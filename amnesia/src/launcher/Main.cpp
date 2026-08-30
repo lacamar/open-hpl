@@ -455,7 +455,12 @@ int hplMain(const tString &asCommandLine)
 #ifdef WIN32
 	sGameExe = _W("Amnesia.exe");
 #elif __linux__
-	#if (defined(i386) && !defined(__LP64__))
+	// Must track HPL2/core/cmake/BoilerPlate.cmake's CMAKE_EXECUTABLE_SUFFIX
+	// (".bin.${CMAKE_SYSTEM_PROCESSOR}"), which is what the game binary this
+	// launches is actually named.
+	#if defined(__aarch64__)
+		sGameExe = _W("./Amnesia.bin.aarch64");
+	#elif (defined(i386) && !defined(__LP64__))
 		sGameExe = _W("./Amnesia.bin.x86");
 	#else
 		sGameExe = _W("./Amnesia.bin.x86_64");
