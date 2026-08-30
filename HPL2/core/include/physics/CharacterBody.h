@@ -57,9 +57,10 @@ namespace hpl {
 	{
 	public:
 		cCharacterBodyCollideGravity(iCharacterBody *apCharBody);
+		virtual ~cCharacterBodyCollideGravity(){}
 
 		void OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData);
-		
+
 		iCharacterBody *mpCharBody;
 	};
 
@@ -69,18 +70,20 @@ namespace hpl {
 	{
 	public:
 		cCharacterBodyCollidePush(iCharacterBody *apCharBody);
+		virtual ~cCharacterBodyCollidePush(){}
 
 		void OnCollision(iPhysicsBody *apBody, cCollideData *apCollideData);
 
 		iCharacterBody *mpCharBody;
 	};
-	
+
 	//------------------------------------------------
 
 	class cCharacterBodyRay : public iPhysicsRayCallback
 	{
 	public:
 		cCharacterBodyRay();
+		virtual ~cCharacterBodyRay(){}
 
 		void Clear();
 		bool OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams);

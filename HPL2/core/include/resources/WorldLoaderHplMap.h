@@ -48,7 +48,14 @@ namespace hpl {
 	#define MAP_CACHE_FORMAT_MAGIC_NUMBER		0xF441451F
 #endif
 
-	#define MAP_CACHE_FORMAT_VERSION			10
+	// Bumped for the Newton 2.x -> 3.14 port: .map_cache files bake serialized
+	// Newton collision blobs (see cCollideShapeNewton::SaveToSerializedData),
+	// and that binary format is not compatible between Newton versions.
+	// Bumping this forces every pre-existing cache file (including all the
+	// ones shipped with the original game) to be treated as stale and
+	// rebuilt from the .map source data instead of hanging while
+	// misinterpreting old-format bytes as new-format ones.
+	#define MAP_CACHE_FORMAT_VERSION			11
 	
 	//----------------------------------------
 	

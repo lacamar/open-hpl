@@ -60,6 +60,7 @@ namespace hpl {
 	{
 	public:
 		cRenderableContainerObjectCallback();
+		virtual ~cRenderableContainerObjectCallback(){}
 
 		void OnVisibleChange(iRenderable *apObject);
 		void OnRenderFlagsChange(iRenderable *apObject);

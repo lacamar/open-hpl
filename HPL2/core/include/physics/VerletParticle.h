@@ -48,6 +48,7 @@ namespace hpl {
 		friend class iVerletParticleContainer;
 	public:
 		cVerletParticleRayCallback(iVerletParticleContainer *apContainer);
+		virtual ~cVerletParticleRayCallback(){}
 
 		void Reset();
 

@@ -55,6 +55,7 @@ class cLuxChestMessageCallback : public iLuxMessageCallback
 {
 public:
 	cLuxChestMessageCallback(cLuxProp_Chest *apChest);
+	virtual ~cLuxChestMessageCallback(){}
 
 	void OnPress(bool abYes);
 

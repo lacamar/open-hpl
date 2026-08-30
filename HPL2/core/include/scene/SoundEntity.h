@@ -36,6 +36,8 @@ namespace hpl {
 	class cSoundEntityChannelCallback : public iSoundEntryCallback
 	{
 	public:
+		virtual ~cSoundEntityChannelCallback(){}
+
 		void OnPriorityRelease();
 
 		cSoundEntity *mpEntity;

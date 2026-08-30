@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 3.10...3.28)
 project(HPL2)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -35,7 +35,11 @@ IF(APPLE)
     endif()
 ELSEIF(LINUX)
     SET(PRIVATE_LIB_SUFFIX "lib/linux")
-    SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
+    # PRIVATE_LIB_DIR intentionally left unset on Linux: it would make
+    # OALWrapper look for ogg/vorbis/openal/SDL under our own prebuilt-binary
+    # tree (dependencies/lib/linux), which no longer ships those on Linux -
+    # they come from the system aarch64 packages via OALWrapper's normal
+    # find_package() fallback instead.
 ENDIF()
 
 OPTION(USE_SDL2 "Use SDL2 instead of SDL1.2" ON)
@@ -151,7 +155,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderColladaHelpers.cpp
     sources/impl/MeshLoaderColladaLoader.cpp
     sources/impl/MeshLoaderMSH.cpp
-    sources/impl/MeshLoaderFBX.cpp
 )
 
 IF(APPLE)
@@ -238,14 +241,15 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 # setup libs
 
 FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
+FindPrebuiltLibrary(DGPHYSICS_LIBRARY dgPhysics)
+FindPrebuiltLibrary(DGCORE_LIBRARY dgCore)
 FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
-FindPrebuiltLibrary(FBX_LIBRARY fbxsdk-2012.2-static)
 FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
 FindPrebuiltLibrary(THEORA_LIBRARY theora)
 FindPrebuiltLibrary(DEVIL_LIBRARY IL)
 
 find_package(OpenGL)
-mark_as_advanced(NEWTON_LIBRARY ANGELSCRIPT_LIBRARY FBX_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
+mark_as_advanced(NEWTON_LIBRARY DGPHYSICS_LIBRARY DGCORE_LIBRARY ANGELSCRIPT_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
 
 # setup HPL2 compile target
 
@@ -283,21 +287,25 @@ endif()
 target_link_libraries(HPL2
     OALWrapper # also pulls in ogg,vorbis,SDL
     ${NEWTON_LIBRARY}
+    ${DGPHYSICS_LIBRARY}
+    ${DGCORE_LIBRARY}
     ${ANGELSCRIPT_LIBRARY}
-    ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
+    # Modern (GLVND-aware) FindOpenGL only sets OPENGL_opengl_LIBRARY, not the
+    # legacy OPENGL_gl_LIBRARY this project originally used - the imported
+    # targets work correctly under both old and new CMake/FindOpenGL behavior.
+    OpenGL::GL OpenGL::GLU
     ${GLEW_LIBRARY}
     ${THEORA_LIBRARY}
     ${DEVIL_LIBRARY}
     z
-    ${FBX_LIBRARY}
     ${PLATFORM_LIBS}
 )
 
 
-if(APPLE)   
+if(APPLE)
     # helper function to copy the needed frameworks in at build time
     SET(HPL2_FRAMEWORKS ${HPL2_FRAMEWORKS} CACHE STRING "HPL2 copy frameworks")
-    SET(HPL2_LIBRARIES libSDL2.dylib libIL.1.dylib) 
+    SET(HPL2_LIBRARIES libSDL2.dylib libIL.1.dylib)
     SET(HPL2_LIBRARIES ${HPL2_LIBRARIES}  CACHE STRING "HPL2 copy libs")
     mark_as_advanced(HPL2_FRAMEWORKS HPL2_LIBRARIES)
 
@@ -344,7 +352,6 @@ FUNCTION(AddTestTarget target_name)
     )
 ENDFUNCTION()
 
+enable_testing()
 add_subdirectory(../tests tests)
-add_subdirectory(../tools tools)
-
 

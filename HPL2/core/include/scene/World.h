@@ -111,6 +111,8 @@ namespace hpl {
 	{
 		kSerializableClassInit(cAreaEntity)
 	public:
+		virtual ~cAreaEntity(){}
+
 		tString msName;
 		tString msType;
 		cMatrixf m_mtxTransform;
@@ -128,6 +130,7 @@ namespace hpl {
 	public:
 		cStartPosEntity() {}
 		cStartPosEntity(const tString& asName) : msName(asName){}
+		virtual ~cStartPosEntity(){}
 
 		cMatrixf& GetWorldMatrix(){ return m_mtxTransform;}
 		cMatrixf& GetLocalMatrix(){ return m_mtxTransform;}

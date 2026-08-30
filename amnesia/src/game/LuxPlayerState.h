@@ -71,6 +71,8 @@ class iLuxPlayerState_SaveData : public iSerializable
 {
 	kSerializableClassInit(iLuxPlayerState_SaveData)
 public:
+	virtual ~iLuxPlayerState_SaveData(){}
+
 	int mlPreviousState;
 };
 

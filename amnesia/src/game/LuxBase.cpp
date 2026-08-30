@@ -1151,6 +1151,12 @@ bool cLuxBase::InitEngine()
 	iRenderer::SetParallaxQuality((eParallaxQuality)mpConfigHandler->mlParallaxQuality);
 	iRenderer::SetParallaxEnabled(mpConfigHandler->mbParallaxEnabled);
 
+	//Must be set before any cGuiSet is created (CreateHPLEngine() below creates the engine's
+	//own GUI sets, and PreMenu/MainMenu/HUD sets are created shortly after) since each set
+	//bakes the current global scale into its virtual-to-screen mapping when constructed or
+	//when SetVirtualSize() is called on it.
+	cGuiSet::SetGlobalGuiScale((float)mpConfigHandler->mlGuiScale);
+
 	iRenderer::SetRefractionEnabled(mpConfigHandler->mbRefraction);
 
 	cRendererDeferred::SetSSAOBufferSizeDiv(mpConfigHandler->mlSSAOResolution==0? 2 : 1);

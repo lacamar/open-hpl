@@ -79,6 +79,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	// Global integer (or fractional) GUI scale factor - see cGuiSet::SetGlobalGuiScale()
+	// in GuiSet.h for what this does and why it's implemented this way.
+	float cGuiSet::mfGlobalGuiScale = 1.0f;
+
+	//-----------------------------------------------------------------------
+
 	// This is temporary, but works now. Used for sorting widgets Z-wise before sending input
 
 	static bool SortWidget_Z (const iWidget* apWidgetA, const iWidget* apWidgetB)
@@ -99,8 +105,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	bool cGuiRenderObjectCompare::operator()(	const cGuiRenderObject& aObjectA, 
-												const cGuiRenderObject& aObjectB)
+	bool cGuiRenderObjectCompare::operator()(	const cGuiRenderObject& aObjectA,
+												const cGuiRenderObject& aObjectB) const
 	{
 		//Z
 		float fZA = aObjectA.mvPos.z;
@@ -283,10 +289,9 @@ namespace hpl {
 
 		mfContextMenuZ = 500;
 
-		mvVirtualSize = mpGraphics->GetLowLevel()->GetScreenSizeFloat();
 		mfVirtualMinZ = -1000;
 		mfVirtualMaxZ = 1000;
-		mvVirtualSizeOffset = cVector2f(0);
+		SetVirtualSize(mpGraphics->GetLowLevel()->GetScreenSizeFloat(), mfVirtualMinZ, mfVirtualMaxZ, cVector2f(0));
 
 		mbActive = true;
 		mbDrawMouse = true;
@@ -1269,10 +1274,30 @@ namespace hpl {
 
 	void cGuiSet::SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset)
 	{
-		mvVirtualSize = avSize;
 		mfVirtualMinZ = afMinZ;
 		mfVirtualMaxZ = afMaxZ;
-		mvVirtualSizeOffset = avOffset;
+
+		////////////////////////////////////////////////////////////////////////////////
+		// Apply the global GUI scale by zooming the visible virtual-coordinate window in
+		// around its own centre. At scale 1 this is an identity transform (avSize/avOffset
+		// pass through unchanged). At scale N, only the central 1/N (linear) portion of the
+		// original virtual space remains visible, but since it is stretched to fill the same
+		// real screen area, everything drawn in it (and every mouse-hit-test against it, since
+		// GetVirtualSize()/GetVirtualSizeOffset() are also used for that - see cGui::ScreenPos
+		// ToVirtual-style code in Gui.cpp) ends up N times bigger on screen. Content placed
+		// near the edges of the original virtual space can fall outside the now-smaller
+		// visible window and get clipped - see PORTING_NOTES.md.
+		if(mfGlobalGuiScale != 1.0f)
+		{
+			cVector2f vHalfSize = avSize * 0.5f;
+			mvVirtualSize = avSize / mfGlobalGuiScale;
+			mvVirtualSizeOffset = avOffset - vHalfSize*(1.0f - 1.0f/mfGlobalGuiScale);
+		}
+		else
+		{
+			mvVirtualSize = avSize;
+			mvVirtualSizeOffset = avOffset;
+		}
 	}
 
 	//-----------------------------------------------------------------------

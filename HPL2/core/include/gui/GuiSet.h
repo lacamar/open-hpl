@@ -97,7 +97,7 @@ namespace hpl {
 	class cGuiRenderObjectCompare
 	{
 	public:
-		bool operator()(const cGuiRenderObject& aObjectA, const cGuiRenderObject& aObjectB);
+		bool operator()(const cGuiRenderObject& aObjectA, const cGuiRenderObject& aObjectB) const;
 	};
 
 	typedef std::multiset<cGuiRenderObject,cGuiRenderObjectCompare> tGuiRenderObjectSet;
@@ -406,6 +406,22 @@ namespace hpl {
 		const cVector2f& GetVirtualSize(){return mvVirtualSize;}
 		const cVector2f& GetVirtualSizeOffset(){return mvVirtualSizeOffset;}
 
+		////////////////////////////////////
+		// GUI scaling
+		//
+		// Integer (or fractional) scale factor applied to every GuiSet's virtual-to-screen
+		// mapping. Increasing it zooms the orthographic projection used to render (and the
+		// matching mouse-to-virtual-coordinate conversion) in around the centre of each set's
+		// virtual space, so widgets end up covering more real screen pixels without any widget
+		// layout code needing to change. Content positioned near the edges of a set's virtual
+		// space can get clipped at scales > 1 as a result - see PORTING_NOTES.md.
+		//
+		// This is a process-wide setting (all GuiSets share it) read once from config at
+		// startup, before any cGuiSet is constructed - changing it at runtime only affects
+		// GuiSets created (or given a new SetVirtualSize() call) afterwards.
+		static void SetGlobalGuiScale(float afScale){ mfGlobalGuiScale = afScale>0 ? afScale : 1.0f; }
+		static float GetGlobalGuiScale(){ return mfGlobalGuiScale; }
+
 		void SetFocusedWidget(iWidget* apWidget, bool abCheckForValidity=false);
 		iWidget* GetFocusedWidget(){return mpFocusedWidget;}
 
@@ -547,6 +563,8 @@ namespace hpl {
 		float mfWindowZ;
 
 		float mfContextMenuZ;
+
+		static float mfGlobalGuiScale;
 
 		cVector2f mvVirtualSize;
 		cVector2f mvVirtualSizeOffset;

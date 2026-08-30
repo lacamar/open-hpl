@@ -31,6 +31,9 @@ namespace hpl {
 
 	class cPhysicsBodyNewtonCallback : public iEntityCallback
 	{
+	public:
+		virtual ~cPhysicsBodyNewtonCallback(){}
+	private:
 		void OnTransformUpdate(iEntity3D * apEntity);
 	};
 

@@ -1,5 +1,10 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 3.10...3.28)
 project(Lux)
+
+# Must be called at the top-level project scope for `ctest` (run from this
+# project's build dir) to discover tests registered further down in
+# HPL2/core/CMakeLists.txt / HPL2/tests/CMakeLists.txt.
+enable_testing()
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -34,6 +39,11 @@ endif()
 set(VERSION "1.3.1")
 
 add_subdirectory(game game)
+
+# Phase 0 of the SOMA game module (see PORTING_NOTES.md / the SOMA plan doc):
+# a sibling target that links the same HPL2 library. Additive only - does not
+# touch anything above.
+add_subdirectory(../../soma/src/game soma_game)
 
 if(APPLE)
     add_subdirectory(launcher-macosx launcher)

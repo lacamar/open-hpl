@@ -451,6 +451,7 @@ class cLuxSaveGame_SaveData: public iSerializable
 	kSerializableClassInit(cLuxSaveGame_SaveData)
 public:
 	cLuxSaveGame_SaveData();
+	virtual ~cLuxSaveGame_SaveData(){}
 	
 	//////////////////////
 	//HARDMODE

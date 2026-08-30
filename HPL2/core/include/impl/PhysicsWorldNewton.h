@@ -111,6 +111,12 @@ namespace hpl {
 		float* mpTempPoints;
 		float* mpTempNormals;
 		float* mpTempDepths;
+		// Newton 3.14's NewtonCollisionCollide requires per-contact shape-id output
+		// arrays (used for compound/tree sub-shape identification) that the old API
+		// didn't take - the engine doesn't use the ids, but the buffers must be
+		// real (Newton writes into them unconditionally, NULL would segfault).
+		long long* mpTempAttributeA;
+		long long* mpTempAttributeB;
 
 		cVector3f mvWorldSizeMin;
 		cVector3f mvWorldSizeMax;

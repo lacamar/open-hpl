@@ -123,7 +123,12 @@ namespace hpl {
 			return mvElementArrays[ lIdx ]; 
 		}
 		
-		char mvElementArrayIndex[eVertexBufferElement_LastEnum];
+		// Must be *signed* char: -1 means "no element of this type". Plain
+		// `char` is unsigned by default on AArch64 (unlike x86_64, where it's
+		// signed), so -1 stored here read back as 255 on arm64, defeating the
+		// `if(lIdx < 0) return NULL;` guard in GetElementArray() below and
+		// indexing mvElementArrays wildly out of bounds.
+		signed char mvElementArrayIndex[eVertexBufferElement_LastEnum];
 		std::vector<cVtxBufferGLElementArray*> mvElementArrays;
 		
 		tUIntVec mvIndexArray;

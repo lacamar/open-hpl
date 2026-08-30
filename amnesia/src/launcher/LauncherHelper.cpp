@@ -21,6 +21,8 @@
 #include "hpl.h"
 #include "launcher.h"
 
+#include <set>
+
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Group.H>
@@ -521,6 +523,21 @@ void cLauncherHelper::PopulateResolutions(const tVideoModeVec& avVidModes, cConf
 	// Clear out menu
 	apRes->menu(NULL);
 
+	// Fl_Menu_::add() treats identical label text as the SAME menu entry (it parses the
+	// label as a hierarchical path and, on a match, just overwrites that entry's user_data
+	// instead of appending a new item). Since two different monitors very often share common
+	// resolutions (e.g. both a laptop panel and an external display supporting 1920x1080),
+	// leaving the display identity out of the label caused every shared resolution across
+	// displays to collapse into a single dropdown item bound to whichever display was
+	// enumerated last - silently dropping the ability to pick that resolution on any other
+	// display. Only resolutions unique to one display (no other display sharing that exact
+	// WxH) happened to survive as distinct, correctly-bound entries. Fix: disambiguate every
+	// entry's label by display whenever more than one display is present, so add() never
+	// sees two identical label strings for different cVideoMode entries.
+	std::set<int> setDisplays;
+	for(size_t i=0; i<avVidModes.size(); ++i) setDisplays.insert(avVidModes[i].mlDisplay);
+	bool bMultiDisplay = setDisplays.size() > 1;
+
 	int lSelectedRes = -1;
 	int lItemPos = -1;
 	for(int i=0; i<(int)avVidModes.size(); ++i)
@@ -540,12 +557,21 @@ void cLauncherHelper::PopulateResolutions(const tVideoModeVec& avVidModes, cConf
 			// Check if custom added mode
 			if(vMode.mbCustom)
 			{
-				tWString sAppendix = tWString(kTranslate("Launcher", "Custom")); 
+				tWString sAppendix = tWString(kTranslate("Launcher", "Custom"));
 				sModeStr += " (" + cString::S16BitToUTF8(sAppendix) + ")";
 			}
 		}
+		if(bMultiDisplay)
+		{
+			// Disambiguate by display so identically-sized modes on different displays
+			// don't collide under FLTK's label-based add(). Replace '/' since FLTK
+			// interprets it as a submenu path separator in labels passed to add().
+			tString sDisplayName = cString::S16BitToUTF8(cPlatform::GetDisplayName(vMode.mlDisplay));
+			sDisplayName = cString::ReplaceCharTo(sDisplayName, "/", "-");
+			sModeStr += "  (" + sDisplayName + ")";
+		}
 		lItemPos = apRes->add(sModeStr.c_str(), 0, NULL, (void*)i);
-			
+
 		if(vMode == curMode)
 			lSelectedRes = lItemPos;
 	}
@@ -770,20 +796,20 @@ void cLauncherHelper::DetectSettings(cUserInterface* apUI, cConfigFile* apConfig
 	if(sClosestMatch.empty()==false)
 	{
 		sClosestMatch = cString::S16BitToUTF8(kTranslate("Launcher", "UnlistedVCardClosestMatch")) + " " + sClosestMatch; 
-		fl_message(sClosestMatch.c_str());
+		fl_message("%s", sClosestMatch.c_str());
 	}
 
 	if(rating==eQRating_Unknown)
 	{
 		rating = eQRating_Medium;
 		tString sMsg = cString::S16BitToUTF8(kTranslate("Launcher", "UnlistedVCard"));
-		fl_message(sMsg.c_str());
+		fl_message("%s", sMsg.c_str());
 	}
 		
 	if(rating==eQRating_Unsupported)
 	{
 		tString sMsg = cString::S16BitToUTF8(kTranslate("Launcher", "UnsupportedVCard"));
-		fl_message(sMsg.c_str());
+		fl_message("%s", sMsg.c_str());
 	}
 	else
 	{

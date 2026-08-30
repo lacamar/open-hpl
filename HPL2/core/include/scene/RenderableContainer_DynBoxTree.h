@@ -38,6 +38,7 @@ namespace hpl {
 	{
 	public:
 		cDynBoxTreeObjectCallback(cRenderableContainer_DynBoxTree *apContainer);
+		virtual ~cDynBoxTreeObjectCallback(){}
 
 		void OnTransformUpdate(iEntity3D * apEntity);
 

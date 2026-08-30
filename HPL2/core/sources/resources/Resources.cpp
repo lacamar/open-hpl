@@ -44,6 +44,7 @@
 #include "resources/BinaryBuffer.h"
 
 #include "resources/WorldLoaderHplMap.h"
+#include "resources/WorldLoaderHpm.h"
 
 #include "system/System.h"
 #include "system/LowLevelSystem.h"
@@ -317,8 +318,14 @@ namespace hpl {
 		mpLowLevelResources->AddVideoLoaders(mpVideoLoaderHandler);
 		
 		//Add properitary formats directly
-        mpWorldLoaderHandler->AddLoader(hplNew(cWorldLoaderHplMap, () ));		
-		
+        mpWorldLoaderHandler->AddLoader(hplNew(cWorldLoaderHplMap, () ));
+
+		// SOMA's split ".hpm" map format (Phase 1 data loading). Purely
+		// additive: a new loader registered for the "hpm" extension only,
+		// does not touch or replace the ".map"/".cmap" loader above -
+		// Amnesia's map loading is unaffected. See WorldLoaderHpm.h.
+		mpWorldLoaderHandler->AddLoader(hplNew(cWorldLoaderHpm, () ));
+
 		Log("--------------------------------------------------------\n\n");
 	}
 	

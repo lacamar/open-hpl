@@ -39,6 +39,7 @@ class cMapHandlerSoundCallback : public iSoundEntityGlobalCallback
 {
 public:
 	cMapHandlerSoundCallback();
+	virtual ~cMapHandlerSoundCallback(){}
 
 	void OnStart(cSoundEntity *apSoundEntity);
 

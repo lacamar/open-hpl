@@ -31,6 +31,7 @@ class cLuxCritterRayCallback : public iPhysicsRayCallback
 {
 public:
 	cLuxCritterRayCallback(iLuxProp_CritterBase *apCritterBase) : mpCritterBase(apCritterBase) {}
+	virtual ~cLuxCritterRayCallback(){}
 
 	void Reset();
 

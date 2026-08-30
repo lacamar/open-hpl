@@ -1322,10 +1322,24 @@ void cLuxInputHandler::UpdatePreMenuInput()
 		gpBase->mpPreMenu->GetSet()->SetMouseMovementEnabled(true);
 		gpBase->mpPreMenu->GetSet()->SetDrawMouse(true);
 	}
-	
+
 	////////////////////
-	//Key press
+	//Key press (Escape or the UI "confirm" action - same trigger cLuxPreMenu's own
+	//Continue button uses - skips the current splash/pre-menu section immediately)
 	if(mpInput->BecameTriggerd(eLuxAction_Exit) || mpInput->BecameTriggerd(eLuxAction_UIPrimary))
+	{
+		gpBase->mpPreMenu->ButtonPressed();
+	}
+	////////////////////
+	//Mouse click - only treat a raw click anywhere on screen as "skip" when there's no
+	//on-screen widget (Continue button / gamma slider) for the click to interact with
+	//instead. Sections with a visible Continue button already advance normally via its
+	//own eGuiMessage_ButtonPressed callback; treating every click as "skip" while it's
+	//showing would make it impossible to drag the gamma slider on those sections.
+	else if(gpBase->mpPreMenu->IsContinueButtonVisible()==false &&
+			(mpInput->BecameTriggerd(eLuxAction_LeftClick) ||
+			 mpInput->BecameTriggerd(eLuxAction_MiddleClick) ||
+			 mpInput->BecameTriggerd(eLuxAction_RightClick)))
 	{
 		gpBase->mpPreMenu->ButtonPressed();
 	}

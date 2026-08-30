@@ -33,8 +33,23 @@ endif()
 if(LINUX)
     set(PLATFORM_PREFIX             "linux")
     if(CMAKE_SIZEOF_VOID_P MATCHES "8" AND NOT(FORCE32) )
-        set(CMAKE_EXECUTABLE_SUFFIX ".bin.x86_64")
+        # This used to hardcode ".bin.x86_64" - correct on x86_64 but actively
+        # misleading on any other 64-bit target (e.g. aarch64).
+        set(CMAKE_EXECUTABLE_SUFFIX ".bin.${CMAKE_SYSTEM_PROCESSOR}")
         set(BIN_RPATH               "\$ORIGIN/lib64")
+
+        # Codegen tuning for Apple Silicon under Asahi/Fedora Linux (this port's actual
+        # target hardware). Pure instruction-scheduling/ISA-extension tuning for the M2
+        # family (verified equal to what `-mcpu=native` resolves to on an M2 Max via GCC
+        # 16: apple-m2+crc+aes+sha3+fp16) - does not change program semantics, and does not
+        # affect the aarch64-vs-NEON dgVector selection in the vendored Newton port (that's
+        # gated on the __aarch64__ preprocessor macro in dgVector.h, not on -mcpu/-march).
+        # Verified: PhysicsNewtonTests pass identically with and without this flag, and a
+        # real level (loaded from a save) renders pixel-identical screenshots either way.
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -mcpu=apple-m2+crc+aes+sha3+fp16")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=apple-m2+crc+aes+sha3+fp16")
+        endif()
     else()
         set(CMAKE_EXECUTABLE_SUFFIX ".bin.x86")
         set(BIN_RPATH               "\$ORIGIN/lib")

@@ -48,6 +48,7 @@
 #endif
 
 #include "impl/scriptstring.h"
+#include "impl/scriptarray.h"
 
 #include "system/String.h"
 
@@ -412,7 +413,16 @@ namespace hpl {
 		mpScriptEngine->SetMessageCallback(asMETHOD(cScriptOutput,AddMessage), mpScriptOutput, asCALL_THISCALL);
 
 		RegisterScriptString(mpScriptEngine);
-	
+
+		// AngelScript 2.19.2 (the original vendored version) had a built-in
+		// default array type usable via bare `T[]` script syntax. That was
+		// removed from the language in later AngelScript versions - now
+		// available only via the `array<T>` addon, which must explicitly
+		// opt in to also being usable as the default `T[]` array (the
+		// `defaultArray=true` argument here) for existing game scripts
+		// written against the old built-in syntax to keep compiling.
+		RegisterScriptArray(mpScriptEngine, true);
+
 		mlHandleCount = 0;
 
 		Log("-------- THE HPL ENGINE LOG ------------\n");

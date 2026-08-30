@@ -75,9 +75,15 @@ namespace hpl {
 		m_mtxViewProj = cMatrixf::Identity;
 		m_mtxProjection = cMatrixf::Identity;
 
+		// NOTE: see the matching comment in iLight::iLight (Light.cpp) - SOMA's
+		// data does not ship "core_falloff_linear", so Create1D() can return
+		// NULL here; behaviorally a no-op for Amnesia, which always finds it.
 		mpSpotFalloffMap = mpTextureManager->Create1D("core_falloff_linear",false);
-		mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		if(mpSpotFalloffMap)
+		{
+			mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
+			mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		}
 
 		UpdateBoundingVolume();
 	}

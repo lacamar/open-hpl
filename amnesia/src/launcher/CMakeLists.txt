@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 3.10...3.28)
 project(Launcher)
 
 FindPrebuiltLibrary(FLTK_LIBRARY fltk)

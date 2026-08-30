@@ -51,13 +51,12 @@ namespace hpl {
 	cPhysicsWorldNewton::cPhysicsWorldNewton()
 		: iPhysicsWorld()
 	{
-		//mpNewtonWorld = NewtonCreate();
-		mpNewtonWorld = NewtonCreate(NULL, NULL);
+		mpNewtonWorld = NewtonCreate();
 
 		if(mpNewtonWorld==NULL){
 			Warning("Couldn't create newton world!\n");
 		}
-		
+
 		/////////////////////////////////
         //Set default values to properties
 		mvWorldSizeMin = cVector3f(0,0,0);
@@ -65,10 +64,10 @@ namespace hpl {
 
 		mvGravity = cVector3f(0,-9.81f,0);
 		mfMaxTimeStep = 1.0f/60.0f;
-		
+
 		/////////////////////////////////
 		//Create default material.
-		int lDefaultMatId = 0;//NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
+		int lDefaultMatId = NewtonMaterialGetDefaultGroupID(mpNewtonWorld);
 		cPhysicsMaterialNewton *pMaterial = hplNew( cPhysicsMaterialNewton, ("Default",this,lDefaultMatId) );
 		tPhysicsMaterialMap::value_type Val("Default",pMaterial);
 		m_mapMaterials.insert(Val);
@@ -77,6 +76,8 @@ namespace hpl {
 		mpTempDepths = hplNewArray( float,500);
 		mpTempNormals = hplNewArray( float,500 * 3);
 		mpTempPoints = hplNewArray( float,500 * 3);
+		mpTempAttributeA = hplNewArray( long long,500);
+		mpTempAttributeB = hplNewArray( long long,500);
 	}
 
 	//-----------------------------------------------------------------------
@@ -89,6 +90,8 @@ namespace hpl {
 		hplDeleteArray(mpTempDepths);
 		hplDeleteArray(mpTempNormals);
 		hplDeleteArray(mpTempPoints);
+		hplDeleteArray(mpTempAttributeA);
+		hplDeleteArray(mpTempAttributeB);
 	}
 
 	//-----------------------------------------------------------------------
@@ -143,7 +146,9 @@ namespace hpl {
 		mvWorldSizeMin = avMin;
 		mvWorldSizeMax = avMax;
 
-		NewtonSetWorldSize(mpNewtonWorld,avMin.v, avMax.v);
+		// Newton 3.14 dropped the fixed-extent world size concept: the broadphase
+		// now grows dynamically, so there is nothing to configure here. Min/max are
+		// still cached above purely so GetWorldSizeMin/Max keep returning what was set.
 	}
 
 	cVector3f cPhysicsWorldNewton::GetWorldSizeMin()
@@ -177,19 +182,21 @@ namespace hpl {
 	{
 		mAccuracy = aAccuracy;
 		
+		// Newton 3.14 renamed NewtonSetSolverModel to NewtonSetSolverIterations (same
+		// meaning: 0 = exact/iterative, N = N approximation passes). NewtonSetFrictionModel
+		// (global exact-vs-approximate Coulomb friction toggle) was removed entirely -
+		// the solver always uses the old "exact" (0) friction model now, so there is
+		// nothing to set for that axis any more.
 		switch(mAccuracy)
 		{
 		case ePhysicsAccuracy_Low:
-									NewtonSetSolverModel(mpNewtonWorld,1);
-									NewtonSetFrictionModel(mpNewtonWorld,1);
+									NewtonSetSolverIterations(mpNewtonWorld,1);
 									break;
 		case ePhysicsAccuracy_Medium:
-									NewtonSetSolverModel(mpNewtonWorld,2);
-									NewtonSetFrictionModel(mpNewtonWorld,1);
+									NewtonSetSolverIterations(mpNewtonWorld,2);
 									break;
 		case ePhysicsAccuracy_High:
-									NewtonSetSolverModel(mpNewtonWorld,0);
-									NewtonSetFrictionModel(mpNewtonWorld,0);
+									NewtonSetSolverIterations(mpNewtonWorld,0);
 									break;
 		}
 	}
@@ -387,18 +394,18 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	static std::vector<iPhysicsBody*> *gpBodyVec;
-	static void AddNewtonBodyToVector(const NewtonBody* apNewtonBody)//, void* userData)
+	static int AddNewtonBodyToVector(const NewtonBody* apNewtonBody, void* apUserData)
 	{
 		cPhysicsBodyNewton* pBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apNewtonBody);
 		gpBodyVec->push_back(pBody);
+		return 1;
 	}
 
 	void cPhysicsWorldNewton::GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec)
 	{
 		gpBodyVec = apBodyVec;
 
-		//NewtonWorldForEachBodyInAABBDo(mpNewtonWorld,apBV->GetMin().v, apBV->GetMax().v,AddNewtonBodyToVector, NULL);
-		NewtonWorldForEachBodyInAABBDo(mpNewtonWorld,apBV->GetMin().v, apBV->GetMax().v,AddNewtonBodyToVector);
+		NewtonWorldForEachBodyInAABBDo(mpNewtonWorld,apBV->GetMin().v, apBV->GetMax().v,AddNewtonBodyToVector, NULL);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -484,14 +491,15 @@ namespace hpl {
 		else return 0;
 	}
 
-	static float RayCastFilterFunc (const NewtonBody* apNewtonBody, const float* apNormalVec, 
-								int alCollisionID, void* apUserData, float afIntersetParam)
+	static dFloat RayCastFilterFunc (const NewtonBody* apNewtonBody, const NewtonCollision* apShapeHit,
+								const dFloat* apHitContact, const dFloat* apNormalVec,
+								dLong alCollisionID, void* apUserData, dFloat afIntersetParam)
 	{
 		cPhysicsBodyNewton* pRigidBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apNewtonBody);
 		if(pRigidBody->IsActive()==false) return 1;
 
 		gRayParams.mfT = afIntersetParam;
-		
+
 		//Calculate stuff needed.
 		if(gbRayCalcDist){
 			gRayParams.mfDist = gfRayLength * afIntersetParam;
@@ -500,7 +508,7 @@ namespace hpl {
 			gRayParams.mvNormal.FromVec(apNormalVec);
 		}
 		if(gbRayCalcPoint){
-			gRayParams.mvPoint = gvRayOrigin + gvRayDelta * afIntersetParam;
+			gRayParams.mvPoint.FromVec(apHitContact);
 		}
 		
 		//Call the call back
@@ -546,9 +554,9 @@ namespace hpl {
 
 		
 		if(abUsePrefilter)
-			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, RayCastPrefilterFunc);
+			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, RayCastPrefilterFunc, 0);
 		else
-			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, NULL);
+			NewtonWorldRayCast(mpNewtonWorld, avOrigin.v, avEnd.v,RayCastFilterFunc, NULL, NULL, 0);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -599,7 +607,7 @@ namespace hpl {
 					int lNum = NewtonCollisionCollide(mpNewtonWorld, alMaxPoints,
 												pSubShapeA->GetNewtonCollision(), &(mtxTransposeA.m[0][0]),
 												pSubShapeB->GetNewtonCollision(), &(mtxTransposeB.m[0][0]),
-												mpTempPoints, mpTempNormals, mpTempDepths, 0);
+												mpTempPoints, mpTempNormals, mpTempDepths, mpTempAttributeA, mpTempAttributeB, 0);
 					if(lNum<1) continue;
 					if(lNum > alMaxPoints )lNum = alMaxPoints;
 
@@ -649,7 +657,7 @@ namespace hpl {
 			int lNum = NewtonCollisionCollide(mpNewtonWorld, alMaxPoints,
 										pNewtonShapeA->GetNewtonCollision(), &(mtxTransposeA.m[0][0]),
 										pNewtonShapeB->GetNewtonCollision(), &(mtxTransposeB.m[0][0]),
-										mpTempPoints, mpTempNormals, mpTempDepths, 0);
+										mpTempPoints, mpTempNormals, mpTempDepths, mpTempAttributeA, mpTempAttributeB, 0);
 			
 			if(lNum<1) return false;
 			if(lNum > alMaxPoints )lNum = alMaxPoints;
@@ -714,8 +722,9 @@ namespace hpl {
 		gDebugColor = aColor;
 
 		cCollideShapeNewton *pNewtonShape = static_cast<cCollideShapeNewton*>(apShape);
-		NewtonCollisionForEachPolygonDo (	pNewtonShape->GetNewtonCollision(), 
-											&(a_mtxTransform.GetTranspose().m[0][0]), 
+		cMatrixf mtxTranspose = a_mtxTransform.GetTranspose();
+		NewtonCollisionForEachPolygonDo (	pNewtonShape->GetNewtonCollision(),
+											&mtxTranspose.m[0][0],
 											RenderDebugPolygon,
 											NULL);
 	}

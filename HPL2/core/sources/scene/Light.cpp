@@ -94,9 +94,20 @@ namespace hpl {
 
 		///////////////////////////////
 		//Data init
+		// NOTE: SOMA's data does not ship "core_falloff_linear" (only Amnesia's
+		// does - it computes falloff differently, e.g. procedurally in its
+		// HPSL shaders); Create1D() then returns NULL. This is otherwise a
+		// no-op for Amnesia, which always finds the texture here (same as
+		// before this check was added) - see the destructor a few lines
+		// down, which already null-checks mpFalloffMap before destroying it,
+		// so NULL was always an anticipated state for this member, just not
+		// guarded here at construction time.
 		mpFalloffMap = mpTextureManager->Create1D("core_falloff_linear",false);
-		mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		if(mpFalloffMap)
+		{
+			mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
+			mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		}
 
 		mpGoboTexture = NULL;
 

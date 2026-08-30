@@ -47,7 +47,7 @@ class cLuxProp_Object_BodyCallback : public iPhysicsBodyCallback
 {
 public:
 	cLuxProp_Object_BodyCallback(cLuxProp_Object *apObject);
-	~cLuxProp_Object_BodyCallback();
+	virtual ~cLuxProp_Object_BodyCallback();
 
 	bool OnAABBCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody);
 	void OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData* apContactData);

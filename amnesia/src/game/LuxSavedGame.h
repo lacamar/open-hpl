@@ -64,6 +64,8 @@ class cLuxSavedGameEnemy : public iSerializable
 {
 	kSerializableClassInit(cLuxSavedGameEnemy)
 public:
+	virtual ~cLuxSavedGameEnemy(){}
+
 	void FromEnemy(iLuxEnemy *apEnemy);
 	void ToEnemy(cLuxMap *apMap, iLuxEnemy *apEnemy);
 
@@ -95,7 +97,7 @@ class cLuxSavedGameMap : public iSerializable
 	kSerializableClassInit(cLuxSavedGameMap)
 public:	
 	cLuxSavedGameMap();
-	~cLuxSavedGameMap();
+	virtual ~cLuxSavedGameMap();
 
 	void DestroyAll();
 
@@ -160,7 +162,7 @@ class cLuxSavedGameMapCollection : public iSerializable
 	kSerializableClassInit(cLuxSavedGameMapCollection)
 public:	
 	cLuxSavedGameMapCollection();
-	~cLuxSavedGameMapCollection();
+	virtual ~cLuxSavedGameMapCollection();
 
 	void Reset();
 

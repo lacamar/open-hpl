@@ -32,6 +32,7 @@ class cLuxMoveState_Normal_Callback : public iCharacterBodyCallback
 {
 public:
 	cLuxMoveState_Normal_Callback(cLuxMoveState_Normal *apMoveState);
+	virtual ~cLuxMoveState_Normal_Callback(){}
 
 	void OnGravityCollide(iCharacterBody *apCharBody, iPhysicsBody *apBody, cCollideData *apCollideData);
 	void OnHitGround(iCharacterBody *apCharBody,const cVector3f &avVel){}

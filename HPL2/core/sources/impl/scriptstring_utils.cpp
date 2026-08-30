@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "impl/scriptstring.h"
+#include "impl/scriptarray.h"
 #include <string.h> // strstr
 
 
@@ -250,38 +251,37 @@ void StringSplit_Generic(asIScriptGeneric *gen)
     asIScriptEngine *engine = ctx->GetEngine();
 
     // TODO: This should only be done once
-    int stringArrayType = engine->GetTypeIdByDecl("string@[]");
+    asITypeInfo *stringArrayType = engine->GetTypeInfoByDecl("array<string@>");
 
     // Create the array object
-    asIScriptArray *array = (asIScriptArray*)engine->CreateScriptObject(stringArrayType);
+    CScriptArray *array = CScriptArray::Create(stringArrayType);
 
     // Get the arguments
     CScriptString *str = *(CScriptString**)gen->GetAddressOfArg(0);
     CScriptString *delim = *(CScriptString**)gen->GetAddressOfArg(1);
 
     // Find the existence of the delimiter in the input string
-    int pos = 0, prev = 0, count = 0;
+    int pos = 0, prev = 0;
     while( (pos = (int)str->buffer.find(delim->buffer, prev)) != (int)std::string::npos )
     {
         // Add the part to the array
         CScriptString *part = new CScriptString();
         part->buffer.assign(&str->buffer[prev], pos-prev);
-        array->Resize(array->GetElementCount()+1);
-        *(CScriptString**)array->GetElementPointer(count) = part;
+        array->InsertLast(&part);
+        part->Release(); // the array holds its own reference now
 
         // Find the next part
-        count++;
         prev = pos + (int)delim->buffer.length();
     }
 
     // Add the remaining part
     CScriptString *part = new CScriptString();
     part->buffer.assign(&str->buffer[prev]);
-    array->Resize(array->GetElementCount()+1);
-    *(CScriptString**)array->GetElementPointer(count) = part;
+    array->InsertLast(&part);
+    part->Release(); // the array holds its own reference now
 
     // Return the array by handle
-    *(asIScriptArray**)gen->GetAddressOfReturnLocation() = array;
+    *(CScriptArray**)gen->GetAddressOfReturnLocation() = array;
 }
 
 
@@ -302,21 +302,21 @@ void StringSplit_Generic(asIScriptGeneric *gen)
 void StringJoin_Generic(asIScriptGeneric *gen)
 {
     // Get the arguments
-    asIScriptArray *array = *(asIScriptArray**)gen->GetAddressOfArg(0);
+    CScriptArray *array = *(CScriptArray**)gen->GetAddressOfArg(0);
     CScriptString *delim = *(CScriptString**)gen->GetAddressOfArg(1);
 
     // Create the new string
     CScriptString *str = new CScriptString();
     int n;
-    for( n = 0; n < (int)array->GetElementCount() - 1; n++ )
+    for( n = 0; n < (int)array->GetSize() - 1; n++ )
     {
-        CScriptString *part = *(CScriptString**)array->GetElementPointer(n);
+        CScriptString *part = *(CScriptString**)array->At(n);
         str->buffer += part->buffer;
         str->buffer += delim->buffer;
     }
 
     // Add the last part
-    CScriptString *part = *(CScriptString**)array->GetElementPointer(n);
+    CScriptString *part = *(CScriptString**)array->At(n);
     str->buffer += part->buffer;
 
     // Return the string
@@ -351,6 +351,11 @@ void StringJoin_Generic(asIScriptGeneric *gen)
 void RegisterScriptStringUtils(asIScriptEngine *engine)
 {
     int r;
+
+    // split()/join() need the "array" template type. Register it here (with the
+    // legacy "T[]" bracket syntax kept alive via the defaultArray flag) since
+    // nothing else in the engine currently registers "array".
+    RegisterScriptArray(engine, true);
 
     r = engine->RegisterGlobalFunction("string@ substring(const string &in, int, int)", asFUNCTION(StringSubString_Generic), asCALL_GENERIC); assert(r >= 0);
     r = engine->RegisterGlobalFunction("int findFirst(const string &in, const string &in)", asFUNCTION(StringFindFirst0_Generic), asCALL_GENERIC); assert(r >= 0);

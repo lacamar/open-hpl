@@ -55,6 +55,7 @@ namespace hpl {
 	class cSubMeshEntityBodyUpdate : public iEntityCallback
 	{
 	public:
+		virtual ~cSubMeshEntityBodyUpdate(){}
 		void OnTransformUpdate(iEntity3D * apEntity);
 	};
 
@@ -127,7 +128,10 @@ namespace hpl {
 
 		bool mbGraphicsUpdated;
 
-		char mlStaticNullMatrixCount;
+		// Signed explicitly: -1/0/1 tri-state sentinel (see SubMeshEntity.cpp),
+		// and plain `char` is unsigned by default on AArch64 (unlike x86_64),
+		// which would make the -1 "not yet computed" state read back as 255.
+		signed char mlStaticNullMatrixCount;
 		void *mpUserData;
 	};
 

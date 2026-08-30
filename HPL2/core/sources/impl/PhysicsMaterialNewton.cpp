@@ -181,11 +181,14 @@ namespace hpl {
 				Combine(frictionMode,mfStaticFriction, pMat->mfStaticFriction),
 				Combine(frictionMode,mfKineticFriction, pMat->mfKineticFriction));
 
-			NewtonMaterialSetContinuousCollisionMode(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-													1);
+			// Newton 3.14 removed the per-material-pair continuous collision toggle -
+			// it's now set per body instead (see NewtonBodySetContinuousCollisionMode
+			// in cPhysicsBodyNewton's constructor). This used to be unconditionally
+			// enabled for every material pair here, which is equivalent to enabling
+			// it on every body at creation time.
 
 			NewtonMaterialSetCollisionCallback(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-												(void*)NULL,OnAABBOverlapCallback,ContactsProcessCallback);
+												OnAABBOverlapCallback,ContactsProcessCallback);
 		}
 	}
 
@@ -210,12 +213,13 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cNewtonLockBodyUntilReturn::cNewtonLockBodyUntilReturn(const NewtonBody* apNewtonBody)
+	cNewtonLockBodyUntilReturn::cNewtonLockBodyUntilReturn(const NewtonBody* apNewtonBody, int alThreadIndex)
 	{
 		mpNewtonBody = apNewtonBody;
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (mpNewtonBody));
+		mlThreadIndex = alThreadIndex;
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (mpNewtonBody), mlThreadIndex);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	cNewtonLockBodyUntilReturn::~cNewtonLockBodyUntilReturn()
@@ -231,10 +235,14 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	int cPhysicsMaterialNewton::OnAABBOverlapCallback(	const NewtonMaterial* apMaterial,
-														const NewtonBody* apBody1, const NewtonBody* apBody2,
-														int alThreadIndex)
+	int cPhysicsMaterialNewton::OnAABBOverlapCallback(const NewtonJoint* apContactJoint, dFloat afTimestep, int alThreadIndex)
 	{
+		// Newton 3.14 folded the AABB-overlap pre-filter into the same persistent
+		// per-pair contact joint used by the contacts-process callback, rather than
+		// passing the two bodies directly.
+		const NewtonBody* apBody1 = NewtonJointGetBody0(apContactJoint);
+		const NewtonBody* apBody2 = NewtonJointGetBody1(apContactJoint);
+
 		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody1);
 		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody2);
 
@@ -259,8 +267,8 @@ namespace hpl {
 		//													mpContactBody2->GetName().c_str());
 
 		//Thread lock
-		cNewtonLockBodyUntilReturn criticalLock1(apBody1);
-		cNewtonLockBodyUntilReturn criticalLock2(apBody2);
+		cNewtonLockBodyUntilReturn criticalLock1(apBody1, alThreadIndex);
+		cNewtonLockBodyUntilReturn criticalLock2(apBody2, alThreadIndex);
 		
 		//Call the callbacks
 		if(pContactBody1->OnAABBCollision(pContactBody2)==false) return 0;
@@ -310,12 +318,12 @@ namespace hpl {
 
 			//Force
 			cVector3f vForce;
-			NewtonMaterialGetContactForce(pMaterial,vForce.v);
+			NewtonMaterialGetContactForce(pMaterial,pBody0,vForce.v);
 			contactData.mvForce += vForce;
 
 			//Position and normal
 			cVector3f vPos, vNormal;
-			NewtonMaterialGetContactPositionAndNormal(pMaterial,vPos.v, vNormal.v);
+			NewtonMaterialGetContactPositionAndNormal(pMaterial,pBody0,vPos.v, vNormal.v);
 
 			contactData.mvContactNormal += vNormal;
 			contactData.mvContactPosition += vPos;
@@ -329,11 +337,11 @@ namespace hpl {
 			if(pContactBody1->GetWorld()->GetSaveContactPoints())
 			{
 				//Thread lock
-				NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
+				NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0), alThreadIndex);
 
 				cCollidePoint collidePoint;
 				collidePoint.mfDepth = 1;
-				NewtonMaterialGetContactPositionAndNormal (pMaterial, collidePoint.mvPoint.v, collidePoint.mvNormal.v);
+				NewtonMaterialGetContactPositionAndNormal (pMaterial, pBody0, collidePoint.mvPoint.v, collidePoint.mvNormal.v);
 
 				pContactBody1->GetWorld()->GetContactPoints()->push_back(collidePoint);
 
@@ -353,8 +361,8 @@ namespace hpl {
 		contactData.mvContactPosition = contactData.mvContactPosition / (float)lContactNum;
 
 		//Thread lock
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1));
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0), alThreadIndex);
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1), alThreadIndex);
 
 		////////////////////////////
 		//Surface data stuff

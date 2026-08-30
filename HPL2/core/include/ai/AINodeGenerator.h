@@ -54,7 +54,7 @@ namespace hpl {
 	{
 	public:
 		cAINodeGenerator();
-		~cAINodeGenerator();
+		virtual ~cAINodeGenerator();
 
 		void Generate(cWorld* apWorld,cAINodeGeneratorParams *apParams);
 

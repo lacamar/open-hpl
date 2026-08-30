@@ -106,6 +106,8 @@ namespace hpl {
 	class cAINodeRayCallback : public iPhysicsRayCallback
 	{
 	public:
+		virtual ~cAINodeRayCallback(){}
+
 		void Reset();
 		void SetFlags(tAIFreePathFlag aFlags){ mFlags = aFlags;}
 		

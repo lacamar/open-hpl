@@ -69,7 +69,9 @@ namespace hpl {
 		kSerializableClassInit(cBoundingVolume)
 	public:
 		cBoundingVolume();
-		
+		virtual ~cBoundingVolume(){}
+
+
 		const cVector3f& GetMax();
 		const cVector3f& GetMin();
 
