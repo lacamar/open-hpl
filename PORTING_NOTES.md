@@ -1,7 +1,8 @@
 # Amnesia: The Dark Descent (HPL2) — arm64 Linux port — session handover
 
-Working tree: `/home/lm/.local/src/AmnesiaTheDarkDescent` (uncommitted changes throughout —
-nothing has been git-committed during this port; `git status`/`git diff` show everything).
+Working tree: `/home/lm/.local/src/open-hpl` (was `AmnesiaTheDarkDescent` — renamed
+as part of the project's rebrand to Open HPL; git history predates the rename).
+The port itself is now committed; see `git log` for the breakdown.
 Target system: Fedora Asahi Remix 44, aarch64, 16K page size. Real game data (Steam,
 legitimately owned by the user) lives at
 `/home/lm/.steam/steam/steamapps/common/Amnesia The Dark Descent` (also reachable via
@@ -17,7 +18,7 @@ an AngelScript compatibility issue, now fixed.
 ## Build / deploy / test cycle (use this exact pattern)
 
 ```sh
-cd /home/lm/.local/src/AmnesiaTheDarkDescent
+cd /home/lm/.local/src/open-hpl
 cmake --build amnesia/src/build --target Amnesia -j$(nproc)   # or --target Launcher, or no --target for all
 GAMEDIR="/home/lm/.steam/steam/steamapps/common/Amnesia The Dark Descent"
 \cp -f amnesia/src/build/Amnesia.bin.aarch64 "$GAMEDIR/Amnesia.bin.aarch64"   # \cp NOT cp — see gotcha below
