@@ -455,14 +455,32 @@ support exists)**:
 
 ## Next session priorities (handover, this session ending on token limit)
 
-1. **AMFP: fix root cause #2** — player collides fine standing still, falls through when
-   moving. Suspected: discrete (non-swept) per-frame collision step in
-   `HPL2/core/sources/physics/CharacterBody.cpp` (`CheckMoveCollision`,
-   `AlignPosAddAccordingToGroundNormal`) failing at seams between the ~20+ separate
-   physics bodies AMFP's floor mesh got batched into (`CombineAndCreateMeshesAndPhysics`,
-   `WorldLoaderHplMap.cpp:1252`). Use live `gdb -p <pid>` on a moving player, same
-   technique used for root cause #1 this session — don't repeat the screenshot/window-geometry
-   approach, it's unreliable in this environment; headless (log + `/proc` + gdb) is faster.
+1. ~~**AMFP: fix root cause #2**~~ — **FIXED (2026-09-01), and it was a real bug - an
+   earlier pass in this doc wrongly called it "intentional", which was wrong; corrected here.**
+   Root cause: `cLuxPlayer::PlaceAtStartNode()` (`amnesia/src/game/LuxPlayer.cpp`, called by
+   `TeleportPlayer()`) sets the character's position via `SetFeetPosition()` but never clears
+   its existing velocity/move-speed. `maps/01_mansion_01.hps`'s `OnStart()` calls
+   `TeleportPlayer("temple_intro_1")` as its very first action, before the character has ever
+   had a safe initial position - by that point it had already been falling (from whatever
+   default/uninitialized spot the engine placed it at on map load) long enough to hit terminal
+   fall velocity (`mvVelocity.y = -30`, the engine's `mfMaxGravitySpeed` cap - confirmed via
+   live `gdb -p <pid>` sampling from the first moment the player object existed). Teleporting
+   to `temple_intro_1` (and later `MainStart`) carried that -30 velocity straight through both
+   real, solid floors - confirmed via `gdb` that both floors are genuinely collidable when the
+   character is placed there with velocity actually at zero. **Fix**: added
+   `mpCharBody->StopMovement()` (`HPL2/core/sources/physics/CharacterBody.cpp` - an existing,
+   already-used-elsewhere method that zeroes velocity/move-speed/acceleration state, e.g. used
+   on ladder-exit and enemy-state-reset, just never wired into player teleportation) right
+   before `SetFeetPosition()` in `PlaceAtStartNode()`. This is a general engine bugfix, not
+   AMFP-specific - any teleport with residual motion (in either game) could have hit this;
+   Dark Descent just never happened to exercise a teleport-while-falling until now. **Verified**:
+   after the fix, sampling position/velocity across the real `TeleportPlayer("MainStart")` call
+   (triggered via gdb by calling the exact same functions the in-game "New Game" confirmation
+   popup calls - `gpBase->mpMainMenu->ExitMenu(eLuxMainMenuExit_StartGame)` etc, since no mouse
+   input simulation tool exists in this environment) shows velocity `(0,0,0)` both immediately
+   before and immediately after the teleport, with the player resting solid and stationary for
+   6+ seconds post-teleport. Dark Descent re-verified unaffected (stable on ground,
+   `mlOnGroundCount` 11-12, no crash) with the same fix in the shared binary.
 2. **SOMA: real rendering needs an HPSL→GLSL transpiler** — scoped this session, not
    started. HPSL (`core/shaders/hpsl/*.hpsl`) is a genuine distinct shading language, not a
    GLSL variant: custom preprocessor (`@ifdef`/`@include`/`@else`/`@endif`), custom types

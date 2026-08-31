@@ -826,6 +826,11 @@ void cLuxPlayer::PlaceAtStartNode(cLuxNode_PlayerStart *apNode)
 	if(mpSpawnPS->IsActive())
 		mpSpawnPS->RespawnAll(); //Needs to respawn all!
 
+	mpCharBody->StopMovement(); //Clear any residual velocity/move-speed from before the
+								//teleport (e.g. a fall in progress) - otherwise it carries
+								//straight through into the new position, which can send the
+								//character clean through the destination's floor before
+								//collision ever gets a chance to catch a stationary character.
 	mpCharBody->SetFeetPosition(apNode->GetPosition());
 	mpCharBody->SetYaw(apNode->GetAngle());
 	mpCamera->SetYaw(apNode->GetAngle());
