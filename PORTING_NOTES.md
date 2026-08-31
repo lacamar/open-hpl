@@ -377,35 +377,67 @@ evidence already says loading succeeded. Worth formalizing into a small
 reusable script (e.g. `scripts/headless-check.sh`) if this project keeps
 needing it - not done yet, flagging for whoever picks this up next.
 
-**SOMA: root-caused a real crash, but the actual blocker is bigger than a
-bug.** `Soma.bin.aarch64` (already built before this session) SIGSEGVs
-reliably on `00_01_apartment` load. Root-caused via `coredumpctl` + `gdb`
-(debug info present): `iRenderer::DrawCurrentMaterial()`
-(`HPL2/core/sources/graphics/Renderer.cpp:2188`) calls
-`pMatType->SetupObjectSpecificData(aRenderMode, mpCurrentProgram, ...)`
-without checking `mpCurrentProgram` for NULL, and
-`cMaterialType_SolidDiffuse::SetupObjectSpecificData()`
-(`HPL2/core/sources/graphics/MaterialType_BasicSolid.cpp:586`) dereferences
-it unconditionally (`apProgram->SetFloat(...)`) - confirmed via disassembly +
-core registers (`apProgram = 0x0`). `mpCurrentProgram` is NULL because
-`cMaterial::GetProgram()` never got a compiled Illumination-mode program in
-the first place. Traced why: `hpl.log` is full of
-`Couldn't find file 'deferred_base_vtx.glsl' in resources` - and there is no
-such file anywhere in SOMA's data. **SOMA ships `.hpsl` shaders under
+**SOMA: the confirmed NULL-program crash is now fixed - the engine boots,
+loads real SOMA level data, and reaches "Game Running" without
+crashing.** Root cause (found earlier via `coredumpctl` + `gdb`, debug info
+present, confirmed by disassembly + core registers showing
+`apProgram = 0x0`): `cMaterial::GetProgram()` never gets a compiled program
+for any SOMA material because **SOMA ships `.hpsl` shaders under
 `core/shaders/hpsl/*.hpsl`** (`deferred_base_vtx.hpsl`,
 `deferred_gbuffer_solid_frag.hpsl`, `deferred_illumination_solid_frag.hpsl`,
 plus tessellation-stage shaders like `deferred_terrain_tess_cs/es.hpsl` with
-no HPL2 equivalent at all) - this is HPL3's shader format/pipeline, not
-HPL2's plain `.glsl`. **The null-pointer crash is real but not the actual
-problem** - fixing it would just trade a crash for silently-wrong rendering
-(no diffuse/illumination shading at all, since every material program lookup
-fails the same way). The real gap is that `soma/`'s Phase 0 scaffolding
-assumed SOMA's renderer/shader needs are HPL2-compatible like Dark
-Descent's/AMFP's, and they are not - SOMA needs either an HPSL→GLSL
-translation layer or a materially HPL3-shaped renderer, not a null-check.
-**Not attempted this session** - flagged as a much larger, open-ended effort
-than the AMFP work above; deprioritized in favor of AMFP per explicit
-direction this session.
+no HPL2 equivalent at all) instead of HPL2's plain `.glsl` - this is HPL3's
+shader format/pipeline, and HPL2 has no HPSL compiler, so every
+`hpl.log` line reads `Couldn't find file 'deferred_base_vtx.glsl' in
+resources`, leaving `mpCurrentProgram` NULL for every material.
+`iRenderer::DrawCurrentMaterial()`
+(`HPL2/core/sources/graphics/Renderer.cpp:2188`, now ~2191) used to call
+`pMatType->SetupObjectSpecificData(aRenderMode, mpCurrentProgram, ...)`
+unconditionally, and `cMaterialType_SolidDiffuse::SetupObjectSpecificData()`
+(`HPL2/core/sources/graphics/MaterialType_BasicSolid.cpp:586`) dereferenced
+that NULL program (`apProgram->SetFloat(...)`) - guaranteed SIGSEGV on any
+object using `HasObjectSpecificsSettings()`.
+
+**Fix** (`HPL2/core/sources/graphics/Renderer.cpp`,
+`iRenderer::DrawCurrentMaterial()`): added `&& mpCurrentProgram` to the
+existing `if(pMaterial->HasObjectSpecificsSettings(aRenderMode))` guard, so
+the `SetupObjectSpecificData()` call (and by extension every material-type
+implementation that dereferences the program pointer it's handed) is simply
+skipped when no program was loaded, instead of crashing. This is the only
+unguarded `mpCurrentProgram` use in `Renderer.cpp` - the two other
+call sites (`SetupTypeSpecificData`/`SetupMaterialSpecificData`, lines
+~2133/2141) are already nested inside `if(mpCurrentProgram)` at line 2126
+and were never reachable with a NULL program. No other crash surfaced during
+testing - see below.
+
+Verified end-to-end this session: rebuilt `Soma` target, deployed
+`Soma.bin.aarch64` into the real SOMA install, launched headlessly (per the
+established pattern below - `pgrep`/`/proc/<pid>/stat` tick sampling/
+`coredumpctl`, no screenshots). The process loads `00_01_apartment.hpm`
+(logged: "SOMA hpm: 145 static objects, 11 primitives, 0 entities, 70
+lights, 0 areas, 0 sounds"), reaches `Game Running`, and stays alive and
+CPU-active (utime climbing steadily - real render-loop work, not a hang)
+for 40+ seconds with zero new crashes/coredumps (`coredumpctl list` shows
+only pre-existing entries from Aug 28/30, nothing from this session's runs).
+No further crash of the same shape needed fixing this session - one
+guard was sufficient to reach a stable running state.
+
+**Known-remaining limitations, expected and not attempted (still no HPSL
+support exists)**:
+- No real rendering: every SOMA material's Deferred/FogArea GLSL shaders are
+  reported missing (`Couldn't find file 'deferred_base_vtx.glsl'`/
+  `deferred_light_frag.glsl`/`deferred_fog_vtx.glsl`/`deferred_fog_frag.glsl`
+  in resources) and never bind, so diffuse/illumination/fog shading is
+  entirely absent - this is the direct, expected consequence of the guard
+  above (skip instead of crash), not a new bug.
+- Many SOMA entity types have no loader in this HPL2-based Phase 0
+  scaffolding (`Couldn't find loader for type 'Prop_Grab'/'Prop_Lamp'/
+  'Prop_Rigid'/'StaticProp'/...` etc.) - expected, matches the documented
+  Phase 0 scope (no player/scripts, map geometry only).
+- SOMA still needs either an HPSL→GLSL translation layer or a materially
+  HPL3-shaped renderer to ever render correctly - that remains out of scope
+  (multi-week effort, explicitly excluded from this session's goal of "stop
+  the crash, boot, load real data").
 
 ## General guidance for whoever picks this up
 

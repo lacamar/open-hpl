@@ -2183,7 +2183,10 @@ namespace hpl {
 			cMaterial *pMaterial = apObject->GetMaterial();
 			iMaterialType *pMatType = pMaterial->GetType();
 
-			if(pMaterial->HasObjectSpecificsSettings(aRenderMode))
+			// mpCurrentProgram can be NULL here for materials whose shader failed to load
+			// (e.g. SOMA's HPSL shaders, which HPL2 cannot compile) - skip rather than
+			// let SetupObjectSpecificData() dereference a NULL program.
+			if(pMaterial->HasObjectSpecificsSettings(aRenderMode) && mpCurrentProgram)
 			{
 				pMatType->SetupObjectSpecificData(aRenderMode,mpCurrentProgram,apObject,this);
 			}
