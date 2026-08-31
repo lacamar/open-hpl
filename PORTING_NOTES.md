@@ -288,49 +288,94 @@ shared HPL2 engine against the real game's own config/resource files, loads
 one hardcoded map, and drives a debug free-fly camera - no player controller,
 no scripts, no menus.
 
-**AMFP: added this session, builds and boots, but has a real, confirmed
-severe performance bug loading its first real map - not yet root-caused.**
-(Two earlier claims in this doc were wrong and have both been corrected in
-this final pass - see git history of this file if the old wording is
-wanted: an initial "screenshot-confirmed working" claim mistook the desktop
-wallpaper on another workspace for the game's render, and a follow-up
-"probably fine, just slow" characterization undersold how bad it actually
-is.)
+**AMFP: added this session, builds and boots, and the real blocker is now
+root-caused and fixed.** (Earlier claims in this doc were wrong at each
+intermediate stage - see git history if the old wording is wanted: first
+"screenshot-confirmed working" mistook desktop wallpaper on another
+workspace for the game's render; then "confirmed severe algorithmic
+perf bug, not root-caused" was itself wrong about the *cause*, though
+right that something serious was happening.)
 
 `amfp/src/game/` (wired into `amnesia/src/CMakeLists.txt` as a third sibling
-target next to `game` and `soma_game`, same
-`add_subdirectory(../../amfp/src/game amfp_game)` pattern). Confirmed by
-inspection that AMFP's shipped data is genuinely HPL2-compatible - it has
-`core/shaders/deferred_base_vtx.glsl` and the rest of the standard HPL2
-deferred-renderer `.glsl` shader set (unlike SOMA - see below), and its
-`main_init.cfg`/`resources.cfg` are the same shape as Dark Descent's. Built
-clean (`cmake --build amnesia/src/build --target Amfp`), deployed as
-`Amfp.bin.aarch64` into the AMFP Steam dir. Engine init and
-resource/material loading succeed with no errors in `hpl.log`.
+target next to `game` and `soma_game`). AMFP's shipped data is genuinely
+HPL2-compatible (`core/shaders/deferred_base_vtx.glsl` and the rest of the
+standard HPL2 deferred-renderer `.glsl` set, unlike SOMA - see below), and
+its `main_init.cfg`/`resources.cfg` are the same shape as Dark Descent's.
 
-**The real, confirmed finding**: loading `01_mansion_01.map` (the game's
-real first map, start position/rotation taken from its own `InitStart`
-Area) never completes in any reasonable time. A precisely-cropped
-screenshot of the actual game window (using its real geometry from
-`niri msg windows` + `niri msg outputs`, not a full-desktop capture) confirms
-it is genuinely, entirely black - no partial render, nothing - consistent
-with `LoadWorld()` still blocking the main thread (no camera/viewport exists
-until it returns). Left it running and monitored via `/proc/<pid>/stat`:
-**it ran for ~19.5 minutes of wall-clock time (`ps -o etimes=`), consuming
-~1152s of CPU time in that span - i.e. pegged at essentially 99% of one CPU
-core continuously the entire time - and never got past the first**
-`-------- Loading map '01_mansion_01.map' ---------` **log line** before
-being killed. This is not "slow because it's a big map" - no engine takes
-20 minutes of solid CPU work to load one game level. This strongly suggests
-a real algorithmic bug in the loading path (something scaling
-near-quadratically or worse with polygon/entity/physics-shape count) that
-SOMA's tiny test apartment and Dark Descent's already-exercised maps never
-hit, because AMFP's real first level has far more geometry than either.
-**Not root-caused this session** - next step is profiling (perf/gprof, or
-even just bisecting `cWorldLoaderHplMap`'s load steps with timing logs) to
-find which phase of the load is actually pathological, most likely
-somewhere in mesh/entity instantiation or Newton collision-shape cooking
-given the size of this specific map vs. the ones already proven fast.
+**Root cause, found via `gdb -p <pid>` on the actually-stuck process**
+(not guessing from logs/timing - attach and read the real backtrace): it
+was wedged inside Newton's `dgWorld::CreateCollisionFromSerialization`
+(`dgDeserializeMarker`), deserializing physics body #1 of 178, with the
+`cBinaryBuffer` read cursor already sitting at the *exact end* of the 56MB
+`.map_cache` file. `cBinaryBuffer::GetData()`
+(`HPL2/core/sources/resources/BinaryBuffer.cpp`) silently no-ops past EOF -
+clamps the cursor, returns `false`, leaves the destination untouched -
+and nothing in Newton's C serialization-callback protocol checks that
+return value, so once a corrupt/truncated cache runs past its real data,
+Newton just keeps "reading" stale/uninitialized memory as valid stream
+data forever instead of failing. The specific `.map_cache` that triggered
+this was pre-existing (not written by this session) - almost certainly
+truncated by an interrupted save from an earlier crashed run. Confirmed by
+deleting it: rebuilding straight from `.map` source data took **3.9
+seconds**, not 20 minutes - this was never an algorithmic/performance
+problem in the load path itself.
+
+**Fix** (`HPL2/core/{include,sources}/resources/WorldLoaderHplMap.{h,cpp}`,
+`MAP_CACHE_FORMAT_VERSION` bumped 11->12): the cache format now stores its
+own total payload byte count in the header; `LoadCacheFile` checks that
+against the actually-loaded file size *before* ever reaching Newton's
+deserializer, rejecting a truncated/corrupt cache in milliseconds with a
+clean error instead of hanging. Verified end-to-end: fresh build saves a
+v12 cache (3.1s), reloading from that cache is fast (663ms total, 491ms of
+which is the physics-shape deserialization that used to hang), and
+truncating a real cache to 70% is caught immediately
+(`ERROR: File '...' is truncated or corrupt (expected N bytes, file is M)!
+Rebuilding from source instead.`) with a clean fallback rebuild. This is
+generic `cBinaryBuffer`/`WorldLoaderHplMap` code shared by all three
+games, not AMFP-specific - benefits Dark Descent and SOMA's cache loading
+too.
+
+**Still open, not attempted**: with the load hang fixed, the world does
+load and `cScene::Render()` runs, but a precisely-cropped screenshot of
+the actual game window (via real geometry from `niri msg windows`, not a
+full-desktop capture - that mistake from earlier this session is exactly
+why precision here matters) showed a flat near-black frame with real but
+minimal pixel variation (min=771/65535, not a totally blank clear color) -
+consistent with the hardcoded debug-camera position/rotation guessed from
+the map's `InitStart` Area being wrong for this specific map (embedded in
+geometry, or just facing an unlit surface), *and* with there being no
+lighting/scripts running at all in this Phase 0 scaffolding (no AMFP game
+logic exists to reuse - unlike Dark Descent, AMFP's own game-logic source
+was never open-sourced, only its data). **Getting an actually-playable
+native AMFP is a much bigger undertaking than this fix** - it needs some
+equivalent of Dark Descent's `Lux*` game-logic layer (player controller,
+scripts, lighting/quest logic) written from scratch by reverse-engineering
+AMFP's data/script format, not ported from existing open-source code.
+**Do not swap `open-hpl.spec`'s `open-hpl-machine-for-pigs` launcher away
+from box64 based on this fix alone** - box64-running-the-real-binary is
+currently the only way to actually *play* AMFP; this session's native
+Phase 0 build only proves the shared engine can load AMFP's real data
+without crashing/hanging, which is a necessary foundation, not a
+replacement.
+
+**Headless testing pattern established this session** (per explicit
+request - screenshots needing precise window geometry and an unlocked
+screen are unreliable/slow to depend on): launch the binary
+backgrounded, then verify success *without any screenshot* via (1)
+`hpl.log` for `Total:`/`Game Running`/`ERROR` lines (already-instrumented,
+see `gbLogTiming` in `WorldLoaderHplMap.cpp`), (2) `/proc/<pid>/stat`
+field 14+15 (utime+stime) sampled a few seconds apart to distinguish
+"genuinely still working" (ticks climbing near 1:1 with wall time) from
+"truly hung" (ticks flat) from "crashed" (`pgrep` comes back empty +
+`coredumpctl list`), and (3) `gdb -p <pid> -batch -ex bt -ex detach` to
+get a real backtrace of a stuck process in seconds rather than guessing.
+This is how the actual root cause above was found - not a screenshot.
+Only reach for a screenshot (and then, only a precisely-cropped one via
+`niri msg windows`/`niri msg outputs` real geometry, never a raw
+full-desktop capture) to confirm *visual* correctness once the log/process
+evidence already says loading succeeded. Worth formalizing into a small
+reusable script (e.g. `scripts/headless-check.sh`) if this project keeps
+needing it - not done yet, flagging for whoever picks this up next.
 
 **SOMA: root-caused a real crash, but the actual blocker is bigger than a
 bug.** `Soma.bin.aarch64` (already built before this session) SIGSEGVs
