@@ -452,3 +452,31 @@ support exists)**:
   AngelScript upgrade) may still be lurking in code paths not yet exercised (most of the game
   has not been played through yet — only the very start of the first level is confirmed
   working).
+
+## Next session priorities (handover, this session ending on token limit)
+
+1. **AMFP: fix root cause #2** — player collides fine standing still, falls through when
+   moving. Suspected: discrete (non-swept) per-frame collision step in
+   `HPL2/core/sources/physics/CharacterBody.cpp` (`CheckMoveCollision`,
+   `AlignPosAddAccordingToGroundNormal`) failing at seams between the ~20+ separate
+   physics bodies AMFP's floor mesh got batched into (`CombineAndCreateMeshesAndPhysics`,
+   `WorldLoaderHplMap.cpp:1252`). Use live `gdb -p <pid>` on a moving player, same
+   technique used for root cause #1 this session — don't repeat the screenshot/window-geometry
+   approach, it's unreliable in this environment; headless (log + `/proc` + gdb) is faster.
+2. **SOMA: real rendering needs an HPSL→GLSL transpiler** — scoped this session, not
+   started. HPSL (`core/shaders/hpsl/*.hpsl`) is a genuine distinct shading language, not a
+   GLSL variant: custom preprocessor (`@ifdef`/`@include`/`@else`/`@endif`), custom types
+   (`cVector4f`, `cTexture2D`, `cTextureBuffer`), and shader I/O passed as explicit `main()`
+   parameters instead of GLSL's global `in`/`out` declarations, plus a "constant buffer
+   chosen by MaterialType" indirection layer not yet investigated. 75 `.hpsl` files total.
+   This is realistically its own multi-session project — start by writing the `@ifdef`/
+   `@include` preprocessor and the `main()`-parameter→GLSL-global rewrite for ONE simple
+   shader (`clear_frag.hpsl`/`clear_vtx.hpsl` look like the smallest files, good first
+   target) before attempting anything material-system-wide. SOMA currently boots and runs
+   stably without crashing (fixed this session, commit `7e426e4`) but renders no real
+   materials — that's the honest current ceiling until the transpiler exists.
+3. Both AMFP and SOMA changes so far are in `amfp/src/game/`, `soma/src/game/`, and shared
+   `HPL2/core/` — none of it ships in the `open-hpl` RPM except the experimental
+   `open-hpl-machine-for-pigs` entry (see spec changelog 1.3.1-5). Re-run the release chain
+   (commit → tag → `mx-rpm --copr arm64-misc -i`) after any further fixes, same pattern used
+   throughout this session.
