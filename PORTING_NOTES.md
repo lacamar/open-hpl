@@ -275,6 +275,93 @@ automatically stay centered in the now-smaller virtual space.
    action IDs (`eLuxAction_LeftClick`/`MiddleClick`/`RightClick`) already used
    successfully elsewhere in the same file.
 
+## AMFP and SOMA reverse-engineering support (this session)
+
+Two more Frictional/HPL2-lineage games have real Linux data available locally
+(Steam): `Amnesia: A Machine for Pigs` at
+`/home/lm/.local/share/Steam/steamapps/common/Machine for Pigs` and `SOMA` at
+`/home/lm/.local/share/Steam/steamapps/common/SOMA`. Neither ships open
+source game-logic (only Dark Descent's was ever open-sourced) - the approach
+for both is the same "Phase 0/1 scaffolding" pattern already used for `soma/`
+(see its `src/game/` for the shape): a minimal `hplMain()` that boots the
+shared HPL2 engine against the real game's own config/resource files, loads
+one hardcoded map, and drives a debug free-fly camera - no player controller,
+no scripts, no menus.
+
+**AMFP: added this session, builds and boots, but has a real, confirmed
+severe performance bug loading its first real map - not yet root-caused.**
+(Two earlier claims in this doc were wrong and have both been corrected in
+this final pass - see git history of this file if the old wording is
+wanted: an initial "screenshot-confirmed working" claim mistook the desktop
+wallpaper on another workspace for the game's render, and a follow-up
+"probably fine, just slow" characterization undersold how bad it actually
+is.)
+
+`amfp/src/game/` (wired into `amnesia/src/CMakeLists.txt` as a third sibling
+target next to `game` and `soma_game`, same
+`add_subdirectory(../../amfp/src/game amfp_game)` pattern). Confirmed by
+inspection that AMFP's shipped data is genuinely HPL2-compatible - it has
+`core/shaders/deferred_base_vtx.glsl` and the rest of the standard HPL2
+deferred-renderer `.glsl` shader set (unlike SOMA - see below), and its
+`main_init.cfg`/`resources.cfg` are the same shape as Dark Descent's. Built
+clean (`cmake --build amnesia/src/build --target Amfp`), deployed as
+`Amfp.bin.aarch64` into the AMFP Steam dir. Engine init and
+resource/material loading succeed with no errors in `hpl.log`.
+
+**The real, confirmed finding**: loading `01_mansion_01.map` (the game's
+real first map, start position/rotation taken from its own `InitStart`
+Area) never completes in any reasonable time. A precisely-cropped
+screenshot of the actual game window (using its real geometry from
+`niri msg windows` + `niri msg outputs`, not a full-desktop capture) confirms
+it is genuinely, entirely black - no partial render, nothing - consistent
+with `LoadWorld()` still blocking the main thread (no camera/viewport exists
+until it returns). Left it running and monitored via `/proc/<pid>/stat`:
+**it ran for ~19.5 minutes of wall-clock time (`ps -o etimes=`), consuming
+~1152s of CPU time in that span - i.e. pegged at essentially 99% of one CPU
+core continuously the entire time - and never got past the first**
+`-------- Loading map '01_mansion_01.map' ---------` **log line** before
+being killed. This is not "slow because it's a big map" - no engine takes
+20 minutes of solid CPU work to load one game level. This strongly suggests
+a real algorithmic bug in the loading path (something scaling
+near-quadratically or worse with polygon/entity/physics-shape count) that
+SOMA's tiny test apartment and Dark Descent's already-exercised maps never
+hit, because AMFP's real first level has far more geometry than either.
+**Not root-caused this session** - next step is profiling (perf/gprof, or
+even just bisecting `cWorldLoaderHplMap`'s load steps with timing logs) to
+find which phase of the load is actually pathological, most likely
+somewhere in mesh/entity instantiation or Newton collision-shape cooking
+given the size of this specific map vs. the ones already proven fast.
+
+**SOMA: root-caused a real crash, but the actual blocker is bigger than a
+bug.** `Soma.bin.aarch64` (already built before this session) SIGSEGVs
+reliably on `00_01_apartment` load. Root-caused via `coredumpctl` + `gdb`
+(debug info present): `iRenderer::DrawCurrentMaterial()`
+(`HPL2/core/sources/graphics/Renderer.cpp:2188`) calls
+`pMatType->SetupObjectSpecificData(aRenderMode, mpCurrentProgram, ...)`
+without checking `mpCurrentProgram` for NULL, and
+`cMaterialType_SolidDiffuse::SetupObjectSpecificData()`
+(`HPL2/core/sources/graphics/MaterialType_BasicSolid.cpp:586`) dereferences
+it unconditionally (`apProgram->SetFloat(...)`) - confirmed via disassembly +
+core registers (`apProgram = 0x0`). `mpCurrentProgram` is NULL because
+`cMaterial::GetProgram()` never got a compiled Illumination-mode program in
+the first place. Traced why: `hpl.log` is full of
+`Couldn't find file 'deferred_base_vtx.glsl' in resources` - and there is no
+such file anywhere in SOMA's data. **SOMA ships `.hpsl` shaders under
+`core/shaders/hpsl/*.hpsl`** (`deferred_base_vtx.hpsl`,
+`deferred_gbuffer_solid_frag.hpsl`, `deferred_illumination_solid_frag.hpsl`,
+plus tessellation-stage shaders like `deferred_terrain_tess_cs/es.hpsl` with
+no HPL2 equivalent at all) - this is HPL3's shader format/pipeline, not
+HPL2's plain `.glsl`. **The null-pointer crash is real but not the actual
+problem** - fixing it would just trade a crash for silently-wrong rendering
+(no diffuse/illumination shading at all, since every material program lookup
+fails the same way). The real gap is that `soma/`'s Phase 0 scaffolding
+assumed SOMA's renderer/shader needs are HPL2-compatible like Dark
+Descent's/AMFP's, and they are not - SOMA needs either an HPSL→GLSL
+translation layer or a materially HPL3-shaped renderer, not a null-check.
+**Not attempted this session** - flagged as a much larger, open-ended effort
+than the AMFP work above; deprioritized in favor of AMFP per explicit
+direction this session.
+
 ## General guidance for whoever picks this up
 
 - Always verify a fix against the *real* game data (see build/deploy/test cycle above), not

@@ -45,6 +45,10 @@ add_subdirectory(game game)
 # touch anything above.
 add_subdirectory(../../soma/src/game soma_game)
 
+# Phase 0 of the AMFP (Amnesia: A Machine for Pigs) game module - another
+# sibling target linking the same HPL2 library, same as soma_game above.
+add_subdirectory(../../amfp/src/game amfp_game)
+
 if(APPLE)
     add_subdirectory(launcher-macosx launcher)
 else()
