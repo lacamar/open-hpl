@@ -498,3 +498,44 @@ support exists)**:
    `open-hpl-machine-for-pigs` entry (see spec changelog 1.3.1-5). Re-run the release chain
    (commit → tag → `mx-rpm --copr arm64-misc -i`) after any further fixes, same pattern used
    throughout this session.
+
+## "Attic staircase" physics/trigger bug — investigated, NOT reproduced or root-caused
+
+A user report described "a physics/event trigger bug with the attic staircase." Searched
+exhaustively for a matching location and found no candidate:
+
+- Dark Descent's real campaign (`.../maps/main/ch01/ch02/ch03`) has **no map or area named
+  "attic"** anywhere — checked every `.hps` script (grep for `attic`/`stair`) and every
+  compiled `.map` file's raw strings (`grep -a`) in all three chapters. The only "stairs"
+  hits found were unrelated: a music-cue string `"04_event_stairs"` (a spooky ambient track
+  name, triggered by a skeleton-in-a-desk jump-scare in `11_study.hps`, nothing to do with
+  physical stairs) and a code comment in `13_machine_room.hps` ("Second collide, stairs
+  before exit") labeling a slime/howl trigger area, again unrelated to stair geometry or an
+  attic.
+- `custom_stories/` is empty — no user-installed custom story that might contain an attic
+  level.
+- AMFP has no attic-named content either, and isn't playable yet (Phase 0 scaffolding only —
+  no player controller, scripts, or menus per the "AMFP and SOMA reverse-engineering
+  support" section above), so it can't be the source of an in-game reproduction. SOMA:
+  same reasoning, even less complete.
+- Looked at the engine's generic stair-climbing mechanism,
+  `iCharacterBody::UpdateStepClimbing()`/`mfMaxStepHeight` (`HPL2/core/sources/physics/
+  CharacterBody.cpp`, ~line 358 and ~1694) as a candidate for a location-independent
+  "any staircase" bug, since Dark Descent has no literal attic. This code is unmodified
+  from upstream (not touched by the aarch64 port per `git blame`) and a plausible-looking
+  read didn't surface an obvious defect — but did not attempt a real fix here, because
+  verifying *any* change to character-controller physics requires actually walking a
+  staircase in a live game session, and there's no input-simulation tool in this
+  environment (no `ydotool`/`wlrctl`/`xdotool`, same limitation noted elsewhere in this
+  file) and no known in-game location to reproduce against. Driving movement via `gdb`
+  calls (the trick used for the teleport-velocity fix above) only works for one-shot
+  function calls, not sustained WASD-style movement needed to actually climb stairs.
+
+**Next session, before attempting a fix**: get a location from the user — which game, which
+save/chapter, and ideally a screenshot or the exact area name as seen in-game (subtitles/
+loading-screen text), since none of Dark Descent's internal entity/map names say "attic."
+If it turns out to be about general stair-climbing robustness rather than one specific
+place, `UpdateStepClimbing()` above is the right starting point, but treat any change there
+as high-risk (touches all player movement) and verify with real in-game testing, not just
+code review — this project's own "General guidance" section above is explicit that this
+codebase "has repeatedly compiled cleanly while still being behaviorally broken."
