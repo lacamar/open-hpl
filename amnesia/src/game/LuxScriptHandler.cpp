@@ -417,6 +417,31 @@ void cLuxScriptHandler::InitScriptFunctions()
 
 	AddFunc("void AutoSave()", (void *)AutoSave);
 	AddFunc("void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry)", (void *)CheckPoint);
+	// AMFP's real map scripts call a 6-arg CheckPoint (see CheckPointAmfp's comment) -
+	// registered as a second overload under the same script-visible name rather than
+	// changing the signature above, so Dark Descent's own 5-arg call sites keep compiling
+	// unmodified. AngelScript resolves overloads by declared signature same as C++.
+	AddFunc("void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry, bool abAmfpExtraArg)", (void *)CheckPointAmfp);
+
+	////////////////////////////
+	// AMFP-only script API - see the AmfpStub_* declarations in LuxScriptHandler.h.
+	AddFunc("void AddHint(const string &in asEntity, const string &in asUnknown)", (void *)AmfpStub_AddHint);
+	AddFunc("bool GetEntityActive(const string &in asName)", (void *)AmfpStub_GetEntityActive);
+	AddFunc("void SetEnemyMoveType(const string &in asEnemyName, const string &in asMoveType)", (void *)AmfpStub_SetEnemyMoveType);
+	AddFunc("void SetJournalDisabled(bool abDisabled)", (void *)AmfpStub_SetJournalDisabled);
+	AddFunc("void SetLampFlickerActive(const string &in asName, bool abActive)", (void *)AmfpStub_SetLampFlickerActive);
+	AddFunc("void SetLanternFlickerActive(bool abActive)", (void *)AmfpStub_SetLanternFlickerActive);
+	AddFunc("void SetManPigType(const string &in asEnemyName, const string &in asType)", (void *)AmfpStub_SetManPigType);
+	AddFunc("void SetParticleSystemActive(const string &in asName, bool abActive)", (void *)AmfpStub_SetParticleSystemActive);
+	AddFunc("void SetPhysicsAutoDisable(const string &in asName, bool abActive)", (void *)AmfpStub_SetPhysicsAutoDisable);
+	AddFunc("void SetPlayerInfection(float afAmount)", (void *)AmfpStub_SetPlayerInfection);
+	AddFunc("void ShowScreenImage(const string &in asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC)", (void *)AmfpStub_ShowScreenImage);
+	AddFunc("void StartPhoneRinging(const string &in asName)", (void *)AmfpStub_StartPhoneRinging);
+	AddFunc("void StopPhoneRinging(const string &in asName)", (void *)AmfpStub_StopPhoneRinging);
+	AddFunc("void AddEffectVoice4(const string &in asVoiceFile, const string &in asEffectFile, const string &in asTextCat, "
+		"const string &in asTextEntry1, float afTime1, const string &in asTextEntry2, float afTime2, "
+		"const string &in asTextEntry3, float afTime3, const string &in asTextEntry4, float afTime4, "
+		"bool abUsePosition, const string &in asPosEntity, float afMinDistance, float afMaxDistance)", (void *)AmfpStub_AddEffectVoice4);
 
 	AddFunc("void ChangeMap(const string &in asMapName, const string &in asStartPos, const string &in asStartSound, const string &in asEndSound)",(void *)ChangeMap);
 	AddFunc("void ClearSavedMaps()",(void *)ClearSavedMaps);
@@ -636,6 +661,7 @@ void cLuxScriptHandler::InitScriptFunctions()
 	AddFunc("void ShowEnemyPlayerPosition(const string &in asName)",(void *)ShowEnemyPlayerPosition);
 	AddFunc("void AlertEnemyOfPlayerPresence(const string &in asName)",(void *)AlertEnemyOfPlayerPresence);
 	AddFunc("void AddEnemyPatrolNode(const string &in asEnemyName, const string &in asNodeName, float afWaitTime, const string &in asAnimation)",(void *)AddEnemyPatrolNode);
+	AddFunc("void AddEnemyPatrolNode(const string &in asEnemyName, const string &in asNodeName, float afWaitTime, const string &in asAnimation, bool abAmfpExtraArg)",(void *)AddEnemyPatrolNodeAmfp);
 	AddFunc("void ClearEnemyPatrolNodes(const string &in asEnemyName)",(void *)ClearEnemyPatrolNodes);
 	AddFunc("void SetEnemySanityDecreaseActive(const string &in asName, bool abX)",(void *)SetEnemySanityDecreaseActive);
 	AddFunc("void TeleportEnemyToNode(const string &in asEnemyName, const string &in asNodeName, bool abChangeY)",(void *)TeleportEnemyToNode);
@@ -1021,6 +1047,99 @@ void __stdcall cLuxScriptHandler::CheckPoint(string& asName,string& asStartPos ,
 {
 	gpBase->mpMapHandler->GetCurrentMap()->SetCheckPoint(asName, asStartPos, asCallback);
 	gpBase->mpPlayer->GetHelperDeath()->SetHint(asDeathHintCat, asDeathHintEntry);
+}
+
+//-----------------------------------------------------------------------
+
+void __stdcall cLuxScriptHandler::CheckPointAmfp(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry, bool abAmfpExtraArg)
+{
+	// AMFP's real map scripts (e.g. maps/01_mansion_01.hps) call CheckPoint with a 6th
+	// bool argument Dark Descent's original signature doesn't have - exact semantics not
+	// yet reverse-engineered (candidates: disable auto-save, skip the death hint, force a
+	// full respawn vs. a soft one). Accepted here purely so AMFP's scripts compile at all;
+	// intentionally not wired into cLuxMap::SetCheckPoint yet to avoid guessing wrong.
+	CheckPoint(asName, asStartPos, asCallback, asDeathHintCat, asDeathHintEntry);
+}
+
+//-----------------------------------------------------------------------
+
+// AMFP-only script API stubs - see LuxScriptHandler.h. Each logs once (via the engine's
+// normal Warning() so it's visible in hpl.log without spamming every call) and otherwise
+// safely no-ops / returns a conservative default. Real behavior is unimplemented pending
+// further reverse engineering - do not treat these as correct gameplay yet.
+void __stdcall cLuxScriptHandler::AmfpStub_AddHint(string &asEntity, string &asUnknown)
+{
+	Warning("AMFP stub: AddHint('%s', '%s') not implemented\n", asEntity.c_str(), asUnknown.c_str());
+}
+
+bool __stdcall cLuxScriptHandler::AmfpStub_GetEntityActive(string &asName)
+{
+	Warning("AMFP stub: GetEntityActive('%s') not implemented, returning true\n", asName.c_str());
+	return true;
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetEnemyMoveType(string &asEnemyName, string &asMoveType)
+{
+	Warning("AMFP stub: SetEnemyMoveType('%s', '%s') not implemented\n", asEnemyName.c_str(), asMoveType.c_str());
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetJournalDisabled(bool abDisabled)
+{
+	Warning("AMFP stub: SetJournalDisabled(%d) not implemented\n", abDisabled);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetLampFlickerActive(string &asName, bool abActive)
+{
+	Warning("AMFP stub: SetLampFlickerActive('%s', %d) not implemented\n", asName.c_str(), abActive);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetLanternFlickerActive(bool abActive)
+{
+	Warning("AMFP stub: SetLanternFlickerActive(%d) not implemented\n", abActive);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetManPigType(string &asEnemyName, string &asType)
+{
+	Warning("AMFP stub: SetManPigType('%s', '%s') not implemented\n", asEnemyName.c_str(), asType.c_str());
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetParticleSystemActive(string &asName, bool abActive)
+{
+	Warning("AMFP stub: SetParticleSystemActive('%s', %d) not implemented\n", asName.c_str(), abActive);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetPhysicsAutoDisable(string &asName, bool abActive)
+{
+	Warning("AMFP stub: SetPhysicsAutoDisable('%s', %d) not implemented\n", asName.c_str(), abActive);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_SetPlayerInfection(float afAmount)
+{
+	Warning("AMFP stub: SetPlayerInfection(%f) not implemented\n", afAmount);
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_ShowScreenImage(string &asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC)
+{
+	Warning("AMFP stub: ShowScreenImage('%s', ...) not implemented\n", asFile.c_str());
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_StartPhoneRinging(string &asName)
+{
+	Warning("AMFP stub: StartPhoneRinging('%s') not implemented\n", asName.c_str());
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_StopPhoneRinging(string &asName)
+{
+	Warning("AMFP stub: StopPhoneRinging('%s') not implemented\n", asName.c_str());
+}
+
+void __stdcall cLuxScriptHandler::AmfpStub_AddEffectVoice4(string &asVoiceFile, string &asEffectFile, string &asTextCat,
+	string &asTextEntry1, float afTime1, string &asTextEntry2, float afTime2,
+	string &asTextEntry3, float afTime3, string &asTextEntry4, float afTime4,
+	bool abUsePosition, string &asPosEntity, float afMinDistance, float afMaxDistance)
+{
+	Warning("AMFP stub: AddEffectVoice4('%s') only showing first of 4 captions\n", asVoiceFile.c_str());
+	AddEffectVoice(asVoiceFile, asEffectFile, asTextCat, asTextEntry1, abUsePosition, asPosEntity, afMinDistance, afMaxDistance);
 }
 
 //-----------------------------------------------------------------------
@@ -3067,6 +3186,11 @@ void __stdcall cLuxScriptHandler::AddEnemyPatrolNode(string& asName, string& asN
 		pEnemy->AddPatrolNode(pNode, afWaitTime, asAnimation);
 	
 	END_SET_PROPERTY
+}
+
+void __stdcall cLuxScriptHandler::AddEnemyPatrolNodeAmfp(string& asName, string& asNodeName, float afWaitTime, string& asAnimation, bool abAmfpExtraArg)
+{
+	AddEnemyPatrolNode(asName, asNodeName, afWaitTime, asAnimation);
 }
 
 void __stdcall cLuxScriptHandler::ClearEnemyPatrolNodes(string& asName)

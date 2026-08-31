@@ -115,6 +115,36 @@ private:
 	 * Callback syntax: MyFunc(string &in asName, int alCount), Count is 0 on first checkpoint load!
 	 */
 	static void __stdcall CheckPoint(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry);
+	// AMFP overload - see LuxScriptHandler.cpp's CheckPointAmfp for why this is separate.
+	static void __stdcall CheckPointAmfp(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry, bool abAmfpExtraArg);
+
+	// AMFP-only script API, found by diffing maps/01_mansion_01.hps's actual function
+	// calls against this file's registered functions (comm -23, see PORTING_NOTES.md).
+	// Stubs for now (log once, safe no-op/default return) purely so AMFP's real scripts
+	// compile and run instead of hard-failing - real behavior is a follow-up, not yet
+	// reverse-engineered/wired to the engine. Not called by any Dark Descent script.
+	static void __stdcall AmfpStub_AddHint(string &asEntity, string &asUnknown);
+	static bool __stdcall AmfpStub_GetEntityActive(string &asName);
+	static void __stdcall AmfpStub_SetEnemyMoveType(string &asEnemyName, string &asMoveType);
+	static void __stdcall AmfpStub_SetJournalDisabled(bool abDisabled);
+	static void __stdcall AmfpStub_SetLampFlickerActive(string &asName, bool abActive);
+	static void __stdcall AmfpStub_SetLanternFlickerActive(bool abActive);
+	static void __stdcall AmfpStub_SetManPigType(string &asEnemyName, string &asType);
+	static void __stdcall AmfpStub_SetParticleSystemActive(string &asName, bool abActive);
+	static void __stdcall AmfpStub_SetPhysicsAutoDisable(string &asName, bool abActive);
+	static void __stdcall AmfpStub_SetPlayerInfection(float afAmount);
+	static void __stdcall AmfpStub_ShowScreenImage(string &asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC);
+	static void __stdcall AmfpStub_StartPhoneRinging(string &asName);
+	static void __stdcall AmfpStub_StopPhoneRinging(string &asName);
+	// AMFP's "4-caption" variant of AddEffectVoice (one .ogg with four separately-timed
+	// subtitle lines, used by the Phonautograph puzzle props) - only the first caption is
+	// shown for now (reuses AddEffectVoice as-is), the other three timed captions are not
+	// yet implemented. Real per-caption timing would need a new engine-side mechanism, not
+	// just a script-API stub - only one call site in the whole game (01_mansion_01.hps).
+	static void __stdcall AmfpStub_AddEffectVoice4(string &asVoiceFile, string &asEffectFile, string &asTextCat,
+		string &asTextEntry1, float afTime1, string &asTextEntry2, float afTime2,
+		string &asTextEntry3, float afTime3, string &asTextEntry4, float afTime4,
+		bool abUsePosition, string &asPosEntity, float afMinDistance, float afMaxDistance);
 
 	// Map
 	static void __stdcall ChangeMap(string& asMapName, string& asStartPos, string& asStartSound, string& asEndSound);
@@ -434,6 +464,9 @@ private:
 	static void __stdcall AlertEnemyOfPlayerPresence(string& asName);
 	static void __stdcall SetEnemyDisableTriggers(string& asName, bool abX);
 	static void __stdcall AddEnemyPatrolNode(string& asName, string& asNodeName, float afWaitTime, string& asAnimation);
+	// AMFP overload - adds a trailing bool Dark Descent's scripts don't pass. Same pattern
+	// as CheckPointAmfp: registered separately so Dark Descent's own 4-arg calls still work.
+	static void __stdcall AddEnemyPatrolNodeAmfp(string& asName, string& asNodeName, float afWaitTime, string& asAnimation, bool abAmfpExtraArg);
 	static void __stdcall ClearEnemyPatrolNodes(string& asEnemyName);
 	static void __stdcall SetEnemySanityDecreaseActive(string& asName, bool abX);
 	static void __stdcall TeleportEnemyToNode(string & asEnemyName, string & asNodeName, bool abChangeY);
