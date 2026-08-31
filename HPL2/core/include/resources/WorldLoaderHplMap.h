@@ -55,7 +55,19 @@ namespace hpl {
 	// ones shipped with the original game) to be treated as stale and
 	// rebuilt from the .map source data instead of hanging while
 	// misinterpreting old-format bytes as new-format ones.
-	#define MAP_CACHE_FORMAT_VERSION			11
+	//
+	// Bumped again: a truncated/corrupt .map_cache (e.g. from a process
+	// killed mid-save) was found to make Newton's mesh-collision
+	// deserializer (dgWorld::CreateCollisionFromSerialization) spin
+	// forever - cBinaryBuffer::GetData() silently no-ops past EOF
+	// (returns false, leaves the destination untouched) and nothing in
+	// Newton's C callback protocol checks that, so it just keeps
+	// "reading" stale/uninitialized memory as if it were valid stream
+	// data indefinitely instead of failing fast. This version adds a
+	// stored total-payload-size field, checked against the actually
+	// loaded byte count before any Newton deserialization is attempted,
+	// so a truncated file is rejected immediately instead of hanging.
+	#define MAP_CACHE_FORMAT_VERSION			12
 	
 	//----------------------------------------
 	

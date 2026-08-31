@@ -481,7 +481,23 @@ namespace hpl {
 			Error("File '%s' does not have right MAP_CACHE version! Is %d, newest is %d\n", cString::To8Char(asFile).c_str(),lVersion,MAP_CACHE_FORMAT_VERSION);
 			return;
 		}
-		
+
+		//Check the file isn't truncated/corrupt (e.g. a process killed
+		//mid-save) before touching anything below, which includes
+		//Newton's mesh-collision deserializer - that spins forever on
+		//exhausted/corrupt data instead of failing, since nothing in
+		//Newton's C callback protocol checks cBinaryBuffer::GetData()'s
+		//past-EOF return value (see MAP_CACHE_FORMAT_VERSION's comment).
+		{
+			int lExpectedTotalSize = binBuff.GetInt32();
+			if((size_t)lExpectedTotalSize != binBuff.GetSize())
+			{
+				Error("File '%s' is truncated or corrupt (expected %d bytes, file is %d)! Rebuilding from source instead.\n",
+					cString::To8Char(asFile).c_str(), lExpectedTotalSize, (int)binBuff.GetSize());
+				return;
+			}
+		}
+
 		////////////////////////////////////////
 		// General Data
 		unsigned long lStartTime = cPlatform::GetApplicationTime();
@@ -492,6 +508,9 @@ namespace hpl {
 		int lStaticMeshEntities = binBuff.GetInt32();
 		mlStaticMeshBodiesCreated = lStaticMeshBodyNum;
 		mlStaticMeshEntitiesCreated = lStaticMeshEntities;
+
+		if(gbLogTiming) Log("    Cache header: %d mesh bodies, %d shape bodies, %d mesh entities\n",
+			lStaticMeshBodyNum, lStaticShapeBodyNum, lStaticMeshEntities);
 
 		////////////////////////////////////////
 		// Iterate Mesh Bodies
@@ -711,6 +730,15 @@ namespace hpl {
 		binBuff.AddInt32(MAP_CACHE_FORMAT_MAGIC_NUMBER);
 		binBuff.AddInt32(MAP_CACHE_FORMAT_VERSION);
 
+		// Reserved now, patched with the final total byte count once
+		// everything below has been written - lets LoadCacheFile detect a
+		// truncated/corrupt file (e.g. from a process killed mid-save)
+		// before it ever reaches Newton's mesh-collision deserializer,
+		// which otherwise spins forever on exhausted/corrupt data instead
+		// of failing (see MAP_CACHE_FORMAT_VERSION's comment).
+		size_t iTotalSizePos = binBuff.GetPos();
+		binBuff.AddInt32(0);
+
 		////////////////////////////////////////
 		// General Data
 		binBuff.AddInt32((int)mlstStaticMeshBodies.size());
@@ -879,6 +907,10 @@ namespace hpl {
 			}
 		}
 		
+		////////////////////////////////////////
+		// Patch in the final total size (see the reservation above)
+		binBuff.SetInt32((int)binBuff.GetPos(), iTotalSizePos);
+
 		////////////////////////////////////////
 		// Save
 		bool bRet = binBuff.Save();
