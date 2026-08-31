@@ -1094,6 +1094,16 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 			cVideoMode vCurrentRes = cVideoMode(aObj.GetVarInt("Display"), cVector2l((int)vCurrentResf.x, (int)vCurrentResf.y), -1, -1);
 
 			/////////////////
+			// Check whether more than one display is present, so resolution labels can be
+			// disambiguated below (two displays commonly share resolutions, e.g. a laptop
+			// panel and an external monitor both supporting 1920x1080).
+			bool bMultiDisplay = false;
+			for(size_t i=1;i<vVidModes.size();++i)
+			{
+				if(vVidModes[i].mlDisplay != vVidModes[0].mlDisplay) { bMultiDisplay = true; break; }
+			}
+
+			/////////////////
 			// Remove duplicates
 			for(size_t i=0;i<vVidModes.size();++i)
 			{
@@ -1101,10 +1111,13 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 				int lRefreshRate = vVidModes[i].mlRefreshRate;
 
 				//////////////
-				// Move forward until there are no more matches
+				// Move forward until there are no more matches. Must also match mlDisplay -
+				// vVidModes is sorted by display first then size, so without this check a
+				// resolution shared by two displays (e.g. both support 1920x1080) collapses
+				// at the display boundary, silently dropping one display's entry entirely.
 				for(size_t j=i+1;j<vVidModes.size();++j)
 				{
-					if(vVidModes[i].mvScreenSize == vVidModes[j].mvScreenSize)
+					if(vVidModes[i].mvScreenSize == vVidModes[j].mvScreenSize && vVidModes[i].mlDisplay == vVidModes[j].mlDisplay)
 					{
 						lRemove++;
 						lRefreshRate = cMath::Max(lRefreshRate, vVidModes[i].mlRefreshRate);
@@ -1135,10 +1148,12 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
                 else
                 {
 					sRes = cString::ToStringW(mode.mvScreenSize.x) + _W("x") + cString::ToStringW(mode.mvScreenSize.y);
+					if(bMultiDisplay)
+					{
+						// Disambiguate identically-sized modes on different displays.
+						sRes += _W(" (") + cPlatform::GetDisplayName(mode.mlDisplay) + _W(")");
+					}
             	}
-// Since the same resolution on display 0 will have the same text as display 1, this won't work 
-//				if(mpCBResolution->HasItem(sRes))
-//					continue;
 
 				mpCBResolution->AddItem(sRes);
 				mvScreenSizes.push_back(mode);
