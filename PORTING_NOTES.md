@@ -598,3 +598,127 @@ support exists)**:
    `open-hpl-machine-for-pigs` entry (see spec changelog 1.3.1-5). Re-run the release chain
    (commit → tag → `mx-rpm --copr arm64-misc -i`) after any further fixes, same pattern used
    throughout this session.
+
+## "Attic staircase" physics/trigger bug — real location found in AMFP, NOT yet reproduced live
+
+A user report described "a physics/event trigger bug with the attic staircase." First pass
+this session wrongly ruled this out — see below for the correction. **Dark Descent has no
+attic** (confirmed: no map/area named "attic" anywhere in `.../maps/main/ch01/ch02/ch03`'s
+`.hps` scripts or compiled `.map` binary strings; `custom_stories/` is empty). The attic is
+real, just in **AMFP** (`Amnesia: A Machine for Pigs`, `/home/lm/.steam/steam/steamapps/
+common/Machine for Pigs`), confirmed by file search: `maps/02_mansion_02_child_mansion_
+attic.nodes`, `entities/door/attic_floor_ladderhatch/` (a ladder hatch, not a conventional
+staircase — the user may be describing this loosely), `static_objects/mansionbase/stairs/
+stairs_attic_01/02/03`, matching ambience/sound assets (`attic_creak`, `attichatch_child`,
+etc.). Also correcting an earlier claim in this file: **AMFP is not "Phase 0 only, not
+playable"** — see commit `b2f51f4`, which found that Dark Descent's own real compiled
+game-logic binary (`amnesia/src/game/`, not the separate `amfp/src/game/` free-fly
+scaffold) can run AMFP's real level scripts and real player controller natively against
+AMFP's actual game data, via two small AngelScript API-compat shims. `amfp/src/game/` (the
+free-fly scaffold) genuinely has no player/scripts; the real `amnesia/src/game/` binary
+does, when pointed at AMFP's data directory.
+
+**The real attic sequence, found by grepping `maps/01_mansion_01.hps`** (not
+`02_mansion_02.hps`, despite the nodes-file name above — that file's `.hps` has no "attic"
+string at all; the actual attic hatch/ladder script lives in the first map):
+
+- Two hatch prop entities, `attic_floor_ladderhatch_1` and `attic_floor_ladderhatch_2`.
+- `AddEntityCollideCallback("attic_floor_ladderhatch_2", "PhysicsSimulationTrigger",
+  "AtticHatchPhysicsSimulation", true, 1)` (line 94) — note the *parent* entity here is the
+  hatch prop itself, not `"Player"`, unlike nearly every other callback in this file: this
+  fires when the physics-simulated hatch prop collides with an area, not when the player
+  does.
+- `AtticHatchPhysicsSimulation()` (~line 1520): `SetEntityInteractionDisabled
+  ("attic_floor_ladderhatch_1", true)`, `SetPropStaticPhysics("attic_floor_ladderhatch_2",
+  true)`, then `CheckPoint("CP02_Attic", "CheckpointStart_1", ...)`. This is a
+  dynamic-prop-settles-then-gets-pinned-static pattern — the hatch starts as a real physics
+  body (so it can fall/swing open) and gets frozen static once it's done moving, driven by a
+  collide-trigger on the prop itself.
+- `SetEntityPlayerInteractCallback("attic_floor_ladderhatch_1", "DeactivateAtticHatchBlocker",
+  true)` (line 145) and `AddEntityCollideCallback("attic_floor_ladderhatch_2",
+  "LadderSoundCollision", "Ladder_Floor_Hit", true, 1)` (line 132) are two more
+  collide/interact hooks on the same two hatch entities.
+- Related but **distinct** — do not conflate: `02_mansion_02.hps` has its own real
+  scripted collapsing-staircase event, `StairBreakEvent()`/`StairBreakEventTimerCalls()`
+  (~line 1899), triggered by `AddEntityCollideCallback("Player", "StairBreakTrigger",
+  "StairBreakEvent", true, 1)`. This is a "Transition Room" pipe/stair collapse (comment:
+  "Transition Room Stair Sequence"), not the child's attic — a different area entirely, but
+  worth knowing about since it's the *other* strong "stairs" hit in AMFP's data and a future
+  session could easily conflate the two given both match on "stair".
+
+**Leading hypothesis, not yet confirmed live**: this is very plausibly the same bug class
+already documented in commit `b2f51f4` — "collision breaks specifically while moving,
+likely a discrete (non-swept) per-frame collision step failing at seams between the ~20+
+separate physics bodies AMFP's floor mesh got batched into." The attic hatch sequence above
+is exactly the kind of place this would surface: a dynamic-to-static physics-prop
+transition, driven by a prop-vs-area collide trigger, on/near a floor that's plausibly
+built from the same kind of multi-body batched mesh. Not confirmed by live testing this
+session (see below for why) — this is a strong, evidence-based lead for whoever picks this
+up next, not a guess pulled from nothing, but still unverified.
+
+**Attempted live reproduction this session, blocked by the environment, not by the game
+logic**: built `amnesia/src/game`'s `Amnesia` target fresh in a dedicated worktree build
+dir, deployed as a uniquely-suffixed test binary into the real AMFP install (mirroring the
+already-deployed `AmnesiaOnAmfp.bin.aarch64` from the `b2f51f4` session), launched
+headlessly. **The desktop screen was locked for this entire session** (password prompt
+visible on screenshot) — per this project's own established testing pattern, screenshots
+and any input-simulation are unreliable/unusable while locked, so all interaction here was
+via `gdb -p <pid>` state inspection/manipulation only, no `wtype`/mouse/keyboard input sent
+anywhere near the lock screen.
+
+Sequence of real findings while trying to reach the attic checkpoint (`"CheckpointStart_1"`,
+the start-node named in `AtticHatchPhysicsSimulation`'s `CheckPoint()` call, and the correct
+target to `TeleportPlayer`/`ChangeMap` to once in-game):
+1. The engine's main loop blocks in `cEngine::CheckIfAppInFocusElseWait()`
+   (`HPL2/core/sources/engine/Engine.cpp:826`) whenever the window lacks real input focus
+   (true for any locked-screen/backgrounded window) — an internal `while(GetWindowInputFocus
+   ()==false)` loop, immune to flipping the outer `mbWaitIfAppOutOfFocus` gate via `gdb` once
+   already inside it. Worked around via `gdb`'s `frame`/`return` commands to force that one
+   call to return early (safe — it's a pure poll loop, no side effects to unwind) — this
+   let the real engine loop run again.
+2. `gpBase->mpMainMenu->ExitMenu(eLuxMainMenuExit_StartGame)` (called via `gdb`, same
+   technique as the teleport-velocity fix's "New Game" verification elsewhere in this file)
+   does trigger a real transition (confirmed: `mbExiting`/`mfMenuFadeAlpha` observed
+   settling back to their idle values after the fade completes) but calls
+   `cLuxBase::StartGame("","","")` with **empty arguments**, which falls through to Dark
+   Descent's own default start-map config (`mpUserConfig`/`msStartMapFile`), not AMFP's
+   `01_mansion_01` — the vanilla "New Game" menu path is the wrong tool for pointing this
+   shared binary at a specific AMFP map/checkpoint.
+3. Called `cLuxBase::StartGame("01_mansion_01", "", "CheckpointStart_1")` directly via
+   `gdb` instead (constructing the `std::string` arguments by reusing already-live
+   `std::string` lvalues in the inferior — `mMapChangeData.msMapFile`/`.msStartPos`/
+   `.msSound`, `.assign()`-ed to the right values first — since `gdb` cannot construct a
+   temporary `std::string` from a C string literal as a call argument on this build; a
+   plain `set variable someStdString = "text"` also fails ("Invalid cast") but
+   `someStdString.assign("text")` works reliably as a `gdb call`). This call **blocked for
+   ~25+ minutes** at extremely low CPU (order of 2 CPU-seconds of real work per 10 minutes
+   of wall time — not a tight spin, but not meaningful progress either).
+4. Interrupted the stuck `gdb call` with `SIGINT` (safe: `gdb` abandons inferior calls
+   cleanly on `^C`, printing "the function is done executing, GDB will silently stop", and
+   detaches without corrupting the inferior). A fresh, non-`call`-blocking `gdb -p ... -ex
+   bt -ex detach` attach then showed the **real** stall point: still inside
+   `cLuxBase::StartGame()`, at its very first line, `mpLoadScreenHandler->
+   DrawMenuScreen()` (`LuxBase.cpp:551`) → `Wayland_GLES_SwapWindow` →
+   `wl_display_read_events` → blocked in `pthread_cond_wait`, i.e. **the loading-screen's
+   buffer swap is waiting on a Wayland frame-done callback that the compositor never sends
+   for a window it isn't compositing (obscured behind the lock screen).**
+
+**This is a genuinely new, useful finding for this project's testing methodology, distinct
+from the attic bug itself**: this file already knew screenshots were unreliable while
+locked; what wasn't previously documented is that this is much more fundamental — *any*
+code path that calls a real buffer-swap/present (loading screens, and presumably the normal
+render loop's own swap once actually in-game) can block **indefinitely** while the screen
+is locked, not just degrade or skip a frame. This fully explains why live reproduction
+could not be completed this session, independent of anything about the attic hatch bug
+itself. Killed the hung test process and removed the test binary afterward (`kill`, no
+`--force`, no data loss — this was a scratch test binary, not the canonical deployed one).
+
+**Next session**: retry the exact same repro path (steps above; the `StartGame("01_
+mansion_01", "", "CheckpointStart_1")` `gdb` call is the fast-forward to the checkpoint,
+already worked out) **with the screen unlocked** — the whole chain up to the
+`DrawMenuScreen()` swap-wait was working correctly, this was purely an environment
+precondition, not a bug to fix. Once at the checkpoint, sample `mpCharBody`'s
+position/velocity across a few real frames the way the teleport-velocity fix did, focusing
+on whatever happens right as `AtticHatchPhysicsSimulation()`'s `SetPropStaticPhysics` call
+fires (that dynamic→static transition is the most likely single moment for a
+seam/discontinuity bug to manifest, per the `b2f51f4` hypothesis above).
