@@ -208,6 +208,21 @@ bool cSomaBase::InitEngine()
 	vars.mGraphics.mbFullscreen = false;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
+#if defined(__linux__)
+	// hpl.log otherwise defaults to a bare relative "hpl.log" (see
+	// LowLevelSystemSDL.cpp), landing wherever cwd happens to be at first
+	// Log() - the real game's Steam install directory, since that's where
+	// this binary gets deployed and run from. XDG_STATE_HOME is the
+	// correct home for transient log/state data (see amnesia/src/game/
+	// LuxBasePersonal.h's equivalent for the real Amnesia game module).
+	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
+	tWString sStateDir = sStateRoot + _W("open-hpl/");
+	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
+	sStateDir += _W("soma/");
+	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
+	SetLogFile(sStateDir + _W("hpl.log"));
+#endif
+
 	/////////////////////////
 	// Create the engine
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);

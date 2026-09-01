@@ -464,6 +464,66 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	// XDG Base Directory Specification: an env var counts as set only if it holds a
+	// non-empty *absolute* path (a relative value "should be considered as if it was
+	// not set" per the spec) - falls back to asDefaultRelativeToHome under $HOME otherwise.
+	static tWString GetXDGBaseDir(const char *asEnvVar, const tWString &asDefaultRelativeToHome)
+	{
+		const char *pEnv = getenv(asEnvVar);
+		if(pEnv && pEnv[0] == '/')
+		{
+			tWString sDir = cString::To16Char(tString(pEnv));
+			if(cString::GetLastCharW(sDir) != _W("/")) sDir += _W("/");
+			return sDir;
+		}
+
+		const char *home = getenv("HOME");
+		tWString sHome = cString::To16Char(tString(home));
+		if(cString::GetLastCharW(sHome) != _W("/")) sHome += _W("/");
+		return sHome + asDefaultRelativeToHome;
+	}
+
+	// xdg-user-dirs (~/.config/user-dirs.dirs, XDG_CONFIG_HOME-relative): a small
+	// KEY="value"-per-line file, values using a literal "$HOME" token rather than an
+	// already-expanded path - not shell-sourced (no other expansions/quoting to handle),
+	// so a plain substring search is sufficient without pulling in a real shell parser.
+	static tWString GetXDGUserDir(const char *asKey, const tWString &asDefaultRelativeToHome)
+	{
+		const char *home = getenv("HOME");
+		tWString sHome = home ? cString::To16Char(tString(home)) : _W("");
+		if(!sHome.empty() && cString::GetLastCharW(sHome) != _W("/")) sHome += _W("/");
+
+		tString sDirsFile = cString::To8Char(GetXDGBaseDir("XDG_CONFIG_HOME", _W(".config/"))) + "user-dirs.dirs";
+		std::ifstream file(sDirsFile.c_str());
+		tString sLine;
+		tString sKey = tString(asKey) + "=\"";
+		while(file.good() && std::getline(file, sLine))
+		{
+			size_t lKeyPos = sLine.find(sKey);
+			if(lKeyPos == tString::npos) continue;
+
+			size_t lValStart = lKeyPos + sKey.length();
+			size_t lValEnd = sLine.find('"', lValStart);
+			if(lValEnd == tString::npos) continue;
+
+			tString sVal = sLine.substr(lValStart, lValEnd - lValStart);
+
+			const tString sHomeToken = "$HOME";
+			size_t lHomePos = sVal.find(sHomeToken);
+			if(lHomePos != tString::npos)
+				sVal = sVal.substr(0, lHomePos) + cString::To8Char(sHome) + sVal.substr(lHomePos + sHomeToken.length());
+
+			if(!sVal.empty())
+			{
+				tWString sWVal = cString::To16Char(sVal);
+				if(cString::GetLastCharW(sWVal) != _W("/")) sWVal += _W("/");
+				return sWVal;
+			}
+		}
+
+		return sHome + asDefaultRelativeToHome;
+	}
+
 	tWString cPlatform::GetSystemSpecialPath(eSystemPath aPathType)
 	{
 		switch (aPathType)
@@ -476,6 +536,16 @@ namespace hpl {
 				}
 				return sDir;
 			}
+			case eSystemPath_XDGDataHome:
+				return GetXDGBaseDir("XDG_DATA_HOME", _W(".local/share/"));
+			case eSystemPath_XDGConfigHome:
+				return GetXDGBaseDir("XDG_CONFIG_HOME", _W(".config/"));
+			case eSystemPath_XDGCacheHome:
+				return GetXDGBaseDir("XDG_CACHE_HOME", _W(".cache/"));
+			case eSystemPath_XDGStateHome:
+				return GetXDGBaseDir("XDG_STATE_HOME", _W(".local/state/"));
+			case eSystemPath_XDGPictures:
+				return GetXDGUserDir("XDG_PICTURES_DIR", _W("Pictures/"));
 			default:
 				return _W("");
 		}

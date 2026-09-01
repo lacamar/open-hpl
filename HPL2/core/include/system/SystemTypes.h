@@ -74,6 +74,15 @@ namespace hpl {
 	enum eSystemPath
 	{
 		eSystemPath_Personal,
+		// XDG Base Directory (see PlatformUnix.cpp) - Linux-only; other platforms'
+		// GetSystemSpecialPath() falls through to the default "" case for these.
+		eSystemPath_XDGDataHome,
+		eSystemPath_XDGConfigHome,
+		eSystemPath_XDGCacheHome,
+		eSystemPath_XDGStateHome,
+		// XDG user directory (xdg-user-dirs, ~/.config/user-dirs.dirs) - distinct from the
+		// four XDG Base Directory paths above; falls back to $HOME/Pictures/ if unset/unparsable.
+		eSystemPath_XDGPictures,
 		eSystemPath_LastEnum
 	};
 

@@ -811,7 +811,7 @@ bool cLuxBase::ParseCommandLine(const tString &asCommandline)
 bool cLuxBase::InitApp()
 {
 	// We load this HERE so the "userdir" magic can work
-	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(eSystemPath_Personal);
+	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(PERSONAL_SYSTEMPATH_TYPE);
 #ifdef USERDIR_RESOURCES
 	//Set the user resource directory (used for mac and linux builds to not require saving files in game dir)
 	msUserResourceDir = sPersonalDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT PERSONAL_RESOURCES;
@@ -967,7 +967,11 @@ bool cLuxBase::InitApp()
     hpl::SetupBaseDirs(vDirs, PERSONAL_RELATIVEGAME_PARENT, msMainSaveFolder);
 #endif
 
-    //Create directories	
+#if defined(__linux__)
+    hpl::MigrateLegacyPersonalDir(sPersonalDir + PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT);
+#endif
+
+    //Create directories
     hpl::CreateBaseDirs(vDirs, sPersonalDir);
 
 	//Set the base directory from which all saving will take place.
@@ -978,9 +982,18 @@ bool cLuxBase::InitApp()
 	msFirstStartFlagPath = msBaseSavePath + _W("first_start_flag");
 
 	/////////////////////////
-	//Set up log file locations
-	SetLogFile(msBaseSavePath + _W("hpl.log"));
-	SetUpdateLogFile(msBaseSavePath + _W("hpl_update.log"));
+	//Set up log file locations - logs are transient state, not save data, so on Linux
+	//they get their own XDG_STATE_HOME tree (same relative layout, reusing vDirs) rather
+	//than living alongside actual save games under msBaseSavePath.
+#if defined(__linux__)
+	tWString sLogDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
+	hpl::CreateBaseDirs(vDirs, sLogDir);
+	tWString msBaseLogPath = sLogDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + msMainSaveFolder + _W("/");
+#else
+	const tWString &msBaseLogPath = msBaseSavePath;
+#endif
+	SetLogFile(msBaseLogPath + _W("hpl.log"));
+	SetUpdateLogFile(msBaseLogPath + _W("hpl_update.log"));
 
 	return true;
 }

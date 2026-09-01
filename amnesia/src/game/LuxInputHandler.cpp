@@ -709,10 +709,12 @@ void cLuxInputHandler::UpdateGlobalInput()
 		tWString sFileName = _W("");
 		tWString sBaseName = _W("Screen_");
 #ifndef WIN32
-		tWString sScreenShotDir = cPlatform::GetSystemSpecialPath(eSystemPath_Personal);
-		if (cPlatform::FolderExists(cString::AddSlashAtEndW(sScreenShotDir) + _W("Desktop"))) {
-			sScreenShotDir = cString::AddSlashAtEndW(sScreenShotDir) + _W("Desktop");
-		}
+		// XDG user directories (xdg-user-dirs, ~/.config/user-dirs.dirs): a screenshot is
+		// user-facing media the player will want to find/share, so it belongs under
+		// XDG_PICTURES_DIR (falls back to ~/Pictures/ if unset - see GetXDGUserDir() in
+		// PlatformUnix.cpp), not the old ~/Desktop-or-bust guess.
+		tWString sScreenShotDir = cString::AddSlashAtEndW(cPlatform::GetSystemSpecialPath(eSystemPath_XDGPictures)) + _W("OpenHPL");
+		if (cPlatform::FolderExists(sScreenShotDir) == false) cPlatform::CreateFolder(sScreenShotDir);
 		sBaseName = cString::AddSlashAtEndW(sScreenShotDir) + _W("Amnesia_");
 #endif
 		int lCount = 0;

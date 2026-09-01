@@ -1037,3 +1037,83 @@ past it. (The same screenshot also happened to catch the in-game pause menu over
 top - an artifact of calling `StartGame()` directly instead of through a real "New
 Game"/pause-menu button click, not a real bug - MainMenu's own already-fixed scaling is
 unaffected by anything in this entry.)
+
+## XDG Base Directory compliance (this session)
+
+Every file this engine writes on its own (not game content it reads) used to land in one
+of three places, none of them XDG-compliant: a bare `~/.frictionalgames/` dotfile
+(save games, all config, logs, all mixed together - `amnesia/src/game/LuxBasePersonal.h`,
+upstream Frictional code, predates this port), directly inside the Steam game's own install
+directory (`hpl.log` for every non-Amnesia game module, and every map's `.map_cache` file,
+both via a bare relative/same-directory path), or wherever a user happened to have (or not
+have) a Desktop folder (in-game screenshots). Added real support (`HPL2/core/sources/impl/
+PlatformUnix.cpp`, new `eSystemPath_XDG{Data,Config,Cache,State}Home`/`eSystemPath_XDGPictures`
+cases on `cPlatform::GetSystemSpecialPath()`) for both the XDG Base Directory spec (reads the
+env var only when it's a non-empty absolute path, per spec, else the documented default under
+`$HOME`) and `xdg-user-dirs` (`~/.config/user-dirs.dirs`, a small non-shell `KEY="$HOME/value"`
+format - `GetXDGUserDir()`, own minimal parser, not a full shell-conf reader), then rewired
+every write site:
+
+- **`amnesia/src/game`'s save/config tree** (Dark Descent and, since it runs through the same
+  binary, AMFP too): `PERSONAL_RELATIVEROOT` (`LuxBasePersonal.h`) now resolves under
+  `$XDG_DATA_HOME/open-hpl/` instead of `~/.frictionalgames/` (same macro-based "vendor
+  folder" role either way - `PERSONAL_SYSTEMPATH_TYPE` picks the right `eSystemPath` per
+  platform, Windows/macOS untouched). Logs specifically (`hpl.log`/`hpl_update.log`) are
+  transient state, not save data, so they get their own `$XDG_STATE_HOME` tree instead of
+  living inside the save/profile folders (`cLuxBase::InitApp()`, `LuxBase.cpp`) - the config
+  files (`main_settings.cfg`, per-profile `user_settings.cfg`/`user_keys.cfg`) stayed inside
+  the data tree rather than `$XDG_CONFIG_HOME`, a deliberate scope call: they're intermixed
+  with actual save files in the same per-profile folders closely enough that separating them
+  would mean touching every individual file-open call site, not just the shared root, for
+  comparatively little benefit given the whole tree already moved out of `$HOME` proper.
+  **Migration**: `MigrateLegacyPersonalDir()` (`LuxBasePersonal.h`) does a one-time whole-
+  subtree `rename()` of `~/.frictionalgames/Amnesia/` to the new location on first boot with
+  this build, only when the new location doesn't already exist (never overwrites) - verified
+  live against this machine's own real, multi-month save history (Dark Descent `dev_user`
+  profile, 15+ real autosaves; AMFP's `New Player` profile, 15+ more): every file present and
+  correct at the new path immediately after, old location gone, no data touched or lost.
+- **`.map_cache`/`.map_cache_fastload` files** (`HPL2/core/sources/resources/
+  WorldLoaderHplMap.cpp`, `cWorldLoaderHplMap::{Load,Save}CacheFile()`): used to be written
+  next to their source `.map` file (`SetFileExtW(asFile,...)` on the map's own path) - i.e.
+  into the game's own install directory, regardless of whether that's even writable, and not
+  this engine's data to leave lying around there either way. `GetMapCacheFilePath()` now
+  mirrors the source map's full absolute path under `$XDG_CACHE_HOME/open-hpl/maps/` instead
+  (keyed by the whole path, not just basename, so same-named maps from different games/custom
+  stories can't collide - the source map itself is found by basename via the resource-dir
+  search elsewhere, but this cache isn't part of that search) with `CreateFolderRecursive()`
+  (`cPlatform::CreateFolder()` is a single `mkdir()`, not `mkdir -p`, and this path is
+  arbitrarily deep) making sure the destination directory tree exists first. `LoadCacheFile()`
+  falls back to the legacy same-directory-as-map location when nothing exists yet at the new
+  path (read-only, never written back there) - this machine had real caches for essentially
+  the whole main campaign sitting in the Steam install already; skipping that entirely and
+  landing on the same-shape "no cache found" behavior as a stale/corrupt one (safely handled
+  by the existing byte-count guard from the Newton corrupt-cache-hang fix, see above) would
+  have meant a full reload of every one of those maps for real users upgrading this package.
+  Verified live: `start_map` on a map with a real legacy cache correctly found it, logged a
+  clean version-mismatch rejection (an unrelated pre-existing MAP_CACHE format bump, not
+  something this session touched or introduced) rather than crashing/hanging, and the new
+  cache directory tree was created (empty, since `ForceCacheLoadingAndSkipSaving="true"` in
+  this dev config means nothing gets saved back either way, old behavior or new).
+- **`soma`/`rebirth`/`bunker`'s `hpl.log`** (their `*Base.cpp::InitEngine()`): these Phase 0
+  scaffolds never redirected their log at all (no equivalent of the real Amnesia game
+  module's `SetLogFile()` call existed), so it defaulted to a bare relative `"hpl.log"`
+  (`LowLevelSystemSDL.cpp`), landing in whatever cwd happened to be - the Steam install
+  directory, since that's where the deployed binary runs from. Each now redirects to its own
+  `$XDG_STATE_HOME/open-hpl/<game>/hpl.log`, same rationale as the real game's log split
+  above, duplicated per module rather than shared (matches the project's own established
+  convention for these small self-contained scaffolds - see `DebugFreeCamera.cpp`, already
+  duplicated three times for the same reason).
+- **In-game screenshots** (`eLuxAction_ScreenShot`, `amnesia/src/game/LuxInputHandler.cpp`):
+  used to fall back to `~/Desktop` if it happened to exist, else bare `$HOME` - replaced with
+  `XDG_PICTURES_DIR` (falls back to `~/Pictures/` - see `GetXDGUserDir()` above) under a new
+  `OpenHPL/` subfolder, matching how most other Linux games keep their own screenshots out of
+  the user's general Pictures clutter.
+- **Headless automation server's `screenshot` command default path** (`HeadlessControl.cpp`,
+  `CmdScreenshot()`): a caller-given `path` (the normal case - see `scripts/hpl_control.py`)
+  is untouched, but the *default*, previously a bare relative `"headless_screenshot.bmp"`,
+  now resolves under `$XDG_CACHE_HOME/open-hpl/` too - it's exactly the kind of throwaway,
+  regenerable-on-demand file XDG_CACHE_HOME exists for.
+
+All of the above is gated `#if defined(__linux__)` - this package's only shipped target -
+Windows/macOS code paths are untouched (still their own pre-existing, already
+platform-appropriate `PERSONAL_RELATIVEROOT` conventions).

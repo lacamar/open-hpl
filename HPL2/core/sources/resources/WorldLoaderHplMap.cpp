@@ -434,13 +434,66 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+#if defined(__linux__)
+	// mkdir each path segment in turn (cPlatform::CreateFolder() is a single mkdir(), not
+	// mkdir -p) - needed since GetMapCacheFilePath() below mirrors the source map's full
+	// absolute path under the cache root, which can be arbitrarily deep.
+	static void CreateFolderRecursive(const tWString &asDir)
+	{
+		size_t lPos = 0;
+		while(true)
+		{
+			lPos = asDir.find(_W('/'), lPos+1);
+			if(lPos == tWString::npos) break;
+			tWString sPrefix = asDir.substr(0, lPos);
+			if(cPlatform::FolderExists(sPrefix) == false) cPlatform::CreateFolder(sPrefix);
+		}
+	}
+
+	// Cache files used to live alongside their source .map file (SetFileExtW(asFile,...) on
+	// its own), which meant writing into the game's own (often read-only, always outside
+	// this engine's business to touch) install directory - not this engine's data to leave
+	// lying around there, and not XDG-compliant either. Now mirrored under
+	// $XDG_CACHE_HOME/open-hpl/maps/<source's own absolute path>, keyed by that full path
+	// (not just basename) so two same-named maps from different games/custom stories can
+	// never collide - the source map is looked up purely by basename elsewhere (resource
+	// dir search), but this cache doesn't get that luxury since it isn't part of that search.
+	static tWString GetMapCacheFilePath(const tWString &asFile, const tWString &asCacheExt)
+	{
+		tWString sRelative = asFile;
+		if(!sRelative.empty() && sRelative[0] == _W('/')) sRelative = sRelative.substr(1);
+
+		tWString sCacheFile = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome)
+			+ _W("open-hpl/maps/") + sRelative;
+		sCacheFile = cString::SetFileExtW(sCacheFile, asCacheExt);
+
+		CreateFolderRecursive(cString::GetFilePathW(sCacheFile));
+
+		return sCacheFile;
+	}
+#endif
+
 	void cWorldLoaderHplMap::LoadCacheFile(const tWString& asFile)
 	{
 #if (defined(__PPC__) || defined(__ppc__))
 		return;
 #endif
+#if defined(__linux__)
+		tWString sCacheFile = GetMapCacheFilePath(asFile, msCacheFileExt);
+		// Read-compat fallback only (never written back here) - a cache built by a
+		// pre-XDG-fix engine still sits next to its source map; use it rather than a cold
+		// reload, since GetForceCacheLoadingAndSkipSaving() (see below) can mean a fresh
+		// cache never gets saved to the new location at all, and a full reload of every map
+		// is real, unnecessary reload time regardless.
+		if(cPlatform::FileExists(sCacheFile) == false)
+		{
+			tWString sLegacyCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
+			if(cPlatform::FileExists(sLegacyCacheFile)) sCacheFile = sLegacyCacheFile;
+		}
+#else
 		tWString sCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
-		
+#endif
+
 		////////////////////////////////////////
 		// Check if there is a cache file
 		cDate currentDate = cPlatform::FileModifiedDate(asFile);
@@ -722,7 +775,11 @@ namespace hpl {
 		Log("Saving cache file for '%s'\n", cString::To8Char(asFile).c_str());
 
         size_t iNewtonTotal = 0;
+#if defined(__linux__)
+		tWString sCacheFile = GetMapCacheFilePath(asFile, msCacheFileExt);
+#else
 		tWString sCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
+#endif
 		cBinaryBuffer binBuff(sCacheFile);
 
 		////////////////////////////////////////

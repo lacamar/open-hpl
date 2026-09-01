@@ -480,7 +480,20 @@ namespace hpl {
 
 	void cHeadlessControlServer::CmdScreenshot(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{
-		tString sPath = aReq.GetString("path", "headless_screenshot.bmp");
+		// A caller-given path (the normal case - see hpl_control.py) is used verbatim, but
+		// the fallback default used to be a bare relative filename, landing wherever cwd
+		// happens to be (typically the game's own Steam install directory). Cache data
+		// belongs under XDG_CACHE_HOME instead.
+		tString sDefaultPath = aReq.HasKey("path") ? "" :
+			cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome)) + "open-hpl/headless_screenshot.bmp";
+		tString sPath = aReq.GetString("path", sDefaultPath);
+#if defined(__linux__)
+		if(aReq.HasKey("path") == false)
+		{
+			tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome) + _W("open-hpl/");
+			if(cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
+		}
+#endif
 
 		cBitmap *pBmp = mpEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
 		if(pBmp == NULL)
