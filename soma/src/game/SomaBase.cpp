@@ -4,6 +4,7 @@
  */
 
 #include "SomaBase.h"
+#include "HpslTranspilerSelfTest.h"
 
 //---------------------------------------
 
@@ -52,6 +53,14 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
 		return false;
+
+	/////////////////////////////
+	// One-shot HPSL->GLSL transpiler proof-of-concept - see
+	// HpslTranspilerSelfTest.h. Not part of real rendering yet; just
+	// proves whether the transpiled clear_vtx/clear_frag pair compiles as
+	// real GLSL against the live GL context. Safe to run every boot: it
+	// only reads shader files and compiles throwaway GL shader objects.
+	RunHpslTranspilerSelfTest(mpEngine);
 
 	/////////////////////////////
 	// Phase 1: load a hardcoded test map through the new SOMA ".hpm" world

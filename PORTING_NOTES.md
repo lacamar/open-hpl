@@ -528,18 +528,71 @@ support exists)**:
    before and immediately after the teleport, with the player resting solid and stationary for
    6+ seconds post-teleport. Dark Descent re-verified unaffected (stable on ground,
    `mlOnGroundCount` 11-12, no crash) with the same fix in the shared binary.
-2. **SOMA: real rendering needs an HPSL→GLSL transpiler** — scoped this session, not
-   started. HPSL (`core/shaders/hpsl/*.hpsl`) is a genuine distinct shading language, not a
-   GLSL variant: custom preprocessor (`@ifdef`/`@include`/`@else`/`@endif`), custom types
-   (`cVector4f`, `cTexture2D`, `cTextureBuffer`), and shader I/O passed as explicit `main()`
-   parameters instead of GLSL's global `in`/`out` declarations, plus a "constant buffer
-   chosen by MaterialType" indirection layer not yet investigated. 75 `.hpsl` files total.
-   This is realistically its own multi-session project — start by writing the `@ifdef`/
-   `@include` preprocessor and the `main()`-parameter→GLSL-global rewrite for ONE simple
-   shader (`clear_frag.hpsl`/`clear_vtx.hpsl` look like the smallest files, good first
-   target) before attempting anything material-system-wide. SOMA currently boots and runs
-   stably without crashing (fixed this session, commit `7e426e4`) but renders no real
-   materials — that's the honest current ceiling until the transpiler exists.
+2. **SOMA: HPSL→GLSL transpiler** — **proof-of-concept done (2026-09-01), real work
+   remains.** Scoping correction from the previous pass of this doc: HPSL's `@ifdef`/
+   `@else`/`@endif`/`@include`/`@define` directives are **not** a custom preprocessor -
+   they're the *exact same* directive set implemented by HPL2's own
+   `cPreprocessParser` (`HPL2/core/include/system/PreprocessParser.h`), already used to
+   preprocess HPL2's own hand-written GLSL shaders (see the `@ifdef UseDiffuse` etc.
+   blocks in a real install's `core/shaders/deferred_base_frag.glsl` - same syntax,
+   same engine class, wired in at `cGpuShaderManager::CreateShader()`,
+   `HPL2/core/sources/resources/GpuShaderManager.cpp:132`). Nothing needed writing
+   there - just reuse it. That leaves a narrower, syntax-only gap: HPSL's
+   `cVectorNf`/`cTextureX` type names and its `main()`-parameter I/O convention, vs.
+   GLSL 120's `vec4`/`sampler2D`/global `attribute`/`varying`/`gl_FragData[N]`
+   convention (confirmed by inspecting a real install's `deferred_base_vtx.glsl`/
+   `deferred_base_frag.glsl`, which use `gl_Vertex`/`gl_Color`/`gl_MultiTexCoord0`
+   fixed-function built-ins and `varying`, GLSL 120 + `#extension GL_ARB_draw_buffers`
+   for MRT output - not custom attributes).
+
+   Added `soma/src/game/HpslTranspiler.{h,cpp}`: a best-effort, regex/string-based
+   (not a real parser) transpiler doing exactly that rewrite, plus
+   `soma/src/game/HpslTranspilerSelfTest.{h,cpp}`, a one-shot self-test wired into
+   `cSomaBase::Init()` (right after `InitEngine()`) that loads the real
+   `clear_vtx.hpsl`/`clear_frag.hpsl` from a real SOMA install via the engine's own
+   file searcher, runs them through `cPreprocessParser::Parse()` (the real, shared
+   preprocessing step) then `TranspileHpslToGlsl()`, and attempts a **real GL compile**
+   via `iGpuShader::CreateFromString()` against the live GL context - not a syntax
+   check, an actual `glCompileShader()` call. **Verified**: built to
+   `amnesia/src/build-hpsl`, deployed as `Soma.hpsltest.aarch64` into the real SOMA
+   install, ran headlessly; `hpl.log` shows both
+   `HpslTranspilerSelfTest: 'clear_vtx.hpsl' PASSED (compiled as real GLSL)` and the
+   same for `clear_frag.hpsl`, `overall result: PASS`. Caught and fixed one real bug
+   in the process: the transpiler's header-prefix slice (`sSrc.substr(0, lMainPos)`,
+   text before the literal string `"main"`) left the `void` return-type keyword of
+   HPSL's `void main(...)` dangling in front of the generated `varying` declarations
+   (`void varying vec4 px_vColor;` - a genuine GLSL syntax error, `0:13(6): error:
+   syntax error, unexpected VARYING`), caught by the real-compile self-test exactly as
+   intended; fixed by trimming a trailing `void` token off the header-prefix slice.
+
+   **Known limitations, not fixed**: the vertex-input semantic name → GLSL built-in
+   table (`vtx_vPosition`→`gl_Vertex`, `vtx_vColor`→`gl_Color`, plus three more
+   guessed-by-analogy entries) has exactly two verified entries - only what
+   `clear_vtx.hpsl` exercises; no `cTextureBuffer`/constant-buffer support at all
+   (unexplored - the `HPL2/core/include/system/PreprocessParser.h` comment about a
+   "constant buffer chosen by MaterialType" indirection layer, referenced in the
+   previous pass of this doc, is still uninvestigated); assumes a vtx/frag pair uses
+   matching parameter names for interpolated values (true for `clear_vtx`/`clear_frag`,
+   unverified elsewhere); simple regex/brace-counting, not a real HPSL grammar, so it
+   will not survive constructs the two clear-pass shaders don't use. It is also
+   **not wired into the real shader-loading path**
+   (`cGpuShaderManager::CreateShader()`) at all - `RunHpslTranspilerSelfTest()` is a
+   standalone diagnostic, deliberately kept off the shared HPL2/core code path other
+   in-flight work touches this session.
+
+   **Next step for whoever continues this**: try transpiling
+   `deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl` next (the shaders actually
+   blocking real rendering, per the `Couldn't find file 'deferred_base_vtx.glsl'`
+   errors below) rather than another toy shader - expect it to fail on unmapped
+   vertex builtins (`gl_Normal`/`gl_MultiTexCoord1` equivalents beyond the five
+   guessed here) and possibly on `@ifdef`-combo interaction with the transpiler (the
+   combo path in `ProgramComboManager.cpp` calls `cGpuShaderManager::CreateShader()`
+   *with* a variable container - the self-test here always passes an *empty* one,
+   untested against real `@ifdef UseDiffuse`-style combo variables). Once a
+   representative real material's pair transpiles and compiles, wire the fallback
+   into `cGpuShaderManager::CreateShader()`: when `mpFileSearcher->GetFilePath()`
+   fails to find `"foo.glsl"`, retry with `"foo.hpsl"`, and if found, run it through
+   this same preprocess→transpile→`CreateFromString()` path instead of erroring.
 3. Both AMFP and SOMA changes so far are in `amfp/src/game/`, `soma/src/game/`, and shared
    `HPL2/core/` — none of it ships in the `open-hpl` RPM except the experimental
    `open-hpl-machine-for-pigs` entry (see spec changelog 1.3.1-5). Re-run the release chain
