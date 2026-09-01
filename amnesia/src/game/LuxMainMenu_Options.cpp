@@ -466,7 +466,7 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 	cWidgetGroup *pGroup = mpGuiSet->CreateWidgetGroup(vPos,0, kTranslate("OptionsMenu", "Screen"), apDummy);
 	{
 		float fBorderSize = 15;
-		pGroup->SetSize(cVector2f(apDummy->GetParent()->GetSize().x-fBorderSize-fBorderSize,70));
+		pGroup->SetSize(cVector2f(apDummy->GetParent()->GetSize().x-fBorderSize-fBorderSize,115));
 		cVector3f vPosInGroup = cVector3f(fBorderSize, fBorderSize, 0.1f);
 
 		/////////////////////////////////
@@ -489,6 +489,12 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 //		mpChBAdaptiveVSync = mpGuiSet->CreateWidgetCheckBox(vPosInGroup + cVector3f(mpChBVSync->GetSize().x+10,mpChBFullScreen->GetSize().y+10,0), 0, kTranslate("OptionsMenu","AdaptiveVSync"), pGroup);
 //		SetUpInput(NULL, mpChBAdaptiveVSync, false, kTranslate("OptionsMenu","AdaptiveVSyncTip"));
 
+		/////////////////////////////////
+		// UI/GUI scale
+		cVector3f vPosGuiScale(fBorderSize, mpChBVSync->GetLocalPosition().y + mpChBVSync->GetSize().y + 15, 0.1f);
+		pLabel = mpGuiSet->CreateWidgetLabel(vPosGuiScale, -1, kTranslate("OptionsMenu","GuiScale"), pGroup);
+		mpCBGuiScale = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(70, 25), _W(""), pGroup);
+		SetUpInput(pLabel, mpCBGuiScale, true, kTranslate("OptionsMenu","GuiScaleTip"));
 	}
 
 	vPos.y += pGroup->GetSize().y + 15;
@@ -548,13 +554,16 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 	mpChBVSync->SetFocusNavigation(eUIArrow_Left, mpCBResolution);
 //	mpChBVSync->SetFocusNavigation(eUIArrow_Right, mpChBAdaptiveVSync);
 	mpChBVSync->SetFocusNavigation(eUIArrow_Up, mpChBFullScreen);
-	mpChBVSync->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
-	
+	mpChBVSync->SetFocusNavigation(eUIArrow_Down, mpCBGuiScale);
+
 //	mpChBAdaptiveVSync->SetFocusNavigation(eUIArrow_Left, mpChBVSync);
 //	mpChBAdaptiveVSync->SetFocusNavigation(eUIArrow_Up, mpChBFullScreen);
 //	mpChBAdaptiveVSync->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
 
-	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Up, mpCBResolution);
+	mpCBGuiScale->SetFocusNavigation(eUIArrow_Up, mpChBVSync);
+	mpCBGuiScale->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
+
+	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Up, mpCBGuiScale);
 	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Down, mpSGamma);
 
 	mpSGamma->SetFocusNavigation(eUIArrow_Up, mpCBTextureSizeLevel);
@@ -1182,6 +1191,20 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 //		mpChBAdaptiveVSync->SetChecked(aObj.GetVarBool("AdaptiveVsync"), false);
 
 		/////////////////////////
+		// UI/GUI scale
+		{
+			mpCBGuiScale->ClearItems();
+			mpCBGuiScale->AddItem(_W("1x"));
+			mpCBGuiScale->AddItem(_W("2x"));
+			mpCBGuiScale->AddItem(_W("3x"));
+			mpCBGuiScale->AddItem(_W("4x"));
+
+			int lGuiScale = aObj.GetVarInt("GuiScale");
+			int lIdx = cMath::Clamp(lGuiScale-1, 0, mpCBGuiScale->GetItemNum()-1);
+			mpCBGuiScale->SetSelectedItem(lIdx, true, false);
+		}
+
+		/////////////////////////
 		// Texture quality and filtering
 		{
 			/////////////////////////////////
@@ -1457,6 +1480,9 @@ void cLuxMainMenu_Options::ApplyChanges()
 //		pCfgHdr->mbAdaptiveVSync = mpChBAdaptiveVSync->IsChecked();
 		pGfx->GetLowLevel()->SetVsyncActive(pCfgHdr->mbVSync, pCfgHdr->mbAdaptiveVSync);
 		pGfx->GetLowLevel()->SetGammaCorrection(GetGamma());
+
+		// GUI scale (needs restart - cGuiSet bakes the scale into each set at construction)
+		pCfgHdr->mlGuiScale = mpCBGuiScale->GetSelectedItem()+1;
 
 		// Parallax
 		//int lParallax = (int)mpCBParallaxQuality->GetSelectedItem() - 1;
@@ -1766,7 +1792,11 @@ void cLuxMainMenu_Options::DumpInitialValues(cResourceVarsObject &aObj)
 		aObj.AddVarBool("FullScreen", gpBase->mpConfigHandler->mbFullscreen);
 		aObj.AddVarBool("VSync", gpBase->mpConfigHandler->mbVSync);
 		aObj.AddVarBool("AdaptiveVsync", gpBase->mpConfigHandler->mbAdaptiveVSync);
-		
+
+		/////////////////////////
+		// UI/GUI scale
+		aObj.AddVarInt("GuiScale", gpBase->mpConfigHandler->mlGuiScale);
+
 		/////////////////////////
 		// Texture quality and filtering
 		aObj.AddVarInt("TextureQuality", gpBase->mpConfigHandler->mlTextureQuality);
@@ -1861,7 +1891,11 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 		// Fullscreen & vsync
 		aObj.AddVarBool("FullScreen",	mpChBFullScreen->IsChecked());
 		aObj.AddVarBool("VSync",		mpChBVSync->IsChecked());
-		
+
+		/////////////////////////
+		// UI/GUI scale
+		aObj.AddVarInt("GuiScale", mpCBGuiScale->GetSelectedItem()+1);
+
 		/////////////////////////
 		// Texture quality and filtering
 		aObj.AddVarInt("TextureQuality", (mpCBTextureSizeLevel->GetItemNum()-1) - mpCBTextureSizeLevel->GetSelectedItem());
