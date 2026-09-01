@@ -15,6 +15,7 @@
 #include "hpl.h"
 
 #include "DebugFreeCamera.h"
+#include "SomaSplash.h"
 
 using namespace hpl;
 
@@ -31,6 +32,11 @@ public:
 
 	void Run();
 
+	// Called by cSomaSplash once its sequence finishes (or is skipped).
+	// Public because cSomaSplash calls it back via the global gpSomaBase
+	// pointer, same idiom as gpBase-> calls throughout amnesia/src/game.
+	void OnSplashFinished();
+
 private:
 	bool ParseCommandLine(const tString &asCommandline);
 
@@ -40,9 +46,20 @@ private:
 	void ExitEngine();
 
 	////////////////////////////////////////
-	// Phase 1: data loading - load a hardcoded test map and set up a
-	// debug free-fly camera to look at it with. No player controller,
-	// no scripts.
+	// Real boot sequence, one step further than Phase 0: after the splash
+	// (see cSomaSplash), load SOMA's own declared main menu scene
+	// (main_init.cfg's <MainMenu> entry) with the same debug free-fly
+	// camera as InitTestMap() below - there is no real interactive menu
+	// (the actual game layers an ImGui-based UI over this scene, not
+	// implemented here), just the backdrop.
+	bool InitMainMenuScene();
+
+	////////////////////////////////////////
+	// Original Phase 1 hardcoded test map - no longer called from Init()
+	// automatically (OnSplashFinished() calls InitMainMenuScene() instead,
+	// falling back to this only if that fails to load), but kept available
+	// as a known-good manual fallback: call this instead of
+	// InitMainMenuScene() from OnSplashFinished() to go back to it.
 	bool InitTestMap();
 	void ExitTestMap();
 
@@ -61,7 +78,13 @@ private:
 	tString msMaterialConfigPath;
 
 	/////////////////////////
-	// Phase 1 test map + debug camera state
+	// Splash sequence, shown before the map below loads
+	cSomaSplash *mpSplash;
+
+	/////////////////////////
+	// Phase 1 test map + debug camera state (also used by
+	// InitMainMenuScene() for the main menu scene - same shape, one
+	// camera/viewport/world set at a time)
 	cWorld *mpTestWorld;
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
