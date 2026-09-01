@@ -196,11 +196,35 @@ the visually-scaled widgets.
 **before** `CreateHPLEngine()` / any PreMenu/MainMenu/HUD GuiSet gets constructed, since each
 set bakes the current global scale into its own virtual-to-screen mapping at construction (or
 whenever `SetVirtualSize()` is called on it) — changing the value requires a restart to take
-effect, matching how most other `[Graphics]` settings in this file already behave. No in-game
-options-menu control was wired up (config-file-only, per the task's stated minimum bar) —
-`LuxMainMenu_Options.cpp`'s settings wiring (creation + load + save + "needs restart"
-tracking) spans ~8 touch points per setting and would have required careful vertical-layout
-re-flow of the whole Graphics tab; not attempted this session.
+effect, matching how most other `[Graphics]` settings in this file already behave.
+
+**In-game Options control (later session)**: added a "UI Scale" combo box (1x/2x/3x/4x —
+integer only, matching `mlGuiScale`'s `int` storage) to the Graphics tab's Screen group in
+`amnesia/src/game/LuxMainMenu_Options.cpp`/`.h`, following the exact wiring pattern already
+used by `mpCBTextureSizeLevel` (a restart-required combo box): `SetUpInput(..., true, ...)`,
+population + selection in `SetInputValues()`, snapshot round-trip in
+`DumpInitialValues()`/`DumpCurrentValues()`, and the actual config write in `ApplyChanges()`
+(`pCfgHdr->mlGuiScale = ...`). The Screen group's box grew from height 70 to 115 to fit the
+new row below Fullscreen/VSync; focus-nav chain updated (`VSync` → `GuiScale` →
+`TextureSizeLevel`, was `VSync` → `TextureSizeLevel` directly).
+
+Two new translation keys are needed for the label/tooltip to actually render text —
+`OptionsMenu/GuiScale` ("UI Scale") and `OptionsMenu/GuiScaleTip` — in each `config/base_*.lang`
+file (game-shipped data, not part of this repo, so not added here; missing keys just log a
+`cLanguageFile::Translate()` warning and render blank text, no crash — confirmed by reading
+that function's fallback path). Whoever ships this should add those two entries alongside the
+existing `TexQuality`/`TexQualityTip` pair as a template.
+
+**Verified this pass**: built (`amnesia/src/build-guiscale2`), deployed as
+`Amnesia.guiscale2.aarch64`, booted successfully against real game data with no warnings in
+`hpl.log` and the process stable while running. Could not interactively click through to the
+Graphics tab this pass — the desktop session was screen-locked for the whole test window (no
+input simulation tool is available in this environment regardless, per the existing "Skip
+splash screens" note) — so the new control's correctness rests on code review against the
+proven `TextureSizeLevel` pattern, not a live screenshot. Re-verify visually (select each of
+1x/2x/3x/4x, confirm it persists to `main_settings.cfg`'s `[Graphics] GuiScale` and that a
+restart actually changes UI size, same as the original `GuiScale="1"`/`"2"` screenshots above)
+next time an interactive desktop session is available.
 
 **Verified**: built via a dedicated `amnesia/src/build-guiscale` dir, deployed as
 `Amnesia.guiscale.aarch64` in the Steam game dir, ran against real game data at `GuiScale="1"`
