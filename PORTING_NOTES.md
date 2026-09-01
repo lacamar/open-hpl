@@ -235,19 +235,86 @@ size difference. Centered dialogs (built via `iGuiPopUp`/`GuiPopUpMessageBox`, w
 themselves at `GetVirtualSize()/2 - windowSize/2`) scale cleanly with no clipping, since they
 automatically stay centered in the now-smaller virtual space.
 
-- **Known limitation, not fixed this session**: because the scale "zooms to centre" rather
-  than rescaling each widget's own position relative to its actual anchor (top-left,
-  bottom-right, etc.), content positioned close to the edge of a GuiSet's virtual space can
-  end up outside the now-smaller visible window and get clipped at `GuiScale` > 1. Confirmed
-  via screenshot: at `GuiScale="2"`, a "Load Game" list window (title bar + top of its
-  scrollbar) got clipped off the top edge of the screen, while its (centered) buttons
-  remained fully visible and correctly enlarged. A true fix would need each widget to know
-  its own anchor point and rescale position + size together (e.g. top-left-anchored widgets
-  scaling away from the top-left corner, bottom-right-anchored ones away from bottom-right) —
-  significantly more invasive, touching widget layout code throughout
-  `HPL2/core/sources/gui/` and `amnesia/src/game/Lux*.cpp`, not attempted this session.
 - The Launcher (`amnesia/src/launcher/`, FLTK-based) is a separate, unrelated GUI system —
   not touched, and not investigated for whether it has the same "reads as tiny" issue.
+
+### Follow-up: clipping at `GuiScale > 1` actually fixed (later session)
+
+User report: at `GuiScale="2"`, "lots of elements are offscreen so I can't interact with
+menus", the splash screen was offscreen, and splash still couldn't be skipped by click or
+key. Root-caused and fixed all three, without the full per-widget-anchor rewrite the note
+above assumed was required:
+
+1. **`cGuiSet::SetVirtualSize()`** (`HPL2/core/sources/gui/GuiSet.cpp`) zoomed around the
+   *centre* of a set's full `avSize`. Since MainMenu-category sets default their virtual size
+   to the raw screen size and most game code positions widgets from `(0,0)`, centre-zoom
+   pushed the *majority* of a set's content outside the shrunk visible window - not just
+   edge-adjacent content as the original note assumed. Changed the anchor to `avOffset` (the
+   set's own origin - `(0,0)` for sets like MainMenu that don't aspect-correct, or whatever
+   `LuxCalcGuiSetScreenOffset` already centered for sets that do) instead of the screen's
+   geometric centre. `GetVirtualSize()/2`-based centering (popups, `CenterGlobalPositionInSet`)
+   is unaffected either way, since that math is expressed in the already-scaled
+   `GetVirtualSize()` and doesn't depend on where the zoom is anchored.
+2. **`cLuxMainMenu`** (`amnesia/src/game/LuxMainMenu.cpp`) computed its top-level layout
+   (button list, logo) as `menu.cfg`'s `*RelativePos`/`*RelativeSize` fractions multiplied by
+   the raw screen size (`mvScreenSize`), then fed the result into the same (now scaled)
+   coordinate space as everything else - so e.g. the button list's `TopMenuStartRelativePos`
+   of `(0.8, 0.325)` landed at 80% across the *original* screen, which at `GuiScale="2"` is
+   already past the shrunk visible window's right edge, regardless of anchor choice. Changed
+   these calculations to multiply by `mpGuiSet->GetVirtualSize()` (the current, already-scaled
+   space) instead, so the fraction is always relative to what's actually visible. Its
+   full-screen background/overlay `DrawGfx` calls (captured game screenshot + blur behind the
+   in-game pause menu, black fade, top-menu backdrop) had the same bug in reverse - sized via
+   raw `mvScreenSize` instead of `GetVirtualSize()`, so at `GuiScale > 1` they only covered
+   their own origin corner of the visible window instead of all of it. Symptom, live: pausing
+   in-game showed the frozen background "zoomed into just the top-left corner". Fixed the same
+   way, size parameter switched to `GetVirtualSize()`.
+3. **`iWidget::CenterGlobalPositionInSet()`** (`HPL2/core/sources/gui/Widget.cpp`) and
+   `cGuiPopUpMessageBox`'s equivalent inline centering (`HPL2/core/sources/gui/
+   GuiPopUpMessageBox.cpp`) computed `GetVirtualSize()/2 - windowSize/2` with no floor - a
+   window bigger than the (scale-shrunk) visible canvas in either dimension centers into
+   *negative* coordinates, overflowing past the top/left edge instead of just the
+   bottom/right. This is what the original note's "Load Game clipped off the top" screenshot
+   actually was, not edge-of-canvas positioning - Load Game's fixed pixel size doesn't fit
+   inside a `GuiScale="2"`-shrunk canvas whose scale was derived from real screen resolution,
+   not the layout's own design resolution. Clamped both to `Max(0, ...)` in each axis, so an
+   oversized window anchors to the set's origin (still fully reachable) instead of spilling
+   off both edges. Confirmed live: the Profiles window (same oversized-dialog situation as
+   Load Game, encountered via the first-run profile-creation flow) went from partially
+   off-screen (`Delete`/`Create` buttons cut off at the left edge) to fully visible and
+   correctly centered.
+4. **Splash/pre-menu** (`amnesia/src/game/LuxPreMenu.cpp`): added an `abIgnoreGlobalScale`
+   parameter to `cGuiSet::SetVirtualSize()` (defaults `false`, every other call site
+   unaffected) and set it for PreMenu's call specifically - a full-bleed splash/logo image
+   already fills the screen at scale 1 and has nothing to gain from `GuiScale`, only edges to
+   lose to it. Confirmed fix #1-3 above didn't independently need this (they fix
+   *any*-size-canvas clipping generally), but leaving splash unscaled is strictly simpler and
+   guarantees it never regresses no matter what else changes here.
+5. **Splash skip** (click/key): re-tested live against current `HEAD` (not just reviewed) -
+   `eLuxAction_Exit`/`UIPrimary` keyboard skip (`cLuxInputHandler::UpdatePreMenuInput()`,
+   `amnesia/src/game/LuxInputHandler.cpp`) fired correctly via `wtype`, advancing straight
+   through the splash sequence to the Profiles window in one keypress. The behavior the user
+   originally hit was against a stale installed binary predating this session's fixes, not a
+   regression in the skip logic itself - once the *fixed* binary was actually running, skip
+   worked as already documented above. Mouse-click skip still not independently verified live
+   (no click-simulation tool in this environment - see the note above) - only keyboard was
+   confirmed this pass.
+
+**Verified live** (real Steam game data, `amnesia/src/build`, deployed over the Steam-side
+`Amnesia.bin.aarch64`, `GuiScale="2"` from the user's own `main_settings.cfg`): splash logos
+render centered and unclipped; a single keypress skips through them; the Profiles dialog is
+fully visible and centered; user confirmed the main menu button list and in-game pause view
+both look correct after these fixes.
+
+**Not fixed / still a known limitation**: a dialog wider or taller than the shrunk visible
+canvas in either dimension (i.e. bigger than `screen_size / GuiScale`) still can't fully fit
+on screen - the clamp (#3) keeps it *reachable* (anchored on-screen at the origin) but its
+far edge still gets cut off by the viewport. This becomes likelier at `GuiScale="3"`/`"4"` or
+on lower real resolutions. The genuinely complete fix would need each widget to know its own
+anchor point and rescale position + size together (e.g. top-left-anchored widgets scaling
+away from the top-left corner, bottom-right-anchored ones away from bottom-right) -
+significantly more invasive, touching widget layout code throughout
+`HPL2/core/sources/gui/` and `amnesia/src/game/Lux*.cpp` - not attempted here either.
 
 ## Pending work (this turn's requests — likely being handled by sub-agents, check for their reports)
 

@@ -464,8 +464,18 @@ namespace hpl {
 	{
 		cVector2f vSetSize = mpSet->GetVirtualSize();
 		float fGlobalZ = GetGlobalPosition().z;
-        
-		SetGlobalPosition(cVector3f(vSetSize.x/2.0f - mvSize.x/2.0f, vSetSize.y/2.0f - mvSize.y/2.0f, fGlobalZ));
+
+		// Clamp to the set's origin rather than letting a window bigger than the
+		// (possibly GuiScale-shrunk) visible canvas centre into negative coordinates -
+		// otherwise it overflows past the top/left edge instead of just the
+		// bottom/right, seen live as e.g. the Load Game window's title bar and
+		// Delete/Create buttons landing partly off-screen at GuiScale > 1.
+		float fX = vSetSize.x/2.0f - mvSize.x/2.0f;
+		float fY = vSetSize.y/2.0f - mvSize.y/2.0f;
+		if(fX < 0) fX = 0;
+		if(fY < 0) fY = 0;
+
+		SetGlobalPosition(cVector3f(fX, fY, fGlobalZ));
 	}
 	
 	//-----------------------------------------------------------------------

@@ -187,7 +187,9 @@ cLuxPreMenu::cLuxPreMenu() : iLuxUpdateable("LuxPreMenu")
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset);
+	// Splash/logo images are full-bleed backgrounds that already fill the whole screen at
+	// scale 1 - GuiScale has nothing useful to enlarge here, only edges to zoom past.
+	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 
 	///////////////////////////////
 	//Create Viewport

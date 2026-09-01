@@ -164,18 +164,28 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	mfTopMenuFadeInTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeInTime", 0);
 	mfTopMenuFadeOutTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeOutTime", 0);
 	
-	mvTopMenuStartPos = gpBase->mpMenuCfg->GetVector2f("Main","TopMenuStartRelativePos", 0) * mvScreenSize;
-	mvTopMenuStartPos.z = 2;
-	mvTopMenuFontSize = gpBase->mpMenuCfg->GetVector2f("Main","TopMenuFontRelativeSize", 0) * mvScreenSize;
+	// These "Relative" config values are fractions (0-1) of the menu's own coordinate
+	// space, not of the real screen - use GetVirtualSize() (already GuiScale-adjusted,
+	// see cGuiSet::SetVirtualSize()) rather than the raw mvScreenSize, so the top menu
+	// and logo land at the same *fraction* of what's actually visible at any GuiScale
+	// instead of a fraction of the pre-scale screen (which, since GuiScale zooms the
+	// visible window in around the origin, pushed this content - anchored well away
+	// from (0,0), e.g. TopMenuStartRelativePos's default 80% across - outside that
+	// window and off screen at scale > 1).
+	const cVector2f& vMenuSpace = mpGuiSet->GetVirtualSize();
 
-	mvTopMenuStartPosInGame = gpBase->mpMenuCfg->GetVector2f("Main", "TopMenuStartRelativePosInGame", 0) * mvScreenSize;
+	mvTopMenuStartPos = gpBase->mpMenuCfg->GetVector2f("Main","TopMenuStartRelativePos", 0) * vMenuSpace;
+	mvTopMenuStartPos.z = 2;
+	mvTopMenuFontSize = gpBase->mpMenuCfg->GetVector2f("Main","TopMenuFontRelativeSize", 0) * vMenuSpace;
+
+	mvTopMenuStartPosInGame = gpBase->mpMenuCfg->GetVector2f("Main", "TopMenuStartRelativePosInGame", 0) * vMenuSpace;
 	mvTopMenuStartPosInGame.z = 2;
-	
+
 	mvTopMenuFontSize.x  *= (mvScreenSize.y / mvScreenSize.x) / (3.0f/4.0f);//Make font more narrow to compensate for wide screen.
 
-	mvLogoPos = gpBase->mpMenuCfg->GetVector2f("Main", "MainMenuLogoStartRelativePos", 0) * mvScreenSize;
+	mvLogoPos = gpBase->mpMenuCfg->GetVector2f("Main", "MainMenuLogoStartRelativePos", 0) * vMenuSpace;
 	mvLogoPos.z = 2;
-	mvLogoSize = gpBase->mpMenuCfg->GetVector2f("Main", "MainMenuLogoRelativeSize", 0) * mvScreenSize;
+	mvLogoSize = gpBase->mpMenuCfg->GetVector2f("Main", "MainMenuLogoRelativeSize", 0) * vMenuSpace;
 	
 	msMusic = gpBase->mpMenuCfg->GetString("Main", "Music", "");
 	msZoomSound = gpBase->mpMenuCfg->GetString("Main", "ZoomSound", "");
@@ -455,24 +465,32 @@ void cLuxMainMenu::Update(float afTimeStep)
 
 void cLuxMainMenu::OnDraw(float afFrameTime)
 {
+	// Full-screen backgrounds/overlays need to be sized in the same (possibly
+	// GuiScale-shrunk) coordinate space the projection actually maps to the real
+	// screen - see cGuiSet::SetVirtualSize() - not raw mvScreenSize, or they only
+	// cover the space's origin corner instead of the whole visible window (seen
+	// live as the paused-game background screenshot behind this same MainMenu
+	// GuiSet appearing zoomed into just its top-left corner at GuiScale > 1).
+	const cVector2f& vMenuSpace = mpGuiSet->GetVirtualSize();
+
 	/////////////////////////////////
 	//Screen background
 	if(mpScreenGfx)
 	{
-		if(mpScreenGfx && mfMenuFadeAlpha>0) 
-			mpGuiSet->DrawGfx(mpScreenGfx,cVector3f(0,0,0),mvScreenSize);
-		
+		if(mpScreenGfx && mfMenuFadeAlpha>0)
+			mpGuiSet->DrawGfx(mpScreenGfx,cVector3f(0,0,0),vMenuSpace);
+
 		if(mpScreenBlurGfx)
-			mpGuiSet->DrawGfx(mpScreenBlurGfx,cVector3f(0,0,0.2f),mvScreenSize,cColor(1, 1-mfMenuFadeAlpha));
+			mpGuiSet->DrawGfx(mpScreenBlurGfx,cVector3f(0,0,0.2f),vMenuSpace,cColor(1, 1-mfMenuFadeAlpha));
 
 		if(	mfMenuFadeAlpha > 0 && mbExiting && mExitMessage != eLuxMainMenuExit_ReturnToGame )
 		{
-			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), mvScreenSize, cColor(1 ,mfMenuFadeAlpha));
+			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mfMenuFadeAlpha));
 		}
 
 		//Top Menu background
 		mpGuiSet->DrawGfx(	mpTopBackground,cVector3f(0,mvTopMenuStartPos.y,0.5f),
-							cVector2f(mvScreenSize.x, mvScreenSize.y - mvTopMenuStartPos.y),
+							cVector2f(vMenuSpace.x, vMenuSpace.y - mvTopMenuStartPos.y),
 							cColor(1 ,0.5f*mfTopMenuAlpha));
 	}
 	/////////////////////////////////
@@ -480,7 +498,7 @@ void cLuxMainMenu::OnDraw(float afFrameTime)
 	else
 	{
 		if(mfMenuFadeAlpha > 0)
-			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), mvScreenSize, cColor(1 ,mfMenuFadeAlpha));
+			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mfMenuFadeAlpha));
 
 		if(mpLogoGfx)
 			mpGuiSet->DrawGfx( mpLogoGfx, mvLogoPos, mvLogoSize, cColor(1, mfTopMenuAlpha) );

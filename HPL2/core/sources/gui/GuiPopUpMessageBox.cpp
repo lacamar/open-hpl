@@ -65,7 +65,11 @@ namespace hpl {
 
 		float fWindowHeight = 90 + pFont->mvSize.y;
 		
-		cVector3f vPos = cVector3f(vVirtSize.x/2 - fWindowWidth/2,vVirtSize.y/2- fWindowHeight/2,100);
+		// Clamp to the set's origin rather than centring into negative coordinates if
+		// this box is bigger than the (possibly GuiScale-shrunk) visible canvas - see
+		// iWidget::CenterGlobalPositionInSet().
+		cVector3f vPos = cVector3f(	cMath::Max(vVirtSize.x/2 - fWindowWidth/2, 0.0f),
+										cMath::Max(vVirtSize.y/2 - fWindowHeight/2, 0.0f), 100);
 
 		//////////////////////////
 		// Window

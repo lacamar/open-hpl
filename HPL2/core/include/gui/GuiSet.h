@@ -402,7 +402,11 @@ namespace hpl {
 		void SetRootWidgetClips(bool abX);
 		bool GetRootWidgetClips();
 
-		void SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset=0);
+		// abIgnoreGlobalScale: skip the global GUI scale (see SetGlobalGuiScale()) for this
+		// set - for full-bleed backgrounds (e.g. the splash/pre-menu sequence) that already
+		// fill the whole screen at scale 1 and have nothing to gain from being "made bigger",
+		// only content to lose off the edges from being zoomed.
+		void SetVirtualSize(const cVector2f& avSize, float afMinZ, float afMaxZ, const cVector2f& avOffset=0, bool abIgnoreGlobalScale=false);
 		const cVector2f& GetVirtualSize(){return mvVirtualSize;}
 		const cVector2f& GetVirtualSizeOffset(){return mvVirtualSizeOffset;}
 
