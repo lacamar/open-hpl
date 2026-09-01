@@ -58,8 +58,28 @@ set(HPL2_INCLUDES
     PUBLIC include
     #Important that this is before dependencies so the correct OpenAL headers are used
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
-    PUBLIC ../dependencies/include
 )
+
+IF(LINUX)
+    # ../dependencies/include holds vendored headers still needed on Linux
+    # (Newton.h in particular - already updated in place to the 3.14 API
+    # this port builds against, and there's no Fedora package for it), but
+    # also a much older bundled FL/ (FLTK 1.3.3), kept only for the
+    # Windows/macOS project files which don't go through this CMake build.
+    # A plain -I would let that stale FL/ shadow the real system FLTK
+    # (fltk-devel, >=1.4 - the first release with a native Wayland backend)
+    # and the Launcher would fail to link against its newer libfltk.so ABI.
+    # -idirafter searches this directory only after the compiler's normal
+    # (including implicit system) include paths, so /usr/include/FL wins
+    # while everything else vendored here is still found as a fallback.
+    # (Applied via target_compile_options below, once the HPL2 target
+    # exists.)
+    set(HPL2_VENDORED_INCLUDE_IDIRAFTER "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/include")
+ELSE()
+    list(APPEND HPL2_INCLUDES
+        PUBLIC ../dependencies/include
+    )
+ENDIF()
 
 IF(LINUX)
     add_library(binreloc STATIC ../dependencies/sources/binreloc/binreloc.c)
@@ -262,6 +282,10 @@ add_library(HPL2 STATIC
 target_include_directories(HPL2
     ${HPL2_INCLUDES}
 )
+
+if(HPL2_VENDORED_INCLUDE_IDIRAFTER)
+    target_compile_options(HPL2 PUBLIC -idirafter "${HPL2_VENDORED_INCLUDE_IDIRAFTER}")
+endif()
 
 target_compile_definitions(HPL2
     ${HPL2_DEFINES}
