@@ -885,3 +885,109 @@ skip triggers — the logic is provably correct.
   real "New Game" destination) is the next concrete milestone after that, once script
   execution exists to make either scene meaningfully playable rather than an empty static
   camera-fly view.
+
+## Amnesia: Rebirth and Amnesia: The Bunker Phase 0 (this session)
+
+Two more titles get the same "boot the shared HPL2 engine against real Steam data, load one
+map, drive a free-fly debug camera" scaffold already proven for `soma/` - `rebirth/src/game/`
+and `bunker/src/game/` (wired into `amnesia/src/CMakeLists.txt` as two more sibling targets).
+Both games' real Linux data is available locally (Steam): `Amnesia Rebirth` at
+`/home/lm/.local/share/Steam/steamapps/common/Amnesia Rebirth` (appid 999220) and
+`Amnesia The Bunker` at `/home/lm/.local/share/Steam/steamapps/common/Amnesia The Bunker`
+(appid 1944430) - both Windows-only in this Steam library (no native Linux binary at all,
+just `.exe`/`.dll`), which is irrelevant to this port since only each game's *data* is
+needed, not its own binary.
+
+Unlike SOMA's Phase 0 (which hardcoded a hand-picked test map and read its camera start
+position/facing by manually inspecting the map file's XML), `InitTestMap()` in both new
+`*Base.cpp` files resolves this generically: the map filename comes straight from
+`main_init.cfg`'s own `<StartMap File=... Pos=.../>` entry (Bunker's is a comma-separated
+`Label:file.hpm` list - `"Main:trenches.hpm, PostIntro:officer_hub.hpm"` - Phase 0 takes only
+the first), and the camera position comes from the matching `cStartPosEntity` the loaded map
+declares (`cWorld::GetStartPosEntity()`). In practice neither map actually has one (see
+below), so this ends up falling back to world origin either way - but the mechanism is more
+robust than SOMA's for whichever future map does have one.
+
+**Root-caused and fixed, a real cross-game engine bug**: both new targets hit an immediate
+`FatalError` on boot - `Could not load vertex buffer from mesh 'core_box.dae'` - before any
+of this session's own code even ran. Traced to `iRenderer::LoadVertexBufferFromMesh()`
+(`HPL2/core/sources/graphics/Renderer.cpp:442` and `RendererDeferred.cpp:652-656`), which asks
+for five core primitive meshes by hardcoded filename at renderer init (a box for something
+using `Renderer.cpp`'s own utility shape, three sphere tessellations
+`core_5_5_sphere.dae`/`core_7_7_sphere.dae`/`core_12_12_sphere.dae` and a
+`core_pyramid.dae` for `RendererDeferred`'s light-volume stencils) - always the `.dae`
+(COLLADA source) extension specifically, with no fallback to an equivalent pre-compiled
+`.msh` cache even when one exists. Confirmed via direct comparison across every real install
+available locally: SOMA, Dark Descent, and Machine for Pigs all ship both the `.msh` cache
+*and* the original `.dae` source for all five; Rebirth and the Bunker ship only the `.msh` -
+Valve's depot for the two newer titles evidently strips the COLLADA sources these two
+specific renderer call sites still need. Not fixable by changing the engine's asset
+resolution generically without more risk than this session wanted to take on the shared
+renderer init path; instead, `soma/data/compat/*.dae` (present in this repo since its initial
+import, unused until now - clearly staged in advance for exactly this gap) supplies drop-in
+replacement copies of all five, pulled from a real install that does ship them. The spec
+(`open-hpl.spec`, packaged separately from this repo - see its own changelog) now installs
+those five files under `%{_libexecdir}/%{name}/compat/` and has the new
+`open-hpl-rebirth`/`open-hpl-bunker` launcher wrappers deploy them into
+`<gamedir>/core/models/` (already a registered resource directory per both games' own
+`resources.cfg`) alongside the binary, the same additive, non-destructive pattern the
+existing launchers already use for icon caching and binary deployment.
+
+**Verified live** (headless, screenshot-confirmed - see the headless hidden-window entry
+below for how): both reach `Game Running` with zero crashes after the compat-mesh fix.
+Rebirth loads `01_00_intro.hpm` ("64 static objects, 0 primitives, 0 entities, 48 lights, 0
+areas, 0 sounds") and the debug camera (parked at world origin - see below) lands inside the
+opening plane-cabin scene, seats clearly visible in the screenshot though heavily overexposed
+(no real material/lighting shading, same class of gap as SOMA's - expected, see "Known-
+remaining limitations" under the SOMA entry above, not investigated further this session).
+The Bunker loads `trenches.hpm` ("663 static objects, 36 primitives, 0 entities, 78 lights, 0
+areas, 0 sounds") and renders real distant structure geometry against a flat fog-colored
+background. Both logs show the expected, already-documented class of Phase 0 gaps and
+nothing new: `no area loader registered for AreaType 'PlayerStart'/'Trigger'/...` (this
+engine generation represents player starts as script-loaded Areas, not the `cStartPosEntity`
+objects `GetStartPosEntity()` looks for - hence both cameras actually landing at world origin,
+not the map's real intended spawn; happened to be usable in both cases but is not guaranteed
+to be for an arbitrary future map), `Couldn't find loader for type 'Prop_Rigid'/'StaticProp'/
+'Prop_Grab'/...` (no entity-type loaders registered, matches SOMA's Phase 0 scope exactly),
+and (Bunker only) a long run of `Couldn't create SoundEntity`/`Cannot find sound entity`
+errors from `sounddata.cfg` never being loaded (not wired into `InitMainConfig()` for either
+game, matching SOMA) - none of these are fatal, all expected.
+
+**Next step for whoever continues this**: same shape as SOMA's own next steps - real camera
+placement needs either a `PlayerStart`-Area loader or (cheaper, matching SOMA's original
+Phase 0 approach) hand-reading the intended spawn Area's `WorldPos` out of the map XML per
+map; real rendering needs the same HPSL→GLSL translation work already scoped for SOMA (see
+above - these later titles are the same HPL3-lineage shader format); no script execution
+exists for either title yet, so both StartMap scenes may, like SOMA's `main_menu.hpm`, end up
+mostly empty of anything the map file doesn't bake in directly once actually inspected in
+detail (not yet checked for either game this session).
+
+## Headless hidden-window screenshots + splash "any key" skip (this session)
+
+Two smaller, unrelated fixes alongside the Rebirth/Bunker work above:
+
+- **`cLuxPreMenu`'s splash/pre-menu skip now genuinely accepts any key**, not just
+  Escape/Enter. `cLuxInputHandler::UpdatePreMenuInput()` (`amnesia/src/game/
+  LuxInputHandler.cpp`) previously only checked `eLuxAction_Exit`/`eLuxAction_UIPrimary`
+  (bound actions) plus a raw click when no on-screen widget wants it - a real gap against
+  "press any key", not the "click skip already worked" case 1.3.1-9's changelog re-verified.
+  Fixed at the one point `UpdateGlobalInput()` already drains the keyboard's pressed-key
+  queue to forward to the GUI on a PreMenu-active frame - checking `IsContinueButtonVisible()
+  ==false` there (same gate the existing click-skip already uses) and calling
+  `cLuxPreMenu::ButtonPressed()` for any key found, so a Continue-button/gamma-slider section
+  still reserves its arrow keys for the slider, untouched.
+- **The opt-in headless automation server (`OPENHPL_HEADLESS_SOCKET`, added 1.3.1-8/this
+  project's earlier session) can now take a real screenshot without ever putting a window on
+  screen.** `LowLevelGraphicsSDL::Init()` now adds `SDL_WINDOW_HIDDEN` to the window flags
+  whenever that env var is set (a real window/GL context is still created -
+  `CopyFrameBufferToBitmap()` needs one to read pixels from). Verified live this session that
+  a hidden window alone isn't sufficient under this system's default Wayland driver -
+  `screenshot` reliably read back solid black, because a never-mapped window's
+  `wl_egl_window` surface never receives the compositor's initial `configure` event, so
+  nothing actually renders into it. `SDLEngineSetup.cpp`'s `cSDLEngineSetup` constructor now
+  also forces `SDL_VIDEODRIVER=x11` ahead of `SDL_Init()` specifically for headless runs (only
+  when `OPENHPL_HEADLESS_SOCKET` is set, no caller-set `SDL_VIDEODRIVER` already exists, and
+  `DISPLAY` is set - so normal on-screen play, and any environment with no X server at all,
+  are both untouched) - confirmed live that X11/XWayland hidden windows carry no equivalent
+  requirement: same test now reads back real rendered content. This is what made the
+  Rebirth/Bunker screenshots above possible without ever needing eyes on a real display.

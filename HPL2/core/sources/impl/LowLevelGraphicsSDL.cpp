@@ -226,6 +226,14 @@ namespace hpl {
             mlFlags |= SDL_WINDOW_FULLSCREEN;
         }
 
+        // Under the opt-in headless automation server (see HeadlessControl.h),
+        // still create a real window/GL context - CopyFrameBufferToBitmap()
+        // needs one to read pixels from - but keep it off-screen so scripted
+        // test runs never pop a window in front of whoever's at the desktop.
+        if (getenv("OPENHPL_HEADLESS_SOCKET") != NULL) {
+            mlFlags |= SDL_WINDOW_HIDDEN;
+        }
+
 
         Log(" Setting video mode: %d x %d - %d bpp\n",alWidth, alHeight, alBpp);
         mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),

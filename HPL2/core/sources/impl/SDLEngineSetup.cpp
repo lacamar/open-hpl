@@ -19,6 +19,8 @@
 
 #include "impl/SDLEngineSetup.h"
 
+#include <cstdlib>
+
 #include "system/System.h"
 #include "input/Input.h"
 #include "graphics/Graphics.h"
@@ -70,6 +72,24 @@ namespace hpl {
 #endif
 		if(alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video))
 		{
+			// Under the opt-in headless automation server (OPENHPL_HEADLESS_SOCKET -
+			// see HeadlessControl.h), prefer X11/XWayland over this system's default
+			// Wayland driver, if a caller hasn't already forced one and an X server
+			// looks available (DISPLAY set): a hidden (SDL_WINDOW_HIDDEN, see
+			// LowLevelGraphicsSDL::Init()) window never gets mapped, and on Wayland
+			// that means its wl_egl_window surface never receives the compositor's
+			// initial configure event, so rendering into it silently produces
+			// nothing (CopyFrameBufferToBitmap() reads back solid black) - verified
+			// live, X11's hidden-window model has no such requirement. Left alone
+			// (and normal, on-screen play unaffected) when DISPLAY isn't set, since
+			// forcing x11 with no X server available would just fail SDL_Init below.
+			if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL &&
+			   getenv("SDL_VIDEODRIVER") == NULL &&
+			   getenv("DISPLAY") != NULL)
+			{
+				setenv("SDL_VIDEODRIVER", "x11", 1);
+			}
+
 			if(SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0) {
 				FatalError("Error Initializing Display: %s",SDL_GetError()); 
 				exit(1);

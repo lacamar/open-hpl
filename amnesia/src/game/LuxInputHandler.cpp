@@ -755,7 +755,17 @@ void cLuxInputHandler::UpdateGlobalInput()
 		//Key presses
 		while(mpInput->GetKeyboard()->KeyIsPressed())
 		{
-			pGui->SendKeyPress(mpInput->GetKeyboard()->GetKey());
+			cKeyPress key = mpInput->GetKeyboard()->GetKey();
+			pGui->SendKeyPress(key);
+
+			//Any key skips a pre-menu/splash section with no interactive widget (Continue
+			//button/gamma slider) for it to hit instead - sections that do show one keep
+			//using their own eGuiMessage_ButtonPressed callback and the Escape/UIPrimary
+			//check below, so arrow keys etc. still reach the gamma slider undisturbed.
+			if(mState==eLuxInputState_PreMenu && gpBase->mpPreMenu->IsContinueButtonVisible()==false)
+			{
+				gpBase->mpPreMenu->ButtonPressed();
+			}
 		}
 
 		//Mouse movement

@@ -49,6 +49,15 @@ add_subdirectory(../../soma/src/game soma_game)
 # sibling target linking the same HPL2 library, same as soma_game above.
 add_subdirectory(../../amfp/src/game amfp_game)
 
+# Phase 0 of the Amnesia: Rebirth and Amnesia: The Bunker game modules -
+# further sibling targets, same additive pattern as soma_game/amfp_game
+# above. Both are Windows-only titles with no Linux binary of their own in
+# this project's Steam library, so unlike SOMA there is no existing native
+# build to compare against - these boot straight off each game's own real
+# data files.
+add_subdirectory(../../rebirth/src/game rebirth_game)
+add_subdirectory(../../bunker/src/game bunker_game)
+
 if(APPLE)
     add_subdirectory(launcher-macosx launcher)
 else()
