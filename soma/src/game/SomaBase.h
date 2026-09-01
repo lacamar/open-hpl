@@ -69,6 +69,10 @@ public:
 	tString msGameName;
 	tWString msErrorMessage;
 
+	// NULL until InitMainMenuScene()/InitTestMap() runs; used by the
+	// headless-control camera_state/set_camera commands (see SomaBase.cpp).
+	cCamera* GetDebugCamera(){ return mpDebugCamera; }
+
 private:
 	/////////////////////////
 	// Config file paths, loaded from main_init.cfg

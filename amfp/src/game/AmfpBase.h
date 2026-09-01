@@ -65,6 +65,10 @@ public:
 	tString msGameName;
 	tWString msErrorMessage;
 
+	// NULL until InitTestMap() runs; used by the headless-control
+	// camera_state/set_camera commands (see AmfpBase.cpp).
+	cCamera* GetDebugCamera(){ return mpDebugCamera; }
+
 private:
 	/////////////////////////
 	// Config file paths, loaded from main_init.cfg

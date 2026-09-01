@@ -55,6 +55,8 @@
 
 #include "LuxPlayer.h"
 
+#include "system/HeadlessControl.h"
+
 #include "LuxStaticProp.h"
 
 #include "LuxProp_Object.h"
@@ -398,6 +400,94 @@ cLuxBase::~cLuxBase()
 //-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
+// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
+//
+// Registered below in Init(), after InitGame() has created mpMapHandler/
+// mpPlayer, whenever OPENHPL_HEADLESS_SOCKET is set. Each checks map/player
+// state at call time rather than registration time, since no map is loaded
+// yet at registration.
+//////////////////////////////////////////////////////////////////////////
+
+static void cLuxBase_HeadlessCmd_RunScript(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	if(pBase->mpMapHandler->MapIsLoaded()==false)
+	{
+		aResp.SetError("no map loaded");
+		return;
+	}
+	pBase->mpMapHandler->GetCurrentMap()->RunScript(aReq.GetString("line",""));
+}
+
+static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+
+	aResp.Set("map_loaded", pBase->mpMapHandler->MapIsLoaded());
+	if(pBase->mpMapHandler->MapIsLoaded())
+	{
+		cLuxMap *pMap = pBase->mpMapHandler->GetCurrentMap();
+		aResp.Set("map_name", pMap->GetName());
+		aResp.Set("map_file", pMap->GetFileName());
+	}
+
+	if(pBase->mpPlayer)
+	{
+		iCharacterBody *pBody = pBase->mpPlayer->GetCharacterBody();
+		cVector3f vPos = pBody->GetFeetPosition();
+		cVector3f vVel = pBody->GetVelocity(pBase->mpEngine->GetStepSize());
+
+		aResp.Set("pos_x", vPos.x);
+		aResp.Set("pos_y", vPos.y);
+		aResp.Set("pos_z", vPos.z);
+		aResp.Set("vel_x", vVel.x);
+		aResp.Set("vel_y", vVel.y);
+		aResp.Set("vel_z", vVel.z);
+		aResp.Set("health", pBase->mpPlayer->GetHealth());
+		aResp.Set("sanity", pBase->mpPlayer->GetSanity());
+	}
+
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cLuxBase_HeadlessCmd_Teleport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	if(pBase->mpPlayer == NULL)
+	{
+		aResp.SetError("no player");
+		return;
+	}
+
+	cVector3f vPos(aReq.GetFloat("x",0), aReq.GetFloat("y",0), aReq.GetFloat("z",0));
+
+	// Same order as the fix for the teleport-while-falling bug (see
+	// PORTING_NOTES.md): clear residual velocity, or a teleport straight
+	// into/through solid floor can carry stale fall speed through it.
+	iCharacterBody *pBody = pBase->mpPlayer->GetCharacterBody();
+	pBody->SetFeetPosition(vPos);
+	pBody->StopMovement();
+}
+
+static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	tString sMap = aReq.GetString("map","");
+	if(sMap == "")
+	{
+		aResp.SetError("missing 'map'");
+		return;
+	}
+
+	if(pBase->StartGame(sMap, "", aReq.GetString("start_pos","")) == false)
+	{
+		aResp.SetError("StartGame('" + sMap + "') failed");
+	}
+}
+
+//-----------------------------------------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
 // PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////
 
@@ -459,6 +549,18 @@ bool cLuxBase::Init(const tString &asCommandline)
 	/////////////////////////////
 	// Init the game data and structures
 	if(InitGame()==false) return false;
+
+	/////////////////////////////
+	// Headless control: register game-specific commands if a control
+	// server is active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
+	if(mpEngine->GetHeadlessControl())
+	{
+		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+		pCtrl->RegisterHandler("run_script", cLuxBase_HeadlessCmd_RunScript, this);
+		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
+		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
+		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
+	}
 
 
 	//////////////////////////

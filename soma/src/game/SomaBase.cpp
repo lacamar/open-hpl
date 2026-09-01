@@ -7,9 +7,60 @@
 #include "HpslTranspilerSelfTest.h"
 #include "SomaSplash.h"
 
+#include "system/HeadlessControl.h"
+
 //---------------------------------------
 
 cSomaBase *gpSomaBase = NULL;
+
+//---------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
+// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
+//
+// No player/script layer exists in this free-fly scaffold, so this is just
+// the debug camera's own transform. mpDebugCamera is checked at call time,
+// not registration time: it doesn't exist until InitMainMenuScene()/
+// InitTestMap() run, which happens later (after the splash sequence, via
+// OnSplashFinished()) than where these are registered below.
+//////////////////////////////////////////////////////////////////////////
+
+static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	const cVector3f &vPos = pBase->GetDebugCamera()->GetPosition();
+	aResp.Set("pos_x", vPos.x);
+	aResp.Set("pos_y", vPos.y);
+	aResp.Set("pos_z", vPos.z);
+	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
+	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cSomaBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	if(aReq.HasKey("x") || aReq.HasKey("y") || aReq.HasKey("z"))
+	{
+		const cVector3f &vCur = pBase->GetDebugCamera()->GetPosition();
+		cVector3f vPos(aReq.GetFloat("x", vCur.x), aReq.GetFloat("y", vCur.y), aReq.GetFloat("z", vCur.z));
+		pBase->GetDebugCamera()->SetPosition(vPos);
+	}
+	if(aReq.HasKey("pitch")) pBase->GetDebugCamera()->SetPitch(aReq.GetFloat("pitch", 0));
+	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
+}
 
 //---------------------------------------
 
@@ -56,6 +107,16 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
 		return false;
+
+	/////////////////////////////
+	// Headless control: register camera commands if a control server is
+	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
+	if (mpEngine->GetHeadlessControl())
+	{
+		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+		pCtrl->RegisterHandler("camera_state", cSomaBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
+	}
 
 	/////////////////////////////
 	// One-shot HPSL->GLSL transpiler proof-of-concept - see

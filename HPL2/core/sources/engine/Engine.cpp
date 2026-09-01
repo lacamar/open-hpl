@@ -48,8 +48,11 @@
 
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
+#include "system/HeadlessControl.h"
 
 #include "impl/SDLEngineSetup.h"
+
+#include <cstdlib>
 
 namespace hpl {
 
@@ -195,10 +198,22 @@ namespace hpl {
 
 	cEngine::cEngine(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars)
 	{
+		mpHeadlessControl = NULL;
+
 		GameInit(apGameSetup,alHplSetupFlags, apVars);
 
 		//Set up variables
 		mbWaitIfAppOutOfFocus = false;
+
+		//////////////////////////////////////////
+		// Opt-in headless automation server - see HeadlessControl.h. Off
+		// (mpHeadlessControl stays NULL, zero overhead) unless this env var
+		// is set, so it can never affect normal play.
+		const char *pHeadlessSocketPath = getenv("OPENHPL_HEADLESS_SOCKET");
+		if(pHeadlessSocketPath != NULL && pHeadlessSocketPath[0] != '\0')
+		{
+			mpHeadlessControl = hplNew(cHeadlessControlServer, (this, tString(pHeadlessSocketPath)));
+		}
 
 		mbApplicationHasInputFocus = false;
 		mbApplicationHasMouseFocus = false;
@@ -366,6 +381,11 @@ namespace hpl {
 	{
 		Log("--------------------------------------------------------\n\n");
 
+		// Stop the listener thread and close the socket before anything it
+		// might touch (mpGraphics, mpResources, ...) is torn down below.
+		if(mpHeadlessControl) hplDelete(mpHeadlessControl);
+		mpHeadlessControl = NULL;
+
 		hplDelete(mpLogicTimer);
 		hplDelete(mpFPSCounter);
 		hplDelete(mpFrameTimer);
@@ -487,6 +507,12 @@ namespace hpl {
 				}
 				mpLogicTimer->EndUpdateLoop();
 			}
+
+			/////////////////////////////////////////////
+			// Drain any queued headless-control commands (see
+			// HeadlessControl.h) once per outer loop iteration - including
+			// while paused, so a test script can still query state/quit.
+			if(mpHeadlessControl) mpHeadlessControl->Update();
 
 			//if(GetGameIsDone()) Log("1\n");
 

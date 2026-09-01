@@ -5,9 +5,58 @@
 
 #include "AmfpBase.h"
 
+#include "system/HeadlessControl.h"
+
 //---------------------------------------
 
 cAmfpBase *gpAmfpBase = NULL;
+
+//---------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
+// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
+//
+// No player/script layer exists in this free-fly scaffold, so this is just
+// the debug camera's own transform. mpDebugCamera is checked at call time,
+// not registration time, since it's created after Init() registers these.
+//////////////////////////////////////////////////////////////////////////
+
+static void cAmfpBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cAmfpBase *pBase = (cAmfpBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	const cVector3f &vPos = pBase->GetDebugCamera()->GetPosition();
+	aResp.Set("pos_x", vPos.x);
+	aResp.Set("pos_y", vPos.y);
+	aResp.Set("pos_z", vPos.z);
+	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
+	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cAmfpBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cAmfpBase *pBase = (cAmfpBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	if(aReq.HasKey("x") || aReq.HasKey("y") || aReq.HasKey("z"))
+	{
+		const cVector3f &vCur = pBase->GetDebugCamera()->GetPosition();
+		cVector3f vPos(aReq.GetFloat("x", vCur.x), aReq.GetFloat("y", vCur.y), aReq.GetFloat("z", vCur.z));
+		pBase->GetDebugCamera()->SetPosition(vPos);
+	}
+	if(aReq.HasKey("pitch")) pBase->GetDebugCamera()->SetPitch(aReq.GetFloat("pitch", 0));
+	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
+}
 
 //---------------------------------------
 
@@ -52,6 +101,18 @@ bool cAmfpBase::Init(const tString &asCommandline)
 	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
 		return false;
+
+	/////////////////////////////
+	// Headless control: register camera commands if a control server is
+	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h. Registered
+	// here (mpDebugCamera doesn't exist until InitTestMap() below) so the
+	// handlers just check it at call time instead.
+	if (mpEngine->GetHeadlessControl())
+	{
+		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+		pCtrl->RegisterHandler("camera_state", cAmfpBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("set_camera", cAmfpBase_HeadlessCmd_SetCamera, this);
+	}
 
 	/////////////////////////////
 	// Phase 1: load a hardcoded test map through the existing HPL2 ".map"

@@ -45,6 +45,7 @@ namespace hpl {
 	class cEngineInitVars;
 	class iTimer;
 	class iMutex;
+	class cHeadlessControlServer;
 
 	//------------------------------------------------------
 	
@@ -127,7 +128,13 @@ namespace hpl {
 		cGui* GetGui(){ return mpGui;}
 		cHaptic* GetHaptic(){ return mpHaptic;}
 		cGenerate* GetGenerate(){ return mpGenerate;}
-		
+
+		/**
+		 * NULL unless the OPENHPL_HEADLESS_SOCKET environment variable was
+		 * set at startup - see HeadlessControl.h.
+		 */
+		cHeadlessControlServer* GetHeadlessControl(){ return mpHeadlessControl;}
+
 		void ResetLogicTimer();
 		void SetUpdatesPerSec(int alUpdatesPerSec);
 		int GetUpdatesPerSec();
@@ -152,7 +159,13 @@ namespace hpl {
 		void SetLimitFPS(bool abX){ mbLimitFPS = abX;}
 		bool GetLimitFPS(){ return mbLimitFPS;}
 
-		void SetWaitIfAppOutOfFocus(bool abX){ mbWaitIfAppOutOfFocus =abX;}
+		/**
+		 * Forced to false whenever a headless control server is active
+		 * (see GetHeadlessControl()), regardless of the requested value -
+		 * headless runs must never block in CheckIfAppInFocusElseWait()
+		 * (a backgrounded/locked-screen window has no input focus).
+		 */
+		void SetWaitIfAppOutOfFocus(bool abX){ mbWaitIfAppOutOfFocus = mpHeadlessControl ? false : abX;}
 		bool GetWaitIfAppOutOfFocus(){ return mbWaitIfAppOutOfFocus;}
 
 		void SetPaused(bool abPaused);
@@ -236,6 +249,8 @@ namespace hpl {
 		cHaptic *mpHaptic;
 		cGui *mpGui;
 		cGenerate* mpGenerate;
+
+		cHeadlessControlServer *mpHeadlessControl;
 	};
 
 };
