@@ -991,3 +991,49 @@ Two smaller, unrelated fixes alongside the Rebirth/Bunker work above:
   are both untouched) - confirmed live that X11/XWayland hidden windows carry no equivalent
   requirement: same test now reads back real rendered content. This is what made the
   Rebirth/Bunker screenshots above possible without ever needing eyes on a real display.
+
+## GuiScale: exempted every remaining fixed-position GuiSet (this session)
+
+The in-game "UI Scale" feature (`GuiScale`, added 1.3.1-7, partially fixed 1.3.1-9) only
+ever got the main menu and `cLuxPreMenu`'s splash sequence made scale-aware. Reported live:
+at `GuiScale=2`, the loading screen (background image and hint text) rendered far too big
+and spilled off-screen, same for other screens.
+
+Root cause, same class as the pre-1.3.1-9 splash bug: `cGuiSet::SetVirtualSize()`
+(`HPL2/core/sources/gui/GuiSet.cpp:1275`) divides the virtual coordinate space by
+`GuiScale` unless called with `abIgnoreGlobalScale=true` - shrinking that space makes
+anything drawn at a *fixed* position (assuming the original, unshrunk 800x600 canvas -
+e.g. `cVector3f(400,300,0)` as "center") push toward or past the new, smaller canvas's own
+edges. `cLuxPreMenu` was the only caller already passing `true` (1.3.1-9); every other
+`SetVirtualSize()` call in `amnesia/src/game` was still using the default `false`, all
+using this exact same fixed-800x600-position drawing style (never updated to reflow the
+way the main menu was): `cLuxLoadScreenHandler` (loading screen image + hint text),
+`cLuxHelpFuncs`'s `mpSet` (its synchronous-load draw path - same content, separate
+`cGuiSet`), `cLuxCredits`, `cLuxDemoEnd`, `cLuxJournal`, `cLuxInventory`, and
+`cLuxBase::mpGameHudSet` (the real in-game HUD - health/sanity, item pickups, and
+`LuxHintHandler::DrawHintText()`'s hint popups, all drawn via `cVector3f(400,...)`).
+**Fix**: added `, true` to all seven remaining `SetVirtualSize()` calls, so none of them
+grow with `GuiScale` any more - same accepted tradeoff as the splash sequence already had
+(only the main menu is deliberately scale-aware; every other screen keeps its original
+design size rather than reflowing for a shrunk virtual canvas, which none of them were
+ever built to do).
+
+**Verified live** (headless, GuiScale=2 forced via `main_settings.cfg`, restored after):
+found and fixed an unrelated pre-existing crash blocking this verification first - the
+headless `start_map` command (`cLuxBase_HeadlessCmd_StartMap` in `LuxBase.cpp`) SIGSEGVs
+inside `cConfigFile::GetString()` (`TiXmlNode::FirstChildElement()` on garbage `this`) when
+called before a profile/user-config exists, since `cLuxBase::StartGame()` reads
+`mpUserConfig` and nothing before this command ever creates one - the real UI always goes
+through `cLuxPreMenu::Update()`'s profile bootstrap first, which a headless run driving
+`start_map` straight from boot skips entirely. Fixed by having the command run that same
+bootstrap (`CreateProfile()`/`SetProfile()`/`InitUserConfig()`) itself when
+`mpUserConfig==NULL`, matching the real UI's own sequence - a genuine headless-testing-
+harness bug, unrelated to GuiScale, that would have blocked any future headless test
+needing `start_map` too. With that fixed: `start_map map=00_rainy_hall.map` against the
+real Dark Descent install no longer crashes, and a follow-up screenshot shows
+`cLuxLoadScreenHandler`'s "Loading..." text (drawn at fixed y=530 out of a nominal 600-tall
+canvas) rendering correctly near the bottom of a real 3840x2160 screen instead of spilling
+past it. (The same screenshot also happened to catch the in-game pause menu overlaid on
+top - an artifact of calling `StartGame()` directly instead of through a real "New
+Game"/pause-menu button click, not a real bug - MainMenu's own already-fixed scaling is
+unaffected by anything in this entry.)

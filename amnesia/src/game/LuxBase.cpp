@@ -479,6 +479,23 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 		return;
 	}
 
+	// StartGame() reads mpUserConfig (Map/StartPos etc.) - normally already set up by the
+	// time it's reachable through the real UI (cLuxPreMenu::Update() creates/loads the
+	// default profile before ever calling StartGame()), but a headless run driving this
+	// command straight from boot never goes through that flow, leaving mpUserConfig NULL -
+	// SIGSEGVs inside cConfigFile::GetString() (TiXmlNode::FirstChildElement() on garbage
+	// `this`). Mirror that same bootstrap here so this command works standalone.
+	if(pBase->mpUserConfig == NULL)
+	{
+		pBase->CreateProfile(pBase->msDefaultProfileName);
+		pBase->SetProfile(pBase->msDefaultProfileName);
+		if(pBase->InitUserConfig() == false)
+		{
+			aResp.SetError("InitUserConfig() failed");
+			return;
+		}
+	}
+
 	if(pBase->StartGame(sMap, "", aReq.GetString("start_pos","")) == false)
 	{
 		aResp.SetError("StartGame('" + sMap + "') failed");
@@ -1366,7 +1383,11 @@ bool cLuxBase::InitGame()
 	mvHudVirtualStartPos = cVector3f(-mvHudVirtualOffset.x,-mvHudVirtualOffset.y,0);
 
 	mpGameHudSet = mpEngine->GetGui()->CreateSet("GameHud",NULL);
-	mpGameHudSet->SetVirtualSize(mvHudVirtualSize,-1000, 1000, mvHudVirtualOffset);
+	// Health/sanity bars, item pickups, and hint text (LuxHintHandler::DrawHintText(),
+	// cVector3f(400,...) etc.) are all drawn at fixed positions assuming the original
+	// 800x600 canvas - same GuiScale exemption and rationale as cLuxPreMenu's splash
+	// sequence and cLuxLoadScreenHandler/cLuxCredits/cLuxJournal/cLuxInventory.
+	mpGameHudSet->SetVirtualSize(mvHudVirtualSize,-1000, 1000, mvHudVirtualOffset, true);
 	mpGameDebugSet = mpEngine->GetGui()->CreateSet("GameDebug",NULL);
 	mpGameDebugSet->SetDrawPriority(1);
 	mpGameHudSet->SetDrawPriority(0);

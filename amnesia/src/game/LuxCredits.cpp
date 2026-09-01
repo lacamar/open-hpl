@@ -50,7 +50,10 @@ cLuxCredits::cLuxCredits() : iLuxUpdateable("LuxCredits")
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset);
+	// Scrolling credits text is drawn at fixed positions assuming the original 800x600
+	// canvas - same GuiScale exemption and rationale as cLuxPreMenu's splash sequence and
+	// cLuxLoadScreenHandler (see their own SetVirtualSize() calls).
+	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 
 	///////////////////////////////
 	//Create Viewport

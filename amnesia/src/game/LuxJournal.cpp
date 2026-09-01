@@ -282,7 +282,10 @@ cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset);
+	// Notes/diary pages, backgrounds and buttons are laid out at fixed positions assuming
+	// the original 800x600 canvas (e.g. centered on (400,300)) - same GuiScale exemption
+	// and rationale as cLuxPreMenu's splash sequence and cLuxLoadScreenHandler/cLuxCredits.
+	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 	mpGuiSet->SetActive(false);
 
 	///////////////////////////////

@@ -121,7 +121,10 @@ cLuxHelpFuncs::cLuxHelpFuncs() : iLuxUpdateable("LuxHelpFuncs")
 {
 	mpSet = gpBase->mpEngine->GetGui()->CreateSet("DirectToScree", NULL);
 	mpSet->SetActive(false);
-	mpSet->SetVirtualSize(gpBase->mvHudVirtualSize,-1000, 1000, gpBase->mvHudVirtualOffset);
+	// Used exclusively by cLuxLoadScreenHandler's synchronous-load draw path
+	// (DrawGameScreen()/DrawMenuScreen(), called while a real GuiSet/viewport can't run) -
+	// same fixed-800x600-position content, same GuiScale exemption as its own mpGuiSet.
+	mpSet->SetVirtualSize(gpBase->mvHudVirtualSize,-1000, 1000, gpBase->mvHudVirtualOffset, true);
 
 	mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
 
