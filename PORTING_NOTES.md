@@ -227,14 +227,37 @@ automatically stay centered in the now-smaller virtual space.
 
 ## Pending work (this turn's requests — likely being handled by sub-agents, check for their reports)
 
-2. **Resolution picker only enumerates one monitor (`eDP-1`, the laptop panel), not `DP-1`
-   (external display)** — an SDL display-mode enumeration bug. Look at
-   `HPL2/core/sources/impl/LowLevelGraphicsSDL.cpp` (or wherever `SDL_GetNumDisplayModes`/
-   `SDL_GetDisplayMode`/equivalent SDL2 calls happen) and the launcher's resolution list
-   population (`amnesia/src/launcher/LauncherHelper.cpp`, `PopulateResolutions` — already
-   touched once this session for an unrelated warning fix, worth checking there first) to
-   see if it's hardcoded to display index 0 rather than enumerating
-   `SDL_GetNumVideoDisplays()`.
+2. ~~**Resolution picker only enumerates one monitor (`eDP-1`, the laptop panel), not `DP-1`
+   (external display)**~~ — **Done, in two places.** `cPlatform::GetAvailableVideoModes`
+   (`HPL2/core/sources/impl/PlatformSDL.cpp`) itself was never the problem — it already loops
+   over `SDL_GetNumVideoDisplays()` and tags every `cVideoMode` with its real `mlDisplay`. The
+   bug was in the two *consumers* of that list, both dropping/merging entries that share a
+   `mvScreenSize` across displays (very common — e.g. a laptop panel and an external monitor
+   both supporting 1920x1080):
+   - **Launcher** (`amnesia/src/launcher/LauncherHelper.cpp::PopulateResolutions`, FLTK-based):
+     `Fl_Menu_::add()` treats identical label text as the *same* menu entry, so two displays'
+     same-size modes collapsed into one dropdown item bound to whichever display was enumerated
+     last. Fixed by appending `" (<display name>)"` to every label whenever more than one
+     display is present.
+   - **In-game Options menu** (`amnesia/src/game/LuxMainMenu_Options.cpp`, the "Resolution"
+     block, ~line 1096): a hand-rolled "remove duplicates" pass that merges adjacent
+     same-`mvScreenSize` entries in the (display-then-size sorted) `vVidModes` vector to
+     collapse refresh-rate variants — but it never checked `mlDisplay`, so at every
+     display-boundary crossing where two displays shared a resolution, one display's entry got
+     silently merged away and lost, exactly like the Launcher bug. There's a telling
+     commented-out block right after it (`// Since the same resolution on display 0 will have
+     the same text as display 1, this won't work`) — the original Frictional dev noticed the
+     label-collision symptom but left the flawed size-only dedup untouched. Fixed the same way:
+     the dedup loop now also requires matching `mlDisplay` before merging two entries, and
+     labels get a `" (<display name>)"` suffix whenever more than one display is present.
+   Verified: built clean (`amnesia/src/build-resfix2`, deployed as a uniquely-named
+   `Amnesia.resfix2.aarch64` test binary, never overwriting the canonical one), boots and runs
+   stably headlessly with no new `hpl.log` warnings. This dev machine only had `eDP-1` active
+   at fix time (`DP-1`, the LG 4K external, was present in `niri msg outputs` but disabled) —
+   **no live two-display repro was available**; correctness was confirmed by hand-tracing the
+   dedup loop against a two-display example (both listing 1920x1080) and by symmetry with the
+   already-verified Launcher fix. Worth a real screenshot check next time a second monitor is
+   actually plugged in.
 3. **Performance on max settings is below expectations** — asked for a **low-risk**
    optimization pass (i.e. don't restructure the renderer; look for cheap wins). Candidate
    areas nobody's checked yet this session: whether the build is actually using an optimized
