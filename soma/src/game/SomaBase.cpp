@@ -5,6 +5,7 @@
 
 #include "SomaBase.h"
 #include "HpslTranspilerSelfTest.h"
+#include "SomaSplash.h"
 
 //---------------------------------------
 
@@ -15,6 +16,8 @@ cSomaBase *gpSomaBase = NULL;
 cSomaBase::cSomaBase()
 {
 	mpEngine = NULL;
+
+	mpSplash = NULL;
 
 	mpTestWorld = NULL;
 	mpDebugCamera = NULL;
@@ -63,12 +66,26 @@ bool cSomaBase::Init(const tString &asCommandline)
 	RunHpslTranspilerSelfTest(mpEngine);
 
 	/////////////////////////////
-	// Phase 1: load a hardcoded test map through the new SOMA ".hpm" world
-	// loader and set up a debug free-fly camera to look at it with.
-	if (InitTestMap() == false)
-		return false;
+	// Real boot sequence: show the splash logos, then (via
+	// OnSplashFinished(), called back from cSomaSplash once its sequence
+	// ends) load SOMA's own declared main menu scene. No map is loaded
+	// synchronously here anymore - see SomaSplash.h/cpp.
+	mpSplash = hplNew(cSomaSplash, (mpEngine, this));
+	mpEngine->GetUpdater()->AddGlobalUpdate(mpSplash);
 
 	return true;
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaBase::OnSplashFinished()
+{
+	if (InitMainMenuScene() == false)
+	{
+		Log("SOMA: could not load main menu scene ('%s'), falling back to the "
+			"apartment test map\n", cString::To8Char(msErrorMessage).c_str());
+		InitTestMap();
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -156,6 +173,63 @@ void cSomaBase::ExitEngine()
 	if (mpEngine)
 		DestroyHPLEngine(mpEngine);
 	mpEngine = NULL;
+}
+
+//-----------------------------------------------------------------------
+
+bool cSomaBase::InitMainMenuScene()
+{
+	////////////////////////////////////
+	// Read the <MainMenu File="..."/> entry back out of main_init.cfg -
+	// the same file InitMainConfig() already loaded once, re-loaded here
+	// rather than caching it earlier since Phase 0 only kept the two
+	// fields it needed at the time.
+	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
+	if (pInitCfg->Load() == false)
+	{
+		msErrorMessage = _W("Could not reload main init file for <MainMenu> entry: ") + msInitConfigFile;
+		hplDelete(pInitCfg);
+		return false;
+	}
+	tString sMainMenuFile = pInitCfg->GetString("MainMenu", "File", "");
+	hplDelete(pInitCfg);
+
+	if (sMainMenuFile == "")
+	{
+		msErrorMessage = _W("main_init.cfg has no <MainMenu File=.../> entry");
+		return false;
+	}
+
+	////////////////////////////////////
+	// Found by basename via the resource dir search, same convention as
+	// InitTestMap()'s apartment map load below - Folder="maps/" from the
+	// config is not needed, "/maps" is already registered with AddSubDirs
+	// in SOMA's real resources.cfg.
+	cWorld *pWorld = mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
+	if (pWorld == NULL)
+	{
+		msErrorMessage = _W("Could not load main menu scene '") + cString::To16Char(sMainMenuFile) + _W("'");
+		return false;
+	}
+	mpTestWorld = pWorld;
+
+	////////////////////////////////////
+	// Debug free-fly camera, same as InitTestMap() below. main_menu.hpm's
+	// own PlayerStartArea_1 has WorldPos="0 0 0" - the real menu camera
+	// path is driven entirely by scripted logic this port doesn't have
+	// (main_menu.hps plus the closed ImGui menu layer), so world origin is
+	// the only position the map data itself actually declares.
+	cCamera *pCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
+	pCamera->SetPosition(cVector3f(0, 1.7f, 0));
+	pCamera->SetFarClipPlane(200.0f);
+	mpDebugCamera = pCamera;
+
+	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
+
+	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
+	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+
+	return true;
 }
 
 //-----------------------------------------------------------------------

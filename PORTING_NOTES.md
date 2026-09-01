@@ -722,3 +722,99 @@ position/velocity across a few real frames the way the teleport-velocity fix did
 on whatever happens right as `AtticHatchPhysicsSimulation()`'s `SetPropStaticPhysics` call
 fires (that dynamic→static transition is the most likely single moment for a
 seam/discontinuity bug to manifest, per the `b2f51f4` hypothesis above).
+
+## SOMA: splash screens + real boot sequence, one step past Phase 0 (this session)
+
+User ask: "make whatever changes to the engine are needed to at least load the splash
+screens correctly and have the game go through the first steps of starting normally" for
+SOMA. Previously, `cSomaBase::Init()` (`soma/src/game/SomaBase.cpp`) went straight from
+`InitEngine()` to a hardcoded `InitTestMap()` load of `00_01_apartment.hpm` with no visual
+boot sequence at all — not how the real game starts, just a debug scaffold shortcut.
+
+**What the real game declares, and what's now used**: SOMA's `config/main_init.cfg` (a real
+shipped data file, not code) declares `<MainMenu File="main_menu.hpm" Folder="maps/" .../>`
+and `<StartMap File="00_00_intro.hpm" .../>` — unlike Dark Descent, there's no plain-text
+`pre_menu.cfg`-equivalent splash config; the actual splash asset is
+`graphics/startmenu/premenu/frictional_games_logo.dds` (the "premenu" folder name itself is
+the tell — alongside a `loading_bar.dds`/`loading_frame.dds` pair for a loading-progress
+UI, not used here) plus `graphics/imgui/credits/soma_logo_splash_static.dds` (the "static"
+in the name marking it as the non-animated variant meant for exactly this, as opposed to
+`fg_logo_splash.dds`, the animated closing-credits version — not used).
+
+**Splash sequence** (new files `soma/src/game/SomaSplash.{h,cpp}`): a `cSomaSplash : public
+iUpdateable` shows those two images in turn (2.4s hold each, 0.4s linear fade in/out) on a
+GUI-only viewport (`cScene::CreateViewport(NULL, NULL, true)`), using the same underlying
+mechanism Dark Descent's `cLuxPreMenu` uses — a `cGuiSet` (skin: SOMA's own real
+`gui/gui_default.skin`) with `cGuiGfxElement`s drawn via `DrawGfx()` — but as a small
+standalone class, not a port of `cLuxPreMenu` itself, since this Phase 0 scaffold has none
+of `LuxBase`'s container/state machinery that class is wired into. Skippable by any key or
+mouse click, matching this project's already-established "splashes should be skippable"
+standard from the Dark Descent work. Once finished, it calls back into `cSomaBase::
+OnSplashFinished()` (same `gpSomaBase->` global-callback idiom used throughout
+`amnesia/src/game`) — note this codebase's `iUpdateable`s can never be removed from
+`cUpdater` once registered (see the existing `ExitTestMap()` comment on
+`cSomaDebugFreeCamera` for the same constraint), so `cSomaSplash` just goes permanently
+inert (`mbFinished`) rather than being torn down.
+
+**Real boot sequence, one step further**: `OnSplashFinished()` now calls a new
+`cSomaBase::InitMainMenuScene()`, which reads the `<MainMenu File="...">` path straight out
+of `main_init.cfg` (not hardcoded a second time) and loads it — SOMA's own declared entry
+point — instead of the hardcoded apartment test map. `InitTestMap()`/the apartment map are
+kept intact as a documented fallback (`OnSplashFinished()` calls `InitTestMap()` if
+`InitMainMenuScene()` fails) and as a known-good manual target for anyone who wants it back.
+`main_menu.hpm`'s own `PlayerStartArea_1` has `WorldPos="0 0 0"` — the real menu camera path
+is driven entirely by scripted logic this port doesn't have (`main_menu.hps` plus SOMA's
+closed, ImGui-based menu UI layer, confirmed by the `graphics/imgui/` asset tree — real
+interactive menu widgets are explicitly out of scope, not attempted), so world origin is the
+literal only position the map data itself declares; the existing debug free-fly camera is
+reused verbatim to look around the (mostly empty, since nothing scripted populates it —
+see below) scene.
+
+**One real bug caught and fixed during this work**: `iKeyboard::KeyIsPressed()`
+(`cKeyboardSDL::KeyIsPressed()`, `HPL2/core/sources/impl/KeyboardSDL.cpp`) only reports
+whether its internal pressed-keys queue is non-empty — it does **not** drain it; only
+`GetKey()` does (`mlstKeysPressed.pop_front()`). The first skip-input implementation called
+only `KeyIsPressed()` without ever calling `GetKey()`, so a single stray key event (e.g.
+from window creation/focus) would have latched "skip requested" true forever, silently
+skipping the entire splash sequence every launch. Fixed by calling `GetKey()` to drain
+exactly one event whenever a press is detected, so it only fires on real, distinct presses.
+
+**Verified**: built clean (`amnesia/src/build-splash2`, both `Soma` and `Amnesia` targets —
+this touches only `soma/src/game/` and `PORTING_NOTES.md`, but rebuilt `Amnesia` too as a
+sanity check since both share `HPL2/core`), deployed as a uniquely-suffixed
+`Soma.splashtest.aarch64` in the real Steam SOMA install (never touched the canonical
+`Soma.bin.aarch64`), ran headlessly. `hpl.log` confirms: no load errors for either DDS file,
+`gui_default.skin` loads (with a handful of pre-existing "Skin Attribute/gfx type does not
+exist" warnings — the skin file doesn't define every attribute this generic HPL2 GUI system
+looks for; harmless, unrelated to this change), `Game Running` reached, then
+`Loading SOMA hpm map 'main_menu.hpm'` (previously always `00_01_apartment.hpm`) — no crash,
+no fallback-to-apartment message, meaning `InitMainMenuScene()` succeeded on the real path.
+Temporarily instrumented `cSomaSplash::Update()` with per-call debug logging to get a frame-
+by-frame trace (removed before the final commit) and confirmed the timer counts down
+2.4s→0s→2.4s→0s across exactly the two images with correct fixed 1/60s steps and zero false
+skip triggers — the logic is provably correct.
+
+- **Known limitation, not a bug**: `main_menu.hpm` loads with "0 static objects, 0
+  primitives, 0 entities, 0 lights, 0 areas, 0 sounds" — genuinely empty. The real menu's
+  visible scene (a submarine control room) is evidently built by `main_menu.hps`'s own
+  `OnEnter()`/script logic rather than baked into the `.hpm` file, and this Phase 0
+  scaffolding still runs no scripts at all — so the camera currently floats in an empty
+  void here, same as it would for any script-populated real gameplay map. Not something to
+  "fix" without script execution existing first.
+- **Could not get a live screenshot of the splash actually appearing on screen** (asked for
+  if the desktop happened to be unlocked, which it was this session) for a subtler reason
+  than the usual lock-screen issue documented elsewhere in this file: with no real materials
+  rendering (the `deferred_base_vtx.glsl` etc. errors below are unrelated pre-existing SOMA
+  limitations) there is nothing to vsync/present-throttle against, so this fixed-60Hz-logic-
+  step engine loop just races through simulated time far faster than real wall-clock time —
+  the entire ~4.8 simulated seconds of splash consistently completed within ~3 real seconds
+  in every timed test this session. A screenshot taken any reasonable amount of real time
+  after launch reliably lands *after* the splash has already finished. The frame-by-frame
+  debug-log trace above is the actual verification for this reason, not a screenshot.
+- **Next step for whoever continues this**: `main_menu.hps`'s `OnEnter()` calls
+  `MainMenu_Show(true)` (an ImGui-facing call) — real interactive menu content needs both
+  script execution (a much larger, separate effort — this Phase 0 scaffold runs none) and an
+  ImGui integration this engine port doesn't have at all. `00_00_intro.hpm` (`<StartMap>`'s
+  real "New Game" destination) is the next concrete milestone after that, once script
+  execution exists to make either scene meaningfully playable rather than an empty static
+  camera-fly view.
