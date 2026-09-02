@@ -5,6 +5,7 @@
 
 #include "SomaBase.h"
 #include "HpslTranspilerSelfTest.h"
+#include "SomaLoaders.h"
 #include "SomaSplash.h"
 
 #include "system/HeadlessControl.h"
@@ -80,9 +81,10 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 	}
 
 	cVector3f vPos(aReq.GetFloat("x", 0), aReq.GetFloat("y", 1.7f), aReq.GetFloat("z", 0));
+	tString sStartPosName = aReq.GetString("pos", "");
 
 	tString sError;
-	if(pBase->LoadMap(sMap, vPos, sError) == false)
+	if(pBase->LoadMap(sMap, vPos, sError, sStartPosName) == false)
 	{
 		aResp.SetError(sError);
 		return;
@@ -267,6 +269,11 @@ bool cSomaBase::InitEngine()
 	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
 
+	// See SomaLoaders.h - without these, cWorldLoaderHpm silently drops
+	// every <Entity>/<Area> element in a real SOMA map (confirmed via a real
+	// boot log against real game data).
+	RegisterSomaLoaders(mpEngine->GetResources());
+
 	return true;
 }
 
@@ -378,7 +385,8 @@ bool cSomaBase::InitTestMap()
 
 //-----------------------------------------------------------------------
 
-bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut)
+bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
+						 const tString &asStartPosName)
 {
 	// Found by basename via the resource dir search, same convention as
 	// InitTestMap()/InitMainMenuScene() above ("/maps" is registered with
@@ -413,7 +421,22 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		mpDebugViewport->SetWorld(mpTestWorld);
 	}
 
-	mpDebugCamera->SetPosition(avStartPos);
+	// Resolve a real PlayerStart Area by name if asked for (requires
+	// cSomaAreaLoader_PlayerStart - see SomaLoaders.h - to have populated
+	// one via CreateStartPos() while pNewWorld loaded above); otherwise fall
+	// back to the caller-supplied position, same as before this existed.
+	cVector3f vStartPos = avStartPos;
+	if (asStartPosName != "")
+	{
+		cStartPosEntity *pStartPos = pNewWorld->GetStartPosEntity(asStartPosName);
+		if (pStartPos)
+			vStartPos = pStartPos->GetWorldMatrix().GetTranslation() + cVector3f(0, 0.5f, 0);
+		else
+			Log("SOMA: map '%s' has no PlayerStart Area named '%s', using fallback position\n",
+				asMapFile.c_str(), asStartPosName.c_str());
+	}
+
+	mpDebugCamera->SetPosition(vStartPos);
 	mpDebugCamera->SetPitch(0);
 	mpDebugCamera->SetYaw(0);
 
