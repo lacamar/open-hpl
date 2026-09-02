@@ -5,9 +5,63 @@
 
 #include "BunkerBase.h"
 
+#include "system/HeadlessControl.h"
+
 //---------------------------------------
 
 cBunkerBase *gpBunkerBase = NULL;
+
+//---------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
+// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
+//
+// Same shape as soma/src/game/SomaBase.cpp's - no player/script layer
+// exists in this free-fly scaffold, so this is just the debug camera's own
+// transform. Needed so this task's verification pass could confirm the
+// PlayerStart-Area spawn fix (see BunkerAreaLoader.h) actually landed the
+// camera at the map's real Start_Begin coordinates, not just "didn't
+// crash" - the core control server only offers "screenshot"/"quit" until a
+// game module registers commands of its own, and Bunker's Phase 0 had none
+// before this.
+//////////////////////////////////////////////////////////////////////////
+
+static void cBunkerBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cBunkerBase *pBase = (cBunkerBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	const cVector3f &vPos = pBase->GetDebugCamera()->GetPosition();
+	aResp.Set("pos_x", vPos.x);
+	aResp.Set("pos_y", vPos.y);
+	aResp.Set("pos_z", vPos.z);
+	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
+	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cBunkerBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cBunkerBase *pBase = (cBunkerBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	if(aReq.HasKey("x") || aReq.HasKey("y") || aReq.HasKey("z"))
+	{
+		const cVector3f &vCur = pBase->GetDebugCamera()->GetPosition();
+		cVector3f vPos(aReq.GetFloat("x", vCur.x), aReq.GetFloat("y", vCur.y), aReq.GetFloat("z", vCur.z));
+		pBase->GetDebugCamera()->SetPosition(vPos);
+	}
+	if(aReq.HasKey("pitch")) pBase->GetDebugCamera()->SetPitch(aReq.GetFloat("pitch", 0));
+	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
+}
 
 //---------------------------------------
 
@@ -41,6 +95,16 @@ bool cBunkerBase::Init(const tString &asCommandline)
 
 	if (InitEngine() == false)
 		return false;
+
+	// Headless control: register camera commands if a control server is
+	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h and the
+	// handler comment above.
+	if (mpEngine->GetHeadlessControl())
+	{
+		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+		pCtrl->RegisterHandler("camera_state", cBunkerBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("set_camera", cBunkerBase_HeadlessCmd_SetCamera, this);
+	}
 
 	if (InitTestMap() == false)
 		return false;
@@ -161,6 +225,12 @@ bool cBunkerBase::InitEngine()
 	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
 
+	// See BunkerAreaLoader.h - without this, cWorldLoaderHpm::CreateMapArea
+	// drops every PlayerStart Area on the floor (logged as "no area loader
+	// registered for AreaType 'PlayerStart'") and InitTestMap() has nothing
+	// to resolve <StartMap Pos="..."/> against.
+	mpEngine->GetResources()->AddAreaLoader(hplNew(cBunkerAreaLoader_PlayerStart, ("PlayerStart")));
+
 	return true;
 }
 
@@ -187,6 +257,7 @@ bool cBunkerBase::InitTestMap()
 	// Found by basename via the resource dir search - GameMapFolder="maps/"
 	// from main_init.cfg's <Directories> is already registered with
 	// AddSubDirs in the Bunker's real resources.cfg.
+	cBunkerAreaLoader_PlayerStart::Clear();
 	cWorld *pWorld = mpEngine->GetScene()->LoadWorld(msStartMapFile, 0);
 	if (pWorld == NULL)
 	{
@@ -196,19 +267,31 @@ bool cBunkerBase::InitTestMap()
 	mpTestWorld = pWorld;
 
 	////////////////////////////////////
-	// Camera position from the map's own declared start position (see
-	// rebirth/src/game/RebirthBase.cpp - same approach). Nudged up half a
-	// metre from whatever the entity's own transform gives - PlayerStart
-	// areas in this engine generation are typically placed at floor/foot
-	// level, not eye level.
+	// Camera position from the map's own declared start position. The
+	// Bunker's maps carry this as a PlayerStart-type Area (see
+	// BunkerAreaLoader.h), not a cStartPosEntity - GetStartPosEntity() is
+	// kept as a fallback in case a future map ever has one instead (e.g. if
+	// a later phase reuses this scaffold against an older-format map).
+	// Nudged up half a metre from the Area's own transform - PlayerStart
+	// Areas are placed at floor/foot level, not eye level (confirmed
+	// against a real install's trenches.hpm_Area: Start_Begin's WorldPos.y
+	// is 0.978, consistent with a foot position, not a ~1.7m eye height).
 	cVector3f vPos(0, 1.7f, 0);
 	if (msStartMapPos != "")
 	{
-		cStartPosEntity *pStartPos = pWorld->GetStartPosEntity(msStartMapPos);
-		if (pStartPos)
+		cMatrixf mtxStart;
+		if (cBunkerAreaLoader_PlayerStart::GetStartTransform(msStartMapPos, mtxStart))
+		{
+			vPos = mtxStart.GetTranslation() + cVector3f(0, 0.5f, 0);
+		}
+		else if (cStartPosEntity *pStartPos = pWorld->GetStartPosEntity(msStartMapPos))
+		{
 			vPos = pStartPos->GetWorldMatrix().GetTranslation() + cVector3f(0, 0.5f, 0);
+		}
 		else
-			Log("Bunker: start map has no StartPosEntity named '%s', using world origin\n", msStartMapPos.c_str());
+		{
+			Log("Bunker: start map has no PlayerStart Area or StartPosEntity named '%s', using world origin\n", msStartMapPos.c_str());
+		}
 	}
 
 	cCamera *pCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
