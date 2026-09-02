@@ -5,9 +5,61 @@
 
 #include "RebirthBase.h"
 
+#include "RebirthLoaders.h"
+
+#include "system/HeadlessControl.h"
+
 //---------------------------------------
 
 cRebirthBase *gpRebirthBase = NULL;
+
+//---------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
+// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
+//
+// Same shape as cSomaBase's/cAmfpBase's own camera_state/set_camera pair
+// (soma/src/game/SomaBase.cpp, amfp/src/game/AmfpBase.cpp) - no player/
+// script layer exists in this free-fly scaffold, so this is just the debug
+// camera's own transform.
+//////////////////////////////////////////////////////////////////////////
+
+static void cRebirthBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cRebirthBase *pBase = (cRebirthBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	const cVector3f &vPos = pBase->GetDebugCamera()->GetPosition();
+	aResp.Set("pos_x", vPos.x);
+	aResp.Set("pos_y", vPos.y);
+	aResp.Set("pos_z", vPos.z);
+	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
+	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cRebirthBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cRebirthBase *pBase = (cRebirthBase*)apUserData;
+	if(pBase->GetDebugCamera() == NULL)
+	{
+		aResp.SetError("no camera yet");
+		return;
+	}
+
+	if(aReq.HasKey("x") || aReq.HasKey("y") || aReq.HasKey("z"))
+	{
+		const cVector3f &vCur = pBase->GetDebugCamera()->GetPosition();
+		cVector3f vPos(aReq.GetFloat("x", vCur.x), aReq.GetFloat("y", vCur.y), aReq.GetFloat("z", vCur.z));
+		pBase->GetDebugCamera()->SetPosition(vPos);
+	}
+	if(aReq.HasKey("pitch")) pBase->GetDebugCamera()->SetPitch(aReq.GetFloat("pitch", 0));
+	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
+}
 
 //---------------------------------------
 
@@ -41,6 +93,15 @@ bool cRebirthBase::Init(const tString &asCommandline)
 
 	if (InitEngine() == false)
 		return false;
+
+	// Headless control: register camera commands if a control server is
+	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
+	if (mpEngine->GetHeadlessControl())
+	{
+		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
+		pCtrl->RegisterHandler("camera_state", cRebirthBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("set_camera", cRebirthBase_HeadlessCmd_SetCamera, this);
+	}
 
 	if (InitTestMap() == false)
 		return false;
@@ -137,6 +198,11 @@ bool cRebirthBase::InitEngine()
 	// unmodified.
 	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
+
+	// See RebirthLoaders.h - without these, cWorldLoaderHpm silently drops
+	// every <Entity>/<Area> element in a real Rebirth map (confirmed via a
+	// real boot log against real game data).
+	RegisterRebirthLoaders(mpEngine->GetResources());
 
 	return true;
 }
