@@ -69,9 +69,14 @@ public:
 	// currently active (properly, via cScene::Destroy*(), unlike
 	// ExitTestMap()'s "owned by cScene, left for engine teardown" shortcut,
 	// since this can be called many times in one process) and loads
-	// asMapFile fresh with a debug free-fly camera at avStartPos. Returns
+	// asMapFile fresh with a debug free-fly camera. If asStartPosName is
+	// non-empty and the loaded map has a PlayerStart Area of that name (see
+	// SomaLoaders.h - requires RegisterSomaLoaders() to have run), the
+	// camera spawns there instead of avStartPos, which is used as a
+	// fallback/default whenever the name is empty or not found. Returns
 	// false (asErrorOut set) if the map fails to load.
-	bool LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut);
+	bool LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
+				 const tString &asStartPosName = "");
 
 	cEngine *mpEngine;
 
