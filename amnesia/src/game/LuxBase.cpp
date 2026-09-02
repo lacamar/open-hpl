@@ -19,6 +19,10 @@
 
 #include "LuxBase.h"
 
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+
 #include "LuxInputHandler.h"
 
 #include "LuxMapHandler.h"
@@ -1008,8 +1012,23 @@ bool cLuxBase::InitApp()
 #else
 	const tWString &msBaseLogPath = msBaseSavePath;
 #endif
-	SetLogFile(msBaseLogPath + _W("hpl.log"));
-	SetUpdateLogFile(msBaseLogPath + _W("hpl_update.log"));
+
+	// A fixed hpl.log path collides across concurrent headless test runs
+	// (this project's own scripted testing regularly launches more than one
+	// instance at once) - cLogWriter::ReopenFile() truncates on open, so a
+	// second process launched while a first is still running silently wipes
+	// whatever the first had already logged. Suffix with the PID under
+	// OPENHPL_HEADLESS_SOCKET only, so normal interactive play (almost
+	// always exactly one instance) keeps the stable, predictable filename.
+	tWString sLogSuffix = _W("");
+#if defined(__linux__)
+	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
+	{
+		sLogSuffix = _W("-") + cString::ToStringW((int)getpid());
+	}
+#endif
+	SetLogFile(msBaseLogPath + _W("hpl") + sLogSuffix + _W(".log"));
+	SetUpdateLogFile(msBaseLogPath + _W("hpl_update") + sLogSuffix + _W(".log"));
 
 	return true;
 }

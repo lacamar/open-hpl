@@ -12,6 +12,10 @@
 #include "system/HeadlessControl.h"
 #include "resources/GpuShaderManager.h"
 
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+
 //---------------------------------------
 
 cSomaBase *gpSomaBase = NULL;
@@ -263,7 +267,20 @@ bool cSomaBase::InitEngine()
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 	sStateDir += _W("soma/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-	SetLogFile(sStateDir + _W("hpl.log"));
+
+	// A fixed hpl.log path collides across concurrent headless test runs
+	// (now a normal occurrence with multiple agents each testing their own
+	// Soma.<branch>.aarch64 build) - cLogWriter::ReopenFile() truncates on
+	// open, so a second process launched while a first is still running
+	// silently wipes whatever the first had already logged. Suffix with the
+	// PID under OPENHPL_HEADLESS_SOCKET only, so normal interactive play
+	// keeps the stable, predictable filename.
+	tWString sLogFile = sStateDir + _W("hpl.log");
+	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
+	{
+		sLogFile = sStateDir + _W("hpl-") + cString::ToStringW((int)getpid()) + _W(".log");
+	}
+	SetLogFile(sLogFile);
 #endif
 
 	/////////////////////////
