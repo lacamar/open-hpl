@@ -70,6 +70,9 @@ public:
 	bool GetDisableFlashBacks(){ return mbDisableFlashBacks;}
 	bool GetAllowQuickSave(){ return mbAllowQuickSave;}
 
+	bool GetShowFPS(){ return mbShowFPS;}
+	void SetShowFPS(bool abX){ mbShowFPS = abX;}
+
 	void SetFastForward(bool abX);
 	bool GetFastForward(){ return mbFastForward;}
 

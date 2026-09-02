@@ -24,6 +24,7 @@
 #include "LuxInputHandler.h"
 #include "LuxHintHandler.h"
 #include "LuxConfigHandler.h"
+#include "LuxDebugHandler.h"
 #include "LuxPostEffects.h"
 #include "LuxMessageHandler.h"
 #include "LuxPlayerHelpers.h"
@@ -466,7 +467,7 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 	cWidgetGroup *pGroup = mpGuiSet->CreateWidgetGroup(vPos,0, kTranslate("OptionsMenu", "Screen"), apDummy);
 	{
 		float fBorderSize = 15;
-		pGroup->SetSize(cVector2f(apDummy->GetParent()->GetSize().x-fBorderSize-fBorderSize,115));
+		pGroup->SetSize(cVector2f(apDummy->GetParent()->GetSize().x-fBorderSize-fBorderSize,140));
 		cVector3f vPosInGroup = cVector3f(fBorderSize, fBorderSize, 0.1f);
 
 		/////////////////////////////////
@@ -485,7 +486,6 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		mpChBVSync = mpGuiSet->CreateWidgetCheckBox(vPosInGroup + cVector3f(0,mpChBFullScreen->GetSize().y+10,0), 0, kTranslate("OptionsMenu","VSync"), pGroup);
 		SetUpInput(NULL, mpChBVSync, false, kTranslate("OptionsMenu","VSyncTip"));
 
-
 //		mpChBAdaptiveVSync = mpGuiSet->CreateWidgetCheckBox(vPosInGroup + cVector3f(mpChBVSync->GetSize().x+10,mpChBFullScreen->GetSize().y+10,0), 0, kTranslate("OptionsMenu","AdaptiveVSync"), pGroup);
 //		SetUpInput(NULL, mpChBAdaptiveVSync, false, kTranslate("OptionsMenu","AdaptiveVSyncTip"));
 
@@ -495,6 +495,12 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		pLabel = mpGuiSet->CreateWidgetLabel(vPosGuiScale, -1, kTranslate("OptionsMenu","GuiScale"), pGroup);
 		mpCBGuiScale = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(70, 25), _W(""), pGroup);
 		SetUpInput(pLabel, mpCBGuiScale, true, kTranslate("OptionsMenu","GuiScaleTip"));
+
+		/////////////////////////////////
+		// Show FPS
+		cVector3f vPosShowFPS(fBorderSize, vPosGuiScale.y + mpCBGuiScale->GetSize().y + 10, 0.1f);
+		mpChBShowFPS = mpGuiSet->CreateWidgetCheckBox(vPosShowFPS, 0, kTranslate("OptionsMenu","ShowFPS"), pGroup);
+		SetUpInput(NULL, mpChBShowFPS, false, kTranslate("OptionsMenu","ShowFPSTip"));
 	}
 
 	vPos.y += pGroup->GetSize().y + 15;
@@ -552,7 +558,6 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 	mpChBFullScreen->SetFocusNavigation(eUIArrow_Down, mpChBVSync);
 
 	mpChBVSync->SetFocusNavigation(eUIArrow_Left, mpCBResolution);
-//	mpChBVSync->SetFocusNavigation(eUIArrow_Right, mpChBAdaptiveVSync);
 	mpChBVSync->SetFocusNavigation(eUIArrow_Up, mpChBFullScreen);
 	mpChBVSync->SetFocusNavigation(eUIArrow_Down, mpCBGuiScale);
 
@@ -561,9 +566,12 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 //	mpChBAdaptiveVSync->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
 
 	mpCBGuiScale->SetFocusNavigation(eUIArrow_Up, mpChBVSync);
-	mpCBGuiScale->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
+	mpCBGuiScale->SetFocusNavigation(eUIArrow_Down, mpChBShowFPS);
 
-	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Up, mpCBGuiScale);
+	mpChBShowFPS->SetFocusNavigation(eUIArrow_Up, mpCBGuiScale);
+	mpChBShowFPS->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
+
+	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Up, mpChBShowFPS);
 	mpCBTextureSizeLevel->SetFocusNavigation(eUIArrow_Down, mpSGamma);
 
 	mpSGamma->SetFocusNavigation(eUIArrow_Up, mpCBTextureSizeLevel);
@@ -1190,6 +1198,8 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 		mpChBVSync->SetChecked(aObj.GetVarBool("VSync"), false);
 //		mpChBAdaptiveVSync->SetChecked(aObj.GetVarBool("AdaptiveVsync"), false);
 
+		mpChBShowFPS->SetChecked(aObj.GetVarBool("ShowFPS"), false);
+
 		/////////////////////////
 		// UI/GUI scale
 		{
@@ -1480,6 +1490,8 @@ void cLuxMainMenu_Options::ApplyChanges()
 //		pCfgHdr->mbAdaptiveVSync = mpChBAdaptiveVSync->IsChecked();
 		pGfx->GetLowLevel()->SetVsyncActive(pCfgHdr->mbVSync, pCfgHdr->mbAdaptiveVSync);
 		pGfx->GetLowLevel()->SetGammaCorrection(GetGamma());
+
+		gpBase->mpDebugHandler->SetShowFPS(mpChBShowFPS->IsChecked());
 
 		// GUI scale (needs restart - cGuiSet bakes the scale into each set at construction)
 		pCfgHdr->mlGuiScale = mpCBGuiScale->GetSelectedItem()+1;
@@ -1793,6 +1805,8 @@ void cLuxMainMenu_Options::DumpInitialValues(cResourceVarsObject &aObj)
 		aObj.AddVarBool("VSync", gpBase->mpConfigHandler->mbVSync);
 		aObj.AddVarBool("AdaptiveVsync", gpBase->mpConfigHandler->mbAdaptiveVSync);
 
+		aObj.AddVarBool("ShowFPS", gpBase->mpDebugHandler->GetShowFPS());
+
 		/////////////////////////
 		// UI/GUI scale
 		aObj.AddVarInt("GuiScale", gpBase->mpConfigHandler->mlGuiScale);
@@ -1891,6 +1905,8 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 		// Fullscreen & vsync
 		aObj.AddVarBool("FullScreen",	mpChBFullScreen->IsChecked());
 		aObj.AddVarBool("VSync",		mpChBVSync->IsChecked());
+
+		aObj.AddVarBool("ShowFPS",		mpChBShowFPS->IsChecked());
 
 		/////////////////////////
 		// UI/GUI scale
