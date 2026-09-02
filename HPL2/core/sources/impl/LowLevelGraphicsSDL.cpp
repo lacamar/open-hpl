@@ -104,6 +104,7 @@ namespace hpl {
 
 		for(int i=0;i<kMaxTextureUnits;i++)
 			mvCurrentTextureTarget[i] = 0;
+		mlCurrentActiveTextureUnit = -1;
 
 		//Create the batch arrays:
 		mlBatchStride = 13;
@@ -1525,18 +1526,22 @@ namespace hpl {
 		if(apTex)	NewTarget = GetGLTextureTargetEnum(apTex->GetType());
 		
 		GLenum LastTarget = mvCurrentTextureTarget[alUnit];
-		
+
 		//Check if multi texturing is supported.
-		if(GLEW_ARB_multitexture){
+		// Skip the driver call when this unit is already the active one -
+		// SetTexture is called for every texture unit of every material, so
+		// consecutive calls on the same unit (very common) used to reselect it for nothing.
+		if(GLEW_ARB_multitexture && mlCurrentActiveTextureUnit != (int)alUnit){
 			glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
+			mlCurrentActiveTextureUnit = (int)alUnit;
 		}
-		
+
 		//Disable this unit if NULL
 		if(apTex == NULL)
 		{
 			if(LastTarget!=0)
 				glDisable(LastTarget);
-			
+
 			//glBindTexture(LastTarget,0);
 		}
 		//Enable the unit, set the texture handle and bind the pbuffer
@@ -1550,7 +1555,9 @@ namespace hpl {
 			cSDLTexture *pSDLTex = static_cast<cSDLTexture*> (apTex);
 
 			glBindTexture(NewTarget, pSDLTex->GetTextureHandle());
-			glEnable(NewTarget);
+
+			//Target is already enabled from a previous bind on this unit unless it just changed above.
+			if(NewTarget != LastTarget) glEnable(NewTarget);
 
 			//if it is a render target we need to do some more binding.
 			if(pSDLTex->GetUsage() == eTextureUsage_RenderTarget)
@@ -1568,7 +1575,10 @@ namespace hpl {
 	{
 		;
 
+		if(mlCurrentActiveTextureUnit == (int)alUnit) return;
+
 		glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
+		mlCurrentActiveTextureUnit = (int)alUnit;
 	}
 
 	//-----------------------------------------------------------------------
