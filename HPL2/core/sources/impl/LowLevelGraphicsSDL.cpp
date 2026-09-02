@@ -33,6 +33,7 @@
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
 #include "system/Mutex.h"
+#include "system/String.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLFontData.h"
@@ -224,7 +225,23 @@ namespace hpl {
             mvScreenSize = cVector2l(800,600);
             mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         } else if (abFullscreen) {
-            mlFlags |= SDL_WINDOW_FULLSCREEN;
+            // Wayland has no exclusive-fullscreen modesetting - compositors either
+            // ignore SDL_WINDOW_FULLSCREEN's mode-switch request outright or reject
+            // a size that doesn't match an existing output mode, leaving the window
+            // stuck at desktop size anyway but having gone through a jarring
+            // attempted mode change first. SDL_WINDOW_FULLSCREEN_DESKTOP (borderless,
+            // no modeset) is the documented-recommended flag for compositor-managed
+            // desktops and degrades to the same real modeset on X11/Windows outputs
+            // that do support it, so only divert on Wayland specifically.
+            const char *pDriver = SDL_GetCurrentVideoDriver();
+            if(pDriver != NULL && cString::ToLowerCase(pDriver) == "wayland")
+            {
+                mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+            }
+            else
+            {
+                mlFlags |= SDL_WINDOW_FULLSCREEN;
+            }
         }
 
         // Under the opt-in headless automation server (see HeadlessControl.h),

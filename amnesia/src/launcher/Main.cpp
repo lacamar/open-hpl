@@ -428,6 +428,25 @@ int hplMain(const tString &asCommandLine)
 	int exitflag = -1;
 	bool bShowLauncher = pMainConfig->GetBool("Main", "ShowLauncher", true);
 
+#if defined(__linux__)
+	// Unset, FLTK's Wayland/X11 backends both fall back to the literal string
+	// "FLTK" as the window's app_id/WM_CLASS - identical for every FLTK app on
+	// the system, so a compositor/taskbar can't tell this window apart from
+	// any other FLTK program, let alone show the right icon for it. Match the
+	// game binary this launcher hands off to (RunProgram() below, same
+	// per-arch suffix as HPL2/core/cmake/BoilerPlate.cmake's
+	// CMAKE_EXECUTABLE_SUFFIX) so a desktop entry's StartupWMClass can
+	// identify both the launcher window and the game window it starts as the
+	// same application.
+	#if defined(__aarch64__)
+		Fl_Window::default_xclass("Amnesia.bin.aarch64");
+	#elif (defined(i386) && !defined(__LP64__))
+		Fl_Window::default_xclass("Amnesia.bin.x86");
+	#else
+		Fl_Window::default_xclass("Amnesia.bin.x86_64");
+	#endif
+#endif
+
 	if(bShowLauncher)
 	{
 		while(exitflag==-1)
