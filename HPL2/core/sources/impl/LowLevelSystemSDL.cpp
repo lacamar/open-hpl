@@ -229,7 +229,16 @@ namespace hpl {
 #endif
 		SDL_Quit();
 #endif
-		cPlatform::CreateMessageBox(eMsgBoxType_Error, _W("FATAL ERROR"), _W("%ls"), cString::To16Char(sMess).c_str());
+		// A headless run has nobody to click the native dialog's "Dismiss" button - it would
+		// otherwise hang forever (the whole process, including the control socket thread,
+		// since this call never returns), turning one bad headless command into a stuck
+		// process that has to be killed by hand instead of just exiting like any other fatal
+		// error. Same OPENHPL_HEADLESS_SOCKET check already used at every other headless-mode
+		// call site (see Engine.cpp/LowLevelGraphicsSDL.cpp/SDLEngineSetup.cpp).
+		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
+		{
+			cPlatform::CreateMessageBox(eMsgBoxType_Error, _W("FATAL ERROR"), _W("%ls"), cString::To16Char(sMess).c_str());
+		}
 
 		exit(1);
 	}

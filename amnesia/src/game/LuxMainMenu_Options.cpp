@@ -37,6 +37,16 @@
 
 //-----------------------------------------------------------------------
 
+// Retail language.lang files don't have entries for UI strings this port added
+// (kTranslate/cLanguageFile::Translate() returns an empty string on a missing
+// key, so the widget would render with no visible label at all) - fall back
+// to a hardcoded string in that case instead of leaving it blank.
+static tWString TranslateOrFallback(const tString& asCat, const tString& asName, const tWString& asFallback)
+{
+	tWString sText = kTranslate(asCat, asName);
+	return sText.empty() ? asFallback : sText;
+}
+
 static int GetIndexFromAnisotropy(float afX)
 {
 	if(afX <= 1) return 0;
@@ -499,8 +509,8 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		/////////////////////////////////
 		// Show FPS
 		cVector3f vPosShowFPS(fBorderSize, vPosGuiScale.y + mpCBGuiScale->GetSize().y + 10, 0.1f);
-		mpChBShowFPS = mpGuiSet->CreateWidgetCheckBox(vPosShowFPS, 0, kTranslate("OptionsMenu","ShowFPS"), pGroup);
-		SetUpInput(NULL, mpChBShowFPS, false, kTranslate("OptionsMenu","ShowFPSTip"));
+		mpChBShowFPS = mpGuiSet->CreateWidgetCheckBox(vPosShowFPS, 0, TranslateOrFallback("OptionsMenu","ShowFPS", _W("Show FPS")), pGroup);
+		SetUpInput(NULL, mpChBShowFPS, false, TranslateOrFallback("OptionsMenu","ShowFPSTip", _W("Show a frames-per-second counter during gameplay.")));
 	}
 
 	vPos.y += pGroup->GetSize().y + 15;
