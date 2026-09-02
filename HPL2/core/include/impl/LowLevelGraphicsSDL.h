@@ -398,7 +398,8 @@ namespace hpl {
 		//////////////////////////////////////
 		//Texture
 		GLenum mvCurrentTextureTarget[kMaxTextureUnits];
-		
+		int mlCurrentActiveTextureUnit; //-1 = unknown, forces the next glActiveTextureARB call through.
+
 #ifdef WITH_CG
 		//////////////////////////////////////
 		//CG Compiler Variables
