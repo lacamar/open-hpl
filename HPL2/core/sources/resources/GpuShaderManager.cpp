@@ -41,6 +41,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	tHpslTranspileCallback cGpuShaderManager::mpHpslTranspileCallback = NULL;
+
+	//-----------------------------------------------------------------------
+
 	cGpuShaderManager::cGpuShaderManager(cFileSearcher *apFileSearcher,iLowLevelGraphics *apLowLevelGraphics, 
 		iLowLevelResources *apLowLevelResources,iLowLevelSystem *apLowLevelSystem)
 		: iResourceManager(apFileSearcher, apLowLevelResources,apLowLevelSystem)
@@ -110,10 +114,29 @@ namespace hpl {
 		{
 			tString sFileData;
 			tString sParsedOutput;
-		
+
 			/////////////////////////////////
 			//Get file from file searcher
+			bool bIsHpslFallback = false;
+			tString sHpslName;
 			tWString sPath = mpFileSearcher->GetFilePath(asName);
+			if(sPath==_W("") && mpHpslTranspileCallback)
+			{
+				/////////////////////////////////
+				// No .glsl by this name - see if a same-named .hpsl exists
+				// (SOMA/Rebirth/Bunker's HPL3 shader source). Only tried
+				// when a game module has registered a transpiler via
+				// SetHpslTranspileCallback(); Dark Descent/AMFP never do,
+				// so this block is unreachable for them and sPath=="" falls
+				// straight into the existing error path below unchanged.
+				sHpslName = cString::SetFileExt(asName, "hpsl");
+				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
+				if(sHpslPath != _W(""))
+				{
+					sPath = sHpslPath;
+					bIsHpslFallback = true;
+				}
+			}
 			if(sPath==_W("")){
 				Error("Couldn't find file '%s' in resources\n",asName.c_str());
 				EndLoad();
@@ -130,12 +153,29 @@ namespace hpl {
 			/////////////////////////////////
 			//Parse file
 			mpPreprocessParser->Parse(&sFileData, &sParsedOutput,apVarContainer,cString::GetFilePathW(sPath));
-			
+
+			/////////////////////////////////
+			//HPSL -> GLSL fallback: same preprocessor as the .glsl path
+			//above, transpiled the rest of the way by the registered
+			//game-module callback.
+			if(bIsHpslFallback)
+			{
+				tString sGlsl, sTranspileError;
+				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError)==false)
+				{
+					Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
+						  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
+					EndLoad();
+					return NULL;
+				}
+				sParsedOutput = sGlsl;
+			}
+
 			/////////////////////////////////
 			//Compile
 			pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
 			pShader->SetFullPath(sPath);
-			
+
 			if(pShader->CreateFromString(sParsedOutput.c_str())==false)
 			{
 				Error("Couldn't create program '%s'\n",asName.c_str());
@@ -189,6 +229,55 @@ namespace hpl {
 				}
 
 				AddResource(pShader);
+			}
+			//////////////////////////////////////////////
+			// HPSL -> GLSL fallback (see the apVarContainer branch above for
+			// the full explanation) - only reachable when a game module has
+			// registered a transpiler; Dark Descent/AMFP leave
+			// mpHpslTranspileCallback NULL and never enter this block.
+			else if(pShader==NULL && sPath==_W("") && mpHpslTranspileCallback)
+			{
+				tString sHpslName = cString::SetFileExt(asName, "hpsl");
+				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
+				if(sHpslPath != _W(""))
+				{
+					tString sFileData;
+					unsigned int lFileSize = cPlatform::GetFileSize(sHpslPath);
+					sFileData.resize(lFileSize);
+					cPlatform::CopyFileToBuffer(sHpslPath,&sFileData[0],lFileSize);
+
+					// This branch has no caller-supplied cParserVarContainer
+					// (that's what distinguishes it from the branch above),
+					// so preprocess with an empty one - same convention
+					// HpslTranspilerSelfTest.cpp uses.
+					cParserVarContainer emptyVars;
+					tString sParsedOutput;
+					mpPreprocessParser->Parse(&sFileData, &sParsedOutput, &emptyVars, cString::GetFilePathW(sHpslPath));
+
+					tString sGlsl, sTranspileError;
+					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError))
+					{
+						pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
+						pShader->SetFullPath(sHpslPath);
+
+						if(pShader->CreateFromString(sGlsl.c_str())==false)
+						{
+							Error("Couldn't create program '%s' (from transpiled HPSL '%s')\n",
+								  asName.c_str(), sHpslName.c_str());
+							hplDelete(pShader);
+							pShader = NULL;
+						}
+						else
+						{
+							AddResource(pShader);
+						}
+					}
+					else
+					{
+						Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
+							  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
+					}
+				}
 			}
 
 			if(pShader)pShader->IncUserCount();

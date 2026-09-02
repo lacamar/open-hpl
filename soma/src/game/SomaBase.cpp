@@ -5,9 +5,11 @@
 
 #include "SomaBase.h"
 #include "HpslTranspilerSelfTest.h"
+#include "HpslTranspiler.h"
 #include "SomaSplash.h"
 
 #include "system/HeadlessControl.h"
+#include "resources/GpuShaderManager.h"
 
 //---------------------------------------
 
@@ -134,6 +136,17 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
 		return false;
+
+	/////////////////////////////
+	// Wire the HPSL->GLSL transpiler (soma/src/game/HpslTranspiler.cpp) into
+	// cGpuShaderManager as its .glsl-not-found fallback, so SOMA's real
+	// .hpsl material shaders get transpiled-and-compiled instead of just
+	// erroring (see PORTING_NOTES.md "SOMA" section). HPL2/core can't call
+	// TranspileHpslToGlsl() directly (that's game-module code), so this is
+	// the only place in this codebase that calls SetHpslTranspileCallback -
+	// Dark Descent/AMFP never do, so cGpuShaderManager's fallback path stays
+	// dead code for them.
+	cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl);
 
 	/////////////////////////////
 	// Headless control: register camera commands if a control server is
