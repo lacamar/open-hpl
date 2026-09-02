@@ -9,6 +9,7 @@
 #include <map>
 #include <algorithm>
 #include <cctype>
+#include <functional>
 
 //---------------------------------------------------------------
 
@@ -122,6 +123,173 @@ namespace
 		std::regex idRe("\\b" + asFrom + "\\b");
 		return std::regex_replace(asSrc, idRe, asTo);
 	}
+
+	// Strips a D3D-style "uniform TYPE NAME : N;" texture-unit-binding
+	// suffix down to "uniform TYPE NAME;" - GLSL 120 has no such syntax.
+	// Only ever seen on "uniform cTextureX ..." lines in practice, but the
+	// pattern is generic (any uniform decl) since nothing else in HPSL
+	// syntax uses a bare ": <int>" after a declaration outside main()'s
+	// own parameter list (handled separately, see ParseParam).
+	tString StripUniformBindingIndices(const tString& asSrc)
+	{
+		std::regex bindRe("(uniform\\s+\\S+\\s+\\w+)\\s*:\\s*\\d+(\\s*;)");
+		return std::regex_replace(asSrc, bindRe, "$1$2");
+	}
+
+	// Paren-depth-aware split of a call's argument list on top-level
+	// commas - unlike SplitParams() (used only for main()'s own parameter
+	// list, where no HPSL param type ever contains a paren or comma),
+	// intrinsic call arguments are arbitrary expressions that can nest
+	// constructor calls (e.g. "mul(m, cVector4f(x,y,z,w))"), so a naive
+	// comma split would mis-split those.
+	std::vector<tString> SplitTopLevelArgs(const tString& asArgList)
+	{
+		std::vector<tString> vOut;
+		tString sCurrent;
+		int lDepth = 0;
+		for (size_t i = 0; i < asArgList.size(); ++i)
+		{
+			char c = asArgList[i];
+			if (c == '(') lDepth++;
+			else if (c == ')') lDepth--;
+
+			if (c == ',' && lDepth == 0)
+			{
+				vOut.push_back(Trim(sCurrent));
+				sCurrent = "";
+			}
+			else sCurrent += c;
+		}
+		if (Trim(sCurrent) != "") vOut.push_back(Trim(sCurrent));
+		return vOut;
+	}
+
+	// Rewrites every call to asFuncName(...) in asSrc via aFormatter(args),
+	// processing whichever occurrence is rightmost in the string first on
+	// each pass. This is always safe for nested calls (e.g.
+	// "mul(mul(a,b),c)"): any call nested inside another necessarily
+	// starts at a strictly greater string offset than its enclosing call
+	// (it appears somewhere inside the enclosing call's own argument
+	// list, which begins after the enclosing call's own name+'('), so the
+	// rightmost remaining "name(" at any point in the loop can never
+	// itself contain another not-yet-rewritten occurrence - it's always
+	// a leaf call, safe to rewrite immediately.
+	bool RewriteCallIntrinsic(const tString& asSrc, const tString& asFuncName,
+							   const std::function<bool(const std::vector<tString>&, tString&, tString&)>& aFormatter,
+							   tString& asOut, tString& asErrorOut)
+	{
+		tString sSrc = asSrc;
+		tString sPattern = asFuncName + "(";
+
+		for (;;)
+		{
+			size_t lPos = tString::npos;
+			size_t lSearchFrom = sSrc.size();
+			for (;;)
+			{
+				if (lSearchFrom == 0) break;
+				size_t lFound = sSrc.rfind(sPattern, lSearchFrom - 1);
+				if (lFound == tString::npos) break;
+
+				bool bBoundaryOk = (lFound == 0) ||
+					!(isalnum((unsigned char)sSrc[lFound - 1]) || sSrc[lFound - 1] == '_');
+				if (bBoundaryOk) { lPos = lFound; break; }
+				lSearchFrom = lFound;
+			}
+			if (lPos == tString::npos) break;
+
+			size_t lArgsStart = lPos + sPattern.size();
+			int lDepth = 1;
+			size_t lArgsEnd = lArgsStart;
+			for (; lArgsEnd < sSrc.size() && lDepth > 0; ++lArgsEnd)
+			{
+				if (sSrc[lArgsEnd] == '(') lDepth++;
+				else if (sSrc[lArgsEnd] == ')') lDepth--;
+			}
+			if (lDepth != 0)
+			{
+				asErrorOut = "Unterminated '" + asFuncName + "(' call (unbalanced parens)";
+				return false;
+			}
+			lArgsEnd--; // point at the matching ')'
+
+			tString sArgs = sSrc.substr(lArgsStart, lArgsEnd - lArgsStart);
+			std::vector<tString> vArgs = SplitTopLevelArgs(sArgs);
+
+			tString sReplacement;
+			if (aFormatter(vArgs, sReplacement, asErrorOut) == false)
+				return false;
+
+			sSrc = sSrc.substr(0, lPos) + sReplacement + sSrc.substr(lArgsEnd + 1);
+		}
+
+		asOut = sSrc;
+		return true;
+	}
+
+	// Collects uniform texture declarations (post type-mapping, so already
+	// e.g. "uniform sampler2D aColorMap;") so sample() calls can be routed
+	// to the right GLSL 120 sampling function for the referenced texture's
+	// type - GLSL 120 has no overloaded generic "sample", unlike HPSL.
+	std::map<tString, tString> CollectSamplerTypes(const tString& asSrc)
+	{
+		static const std::map<tString, tString> smapSamplerToFunc = {
+			{"sampler2D", "texture2D"},
+			{"samplerCube", "textureCube"},
+			{"sampler2DRect", "texture2DRect"},
+		};
+
+		std::map<tString, tString> mapOut;
+		std::regex declRe("uniform\\s+(sampler2D|samplerCube|sampler2DRect)\\s+(\\w+)\\s*;");
+		auto begin = std::sregex_iterator(asSrc.begin(), asSrc.end(), declRe);
+		for (auto it = begin; it != std::sregex_iterator(); ++it)
+		{
+			std::smatch match = *it;
+			mapOut[match[2].str()] = smapSamplerToFunc.at(match[1].str());
+		}
+		return mapOut;
+	}
+
+	bool RewriteMulIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
+	{
+		auto formatter = [](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != 2)
+			{
+				asErr = "mul() with " + cString::ToString((int)aArgs.size()) +
+						" argument(s) is not supported (only the 2-argument matrix/vector form is)";
+				return false;
+			}
+			asRepl = "(" + aArgs[0] + " * " + aArgs[1] + ")";
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, "mul", formatter, asOut, asErrorOut);
+	}
+
+	bool RewriteSampleIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
+	{
+		std::map<tString, tString> mapSamplers = CollectSamplerTypes(asSrc);
+
+		auto formatter = [&mapSamplers](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != 2)
+			{
+				asErr = "sample() with " + cString::ToString((int)aArgs.size()) +
+						" argument(s) is not supported (only the 2-argument texture/uv form is)";
+				return false;
+			}
+			std::map<tString, tString>::const_iterator it = mapSamplers.find(aArgs[0]);
+			if (it == mapSamplers.end())
+			{
+				asErr = "sample() references '" + aArgs[0] + "', which isn't a declared uniform texture "
+						"(or is a texture type this transpiler doesn't map - see gvTypeMap)";
+				return false;
+			}
+			asRepl = it->second + "(" + aArgs[0] + ", " + aArgs[1] + ")";
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, "sample", formatter, asOut, asErrorOut);
+	}
 }
 
 //---------------------------------------------------------------
@@ -130,6 +298,10 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 						  tString& asGlslOut, tString& asErrorOut)
 {
 	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
+	sSrc = StripUniformBindingIndices(sSrc);
+
+	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
+	if (RewriteSampleIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 
 	//////////////////////////////
 	// Find "void main(" ... ")" and the "{" ... "}" body that follows it.
@@ -211,7 +383,24 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 		if (ParseParam(vRawParams[i], param, asErrorOut) == false)
 			return false;
 
-		if (aType == eGpuShaderType_Vertex && param.msQualifier == "in")
+		if (param.msName == "px_vPosition" && param.mlSemantic == -1 &&
+			aType == eGpuShaderType_Vertex && param.msQualifier == "out")
+		{
+			// HPSL's HLSL-SV_Position-equivalent convention name: the
+			// vertex shader's clip-space position output, consumed by the
+			// fixed-function clipper/rasterizer - NOT an interpolated
+			// varying (see HpslTranspiler.h scope note).
+			vBodySubs.push_back(std::make_pair(param.msName, tString("gl_Position")));
+		}
+		else if (param.msName == "px_vPosition" && aType == eGpuShaderType_Fragment && param.msQualifier == "in")
+		{
+			// Mirror of the above on the fragment side: the interpolated
+			// screen-space position, read from the built-in rather than a
+			// same-named varying (which the vertex shader side never
+			// declares, per the case above).
+			vBodySubs.push_back(std::make_pair(param.msName, tString("gl_FragCoord")));
+		}
+		else if (aType == eGpuShaderType_Vertex && param.msQualifier == "in")
 		{
 			std::map<tString, tString>::const_iterator it = gmapVertexBuiltins.find(param.msName);
 			if (it == gmapVertexBuiltins.end())
