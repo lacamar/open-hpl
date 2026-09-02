@@ -1247,3 +1247,120 @@ in `TASKS.md`):**
   value relative to the new dependency and runtime-decode risk given the desktop-entry path
   already covers modern (Wayland and most current X11) desktops - not attempted, noted only
   for completeness.
+
+## AMFP physics/scripting bug hunt (this session) - two real harness bugs fixed, one real symptom reproduced but not root-caused
+
+Task: find and fix physics/event-scripting bugs in AMFP. Per the "AMFP is not
+Phase 0 only" correction above, the actual playable path is the shared
+`amnesia/src/game` binary + AngelScript shims (`b2f51f4`) run against AMFP's
+real data, *not* the free-fly `amfp/src/game` scaffold (which has no
+player/scripts to have physics or scripting bugs in). All work this session
+is in `amnesia/src/game/LuxBase.cpp`, inside the headless-control command
+block added for exactly this kind of testing - deliberately narrow, AMFP-
+support-adjacent code, not general Dark Descent game logic.
+
+**Two real, reproduced-and-fixed bugs in the headless test harness itself**
+(found while trying to actually use it to drive AMFP):
+
+1. `cLuxBase_HeadlessCmd_State()` dereferenced `GetCharacterBody()` with no
+   NULL check. `mpPlayer` lives for the whole process, but its
+   `iCharacterBody` only exists once a map is loaded - calling `state`
+   at the main menu (e.g. right after boot, before `start_map`) SIGSEGVs
+   the whole engine. Confirmed via `coredumpctl dump` + `gdb`: crash in
+   `iCharacterBody::GetFeetPosition()` with `this=0x0`, called from
+   `cLuxBase_HeadlessCmd_State` at the old `LuxBase.cpp:437`. Fixed by
+   computing `pBody` once and checking it before use.
+2. `cLuxBase_HeadlessCmd_StartMap()` called `StartGame()` directly without
+   ever calling `mpInputHandler->ChangeState(eLuxInputState_Game)` or
+   `mpEngine->GetUpdater()->SetContainer("Default")` first - both of which
+   the real UI (`cLuxMainMenu::ExitMenu()`'s `eLuxMainMenuExit_StartGame`
+   case, `LuxMainMenu.cpp:682-698`) does *before* calling `StartGame()`.
+   Without this, `start_map` still loads the map and runs its scripts/
+   physics correctly (checkpoints fire, entities spawn), but the `input`
+   command's injected key events are silently dropped - confirmed via live
+   `gdb`: `cInput`'s action system correctly saw `eLuxAction_Forward` as
+   down (`cAction::mbIsDown == true`, sub-action's `KeyIsDown()` correctly
+   read the injected `SDL_KEYDOWN`), but `cLuxInputHandler`'s state machine
+   was still in its pre-`start_map` state (e.g. `PreMenu`), so
+   `UpdateGameInput()` never ran and the player never moved despite the key
+   genuinely registering as held. Fixed by mirroring the real UI's exact
+   sequencing.
+
+Both fixes verified live against real AMFP data end-to-end (headless
+`state`/`input` now work together - a held `Forward` key correctly moves the
+player once `start_map` has run) and re-verified against real Dark Descent
+data with zero regression (`state` no longer crashes pre-map-load; `start_map
+map=00_rainy_hall.map` still loads and reports state normally). Also
+confirmed live: AMFP's real `01_mansion_01.hps` level script still compiles
+and runs cleanly through the `b2f51f4` AngelScript shims (`CheckPointAmfp`,
+the `AmfpStub_*` functions) with zero "Not a valid reference" or
+missing-function errors in `hpl.log`.
+
+**One real, striking symptom reproduced live, not root-caused**: with both
+fixes above, a long (~90s+) headless test - `start_map map=01_mansion_01.map`,
+then hold `Forward` via the `input` command and just poll `state` - ended
+with the player falling through geometry into an apparently endless void
+(`pos_y` dropping from the low 20s past -600 and still falling at the engine's
+`-30`/s terminal fall speed when last checked), taking fall damage down to 0
+health with no death/respawn recovery kicking in. Investigation before
+concluding this was **not a simple case of "no floor at spawn" or a stale
+gdb artifact**:
+- `mlOnGroundCount` was a firm `12` immediately after `start_map` returned,
+  position and velocity both genuinely static (not just under-sampled) for
+  a long stretch afterward - confirmed via repeated `gpBase->mpEngine->
+  mfGameTime` reads showing real elapsed logic time advancing normally while
+  `mpCharBody->mvPosition.y` stayed bit-for-bit identical, ruling out "the
+  engine is stalled" as the explanation for the initial "frozen" period.
+- That "frozen" period turned out to be **real, correct, scripted
+  behavior**, not a bug: `01_mansion_01.hps`'s `OnStart()` unconditionally
+  (when `ScriptDebugOn()==false`, the normal case) teleports the player to
+  `"temple_intro_1"` - *not* whatever `start_pos` the headless caller asked
+  for - and calls `SetPlayerActive(false)`, then runs a long chained
+  `AddTimer(...,"IntroSequenceHandler")` sequence (a scripted temple/dream
+  intro cutscene, 6+11+8.8+12+12+10+9+7+6+...s of steps) before eventually
+  calling `SetPlayerActive(true)` / `SetPlayerMoveSpeedMul(0)` /
+  `TeleportPlayer("BedStart")` around the 69s mark and continuing from
+  there. So "player ignores `start_pos=MainStart` and sits motionless for
+  an extended period" is *intended* cutscene-lock behavior working
+  correctly, not a bug - important to know before "fixing" it.
+- `TeleportPlayer()` (the script-callable one AMFP's `.hps` files use) does
+  go through `cLuxPlayer::PlaceAtStartNode()`, which already has the
+  `StopMovement()` fix from the earlier teleport-while-falling bug (see
+  "Next session priorities" above) - so a fresh teleport shouldn't itself
+  be the source of residual fall velocity.
+- `SetPlayerMoveSpeedMul` (called with `0` right when the intro reactivates
+  the player) is a real, already-implemented Dark-Descent-shared function,
+  not one of the `AmfpStub_*` no-ops - so it's not silently missing either.
+- No `"...could not be found!"` (TeleportPlayer's own NULL-node error) or
+  any other script error appears anywhere in `hpl.log` for this run - every
+  teleport target the script asked for genuinely exists.
+
+**Not resolved**: whether the eventual fall is (a) the still-open
+`b2f51f4`-hypothesized discrete/non-swept collision bug at seams between
+AMFP's ~20+ batched floor physics bodies, finally triggered once the player
+actually starts moving somewhere in this multi-minute sequence, or (b) an
+artifact of this specific test methodology - blindly holding one movement
+key with no camera/look control for 1-2 real minutes straight through a
+cutscene with many `TeleportPlayer`/`SetPlayerActive`/`SetPlayerMoveSpeedMul`
+transitions it was never designed to be driven through this way. Distinguishing
+these needs either real interactive play (mouse look + selective key timing,
+not available in this environment - see the existing "no input-simulation
+tool" notes elsewhere in this file) or a much more surgical headless
+repro: `start_map` with `ScriptDebugOn()`-equivalent skip of the intro (or
+directly `run_script`-ing a jump straight to a known-good gameplay state),
+then a short, deliberate, camera-aware movement test across a small known
+patch of the mansion floor, sampling `mlOnGroundCount`/position every frame
+to catch the exact moment (if any) a real mid-floor collision seam is
+crossed - not attempted this session due to time.
+
+**Verified**: build cycle used - `cmake --build amnesia/src/build --target
+Amnesia -j$(nproc)`, deployed as `AmnesiaOnAmfp.bin.aarch64` in the real AMFP
+Steam install (pre-existing test-binary name from the `b2f51f4` session, not
+the canonical launcher binary), run headlessly via
+`OPENHPL_HEADLESS_SOCKET` + `scripts/hpl_control.py`. Crash confirmed/fixed
+via `coredumpctl dump` + `gdb`; live state inspection via `gdb -p <pid>`
+(quoted type names, e.g. `('hpl::cKeyboardSDL' *)ptr`, needed to work around
+a cast-parsing quirk in this gdb/build combination - added to this file's
+running list of gdb gotchas). No RPM/spec changes - this only touches
+`amnesia/src/game/LuxBase.cpp`'s headless-control block, shared by all three
+games that run through this binary.

@@ -431,9 +431,15 @@ static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest 
 		aResp.Set("map_file", pMap->GetFileName());
 	}
 
-	if(pBase->mpPlayer)
+	// mpPlayer itself is created at InitGame() time and lives for the whole process,
+	// but its iCharacterBody is only created once a map is actually loaded (see
+	// cLuxPlayer::LoadCharacterBody(), called from map setup) - calling this command
+	// at the main menu / between maps used to dereference a NULL GetCharacterBody(),
+	// crashing the whole engine (confirmed via coredumpctl/gdb: SIGSEGV in
+	// iCharacterBody::GetFeetPosition() with this=0x0).
+	iCharacterBody *pBody = pBase->mpPlayer ? pBase->mpPlayer->GetCharacterBody() : NULL;
+	if(pBody)
 	{
-		iCharacterBody *pBody = pBase->mpPlayer->GetCharacterBody();
 		cVector3f vPos = pBody->GetFeetPosition();
 		cVector3f vVel = pBody->GetVelocity(pBase->mpEngine->GetStepSize());
 
@@ -495,6 +501,16 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 			return;
 		}
 	}
+
+	// The real UI (cLuxMainMenu::ExitMenu(), eLuxMainMenuExit_StartGame case) always
+	// switches the input handler to eLuxInputState_Game and the updater container to
+	// "Default" *before* calling StartGame() - without this, StartGame() still loads
+	// the map and runs its scripts/physics correctly, but injected "input" keys are
+	// silently dropped (the input handler stays in whatever non-gameplay state it was
+	// in, e.g. still PreMenu/MainMenu), making the player look permanently frozen to
+	// anyone driving movement through this command. Mirror that same sequencing here.
+	pBase->mpInputHandler->ChangeState(eLuxInputState_Game);
+	pBase->mpEngine->GetUpdater()->SetContainer("Default");
 
 	if(pBase->StartGame(sMap, "", aReq.GetString("start_pos","")) == false)
 	{
