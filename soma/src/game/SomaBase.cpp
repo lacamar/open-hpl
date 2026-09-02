@@ -62,6 +62,33 @@ static void cSomaBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessReq
 	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
 }
 
+// Lets a headless caller load any real map by basename (found via the same
+// resource-dir search InitTestMap()/InitMainMenuScene() already use) instead
+// of being stuck with whatever InitMainMenuScene()/InitTestMap()'s
+// boot-time fallback logic decided - added specifically so this scaffold's
+// real content (e.g. 00_01_apartment.hpm) can be inspected headlessly now
+// that InitMainMenuScene() succeeds (loading a real but legitimately empty
+// main_menu.hpm - see PORTING_NOTES.md) and no longer falls back to it.
+static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	tString sMap = aReq.GetString("map", "");
+	if(sMap == "")
+	{
+		aResp.SetError("missing 'map' field");
+		return;
+	}
+
+	cVector3f vPos(aReq.GetFloat("x", 0), aReq.GetFloat("y", 1.7f), aReq.GetFloat("z", 0));
+
+	tString sError;
+	if(pBase->LoadMap(sMap, vPos, sError) == false)
+	{
+		aResp.SetError(sError);
+		return;
+	}
+}
+
 //---------------------------------------
 
 cSomaBase::cSomaBase()
@@ -116,6 +143,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
 		pCtrl->RegisterHandler("camera_state", cSomaBase_HeadlessCmd_CameraState, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
+		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
 	}
 
 	/////////////////////////////
@@ -344,6 +372,50 @@ bool cSomaBase::InitTestMap()
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+
+	return true;
+}
+
+//-----------------------------------------------------------------------
+
+bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut)
+{
+	// Found by basename via the resource dir search, same convention as
+	// InitTestMap()/InitMainMenuScene() above ("/maps" is registered with
+	// AddSubDirs in SOMA's real resources.cfg).
+	cWorld *pNewWorld = mpEngine->GetScene()->LoadWorld(asMapFile, 0);
+	if (pNewWorld == NULL)
+	{
+		asErrorOut = "Could not load map '" + asMapFile + "'";
+		return false;
+	}
+
+	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
+	mpTestWorld = pNewWorld;
+
+	// Reuse the existing camera/viewport/controller if this isn't the first
+	// load rather than destroying and recreating them - cUpdater has no
+	// "remove" counterpart to AddGlobalUpdate() (see ExitTestMap()'s own
+	// comment on this), so a fresh cSomaDebugFreeCamera on every call would
+	// leak one dangling iUpdateable per call once its camera is destroyed
+	// below. cViewport::SetWorld() is the real engine API for exactly this
+	// "same camera, new world" case.
+	if (mpDebugCamera == NULL)
+	{
+		mpDebugCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
+		mpDebugCamera->SetFarClipPlane(200.0f);
+		mpDebugViewport = mpEngine->GetScene()->CreateViewport(mpDebugCamera, mpTestWorld, true);
+		mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
+		mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+	}
+	else
+	{
+		mpDebugViewport->SetWorld(mpTestWorld);
+	}
+
+	mpDebugCamera->SetPosition(avStartPos);
+	mpDebugCamera->SetPitch(0);
+	mpDebugCamera->SetYaw(0);
 
 	return true;
 }

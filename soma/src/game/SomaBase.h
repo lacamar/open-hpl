@@ -64,6 +64,15 @@ private:
 	void ExitTestMap();
 
 public:
+	// Generic map loader for the "start_map" headless command (see
+	// SomaBase.cpp) - tears down whatever world/camera/viewport is
+	// currently active (properly, via cScene::Destroy*(), unlike
+	// ExitTestMap()'s "owned by cScene, left for engine teardown" shortcut,
+	// since this can be called many times in one process) and loads
+	// asMapFile fresh with a debug free-fly camera at avStartPos. Returns
+	// false (asErrorOut set) if the map fails to load.
+	bool LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut);
+
 	cEngine *mpEngine;
 
 	tString msGameName;
