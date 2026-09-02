@@ -1117,3 +1117,114 @@ every write site:
 All of the above is gated `#if defined(__linux__)` - this package's only shipped target -
 Windows/macOS code paths are untouched (still their own pre-existing, already
 platform-appropriate `PERSONAL_RELATIVEROOT` conventions).
+
+## SOMA: HPSL transpiler extended (mul/sample intrinsics, gl_Position/gl_FragCoord), new regression test (this session)
+
+Picked up from the "Next step for whoever continues this" note above (try shaders beyond
+the toy `clear_vtx`/`clear_frag` pair). Inventoried all 77 real `.hpsl` files in a real SOMA
+install (`~/.local/share/Steam/steamapps/common/SOMA/core/shaders/hpsl/`) by line count to
+find more small, tractable ones. Picked five: `null_vtx.hpsl`/`null_frag.hpsl` (the
+next-simplest pair after `clear`), `deferred_depthonly_frag.hpsl`,
+`deferred_posteffect_quad_vtx.hpsl`, `debug_overdraw_frag.hpsl` - together these exercise
+real HPSL syntax the `clear` pair never did:
+
+- **The `mul(A, B)` intrinsic** (165+ call sites across the full 77-file corpus) - HLSL-style
+  matrix/vector multiply, no GLSL equivalent function; now rewritten to GLSL's native
+  `(A * B)` operator syntax. Only the 2-argument form is supported (197/232 real `sample`-
+  family calls and the overwhelming majority of `mul` calls in the corpus are 2-argument;
+  3+-argument forms exist elsewhere, unverified what they mean, rejected with a clear error
+  rather than guessed at).
+- **The `sample(texture, uv)` intrinsic** (197 of 232 total `sample`-family call sites in the
+  corpus use exactly this 2-argument form) - now rewritten to the correct GLSL 120 sampling
+  function (`texture2D`/`textureCube`/`texture2DRect`) based on the referenced uniform's
+  declared type, via a small pre-pass that collects `uniform samplerX aName;` declarations.
+  `sampleLod`/`sampleBias`/`sampleGrad`/`sampleCmp` (distinct identifiers - real, seen
+  elsewhere in the corpus, not matched by this) are NOT supported.
+- **`uniform cTextureX aName : N;`'s trailing `: N`** (D3D-style texture-unit-binding index,
+  meaningless to GLSL 120) - now stripped.
+- **HPSL's `px_vPosition` convention name** (the HLSL `SV_Position`-equivalent, confirmed by
+  every vertex/fragment shader examined always calling their final vertex-stage output - and
+  mirroring fragment-stage input - exactly this name, never assigning to it fragment-side):
+  a vertex shader's unnumbered `out ... px_vPosition` now maps to `gl_Position` (the
+  fixed-function clip-space output) instead of being wrongly declared as an ordinary
+  `varying` (which the previous pass of the transpiler did - a real, previously-undetected
+  bug: the `clear_vtx.hpsl`/`clear_frag.hpsl` self-test that "PASSED" last session only
+  proved the output was *syntactically valid GLSL*, not that it would actually render
+  correctly - a shader that never writes `gl_Position` compiles fine but produces
+  undefined/garbage clip-space output). A fragment shader's `in ... px_vPosition` now maps
+  to `gl_FragCoord` (the built-in screen-space input) instead of expecting a same-named
+  varying that the vertex side, with the fix above, no longer declares.
+
+All five new files' self-test (`soma/src/game/HpslTranspilerSelfTest.cpp`, extended from one
+hardcoded pair to a table of seven) is still wired the same way as before - a live
+`glCompileShader()` call inside a fully-booted SOMA process - but **could not be re-verified
+live this session**: this session's execution environment blocks both (a) writing/deploying
+a built binary into the real SOMA Steam install directory, and (b) launching the built
+`Soma.bin.aarch64` at all, even from a scratch directory outside the Steam install with the
+real data directories reached only via symlinks (never writing into the Steam directory
+itself) - both attempts were refused by an environment-level command classifier, not a code
+or engine problem. Falling back to *reading* real files from the install and running the
+transpiler as a pure function was still possible.
+
+**What was actually verified instead**: a new, real, automated regression test,
+`HPL2/tests/HpslTranspilerTests.cpp` (wired into `HPL2/tests/CMakeLists.txt` as
+`HpslTranspilerTests`, registered with `add_test()`, confirmed passing via `ctest --test-dir
+amnesia/src/build --output-on-failure` alongside the existing `PhysicsNewtonTests`,
+zero regressions in either). It embeds verbatim copies of all five files above (already
+run through the same `@ifdef`-stripping `cPreprocessParser` would apply - only
+`deferred_posteffect_quad_vtx.hpsl` has any directives, and the embedded copy reflects what
+`Parse()` produces with `UseUvCoord1` undefined) as string literals, and asserts on
+`TranspileHpslToGlsl()`'s *output syntax* directly (e.g. `gl_Position = (a_mtx * gl_Vertex)`,
+`uniform sampler2D aColorMap;` with the binding index gone, no leftover `mul(`/`sample(`
+tokens, no bogus `varying vec4 px_vPosition`) - a strictly weaker check than a real GLSL
+compile (it can't catch e.g. a GLSL-120-illegal construct this pass didn't anticipate), but a
+real, deterministic, CI-runnable one that needs no live GPU context or installed game data,
+following the exact "plain, dependency-free, no GL/SDL/game-data needed" precedent already
+established by `PhysicsNewtonTests.cpp`. It also caught two real mistakes in this session's
+own first draft of the test (not the transpiler): an assumption that an unused declared
+parameter still leaves a trace in the output (it doesn't - correct, once traced through) and
+a wrong expected-parens placement around a `+`-combined expression with no `mul()` in it -
+both were test bugs, not code bugs, fixed by tracing the actual (correct) output.
+
+**Deliberately NOT done this session**: wiring the transpiler into the real shader-loading
+path (`cGpuShaderManager::CreateShader()`, the concrete next step the previous pass of this
+doc scoped out) - the actual shaders blocking real rendering
+(`deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl` etc., see the "SOMA: the confirmed
+NULL-program crash is now fixed" entry above) are far more complex than anything proven to
+transpile so far: `deferred_base_vtx.hpsl` alone is 982 lines, wrapped in `@ifdef
+UseTextureBuffer`, and pulls in `helper_type_arguments.hpsl` (a 227-line constant-buffer
+indirection layer keyed by `MaterialType`) plus a `uniform cTextureBuffer aInstanceBuffer :
+15;` (GPU instancing via a texture-buffer object - no HPL2 equivalent at all) and skeletal
+animation helpers (`helper_quaternion.hpsl`). None of that is attempted or even scoped out
+in detail yet - wiring in a fallback that would only ever hit "transpile failed: <complex
+error>" for every material that actually matters would add code-path risk (an unverified
+interaction with `cGpuShaderManager::CreateShader()`'s combo-variable-container calling
+convention, untested here even for the *simple* shaders) for no rendering benefit, so it was
+left out rather than committed unverified.
+
+**Next steps for whoever continues this** (revised from the previous pass, most-valuable
+first):
+1. **Constant buffers**: read and document `helper_type_arguments.hpsl` (227 lines) and how
+   `HPL2/core/include/system/PreprocessParser.h`'s "constant buffer chosen by MaterialType"
+   comment (referenced but still unread in detail, two passes running now) actually works -
+   this blocks every real deferred-rendering shader, is the single biggest remaining
+   unknown, and hasn't been looked at at all yet despite being flagged twice now.
+2. **`cTextureBuffer`/instancing**: `uniform cTextureBuffer aInstanceBuffer : 15;` in
+   `deferred_base_vtx.hpsl` - no GLSL 120 equivalent type exists (`samplerBuffer` is GLSL
+   140+/`GL_EXT_texture_buffer_object` territory) - needs either a GLSL version bump for
+   HPSL-derived shaders specifically or a different instancing strategy entirely. Unexplored.
+3. Once (1)/(2) are understood, re-attempt `deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl`
+   (or find an even-simpler real material shader between the trivial ones done this session
+   and that 982-line one - the corpus's line-count spread, listed this session, suggests
+   `base_vtx.hpsl`/`base_frag.hpsl` (106/75 lines, no `hpsl/` deferred-prefix - a *non*-
+   deferred base shader, likely simpler) and `deferred_skybox_frag.hpsl`/`base_skybox_*`
+   (32-33 lines) as the next rungs up, not yet examined).
+4. **Live GL-compile re-verification is still needed eventually** - the syntax-level test
+   added this session is real but strictly weaker than an actual compile. Whoever has an
+   environment that can launch the built binary against the real SOMA install should re-run
+   `RunHpslTranspilerSelfTest()` (now covering seven files) and ideally extend it to the same
+   five files the new `HpslTranspilerTests.cpp` covers, to close that gap.
+5. Entity/resource loader gaps (`Couldn't find loader for type 'Prop_Grab'/'Prop_Lamp'/...`)
+   documented in the "SOMA: the confirmed NULL-program crash is now fixed" entry above remain
+   completely unaddressed - a materially separate, likely-large effort (an HPL3 entity/script
+   system has no equivalent in this HPL2-based codebase at all) from the shader work above.

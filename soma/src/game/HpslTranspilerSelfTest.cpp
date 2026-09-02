@@ -77,8 +77,23 @@ void RunHpslTranspilerSelfTest(cEngine *apEngine)
 	iLowLevelGraphics *pLowLevel = apEngine->GetGraphics()->GetLowLevel();
 	cResources *pResources = apEngine->GetResources();
 
-	bool bVtxOk = TestOneShader(pResources, pLowLevel, "clear_vtx.hpsl", eGpuShaderType_Vertex);
-	bool bFragOk = TestOneShader(pResources, pLowLevel, "clear_frag.hpsl", eGpuShaderType_Fragment);
+	struct cCase { const char *psFile; eGpuShaderType mType; };
+	static const cCase vCases[] = {
+		{ "clear_vtx.hpsl", eGpuShaderType_Vertex },
+		{ "clear_frag.hpsl", eGpuShaderType_Fragment },
+		{ "null_vtx.hpsl", eGpuShaderType_Vertex },
+		{ "null_frag.hpsl", eGpuShaderType_Fragment },
+		{ "deferred_depthonly_frag.hpsl", eGpuShaderType_Fragment },
+		{ "deferred_posteffect_quad_vtx.hpsl", eGpuShaderType_Vertex },
+		{ "debug_overdraw_frag.hpsl", eGpuShaderType_Fragment },
+	};
 
-	Log("HpslTranspilerSelfTest: overall result: %s\n", (bVtxOk && bFragOk) ? "PASS" : "FAIL");
+	bool bAllOk = true;
+	for (size_t i = 0; i < sizeof(vCases) / sizeof(vCases[0]); ++i)
+	{
+		bool bOk = TestOneShader(pResources, pLowLevel, vCases[i].psFile, vCases[i].mType);
+		bAllOk = bAllOk && bOk;
+	}
+
+	Log("HpslTranspilerSelfTest: overall result: %s\n", bAllOk ? "PASS" : "FAIL");
 }
