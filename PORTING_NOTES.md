@@ -1583,3 +1583,158 @@ game-module-side command registrations described above (identical to SOMA's own 
 **Given the above, this is genuinely not close to "boots and runs in a meaningfully complete
 way"** - real rendering, sound, and any game logic are all still missing, same class of gap
 as SOMA/Rebirth. Marked IN PROGRESS in TASKS.md, not DONE.
+
+## SOMA: entity/area loaders, and the real sounddata.cfg story
+
+This session's task: SOMA had the same "0 entities, 0 areas" gap as Rebirth/Bunker had
+before their own loader fixes (see those sections above) - real static geometry/lights load
+fine via `cWorldLoaderHpm`'s type-agnostic code paths, but every `<Entity>`/`<Area>` element
+was silently dropped since nothing recognized SOMA's own Type/AreaType names. Also asked to
+chase the "sounddata.cfg never loaded" gap documented elsewhere in this file (see the Bunker
+section above and TASKS.md).
+
+### Entity/area loaders (soma/src/game/SomaLoaders.{h,cpp})
+
+Same shape as `rebirth/src/game/RebirthLoaders.{h,cpp}` - a generic
+`cSomaGenericEntityLoader : public cEntityLoader_Object` (all real work already
+type-agnostic in the base class; only `BeforeLoad`/`AfterLoad` hooks needed, and `AfterLoad`
+only carries over the `CastShadows` instance-var override, same as Rebirth's/Dark Descent's
+own `cLuxStaticPropLoader`), a `cSomaAreaLoader_PlayerStart` creating a real
+`cStartPosEntity` via `cWorld::CreateStartPos()`, and a `cSomaAreaLoader_Noop` for
+gameplay-only AreaTypes with no engine-side meaning yet. Registered from
+`cSomaBase::InitEngine()` (`SomaBase.cpp`), same call site pattern as
+`RegisterRebirthLoaders()` in `RebirthBase.cpp`.
+
+**One real difference from Rebirth worth flagging for whoever ports Bunker's own loader
+list next**: SOMA's per-map `.hpm_Entity` data carries no `Type` attribute of its own - each
+`<Entity>` instance only references a `FileIndex` into a per-map file list of `.ent` paths
+(`<File Id="87" Path="entities/urban/desk/desk_paper_crumbled/desk_paper_crumbled.ent"/>`),
+and the actual entity-type name lives inside *that* `.ent` file's own
+`<UserDefinedVariables EntityType="Prop_Grab">` element - confirmed by inspecting a real
+`desk_paper_crumbled.ent`. So the Type list here was collected two ways, not just one:
+
+1. A live headless boot of two real maps (`00_01_apartment.hpm`, `00_02_subway.hpm`),
+   reading hpl.log's `"No loader for type 'X' found!"` / `"No loader for area type 'X'
+   found!"` / `"SOMA hpm: no area loader registered for AreaType 'X'"` warnings directly.
+2. A full census across the *entire* real SOMA install, which is more complete than any
+   handful of sampled maps could ever be on its own (a per-map boot only exercises what that
+   specific map happens to reference):
+   ```
+   grep -rohE 'EntityType="[^"]+"' entities/ | sort -u
+   grep -ohE 'AreaType="[^"]+"' maps/*/*/*.hpm_Area | sort -u
+   ```
+
+The census found **46 entity types** (the two live-boot maps only exercised 16 of them) -
+`StaticProp`, `Prop_Rigid`, `Prop_Grab`, `Prop_SwingDoor`, `Prop_Readable`, `Prop_Lamp`,
+`Prop_LevelDoor`, `Prop_Lever`, `Prop_MoveObject`, `Prop_MovingButton`, `Prop_Terminal`,
+`Prop_HandheldTerminal`, `Prop_Tool`, `Prop_Slide`, `StaticCollider` plus the two live maps'
+`Critter_FishSmall`, and (census-only, not seen in either sampled map) `Prop_Button`,
+`Prop_ConstructLure`, `Prop_Datamine`, `Prop_EnergySource`, `Prop_HudObject`, `Prop_Meter`,
+`Prop_OmniSlot`, `Prop_PhysicsSlideDoor`, `Prop_PlayerHands`, `Prop_Push`, `Prop_SlideDoor`,
+`Prop_Tear`, `Prop_Wheel`, plus the monster/NPC `Agent_*`/`Critter_*`/`critter_wau_swarm_
+agent_fish` set (`Agent_Anglerfish`, `Agent_Construct_Crawler`, `Agent_Construct_Worker`,
+`Agent_DeepseaSuit`, `Agent_Flesher`, `Agent_Humanoid`, `Agent_Humanoid_NPC`, `Agent_
+Infected_Robot`, `Agent_Puppet`, `Agent_Remade`, `Agent_Roomba`, `Agent_Swarm`, `Agent_
+SwimBot`, `Agent_Viperfish`, `Critter_CaveSpider`, `Critter_CrabSmall`, `Critter_CrabSpider`,
+`Critter_Nautilus`). All 46 are registered with the same generic loader - an `Agent_*`
+mesh with no AI/scripting layer to drive it (none exists in this Phase 0 scaffold) just
+renders as inert static geometry instead of being silently dropped, exactly as inert as
+every other entity type this scaffold loads; nothing gameplay-shaped should be inferred from
+a monster's mesh being present in the scene.
+
+The census found **24 AreaTypes** (again, more than the ~10 either sampled map alone
+exercised): `PlayerStart` (real loader), plus no-op `AgentRepel`, `AmbientLight`,
+`CameraAnimation`, `Climb`, `Crawl`, `Datamine`, `Description`, `Distortion`,
+`DoorwayTrigger`, `EyeTrackingZoom`, `Hide`, `InteractAux`, `Ladder`, `Liquid`,
+`MapTransfer`, `PathNode`, `Sit`, `Soundscape`, `Sticky`, `Tool`, `Trigger`,
+`VisibilityArea`, `VisibilityPortal`, `Zoom`.
+
+**Nice-to-have from the task brief, done**: `cSomaBase::LoadMap()` (and the `start_map`
+headless command) now takes an optional `pos=` field - if given and the loaded map has a
+`PlayerStart` Area of that name (populated by `cSomaAreaLoader_PlayerStart` while the map
+was loading, same mechanism as Rebirth's `InitTestMap()`), the debug camera spawns there via
+`cWorld::GetStartPosEntity()` instead of the caller-supplied `x`/`y`/`z` fallback.
+
+**Verified end-to-end** (headless, real game data, branch `worktree-agent-a385d484e71b61dce`):
+
+| Map | Before (entities, areas) | After (entities, areas) |
+|---|---|---|
+| `00_01_apartment.hpm` | 0, 0 | 425, 80 |
+| `00_02_subway.hpm` | (not sampled before) | 214, 37 |
+
+(both maps' static-object/light counts are unchanged by this fix, as expected - 145
+static/70 lights for the apartment map, matching the pre-existing `PORTING_NOTES.md` SOMA
+entry above). Zero `"no loader"`/`"no area loader"` warnings remain in `hpl.log` for either
+map post-fix (the only remaining `"No loader for..."` lines are the pre-existing,
+unrelated `"No loader for file extension 'fbx' found!"` gap already documented for Rebirth -
+confirmed SOMA hits this too, ~11 instances, not investigated further this session).
+`start_map map=00_01_apartment.hpm pos=PlayerStartArea_1 x=-10.75 y=1.7 z=8.25` followed by
+`camera_state` reported `pos_y: 1.51415` - exactly the map's own authored
+`WorldPos="-10.75 1.01415 8.25"` for `PlayerStartArea_1` plus the code's `+0.5` eye-height
+nudge, confirming the real Area lookup path (not the `x`/`y`/`z` fallback) was actually used.
+
+A headless screenshot after the fix (`00_01_apartment.hpm`) shows the scene rendering flat
+magenta/black geometric shapes rather than a lit room - **this is the pre-existing SOMA
+material-shader gap** (every `deferred_*.glsl` fails to load, `ERROR: Couldn't find file
+'deferred_base_vtx.glsl' in resources` etc. - see the SOMA section above and the two
+shader-focused sessions' TASKS.md entries), not a regression from this fix: the same broken
+shading already applied to the 145 static objects before this session touched anything.
+Confirming entity geometry specifically became visible (as opposed to just static
+architecture) wasn't possible to eyeball from this particular screenshot's angle/shading -
+the object counts in `hpl.log` are the more reliable evidence here.
+
+### The real sounddata.cfg story (correcting an earlier assumption in this document)
+
+TASKS.md previously suggested (based on the Bunker session's notes, itself echoing an
+earlier session) that the "every `.hpm_Sound` reference fails" gap across all three Phase 0
+modules was a small, self-contained fix - "wire whatever `cSoundHandler` API loads
+`sounddata.cfg`, mirroring how Dark Descent's own `LuxBase.cpp` does it". Investigated for
+real this session; **both halves of that premise are wrong**:
+
+1. **`sounddata.cfg` does not exist as a file anywhere in the real SOMA, Rebirth, or Bunker
+   Steam installs**, despite all three declaring `<ConfigFiles SoundData="sounddata.cfg"/>`
+   in their `main_init.cfg`. Confirmed by an exhaustive `find` across all three real install
+   trees - zero hits. Whatever a loader for it would have read, there was never anything to
+   read.
+2. **Dark Descent's own `LuxBase.cpp` never reads any `SoundData` config key at all** -
+   confirmed by grepping it directly. Its `main_init.cfg` has no `SoundData` entry in the
+   first place (only `Resources`/`Materials`/`Menu`/`PreMenu`/`Demo`/etc.) - it's an
+   HPL3-era-only config key, not something Dark Descent's own code has ever had a reason to
+   read. The "mirror `LuxBase.cpp`" suggestion had no real target to mirror.
+
+**What's actually happening**: traced `cWorld::CreateSoundEntity()`
+(`HPL2/core/sources/scene/World.cpp:960`) -> `cSoundEntityManager::CreateSoundEntity()`
+(`HPL2/core/sources/resources/SoundEntityManager.cpp:74`), and confirmed it does exactly one
+thing: resolve `<name>.snt` via the engine's ordinary resource-dir file searcher (the same
+mechanism meshes/textures/everything else uses) - no `sounddata.cfg`-shaped config file is
+involved in this path at all, at any level. So the real question became "why can't the file
+searcher find these `.snt` files", and the answer is architectural, not a missing
+registration: a real install's `.hpm_Sound` track references sound entities by names like
+`"Entities_Urban/kitchen/fridge/hum_loop"` or `"physics/wood/robust/roll"` - and **no `.snt`
+file by any of these names, or almost any name, exists anywhere in the real SOMA install**.
+What *does* exist under `sounds/` is a set of **FMOD Studio/Designer banks**:
+`sounds/entities/Entities_Urban.fev`/`.fdp`, `sounds/physics/...fsb`, etc. - `.fev`
+(FMOD event project), `.fsb` (FMOD sound bank), `.fdp` (FMOD event project data) are
+FMOD's own proprietary binary formats, completely unrelated to HPL2's OpenAL-backed,
+individually-file-per-sound `.snt`-XML convention. Confirmed the same is true of Rebirth
+(`sounds/creatures/creatures.fev`/`.fsb`) and Bunker (`sounds/creatures/creature.fsb`,
+`sounds/physics/physics.fev`, etc.) - all three HPL3-generation games moved their sound
+pipeline to FMOD entirely, matching the pattern already established for shaders (HPSL
+instead of GLSL) and entity/area taxonomy (renamed types) - this is a third instance of the
+same "HPL3 quietly replaced this HPL2 subsystem wholesale" shape, not a coincidence.
+
+**Consequence**: there is no small fix here. `cSound`/`cSoundHandler`/`cSoundEntityManager`
+as they exist in this codebase have no FMOD-awareness whatsoever - getting real sound
+working in SOMA/Rebirth/Bunker needs either (a) a real FMOD bank reader wired into a new
+`iSoundData`-equivalent backend (FMOD's runtime SDK is itself proprietary and non-free,
+which may rule this out entirely for a GPLv3 project depending on licensing), or (b) an
+offline re-encode of each bank's contained sounds into individual `.ogg` files plus
+hand/script-generated `.snt` XML wrappers naming them the way `.hpm_Sound`/`.ent` files
+expect - itself a real reverse-engineering task (FMOD bank internals aren't documented for
+free extraction, though third-party bank-extraction tools exist). Either path is a
+genuinely multi-week undertaking, not attempted this session - corrected the misleading
+TASKS.md bullet rather than writing a `sounddata.cfg` loader that would have compiled,
+looked plausible, and done precisely nothing against real game data (the file it would
+load doesn't exist). Flagging this specifically so nobody re-derives the same wrong lead a
+third time - if a future session has bandwidth for real sound in any of these three games,
+start from "FMOD banks need a backend/re-encode", not "sounddata.cfg needs loading".
