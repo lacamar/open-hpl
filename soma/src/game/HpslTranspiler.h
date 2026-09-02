@@ -56,11 +56,37 @@
  *    suffix (D3D-style register binding, meaningless to GLSL 120) is
  *    stripped from uniform declarations.
  *
- * Still no cTextureBuffer/constant-buffer support at all - unexplored,
- * and known to block every real deferred-rendering shader (see
- * deferred_base_vtx.hpsl's `@include helper_type_arguments.hpsl` and
- * `uniform cTextureBuffer aInstanceBuffer : 15;` - a materially bigger
- * undertaking, not attempted this pass; see PORTING_NOTES.md).
+ * Constant buffers (`cBuffer NAME [: N] { members... };`, HPSL's HLSL-
+ * derived syntax - see helper_type_arguments.hpsl and deferred_base_vtx.hpsl's
+ * legacy `cBuffer cVertexArguments` block) ARE now supported: each block is
+ * flattened into a sequence of plain top-level `uniform TYPE NAME;`
+ * declarations (dropping the `cBuffer NAME [: N] { ... };` wrapper), since
+ * GLSL 120 has no named-uniform-block syntax at all (`layout(std140) uniform
+ * Name {...}` is a GLSL 140+ feature) and HPSL's own cBuffer members are
+ * always referenced unqualified anyway - see FlattenConstantBuffers() in
+ * HpslTranspiler.cpp for the full reasoning, and PORTING_NOTES.md's "SOMA"
+ * section for how this was verified against real files.
+ *
+ * Still NOT supported: `cTextureBuffer` (GPU-instancing via a texture-buffer
+ * object - `uniform cTextureBuffer aInstanceBuffer : 15;` in
+ * deferred_base_vtx.hpsl) - rejected with a clear "no known GLSL built-in
+ * mapping" error via the same unmapped-type path as any other unrecognised
+ * type, rather than guessed at. GLSL 120 has no equivalent type
+ * (`samplerBuffer` needs GLSL 140+/`GL_EXT_texture_buffer_object`).
+ * PORTING_NOTES.md documents why this is not expected to actually block real
+ * rendering: every real material shader that uses `cTextureBuffer` gates it
+ * (along with the whole `helper_type_arguments.hpsl` MaterialType-buffer
+ * indirection and GPU instancing) behind `@ifdef UseTextureBuffer`, with a
+ * simpler "TEMP BACKWARD COMPATIBILITY" `@else` branch that avoids it
+ * entirely (a single flat `cBuffer`, no MaterialType branching, and either
+ * no instance buffer at all or a plain `cTexture2D` one gated behind its own
+ * separate `UseMeshInstancing`/`UseStaticMeshInstancing` flags) - so the
+ * chosen strategy is for whichever engine code selects HPSL combo-variables
+ * to simply never define `UseTextureBuffer`/`UseMeshInstancing`/
+ * `UseStaticMeshInstancing`, steering every material onto that already-
+ * transpilable legacy branch and accepting no GPU instancing (one uniform
+ * set per draw call, same as this engine's own hand-written GLSL shaders
+ * already do) rather than attempting a real texture-buffer/instancing port.
  */
 
 #ifndef SOMA_HPSL_TRANSPILER_H
