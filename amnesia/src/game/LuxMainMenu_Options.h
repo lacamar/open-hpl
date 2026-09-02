@@ -152,6 +152,7 @@ private:
 	cWidgetCheckBox *mpChBFullScreen;
 	cWidgetCheckBox *mpChBVSync;
 	cWidgetComboBox *mpCBGuiScale;
+	cWidgetCheckBox *mpChBShowFPS;
 //	cWidgetCheckBox *mpChBAdaptiveVSync;
 
 	cWidgetComboBox *mpCBTextureSizeLevel;
