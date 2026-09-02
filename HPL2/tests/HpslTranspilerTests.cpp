@@ -279,6 +279,212 @@ static void TestSampleRejectsUnknownTexture()
 	CHECK_CONTAINS(sErr, "aNotDeclared");
 }
 
+// Verbatim from deferred_base_vtx.hpsl's "TEMP BACKWARD COMPATIBILITY"
+// @else-UseTextureBuffer branch (lines 517-569 of a real SOMA install's
+// copy) - the single flat "cBuffer cVertexArguments" block real material
+// shaders declare when UseTextureBuffer is left undefined (see
+// PORTING_NOTES.md and HpslTranspiler.h for why that's the combo this port
+// targets). Trimmed to just the cBuffer block plus a trivial main() that
+// references one flattened member unqualified, exactly as the real file's
+// body does (e.g. "mul(a_mtxModelViewProjection, ...)", never
+// "cVertexArguments.a_mtx...").
+static const char* gpsVertexArgumentsCBuffer =
+	"cBuffer cVertexArguments //make sure the struct in c++ has the same layout!\n"
+	"{\n"
+	"	//////////////\n"
+	"	// Default input\n"
+	"	cMatrixf a_mtxProjection;\n"
+	"	cMatrixf a_mtxModelViewProjection;\n"
+	"	cMatrixf a_mtxModelView;\n"
+	"	cMatrixf a_mtxUV;\n"
+	"	cMatrixf a_mtxModel;\n"
+	"	cMatrixf a_mtxNormal;\n"
+	"\n"
+	"	float afInvFarPlane;\n"
+	"	cVector4f avColorMul;\n"
+	"	int alInstanceOffset;\n"
+	"};\n"
+	"\n"
+	"void main(in cVector4f vtx_vPosition,\n"
+	"		  out cVector4f px_vPosition)\n"
+	"{	\n"
+	"	px_vPosition = mul(a_mtxModelViewProjection, vtx_vPosition);\n"
+	"}";
+
+static void TestConstantBufferFlattening()
+{
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsVertexArgumentsCBuffer, eGpuShaderType_Vertex, sGlsl, sErr));
+
+	// The "cBuffer NAME { ... };" wrapper itself must be gone - GLSL 120
+	// has no such syntax.
+	CHECK_NOT_CONTAINS(sGlsl, "cBuffer");
+	CHECK_NOT_CONTAINS(sGlsl, "cVertexArguments");
+
+	// Every member becomes its own top-level "uniform TYPE NAME;",
+	// unqualified, using the same type mapping as any other uniform.
+	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxModelViewProjection;");
+	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxNormal;");
+	CHECK_CONTAINS(sGlsl, "uniform float afInvFarPlane;");
+	CHECK_CONTAINS(sGlsl, "uniform vec4 avColorMul;");
+	CHECK_CONTAINS(sGlsl, "uniform int alInstanceOffset;");
+
+	// The body's unqualified reference to a flattened member still
+	// resolves (same name, now a plain global uniform instead of a
+	// cbuffer member) - proves the flattening didn't just declare the
+	// uniforms but leave the body unable to use them.
+	CHECK_CONTAINS(sGlsl, "gl_Position = (a_mtxModelViewProjection * gl_Vertex)");
+}
+
+// Exercises a #define *inside* a cBuffer body (real case: helper_type_
+// arguments.hpsl-adjacent deferred_base_vtx.hpsl's "cBuffer cSkinningData"
+// block, gated behind UseSkeleton, defines "kMaxBones" this way right
+// before using it in an array size) - the #define must survive verbatim
+// (it's real C-preprocessor syntax GLSL itself understands, not something
+// FlattenConstantBuffers should try to interpret), and an array member
+// must still get "uniform " prepended like any other declaration.
+static void TestConstantBufferPreservesDefine()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"cBuffer cSkinningData\n"
+		"{\n"
+		"	#define kMaxBones 96\n"
+		"	cVector4f avDualQuatBones[kMaxBones*2];\n"
+		"};\n"
+		"\n"
+		"void main(out cVector4f px_vColor : 0)\n"
+		"{\n"
+		"	px_vColor = avDualQuatBones[0];\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "#define kMaxBones 96");
+	CHECK_CONTAINS(sGlsl, "uniform vec4 avDualQuatBones[kMaxBones*2];");
+}
+
+// A "cBuffer NAME : N { ... };" with the D3D-register-style binding index
+// (helper_type_arguments.hpsl's actual spelling, e.g. "cBuffer
+// cInstanceArguments : 2") - the ": N" must be discarded along with the
+// rest of the header, same as a texture uniform's own ": N" suffix.
+static void TestConstantBufferWithBindingIndex()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"cBuffer cInstanceArguments : 2\n"
+		"{\n"
+		"	int alInstanceOffset;\n"
+		"	int alInstanceStride;\n"
+		"};\n"
+		"\n"
+		"void main(out cVector4f px_vColor : 0)\n"
+		"{\n"
+		"	px_vColor = cVector4f(float(alInstanceOffset + alInstanceStride));\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_NOT_CONTAINS(sGlsl, "cBuffer");
+	CHECK_NOT_CONTAINS(sGlsl, ": 2");
+	CHECK_CONTAINS(sGlsl, "uniform int alInstanceOffset;");
+	CHECK_CONTAINS(sGlsl, "uniform int alInstanceStride;");
+}
+
+// Exercises the custom-"attribute"-fallback path for vertex inputs with no
+// known GLSL 120 fixed-function built-in (e.g. deferred_base_vtx.hpsl's
+// vtx_vTangent/vtx_vBoneIndices/vtx_vBoneWeight - real, unconditional main()
+// parameters in that file even when skinning/normal-mapping combo vars are
+// off). Must compile (not the old hard error) and must NOT silently alias
+// onto a gl_MultiTexCoordN slot.
+static void TestUnknownVertexInputBecomesAttribute()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"void main(in cVector4f vtx_vPosition,\n"
+		"		  in cVector4f vtx_vTangent,\n"
+		"		  in cVector4f vtx_vBoneIndices,\n"
+		"		  in cVector4f vtx_vBoneWeight,\n"
+		"		  out cVector4f px_vPosition)\n"
+		"{	\n"
+		"	px_vPosition = vtx_vPosition + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vTangent;");
+	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneIndices;");
+	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneWeight;");
+	// vtx_vTangent must keep its own name in the body, not get rewritten
+	// onto gl_MultiTexCoord1 (that would collide with a real
+	// vtx_vTexCoord1 input elsewhere - see HpslTranspiler.cpp's comment at
+	// this fallback for why).
+	CHECK_CONTAINS(sGlsl, "gl_Vertex + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight");
+}
+
+// cTexture3D (real use: deferred_base_frag.hpsl's dissolve map,
+// "uniform cTexture3D aDissolveMap : 14;") must map to sampler3D/texture3D,
+// same pattern as the other texture types.
+static void TestTexture3D()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"uniform cTexture3D aDissolveMap : 14;\n"
+		"\n"
+		"void main(in cVector4f px_vPosition, out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	out_vColor = sample(aDissolveMap, cVector3f(0.0, 0.0, 0.0));\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "uniform sampler3D aDissolveMap;");
+	CHECK_CONTAINS(sGlsl, "texture3D(aDissolveMap, vec3(0.0, 0.0, 0.0))");
+}
+
+// cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
+// "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
+// bug this pass's live glCompileShader() self-test caught (see
+// PORTING_NOTES.md): the syntax-level checks in this file didn't know to
+// look for it until the live compile failed with "syntax error, unexpected
+// NEW_IDENTIFIER" at exactly this line, because an unmapped type name is
+// silently passed through unchanged rather than erroring - GLSL's own
+// parser was the only thing that caught it. Locked in here so a regression
+// doesn't need a live GPU to catch again.
+static void TestMatrix3f()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"uniform cMatrixf a_mtxNormal;\n"
+		"\n"
+		"void main(out cVector4f px_vColor : 0)\n"
+		"{\n"
+		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);\n"
+		"	px_vColor = cVector4f(mtxNormal[0], 1.0);\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "mat3 mtxNormal = mat3(a_mtxNormal);");
+	CHECK_NOT_CONTAINS(sGlsl, "cMatrix3f");
+}
+
+// Verbatim (parameter list only) from deferred_gbuffer_solid_frag.hpsl's
+// main() - a real, live-found bug (see PORTING_NOTES.md): a trailing
+// "//comment" after a parameter's ": N" semantic, where the comment text
+// itself contains a comma ("//diffuse rgb, translucency a"), used to
+// corrupt SplitParams()'s naive comma-split into bogus pieces that failed
+// ParseParam()'s regex. Found by a different concurrent session's real
+// GpuShaderManager wiring work, fixed here (StripLineComments()).
+static void TestParameterListTrailingCommentWithComma()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"void main(in cVector4f px_vPosition,\n"
+		"		  out cVector4f out_vDiffuse : 0,		//diffuse rgb, translucency a\n"
+		"		  out cVector4f out_vNormal : 1,			//normal xyz, depth w\n"
+		"		  out cVector4f out_vSpecular : 2)		//spec color rgb, spec power a\n"
+		"{\n"
+		"	out_vDiffuse = px_vPosition;\n"
+		"	out_vNormal = px_vPosition;\n"
+		"	out_vSpecular = px_vPosition;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = gl_FragCoord");
+	CHECK_CONTAINS(sGlsl, "gl_FragData[1] = gl_FragCoord");
+	CHECK_CONTAINS(sGlsl, "gl_FragData[2] = gl_FragCoord");
+}
+
 //-----------------------------------------------------------------------
 
 int main()
@@ -292,6 +498,13 @@ int main()
 	TestDebugOverdrawFrag();
 	TestMulRejectsWrongArgCount();
 	TestSampleRejectsUnknownTexture();
+	TestConstantBufferFlattening();
+	TestConstantBufferPreservesDefine();
+	TestConstantBufferWithBindingIndex();
+	TestUnknownVertexInputBecomesAttribute();
+	TestTexture3D();
+	TestMatrix3f();
+	TestParameterListTrailingCommentWithComma();
 
 	if (gFailures == 0)
 	{

@@ -30,9 +30,9 @@ namespace
 	const std::vector<std::pair<tString, tString> > gvTypeMap = {
 		{"cVector4f", "vec4"}, {"cVector3f", "vec3"}, {"cVector2f", "vec2"},
 		{"cVector4i", "ivec4"}, {"cVector3i", "ivec3"}, {"cVector2i", "ivec2"},
-		{"cMatrixf", "mat4"},
+		{"cMatrixf", "mat4"}, {"cMatrix3f", "mat3"},
 		{"cTexture2D", "sampler2D"}, {"cTextureCube", "samplerCube"},
-		{"cTextureRect", "sampler2DRect"},
+		{"cTextureRect", "sampler2DRect"}, {"cTexture3D", "sampler3D"},
 	};
 
 	// Vertex-input semantic name -> GLSL 120 built-in. Only vtx_vPosition
@@ -67,6 +67,41 @@ namespace
 		if (lBegin == tString::npos) return "";
 		size_t lEnd = asStr.find_last_not_of(" \t\r\n");
 		return asStr.substr(lBegin, lEnd - lBegin + 1);
+	}
+
+	// Strips "//..." line comments from a parameter list, replacing the
+	// comment text (not the newline itself, so structure is otherwise
+	// unchanged) with nothing. Real case this fixes: deferred_gbuffer_
+	// solid_frag.hpsl's main() declares
+	// "out cVector4f out_vDiffuse : 0,   //diffuse rgb, translucency a" -
+	// SplitParams()'s naive comma-split would otherwise treat the comma
+	// *inside that trailing comment* as a parameter separator too (the
+	// comment text itself contains a comma), corrupting the split into
+	// bogus pieces that then fail ParseParam()'s regex - found live via
+	// this project's real GpuShaderManager wiring session (see
+	// PORTING_NOTES.md), not hypothetical.
+	tString StripLineComments(const tString& asSrc)
+	{
+		tString sOut;
+		sOut.reserve(asSrc.size());
+		bool bInComment = false;
+		for (size_t i = 0; i < asSrc.size(); ++i)
+		{
+			char c = asSrc[i];
+			if (bInComment)
+			{
+				if (c == '\n') { bInComment = false; sOut += c; }
+				continue;
+			}
+			if (c == '/' && i + 1 < asSrc.size() && asSrc[i + 1] == '/')
+			{
+				bInComment = true;
+				++i; // skip the second '/' too
+				continue;
+			}
+			sOut += c;
+		}
+		return sOut;
 	}
 
 	// Splits a parameter list on top-level commas (none of the expected
@@ -134,6 +169,155 @@ namespace
 	{
 		std::regex bindRe("(uniform\\s+\\S+\\s+\\w+)\\s*:\\s*\\d+(\\s*;)");
 		return std::regex_replace(asSrc, bindRe, "$1$2");
+	}
+
+	// Rewrites one already-brace-matched "cBuffer" block BODY (the text
+	// between - but not including - the '{' and '}') into the same text
+	// with "uniform " prepended to every member-declaration line, leaving
+	// blank lines, "//" comments and "#define"/other '#' preprocessor
+	// lines untouched. See FlattenConstantBuffers() below for why a flat
+	// rewrite (rather than a real GLSL uniform block) is correct here.
+	tString FlattenBufferBody(const tString& asBody)
+	{
+		tString sOut;
+		size_t lLineStart = 0;
+		while (lLineStart <= asBody.size())
+		{
+			size_t lLineEnd = asBody.find('\n', lLineStart);
+			bool bLastLine = (lLineEnd == tString::npos);
+			tString sLine = bLastLine ? asBody.substr(lLineStart) : asBody.substr(lLineStart, lLineEnd - lLineStart);
+
+			tString sTrimmed = Trim(sLine);
+			if (sTrimmed.empty() || sTrimmed.compare(0, 2, "//") == 0 || sTrimmed[0] == '#')
+			{
+				sOut += sLine;
+			}
+			else
+			{
+				// Preserve the line's own leading whitespace, just inject
+				// "uniform " right before the first non-blank character -
+				// cosmetic only (the flattened output is still generated
+				// code), but keeps a diff-friendly resemblance to the
+				// source when logged for debugging.
+				size_t lIndentEnd = sLine.find_first_not_of(" \t");
+				if (lIndentEnd == tString::npos) lIndentEnd = 0;
+				sOut += sLine.substr(0, lIndentEnd) + "uniform " + sLine.substr(lIndentEnd);
+			}
+
+			if (bLastLine) break;
+			sOut += "\n";
+			lLineStart = lLineEnd + 1;
+		}
+		return sOut;
+	}
+
+	// Rewrites every "cBuffer NAME [: N] { members... };" block (HPSL's
+	// HLSL-derived constant-buffer syntax - see helper_type_arguments.hpsl
+	// and deferred_base_vtx.hpsl's legacy "cBuffer cVertexArguments" block,
+	// both real SOMA files) into a flat sequence of top-level
+	// "uniform TYPE NAME;" declarations, dropping the "cBuffer NAME [: N]"
+	// wrapper and its braces entirely.
+	//
+	// Why flattening (not a real GLSL uniform block) is the right target:
+	// GLSL 120 has no named-uniform-block syntax at all - that's a GLSL 140
+	// feature (`layout(std140) uniform Name { ... };`), unavailable at the
+	// GLSL 120 baseline every other hand-written shader in this engine
+	// targets (see HpslTranspiler.h). But a real GPU-backed uniform buffer
+	// object was never actually required for correctness here: HPSL's own
+	// cBuffer members are referenced *unqualified* everywhere they're used
+	// (e.g. deferred_base_vtx.hpsl's legacy body writes
+	// "mul(a_mtxViewProjection, ...)", never "cVertexArguments.a_mtx...")
+	// - i.e. HLSL's own cbuffer convention (which HPSL's syntax is visibly
+	// derived from - the "cBuffer NAME : N" spelling mirrors HLSL's
+	// "cbuffer NAME : register(bN)") already treats a constant buffer as
+	// nothing more than a *named group of otherwise-ordinary globals*, and
+	// this engine's own hand-written GLSL 120 shaders (e.g. a real
+	// Dark Descent install's core/shaders/deferred_base_vtx.glsl, and
+	// HPSL's own non-cBuffer files like base_vtx.hpsl) already set the
+	// equivalent uniforms individually by name via glUniform*, not via a
+	// bound buffer object - so a flat rewrite is both sufficient (nothing
+	// in the shader body needs block-qualified access) and faithful (same
+	// unqualified names HPSL itself already uses).
+	//
+	// The optional ": N" is a D3D-style constant-buffer *register* binding
+	// (`register(bN)`) - meaningless to GLSL uniforms set by name, so it's
+	// simply discarded along with the rest of the "cBuffer NAME" header
+	// (same rationale as StripUniformBindingIndices() above, for the same
+	// D3D-register-binding convention on texture uniforms).
+	//
+	// NOTE ON SCOPE: helper_type_arguments.hpsl @ifdef-branches between
+	// several *mutually exclusive* cBuffer sets keyed by which
+	// "MaterialType_X" combo variable is defined. That branching is HPSL's
+	// own @ifdef syntax, already resolved by cPreprocessParser::Parse()
+	// before this function ever runs (see HpslTranspiler.h's scope note) -
+	// by the time source reaches here, at most the one cBuffer block for
+	// the actually-selected MaterialType survives, so this function never
+	// needs to know about MaterialType selection itself, only flatten
+	// whatever cBuffer block(s) remain in the text it's given.
+	bool FlattenConstantBuffers(const tString& asSrc, tString& asOut, tString& asErrorOut)
+	{
+		tString sResult;
+		size_t lCursor = 0;
+
+		for (;;)
+		{
+			size_t lFound = tString::npos;
+			size_t lSearchFrom = lCursor;
+			for (;;)
+			{
+				size_t lCandidate = asSrc.find("cBuffer", lSearchFrom);
+				if (lCandidate == tString::npos) break;
+				bool bBoundaryOk = (lCandidate == 0 || !(isalnum((unsigned char)asSrc[lCandidate - 1]) || asSrc[lCandidate - 1] == '_'));
+				size_t lAfter = lCandidate + 7; // strlen("cBuffer")
+				bBoundaryOk = bBoundaryOk && (lAfter >= asSrc.size() || !(isalnum((unsigned char)asSrc[lAfter]) || asSrc[lAfter] == '_'));
+				if (bBoundaryOk) { lFound = lCandidate; break; }
+				lSearchFrom = lCandidate + 7;
+			}
+
+			if (lFound == tString::npos)
+			{
+				sResult += asSrc.substr(lCursor);
+				break;
+			}
+			sResult += asSrc.substr(lCursor, lFound - lCursor);
+
+			size_t lBraceOpen = asSrc.find('{', lFound);
+			if (lBraceOpen == tString::npos)
+			{
+				asErrorOut = "Found 'cBuffer' with no following '{'";
+				return false;
+			}
+
+			int lDepth = 1;
+			size_t i = lBraceOpen + 1;
+			for (; i < asSrc.size() && lDepth > 0; ++i)
+			{
+				if (asSrc[i] == '{') lDepth++;
+				else if (asSrc[i] == '}') lDepth--;
+			}
+			if (lDepth != 0)
+			{
+				asErrorOut = "Unterminated 'cBuffer { ... }' block (unbalanced braces)";
+				return false;
+			}
+			size_t lBraceClose = i - 1; // points at the matching '}'
+
+			size_t lSemi = lBraceClose + 1;
+			while (lSemi < asSrc.size() && isspace((unsigned char)asSrc[lSemi])) lSemi++;
+			if (lSemi >= asSrc.size() || asSrc[lSemi] != ';')
+			{
+				asErrorOut = "'cBuffer { ... }' block not terminated with ';' after the closing brace";
+				return false;
+			}
+
+			tString sBody = asSrc.substr(lBraceOpen + 1, lBraceClose - (lBraceOpen + 1));
+			sResult += FlattenBufferBody(sBody);
+
+			lCursor = lSemi + 1;
+		}
+
+		asOut = sResult;
+		return true;
 	}
 
 	// Paren-depth-aware split of a call's argument list on top-level
@@ -237,10 +421,11 @@ namespace
 			{"sampler2D", "texture2D"},
 			{"samplerCube", "textureCube"},
 			{"sampler2DRect", "texture2DRect"},
+			{"sampler3D", "texture3D"},
 		};
 
 		std::map<tString, tString> mapOut;
-		std::regex declRe("uniform\\s+(sampler2D|samplerCube|sampler2DRect)\\s+(\\w+)\\s*;");
+		std::regex declRe("uniform\\s+(sampler2D|samplerCube|sampler2DRect|sampler3D)\\s+(\\w+)\\s*;");
 		auto begin = std::sregex_iterator(asSrc.begin(), asSrc.end(), declRe);
 		for (auto it = begin; it != std::sregex_iterator(); ++it)
 		{
@@ -298,6 +483,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 						  tString& asGlslOut, tString& asErrorOut)
 {
 	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
+	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = StripUniformBindingIndices(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
@@ -331,7 +517,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	}
 	lParamsEnd--; // point at the matching ')'
 
-	tString sParamList = sSrc.substr(lParamsStart + 1, lParamsEnd - lParamsStart - 1);
+	tString sParamList = StripLineComments(sSrc.substr(lParamsStart + 1, lParamsEnd - lParamsStart - 1));
 
 	size_t lBodyStart = sSrc.find('{', lParamsEnd);
 	if (lBodyStart == tString::npos)
@@ -403,12 +589,44 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 		else if (aType == eGpuShaderType_Vertex && param.msQualifier == "in")
 		{
 			std::map<tString, tString>::const_iterator it = gmapVertexBuiltins.find(param.msName);
-			if (it == gmapVertexBuiltins.end())
+			if (it != gmapVertexBuiltins.end())
 			{
-				asErrorOut = "Unrecognised vertex input '" + param.msName + "' - no known GLSL built-in mapping (see HpslTranspiler.h)";
-				return false;
+				vBodySubs.push_back(std::make_pair(param.msName, it->second));
 			}
-			vBodySubs.push_back(std::make_pair(param.msName, it->second));
+			else
+			{
+				// No GLSL 120 fixed-function built-in carries this semantic
+				// (e.g. vtx_vTangent, vtx_vBoneIndices, vtx_vBoneWeight in
+				// deferred_base_vtx.hpsl - real SOMA material shaders that
+				// need per-vertex tangent/skinning data, which GL's legacy
+				// fixed-function pipeline has no dedicated attribute for).
+				// Declared as an ordinary GLSL 120 "attribute" of the same
+				// name instead - valid syntax, and no substitution needed
+				// since the body already spells the name this way.
+				//
+				// Deliberately NOT aliased onto a spare gl_MultiTexCoordN
+				// slot the way this engine's own hand-written
+				// deferred_base_vtx.glsl packs tangent data into
+				// gl_MultiTexCoord1: that shader has no separate second-UV
+				// input to conflict with, but HPSL shaders declare
+				// vtx_vTexCoord1 (mapped to gl_MultiTexCoord1 above) *and*
+				// vtx_vTangent as distinct main() parameters - aliasing
+				// both to the same built-in would silently corrupt data
+				// whenever a material uses both (UseUvCoord1 +
+				// UseNormalMapping together).
+				//
+				// NOT yet wired end-to-end: something on the C++ mesh-
+				// upload side (cVertexBuffer -> LowLevelGraphicsSDL, whoever
+				// owns cGpuShaderManager::CreateShader()'s calling
+				// convention) still needs to glBindAttribLocation /
+				// glVertexAttribPointer this same attribute name to actual
+				// per-vertex tangent/bone data for it to do anything beyond
+				// compile - see PORTING_NOTES.md "SOMA" section. Tracked as
+				// a follow-up, not attempted in this pass (out of this
+				// transpiler's scope: it only has the shader source, not
+				// the mesh format or draw-call setup).
+				sGlobals += "attribute " + param.msType + " " + param.msName + ";\n";
+			}
 		}
 		else if (aType == eGpuShaderType_Fragment && param.mlSemantic >= 0 && param.msQualifier == "out")
 		{

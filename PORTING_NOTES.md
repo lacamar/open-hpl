@@ -1738,3 +1738,206 @@ looked plausible, and done precisely nothing against real game data (the file it
 load doesn't exist). Flagging this specifically so nobody re-derives the same wrong lead a
 third time - if a future session has bandwidth for real sound in any of these three games,
 start from "FMOD banks need a backend/re-encode", not "sounddata.cfg needs loading".
+
+## SOMA: HPSL constant buffers + a real material shader pair transpiles (this session)
+
+Task: the two biggest unknowns flagged (twice) by the previous HPSL-transpiler pass -
+`helper_type_arguments.hpsl`'s "constant buffer chosen by MaterialType" mechanism, and
+`cTextureBuffer`/GPU instancing - blocking `deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl`
+(the actual material shaders every real object in `00_01_apartment.hpm` needs; see the
+`start_map` session's finding that every material fails with `Couldn't find file
+'deferred_base_vtx.glsl'`, being fixed in parallel by another agent's `GpuShaderManager.cpp`
+wiring - this session is purely the transpiler's own capability, not that wiring).
+
+**Correction to two prior sessions' handover notes**: the "`HPL2/core/include/system/
+PreprocessParser.h`'s constant buffer chosen by MaterialType comment" flagged as unread in
+both the previous HPSL pass and the one before it **does not exist** - `grep -n -i buffer
+HPL2/core/include/system/PreprocessParser.h` (and the whole file, and its `.cpp`) returns
+zero matches. Whatever prompted that phrasing two sessions ago wasn't a comment in this file.
+The real source for "chosen by MaterialType" is `helper_type_arguments.hpsl`'s own first line
+- `// This needs to match the c++ implementation in RendererDeferredTypes.h` - and its
+`@ifdef MaterialType_X` branches, both read directly this session instead.
+
+**What `helper_type_arguments.hpsl` actually is**: a set of mutually-exclusive `@ifdef
+MaterialType_X` branches, each declaring one or two `cBuffer NAME : N { members... };`
+blocks - HPSL's own syntax, visibly HLSL-derived (`cBuffer NAME : N` mirrors HLSL's `cbuffer
+NAME : register(bN)` almost exactly, same as the `: N` D3D-register-binding suffix already
+handled on texture uniforms). It is **not** a custom preprocessor-only indirection resolved
+before GLSL ever sees it - it's a real shading-language construct, just one GLSL 120 (this
+engine's baseline) has no direct syntax for: named uniform blocks are a GLSL 140+ feature. But
+a real GPU-backed uniform buffer object was never actually required for correctness: every
+real file that uses a `cBuffer` (both `helper_type_arguments.hpsl`'s MaterialType-keyed ones
+and `deferred_base_vtx.hpsl`'s own legacy `cBuffer cVertexArguments`) references its members
+**unqualified** everywhere in the shader body (e.g. `mul(a_mtxViewProjection, ...)`, never
+`cSolidTypeArguments.a_mtxViewProjection`) - exactly HLSL's own cbuffer-member convention, and
+exactly how this engine's non-cBuffer HPSL files (`base_vtx.hpsl`) and its own hand-written
+GLSL 120 shaders (a real install's `core/shaders/deferred_base_vtx.glsl`) already set the
+equivalent uniforms individually by name via `glUniform*`, never through a bound buffer
+object. So the correct, tractable target is a flat rewrite: **implemented** in
+`soma/src/game/HpslTranspiler.cpp`'s new `FlattenConstantBuffers()` - every `cBuffer NAME [:
+N] { members... };` block becomes a sequence of plain `uniform TYPE NAME;` declarations,
+dropping the wrapper and its optional binding index entirely (brace-depth-matched, so it
+correctly finds the end of a block regardless of nested braces elsewhere in the file; per-line
+body processing preserves blank lines, `//` comments, and `#define`s verbatim - real files
+use `#define kMaxBones 96` immediately before an array-sized member inside a `cBuffer`, and
+that has to survive as real GLSL-preprocessor text, not be treated as a struct member).
+
+**The `cTextureBuffer`/instancing question turned out to mostly not need solving at all**,
+because of something neither prior pass had actually read closely:
+`deferred_base_vtx.hpsl`'s *entire body* (982 of its ~1000 lines) is wrapped in `@ifdef
+UseTextureBuffer ... @else ... @endif`, and the `@else` side is explicitly labelled `// TEMP
+BACKWARD COMBATABILITY BELOW` (sic) in the real file. That legacy branch:
+- Uses a single flat `cBuffer cVertexArguments { ... };` (no MaterialType branching, no
+  `@include helper_type_arguments.hpsl` at all).
+- Declares `uniform cTexture2D aInstanceBuffer : 15;` (a plain 2D texture, not a texture
+  buffer object) **only** when `UseMeshInstancing || UseStaticMeshInstancing` is defined -
+  and if neither is, the "Position - Default" `@else` arm (`vLocalVertexPos =
+  cVector4f(vtx_vPosition.xyz, 1.0); px_vPosition = mul(a_mtxModelViewProjection,
+  vLocalVertexPos);`) is used instead, touching no instance-buffer identifier at all.
+- Never declares or references `cTextureBuffer`/`aInstanceBuffer : 15` anywhere in this
+  branch - that only exists on the `UseTextureBuffer`-on side.
+`deferred_base_frag.hpsl` has the identical `@ifdef UseTextureBuffer` gate around its own
+`@include helper_type_arguments.hpsl`. A `grep -l UseTextureBuffer *.hpsl` across a real SOMA
+install's `core/shaders/hpsl/` confirms every one of the 15 files that reference
+`cTextureBuffer`/`UseTextureBuffer` gate it the same way. **Chosen strategy** (this
+transpiler's scope, not the C++ wiring): whichever engine code selects HPSL combo-variables
+before preprocessing should simply never define `UseTextureBuffer`, `UseMeshInstancing`, or
+`UseStaticMeshInstancing` - steering every real material shader onto its already-transpilable
+legacy branch and accepting no GPU instancing (one uniform set per draw call, same as this
+engine's own hand-written GLSL shaders already do), rather than attempting a real
+`cTextureBuffer`→GLSL-120 port (no direct equivalent exists; `samplerBuffer` needs GLSL
+140+/`GL_EXT_texture_buffer_object`, and a version bump raised its own unresolved questions
+about `gl_Vertex`/`gl_MultiTexCoordN` compatibility-profile availability at a higher version -
+moot once instancing itself is avoided, so not investigated further). `cTextureBuffer` itself
+is still **not** transpilable if actually encountered - rejected with a clear "no known GLSL
+built-in mapping" error via the existing unmapped-type path, not guessed at.
+
+**Three more real gaps found and fixed only by actually attempting real files** (both
+`base_vtx.hpsl`/`base_frag.hpsl`'s smaller, non-cBuffer combo had already hidden):
+1. Vertex inputs with no GLSl 120 fixed-function built-in at all - `vtx_vTangent`,
+   `vtx_vBoneIndices`, `vtx_vBoneWeight` are unconditional `main()` parameters in
+   `deferred_base_vtx.hpsl` (present even with skinning/normal-mapping combo vars off), but
+   GL's legacy fixed-function pipeline has no dedicated attribute for tangent or bone data
+   (only `gl_Vertex`/`gl_Normal`/`gl_Color`/`gl_MultiTexCoordN`). The transpiler used to hard-
+   error on any unrecognised vertex input; now it falls back to declaring an ordinary GLSL 120
+   `attribute` of the same name (no substitution needed - the body already spells it that
+   way). Deliberately **not** aliased onto a spare `gl_MultiTexCoordN` slot the way this
+   engine's own `deferred_base_vtx.glsl` packs tangent data into `gl_MultiTexCoord1` - that
+   shader has no competing second-UV input, but HPSL shaders declare `vtx_vTexCoord1` *and*
+   `vtx_vTangent` as distinct parameters, so aliasing both to the same built-in would silently
+   corrupt data whenever a material uses both (`UseUvCoord1` + `UseNormalMapping` together).
+   **Not yet wired end-to-end**: something on the C++ mesh-upload side still needs to
+   `glBindAttribLocation`/`glVertexAttribPointer` this same attribute name to real per-vertex
+   tangent/bone data for it to do anything beyond compile - out of a shader-source-only
+   transpiler's reach, flagged as a new TASKS.md follow-up.
+2. `cMatrix3f` (used for the normal matrix - `cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);`,
+   real, unconditional code in the legacy branch's non-instanced path) had no type mapping at
+   all - silently passed through unchanged (the transpiler doesn't validate type names, only
+   rewrites the ones it recognises), producing GLSL the parser rejected with `syntax error,
+   unexpected NEW_IDENTIFIER`. **This was caught only by the live `glCompileShader()` self-
+   test**, not by string-level assertions - concrete proof the live check earns its keep over
+   the syntax-only regression suite. Fixed: `cMatrix3f` → `mat3` added to the type map
+   (`mat3(mat4)` is a valid GLSL 120 constructor, takes the upper-left 3×3 submatrix).
+   `cTexture3D` → `sampler3D`/`texture3D()` was added too (used by the dissolve map when
+   `UseDissolve` is set - not exercised by the minimal combo below, but trivially the same
+   pattern as the other texture types and needed for that combo eventually).
+3. A trailing `//comment` after a parameter's `: N` semantic, where the comment text itself
+   contains a comma, corrupted `SplitParams()`'s naive comma-split of `main()`'s parameter
+   list - real case: `deferred_gbuffer_solid_frag.hpsl`'s `out cVector4f out_vDiffuse : 0,
+   //diffuse rgb, translucency a` (the comma inside "rgb, translucency" was treated as a
+   parameter separator, producing bogus pieces that failed `ParseParam()`'s regex). **Not
+   found by this session's own reading** - flagged live by a different, concurrently-running
+   session's real `cGpuShaderManager::CreateShader()` wiring work (see its own TASKS.md
+   entry, branch `worktree-agent-a98dec63e5599d81b`) as blocking every real material shader
+   requested during an actual apartment-map frame, and fixed here since it's squarely
+   transpiler-capability scope, not shader-loading-wiring scope. Fixed with a new
+   `StripLineComments()` helper applied to the raw parameter-list text before splitting -
+   strips `//...` to end-of-line (tracking an in-comment flag that resets on `'\n'`, so it
+   correctly leaves the *first*, real comma alone and only swallows the comment text after
+   it) rather than trying to make the comma-splitter itself comment-aware, which would still
+   have left the comment text embedded in the split piece for `ParseParam()`'s regex to choke
+   on.
+
+**Verified live, both ways the task asked for**:
+- **(a) Real GL compile**: contrary to two prior sessions' reports that this environment
+  blocks launching a built `Soma.bin.aarch64` at all, launching directly worked this time (no
+  environment-level refusal hit) - deployed to a scratch directory outside the Steam install
+  (`/tmp/soma-transpiler-test-*`, real data reached only via symlinks to the actual SOMA
+  install, matching the approach the earlier "blocked" session already intended), with
+  `OPENHPL_HEADLESS_SOCKET` set for headless mode. One real wrinkle: the `hpl.log` written by
+  a fully-booted SOMA process is no longer next to the binary (see "XDG Base Directory
+  compliance" above, already landed on `master` before this session started) - it's
+  `$XDG_STATE_HOME/open-hpl/soma/hpl.log`, a **single path shared by every concurrent SOMA
+  process on the machine** regardless of install directory or binary copy, which collided with
+  two other agents' own live SOMA runs the first time (their log lines interleaved with mine,
+  each `Log()` line still atomic but the file's growth pattern made it useless to read
+  reliably). Fixed by also overriding `XDG_STATE_HOME` to a private scratch directory for the
+  launch (the engine already honours the env var per XDG spec) - fully isolates one process's
+  log from any concurrently-running agent's own SOMA instance. **Worth calling out as a
+  process note for whoever else needs to headlessly launch SOMA/Rebirth/Bunker concurrently
+  with other agents from now on**: always set a private `XDG_STATE_HOME` (and ideally
+  `XDG_CACHE_HOME`, for the same reason on `.map_cache` files) for a scratch/test launch, not
+  just an isolated install directory - the log/cache paths are no longer tied to the binary's
+  own location the way `hpl.log` used to be.
+  `RunHpslTranspilerSelfTest()` (runs automatically every boot, see `SomaBase.cpp`) was
+  extended to take a per-case list of combo-variable defines (`TestOneShader()`'s new
+  `avDefines` parameter, applied via `cParserVarContainer`) and given a new case:
+  `deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl` with a deliberately minimal real combo
+  (`UseUv`, `UseNormals`, `UseColor`, `UseDiffuse`; `UseTextureBuffer`/`UseMeshInstancing`/
+  `UseStaticMeshInstancing`/`UseSkeleton`/etc. left undefined, per the strategy above), and
+  `deferred_gbuffer_solid_frag.hpsl` (the actual G-buffer fragment shader real lit materials
+  need, not just `deferred_base_frag.hpsl`'s simpler diffuse-only path) with its own minimal
+  combo (`UseNormals`, `UseLinearDepth` - the latter not actually optional for this file: its
+  body writes `out_vNormal.w = px_fLinearDepth;` unconditionally, so an input that provides it
+  must always be present). First `deferred_base_vtx.hpsl` attempt failed exactly as described
+  above (`cMatrix3f`); after that fix and the `StripLineComments()` fix, `hpl.log` confirms
+  **`HpslTranspilerSelfTest: overall result: PASS`** for all ten files now covered, including
+  `deferred_base_vtx.hpsl`, `deferred_base_frag.hpsl`, and `deferred_gbuffer_solid_frag.hpsl`
+  all PASSED - real GLSL 120, real `glCompileShader()`, three real material shaders, live.
+- **(b) Regression tests**: `HPL2/tests/HpslTranspilerTests.cpp` gained seven new cases
+  (`TestConstantBufferFlattening`, `TestConstantBufferPreservesDefine`,
+  `TestConstantBufferWithBindingIndex`, `TestUnknownVertexInputBecomesAttribute`,
+  `TestTexture3D`, `TestMatrix3f`, `TestParameterListTrailingCommentWithComma`) - synthetic
+  (not full real-file embeds, unlike the previous pass's five files) because embedding the
+  entire ~350-line preprocessed legacy branch would mostly test regex plumbing already
+  covered elsewhere; each new case instead isolates exactly one new capability, using
+  verbatim snippets drawn from the real files (e.g. `TestConstantBufferFlattening`'s `cBuffer
+  cVertexArguments` body is lines 517-569 of a real install's `deferred_base_vtx.hpsl`,
+  trimmed, and `TestParameterListTrailingCommentWithComma`'s source is
+  `deferred_gbuffer_solid_frag.hpsl`'s actual `out_v*` parameter lines verbatim). All 15 cases
+  pass: `cmake --build amnesia/src/build --target HpslTranspilerTests -j$(nproc) && ctest --test-dir
+  amnesia/src/build -R HpslTranspilerTests --output-on-failure`.
+
+**Coordinator follow-up (after the other agent's `GpuShaderManager::CreateShader()` wiring
+landed on `master` and was tested live against a real boot)**: three concerns were raised -
+`vtx_vTangent` unrecognised, the `deferred_gbuffer_solid_frag.hpsl` comment-parsing failure,
+and `sample() references 'aDissolveMap', which isn't a declared uniform texture'` for
+`deferred_base_frag.hpsl`. The first two are exactly gaps 1 and 3 above, already fixed. The
+third turned out to be gap 2's `cTexture3D` fix (already made) working correctly once
+exercised - added a fourth live self-test case, `deferred_base_frag.hpsl` with `UseUv` +
+`UseDiffuse` + `UseDissolve`, and it **passes**. One real wrinkle worth recording: a first
+attempt at this case used `UseDissolve` alone (no `UseUv`) and correctly *failed* to compile
+with `` `px_vTexCoord0' undeclared `` - not a transpiler bug, but this test's own incoherent
+combo (`deferred_base_frag.hpsl` only declares `px_vTexCoord0` as a `main()` input when
+`UseUv` is set, but its body unconditionally reads it whenever `UseDiffuse` is set - any real
+material combo would always set both together). `hpl.log` now shows all eleven self-test
+cases PASS.
+
+**Still not done / next steps, most-valuable first**:
+1. The C++ mesh-upload wiring for the new `attribute vtx_vTangent`/`vtx_vBoneIndices`/
+   `vtx_vBoneWeight` declarations (see gap 1 above) - needed before normal-mapped or skinned
+   materials can render correctly, even once shader *compilation* succeeds.
+2. This session's minimal combo (`UseUv`/`UseNormals`/`UseColor`/`UseDiffuse` only) doesn't
+   exercise `UseNormalMapping`, `UseSkeleton`, `UseSway`, `UseColorMul`, `UseDissolve`,
+   `MaterialType_Translucent`, or any of `deferred_base_vtx.hpsl`'s other real combos - each
+   may surface its own unmapped type or construct the same way `cMatrix3f` did here (e.g.
+   `cVector4l`/`cVector2l`, seen but not needed by this combo, used by the `UseSkeleton`/
+   `UseTextureBuffer` paths - likely `ivec4`/`ivec2`, unverified). Widening
+   `vMinimalMaterialCombo` (or adding more cases) and re-running the live self-test is the
+   fastest way to find the next one.
+3. This is still only proof that the transpiler's *output* is valid, compilable GLSL - it is
+   not wired into `cGpuShaderManager::CreateShader()` (the real shader-loading path), which is
+   the other agent's concurrent work per this session's task brief. Whoever finishes that
+   wiring will need to pick concrete combo-variable defaults for real materials, and should
+   reuse this session's `UseTextureBuffer`/`UseMeshInstancing`/`UseStaticMeshInstancing`-
+   undefined strategy rather than rediscovering it.
