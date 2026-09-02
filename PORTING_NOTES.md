@@ -1117,3 +1117,133 @@ every write site:
 All of the above is gated `#if defined(__linux__)` - this package's only shipped target -
 Windows/macOS code paths are untouched (still their own pre-existing, already
 platform-appropriate `PERSONAL_RELATIVEROOT` conventions).
+
+## First-class Wayland/Linux desktop integration (this session, branch `worktree-agent-a31bde44ba89ffbd9`)
+
+Investigated the areas called out for "first class Wayland support": video driver
+selection, HiDPI, fullscreen mode-setting, cursor grab/relative mouse, and desktop
+metadata (`.desktop`/icon/app-id). Findings below, split into what was already fine,
+what got fixed, and what's still open.
+
+**Already correct, no change needed (confirmed by live testing this session, native
+Wayland desktop - niri, two real HiDPI outputs at scale 2 - `WAYLAND_DISPLAY` set,
+`XDG_SESSION_TYPE=wayland`):**
+- **Video driver selection**: `cSDLEngineSetup` (`HPL2/core/sources/impl/SDLEngineSetup.cpp`)
+  never forces `SDL_VIDEODRIVER` for normal play - the only place it does is the opt-in
+  headless automation path (`OPENHPL_HEADLESS_SOCKET` set), which deliberately prefers
+  X11/XWayland for its own documented reason (a hidden window's `wl_egl_window` never gets
+  a compositor configure event on Wayland - see the comment there). Launched the real
+  `Amnesia.bin.aarch64` normally (no env overrides) and confirmed via `niri msg windows` it
+  came up as a genuine native Wayland toplevel with app_id `Amnesia.bin.aarch64` (SDL's
+  default app_id derivation from argv[0]'s basename, confirmed empirically) - not XWayland.
+  This part was already effectively "first class."
+- **Relative mouse / cursor grab** (`HPL2/core/sources/impl/LowLevelGraphicsSDL.cpp`
+  `SetWindowGrab()`/`SetRelativeMouse()`): implemented via `SDL_SetWindowGrab()` +
+  `SDL_SetRelativeMouseMode()`, the correct modern SDL2 API that maps to Wayland's
+  `pointer-constraints`/`relative-pointer` protocols on compositors that support them. No
+  manual `SDL_WarpMouse`-style center-warping hack anywhere in the input code (which
+  *would* have been a real Wayland problem - arbitrary pointer warping isn't a thing
+  Wayland allows without those same protocols). Verified by code review only this pass
+  (not re-verified live interactively - see the headless-testing note below).
+
+**Fixed this session:**
+1. **Exclusive fullscreen requested a real mode-switch even on Wayland**
+   (`HPL2/core/sources/impl/LowLevelGraphicsSDL.cpp::Init()`). When a user picks a specific
+   resolution + "Fullscreen" in Options, the code asked SDL for `SDL_WINDOW_FULLSCREEN`
+   (true exclusive mode-set) unconditionally. Wayland has no exclusive-fullscreen
+   modesetting protocol for arbitrary client-requested resolutions - compositors either
+   ignore the request or reject a size that doesn't match a real output mode, and the
+   window ends up stuck at desktop size anyway, just after a jarring failed-modeset
+   attempt. Fixed by checking `SDL_GetCurrentVideoDriver()` at window-creation time and
+   using `SDL_WINDOW_FULLSCREEN_DESKTOP` (borderless, no modeset - same flag already used
+   for the `alWidth==0 && alHeight==0` "just use desktop res" case) instead of
+   `SDL_WINDOW_FULLSCREEN` specifically when the driver is `"wayland"`; X11/Windows are
+   unaffected and still get the real exclusive mode-set. Verified headlessly (see below)
+   that the binary still boots and renders cleanly after this change; the new
+   Wayland-driver branch itself couldn't be exercised by that headless run since headless
+   mode forces the X11 driver by design (see above) - not independently live-verified this
+   pass, flagging for whoever next has an interactive session.
+2. **Launcher (FLTK) had no app-id/window-class set at all**
+   (`amnesia/src/launcher/Main.cpp::hplMain()`). A previous session's packaging work
+   (`~/.local/rpm/specs/open-hpl.spec` changelog, 1.3.1-8) already migrated the Launcher
+   from FLTK 1.3 (X11-only) to system FLTK 1.4 (has a real Wayland backend) and confirmed
+   live that it *does* come up as a genuine Wayland toplevel - but with app_id literally
+   `"FLTK"`, FLTK's hardcoded fallback when nothing calls `Fl_Window::xclass()` /
+   `default_xclass()`. That string is identical for every unconfigured FLTK app on the
+   system, so a compositor/taskbar/dock can't distinguish this launcher from any other
+   FLTK program, and can't associate it with the right icon or the desktop entry that
+   launched it. Fixed by calling `Fl_Window::default_xclass(...)` once at the top of
+   `hplMain()`, before any window is created, set to the same binary basename the Launcher
+   itself hands off to via `cPlatform::RunProgram()` right below (`"Amnesia.bin.aarch64"` /
+   `.bin.x86` / `.bin.x86_64`, matching `HPL2/core/cmake/BoilerPlate.cmake`'s
+   `CMAKE_EXECUTABLE_SUFFIX` logic) - so the brief Launcher window and the real game window
+   that follows it present the *same* app-id throughout one play session, not two different
+   unmatched ones. Verified: builds clean, `Launcher.bin.aarch64` linked successfully; not
+   re-verified live this pass (see headless-only note below) - the mechanism itself
+   (`Fl_Window::default_xclass()` controlling both X11 `WM_CLASS` and the Wayland driver's
+   `xdg_toplevel` app_id) is FLTK 1.4's own documented, standard idiom for exactly this
+   problem, and mirrors what the previous session's spec changelog already established
+   empirically about this same Launcher/FLTK-Wayland combination.
+
+**Testing method this session**: per an explicit instruction partway through ("make sure
+all the game testing is headless"), switched from an initial brief live windowed test
+(used only to establish the video-driver/app-id baseline facts above) to
+`scripts/headless-check.sh` + `scripts/hpl_control.py` (see their own doc comments) for
+everything after. Confirmed both the pre-existing baseline and the fixed binary boot
+cleanly, stay CPU-active, answer `ping`, and produce a correct-looking `screenshot`
+(the Profiles dialog, fully visible/sharp) under headless mode. **Important caveat**:
+headless mode deliberately forces the X11 driver (see above), so it cannot exercise or
+visually confirm anything Wayland-specific - the new fullscreen-driver-branch fix (#1) and
+the Launcher app-id fix (#2) are verified only by build success + code review + (for #2)
+FLTK's documented behavior, not by an interactive native-Wayland run. Say so explicitly
+rather than claim live-verified: **both fixes are unverified in an actual live Wayland
+session this pass.**
+
+**Left open / not attempted, flagged as follow-ups (also logged as new top-level bullets
+in `TASKS.md`):**
+- **HiDPI/fractional scaling**: `SDL_WINDOW_ALLOW_HIGHDPI` is never passed to
+  `SDL_CreateWindow()` (`LowLevelGraphicsSDL.cpp`), and nothing in the renderer ever calls
+  `SDL_GL_GetDrawableSize()` - `mvScreenSize` (used for `glViewport`, the GUI's virtual-to-
+  screen mapping, everything) comes from `SDL_GetWindowSize()` alone. On this session's own
+  real two-HiDPI-output desktop (both `niri msg outputs`-reported at `Scale: 2`), that means
+  the game window is created and rendered at the *logical* (points) size and then bitmap-
+  upscaled 2x by the compositor - blurry, but not a Wayland-specific regression (plenty of
+  legacy X11 apps behave identically on a scaled X11 setup too, and it's not a crash/black-
+  screen bug). A correct fix means passing `SDL_WINDOW_ALLOW_HIGHDPI`, then routing
+  `SDL_GL_GetDrawableSize()`'s *physical* pixel size through to `mvScreenSize` instead of
+  `SDL_GetWindowSize()`'s logical size, *and* scaling `MouseSDL.cpp`'s window-coordinate
+  mouse events by the same drawable/window ratio so hit-testing still lines up - touches the
+  viewport/framebuffer-size code path pervasively (dozens of `GetScreenSize()` call sites
+  across `HPL2/core/sources/graphics/` and `amnesia/src/game/Lux*.cpp`) and risks a
+  regression (mismatched viewport vs. framebuffer = rendering only into a corner of the
+  window) if done half-way, so deliberately not attempted this pass - flagged as its own
+  follow-up task rather than risking a working port for a cosmetic sharpness fix.
+- **Desktop-entry `StartupWMClass` still missing** (`~/.local/rpm/specs/open-hpl.spec`,
+  outside this git repo - packaging, not code, so not edited here per this task's own
+  "don't touch unrelated areas" scoping). All five `.desktop` entries the spec generates
+  (`open-hpl-amnesia`/`-machine-for-pigs`/`-soma`/`-rebirth`/`-bunker`) set `Exec=`/`Icon=`
+  but no `StartupWMClass=`, and none of their IDs match the app-id the actual running game
+  window presents (SDL's argv[0]-basename default, confirmed live this session - see
+  above) - e.g. `open-hpl-amnesia.desktop`'s ID is `open-hpl-amnesia` but the real window
+  (after the now-fixed Launcher) is `Amnesia.bin.aarch64`. Without a matching
+  `StartupWMClass`, most compositors/shells fall back to a generic icon for the actual
+  gameplay window in the taskbar/alt-tab/dock, even though the right icon is installed and
+  correctly shown in the app-launcher grid. Concrete fix (for whoever next touches that
+  spec - each value matches the actual deployed/renamed binary basename each wrapper script
+  `exec`s, per the spec's own `%install` section): add `StartupWMClass=Amnesia.bin.aarch64`
+  to `open-hpl-amnesia.desktop` (covers both the Launcher, now that its `xclass` matches,
+  and the game itself), `StartupWMClass=AmnesiaOnAmfp.bin.aarch64` to
+  `open-hpl-machine-for-pigs.desktop`, `StartupWMClass=OpenHplSoma.bin.aarch64` to
+  `open-hpl-soma.desktop`, `StartupWMClass=OpenHplRebirth.bin.aarch64` to
+  `open-hpl-rebirth.desktop`, `StartupWMClass=OpenHplBunker.bin.aarch64` to
+  `open-hpl-bunker.desktop`.
+- **No `SDL_SetWindowIcon()` call anywhere** in `LowLevelGraphicsSDL.cpp`. Doesn't matter
+  on Wayland (compositors source the app icon from the matched `.desktop` entry, never from
+  a runtime-set window icon surface - there's no Wayland protocol for it), but does affect
+  legacy X11 window managers that read the X11 icon window hint directly. Would need adding
+  an SDL2_image (or similar) dependency to decode `amnesia/src/game/Lux.ico` (the one
+  in-repo icon asset, currently only consumed by the packaging spec via ImageMagick at
+  package-build time, not at runtime) into an `SDL_Surface` for `SDL_SetWindowIcon()`. Low
+  value relative to the new dependency and runtime-decode risk given the desktop-entry path
+  already covers modern (Wayland and most current X11) desktops - not attempted, noted only
+  for completeness.
