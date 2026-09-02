@@ -34,6 +34,24 @@ namespace hpl {
 
 	//------------------------------------
 
+	/**
+	 * Optional fallback hook so a .glsl lookup that finds nothing can still
+	 * succeed off a same-named .hpsl file (SOMA/Rebirth/Bunker's HPL3 shader
+	 * source format) - see cGpuShaderManager::SetHpslTranspileCallback().
+	 * HPL2/core cannot link soma/src/game/HpslTranspiler.cpp directly (it's
+	 * game-module code, and the only game module that needs it), so the
+	 * signature here matches TranspileHpslToGlsl() exactly and whichever
+	 * game module owns a transpiler registers it at startup; Dark
+	 * Descent/AMFP never call SetHpslTranspileCallback(), so this stays
+	 * NULL and the fallback path is dead code for them.
+	 * \param asHpslSource HPSL source, already run through cPreprocessParser::Parse().
+	 * \param aType eGpuShaderType_Vertex or eGpuShaderType_Fragment.
+	 * \param asGlslOut receives the transpiled GLSL source on success.
+	 * \param asErrorOut receives a human-readable reason on failure.
+	 */
+	typedef bool (*tHpslTranspileCallback)(const tString& asHpslSource, eGpuShaderType aType,
+											tString& asGlslOut, tString& asErrorOut);
+
 	class cGpuShaderManager : public iResourceManager
 	{
 	public:
@@ -54,12 +72,23 @@ namespace hpl {
 
 		void Destroy(iResourceBase* apResource);
 		void Unload(iResourceBase* apResource);
-	
+
+		/**
+		 * Registers a game-module-supplied HPSL->GLSL transpiler used as a
+		 * fallback when a .glsl file can't be found but a same-named .hpsl
+		 * one can. NULL (no fallback) by default - only SOMA/Rebirth/
+		 * Bunker's game module calls this; Dark Descent/AMFP never do, so
+		 * their .glsl-only lookups are completely unaffected.
+		 */
+		static void SetHpslTranspileCallback(tHpslTranspileCallback aCallback) { mpHpslTranspileCallback = aCallback; }
+
 	private:
 		bool IsShaderSupported(const tString& asName, eGpuShaderType aType);
 
 		iLowLevelGraphics *mpLowLevelGraphics;
 		cPreprocessParser* mpPreprocessParser;
+
+		static tHpslTranspileCallback mpHpslTranspileCallback;
 	};
 
 };
