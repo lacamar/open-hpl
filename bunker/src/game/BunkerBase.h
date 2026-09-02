@@ -12,8 +12,11 @@
  * "Main:trenches.hpm, PostIntro:officer_hub.hpm") rather than a single bare
  * filename - presumably selecting among a few entry points depending on
  * story-progress state that this scaffold has no concept of. Phase 0 just
- * takes the first entry ("Main"'s map). Pos ("Start_Begin") resolves the
- * same way as Rebirth's: via the loaded map's own cStartPosEntity.
+ * takes the first entry ("Main"'s map). Pos ("Start_Begin") resolves via a
+ * real PlayerStart-Area loader (see BunkerAreaLoader.h) - the Bunker's maps
+ * have no cStartPosEntity at all, unlike what an earlier pass of this file
+ * assumed (see BunkerAreaLoader.h for why, and PORTING_NOTES.md for the
+ * "using world origin" fallback this replaces).
  */
 
 #ifndef BUNKER_BASE_H
@@ -21,6 +24,7 @@
 
 #include "hpl.h"
 
+#include "BunkerAreaLoader.h"
 #include "DebugFreeCamera.h"
 
 using namespace hpl;

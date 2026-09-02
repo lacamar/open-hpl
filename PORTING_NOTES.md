@@ -1475,3 +1475,111 @@ first):
    documented in the "SOMA: the confirmed NULL-program crash is now fixed" entry above remain
    completely unaddressed - a materially separate, likely-large effort (an HPL3 entity/script
    system has no equivalent in this HPL2-based codebase at all) from the shader work above.
+
+## Amnesia: The Bunker - engine generation verified, real PlayerStart spawn fix (this session)
+
+Task: make real forward progress on `bunker/src/game/`'s Phase 0 scaffold via binary/data
+analysis of the real Bunker install (`/home/lm/.local/share/Steam/steamapps/common/Amnesia
+The Bunker`, Windows-only depot, data-only use as with Rebirth/SOMA above).
+
+**Verified, not assumed: the Bunker runs on HPL3, not HPL2.** The task brief's hypothesis -
+that the Bunker, as Frictional's last HPL2-derived title before their newer engine, might be
+closer to this repo's HPL2 base than SOMA/Rebirth - is **false** for the two things that
+actually matter for porting (shaders and map format), confirmed two independent ways:
+- `strings AmnesiaTheBunker.exe | grep hpl3` surfaces dozens of literal embedded debug paths
+  like `E:\bunker\hpl3\core\sources\graphics\RendererDeferred.cpp` - the game's own build
+  used a source tree literally named `hpl3`.
+- `core/shaders/` in a real install has zero top-level `.glsl` files for the deferred
+  renderer (only two trivial `base_vtx/frag.glsl`, likely a debug/wireframe pair) and a
+  `core/shaders/hpsl/` subfolder with 109 `.hpsl` files, including `deferred_base_vtx.hpsl`,
+  `deferred_gbuffer_solid_frag.hpsl`, and terrain tessellation shaders - the exact same
+  HPL3 `.hpsl` shader pipeline already found and documented for SOMA above, not HPL2 GLSL.
+  Confirmed live: a real headless run's `hpl.log` shows the identical failure signature
+  already known from SOMA (`Couldn't find file 'deferred_base_vtx.glsl' in resources`) -
+  every material fails to bind a shader program, for the same root cause.
+
+So the Bunker needs the same eventual HPSL->GLSL translation work scoped for SOMA above (see
+"SOMA: HPSL->GLSL transpiler") to ever render correctly - there is no shortcut available from
+being "closer to HPL2". One place the Bunker's data *is* simpler than expected: its `.hpm` map
+format is the same HPL3 "split-track" layout as SOMA's/Rebirth's (a tiny root `.hpm` with only
+`<GlobalSettings>`/`<RegisteredUsers>`, plus sibling `<mapname>.hpm_StaticObject`/`_Light`/
+`_Area`/`_Entity`/`_Sound`/etc. files, each an independent `<HPLMapTrack_X>` XML document) -
+already handled generically by the shared `cWorldLoaderHpm` (`HPL2/core/sources/resources/
+WorldLoaderHpm.cpp`, added for SOMA, reused unmodified for Rebirth and the Bunker via the
+`.hpm` extension registration - no Bunker-specific engine change was needed here).
+
+**Real fix implemented and verified live against real data**: `bunker/src/game/
+BunkerAreaLoader.h`/`.cpp` (new files), registered from `cBunkerBase::InitEngine()`
+(`BunkerBase.cpp`). This closes the exact gap the Rebirth/Bunker Phase 0 entry above flagged -
+"`Bunker: start map has no StartPosEntity named 'Start_Begin', using world origin`" and
+"`no area loader registered for AreaType 'PlayerStart'`". Root cause: the Bunker's maps (like
+SOMA's) have no `cStartPosEntity` at all - that's an HPL2-only concept `cWorldLoaderHpm` never
+populates. Player spawn points are plain map Areas of `AreaType="PlayerStart"` instead
+(confirmed by inspecting a real install's `trenches.hpm_Area`: `<Area Name="Start_Begin"
+WorldPos="2.2563 0.978092 16.0246" Rotation="0 1.5708 0" ... AreaType="PlayerStart">`, one of
+six such Areas in this map - `Start_Begin`/`Start_Gate`/`Start_Ambush`/`Start_Crafting`/
+`Start_Gas`/`Start_ExplosiveBarrel`). `cWorldLoaderHpm::CreateMapArea()` already has exactly
+the right extension point for this - `cResources::GetAreaLoader(sType)`, the same
+`iAreaLoader`/`AddAreaLoader()` mechanism Dark Descent's own `cLuxAreaNodeLoader_PlayerStart`
+(`amnesia/src/game/LuxAreaNodes.h`) already uses for the identical `"PlayerStart"` AreaType -
+it just had nothing registered for Bunker's Phase 0 module, so every PlayerStart Area was
+silently dropped. `cBunkerAreaLoader_PlayerStart` is a trimmed-down analogue (no AI-node graph
+like Dark Descent's `cLuxNode_PlayerStart`, just a static `name -> cMatrixf` table)
+that `InitTestMap()` now consults before falling back to `GetStartPosEntity()` (kept as a
+no-cost fallback, not removed) and then world origin.
+
+Also added, needed to verify the above without a windowed session (per this task's
+requirement to test headlessly): `bunker/src/game/BunkerBase.cpp` now registers
+`camera_state`/`set_camera` headless-control commands, the same pattern already proven by
+`soma/src/game/SomaBase.cpp` - Bunker's Phase 0 previously had *no* game-specific headless
+commands at all (only the engine's built-in `screenshot`/`quit`), so there was no way to ask
+the running process where its debug camera actually ended up short of a screenshot.
+
+**Verified end-to-end, headless, against real game data** (built to this worktree's own
+`amnesia/src/build`, deployed as a uniquely-named `Bunker.playerstart_test.aarch64` test
+binary in the real Bunker install, run with `OPENHPL_HEADLESS_SOCKET` set, driven via
+`scripts/hpl_control.py`, never a windowed session):
+- `camera_state` returns `pos_x=2.2563, pos_y=1.478092, pos_z=16.0246` - an exact match for
+  `Start_Begin`'s `WorldPos="2.2563 0.978092 16.0246"` plus the existing +0.5m eye-height
+  offset (`0.978092 + 0.5 = 1.478092`), proving the camera is now placed at the map's real,
+  named spawn point instead of world origin.
+- `hpl.log` (now at `$XDG_STATE_HOME/open-hpl/bunker/hpl.log`) confirms `6 areas` loaded
+  (was `0 areas` before this fix) and no longer logs the "no area loader registered for
+  AreaType 'PlayerStart'" warning for any of the six Start_* Areas, nor the "start map has no
+  PlayerStart Area or StartPosEntity" fallback message.
+- A headless screenshot (`scripts/hpl_control.py ... screenshot`) shows the camera now
+  looking at close-range trench/sandbag-barrier structure geometry at head height, consistent
+  with actually standing at the real trench entrance - as expected, still unshaded black
+  silhouettes against the fog-colored sky (the HPSL shader gap above, unrelated to this fix).
+- The `quit` headless command works (process exits cleanly, no new `coredumpctl` entry) but
+  is slow - roughly 40-50s from command to process exit in this run. Not root-caused (out of
+  scope for this task); flagging in case whoever eventually chases the pre-existing
+  OALWrapper shutdown-race note elsewhere in this document finds it relevant.
+
+**Verified the headless path itself, per this session's explicit instruction not to assume
+it works**: confirmed `camera_state`/`set_camera`/`screenshot`/`quit` all round-tripped
+correctly (see above) before relying on any of them for the PlayerStart verification -
+the automation server itself needed no fixes for the Bunker's case, only the two new
+game-module-side command registrations described above (identical to SOMA's own pattern).
+
+**What remains, concretely** (see also the new TASKS.md bullets):
+1. HPSL->GLSL shader translation - same multi-week scope already documented for SOMA, not
+   attempted here; this is the actual blocker for any real shading/rendering.
+2. `sounddata.cfg` is never loaded (`InitMainConfig()` doesn't read `<ConfigFiles
+   SoundData=.../>` at all, matching SOMA's/Rebirth's Phase 0 scope) - every `.snt` sound
+   entity reference in a real map (90+ per `trenches.hpm_Sound` alone) fails with
+   `Couldn't create SoundEntity`/`Cannot find sound entity`. Wiring `cSoundHandler::
+   LoadSoundData()` (or equivalent) against the real `sounddata.cfg` would be a similarly
+   well-scoped next piece, same shape as this session's Area-loader fix.
+3. No entity-type loaders registered (`Couldn't find loader for type 'Prop_Rigid'`/
+   `'StaticProp'`/etc., matches SOMA's Phase 0 scope exactly) - no player controller, no
+   scripts (`trenches.hps` exists and is 71KB, unparsed by this Phase 0 scaffold).
+4. The other five PlayerStart Areas this fix now makes resolvable
+   (`Start_Gate`/`Start_Ambush`/`Start_Crafting`/`Start_Gas`/`Start_ExplosiveBarrel`) aren't
+   exposed anywhere yet - `main_init.cfg`'s own `<StartMap Pos="Start_Begin"/>` is still the
+   only one Phase 0 ever asks for; a `cBunkerAreaLoader_PlayerStart` static accessor already
+   makes the other five available to whoever wants to expose a "start location" picker later.
+
+**Given the above, this is genuinely not close to "boots and runs in a meaningfully complete
+way"** - real rendering, sound, and any game logic are all still missing, same class of gap
+as SOMA/Rebirth. Marked IN PROGRESS in TASKS.md, not DONE.
