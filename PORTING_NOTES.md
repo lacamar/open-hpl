@@ -1941,3 +1941,154 @@ cases PASS.
    wiring will need to pick concrete combo-variable defaults for real materials, and should
    reuse this session's `UseTextureBuffer`/`UseMeshInstancing`/`UseStaticMeshInstancing`-
    undefined strategy rather than rediscovering it.
+
+## SOMA: HPSL->GLSL transpiler wired into real shader loading (this session)
+
+Prior sessions built the HPSL->GLSL transpiler proof-of-concept
+(`soma/src/game/HpslTranspiler.{h,cpp}`) and extended its real-syntax coverage
+(`mul()`/`sample()`, `px_vPosition`->`gl_Position`/`gl_FragCoord`, etc.), but it
+only ever ran as a one-shot startup self-test
+(`soma/src/game/HpslTranspilerSelfTest.cpp`, called from `cSomaBase::Init()`)
+against a fixed list of seven small non-material `.hpsl` files - it was never
+connected to the real shader-loading path, so every real material still hit
+`ERROR: Couldn't find file 'deferred_base_vtx.glsl' in resources` and the
+apartment map rendered fully black (confirmed via `start_map`, see the
+"SOMA support" TASKS.md entries). This session's task was specifically the
+*wiring*, not extending the transpiler's own feature coverage (that's a
+separate concurrent agent's work, same session, extending
+`soma/src/game/HpslTranspiler.cpp` - not touched here beyond reading its
+header for the exact function signature).
+
+**Where the fallback lives**: `HPL2/core/sources/resources/GpuShaderManager.cpp`,
+`cGpuShaderManager::CreateShader()`. This one function has two independent
+code paths depending on whether a `cParserVarContainer` is passed:
+- The `apVarContainer != NULL` branch is the one real materials actually use
+  (`cProgramComboManager::CreateShader()` in
+  `HPL2/core/sources/graphics/ProgramComboManager.cpp` always passes one) -
+  reads the file, runs it through `cPreprocessParser::Parse()` (the same
+  `@ifdef`/`@include` preprocessor HPSL and GLSL both use), then compiles the
+  parsed string.
+- The `apVarContainer == NULL` branch is a plain resource-cache path (used by
+  a handful of fixed shaders with no variable substitution) that skips
+  preprocessing entirely and compiles straight from file.
+
+Both branches previously did the same thing on a failed `mpFileSearcher->
+GetFilePath(asName)` lookup: `Error("Couldn't find file '%s' in resources\n",
+...)` and bail. Both now, on that same failure, try the same basename with a
+`.hpsl` extension (`cString::SetFileExt(asName, "hpsl")`) via a second
+`GetFilePath()` call before giving up. If found: read it, preprocess it with
+`cPreprocessParser::Parse()` (using the caller's real `apVarContainer` in the
+first branch, an empty one in the second - matching
+`HpslTranspilerSelfTest.cpp`'s own convention), then hand the preprocessed
+string to a registered transpiler callback. On transpile success, compile the
+returned GLSL exactly like the pre-existing path did; on failure, a new,
+distinctly-worded error (`"Couldn't transpile HPSL shader '%s' (from '%s'):
+%s\n"`) reports why, with the transpiler's own reason text.
+
+**The HPL2/core <-> soma/ dependency problem, and how it's resolved**:
+`HPL2/core` is linked by every game module (Dark Descent, AMFP, SOMA, Rebirth,
+Bunker) - it cannot `#include "HpslTranspiler.h"` or link
+`soma/src/game/HpslTranspiler.cpp` directly, since that file is game-module
+code (`using namespace hpl;`, SOMA-specific comments) and, more importantly,
+only SOMA (for now) needs it at all. Resolved with a static function-pointer
+hook: `HPL2/core/include/resources/GpuShaderManager.h` declares
+`typedef bool (*tHpslTranspileCallback)(const tString& asHpslSource,
+eGpuShaderType aType, tString& asGlslOut, tString& asErrorOut);` - deliberately
+matching `TranspileHpslToGlsl()`'s exact signature - plus
+`cGpuShaderManager::SetHpslTranspileCallback()` (static setter, NULL by
+default) and a static `mpHpslTranspileCallback` member.
+`cSomaBase::Init()` (`soma/src/game/SomaBase.cpp`) calls
+`cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl)` right after
+`InitEngine()` succeeds (window/GL context exists, before any real shader
+load). Dark Descent/AMFP/Rebirth/Bunker never call this setter, so the
+callback stays NULL for them and every new code path in `CreateShader()` is
+gated behind an `if(mpHpslTranspileCallback)` check that's provably false -
+dead code for every non-SOMA game, structurally, not just by convention.
+
+**Zero-regression verification for Dark Descent** (this touches shared
+`HPL2/core` code used by every game, so this was treated as the highest-risk
+part of the task): built both `Amnesia` and `Soma` from one CMake configure
+(`amnesia/src/CMakeLists.txt` pulls in both via `add_subdirectory`). Used
+`git stash` to get a clean pre-change `Amnesia.bin.aarch64`, deployed it as
+`Amnesia.baseline.aarch64` into the real Dark Descent Steam install, launched
+headlessly (`OPENHPL_HEADLESS_SOCKET`), took a screenshot, `git stash pop` to
+restore the change, rebuilt, deployed as
+`Amnesia.worktree-agent-a98dec63e5599d81b.aarch64`, launched, took a matching
+screenshot. Both runs produced **zero `hpl.log` output** (the file doesn't
+even get created - `SetLogFile()`/`ReopenFile()` only ever happens on first
+`Log()`/`Error()` call, per `LowLevelSystemSDL.cpp`, and neither run logged
+anything). Raw byte-diffing the two BMP screenshots showed a large
+difference (expected - Dark Descent's pre-menu scene has an animated
+torch/particle flicker, so no two screenshots of it are ever byte-identical
+even from the *same* binary run twice, confirmed by capturing two screenshots
+of the unmodified baseline binary back-to-back: ~11% of raw bytes differ
+between those two baseline-only runs too). The meaningful comparison is
+ImageMagick `compare`'s perceptual pixel-difference count: baseline-vs-baseline
+(same binary, two separate runs) = 6435 differing pixels (0.098%);
+baseline-vs-wired (different binaries) = 6497 differing pixels (0.099%) - the
+same order of magnitude, i.e. statistically indistinguishable from the
+inherent animation noise. Screenshots of both diffs visually show the same
+flickering-torch-glow pattern in the same screen region either way. Concluded:
+no measurable rendering change for Dark Descent from this wiring.
+
+**Verified live against SOMA's real `00_01_apartment.hpm`** (`start_map`
+headless command, per the existing "SOMA: splash screens + real boot
+sequence" section above): deployed `Soma.worktree-agent-a98dec63e5599d81b.
+aarch64`, booted headlessly, called `start_map` with the apartment map's real
+`PlayerStartArea_1` coordinates. `hpl.log` (shared path caveat below) now
+shows, for every real material's `deferred_base_vtx.glsl` request:
+
+```
+ERROR: Couldn't transpile HPSL shader 'deferred_base_vtx.glsl' (from 'deferred_base_vtx.hpsl'): Unrecognised vertex input 'vtx_vTangent' - no known GLSL built-in mapping (see HpslTranspiler.h)
+ERROR: Could not load material 'soliddiffuse' shader 'deferred_base_vtx.glsl'
+```
+
+instead of the old, terminal `Couldn't find file 'deferred_base_vtx.glsl' in
+resources` - direct proof the `.hpsl` fallback is genuinely triggering:
+`deferred_base_vtx.hpsl` is found, preprocessed, and handed to
+`TranspileHpslToGlsl()`, which then rejects it for a specific, legible reason.
+Also surfaced a second, different transpiler gap on
+`deferred_gbuffer_solid_frag.hpsl`: `Couldn't parse parameter '		//diffuse
+rgb' (expected '(in|out) TYPE NAME [: N]')` - a `//`-comment line inside a
+parameter list is apparently mis-parsed as if it were itself a parameter.
+Both are new findings for whoever's extending `HpslTranspiler.cpp`
+(constant-buffer/instancing support was already known-blocking per TASKS.md;
+these are two more, smaller, and probably easy relative to that).
+
+**Still fully black** - as expected, and worth being precise about: a
+before/after screenshot pair of the real apartment map at the same camera
+position (before = this SOMA build with the wiring reverted via
+`git stash`, after = with it restored) is **pixel-identical**
+(`PIL.ImageChops.difference(a, b).getbbox() is None`). The wiring makes real
+material shaders fail differently (a specific, actionable transpile error
+instead of a dead end) but not yet *succeed* - every real deferred-rendering
+material still needs the constant-buffer/instancing support and the two
+smaller gaps above before anything actually compiles and renders. Checked
+whether any of the *already-working* simpler shaders
+(`deferred_depthonly_frag`/`deferred_posteffect_quad_vtx`/
+`debug_overdraw_frag`/`null_vtx`/`null_frag`/`clear_vtx`/`clear_frag` - the
+seven the self-test already proves compile) get requested through
+`CreateShader()` during a real apartment-map frame, as a way to get
+additional live-GL-compile proof of the wiring beyond the self-test; none of
+them were requested this pass (grepped `hpl.log` for all seven basenames
+across the whole `start_map` load+frame - zero hits), so the self-test remains
+the only *actual* live-GL-compile evidence for those specific files; the
+wiring's live-compile proof for real material shaders is blocked entirely on
+the transpiler gaps above.
+
+**New problem found and worth flagging explicitly**: SOMA's `hpl.log` path
+(`~/.local/state/open-hpl/soma/hpl.log`, set in `cSomaBase::InitEngine()`) is
+the same fixed path for every launched SOMA process regardless of which
+build/worktree/agent started it, and `cLogWriter::ReopenFile()`
+(`HPL2/core/sources/impl/LowLevelSystemSDL.cpp`) opens it with `fopen(...,
+"w")` - full truncation. Multiple concurrent agents each headlessly testing
+their own `Soma.<branch>.aarch64` build (a normal occurrence this session -
+observed `Soma.agenta.aarch64`, `Soma.review.aarch64`, and another
+worktree's build all running simultaneously) silently stomp on each other's
+log content with no error to either side. Discovered this firsthand when
+launching a SOMA test instance truncated a concurrent agent's in-progress
+log mid-session. Added as a new top-level TASKS.md bullet (not fixed here -
+out of this task's scope) - a real fix should make the log path unique per
+process, e.g. keyed off `OPENHPL_HEADLESS_SOCKET`'s own path or the PID.
+(Fixed later this session - see the "Suffix hpl.log with PID under headless
+mode" commit.)
