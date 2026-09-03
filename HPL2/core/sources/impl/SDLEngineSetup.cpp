@@ -70,6 +70,19 @@ namespace hpl {
 #if SDL_VERSION_ATLEAST(2,0,0)
 		SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
 #endif
+		// Headless test runs must never make real sound come out of the
+		// physical speakers. OpenAL-soft (the only sound backend this engine
+		// builds) reads ALSOFT_DRIVERS at alcOpenDevice() time to restrict
+		// which backends it considers - "null" gives a real, silently-
+		// succeeding device with no hardware/server access at all. Set this
+		// as early as possible (before any subsystem, sound included, is
+		// initialized below) and only if a caller hasn't already chosen a
+		// driver list, same guard shape as the SDL_VIDEODRIVER one further
+		// down. Inert for normal play, where OPENHPL_HEADLESS_SOCKET is unset.
+		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL && getenv("ALSOFT_DRIVERS") == NULL)
+		{
+			setenv("ALSOFT_DRIVERS", "null", 1);
+		}
 		if(alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video))
 		{
 			// Under the opt-in headless automation server (OPENHPL_HEADLESS_SOCKET -
@@ -91,11 +104,20 @@ namespace hpl {
 			}
 
 			if(SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0) {
-				FatalError("Error Initializing Display: %s",SDL_GetError()); 
+				FatalError("Error Initializing Display: %s",SDL_GetError());
 				exit(1);
 			}
 #if SDL_VERSION_ATLEAST(2,0,0)
-            SDL_DisableScreenSaver();
+            // Don't suspend the real desktop's screensaver/DPMS on behalf of a
+            // headless test run - X11_SuspendScreenSaver() resets the X server's
+            // idle timer, which under this repo's headless testing (the hidden
+            // window still lives on the real DISPLAY, see the driver-selection
+            // comment above) was observed waking the physical monitor even
+            // though the window itself is never shown.
+            if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
+            {
+                SDL_DisableScreenSaver();
+            }
 #elif defined WIN32 // only on SDL1.2
 			// Set up device notifications!
 			// This is bad, cos it is actually Windows specific code, should not be here. TODO: move it, obviously
