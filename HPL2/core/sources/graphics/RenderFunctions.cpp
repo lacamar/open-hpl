@@ -520,7 +520,7 @@ namespace hpl {
 		if(apProgram)
 		{
 			if(mbLog) Log("  Setting gpu program %d : '%s'\n", apProgram, apProgram->GetName().c_str());
-			apProgram->Bind();	
+			apProgram->Bind();
 		}
 		else
 		{

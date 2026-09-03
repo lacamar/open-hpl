@@ -138,12 +138,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 	Log("SOMA game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
 
 	/////////////////////////////
-	// Init the engine: create the window, load resources.cfg/materials.cfg,
-	// and get to a state where an empty scene can be rendered.
-	if (InitEngine() == false)
-		return false;
-
-	/////////////////////////////
 	// Wire the HPSL->GLSL transpiler (soma/src/game/HpslTranspiler.cpp) into
 	// cGpuShaderManager as its .glsl-not-found fallback, so SOMA's real
 	// .hpsl material shaders get transpiled-and-compiled instead of just
@@ -152,7 +146,30 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// the only place in this codebase that calls SetHpslTranspileCallback -
 	// Dark Descent/AMFP never do, so cGpuShaderManager's fallback path stays
 	// dead code for them.
+	//
+	// MUST run before InitEngine(): CreateHPLEngine() (called from inside
+	// InitEngine() below) constructs cGraphics, which in turn constructs
+	// cRendererDeferred/cRendererSimple/the post-effect types/some material
+	// types - several of which build GPU programs (deferred_base_vtx.glsl
+	// and friends) directly in their own constructors, not lazily on first
+	// use. When this call came after InitEngine(), every one of those
+	// engine-init-time shader lookups saw mpHpslTranspileCallback still
+	// NULL, so cGpuShaderManager::CreateShader()'s HPSL-fallback branch
+	// never even triggered - straight to "Couldn't find file
+	// 'deferred_base_vtx.glsl' in resources", permanently (those program
+	// pointers are cached NULL for the object's lifetime, never retried).
+	// Found live: a real headless boot of 00_01_apartment.hpm showed 14
+	// "Couldn't find file 'deferred_base_vtx.glsl'" / 6 "Could not load
+	// material ... shader 'deferred_base_vtx.glsl'" lines in hpl.log even
+	// though most materials (loaded later, well after Init() returns and
+	// the callback is registered) resolved through the same fallback fine.
 	cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl);
+
+	/////////////////////////////
+	// Init the engine: create the window, load resources.cfg/materials.cfg,
+	// and get to a state where an empty scene can be rendered.
+	if (InitEngine() == false)
+		return false;
 
 	/////////////////////////////
 	// Headless control: register camera commands if a control server is

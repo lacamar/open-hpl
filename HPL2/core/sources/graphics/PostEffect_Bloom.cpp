@@ -135,6 +135,32 @@ namespace hpl {
 	iTexture* cPostEffect_Bloom::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
 		/////////////////////////
+		// Bail out gracefully if any of the three programs this effect needs
+		// failed to build (real on SOMA/Rebirth/Bunker's HPSL path -
+		// posteffect_bloom_blur_vtx.glsl/posteffect_bloom_blur_frag.glsl/
+		// posteffect_bloom_add_frag.glsl have no equivalent file anywhere in
+		// the real HPSL corpus, confirmed by searching it in full - HPL3's
+		// bloom is structured entirely differently, not just renamed, so no
+		// filename alias can fix this the way GpuShaderManager.cpp's
+		// gvHpslFilenameAliases table fixes the other shader-name gaps).
+		// Without this check, SetProgram(mpBlurProgram[i]) with a NULL
+		// program just unbinds whatever shader happened to be bound from
+		// unrelated earlier rendering (iRenderFunctions::SetProgram(NULL)
+		// calls UnBind(), it doesn't skip the draw), so DrawQuad() below
+		// would still submit full-screen quads through the fixed-function
+		// pipeline with no shader and stale GL state - the likely source of
+		// a solid magenta full-screen-quad artifact seen in a real headless
+		// screenshot this session (see PORTING_NOTES.md). Returning the
+		// input texture untouched (without calling SetFinalFrameBuffer) is
+		// the same no-op pass-through iPostEffect::Render() already expects
+		// and handles (PostEffect.cpp:93-108 auto-blits it when
+		// mbFinalFrameBufferUsed stays false) - not a special case.
+		if(mpBloomType->mpBlurProgram[0]==NULL || mpBloomType->mpBlurProgram[1]==NULL || mpBloomType->mpBloomProgram==NULL)
+		{
+			return apInputTexture;
+		}
+
+		/////////////////////////
 		// Init render states
 		mpCurrentComposite->SetFlatProjection();
 		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);

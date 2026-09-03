@@ -49,6 +49,16 @@ namespace hpl {
 	cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("RadialBlur",apGraphics,apResources)
 	{
 		cParserVarContainer vars;
+		// HPSL's real posteffect_radial_blur_frag.hpsl unconditionally reads
+		// a px_vTexCoord0 varying, but deferred_base_vtx.hpsl only emits it
+		// when "UseUv" is set - this call site passed an empty vars
+		// container, so the HPSL path's pair failed to link ("varying
+		// px_vTexCoord0 not written by vertex shader"). Same shape of gap as
+		// the skybox fix above (see RendererDeferred.cpp). Dark Descent's
+		// own posteffect_radial_blur_frag.glsl reads gl_FragCoord.xy
+		// directly (fixed-function), not any custom varying, so this is a
+		// no-op for it - confirmed by reading the real file, not assumed.
+		vars.Add("UseUv");
 		mpProgram = mpGraphics->CreateGpuProgramFromShaders("RadialBlur","deferred_base_vtx.glsl", "posteffect_radial_blur_frag.glsl", &vars);
 		if(mpProgram)
 		{
