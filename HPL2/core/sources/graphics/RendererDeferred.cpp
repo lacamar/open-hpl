@@ -909,9 +909,33 @@ namespace hpl {
 		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
 		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
 		DrawQuad(	cVector2f(0,0),1,
-					cVector2f(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y ), 
+					cVector2f(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y ),
 					cVector2f(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y),
 					true);
+
+		////////////////////////////////////
+		// Global exposure (see cWorld::SetGlobalExposure()'s own comment) -
+		// a real, simplified stand-in for HPL3-authored per-area exposure
+		// data (SOMA/Rebirth/Bunker's real .hpm_ExposureArea, unread by any
+		// loader yet) applied as one flat multiply over the whole frame,
+		// via a solid untextured quad in Mul blend mode - no new shader
+		// needed (this repo carries no .glsl/.hpsl of its own; every game's
+		// shaders come from its own real, separately-installed data, so a
+		// fixed-function blend is the only way to add a new visual effect
+		// from engine code alone). Skipped entirely at the default 1.0 (true
+		// no-op, byte-identical to before this existed) - the overwhelmingly
+		// common case, since only a world whose loader actually calls
+		// SetGlobalExposure() ever sets anything else.
+		float fExposure = mpCurrentWorld->GetGlobalExposure();
+		if(fExposure != 1.0f)
+		{
+			SetBlendMode(eMaterialBlendMode_Mul);
+			SetTexture(0,NULL);
+			DrawQuad(	cVector2f(0,0),1,
+						cVector2f(0,0), cVector2f(1,1),
+						false, cColor(fExposure,1));
+			SetBlendMode(eMaterialBlendMode_None);
+		}
 
 		END_RENDER_PASS();
 	}

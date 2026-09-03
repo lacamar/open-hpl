@@ -2619,3 +2619,109 @@ color.
   fix above via `GetSkyBoxProgram()`, but the dedicated duplicate pass itself is still
   unreachable and could be deleted as cleanup, not attempted this session to keep the diff
   minimal.
+
+## SOMA: real global exposure applied (ExposureArea), and a correction about the skybox fix (this session, continued)
+
+### Global exposure from real .hpm_ExposureArea data
+
+Once the skybox fix above landed and camera-responsiveness was restored, a fresh headless
+screenshot of `00_01_apartment.hpm` at its real `PlayerStartArea_1` was still severely
+overexposed near-white - the "real, separate tone-mapping/exposure follow-up" already flagged
+by the lighting-fix session. Investigated properly rather than left as a guess: SOMA's real map
+data ships a `.hpm_ExposureArea` sidecar file (`HPLMapTrack_ExposureArea`) this engine never had
+any loader for at all - `00_01_apartment.hpm_ExposureArea` declares one real `ExposureArea_1`
+entity with `Exposure="-1.2"` (a real photographic EV compensation) and `WhiteCut="2.2"`, neither
+read anywhere in `soma/src/game/` or `HPL2/core/`.
+
+Added `cWorldLoaderHpm::LoadExposureAreaTrack()` (`HPL2/core/{include,sources}/resources/
+WorldLoaderHpm.{h,cpp}`) as a new sidecar track loader, following the exact same
+`OpenSidecar()`/`GetTrackRoot()`/per-`Section` pattern every other track in this file already
+uses (`LoadAreasTrack()`/`LoadSoundsTrack()` etc. right above it) - this is `cWorldLoaderHpm`,
+the SOMA/HPL3-specific loader, entirely separate from `cWorldLoaderHplMap` (Dark Descent's own),
+so zero risk to Dark Descent. Deliberately simplified: applies only the first `ExposureArea`
+entity found as one flat global scale via a new `cWorld::SetGlobalExposure()`/
+`GetGlobalExposure()` pair (`HPL2/core/include/scene/World.h`, defaults to `1.0` - a true no-op
+for every world that never calls the setter, i.e. every existing Dark Descent/AMFP/no-
+ExposureArea-SOMA-map world), not the real system's spatial blend/fade between multiple
+overlapping areas as the camera moves through them (`WorldPos`/`Scale`/`TransitionTime` are
+read from the file but unused) - a real, honest first step, not the full system; noted as a
+follow-up below.
+
+Applying it needed a real value, not just a stored one: `cRendererDeferred::CopyToFrameBuffer()`
+(the final accumulation-buffer-to-screen blit) now draws one additional untextured fullscreen
+quad in `eMaterialBlendMode_Mul` blend mode, colored `(exposure,exposure,exposure,1)`, right
+after the existing blit - skipped entirely when `GetGlobalExposure()==1.0f` (the common case, so
+truly zero extra draw call for every world that doesn't set one). No new shader file needed
+(this repo carries no `.glsl`/`.hpsl` of its own - every game's shaders come from its own real,
+separately-installed data - so a fixed-function multiply-blend quad is the only way to add a new
+visual effect from engine code alone, matching how `SetTexture(unit, NULL)` + `glDisable()`
+already correctly falls back to plain vertex-color modulation, confirmed by reading
+`cLowLevelGraphicsSDL::SetTexture()`).
+
+**Verified live, headless, real `00_01_apartment.hpm`**: hpl.log shows `applying global exposure
+-1.200000 EV (0.435275 linear) from 'ExposureArea_1'`; the real `PlayerStartArea_1` screenshot
+went from solid overexposed white to a properly-exposed gray-toned scene with visible wall
+texture/streak detail - a dramatic, clearly real improvement, not a subtle one.
+
+### Correction: the skybox fix's "magenta triangles gone" claim was wrong
+
+The previous PORTING_NOTES section ("SOMA: shader-filename/sampler-binding fixes...") claimed
+the skybox fix made the magenta triangles "completely gone," verified by comparing a yaw=0
+screenshot (still showing magenta) against a *different*, yaw=1.57 screenshot (genuinely
+magenta-free) - comparing screenshots at two different camera angles and treating the second as
+representative of the fix was a mistake, caught this session while re-verifying with the
+exposure fix layered on top (the same two triangular patches are still visible at yaw=0, just
+darkened to purple by the new exposure multiply - confirmed by the color relationship: pure
+magenta `(255,0,255)` times the `0.435` exposure scale is almost exactly the dark purple/maroon
+actually seen). What the skybox fix *did* genuinely verify and fix, real and still holding:
+camera-responsiveness (screenshots now differ across camera moves - confirmed again this
+session, still true) and the FPS recovery (~3-8 -> ~19-22, still holding). What it did NOT fix:
+whatever specifically produces these two magenta/purple triangular patches at this particular
+camera pose.
+
+Investigated further this session, real findings (not yet a fix):
+- The real map data (`00_01_apartment.hpm`'s `<GlobalSettings><SkyBox .../>`) declares
+  `Active="true" Color="0.67 0.79 1 1" Texture="D:/work/depth/redist/textures/environment/
+  lab_env.dds"` - a light sky-blue tint, not magenta at all, so this is not the skybox's
+  *intended* appearance.
+- `iRenderer::RenderBasicSkyBox()` (`Renderer.cpp`) only checks `GetSkyBoxActive()`, never
+  `GetSkyBoxTexture()!=NULL` - if the texture failed to load, the skybox mesh still draws every
+  frame with the fixed skybox program (now real, post-skyfix) sampling an unbound/disabled
+  texture unit 0 (`SetTexture(0, mpCurrentWorld->GetSkyBoxTexture())` with a NULL texture calls
+  `SetTexture`'s NULL path, which `glDisable()`s that unit rather than binding anything) - a
+  plausible source of undefined/driver-specific "error" color on Mesa's AGX driver, which is
+  known to return a distinctive magenta-ish pattern for incomplete/unbound texture reads on some
+  paths, matching what's seen.
+- However: no `Warning("SOMA hpm: could not load skybox texture ...")` (the exact line
+  `cWorldLoaderHpm::LoadGlobalSettings()` already logs on a real load failure - see its own
+  comment, written by a prior session, calling the "D:/work/..." authored path "a known Phase 1
+  data-path gap") appears anywhere in a real boot's hpl.log, and every texture-resolution layer
+  between there and the actual file load (`cTextureManager::CreateCubeMap()` ->
+  `CreateSimpleTexture()` -> `FindTexture2D()` -> `iResourceManager::FindLoadedResource()` ->
+  `cFileSearcher::GetFilePath()`) resolves purely by basename (`cString::GetFileName()` strips
+  everything up to the last `/`, same mechanism every other real texture in this map already
+  loads through successfully) - meaning the prior session's "will not resolve here" comment on
+  that code is itself an unverified assumption, not confirmed by reading the actual resolution
+  code, and the real `lab_env.dds` file does exist in the install
+  (`textures/environment/lab_env.dds`). So the texture most likely *does* load successfully by
+  basename, same as everything else - meaning the missing-texture theory above is probably
+  wrong too, and the real cause is something else entirely (a DDS cubemap face-order/format
+  quirk this old DevIL 1.7.8 loader mishandles, or something unrelated to the skybox at all that
+  just happens to render as two triangles near where the skybox mesh's corners would be).
+- Also confirmed harmless, not the cause: a burst of unrelated `ERROR: Sampler X does not
+  exist, could not bind it to unit N` lines (`aSpecularMap`/`aHeightMap`/`aDiffuseMap`/
+  `aNoiseMap`/`aSkyboxMap` - note "aSkyboxMap", not the real HPSL name "aSkyMap") appear for
+  many different shaders throughout a real boot - this is `GLSLProgram.cpp`'s sampler-binding
+  loop (`SetupProgramAndTextures()`/link-time setup) trying a fixed set of Dark-Descent-
+  convention sampler names against every linked program regardless of whether that particular
+  program declares them; `glGetUniformLocation()` correctly returns -1 for names a given
+  program doesn't have and the loop `continue`s past it - confirmed non-fatal, doesn't affect
+  which unit any *real* sampler ends up bound to (which is separately, correctly handled by this
+  session's earlier `ApplyHpslTextureBindings()` fix for HPSL shaders, or GLSL's own unit-0
+  default for a sampler nothing ever explicitly binds).
+
+**Not fixed this session** - correctly flagging this as still open rather than repeating the
+earlier overclaim. Next step for whoever picks this up: instrument `CreateCubeMap()`/
+`CreateSimpleTexture()` directly (a temporary log line printing `sPath`/whether `pTexture` came
+back non-NULL) to settle whether the skybox texture load actually succeeds or not, before
+guessing further at what happens after.

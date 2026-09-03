@@ -96,6 +96,7 @@ namespace hpl {
 		LoadLightsTrack(asFile);
 		LoadAreasTrack(asFile);
 		LoadSoundsTrack(asFile);
+		LoadExposureAreaTrack(asFile);
 		CheckTerrainTrackInactive(asFile);
 
 		///////////////////////
@@ -470,6 +471,72 @@ namespace hpl {
 
 					cSoundEntity* pSound = cEngineFileLoading::LoadSound(pObjElem, "", mpCurrentWorld);
 					if (pSound) ++mlSoundsCreated;
+				}
+			}
+		}
+
+		hplDelete(pDoc);
+	}
+
+	//-----------------------------------------------------------------------
+
+	// SOMA/Rebirth/Bunker's real HPL3-authored maps can carry a
+	// .hpm_ExposureArea sidecar (HPLMapTrack_ExposureArea) - real per-area
+	// exposure/white-point/transition-time data for a camera-position-based
+	// HDR exposure system this engine has never had a native concept of at
+	// all (Dark Descent's own maps never ship one, and cWorldLoaderHplMap -
+	// the separate, DD-only loader - has no matching track). Not every map
+	// has one (unlike StaticObject/Light/etc, always expected), so
+	// abWarnIfMissing=false below, unlike every other track load in this
+	// file. Deliberately simplified: applies only the FIRST ExposureArea
+	// entity found as one flat cWorld::SetGlobalExposure() value for the
+	// whole world, not the real system's spatial blend/fade between
+	// multiple overlapping areas as the camera moves through them
+	// (WorldPos/Scale/TransitionTime are read from the file but unused here)
+	// - a real, honest first step, not the full system. See
+	// cWorld::SetGlobalExposure()'s own doc comment and
+	// cRendererDeferred::CopyToFrameBuffer() for how the resulting scale is
+	// actually applied.
+	void cWorldLoaderHpm::LoadExposureAreaTrack(const tWString& asBaseFile)
+	{
+		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_ExposureArea"), false);
+		if (pDoc == NULL) return;
+
+		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_ExposureArea");
+		if (pRoot)
+		{
+			bool bApplied = false;
+			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
+			while (bApplied == false && sectionIt.HasNext())
+			{
+				cXmlElement* pSection = sectionIt.Next()->ToElement();
+				if (pSection->GetValue() != "Section") continue;
+
+				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
+				if (pObjects == NULL) continue;
+
+				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
+				while (bApplied == false && objIt.HasNext())
+				{
+					cXmlElement* pObjElem = objIt.Next()->ToElement();
+					if (pObjElem->GetValue() != "ExposureArea") continue;
+
+					// HPL3's Exposure attribute is a real photographic EV
+					// (stops) compensation, same convention as
+					// cCamera-less exposure systems elsewhere (2 == twice
+					// as bright, -1 == half as bright) - convert to the
+					// plain linear multiply cWorld::SetGlobalExposure()
+					// stores.
+					float fExposureEv = pObjElem->GetAttributeFloat("Exposure", 0);
+					mpCurrentWorld->SetGlobalExposure(powf(2.0f, fExposureEv));
+					bApplied = true;
+
+					Log("SOMA hpm: applying global exposure %f EV (%f linear) from '%s' - real per-area "
+						"exposure data exists (WorldPos %s, additional areas if any) but only this first "
+						"one is used, see LoadExposureAreaTrack()'s comment\n",
+						fExposureEv, powf(2.0f, fExposureEv),
+						pObjElem->GetAttributeString("Name", "").c_str(),
+						pObjElem->GetAttributeString("WorldPos", "").c_str());
 				}
 			}
 		}

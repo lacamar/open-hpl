@@ -90,6 +90,7 @@ namespace hpl {
 		void LoadLightsTrack(const tWString& asBaseFile);
 		void LoadAreasTrack(const tWString& asBaseFile);
 		void LoadSoundsTrack(const tWString& asBaseFile);
+		void LoadExposureAreaTrack(const tWString& asBaseFile);
 		void CheckTerrainTrackInactive(const tWString& asBaseFile);
 
 		////////////////////////////////////////

@@ -228,6 +228,21 @@ namespace hpl {
 		const cColor& GetFogColor(){ return mFogColor; }
 		bool GetFogCulling() { return mbFogCulling;}
 
+		///// EXPOSURE ////////////////////////////////
+		// A single global linear scale applied to the final composited frame
+		// (cRendererDeferred::CopyToFrameBuffer(), see its own comment) -
+		// defaults to 1.0 (a true no-op: every existing world that never
+		// calls SetGlobalExposure() renders byte-identically to before this
+		// existed). Real HPL3-authored content (SOMA/Rebirth/Bunker) ships
+		// per-area exposure/white-point/transition-time data this engine has
+		// no loader for yet - this is deliberately just the single global
+		// scale a loader can set from the first/nearest such area as a real
+		// but simplified stand-in, not the full position-blended system. See
+		// soma/src/game/SomaLoaders.cpp's cSomaAreaLoader_Exposure.
+
+		void SetGlobalExposure(float afX){ mfGlobalExposure = afX; }
+		float GetGlobalExposure(){ return mfGlobalExposure; }
+
 		///// AREA ////////////////////////////////
 		
 		cAreaEntity* CreateAreaEntity(const tString &asName);
@@ -401,6 +416,8 @@ namespace hpl {
 		float mfFogEnd;
 		float mfFogFalloffExp;
 		cColor mFogColor;
+
+		float mfGlobalExposure;
 
 		tLightList mlstLights;
 		tMeshEntityList mlstDynamicMeshEntities;

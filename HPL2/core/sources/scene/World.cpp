@@ -146,6 +146,8 @@ namespace hpl {
 		mFogColor = cColor(1,1);
 		mbFogCulling = true;
 
+		mfGlobalExposure = 1.0f;
+
 
 		msFilePath = _W("");
 	}
