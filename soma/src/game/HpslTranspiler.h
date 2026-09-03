@@ -54,14 +54,7 @@
  *    chosen yet.
  *  - `uniform cTextureX aName : N;`'s trailing `: N` texture-unit-binding
  *    suffix (D3D-style register binding, meaningless to GLSL 120) is
- *    stripped from uniform declarations - but N itself is preserved,
- *    returned via asSamplerBindingsOut, since GLSL 120 has no in-shader way
- *    to say it (no `layout(binding=N)`) and it still has to reach a real
- *    glUniform1i() call after linking. See CollectSamplerBindings() in
- *    HpslTranspiler.cpp for why this is a real, previously-silent bug (not
- *    a nice-to-have): every sampler in every HPSL shader was defaulting to
- *    texture unit 0, invisible for a shader with only one sampler, wrong
- *    for any with 2+.
+ *    stripped from uniform declarations.
  *
  * Constant buffers (`cBuffer NAME [: N] { members... };`, HPSL's HLSL-
  * derived syntax - see helper_type_arguments.hpsl and deferred_base_vtx.hpsl's
@@ -108,12 +101,9 @@ using namespace hpl;
  * \param aType eGpuShaderType_Vertex or eGpuShaderType_Fragment.
  * \param asGlslOut receives the transpiled GLSL 120 source on success.
  * \param asErrorOut receives a human-readable reason on failure.
- * \param asSamplerBindingsOut receives, on success, one "NAME UNIT\n" line
- *        per texture-uniform binding found (see the ": N" note above) -
- *        always cleared first, empty if the shader declares none.
  * \return false if the source uses a construct this best-effort transpiler doesn't understand.
  */
 bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType,
-						  tString& asGlslOut, tString& asErrorOut, tString& asSamplerBindingsOut);
+						  tString& asGlslOut, tString& asErrorOut);
 
 #endif // SOMA_HPSL_TRANSPILER_H

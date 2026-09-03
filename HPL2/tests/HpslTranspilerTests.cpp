@@ -149,14 +149,14 @@ static const char* gpsDebugOverdrawFrag =
 
 static void TestClearPair()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 
-	CHECK(TranspileHpslToGlsl(gpsClearVtx, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(gpsClearVtx, eGpuShaderType_Vertex, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_Position = gl_Vertex");
 	CHECK_CONTAINS(sGlsl, "varying vec4 px_vColor");
 	CHECK_NOT_CONTAINS(sGlsl, "varying vec4 px_vPosition"); // must NOT be a varying
 
-	CHECK(TranspileHpslToGlsl(gpsClearFrag, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(gpsClearFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0]");
 	CHECK_CONTAINS(sGlsl, "gl_FragData[3]");
 	CHECK_CONTAINS(sGlsl, "#extension GL_ARB_draw_buffers");
@@ -164,9 +164,9 @@ static void TestClearPair()
 
 static void TestNullPair()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 
-	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr));
 	// a_mtxModelViewProjection becomes gl_ModelViewProjectionMatrix (see
 	// SubstituteFixedFunctionMatrixUniforms() in HpslTranspiler.cpp) - not
 	// a lingering plain uniform. This is real, live-found behavior (see
@@ -178,7 +178,7 @@ static void TestNullPair()
 	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex)");
 	CHECK_NOT_CONTAINS(sGlsl, "mul(");
 
-	CHECK(TranspileHpslToGlsl(gpsNullFrag, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(gpsNullFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "uniform sampler2D aColorMap;"); // ": 0" binding index stripped
 	CHECK_NOT_CONTAINS(sGlsl, "aColorMap : 0");
 	CHECK_CONTAINS(sGlsl, "texture2D(aColorMap, px_vTexCoord0.xy)");
@@ -199,21 +199,21 @@ static void TestFragPositionUsed()
 	// A synthetic case (no real .hpsl file happens to actually reference
 	// px_vPosition in its body) proving the gl_FragCoord substitution
 	// itself actually fires when it's not a no-op.
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f px_vPosition,\n"
 		"		  out cVector4f px_vColor : 0)\n"
 		"{\n"
 		"	px_vColor = px_vPosition;\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = gl_FragCoord");
 }
 
 static void TestDepthonlyFrag()
 {
-	tString sGlsl, sErr, sSamplerBindings;
-	CHECK(TranspileHpslToGlsl(gpsDepthonlyFrag, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsDepthonlyFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0]");
 	// px_vPosition is declared but unused in the body - just must not be
 	// emitted as a bogus varying (nothing would ever write to a
@@ -224,8 +224,8 @@ static void TestDepthonlyFrag()
 
 static void TestPosteffectQuadVtx()
 {
-	tString sGlsl, sErr, sSamplerBindings;
-	CHECK(TranspileHpslToGlsl(gpsPosteffectQuadVtx, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsPosteffectQuadVtx, eGpuShaderType_Vertex, sGlsl, sErr));
 	// No mul() in this file (uses GLSL-native '*'/'+' operators directly),
 	// so no extra parens get added - only the identifier substitution
 	// (vtx_vPosition->gl_Vertex, px_vPosition->gl_Position) applies here.
@@ -244,45 +244,45 @@ static void TestVertexTexCoord1Builtin()
 	// real .hpsl file (none of the ones examined this pass reference it
 	// in a shader body), but confirms the mapping table entry itself
 	// fires correctly when it IS referenced.
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f vtx_vTexCoord1,\n"
 		"		  out cVector4f px_vColor)\n"
 		"{\n"
 		"	px_vColor = vtx_vTexCoord1;\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "px_vColor = gl_MultiTexCoord1");
 }
 
 static void TestDebugOverdrawFrag()
 {
-	tString sGlsl, sErr, sSamplerBindings;
-	CHECK(TranspileHpslToGlsl(gpsDebugOverdrawFrag, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsDebugOverdrawFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = vec4(1.0f / 48.0f)");
 }
 
 static void TestMulRejectsWrongArgCount()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psBadMul =
 		"void main(out cVector4f px_vColor : 0)\n"
 		"{\n"
 		"	px_vColor = mul(a, b, c);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psBadMul, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings) == false);
+	CHECK(TranspileHpslToGlsl(psBadMul, eGpuShaderType_Fragment, sGlsl, sErr) == false);
 	CHECK_CONTAINS(sErr, "mul()");
 }
 
 static void TestSampleRejectsUnknownTexture()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psBadSample =
 		"void main(out cVector4f px_vColor : 0)\n"
 		"{\n"
 		"	px_vColor = sample(aNotDeclared, uv);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psBadSample, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings) == false);
+	CHECK(TranspileHpslToGlsl(psBadSample, eGpuShaderType_Fragment, sGlsl, sErr) == false);
 	CHECK_CONTAINS(sErr, "aNotDeclared");
 }
 
@@ -320,8 +320,8 @@ static const char* gpsVertexArgumentsCBuffer =
 
 static void TestConstantBufferFlattening()
 {
-	tString sGlsl, sErr, sSamplerBindings;
-	CHECK(TranspileHpslToGlsl(gpsVertexArgumentsCBuffer, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsVertexArgumentsCBuffer, eGpuShaderType_Vertex, sGlsl, sErr));
 
 	// The "cBuffer NAME { ... };" wrapper itself must be gone - GLSL 120
 	// has no such syntax.
@@ -359,7 +359,7 @@ static void TestConstantBufferFlattening()
 // must still get "uniform " prepended like any other declaration.
 static void TestConstantBufferPreservesDefine()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"cBuffer cSkinningData\n"
 		"{\n"
@@ -371,7 +371,7 @@ static void TestConstantBufferPreservesDefine()
 		"{\n"
 		"	px_vColor = avDualQuatBones[0];\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "#define kMaxBones 96");
 	CHECK_CONTAINS(sGlsl, "uniform vec4 avDualQuatBones[kMaxBones*2];");
 }
@@ -382,7 +382,7 @@ static void TestConstantBufferPreservesDefine()
 // rest of the header, same as a texture uniform's own ": N" suffix.
 static void TestConstantBufferWithBindingIndex()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"cBuffer cInstanceArguments : 2\n"
 		"{\n"
@@ -394,7 +394,7 @@ static void TestConstantBufferWithBindingIndex()
 		"{\n"
 		"	px_vColor = cVector4f(float(alInstanceOffset + alInstanceStride));\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_NOT_CONTAINS(sGlsl, "cBuffer");
 	CHECK_NOT_CONTAINS(sGlsl, ": 2");
 	CHECK_CONTAINS(sGlsl, "uniform int alInstanceOffset;");
@@ -409,7 +409,7 @@ static void TestConstantBufferWithBindingIndex()
 // onto a gl_MultiTexCoordN slot.
 static void TestUnknownVertexInputBecomesAttribute()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f vtx_vPosition,\n"
 		"		  in cVector4f vtx_vTangent,\n"
@@ -419,7 +419,7 @@ static void TestUnknownVertexInputBecomesAttribute()
 		"{	\n"
 		"	px_vPosition = vtx_vPosition + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight;\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vTangent;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneIndices;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneWeight;");
@@ -435,7 +435,7 @@ static void TestUnknownVertexInputBecomesAttribute()
 // same pattern as the other texture types.
 static void TestTexture3D()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"uniform cTexture3D aDissolveMap : 14;\n"
 		"\n"
@@ -443,7 +443,7 @@ static void TestTexture3D()
 		"{\n"
 		"	out_vColor = sample(aDissolveMap, cVector3f(0.0, 0.0, 0.0));\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "uniform sampler3D aDissolveMap;");
 	CHECK_CONTAINS(sGlsl, "texture3D(aDissolveMap, vec3(0.0, 0.0, 0.0))");
 }
@@ -461,7 +461,7 @@ static void TestTexture3D()
 // preserve).
 static void TestShadowSample()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"uniform cTexture2DCmp aShadowMap : 6;\n"
 		"\n"
@@ -475,7 +475,7 @@ static void TestShadowSample()
 		"	float fShadowAmount = sampleCmp(aShadowMap, px_vPosition.xy, px_vPosition.z);\n"
 		"	out_vColor = cVector4f(fShadowAmount);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "uniform sampler2DShadow aShadowMap;");
 	CHECK_CONTAINS(sGlsl, "sampler2DShadow aTex");
 	CHECK_CONTAINS(sGlsl, "shadow2D(aTex, vec3(avLocation.xy + avOffset, avLocation.z)).x");
@@ -488,13 +488,13 @@ static void TestShadowSample()
 
 static void TestSampleCmpRejectsWrongArgCount()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psBadSampleCmp =
 		"void main(out cVector4f px_vColor : 0)\n"
 		"{\n"
 		"	px_vColor = cVector4f(sampleCmp(a, b));\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psBadSampleCmp, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings) == false);
+	CHECK(TranspileHpslToGlsl(psBadSampleCmp, eGpuShaderType_Fragment, sGlsl, sErr) == false);
 	CHECK_CONTAINS(sErr, "sampleCmp()");
 }
 
@@ -510,7 +510,7 @@ static void TestSampleCmpRejectsWrongArgCount()
 // the usual 120, but *only* when load() actually appears.
 static void TestLoadBecomesTexelFetch()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"uniform cTexture2D aNormalDepthMap : 4;\n"
 		"\n"
@@ -519,7 +519,7 @@ static void TestLoadBecomesTexelFetch()
 		"	cVector2l vMapCoords = cVector2l(gl_FragCoord.xy);\n"
 		"	out_vColor = load(aNormalDepthMap, vMapCoords, 0);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "#version 130");
 	CHECK_NOT_CONTAINS(sGlsl, "#version 120");
 	CHECK_CONTAINS(sGlsl, "ivec2 vMapCoords = ivec2(gl_FragCoord.xy);");
@@ -535,15 +535,15 @@ static void TestLoadBecomesTexelFetch()
 // RewriteLoadIntrinsic()'s comment in HpslTranspiler.cpp).
 static void TestNoLoadKeepsVersion120()
 {
-	tString sGlsl, sErr, sSamplerBindings;
-	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "#version 120");
 	CHECK_NOT_CONTAINS(sGlsl, "#version 130");
 }
 
 static void TestLoadRejectsNonSampler2D()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psBadLoad =
 		"uniform cTextureCube aEnvMap : 0;\n"
 		"\n"
@@ -551,7 +551,7 @@ static void TestLoadRejectsNonSampler2D()
 		"{\n"
 		"	px_vColor = load(aEnvMap, cVector2l(0, 0), 0);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psBadLoad, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings) == false);
+	CHECK(TranspileHpslToGlsl(psBadLoad, eGpuShaderType_Fragment, sGlsl, sErr) == false);
 	CHECK_CONTAINS(sErr, "aEnvMap");
 }
 
@@ -571,7 +571,7 @@ static void TestLoadRejectsNonSampler2D()
 // MaterialType_BasicSolid.cpp's SetMatrixf(kVar_a_mtxUV, ...)).
 static void TestFixedFunctionMatrixSubstitution()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"cBuffer cVertexArguments\n"
 		"{\n"
@@ -590,7 +590,7 @@ static void TestFixedFunctionMatrixSubstitution()
 		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);\n"
 		"	cVector4f vUv = mul(a_mtxUV, vtx_vPosition);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
 
 	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * vLocalVertexPos)");
 	CHECK_CONTAINS(sGlsl, "mat3(gl_NormalMatrix)");
@@ -628,7 +628,7 @@ static void TestMatrix3f()
 	// would fire here too and defeat the point of this test (isolating
 	// the cMatrix3f->mat3 type mapping on its own, independent of that
 	// separate rewrite).
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"uniform cMatrixf a_mtxCustomNormal;\n"
 		"\n"
@@ -637,7 +637,7 @@ static void TestMatrix3f()
 		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxCustomNormal);\n"
 		"	px_vColor = cVector4f(mtxNormal[0], 1.0);\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "mat3 mtxNormal = mat3(a_mtxCustomNormal);");
 	CHECK_NOT_CONTAINS(sGlsl, "cMatrix3f");
 }
@@ -651,7 +651,7 @@ static void TestMatrix3f()
 // GpuShaderManager wiring work, fixed here (StripLineComments()).
 static void TestParameterListTrailingCommentWithComma()
 {
-	tString sGlsl, sErr, sSamplerBindings;
+	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f px_vPosition,\n"
 		"		  out cVector4f out_vDiffuse : 0,		//diffuse rgb, translucency a\n"
@@ -662,7 +662,7 @@ static void TestParameterListTrailingCommentWithComma()
 		"	out_vNormal = px_vPosition;\n"
 		"	out_vSpecular = px_vPosition;\n"
 		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr, sSamplerBindings));
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = gl_FragCoord");
 	CHECK_CONTAINS(sGlsl, "gl_FragData[1] = gl_FragCoord");
 	CHECK_CONTAINS(sGlsl, "gl_FragData[2] = gl_FragCoord");

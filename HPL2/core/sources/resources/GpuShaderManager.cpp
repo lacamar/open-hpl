@@ -29,11 +29,42 @@
 
 #include "resources/FileSearcher.h"
 
+#include <regex>
+
 #ifdef WIN32
 #include <io.h>
 #endif
 
 namespace hpl {
+
+	//-----------------------------------------------------------------------
+
+	// HPSL declares each texture uniform's binding as a D3D-style
+	// "uniform cTextureX NAME : N;" suffix (see HpslTranspiler.cpp's
+	// StripUniformBindingIndices(), which discards it since GLSL 120 has no
+	// such syntax) - unlike Dark Descent's own hand-written .glsl shaders,
+	// which instead rely on a "@define sampler_NAME N" preprocessor line
+	// parsed into cPreprocessParser's own var container and consumed just
+	// below (the "Sampler to texture units setup" block). HPSL source has no
+	// such @define, so that block finds nothing and every fragment-shader
+	// sampler silently stays bound to GLSL's default texture unit 0 - live-
+	// confirmed via SOMA's real deferred_light_frag.hpsl: aDiffuseMap/
+	// aNormalDepthMap/aSpecMap/aShadowMap/aShadowOffsetMap all sampling
+	// whatever happened to be bound to unit 0, producing visible garbage
+	// instead of real lighting even once the shader compiles and runs.
+	// Extracted here (from the pre-transpile, post-@ifdef-preprocessing HPSL
+	// text, where the ": N" suffix is still present) and fed to the same
+	// iGpuShader::AddSamplerUnit() the @define path already uses, so both
+	// mechanisms land on the same consumer (cGLSLProgram::Compile()).
+	static void ApplyHpslTextureBindings(iGpuShader* apShader, const tString& asHpslText)
+	{
+		static const std::regex bindRe("uniform\\s+cTexture\\w*\\s+(\\w+)\\s*:\\s*(\\d+)\\s*;");
+		auto begin = std::sregex_iterator(asHpslText.begin(), asHpslText.end(), bindRe);
+		for(auto it = begin; it != std::sregex_iterator(); ++it)
+		{
+			apShader->AddSamplerUnit((*it)[1].str(), cString::ToInt((*it)[2].str().c_str(), 0));
+		}
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -143,34 +174,6 @@ namespace hpl {
 			if(asGlslName == gvHpslFilenameAliases[i][0]) return gvHpslFilenameAliases[i][1];
 		}
 		return cString::SetFileExt(asGlslName, "hpsl");
-	}
-
-	//-----------------------------------------------------------------------
-
-	// Applies the "NAME UNIT\n"-per-line sampler bindings
-	// TranspileHpslToGlsl() hands back (see its asSamplerBindingsOut doc
-	// comment in HpslTranspiler.h) via real iGpuShader::AddSamplerUnit()
-	// calls - the HPSL-path equivalent of the "@define sampler_NAME N" scan
-	// just above, for a binding syntax that scan can't see at all.
-	static void ApplyHpslSamplerBindings(iGpuShader *apShader, const tString& asBindings)
-	{
-		size_t lLineStart = 0;
-		while(lLineStart < asBindings.size())
-		{
-			size_t lLineEnd = asBindings.find('\n', lLineStart);
-			if(lLineEnd == tString::npos) lLineEnd = asBindings.size();
-
-			tString sLine = asBindings.substr(lLineStart, lLineEnd - lLineStart);
-			lLineStart = lLineEnd + 1;
-
-			size_t lSpacePos = sLine.find(' ');
-			if(lSpacePos == tString::npos || lSpacePos == 0) continue;
-
-			tString sName = sLine.substr(0, lSpacePos);
-			int lUnit = cString::ToInt(sLine.substr(lSpacePos + 1).c_str(), 0);
-
-			apShader->AddSamplerUnit(sName, lUnit);
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -286,11 +289,12 @@ namespace hpl {
 			//HPSL -> GLSL fallback: same preprocessor as the .glsl path
 			//above, transpiled the rest of the way by the registered
 			//game-module callback.
-			tString sHpslSamplerBindings;
+			tString sHpslPreTranspile;
 			if(bIsHpslFallback)
 			{
 				tString sGlsl, sTranspileError;
-				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError, sHpslSamplerBindings)==false)
+				sHpslPreTranspile = sParsedOutput;
+				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError)==false)
 				{
 					Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
 						  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
@@ -317,6 +321,8 @@ namespace hpl {
 			//Sampler to texture units setup, if needed
 			if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
 			{
+				if(bIsHpslFallback) ApplyHpslTextureBindings(pShader, sHpslPreTranspile);
+
 				tParseVarMap *pVarMap = mpPreprocessParser->GetParsingVarContainer()->GetMapPtr();
 				tParseVarMapIt varIt = pVarMap->begin();
 				for(; varIt != pVarMap->end(); ++varIt)
@@ -336,17 +342,6 @@ namespace hpl {
 					}
 
 				}
-
-				// HPSL's own ": N" texture-unit-binding syntax is a
-				// different, D3D-derived convention the scan above (which
-				// only understands hand-written .glsl's "@define
-				// sampler_NAME N") can't see at all - see
-				// TranspileHpslToGlsl()'s asSamplerBindingsOut doc comment
-				// in HpslTranspiler.h for why, and PORTING_NOTES.md's "SOMA"
-				// section for the real symptom this fixed (every HPSL
-				// fragment shader's 2nd+ sampler silently defaulting to
-				// texture unit 0).
-				if(bIsHpslFallback) ApplyHpslSamplerBindings(pShader, sHpslSamplerBindings);
 			}
 		}
 		/////////////////////////////////////////
@@ -394,8 +389,8 @@ namespace hpl {
 					tString sParsedOutput;
 					mpPreprocessParser->Parse(&sFileData, &sParsedOutput, &emptyVars, cString::GetFilePathW(sHpslPath));
 
-					tString sGlsl, sTranspileError, sHpslSamplerBindings;
-					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError, sHpslSamplerBindings))
+					tString sGlsl, sTranspileError;
+					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError))
 					{
 						pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
 						pShader->SetFullPath(sHpslPath);
@@ -409,12 +404,9 @@ namespace hpl {
 						}
 						else
 						{
-							// Same reasoning as the apVarContainer branch
-							// above - HPSL's ": N" sampler bindings never
-							// reach the "@define sampler_NAME N" scan that
-							// path relies on, since Parse() doesn't
-							// recognize the D3D-style syntax as such a var.
-							if(aType == eGpuShaderType_Fragment) ApplyHpslSamplerBindings(pShader, sHpslSamplerBindings);
+							if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
+								ApplyHpslTextureBindings(pShader, sParsedOutput);
+
 							AddResource(pShader);
 						}
 					}

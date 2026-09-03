@@ -63,8 +63,8 @@ namespace
 			return false;
 		}
 
-		tString sGlsl, sTranspileError, sSamplerBindings;
-		if (TranspileHpslToGlsl(sPreprocessed, aType, sGlsl, sTranspileError, sSamplerBindings) == false)
+		tString sGlsl, sTranspileError;
+		if (TranspileHpslToGlsl(sPreprocessed, aType, sGlsl, sTranspileError) == false)
 		{
 			Error("HpslTranspilerSelfTest: '%s' transpile failed: %s\n", asHpslName.c_str(), sTranspileError.c_str());
 			return false;

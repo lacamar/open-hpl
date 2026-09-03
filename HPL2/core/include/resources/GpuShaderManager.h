@@ -48,17 +48,9 @@ namespace hpl {
 	 * \param aType eGpuShaderType_Vertex or eGpuShaderType_Fragment.
 	 * \param asGlslOut receives the transpiled GLSL source on success.
 	 * \param asErrorOut receives a human-readable reason on failure.
-	 * \param asSamplerBindingsOut receives, on success, one "NAME UNIT\n"
-	 *        line per texture-uniform binding the HPSL source declared (its
-	 *        D3D-style "uniform cTextureX aName : N;" suffix - GLSL 120 has
-	 *        no in-shader equivalent, so this is CreateShader()'s only way
-	 *        to learn it and call iGpuShader::AddSamplerUnit() itself; see
-	 *        HpslTranspiler.h for why this can't just reuse the existing
-	 *        "@define sampler_NAME N" preprocessor-var scan below).
 	 */
 	typedef bool (*tHpslTranspileCallback)(const tString& asHpslSource, eGpuShaderType aType,
-											tString& asGlslOut, tString& asErrorOut,
-											tString& asSamplerBindingsOut);
+											tString& asGlslOut, tString& asErrorOut);
 
 	class cGpuShaderManager : public iResourceManager
 	{

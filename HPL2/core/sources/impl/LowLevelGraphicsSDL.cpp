@@ -669,6 +669,12 @@ namespace hpl {
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
         mbGrab = abX;
+        // Skip the real X11 grab under headless testing - the window is never
+        // shown (see the SDL_WINDOW_HIDDEN block in Init() above), and calling
+        // it anyway exercises real pointer/keyboard grab machinery against the
+        // physical desktop's X server for no benefit (headless camera control
+        // goes through HeadlessControl's JSON protocol, not OS input).
+        if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         if (mpScreen) {
             SDL_SetWindowGrab(mpScreen, abX ? SDL_TRUE : SDL_FALSE);
@@ -680,6 +686,13 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
+		// Same headless guard as SetWindowGrab() above - and more directly
+		// motivated: on X11, SDL2 relative-mouse-mode emulation periodically
+		// calls XWarpPointer() to re-center the real cursor, which is real
+		// synthetic input activity against the physical desktop's X server
+		// even though the game window is hidden. Observed waking the monitor
+		// during headless mouselook-driven camera testing.
+		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
 #endif

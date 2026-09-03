@@ -164,6 +164,11 @@ namespace hpl {
 	#define kVar_afFalloffExp						20
 	#define kVar_afDepthDiffMul						21
 	#define kVar_afSkipEdgeLimit					22
+	#define kVar_avScreenToFarPlane					23
+	#define kVar_avInvScreenSize					24
+	#define kVar_a_mtxLightViewProj					25
+	#define kVar_afFalloffPow						26
+	#define kVar_afSpotFalloffPow					27
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -534,6 +539,40 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
+				// SOMA/HPSL's real deferred_light_frag.hpsl reconstructs view-space
+				// position from gl_FragCoord + two uniforms Dark Descent's own
+				// hand-written deferred_light_frag.glsl never needed (it instead
+				// interpolates a per-vertex far-plane ray, gvFarPlanePos, computed
+				// in the vertex shader) - harmless no-op registration for DD's own
+				// program (name doesn't exist there, GetVariableAsId just returns
+				// false), required for HPSL's GetPos() to produce anything but a
+				// degenerate on-axis position. See SetupProgramAndTextures().
+				mpProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
+				// HPSL's real spotlight uniform is named "a_mtxLightViewProj", not
+				// "a_mtxSpotViewProj" (confirmed via the real deferred_light_frag.hpsl
+				// source) - same shape of name-mismatch as the UseDepth/UseLinearDepth
+				// combo-variable alias found earlier. Registered alongside the
+				// existing DD-native name so SetupLightProgramVariables() can feed
+				// both spellings; each is a no-op on whichever program doesn't
+				// declare it.
+				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
+				// afFalloffPow/afSpotFalloffPow: HPSL's analytic light falloff
+				// exponents (raises the linear "1 - dist/radius"/cone-edge term
+				// to this power) - a real per-light parameter in HPSL, but one
+				// HPL2's own cLight/cLightSpot classes have no field for (HPL2's
+				// original engine did radial falloff via an authored 1D texture
+				// curve instead, GetFalloffMap(), which this HPSL shader doesn't
+				// even sample). Left unset, both default to GLSL's 0, and
+				// pow(x, 0) == 1 for any x - i.e. *no* falloff at all inside the
+				// light's radius/cone, so every light contributes its full
+				// unattenuated color everywhere it reaches; with several
+				// overlapping lights and additive blending that saturates the
+				// accumulation buffer to solid white. No authored per-light
+				// value exists to read, so use a fixed, reasonable exponent
+				// instead of leaving this at the degenerate 0 default.
+				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
 			}
 
 			//////////////////////////////
@@ -1411,9 +1450,18 @@ namespace hpl {
 				apLightData->mpShadowTexture = NULL;
 			}
 			
+			// HPSL's real deferred_light_frag.hpsl reads this matrix
+			// unconditionally for every spot light (both its UseGobo and
+			// no-gobo branches use it just to derive the near-clip/cone
+			// attenuation term, not only for gobo projection or shadowing),
+			// unlike Dark Descent's own deferred_light_frag.glsl - so this
+			// can't stay gated behind GetGoboTexture()/mbCastShadows the way
+			// the DD-native a_mtxSpotViewProj spelling below still is.
+			cMatrixf mtxFinal = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), m_mtxInvView);
+			apProgram->SetMatrixf(kVar_a_mtxLightViewProj, mtxFinal);
+
 			if(pLight->GetGoboTexture() || apLightData->mbCastShadows)
 			{
-				cMatrixf mtxFinal = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), m_mtxInvView);
 				apProgram->SetMatrixf(kVar_a_mtxSpotViewProj, mtxFinal);
 			}
 		}
@@ -1464,8 +1512,27 @@ namespace hpl {
 		if(pProgram)
 		{
 			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+
+			// HPSL's GetPos(vec2 avUV, float afDepth) reconstructs view-space
+			// position purely from gl_FragCoord + these two uniforms (no
+			// per-vertex ray, unlike Dark Descent's own gvFarPlanePos varying -
+			// see the registration comment above). Map pixel coords directly
+			// (avUV is gl_FragCoord.xy, not normalized) onto the far-plane
+			// rectangle already computed once per frame in SetupRenderVariables().
+			pProgram->SetVec4f(kVar_avScreenToFarPlane,
+								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarBottom);
+			pProgram->SetVec2f(kVar_avInvScreenSize,
+								1.0f / (float)mvRenderTargetSize.x,
+								1.0f / (float)mvRenderTargetSize.y);
+
+			// See the registration comment above - no authored value exists,
+			// this just avoids the degenerate pow(x,0)==1 "no falloff" default.
+			pProgram->SetFloat(kVar_afFalloffPow, 2.0f);
+			pProgram->SetFloat(kVar_afSpotFalloffPow, 2.0f);
 		}
-		
+
 		/////////////////////////
 		//Textures
 		SetTexture(4,pLight->GetFalloffMap());
@@ -1918,7 +1985,7 @@ namespace hpl {
 			if(pQuery)
 			{
 				bool bLightInvisible = false;
-				if(pQuery->FetchResults())	
+				if(pQuery->FetchResults())
 				{
 					int lSampleCount = pQuery->GetSampleCount();
 					if(lSampleCount <= mpCurrentSettings->mlSampleVisiblilityLimit)
@@ -1929,16 +1996,16 @@ namespace hpl {
 					if(mbLog)
 						Log(" Fetching query for light '%s'/%d. Have %d samples. Visible: %d\n", pLight->GetName().c_str(), pLight,lSampleCount, !bLightInvisible);
 				}
-				
+
 				ReleaseOcclusionQuery(pQuery);
 				pLightData->mpQuery = NULL;
-				
+
 				if(bLightInvisible)
 				{
 					continue;
 				}
 			}
-			
+
 			mpCurrentSettings->mlNumberOfLightsRendered++;
 
 			////////////////////////
@@ -1983,7 +2050,7 @@ namespace hpl {
 		//Log("Near lights: %d\n",mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad].size());
 		//Log("Large lights: %d\n",mvSortedLights[eDeferredLightList_StencilFront_RenderBack].size());
 		//Log("Default lights: %d\n",mvSortedLights[eDeferredLightList_RenderBack].size());
-		
+
 		//////////////////////////////
 		//Sort lists
 		for(int i=0; i<eDeferredLightList_LastEnum; ++i)
