@@ -2092,3 +2092,218 @@ out of this task's scope) - a real fix should make the log path unique per
 process, e.g. keyed off `OPENHPL_HEADLESS_SOCKET`'s own path or the PID.
 (Fixed later this session - see the "Suffix hpl.log with PID under headless
 mode" commit.)
+
+## SOMA: real geometry finally renders - matrix-uniform bug found and fixed; lighting still missing (this session, continued after the wiring above merged)
+
+Task: the coordinator merged this session's constant-buffer work (`73fcb19`) and the
+wiring above onto `master`, then ran `start_map` against real `00_01_apartment.hpm` with
+real `.mat`-driven combo variables (not the self-test's manually-chosen ones) and found
+`deferred_base_vtx.hpsl`/`deferred_base_frag.hpsl` now compile, but
+`deferred_gbuffer_solid_frag.hpsl` failed at real GL compile time with `'px_fLinearDepth'
+undeclared`. Asked to keep iterating directly against the live pipeline (`start_map` +
+screenshots), fixing whatever real gaps it surfaces, until actual lit/textured rendering
+works or a genuine wall is hit.
+
+**Fixed three more real compile gaps, each found by actually running the live pipeline**
+(not guessed at, not from the self-test's own chosen combos):
+
+1. **`UseDepth`/`UseLinearDepth` combo-variable naming mismatch** (not a transpiler bug -
+   fixed in `HPL2/core/sources/resources/GpuShaderManager.cpp`, the HPSL-fallback branch of
+   `cGpuShaderManager::CreateShader()`). Root cause, confirmed by reading the actual combo
+   variables reaching the transpiler (temporarily logged them - see history, not left in the
+   final diff): this engine's own `cMaterialType_SolidDiffuse::LoadSpecificData()`
+   (`HPL2/core/sources/graphics/MaterialType_BasicSolid.cpp`) unconditionally sets
+   `"UseDepth"` - a name written for Dark Descent's own hand-written GLSL `@ifdef`
+   vocabulary - but `deferred_base_vtx.hpsl`/`deferred_gbuffer_solid_frag.hpsl` gate their
+   own (also unconditionally-*written*) linear-depth output behind `"UseLinearDepth"`
+   instead, so the fragment body read an identifier nothing had declared. Aliased in the
+   HPSL-fallback path only (`if(apVarContainer->Get("UseDepth")!=NULL)
+   apVarContainer->Add("UseLinearDepth");` right before `Parse()`) - Dark Descent's own
+   compiles never reach this branch, so this can't affect them. Turning that alias on then
+   newly exercised `deferred_base_vtx.hpsl`'s `afInvFarPlane`/`afT`/sway/scrolling-noise/
+   soft-particle/instancing-offset uniforms, all gated behind a *second* HPSL-only name,
+   `"UseExtendedArgs"` (confirmed via `grep` to be the *only* place that name appears
+   anywhere in the real `.hpsl` corpus, for exactly this purpose) - so that's now always
+   added too for any HPSL compile (harmless when unused: every member it gates is a plain
+   declaration, read only by code separately gated behind its own specific flag).
+2. **`cTexture2DCmp`/`sampleCmp()`** (`soma/src/game/HpslTranspiler.cpp`) -
+   `deferred_light_frag.hpsl`'s shadow-map lookup. Maps to `sampler2DShadow`/
+   `shadow2D(tex, vec3(uv, refZ)).x`. Deliberately the *non-projective* `shadow2D` - this
+   engine's own hand-written `deferred_light_frag.glsl` uses the projective `shadow2DProj`
+   with a `vec4` (including a `.w` for the perspective divide), but every real `sampleCmp()`
+   call site only ever passes 3 arguments and never reads a `.w` component at all, so there's
+   no perspective-divide term in the HPSL source to preserve - inventing one would be
+   unfaithful, not just unnecessary.
+3. **`cVector2l`/`cVector3l`/`cVector4l` + `load()`/`texelFetch`** (same file) -
+   `deferred_light_frag.hpsl`'s G-buffer readback,
+   `load(aNormalDepthMap, vMapCoords, 0)`. The `cVector*l` types map to the same `ivecN` as
+   the existing `cVector*i` (HPSL's other integer-vector spelling - both exist in the real
+   corpus). `load(tex, coords, mip)` maps 1:1 to `texelFetch(tex, coords, mip)` - HLSL's
+   `Texture.Load()` 3-argument shape matches GLSL's `texelFetch()` exactly, no argument
+   reshuffling needed (unlike `sampleCmp` above). The catch: `texelFetch` needs GLSL 130,
+   unavailable in this engine's GLSL 120 baseline - so `TranspileHpslToGlsl()` now bumps the
+   emitted `#version` to 130, but **only** for the specific shader files where `load()`
+   actually fires (tracked via a `bool& abFired` out-parameter on the new
+   `RewriteLoadIntrinsic()`), never globally. GLSL 130 is still a compatibility-profile
+   version (core profiles didn't exist until 150), so `gl_FragData`/`gl_FragCoord`/
+   `varying`/`gl_Vertex`/`gl_MultiTexCoordN` all keep working unchanged in every shader that
+   needs the bump - the version-conflict concern flagged in earlier passes (`gl_Vertex`
+   removed in 150+ *core* profile) simply doesn't apply here, since nothing is requesting a
+   core profile and this bump is fragment-shader-only in every real case found so far.
+
+**Verified live after these three**: `hpl.log` for a real `start_map` run against
+`00_01_apartment.hpm` shows **zero** `"Couldn't transpile"`/`"Failed to compile GLSL
+shader"`/`"Couldn't create program"` errors for any currently-requested material shader -
+`deferred_base_vtx.hpsl`, `deferred_base_frag.hpsl`, `deferred_gbuffer_solid_frag.hpsl`, and
+`deferred_light_frag.hpsl` (once it's actually requested - see below) all compile clean.
+6 new dependency-free regression cases added to `HPL2/tests/HpslTranspilerTests.cpp` (20
+total at this point).
+
+**But the screenshot told a different story than "compiling == working"** - exactly the
+caution the coordinator's own instruction anticipated. At `PlayerStartArea_1`'s real
+coordinates (`-10.75 1.7 8.25`, the same position a previous session verified matches the
+map's authored `WorldPos`), every direction and every nearby camera position (including
+directly beside a real light source, `WorldPos="-8.5 2.05 6"` from the map's own
+`.hpm_Light` data) showed **only the skybox** - identical stormy clouds regardless of yaw/
+pitch/position, meaning real solid geometry (145 static objects, confirmed loaded and
+confirmed compiling clean) was never actually appearing on screen at all.
+
+**Root-caused, not guessed at.** Added a temporary diagnostic
+(`Log("...SolidObjectNum=%d", mpCurrentRenderList->GetSolidObjectNum())` in
+`cRendererDeferred::RenderObjects()`, `HPL2/core/sources/graphics/RendererDeferred.cpp` -
+removed again once done, not left in the final diff) and confirmed **~427-430 solid objects
+were genuinely being submitted for rendering every frame** - ruling out an
+occlusion-culling/frustum-culling explanation immediately. That pointed at the shaders
+themselves producing degenerate output despite compiling. Reading this engine's own
+`HPL2/core/sources/graphics/RenderFunctions.cpp` (`iRenderFunctions::SetMatrix()`, called
+for every solid-object draw) confirmed the real cause: **this engine feeds every per-object
+transform exclusively through the legacy OpenGL fixed-function matrix stack**
+(`mpLowLevelGraphics->SetMatrix(eMatrix_ModelView, viewMatrix * modelMatrix)` and a separate
+`eMatrix_Projection` call) - `SetMatrix()` computes `eMatrix_ModelView` as exactly `(view *
+per-object model)`, matching this engine's own hand-written `deferred_base_vtx.glsl`
+(a real Dark Descent install's copy), which does `gl_Position = ftransform();` - the GLSL
+120 fixed-function built-in, using `gl_ModelViewMatrix` implicitly, **no custom `a_mtx*`
+uniform anywhere**. There is no by-name uniform-setting call in this engine's C++ for
+`"a_mtxModelViewProjection"`/`"a_mtxModelView"`/`"a_mtxProjection"`/`"a_mtxNormal"`
+specifically (a real, working by-name mechanism *does* exist and *is* used for one other
+matrix, confirmed: `MaterialType_BasicSolid.cpp`'s
+`apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix())` for UV animation - that one
+genuinely receives real data). Left as flattened plain uniforms (this session's earlier,
+now-superseded behavior), `a_mtxModelViewProjection` etc. would sit at GLSL's default
+all-zero value forever, transforming every real vertex to the origin - degenerate, invisible
+geometry that **compiles perfectly fine**, which is exactly why nothing before an actual
+render/screenshot check could have caught it, and exactly the gap the coordinator's
+instruction to screenshot (not just check compile logs) was written to catch.
+
+**Fixed**: new `SubstituteFixedFunctionMatrixUniforms()` in `HpslTranspiler.cpp` maps those
+four specific, well-known HPSL uniform names to their exact GLSL 120 fixed-function
+built-in equivalents (`gl_ModelViewProjectionMatrix`/`gl_ModelViewMatrix`/
+`gl_ProjectionMatrix`/`gl_NormalMatrix`) and removes their now-redundant `uniform mat4
+NAME;` declaration (whether that declaration came from `FlattenConstantBuffers()` or was
+already a plain uniform in the source, e.g. the simpler `base_vtx.hpsl`'s own `uniform
+cMatrixf a_mtxModelViewProjection;` - the same bug, independently confirmed to exist there
+too, now also fixed by the same substitution). Deliberately **not** substituted:
+`"a_mtxModel"` (a model-only, not model-view, matrix - no fixed-function equivalent exists,
+since the legacy matrix stack only ever exposes the *combined* modelview state, never model
+alone - a real, still-open gap, see below) and `"a_mtxUV"` (already correctly fed real data
+through the different, working `SetMatrixf(kVar_a_mtxUV, ...)` mechanism mentioned above -
+touching it would be both unnecessary and wrong).
+
+**Verified live, dramatic before/after**: same camera positions as the "only skybox"
+screenshots above, rebuilt and redeployed. **Before this fix**: pure skybox in every
+direction, confirmed via four separate screenshots at three different positions/angles
+(rotating yaw and pitch did rotate the visible sky correctly - ruling out a stale-screenshot
+artifact - but never revealed anything but sky). **After**: the skybox is now largely gone,
+replaced by real geometry silhouettes (rendered black/unlit - see below) that correctly
+*occlude* the sky the way real solid geometry should - i.e. solid objects are now genuinely
+being drawn in their correct world-space positions for the first time this port has ever
+confirmed. A few bright magenta triangles remain visible at some angles - almost certainly
+an unrelated, separate "missing shader" fallback-color artifact (magenta is the
+conventional broken-material color in this engine's family), most likely the skybox mesh
+itself or a light-volume debug shape hitting one of the filename-mismatch gaps noted below,
+not investigated further this pass.
+
+**Existing tests updated, not just added to**: `TestNullPair`/`TestConstantBufferFlattening`/
+`TestMatrix3f` all happened to use one of the four now-substituted names as an incidental
+placeholder in their own fixture text (testing unrelated things - uniform pass-through,
+cBuffer flattening, the `cMatrix3f`→`mat3` mapping) - each updated to either assert the new
+(correct) substituted output or renamed its fixture uniform to something outside the
+substituted set (e.g. `TestMatrix3f`'s uniform renamed `a_mtxCustomNormal`) so it keeps
+testing only its own original, narrower point. One new dedicated test,
+`TestFixedFunctionMatrixSubstitution`, added. 21 cases total, all passing.
+
+**Still not lit - next, concretely narrowed-down blocker, NOT a transpiler-syntax problem**:
+geometry now renders, but as flat black silhouettes, not diffuse-lit. Investigated with the
+same "add a temporary counter, read hpl.log, don't guess" discipline used above:
+- A completely fresh process (ruling out any shader-cache pollution from an earlier scene),
+  `start_map` against `00_01_apartment.hpm`, camera placed directly beside a real light
+  source: `deferred_light_frag.hpsl` is **never requested at all** - confirmed via `grep -oE
+  "[A-Za-z_0-9]+\.hpsl"` over the fresh run's log, waited 11+ seconds (many frames) to rule
+  out a query/warm-up-frame timing artifact.
+- This is **not** because zero lights are visible/culled: a second temporary diagnostic
+  (`Log("...GetLightNum=%d", mpCurrentRenderList->GetLightNum())` at the top of
+  `cRendererDeferred::SetupLightsAndRenderQueries()`, also removed again, not left in the
+  final diff) showed **37 lights** genuinely reaching the render list every single frame at
+  this exact camera position. So lights are found and considered visible, but something
+  between that point and the actual per-light draw call (which would request
+  `deferred_light_frag.hpsl`) drops all 37 of them before any of `RenderLights()`'s five
+  dispatch functions (`RenderLights_Box_StencilFront_RenderBack`/
+  `RenderLights_Box_RenderBack`/`RenderLights_StencilBack_ScreenQuad`/
+  `RenderLights_StencilFront_RenderBack`/`RenderLights_RenderBack` - each apparently handling
+  a different light-type/size/shadow bucket) ever calls `SetProgram()`/`CreateShader()` for
+  one. **Deliberately not chased further this pass**: `InitLightRendering()` (the function
+  that sorts `mvTempDeferredLights` into `mvSortedLights[eDeferredLightList_*]` buckets
+  consumed by those five dispatch functions,
+  `HPL2/core/sources/graphics/RendererDeferred.cpp:1829`) is the concrete next place to
+  look - but it's shared HPL2 core rendering code used by *every* module including Dark
+  Descent, a materially higher-risk piece of code to touch speculatively than the SOMA-only
+  HPSL transpiler work above, and diagnosing it properly (is it a screen-space-area
+  computation returning 0, a near-plane test, a shadow-quality gate, something else
+  entirely) needs more instrumentation/time than remained this pass. A real, well-scoped,
+  concrete next task for whoever continues - not a vague "lighting is broken."
+- Also found, **not yet fixed, a separate class of gap** (filename mismatches, not shader
+  syntax): several shader requests in this engine's C++ ask for exact `.glsl` filenames that
+  don't exist among the real `.hpsl` corpus's actual names at all (so neither the direct
+  `.glsl` lookup nor the `.hpsl`-fallback lookup finds anything) -
+  `MaterialType_BasicSolid.cpp:330` requests `"deferred_illumination_frag.glsl"` (real file:
+  `deferred_illumination_solid_frag.hpsl`, likely only affects self-illuminating/emissive
+  materials specifically, not general lighting), `RendererDeferred.cpp:413` requests
+  `"deferred_gbuffer_skybox_frag.glsl"` (real file: `deferred_skybox_frag.hpsl`),
+  `MaterialType_Decal.cpp:100` requests `"deferred_decal_frag.glsl"` (real file:
+  `deferred_gbuffer_decal_frag.hpsl`), and `PostEffect_Bloom.cpp:59` requests
+  `"posteffect_bloom_blur_vtx.glsl"` (real file, if any, not confirmed -
+  `posteffect_bloomhdr_blur_frag.hpsl` is the closest real name, note also `_frag` not
+  `_vtx`). Same shape of fix
+  as the `UseDepth`→`UseLinearDepth` alias above (a small filename-alias table somewhere in
+  the HPSL-fallback path), but for filenames instead of combo-variable names - not attempted
+  this pass, added as a new TASKS.md bullet.
+
+**Build/verify**: `cmake --build amnesia/src/build --target HpslTranspilerTests Soma
+-j$(nproc) && ctest --test-dir amnesia/src/build -R HpslTranspilerTests
+--output-on-failure` (21/21 passing). Live re-verification used a scratch directory with
+real SOMA data reached via symlinks (`/tmp/soma-live` this session, not committed/left
+behind), `OPENHPL_HEADLESS_SOCKET` for headless mode, and `XDG_STATE_HOME` overridden to a
+private scratch path each launch (still necessary - see the "hpl.log path collides" note
+above, now fixed on `master` via PID-suffixing but a private `XDG_STATE_HOME` is still the
+simplest way to get a clean, predictable log path per test run without needing to discover
+the PID first). Both real fix commits (`636560f` "fix real compile gaps", `0ec59d7`
+"substitute fixed-function matrix built-ins") are on branch
+`worktree-agent-a616b92d063d83a8f`, not merged/pushed - left for the user to review per this
+session's standing instruction.
+
+**Concrete next steps, most-valuable first**:
+1. `InitLightRendering()`/`RenderLights_*` dispatch - why 37 correctly-identified visible
+   lights never reach a single `CreateShader()` call. The single most valuable remaining
+   step toward real lit rendering; needs care since it's shared HPL2 core code.
+2. The filename-mismatch table (illumination/skybox/decal/bloom-blur) - smaller in scope,
+   same shape of fix as the `UseDepth` alias, affects secondary rendering (emissive glow,
+   sky, decals, bloom) rather than base lighting.
+3. `a_mtxModel` still has no working uniform-setting path (no fixed-function equivalent,
+   and no by-name `SetMatrixf` call for it found) - currently only matters for the
+   `UseSway`/`UseDetailMesh`/`UseStaticMeshInstancing` combos this session's testing never
+   exercised (the "Position - Default" non-instanced path this session verified doesn't
+   reference it), but will need solving before those combos work.
+4. The C++ mesh-upload wiring for `vtx_vTangent`/`vtx_vBoneIndices`/`vtx_vBoneWeight` (flagged
+   in the earlier "SOMA: HPSL constant buffers" section) remains unaddressed - now more
+   clearly the next thing standing between "flat-lit geometry" and "normal-mapped geometry",
+   once (1) above is solved.
