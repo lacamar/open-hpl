@@ -2307,3 +2307,187 @@ session's standing instruction.
    in the earlier "SOMA: HPSL constant buffers" section) remains unaddressed - now more
    clearly the next thing standing between "flat-lit geometry" and "normal-mapped geometry",
    once (1) above is solved.
+
+## SOMA: real-time lights now render lit geometry - three real uniform/binding gaps found and fixed, not a dispatch bug (this session)
+
+Task: root-cause and fix the "SOMA: real-time light rendering never invokes
+`deferred_light_frag.hpsl` at all" bullet from TASKS.md/the previous session's PORTING_NOTES
+entry above - the hypothesis being that `InitLightRendering()`
+(`RendererDeferred.cpp:1829`) was dropping all 37 real lights into no bucket before any of
+`RenderLights()`'s five dispatch functions ever called `SetProgram()`/`CreateShader()`.
+
+**First finding: that premise no longer holds on current `master`.** Before touching
+anything, added temporary `Log()` instrumentation (removed again before the final commit,
+same discipline as prior sessions) to `InitLightRendering()` and both
+`RenderLights_StencilFront_RenderBack()`/`RenderLights_RenderBack()`, then ran a fresh
+headless process against real `00_01_apartment.hpm` (`start_map ... pos=PlayerStartArea_1`).
+Result: `InitLightRendering()` genuinely buckets 22 of the 37 lights every frame
+(`RenderBack=12 StencilFront_RenderBack=2 Box_RenderBack=6 Box_StencilFront_RenderBack=2`,
+the rest correctly culled by the existing large-light occlusion-query mechanism), and
+`SetupProgramAndTextures()` (`RendererDeferred.cpp:1413`) *does* call
+`mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags)` every frame,
+returning real non-NULL program pointers for several distinct combo-flag values (61, 109,
+33, 5, 37 observed) - `deferred_light_frag.hpsl` transpiles and compiles clean, zero
+"Couldn't transpile"/"Couldn't create program" errors anywhere in the log. Whatever produced
+the original "never invokes it at all" symptom (most likely a transpile-time failure in an
+earlier, less-complete state of `HpslTranspiler.cpp` that has since been fixed by later
+commits, e.g. the matrix-uniform-substitution fix two sessions ago) is no longer present -
+this is a real, empirically-checked finding, not a guess, and the stale TASKS.md bullet is
+corrected below rather than left to mislead the next reader.
+
+**So the dispatch bug is resolved already; the actual remaining cause of flat-black/wrong
+rendering was three separate, real uniform/binding gaps between HPSL's actual shader source
+and this engine's C++ uniform-feeding code** - found by dumping the transpiled
+`deferred_light_frag.glsl` output to a scratch file (temporary `fopen`/`fwrite` in
+`GpuShaderManager.cpp`, removed again) and reading it against the real
+`deferred_light_frag.hpsl` source and the real (working, Dark-Descent-native)
+`deferred_light_frag.glsl` side by side:
+
+1. **`avScreenToFarPlane`/`avInvScreenSize` never set at all (affects every light type).**
+   HPSL's `GetPos(vec2 avUV, float afDepth)` reconstructs view-space position purely from
+   `gl_FragCoord.xy` and these two uniforms - a completely different technique from Dark
+   Descent's own `deferred_light_frag.glsl`, which instead interpolates a per-vertex
+   far-plane ray (`gvFarPlanePos`, a `varying` computed in the vertex shader from
+   `afNegFarPlane` and a tangent term). Since HPL2's C++ was written for the varying-based
+   technique, it never had a reason to set either of these two uniform names anywhere -
+   confirmed via `grep -rn "ScreenToFarPlane\|InvScreenSize" HPL2/core/`, zero hits before
+   this session's fix. Left at GLSL's default zero, `GetPos()` collapsed to a degenerate
+   on-axis position independent of screen location. Fixed in `SetupProgramAndTextures()`
+   (`RendererDeferred.cpp`): registered two new `kVar_*` ids
+   (`avScreenToFarPlane`/`avInvScreenSize`) for `eDefferredProgramMode_Lights` and set them
+   every light draw from the same `mfFarLeft`/`mfFarRight`/`mfFarTop`/`mfFarBottom`/
+   `mvRenderTargetSize` fields `SetupRenderVariables()` already computes once a frame for
+   the (already-working) full-screen light quad path - mapping raw pixel coordinates
+   directly onto the far-plane rectangle, mirroring the exact quad `UpdateqQuadVertexPostion`
+   already builds from the same fields elsewhere in this file.
+2. **Spotlight view-projection matrix registered under the wrong uniform name.** HPL2's C++
+   registers/sets `a_mtxSpotViewProj` (matching Dark Descent's own real
+   `deferred_light_frag.glsl`, confirmed via `grep` on the real installed file) - but SOMA's
+   real `deferred_light_frag.hpsl` declares this uniform as `a_mtxLightViewProj` (confirmed
+   via `grep -n "a_mtxLightViewProj" .../core/shaders/hpsl/deferred_light_frag.hpsl`, real
+   SOMA install), and the transpiler passes uniform names through verbatim - no alias exists,
+   same shape of gap as the earlier `UseDepth`→`UseLinearDepth` combo-variable alias, just for
+   a uniform name instead of a preprocessor variable. `GetVariableAsId()`
+   (`GLSLProgram.cpp:200`) fails closed (returns `false`, no crash) for a name that doesn't
+   exist in the compiled program, so this was a silent no-op, not an error - the real
+   `a_mtxLightViewProj` uniform stayed at its GLSL zero-matrix default forever. Every spot
+   light's `vProjectedUv = mul(px_mtxLightViewProj, vec4(vPos,1))` therefore divided by a
+   zero `.w`, producing NaN, which propagated through `fAttenuatuion *= max(0,
+   vProjectedUv.z)` and onward into every spot light's whole contribution (max-with-NaN is
+   driver-defined in GLSL, but a NaN pixel value reliably shows as black or garbage). Also
+   found while fixing this: HPL2's C++ only ever set the (any-name-spelled) matrix `if
+   (pLight->GetGoboTexture() || apLightData->mbCastShadows)`, but HPSL's real
+   `@ifdef LightType_Spot` branch (both its `UseGobo` and no-gobo halves) reads this matrix
+   *unconditionally* just to derive the near-clip/cone-edge attenuation term - Dark Descent's
+   own shader apparently doesn't need it outside gobo/shadow, HPSL's does for every spot
+   light. Fixed: `SetupLightProgramVariables()` now always computes and sets
+   `kVar_a_mtxLightViewProj` for any spot light (the pre-existing `kVar_a_mtxSpotViewProj`
+   call, still gated behind gobo/shadow, is left untouched for Dark Descent's own shader).
+3. **Every fragment-shader sampler silently bound to texture unit 0 (the most severe of the
+   three - this produced genuinely garbled/rainbow output, not just wrong brightness).**
+   HPSL declares each texture uniform's binding as a D3D-style `uniform cTextureX NAME : N;`
+   suffix, which `HpslTranspiler.cpp`'s `StripUniformBindingIndices()` discards entirely (by
+   design - GLSL 120 has no such syntax) with nothing downstream to consume the index instead.
+   Dark Descent's own hand-written `.glsl` shaders instead rely on a `@define sampler_NAME N`
+   preprocessor line (`PreprocessParser.cpp:698`'s `@define` handling), parsed into
+   `cPreprocessParser`'s own variable container and consumed right after compile in
+   `GpuShaderManager.cpp`'s "Sampler to texture units setup" block
+   (`pShader->AddSamplerUnit(name, unit)`, consumed at link time by
+   `cGLSLProgram::Compile()`, `GLSLProgram.cpp:111-130`, via `glUniform1i`). HPSL source has
+   no `@define` lines at all, so that block found nothing for every HPSL-derived fragment
+   shader and silently skipped calling `AddSamplerUnit()` for any sampler - meaning
+   `aDiffuseMap`/`aNormalDepthMap`/`aSpecMap`/`aShadowMap`/`aShadowOffsetMap` (5 distinct
+   samplers in `deferred_light_frag.hpsl` alone) all defaulted to GLSL's implicit unit 0,
+   each reading whatever `SetTexture(0, ...)` had most recently bound there - visually,
+   diffuse color, normal/depth data, specular data and shadow data all sampling the *same*
+   single texture, producing exactly the rainbow/garbage noise pattern seen mid-session
+   (screenshot evidence: a colorful noisy band along solid-geometry edges, completely
+   different in *kind* from the flat-black/flat-white symptoms of gaps 1-2, not just degree).
+   Fixed with a new `ApplyHpslTextureBindings()` helper in `GpuShaderManager.cpp`: regexes
+   `uniform\s+cTexture\w*\s+(\w+)\s*:\s*(\d+)\s*;` out of the *pre-transpile* HPSL text
+   (saved off right before the transpile callback overwrites it - the `: N` suffix is still
+   present there, only `HpslTranspiler.cpp`'s output has it stripped) and calls the exact
+   same `iGpuShader::AddSamplerUnit()` the `@define` path already uses, in both HPSL-fallback
+   branches of `CreateShader()` (the `apVarContainer` branch materials/lights use via
+   `cProgramComboManager`, and the plain-resource branch). Lands on the same consumer as the
+   pre-existing mechanism, so no new code path for `cGLSLProgram::Compile()` to trust.
+
+**Also found, and given a fixed non-authored default rather than left broken**: HPSL's
+`afFalloffPow`/`afSpotFalloffPow` (exponents on the linear "1 - dist/radius"/cone-edge
+attenuation terms) have no HPL2-native equivalent to read - HPL2's own `cLight`/`cLightSpot`
+classes have no per-light falloff-exponent field at all (the original engine did radial
+falloff via an authored 1D texture curve, `iLight::GetFalloffMap()`, which this HPSL shader
+doesn't even sample). Left unset, both default to GLSL's `0`, and `pow(x, 0) == 1` for any
+`x` - i.e. *no* falloff shaping at all within a light's radius/cone, full unattenuated color
+everywhere it reaches. With the position-reconstruction and sampler-binding fixes above
+actually landing correctly, this alone was enough to saturate the accumulation buffer to
+solid white in the same `00_01_apartment.hpm` scene (all three fixes were needed together to
+get *any* meaningfully different image from flat black; this one was needed on top to get a
+non-blown-out one). No authored per-light value exists anywhere in this port's data model to
+read instead, so `SetupProgramAndTextures()` now sets both to a fixed `2.0` - a reasonable,
+clearly-commented placeholder, not a derived-from-data value.
+
+**Verified live, headless, real SOMA install** (`00_01_apartment.hpm`,
+`scripts/headless-check.sh` + `scripts/hpl_control.py`, same pattern as prior sessions):
+- **Before this session's fixes** (current `master`, i.e. after the matrix-uniform fix but
+  before this session's three fixes): screenshot near a real light shows solid black
+  background, flat-shaded magenta triangles (separate, already-delegated bug, not touched),
+  faint white dots (debug gizmos) - matches the "still broken" baseline described in this
+  session's task brief exactly.
+- **After fix 1+2 only** (position reconstruction + spotlight matrix, sampler binding not
+  yet fixed): visibly different from flat black - a colorful noisy/rainbow band appears along
+  real geometry edges - but clearly wrong (garbled, not lit).
+- **After all three fixes + the falloff-exponent default**: real per-pixel lighting/shading
+  gradient visible and tied to actual geometry - moving the camera away from the
+  camera-beside-a-light test position (`set_camera` to a spot further into the room) shows a
+  visible warm-toned vertical-stripe gradient across a wall/paneling surface, not a flat
+  color - genuine per-pixel variation, not just "not black". The scene is still overexposed
+  (large areas saturate to white) close to the many real lights in this small apartment
+  room with the placeholder `2.0` falloff exponent and no tone-mapping/exposure step in this
+  fallback pipeline - a real, separate follow-up (see below), but squarely a *tuning*
+  problem now, not a "the pipeline doesn't work" one.
+- **Dark Descent regression check**: built `Amnesia` from the same tree, deployed as
+  `Amnesia.lightfix.aarch64` into the real Dark Descent Steam install, headless-booted to the
+  Profiles menu screen (the same known-good scene with the real torch spotlight used by
+  earlier sessions) - `hpl.log` has zero lines (this game only writes the file on a
+  warning/error at all, so an absent file is the strongest possible zero-regression signal),
+  and the screenshot shows the torch's warm point-light falloff rendering exactly as before -
+  correct gradient, correct shadowing, no white blowout, no black. Expected: every new
+  `kVar_*`/uniform name this session added is either only read behind SOMA's own HPSL
+  transpile path, or (for the `a_mtxSpotViewProj`→also-`a_mtxLightViewProj` and sampler-unit
+  changes) a harmless no-op against Dark Descent's own real shader/HPSL text, confirmed by
+  `GetVariableAsId()`/the new binding-regex both failing closed for names/patterns that don't
+  exist in DD's own file - Dark Descent never takes the HPSL-fallback branch at all
+  (`mpHpslTranspileCallback` stays `NULL` for it), so its own light rendering path is
+  provably untouched by any of this beyond the harmless new registrations.
+- **Regression tests**: `ctest --test-dir amnesia/src/build --output-on-failure` - all 4
+  tests pass (`PhysicsNewtonTests`, `CStringTests`, `PlatformXdgPathTests`,
+  `HpslTranspilerTests`), no changes needed to any of them (this session's fixes are all in
+  `RendererDeferred.cpp`/`GpuShaderManager.cpp`, not `HpslTranspiler.cpp` itself).
+
+**Files changed**: `HPL2/core/sources/graphics/RendererDeferred.cpp` (new `kVar_*` ids;
+`avScreenToFarPlane`/`avInvScreenSize`/`afFalloffPow`/`afSpotFalloffPow` registration and
+per-light-draw `Set*()` calls in `SetupProgramAndTextures()`; `a_mtxLightViewProj`
+registration and always-on set in `SetupLightProgramVariables()`'s spot-light branch),
+`HPL2/core/sources/resources/GpuShaderManager.cpp` (new `ApplyHpslTextureBindings()` helper,
+called from both HPSL-fallback branches of `CreateShader()`).
+
+**Concrete next steps**:
+1. Real exposure/tone-mapping for the HPSL light-accumulation path, or a data-driven
+   per-light falloff exponent, to fix the remaining overexposure - cosmetic/tuning now, not
+   a "pipeline broken" bug. `deferred_light_frag.hpsl`'s `gl_FragData[0].xyz = vDiffuse *
+   8.0;` "increase precision" scale-up implies a matching `/8.0` (or a real tonemap curve)
+   is expected downstream in whatever composites the accumulation buffer into the final
+   image - worth checking whether that composite step is HPSL-derived too (another gap of
+   the same shape as this session's) or genuinely missing entirely.
+2. The already-known filename-mismatch table (illumination/skybox/decal/bloom-blur, see the
+   previous session's PORTING_NOTES entry above) and the mesh-upload wiring for
+   `vtx_vTangent`/`vtx_vBoneIndices`/`vtx_vBoneWeight` are both still open, independent of
+   this session's work.
+3. `ApplyHpslTextureBindings()`'s regex only matches `uniform cTextureX NAME : N;` -
+   confirmed sufficient for every sampler `deferred_light_frag.hpsl` declares, but not
+   audited against the rest of the 77-file real `.hpsl` corpus; worth a quick grep sweep
+   (`grep -rn "uniform cTexture" core/shaders/hpsl/`) if a not-yet-exercised material shader
+   turns out to have samplers in an unexpected declaration shape (e.g. split across multiple
+   lines) the regex doesn't match - it would fail closed (no binding set, back to the unit-0
+   bug for that one sampler) rather than crash, same as before this fix existed.
