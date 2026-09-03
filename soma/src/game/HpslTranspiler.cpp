@@ -30,9 +30,11 @@ namespace
 	const std::vector<std::pair<tString, tString> > gvTypeMap = {
 		{"cVector4f", "vec4"}, {"cVector3f", "vec3"}, {"cVector2f", "vec2"},
 		{"cVector4i", "ivec4"}, {"cVector3i", "ivec3"}, {"cVector2i", "ivec2"},
+		{"cVector4l", "ivec4"}, {"cVector3l", "ivec3"}, {"cVector2l", "ivec2"},
 		{"cMatrixf", "mat4"}, {"cMatrix3f", "mat3"},
 		{"cTexture2D", "sampler2D"}, {"cTextureCube", "samplerCube"},
 		{"cTextureRect", "sampler2DRect"}, {"cTexture3D", "sampler3D"},
+		{"cTexture2DCmp", "sampler2DShadow"},
 	};
 
 	// Vertex-input semantic name -> GLSL 120 built-in. Only vtx_vPosition
@@ -435,6 +437,76 @@ namespace
 		return mapOut;
 	}
 
+	// Substitutes specific well-known HPSL uniform-matrix names with GLSL
+	// 120's fixed-function built-in equivalents, when a real one exists -
+	// and removes their now-redundant "uniform mat4 NAME;" declaration
+	// (whether it came from FlattenConstantBuffers() or was already a
+	// plain uniform in the source, e.g. base_vtx.hpsl's own
+	// "uniform cMatrixf a_mtxModelViewProjection;").
+	//
+	// Why this exists at all: confirmed by reading this engine's own C++
+	// (HPL2/core/sources/graphics/RenderFunctions.cpp's
+	// iRenderFunctions::SetMatrix(), used for every solid-object draw call)
+	// that per-object transforms are fed exclusively through the legacy
+	// fixed-function matrix stack (mpLowLevelGraphics->SetMatrix(eMatrix_
+	// ModelView, viewMatrix * modelMatrix) and eMatrix_Projection) - the
+	// same mechanism this engine's own hand-written GLSL 120 shaders rely
+	// on (e.g. a real Dark Descent install's deferred_base_vtx.glsl:
+	// "gl_Position = ftransform();", using gl_ModelViewMatrix implicitly,
+	// with NO custom "a_mtx*" uniform at all). There is no by-name uniform-
+	// setting call anywhere in this engine's C++ for
+	// "a_mtxModelViewProjection"/"a_mtxModelView"/"a_mtxProjection"/
+	// "a_mtxNormal" specifically (a real, separate mechanism DOES exist and
+	// IS used for a few other matrices, e.g. MaterialType_BasicSolid.cpp's
+	// apProgram->SetMatrixf(kVar_a_mtxUV, ...) for UV-animation - that one
+	// is left alone here, real per-object data actually reaches it). Left
+	// unsubstituted, a flattened "uniform mat4 a_mtxModelViewProjection;"
+	// would sit at GLSL's default all-zero value forever, transforming
+	// every vertex to the origin - degenerate, invisible geometry, not a
+	// compile error, so nothing before a live render/screenshot check
+	// (see PORTING_NOTES.md's "SOMA" section) could have caught it.
+	//
+	// The mapping is exact, not approximate: RenderFunctions.cpp's
+	// SetMatrix() computes eMatrix_ModelView as
+	// (view matrix * per-object model matrix) before every solid-object
+	// draw call - precisely HPSL's own "a_mtxModelView" semantic - and
+	// gl_ModelViewProjectionMatrix/gl_NormalMatrix are then derived by the
+	// GL driver from that same state (projection * modelview, and the
+	// inverse-transpose of modelview's upper 3x3, respectively) exactly as
+	// their HPSL-side names imply.
+	//
+	// NOT substituted (left as real, currently-never-set uniforms - a
+	// known remaining gap, see PORTING_NOTES.md): "a_mtxModel" (a model-
+	// only, not model-view, matrix - no fixed-function equivalent exists,
+	// since the legacy matrix stack only ever exposes the *combined*
+	// modelview state, never model alone) and "a_mtxUV" (already correctly
+	// fed real data via the by-name SetMatrixf() mechanism mentioned
+	// above - substituting it would be both unnecessary and wrong, since
+	// gl_ModelViewMatrix has nothing to do with UV animation).
+	tString SubstituteFixedFunctionMatrixUniforms(const tString& asSrc)
+	{
+		static const std::vector<std::pair<tString, tString> > gvMatrixBuiltins = {
+			{"a_mtxModelViewProjection", "gl_ModelViewProjectionMatrix"},
+			{"a_mtxModelView", "gl_ModelViewMatrix"},
+			{"a_mtxProjection", "gl_ProjectionMatrix"},
+			{"a_mtxNormal", "gl_NormalMatrix"},
+		};
+
+		tString sOut = asSrc;
+		for (size_t i = 0; i < gvMatrixBuiltins.size(); ++i)
+		{
+			const tString& sName = gvMatrixBuiltins[i].first;
+			const tString& sBuiltin = gvMatrixBuiltins[i].second;
+
+			std::regex declRe("uniform\\s+mat4\\s+" + sName + "\\s*;\\n?");
+			if (std::regex_search(sOut, declRe) == false) continue;
+
+			sOut = std::regex_replace(sOut, declRe, "");
+			sOut = ReplaceIdentifier(sOut, sName, sBuiltin);
+		}
+		return sOut;
+	}
+
 	bool RewriteMulIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
 	{
 		auto formatter = [](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
@@ -475,6 +547,90 @@ namespace
 		};
 		return RewriteCallIntrinsic(asSrc, "sample", formatter, asOut, asErrorOut);
 	}
+
+	// sampleCmp(texture, uv, refZ) - HPSL's HLSL-style shadow-comparison
+	// sample (3-argument: a cTexture2DCmp uniform, a 2-component uv, and a
+	// scalar reference depth to compare against) - rewritten to GLSL 120's
+	// built-in shadow2D(sampler2DShadow, vec3(uv, refZ)), reduced to a
+	// scalar via .x to match sampleCmp's scalar-float HLSL convention
+	// (every real call site assigns its result straight to a float, e.g.
+	// "float fShadowAmount = sampleCmp(...);"). Deliberately the plain
+	// (non-projective) shadow2D, not shadow2DProj: unlike this engine's own
+	// hand-written deferred_light_frag.glsl (which calls shadow2DProj with
+	// a full vec4 including a .w for the perspective divide), every real
+	// HPSL sampleCmp() call site only ever passes 3 arguments and never
+	// reads its uv source's .w component at all (e.g.
+	// "sampleCmp(aShadowMap, avLocation.xy + avOffset, avLocation.z)" from
+	// a cVector4f avLocation - .w simply isn't part of the call) - HPSL's
+	// own shadow-lookup convention here has no projective-divide step to
+	// preserve, so inventing a .w argument that isn't in the source would
+	// be unfaithful, not just unnecessary.
+	bool RewriteSampleCmpIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
+	{
+		auto formatter = [](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != 3)
+			{
+				asErr = "sampleCmp() with " + cString::ToString((int)aArgs.size()) +
+						" argument(s) is not supported (only the 3-argument texture/uv/refZ form is)";
+				return false;
+			}
+			asRepl = "shadow2D(" + aArgs[0] + ", vec3(" + aArgs[1] + ", " + aArgs[2] + ")).x";
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, "sampleCmp", formatter, asOut, asErrorOut);
+	}
+
+	// load(texture, ivecN coords, mipLevel) - HPSL's HLSL-style
+	// Texture.Load() exact-texel fetch (no filtering, integer pixel
+	// coordinates) - real use: deferred_light_frag.hpsl's G-buffer readback,
+	// "load(aNormalDepthMap, vMapCoords, 0)" where vMapCoords is a
+	// cVector2l/ivec2. Maps 1:1 to GLSL's texelFetch(sampler2D, ivec2, int
+	// lod) - same 3-argument shape, no argument reshuffling needed (unlike
+	// sampleCmp above). Only sampler2D is supported (the only texture type
+	// any real load() call site references so far - see PORTING_NOTES.md);
+	// other sampler types are rejected with a clear error rather than
+	// guessed at, same conservative approach as sample()/sampleCmp().
+	//
+	// texelFetch is GLSL 130+, not available in GLSL 120 at all (this
+	// engine's baseline for every other shader) - TranspileHpslToGlsl()
+	// bumps the emitted #version to 130 for exactly (and only) the shader
+	// files where this rewrite actually fires, tracked via abFired. GLSL
+	// 130 is still a compatibility-profile version (core profiles didn't
+	// exist until 150), so gl_FragData/gl_FragCoord/"varying"/gl_Vertex/
+	// gl_MultiTexCoordN etc. all keep working unchanged in the shaders that
+	// need this bump - see HpslTranspiler.h for why a wholesale version
+	// bump was deliberately avoided elsewhere (cTextureBuffer/instancing)
+	// but is safe and scoped here (fragment-shader-only in every real case
+	// found, and additive - texelFetch is a new function, not a
+	// replacement for anything gl_Vertex-related that a vertex shader would
+	// need).
+	bool RewriteLoadIntrinsic(const tString& asSrc, tString& asOut, bool& abFired, tString& asErrorOut)
+	{
+		std::map<tString, tString> mapSamplers = CollectSamplerTypes(asSrc);
+		abFired = false;
+
+		auto formatter = [&mapSamplers, &abFired](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != 3)
+			{
+				asErr = "load() with " + cString::ToString((int)aArgs.size()) +
+						" argument(s) is not supported (only the 3-argument texture/coords/mipLevel form is)";
+				return false;
+			}
+			std::map<tString, tString>::const_iterator it = mapSamplers.find(aArgs[0]);
+			if (it == mapSamplers.end() || it->second != "texture2D")
+			{
+				asErr = "load() references '" + aArgs[0] + "', which isn't a declared uniform sampler2D "
+						"(load() is only supported on sampler2D - see HpslTranspiler.cpp)";
+				return false;
+			}
+			asRepl = "texelFetch(" + aArgs[0] + ", " + aArgs[1] + ", " + aArgs[2] + ")";
+			abFired = true;
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, "load", formatter, asOut, asErrorOut);
+	}
 }
 
 //---------------------------------------------------------------
@@ -484,10 +640,14 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 {
 	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
+	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
+	if (RewriteSampleCmpIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	if (RewriteSampleIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
+	bool bNeedsTexelFetch = false;
+	if (RewriteLoadIntrinsic(sSrc, sSrc, bNeedsTexelFetch, asErrorOut) == false) return false;
 
 	//////////////////////////////
 	// Find "void main(" ... ")" and the "{" ... "}" body that follows it.
@@ -658,8 +818,11 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 		sBody = ReplaceIdentifier(sBody, vBodySubs[i].first, vBodySubs[i].second);
 
 	//////////////////////////////
-	// Assemble final GLSL 120 source.
-	tString sVersionBlock = "#version 120\n";
+	// Assemble final GLSL source - #version 120 for every shader, except a
+	// #version 130 bump for the specific files that actually use load()
+	// (texelFetch needs it - see RewriteLoadIntrinsic() above for why this
+	// narrow, per-file bump is safe unlike a blanket engine-wide one).
+	tString sVersionBlock = bNeedsTexelFetch ? "#version 130\n" : "#version 120\n";
 	if (aType == eGpuShaderType_Fragment && bNeedsFragData)
 		sVersionBlock += "#extension GL_ARB_draw_buffers : enable\n";
 
