@@ -181,7 +181,14 @@ namespace hpl {
 
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
-	
+
+		// See iRenderer::GetSkyBoxProgram()'s doc comment / RenderBasicSkyBox()
+		// in Renderer.cpp - mpSkyBoxProgram is a real, working GLSL/transpiled
+		// program (built in LoadData(), same as every other program this
+		// renderer owns), so expose it instead of leaving the base class's
+		// fixed-function default.
+		iGpuProgram* GetSkyBoxProgram(){ return mpSkyBoxProgram; }
+
 	private:
 		void CopyToFrameBuffer();
 		void SetupRenderList();

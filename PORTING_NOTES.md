@@ -2491,3 +2491,131 @@ called from both HPSL-fallback branches of `CreateShader()`).
    turns out to have samplers in an unexpected declaration shape (e.g. split across multiple
    lines) the regex doesn't match - it would fail closed (no binding set, back to the unit-0
    bug for that one sampler) rather than crash, same as before this fix existed.
+
+## SOMA: shader-filename/sampler-binding fixes, and the magenta skybox artifact finally root-caused (this session)
+
+Two pieces of work, the second finishing what the first's investigation started.
+
+### Filename aliases, HPSL fallback resource-dir gap, real sampler-binding bug (commit `dea9ad5`)
+
+- Added a small filename-alias table to `GpuShaderManager.cpp` (same shape as the existing
+  `UseDepth`->`UseLinearDepth` combo-variable alias) for three real Dark-Descent-vs-HPSL
+  naming mismatches documented in TASKS.md: `deferred_illumination_frag.glsl` ->
+  `deferred_illumination_solid_frag.hpsl`, `deferred_gbuffer_skybox_frag.glsl` ->
+  `deferred_skybox_frag.hpsl`, `deferred_decal_frag.glsl` -> `deferred_gbuffer_decal_frag.hpsl`.
+  `posteffect_bloom_blur_vtx/frag`/`posteffect_bloom_add_frag` deliberately left unaliased -
+  no real HPSL equivalent exists anywhere in the corpus (confirmed by searching it in full).
+- Found the real cause of the "residual `deferred_base_vtx.glsl` lookup failures" bullet in
+  TASKS.md: `cGraphics::Init()`'s hardcoded `core/shaders` resource-dir registration (needed
+  before a game module's own `resources.cfg` loads, since several renderers/material
+  types/post-effect types build GPU programs directly in their own constructors) registered
+  the directory non-recursively. Harmless for Dark Descent/AMFP (no subdirectories under
+  `core/shaders/` in their real installs), but SOMA/Rebirth/Bunker's real HPSL source lives one
+  level down at `core/shaders/hpsl/` - so every shader built during this early bootstrap
+  window failed to find its `.hpsl` fallback file at all. Fixed by registering recursively.
+- `PostEffect_Bloom.cpp`: bail out gracefully (return the input texture untouched) when any of
+  its three GPU programs failed to build, true on the HPSL path since bloom has no real HPSL
+  equivalent. Without this, `SetProgram(NULL)` on a missing program just unbinds whatever
+  shader was last active rather than skipping the draw - full-screen quads still got submitted
+  through the fixed-function pipeline with stale GL state, contributing to the magenta/white
+  artifact investigated below.
+- Two more real HPSL vertex/fragment combo-variable mismatches found once the resource-dir fix
+  let these shaders actually get requested: `deferred_skybox_frag.hpsl` and
+  `posteffect_radial_blur_frag.hpsl` both unconditionally read varyings (`px_vColor`,
+  `px_vTexCoord0`) that `deferred_base_vtx.hpsl` only emits when `UseColor`/`UseUv` are set,
+  which these call sites never set. Fixed at the call site; confirmed harmless for Dark Descent
+  by reading its own real `.glsl` pair for each (neither references the corresponding built-in).
+- The real systemic bug: HPSL's `uniform cTextureX aName : N;` D3D-style texture-unit-binding
+  suffix was stripped and discarded during transpile with no replacement - GLSL 120 has no
+  in-shader way to express it, so it has to reach a real `glUniform1i()` call after linking,
+  which `GpuShaderManager.cpp` already does via `iGpuShader::AddSamplerUnit()`, but only by
+  scanning the preprocessor's own `sampler_NAME=N` parsed-variable map - a convention driven by
+  `@define sampler_NAME N` lines in Dark Descent's own hand-written `.glsl`, which HPSL's `: N`
+  syntax has no way to produce. Every HPSL fragment shader's samplers were silently defaulting
+  to texture unit 0. `TranspileHpslToGlsl()` now takes an `asSamplerBindingsOut` parameter that
+  `GpuShaderManager.cpp` applies directly via `AddSamplerUnit()`, bypassing the
+  preprocessor-var scan for the HPSL path. All 15 `HpslTranspilerTests.cpp` call sites updated
+  for the new signature; `ctest` stays green.
+- Verified live against a real headless boot of `00_01_apartment.hpm`: decal/skybox/
+  illumination filename-alias errors gone, `deferred_base_vtx.glsl` "Couldn't find file" errors
+  gone (22 -> 0, only the three genuinely-missing bloom files remain), zero "Failed to link"
+  errors remain.
+
+### The magenta full-screen artifact, root-caused: fixed-function skybox + missing fog uniforms
+
+The investigation above left a real, separate symptom open: a headless screenshot of
+`00_01_apartment.hpm` showed two large, flat-shaded magenta triangles, and - discovered by a
+parallel coordinating session doing its own verification pass - the **entire frame was
+overexposed near-white and completely unresponsive to camera position/orientation**: repeated
+screenshots from independently-launched processes at different camera poses were
+byte-for-byte pixel-identical, which is not possible for real camera-dependent 3D rendering.
+That second symptom was the real clue - it meant a screen-space-independent, full-frame draw
+was swamping everything else.
+
+Root cause, found by bisecting which render pass produces full-frame, camera-independent
+output: `iRenderer::RenderBasicSkyBox()` (`Renderer.cpp`, shared base class, called from every
+renderer's `RenderObjects()`) draws the world's skybox cubemap through the fixed-function
+pipeline - `SetProgram(NULL)`. That's correct-enough behavior on the mature desktop OpenGL
+drivers this engine originally shipped against, but on this project's real test platform
+(Mesa's AGX driver, Asahi Linux/Apple Silicon), fixed-function rendering of a bound
+`GL_TEXTURE_CUBE_MAP` with no shader produced solid, wrong, saturated color instead of actually
+sampling the cubemap - and, being a skybox, it's drawn at infinite depth behind everything,
+filling the entire frame regardless of camera orientation (explaining both the magenta
+triangles - the visible facets of the skybox mesh - and the complete camera-independence, since
+a skybox's world-space geometry is deliberately camera-rotation-invariant by design, it just
+should be *sampling a real texture*, not flat-shading). Confirmed this is SOMA-specific in
+practice, not a latent Dark Descent bug: no real Dark Descent map ships a non-empty
+`SkyBoxTexture` (`SkyBoxActive` is false everywhere in the real Dark Descent install), while
+`00_01_apartment.hpm` has both `SkyBoxActive=true` and a real cubemap set.
+
+Fix: added `iRenderer::GetSkyBoxProgram()` (`Renderer.h`, defaults to `NULL` - unchanged
+fixed-function behavior for any renderer that doesn't override it) and
+`cRendererDeferred::GetSkyBoxProgram()` (`RendererDeferred.h`, returns the real, working
+`mpSkyBoxProgram` this renderer already builds in `LoadData()` for its own now-dead
+`RenderDeferredSkyBox()` pass - see the existing comment on that function, it's been commented
+out since this engine shipped, so `mpSkyBoxProgram` was unused dead weight until now).
+`RenderBasicSkyBox()` now calls `SetProgram(GetSkyBoxProgram())` instead of
+`SetProgram(NULL)`.
+
+Fixing the skybox surfaced a second, same-shape bug one layer down: `deferred_fog_frag.hpsl`
+(SOMA's real fog shader, both the full-screen and per-area variants) unconditionally
+reconstructs view-space position from `gl_FragCoord` via `avScreenToFarPlane`/`avInvScreenSize`
+- the exact same uniforms and formula as `deferred_light_frag.hpsl`'s already-fixed case (see
+the "real-time lights now render lit geometry" section above) - but neither was ever
+registered/set for the fog program. Fixed identically: registered both variable ids on
+`mpFogProgramManager` and set them from the same `mfFarLeft/mfFarRight/mfFarTop/mfFarBottom`/
+`mvRenderTargetSize` values already computed once per frame, in both `RenderFullScreenFog()`
+and the per-`cFogArea` variant.
+
+**Verified live, headless, real `00_01_apartment.hpm`, both fixes together**: the magenta
+triangles are completely gone. Camera-independence is gone too - confirmed by diffing two
+screenshots taken from the same process at the same position but different yaw
+(`ImageChops.difference(...).getbbox()` now reports a real, full-frame difference, not `None`)
+- proof the renderer is genuinely responding to the camera again, not just "no more magenta by
+coincidence." FPS also recovered to ~22 (previously observed as low as ~3-8 FPS in the same
+scene before this fix, likely the fixed-function skybox path forcing extra state
+changes/driver fallback work every frame on this GPU). The scene is still overexposed
+near-white - the same real, separate tone-mapping/exposure follow-up already flagged in the
+"real-time lights" section above, not a new regression from this fix; a few faint vertical
+streaky texture patterns and small debug-gizmo dots are visible through the overexposure,
+consistent with real (if blown-out) geometry rendering underneath rather than a solid clear
+color.
+
+### Follow-ups
+
+- Tone-mapping/exposure: SOMA's real lit geometry is now visible but overexposed white in most
+  of the frame at the real `PlayerStartArea_1` spawn (close to multiple real lights). Not yet
+  investigated - likely needs whatever real HDR tonemap/exposure pass HPSL's pipeline expects
+  that this scaffold doesn't yet perform, or a real per-light intensity/attenuation tuning gap
+  beyond the `afFalloffPow`/`afSpotFalloffPow` fixed defaults already added.
+- `posteffect_bloom_*`: still genuinely absent from the real HPSL corpus (confirmed by a full
+  corpus search this session) - bloom just doesn't run for SOMA at all right now (graceful
+  no-op via the `PostEffect_Bloom.cpp` fix above), which is fine for correctness but means
+  SOMA's real bloom look is missing. Would need either a hand-written GLSL bloom shader pair
+  bypassing the HPSL fallback entirely, or confirmation from a real disassembly of SOMA's own
+  shipped shader binaries (if any exist beyond the `.hpsl` source tree) that no such pass ships.
+- `RenderDeferredSkyBox()` in `RendererDeferred.cpp` remains genuinely dead code (its call site
+  has been commented out since this engine shipped) - `mpSkyBoxProgram` is now used by the
+  fix above via `GetSkyBoxProgram()`, but the dedicated duplicate pass itself is still
+  unreachable and could be deleted as cleanup, not attempted this session to keep the diff
+  minimal.

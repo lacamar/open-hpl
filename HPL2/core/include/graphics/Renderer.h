@@ -266,6 +266,12 @@ namespace hpl {
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
 
+		// Real GPU program to sample the skybox cubemap with, if this
+		// renderer built one - see RenderBasicSkyBox()'s use of it below.
+		// Defaults to NULL (fixed-function rendering, this class's own
+		// long-standing behavior) for any renderer that hasn't built one.
+		virtual iGpuProgram* GetSkyBoxProgram(){ return NULL; }
+
 		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
 		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
 		cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}

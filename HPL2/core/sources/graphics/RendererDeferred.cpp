@@ -421,21 +421,25 @@ namespace hpl {
 			// deferred_base_vtx.hpsl only emits px_vColor when "UseColor"
 			// (or "UseAngleFade") is set - this call site never set it, so
 			// the HPSL path's vertex/fragment pair failed to link ("varying
-			// px_vColor not written by vertex shader"). Fixed for
-			// consistency with every other real filename/combo gap found
-			// this session, but turned out NOT to be the cause of a real
-			// magenta-triangle rendering artifact this session went
-			// looking for (see PORTING_NOTES.md "SOMA" section for the
-			// actual root cause) - the call to RenderDeferredSkyBox() a
-			// couple hundred lines up (search this file for
-			// "RenderDeferredSkyBox()") is commented out and has been since
-			// this engine shipped, so mpSkyBoxProgram, fixed or not, is
-			// currently unreachable dead code for every module including
-			// SOMA. Left fixed anyway since it's still a real, correct fix
-			// and someone may re-enable that pass later. Dark Descent's own
+			// px_vColor not written by vertex shader"). Dark Descent's own
 			// hand-written deferred_gbuffer_skybox_frag.glsl doesn't
 			// reference gl_Color at all, so adding this is a no-op for it -
 			// confirmed by reading the real file, not assumed.
+			//
+			// mpSkyBoxProgram itself is NOT used by this file's own (dead -
+			// commented out, see RenderDeferredSkyBox()/its call site)
+			// duplicate skybox pass, but IS the real fix for a genuine
+			// magenta full-screen rendering artifact this session went
+			// looking for: the LIVE skybox pass is actually
+			// iRenderer::RenderBasicSkyBox() (Renderer.cpp, shared base
+			// class, called from RenderObjects() below), which rendered a
+			// real skybox cubemap through fixed-function (SetProgram(NULL))
+			// - correct enough on the mature desktop drivers this engine
+			// shipped against, but produced solid, wrong, saturated color
+			// on this project's real Mesa/AGX test platform. See
+			// GetSkyBoxProgram() in this class/Renderer.h/Renderer.cpp for
+			// the actual fix, and PORTING_NOTES.md "SOMA" section for the
+			// live before/after verification.
 			vars.Add("UseColor");
 			iGpuShader *pVtxShader = mpShaderManager->CreateShader("deferred_base_vtx.glsl",eGpuShaderType_Vertex,&vars);
 			iGpuShader *pFragShader = mpShaderManager->CreateShader("deferred_gbuffer_skybox_frag.glsl", eGpuShaderType_Fragment,&vars);
@@ -466,6 +470,26 @@ namespace hpl {
 			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistNeg",kVar_avNegPlaneDistNeg,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
+
+			// HPSL's real deferred_fog_frag.hpsl unconditionally reconstructs
+			// view-space position from gl_FragCoord using "avScreenToFarPlane"/
+			// "avInvScreenSize" (no per-vertex ray the way Dark Descent's own
+			// deferred_fog_frag.glsl gets one via a gvVertexPos varying - see
+			// that real file, which has no such uniform at all). Neither was
+			// ever registered/set for this program, so they silently stayed at
+			// GLSL's default (0,0,0,0) - real found live via a magenta/white
+			// full-screen rendering artifact (see PORTING_NOTES.md "SOMA"
+			// section). Same uniforms, same exact formula, and the same
+			// per-frame values as the (already-fixed, by a separate concurrent
+			// session's real-time-lighting fix) deferred_light_frag.hpsl case
+			// a few hundred lines down in RenderLightObject() - reusing the
+			// identical kVar_avScreenToFarPlane/kVar_avInvScreenSize slot IDs
+			// here is safe: each iGpuProgram keeps its own private id->location
+			// table, so the same small integer is already reused for
+			// kVar_afNegFarPlane between the light and fog programs in this
+			// very file.
+			mpFogProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, 0);
 		}
 		
 		////////////////////////////////////
@@ -2846,6 +2870,17 @@ namespace hpl {
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
 			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
 			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
+
+			// See the registration comment in LoadData() ("Create Fog
+			// program") - same formula as RenderLightObject()'s already-
+			// fixed deferred_light_frag.hpsl case.
+			pProgram->SetVec4f(kVar_avScreenToFarPlane,
+								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarBottom);
+			pProgram->SetVec2f(kVar_avInvScreenSize,
+								1.0f / (float)mvRenderTargetSize.x,
+								1.0f / (float)mvRenderTargetSize.y);
 		}
 
 
@@ -2921,7 +2956,19 @@ namespace hpl {
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
 			pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
 			pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
-		
+
+			// See the registration comment in LoadData() ("Create Fog
+			// program") - same formula as RenderFullScreenFog() above and
+			// RenderLightObject()'s already-fixed deferred_light_frag.hpsl
+			// case.
+			pProgram->SetVec4f(kVar_avScreenToFarPlane,
+								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarBottom);
+			pProgram->SetVec2f(kVar_avInvScreenSize,
+								1.0f / (float)mvRenderTargetSize.x,
+								1.0f / (float)mvRenderTargetSize.y);
+
 			/////////////////////////////////////////////
 			//Outside of box setup
 			if(fogData.mbInsideNearFrustum==false)

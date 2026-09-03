@@ -2059,8 +2059,23 @@ namespace hpl {
 
 		/////////////////////////
 		//Program
-        SetProgram(NULL);
-		
+		// Was unconditionally SetProgram(NULL) (fixed-function) - correct
+		// enough on the mature desktop OpenGL drivers this engine shipped
+		// against, but real on this project's actual test platform (Mesa's
+		// AGX driver, Asahi Linux/Apple Silicon): fixed-function rendering
+		// of a bound GL_TEXTURE_CUBE_MAP with no shader produced a solid,
+		// wrong, saturated flat color (found live: a real headless
+		// screenshot of SOMA's 00_01_apartment.hpm, which - unlike any real
+		// Dark Descent map, none of which ship a non-empty SkyBoxTexture -
+		// has both SkyBoxActive=true and a real cubemap set, showed two
+		// large flat magenta triangles exactly where the skybox mesh should
+		// be - see PORTING_NOTES.md "SOMA" section). GetSkyBoxProgram()
+		// defaults to NULL (unchanged fixed-function behavior) unless a
+		// renderer subclass overrides it with a real, working program -
+		// cRendererDeferred does (see mpSkyBoxProgram in RendererDeferred.cpp),
+		// so this is a real fix there, not just a workaround.
+		SetProgram(GetSkyBoxProgram());
+
 		/////////////////////////
 		//Texture and vertex buffer
 		SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
