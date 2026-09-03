@@ -66,6 +66,24 @@ namespace hpl {
 
 	//------------------------------------------------------
 
+	// Serializes headless instances against each other: only one
+	// OPENHPL_HEADLESS_SOCKET process may be past this call at a time -
+	// concurrent worktree-agents/test scripts each launching their own
+	// instance were observed competing for the same GPU (FPS as low as
+	// ~3-8, versus ~22 with only one instance running - see PORTING_NOTES.md
+	// "SOMA: shader-filename/sampler-binding fixes..."). Call as early as
+	// possible in headless startup (cSDLEngineSetup's constructor, before
+	// SDL_Init - see SDLEngineSetup.cpp) so a queued instance doesn't even
+	// open a window/X11 connection on the real desktop while waiting.
+	// Blocks (does not fail/exit) until the lock is free, logging once if it
+	// has to wait, so scripts/headless-check.sh's CPU-tick-based hang
+	// detection doesn't misreport a merely-queued process as stuck - see the
+	// .cpp for why a flock()'d fd (not a pidfile) is used. A no-op, like the
+	// rest of this header, whenever OPENHPL_HEADLESS_SOCKET is unset.
+	void AcquireHeadlessSingleInstanceLock();
+
+	//------------------------------------------------------
+
 	class cHeadlessRequest
 	{
 	public:

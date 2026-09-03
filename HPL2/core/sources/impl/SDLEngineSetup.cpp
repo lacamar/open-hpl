@@ -30,6 +30,7 @@
 #include "physics/Physics.h"
 #include "ai/AI.h"
 #include "haptic/Haptic.h"
+#include "system/HeadlessControl.h"
 
 #include "impl/KeyboardSDL.h"
 #include "impl/MouseSDL.h"
@@ -70,6 +71,13 @@ namespace hpl {
 #if SDL_VERSION_ATLEAST(2,0,0)
 		SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
 #endif
+		// Only one headless instance runs at a time - see
+		// AcquireHeadlessSingleInstanceLock()'s own doc comment
+		// (HeadlessControl.h) for why, and why this is the right place to
+		// call it (earliest possible headless-gated point, before SDL_Init
+		// below even runs). A no-op when OPENHPL_HEADLESS_SOCKET is unset.
+		AcquireHeadlessSingleInstanceLock();
+
 		// Headless test runs must never make real sound come out of the
 		// physical speakers. OpenAL-soft (the only sound backend this engine
 		// builds) reads ALSOFT_DRIVERS at alcOpenDevice() time to restrict

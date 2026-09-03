@@ -37,6 +37,8 @@
 #define HPL_HEADLESS_CONTROL_POSIX 1
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/file.h>
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -45,6 +47,48 @@
 #endif
 
 namespace hpl {
+
+	//////////////////////////////////////////////////////////////////////////
+	// SINGLE-INSTANCE LOCK (see HeadlessControl.h)
+	//////////////////////////////////////////////////////////////////////////
+
+	void AcquireHeadlessSingleInstanceLock()
+	{
+		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL) return;
+
+#ifdef HPL_HEADLESS_CONTROL_POSIX
+		// flock() on an fd, not a pidfile: the lock is released automatically
+		// by the kernel when this process's last reference to the fd goes
+		// away, including on a crash/SIGKILL - no stale-lock cleanup logic
+		// needed (a pidfile approach would need to detect and break a lock
+		// left behind by a process that died without removing it). The fd is
+		// deliberately never closed - held for the rest of this process's
+		// life, released implicitly on exit.
+		const char *pRuntimeDir = getenv("XDG_RUNTIME_DIR");
+		tString sLockPath = (pRuntimeDir && pRuntimeDir[0] != '\0' ? tString(pRuntimeDir) : tString("/tmp"))
+							 + "/open-hpl-headless.lock";
+
+		int lFd = open(sLockPath.c_str(), O_CREAT | O_RDWR, 0600);
+		if(lFd < 0)
+		{
+			Warning("AcquireHeadlessSingleInstanceLock: couldn't open '%s' (%s) - proceeding unserialized\n",
+					sLockPath.c_str(), strerror(errno));
+			return;
+		}
+
+		if(flock(lFd, LOCK_EX | LOCK_NB) == 0) return; // uncontended - common case
+
+		Log("Another headless instance already holds '%s' - waiting for it to exit "
+			"(this is expected, not a hang - see AcquireHeadlessSingleInstanceLock())\n",
+			sLockPath.c_str());
+
+		if(flock(lFd, LOCK_EX) != 0)
+		{
+			Warning("AcquireHeadlessSingleInstanceLock: blocking flock() on '%s' failed (%s) - proceeding unserialized\n",
+					sLockPath.c_str(), strerror(errno));
+		}
+#endif
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// MINIMAL FLAT-JSON HELPERS (see HeadlessControl.h - not a general parser)
