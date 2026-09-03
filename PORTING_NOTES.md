@@ -2939,3 +2939,64 @@ and additional to, the `avInvScreenSize` fix and the `×8` gap above.
   session should be able to land both without another multi-hour bisection - the hard part (
   finding *which* real objects/materials are responsible for each remaining visible artifact) is
   already done.
+
+## SOMA/HPSL: the ×8 HDR-precision-boost gap, actually fixed this time (this session, continued)
+
+Picked up the "root-caused but NOT fixed" gap from the section above: `deferred_transparent_frag.hpsl`
+ends `main()` with an unconditional `vFinalColor *= cVector4f(8.0, 8.0, 8.0, 1.0);` under
+`@ifdef UseRefraction || UseEnvMap || BlendMode_Add || BlendMode_Alpha || BlendMode_PremulAlpha`
+that Dark Descent's own real `deferred_transparent_frag.glsl` has no equivalent of, and this port
+has no compensating downstream divide for anywhere.
+
+Rejected the two GL-blend-state approaches considered previously (a `GL_CONSTANT_COLOR`/
+`glBlendColor()` source factor, or pre-scaling `afLightLevel`) as too invasive (new shared
+`eBlendFunc` enum value, new low-level graphics method, global GL state to manage) and not exact
+for `Alpha`/`PremulAlpha` blend modes (GL only allows one source blend factor - can't combine
+`SRC_ALPHA` and a constant scale). Simpler, more complete fix: this repo carries no `.glsl`/`.hpsl`
+of its own, but it does fully own the HPSL->GLSL *transpiler* (`soma/src/game/HpslTranspiler.cpp`)
+that produces the actual GLSL text fed to the driver - so the boost can be removed at its source,
+in the transpiled shader text itself, correctly handling every blend mode uniformly (the multiply
+line disappears entirely, regardless of which `@ifdef` branch was active) instead of trying to
+compensate for it downstream per blend mode.
+
+Added `RemoveUncompensatedHdrPrecisionBoost()` (a `std::regex`-based line removal, same shape as
+the existing `StripUniformBindingIndices()` in the same file) to the `TranspileHpslToGlsl()`
+pipeline. Confirmed via a full corpus search that the exact `"vFinalColor *= cVector4f(8.0, ...)"`
+pattern exists in exactly one file among the entire real HPSL corpus, so this can't affect
+anything else. One real gotcha found the hard way: the transform must run *after*
+`ReplaceTypeNames()` (which rewrites `cVector4f` -> `vec4` earlier in the same pipeline) - an
+initial attempt placed it before that step and matched nothing, silently. A temporary diagnostic
+`Log()` (added, confirmed the match fires correctly for multiple real combo variants during a real
+boot, then removed before committing) caught this.
+
+**Verified live, for real this time**: `entities/technical/block_box/block_box.mat`'s pixel color
+at the real `00_01_apartment.hpm` `PlayerStartArea_1` pose went from a clipped, saturated bright
+magenta/purple to `(58,2,24)` - matching `raw_texture_color(119,2,49) * this_scene's_own_exposure_
+multiplier(~0.435)` almost exactly, confirming the fix is both real and correctly scoped, not a
+coincidental color shift. `ctest` stays 4/4 green. Change is 100% contained to
+`soma/src/game/HpslTranspiler.cpp` (SOMA-only, never compiled into or reachable from Dark
+Descent/AMFP/Rebirth/Bunker's own `.glsl`-only shader path) - zero regression risk by construction,
+no live Dark Descent re-verification needed for this one.
+
+**A real false start worth recording for calibration**: the first two attempts at verifying this
+fix (a wrong-regex build, then a supposedly-fixed rebuild) both showed a byte-for-byte identical
+screenshot before/after, and were wrongly written up as "the fix compiles and matches during
+transpile but doesn't visibly affect this material" - complete with a plausible-sounding
+alternative theory (that `block_box.mat` is an intentionally-invisible debug/collision-marker prop
+real SOMA hides via game-script logic this scaffold doesn't run, so no fix should be expected to
+change it). That specific reasoning about the material's *nature* (debug placeholder, physics-only
+prop) is still true and worth keeping in mind - but the conclusion "so this fix can't have worked"
+was wrong. Root cause of the false negative: a `cp` deploy step hit an interactive "overwrite?"
+prompt and timed out after 2 minutes without actually copying the new binary, so both "verification"
+runs were silently re-testing a stale build. Caught by adding a temporary diagnostic and seeing it
+fire, then re-deploying cleanly (`rm` first, then `cp`, avoiding the interactive prompt entirely)
+and re-testing - the corrected result is unambiguous. Lesson: **a `cp` onto an existing file in
+this environment can prompt interactively and silently hang/timeout rather than error** - always
+`rm -f` the destination first when redeploying a test binary under the same name, don't rely on
+`cp`'s overwrite behavior.
+
+### Remaining open item
+
+- `CubeMap Type="Rect"` silently loading as a plain 2D texture (`MaterialManager.cpp:496`) is
+  still unfixed - unrelated to the HDR-boost gap, see the previous section for full detail. Still
+  the one remaining known, understood-but-unfixed gap from this investigation thread.

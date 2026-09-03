@@ -173,6 +173,54 @@ namespace
 		return std::regex_replace(asSrc, bindRe, "$1$2");
 	}
 
+	// deferred_transparent_frag.hpsl's real source ends main() with
+	// "vFinalColor *= cVector4f(8.0, 8.0, 8.0, 1.0);" under
+	// "@ifdef UseRefraction || UseEnvMap || BlendMode_Add || BlendMode_Alpha
+	// || BlendMode_PremulAlpha" - the shader's own comment calls this
+	// "Multiply with 8.0 to increase precision", a real HPL3/HDR-precision
+	// convention with no equivalent in Dark Descent's own hand-written
+	// deferred_transparent_frag.glsl (confirmed by grep - zero matches) and,
+	// critically, no compensating downstream divide anywhere in this port:
+	// RenderTranslucent() blends this shader's output straight into the
+	// real framebuffer via ordinary GL blending (or, for UseRefraction
+	// materials, writes it directly - see RendererDeferred.cpp), neither of
+	// which expects an 8x-boosted input. A moderately-saturated color
+	// boosted 8x and blended clips straight to a fully-saturated flat
+	// color - this is the real, live-confirmed root cause of a solid
+	// magenta artifact on entities/technical/block_box/block_box.mat (Add
+	// blend, no refraction/envmap) in a real SOMA map.
+	//
+	// Verified live: before this fix, that material's own diffuse texture
+	// (block_box.dds, a single solid dark-magenta (119,2,49) - a real
+	// Frictional-internal debug/collision-marker placeholder color, this
+	// mesh is a physics-only "blocking volume" prop, e.g. instance name
+	// "BedCollider_Crouch_pCube1", never meant to be player-visible)
+	// rendered as a clipped, saturated bright magenta/purple. After, the
+	// same on-screen pixel reads (58,2,24) - matching raw_texture_color *
+	// the scene's own exposure multiplier (~0.435 at this camera pose,
+	// see cWorld::SetGlobalExposure()) almost exactly, confirming the boost
+	// removal is both real and correctly scoped, not a coincidental color
+	// shift. (An earlier pass through this investigation wrongly concluded
+	// this fix had zero visible effect - that was a stale-binary artifact
+	// from an interrupted `cp` deploy step timing out on an overwrite
+	// prompt, not a real result; corrected after re-deploying cleanly and
+	// re-verifying.)
+	//
+	// Confirmed via a full corpus search that this exact
+	// "vFinalColor *= cVector4f(8.0, ...)" pattern exists in exactly this
+	// one file among the entire real HPSL corpus, so removing it here can't
+	// affect anything else. Whitespace-tolerant (the real file has two
+	// spaces before "*=") rather than a literal string match, in case a
+	// different game's copy of this file formats it slightly differently.
+	// Must run after ReplaceTypeNames() (which rewrites "cVector4f" ->
+	// "vec4" before this ever sees the text) - matches the post-rename
+	// spelling accordingly.
+	tString RemoveUncompensatedHdrPrecisionBoost(const tString& asSrc)
+	{
+		std::regex boostRe("vFinalColor\\s*\\*=\\s*vec4\\(\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*1\\.0\\s*\\)\\s*;");
+		return std::regex_replace(asSrc, boostRe, "");
+	}
+
 	// Rewrites one already-brace-matched "cBuffer" block BODY (the text
 	// between - but not including - the '{' and '}') into the same text
 	// with "uniform " prepended to every member-declaration line, leaving
@@ -642,6 +690,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
+	sSrc = RemoveUncompensatedHdrPrecisionBoost(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	if (RewriteSampleCmpIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
