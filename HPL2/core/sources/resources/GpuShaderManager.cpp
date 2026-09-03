@@ -152,6 +152,57 @@ namespace hpl {
 
 			/////////////////////////////////
 			//Parse file
+			if(bIsHpslFallback)
+			{
+				/////////////////////////////////
+				// HPL2's own material combo-variable-setting C++
+				// (MaterialType_BasicSolid.cpp etc.) was written for Dark
+				// Descent's own hand-written GLSL @ifdef vocabulary, and is
+				// reused as-is here (Dark Descent's own compiles never take
+				// this bIsHpslFallback branch at all, so mutating
+				// apVarContainer here can't affect them). Most flag names
+				// happen to already match HPSL's own vocabulary verbatim
+				// (UseUv/UseNormals/UseNormalMapping/UseColor/UseEnvMap/
+				// UseCubeMapAlpha/...), but a few HPL2-legacy names
+				// represent the same real concept under a different exact
+				// spelling HPSL's own @ifdefs never check for - alias them
+				// here. Found live (real headless start_map run against
+				// 00_01_apartment.hpm, see PORTING_NOTES.md "SOMA" section):
+				// cMaterialType_SolidDiffuse::LoadSpecificData()
+				// unconditionally sets "UseDepth" whenever G-buffer solid
+				// rendering needs linear depth written (which is always),
+				// but deferred_base_vtx.hpsl/deferred_gbuffer_solid_frag.hpsl
+				// gate their own (also always-written) linear-depth
+				// interpolant behind "UseLinearDepth" instead - without this
+				// alias, the fragment shader's body unconditionally reads
+				// px_fLinearDepth while neither shader ever declares it,
+				// since the combo variable their @ifdef actually checks for
+				// is never set.
+				if(apVarContainer->Get("UseDepth") != NULL)
+					apVarContainer->Add("UseLinearDepth");
+
+				/////////////////////////////////
+				// "UseExtendedArgs" gates deferred_base_vtx.hpsl's legacy
+				// cVertexArguments cBuffer's extra members (afInvFarPlane/
+				// afT/sway/force-field/scrolling-noise/soft-particle/
+				// instancing-offset uniforms) - the *only* place this name
+				// appears anywhere in the real .hpsl corpus (confirmed via
+				// grep across every file), and every one of those members
+				// is a plain declaration only read by code that's itself
+				// separately gated behind its own specific combo variable
+				// (UseSway/UseScrollingNoise/UseSoftParticle/...) - so
+				// there's no downside to always declaring them, unused or
+				// not. Unlike "UseDepth"/"UseLinearDepth" above, this has
+				// no HPL2-legacy equivalent flag to alias from at all (it's
+				// pure HPSL-side cBuffer-visibility bookkeeping with no
+				// Dark-Descent-shader analog) - just always turn it on for
+				// every HPSL compile. Found live the same way as the
+				// UseDepth/UseLinearDepth alias above: turning that alias
+				// on newly activated deferred_base_vtx.hpsl's
+				// "px_fLinearDepth = ... * afInvFarPlane;" line, which
+				// reads afInvFarPlane from inside this gated block.
+				apVarContainer->Add("UseExtendedArgs");
+			}
 			mpPreprocessParser->Parse(&sFileData, &sParsedOutput,apVarContainer,cString::GetFilePathW(sPath));
 
 			/////////////////////////////////

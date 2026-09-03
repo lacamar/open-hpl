@@ -434,6 +434,113 @@ static void TestTexture3D()
 	CHECK_CONTAINS(sGlsl, "texture3D(aDissolveMap, vec3(0.0, 0.0, 0.0))");
 }
 
+// cTexture2DCmp/sampleCmp (real use: deferred_light_frag.hpsl's shadow-map
+// lookup, "uniform cTexture2DCmp aShadowMap : 6;" +
+// "sampleCmp(aShadowMap, avLocation.xy + avOffset, avLocation.z)") - found
+// live via the real GpuShaderManager wiring path (start_map against
+// 00_01_apartment.hpm, see PORTING_NOTES.md), not the self-test. Must map
+// to sampler2DShadow / shadow2D(tex, vec3(uv, refZ)).x - deliberately the
+// non-projective shadow2D (this engine's own hand-written
+// deferred_light_frag.glsl uses the projective shadow2DProj with a vec4,
+// but every real sampleCmp() call site only ever passes 3 arguments and
+// never reads a .w component, so there's no perspective-divide term to
+// preserve).
+static void TestShadowSample()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"uniform cTexture2DCmp aShadowMap : 6;\n"
+		"\n"
+		"float ShadowOffsetLookup(cTexture2DCmp aTex, cVector4f avLocation, cVector2f avOffset)\n"
+		"{\n"
+		"	return sampleCmp(aTex, avLocation.xy + avOffset, avLocation.z);\n"
+		"}\n"
+		"\n"
+		"void main(in cVector4f px_vPosition, out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	float fShadowAmount = sampleCmp(aShadowMap, px_vPosition.xy, px_vPosition.z);\n"
+		"	out_vColor = cVector4f(fShadowAmount);\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "uniform sampler2DShadow aShadowMap;");
+	CHECK_CONTAINS(sGlsl, "sampler2DShadow aTex");
+	CHECK_CONTAINS(sGlsl, "shadow2D(aTex, vec3(avLocation.xy + avOffset, avLocation.z)).x");
+	// px_vPosition is special-cased to gl_FragCoord in a fragment shader
+	// body (see HpslTranspiler.h) - expected here, not a mistake.
+	CHECK_CONTAINS(sGlsl, "shadow2D(aShadowMap, vec3(gl_FragCoord.xy, gl_FragCoord.z)).x");
+	CHECK_NOT_CONTAINS(sGlsl, "sampleCmp(");
+	CHECK_NOT_CONTAINS(sGlsl, "cTexture2DCmp");
+}
+
+static void TestSampleCmpRejectsWrongArgCount()
+{
+	tString sGlsl, sErr;
+	static const char* psBadSampleCmp =
+		"void main(out cVector4f px_vColor : 0)\n"
+		"{\n"
+		"	px_vColor = cVector4f(sampleCmp(a, b));\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psBadSampleCmp, eGpuShaderType_Fragment, sGlsl, sErr) == false);
+	CHECK_CONTAINS(sErr, "sampleCmp()");
+}
+
+// load()/texelFetch (real use: deferred_light_frag.hpsl's G-buffer
+// readback, "cVector2l vMapCoords = cVector2l(gl_FragCoord.xy);" +
+// "load(aNormalDepthMap, vMapCoords, 0)" - found live via the real
+// GpuShaderManager wiring path, see PORTING_NOTES.md). cVector2l must map
+// to ivec2 (same as the existing cVector2i, just HPSL's other integer-
+// vector spelling), load(tex, coords, mip) must become
+// texelFetch(tex, coords, mip) verbatim (no argument reshuffling, unlike
+// sampleCmp), and - because texelFetch needs GLSL 130, unlike everything
+// else this transpiler emits - the file must get "#version 130" instead of
+// the usual 120, but *only* when load() actually appears.
+static void TestLoadBecomesTexelFetch()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"uniform cTexture2D aNormalDepthMap : 4;\n"
+		"\n"
+		"void main(in cVector4f px_vPosition, out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector2l vMapCoords = cVector2l(gl_FragCoord.xy);\n"
+		"	out_vColor = load(aNormalDepthMap, vMapCoords, 0);\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "#version 130");
+	CHECK_NOT_CONTAINS(sGlsl, "#version 120");
+	CHECK_CONTAINS(sGlsl, "ivec2 vMapCoords = ivec2(gl_FragCoord.xy);");
+	CHECK_CONTAINS(sGlsl, "texelFetch(aNormalDepthMap, vMapCoords, 0)");
+	CHECK_NOT_CONTAINS(sGlsl, "load(");
+	CHECK_NOT_CONTAINS(sGlsl, "cVector2l");
+}
+
+// A file that never uses load() must still get the usual #version 120 -
+// the bump above must be strictly per-file/opt-in, not a global default
+// change (this is the whole reason a blanket engine-wide version bump was
+// avoided in favor of a narrow, load()-triggered one - see
+// RewriteLoadIntrinsic()'s comment in HpslTranspiler.cpp).
+static void TestNoLoadKeepsVersion120()
+{
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "#version 120");
+	CHECK_NOT_CONTAINS(sGlsl, "#version 130");
+}
+
+static void TestLoadRejectsNonSampler2D()
+{
+	tString sGlsl, sErr;
+	static const char* psBadLoad =
+		"uniform cTextureCube aEnvMap : 0;\n"
+		"\n"
+		"void main(out cVector4f px_vColor : 0)\n"
+		"{\n"
+		"	px_vColor = load(aEnvMap, cVector2l(0, 0), 0);\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psBadLoad, eGpuShaderType_Fragment, sGlsl, sErr) == false);
+	CHECK_CONTAINS(sErr, "aEnvMap");
+}
+
 // cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
 // "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
 // bug this pass's live glCompileShader() self-test caught (see
@@ -505,6 +612,11 @@ int main()
 	TestTexture3D();
 	TestMatrix3f();
 	TestParameterListTrailingCommentWithComma();
+	TestShadowSample();
+	TestSampleCmpRejectsWrongArgCount();
+	TestLoadBecomesTexelFetch();
+	TestNoLoadKeepsVersion120();
+	TestLoadRejectsNonSampler2D();
 
 	if (gFailures == 0)
 	{
