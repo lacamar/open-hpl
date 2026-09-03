@@ -2778,3 +2778,164 @@ where this investigation started (a vague "two magenta triangles"). Next session
 3. Re-verify with the same bisection method (a temporary early-return, not guessing) once a fix
    is in place - it's fast and decisive, much more effective this session than reasoning about
    driver behavior from screenshots alone.
+
+## SOMA/HPSL: the translucent/forward-pass artifact, precisely split into two independent real bugs (this session)
+
+Picked up exactly where the previous session left off: `cRendererDeferred::RenderTranslucent()`
+(`eMaterialRenderMode_Diffuse`, `MaterialType_BasicTranslucent.cpp`) does go through the same
+`GpuShaderManager.cpp` HPSL-fallback + `ApplyHpslTextureBindings()` machinery as the deferred
+G-buffer path - confirmed live (`deferred_transparent_frag.hpsl` compiles and links with zero
+errors in hpl.log, real non-NULL `iGpuProgram*` for every translucent material at the test pose)
+- so the earlier hypothesis of a bypassed/separate code path was wrong. Re-verified the whole
+setup first: fast-forwarded this worktree onto master's current tip (`82a75a1`, a clean
+ancestor - no merge needed) to pick up the lighting/skybox/sampler-binding/exposure fixes landed
+since this bug was first isolated, then re-confirmed the exact same gray/magenta artifact at the
+documented `00_01_apartment.hpm` `PlayerStartArea_1` pose before touching anything.
+
+Added a temporary per-material diagnostic `Log()` in `RenderTranslucent()`'s object loop
+(reverted before committing - not shipped) to print every real translucent object/material/blend-
+mode/program hitting this pass. This immediately turned the abstract "gray and magenta shapes"
+into concrete, real content: `static_objects/urban/walls/plain_glass_livingroom.mat` (a living-
+room window pane - the large gray arrow-shaped area, `MulX2` blend, `Refraction`+`EnvMap`
+enabled) and `entities/technical/block_box/block_box.mat` (a `technical/`-folder "blocking
+volume" prop, object names `block_box_char_1_pCube1`/`BedCollider_Crouch_pCube1` - a
+gameplay/physics helper mesh, not real player-visible art - `Add` blend, no refraction/envmap).
+Bisected which contributes which visible shape by temporarily `continue`-skipping objects by
+name/material in the render loop, rebuilding, and re-screenshotting each time (same discipline
+the prior session used for render passes, just one level more granular - per-object instead of
+per-pass) - confirmed live: excluding objects with a `CubeMap` texture makes the gray shape
+disappear entirely (magenta unaffected); further excluding `block_box`-named objects then makes
+the magenta shape disappear too (gray unaffected). Two independent bugs, not one:
+
+### Fixed and verified: `avInvScreenSize` was never registered/set on `MaterialType_BasicTranslucent`
+
+`deferred_transparent_frag.hpsl`'s `cTransparentFragArguments` cBuffer declares
+`cVector2f avInvScreenSize`, used to convert the fragment's device pixel coordinates into a
+screen-space UV for refraction's distorted sample position: `vDistortedScreenPos =
+(px_vPosition.xy * avInvScreenSize + vRefractOffset)`. `MaterialType_BasicTranslucent.cpp` had
+no `kVar_avInvScreenSize` slot at all - Dark Descent's own hand-written
+`deferred_transparent_frag.glsl` never declares this uniform (confirmed by grepping the real
+Dark Descent install's shader file - zero matches), so nothing in this file's history ever needed
+one. Left unset, it silently defaulted to `(0,0)`: every refracting translucent surface's sampled
+UV collapsed to near the `mpRefractionTexture`'s `(0,0)` corner (whatever stale content lives
+there, since `CopyFrameBufferToTexure()` only ever updates the object's own on-screen clip rect,
+not the whole texture) instead of the fragment's real screen position - producing a flat,
+mostly-uniform color across the entire surface, independent of what's actually behind it.
+
+Fixed the same way every other per-frame screen-size constant is wired for this material type
+(`kVar_afInvFarPlane` in `MaterialType_BasicSolid.cpp`, `kVar_avInvScreenSize` in
+`RendererDeferred.cpp`'s light/fog passes): added `kVar_avInvScreenSize` (id 10), registered via
+`AddGenerateProgramVariableId("avInvScreenSize", ...)` in `LoadData()` for all 5 blend-mode
+program managers, and set it in the previously-empty `cMaterialType_Translucent::
+SetupTypeSpecificData()` from `apRenderer->GetRenderTargetSize()` (called once per program bind,
+same convention as the existing `afInvFarPlane` setup).
+
+**Verified live**: before the fix, the living-room window rendered as a completely flat, textureless
+gray shape. After, real background detail bleeds through via refraction - visible wall/paper
+texture streaks and a curved line detail, matching the "properly-exposed gray-toned scene with
+visible wall texture/streak detail" already established as correct for this exposure-corrected
+scene in an earlier session. Confirmed via pixel diff (`ImageChops.difference().getbbox()` is a
+real, large, non-`None` region between before/after screenshots at the identical camera pose) -
+not a placebo. `ctest --test-dir amnesia/src/build` stays green (4/4), and a headless Dark
+Descent regression boot (`Amnesia.bin.aarch64`, real Dark Descent install, Profiles menu) shows
+zero hpl.log output and an unchanged, correctly torch-lit menu screenshot - this file is shared
+HPL2 core code, and `SetupTypeSpecificData()`'s new branch is gated on
+`eMaterialRenderMode_Diffuse`/`_DiffuseFog`, both already reachable for Dark Descent's own real
+translucent materials (glass, water uses a different material type) - genuinely exercised, not
+dead code, and produces byte-for-byte-equivalent output since Dark Descent's own
+`deferred_transparent_frag.glsl` simply doesn't read this new uniform at all.
+
+### Root-caused but NOT fixed: `block_box.mat`'s magenta is a real "×8 HDR precision boost with no compensating downstream divide" gap
+
+Excluding `block_box`-named objects removes the magenta shape entirely, unaffected by the
+`avInvScreenSize` fix or by disabling `UseEnvMap`/`UseRefraction` (also bisected, temporarily, to
+rule out reflection/refraction as the cause for this specific object - reverted). This object is
+real content, not garbage: `entities/technical/block_box/block_box.mat` is a `technical/`-folder
+prop referenced by names like `BedCollider_Crouch_pCube1` - a gameplay collision-blocker/marker
+mesh, `Add` blend, no refraction, no cubemap, `AffectedByLightLevel=false`.
+
+Root cause, read directly from `deferred_transparent_frag.hpsl`'s `main()`: every blend-mode
+branch that includes `BlendMode_Add` (also `BlendMode_Alpha`/`BlendMode_PremulAlpha`, and
+`UseEnvMap`/`UseRefraction` regardless of blend mode) ends with an unconditional
+`vFinalColor *= cVector4f(8.0, 8.0, 8.0, 1.0);` - the shader's own comment calls this "Multiply
+with 8.0 to increase precision." This is a real HPL3/HPSL-era HDR-precision convention with **no
+equivalent anywhere in Dark Descent's own hand-written `deferred_transparent_frag.glsl`**
+(confirmed by grep - zero `8.0`/`* 8` occurrences in the real Dark Descent shader file), and this
+port's `RenderTranslucent()` draws straight into the real framebuffer via ordinary GL blending
+(`SetBlendMode()` → real `GL_ONE`/`GL_ONE`-style fixed-function blend state) with no subsequent
+tonemap/composite pass that could apply a matching `/8`. A moderately-saturated diffuse texture
+sample, boosted ×8 and additively blended, clips straight into a fully-saturated flat color -
+consistent with the solid, hard-edged magenta triangle actually seen (not textured/gradiented,
+since the source texture's own detail gets crushed by the ×8 clip).
+
+**Why not fixed this session**: the only local (non-shader-source, since the real `.hpsl` is
+proprietary SOMA data outside this repo) place to compensate is either (a) scale
+`afLightLevel`/`afAlpha` by `1/8` before it reaches the shader, or (b) use a `GL_CONSTANT_COLOR`
+source blend factor with `glBlendColor(0.125,...)` at the GL level for the affected blend modes.
+(a) doesn't cleanly cancel the boost when `UseFog` is also compiled in (true for this exact
+material at this camera pose - `progName` includes `UseFog`): the fog contribution is mixed in
+via `ApplyFogColor()` (a `mix()`, not a pure scale) *between* the `afLightLevel` multiply and the
+final `×8`, so pre-scaling `afLightLevel` alone would under-boost the object's own color relative
+to fog and change the visual balance, not just its brightness - a different, not obviously
+correct, artifact. (b) is a real fix (GL blending operates on the shader's final output, so an
+exact `1/8` GL-level scale is source-value-agnostic and correctly cancels the boost regardless of
+what internal math produced it) but changes `SetBlendMode()`/blend-state handling in shared
+`iRenderFunctions`/`LowLevelGraphicsSDL.cpp` code used by every blend mode across every module
+(Dark Descent's particles/decals/GUI included) - real risk of a silent, hard-to-notice regression
+elsewhere if not scoped very carefully (e.g. only for the SOMA-only HPSL-fallback path, which
+would need a new "is this an HPSL-sourced program" flag threaded through to blend-state setup,
+not a small change). Flagging precisely rather than attempting a rushed fix.
+
+**Concrete next step**: implement (b), scoped narrowly - e.g. a new `iGpuProgram`/`cMaterial`-side
+flag set only when a program came from the HPSL-fallback path (already known at `CreateShader()`
+time in `GpuShaderManager.cpp` via `bIsHpslFallback`) that `RenderTranslucent()` checks to apply
+a `GL_CONSTANT_COLOR`/`glBlendColor(0.125,0.125,0.125,1)` source factor instead of the normal
+`GL_ONE` for `BlendMode_Add`/`_Alpha`/`_PremulAlpha`, and investigate whether `UseEnvMap`/
+`UseRefraction`-only cases (e.g. `MulX2` glass) need the same treatment for their reflection
+term specifically (likely yes, unverified - the reflection addition happens before the same `×8`
+line for those modes too).
+
+### Investigated, real, but deliberately not touched: `CubeMap Type="Rect"` is silently loaded as a plain 2D texture
+
+While tracing the window material, noticed `static_objects/urban/plain_glass_livingroom.mat`
+declares its `CubeMap` texture unit as `Type="Rect"` (`textures/environment/skyline_day_env.dds`),
+not `Type="Cube"` like every other real cubemap-using material checked this session (e.g.
+`entities/urban/kitchen/glass/Glass.mat`, `entities/urban/grocery/botte_of_juice/
+botte_of_juice_empty.mat`, both `Type="Cube"`). `cMaterialManager::GetType()`
+(`MaterialManager.cpp:496`) only recognizes `"cube"`/`"1d"`/`"2d"`/`"3d"` (case-insensitive) and
+silently falls back to `eTextureType_2D` for anything else, including `"rect"` - so this specific
+material's env-reflection texture loads as an ordinary `GL_TEXTURE_2D`, then gets bound to a
+texture unit the shader samples via `samplerCube`/`textureCube()` whenever `UseEnvMap` is set - a
+genuine type mismatch. Confirmed the DDS file itself is real and not a mis-saved cubemap: its
+header's `caps2` field (byte offset 108, matching the correct offset - a previous session's own
+DDS-parsing bug used the wrong offset here, see the "root-caused for real" section above) has
+`DDSCAPS2_CUBEMAP` (`0x200`) unset but `DDSCAPS2_VOLUME` (`0x400000`) set - `skyline_day_env.dds`
+is a 512×512 non-cubemap texture, so `Type="Rect"` is *not* a data-entry mistake for `"Cube"`,
+it's real, deliberate HPL3 authoring for a different (currently unidentified) env-map technique
+this shader/material system doesn't have a code path for. Left uninvestigated further - understood
+just well enough to know it's a real content-format question (what does `Type="Rect"` actually
+mean in HPL3's real renderer - a spherical/equirectangular panorama sampled with computed UVs
+instead of `textureCube()`? a `GL_TEXTURE_RECTANGLE`?) rather than a "just add another case to
+GetType()" one-liner; guessing wrong here risks a differently-wrong render for no better reason
+than the current gap. This currently contributes to `plain_glass_livingroom`'s residual
+imperfection (window still isn't a *fully* correct-looking reflective glass pane, even after the
+`avInvScreenSize` fix - it's now recognizably showing real refracted background detail, which is
+the main win this session, but its reflection component is still wrong) but is independent of,
+and additional to, the `avInvScreenSize` fix and the `×8` gap above.
+
+### Summary for next session
+
+- Landed and verified: `avInvScreenSize` fix (commit-ready, see diff in
+  `MaterialType_BasicTranslucent.cpp`).
+- Precisely root-caused, not fixed: the `×8` HDR-precision-boost-with-no-divide gap (affects
+  `block_box.mat`'s magenta directly, and very likely also affects the window/bottle glass
+  materials' `UseEnvMap`/`UseRefraction` reflection terms to some lesser degree - unverified how
+  much, since the `Type="Rect"` gap below already prevents `plain_glass_livingroom`'s reflection
+  from being checked in isolation).
+- Precisely root-caused, not fixed: `CubeMap Type="Rect"` loads as a plain 2D texture
+  (`MaterialManager.cpp:496`'s `GetType()`) - real content, unclear what HPL3's real renderer
+  does with it, needs understanding before attempting a fix.
+- Both remaining gaps are scoped narrowly enough (one function each) that a focused follow-up
+  session should be able to land both without another multi-hour bisection - the hard part (
+  finding *which* real objects/materials are responsible for each remaining visible artifact) is
+  already done.

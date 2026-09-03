@@ -56,6 +56,21 @@ namespace hpl {
 	#define kVar_avFrenselBiasPow					7
 	#define kVar_avRimLightMulPow					8
 	#define kVar_afLightLevel						9
+	// SOMA/HPSL: deferred_transparent_frag.hpsl's cTransparentFragArguments
+	// cBuffer declares "cVector2f avInvScreenSize" (used for refraction's
+	// screen-space UV: "px_vPosition.xy * avInvScreenSize + vRefractOffset")
+	// - Dark Descent's own hand-written deferred_transparent_frag.glsl never
+	// declares this uniform at all, so no slot for it existed here. Left
+	// unset it silently defaulted to (0,0),
+	// collapsing every refracting glass/translucent surface's sampled UV to
+	// near the framebuffer's (0,0) corner (whatever stale/uninitialized
+	// pixels happen to live in mpRefractionTexture there, since
+	// CopyFrameBufferToTexure() only ever updates the object's own clip
+	// rect, not the whole texture) instead of the fragment's real screen
+	// position - a flat, garish, camera-position-insensitive color across
+	// the whole surface, exactly the "gray/magenta triangle" artifact
+	// bisected to this render pass. See PORTING_NOTES.md.
+	#define kVar_avInvScreenSize					10
 	
 	
 	//------------------------------
@@ -174,7 +189,8 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avRimLightMulPow", kVar_avRimLightMulPow, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afLightLevel", kVar_afLightLevel, eMaterialRenderMode_Diffuse);
-		
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eMaterialRenderMode_Diffuse);
+
 		}
 	}
 	void cMaterialType_Translucent::DestroyData()
@@ -285,6 +301,11 @@ namespace hpl {
 
 	void cMaterialType_Translucent::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer)
 	{
+		if(aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
+		{
+			cVector2l vScreenSize = apRenderer->GetRenderTargetSize();
+			apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f/(float)vScreenSize.x, 1.0f/(float)vScreenSize.y);
+		}
 	}
 	
 	//--------------------------------------------------------------------------
