@@ -205,6 +205,29 @@ bool cSomaBase::Init(const tString &asCommandline)
 
 void cSomaBase::OnSplashFinished()
 {
+	// Opt-in escape hatch for interactively looking at real map content -
+	// InitMainMenuScene() (the normal path) loads a real but legitimately
+	// empty main_menu.hpm, since there's no menu/script layer yet to make
+	// anything else of it. Set OPENHPL_SOMA_MAP to a real map filename
+	// (e.g. "00_01_apartment.hpm") to load that instead, so a real desktop
+	// launch can show real geometry/lighting without needing the headless
+	// control-socket workflow. No effect when unset.
+	const char *pTestMap = getenv("OPENHPL_SOMA_MAP");
+	if (pTestMap != NULL && pTestMap[0] != '\0')
+	{
+		tString sError;
+		tString sStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS") ? getenv("OPENHPL_SOMA_MAP_STARTPOS") : "";
+		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, sStartPos) == false)
+		{
+			Log("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s), falling back to the main menu scene\n",
+				pTestMap, sError.c_str());
+		}
+		else
+		{
+			return;
+		}
+	}
+
 	if (InitMainMenuScene() == false)
 	{
 		Log("SOMA: could not load main menu scene ('%s'), falling back to the "
