@@ -167,8 +167,15 @@ static void TestNullPair()
 	tString sGlsl, sErr;
 
 	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxModelViewProjection;");
-	CHECK_CONTAINS(sGlsl, "gl_Position = (a_mtxModelViewProjection * gl_Vertex)");
+	// a_mtxModelViewProjection becomes gl_ModelViewProjectionMatrix (see
+	// SubstituteFixedFunctionMatrixUniforms() in HpslTranspiler.cpp) - not
+	// a lingering plain uniform. This is real, live-found behavior (see
+	// PORTING_NOTES.md "SOMA" section): this engine's own C++ never sets a
+	// by-name "a_mtxModelViewProjection" uniform for any real per-object
+	// draw, only the legacy fixed-function matrix stack, so a plain
+	// uniform here would always read as zero.
+	CHECK_NOT_CONTAINS(sGlsl, "a_mtxModelViewProjection");
+	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex)");
 	CHECK_NOT_CONTAINS(sGlsl, "mul(");
 
 	CHECK(TranspileHpslToGlsl(gpsNullFrag, eGpuShaderType_Fragment, sGlsl, sErr));
@@ -322,9 +329,13 @@ static void TestConstantBufferFlattening()
 	CHECK_NOT_CONTAINS(sGlsl, "cVertexArguments");
 
 	// Every member becomes its own top-level "uniform TYPE NAME;",
-	// unqualified, using the same type mapping as any other uniform.
-	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxModelViewProjection;");
-	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxNormal;");
+	// unqualified, using the same type mapping as any other uniform. Using
+	// a_mtxModel here (not a_mtxModelViewProjection/a_mtxNormal, both of
+	// which SubstituteFixedFunctionMatrixUniforms() now rewrites away - see
+	// TestFixedFunctionMatrixSubstitution() for that behavior specifically;
+	// a_mtxModel has no fixed-function equivalent so it stays a real,
+	// plain flattened uniform, same as these other non-matrix members).
+	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxModel;");
 	CHECK_CONTAINS(sGlsl, "uniform float afInvFarPlane;");
 	CHECK_CONTAINS(sGlsl, "uniform vec4 avColorMul;");
 	CHECK_CONTAINS(sGlsl, "uniform int alInstanceOffset;");
@@ -332,8 +343,11 @@ static void TestConstantBufferFlattening()
 	// The body's unqualified reference to a flattened member still
 	// resolves (same name, now a plain global uniform instead of a
 	// cbuffer member) - proves the flattening didn't just declare the
-	// uniforms but leave the body unable to use them.
-	CHECK_CONTAINS(sGlsl, "gl_Position = (a_mtxModelViewProjection * gl_Vertex)");
+	// uniforms but leave the body unable to use them. a_mtxModelViewProjection
+	// itself becomes gl_ModelViewProjectionMatrix (see
+	// TestFixedFunctionMatrixSubstitution()), still proving the same
+	// point (an unqualified cBuffer-member reference resolves correctly).
+	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex)");
 }
 
 // Exercises a #define *inside* a cBuffer body (real case: helper_type_
@@ -541,6 +555,61 @@ static void TestLoadRejectsNonSampler2D()
 	CHECK_CONTAINS(sErr, "aEnvMap");
 }
 
+// a_mtxModelViewProjection/a_mtxModelView/a_mtxProjection/a_mtxNormal must
+// become GLSL 120's fixed-function built-ins (gl_ModelViewProjectionMatrix/
+// gl_ModelViewMatrix/gl_ProjectionMatrix/gl_NormalMatrix), not stay plain
+// uniforms - found live via a real start_map run against 00_01_apartment.hpm
+// (see PORTING_NOTES.md): this engine's own C++ (RenderFunctions.cpp's
+// iRenderFunctions::SetMatrix()) only ever feeds per-object transforms
+// through the legacy fixed-function matrix stack, never through a by-name
+// "a_mtxModelViewProjection" uniform - left as a flattened uniform, it
+// would sit at GLSL's default zero value forever, transforming every real
+// vertex to the origin (degenerate, invisible geometry - compiles fine,
+// renders nothing). a_mtxUV must NOT be touched (it has no fixed-function
+// equivalent and - unlike the other four - is genuinely fed real per-
+// object data through a different, already-working by-name mechanism, see
+// MaterialType_BasicSolid.cpp's SetMatrixf(kVar_a_mtxUV, ...)).
+static void TestFixedFunctionMatrixSubstitution()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"cBuffer cVertexArguments\n"
+		"{\n"
+		"	cMatrixf a_mtxProjection;\n"
+		"	cMatrixf a_mtxModelViewProjection;\n"
+		"	cMatrixf a_mtxModelView;\n"
+		"	cMatrixf a_mtxUV;\n"
+		"	cMatrixf a_mtxModel;\n"
+		"	cMatrixf a_mtxNormal;\n"
+		"};\n"
+		"\n"
+		"void main(in cVector4f vtx_vPosition, out cVector4f px_vPosition)\n"
+		"{\n"
+		"	cVector4f vLocalVertexPos = cVector4f(vtx_vPosition.xyz, 1.0);\n"
+		"	px_vPosition = mul(a_mtxModelViewProjection, vLocalVertexPos);\n"
+		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);\n"
+		"	cVector4f vUv = mul(a_mtxUV, vtx_vPosition);\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
+
+	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * vLocalVertexPos)");
+	CHECK_CONTAINS(sGlsl, "mat3(gl_NormalMatrix)");
+	CHECK_NOT_CONTAINS(sGlsl, "a_mtxModelViewProjection");
+	CHECK_NOT_CONTAINS(sGlsl, "a_mtxNormal");
+	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxModelViewProjection");
+	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxModelView;"); // unused here, but must not linger as a real uniform either
+	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxProjection;");
+	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxNormal;");
+
+	// a_mtxUV must survive as a real uniform, untouched. vtx_vPosition
+	// itself is separately substituted to gl_Vertex (the usual vertex-
+	// builtin mapping, unrelated to this test's own subject) - expected,
+	// not a second substitution firing on a_mtxUV.
+	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxUV;");
+	CHECK_CONTAINS(sGlsl, "(a_mtxUV * gl_Vertex)");
+	CHECK_NOT_CONTAINS(sGlsl, "gl_ModelViewMatrix"); // a_mtxModelView itself unused in this source - substitution only fires for names actually declared+present, doesn't invent gl_ModelViewMatrix out of nowhere
+}
+
 // cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
 // "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
 // bug this pass's live glCompileShader() self-test caught (see
@@ -552,17 +621,24 @@ static void TestLoadRejectsNonSampler2D()
 // doesn't need a live GPU to catch again.
 static void TestMatrix3f()
 {
+	// Deliberately NOT named "a_mtxNormal" (unlike the real file this is
+	// otherwise modeled on) - that exact name is now special-cased by
+	// SubstituteFixedFunctionMatrixUniforms() (see
+	// TestFixedFunctionMatrixSubstitution() for that behavior), which
+	// would fire here too and defeat the point of this test (isolating
+	// the cMatrix3f->mat3 type mapping on its own, independent of that
+	// separate rewrite).
 	tString sGlsl, sErr;
 	static const char* psSrc =
-		"uniform cMatrixf a_mtxNormal;\n"
+		"uniform cMatrixf a_mtxCustomNormal;\n"
 		"\n"
 		"void main(out cVector4f px_vColor : 0)\n"
 		"{\n"
-		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);\n"
+		"	cMatrix3f mtxNormal = cMatrix3f(a_mtxCustomNormal);\n"
 		"	px_vColor = cVector4f(mtxNormal[0], 1.0);\n"
 		"}";
 	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "mat3 mtxNormal = mat3(a_mtxNormal);");
+	CHECK_CONTAINS(sGlsl, "mat3 mtxNormal = mat3(a_mtxCustomNormal);");
 	CHECK_NOT_CONTAINS(sGlsl, "cMatrix3f");
 }
 
@@ -617,6 +693,7 @@ int main()
 	TestLoadBecomesTexelFetch();
 	TestNoLoadKeepsVersion120();
 	TestLoadRejectsNonSampler2D();
+	TestFixedFunctionMatrixSubstitution();
 
 	if (gFailures == 0)
 	{

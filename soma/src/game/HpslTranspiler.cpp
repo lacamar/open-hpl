@@ -437,6 +437,76 @@ namespace
 		return mapOut;
 	}
 
+	// Substitutes specific well-known HPSL uniform-matrix names with GLSL
+	// 120's fixed-function built-in equivalents, when a real one exists -
+	// and removes their now-redundant "uniform mat4 NAME;" declaration
+	// (whether it came from FlattenConstantBuffers() or was already a
+	// plain uniform in the source, e.g. base_vtx.hpsl's own
+	// "uniform cMatrixf a_mtxModelViewProjection;").
+	//
+	// Why this exists at all: confirmed by reading this engine's own C++
+	// (HPL2/core/sources/graphics/RenderFunctions.cpp's
+	// iRenderFunctions::SetMatrix(), used for every solid-object draw call)
+	// that per-object transforms are fed exclusively through the legacy
+	// fixed-function matrix stack (mpLowLevelGraphics->SetMatrix(eMatrix_
+	// ModelView, viewMatrix * modelMatrix) and eMatrix_Projection) - the
+	// same mechanism this engine's own hand-written GLSL 120 shaders rely
+	// on (e.g. a real Dark Descent install's deferred_base_vtx.glsl:
+	// "gl_Position = ftransform();", using gl_ModelViewMatrix implicitly,
+	// with NO custom "a_mtx*" uniform at all). There is no by-name uniform-
+	// setting call anywhere in this engine's C++ for
+	// "a_mtxModelViewProjection"/"a_mtxModelView"/"a_mtxProjection"/
+	// "a_mtxNormal" specifically (a real, separate mechanism DOES exist and
+	// IS used for a few other matrices, e.g. MaterialType_BasicSolid.cpp's
+	// apProgram->SetMatrixf(kVar_a_mtxUV, ...) for UV-animation - that one
+	// is left alone here, real per-object data actually reaches it). Left
+	// unsubstituted, a flattened "uniform mat4 a_mtxModelViewProjection;"
+	// would sit at GLSL's default all-zero value forever, transforming
+	// every vertex to the origin - degenerate, invisible geometry, not a
+	// compile error, so nothing before a live render/screenshot check
+	// (see PORTING_NOTES.md's "SOMA" section) could have caught it.
+	//
+	// The mapping is exact, not approximate: RenderFunctions.cpp's
+	// SetMatrix() computes eMatrix_ModelView as
+	// (view matrix * per-object model matrix) before every solid-object
+	// draw call - precisely HPSL's own "a_mtxModelView" semantic - and
+	// gl_ModelViewProjectionMatrix/gl_NormalMatrix are then derived by the
+	// GL driver from that same state (projection * modelview, and the
+	// inverse-transpose of modelview's upper 3x3, respectively) exactly as
+	// their HPSL-side names imply.
+	//
+	// NOT substituted (left as real, currently-never-set uniforms - a
+	// known remaining gap, see PORTING_NOTES.md): "a_mtxModel" (a model-
+	// only, not model-view, matrix - no fixed-function equivalent exists,
+	// since the legacy matrix stack only ever exposes the *combined*
+	// modelview state, never model alone) and "a_mtxUV" (already correctly
+	// fed real data via the by-name SetMatrixf() mechanism mentioned
+	// above - substituting it would be both unnecessary and wrong, since
+	// gl_ModelViewMatrix has nothing to do with UV animation).
+	tString SubstituteFixedFunctionMatrixUniforms(const tString& asSrc)
+	{
+		static const std::vector<std::pair<tString, tString> > gvMatrixBuiltins = {
+			{"a_mtxModelViewProjection", "gl_ModelViewProjectionMatrix"},
+			{"a_mtxModelView", "gl_ModelViewMatrix"},
+			{"a_mtxProjection", "gl_ProjectionMatrix"},
+			{"a_mtxNormal", "gl_NormalMatrix"},
+		};
+
+		tString sOut = asSrc;
+		for (size_t i = 0; i < gvMatrixBuiltins.size(); ++i)
+		{
+			const tString& sName = gvMatrixBuiltins[i].first;
+			const tString& sBuiltin = gvMatrixBuiltins[i].second;
+
+			std::regex declRe("uniform\\s+mat4\\s+" + sName + "\\s*;\\n?");
+			if (std::regex_search(sOut, declRe) == false) continue;
+
+			sOut = std::regex_replace(sOut, declRe, "");
+			sOut = ReplaceIdentifier(sOut, sName, sBuiltin);
+		}
+		return sOut;
+	}
+
 	bool RewriteMulIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
 	{
 		auto formatter = [](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
@@ -570,6 +640,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 {
 	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
+	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
