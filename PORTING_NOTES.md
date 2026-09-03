@@ -2725,3 +2725,56 @@ earlier overclaim. Next step for whoever picks this up: instrument `CreateCubeMa
 `CreateSimpleTexture()` directly (a temporary log line printing `sPath`/whether `pTexture` came
 back non-NULL) to settle whether the skybox texture load actually succeeds or not, before
 guessing further at what happens after.
+
+## SOMA: the magenta/gray artifact root-caused for real - it's the translucent/forward render pass, not the skybox (this session, continued)
+
+Definitively isolated via bisection (disable one render pass at a time, rebuild, re-screenshot
+the exact same real `00_01_apartment.hpm` PlayerStartArea_1 pose, compare) rather than more
+guessing, after the skybox theory above turned out to be a dead end (confirmed: temporarily
+forcing `iRenderer::RenderBasicSkyBox()` to return immediately produces a byte-identical
+screenshot - the skybox pass, real cubemap and all, contributes *nothing* visible at this camera
+pose. Also re-checked and ruled out the "incomplete cubemap" theory from earlier the same
+session: that was a bug in this session's own throwaway DDS-header-parsing script - `caps2` is
+at byte offset 108 into the header, not 112 - the real `lab_env.dds` file has all 6 cubemap
+faces properly flagged and `cBitmapLoaderDevilDDS::LoadBitmap()` correctly reports 6 images,
+confirmed by adding a temporary diagnostic Log() to `cTextureManager::CreateSimpleTexture()`
+and reading real hpl.log output, not by re-parsing the file a second time.):
+
+- Disabling `iRenderer::RenderBasicSkyBox()` entirely: **no change** - rules out skybox.
+- Disabling `cRendererDeferred::RenderDecals()` entirely: **no change** - rules out decals.
+- Disabling `cRendererDeferred::RenderTranslucent()` entirely: **the entire image goes flat
+  black** (except the small debug-gizmo dots in the corner, unrelated) - every gray "wall"
+  surface, every purple/magenta triangle, all of it, is being drawn by this one pass.
+
+This means at this specific camera pose, **all real visible content is classified as
+translucent**, not opaque/deferred geometry - plausible on its own terms (real Frictional
+apartment interiors have real glass: windows, partitions, maybe a glass table - and
+`lab_env.dds`, the same texture referenced by `<SkyBox Texture>`, is *also* referenced by
+several real glass/reflective entity materials found earlier this session, e.g.
+`entities/station/lab/beaker/lab_env.dds` - a shared environment-reflection map convention).
+
+The critical implication: **none of this session's HPSL fixes touch this code path at all.**
+`RenderTranslucent()` (`RendererDeferred.cpp`) uses `eMaterialRenderMode_Diffuse`/
+`_DiffuseFog` - a forward-rendering technique completely separate from the deferred G-buffer
+pipeline (`SetupProgramAndTextures()`/`RenderLightObject()`/the light-frag/fog-frag uniform
+fixes, the skybox fix, the sampler-binding fix) every earlier fix this session targeted. It
+almost certainly requests its own, different real HPSL shader file(s) via `cMaterial`/
+`iMaterialType`'s own program-lookup path (not yet identified which ones) - the same class of
+"C++ hardcodes a Dark-Descent-era filename/uniform-name that doesn't match HPSL's real name"
+bug found and fixed repeatedly today, just never yet investigated for this specific rendering
+technique. Given real forward-rendered glass needs at minimum a working diffuse/alpha-blend
+shader and (for anything reflective) a real environment-map sample, this is likely multiple
+real gaps of the same shape as everything already fixed today, not a single small fix.
+
+**Not fixed this session - this is the concrete, well-isolated next step**, much stronger than
+where this investigation started (a vague "two magenta triangles"). Next session should:
+1. Find what real shader filename(s)/uniform names `eMaterialRenderMode_Diffuse` materials
+   request (grep `MaterialType_BasicSolid.cpp`/`MaterialType_Translucent.cpp`/wherever
+   `cMaterial::GetProgram(eMaterialRenderMode_Diffuse, ...)` actually builds a GPU program) and
+   check them the same way every deferred-path filename was checked - real `.hpsl` corpus
+   search, filename-alias table if needed.
+2. Check whether this path even goes through the same `bIsHpslFallback`/`ApplyHpslTextureBindings()`
+   machinery in `GpuShaderManager.cpp` at all, or bypasses it entirely.
+3. Re-verify with the same bisection method (a temporary early-return, not guessing) once a fix
+   is in place - it's fast and decisive, much more effective this session than reasoning about
+   driver behavior from screenshots alone.
