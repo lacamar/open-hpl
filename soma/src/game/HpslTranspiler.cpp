@@ -173,6 +173,50 @@ namespace
 		return std::regex_replace(asSrc, bindRe, "$1$2");
 	}
 
+	// Captures (name, unit) for every "uniform samplerX NAME : N;"
+	// declaration - called on the source AFTER ReplaceTypeNames() (so
+	// cTextureX has already become sampler2D/samplerCube/etc) but BEFORE
+	// StripUniformBindingIndices() discards the ": N" suffix above.
+	//
+	// This binding index can't just be dropped like any other stripped
+	// construct: GLSL 120 has no in-shader way to bind a sampler uniform to
+	// a texture unit (no layout(binding=N)), so it has to happen via a real
+	// glUniform1i() call after linking - which is exactly what
+	// GLSLProgram::Link() already does, driven by iGpuShader::AddSamplerUnit()
+	// calls GpuShaderManager.cpp normally makes by scanning the
+	// preprocessor's own parsed variable map for "sampler_NAME"=N entries, a
+	// convention Dark Descent's hand-written .glsl shaders declare
+	// themselves via "@define sampler_NAME N" - a *cPreprocessParser*
+	// directive. HPSL's ": N" suffix is an entirely different, D3D-derived
+	// syntax that Parse() (which already ran, by the game module, before
+	// this transpiler ever sees the source - see HpslTranspiler.h) has no
+	// idea is a sampler binding at all, so that scan silently finds nothing
+	// for every HPSL shader and every one of its samplers defaults to
+	// texture unit 0 - harmless for a shader with exactly one sampler
+	// (already unit 0 by luck), silently wrong for any shader with 2+.
+	// Found live: SOMA's real deferred_fog_frag.hpsl declares three
+	// (aDepthMap/aNoiseMap/aSkyboxMap on units 0/1/2); with all three
+	// defaulting to unit 0, aNoiseMap and aSkyboxMap both ended up reading
+	// the *depth* texture bound there as color data, producing the flat,
+	// saturated magenta fog-box triangles seen in a real headless
+	// screenshot this session (see PORTING_NOTES.md "SOMA" section).
+	// Returned as "NAME UNIT\n"-per-line text (matching this codebase's
+	// existing preference for plain tString over exposing a new STL
+	// container type across the HPL2/core <-> game-module callback
+	// boundary - see tHpslTranspileCallback in GpuShaderManager.h) so
+	// GpuShaderManager.cpp can call AddSamplerUnit() directly for the HPSL
+	// path instead of relying on the (HPSL-blind) preprocessor-var scan.
+	void CollectSamplerBindings(const tString& asSrc, tString& asBindingsOut)
+	{
+		std::regex bindingRe("uniform\\s+(sampler\\w*)\\s+(\\w+)\\s*:\\s*(\\d+)\\s*;");
+		std::sregex_iterator it(asSrc.begin(), asSrc.end(), bindingRe);
+		std::sregex_iterator itEnd;
+		for (; it != itEnd; ++it)
+		{
+			asBindingsOut += (*it)[2].str() + " " + (*it)[3].str() + "\n";
+		}
+	}
+
 	// Rewrites one already-brace-matched "cBuffer" block BODY (the text
 	// between - but not including - the '{' and '}') into the same text
 	// with "uniform " prepended to every member-declaration line, leaving
@@ -636,11 +680,14 @@ namespace
 //---------------------------------------------------------------
 
 bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType,
-						  tString& asGlslOut, tString& asErrorOut)
+						  tString& asGlslOut, tString& asErrorOut, tString& asSamplerBindingsOut)
 {
+	asSamplerBindingsOut.clear();
+
 	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
+	CollectSamplerBindings(sSrc, asSamplerBindingsOut);
 	sSrc = StripUniformBindingIndices(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;

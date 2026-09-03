@@ -136,7 +136,26 @@ namespace hpl {
 
 		////////////////////////////////////////////////
 		//Setup the graphic directories:
-		apResources->AddResourceDir(_W("core/shaders"),false);
+		// core/shaders needs subdirectories included: Dark Descent/AMFP ship
+		// no subdirectories under it (so this was always a no-op for them),
+		// but SOMA/Rebirth/Bunker's real HPSL shader source lives one level
+		// down at core/shaders/hpsl/ - a game module's own resources.cfg
+		// (loaded later, in InitEngine() after CreateHPLEngine() returns -
+		// see cSomaBase::InitEngine()) does redeclare "/core/shaders" with
+		// AddSubDirs="true", but every GPU program this constructor and its
+		// callees build directly (cRendererDeferred/cRendererSimple's own
+		// LoadData(), the material types and post-effect types added below)
+		// runs during this earlier bootstrap window, so their shader lookups
+		// saw an index with zero .hpsl files in it regardless of the HPSL
+		// fallback machinery in GpuShaderManager.cpp - straight to
+		// "Couldn't find file" for every one of them. Found live (real
+		// headless boot of 00_01_apartment.hpm): deferred_base_vtx.glsl,
+		// deferred_gbuffer_skybox_frag.glsl, and posteffect_bloom_blur_vtx.glsl
+		// all failed this way even after fixing HpslTranspileCallback
+		// registration order and adding filename aliases - neither fix
+		// touches this, since the file genuinely wasn't indexed yet at this
+		// point. See PORTING_NOTES.md "SOMA" section.
+		apResources->AddResourceDir(_W("core/shaders"),true);
 		apResources->AddResourceDir(_W("core/textures"),false);
 		apResources->AddResourceDir(_W("core/models"),false);
 		

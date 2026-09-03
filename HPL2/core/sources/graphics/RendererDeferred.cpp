@@ -409,6 +409,29 @@ namespace hpl {
 		{
 			cParserVarContainer vars;
 			vars.Add("UseUv");
+			// HPSL's real deferred_skybox_frag.hpsl unconditionally reads a
+			// px_vColor varying (multiplies it into the sampled cubemap
+			// color - a real, used input, not dead code: see the file's
+			// "Multiply with 8.0 to increase precision" comment), but
+			// deferred_base_vtx.hpsl only emits px_vColor when "UseColor"
+			// (or "UseAngleFade") is set - this call site never set it, so
+			// the HPSL path's vertex/fragment pair failed to link ("varying
+			// px_vColor not written by vertex shader"). Fixed for
+			// consistency with every other real filename/combo gap found
+			// this session, but turned out NOT to be the cause of a real
+			// magenta-triangle rendering artifact this session went
+			// looking for (see PORTING_NOTES.md "SOMA" section for the
+			// actual root cause) - the call to RenderDeferredSkyBox() a
+			// couple hundred lines up (search this file for
+			// "RenderDeferredSkyBox()") is commented out and has been since
+			// this engine shipped, so mpSkyBoxProgram, fixed or not, is
+			// currently unreachable dead code for every module including
+			// SOMA. Left fixed anyway since it's still a real, correct fix
+			// and someone may re-enable that pass later. Dark Descent's own
+			// hand-written deferred_gbuffer_skybox_frag.glsl doesn't
+			// reference gl_Color at all, so adding this is a no-op for it -
+			// confirmed by reading the real file, not assumed.
+			vars.Add("UseColor");
 			iGpuShader *pVtxShader = mpShaderManager->CreateShader("deferred_base_vtx.glsl",eGpuShaderType_Vertex,&vars);
 			iGpuShader *pFragShader = mpShaderManager->CreateShader("deferred_gbuffer_skybox_frag.glsl", eGpuShaderType_Fragment,&vars);
 

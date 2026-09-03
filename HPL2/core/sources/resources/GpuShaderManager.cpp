@@ -101,6 +101,80 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	//////////////////////////////////////////////////////////////////////////
+	// HPSL FILENAME ALIASES
+	//////////////////////////////////////////////////////////////////////////
+	// HPL2's own material/renderer C++ (MaterialType_BasicSolid.cpp,
+	// MaterialType_Decal.cpp, RendererDeferred.cpp) hardcodes exact .glsl
+	// filenames written for Dark Descent's own hand-authored shader set. A
+	// handful of them have no file of that exact name anywhere in the real
+	// SOMA/Rebirth/Bunker HPSL corpus - HPL3 simply renamed the equivalent
+	// shader when it restructured the pipeline - so the plain
+	// SetFileExt(asName, "hpsl") fallback below finds nothing and
+	// CreateShader() errors out ("Couldn't find file") before ever attempting
+	// a transpile, for materials/passes that would otherwise work fine. Same
+	// shape of fix as the UseDepth->UseLinearDepth combo-variable alias
+	// below, but for filenames instead of combo-variable names. Found live
+	// (real headless start_map run against 00_01_apartment.hpm): the decal
+	// entry below is what was behind "Invalid material type 'projectedUV'!"/
+	// "Couldn't load material 'static_objects/urban/cables/cable.mat'" -
+	// MaterialManager.cpp falls back to material type "projectedUV" (itself
+	// unrecognized - a separate, pre-existing Rebirth-side gap, see
+	// TASKS.md) once "decal" material loading fails from this shader lookup
+	// dying first.
+	// posteffect_bloom_blur_vtx.glsl/posteffect_bloom_blur_frag.glsl/
+	// posteffect_bloom_add_frag.glsl (PostEffect_Bloom.cpp) are deliberately
+	// NOT aliased here: no real HPSL file corresponds to any of the three
+	// (confirmed by searching the whole corpus) - HPL3's bloom is
+	// structured entirely differently (posteffect_bloomhdr_brightpass_frag.
+	// hpsl + posteffect_bloomhdr_blur_frag.hpsl, no separate "add" pass),
+	// not just renamed. See PostEffect_Bloom.cpp for the graceful-skip fix
+	// instead.
+	static const char* const gvHpslFilenameAliases[][2] = {
+		{ "deferred_illumination_frag.glsl",	"deferred_illumination_solid_frag.hpsl" },
+		{ "deferred_gbuffer_skybox_frag.glsl",	"deferred_skybox_frag.hpsl" },
+		{ "deferred_decal_frag.glsl",			"deferred_gbuffer_decal_frag.hpsl" },
+	};
+
+	static tString GetHpslFallbackName(const tString& asGlslName)
+	{
+		for(size_t i=0; i<sizeof(gvHpslFilenameAliases)/sizeof(gvHpslFilenameAliases[0]); ++i)
+		{
+			if(asGlslName == gvHpslFilenameAliases[i][0]) return gvHpslFilenameAliases[i][1];
+		}
+		return cString::SetFileExt(asGlslName, "hpsl");
+	}
+
+	//-----------------------------------------------------------------------
+
+	// Applies the "NAME UNIT\n"-per-line sampler bindings
+	// TranspileHpslToGlsl() hands back (see its asSamplerBindingsOut doc
+	// comment in HpslTranspiler.h) via real iGpuShader::AddSamplerUnit()
+	// calls - the HPSL-path equivalent of the "@define sampler_NAME N" scan
+	// just above, for a binding syntax that scan can't see at all.
+	static void ApplyHpslSamplerBindings(iGpuShader *apShader, const tString& asBindings)
+	{
+		size_t lLineStart = 0;
+		while(lLineStart < asBindings.size())
+		{
+			size_t lLineEnd = asBindings.find('\n', lLineStart);
+			if(lLineEnd == tString::npos) lLineEnd = asBindings.size();
+
+			tString sLine = asBindings.substr(lLineStart, lLineEnd - lLineStart);
+			lLineStart = lLineEnd + 1;
+
+			size_t lSpacePos = sLine.find(' ');
+			if(lSpacePos == tString::npos || lSpacePos == 0) continue;
+
+			tString sName = sLine.substr(0, lSpacePos);
+			int lUnit = cString::ToInt(sLine.substr(lSpacePos + 1).c_str(), 0);
+
+			apShader->AddSamplerUnit(sName, lUnit);
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
 	iGpuShader* cGpuShaderManager::CreateShader(const tString& asName, eGpuShaderType aType,
 												cParserVarContainer *apVarContainer)
 	{
@@ -129,7 +203,10 @@ namespace hpl {
 				// SetHpslTranspileCallback(); Dark Descent/AMFP never do,
 				// so this block is unreachable for them and sPath=="" falls
 				// straight into the existing error path below unchanged.
-				sHpslName = cString::SetFileExt(asName, "hpsl");
+				// GetHpslFallbackName() applies the gvHpslFilenameAliases
+				// table above for the handful of names HPL3 genuinely
+				// renamed, falling back to plain SetFileExt() otherwise.
+				sHpslName = GetHpslFallbackName(asName);
 				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
 				if(sHpslPath != _W(""))
 				{
@@ -209,10 +286,11 @@ namespace hpl {
 			//HPSL -> GLSL fallback: same preprocessor as the .glsl path
 			//above, transpiled the rest of the way by the registered
 			//game-module callback.
+			tString sHpslSamplerBindings;
 			if(bIsHpslFallback)
 			{
 				tString sGlsl, sTranspileError;
-				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError)==false)
+				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError, sHpslSamplerBindings)==false)
 				{
 					Error("Couldn't transpile HPSL shader '%s' (from '%s'): %s\n",
 						  asName.c_str(), sHpslName.c_str(), sTranspileError.c_str());
@@ -246,18 +324,29 @@ namespace hpl {
 					const tString& sVarName = varIt->first;
 					const tString& sVarVal = varIt->second;
 					if(sVarName == "") continue;
-                    
+
 					tStringVec vStrings;
 					tString sSepp = "_";
 					cString::GetStringVec(sVarName,vStrings,&sSepp);
 					if(vStrings.size()>=2 && vStrings[0]=="sampler")
 					{
 						int lUnit = cString::ToInt(sVarVal.c_str(), 0);
-						
+
 						pShader->AddSamplerUnit(vStrings[1], lUnit);
 					}
-					
+
 				}
+
+				// HPSL's own ": N" texture-unit-binding syntax is a
+				// different, D3D-derived convention the scan above (which
+				// only understands hand-written .glsl's "@define
+				// sampler_NAME N") can't see at all - see
+				// TranspileHpslToGlsl()'s asSamplerBindingsOut doc comment
+				// in HpslTranspiler.h for why, and PORTING_NOTES.md's "SOMA"
+				// section for the real symptom this fixed (every HPSL
+				// fragment shader's 2nd+ sampler silently defaulting to
+				// texture unit 0).
+				if(bIsHpslFallback) ApplyHpslSamplerBindings(pShader, sHpslSamplerBindings);
 			}
 		}
 		/////////////////////////////////////////
@@ -288,7 +377,7 @@ namespace hpl {
 			// mpHpslTranspileCallback NULL and never enter this block.
 			else if(pShader==NULL && sPath==_W("") && mpHpslTranspileCallback)
 			{
-				tString sHpslName = cString::SetFileExt(asName, "hpsl");
+				tString sHpslName = GetHpslFallbackName(asName);
 				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
 				if(sHpslPath != _W(""))
 				{
@@ -305,8 +394,8 @@ namespace hpl {
 					tString sParsedOutput;
 					mpPreprocessParser->Parse(&sFileData, &sParsedOutput, &emptyVars, cString::GetFilePathW(sHpslPath));
 
-					tString sGlsl, sTranspileError;
-					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError))
+					tString sGlsl, sTranspileError, sHpslSamplerBindings;
+					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError, sHpslSamplerBindings))
 					{
 						pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
 						pShader->SetFullPath(sHpslPath);
@@ -320,6 +409,12 @@ namespace hpl {
 						}
 						else
 						{
+							// Same reasoning as the apVarContainer branch
+							// above - HPSL's ": N" sampler bindings never
+							// reach the "@define sampler_NAME N" scan that
+							// path relies on, since Parse() doesn't
+							// recognize the D3D-style syntax as such a var.
+							if(aType == eGpuShaderType_Fragment) ApplyHpslSamplerBindings(pShader, sHpslSamplerBindings);
 							AddResource(pShader);
 						}
 					}
