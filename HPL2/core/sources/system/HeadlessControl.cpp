@@ -506,6 +506,7 @@ namespace hpl {
 		RegisterHandler("log_tail", SCmdLogTail, this);
 		RegisterHandler("set_focus_wait", SCmdSetFocusWait, this);
 		RegisterHandler("input", SCmdInput, this);
+		RegisterHandler("resize", SCmdResizeWindow, this);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -579,6 +580,27 @@ namespace hpl {
 	void cHeadlessControlServer::CmdSetFocusWait(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{
 		mpEngine->SetWaitIfAppOutOfFocus(aReq.GetBool("enabled", false));
+	}
+
+	void cHeadlessControlServer::CmdResizeWindow(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{
+		// Test-only hook for reproducing "the compositor resized/fullscreened
+		// our window and we never noticed" bugs headlessly: even a hidden
+		// (SDL_WINDOW_HIDDEN) window has a real SDL_Window, so this can drive
+		// the exact same SDL_WINDOWEVENT_RESIZED path a real compositor action
+		// would, with no visible on-screen effect.
+		int lW = aReq.GetInt("width", 0);
+		int lH = aReq.GetInt("height", 0);
+		if(lW <= 0 || lH <= 0)
+		{
+			aResp.SetError("resize requires positive 'width' and 'height'");
+			return;
+		}
+
+		if(mpEngine->GetGraphics()->GetLowLevel()->ForceWindowSize(lW, lH) == false)
+		{
+			aResp.SetError("could not resize window");
+		}
 	}
 
 	void cHeadlessControlServer::CmdInput(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -661,5 +683,7 @@ namespace hpl {
 	{ ((cHeadlessControlServer*)apUserData)->CmdSetFocusWait(aReq, aResp); }
 	void cHeadlessControlServer::SCmdInput(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{ ((cHeadlessControlServer*)apUserData)->CmdInput(aReq, aResp); }
+	void cHeadlessControlServer::SCmdResizeWindow(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{ ((cHeadlessControlServer*)apUserData)->CmdResizeWindow(aReq, aResp); }
 
 }

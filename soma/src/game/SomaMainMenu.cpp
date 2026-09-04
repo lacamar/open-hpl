@@ -294,15 +294,16 @@ void cSomaMainMenu::RunPendingAction()
 	{
 	case eSomaMainMenuAction_NewGame:
 	{
-		// Reuses cSomaBase::LoadMap() - the same entry point the headless
-		// "start_map" command already uses - rather than duplicating
-		// map-load logic here. 00_01_apartment.hpm/PlayerStartArea_1 is
-		// the smallest, earliest real SOMA map with a real PlayerStart
-		// Area (see PORTING_NOTES.md).
+		// Reads the real <StartMap>/main_init.cfg entry (SOMA's own
+		// "00_00_intro.hpm"/PlayerStartArea_1 on a real install) via
+		// cSomaBase::StartNewGame(), rather than a hardcoded map file -
+		// see its comment in SomaBase.cpp for why 00_01_apartment.hpm was
+		// wrong here (a later map in the intro sequence, not the real
+		// start).
 		tString sError;
-		if (mpBase->LoadMap("00_01_apartment.hpm", cVector3f(0, 1.7f, 0), sError, "PlayerStartArea_1") == false)
+		if (mpBase->StartNewGame(sError) == false)
 		{
-			Log("SOMA main menu: New Game failed to load 00_01_apartment.hpm (%s)\n", sError.c_str());
+			Log("SOMA main menu: New Game failed to load the start map (%s)\n", sError.c_str());
 			return;
 		}
 		SetVisible(false);

@@ -79,6 +79,14 @@ public:
 	bool LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
 				 const tString &asStartPosName = "");
 
+	// Reads the real <StartMap File=".../" Pos="..."/> entry out of
+	// main_init.cfg (same file/pattern InitMainMenuScene() already uses for
+	// <MainMenu>) and loads it via LoadMap() - the actual first map a new
+	// game should open on, e.g. SOMA's own real "00_00_intro.hpm"/
+	// "PlayerStartArea_1". Used by the main menu's "New Game" action instead
+	// of a hardcoded map file.
+	bool StartNewGame(tString &asErrorOut);
+
 	cEngine *mpEngine;
 
 	tString msGameName;

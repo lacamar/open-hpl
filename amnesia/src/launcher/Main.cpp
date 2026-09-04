@@ -74,7 +74,7 @@ std::vector<cConfigFile*> gvPresets;
 bool InitPaths(const tWString& asInitConfigFile, const tWString &asDefaultInitConfigFile)
 {
     // Load this up as a global to search alternate resource path
-	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(eSystemPath_Personal);
+	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(PERSONAL_SYSTEMPATH_TYPE);
 
     tWString sInitConfigFile = asInitConfigFile;
 #ifdef USERDIR_RESOURCES

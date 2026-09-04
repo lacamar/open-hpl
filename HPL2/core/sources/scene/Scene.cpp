@@ -397,7 +397,7 @@ namespace hpl {
 		for(; SortIt != mapSortedSets.end(); ++SortIt)
 		{
 			cGuiSet *pSet = SortIt->second;
-			
+
 			//Log("Rendering gui '%s'\n", pSet->GetName().c_str());
 
 			pSet->Render(NULL);

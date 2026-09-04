@@ -184,6 +184,7 @@ namespace hpl {
 		void CmdLogTail(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		void CmdSetFocusWait(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		void CmdInput(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		void CmdResizeWindow(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 
 		static void SCmdPing(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdQuit(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
@@ -191,6 +192,7 @@ namespace hpl {
 		static void SCmdLogTail(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdSetFocusWait(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdInput(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		static void SCmdResizeWindow(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 
 		cEngine *mpEngine;
 		tString msSocketPath;

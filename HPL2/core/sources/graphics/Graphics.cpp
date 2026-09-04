@@ -242,6 +242,20 @@ namespace hpl {
 
 	void cGraphics::Update(float afTimeStep)
 	{
+		// Catches the window's real size changing out from under the engine (e.g. a
+		// Wayland compositor fullscreening/tiling this window on its own) - without
+		// this, every size-dependent render target and viewport calc keeps using the
+		// stale size, leaving rendering pinned to a stale-sized rectangle with the
+		// rest of the window showing undrawn framebuffer content. Reloading here
+		// (rather than live-resizing individual buffers) reuses the exact same
+		// DestroyData()/LoadData() path every renderer already implements for its
+		// own (previously-unused) initial setup, so every size-dependent resource
+		// is rebuilt consistently at the new size.
+		if(mpLowLevelGraphics->CheckAndUpdateScreenSize())
+		{
+			ReloadRendererData();
+		}
+
 		for(size_t i=0; i< mvRenderers.size(); ++i)
 		{
 			iRenderer *pRenderer = mvRenderers[i];

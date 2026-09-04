@@ -423,6 +423,37 @@ bool cSomaBase::InitMainMenuScene()
 
 //-----------------------------------------------------------------------
 
+bool cSomaBase::StartNewGame(tString &asErrorOut)
+{
+	////////////////////////////////////
+	// Read the real <StartMap File="..." Pos="..."/> entry back out of
+	// main_init.cfg - same file/pattern InitMainMenuScene() already uses
+	// for <MainMenu>. A real install declares "00_00_intro.hpm"/
+	// "PlayerStartArea_1" here; the previous New Game handler hardcoded
+	// "00_01_apartment.hpm" instead (a real, but wrong, map - apartment is
+	// reached later in the intro sequence, not where a new game starts).
+	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
+	if (pInitCfg->Load() == false)
+	{
+		asErrorOut = "Could not reload main init file for <StartMap> entry";
+		hplDelete(pInitCfg);
+		return false;
+	}
+	tString sStartMapFile = pInitCfg->GetString("StartMap", "File", "");
+	tString sStartMapPos = pInitCfg->GetString("StartMap", "Pos", "");
+	hplDelete(pInitCfg);
+
+	if (sStartMapFile == "")
+	{
+		asErrorOut = "main_init.cfg has no <StartMap File=.../> entry";
+		return false;
+	}
+
+	return LoadMap(sStartMapFile, cVector3f(0, 1.7f, 0), asErrorOut, sStartMapPos);
+}
+
+//-----------------------------------------------------------------------
+
 bool cSomaBase::InitTestMap()
 {
 	////////////////////////////////////

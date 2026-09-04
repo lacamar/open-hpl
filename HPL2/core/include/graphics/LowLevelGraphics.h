@@ -86,6 +86,24 @@ namespace hpl {
 		virtual cVector2f GetScreenSizeFloat()=0;
 		virtual const cVector2l& GetScreenSizeInt()=0;
 
+		/**
+		 * Re-query the real window/drawable size (e.g. after a compositor-driven
+		 * resize such as toggling fullscreen outside the engine's own control) and
+		 * update the cached screen size accordingly. Returns true if the size
+		 * actually changed, so the caller can decide whether to reload
+		 * size-dependent renderer data.
+		 */
+		virtual bool CheckAndUpdateScreenSize()=0;
+
+		/**
+		 * Test-only hook: force the real OS window to a given size, so
+		 * "the compositor resized us and the engine never noticed" bugs can be
+		 * reproduced headlessly (a hidden window can still be resized with no
+		 * visible on-screen effect) instead of needing a live, visible desktop
+		 * resize/fullscreen action. Returns false if unsupported/no window yet.
+		 */
+		virtual bool ForceWindowSize(int alWidth, int alHeight)=0;
+
 		/*
 		* Get fullscreen mode
 		*/

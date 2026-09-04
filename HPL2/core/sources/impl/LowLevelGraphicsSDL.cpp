@@ -817,6 +817,49 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cLowLevelGraphicsSDL::ForceWindowSize(int alWidth, int alHeight)
+	{
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		if(mpScreen == NULL) return false;
+		SDL_SetWindowSize(mpScreen, alWidth, alHeight);
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	//-----------------------------------------------------------------------
+
+	bool cLowLevelGraphicsSDL::CheckAndUpdateScreenSize()
+	{
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		// Nothing in this engine listens for SDL_WINDOWEVENT_RESIZED/SIZE_CHANGED
+		// (e.g. a Wayland compositor fullscreening or tiling this window on its
+		// own, outside the engine's own SDL_WINDOW_FULLSCREEN_DESKTOP path), so
+		// mvScreenSize can silently go stale: the real window/backbuffer grows or
+		// shrinks but every size-dependent render target/viewport calc keeps using
+		// the old cached value, leaving rendering pinned to a stale-sized rectangle
+		// with the rest of the (now larger) window showing undrawn framebuffer
+		// content. Called once a frame from cGraphics::Update() so any such resize
+		// is caught and reconciled within a frame, without needing new SDL event
+		// plumbing threaded through the input layer.
+		if(mpScreen == NULL) return false;
+
+		int lW = 0, lH = 0;
+		SDL_GetWindowSize(mpScreen, &lW, &lH);
+		if(lW <= 0 || lH <= 0) return false; // e.g. minimized - keep the last known good size
+
+		if(lW == mvScreenSize.x && lH == mvScreenSize.y) return false;
+
+		mvScreenSize = cVector2l(lW, lH);
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	//-----------------------------------------------------------------------
+
 	//////////////////////////////////////////////////////////////////////////
 	// DATA CREATION
 	//////////////////////////////////////////////////////////////////////////
