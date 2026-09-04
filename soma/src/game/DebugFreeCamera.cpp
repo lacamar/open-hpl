@@ -16,6 +16,8 @@ cSomaDebugFreeCamera::cSomaDebugFreeCamera(cCamera *apCamera, cInput *apInput) :
 
 	mbFirstUpdate = true;
 	mvLastMousePos = cVector2l(0, 0);
+
+	mbActive = true;
 }
 
 //-----------------------------------------------------------------------
@@ -28,6 +30,7 @@ cSomaDebugFreeCamera::~cSomaDebugFreeCamera()
 
 void cSomaDebugFreeCamera::Update(float afTimeStep)
 {
+	if (mbActive == false) return;
 	if (mpCamera == NULL || mpInput == NULL) return;
 
 	iKeyboard *pKeyboard = mpInput->GetKeyboard();

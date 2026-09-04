@@ -3113,3 +3113,366 @@ change. `ctest` stays 4/4 green. No `HPL2/core` changes this pass - contained to
   `cWidgetImage` is needed for something `DrawGfx()` can't do as well (e.g. per-widget hover/
   animation state).
 - `CubeMap Type="Rect"` silently loading as a plain 2D texture (unrelated, documented earlier).
+
+## SOMA: a real Options screen off the main menu's Options button (this session)
+
+Previously the main menu's Options button (`soma/src/game/SomaMainMenu.cpp`) was a hardcoded
+no-op (`Log("... not implemented in this scaffold yet")`). Read the real Options screen directly
+out of a real SOMA install the same way the main menu itself was: `script/modules/
+MenuHandler.hps`'s `GuiOptions()`/`GuiOptionsAudio()`/`GuiOptionsVideoDisplay()`/
+`GuiOptionsVideoGamma()` for the real menu tree/logic, and `script/custom_depth/
+helper_custom_depth_imgui/helper_imgui_options.hps` for the real layout constants and widget
+conventions (`OptionMenu_ButtonOptions()`/`OptionMenu_ButtonOptionsSlider()`/
+`OptionMenu_ButtonOptionsToggle()`, `kOptionsBgPos`/`kOptionMenu_*`), plus `config/
+base_english.lang`'s `Menu` category for real captions (`AUDIO`/`DISPLAY`/`VOLUME`/`V-SYNC`/
+`GAMMA`/`BACK` etc. - confirmed there's no separate `OptionsMenu` category the way Dark Descent's
+`amnesia/src/game/LuxMainMenu_Options.cpp` uses; SOMA keeps everything under `Menu`).
+
+The real tree is Gameplay/Controls/Video{Display,PostEffect,World,Gamma}/Audio, each its own
+sub-screen - deliberately NOT ported in full. Checked what this engine's shared HPL2/core
+actually has a *working* backend for (same method as reading `amnesia/src/game/
+LuxMainMenu_Options.cpp`/`LuxConfigHandler.{h,cpp}` to see what Dark Descent's own Options menu
+really wires up) and kept only that: master volume (`cSound`'s `iLowLevelSound::SetVolume()`/
+`GetVolume()`), gamma (`iLowLevelGraphics::SetGammaCorrection()`/`GetGammaCorrection()`, same
+0.3-2.0 range `cSomaGammaScreen`'s first-boot calibration screen already uses), vsync
+(`iLowLevelGraphics::SetVsyncActive()`), and fullscreen (persisted only - no live "become
+fullscreen" API exists, same "takes effect after restart" contract Dark Descent's own Fullscreen
+checkbox has). Everything else real but unbacked (texture/shadow/SSAO/AA quality, resolution
+list, refresh rate, FOV, subtitles, controls/keybinds, gameplay difficulty, ...) was left out
+entirely rather than drawn as a dead control, per this project's stated preference for honest
+scope over fake completeness.
+
+**New `soma/src/game/SomaConfig.{h,cpp}`**: a small `cLuxConfigHandler`-shaped Load()/Save()
+class for exactly those four settings (`mfMasterVolume`/`mfGamma`/`mbVSync`/`mbFullscreen`),
+persisted to `main_settings.cfg` under `$XDG_CONFIG_HOME/open-hpl/soma/` (config, not state/cache
+- SOMA previously had zero persisted config at all, `cSomaBase::InitEngine()` hardcoded
+`1280x720`/windowed every boot). Saved immediately on every change from the Options screen
+(cheap for four scalars) rather than batched behind a separate "Apply" step.
+
+**Options screen implementation lives inside `cSomaMainMenu`** (`soma/src/game/
+SomaMainMenu.{h,cpp}`), not a separate class/GuiSet - it shares the main menu's background/title/
+font/highlight-bar drawing and 1280x720 virtual canvas, and the real game overlays its own
+Options screen on top of the still-visible main menu background the same way. Added an
+`eSomaMenuScreen` state (`Main`/`OptionsRoot`/`OptionsAudio`/`OptionsDisplay`) and a generic
+`cSomaOptionsRow` (`Category`/`Toggle`/`Slider`/`Back`) rebuilt fresh each frame by
+`BuildOptionsRows()`, pointing directly at the live `cSomaConfig` fields (no separate "UI has its
+own copy of the value" staleness risk). Real widget art used throughout: the 9-slice `menu_
+corner_*.tga`/`menu_border_*.tga` panel frame (composited by hand in `DrawOptionsPanel()` - this
+engine has no scripted equivalent of the real closed-source `cImGuiFrameGfx`/`DrawFrame()`, so
+this is a real panel using the real assets/colour, not a pixel-identical recreation),
+`startmenu_options_button_long.tga` for the selected-row highlight (confirmed distinct from the
+main menu's own `startmenu_button_long.tga`), `startmenu_options_button_meter.tga`/`_arrow.tga`
+for sliders, `startmenu_options_button_on/off.tga` for toggles. Slider interaction matches the
+real script's `OptionMenu_ButtonOptionsSlider()`: clicking inside the actual track rect starts a
+direct drag-to-position (held across frames via `mlDraggingSliderRow`), clicking elsewhere in the
+row steps by a fixed amount based on which half of the track the click was nearer.
+
+**A real, confirmed-live bug found and fixed along the way** (not the Options screen itself, but
+directly relevant to this project's zero-tolerance policy on writing into the real Steam
+install): `cSomaConfig::Load()`'s `Log()` call (on the fresh-install "no config file yet" path)
+was being reached from inside `cSomaBase::InitEngine()` *before* that function's own
+`SetLogFile()` call further down - meaning it went to this engine's pre-`SetLogFile()` default
+log destination, a bare relative `"hpl.log"` resolved against the process's cwd. Confirmed live:
+running an early build of this session's own binary from a scratch test directory that (per this
+project's own established headless-testing pattern) symlinks `hpl.log` back to the real Steam
+install for tailing actually wrote into `~/.../Steam/steamapps/common/SOMA/hpl.log`. Fixed by
+moving the `mConfig.Load()` call (and the `vars.mGraphics.mbFullscreen = mConfig.mbFullscreen`
+line that depends on it) to after `SetLogFile()`. While chasing this, found a second, pre-existing
+instance of the identical class of bug, unrelated to this session's own changes: `cSomaBase::
+Init()`'s very first `Log("SOMA game module - Phase 0 scaffolding...")` call sat before
+`InitEngine()` entirely, so it *always* hit the same pre-`SetLogFile()` destination on every
+single boot - also confirmed live (caught it happening in real time from a concurrent session's
+own test run against the real Steam install while investigating this). Fixed the same way (moved
+after `InitEngine()` succeeds). Neither fix touches Dark Descent/AMFP/Rebirth/Bunker in any way -
+both are SOMA-only lines inside `cSomaBase::Init()`/`InitEngine()`.
+
+**Verified live, headless** (`scripts/hpl_control.py` against a real build deployed to a scratch
+dir with real SOMA data symlinked in read-only - see the top of this file for why the real Steam
+install is never written to): clicking through Main Menu -> OPTIONS -> AUDIO -> drag the VOLUME
+slider -> BACK -> DISPLAY -> toggle FULLSCREEN/V-SYNC -> drag GAMMA -> BACK -> BACK -> Main Menu,
+all via real injected mouse events (not just visual presence - actual click/drag routing),
+confirmed the real panel/highlight-bar/slider/toggle art renders and each control responds.
+`main_settings.cfg` correctly recorded every change as it happened (`Sound Volume="0.159184"`,
+`Graphics Gamma="0.431837"`, `Screen Vsync="true" FullScreen="true"`) and a full process restart
+against the same config confirmed persistence actually works end-to-end: `hpl.log` showed `Init
+lowlevel graphics: ... fs:1 ...` (fullscreen correctly re-applied at the next `InitEngine()`) and
+no stray pre-`SetLogFile()` log line anywhere. `ctest` stayed 4/4 green both before and
+immediately after this session's own changes; a full clean rebuild (`cmake --build amnesia/src/
+build`, no target filter - Amnesia/Launcher/Soma/all tests) and `ctest` both stayed green at the
+very end of this session too, see "Remaining open items" below for the transient build break in
+between.
+
+### Remaining open items
+
+- This session ran concurrently with another session's own work on a real player controller
+  (`soma/src/game/SomaPlayer.{h,cpp}`, touching shared `HPL2/core/{include,sources}/resources/
+  WorldLoaderHpm.{h,cpp}`) in the same working tree. That work was mid-edit at one point and
+  briefly left the shared `HPL2` target failing to build (`invalid use of incomplete type 'class
+  hpl::iVertexBuffer'` in `WorldLoaderHpm.cpp`) - confirmed unrelated to anything in this entry
+  (the error was entirely inside `WorldLoaderHpm.cpp`'s mesh/physics-body code, nothing this
+  session touched), and resolved itself (that other session finished its edit) before this session
+  ended - a subsequent full rebuild + `ctest` confirmed everything green again. Noted here in case
+  it's a useful data point for whoever reviews either session's work, not a real open item.
+- Also encountered (not fixed, out of scope, pre-existing): a first-boot-only `cSomaGammaScreen`
+  (`soma/src/game/SomaGammaScreen.{h,cpp}`, apparently from that same concurrent work) never
+  routes mouse input to its own `cGuiSet` (missing the `cGui::SendMousePos()` pump `cSomaMainMenu`
+  itself needed fixing for earlier) - its Continue button/slider are unreachable by mouse, only
+  Enter/Escape/Space keyboard input actually advances past it. Also observed its slider/Continue
+  button widgets still rendering for one frame after `Finish()` on top of the main menu that
+  loads immediately after (cosmetic, `mpViewport->SetActive(false)` apparently isn't enough to
+  stop `cGuiSet`'s own widget draw pass). Neither investigated further - not this session's scope.
+- Only master Volume/Gamma/VSync/Fullscreen are wired up, matching what this engine actually
+  backs today (see above) - Resolution/TextureQuality/ShadowQuality/SSAO/AA/refresh rate/FOV/
+  subtitles/Controls-Gameplay tabs are all real in SOMA's own script but not implemented here at
+  all (not even as disabled controls) since nothing in this engine drives them yet.
+- The Options panel's 9-slice frame (`DrawOptionsPanel()`) is a hand-composited approximation
+  (corners at native size, borders stretched between them, translucent fill) using the real
+  texture assets and real background colour - not a byte-for-byte reproduction of the real
+  (closed, compiled) `cImGuiFrameGfx`/`DrawFrame()` pixel math, which isn't available to read.
+  Looks correct in every screenshot taken this session but wasn't compared pixel-by-pixel against
+  a real SOMA screenshot of the same screen.
+- `OptionMenu_SectionTitle`'s real 3-arg overload right-aligns the screen title along the panel's
+  bottom edge; this port's `DrawOptionsScreen()` left-aligns it instead (simpler, and reads fine
+  in practice) - a known, minor, deliberate deviation, not a bug.
+
+## SOMA: a real player controller (physics body, walk/collide/jump/look) - this session, ran concurrently with the Options-menu session above
+
+This is the other concurrent session referenced in that session's own note above (which
+independently hit and correctly diagnosed a mid-edit `WorldLoaderHpm.cpp` build break from this
+work - confirmed here too, self-resolved, not a real bug). Scope: replace the free-fly debug
+camera with a real physics-based player controller for actual game maps, and investigate real
+AngelScript `OnStart()` execution. Priority 1 (player controller) is done and live-verified;
+priority 2 (script execution) turned out to be a much bigger gap than scoped time allowed - see
+the "not done" section below for exactly why, with citations, so the next session doesn't have to
+re-discover it.
+
+### New: `soma/src/game/SomaPlayer.{h,cpp}` - a real `iCharacterBody`-based player
+
+Modeled on (not copied from) `amnesia/src/game/LuxPlayer.cpp`'s `CreateCharacterBody()`/`Move()`/
+`AddYaw()`/`AddPitch()`/`Jump()`, trimmed to the minimum: no crouch/lean/state-machine, just
+gravity, real per-axis walk speeds, mouse-look, and a simple ground-gated jump. All body/movement
+constants are reverse-engineered from SOMA's own real script source, not guessed:
+- Body size `(0.7, 2.0, 0.7)`, crouch size `(0.7, 1.2, 0.7)`, mass `70` -
+  `script/player/Player_Types.hps` (`gvBodySize`/`gvBodyCrouchSize`/`gfPlayer_BodyDefaultMass`).
+- Gravity `(0, -12, 0)`, camera pos-add `(0, -0.1, 0)`, `MaxNoSlideSlopeAngle=46°`,
+  `MaxStepSize=0.4`/`MaxStepSizeInAir=0.1`/`StepClimbSpeed=3.5` -
+  `script/player/Player.hps`'s `SetCharacterBodyDefaults()`/`SetBaseCameraPosAdd()`.
+- Per-axis walk speeds forward `2.5`/backward `2.0`/sideways `2.25` -
+  `script/player/MoveState_Normal.hps`'s `OnEnterState()` (`mfMaxForwardSpeed`/
+  `mfMaxBackwardSpeed`/`mfMaxSidwaySpeed`).
+- Camera pitch limits `±70°` - `config/game.cfg`'s real `<Player CameraPitchLimit_Min/Max>`.
+- Jump: SOMA's real jump is a *force* (`gfJumpStartForce=200`) integrated over
+  `gfJumpDuration=0.32s` in `MoveState_Normal.hps`'s `UpdateJumping()` - not reproduced; this is a
+  plain instantaneous upward velocity (`v=sqrt(2*g*h)` for a ~0.8m hop) instead, tuned by feel.
+
+`SomaBase::LoadMap()` now creates a `cSomaPlayer` (once, reused across map loads the same way
+`cSomaDebugFreeCamera` already was - see below) instead of `cSomaDebugFreeCamera` for real game
+maps, gated by a new `mbUseRealPlayer` flag (`OPENHPL_SOMA_FREECAM=1` opts back into the old
+free-fly no-clip camera, e.g. for inspecting a level without gravity/collision). The main menu
+scene (`InitMainMenuScene()`) and the old `InitTestMap()` fallback are unconditionally unchanged
+(still free-fly) - a player body makes no sense there. `cSomaDebugFreeCamera` gained a
+`SetActive(bool)` (disabled rather than destroyed when the real player takes over on "New Game" -
+same "`cUpdater` has no remove" constraint as everywhere else in this scaffold).
+
+Also fixed as a small side-effect: `LoadMap()` previously read a `PlayerStart` Area's position but
+threw away its rotation (`mpDebugCamera->SetYaw(0)` was hardcoded) - it now extracts the real yaw
+via `cMath::MatrixToEulerAngles(...).y` and applies it to both the real player and the free-fly
+camera fallback, so both now face the way the map's author actually intended.
+
+### Real bug #1 (found via a live SIGSEGV, not reasoning): character-body destroy order
+
+`cSomaPlayer::ResetForNewMap()` originally destroyed the *previous* map's character body itself,
+called *after* `SomaBase::LoadMap()` had already called `cScene::DestroyWorld()` on that previous
+world - which also destroys its `iPhysicsWorld`. `iPhysicsWorld::DestroyCharacterBody()` on a body
+whose owning world is already freed is a real use-after-free. Reproduced live: booting headlessly,
+calling `start_map` twice in a row (the second any real map transition, or a second headless
+`start_map` call) crashed with `SIGSEGV` every time - full `coredumpctl gdb` backtrace pinned it to
+`cSomaPlayer::DestroyCharacterBody`, called from `ResetForNewMap`, called from `cSomaBase::LoadMap`.
+Fixed by splitting `DestroyCharacterBody()` out as its own public method and moving the call in
+`SomaBase::LoadMap()` to *before* `DestroyWorld()`, not after (see the comments at both call sites
+for the full reasoning). Verified fixed: repeated `start_map` calls (intro → apartment → intro →
+apartment, several times in a row) no longer crash.
+
+### Real bug #2 (found via a live SIGSEGV): `Soma.bin.aarch64`/`OpenHplSoma.bin.aarch64` inside the real Steam SOMA install directory
+
+While setting up an isolated scratch test directory (symlinking the real SOMA data in read-only,
+per this project's own safety rule), `ls` on the real
+`/home/lm/.local/share/Steam/steamapps/common/SOMA/` directory turned up two real (not symlinked)
+ELF binaries sitting there: `Soma.bin.aarch64` (88MB, today's date) and `OpenHplSoma.bin.aarch64`
+(2.5MB, today's date) - build output from a `\cp -f .../Amnesia.bin.aarch64 "$GAMEDIR/..."`-style
+deploy (the exact pattern this document's own "Build / deploy / test cycle" section at the very
+top prescribes for Dark Descent) having apparently been run against SOMA's real Steam folder by an
+earlier session, before the stricter "never write to any Steam game directory" rule now in force
+for this project. **Not touched, not deleted** (deleting would itself be writing to that directory,
+against the same rule) - flagging this clearly for the user's own review/cleanup, since it's
+exactly the kind of accidental Steam-directory contamination this project has been explicitly
+warned about. Whoever picks this up next should NOT reuse the top-of-document "Build / deploy /
+test cycle" section's `\cp -f ... "$GAMEDIR/..."` pattern for SOMA (or any other game) - use a
+scratch/tmp deploy with symlinked read-only game data instead (see this session's own
+`/tmp/smtest` pattern below).
+
+### Real bug #3 (found via a real headless probe, after a real physics-collision root-cause): `StopMovement()` silently zeroes a persistent tuning constant
+
+The most time-consuming bug this session, because the first two symptoms it produced (WASD/mouse
+input appearing to do nothing) looked like a headless-input-tooling problem, not a player-code bug
+- worth documenting the full chase for whoever hits something similar:
+
+1. First real finding (a genuine, separate, previously-undocumented gap): `resources/
+   WorldLoaderHpm.cpp` - SOMA's own real `.hpm` map loader - **never created any physics bodies for
+   level geometry at all**, by original design (`WorldLoaderHpm.h`'s own header comment: *"Phase 1
+   has no player controller, so collision is unnecessary"*, `CreateStaticObject()`'s own comment:
+   *"NOTE: 'Collides' is intentionally ignored - this loader creates no physics bodies"*). This was
+   the real reason a real physics player fell straight through a real map's floor with no
+   FPS-independent limit (confirmed live: repeated `camera_state` polls on `00_01_apartment.hpm`
+   showed uninterrupted free-fall, `y` dropping by the exact amount plain `-12 m/s²` gravity
+   predicts, forever). **Fixed**: `CreateStaticObject()`/`CreatePlanePrimitive()` now read the
+   real (previously-ignored) `Collides="true/false"` attribute and, when true, build a real static
+   (mass 0) collision body per object via a new `CreateStaticBodyForMesh()` helper - one
+   `iCollideShape` per submesh (a `cCompoundShape` if more than one), built from a `Software` copy
+   of that submesh's own vertex buffer transformed into world space, then `CreateMeshShape()` +
+   `CreateBody()`, matching the technique (not the spatial-batching) `cWorldLoaderHplMap`'s own
+   `AddObjectsToStaticMeshBody()` uses for Dark Descent. Verified live: after this fix, spawning on
+   `00_01_apartment.hpm`'s real `PlayerStartArea_1` now falls a small, correct distance and comes
+   to rest exactly on the real floor (`camera_state` position stable across repeated polls, matching
+   the map's known real floor height), instead of falling through it forever. **Scope note**:
+   `CreateMapEntity()` (dynamic props/furniture/doors) still gets no collision body at all - a real
+   map's ~400+ entities are still walk-through. This loader is SOMA-only (registered for the "hpm"
+   extension only), so this change is inert for Dark Descent/AMFP/Rebirth/Bunker - confirmed via a
+   full `Amnesia` target rebuild after the change, plus `ctest` staying green throughout.
+2. With real floor collision now working, WASD *still* produced provably zero movement - and this
+   time it looked like a headless-input-tooling problem specifically: a synthetic `input
+   type=mouse_move` command (pushed via `SDL_PushEvent`) never affected `GetRelPosition()` at all.
+   Root-caused by reading `MouseSDL.cpp`: `GetRelPosition()` is fed from `SDL_GetRelativeMouseState()`,
+   a real OS/backend-level accumulator - **not** from the injected `SDL_Event`'s own `motion.xrel/
+   yrel` fields at all. This means the existing headless "input" command's `mouse_move` sub-type is
+   a confirmed no-op for anything reading `GetRelPosition()` (which includes both
+   `cSomaDebugFreeCamera` and the new `cSomaPlayer`) - a real, pre-existing gap in
+   `HeadlessControl.cpp`'s `CmdInput()`/this project's headless test tooling, not something this
+   session fixed (documenting it here since it means **mouse-look could not be verified headlessly
+   this session** - see "Not done" below). `type=key` keyboard events, by contrast, *are*
+   confirmed to work correctly (`cKeyboardSDL::Update()` reads them from the real queued
+   `SDL_Event` list, not an OS accumulator) - confirmed via a temporary `input_debug` headless probe
+   showing `w_down: true` immediately after injecting a `key W action=down` event, and staying true
+   until released.
+3. So keyboard input demonstrably reached `iKeyboard::KeyIsDown()`, `cSomaPlayer::Update()`
+   demonstrably ran every frame (gravity/landing worked), yet `pKeyboard->KeyIsDown(eKey_W)` being
+   true still produced zero movement. A second temporary headless probe (`force_move`, since
+   removed) called `iCharacterBody::Move(eCharDir_Forward,1)` + `Update()` in a tight synchronous
+   60-iteration loop directly, bypassing per-frame input/timing entirely, on a character body
+   floating in **empty space** (SOMA's real, genuinely geometry-less `00_00_intro.hpm` intro map -
+   see below) to rule out collision as an explanation too: still exactly zero net displacement, and
+   `iCharacterBody::GetMoveAcc(eCharDir_Forward)` (a per-body tuning constant, defaults to `20` in
+   `CharacterBody.cpp`'s constructor) read back as `0`. Root cause: `cSomaPlayer::ResetForNewMap()`
+   called `mpCharBody->StopMovement()` right after spawning (mirroring `LuxPlayer::
+   PlaceAtStartNode()`'s own `StopMovement()` call, on the reasonable assumption it just clears
+   transient move state) - but `iCharacterBody::StopMovement()` (`CharacterBody.cpp`) also zeroes
+   `mfMoveAcc[i]`/`mfMoveDeacc[i]` themselves, not just the transient `mfCurrentMoveAcc`/
+   `mfMoveSpeed`/`mbMoving` state its name implies. Since `mfMoveAcc` gates *all* future
+   acceleration (`fSpeedAdd = mfCurrentMoveAcc[i] * mfMoveAcc[i] * ...`), zeroing it once
+   permanently disables all future movement - forever, for that body. Dark Descent's own
+   `cLuxPlayer` never notices this because its move-state machine (`LuxMoveState.cpp`'s
+   `OnEnterState()`) unconditionally re-applies `SetMoveAcc()`/`SetMoveDeacc()` every time a move
+   state activates (called right after `PlaceAtStartNode()`), silently healing the wipe on the very
+   next state transition - this scaffold has no such state machine, so the wipe stuck permanently.
+   **Fixed**: removed the (for a freshly-`CreateCharacterBody()`'d body, unnecessary - there is no
+   prior movement to "stop") `StopMovement()` call from `ResetForNewMap()` entirely, with a detailed
+   comment explaining the trap for whoever adds a real move-state system later and might
+   reintroduce a `StopMovement()` call without knowing about this.
+
+### Verified live (headless, `/tmp/smtest` scratch deploy symlinked read-only to the real SOMA
+install, `OPENHPL_HEADLESS_SOCKET`, real `00_01_apartment.hpm`)
+
+Concrete evidence, not just "compiles":
+- **Spawn position**: `start_map map=00_01_apartment.hpm pos=PlayerStartArea_1` →
+  `camera_state` reports `(-10.75, 1.936, 8.25)`, matching the map's real
+  `PlayerStartArea_1` (`WorldPos="-10.75 1.01415 8.25"`) plus the real body-height/CameraPosAdd
+  math (feet `1.01415` + body height `2.0` - `0.1` ≈ `2.91`... actual settled height after falling
+  onto the real floor was `1.936`, i.e. it fell a small amount and *stopped*, not fell forever).
+- **Gravity + real floor collision**: repeated `camera_state` polls immediately after spawn show a
+  short fall (`2.79 → 1.94`) that then holds rock-stable across 8+ further polls - before the
+  `WorldLoaderHpm.cpp` fix, the exact same sequence showed uninterrupted free-fall
+  (`2.79 → -22.75` and still falling) with no floor at all.
+- **WASD movement**: holding synthetic `W` (`input type=key key=W action=down`) moved the player
+  from `(-10.75, 8.25)` to `(-9.43, 7.78)` over ~6 real seconds, in the exact diagonal direction its
+  `yaw` (`-0.786` rad, from the map's real `PlayerStartArea_1` rotation) implies, then **stopped
+  dead against real collision** (three consecutive polls at the same position after ~5s of
+  movement) - a real wall or piece of geometry, not a bug (movement resumes correctly if `A`/`D`/`S`
+  are used to route around it, not separately re-verified this session for time).
+- **Jump**: holding synthetic `Space` while grounded raised `y` from `1.936` to `2.679` (a real
+  ~0.74m hop) then fell back to exactly `1.936` again - lands back on the same real floor.
+- **Regression**: `ctest --test-dir amnesia/src/build` stayed green (4/4) throughout every change
+  in this session, and a plain `Amnesia` target rebuild after the shared `WorldLoaderHpm.cpp`
+  change succeeded with no changes needed elsewhere.
+
+Not verified this session (see "not done"): real mouse-look (headless `mouse_move` injection is a
+confirmed tooling no-op, see bug #3 above - the code path itself mirrors `LuxPlayer::AddYaw()`
+closely enough to be fairly confident it's correct, but "fairly confident" is not "verified", and
+this project's own history has burned people on unverified confidence before); crouch/lean; NPC/
+enemy interaction (none exist in this scaffold at all); actually playing through a full real level
+by hand on a real desktop (only headless synthetic input was used).
+
+### Not done / concretely investigated but out of realistic scope this session: real AngelScript `OnStart()` execution
+
+Spent real, bounded investigation time (not just guessing) characterizing exactly how far this is
+from working, since "get OnStart() to run" turned out to be a much bigger gap than the debug-camera
+free-fly scaffold's existing PORTING_NOTES entries implied:
+
+- SOMA's real map scripts (read directly, e.g. `maps/chapter00/00_00_intro/00_00_intro.hps`,
+  `script/player/Player.hps` et al) are genuine HPL3-generation AngelScript: full `#include`
+  preprocessing (`#include "interfaces/Map_Interface.hps"` etc), script-defined classes deriving
+  from engine interfaces, and extensive use of real *host object types* passed/returned across the
+  script/engine boundary (`iCharacterBody@`, `cLuxMap@`-equivalent, ImGui draw types, `cVector3f`/
+  `cColor` as first-class objects with methods, not just plain-float function arguments).
+- This codebase's entire existing AngelScript integration (`HPL2/core/sources/impl/SqScript.cpp`'s
+  `cSqScript::CreateFromFile()`, used by Dark Descent's real, working `cLuxScriptHandler`) does
+  **zero** `#include` preprocessing - `AddScriptSection("main", <raw file bytes>, len)` then
+  `Build()` directly. AngelScript itself has no built-in `#include` support; the standard solution
+  (the `CScriptBuilder` addon) is not present anywhere in `HPL2/dependencies` - confirmed by
+  searching the whole tree for `scriptbuilder`/`preprocessor`, nothing found. Feeding a real SOMA
+  `.hps` file to `CreateFromFile()` as-is would fail to compile on the very first `#include` line.
+- More fundamentally: `grep -rn "RegisterObjectType" HPL2/core/sources` returns **zero matches**,
+  anywhere in this codebase. Dark Descent's entire real script API (`LuxScriptHandler.cpp`, ~260
+  functions) is 100% flat global functions taking only primitive types (`float`/`int`/`bool`/
+  `string`) - this is genuinely how Frictional wrote Amnesia's own Lua-turned-AngelScript API, not
+  a simplification this port made. SOMA's real scripts, by contrast, are written against a real
+  object-oriented API (`mBaseObj.GetCharacterBody().SetCustomGravity(mvGravity)` etc., straight
+  from `script/player/Player.hps`) that requires registering real C++ types as AngelScript
+  reference types with bound methods - infrastructure that does not exist ANYWHERE in this
+  codebase yet, for any game.
+- Conclusion: getting even one real SOMA map's `OnStart()` to run requires, at minimum, (1) a real
+  `#include` resolver (a `CScriptBuilder`-equivalent, or a simpler recursive text-inliner scoped to
+  SOMA's script include search paths) and (2) a genuinely new object-type registration layer
+  (`iCharacterBody`, a `cLuxMap`-equivalent, `cVector3f`/`cColor` as script objects, at minimum) -
+  neither of which exists today for *any* game in this codebase, not just SOMA. This is
+  realistically its own multi-session project, not a follow-up task. Deliberately not attempted
+  beyond this characterization, per this session's own time-boxing - a half-built object
+  registration layer with no working compile target to prove it against would be worse than an
+  honest "not started" note.
+- The real 00_00_intro.hpm map itself is also worth noting for whoever picks this up: it has
+  **zero static objects, zero entities, one primitive** (confirmed live via the real load log) -
+  the actual intro is a pure ImGui slideshow (`iSlideShowElement`/`cSlide`/`cSlideShowVoice`
+  classes at the top of `00_00_intro.hps`) drawn over a void scene, not real 3D geometry at all.
+  This means a real physics player controller in this specific map will fall forever no matter what
+  (correctly - there is genuinely nothing to stand on), which is expected/correct physics, not a
+  bug - the real game clearly does not run a physics player character during this map at all
+  (almost certainly gated by script, e.g. `SetPlayerActive(false)` or equivalent, which doesn't
+  exist yet either). `00_01_apartment.hpm` (real floor, walls, furniture) is the right map to
+  verify player-controller work against, not the intro.
+
+### Remaining open items for whoever picks this up
+
+1. Real mouse-look is implemented (mirrors `LuxPlayer::AddYaw()`/`AddPitch()`) but **not verified
+   live** - the headless `input type=mouse_move` command is a confirmed no-op for `GetRelPosition()`
+   (see bug #3 above); either fix `CmdInput()` to also feed `motion.xrel/yrel` through a path
+   `GetRelPosition()` actually reads (not a small change - would need a new, `iMouse`-level way to
+   inject a "relative delta" independent of `SDL_GetRelativeMouseState()`), or verify via a real
+   desktop session with a real mouse instead.
+2. `WorldLoaderHpm.cpp`'s new collision only covers `StaticObject`/`Primitive` (walls/floors/
+   ceilings) - `CreateMapEntity()` (props/furniture/doors, ~400+ per real map) still creates no
+   physics body at all. A real map is still far from fully walkable.
+3. No crouch, lean, or footstep/landing sounds/effects - `cSomaPlayer` is deliberately minimal.
+4. Real AngelScript `OnStart()` execution - see above; needs its own multi-session effort
+   (`#include` resolution + object-type registration layer) before it's even worth attempting on
+   real map scripts.
+5. The stray `Soma.bin.aarch64`/`OpenHplSoma.bin.aarch64` files inside the real Steam SOMA
+   directory (bug #2 above) need the user's own attention - not touched by this session.

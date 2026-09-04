@@ -1,5 +1,82 @@
 # Tasks
 
+- SOMA: a real physics-based player controller, and real static-geometry collision (2026-09-05)
+  - DONE: soma/src/game/SomaPlayer.{h,cpp} - a real iCharacterBody-based player controller
+    (gravity, real per-axis walk speeds, mouse-look, ground-gated jump) replacing the free-fly
+    debug camera for real game maps loaded via SomaBase::LoadMap() (main menu scenes keep the
+    free-fly camera unconditionally; OPENHPL_SOMA_FREECAM=1 opts back into free-fly for game maps
+    too). All body/movement constants reverse-engineered from SOMA's own real script source
+    (script/player/Player_Types.hps, Player.hps, MoveState_Normal.hps, config/game.cfg), not
+    guessed. Also fixed: HPL2/core/{include,sources}/resources/WorldLoaderHpm.{h,cpp} (SOMA's own
+    real .hpm map loader) previously created ZERO physics bodies for any level geometry at all (a
+    known, documented Phase-1 gap from before any player controller existed) - StaticObject/
+    Primitive meshes now get a real static collision body each when their real "Collides"
+    attribute (previously read but ignored) is true. Found and fixed two real, live-reproduced
+    bugs along the way: (1) a SIGSEGV use-after-free (character body destroyed after its owning
+    physics world, not before - real coredumpctl backtrace), (2) iCharacterBody::StopMovement()
+    silently zeroing the persistent mfMoveAcc/mfMoveDeacc tuning constants (not just transient move
+    state as its name implies), which permanently disabled all future WASD movement - the root
+    cause of "keyboard input registers but the player never moves" after a long, methodical chase
+    (ruled out headless-input-tooling issues, mouse-look injection - genuinely a separate,
+    confirmed no-op tooling gap - and collision before finding this). Verified live and
+    headlessly on the real 00_01_apartment.hpm map: correct spawn position/facing from the map's
+    real PlayerStart Area, gravity + real floor collision (falls a small amount then rests, was
+    previously infinite free-fall), WASD movement in the correct direction that stops dead against
+    real wall collision, and jump (real ~0.74m hop, lands back on the same floor). ctest 4/4 green
+    throughout; a full Amnesia target rebuild after the shared WorldLoaderHpm.cpp change confirmed
+    it's inert for Dark Descent (that loader is SOMA-only, registered for the "hpm" extension
+    only). Also found, NOT fixed (flagged for the user, out of scope - must not touch Steam
+    directories): two real build-artifact binaries (Soma.bin.aarch64/OpenHplSoma.bin.aarch64) sit
+    inside the real Steam SOMA install directory from an earlier session, predating this project's
+    current "never write to a Steam game directory" rule. Full writeup, all verification evidence,
+    and a real characterization of the real AngelScript OnStart() gap (see below) in
+    PORTING_NOTES.md.
+  - Not done: real mouse-look is implemented but NOT verified live (the existing headless "input"
+    command's mouse_move injection is a confirmed no-op for GetRelPosition() - reads a real SDL
+    OS-level accumulator, not the injected event's own fields - a pre-existing headless-tooling gap,
+    not something this session could fix within scope); dynamic map Entities (props/furniture/
+    doors, ~400+ per real map) still get no collision body at all, only StaticObjects/Primitives
+    (walls/floors/ceilings); no crouch/lean/footstep sounds.
+  - Investigated but NOT attempted (real AngelScript OnStart() execution, priority 2 of this
+    session's brief): characterized concretely why this is its own multi-session project, not a
+    follow-up task - this codebase's entire AngelScript integration (used successfully by Dark
+    Descent) does zero #include preprocessing and has literally zero RegisterObjectType() calls
+    anywhere, for any game; SOMA's real scripts need both a real #include resolver and a genuinely
+    new object-type registration layer (iCharacterBody, a cLuxMap-equivalent, vector/color types as
+    real script objects) that doesn't exist today. See PORTING_NOTES.md for the full citations.
+
+- SOMA: a real Options screen off the main menu's Options button (2026-09-05)
+  - DONE: read the real Options screen directly out of a real SOMA install
+    (script/modules/MenuHandler.hps's GuiOptions()/GuiOptionsAudio()/GuiOptionsVideoDisplay()/
+    GuiOptionsVideoGamma() + script/custom_depth/helper_custom_depth_imgui/helper_imgui_options.hps's
+    layout constants/widget helpers), same methodology as the main menu. Scoped down from the real
+    8-tab tree (Gameplay/Controls/Video{Display,PostEffect,World,Gamma}/Audio) to only what this
+    engine has a real, working backend for: master Volume (cSound), Gamma/VSync (cLowLevelGraphics,
+    both live), Fullscreen (persisted, applies on next launch - no live API exists, matching Dark
+    Descent's own Fullscreen setting). New soma/src/game/SomaConfig.{h,cpp} (small Load()/Save()
+    class, mirrors amnesia/src/game/LuxConfigHandler.{h,cpp}'s shape) persists these four settings
+    to main_settings.cfg under $XDG_CONFIG_HOME/open-hpl/soma/ - SOMA previously had zero persisted
+    config at all. Options screen itself lives inside cSomaMainMenu (soma/src/game/
+    SomaMainMenu.{h,cpp}, an eSomaMenuScreen state + generic cSomaOptionsRow rows), not a separate
+    class, so it shares the main menu's background/font/highlight-bar/1280x720-canvas conventions;
+    real corner/border frame + slider/toggle/highlight-bar art (graphics/startmenu/gfx/) used
+    throughout. Found and fixed a real, confirmed-live bug along the way: cSomaBase::InitEngine()
+    (and a second, pre-existing instance in cSomaBase::Init() itself) could Log() before
+    SetLogFile() ran, which - confirmed live from a real headless test run - wrote into the real
+    Steam SOMA install's hpl.log via this project's own established "symlink hpl.log for tailing"
+    scratch-dir pattern; fixed by reordering both call sites. Verified live, headless, via real
+    injected mouse clicks/drags: full navigation (Main -> Options -> Audio -> Volume drag -> Back ->
+    Display -> Fullscreen/VSync toggle -> Gamma drag -> Back -> Back -> Main), main_settings.cfg
+    recording each change correctly, and a full process restart confirming persistence actually
+    works (hpl.log showed "fs:1" - fullscreen correctly re-applied). ctest 4/4 green immediately
+    after this session's changes. Full writeup in PORTING_NOTES.md, including a note on an
+    unrelated concurrent session's own in-progress work (SomaPlayer/WorldLoaderHpm.cpp) that left
+    the shared build broken afterward - confirmed unrelated to this entry.
+  - Not attempted: Controls/Gameplay tabs, Resolution/TextureQuality/ShadowQuality/SSAO/AA/refresh
+    rate/FOV/subtitles (none of these have a working backend in this engine yet, left out entirely
+    rather than drawn as dead controls); pixel-exact 9-slice panel frame math (hand-composited
+    approximation using the real assets/colour instead, see PORTING_NOTES.md).
+
 - SOMA: splash screens + a real interactive main menu (2026-09-04)
   - DONE: fixed two real splash bugs (soma/src/game/SomaSplash.cpp) - logo textures requested
     GL_TEXTURE_RECTANGLE for compressed DDS data (spec doesn't support that combination, switched

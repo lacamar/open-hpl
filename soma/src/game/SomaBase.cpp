@@ -25,11 +25,14 @@ cSomaBase *gpSomaBase = NULL;
 //////////////////////////////////////////////////////////////////////////
 // HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
 //
-// No player/script layer exists in this free-fly scaffold, so this is just
-// the debug camera's own transform. mpDebugCamera is checked at call time,
-// not registration time: it doesn't exist until InitMainMenuScene()/
-// InitTestMap() run, which happens later (after the splash sequence, via
-// OnSplashFinished()) than where these are registered below.
+// Still just the shared debug camera's own transform, whether it's actually
+// being driven by cSomaDebugFreeCamera or (see SomaPlayer.h) a real
+// character body - both write straight into the same cCamera, so this needs
+// no changes to support the real player controller. mpDebugCamera is
+// checked at call time, not registration time: it doesn't exist until
+// InitMainMenuScene()/InitTestMap() run, which happens later (after the
+// splash sequence, via OnSplashFinished()) than where these are registered
+// below. There is still no script layer at all - see SomaPlayer.h/PORTING_NOTES.md.
 //////////////////////////////////////////////////////////////////////////
 
 static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -104,12 +107,15 @@ cSomaBase::cSomaBase()
 	mpEngine = NULL;
 
 	mpSplash = NULL;
+	mpGammaScreen = NULL;
 	mpMainMenu = NULL;
 
 	mpTestWorld = NULL;
 	mpDebugCamera = NULL;
 	mpDebugViewport = NULL;
 	mpDebugCameraController = NULL;
+	mpPlayer = NULL;
+	mbUseRealPlayer = true;
 }
 
 //-----------------------------------------------------------------------
@@ -135,8 +141,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// InitMainConfig() here only pulls out what Phase 0 actually needs.
 	if (InitMainConfig() == false)
 		return false;
-
-	Log("SOMA game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
 
 	/////////////////////////////
 	// Wire the HPSL->GLSL transpiler (soma/src/game/HpslTranspiler.cpp) into
@@ -172,6 +176,20 @@ bool cSomaBase::Init(const tString &asCommandline)
 	if (InitEngine() == false)
 		return false;
 
+	// Deliberately after InitEngine() (which calls SetLogFile() early on,
+	// before doing anything else that might Log()) rather than right after
+	// InitMainConfig() above where this used to sit - a bare relative
+	// "hpl.log" (this engine's default log destination before SetLogFile()
+	// runs, see InitEngine()'s own comment) resolves inside whatever the
+	// process's cwd happens to be, which for a real deployed build is the
+	// Steam install directory itself. Confirmed live: running a build with
+	// this Log() call still in its old spot from a scratch test directory
+	// that (per this project's own established headless-testing pattern)
+	// symlinks "hpl.log" back to the real install for tailing wrote this
+	// exact line into the real Steam SOMA install's hpl.log - exactly what
+	// this project has a zero-tolerance policy against.
+	Log("SOMA game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
+
 	/////////////////////////////
 	// Headless control: register camera commands if a control server is
 	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
@@ -205,6 +223,31 @@ bool cSomaBase::Init(const tString &asCommandline)
 //-----------------------------------------------------------------------
 
 void cSomaBase::OnSplashFinished()
+{
+	// Real SOMA only shows its gamma-calibration screen once, on a
+	// completely fresh install (MenuHandler.hps's mbPremenuActive flag) -
+	// see cSomaGammaScreen::ShouldShowAndMarkSeen() for how that's tracked
+	// here. On every later boot this goes straight to ProceedPastBoot().
+	if (cSomaGammaScreen::ShouldShowAndMarkSeen())
+	{
+		mpGammaScreen = hplNew(cSomaGammaScreen, (mpEngine, this));
+		mpEngine->GetUpdater()->AddGlobalUpdate(mpGammaScreen);
+		return;
+	}
+
+	ProceedPastBoot();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaBase::OnGammaScreenFinished()
+{
+	ProceedPastBoot();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaBase::ProceedPastBoot()
 {
 	// Opt-in escape hatch for interactively looking at real map content -
 	// InitMainMenuScene() (the normal path) loads a real but legitimately
@@ -249,9 +292,10 @@ void cSomaBase::Exit()
 
 void cSomaBase::Run()
 {
-	// Main loop - a map is loaded and a debug free-fly camera is active
-	// (see InitTestMap()), but there is still no player controller and no
-	// scripts running.
+	// Main loop - a map is loaded and either the debug free-fly camera or
+	// (the default for real game maps - see LoadMap()) a real physics-based
+	// player controller (see SomaPlayer.h) is active, but there is still no
+	// script layer running at all (no OnStart()/quest/door/intro logic).
 	mpEngine->Run();
 }
 
@@ -291,9 +335,17 @@ bool cSomaBase::InitMainConfig()
 
 bool cSomaBase::InitEngine()
 {
+	// Real physics-based player controller (see SomaPlayer.h/.cpp) for real
+	// game maps loaded via LoadMap() - the debug free-fly camera stays
+	// available as an opt-out escape hatch (e.g. to no-clip through a level
+	// for inspection) via OPENHPL_SOMA_FREECAM=1. Main menu scenes
+	// (InitMainMenuScene()) and the old InitTestMap() fallback always keep
+	// using the free-fly camera regardless of this flag - no player body
+	// makes sense there.
+	mbUseRealPlayer = (getenv("OPENHPL_SOMA_FREECAM") == NULL);
+
 	cEngineInitVars vars;
 	vars.mGraphics.mvScreenSize = cVector2l(1280, 720);
-	vars.mGraphics.mbFullscreen = false;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 #if defined(__linux__)
@@ -324,6 +376,25 @@ bool cSomaBase::InitEngine()
 	SetLogFile(sLogFile);
 #endif
 
+	// Load persisted settings (see SomaConfig.h) - deliberately AFTER
+	// SetLogFile() above: cConfigFile::Load()/cSomaConfig::Load() both Log()
+	// on a missing/fresh-install config file (the common case), and doing
+	// this any earlier sends that Log() to the engine's pre-SetLogFile()
+	// default destination - a bare relative "hpl.log" in whatever the
+	// process's cwd happens to be (see the comment above). A real headless
+	// test run from a scratch directory containing an "hpl.log" symlink
+	// (this project's own established pattern, e.g. for tailing it via the
+	// headless control socket) turned that into a real, confirmed write
+	// into the actual Steam install directory the very first time this bug
+	// existed - exactly what this project has a zero-tolerance policy
+	// against. mbFullscreen only takes effect at window-creation time
+	// (cLowLevelGraphics::Init()'s abFullscreen param), so it has to be
+	// read back and applied to vars here, before CreateHPLEngine() below -
+	// unlike Gamma/Volume/VSync, applied live further down once cGraphics/
+	// cSound exist.
+	mConfig.Load();
+	vars.mGraphics.mbFullscreen = mConfig.mbFullscreen;
+
 	/////////////////////////
 	// Create the engine
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
@@ -344,6 +415,15 @@ bool cSomaBase::InitEngine()
 	// every <Entity>/<Area> element in a real SOMA map (confirmed via a real
 	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
+
+	/////////////////////////
+	// Apply the persisted settings that DO have a live/runtime API (unlike
+	// Fullscreen above, which only applies at the next InitEngine()) - same
+	// APIs amnesia/src/game/LuxMainMenu_Options.cpp's own Options menu uses
+	// for these.
+	mpEngine->GetSound()->GetLowLevel()->SetVolume(mConfig.mfMasterVolume);
+	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mConfig.mfGamma);
+	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mConfig.mbVSync, false);
 
 	return true;
 }
@@ -507,47 +587,114 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		return false;
 	}
 
+	// mpPlayer's character body (if any) belongs to mpTestWorld's specific
+	// physics world - must be destroyed before DestroyWorld() below frees
+	// that physics world out from under it, or cSomaPlayer::ResetForNewMap()
+	// (called further down) would call iPhysicsWorld::DestroyCharacterBody()
+	// on an already-dangling pointer. Found live via a real SIGSEGV: the
+	// first LoadMap() call (menu -> New Game) worked fine (no old body to
+	// destroy yet), but a second one (e.g. a headless "start_map" reload)
+	// crashed immediately in cSomaPlayer::DestroyCharacterBody().
+	if (mpPlayer) mpPlayer->DestroyCharacterBody();
+
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
 	mpTestWorld = pNewWorld;
 
-	// Reuse the existing camera/viewport/controller if this isn't the first
-	// load rather than destroying and recreating them - cUpdater has no
-	// "remove" counterpart to AddGlobalUpdate() (see ExitTestMap()'s own
-	// comment on this), so a fresh cSomaDebugFreeCamera on every call would
-	// leak one dangling iUpdateable per call once its camera is destroyed
-	// below. cViewport::SetWorld() is the real engine API for exactly this
-	// "same camera, new world" case.
+	// Reuse the existing camera/viewport if this isn't the first load rather
+	// than destroying and recreating them - cUpdater has no "remove"
+	// counterpart to AddGlobalUpdate() (see ExitTestMap()'s own comment on
+	// this), so a fresh controller on every call would leak one dangling
+	// iUpdateable per call once its camera is destroyed below.
+	// cViewport::SetWorld() is the real engine API for exactly this "same
+	// camera, new world" case. Note this camera/viewport may already exist
+	// from InitMainMenuScene() (StartNewGame() calling this after the menu
+	// was shown is the normal "New Game" path), not just from an earlier
+	// LoadMap() call.
 	if (mpDebugCamera == NULL)
 	{
 		mpDebugCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
 		mpDebugCamera->SetFarClipPlane(200.0f);
 		mpDebugViewport = mpEngine->GetScene()->CreateViewport(mpDebugCamera, mpTestWorld, true);
-		mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
-		mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 	}
 	else
 	{
 		mpDebugViewport->SetWorld(mpTestWorld);
 	}
 
+	// Controller hand-off: InitMainMenuScene() always creates a free-fly
+	// mpDebugCameraController for the menu scene itself (see there), so the
+	// *first* real game map to load via LoadMap() (typically "New Game")
+	// needs to both disable that (rather than destroy it - same
+	// no-remove-from-cUpdater constraint as above; a live but disabled
+	// controller just returns immediately, see cSomaDebugFreeCamera::Update())
+	// and create the real player controller for the first time. A
+	// cSomaPlayer, once created, is reused/reset for every later map (see
+	// cSomaPlayer::ResetForNewMap()) rather than recreated - unlike its
+	// character body, which really does need destroying and recreating on
+	// every call, since it belongs to the old world's specific physics
+	// world, just torn down by DestroyWorld() above.
+	if (mbUseRealPlayer)
+	{
+		if (mpDebugCameraController)
+			mpDebugCameraController->SetActive(false);
+
+		if (mpPlayer == NULL)
+		{
+			mpPlayer = hplNew(cSomaPlayer, (mpDebugCamera, mpEngine->GetInput()));
+			mpEngine->GetUpdater()->AddGlobalUpdate(mpPlayer);
+		}
+	}
+	else if (mpDebugCameraController == NULL)
+	{
+		mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
+		mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+	}
+
 	// Resolve a real PlayerStart Area by name if asked for (requires
 	// cSomaAreaLoader_PlayerStart - see SomaLoaders.h - to have populated
 	// one via CreateStartPos() while pNewWorld loaded above); otherwise fall
 	// back to the caller-supplied position, same as before this existed.
-	cVector3f vStartPos = avStartPos;
+	// Also pulls the Area's real yaw rotation now (previously discarded -
+	// the free-fly camera always started facing world-forward regardless of
+	// which way the PlayerStart actually faced), needed for the real player
+	// controller below and applied to the free-fly camera too as a minor
+	// side-fix.
+	cVector3f vAreaPos = avStartPos;
+	float fAreaYaw = 0;
+	bool bFoundArea = false;
 	if (asStartPosName != "")
 	{
 		cStartPosEntity *pStartPos = pNewWorld->GetStartPosEntity(asStartPosName);
 		if (pStartPos)
-			vStartPos = pStartPos->GetWorldMatrix().GetTranslation() + cVector3f(0, 0.5f, 0);
+		{
+			vAreaPos = pStartPos->GetWorldMatrix().GetTranslation();
+			fAreaYaw = cMath::MatrixToEulerAngles(pStartPos->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y;
+			bFoundArea = true;
+		}
 		else
+		{
 			Log("SOMA: map '%s' has no PlayerStart Area named '%s', using fallback position\n",
 				asMapFile.c_str(), asStartPosName.c_str());
+		}
 	}
 
-	mpDebugCamera->SetPosition(vStartPos);
-	mpDebugCamera->SetPitch(0);
-	mpDebugCamera->SetYaw(0);
+	if (mbUseRealPlayer && mpPlayer)
+	{
+		// Real feet position: the PlayerStart Area's raw translation (no
+		// eye-height fudge - the character body's own size/CameraPosAdd
+		// handles that, see SomaPlayer.cpp), or the caller-supplied
+		// fallback position when no named Area was found (only exercised by
+		// the OPENHPL_SOMA_MAP debug env var / the "start_map" headless
+		// command with no 'pos' field).
+		mpPlayer->ResetForNewMap(mpTestWorld->GetPhysicsWorld(), vAreaPos, fAreaYaw);
+	}
+	else
+	{
+		cVector3f vCamPos = bFoundArea ? (vAreaPos + cVector3f(0, 0.5f, 0)) : avStartPos;
+		mpDebugCamera->SetPosition(vCamPos);
+		mpDebugCamera->SetPitch(0);
+		mpDebugCamera->SetYaw(fAreaYaw);
+	}
 
 	return true;
 }
@@ -568,6 +715,7 @@ void cSomaBase::ExitTestMap()
 	// teardown rather than explicitly deleted here against a dangling
 	// reference in the updater's list.
 	mpDebugCameraController = NULL;
+	mpPlayer = NULL;
 
 	mpDebugViewport = NULL;
 	mpDebugCamera = NULL;

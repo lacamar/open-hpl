@@ -26,9 +26,12 @@
 #include "graphics/SubMesh.h"
 #include "graphics/MeshCreator.h"
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/VertexBuffer.h"
 
 #include "physics/Physics.h"
 #include "physics/PhysicsWorld.h"
+#include "physics/PhysicsBody.h"
+#include "physics/CollideShape.h"
 
 #include "math/Math.h"
 
@@ -608,10 +611,8 @@ namespace hpl {
 		cVector3f vScale = apElement->GetAttributeVector3f("Scale", 1);
 		cVector3f vRotation = apElement->GetAttributeVector3f("Rotation", 0);
 		bool bCastsShadows = apElement->GetAttributeBool("CastShadows", true);
+		bool bCollides = apElement->GetAttributeBool("Collides", true);
 		int lID = apElement->GetAttributeInt("ID", -1);
-
-		// NOTE: "Collides" is intentionally ignored - this loader creates
-		// no physics bodies (see file header).
 
 		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return;
 
@@ -628,6 +629,12 @@ namespace hpl {
 
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);
+
+		// Real collision body from the real "Collides" attribute - see
+		// CreateStaticBodyForMesh() and the class comment in the header for
+		// why this now exists (it didn't in the original Phase 1 loader).
+		if (bCollides)
+			CreateStaticBodyForMesh(pMeshEntity, sName);
 
 		++mlStaticObjectsCreated;
 	}
@@ -646,6 +653,7 @@ namespace hpl {
 		tString sName = apElement->GetAttributeString("Name");
 		tString sMaterial = apElement->GetAttributeString("Material");
 		bool bCastsShadows = apElement->GetAttributeBool("CastShadows", true);
+		bool bCollides = apElement->GetAttributeBool("Collides", true);
 		int lID = apElement->GetAttributeInt("ID", -1);
 
 		cVector3f vPosition = apElement->GetAttributeVector3f("WorldPos", 0);
@@ -677,7 +685,55 @@ namespace hpl {
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);
 
+		if (bCollides)
+			CreateStaticBodyForMesh(pMeshEntity, sName);
+
 		++mlPrimitivesCreated;
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName)
+	{
+		cMesh* pMesh = apMeshEntity->GetMesh();
+		if (pMesh == NULL) return;
+
+		int lSubMeshNum = pMesh->GetSubMeshNum();
+		if (lSubMeshNum <= 0) return;
+
+		// One iCollideShape per submesh, each built from a Software copy of
+		// that submesh's own vertex buffer transformed into world space by
+		// the mesh entity's already-fully-set world matrix (position +
+		// rotation + scale - see both call sites above, which call this only
+		// after SetWorldMatrix()/SetPosition()) - same technique
+		// cWorldLoaderHplMap::AddObjectsToStaticMeshBody() uses for Amnesia's
+		// own batched static bodies, just one object (not a spatially-batched
+		// group of many) per call here, matching this loader's existing
+		// "one cMeshEntity per source object, not batched" simplification
+		// for rendering (see the class comment in WorldLoaderHpm.h).
+		tCollideShapeVec vShapes;
+		for (int i = 0; i < lSubMeshNum; ++i)
+		{
+			cSubMesh* pSubMesh = pMesh->GetSubMesh(i);
+			iVertexBuffer* pSrcVtxBuffer = pSubMesh->GetVertexBuffer();
+			if (pSrcVtxBuffer == NULL) continue;
+
+			iVertexBuffer* pVtxBuffer = pSrcVtxBuffer->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static,
+																   eVertexElementFlag_Position);
+			pVtxBuffer->Transform(apMeshEntity->GetWorldMatrix());
+
+			iCollideShape* pShape = mpCurrentPhysicsWorld->CreateMeshShape(pVtxBuffer);
+			hplDelete(pVtxBuffer);
+
+			if (pShape) vShapes.push_back(pShape);
+		}
+
+		if (vShapes.empty()) return;
+
+		iCollideShape* pFinalShape = vShapes.size() > 1 ? mpCurrentPhysicsWorld->CreateCompundShape(vShapes) : vShapes[0];
+
+		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, pFinalShape);
+		pBody->SetMass(0); // static - real objects are never pushed/simulated by this loader
 	}
 
 	//-----------------------------------------------------------------------

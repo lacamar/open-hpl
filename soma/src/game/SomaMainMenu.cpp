@@ -6,6 +6,7 @@
 
 #include "SomaMainMenu.h"
 #include "SomaBase.h"
+#include "SomaConfig.h"
 
 #include <cmath>
 
@@ -31,6 +32,80 @@ static const cColor kDeselectedTextColor(1, 1);
 
 static const float kFrontFaceScale = 0.7f;
 static const float kBackFaceScale = 0.3f;
+
+//---------------------------------------
+// Real Options screen constants, verbatim from helper_imgui_options.hps
+// (kOptionMenu_* there). Reusing kMainMenuButtonPos/kOptionMenuButtonSpacing
+// above for row position/spacing - the real script does too (every
+// OptionMenu_ButtonOptions*() call is passed kMainMenuButtonPos as avPos).
+
+static const cVector2f kOptionsBgPos(100, 260);
+
+static const cVector2f kOptionsCheckboxOffset(405, 2);
+static const cVector2f kOptionsCheckboxSize(100, 46);
+
+static const cVector2f kOptionsSliderOffset(305, 2);
+static const cVector2f kOptionsSliderSize(368, 46);
+static const float kOptionsSliderTrackLocalMinX = 325; // relative to row pos.x
+static const float kOptionsSliderTrackLocalMaxX = 570;
+static const cVector2f kOptionsSliderBarOffset(325, 16);
+static const cVector2f kOptionsSliderBarSize(245, 5);
+static const cVector2f kOptionsSliderArrowOffsetL(570, -1);
+static const cVector2f kOptionsSliderArrowOffsetR(305, -2);
+static const cVector2f kOptionsSliderArrowSize(20, 40);
+
+// Real mGfxFrame.mGfxBackground.mColor (MenuHandler.hps's Init()).
+static const cColor kOptionsFrameFillColor(5.0f / 255.0f, 60.0f / 255.0f, 72.0f / 255.0f, 0.25f);
+
+//---------------------------------------
+// Small helpers to build a fully-populated cSomaOptionsRow without leaving
+// any field at a stale value from a previous push_back() - see
+// cSomaMainMenu::BuildOptionsRows().
+
+static cSomaOptionsRow MakeCategoryRow(const tWString &asLabel, eSomaMenuScreen aTarget)
+{
+	cSomaOptionsRow row;
+	row.mKind = cSomaOptionsRow::eKind_Category;
+	row.msLabel = asLabel;
+	row.mTarget = aTarget;
+	row.mpBoolValue = NULL;
+	row.mpFloatValue = NULL;
+	row.mfMin = row.mfMax = row.mfStep = 0;
+	return row;
+}
+
+static cSomaOptionsRow MakeBackRow(eSomaMenuScreen aTarget)
+{
+	cSomaOptionsRow row = MakeCategoryRow(_W("BACK"), aTarget);
+	row.mKind = cSomaOptionsRow::eKind_Back;
+	return row;
+}
+
+static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue)
+{
+	cSomaOptionsRow row;
+	row.mKind = cSomaOptionsRow::eKind_Toggle;
+	row.msLabel = asLabel;
+	row.mTarget = eSomaMenuScreen_Main;
+	row.mpBoolValue = apValue;
+	row.mpFloatValue = NULL;
+	row.mfMin = row.mfMax = row.mfStep = 0;
+	return row;
+}
+
+static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, float afMin, float afMax, float afStep)
+{
+	cSomaOptionsRow row;
+	row.mKind = cSomaOptionsRow::eKind_Slider;
+	row.msLabel = asLabel;
+	row.mTarget = eSomaMenuScreen_Main;
+	row.mpBoolValue = NULL;
+	row.mpFloatValue = apValue;
+	row.mfMin = afMin;
+	row.mfMax = afMax;
+	row.mfStep = afStep;
+	return row;
+}
 
 //---------------------------------------
 
@@ -74,6 +149,16 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mfButtonClickedTimer = 0;
 	mPendingAction = eSomaMainMenuAction_None;
 
+	mScreen = eSomaMenuScreen_Main;
+	mlOptionsHoveredRow = -1;
+	mlDraggingSliderRow = -1;
+
+	mpFrameCornerTL = mpFrameCornerTR = mpFrameCornerBL = mpFrameCornerBR = NULL;
+	mpFrameBorderTop = mpFrameBorderBottom = mpFrameBorderLeft = mpFrameBorderRight = NULL;
+	mpFrameFillGfx = NULL;
+	mpOptionsHighlightGfx = mpOptionsMeterGfx = mpOptionsArrowGfx = NULL;
+	mpOptionsCheckOnGfx = mpOptionsCheckOffGfx = mpOptionsBarGfx = NULL;
+
 	mpGui = mpEngine->GetGui();
 
 	// Same real skin file cSomaSplash already uses (SOMA ships no separate
@@ -106,6 +191,13 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mpGui->SetFocus(mpGuiSet);
 
 	CreateGui();
+	CreateOptionsGui();
+
+	// Real menu music - "Menu_Music.ogg" ships as a plain OGG file (not
+	// FMOD-banked like most of SOMA's other audio), directly playable
+	// through this engine's existing OpenAL music backend with no extra
+	// wiring - music/ is already a registered resources.cfg search dir.
+	mpEngine->GetSound()->GetMusicHandler()->Play("Menu_Music.ogg", 1.0f, 0.5f, true, false);
 }
 
 //-----------------------------------------------------------------------
@@ -197,6 +289,46 @@ void cSomaMainMenu::CreateGui()
 
 //-----------------------------------------------------------------------
 
+void cSomaMainMenu::CreateOptionsGui()
+{
+	////////////////////////////////////
+	// Real 9-slice frame (graphics/startmenu/gfx/window/menu_*.tga) - same
+	// asset set MenuHandler.hps's mGfxFrame uses for the Options
+	// background (ImGui_DrawFrame(mGfxFrame, ...) in GuiOptions()/
+	// GuiOptionsAudio()/GuiOptionsVideoDisplay()/GuiOptionsVideoGamma()).
+	// This engine has no scripted cImGuiFrameGfx equivalent, so
+	// DrawOptionsPanel() below composites these corners/borders/fill by
+	// hand rather than porting the real (closed, C++) DrawFrame() pixel
+	// math exactly - a real, working panel using the real assets/colour,
+	// not pixel-identical to the original.
+	mpFrameCornerTL = CreateGfx("menu_corner_tl.tga", eGuiMaterial_Alpha);
+	mpFrameCornerTR = CreateGfx("menu_corner_tr.tga", eGuiMaterial_Alpha);
+	mpFrameCornerBL = CreateGfx("menu_corner_bl.tga", eGuiMaterial_Alpha);
+	mpFrameCornerBR = CreateGfx("menu_corner_br.tga", eGuiMaterial_Alpha);
+	mpFrameBorderTop = CreateGfx("menu_border_top.tga", eGuiMaterial_Alpha);
+	mpFrameBorderBottom = CreateGfx("menu_border_bottom.tga", eGuiMaterial_Alpha);
+	mpFrameBorderLeft = CreateGfx("menu_border_left.tga", eGuiMaterial_Alpha);
+	mpFrameBorderRight = CreateGfx("menu_border_right.tga", eGuiMaterial_Alpha);
+
+	// Real gfxBar/background fill: cImGui's default "no texture" cImGuiGfx
+	// is a plain colour quad (used both for mGfxFrame.mGfxBackground and
+	// for the slider track/handle) - cGui::CreateGfxFilledRect() is this
+	// engine's own equivalent (same call amnesia/src/game/
+	// LuxLoadScreenHandler.cpp etc. use for their own filled rects).
+	mpFrameFillGfx = mpGui->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
+	mpOptionsBarGfx = mpGui->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
+
+	// Real Options-row widget art - confirmed distinct from the main menu's
+	// own "startmenu_button_long"/jitter set above.
+	mpOptionsHighlightGfx = CreateGfx("startmenu_options_button_long.tga", eGuiMaterial_Alpha);
+	mpOptionsMeterGfx = CreateGfx("startmenu_options_button_meter.tga", eGuiMaterial_Alpha);
+	mpOptionsArrowGfx = CreateGfx("startmenu_options_arrow.tga", eGuiMaterial_Alpha);
+	mpOptionsCheckOnGfx = CreateGfx("startmenu_options_button_on.tga", eGuiMaterial_Alpha);
+	mpOptionsCheckOffGfx = CreateGfx("startmenu_options_button_off.tga", eGuiMaterial_Alpha);
+}
+
+//-----------------------------------------------------------------------
+
 void cSomaMainMenu::SetVisible(bool abVisible)
 {
 	mbVisible = abVisible;
@@ -205,9 +337,16 @@ void cSomaMainMenu::SetVisible(bool abVisible)
 	mpGuiSet->SetDrawMouse(abVisible);
 
 	if (abVisible)
+	{
 		mpGui->SetFocus(mpGuiSet);
-	else if (mpGui->GetFocusedSet() == mpGuiSet)
-		mpGui->SetFocus(NULL);
+		mpEngine->GetSound()->GetMusicHandler()->Play("Menu_Music.ogg", 1.0f, 0.5f, true, false);
+	}
+	else
+	{
+		if (mpGui->GetFocusedSet() == mpGuiSet)
+			mpGui->SetFocus(NULL);
+		mpEngine->GetSound()->GetMusicHandler()->Stop(0.5f);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -227,21 +366,45 @@ void cSomaMainMenu::Update(float afTimeStep)
 
 	mpGui->SendMousePos(pMouse->GetAbsPosition(), pMouse->GetRelPosition());
 
-	UpdateMouseHitTest();
-
 	bool bDown = pMouse->ButtonIsDown(eMouseButton_Left);
-	if (bDown && mbMouseWasDown == false && mlHoveredItem != -1 && mlClickedItem == -1)
-	{
-		ClickItem(mItems[mlHoveredItem]);
-	}
-	mbMouseWasDown = bDown;
+	bool bPressedEdge = bDown && mbMouseWasDown == false;
 
-	if (mlClickedItem != -1)
+	if (mScreen == eSomaMenuScreen_Main)
 	{
-		mfButtonClickedTimer -= afTimeStep;
-		if (mfButtonClickedTimer <= 0)
-			RunPendingAction();
+		UpdateMouseHitTest();
+
+		if (bPressedEdge && mlHoveredItem != -1 && mlClickedItem == -1)
+		{
+			ClickItem(mItems[mlHoveredItem]);
+		}
+
+		if (mlClickedItem != -1)
+		{
+			mfButtonClickedTimer -= afTimeStep;
+			if (mfButtonClickedTimer <= 0)
+				RunPendingAction();
+		}
 	}
+	else
+	{
+		// Options screen - see BuildOptionsRows()/UpdateOptionsMouseHitTest()/
+		// ClickOptionsRow() below. No 0.15s click-flash delay here: the real
+		// script's OptionMenu_ButtonOptions() (unlike OptionMenu_
+		// ButtonMainMenu()) acts immediately on click.
+		BuildOptionsRows();
+		UpdateOptionsMouseHitTest();
+
+		if (bPressedEdge && mlOptionsHoveredRow != -1)
+			ClickOptionsRow(mlOptionsHoveredRow);
+
+		if (bDown && mlDraggingSliderRow != -1)
+			UpdateOptionsSliderDrag();
+
+		if (bDown == false)
+			mlDraggingSliderRow = -1;
+	}
+
+	mbMouseWasDown = bDown;
 }
 
 //-----------------------------------------------------------------------
@@ -310,10 +473,11 @@ void cSomaMainMenu::RunPendingAction()
 		break;
 	}
 	case eSomaMainMenuAction_Options:
-		// Real menu has a full Options screen (Audio/Video/Input/
-		// Gameplay - eMainMenuGroup_Options*); not implemented in this
-		// scaffold, honestly a no-op rather than a fake screen.
-		Log("SOMA main menu: Options is not implemented in this scaffold yet\n");
+		// Real menu's full tree is Gameplay/Controls/Video{Display,
+		// PostEffect,World,Gamma}/Audio (eMainMenuGroup_Options*) - see
+		// SomaMainMenu.h's class comment for which two of those this
+		// scaffold actually ports (Audio/Display) and why.
+		NavigateTo(eSomaMenuScreen_OptionsRoot);
 		break;
 	case eSomaMainMenuAction_Exit:
 		// Real menu shows an "ARE YOU SURE YOU WANT TO EXIT?" confirm box
@@ -332,9 +496,21 @@ void cSomaMainMenu::OnDraw(float afFrameTime)
 	if (mbVisible == false)
 		return;
 
+	// Background/title never go away behind the Options screen - matches
+	// the real game (GuiOptions() etc. are drawn as an overlay on top of
+	// GuiBackground(), never a scene replacement).
 	DrawBackground(afFrameTime);
 	DrawTitle(afFrameTime);
-	DrawMenuItems();
+
+	if (mScreen == eSomaMenuScreen_Main)
+	{
+		DrawMenuItems();
+	}
+	else
+	{
+		BuildOptionsRows();
+		DrawOptionsScreen();
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -563,5 +739,387 @@ void cSomaMainMenu::DrawMenuItems()
 			const cColor &textCol = bSelected ? kSelectedTextColor : kDeselectedTextColor;
 			mpGuiSet->DrawFont(item.msLabel, mpButtonFont, vPos, cVector2f(36, 36), textCol, eFontAlign_Left);
 		}
+	}
+}
+
+//-----------------------------------------------------------------------
+//
+// Options screen
+//
+// Real script tree (script/modules/MenuHandler.hps): GuiOptions() lists
+// Gameplay/Controls/Video/Audio/Back, each of which opens its own
+// sub-screen (GuiOptionsVideo() further splits into Display/PostEffect/
+// World/Gamma). This scaffold has a real, live backend for exactly two
+// slices of that: master volume (cSound) and three video settings
+// (fullscreen/vsync/gamma, via cLowLevelGraphics) - see SomaConfig.h. So
+// the tree here is deliberately shallow: OptionsRoot lists only "AUDIO"/
+// "DISPLAY"/"BACK" (real captions Menu.Audio/Menu.Display/Menu.Back -
+// "Display" is the closest single real caption for a page that collapses
+// the real Video tab's Display+Gamma sub-pages into one, since nothing
+// here implements PostEffect/World). Everything real but not backed by a
+// working setting yet (Controls/Gameplay, TextureQuality/ShadowQuality/
+// SSAO/AA/refresh rate/resolution list, PS4/XBO speaker type, subtitles,
+// FOV, ...) is left out entirely rather than drawn as a dead control -
+// see the class comment in SomaMainMenu.h.
+//
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::NavigateTo(eSomaMenuScreen aScreen)
+{
+	mScreen = aScreen;
+	mlOptionsHoveredRow = -1;
+	mlDraggingSliderRow = -1;
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::BuildOptionsRows()
+{
+	mOptionsRows.clear();
+
+	cSomaConfig *pCfg = mpBase->GetConfig();
+
+	switch (mScreen)
+	{
+	case eSomaMenuScreen_OptionsRoot:
+		// Real GuiOptions(): OptionMenu_ButtonOptions("Audio"/... , kMainMenuButtonPos, id, ...)
+		mOptionsRows.push_back(MakeCategoryRow(_W("AUDIO"), eSomaMenuScreen_OptionsAudio));
+		mOptionsRows.push_back(MakeCategoryRow(_W("DISPLAY"), eSomaMenuScreen_OptionsDisplay));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_Main));
+		break;
+
+	case eSomaMenuScreen_OptionsAudio:
+		// Real GuiOptionsAudio(): mpConfig.GetFloat("Sound","Volume",1.0f) via
+		// OptionMenu_ButtonOptionsSlider("Volume", ..., 0.1f step, ...). This
+		// scaffold has no SpeakerType/Subtitles/HearingAid backend, so only
+		// Volume is ported (see the class comment above).
+		mOptionsRows.push_back(MakeSliderRow(_W("VOLUME"), &pCfg->mfMasterVolume, 0.0f, 1.0f, 0.1f));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
+		break;
+
+	case eSomaMenuScreen_OptionsDisplay:
+		// Real GuiOptionsVideoDisplay()'s DisplayMode/VSync (collapsed to a
+		// plain on/off toggle here - this engine has no live "borderless"
+		// mode, and VSync's real "Adaptive" third state has no exposed
+		// getter, see SomaConfig.h) plus GuiOptionsVideoGamma()'s Gamma
+		// slider (same 0.3-2.0 range cSomaGammaScreen's first-boot
+		// calibration already uses).
+		mOptionsRows.push_back(MakeToggleRow(_W("FULLSCREEN"), &pCfg->mbFullscreen));
+		mOptionsRows.push_back(MakeToggleRow(_W("V-SYNC"), &pCfg->mbVSync));
+		mOptionsRows.push_back(MakeSliderRow(_W("GAMMA"), &pCfg->mfGamma, 0.3f, 2.0f, 0.05f));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
+		break;
+
+	default:
+		break;
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::UpdateOptionsMouseHitTest()
+{
+	mlOptionsHoveredRow = -1;
+
+	// While a slider drag is in progress, keep it "hovered"/selected
+	// regardless of where the mouse strays this frame (matches the real
+	// script's ImGui_DoRepeatButtonExt(), which keeps a widget pressed
+	// until the mouse button is released, not just while directly over it).
+	if (mlDraggingSliderRow != -1)
+	{
+		mlOptionsHoveredRow = mlDraggingSliderRow;
+		return;
+	}
+
+	const cVector2f &vMouse = mpGuiSet->GetMousePos();
+
+	for (size_t i = 0; i < mOptionsRows.size(); ++i)
+	{
+		float fTop = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)i;
+		float fBottom = fTop + kOptionMenuButtonSpacing;
+		if (vMouse.x >= kMainMenuButtonPos.x && vMouse.x <= kVirtualCanvas.x && vMouse.y >= fTop && vMouse.y <= fBottom)
+		{
+			mlOptionsHoveredRow = (int)i;
+			break;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::ClickOptionsRow(int alIndex)
+{
+	if (alIndex < 0 || alIndex >= (int)mOptionsRows.size())
+		return;
+
+	cSomaOptionsRow &row = mOptionsRows[alIndex];
+	cSomaConfig *pCfg = mpBase->GetConfig();
+
+	switch (row.mKind)
+	{
+	case cSomaOptionsRow::eKind_Category:
+	case cSomaOptionsRow::eKind_Back:
+		NavigateTo(row.mTarget);
+		break;
+
+	case cSomaOptionsRow::eKind_Toggle:
+		if (row.mpBoolValue)
+		{
+			*row.mpBoolValue = !(*row.mpBoolValue);
+
+			// Live-apply the ones that have a runtime API; Fullscreen is
+			// persisted only (see SomaConfig.h) - applied at the next
+			// InitEngine(), same "takes effect after restart" contract
+			// amnesia/src/game/LuxMainMenu_Options.cpp's own Fullscreen
+			// checkbox has.
+			if (row.mpBoolValue == &pCfg->mbVSync)
+				mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, false);
+			else if (row.mpBoolValue == &pCfg->mbFullscreen)
+				Log("SOMA options: Fullscreen changed to %s - takes effect on next launch\n",
+					pCfg->mbFullscreen ? "true" : "false");
+
+			pCfg->Save();
+		}
+		break;
+
+	case cSomaOptionsRow::eKind_Slider:
+	{
+		if (row.mpFloatValue == NULL)
+			break;
+
+		// Real OptionMenu_ButtonOptionsSlider(): clicking inside the actual
+		// track rect starts a direct-drag ("repeat button"); clicking
+		// anywhere else in the row steps by afStepSize based on which half
+		// of the track the mouse is nearer to.
+		float fLocalX = mpGuiSet->GetMousePos().x - kMainMenuButtonPos.x;
+
+		if (fLocalX >= kOptionsSliderTrackLocalMinX && fLocalX <= kOptionsSliderTrackLocalMaxX)
+		{
+			mlDraggingSliderRow = alIndex;
+			UpdateOptionsSliderDrag();
+		}
+		else
+		{
+			float fNorm = (*row.mpFloatValue - row.mfMin) / (row.mfMax - row.mfMin);
+			float fMid = (kOptionsSliderTrackLocalMinX + kOptionsSliderTrackLocalMaxX) * 0.5f;
+			fNorm += (fLocalX < fMid) ? -row.mfStep : row.mfStep;
+			fNorm = cMath::Clamp(fNorm, 0.0f, 1.0f);
+
+			*row.mpFloatValue = row.mfMin + fNorm * (row.mfMax - row.mfMin);
+
+			if (row.mpFloatValue == &pCfg->mfMasterVolume)
+				mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
+			else if (row.mpFloatValue == &pCfg->mfGamma)
+				mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+
+			pCfg->Save();
+		}
+		break;
+	}
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::UpdateOptionsSliderDrag()
+{
+	if (mlDraggingSliderRow < 0 || mlDraggingSliderRow >= (int)mOptionsRows.size())
+	{
+		mlDraggingSliderRow = -1;
+		return;
+	}
+
+	cSomaOptionsRow &row = mOptionsRows[mlDraggingSliderRow];
+	if (row.mKind != cSomaOptionsRow::eKind_Slider || row.mpFloatValue == NULL)
+	{
+		mlDraggingSliderRow = -1;
+		return;
+	}
+
+	float fLocalX = mpGuiSet->GetMousePos().x - kMainMenuButtonPos.x;
+	float fNorm = (fLocalX - kOptionsSliderTrackLocalMinX) / (kOptionsSliderTrackLocalMaxX - kOptionsSliderTrackLocalMinX);
+	fNorm = cMath::Clamp(fNorm, 0.0f, 1.0f);
+
+	float fNewValue = row.mfMin + fNorm * (row.mfMax - row.mfMin);
+	if (cMath::Abs(fNewValue - *row.mpFloatValue) < 0.0001f)
+		return;
+
+	*row.mpFloatValue = fNewValue;
+
+	cSomaConfig *pCfg = mpBase->GetConfig();
+	if (row.mpFloatValue == &pCfg->mfMasterVolume)
+		mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
+	else if (row.mpFloatValue == &pCfg->mfGamma)
+		mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+
+	pCfg->Save();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawOptionsPanel(const cVector2f &avPos, const cVector2f &avSize)
+{
+	// Real MenuHandler.hps's mGfxFrame, composited by hand (see
+	// CreateOptionsGui()'s comment for why) - corners at native size in
+	// each corner, borders stretched between them, a translucent fill
+	// (real mGfxFrame.mGfxBackground.mColor) covering the interior.
+	cVector2f vTL = mpFrameCornerTL ? mpFrameCornerTL->GetImageSize() : cVector2f(0);
+	cVector2f vTR = mpFrameCornerTR ? mpFrameCornerTR->GetImageSize() : cVector2f(0);
+	cVector2f vBL = mpFrameCornerBL ? mpFrameCornerBL->GetImageSize() : cVector2f(0);
+	cVector2f vBR = mpFrameCornerBR ? mpFrameCornerBR->GetImageSize() : cVector2f(0);
+
+	const float fZ = 0.0f;
+
+	if (mpFrameFillGfx)
+	{
+		mpGuiSet->DrawGfx(mpFrameFillGfx, cVector3f(avPos.x, avPos.y, fZ), avSize, kOptionsFrameFillColor);
+	}
+
+	if (mpFrameCornerTL) mpGuiSet->DrawGfx(mpFrameCornerTL, cVector3f(avPos.x, avPos.y, fZ + 0.1f), vTL, cColor(1, 1));
+	if (mpFrameCornerTR) mpGuiSet->DrawGfx(mpFrameCornerTR, cVector3f(avPos.x + avSize.x - vTR.x, avPos.y, fZ + 0.1f), vTR, cColor(1, 1));
+	if (mpFrameCornerBL) mpGuiSet->DrawGfx(mpFrameCornerBL, cVector3f(avPos.x, avPos.y + avSize.y - vBL.y, fZ + 0.1f), vBL, cColor(1, 1));
+	if (mpFrameCornerBR) mpGuiSet->DrawGfx(mpFrameCornerBR, cVector3f(avPos.x + avSize.x - vBR.x, avPos.y + avSize.y - vBR.y, fZ + 0.1f), vBR, cColor(1, 1));
+
+	if (mpFrameBorderTop)
+	{
+		float fW = avSize.x - vTL.x - vTR.x;
+		if (fW > 0)
+			mpGuiSet->DrawGfx(mpFrameBorderTop, cVector3f(avPos.x + vTL.x, avPos.y, fZ + 0.1f), cVector2f(fW, mpFrameBorderTop->GetImageSize().y), cColor(1, 1));
+	}
+	if (mpFrameBorderBottom)
+	{
+		cVector2f vBorderSize = mpFrameBorderBottom->GetImageSize();
+		float fW = avSize.x - vBL.x - vBR.x;
+		if (fW > 0)
+			mpGuiSet->DrawGfx(mpFrameBorderBottom, cVector3f(avPos.x + vBL.x, avPos.y + avSize.y - vBorderSize.y, fZ + 0.1f), cVector2f(fW, vBorderSize.y), cColor(1, 1));
+	}
+	if (mpFrameBorderLeft)
+	{
+		float fH = avSize.y - vTL.y - vBL.y;
+		if (fH > 0)
+			mpGuiSet->DrawGfx(mpFrameBorderLeft, cVector3f(avPos.x, avPos.y + vTL.y, fZ + 0.1f), cVector2f(mpFrameBorderLeft->GetImageSize().x, fH), cColor(1, 1));
+	}
+	if (mpFrameBorderRight)
+	{
+		cVector2f vBorderSize = mpFrameBorderRight->GetImageSize();
+		float fH = avSize.y - vTR.y - vBR.y;
+		if (fH > 0)
+			mpGuiSet->DrawGfx(mpFrameBorderRight, cVector3f(avPos.x + avSize.x - vBorderSize.x, avPos.y + vTR.y, fZ + 0.1f), cVector2f(vBorderSize.x, fH), cColor(1, 1));
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, bool abSelected)
+{
+	float fRowY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)alIndex;
+	cVector3f vTextPos(kMainMenuButtonPos.x, fRowY, 2.0f);
+
+	// Real OptionMenu_ButtonBackgroundOptions(): "startmenu_options_button_long"
+	// tinted teal, behind whichever row is currently selected - used for
+	// every row kind (category/toggle/slider/back), unlike the main menu's
+	// own click-flash jitter set (not used here at all - the real script
+	// doesn't add a "ButtonClicked" timer inside GuiOptions() either).
+	if (abSelected && mpOptionsHighlightGfx)
+	{
+		cVector3f vBarPos(kMainMenuButtonPos.x - 22.0f, fRowY, 0.5f);
+		mpGuiSet->DrawGfx(mpOptionsHighlightGfx, vBarPos, kOptionMenuButtonBgSize, kMainMenuButtonBgColor);
+	}
+
+	const cColor &textCol = abSelected ? kSelectedTextColor : kDeselectedTextColor;
+	if (mpButtonFont)
+		mpGuiSet->DrawFont(aRow.msLabel, mpButtonFont, vTextPos, cVector2f(36, 36), textCol, eFontAlign_Left);
+
+	switch (aRow.mKind)
+	{
+	case cSomaOptionsRow::eKind_Category:
+	case cSomaOptionsRow::eKind_Back:
+		break;
+
+	case cSomaOptionsRow::eKind_Toggle:
+	{
+		bool bChecked = aRow.mpBoolValue && *aRow.mpBoolValue;
+
+		cVector3f vOffPos(kMainMenuButtonPos.x + kOptionsCheckboxOffset.x, fRowY + kOptionsCheckboxOffset.y, 1.5f);
+		cVector3f vOnPos = vOffPos + cVector3f(kOptionsCheckboxSize.x * 0.5f + 5.0f, -0.5f, 0);
+		cVector2f vBoxSize = kOptionsCheckboxSize * 0.5f;
+
+		if (mpOptionsCheckOffGfx)
+			mpGuiSet->DrawGfx(mpOptionsCheckOffGfx, vOffPos, vBoxSize, bChecked ? kMainMenuButtonBgColor : cColor(1, 1));
+		if (mpOptionsCheckOnGfx)
+			mpGuiSet->DrawGfx(mpOptionsCheckOnGfx, vOnPos, vBoxSize, bChecked ? cColor(1, 1) : kMainMenuButtonBgColor);
+
+		if (mpButtonFont)
+		{
+			mpGuiSet->DrawFont(_W("OFF"), mpButtonFont, cVector3f(vOffPos.x, vOffPos.y, 2.0f), cVector2f(20, 20), cColor(0, 1), eFontAlign_Center);
+			mpGuiSet->DrawFont(_W("ON"), mpButtonFont, cVector3f(vOnPos.x, vOnPos.y, 2.0f), cVector2f(20, 20), cColor(0, 1), eFontAlign_Center);
+		}
+		break;
+	}
+
+	case cSomaOptionsRow::eKind_Slider:
+	{
+		float fValue = aRow.mpFloatValue ? *aRow.mpFloatValue : 0;
+		float fNorm = cMath::Clamp((fValue - aRow.mfMin) / (aRow.mfMax - aRow.mfMin), 0.0f, 1.0f);
+
+		if (mpOptionsMeterGfx)
+		{
+			cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fRowY + kOptionsSliderOffset.y, 1.5f);
+			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, kMainMenuButtonBgColor);
+		}
+
+		if (mpOptionsArrowGfx)
+		{
+			cColor arrowCol = abSelected ? cColor(1, 1) : cColor(0, 1);
+			cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, fRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
+			cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, arrowCol, eGuiMaterial_LastEnum, 180.0f);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, arrowCol);
+		}
+
+		if (mpOptionsBarGfx)
+		{
+			cVector3f vTrackPos(kMainMenuButtonPos.x + kOptionsSliderBarOffset.x, fRowY + kOptionsSliderBarOffset.y, 2.0f);
+			mpGuiSet->DrawGfx(mpOptionsBarGfx, vTrackPos, kOptionsSliderBarSize, cColor(0, 1));
+
+			cVector3f vHandlePos = vTrackPos + cVector3f(kOptionsSliderBarSize.x * fNorm - 3.0f, -6.0f, 0.1f);
+			mpGuiSet->DrawGfx(mpOptionsBarGfx, vHandlePos, cVector2f(6, 16), cColor(0, 1));
+		}
+		break;
+	}
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawOptionsScreen()
+{
+	// Panel sized to content - real per-screen kOptionsXxxBgSize constants
+	// (kOptionsBgSize/kOptionsAudioBgSize/kOptionsVideoDisplayBgSize) are
+	// all "row count * spacing + fixed padding" in the same way.
+	float fPanelHeight = 60.0f + kOptionMenuButtonSpacing * (float)mOptionsRows.size();
+	cVector2f vPanelSize(680, fPanelHeight);
+
+	DrawOptionsPanel(kOptionsBgPos, vPanelSize);
+
+	// Real OptionMenu_SectionTitle(asTitle, avPos, avSize) 3-arg overload:
+	// right-aligned title text along the panel's own bottom edge.
+	tWString sTitle;
+	switch (mScreen)
+	{
+	case eSomaMenuScreen_OptionsAudio: sTitle = _W("AUDIO"); break;
+	case eSomaMenuScreen_OptionsDisplay: sTitle = _W("DISPLAY"); break;
+	default: sTitle = _W("OPTIONS"); break;
+	}
+	if (mpButtonFont)
+	{
+		cVector3f vTitlePos(kOptionsBgPos.x, kOptionsBgPos.y + vPanelSize.y + 5.0f, 2.0f);
+		mpGuiSet->DrawFont(sTitle, mpButtonFont, vTitlePos, cVector2f(46, 46), cColor(1, 1), eFontAlign_Left);
+	}
+
+	for (size_t i = 0; i < mOptionsRows.size(); ++i)
+	{
+		bool bSelected = ((int)i == mlOptionsHoveredRow);
+		DrawOptionsRow(mOptionsRows[i], (int)i, bSelected);
 	}
 }

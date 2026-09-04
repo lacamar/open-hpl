@@ -32,6 +32,15 @@ public:
 
 	void Update(float afTimeStep);
 
+	// SomaBase.cpp hands off control of the shared camera to a real
+	// cSomaPlayer the first time a real game map loads (see
+	// SomaBase::LoadMap()) - this instance can't be removed from cUpdater
+	// (no "remove" counterpart to AddGlobalUpdate() anywhere in this
+	// codebase), so it's disabled in place instead, otherwise its own
+	// Update() would keep fighting the character body for control of the
+	// camera every frame.
+	void SetActive(bool abActive){ mbActive = abActive; }
+
 private:
 	cCamera *mpCamera;
 	cInput *mpInput;
@@ -41,6 +50,8 @@ private:
 
 	bool mbFirstUpdate;
 	cVector2l mvLastMousePos;
+
+	bool mbActive;
 };
 
 //----------------------------------------------

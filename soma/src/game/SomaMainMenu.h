@@ -36,11 +36,29 @@
  *    menu at all, only a highlight bar behind the focused item.
  *
  * Not reproduced (real, but out of scope for this scaffold - no save
- * system, no options menu, no controller support exist here yet): the
- * exit confirmation message box, click/glitch sound effects, save-game-
- * dependent Continue/LoadGame enablement (always shows disabled, same as
- * a real fresh install), and background phases 2-5 (progress-gated, this
- * scaffold has no progress tracking so always renders phase 1).
+ * system, no controller support exist here yet): the exit confirmation
+ * message box, click/glitch sound effects, save-game-dependent Continue/
+ * LoadGame enablement (always shows disabled, same as a real fresh
+ * install), and background phases 2-5 (progress-gated, this scaffold has
+ * no progress tracking so always renders phase 1).
+ *
+ * The Options screen (eSomaMenuScreen_Options*, reached from the main
+ * menu's Options button) is the same kind of port: real layout constants
+ * and widget conventions read directly out of SOMA's own
+ * script/custom_depth/helper_custom_depth_imgui/helper_imgui_options.hps
+ * (OptionMenu_ButtonOptions()/OptionMenu_ButtonOptionsSlider()/
+ * OptionMenu_ButtonOptionsToggle(), kOptionsBgPos/kOptionMenu_* constants)
+ * and script/modules/MenuHandler.hps (GuiOptions()/GuiOptionsAudio()/
+ * GuiOptionsVideoDisplay()/GuiOptionsVideoGamma() - the real menu tree is
+ * Gameplay/Controls/Video{Display,PostEffect,World,Gamma}/Audio, each its
+ * own sub-screen), scoped down to only what this engine actually has a
+ * live backend for rather than the full 8-tab tree - see SomaMainMenu.cpp's
+ * "Real Options screen" comment block for exactly what was kept/cut and
+ * why. Same real corner/border frame textures (graphics/startmenu/gfx/
+ * window/menu_*.tga) and options-row highlight bar
+ * ("startmenu_options_button_long.tga", NOT the main menu's own
+ * "startmenu_button_long.tga" - confirmed distinct real assets) the real
+ * script itself uses for this screen.
  *
  * Owned by cSomaBase, created once by InitMainMenuScene() and attached to
  * the same real camera+world viewport (mpDebugViewport) that scene already
@@ -66,6 +84,8 @@
 
 #include "hpl.h"
 
+#include <vector>
+
 using namespace hpl;
 
 class cSomaBase;
@@ -86,6 +106,54 @@ struct cSomaMainMenuItem
 	bool mbEnabled;
 	eSomaMainMenuAction mAction;
 	float mfRowY; // kMainMenuButtonPos.y + kOptionMenu_ButtonSpacing * row index
+};
+
+//----------------------------------------------
+// Options screen - see the class comment above for what real script this
+// was read out of. eSomaMenuScreen_Main is the original 5-item list;
+// everything else is the Options tree, collapsed from the real game's
+// Gameplay/Controls/Video{Display,PostEffect,World,Gamma}/Audio tabs down
+// to just the two that have a real, live backend in this engine.
+
+enum eSomaMenuScreen
+{
+	eSomaMenuScreen_Main,
+	eSomaMenuScreen_OptionsRoot,	// real GuiOptions(): Audio/Display/Back
+	eSomaMenuScreen_OptionsAudio,	// real GuiOptionsAudio(), Volume only
+	eSomaMenuScreen_OptionsDisplay, // real GuiOptionsVideoDisplay()+VideoGamma(), collapsed into one page
+};
+
+// One row of the Options screen, built fresh each frame by
+// BuildOptionsRows() (cheap - a handful of entries, and keeps the row list
+// always in sync with the live config values it points at rather than
+// risking a stale cached copy).
+struct cSomaOptionsRow
+{
+	enum eKind
+	{
+		eKind_Category, // navigates to another eSomaMenuScreen on click (real OptionMenu_ButtonOptions)
+		eKind_Toggle,	// real OptionMenu_ButtonOptionsToggle - On/Off checkbox pair
+		eKind_Slider,	// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
+		eKind_Back,		// same as eKind_Category but always navigates "up"
+	};
+
+	eKind mKind;
+	tWString msLabel;
+
+	// eKind_Category/eKind_Back
+	eSomaMenuScreen mTarget;
+
+	// eKind_Toggle
+	bool *mpBoolValue;
+
+	// eKind_Slider - mpFloatValue points at the real backing value in its
+	// own real-world units (e.g. Gamma is 0.3-2.0, Volume is 0-1); mfMin/
+	// mfMax give that range so the widget can normalize it to the 0..1 bar
+	// position/step math OptionMenu_ButtonOptionsSlider() itself uses.
+	float *mpFloatValue;
+	float mfMin;
+	float mfMax;
+	float mfStep; // step size in normalized 0..1 units, same as the real afStepSize param
 };
 
 //----------------------------------------------
@@ -117,6 +185,25 @@ private:
 	void UpdateMouseHitTest();
 	void ClickItem(cSomaMainMenuItem &aItem);
 	void RunPendingAction();
+
+	////////////////////////////////////
+	// Options screen (eSomaMenuScreen_Options*) - see the class comment and
+	// SomaMainMenu.cpp for the real script this was read out of.
+	void CreateOptionsGui();
+	void BuildOptionsRows();
+	void NavigateTo(eSomaMenuScreen aScreen);
+
+	void DrawOptionsScreen();
+	void DrawOptionsPanel(const cVector2f &avPos, const cVector2f &avSize);
+	void DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, bool abSelected);
+
+	void UpdateOptionsMouseHitTest();
+	void ClickOptionsRow(int alIndex);
+	// Continues a slider drag started on a previous frame - called every
+	// frame the mouse button stays down after a drag began on
+	// mlDraggingRow, same "repeat while held" behaviour as the real
+	// script's ImGui_DoRepeatButtonExt() inside OptionMenu_ButtonOptionsSlider().
+	void UpdateOptionsSliderDrag();
 
 	cEngine *mpEngine;
 	cSomaBase *mpBase;
@@ -172,6 +259,35 @@ private:
 
 	bool mbVisible;
 	bool mbMouseWasDown;
+
+	////////////////////////////////////
+	// Options screen state (see SomaMainMenu.h's class comment)
+	eSomaMenuScreen mScreen;
+	std::vector<cSomaOptionsRow> mOptionsRows; // rebuilt each frame by BuildOptionsRows()
+	int mlOptionsHoveredRow;
+	int mlDraggingSliderRow; // -1 when not dragging - see UpdateOptionsSliderDrag()
+
+	// Real corner/border frame (graphics/startmenu/gfx/window/menu_*.tga),
+	// same asset set MenuHandler.hps's mGfxFrame uses for every Options
+	// sub-screen's background panel.
+	cGuiGfxElement *mpFrameCornerTL;
+	cGuiGfxElement *mpFrameCornerTR;
+	cGuiGfxElement *mpFrameCornerBL;
+	cGuiGfxElement *mpFrameCornerBR;
+	cGuiGfxElement *mpFrameBorderTop;
+	cGuiGfxElement *mpFrameBorderBottom;
+	cGuiGfxElement *mpFrameBorderLeft;
+	cGuiGfxElement *mpFrameBorderRight;
+	cGuiGfxElement *mpFrameFillGfx; // plain filled rect, real mGfxFrame.mGfxBackground translucent fill
+
+	// Real Options-row widget art (helper_imgui_options.hps) - distinct
+	// from the main menu's own mpButtonBarGfx/mpButtonBarJitterGfx above.
+	cGuiGfxElement *mpOptionsHighlightGfx; // "startmenu_options_button_long" - selected-row bar
+	cGuiGfxElement *mpOptionsMeterGfx;		// "startmenu_options_button_meter" - slider background
+	cGuiGfxElement *mpOptionsArrowGfx;		// "startmenu_options_arrow"
+	cGuiGfxElement *mpOptionsCheckOnGfx;	// "startmenu_options_button_on"
+	cGuiGfxElement *mpOptionsCheckOffGfx;	// "startmenu_options_button_off"
+	cGuiGfxElement *mpOptionsBarGfx;		// plain filled rect, slider track/handle
 };
 
 //----------------------------------------------

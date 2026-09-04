@@ -15,8 +15,11 @@
 #include "hpl.h"
 
 #include "DebugFreeCamera.h"
+#include "SomaPlayer.h"
 #include "SomaSplash.h"
+#include "SomaGammaScreen.h"
 #include "SomaMainMenu.h"
+#include "SomaConfig.h"
 
 using namespace hpl;
 
@@ -36,7 +39,14 @@ public:
 	// Called by cSomaSplash once its sequence finishes (or is skipped).
 	// Public because cSomaSplash calls it back via the global gpSomaBase
 	// pointer, same idiom as gpBase-> calls throughout amnesia/src/game.
+	// Shows cSomaGammaScreen first on a fresh install (see
+	// cSomaGammaScreen::ShouldShowAndMarkSeen()), otherwise goes straight
+	// to ProceedPastBoot() (below).
 	void OnSplashFinished();
+
+	// Called by cSomaGammaScreen once its sequence finishes (or is
+	// skipped) - only reached on a fresh install, see OnSplashFinished().
+	void OnGammaScreenFinished();
 
 private:
 	bool ParseCommandLine(const tString &asCommandline);
@@ -45,6 +55,11 @@ private:
 
 	bool InitEngine();
 	void ExitEngine();
+
+	// Shared tail end of OnSplashFinished()/OnGammaScreenFinished() - the
+	// OPENHPL_SOMA_MAP test-map escape hatch, falling back to
+	// InitMainMenuScene()/InitTestMap().
+	void ProceedPastBoot();
 
 	////////////////////////////////////////
 	// Real boot sequence, one step further than Phase 0: after the splash
@@ -96,6 +111,12 @@ public:
 	// headless-control camera_state/set_camera commands (see SomaBase.cpp).
 	cCamera* GetDebugCamera(){ return mpDebugCamera; }
 
+	// Persisted settings backing the real Options screen (see
+	// SomaMainMenu.cpp) - loaded once in InitEngine(), mutated live by the
+	// Options screen itself via this same instance (it calls Save() after
+	// each change, see SomaConfig.h).
+	cSomaConfig* GetConfig(){ return &mConfig; }
+
 private:
 	/////////////////////////
 	// Config file paths, loaded from main_init.cfg
@@ -105,8 +126,17 @@ private:
 	tString msMaterialConfigPath;
 
 	/////////////////////////
+	// Persisted settings (Volume/Gamma/VSync/Fullscreen) - see SomaConfig.h.
+	cSomaConfig mConfig;
+
+	/////////////////////////
 	// Splash sequence, shown before the map below loads
 	cSomaSplash *mpSplash;
+
+	// First-boot-only gamma calibration screen, shown between the splash
+	// and the main menu - see SomaGammaScreen.h. NULL once past boot (or
+	// on any boot after the first, when it's never constructed at all).
+	cSomaGammaScreen *mpGammaScreen;
 
 	// NULL except while the main menu scene (InitMainMenuScene()) is the
 	// active scene - not created for InitTestMap()'s fallback path or for
@@ -122,6 +152,14 @@ private:
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
 	cSomaDebugFreeCamera *mpDebugCameraController;
+
+	// Real physics-based player controller (see SomaPlayer.h) - created
+	// instead of mpDebugCameraController by LoadMap() (real game maps) when
+	// mbUseRealPlayer is true, sharing the same mpDebugCamera/mpDebugViewport.
+	// InitMainMenuScene()/InitTestMap() always keep using the free-fly
+	// camera instead (no player body makes sense in the menu scene).
+	cSomaPlayer *mpPlayer;
+	bool mbUseRealPlayer;
 };
 
 //----------------------------------------------

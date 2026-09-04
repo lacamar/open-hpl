@@ -31,12 +31,23 @@
  *  - Terrain (".hpm_Terrain") is logged and skipped unconditionally. HPL2
  *    has no terrain renderer at all; every SOMA map's terrain track has
  *    Active="false" in practice, so this is a safe, confirmed no-op.
- *  - Physics/collision bodies are NOT created for any loaded geometry.
- *    Phase 1 has no player controller, so collision is unnecessary; this
- *    also lets us skip Amnesia's substantial mesh/body-combining pipeline
- *    (cRenderableContainer_BoxTree leaf batching) entirely and instead
- *    create one cMeshEntity per source object directly - functionally
- *    equivalent geometry, just not batched for render/physics efficiency.
+ *  - Physics/collision bodies are NOT batched into combined per-region
+ *    shapes the way Amnesia's loader does (cRenderableContainer_BoxTree leaf
+ *    batching) - this still creates one cMeshEntity per source object
+ *    directly. A real player controller (see soma/src/game/SomaPlayer.h)
+ *    does now exist, though, so StaticObject/Primitive geometry DOES get a
+ *    real static (mass 0) collision body each, one (possibly compound, for
+ *    multi-submesh meshes) iCollideShape per object rather than one combined
+ *    shape per spatial group - see CreateStaticBodyForMesh() in the .cpp.
+ *    This is real functional collision, just not batched for physics
+ *    broadphase efficiency the way Amnesia's is (a real map's few hundred
+ *    static objects is nowhere near what made Amnesia's batching necessary,
+ *    which existed mainly to keep triangle counts in single mesh shapes
+ *    sane, not for HPL2's Newton-based broadphase specifically).
+ *    Dynamic map Entities (props, furniture, doors - CreateMapEntity()) do
+ *    NOT get a collision body from this loader at all yet - only
+ *    StaticObjects/Primitives (walls/floors/ceilings). A real map's props
+ *    are still walk-through until that's added too.
  *  - Decals, Billboards, ParticleSystems, FogAreas, LensFlares,
  *    ExposureAreas, LightMasks, StaticComboAreas, DetailMeshes and
  *    StaticObjectCombos/Compounds (grouping-only, does not affect final
@@ -60,6 +71,7 @@ namespace hpl {
 	class cXmlElement;
 	class iXmlDocument;
 	class iPhysicsWorld;
+	class cMeshEntity;
 
 	//----------------------------------------
 
@@ -99,6 +111,14 @@ namespace hpl {
 		void CreatePlanePrimitive(cXmlElement* apElement);
 		void CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex);
 		void CreateMapArea(cXmlElement* apElement);
+
+		// Static collision body for a StaticObject/Primitive mesh entity, one
+		// (possibly compound, for multi-submesh meshes) static (mass 0)
+		// iPhysicsBody per call - see the .cpp file for why this exists now
+		// (it didn't in the original Phase 1 loader, see the class comment
+		// in this header). apMeshEntity's WORLD matrix must already be fully
+		// set (rotation+scale+position) before calling this.
+		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName);
 
 		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
 
