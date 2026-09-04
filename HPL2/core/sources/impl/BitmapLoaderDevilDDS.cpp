@@ -22,9 +22,103 @@
 #include "graphics/Bitmap.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "system/Platform.h"
 #include "graphics/LowLevelGraphics.h"
 
+#include <cstring>
+
 namespace hpl {
+
+	//////////////////////////////////////////////////////////////////////////
+	// UNCOMPRESSED 8BPP ALPHA-ONLY DDS FALLBACK
+	//
+	// DevIL (libIL) mis-decodes plain uncompressed 8bpp "A8"-format DDS files
+	// (DDS_PIXELFORMAT.dwFlags == DDPF_ALPHA, dwRGBBitCount == 8, no FourCC) -
+	// confirmed via a standalone probe against the real SOMA font atlas
+	// (fonts/vera_00.dds, shipped by SOMA itself): ilGetInteger(IL_IMAGE_FORMAT)
+	// comes back IL_RGB with every byte of pixel data zeroed, rather than the
+	// real per-pixel alpha coverage the file's header describes. Since an
+	// all-zero RGB texture samples as opaque black (RGB textures have no alpha
+	// channel, so blending treats them as alpha=1), every glyph on this DDS's
+	// atlas page rendered as a solid black box instead of real antialiased
+	// text - found while building soma/src/game/SomaMainMenu.cpp, whose
+	// button/title labels are the first real text this port has ever drawn
+	// through a font with a page in this exact format (vera.fnt's second
+	// page, vera_01.dds, is a normal RGBA DDS and decodes/renders fine).
+	//
+	// This is a narrow, well-defined DDS variant DevIL's DDS reader appears
+	// to not support at all (as opposed to a general "this file is corrupt"
+	// case) - the fix parses the DDS header ourselves and reads the raw
+	// pixel payload directly, entirely bypassing DevIL, only for files that
+	// match this exact pixel-format signature. Every other DDS variant
+	// (compressed DXT1/3/5, uncompressed RGB/RGBA/Luminance) is untouched -
+	// this returns false immediately for anything that doesn't match.
+	//////////////////////////////////////////////////////////////////////////
+
+	static bool TryLoadUncompressedAlphaDDS(const tWString& asFile, cBitmap** apBitmapOut)
+	{
+		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
+		if (pFile == NULL) return false;
+
+		unsigned char vHeader[128];
+		bool bOk = fread(vHeader, 1, sizeof(vHeader), pFile) == sizeof(vHeader);
+		if (bOk && memcmp(vHeader, "DDS ", 4) != 0) bOk = false;
+
+		unsigned int lHeaderFlags = 0, lHeight = 0, lWidth = 0, lPitch = 0;
+		unsigned int lPixelFormatFlags = 0, lRgbBitCount = 0;
+		if (bOk)
+		{
+			memcpy(&lHeaderFlags, vHeader + 8, 4);
+			memcpy(&lHeight, vHeader + 12, 4);
+			memcpy(&lWidth, vHeader + 16, 4);
+			memcpy(&lPitch, vHeader + 20, 4);
+			memcpy(&lPixelFormatFlags, vHeader + 80, 4);
+			memcpy(&lRgbBitCount, vHeader + 88, 4);
+		}
+
+		const unsigned int klDdpfAlpha = 0x2;
+		const unsigned int klDdsdPitch = 0x8;
+
+		if (bOk == false || lPixelFormatFlags != klDdpfAlpha || lRgbBitCount != 8 ||
+			lWidth == 0 || lHeight == 0)
+		{
+			fclose(pFile);
+			return false;
+		}
+
+		unsigned int lRowBytes = ((lHeaderFlags & klDdsdPitch) != 0 && lPitch > 0) ? lPitch : lWidth;
+
+		unsigned char* pPixels = hplNewArray(unsigned char, (size_t)lWidth * lHeight);
+		bool bReadOk = true;
+		for (unsigned int y = 0; y < lHeight; ++y)
+		{
+			if (fseek(pFile, 128 + (long)y * lRowBytes, SEEK_SET) != 0 ||
+				fread(pPixels + (size_t)y * lWidth, 1, lWidth, pFile) != lWidth)
+			{
+				bReadOk = false;
+				break;
+			}
+		}
+		fclose(pFile);
+
+		if (bReadOk == false)
+		{
+			hplDeleteArray(pPixels);
+			return false;
+		}
+
+		cBitmap* pBitmap = hplNew(cBitmap, ());
+		pBitmap->SetSize(cVector3l((int)lWidth, (int)lHeight, 1));
+		pBitmap->SetBytesPerPixel(1);
+		pBitmap->SetIsCompressed(false);
+		pBitmap->SetPixelFormat(ePixelFormat_Alpha);
+		pBitmap->GetData(0, 0)->SetData(pPixels, (int)(lWidth * lHeight));
+
+		hplDeleteArray(pPixels);
+
+		*apBitmapOut = pBitmap;
+		return true;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -53,6 +147,16 @@ namespace hpl {
 	cBitmap* cBitmapLoaderDevilDDS::LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags)
 	{
 		Initialize();
+
+		// See TryLoadUncompressedAlphaDDS() above - DevIL cannot decode this
+		// specific uncompressed 8bpp alpha-only DDS variant correctly. Only
+		// takes effect for files matching that exact pixel-format signature;
+		// everything else falls through to the normal DevIL path below.
+		{
+			cBitmap* pRawAlphaBitmap = NULL;
+			if (TryLoadUncompressedAlphaDDS(asFile, &pRawAlphaBitmap))
+				return pRawAlphaBitmap;
+		}
 
 		//create image id
 		unsigned int lImageId;

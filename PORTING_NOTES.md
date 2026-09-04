@@ -3000,3 +3000,65 @@ this environment can prompt interactively and silently hang/timeout rather than 
 - `CubeMap Type="Rect"` silently loading as a plain 2D texture (`MaterialManager.cpp:496`) is
   still unfixed - unrelated to the HDR-boost gap, see the previous section for full detail. Still
   the one remaining known, understood-but-unfixed gap from this investigation thread.
+
+## SOMA: a real interactive main menu (this session)
+
+Previously, after the splash sequence, SOMA loaded `main_menu.hpm` (a real but legitimately
+empty scene) with a free-fly debug camera and no GUI at all - nothing to click, no way to
+actually start playing without the headless control-socket workflow.
+
+Added `soma/src/game/SomaMainMenu.{h,cpp}` - a plain native `cGuiSet`/`cWidgetButton` menu built
+the same way `amnesia/src/game/LuxMainMenu.{h,cpp}` builds Dark Descent's real menu, trimmed to
+what this scaffold needs: a title label, a "New Game" button (calls `cSomaBase::LoadMap()` with
+`00_01_apartment.hpm`/`PlayerStartArea_1` - the same real, extensively-tested entry point the
+headless `start_map` command already uses), and a "Quit" button (`cEngine::Exit()`). Not a
+recreation of SOMA's real menu - the actual game uses ImGui + an AngelScript-driven
+`main_menu.hps`, a completely different UI toolkit this engine has no integration for at all;
+this is an honest, functional native replacement appropriate for Phase 0/1 scope. Created by
+`cSomaBase::InitMainMenuScene()`, attached to that scene's own real camera+world viewport (not a
+separate GUI-only one like the splash uses, since there's a real scene behind it).
+
+Two real bugs found and fixed along the way:
+
+- **Mouse input was never routed to the GUI at all.** `cGui` doesn't poll `iMouse` on its own -
+  nothing in `HPL2/core` calls `SendMousePos()`/`SendMouseClickDown()`/`Up()` for you; the real
+  Dark Descent game module does that itself every frame in `amnesia/src/game/
+  LuxInputHandler.cpp`, which this Phase 0 scaffold has no equivalent of (the splash never hit
+  this, since it polls `iMouse` directly rather than routing through widget click messages).
+  Buttons were visible and the `cGuiSet` was set as the focused set, but clicks were silently
+  dropped and the cursor never moved from `(0,0)`. Fixed by making `cSomaMainMenu` an
+  `iUpdateable` that pumps mouse position and left-click edges into `cGui` every frame, the same
+  thing `LuxInputHandler.cpp` does for the real game.
+- **DevIL mis-decodes a real SOMA font atlas format.** SOMA's `vera.fnt`'s first texture page,
+  `fonts/vera_00.dds`, is an uncompressed 8bpp alpha-only DDS (`DDPF_ALPHA`, 8-bit). DevIL
+  decodes it as `IL_RGB` with every byte zeroed rather than the real per-pixel alpha coverage the
+  header describes - confirmed via a standalone probe against the real file. An all-zero RGB
+  texture has no alpha channel (samples as opaque black), so every glyph rendered as a solid
+  black box - the menu's title/button text was completely invisible before this was found (the
+  second font page, `vera_01.dds`, is a normal RGBA DDS and was never affected - this port simply
+  never exercised text through this specific page before, since nothing drew real text until
+  this menu). Fixed narrowly in `HPL2/core/sources/impl/BitmapLoaderDevilDDS.cpp`: a new
+  `TryLoadUncompressedAlphaDDS()` parses the DDS header directly and reads the raw pixel payload,
+  entirely bypassing DevIL, but only for files matching this exact pixel-format signature
+  (`DDPF_ALPHA`, 8bpp) - every other DDS variant (compressed DXT1/3/5, uncompressed RGB/RGBA/
+  Luminance) falls through to the normal DevIL path untouched. This is shared `HPL2/core` code;
+  verified zero Dark Descent regression (clean headless boot, empty hpl.log, unchanged Profiles
+  menu screenshot) since Dark Descent's own font/texture data doesn't use this DDS variant.
+
+**Verified live, headless, both interactively** (not just visually present - actual click
+routing): screenshot confirms the title text, both buttons, and a visible cursor all render
+correctly; injecting a real `mouse_move` + `mouse_button` click (via the headless `input`
+command) on "New Game" correctly loaded `00_01_apartment.hpm` and teleported the camera to the
+real `PlayerStartArea_1` coordinates, confirmed via `camera_state`; a separate run's "Quit" click
+correctly triggered the engine's real shutdown sequence ("User Exit" in hpl.log) and the process
+exited cleanly a few seconds later (normal engine cleanup time, not a hang). `ctest` stays 4/4
+green.
+
+### Remaining open items
+
+- No "Load Game"/settings/other menu functionality - genuinely out of scope for this pass
+  (New Game + Quit is the minimum for "interactive"), not attempted.
+- The menu's visual design is plain/functional (skin's default button/label styling, no custom
+  layout beyond centering) - real SOMA's actual menu art was never a goal here, see above.
+- `CubeMap Type="Rect"` silently loading as a plain 2D texture (`MaterialManager.cpp:496`,
+  documented in the previous PORTING_NOTES section) remains unfixed and is unrelated to this work.
