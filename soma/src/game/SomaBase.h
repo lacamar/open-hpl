@@ -16,6 +16,7 @@
 
 #include "DebugFreeCamera.h"
 #include "SomaSplash.h"
+#include "SomaMainMenu.h"
 
 using namespace hpl;
 
@@ -49,9 +50,9 @@ private:
 	// Real boot sequence, one step further than Phase 0: after the splash
 	// (see cSomaSplash), load SOMA's own declared main menu scene
 	// (main_init.cfg's <MainMenu> entry) with the same debug free-fly
-	// camera as InitTestMap() below - there is no real interactive menu
-	// (the actual game layers an ImGui-based UI over this scene, not
-	// implemented here), just the backdrop.
+	// camera as InitTestMap() below, plus a real interactive GuiSet menu
+	// (see SomaMainMenu.h) - a plain native replacement for the real
+	// ImGui-based menu this port doesn't integrate with.
 	bool InitMainMenuScene();
 
 	////////////////////////////////////////
@@ -98,6 +99,12 @@ private:
 	/////////////////////////
 	// Splash sequence, shown before the map below loads
 	cSomaSplash *mpSplash;
+
+	// NULL except while the main menu scene (InitMainMenuScene()) is the
+	// active scene - not created for InitTestMap()'s fallback path or for
+	// OPENHPL_SOMA_MAP boot-time overrides, both of which skip the menu
+	// entirely by design (see OnSplashFinished()).
+	cSomaMainMenu *mpMainMenu;
 
 	/////////////////////////
 	// Phase 1 test map + debug camera state (also used by

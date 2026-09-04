@@ -104,6 +104,7 @@ cSomaBase::cSomaBase()
 	mpEngine = NULL;
 
 	mpSplash = NULL;
+	mpMainMenu = NULL;
 
 	mpTestWorld = NULL;
 	mpDebugCamera = NULL;
@@ -409,6 +410,13 @@ bool cSomaBase::InitMainMenuScene()
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+
+	////////////////////////////////////
+	// Real interactive menu - see SomaMainMenu.h. Attached to this same
+	// camera+world viewport (not a separate GUI-only one like the splash
+	// uses), since there's a real scene behind it.
+	mpMainMenu = hplNew(cSomaMainMenu, (mpEngine, this, mpDebugViewport));
+	mpEngine->GetUpdater()->AddGlobalUpdate(mpMainMenu);
 
 	return true;
 }
