@@ -3062,3 +3062,54 @@ green.
   layout beyond centering) - real SOMA's actual menu art was never a goal here, see above.
 - `CubeMap Type="Rect"` silently loading as a plain 2D texture (`MaterialManager.cpp:496`,
   documented in the previous PORTING_NOTES section) remains unfixed and is unrelated to this work.
+
+## SOMA: the main menu now uses SOMA's own real 2D art (this session, continued)
+
+The previous pass's menu (plain text title, generic skin buttons, black backdrop) was
+functionally real but visually nothing like SOMA - user feedback prompted a closer look, and
+`graphics/startmenu/` in the real install turned out to hold a complete, unused 2D menu art set:
+`background/startmenu_background.tga` (1920x1080, the real glitchy-face menu backdrop),
+`title/startmenu_title.tga` + 4 numbered `_flicker` variants (the real "SOMA" glitch-logo, plus
+frames clearly meant for a cycling flicker animation), `gfx/startmenu_button_long.tga` + jitter
+variants, `icons/` (controller button icons), `misc/` (gamma calibration, error screens). None of
+this is ImGui-rendered content - these are ordinary `.tga` textures, meant to be composited by
+*some* 2D system, so they work through this engine's existing texture/GUI pipeline same as
+anything else. (Also found: `graphics/startmenu/premenu/Premenu.png`, an apparent reference
+screenshot of the real premenu-to-menu transition, showing "INITIALIZATION..." text over the
+glitch effect with LOAD/OPTIONS buttons fading in - confirms the real sequence blends the splash
+glitch effect directly into the menu appearing, not two hard-cut separate screens like this port's
+splash+menu currently are - a real difference, not addressed this pass.)
+
+Wired the real background and title into `cSomaMainMenu` (`soma/src/game/SomaMainMenu.{h,cpp}`).
+Real complication: `cWidgetImage`'s normal path (`cGuiSet::CreateWidgetImage()` ->
+`cGui::CreateGfxImage()` -> `cImageManager::CreateImage()`) failed to find either file
+("Imagemanager couldn't create image ..." in hpl.log) even though the exact same basenames
+resolve fine through `cGui::CreateGfxTexture()`'s texture-manager-based path (the same one
+`cSomaSplash` already uses successfully) - root cause not chased down given a known-working
+alternative existed. Switched to that alternative: `mpBackgroundGfx`/`mpTitleGfx` are created via
+`CreateGfxTexture()` in the constructor and drawn directly via `DrawGfx()` in a new `OnDraw()`
+override, the exact mechanism `cSomaSplash` already validated - background first (full-screen,
+`eGuiMaterial_Diffuse`), title second (upper-left, over the background's own dark region - the
+real background's right half is the glitchy face portrait, kept clear of text/buttons), both
+behind the button/label widgets' own normal draws.
+
+**Verified live, headless**: real background and title render correctly at the right position/
+size; re-verified "New Game" still correctly loads the real map via an injected click after this
+change. `ctest` stays 4/4 green. No `HPL2/core` changes this pass - contained to
+`soma/src/game/SomaMainMenu.{h,cpp}`, zero Dark Descent regression risk by construction.
+
+### Remaining open items
+
+- Buttons still use the generic skin's default graphics, not SOMA's real
+  `startmenu_button_long.tga` (+ jitter-state variants) - needs a custom `iGuiMaterial`/skin
+  entry to actually use real button art, not just a texture swap onto the existing widget.
+- Title is static; the real asset ships 4 numbered `_flicker` frames clearly meant for a cycling
+  glitch animation, not implemented.
+- Splash and menu are still two hard-cut separate screens; the real game's transition appears to
+  blend them (see the `Premenu.png` reference image described above) - not investigated further.
+- Why `cImageManager` fails to find these exact files while `cTextureManager` finds them fine is
+  still an open, real question - a real bug in this port somewhere (resource-dir registration
+  gap specific to whatever `cImageManager` searches, most likely) worth root-causing properly if
+  `cWidgetImage` is needed for something `DrawGfx()` can't do as well (e.g. per-widget hover/
+  animation state).
+- `CubeMap Type="Rect"` silently loading as a plain 2D texture (unrelated, documented earlier).

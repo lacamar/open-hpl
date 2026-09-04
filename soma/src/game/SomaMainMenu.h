@@ -45,6 +45,7 @@ public:
 	~cSomaMainMenu();
 
 	void Update(float afTimeStep);
+	void OnDraw(float afFrameTime);
 
 	// Hides the menu and stops it from eating mouse input, without
 	// destroying it - used once "New Game" has actually loaded a map, so
@@ -69,6 +70,15 @@ private:
 	cGuiSet *mpGuiSet;
 
 	cVector2f mvScreenSize;
+
+	// Real SOMA menu art (graphics/startmenu/) - drawn directly via
+	// DrawGfx() in OnDraw(), the same mechanism cSomaSplash already proved
+	// reliable, rather than cWidgetImage: cWidgetImage's CreateGfxImage()
+	// path goes through cImageManager, which failed to find these exact
+	// same files (real cause not fully chased down - not worth another
+	// investigation given a known-working alternative existed).
+	cGuiGfxElement *mpBackgroundGfx;
+	cGuiGfxElement *mpTitleGfx;
 
 	bool mbVisible;
 	bool mbMouseWasDown;
