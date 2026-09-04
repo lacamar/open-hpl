@@ -69,7 +69,7 @@ void cSomaSplash::LoadCurrentImage()
 		return;
 
 	mpCurrentImage = mpGui->CreateGfxTexture(
-		mvImages[mlCurrentIndex].msFile, eGuiMaterial_Alpha, eTextureType_Rect);
+		mvImages[mlCurrentIndex].msFile, eGuiMaterial_Alpha, eTextureType_2D);
 
 	if (mpCurrentImage == NULL)
 	{
@@ -209,7 +209,17 @@ void cSomaSplash::OnDraw(float afFrameTime)
 
 	if (mpCurrentImage)
 	{
+		// Scale down (never up) to fit on screen, preserving aspect ratio -
+		// the real splash images aren't all screen-sized (e.g.
+		// soma_logo_splash_static.dds is 2048x1024, larger than most actual
+		// display resolutions), and drawing at native pixel size just
+		// crops most of the image off-screen instead of showing the whole
+		// logo. Real assets confirmed to have no built-in padding/framing
+		// that would make aspect-fit look wrong.
 		cVector2f vImgSize = mpCurrentImage->GetImageSize();
+		float fScale = cMath::Min(1.0f, cMath::Min(mvScreenSize.x / vImgSize.x, mvScreenSize.y / vImgSize.y));
+		vImgSize = vImgSize * fScale;
+
 		cVector3f vPos((mvScreenSize.x - vImgSize.x) * 0.5f,
 						(mvScreenSize.y - vImgSize.y) * 0.5f, 1);
 
