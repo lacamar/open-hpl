@@ -20,6 +20,7 @@
 #include "SomaGammaScreen.h"
 #include "SomaMainMenu.h"
 #include "SomaConfig.h"
+#include "SomaIntroSequence.h"
 
 using namespace hpl;
 
@@ -47,6 +48,13 @@ public:
 	// Called by cSomaGammaScreen once its sequence finishes (or is
 	// skipped) - only reached on a fresh install, see OnSplashFinished().
 	void OnGammaScreenFinished();
+
+	// Called by cSomaIntroSequence (see SomaIntroSequence.h) once its
+	// hardcoded 00_00_intro.hpm slideshow finishes - loads the real next map
+	// (00_01_apartment.hpm/PlayerStartArea_1, same as the real script's
+	// Event_EndSlideShow/TimerNextMap) and re-enables the player controller
+	// that StartNewGame() suppressed for the slideshow's duration.
+	void OnIntroSequenceFinished();
 
 private:
 	bool ParseCommandLine(const tString &asCommandline);
@@ -160,6 +168,12 @@ private:
 	// camera instead (no player body makes sense in the menu scene).
 	cSomaPlayer *mpPlayer;
 	bool mbUseRealPlayer;
+
+	// Real 00_00_intro.hpm opening slideshow (see SomaIntroSequence.h) -
+	// created once by StartNewGame() the first time that specific map loads,
+	// NULL otherwise. Kept alive for the rest of the process, same
+	// no-remove-from-cUpdater constraint as every other iUpdateable here.
+	cSomaIntroSequence *mpIntroSequence;
 };
 
 //----------------------------------------------

@@ -57,6 +57,29 @@ namespace hpl {
 		mpCurrentRenderTarget = apRenderTarget;
 		mbLog = abLog;
 
+		// mvScreenSize/mvScreenSizeFloat are otherwise only set once, in
+		// SetupRenderFunctions() at renderer-construction time - if the OS/
+		// compositor resizes the window afterwards (see cLowLevelGraphicsSDL::
+		// CheckAndUpdateScreenSize()), this cached copy goes stale forever,
+		// even though cGraphics::Update() correctly reloads every size-dependent
+		// GPU resource on resize. Below (see "Get size of render target"), a
+		// cRenderTarget with mvSize=(-1,-1) - meaning "the whole screen",
+		// e.g. every cViewport's default render target - resolves against this
+		// stale copy, not the live one, whenever it's rendering straight to the
+		// real screen (apFrameBuffer==NULL): the final SetCurrentFrameBuffer()/
+		// glViewport() call ends up sized to the OLD window, not the new one.
+		// This is what caused the real, live bug where a resize correctly grew
+		// the 3D scene's own render targets but left the following 2D GUI draw
+		// pass - and any other real-screen pass reusing this same viewport
+		// state, e.g. a post effect's final composite - rendering into (and
+		// tiling/repeating across, via the same rasterizer wraparound the
+		// black-void fix's own commit message describes) only the stale old-
+		// sized rectangle. Refreshing here, every frame, is the fix - the same
+		// live-vs-cached mismatch pattern CheckAndUpdateScreenSize() itself was
+		// added to close for iLowLevelGraphics's own mvScreenSize.
+		mvScreenSize = mpLowLevelGraphics->GetScreenSizeInt();
+		mvScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
+
 		////////////////////////////////
 		//Set up variables
 		mpCurrentProjectionMatrix = NULL;

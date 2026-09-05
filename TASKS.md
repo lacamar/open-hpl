@@ -1,5 +1,31 @@
 # Tasks
 
+- SOMA: the real splash/boot sequence, properly reverse-engineered (2026-09-05)
+  - DONE: soma/src/game/SomaSplash.{h,cpp} fully rewritten after user feedback that the previous
+    session's splash "still not correct... missing visual effects, sound effects, and loading bar".
+    Re-derived the real sequence from config/game.cfg's <General> block (SplashScreen/
+    SplashScreenMusic/LoadingBar/LoadingFrame - confirmed native/compiled via `strings
+    Soma.bin.x86_64`, not script), script/modules/MenuHandler.hps's GuiPreMenu() (real FG-logo
+    fade/hold timing and SFX/music cues), and direct inspection of the real assets. Two phases:
+    FG logo (real ~2.5s/~0.5s/~2s fade-in/hold/fade-out, matching script exactly) then a new
+    Premenu.png + loading_bar.dds/loading_frame.dds "boot/init" screen (the real glitchy
+    "INITIALIZATION..." screen the user's own screenshot showed) with a time-based bar-fill
+    animation (clipped via a persistent cGuiClipRegion, not cGuiSet::DrawGfx()'s nonexistent
+    source-rect param). Removed a real, confirmed bug from the previous session: the second splash
+    image was graphics/imgui/credits/soma_logo_splash_static.dds, an end-credits asset, not part
+    of the real boot sequence at all. Also extended a concurrent session's new
+    soma/src/game/SomaMenuSfx.{h,cpp} (a real FSB5 bank reader) with two more real sample names
+    this session found via `strings` on special_fx_stream.fsb - FG_Logo_Sting and menu_bg_noise -
+    resolving that file's own documented "FG_Menu_Sting may resolve to..." gap, so the splash's
+    real sting/ambience SFX now actually play (extracted, verified as valid PCM16 WAV via
+    ffprobe). SplashScreenMusic ("loadscreen_background.ogg") is a real plain Vorbis OGG file,
+    wired in via the existing cMusicHandler. Verified live, headless: ctest 4/4 green; a real
+    screenshot mid-boot-phase shows Premenu.png's glitch text + the red loading bar correctly
+    clipped/filled, closely matching the real Premenu.png reference image; a follow-up screenshot
+    confirms a clean, crash-free hand-off into the main menu. Full writeup in PORTING_NOTES.md,
+    including exact citations for every real value used and what's still an approximation (exact
+    bar/frame pixel position - no further evidence recovered from the closed native boot code).
+
 - SOMA: a real physics-based player controller, and real static-geometry collision (2026-09-05)
   - DONE: soma/src/game/SomaPlayer.{h,cpp} - a real iCharacterBody-based player controller
     (gravity, real per-axis walk speeds, mouse-look, ground-gated jump) replacing the free-fly

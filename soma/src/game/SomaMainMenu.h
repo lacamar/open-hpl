@@ -47,18 +47,28 @@
  * and widget conventions read directly out of SOMA's own
  * script/custom_depth/helper_custom_depth_imgui/helper_imgui_options.hps
  * (OptionMenu_ButtonOptions()/OptionMenu_ButtonOptionsSlider()/
- * OptionMenu_ButtonOptionsToggle(), kOptionsBgPos/kOptionMenu_* constants)
- * and script/modules/MenuHandler.hps (GuiOptions()/GuiOptionsAudio()/
- * GuiOptionsVideoDisplay()/GuiOptionsVideoGamma() - the real menu tree is
- * Gameplay/Controls/Video{Display,PostEffect,World,Gamma}/Audio, each its
- * own sub-screen), scoped down to only what this engine actually has a
- * live backend for rather than the full 8-tab tree - see SomaMainMenu.cpp's
- * "Real Options screen" comment block for exactly what was kept/cut and
- * why. Same real corner/border frame textures (graphics/startmenu/gfx/
- * window/menu_*.tga) and options-row highlight bar
- * ("startmenu_options_button_long.tga", NOT the main menu's own
- * "startmenu_button_long.tga" - confirmed distinct real assets) the real
- * script itself uses for this screen.
+ * OptionMenu_ButtonOptionsToggle()/OptionMenu_ButtonOptionsMultiSelect(),
+ * kOptionsBgPos/kOptionMenu_* constants) and script/modules/MenuHandler.hps
+ * (GuiOptions()/GuiOptionsGameplay()/GuiOptionsInput()/GuiOptionsVideo()/
+ * GuiOptionsVideoDisplay()/GuiOptionsVideoPostEffect()/
+ * GuiOptionsVideoWorld()/GuiOptionsVideoGamma()/GuiOptionsAudio()) - the
+ * real menu tree is Gameplay/Controls/Video{Display,PostEffect,World,
+ * Gamma}/Audio, each its own sub-screen, cross-referenced against
+ * config/base_english.lang's "Menu" category for exact real caption text.
+ * The FULL real tree/order/captions are reproduced (an earlier pass here
+ * scoped the UI down to only rows with a live backend and omitted
+ * everything else outright - user feedback that this made the Options
+ * screen "not correct" compared to the real game). Rows this engine has no
+ * real working backend for yet (no texture/shadow/AA/resolution system, no
+ * keybinding rebinder, no subtitle renderer, ...) are still listed in their
+ * real position with their real caption, just drawn grayed-out and
+ * non-interactive (cSomaOptionsRow::mbEnabled) rather than omitted or
+ * pretending they work - see SomaMainMenu.cpp's BuildOptionsRows() for the
+ * exact per-row enabled/disabled call and why. Same real corner/border
+ * frame textures (graphics/startmenu/gfx/window/menu_*.tga) and
+ * options-row highlight bar ("startmenu_options_button_long.tga", NOT the
+ * main menu's own "startmenu_button_long.tga" - confirmed distinct real
+ * assets) the real script itself uses for this screen.
  *
  * Owned by cSomaBase, created once by InitMainMenuScene() and attached to
  * the same real camera+world viewport (mpDebugViewport) that scene already
@@ -118,27 +128,44 @@ struct cSomaMainMenuItem
 enum eSomaMenuScreen
 {
 	eSomaMenuScreen_Main,
-	eSomaMenuScreen_OptionsRoot,	// real GuiOptions(): Audio/Display/Back
-	eSomaMenuScreen_OptionsAudio,	// real GuiOptionsAudio(), Volume only
-	eSomaMenuScreen_OptionsDisplay, // real GuiOptionsVideoDisplay()+VideoGamma(), collapsed into one page
+	eSomaMenuScreen_OptionsRoot,		// real GuiOptions(): Gameplay/Controls/Video/Audio/Back
+	eSomaMenuScreen_OptionsGameplay,	// real GuiOptionsGameplay()
+	eSomaMenuScreen_OptionsControls,	// real GuiOptionsInput() top level (Keybind/MouseOptions/GamepadOptions/Back)
+	eSomaMenuScreen_OptionsVideo,		// real GuiOptionsVideo() (AutoDetect/Display/PostEffect/Rendering/Gamma/Back)
+	eSomaMenuScreen_OptionsVideoDisplay,	// real GuiOptionsVideoDisplay()
+	eSomaMenuScreen_OptionsVideoPostEffect, // real GuiOptionsVideoPostEffect()
+	eSomaMenuScreen_OptionsVideoWorld,		// real GuiOptionsVideoWorld() (captioned "Rendering")
+	eSomaMenuScreen_OptionsVideoGamma,		// real GuiOptionsVideoGamma()
+	eSomaMenuScreen_OptionsAudio,			// real GuiOptionsAudio()
 };
 
 // One row of the Options screen, built fresh each frame by
 // BuildOptionsRows() (cheap - a handful of entries, and keeps the row list
 // always in sync with the live config values it points at rather than
 // risking a stale cached copy).
+//
+// mbEnabled reflects whether THIS engine has a real working backend for the
+// row: every row here is real (present, in the real order, with the real
+// caption) per script/modules/MenuHandler.hps + helper_imgui_options.hps,
+// but rows this engine can't actually act on yet (no texture/shadow quality
+// system, no keybinding rebinder, no subtitle renderer, ...) are still
+// listed - just drawn grayed-out/non-interactive (see DrawOptionsRow()/
+// UpdateOptionsMouseHitTest()) rather than omitted, per user feedback that
+// omitting them made the menu look wrong compared to the real game.
 struct cSomaOptionsRow
 {
 	enum eKind
 	{
-		eKind_Category, // navigates to another eSomaMenuScreen on click (real OptionMenu_ButtonOptions)
-		eKind_Toggle,	// real OptionMenu_ButtonOptionsToggle - On/Off checkbox pair
-		eKind_Slider,	// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
-		eKind_Back,		// same as eKind_Category but always navigates "up"
+		eKind_Category,		// navigates to another eSomaMenuScreen on click (real OptionMenu_ButtonOptions)
+		eKind_Toggle,		// real OptionMenu_ButtonOptionsToggle - On/Off checkbox pair
+		eKind_Slider,		// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
+		eKind_Back,			// same as eKind_Category but always navigates "up"
+		eKind_MultiSelect,	// real OptionMenu_ButtonOptionsMultiSelect - cycles a fixed value list
 	};
 
 	eKind mKind;
 	tWString msLabel;
+	bool mbEnabled;
 
 	// eKind_Category/eKind_Back
 	eSomaMenuScreen mTarget;
@@ -154,6 +181,61 @@ struct cSomaOptionsRow
 	float mfMin;
 	float mfMax;
 	float mfStep; // step size in normalized 0..1 units, same as the real afStepSize param
+
+	// eKind_MultiSelect - no live backend exists for any real multi-select
+	// setting yet (Resolution/RefreshRate/TextureQuality/TextureFiltering/
+	// ShadowQuality/AA/Language), so these are always built with mbEnabled
+	// false and mlOptionIndex fixed at the real script's own default value -
+	// display-only, real captions/value lists, real position in the tree.
+	std::vector<tWString> mOptions;
+	int mlOptionIndex;
+};
+
+//----------------------------------------------
+// Real "ocean detritus floating over the menu" effect - MenuHandler.hps's
+// cImGuiParticleEmitter class + DrawParticles() (real menu-only particle
+// systems, reusing the same "dust_light_tiny.dds"/"dust_cloud.dds" sprites
+// the real in-game world particle systems under particles/dust/ use, not
+// dedicated startmenu-only art). Ported field-for-field rather than
+// approximated - see SomaMainMenu.cpp's CreateParticleEmitters() for the
+// real constants (spawn rect/velocity/size/life/colour) copied straight out
+// of DrawParticles(), and UpdateParticleEmitter()/DrawParticleEmitter() for
+// the real per-particle spawn/fade logic.
+
+struct cSomaMenuParticle
+{
+	cVector3f mvPos;
+	cVector3f mvVel;
+	float mfSize;
+	float mfLife; // 0..1 normalized, real "mvParticleLifeValues"
+	float mfLifeStepMul; // 1 / lifetime-in-seconds
+	cColor mStartColor;
+};
+
+struct cSomaMenuParticleEmitter
+{
+	// Real cImGuiParticleEmitter always draws gfx index 0 regardless of how
+	// many variants mvGfx holds (its own random-index pick is commented out
+	// in the real script) - kept as a vector anyway to mirror the real
+	// class shape/intent (see CreateParticleEmitters() for the real
+	// "menu_bg_noise"-style dust_cloud.dds 4-quadrant variants this
+	// preserves without ever actually cycling through them, matching the
+	// real game's own observed behaviour exactly, quirk included).
+	std::vector<cGuiGfxElement *> mvGfx;
+	eGuiMaterial mMaterial;
+
+	cVector3f mvMin, mvMax;
+	cVector3f mvVelocityMin, mvVelocityMax;
+	float mfSizeMin, mfSizeMax;
+	int mlMaxParticles;
+	float mfParticlesPerSec;
+	float mfNewParticleTimer;
+	float mfMinLife, mfMaxLife;
+	cColor mColorStartMin, mColorStartMax;
+	cColor mColorMulStart, mColorMulMiddle, mColorMulEnd;
+	float mfColorMulEndStartTime;
+
+	std::vector<cSomaMenuParticle> mvParticles;
 };
 
 //----------------------------------------------
@@ -181,6 +263,12 @@ private:
 						  float afFrontScale, float afBackScale, const cColor &aFrontCol, const cColor &aBackCol, int alLayers);
 	void DrawTitle(float afTimeStep);
 	void DrawMenuItems();
+
+	// Real DrawParticles() "ocean detritus" effect - see the class comment
+	// above cSomaMenuParticleEmitter.
+	void CreateParticleEmitters();
+	void UpdateParticleEmitter(cSomaMenuParticleEmitter &aEmitter, float afTimeStep);
+	void DrawParticleEmitter(cSomaMenuParticleEmitter &aEmitter, float afZ);
 
 	void UpdateMouseHitTest();
 	void ClickItem(cSomaMainMenuItem &aItem);
@@ -214,6 +302,10 @@ private:
 	cGuiSet *mpGuiSet;
 
 	iFontData *mpButtonFont;
+
+	// Real SOMA cursor (graphics/imgui/default/imgui_pointer_normal.tga) -
+	// wired via cGuiSet::SetCurrentPointer(), see the constructor.
+	cGuiGfxElement *mpCursorGfx;
 
 	// Real SOMA menu art (graphics/startmenu/), drawn directly via
 	// DrawGfx() rather than cWidgetImage - see SomaMainMenu.cpp for why.
@@ -288,6 +380,15 @@ private:
 	cGuiGfxElement *mpOptionsCheckOnGfx;	// "startmenu_options_button_on"
 	cGuiGfxElement *mpOptionsCheckOffGfx;	// "startmenu_options_button_off"
 	cGuiGfxElement *mpOptionsBarGfx;		// plain filled rect, slider track/handle
+
+	////////////////////////////////////
+	// Real "ocean detritus" particle effect (DrawParticles()) - see the
+	// class comment above cSomaMenuParticleEmitter for what real script this
+	// was read out of.
+	cSomaMenuParticleEmitter mEmitterLowerHalf;
+	cSomaMenuParticleEmitter mEmitterUpperHalf;
+	cSomaMenuParticleEmitter mEmitterLarge;
+	cSomaMenuParticleEmitter mEmitterSmoke;
 };
 
 //----------------------------------------------

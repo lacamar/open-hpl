@@ -64,6 +64,15 @@ public:
 
 	iCharacterBody* GetCharacterBody(){ return mpCharBody; }
 
+	// Gates Update() - used by cSomaIntroSequence (see SomaIntroSequence.h)
+	// to freeze input/movement while its non-interactive 2D slideshow plays
+	// over the (currently unlit/black) 00_00_intro.hpm scene, matching the
+	// real script's own Player_SetActive(false) in OnEnter(). Defaults to
+	// true; does not touch the character body itself (gravity/collision
+	// still apply, only WASD/mouse-look/jump input is ignored while false).
+	void SetActive(bool abActive){ mbActive = abActive; }
+	bool IsActive() const { return mbActive; }
+
 private:
 	void CreateCharacterBody();
 
@@ -80,6 +89,8 @@ private:
 
 	bool mbJumpButtonWasDown;
 	float mfJumpSpeed;
+
+	bool mbActive;
 };
 
 //----------------------------------------------

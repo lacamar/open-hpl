@@ -7,6 +7,7 @@
 #include "SomaMainMenu.h"
 #include "SomaBase.h"
 #include "SomaConfig.h"
+#include "SomaMenuSfx.h"
 
 #include <cmath>
 
@@ -62,16 +63,28 @@ static const cColor kOptionsFrameFillColor(5.0f / 255.0f, 60.0f / 255.0f, 72.0f 
 // any field at a stale value from a previous push_back() - see
 // cSomaMainMenu::BuildOptionsRows().
 
-static cSomaOptionsRow MakeCategoryRow(const tWString &asLabel, eSomaMenuScreen aTarget)
+static cSomaOptionsRow MakeCategoryRow(const tWString &asLabel, eSomaMenuScreen aTarget, bool abEnabled = true)
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_Category;
 	row.msLabel = asLabel;
+	row.mbEnabled = abEnabled;
 	row.mTarget = aTarget;
 	row.mpBoolValue = NULL;
 	row.mpFloatValue = NULL;
 	row.mfMin = row.mfMax = row.mfStep = 0;
+	row.mlOptionIndex = 0;
 	return row;
+}
+
+// Real but not-yet-backed category rows (Keybind/MouseOptions/GamepadOptions/
+// AutoDetect - real OptionMenu_ButtonOptions() calls that open a rebinder UI
+// or trigger a detect-settings popup, neither of which exists in this
+// engine) - same row kind as a working category, just permanently disabled
+// so it draws grayed and never navigates (see UpdateOptionsMouseHitTest()).
+static cSomaOptionsRow MakeDisabledActionRow(const tWString &asLabel, eSomaMenuScreen aCurrentScreen)
+{
+	return MakeCategoryRow(asLabel, aCurrentScreen, false);
 }
 
 static cSomaOptionsRow MakeBackRow(eSomaMenuScreen aTarget)
@@ -81,29 +94,53 @@ static cSomaOptionsRow MakeBackRow(eSomaMenuScreen aTarget)
 	return row;
 }
 
-static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue)
+static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue, bool abEnabled = true)
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_Toggle;
 	row.msLabel = asLabel;
+	row.mbEnabled = abEnabled;
 	row.mTarget = eSomaMenuScreen_Main;
 	row.mpBoolValue = apValue;
 	row.mpFloatValue = NULL;
 	row.mfMin = row.mfMax = row.mfStep = 0;
+	row.mlOptionIndex = 0;
 	return row;
 }
 
-static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, float afMin, float afMax, float afStep)
+static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, float afMin, float afMax, float afStep, bool abEnabled = true)
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_Slider;
 	row.msLabel = asLabel;
+	row.mbEnabled = abEnabled;
 	row.mTarget = eSomaMenuScreen_Main;
 	row.mpBoolValue = NULL;
 	row.mpFloatValue = apValue;
 	row.mfMin = afMin;
 	row.mfMax = afMax;
 	row.mfStep = afStep;
+	row.mlOptionIndex = 0;
+	return row;
+}
+
+// Real OptionMenu_ButtonOptionsMultiSelect() rows with no live backend in
+// this engine at all (no texture/shadow/AA/resolution/language system) -
+// always disabled, mlOptionIndex fixed at the real script's own default
+// index (see BuildOptionsRows() call sites for which real default) so the
+// displayed value matches what a fresh real install would actually show.
+static cSomaOptionsRow MakeMultiSelectRow(const tWString &asLabel, const std::vector<tWString> &aOptions, int alDefaultIndex)
+{
+	cSomaOptionsRow row;
+	row.mKind = cSomaOptionsRow::eKind_MultiSelect;
+	row.msLabel = asLabel;
+	row.mbEnabled = false;
+	row.mTarget = eSomaMenuScreen_Main;
+	row.mpBoolValue = NULL;
+	row.mpFloatValue = NULL;
+	row.mfMin = row.mfMax = row.mfStep = 0;
+	row.mOptions = aOptions;
+	row.mlOptionIndex = aOptions.empty() ? 0 : cMath::Clamp(alDefaultIndex, 0, (int)aOptions.size() - 1);
 	return row;
 }
 
@@ -116,6 +153,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mpViewport = apViewport;
 
 	mpBackgroundGfx = NULL;
+	mpCursorGfx = NULL;
 	mpCornerUL = mpCornerUR = mpCornerBL = mpCornerBR = NULL;
 	mpCathLeft = mpCathRight = mpCathJaw = NULL;
 	mpTitleGfx = NULL;
@@ -179,6 +217,26 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mpGuiSet->SetVirtualSize(kVirtualCanvas, -1000, 1000);
 
 	mpGuiSet->SetDrawMouse(true);
+
+	// Real SOMA cursor - graphics/imgui/default/imgui_pointer_normal.tga.
+	// Confirmed via a real install: no cursor-shaped asset exists anywhere
+	// under graphics/startmenu/ (searched exhaustively) or the generic
+	// gui/gui_default.skin this class otherwise reuses (that skin's own
+	// "PointerNormal" is gui_def_pointer_normal.tga, a Dark Descent
+	// placeholder cursor, not SOMA's) - the real one lives instead under
+	// graphics/imgui/ (SOMA's own closed cImGui system's asset directory,
+	// covered by the same "/graphics" AddSubDirs resources.cfg entry). A
+	// real, plain 27x36 uncompressed-alpha TGA (not the mis-decoded
+	// uncompressed-8bpp-alpha format that broke vera.fnt - see the class
+	// comment above), so DevIL decodes it the same as every other TGA this
+	// class already loads. cGuiSet::SetCurrentPointer() is this engine's
+	// own existing API for a per-set custom cursor image (falls back to the
+	// skin's PointerNormal otherwise, via SetSkin() - see GuiSet.cpp) - no
+	// per-frame manual DrawGfx() hack needed.
+	mpCursorGfx = CreateGfx("imgui_pointer_normal.tga", eGuiMaterial_Alpha);
+	if (mpCursorGfx)
+		mpGuiSet->SetCurrentPointer(mpCursorGfx);
+
 	mpViewport->AddGuiSet(mpGuiSet);
 	mpGuiSet->SetActive(true);
 
@@ -192,12 +250,34 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 
 	CreateGui();
 	CreateOptionsGui();
+	CreateParticleEmitters();
+
+	// Real menu click/hover/glitch/sting sound effects - unlike Menu_Music.ogg
+	// below, these are FMOD Studio/Designer-banked in the real install (see
+	// SomaMenuSfx.cpp's top comment for the real background and how this
+	// converts them into plain files this engine's sound backend can
+	// already play). Idempotent/cheap after the first call, safe even if
+	// the real install can't be found.
+	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
 
 	// Real menu music - "Menu_Music.ogg" ships as a plain OGG file (not
 	// FMOD-banked like most of SOMA's other audio), directly playable
 	// through this engine's existing OpenAL music backend with no extra
 	// wiring - music/ is already a registered resources.cfg search dir.
 	mpEngine->GetSound()->GetMusicHandler()->Play("Menu_Music.ogg", 1.0f, 0.5f, true, false);
+}
+
+//-----------------------------------------------------------------------
+
+// Real Sound_PlayGui() call sites throughout script/modules/MenuHandler.hps/
+// helper_imgui_options.hps all pass volume 1.0f and no looping - PlayGui()
+// itself is a no-op if asFile is empty (a sample that failed to convert),
+// so call sites below don't need their own empty checks.
+static void PlaySomaMenuSfx(cEngine *apEngine, const tString &asFile)
+{
+	if (asFile.empty())
+		return;
+	apEngine->GetSound()->GetSoundHandler()->PlayGui(asFile, false, 1.0f);
 }
 
 //-----------------------------------------------------------------------
@@ -328,6 +408,236 @@ void cSomaMainMenu::CreateOptionsGui()
 }
 
 //-----------------------------------------------------------------------
+//
+// Real "ocean detritus floating over the menu" effect - see the class
+// comment above cSomaMenuParticleEmitter in SomaMainMenu.h. Every constant
+// below is copied straight out of the real DrawParticles() (script/modules/
+// MenuHandler.hps) - spawn rect, velocity, size, life, colour - the only
+// translation is real "OptionMenu_GetBotRightOffset(cVector2f(0,0), Z)"
+// (screen-right-edge-at-depth-Z in the real script's own scaled coordinate
+// space) becoming a plain x=kVirtualCanvas.x constant here, since this
+// port's 1280x720 virtual canvas already *is* that same coordinate space
+// (see the class comment at the top of this file) - and real
+// "ImGui_NrmSize(0, t).y" (t as a fraction of screen height) becoming
+// kVirtualCanvas.y * t.
+//
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::CreateParticleEmitters()
+{
+	// Real "dust_light_tiny.dds"/"dust_cloud.dds" - reused from the actual
+	// in-game world particle system (particles/dust/materials/), not
+	// dedicated startmenu-only art; particles/ is already a registered
+	// resources.cfg search dir.
+	cGuiGfxElement *pDustLightTiny = CreateGfx("dust_light_tiny.dds", eGuiMaterial_Alpha);
+
+	mEmitterLowerHalf.mvGfx.push_back(pDustLightTiny);
+	mEmitterLowerHalf.mMaterial = eGuiMaterial_Alpha;
+	mEmitterLowerHalf.mvMin = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 0.5f, 13.0f);
+	mEmitterLowerHalf.mvMax = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 1.0f, 13.0f);
+	mEmitterLowerHalf.mvVelocityMin = cVector3f(-10.0f, 0.0f, 0.0f);
+	mEmitterLowerHalf.mvVelocityMax = cVector3f(-30.0f, 10.0f, 0.0f);
+	mEmitterLowerHalf.mfSizeMin = 0.1f;
+	mEmitterLowerHalf.mfSizeMax = 0.25f;
+	mEmitterLowerHalf.mlMaxParticles = 100;
+	mEmitterLowerHalf.mfParticlesPerSec = 10.0f;
+	mEmitterLowerHalf.mfNewParticleTimer = 0.0f;
+	mEmitterLowerHalf.mfMinLife = 15.0f;
+	mEmitterLowerHalf.mfMaxLife = 35.0f;
+	mEmitterLowerHalf.mColorStartMin = cColor(0.7f, 0.25f);
+	mEmitterLowerHalf.mColorStartMax = cColor(0.7f, 0.75f);
+	mEmitterLowerHalf.mColorMulStart = cColor(1, 1);
+	mEmitterLowerHalf.mColorMulMiddle = cColor(1, 1);
+	mEmitterLowerHalf.mColorMulEnd = cColor(1, 0);
+	mEmitterLowerHalf.mfColorMulEndStartTime = 0.8f;
+
+	mEmitterUpperHalf.mvGfx.push_back(pDustLightTiny);
+	mEmitterUpperHalf.mMaterial = eGuiMaterial_Alpha;
+	mEmitterUpperHalf.mvMin = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 0.0f, 13.0f);
+	mEmitterUpperHalf.mvMax = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 0.5f, 13.0f);
+	mEmitterUpperHalf.mvVelocityMin = cVector3f(-10.0f, 0.0f, 0.0f);
+	mEmitterUpperHalf.mvVelocityMax = cVector3f(-30.0f, 10.0f, 0.0f);
+	mEmitterUpperHalf.mfSizeMin = 0.1f;
+	mEmitterUpperHalf.mfSizeMax = 0.25f;
+	mEmitterUpperHalf.mlMaxParticles = 100;
+	mEmitterUpperHalf.mfParticlesPerSec = 5.0f;
+	mEmitterUpperHalf.mfNewParticleTimer = 0.0f;
+	mEmitterUpperHalf.mfMinLife = 5.0f;
+	mEmitterUpperHalf.mfMaxLife = 20.0f;
+	mEmitterUpperHalf.mColorStartMin = cColor(0.7f, 0.25f);
+	mEmitterUpperHalf.mColorStartMax = cColor(0.7f, 0.75f);
+	mEmitterUpperHalf.mColorMulStart = cColor(1, 1);
+	mEmitterUpperHalf.mColorMulMiddle = cColor(1, 1);
+	mEmitterUpperHalf.mColorMulEnd = cColor(1, 0);
+	mEmitterUpperHalf.mfColorMulEndStartTime = 0.8f;
+
+	mEmitterLarge.mvGfx.push_back(pDustLightTiny);
+	mEmitterLarge.mMaterial = eGuiMaterial_Alpha;
+	mEmitterLarge.mvMin = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 0.0f, 13.0f);
+	mEmitterLarge.mvMax = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 1.0f, 13.0f);
+	mEmitterLarge.mvVelocityMin = cVector3f(-10.0f, 0.0f, 0.0f);
+	mEmitterLarge.mvVelocityMax = cVector3f(-30.0f, 10.0f, 0.0f);
+	mEmitterLarge.mfSizeMin = 0.3f;
+	mEmitterLarge.mfSizeMax = 0.5f;
+	mEmitterLarge.mlMaxParticles = 100;
+	mEmitterLarge.mfParticlesPerSec = 2.0f;
+	mEmitterLarge.mfNewParticleTimer = 0.0f;
+	mEmitterLarge.mfMinLife = 5.0f;
+	mEmitterLarge.mfMaxLife = 20.0f;
+	mEmitterLarge.mColorStartMin = cColor(0.5f, 0.25f);
+	mEmitterLarge.mColorStartMax = cColor(0.5f, 0.75f);
+	mEmitterLarge.mColorMulStart = cColor(1, 1);
+	mEmitterLarge.mColorMulMiddle = cColor(1, 1);
+	mEmitterLarge.mColorMulEnd = cColor(1, 0);
+	mEmitterLarge.mfColorMulEndStartTime = 0.8f;
+
+	// Real mEmitterSmoke uses 4 UV-quadrant variants of the same
+	// "dust_cloud.dds" atlas via cImGuiGfx.mvUVMin/mvUVMax - cGui's own
+	// CreateGfxTexture(iTexture*, ...) overload takes the same start/end UV
+	// pair directly. Real cImGuiParticleEmitter always draws gfx index 0
+	// regardless (see cSomaMenuParticleEmitter's own comment in the header)
+	// - all 4 are still created here to mirror the real class faithfully,
+	// even though only the first is ever actually drawn, matching the real
+	// game's own observed behaviour.
+	iTexture *pDustCloudTex = mpEngine->GetResources()->GetTextureManager()->Create2D("dust_cloud.dds", true, eTextureType_2D);
+	if (pDustCloudTex)
+	{
+		static const cVector2f kUvMins[4] = {cVector2f(0.0f, 0.0f), cVector2f(0.0f, 0.5f), cVector2f(0.5f, 0.0f), cVector2f(0.5f, 0.5f)};
+		static const cVector2f kUvMaxs[4] = {cVector2f(0.5f, 0.5f), cVector2f(0.5f, 1.0f), cVector2f(1.0f, 0.5f), cVector2f(1.0f, 1.0f)};
+		for (int i = 0; i < 4; ++i)
+		{
+			cGuiGfxElement *pQuadrant = mpGui->CreateGfxTexture(pDustCloudTex, false, eGuiMaterial_Additive, cColor(1, 1), true, kUvMins[i], kUvMaxs[i]);
+			if (pQuadrant)
+				mEmitterSmoke.mvGfx.push_back(pQuadrant);
+		}
+	}
+	mEmitterSmoke.mMaterial = eGuiMaterial_Additive;
+	mEmitterSmoke.mvMin = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 0.0f, 13.0f);
+	mEmitterSmoke.mvMax = cVector3f(kVirtualCanvas.x, kVirtualCanvas.y * 1.0f, 13.0f);
+	mEmitterSmoke.mvVelocityMin = cVector3f(-20.0f, 0.0f, 0.0f);
+	mEmitterSmoke.mvVelocityMax = cVector3f(-20.0f, 10.0f, 0.0f);
+	mEmitterSmoke.mfSizeMin = 1.0f;
+	mEmitterSmoke.mfSizeMax = 3.0f;
+	mEmitterSmoke.mlMaxParticles = 50;
+	mEmitterSmoke.mfParticlesPerSec = 0.5f;
+	mEmitterSmoke.mfNewParticleTimer = 0.0f;
+	mEmitterSmoke.mfMinLife = 30.0f;
+	mEmitterSmoke.mfMaxLife = 100.0f;
+	mEmitterSmoke.mColorStartMin = cColor(0.25f, 1.0f);
+	mEmitterSmoke.mColorStartMax = cColor(0.5f, 1.0f);
+	mEmitterSmoke.mColorMulStart = cColor(1, 1);
+	mEmitterSmoke.mColorMulMiddle = cColor(0.5f, 0.5f);
+	mEmitterSmoke.mColorMulEnd = cColor(0, 0);
+	mEmitterSmoke.mfColorMulEndStartTime = 0.8f;
+
+	// Real DrawParticles() runs each emitter's Update() 1200 times before
+	// the first Draw() so the menu never opens on a completely empty sky -
+	// particles are already mid-flight, scattered across their lifespans,
+	// the first time this menu is shown. 1/60s per step is a plain,
+	// reasonable stand-in for the real script's own per-frame afTimeStep
+	// (unspecified/variable in the real code - only the "run it forward a
+	// few thousand times" intent matters here, not an exact frame time).
+	for (int i = 0; i < 1200; ++i)
+	{
+		UpdateParticleEmitter(mEmitterLowerHalf, 1.0f / 60.0f);
+		UpdateParticleEmitter(mEmitterUpperHalf, 1.0f / 60.0f);
+		UpdateParticleEmitter(mEmitterLarge, 1.0f / 60.0f);
+		UpdateParticleEmitter(mEmitterSmoke, 1.0f / 60.0f);
+	}
+}
+
+//-----------------------------------------------------------------------
+
+static cVector3f RandRectVec3(const cVector3f &aMin, const cVector3f &aMax)
+{
+	return cVector3f(cMath::RandRectf(aMin.x, aMax.x), cMath::RandRectf(aMin.y, aMax.y), cMath::RandRectf(aMin.z, aMax.z));
+}
+
+void cSomaMainMenu::UpdateParticleEmitter(cSomaMenuParticleEmitter &aEmitter, float afTimeStep)
+{
+	aEmitter.mfNewParticleTimer -= afTimeStep;
+	if (aEmitter.mfNewParticleTimer <= 0.0f && (int)aEmitter.mvParticles.size() < aEmitter.mlMaxParticles)
+	{
+		cSomaMenuParticle particle;
+		particle.mvPos = RandRectVec3(aEmitter.mvMin, aEmitter.mvMax);
+		particle.mvVel = RandRectVec3(aEmitter.mvVelocityMin, aEmitter.mvVelocityMax);
+		particle.mfSize = cMath::RandRectf(aEmitter.mfSizeMin, aEmitter.mfSizeMax);
+		particle.mfLife = 0.0f;
+
+		float fLifeSecs = cMath::RandRectf(aEmitter.mfMinLife, aEmitter.mfMaxLife);
+		particle.mfLifeStepMul = (fLifeSecs > 0.0f) ? (1.0f / fLifeSecs) : 1.0f;
+
+		float fColorT = cMath::RandRectf(0.0f, 1.0f);
+		particle.mStartColor = aEmitter.mColorStartMin * (1.0f - fColorT) + aEmitter.mColorStartMax * fColorT;
+
+		aEmitter.mvParticles.push_back(particle);
+		aEmitter.mfNewParticleTimer = (aEmitter.mfParticlesPerSec > 0.0f) ? (1.0f / aEmitter.mfParticlesPerSec) : 1.0f;
+	}
+
+	for (size_t i = 0; i < aEmitter.mvParticles.size();)
+	{
+		cSomaMenuParticle &particle = aEmitter.mvParticles[i];
+		particle.mfLife += afTimeStep * particle.mfLifeStepMul;
+
+		if (particle.mfLife >= 1.0f)
+		{
+			aEmitter.mvParticles.erase(aEmitter.mvParticles.begin() + i);
+			continue;
+		}
+
+		particle.mvPos += particle.mvVel * afTimeStep;
+		++i;
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawParticleEmitter(cSomaMenuParticleEmitter &aEmitter, float afZ)
+{
+	if (aEmitter.mvGfx.empty())
+		return;
+
+	// Real cImGuiParticleEmitter::Draw() always uses gfx index 0 - see the
+	// header's comment on cSomaMenuParticleEmitter::mvGfx.
+	cGuiGfxElement *pGfx = aEmitter.mvGfx[0];
+	cVector2f vNativeSize = pGfx->GetImageSize();
+
+	for (size_t i = 0; i < aEmitter.mvParticles.size(); ++i)
+	{
+		const cSomaMenuParticle &particle = aEmitter.mvParticles[i];
+
+		cColor colorMul;
+		if (particle.mfLife < aEmitter.mfColorMulEndStartTime)
+		{
+			// Real script also has an intermediate "MulMiddleStartTime"
+			// (default 0.25) segment; every real DrawParticles() emitter
+			// leaves mfColorMulMiddleStartTime at its class default and
+			// mColorMulStart==mColorMulMiddle for all 4 real emitters here,
+			// so that first segment is always a no-op lerp between two
+			// identical colours - collapsed to a flat mColorMulMiddle for
+			// the whole pre-fade-out span rather than reproducing a lerp
+			// that's always constant anyway.
+			colorMul = aEmitter.mColorMulMiddle;
+		}
+		else
+		{
+			float fSpan = 1.0f - aEmitter.mfColorMulEndStartTime;
+			float fT = (fSpan > 0.0f) ? (particle.mfLife - aEmitter.mfColorMulEndStartTime) / fSpan : 1.0f;
+			colorMul = aEmitter.mColorMulMiddle * (1.0f - fT) + aEmitter.mColorMulEnd * fT;
+		}
+
+		cColor col = particle.mStartColor * colorMul;
+		cVector2f vSize = vNativeSize * particle.mfSize;
+		// Real ImGui_SetAlignment(eImGuiAlign_CenterCenter) - particle.mvPos
+		// is the sprite's centre, not its top-left corner (same convention
+		// DrawCathFacePart() already uses above).
+		cVector3f vDrawPos(particle.mvPos.x - vSize.x * 0.5f, particle.mvPos.y - vSize.y * 0.5f, afZ);
+
+		mpGuiSet->DrawGfx(pGfx, vDrawPos, vSize, col, aEmitter.mMaterial);
+	}
+}
+
+//-----------------------------------------------------------------------
 
 void cSomaMainMenu::SetVisible(bool abVisible)
 {
@@ -368,6 +678,15 @@ void cSomaMainMenu::Update(float afTimeStep)
 
 	bool bDown = pMouse->ButtonIsDown(eMouseButton_Left);
 	bool bPressedEdge = bDown && mbMouseWasDown == false;
+
+	// Real DrawParticles() runs whenever mbMainMenuActive is true, which
+	// covers the Options sub-tree too (an overlay on the main menu, not a
+	// separate mode) - same "never goes away behind Options" rule
+	// DrawBackground()/DrawTitle() already follow in OnDraw().
+	UpdateParticleEmitter(mEmitterLowerHalf, afTimeStep);
+	UpdateParticleEmitter(mEmitterUpperHalf, afTimeStep);
+	UpdateParticleEmitter(mEmitterLarge, afTimeStep);
+	UpdateParticleEmitter(mEmitterSmoke, afTimeStep);
 
 	if (mScreen == eSomaMenuScreen_Main)
 	{
@@ -411,6 +730,7 @@ void cSomaMainMenu::Update(float afTimeStep)
 
 void cSomaMainMenu::UpdateMouseHitTest()
 {
+	int lPrevHovered = mlHoveredItem;
 	mlHoveredItem = -1;
 
 	const cVector2f &vMouse = mpGuiSet->GetMousePos();
@@ -431,6 +751,13 @@ void cSomaMainMenu::UpdateMouseHitTest()
 			break;
 		}
 	}
+
+	// Real OptionMenu_UpdateFocus(): plays frontend_menu_focus exactly when
+	// a new item becomes focused (ImGui_PrevBecameInFocus()), not every
+	// frame the mouse merely stays over one - same shared helper the real
+	// script uses for both main menu items and Options rows.
+	if (mlHoveredItem != -1 && mlHoveredItem != lPrevHovered)
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::FocusSound());
 }
 
 //-----------------------------------------------------------------------
@@ -439,10 +766,14 @@ void cSomaMainMenu::ClickItem(cSomaMainMenuItem &aItem)
 {
 	// Real OptionMenu_ButtonMainMenu()/GuiMainMenuSelection(): a click
 	// starts a 0.15s "ButtonClicked" flash (jitter background) and only
-	// performs the actual action once that timer elapses.
+	// performs the actual action once that timer elapses. Real
+	// OptionMenu_ButtonMainMenu() plays frontend_menu_select on the click
+	// itself (not frontend_menu_change - that's only for Options rows, see
+	// ClickOptionsRow()).
 	mlClickedItem = mlHoveredItem;
 	mfButtonClickedTimer = 0.15f;
 	mPendingAction = aItem.mAction;
+	PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
 }
 
 //-----------------------------------------------------------------------
@@ -469,14 +800,17 @@ void cSomaMainMenu::RunPendingAction()
 			Log("SOMA main menu: New Game failed to load the start map (%s)\n", sError.c_str());
 			return;
 		}
+		// Real ClickNewGame(): "New game sting" plays right when a fresh
+		// install's New Game is confirmed (no save exists, so no
+		// confirmation box is needed - same as here).
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::NewGameSting());
 		SetVisible(false);
 		break;
 	}
 	case eSomaMainMenuAction_Options:
 		// Real menu's full tree is Gameplay/Controls/Video{Display,
-		// PostEffect,World,Gamma}/Audio (eMainMenuGroup_Options*) - see
-		// SomaMainMenu.h's class comment for which two of those this
-		// scaffold actually ports (Audio/Display) and why.
+		// PostEffect,World,Gamma}/Audio (eMainMenuGroup_Options*) - now
+		// reproduced in full, see BuildOptionsRows().
 		NavigateTo(eSomaMenuScreen_OptionsRoot);
 		break;
 	case eSomaMainMenuAction_Exit:
@@ -511,6 +845,15 @@ void cSomaMainMenu::OnDraw(float afFrameTime)
 		BuildOptionsRows();
 		DrawOptionsScreen();
 	}
+
+	// Real DrawParticles() is the very last thing drawn each frame (called
+	// after GuiBackground()/GuiOptions()/etc in MenuHandler.hps), on top of
+	// everything else including the dirt-corner vignette - matched here by
+	// using z=13, above the corners' own z=12.5 (see DrawBackground()).
+	DrawParticleEmitter(mEmitterLowerHalf, 13.0f);
+	DrawParticleEmitter(mEmitterUpperHalf, 13.0f);
+	DrawParticleEmitter(mEmitterLarge, 13.0f);
+	DrawParticleEmitter(mEmitterSmoke, 13.0f);
 }
 
 //-----------------------------------------------------------------------
@@ -639,6 +982,12 @@ void cSomaMainMenu::DrawTitle(float afTimeStep)
 	{
 		mlTitleGlitchTimes = cMath::RandRectl(3, 5);
 		mfTitleGlitchTimer = 0;
+
+		// Real GuiBackground(): "menu_glitch" plays once per glitch burst
+		// (when the "TitleGlitch" timer is (re)started), not once per
+		// individual flicker frame - the real event has 12 layered wave
+		// variants FMOD itself picks between; this port just picks one.
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::GlitchSound(cMath::RandRectl(1, cSomaMenuSfx::GlitchSoundCount())));
 	}
 
 	if (mlTitleGlitchTimes > 0)
@@ -779,34 +1128,137 @@ void cSomaMainMenu::BuildOptionsRows()
 
 	cSomaConfig *pCfg = mpBase->GetConfig();
 
+	// Display-only defaults for disabled toggle/slider rows below - these
+	// mirror the real script's own mpConfig.GetBool/GetFloat(...) default
+	// argument (see MenuHandler.hps's GuiOptionsGameplay()/
+	// GuiOptionsVideoPostEffect()/GuiOptionsVideoWorld()/GuiOptionsAudio()),
+	// not a live setting - the row is disabled, so nothing ever writes back
+	// to these.
+	static bool bShowHints = true;
+	static bool bScreenDistortion = true;
+	static bool bColorSeparation = true;
+	static bool bCrosshairSimple = false;
+	static bool bSubtitles = true;
+	static bool bHearingAid = false;
+	static bool bSSAO = true;
+	static bool bBloom = true;
+	static bool bReflection = true;
+	static bool bRefraction = true;
+	static float fFOV = 70.0f;
+
 	switch (mScreen)
 	{
 	case eSomaMenuScreen_OptionsRoot:
-		// Real GuiOptions(): OptionMenu_ButtonOptions("Audio"/... , kMainMenuButtonPos, id, ...)
+		// Real GuiOptions(): Gameplay/Controls/Video/Audio/Back, in that
+		// order (real id gap at 4 - Video and PS4/XBO's "Gamma" alias share
+		// index 2 in the real script - not reproduced, this engine is never
+		// PS4/XBO). Every one of these has *some* real content on the other
+		// side (even if some of it is entirely disabled rows, e.g. Controls/
+		// Gameplay), so all four are real, enabled, navigable categories.
+		mOptionsRows.push_back(MakeCategoryRow(_W("GAME"), eSomaMenuScreen_OptionsGameplay));
+		mOptionsRows.push_back(MakeCategoryRow(_W("CONTROLS"), eSomaMenuScreen_OptionsControls));
+		mOptionsRows.push_back(MakeCategoryRow(_W("VIDEO"), eSomaMenuScreen_OptionsVideo));
 		mOptionsRows.push_back(MakeCategoryRow(_W("AUDIO"), eSomaMenuScreen_OptionsAudio));
-		mOptionsRows.push_back(MakeCategoryRow(_W("DISPLAY"), eSomaMenuScreen_OptionsDisplay));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_Main));
 		break;
 
-	case eSomaMenuScreen_OptionsAudio:
-		// Real GuiOptionsAudio(): mpConfig.GetFloat("Sound","Volume",1.0f) via
-		// OptionMenu_ButtonOptionsSlider("Volume", ..., 0.1f step, ...). This
-		// scaffold has no SpeakerType/Subtitles/HearingAid backend, so only
-		// Volume is ported (see the class comment above).
-		mOptionsRows.push_back(MakeSliderRow(_W("VOLUME"), &pCfg->mfMasterVolume, 0.0f, 1.0f, 0.1f));
+	case eSomaMenuScreen_OptionsGameplay:
+		// Real GuiOptionsGameplay() - none of these have a backend in this
+		// engine (no language switcher, no hint system, no screen-distortion/
+		// colour-separation post effect, no crosshair-style setting), so
+		// every row here is disabled.
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("LANGUAGE"), {_W("ENGLISH")}, 0));
+		mOptionsRows.push_back(MakeToggleRow(_W("HINTS"), &bShowHints, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("VIDEO DISTORTION EFFECTS"), &bScreenDistortion, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("COLOR SEPARATION"), &bColorSeparation, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("SIMPLE INTERACTION ICONS"), &bCrosshairSimple, false));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
 		break;
 
-	case eSomaMenuScreen_OptionsDisplay:
-		// Real GuiOptionsVideoDisplay()'s DisplayMode/VSync (collapsed to a
-		// plain on/off toggle here - this engine has no live "borderless"
-		// mode, and VSync's real "Adaptive" third state has no exposed
-		// getter, see SomaConfig.h) plus GuiOptionsVideoGamma()'s Gamma
-		// slider (same 0.3-2.0 range cSomaGammaScreen's first-boot
-		// calibration already uses).
-		mOptionsRows.push_back(MakeToggleRow(_W("FULLSCREEN"), &pCfg->mbFullscreen));
+	case eSomaMenuScreen_OptionsControls:
+		// Real GuiOptionsInput() top level - Keybind/MouseOptions/
+		// GamepadOptions (EyeTracking omitted: real script only shows it
+		// when EyeTracking_IsAvailable(), never true here). No keybinding/
+		// mouse-sensitivity/gamepad backend exists in this engine at all, so
+		// all three are disabled rather than navigating to an empty screen.
+		mOptionsRows.push_back(MakeDisabledActionRow(_W("KEYBINDINGS"), eSomaMenuScreen_OptionsControls));
+		mOptionsRows.push_back(MakeDisabledActionRow(_W("MOUSE OPTIONS"), eSomaMenuScreen_OptionsControls));
+		mOptionsRows.push_back(MakeDisabledActionRow(_W("CONTROLLER OPTIONS"), eSomaMenuScreen_OptionsControls));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
+		break;
+
+	case eSomaMenuScreen_OptionsVideo:
+		// Real GuiOptionsVideo(): AutoDetect/Display/PostEffect/Rendering/
+		// Gamma/Back. AutoDetect just pops a "detect best settings" message
+		// box in the real game - no detection logic exists here, disabled.
+		mOptionsRows.push_back(MakeDisabledActionRow(_W("AUTO DETECT SETTINGS"), eSomaMenuScreen_OptionsVideo));
+		mOptionsRows.push_back(MakeCategoryRow(_W("DISPLAY"), eSomaMenuScreen_OptionsVideoDisplay));
+		mOptionsRows.push_back(MakeCategoryRow(_W("POST EFFECT"), eSomaMenuScreen_OptionsVideoPostEffect));
+		mOptionsRows.push_back(MakeCategoryRow(_W("RENDERING"), eSomaMenuScreen_OptionsVideoWorld));
+		mOptionsRows.push_back(MakeCategoryRow(_W("GAMMA"), eSomaMenuScreen_OptionsVideoGamma));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
+		break;
+
+	case eSomaMenuScreen_OptionsVideoDisplay:
+	{
+		// Real GuiOptionsVideoDisplay(): Resolution/DisplayMode/VSync/
+		// RefreshRate/AA/FOV/Back. DisplayMode and VSync are the two rows
+		// with a real backend (cSomaConfig::mbFullscreen/mbVSync) - real
+		// DisplayMode is a 3-way Fullscreen/Windowed/Borderless multi-select
+		// and real VSync is On/Adaptive/Off, both collapsed to a 2-state
+		// toggle here since this engine only has a bool for each (no
+		// borderless window mode, no adaptive-vsync getter - see
+		// SomaConfig.h). Resolution/RefreshRate/AA/FOV have no backend at
+		// all (no resolution-switching, no AA, no FOV/projection control).
+		const cVector2l &vScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
+		tWString sResolution = cString::ToStringW(vScreenSize.x) + _W("x") + cString::ToStringW(vScreenSize.y);
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("RESOLUTION"), {sResolution}, 0));
+		mOptionsRows.push_back(MakeToggleRow(_W("DISPLAY MODE"), &pCfg->mbFullscreen));
 		mOptionsRows.push_back(MakeToggleRow(_W("V-SYNC"), &pCfg->mbVSync));
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("REFRESH RATE"), {_W("AUTO")}, 0));
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("ANTI-ALIASING"), {_W("OFF"), _W("FXAA")}, 1));
+		mOptionsRows.push_back(MakeSliderRow(_W("HORIZONTAL FOV"), &fFOV, 50.0f, 83.0f, 0.05f, false));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
+		break;
+	}
+
+	case eSomaMenuScreen_OptionsVideoPostEffect:
+		// Real GuiOptionsVideoPostEffect() - no depth-of-field/SSAO/bloom
+		// post effects exist in this engine's SOMA renderer yet, all disabled.
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("DEPTH OF FIELD"), {_W("LOW"), _W("MEDIUM"), _W("HIGH")}, 2));
+		mOptionsRows.push_back(MakeToggleRow(_W("SSAO"), &bSSAO, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("BLOOM"), &bBloom, false));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
+		break;
+
+	case eSomaMenuScreen_OptionsVideoWorld:
+		// Real GuiOptionsVideoWorld() (captioned "Rendering" in the real
+		// menu) - no texture-quality/filtering/shadow-quality/reflection/
+		// refraction settings exist in this engine's SOMA renderer yet.
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("TEXTURE QUALITY"), {_W("HIGH"), _W("MEDIUM"), _W("LOW")}, 0));
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("TEXTURE FILTER"), {_W("BILINEAR"), _W("TRILINEAR"), _W("AFx2"), _W("AFx4"), _W("AFx8"), _W("AFx16")}, 0));
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("SHADOW QUALITY"), {_W("OFF"), _W("LOW"), _W("MEDIUM"), _W("HIGH"), _W("VERY HIGH")}, 3));
+		mOptionsRows.push_back(MakeToggleRow(_W("REFLECTION"), &bReflection, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("REFRACTION"), &bRefraction, false));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
+		break;
+
+	case eSomaMenuScreen_OptionsVideoGamma:
+		// Real GuiOptionsVideoGamma() - the one real Video sub-screen that's
+		// just a single slider, same live backend cSomaGammaScreen's
+		// first-boot calibration already uses.
 		mOptionsRows.push_back(MakeSliderRow(_W("GAMMA"), &pCfg->mfGamma, 0.3f, 2.0f, 0.05f));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
+		break;
+
+	case eSomaMenuScreen_OptionsAudio:
+		// Real GuiOptionsAudio(): SpeakerType (PS4/XBO only, never shown
+		// here)/Volume/Subtitles/HearingAid/Back. Volume is the only row
+		// with a real backend (cSound); this engine has no subtitle
+		// rendering or closed-caption system at all yet.
+		mOptionsRows.push_back(MakeSliderRow(_W("VOLUME"), &pCfg->mfMasterVolume, 0.0f, 1.0f, 0.1f));
+		mOptionsRows.push_back(MakeToggleRow(_W("SUBTITLES"), &bSubtitles, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("CLOSED CAPTION"), &bHearingAid, false));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
 		break;
 
@@ -819,6 +1271,7 @@ void cSomaMainMenu::BuildOptionsRows()
 
 void cSomaMainMenu::UpdateOptionsMouseHitTest()
 {
+	int lPrevHovered = mlOptionsHoveredRow;
 	mlOptionsHoveredRow = -1;
 
 	// While a slider drag is in progress, keep it "hovered"/selected
@@ -835,6 +1288,9 @@ void cSomaMainMenu::UpdateOptionsMouseHitTest()
 
 	for (size_t i = 0; i < mOptionsRows.size(); ++i)
 	{
+		if (mOptionsRows[i].mbEnabled == false)
+			continue; // real-but-unbacked row - never hoverable/clickable, drawn grayed only
+
 		float fTop = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)i;
 		float fBottom = fTop + kOptionMenuButtonSpacing;
 		if (vMouse.x >= kMainMenuButtonPos.x && vMouse.x <= kVirtualCanvas.x && vMouse.y >= fTop && vMouse.y <= fBottom)
@@ -843,6 +1299,11 @@ void cSomaMainMenu::UpdateOptionsMouseHitTest()
 			break;
 		}
 	}
+
+	// Real OptionMenu_UpdateFocus() - same shared focus-change sound the
+	// main menu's own items use (see UpdateMouseHitTest()).
+	if (mlOptionsHoveredRow != -1 && mlOptionsHoveredRow != lPrevHovered)
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::FocusSound());
 }
 
 //-----------------------------------------------------------------------
@@ -855,10 +1316,24 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 	cSomaOptionsRow &row = mOptionsRows[alIndex];
 	cSomaConfig *pCfg = mpBase->GetConfig();
 
+	if (row.mbEnabled == false)
+		return; // real-but-unbacked row - UpdateOptionsMouseHitTest() already keeps these unhoverable, but guard anyway
+
 	switch (row.mKind)
 	{
+	case cSomaOptionsRow::eKind_MultiSelect:
+		// No real multi-select row is ever built with mbEnabled true yet
+		// (see MakeMultiSelectRow()), so this is unreachable today - kept so
+		// the day one of these gets a real backend, wiring it in here is a
+		// one-line addition rather than a new switch case.
+		break;
+
 	case cSomaOptionsRow::eKind_Category:
 	case cSomaOptionsRow::eKind_Back:
+		// Real OptionMenu_ButtonOptions(): plays frontend_menu_change on
+		// click (distinct from the main menu's own frontend_menu_select -
+		// see ClickItem()).
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
 		NavigateTo(row.mTarget);
 		break;
 
@@ -866,6 +1341,10 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 		if (row.mpBoolValue)
 		{
 			*row.mpBoolValue = !(*row.mpBoolValue);
+
+			// Real OptionMenu_ButtonOptionsToggle(): plays frontend_menu_select
+			// on click (helper_imgui_options.hps).
+			PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
 
 			// Live-apply the ones that have a runtime API; Fullscreen is
 			// persisted only (see SomaConfig.h) - applied at the next
@@ -907,6 +1386,10 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 
 			*row.mpFloatValue = row.mfMin + fNorm * (row.mfMax - row.mfMin);
 
+			// Real OptionMenu_ButtonOptionsSlider(): plays frontend_menu_slider
+			// whenever a click-to-step actually changes the value.
+			PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SliderSound());
+
 			if (row.mpFloatValue == &pCfg->mfMasterVolume)
 				mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
 			else if (row.mpFloatValue == &pCfg->mfGamma)
@@ -945,6 +1428,11 @@ void cSomaMainMenu::UpdateOptionsSliderDrag()
 		return;
 
 	*row.mpFloatValue = fNewValue;
+
+	// Real OptionMenu_ButtonOptionsSlider()'s repeat-button/drag branch:
+	// plays frontend_menu_slider every frame the dragged value actually
+	// changes (matches the real script's own per-frame behaviour here).
+	PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SliderSound());
 
 	cSomaConfig *pCfg = mpBase->GetConfig();
 	if (row.mpFloatValue == &pCfg->mfMasterVolume)
@@ -1026,9 +1514,24 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 		mpGuiSet->DrawGfx(mpOptionsHighlightGfx, vBarPos, kOptionMenuButtonBgSize, kMainMenuButtonBgColor);
 	}
 
-	const cColor &textCol = abSelected ? kSelectedTextColor : kDeselectedTextColor;
+	// Real-but-unbacked rows (mbEnabled false) are never selected (see
+	// UpdateOptionsMouseHitTest()) and always draw with the same disabled
+	// grey the main menu's own Continue/LoadGame labels use, per the user's
+	// ask to mark these clearly rather than omit them.
+	cColor textCol = kDeselectedTextColor;
+	if (aRow.mbEnabled == false)
+		textCol = kDisabledColor;
+	else if (abSelected)
+		textCol = kSelectedTextColor;
+
 	if (mpButtonFont)
 		mpGuiSet->DrawFont(aRow.msLabel, mpButtonFont, vTextPos, cVector2f(36, 36), textCol, eFontAlign_Left);
+
+	// Widget tint for disabled rows - same dark grey as the label, applied
+	// in place of the normal on/highlighted colour so the checkbox/slider/
+	// value text reads as inert at a glance.
+	const cColor &widgetOnCol = aRow.mbEnabled ? kMainMenuButtonBgColor : kDisabledColor;
+	const cColor widgetArrowCol = aRow.mbEnabled ? (abSelected ? cColor(1, 1) : cColor(0, 1)) : kDisabledColor;
 
 	switch (aRow.mKind)
 	{
@@ -1045,9 +1548,9 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 		cVector2f vBoxSize = kOptionsCheckboxSize * 0.5f;
 
 		if (mpOptionsCheckOffGfx)
-			mpGuiSet->DrawGfx(mpOptionsCheckOffGfx, vOffPos, vBoxSize, bChecked ? kMainMenuButtonBgColor : cColor(1, 1));
+			mpGuiSet->DrawGfx(mpOptionsCheckOffGfx, vOffPos, vBoxSize, bChecked ? widgetOnCol : cColor(1, 1));
 		if (mpOptionsCheckOnGfx)
-			mpGuiSet->DrawGfx(mpOptionsCheckOnGfx, vOnPos, vBoxSize, bChecked ? cColor(1, 1) : kMainMenuButtonBgColor);
+			mpGuiSet->DrawGfx(mpOptionsCheckOnGfx, vOnPos, vBoxSize, bChecked ? cColor(1, 1) : widgetOnCol);
 
 		if (mpButtonFont)
 		{
@@ -1065,16 +1568,15 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 		if (mpOptionsMeterGfx)
 		{
 			cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fRowY + kOptionsSliderOffset.y, 1.5f);
-			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, kMainMenuButtonBgColor);
+			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, widgetOnCol);
 		}
 
 		if (mpOptionsArrowGfx)
 		{
-			cColor arrowCol = abSelected ? cColor(1, 1) : cColor(0, 1);
 			cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, fRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
 			cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
-			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, arrowCol, eGuiMaterial_LastEnum, 180.0f);
-			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, arrowCol);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, widgetArrowCol, eGuiMaterial_LastEnum, 180.0f);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, widgetArrowCol);
 		}
 
 		if (mpOptionsBarGfx)
@@ -1083,7 +1585,36 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 			mpGuiSet->DrawGfx(mpOptionsBarGfx, vTrackPos, kOptionsSliderBarSize, cColor(0, 1));
 
 			cVector3f vHandlePos = vTrackPos + cVector3f(kOptionsSliderBarSize.x * fNorm - 3.0f, -6.0f, 0.1f);
-			mpGuiSet->DrawGfx(mpOptionsBarGfx, vHandlePos, cVector2f(6, 16), cColor(0, 1));
+			mpGuiSet->DrawGfx(mpOptionsBarGfx, vHandlePos, cVector2f(6, 16), aRow.mbEnabled ? cColor(0, 1) : kDisabledColor);
+		}
+		break;
+	}
+
+	case cSomaOptionsRow::eKind_MultiSelect:
+	{
+		// Real OptionMenu_ButtonOptionsMultiSelect(): value text centred in
+		// the same track rect a slider uses, with an arrow either side -
+		// every row of this kind is built disabled (see MakeMultiSelectRow()),
+		// so this always renders the grey/inert look.
+		if (mpOptionsMeterGfx)
+		{
+			cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fRowY + kOptionsSliderOffset.y, 1.5f);
+			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, widgetOnCol);
+		}
+
+		if (mpOptionsArrowGfx)
+		{
+			cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, fRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
+			cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, widgetArrowCol, eGuiMaterial_LastEnum, 180.0f);
+			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, widgetArrowCol);
+		}
+
+		if (mpButtonFont && aRow.mlOptionIndex >= 0 && aRow.mlOptionIndex < (int)aRow.mOptions.size())
+		{
+			cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsSliderOffset.x + kOptionsSliderSize.x * 0.5f,
+								 fRowY + kOptionsSliderOffset.y + kOptionsSliderSize.y * 0.5f, 2.0f);
+			mpGuiSet->DrawFont(aRow.mOptions[aRow.mlOptionIndex], mpButtonFont, vValuePos, cVector2f(24, 24), kDisabledColor, eFontAlign_Center);
 		}
 		break;
 	}
@@ -1098,7 +1629,7 @@ void cSomaMainMenu::DrawOptionsScreen()
 	// (kOptionsBgSize/kOptionsAudioBgSize/kOptionsVideoDisplayBgSize) are
 	// all "row count * spacing + fixed padding" in the same way.
 	float fPanelHeight = 60.0f + kOptionMenuButtonSpacing * (float)mOptionsRows.size();
-	cVector2f vPanelSize(680, fPanelHeight);
+	cVector2f vPanelSize(760, fPanelHeight);
 
 	DrawOptionsPanel(kOptionsBgPos, vPanelSize);
 
@@ -1107,8 +1638,14 @@ void cSomaMainMenu::DrawOptionsScreen()
 	tWString sTitle;
 	switch (mScreen)
 	{
+	case eSomaMenuScreen_OptionsGameplay: sTitle = _W("GAME"); break;
+	case eSomaMenuScreen_OptionsControls: sTitle = _W("CONTROLS"); break;
+	case eSomaMenuScreen_OptionsVideo: sTitle = _W("VIDEO"); break;
+	case eSomaMenuScreen_OptionsVideoDisplay: sTitle = _W("DISPLAY"); break;
+	case eSomaMenuScreen_OptionsVideoPostEffect: sTitle = _W("POST EFFECT"); break;
+	case eSomaMenuScreen_OptionsVideoWorld: sTitle = _W("RENDERING"); break;
+	case eSomaMenuScreen_OptionsVideoGamma: sTitle = _W("GAMMA"); break;
 	case eSomaMenuScreen_OptionsAudio: sTitle = _W("AUDIO"); break;
-	case eSomaMenuScreen_OptionsDisplay: sTitle = _W("DISPLAY"); break;
 	default: sTitle = _W("OPTIONS"); break;
 	}
 	if (mpButtonFont)

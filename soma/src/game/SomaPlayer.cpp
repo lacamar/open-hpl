@@ -29,6 +29,7 @@ cSomaPlayer::cSomaPlayer(cCamera *apCamera, cInput *apInput) : iUpdateable("Soma
 	mfMouseSensitivity = 0.003f;
 
 	mbJumpButtonWasDown = false;
+	mbActive = true;
 
 	// v = sqrt(2 * g * h) for a ~0.8m hop under SOMA's real gravity
 	// magnitude (12 m/s^2 - see ResetForNewMap() below) - not from a real
@@ -162,6 +163,7 @@ void cSomaPlayer::CreateCharacterBody()
 void cSomaPlayer::Update(float afTimeStep)
 {
 	if(mpCharBody == NULL || mpInput == NULL) return;
+	if(mbActive == false) return;
 
 	iKeyboard *pKeyboard = mpInput->GetKeyboard();
 	iMouse *pMouse = mpInput->GetMouse();

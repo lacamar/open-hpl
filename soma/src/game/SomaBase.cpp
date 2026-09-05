@@ -116,6 +116,8 @@ cSomaBase::cSomaBase()
 	mpDebugCameraController = NULL;
 	mpPlayer = NULL;
 	mbUseRealPlayer = true;
+
+	mpIntroSequence = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -534,6 +536,20 @@ bool cSomaBase::StartNewGame(tString &asErrorOut)
 
 //-----------------------------------------------------------------------
 
+void cSomaBase::OnIntroSequenceFinished()
+{
+	tString sError;
+	if (LoadMap("00_01_apartment.hpm", cVector3f(0, 1.7f, 0), sError, "PlayerStartArea_1") == false)
+	{
+		Log("SOMA: intro sequence finished but failed to load next map (%s)\n", sError.c_str());
+		return;
+	}
+
+	if (mpPlayer) mpPlayer->SetActive(true);
+}
+
+//-----------------------------------------------------------------------
+
 bool cSomaBase::InitTestMap()
 {
 	////////////////////////////////////
@@ -694,6 +710,29 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		mpDebugCamera->SetPosition(vCamPos);
 		mpDebugCamera->SetPitch(0);
 		mpDebugCamera->SetYaw(fAreaYaw);
+	}
+
+	// Real 00_00_intro.hpm is a non-interactive 2D slideshow, not walkable 3D
+	// content - real OnEnter() calls Player_SetActive(false) for the whole
+	// map (see SomaIntroSequence.h for the full reverse-engineering
+	// citation). Matched on the real map filename here in LoadMap() itself,
+	// not just the "New Game" call site (StartNewGame() just calls this),
+	// so it also fires for a direct "start_map" headless reload used to
+	// verify it - same as the real engine, which runs this map's OnEnter()
+	// regardless of how it was reached.
+	if (asMapFile == "00_00_intro.hpm")
+	{
+		if (mpPlayer) mpPlayer->SetActive(false);
+
+		if (mpIntroSequence == NULL)
+		{
+			mpIntroSequence = hplNew(cSomaIntroSequence, (mpEngine, this));
+			mpEngine->GetUpdater()->AddGlobalUpdate(mpIntroSequence);
+		}
+		else
+		{
+			Log("SOMA: intro sequence object already exists, not starting a second one\n");
+		}
 	}
 
 	return true;

@@ -3476,3 +3476,164 @@ free-fly scaffold's existing PORTING_NOTES entries implied:
    real map scripts.
 5. The stray `Soma.bin.aarch64`/`OpenHplSoma.bin.aarch64` files inside the real Steam SOMA
    directory (bug #2 above) need the user's own attention - not touched by this session.
+
+## SOMA: the real splash/boot sequence, properly reverse-engineered (this session)
+
+User feedback on the previous splash session's work: "The splash screens are still not correct,
+they are different from the real game and missing the visual effects, sounds effects, and loading
+bar." The previous version of `soma/src/game/SomaSplash.{h,cpp}` was a folder/naming-convention
+guess (two logos crossfading, `frictional_games_logo.dds` then
+`graphics/imgui/credits/soma_logo_splash_static.dds`) never checked against real declarative
+config or script. This session re-derived the real sequence from `config/game.cfg`,
+`script/modules/MenuHandler.hps`, and the real `Soma.bin.x86_64`/asset files directly.
+
+**Real evidence, concretely:**
+
+1. `config/game.cfg`'s `<General>` block (a real shipped data file) declares:
+   `SplashScreen="Premenu.png"`, `SplashScreenMusic="loadscreen_background"`,
+   `SplashScreenMusicVol="0.15"`, `LoadingBar="graphics/startmenu/premenu/loading_bar.dds"`,
+   `LoadingFrame="graphics/startmenu/premenu/loading_frame.dds"`. Confirmed **native** (compiled
+   into `Soma.bin.x86_64`, not AngelScript): `strings Soma.bin.x86_64` contains the literal
+   config-key names `SplashScreen`/`SplashScreenMusic`/`SplashScreenMusicVol`/
+   `SplashScreenMusicFreq` plus the literal value `Premenu.png` - none of this appears anywhere in
+   `script/modules/MenuHandler.hps` (grepped, zero hits) or any `.lang` file (also zero hits for
+   "INITIALIZATION" anywhere in game data - see point 2).
+2. `graphics/startmenu/premenu/Premenu.png` (1920x1080, opened and viewed directly this session)
+   **is** the real boot splash background - a glitch/scanline effect with baked-in
+   "INITIALIZATION..." text and a fading-in preview of "LOAD"/"OPTIONS" menu buttons. Not a
+   separate text draw - "INITIALIZATION..." is pixels in this PNG, matching the zero-hits lang
+   search above. This is also what the user's own screenshot showed, confirming it as a real,
+   distinct, previously entirely-unbuilt screen (not a fullscreen-bug artifact, as a prior
+   investigation had guessed).
+3. `graphics/startmenu/premenu/loading_bar.dds` (1024x128) decodes, via `identify -verbose`, to
+   base color `srgba(255,0,0,0)` - genuinely **red**, matching the user's own description ("a red
+   progress-bar-like graphic"). Visually (composited on black to see past the alpha channel) it's
+   a jagged/stepped waveform-style readout, not a plain rectangle.
+   `graphics/startmenu/premenu/loading_frame.dds` (same 1024x128) is a thin cyan tick-mark/grid
+   decoration meant to sit over/around it.
+4. `graphics/imgui/credits/soma_logo_splash_static.dds` - the previous session's second "logo" -
+   is **not** part of the boot splash at all. Opened directly: it's a glitchy "SOMA" wordmark with
+   a targeting-reticle "O". Its sibling `fg_logo_splash.dds` (same folder, "animated" per the lack
+   of `_static`) is a **second, larger Frictional Games gear logo**, not an animated SOMA variant
+   as previously assumed. Both live under `graphics/imgui/credits/` and neither filename is
+   referenced anywhere in script/lang data - real evidence (by content + location) that these are
+   end-credits assets. Removed from the splash sequence entirely - this was a real, confirmed bug
+   in the previous version.
+5. `script/modules/MenuHandler.hps`'s `cScrMenuHandler::GuiPreMenu()` (~line 6774) is a
+   **separate, later, scripted** phase (FG logo → optional controller "Press X" engagement →
+   optional first-run gamma calibration → main menu) - this is what the *previous* splash session
+   was actually modeling, just with the wrong second image. Its FG-logo sub-state
+   (`mlPreMenuState==0`) gives real, precise, previously-undocumented timing/SFX now replicated
+   exactly:
+   - `ImGui_AddTimer("FGLogoOver", 3)` - a 3s hold timer, started the instant the phase begins,
+     concurrently with fade-in (not after).
+   - Fade-in rate `0.4/s` (`mfPreMenuFadeAmount += afTimeStep*0.4`) while entering this phase -
+     ~2.5s to reach full opacity.
+   - Fade-out rate `0.5/s` once the timer fires - ~2s fade-out.
+   - `Sound_PlayGui("special_fx/frontend/FG_Menu_Sting", ...)` and
+     `Music_PlayExt("IngameMenu_Music", ...)`/`Sound_CreateAtEntity("MenuBGNoise", "special_fx/
+     frontend/main_menu_bg", ...)` all fire the instant this phase begins.
+   Previous session's timing (2.4s hold + 0.4s fade both ways) is now replaced with these real
+   numbers. The real FG-logo box size in script (`cVector2f(1024, 351) * 0.87` via a menu-only
+   `OptionMenu_GetCenterOffset()` helper this scaffold has no equivalent of) was **not** chased -
+   kept the existing full-screen aspect-fit sizing, which the user's own reference screenshot
+   already showed as visually correct.
+6. SFX gap, mostly closed this pass: `FG_Menu_Sting` and `main_menu_bg` are both FMOD-banked
+   (`sounds/special/special_fx.fdp` lists both event names, but is a human-readable "project" file,
+   not playable audio - real compiled sample data lives in `sounds/special/special_fx.fsb`/
+   `special_fx_stream.fsb`). A concurrent session this pass was already building
+   `soma/src/game/SomaMenuSfx.{h,cpp}` - a real, bounded FSB5 parser for SOMA's menu click/hover/
+   glitch SFX (see that file's own header comment for the full format writeup), which had already
+   independently found and documented that `FG_Menu_Sting` "may resolve to FG_Logo_Sting via FMOD
+   event-internal logic this file doesn't parse the .fev format for". This session confirmed that
+   guess and found the second missing name too, both via `strings` on the real
+   `special_fx_stream.fsb`: it contains real named samples **`FG_Logo_Sting`** and
+   **`menu_bg_noise`** (not `FG_Menu_Sting`/`main_menu_bg` literally - those are just the *event*
+   names the script calls). Extended that file's existing PCM16 extraction loop (already used for
+   `new_game_sting`) with these two additional real sample names rather than duplicating a second
+   FSB5 reader, per this task's own "reuse it rather than duplicating" scope note - a small,
+   mechanical, three-line table addition to an already-generic loop, plus two new public
+   accessors (`cSomaMenuSfx::FGLogoSting()`/`MenuBgNoise()`) and matching cache-file-exists checks.
+   Verified live this session: both extract as real, valid PCM16 WAV files
+   (`~/.cache/open-hpl/soma/sfx/fg_logo_sting.wav`, 11.37s mono 44.1kHz; `menu_bg_noise.wav`,
+   65.1s stereo 48kHz - both confirmed via `ffprobe`) and both play successfully via
+   `cSoundHandler::PlayGui()` (no "sample not available" fallback log emitted this run).
+   `SplashScreenMusic="loadscreen_background"` resolves to
+   `music/LoadScreen/loadscreen_background.ogg` - a real **plain Vorbis OGG file** (confirmed via
+   `file`), needing no FMOD work at all - wired in via the same `cMusicHandler::Play()` call
+   `soma/src/game/SomaMainMenu.cpp` already uses for `Menu_Music.ogg`, confirmed live via
+   `Play()`'s own return value during this session's debug-instrumented run.
+
+**New sequence** (`soma/src/game/SomaSplash.{h,cpp}`, fully rewritten): two phases, both drawn
+over a constant opaque black base layer (so each phase's own fade-in starts from true black,
+matching the real script's separate black-screen fade-up without needing to model it as a third
+phase):
+
+- `ePhase_FGLogo` - `frictional_games_logo.dds`, the real ~2.5s/~0.5s/~2s fade-in/hold/fade-out
+  timing and SFX/music cues from point 5 above.
+- `ePhase_BootInit` - `Premenu.png` full-bleed + `loading_bar.dds` (clipped horizontally via a
+  `cGuiClipRegion` to reveal a growing fraction) and `loading_frame.dds` (static decoration)
+  overlaid, plus `loadscreen_background.ogg` starting. This port completes all real engine boot
+  work (resource dir mounts, shader compiles, etc.) *before* `cSomaSplash` is even constructed -
+  there is no real, granular progress signal left to sample by this point (same "no true
+  percentage tracking anywhere in this engine" finding already documented elsewhere in this file
+  for Dark Descent's own loading screen), so the bar's fill fraction is an honest, smooth
+  **time-based** animation across the phase's fixed duration, not a fabricated "phase" breakdown
+  that would imply real work is being tracked when it isn't. The bar/frame's on-screen position
+  (roughly under where `Premenu.png`'s own baked "INITIALIZATION..." text sits) is this session's
+  own reasonable placement - the real position is native/closed code with no further evidence
+  recovered.
+
+`cGuiSet::DrawGfx()` has no source-rect/UV-crop parameter for a partial-fill bar; used
+`cGuiClipRegion` instead (a horizontal clip window, drawing the full bar texture but only letting
+the left `barFraction` of it show). Real, non-obvious gotcha caught before it became a leak:
+`cGuiClipRegion::CreateChild()` allocates a new heap node on every call and only frees it when its
+*parent* region is destroyed (`cGuiClipRegion::Clear()`/`STLDeleteAll` in `GuiSet.cpp`) - calling
+it every frame (once per draw) would leak one node per frame for the life of the process. Fixed by
+allocating exactly one `cGuiClipRegion` in the constructor and only mutating its `mRect` each
+frame instead.
+
+**Verified live, headless, this session:**
+
+- Clean build (`amnesia/src/build-splashagent`, both `Soma` and `Amnesia` targets) and `ctest`
+  4/4 green, both before and after this session's changes.
+- `hpl-<pid>.log` confirms all four real textures load without error
+  (`fglogo_loaded=1 premenu_loaded=1 bar_loaded=1 frame_loaded=1` from a temporary debug print,
+  removed before finalizing) and `SplashScreenMusic Play()` returns `true`.
+- A temporary per-frame debug trace (same "instrument, verify via log trace, then strip" pattern
+  this exact class already used in a prior session, removed before finalizing) confirmed the
+  phase state machine numerically: `EnterPhase(0)`→`EnterPhase(1)` fires at the correct elapsed
+  time, `DrawBootInitPhase`'s `alpha`/`barFraction` values ramp smoothly and monotonically exactly
+  per the documented formulas (fade 0→1 over 0.4s, `barFraction` 0→1 linearly across the full
+  3.8s phase).
+- **A real, live headless screenshot** (not just a log trace this time) was captured
+  mid-`ePhase_BootInit` (`elapsed=1.67s` of `dur=3.8s`, confirmed from the same run's log): it
+  shows `Premenu.png`'s "INITIALIZATION..." glitch text and the real red `loading_bar.dds`,
+  partially filled and correctly clipped, positioned just under the text - visually matching the
+  real `Premenu.png` reference image closely. A second screenshot taken ~2s later shows a clean,
+  crash-free hand-off into the (separately-developed) main menu, with no residual splash artifacts.
+  This is real, direct visual confirmation the fix addresses the user's core complaint, not just a
+  numeric trace.
+- Getting these screenshots required working around this environment's shared, system-wide
+  headless single-instance lock (`AcquireHeadlessSingleInstanceLock()`,
+  `/run/user/1000/open-hpl-headless.lock`) - several other concurrent agent sessions were also
+  running headless SOMA processes throughout, so most launches spent tens of seconds to a few
+  minutes queued behind them before getting a turn. Not a bug, just a real environmental
+  constraint worth noting for whoever runs concurrent sessions next.
+
+**Not verified / follow-ups for whoever continues this:**
+
+1. The exact on-screen position/size of the loading bar/frame overlay is this session's own
+   estimate (see point 6 above) - no further evidence recovered from the closed native boot-splash
+   code for the real pixel position.
+2. The real FG-logo box size/position from script (`OptionMenu_GetCenterOffset`) was not chased -
+   full-screen aspect-fit was kept instead (see point 5 above for why).
+3. `menu_glitch_05.ogg` failed to load in this session's test run
+   (`ERROR: Couldn't load sound data '.../menu_glitch_05.ogg'`) - this is the *main menu's* own
+   title-glitch animation (a concurrent session's work, `soma/src/game/SomaMainMenu.cpp`), not
+   this splash - noted here only because it appeared in the same test run's log; not investigated
+   or fixed as part of this session (out of this session's scope).
+4. `cSomaMenuSfx::EnsureCached()`'s own `bAllPresent` short-circuit check (added before this
+   session started) did not originally include this session's two new cache filenames
+   (`fg_logo_sting.wav`/`menu_bg_noise.wav`) - fixed as part of this session's edit to that file,
+   but worth double-checking after any future edits to that check add more real sample names.
