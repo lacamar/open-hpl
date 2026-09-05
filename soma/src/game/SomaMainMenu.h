@@ -157,7 +157,14 @@ struct cSomaOptionsRow
 	enum eKind
 	{
 		eKind_Category,		// navigates to another eSomaMenuScreen on click (real OptionMenu_ButtonOptions)
-		eKind_Toggle,		// real OptionMenu_ButtonOptionsToggle - On/Off checkbox pair
+		// real OptionMenu_ButtonOptionsToggle - NOT a checkbox/on-off-switch visually (an
+		// earlier pass here got this wrong): the real widget is the exact same left/right-
+		// arrow value-cycle bar eKind_MultiSelect below draws, just always exactly 2 values
+		// (confirmed against real helper_imgui_options.hps's OptionMenu_OptionsToggle(), which
+		// literally calls the same cycle-bar drawing as OptionMenu_OptionsSlider/MultiSelect
+		// share, and against config/base_english.lang's single shared "On"/"Off" caption pair
+		// used by every toggle-shaped row) - see DrawOptionsCycleControl().
+		eKind_Toggle,
 		eKind_Slider,		// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
 		eKind_Back,			// same as eKind_Category but always navigates "up"
 		eKind_MultiSelect,	// real OptionMenu_ButtonOptionsMultiSelect - cycles a fixed value list
@@ -182,11 +189,26 @@ struct cSomaOptionsRow
 	float mfMax;
 	float mfStep; // step size in normalized 0..1 units, same as the real afStepSize param
 
+	// eKind_Slider only - real OptionMenu_ButtonOptionsSlider()'s optional
+	// "asTextValue" param: empty for Gamma/Volume (real script passes ""),
+	// a formatted number for FOV (the one real slider that shows a trailing
+	// value) - real helper_imgui_options.hps draws a visually narrower bar
+	// with the value text after it when this is non-empty (see
+	// kOptionMenu_TextedSlider* constants in DrawOptionsRow()'s eKind_Slider
+	// case), a plain full-width bar with no text at all otherwise.
+	tWString mSliderValueText;
+
 	// eKind_MultiSelect - no live backend exists for any real multi-select
 	// setting yet (Resolution/RefreshRate/TextureQuality/TextureFiltering/
 	// ShadowQuality/AA/Language), so these are always built with mbEnabled
 	// false and mlOptionIndex fixed at the real script's own default value -
 	// display-only, real captions/value lists, real position in the tree.
+	//
+	// eKind_Toggle reuses these same two fields rather than duplicating the
+	// cycle-widget machinery: mOptions = {offLabel, onLabel} (real captions,
+	// e.g. {"WINDOWED","FULLSCREEN"} for Display Mode, {"OFF","ON"} for
+	// everything else per base_english.lang), mlOptionIndex = current bool
+	// state (0/1) - see MakeToggleRow()/DrawOptionsCycleControl().
 	std::vector<tWString> mOptions;
 	int mlOptionIndex;
 };
@@ -284,6 +306,13 @@ private:
 	void DrawOptionsScreen();
 	void DrawOptionsPanel(const cVector2f &avPos, const cVector2f &avSize);
 	void DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, bool abSelected);
+	// Shared real "startmenu_options_button_meter" + left/right
+	// "startmenu_options_arrow" cycle-bar widget (real
+	// OptionMenu_OptionsToggle()/OptionMenu_OptionsMultiSelect() both draw
+	// this exact same thing, just with a different value list length) - used
+	// by DrawOptionsRow() for both eKind_Toggle and eKind_MultiSelect so the
+	// two kinds can never visually drift apart again.
+	void DrawOptionsCycleControl(float afRowY, const tWString &asValueText, const cColor &aBarCol, const cColor &aArrowCol, const cColor &aTextCol);
 
 	void UpdateOptionsMouseHitTest();
 	void ClickOptionsRow(int alIndex);
@@ -377,8 +406,6 @@ private:
 	cGuiGfxElement *mpOptionsHighlightGfx; // "startmenu_options_button_long" - selected-row bar
 	cGuiGfxElement *mpOptionsMeterGfx;		// "startmenu_options_button_meter" - slider background
 	cGuiGfxElement *mpOptionsArrowGfx;		// "startmenu_options_arrow"
-	cGuiGfxElement *mpOptionsCheckOnGfx;	// "startmenu_options_button_on"
-	cGuiGfxElement *mpOptionsCheckOffGfx;	// "startmenu_options_button_off"
 	cGuiGfxElement *mpOptionsBarGfx;		// plain filled rect, slider track/handle
 
 	////////////////////////////////////

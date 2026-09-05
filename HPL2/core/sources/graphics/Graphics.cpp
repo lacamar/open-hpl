@@ -281,6 +281,18 @@ namespace hpl {
 		{
 			iRenderer *pRenderer = mvRenderers[i];
 
+			// This runs from cGraphics::Update(), which fires during the Update phase of
+			// the frame - BEFORE the Render phase that would otherwise refresh mvScreenSize/
+			// mvScreenSizeFloat via iRenderFunctions::InitAndResetRenderFunctions() (called
+			// per-viewport from SetFrameBuffer()). Without this, LoadData() below rebuilds
+			// every size-dependent G-buffer/accumulation/reflection render target using the
+			// STILL-STALE pre-resize size, even though CheckAndUpdateScreenSize() just
+			// confirmed the real window size changed - leaving the deferred renderer's own
+			// intermediate targets pinned to the old (smaller) size while everything drawn
+			// into them next frame correctly targets the new viewport, so real content only
+			// ever fills the old rectangle and the newly-exposed screen area stays black.
+			pRenderer->SetupRenderFunctions(mpLowLevelGraphics);
+
 			pRenderer->DestroyData();
 			pRenderer->LoadData();
 		}

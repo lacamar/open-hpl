@@ -42,9 +42,17 @@ static const float kBackFaceScale = 0.3f;
 
 static const cVector2f kOptionsBgPos(100, 260);
 
-static const cVector2f kOptionsCheckboxOffset(405, 2);
-static const cVector2f kOptionsCheckboxSize(100, 46);
+// Real kOptionMenu_CheckboxOffset/Size - no longer used to draw an actual
+// on/off checkbox pair (see the eKind_Toggle comment in SomaMainMenu.h: the
+// real widget is the same cycle-bar every other row uses), kept only because
+// eKind_Toggle/eKind_MultiSelect share kOptionsSliderOffset/Size below for
+// that cycle bar's own position - nothing here references these two anymore.
 
+// Real kOptionMenu_SliderOffset/Size - the cycle-bar background rect shared
+// by eKind_Toggle/eKind_Slider/eKind_MultiSelect alike (real
+// OptionMenu_OptionsToggle()/OptionMenu_OptionsSlider()/
+// OptionMenu_OptionsMultiSelect() all draw "startmenu_options_button_meter"
+// at this exact same offset/size regardless of kind).
 static const cVector2f kOptionsSliderOffset(305, 2);
 static const cVector2f kOptionsSliderSize(368, 46);
 static const float kOptionsSliderTrackLocalMinX = 325; // relative to row pos.x
@@ -54,6 +62,18 @@ static const cVector2f kOptionsSliderBarSize(245, 5);
 static const cVector2f kOptionsSliderArrowOffsetL(570, -1);
 static const cVector2f kOptionsSliderArrowOffsetR(305, -2);
 static const cVector2f kOptionsSliderArrowSize(20, 40);
+
+// Real kOptionMenu_TextedSlider* (helper_imgui_options.hps) - used only when
+// a slider row has a non-empty value string to show after it (real script:
+// "asTextValue.length() > 0"), which today is FOV alone (Gamma/Volume both
+// pass "" for asTextValue in MenuHandler.hps and use the plain kOptionsSlider*
+// constants above unchanged). Same overall bar rect as the plain slider, but
+// the track/right-arrow stop short at x=510 instead of x=570 to leave room
+// for the trailing number before the bar's own right-edge notch.
+static const float kOptionsTextedSliderArrowRightX = 510; // real kOptionMenu_TextedSliderArrowOffsetL.x
+static const cVector2f kOptionsTextedSliderBarOffset(325, 16);
+static const cVector2f kOptionsTextedSliderBarSize(185, 5);
+static const cVector2f kOptionsTextedSliderTextOffset(530, 16); // real kOptionMenu_TextedSliderTextOffset
 
 // Real mGfxFrame.mGfxBackground.mColor (MenuHandler.hps's Init()).
 static const cColor kOptionsFrameFillColor(5.0f / 255.0f, 60.0f / 255.0f, 72.0f / 255.0f, 0.25f);
@@ -94,7 +114,12 @@ static cSomaOptionsRow MakeBackRow(eSomaMenuScreen aTarget)
 	return row;
 }
 
-static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue, bool abEnabled = true)
+// asOnLabel/asOffLabel default to the real generic "On"/"Off" captions
+// (config/base_english.lang) every toggle-shaped row except Display Mode
+// uses; Display Mode passes the real "Fullscreen"/"Windowed" pair instead
+// (see BuildOptionsRows()).
+static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue, bool abEnabled = true,
+									  const tWString &asOnLabel = _W("ON"), const tWString &asOffLabel = _W("OFF"))
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_Toggle;
@@ -104,11 +129,19 @@ static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue, boo
 	row.mpBoolValue = apValue;
 	row.mpFloatValue = NULL;
 	row.mfMin = row.mfMax = row.mfStep = 0;
-	row.mlOptionIndex = 0;
+	// Real cycle-bar widget, see the eKind_Toggle comment in SomaMainMenu.h -
+	// mOptions/mlOptionIndex are reused from eKind_MultiSelect rather than
+	// duplicating them.
+	row.mOptions.push_back(asOffLabel);
+	row.mOptions.push_back(asOnLabel);
+	row.mlOptionIndex = (apValue && *apValue) ? 1 : 0;
 	return row;
 }
 
-static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, float afMin, float afMax, float afStep, bool abEnabled = true)
+// asValueText: real OptionMenu_ButtonOptionsSlider()'s optional "asTextValue"
+// - empty for every slider except FOV (see cSomaOptionsRow::mSliderValueText).
+static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, float afMin, float afMax, float afStep, bool abEnabled = true,
+									  const tWString &asValueText = _W(""))
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_Slider;
@@ -120,6 +153,7 @@ static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, fl
 	row.mfMin = afMin;
 	row.mfMax = afMax;
 	row.mfStep = afStep;
+	row.mSliderValueText = asValueText;
 	row.mlOptionIndex = 0;
 	return row;
 }
@@ -195,7 +229,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mpFrameBorderTop = mpFrameBorderBottom = mpFrameBorderLeft = mpFrameBorderRight = NULL;
 	mpFrameFillGfx = NULL;
 	mpOptionsHighlightGfx = mpOptionsMeterGfx = mpOptionsArrowGfx = NULL;
-	mpOptionsCheckOnGfx = mpOptionsCheckOffGfx = mpOptionsBarGfx = NULL;
+	mpOptionsBarGfx = NULL;
 
 	mpGui = mpEngine->GetGui();
 
@@ -403,8 +437,12 @@ void cSomaMainMenu::CreateOptionsGui()
 	mpOptionsHighlightGfx = CreateGfx("startmenu_options_button_long.tga", eGuiMaterial_Alpha);
 	mpOptionsMeterGfx = CreateGfx("startmenu_options_button_meter.tga", eGuiMaterial_Alpha);
 	mpOptionsArrowGfx = CreateGfx("startmenu_options_arrow.tga", eGuiMaterial_Alpha);
-	mpOptionsCheckOnGfx = CreateGfx("startmenu_options_button_on.tga", eGuiMaterial_Alpha);
-	mpOptionsCheckOffGfx = CreateGfx("startmenu_options_button_off.tga", eGuiMaterial_Alpha);
+	// Real "startmenu_options_button_on/off.tga" - NOT loaded/drawn here:
+	// these back the on/off checkbox-pair widget this class used to draw for
+	// eKind_Toggle, which turned out not to match the real game at all (see
+	// the eKind_Toggle comment in SomaMainMenu.h) - every toggle-shaped row
+	// now reuses mpOptionsMeterGfx/mpOptionsArrowGfx via
+	// DrawOptionsCycleControl() instead, same as eKind_MultiSelect.
 }
 
 //-----------------------------------------------------------------------
@@ -1213,11 +1251,29 @@ void cSomaMainMenu::BuildOptionsRows()
 		const cVector2l &vScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
 		tWString sResolution = cString::ToStringW(vScreenSize.x) + _W("x") + cString::ToStringW(vScreenSize.y);
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("RESOLUTION"), {sResolution}, 0));
-		mOptionsRows.push_back(MakeToggleRow(_W("DISPLAY MODE"), &pCfg->mbFullscreen));
+		// Real captions "FULLSCREEN"/"WINDOWED" (base_english.lang's
+		// Fullscreen/Windowed entries) - the real 3-way Fullscreen/Windowed/
+		// Borderless multi-select collapsed to this engine's single bool,
+		// same scope note as above.
+		mOptionsRows.push_back(MakeToggleRow(_W("DISPLAY MODE"), &pCfg->mbFullscreen, true, _W("FULLSCREEN"), _W("WINDOWED")));
 		mOptionsRows.push_back(MakeToggleRow(_W("V-SYNC"), &pCfg->mbVSync));
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("REFRESH RATE"), {_W("AUTO")}, 0));
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("ANTI-ALIASING"), {_W("OFF"), _W("FXAA")}, 1));
-		mOptionsRows.push_back(MakeSliderRow(_W("HORIZONTAL FOV"), &fFOV, 50.0f, 83.0f, 0.05f, false));
+
+		// Real MenuHandler.hps's FOV row is the one slider that shows a
+		// trailing numeric value (Gamma/Volume don't - see
+		// cSomaOptionsRow::mSliderValueText) - real formula verbatim from
+		// GuiOptionsVideoDisplay(): the stored 50-83 value is treated as a
+		// vertical-ish FOV and converted to a horizontal degrees figure using
+		// the real screen aspect ratio before display. No real backend
+		// applies this to an actual camera/projection in this engine (see
+		// the disabled=false arg below and the class comment on why it stays
+		// grayed), but the row now at least *looks* like the real row
+		// instead of silently omitting its value number altogether.
+		float fAspect = (vScreenSize.y != 0) ? (float)vScreenSize.x / (float)vScreenSize.y : 16.0f / 9.0f;
+		float fHorizontalFovRad = 2.0f * atanf(tanf(cMath::ToRad(fFOV) * 0.5f) * fAspect);
+		tWString sFovText = cString::ToStringW((int)(cMath::ToDeg(fHorizontalFovRad) + 0.5f));
+		mOptionsRows.push_back(MakeSliderRow(_W("HORIZONTAL FOV"), &fFOV, 50.0f, 83.0f, 0.05f, false, sFovText));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
 		break;
 	}
@@ -1541,22 +1597,18 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 
 	case cSomaOptionsRow::eKind_Toggle:
 	{
-		bool bChecked = aRow.mpBoolValue && *aRow.mpBoolValue;
-
-		cVector3f vOffPos(kMainMenuButtonPos.x + kOptionsCheckboxOffset.x, fRowY + kOptionsCheckboxOffset.y, 1.5f);
-		cVector3f vOnPos = vOffPos + cVector3f(kOptionsCheckboxSize.x * 0.5f + 5.0f, -0.5f, 0);
-		cVector2f vBoxSize = kOptionsCheckboxSize * 0.5f;
-
-		if (mpOptionsCheckOffGfx)
-			mpGuiSet->DrawGfx(mpOptionsCheckOffGfx, vOffPos, vBoxSize, bChecked ? widgetOnCol : cColor(1, 1));
-		if (mpOptionsCheckOnGfx)
-			mpGuiSet->DrawGfx(mpOptionsCheckOnGfx, vOnPos, vBoxSize, bChecked ? cColor(1, 1) : widgetOnCol);
-
-		if (mpButtonFont)
-		{
-			mpGuiSet->DrawFont(_W("OFF"), mpButtonFont, cVector3f(vOffPos.x, vOffPos.y, 2.0f), cVector2f(20, 20), cColor(0, 1), eFontAlign_Center);
-			mpGuiSet->DrawFont(_W("ON"), mpButtonFont, cVector3f(vOnPos.x, vOnPos.y, 2.0f), cVector2f(20, 20), cColor(0, 1), eFontAlign_Center);
-		}
+		// Real cycle-bar widget (see the eKind_Toggle comment in
+		// SomaMainMenu.h) - NOT the on/off checkbox pair this used to draw.
+		// Real OptionMenu_OptionsToggle()/MultiSelect() always draw this
+		// value text in plain black regardless of any "disabled" concept
+		// (which doesn't exist in the real game at all - see kDisabledColor's
+		// own doc comment) - kept black here too even for a disabled row,
+		// same reasoning as the eKind_Slider case below: a grey-on-grey
+		// value text would be unreadable against the also-grey disabled bar.
+		tWString sValue = (aRow.mlOptionIndex >= 0 && aRow.mlOptionIndex < (int)aRow.mOptions.size())
+							   ? aRow.mOptions[aRow.mlOptionIndex]
+							   : tWString();
+		DrawOptionsCycleControl(fRowY, sValue, widgetOnCol, widgetArrowCol, cColor(0, 1));
 		break;
 	}
 
@@ -1564,6 +1616,7 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 	{
 		float fValue = aRow.mpFloatValue ? *aRow.mpFloatValue : 0;
 		float fNorm = cMath::Clamp((fValue - aRow.mfMin) / (aRow.mfMax - aRow.mfMin), 0.0f, 1.0f);
+		bool bTexted = aRow.mSliderValueText.empty() == false; // real "asTextValue.length() > 0" branch (FOV only)
 
 		if (mpOptionsMeterGfx)
 		{
@@ -1571,53 +1624,109 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, widgetOnCol);
 		}
 
+		// Real kOptionMenu_SliderArrowOffsetL/TextedSliderArrowOffsetL: the
+		// right arrow sits at the bar's own right edge (x=570) for a plain
+		// slider, or short of it (x=510) to leave room for the trailing
+		// value text on a texted one (Gamma/Volume vs FOV).
+		float fRightArrowX = bTexted ? kOptionsTextedSliderArrowRightX : kOptionsSliderArrowOffsetL.x;
 		if (mpOptionsArrowGfx)
 		{
 			cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, fRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
-			cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
+			cVector3f vArrowR(kMainMenuButtonPos.x + fRightArrowX, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
 			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, widgetArrowCol, eGuiMaterial_LastEnum, 180.0f);
 			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, widgetArrowCol);
 		}
 
 		if (mpOptionsBarGfx)
 		{
-			cVector3f vTrackPos(kMainMenuButtonPos.x + kOptionsSliderBarOffset.x, fRowY + kOptionsSliderBarOffset.y, 2.0f);
-			mpGuiSet->DrawGfx(mpOptionsBarGfx, vTrackPos, kOptionsSliderBarSize, cColor(0, 1));
+			const cVector2f &vBarOffset = bTexted ? kOptionsTextedSliderBarOffset : kOptionsSliderBarOffset;
+			const cVector2f &vBarSize = bTexted ? kOptionsTextedSliderBarSize : kOptionsSliderBarSize;
+			// Real gfxBar draws (both OptionMenu_OptionsSlider() branches)
+			// are unconditionally cColor(0,1) - kept black even when
+			// mbEnabled is false (this engine's own "grey out unbacked rows"
+			// convention, which the real game has no equivalent of) so the
+			// track/handle stay visible against the also-grey disabled bar
+			// fill instead of disappearing into it.
+			cVector3f vTrackPos(kMainMenuButtonPos.x + vBarOffset.x, fRowY + vBarOffset.y, 2.0f);
+			mpGuiSet->DrawGfx(mpOptionsBarGfx, vTrackPos, vBarSize, cColor(0, 1));
 
-			cVector3f vHandlePos = vTrackPos + cVector3f(kOptionsSliderBarSize.x * fNorm - 3.0f, -6.0f, 0.1f);
-			mpGuiSet->DrawGfx(mpOptionsBarGfx, vHandlePos, cVector2f(6, 16), aRow.mbEnabled ? cColor(0, 1) : kDisabledColor);
+			cVector3f vHandlePos = vTrackPos + cVector3f(vBarSize.x * fNorm - 3.0f, -6.0f, 0.1f);
+			mpGuiSet->DrawGfx(mpOptionsBarGfx, vHandlePos, cVector2f(6, 16), cColor(0, 1));
+		}
+
+		// Real kOptionMenu_TextedSliderTextOffset - FOV only (see
+		// cSomaOptionsRow::mSliderValueText). Real script draws this in
+		// plain black unconditionally too - see the track/handle comment
+		// above for why that's kept even though this row is currently
+		// disabled (this row was previously disabled AND silently blank - a
+		// real fresh SOMA install still shows "96" etc, just non-
+		// interactive, so this now matches).
+		if (bTexted && mpButtonFont)
+		{
+			// eFontAlign_Center only recentres X (see DrawTextFromCharArry()
+			// in HPL2/core/sources/gui/GuiSet.cpp) - avPos.y is always the
+			// TOP of the glyphs, never vertically centred by the align
+			// param, so this vertically centres a 28-tall value inside the
+			// 46-tall bar by hand.
+			const float fFontH = 28.0f;
+			cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsTextedSliderTextOffset.x,
+								 fRowY + kOptionsSliderOffset.y + (kOptionsSliderSize.y - fFontH) * 0.5f, 2.0f);
+			mpGuiSet->DrawFont(aRow.mSliderValueText, mpButtonFont, vValuePos, cVector2f(fFontH, fFontH),
+							   cColor(0, 1), eFontAlign_Center);
 		}
 		break;
 	}
 
 	case cSomaOptionsRow::eKind_MultiSelect:
 	{
-		// Real OptionMenu_ButtonOptionsMultiSelect(): value text centred in
-		// the same track rect a slider uses, with an arrow either side -
-		// every row of this kind is built disabled (see MakeMultiSelectRow()),
-		// so this always renders the grey/inert look.
-		if (mpOptionsMeterGfx)
-		{
-			cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fRowY + kOptionsSliderOffset.y, 1.5f);
-			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, widgetOnCol);
-		}
-
-		if (mpOptionsArrowGfx)
-		{
-			cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, fRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
-			cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, fRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
-			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, widgetArrowCol, eGuiMaterial_LastEnum, 180.0f);
-			mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, widgetArrowCol);
-		}
-
-		if (mpButtonFont && aRow.mlOptionIndex >= 0 && aRow.mlOptionIndex < (int)aRow.mOptions.size())
-		{
-			cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsSliderOffset.x + kOptionsSliderSize.x * 0.5f,
-								 fRowY + kOptionsSliderOffset.y + kOptionsSliderSize.y * 0.5f, 2.0f);
-			mpGuiSet->DrawFont(aRow.mOptions[aRow.mlOptionIndex], mpButtonFont, vValuePos, cVector2f(24, 24), kDisabledColor, eFontAlign_Center);
-		}
+		// Real OptionMenu_ButtonOptionsMultiSelect() - every row of this kind
+		// is built disabled (see MakeMultiSelectRow()), so this always
+		// renders the grey/inert bar/arrows via widgetOnCol/widgetArrowCol
+		// above - value text stays black regardless, same reasoning as
+		// eKind_Toggle/eKind_Slider above (grey-on-grey would be unreadable).
+		tWString sValue = (aRow.mlOptionIndex >= 0 && aRow.mlOptionIndex < (int)aRow.mOptions.size())
+							   ? aRow.mOptions[aRow.mlOptionIndex]
+							   : tWString();
+		DrawOptionsCycleControl(fRowY, sValue, widgetOnCol, widgetArrowCol, cColor(0, 1));
 		break;
 	}
+	}
+}
+
+//-----------------------------------------------------------------------
+
+// Shared real "startmenu_options_button_meter" + left/right
+// "startmenu_options_arrow" cycle-bar widget - see the eKind_Toggle comment
+// in SomaMainMenu.h and DrawOptionsRow()'s eKind_Toggle/eKind_MultiSelect
+// cases above, the two callers.
+void cSomaMainMenu::DrawOptionsCycleControl(float afRowY, const tWString &asValueText, const cColor &aBarCol, const cColor &aArrowCol, const cColor &aTextCol)
+{
+	if (mpOptionsMeterGfx)
+	{
+		cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, afRowY + kOptionsSliderOffset.y, 1.5f);
+		mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, aBarCol);
+	}
+
+	if (mpOptionsArrowGfx)
+	{
+		cVector3f vArrowL(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetR.x, afRowY + kOptionsSliderArrowOffsetR.y, 2.0f);
+		cVector3f vArrowR(kMainMenuButtonPos.x + kOptionsSliderArrowOffsetL.x, afRowY + kOptionsSliderArrowOffsetL.y, 2.0f);
+		mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowL, kOptionsSliderArrowSize, aArrowCol, eGuiMaterial_LastEnum, 180.0f);
+		mpGuiSet->DrawGfx(mpOptionsArrowGfx, vArrowR, kOptionsSliderArrowSize, aArrowCol);
+	}
+
+	if (mpButtonFont && asValueText.empty() == false)
+	{
+		// See the matching comment in the eKind_Slider case above -
+		// eFontAlign_Center never centres Y, only X, so this bug (pre-
+		// existing in eKind_MultiSelect's own copy of this code before the
+		// eKind_Toggle/eKind_MultiSelect draw paths were unified into this
+		// function) had every cycle-bar's value text spilling down into the
+		// row below it rather than sitting centred in its own bar.
+		const float fFontH = 24.0f;
+		cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsSliderOffset.x + kOptionsSliderSize.x * 0.5f,
+							 afRowY + kOptionsSliderOffset.y + (kOptionsSliderSize.y - fFontH) * 0.5f, 2.0f);
+		mpGuiSet->DrawFont(asValueText, mpButtonFont, vValuePos, cVector2f(fFontH, fFontH), aTextCol, eFontAlign_Center);
 	}
 }
 

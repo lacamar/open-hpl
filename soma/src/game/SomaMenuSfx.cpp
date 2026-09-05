@@ -371,6 +371,26 @@ public:
 			FlushPage(true, alFinalGranulePos);
 	}
 
+	// Forces whatever packet(s) added so far onto their own page, with no
+	// packet considered "complete" on it (granulepos -1, the standard Ogg
+	// convention for a page that ends mid-packet or, as used here, a header
+	// page - real encoders always give the identification header its own
+	// page). Required because libvorbisfile's _fetch_headers() (see
+	// OggMuxVorbisSample()'s call site for the full story) fetches the
+	// identification header via a dedicated page-at-a-time prospective scan
+	// and then does a fresh _get_next_page() call for the remaining header
+	// packets - it never re-reads further packets already sitting in a page
+	// it has already consumed for the id header, so if id/comment/setup are
+	// all packed onto one page (as libogg's own page-lacing rules would
+	// otherwise happily allow, and as ffmpeg/ffprobe's more lenient demuxer
+	// tolerates), _get_next_page() finds no further page in a short,
+	// single-page file and bails out with OV_ENOTVORBIS.
+	void ForcePageBoundary()
+	{
+		if (mSegTable.empty() == false)
+			FlushPage(false, -1);
+	}
+
 	const std::vector<unsigned char> &Bytes() const { return mOut; }
 
 private:
@@ -515,8 +535,33 @@ static bool OggMuxVorbisSample(const cFsbSample &aSample, const unsigned char *a
 
 	cOggMuxer muxer(1);
 	muxer.AddPacket(idHeader.data(), idHeader.size());
+	// The identification header must be alone on the first page - see
+	// cOggMuxer::ForcePageBoundary()'s comment for exactly why
+	// libvorbisfile's real ov_fopen()/_fetch_headers() (unlike ffprobe/
+	// ffmpeg's more lenient demuxer) hard-requires this.
+	muxer.ForcePageBoundary();
 	muxer.AddPacket(commentHeader.data(), commentHeader.size());
 	muxer.AddPacket(kSomaVorbisSetupHeaderData, (size_t)kSomaVorbisSetupHeaderSize);
+	// The setup header must ALSO end its own page, with no audio data
+	// sharing it - a second, distinct bug from the id-header one above,
+	// found only by fully decoding (not just header-parsing) a real
+	// extracted file: right after _fetch_headers() succeeds, vorbisfile's
+	// _open_seekable2() snapshots vf->dataoffsets[0]=vf->offset (the file
+	// position right after whatever pages _fetch_headers() consumed), then
+	// ends with ov_raw_seek(vf,dataoffset) - which discards any packets
+	// already sitting in memory and reseeks the real file to that byte
+	// offset to start decode fresh. If audio packets were bundled onto the
+	// same (now fully-consumed) page as the setup header, dataoffset lands
+	// *past* them - at EOF for a short sample with no further page - so
+	// ov_read() silently returns 0 immediately despite ov_fopen() and
+	// vorbis_synthesis_headerin() having succeeded and the packets having
+	// physically been present. Confirmed via a real decode-loop test
+	// (replicating OAL_OggSample.cpp's LoadOgg()): every sample whose
+	// audio happened to fit on the same page as the setup header decoded
+	// zero bytes, while samples large enough to already spill onto a third
+	// page (via cOggMuxer's own 255-segment page-overflow logic) decoded
+	// correctly - a page-count correlation that pointed straight at this.
+	muxer.ForcePageBoundary();
 
 	// Real FSB5 Vorbis sample data is a sequence of (uint16 LE length,
 	// payload) audio packets, zero-length-terminated.
