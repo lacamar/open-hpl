@@ -4210,3 +4210,141 @@ dirs/sockets/the build dir were removed after verification; the live headless pr
 via the control socket's own `quit` command (not a PID-guessing `kill` - `pgrep -f` against this
 scratch path proved unreliable mid-session, matching this project's own documented self-match
 footgun for `pkill -f`).
+
+## SOMA: prop/furniture collision correction (PORTING_NOTES's own earlier claim was wrong), and a real one-map hand-port of the apartment's phone-call sequence
+
+Two tasks this session: (1) investigate/fix the reported "furniture has no collision" gap, (2)
+hand-port `00_01_apartment.hps`'s David Munshi phone call, the same shape as the existing
+`cSomaIntroSequence` hand-port.
+
+### Task 1: prop collision - investigated, found ALREADY WORKING, corrected the record
+
+The brief for this (echoing this file's own "Remaining open items" note from the real-player-
+controller session: *"`WorldLoaderHpm.cpp`'s new collision only covers `StaticObject`/`Primitive`
+... `CreateMapEntity()` (props/furniture/doors) still creates no physics body at all"*) turned out
+to be **incorrect**, and this session spent real time confirming that rather than taking it on
+faith:
+
+- `cWorldLoaderHpm::CreateMapEntity()` calls `cWorld::CreateEntity()`, which dispatches to
+  whichever `iEntityLoader` is registered for the entity's real `EntityType` (`SomaLoaders.cpp`'s
+  `cSomaGenericEntityLoader`, registered for every real type including `Prop_Rigid`/`StaticProp`/
+  etc.) - and that loader is a thin wrapper around `cEntityLoader_Object` (`HPL2/core/sources/
+  resources/EntityLoader_Object.cpp`), which has ALWAYS generically read each `.ent` file's own
+  `<ModelData><Shapes>`/`<Bodies>` XML and built real Newton `iPhysicsBody`s from it, honoring the
+  real `CollideCharacter`/`CollideNonCharacter`/`Mass` attributes - completely independently of
+  entity type, and with zero SOMA-specific code. This is the exact same, real, load-bearing code
+  path Dark Descent's own `iLuxPropLoader`/`LuxProp.cpp` uses for every real, already-shipped,
+  already-collidable Amnesia prop (confirmed by reading `LuxProp.cpp`: it also subclasses
+  `cEntityLoader_Object` and does nothing different for the body-creation part of `Load()`).
+- Verified live, not just read: added a temporary one-line diagnostic `Log()` at the end of
+  `cEntityLoader_Object::Load()` printing each loaded entity's name/type/`mvBodies.size()`, booted
+  `00_01_apartment.hpm` headlessly (`OPENHPL_SOMA_MAP`), and inspected the real `hpl.log`. Of 425
+  real map entities, **353 (83%) already get one or more real physics bodies** - every real piece
+  of furniture checked this way (`bed_1`: 2 bodies, `desk_work_1`: 2, `chest_of_drawers_bedside_1`:
+  2, `sink_toilet_1`: 1, `rack_shoes_1`: 2, dozens more) - and, notably, both real
+  `technical/block_box/*` invisible collision-blocker markers this project's own earlier
+  corruption-fix session already found and fixed the *visibility* of (`BedCollider`,
+  `BedCollider_Crouch`) also get a real body each, with `CollideCharacter="true"` read straight off
+  their own `.ent`. The other 72 (17%) getting zero bodies are, without exception, small decorative
+  clutter whose own real `.ent` files author no `<Shapes>`/`<Bodies>` at all in the first
+  place - individual `plant_dracaena02_leaf*` leaves (31), `shrub_hazel_01_*` wall decoration bits
+  (28), `alarm_clock_digit_*` decals (5), `papers_printed_postit01_*` notes (5), `bandage_01_*` (2),
+  one drape animation bar - i.e. real, correctly-authored non-colliding set dressing, matching real
+  SOMA's own behavior (walking through a single plant leaf is correct, not a bug). Removed the
+  diagnostic line afterward - this is now purely a documentation correction, no code changed for
+  Task 1.
+- Also physically verified with the real player controller: teleported/walked (via
+  `scripts/hpl_control.py`'s `set_camera`/`input` commands) from `PlayerStartArea_1` on a bearing
+  aimed straight at `bed_1`'s real `WorldPos`; `camera_state` polls show the character's forward
+  progress along the bed-facing axis clearly decelerating and being deflected/slid along the
+  bed's edge as it closed on the bed's real footprint (`z` stalling near `10.44` for a full 1.5s
+  poll while `x` kept sliding) - the real "collide and slide" response you'd expect hitting a
+  static obstacle at a shallow angle, not a clean pass-through. (Chasing the exact geometry further
+  to get a clean 90°, dead-stop repro wasn't worth the time given the body-count log evidence above
+  already settles the question unambiguously.)
+- Checked the task's other ask - a real `NoCollide`-style opt-out flag some props might set - across
+  every real `.ent` in the install (`grep -rohE 'Var Name="[A-Za-z]*[Cc]ollid[a-zA-Z]*"'`): no such
+  variable exists anywhere in real SOMA data (the only collision-adjacent variable found at all is
+  the unrelated `AgentColliderBody`), so there is nothing to honor here beyond what already works.
+- **Corrected this file's own prior claim** (the "Remaining open items" note quoted above) - it was
+  reached by inference/symmetry with the `WorldLoaderHpm.cpp` `StaticObject`/`Primitive` fix
+  (*"that loader's new code only covers static geometry, so by the same logic props must get
+  nothing"*) without actually checking that `cEntityLoader_Object::Load()` has its own,
+  much older, separate generic body-creation logic. A good reminder for future sessions: when a
+  note says a whole category of content "gets no collision body at all," verify with a log/live
+  check before treating it as ground truth, even when it reads confidently.
+- **Genuinely out of scope, found incidentally while probing this**: walking far enough past
+  `bed_1` on that same bearing eventually made the character fall out of the compiled level bounds
+  entirely (`camera_state` showing `y` dropping past `-700` and climbing in magnitude) - a real gap
+  somewhere in the bedroom's own wall/floor collision coverage in that specific direction (or a
+  real unmapped opening the original game never lets the player reach), not a prop-collision issue.
+  Not investigated further - flagging for whoever next works on `WorldLoaderHpm.cpp`'s static
+  geometry coverage.
+
+### Task 2: `soma/src/game/SomaApartmentIntroCall.{h,cpp}` - the apartment's Munshi phone call
+
+Same shape and same honesty conventions as `cSomaIntroSequence` (see that file's own header) - a
+hand-ported, one-map reimplementation of specific real script behavior, explicitly NOT a step
+toward general `.hps`/AngelScript execution (still zero `RegisterObjectType` calls anywhere in this
+codebase - see this file's own "AngelScript `OnStart()`" section from the real-player-controller
+session for why that's still a separate, much larger effort).
+
+Real source, read in full: `maps/chapter00/00_01_apartment/00_01_apartment.hps`'s `OnStart()` (line
+63) → `TimerStartNarration()` (230) → `IntroSequence()` (549) → `TimerRingTelephone()` (669) →
+(real player interaction) → `AnswerPhone()` (702) → `Dialog_AddBranchAndSubject("1_PhoneCall", ...)`
+(727), plus that Subject's own 11 real lines in the sibling `00_01_apartment.voice` file.
+
+- Real timing reproduced exactly: `OnStart()`'s `Map_AddTimer("timer_introtext", 1.5, ...)` then
+  `IntroSequence()`'s own `Map_AddTimer("Timer_PhoneRing", 0.05, ...)` - the ring genuinely starts
+  `1.5 + 0.05 = 1.55s` after the map loads, and this class uses that exact real total
+  (`kRingDelaySecs`).
+- Real dialogue content: all 11 lines of `00_01_apartment.voice`'s `Subject Name="1_PhoneCall"`
+  (Simon/Munshi alternating), each paired with its real, plain (non-FMOD) `.ogg` voice-over file
+  under `lang/eng/voices/00_01_apartment/phonecall_1_phonecall_0NN_<player|david>_001.ogg` -
+  confirmed to exist and match the `.voice` text 1-for-1 by directly listing that directory.
+- Real audio-completion-gated advance (not a fixed timer): each line is played via
+  `cSoundHandler::PlayGui()` and the next line only starts once `cSoundHandler::IsPlaying()`
+  reports that file has stopped - the same pattern this session's sibling intro-sequence work was
+  independently updating `cSomaIntroSequence.cpp` to use, for the same reason (fixed timers there
+  were found to cause overlap/stilted pacing). Each real probed `.ogg` duration (via `ffprobe`,
+  0.89s-7.13s across the 11 lines) plus a small reading tail is kept only as a fallback safety net
+  in case a line's audio fails to open a channel at all, not as the primary gate.
+- **Two deliberate, clearly-logged honesty gaps** (see `SomaApartmentIntroCall.h`'s own doc comment
+  for the full citations): (1) no real interact-with-entity system exists anywhere in this codebase
+  yet (confirmed: no such thing in `SomaPlayer.h`/`SomaBase.h`), so instead of waiting forever for a
+  real click on the "Simon_Phone" entity like the real script does, this class auto-"answers" 4
+  real seconds after the ring starts, logging clearly that it did so; (2) both real phone SFX
+  (ring: `Entities_Urban/tech/cellphone/vibrating_wood`; pickup:
+  `00_05_apartment2/SFX/phone/pickup_counter`) are FMOD Designer soundbank events with real
+  waveforms living inside `sounds/entities/entities_urban.fsb`/an apartment-project FSB - confirmed
+  by reading `sounds/entities/Entities_Urban.fdp` directly - so no audio plays for either; a
+  `"(phone ringing...)"` subtitle-style line stands in so the moment stays externally verifiable.
+  The real wake-up camera animation/crouch-collision swap the same `IntroSequence()` function also
+  drives is unrelated to the phone call and not reproduced - the player keeps normal control
+  throughout.
+- Wired into `cSomaBase::LoadMap()` with the exact same one-map-gated, construct-once-never-destroy
+  pattern `cSomaIntroSequence` already uses, gated on `asMapFile == "00_01_apartment.hpm"` -
+  `SomaBase.cpp`'s own change is a single new `if` block, no other lines touched.
+
+**Verified live** (headless, `OPENHPL_SOMA_MAP=00_01_apartment.hpm`, real Steam SOMA data
+read-only-symlinked into a `/tmp` scratch dir, `OPENHPL_HEADLESS_SOCKET` +
+`scripts/hpl_control.py`), reproduced across 3 independent fresh process boots: `hpl.log` shows, in
+order, `"phone starts ringing"` then (real seconds later) `"auto-answering ... starting real
+'1_PhoneCall' dialogue"` then `"real '1_PhoneCall' dialogue finished (11/11 lines)"`. A real
+mid-call screenshot shows the actual on-screen subtitle `"Simon: The brain scan! I remember."` -
+line 5 of the real 11, proving the real dialogue text is genuinely rendering, not just logged.
+Also re-confirmed the original `block_box`/`ShowMesh` corruption fix is still intact: a fresh
+`PlayerStartArea_1` screenshot shows the same dark (unlit - no `OnStart()` runs `SetupLights()`
+here, expected) but uncorrupted bedroom, no magenta/clipped color anywhere.
+
+All 4 ctest suites (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/
+`HpslTranspilerTests`) green in a dedicated build dir, plus a full unfiltered `Amnesia`/`Soma`
+target rebuild to confirm zero regression risk to Dark Descent (Task 1 changed nothing; Task 2's
+only shared-code touch was a temporary, since-reverted diagnostic `Log()` line in
+`HPL2/core/sources/resources/EntityLoader_Object.cpp`).
+
+Not done / open items: the incidental out-of-bounds-fall gap noted under Task 1 above; a real
+interact-with-entity system (would let this hand-port and future ones replace their own
+auto-trigger substitutes with the real thing); the rest of `00_01_apartment.hps`'s ~1760 lines
+(lighting setup, drapes, tracer-fluid reminder loop, answering machine, bathroom/kitchen
+interactions, end-of-level timer) - none of that is touched by this session's `.hps` gap.

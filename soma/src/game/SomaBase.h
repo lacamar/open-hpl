@@ -21,6 +21,7 @@
 #include "SomaMainMenu.h"
 #include "SomaConfig.h"
 #include "SomaIntroSequence.h"
+#include "SomaApartmentIntroCall.h"
 
 using namespace hpl;
 
@@ -244,6 +245,12 @@ private:
 	// NULL otherwise. Kept alive for the rest of the process, same
 	// no-remove-from-cUpdater constraint as every other iUpdateable here.
 	cSomaIntroSequence *mpIntroSequence;
+
+	// Real 00_01_apartment.hpm Munshi phone-call hand-port (see
+	// SomaApartmentIntroCall.h) - created once by LoadMap() the first time
+	// that specific map loads, NULL otherwise. Same never-destroyed
+	// no-remove-from-cUpdater constraint as mpIntroSequence above.
+	cSomaApartmentIntroCall *mpApartmentIntroCall;
 };
 
 //----------------------------------------------

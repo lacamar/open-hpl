@@ -59,6 +59,43 @@
     then moving correctly. `ctest` 4/4 green throughout. Full writeup, citations, and the Quit-to-
     Main-Menu limitation's exact next steps in PORTING_NOTES.md.
 
+- SOMA: prop collision investigation (found already working, corrected the record) + a real apartment phone-call hand-port (2026-09-07)
+  - DONE: two tasks. (1) Investigated the reported "furniture has no collision" gap
+    (`soma/src/game/SomaLoaders.{h,cpp}`'s entity loading path) and found it does not reproduce:
+    `cEntityLoader_Object::Load()` (shared with Dark Descent's own `LuxProp`) already generically
+    builds real Newton bodies from each `.ent`'s own `<Shapes>`/`<Bodies>` XML, independent of
+    entity type. Verified live via a temporary diagnostic log against a real `00_01_apartment.hpm`
+    boot: 353/425 (83%) of real map entities already get real bodies (every actual piece of
+    furniture checked - beds, desks, cabinets, sinks, shelving, the `BedCollider`/
+    `BedCollider_Crouch` invisible block_box volumes), and the remaining 72 (17%) are all
+    correctly-authored collisionless decorative clutter (plant leaves, wall shrub decoration,
+    post-its, alarm-clock digit decals) with no `<Bodies>` in their own real `.ent` files -
+    matching real SOMA's own behavior. Also physically confirmed via the real player controller:
+    walking toward `bed_1`'s real position shows genuine collide-and-slide deceleration, not a
+    clean pass-through. No code change was needed or made for this task - this corrects an
+    incorrect inference in this file's/PORTING_NOTES.md's own prior "props get no collision body
+    at all" note (reached by symmetry with the `WorldLoaderHpm.cpp` static-geometry fix, without
+    checking `cEntityLoader_Object`'s own pre-existing generic body creation). See
+    PORTING_NOTES.md for the full investigation, including one genuinely-out-of-scope gap found
+    incidentally (falling out of the compiled level bounds walking far enough past the bed in one
+    specific direction - a real static-geometry coverage gap, not a prop-collision one).
+  - DONE: new `soma/src/game/SomaApartmentIntroCall.{h,cpp}` - a one-map hand-port of
+    `00_01_apartment.hps`'s David Munshi phone call (real timer delay, real ring, real 11-line
+    `1_PhoneCall` dialogue with real voice-over `.ogg` files, audio-completion-gated advance same
+    as `cSomaIntroSequence`'s own pattern), modeled directly on `cSomaIntroSequence`'s shape and
+    carrying the same explicit "not a step toward general script execution" disclaimer. Two
+    honest, clearly-logged gaps: auto-answers the call 4s after the ring starts (no real
+    interact-with-entity system exists anywhere in this codebase yet) instead of waiting for a
+    real player interaction; both real phone SFX are FMOD-banked and unavailable (a
+    `"(phone ringing...)"` subtitle line stands in). Wired into `cSomaBase::LoadMap()` with a
+    single new one-map-gated `if` block, same pattern as `cSomaIntroSequence`'s own construction.
+    Verified live across 3 independent headless boots: `hpl.log` shows the ring/auto-answer/
+    11-of-11-lines-finished sequence firing in order and on schedule every time; a real mid-call
+    screenshot shows the real subtitle text on screen. Re-confirmed the original block_box/
+    ShowMesh corruption fix is still intact (clean, uncorrupted `PlayerStartArea_1` screenshot).
+    All 4 ctest suites green; full `Amnesia`/`Soma` rebuild confirms zero Dark Descent regression
+    risk. Full writeup in PORTING_NOTES.md.
+
 - SOMA: the real splash/boot sequence, properly reverse-engineered (2026-09-05)
   - DONE: soma/src/game/SomaSplash.{h,cpp} fully rewritten after user feedback that the previous
     session's splash "still not correct... missing visual effects, sound effects, and loading bar".
