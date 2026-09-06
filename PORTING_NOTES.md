@@ -3897,3 +3897,92 @@ same well-understood, already-proven-correct pattern class as two prior fixes, (
 inert everywhere except these two files (corpus-grepped), and (c) the worst case if somehow wrong
 would be a very narrow, easy-to-spot visual regression in the specific box-light/fog code path,
 not a crash or broad corruption.
+
+## SOMA: the New Game intro sequence's "stilted"/overlapping voice lines - schedule-based advance replaced with real audio-completion polling (this session)
+
+Follow-up to the "slides/subtitles invisible" fix above (a different bug in the same file): the
+user reported the intro slideshow's dialogue was "stilted," missing some correct timing, and had
+overlapping audio lines - "some missing component of the voice line scheduling."
+
+**Root cause**: the real script never advances dialogue on a fixed timeline at all. Real
+`maps/chapter00/00_00_intro/00_00_intro.hps`'s `Update()` calls, for every `Subject`:
+```
+Voice_PlayWhenPossible(nextVoice.msSubject, "Subject_ConditionToPlay", -1.0f, 0.0f, "Subject_OnDone");
+```
+and real `script/helpers/helper_audio.hps`'s `Voice_PlayWhenPossible()` enqueues a 0.2s poll timer
+(`_Voice_PlayWhenPossible_CheckTimer`) that refuses to start the next Subject until
+`Voice_AnySceneIsActive()` is false - i.e. gated on genuine audio completion, not a nominal
+schedule. The `-1.0f`/`0.0f` arguments are real and significant: `afMaxCheckTime=-1` (never times
+out) and, notably, `afMinQuietTime=0.0f` - **not** the function's own documented 5s default - so
+the real gate requires no extra silence beyond "the previous Subject's audio has just stopped."
+
+This port's `soma/src/game/SomaIntroSequence.cpp`'s `AdvanceVoice()` did the opposite: it switched
+Subjects purely on elapsed wall-clock time (`mfTimer` vs. a schedule built by `BuildTimeline()`),
+using each line's `mfHoldTime` - a real probed `.ogg` duration plus a fixed `0.4s` reading tail -
+as an estimate of when that line's audio would finish. Since the estimate didn't always match real
+playback closely enough, the port would sometimes start the next Subject's `PlayGui()` while the
+previous Subject's real audio was still physically playing (the reported overlap), independent of
+whether the *dialogue text itself* was present or correct.
+
+**Fix**: `AdvanceVoice()`'s advance condition is now "the schedule's nominal start time has been
+reached AND the previous line/Subject's own real audio has actually finished" - both required,
+mirroring the real script's own "attempt-at-schedule-time, gated-on-completion" design exactly.
+Completion is detected by directly querying the sound system - `cSoundHandler::IsPlaying()`
+(`HPL2/core/sources/sound/SoundHandler.cpp`), the real `Sound_GuiIsPlaying()`-equivalent this
+engine already exposes - passed the exact same filename `PlayLine()` gave `PlayGui()`, rather than
+estimating a duration up front. New `IsCurrentLineFinished()` does this per line (not just per
+Subject): it latches `mbCurrentLineAudioStarted` once the channel is actually observed playing
+(`cSoundEntry`'s own `Update()` only calls its real `Play()` on its *own* first
+`cSoundHandler::Update()` tick, not synchronously inside `PlayGui()` - checking `IsPlaying()` the
+same frame a line starts could otherwise misread "not started yet" as "already finished"), then
+reports done once it was playing and now isn't. A `kVoiceLineSafetyTimeout` (12s, well above any
+real line's probed length) guards only the pathological case of a line's audio never starting at
+all (missing asset), so a broken file can't stall New Game forever - not a normal-path fallback.
+
+This let the synthesized per-line `mfHoldTime` machinery (probed duration + reading-tail estimate)
+be **removed entirely** from `cIntroVoiceLine`/`BuildTimeline()` for every real-audio line; only
+the one real line with no voice-over file at all (`00_00_intro.voice`'s `Intro_7` 4th line, "For
+what?") still uses a fixed hold time (`kSilentLineHoldTime`), since there is nothing to query for
+it. Real per-line `EndPadding`/`VoiceOffset` fields (negative for nearly every real line - e.g.
+`Intro_3`'s are `-0.8`/`-1.4` - meaning the real engine starts a line slightly *before* the
+previous one in the same Subject fully finishes) are still not reproduced: this port now waits for
+full completion before starting the next line, so lines within a Subject play strictly back-to-
+back rather than with the real subtle overlap/crossfade - a known, documented, cosmetic gap, not
+the reported bug (between-subject overlap, now fixed exactly).
+
+**The "missing dialogue" part of the complaint**: read `00_00_intro.hps`'s `OnStart()` line-by-line
+against this port's `BuildTimeline()` - every real `AddSlide()`/`AddCustomSlide()`/`AddVoice()`/
+`AddEvent()` call is represented call-for-call, same literal offsets, same voice files in the same
+order (`Intro_3`..`Intro_7`, matching `00_00_intro.voice`'s own Subjects and line text/speakers
+exactly, including the one real silent line). Nothing was actually missing from the code - the
+complaint was caused by the overlap bug cutting lines short/into each other, making some read as
+skipped. No additions made; this is a confirmation, not a guess.
+
+**Verified live** (headless, `/tmp/soma-introfix-test` scratch deploy symlinked read-only to the
+real SOMA install, `OPENHPL_HEADLESS_SOCKET`, `start_map map=00_00_intro.hpm`): a temporary
+diagnostic `Log()` (removed before finalizing) on every `PlayLine()` call and every real-audio
+"finished" detection captured the entire sequence end to end, all 5 Subjects and all 11 real lines
+(10 real-audio + 1 silent):
+```
+t=8.750  ADVANCE_SUBJECT -> 0
+t=8.750  subject=0 line=0 PLAY  intro_intro_3_001_ashley_001.ogg
+t=11.717 subject=0 line=0 FINISHED
+t=11.717 subject=0 line=1 PLAY  intro_intro_3_002_simon_001.ogg
+t=16.317 subject=0 line=1 FINISHED
+t=16.317 ADVANCE_SUBJECT -> 1
+...
+t=34.833 subject=4 line=2 PLAY  intro_intro_7_003_simon_001.ogg
+t=36.333 subject=4 line=2 FINISHED
+t=36.333 subject=4 line=3 PLAY  '' (silent "For what?")
+```
+Every single `PLAY` across the whole run occurs either at the exact same tick as the prior line's
+own `FINISHED`, or strictly later (waiting on the schedule) - never before. Checked every
+transition in the full sequence, not just the first one or two: zero overlap anywhere. No remote
+"sound instances playing" headless command exists in this project to double-check independently
+(`soma/src/game/SomaBase.cpp`'s headless command set has `camera_state`/`start_map`/etc, nothing
+sound-related, and this session's ownership is scoped to `SomaIntroSequence.{h,cpp}` only) - the
+log-based check above is exhaustive across the whole sequence instead.
+
+All 4 ctest suites (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/
+`HpslTranspilerTests`) verified green in a dedicated build dir, both before and after. Change is
+100% contained to `soma/src/game/SomaIntroSequence.{h,cpp}`.
