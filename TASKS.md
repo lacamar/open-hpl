@@ -1069,3 +1069,31 @@
     gray-toned scene with visible wall texture detail - large, clearly real improvement.
     Follow-up: implement the real spatial blend/transition-time system instead of a single
     flat global value, and apply WhiteCut (currently read but unused).
+
+- SOMA box lights/fog: same uncompensated "×8 HDR precision boost" gap as the already-fixed
+  deferred_transparent_frag.hpsl/deferred_light_frag.hpsl cases
+  - DONE (master, this session): deferred_light_box_frag.hpsl (box lights, two main() variants -
+    one SH-probe path spelling the uniform "vLightColor.xyz", one plain path spelling it just
+    "vLightColor") and deferred_fog_frag.hpsl (two shapes depending on which @ifdef branch
+    survives preprocessing - a standalone "px_vColor.xyz *= 8.0;" compound-assign, and a
+    "vFogColor.xyz * 8" - integer 8, not 8.0 - baked into a plain assignment) both had the
+    identical real, corpus-confirmed, unfixed convention flagged as the top "concrete next step"
+    in PORTING_NOTES.md's box-light/fog section. Fixed the same way, in the same function
+    (soma/src/game/HpslTranspiler.cpp's RemoveUncompensatedHdrPrecisionBoost()): three new regex
+    patterns strip just the "* 8.0"/"* 8" factor (or remove the standalone compound-assign line
+    entirely), never the whole expression, since unlike vFinalColor/light_frag's boost these
+    aren't always the sole RHS. Three new regression tests added to HpslTranspilerTests.cpp
+    (TestBoxLightBoostRemoved, TestFogBoostRemoved - covers both vLightColor spellings and both
+    fog shapes); all 4 ctest suites green (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/
+    HpslTranspilerTests). 100% contained to soma/src/game/HpslTranspiler.cpp - SOMA-only
+    transpiler code, zero Dark Descent/AMFP/Rebirth/Bunker reachability, zero regression risk by
+    construction. Not yet live-verified against a real scene with active box lights/fog areas
+    specifically (would need locating a map/camera pose where one of these two shaders is
+    actually the dominant contributor to a visible pixel, unlike the light_frag/block_box.mat
+    fixes which had an obvious, easy-to-repro magenta target) - the game_edge_glow.hpsl and
+    null_frag_array(2).hpsl instances of the same "* 8.0" text (also present in the corpus, per
+    the same earlier grep) were deliberately left alone: game_edge_glow.hpsl's comment doesn't
+    confirm the same "increase precision" intent and it's a much lower-traffic effect, and
+    null_frag_array.hpsl is explicitly commented "Null shader, bound when no other shader is
+    bound" (an error-fallback path, not normally live) - lower confidence, not worth the same risk
+    calculus as the two "most valuable first" targets actually named in PORTING_NOTES.md.

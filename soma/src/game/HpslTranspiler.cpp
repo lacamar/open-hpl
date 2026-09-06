@@ -260,6 +260,30 @@ namespace
 		std::regex lightBoostRe("out_vColor\\.xyz\\s*=\\s*vDiffuse\\s*\\*\\s*8\\.0\\s*;");
 		sOut = std::regex_replace(sOut, lightBoostRe, "out_vColor.xyz = vDiffuse;");
 
+		// deferred_light_box_frag.hpsl (box lights): same convention, same
+		// comment ("Multiply with 8.0 to increase precision"), on the final
+		// "* vLightColor[.xyz] * 8.0;" factor of two separate main()
+		// variants (one takes an SH-probe path, one a plain path; one
+		// spells the uniform "vLightColor.xyz", the other just
+		// "vLightColor" - both confirmed present verbatim in the real
+		// corpus). Strip only the trailing "* 8.0", not the whole
+		// statement, since unlike vFinalColor/light_frag's boost this one
+		// isn't the sole RHS - it's the last factor of a longer expression.
+		std::regex boxLightBoostRe("(vLightColor(?:\\.xyz)?)\\s*\\*\\s*8\\.0\\s*;");
+		sOut = std::regex_replace(sOut, boxLightBoostRe, "$1;");
+
+		// deferred_fog_frag.hpsl: same convention, two shapes depending on
+		// which @ifdef branch survived preprocessing - a standalone
+		// "*= 8.0;" compound-assign (secondary-fog branch, removed
+		// entirely like the vFinalColor pattern above) and a "* 8" baked
+		// into the RHS of a plain assignment (primary-fog branch, note:
+		// integer "8" not "8.0" in the real file - strip just that factor).
+		std::regex fogBoostCompoundRe("px_vColor\\.xyz\\s*\\*=\\s*8\\.0\\s*;");
+		sOut = std::regex_replace(sOut, fogBoostCompoundRe, "");
+
+		std::regex fogBoostScaleRe("px_vColor\\.xyz\\s*=\\s*vFogColor\\.xyz\\s*\\*\\s*8\\s*;");
+		sOut = std::regex_replace(sOut, fogBoostScaleRe, "px_vColor.xyz = vFogColor.xyz;");
+
 		return sOut;
 	}
 

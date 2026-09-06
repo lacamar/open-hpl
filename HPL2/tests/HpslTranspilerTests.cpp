@@ -643,6 +643,71 @@ static void TestLightBoostRemoved()
 	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
 }
 
+// deferred_light_box_frag.hpsl: same ×8 convention as TestLightBoostRemoved,
+// but the boost is the trailing factor of a longer expression rather than
+// the sole RHS, and the real corpus has both a "vLightColor.xyz" and a bare
+// "vLightColor" spelling across its two main() variants - cover both.
+static void TestBoxLightBoostRemoved()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"void main(out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector3f vColorVal = cVector3f(0.5, 0.5, 0.5);\n"
+		"	cVector3f vLightColor = cVector3f(1.0, 1.0, 1.0);\n"
+		"\n"
+		"	// Calculate color, multiply with 8.0 to increase precision\n"
+		"	out_vColor.xyz = vColorVal.xyz * vLightColor.xyz * 8.0;\n"
+		"	out_vColor.w = 0;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vColorVal.xyz * vLightColor.xyz;");
+	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
+
+	static const char* psSrcBare =
+		"void main(out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector3f vColorVal = cVector3f(0.5, 0.5, 0.5);\n"
+		"	cVector3f vLightColor = cVector3f(1.0, 1.0, 1.0);\n"
+		"\n"
+		"	out_vColor.xyz = vColorVal.xyz * vLightColor * 8.0;\n"
+		"	out_vColor.w = 0;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrcBare, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vColorVal.xyz * vLightColor;");
+	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
+}
+
+// deferred_fog_frag.hpsl: two real shapes depending on which @ifdef branch
+// survives preprocessing - a standalone compound-assign "*= 8.0;" (removed
+// entirely, same as the vFinalColor pattern) and a "* 8" (integer, not
+// "8.0") baked into a plain assignment's RHS.
+static void TestFogBoostRemoved()
+{
+	tString sGlsl, sErr;
+	static const char* psSrcCompound =
+		"void main(out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector4f px_vColor = cVector4f(0.5, 0.5, 0.5, 1.0);\n"
+		"	px_vColor.xyz *= 8.0;\n"
+		"	out_vColor = px_vColor;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrcCompound, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_NOT_CONTAINS(sGlsl, "8.0");
+
+	static const char* psSrcScale =
+		"void main(out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector4f px_vColor;\n"
+		"	cVector4f vFogColor = cVector4f(0.5, 0.5, 0.5, 1.0);\n"
+		"	px_vColor.xyz = vFogColor.xyz * 8;\n"
+		"	out_vColor = px_vColor;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrcScale, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "px_vColor.xyz = vFogColor.xyz;");
+	CHECK_NOT_CONTAINS(sGlsl, "* 8");
+}
+
 // cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
 // "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
 // bug this pass's live glCompileShader() self-test caught (see
@@ -728,6 +793,8 @@ int main()
 	TestLoadRejectsNonSampler2D();
 	TestFixedFunctionMatrixSubstitution();
 	TestLightBoostRemoved();
+	TestBoxLightBoostRemoved();
+	TestFogBoostRemoved();
 
 	if (gFailures == 0)
 	{

@@ -3821,11 +3821,9 @@ one such stray (this session's own) was what caused a `flock()` wait that looked
 regression.
 
 **Concrete next steps, most valuable first:**
-1. `deferred_light_box_frag.hpsl` and `deferred_fog_frag.hpsl` both have the same real,
-   confirmed-present, unfixed ×8-boost-with-no-divide gap as `deferred_light_frag.hpsl` did
-   before this session (see corpus grep above) - same shape of fix, needs its own live
-   verification against a scene with real box lights/fog areas to confirm which (if either)
-   produces a visible artifact in practice.
+1. ~~`deferred_light_box_frag.hpsl` and `deferred_fog_frag.hpsl` both have the same real,
+   confirmed-present, unfixed ×8-boost-with-no-divide gap~~ - **fixed, see "SOMA/HPSL: the ×8
+   HDR-precision-boost gap, box lights and fog (next session)" below.
 2. A real HDR tonemap pass (the reverted `mpTonemapProgram` attempt above, or an equivalent) to
    replace the "just strip the boost" approach with a real Uncharted2 curve + exposure key +
    white-cut shaping - would fix the remaining, real, separate underexposure/dimness (this
@@ -3839,3 +3837,63 @@ regression.
    "something's rendering behind/in front of something else" bug ever surfaces, the
    `cScene::CreateViewport()` `abPushFront` ordering semantics documented here are the first
    thing to check.
+
+## SOMA/HPSL: the ×8 HDR-precision-boost gap, box lights and fog (next session)
+
+Picked up item 1 of the previous section's "Concrete next steps": `deferred_light_box_frag.hpsl`
+and `deferred_fog_frag.hpsl` both carry the same real, corpus-confirmed "×8 to increase precision"
+convention already fixed for `deferred_transparent_frag.hpsl`'s `vFinalColor` and
+`deferred_light_frag.hpsl`'s `out_vColor.xyz = vDiffuse * 8.0;`.
+
+Two real files, three real patterns, none of them a straight copy of the two already-fixed
+regexes:
+
+- `deferred_light_box_frag.hpsl` has **two separate `main()` variants** (an SH-probe-lit path and
+  a plain path), each ending its final `out_vColor.xyz = ... * 8.0;` line with the boost as the
+  *last factor of a longer expression*, not the sole RHS like `deferred_light_frag.hpsl`'s. The
+  two variants also spell the light-color uniform differently: `vLightColor.xyz` in one, bare
+  `vLightColor` in the other (both confirmed verbatim via direct read of the real file). Handled
+  with one regex, `(vLightColor(?:\.xyz)?)\s*\*\s*8\.0\s*;` → `$1;`, that strips only the trailing
+  `* 8.0` factor and keeps everything before it - correct for both variants and both spellings.
+- `deferred_fog_frag.hpsl` has **two shapes depending on which `@ifdef` branch survives
+  preprocessing**: a standalone `px_vColor.xyz *= 8.0;` compound-assign (the `UseSecondaryFog`
+  branch - removed entirely, same shape as the existing `vFinalColor` full-line removal), and a
+  `px_vColor.xyz = vFogColor.xyz * 8;` plain assignment (the primary-fog branch - note the real
+  file uses the bare integer `8`, not `8.0`, here; the regex matches `\* 8\s*;` accordingly and
+  rewrites the line to drop just that factor).
+
+All three added as new patterns inside the existing `RemoveUncompensatedHdrPrecisionBoost()` in
+`soma/src/game/HpslTranspiler.cpp` (already the right home for this class of fix - just needed
+three more lines, no new function). Confirmed via a fresh full-corpus grep of the real HPSL
+directory that these exact patterns exist in exactly these two files (same "corpus search first"
+discipline the earlier fixes established) - the same `"* 8.0"`/`"* 8"` text also appears in
+`game_edge_glow.hpsl` and `null_frag_array.hpsl`/`null_frag_array2.hpsl`, deliberately left
+untouched this pass: `game_edge_glow.hpsl`'s occurrence has no matching "increase precision"
+comment confirming the same intent (an edge-glow highlight effect, much lower per-frame traffic
+than every lit/fogged pixel in a scene), and `null_frag_array.hpsl` is explicitly commented "Null
+shader, bound when no other shader is bound" - an error-fallback path that shouldn't normally be
+live at all. Fixing those two would be the same shape of change if a future session confirms
+they're worth chasing, but they didn't meet the same confidence bar as the two the previous
+session's own notes named "most valuable first."
+
+Three new regression tests added to `HpslTranspilerTests.cpp` (`TestBoxLightBoostRemoved` - covers
+both the `vLightColor.xyz` and bare `vLightColor` spellings as two sub-cases; `TestFogBoostRemoved`
+- covers both the compound-assign and plain-assignment shapes), registered in the test runner's
+call list alongside the existing `TestLightBoostRemoved`. All 4 ctest suites verified green in a
+dedicated build dir (`amnesia/src/build-hdrfix`): `PhysicsNewtonTests`/`CStringTests`/
+`PlatformXdgPathTests`/`HpslTranspilerTests`, the last including these three new cases.
+
+Change is 100% contained to `soma/src/game/HpslTranspiler.cpp` + its own test file - the SOMA-only
+HPSL→GLSL transpiler, never compiled into or reachable from Dark Descent/AMFP/Rebirth/Bunker's own
+`.glsl`-only shader path (same zero-regression-by-construction guarantee as every prior fix in this
+same function). **Not yet live-verified against a real scene** where a box light or fog area is
+the dominant contributor to a visible pixel - unlike `deferred_light_frag.hpsl`/`block_box.mat`,
+which had an easy, already-known repro (a specific object at a specific camera pose showing
+clipped magenta), no such obvious target has been located yet for box lights or fog specifically.
+Finding one (a map area lit primarily by a box light, or with a dense fog volume, then comparing
+before/after pixel values the same way `block_box.mat`'s `(58,2,24)` match was confirmed) is the
+natural verification follow-up, but was not blocking landing this fix given: (a) the fix is the
+same well-understood, already-proven-correct pattern class as two prior fixes, (b) it's provably
+inert everywhere except these two files (corpus-grepped), and (c) the worst case if somehow wrong
+would be a very narrow, easy-to-spot visual regression in the specific box-light/fog code path,
+not a crash or broad corruption.
