@@ -3897,3 +3897,78 @@ same well-understood, already-proven-correct pattern class as two prior fixes, (
 inert everywhere except these two files (corpus-grepped), and (c) the worst case if somehow wrong
 would be a very narrow, easy-to-spot visual regression in the specific box-light/fog code path,
 not a crash or broad corruption.
+
+## SOMA splash: real brainscan loading icon + a real "menu ambient never stops" bug fix
+
+Two small, unrelated fixes, both scoped entirely to `soma/src/game/SomaSplash.{h,cpp}` (plus one
+call-site line in `SomaMainMenu.cpp` and one accessor in `SomaBase.h` - see below for why that one
+extra file was unavoidable).
+
+**Fix 1 - missing brainscan loading-icon animation.** `config/game.cfg`'s `<General>` block (the
+same block `DrawBootInitPhase()`'s own citation already traces to the native `cLuxLoadHandler`
+class via `nm -C`/`objdump -d` on the real unstripped `Soma.bin.x86_64`) also has `LoadingIcon =
+"brain_01.dds"`, read by that same constructor right alongside `SplashScreen`/`LoadingBar`/
+`LoadingFrame` - i.e. it's meant to composite with the boot-init phase too, but nothing in this
+port ever loaded or drew it. The real install ships a genuine 26-frame animated sequence at
+`graphics/general/loadscreen/brainAnim/brain_01.dds` .. `brain_26.dds` (confirmed via `identify`
+across the whole set - each a distinct real 512x512 DDS frame, not 26 copies of one image).
+`cSomaSplash` now loads all 26 once (`mvBrainFrames[26]`, same `cGui::CreateGfxTexture()` pattern
+already used for `Premenu.png`/`loading_bar.dds` - resolved by filename alone since
+`resources.cfg`'s `<Directory Path="/graphics" AddSubDirs="true"/>` already covers this subfolder)
+and a new `DrawBrainIcon()` cycles them at a fixed 12fps in the bottom-right corner for the whole
+boot-init phase, matching the user's reference screenshot. No real evidence recovered for the
+native class's exact on-screen size/position/frame rate (same situation as `mfBootFadeTime`/
+`mfBootHoldTime` already documented in this file's header comment) - 140px square, 40px margin,
+12fps are this pass's plausible values, not disassembly-confirmed like the loading bar's own size.
+
+**Fix 2 - the menu ambient loop never stops, a real user-reported bug.** `cSomaSplash::EnterPhase()`
+starts a looping "MenuBGNoise" ambient (`special_fx/frontend/main_menu_bg`) via
+`PlayGui(sBgNoise, true, 1.0f)` completely fire-and-forget - no handle stored anywhere (confirmed
+by grep: "MenuBgNoise"/"BGNoise" appeared nowhere else in the codebase outside this declaration and
+comments). Real `script/modules/MenuHandler.hps` calls `Sound_Stop("MenuBGNoise", ...)` at every
+real point that leaves the menu (a dozen+ call sites, e.g. line 2244's `Sound_Stop("MenuBGNoise",
+mfFadeLength)`), but this port had no equivalent at all - so the ambient played forever, audible
+under any map loaded from the menu (New Game included). Fixed by storing the `cSoundEntry*` +
+`GetId()` pair `PlayGui()` returns (`mpMenuAmbientSound`/`mlMenuAmbientSoundId`) and exposing a new
+`cSomaSplash::StopMenuAmbient()` that stops it - guarded with the exact same
+`cSoundHandler::IsValid(ptr, id)` check `amnesia/src/game/LuxEnemy_ManPig.cpp`'s own
+`mpMindFuckSound`/`mlMindFuckSoundId` already establishes as this codebase's pattern for touching a
+stored `cSoundEntry*` that may have been recycled since it was captured (this class lives for the
+whole process, long past the menu's own lifetime, so that guard genuinely matters here). Wired up
+from `cSomaMainMenu::SetVisible(false)` (`SomaMainMenu.cpp`), the same call site that already stops
+the menu music (`GetMusicHandler()->Stop(0.5f)`) - real SOMA stops both layers together too.
+
+Reaching `cSomaSplash` from `cSomaMainMenu` required one small, otherwise-unavoidable addition
+outside this pass's two owned files: `cSomaSplash *mpSplash` was already a private member of
+`cSomaBase` (constructed in `cSomaBase::Init()`, wired the same way `mpMainMenu` already is), but
+had no public accessor, and `cSomaMainMenu` already holds an `mpBase` (`cSomaBase*`) for everything
+else it needs from that class - so a one-line `cSomaSplash* GetSplash(){ return mpSplash; }` was
+added to `SomaBase.h` next to the existing `GetDebugCamera()`/`GetConfig()` accessors, following
+that exact established pattern rather than inventing a new wiring mechanism. No other line in
+`SomaBase.h`/`SomaBase.cpp` changed.
+
+**Verified live, headless** (scratch dir symlinked read-only to the real SOMA install, own
+dedicated build dir, `scripts/hpl_control.py` over `OPENHPL_HEADLESS_SOCKET`):
+- Fix 1: screenshots taken during the boot-init phase (`Premenu.png` glitch composite + red
+  loading bar visible) show the glowing brain/EEG icon in the bottom-right corner; a sequence of
+  screenshots taken moments apart shows the icon's internal squiggle pattern visibly changing
+  frame to frame - genuinely animating, not a static image.
+- Fix 2: `hpl.log` (via a temporary `Log()` added to `EnterPhase()`/`StopMenuAmbient()` this pass
+  and removed again before finishing, per this file's own "temporary diagnostic, remove before
+  done" convention) showed `menu ambient started, entry=0x1f2e1f70 id=1` right as the main menu
+  loaded. A real injected mouse click on "NEW GAME" (hover-highlight confirmed via screenshot
+  first) triggered the real `StartNewGame()` path, loading `00_00_intro.hpm` exactly like a real
+  New Game does. Immediately after, the log showed `StopMenuAmbient() called, entry=0x1f2e1f70
+  id=1, IsPlaying=1` (same entry still alive and audibly playing right before the stop),
+  `menu ambient IsValid=1` (the stored pointer/id pair was still valid - no stale-handle bug), and
+  `after Stop(), IsPlaying=0` - the last line queried the real `iSoundChannel::IsPlaying()` on the
+  actual audio channel, not just this class's own bookkeeping, so this is authoritative evidence
+  the ambient genuinely stopped, not just that this class believes it did.
+- `ctest` (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests`) stayed
+  4/4 green in a dedicated build dir, both before and after removing the temporary diagnostic logs
+  and rebuilding clean.
+
+Change is contained to `soma/src/game/SomaSplash.{h,cpp}`, one call-site addition in
+`SomaMainMenu.cpp`, and the one-line `GetSplash()` accessor in `SomaBase.h` described above - no
+Dark Descent/AMFP/Rebirth/Bunker code path touched at all (`cSomaSplash`/`cSomaMainMenu` are
+SOMA-only classes).

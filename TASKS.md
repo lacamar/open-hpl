@@ -1097,3 +1097,25 @@
     null_frag_array.hpsl is explicitly commented "Null shader, bound when no other shader is
     bound" (an error-fallback path, not normally live) - lower confidence, not worth the same risk
     calculus as the two "most valuable first" targets actually named in PORTING_NOTES.md.
+
+- SOMA: real brainscan loading-icon animation + menu ambient sound never stops after New Game
+  (2026-09-07)
+  - DONE: added the real 26-frame `brain_01.dds`..`brain_26.dds` loading-icon animation
+    (`config/game.cfg`'s `LoadingIcon`) to the boot-init splash phase, bottom-right corner,
+    ~12fps - see `soma/src/game/SomaSplash.cpp`'s new `DrawBrainIcon()`.
+  - DONE: fixed a real, user-reported bug - the main menu's looping "MenuBGNoise" ambient
+    (`special_fx/frontend/main_menu_bg`) never stopped, including after New Game loaded a real
+    map, because `cSomaSplash::EnterPhase()` started it fully fire-and-forget. Now stored
+    (`cSoundEntry*`/id pair, same `IsValid()` guard pattern as
+    `amnesia/src/game/LuxEnemy_ManPig.cpp`'s `mpMindFuckSound`) and stopped via a new
+    `cSomaSplash::StopMenuAmbient()`, called from `cSomaMainMenu::SetVisible(false)` alongside
+    the existing music-stop. Required one small unavoidable addition outside this pass's two
+    owned files: a `GetSplash()` accessor on `cSomaBase` (it already had a private `mpSplash`)
+    so `cSomaMainMenu` (which already holds `mpBase`) can reach it - same pattern as its
+    existing `GetDebugCamera()`/`GetConfig()`. See PORTING_NOTES.md's newest SOMA section for
+    full evidence/citations and live verification detail (headless screenshots for the icon
+    animation; a real injected "NEW GAME" click + `iSoundChannel::IsPlaying()` log evidence
+    going 1→0 across the stop, for the ambient fix). All 4 ctest suites
+    (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
+    100% SOMA-only (`cSomaSplash`/`cSomaMainMenu` classes) - zero Dark Descent/AMFP/Rebirth/
+    Bunker reachability.

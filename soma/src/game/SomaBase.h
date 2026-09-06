@@ -129,6 +129,13 @@ public:
 	// headless-control camera_state/set_camera commands (see SomaBase.cpp).
 	cCamera* GetDebugCamera(){ return mpDebugCamera; }
 
+	// Lets cSomaMainMenu reach the splash instance to stop its still-
+	// looping menu ambient when leaving the menu (see SomaMainMenu.cpp's
+	// SetVisible(false) and cSomaSplash::StopMenuAmbient()'s own comment
+	// for the real bug this fixes) - same "mpBase already holds the other
+	// side" wiring cSomaMainMenu uses for everything else in this class.
+	cSomaSplash* GetSplash(){ return mpSplash; }
+
 	// Persisted settings backing the real Options screen (see
 	// SomaMainMenu.cpp) - loaded once in InitEngine(), mutated live by the
 	// Options screen itself via this same instance (it calls Save() after

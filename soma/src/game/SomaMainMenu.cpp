@@ -723,6 +723,15 @@ void cSomaMainMenu::SetVisible(bool abVisible)
 		if (mpGui->GetFocusedSet() == mpGuiSet)
 			mpGui->SetFocus(NULL);
 		mpEngine->GetSound()->GetMusicHandler()->Stop(0.5f);
+
+		// Real script/modules/MenuHandler.hps stops a SECOND, separate
+		// looping ambient here too (Sound_Stop("MenuBGNoise", ...), source
+		// special_fx/frontend/main_menu_bg) - previously never stopped by
+		// this port at all (cSomaSplash::EnterPhase() starts it fire-and-
+		// forget), so it kept looping under any map loaded from the menu.
+		// See cSomaSplash::StopMenuAmbient()'s own comment for the fix.
+		if (mpBase && mpBase->GetSplash())
+			mpBase->GetSplash()->StopMenuAmbient();
 	}
 }
 
