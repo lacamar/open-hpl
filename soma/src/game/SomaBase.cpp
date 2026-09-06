@@ -197,6 +197,7 @@ cSomaBase::cSomaBase()
 	mbUseRealPlayer = true;
 
 	mpIntroSequence = NULL;
+	mpApartmentIntroCall = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -956,6 +957,23 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		else
 		{
 			Log("SOMA: intro sequence object already exists, not starting a second one\n");
+		}
+	}
+
+	// Real 00_01_apartment.hpm Munshi phone-call hand-port (see
+	// SomaApartmentIntroCall.h) - as narrowly scoped/one-map-gated as the
+	// intro sequence's own construction just above, and same "constructed
+	// once, never destroyed" pattern.
+	if (asMapFile == "00_01_apartment.hpm")
+	{
+		if (mpApartmentIntroCall == NULL)
+		{
+			mpApartmentIntroCall = hplNew(cSomaApartmentIntroCall, (mpEngine, this));
+			mpEngine->GetUpdater()->AddGlobalUpdate(mpApartmentIntroCall);
+		}
+		else
+		{
+			Log("SOMA: apartment intro call object already exists, not starting a second one\n");
 		}
 	}
 
