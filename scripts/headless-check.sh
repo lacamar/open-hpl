@@ -9,9 +9,18 @@
 # Usage:
 #   scripts/headless-check.sh <path-to-deployed-binary> [wait-seconds] [socket-path]
 #
-# <path-to-deployed-binary> must already be deployed inside its real game
-# directory (Amnesia/AMFP/SOMA all resolve config/maps/etc relative to the
-# binary's own location via binreloc - see PORTING_NOTES.md).
+# <path-to-deployed-binary> must be deployed inside a SCRATCH test directory
+# that mimics the real game's install layout (Amnesia/AMFP/SOMA all resolve
+# config/maps/etc relative to the binary's own location via binreloc - see
+# PORTING_NOTES.md) - e.g. real game data read-only-symlinked in alongside a
+# freshly-built binary. It must NEVER be deployed into (or point at a copy
+# living inside) the real Steam install directory itself - this script
+# deletes a log file there and cd's into that directory before launching,
+# so pointing it at a real install risks corrupting real, Steam-validated
+# game data (this happened once for real - see PORTING_NOTES.md /
+# TASKS.md). The check below refuses to run against any path that resolves
+# under a real Steam library (".../steamapps/common/...") for exactly this
+# reason.
 #
 # If [socket-path] is given, OPENHPL_HEADLESS_SOCKET is set to it before
 # launching and a final "ping" is sent over it via hpl_control.py once the
@@ -37,6 +46,18 @@ fi
 BIN_DIR="$(cd "$(dirname "$BIN_PATH")" && pwd)"
 BIN_NAME="$(basename "$BIN_PATH")"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Refuse to run against a real Steam install - this script rm -f's a log
+# file in BIN_DIR and cd's there before launching, so pointing it at a real
+# install (rather than a scratch dir with symlinked-in game data) risks
+# writing into real, Steam-validated game files. Match on the realpath'd
+# directory so a symlink can't disguise the real target either.
+case "$BIN_DIR" in
+	*/steamapps/common/*)
+		echo "error: refusing to run against '$BIN_DIR' - this looks like a real Steam install directory, not a scratch test dir. Deploy the binary to a scratch dir with the real game data read-only-symlinked in instead." >&2
+		exit 1
+		;;
+esac
 
 LOG_FILE="$BIN_DIR/hpl.log"
 RUN_LOG="$(mktemp -t headless-check-XXXXXX.log)"

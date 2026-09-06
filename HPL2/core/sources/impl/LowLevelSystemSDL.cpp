@@ -37,6 +37,10 @@
 #include <fstream>
 #include <string>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 #include "impl/LowLevelSystemSDL.h"
 #include "impl/SqScript.h"
 #include "system/Platform.h"
@@ -176,10 +180,52 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
+	// Defense-in-depth backstop against ever opening a log file that
+	// resolves inside a real Steam install directory - every real game
+	// module in this codebase (see soma/src/game/SomaBase.cpp's
+	// SetupLogFile(), amnesia/src/game's equivalent) is expected to route
+	// its log through an XDG state path, never a bare relative "hpl.log"
+	// (this file's own default, gLogWriter below) resolved against
+	// whatever cwd happens to be - which, for a real Steam launch, IS the
+	// install directory. This happened for real once (see PORTING_NOTES.md/
+	// TASKS.md): a real Steam SOMA install's files were corrupted badly
+	// enough that Steam's own integrity check flagged them and forced a
+	// re-download. Checked here, in shared core code, rather than only in
+	// each game module's own setup, so a future game module or test script
+	// mistake can't reintroduce the same failure mode silently.
+	static bool PathLooksLikeSteamInstall(const tWString &asFile)
+	{
+		tString sPath = cString::To8Char(asFile);
+		tString sFull = sPath;
+#ifndef WIN32
+		if (sPath.empty() == false && sPath[0] != '/')
+		{
+			char vCwd[4096];
+			if (getcwd(vCwd, sizeof(vCwd)) != NULL)
+			{
+				sFull = tString(vCwd) + "/" + sPath;
+			}
+		}
+#endif
+		return sFull.find("/steamapps/common/") != tString::npos ||
+			   sFull.find("\\steamapps\\common\\") != tString::npos;
+	}
+
 	void cLogWriter::ReopenFile()
 	{
 		if(mpFile) fclose(mpFile);
-						
+		mpFile = NULL;
+
+		if(PathLooksLikeSteamInstall(msFileName))
+		{
+			fprintf(stderr, "open-hpl: refusing to open log file '%s' - it resolves inside "
+				"what looks like a real Steam install directory (steamapps/common). Game "
+				"modules in this codebase must route logs through an XDG state path, never "
+				"a path resolved against a real game install's own directory. Log output for "
+				"this run will go to stderr only.\n", cString::To8Char(msFileName).c_str());
+			return;
+		}
+
 		#ifdef WIN32
 			mpFile = _wfopen(msFileName.c_str(),_W("w"));
 		#else

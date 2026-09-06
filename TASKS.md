@@ -1097,3 +1097,43 @@
     null_frag_array.hpsl is explicitly commented "Null shader, bound when no other shader is
     bound" (an error-fallback path, not normally live) - lower confidence, not worth the same risk
     calculus as the two "most valuable first" targets actually named in PORTING_NOTES.md.
+
+- CRITICAL: real Steam SOMA install files got corrupted badly enough that Steam's own integrity
+  check flagged and force-re-downloaded them, despite this project's standing zero-tolerance
+  rule against ever writing into a real game install directory
+  - ROOT-CAUSED AND FIXED (master, this session): `scripts/headless-check.sh`'s own header
+    comment documented (incorrectly, per this project's real convention) that its target binary
+    "must already be deployed inside its real game directory" - the script then `rm -f`'s a log
+    file there and `cd`'s into that directory before launching. Following the script's own
+    documented usage against a binary actually deployed into the real Steam install (rather than
+    a scratch dir with read-only-symlinked game data) explains the corruption: any relative-path
+    write inside the engine with cwd = the real install directory lands there for real. Fixed by
+    making the script hard-refuse (exit 1) any target path containing a `steamapps/common`
+    segment, and rewriting its header to describe the correct (scratch-dir-only) usage.
+  - Also fixed a second, smaller, real contributing gap: `cSomaBase::InitMainConfig()` loaded
+    `config/main_init.cfg` via a relative path *before* `SetLogFile()` ran - on a load failure,
+    `cConfigFile::Load()`'s `Error()` call would have fallen back to the engine's default bare
+    relative `"hpl.log"`, resolved against cwd (the same danger as above). This was the one
+    call site missed when the equivalent bug was fixed for two other pre-`SetLogFile()` sites
+    in an earlier session (see PORTING_NOTES.md ~"Headless testing must never..."). Fixed by
+    extracting the log-file-setup block out of `InitEngine()` into a new `SetupLogFile()`,
+    called first thing in `cSomaBase::Init()` - before `ParseCommandLine()`/`InitMainConfig()` -
+    so every `Log()`/`Error()` call in the whole init sequence has a real, XDG-routed
+    destination from the very start.
+  - Added a third, shared, defense-in-depth backstop in `HPL2/core/sources/impl/
+    LowLevelSystemSDL.cpp`'s `cLogWriter::ReopenFile()` (used by every game module, not just
+    SOMA): refuses to open (falls back to stderr-only with a clear message) any log path that
+    resolves - after joining with cwd, for a relative path - to something containing
+    `steamapps/common` (or its Windows-path-separator spelling). This protects against the same
+    failure mode being reintroduced by a future test script or manual command, independent of
+    whether any single game module's own init-order is currently correct.
+  - Verified live: rebuilt Soma/Amnesia in a dedicated build dir, ran both from real scratch-dir
+    setups (real game data read-only-symlinked in, XDG_STATE_HOME etc. overridden to scratch
+    subdirs) - both booted and answered a real headless control-socket ping; both real Steam
+    install directories' `hpl.log` (Amnesia's absent entirely, SOMA's a pre-existing stale file
+    from before this fix) were confirmed untouched (unchanged/absent) by either run. Also
+    directly tested `scripts/headless-check.sh`'s new guard against a fabricated
+    `.../steamapps/common/SOMA/fakebin` path (refuses, exit 1) and a legitimate scratch path
+    (passes through to the normal "not executable" check, exit 1 for an unrelated reason) - no
+    false positive. All 4 ctest suites green throughout
+    (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests).

@@ -210,6 +210,14 @@ cSomaBase::~cSomaBase()
 bool cSomaBase::Init(const tString &asCommandline)
 {
 	/////////////////////////////
+	// Set the real log destination FIRST, before anything below that could
+	// Log()/Error() - see SetupLogFile()'s own comment for why this can't
+	// wait until InitEngine() (that used to be where this happened, and
+	// InitMainConfig() below - which can genuinely fail and Error() on a
+	// missing/malformed main_init.cfg - ran before it).
+	SetupLogFile();
+
+	/////////////////////////////
 	// Parse the command line (an alternate init config file path, same
 	// convention as cLuxBase::ParseCommandLine)
 	if (ParseCommandLine(asCommandline) == false)
@@ -257,18 +265,17 @@ bool cSomaBase::Init(const tString &asCommandline)
 	if (InitEngine() == false)
 		return false;
 
-	// Deliberately after InitEngine() (which calls SetLogFile() early on,
-	// before doing anything else that might Log()) rather than right after
-	// InitMainConfig() above where this used to sit - a bare relative
-	// "hpl.log" (this engine's default log destination before SetLogFile()
-	// runs, see InitEngine()'s own comment) resolves inside whatever the
-	// process's cwd happens to be, which for a real deployed build is the
-	// Steam install directory itself. Confirmed live: running a build with
-	// this Log() call still in its old spot from a scratch test directory
-	// that (per this project's own established headless-testing pattern)
-	// symlinks "hpl.log" back to the real install for tailing wrote this
-	// exact line into the real Steam SOMA install's hpl.log - exactly what
-	// this project has a zero-tolerance policy against.
+	// Safe wherever this sits now - SetupLogFile() at the very top of Init()
+	// already set a real, XDG-routed log destination before anything else
+	// in this function could Log()/Error(). This used to need to sit after
+	// InitEngine() specifically (which used to be the only place
+	// SetLogFile() was called) - confirmed live, once: running a build with
+	// this Log() call in its old spot (right after InitMainConfig(), before
+	// SetLogFile() existed anywhere) from a scratch test directory that (per
+	// this project's own established headless-testing pattern) symlinks
+	// "hpl.log" back to the real install for tailing wrote this exact line
+	// into the real Steam SOMA install's hpl.log - exactly what this
+	// project has a zero-tolerance policy against.
 	Log("SOMA game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
 
 	/////////////////////////////
@@ -417,20 +424,20 @@ bool cSomaBase::InitMainConfig()
 
 //-----------------------------------------------------------------------
 
-bool cSomaBase::InitEngine()
+// Split out of InitEngine() and called first thing from Init(), before
+// InitMainConfig() - InitMainConfig()'s cConfigFile::Load() calls Error()
+// on a missing/malformed main_init.cfg, which (like cSomaConfig::Load()'s
+// own Log() call, see the comment below) needs a real log destination
+// already set up to avoid falling back to the engine's pre-SetLogFile()
+// default: a bare relative "hpl.log" resolved against cwd, which for a
+// real Steam launch (or a headless-check.sh run against a real install -
+// see that script's own guard, added for exactly this reason) is the real
+// Steam install directory. This was a real, confirmed-live gap: this one
+// call site was missed when the equivalent pre-SetLogFile() ordering bug
+// was fixed for cSomaConfig::Load()/the old "Phase 0 scaffolding" Log()
+// call (see PORTING_NOTES.md).
+void cSomaBase::SetupLogFile()
 {
-	// Real physics-based player controller (see SomaPlayer.h/.cpp) for real
-	// game maps loaded via LoadMap() - the debug free-fly camera stays
-	// available as an opt-out escape hatch (e.g. to no-clip through a level
-	// for inspection) via OPENHPL_SOMA_FREECAM=1. Main menu scenes
-	// (InitMainMenuScene()) and the old InitTestMap() fallback always keep
-	// using the free-fly camera regardless of this flag - no player body
-	// makes sense there.
-	mbUseRealPlayer = (getenv("OPENHPL_SOMA_FREECAM") == NULL);
-
-	cEngineInitVars vars;
-	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
-
 #if defined(__linux__)
 	// hpl.log otherwise defaults to a bare relative "hpl.log" (see
 	// LowLevelSystemSDL.cpp), landing wherever cwd happens to be at first
@@ -458,6 +465,23 @@ bool cSomaBase::InitEngine()
 	}
 	SetLogFile(sLogFile);
 #endif
+}
+
+//-----------------------------------------------------------------------
+
+bool cSomaBase::InitEngine()
+{
+	// Real physics-based player controller (see SomaPlayer.h/.cpp) for real
+	// game maps loaded via LoadMap() - the debug free-fly camera stays
+	// available as an opt-out escape hatch (e.g. to no-clip through a level
+	// for inspection) via OPENHPL_SOMA_FREECAM=1. Main menu scenes
+	// (InitMainMenuScene()) and the old InitTestMap() fallback always keep
+	// using the free-fly camera regardless of this flag - no player body
+	// makes sense there.
+	mbUseRealPlayer = (getenv("OPENHPL_SOMA_FREECAM") == NULL);
+
+	cEngineInitVars vars;
+	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 	// Load persisted settings (see SomaConfig.h) - deliberately AFTER
 	// SetLogFile() above: cConfigFile::Load()/cSomaConfig::Load() both Log()

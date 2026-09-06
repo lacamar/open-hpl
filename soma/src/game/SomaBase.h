@@ -59,6 +59,7 @@ public:
 private:
 	bool ParseCommandLine(const tString &asCommandline);
 
+	void SetupLogFile();
 	bool InitMainConfig();
 
 	bool InitEngine();
