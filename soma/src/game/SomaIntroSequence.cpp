@@ -13,16 +13,18 @@
 static const char *kQuoteText = "\"Reality is that which, when you stop believing in it, doesn't go away.\"";
 static const char *kSignatureText = "- Philip K. Dick";
 
-// Small fixed reading tail added to each line's real probed .ogg duration
-// (see BuildTimeline()) so on-screen text does not vanish the instant audio
-// stops - the real engine's own EndPadding/VoiceOffset fields do something
-// similar but are not reproduced bit-for-bit here (see SomaIntroSequence.h).
-static const float kSubtitleReadingTail = 0.4f;
-
 // Real "Intro_7" subject's 4th line (00_00_intro.voice) has real dialogue
 // text ("For what?") but no FileName attribute at all - i.e. no real
 // voice-over line exists for it. Held on screen for this long, silent.
 static const float kSilentLineHoldTime = 1.1f;
+
+// Defensive only: a real-audio line's own completion is detected by
+// querying the sound system directly (see IsCurrentLineFinished()), not by
+// estimating a duration up front - but if a line's .ogg somehow never even
+// reports itself as started (missing asset, sound backend failure), don't
+// let that stall the rest of New Game forever. All real lines here probe
+// well under 5s, so this is a generous margin, never a normal-path timeout.
+static const float kVoiceLineSafetyTimeout = 12.0f;
 
 //---------------------------------------
 
@@ -90,6 +92,8 @@ cSomaIntroSequence::cSomaIntroSequence(cEngine *apEngine, cSomaBase *apBase) : i
 	mlCurrentSubjectIndex = -1;
 	mlCurrentLineIndex = -1;
 	mfLineTimer = 0;
+	mbCurrentLineFinished = false;
+	mbCurrentLineAudioStarted = false;
 
 	mbFinished = false;
 }
@@ -169,12 +173,10 @@ void cSomaIntroSequence::BuildTimeline()
 	lines.back().msFile = "intro_intro_3_001_ashley_001.ogg";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "Are you okay, Simon? I think you're bleeding.";
-	lines.back().mfHoldTime = 2.935958f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_3_002_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "Oh, that's nothing -- it's just my brain can't stop bleeding from the accident.";
-	lines.back().mfHoldTime = 4.565104f + kSubtitleReadingTail;
 	AddVoiceEvent(3.75f, lines);
 
 	AddSlideImage("01_SimonMirror.jpg", 2.55f, 0.0f);
@@ -186,7 +188,6 @@ void cSomaIntroSequence::BuildTimeline()
 	lines.back().msFile = "intro_intro_4_001_ashley_001.ogg";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "Here, take this.";
-	lines.back().mfHoldTime = 1.001021f + kSubtitleReadingTail;
 	AddVoiceEvent(2.5f, lines);
 
 	// Intro_5
@@ -195,12 +196,10 @@ void cSomaIntroSequence::BuildTimeline()
 	lines.back().msFile = "intro_intro_5_001_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "No, that's for later -- for the scan.";
-	lines.back().mfHoldTime = 2.010417f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_5_002_ashley_001.ogg";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "It's green.";
-	lines.back().mfHoldTime = 0.700354f + kSubtitleReadingTail;
 	AddVoiceEvent(4.1f, lines);
 
 	AddSlideImage("02_Bottle.jpg", 0.4f, 1.5f);
@@ -212,17 +211,14 @@ void cSomaIntroSequence::BuildTimeline()
 	lines.back().msFile = "intro_intro_6_001_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "Ashley, I need to tell you something.";
-	lines.back().mfHoldTime = 2.210417f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_6_002_ashley_001.ogg";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "Simon, please don't make this weird--";
-	lines.back().mfHoldTime = 2.141938f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_6_003_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "No, no, it's not like that.";
-	lines.back().mfHoldTime = 1.650521f + kSubtitleReadingTail;
 	AddVoiceEvent(4.7f, lines);
 
 	AddSlideImage("03_AshleyPortrait.jpg", 3.17f, 0.5f);
@@ -235,22 +231,18 @@ void cSomaIntroSequence::BuildTimeline()
 	lines.back().msFile = "intro_intro_7_001_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "Why now?";
-	lines.back().mfHoldTime = 1.031771f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_7_002_ashley_001.ogg";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "Who's David Munshi?";
-	lines.back().mfHoldTime = 1.732438f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "intro_intro_7_003_simon_001.ogg";
 	lines.back().msSpeaker = "Simon";
 	lines.back().msText = "Why is there never enough time?!";
-	lines.back().mfHoldTime = 1.477000f + kSubtitleReadingTail;
 	lines.push_back(cIntroVoiceLine());
 	lines.back().msFile = "";
 	lines.back().msSpeaker = "Ashley";
 	lines.back().msText = "For what?";
-	lines.back().mfHoldTime = kSilentLineHoldTime;
 	AddVoiceEvent(1.0f, lines);
 
 	AddSlideImage("04_PhoneClose.jpg", 3.6f, 0.27f);
@@ -332,32 +324,94 @@ void cSomaIntroSequence::PlayLine(const cIntroVoiceLine &aLine)
 
 //-----------------------------------------------------------------------
 
+// "The previous voice has finished" per the real script's own gating
+// (helper_audio.hps's Voice_PlayWhenPossible()/Voice_AnySceneIsActive()) -
+// queries whether this line's own real audio file is still reported
+// playing by the sound system (cSoundHandler::IsPlaying(), the same string
+// PlayLine() passed to PlayGui() - see SoundHandler.cpp) rather than
+// estimating a duration up front. mbCurrentLineAudioStarted latches once
+// the channel is actually observed playing, since PlayGui()'s cSoundEntry
+// only calls its real Play() on its *own* first cSoundHandler::Update()
+// tick (see cSoundEntry::Update()), not synchronously inside PlayGui()
+// itself - without the latch, checking IsPlaying() the same frame a line
+// starts could misread "not started yet" as "already finished".
+bool cSomaIntroSequence::IsCurrentLineFinished(const cIntroVoiceLine &aLine, float afTimeStep)
+{
+	if (mfLineTimer > 0.0f)
+		mfLineTimer -= afTimeStep;
+
+	// The one real line with no voice-over file at all (00_00_intro.voice's
+	// Intro_7 4th line, "For what?") - nothing to query, just hold it.
+	if (aLine.msFile == "")
+		return mfLineTimer <= 0.0f;
+
+	if (mpEngine->GetSound()->GetSoundHandler()->IsPlaying(aLine.msFile))
+	{
+		mbCurrentLineAudioStarted = true;
+		return false;
+	}
+
+	if (mbCurrentLineAudioStarted)
+		return true; // was playing, now isn't - genuinely done
+
+	if (mfLineTimer <= 0.0f) // kVoiceLineSafetyTimeout elapsed and audio never even started
+	{
+		Log("SOMA intro sequence: voice line '%s' never started playing within %.1fs - advancing anyway\n",
+			aLine.msFile.c_str(), kVoiceLineSafetyTimeout);
+		return true;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------
+
 void cSomaIntroSequence::AdvanceVoice(float afTimeStep)
 {
+	if (mlCurrentSubjectIndex >= 0 && mlCurrentLineIndex >= 0 && !mbCurrentLineFinished)
+	{
+		const cIntroVoiceLine &curLine = mvVoiceEvents[mlCurrentSubjectIndex].mLines[mlCurrentLineIndex];
+		mbCurrentLineFinished = IsCurrentLineFinished(curLine, afTimeStep);
+	}
+
+	bool bCurrentSubjectDone = mlCurrentSubjectIndex < 0 ||
+		(mlCurrentLineIndex == (int)mvVoiceEvents[mlCurrentSubjectIndex].mLines.size() - 1 && mbCurrentLineFinished);
+
+	// Real script's Update() only calls Voice_PlayWhenPossible() for the next
+	// Subject once mfSlideShowTimer reaches its scheduled offset - but real
+	// 00_00_intro.hps passes afMinQuietTime=0.0f (not the documented 5s
+	// default) to every one of those calls, so that enqueued check (polled
+	// every 0.2s by _Voice_PlayWhenPossible_CheckTimer) requires nothing
+	// beyond "Voice_AnySceneIsActive() is now false" before actually playing.
+	// bCurrentSubjectDone is that same real condition (no added minimum
+	// quiet gap), checked every frame against this port's own audio state
+	// instead of a 0.2s script timer - strictly tighter, not looser.
 	if (mlCurrentSubjectIndex + 1 < (int)mvVoiceEvents.size() &&
-		mfTimer >= mvVoiceEvents[mlCurrentSubjectIndex + 1].mfStartTime)
+		mfTimer >= mvVoiceEvents[mlCurrentSubjectIndex + 1].mfStartTime &&
+		bCurrentSubjectDone)
 	{
 		++mlCurrentSubjectIndex;
 		mlCurrentLineIndex = -1;
-		mfLineTimer = 0;
+		mbCurrentLineFinished = false;
 	}
 
 	if (mlCurrentSubjectIndex < 0)
 		return;
 
-	const cIntroVoiceEvent &subject = mvVoiceEvents[mlCurrentSubjectIndex];
+	if (mlCurrentLineIndex >= 0 && !mbCurrentLineFinished)
+		return; // current line's real audio (or silent hold) still playing
 
-	if (mfLineTimer > 0.0f)
-	{
-		mfLineTimer -= afTimeStep;
-		return;
-	}
+	const cIntroVoiceEvent &subject = mvVoiceEvents[mlCurrentSubjectIndex];
 
 	if (mlCurrentLineIndex + 1 < (int)subject.mLines.size())
 	{
 		++mlCurrentLineIndex;
 		const cIntroVoiceLine &line = subject.mLines[mlCurrentLineIndex];
-		mfLineTimer = line.mfHoldTime;
+
+		mbCurrentLineFinished = false;
+		mbCurrentLineAudioStarted = false;
+		mfLineTimer = (line.msFile == "") ? kSilentLineHoldTime : kVoiceLineSafetyTimeout;
+
 		PlayLine(line);
 	}
 	else

@@ -61,9 +61,14 @@
  *    section), so it cannot be played back at all, plain-file re-encode or
  *    otherwise, without that separate reverse-engineering effort.
  *  - Real per-line VoiceOffset/EndPadding fields (00_00_intro.voice) that
- *    fine-tune subtitle-to-audio sync are not reproduced bit-for-bit; each
- *    line's on-screen hold time here is its real probed .ogg duration plus a
- *    fixed small reading tail (see the .cpp), not an exact frame match.
+ *    let the real engine start a line slightly before the previous one in
+ *    the same Subject has fully finished (EndPadding is negative for nearly
+ *    every line here - e.g. Intro_3's are -0.8/-1.4) are not reproduced:
+ *    this port waits for each line's real audio to be genuinely done (see
+ *    AdvanceVoice()/IsCurrentLineFinished()) before starting the next, so
+ *    lines within a Subject play strictly back-to-back rather than with the
+ *    real subtle overlap/crossfade. Between Subjects this port's behavior
+ *    now matches the real one exactly (see AdvanceVoice()'s own comment).
  *
  * Modeled on cSomaSplash's shape (a small self-contained iUpdateable driving
  * its own cGuiSet/cViewport, calling back into cSomaBase when done) - see
@@ -98,7 +103,6 @@ struct cIntroVoiceLine
 	tString msFile;    // real .ogg filename (with extension), "" = no audio (one real line has none)
 	tString msSpeaker;
 	tString msText;
-	float mfHoldTime;  // real probed .ogg duration + a small reading tail (see .cpp)
 };
 
 struct cIntroVoiceEvent
@@ -135,6 +139,7 @@ private:
 	void AdvanceSlides(float afTimeStep);
 	void AdvanceVoice(float afTimeStep);
 	void PlayLine(const cIntroVoiceLine &aLine);
+	bool IsCurrentLineFinished(const cIntroVoiceLine &aLine, float afTimeStep);
 
 	void DrawSlide(const cIntroSlide &aSlide, float afAlpha);
 	void DrawTextSlide(float afAlpha);
@@ -178,7 +183,9 @@ private:
 
 	int mlCurrentSubjectIndex;
 	int mlCurrentLineIndex;
-	float mfLineTimer;
+	float mfLineTimer;         // silent-line hold countdown, or a real-audio line's safety-timeout countdown (see IsCurrentLineFinished())
+	bool mbCurrentLineFinished;
+	bool mbCurrentLineAudioStarted; // latched true once the current line's real .ogg has been observed actually playing
 	tString msCurrentSpeaker;
 	tString msCurrentSubtitle;
 

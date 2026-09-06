@@ -1,5 +1,30 @@
 # Tasks
 
+- SOMA: New Game intro sequence's "stilted"/overlapping voice lines - schedule-based advance
+  replaced with real audio-completion polling (2026-09-07)
+  - DONE: soma/src/game/SomaIntroSequence.{h,cpp} - user reported the intro slideshow's dialogue
+    was "stilted," missing correct timing, with overlapping audio ("some missing component of the
+    voice line scheduling"). Root cause: real 00_00_intro.hps/helper_audio.hps's
+    Voice_PlayWhenPossible() gates advancing to the next Subject on real audio completion
+    (Voice_AnySceneIsActive()==false, polled every 0.2s) plus a real afMinQuietTime of 0.0f (not
+    the documented 5s default) - not a fixed timeline. This port's AdvanceVoice() instead switched
+    Subjects purely on elapsed wall-clock time against a schedule, using each line's mfHoldTime (a
+    probed real .ogg duration + fixed reading tail) as a duration estimate - close but not exact,
+    so the port would sometimes start the next line/Subject's PlayGui() while the previous one's
+    real audio was still playing. Fixed: AdvanceVoice() now requires BOTH the schedule's nominal
+    start time AND a direct sound-system query (cSoundHandler::IsPlaying(), passed the same
+    filename PlayLine() gave PlayGui()) confirming the previous line's real audio has actually
+    finished, mirroring the real engine's own gating exactly. This let the synthesized per-line
+    mfHoldTime estimate be removed entirely for every real-audio line (kept only for the one real
+    line with no voice file at all, "For what?"). Also confirmed via a full line-by-line diff
+    against 00_00_intro.hps's OnStart() that every real AddSlide()/AddVoice()/AddEvent() call was
+    already represented in this port's data - no dialogue was actually missing, the complaint was
+    the overlap bug making lines read as skipped. Verified live, headless: a temporary diagnostic
+    Log() (removed before finalizing) traced every PlayLine()/audio-finished event across the
+    entire sequence (all 5 Subjects, all 11 real lines) - zero overlap at any transition, every
+    PLAY at or after the prior line's own FINISHED tick. ctest 4/4 green before and after. Full
+    writeup with exact real-source citations and the full trace in PORTING_NOTES.md.
+
 - SOMA: the real splash/boot sequence, properly reverse-engineered (2026-09-05)
   - DONE: soma/src/game/SomaSplash.{h,cpp} fully rewritten after user feedback that the previous
     session's splash "still not correct... missing visual effects, sound effects, and loading bar".
