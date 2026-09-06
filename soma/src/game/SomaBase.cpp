@@ -51,6 +51,10 @@ static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessR
 	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
 	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
 	aResp.Set("fps", pBase->mpEngine->GetFPS());
+	// Degrees, not cCamera::GetFOV()'s native radians - added to verify the
+	// real Options screen's Horizontal FOV slider (see SomaConfig.h's
+	// mfFOV/SomaPlayer.cpp) actually reaches the real camera live.
+	aResp.Set("fov_deg", cMath::ToDeg(pBase->GetDebugCamera()->GetFOV()));
 }
 
 static void cSomaBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -98,6 +102,81 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 		aResp.SetError(sError);
 		return;
 	}
+}
+
+// "forward"/"backward"/"left"/"right"/"jump" -> eSomaPlayerAction, shared by
+// the two headless commands below. Returns false (aResp gets an error set by
+// the caller) for anything else.
+static bool ParsePlayerActionName(const tString &asName, cSomaBase::eSomaPlayerAction &aActionOut)
+{
+	tString sLower = cString::ToLowerCase(asName);
+	if(sLower == "forward") { aActionOut = cSomaBase::eSomaPlayerAction_Forward; return true; }
+	if(sLower == "backward") { aActionOut = cSomaBase::eSomaPlayerAction_Backward; return true; }
+	if(sLower == "left") { aActionOut = cSomaBase::eSomaPlayerAction_Left; return true; }
+	if(sLower == "right") { aActionOut = cSomaBase::eSomaPlayerAction_Right; return true; }
+	if(sLower == "jump") { aActionOut = cSomaBase::eSomaPlayerAction_Jump; return true; }
+	return false;
+}
+
+// Headless-only verification hooks for SomaMainMenu.cpp's real KEYBINDINGS
+// screen (see cSomaBase::RebindPlayerAction()/GetPlayerActionKeyName()) -
+// same idea as camera_state/set_camera above, letting this be tested without
+// clicking through the actual menu UI pixel-by-pixel. "keybind_get" reads
+// the current binding; "keybind_set" rebinds it exactly like clicking a row
+// and pressing a key would (used together with the generic "input" command's
+// type=key events and "action_triggered" below to prove a rebind actually
+// changes which real key the player controller responds to).
+static void cSomaBase_HeadlessCmd_KeybindGet(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cSomaBase::eSomaPlayerAction action;
+	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
+	{
+		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
+		return;
+	}
+
+	aResp.Set("key", pBase->GetPlayerActionKeyName(action));
+}
+
+static void cSomaBase_HeadlessCmd_KeybindSet(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cSomaBase::eSomaPlayerAction action;
+	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
+	{
+		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
+		return;
+	}
+
+	tString sKeyName = aReq.GetString("key", "");
+	eKey key = pBase->mpEngine->GetInput()->GetKeyboard()->StringToKey(sKeyName);
+	if(key == eKey_LastEnum)
+	{
+		aResp.SetError("unknown 'key' name: '" + sKeyName + "'");
+		return;
+	}
+
+	pBase->RebindPlayerAction(action, key);
+	aResp.Set("key", pBase->GetPlayerActionKeyName(action));
+}
+
+// Real cAction::IsTriggerd() readback for one of cSomaBase's 5 player
+// actions - lets a headless test confirm which real key an action responds
+// to after a keybind_set rebind, by injecting a raw "input" type=key event
+// for a specific key and checking whether the ACTION (not the key itself)
+// reports triggered.
+static void cSomaBase_HeadlessCmd_ActionTriggered(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cSomaBase::eSomaPlayerAction action;
+	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
+	{
+		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
+		return;
+	}
+
+	aResp.Set("triggered", pBase->mpEngine->GetInput()->IsTriggerd(cSomaBase::GetPlayerActionName(action)));
 }
 
 //---------------------------------------
@@ -201,6 +280,9 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("camera_state", cSomaBase_HeadlessCmd_CameraState, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
 		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
+		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
+		pCtrl->RegisterHandler("keybind_set", cSomaBase_HeadlessCmd_KeybindSet, this);
+		pCtrl->RegisterHandler("action_triggered", cSomaBase_HeadlessCmd_ActionTriggered, this);
 	}
 
 	/////////////////////////////
@@ -347,7 +429,6 @@ bool cSomaBase::InitEngine()
 	mbUseRealPlayer = (getenv("OPENHPL_SOMA_FREECAM") == NULL);
 
 	cEngineInitVars vars;
-	vars.mGraphics.mvScreenSize = cVector2l(1280, 720);
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 #if defined(__linux__)
@@ -397,6 +478,24 @@ bool cSomaBase::InitEngine()
 	mConfig.Load();
 	vars.mGraphics.mbFullscreen = mConfig.mbFullscreen;
 
+	// Real Resolution row's own restart-required contract - see
+	// SomaConfig.h's mlScreenWidth/mlScreenHeight comment. Was hardcoded
+	// 1280x720 here before those fields existed.
+	vars.mGraphics.mvScreenSize = cVector2l(mConfig.mlScreenWidth, mConfig.mlScreenHeight);
+
+	// TEMP DEBUG ONLY - not for commit: lets a large windowed boot size be
+	// tested headlessly (a hidden window never picks up real monitor
+	// dimensions for SDL_WINDOW_FULLSCREEN_DESKTOP, so this is the only way
+	// to reproduce "booted directly at a large real resolution" headlessly).
+	// Deliberately AFTER the config-driven default above so this always wins
+	// over a persisted Resolution setting for debugging.
+	if (getenv("OPENHPL_SOMA_DEBUG_SCREENSIZE"))
+	{
+		int lW = 1280, lH = 720;
+		sscanf(getenv("OPENHPL_SOMA_DEBUG_SCREENSIZE"), "%dx%d", &lW, &lH);
+		vars.mGraphics.mvScreenSize = cVector2l(lW, lH);
+	}
+
 	/////////////////////////
 	// Create the engine
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
@@ -427,7 +526,118 @@ bool cSomaBase::InitEngine()
 	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mConfig.mfGamma);
 	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mConfig.mbVSync, false);
 
+	CreateInputActions();
+
 	return true;
+}
+
+//-----------------------------------------------------------------------
+
+const char* cSomaBase::GetPlayerActionName(eSomaPlayerAction aAction)
+{
+	switch (aAction)
+	{
+	case eSomaPlayerAction_Forward: return "SomaMoveForward";
+	case eSomaPlayerAction_Backward: return "SomaMoveBackward";
+	case eSomaPlayerAction_Left: return "SomaMoveLeft";
+	case eSomaPlayerAction_Right: return "SomaMoveRight";
+	case eSomaPlayerAction_Jump: return "SomaJump";
+	default: return "";
+	}
+}
+
+//-----------------------------------------------------------------------
+
+const wchar_t* cSomaBase::GetPlayerActionLabel(eSomaPlayerAction aAction)
+{
+	switch (aAction)
+	{
+	case eSomaPlayerAction_Forward: return L"MOVE FORWARD";
+	case eSomaPlayerAction_Backward: return L"MOVE BACKWARD";
+	case eSomaPlayerAction_Left: return L"MOVE LEFT";
+	case eSomaPlayerAction_Right: return L"MOVE RIGHT";
+	case eSomaPlayerAction_Jump: return L"JUMP";
+	default: return L"";
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaBase::CreateInputActions()
+{
+	// Real defaults matching cSomaPlayer's own previous hardcoded
+	// eKey_W/S/A/D/Space checks (see SomaPlayer.cpp) - used whenever the
+	// persisted config has no value yet (fresh install) or an
+	// unparseable one (hand-edited typo).
+	struct cDefaultBinding { eSomaPlayerAction mAction; tString *mpConfigField; eKey mDefaultKey; };
+	cDefaultBinding vDefaults[] = {
+		{ eSomaPlayerAction_Forward,  &mConfig.msKeyForward,  eKey_W },
+		{ eSomaPlayerAction_Backward, &mConfig.msKeyBackward, eKey_S },
+		{ eSomaPlayerAction_Left,     &mConfig.msKeyLeft,     eKey_A },
+		{ eSomaPlayerAction_Right,    &mConfig.msKeyRight,    eKey_D },
+		{ eSomaPlayerAction_Jump,     &mConfig.msKeyJump,     eKey_Space },
+	};
+
+	iKeyboard *pKeyboard = mpEngine->GetInput()->GetKeyboard();
+
+	for (size_t i = 0; i < sizeof(vDefaults) / sizeof(vDefaults[0]); ++i)
+	{
+		const cDefaultBinding &def = vDefaults[i];
+
+		cAction *pAction = mpEngine->GetInput()->CreateAction(GetPlayerActionName(def.mAction));
+
+		eKey key = pKeyboard->StringToKey(*def.mpConfigField);
+		if (key == eKey_LastEnum)
+		{
+			// Unparseable (or empty, on a fresh install where the config
+			// field's constructor default is already the right string, but
+			// this also self-heals a hand-edited bad value) - fall back to
+			// the real hardcoded default and persist the corrected value so
+			// it reads back clean next time.
+			key = def.mDefaultKey;
+			*def.mpConfigField = pKeyboard->KeyToString(key);
+		}
+
+		pAction->AddKey(key);
+	}
+
+	mConfig.Save();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaBase::RebindPlayerAction(eSomaPlayerAction aAction, eKey aKey)
+{
+	cAction *pAction = mpEngine->GetInput()->GetAction(GetPlayerActionName(aAction));
+	if (pAction == NULL)
+		return;
+
+	pAction->ClearSubActions();
+	pAction->AddKey(aKey);
+
+	tString sKeyName = mpEngine->GetInput()->GetKeyboard()->KeyToString(aKey);
+	switch (aAction)
+	{
+	case eSomaPlayerAction_Forward:  mConfig.msKeyForward  = sKeyName; break;
+	case eSomaPlayerAction_Backward: mConfig.msKeyBackward = sKeyName; break;
+	case eSomaPlayerAction_Left:     mConfig.msKeyLeft     = sKeyName; break;
+	case eSomaPlayerAction_Right:    mConfig.msKeyRight    = sKeyName; break;
+	case eSomaPlayerAction_Jump:     mConfig.msKeyJump     = sKeyName; break;
+	default: break;
+	}
+
+	mConfig.Save();
+}
+
+//-----------------------------------------------------------------------
+
+tString cSomaBase::GetPlayerActionKeyName(eSomaPlayerAction aAction)
+{
+	cAction *pAction = mpEngine->GetInput()->GetAction(GetPlayerActionName(aAction));
+	if (pAction == NULL || pAction->GetSubActionNum() == 0)
+		return "-";
+
+	return pAction->GetSubAction(0)->GetInputName();
 }
 
 //-----------------------------------------------------------------------
@@ -489,6 +699,12 @@ bool cSomaBase::InitMainMenuScene()
 	mpDebugCamera = pCamera;
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
+
+	// Real Anti-Aliasing row's live backend - see SomaConfig.h's
+	// mbAntiAliasing comment. cRenderSettings defaults mbUseEdgeSmooth to
+	// false (Renderer.cpp), so this needs applying explicitly on every fresh
+	// cRenderSettings a new cViewport creates.
+	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
@@ -581,6 +797,7 @@ bool cSomaBase::InitTestMap()
 	mpDebugCamera = pCamera;
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
+	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing; // see InitMainMenuScene()'s copy of this line
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
@@ -636,6 +853,13 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	{
 		mpDebugViewport->SetWorld(mpTestWorld);
 	}
+
+	// Real Anti-Aliasing row's live backend (see SomaConfig.h's
+	// mbAntiAliasing comment) - reapplied unconditionally on every map load,
+	// covering both the "brand new cRenderSettings" branch above (which
+	// defaults mbUseEdgeSmooth to false) and the "reused viewport" branch
+	// (already correct, but cheap to just re-set).
+	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
 
 	// Controller hand-off: InitMainMenuScene() always creates a free-fly
 	// mpDebugCameraController for the menu scene itself (see there), so the

@@ -87,6 +87,16 @@ private:
 	bool InitTestMap();
 	void ExitTestMap();
 
+	// Creates cSomaBase::eSomaPlayerAction's 5 real cAction objects on
+	// mpEngine->GetInput() and binds each to its persisted key (see
+	// SomaConfig.h's msKeyForward/etc, falling back to the hardcoded
+	// default for any that fail to parse - e.g. a hand-edited config with a
+	// typo). Called once from InitEngine(), before any map/menu loads, so
+	// the real player controller (SomaPlayer.cpp) and the Options screen's
+	// KEYBINDINGS row (SomaMainMenu.cpp) both see fully-bound actions from
+	// the very first frame.
+	void CreateInputActions();
+
 public:
 	// Generic map loader for the "start_map" headless command (see
 	// SomaBase.cpp) - tears down whatever world/camera/viewport is
@@ -124,6 +134,45 @@ public:
 	// Options screen itself via this same instance (it calls Save() after
 	// each change, see SomaConfig.h).
 	cSomaConfig* GetConfig(){ return &mConfig; }
+
+	// Real HPL2 cAction/cInput system (HPL2/core/include/input/Action.h) -
+	// cSomaPlayer's 5 movement/jump actions, same real API
+	// amnesia/src/game/LuxInputHandler.cpp's own action table uses. Created
+	// once on mpEngine->GetInput() by InitEngine() (see CreateInputActions()
+	// below) - deliberately NOT owned by cSomaPlayer itself (which doesn't
+	// exist yet the first time the Options screen's KEYBINDINGS sub-screen
+	// is reachable, straight from the main menu before any game map has
+	// loaded) so rebinding works from the main menu exactly like every other
+	// Options row, not just mid-game.
+	enum eSomaPlayerAction
+	{
+		eSomaPlayerAction_Forward,
+		eSomaPlayerAction_Backward,
+		eSomaPlayerAction_Left,
+		eSomaPlayerAction_Right,
+		eSomaPlayerAction_Jump,
+		eSomaPlayerAction_LastEnum
+	};
+
+	// Internal cAction name (never shown to the user - see
+	// GetPlayerActionKeyName() for the real display string).
+	static const char* GetPlayerActionName(eSomaPlayerAction aAction);
+
+	// Real display label for the Options screen's KEYBINDINGS row (e.g.
+	// "FORWARD") - not a real base_english.lang lookup (this scaffold has
+	// no in-game action names to translate, only these 5 fixed labels).
+	static const wchar_t* GetPlayerActionLabel(eSomaPlayerAction aAction);
+
+	// Rebinds the given action to a single key (real cAction::
+	// ClearSubActions()+AddKey()), persists it to cSomaConfig, and saves -
+	// used by SomaMainMenu.cpp's "press a key" KEYBINDINGS flow.
+	void RebindPlayerAction(eSomaPlayerAction aAction, eKey aKey);
+
+	// The action's current bound key, as a display string (real
+	// iKeyboard::KeyToString(), via the action's own sole sub-action) - "-"
+	// if unbound (should not normally happen - every action always has
+	// exactly one key bound, see CreateInputActions()).
+	tString GetPlayerActionKeyName(eSomaPlayerAction aAction);
 
 private:
 	/////////////////////////

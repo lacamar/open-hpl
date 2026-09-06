@@ -610,6 +610,39 @@ static void TestFixedFunctionMatrixSubstitution()
 	CHECK_NOT_CONTAINS(sGlsl, "gl_ModelViewMatrix"); // a_mtxModelView itself unused in this source - substitution only fires for names actually declared+present, doesn't invent gl_ModelViewMatrix out of nowhere
 }
 
+// deferred_light_frag.hpsl's real, unconditional "out_vColor.xyz =
+// vDiffuse * 8.0;" (a "Multiply with 8.0 to increase precision" HDR
+// convention with no compensating downstream divide anywhere in this port -
+// see RemoveUncompensatedHdrPrecisionBoost()'s own comment) must have the
+// "* 8.0" dropped, same shape of fix as the already-existing
+// deferred_transparent_frag.hpsl/vFinalColor case this function also
+// handles. Found live via a real start_map run against 00_01_apartment.hpm
+// (see PORTING_NOTES.md): left in, every lit pixel in a real scene reached
+// the screen roughly 8x too bright, well past clipping, producing a severe,
+// resolution/camera-independent magenta/maroon corruption of most of the
+// frame - not a resolution- or light-volume-geometry bug as it first
+// appeared.
+static void TestLightBoostRemoved()
+{
+	tString sGlsl, sErr;
+	static const char* psSrc =
+		"void main(out cVector4f out_vColor : 0)\n"
+		"{\n"
+		"	cVector3f vDiffuse = cVector3f(0.5, 0.5, 0.5);\n"
+		"\n"
+		"	// Multiply with 8.0 to increase precision\n"
+		"	out_vColor.xyz =vDiffuse * 8.0;\n"
+		"	out_vColor.w = 0;\n"
+		"}";
+	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	// "out_vColor : 0" itself becomes gl_FragData[0] (the usual single-
+	// render-target output mapping, unrelated to this test's own subject) -
+	// expected, not a sign the boost-removal regex (which matches on the
+	// still-named "out_vColor.xyz" text, run before that rename) missed.
+	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vDiffuse;");
+	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
+}
+
 // cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
 // "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
 // bug this pass's live glCompileShader() self-test caught (see
@@ -694,6 +727,7 @@ int main()
 	TestNoLoadKeepsVersion120();
 	TestLoadRejectsNonSampler2D();
 	TestFixedFunctionMatrixSubstitution();
+	TestLightBoostRemoved();
 
 	if (gFailures == 0)
 	{

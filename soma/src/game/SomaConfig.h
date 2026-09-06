@@ -70,6 +70,73 @@ public:
 	// working setting, just not an instant one.
 	bool mbFullscreen;
 
+	// Screen - real keys "Screen"/"Width"+"Height" (real
+	// GuiOptionsVideoDisplay()'s Resolution row - see MenuHandler.hps'
+	// GetCurrentResolution()/SetCurrentResolution()). Same restart-required
+	// contract as mbFullscreen above: cLowLevelGraphics has no live
+	// window-resize/mode-switch call either, only cLowLevelGraphics::Init()'s
+	// screen-size param - evaluated once at window-creation time in
+	// cSomaBase::InitEngine(). The Options screen's Resolution row builds its
+	// value list from cPlatform::GetAvailableVideoModes(), same real API
+	// amnesia/src/game/LuxMainMenu_Options.cpp's own Resolution dropdown
+	// uses.
+	int mlScreenWidth;
+	int mlScreenHeight;
+
+	// Graphics - LIVE via cViewport::GetRenderSettings()->mbUseEdgeSmooth
+	// (HPL2/core/include/graphics/Renderer.h's cRenderSettings, consumed
+	// every frame by RendererDeferred.cpp's RenderEdgeSmooth() pass) - the
+	// exact same FXAA-style edge-smoothing setting
+	// amnesia/src/game/LuxConfigHandler.cpp's own "EdgeSmooth" field drives
+	// via cLuxMapHandler::UpdateViewportRenderProperties(). Real SOMA only
+	// ever offers "Off"/"FXAA" (helper_imgui_options.hps' vAAValues), so this
+	// engine's single edge-smooth pass covers the full real option range -
+	// stored as a bool rather than a string, same simplification already
+	// applied to mbFullscreen/mbVSync above.
+	bool mbAntiAliasing;
+
+	// Gameplay - LIVE via cCamera::SetFOV() (radians) - real key
+	// "Gameplay"/"FOV", real range 50-83 (see MenuHandler.hps'
+	// GuiOptionsVideoDisplay()'s FOV row, which treats this as a
+	// vertical-ish FOV and derives a horizontal display figure from it via
+	// the real screen aspect ratio - see SomaMainMenu.cpp's own copy of that
+	// formula). Applied every cSomaPlayer::Update() (cCamera::SetFOV() is a
+	// cheap early-return-if-unchanged call, see Camera.cpp), so a change
+	// here takes effect on the very next frame once a real player camera
+	// exists.
+	float mfFOV;
+
+	// Sound - real key "Sound"/"ShowSubtitles" - gates
+	// cSomaIntroSequence::DrawSubtitle() (see SomaIntroSequence.cpp), this
+	// engine's only subtitle-rendering content so far. Real default true.
+	bool mbShowSubtitles;
+
+	// Input - real key "Input"/"MouseSensitivity" (real range ~0.01-4.01,
+	// see MenuHandler.hps' GuiOptionsInputMouse()'s MouseSens slider) -
+	// multiplies cSomaPlayer's own fixed base mouse-look constant live, every
+	// frame (see SomaPlayer.cpp's mfMouseSensitivity comment).
+	float mfMouseSensitivity;
+
+	// Input - real key "Input"/"InvertMouse" - flips the pitch (vertical
+	// look) delta's sign in cSomaPlayer::Update(). Real default false.
+	bool mbInvertMouseY;
+
+	// Input - keybindings for cSomaBase::eSomaPlayerAction's 5 movement/jump
+	// actions (see SomaBase.h/.cpp's CreateInputActions()/RebindPlayerAction()) -
+	// real HPL2 cAction/cInput system, same one
+	// amnesia/src/game/LuxInputHandler.cpp's own action table uses, persisted
+	// via the same real iKeyboard::KeyToString()/StringToKey() round trip
+	// LuxInputHandler.cpp uses for its own keybind config. Real SOMA's own
+	// key-config file format is far more elaborate (per-action primary AND
+	// secondary binds, gamepad, many more actions than this scaffold's
+	// player has) - this is a deliberately simplified "one key per action"
+	// version covering just Forward/Backward/Left/Right/Jump.
+	tString msKeyForward;
+	tString msKeyBackward;
+	tString msKeyLeft;
+	tString msKeyRight;
+	tString msKeyJump;
+
 private:
 	tWString GetConfigFilePath();
 };

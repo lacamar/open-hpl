@@ -206,19 +206,61 @@ namespace
 	// prompt, not a real result; corrected after re-deploying cleanly and
 	// re-verifying.)
 	//
-	// Confirmed via a full corpus search that this exact
-	// "vFinalColor *= cVector4f(8.0, ...)" pattern exists in exactly this
-	// one file among the entire real HPSL corpus, so removing it here can't
-	// affect anything else. Whitespace-tolerant (the real file has two
-	// spaces before "*=") rather than a literal string match, in case a
-	// different game's copy of this file formats it slightly differently.
-	// Must run after ReplaceTypeNames() (which rewrites "cVector4f" ->
-	// "vec4" before this ever sees the text) - matches the post-rename
-	// spelling accordingly.
+	// A later session's corpus-wide re-check (chasing a much more severe,
+	// map-filling version of this same symptom - see the second regex
+	// below) found this "vFinalColor *= cVector4f(8.0, ...)" pattern is
+	// NOT unique to deferred_transparent_frag.hpsl after all: the exact
+	// same "no compensating downstream divide anywhere in this port"
+	// problem also exists, worse, in deferred_light_frag.hpsl's real,
+	// UNCONDITIONAL "out_vColor.xyz = vDiffuse * 8.0;" (the real per-pixel
+	// point/spot-light shading output, run for every lit pixel every
+	// frame - not gated behind any particular blend mode/material like the
+	// transparent-shader case above). A full grep of the real HPSL corpus
+	// for "* 8.0"/"*8.0" also turned up deferred_light_box_frag.hpsl (box
+	// lights), deferred_fog_frag.hpsl, game_edge_glow.hpsl and
+	// null_frag_array*.hpsl with similar boosts - only the light_frag case
+	// is handled here (by far the dominant light type - point/spot -
+	// confirmed live to be the actual cause of a severe, map-filling,
+	// resolution/camera-independent magenta/maroon corruption of every real
+	// SOMA map with lights, reproduced at 720p/1080p/1440p/4K alike, i.e.
+	// this was never a resolution- or light-volume-geometry bug despite
+	// initially looking like one); the other three files are lower-traffic
+	// (box lights are a less common light type; fog/edge-glow/null-array are
+	// comparatively rare paths) and left as a follow-up if a similar
+	// artifact is ever traced to one of them specifically.
+	//
+	// Verified live, real 00_01_apartment.hpm, PlayerStartArea_1 (a
+	// deliberately light-dense starting room): before this fix, every
+	// direction and every resolution tested (720p through real 4K) showed
+	// large, flat, per-channel-clipped magenta/maroon shapes covering most
+	// of the frame - real, correctly-shaded, correctly-lit geometry that
+	// clipped hard because it was reaching the accumulation buffer roughly
+	// 8x too bright, the same failure shape as the block_box.mat case above
+	// but affecting the ENTIRE scene's real-time lighting instead of one
+	// Add-blended prop. After removing this boost too, the same camera
+	// position shows real, recognizable, correctly-exposed apartment
+	// geometry (walls/floor/furniture with visible texture detail and
+	// per-pixel shading gradients, not flat clipped color) at every
+	// resolution tested.
+	//
+	// Both patterns are whitespace-tolerant (the real light_frag file has
+	// no space before its own "= vDiffuse", but two spaces in most other
+	// occurrences of this convention elsewhere in the corpus - not worth
+	// relying on) rather than literal string matches. Must run after
+	// ReplaceTypeNames() (no-op for the light_frag pattern itself, which
+	// uses no vector-constructor syntax, but kept alongside the
+	// vFinalColor/vec4 pattern that does need it, and after
+	// StripUniformBindingIndices() for consistency with the rest of this
+	// pipeline's ordering).
 	tString RemoveUncompensatedHdrPrecisionBoost(const tString& asSrc)
 	{
 		std::regex boostRe("vFinalColor\\s*\\*=\\s*vec4\\(\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*1\\.0\\s*\\)\\s*;");
-		return std::regex_replace(asSrc, boostRe, "");
+		tString sOut = std::regex_replace(asSrc, boostRe, "");
+
+		std::regex lightBoostRe("out_vColor\\.xyz\\s*=\\s*vDiffuse\\s*\\*\\s*8\\.0\\s*;");
+		sOut = std::regex_replace(sOut, lightBoostRe, "out_vColor.xyz = vDiffuse;");
+
+		return sOut;
 	}
 
 	// Rewrites one already-brace-matched "cBuffer" block BODY (the text

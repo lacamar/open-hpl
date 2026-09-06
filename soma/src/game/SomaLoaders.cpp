@@ -33,6 +33,49 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	{
 		mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, apInstanceVars->GetVarBool("CastShadows", true));
 	}
+
+	// Real root cause of a severe, map-filling magenta/maroon corruption
+	// (see PORTING_NOTES.md) initially mistaken for a resolution-dependent
+	// light-volume bug: real SOMA .ent files mark physics-only, deliberately
+	// invisible collision-blocker meshes with
+	// <UserDefinedVariables><Var Name="ShowMesh" Value="false" /></...>
+	// (confirmed live: entities/technical/block_box/block_box_bed.ent, the
+	// exact entity filling most of the screen at 00_01_apartment.hpm's real
+	// PlayerStartArea_1 - a bed's crouch-collision volume, never meant to be
+	// player-visible in the real game). Dark Descent's own LuxProp.cpp reads
+	// this same variable and calls SetVisible() on its wrapped entity
+	// (LuxProp.cpp: "pProp->mbShowMesh = GetVarBool(\"ShowMesh\", true); if
+	// (mpEntity) mpEntity->SetVisible(pProp->mbShowMesh);") - this port's own
+	// SOMA entity loader had no equivalent at all (no gameplay "Prop" wrapper
+	// object exists yet for SOMA, per this file's own header comment), so
+	// every such collision-only mesh across every real SOMA map rendered
+	// fully visible, using whatever raw diffuse texture the artist left on
+	// it (block_box.dds is a solid, saturated placeholder color, by design
+	// never meant to reach the screen). GetVarBool() here reads directly off
+	// `this` (cEntityLoader_Object inherits cResourceVarsObject, and the
+	// base class's Load() already calls LoadUserVariables(apRootElem) - the
+	// .ent file's own <UserDefinedVariables>, not apInstanceVars's separate
+	// per-map-placement <UserVariables> block above - right before calling
+	// AfterLoad()), so no extra parsing is needed here.
+	//
+	// One real sibling gap found verifying this fix at other resolutions: a
+	// second, smaller magenta patch remained visible even after the above -
+	// entities/technical/block_box/block_box_static.ent, same "technical/
+	// block_box" invisible-collision-volume family, but with EntityType=
+	// "StaticCollider" and an EMPTY <UserDefinedVariables/> (no Var children
+	// at all, confirmed by reading the real file) - GetVarBool("ShowMesh",
+	// true) legitimately finds nothing and returns the default, which is
+	// wrong specifically for this type: unlike "Prop_Rigid" (a real,
+	// sometimes-visible prop that merely happens to default visible),
+	// "StaticCollider" is BY DEFINITION collision-only - Dark Descent's own
+	// LuxStaticProp-family loaders never register a visible mesh for this
+	// type either. So the true no-authored-Var default depends on
+	// msEntityType, not a single hardcoded bool.
+	if (mpEntity)
+	{
+		bool bDefaultShowMesh = (msEntityType != "StaticCollider");
+		mpEntity->SetVisible(GetVarBool("ShowMesh", bDefaultShowMesh));
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////

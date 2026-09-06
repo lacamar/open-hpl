@@ -3,6 +3,7 @@
  */
 
 #include "SomaPlayer.h"
+#include "SomaBase.h"
 
 //---------------------------------------
 
@@ -23,9 +24,11 @@ cSomaPlayer::cSomaPlayer(cCamera *apCamera, cInput *apInput) : iUpdateable("Soma
 
 	// LuxInputHandler.cpp's own mouse-to-radians conversion divides by
 	// screen height and multiplies by a user sensitivity around 1.0 - this
-	// scaffold has no user config, so this is just a fixed, reasonable
-	// constant tuned by feel (same idiom as cSomaDebugFreeCamera's own
-	// mfMouseSensitivity).
+	// is a fixed, reasonable BASE constant tuned by feel (same idiom as
+	// cSomaDebugFreeCamera's own mfMouseSensitivity), separate from the real,
+	// live cSomaConfig::mfMouseSensitivity multiplier applied in Update()
+	// below (real key "Input"/"MouseSensitivity", real default 1.0 - see
+	// SomaConfig.h).
 	mfMouseSensitivity = 0.003f;
 
 	mbJumpButtonWasDown = false;
@@ -165,7 +168,14 @@ void cSomaPlayer::Update(float afTimeStep)
 	if(mpCharBody == NULL || mpInput == NULL) return;
 	if(mbActive == false) return;
 
-	iKeyboard *pKeyboard = mpInput->GetKeyboard();
+	// Real Horizontal FOV/MouseSensitivity/InvertMouseY settings - all three
+	// are live, so just re-read the config every frame rather than caching a
+	// stale copy (cCamera::SetFOV() is a cheap early-return-if-unchanged
+	// call, see Camera.cpp - no cost to calling it unconditionally here).
+	cSomaConfig *pCfg = gpSomaBase ? gpSomaBase->GetConfig() : NULL;
+	if(pCfg)
+		mpCamera->SetFOV(cMath::ToRad(pCfg->mfFOV));
+
 	iMouse *pMouse = mpInput->GetMouse();
 
 	//////////////////////////
@@ -177,9 +187,12 @@ void cSomaPlayer::Update(float afTimeStep)
 	// toggle exists anywhere in this codebase's SDL input layer).
 	if(pMouse)
 	{
+		float fSensitivity = mfMouseSensitivity * (pCfg ? pCfg->mfMouseSensitivity : 1.0f);
+		float fInvert = (pCfg && pCfg->mbInvertMouseY) ? 1.0f : -1.0f;
+
 		cVector2l vRel = pMouse->GetRelPosition();
-		mpCamera->AddYaw(-(float)vRel.x * mfMouseSensitivity);
-		mpCamera->AddPitch(-(float)vRel.y * mfMouseSensitivity);
+		mpCamera->AddYaw(-(float)vRel.x * fSensitivity);
+		mpCamera->AddPitch((float)vRel.y * fSensitivity * fInvert);
 
 		// Character body yaw must track the camera's yaw every frame (same
 		// as LuxPlayer::AddYaw() does) so Move()'s Forward/Right axes stay
@@ -189,19 +202,26 @@ void cSomaPlayer::Update(float afTimeStep)
 
 	//////////////////////////
 	// WASD movement, relative to the body's own (camera-synced) facing.
-	if(pKeyboard)
+	// Real HPL2 cAction/cInput system (HPL2/core/include/input/Action.h) -
+	// keys are looked up by name every call rather than hardcoded eKey_W/S/
+	// A/D checks, so a real rebind from SomaMainMenu.cpp's KEYBINDINGS
+	// screen (via cSomaBase::RebindPlayerAction()) takes effect immediately,
+	// same as every other live Options setting. The actions themselves are
+	// created once by cSomaBase::CreateInputActions() (called from
+	// InitEngine(), before any player/menu exists), not here - this scaffold
+	// intentionally has no gamepad support to fall back to.
 	{
-		if(pKeyboard->KeyIsDown(eKey_W)) mpCharBody->Move(eCharDir_Forward, 1);
-		if(pKeyboard->KeyIsDown(eKey_S)) mpCharBody->Move(eCharDir_Forward, -1);
-		if(pKeyboard->KeyIsDown(eKey_D)) mpCharBody->Move(eCharDir_Right, 1);
-		if(pKeyboard->KeyIsDown(eKey_A)) mpCharBody->Move(eCharDir_Right, -1);
+		if(mpInput->IsTriggerd(cSomaBase::GetPlayerActionName(cSomaBase::eSomaPlayerAction_Forward))) mpCharBody->Move(eCharDir_Forward, 1);
+		if(mpInput->IsTriggerd(cSomaBase::GetPlayerActionName(cSomaBase::eSomaPlayerAction_Backward))) mpCharBody->Move(eCharDir_Forward, -1);
+		if(mpInput->IsTriggerd(cSomaBase::GetPlayerActionName(cSomaBase::eSomaPlayerAction_Right))) mpCharBody->Move(eCharDir_Right, 1);
+		if(mpInput->IsTriggerd(cSomaBase::GetPlayerActionName(cSomaBase::eSomaPlayerAction_Left))) mpCharBody->Move(eCharDir_Right, -1);
 
 		//////////////////////////
 		// Jump - a simple instantaneous upward velocity on the down-stroke,
 		// only while grounded (real SOMA's own jump additionally blocks on
 		// crouch/underwater/a fatigue timer - see MoveState_Normal.hps'
 		// Jump() - none of which exist in this scaffold yet).
-		bool bJumpDown = pKeyboard->KeyIsDown(eKey_Space);
+		bool bJumpDown = mpInput->IsTriggerd(cSomaBase::GetPlayerActionName(cSomaBase::eSomaPlayerAction_Jump));
 		if(bJumpDown && mbJumpButtonWasDown == false && mpCharBody->IsOnGround())
 		{
 			mpCharBody->AddForceVelocity(cVector3f(0, mfJumpSpeed, 0));

@@ -131,6 +131,8 @@ enum eSomaMenuScreen
 	eSomaMenuScreen_OptionsRoot,		// real GuiOptions(): Gameplay/Controls/Video/Audio/Back
 	eSomaMenuScreen_OptionsGameplay,	// real GuiOptionsGameplay()
 	eSomaMenuScreen_OptionsControls,	// real GuiOptionsInput() top level (Keybind/MouseOptions/GamepadOptions/Back)
+	eSomaMenuScreen_OptionsControlsMouse,	// real GuiOptionsInputMouse() (MouseSens/InvertMouseY/SmoothMouse/Back)
+	eSomaMenuScreen_OptionsControlsKeybind,	// real GuiOptionsInputKeybind() (Forward/Backward/Left/Right/Jump/Back - simplified, see cSomaBase::eSomaPlayerAction)
 	eSomaMenuScreen_OptionsVideo,		// real GuiOptionsVideo() (AutoDetect/Display/PostEffect/Rendering/Gamma/Back)
 	eSomaMenuScreen_OptionsVideoDisplay,	// real GuiOptionsVideoDisplay()
 	eSomaMenuScreen_OptionsVideoPostEffect, // real GuiOptionsVideoPostEffect()
@@ -168,6 +170,27 @@ struct cSomaOptionsRow
 		eKind_Slider,		// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
 		eKind_Back,			// same as eKind_Category but always navigates "up"
 		eKind_MultiSelect,	// real OptionMenu_ButtonOptionsMultiSelect - cycles a fixed value list
+		// real OptionMenu_ButtonKeybind - shows the real cSomaBase::
+		// eSomaPlayerAction (mlOptionIndex) this row rebinds and its
+		// current key name (mSliderValueText, reused rather than adding a
+		// near-duplicate field); clicking starts cSomaMainMenu's own
+		// "press a key" capture mode (see mlAwaitingKeybindRow).
+		eKind_Keybind,
+	};
+
+	// eKind_MultiSelect only - unlike eKind_Toggle/eKind_Slider (which point
+	// straight at their own backing bool*/float*), a multi-select's backing
+	// value isn't always a single scalar (Resolution is a width+height pair
+	// resolved through cSomaMainMenu's own cached mvResolutions list), so
+	// ClickOptionsRow() switches on this instead to know which real setting
+	// (if any) a given multi-select row controls. eOptionId_None for every
+	// multi-select row still without a real backend (RefreshRate/
+	// TextureQuality/TextureFilter/ShadowQuality/Language/DepthOfField).
+	enum eOptionId
+	{
+		eOptionId_None,
+		eOptionId_Resolution,
+		eOptionId_AntiAliasing,
 	};
 
 	eKind mKind;
@@ -209,8 +232,12 @@ struct cSomaOptionsRow
 	// e.g. {"WINDOWED","FULLSCREEN"} for Display Mode, {"OFF","ON"} for
 	// everything else per base_english.lang), mlOptionIndex = current bool
 	// state (0/1) - see MakeToggleRow()/DrawOptionsCycleControl().
+	// eKind_Keybind reuses mlOptionIndex too: the cSomaBase::eSomaPlayerAction
+	// this row rebinds (mOptions unused).
 	std::vector<tWString> mOptions;
 	int mlOptionIndex;
+
+	eOptionId mOptionId; // eKind_MultiSelect only - see the enum comment above
 };
 
 //----------------------------------------------
@@ -387,6 +414,23 @@ private:
 	std::vector<cSomaOptionsRow> mOptionsRows; // rebuilt each frame by BuildOptionsRows()
 	int mlOptionsHoveredRow;
 	int mlDraggingSliderRow; // -1 when not dragging - see UpdateOptionsSliderDrag()
+
+	// -1 normally; set to the row index of an eKind_Keybind row that was
+	// just clicked, while cSomaMainMenu waits for the player to press a
+	// real key to bind (or Escape to cancel) - see UpdateKeybindCapture().
+	// Suppresses all other mouse hit-testing/clicking while active, same as
+	// real SOMA's own keybind capture UI.
+	int mlAwaitingKeybindRow;
+	void UpdateKeybindCapture();
+
+	// Real Resolution row's value list - built once in the constructor (not
+	// every BuildOptionsRows() call) from cPlatform::GetAvailableVideoModes(),
+	// the same real API amnesia/src/game/LuxMainMenu_Options.cpp's own
+	// Resolution dropdown uses. cSomaOptionsRow::mlOptionIndex/ClickOptionsRow()
+	// both index into this same cached list, so it must stay stable for the
+	// life of the menu.
+	std::vector<cVector2l> mvResolutions;
+	void BuildResolutionList();
 
 	// Real corner/border frame (graphics/startmenu/gfx/window/menu_*.tga),
 	// same asset set MenuHandler.hps's mGfxFrame uses for every Options

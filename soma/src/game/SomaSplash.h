@@ -112,11 +112,24 @@
  *                       animation across the phase's fixed duration, not
  *                       a fabricated "phase" breakdown that would imply
  *                       real work is being tracked when it isn't. The
- *                       bar/frame's on-screen position is this class's own
- *                       reasonable placement (roughly under where
- *                       Premenu.png's own baked "INITIALIZATION..." text
- *                       sits) - the real position is native/closed code
- *                       with no further evidence recovered this pass.
+ *                       bar/frame's on-screen size and horizontal position
+ *                       ARE now real evidence (not a guess) - `nm -C`/
+ *                       `objdump -d` on the real, unstripped Soma.bin.x86_64
+ *                       locates the native cLuxLoadHandler class that
+ *                       game.cfg's <General> block belongs to (its
+ *                       constructor reads "LoadingIcon"/"SplashScreen"/
+ *                       "LoadingBar"/"LoadingFrame"/"SplashScreenMusic" in
+ *                       that exact order) and its OnDraw() disassembles to
+ *                       a DrawGfx() call for the bar/frame with a literal,
+ *                       hardcoded (1024, 128) size - the assets' own exact
+ *                       native pixel dimensions - and a "-512.0" position
+ *                       constant (exactly half that width) applied to a
+ *                       screen-width*0.5 term, confirming horizontal
+ *                       centering. See DrawBootInitPhase()'s own comment in
+ *                       SomaSplash.cpp for the full citation, including the
+ *                       vertical position (a "-256.0" constant read as a
+ *                       bottom-edge anchor - this part is this pass's best
+ *                       inference, not runtime-confirmed).
  *
  * Modeled on the *mechanism* amnesia/src/game/LuxPreMenu.cpp uses (a
  * cGuiSet with cGuiGfxElement images drawn via DrawGfx on a GUI-only

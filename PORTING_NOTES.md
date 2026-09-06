@@ -3637,3 +3637,205 @@ frame instead.
    session started) did not originally include this session's two new cache filenames
    (`fg_logo_sting.wav`/`menu_bg_noise.wav`) - fixed as part of this session's edit to that file,
    but worth double-checking after any future edits to that check add more real sample names.
+
+## SOMA: the "severe map-filling magenta/maroon corruption" bug - NOT resolution-dependent, NOT a light-volume bug; two real, unrelated root causes found and fixed (this session)
+
+Task as briefed: a real user hit "rendering is complete chaos" after the first map loads at
+their real desktop's fullscreen resolution, plus "New Game intro slides/subtitles invisible,
+audio correct" - both suspected to share a root cause in `RendererDeferred.cpp`'s light-volume
+rendering, based on a prior coordinator repro at `OPENHPL_SOMA_DEBUG_SCREENSIZE=3840x2160`
+showing severe magenta/maroon corruption loading `00_01_apartment.hpm`, contrasted against a
+clean `main_menu.hpm` (0 lights) boot at the same size.
+
+**First finding: the premise doesn't hold.** Reproduced the exact magenta/maroon corruption
+live (headless, real `00_01_apartment.hpm`, `PlayerStartArea_1`) - but it is **byte-for-byte
+present at every resolution tested: 1280x720 (the hardcoded default), 1920x1080, 2560x1440, and
+3840x2160**, with the same shapes in the same proportions. Bisected by temporarily disabling
+(env-var gated, reverted before finalizing) `RenderBasicSkyBox()` and
+`iRenderer::mbRenderWorldReflection` entirely - zero visual change either time. This ruled out
+both the resolution-dependent light-volume-geometry hypothesis and the two most obvious existing
+"magenta artifact" suspects (the skybox/reflection bugs from earlier sessions, both already
+fixed) in about 20 minutes, before chasing the real cause.
+
+### Root cause 1 (the dominant one): `technical/block_box/*` invisible collision volumes render fully visible
+
+Found by process of elimination, not a guess: skipping any translucent object whose name/material
+contained `"block_box"` (a temporary env-var-gated debug hook in `RenderTranslucent()`, reverted
+before finalizing) made the ENTIRE magenta corruption disappear at every resolution, leaving a
+correctly dark (if underexposed) room. `entities/technical/block_box/block_box_bed.ent` - a
+bed's crouch-collision physics volume, real content, not garbage - is what fills most of the
+screen from `PlayerStartArea_1`'s exact camera pose. Its real `<UserDefinedVariables>` block
+declares `<Var Name="ShowMesh" Value="false" />`: an authored, explicit "physics-only, never
+player-visible" flag. Dark Descent's own `amnesia/src/game/LuxProp.cpp` reads this exact
+variable and calls `SetVisible()` on the wrapped entity - but SOMA's own entity loader
+(`soma/src/game/SomaLoaders.cpp`'s `cSomaGenericEntityLoader`, this port's "Phase 0" stand-in
+for a real gameplay "Prop" object, which doesn't exist yet for SOMA at all) had no equivalent
+at all, so every `ShowMesh="false"` mesh across every real SOMA map rendered fully visible using
+whatever raw diffuse texture the artist left on it - `block_box.dds` is a solid, saturated
+placeholder color, by design never meant to reach the screen. This is why the shapes looked
+flat/solid-colored with only faint texture detail bleeding through (severe, but not complete,
+overexposure clipping - see root cause 2) and why they looked vaguely "mirrored" around a
+horizontal line (architectural coincidence of the collision box's own geometry near the camera,
+not a real rendering bug).
+
+Fixed in `cSomaGenericEntityLoader::AfterLoad()`: reads `GetVarBool("ShowMesh", ...)` (the base
+`cEntityLoader_Object` already inherits `cResourceVarsObject` and calls
+`LoadUserVariables(apRootElem)` - the `.ent` file's own `<UserDefinedVariables>`, not the
+per-map-instance `<UserVariables>` block `apInstanceVars` already handles a line above - right
+before `AfterLoad()` runs, so no new XML parsing needed) and calls `mpEntity->SetVisible(...)`.
+
+**A real sibling gap found verifying this across resolutions, not just at 720p**: a second,
+smaller magenta patch remained at 1080p/1440p/4K even after the fix above.
+`entities/technical/block_box/block_box_static.ent` - same invisible-collision family, but
+`EntityType="StaticCollider"` with an **empty** `<UserDefinedVariables/>` (no `ShowMesh` var at
+all, confirmed by reading the real file) - so `GetVarBool("ShowMesh", true)` legitimately found
+nothing and fell back to the default, which is wrong specifically for this type: unlike
+`Prop_Rigid` (a real, sometimes-visible prop that merely happens to default visible),
+`StaticCollider` is collision-only by definition. Fixed by making the no-authored-var default
+depend on `msEntityType` (`bDefaultShowMesh = (msEntityType != "StaticCollider")`), not a single
+hardcoded bool.
+
+### Root cause 2 (real, but not what dominated the visible corruption): `deferred_light_frag.hpsl`'s own uncompensated ×8 HDR-precision boost
+
+Independently real and worth fixing regardless of root cause 1: `deferred_light_frag.hpsl` (the
+real per-pixel point/spot-light shading shader - not a debug/complexity path, this is the live,
+unconditional final line) ends with `out_vColor.xyz = vDiffuse * 8.0; // Multiply with 8.0 to
+increase precision`. This is the exact same "real HPL3/HDR-precision convention with no
+compensating downstream divide anywhere in this port's pipeline" gap a previous session already
+found and fixed for `deferred_transparent_frag.hpsl`'s `vFinalColor` (see "the ×8
+HDR-precision-boost gap, actually fixed this time" above) - that fix's own "confirmed via a full
+corpus search that this exact pattern exists in exactly this one file" claim did not hold up: a
+fresh full-corpus grep for `"* 8.0"`/`"*8.0"` found the identical convention, unfixed, in
+`deferred_light_frag.hpsl` (point/spot lights - the dominant light type, run for literally every
+lit pixel every frame) and `deferred_light_box_frag.hpsl` (box lights), plus lower-traffic hits
+in `deferred_fog_frag.hpsl`/`game_edge_glow.hpsl`/`null_frag_array*.hpsl`. Confirmed live: real
+SOMA's own `posteffect_tonemapping_frag.hpsl` (a full Uncharted2-curve HDR tonemap this port has
+no C++ wiring for at all yet) is the one file with a matching `"/8.0"` - `vSourceColor * vec4(1.5
+/ 8.0, ...)  // Rescale the color because of x 8.0 in helper_gamma_correction` - proving this
+boost is genuinely meant to be paired with a real tonemap pass, not a leftover/dead multiply.
+
+Only `deferred_light_frag.hpsl` was fixed this session (by far the highest-value target - point/
+spot lights are the dominant type in almost every real scene); `deferred_light_box_frag.hpsl`/
+`deferred_fog_frag.hpsl` are real, confirmed-present, NOT yet fixed gaps, left for whoever
+chases a magenta/overexposure artifact traced specifically to a box light or fog area (see
+"Concrete next steps" below). Fixed the same way as the existing `vFinalColor` precedent - a new
+regex in `HpslTranspiler.cpp`'s `RemoveUncompensatedHdrPrecisionBoost()` (already the right home
+for this class of fix, just needed a second pattern) rewrites
+`out_vColor.xyz = vDiffuse * 8.0;` to `out_vColor.xyz = vDiffuse;`, at transpile time, in the SOMA-
+only HPSL->GLSL transpiler - zero reachability from Dark Descent/AMFP's own hand-written `.glsl`
+shaders. New regression test `TestLightBoostRemoved()` added to `HpslTranspilerTests.cpp` (23
+cases total now, all passing).
+
+An earlier, more elaborate attempt at this same root cause (building a real
+`cRendererDeferred::mpTonemapProgram` running the actual `posteffect_tonemapping_vtx/frag.hpsl`
+pair as a genuine post-effect, replacing the raw accumulation-buffer blit in
+`CopyToFrameBuffer()`) was fully implemented, then reverted before finalizing: it surfaced a
+real, separate, unresolved type mismatch (`mpAccumBufferTexture` is created as `eTextureType_Rect`
+- a `GL_TEXTURE_RECTANGLE`, this port's own render-target convention, inherited from Dark
+Descent's legacy design - but the real HPSL shader's `sample(finalMap, uv)` assumes a normalized
+`sampler2D`; feeding a Rect-backed texture to a `texture2D()` call produced a driver-specific
+tiled/checkerboard artifact on this project's real Mesa/AGX test platform, not the intended
+image) that would need its own dedicated investigation (likely: detect Rect-backed accumulation
+textures in `HpslTranspiler.cpp` and route `finalMap` through `sampler2DRect`/pixel-space UVs,
+the same pattern `deferred_light_frag.hpsl`'s own G-buffer reads already use via `load()`/
+`texelFetch()`) - flagged as a real, valuable, NOT-yet-attempted follow-up (a full tonemap pass
+would fix real per-scene overexposure more completely than the ×8-strip approach above, which
+only removes the boost, it doesn't add back the real tonemap curve/exposure key/white-cut
+shaping), not attempted further this session to keep the diff safe and scoped.
+
+### Bonus: the New Game intro sequence's "slides/subtitles invisible, audio correct" symptom - a real, different, unrelated bug, also fixed
+
+Per the task's own instruction to check whether the corruption fix also explains this - it does
+not, but investigating it live from the same apartment-map repro setup found a real, separate,
+easy-to-fix bug: `soma/src/game/SomaIntroSequence.cpp`'s constructor creates its own GUI-only
+overlay viewport (black background + slide images + subtitle text - the real engine's "the scene
+is not being rendered" design, reproduced faithfully in this port's own comments) via
+`cScene::CreateViewport(NULL, NULL, true)` - `abPushFront=true`, the same call every other
+GUI-only overlay in this codebase (`cSomaSplash`/`cSomaGammaScreen`) already uses successfully.
+The difference: `cScene::Render()` iterates `mlstViewports` front-to-back (front = rendered
+first = bottom, back = rendered last = on top), and `CreateViewport(..., true)` inserts at the
+FRONT. Splash/gamma are each always the *only* viewport that exists at their point in the boot
+sequence, so front-vs-back never mattered in practice for them - but by the time
+`cSomaIntroSequence`'s constructor runs, `cSomaBase::LoadMap("00_00_intro.hpm")` has already run
+and `mpDebugViewport` (a real, live world+camera viewport for the intro's own 3D scene, kept
+alive on purpose - this port never suppresses it, matching its own "does still create a real
+world/camera/viewport for it" design note) already exists in the list. The intro's own overlay
+viewport, pushed to the front, rendered FIRST - then `mpDebugViewport`'s full deferred-renderer
+pass (which unconditionally repaints the entire frame, it doesn't blend with whatever was
+already there) rendered SECOND, completely overwriting the black background and any slide/
+subtitle content with the raw, undimmed 3D scene. Live-verified: a real headless screenshot
+mid-intro (`OPENHPL_SOMA_MAP=00_00_intro.hpm`) showed plain, undimmed apartment-adjacent 3D
+geometry, not a black screen, not corrupted content, and definitely not any slide/quote/subtitle
+text - exactly matching "audio plays, nothing visible."
+
+Fixed with a one-word change: `CreateViewport(NULL, NULL, false)` - `abPushFront=false` pushes
+this viewport to the BACK of the list instead, so it now renders last (on top), matching the
+"always-on-top GUI set" intent the surrounding comment already (correctly) described but the
+code didn't actually achieve. **Verified live**: the same `OPENHPL_SOMA_MAP=00_00_intro.hpm`
+headless boot now shows the real opening quote ("Reality is that which, when you stop believing
+in it, doesn't go away." - Philip K. Dick) fading in correctly over the black background, and a
+later screenshot shows a slide image mid-fade-transition - both real, correct, previously-
+invisible content, now visible. `cSomaSplash`/`cSomaGammaScreen` were deliberately left
+unchanged (`abPushFront=true`) since they never coexist with another viewport in practice and
+touching them risks nothing but adds no value.
+
+**Verified end-to-end, this session:**
+- `ctest --test-dir amnesia/src/build-lightbig-agent` - all 4 tests pass (`PhysicsNewtonTests`/
+  `CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests`, the last with the new
+  `TestLightBoostRemoved()` case), both before and after every change this session.
+- Real headless screenshots of `00_01_apartment.hpm`'s `PlayerStartArea_1`, both fixes together,
+  at 1280x720/1920x1080/2560x1440/3840x2160: zero magenta/maroon corruption at any size (max
+  pixel channel values well below 255, no clipping, real texture detail visible throughout -
+  a laptop/monitor boot-screen prop with "INITIALIZATION..."/"LOAD"/"OPTIONS" text and a real
+  bottle-label texture with legible small print were both directly confirmed in different
+  screenshots). The scene is now correctly dark/underexposed rather than corrupted - a real,
+  separate, lower-severity tuning gap (see next steps), not a regression from this session's
+  fixes (it was *always* this dark underneath the magenta; the fixes just stopped hiding it
+  behind clipped color).
+- Dark Descent zero-regression: both this session's real fixes
+  (`soma/src/game/HpslTranspiler.cpp`, `soma/src/game/SomaLoaders.cpp`) live entirely under
+  `soma/src/game/`, confirmed via `soma/src/game/CMakeLists.txt`/`amnesia/src/game/CMakeLists.txt`
+  to be **exclusively** part of the separate `Soma` executable target, never compiled into or
+  linked with `Amnesia`/`AmnesiaDemo` at all - a zero-regression guarantee by construction, not
+  just by live testing. Also verified live anyway: a real headless `Amnesia.bin.aarch64` boot
+  (real Dark Descent Steam install, symlinked data only) reached the real "Welcome to Amnesia:
+  The Dark Descent!" first-run 3D-background screen with zero `hpl.log` output (this game only
+  writes the file on a warning/error at all - the strongest available zero-regression signal)
+  and a correctly-rendered vignette/tunnel background, no corruption.
+- The `OPENHPL_SOMA_DEBUG_SCREENSIZE` debug hook (`soma/src/game/SomaBase.cpp`) was kept exactly
+  as instructed - genuinely useful for reproducing this whole class of bug headlessly going
+  forward, and this session's own investigation is a direct example of that value (it's what let
+  "is this resolution-dependent at all" get answered definitively in the first 20 minutes,
+  rather than being assumed).
+
+**A real environmental note for whoever runs concurrent sessions next**: this project's headless
+processes across *every* game module share one system-wide single-instance lock
+(`AcquireHeadlessSingleInstanceLock()`, `/run/user/1000/open-hpl-headless.lock`) - with several
+concurrent agent sessions all running headless SOMA/Amnesia processes throughout this session,
+most launches spent anywhere from a few seconds to several minutes blocked in `flock()` waiting
+their turn (confirmed via `gdb -p <pid> -batch -ex "thread apply all bt"` on an apparently-hung
+process - it was waiting on the lock, not actually stuck). Not a bug, just worth budgeting for.
+Also worth double-checking your own scratch directory for stray orphaned processes from earlier
+in the same session before assuming a "still not ready" poll means something is actually wrong -
+one such stray (this session's own) was what caused a `flock()` wait that looked at first like a
+regression.
+
+**Concrete next steps, most valuable first:**
+1. `deferred_light_box_frag.hpsl` and `deferred_fog_frag.hpsl` both have the same real,
+   confirmed-present, unfixed ×8-boost-with-no-divide gap as `deferred_light_frag.hpsl` did
+   before this session (see corpus grep above) - same shape of fix, needs its own live
+   verification against a scene with real box lights/fog areas to confirm which (if either)
+   produces a visible artifact in practice.
+2. A real HDR tonemap pass (the reverted `mpTonemapProgram` attempt above, or an equivalent) to
+   replace the "just strip the boost" approach with a real Uncharted2 curve + exposure key +
+   white-cut shaping - would fix the remaining, real, separate underexposure/dimness (this
+   session confirmed the apartment scene is now correctly non-clipped but quite dark) more
+   completely than any flat exposure multiply can. The concrete blocker if picked back up:
+   `mpAccumBufferTexture`'s `eTextureType_Rect` vs. the real shader's `sampler2D` assumption
+   (see "Root cause 2" above for the exact failure mode already ruled out).
+3. This session deliberately did not re-check whether the intro sequence's viewport-ordering fix
+   also has any bearing on `cSomaMainMenu`'s own interactive menu (a different, concurrent
+   session's work this session was told to leave alone) - if a future main-menu-related
+   "something's rendering behind/in front of something else" bug ever surfaces, the
+   `cScene::CreateViewport()` `abPushFront` ordering semantics documented here are the first
+   thing to check.

@@ -44,7 +44,32 @@ cSomaIntroSequence::cSomaIntroSequence(cEngine *apEngine, cSomaBase *apBase) : i
 	// "since scene is not being rendered" (see the .h's citation), and this
 	// port does the same by drawing on a dedicated always-on-top GUI set
 	// rather than trying to suppress the world viewport underneath.
-	mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL, true);
+	//
+	// abPushFront=false (unlike cSomaSplash/cSomaGammaScreen's own copy of
+	// this same call, which both correctly use true) is real and load-
+	// bearing here, not a copy-paste slip: cScene::Render() draws
+	// mlstViewports front-to-back, and cScene::CreateViewport(..., true)
+	// inserts at the FRONT (rendered first = bottom). Splash/gamma are each
+	// always the only viewport that exists at their point in the boot
+	// sequence, so front-vs-back never mattered for them - but by the time
+	// this constructor runs (LoadMap("00_00_intro.hpm") already completed,
+	// see cSomaBase::LoadMap()), cSomaBase's own mpDebugViewport (a real
+	// world+camera viewport, kept alive on purpose per this comment's own
+	// "does still create a real world/camera/viewport for it" note) already
+	// exists and is already in the list. With abPushFront=true this
+	// viewport's own opaque-black-then-slides draw was rendered FIRST, then
+	// completely overwritten by mpDebugViewport's own full deferred-
+	// renderer pass (cRendererDeferred::Render() unconditionally repaints
+	// the whole frame, it doesn't blend with whatever was already there) -
+	// live-verified root cause of "New Game intro slides/subtitles never
+	// visible, audio plays fine" (see PORTING_NOTES.md): a real headless
+	// screenshot mid-intro showed the raw, undimmed 00_00_intro.hpm 3D scene
+	// with zero black overlay/slide/subtitle content at all, not a blank or
+	// corrupted frame. false correctly puts this viewport at the BACK
+	// (rendered last = on top), matching the comment above's own stated
+	// intent ("always-on-top GUI set") for the first time an actual
+	// world viewport coexists with it.
+	mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 	mpViewport->AddGuiSet(mpGuiSet);
 
 	mpBlackBg = mpGui->CreateGfxFilledRect(cColor(0, 1), eGuiMaterial_Alpha);
@@ -452,6 +477,14 @@ void cSomaIntroSequence::DrawSlide(const cIntroSlide &aSlide, float afAlpha)
 void cSomaIntroSequence::DrawSubtitle()
 {
 	if (msCurrentSubtitle == "")
+		return;
+
+	// Real Sound/ShowSubtitles - see SomaConfig.h's mbShowSubtitles comment
+	// and SomaMainMenu.cpp's Options>Audio>Subtitles row. This is this
+	// engine's only subtitle-rendering content so far, but the toggle
+	// itself is real: matches amnesia/src/game/LuxMainMenu_Options.cpp's own
+	// gpBase->mpMessageHandler->SetShowSubtitles()/ShowSubtitles() gate.
+	if (gpSomaBase && gpSomaBase->GetConfig()->mbShowSubtitles == false)
 		return;
 
 	tString sLine = msCurrentSpeaker + ": " + msCurrentSubtitle;

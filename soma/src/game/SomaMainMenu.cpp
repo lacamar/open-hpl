@@ -94,6 +94,7 @@ static cSomaOptionsRow MakeCategoryRow(const tWString &asLabel, eSomaMenuScreen 
 	row.mpFloatValue = NULL;
 	row.mfMin = row.mfMax = row.mfStep = 0;
 	row.mlOptionIndex = 0;
+	row.mOptionId = cSomaOptionsRow::eOptionId_None;
 	return row;
 }
 
@@ -135,6 +136,7 @@ static cSomaOptionsRow MakeToggleRow(const tWString &asLabel, bool *apValue, boo
 	row.mOptions.push_back(asOffLabel);
 	row.mOptions.push_back(asOnLabel);
 	row.mlOptionIndex = (apValue && *apValue) ? 1 : 0;
+	row.mOptionId = cSomaOptionsRow::eOptionId_None;
 	return row;
 }
 
@@ -155,26 +157,51 @@ static cSomaOptionsRow MakeSliderRow(const tWString &asLabel, float *apValue, fl
 	row.mfStep = afStep;
 	row.mSliderValueText = asValueText;
 	row.mlOptionIndex = 0;
+	row.mOptionId = cSomaOptionsRow::eOptionId_None;
 	return row;
 }
 
-// Real OptionMenu_ButtonOptionsMultiSelect() rows with no live backend in
-// this engine at all (no texture/shadow/AA/resolution/language system) -
-// always disabled, mlOptionIndex fixed at the real script's own default
-// index (see BuildOptionsRows() call sites for which real default) so the
-// displayed value matches what a fresh real install would actually show.
-static cSomaOptionsRow MakeMultiSelectRow(const tWString &asLabel, const std::vector<tWString> &aOptions, int alDefaultIndex)
+// Real OptionMenu_ButtonOptionsMultiSelect() rows. abEnabled/aOptionId default
+// to "no live backend" (disabled, mlOptionIndex fixed at the real script's
+// own default index - see BuildOptionsRows() call sites for which real
+// default) for the settings this engine still can't act on at all
+// (RefreshRate/TextureQuality/TextureFilter/ShadowQuality/Language/
+// DepthOfField) - Resolution/AntiAliasing pass abEnabled=true and their real
+// eOptionId explicitly (see ClickOptionsRow()'s eKind_MultiSelect case).
+static cSomaOptionsRow MakeMultiSelectRow(const tWString &asLabel, const std::vector<tWString> &aOptions, int alDefaultIndex,
+										   bool abEnabled = false, cSomaOptionsRow::eOptionId aOptionId = cSomaOptionsRow::eOptionId_None)
 {
 	cSomaOptionsRow row;
 	row.mKind = cSomaOptionsRow::eKind_MultiSelect;
 	row.msLabel = asLabel;
-	row.mbEnabled = false;
+	row.mbEnabled = abEnabled;
 	row.mTarget = eSomaMenuScreen_Main;
 	row.mpBoolValue = NULL;
 	row.mpFloatValue = NULL;
 	row.mfMin = row.mfMax = row.mfStep = 0;
 	row.mOptions = aOptions;
 	row.mlOptionIndex = aOptions.empty() ? 0 : cMath::Clamp(alDefaultIndex, 0, (int)aOptions.size() - 1);
+	row.mOptionId = aOptionId;
+	return row;
+}
+
+// Real OptionMenu_ButtonKeybind() row - asKeyName is the action's current
+// bound key display string (cSomaBase::GetPlayerActionKeyName()), rebuilt
+// fresh every BuildOptionsRows() call like everything else here so a
+// just-completed rebind shows up immediately on the very next frame.
+static cSomaOptionsRow MakeKeybindRow(const tWString &asLabel, cSomaBase::eSomaPlayerAction aAction, const tWString &asKeyName)
+{
+	cSomaOptionsRow row;
+	row.mKind = cSomaOptionsRow::eKind_Keybind;
+	row.msLabel = asLabel;
+	row.mbEnabled = true;
+	row.mTarget = eSomaMenuScreen_Main;
+	row.mpBoolValue = NULL;
+	row.mpFloatValue = NULL;
+	row.mfMin = row.mfMax = row.mfStep = 0;
+	row.mSliderValueText = asKeyName;
+	row.mlOptionIndex = (int)aAction;
+	row.mOptionId = cSomaOptionsRow::eOptionId_None;
 	return row;
 }
 
@@ -224,6 +251,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mScreen = eSomaMenuScreen_Main;
 	mlOptionsHoveredRow = -1;
 	mlDraggingSliderRow = -1;
+	mlAwaitingKeybindRow = -1;
 
 	mpFrameCornerTL = mpFrameCornerTR = mpFrameCornerBL = mpFrameCornerBR = NULL;
 	mpFrameBorderTop = mpFrameBorderBottom = mpFrameBorderLeft = mpFrameBorderRight = NULL;
@@ -285,6 +313,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	CreateGui();
 	CreateOptionsGui();
 	CreateParticleEmitters();
+	BuildResolutionList();
 
 	// Real menu click/hover/glitch/sting sound effects - unlike Menu_Music.ogg
 	// below, these are FMOD Studio/Designer-banked in the real install (see
@@ -749,16 +778,28 @@ void cSomaMainMenu::Update(float afTimeStep)
 		// script's OptionMenu_ButtonOptions() (unlike OptionMenu_
 		// ButtonMainMenu()) acts immediately on click.
 		BuildOptionsRows();
-		UpdateOptionsMouseHitTest();
 
-		if (bPressedEdge && mlOptionsHoveredRow != -1)
-			ClickOptionsRow(mlOptionsHoveredRow);
+		// Real OptionMenu_ButtonKeybind() capture mode: while waiting for a
+		// key press to bind, every other mouse hit-test/click/drag is
+		// suppressed (matches the real script's own kKeybindFocusSlot
+		// exclusivity) - only UpdateKeybindCapture() below runs.
+		if (mlAwaitingKeybindRow != -1)
+		{
+			UpdateKeybindCapture();
+		}
+		else
+		{
+			UpdateOptionsMouseHitTest();
 
-		if (bDown && mlDraggingSliderRow != -1)
-			UpdateOptionsSliderDrag();
+			if (bPressedEdge && mlOptionsHoveredRow != -1)
+				ClickOptionsRow(mlOptionsHoveredRow);
 
-		if (bDown == false)
-			mlDraggingSliderRow = -1;
+			if (bDown && mlDraggingSliderRow != -1)
+				UpdateOptionsSliderDrag();
+
+			if (bDown == false)
+				mlDraggingSliderRow = -1;
+		}
 	}
 
 	mbMouseWasDown = bDown;
@@ -1136,18 +1177,27 @@ void cSomaMainMenu::DrawMenuItems()
 // Real script tree (script/modules/MenuHandler.hps): GuiOptions() lists
 // Gameplay/Controls/Video/Audio/Back, each of which opens its own
 // sub-screen (GuiOptionsVideo() further splits into Display/PostEffect/
-// World/Gamma). This scaffold has a real, live backend for exactly two
-// slices of that: master volume (cSound) and three video settings
-// (fullscreen/vsync/gamma, via cLowLevelGraphics) - see SomaConfig.h. So
-// the tree here is deliberately shallow: OptionsRoot lists only "AUDIO"/
-// "DISPLAY"/"BACK" (real captions Menu.Audio/Menu.Display/Menu.Back -
-// "Display" is the closest single real caption for a page that collapses
-// the real Video tab's Display+Gamma sub-pages into one, since nothing
-// here implements PostEffect/World). Everything real but not backed by a
-// working setting yet (Controls/Gameplay, TextureQuality/ShadowQuality/
-// SSAO/AA/refresh rate/resolution list, PS4/XBO speaker type, subtitles,
-// FOV, ...) is left out entirely rather than drawn as a dead control -
-// see the class comment in SomaMainMenu.h.
+// World/Gamma, GuiOptionsInput() into Keybind/MouseOptions/GamepadOptions).
+// The FULL real tree/order/captions is reproduced (see the class comment in
+// SomaMainMenu.h for the earlier, narrower pass this superseded) - every row
+// this engine has no real backend for is still listed, just drawn
+// grayed-out/non-interactive (cSomaOptionsRow::mbEnabled).
+//
+// Rows with a real, live/persisted backend as of this pass: master volume +
+// Subtitles (cSound/cSomaIntroSequence), Gamma/VSync/Fullscreen/Resolution/
+// Anti-Aliasing/Horizontal FOV (cLowLevelGraphics/cRenderSettings/cCamera -
+// Resolution and Fullscreen are restart-required, same contract; the rest
+// are live), and MouseOptions' Sensitivity/InvertMouseY (cSomaPlayer). See
+// each row's own build-site comment below and SomaConfig.h for exactly which
+// real script/config key each maps to. Still honestly grayed - no working
+// backend exists in this engine yet: Gameplay's whole tab (language/hints/
+// screen-distortion/colour-separation/crosshair-style), Keybindings/
+// Controller Options (no rebindable-action UI built against HPL2/core's real
+// cAction system yet, see eSomaMenuScreen_OptionsControls's comment),
+// Refresh Rate (no real distinct per-mode value on this engine's SDL2
+// backend - see the Resolution row's comment), PostEffect/Rendering tabs
+// (no depth-of-field/SSAO/bloom/texture/shadow/reflection/refraction
+// systems), Smooth Mouse, and Closed Caption (HearingAid).
 //
 //-----------------------------------------------------------------------
 
@@ -1156,6 +1206,66 @@ void cSomaMainMenu::NavigateTo(eSomaMenuScreen aScreen)
 	mScreen = aScreen;
 	mlOptionsHoveredRow = -1;
 	mlDraggingSliderRow = -1;
+	mlAwaitingKeybindRow = -1;
+}
+
+//-----------------------------------------------------------------------
+
+// Real Resolution row's value list - see the mvResolutions comment in
+// SomaMainMenu.h. cPlatform::GetAvailableVideoModes() is the same real API
+// amnesia/src/game/LuxMainMenu_Options.cpp's own Resolution dropdown uses
+// (see cLuxMainMenu_Options::UpdateResolutions() there); this engine's SDL2
+// backend enumerates every display mode across every connected display plus
+// a synthetic (0,0) "current desktop" marker per display (see
+// PlatformSDL.cpp's cPlatform::GetAvailableVideoModes()) - only the primary
+// display's (mlDisplay==0) real, non-zero sizes are kept here, deduplicated,
+// since this scaffold has no multi-monitor picker at all (real SOMA's own
+// Resolution row doesn't show a separate per-display list either).
+void cSomaMainMenu::BuildResolutionList()
+{
+	mvResolutions.clear();
+
+	tVideoModeVec vModes;
+	cPlatform::GetAvailableVideoModes(vModes, 32);
+
+	for (size_t i = 0; i < vModes.size(); ++i)
+	{
+		const cVideoMode &mode = vModes[i];
+		if (mode.mlDisplay != 0)
+			continue;
+		if (mode.mvScreenSize.x <= 0 || mode.mvScreenSize.y <= 0)
+			continue; // the synthetic "current desktop" marker - not a real explicit size to switch to
+
+		bool bDup = false;
+		for (size_t j = 0; j < mvResolutions.size(); ++j)
+		{
+			if (mvResolutions[j] == mode.mvScreenSize) { bDup = true; break; }
+		}
+		if (bDup == false)
+			mvResolutions.push_back(mode.mvScreenSize);
+	}
+
+	// Headless/no-display environments (this project's own established
+	// test convention - see the class comment's "headless-control" mentions
+	// elsewhere in this codebase) may enumerate zero real modes - fall back
+	// to whatever the engine actually booted at, so the Resolution row and
+	// ClickOptionsRow()'s index math always have at least one real entry.
+	if (mvResolutions.empty())
+		mvResolutions.push_back(mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt());
+
+	// Make sure the currently-configured resolution (which may not be a
+	// mode SDL enumerated - e.g. a leftover value from a display that's
+	// since been unplugged) is always representable, same "(Custom)"
+	// fallback idea as LuxMainMenu_Options.cpp's own resolution list.
+	cSomaConfig *pCfg = mpBase->GetConfig();
+	cVector2l vCurRes(pCfg->mlScreenWidth, pCfg->mlScreenHeight);
+	bool bHasCurrent = false;
+	for (size_t i = 0; i < mvResolutions.size(); ++i)
+	{
+		if (mvResolutions[i] == vCurRes) { bHasCurrent = true; break; }
+	}
+	if (bHasCurrent == false)
+		mvResolutions.push_back(vCurRes);
 }
 
 //-----------------------------------------------------------------------
@@ -1176,13 +1286,11 @@ void cSomaMainMenu::BuildOptionsRows()
 	static bool bScreenDistortion = true;
 	static bool bColorSeparation = true;
 	static bool bCrosshairSimple = false;
-	static bool bSubtitles = true;
 	static bool bHearingAid = false;
 	static bool bSSAO = true;
 	static bool bBloom = true;
 	static bool bReflection = true;
 	static bool bRefraction = true;
-	static float fFOV = 70.0f;
 
 	switch (mScreen)
 	{
@@ -1216,14 +1324,51 @@ void cSomaMainMenu::BuildOptionsRows()
 	case eSomaMenuScreen_OptionsControls:
 		// Real GuiOptionsInput() top level - Keybind/MouseOptions/
 		// GamepadOptions (EyeTracking omitted: real script only shows it
-		// when EyeTracking_IsAvailable(), never true here). No keybinding/
-		// mouse-sensitivity/gamepad backend exists in this engine at all, so
-		// all three are disabled rather than navigating to an empty screen.
-		mOptionsRows.push_back(MakeDisabledActionRow(_W("KEYBINDINGS"), eSomaMenuScreen_OptionsControls));
-		mOptionsRows.push_back(MakeDisabledActionRow(_W("MOUSE OPTIONS"), eSomaMenuScreen_OptionsControls));
+		// when EyeTracking_IsAvailable(), never true here). Keybindings and
+		// MouseOptions both have a real backend now (see
+		// eSomaMenuScreen_OptionsControlsKeybind/Mouse below); no gamepad
+		// support exists at all, so Controller Options stays disabled.
+		mOptionsRows.push_back(MakeCategoryRow(_W("KEYBINDINGS"), eSomaMenuScreen_OptionsControlsKeybind));
+		mOptionsRows.push_back(MakeCategoryRow(_W("MOUSE OPTIONS"), eSomaMenuScreen_OptionsControlsMouse));
 		mOptionsRows.push_back(MakeDisabledActionRow(_W("CONTROLLER OPTIONS"), eSomaMenuScreen_OptionsControls));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
 		break;
+
+	case eSomaMenuScreen_OptionsControlsKeybind:
+		// Real GuiOptionsInputKeybind() - simplified to this scaffold's
+		// actual action set (cSomaBase::eSomaPlayerAction: Forward/Backward/
+		// Left/Right/Jump, no secondary bind slot, no gamepad rebinding -
+		// see SomaBase.h's own scope note). Each row shows the action's real
+		// current key (cSomaBase::GetPlayerActionKeyName()) and, on click,
+		// waits for the next real key press to rebind it (see
+		// UpdateKeybindCapture()).
+		mOptionsRows.push_back(MakeKeybindRow(_W("MOVE FORWARD"), cSomaBase::eSomaPlayerAction_Forward,
+											   cString::To16Char(mpBase->GetPlayerActionKeyName(cSomaBase::eSomaPlayerAction_Forward))));
+		mOptionsRows.push_back(MakeKeybindRow(_W("MOVE BACKWARD"), cSomaBase::eSomaPlayerAction_Backward,
+											   cString::To16Char(mpBase->GetPlayerActionKeyName(cSomaBase::eSomaPlayerAction_Backward))));
+		mOptionsRows.push_back(MakeKeybindRow(_W("MOVE LEFT"), cSomaBase::eSomaPlayerAction_Left,
+											   cString::To16Char(mpBase->GetPlayerActionKeyName(cSomaBase::eSomaPlayerAction_Left))));
+		mOptionsRows.push_back(MakeKeybindRow(_W("MOVE RIGHT"), cSomaBase::eSomaPlayerAction_Right,
+											   cString::To16Char(mpBase->GetPlayerActionKeyName(cSomaBase::eSomaPlayerAction_Right))));
+		mOptionsRows.push_back(MakeKeybindRow(_W("JUMP"), cSomaBase::eSomaPlayerAction_Jump,
+											   cString::To16Char(mpBase->GetPlayerActionKeyName(cSomaBase::eSomaPlayerAction_Jump))));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsControls));
+		break;
+
+	case eSomaMenuScreen_OptionsControlsMouse:
+	{
+		// Real GuiOptionsInputMouse(): MouseSens/InvertMouseY/SmoothMouse/
+		// Back. MouseSens and InvertMouseY are real, live settings (see
+		// cSomaPlayer::Update()); SmoothMouse has no backend (this engine's
+		// mouse-look applies the raw per-frame delta directly, with no
+		// smoothing/filter buffer to gate), stays disabled.
+		static bool bSmoothMouse = true;
+		mOptionsRows.push_back(MakeSliderRow(_W("MOUSE SENSITIVITY"), &pCfg->mfMouseSensitivity, 0.01f, 4.01f, 0.05f));
+		mOptionsRows.push_back(MakeToggleRow(_W("INVERT MOUSE Y"), &pCfg->mbInvertMouseY));
+		mOptionsRows.push_back(MakeToggleRow(_W("SMOOTH MOUSE"), &bSmoothMouse, false));
+		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsControls));
+		break;
+	}
 
 	case eSomaMenuScreen_OptionsVideo:
 		// Real GuiOptionsVideo(): AutoDetect/Display/PostEffect/Rendering/
@@ -1240,17 +1385,29 @@ void cSomaMainMenu::BuildOptionsRows()
 	case eSomaMenuScreen_OptionsVideoDisplay:
 	{
 		// Real GuiOptionsVideoDisplay(): Resolution/DisplayMode/VSync/
-		// RefreshRate/AA/FOV/Back. DisplayMode and VSync are the two rows
-		// with a real backend (cSomaConfig::mbFullscreen/mbVSync) - real
-		// DisplayMode is a 3-way Fullscreen/Windowed/Borderless multi-select
-		// and real VSync is On/Adaptive/Off, both collapsed to a 2-state
-		// toggle here since this engine only has a bool for each (no
+		// RefreshRate/AA/FOV/Back. DisplayMode and VSync are collapsed to a
+		// 2-state toggle here since this engine only has a bool for each (no
 		// borderless window mode, no adaptive-vsync getter - see
-		// SomaConfig.h). Resolution/RefreshRate/AA/FOV have no backend at
-		// all (no resolution-switching, no AA, no FOV/projection control).
-		const cVector2l &vScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
-		tWString sResolution = cString::ToStringW(vScreenSize.x) + _W("x") + cString::ToStringW(vScreenSize.y);
-		mOptionsRows.push_back(MakeMultiSelectRow(_W("RESOLUTION"), {sResolution}, 0));
+		// SomaConfig.h); Resolution/AA/FOV are now real too (see below).
+		// RefreshRate stays disabled: this engine's own SDL2 video-mode
+		// enumeration (HPL2/core/sources/impl/PlatformSDL.cpp's
+		// cPlatform::GetAvailableVideoModes()) hardcodes every mode's
+		// mlRefreshRate to a literal 1 rather than reading
+		// SDL_DisplayMode::refresh_rate - there is no real distinct
+		// per-resolution refresh rate value anywhere in this engine to offer
+		// a choice between, on this platform/backend (out of this task's
+		// file scope to fix - HPL2/core is shared with Dark Descent/AMFP and
+		// other agents' concurrent work).
+		int lCurRes = 0;
+		std::vector<tWString> vResOptions;
+		for (size_t i = 0; i < mvResolutions.size(); ++i)
+		{
+			vResOptions.push_back(cString::ToStringW(mvResolutions[i].x) + _W("x") + cString::ToStringW(mvResolutions[i].y));
+			if (mvResolutions[i].x == pCfg->mlScreenWidth && mvResolutions[i].y == pCfg->mlScreenHeight)
+				lCurRes = (int)i;
+		}
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("RESOLUTION"), vResOptions, lCurRes, true, cSomaOptionsRow::eOptionId_Resolution));
+
 		// Real captions "FULLSCREEN"/"WINDOWED" (base_english.lang's
 		// Fullscreen/Windowed entries) - the real 3-way Fullscreen/Windowed/
 		// Borderless multi-select collapsed to this engine's single bool,
@@ -1258,22 +1415,25 @@ void cSomaMainMenu::BuildOptionsRows()
 		mOptionsRows.push_back(MakeToggleRow(_W("DISPLAY MODE"), &pCfg->mbFullscreen, true, _W("FULLSCREEN"), _W("WINDOWED")));
 		mOptionsRows.push_back(MakeToggleRow(_W("V-SYNC"), &pCfg->mbVSync));
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("REFRESH RATE"), {_W("AUTO")}, 0));
-		mOptionsRows.push_back(MakeMultiSelectRow(_W("ANTI-ALIASING"), {_W("OFF"), _W("FXAA")}, 1));
+		// Real live backend: cRenderSettings::mbUseEdgeSmooth (see
+		// SomaConfig.h's mbAntiAliasing comment) - genuinely toggles
+		// RendererDeferred.cpp's real FXAA-style edge-smoothing pass.
+		mOptionsRows.push_back(MakeMultiSelectRow(_W("ANTI-ALIASING"), {_W("OFF"), _W("FXAA")}, pCfg->mbAntiAliasing ? 1 : 0,
+												   true, cSomaOptionsRow::eOptionId_AntiAliasing));
 
 		// Real MenuHandler.hps's FOV row is the one slider that shows a
 		// trailing numeric value (Gamma/Volume don't - see
 		// cSomaOptionsRow::mSliderValueText) - real formula verbatim from
 		// GuiOptionsVideoDisplay(): the stored 50-83 value is treated as a
 		// vertical-ish FOV and converted to a horizontal degrees figure using
-		// the real screen aspect ratio before display. No real backend
-		// applies this to an actual camera/projection in this engine (see
-		// the disabled=false arg below and the class comment on why it stays
-		// grayed), but the row now at least *looks* like the real row
-		// instead of silently omitting its value number altogether.
+		// the real screen aspect ratio before display. Now a real, live
+		// setting: cSomaConfig::mfFOV is applied to the real player camera
+		// every cSomaPlayer::Update() (see SomaPlayer.cpp).
+		const cVector2l &vScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
 		float fAspect = (vScreenSize.y != 0) ? (float)vScreenSize.x / (float)vScreenSize.y : 16.0f / 9.0f;
-		float fHorizontalFovRad = 2.0f * atanf(tanf(cMath::ToRad(fFOV) * 0.5f) * fAspect);
+		float fHorizontalFovRad = 2.0f * atanf(tanf(cMath::ToRad(pCfg->mfFOV) * 0.5f) * fAspect);
 		tWString sFovText = cString::ToStringW((int)(cMath::ToDeg(fHorizontalFovRad) + 0.5f));
-		mOptionsRows.push_back(MakeSliderRow(_W("HORIZONTAL FOV"), &fFOV, 50.0f, 83.0f, 0.05f, false, sFovText));
+		mOptionsRows.push_back(MakeSliderRow(_W("HORIZONTAL FOV"), &pCfg->mfFOV, 50.0f, 83.0f, 0.05f, true, sFovText));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsVideo));
 		break;
 	}
@@ -1309,11 +1469,21 @@ void cSomaMainMenu::BuildOptionsRows()
 
 	case eSomaMenuScreen_OptionsAudio:
 		// Real GuiOptionsAudio(): SpeakerType (PS4/XBO only, never shown
-		// here)/Volume/Subtitles/HearingAid/Back. Volume is the only row
-		// with a real backend (cSound); this engine has no subtitle
-		// rendering or closed-caption system at all yet.
+		// here)/Volume/Subtitles/HearingAid/Back. Volume and Subtitles now
+		// both have a real backend: Subtitles (real key Sound/ShowSubtitles)
+		// genuinely gates cSomaIntroSequence::DrawSubtitle(), this engine's
+		// only subtitle-rendering content so far (see SomaIntroSequence.cpp).
+		// HearingAid ("CLOSED CAPTION" - real key
+		// Sound/ForceShowSubtitleCharacterName) stays disabled: the real
+		// setting forces the speaker-name prefix onto subtitle lines that
+		// would otherwise omit it when the speaker is visually unambiguous:
+		// this port's subtitle line always includes the speaker name
+		// already (no contextual suppression logic exists to "force"
+		// anything on top of - see DrawSubtitle()), so there is no real,
+		// distinguishable behaviour left for this toggle to control without
+		// inventing a rule the real game doesn't have.
 		mOptionsRows.push_back(MakeSliderRow(_W("VOLUME"), &pCfg->mfMasterVolume, 0.0f, 1.0f, 0.1f));
-		mOptionsRows.push_back(MakeToggleRow(_W("SUBTITLES"), &bSubtitles, false));
+		mOptionsRows.push_back(MakeToggleRow(_W("SUBTITLES"), &pCfg->mbShowSubtitles));
 		mOptionsRows.push_back(MakeToggleRow(_W("CLOSED CAPTION"), &bHearingAid, false));
 		mOptionsRows.push_back(MakeBackRow(eSomaMenuScreen_OptionsRoot));
 		break;
@@ -1378,11 +1548,60 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 	switch (row.mKind)
 	{
 	case cSomaOptionsRow::eKind_MultiSelect:
-		// No real multi-select row is ever built with mbEnabled true yet
-		// (see MakeMultiSelectRow()), so this is unreachable today - kept so
-		// the day one of these gets a real backend, wiring it in here is a
-		// one-line addition rather than a new switch case.
+	{
+		// Only Resolution/AntiAliasing are ever built with mbEnabled true
+		// (see MakeMultiSelectRow() call sites in BuildOptionsRows()) -
+		// every other multi-select row's mOptionId is eOptionId_None and
+		// mbEnabled is false, already filtered out by the guard above.
+		if (row.mOptions.empty())
+			break;
+
+		// Real OptionMenu_ButtonOptionsMultiSelect(): clicking left/right of
+		// the widget's own centre cycles the value list backward/forward -
+		// same click-side test as the eKind_Slider click-to-step branch
+		// below (this cycle-bar widget occupies the exact same on-screen
+		// rect as the slider one, see DrawOptionsCycleControl()).
+		float fLocalX = mpGuiSet->GetMousePos().x - kMainMenuButtonPos.x;
+		float fMid = (kOptionsSliderTrackLocalMinX + kOptionsSliderTrackLocalMaxX) * 0.5f;
+		int lDir = (fLocalX < fMid) ? -1 : 1;
+		int lCount = (int)row.mOptions.size();
+		int lNewIndex = ((row.mlOptionIndex + lDir) % lCount + lCount) % lCount;
+
+		// Real OptionMenu_ButtonOptionsMultiSelect() plays frontend_menu_select
+		// on click (helper_imgui_options.hps).
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
+
+		switch (row.mOptionId)
+		{
+		case cSomaOptionsRow::eOptionId_Resolution:
+			// Restart-required, same contract as Fullscreen (see
+			// SomaConfig.h's mlScreenWidth/mlScreenHeight comment) -
+			// mvResolutions is the same cached list the row's value text
+			// came from in BuildOptionsRows(), so the index lines up.
+			if (lNewIndex >= 0 && lNewIndex < (int)mvResolutions.size())
+			{
+				pCfg->mlScreenWidth = mvResolutions[lNewIndex].x;
+				pCfg->mlScreenHeight = mvResolutions[lNewIndex].y;
+				Log("SOMA options: Resolution changed to %dx%d - takes effect on next launch\n",
+					pCfg->mlScreenWidth, pCfg->mlScreenHeight);
+			}
+			break;
+
+		case cSomaOptionsRow::eOptionId_AntiAliasing:
+			// Live: only two real values exist (Off/FXAA), so cycling either
+			// direction just flips it - see SomaConfig.h's mbAntiAliasing
+			// comment for the real cRenderSettings field this drives.
+			pCfg->mbAntiAliasing = (lNewIndex != 0);
+			if (mpViewport) mpViewport->GetRenderSettings()->mbUseEdgeSmooth = pCfg->mbAntiAliasing;
+			break;
+
+		default:
+			break;
+		}
+
+		pCfg->Save();
 		break;
+	}
 
 	case cSomaOptionsRow::eKind_Category:
 	case cSomaOptionsRow::eKind_Back:
@@ -1450,12 +1669,89 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 				mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
 			else if (row.mpFloatValue == &pCfg->mfGamma)
 				mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+			else if (row.mpFloatValue == &pCfg->mfFOV && mpBase->GetDebugCamera())
+				// Live-applied here too (not just read every cSomaPlayer::
+				// Update() - see SomaPlayer.cpp) so this is visibly correct
+				// even from the menu's own free-fly camera, before any real
+				// game map/player controller exists.
+				mpBase->GetDebugCamera()->SetFOV(cMath::ToRad(pCfg->mfFOV));
 
 			pCfg->Save();
 		}
 		break;
 	}
+
+	case cSomaOptionsRow::eKind_Keybind:
+	{
+		// Real OptionMenu_ButtonKeybind(): clicking a bind slot starts
+		// capture mode rather than acting immediately - see
+		// UpdateKeybindCapture() (driven from Update() instead of here,
+		// since it must keep running across frames until a key is pressed).
+		//
+		// Drain any already-queued key presses first (iKeyboard::GetKey()'s
+		// queue is fed by every real keypress regardless of what's focused -
+		// e.g. whatever key, if any, was down in the same frame as this
+		// click) - without this, capture mode could instantly "consume" a
+		// stale press from before the row was even clicked instead of
+		// genuinely waiting for the next one.
+		iKeyboard *pKeyboard = mpEngine->GetInput()->GetKeyboard();
+		while (pKeyboard->KeyIsPressed())
+			pKeyboard->GetKey();
+
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
+		mlAwaitingKeybindRow = alIndex;
+		break;
 	}
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::UpdateKeybindCapture()
+{
+	if (mlAwaitingKeybindRow < 0 || mlAwaitingKeybindRow >= (int)mOptionsRows.size())
+	{
+		mlAwaitingKeybindRow = -1;
+		return;
+	}
+
+	const cSomaOptionsRow &row = mOptionsRows[mlAwaitingKeybindRow];
+	if (row.mKind != cSomaOptionsRow::eKind_Keybind)
+	{
+		mlAwaitingKeybindRow = -1;
+		return;
+	}
+
+	// Real iKeyboard::GetKey() - "can be checked many times to see all key
+	// presses" (see Keyboard.h) - designed for exactly this kind of polling
+	// capture loop, same idea as amnesia/src/game/LuxMainMenu_KeyConfig.cpp's
+	// own key-press interception, just polled directly here rather than
+	// routed through a cWidget focus message (this menu doesn't use
+	// cWidget/cGui's widget system at all - see the class comment).
+	// KeyIsPressed() MUST be checked first - GetKey() calls .front() on its
+	// internal queue unconditionally (see KeyboardSDL.cpp), undefined
+	// behaviour on an empty one.
+	iKeyboard *pKeyboard = mpEngine->GetInput()->GetKeyboard();
+	if (pKeyboard->KeyIsPressed() == false)
+		return; // still waiting
+
+	cKeyPress keyPress = pKeyboard->GetKey();
+
+	// Escape cancels the capture without rebinding anything - same "back
+	// out of a modal without side effects" convention every other Options
+	// sub-screen's Back row already follows.
+	if (keyPress.mKey != eKey_Escape)
+	{
+		cSomaBase::eSomaPlayerAction action = (cSomaBase::eSomaPlayerAction)row.mlOptionIndex;
+		mpBase->RebindPlayerAction(action, keyPress.mKey);
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
+	}
+	else
+	{
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+	}
+
+	mlAwaitingKeybindRow = -1;
 }
 
 //-----------------------------------------------------------------------
@@ -1495,6 +1791,8 @@ void cSomaMainMenu::UpdateOptionsSliderDrag()
 		mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
 	else if (row.mpFloatValue == &pCfg->mfGamma)
 		mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+	else if (row.mpFloatValue == &pCfg->mfFOV && mpBase->GetDebugCamera())
+		mpBase->GetDebugCamera()->SetFOV(cMath::ToRad(pCfg->mfFOV)); // see the matching branch in ClickOptionsRow() above
 
 	pCfg->Save();
 }
@@ -1690,6 +1988,34 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 		DrawOptionsCycleControl(fRowY, sValue, widgetOnCol, widgetArrowCol, cColor(0, 1));
 		break;
 	}
+
+	case cSomaOptionsRow::eKind_Keybind:
+	{
+		// Real OptionMenu_ButtonKeybind() - same meter-bar background as
+		// every other widget here, no left/right arrows (this isn't a
+		// cycle - a single click starts capture instead), showing either
+		// the bound key's real name or, while this exact row is being
+		// captured (see mlAwaitingKeybindRow), a prompt telling the player
+		// to press a key.
+		if (mpOptionsMeterGfx)
+		{
+			cVector3f vMeterPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fRowY + kOptionsSliderOffset.y, 1.5f);
+			mpGuiSet->DrawGfx(mpOptionsMeterGfx, vMeterPos, kOptionsSliderSize, widgetOnCol);
+		}
+
+		bool bAwaitingThisRow = (mlAwaitingKeybindRow == alIndex);
+		tWString sValue = bAwaitingThisRow ? _W("PRESS A KEY...") : aRow.mSliderValueText;
+
+		if (mpButtonFont)
+		{
+			const float fFontH = 24.0f;
+			cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsSliderOffset.x + kOptionsSliderSize.x * 0.5f,
+								 fRowY + kOptionsSliderOffset.y + (kOptionsSliderSize.y - fFontH) * 0.5f, 2.0f);
+			mpGuiSet->DrawFont(sValue, mpButtonFont, vValuePos, cVector2f(fFontH, fFontH),
+								bAwaitingThisRow ? kSelectedTextColor : cColor(0, 1), eFontAlign_Center);
+		}
+		break;
+	}
 	}
 }
 
@@ -1749,6 +2075,8 @@ void cSomaMainMenu::DrawOptionsScreen()
 	{
 	case eSomaMenuScreen_OptionsGameplay: sTitle = _W("GAME"); break;
 	case eSomaMenuScreen_OptionsControls: sTitle = _W("CONTROLS"); break;
+	case eSomaMenuScreen_OptionsControlsMouse: sTitle = _W("MOUSE OPTIONS"); break;
+	case eSomaMenuScreen_OptionsControlsKeybind: sTitle = _W("KEYBINDINGS"); break;
 	case eSomaMenuScreen_OptionsVideo: sTitle = _W("VIDEO"); break;
 	case eSomaMenuScreen_OptionsVideoDisplay: sTitle = _W("DISPLAY"); break;
 	case eSomaMenuScreen_OptionsVideoPostEffect: sTitle = _W("POST EFFECT"); break;

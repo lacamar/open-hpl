@@ -292,6 +292,10 @@ void cSomaSplash::DrawBootInitPhase()
 	// ePhase_BootInit note for why.
 	float fBarFraction = cMath::Clamp(mfPhaseElapsed / fPhaseDuration, 0.0f, 1.0f);
 
+	// Reused for the loading bar/frame below (see their own comment) so
+	// their on-screen size tracks Premenu.png's own scale at any resolution.
+	float fPremenuScale = 1.0f;
+
 	if (mpPremenuBg)
 	{
 		// Real asset is already a 1920x1080 full-bleed composite
@@ -299,8 +303,8 @@ void cSomaSplash::DrawBootInitPhase()
 		// the FG logo, in case this splash ever runs at a non-16:9
 		// resolution.
 		cVector2f vImgSize = mpPremenuBg->GetImageSize();
-		float fScale = cMath::Min(mvScreenSize.x / vImgSize.x, mvScreenSize.y / vImgSize.y);
-		vImgSize = vImgSize * fScale;
+		fPremenuScale = cMath::Min(mvScreenSize.x / vImgSize.x, mvScreenSize.y / vImgSize.y);
+		vImgSize = vImgSize * fPremenuScale;
 
 		cVector3f vPos((mvScreenSize.x - vImgSize.x) * 0.5f,
 						(mvScreenSize.y - vImgSize.y) * 0.5f, 1);
@@ -310,16 +314,52 @@ void cSomaSplash::DrawBootInitPhase()
 
 	if (mpLoadingFrame && mpLoadingBar)
 	{
-		// Placement approximation - see SomaSplash.h point 6 for why
-		// there's no further real evidence for an exact position. Sized
-		// relative to screen width, preserving the real 1024:128 (8:1)
-		// asset aspect ratio, positioned just under where Premenu.png's
-		// own baked "INITIALIZATION..." text sits (roughly 44% down the
-		// 1920x1080 reference image).
-		float fBarWidth = mvScreenSize.x * 0.32f;
-		float fBarHeight = fBarWidth * (128.0f / 1024.0f);
-		cVector3f vBarPos(mvScreenSize.x * 0.17f, mvScreenSize.y * 0.47f, 2);
-		cVector2f vBarSize(fBarWidth, fBarHeight);
+		// Real evidence this pass (previous version of this block was a
+		// pure visual-judgment guess - see the removed comment in git
+		// history): `nm -C`/`objdump -d` on the real, unstripped
+		// Soma.bin.x86_64 (it has debug_info - confirmed `file` output)
+		// locates a native cLuxLoadHandler class whose constructor
+		// (cLuxLoadHandler::cLuxLoadHandler(), file vaddr 0xb1a6f0)
+		// disassembles to cConfigFile::GetString("General", ...) calls for
+		// "LoadingIcon"/"SplashScreen"/"LoadingBar"/"LoadingFrame"/
+		// "SplashScreenMusic" IN THAT EXACT ORDER - i.e. this is the real
+		// native class config/game.cfg's <General> block belongs to, and
+		// it groups the boot splash (SplashScreen) with LoadingBar/
+		// LoadingFrame, confirming (not just assuming) they're meant to
+		// composite together.
+		//
+		// Its OnDraw() (file vaddr 0xb1d190) disassembles to a
+		// cGuiSet::DrawGfx() call for the loading bar (and a second, near-
+		// identical one for the frame) with a LITERAL, HARDCODED size
+		// immediate of (1024.0, 128.0) - i.e. the asset's own exact native
+		// pixel dimensions (`identify` confirms both loading_bar.dds and
+		// loading_frame.dds are 1024x128) - not a fraction of screen
+		// width like the previous version of this block used. The same
+		// call's position math includes a literal "-512.0" float
+		// (sitting in .rodata right next to the "LoadingBar"/
+		// "LoadingFrame" config-key strings themselves) - exactly half
+		// that 1024 width - applied to a term that's otherwise built from
+		// a "screen-width * 0.5" component; i.e. the real code converts a
+		// horizontal-CENTER coordinate into a left-edge draw position,
+		// confirming the bar is horizontally centered on screen (not
+		// left-anchored at a fixed inset like the previous version
+		// guessed). The analogous vertical term uses no such "* 0.5" on
+		// its screen-size input and instead has a "-256.0" literal -
+		// read here as the same pattern applied to a BOTTOM-edge anchor
+		// instead of a center one (screen height minus a fixed inset),
+		// which - unlike full vertical centering - keeps the bar clear of
+		// Premenu.png's own baked "INITIALIZATION.../LOAD/OPTIONS" text
+		// block (roughly 43%-53% down the 1080-tall reference image, per
+		// direct pixel inspection this pass). This vertical reading is
+		// this pass's best inference, not a runtime-confirmed value (the
+		// exact fields the formula reads live in engine globals this pass
+		// had no way to sample live without running the real closed
+		// binary, which is out of bounds - see PORTING_NOTES.md); the
+		// size and horizontal-centering findings above are the solid
+		// part of this evidence.
+		cVector2f vBarSize(1024.0f * fPremenuScale, 128.0f * fPremenuScale);
+		cVector3f vBarPos((mvScreenSize.x - vBarSize.x) * 0.5f,
+						   mvScreenSize.y - 256.0f * fPremenuScale, 2);
 
 		// Static decoration - always fully visible.
 		mpGuiSet->DrawGfx(mpLoadingFrame, vBarPos, vBarSize, cColor(1, 1, 1, fAlpha));
