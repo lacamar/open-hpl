@@ -46,6 +46,38 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	}
 
 	////////////////////////////////////
+	// Instructional text - real GammaInstructions0 (config/base_english.lang):
+	// "Adjust gamma so you can barely make out the details on the robot
+	// poster on the left." Real font/size is Sansation Large Bold at 24
+	// (MenuHandler.hps's GuiGammaCorrection()) - reused here via the same
+	// font file SomaMainMenu.cpp's own real button font uses.
+	mpInstructionsFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large_bold.fnt");
+	mfInstructionsFontHeight = 24.0f;
+	mfInstructionsRowHeight = mfInstructionsFontHeight + 6.0f;
+
+	if (mpInstructionsFont)
+	{
+		float fWrapWidth = cMath::Min(700.0f, mvScreenSize.x - 160.0f);
+		if (fWrapWidth < 200.0f)
+			fWrapWidth = mvScreenSize.x; // degenerate tiny headless resolution - don't wrap into nothing
+
+		mpInstructionsFont->GetWordWrapRows(fWrapWidth, mfInstructionsRowHeight,
+											 cVector2f(mfInstructionsFontHeight, mfInstructionsFontHeight),
+											 _W("Adjust gamma so you can barely make out the details on the robot poster on the left."),
+											 &mvInstructionRows);
+
+		float fBlockHeight = mfInstructionsRowHeight * (float)mvInstructionRows.size();
+
+		// Sits in a horizontal band directly above the checkerboard test
+		// pattern (and, in turn, the Gamma slider/Continue button below it -
+		// see the constructor below) - matches the real layout's own
+		// instructions-above-the-slider-row placement, clamped so it never
+		// scrolls off the top of a short headless window.
+		mvInstructionsPos = cVector2f((mvScreenSize.x - fWrapWidth) * 0.5f,
+									   cMath::Max(20.0f, mvCheckerboardPos.y - 20.0f - fBlockHeight));
+	}
+
+	////////////////////////////////////
 	// Gamma slider - same mechanism as Dark Descent's cLuxPreMenu
 	// (amnesia/src/game/LuxPreMenu.cpp), same min/max range.
 	mfGammaMinValue = 0.3f;
@@ -223,6 +255,22 @@ void cSomaGammaScreen::OnDraw(float afFrameTime)
 
 	if (mpCheckerboardGfx)
 		mpGuiSet->DrawGfx(mpCheckerboardGfx, cVector3f(mvCheckerboardPos.x, mvCheckerboardPos.y, 0.1f), mvCheckerboardSize);
+
+	// Real GammaInstructions0 text - see the constructor for how
+	// mvInstructionRows/mvInstructionsPos were computed. The "glitchy S"
+	// logo mark visible in the top-left corner of the reference screenshot
+	// is already baked into gamma_background.tga's own pixels (confirmed by
+	// viewing the real texture directly - a poster graphic within the scene
+	// photo, not a separate overlay) - no extra draw call needed for it.
+	if (mpInstructionsFont)
+	{
+		for (size_t i = 0; i < mvInstructionRows.size(); ++i)
+		{
+			cVector3f vRowPos(mvInstructionsPos.x, mvInstructionsPos.y + mfInstructionsRowHeight * (float)i, 0.2f);
+			mpGuiSet->DrawFont(mvInstructionRows[i], mpInstructionsFont, vRowPos,
+								cVector2f(mfInstructionsFontHeight, mfInstructionsFontHeight), cColor(1, 1), eFontAlign_Left);
+		}
+	}
 }
 
 //-----------------------------------------------------------------------

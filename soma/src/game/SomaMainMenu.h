@@ -108,6 +108,13 @@ enum eSomaMainMenuAction
 	eSomaMainMenuAction_NewGame,
 	eSomaMainMenuAction_Options,
 	eSomaMainMenuAction_Exit,
+
+	// Paused-mode-only actions (see cSomaMainMenu::ShowPaused()) - real
+	// precedent is Dark Descent's cLuxMainMenu, the SAME menu object used for
+	// both the title screen and the in-game pause menu (amnesia/src/game/
+	// LuxMainMenu.h) - not two separate classes.
+	eSomaMainMenuAction_Resume,
+	eSomaMainMenuAction_QuitToMainMenu,
 };
 
 struct cSomaMainMenuItem
@@ -159,13 +166,15 @@ struct cSomaOptionsRow
 	enum eKind
 	{
 		eKind_Category,		// navigates to another eSomaMenuScreen on click (real OptionMenu_ButtonOptions)
-		// real OptionMenu_ButtonOptionsToggle - NOT a checkbox/on-off-switch visually (an
-		// earlier pass here got this wrong): the real widget is the exact same left/right-
-		// arrow value-cycle bar eKind_MultiSelect below draws, just always exactly 2 values
-		// (confirmed against real helper_imgui_options.hps's OptionMenu_OptionsToggle(), which
-		// literally calls the same cycle-bar drawing as OptionMenu_OptionsSlider/MultiSelect
-		// share, and against config/base_english.lang's single shared "On"/"Off" caption pair
-		// used by every toggle-shaped row) - see DrawOptionsCycleControl().
+		// real OptionMenu_ButtonOptionsToggle - a genuinely distinct on/off switch widget,
+		// NOT the cycle-bar eKind_MultiSelect below draws (an earlier pass here concluded
+		// the opposite and was wrong: helper_imgui_options.hps's OptionMenu_ButtonOptionsToggle()
+		// calls OptionMenu_OptionsCheckbox(), a separate function that draws two real, distinct
+		// textures - graphics/startmenu/gfx/startmenu_options_button_on.tga/_off.tga - side by
+		// side, tinted to show which side is active, with plain "OFF"/"ON" labels (config/
+		// base_english.lang) drawn as separate text next to each half - not baked into the
+		// textures, which are themselves just plain untextured white shapes). See
+		// DrawOptionsToggleControl().
 		eKind_Toggle,
 		eKind_Slider,		// real OptionMenu_ButtonOptionsSlider - click-to-step or drag
 		eKind_Back,			// same as eKind_Category but always navigates "up"
@@ -303,9 +312,32 @@ public:
 	// the buttons don't keep drawing/intercepting clicks over gameplay.
 	void SetVisible(bool abVisible);
 
+	// ESC pause menu during real gameplay (task 3) - real precedent is Dark
+	// Descent's cLuxMainMenu, the SAME menu object used both as the title
+	// screen and as the in-game pause menu, swapping its button set/behaviour
+	// by state rather than being a separate class (amnesia/src/game/
+	// LuxMainMenu.h/.cpp) - this mirrors that, reusing this same instance's
+	// existing background/title/particle drawing and Options sub-tree
+	// unchanged, just with a reduced Resume/Options/Quit-to-Main-Menu item
+	// list instead of the full 5-item title-screen list (see
+	// BuildPausedMenuItems()). Bridged to cSomaPlayer via cSomaBase::
+	// SetGameplayPaused()/IsGameplayPaused() (see SomaBase.h) rather than a
+	// direct pointer either way - see SomaPlayer.cpp's Escape check.
+	void ShowPaused();
+	void HidePaused();
+	bool IsPaused() const { return mbPaused; }
+
 private:
 	void CreateGui();
 	cGuiGfxElement *CreateGfx(const tString &asFile, eGuiMaterial aMaterial);
+
+	// Real MainMenu.Continue/NewGame/LoadGame/Options/Exit item list vs. the
+	// paused-mode Resume/Options/Quit-to-Main-Menu list (see ShowPaused()) -
+	// both just (re)populate mItems, the single list every other method
+	// (UpdateMouseHitTest()/DrawMenuItems()/ClickItem()) already iterates
+	// without caring which one built it.
+	void BuildMainMenuItems();
+	void BuildPausedMenuItems();
 
 	void DrawBackground(float afTimeStep);
 	void DrawCathFacePart(cGuiGfxElement *apGfx, const cVector3f &avFrontCenterPos, const cVector3f &avBackCenterPos,
@@ -340,6 +372,12 @@ private:
 	// by DrawOptionsRow() for both eKind_Toggle and eKind_MultiSelect so the
 	// two kinds can never visually drift apart again.
 	void DrawOptionsCycleControl(float afRowY, const tWString &asValueText, const cColor &aBarCol, const cColor &aArrowCol, const cColor &aTextCol);
+	// Real "startmenu_options_button_on/off" checkbox-pair widget (see the
+	// eKind_Toggle comment above) - used by DrawOptionsRow() for eKind_Toggle
+	// only (eKind_MultiSelect keeps using DrawOptionsCycleControl() above,
+	// which is real and correct for that kind).
+	void DrawOptionsToggleControl(float afRowY, bool abValue, const tWString &asOffLabel, const tWString &asOnLabel,
+								   const cColor &aInactiveCol, const cColor &aActiveCol, const cColor &aTextCol);
 
 	void UpdateOptionsMouseHitTest();
 	void ClickOptionsRow(int alIndex);
@@ -399,7 +437,9 @@ private:
 	float mfTitleColorFadeT;
 	float mfTitleColorFadeLen;
 
-	cSomaMainMenuItem mItems[5];
+	// Holds whichever list BuildMainMenuItems()/BuildPausedMenuItems() last
+	// built (5 items title-screen, 3 items paused) - see ShowPaused().
+	std::vector<cSomaMainMenuItem> mItems;
 	int mlHoveredItem;
 	int mlClickedItem;
 	float mfButtonClickedTimer; // real "ButtonClicked" 0.15s flash-then-act delay
@@ -407,6 +447,11 @@ private:
 
 	bool mbVisible;
 	bool mbMouseWasDown;
+
+	// True while showing the reduced in-game pause overlay (ShowPaused()) as
+	// opposed to the full title-screen menu - same mpGuiSet/background/
+	// Options sub-tree either way, just a different mItems list.
+	bool mbPaused;
 
 	////////////////////////////////////
 	// Options screen state (see SomaMainMenu.h's class comment)
@@ -451,6 +496,8 @@ private:
 	cGuiGfxElement *mpOptionsMeterGfx;		// "startmenu_options_button_meter" - slider background
 	cGuiGfxElement *mpOptionsArrowGfx;		// "startmenu_options_arrow"
 	cGuiGfxElement *mpOptionsBarGfx;		// plain filled rect, slider track/handle
+	cGuiGfxElement *mpOptionsToggleOnGfx;	// "startmenu_options_button_on" - eKind_Toggle only
+	cGuiGfxElement *mpOptionsToggleOffGfx;	// "startmenu_options_button_off" - eKind_Toggle only
 
 	////////////////////////////////////
 	// Real "ocean detritus" particle effect (DrawParticles()) - see the

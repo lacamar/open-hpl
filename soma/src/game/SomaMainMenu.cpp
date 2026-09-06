@@ -227,6 +227,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 
 	mbVisible = true;
 	mbMouseWasDown = false;
+	mbPaused = false;
 
 	mfTitleAlpha = 0;
 	mfFaceAlpha = 0;
@@ -258,6 +259,7 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mpFrameFillGfx = NULL;
 	mpOptionsHighlightGfx = mpOptionsMeterGfx = mpOptionsArrowGfx = NULL;
 	mpOptionsBarGfx = NULL;
+	mpOptionsToggleOnGfx = mpOptionsToggleOffGfx = NULL;
 
 	mpGui = mpEngine->GetGui();
 
@@ -400,12 +402,22 @@ void cSomaMainMenu::CreateGui()
 	// OptionMenu_ButtonMainMenu()), not the generic skin's "Default" font.
 	mpButtonFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large_bold.fnt");
 
+	BuildMainMenuItems();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::BuildMainMenuItems()
+{
 	////////////////////////////////////
 	// Real menu item list/order/captions (MainMenu.Continue/NewGame/
 	// LoadGame/Options/Exit in config/base_english.lang) and real
 	// enable rule: with no save system in this scaffold, mbCanContinue is
 	// always false, same as a real fresh install - Continue/LoadGame show
 	// as disabled labels rather than buttons (GuiMainMenuSelection()).
+	mItems.clear();
+	mItems.resize(5);
+
 	mItems[0].msLabel = _W("CONTINUE");
 	mItems[0].mbEnabled = false;
 	mItems[0].mAction = eSomaMainMenuAction_None;
@@ -426,8 +438,34 @@ void cSomaMainMenu::CreateGui()
 	mItems[4].mbEnabled = true;
 	mItems[4].mAction = eSomaMainMenuAction_Exit;
 
-	for (int i = 0; i < 5; ++i)
-		mItems[i].mfRowY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * i;
+	for (size_t i = 0; i < mItems.size(); ++i)
+		mItems[i].mfRowY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)i;
+}
+
+//-----------------------------------------------------------------------
+
+// Paused-mode item list (see ShowPaused()) - not a real SOMA screen (see the
+// class comment in SomaMainMenu.h's ESC pause menu section), a practical
+// reduced set modeled on Dark Descent's own in-game pause menu button list.
+void cSomaMainMenu::BuildPausedMenuItems()
+{
+	mItems.clear();
+	mItems.resize(3);
+
+	mItems[0].msLabel = _W("RESUME");
+	mItems[0].mbEnabled = true;
+	mItems[0].mAction = eSomaMainMenuAction_Resume;
+
+	mItems[1].msLabel = _W("OPTIONS");
+	mItems[1].mbEnabled = true;
+	mItems[1].mAction = eSomaMainMenuAction_Options;
+
+	mItems[2].msLabel = _W("QUIT TO MAIN MENU");
+	mItems[2].mbEnabled = true;
+	mItems[2].mAction = eSomaMainMenuAction_QuitToMainMenu;
+
+	for (size_t i = 0; i < mItems.size(); ++i)
+		mItems[i].mfRowY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)i;
 }
 
 //-----------------------------------------------------------------------
@@ -466,12 +504,15 @@ void cSomaMainMenu::CreateOptionsGui()
 	mpOptionsHighlightGfx = CreateGfx("startmenu_options_button_long.tga", eGuiMaterial_Alpha);
 	mpOptionsMeterGfx = CreateGfx("startmenu_options_button_meter.tga", eGuiMaterial_Alpha);
 	mpOptionsArrowGfx = CreateGfx("startmenu_options_arrow.tga", eGuiMaterial_Alpha);
-	// Real "startmenu_options_button_on/off.tga" - NOT loaded/drawn here:
-	// these back the on/off checkbox-pair widget this class used to draw for
-	// eKind_Toggle, which turned out not to match the real game at all (see
-	// the eKind_Toggle comment in SomaMainMenu.h) - every toggle-shaped row
-	// now reuses mpOptionsMeterGfx/mpOptionsArrowGfx via
-	// DrawOptionsCycleControl() instead, same as eKind_MultiSelect.
+	// Real "startmenu_options_button_on/off.tga" - the genuinely distinct
+	// on/off switch widget eKind_Toggle uses (see the eKind_Toggle comment in
+	// SomaMainMenu.h and DrawOptionsToggleControl()) - an earlier pass here
+	// concluded these were unused/wrong and skipped loading them; confirmed
+	// wrong by reading helper_imgui_options.hps's OptionMenu_ButtonOptionsToggle()
+	// directly, which calls a distinct OptionMenu_OptionsCheckbox() function,
+	// not the shared cycle-bar eKind_MultiSelect still correctly uses below.
+	mpOptionsToggleOnGfx = CreateGfx("startmenu_options_button_on.tga", eGuiMaterial_Alpha);
+	mpOptionsToggleOffGfx = CreateGfx("startmenu_options_button_off.tga", eGuiMaterial_Alpha);
 }
 
 //-----------------------------------------------------------------------
@@ -817,7 +858,7 @@ void cSomaMainMenu::UpdateMouseHitTest()
 	// Real OptionMenu_ButtonMainMenu() hit-tests an 8000-unit-wide row
 	// (ImGui_DoButtonExt with kOptionMenu_ButtonSize.x=8000) - effectively
 	// "anywhere to the right of the label, to the edge of the screen".
-	for (int i = 0; i < 5; ++i)
+	for (size_t i = 0; i < mItems.size(); ++i)
 	{
 		if (mItems[i].mbEnabled == false)
 			continue;
@@ -826,7 +867,7 @@ void cSomaMainMenu::UpdateMouseHitTest()
 		float fBottom = fTop + kOptionMenuButtonSpacing;
 		if (vMouse.x >= kMainMenuButtonPos.x && vMouse.x <= kVirtualCanvas.x && vMouse.y >= fTop && vMouse.y <= fBottom)
 		{
-			mlHoveredItem = i;
+			mlHoveredItem = (int)i;
 			break;
 		}
 	}
@@ -897,9 +938,79 @@ void cSomaMainMenu::RunPendingAction()
 		// first (mbShowExit); not reproduced here, exits immediately.
 		mpEngine->Exit();
 		break;
+
+	case eSomaMainMenuAction_Resume:
+		// Routed through cSomaBase::SetGameplayPaused() (rather than calling
+		// HidePaused() directly here) so the player controller's SetActive()
+		// call and this menu's own hide both happen from the same single
+		// place - see SomaBase.cpp.
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::SelectSound());
+		if (mpBase)
+			mpBase->SetGameplayPaused(false);
+		break;
+
+	case eSomaMainMenuAction_QuitToMainMenu:
+		// Real precedent (Dark Descent's eLuxAction_Exit, LuxInputHandler.cpp)
+		// fully swaps back to the title-screen container/scene. This
+		// scaffold has no such scene-swap plumbing for a live gameplay map
+		// (would need cSomaBase to unload the current map, reload
+		// main_init.cfg's <MainMenu> scene into mpDebugViewport, and switch
+		// mpDebugCameraController back on - a real restructure, out of scope
+		// here per this class's own file-ownership boundary; see this
+		// session's final report). Closest safe approximation: just re-show
+		// the full title-screen item list over the CURRENT gameplay map,
+		// deliberately leaving the player controller inactive (same as while
+		// paused - not reactivated here, unlike the Resume case above) so
+		// nothing moves behind the menu.
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+		mbPaused = false;
+		BuildMainMenuItems();
+		mScreen = eSomaMenuScreen_Main;
+		SetVisible(true);
+		break;
+
 	default:
 		break;
 	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::ShowPaused()
+{
+	if (mbPaused)
+		return; // already showing - matches SetVisible()'s own idempotency
+
+	mbPaused = true;
+	BuildPausedMenuItems();
+	mScreen = eSomaMenuScreen_Main;
+	mlHoveredItem = -1;
+	mlClickedItem = -1;
+	mfButtonClickedTimer = 0;
+	mPendingAction = eSomaMainMenuAction_None;
+
+	// Same gui-activation calls SetVisible(true) makes, deliberately without
+	// its Menu_Music.ogg swap - pausing shouldn't cut off whatever's already
+	// playing in-game.
+	mbVisible = true;
+	mpGuiSet->SetActive(true);
+	mpGuiSet->SetDrawMouse(true);
+	mpGui->SetFocus(mpGuiSet);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::HidePaused()
+{
+	if (mbPaused == false)
+		return;
+
+	mbPaused = false;
+	mbVisible = false;
+	mpGuiSet->SetActive(false);
+	mpGuiSet->SetDrawMouse(false);
+	if (mpGui->GetFocusedSet() == mpGuiSet)
+		mpGui->SetFocus(NULL);
 }
 
 //-----------------------------------------------------------------------
@@ -1131,7 +1242,7 @@ void cSomaMainMenu::DrawTitle(float afTimeStep)
 
 void cSomaMainMenu::DrawMenuItems()
 {
-	for (int i = 0; i < 5; ++i)
+	for (size_t i = 0; i < mItems.size(); ++i)
 	{
 		cSomaMainMenuItem &item = mItems[i];
 		cVector3f vPos(kMainMenuButtonPos.x, item.mfRowY, 1.0f);
@@ -1143,7 +1254,7 @@ void cSomaMainMenu::DrawMenuItems()
 			continue;
 		}
 
-		bool bSelected = (i == mlHoveredItem && mlClickedItem == -1) || i == mlClickedItem;
+		bool bSelected = ((int)i == mlHoveredItem && mlClickedItem == -1) || (int)i == mlClickedItem;
 
 		if (bSelected)
 		{
@@ -1574,15 +1685,21 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 		switch (row.mOptionId)
 		{
 		case cSomaOptionsRow::eOptionId_Resolution:
-			// Restart-required, same contract as Fullscreen (see
-			// SomaConfig.h's mlScreenWidth/mlScreenHeight comment) -
-			// mvResolutions is the same cached list the row's value text
-			// came from in BuildOptionsRows(), so the index lines up.
+			// Live, same contract as Anti-Aliasing below (see SomaConfig.h's
+			// mlScreenWidth/mlScreenHeight comment) - mvResolutions is the
+			// same cached list the row's value text came from in
+			// BuildOptionsRows(), so the index lines up. ForceWindowSize()
+			// resizes the real live window immediately;
+			// cLowLevelGraphicsSDL::CheckAndUpdateScreenSize() (already
+			// called every frame from cGraphics::Update()) picks up the new
+			// size and reconciles every render target/viewport from it
+			// within a frame, with no restart needed.
 			if (lNewIndex >= 0 && lNewIndex < (int)mvResolutions.size())
 			{
 				pCfg->mlScreenWidth = mvResolutions[lNewIndex].x;
 				pCfg->mlScreenHeight = mvResolutions[lNewIndex].y;
-				Log("SOMA options: Resolution changed to %dx%d - takes effect on next launch\n",
+				mpEngine->GetGraphics()->GetLowLevel()->ForceWindowSize(pCfg->mlScreenWidth, pCfg->mlScreenHeight);
+				Log("SOMA options: Resolution changed to %dx%d - applied live\n",
 					pCfg->mlScreenWidth, pCfg->mlScreenHeight);
 			}
 			break;
@@ -1625,7 +1742,13 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 			// persisted only (see SomaConfig.h) - applied at the next
 			// InitEngine(), same "takes effect after restart" contract
 			// amnesia/src/game/LuxMainMenu_Options.cpp's own Fullscreen
-			// checkbox has.
+			// checkbox has. Confirmed no live fullscreen<->windowed mode-
+			// switch call exists anywhere in cLowLevelGraphicsSDL (only
+			// ForceWindowSize(), which resizes within the current mode - see
+			// the Resolution case above and iLowLevelGraphics::
+			// GetFullscreenModeActive(), the only fullscreen-related call
+			// that isn't Init()-only) - a real live setter would need new SDL
+			// plumbing, out of scope for this pass.
 			if (row.mpBoolValue == &pCfg->mbVSync)
 				mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, false);
 			else if (row.mpBoolValue == &pCfg->mbFullscreen)
@@ -1895,18 +2018,19 @@ void cSomaMainMenu::DrawOptionsRow(const cSomaOptionsRow &aRow, int alIndex, boo
 
 	case cSomaOptionsRow::eKind_Toggle:
 	{
-		// Real cycle-bar widget (see the eKind_Toggle comment in
-		// SomaMainMenu.h) - NOT the on/off checkbox pair this used to draw.
-		// Real OptionMenu_OptionsToggle()/MultiSelect() always draw this
-		// value text in plain black regardless of any "disabled" concept
-		// (which doesn't exist in the real game at all - see kDisabledColor's
-		// own doc comment) - kept black here too even for a disabled row,
-		// same reasoning as the eKind_Slider case below: a grey-on-grey
-		// value text would be unreadable against the also-grey disabled bar.
-		tWString sValue = (aRow.mlOptionIndex >= 0 && aRow.mlOptionIndex < (int)aRow.mOptions.size())
-							   ? aRow.mOptions[aRow.mlOptionIndex]
-							   : tWString();
-		DrawOptionsCycleControl(fRowY, sValue, widgetOnCol, widgetArrowCol, cColor(0, 1));
+		// Real on/off checkbox-pair widget (see the eKind_Toggle comment in
+		// SomaMainMenu.h and DrawOptionsToggleControl()) - NOT the cycle-bar
+		// eKind_MultiSelect below still correctly uses. Real
+		// OptionMenu_OptionsCheckbox() always draws its "Off"/"On" labels in
+		// plain black regardless of any "disabled" concept (which doesn't
+		// exist in the real game at all - see kDisabledColor's own doc
+		// comment) - kept black here too even for a disabled row, same
+		// reasoning as the eKind_Slider case below.
+		bool bValue = aRow.mpBoolValue ? *aRow.mpBoolValue : (aRow.mlOptionIndex != 0);
+		tWString sOff = aRow.mOptions.size() > 0 ? aRow.mOptions[0] : _W("OFF");
+		tWString sOn = aRow.mOptions.size() > 1 ? aRow.mOptions[1] : _W("ON");
+		cColor activeCol = aRow.mbEnabled ? cColor(1, 1) : kDisabledColor;
+		DrawOptionsToggleControl(fRowY, bValue, sOff, sOn, widgetOnCol, activeCol, cColor(0, 1));
 		break;
 	}
 
@@ -2053,6 +2177,46 @@ void cSomaMainMenu::DrawOptionsCycleControl(float afRowY, const tWString &asValu
 		cVector3f vValuePos(kMainMenuButtonPos.x + kOptionsSliderOffset.x + kOptionsSliderSize.x * 0.5f,
 							 afRowY + kOptionsSliderOffset.y + (kOptionsSliderSize.y - fFontH) * 0.5f, 2.0f);
 		mpGuiSet->DrawFont(asValueText, mpButtonFont, vValuePos, cVector2f(fFontH, fFontH), aTextCol, eFontAlign_Center);
+	}
+}
+
+//-----------------------------------------------------------------------
+
+// Real "startmenu_options_button_on/off" checkbox-pair widget
+// (OptionMenu_OptionsCheckbox() in helper_imgui_options.hps) - see the
+// eKind_Toggle comment in SomaMainMenu.h and DrawOptionsRow()'s eKind_Toggle
+// case above, its one caller. Both textures are plain untextured white
+// shapes (confirmed by viewing them directly) tinted at draw time - abValue
+// picks which side gets aActiveCol (bright, or whatever the row's own
+// selection-tint is) and which gets aInactiveCol (dim), same as the real
+// script's abIsChecked ? ... : ... tint swap. Positioned inside the same
+// kOptionsSliderOffset/kOptionsSliderSize bar rect DrawOptionsCycleControl()
+// above uses (this engine doesn't reproduce the real script's own
+// OptionMenu_UpdateExtraWidth() per-label dynamic width fit, so reusing the
+// already-working cycle-bar's rect keeps every widget kind lined up in the
+// same column) rather than the real script's separate, absolute
+// kOptionMenu_CheckboxOffset.
+void cSomaMainMenu::DrawOptionsToggleControl(float afRowY, bool abValue, const tWString &asOffLabel, const tWString &asOnLabel,
+											  const cColor &aInactiveCol, const cColor &aActiveCol, const cColor &aTextCol)
+{
+	const float fBoxW = 50.0f; // real kOptionMenu_CheckboxSize is 2*50 wide, 46 tall
+	const float fBoxH = kOptionsSliderSize.y;
+	const float fPairX = kOptionsSliderOffset.x + (kOptionsSliderSize.x - fBoxW * 2.0f) * 0.5f;
+
+	cVector3f vOffPos(kMainMenuButtonPos.x + fPairX, afRowY + kOptionsSliderOffset.y, 1.5f);
+	cVector3f vOnPos(kMainMenuButtonPos.x + fPairX + fBoxW, afRowY + kOptionsSliderOffset.y, 1.5f);
+
+	if (mpOptionsToggleOffGfx)
+		mpGuiSet->DrawGfx(mpOptionsToggleOffGfx, vOffPos, cVector2f(fBoxW, fBoxH), abValue ? aInactiveCol : aActiveCol);
+	if (mpOptionsToggleOnGfx)
+		mpGuiSet->DrawGfx(mpOptionsToggleOnGfx, vOnPos, cVector2f(fBoxW, fBoxH), abValue ? aActiveCol : aInactiveCol);
+
+	if (mpButtonFont)
+	{
+		const float fFontH = 22.0f;
+		float fTextY = afRowY + kOptionsSliderOffset.y + (fBoxH - fFontH) * 0.5f;
+		mpGuiSet->DrawFont(asOffLabel, mpButtonFont, cVector3f(vOffPos.x - 8.0f, fTextY, 2.0f), cVector2f(fFontH, fFontH), aTextCol, eFontAlign_Right);
+		mpGuiSet->DrawFont(asOnLabel, mpButtonFont, cVector3f(vOnPos.x + fBoxW + 8.0f, fTextY, 2.0f), cVector2f(fFontH, fFontH), aTextCol, eFontAlign_Left);
 	}
 }
 

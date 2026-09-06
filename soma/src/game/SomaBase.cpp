@@ -642,6 +642,29 @@ tString cSomaBase::GetPlayerActionKeyName(eSomaPlayerAction aAction)
 
 //-----------------------------------------------------------------------
 
+void cSomaBase::SetGameplayPaused(bool abPaused)
+{
+	if (mpPlayer)
+		mpPlayer->SetActive(abPaused == false);
+
+	if (mpMainMenu)
+	{
+		if (abPaused)
+			mpMainMenu->ShowPaused();
+		else
+			mpMainMenu->HidePaused();
+	}
+}
+
+//-----------------------------------------------------------------------
+
+bool cSomaBase::IsGameplayPaused()
+{
+	return mpMainMenu && mpMainMenu->IsPaused();
+}
+
+//-----------------------------------------------------------------------
+
 void cSomaBase::ExitEngine()
 {
 	if (mpEngine)

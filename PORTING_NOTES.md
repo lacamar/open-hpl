@@ -3897,3 +3897,152 @@ same well-understood, already-proven-correct pattern class as two prior fixes, (
 inert everywhere except these two files (corpus-grepped), and (c) the worst case if somehow wrong
 would be a very narrow, easy-to-spot visual regression in the specific box-light/fog code path,
 not a crash or broad corruption.
+
+## SOMA: real Options toggle widget, gamma instructions, live Resolution apply, ESC pause menu
+
+Three unrelated fixes to `cSomaMainMenu`/`cSomaGammaScreen`/`cSomaPlayer`/`cSomaBase`, all
+verified live/headless in one session (`/tmp/soma-agenta98-test`, real SOMA data symlinked
+read-only, `OPENHPL_HEADLESS_SOCKET`, scratch `XDG_*_HOME`).
+
+### 1. Real on/off toggle-switch widget (was: wrongly sharing the cycle-bar widget)
+
+An earlier pass's own comment in `SomaMainMenu.h` (the `eKind_Toggle` doc, now corrected)
+concluded `OptionMenu_ButtonOptionsToggle()` draws the exact same left/right-arrow cycle-bar
+`eKind_MultiSelect` uses. Rereading `helper_imgui_options.hps` directly this session shows that's
+wrong: `OptionMenu_ButtonOptionsToggle()` (line ~1229) calls `OptionMenu_OptionsCheckbox()` (line
+~294), a genuinely separate function that draws two real textures -
+`graphics/startmenu/gfx/startmenu_options_button_on.tga`/`_off.tga` - side by side (real
+`kOptionMenu_CheckboxOffset`/`CheckboxSize`), tinted `cColor(1,1)` on the active side and
+`kOptionMenu_ButtonBgColor` on the inactive one, with plain "Off"/"On" text labels drawn
+separately via `ImGui_DoLabelExt()` next to each half - confirmed by opening both `.tga` files
+directly (128x64, plain untextured white rounded-rect shapes with alpha, no baked-in text - the
+tint and separate labels are the whole visual).
+
+Added `cSomaMainMenu::DrawOptionsToggleControl()` (`soma/src/game/SomaMainMenu.cpp`, right after
+`DrawOptionsCycleControl()`), loading the two real textures in `CreateOptionsGui()` and routing
+`DrawOptionsRow()`'s `eKind_Toggle` case through it instead of the cycle-bar (`eKind_MultiSelect`
+correctly still uses the cycle-bar - real `OptionMenu_ButtonOptionsMultiSelect()` genuinely does
+draw that). Positioned inside the same `kOptionsSliderOffset`/`kOptionsSliderSize` bar rect the
+cycle-bar already uses (real script's own `OptionMenu_UpdateExtraWidth()` per-label dynamic width
+fit isn't reproduced, so reusing the working rect keeps every widget kind in the same column)
+rather than the real script's separate absolute `kOptionMenu_CheckboxOffset`. Also updated
+`SomaConfig.h`'s stale reference comments and the "not loaded" comment in `CreateOptionsGui()`.
+
+**Verified live**: headless screenshot of Video→Rendering shows REFLECTION/REFRACTION (and
+Video→Display's DISPLAY MODE/V-SYNC, which are real/enabled rows) as a genuine two-segment
+OFF|ON switch with the active side highlighted, not the arrow-cycle bar TEXTURE
+QUALITY/TEXTURE FILTER/SHADOW QUALITY/ANTI-ALIASING still correctly show.
+
+### 2. Gamma screen instructional text (was: missing entirely)
+
+`cSomaGammaScreen::OnDraw()` drew only the background + checkerboard, no text. Added the real
+`GammaInstructions0` string (`config/base_english.lang`, confirmed verbatim by reading the file):
+"Adjust gamma so you can barely make out the details on the robot poster on the left." Real
+`GuiGammaCorrection()` (`MenuHandler.hps`) draws this via Sansation Large Bold at size 24,
+word-wrapped inside a box positioned above the Gamma slider row - this class has no
+`cImGuiTextFrameData`/word-wrap-box equivalent, so `SomaGammaScreen.cpp`'s constructor now
+precomputes wrapped rows once via `iFontData::GetWordWrapRows()` (same real API
+`amnesia/src/game/LuxJournal.cpp` etc. already use) and `OnDraw()` draws them as plain `DrawFont()`
+calls, positioned in a band directly above the checkerboard/slider (clamped to stay on-screen on
+a short headless window).
+
+Also checked whether the "glitchy S logo" visible in the reference screenshot's top-left needs a
+separate draw call: viewed `graphics/startmenu/misc/gamma_background.tga` directly and confirmed
+it's already baked into the photo (a poster prop within the scene, at roughly the texture's own
+15%/35% width/height) - no code change needed, noted in a comment so a future pass doesn't
+re-litigate it.
+
+**Verified live**: headless screenshot of the first-boot gamma screen shows the instructional text
+in a clean band above the checkerboard/slider/Continue button.
+
+### 3. Live Resolution apply (was: persisted-only, "takes effect on next launch")
+
+`ClickOptionsRow()`'s `eOptionId_Resolution` case only wrote `cSomaConfig::mlScreenWidth/Height`
+and logged a next-launch-only message. Per the task brief, no new plumbing was needed:
+`cLowLevelGraphicsSDL::ForceWindowSize()` (already used by `HeadlessControl.cpp`'s `resize`
+command) resizes the real live SDL window, and `cLowLevelGraphicsSDL::CheckAndUpdateScreenSize()`
+(already called every frame from `cGraphics::Update()`) picks up the new size and reconciles
+every size-dependent render target/viewport within a frame. Added one call -
+`mpEngine->GetGraphics()->GetLowLevel()->ForceWindowSize(pCfg->mlScreenWidth, pCfg->mlScreenHeight)`
+- right after persisting the two config fields, and updated `SomaConfig.h`'s doc comment (was
+flatly wrong about "no live window-resize call exists").
+
+Checked whether Display Mode (Fullscreen/Windowed) has an equally-easy live path: it does not -
+`cLowLevelGraphicsSDL` has no fullscreen<->windowed mode-switch call anywhere outside `Init()`,
+only `ForceWindowSize()` (resize within the current mode) and the getter
+`GetFullscreenModeActive()`. Left persisted-only, with a comment recording that this was actually
+checked this pass, not just assumed.
+
+**Verified live**: headless screenshot before showed `RESOLUTION 1280x720` (the real boot size);
+clicking the row's right arrow (via injected `mouse_move`+`mouse_button` events, real absolute
+mouse position - injected `mouse_move`'s `xrel`/`yrel` are a confirmed no-op for
+`GetRelPosition()`, see this doc's earlier "Real bug #3", but `mvMouseAbsPos` is fed straight from
+the injected event and IS live, confirmed by reading `MouseSDL.cpp`) produced a real
+1280x720→1280x800 framebuffer resize with no restart - the post-click screenshot's own BMP
+dimensions are 1280x800, the Resolution row's own text now reads `1280x800`, and
+`hpl-<pid>.log` shows `SOMA options: Resolution changed to 1280x800 - applied live`.
+
+### 4. ESC pause menu during gameplay (was: entirely unbuilt)
+
+No `eKey_Escape` handling existed anywhere in `SomaPlayer.cpp`/`SomaBase.cpp`. Real precedent
+(`amnesia/src/game/LuxMainMenu.h`): Dark Descent's `cLuxMainMenu` is literally the same menu
+object used both as the title screen and the in-game pause menu, swapping its button set by
+state - reused that idea rather than building a second menu class:
+
+- `cSomaMainMenu` (`SomaMainMenu.h`/`.cpp`): `mItems` (main-menu button list) changed from a fixed
+  `cSomaMainMenuItem[5]` to `std::vector<cSomaMainMenuItem>`, split into `BuildMainMenuItems()`
+  (the original 5: Continue/New Game/Load Game/Options/Exit) and a new
+  `BuildPausedMenuItems()` (3: Resume/Options/Quit to Main Menu - not a real SOMA screen, a
+  practical reduced set per the task brief). New `bool mbPaused` + public `ShowPaused()`/
+  `HidePaused()`/`IsPaused()`: `ShowPaused()` does the same gui-activation `SetVisible(true)`
+  makes, deliberately *without* its `Menu_Music.ogg` swap (pausing shouldn't cut off in-game
+  audio). The existing Options sub-tree, background/title/particle drawing, and BACK-navigates-
+  to-`eSomaMenuScreen_Main` logic all work unmodified for both modes - only which item list is
+  currently in `mItems` differs. New `eSomaMainMenuAction_Resume`/`_QuitToMainMenu` actions in
+  `RunPendingAction()`: Resume routes through the new `cSomaBase::SetGameplayPaused(false)`
+  bridge (below) rather than calling `HidePaused()` directly, so the player's `SetActive(true)`
+  and the menu's own hide always happen together.
+- `cSomaBase` (`SomaBase.h`/`.cpp`): one new bridge pair, `SetGameplayPaused(bool)`/
+  `IsGameplayPaused()` - the single new accessor point between the private `mpPlayer`/
+  `mpMainMenu` members, so `cSomaPlayer`/`cSomaMainMenu` never need a direct pointer to each
+  other. `SetGameplayPaused(true)` calls `mpPlayer->SetActive(false)` (the exact same external-
+  call wiring `SomaBase.cpp` already uses elsewhere for the intro sequence/gamma screen) and
+  `mpMainMenu->ShowPaused()`; `false` does the inverse.
+- `cSomaPlayer::Update()` (`SomaPlayer.cpp`): new block at the very top, checked even while
+  `mbActive` is false so a second Escape can close the menu it just opened - reads the raw
+  keyboard event queue directly (no `cAction` is bound to Escape - `CreateInputActions()` only
+  has the 5 movement/jump actions), same "drain one distinct press" pattern as
+  `cSomaGammaScreen::AnyContinueInputThisFrame()`. On a real Escape press, toggles via
+  `gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false)`.
+
+**Known limitation, left as-is rather than guessed at**: "Quit to Main Menu" does not reload
+`main_init.cfg`'s `<MainMenu>` scene (`main_menu.hpm`) - doing that properly needs `cSomaBase` to
+tear down the live gameplay world, recreate the free-fly debug camera controller, and reset
+`cSomaMainMenu`'s own particle/background state, which is a real restructure of `SomaBase.h/.cpp`
+beyond the "one accessor" bar this session held itself to (per the task brief's own instruction to
+flag rather than guess at new `SomaBase` plumbing). Instead it just rebuilds the full 5-item title
+list and re-shows it over the *current* gameplay map, leaving the player controller inactive (not
+reactivated, unlike Resume) so nothing moves behind it - a safe, honest, but incomplete
+approximation. Whoever picks this up: the pieces needed are (a) a way to re-run
+`InitMainMenuScene()`'s world/camera-controller setup without leaking the old `cSomaMainMenu`/
+`cSomaDebugFreeCamera` (`cUpdater` has no "remove" - same constraint documented elsewhere in this
+file), or (b) a `cSomaMainMenu::ResetForMainMenu()`-style rebuild of just the parts that need it.
+
+**Verified live**, headless, `00_01_apartment.hpm` via `start_map` (real `cSomaPlayer`, real
+`PlayerStartArea_1` spawn, confirmed via `camera_state`): injected Escape → screenshot shows the
+RESUME/OPTIONS/QUIT TO MAIN MENU list (not the 5-item title list); held synthetic `W` for 1.5s
+while paused → `camera_state` position identical before/after (movement genuinely suppressed, not
+just visually hidden); Escape again → screenshot shows the menu gone and real (dark, unlit-by-
+this-scaffold) map geometry rendering; held `W` again → position moved from `(-10.75, 8.25)` to
+`(-10.39, 7.90)`, the correct diagonal for the map's real spawn yaw - control genuinely resumes.
+Used position-polling rather than a temporary diagnostic `Log()` for the movement-suppression
+check - equally direct evidence, and avoids a rebuild-add-log/rebuild-remove-log round trip.
+
+### Verification common to all four
+
+Built in a dedicated `amnesia/src/build-agenta98` (removed after); `ctest` `PhysicsNewtonTests`/
+`CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests` all green. All screenshots/scratch
+dirs/sockets/the build dir were removed after verification; the live headless process was stopped
+via the control socket's own `quit` command (not a PID-guessing `kill` - `pgrep -f` against this
+scratch path proved unreliable mid-session, matching this project's own documented self-match
+footgun for `pkill -f`).

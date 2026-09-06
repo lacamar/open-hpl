@@ -174,6 +174,19 @@ public:
 	// exactly one key bound, see CreateInputActions()).
 	tString GetPlayerActionKeyName(eSomaPlayerAction aAction);
 
+	// ESC pause menu (task 3) - single bridge point between mpPlayer and
+	// mpMainMenu (both private below), so cSomaPlayer/cSomaMainMenu never
+	// need a direct pointer to each other: cSomaPlayer::Update() calls these
+	// on a fresh Escape press (see its own comment for why it checks the
+	// raw keyboard queue instead of a cAction), and cSomaMainMenu's own
+	// Resume button routes back through SetGameplayPaused(false) rather than
+	// unpausing itself directly, so the player's SetActive() call and the
+	// menu's own show/hide always happen together. mpMainMenu is NULL only
+	// before InitMainMenuScene() has run (i.e. before any player could exist
+	// either), so both are guarded.
+	void SetGameplayPaused(bool abPaused);
+	bool IsGameplayPaused();
+
 private:
 	/////////////////////////
 	// Config file paths, loaded from main_init.cfg
