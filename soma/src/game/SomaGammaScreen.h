@@ -77,6 +77,21 @@ private:
 	cVector2f mvCheckerboardPos;
 	cVector2f mvCheckerboardSize;
 
+	// Real GammaInstructions0 (config/base_english.lang) - "Adjust gamma so
+	// you can barely make out the details on the robot poster on the left."
+	// Real MenuHandler.hps's GuiGammaCorrection() draws this via
+	// Sansation Large Bold at size 24, word-wrapped inside the background
+	// image's own box, in a band above the Gamma slider row - this class has
+	// no cImGuiTextFrameData/word-wrap-box equivalent, so the wrapped rows
+	// are precomputed once here (iFontData::GetWordWrapRows(), same real API
+	// amnesia/src/game/LuxJournal.cpp etc. already use for wrapped text) and
+	// drawn as plain DrawFont() calls, one per row, in OnDraw().
+	iFontData *mpInstructionsFont;
+	tWStringVec mvInstructionRows;
+	cVector2f mvInstructionsPos;	// top-left of the wrapped block, in screen pixels
+	float mfInstructionsRowHeight;
+	float mfInstructionsFontHeight;
+
 	cWidgetSlider *mpSlider;
 	cWidgetButton *mpContinueButton;
 

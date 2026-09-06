@@ -166,6 +166,24 @@ void cSomaPlayer::CreateCharacterBody()
 void cSomaPlayer::Update(float afTimeStep)
 {
 	if(mpCharBody == NULL || mpInput == NULL) return;
+
+	//////////////////////////
+	// ESC pause menu (task 3) - checked even while mbActive is false (i.e.
+	// already paused), so a second Escape press can close the menu it just
+	// opened. No cAction is bound to Escape (see cSomaBase::
+	// CreateInputActions() - only the 5 movement/jump actions exist), so
+	// this reads the raw keyboard event queue directly instead, same
+	// "drain one distinct press" pattern as cSomaGammaScreen::
+	// AnyContinueInputThisFrame(). Routed through cSomaBase::
+	// SetGameplayPaused() (which also calls this object's own SetActive())
+	// rather than calling SetActive()/the menu directly here - see its
+	// comment in SomaBase.h.
+	{
+		iKeyboard *pKeyboard = mpInput->GetKeyboard();
+		if(pKeyboard && pKeyboard->KeyIsPressed() && pKeyboard->GetKey().mKey == eKey_Escape && gpSomaBase)
+			gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false);
+	}
+
 	if(mbActive == false) return;
 
 	// Real Horizontal FOV/MouseSensitivity/InvertMouseY settings - all three

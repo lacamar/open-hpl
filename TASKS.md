@@ -25,6 +25,40 @@
     PLAY at or after the prior line's own FINISHED tick. ctest 4/4 green before and after. Full
     writeup with exact real-source citations and the full trace in PORTING_NOTES.md.
 
+- SOMA: real toggle widget, gamma instructions, live Resolution apply, ESC pause menu (2026-09-07)
+  - DONE: `soma/src/game/SomaMainMenu.{h,cpp}` - added `DrawOptionsToggleControl()`, the real
+    on/off switch widget (`startmenu_options_button_on/off.tga`) `OptionMenu_ButtonOptionsToggle()`
+    actually draws via a separate `OptionMenu_OptionsCheckbox()` function - a previous pass's own
+    comment wrongly concluded it shares the arrow-cycle-bar `eKind_MultiSelect` uses; rereading
+    `helper_imgui_options.hps` directly this session found the real, separate function. Reflection/
+    Refraction/Display Mode/V-Sync now show the real two-segment switch, not the cycle bar.
+  - DONE: `soma/src/game/SomaGammaScreen.{h,cpp}` - added the real `GammaInstructions0` string
+    (`config/base_english.lang`) above the checkerboard/slider, word-wrapped via
+    `iFontData::GetWordWrapRows()`. Confirmed the reference screenshot's "glitchy S logo" is
+    already baked into `gamma_background.tga`'s own pixels - no extra draw call needed.
+  - DONE: `soma/src/game/SomaMainMenu.cpp`'s Resolution row now calls the existing
+    `cLowLevelGraphicsSDL::ForceWindowSize()` live (same call `HeadlessControl.cpp`'s `resize`
+    command already uses) instead of "takes effect on next launch" - `CheckAndUpdateScreenSize()`
+    (already called every frame) picks up the resize with no restart. Display Mode (fullscreen/
+    windowed) checked and confirmed to have no equivalent live call anywhere in
+    `cLowLevelGraphicsSDL` - left persisted-only, documented as actually checked this pass.
+  - DONE: ESC pause menu during real gameplay - `cSomaMainMenu` gained a paused mode (reduced
+    Resume/Options/Quit-to-Main-Menu item list, `ShowPaused()`/`HidePaused()`/`IsPaused()`),
+    `cSomaBase` gained one new bridge pair (`SetGameplayPaused()`/`IsGameplayPaused()`) so the
+    player and menu don't need direct pointers to each other, and `cSomaPlayer::Update()` gained a
+    minimal raw-keyboard-queue Escape check (no `cAction` exists for Escape) that toggles it.
+    "Quit to Main Menu" is a known, documented partial approximation (re-shows the title menu over
+    the still-loaded gameplay map rather than reloading `main_menu.hpm`) - a full fix needs
+    `SomaBase` world/camera-controller teardown/rebuild plumbing, flagged rather than guessed at.
+  - Verified live/headless (`/tmp/soma-agenta98-test`, real SOMA data symlinked read-only):
+    screenshots of Video→Rendering (toggle widget) and the gamma screen (instructions text);
+    Resolution click producing a real 1280x720→1280x800 live framebuffer resize (confirmed via
+    both the screenshot's own BMP dimensions and the `hpl.log` "applied live" line); and, on the
+    real `00_01_apartment.hpm` map, Escape showing the paused menu, `camera_state` position
+    staying identical while holding `W` during pause, Escape again closing the menu, and position
+    then moving correctly. `ctest` 4/4 green throughout. Full writeup, citations, and the Quit-to-
+    Main-Menu limitation's exact next steps in PORTING_NOTES.md.
+
 - SOMA: the real splash/boot sequence, properly reverse-engineered (2026-09-05)
   - DONE: soma/src/game/SomaSplash.{h,cpp} fully rewritten after user feedback that the previous
     session's splash "still not correct... missing visual effects, sound effects, and loading bar".

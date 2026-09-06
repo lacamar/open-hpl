@@ -72,14 +72,19 @@ public:
 
 	// Screen - real keys "Screen"/"Width"+"Height" (real
 	// GuiOptionsVideoDisplay()'s Resolution row - see MenuHandler.hps'
-	// GetCurrentResolution()/SetCurrentResolution()). Same restart-required
-	// contract as mbFullscreen above: cLowLevelGraphics has no live
-	// window-resize/mode-switch call either, only cLowLevelGraphics::Init()'s
-	// screen-size param - evaluated once at window-creation time in
-	// cSomaBase::InitEngine(). The Options screen's Resolution row builds its
-	// value list from cPlatform::GetAvailableVideoModes(), same real API
-	// amnesia/src/game/LuxMainMenu_Options.cpp's own Resolution dropdown
-	// uses.
+	// GetCurrentResolution()/SetCurrentResolution()). LIVE, unlike
+	// mbFullscreen above: cLowLevelGraphics::Init()'s screen-size param is
+	// only evaluated once at window-creation time, but
+	// cLowLevelGraphicsSDL::ForceWindowSize() (already used by
+	// HeadlessControl.cpp's "resize" command) resizes the real live window,
+	// and cLowLevelGraphicsSDL::CheckAndUpdateScreenSize() (already called
+	// every frame from cGraphics::Update()) reconciles every size-dependent
+	// render target/viewport from the new size within a frame - so
+	// SomaMainMenu.cpp's Resolution row calls ForceWindowSize() directly in
+	// addition to persisting these two fields, same as it always has. No
+	// live SDL call exists for a fullscreen<->windowed *mode* switch itself
+	// (see mbFullscreen above), only for resizing within whatever mode is
+	// already active - that part remains restart-required.
 	int mlScreenWidth;
 	int mlScreenHeight;
 
