@@ -141,6 +141,38 @@
  * constraint) - so this class stays alive for the whole process and just
  * goes inert (mbFinished) once its sequence is done, rather than actually
  * being torn down.
+ *
+ * Two fixes added this pass:
+ *
+ * 7. Real "brainscan" loading icon, missing entirely until now.
+ *    config/game.cfg's <General> block also has `LoadingIcon =
+ *    "brain_01.dds"` - read by the same native cLuxLoadHandler constructor
+ *    cited in point 6 above, right alongside SplashScreen/LoadingBar/
+ *    LoadingFrame, i.e. it's meant to composite with the boot-init phase
+ *    too. The real install ships a genuine 26-frame animated sequence at
+ *    graphics/general/loadscreen/brainAnim/brain_01.dds .. brain_26.dds
+ *    (each a real, distinct 512x512 DDS frame - confirmed via `identify`
+ *    across the whole set, not just brain_01). DrawBrainIcon() loads all
+ *    26 once and cycles them at a fixed ~12fps in the bottom-right corner
+ *    for the whole boot-init phase - no real evidence recovered for the
+ *    native class's exact on-screen size/position/frame rate (same "no
+ *    granular native constant recovered" situation as mfBootFadeTime/
+ *    mfBootHoldTime above), so these are this pass's plausible values,
+ *    not disassembly-confirmed like the loading bar's own size/position.
+ *
+ * 8. Menu ambient ("MenuBGNoise") never stopped - a real, user-reported
+ *    bug. EnterPhase() below starts this loop via PlayGui() fire-and-
+ *    forget, storing nothing - so it played forever, audible under any
+ *    map loaded from the main menu (e.g. New Game). Real script/modules/
+ *    MenuHandler.hps calls `Sound_Stop("MenuBGNoise", ...)` in every real
+ *    path that leaves the menu (grep for "MenuBGNoise" in that file - a
+ *    dozen+ call sites). This class now stores the cSoundEntry* + id
+ *    PlayGui() returns for this one sound (mpMenuAmbientSound/
+ *    mlMenuAmbientSoundId) and exposes StopMenuAmbient() to stop it -
+ *    wired up from soma/src/game/SomaMainMenu.cpp's SetVisible(false),
+ *    the same call site that already stops the menu music. See
+ *    StopMenuAmbient()'s own comment in SomaSplash.cpp for the pointer/id
+ *    validity pattern this reuses from amnesia/src/game/LuxEnemy_ManPig.cpp.
  */
 
 #ifndef SOMA_SPLASH_H
@@ -172,6 +204,12 @@ public:
 	void Update(float afTimeStep);
 	void OnDraw(float afFrameTime);
 
+	// Stops the "MenuBGNoise" ambient (special_fx/frontend/main_menu_bg)
+	// this class starts in EnterPhase() - see that call site's own comment
+	// and this method's definition in SomaSplash.cpp for the real bug this
+	// fixes.
+	void StopMenuAmbient();
+
 private:
 	void EnterPhase(eSomaSplashPhase aPhase);
 	void AdvanceToNextPhase();
@@ -181,6 +219,7 @@ private:
 
 	void DrawFGLogoPhase();
 	void DrawBootInitPhase();
+	void DrawBrainIcon(float afAlpha, float afPremenuScale);
 
 	cEngine *mpEngine;
 	cSomaBase *mpBase;
@@ -197,6 +236,13 @@ private:
 	cGuiGfxElement *mpPremenuBg;
 	cGuiGfxElement *mpLoadingBar;
 	cGuiGfxElement *mpLoadingFrame;
+
+	// config/game.cfg's General block: LoadingIcon = "brain_01.dds" - see
+	// DrawBrainIcon()'s own comment in SomaSplash.cpp for the real 26-frame
+	// sequence this loads (graphics/general/loadscreen/brainAnim/brain_01.dds
+	// .. brain_26.dds).
+	static const int mlBrainFrameCount = 26;
+	cGuiGfxElement *mvBrainFrames[mlBrainFrameCount];
 
 	// Persistent (created once, reused every frame) clip region used to
 	// reveal only the left mfBarFillFraction of mpLoadingBar - cGuiSet's
@@ -222,6 +268,19 @@ private:
 
 	static const float mfBootFadeTime;
 	static const float mfBootHoldTime;
+
+	static const float mfBrainFrameRate;
+
+	// Task 2 fix: the only stored handle anywhere in this codebase for the
+	// menu ambient loop this class fires-and-forgets in EnterPhase() (see
+	// StopMenuAmbient()'s own comment below for why a handle is needed at
+	// all). Same cSoundEntry*/id pair + iSoundManager::IsValid() pattern
+	// amnesia/src/game/LuxEnemy_ManPig.cpp's mpMindFuckSound/
+	// mlMindFuckSoundId already establishes for a looping PlayGui() sound
+	// whose cSoundEntry may be recycled/destroyed by the sound handler
+	// before this class gets around to stopping it.
+	cSoundEntry *mpMenuAmbientSound;
+	int mlMenuAmbientSoundId;
 };
 
 //----------------------------------------------

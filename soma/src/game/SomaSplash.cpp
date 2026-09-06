@@ -24,6 +24,11 @@ const float cSomaSplash::mfFGFadeOutTime = 2.0f;	 // 1 / 0.5 fade-out rate
 const float cSomaSplash::mfBootFadeTime = 0.4f;
 const float cSomaSplash::mfBootHoldTime = 3.0f;
 
+// Brainscan loading-icon animation rate - no real evidence recovered for the
+// exact native value (see SomaSplash.h point 7), 12fps is a plausible guess
+// for a low-res EEG-style loop like this.
+const float cSomaSplash::mfBrainFrameRate = 12.0f;
+
 //---------------------------------------
 
 cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("SomaSplash")
@@ -36,6 +41,12 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	mpLoadingBar = NULL;
 	mpLoadingFrame = NULL;
 	mpBarClipRegion = NULL;
+
+	for (int i = 0; i < mlBrainFrameCount; ++i)
+		mvBrainFrames[i] = NULL;
+
+	mpMenuAmbientSound = NULL;
+	mlMenuAmbientSoundId = -1;
 
 	mfPhaseElapsed = 0;
 	mbFinished = false;
@@ -62,6 +73,16 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	mpPremenuBg = mpGui->CreateGfxTexture("Premenu.png", eGuiMaterial_Alpha, eTextureType_2D);
 	mpLoadingBar = mpGui->CreateGfxTexture("loading_bar.dds", eGuiMaterial_Alpha, eTextureType_2D);
 	mpLoadingFrame = mpGui->CreateGfxTexture("loading_frame.dds", eGuiMaterial_Alpha, eTextureType_2D);
+
+	// config/game.cfg: LoadingIcon = "brain_01.dds" - real 26-frame sequence,
+	// see SomaSplash.h point 7. Resolved by filename alone, same as the
+	// other textures above - resources.cfg's <Directory Path="/graphics"
+	// AddSubDirs="true"/> covers graphics/general/loadscreen/brainAnim/.
+	for (int i = 0; i < mlBrainFrameCount; ++i)
+	{
+		tString sFrameFile = "brain_" + cString::ToString(i + 1, 2) + ".dds";
+		mvBrainFrames[i] = mpGui->CreateGfxTexture(sFrameFile, eGuiMaterial_Alpha, eTextureType_2D);
+	}
 
 	// Owned outright (not a child of the set's base clip region) so its
 	// lifetime is entirely this class's responsibility - see
@@ -109,7 +130,15 @@ void cSomaSplash::EnterPhase(eSomaSplashPhase aPhase)
 
 		tString sBgNoise = cSomaMenuSfx::MenuBgNoise();
 		if (sBgNoise.size() > 0)
-			mpEngine->GetSound()->GetSoundHandler()->PlayGui(sBgNoise, true, 1.0f);
+		{
+			// Stored so StopMenuAmbient() can stop this specific looping
+			// instance later (see SomaSplash.h point 8 / that method's own
+			// comment) - previously fire-and-forget, the real bug this pass
+			// fixes.
+			mpMenuAmbientSound = mpEngine->GetSound()->GetSoundHandler()->PlayGui(sBgNoise, true, 1.0f);
+			if (mpMenuAmbientSound)
+				mlMenuAmbientSoundId = mpMenuAmbientSound->GetId();
+		}
 		else
 			Log("SOMA splash: main_menu_bg sample not available (see SomaMenuSfx.cpp) - playing silently\n");
 	}
@@ -123,6 +152,25 @@ void cSomaSplash::EnterPhase(eSomaSplashPhase aPhase)
 		mbSplashMusicStarted = true;
 		mpEngine->GetSound()->GetMusicHandler()->Play("loadscreen_background.ogg", 0.15f, 0.3f, true, false);
 	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaSplash::StopMenuAmbient()
+{
+	if (mpMenuAmbientSound == NULL)
+		return;
+
+	// cSoundHandler may have already destroyed/recycled this cSoundEntry*
+	// by the time this runs (this class lives for the whole process, long
+	// past the menu's own lifetime) - same IsValid(ptr, id) guard
+	// amnesia/src/game/LuxEnemy_ManPig.cpp's mpMindFuckSound uses before
+	// touching a stored cSoundEntry* again.
+	cSoundHandler *pSoundHandler = mpEngine->GetSound()->GetSoundHandler();
+	if (pSoundHandler->IsValid(mpMenuAmbientSound, mlMenuAmbientSoundId))
+		mpMenuAmbientSound->Stop();
+
+	mpMenuAmbientSound = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -167,6 +215,14 @@ void cSomaSplash::Finish()
 	{
 		mpGui->DestroyGfx(mpLoadingFrame);
 		mpLoadingFrame = NULL;
+	}
+	for (int i = 0; i < mlBrainFrameCount; ++i)
+	{
+		if (mvBrainFrames[i])
+		{
+			mpGui->DestroyGfx(mvBrainFrames[i]);
+			mvBrainFrames[i] = NULL;
+		}
 	}
 
 	// Stop this viewport rendering (clearing to black + drawing the now-
@@ -375,6 +431,37 @@ void cSomaSplash::DrawBootInitPhase()
 		mpGuiSet->DrawGfx(mpLoadingBar, vBarPos, vBarSize, cColor(1, 1, 1, fAlpha));
 		mpGuiSet->SetCurrentClipRegion(pPrevRegion);
 	}
+
+	DrawBrainIcon(fAlpha, fPremenuScale);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaSplash::DrawBrainIcon(float afAlpha, float afPremenuScale)
+{
+	// config/game.cfg: LoadingIcon = "brain_01.dds" - real 26-frame animated
+	// sequence (graphics/general/loadscreen/brainAnim/brain_01.dds ..
+	// brain_26.dds, each a genuine distinct 512x512 DDS frame) - see
+	// SomaSplash.h point 7 for the native cLuxLoadHandler evidence tying
+	// this to the boot-init phase. No real evidence recovered for the
+	// native on-screen size/position/frame rate, so a modest bottom-right
+	// icon (matching the user's reference screenshot) and mfBrainFrameRate
+	// are this pass's plausible values, not disassembly-confirmed.
+	int lFrame = ((int)(mfPhaseElapsed * mfBrainFrameRate)) % mlBrainFrameCount;
+	if (lFrame < 0)
+		lFrame = 0;
+
+	cGuiGfxElement *pFrame = mvBrainFrames[lFrame];
+	if (pFrame == NULL)
+		return;
+
+	cVector2f vIconSize(140.0f * afPremenuScale, 140.0f * afPremenuScale);
+	float fMargin = 40.0f * afPremenuScale;
+
+	cVector3f vPos(mvScreenSize.x - vIconSize.x - fMargin,
+				   mvScreenSize.y - vIconSize.y - fMargin, 2);
+
+	mpGuiSet->DrawGfx(pFrame, vPos, vIconSize, cColor(1, 1, 1, afAlpha));
 }
 
 //-----------------------------------------------------------------------
