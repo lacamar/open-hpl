@@ -281,13 +281,26 @@ cGuiGfxElement *cSomaIntroSequence::GetOrLoadSlideGfx(const tString &asFile)
 
 //-----------------------------------------------------------------------
 
+// Real 00_00_intro.hps's own Update() advances at most ONE slide index per
+// frame - "if(mlCurrentSlideIndex<mvSlides.length()-1){ ... if(mfSlideShowTimer
+// >=nextSlide.mfStartTime){ ++mlCurrentSlideIndex; ... } }" (line ~589) - not
+// a loop. This port previously used a `while`, which (task 1's reported
+// "slide cadence" bug) can silently skip slides ENTIRELY under any frame-time
+// variance: several of BuildTimeline()'s real gaps are as short as 0.27s (the
+// real script's own authored rapid-cut flashes), so a single slow/hitched
+// frame - a texture decode stall, a loaded-but-not-yet-rendered frame, a slow
+// headless/test host - can jump straight past one or more slides' entire
+// visible lifetime in one Update() call, and they are then never drawn at
+// all. The real script's single `if` instead falls behind by at most one
+// index per frame, guaranteeing every slide gets at least one real frame of
+// screen time, exactly like this fix now does.
 void cSomaIntroSequence::AdvanceSlides(float afTimeStep)
 {
 	if (mfSlideFadeTimer > 0.0f)
 		mfSlideFadeTimer -= afTimeStep;
 
-	while (mlCurrentSlideIndex + 1 < (int)mvSlides.size() &&
-		   mfTimer >= mvSlides[mlCurrentSlideIndex + 1].mfStartTime)
+	if (mlCurrentSlideIndex + 1 < (int)mvSlides.size() &&
+		mfTimer >= mvSlides[mlCurrentSlideIndex + 1].mfStartTime)
 	{
 		++mlCurrentSlideIndex;
 		const cIntroSlide &curSlide = mvSlides[mlCurrentSlideIndex];
@@ -485,12 +498,17 @@ void cSomaIntroSequence::DrawTextSlide(float afAlpha)
 	float fCenterY = mvScreenSize.y * 0.42f;
 	float fMaxWidth = mvScreenSize.x * 0.6f;
 
-	DrawWrappedText(kQuoteText, mpQuoteFont, cVector2f(30, 30), cVector3f(fCenterX, fCenterY, 5),
+	// Real font sizes, straight from 00_00_intro.hps's own DrawTextSlide():
+	// frameQuote.mFont.mvSize = cVector2f(36, 36) (Sansation_Large_Bold),
+	// labelSignature.mFont.mvSize = cVector2f(30, 30) (Sansation_Large) -
+	// this port previously used 30/24, visibly smaller than the real card
+	// (task 4's reported bug).
+	DrawWrappedText(kQuoteText, mpQuoteFont, cVector2f(36, 36), cVector3f(fCenterX, fCenterY, 5),
 					fMaxWidth, col, eFontAlign_Center, false);
 
 	mpGuiSet->DrawFont(cString::To16Char(kSignatureText), mpSignatureFont,
 						cVector3f(fCenterX + fMaxWidth * 0.5f, fCenterY + 60, 5),
-						cVector2f(24, 24), col, eFontAlign_Right);
+						cVector2f(30, 30), col, eFontAlign_Right);
 }
 
 //-----------------------------------------------------------------------

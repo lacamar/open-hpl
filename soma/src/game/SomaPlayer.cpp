@@ -7,6 +7,61 @@
 
 //---------------------------------------
 
+// Real config/game.cfg <Game DefaultMaxInteractDistance="2.0" .../> - used
+// by RegisterInteractPoint() callers as the real default max-look distance
+// (see SomaApartmentIntroCall.cpp's own use for the wake-up phone).
+static const float kDefaultMaxInteractDistance = 2.0f;
+
+// Not a real script constant - real SOMA's own "am I looking at this" test
+// (PlayerLookAtCheckCenterOfScreen) is a compiled-Area/Entity flag this
+// engine's world loader doesn't parse (see SomaLoaders.h), so a registered
+// interact point here is just a plain world-space point with no known real
+// on-screen extent. A generous view-cone half-angle (~32 degrees) keeps a
+// point comfortably "hittable" near screen center without requiring the
+// player to aim with pixel precision at an invisible point.
+static const float kInteractConeCosine = 0.85f;
+
+// Line-of-sight raycast tolerance (see UpdateLookTarget()'s use of
+// cSomaInteractRayCallback) - a solid hit strictly closer than the target
+// point, by more than this margin, is treated as "blocking the view".
+// Without a small margin, the point itself (or geometry it's touching)
+// could register as its own blocker due to float precision.
+static const float kLineOfSightMargin = 0.1f;
+
+//---------------------------------------
+
+// Modeled on amnesia/src/game/LuxMapHelper.cpp's own
+// cLuxLineOfSightCallback (read directly, not guessed) - finds the closest
+// real solid hit along a ray, ignoring the player's own character-collider
+// bodies (matching that file's apBody->IsCharacter() skip) so
+// UpdateLookTarget() below can tell whether something solid stands between
+// the camera and a registered interact point.
+class cSomaInteractRayCallback : public iPhysicsRayCallback
+{
+public:
+	cSomaInteractRayCallback() : mbHit(false), mfClosestDist(0) {}
+
+	bool BeforeIntersect(iPhysicsBody *apBody)
+	{
+		return apBody->IsCharacter() == false && apBody->GetCollide();
+	}
+
+	bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams)
+	{
+		if (mbHit == false || apParams->mfDist < mfClosestDist)
+		{
+			mbHit = true;
+			mfClosestDist = apParams->mfDist;
+		}
+		return true;
+	}
+
+	bool mbHit;
+	float mfClosestDist;
+};
+
+//---------------------------------------
+
 cSomaPlayer::cSomaPlayer(cCamera *apCamera, cInput *apInput) : iUpdateable("SomaPlayer")
 {
 	mpCamera = apCamera;
@@ -44,6 +99,30 @@ cSomaPlayer::cSomaPlayer(cCamera *apCamera, cInput *apInput) : iUpdateable("Soma
 
 	// Real limits from SOMA's own config/game.cfg <Player CameraPitchLimit_Min/Max>.
 	mpCamera->SetPitchLimits(cMath::ToRad(-70.0f), cMath::ToRad(70.0f));
+
+	////////////////////////////////////////
+	// Tasks 2/3 - interact-point registry + HUD overlay. gpSomaBase is
+	// already valid here (Main.cpp assigns it immediately after
+	// construction, long before any LoadMap() call could construct this
+	// object - see SomaBase.cpp's own identical assumption for
+	// gpSomaBase->GetConfig() in Update() below).
+	msCurrentLookTarget = "";
+	mbInteractKeyPressedThisFrame = false;
+
+	cEngine *pEngine = gpSomaBase->mpEngine;
+	mpGui = pEngine->GetGui();
+	mpGuiSkin = mpGui->CreateSkin("gui_default.skin");
+	mpGuiSet = mpGui->CreateSet("PlayerHud", mpGuiSkin);
+
+	// GUI-only overlay viewport on top of the real gameplay viewport -
+	// abPushFront=false puts this at the back of the render list (drawn
+	// LAST/on top), same reasoning/citation as cSomaApartmentIntroCall's own
+	// identical subtitle overlay viewport (see its .cpp).
+	mpHudViewport = pEngine->GetScene()->CreateViewport(NULL, NULL, false);
+	mpHudViewport->AddGuiSet(mpGuiSet);
+
+	mpCrosshairGfx = mpGui->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
+	mpPromptFont = pEngine->GetResources()->GetFontManager()->CreateFontData("sansation_medium_bold.fnt");
 }
 
 //-----------------------------------------------------------------------
@@ -168,23 +247,50 @@ void cSomaPlayer::Update(float afTimeStep)
 	if(mpCharBody == NULL || mpInput == NULL) return;
 
 	//////////////////////////
-	// ESC pause menu (task 3) - checked even while mbActive is false (i.e.
-	// already paused), so a second Escape press can close the menu it just
-	// opened. No cAction is bound to Escape (see cSomaBase::
-	// CreateInputActions() - only the 5 movement/jump actions exist), so
-	// this reads the raw keyboard event queue directly instead, same
-	// "drain one distinct press" pattern as cSomaGammaScreen::
-	// AnyContinueInputThisFrame(). Routed through cSomaBase::
-	// SetGameplayPaused() (which also calls this object's own SetActive())
-	// rather than calling SetActive()/the menu directly here - see its
-	// comment in SomaBase.h.
+	// ESC pause menu (task 3) + real interact key (task 2/3) - both checked
+	// even while mbActive is false (i.e. already paused), so a second
+	// Escape press can close the menu it just opened. Neither has a real
+	// cAction bound (see cSomaBase::CreateInputActions() - only the 5
+	// movement/jump actions exist), so this reads the raw keyboard event
+	// queue directly instead, same "drain one distinct press" pattern as
+	// cSomaGammaScreen::AnyContinueInputThisFrame(). Both checks share ONE
+	// drain loop rather than two separate KeyIsPressed()+GetKey() calls -
+	// iKeyboard::GetKey() (see KeyboardSDL.cpp) pops the front of a real
+	// FIFO queue every call, so two independent single-pop checks in the
+	// same frame could each consume a *different* queued key and neither
+	// would see the other's press. Draining the whole queue once here
+	// checks every key actually pressed this frame against both actions.
+	//
+	// Escape is routed through cSomaBase::SetGameplayPaused() (which also
+	// calls this object's own SetActive()) rather than calling
+	// SetActive()/the menu directly here - see its comment in SomaBase.h.
+	// The interact key (E - a real default per this task's own guidance;
+	// this scaffold has no rebindable interact cAction, see SomaPlayer.h's
+	// own scope note) is only latched into mbInteractKeyPressedThisFrame
+	// here; WasInteractedWith() (checked later, once UpdateLookTarget() has
+	// run for this frame) is what actually turns it into an edge-triggered
+	// "did the player just interact with X" answer.
+	mbInteractKeyPressedThisFrame = false;
 	{
 		iKeyboard *pKeyboard = mpInput->GetKeyboard();
-		if(pKeyboard && pKeyboard->KeyIsPressed() && pKeyboard->GetKey().mKey == eKey_Escape && gpSomaBase)
-			gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false);
+		while(pKeyboard && pKeyboard->KeyIsPressed())
+		{
+			eKey key = pKeyboard->GetKey().mKey;
+
+			if(key == eKey_Escape && gpSomaBase)
+				gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false);
+			else if(key == eKey_E)
+				mbInteractKeyPressedThisFrame = true;
+		}
 	}
 
-	if(mbActive == false) return;
+	if(mbActive == false)
+	{
+		// No fresh look-target while paused/inactive - avoid reporting a
+		// stale target from the last active frame (see WasInteractedWith()).
+		msCurrentLookTarget = "";
+		return;
+	}
 
 	// Real Horizontal FOV/MouseSensitivity/InvertMouseY settings - all three
 	// are live, so just re-read the config every frame rather than caching a
@@ -248,6 +354,155 @@ void cSomaPlayer::Update(float afTimeStep)
 	}
 
 	mpCharBody->Update(afTimeStep);
+
+	// Run after mpCharBody->Update() so mpCamera's position (driven by the
+	// character body's own SetCamera()/CameraPosAdd - see CreateCharacterBody())
+	// is this frame's up-to-date eye position, not last frame's.
+	UpdateLookTarget();
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaPlayer::RegisterInteractPoint(const tString &asName, const cVector3f &avWorldPos, float afMaxDistance)
+{
+	// Re-registering an existing name (e.g. a map reload) replaces it rather
+	// than accumulating duplicates.
+	for(size_t i = 0; i < mvInteractPoints.size(); ++i)
+	{
+		if(mvInteractPoints[i].msName == asName)
+		{
+			mvInteractPoints[i].mvWorldPos = avWorldPos;
+			mvInteractPoints[i].mfMaxDistance = afMaxDistance;
+			return;
+		}
+	}
+
+	cSomaInteractPoint point;
+	point.msName = asName;
+	point.mvWorldPos = avWorldPos;
+	point.mfMaxDistance = afMaxDistance;
+	mvInteractPoints.push_back(point);
+}
+
+//-----------------------------------------------------------------------
+
+bool cSomaPlayer::WasInteractedWith(const tString &asName) const
+{
+	return mbInteractKeyPressedThisFrame && msCurrentLookTarget == asName;
+}
+
+//-----------------------------------------------------------------------
+
+// See SomaPlayer.h's RegisterInteractPoint() doc comment and
+// cSomaInteractRayCallback above for the real citations this leans on.
+void cSomaPlayer::UpdateLookTarget()
+{
+	msCurrentLookTarget = "";
+
+	if(mvInteractPoints.empty() || mpCharBody == NULL)
+		return;
+
+	cVector3f vCamPos = mpCamera->GetPosition();
+	cVector3f vFwd = mpCamera->GetForward();
+
+	tString sClosestName = "";
+	float fClosestDist = 0;
+
+	for(size_t i = 0; i < mvInteractPoints.size(); ++i)
+	{
+		const cSomaInteractPoint &point = mvInteractPoints[i];
+
+		cVector3f vToPoint = point.mvWorldPos - vCamPos;
+		float fDist = vToPoint.Length();
+		if(fDist > point.mfMaxDistance || fDist < 0.0001f)
+			continue;
+
+		cVector3f vDir = vToPoint / fDist;
+		float fDot = cMath::Vector3Dot(vFwd, vDir);
+		if(fDot < kInteractConeCosine)
+			continue;
+
+		if(mpPhysicsWorld)
+		{
+			cSomaInteractRayCallback rayCallback;
+			mpPhysicsWorld->CastRay(&rayCallback, vCamPos, point.mvWorldPos, true, false, false, true);
+			if(rayCallback.mbHit && rayCallback.mfClosestDist < fDist - kLineOfSightMargin)
+				continue; // something solid stands between the camera and the point
+		}
+
+		if(sClosestName == "" || fDist < fClosestDist)
+		{
+			sClosestName = point.msName;
+			fClosestDist = fDist;
+		}
+	}
+
+	msCurrentLookTarget = sClosestName;
+}
+
+//-----------------------------------------------------------------------
+
+// Task 3 - a real crosshair, shown during normal gameplay only (not while
+// paused/inactive, matching the real game's own HUD hiding for its pause
+// menu). Screen size is queried fresh here rather than cached at
+// construction - this object (unlike the short-lived splash/gamma screens)
+// lives for the rest of the process, so a cached size would go stale across
+// a real window resize (see SomaMainMenu.cpp's own equivalent fix, cited in
+// PORTING_NOTES.md's "screen-size staleness" entry).
+void cSomaPlayer::DrawCrosshair()
+{
+	cVector2f vScreenSize = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	cVector2f vCenter = vScreenSize * 0.5f;
+
+	const float fLength = 8.0f;
+	const float fThickness = 2.0f;
+	cColor col(1, 1, 1, 0.85f);
+
+	// Horizontal bar, then vertical bar - together a real "+" reticle.
+	mpGuiSet->DrawGfx(mpCrosshairGfx,
+					   cVector3f(vCenter.x - fLength, vCenter.y - fThickness * 0.5f, 10),
+					   cVector2f(fLength * 2.0f, fThickness), col);
+	mpGuiSet->DrawGfx(mpCrosshairGfx,
+					   cVector3f(vCenter.x - fThickness * 0.5f, vCenter.y - fLength, 10),
+					   cVector2f(fThickness, fLength * 2.0f), col);
+}
+
+//-----------------------------------------------------------------------
+
+// Task 3 - real interact hint, shown only while actually looking at a
+// registered interactable (reuses task 2's own UpdateLookTarget() - one
+// shared "what am I looking at" system, not two separate ones, per this
+// task's own guidance). Mirrors real base_english.lang's
+// CATEGORY="MainMenu"/Entry="Interact" wording ("Interact") rather than
+// inventing new copy.
+void cSomaPlayer::DrawInteractPrompt()
+{
+	if(msCurrentLookTarget == "")
+		return;
+
+	cVector2f vScreenSize = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+
+	tString sPrompt = "[E] Interact";
+	cVector3f vPos(vScreenSize.x * 0.5f, vScreenSize.y * 0.5f + 28.0f, 10);
+
+	mpGuiSet->DrawFont(cString::To16Char(sPrompt), mpPromptFont, vPos,
+						cVector2f(20, 20), cColor(1, 1), eFontAlign_Center);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaPlayer::OnDraw(float afFrameTime)
+{
+	// No HUD while paused/inactive (SetActive(false)) - matches the real
+	// game hiding its own HUD behind the pause menu, and keeps this from
+	// drawing over cSomaIntroSequence's opaque slideshow (which also drives
+	// SetActive(false) - see SomaBase.cpp's LoadMap()) or cSomaMainMenu's
+	// paused-menu overlay.
+	if(mbActive == false)
+		return;
+
+	DrawCrosshair();
+	DrawInteractPrompt();
 }
 
 //-----------------------------------------------------------------------

@@ -16,12 +16,21 @@
  * source, not guessed - see the .cpp file's comments for exact file/line
  * citations (script/player/Player_Types.hps, Player.hps,
  * MoveState_Normal.hps, config/game.cfg).
+ *
+ * Also owns a small, hand-authored interact-point registry and a real HUD
+ * overlay (crosshair + "you can interact" prompt) - see the public
+ * RegisterInteractPoint()/GetCurrentLookTarget()/WasInteractedWith()
+ * declarations below and the .cpp's citations. This is NOT a general
+ * interact/input-binding framework (no real Area/trigger-volume system,
+ * no rebindable interact cAction) - see those comments for the honest scope.
  */
 
 #ifndef SOMA_PLAYER_H
 #define SOMA_PLAYER_H
 
 #include "hpl.h"
+
+#include <vector>
 
 using namespace hpl;
 
@@ -61,6 +70,7 @@ public:
 	void ResetForNewMap(iPhysicsWorld *apPhysicsWorld, const cVector3f &avFeetPos, float afYawRad);
 
 	void Update(float afTimeStep);
+	void OnDraw(float afFrameTime);
 
 	iCharacterBody* GetCharacterBody(){ return mpCharBody; }
 
@@ -73,8 +83,42 @@ public:
 	void SetActive(bool abActive){ mbActive = abActive; }
 	bool IsActive() const { return mbActive; }
 
+	////////////////////////////////////////
+	// Tasks 2/3 - a minimal, hand-authored "interact point" registry, NOT a
+	// general Area/trigger-volume system (real SOMA Areas are OBB-shaped
+	// script volumes this engine's world loader doesn't expose at runtime -
+	// see SomaLoaders.h). Each registered point is a plain world-space
+	// sphere a caller already knows the real position of (e.g.
+	// cSomaApartmentIntroCall registers the real "InteractCellPhone_Dummy"
+	// trigger's own compiled-map WorldPos - see its own .cpp for the
+	// citation), checked every frame in Update() against the camera's live
+	// position/facing plus a real cSomaPlayer physics line-of-sight raycast
+	// (see the .cpp's cSomaInteractRayCallback, modeled on amnesia/src/game/
+	// LuxMapHelper.cpp's own cLuxLineOfSightCallback). Reusable by name for
+	// any future one-off interactable this codebase adds narrow hand-port
+	// support for.
+
+	// afMaxDistance is real SOMA's own config/game.cfg
+	// <Game DefaultMaxInteractDistance="2.0" .../> unless the caller has a
+	// more specific real value to cite.
+	void RegisterInteractPoint(const tString &asName, const cVector3f &avWorldPos, float afMaxDistance);
+
+	// "" if the player isn't currently looking at any registered point -
+	// lets HUD code (task 3, this class's own OnDraw()) show a generic "you
+	// can interact" prompt without needing to know real point names.
+	tString GetCurrentLookTarget() const { return msCurrentLookTarget; }
+
+	// True only on the exact frame a real interact keypress (see Update()'s
+	// own "drain the keyboard queue once" comment) landed while asName was
+	// the current look target - edge-triggered, so holding the key down
+	// can't "answer" the same phone call twice.
+	bool WasInteractedWith(const tString &asName) const;
+
 private:
 	void CreateCharacterBody();
+	void UpdateLookTarget();
+	void DrawCrosshair();
+	void DrawInteractPrompt();
 
 	cCamera *mpCamera;
 	cInput *mpInput;
@@ -91,6 +135,32 @@ private:
 	float mfJumpSpeed;
 
 	bool mbActive;
+
+	////////////////////////////////////////
+	// Tasks 2/3 state - see the public section above for the real citations.
+	struct cSomaInteractPoint
+	{
+		tString msName;
+		cVector3f mvWorldPos;
+		float mfMaxDistance;
+	};
+	std::vector<cSomaInteractPoint> mvInteractPoints;
+
+	tString msCurrentLookTarget;
+	bool mbInteractKeyPressedThisFrame;
+
+	// HUD overlay (task 3) - a GUI-only viewport on top of the real
+	// gameplay viewport, same idiom cSomaApartmentIntroCall's own subtitle
+	// overlay already uses (see its .cpp for the full "front vs back"
+	// citation) - created once, alongside the one cSomaPlayer instance
+	// itself (never destroyed - see cSomaPlayer.h's own header, this class
+	// is already never-destroyed for the life of the process).
+	cGui *mpGui;
+	cGuiSkin *mpGuiSkin;
+	cGuiSet *mpGuiSet;
+	cViewport *mpHudViewport;
+	cGuiGfxElement *mpCrosshairGfx;
+	iFontData *mpPromptFont;
 };
 
 //----------------------------------------------
