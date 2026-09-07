@@ -4348,3 +4348,87 @@ interact-with-entity system (would let this hand-port and future ones replace th
 auto-trigger substitutes with the real thing); the rest of `00_01_apartment.hps`'s ~1760 lines
 (lighting setup, drapes, tracer-fluid reminder loop, answering machine, bathroom/kitchen
 interactions, end-of-level timer) - none of that is touched by this session's `.hps` gap.
+
+## Shared engine: mute audio while the window is unfocused, resume on refocus (this session)
+
+User-reported, generic desktop-game gap, not SOMA-specific: audio kept playing continuously
+while alt-tabbed away. Fix lives entirely in the shared `HPL2/core` engine layer so it applies
+identically to every game module (Dark Descent, AMFP, SOMA, Rebirth, Bunker) with no per-game
+flag or file.
+
+Investigation found this didn't need any new SDL event plumbing: `cEngine::Update()` already
+calls `CheckAndBroadcastFocusChange()` (`HPL2/core/sources/engine/Engine.cpp:829`) every frame,
+polling `iLowLevelGraphics::GetWindowInputFocus()` (backed by SDL2's real
+`SDL_WINDOW_INPUT_FOCUS` flag - set/cleared by the real `SDL_WINDOWEVENT_FOCUS_GAINED`/
+`FOCUS_LOST` events under the hood, see `LowLevelGraphicsSDL.cpp:719`) and broadcasting
+`eUpdateableMessage_AppLostInputFocus`/`AppGotInputFocus` via `cUpdater::RunMessage()` to every
+globally-registered `iUpdateable`. `cSound` is already one of those (`AddGlobalUpdate(mpSound)`,
+`Engine.cpp:340`), so overriding `iUpdateable::AppLostInputFocus()`/`AppGotInputFocus()` on
+`cSound` itself was the whole fix - no touch to `LowLevelInputSDL.cpp`'s `SDL_PollEvent()` loop
+or any new static engine flags (unlike the resize precedent's `CheckAndUpdateScreenSize()`
+polling pattern, this hook already existed and just had no audio consumer).
+
+- `HPL2/core/include/sound/Sound.h` - added the two overrides plus `mbMutedByFocusLoss`/
+  `mfPreFocusMuteVolume`.
+- `HPL2/core/sources/sound/Sound.cpp` - `AppLostInputFocus()` saves the current
+  `iLowLevelSound::GetVolume()` then calls `SetVolume(0)`; `AppGotInputFocus()` restores the
+  saved value. Both guarded by `mbMutedByFocusLoss` so a redundant message (e.g. two
+  `AppGotInputFocus()` in a row) is a no-op. `iLowLevelSound::SetVolume()` is already the
+  engine's real top-level master-volume call - both backends implement it as a genuine
+  single-call device-wide gain (OpenAL: `OAL_Listener_SetMasterVolume()` via
+  `LowLevelSoundOpenAL.cpp:199`; FMOD: `FSOUND_SetSFXMasterVolume()` via
+  `LowLevelSoundFmod.cpp:186`), and it's already what every game's Options-menu volume slider
+  calls (e.g. `amnesia/src/game/LuxMainMenu_Options.cpp:2166`) - so muting here doesn't clobber
+  the user's configured volume, it saves-and-restores around it, and composes cleanly with
+  Dark Descent's own separate, unmodified `cLuxMapHandler::PauseSoundsAndMusic()`/
+  `ResumeSoundsAndMusic()` (`amnesia/src/game/LuxMapHandler.cpp:483`, called from the exact same
+  `AppLostInputFocus()`/`AppGotInputFocus()` messages) since that pauses individual
+  `cSoundEntry`/music-stream channels rather than the device volume - belt-and-suspenders, not a
+  conflict. SOMA has no equivalent per-game hook at all, confirming this was a genuine gap for
+  it specifically before this fix.
+- `HPL2/core/sources/system/HeadlessControl.cpp` - added a test-only `"focus"` input type to the
+  existing `CmdInput` handler (`"lost"`/`"gained"`), calling `mpEngine->GetUpdater()->
+  RunMessage(eUpdateableMessage_AppLostInputFocus/AppGotInputFocus)` directly. Purely additive
+  (existing `"key"`/`"mouse_move"`/`"mouse_button"` types untouched). Needed because a headless
+  window is created `SDL_WINDOW_HIDDEN` and never shown, so its real `SDL_WINDOW_INPUT_FOCUS`
+  flag can never transition - `CheckAndBroadcastFocusChange()`'s own real polling path can never
+  fire in headless mode, by design, matching this task's own caution about headless focus
+  state. This new command drives the exact same `RunMessage()` call a real alt-tab would,
+  without touching `mbApplicationHasInputFocus` at all, so it can't desync the real polling path.
+
+**Verified live, headless** (`scripts/setup-test-scratch.sh` against the real Steam SOMA
+install, real binary rebuilt in a dedicated `amnesia/src/build-focusfix` dir, deployed with
+`scripts/deploy-test-binary.sh`, driven over the real `OPENHPL_HEADLESS_SOCKET` control
+protocol via a small local Python client): injecting `{"cmd":"input","type":"focus",
+"state":"lost"}` produced the log line `"Sound: window lost focus, muting audio device"`;
+`"state":"gained"` immediately after produced `"Sound: window regained focus, restoring audio
+volume"`. Sending a redundant `"gained"` (already unmuted) and a redundant `"lost"` (already
+muted) each produced no extra log line, confirming the `mbMutedByFocusLoss` guard. An invalid
+`"state":"bogus"` returned a clean `{"ok":false,"error":...}` with no crash, and the process kept
+responding to `ping` afterward.
+
+**Limits of this verification, stated honestly**: this exercises the actual message-dispatch
+and mute/restore logic (the code this session wrote) end-to-end, but bypasses
+`CheckAndBroadcastFocusChange()`'s own real SDL-focus-flag polling (unmodified, pre-existing
+code) - as explained above, a hidden headless window structurally cannot receive a real
+focus-lost/gained transition, so there is no clean way to headlessly test *that* half of the
+path. Confirming a real alt-tab actually mutes/restores audio needs an interactive manual
+check: run any game module in a normal (non-headless) window, alt-tab away and confirm audio
+stops, alt-tab back and confirm it resumes.
+
+Dark Descent regression: build succeeded cleanly (`amnesia/src/build-focusfix`, full unfiltered
+rebuild - `Amnesia`/`Amfp`/`Bunker`/`Rebirth`/`Soma`/`Launcher` all linked, only pre-existing
+`std::binary_function` deprecation warnings). All 4 ctest suites
+(`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests`) green. A real
+headless Amnesia boot against the real Dark Descent Steam install (same scratch-dir script)
+reached its own expected pre-existing single-instance-lock wait state cleanly (log:
+`"Another headless instance already holds ... this is expected, not a hang"`) with no crash or
+deviation - a second concurrent agent's own long-running SOMA headless test was holding that
+shared per-user `open-hpl-headless.lock` at the time, which is an unrelated resource-contention
+condition this fix doesn't touch and that lock is intentionally not bypassed (it may guard real
+shared GPU/display resources across concurrent headless runs); that pre-existing lock is
+correctly documented as "expected, not a hang." Since the new code only ever executes inside
+`cSound::AppLostInputFocus()`/`AppGotInputFocus()`, which fire solely off real focus
+transitions that a headless window structurally cannot produce, the new path is provably inert
+for the entire duration of any headless run (Dark Descent included) absent an actual focus
+event - by construction, not just by observation.

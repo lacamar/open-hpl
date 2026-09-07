@@ -20,6 +20,7 @@
 #include "system/HeadlessControl.h"
 
 #include "engine/Engine.h"
+#include "engine/Updater.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Bitmap.h"
@@ -656,6 +657,30 @@ namespace hpl {
 			ev.button.x = aReq.GetInt("x", 0);
 			ev.button.y = aReq.GetInt("y", 0);
 			SDL_PushEvent(&ev);
+		}
+		else if(sType == "focus")
+		{
+			// Test-only hook: a hidden headless window's real SDL_WINDOW_INPUT_FOCUS
+			// flag never changes (see the SDL_WINDOW_HIDDEN block in Init() above), so
+			// cEngine::CheckAndBroadcastFocusChange()'s own real polling of that flag
+			// can never fire here - this drives the exact same cUpdater::RunMessage()
+			// call it would make on a real alt-tab, letting focus-loss/gain consumers
+			// (e.g. cSound::AppLostInputFocus/AppGotInputFocus) be tested headlessly
+			// without a real window and without touching mbApplicationHasInputFocus,
+			// so it can't desync the real polling path.
+			tString sState = aReq.GetString("state", "");
+			if(sState == "lost")
+			{
+				mpEngine->GetUpdater()->RunMessage(eUpdateableMessage_AppLostInputFocus);
+			}
+			else if(sState == "gained")
+			{
+				mpEngine->GetUpdater()->RunMessage(eUpdateableMessage_AppGotInputFocus);
+			}
+			else
+			{
+				aResp.SetError("focus requires 'state' of 'lost' or 'gained'");
+			}
 		}
 		else
 		{
