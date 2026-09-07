@@ -42,15 +42,27 @@ namespace hpl {
 
 		void Update(float afTimeStep);
 
+		// Shared engine-wide fix (applies to every game module, not just one): the
+		// window/input-focus tracking in cEngine::CheckAndBroadcastFocusChange() already
+		// fires these on every real focus transition (SDL_WINDOW_INPUT_FOCUS gained/lost)
+		// via cUpdater::RunMessage() to every globally-registered iUpdateable, and cSound
+		// is one (see cEngine::Init()'s AddGlobalUpdate(mpSound)) - so overriding these two
+		// is enough to silence/restore all audio on alt-tab with no new event plumbing.
+		void AppLostInputFocus();
+		void AppGotInputFocus();
+
 		iLowLevelSound* GetLowLevel(){ return mpLowLevelSound;}
 		cSoundHandler* GetSoundHandler(){ return mpSoundHandler; }
 		cMusicHandler* GetMusicHandler(){ return mpMusicHandler; }
-		
+
 	private:
 		iLowLevelSound *mpLowLevelSound;
 		cResources* mpResources;
 		cSoundHandler* mpSoundHandler;
 		cMusicHandler* mpMusicHandler;
+
+		bool mbMutedByFocusLoss;
+		float mfPreFocusMuteVolume;
 	};
 
 };

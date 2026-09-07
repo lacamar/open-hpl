@@ -1,5 +1,23 @@
 # Tasks
 
+- Shared engine: mute audio while window is unfocused, resume on refocus (2026-09-08)
+  - DONE: user reported audio kept playing continuously while alt-tabbed away, on every game
+    module. Fixed at the shared `HPL2/core` engine layer, not gated on any per-game flag.
+    `cEngine::Update()` already broadcasts `AppLostInputFocus()`/`AppGotInputFocus()` to every
+    globally-registered `iUpdateable` off real SDL window-focus polling (pre-existing, used by
+    Dark Descent's own `cLuxMapHandler` sound-pause already) - `cSound` (`HPL2/core/sources/
+    sound/Sound.cpp`) is one such updateable and now overrides both to mute/restore the real
+    device master volume (`iLowLevelSound::SetVolume()`), the same call every game's own Options
+    volume slider already uses. Added a test-only `"focus"` input type to the headless control
+    protocol's `CmdInput` (`HPL2/core/sources/system/HeadlessControl.cpp`) to drive this directly
+    for headless verification, since a hidden headless window can never receive a real focus
+    transition. Verified live headless against real SOMA data: mute/restore fire correctly and
+    idempotently over the real control socket; Dark Descent regression confirmed via a clean full
+    rebuild, all 4 ctest suites green, and a real headless Amnesia boot reaching its own expected
+    behavior unchanged. Full writeup, citations, and verification detail (plus its one honestly
+    stated limit - a real alt-tab itself needs interactive, non-headless confirmation) in
+    PORTING_NOTES.md's newest section.
+
 - SOMA: New Game intro sequence's "stilted"/overlapping voice lines - schedule-based advance
   replaced with real audio-completion polling (2026-09-07)
   - DONE: soma/src/game/SomaIntroSequence.{h,cpp} - user reported the intro slideshow's dialogue
