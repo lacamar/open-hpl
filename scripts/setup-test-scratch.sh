@@ -21,10 +21,11 @@
 #
 #   eval "$(scripts/setup-test-scratch.sh /home/lm/.local/share/Steam/steamapps/common/SOMA /tmp/my-scratch)"
 #
-# Deploy your OWN built binary into <scratch-dir> yourself afterward (e.g.
-# `\cp -f amnesia/src/build-foo/Soma.bin.aarch64 <scratch-dir>/`) - this
-# script only sets up the read-only real-data symlinks and XDG dirs, it
-# never touches your build output.
+# Deploy your OWN built binary into <scratch-dir> afterward using
+# scripts/deploy-test-binary.sh (NOT a bare `cp`/`\cp -f`, see that
+# script's own header for exactly why) - this script only sets up the
+# read-only real-data symlinks and XDG dirs, it never touches your build
+# output.
 #
 # Safety guarantees this script enforces:
 # - <scratch-dir> must NOT resolve (after realpath) under a real Steam
