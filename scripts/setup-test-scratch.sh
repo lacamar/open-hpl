@@ -44,6 +44,21 @@
 # - Refuses if <real-game-root> itself doesn't look like a real Frictional
 #   Games install (no Soma.bin.x86_64/Amnesia.bin.x86_64-shaped binary
 #   found at its top level) - catches an accidental argument-order swap.
+# - Does NOT symlink a handful of known transient/session-artifact
+#   filenames from the real root, even if present there: `hpl*.log`, and
+#   any `*.bin.aarch64` that isn't the sanctioned `OpenHpl<Game>.bin.aarch64`
+#   launcher-deployed name (the real Frictional depot never ships aarch64
+#   binaries at all, so any other one there is either this project's own
+#   launcher artifact - harmless to skip, your own deploy-test-binary.sh
+#   replaces it under this same plain name anyway - or a stray mistake).
+#   This is a real, previously-hit hazard, not theoretical: an earlier
+#   session left a stray hpl.log directly in the real install; every
+#   concurrent agent's scratch dir then symlinked ITS OWN "hpl.log" at
+#   that exact same real file, and two engines opening/locking the same
+#   real inode from different scratch dirs deadlocked on it. Skipping
+#   these names here means a real hpl.log gets created fresh, local to
+#   each scratch dir, every time - no shared real inode, no contention,
+#   and no risk of a write ever reaching the real file through it.
 
 set -euo pipefail
 
@@ -104,6 +119,24 @@ echo "Symlinking '$REAL_ROOT' contents into '$SCRATCH_DIR' (real data, read-only
 for entry in "$REAL_ROOT"/* "$REAL_ROOT"/.[!.]*; do
 	[ -e "$entry" ] || continue
 	base="$(basename "$entry")"
+
+	# See this script's own header comment ("Does NOT symlink...") for why.
+	case "$base" in
+		hpl*.log)
+			echo "  skipping '$base' (transient log artifact, not real game data)" >&2
+			continue
+			;;
+		*.bin.aarch64)
+			case "$base" in
+				OpenHpl*.bin.aarch64) : ;; # sanctioned launcher artifact - fine to symlink
+				*)
+					echo "  skipping '$base' (aarch64 binary that isn't the sanctioned launcher name - the real depot never ships one, so this is either our own launcher artifact under an unexpected name or a stray build output)" >&2
+					continue
+					;;
+			esac
+			;;
+	esac
+
 	ln -sf "$entry" "$SCRATCH_DIR/$base"
 done
 
