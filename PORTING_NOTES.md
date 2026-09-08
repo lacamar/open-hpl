@@ -4548,3 +4548,120 @@ correctly documented as "expected, not a hang." Since the new code only ever exe
 transitions that a headless window structurally cannot produce, the new path is provably inert
 for the entire duration of any headless run (Dark Descent included) absent an actual focus
 event - by construction, not just by observation.
+
+## SOMA: real map-authored ambient sounds (car honking, dogs, seagulls, fridge hum, ...) - loader existed, target resource didn't (this session)
+
+User-reported: "the ringing phone sound doesn't play or any of the other sounds besides the
+voice dialog lines... there are meant to be car honking sounds and things like that in the
+background" (00_01_apartment.hpm's intro; the phone ring itself is a separate, parallel task's
+scope - `SomaApartmentIntroCall.cpp`, not touched here).
+
+**Root cause, precisely** (per this project's established discipline - confirmed against real
+data and a real live boot before writing any fix): this was neither a missing loader (the
+`LoadExposureAreaTrack()` precedent) nor a not-wired-up one. `cWorldLoaderHpm::
+LoadSoundsTrack()` (`HPL2/core/sources/resources/WorldLoaderHpm.cpp:448`) already exists,
+already runs unmodified for every real map, and already calls the shared
+`cEngineFileLoading::LoadSound()` -> `cWorld::CreateSoundEntity()` ->
+`cSoundEntityManager::CreateSoundEntity()` for every `<Sound>` element in a real
+`.hpm_Sound` sidecar (confirmed real: `maps/chapter00/00_01_apartment/
+00_01_apartment.hpm_Sound` really contains 7 `HPLMapTrack_Sound` entries - `fridge_hum`,
+`dvd_idle`, `vent_sound_1`, `dogs`, `car_drive`, `seagulls`, `dogs_1` - each with a real
+`SoundEntityFile="..."` plus per-instance `MinDistance`/`MaxDistance`/`Volume`). The real gap:
+`SoundEntityFile` values like `"Entities_Urban/kitchen/fridge/hum_loop"` and
+`"00_06_lab/amb/spot/car_drive"` are real FMOD Ex/Studio *event* paths, not real HPL `.snt`
+sound-entity resource files - confirmed by `find .../SOMA -iname '*.snt'` across the entire
+real install turning up exactly ONE real `.snt` (`lang/eng/voices/vocalizations/player/
+player_burned.snt`, unrelated). So `cSoundEntityManager::CreateSoundEntity()`'s file-searcher
+lookup always misses and `cWorld::CreateSoundEntity()` returns NULL for all 7, confirmed live
+via a real headless boot of `00_01_apartment.hpm` BEFORE this fix (`hpl.log`): "ERROR: Couldn't
+create SoundEntity 'Entities_Urban/kitchen/fridge/hum_loop.snt'" / "ERROR: Cannot find sound
+entity '...'" repeated for all 7, and the loader's own real summary line ending "...0 sounds"
+for the whole map. Same FMOD-event-not-a-real-resource shape already root-caused for the main
+menu's click/hover SFX (`SomaMenuSfx.cpp`) and, per this session's task briefing, believed true
+of the apartment phone ring (separate task).
+
+**The fix** (`soma/src/game/SomaAmbientSfx.{h,cpp}`, new files; `SomaAmbientSfxVorbisSetup.h`,
+new): rather than touching any shared loader (zero changes to `WorldLoaderHpm.cpp`/
+`EngineFileLoading.cpp`/`SoundEntityManager.cpp` - all three already run correctly and now just
+find a real resource where they used to find nothing), this extracts the real audio out of the
+banks that actually contain it and synthesizes real, valid `SOUNDENTITY` `.snt` XML sidecars
+(exact schema verified against the one real `.snt` in the install) referencing it, in a cache
+resource dir registered at boot (`cSomaBase::Init()`, right after `RegisterSomaLoaders()`) -
+mirrors `SomaMenuSfx.cpp`'s established FSB5-extraction pattern for this exact problem shape,
+duplicated into new files rather than shared, to keep this fix's blast radius off
+already-shipped/verified menu-SFX code.
+
+Real audio sources (all three banks read live from the user's own install; parsed with this
+session's own FSB5 reader, deliberately re-implemented rather than importing SomaMenuSfx.cpp's):
+
+- `sounds/level/00_06_lab.fsb` - real FSB5, **mode=2 (plain PCM16)**, containing
+  `car_drive_01..10`, `distant_dog_bark_11..19`, `urban_seagull_01..06` - matches
+  `"00_06_lab/amb/spot/{car_drive,distant_dog,seagull}"`'s leaf event names. This per-level
+  bank is reused by other areas needing generic urban ambience, which is exactly why the
+  apartment's own `.hpm_Sound` points at a `"00_06_lab"`-named bank rather than one named for
+  itself (confirmed via `strings`, not a guess). No Vorbis reconstruction needed at all here -
+  just a 44-byte WAV header, same as `SomaMenuSfx.cpp`'s `new_game_sting` PCM16 path.
+- `sounds/entities/entities_urban.fsb` - real FSB5, **mode=15 (Vorbis)**, containing `hum_loop`
+  and `dvd_player_idle_sweet_01..04` - matches `"Entities_Urban/kitchen/fridge/hum_loop"` and
+  `".../dvd_player/idle"`. Its samples' Vorbis setup-header crc32 (`0xb62ad8df`) is a
+  **different** real FMOD codebook preset than `SomaMenuSfxVorbisSetup.h`'s existing one
+  (`0x6d39bf3e`) - confirmed via this session's own FSB5 header parse. Pulled the matching
+  4038-byte preset entry out of the same public, MIT-licensed python-fsb5 project table
+  (`fsb5/vorbis_headers.py`, https://github.com/HearthSim/python-fsb5) the first preset came
+  from, into the new `SomaAmbientSfxVorbisSetup.h` - not extracted from SOMA itself, same as the
+  existing preset's own provenance.
+- `sounds/entities/Entities_Station.fsb` - real FSB5, mode=15 (Vorbis), containing
+  `small_ventilation_cluster_001..004` - matches `"Entities_Station/object/
+  small_ventilation_cluser/loop"` (real misspelled-in-the-original-data folder name). Its
+  samples' crc32 (`0x6d39bf3e`) IS the preset `SomaMenuSfxVorbisSetup.h` already embeds - reused
+  directly. Directory-qualified as `"entities/Entities_Station.fsb"` when resolving via the file
+  searcher since an unrelated second `Entities_Station.fsb` also exists under `sounds/level/`.
+
+Two deliberate, documented simplifications (same spirit as `LoadExposureAreaTrack()`'s "a real,
+honest first step, not the full system"): (1) real per-instance FMOD "spot" scatter timing
+(how often `car_drive`/`distant_dog`/`seagull` repeat) lives inside the `.fev` event project
+this codebase has no parser for - fixed, staggered `Interval`/`Random` values (14-27s) were
+used instead of extracted real timing; real per-instance `MinDistance`/`MaxDistance`/`Volume`,
+by contrast, ARE the authored `.hpm_Sound` values and flow through completely unmodified
+(`cEngineFileLoading::LoadSound()` already calls `SetMinDistance()`/etc. straight from the real
+XML after creation). (2) `"dogs"`/`"distant_dog"` and `"dogs_1"`/`"distant_dog_type2"` are two
+separate real `.hpm_Sound` entities, but only one real sample family
+(`distant_dog_bark_11..19`) was found in `00_06_lab.fsb` - both synthesized `.snt` files draw
+from the same real pool (still real dog-bark audio) rather than inventing a second one.
+
+**Verified live, headless**: rebuilt in a dedicated `amnesia/src/build-ambientsfx` dir, deployed
+with `scripts/deploy-test-binary.sh` into a `scripts/setup-test-scratch.sh` scratch dir, booted,
+and used the existing `start_map` headless control command to load `00_01_apartment.hpm`
+directly. **Before** this fix: `hpl.log` showed all 7 `SoundEntity` creations failing and the
+loader's own summary ending `"...0 sounds"`. **After**: the same summary line reads `"...7
+sounds"`, and a temporary diagnostic `Log()` added to `cSoundEntity::PlaySound()` (removed
+before finishing, per this task's own instructions - net zero diff there) confirmed all 7
+actually START PLAYING real audio once the map loads, not merely construct successfully:
+
+```
+TEMP-DIAG: cSoundEntity 'fridge_hum' started playing 'hum_loop.ogg'
+TEMP-DIAG: cSoundEntity 'dvd_idle' started playing 'dvd_player_idle_sweet_01.ogg'
+TEMP-DIAG: cSoundEntity 'vent_sound_1' started playing 'small_ventilation_cluster_002.ogg'
+TEMP-DIAG: cSoundEntity 'dogs' started playing 'distant_dog_bark_15.wav'
+TEMP-DIAG: cSoundEntity 'car_drive' started playing 'car_drive_06.wav'
+TEMP-DIAG: cSoundEntity 'seagulls' started playing 'urban_seagull_02.wav'
+TEMP-DIAG: cSoundEntity 'dogs_1' started playing 'distant_dog_bark_13.wav'
+```
+
+`car_drive`/`dogs`/`seagulls` are exactly the "car honking sounds and things like that in the
+background" the user reported missing. Also independently verified the extracted audio itself
+is genuinely valid (not just structurally-parsed): `ffprobe`/`ffmpeg -f null -` fully decoded
+`hum_loop.ogg`, `small_ventilation_cluster_001.ogg`, and `dvd_player_idle_sweet_01.ogg`
+end-to-end with no errors (48kHz/44.1kHz mono Vorbis), and `car_drive_01.wav` probed as valid
+16-bit PCM. All 4 ctest suites
+(`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests`) green both
+before and after the temporary diagnostic was added and removed. Zero changes to any shared
+loader; the only shared-code touch for the whole session was the temporary, reverted
+`cSoundEntity::PlaySound()` diagnostic line.
+
+**Known gap, left honest rather than faked**: the physics-material impact/roll/scrape sound
+system (`physics/*.snt` - a much larger, separate FMOD-banked subsystem covering every
+collidable object's collision SFX, hundreds of real `Couldn't create SoundEntity` lines in the
+same `hpl.log`) has the identical FMOD-event-not-a-real-resource shape but was NOT in this
+session's scope (car honks/street ambience/environmental loops only, per the task brief) and is
+not fixed by this change.

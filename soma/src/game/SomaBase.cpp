@@ -7,6 +7,7 @@
 #include "HpslTranspilerSelfTest.h"
 #include "HpslTranspiler.h"
 #include "SomaLoaders.h"
+#include "SomaAmbientSfx.h"
 #include "SomaSplash.h"
 
 #include "system/HeadlessControl.h"
@@ -555,6 +556,14 @@ bool cSomaBase::InitEngine()
 	// every <Entity>/<Area> element in a real SOMA map (confirmed via a real
 	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
+
+	// See SomaAmbientSfx.h/.cpp - real map-authored ambient sound entities
+	// (car honks, distant dogs, seagulls, a fridge hum, ...) reference real
+	// FMOD-event names with no matching .snt resource anywhere in the
+	// install, so cWorldLoaderHpm::LoadSoundsTrack() (which already runs,
+	// unmodified) silently fails to create every one. Must run before any
+	// map load, same as RegisterSomaLoaders() above.
+	cSomaAmbientSfx::EnsureCached(mpEngine->GetResources());
 
 	/////////////////////////
 	// Apply the persisted settings that DO have a live/runtime API (unlike
