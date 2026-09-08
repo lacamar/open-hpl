@@ -1273,3 +1273,44 @@
     (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
     100% SOMA-only (`cSomaSplash`/`cSomaMainMenu` classes) - zero Dark Descent/AMFP/Rebirth/
     Bunker reachability.
+
+- SOMA: intro-sequence slide-cadence bug, a real phone-interact system (no more auto-answer),
+  a real player HUD (crosshair + interact prompt), and the intro quote card's too-small font
+  (2026-09-08)
+  - DONE (task 1): `SomaIntroSequence.cpp`'s `AdvanceSlides()` used a `while` loop to advance
+    `mlCurrentSlideIndex`; real `00_00_intro.hps`'s own `Update()` uses a single `if` per frame,
+    which can never skip a slide's entire visible lifetime under a frame-time hitch the way a
+    `while` can (several real slide gaps are as short as 0.27s). Fixed by matching the real
+    per-frame semantics. Investigated and ruled out the task brief's own hypothesis (that the
+    prior session's voice-completion-gating fix desynced slide timing) - confirmed by reading
+    real `Update()` in full that slides and voice-subject enqueueing both advance off the same
+    shared schedule completely independently of each other, both in the real game and in this
+    port.
+  - DONE (tasks 2/3): built a minimal, hand-authored interact-point system on `cSomaPlayer`
+    (`RegisterInteractPoint()`/`GetCurrentLookTarget()`/`WasInteractedWith()` - point+cone+
+    real-physics-line-of-sight, not a general Area/trigger-volume reader) plus a real HUD
+    (crosshair + `"[E] Interact"` prompt, drawn via `cSomaPlayer::OnDraw()`'s own new GUI-only
+    overlay viewport). `cSomaApartmentIntroCall` now registers the real wake-up phone's actual
+    interact point (`InteractCellPhone_Dummy`, NOT the separate later-game `Simon_Phone`
+    landline - see PORTING_NOTES.md for the full disambiguation) and waits for a real interact
+    keypress while looking at it instead of the previous 4-second auto-answer timer - matching
+    real `00_01_apartment.hps`'s own indefinite wait. Required one small, flagged `SomaBase.h`
+    hook (`GetPlayer()` accessor, no `.cpp` change).
+  - DONE (task 4): intro quote card font size was 30/24 (quote/signature); real
+    `00_00_intro.hps`'s own `DrawTextSlide()` specifies 36/30. Fixed to match exactly.
+  - Verified live, headless throughout (see PORTING_NOTES.md for full evidence): a temporary
+    diagnostic trace (removed before this commit) confirmed all 19 real intro slides fire within
+    15-20ms of their exact real scheduled time, in order, none skipped; a screenshot with the
+    player aimed at the real phone position shows the crosshair AND interact prompt appearing
+    together (vs. crosshair-only when not looking at it); an injected real interact keypress
+    while aimed at the phone produced the log line confirming Munshi's real dialogue started
+    (and did not start before that keypress, across many real seconds of ringing); a screenshot
+    of the quote card confirms the larger, correct font size. All 4 ctest suites
+    (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green in a
+    dedicated build dir (removed after). 100% contained to `SomaIntroSequence.{h,cpp}`/
+    `SomaApartmentIntroCall.{h,cpp}`/`SomaPlayer.{h,cpp}` plus the one `SomaBase.h` accessor -
+    zero Dark Descent/AMFP/Rebirth/Bunker reachability, zero `SomaMainMenu`/`SomaSplash`/
+    `SomaLoaders` reachability (other agents' owned files, untouched). This interact system is a
+    scoped, narrow addition for this one real interactable - not a generalizable input-binding/
+    interaction framework; see PORTING_NOTES.md's "Not done / open items" for what a real
+    version would still need.
