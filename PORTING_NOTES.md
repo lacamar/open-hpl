@@ -5161,3 +5161,50 @@ copied into it - would remove an entire class of risk this whole investigation t
 about, independent of this specific bug's own fix. A real, valuable next step; scoped separately
 since it touches path-resolution code broadly (binreloc usage, resource-dir/config-file lookup,
 the RPM packaging/launcher scripts) rather than being a narrow bug fix.
+
+## Follow-up: every engine binary can now be told where the game data lives, instead of requiring itself to be deployed inside it
+
+Picked up the architectural improvement flagged above. `HPL2/core/sources/impl/LowLevelSystemSDL.cpp`'s
+`main()` is the one real entry point every game module in this repo already shares (Amnesia,
+Soma, AMFP, Rebirth, Bunker all link the same `LowLevelSystemSDL.cpp`) - it already had a small
+`argv` parsing loop recognizing `-cwd` (skip the binreloc chdir, caller has already set cwd
+correctly) and `-psn*` (macOS Finder process number, ignored) before joining everything else into
+a single `cmdline` string handed to `hplMain()`.
+
+Extended that same loop: the first plain (non-`-`-prefixed) argument is now checked with
+`stat()`+`S_ISDIR` - if it resolves to a real, existing directory, `chdir()` into it directly and
+skip the binreloc-based `GetDataDir()` fallback entirely. Concretely:
+```
+./Soma.bin.aarch64 /home/lm/.steam/steam/steamapps/common/SOMA
+```
+now works with `Soma.bin.aarch64` living anywhere at all - `/usr/libexec/open-hpl/`, a scratch
+test directory, wherever - it no longer needs to be physically copied inside the real game
+directory just so binreloc's "resolve everything relative to my own executable path" logic
+happens to land in the right place. This is the real, general fix for the class of risk the
+`OpenHplSoma.bin.aarch64` launcher-copy step exists to work around in the first place (see the
+CRITICAL section above) - the RPM's own launcher no longer strictly needs to `cp` a binary into
+the real install directory at all, though updating it to actually stop doing so is a separate,
+not-yet-done follow-up (see TASKS.md).
+
+**Why this can't collide with the argument slot's other real, pre-existing use**: `cSomaBase::
+ParseCommandLine()` already treats a bare argument as an alternate init-config *file* path
+(defaulting to `"config/main_init.cfg"`) if one is given. A directory can never satisfy
+`S_ISDIR` as a *file*, so the two uses are mutually exclusive by construction - whichever one a
+given argument actually is decides which code path it hits, with zero ambiguity. The consumed
+game-dir argument is excluded from the `cmdline` string forwarded to `hplMain()`/each game
+module's own parsing, so it's invisible to (and can't confuse) anything downstream.
+
+**Verification status, honestly**: all 4 ctest suites green, and the parsing logic itself was
+read through by hand multiple times (it's a small, self-contained change with an obvious,
+narrow blast radius - one shared `main()`, one new `if`/`else if` branch). A live end-to-end
+boot using the new argument (does the engine actually reach a working main menu when invoked
+this way) could **not** be completed this session: the test machine hit a real, separate GL-
+context degradation partway through this work (`ERROR: Couldn't init glew!`, cascading into
+`Couldn't load mesh 'core_box.dae'`/`FATAL ERROR: Could not load vertex buffer` - traced via
+`strace` all the way to the actual failing syscalls, confirmed reproducible identically with an
+*unmodified*, already-installed binary using the *old* invocation style too, so definitively not
+caused by this change or the CRITICAL fix above). This coincided with the desktop session being
+locked (`loginctl show-session <id> -p LockedHint` returned `yes` at the time) - plausibly the
+compositor handing out a degraded/minimal GL context to background clients while locked, though
+that specific mechanism wasn't confirmed further. Flagging this gap explicitly rather than
+claiming a live verification that didn't actually happen.

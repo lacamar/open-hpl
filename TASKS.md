@@ -1475,3 +1475,32 @@
     argument/env var instead, so the binary never needs to live inside the real Steam directory
     in the first place, would remove an entire class of risk here. Flagged as the natural next
     architectural improvement, not attempted in this same pass.
+
+- Follow-up to the above: every open-hpl engine binary can now accept an explicit game-data
+  directory as a plain command-line argument, so none of them need to be physically deployed
+  inside the real game directory at all (2026-09-09)
+  - DONE: `HPL2/core/sources/impl/LowLevelSystemSDL.cpp`'s shared `main()` - the one entry point
+    every game module (Amnesia/Soma/AMFP/Rebirth/Bunker) already funnels through before
+    `hplMain()` - now recognizes the first plain (non-`-flag`) argument as a real
+    game-data-directory override if `stat()`+`S_ISDIR` confirms it's an existing directory, and
+    `chdir()`s into it instead of the binreloc-based `GetDataDir()` (the executable's own
+    directory) it would otherwise fall back to. e.g. `./Soma.bin.aarch64
+    /home/lm/.steam/steam/steamapps/common/SOMA` now works with the binary living anywhere,
+    `/usr/libexec/open-hpl/` included. A config-FILE path (this same argument slot's other real
+    existing use - `cSomaBase::ParseCommandLine()` treats it as an alternate init-config path)
+    can never collide with this, since a file can never satisfy `S_ISDIR`. Excluded from the
+    `cmdline` string passed to `hplMain()` since it's consumed here, not meant for the game
+    module's own argument parsing. All 4 ctest suites green.
+  - Not done this pass: updating the RPM's own launcher wrapper scripts to actually use this
+    (currently still `cp -f`s a binary into the real game directory before `exec`ing it) - a
+    real, valuable follow-up now that the underlying engine capability exists, but scoped
+    separately since it also touches package-level install-time logic, not just engine code.
+  - Live end-to-end verification (does a real headless boot using this new argument actually
+    reach a working menu) could not be completed this session - the test machine hit a real,
+    separate, live GL-context degradation (`ERROR: Couldn't init glew!` cascading into mesh/
+    resource load failures, confirmed via `strace` to be unrelated to any of this session's code
+    changes - reproduced identically with an unmodified installed binary) that appears tied to
+    the desktop session being locked (`loginctl show-session ... -p LockedHint` returned `yes`
+    at the time). The argument-parsing logic itself is simple, narrowly scoped, and was read
+    through carefully by hand in addition to the ctest pass; live boot-to-menu verification is
+    the honest remaining gap, flagged rather than glossed over.

@@ -95,12 +95,45 @@ int main(int argc, char *argv[])
 #endif
 
 	bool cwd = false;
+	bool bGotGameDirArg = false;
 	hpl::tString cmdline = "";
 	for (int i=1; i < argc; i++) {
         if (strcmp(argv[i], "-cwd") == 0) {
             cwd = true;
         } else if (strncmp(argv[i], "-psn", 4) == 0) {
             // skip "finder" process number
+		} else if (bGotGameDirArg == false && argv[i][0] != '-') {
+			// Real game-data-directory override, e.g.
+			// "./Soma.bin.aarch64 /path/to/steamapps/common/SOMA" - lets
+			// every engine binary be installed anywhere (e.g. a real
+			// system-wide /usr/libexec/open-hpl/) and simply be told where
+			// the actual game data lives, instead of requiring itself to
+			// be physically deployed inside that directory just so
+			// GetDataDir()'s binreloc-based chdir() below resolves to the
+			// right place (see PORTING_NOTES.md - that requirement was the
+			// entire reason a stray copy of this binary kept ending up
+			// inside a real Steam install directory, and it's what real
+			// package launcher scripts have to `cp` around today). Only
+			// the FIRST plain (non-flag) argument is ever treated this
+			// way, and only if it's a real, existing directory - a config
+			// FILE path (this engine's other existing use of a bare
+			// argument, see e.g. cSomaBase::ParseCommandLine()) can never
+			// satisfy S_ISDIR, so the two uses can never collide. Excluded
+			// from cmdline below since it's consumed here, not meant for
+			// the game module's own argument parsing.
+			struct stat dirStat;
+			if (stat(argv[i], &dirStat) == 0 && S_ISDIR(dirStat.st_mode))
+			{
+				bGotGameDirArg = true;
+				cwd = (chdir(argv[i]) == 0);
+				continue;
+			}
+
+			if (cmdline.length()>0) {
+				cmdline.append(" ").append(argv[i]);
+			} else {
+				cmdline.append(argv[i]);
+			}
 		} else {
 			if (cmdline.length()>0) {
 				cmdline.append(" ").append(argv[i]);
