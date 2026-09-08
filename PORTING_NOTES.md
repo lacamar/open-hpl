@@ -4861,3 +4861,192 @@ trigger-volume reader (would let future interactables register their real compil
 rotation instead of a hand-cited point, and would let a real rebindable interact `cAction`
 replace the hardcoded `E` key); the rest of `00_01_apartment.hps`'s ~1760 lines, same open item
 this file's own earlier apartment-phone-call session already noted.
+
+### SOMA: real pause-menu item list + exit-confirm dialog, and a real New Game difficulty screen
+
+Three user-reported bugs against `soma/src/game/SomaMainMenu.{h,cpp}` (the only two files this pass
+owned/touched, per this project's per-agent file-ownership convention): "buttons and icons look a
+bit weird," the in-game pause menu not matching the real one, and NEW GAME going straight to the
+map instead of a real difficulty-select screen first. All three real citations were read directly
+out of a real SOMA install's `script/modules/MenuHandler.hps` (`GuiPauseMenuSelection()`,
+`MessageBoxExitFromPauseMenu()`, `GuiGameModeSelection()`), `script/custom_depth/
+helper_custom_depth_imgui/helper_imgui_options.hps` (`OptionMenu_MessageBox_Proper()`), and
+`config/base_english.lang`'s `Menu`/`Global` categories - not paraphrased.
+
+**Task 1 ("weird" buttons/icons)**: systematic screenshot pass across every menu screen (title,
+full Options tree, the paused overlay, the new dialogs/screen below) turned up two concrete, fixed
+bugs rather than one vague style mismatch:
+1. The pause overlay was drawing the FULL title-screen chrome (`menu_background.tga`, the SOMA
+   logo, the animated cathedral-face ghost effect, the ocean-dust particles) behind its reduced
+   item list - i.e. pausing in-game looked like teleporting back to the title screen with fewer
+   buttons, not a dimmed view of the paused game. Root cause: `OnDraw()` called
+   `DrawBackground()`/`DrawTitle()`/the particle-emitter draws unconditionally, with no
+   `mbPaused` check at all. Real `MenuHandler.hps`'s own `GuiBackground()` confirms this is wrong
+   for real SOMA too - its entire body is `if(mbMainMenuActive){...}` with no `else`, so it draws
+   *nothing* while paused (`mbMainMenuActive` is false in-game) - see "Task 2" below for what fills
+   that gap instead.
+2. The new exit-confirm dialog's real "startmenu_options_msgbox_button_left/right.tga" assets are
+   plain untextured white shapes (same convention as this file's own existing
+   `startmenu_options_button_on/off.tga` toggle widget) - the first pass drew "Yes"/"No" captions
+   in white on top of them, invisible. Confirmed live (a real headless screenshot showed two blank
+   white buttons) and fixed by drawing the caption in black instead (see Task 2 below).
+
+**Task 2 - the pause menu itself** (`BuildPausedMenuItems()`, `DrawPauseBackground()`,
+`DrawExitConfirmDialog()`/`UpdateExitConfirmDialog()`, `DoQuitToMainMenu()`):
+- Real item list/order, read directly out of `GuiPauseMenuSelection()`
+  (`MenuHandler.hps:2664-2817`): `RETURN TO THE GAME`(0) / `OPTIONS`(1) / `EXIT`(2) / `SAVE AND
+  EXIT`(3) - all real `config/base_english.lang` "Menu" category captions. Replaces an earlier
+  pass's `RESUME`/`OPTIONS`/`QUIT TO MAIN MENU` 3-item placeholder, which had no real SOMA
+  precedent at all (it was modeled on Dark Descent's own pause menu instead). Both real
+  `GuiPauseMenuSelection()` and `GuiMainMenuSelection()` use the identical `kMainMenuButtonPos =
+  (136, 275)` for every button - already this file's existing main-menu button position, already
+  left-aligned/upper-third-of-screen - so no new position constant was needed once the (formerly
+  screen-filling) title-screen chrome was correctly hidden behind it (see Task 1).
+- **Real pause background investigated and found to have no in-script effect at all**: grepped
+  `GuiBackground()`/`GuiPauseMenuSelection()` for `Blur`/`PostEffect`/`Darken` - none exist. The
+  dimming a real player sees while paused must come from SOMA's own closed C++ engine. The
+  concrete real precedent for that in this codebase is Dark Descent's `cLuxMainMenu` - the exact
+  same "one menu class doubles as the title screen and the pause menu" class this file's own
+  header comment already models itself on - which really does capture the live frame into a
+  texture and run a real 2-pass GPU gaussian blur over it when pausing in-game
+  (`amnesia/src/game/LuxMainMenu.cpp`'s `RenderBlurTexture()`/`RenderBlur()`,
+  `mainmenu_screen_blur_vtx/frag.glsl`). Two real attempts at reproducing this were tried and
+  ruled out live, in order, before landing on the shipped version:
+  1. A real `iLowLevelGraphics::CopyFrameBufferToTexure()` capture (same real API Dark Descent's
+     code above uses) taken inside `ShowPaused()` - came back solid white. Root cause: this
+     engine's own frame loop (`HPL2/core/sources/engine/Engine.cpp`: `Update -> SwapBuffers ->
+     OnDraw -> Render`) has no point at which "the last fully composited frame" is a
+     well-defined buffer to read back from - `ShowPaused()` runs mid-`Update()`, before that
+     frame's own 3D render has even happened.
+  2. Moving the same capture into `OnDraw()` (which runs immediately after `SwapBuffers()`, right
+     before that frame's `Render()`) didn't fix it either, for the same underlying reason - by
+     that point in the loop the back buffer's contents are undefined per GL's own double-buffer
+     swap semantics, not "the previous frame," confirmed live (still solid white).
+  3. Abandoned the capture approach; tried instead just drawing a lightly-translucent dark
+     overlay directly over the supposedly-still-rendering live 3D world (reasoning: nothing stops
+     `mpScene->Render()` from running every frame while paused, only the player controller itself
+     goes inactive via `cSomaPlayer::SetActive(false)`) - also came back solid white underneath,
+     confirmed live by testing overlay alpha 0 (plain white), 0.65 (a washed-out mid-grey, i.e.
+     35% white + 65% black), and 1.0 (clean black) in turn. This port's own viewport apparently
+     doesn't keep rendering the real scene once the player controller goes inactive -
+     `SomaPlayer.*` is explicitly outside this pass's file-ownership boundary (see this session's
+     brief), so this is a real, flagged, NOT-fixed-here limitation for whoever next touches
+     `cSomaPlayer::SetActive()`.
+  - **Shipped**: a solid, high-alpha (0.9) dark overlay (`kPauseBgDarkenColor`,
+    `DrawPauseBackground()`) - reliably dark regardless of the above, at the honest cost of not
+    literally showing the live paused scene dimmed through it the way the real game does. A real,
+    live headless screenshot confirms the result: a dark background with a faint hint of the
+    underlying map geometry still visible through it, plus the correct 4-item real list, in the
+    real position.
+- Real exit-confirm dialog (`MessageBoxExitFromPauseMenu()`/`OptionMenu_MessageBox_Proper()`):
+  clicking either `EXIT` or `SAVE AND EXIT` shows the same dialog machinery, differing only in
+  which of two real message strings it shows and whether a save is attempted first - reproduced
+  exactly:
+  - `EXIT` (no save) → real `"ExitNoSaveToMenuMessageBox"` = **"ARE YOU SURE YOU WANT TO EXIT
+    WITHOUT SAVING?"**
+  - `SAVE AND EXIT` → real `"ExitToMenuMessageBox"` = **"ARE YOU SURE YOU WANT TO EXIT TO
+    MENU?"**
+  - Both from `base_english.lang`'s `Menu` category; Yes/No button captions from its `Global`
+    category (`Yes`="Yes", `No`="No"). Real asset citation: real
+    `OptionMenu_MessageBox_Proper()` draws the same corner/border frame textures
+    (`graphics/startmenu/gfx/window/menu_*.tga`) this file's Options screen already uses for its
+    own panel (confirmed by comparing background fill colours) behind a full-screen darken
+    (`cColor(0,0.75)`) - both reproduced via the existing `DrawOptionsPanel()` helper, reused
+    as-is rather than duplicated. Yes/No buttons use the real, distinct
+    `startmenu_options_msgbox_button_left/right(_active).tga` assets (confirmed to exist in a
+    real install and load without error).
+  - **Honest, flagged SAVE AND EXIT scope limitation** (exactly per this session's own brief):
+    checked whether a real save system exists anywhere in this codebase before assuming -
+    `HPL2/core/include/engine/SaveGame.h` has a generic, engine-agnostic
+    `iSaveObject`/`iSaveData`/`cSaveObjectHandler` serialization *framework*, and Dark Descent has
+    a concrete, working implementation on top of it (`amnesia/src/game/LuxSaveHandler.{h,cpp}`,
+    real `AutoSave()`/`SaveGameToFile()`) - but nothing SOMA-specific exists anywhere under
+    `soma/src/game` (confirmed: no matches for "save" in that whole directory before this
+    session). So `SAVE AND EXIT`'s confirm click performs the exact same close action as `EXIT`
+    (`DoQuitToMainMenu()`), with a `Log()` line stating plainly that nothing was actually saved -
+    the same honest-stopgap convention this file's Continue/Load Game rows (always disabled,
+    "no save system in this scaffold") and its FOV/Resolution "live but restart-required" rows
+    already use, not a fabricated save.
+  - Clicking `YES` reuses the existing (pre-existing, unmodified) `eSomaMainMenuAction_
+    QuitToMainMenu` behaviour, factored out into a small shared `DoQuitToMainMenu()` so both the
+    real EXIT/SAVE AND EXIT flow and that pre-existing code path share one implementation instead
+    of two copies.
+
+**Task 3 - New Game difficulty screen** (`eSomaMenuScreen_NewGameDifficulty`,
+`DrawNewGameDifficultyScreen()`/`UpdateNewGameDifficultyMouseHitTest()`/
+`ClickNewGameDifficultyControl()`): real `GuiGameModeSelection()` (`MenuHandler.hps:2268-2462`),
+reached whenever `cLux_GetSupportExplorationMode()` is true (every real SOMA release) instead of
+starting the game directly - this port's `RunPendingAction()`'s `eSomaMainMenuAction_NewGame` case
+now navigates here instead of calling `StartNewGame()` itself; the real `StartNewGame()` call moved
+to this screen's own `START GAME` button (`ClickNewGameDifficultyControl()`), matching the real
+click order (`StartGame` → `ClickNewGame()`, not `NEW GAME` → `ClickNewGame()` directly).
+- Real title "NEW GAME" (`OptionMenu_SectionTitle("NewGame", ...)` → `base_english.lang`'s
+  `NewGame`="NEW GAME"), real row label `GameMode`="GAME MODE:", real panel position/size
+  (`kGameModeBgPos`=(100,260), `kGameModeBgSize`=(663,260), read verbatim out of
+  `MenuHandler.hps`), drawn via the same `DrawOptionsPanel()` helper Task 2's dialog and the
+  existing Options screen both reuse.
+- Real two modes and their exact real descriptions, `base_english.lang`'s `Menu` category, copied
+  verbatim (not paraphrased):
+  - `NormalMode`="NORMAL" / `NormalModeDescription`="Monsters are dangerous and can kill you. You
+    need to think and sneak to survive. The way the game was designed from the start."
+  - `ExplorationMode`="SAFE" (real internal key is "Exploration", real displayed caption is
+    "SAFE") / `ExplorationModeDescription`="Monsters are still creepy, but can't kill you. You
+    don't need to worry about stealth as you play."
+  - The mode-cycle control reuses this file's own existing `DrawOptionsCycleControl()` widget
+    (same `startmenu_options_button_meter`/`startmenu_options_arrow` real assets the Options
+    screen's `eKind_MultiSelect` rows already use) rather than hand-rolling the real script's own
+    bespoke `GuiGameModeSelection()` arrow layout a second time - a deliberate simplification for
+    consistency/robustness, flagged in the code comment.
+  - Real `StartGame`="START GAME" / `Back`="BACK" buttons at the real script's own row indices 4
+    and 5 (`OptionMenu_ButtonMainMenu("StartGame", kMainMenuButtonPos, 4, ...)`/
+    `OptionMenu_ButtonOptions("Back", kMainMenuButtonPos, 5, ...)`), which is also exactly the
+    real vertical gap the mode description text needs - not a coincidence, the real layout
+    already reserves that space.
+  - Description text word-wrapped via `iFontData::GetWordWrapRows()` (same real API/pattern
+    `cSomaIntroSequence::DrawWrappedText()` already uses, not duplicated logic) with a new
+    `mpBodyFont` (`sansation_large.fnt`, real non-bold "Sansation Large" - distinct from this
+    file's existing bold `mpButtonFont`, matching `GuiGameModeSelection()`'s own real font choice
+    for the description).
+- **Overwrite-save confirmation investigated and deliberately not shown**: real
+  `GuiGameModeSelection()` only shows `MessageBoxNewGame()` ("STARTING A NEW GAME WILL OVERWRITE
+  YOUR LATEST SAVE. CONTINUE?") when `mbCanContinue` is true; otherwise it calls `ClickNewGame()`
+  immediately (`MenuHandler.hps:2441-2454`). This port's own `mbCanContinue` equivalent
+  (`BuildMainMenuItems()`'s `CONTINUE` row) is always false - no save system exists at all (see
+  Task 2's SAVE AND EXIT limitation above) - so skipping the confirmation here isn't a shortcut,
+  it's the exact real branch a fresh SOMA install with no existing save also takes.
+- Game mode choice (`mlNewGameMode`) deliberately kept in-memory only, not persisted to
+  `cSomaConfig` - `soma/src/game` has no monster/AI code anywhere yet for either mode to actually
+  affect, so persisting a choice with zero real backend would be dishonest busywork.
+
+**Verified live** (headless, real SOMA data read-only-symlinked via `scripts/setup-test-scratch.sh`
++ `scripts/deploy-test-binary.sh`, `OPENHPL_HEADLESS_SOCKET` + `scripts/hpl_control.py`, real
+injected mouse/keyboard events - not just static screenshots):
+- Full real click-through: title screen `NEW GAME` → real difficulty screen (screenshot confirms
+  "NORMAL" + its real description) → clicked the mode-cycle arrow, confirmed it flips to "SAFE"
+  with its own real description text → clicked `START GAME` → confirmed the real intro sequence
+  begins (screenshot shows the real opening Philip K. Dick quote slide) exactly as the pre-existing
+  `NEW GAME` flow already did.
+- Reached real live gameplay in `00_01_apartment.hpm` past the intro's phone-call sequence,
+  injected a real `Escape` keypress: screenshot confirms the redesigned pause menu (dark
+  background, real 4-item list, correct hover highlight).
+  Clicked `EXIT`: screenshot confirms the real confirm dialog, real "ARE YOU SURE YOU WANT TO EXIT
+  WITHOUT SAVING?" text, real Yes/No buttons with now-legible black-on-white captions (the Task 1
+  fix). Clicked `YES`: screenshot confirms it correctly returns to the full real title-screen menu.
+- Spot-checked the Options tree (root/Audio) post-fix for Task 1's systematic review - both render
+  correctly, consistent with this file's pre-existing (already-correct, unmodified by this
+  session) Options screen work.
+- All 4 ctest suites (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/
+  `HpslTranspilerTests`) green in a dedicated build dir. All scratch dirs/sockets/build dirs/test
+  processes cleaned up afterward.
+
+100% contained to `soma/src/game/SomaMainMenu.{h,cpp}` - the two files this pass owned. Zero Dark
+Descent/AMFP/Rebirth/Bunker reachability by construction (SOMA-only classes).
+
+Not done / open items: the real captured-and-blurred pause background (needs `cSomaPlayer::
+SetActive()` investigated first - see above, out of this pass's file-ownership boundary); a real
+SOMA-specific save system (would let `SAVE AND EXIT` actually save - the generic
+`iSaveObject`/`iSaveData` framework and Dark Descent's own concrete `cLuxSaveHandler` are both real,
+possible starting points, see above); the real `GuiGameModeSelection()` bespoke arrow-widget layout
+(this port intentionally reuses the existing cycle-bar widget instead, see Task 3); real
+per-mode gameplay effects (no monster/AI code exists anywhere in this engine yet for either mode to
+affect).

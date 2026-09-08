@@ -79,6 +79,27 @@ static const cVector2f kOptionsTextedSliderTextOffset(530, 16); // real kOptionM
 static const cColor kOptionsFrameFillColor(5.0f / 255.0f, 60.0f / 255.0f, 72.0f / 255.0f, 0.25f);
 
 //---------------------------------------
+// Real GuiGameModeSelection() layout constants, verbatim from
+// MenuHandler.hps (kGameModeBgPos/kGameModeBgSize/kGameModeArrowPosLeft/
+// kGameModeArrowPosRight/kGameModeArrowSize) - see
+// DrawNewGameDifficultyScreen(). The GameMode row itself, the StartGame
+// button (real row index 4) and Back button (real row index 5) all still
+// reuse kMainMenuButtonPos/kOptionMenuButtonSpacing above, same as every
+// other real screen in this file.
+
+static const cVector2f kGameModeBgPos(100, 260);
+static const cVector2f kGameModeBgSize(663, 260);
+
+// Dark overlay drawn over the live 3D scene while paused - see
+// DrawPauseBackground()'s comment in SomaMainMenu.h for why this is a
+// solid, high-alpha dark fill rather than a lightly-translucent tint over
+// the paused scene (this port's own viewport renders solid white, not the
+// paused scene, once cSomaPlayer::SetActive(false) takes effect - confirmed
+// live by testing alpha 0/0.65/1.0 in turn - so a low-alpha tint would show
+// that white through, not a dim view of the game).
+static const cColor kPauseBgDarkenColor(0.0f, 0.0f, 0.0f, 0.9f);
+
+//---------------------------------------
 // Small helpers to build a fully-populated cSomaOptionsRow without leaving
 // any field at a stale value from a previous push_back() - see
 // cSomaMainMenu::BuildOptionsRows().
@@ -228,6 +249,16 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	mbVisible = true;
 	mbMouseWasDown = false;
 	mbPaused = false;
+
+	mbShowExitConfirm = false;
+	mbExitConfirmSaveAndExit = false;
+	mlExitConfirmHovered = -1;
+	mpMsgBoxButtonLeftGfx = mpMsgBoxButtonLeftActiveGfx = NULL;
+	mpMsgBoxButtonRightGfx = mpMsgBoxButtonRightActiveGfx = NULL;
+
+	mpBodyFont = NULL;
+	mlNewGameMode = 0;
+	mlNewGameHoveredControl = eSomaNewGameControl_None;
 
 	mfTitleAlpha = 0;
 	mfFaceAlpha = 0;
@@ -402,6 +433,17 @@ void cSomaMainMenu::CreateGui()
 	// OptionMenu_ButtonMainMenu()), not the generic skin's "Default" font.
 	mpButtonFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large_bold.fnt");
 
+	// Real GuiGameModeSelection() description body font (Sansation Large,
+	// non-bold - see DrawNewGameDifficultyScreen()).
+	mpBodyFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large.fnt");
+
+	// Real exit-confirm dialog Yes/No buttons (helper_imgui_options.hps'
+	// OptionMenu_MessageBox_Proper()) - see DrawExitConfirmDialog().
+	mpMsgBoxButtonLeftGfx = CreateGfx("startmenu_options_msgbox_button_left.tga", eGuiMaterial_Alpha);
+	mpMsgBoxButtonLeftActiveGfx = CreateGfx("startmenu_options_msgbox_button_left_active.tga", eGuiMaterial_Alpha);
+	mpMsgBoxButtonRightGfx = CreateGfx("startmenu_options_msgbox_button_right.tga", eGuiMaterial_Alpha);
+	mpMsgBoxButtonRightActiveGfx = CreateGfx("startmenu_options_msgbox_button_right_active.tga", eGuiMaterial_Alpha);
+
 	BuildMainMenuItems();
 }
 
@@ -444,15 +486,26 @@ void cSomaMainMenu::BuildMainMenuItems()
 
 //-----------------------------------------------------------------------
 
-// Paused-mode item list (see ShowPaused()) - not a real SOMA screen (see the
-// class comment in SomaMainMenu.h's ESC pause menu section), a practical
-// reduced set modeled on Dark Descent's own in-game pause menu button list.
+// Paused-mode item list (see ShowPaused()) - real GuiPauseMenuSelection()
+// (script/modules/MenuHandler.hps), confirmed by reading it directly: real
+// item order/captions are RETURN TO THE GAME(0)/OPTIONS(1)/EXIT(2)/SAVE AND
+// EXIT(3), all real config/base_english.lang "Menu" category captions -
+// replaces an earlier pass's placeholder RESUME/OPTIONS/QUIT TO MAIN MENU
+// 3-item list (real precedent for THAT list never existed - it was modeled
+// on Dark Descent's own pause menu instead of SOMA's real one). Real EXIT
+// and SAVE AND EXIT both route through the same confirm dialog - see
+// eSomaMainMenuAction_PauseExit/PauseSaveAndExit and
+// DrawExitConfirmDialog(). SaveAndExit is real-but-conditionally-disabled
+// in the real game (mbSaveLoadEnabled/Map_IsChanging()/InIntro checks,
+// MenuHandler.hps:2701-2725) - this port has no such conditions to check
+// (no save system, no map-transition/intro-lock state this menu tracks), so
+// it's always enabled here.
 void cSomaMainMenu::BuildPausedMenuItems()
 {
 	mItems.clear();
-	mItems.resize(3);
+	mItems.resize(4);
 
-	mItems[0].msLabel = _W("RESUME");
+	mItems[0].msLabel = _W("RETURN TO THE GAME");
 	mItems[0].mbEnabled = true;
 	mItems[0].mAction = eSomaMainMenuAction_Resume;
 
@@ -460,9 +513,13 @@ void cSomaMainMenu::BuildPausedMenuItems()
 	mItems[1].mbEnabled = true;
 	mItems[1].mAction = eSomaMainMenuAction_Options;
 
-	mItems[2].msLabel = _W("QUIT TO MAIN MENU");
+	mItems[2].msLabel = _W("EXIT");
 	mItems[2].mbEnabled = true;
-	mItems[2].mAction = eSomaMainMenuAction_QuitToMainMenu;
+	mItems[2].mAction = eSomaMainMenuAction_PauseExit;
+
+	mItems[3].msLabel = _W("SAVE AND EXIT");
+	mItems[3].mbEnabled = true;
+	mItems[3].mAction = eSomaMainMenuAction_PauseSaveAndExit;
 
 	for (size_t i = 0; i < mItems.size(); ++i)
 		mItems[i].mfRowY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * (float)i;
@@ -799,13 +856,24 @@ void cSomaMainMenu::Update(float afTimeStep)
 	// Real DrawParticles() runs whenever mbMainMenuActive is true, which
 	// covers the Options sub-tree too (an overlay on the main menu, not a
 	// separate mode) - same "never goes away behind Options" rule
-	// DrawBackground()/DrawTitle() already follow in OnDraw().
-	UpdateParticleEmitter(mEmitterLowerHalf, afTimeStep);
-	UpdateParticleEmitter(mEmitterUpperHalf, afTimeStep);
-	UpdateParticleEmitter(mEmitterLarge, afTimeStep);
-	UpdateParticleEmitter(mEmitterSmoke, afTimeStep);
+	// DrawBackground()/DrawTitle() already follow in OnDraw(). Never runs
+	// while paused (mbMainMenuActive false) - see OnDraw()'s own comment.
+	if (mbPaused == false)
+	{
+		UpdateParticleEmitter(mEmitterLowerHalf, afTimeStep);
+		UpdateParticleEmitter(mEmitterUpperHalf, afTimeStep);
+		UpdateParticleEmitter(mEmitterLarge, afTimeStep);
+		UpdateParticleEmitter(mEmitterSmoke, afTimeStep);
+	}
 
-	if (mScreen == eSomaMenuScreen_Main)
+	if (mbPaused && mbShowExitConfirm)
+	{
+		// Real mbShowExit overlay - suppresses all normal item-list
+		// hit-testing/clicking underneath it while shown (see
+		// UpdateExitConfirmDialog()).
+		UpdateExitConfirmDialog(bDown, bPressedEdge);
+	}
+	else if (mScreen == eSomaMenuScreen_Main)
 	{
 		UpdateMouseHitTest();
 
@@ -820,6 +888,13 @@ void cSomaMainMenu::Update(float afTimeStep)
 			if (mfButtonClickedTimer <= 0)
 				RunPendingAction();
 		}
+	}
+	else if (mScreen == eSomaMenuScreen_NewGameDifficulty)
+	{
+		UpdateNewGameDifficultyMouseHitTest();
+
+		if (bPressedEdge && mlNewGameHoveredControl != eSomaNewGameControl_None)
+			ClickNewGameDifficultyControl(mlNewGameHoveredControl);
 	}
 	else
 	{
@@ -916,26 +991,17 @@ void cSomaMainMenu::RunPendingAction()
 	switch (action)
 	{
 	case eSomaMainMenuAction_NewGame:
-	{
-		// Reads the real <StartMap>/main_init.cfg entry (SOMA's own
-		// "00_00_intro.hpm"/PlayerStartArea_1 on a real install) via
-		// cSomaBase::StartNewGame(), rather than a hardcoded map file -
-		// see its comment in SomaBase.cpp for why 00_01_apartment.hpm was
-		// wrong here (a later map in the intro sequence, not the real
-		// start).
-		tString sError;
-		if (mpBase->StartNewGame(sError) == false)
-		{
-			Log("SOMA main menu: New Game failed to load the start map (%s)\n", sError.c_str());
-			return;
-		}
-		// Real ClickNewGame(): "New game sting" plays right when a fresh
-		// install's New Game is confirmed (no save exists, so no
-		// confirmation box is needed - same as here).
-		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::NewGameSting());
-		SetVisible(false);
+		// Real GuiMainMenuSelection() case 1 (NewGame): opens the
+		// difficulty-select screen (GuiGameModeSelection()) whenever
+		// cLux_GetSupportExplorationMode() is true - true on every real SOMA
+		// release, so this port always takes that branch - rather than
+		// starting the game directly. StartNewGame() itself (see below) now
+		// only runs from that screen's own START GAME button
+		// (ClickNewGameDifficultyControl()), not from here anymore.
+		mlNewGameMode = 0; // real SetMenuActive(true)'s mlSelectedGameMode = 0 reset
+		mlNewGameHoveredControl = eSomaNewGameControl_None;
+		NavigateTo(eSomaMenuScreen_NewGameDifficulty);
 		break;
-	}
 	case eSomaMainMenuAction_Options:
 		// Real menu's full tree is Gameplay/Controls/Video{Display,
 		// PostEffect,World,Gamma}/Audio (eMainMenuGroup_Options*) - now
@@ -958,29 +1024,56 @@ void cSomaMainMenu::RunPendingAction()
 			mpBase->SetGameplayPaused(false);
 		break;
 
-	case eSomaMainMenuAction_QuitToMainMenu:
-		// Real precedent (Dark Descent's eLuxAction_Exit, LuxInputHandler.cpp)
-		// fully swaps back to the title-screen container/scene. This
-		// scaffold has no such scene-swap plumbing for a live gameplay map
-		// (would need cSomaBase to unload the current map, reload
-		// main_init.cfg's <MainMenu> scene into mpDebugViewport, and switch
-		// mpDebugCameraController back on - a real restructure, out of scope
-		// here per this class's own file-ownership boundary; see this
-		// session's final report). Closest safe approximation: just re-show
-		// the full title-screen item list over the CURRENT gameplay map,
-		// deliberately leaving the player controller inactive (same as while
-		// paused - not reactivated here, unlike the Resume case above) so
-		// nothing moves behind the menu.
-		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
-		mbPaused = false;
-		BuildMainMenuItems();
-		mScreen = eSomaMenuScreen_Main;
-		SetVisible(true);
+	case eSomaMainMenuAction_PauseExit:
+		// Real GuiPauseMenuSelection() case 2: sets mbShowExit (real
+		// msMessageBoxFocus default "No") - the actual quit-to-menu action
+		// only happens once the confirm dialog's YES is clicked, see
+		// UpdateExitConfirmDialog().
+		mbShowExitConfirm = true;
+		mbExitConfirmSaveAndExit = false;
+		mlExitConfirmHovered = 1; // real default focus "No"
+		break;
+
+	case eSomaMainMenuAction_PauseSaveAndExit:
+		// Real GuiPauseMenuSelection() case 3: same mbShowExit dialog as
+		// PauseExit above, just mbSaveAndExit=true too (picks the
+		// "...EXIT TO MENU?" wording instead of "...WITHOUT SAVING?" and
+		// attempts Game_AutoSave() first on a real install - see
+		// UpdateExitConfirmDialog()'s own comment for why this port can't do
+		// that last part).
+		mbShowExitConfirm = true;
+		mbExitConfirmSaveAndExit = true;
+		mlExitConfirmHovered = 1;
 		break;
 
 	default:
 		break;
 	}
+}
+
+//-----------------------------------------------------------------------
+
+// Real precedent (Dark Descent's eLuxAction_Exit, LuxInputHandler.cpp)
+// fully swaps back to the title-screen container/scene. This scaffold has
+// no such scene-swap plumbing for a live gameplay map (would need cSomaBase
+// to unload the current map, reload main_init.cfg's <MainMenu> scene into
+// mpDebugViewport, and switch mpDebugCameraController back on - a real
+// restructure, out of scope here per this class's own file-ownership
+// boundary). Closest safe approximation: just re-show the full title-screen
+// item list over the CURRENT gameplay map, deliberately leaving the player
+// controller inactive (same as while paused - not reactivated here, unlike
+// the Resume case in RunPendingAction()) so nothing moves behind the menu.
+// Called once the real EXIT/SAVE AND EXIT confirm dialog's YES is clicked
+// (UpdateExitConfirmDialog()) - both real actions land here in this port,
+// see that function's own comment for the honest SAVE AND EXIT limitation.
+void cSomaMainMenu::DoQuitToMainMenu()
+{
+	PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+	mbPaused = false;
+	mbShowExitConfirm = false;
+	BuildMainMenuItems();
+	mScreen = eSomaMenuScreen_Main;
+	SetVisible(true);
 }
 
 //-----------------------------------------------------------------------
@@ -997,6 +1090,10 @@ void cSomaMainMenu::ShowPaused()
 	mlClickedItem = -1;
 	mfButtonClickedTimer = 0;
 	mPendingAction = eSomaMainMenuAction_None;
+
+	mbShowExitConfirm = false;
+	mbExitConfirmSaveAndExit = false;
+	mlExitConfirmHovered = -1;
 
 	// Same gui-activation calls SetVisible(true) makes, deliberately without
 	// its Menu_Music.ogg swap - pausing shouldn't cut off whatever's already
@@ -1029,15 +1126,32 @@ void cSomaMainMenu::OnDraw(float afFrameTime)
 	if (mbVisible == false)
 		return;
 
-	// Background/title never go away behind the Options screen - matches
-	// the real game (GuiOptions() etc. are drawn as an overlay on top of
-	// GuiBackground(), never a scene replacement).
-	DrawBackground(afFrameTime);
-	DrawTitle(afFrameTime);
+	if (mbPaused)
+	{
+		// Real GuiBackground() draws NOTHING while paused (mbMainMenuActive
+		// false) - no menu_background.tga, no title, no cathedral-face/
+		// particles either (see DrawPauseBackground()'s own comment in
+		// SomaMainMenu.h) - the earlier pass this replaced wrongly kept
+		// drawing the full title-screen chrome behind the reduced pause item
+		// list, which is what actually read as "weird"/wrong here.
+		DrawPauseBackground();
+	}
+	else
+	{
+		// Background/title never go away behind the Options screen - matches
+		// the real game (GuiOptions() etc. are drawn as an overlay on top of
+		// GuiBackground(), never a scene replacement).
+		DrawBackground(afFrameTime);
+		DrawTitle(afFrameTime);
+	}
 
 	if (mScreen == eSomaMenuScreen_Main)
 	{
 		DrawMenuItems();
+	}
+	else if (mScreen == eSomaMenuScreen_NewGameDifficulty)
+	{
+		DrawNewGameDifficultyScreen();
 	}
 	else
 	{
@@ -1045,14 +1159,23 @@ void cSomaMainMenu::OnDraw(float afFrameTime)
 		DrawOptionsScreen();
 	}
 
-	// Real DrawParticles() is the very last thing drawn each frame (called
-	// after GuiBackground()/GuiOptions()/etc in MenuHandler.hps), on top of
-	// everything else including the dirt-corner vignette - matched here by
-	// using z=13, above the corners' own z=12.5 (see DrawBackground()).
-	DrawParticleEmitter(mEmitterLowerHalf, 13.0f);
-	DrawParticleEmitter(mEmitterUpperHalf, 13.0f);
-	DrawParticleEmitter(mEmitterLarge, 13.0f);
-	DrawParticleEmitter(mEmitterSmoke, 13.0f);
+	if (mbPaused && mbShowExitConfirm)
+		DrawExitConfirmDialog();
+
+	// Real DrawParticles() only ever runs while mbMainMenuActive (see
+	// DrawPauseBackground()'s comment) - never drawn while paused, same as
+	// DrawBackground()/DrawTitle() above. Last thing drawn each frame
+	// otherwise (called after GuiBackground()/GuiOptions()/etc in
+	// MenuHandler.hps), on top of everything else including the dirt-corner
+	// vignette - matched here by using z=13, above the corners' own z=12.5
+	// (see DrawBackground()).
+	if (mbPaused == false)
+	{
+		DrawParticleEmitter(mEmitterLowerHalf, 13.0f);
+		DrawParticleEmitter(mEmitterUpperHalf, 13.0f);
+		DrawParticleEmitter(mEmitterLarge, 13.0f);
+		DrawParticleEmitter(mEmitterSmoke, 13.0f);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -1287,6 +1410,326 @@ void cSomaMainMenu::DrawMenuItems()
 			const cColor &textCol = bSelected ? kSelectedTextColor : kDeselectedTextColor;
 			mpGuiSet->DrawFont(item.msLabel, mpButtonFont, vPos, cVector2f(36, 36), textCol, eFontAlign_Left);
 		}
+	}
+}
+
+//-----------------------------------------------------------------------
+//
+// Pause background - see the class comment on DrawPauseBackground() in
+// SomaMainMenu.h for the real precedent/limitation this follows.
+//
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawPauseBackground()
+{
+	// Plain translucent dark overlay directly over the still-live-rendering
+	// 3D scene - see this function's own comment in SomaMainMenu.h for why
+	// (a real framebuffer-capture-and-tint was tried and abandoned: came
+	// back solid white in live testing, this engine's frame loop has no
+	// well-defined point to read back "the last composited frame" from).
+	if (mpFrameFillGfx)
+		mpGuiSet->DrawGfx(mpFrameFillGfx, cVector3f(0, 0, -10.0f), kVirtualCanvas, kPauseBgDarkenColor);
+}
+
+//-----------------------------------------------------------------------
+//
+// Real EXIT/SAVE AND EXIT confirm dialog - see the class comment on
+// DrawExitConfirmDialog() in SomaMainMenu.h.
+//
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawExitConfirmDialog()
+{
+	// Real OptionMenu_MessageBox_Proper(): a full-screen darken first
+	// (helper_imgui_options.hps' cColor(0,0.75)), THEN the dialog frame.
+	if (mpFrameFillGfx)
+		mpGuiSet->DrawGfx(mpFrameFillGfx, cVector3f(0, 0, 5.0f), kVirtualCanvas, cColor(0, 0.75f));
+
+	cVector2f vSize(560, 200);
+	cVector2f vPos((kVirtualCanvas.x - vSize.x) * 0.5f, (kVirtualCanvas.y - vSize.y) * 0.5f);
+
+	// Real same corner/border frame set (graphics/startmenu/gfx/window/
+	// menu_*.tga) the Options panel uses - confirmed distinct from a
+	// dedicated messagebox frame by comparing background colours.
+	DrawOptionsPanel(vPos, vSize);
+
+	// Real base_english.lang "Menu" category strings - see
+	// MessageBoxExitFromPauseMenu() in script/modules/MenuHandler.hps and
+	// PORTING_NOTES.md for the full citation.
+	tWString sMessage = mbExitConfirmSaveAndExit
+		? _W("ARE YOU SURE YOU WANT TO EXIT TO MENU?")
+		: _W("ARE YOU SURE YOU WANT TO EXIT WITHOUT SAVING?");
+
+	if (mpButtonFont)
+	{
+		tWStringVec vRows;
+		cVector2f vFontSize(28, 28);
+		mpButtonFont->GetWordWrapRows(vSize.x - 60.0f, vFontSize.y, vFontSize, sMessage, &vRows);
+
+		float fTextTop = vPos.y + 36.0f;
+		for (size_t i = 0; i < vRows.size(); ++i)
+		{
+			cVector3f vRowPos(vPos.x + vSize.x * 0.5f, fTextTop + (float)i * (vFontSize.y + 6.0f), 6.0f);
+			mpGuiSet->DrawFont(vRows[i], mpButtonFont, vRowPos, vFontSize, cColor(1, 1), eFontAlign_Center);
+		}
+	}
+
+	// Real "startmenu_options_msgbox_button_left/right(_active).tga" - Yes
+	// is the LEFT button, No the right (OptionMenu_MessageBox_Proper(text,
+	// "Yes","No",...)).
+	bool bYesHovered = (mlExitConfirmHovered == 0);
+	bool bNoHovered = (mlExitConfirmHovered == 1);
+
+	cGuiGfxElement *pYesGfx = bYesHovered ? mpMsgBoxButtonLeftActiveGfx : mpMsgBoxButtonLeftGfx;
+	cGuiGfxElement *pNoGfx = bNoHovered ? mpMsgBoxButtonRightActiveGfx : mpMsgBoxButtonRightGfx;
+
+	// Real "startmenu_options_msgbox_button_left/right.tga" are plain
+	// untextured white shapes (same convention as this file's own
+	// mpOptionsToggleOnGfx/OffGfx - see DrawOptionsToggleControl()'s
+	// comment), so the caption needs a dark colour to actually read against
+	// them - white-on-white was invisible here in live testing.
+	const cColor kMsgBoxButtonTextCol(0, 0, 0, 1);
+
+	float fButtonY = vPos.y + vSize.y - 70.0f;
+	if (pYesGfx)
+	{
+		cVector2f vBtnSize = pYesGfx->GetImageSize();
+		cVector3f vBtnPos(vPos.x + vSize.x * 0.5f - vBtnSize.x - 10.0f, fButtonY, 6.0f);
+		mpGuiSet->DrawGfx(pYesGfx, vBtnPos, vBtnSize, cColor(1, 1));
+		if (mpButtonFont)
+			mpGuiSet->DrawFont(_W("Yes"), mpButtonFont, cVector3f(vBtnPos.x + vBtnSize.x * 0.5f, vBtnPos.y + (vBtnSize.y - 28.0f) * 0.5f, 7.0f),
+								cVector2f(28, 28), kMsgBoxButtonTextCol, eFontAlign_Center);
+	}
+	if (pNoGfx)
+	{
+		cVector2f vBtnSize = pNoGfx->GetImageSize();
+		cVector3f vBtnPos(vPos.x + vSize.x * 0.5f + 10.0f, fButtonY, 6.0f);
+		mpGuiSet->DrawGfx(pNoGfx, vBtnPos, vBtnSize, cColor(1, 1));
+		if (mpButtonFont)
+			mpGuiSet->DrawFont(_W("No"), mpButtonFont, cVector3f(vBtnPos.x + vBtnSize.x * 0.5f, vBtnPos.y + (vBtnSize.y - 28.0f) * 0.5f, 7.0f),
+								cVector2f(28, 28), kMsgBoxButtonTextCol, eFontAlign_Center);
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::UpdateExitConfirmDialog(bool abMouseDown, bool abPressedEdge)
+{
+	int lPrevHovered = mlExitConfirmHovered;
+	mlExitConfirmHovered = -1;
+
+	const cVector2f &vMouse = mpGuiSet->GetMousePos();
+	cVector2f vSize(560, 200);
+	cVector2f vPos((kVirtualCanvas.x - vSize.x) * 0.5f, (kVirtualCanvas.y - vSize.y) * 0.5f);
+	float fButtonY = vPos.y + vSize.y - 70.0f;
+
+	if (mpMsgBoxButtonLeftGfx)
+	{
+		cVector2f vBtnSize = mpMsgBoxButtonLeftGfx->GetImageSize();
+		cVector2f vBtnPos(vPos.x + vSize.x * 0.5f - vBtnSize.x - 10.0f, fButtonY);
+		if (vMouse.x >= vBtnPos.x && vMouse.x <= vBtnPos.x + vBtnSize.x && vMouse.y >= vBtnPos.y && vMouse.y <= vBtnPos.y + vBtnSize.y)
+			mlExitConfirmHovered = 0;
+	}
+	if (mlExitConfirmHovered == -1 && mpMsgBoxButtonRightGfx)
+	{
+		cVector2f vBtnSize = mpMsgBoxButtonRightGfx->GetImageSize();
+		cVector2f vBtnPos(vPos.x + vSize.x * 0.5f + 10.0f, fButtonY);
+		if (vMouse.x >= vBtnPos.x && vMouse.x <= vBtnPos.x + vBtnSize.x && vMouse.y >= vBtnPos.y && vMouse.y <= vBtnPos.y + vBtnSize.y)
+			mlExitConfirmHovered = 1;
+	}
+
+	if (mlExitConfirmHovered != -1 && mlExitConfirmHovered != lPrevHovered)
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::FocusSound());
+
+	if (abPressedEdge == false || mlExitConfirmHovered == -1)
+		return;
+
+	if (mlExitConfirmHovered == 0) // Yes
+	{
+		if (mbExitConfirmSaveAndExit)
+		{
+			// Honest scope limitation (see SomaMainMenu.h/PORTING_NOTES.md):
+			// HPL2/core has a generic iSaveObject/iSaveData serialization
+			// framework and Dark Descent has a concrete cLuxSaveHandler built
+			// on it, but nothing SOMA-specific exists in soma/src/game yet -
+			// so SAVE AND EXIT performs the exact same close action as EXIT,
+			// without actually saving anything.
+			Log("SOMA main menu: SAVE AND EXIT confirmed - no SOMA save system exists in this engine yet, behaving identically to EXIT (nothing saved)\n");
+		}
+		DoQuitToMainMenu();
+	}
+	else // No
+	{
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+		mbShowExitConfirm = false;
+	}
+}
+
+//-----------------------------------------------------------------------
+//
+// Real GuiGameModeSelection() difficulty-select screen - see the class
+// comment on eSomaMenuScreen_NewGameDifficulty in SomaMainMenu.h.
+//
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::DrawNewGameDifficultyScreen()
+{
+	DrawOptionsPanel(kGameModeBgPos, kGameModeBgSize);
+
+	// Real OptionMenu_SectionTitle("NewGame", ...) - same title-placement
+	// convention DrawOptionsScreen() uses for its own real per-screen titles.
+	if (mpButtonFont)
+	{
+		cVector3f vTitlePos(kGameModeBgPos.x, kGameModeBgPos.y + kGameModeBgSize.y + 5.0f, 2.0f);
+		mpGuiSet->DrawFont(_W("NEW GAME"), mpButtonFont, vTitlePos, cVector2f(46, 46), cColor(1, 1), eFontAlign_Left);
+	}
+
+	float fModeRowY = kMainMenuButtonPos.y;
+	bool bModeHovered = (mlNewGameHoveredControl == eSomaNewGameControl_LeftArrow || mlNewGameHoveredControl == eSomaNewGameControl_RightArrow);
+
+	if (mpButtonFont)
+		mpGuiSet->DrawFont(_W("GAME MODE:"), mpButtonFont, cVector3f(kMainMenuButtonPos.x, fModeRowY, 2.0f), cVector2f(36, 36), cColor(1, 1), eFontAlign_Left);
+
+	// Real "NormalMode"/"ExplorationMode" captions ("NORMAL"/"SAFE") - reuses
+	// this file's existing real cycle-bar widget (same
+	// "startmenu_options_button_meter"/"startmenu_options_arrow" assets the
+	// Options screen's own eKind_MultiSelect rows use) rather than hand-
+	// rolling the real script's own bespoke GuiGameModeSelection() arrow
+	// layout a second time - see SomaMainMenu.h's comment on this screen.
+	tWString sModeLabel = (mlNewGameMode == 0) ? _W("NORMAL") : _W("SAFE");
+	cColor barCol = bModeHovered ? kMainMenuButtonBgColor : (kMainMenuButtonBgColor * 0.7f);
+	DrawOptionsCycleControl(fModeRowY, sModeLabel, barCol, cColor(1, 1), cColor(0, 0, 0, 1));
+
+	// Real mode descriptions (base_english.lang "NormalModeDescription"/
+	// "ExplorationModeDescription") - wrapped with the real non-bold
+	// "Sansation Large" body font (see mpBodyFont's comment in SomaMainMenu.h).
+	tWString sDesc = (mlNewGameMode == 0)
+		? _W("Monsters are dangerous and can kill you. You need to think and sneak to survive. The way the game was designed from the start.")
+		: _W("Monsters are still creepy, but can't kill you. You don't need to worry about stealth as you play.");
+
+	if (mpBodyFont)
+	{
+		tWStringVec vRows;
+		cVector2f vDescFontSize(24, 24);
+		float fMaxWidth = kGameModeBgSize.x - 40.0f;
+		mpBodyFont->GetWordWrapRows(fMaxWidth, vDescFontSize.y, vDescFontSize, sDesc, &vRows);
+
+		for (size_t i = 0; i < vRows.size(); ++i)
+		{
+			cVector3f vRowPos(kMainMenuButtonPos.x, fModeRowY + 48.0f + (float)i * (vDescFontSize.y + 4.0f), 2.0f);
+			mpGuiSet->DrawFont(vRows[i], mpBodyFont, vRowPos, vDescFontSize, cColor(1, 1), eFontAlign_Left);
+		}
+	}
+
+	// Real row indices 4 (StartGame, main-menu-style button) and 5 (Back,
+	// options-style button) - see GuiGameModeSelection()'s own
+	// OptionMenu_ButtonMainMenu("StartGame", kMainMenuButtonPos, 4, ...) /
+	// OptionMenu_ButtonOptions("Back", kMainMenuButtonPos, 5, ...) calls.
+	float fStartY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * 4.0f;
+	float fBackY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * 5.0f;
+
+	bool bStartSelected = (mlNewGameHoveredControl == eSomaNewGameControl_StartGame);
+	if (bStartSelected && mpButtonBarGfx)
+	{
+		cVector3f vBarPos(kMainMenuButtonPos.x - 22.0f, fStartY, 0.5f);
+		mpGuiSet->DrawGfx(mpButtonBarGfx, vBarPos, kOptionMenuButtonBgSize, kMainMenuButtonBgColor);
+	}
+	if (mpButtonFont)
+		mpGuiSet->DrawFont(_W("START GAME"), mpButtonFont, cVector3f(kMainMenuButtonPos.x, fStartY, 1.0f), cVector2f(36, 36),
+							bStartSelected ? kSelectedTextColor : kDeselectedTextColor, eFontAlign_Left);
+
+	bool bBackSelected = (mlNewGameHoveredControl == eSomaNewGameControl_Back);
+	if (bBackSelected && mpOptionsHighlightGfx)
+	{
+		cVector3f vBarPos(kMainMenuButtonPos.x - 22.0f, fBackY, 0.5f);
+		mpGuiSet->DrawGfx(mpOptionsHighlightGfx, vBarPos, kOptionMenuButtonBgSize, kMainMenuButtonBgColor);
+	}
+	if (mpButtonFont)
+		mpGuiSet->DrawFont(_W("BACK"), mpButtonFont, cVector3f(kMainMenuButtonPos.x, fBackY, 1.0f), cVector2f(36, 36),
+							bBackSelected ? kSelectedTextColor : kDeselectedTextColor, eFontAlign_Left);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::UpdateNewGameDifficultyMouseHitTest()
+{
+	int lPrevHovered = mlNewGameHoveredControl;
+	mlNewGameHoveredControl = eSomaNewGameControl_None;
+
+	const cVector2f &vMouse = mpGuiSet->GetMousePos();
+	float fModeRowY = kMainMenuButtonPos.y;
+
+	// Same cycle-bar rect DrawOptionsCycleControl()/eKind_MultiSelect's own
+	// click-side test uses (kOptionsSliderOffset/Size) - see ClickOptionsRow().
+	cVector2f vBoxPos(kMainMenuButtonPos.x + kOptionsSliderOffset.x, fModeRowY + kOptionsSliderOffset.y);
+	cVector2f vBoxSize = kOptionsSliderSize;
+
+	if (vMouse.x >= vBoxPos.x && vMouse.x <= vBoxPos.x + vBoxSize.x && vMouse.y >= vBoxPos.y && vMouse.y <= vBoxPos.y + vBoxSize.y)
+	{
+		float fMid = kMainMenuButtonPos.x + (kOptionsSliderTrackLocalMinX + kOptionsSliderTrackLocalMaxX) * 0.5f;
+		mlNewGameHoveredControl = (vMouse.x < fMid) ? eSomaNewGameControl_LeftArrow : eSomaNewGameControl_RightArrow;
+	}
+	else
+	{
+		float fStartY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * 4.0f;
+		float fBackY = kMainMenuButtonPos.y + kOptionMenuButtonSpacing * 5.0f;
+
+		if (vMouse.x >= kMainMenuButtonPos.x && vMouse.x <= kVirtualCanvas.x && vMouse.y >= fStartY && vMouse.y <= fStartY + kOptionMenuButtonSpacing)
+			mlNewGameHoveredControl = eSomaNewGameControl_StartGame;
+		else if (vMouse.x >= kMainMenuButtonPos.x && vMouse.x <= kVirtualCanvas.x && vMouse.y >= fBackY && vMouse.y <= fBackY + kOptionMenuButtonSpacing)
+			mlNewGameHoveredControl = eSomaNewGameControl_Back;
+	}
+
+	if (mlNewGameHoveredControl != eSomaNewGameControl_None && mlNewGameHoveredControl != lPrevHovered)
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::FocusSound());
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaMainMenu::ClickNewGameDifficultyControl(int aControl)
+{
+	switch (aControl)
+	{
+	case eSomaNewGameControl_LeftArrow:
+	case eSomaNewGameControl_RightArrow:
+		// Only 2 real modes exist, so either arrow just flips it - same
+		// "any click toggles" simplification ClickOptionsRow()'s
+		// eKind_MultiSelect case documents for a 2-value list.
+		mlNewGameMode = (mlNewGameMode == 0) ? 1 : 0;
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+		break;
+
+	case eSomaNewGameControl_StartGame:
+	{
+		// Real ClickNewGame() - moved here from the old direct-from-title-
+		// screen NEW GAME click (RunPendingAction()'s old
+		// eSomaMainMenuAction_NewGame case) now that this difficulty screen
+		// sits in between, matching the real click order (StartGame ->
+		// ClickNewGame(), not NEW GAME -> ClickNewGame() directly). No
+		// overwrite-save confirmation dialog: this port's own mbCanContinue
+		// equivalent (BuildMainMenuItems()'s CONTINUE row) is always false -
+		// see the class comment in SomaMainMenu.h - so the real branch this
+		// actually hits is GuiGameModeSelection()'s own "else ClickNewGame()"
+		// (mbCanContinue == false), the same as a real fresh SOMA install
+		// with no existing save, not a fabricated skip.
+		tString sError;
+		if (mpBase->StartNewGame(sError) == false)
+		{
+			Log("SOMA main menu: New Game failed to load the start map (%s)\n", sError.c_str());
+			break;
+		}
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::NewGameSting());
+		SetVisible(false);
+		break;
+	}
+
+	case eSomaNewGameControl_Back:
+		PlaySomaMenuSfx(mpEngine, cSomaMenuSfx::ChangeSound());
+		NavigateTo(eSomaMenuScreen_Main);
+		break;
+
+	default:
+		break;
 	}
 }
 

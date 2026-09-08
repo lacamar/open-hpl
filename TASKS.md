@@ -1387,3 +1387,37 @@
     scoped, narrow addition for this one real interactable - not a generalizable input-binding/
     interaction framework; see PORTING_NOTES.md's "Not done / open items" for what a real
     version would still need.
+
+- SOMA: real pause-menu item list + exit-confirm dialog, and a real New Game difficulty screen
+  (2026-09-08)
+  - DONE: fixed the pause menu drawing the FULL title-screen chrome (background/logo/cathedral
+    face/particles) behind its item list - real `MenuHandler.hps` draws none of that while
+    paused; replaced with a solid dark overlay (`DrawPauseBackground()`) and the real 4-item
+    list `RETURN TO THE GAME`/`OPTIONS`/`EXIT`/`SAVE AND EXIT` (was a placeholder
+    `RESUME`/`OPTIONS`/`QUIT TO MAIN MENU` with no real SOMA precedent).
+  - DONE: real EXIT/SAVE AND EXIT confirm dialog (`DrawExitConfirmDialog()`/
+    `UpdateExitConfirmDialog()`) - real "ARE YOU SURE YOU WANT TO EXIT WITHOUT SAVING?"/"...EXIT
+    TO MENU?" strings, real teal-bordered panel (reuses the existing Options-screen frame
+    helper), real Yes/No button art. SAVE AND EXIT honestly behaves identically to EXIT (logged
+    plainly) - no SOMA-specific save system exists anywhere in this engine (checked: only
+    HPL2/core's generic serialization framework and Dark Descent's own concrete save handler,
+    neither wired up for SOMA).
+  - DONE: real New Game difficulty-select screen (`eSomaMenuScreen_NewGameDifficulty`) between
+    the title screen's NEW GAME click and the actual map load - real "GAME MODE:" NORMAL/SAFE
+    cycle control with the real verbatim description text for each, real START GAME/BACK
+    buttons, wired so START GAME proceeds into the real intro sequence exactly as NEW GAME used
+    to.
+  - Investigated (and ruled out live) a real captured-and-blurred pause background matching Dark
+    Descent's own `cLuxMainMenu` precedent - this engine's frame loop has no point at which "the
+    last composited frame" is a well-defined buffer to read back, and separately this port's own
+    viewport renders solid white (not the live scene) once `cSomaPlayer::SetActive(false)` takes
+    effect - `SomaPlayer.*` is outside this pass's file-ownership boundary, flagged as a known
+    next step rather than fixed here. See PORTING_NOTES.md's newest SOMA section for the full
+    citation trail and both ruled-out attempts.
+  - **Verified live**: full real click-through (title → NEW GAME → difficulty screen incl. mode
+    toggle → START GAME → real intro sequence) and separately reached live gameplay, injected a
+    real Escape keypress → pause menu → EXIT → confirm dialog → YES → back to the real title
+    screen, all via real injected mouse/keyboard events and headless screenshots at each step.
+    All 4 ctest suites (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests)
+    green. 100% contained to `soma/src/game/SomaMainMenu.{h,cpp}` - zero Dark Descent/AMFP/
+    Rebirth/Bunker reachability.
