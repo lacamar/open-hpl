@@ -1273,3 +1273,36 @@
     (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
     100% SOMA-only (`cSomaSplash`/`cSomaMainMenu` classes) - zero Dark Descent/AMFP/Rebirth/
     Bunker reachability.
+
+- SOMA: real map-authored ambient sounds (car honking, dogs, seagulls, fridge hum, DVD idle,
+  vent loop) were silent - loader existed, target `.snt` resource never did (2026-09-08)
+  - DONE: root-caused precisely before touching code - `cWorldLoaderHpm::LoadSoundsTrack()`
+    already runs unmodified for every map and already calls `cEngineFileLoading::LoadSound()`
+    for real `.hpm_Sound` entities (confirmed 7 real ones in `00_01_apartment.hpm_Sound`:
+    fridge_hum/dvd_idle/vent_sound_1/dogs/car_drive/seagulls/dogs_1); the real gap is that their
+    `SoundEntityFile` values are real FMOD Ex/Studio event paths with no matching `.snt`
+    resource anywhere in the real install (confirmed: only one real `.snt` exists in the whole
+    game, unrelated), so `cSoundEntityManager::CreateSoundEntity()` always failed - confirmed
+    live via hpl.log ("Couldn't create SoundEntity ... 0 sounds") BEFORE writing any fix.
+  - DONE: fixed via new `soma/src/game/SomaAmbientSfx.{h,cpp}` + `SomaAmbientSfxVorbisSetup.h` -
+    extracts the real audio from `sounds/level/00_06_lab.fsb` (PCM16: car_drive/distant_dog/
+    seagull), `sounds/entities/entities_urban.fsb` (Vorbis, a NEW real FMOD codebook preset
+    pulled from the same public MIT-licensed python-fsb5 table SomaMenuSfxVorbisSetup.h's
+    existing preset came from), and `sounds/entities/Entities_Station.fsb` (Vorbis, reuses the
+    existing preset) using a bounded FSB5 parser mirroring `SomaMenuSfx.cpp`'s established
+    pattern, then synthesizes real `SOUNDENTITY` `.snt` XML sidecars (exact real schema,
+    verified against the one genuine `.snt` in the install) into a cache resource dir. Zero
+    changes to any shared loader (`WorldLoaderHpm.cpp`/`EngineFileLoading.cpp`/
+    `SoundEntityManager.cpp` all untouched) - they now simply find a real resource where they
+    used to find nothing. Wired via one new call, `cSomaAmbientSfx::EnsureCached()`, right next
+    to `RegisterSomaLoaders()` in `cSomaBase::Init()`.
+  - Verified live: headless-booted `00_01_apartment.hpm` via the real `start_map` control
+    command; hpl.log's sound-load summary went from "...0 sounds" to "...7 sounds", and a
+    temporary (added-then-reverted) diagnostic in `cSoundEntity::PlaySound()` confirmed all 7
+    actually START PLAYING real extracted audio, including `car_drive`/`dogs`/`seagulls` - the
+    exact sounds the user reported missing. `ffprobe`/`ffmpeg -f null -` independently confirmed
+    the extracted Vorbis/PCM16 files are genuinely valid, fully-decodable audio. All 4 ctest
+    suites (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
+    See PORTING_NOTES.md's newest SOMA section for full citations, the two documented
+    simplifications (fixed spot-repeat timing; one shared dog-bark pool for both real "dogs"/
+    "dogs_1" entities), and the known out-of-scope physics-impact-sound gap left honest.
