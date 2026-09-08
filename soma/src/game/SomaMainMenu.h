@@ -36,9 +36,12 @@
  *    menu at all, only a highlight bar behind the focused item.
  *
  * Not reproduced (real, but out of scope for this scaffold - no save
- * system, no controller support exist here yet): the exit confirmation
- * message box, click/glitch sound effects, save-game-dependent Continue/
- * LoadGame enablement (always shows disabled, same as a real fresh
+ * system, no controller support exist here yet): the title screen's own
+ * EXIT confirmation message box (its click still exits immediately - see
+ * RunPendingAction()'s eSomaMainMenuAction_Exit case; the PAUSE menu's real
+ * EXIT/SAVE AND EXIT confirm dialog IS reproduced, see
+ * DrawExitConfirmDialog()), click/glitch sound effects, save-game-dependent
+ * Continue/LoadGame enablement (always shows disabled, same as a real fresh
  * install), and background phases 2-5 (progress-gated, this scaffold has
  * no progress tracking so always renders phase 1).
  *
@@ -112,9 +115,18 @@ enum eSomaMainMenuAction
 	// Paused-mode-only actions (see cSomaMainMenu::ShowPaused()) - real
 	// precedent is Dark Descent's cLuxMainMenu, the SAME menu object used for
 	// both the title screen and the in-game pause menu (amnesia/src/game/
-	// LuxMainMenu.h) - not two separate classes.
+	// LuxMainMenu.h) - not two separate classes. Real item list/order is
+	// RETURN TO THE GAME/OPTIONS/EXIT/SAVE AND EXIT (script/modules/
+	// MenuHandler.hps's GuiPauseMenuSelection(), confirmed by reading it
+	// directly - see BuildPausedMenuItems()), not the earlier "QUIT TO MAIN
+	// MENU" 3-item placeholder list this replaced.
 	eSomaMainMenuAction_Resume,
-	eSomaMainMenuAction_QuitToMainMenu,
+	// Real EXIT/SAVE AND EXIT both fall into the SAME confirm dialog
+	// (mbShowExit in the real script), differing only in which of the two
+	// real message strings it shows and whether a save is attempted first -
+	// see DrawExitConfirmDialog()/UpdateExitConfirmDialog().
+	eSomaMainMenuAction_PauseExit,
+	eSomaMainMenuAction_PauseSaveAndExit,
 };
 
 struct cSomaMainMenuItem
@@ -146,6 +158,28 @@ enum eSomaMenuScreen
 	eSomaMenuScreen_OptionsVideoWorld,		// real GuiOptionsVideoWorld() (captioned "Rendering")
 	eSomaMenuScreen_OptionsVideoGamma,		// real GuiOptionsVideoGamma()
 	eSomaMenuScreen_OptionsAudio,			// real GuiOptionsAudio()
+
+	// Real GuiGameModeSelection() - the difficulty-select screen shown
+	// between the title screen's NEW GAME click and actually starting the
+	// game (script/modules/MenuHandler.hps, reached whenever
+	// cLux_GetSupportExplorationMode() is true, which every real SOMA
+	// release is - see RunPendingAction()'s eSomaMainMenuAction_NewGame
+	// case). Not part of the Options tree above; a sibling of
+	// eSomaMenuScreen_Main entered/left the same way (NavigateTo()).
+	eSomaMenuScreen_NewGameDifficulty,
+};
+
+// Real GuiGameModeSelection()'s own hit-testable controls - not a
+// cSomaOptionsRow list (that struct's kinds don't fit this screen's mixed
+// cycle-control/main-menu-button/options-button layout), see
+// DrawNewGameDifficultyScreen()/UpdateNewGameDifficultyMouseHitTest().
+enum eSomaNewGameControl
+{
+	eSomaNewGameControl_None,
+	eSomaNewGameControl_LeftArrow,
+	eSomaNewGameControl_RightArrow,
+	eSomaNewGameControl_StartGame,
+	eSomaNewGameControl_Back,
 };
 
 // One row of the Options screen, built fresh each frame by
@@ -355,6 +389,68 @@ private:
 	void ClickItem(cSomaMainMenuItem &aItem);
 	void RunPendingAction();
 
+	// Real pause background: MenuHandler.hps's own GuiBackground() draws
+	// NOTHING while paused (its entire body is "if(mbMainMenuActive){...}",
+	// confirmed by reading it directly - no blur/darken call exists there),
+	// so the dimming the real game visibly shows while paused must come from
+	// SOMA's own closed C++ engine, not this script. The concrete real
+	// precedent for that is Dark Descent's cLuxMainMenu - the SAME "one menu
+	// class doubles as the pause menu" class this file's own header comment
+	// already patterns itself on - which captures the live frame into a
+	// texture and runs a real 2-pass GPU gaussian blur over it
+	// (amnesia/src/game/LuxMainMenu.cpp's RenderBlurTexture()/RenderBlur()).
+	//
+	// Two things were tried here and ruled out live before landing on a
+	// plain solid dark overlay:
+	//  1. A real capture-and-tint of this port's own live frame (same
+	//     iLowLevelGraphics::CopyFrameBufferToTexure() API) - came back
+	//     solid white. This engine's frame loop (Engine.cpp: Update ->
+	//     SwapBuffers -> OnDraw -> Render) has no point at which "the last
+	//     fully composited frame" is a well-defined buffer to read back,
+	//     unlike Dark Descent's real OnEnterContainer()/CreateBackground()
+	//     call site.
+	//  2. A lightly-translucent dark tint drawn directly over the
+	//     supposedly-still-rendering live 3D scene (reasoning: nothing
+	//     stops mpScene->Render() from running every frame while paused,
+	//     only the player controller itself goes inactive - see
+	//     cSomaBase::SetGameplayPaused()) - also came back solid white
+	//     underneath (confirmed live by testing alpha 0, 0.65 and 1.0 in
+	//     turn: 0 = plain white, 0.65 = washed-out grey, 1.0 = clean black).
+	//     This port's own viewport apparently doesn't keep rendering the
+	//     real scene once cSomaPlayer::SetActive(false) takes effect -
+	//     cSomaPlayer.* is explicitly outside this class's file-ownership
+	//     boundary for this pass, so that's a known, flagged limitation to
+	//     chase separately, not fixed here.
+	// Net result: a solid, high-alpha (not lightly translucent) dark
+	// overlay - reliably dark regardless of the above, at the honest cost of
+	// not literally showing the live paused scene dimmed through it the way
+	// the real game does.
+	void DrawPauseBackground();
+
+	////////////////////////////////////
+	// Real EXIT/SAVE AND EXIT confirm dialog (MessageBoxExitFromPauseMenu(),
+	// OptionMenu_MessageBox_Proper() in helper_imgui_options.hps) - drawn as
+	// an overlay on top of the (frozen) pause item list, exactly like the
+	// real script's own mbShowExit overlay, rather than a full mScreen
+	// navigation away from eSomaMenuScreen_Main.
+	void DrawExitConfirmDialog();
+	void UpdateExitConfirmDialog(bool abMouseDown, bool abPressedEdge);
+
+	// Shared by both the pause menu's real EXIT/SAVE AND EXIT -> confirm ->
+	// quit-to-menu flow and the (now dialog-driven, previously a direct
+	// third pause-menu button - see BuildPausedMenuItems()'s own comment)
+	// "return to the title screen over the current gameplay map" action -
+	// see this function's own definition for the real precedent/limitation.
+	void DoQuitToMainMenu();
+
+	////////////////////////////////////
+	// Real GuiGameModeSelection() difficulty-select screen (see
+	// eSomaMenuScreen_NewGameDifficulty) - reached from the title screen's
+	// NEW GAME click, in between it and the actual StartNewGame() call.
+	void DrawNewGameDifficultyScreen();
+	void UpdateNewGameDifficultyMouseHitTest();
+	void ClickNewGameDifficultyControl(int aControl); // aControl: eSomaNewGameControl
+
 	////////////////////////////////////
 	// Options screen (eSomaMenuScreen_Options*) - see the class comment and
 	// SomaMainMenu.cpp for the real script this was read out of.
@@ -449,9 +545,52 @@ private:
 	bool mbMouseWasDown;
 
 	// True while showing the reduced in-game pause overlay (ShowPaused()) as
-	// opposed to the full title-screen menu - same mpGuiSet/background/
-	// Options sub-tree either way, just a different mItems list.
+	// opposed to the full title-screen menu - same mpGuiSet/Options sub-tree
+	// either way, just a different mItems list and (see DrawPauseBackground())
+	// a captured-live-frame background instead of the title screen's own
+	// menu_background.tga/title/particles, which the real game never draws
+	// while paused either (see DrawPauseBackground()'s own comment).
 	bool mbPaused;
+
+	// See DrawPauseBackground()'s own comment for why this ended up a plain
+	// translucent overlay rather than a captured/blurred frame - an
+	// iLowLevelGraphics::CopyFrameBufferToTexure() capture was tried first
+	// (the real Dark Descent cLuxMainMenu precedent) but proved unreliable
+	// in this engine's headless GL path (verified live: came back solid
+	// white, not the paused scene - capturing at any point in this engine's
+	// own frame loop that was tried landed on an undefined/just-swapped
+	// buffer, not the last fully-rendered one).
+
+	// Real MessageBoxExitFromPauseMenu() overlay state - see
+	// DrawExitConfirmDialog()/UpdateExitConfirmDialog(). mlExitConfirmHovered
+	// mirrors the real script's own msMessageBoxFocus ("No" by default): -1
+	// none, 0 = Yes, 1 = No.
+	bool mbShowExitConfirm;
+	bool mbExitConfirmSaveAndExit; // which of the two real message strings/behaviours - see the enum comment on eSomaMainMenuAction_PauseSaveAndExit
+	int mlExitConfirmHovered;
+
+	// Real "startmenu_options_msgbox_button_left/right(_active).tga" -
+	// Yes/No buttons for the confirm dialog above (OptionMenu_MessageBox_
+	// Proper(text,"Yes","No",...) - Yes is the LEFT button, No the right).
+	cGuiGfxElement *mpMsgBoxButtonLeftGfx;
+	cGuiGfxElement *mpMsgBoxButtonLeftActiveGfx;
+	cGuiGfxElement *mpMsgBoxButtonRightGfx;
+	cGuiGfxElement *mpMsgBoxButtonRightActiveGfx;
+
+	// Real "Sansation Large" (non-bold) 27px - GuiGameModeSelection()'s own
+	// mode-description body font, distinct from mpButtonFont's Sansation
+	// Large BOLD 36px used for every button/label elsewhere in this class.
+	iFontData *mpBodyFont;
+
+	// Real GuiGameModeSelection() state - see eSomaMenuScreen_NewGameDifficulty.
+	// mlNewGameMode: 0 = real "NormalMode", 1 = real "ExplorationMode" ("SAFE"
+	// caption) - matches the real script's own mlSelectedGameMode. Not
+	// persisted to cSomaConfig: no monster/AI code exists anywhere in
+	// soma/src/game yet for either mode to actually affect, so this is a
+	// real, live UI choice with an honestly-scoped no-op backend - see
+	// PORTING_NOTES.md.
+	int mlNewGameMode;
+	int mlNewGameHoveredControl; // eSomaNewGameControl
 
 	////////////////////////////////////
 	// Options screen state (see SomaMainMenu.h's class comment)
