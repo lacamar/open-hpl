@@ -5050,3 +5050,114 @@ possible starting points, see above); the real `GuiGameModeSelection()` bespoke 
 (this port intentionally reuses the existing cycle-bar widget instead, see Task 3); real
 per-mode gameplay effects (no monster/AI code exists anywhere in this engine yet for either mode to
 affect).
+
+## CRITICAL: the real Steam SOMA install kept getting modified on every normal launch - the actual root cause, found for real this time
+
+This session chased "real Steam files keep getting modified" through three prior incidents (a
+stray `Soma.bin.aarch64` build artifact left in the real install, a stray `hpl.log` symlinked
+into every scratch dir causing concurrent agents to deadlock on the same real inode, and a
+`cp -f`-through-symlink bug in the test tooling) - all real, all fixed, and all **downstream
+symptoms of a fourth, actual, still-live bug** that had nothing to do with any of this project's
+own testing tooling at all: it fires on every single normal boot of the real, installed game,
+including the user's own `open-hpl soma` launch via Steam, headless test or not.
+
+**How it was finally found**: after fixing the first three incidents, the user reported the real
+files were *still* getting flagged by Steam's own validator after nothing but a normal launch. A
+controlled reproduction (`strace -f -e trace=openat` against the real, installed
+`/usr/libexec/open-hpl/Soma.bin.aarch64` binary, run in a scratch dir symlinked read-only to the
+real depot via `scripts/setup-test-scratch.sh`) caught it directly, within the first few hundred
+syscalls of every boot:
+
+```
+openat(AT_FDCWD, ".../SOMA/core/models/core_box.msh", O_WRONLY|O_CREAT|O_TRUNC, 0666)
+openat(AT_FDCWD, ".../SOMA/core/models/core_12_12_sphere.msh", O_WRONLY|O_CREAT|O_TRUNC, 0666)
+openat(AT_FDCWD, ".../SOMA/core/models/core_7_7_sphere.msh", O_WRONLY|O_CREAT|O_TRUNC, 0666)
+openat(AT_FDCWD, ".../SOMA/core/models/core_5_5_sphere.msh", O_WRONLY|O_CREAT|O_TRUNC, 0666)
+openat(AT_FDCWD, ".../SOMA/core/models/core_pyramid.msh", O_WRONLY|O_CREAT|O_TRUNC, 0666)
+```
+
+These are real, already-shipped depot files, opened with `O_TRUNC` - truncated and rewritten -
+by the engine itself, unconditionally, every boot.
+
+**Root cause**: `iRenderer`'s own built-in debug/light-volume shape rendering
+(`HPL2/core/sources/graphics/Renderer.cpp:442`) loads these five primitive shapes by their
+Collada source name: `LoadVertexBufferFromMesh("core_box.dae", ...)`. Real SOMA genuinely ships
+*both* `core_box.dae` (source, confirmed present, dated well before any of this session's work)
+and `core_box.msh` (a compiled cache of it) side by side in `core/models/` - this is real,
+original, deliberate Frictional Games content, not test debris. `cMeshLoaderCollada`'s real,
+unmodified, original engine behavior (`HPL2/core/sources/impl/MeshLoaderCollada.cpp:754-761`)
+treats the shipped `.msh` as nothing more than a rebuildable cache of the `.dae`: it always
+recompiles the Collada source and calls `mpMeshLoaderMSH->SaveMesh(pMesh, sMSHFile)`, where
+
+```cpp
+tWString sMSHFile = cString::SetFileExtW(asFile, _W("msh"));
+```
+
+`asFile` here is the real, resolved path to the `.dae` file - the same directory, same base
+name - so `sMSHFile` is *exactly* the already-shipped sibling `.msh` file's own real path. This
+is genuine upstream behavior, present in HPL2 since Dark Descent - not a bug this port
+introduced - and it makes complete sense on the platforms this engine originally targeted, where
+a game's own install directory is expected to be writable by the game itself. On a real Steam
+depot on Linux, where `steamapps/common/*` is meant to be read-only content Valve's own client
+validates by checksum, this exact "helpful" caching behavior is precisely what was corrupting
+the install on every launch.
+
+**The fix**: the real engine already has a purpose-built escape hatch for exactly this scenario -
+`cResources::SetForceCacheLoadingAndSkipSaving(bool)` (`HPL2/core/include/resources/Resources.h`),
+checked at every one of these save sites (`MeshLoaderCollada.cpp` lines 189, 755, 816, 978;
+`WorldLoaderHplMap.cpp` lines 502, 773; `World.cpp` lines 1173, 1188). **Dark Descent's own real
+game module already calls this** - `amnesia/src/game/LuxBase.cpp:1341`:
+```cpp
+cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->mbForceCacheLoadingAndSkipSaving);
+```
+and that config value itself defaults to `true` (`LuxConfigHandler.cpp`:
+`GetBool("Main","ForceCacheLoadingAndSkipSaving", true)`) - meaning the real, original, shipped
+Amnesia: The Dark Descent has shipped with this exact protection turned on by default the whole
+time. SOMA's from-scratch `cSomaBase::InitEngine()` (this project's own Phase 0 scaffolding,
+built without a Lux-equivalent config layer) simply never made the equivalent call at all - a
+real, simple, precedented gap, not a design flaw needing new engine work.
+
+Fixed with one line in `soma/src/game/SomaBase.cpp`'s `InitEngine()`, placed before
+`LoadResourceDirsFile()` (i.e. before any resource loading whatsoever can occur):
+```cpp
+cResources::SetForceCacheLoadingAndSkipSaving(true);
+```
+Hardcoded `true` rather than config-driven like Dark Descent's own version, since SOMA's real
+`main_init.cfg` has no equivalent setting and there is no scenario on this port where this
+should ever be anything but true - a real install's resource directory must never be written to,
+unconditionally, not only by default.
+
+**Verified live**: re-ran the identical `strace` reproduction against the fixed binary, twice -
+zero `O_WRONLY`/`O_RDWR`/`O_CREAT` opens of any kind targeting the real Steam directory in either
+run (the unfixed binary reproduced the writes within the first few hundred trace lines, every
+single time, across three separate reproduction runs). Could not complete a full live
+headless-boot-to-menu re-verification in the same session due to the machine being under severe,
+genuine, unrelated memory pressure at the time (`free -h` showed ~1.9GB free RAM with swap
+almost entirely exhausted) - confirmed this was environmental and not caused by the fix by
+launching the *already-installed, unmodified* v1.3.16 binary the exact same way immediately
+afterward and observing the identical silent early `exit(1)` with zero log output, which the
+fixed build could not itself have caused. The specific, targeted bug (the mesh-file rewrite) was
+directly and empirically confirmed fixed regardless, via the completed partial-boot strace runs
+that got well past the point of the fix (both reached shader compilation, several hundred
+syscalls past `LoadResourceDirsFile()`) with zero real-directory writes observed. All 4 ctest
+suites (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/`HpslTranspilerTests`) green.
+
+**Also observed, not acted on**: Steam's own validator/repair cycle was separately caught (via
+`~/.local/share/Steam/logs/content_log.txt`) repeatedly self-healing then re-breaking in a loop
+whenever the real game got relaunched while a repair was still mid-flight (`App update changed :
+None` / `state changed : ...(Suspended)` immediately followed by a worse mismatch count on the
+next scan) - a real, separate, Steam-client-side interaction with this bug's own fallout, not
+something to fix in this codebase. This should simply stop recurring now that the actual
+underlying write no longer happens at all.
+
+**Flagged by the user as a good, separate architectural improvement, not attempted this pass**:
+this port's binreloc-style path resolution requires the engine binary to be physically deployed
+*inside* the real Steam game directory to find its own resources at all - the entire reason the
+RPM's own launcher wrapper (`%post`'s `cp -f "$PKGDIR/Soma.bin.aarch64"
+"$gamedir/OpenHplSoma.bin.aarch64"`) exists. Refactoring to accept an explicit game-data-directory
+argument or environment variable instead - so the binary could live permanently in, e.g.,
+`/usr/libexec/open-hpl/` and simply be told where the real game data is, never needing to be
+copied into it - would remove an entire class of risk this whole investigation thread has been
+about, independent of this specific bug's own fix. A real, valuable next step; scoped separately
+since it touches path-resolution code broadly (binreloc usage, resource-dir/config-file lookup,
+the RPM packaging/launcher scripts) rather than being a narrow bug fix.

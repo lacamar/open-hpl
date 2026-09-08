@@ -1421,3 +1421,57 @@
     All 4 ctest suites (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests)
     green. 100% contained to `soma/src/game/SomaMainMenu.{h,cpp}` - zero Dark Descent/AMFP/
     Rebirth/Bunker reachability.
+
+- CRITICAL: real Steam SOMA install files kept getting modified on every normal launch, not just
+  during testing - the actual, complete root cause, finally found and fixed (2026-09-09)
+  - ROOT-CAUSED AND FIXED (master): every previous "real files got corrupted" incident this
+    project chased (the stray `Soma.bin.aarch64`, the `hpl.log` symlink deadlock, the `cp -f`
+    through-symlink bug) turned out to be downstream symptoms, not the source - the actual bug
+    was live, active, and firing on every single normal boot, including the user's own real
+    `open-hpl soma` launch via Steam. Confirmed directly via `strace -f -e trace=openat` against
+    the real installed binary in a scratch dir symlinked to the real depot: every boot opened
+    `core/models/core_box.msh`, `core_pyramid.msh`, and `core_5_5_sphere.msh`/`core_7_7_sphere.msh`/
+    `core_12_12_sphere.msh` with `O_WRONLY|O_CREAT|O_TRUNC` and rewrote them - real, already-shipped
+    depot files, not test artifacts.
+  - Real SOMA ships BOTH `core_box.dae` (source) and `core_box.msh` (a compiled cache of it) for
+    these five built-in primitive shapes (`iRenderer::LoadVertexBufferFromMesh("core_box.dae",
+    ...)`, `Renderer.cpp:442` - used for debug/light-volume rendering). `cMeshLoaderCollada`'s
+    real, original, unmodified Frictional Games behavior (`MeshLoaderCollada.cpp:754-761`)
+    treats `.msh` as a rebuildable cache of `.dae` and unconditionally recompiles+resaves it on
+    every load via `mpMeshLoaderMSH->SaveMesh(pMesh, sMSHFile)` where `sMSHFile` is just
+    `asFile`'s extension swapped to `.msh` - i.e. the exact real, already-shipped sibling file's
+    own path. This is genuine, intentional, original engine behavior (not a bug introduced by
+    this port) - it assumes the game's own install directory is writable, true on the platforms
+    this engine originally shipped for, false for a real Steam depot on Linux.
+  - The real engine already has a purpose-built escape hatch for exactly this:
+    `cResources::SetForceCacheLoadingAndSkipSaving()` - and Dark Descent's own real
+    `cLuxBase::InitEngine()` already calls it (`amnesia/src/game/LuxBase.cpp:1341`,
+    `mpConfigHandler->mbForceCacheLoadingAndSkipSaving` itself defaulting to `true` in
+    `LuxConfigHandler.cpp`). SOMA's from-scratch `cSomaBase::InitEngine()` never made the
+    equivalent call at all. Fixed with one line, `cResources::SetForceCacheLoadingAndSkipSaving
+    (true)`, added right before `LoadResourceDirsFile()` in `soma/src/game/SomaBase.cpp` (hardcoded
+    true, not config-driven, since SOMA's own real main_init.cfg has no equivalent setting and
+    this should never be anything else on this port).
+  - Verified live: re-ran the exact same `strace` reproduction against the FIXED binary, twice -
+    zero opens of any kind (`O_WRONLY`/`O_RDWR`/`O_CREAT`) targeting the real Steam directory in
+    either run, versus the unfixed binary's reproducible writes within the first few hundred
+    trace lines every time. A full end-to-end headless boot-to-menu re-verification could not be
+    completed in the same session due to the machine being under genuine, severe, unrelated
+    memory pressure at the time (confirmed: the ALREADY-INSTALLED, unmodified v1.3.16 binary
+    exhibited the identical silent early exit(1) when launched the same way immediately
+    afterward, proving the failure is environmental, not caused by this fix) - the mesh-write
+    behavior itself was directly, empirically confirmed fixed regardless. All 4 ctest suites
+    (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
+  - Also traced (but did not act on, to keep this fix minimal and precedented) that Steam's own
+    validator repeatedly self-heals then re-breaks in a loop whenever the game gets relaunched
+    mid-repair (confirmed via `~/.local/share/Steam/logs/content_log.txt`'s own
+    "Update...Suspended"/"App update changed: None" sequence) - a real, separate, Steam-side
+    interaction with this bug's fallout, not something to fix in this codebase; it should stop
+    recurring entirely now that the actual write no longer happens.
+  - Not done this pass, raised separately by the user as a real, good architectural idea: this
+    port's binreloc-style path resolution requires the binary to be physically deployed inside
+    the real game directory at all (hence the RPM's own `cp -f ... OpenHplSoma.bin.aarch64`
+    launcher step existing at all) - refactoring to accept an explicit game-data-directory
+    argument/env var instead, so the binary never needs to live inside the real Steam directory
+    in the first place, would remove an entire class of risk here. Flagged as the natural next
+    architectural improvement, not attempted in this same pass.

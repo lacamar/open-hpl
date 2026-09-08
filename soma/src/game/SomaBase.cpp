@@ -545,6 +545,38 @@ bool cSomaBase::InitEngine()
 		return false;
 	}
 
+	// CRITICAL, must run before any resource/mesh loading below: real SOMA
+	// ships paired `.dae`+`.msh` files for the engine's built-in primitive
+	// shapes (core_box, core_pyramid, core_*_sphere - used by iRenderer's
+	// own debug/light-volume rendering, see Renderer.cpp's
+	// LoadVertexBufferFromMesh("core_box.dae", ...)). cMeshLoaderCollada's
+	// real, original Frictional Games behavior (MeshLoaderCollada.cpp) is
+	// to treat the shipped `.msh` as a rebuildable CACHE of the `.dae`
+	// source - it recompiles the `.dae` and calls SaveMesh() to overwrite
+	// that `.msh` unconditionally on every load, by design, because on the
+	// platforms this engine originally shipped for the game's own install
+	// directory was expected to be writable. On this Linux port, that
+	// install directory is the real Steam depot - confirmed live via
+	// strace: every boot was opening the real, already-shipped
+	// core_box.msh/core_pyramid.msh/core_*_sphere.msh with
+	// O_WRONLY|O_CREAT|O_TRUNC and rewriting them, which is exactly what
+	// triggered Steam's own repeated "files failed to validate" repair
+	// cycles this session traced back through - a real, active, ongoing
+	// bug, not leftover damage from anything already fixed.
+	//
+	// Dark Descent's own real cLuxBase::InitEngine() already disables this
+	// exact behavior by default (amnesia/src/game/LuxBase.cpp's
+	// `cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->
+	// mbForceCacheLoadingAndSkipSaving)`, itself defaulting to `true` -
+	// LuxConfigHandler.cpp's `GetBool("Main",
+	// "ForceCacheLoadingAndSkipSaving", true)`) - this Phase 0 scaffolding
+	// simply never made the equivalent call for SOMA. Hardcoded true here
+	// (not read from a config option) since SOMA's own real main_init.cfg
+	// has no equivalent setting and this should never be anything but true
+	// on this port - a real install's resource directory must never be
+	// written to, unconditionally, not just by default.
+	cResources::SetForceCacheLoadingAndSkipSaving(true);
+
 	/////////////////////////
 	// Load SOMA's real resource directory listing and physics surface data.
 	// Both parsers are fully generic (no Amnesia-specific assumptions), so
