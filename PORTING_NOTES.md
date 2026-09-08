@@ -4349,6 +4349,122 @@ auto-trigger substitutes with the real thing); the rest of `00_01_apartment.hps`
 (lighting setup, drapes, tracer-fluid reminder loop, answering machine, bathroom/kitchen
 interactions, end-of-level timer) - none of that is touched by this session's `.hps` gap.
 
+## SOMA splash: real boot order corrected, real progress/unskippable loading, icon timing evidence (this session)
+
+User feedback: "The frictional splash logo still comes up before the loading screen, which is
+wrong" (reference screenshots show boot-init glitch screen FIRST, FG logo SECOND); "get the loading
+splash to look exactly like the original"; "have it reflect the actual loading of game data (and
+make it impossible to skip until the loading has actually finished)". A prior session's writeup
+(the "properly reverse-engineered" section above) never explicitly re-confirmed phase *order* -
+`soma/src/game/SomaSplash.{h,cpp}` shipped with `ePhase_FGLogo` first, `ePhase_BootInit` second,
+backwards from the real game.
+
+**Order, re-derived from scratch against primary evidence** (not trusting either the old
+implementation or the user's claim uncritically):
+- `nm -C`/`objdump -d` on the real, unstripped `Soma.bin.x86_64`: `cLuxBase::Init()` (vaddr
+  0x8baf40) disassembles to a fixed call sequence `InitApp()` → `InitConfig()` → `InitEngine()` →
+  `CheckFeatureSupport()` → `InitScript()` → `InitLoadHandler()` → a vtable dispatch that starts
+  the real `Run()` loop. `InitLoadHandler()` (0x8d14f0) itself calls
+  `cLuxLoadHandler::cLuxLoadHandler()` (0xb1a6f0 - the ctor reading `LoadingIcon`/`SplashScreen`/
+  `LoadingBar`/`LoadingFrame`/`SplashScreenMusic` from `game.cfg`, already cited above) and
+  immediately `cLuxLoadHandler::AddJob()` (0xb1d060) - i.e. the native boot-init screen and its
+  first background job start running **before the main loop (and thus before any script) ever
+  runs a single frame**.
+- `script/modules/MenuHandler.hps`'s `GuiPreMenu()` (the FG-logo phase) is only ever reached from
+  `cScrMenuHandler`'s Update() switch, `case eMainMenuGroup_Main:`, only when `mbMainMenuActive` is
+  already true (~line 1611) - i.e. it's part of the **already-loaded, already-active main menu's
+  own update loop**, structurally impossible to run before the main menu scene exists.
+Together: native boot-init (Premenu.png/red loading bar/brain icon) renders first, while the main
+menu's own resources/scene load as a background job; only once that job finishes and the main menu
+becomes active does script code start running `GuiPreMenu()`'s FG-logo sub-state. Fixed by swapping
+`eSomaSplashPhase_BootInit`/`eSomaSplashPhase_FGLogo`'s order in the enum and
+`EnterPhase()`/`AdvanceToNextPhase()` in `soma/src/game/SomaSplash.{h,cpp}`.
+
+**Visual match, incremental**: further `objdump -d` on `cLuxLoadHandler::DrawBigIcon(int, float)`
+(0xb1e710)/`DrawSmallIcon(int, float)` (0xb1e420) - both called from `OnDraw()` (0xb1d190) on an
+`mbUseSmallIcon` flag (offset 0x9c) the constructor never explicitly sets (defaults false/big):
+`DrawBigIcon`'s own `DrawGfx()` call uses a literal, hardcoded (512.0, 512.0) size immediate - the
+brain frames' own exact native pixel dimensions. Also found: `OnDraw()` accumulates elapsed time
+multiplied by a literal double constant **15.0** (vaddr 0x19bf748), compared against 2x the icon's
+real frame count via an abs-value/subtract pattern - a real **~15fps PING-PONG bounce**
+(0→25→0→25→...), not a simple forward loop with wraparound. Adopted the timing finding
+(`mfBrainFrameRate` now 15.0, `DrawBrainIcon()` now bounces) since it's unambiguous and low-risk.
+NOT adopted: the 512x512 native size - `mbUseSmallIcon` defaulting false is suggestive but this
+same native class is also reused for later in-game level-load screens (screenshot + small icon +
+percent text, a visibly different composition per `MenuHandler.hps`'s own `GuiLoadingScreen`-style
+block), and a previous session's modest corner-icon choice was already checked directly against
+the user's reference screenshot - left as-is rather than risk a visual regression on ambiguous
+evidence. Exact bar/frame position (from the earlier "properly reverse-engineered" session) is
+unchanged and still disassembly-confirmed for size/horizontal-centering, best-inference for
+vertical anchor.
+
+**Real progress / unskippable loading (task 3)**: this port completes `resources.cfg`/
+`materials.cfg` parsing etc. inside `cSomaBase::InitEngine()`, fully synchronously, before
+`cSomaSplash` is even constructed - already true before this session. But the ONE remaining real,
+heavy piece of boot work - loading the actual main menu `cWorld` (`main_menu.hpm`) - used to happen
+only in `cSomaBase::OnSplashFinished()` → `ProceedPastBoot()` → `InitMainMenuScene()`, i.e. only
+*after* the whole splash sequence (both phases' fixed real-time durations) had already finished -
+backwards from the real `cLuxLoadHandler`, which loads while its own boot splash is still on
+screen. Fixed:
+- New `cSomaBase::PreloadMainMenuWorld()` (small, additive touch to `SomaBase.h/.cpp`, flagged per
+  this task's scope note): reads `main_init.cfg`'s `<MainMenu File=.../>` entry and calls
+  `cScene::LoadWorld()` exactly once, caching the result in `mpPreloadedMainMenuWorld`.
+- `cSomaSplash::EnterPhase(eSomaSplashPhase_BootInit)` (called synchronously from the constructor,
+  i.e. from inside `cSomaBase::Init()`, **before `cEngine::Run()`'s main loop ever starts** - see
+  live verification below) now calls this real, blocking, synchronous load and sets a new
+  `mbRealBootWorkDone` flag once it returns.
+- `InitMainMenuScene()` now consumes (and clears) the cached world instead of calling
+  `LoadWorld()` a second time; `ProceedPastBoot()`'s `OPENHPL_SOMA_MAP` test-map branch destroys
+  the cached world via `cScene::DestroyWorld()` if it goes unused (a custom test map wins instead),
+  so nothing leaks on that path either.
+- `cSomaSplash::Update()` now refuses to advance out of `eSomaSplashPhase_BootInit` - by skip
+  input OR by its own cosmetic duration expiring - until `mbRealBootWorkDone` is true.
+
+**Honest assessment of what's real vs. still approximated**: the bar's own moment-to-moment FILL
+ANIMATION is still a smooth, honest TIME-based ramp across the phase's fixed cosmetic duration -
+true sub-second granular progress within loading one `.hpm` world isn't recoverable without a full
+threaded job queue, deliberately not attempted here (see the reverted real-tonemap-pass precedent
+elsewhere in this file for why that class of change is out of scope for this pass). What IS now
+real: the actual main-menu-world load is genuinely triggered from, and completes during, the
+boot-init phase (not after it), and `mbRealBootWorkDone` is a genuine completion signal, not a
+timer. On "unskippable": because this engine's boot is single-threaded and `PreloadMainMenuWorld()`
+is called synchronously from `cSomaSplash`'s constructor - itself called from `cSomaBase::Init()`,
+strictly before `cEngine::Run()`'s main loop (and therefore before a single input event is ever
+polled/processed by the game) - the real load is *unconditionally* complete before any skip input
+could possibly reach it, by construction, not by accident. `mbRealBootWorkDone`'s explicit check
+still exists (rather than relying on this as an implicit accident of unrelated code, which is what
+shipped before this session) so this guarantee survives if the load is ever made async later.
+
+**Verified live**, headless, real Steam SOMA data read-only-symlinked into a scratch dir
+(`scripts/setup-test-scratch.sh`/`scripts/deploy-test-binary.sh`), `OPENHPL_HEADLESS_SOCKET` +
+`scripts/hpl_control.py`:
+- All 4 ctest suites (`PhysicsNewtonTests`/`CStringTests`/`PlatformXdgPathTests`/
+  `HpslTranspilerTests`) green in a dedicated build dir.
+- `log_tail` (live, unbuffered) shows exactly **one** `"Loading SOMA hpm map 'main_menu.hpm'"` line
+  per boot, and it appears *before* the engine's own `"Game Running"` line - i.e. before
+  `cEngine::Run()`'s main loop even starts - directly confirming (not just by code inspection) that
+  the real menu-world load now happens during `cSomaSplash`'s construction and that
+  `InitMainMenuScene()` correctly reuses the cached world rather than double-loading.
+- A real injected mouse click (`hpl_control.py input type=mouse_button ...`) on the (first-run-only)
+  gamma screen's "Continue" button correctly advanced to a fully-rendered, real, working main menu
+  (SOMA logo/NEW GAME/OPTIONS/EXIT) - confirming the whole corrected boot chain (BootInit → FGLogo
+  → gamma screen → main menu) runs end-to-end with zero crashes/regressions from either the order
+  swap or the `SomaBase.cpp` preload-caching change.
+- **Not obtained this session**: a clean live screenshot of the mid-BootInit-phase visuals
+  themselves (Premenu.png/red bar/brain icon). This environment's shared, system-wide headless
+  single-instance lock (`/run/user/1000/open-hpl-headless.lock`) was under sustained contention
+  from several other concurrent agent sessions throughout this pass (`lslocks` regularly showed
+  3-4 queued `Soma.bin.aarch64` processes at once, one held for 10+ minutes) - the same documented
+  environmental constraint an earlier splash session also hit ("most launches spent tens of seconds
+  to a few minutes queued... could not get a live screenshot of the splash actually appearing on
+  screen"). By the time this session's queued process finally got scheduled and its socket became
+  reachable, the fixed-duration BootInit+FGLogo sequence had consistently already finished (reached
+  the gamma screen) before the first screenshot request could land - not a bug in the splash logic
+  itself (order/timing are independently confirmed correct via the log evidence above), just this
+  shared machine's contention making the ~9-second real-time window hard to hit externally. The
+  code-level visual placement fixes above (icon timing) are grounded directly in binary evidence
+  regardless.
+
 ## Shared engine: mute audio while the window is unfocused, resume on refocus (this session)
 
 User-reported, generic desktop-game gap, not SOMA-specific: audio kept playing continuously

@@ -24,10 +24,12 @@ const float cSomaSplash::mfFGFadeOutTime = 2.0f;	 // 1 / 0.5 fade-out rate
 const float cSomaSplash::mfBootFadeTime = 0.4f;
 const float cSomaSplash::mfBootHoldTime = 3.0f;
 
-// Brainscan loading-icon animation rate - no real evidence recovered for the
-// exact native value (see SomaSplash.h point 7), 12fps is a plausible guess
-// for a low-res EEG-style loop like this.
-const float cSomaSplash::mfBrainFrameRate = 12.0f;
+// Brainscan loading-icon animation rate - real evidence this pass (see
+// SomaSplash.h point 7): cLuxLoadHandler::OnDraw() disassembles to an
+// elapsed-time accumulator multiplied by a literal double constant 15.0,
+// compared against 2x the icon's real frame count in a ping-pong (bounce,
+// not wraparound-loop) pattern. DrawBrainIcon() below now replicates both.
+const float cSomaSplash::mfBrainFrameRate = 15.0f;
 
 //---------------------------------------
 
@@ -52,6 +54,7 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	mbFinished = false;
 	mbMouseWasDown = false;
 	mbSplashMusicStarted = false;
+	mbRealBootWorkDone = false;
 
 	mpGui = mpEngine->GetGui();
 	mvScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
@@ -95,7 +98,11 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	// this - see SomaSplash.h point 6 for what this provides.
 	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
 
-	EnterPhase(eSomaSplashPhase_FGLogo);
+	// Real order: boot-init (native cLuxLoadHandler) first, FG logo
+	// (scripted GuiPreMenu(), part of the already-loaded main menu's own
+	// update) second - see the file-top comment in SomaSplash.h for the
+	// disassembly/script evidence this was corrected from.
+	EnterPhase(eSomaSplashPhase_BootInit);
 }
 
 //-----------------------------------------------------------------------
@@ -151,6 +158,18 @@ void cSomaSplash::EnterPhase(eSomaSplashPhase aPhase)
 		// already uses for its own real "Menu_Music.ogg".
 		mbSplashMusicStarted = true;
 		mpEngine->GetSound()->GetMusicHandler()->Play("loadscreen_background.ogg", 0.15f, 0.3f, true, false);
+
+		// Task 3: real boot work, triggered for real right here instead of
+		// only after this whole splash sequence finishes (the old
+		// cSomaBase::OnSplashFinished()->ProceedPastBoot() path) - see
+		// SomaSplash.h's "Two real phases" comment and
+		// cSomaBase::PreloadMainMenuWorld()'s own comment in SomaBase.cpp.
+		// This is a real, synchronous, blocking call (loads the actual
+		// main_init.cfg <MainMenu> world) - not a synthetic delay - and
+		// mbRealBootWorkDone genuinely can't become true before it returns.
+		if (mpBase)
+			mpBase->PreloadMainMenuWorld();
+		mbRealBootWorkDone = true;
 	}
 }
 
@@ -177,9 +196,9 @@ void cSomaSplash::StopMenuAmbient()
 
 void cSomaSplash::AdvanceToNextPhase()
 {
-	if (mPhase == eSomaSplashPhase_FGLogo)
+	if (mPhase == eSomaSplashPhase_BootInit)
 	{
-		EnterPhase(eSomaSplashPhase_BootInit);
+		EnterPhase(eSomaSplashPhase_FGLogo);
 		return;
 	}
 
@@ -291,7 +310,19 @@ void cSomaSplash::Update(float afTimeStep)
 	else if (mPhase == eSomaSplashPhase_BootInit)
 		fPhaseDuration = mfBootFadeTime + mfBootHoldTime + mfBootFadeTime;
 
-	if (AnySkipInputThisFrame() || mfPhaseElapsed >= fPhaseDuration)
+	// Task 3a: never let eSomaSplashPhase_BootInit advance - by skip input
+	// OR by its own cosmetic duration expiring - until the real main menu
+	// world load it triggers in EnterPhase() has actually finished. See
+	// mbRealBootWorkDone's own comment in SomaSplash.h for why this is
+	// (currently) always already true by the time this runs, and why the
+	// explicit check still matters. AnySkipInputThisFrame() is still called
+	// unconditionally so a stray key/click during this window is consumed
+	// (see that method's own comment on why) rather than left queued up to
+	// incorrectly skip the FG logo phase right after this one opens.
+	bool bSkip = AnySkipInputThisFrame();
+	bool bBootWorkGate = (mPhase != eSomaSplashPhase_BootInit) || mbRealBootWorkDone;
+
+	if (bBootWorkGate && (bSkip || mfPhaseElapsed >= fPhaseDuration))
 	{
 		AdvanceToNextPhase();
 	}
@@ -443,13 +474,18 @@ void cSomaSplash::DrawBrainIcon(float afAlpha, float afPremenuScale)
 	// sequence (graphics/general/loadscreen/brainAnim/brain_01.dds ..
 	// brain_26.dds, each a genuine distinct 512x512 DDS frame) - see
 	// SomaSplash.h point 7 for the native cLuxLoadHandler evidence tying
-	// this to the boot-init phase. No real evidence recovered for the
-	// native on-screen size/position/frame rate, so a modest bottom-right
-	// icon (matching the user's reference screenshot) and mfBrainFrameRate
-	// are this pass's plausible values, not disassembly-confirmed.
-	int lFrame = ((int)(mfPhaseElapsed * mfBrainFrameRate)) % mlBrainFrameCount;
-	if (lFrame < 0)
-		lFrame = 0;
+	// this to the boot-init phase. Frame pacing is real evidence this pass
+	// (elapsed*15fps, see mfBrainFrameRate's own comment) using a real
+	// PING-PONG bounce (0->25->0->25->...) rather than a wraparound loop -
+	// a real, disassembly-confirmed pattern (a triangle wave over twice the
+	// frame count). On-screen SIZE/POSITION are still this pass's plausible
+	// (not fully disassembly-confirmed) values - see SomaSplash.h point 7.
+	float fRaw = mfPhaseElapsed * mfBrainFrameRate;
+	int lPeriod = 2 * (mlBrainFrameCount - 1);
+	int lStep = ((int)fRaw) % lPeriod;
+	if (lStep < 0)
+		lStep += lPeriod;
+	int lFrame = (lStep <= (mlBrainFrameCount - 1)) ? lStep : (lPeriod - lStep);
 
 	cGuiGfxElement *pFrame = mvBrainFrames[lFrame];
 	if (pFrame == NULL)

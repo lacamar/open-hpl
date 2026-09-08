@@ -50,6 +50,22 @@ public:
 	// skipped) - only reached on a fresh install, see OnSplashFinished().
 	void OnGammaScreenFinished();
 
+	// SomaSplash.cpp task (real boot-progress work): loads the real main
+	// menu world (main_init.cfg's <MainMenu> entry) exactly once and caches
+	// it so InitMainMenuScene() below can consume it without loading twice.
+	// Called by cSomaSplash::EnterPhase() while its own boot-init screen is
+	// still on screen, so this real, heavy load now genuinely happens
+	// *during* the splash instead of only after it finishes - see
+	// SomaSplash.h's "Two real phases" comment for why. Small, additive,
+	// flagged touch to this normally splash-owned file: only this method,
+	// mpPreloadedMainMenuWorld, and the two call sites that consume/free it
+	// in InitMainMenuScene()/ProceedPastBoot() below were added/changed.
+	// Returns the loaded cWorld* (NULL on failure), and is safe to call
+	// more than once (a no-op after the first attempt) or never at all
+	// (InitMainMenuScene() falls back to loading directly, unchanged from
+	// before this pass, for any caller that never runs cSomaSplash).
+	cWorld* PreloadMainMenuWorld();
+
 	// Called by cSomaIntroSequence (see SomaIntroSequence.h) once its
 	// hardcoded 00_00_intro.hpm slideshow finishes - loads the real next map
 	// (00_01_apartment.hpm/PlayerStartArea_1, same as the real script's
@@ -231,6 +247,13 @@ private:
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
 	cSomaDebugFreeCamera *mpDebugCameraController;
+
+	// See PreloadMainMenuWorld()'s own comment above. Always NULL again by
+	// the time either InitMainMenuScene() or ProceedPastBoot()'s
+	// OPENHPL_SOMA_MAP branch returns - one of them always consumes
+	// (uses) or frees (cScene::DestroyWorld()) whatever this holds.
+	cWorld *mpPreloadedMainMenuWorld;
+	bool mbMainMenuWorldPreloadAttempted;
 
 	// Real physics-based player controller (see SomaPlayer.h) - created
 	// instead of mpDebugCameraController by LoadMap() (real game maps) when
