@@ -196,6 +196,9 @@ cSomaBase::cSomaBase()
 	mpPlayer = NULL;
 	mbUseRealPlayer = true;
 
+	mpPreloadedMainMenuWorld = NULL;
+	mbMainMenuWorldPreloadAttempted = false;
+
 	mpIntroSequence = NULL;
 	mpApartmentIntroCall = NULL;
 }
@@ -360,6 +363,17 @@ void cSomaBase::ProceedPastBoot()
 		}
 		else
 		{
+			// A custom test map won instead of the real main menu - destroy
+			// any real main-menu world cSomaSplash's boot-init phase already
+			// loaded via PreloadMainMenuWorld() (see that method's own
+			// comment), else it leaks: InitMainMenuScene() (the only other
+			// consumer) never runs on this path, so nothing else will ever
+			// free the cWorld cScene::LoadWorld() heap-allocated for it.
+			if (mpPreloadedMainMenuWorld)
+			{
+				mpEngine->GetScene()->DestroyWorld(mpPreloadedMainMenuWorld);
+				mpPreloadedMainMenuWorld = NULL;
+			}
 			return;
 		}
 	}
@@ -699,8 +713,44 @@ void cSomaBase::ExitEngine()
 
 //-----------------------------------------------------------------------
 
+// See this method's own declaration comment in SomaBase.h. Reads the same
+// main_init.cfg <MainMenu File=.../> entry InitMainMenuScene() below reads -
+// duplicated rather than cached earlier for the same reason InitMainMenuScene()
+// already re-reads it itself (Phase 0 only kept the two fields InitMainConfig()
+// needed at the time).
+cWorld* cSomaBase::PreloadMainMenuWorld()
+{
+	if (mbMainMenuWorldPreloadAttempted)
+		return mpPreloadedMainMenuWorld;
+	mbMainMenuWorldPreloadAttempted = true;
+
+	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
+	if (pInitCfg->Load() == false)
+	{
+		hplDelete(pInitCfg);
+		return NULL;
+	}
+	tString sMainMenuFile = pInitCfg->GetString("MainMenu", "File", "");
+	hplDelete(pInitCfg);
+
+	if (sMainMenuFile == "")
+		return NULL;
+
+	mpPreloadedMainMenuWorld = mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
+	return mpPreloadedMainMenuWorld;
+}
+
+//-----------------------------------------------------------------------
+
 bool cSomaBase::InitMainMenuScene()
 {
+	// Consume whatever cSomaSplash's real boot-work step already loaded
+	// (see PreloadMainMenuWorld()'s own comment) - grabbed unconditionally
+	// up front so every return path below (including the early error
+	// returns) leaves mpPreloadedMainMenuWorld NULL again, never orphaned.
+	cWorld *pPreloadedWorld = mpPreloadedMainMenuWorld;
+	mpPreloadedMainMenuWorld = NULL;
+
 	////////////////////////////////////
 	// Read the <MainMenu File="..."/> entry back out of main_init.cfg -
 	// the same file InitMainConfig() already loaded once, re-loaded here
@@ -711,6 +761,7 @@ bool cSomaBase::InitMainMenuScene()
 	{
 		msErrorMessage = _W("Could not reload main init file for <MainMenu> entry: ") + msInitConfigFile;
 		hplDelete(pInitCfg);
+		if (pPreloadedWorld) mpEngine->GetScene()->DestroyWorld(pPreloadedWorld);
 		return false;
 	}
 	tString sMainMenuFile = pInitCfg->GetString("MainMenu", "File", "");
@@ -719,6 +770,7 @@ bool cSomaBase::InitMainMenuScene()
 	if (sMainMenuFile == "")
 	{
 		msErrorMessage = _W("main_init.cfg has no <MainMenu File=.../> entry");
+		if (pPreloadedWorld) mpEngine->GetScene()->DestroyWorld(pPreloadedWorld);
 		return false;
 	}
 
@@ -726,8 +778,10 @@ bool cSomaBase::InitMainMenuScene()
 	// Found by basename via the resource dir search, same convention as
 	// InitTestMap()'s apartment map load below - Folder="maps/" from the
 	// config is not needed, "/maps" is already registered with AddSubDirs
-	// in SOMA's real resources.cfg.
-	cWorld *pWorld = mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
+	// in SOMA's real resources.cfg. Reuses cSomaSplash's real preload
+	// (see PreloadMainMenuWorld()) instead of loading a second time when
+	// one is already available.
+	cWorld *pWorld = pPreloadedWorld ? pPreloadedWorld : mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
 	if (pWorld == NULL)
 	{
 		msErrorMessage = _W("Could not load main menu scene '") + cString::To16Char(sMainMenuFile) + _W("'");

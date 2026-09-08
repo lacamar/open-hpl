@@ -1273,3 +1273,43 @@
     (PhysicsNewtonTests/CStringTests/PlatformXdgPathTests/HpslTranspilerTests) green.
     100% SOMA-only (`cSomaSplash`/`cSomaMainMenu` classes) - zero Dark Descent/AMFP/Rebirth/
     Bunker reachability.
+
+- SOMA: real boot order corrected, real progress/unskippable loading, icon timing evidence
+  (2026-09-08)
+  - DONE: fixed a real, user-reported bug - `soma/src/game/SomaSplash.{h,cpp}` had the FG
+    Frictional Games logo phase FIRST and the native boot-init glitch screen (Premenu.png/red
+    loading bar/brain icon) SECOND, backwards from the real game. Re-derived the real order from
+    scratch via `nm -C`/`objdump -d` on the real `Soma.bin.x86_64` (`cLuxBase::Init()`'s call
+    sequence shows the native `cLuxLoadHandler` boot splash starts before the main loop/any script
+    ever runs) plus `script/modules/MenuHandler.hps` (`GuiPreMenu()`'s FG-logo phase is only
+    reachable from the already-active main menu's own update loop). Swapped
+    `eSomaSplashPhase_BootInit`/`eSomaSplashPhase_FGLogo`'s order.
+  - DONE (partial, honestly scoped): task 3's real-progress/unskippable-loading ask. Added
+    `cSomaBase::PreloadMainMenuWorld()` (small, additive, flagged touch to `SomaBase.h/.cpp`) so
+    the real main-menu-world load now happens during the boot-init splash phase (triggered
+    synchronously from `cSomaSplash`'s constructor, before `cEngine::Run()`'s main loop even
+    starts) instead of only after the whole splash finishes. `InitMainMenuScene()` reuses the
+    cached world instead of double-loading; the `OPENHPL_SOMA_MAP` test-map branch destroys it
+    if unused. A new `mbRealBootWorkDone` flag genuinely gates `eSomaSplashPhase_BootInit`'s
+    advance (skip or timeout) on this real load having finished - by construction this is always
+    already true given this engine's single-threaded boot, but the check is now explicit rather
+    than an implicit accident. The bar's own fill animation is still honestly time-based (no full
+    threaded job-queue restructure attempted - out of scope per this project's own
+    reverted-tonemap-pass precedent).
+  - DONE (evidence adopted): `objdump -d` on `cLuxLoadHandler::OnDraw()`/`DrawBigIcon()` found a
+    real ~15fps ping-pong (bounce, not loop) animation pattern for the brainscan loading icon -
+    adopted in `DrawBrainIcon()` (`mfBrainFrameRate` 12→15, now bounces 0↔25). NOT adopted: a
+    512x512 native icon size also found in the same disassembly - left as the previous session's
+    already-user-checked modest corner size, since the evidence was ambiguous about which of two
+    reused Draw*Icon() variants applies to the boot splash specifically vs. later level-load
+    screens. See PORTING_NOTES.md's newest SOMA section for the full citations and honesty
+    breakdown.
+  - Verified live: all 4 ctest suites green; `log_tail` (live socket command) confirms exactly one
+    `main_menu.hpm` load per boot, occurring before the engine's own "Game Running" line (i.e.
+    during splash construction, not after); a real injected mouse click through the gamma screen
+    reached a fully working main menu with zero regressions. Could NOT get a live screenshot of
+    the mid-boot-init visuals themselves this session - same documented shared-machine headless
+    single-instance-lock contention (3-4 concurrent agent processes queued throughout) a prior
+    splash session already hit; order/timing correctness instead confirmed via the log evidence
+    above. 100% SOMA-only (`SomaSplash.{h,cpp}`); `SomaBase.{h,cpp}` touch is small/additive per
+    this task's own scope note (one new method + one new field + two call-site edits).
