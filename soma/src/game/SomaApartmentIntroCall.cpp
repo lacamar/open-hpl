@@ -13,14 +13,33 @@
 // ...) - see the .h's line-numbered citation.
 static const float kRingDelaySecs = 1.5f + 0.05f;
 
-// Real script waits indefinitely for a real player interaction with the
-// "Simon_Phone" entity (see the .h's "no interact system exists" gap) -
-// this is this port's own honest substitute: auto-"answer" this long after
-// the ring starts. Not reverse-engineered from anything (no such real
-// value exists to reverse-engineer - the real wait is player-paced), chosen
-// only to be long enough to read as "the phone rang for a bit" both live and
-// in a headless screenshot.
-static const float kAutoAnswerAfterRingSecs = 4.0f;
+// Real name for the interact point registered on cSomaPlayer (task 2) - not
+// a real SOMA entity/area name itself (that's "InteractCellPhone_Dummy",
+// see kPhoneWorldPos's own citation below), just this port's own internal
+// lookup key.
+static const char *kPhoneInteractName = "ApartmentPhone";
+
+// Real WorldPos of the "InteractCellPhone_Dummy" Trigger-type Area (real
+// 00_01_apartment.hpm_Area cache, read directly) - the actual entity real
+// 00_01_apartment.hps wires the wake-up phone interaction to
+// (PlayerInteractCallback="OnInteractCellPhone" -> PhoneInteraction() ->
+// AnswerPhone("Simon_Phone",1)). This is NOT the "Simon_Phone" entity itself
+// (WorldPos -13.2609 1.12571 7.06526) - that's a separate, later-game
+// landline reused for the answering-machine feature (InteractPhone() in the
+// same .hps, a different callback entirely) at a different apartment
+// location; the actual wake-up interaction point is this small trigger box
+// near the ringing cell phone prop ("CellPhone", WorldPos -12.9389 0.7888
+// 8.81662, ~0.9m away). This port has no general compiled-Area/OBB reader
+// (see SomaLoaders.h) so the trigger's own real box extent/rotation aren't
+// reproduced - just its real center point, checked via cSomaPlayer's own
+// point+cone+line-of-sight test (see SomaPlayer.cpp).
+static const cVector3f kPhoneWorldPos(-12.6146f, 1.17574f, 9.28202f);
+
+// Real config/game.cfg <Game DefaultMaxInteractDistance="2.0" .../> - no
+// real Entity_SetMaxInteractionDistance() override exists for this
+// particular trigger in 00_01_apartment.hps, so the real engine's own
+// default applies.
+static const float kPhoneMaxInteractDistance = 2.0f;
 
 // Same reading-tail convention as SomaIntroSequence.cpp's own
 // kSubtitleReadingTail - a safety-net fallback only; the real gate is
@@ -56,6 +75,16 @@ cSomaApartmentIntroCall::cSomaApartmentIntroCall(cEngine *apEngine, cSomaBase *a
 	mpViewport->AddGuiSet(mpGuiSet);
 
 	mpSubtitleFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_medium_bold.fnt");
+
+	// Task 2 - register the real wake-up phone interact point on cSomaPlayer
+	// (see kPhoneWorldPos's own citation above and SomaPlayer.h's
+	// RegisterInteractPoint()). mpBase->GetPlayer() should already be
+	// non-NULL here (LoadMap() creates cSomaPlayer before this object - see
+	// SomaBase.cpp's own ordering), but this is defensive: with no player
+	// (OPENHPL_SOMA_FREECAM), the phone would otherwise just ring forever,
+	// same as the real game with nobody to answer it.
+	if (mpBase && mpBase->GetPlayer())
+		mpBase->GetPlayer()->RegisterInteractPoint(kPhoneInteractName, kPhoneWorldPos, kPhoneMaxInteractDistance);
 
 	BuildDialogue();
 
@@ -177,8 +206,8 @@ void cSomaApartmentIntroCall::AnswerCall()
 	msPlayingFile = "";
 	mfLineFallbackTimer = 0;
 
-	Log("SOMA apartment intro call: auto-answering (no real interact-with-entity system exists yet - "
-		"see SomaApartmentIntroCall.h) - starting real '1_PhoneCall' dialogue\n");
+	Log("SOMA apartment intro call: real interact detected while looking at the phone - "
+		"starting real '1_PhoneCall' dialogue\n");
 }
 
 //-----------------------------------------------------------------------
@@ -270,7 +299,15 @@ void cSomaApartmentIntroCall::Update(float afTimeStep)
 	}
 	else if (mPhase == eCallPhase_Ringing)
 	{
-		if (mfTimer >= kRingDelaySecs + kAutoAnswerAfterRingSecs)
+		// Task 2's real fix: no fixed auto-answer timer any more (real
+		// 00_01_apartment.hps's own TimerRingTelephone()/AnswerPhone() waits
+		// indefinitely for a real player interaction too, matching this) -
+		// the ring plays until cSomaPlayer reports a real interact keypress
+		// while the player is looking at the real phone interact point (see
+		// the constructor's RegisterInteractPoint() call and kPhoneWorldPos's
+		// citation above).
+		cSomaPlayer *pPlayer = mpBase ? mpBase->GetPlayer() : NULL;
+		if (pPlayer && pPlayer->WasInteractedWith(kPhoneInteractName))
 			AnswerCall();
 	}
 	else if (mPhase == eCallPhase_InCall)

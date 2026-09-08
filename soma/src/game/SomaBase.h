@@ -154,6 +154,15 @@ public:
 	// side" wiring cSomaMainMenu uses for everything else in this class.
 	cSomaSplash* GetSplash(){ return mpSplash; }
 
+	// Small, deliberately minimal hook (tasks 2/3 - real interact system):
+	// lets cSomaApartmentIntroCall (constructed by LoadMap() with only an
+	// (mpEngine, this) pair, same as cSomaIntroSequence) reach the one
+	// cSomaPlayer instance to register/query the real phone interact point -
+	// see SomaPlayer.h's RegisterInteractPoint()/WasInteractedWith(). NULL
+	// whenever mbUseRealPlayer is false (OPENHPL_SOMA_FREECAM) or before the
+	// first real game map has loaded - same nullability as GetDebugCamera().
+	cSomaPlayer* GetPlayer(){ return mpPlayer; }
+
 	// Persisted settings backing the real Options screen (see
 	// SomaMainMenu.cpp) - loaded once in InitEngine(), mutated live by the
 	// Options screen itself via this same instance (it calls Save() after

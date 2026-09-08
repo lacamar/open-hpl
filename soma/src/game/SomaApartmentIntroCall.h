@@ -32,25 +32,37 @@
  *    ("Entities_Urban/tech/cellphone/vibrating_wood", looping) and enables
  *    interaction with the "Simon_Phone" entity.
  *  - AnswerPhone() (line 702), reached only via a real player interaction
- *    with that entity (OnInteractCellPhone() -> PhoneInteraction() ->
- *    AnswerPhone()), stops the ring 0.1s later and opens
+ *    - via the real "InteractCellPhone_Dummy" Trigger-type Area
+ *    (PlayerInteractCallback="OnInteractCellPhone" -> PhoneInteraction() ->
+ *    AnswerPhone("Simon_Phone",1); NOT the "Simon_Phone" entity itself,
+ *    which is a separate, later-game landline reused for the answering-
+ *    machine feature at a different location - see SomaApartmentIntroCall.cpp's
+ *    kPhoneWorldPos citation for the full real-source disambiguation) -
+ *    stops the ring 0.1s later and opens
  *    `Dialog_AddBranchAndSubject("1_PhoneCall", ...)` (line 727), whose real
  *    line-by-line content lives in 00_01_apartment.voice's own
- *    Subject Name="1_PhoneCall" (11 lines, Simon/Munshi alternating).
+ *    Subject Name="1_PhoneCall" (11 lines, Simon/Munshi alternating). This
+ *    port now reproduces the real interact gate for real (see below) -
+ *    Munshi's dialogue does not start until cSomaPlayer reports the player
+ *    genuinely pressed the real interact key while looking at the real
+ *    phone interact point (see SomaPlayer.h's RegisterInteractPoint()/
+ *    WasInteractedWith()/GetCurrentLookTarget() and SomaPlayer.cpp's
+ *    UpdateLookTarget()).
  *
  * Known, deliberate honesty gaps vs the real sequence (kept rather than
  * faked - see PORTING_NOTES.md for the project-wide convention this
  * follows):
- *  - No real player-interact-with-entity trigger exists anywhere in this
- *    codebase yet (confirmed: grep for an "interact" system in SomaPlayer.h/
- *    SomaBase.h turns up nothing - this scaffold has no raycast-and-interact
- *    infrastructure at all). The real script waits indefinitely for the
- *    player to physically interact with the "Simon_Phone" entity before
- *    AnswerPhone() ever runs. Absent that infrastructure, this class
- *    auto-"answers" the call itself, kAutoAnswerAfterRingSecs after the ring
- *    starts, and logs clearly that it did so - the closest honest equivalent
- *    per this task's own explicit guidance, not a silent behavioural
- *    invention.
+ *  - The interact system this class now uses (cSomaPlayer's
+ *    RegisterInteractPoint()/WasInteractedWith()) is a small, hand-authored
+ *    point+cone+line-of-sight test, NOT a general Area/trigger-volume system
+ *    or a rebindable interact cAction - see SomaPlayer.h's own scope note.
+ *    It reproduces the real "InteractCellPhone_Dummy" trigger's center point
+ *    and real config/game.cfg DefaultMaxInteractDistance (2.0m), but not its
+ *    real OBB extent/rotation (this engine has no compiled-Area reader - see
+ *    SomaLoaders.h) or the real default interact key (SOMA's own interact
+ *    binding isn't a plain single key in the default config data this
+ *    engine reads - "E" was chosen as a plain, sensible default, consistent
+ *    with cSomaPlayer's existing raw-keyboard-check pattern for Escape).
  *  - No real ring/pickup SFX: both real sounds
  *    ("Entities_Urban/tech/cellphone/vibrating_wood" and
  *    "00_05_apartment2/SFX/phone/pickup_counter") are FMOD Designer

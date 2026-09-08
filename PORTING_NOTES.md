@@ -4665,3 +4665,199 @@ collidable object's collision SFX, hundreds of real `Couldn't create SoundEntity
 same `hpl.log`) has the identical FMOD-event-not-a-real-resource shape but was NOT in this
 session's scope (car honks/street ambience/environmental loops only, per the task brief) and is
 not fixed by this change.
+
+## SOMA: intro-sequence slide cadence, a real phone-interact system, a real player HUD, and the intro quote card's font size
+
+Four fixes this session, all real, user-reported bugs against content already hand-ported by
+earlier sessions (`cSomaIntroSequence`, `cSomaApartmentIntroCall`).
+
+### Task 1: `SomaIntroSequence.cpp`'s slide-advance used a `while` loop; real script uses a single `if` per frame
+
+The previous session's fix for stilted/overlapping voice lines (see this file's own
+"stilted/overlapping voice lines" section above) changed `AdvanceVoice()` to gate Subject
+transitions on real audio completion instead of a fixed schedule. The bug report ("the cadence
+of the slides seems wrong") suggested this might have desynced slide timing from that change.
+Investigated thoroughly by reading real `00_00_intro.hps`'s own `Update()` (line 575) in full:
+slides (`mlCurrentSlideIndex`, line 589) and voice-subject enqueueing (`mlCurrentVoiceIndex`,
+line 738) both advance purely off the same shared `mfSlideShowTimer` schedule, completely
+independently of each other - the real game's own `Voice_PlayWhenPossible()`
+(`helper_audio.hps` line 796) handles overlap-avoidance via its own internal enqueue/poll
+mechanism *without* blocking the master schedule from moving on to the next slide/voice/event.
+This port's `cSomaIntroSequence::AdvanceSlides()` already works the same way (uses only
+`mfTimer`, never touches `AdvanceVoice()`'s state) - confirmed by careful call-for-call
+comparison of every literal `AddSlide()`/`AddCustomSlide()`/`AddVoice()`/`AddEvent()` argument in
+real `OnStart()` (lines 277-317) against `BuildTimeline()`'s own calls: identical order, identical
+literal offsets, identical resulting accumulated schedule (verified by hand-computing the running
+total through all 26 calls) - so the voice-timing fix does **not** desync slide cadence, and the
+task brief's own hypothesis doesn't hold up.
+
+The real, found divergence is smaller but genuine: real `Update()`'s slide-advance is a single
+`if(mlCurrentSlideIndex<mvSlides.length()-1){ if(mfSlideShowTimer>=nextSlide.mfStartTime){
+++mlCurrentSlideIndex; ... } }` - **not a loop**. This port's `AdvanceSlides()` used a `while`,
+which can silently **skip slides entirely** under any frame-time variance: several of
+`BuildTimeline()`'s real gaps are as short as 0.27s (the real script's own authored rapid-cut
+flashes near the end of the sequence), so a single slow/hitched frame (a texture decode stall, a
+loaded-but-not-yet-rendered frame, a slow headless/test host) can jump straight past one or more
+slides' entire visible lifetime in one `Update()` call - they are then never drawn at all. Fixed
+by changing the `while` to a single `if`, exactly matching the real per-frame semantics: now falls
+behind by at most one index per frame, guaranteeing every slide gets at least one real rendered
+frame, same as the real engine.
+
+**Verified live, headless** (`00_00_intro.hpm`, real Steam SOMA data via `scripts/setup-test-scratch.sh`
++ `scripts/deploy-test-binary.sh`): added a temporary diagnostic `Log()` in `AdvanceSlides()`
+printing each slide transition's real `mfTimer` against its scheduled offset (removed before
+this commit), ran the full ~44s sequence to completion. All 19 slide transitions (indices 0-18)
+fired within 15-20ms of their exact real accumulated schedule value, in perfect sequential
+order, none skipped, none duplicated, e.g.: `slide 3 ('01_SimonMirror.jpg') at mfTimer=11.317
+(scheduled=11.300)`, `slide 9 ('04_PhoneClose.jpg') at mfTimer=34.016 (scheduled=34.000)`,
+`slide 17 ('06_AshClose.jpg') at mfTimer=42.283 (scheduled=42.280)` - conclusive proof the
+schedule itself is correct and the `if`-fix introduces no regression under normal conditions.
+Reproducing the exact hitch/skip failure mode the `while`→`if` fix targets wasn't practical to
+force live within this session (would need an artificial frame-time spike injected at a precise
+moment) - the fix is justified by the direct real-source citation and the confirmed-correct
+schedule, not by a live A/B repro of the skip itself; an honest limitation, noted rather than
+glossed over.
+
+### Task 2 & 3: a real, narrow interact system (`cSomaPlayer::RegisterInteractPoint()`/`WasInteractedWith()`) + a real HUD (crosshair + interact prompt)
+
+The bigger fix: `cSomaApartmentIntroCall` previously auto-answered the wake-up phone call 4
+seconds after the ring started, because no interact-with-entity system existed anywhere in this
+codebase (its own header said so explicitly). Real `00_01_apartment.hps` waits indefinitely for
+a real player interaction instead - confirmed by reading `TimerRingTelephone()` (line 669),
+`OnWaitForPhoneInteraction()` (line 626), `OnInteractCellPhone()` (line 648) and
+`PhoneInteraction()`/`AnswerPhone()` (lines 693/702) in full. Tracked down the *real* interactable
+entity carefully, since it's easy to get wrong: `Entity_SetInteractionDisabled("Simon_Phone",
+false)` in `TimerRingTelephone()` looks like the obvious candidate, but `Simon_Phone`
+(`00_01_apartment.hpm_Entity`, `WorldPos="-13.2609 1.12571 7.06526"`) is a **separate, later-game
+landline** whose own `PlayerInteractCallback="InteractPhone"` (a different function entirely,
+`00_01_apartment.hps` line 1238) drives the answering-machine feature much later in the level, at
+a different apartment location - not the wake-up call. The real wake-up interactable is
+`InteractCellPhone_Dummy`, a `Trigger`-type `Area` (`00_01_apartment.hpm_Area`,
+`WorldPos="-12.6146 1.17574 9.28202"`) with `PlayerInteractCallback="OnInteractCellPhone"` →
+`PhoneInteraction("Simon_Phone")` → `AnswerPhone("Simon_Phone",1)` - a small trigger box near the
+real "CellPhone" prop (`WorldPos="-12.9389 0.7888 8.81662"`, ~0.9m away) that the player interacts
+with directly, not the landline itself.
+
+Built a minimal, hand-authored interact system in `cSomaPlayer` (SomaPlayer.h/.cpp), explicitly
+**not** a general Area/trigger-volume system or a rebindable interact `cAction` - this engine has
+no compiled-Area reader (see `SomaLoaders.h`) and no interact entry in `cSomaBase::
+eSomaPlayerAction`, and building either was out of scope for this pass:
+
+- `RegisterInteractPoint(name, worldPos, maxDistance)` / `GetCurrentLookTarget()` /
+  `WasInteractedWith(name)` - a small registry of plain world-space points (not real OBB
+  trigger volumes). Each frame, `UpdateLookTarget()` (called from `cSomaPlayer::Update()`, after
+  `mpCharBody->Update()` so the camera position is this frame's real synced eye position) checks
+  every registered point against: distance (`afMaxDistance` - real `config/game.cfg
+  DefaultMaxInteractDistance="2.0"` for the phone), a view-cone dot-product test (~32° half-angle
+  - no real per-entity cone value exists to cite, since real SOMA's own "am I looking at this"
+  test is a `PlayerLookAtCheckCenterOfScreen` flag inside compiled Area/Entity data this engine
+  doesn't parse), and a real physics line-of-sight raycast (`cSomaInteractRayCallback`, modeled
+  directly on `amnesia/src/game/LuxMapHelper.cpp`'s own `cLuxLineOfSightCallback` - skips
+  character bodies, finds the closest real solid hit, and treats a hit closer than the target
+  point as blocking).
+- The real interact key: this scaffold has no rebindable interact action, so (per this task's own
+  explicit guidance) a raw keyboard check for **E** was added, following the exact same "drain
+  the keyboard queue once per frame" pattern the existing Escape/pause-menu check already used -
+  merged into ONE drain loop rather than two independent `KeyIsPressed()`+`GetKey()` calls, since
+  `iKeyboard::GetKey()` (`KeyboardSDL.cpp`) pops the front of a real FIFO queue on every call, and
+  two separate single-pop checks in the same frame could each consume a *different* queued key,
+  missing the other's press entirely - a real bug this refactor closes for the existing Escape
+  check too, not just the new one.
+- `cSomaApartmentIntroCall`'s constructor registers the real phone point
+  (`RegisterInteractPoint("ApartmentPhone", (-12.6146,1.17574,9.28202), 2.0f)`) via a new
+  `cSomaBase::GetPlayer()` accessor (the one small, flagged `SomaBase.h` hook this pass needed -
+  same trivial pattern as the existing `GetSplash()`/`GetDebugCamera()`, no `.cpp` change
+  required since `mpPlayer` already existed as a private member). `Update()`'s `eCallPhase_Ringing`
+  branch now calls `pPlayer->WasInteractedWith("ApartmentPhone")` instead of the removed
+  `kAutoAnswerAfterRingSecs` timer - the ring plays until a real interact happens, exactly like
+  the real game (which also waits indefinitely, per `Voice_PlayWhenPossible`'s own real semantics
+  documented in this file's Task 1 section above).
+- **HUD (task 3)**: `cSomaPlayer` now owns its own GUI-only overlay viewport (`OnDraw()`, same
+  "back of the render list = drawn last/on top" idiom `cSomaApartmentIntroCall`'s own subtitle
+  overlay already uses), drawing a real crosshair (`+`, built from two `CreateGfxFilledRect()`
+  bars, always visible during normal gameplay) plus a `"[E] Interact"` prompt shown only when
+  `GetCurrentLookTarget() != ""` - i.e. the exact same detection task 2 already computes, per
+  this task's own explicit "one shared 'what am I looking at' system" guidance, not two separate
+  ones. Screen size is queried fresh every draw rather than cached at construction, since this
+  object (unlike the short-lived splash/gamma screens) lives for the rest of the process and a
+  cached size would go stale across a real window resize (same "screen-size staleness" class of
+  bug this file's own splash-sequence session already fixed for `cSomaMainMenu`). The real
+  base_english.lang `CATEGORY="MainMenu"`/`Entry="Interact"` wording ("Interact") was used for the
+  prompt text rather than invented copy. A full real tutorial-hint system (the real "Objects can
+  be interacted with using..." first-time hint text/timing) is explicitly out of scope, per the
+  task brief's own stated bar - this is a crosshair + conditional interact prompt, nothing more.
+
+**Verified live, headless** (`00_01_apartment.hpm`, same scratch setup): a screenshot taken at
+spawn (facing away from the phone) shows the crosshair alone, no prompt, and the on-screen
+`"(phone ringing...)"` subtitle with no Munshi dialogue - confirming the ring plays with no
+auto-answer. Walked the real character body toward the phone via injected `W` keypresses
+(`camera_state`/`set_camera` share the same live `cCamera` the real player uses - confirmed
+`set_camera`'s `x`/`y`/`z` fields are overwritten every frame by the character body's own
+`UpdateCamera()`, so only `yaw`/`pitch` are actually controllable this way; position had to be
+reached by real simulated movement instead), aimed at the real `InteractCellPhone_Dummy`
+position (yaw/pitch derived from two empirical `W`-movement probes establishing this engine's
+real `forward(yaw)=(-sin(yaw),sin(pitch),-cos(yaw))` convention, then solved geometrically for
+the exact real target point) - a screenshot at that pose shows both the crosshair **and** the
+`"[E] Interact"` prompt appearing specifically because the target is now in view, matching this
+task's own explicit want for "a before/after showing the prompt appearing specifically when
+looking at an interactable vs. not." Injected a real `E` keypress: `hpl.log` immediately shows
+`"real interact detected while looking at the phone - starting real '1_PhoneCall' dialogue"`,
+and the dialogue ran to `"real '1_PhoneCall' dialogue finished (11/11 lines)"` - proving the
+interact key, while looking at the real point, is what starts Munshi's dialogue, not a timer.
+
+### Task 4: intro quote card font size - real values are 36/30, this port used 30/24
+
+Real `00_00_intro.hps`'s own `DrawTextSlide()` (line 329): `frameQuote.mFont.mvSize =
+cVector2f(36, 36)` (Sansation_Large_Bold, the quote text itself) and
+`labelSignature.mFont.mvSize = cVector2f(30, 30)` (Sansation_Large, the "- Philip K. Dick"
+signature) - this port previously used `cVector2f(30, 30)`/`cVector2f(24, 24)`, visibly smaller
+than the real card, matching the reported bug. Fixed by using the exact real literal values.
+**Verified live, headless**: temporarily extended the quote card's real hold-time
+(`AddSlideBlank(4.5f,...)` → a much larger throwaway value, reverted before this commit) purely
+to make the ~4.5s real window easier to hit with a screenshot given this session's extreme
+shared-machine contention (see below); a screenshot during the quote confirms the text now
+renders clearly larger and matches the real card's proportions.
+
+### A note on this session's test environment: extreme shared-machine contention, and one real tooling incident
+
+This session ran on a heavily-loaded shared machine with several other agents' own SOMA headless
+tests running concurrently (`load average` over 13 on a 12-core machine at points, memory/swap
+both near-exhausted). Two real, environment-level things worth recording for whoever hits them
+next:
+
+- The shared per-user `/run/user/1000/open-hpl-headless.lock` single-headless-instance lock (see
+  this file's own "window-focus audio mute" section above for its introduction) was held
+  continuously by another agent's own long-running process for approximately 7 real hours at one
+  point mid-session, blocking every other waiting agent (confirmed via `lslocks`/`ps`, not
+  guessed). This is expected, documented, intentional behavior (the lock's own log line says so),
+  not a bug - the fix is patience/bounded polling, not code.
+- Separately, and unrelated to this session's own files: this session's very first scratch-dir
+  test surfaced a real, then-live gap in `scripts/setup-test-scratch.sh`'s symlink farm (it
+  blindly symlinked *every* top-level entry of the real Steam SOMA root, including a stray
+  `hpl.log` and a stray `OpenHplSoma.bin.aarch64` already sitting directly in the real install
+  directory from an earlier, separate incident) - reported immediately, fixed by another agent in
+  parallel (`scripts/setup-test-scratch.sh` now skips both, see its own updated header/output for
+  the exact skip logic), verified fixed live before continuing this session's own testing. No
+  corruption occurred from this session's own run (the real `hpl.log`'s mtime was confirmed
+  unchanged - only its atime moved - before the fix landed), but flagging the near-miss here for
+  the record.
+
+### Verification common to all four
+
+Built in a dedicated `amnesia/src/build-introhud` (removed after, along with every scratch
+dir/socket this session created). `ctest` `PhysicsNewtonTests`/`CStringTests`/
+`PlatformXdgPathTests`/`HpslTranspilerTests` all green, both mid-session and in the final clean
+build (with both temporary diagnostics - the slide-timing `Log()` and the extended quote hold
+time - reverted; `git diff` against the working tree before those temporary edits confirms zero
+net change from them). 100% contained to this session's four owned files (`SomaIntroSequence.{h,
+cpp}`, `SomaApartmentIntroCall.{h,cpp}`, `SomaPlayer.{h,cpp}`) plus the one minimal, explicitly
+flagged `SomaBase.h`-only hook (`GetPlayer()` accessor, no `.cpp` change) - zero Dark Descent/
+AMFP/Rebirth/Bunker reachability, zero `SomaMainMenu`/`SomaSplash`/`SomaLoaders` reachability
+(other agents' owned files, untouched).
+
+Not done / open items: a real tutorial-hint system (real hint strings/timing, e.g. the real
+movement-hint text) - explicitly out of scope per this task's own stated bar; a general Area/
+trigger-volume reader (would let future interactables register their real compiled shape/
+rotation instead of a hand-cited point, and would let a real rebindable interact `cAction`
+replace the hardcoded `E` key); the rest of `00_01_apartment.hps`'s ~1760 lines, same open item
+this file's own earlier apartment-phone-call session already noted.
