@@ -504,10 +504,26 @@ namespace hpl {
 
 		//////////////////////////////
 		// Create program, add to set and return it
+		// mvFeatures/mvDefaultVars[0] below is never actually dereferenced by
+		// CreateShaderFromFeatures() when the matching count is 0 (both its
+		// loops are bounded by the count, not the pointer), but computing
+		// &vec[0] on an EMPTY vector is itself undefined behavior - a real,
+		// general vector::operator[] bounds-check abort under
+		// _GLIBCXX_ASSERTIONS, not just theoretical. Found live: SOMA's own
+		// fog program setup (RendererDeferred.cpp) only adds a real default
+		// var when using the legacy 32-bit G-buffer format, so its
+		// mvDefaultVars was completely empty once SOMA switched to the
+		// 64-bit format (see that switch's own PORTING_NOTES.md section) -
+		// a real crash the very first time a real fog volume actually needed
+		// its shader generated (00_01_apartment.hpm's own real fog areas,
+		// never reached before this session's earlier hang fix let boot get
+		// this far). General fix, not scoped to fog specifically: any
+		// combo manager with zero registered features or zero default vars
+		// would hit this the same way.
 		cProgramComboShader *pShaderData = hplNew(cProgramComboShader , ());
-		iGpuShader* pShader = CreateShaderFromFeatures(	asShaderName, aShaderType, alBitFlags, 
-														&comboSettings.mvFeatures[0], (int)comboSettings.mvFeatures.size(), 
-														&comboSettings.mvDefaultVars[0], (int)comboSettings.mvDefaultVars.size());
+		iGpuShader* pShader = CreateShaderFromFeatures(	asShaderName, aShaderType, alBitFlags,
+														comboSettings.mvFeatures.empty() ? NULL : &comboSettings.mvFeatures[0], (int)comboSettings.mvFeatures.size(),
+														comboSettings.mvDefaultVars.empty() ? NULL : &comboSettings.mvDefaultVars[0], (int)comboSettings.mvDefaultVars.size());
 		pShaderData->mpShader = pShader;
 		pShaderData->mlUserCount++;
 		pShaderSet->insert(tProgramComboShaderMap::value_type(lValidBits, pShaderData));
