@@ -5208,3 +5208,167 @@ locked (`loginctl show-session <id> -p LockedHint` returned `yes` at the time) -
 compositor handing out a degraded/minimal GL context to background clients while locked, though
 that specific mechanism wasn't confirmed further. Flagging this gap explicitly rather than
 claiming a live verification that didn't actually happen.
+
+## SOMA: real launch-crash fixes (packaging + engine), then the lighting investigation (this session)
+
+Continuation of the "core_box.dae"/GL-context-degradation gap flagged at the end of the previous
+section. This session re-tested cleanly (no GL degradation this time) and found the real crash was
+NOT the transient GL issue flagged above - it was two separate, real, fixable bugs.
+
+**Crash 1 - packaging gap, not an engine bug.** `open-hpl-soma`'s RPM launcher script never
+deployed the compat `core_box.dae`/`core_pyramid.dae`/`core_*_sphere.dae` meshes into the game
+directory the way `open-hpl-rebirth`/`open-hpl-bunker`'s launchers already do (see this file's
+earlier Rebirth/Bunker sections) - SOMA's real Steam depot has the identical gap (ships only
+`core/models`'s precompiled `.msh` cache, not these five real `.dae` source files HPL2's renderer
+needs by hardcoded filename), but SOMA's launcher was simply never given the equivalent fix. Fixed
+in the spec (`~/.local/rpm/specs/open-hpl.spec`, not part of this git repo) by adding the same
+`mkdir -p core/models` + compat-copy loop Rebirth/Bunker already have. Shipped as 1.3.17-2 →
+1.3.18-1 (see below).
+
+**Crash 2 - real engine bug, `MeshLoaderColladaHelpers.cpp`.** With crash 1 fixed, a full New
+Game boot into the real `00_01_apartment.hpm` still SIGABRT'd loading `entities/technical/
+block_box/block_box.dae`. Root cause: `cMeshLoaderCollada::LoadGeometry()` lets a `"_"`-prefixed
+geometry (e.g. this file's own `_collider_box_pCubeShape2`, a real collision-only sub-mesh with no
+`TEXCOORD` `<input>` at all - genuinely absent from the source, not a loader bug) skip the "no tex
+coords" warning/skip check, but a few lines later unconditionally read
+`vIndexArray[... + Geometry.mlTexIdxNum]` regardless - with `mlTexIdxNum` at its default `-1` for
+a geometry with no texcoords, this indexes the raw triangle-index array with `-1`, a real
+out-of-bounds read (a hard abort under this build's `_GLIBCXX_ASSERTIONS` bounds checking, a real
+memory-safety bug in an unchecked build). Downstream code (`IndexDataToVertex`/`IndexDataToExtra`)
+already correctly guards on `mlTexArrayIdx>=0` before ever reading this value, so the fix mirrors
+that: skip the read and default to 0 when `mlTexIdxNum<0`. Shared `HPL2/core` code - a real latent
+bug for every game module sharing this Collada loader, just never previously exercised by a real
+`.dae` file shaped exactly this way. Verified live: the full real apartment (145 static objects,
+425 entities, 70 lights) now loads and runs at ~59fps, no crash, no memory leaks on exit. Shipped
+as 1.3.18-1.
+
+**Headless testing infrastructure verified end-to-end for the first time this session** (it
+already existed - `HPL2/core/include/system/HeadlessControl.h`, `scripts/hpl_control.py`,
+`scripts/headless-check.sh`, `scripts/setup-test-scratch.sh`/`deploy-test-binary.sh` - but hadn't
+actually been exercised for SOMA before): launched fully hidden (`OPENHPL_HEADLESS_SOCKET`, real
+`SDL_WINDOW_HIDDEN`), clicked through the real main menu → New Game → difficulty screen → Start
+Game via injected `mouse_move`/`mouse_button` events, confirmed via screenshot at each step, moved
+the player with an injected `W` keypress (real physics-driven position change confirmed via
+`camera_state`), and used SOMA's own `start_map` headless command (calls the real `LoadMap()`
+directly) as a much more reliable way to reach `00_01_apartment.hpm` for repeated testing than
+re-clicking the menu every time (menu-click timing got unreliable under system memory pressure
+later in the session - not a bug, just real-world flakiness of driving UI via injected input on a
+loaded machine). One real footgun: the control socket is a Unix domain socket, capped at ~108
+bytes - a path under a long scratchpad directory fails with `AF_UNIX path too long`; keep socket
+paths short and separate from the scratch data dir.
+
+## SOMA: the apartment renders near-total black - two real bugs found and fixed, the actual cause still open
+
+User reported (with a real reference screenshot) that SOMA's real opening apartment bedroom should
+render warmly lit (glowing bedside lamp, visible furniture) - this port's real New Game boot
+instead showed near-total black (mean pixel value ~10/255) at the exact same early "phone
+ringing..." beat, despite the map data itself being fully correct (145 static objects, 425
+entities, **70 real lights** all present and loaded).
+
+**Bug found and fixed: light occlusion-query culling wrongly discarding every real-time light.**
+`cRendererDeferred::InitLightRendering()` attaches a real GPU occlusion query
+(`GetOcclusionQuery()`) to any light whose projected screen area exceeds `mlMinLargeLightArea`
+(gated by the static `mbOcclusionTestLargeLights`, default `true`), then skips re-rendering that
+light entirely once the query's sample count comes back at or below `mlSampleVisiblilityLimit` - a
+real perf optimization (never re-shade a fully-occluded light), never exercised carefully against
+this specific GPU/driver stack before (Mesa on Apple Silicon - not what this occlusion query path
+was ever verified against historically). A temporary counter on
+`cRenderSettings::mlNumberOfLightsRendered` (added and removed this session, see the git history
+of `RendererDeferred.cpp`'s `RenderLights()`/`InitLightRendering()` for where it lived) proved this
+directly: real, nonzero counts (16, then 19) in the first couple of rendered frames, then
+**permanently 0** from then on - every light in this small apartment bedroom sits close enough to
+the camera to have a large projected screen area and take this occlusion-query path, consistent
+with these near-camera lights' queries wrongly reporting occlusion once results become available
+(a real 1-frame-later readback), which should never happen for a light this close. Fixed for SOMA
+via the engine's own existing `cRendererDeferred::SetOcclusionTestLargeLights(false)` public
+setter, called once in `cSomaBase::Init()` - Dark Descent/AMFP untouched (SOMA-only call site; the
+flag is a process-wide static but each game module is its own process). Verified via a second,
+correctly-timed counter (placed after `InitLightRendering()` completes, not before - the first
+counter's placement had a real one-frame-lag bug of its own that briefly and wrongly suggested
+this fix didn't work) that all 38 real lights in view are now properly routed to their render
+sub-lists (`box=6, StencilFront_RenderBack=25, RenderBack=5`) every frame, not just the first two.
+
+**Bug found and fixed (real, but NOT the dominant cause of the remaining darkness): G-buffer
+format mismatch.** SOMA's real, unmodified `.hpsl` shader corpus (`deferred_gbuffer_solid_frag.hpsl`,
+`deferred_light_frag.hpsl`) always writes/reads the deferred normal G-buffer as raw signed values
+and always stores linear (unpacked) depth directly - confirmed via a full grep of the real shipped
+source, there is no `@ifdef Deferred_32bit`/`@elseif Deferred_64bit` branch around these lines at
+all, unlike Dark Descent's own real `.glsl` (which has exactly this branch, and picks the biased
+`*0.5+0.5` "32bit" encoding). This matches HPL2's own existing `eDeferredGBuffer_64Bit` renderer
+mode exactly - but `cRendererDeferred::mGBufferType` defaults to (and, with nothing anywhere in
+this codebase ever calling `SetGBufferType()` for SOMA, always stayed)
+`eDeferredGBuffer_32Bit`, an 8-bit-per-channel **unsigned** G-buffer texture (`ePixelFormat_RGBA`,
+`GL_RGBA` - confirmed via `LowLevelGraphicsSDL.cpp`'s pixel format mapping) that silently clamps
+any negative normal component to 0 on write. Switched SOMA to `eDeferredGBuffer_64Bit`
+(`ePixelFormat_RGBA16` → real `GL_RGBA16F_ARB`, genuinely float, can hold negative values) via the
+engine's own existing `SetGBufferType()` setter, called once in `cSomaBase::Init()` before
+`InitEngine()` (must run before `cRendererDeferred`'s constructor allocates the G-buffer
+textures). This is a real, independently-justified fix (matches SOMA's actual authored shader
+assumptions) but **empirically confirmed via the debug G-buffer view below to NOT be the dominant
+cause of the remaining darkness** - the black G-buffer target persists identically in both 32-bit
+and 64-bit mode.
+
+**Still open: something prevents the deferred normal+depth G-buffer target from ever being
+written, and it's not clear why yet.** Added a small permanent headless debug hook,
+`set_debug_gbuffer` (`SomaBase.cpp`, wraps the engine's own pre-existing
+`cRendererDeferred::SetDebugRenderFrameBuffers()`/`RenderGbufferContent()` debug quad-view - color/
+diffuse top-left, normal+depth top-right, specular bottom-left, a 4th target bottom-right when
+present), to inspect each real G-buffer render target directly via a headless screenshot instead
+of only ever seeing the final composited frame. Findings, at the real camera pose ~2.7m from the
+nearest bed lamp:
+- **Color/diffuse target (attachment 0): correct.** Real, plausible lit texture data with visible
+  shading gradients and real material colors - definitively rules out "the diffuse texture itself
+  is black" as a cause.
+- **Normal+depth target (attachment 1): solid black**, in both `eDeferredGBuffer_32Bit` and
+  `eDeferredGBuffer_64Bit` mode - ruling out the G-buffer normal-encoding fix above as the (sole)
+  explanation, since a genuine encoding/clamping bug would look different (and be fixed) between
+  the two formats, not identically black in both.
+- **Specular target (attachment 2): shows *some* content**, though not independently confirmed to
+  be genuinely attachment 2's own data rather than a debug-view sampling artifact reusing
+  attachment 0's bound texture unit - not chased further.
+- **4th target (attachment 3, likely illumination): pure random noise** - the classic signature of
+  reading an allocated-but-never-written texture (uninitialized GPU memory), i.e. this target is
+  also never written.
+
+Traced further down the C++ stack looking for why only attachment 0 would ever receive fragment
+output despite a 4-attachment framebuffer:
+- The real, in-game (not self-test) transpiled `deferred_gbuffer_solid_frag.glsl` - checked via a
+  short, safe (unlike an earlier attempt in this same investigation, which crashed the engine with
+  a real stack buffer overflow: `LowLevelSystemSDL.cpp`'s `Log()` uses an unchecked, fixed 4096-
+  byte `vsprintf` buffer - dumping a multi-KB shader source through it smashes the stack; keep any
+  future shader-source diagnostic logging short, or write to a file directly instead) - confirmed
+  it correctly declares `#extension GL_ARB_draw_buffers : enable` and does contain a real
+  `gl_FragData[1]` write, for every real material variant compiled this session. Rules out a
+  transpiler bug dropping this specific write.
+- `cRendererDeferred::SetupGBuffer()` correctly calls `SetGBuffer(eGBufferComponents_Full)` (the
+  real 4-attachment variant, not the single-color-only `eGBufferComponents_Color` variant) for the
+  main geometry pass - not a SOMA-specific viewport misconfiguration either.
+- `cFrameBufferGL::CompileAndValidate()` (`FrameBufferGL.cpp`) correctly calls
+  `glDrawBuffers(4, [COLOR_ATTACHMENT0..3])` once, at FBO creation time, when 4 real color buffers
+  are attached - the standard, correct pattern (draw-buffer state is real per-FBO-object state in
+  `EXT_framebuffer_object`/`ARB_framebuffer_object`, not global context state, so this should
+  persist correctly every time this same FBO gets re-bound later).
+- `cLowLevelGraphicsSDL::SetCurrentFrameBuffer()` (`LowLevelGraphicsSDL.cpp`) - called every time
+  the deferred renderer binds the G-buffer via `SetFrameBuffer()`/`SetGBuffer()` - only calls
+  `glBindFramebufferEXT()` and `glViewport()`. It does **not** re-call `glDrawBuffers()` on bind,
+  which is correct *if and only if* the driver actually preserves per-FBO draw-buffer state across
+  binds the way the GL spec says it should.
+
+**This is as far as this investigation got without real GPU frame-capture tooling** (RenderDoc or
+equivalent) - the headless control server can screenshot final composited frames and (via the new
+`set_debug_gbuffer` hook) raw G-buffer targets, but can't inspect intermediate GL driver state
+(what `glDrawBuffers()` the driver actually thinks is active at draw time, whether the FBO
+completeness check silently degraded something, etc.) at the level needed to go further. All of
+the C++/shader code inspected above is **shared with Dark Descent/AMFP**, not SOMA-specific, and
+(per project memory) Dark Descent is known-working - so either this exact symptom exists there too
+and has simply never been looked for (nobody has ever pointed this project's own
+`set_debug_gbuffer` debug view at a real Dark Descent scene), or something SOMA-specific about
+*how* this shared code gets exercised (its real materials' exact HPSL-vs-GLSL shader path,
+possibly) triggers a genuine Mesa/Apple-Silicon driver bug that Dark Descent's own native `.glsl`
+materials happen not to. **Next step for whoever continues this**: point `set_debug_gbuffer` at a
+real Dark Descent scene first, to establish whether this is a general engine/driver bug (much
+bigger, more important finding) or something narrower to SOMA's specific shader path.
+
+Both real fixes (occlusion culling, G-buffer format) are kept regardless of the remaining open
+issue - each is independently correct and verified not to regress anything (all 4 ctest suites
+green throughout). Shipped as 1.3.19-1.

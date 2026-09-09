@@ -1504,3 +1504,40 @@
     at the time). The argument-parsing logic itself is simple, narrowly scoped, and was read
     through carefully by hand in addition to the ctest pass; live boot-to-menu verification is
     the honest remaining gap, flagged rather than glossed over.
+
+- SOMA: fixed the instant-crash launcher/engine bugs, verified headless testing infra end-to-end,
+  then investigated real New Game apartment darkness - two real bugs fixed, root cause of
+  remaining darkness still open (2026-09-09)
+  - DONE: `open-hpl-soma`'s RPM launcher (spec, not this repo) was missing the compat
+    `core_*.dae` mesh deploy step Rebirth/Bunker's launchers already have - real Steam SOMA
+    depot has the identical gap, was a straight crash on every launch. Shipped 1.3.18-1.
+  - DONE: `HPL2/core/sources/impl/MeshLoaderColladaHelpers.cpp` - `cMeshLoaderCollada::
+    LoadGeometry()` read a raw triangle-index array with a `-1` index for `"_"`-prefixed
+    collision-only geometry with no `TEXCOORD` input (a real, legitimate shape - confirmed via
+    the real, unmodified `.dae` source) - real out-of-bounds read, aborted under this build's
+    bounds checking. Shared HPL2/core code, real latent bug for every game module. Full real
+    apartment (145 objects/425 entities/70 lights) now loads and runs, no crash. Shipped 1.3.18-1.
+  - DONE: verified the existing headless control server (`scripts/hpl_control.py` et al) end to
+    end for SOMA for the first time - real New Game menu navigation via injected mouse/keyboard
+    input, screenshots at each step, real physics-driven player movement confirmed.
+  - DONE: `soma/src/game/SomaBase.cpp` - `cRendererDeferred::SetOcclusionTestLargeLights(false)`
+    for SOMA - real GPU occlusion queries were wrongly culling every real-time light once results
+    became available, confirmed via a live counter (real lights rendered went from a real nonzero
+    count to permanently 0 after the first couple of frames). All 38 real lights in the apartment
+    bedroom now correctly routed for rendering every frame.
+  - DONE: `soma/src/game/SomaBase.cpp` - `cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit)`
+    for SOMA - SOMA's real `.hpsl` shaders assume this convention (raw normal storage, unpacked
+    depth) throughout, confirmed via the real shipped shader source; this port always defaulted
+    to the mismatched legacy 32-bit packed format. Independently correct, but confirmed NOT to be
+    the (sole) cause of the remaining darkness.
+  - NOT DONE / real open gap: even with both fixes and all 38 lights confirmed routed for
+    rendering, the real apartment still renders far darker than the real game (mean pixel value
+    ~10/255 vs a bright reference screenshot). Traced via a new permanent debug hook
+    (`set_debug_gbuffer` headless command) down to: the G-buffer's normal+depth render target
+    renders solid black regardless of G-buffer format, while the diffuse/color target is
+    genuinely correct - and the C++/GLSL code responsible (framebuffer setup, `glDrawBuffers()`,
+    the transpiled shader's own `gl_FragData[1]` write) all checked out as correct by hand. Needs
+    real GPU frame-capture tooling to go further; see PORTING_NOTES.md's matching section for the
+    full trace and the recommended next step (check whether real Dark Descent shows the same
+    G-buffer symptom, to tell general-engine-bug from SOMA-specific). Shipped 1.3.19-1 anyway -
+    both real fixes kept, all 4 ctest suites green throughout.
