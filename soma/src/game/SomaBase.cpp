@@ -12,6 +12,7 @@
 
 #include "system/HeadlessControl.h"
 #include "resources/GpuShaderManager.h"
+#include "graphics/RendererDeferred.h"
 
 #if defined(__linux__)
 #include <unistd.h>
@@ -56,6 +57,24 @@ static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessR
 	// real Options screen's Horizontal FOV slider (see SomaConfig.h's
 	// mfFOV/SomaPlayer.cpp) actually reaches the real camera live.
 	aResp.Set("fov_deg", cMath::ToDeg(pBase->GetDebugCamera()->GetFOV()));
+}
+
+// Headless debug hook onto cRendererDeferred's own existing debug quad-view
+// of the raw G-buffer contents (color/diffuse top-left, normal+depth top-
+// right, specular bottom-left, a 4th target bottom-right if present) - lets
+// a headless screenshot inspect each render target directly instead of only
+// the final composited frame. Used to root-cause the SOMA "real lights get
+// routed for rendering but contribute ~0 visible brightness" investigation
+// (see PORTING_NOTES.md) - confirmed live that the color/diffuse target is
+// correctly populated (real, plausible lit texture data) while the normal+
+// depth target renders solid black regardless of cRendererDeferred's own
+// 32-bit vs 64-bit G-buffer texture format, meaning the deferred G-buffer
+// solid pass's fragment shader isn't reaching that attachment at all - real,
+// still-open investigation, not yet root-caused further than that (needs
+// real GPU frame-capture tooling this headless workflow doesn't have).
+static void cSomaBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cRendererDeferred::SetDebugRenderFrameBuffers(aReq.GetBool("enabled", false));
 }
 
 static void cSomaBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -265,6 +284,65 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl);
 
 	/////////////////////////////
+	// Real SOMA's own .hpsl corpus (deferred_gbuffer_solid_frag.hpsl,
+	// deferred_light_frag.hpsl, ...) always writes/reads the deferred
+	// normal G-buffer raw and unconditionally stores linear (unpacked)
+	// depth in its alpha channel - there is no HPL2-style "@ifdef
+	// Deferred_32bit ... *0.5+0.5 ... @elseif Deferred_64bit ... raw ...
+	// @endif" branch anywhere in the real shipped source (confirmed via a
+	// full grep of the real corpus: every gl_FragData[1]/out_vNormal write
+	// is unconditional). That's exactly what HPL2's existing
+	// eDeferredGBuffer_64Bit renderer mode already means (see
+	// RendererDeferred.cpp's own matching @ifdef Deferred_32bit/@elseif
+	// Deferred_64bit branches in the real Dark Descent .glsl corpus) - but
+	// cRendererDeferred::mGBufferType defaults to (and, with no call
+	// anywhere in this codebase to ever change it, always stays)
+	// eDeferredGBuffer_32Bit, a standard 8-bit-per-channel UNSIGNED G-buffer
+	// texture. Writing SOMA's real raw signed (-1..1) normal components
+	// into that unsigned target silently clamps every negative component
+	// to 0 on write - corrupting the surface normal on nearly every pixel
+	// in the game and starving real lights of any dot(N,L) contribution.
+	// Root-caused live: a real New-Game boot into 00_01_apartment.hpm
+	// rendered almost entirely black despite 38 real lights being
+	// correctly culled into view near the camera - a LIGHTDIAG-SHADER
+	// dump of the real transpiled deferred_gbuffer_solid_frag.glsl (with
+	// the real Deferred_32bit=1 combo var actually set) showed the
+	// unconditional, un-biased `gl_FragData[1].xyz = vScreenNormal;` this
+	// comment describes. Must run before InitEngine() (which constructs
+	// cRendererDeferred and allocates the G-buffer textures based on this
+	// value) - same ordering constraint as SetHpslTranspileCallback()
+	// above.
+	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
+
+	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
+	// a real GPU occlusion query (GetOcclusionQuery()) to any light whose
+	// projected screen area exceeds mlMinLargeLightArea, then skips
+	// re-rendering that light entirely on a later frame once the query's
+	// sample count comes back at or below mlSampleVisiblilityLimit - a real
+	// performance optimization (never re-shade a light that's fully hidden
+	// behind other geometry). Root-caused live: a real New Game boot into
+	// 00_01_apartment.hpm rendered near pure black (mean pixel value ~10/255)
+	// despite 38 real lights correctly culled into view - a temporary
+	// counter on cRenderSettings::mlNumberOfLightsRendered showed a real,
+	// nonzero count (16, then 19) in the first couple of rendered frames,
+	// then permanently 0 from then on. Every light in this small apartment
+	// bedroom sits very close to the camera, so each has a large projected
+	// screen area and takes this occlusion-query path - consistent with
+	// queries reporting these lights as occluded/invisible once their
+	// results are actually available (a 1-frame-later readback), which
+	// would never happen for a real light this close to the camera. This
+	// GPU/driver stack (Mesa on Apple Silicon, not what HPL2's occlusion
+	// query path was ever verified against) is the plausible source, not
+	// verified further than that. Disabling this test for SOMA (verified
+	// live: mean pixel value rose from ~10/255 to ~26/255 and real
+	// previously-invisible room geometry/detail became visible in a
+	// screenshot at the identical camera pose) trades a real-but-broken
+	// perf optimization for correct light visibility - Dark Descent/AMFP
+	// are untouched by this (SOMA-only call, and mbOcclusionTestLargeLights
+	// is a process-wide static, but each game module is its own process).
+	cRendererDeferred::SetOcclusionTestLargeLights(false);
+
+	/////////////////////////////
 	// Init the engine: create the window, load resources.cfg/materials.cfg,
 	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
@@ -290,6 +368,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
 		pCtrl->RegisterHandler("camera_state", cSomaBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
 		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
 		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
