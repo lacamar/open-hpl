@@ -5443,3 +5443,43 @@ not a copy, to avoid any risk from a second scratch-dir mistake): boot now proce
 "User Initialization" through `main_menu.hpm` and into the real `00_00_intro.hpm` cutscene, with
 real, correctly-rendered (non-black) intro imagery visible on screen - confirmed via a real
 screenshot of the live window. All 4 ctest suites green. Shipped as 1.3.21-1.
+
+## CRITICAL: shader-combo generation crash on an empty default-vars vector - a real regression from today's own G-buffer fix
+
+Third bug in the same session-long chain of "each fix lets boot reach a little further into
+previously-unreachable code" - this one a genuine regression introduced by this session's own
+earlier `eDeferredGBuffer_64Bit` switch for SOMA, not a pre-existing latent bug.
+
+User report: "crashes loading the map after the intro slideshow," right after the symlink-hang fix
+shipped. `coredumpctl`/`gdb -batch -ex bt` on the real crash showed a `_GLIBCXX_ASSERTIONS` bounds-
+check abort in `cProgramComboManager::GetShaderForCombo()`, called from `GenerateProgram()`, called
+from `cRendererDeferred::RenderFullScreenFog()`.
+
+Root cause: `GetShaderForCombo()` unconditionally computes `&comboSettings.mvFeatures[0]` and
+`&comboSettings.mvDefaultVars[0]` to pass into `CreateShaderFromFeatures()` - never actually
+dereferenced there when the matching count is 0 (both of that function's loops are bounded by the
+count parameter, not the pointer), but computing `&vec[0]` on an **empty** vector is itself
+undefined behavior, and a real, immediate abort under this build's bounds-checked STL. SOMA's own
+fog program setup (`RendererDeferred.cpp`, `RenderFullScreenFog()`'s constructor-time setup) only
+adds a real default var (`vars.Add("PackedDepth")`) when `GetGBufferType() == eDeferredGBuffer_32Bit`
+- this session's own earlier fix switching SOMA to `eDeferredGBuffer_64Bit` (see that section above)
+left this `vars` container completely empty for SOMA specifically, so the very first real fog
+volume needing its shader generated - `00_01_apartment.hpm`'s own, never reached before the
+symlink-hang fix let boot get this far - crashed immediately.
+
+Fixed generally in `ProgramComboManager.cpp`, not scoped to fog: guard both `&vec[0]` expressions
+with an empty check, passing `NULL` instead (safe, per the above - never dereferenced when the
+paired count is 0). Any combo manager anywhere in this engine with zero registered features or zero
+default vars would hit this the exact same way, so this is a real, general engine hardening, not
+just a SOMA patch. Verified live against the real Steam SOMA install via `start_map` (reaching the
+exact camera pose/map that crashed before, not just a synthetic repro): loads cleanly, real camera
+state, no crash, no coredump. All 4 ctest suites green. Shipped as 1.3.22-1.
+
+**Pattern worth naming for whoever continues this session's work**: three real, previously-latent
+bugs (the `core_box.dae`/collision-mesh crash, the `SetForceCacheLoadingAndSkipSaving` ordering gap,
+the self-referential-symlink recursion hang) plus this one *regression* have now surfaced in strict
+sequence, each only reachable once the previous one was fixed. Don't assume a real Steam data boot
+is "done" once it gets past whatever the current furthest-reached point is - there may well be a
+fourth. Real GPU frame-capture tooling (flagged as the recommended next step in the earlier lighting
+investigation section) and/or a from-scratch full boot-to-gameplay soak test would surface the rest
+of these faster than one-report-at-a-time.
