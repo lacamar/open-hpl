@@ -5401,3 +5401,45 @@ confirmed - Steam's own repair cycle repeatedly rewriting/relocking real depot f
 under a live game process (a documented interaction from the original CRITICAL fix's own session)
 is a plausible independent cause, separate from anything in this port's rendering code. Shipped as
 1.3.20-1; ask for a fresh real-desktop retest now that Steam is no longer mid-repair.
+
+## CRITICAL: real SOMA depot ships self-referential symlinks - infinite recursion hang, not a crash
+
+Immediate follow-up to the previous CRITICAL section - fixing the too-late
+`SetForceCacheLoadingAndSkipSaving()` call let boot progress further, straight into a second,
+previously-unreachable latent bug: a real "black screen, not even a splash" report.
+
+`gdb -p <pid> -batch -ex bt` on the live process (confirmed first via `/proc/<pid>/stat` CPU-tick
+sampling that it was genuinely burning CPU, not sleeping/blocked - a real busy hang, not a crash)
+showed hundreds of stacked `cFileSearcher::AddDirectory()` frames. `readlink()` against the real
+Steam install confirmed why: real SOMA's own depot ships several top-level directories each
+containing a same-named symlink pointing at itself - `entities/entities -> entities`, and the
+identical shape for `graphics/`, `lang/`, `maps/`, `music/`, `sounds/`, `static_objects/`,
+`textures/` (presumably a leftover artifact of Frictional's own Linux/macOS port build, not
+something any game module here is meant to load through). `resources.cfg` marks every one of
+these real top-level directories `AddSubDirs="true"`, and `cFileSearcher::AddDirectory()`'s
+recursive subdirectory walk (`PlatformUnix.cpp`'s `FindFoldersInDir()`, called with
+`abAddSubDirectories=true`) has no cycle protection at all - it used `stat()` (which follows
+symlinks) to decide whether an entry is a directory to recurse into, so a symlinked directory
+passes exactly like a real one. Recursing into `entities/` finds `entities/entities`, `stat()`s it
+as a real directory, recurses into it (which resolves right back to `entities/`), finds
+`entities/entities` again, forever.
+
+Like the previous section's bug, this was never reached before this session's earlier fixes let
+SOMA's boot get this far at all - previously the `core_box.dae` crash aborted well before
+`LoadResourceDirsFile()` (which drives this recursive walk) ever ran.
+
+Fixed with `lstat()` instead of `stat()` for the directory-type check in `FindFoldersInDir()` - the
+standard, correct fix for this exact bug class (only a symlink can form a cycle this way on a POSIX
+filesystem; real-world recursive directory walkers like `find` don't follow symlinks by default for
+the same reason). This is shared code (every caller of `FindFoldersInDir()` is affected, both
+`cFileSearcher::AddDirectory()`'s resource-directory walk and `cPlatform::RemoveFolder()`'s own
+recursive delete) - confirmed safe first via a real symlink audit of every installed game's data
+tree before shipping: Dark Descent has exactly two symlinks, both shared-library files unrelated to
+any `AddSubDirs="true"` resource directory; AMFP/Rebirth/Bunker have none at all. Only SOMA's real
+depot has this symlink shape, so only SOMA's actual boot behavior changes.
+
+Verified live against the real Steam SOMA install directly (via the game-data-directory argument,
+not a copy, to avoid any risk from a second scratch-dir mistake): boot now proceeds normally past
+"User Initialization" through `main_menu.hpm` and into the real `00_00_intro.hpm` cutscene, with
+real, correctly-rendered (non-black) intro imagery visible on screen - confirmed via a real
+screenshot of the live window. All 4 ctest suites green. Shipped as 1.3.21-1.
