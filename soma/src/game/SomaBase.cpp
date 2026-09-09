@@ -342,6 +342,31 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// is a process-wide static, but each game module is its own process).
 	cRendererDeferred::SetOcclusionTestLargeLights(false);
 
+	// CRITICAL, must run before CreateHPLEngine() below, not merely before
+	// map/resource loading: cMeshLoaderCollada's real, original behavior is
+	// to treat a shipped `.msh` as a rebuildable cache of the `.dae` source,
+	// recompiling and unconditionally SaveMesh()-ing over it. On this Linux
+	// port that install directory is the real Steam depot, and this
+	// (correctly, for everything loaded later) used to be disabled by a
+	// call placed inside InitEngine() itself, right after CreateHPLEngine().
+	// That was too late for one specific case: CreateHPLEngine() (below)
+	// constructs cGraphics, which constructs cRendererDeferred, whose own
+	// constructor immediately calls LoadVertexBufferFromMesh("core_box.dae",
+	// ...) (and core_pyramid/core_*_sphere) to build its debug/light-volume
+	// shapes - before InitEngine() ever returns, let alone reaches its own
+	// old call site. Found live: a real (non-headless) SOMA launch just
+	// rewrote exactly these 5 files' real `.msh` caches in the real Steam
+	// install directory (confirmed via mtimes matching the launch, and
+	// Steam's own "5 files failed to validate" integrity check reacting to
+	// it) - the exact zero-tolerance class of bug already fixed once for
+	// every other, later-loaded mesh, just never for these five, since
+	// nothing reached this code path at all before this session's earlier
+	// fix made core_box.dae loadable in the first place (previously the
+	// engine just crashed here instead - see the FatalError fix earlier
+	// this session). Hardcoded true, not config-driven, same reasoning as
+	// this call's own original site.
+	cResources::SetForceCacheLoadingAndSkipSaving(true);
+
 	/////////////////////////////
 	// Init the engine: create the window, load resources.cfg/materials.cfg,
 	// and get to a state where an empty scene can be rendered.
@@ -623,38 +648,6 @@ bool cSomaBase::InitEngine()
 		msErrorMessage = _W("Could not create HPL engine!");
 		return false;
 	}
-
-	// CRITICAL, must run before any resource/mesh loading below: real SOMA
-	// ships paired `.dae`+`.msh` files for the engine's built-in primitive
-	// shapes (core_box, core_pyramid, core_*_sphere - used by iRenderer's
-	// own debug/light-volume rendering, see Renderer.cpp's
-	// LoadVertexBufferFromMesh("core_box.dae", ...)). cMeshLoaderCollada's
-	// real, original Frictional Games behavior (MeshLoaderCollada.cpp) is
-	// to treat the shipped `.msh` as a rebuildable CACHE of the `.dae`
-	// source - it recompiles the `.dae` and calls SaveMesh() to overwrite
-	// that `.msh` unconditionally on every load, by design, because on the
-	// platforms this engine originally shipped for the game's own install
-	// directory was expected to be writable. On this Linux port, that
-	// install directory is the real Steam depot - confirmed live via
-	// strace: every boot was opening the real, already-shipped
-	// core_box.msh/core_pyramid.msh/core_*_sphere.msh with
-	// O_WRONLY|O_CREAT|O_TRUNC and rewriting them, which is exactly what
-	// triggered Steam's own repeated "files failed to validate" repair
-	// cycles this session traced back through - a real, active, ongoing
-	// bug, not leftover damage from anything already fixed.
-	//
-	// Dark Descent's own real cLuxBase::InitEngine() already disables this
-	// exact behavior by default (amnesia/src/game/LuxBase.cpp's
-	// `cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->
-	// mbForceCacheLoadingAndSkipSaving)`, itself defaulting to `true` -
-	// LuxConfigHandler.cpp's `GetBool("Main",
-	// "ForceCacheLoadingAndSkipSaving", true)`) - this Phase 0 scaffolding
-	// simply never made the equivalent call for SOMA. Hardcoded true here
-	// (not read from a config option) since SOMA's own real main_init.cfg
-	// has no equivalent setting and this should never be anything but true
-	// on this port - a real install's resource directory must never be
-	// written to, unconditionally, not just by default.
-	cResources::SetForceCacheLoadingAndSkipSaving(true);
 
 	/////////////////////////
 	// Load SOMA's real resource directory listing and physics surface data.
