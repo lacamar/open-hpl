@@ -5372,3 +5372,32 @@ bigger, more important finding) or something narrower to SOMA's specific shader 
 Both real fixes (occlusion culling, G-buffer format) are kept regardless of the remaining open
 issue - each is independently correct and verified not to regress anything (all 4 ctest suites
 green throughout). Shipped as 1.3.19-1.
+
+## CRITICAL: SOMA's real-Steam-depot-write protection ran too late for core_box.dae and friends
+
+User-reported regression right after 1.3.19 shipped: a real (non-headless) SOMA launch showed a
+black screen with no splash, and Steam reported "5 files failed to validate." Real cause, confirmed
+via `~/.local/share/Steam/logs/content_log.txt` ("Validation: read 5 files missing... 5 updated")
+and matching file mtimes on the real install: `cResources::SetForceCacheLoadingAndSkipSaving(true)`
+(this project's own established fix for the "engine rewrites real Steam depot .msh files" bug
+class, see the CRITICAL section earlier in this file) was called inside `cSomaBase::InitEngine()`
+right after `CreateHPLEngine()` - correct for every mesh loaded afterward, but too late for
+`core_box.dae`/`core_pyramid.dae`/`core_*_sphere.dae` specifically: `CreateHPLEngine()` itself
+constructs `cGraphics` → `cRendererDeferred`, whose constructor immediately calls
+`LoadVertexBufferFromMesh("core_box.dae", ...)` before `InitEngine()` ever returns. This gap
+existed since the original fix was written, but nothing ever reached it until this session's
+earlier `core_box.dae` FatalError crash fix made these five files loadable at all - previously the
+engine just crashed at this exact point instead of ever reaching the (too-late) protection or the
+save it was meant to prevent.
+
+Fixed by moving the call to `cSomaBase::Init()`, before `CreateHPLEngine()` - alongside the other
+"must run before InitEngine()" static setters already established there this session
+(`SetHpslTranspileCallback`/`SetGBufferType`/`SetOcclusionTestLargeLights`). Verified sufficient
+by code inspection (`MeshLoaderCollada.cpp`'s `SaveMesh()` call site is gated by a plain
+`cResources::GetForceCacheLoadingAndSkipSaving()==false` check) rather than by reproducing live
+against the real Steam directory again, to avoid risking a second real corruption if the fix had
+been wrong. Whether this also explains the reported "black screen, no splash" symptom is not
+confirmed - Steam's own repair cycle repeatedly rewriting/relocking real depot files out from
+under a live game process (a documented interaction from the original CRITICAL fix's own session)
+is a plausible independent cause, separate from anything in this port's rendering code. Shipped as
+1.3.20-1; ask for a fresh real-desktop retest now that Steam is no longer mid-repair.
