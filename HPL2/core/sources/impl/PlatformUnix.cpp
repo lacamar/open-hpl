@@ -299,8 +299,36 @@ namespace hpl {
 			snprintf(sSpec,256,"%s%s",sDir8.c_str(),_entry->d_name);
 			
 			// skip unreadable
-			if (stat(sSpec,&statbuff) ==-1) continue;
-			// skip non-directories
+			// lstat(), not stat(): a symlinked directory must NEVER be treated
+			// as a real subdirectory to recurse into here - both of this
+			// function's real callers (cFileSearcher::AddDirectory()'s
+			// recursive AddSubDirs walk, and RemoveFolder()'s recursive
+			// delete) would otherwise follow it. Found live: real SOMA's own
+			// Steam depot ships several top-level directories containing a
+			// same-named self-referential symlink (e.g. a real
+			// "entities/entities" symlink pointing at "entities" itself -
+			// confirmed via readlink() against the real install; also
+			// "graphics/graphics", "lang/lang", "maps/maps", "music/music",
+			// "sounds/sounds", "static_objects/static_objects",
+			// "textures/textures" - presumably a leftover packaging artifact
+			// from Frictional's own Linux/macOS port build, not something any
+			// game module here needs to load through). resources.cfg marks
+			// every one of these real top-level directories AddSubDirs="true",
+			// so AddDirectory() recursing into "entities/" found
+			// "entities/entities", stat()'d it as S_ISDIR (stat() follows
+			// symlinks), recursed into it (resolving back to "entities/"),
+			// found "entities/entities" again, and so on - unbounded
+			// recursion, a real stack-overflow-shaped hang (high CPU, no
+			// crash, no further log output) on every real SOMA launch that
+			// reaches this code path at all. Never reached before this
+			// session's earlier crash fixes let SOMA's boot get this far -
+			// this exact bug shape (self-referential symlinks under
+			// AddSubDirs="true" real directories) may also affect Rebirth/
+			// Bunker's own real depots, not confirmed either way.
+			if (lstat(sSpec,&statbuff) ==-1) continue;
+			// skip non-directories (and, per the above, skip symlinks to
+			// directories too - a real directory can never form a cycle this
+			// way on a POSIX filesystem, only a symlink can)
 			if (!S_ISDIR(statbuff.st_mode)) continue;
 			
 			// add updir
