@@ -1730,7 +1730,17 @@ namespace hpl {
 						{
 							DataVec[i].mlVtx = vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlPosIdxNum];
 							DataVec[i].mlNorm = vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlNormIdxNum];
-							DataVec[i].mlTex = vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlTexIdxNum];
+							// mlTexIdxNum is -1 for a geometry with no TEXCOORD <input> at all - a real,
+							// legitimate case for "_"-prefixed collision-only geometry (e.g. real SOMA's
+							// own "_collider_box_*" sub-meshes), deliberately allowed to skip the
+							// "No tex coords" check above since IndexDataToVertex()/IndexDataToExtra()
+							// already guard on mlTexArrayIdx<0 and never read this value in that case.
+							// Reading vIndexArray[...+(-1)] here without the same guard is a real,
+							// previously-latent out-of-bounds read - confirmed live via a real SOMA map
+							// (00_01_apartment.hpm's block_box entity) aborting on this exact line under
+							// _GLIBCXX_ASSERTIONS.
+							DataVec[i].mlTex = Geometry.mlTexIdxNum >= 0 ?
+								vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlTexIdxNum] : 0;
 						}
 					}
 
