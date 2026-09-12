@@ -18,6 +18,7 @@
  */
 
 #include "LuxBase.h"
+#include "graphics/RendererDeferred.h"
 
 #if defined(__linux__)
 #include <unistd.h>
@@ -423,6 +424,17 @@ static void cLuxBase_HeadlessCmd_RunScript(void *apUserData, const cHeadlessRequ
 	pBase->mpMapHandler->GetCurrentMap()->RunScript(aReq.GetString("line",""));
 }
 
+// Headless debug hook onto cRendererDeferred's own existing debug quad-view
+// of the raw G-buffer contents - see SomaBase.cpp's identical hook for the
+// full rationale (used there to root-cause SOMA's own deferred rendering
+// darkness). Added here purely as a comparison point: does real, known-
+// working Dark Descent show the same "normal+depth target renders solid
+// black" symptom on this GPU/driver stack, or is it SOMA-specific?
+static void cLuxBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cRendererDeferred::SetDebugRenderFrameBuffers(aReq.GetBool("enabled", false));
+}
+
 static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cLuxBase *pBase = (cLuxBase*)apUserData;
@@ -594,6 +606,7 @@ bool cLuxBase::Init(const tString &asCommandline)
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
 		pCtrl->RegisterHandler("run_script", cLuxBase_HeadlessCmd_RunScript, this);
+		pCtrl->RegisterHandler("set_debug_gbuffer", cLuxBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
 		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
 		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
