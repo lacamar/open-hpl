@@ -5483,3 +5483,47 @@ is "done" once it gets past whatever the current furthest-reached point is - the
 fourth. Real GPU frame-capture tooling (flagged as the recommended next step in the earlier lighting
 investigation section) and/or a from-scratch full boot-to-gameplay soak test would surface the rest
 of these faster than one-report-at-a-time.
+
+## SOMA rendering darkness: confirmed NOT a general engine/driver bug - isolated to SOMA's own shader path
+
+Direct follow-up to the still-open "normal+depth G-buffer target renders solid black" investigation
+from the previous lighting section. Added the same `set_debug_gbuffer` headless hook to Dark
+Descent (`LuxBase.cpp` - trivial, wraps the same pre-existing `cRendererDeferred::
+SetDebugRenderFrameBuffers()`/`RenderGbufferContent()` this session already added for SOMA) and
+pointed it at real Dark Descent data (`02_entrance_hall.map`, a real stone corridor with real
+normal-mapped materials) for a clean comparison.
+
+**Result: Dark Descent's debug G-buffer view shows the normal+depth target correctly populated**
+with real, richly-detailed normal-map data (visually obvious - the classic pink/blue/purple
+tangent-space-normal-as-RGB look), on the exact same hardware, exact same shared C++ framebuffer/
+`glDrawBuffers()` code, that renders SOMA's own equivalent target solid black. This is a real,
+important, conclusive result: **the shared engine's deferred-rendering MRT pipeline genuinely works
+correctly on this GPU/driver stack** (Mesa on Apple Silicon) - the earlier investigation's dead end
+(framebuffer setup, `glDrawBuffers()` call, shader source all individually checked out "correct" by
+hand, yet the symptom persisted) is now explained: the bug isn't in any of the code paths already
+checked, because those are exactly the parts proven to work by this comparison. The remaining
+darkness must be something specific to SOMA's own materials or its HPSL-transpiled shader path,
+not the general engine.
+
+**Leading hypothesis investigated and ruled out this pass**: a vertex/fragment shader combo-
+variable mismatch (fragment shader compiled with `UseNormalMapping` reading `px_vTangent`/
+`px_vBinormal` varyings the vertex shader's own, separately-selected combo never wrote, silently
+reading as zero/undefined rather than a link error) - checked `MaterialType_BasicSolid.cpp`'s
+combo feature registration: `UseNormalMapping` is registered as `kPC_VertexBit | kPC_FragmentBit`,
+meaning both stages derive this flag from the exact same `alBitFlags` input to `GenerateProgram()`
+in one call - structurally cannot desync this way. Also confirmed via `hpl.log` that
+`cGLSLProgram::Link()` (which does check `GL_LINK_STATUS` and would `Error()`+log the full info log
+on failure) reports no link failures for any of SOMA's real compiled programs - linking succeeds.
+
+**Not yet checked, the natural next step**: whether the *values* reaching `px_vTangent`/
+`px_vBinormal`/`px_vNormal` are actually sane (a real GPU frame-capture tool, or a numeric texture-
+readback headless command instead of just the visual quad-view, would settle this conclusively -
+neither exists in this headless-only toolkit yet). Given the debug view result is consistently
+black (not visually-erratic noise) across repeated runs, an "undefined/garbage" varying seems less
+likely than a genuinely-computed-but-wrong (e.g. always-zero) value somewhere upstream in SOMA's
+own vertex shader math or its real per-material uniform bindings (`mtxNormal` and friends) -
+unconfirmed, flagged for whoever continues this.
+
+Not resolved this pass; both this comparison test and the fixes from the earlier lighting section
+remain real, additive progress. `set_debug_gbuffer` is now available on both Amnesia and Soma for
+whoever picks this up next.
