@@ -17,6 +17,7 @@
 #include "graphics/RenderList.h"
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
+#include "graphics/SubMesh.h"
 
 #include "math/BoundingVolume.h"
 #include "math/Math.h"
@@ -139,6 +140,7 @@ namespace hpl {
 	tString cEngineDiagnostics::GetWorldStatsJson(cWorld *apWorld)
 	{
 		int lStaticMesh=0, lDynamicMesh=0, lSubMeshNoMaterial=0;
+		std::map<tString,int> mapNoMaterial;
 		cBoundingVolume totalBV;
 		bool bHasBV = false;
 		cVector3f vMin(0), vMax(0);
@@ -152,7 +154,11 @@ namespace hpl {
 				if(lPass==0) ++lStaticMesh; else ++lDynamicMesh;
 
 				for(int i=0; i<pEnt->GetSubMeshEntityNum(); ++i)
-					if(pEnt->GetSubMeshEntity(i)->GetMaterial() == NULL) ++lSubMeshNoMaterial;
+				{
+					if(pEnt->GetSubMeshEntity(i)->GetMaterial() != NULL) continue;
+					++lSubMeshNoMaterial;
+					++mapNoMaterial[(pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")) + ":" + pEnt->GetSubMeshEntity(i)->GetSubMesh()->GetMaterialName()];
+				}
 
 				cBoundingVolume *pBV = pEnt->GetBoundingVolume();
 				if(pBV == NULL) continue;
@@ -192,6 +198,16 @@ namespace hpl {
 		sOut += ",\"static_mesh_entities\":" + cString::ToString(lStaticMesh);
 		sOut += ",\"dynamic_mesh_entities\":" + cString::ToString(lDynamicMesh);
 		sOut += ",\"submeshes_without_material\":" + cString::ToString(lSubMeshNoMaterial);
+		{
+			// Worst offenders as "mesh:material name"
+			std::multimap<int,tString> mapSorted;
+			for(std::map<tString,int>::iterator it = mapNoMaterial.begin(); it != mapNoMaterial.end(); ++it) mapSorted.insert(std::make_pair(-it->second, it->first));
+			sOut += ",\"no_material_top\":{";
+			int lCount = 0;
+			for(std::multimap<int,tString>::iterator it = mapSorted.begin(); it != mapSorted.end() && lCount < 12; ++it, ++lCount)
+				sOut += tString(lCount ? "," : "") + "\"" + JsonEscape(it->second) + "\":" + cString::ToString(-it->first);
+			sOut += "}";
+		}
 		sOut += ",\"lights\":" + cString::ToString(lLightsTotal);
 		sOut += ",\"lights_point\":" + cString::ToString(lLights[eLightType_Point]);
 		sOut += ",\"lights_spot\":" + cString::ToString(lLights[eLightType_Spot]);

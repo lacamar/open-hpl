@@ -249,7 +249,8 @@ def main():
     ap.add_argument("--boot-timeout", type=float, default=900)
     ap.add_argument("--out", default=os.path.join(CONF, "results.json"))
     ap.add_argument("--compare", help="older results.json to diff verdicts against")
-    ap.add_argument("--scratch", default=os.environ.get("OPENHPL_SOMA_SCRATCH"))
+    ap.add_argument("--scratch", default=os.environ.get("OPENHPL_SOMA_SCRATCH") or os.path.join(
+        os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "open-hpl/soma-scratch"))
     args = ap.parse_args()
 
     if not args.scratch or not os.path.exists(os.path.join(args.scratch, "Soma.bin.aarch64")):
@@ -272,6 +273,14 @@ def main():
         names = [n for n in names if any(m in n for m in args.map)]
     if args.only_failed:
         names = [n for n in names if results["maps"].get(n, {}).get("failures", ["never run"])]
+
+    # Per-pid logs pile up; keep only those of the last day.
+    state = os.path.join(args.scratch, ".xdg/state/open-hpl/soma")
+    if os.path.isdir(state):
+        for f in os.listdir(state):
+            path = os.path.join(state, f)
+            if f.startswith("hpl-") and f.endswith(".log") and time.time() - os.path.getmtime(path) > 86400:
+                os.unlink(path)
 
     sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ohpl-sweep.sock")
     for name in names:

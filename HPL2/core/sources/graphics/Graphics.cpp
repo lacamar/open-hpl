@@ -222,6 +222,9 @@ namespace hpl {
 			AddMaterialType(hplNew( cMaterialType_Translucent, (this, apResources) ), "translucent");
 			AddMaterialType(hplNew( cMaterialType_Water, (this, apResources) ), "water");
 			AddMaterialType(hplNew( cMaterialType_Decal, (this, apResources) ), "decal");
+			// HPL3 triplanar type. Approximation: rendered as soliddiffuse with the
+			// mesh's own UVs and the *Side textures (see cMaterialManager::LoadFromFile).
+			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "projecteduv");
 
 
 			////////////////////////////////////////////////

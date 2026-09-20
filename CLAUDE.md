@@ -9,6 +9,9 @@ SOMA work follows `SOMA_PLAN.md`.
   `scripts/setup-test-scratch.sh`; deploy binaries only with `scripts/deploy-test-binary.sh`.
 - Control socket paths must be short (<108 bytes): use `$XDG_RUNTIME_DIR/ohpl-*.sock`.
 - Never `pkill -f` with a loose pattern; kill by PID.
+- Headless instances serialize on a flock. A leftover `Soma.bin.aarch64` or an orphaned
+  `soma-sweep.py` makes the next launch sit idle at 0% CPU: `pgrep -af Soma.bin` first.
+  SIGTERM takes minutes on big maps; use `kill -9 <pid>`.
 - `soma/conformance/expected.json` is generated from the game data. Never edit it by hand, and
   never add to `allowlist.json` without a reason taken from the data.
 - Shared `HPL2/core` changes must keep `ctest` green and Amnesia building.
@@ -23,6 +26,8 @@ scripts/soma-sweep.py --map 00_01_apartment  # one map, ~10 s
 scripts/soma-sweep.py                      # all 29 maps -> soma/conformance/results.json
 scripts/soma-sweep.py --only-failed --compare old.json
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
+scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
+scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
 ```
 
 ## State
@@ -47,14 +52,17 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `world_stats` | live counts by object type, world AABB, submeshes without material |
 | `render_stats` | draw calls, render-list sizes, lights rendered, GL errors, fps |
 | `frame_stats` | final-frame luminance mean/histogram, black/white/magenta fractions |
-| `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero of a G-buffer target |
+| `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation |
+| `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
+| `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth` |
 | `pick x= y=` | raw G-buffer values under a pixel |
 | `shader_report [failed_only=false]` | compile/link status + info log per shader |
 | `entity_info name=` | transform, AABB, mesh, per-submesh material/visibility |
-| `wait_frames n=` | replies after n rendered frames |
+| `wait_frames n= [max_ms=]` | replies after n rendered frames or the time cap |
 | `start_map map= [pos=]` | load a map (default: first PlayerStart), hides menus |
 | `camera_state` / `set_camera` | camera pose |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
-Prefer these over screenshots. Screenshots only for comparing against reference images.
+Localising a render bug: G-buffer targets 0-2 -> accumulation (4) -> `frame_stats`; the first
+stage whose numbers go wrong is where the bug is. Prefer these over screenshots. Screenshots only for comparing against reference images.
 Hangs: `gdb -p <pid> -batch -ex bt`. Crashes: `coredumpctl debug <pid>`.
