@@ -65,6 +65,7 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	eDeferredGBuffer cRendererDeferred::mGBufferType = eDeferredGBuffer_32Bit;
+	eTextureType cRendererDeferred::mGBufferTextureType = eTextureType_Rect;
 	int cRendererDeferred::mlNumOfGBufferTextures = 4;
 	bool cRendererDeferred::mbDepthCullLights = true;
 
@@ -231,8 +232,8 @@ namespace hpl {
 			//ePixelFormat pixelFormat = ePixelFormat_RGBA16;
 
 			tString sName = "G-BufferTexure"+cString::ToString(i);
-			mpGBufferTexture[0][i] = CreateRenderTexture(sName, mvScreenSize,pixelFormat,eTextureFilter_Nearest);
-			mpGBufferTexture[1][i] = CreateRenderTexture(sName+"_Reflection", vRelfectionSize, pixelFormat,eTextureFilter_Nearest);
+			mpGBufferTexture[0][i] = CreateRenderTexture(sName, mvScreenSize,pixelFormat,eTextureFilter_Nearest, mGBufferTextureType);
+			mpGBufferTexture[1][i] = CreateRenderTexture(sName+"_Reflection", vRelfectionSize, pixelFormat,eTextureFilter_Nearest, mGBufferTextureType);
 		}
 
 		////////////////////////////////////
@@ -310,7 +311,7 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Create Accumulation texture
-		mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",eTextureType_Rect,eTextureUsage_RenderTarget);
+		mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",mGBufferTextureType,eTextureUsage_RenderTarget);
 		mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA, NULL);
 		mpAccumBufferTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
@@ -897,10 +898,15 @@ namespace hpl {
 		//Since the texture v coordinate is reversed, need to do some math.
 		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
 		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
-		DrawQuad(	cVector2f(0,0),1,
-					cVector2f(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y ),
-					cVector2f(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y),
-					true);
+		cVector2f vUvMin(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y );
+		cVector2f vUvMax(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y);
+		// Rect textures take pixel coordinates, 2D textures normalized ones.
+		if(mGBufferTextureType != eTextureType_Rect)
+		{
+			vUvMin = vUvMin / mvScreenSizeFloat;
+			vUvMax = vUvMax / mvScreenSizeFloat;
+		}
+		DrawQuad(cVector2f(0,0),1, vUvMin, vUvMax, true);
 
 		////////////////////////////////////
 		// Global exposure (see cWorld::SetGlobalExposure()'s own comment) -

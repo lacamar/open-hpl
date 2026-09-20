@@ -502,6 +502,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// value) - same ordering constraint as SetHpslTranspileCallback()
 	// above.
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
+	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
 
 	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
 	// a real GPU occlusion query (GetOcclusionQuery()) to any light whose

@@ -145,6 +145,9 @@ namespace hpl {
 
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
+		// HPSL shaders sample the G-buffer/accumulation buffer as sampler2D;
+		// Dark Descent's GLSL uses sampler2DRect (the default).
+		static void SetGBufferTextureType(eTextureType aType){ mGBufferTextureType = aType; }
 		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
 
 		static void SetNumOfGBufferTextures(int alNum){ mlNumOfGBufferTextures = alNum;}
@@ -339,6 +342,7 @@ namespace hpl {
 		
 		//Static setting variables
 		static eDeferredGBuffer mGBufferType;
+		static eTextureType mGBufferTextureType;
 		static int mlNumOfGBufferTextures;
 		static bool mbDepthCullLights;
 
