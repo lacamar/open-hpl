@@ -71,6 +71,8 @@ namespace hpl {
 		void SetTimeCount(float afX);
 		int GetCurrentLowlevelHandle();
 
+		bool GetRawPixelsRGBAFloat(std::vector<float> &avOut);
+
 		/// SDL / OGL Specific ///////////
 
 		unsigned int GetTextureHandle();

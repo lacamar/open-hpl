@@ -1,5 +1,40 @@
 # Tasks
 
+- SOMA: apartment-darkness root-caused and fixed - vtx_vTangent was a declared-but-never-bound
+  GPU vertex attribute (2026-09-12)
+  - DONE: the long-running "SOMA apartment renders near-total black" investigation is resolved.
+    Added a `read_gbuffer_stats` headless command (numeric `glGetTexImage` readback of a real
+    G-buffer render target, on both Soma and Amnesia) that proved literally every RGB pixel of
+    the normal+depth target was exactly `0.0` or `NaN` - the signature of `normalize()` on a
+    genuine zero vector, not an unwritten target. An `OPENHPL_DUMP_HPSL_SHADERS_DIR` debug hook
+    (writes final transpiled GLSL straight to a file, sidestepping the known `Log()`/vsprintf
+    crash) then showed the real compiled vertex shader read `vtx_vTangent` as a plain, never-
+    bound GLSL generic `attribute` - `HpslTranspiler.cpp` had its own honest comment flagging
+    this as unwired, and a whole-engine grep confirmed zero `glVertexAttribPointer`/
+    `glBindAttribLocation` calls exist anywhere. Fixed with a one-line alias
+    (`vtx_vTangent` -> `gl_MultiTexCoord1` in `gmapVertexBuiltins`) - exactly what Dark Descent's
+    own hand-written shader already does with the identical real per-vertex tangent data
+    (`eVertexBufferElement_Texture1Tangent`, already uploaded, just never read under this name).
+    Verified live: `read_gbuffer_stats` now shows real signed varying normal data across the
+    whole apartment scene, zero NaNs, zero exact-zero pixels; Dark Descent's own G-buffer
+    unaffected; all 4 ctest suites green. Full writeup in PORTING_NOTES.md's newest section.
+    Getting an actual visual "lit apartment" screenshot proved separately flaky this session (a
+    stuck main-menu/fade overlay, unrelated to this fix - see PORTING_NOTES.md) - a good next
+    step for whoever continues is just retrying the click-through, or eyeballing it interactively.
+    `vtx_vBoneIndices`/`vtx_vBoneWeight` (skeletal bone data) remain genuinely unwired - real
+    follow-up work for skinned/animated meshes, out of scope here (static geometry never reaches
+    that code path).
+
+- SOMA: no save system exists yet ("Save and Exit" is a no-op) - a real feature to design and
+  build from scratch, not picked up this session
+  - OPEN: confirmed (again) in `soma/src/game/SomaMainMenu.cpp` - there is no SOMA save/load
+    implementation at all, just an honest log line. Dark Descent has a real `cLuxSaveHandler`
+    built on HPL2's generic `iSaveObject`/`iSaveData` framework (see `amnesia/src/game/
+    LuxSaveHandler.{h,cpp}`, `LuxSavedGame.{h,cpp}`) that SOMA needs an equivalent of, built from
+    scratch against SOMA's own game state (player, world, script/puzzle state - whatever exists
+    once SOMA has more gameplay than a free-fly debug camera). Scope as a real feature, not a
+    patch, if picked up.
+
 - Shared engine: mute audio while window is unfocused, resume on refocus (2026-09-08)
   - DONE: user reported audio kept playing continuously while alt-tabbed away, on every game
     module. Fixed at the shared `HPL2/core` engine layer, not gated on any per-game flag.

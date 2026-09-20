@@ -30,6 +30,7 @@
 #include "resources/FileSearcher.h"
 
 #include <regex>
+#include <cstdlib>
 
 #ifdef WIN32
 #include <io.h>
@@ -64,6 +65,45 @@ namespace hpl {
 		{
 			apShader->AddSamplerUnit((*it)[1].str(), cString::ToInt((*it)[2].str().c_str(), 0));
 		}
+	}
+
+	// Debug-only: writes a transpiled HPSL->GLSL shader's final real source
+	// straight to a file (fwrite, never Log()/vsprintf - see PORTING_NOTES.md's
+	// SOMA lighting investigation for the real stack-buffer-overflow crash
+	// that came from routing a multi-KB shader source through Log()'s fixed
+	// 4096-byte buffer) so it can actually be read for the first time. Opt-in
+	// via OPENHPL_DUMP_HPSL_SHADERS_DIR (no-op, zero overhead, when unset) -
+	// never fires for Dark Descent/AMFP, which never register a transpile
+	// callback and never reach either call site below.
+	// Every combo compile reuses the same bare "asName" (e.g.
+	// "deferred_base_vtx.glsl" for the Z/Diffuse/Illumination passes alike -
+	// see CreateShader()'s "do NOT add the shader as a resource" comment
+	// below: apVarContainer-driven compiles never touch the resource cache,
+	// so the same source file gets re-preprocessed per-combo, on demand),
+	// so a plain per-name dump file would just keep getting overwritten by
+	// whichever combo happened to compile last. An incrementing counter
+	// gives each real compile its own file instead; since a vertex shader
+	// and its paired fragment shader are always compiled back-to-back (see
+	// CreateProgramFromShaders() below), consecutive indices pair up.
+	static int gnHpslDumpCounter = 0;
+
+	static void DumpTranspiledShaderIfRequested(const tString &asName, const tString &asGlsl)
+	{
+		const char *pDumpDir = getenv("OPENHPL_DUMP_HPSL_SHADERS_DIR");
+		if(pDumpDir == NULL) return;
+
+		tString sSanitizedName = asName;
+		for(size_t i=0; i<sSanitizedName.size(); ++i)
+		{
+			if(sSanitizedName[i] == '/' || sSanitizedName[i] == '\\') sSanitizedName[i] = '_';
+		}
+
+		tString sPath = tString(pDumpDir) + "/" + cString::ToString(gnHpslDumpCounter++) + "_" + sSanitizedName + ".glsl";
+		FILE *pFile = cPlatform::OpenFile(cString::To16Char(sPath), _W("wb"));
+		if(pFile == NULL) return;
+
+		fwrite(asGlsl.data(), 1, asGlsl.size(), pFile);
+		fclose(pFile);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -302,6 +342,7 @@ namespace hpl {
 					return NULL;
 				}
 				sParsedOutput = sGlsl;
+				DumpTranspiledShaderIfRequested(asName, sGlsl);
 			}
 
 			/////////////////////////////////
@@ -392,6 +433,8 @@ namespace hpl {
 					tString sGlsl, sTranspileError;
 					if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError))
 					{
+						DumpTranspiledShaderIfRequested(asName, sGlsl);
+
 						pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
 						pShader->SetFullPath(sHpslPath);
 

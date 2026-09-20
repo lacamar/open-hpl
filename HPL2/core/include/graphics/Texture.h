@@ -125,6 +125,19 @@ namespace hpl {
 		virtual void SetTimeCount(float afX)=0;
 		virtual int GetCurrentLowlevelHandle()=0;
 
+		// Reads this texture's own GPU-resident pixel data back to the CPU
+		// as RGBA floats (GL_RGBA/GL_FLOAT into glGetTexImage - converts from
+		// whatever the real internal storage format is, unsigned-normalized
+		// or float, so callers never need to branch on GetPixelFormat()).
+		// Added for headless numeric G-buffer readback (see
+		// set_debug_gbuffer/read_gbuffer_stats in Soma/LuxBase.cpp) - a
+		// visual quad-view debug render can itself be wrong (bad texture
+		// unit, bad blend state) in a way that looks identical to "the
+		// G-buffer was never written," so this reads the real texture
+		// memory directly instead of trusting another render pass. Returns
+		// false (avOut left untouched) if this texture has no GPU data yet.
+		virtual bool GetRawPixelsRGBAFloat(std::vector<float> &avOut)=0;
+
 	protected:
 		eTextureUsage mUsage;
 		eTextureType mType;

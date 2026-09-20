@@ -41,12 +41,45 @@ namespace
 	// and vtx_vColor are verified (against clear_vtx.hpsl); the rest are
 	// unverified guesses by analogy with HPL2's own GLSL shaders' use of
 	// the same fixed-function built-ins - see HpslTranspiler.h.
+	// vtx_vTangent -> gl_MultiTexCoord1 (added after live headless numeric
+	// G-buffer readback root-caused the SOMA "apartment renders near-total
+	// black" investigation - see PORTING_NOTES.md): with this name absent
+	// from this table, RewriteVertexAttribute() below declared it as a
+	// plain, never-bound GLSL 120 generic "attribute" instead - valid
+	// syntax, but this engine's C++ vertex-upload code has no
+	// glVertexAttribPointer/glBindAttribLocation call anywhere for any
+	// name (confirmed via a whole-engine grep), so it silently read GL's
+	// default generic-attribute value (0,0,0,1) for every vertex of every
+	// real normal-mapped material. px_vTangent/px_vBinormal (both derived
+	// from it) then normalize()d that zero vector - 0 on this GPU/driver's
+	// rsqrt, occasionally NaN - poisoning the deferred G-buffer's normal
+	// target for the ~all of the apartment's normal-mapped surfaces (live-
+	// confirmed via read_gbuffer_stats: literally 100% of the target's RGB
+	// pixels were exactly 0.0 or NaN, never anything else).
+	//
+	// gl_MultiTexCoord1 is exactly right, not just convenient: this
+	// engine's own real vertex-buffer format (GraphicsTypes.cpp's
+	// GetVertexElementTextureUnit()) already binds real per-vertex tangent
+	// data (eVertexBufferElement_Texture1Tangent, 4 components - xyz
+	// tangent + w handedness, matching cVector4f vtx_vTangent exactly) to
+	// GL texture unit 1 for this exact purpose - it's precisely what Dark
+	// Descent's own hand-written deferred_base_vtx.glsl already reads via
+	// gl_MultiTexCoord1 for the identical tangent data. Confirmed safe
+	// against this table's own preexisting vtx_vTexCoord1->gl_MultiTexCoord1
+	// entry just below (the documented worry: a combo needing both a real
+	// second UV channel and normal mapping would silently alias the two):
+	// eVertexBufferElement_Texture1 (a second UV channel) shares that exact
+	// same texture-unit-1 slot in this engine's own mesh format, so no real
+	// mesh here can ever carry both a second UV channel and tangent data at
+	// once - the same structural limitation Dark Descent's own engine
+	// already has, not a new one introduced by this alias.
 	const std::map<tString, tString> gmapVertexBuiltins = {
 		{"vtx_vPosition", "gl_Vertex"},
 		{"vtx_vColor", "gl_Color"},
 		{"vtx_vNormal", "gl_Normal"},
 		{"vtx_vTexCoord0", "gl_MultiTexCoord0"},
 		{"vtx_vTexCoord1", "gl_MultiTexCoord1"},
+		{"vtx_vTangent", "gl_MultiTexCoord1"},
 	};
 
 	tString ReplaceTypeNames(const tString& asSrc)
@@ -871,35 +904,30 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 			else
 			{
 				// No GLSL 120 fixed-function built-in carries this semantic
-				// (e.g. vtx_vTangent, vtx_vBoneIndices, vtx_vBoneWeight in
-				// deferred_base_vtx.hpsl - real SOMA material shaders that
-				// need per-vertex tangent/skinning data, which GL's legacy
-				// fixed-function pipeline has no dedicated attribute for).
-				// Declared as an ordinary GLSL 120 "attribute" of the same
-				// name instead - valid syntax, and no substitution needed
-				// since the body already spells the name this way.
+				// (vtx_vBoneIndices/vtx_vBoneWeight in deferred_base_vtx.hpsl
+				// - real skeletal-mesh per-vertex bone data, which GL's
+				// legacy fixed-function pipeline has no dedicated attribute
+				// for; vtx_vTangent used to hit this branch too, until it
+				// was added to gmapVertexBuiltins above - see that table's
+				// own comment for why gl_MultiTexCoord1 is exactly right for
+				// it). Declared as an ordinary GLSL 120 "attribute" of the
+				// same name instead - valid syntax, and no substitution
+				// needed since the body already spells the name this way.
 				//
-				// Deliberately NOT aliased onto a spare gl_MultiTexCoordN
-				// slot the way this engine's own hand-written
-				// deferred_base_vtx.glsl packs tangent data into
-				// gl_MultiTexCoord1: that shader has no separate second-UV
-				// input to conflict with, but HPSL shaders declare
-				// vtx_vTexCoord1 (mapped to gl_MultiTexCoord1 above) *and*
-				// vtx_vTangent as distinct main() parameters - aliasing
-				// both to the same built-in would silently corrupt data
-				// whenever a material uses both (UseUvCoord1 +
-				// UseNormalMapping together).
-				//
-				// NOT yet wired end-to-end: something on the C++ mesh-
-				// upload side (cVertexBuffer -> LowLevelGraphicsSDL, whoever
-				// owns cGpuShaderManager::CreateShader()'s calling
-				// convention) still needs to glBindAttribLocation /
-				// glVertexAttribPointer this same attribute name to actual
-				// per-vertex tangent/bone data for it to do anything beyond
-				// compile - see PORTING_NOTES.md "SOMA" section. Tracked as
-				// a follow-up, not attempted in this pass (out of this
+				// STILL NOT wired end-to-end for these two (unlike
+				// vtx_vTangent above): something on the C++ mesh-upload side
+				// (cVertexBuffer -> LowLevelGraphicsSDL, whoever owns
+				// cGpuShaderManager::CreateShader()'s calling convention)
+				// still needs to glBindAttribLocation/glVertexAttribPointer
+				// these two attribute names to real per-vertex bone-index/
+				// weight data for skeletal (skinned) meshes to animate
+				// correctly - see PORTING_NOTES.md "SOMA" section. Tracked
+				// as a follow-up, not attempted in this pass (out of this
 				// transpiler's scope: it only has the shader source, not
-				// the mesh format or draw-call setup).
+				// the mesh format or draw-call setup). Static, non-skeletal
+				// geometry (the vast majority of what's currently visible,
+				// e.g. the apartment's furniture) never reaches this code
+				// at all, since UseSkeleton is off for it.
 				sGlobals += "attribute " + param.msType + " " + param.msName + ";\n";
 			}
 		}

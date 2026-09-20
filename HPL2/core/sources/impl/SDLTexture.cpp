@@ -343,6 +343,24 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cSDLTexture::GetRawPixelsRGBAFloat(std::vector<float> &avOut)
+	{
+		unsigned int lHandle = GetTextureHandle();
+		if(lHandle == 0) return false;
+
+		GLenum GLTarget = GetGLTextureTargetEnum(mType);
+
+		avOut.resize(mvSize.x * mvSize.y * 4);
+
+		glBindTexture(GLTarget, lHandle);
+		glGetTexImage(GLTarget, 0, GL_RGBA, GL_FLOAT, &avOut[0]);
+		glBindTexture(GLTarget, 0);
+
+		return true;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cSDLTexture::SetFilter(eTextureFilter aFilter)
 	{
 		if(mFilter == aFilter) return;

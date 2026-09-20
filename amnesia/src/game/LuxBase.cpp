@@ -19,6 +19,13 @@
 
 #include "LuxBase.h"
 #include "graphics/RendererDeferred.h"
+#include "graphics/Graphics.h"
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Texture.h"
+
+#include <vector>
+#include <limits>
+#include <cmath>
 
 #if defined(__linux__)
 #include <unistd.h>
@@ -435,6 +442,91 @@ static void cLuxBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadle
 	cRendererDeferred::SetDebugRenderFrameBuffers(aReq.GetBool("enabled", false));
 }
 
+// Numeric comparison point for SomaBase.cpp's identical read_gbuffer_stats -
+// see there for the full rationale. Registered here purely to confirm known-
+// working Dark Descent's real min/max/mean pixel values for the same target
+// index, to compare against SOMA's own readback.
+static void cLuxBase_HeadlessCmd_ReadGbufferStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+
+	iRenderer *pRenderer = pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main);
+	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pRenderer);
+	if(pDeferred == NULL)
+	{
+		aResp.SetError("no deferred renderer yet");
+		return;
+	}
+
+	int lTarget = aReq.GetInt("target", 1);
+	iTexture *pTex = pDeferred->GetDebugGBufferTexture(lTarget);
+	if(pTex == NULL)
+	{
+		aResp.SetError("no such G-buffer target");
+		return;
+	}
+
+	std::vector<float> vPixels;
+	if(pTex->GetRawPixelsRGBAFloat(vPixels) == false)
+	{
+		aResp.SetError("G-buffer target has no GPU data yet");
+		return;
+	}
+
+	int lWidth = pTex->GetWidth();
+	int lHeight = pTex->GetHeight();
+
+	float fMin[4], fMax[4], fSum[4];
+	int lNanCount[4], lZeroCount[4];
+	for(int i=0; i<4; ++i)
+	{
+		fMin[i] = std::numeric_limits<float>::max();
+		fMax[i] = -std::numeric_limits<float>::max();
+		fSum[i] = 0;
+		lNanCount[i] = 0;
+		lZeroCount[i] = 0;
+	}
+
+	size_t lNumPixels = (size_t)lWidth * (size_t)lHeight;
+	for(size_t lPix=0; lPix<lNumPixels; ++lPix)
+	{
+		for(int c=0; c<4; ++c)
+		{
+			float fVal = vPixels[lPix*4 + c];
+			if(std::isnan(fVal)) { ++lNanCount[c]; continue; }
+			if(fVal == 0.0f) ++lZeroCount[c];
+			if(fVal < fMin[c]) fMin[c] = fVal;
+			if(fVal > fMax[c]) fMax[c] = fVal;
+			fSum[c] += fVal;
+		}
+	}
+
+	aResp.Set("width", lWidth);
+	aResp.Set("height", lHeight);
+
+	const char *pChannelNames[4] = {"r", "g", "b", "a"};
+	for(int c=0; c<4; ++c)
+	{
+		size_t lFiniteCount = lNumPixels - lNanCount[c];
+		aResp.Set(tString(pChannelNames[c]) + "_min", fMin[c]);
+		aResp.Set(tString(pChannelNames[c]) + "_max", fMax[c]);
+		aResp.Set(tString(pChannelNames[c]) + "_mean", lFiniteCount > 0 ? (fSum[c] / (float)lFiniteCount) : 0.0f);
+		aResp.Set(tString(pChannelNames[c]) + "_nan_count", lNanCount[c]);
+		aResp.Set(tString(pChannelNames[c]) + "_zero_count", lZeroCount[c]);
+	}
+
+	int lSampleX = aReq.GetInt("x", lWidth/2);
+	int lSampleY = aReq.GetInt("y", lHeight/2);
+	if(lSampleX >= 0 && lSampleX < lWidth && lSampleY >= 0 && lSampleY < lHeight)
+	{
+		size_t lIdx = ((size_t)lSampleY * lWidth + lSampleX) * 4;
+		aResp.Set("sample_r", vPixels[lIdx+0]);
+		aResp.Set("sample_g", vPixels[lIdx+1]);
+		aResp.Set("sample_b", vPixels[lIdx+2]);
+		aResp.Set("sample_a", vPixels[lIdx+3]);
+	}
+}
+
 static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cLuxBase *pBase = (cLuxBase*)apUserData;
@@ -607,6 +699,7 @@ bool cLuxBase::Init(const tString &asCommandline)
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
 		pCtrl->RegisterHandler("run_script", cLuxBase_HeadlessCmd_RunScript, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cLuxBase_HeadlessCmd_SetDebugGbuffer, this);
+		pCtrl->RegisterHandler("read_gbuffer_stats", cLuxBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
 		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
 		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);

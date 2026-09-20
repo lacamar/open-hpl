@@ -189,6 +189,14 @@ namespace hpl {
 		// fixed-function default.
 		iGpuProgram* GetSkyBoxProgram(){ return mpSkyBoxProgram; }
 
+		// Public alias of the private GetBufferTexture() for headless numeric
+		// G-buffer readback (see read_gbuffer_stats in Soma/LuxBase.cpp) -
+		// lets a headless command pull real GPU pixel data (iTexture::
+		// GetRawPixelsRGBAFloat()) straight from a live render target
+		// instead of only ever seeing it through RenderGbufferContent()'s
+		// own quad-view draw.
+		iTexture* GetDebugGBufferTexture(int alIdx){ return GetBufferTexture(alIdx); }
+
 	private:
 		void CopyToFrameBuffer();
 		void SetupRenderList();

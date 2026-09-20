@@ -5527,3 +5527,132 @@ unconfirmed, flagged for whoever continues this.
 Not resolved this pass; both this comparison test and the fixes from the earlier lighting section
 remain real, additive progress. `set_debug_gbuffer` is now available on both Amnesia and Soma for
 whoever picks this up next.
+
+## SOMA rendering darkness: ROOT-CAUSED AND FIXED - vtx_vTangent was a real GPU attribute that
+## nothing ever bound, silently zeroing every normal-mapped surface's G-buffer normal
+
+Direct continuation of the two sections above. The prior session's "natural next step" - numeric
+readback of the actual G-buffer texture values, not just the visual quad-view - is exactly what
+resolved this.
+
+**New tool: `read_gbuffer_stats` headless command** (`SomaBase.cpp`/`LuxBase.cpp`, plus a small
+shared addition: `iTexture::GetRawPixelsRGBAFloat()` in `Texture.h`/`SDLTexture.cpp`, wrapping
+`glGetTexImage(target, 0, GL_RGBA, GL_FLOAT, ...)` - converts whatever the real internal storage
+format is, unsigned-normalized or float, so no `GetPixelFormat()` branching needed - and a public
+`cRendererDeferred::GetDebugGBufferTexture(int)` alias of the existing private `GetBufferTexture()`).
+Reads a real G-buffer render target's actual GPU pixel data straight back via `glGetTexImage`,
+bypassing `RenderGbufferContent()`'s own quad-view draw entirely, and reports per-channel min/max/
+mean/NaN-count/zero-count plus one sampled pixel. Added specifically because a black quad-view is
+consistent with *either* "the target was never written" *or* "the debug view's own draw is wrong
+while the real target holds good data" - this settles it conclusively either way.
+
+**First real readback, at the same apartment camera pose as before, target=1 (normal+depth)**:
+`a` (depth) came back with real, sane, varying values (`0.00025`-`0.005817`) - confirming (contrary
+to the leading theory two sessions ago) that the fragment shader **does** reach and write this
+attachment. But `r`/`g`/`b` (the normal) told a very specific story: **every single one of the
+1280×720 = 921600 pixels was either exactly `0.0` or `NaN` - `917016` zeros and `4584` NaNs, no
+third value anywhere on screen.** A visual "solid black" view is consistent with lots of things; "no
+pixel ever holds any value except exactly zero or IEEE NaN" is a much narrower signature - textbook
+`normalize()` of a genuine zero-length vector (`0/0`), not an unwritten texture, a clamped/misencoded
+value, or a framebuffer-attachment bug (all three of which were the prior sessions' leading
+theories, and are now ruled out by this specific bit pattern).
+
+**Tracing the zero vector to its source**: added a second small debug tool,
+`OPENHPL_DUMP_HPSL_SHADERS_DIR` (`GpuShaderManager.cpp`'s `DumpTranspiledShaderIfRequested()`,
+called from both of `cGpuShaderManager::CreateShader()`'s HPSL-transpile call sites) - writes each
+transpiled shader's **final real compiled GLSL** straight to a file via `fwrite()`, never
+`Log()`/`vsprintf` (a prior session's own shader-source diagnostic attempt crashed hard on
+`LowLevelSystemSDL.cpp`'s unchecked 4096-byte `vsprintf` buffer - this sidesteps that entirely).
+Opt-in, zero-cost when unset, never fires for Dark Descent/AMFP (they never register a transpile
+callback). One real wrinkle: every combo compile of a given HPSL file reuses the exact same bare
+resource name (e.g. `deferred_base_vtx.glsl` for the Z/Diffuse/Illumination passes alike - confirmed
+via `CreateShader()`'s own "if we have a variable container do NOT add the shader as a resource"
+comment: combo compiles never touch the resource cache, they just re-preprocess the same source file
+on demand every time), so a plain per-name dump file kept getting overwritten by whichever combo
+happened to compile last. Fixed by prefixing each dump with an incrementing counter - since a vertex
+shader and its paired fragment shader always compile back-to-back
+(`CreateProgramFromShaders()`/`CreateShader()`), consecutive indices pair up (e.g.
+`28_deferred_base_vtx.glsl` pairs with `29_deferred_gbuffer_solid_frag.glsl`).
+
+Reading the real dumped, final GLSL for a normal-mapped apartment material's vertex shader (paired
+with a fragment shader that does the classic `UnpackNormalmapYW()` + TBN-blend normal computation)
+showed genuinely correct code: `mat3 mtxNormal = mat3(gl_NormalMatrix); px_vNormal =
+normalize((mtxNormal * gl_Normal)); px_vTangent = normalize((mtxNormal * vtx_vTangent.xyz));
+px_vBinormal = normalize((mtxNormal * cross(vtx_vTangent.xyz, gl_Normal) * vtx_vTangent.w));` -
+identical in shape and semantics to Dark Descent's own hand-written
+`gvNormal = normalize(gl_NormalMatrix * gl_Normal);` line, which is known-working on this exact
+hardware. `gl_NormalMatrix`/`gl_Normal` are real GL fixed-function built-ins, correctly driven by
+this engine's existing `iRenderFunctions::SetModelViewMatrix()` (confirmed: position transforms
+correctly too, and `gl_ModelViewProjectionMatrix`/`gl_NormalMatrix` are both intrinsically derived
+from the same GL_MODELVIEW matrix-stack state, so one can't be right while the other is silently
+wrong). But `vtx_vTangent` is different: it's declared as a plain GLSL 120 generic `attribute vec4
+vtx_vTangent;`, **not** a fixed-function built-in.
+
+**The actual bug, found by reading `HpslTranspiler.cpp`'s own honest comment right next to that
+`attribute` declaration**: "NOT yet wired end-to-end: something on the C++ mesh-upload side ...
+still needs to `glBindAttribLocation`/`glVertexAttribPointer` this same attribute name to actual
+per-vertex tangent/bone data for it to do anything beyond compile ... Tracked as a follow-up, not
+attempted in this pass." Confirmed via a whole-engine grep: **zero calls to
+`glVertexAttribPointer`/`glEnableVertexAttribArray`/`glBindAttribLocation`/`glGetAttribLocation`
+anywhere in this codebase.** A GLSL generic vertex attribute that's declared but never bound reads
+GL's default current-attribute-value, `(0,0,0,1)`, for every single vertex, every draw call - a real
+compile-and-link-clean, silently-wrong-data bug, exactly the shape this project's own `TASKS.md`
+already flagged as a known, deliberately-deferred gap when the transpiler was first built. Its
+downstream consequence for the deferred G-buffer specifically had not yet been connected to the
+"apartment renders too dark" symptom until this session: with `vtx_vTangent.xyz` constant zero,
+`px_vTangent = normalize(mtxNormal * (0,0,0))` is `normalize()` of an exact zero vector for every
+vertex of every normal-mapped material - `0` on this GPU/driver's rsqrt approximation the vast
+majority of the time, occasionally genuine IEEE `NaN` (the same split observed live: `0` or `NaN`,
+nothing else) - and `px_vBinormal` (which depends on `cross(vtx_vTangent.xyz, ...)`) is zeroed the
+exact same way. The fragment shader's `vNormal.x * px_vTangent + vNormal.y * px_vBinormal +
+vNormal.z * px_vNormal` then sums a poisoned (`0` or `NaN`) value into the final `normalize()`,
+overwhelming the one genuinely-correct term (`px_vNormal`) regardless of its own value - explaining
+why literally 100% of the apartment's visible pixels were affected: real HPL3/SOMA interior
+materials are essentially all normal-mapped.
+
+**The fix, one line plus a removed dead branch** (`HpslTranspiler.cpp`'s `gmapVertexBuiltins`
+table): `{"vtx_vTangent", "gl_MultiTexCoord1"}`. Not a workaround - this is exactly what Dark
+Descent's own hand-written `deferred_base_vtx.glsl` already does with the identical underlying
+per-vertex data (its own comment: "packs tangent data into gl_MultiTexCoord1"), and this engine's
+real, shared vertex-buffer format already backs it with genuine per-vertex tangent data:
+`GraphicsTypes.cpp`'s `GetVertexElementTextureUnit()` binds `eVertexBufferElement_Texture1Tangent`
+(4 components - xyz tangent + w handedness, matching `cVector4f vtx_vTangent` exactly) to GL texture
+unit 1, via the ordinary `glTexCoordPointer()` path every mesh already goes through
+(`VertexBufferOGL_VBO.cpp`'s `SetVertexStates()` - no new C++ vertex-upload code needed at all, the
+data was already being uploaded and bound the whole time, just never read by SOMA's own shader
+under this name). Double-checked the transpiler's own original worry - aliasing `vtx_vTangent` onto
+the same built-in `vtx_vTexCoord1` already claims would silently corrupt a material using both a
+real second UV channel and normal mapping simultaneously - against that same vertex-buffer format:
+`eVertexBufferElement_Texture1` (a real second UV channel) shares the *exact same* texture-unit-1
+slot as `eVertexBufferElement_Texture1Tangent`, so this engine's own mesh format can never carry
+both on the same mesh anyway; Dark Descent has this identical structural limitation already, this
+alias doesn't introduce a new one. `vtx_vBoneIndices`/`vtx_vBoneWeight` (skeletal/skinned-mesh bone
+data) remain genuinely unwired - real follow-up work, but out of scope here since static geometry
+(everything currently visible, e.g. the apartment's furniture) never reaches that code path at all
+(`UseSkeleton` is off for it).
+
+**Verified**: `read_gbuffer_stats target=1` at the identical apartment camera pose now reports real,
+signed, varying data across the whole screen - `r` in `[-0.69, 0.93]`, `g` in `[-0.48, 0.90]`, `b`
+in `[-0.93, 0.98]`, zero NaNs, zero exact-zero pixels, depth unchanged - a textbook correctly-lit
+tangent-space-blended normal buffer, not a degenerate one. Cross-checked Dark Descent's own
+`read_gbuffer_stats` (real `02_entrance_hall.map`, added this session for exactly this comparison)
+still reports equally healthy real data post-fix (`r`/`g`/`b` each spanning their full `[0,1]`
+range, zero NaNs) - this fix is SOMA-only (`HpslTranspiler.cpp`, never linked into or reachable by
+Dark Descent/AMFP) and doesn't touch shared rendering code's *behavior*, only adds new opt-in-only
+debug hooks (`read_gbuffer_stats`, `GetRawPixelsRGBAFloat()`, `OPENHPL_DUMP_HPSL_SHADERS_DIR`) to
+`HPL2/core`. All 4 ctest suites green throughout.
+
+Getting an actual full-color "the lit apartment" screenshot to eyeball proved separately flaky this
+session in a way unrelated to this fix: a forced `start_map` while the main-menu GUI/fade overlay is
+still active, and even a clean New-Game→difficulty→Start-Game click-through followed by waiting for
+the real intro cutscene to finish, both left the headless window stuck on a blown-out white frame
+showing the main-menu content bleeding through (`camera_state` confirms the real apartment *is*
+loaded and the camera *is* at `PlayerStartArea_1` throughout - this is a stuck compositing/fade
+layer, not a failed load). Not chased further this session since it's orthogonal to the darkness
+bug - the numeric G-buffer readback is the more reliable diagnostic here anyway (as the prior
+session's own experience with real-menu-click flakiness already established), and it directly
+proves the fix at the data level. Whoever wants the visual confirmation screenshot should retry
+click-through-then-wait once or twice more (this looked like a timing/input race, not a hard
+failure) or drive it interactively instead of headlessly.
+
+Shipped as 1.3.24-1.
