@@ -234,7 +234,9 @@ def judge(name, result, expected, allow):
 
     frame = result.get("frame")
     if frame:
-        if not LUM_MIN <= frame["lum_mean"] <= LUM_MAX:
+        # A map with no lights at all (00_00_intro: one plane behind the slideshow GUI) is black by data.
+        has_lights = not exp or exp["tracks"]["Light"]["xml"] > 0
+        if has_lights and not LUM_MIN <= frame["lum_mean"] <= LUM_MAX:
             fails.append(f"lum_mean:{frame['lum_mean']:.1f}")
         if frame["magenta_frac"] > MAGENTA_MAX:
             fails.append(f"magenta:{frame['magenta_frac']:.3f}")
