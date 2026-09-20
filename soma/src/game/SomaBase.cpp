@@ -16,6 +16,8 @@
 #include "graphics/Graphics.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Texture.h"
+#include "system/EngineDiagnostics.h"
+#include "resources/WorldLoaderHpm.h"
 
 #include <vector>
 #include <limits>
@@ -212,7 +214,7 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 	}
 
 	cVector3f vPos(aReq.GetFloat("x", 0), aReq.GetFloat("y", 1.7f), aReq.GetFloat("z", 0));
-	tString sStartPosName = aReq.GetString("pos", "");
+	tString sStartPosName = aReq.GetString("pos", aReq.HasKey("x") ? "" : "*");
 
 	tString sError;
 	if(pBase->LoadMap(sMap, vPos, sError, sStartPosName) == false)
@@ -220,6 +222,72 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 		aResp.SetError(sError);
 		return;
 	}
+	pBase->HideMenusForHeadlessMapStart();
+
+	aResp.SetRaw("load_report", cWorldLoaderHpm::GetLastLoadReportJson());
+}
+
+static void cSomaBase_HeadlessCmd_LoadReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	const tString &sReport = cWorldLoaderHpm::GetLastLoadReportJson();
+	if(sReport == "") { aResp.SetError("no hpm map loaded yet"); return; }
+	aResp.SetRaw("load_report", sReport);
+}
+
+static void cSomaBase_HeadlessCmd_WorldStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentWorld() == NULL) { aResp.SetError("no world loaded"); return; }
+	aResp.SetRaw("world", cEngineDiagnostics::GetWorldStatsJson(pBase->GetCurrentWorld()));
+}
+
+static void cSomaBase_HeadlessCmd_RenderStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentViewport() == NULL) { aResp.SetError("no viewport yet"); return; }
+	aResp.SetRaw("render", cEngineDiagnostics::GetRenderStatsJson(pBase->GetCurrentViewport(), pBase->mpEngine->GetGraphics()));
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
+}
+
+static void cSomaBase_HeadlessCmd_EntityInfo(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentWorld() == NULL) { aResp.SetError("no world loaded"); return; }
+	tString sInfo = cEngineDiagnostics::GetEntityInfoJson(pBase->GetCurrentWorld(), aReq.GetString("name", ""));
+	if(sInfo == "") { aResp.SetError("no mesh entity with that name"); return; }
+	aResp.SetRaw("entity", sInfo);
+}
+
+// Raw G-buffer values under one pixel: target 0 color, 1 normal+depth, 2 specular.
+static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
+	if(pDeferred == NULL) { aResp.SetError("no deferred renderer yet"); return; }
+
+	tString sOut = "[";
+	for(int lTarget=0; lTarget<3; ++lTarget)
+	{
+		iTexture *pTex = pDeferred->GetDebugGBufferTexture(lTarget);
+		std::vector<float> vPixels;
+		if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("G-buffer target has no GPU data yet"); return; }
+
+		int lX = cMath::Clamp(aReq.GetInt("x", pTex->GetWidth()/2), 0, pTex->GetWidth()-1);
+		int lY = cMath::Clamp(aReq.GetInt("y", pTex->GetHeight()/2), 0, pTex->GetHeight()-1);
+		// GL rows are bottom-up, request coordinates are top-down.
+		size_t lIdx = ((size_t)(pTex->GetHeight()-1-lY) * pTex->GetWidth() + lX) * 4;
+
+		if(lTarget>0) sOut += ",";
+		sOut += "[";
+		for(int c=0; c<4; ++c)
+		{
+			float fVal = vPixels[lIdx+c];
+			if(c>0) sOut += ",";
+			sOut += std::isnan(fVal) ? tString("null") : cString::ToString(fVal, 6, true);
+		}
+		sOut += "]";
+	}
+	aResp.SetRaw("gbuffer", sOut + "]");
 }
 
 // "forward"/"backward"/"left"/"right"/"jump" -> eSomaPlayerAction, shared by
@@ -495,6 +563,11 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
 		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
+		pCtrl->RegisterHandler("load_report", cSomaBase_HeadlessCmd_LoadReport, this);
+		pCtrl->RegisterHandler("world_stats", cSomaBase_HeadlessCmd_WorldStats, this);
+		pCtrl->RegisterHandler("render_stats", cSomaBase_HeadlessCmd_RenderStats, this);
+		pCtrl->RegisterHandler("entity_info", cSomaBase_HeadlessCmd_EntityInfo, this);
+		pCtrl->RegisterHandler("pick", cSomaBase_HeadlessCmd_Pick, this);
 		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
 		pCtrl->RegisterHandler("keybind_set", cSomaBase_HeadlessCmd_KeybindSet, this);
 		pCtrl->RegisterHandler("action_triggered", cSomaBase_HeadlessCmd_ActionTriggered, this);
@@ -513,6 +586,13 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// OnSplashFinished(), called back from cSomaSplash once its sequence
 	// ends) load SOMA's own declared main menu scene. No map is loaded
 	// synchronously here anymore - see SomaSplash.h/cpp.
+	// Headless sweeps: no splash, no first-run gamma screen.
+	if (getenv("OPENHPL_SOMA_SKIP_BOOT") != NULL)
+	{
+		ProceedPastBoot();
+		return true;
+	}
+
 	mpSplash = hplNew(cSomaSplash, (mpEngine, this));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpSplash);
 
@@ -559,7 +639,7 @@ void cSomaBase::ProceedPastBoot()
 	if (pTestMap != NULL && pTestMap[0] != '\0')
 	{
 		tString sError;
-		tString sStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS") ? getenv("OPENHPL_SOMA_MAP_STARTPOS") : "";
+		tString sStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS") ? getenv("OPENHPL_SOMA_MAP_STARTPOS") : "*";
 		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, sStartPos) == false)
 		{
 			Log("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s), falling back to the main menu scene\n",
@@ -1218,7 +1298,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	bool bFoundArea = false;
 	if (asStartPosName != "")
 	{
-		cStartPosEntity *pStartPos = pNewWorld->GetStartPosEntity(asStartPosName);
+		// "*" = the map's first PlayerStart area
+		cStartPosEntity *pStartPos = asStartPosName == "*" ? pNewWorld->GetFirstStartPosEntity()
+															: pNewWorld->GetStartPosEntity(asStartPosName);
 		if (pStartPos)
 		{
 			vAreaPos = pStartPos->GetWorldMatrix().GetTranslation();
@@ -1294,6 +1376,11 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 }
 
 //-----------------------------------------------------------------------
+
+void cSomaBase::HideMenusForHeadlessMapStart()
+{
+	if (mpMainMenu) mpMainMenu->SetVisible(false);
+}
 
 void cSomaBase::ExitTestMap()
 {

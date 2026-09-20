@@ -116,6 +116,8 @@ namespace hpl {
 		void Set(const tString &asKey, float afVal);
 		void Set(const tString &asKey, int alVal);
 		void Set(const tString &asKey, bool abVal);
+		// asJson is inserted verbatim - nested objects/arrays.
+		void SetRaw(const tString &asKey, const tString &asJson);
 
 		tString ToJson() const;
 
@@ -185,6 +187,8 @@ namespace hpl {
 		void CmdSetFocusWait(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		void CmdInput(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		void CmdResizeWindow(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		void CmdShaderReport(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		void CmdFrameStats(const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 
 		static void SCmdPing(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdQuit(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
@@ -193,6 +197,8 @@ namespace hpl {
 		static void SCmdSetFocusWait(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdInput(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 		static void SCmdResizeWindow(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		static void SCmdShaderReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
+		static void SCmdFrameStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp);
 
 		cEngine *mpEngine;
 		tString msSocketPath;
@@ -204,6 +210,15 @@ namespace hpl {
 		iMutex *mpLogMutex;
 
 		std::deque<cPendingRequest> mlstPendingQueue;
+
+		// wait_frames: response is sent once the frame count runs out.
+		struct cFrameWaiter
+		{
+			int mlClientFd;
+			int mlFramesLeft;
+			int mlFramesTotal;
+		};
+		std::vector<cFrameWaiter> mvFrameWaiters;
 		std::map<tString, cHandlerEntry> mmapHandlers;
 
 		std::deque<tString> mlstLogLines;

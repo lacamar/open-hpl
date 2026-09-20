@@ -146,6 +146,9 @@ public:
 	// NULL until InitMainMenuScene()/InitTestMap() runs; used by the
 	// headless-control camera_state/set_camera commands (see SomaBase.cpp).
 	cCamera* GetDebugCamera(){ return mpDebugCamera; }
+	cWorld* GetCurrentWorld(){ return mpTestWorld; }
+	cViewport* GetCurrentViewport(){ return mpDebugViewport; }
+	void HideMenusForHeadlessMapStart();
 
 	// Lets cSomaMainMenu reach the splash instance to stop its still-
 	// looping menu ambient when leaving the menu (see SomaMainMenu.cpp's

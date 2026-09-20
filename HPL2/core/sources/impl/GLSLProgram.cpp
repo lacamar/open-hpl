@@ -18,6 +18,7 @@
  */
 
 #include "impl/GLSLProgram.h"
+#include "system/EngineDiagnostics.h"
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -98,6 +99,17 @@ namespace hpl{
 		//Check for errors
 		GLint lStatus;
 		glGetProgramiv(mlHandle, GL_LINK_STATUS, &lStatus);
+		{
+			tString sInfoLog;
+			GLint lLogLen = 0;
+			glGetProgramiv(mlHandle, GL_INFO_LOG_LENGTH, &lLogLen);
+			if(lStatus == GL_FALSE && lLogLen > 1)
+			{
+				sInfoLog.resize(lLogLen);
+				glGetProgramInfoLog(mlHandle, lLogLen, NULL, &sInfoLog[0]);
+			}
+			cEngineDiagnostics::ReportShader(msName, "link", lStatus != GL_FALSE, sInfoLog);
+		}
 		if(lStatus == GL_FALSE)
 		{
 			Error("Failed to link GLSL program %s\n",msName.c_str());

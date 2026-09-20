@@ -61,6 +61,7 @@
 #include "resources/WorldLoader.h"
 
 #include "resources/ResourcesTypes.h"
+#include "resources/EngineFileLoading.h"
 #include "scene/SceneTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
@@ -83,6 +84,9 @@ namespace hpl {
 
 		cWorld* LoadWorld(const tWString& asFile, tWorldLoadFlag aFlags);
 
+		// Per-track xml/created/skipped counts of the last loaded map, as JSON.
+		static const tString& GetLastLoadReportJson() { return msLastLoadReportJson; }
+
 	private:
 		////////////////////////////////////////
 		// Sidecar-file helpers
@@ -96,21 +100,23 @@ namespace hpl {
 
 		////////////////////////////////////////
 		// Per-track loaders (each opens its own sidecar file)
-		void LoadStaticObjectsTrack(const tWString& asBaseFile);
-		void LoadPrimitivesTrack(const tWString& asBaseFile);
-		void LoadEntitiesTrack(const tWString& asBaseFile);
-		void LoadLightsTrack(const tWString& asBaseFile);
-		void LoadAreasTrack(const tWString& asBaseFile);
-		void LoadSoundsTrack(const tWString& asBaseFile);
+		void LoadTrack(const tWString& asBaseFile, const tString& asTrack, const tString& asFileIndexElement);
+		// Returns "" when the object was created, else a short skip reason.
+		tString CreateTrackObject(const tString& asTrack, cXmlElement* apElement, const tStringVec& avFileIndex);
+		void ConnectLightBillboards();
+		void CountUnsupportedFlatTracks(const tWString& asBaseFile);
+		void LoadDetailMeshesTrack(const tWString& asBaseFile);
+		void BuildLoadReport(const tString& asMap, int alTotalTimeMs);
 		void LoadExposureAreaTrack(const tWString& asBaseFile);
 		void CheckTerrainTrackInactive(const tWString& asBaseFile);
 
 		////////////////////////////////////////
 		// Per-object creation (mirrors cWorldLoaderHplMap's per-object logic)
-		void CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);
-		void CreatePlanePrimitive(cXmlElement* apElement);
-		void CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex);
-		void CreateMapArea(cXmlElement* apElement);
+		tString CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);
+		tString CreatePlanePrimitive(cXmlElement* apElement);
+		tString CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex);
+		tString CreateMapArea(cXmlElement* apElement);
+		tString CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex);
 
 		// Static collision body for a StaticObject/Primitive mesh entity, one
 		// (possibly compound, for multi-submesh meshes) static (mass 0)
@@ -125,12 +131,20 @@ namespace hpl {
 		cWorld* mpCurrentWorld;
 		iPhysicsWorld* mpCurrentPhysicsWorld;
 
-		int mlStaticObjectsCreated;
-		int mlPrimitivesCreated;
-		int mlEntitiesCreated;
-		int mlLightsCreated;
-		int mlAreasCreated;
-		int mlSoundsCreated;
+		struct cHpmTrackStats
+		{
+			cHpmTrackStats() : mlInXml(0), mlCreated(0), mlTimeMs(0), mbFileMissing(false) {}
+			int mlInXml;
+			int mlCreated;
+			int mlTimeMs;
+			bool mbFileMissing;
+			std::map<tString, int> mmapSkipped;
+		};
+		std::map<tString, cHpmTrackStats> mmapTrackStats;
+		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
+		bool mbTerrainActive;
+
+		static tString msLastLoadReportJson;
 	};
 
 };

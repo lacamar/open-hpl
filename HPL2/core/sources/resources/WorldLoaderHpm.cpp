@@ -20,6 +20,13 @@
 #include "scene/World.h"
 #include "scene/MeshEntity.h"
 #include "scene/SubMeshEntity.h"
+#include "scene/Light.h"
+#include "scene/BillBoard.h"
+#include "scene/FogArea.h"
+#include "scene/ParticleSystem.h"
+#include "scene/SoundEntity.h"
+
+#include "system/Platform.h"
 
 #include "graphics/Graphics.h"
 #include "graphics/Mesh.h"
@@ -37,6 +44,8 @@
 
 namespace hpl {
 
+	tString cWorldLoaderHpm::msLastLoadReportJson = "";
+
 	//-----------------------------------------------------------------------
 
 	cWorldLoaderHpm::cWorldLoaderHpm()
@@ -46,12 +55,7 @@ namespace hpl {
 		mpCurrentWorld = NULL;
 		mpCurrentPhysicsWorld = NULL;
 
-		mlStaticObjectsCreated = 0;
-		mlPrimitivesCreated = 0;
-		mlEntitiesCreated = 0;
-		mlLightsCreated = 0;
-		mlAreasCreated = 0;
-		mlSoundsCreated = 0;
+		mbTerrainActive = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -66,12 +70,11 @@ namespace hpl {
 	{
 		Log(" -------- Loading SOMA hpm map '%s' ---------\n", cString::To8Char(cString::GetFileNameW(asFile)).c_str());
 
-		mlStaticObjectsCreated = 0;
-		mlPrimitivesCreated = 0;
-		mlEntitiesCreated = 0;
-		mlLightsCreated = 0;
-		mlAreasCreated = 0;
-		mlSoundsCreated = 0;
+		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
+		mmapTrackStats.clear();
+		mlstLightBillboardConnections.clear();
+
+		mbTerrainActive = false;
 
 		///////////////////////
 		// Create world and set up physics world with default values.
@@ -93,12 +96,26 @@ namespace hpl {
 
 		///////////////////////
 		// Sidecar track files
-		LoadStaticObjectsTrack(asFile);
-		LoadPrimitivesTrack(asFile);
-		LoadEntitiesTrack(asFile);
-		LoadLightsTrack(asFile);
-		LoadAreasTrack(asFile);
-		LoadSoundsTrack(asFile);
+		LoadTrack(asFile, "StaticObject", "FileIndex_StaticObjects");
+		LoadTrack(asFile, "Primitive", "");
+		LoadTrack(asFile, "Entity", "FileIndex_Entities");
+		LoadTrack(asFile, "Light", "");
+		LoadTrack(asFile, "Area", "");
+		LoadTrack(asFile, "Sound", "");
+		LoadTrack(asFile, "Decal", "FileIndex_Decals");
+		LoadTrack(asFile, "Billboard", "");
+		LoadTrack(asFile, "ParticleSystem", "");
+		LoadTrack(asFile, "FogArea", "");
+		ConnectLightBillboards();
+
+		// Not loaded yet - run through LoadTrack() so the report counts them.
+		LoadTrack(asFile, "Compound", "");
+		LoadTrack(asFile, "LightMask", "");
+		LoadTrack(asFile, "LensFlare", "");
+		LoadTrack(asFile, "StaticComboArea", "");
+		CountUnsupportedFlatTracks(asFile);
+		LoadDetailMeshesTrack(asFile);
+
 		LoadExposureAreaTrack(asFile);
 		CheckTerrainTrackInactive(asFile);
 
@@ -106,9 +123,7 @@ namespace hpl {
 		// Compile (sets up physics world size etc. from what was added)
 		mpCurrentWorld->Compile(true);
 
-		Log("  SOMA hpm: %d static objects, %d primitives, %d entities, %d lights, %d areas, %d sounds\n",
-			mlStaticObjectsCreated, mlPrimitivesCreated, mlEntitiesCreated,
-			mlLightsCreated, mlAreasCreated, mlSoundsCreated);
+		BuildLoadReport(cString::To8Char(cString::GetFileNameW(asFile)), (int)(cPlatform::GetApplicationTime() - lLoadStartTime));
 		Log(" -------- Loading complete ---------\n");
 
 		return mpCurrentWorld;
@@ -259,12 +274,19 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHpm::LoadStaticObjectsTrack(const tWString& asBaseFile)
+	void cWorldLoaderHpm::LoadTrack(const tWString& asBaseFile, const tString& asTrack, const tString& asFileIndexElement)
 	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_StaticObject"), true);
-		if (pDoc == NULL) return;
+		cHpmTrackStats& stats = mmapTrackStats[asTrack];
+		unsigned long lStartTime = cPlatform::GetApplicationTime();
 
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_StaticObject");
+		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_") + cString::To16Char(asTrack), true);
+		if (pDoc == NULL)
+		{
+			stats.mbFileMissing = true;
+			return;
+		}
+
+		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_" + asTrack);
 		if (pRoot)
 		{
 			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
@@ -273,13 +295,10 @@ namespace hpl {
 				cXmlElement* pSection = sectionIt.Next()->ToElement();
 				if (pSection->GetValue() != "Section") continue;
 
-				// SOMA's multi-user map format gives each Section its OWN
-				// local FileIndex_StaticObjects table (unlike Amnesia's
-				// single map-wide FileIndex_StaticObjects) - the same
-				// numeric FileIndex means a different mesh in a different
-				// Section, so this must be reloaded per Section.
+				// Each Section has its OWN local file index - the same
+				// numeric index means a different file in another Section.
 				tStringVec vFileIndex;
-				LoadLocalFileIndex(pSection, "FileIndex_StaticObjects", vFileIndex);
+				if (asFileIndexElement != "") LoadLocalFileIndex(pSection, asFileIndexElement, vFileIndex);
 
 				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
 				if (pObjects == NULL) continue;
@@ -288,200 +307,240 @@ namespace hpl {
 				while (objIt.HasNext())
 				{
 					cXmlElement* pObjElem = objIt.Next()->ToElement();
-					if (pObjElem->GetValue() != "StaticObject")
+					++stats.mlInXml;
+
+					tString sReason = CreateTrackObject(asTrack, pObjElem, vFileIndex);
+					if (sReason == "") ++stats.mlCreated;
+					else ++stats.mmapSkipped[sReason];
+				}
+			}
+		}
+
+		hplDelete(pDoc);
+		stats.mlTimeMs = (int)(cPlatform::GetApplicationTime() - lStartTime);
+	}
+
+	//-----------------------------------------------------------------------
+
+	tString cWorldLoaderHpm::CreateTrackObject(const tString& asTrack, cXmlElement* apElement, const tStringVec& avFileIndex)
+	{
+		const tString& sTag = apElement->GetValue();
+
+		if (asTrack == "StaticObject")
+		{
+			if (sTag != "StaticObject") return "unsupported_element:" + sTag;
+			return CreateStaticObject(apElement, avFileIndex);
+		}
+		if (asTrack == "Primitive") return CreatePlanePrimitive(apElement);
+		if (asTrack == "Entity")
+		{
+			if (sTag != "Entity") return "unsupported_element:" + sTag;
+			return CreateMapEntity(apElement, avFileIndex);
+		}
+		if (asTrack == "Light")
+		{
+			return cEngineFileLoading::LoadLight(apElement, "", mpCurrentWorld, mpResources, true) ? "" : "load_failed:" + sTag;
+		}
+		if (asTrack == "Area")
+		{
+			if (sTag != "Area") return "unsupported_element:" + sTag;
+			return CreateMapArea(apElement);
+		}
+		if (asTrack == "Sound")
+		{
+			if (sTag != "Sound") return "unsupported_element:" + sTag;
+			return cEngineFileLoading::LoadSound(apElement, "", mpCurrentWorld) ? "" : "load_failed";
+		}
+		if (asTrack == "Decal")
+		{
+			if (sTag != "Decal") return "unsupported_element:" + sTag;
+			return CreateDecal(apElement, avFileIndex);
+		}
+		if (asTrack == "Billboard")
+		{
+			if (sTag != "Billboard") return "unsupported_element:" + sTag;
+			return cEngineFileLoading::LoadBillboard(apElement, "", mpCurrentWorld, mpResources, true, &mlstLightBillboardConnections) ? "" : "load_failed";
+		}
+		if (asTrack == "ParticleSystem")
+		{
+			if (sTag != "ParticleSystem") return "unsupported_element:" + sTag;
+			return cEngineFileLoading::LoadParticleSystem(apElement, "", mpCurrentWorld) ? "" : "load_failed";
+		}
+		if (asTrack == "FogArea")
+		{
+			if (sTag != "FogArea") return "unsupported_element:" + sTag;
+			return cEngineFileLoading::LoadFogArea(apElement, "", mpCurrentWorld, true) ? "" : "load_failed";
+		}
+
+		return "unsupported_track";
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cWorldLoaderHpm::ConnectLightBillboards()
+	{
+		tEFL_LightBillboardConnectionListIt it = mlstLightBillboardConnections.begin();
+		for (; it != mlstLightBillboardConnections.end(); ++it)
+		{
+			cBillboard* pBB = mpCurrentWorld->GetBillboardFromUniqueID(it->msBillboardID);
+			iLight* pLight = mpCurrentWorld->GetLight(it->msLightName);
+			if (pBB == NULL || pLight == NULL)
+			{
+				++mmapTrackStats["Billboard"].mmapSkipped["connect_light_missing"];
+				continue;
+			}
+			pLight->AttachBillboard(pBB, pBB->GetColor());
+		}
+		mlstLightBillboardConnections.clear();
+	}
+
+	//-----------------------------------------------------------------------
+
+	// Tracks whose file layout is not Section/Objects - counted only.
+	void cWorldLoaderHpm::CountUnsupportedFlatTracks(const tWString& asBaseFile)
+	{
+		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_StaticObjectBatches"), false);
+		if (pDoc)
+		{
+			cHpmTrackStats& stats = mmapTrackStats["StaticObjectBatches"];
+			cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_StaticObjectBatches");
+			cXmlElement* pBatches = pRoot ? pRoot->GetFirstElement("StaticObjectBatches") : NULL;
+			if (pBatches)
+			{
+				cXmlNodeListIterator it = pBatches->GetChildIterator();
+				while (it.HasNext()) { it.Next(); ++stats.mlInXml; }
+			}
+			if (stats.mlInXml > 0) stats.mmapSkipped["unsupported_track"] = stats.mlInXml;
+			hplDelete(pDoc);
+		}
+
+	}
+
+	//-----------------------------------------------------------------------
+
+	static cXmlElement* HpmFirstChildWithText(cXmlElement* apParent, const tString& asName, tFloatVec& avOut)
+	{
+		cXmlElement* pElem = apParent->GetFirstElement(asName);
+		if (pElem == NULL) return NULL;
+		tString sSep = " ";
+		cString::GetFloatVec(pElem->GetAttributeString("_Text", ""), avOut, &sSep);
+		return pElem;
+	}
+
+	// One static, non-colliding mesh entity per instance; no batching.
+	void cWorldLoaderHpm::LoadDetailMeshesTrack(const tWString& asBaseFile)
+	{
+		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_DetailMeshes"), false);
+		if (pDoc == NULL) return;
+
+		cHpmTrackStats& stats = mmapTrackStats["DetailMeshes"];
+		unsigned long lStartTime = cPlatform::GetApplicationTime();
+
+		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_DetailMeshes");
+		cXmlElement* pDetail = pRoot ? pRoot->GetFirstElement("DetailMeshes") : NULL;
+		cXmlElement* pSections = pDetail ? pDetail->GetFirstElement("Sections") : NULL;
+		if (pSections)
+		{
+			cXmlNodeListIterator secIt = pSections->GetChildIterator();
+			while (secIt.HasNext())
+			{
+				cXmlNodeListIterator meshIt = secIt.Next()->ToElement()->GetChildIterator();
+				while (meshIt.HasNext())
+				{
+					cXmlElement* pMeshElem = meshIt.Next()->ToElement();
+					int lNum = pMeshElem->GetAttributeInt("NumOfInstances", 0);
+					tString sFile = pMeshElem->GetAttributeString("File", "");
+					stats.mlInXml += lNum;
+
+					tFloatVec vPositions, vRotations;
+					HpmFirstChildWithText(pMeshElem, "DetailMeshEntityPositions", vPositions);
+					HpmFirstChildWithText(pMeshElem, "DetailMeshEntityRotations", vRotations);
+					if ((int)vPositions.size() < lNum * 3 || (int)vRotations.size() < lNum * 4)
 					{
-						Warning("SOMA hpm: skipping unsupported static object track element '%s'\n", pObjElem->GetValue().c_str());
-						continue;
-					}
-					CreateStaticObject(pObjElem, vFileIndex);
-				}
-			}
-		}
-
-		hplDelete(pDoc);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWorldLoaderHpm::LoadPrimitivesTrack(const tWString& asBaseFile)
-	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Primitive"), true);
-		if (pDoc == NULL) return;
-
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Primitive");
-		if (pRoot)
-		{
-			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (sectionIt.HasNext())
-			{
-				cXmlElement* pSection = sectionIt.Next()->ToElement();
-				if (pSection->GetValue() != "Section") continue;
-
-				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
-				if (pObjects == NULL) continue;
-
-				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (objIt.HasNext())
-				{
-					cXmlElement* pObjElem = objIt.Next()->ToElement();
-					CreatePlanePrimitive(pObjElem);
-				}
-			}
-		}
-
-		hplDelete(pDoc);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWorldLoaderHpm::LoadEntitiesTrack(const tWString& asBaseFile)
-	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Entity"), true);
-		if (pDoc == NULL) return;
-
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Entity");
-		if (pRoot)
-		{
-			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (sectionIt.HasNext())
-			{
-				cXmlElement* pSection = sectionIt.Next()->ToElement();
-				if (pSection->GetValue() != "Section") continue;
-
-				tStringVec vFileIndex;
-				LoadLocalFileIndex(pSection, "FileIndex_Entities", vFileIndex);
-
-				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
-				if (pObjects == NULL) continue;
-
-				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (objIt.HasNext())
-				{
-					cXmlElement* pObjElem = objIt.Next()->ToElement();
-					if (pObjElem->GetValue() != "Entity")
-					{
-						Warning("SOMA hpm: skipping unsupported entity track element '%s'\n", pObjElem->GetValue().c_str());
-						continue;
-					}
-					CreateMapEntity(pObjElem, vFileIndex);
-				}
-			}
-		}
-
-		hplDelete(pDoc);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWorldLoaderHpm::LoadLightsTrack(const tWString& asBaseFile)
-	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Light"), true);
-		if (pDoc == NULL) return;
-
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Light");
-		if (pRoot)
-		{
-			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (sectionIt.HasNext())
-			{
-				cXmlElement* pSection = sectionIt.Next()->ToElement();
-				if (pSection->GetValue() != "Section") continue;
-
-				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
-				if (pObjects == NULL) continue;
-
-				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (objIt.HasNext())
-				{
-					cXmlElement* pObjElem = objIt.Next()->ToElement();
-
-					// BoxLight / SpotLight / PointLight - dispatched on tag
-					// name internally by the same shared helper Amnesia's
-					// loader uses.
-					iLight* pLight = cEngineFileLoading::LoadLight(pObjElem, "", mpCurrentWorld, mpResources, true);
-					if (pLight) ++mlLightsCreated;
-				}
-			}
-		}
-
-		hplDelete(pDoc);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWorldLoaderHpm::LoadAreasTrack(const tWString& asBaseFile)
-	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Area"), true);
-		if (pDoc == NULL) return;
-
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Area");
-		if (pRoot)
-		{
-			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (sectionIt.HasNext())
-			{
-				cXmlElement* pSection = sectionIt.Next()->ToElement();
-				if (pSection->GetValue() != "Section") continue;
-
-				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
-				if (pObjects == NULL) continue;
-
-				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (objIt.HasNext())
-				{
-					cXmlElement* pObjElem = objIt.Next()->ToElement();
-					if (pObjElem->GetValue() != "Area")
-					{
-						Warning("SOMA hpm: skipping unsupported area track element '%s'\n", pObjElem->GetValue().c_str());
-						continue;
-					}
-					CreateMapArea(pObjElem);
-				}
-			}
-		}
-
-		hplDelete(pDoc);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWorldLoaderHpm::LoadSoundsTrack(const tWString& asBaseFile)
-	{
-		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Sound"), true);
-		if (pDoc == NULL) return;
-
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Sound");
-		if (pRoot)
-		{
-			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (sectionIt.HasNext())
-			{
-				cXmlElement* pSection = sectionIt.Next()->ToElement();
-				if (pSection->GetValue() != "Section") continue;
-
-				cXmlElement* pObjects = pSection->GetFirstElement("Objects");
-				if (pObjects == NULL) continue;
-
-				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (objIt.HasNext())
-				{
-					cXmlElement* pObjElem = objIt.Next()->ToElement();
-					if (pObjElem->GetValue() != "Sound")
-					{
-						Warning("SOMA hpm: skipping unsupported sound track element '%s'\n", pObjElem->GetValue().c_str());
+						stats.mmapSkipped["instance_data_short:" + sFile] += lNum;
 						continue;
 					}
 
-					cSoundEntity* pSound = cEngineFileLoading::LoadSound(pObjElem, "", mpCurrentWorld);
-					if (pSound) ++mlSoundsCreated;
+					for (int i = 0; i < lNum; ++i)
+					{
+						// A fresh CreateMesh() per instance only bumps the shared resource's user count.
+						cMesh* pMesh = mpResources->GetMeshManager()->CreateMesh(sFile);
+						if (pMesh == NULL)
+						{
+							stats.mmapSkipped["mesh_missing:" + sFile] += lNum - i;
+							break;
+						}
+
+						cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("DetailMesh_" + cString::ToString(stats.mlCreated), pMesh, true);
+						pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
+
+						cQuaternion qRot(vRotations[i*4], vRotations[i*4+1], vRotations[i*4+2], vRotations[i*4+3]);
+						cMatrixf mtxTransform = cMath::MatrixQuaternion(qRot);
+						mtxTransform.SetTranslation(cVector3f(vPositions[i*3], vPositions[i*3+1], vPositions[i*3+2]));
+						pEntity->SetMatrix(mtxTransform);
+
+						++stats.mlCreated;
+					}
 				}
 			}
 		}
 
 		hplDelete(pDoc);
+		stats.mlTimeMs = (int)(cPlatform::GetApplicationTime() - lStartTime);
 	}
 
 	//-----------------------------------------------------------------------
+
+	static tString HpmJsonEscape(const tString& asIn)
+	{
+		tString sOut;
+		for (size_t i = 0; i < asIn.size(); ++i)
+		{
+			char c = asIn[i];
+			if (c == '"' || c == '\\') { sOut += '\\'; sOut += c; }
+			else if ((unsigned char)c < 0x20) sOut += ' ';
+			else sOut += c;
+		}
+		return sOut;
+	}
+
+	void cWorldLoaderHpm::BuildLoadReport(const tString& asMap, int alTotalTimeMs)
+	{
+		tString sJson = "{\"map\":\"" + HpmJsonEscape(asMap) + "\",\"total_ms\":" + cString::ToString(alTotalTimeMs) +
+						",\"terrain_active\":" + (mbTerrainActive ? "true" : "false") + ",\"tracks\":{";
+
+		bool bFirstTrack = true;
+		for (std::map<tString, cHpmTrackStats>::iterator it = mmapTrackStats.begin(); it != mmapTrackStats.end(); ++it)
+		{
+			cHpmTrackStats& stats = it->second;
+			if (!bFirstTrack) sJson += ",";
+			bFirstTrack = false;
+
+			sJson += "\"" + it->first + "\":{\"xml\":" + cString::ToString(stats.mlInXml) +
+					 ",\"created\":" + cString::ToString(stats.mlCreated) +
+					 ",\"ms\":" + cString::ToString(stats.mlTimeMs) +
+					 ",\"file_missing\":" + (stats.mbFileMissing ? "true" : "false") + ",\"skipped\":{";
+
+			bool bFirstReason = true;
+			for (std::map<tString, int>::iterator rIt = stats.mmapSkipped.begin(); rIt != stats.mmapSkipped.end(); ++rIt)
+			{
+				if (!bFirstReason) sJson += ",";
+				bFirstReason = false;
+				sJson += "\"" + HpmJsonEscape(rIt->first) + "\":" + cString::ToString(rIt->second);
+			}
+			sJson += "}}";
+
+			int lSkipped = stats.mlInXml - stats.mlCreated;
+			Log("  SOMA hpm track %-20s xml=%d created=%d skipped=%d (%d ms)\n", it->first.c_str(),
+				stats.mlInXml, stats.mlCreated, lSkipped, stats.mlTimeMs);
+		}
+		sJson += "}}";
+
+		msLastLoadReportJson = sJson;
+	}
+
+	//-----------------------------------------------------------------------
+
 
 	// SOMA/Rebirth/Bunker's real HPL3-authored maps can carry a
 	// .hpm_ExposureArea sidecar (HPLMapTrack_ExposureArea) - real per-area
@@ -523,6 +582,8 @@ namespace hpl {
 				{
 					cXmlElement* pObjElem = objIt.Next()->ToElement();
 					if (pObjElem->GetValue() != "ExposureArea") continue;
+					++mmapTrackStats["ExposureArea"].mlInXml;
+					++mmapTrackStats["ExposureArea"].mlCreated;
 
 					// HPL3's Exposure attribute is a real photographic EV
 					// (stops) compensation, same convention as
@@ -570,6 +631,7 @@ namespace hpl {
 			cXmlElement* pTerrain = pRoot->GetFirstElement("Terrain");
 			if (pTerrain) bActive = pTerrain->GetAttributeBool("Active", false);
 		}
+		mbTerrainActive = bActive;
 
 		if (bActive)
 			Warning("SOMA hpm: map has an ACTIVE terrain track - HPL2 has no terrain renderer, terrain will NOT be visible (out of scope for Phase 1)\n");
@@ -587,7 +649,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHpm::CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex)
+	tString cWorldLoaderHpm::CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
 		tString sName = apElement->GetAttributeString("Name");
 		tString sFileName;
@@ -604,7 +666,7 @@ namespace hpl {
 		else
 		{
 			Warning("SOMA hpm: static object '%s' has out-of-bounds FileIndex %d\n", sName.c_str(), lFileNameIdx);
-			return;
+			return "file_index_out_of_bounds";
 		}
 
 		cVector3f vPosition = apElement->GetAttributeVector3f("WorldPos", 0);
@@ -614,13 +676,13 @@ namespace hpl {
 		bool bCollides = apElement->GetAttributeBool("Collides", true);
 		int lID = apElement->GetAttributeInt("ID", -1);
 
-		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return;
+		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return "bad_transform";
 
 		cMesh* pMesh = mpResources->GetMeshManager()->CreateMesh(sFileName);
 		if (pMesh == NULL)
 		{
 			Warning("SOMA hpm: could not load mesh '%s' for static object '%s'\n", sFileName.c_str(), sName.c_str());
-			return;
+			return "mesh_missing:" + sFileName;
 		}
 
 		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
@@ -636,18 +698,18 @@ namespace hpl {
 		if (bCollides)
 			CreateStaticBodyForMesh(pMeshEntity, sName);
 
-		++mlStaticObjectsCreated;
+		return "";
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHpm::CreatePlanePrimitive(cXmlElement* apElement)
+	tString cWorldLoaderHpm::CreatePlanePrimitive(cXmlElement* apElement)
 	{
 		tString sType = apElement->GetValue();
 		if (sType != "Plane")
 		{
 			Warning("SOMA hpm: skipping unsupported primitive type '%s'\n", sType.c_str());
-			return;
+			return "unsupported_primitive:" + sType;
 		}
 
 		tString sName = apElement->GetAttributeString("Name");
@@ -660,7 +722,7 @@ namespace hpl {
 		cVector3f vScale = apElement->GetAttributeVector3f("Scale", 1);
 		cVector3f vRotation = apElement->GetAttributeVector3f("Rotation", 0);
 
-		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return;
+		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return "bad_transform";
 
 		cVector3f vStartCorner = apElement->GetAttributeVector3f("StartCorner", 0);
 		cVector3f vEndCorner = apElement->GetAttributeVector3f("EndCorner", 0);
@@ -674,7 +736,7 @@ namespace hpl {
 		if (pMesh == NULL)
 		{
 			Warning("SOMA hpm: could not create plane primitive '%s'\n", sName.c_str());
-			return;
+			return "create_failed";
 		}
 
 		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
@@ -688,7 +750,31 @@ namespace hpl {
 		if (bCollides)
 			CreateStaticBodyForMesh(pMeshEntity, sName);
 
-		++mlPrimitivesCreated;
+		return "";
+	}
+
+	//-----------------------------------------------------------------------
+
+	tString cWorldLoaderHpm::CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex)
+	{
+		tString sName = apElement->GetAttributeString("Name");
+
+		tString sMaterial;
+		int lMaterialIdx = apElement->GetAttributeInt("MaterialIndex", -1);
+		if (lMaterialIdx < 0) sMaterial = apElement->GetAttributeString("Material");
+		else if (lMaterialIdx < (int)avFileIndex.size()) sMaterial = avFileIndex[lMaterialIdx];
+		else return "file_index_out_of_bounds";
+
+		// Decal geometry is baked in world space - no transform applied.
+		cMesh* pMesh = cEngineFileLoading::LoadDecalMeshHelper(apElement->GetFirstElement("DecalMesh"), mpGraphics, mpResources,
+																sName, sMaterial, apElement->GetAttributeColor("Color", cColor(1, 1)));
+		if (pMesh == NULL) return "decal_mesh_failed";
+
+		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
+		pMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
+		pMeshEntity->SetUniqueID(apElement->GetAttributeInt("ID", -1));
+
+		return "";
 	}
 
 	//-----------------------------------------------------------------------
@@ -738,7 +824,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHpm::CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex)
+	tString cWorldLoaderHpm::CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
 		tString sName = apElement->GetAttributeString("Name");
 		int lID = apElement->GetAttributeInt("ID");
@@ -747,7 +833,7 @@ namespace hpl {
 		cVector3f vScale = apElement->GetAttributeVector3f("Scale", 1);
 		cVector3f vRotation = apElement->GetAttributeVector3f("Rotation", 0);
 
-		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return;
+		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return "bad_transform";
 
 		tString sFilename;
 		int lFileNameIdx = apElement->GetAttributeInt("FileIndex", -1);
@@ -762,7 +848,7 @@ namespace hpl {
 		else
 		{
 			Warning("SOMA hpm: entity '%s' has out-of-bounds FileIndex %d\n", sName.c_str(), lFileNameIdx);
-			return;
+			return "file_index_out_of_bounds";
 		}
 
 		cResourceVarsObject userVars;
@@ -773,12 +859,12 @@ namespace hpl {
 		mtxTransform.SetTranslation(vPosition);
 
 		iEntity3D* pEntity = mpCurrentWorld->CreateEntity(sName, mtxTransform, sFilename, lID, bActive, vScale, &userVars, false);
-		if (pEntity) ++mlEntitiesCreated;
+		return pEntity ? "" : "entity_failed:" + sFilename;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHpm::CreateMapArea(cXmlElement* apElement)
+	tString cWorldLoaderHpm::CreateMapArea(cXmlElement* apElement)
 	{
 		tString sName = apElement->GetAttributeString("Name");
 		int lID = apElement->GetAttributeInt("ID");
@@ -787,7 +873,7 @@ namespace hpl {
 		cVector3f vScale = apElement->GetAttributeVector3f("Scale", 1);
 		cVector3f vRotation = apElement->GetAttributeVector3f("Rotation", 0);
 
-		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return;
+		if (CheckTransformValidity(sName, vPosition, vRotation, vScale) == false) return "bad_transform";
 
 		cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
 		mtxTransform.SetTranslation(vPosition);
@@ -798,7 +884,7 @@ namespace hpl {
 		if (pLoader == NULL)
 		{
 			Warning("SOMA hpm: no area loader registered for AreaType '%s' (area '%s')\n", sType.c_str(), sName.c_str());
-			return;
+			return "no_area_loader:" + sType;
 		}
 
 		cXmlElement* pVarRootElem = apElement->GetFirstElement("UserVariables");
@@ -806,7 +892,7 @@ namespace hpl {
 
 		pLoader->Load(sName, lID, bActive, vScale, mtxTransform, mpCurrentWorld);
 
-		++mlAreasCreated;
+		return "";
 	}
 
 	//-----------------------------------------------------------------------

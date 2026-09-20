@@ -293,7 +293,7 @@ namespace hpl {
 		if (fmt == NULL)
 			return;	
 		va_start(ap, fmt);
-		vsprintf(text, fmt, ap);
+		vsnprintf(text, sizeof(text), fmt, ap);
 		va_end(ap);
 
 		tString sMess = "FATAL ERROR: ";
@@ -331,7 +331,7 @@ namespace hpl {
 		if (fmt == NULL)
 			return;	
 		va_start(ap, fmt);
-		vsprintf(text, fmt, ap);
+		vsnprintf(text, sizeof(text), fmt, ap);
 		va_end(ap);
 
 		tString sMess = "ERROR: ";
@@ -351,7 +351,7 @@ namespace hpl {
 		if (fmt == NULL)
 			return;	
 		va_start(ap, fmt);
-		vsprintf(text, fmt, ap);
+		vsnprintf(text, sizeof(text), fmt, ap);
 		va_end(ap);
 
 		tString sMess = "WARNING: ";
@@ -371,7 +371,7 @@ namespace hpl {
 		if (fmt == NULL)
 			return;	
 		va_start(ap, fmt);
-		vsprintf(text, fmt, ap);
+		vsnprintf(text, sizeof(text), fmt, ap);
 		va_end(ap);
 
 		tString sMess = "";
@@ -417,7 +417,7 @@ namespace hpl {
 		if (fmt == NULL)
 			return;	
 		va_start(ap, fmt);
-		vsprintf(text, fmt, ap);
+		vsnprintf(text, sizeof(text), fmt, ap);
 		va_end(ap);
 
 		tString sMess = "";

@@ -18,6 +18,7 @@
  */
 
 #include "system/HeadlessControl.h"
+#include "system/EngineDiagnostics.h"
 
 #include "engine/Engine.h"
 #include "engine/Updater.h"
@@ -248,7 +249,8 @@ namespace hpl {
 	}
 	void cHeadlessResponse::Set(const tString &asKey, float afVal)
 	{
-		mvExtraFields.push_back(std::make_pair(asKey, cString::ToString(afVal, 6, true)));
+		// NaN/inf are not valid JSON
+		mvExtraFields.push_back(std::make_pair(asKey, (afVal != afVal || afVal - afVal != 0) ? tString("null") : cString::ToString(afVal, 6, true)));
 	}
 	void cHeadlessResponse::Set(const tString &asKey, int alVal)
 	{
@@ -257,6 +259,11 @@ namespace hpl {
 	void cHeadlessResponse::Set(const tString &asKey, bool abVal)
 	{
 		mvExtraFields.push_back(std::make_pair(asKey, tString(abVal ? "true" : "false")));
+	}
+
+	void cHeadlessResponse::SetRaw(const tString &asKey, const tString &asJson)
+	{
+		mvExtraFields.push_back(std::make_pair(asKey, asJson));
 	}
 
 	tString cHeadlessResponse::ToJson() const
@@ -356,12 +363,11 @@ namespace hpl {
 #ifdef HPL_HEADLESS_CONTROL_POSIX
 		if(mlListenFd >= 0)
 		{
-			// Closing the listen fd out from under the listener thread's
-			// blocking accept() reliably unblocks it with EBADF on Linux -
-			// UpdateThread() treats that as "stop", matching mpThread->Stop()
-			// below rather than hanging the process on shutdown.
+			// close() alone does not wake a thread blocked in accept() on
+			// Linux; shutdown() does.
 			int lFd = mlListenFd;
 			mlListenFd = -1;
+			shutdown(lFd, SHUT_RDWR);
 			close(lFd);
 		}
 #endif
@@ -395,6 +401,18 @@ namespace hpl {
 
 	void cHeadlessControlServer::Update()
 	{
+		cEngineDiagnostics::EndFrame();
+
+		for(size_t i=0; i<mvFrameWaiters.size(); )
+		{
+			if(--mvFrameWaiters[i].mlFramesLeft > 0) { ++i; continue; }
+
+			cHeadlessResponse response;
+			response.Set("frames", mvFrameWaiters[i].mlFramesTotal);
+			SendResponse(mvFrameWaiters[i].mlClientFd, response);
+			mvFrameWaiters.erase(mvFrameWaiters.begin() + i);
+		}
+
 		while(true)
 		{
 			cPendingRequest pending;
@@ -474,6 +492,16 @@ namespace hpl {
 		cHeadlessResponse response;
 		tString sCmd = aPending.mRequest.GetCmd();
 
+		if(sCmd == "wait_frames")
+		{
+			cFrameWaiter waiter;
+			waiter.mlClientFd = aPending.mlClientFd;
+			waiter.mlFramesTotal = aPending.mRequest.GetInt("n", 1);
+			waiter.mlFramesLeft = waiter.mlFramesTotal;
+			mvFrameWaiters.push_back(waiter);
+			return;
+		}
+
 		std::map<tString, cHandlerEntry>::iterator it = mmapHandlers.find(sCmd);
 		if(it == mmapHandlers.end())
 		{
@@ -508,6 +536,8 @@ namespace hpl {
 		RegisterHandler("set_focus_wait", SCmdSetFocusWait, this);
 		RegisterHandler("input", SCmdInput, this);
 		RegisterHandler("resize", SCmdResizeWindow, this);
+		RegisterHandler("shader_report", SCmdShaderReport, this);
+		RegisterHandler("frame_stats", SCmdFrameStats, this);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -558,6 +588,27 @@ namespace hpl {
 		}
 
 		aResp.Set("path", sPath);
+	}
+
+	void cHeadlessControlServer::CmdShaderReport(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{
+		aResp.Set("failures", cEngineDiagnostics::GetShaderFailCount());
+		aResp.SetRaw("shaders", cEngineDiagnostics::GetShaderReportJson(aReq.GetBool("failed_only", true)));
+	}
+
+	void cHeadlessControlServer::CmdFrameStats(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{
+		cBitmap *pBmp = mpEngine->GetGraphics()->GetLowLevel()->CopyFrameBufferToBitmap();
+		if(pBmp == NULL)
+		{
+			aResp.SetError("CopyFrameBufferToBitmap() failed");
+			return;
+		}
+
+		aResp.SetRaw("frame", cEngineDiagnostics::GetFrameStatsJson(pBmp->GetData(0,0)->mpData, pBmp->GetWidth(), pBmp->GetHeight(),
+																	 pBmp->GetBytesPerPixel()));
+		aResp.SetRaw("gl_errors", cEngineDiagnostics::PollGLErrorsJson(false));
+		hplDelete(pBmp);
 	}
 
 	void cHeadlessControlServer::CmdLogTail(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -696,6 +747,10 @@ namespace hpl {
 	// function directly - see the .h)
 	//////////////////////////////////////////////////////////////////////////
 
+	void cHeadlessControlServer::SCmdShaderReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{ ((cHeadlessControlServer*)apUserData)->CmdShaderReport(aReq, aResp); }
+	void cHeadlessControlServer::SCmdFrameStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+	{ ((cHeadlessControlServer*)apUserData)->CmdFrameStats(aReq, aResp); }
 	void cHeadlessControlServer::SCmdPing(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{ ((cHeadlessControlServer*)apUserData)->CmdPing(aReq, aResp); }
 	void cHeadlessControlServer::SCmdQuit(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

@@ -31,7 +31,10 @@ namespace
 		{"cVector4f", "vec4"}, {"cVector3f", "vec3"}, {"cVector2f", "vec2"},
 		{"cVector4i", "ivec4"}, {"cVector3i", "ivec3"}, {"cVector2i", "ivec2"},
 		{"cVector4l", "ivec4"}, {"cVector3l", "ivec3"}, {"cVector2l", "ivec2"},
-		{"cMatrixf", "mat4"}, {"cMatrix3f", "mat3"},
+		{"cVector4b", "bvec4"}, {"cVector3b", "bvec3"}, {"cVector2b", "bvec2"},
+		// GLSL 1.20 has no unsigned vectors
+		{"cVector4u", "ivec4"}, {"cVector3u", "ivec3"}, {"cVector2u", "ivec2"},
+		{"cMatrixf", "mat4"}, {"cMatrix4f", "mat4"}, {"cMatrix3f", "mat3"}, {"cMatrix3x3f", "mat3"}, {"cMatrix2x2f", "mat2"},
 		{"cTexture2D", "sampler2D"}, {"cTextureCube", "samplerCube"},
 		{"cTextureRect", "sampler2DRect"}, {"cTexture3D", "sampler3D"},
 		{"cTexture2DCmp", "sampler2DShadow"},

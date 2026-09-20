@@ -18,6 +18,7 @@
  */
 
 #include "impl/VertexBufferOGL_Array.h"
+#include "system/EngineDiagnostics.h"
 
 #include "system/LowLevelSystem.h"
 #include "math/Math.h"
@@ -73,6 +74,7 @@ namespace hpl {
 		int lSize = mlElementNum;
 		if(mlElementNum<0) lSize = GetIndexNum();
 		
+		cEngineDiagnostics::CountDrawCall();
 		glDrawElements(mode,lSize,GL_UNSIGNED_INT, &mvIndexArray[0]);
 	}
 
@@ -89,6 +91,7 @@ namespace hpl {
 
 		//////////////////////////////////
 		//Bind and draw the buffer
+		cEngineDiagnostics::CountDrawCall();
 		glDrawElements(mode, alCount, GL_UNSIGNED_INT, apIndices);
 	}
 

@@ -405,8 +405,7 @@ static void TestConstantBufferWithBindingIndex()
 // known GLSL 120 fixed-function built-in (e.g. deferred_base_vtx.hpsl's
 // vtx_vTangent/vtx_vBoneIndices/vtx_vBoneWeight - real, unconditional main()
 // parameters in that file even when skinning/normal-mapping combo vars are
-// off). Must compile (not the old hard error) and must NOT silently alias
-// onto a gl_MultiTexCoordN slot.
+// off). Must compile (not the old hard error).
 static void TestUnknownVertexInputBecomesAttribute()
 {
 	tString sGlsl, sErr;
@@ -420,14 +419,12 @@ static void TestUnknownVertexInputBecomesAttribute()
 		"	px_vPosition = vtx_vPosition + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight;\n"
 		"}";
 	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vTangent;");
+	// vtx_vTangent reads the engine's per-vertex tangent stream
+	// (eVertexBufferElement_Texture1Tangent, texture unit 1).
+	CHECK_NOT_CONTAINS(sGlsl, "attribute vec4 vtx_vTangent;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneIndices;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneWeight;");
-	// vtx_vTangent must keep its own name in the body, not get rewritten
-	// onto gl_MultiTexCoord1 (that would collide with a real
-	// vtx_vTexCoord1 input elsewhere - see HpslTranspiler.cpp's comment at
-	// this fallback for why).
-	CHECK_CONTAINS(sGlsl, "gl_Vertex + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight");
+	CHECK_CONTAINS(sGlsl, "gl_Vertex + gl_MultiTexCoord1 + vtx_vBoneIndices + vtx_vBoneWeight");
 }
 
 // cTexture3D (real use: deferred_base_frag.hpsl's dissolve map,

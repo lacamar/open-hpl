@@ -133,6 +133,11 @@ namespace hpl {
 			apDestElem->SetAttribute(pAttrib->Name(), pAttrib->Value());
 		}
 
+		// Element text (HPL3 .hpm_DetailMeshes keeps its arrays there) is
+		// exposed as a pseudo attribute; HPL2's own formats never use text.
+		const char *pText = apTinyElem->GetText();
+		if(pText) apDestElem->SetAttribute("_Text", pText);
+
 		/////////////////////////////
 		//Load the elements
 		TiXmlElement *pChildElem = apTinyElem->FirstChildElement();

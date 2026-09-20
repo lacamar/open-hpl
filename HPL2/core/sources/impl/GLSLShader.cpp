@@ -18,6 +18,7 @@
  */
 
 #include "impl/GLSLShader.h"
+#include "system/EngineDiagnostics.h"
 #include "impl/SDLTexture.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "system/LowLevelSystem.h"
@@ -118,6 +119,17 @@ namespace hpl{
 		//Check for errors.
 		GLint lStatus;
 		glGetShaderiv(mlHandle,GL_COMPILE_STATUS,&lStatus);
+		{
+			tString sInfoLog;
+			GLint lLogLen = 0;
+			glGetShaderiv(mlHandle, GL_INFO_LOG_LENGTH, &lLogLen);
+			if(lStatus == GL_FALSE && lLogLen > 1)
+			{
+				sInfoLog.resize(lLogLen);
+				glGetShaderInfoLog(mlHandle, lLogLen, NULL, &sInfoLog[0]);
+			}
+			cEngineDiagnostics::ReportShader(msName, "compile", lStatus != GL_FALSE, sInfoLog);
+		}
 		if(lStatus == GL_FALSE)
 		{
 			if(abPrintInfoIfFail)
