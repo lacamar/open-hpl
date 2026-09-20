@@ -258,6 +258,29 @@ static void cSomaBase_HeadlessCmd_EntityInfo(void *apUserData, const cHeadlessRe
 	aResp.SetRaw("entity", sInfo);
 }
 
+static void cSomaBase_HeadlessCmd_Lights(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentWorld() == NULL || pBase->GetDebugCamera() == NULL) { aResp.SetError("no world loaded"); return; }
+	aResp.SetRaw("lights", cEngineDiagnostics::GetLightsJson(pBase->GetCurrentWorld(), pBase->GetDebugCamera()->GetPosition(), aReq.GetInt("n", 8)));
+}
+
+// A/B switches for cRenderSettings: occlusion_culling, ssao, shadows, edge_smooth.
+static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentViewport() == NULL) { aResp.SetError("no viewport yet"); return; }
+	cRenderSettings *pSettings = pBase->GetCurrentViewport()->GetRenderSettings();
+
+	tString sName = aReq.GetString("name", "");
+	bool bValue = aReq.GetBool("value", true);
+	if(sName == "occlusion_culling") pSettings->mbUseOcclusionCulling = bValue;
+	else if(sName == "ssao") pSettings->mbSSAOActive = bValue;
+	else if(sName == "shadows") pSettings->mbRenderShadows = bValue;
+	else if(sName == "edge_smooth") pSettings->mbUseEdgeSmooth = bValue;
+	else aResp.SetError("unknown setting '" + sName + "'");
+}
+
 // Raw G-buffer values under one pixel: target 0 color, 1 normal+depth, 2 specular.
 static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -567,7 +590,9 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("world_stats", cSomaBase_HeadlessCmd_WorldStats, this);
 		pCtrl->RegisterHandler("render_stats", cSomaBase_HeadlessCmd_RenderStats, this);
 		pCtrl->RegisterHandler("entity_info", cSomaBase_HeadlessCmd_EntityInfo, this);
+		pCtrl->RegisterHandler("lights", cSomaBase_HeadlessCmd_Lights, this);
 		pCtrl->RegisterHandler("pick", cSomaBase_HeadlessCmd_Pick, this);
+		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
 		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
 		pCtrl->RegisterHandler("keybind_set", cSomaBase_HeadlessCmd_KeybindSet, this);
 		pCtrl->RegisterHandler("action_triggered", cSomaBase_HeadlessCmd_ActionTriggered, this);
@@ -1100,6 +1125,11 @@ bool cSomaBase::InitMainMenuScene()
 	// cRenderSettings a new cViewport creates.
 	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
 
+	// CHC occlusion culling reads query results back synchronously, which
+	// stalls a tile-based GPU (0.1 fps on real maps) and culled everything
+	// on AGX. Frustum culling still applies.
+	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
+
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 
@@ -1254,6 +1284,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// defaults mbUseEdgeSmooth to false) and the "reused viewport" branch
 	// (already correct, but cheap to just re-set).
 	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
+	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
 
 	// Controller hand-off: InitMainMenuScene() always creates a free-fly
 	// mpDebugCameraController for the menu scene itself (see there), so the

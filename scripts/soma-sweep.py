@@ -36,9 +36,9 @@ def cpu_ticks(pid):
 
 
 def backtrace_live(pid):
-    # All threads: a flat-CPU hang is usually a lock/wait, not the main thread spinning.
+    # Main thread in full, then a few frames of every thread (lock/wait hangs).
     try:
-        proc = subprocess.run(["gdb", "-p", str(pid), "-batch", "-ex", "thread apply all bt 25", "-ex", "detach"],
+        proc = subprocess.run(["gdb", "-p", str(pid), "-batch", "-ex", "bt 30", "-ex", "thread apply all bt 5", "-ex", "detach"],
                               capture_output=True, text=True, timeout=600)
         lines = [l for l in proc.stdout.splitlines() if l.startswith("#") or l.startswith("Thread ")][:80]
         return lines or ["gdb produced no frames: " + proc.stderr.strip()[-300:]]
@@ -125,14 +125,19 @@ def run_map(name, scratch, frames, boot_timeout, sock):
         if ticks != last_ticks:
             last_ticks, flat_since = ticks, time.time()
         if time.time() - flat_since > 30:
-            return finish("hang", backtrace=backtrace_live(proc.pid))
+            # A crashed process sits idle while systemd-coredump writes its core.
+            try:
+                proc.wait(timeout=120)
+                return finish("crash", exit_code=proc.returncode, backtrace=backtrace_core(proc.pid))
+            except subprocess.TimeoutExpired:
+                return finish("hang", backtrace=backtrace_live(proc.pid))
         if time.time() - start > boot_timeout:
             return finish("timeout", backtrace=backtrace_live(proc.pid))
         time.sleep(0.5)
 
     result["boot_s"] = round(time.time() - start, 1)
     try:
-        hpl.send({"cmd": "wait_frames", "n": frames})
+        result["warmup"] = {k: v for k, v in hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 30000}).items() if k != "ok"}
         result["load_report"] = hpl.send({"cmd": "load_report"})["load_report"]
         result["world"] = hpl.send({"cmd": "world_stats"})["world"]
         render = hpl.send({"cmd": "render_stats"})
@@ -211,6 +216,8 @@ def judge(name, result, expected, allow):
     if renderables == 0:
         return fails, allowed
 
+    if result.get("fps") is not None and result["fps"] < 5:
+        fails.append(f"fps:{result['fps']:.1f}")
     if result.get("render", {}).get("draw_calls", 0) == 0:
         fails.append("draw_calls:0")
 

@@ -19,6 +19,7 @@
 #include "graphics/Mesh.h"
 
 #include "math/BoundingVolume.h"
+#include "math/Math.h"
 
 #include "physics/PhysicsWorld.h"
 
@@ -33,6 +34,7 @@ namespace hpl {
 	int cEngineDiagnostics::mlDrawCalls = 0;
 	int cEngineDiagnostics::mlLastFrameDrawCalls = 0;
 	int cEngineDiagnostics::mlShaderFailCount = 0;
+	unsigned int cEngineDiagnostics::mlRenderedFrames = 0;
 
 	struct cShaderReportEntry
 	{
@@ -106,6 +108,7 @@ namespace hpl {
 	{
 		mlLastFrameDrawCalls = mlDrawCalls;
 		mlDrawCalls = 0;
+		++mlRenderedFrames;
 	}
 
 	tString cEngineDiagnostics::PollGLErrorsJson(bool abReset)
@@ -220,6 +223,37 @@ namespace hpl {
 		sOut += ",\"shader_failures\":" + cString::ToString(mlShaderFailCount);
 		sOut += ",\"gl_errors\":" + PollGLErrorsJson(false);
 		return sOut + "}";
+	}
+
+	//-----------------------------------------------------------------------
+
+	tString cEngineDiagnostics::GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax)
+	{
+		std::multimap<float, iLight*> mapByDist;
+		cLightListIterator it = apWorld->GetLightIterator();
+		while(it.HasNext())
+		{
+			iLight *pLight = it.Next();
+			mapByDist.insert(std::make_pair(cMath::Vector3Dist(pLight->GetWorldPosition(), avPos), pLight));
+		}
+
+		static const char* vTypeNames[] = {"point","spot","box"};
+		tString sOut = "[";
+		int lCount = 0;
+		for(std::multimap<float, iLight*>::iterator mIt = mapByDist.begin(); mIt != mapByDist.end() && lCount < alMax; ++mIt, ++lCount)
+		{
+			iLight *pLight = mIt->second;
+			const cColor &col = pLight->GetDiffuseColor();
+			if(lCount>0) sOut += ",";
+			sOut += "{\"name\":\"" + JsonEscape(pLight->GetName()) + "\",\"type\":\"" + vTypeNames[pLight->GetLightType()] + "\"";
+			sOut += ",\"dist\":" + Num(mIt->first) + ",\"radius\":" + Num(pLight->GetRadius());
+			sOut += ",\"color\":[" + Num(col.r) + "," + Num(col.g) + "," + Num(col.b) + "," + Num(col.a) + "]";
+			sOut += ",\"visible\":" + tString(pLight->IsVisible() ? "true" : "false");
+			sOut += ",\"shadows\":" + tString(pLight->GetCastShadows() ? "true" : "false");
+			sOut += ",\"falloff_map\":" + tString(pLight->GetFalloffMap() ? "true" : "false");
+			sOut += ",\"gobo\":" + tString(pLight->GetGoboTexture() ? "true" : "false") + "}";
+		}
+		return sOut + "]";
 	}
 
 	//-----------------------------------------------------------------------

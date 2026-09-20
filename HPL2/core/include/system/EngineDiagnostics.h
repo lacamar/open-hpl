@@ -8,6 +8,7 @@
 #define HPL_ENGINE_DIAGNOSTICS_H
 
 #include "system/SystemTypes.h"
+#include "math/MathTypes.h"
 
 namespace hpl {
 
@@ -27,8 +28,9 @@ namespace hpl {
 		static int GetShaderFailCount() { return mlShaderFailCount; }
 
 		static void CountDrawCall() { ++mlDrawCalls; }
-		// Called once per frame, latches the running counters.
+		// Called by cEngine after each rendered frame, latches the running counters.
 		static void EndFrame();
+		static unsigned int GetRenderedFrameCount() { return mlRenderedFrames; }
 		static int GetLastFrameDrawCalls() { return mlLastFrameDrawCalls; }
 
 		// Drains glGetError() into a running per-code tally.
@@ -36,6 +38,8 @@ namespace hpl {
 
 		static tString GetWorldStatsJson(cWorld *apWorld);
 		static tString GetRenderStatsJson(cViewport *apViewport, cGraphics *apGraphics);
+		// The alMax lights nearest to avPos.
+		static tString GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax);
 		static tString GetEntityInfoJson(cWorld *apWorld, const tString &asName);
 
 		// Per-channel min/max/mean + NaN/zero counts of RGBA float pixels.
@@ -47,6 +51,7 @@ namespace hpl {
 		static int mlDrawCalls;
 		static int mlLastFrameDrawCalls;
 		static int mlShaderFailCount;
+		static unsigned int mlRenderedFrames;
 	};
 
 }

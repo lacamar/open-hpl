@@ -278,6 +278,8 @@ namespace hpl {
 
 	cMaterial* iParticleEmitter::GetMaterial()
 	{
+		// Every material of the emitter failed to load
+		if(mvMaterials->empty()) return NULL;
 		return (*mvMaterials)[(int)mfFrame];
 	}
 

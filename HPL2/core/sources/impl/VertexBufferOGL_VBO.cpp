@@ -76,6 +76,10 @@ namespace hpl {
 	{
 		;
 
+		// Compiled off the GL thread (e.g. an impact particle system created
+		// from a Newton callback): no buffers exist yet, create them here.
+		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
+
 		GLenum usageType = GL_STATIC_DRAW_ARB;
 		if(mUsageType== eVertexBufferUsageType_Dynamic) usageType = GL_DYNAMIC_DRAW_ARB;
 		else if(mUsageType== eVertexBufferUsageType_Stream) usageType = GL_STREAM_DRAW_ARB;
@@ -164,6 +168,10 @@ namespace hpl {
 	void cVertexBufferOGL_VBO::Bind()
 	{
 		;
+
+		// Compiled off the GL thread (e.g. an impact particle system created
+		// from a Newton callback): no buffers exist yet, create them here.
+		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
 
 		SetVertexStates();
 	}

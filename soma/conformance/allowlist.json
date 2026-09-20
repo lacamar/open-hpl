@@ -1,12 +1,13 @@
 {
+ "exposure_area_first_only": "loader applies only the first ExposureArea as a global value",
+ "terrain": "no terrain renderer (SOMA_PLAN P4.9)",
  "tracks": {
   "Compound": "editor grouping; semantics unverified (SOMA_PLAN P4.6)",
   "DetailMeshes": "not implemented (SOMA_PLAN P4.8)",
   "LensFlare": "no engine equivalent yet (SOMA_PLAN P4.7)",
   "LightMask": "no engine equivalent yet (SOMA_PLAN P4.7)",
+  "Sound": "SoundEntityFile values are FMOD event paths; depot ships zero .snt files. Played game-side by SomaAmbientSfx where a bank sample exists",
   "StaticComboArea": "semantics unverified (SOMA_PLAN P4.6)",
   "StaticObjectBatches": "semantics unverified (SOMA_PLAN P4.6)"
- },
- "exposure_area_first_only": "loader applies only the first ExposureArea as a global value",
- "terrain": "no terrain renderer (SOMA_PLAN P4.9)"
+ }
 }

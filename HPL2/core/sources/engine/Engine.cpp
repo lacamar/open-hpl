@@ -19,6 +19,7 @@
 
 #include "engine/Engine.h"
 
+#include "system/EngineDiagnostics.h"
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"
@@ -571,6 +572,8 @@ namespace hpl {
 				START_TIMING(FlushRender)
 				mpGraphics->GetLowLevel()->FlushRendering();
 				STOP_TIMING(FlushRender)
+
+				cEngineDiagnostics::EndFrame();
 				
 				//Update fps counter.
 				mpFPSCounter->AddFrame();

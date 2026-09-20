@@ -92,6 +92,10 @@ namespace hpl {
 
 		mfFadeTime =0;
 
+		mfFalloffPow = 1.0f;
+		mfSpotFalloffPow = 1.0f;
+		mfBrightness = 1.0f;
+
 		///////////////////////////////
 		//Data init
 		// NOTE: SOMA's data does not ship "core_falloff_linear" (only Amnesia's

@@ -401,14 +401,15 @@ namespace hpl {
 
 	void cHeadlessControlServer::Update()
 	{
-		cEngineDiagnostics::EndFrame();
-
 		for(size_t i=0; i<mvFrameWaiters.size(); )
 		{
-			if(--mvFrameWaiters[i].mlFramesLeft > 0) { ++i; continue; }
+			bool bTimedOut = cPlatform::GetApplicationTime() >= mvFrameWaiters[i].mlDeadlineMs;
+			unsigned int lFrame = cEngineDiagnostics::GetRenderedFrameCount();
+			if(lFrame < mvFrameWaiters[i].mlTargetFrame && !bTimedOut) { ++i; continue; }
 
 			cHeadlessResponse response;
-			response.Set("frames", mvFrameWaiters[i].mlFramesTotal);
+			response.Set("frames", (int)(lFrame - mvFrameWaiters[i].mlStartFrame));
+			response.Set("timed_out", bTimedOut);
 			SendResponse(mvFrameWaiters[i].mlClientFd, response);
 			mvFrameWaiters.erase(mvFrameWaiters.begin() + i);
 		}
@@ -497,7 +498,9 @@ namespace hpl {
 			cFrameWaiter waiter;
 			waiter.mlClientFd = aPending.mlClientFd;
 			waiter.mlFramesTotal = aPending.mRequest.GetInt("n", 1);
-			waiter.mlFramesLeft = waiter.mlFramesTotal;
+			waiter.mlStartFrame = cEngineDiagnostics::GetRenderedFrameCount();
+			waiter.mlTargetFrame = waiter.mlStartFrame + (unsigned int)waiter.mlFramesTotal;
+			waiter.mlDeadlineMs = cPlatform::GetApplicationTime() + (unsigned long)aPending.mRequest.GetInt("max_ms", 600000);
 			mvFrameWaiters.push_back(waiter);
 			return;
 		}

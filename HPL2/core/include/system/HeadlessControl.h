@@ -215,8 +215,10 @@ namespace hpl {
 		struct cFrameWaiter
 		{
 			int mlClientFd;
-			int mlFramesLeft;
+			unsigned int mlTargetFrame;
+			unsigned int mlStartFrame;
 			int mlFramesTotal;
+			unsigned long mlDeadlineMs;
 		};
 		std::vector<cFrameWaiter> mvFrameWaiters;
 		std::map<tString, cHandlerEntry> mmapHandlers;

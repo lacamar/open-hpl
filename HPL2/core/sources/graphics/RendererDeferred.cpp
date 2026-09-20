@@ -581,20 +581,9 @@ namespace hpl {
 				// both spellings; each is a no-op on whichever program doesn't
 				// declare it.
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
-				// afFalloffPow/afSpotFalloffPow: HPSL's analytic light falloff
-				// exponents (raises the linear "1 - dist/radius"/cone-edge term
-				// to this power) - a real per-light parameter in HPSL, but one
-				// HPL2's own cLight/cLightSpot classes have no field for (HPL2's
-				// original engine did radial falloff via an authored 1D texture
-				// curve instead, GetFalloffMap(), which this HPSL shader doesn't
-				// even sample). Left unset, both default to GLSL's 0, and
-				// pow(x, 0) == 1 for any x - i.e. *no* falloff at all inside the
-				// light's radius/cone, so every light contributes its full
-				// unattenuated color everywhere it reaches; with several
-				// overlapping lights and additive blending that saturates the
-				// accumulation buffer to solid white. No authored per-light
-				// value exists to read, so use a fixed, reasonable exponent
-				// instead of leaving this at the degenerate 0 default.
+				// HPSL's analytic falloff exponents; per-light FalloffPow/SpotFalloffPow
+				// from the map data (iLight::GetFalloffPow()). Must never stay at
+				// GLSL's default 0: pow(x,0)==1 means no falloff at all.
 				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
 			}
@@ -1459,8 +1448,13 @@ namespace hpl {
 		///////////////////////
 		// General variables
 		apProgram->SetVec3f(kVar_avLightPos, apLightData->m_mtxViewSpaceRender.GetTranslation());
-		apProgram->SetColor4f(kVar_avLightColor, pLight->GetDiffuseColor());
+		cColor lightColor = pLight->GetDiffuseColor();
+		lightColor.r *= pLight->GetBrightness(); lightColor.g *= pLight->GetBrightness(); lightColor.b *= pLight->GetBrightness();
+		apProgram->SetColor4f(kVar_avLightColor, lightColor);
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
+		// No-ops for Dark Descent's GLSL (variables don't exist there).
+		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow());
+		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow());
 
 		////////////////////////
 		// Point light specific
@@ -1575,10 +1569,6 @@ namespace hpl {
 								1.0f / (float)mvRenderTargetSize.x,
 								1.0f / (float)mvRenderTargetSize.y);
 
-			// See the registration comment above - no authored value exists,
-			// this just avoids the degenerate pow(x,0)==1 "no falloff" default.
-			pProgram->SetFloat(kVar_afFalloffPow, 2.0f);
-			pProgram->SetFloat(kVar_afSpotFalloffPow, 2.0f);
 		}
 
 		/////////////////////////
@@ -2518,7 +2508,9 @@ namespace hpl {
 		//Set up Light specific variables
 		if(mpLightBoxProgram[lProgramNum])
 		{
-			mpLightBoxProgram[lProgramNum]->SetColor4f(kVar_avLightColor,pLight->GetDiffuseColor());
+			cColor boxColor = pLight->GetDiffuseColor();
+			boxColor.r *= pLight->GetBrightness(); boxColor.g *= pLight->GetBrightness(); boxColor.b *= pLight->GetBrightness();
+			mpLightBoxProgram[lProgramNum]->SetColor4f(kVar_avLightColor,boxColor);
 		}
 
 		//Blend mode

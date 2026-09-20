@@ -210,6 +210,14 @@ namespace hpl {
 		virtual void SetRadius(float afX);
 		float GetRadius(){return mfRadius;}
 
+		// HPL3 map data; only read by the HPSL light path.
+		void SetFalloffPow(float afX){ mfFalloffPow = afX;}
+		float GetFalloffPow(){ return mfFalloffPow;}
+		void SetSpotFalloffPow(float afX){ mfSpotFalloffPow = afX;}
+		float GetSpotFalloffPow(){ return mfSpotFalloffPow;}
+		void SetBrightness(float afX){ mfBrightness = afX;}
+		float GetBrightness(){ return mfBrightness;}
+
 
 		float GetSourceRadius(){ return mfSourceRadius;}
 		void SetSourceRadius(float afX){ mfSourceRadius = afX;}
@@ -251,6 +259,9 @@ namespace hpl {
 		cColor mSpecularColor;
 		float mfSourceRadius;
 		float mfRadius;
+		float mfFalloffPow;
+		float mfSpotFalloffPow;
+		float mfBrightness;
 
 		bool mbCastShadows;
 		tObjectVariabilityFlag mlShadowCastersAffected;

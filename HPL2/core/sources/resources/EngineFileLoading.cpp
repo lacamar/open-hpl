@@ -304,6 +304,9 @@ namespace hpl {
 		pLight->SetDiffuseColor(apElement->GetAttributeColor("DiffuseColor", cColor(1)));
 		pLight->SetDefaultDiffuseColor(pLight->GetDiffuseColor());
 		pLight->SetRadius(apElement->GetAttributeFloat("Radius", 1));
+		pLight->SetFalloffPow(apElement->GetAttributeFloat("FalloffPow", 1));
+		pLight->SetSpotFalloffPow(apElement->GetAttributeFloat("SpotFalloffPow", 1));
+		pLight->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
 
 		pLight->SetShadowMapResolution( ToShadowMapResolution(apElement->GetAttributeString("ShadowResolution", "High")) );
 		

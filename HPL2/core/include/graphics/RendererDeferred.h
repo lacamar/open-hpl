@@ -195,7 +195,8 @@ namespace hpl {
 		// GetRawPixelsRGBAFloat()) straight from a live render target
 		// instead of only ever seeing it through RenderGbufferContent()'s
 		// own quad-view draw.
-		iTexture* GetDebugGBufferTexture(int alIdx){ return GetBufferTexture(alIdx); }
+		// 0-3: G-buffer targets, 4: light accumulation buffer
+		iTexture* GetDebugGBufferTexture(int alIdx){ return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 
 	private:
 		void CopyToFrameBuffer();
