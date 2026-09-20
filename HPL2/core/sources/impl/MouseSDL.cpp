@@ -18,6 +18,7 @@
  */
 
 #include "impl/MouseSDL.h"
+#include <cstdlib>
 
 #if USE_SDL2
 #include "SDL2/SDL.h"
@@ -85,6 +86,9 @@ namespace hpl {
 		mbWheelUpMoved = false;
 		mbWheelDownMoved = false;
 
+		static const bool bHeadless = getenv("OPENHPL_HEADLESS_SOCKET") != NULL;
+		cVector2l vInjectedRel(0,0);
+
 		std::list<SDL_Event>::iterator it = mpLowLevelInputSDL->mlstEvents.begin();
 		for(; it != mpLowLevelInputSDL->mlstEvents.end(); ++it)
 		{
@@ -102,6 +106,8 @@ namespace hpl {
 
 			if(pEvent->type == SDL_MOUSEMOTION)
 			{
+				// Injected headless events never reach SDL's relative-state accumulator.
+				if(bHeadless) vInjectedRel += cVector2l(pEvent->motion.xrel, pEvent->motion.yrel);
 #if SDL_VERSION_ATLEAST(2, 0, 0) && WIN32
 				/*if(pLowLevelGfx->GetFullscreenModeActive() == false)
 				{
@@ -168,9 +174,7 @@ namespace hpl {
 		
 		int lX,lY; 
 		SDL_GetRelativeMouseState(&lX, &lY);
-		mvMouseRelPos = cVector2l(lX,lY);
-
-		
+		mvMouseRelPos = cVector2l(lX,lY) + vInjectedRel;
 	}
 	
 	//-----------------------------------------------------------------------

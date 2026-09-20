@@ -232,6 +232,12 @@ namespace hpl {
 		static void SetForceCacheLoadingAndSkipSaving(bool abX){ mbForceCacheLoadingAndSkipSaving = abX;}
 		static bool GetForceCacheLoadingAndSkipSaving(){ return mbForceCacheLoadingAndSkipSaving ;}
 
+		// When set, .msh caches are read from/written to this directory (with
+		// trailing slash) instead of next to the source mesh - game data dirs
+		// stay untouched. Overrides ForceCacheLoadingAndSkipSaving for meshes.
+		static void SetMeshCacheDir(const tWString& asDir){ msMeshCacheDir = asDir; }
+		static const tWString& GetMeshCacheDir(){ return msMeshCacheDir; }
+
 		static void SetCreateAndLoadCompressedMaps(bool abX){ mbCreateAndLoadCompressedMaps = abX;}
 		static bool GetCreateAndLoadCompressedMaps(){ return mbCreateAndLoadCompressedMaps ;}
 		
@@ -276,6 +282,7 @@ namespace hpl {
 		tWString mwsEmptyString;
 
 		static bool mbForceCacheLoadingAndSkipSaving;
+		static tWString msMeshCacheDir;
 		static bool mbCreateAndLoadCompressedMaps;
 	};
 

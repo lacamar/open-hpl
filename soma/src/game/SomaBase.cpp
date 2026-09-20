@@ -557,6 +557,18 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// this call's own original site.
 	cResources::SetForceCacheLoadingAndSkipSaving(true);
 
+	// Mesh caches go to $XDG_CACHE_HOME instead (never next to the game data).
+	{
+		tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome);
+		const wchar_t* vParts[] = { _W("open-hpl/"), _W("soma/"), _W("meshcache/") };
+		for (int i = 0; i < 3; ++i)
+		{
+			sDir += vParts[i];
+			if (cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
+		}
+		cResources::SetMeshCacheDir(sDir);
+	}
+
 	/////////////////////////////
 	// Init the engine: create the window, load resources.cfg/materials.cfg,
 	// and get to a state where an empty scene can be rendered.

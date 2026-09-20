@@ -44,8 +44,15 @@ def census_map(path):
         tags = Counter()
         for section in root.findall("Section"):
             objects = section.find("Objects")
-            if objects is not None:
-                tags.update(child.tag for child in objects)
+            if objects is None:
+                continue
+            for child in objects:
+                # 24 decals in the depot are authored with an empty DecalMesh: nothing to create.
+                if track == "Decal":
+                    mesh = child.find("DecalMesh")
+                    if mesh is None or int(mesh.get("NumVerts", "0")) <= 0 or int(mesh.get("NumInds", "0")) <= 0:
+                        continue
+                tags[child.tag] += 1
         tracks[track] = {"file_missing": False, "xml": sum(tags.values()), "tags": dict(tags)}
 
     root = parse(path + "_StaticObjectBatches")

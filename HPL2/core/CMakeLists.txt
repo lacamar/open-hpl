@@ -175,6 +175,7 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderColladaHelpers.cpp
     sources/impl/MeshLoaderColladaLoader.cpp
     sources/impl/MeshLoaderMSH.cpp
+    sources/impl/MeshLoaderAssimp.cpp
 )
 
 IF(APPLE)
@@ -269,6 +270,7 @@ FindPrebuiltLibrary(THEORA_LIBRARY theora)
 FindPrebuiltLibrary(DEVIL_LIBRARY IL)
 
 find_package(OpenGL)
+find_package(assimp REQUIRED)
 mark_as_advanced(NEWTON_LIBRARY DGPHYSICS_LIBRARY DGCORE_LIBRARY ANGELSCRIPT_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
 
 # setup HPL2 compile target
@@ -321,6 +323,7 @@ target_link_libraries(HPL2
     ${GLEW_LIBRARY}
     ${THEORA_LIBRARY}
     ${DEVIL_LIBRARY}
+    assimp::assimp
     z
     ${PLATFORM_LIBS}
 )

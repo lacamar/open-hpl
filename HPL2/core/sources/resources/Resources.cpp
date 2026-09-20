@@ -62,6 +62,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	bool cResources::mbForceCacheLoadingAndSkipSaving = false;
+	tWString cResources::msMeshCacheDir = _W("");
 	bool cResources::mbCreateAndLoadCompressedMaps= false; 
 
 	//-----------------------------------------------------------------------

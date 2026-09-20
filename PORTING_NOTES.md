@@ -5656,3 +5656,87 @@ click-through-then-wait once or twice more (this looked like a timing/input race
 failure) or drive it interactively instead of headlessly.
 
 Shipped as 1.3.24-1.
+
+## SOMA conformance tooling, and what the first all-maps sweep found (2026-09-20/21)
+
+Work follows `SOMA_PLAN.md`. State lives in `soma/conformance/` (`expected.json` from
+`scripts/soma-census.py`, `allowlist.json`, `results.json` from `scripts/soma-sweep.py`);
+`CLAUDE.md` documents the commands. Everything below was found and verified through text
+diagnostics (`load_report`, `render_stats`, `frame_stats`, `read_gbuffer_stats`, `lights`,
+`shader_report`, log aggregation, gdb/coredumpctl); one screenshot was taken at the end as a
+sanity check.
+
+### Tooling added
+
+- `HPL2/core/.../system/EngineDiagnostics.{h,cpp}`: shader compile/link registry, draw-call and
+  rendered-frame counters, GL error tally, world/render/light/entity/frame/pixel stats as JSON.
+- Headless commands: `load_report`, `world_stats`, `render_stats`, `frame_stats`,
+  `shader_report`, `lights`, `pick`, `entity_info`, `wait_frames n= max_ms=`,
+  `set_render_setting`, `read_gbuffer_stats target=4` (light accumulation buffer).
+  `cHeadlessResponse::SetRaw()` for nested JSON; NaN/inf floats serialize as `null`.
+- `cWorldLoaderHpm`: one generic `LoadTrack()` replaces six copy-pasted track loaders and
+  records xml/created/skipped(reason)/ms per track.
+- `OPENHPL_SOMA_SKIP_BOOT=1` (no splash/gamma screen), `OPENHPL_SOMA_MAP` defaults to the first
+  PlayerStart, `start_map` hides the menu.
+- `scripts/soma-init.sh`, `soma-run.sh`, `soma-census.py`, `soma-sweep.py`,
+  `soma-shader-check.py` (glslangValidator over `OPENHPL_DUMP_HPSL_SHADERS_DIR` dumps).
+
+### Bugs found by the sweep and fixed
+
+1. **Lights contributed nothing: G-buffer was `GL_TEXTURE_RECTANGLE`, HPSL samples `sampler2D`.**
+   Subway: healthy G-buffer (diffuse mean 0.65), 7 lights rendered, accumulation buffer exactly
+   0 everywhere. A temporary debug output in the light shader showed `fAttenuation == 0` and
+   `fDepth*50 >= 1` on every pixel while `read_gbuffer_stats target=1` reported depth
+   `0.0003..0.0103` - the shader was not reading that texture. `CreateRenderTexture()` defaults
+   to `eTextureType_Rect`; the transpiled shader declares `sampler2D`, so it sampled the unit's
+   unbound 2D target (`(0,0,0,1)`, i.e. depth 1 = far plane). Fix:
+   `cRendererDeferred::SetGBufferTextureType(eTextureType_2D)` for SOMA (G-buffer +
+   accumulation buffer), and normalized UVs in `CopyToFrameBuffer()` for non-rect.
+   Frame luminance: subway 0.0 -> 26.9, laboratory 0.1 -> 38.0, apartment 6.9 -> 10.2.
+   The light the apartment did get before came from the box-light path only.
+2. **Per-light `FalloffPow`/`SpotFalloffPow`/`Brightness` ignored.** The renderer hardcoded
+   exponent 2.0 with a comment claiming no authored value exists; every SOMA light has them
+   (mostly 0.7 / 0.8 / 0.1-2). Now `iLight` members read by `cEngineFileLoading::LoadLight()`.
+3. **CHC occlusion culling: 0.1 fps and everything culled.** gdb showed the main thread in
+   `cOcclusionQueryOGL::FetchResults` -> `agx_get_query_result` -> `drmSyncobjWait`; synchronous
+   query readback flushes the whole batch on a tiler. With it off subway went from 0 draw calls
+   at 0.1 fps to 179 at 60 fps. Disabled for SOMA viewports (frustum culling remains). Dark
+   Descent still uses it - worth measuring there.
+4. **SIGSEGV in `iParticleEmitter::GetMaterial()`**: emitter whose materials all failed to load
+   indexed an empty vector. Returns NULL now (renderer already handles NULL).
+5. **SIGSEGV in `glDrawElements`, `mlElementHandle == 0`**: `ImpactPS` particle systems are
+   created from Newton's collision callback thread, so `Compile()` ran with no GL context.
+   `cVertexBufferOGL_VBO::Bind()/UpdateData()` now create the buffers lazily on the GL thread.
+6. **Headless shutdown hang**: `close()` on the listen fd does not wake `accept()` on Linux;
+   added `shutdown()`.
+7. **`Log()`/`Error()`/`Warning()` `vsprintf` overflow** -> `vsnprintf`.
+8. **Transpiler**: `cVector3b` & co, unsigned vectors, `cMatrix2x2f/3x3f/4f` were unmapped
+   (`deferred_fog_frag` failed to compile as soon as FogAreas were loaded).
+9. Float G-buffer colour targets are now cleared each frame (NaNs from uninitialized memory in
+   uncovered pixels).
+10. `HpslTranspilerTests` was already failing on master: it asserted the pre-`vtx_vTangent`-fix
+    behaviour. Updated to the intended alias.
+
+### Tracks now loaded
+
+Decal, Billboard (+ light connections), ParticleSystem, FogArea via the shared
+`cEngineFileLoading` helpers; DetailMeshes as one static entity per instance (XML element text
+is exposed as a `_Text` pseudo attribute by `cXmlDocumentTiny`). All 3766 primitives in the
+depot are planes, so nothing else is needed there.
+
+### Open, from the sweep data
+
+- 121 `.fbx`-only meshes (characters, creatures, animated props): no loader. `assimp-devel` is
+  installed; HPL3 `.msh` caches exist but have a newer version.
+- Material types missing: `projecteduv` (15 .mat), `terrain` (23), `terraindecal` (8).
+- Terrain active in 10 maps; Compound/LightMask/LensFlare/StaticComboArea/StaticObjectBatches
+  tracks unloaded (allowlisted with reasons).
+- Sound track: `SoundEntityFile` values are FMOD event paths, the depot ships zero `.snt`.
+- `core_falloff_linear` missing (harmless for HPSL lights, noisy); thousands of
+  "Cannot find sound entity" errors from physics materials.
+- `02_03_delta`: world AABB contains ~1e38 (an entity with a garbage bounding volume).
+- Exposure is applied as a multiplicative blend, which cannot brighten (>1 clamps); no
+  tonemapping/bloom chain yet; frames are still darker than the reference.
+- Engine exit blocks for minutes in the driver's `close()` on big maps.
+- Mesh cache writes are disabled to protect the Steam dir, so every load re-parses `.dae`
+  (2 min on the largest maps). Redirecting the cache to `$XDG_CACHE_HOME` would fix both.

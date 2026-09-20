@@ -1,5 +1,31 @@
 # Tasks
 
+## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
+
+Ordered. Verify each with `scripts/soma-sweep.py --compare`.
+
+1. FBX mesh loader (121 `.fbx`-only meshes: characters, creatures, animated props). assimp is
+   available. Removes every `entity_failed:*.ent` sweep failure.
+2. Material types `projecteduv` (15), `terrain` (23), `terraindecal` (8); then re-check
+   `no_material:N` per map.
+3. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
+   tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
+4. `decal_mesh_failed` cases (a handful per map) - inspect the XML of the failing decals.
+5. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+6. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+7. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
+   unknown `.ent` sub-entity type).
+8. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+9. Reference-pose comparison against official screenshots (needs user-supplied images).
+10. P6 soak test (movement + RSS/fps sampling).
+11. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+
+Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
+G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,
+two crash fixes, mesh cache in `$XDG_CACHE_HOME`. Details in PORTING_NOTES.md.
+
+## History
+
 - SOMA: apartment-darkness root-caused and fixed - vtx_vTangent was a declared-but-never-bound
   GPU vertex attribute (2026-09-12)
   - DONE: the long-running "SOMA apartment renders near-total black" investigation is resolved.

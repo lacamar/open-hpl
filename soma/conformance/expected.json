@@ -351,9 +351,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 118
+      "Decal": 117
      },
-     "xml": 118
+     "xml": 117
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -472,9 +472,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 584
+      "Decal": 583
      },
-     "xml": 584
+     "xml": 583
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -712,9 +712,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 334
+      "Decal": 333
      },
-     "xml": 334
+     "xml": 333
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -950,9 +950,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 463
+      "Decal": 455
      },
-     "xml": 463
+     "xml": 455
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -1069,9 +1069,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 2082
+      "Decal": 2080
      },
-     "xml": 2082
+     "xml": 2080
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -1540,9 +1540,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 380
+      "Decal": 375
      },
-     "xml": 380
+     "xml": 375
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -2125,9 +2125,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 407
+      "Decal": 406
      },
-     "xml": 407
+     "xml": 406
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -2360,9 +2360,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 961
+      "Decal": 957
      },
-     "xml": 961
+     "xml": 957
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -2593,10 +2593,8 @@
     },
     "Decal": {
      "file_missing": false,
-     "tags": {
-      "Decal": 1
-     },
-     "xml": 1
+     "tags": {},
+     "xml": 0
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -2816,9 +2814,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 564
+      "Decal": 562
      },
-     "xml": 564
+     "xml": 562
     },
     "DetailMeshes": {
      "file_missing": false,
@@ -3056,9 +3054,9 @@
     "Decal": {
      "file_missing": false,
      "tags": {
-      "Decal": 179
+      "Decal": 178
      },
-     "xml": 179
+     "xml": 178
     },
     "DetailMeshes": {
      "file_missing": false,

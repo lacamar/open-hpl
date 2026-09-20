@@ -1061,7 +1061,18 @@ namespace hpl {
 		// Clear depth (no need to clear any of the textures!)
 		
 		mpLowLevelGraphics->SetClearDepth(1);
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth, true);
+		// A float G-buffer keeps NaNs from uninitialized memory in pixels no
+		// geometry covers, and lights then propagate them; clear those too.
+		if(mGBufferType == eDeferredGBuffer_64Bit)
+		{
+			// Far depth (w=1) and a valid unit normal, so lights attenuate to exactly 0 there.
+			mpLowLevelGraphics->SetClearColor(cColor(0,0,1,1));
+			ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
+		}
+		else
+		{
+			ClearFrameBuffer(eClearFrameBufferFlag_Depth, true);
+		}
 		END_RENDER_PASS();
 	}
 

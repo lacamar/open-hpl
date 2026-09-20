@@ -99,7 +99,7 @@ namespace hpl {
 			cMeshLoaderHandler *pMeshLoadHandler = mpResources->GetMeshLoaderHandler();
 			pAnimation = pMeshLoadHandler->LoadAnimation(sPath);
 			
-			AddResource(pAnimation);
+			if(pAnimation) AddResource(pAnimation);
 		}
 
 		if(pAnimation) pAnimation->IncUserCount();

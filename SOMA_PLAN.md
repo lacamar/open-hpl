@@ -8,6 +8,18 @@ Written 2026-09-20 from a review of `soma/src/game/`, `HPL2/core/.../WorldLoader
 `HeadlessControl.cpp`, `scripts/`, TASKS.md, PORTING_NOTES.md and a census of the real Steam
 data.
 
+## Status (2026-09-21)
+
+- P0, P1, P2: done. `CLAUDE.md` has the commands.
+- P3: offline glslang check done (`soma-shader-check.py`, fed by shader dumps); material census
+  done (missing: `projecteduv`, `terrain`, `terraindecal`). Bone attributes dropped: HPL2 skins
+  on the CPU, and the HPSL GPU path needs texture buffers, so `UseSkeleton` stays off.
+- P4: Decal, Billboard, ParticleSystem, FogArea, DetailMeshes loaded. All primitives in the
+  depot are planes. Rest open.
+- P5: started - the sweep's black frames were root-caused (rect vs 2D G-buffer samplers,
+  ignored per-light falloff, CHC culling). Open items in TASKS.md.
+- P6: not started.
+
 ## 1. Review findings
 
 ### Map loading

@@ -31,8 +31,8 @@ def main():
         for f in sorted(files):
             if not f.endswith(".glsl"):
                 continue
-            base = re.sub(r"^\d+_", "", f)
-            requested.add(base[:-5])
+            base = re.sub(r"(\.glsl)+$", "", re.sub(r"^\d+_", "", f))
+            requested.add(base)
             path = os.path.join(dirpath, f)
             with open(path, "rb") as fh:
                 digest = hashlib.sha1(fh.read()).hexdigest()

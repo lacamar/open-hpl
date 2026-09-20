@@ -176,11 +176,33 @@ namespace hpl {
 
 	//-------------------------------------------------
 
+	static tWString GetExternalMeshCacheFile(const tWString& asFile)
+	{
+		tWString sFlat = asFile;
+		for(size_t i=0; i<sFlat.size(); ++i)
+			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
+		return cResources::GetMeshCacheDir() + sFlat + _W(".msh");
+	}
+
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
 		/////////////////////////////////////////////////
 		// TRY USING MSH LOADER
-		if(mbLoadAndSaveMSHFormat)
+		bool bExternalCache = cResources::GetMeshCacheDir() != _W("");
+		if(mbLoadAndSaveMSHFormat && bExternalCache)
+		{
+			tWString sMSHFile = GetExternalMeshCacheFile(asFile);
+			if(cPlatform::FileExists(sMSHFile) && cPlatform::FileModifiedDate(sMSHFile) > cPlatform::FileModifiedDate(asFile))
+			{
+				cMesh *pMesh = mpMeshLoaderMSH->LoadMesh(sMSHFile, aFlags);
+				if(pMesh)
+				{
+					pMesh->SetFullPath(asFile);
+					return pMesh;
+				}
+			}
+		}
+		else if(mbLoadAndSaveMSHFormat)
 		{
 			tWString sMSHFile = cString::SetFileExtW(asFile, _W("msh"));
 			cDate currentDate = cPlatform::FileModifiedDate(asFile);
@@ -752,10 +774,10 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// SAVE MSH FORMAT
-		if(	cResources::GetForceCacheLoadingAndSkipSaving()==false && 
+		if(	(bExternalCache || cResources::GetForceCacheLoadingAndSkipSaving()==false) && 
 			mbLoadAndSaveMSHFormat && bMeshIsOKToCache)
 		{
-			tWString sMSHFile = cString::SetFileExtW(asFile, _W("msh"));
+			tWString sMSHFile = bExternalCache ? GetExternalMeshCacheFile(asFile) : cString::SetFileExtW(asFile, _W("msh"));
 			
 			mpMeshLoaderMSH->SaveMesh(pMesh, sMSHFile);
 		}
