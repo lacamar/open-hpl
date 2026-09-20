@@ -191,8 +191,9 @@ namespace hpl {
 		mpMeshEntity->UpdateGraphicsForFrame(afFrameTime);
 
 		////////////////////////////////////
-		// If it has dynamic mesh, update it.
-		if(mpDynVtxBuffer)
+		// If it has dynamic mesh, update it. A sub mesh without bone weights
+		// inside a skinned mesh keeps its bind pose.
+		if(mpDynVtxBuffer && mpSubMesh->mpVertexWeights)
 		{
 			if(mpMeshEntity->mbSkeletonPhysicsSleeping && mbGraphicsUpdated)
 			{

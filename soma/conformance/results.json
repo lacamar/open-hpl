@@ -5,17 +5,15 @@
    "boot_s": 0.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.999992,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 1.75,
     "pos_z": 0,
     "yaw": 0
    },
-   "failures": [
-    "lum_mean:2.8"
-   ],
-   "fps": 60,
+   "failures": [],
+   "fps": 59.999992,
    "frame": {
     "black_frac": 0.982921,
     "height": 720,
@@ -133,7 +131,7 @@
    "load_report": {
     "map": "00_00_intro.hpm",
     "terrain_active": false,
-    "total_ms": 46,
+    "total_ms": 50,
     "tracks": {
      "Area": {
       "created": 1,
@@ -152,7 +150,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
@@ -194,7 +192,7 @@
      "Light": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
@@ -249,7 +247,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2989423.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3070761.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -5316,24 +5314,272 @@
    }
   },
   "02_06_theta_tunnels.hpm": {
-   "allowlisted": [],
-   "backtrace": [
-    "gdb produced no frames: warning: process 3016980 is a zombie - the process has already terminated\nptrace: Operasjonen er ikke tillatt.\nNo stack.\nThe program is not being run."
+   "allowlisted": [
+    "Compound:0/55",
+    "LightMask:0/21",
+    "Sound:0/117"
    ],
-   "boot_s": 16.4,
-   "error": "connection closed before a response line arrived",
+   "boot_s": 15.6,
+   "camera": {
+    "fov_deg": 70.000008,
+    "fps": 2.32558,
+    "pitch": 0,
+    "pos_x": 2.75,
+    "pos_y": 4.75,
+    "pos_z": -64,
+    "yaw": 3e-06
+   },
    "failures": [
-    "status:hang"
+    "no_material:36",
+    "fps:2.3"
    ],
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3016980.log",
+   "fps": 2.32558,
+   "frame": {
+    "black_frac": 0.358621,
+    "height": 720,
+    "lum_hist16": [
+     0.507229,
+     0.318074,
+     0.061259,
+     0.041663,
+     0.030166,
+     0.010441,
+     0.008505,
+     0.005101,
+     0.003776,
+     0.003419,
+     0.004281,
+     0.002818,
+     0.001161,
+     0.00079,
+     0.000642,
+     0.000676
+    ],
+    "lum_max": 253,
+    "lum_mean": 19.815695,
+    "lum_min": 0,
+    "magenta_frac": 0,
+    "white_frac": 0.000101,
+    "width": 1280
+   },
+   "gbuffer": {
+    "0": {
+     "a_max": 0.110352,
+     "a_mean": 0.000298,
+     "a_min": 0,
+     "a_nan_count": 0,
+     "a_zero_count": 913988,
+     "b_max": 0.995605,
+     "b_mean": 0.238328,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 43,
+     "g_max": 0.995605,
+     "g_mean": 0.274688,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 44,
+     "height": 720,
+     "r_max": 0.995605,
+     "r_mean": 0.311547,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 3,
+     "sample_a": 0,
+     "sample_b": 0.192383,
+     "sample_g": 0.4021,
+     "sample_r": 0.576172,
+     "width": 1280
+    },
+    "1": {
+     "a_max": 0.022659,
+     "a_mean": 0.008535,
+     "a_min": 0.003061,
+     "a_nan_count": 0,
+     "a_zero_count": 0,
+     "b_max": 1,
+     "b_mean": 0.378844,
+     "b_min": -0.75293,
+     "b_nan_count": 0,
+     "b_zero_count": 0,
+     "g_max": 0.999512,
+     "g_mean": -0.233435,
+     "g_min": -0.999512,
+     "g_nan_count": 0,
+     "g_zero_count": 0,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": 0.066017,
+     "r_min": -0.999512,
+     "r_nan_count": 0,
+     "r_zero_count": 8,
+     "sample_a": 0.021057,
+     "sample_b": 0.451172,
+     "sample_g": 0.321777,
+     "sample_r": 0.832031,
+     "width": 1280
+    },
+    "2": {
+     "a_max": 0.988281,
+     "a_mean": 0.332533,
+     "a_min": 0,
+     "a_nan_count": 0,
+     "a_zero_count": 353838,
+     "b_max": 1,
+     "b_mean": 0.295739,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 462,
+     "g_max": 1,
+     "g_mean": 0.295369,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 404,
+     "height": 720,
+     "r_max": 1,
+     "r_mean": 0.309365,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 460,
+     "sample_a": 0.67041,
+     "sample_b": 0.430908,
+     "sample_g": 0.491211,
+     "sample_r": 0.603027,
+     "width": 1280
+    }
+   },
+   "load_report": {
+    "map": "02_06_theta_tunnels.hpm",
+    "terrain_active": false,
+    "total_ms": 14903,
+    "tracks": {
+     "Area": {
+      "created": 886,
+      "file_missing": false,
+      "ms": 9,
+      "skipped": {},
+      "xml": 886
+     },
+     "Billboard": {
+      "created": 127,
+      "file_missing": false,
+      "ms": 33,
+      "skipped": {},
+      "xml": 127
+     },
+     "Compound": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {
+       "unsupported_track": 55
+      },
+      "xml": 55
+     },
+     "Decal": {
+      "created": 375,
+      "file_missing": false,
+      "ms": 380,
+      "skipped": {
+       "decal_mesh_failed": 5
+      },
+      "xml": 380
+     },
+     "DetailMeshes": {
+      "created": 639,
+      "file_missing": false,
+      "ms": 56,
+      "skipped": {},
+      "xml": 639
+     },
+     "Entity": {
+      "created": 2220,
+      "file_missing": false,
+      "ms": 5881,
+      "skipped": {},
+      "xml": 2220
+     },
+     "FogArea": {
+      "created": 3,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 3
+     },
+     "LensFlare": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     },
+     "Light": {
+      "created": 499,
+      "file_missing": false,
+      "ms": 36,
+      "skipped": {},
+      "xml": 499
+     },
+     "LightMask": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {
+       "unsupported_track": 21
+      },
+      "xml": 21
+     },
+     "ParticleSystem": {
+      "created": 60,
+      "file_missing": false,
+      "ms": 50,
+      "skipped": {},
+      "xml": 60
+     },
+     "Primitive": {
+      "created": 171,
+      "file_missing": false,
+      "ms": 118,
+      "skipped": {},
+      "xml": 171
+     },
+     "Sound": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 1,
+      "skipped": {
+       "load_failed": 117
+      },
+      "xml": 117
+     },
+     "StaticComboArea": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     },
+     "StaticObject": {
+      "created": 5121,
+      "file_missing": false,
+      "ms": 8160,
+      "skipped": {},
+      "xml": 5121
+     },
+     "StaticObjectBatches": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     }
+    }
+   },
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3070916.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 152,
+     "count": 4656,
      "example": "ERROR: Cannot find sound entity 'level_amb_shared_machines/tech/desktop_computer/hum'"
-    },
-    "ERROR: Couldn'*'.snt'": {
-     "count": 11,
-     "example": "ERROR: Couldn't create SoundEntity '.snt'"
     },
     "ERROR: Couldn'*'Entities_Station/object/metal_fan/metal_fan_loop.snt'": {
      "count": 20,
@@ -5347,114 +5593,409 @@
      "count": 27,
      "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_dreamer/animation/visemes/Visemes_9_1.fbx'"
     },
-    "ERROR: Couldn'*'entities/station/doors/slidedoor_hatch_maintenance_tunnels/animation/slidedoor_hatch_maintenance_tunnels": {
-     "count": 8,
-     "example": "ERROR: Couldn't create animation 'entities/station/doors/slidedoor_hatch_maintenance_tunnels/animation/slidedoor_hatch_maintenance_tunnels_open.fbx'"
+    "ERROR: Couldn'*'physics/default/soft/roll.snt'": {
+     "count": 95,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/default/soft/roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/object/air_con_pipe.snt'": {
-     "count": 10,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/object/air_con_pipe.snt'"
+    "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_roll.snt'": {
+     "count": 513,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/detail/metal_tinking/soft_movement.snt'": {
-     "count": 6,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/detail/metal_tinking/soft_movement.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/detail/plastic/creak.snt'": {
-     "count": 18,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/detail/plastic/creak.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/detail/vent/creak.snt'": {
-     "count": 11,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/detail/vent/creak.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/metal/pipe_groan.snt'": {
-     "count": 9,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/metal/pipe_groan.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/gore/flesh/flesh_spruit.snt'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/gore/flesh/flesh_spruit.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/gore/gore_squelch.snt'": {
-     "count": 7,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/gore/gore_squelch.snt'"
-    },
-    "ERROR: Couldn'*'level_amb_shared_machines/tech/desktop_computer/hum.snt'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_machines/tech/desktop_computer/hum.snt'"
+    "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_scrape.snt'": {
+     "count": 32,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/compact/impact.snt'": {
-     "count": 3,
+     "count": 21,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/impact.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/hollow/impact.snt'": {
-     "count": 9,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/impact.snt'"
+    "ERROR: Couldn'*'physics/metal/compact/roll.snt'": {
+     "count": 307,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/roll.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/large_crate/impact.snt'": {
-     "count": 3,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/large_crate/impact.snt'"
+    "ERROR: Couldn'*'physics/metal/compact/scrape.snt'": {
+     "count": 675,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/scrape.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/robust/impact.snt'": {
-     "count": 3,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/impact.snt'"
+    "ERROR: Couldn'*'physics/metal/hollow/roll.snt'": {
+     "count": 231,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/roll.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/round_canister/impact.snt'": {
-     "count": 3,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/round_canister/impact.snt'"
+    "ERROR: Couldn'*'physics/metal/hollow/scrape.snt'": {
+     "count": 51,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/scrape.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/tin_can/impact.snt'": {
-     "count": 6,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/tin_can/impact.snt'"
+    "ERROR: Couldn'*'physics/metal/tin_can/roll.snt'": {
+     "count": 187,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/tin_can/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/objects/plastic_clipboard/roll.snt'": {
+     "count": 63,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/plastic_clipboard/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/objects/screwdriver/roll.snt'": {
+     "count": 29,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/screwdriver/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/objects/toy_figure/roll.snt'": {
+     "count": 43,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/toy_figure/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/electronic/roll.snt'": {
+     "count": 57,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/electronic/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/pencil/roll.snt'": {
+     "count": 118,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/pencil/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/small_pen/roll.snt'": {
+     "count": 42,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/small_pen/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/brittle/roll.snt'": {
+     "count": 298,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/brittle/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/brittle/scrape.snt'": {
+     "count": 195,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/brittle/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/rock/robust/impact.snt'": {
-     "count": 6,
+     "count": 44,
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/impact.snt'"
     },
-    "ERROR: No animation event named '*'": {
-     "count": 12,
-     "example": "ERROR: No animation event named 'StopLoopSound'"
+    "ERROR: Couldn'*'physics/rock/robust/roll.snt'": {
+     "count": 767,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/robust/scrape.snt'": {
+     "count": 618,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/scrape.snt'"
     },
     "ERROR: No shapes found for body '*'": {
      "count": 18,
      "example": "ERROR: No shapes found for body 'Body_3'"
-    },
-    "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit N": {
-     "count": 6,
-     "example": "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit 0"
-    },
-    "ERROR: Sampler aHeightMap does not exist, could not bind it to unit N": {
-     "count": 15,
-     "example": "ERROR: Sampler aHeightMap does not exist, could not bind it to unit 3"
     }
    },
    "log_warnings": 292,
-   "status": "hang",
-   "wall_s": 18.3
+   "render": {
+    "draw_calls": 20602,
+    "fog_areas_in_list": 1,
+    "gl_errors": {},
+    "lights_in_list": 582,
+    "lights_rendered": 582,
+    "occlusion_queries": 0,
+    "shader_failures": 0,
+    "solid_objects": 5283,
+    "trans_objects": 574
+   },
+   "shader_failures": [],
+   "status": "ok",
+   "wall_s": 51.6,
+   "warmup": {
+    "frames": 44,
+    "timed_out": true
+   },
+   "world": {
+    "aabb_max": [
+     1110.064941,
+     923.25,
+     2370.866699
+    ],
+    "aabb_min": [
+     -1107.63501,
+     -1026.75,
+     -2562.883301
+    ],
+    "billboards": 576,
+    "dynamic_mesh_entities": 0,
+    "fog_areas": 3,
+    "lights": 897,
+    "lights_box": 66,
+    "lights_point": 676,
+    "lights_spot": 155,
+    "name": "02_06_theta_tunnels.hpm",
+    "no_material_top": {
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_organic_mind_coral_mind_coral_colony_pile.dae.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/organic/mind_coral/mind_coral_colony_edges_small_solid.mat": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_bottom.dae.msh:": 3,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_top.dae.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.msh:": 21,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.msh:": 6
+    },
+    "particle_systems": 90,
+    "physics_bodies": 6639,
+    "sound_entities": 6,
+    "static_mesh_entities": 8526,
+    "submeshes_without_material": 36
+   }
   },
   "02_07_theta_exit.hpm": {
-   "allowlisted": [],
-   "backtrace": [
-    "gdb produced no frames: warning: process 3017804 is a zombie - the process has already terminated\nptrace: Operasjonen er ikke tillatt.\nNo stack.\nThe program is not being run."
+   "allowlisted": [
+    "Compound:0/144",
+    "LightMask:0/10",
+    "Sound:1/224"
    ],
-   "boot_s": 35.3,
-   "error": "connection closed before a response line arrived",
+   "boot_s": 34.6,
+   "camera": {
+    "fov_deg": 70.000008,
+    "fps": 1.088141,
+    "pitch": 0,
+    "pos_x": -41.3974,
+    "pos_y": 1.75,
+    "pos_z": 1.87472,
+    "yaw": -1.570796
+   },
    "failures": [
-    "status:hang"
+    "no_material:15",
+    "fps:1.1"
    ],
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3017804.log",
+   "fps": 1.05485,
+   "frame": {
+    "black_frac": 0,
+    "height": 720,
+    "lum_hist16": [
+     0.11278,
+     0.886661,
+     0.000559,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "lum_max": 35,
+    "lum_mean": 18.244267,
+    "lum_min": 13,
+    "magenta_frac": 0,
+    "white_frac": 0,
+    "width": 1280
+   },
+   "gbuffer": {
+    "0": {
+     "a_max": 1,
+     "a_mean": 0.034106,
+     "a_min": 0,
+     "a_nan_count": 0,
+     "a_zero_count": 882175,
+     "b_max": 0.968262,
+     "b_mean": 0.274743,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 12842,
+     "g_max": 0.97168,
+     "g_mean": 0.295904,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 5026,
+     "height": 720,
+     "r_max": 0.968262,
+     "r_mean": 0.314033,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 534,
+     "sample_a": 0,
+     "sample_b": 0.23938,
+     "sample_g": 0.291016,
+     "sample_r": 0.425049,
+     "width": 1280
+    },
+    "1": {
+     "a_max": 0.026978,
+     "a_mean": 0.010776,
+     "a_min": 0.000657,
+     "a_nan_count": 0,
+     "a_zero_count": 0,
+     "b_max": 1,
+     "b_mean": 0.238314,
+     "b_min": -0.996094,
+     "b_nan_count": 0,
+     "b_zero_count": 3,
+     "g_max": 0.999512,
+     "g_mean": 0.241793,
+     "g_min": -1,
+     "g_nan_count": 0,
+     "g_zero_count": 307,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": -0.08055,
+     "r_min": -1,
+     "r_nan_count": 0,
+     "r_zero_count": 206,
+     "sample_a": 0.015976,
+     "sample_b": 0.048737,
+     "sample_g": 0.611816,
+     "sample_r": 0.789062,
+     "width": 1280
+    },
+    "2": {
+     "a_max": 0.915527,
+     "a_mean": 0.551001,
+     "a_min": 0,
+     "a_nan_count": 0,
+     "a_zero_count": 219,
+     "b_max": 1,
+     "b_mean": 0.503914,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 1632,
+     "g_max": 1,
+     "g_mean": 0.490823,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 884,
+     "height": 720,
+     "r_max": 1,
+     "r_mean": 0.513715,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 404,
+     "sample_a": 0.693848,
+     "sample_b": 0.383545,
+     "sample_g": 0.363281,
+     "sample_r": 0.297852,
+     "width": 1280
+    }
+   },
+   "load_report": {
+    "map": "02_07_theta_exit.hpm",
+    "terrain_active": false,
+    "total_ms": 33947,
+    "tracks": {
+     "Area": {
+      "created": 727,
+      "file_missing": false,
+      "ms": 7,
+      "skipped": {},
+      "xml": 727
+     },
+     "Billboard": {
+      "created": 43,
+      "file_missing": false,
+      "ms": 5,
+      "skipped": {},
+      "xml": 43
+     },
+     "Compound": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {
+       "unsupported_track": 144
+      },
+      "xml": 144
+     },
+     "Decal": {
+      "created": 802,
+      "file_missing": false,
+      "ms": 501,
+      "skipped": {},
+      "xml": 802
+     },
+     "DetailMeshes": {
+      "created": 2147,
+      "file_missing": false,
+      "ms": 51,
+      "skipped": {},
+      "xml": 2147
+     },
+     "Entity": {
+      "created": 1720,
+      "file_missing": false,
+      "ms": 14946,
+      "skipped": {},
+      "xml": 1720
+     },
+     "FogArea": {
+      "created": 8,
+      "file_missing": false,
+      "ms": 1,
+      "skipped": {},
+      "xml": 8
+     },
+     "LensFlare": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 1,
+      "skipped": {},
+      "xml": 0
+     },
+     "Light": {
+      "created": 566,
+      "file_missing": false,
+      "ms": 55,
+      "skipped": {},
+      "xml": 566
+     },
+     "LightMask": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {
+       "unsupported_track": 10
+      },
+      "xml": 10
+     },
+     "ParticleSystem": {
+      "created": 206,
+      "file_missing": false,
+      "ms": 120,
+      "skipped": {},
+      "xml": 206
+     },
+     "Primitive": {
+      "created": 551,
+      "file_missing": false,
+      "ms": 207,
+      "skipped": {},
+      "xml": 551
+     },
+     "Sound": {
+      "created": 1,
+      "file_missing": false,
+      "ms": 5,
+      "skipped": {
+       "load_failed": 223
+      },
+      "xml": 224
+     },
+     "StaticComboArea": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     },
+     "StaticObject": {
+      "created": 6263,
+      "file_missing": false,
+      "ms": 17823,
+      "skipped": {},
+      "xml": 6263
+     },
+     "StaticObjectBatches": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     }
+    }
+   },
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3073584.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 230,
+     "count": 8983,
      "example": "ERROR: Cannot find sound entity 'Entities_Station/object/metal_fan/metal_fan_loop'"
-    },
-    "ERROR: Couldn'*'Entities_Station/object/metal_fan/metal_fan_loop.snt'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create SoundEntity 'Entities_Station/object/metal_fan/metal_fan_loop.snt'"
-    },
-    "ERROR: Couldn'*'N_N_theta_exit_a/amb/spot/distant_movement.snt'": {
-     "count": 7,
-     "example": "ERROR: Couldn't create SoundEntity '02_07_theta_exit_a/amb/spot/distant_movement.snt'"
     },
     "ERROR: Couldn'*'core_falloff_linear'": {
      "count": 783,
@@ -5464,90 +6005,145 @@
      "count": 72,
      "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_dreamer/animation/visemes/Visemes_9_1.fbx'"
     },
-    "ERROR: Couldn'*'entities/character/station/puppet_victim/animation/puppet_victim_lying.fbx'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_victim/animation/puppet_victim_lying.fbx'"
+    "ERROR: Couldn'*'physics/ceramic/plate/plate_roll.snt'": {
+     "count": 205,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/ceramic/plate/plate_roll.snt'"
     },
-    "ERROR: Couldn'*'entities/character/station/puppet_victim/animation/puppet_victim_lying_against_wall.fbx'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_victim/animation/puppet_victim_lying_against_wall.fbx'"
+    "ERROR: Couldn'*'physics/default/soft/roll.snt'": {
+     "count": 154,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/default/soft/roll.snt'"
     },
-    "ERROR: Couldn'*'entities/character/station/puppet_victim/animation/puppet_victim_sitting_in_chair.fbx'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_victim/animation/puppet_victim_sitting_in_chair.fbx'"
+    "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_roll.snt'": {
+     "count": 146,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_roll.snt'"
     },
-    "ERROR: Couldn'*'entities/character/station/puppet_victim/animation/puppet_victim_stuck_on_wall.fbx'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create animation 'entities/character/station/puppet_victim/animation/puppet_victim_stuck_on_wall.fbx'"
+    "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_scrape.snt'": {
+     "count": 100,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_scrape.snt'"
     },
-    "ERROR: Couldn'*'entities/station/doors/slidedoor_hatch_maintenance_tunnels/animation/slidedoor_hatch_maintenance_tunnels": {
-     "count": 16,
-     "example": "ERROR: Couldn't create animation 'entities/station/doors/slidedoor_hatch_maintenance_tunnels/animation/slidedoor_hatch_maintenance_tunnels_open.fbx'"
+    "ERROR: Couldn'*'physics/metal/compact/roll.snt'": {
+     "count": 778,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/roll.snt'"
     },
-    "ERROR: Couldn'*'entities/station/machines/generator_habitat/animations/henerator_habitat_fan_spin.fbx'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create animation 'entities/station/machines/generator_habitat/animations/henerator_habitat_fan_spin.fbx'"
+    "ERROR: Couldn'*'physics/metal/compact/scrape.snt'": {
+     "count": 528,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/scrape.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/object/air_con_pipe.snt'": {
-     "count": 17,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/object/air_con_pipe.snt'"
+    "ERROR: Couldn'*'physics/metal/hollow/roll.snt'": {
+     "count": 275,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/detail/metal_tinking/soft_movement.snt'": {
-     "count": 10,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/detail/metal_tinking/soft_movement.snt'"
+    "ERROR: Couldn'*'physics/metal/hollow/scrape.snt'": {
+     "count": 1049,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/scrape.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/sfx/metal/resonant_rattle.snt'": {
-     "count": 10,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/sfx/metal/resonant_rattle.snt'"
+    "ERROR: Couldn'*'physics/metal/large_crate/scrape.snt'": {
+     "count": 488,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/large_crate/scrape.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/gloop/metal_sliding_gloop.snt'": {
-     "count": 29,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/gloop/metal_sliding_gloop.snt'"
+    "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'": {
+     "count": 117,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/water/water_lapping_around_metal.snt'": {
-     "count": 7,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/water/water_lapping_around_metal.snt'"
+    "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'": {
+     "count": 448,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/wau/large_lump.snt'": {
-     "count": 12,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/wau/large_lump.snt'"
+    "ERROR: Couldn'*'physics/metal/pipe/pipe_roll.snt'": {
+     "count": 331,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/pipe/pipe_roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/wau/sweet_lump.snt'": {
-     "count": 40,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/wau/sweet_lump.snt'"
+    "ERROR: Couldn'*'physics/metal/robust/scrape.snt'": {
+     "count": 1330,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/scrape.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/wau/upsilon_lump.snt'": {
-     "count": 16,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/wau/upsilon_lump.snt'"
+    "ERROR: Couldn'*'physics/metal/round_canister/roll.snt'": {
+     "count": 410,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/round_canister/roll.snt'"
     },
-    "ERROR: Couldn'*'level_amb_shared_interior/amb/spot/wau/wau_metal_lump_movement.snt'": {
-     "count": 10,
-     "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_interior/amb/spot/wau/wau_metal_lump_movement.snt'"
+    "ERROR: Couldn'*'physics/metal/round_canister/scrape.snt'": {
+     "count": 82,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/round_canister/scrape.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/hollow/impact.snt'": {
-     "count": 9,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/impact.snt'"
+    "ERROR: Couldn'*'physics/plastic/bottle_empty/bottle_empty_roll.snt'": {
+     "count": 107,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/bottle_empty/bottle_empty_roll.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/robust/impact.snt'": {
-     "count": 9,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/impact.snt'"
+    "ERROR: Couldn'*'physics/plastic/large_plastic_box/large_plastic_box_roll.snt'": {
+     "count": 319,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/large_plastic_box/large_plastic_box_roll.snt'"
     },
-    "ERROR: No animation event named '*'": {
-     "count": 36,
-     "example": "ERROR: No animation event named 'CreateParticle'"
+    "ERROR: Couldn'*'physics/plastic/large_plastic_box/large_plastic_box_scrape.snt'": {
+     "count": 305,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/large_plastic_box/large_plastic_box_scrape.snt'"
     },
-    "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit N": {
-     "count": 6,
-     "example": "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit 0"
+    "ERROR: Couldn'*'physics/plastic/plastic_jug/plastic_jug_roll.snt'": {
+     "count": 76,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/plastic_jug/plastic_jug_roll.snt'"
     },
-    "ERROR: Sampler aHeightMap does not exist, could not bind it to unit N": {
-     "count": 12,
-     "example": "ERROR: Sampler aHeightMap does not exist, could not bind it to unit 2"
+    "ERROR: Couldn'*'physics/rock/robust/roll.snt'": {
+     "count": 221,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/robust/scrape.snt'": {
+     "count": 85,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/toys/car/car_roll.snt'": {
+     "count": 356,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/toys/car/car_roll.snt'"
     }
    },
    "log_warnings": 389,
-   "status": "hang",
-   "wall_s": 37.8
+   "render": {
+    "draw_calls": 7021,
+    "fog_areas_in_list": 6,
+    "gl_errors": {},
+    "lights_in_list": 272,
+    "lights_rendered": 272,
+    "occlusion_queries": 0,
+    "shader_failures": 0,
+    "solid_objects": 2735,
+    "trans_objects": 314
+   },
+   "shader_failures": [],
+   "status": "ok",
+   "wall_s": 76.0,
+   "warmup": {
+    "frames": 32,
+    "timed_out": true
+   },
+   "world": {
+    "aabb_max": [
+     757.901184,
+     727.981934,
+     726.860474
+    ],
+    "aabb_min": [
+     -823.358826,
+     -733.268066,
+     -674.360474
+    ],
+    "billboards": 308,
+    "dynamic_mesh_entities": 0,
+    "fog_areas": 8,
+    "lights": 643,
+    "lights_box": 169,
+    "lights_point": 334,
+    "lights_spot": 140,
+    "name": "02_07_theta_exit.hpm",
+    "no_material_top": {
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_T_plain.dae.msh:": 1,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.msh:": 4,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.msh:": 8,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.msh:": 2
+    },
+    "particle_systems": 216,
+    "physics_bodies": 7830,
+    "sound_entities": 2,
+    "static_mesh_entities": 11483,
+    "submeshes_without_material": 15
+   }
   },
   "03_01_omicron_outside.hpm": {
    "allowlisted": [
