@@ -55,6 +55,59 @@ namespace hpl {
 	// this returns false immediately for anything that doesn't match.
 	//////////////////////////////////////////////////////////////////////////
 
+	// 'ATI2'/'BC5U' two-channel normal maps: DevIL rejects BC5U outright and
+	// decodes ATI2 to a format this engine cannot upload. Pass the blocks
+	// through untouched for GL_COMPRESSED_RG_RGTC2.
+	static bool TryLoadRgtc2DDS(const tWString& asFile, cBitmap** apBitmapOut)
+	{
+		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
+		if (pFile == NULL) return false;
+
+		unsigned char vHeader[128];
+		bool bOk = fread(vHeader, 1, sizeof(vHeader), pFile) == sizeof(vHeader) && memcmp(vHeader, "DDS ", 4) == 0;
+		bool bIsBC5U = bOk && memcmp(vHeader + 84, "BC5U", 4) == 0;
+		bool bIsATI2 = bOk && memcmp(vHeader + 84, "ATI2", 4) == 0;
+		if (bIsBC5U == false && bIsATI2 == false)
+		{
+			fclose(pFile);
+			return false;
+		}
+
+		unsigned int lHeight = 0, lWidth = 0, lMipMaps = 0;
+		memcpy(&lHeight, vHeader + 12, 4);
+		memcpy(&lWidth, vHeader + 16, 4);
+		memcpy(&lMipMaps, vHeader + 28, 4);
+		if (lMipMaps == 0) lMipMaps = 1;
+
+		cBitmap* pBitmap = hplNew(cBitmap, ());
+		if (lMipMaps > 1) pBitmap->SetUpData(1, (int)lMipMaps);
+		pBitmap->SetSize(cVector3l((int)lWidth, (int)lHeight, 1));
+		pBitmap->SetBytesPerPixel(1);
+		pBitmap->SetIsCompressed(true);
+		pBitmap->SetPixelFormat(bIsBC5U ? ePixelFormat_RGTC2_XY : ePixelFormat_RGTC2_YX);
+
+		unsigned int lW = lWidth, lH = lHeight;
+		for (unsigned int mip = 0; mip < lMipMaps; ++mip)
+		{
+			int lSize = (int)(((lW + 3) / 4) * ((lH + 3) / 4) * 16);
+			cBitmapData* pImage = pBitmap->GetData(0, (int)mip);
+			pImage->mlSize = lSize;
+			pImage->mpData = hplNewArray(unsigned char, lSize);
+			if (fread(pImage->mpData, 1, (size_t)lSize, pFile) != (size_t)lSize)
+			{
+				fclose(pFile);
+				hplDelete(pBitmap);
+				return false;
+			}
+			lW = lW > 1 ? lW / 2 : 1;
+			lH = lH > 1 ? lH / 2 : 1;
+		}
+
+		fclose(pFile);
+		*apBitmapOut = pBitmap;
+		return true;
+	}
+
 	static bool TryLoadUncompressedAlphaDDS(const tWString& asFile, cBitmap** apBitmapOut)
 	{
 		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
@@ -152,6 +205,11 @@ namespace hpl {
 		// specific uncompressed 8bpp alpha-only DDS variant correctly. Only
 		// takes effect for files matching that exact pixel-format signature;
 		// everything else falls through to the normal DevIL path below.
+		{
+			cBitmap* pRgtc2Bitmap = NULL;
+			if (TryLoadRgtc2DDS(asFile, &pRgtc2Bitmap))
+				return pRgtc2Bitmap;
+		}
 		{
 			cBitmap* pRawAlphaBitmap = NULL;
 			if (TryLoadUncompressedAlphaDDS(asFile, &pRawAlphaBitmap))

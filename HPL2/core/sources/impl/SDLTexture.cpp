@@ -956,6 +956,14 @@ namespace hpl {
 					GLCompressionFormat, 
 					avSize.x, avSize.y,
 					0, alDataSize, apData);
+
+				// Shaders unpack normal maps DXT5nm-style (x in alpha, y in green).
+				if(aPixelFormat == ePixelFormat_RGTC2_XY || aPixelFormat == ePixelFormat_RGTC2_YX)
+				{
+					bool bXFirst = aPixelFormat == ePixelFormat_RGTC2_XY;
+					GLint vSwizzle[4] = { GL_ONE, bXFirst ? GL_GREEN : GL_RED, GL_ZERO, bXFirst ? GL_RED : GL_GREEN };
+					glTexParameteriv(GLTarget, GL_TEXTURE_SWIZZLE_RGBA, vSwizzle);
+				}
 			}
 			else if(mType == eTextureType_3D)
 			{
