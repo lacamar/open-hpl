@@ -7414,42 +7414,442 @@
    }
   },
   "04_01_tau_outside.hpm": {
-   "allowlisted": [],
-   "backtrace": [],
-   "exit_code": -9,
-   "failures": [
-    "status:crash"
+   "allowlisted": [
+    "Compound:0/310",
+    "LightMask:0/1",
+    "Sound:3/20",
+    "terrain"
    ],
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3539176.log",
-   "log_errors": {
-    "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
-     "count": 1,
-     "example": "ERROR: Couldn't find test file '_test_array_support_frag.glsl' in resources"
+   "backtrace": [
+    "#0  0x0000ffffa8b6ff70 in __pthread_kill_implementation () from /lib64/libc.so.6",
+    "#0  0x0000ffffa8b6ff70 in __pthread_kill_implementation () from /lib64/libc.so.6",
+    "#1  0x0000ffffa8b1b89c [PAC] in raise () from /lib64/libc.so.6",
+    "#2  0x0000ffffa8b06720 [PAC] in abort () from /lib64/libc.so.6",
+    "#3  0x0000ffffa8b628b8 [PAC] in __libc_message_impl () from /lib64/libc.so.6",
+    "#4  0x0000ffffa8b7ba44 [PAC] in malloc_printerr () from /lib64/libc.so.6",
+    "#5  0x0000ffffa8b7c098 [PAC] in unlink_chunk.isra () from /lib64/libc.so.6",
+    "#6  0x0000ffffa8b7c130 [PAC] in _int_free_create_chunk () from /lib64/libc.so.6",
+    "#7  0x0000ffffa8b7d2ac [PAC] in _int_free_merge_chunk () from /lib64/libc.so.6",
+    "#8  0x0000ffffa8b7d430 [PAC] in _int_free_chunk () from /lib64/libc.so.6",
+    "#9  0x000000000053bb54 [PAC] in hpl::STLDeleteAll<std::__cxx11::list<hpl::cMeshEntity*, std::allocator<hpl::cMeshEntity*> > > (aCont=std::__cxx11::list = {...}) at /home/lm/.local/src/open-hpl/HPL2/core/include/system/SystemTypes.h:487",
+    "#10 0x0000000000539920 in hpl::cWorld::DestroyAllEntities (this=this@entry=0x1930ceb0, aFlags=aFlags@entry=0) at /home/lm/.local/src/open-hpl/HPL2/core/sources/scene/World.cpp:191",
+    "#11 0x00000000005399c4 in hpl::cWorld::~cWorld (this=0x1930ceb0) at /home/lm/.local/src/open-hpl/HPL2/core/sources/scene/World.cpp:170",
+    "#12 0x00000000005323b0 in hpl::STLDeleteAll<std::__cxx11::list<hpl::cWorld*, std::allocator<hpl::cWorld*> > > (aCont=std::__cxx11::list = {...}) at /home/lm/.local/src/open-hpl/HPL2/core/include/system/SystemTypes.h:487",
+    "#13 hpl::cScene::~cScene (this=0x14879930) at /home/lm/.local/src/open-hpl/HPL2/core/sources/scene/Scene.cpp:83",
+    "#14 0x0000000000532550 in hpl::cScene::~cScene (this=0x14879930) at /home/lm/.local/src/open-hpl/HPL2/core/sources/scene/Scene.cpp:88",
+    "#15 0x0000000000460b6c in hpl::cEngine::~cEngine (this=0x14815890) at /home/lm/.local/src/open-hpl/HPL2/core/sources/engine/Engine.cpp:399",
+    "#16 0x0000000000460cc0 in hpl::DestroyHPLEngine (apGame=0x14815890) at /home/lm/.local/src/open-hpl/HPL2/core/sources/engine/Engine.cpp:184",
+    "#17 0x0000000000437e54 in cSomaBase::ExitEngine (this=0x146f80b0) at /home/lm/.local/src/open-hpl/soma/src/game/SomaBase.cpp:1042",
+    "#18 cSomaBase::Exit (this=0x146f80b0) at /home/lm/.local/src/open-hpl/soma/src/game/SomaBase.cpp:718",
+    "#19 0x000000000042b024 in hplMain (asCommandline=\"\") at /home/lm/.local/src/open-hpl/soma/src/game/Main.cpp:24",
+    "#20 0x000000000040f288 in main (argc=<optimized out>, argv=<optimized out>) at /home/lm/.local/src/open-hpl/HPL2/core/sources/impl/LowLevelSystemSDL.cpp:152"
+   ],
+   "boot_s": 18.9,
+   "camera": {
+    "fov_deg": 70.000008,
+    "fps": 11.928423,
+    "pitch": 0,
+    "pos_x": -13.4867,
+    "pos_y": 817.039001,
+    "pos_z": 437.464996,
+    "yaw": 0.013099
+   },
+   "exit_code": -6,
+   "failures": [
+    "status:crash_on_exit"
+   ],
+   "fps": 11.928423,
+   "frame": {
+    "black_frac": 0.284528,
+    "height": 720,
+    "lum_hist16": [
+     0.727987,
+     0.207724,
+     0.042827,
+     0.014967,
+     0.005242,
+     0.001166,
+     2.7e-05,
+     1.1e-05,
+     1e-05,
+     5e-06,
+     2e-06,
+     1.5e-05,
+     4e-06,
+     4e-06,
+     3e-06,
+     4e-06
+    ],
+    "lum_max": 250,
+    "lum_mean": 10.22267,
+    "lum_min": 0,
+    "magenta_frac": 2.3e-05,
+    "white_frac": 0,
+    "width": 1280
+   },
+   "gbuffer": {
+    "0": {
+     "a_max": 1,
+     "a_mean": 0.303563,
+     "a_min": 0,
+     "a_nan_count": 0,
+     "a_zero_count": 641836,
+     "b_max": 1,
+     "b_mean": 0.40682,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 60,
+     "g_max": 0.896973,
+     "g_mean": 0.121732,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 279783,
+     "height": 720,
+     "r_max": 0.836426,
+     "r_mean": 0.150988,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 279787,
+     "sample_a": 1,
+     "sample_b": 1,
+     "sample_g": 0,
+     "sample_r": 0,
+     "width": 1280
     },
-    "ERROR: Couldn'*'posteffect_bloom_add_frag.glsl' in resources": {
-     "count": 1,
-     "example": "ERROR: Couldn't find file 'posteffect_bloom_add_frag.glsl' in resources"
+    "1": {
+     "a_max": 1,
+     "a_mean": 0.305445,
+     "a_min": 0.00349,
+     "a_nan_count": 0,
+     "a_zero_count": 0,
+     "b_max": 1,
+     "b_mean": 0.705016,
+     "b_min": -0.971191,
+     "b_nan_count": 0,
+     "b_zero_count": 0,
+     "g_max": 0.999512,
+     "g_mean": 0.083402,
+     "g_min": -0.999512,
+     "g_nan_count": 0,
+     "g_zero_count": 279764,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": -0.018402,
+     "r_min": -0.999512,
+     "r_nan_count": 0,
+     "r_zero_count": 279764,
+     "sample_a": 1,
+     "sample_b": 1,
+     "sample_g": 0,
+     "sample_r": 0,
+     "width": 1280
     },
-    "ERROR: Couldn'*'posteffect_bloom_blur_vtx.glsl' in resources": {
-     "count": 2,
-     "example": "ERROR: Couldn't find file 'posteffect_bloom_blur_vtx.glsl' in resources"
-    },
-    "ERROR: Couldn'*'posteffect_color_conv_tex_frag.glsl' in resources": {
-     "count": 2,
-     "example": "ERROR: Couldn't find file 'posteffect_color_conv_tex_frag.glsl' in resources"
-    },
-    "ERROR: Sampler aHeightMap does not exist, could not bind it to unit N": {
-     "count": 6,
-     "example": "ERROR: Sampler aHeightMap does not exist, could not bind it to unit 3"
-    },
-    "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit N": {
-     "count": 2,
-     "example": "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit 2"
+    "2": {
+     "a_max": 1,
+     "a_mean": 0.59324,
+     "a_min": 0.005146,
+     "a_nan_count": 0,
+     "a_zero_count": 0,
+     "b_max": 1,
+     "b_mean": 0.451184,
+     "b_min": 0,
+     "b_nan_count": 0,
+     "b_zero_count": 5205,
+     "g_max": 0.984375,
+     "g_mean": 0.149842,
+     "g_min": 0,
+     "g_nan_count": 0,
+     "g_zero_count": 284110,
+     "height": 720,
+     "r_max": 0.990723,
+     "r_mean": 0.146266,
+     "r_min": 0,
+     "r_nan_count": 0,
+     "r_zero_count": 285871,
+     "sample_a": 1,
+     "sample_b": 1,
+     "sample_g": 0,
+     "sample_r": 0,
+     "width": 1280
     }
    },
-   "log_warnings": 2,
-   "status": "crash",
-   "wall_s": 633.9
+   "load_report": {
+    "map": "04_01_tau_outside.hpm",
+    "terrain_active": true,
+    "total_ms": 18254,
+    "tracks": {
+     "Area": {
+      "created": 414,
+      "file_missing": false,
+      "ms": 4,
+      "skipped": {},
+      "xml": 414
+     },
+     "Billboard": {
+      "created": 53,
+      "file_missing": false,
+      "ms": 7,
+      "skipped": {},
+      "xml": 53
+     },
+     "Compound": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 1,
+      "skipped": {
+       "unsupported_track": 310
+      },
+      "xml": 310
+     },
+     "Decal": {
+      "created": 406,
+      "file_missing": false,
+      "ms": 288,
+      "skipped": {
+       "decal_mesh_failed": 1
+      },
+      "xml": 407
+     },
+     "DetailMeshes": {
+      "created": 673,
+      "file_missing": false,
+      "ms": 13,
+      "skipped": {},
+      "xml": 673
+     },
+     "Entity": {
+      "created": 2843,
+      "file_missing": false,
+      "ms": 9436,
+      "skipped": {},
+      "xml": 2843
+     },
+     "FogArea": {
+      "created": 1,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 1
+     },
+     "LensFlare": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     },
+     "Light": {
+      "created": 268,
+      "file_missing": false,
+      "ms": 5,
+      "skipped": {},
+      "xml": 268
+     },
+     "LightMask": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {
+       "unsupported_track": 1
+      },
+      "xml": 1
+     },
+     "ParticleSystem": {
+      "created": 95,
+      "file_missing": false,
+      "ms": 16,
+      "skipped": {},
+      "xml": 95
+     },
+     "Primitive": {
+      "created": 35,
+      "file_missing": false,
+      "ms": 3,
+      "skipped": {},
+      "xml": 35
+     },
+     "Sound": {
+      "created": 3,
+      "file_missing": false,
+      "ms": 1,
+      "skipped": {
+       "load_failed": 17
+      },
+      "xml": 20
+     },
+     "StaticComboArea": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     },
+     "StaticObject": {
+      "created": 3695,
+      "file_missing": false,
+      "ms": 8317,
+      "skipped": {},
+      "xml": 3695
+     },
+     "StaticObjectBatches": {
+      "created": 0,
+      "file_missing": false,
+      "ms": 0,
+      "skipped": {},
+      "xml": 0
+     }
+    }
+   },
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3626318.log",
+   "log_errors": {
+    "ERROR: Cannot find sound entity '*'": {
+     "count": 12634,
+     "example": "ERROR: Cannot find sound entity 'Entities_OceanBottom/objects/light/light_buzz_01'"
+    },
+    "ERROR: Couldn'*'Entities_OceanBottom/objects/light/light_buzz_N.snt'": {
+     "count": 72,
+     "example": "ERROR: Couldn't create SoundEntity 'Entities_OceanBottom/objects/light/light_buzz_01.snt'"
+    },
+    "ERROR: Couldn'*'core_falloff_linear'": {
+     "count": 896,
+     "example": "ERROR: Couldn't texture 'core_falloff_linear'"
+    },
+    "ERROR: Couldn'*'physics/metal/ceiling_tile/ceiling_tile_roll.snt'": {
+     "count": 163,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/ceiling_tile/ceiling_tile_roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/compact/impact.snt'": {
+     "count": 62,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/impact.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/compact/roll.snt'": {
+     "count": 277,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/compact/scrape.snt'": {
+     "count": 409,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/hollow/scrape.snt'": {
+     "count": 40,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'": {
+     "count": 38,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'": {
+     "count": 96,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/metal_weights/metal_weights_roll.snt'": {
+     "count": 468,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_weights/metal_weights_roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/robust/roll.snt'": {
+     "count": 266,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/metal/robust/scrape.snt'": {
+     "count": 196,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/objects/allen_key_set/scrape.snt'": {
+     "count": 102,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/allen_key_set/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/basic/impact.snt'": {
+     "count": 53,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/basic/impact.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/basic/roll.snt'": {
+     "count": 8741,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/basic/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/plastic/basic/scrape.snt'": {
+     "count": 284,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/basic/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/concrete_boulder/cocncrete_boulder_roll.snt'": {
+     "count": 262,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/concrete_boulder/cocncrete_boulder_roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/concrete_boulder/cocncrete_boulder_scrape.snt'": {
+     "count": 295,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/concrete_boulder/cocncrete_boulder_scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/robust/impact.snt'": {
+     "count": 22,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/impact.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/robust/roll.snt'": {
+     "count": 388,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/roll.snt'"
+    },
+    "ERROR: Couldn'*'physics/rock/robust/scrape.snt'": {
+     "count": 67,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/scrape.snt'"
+    },
+    "ERROR: Couldn'*'physics/toys/car/car_roll.snt'": {
+     "count": 264,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/toys/car/car_roll.snt'"
+    },
+    "ERROR: Loading entity power_cable_dirty_noplug_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/S": {
+     "count": 29,
+     "example": "ERROR: Loading entity power_cable_dirty_noplug_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/gameplay/power_cable_dirty/power_cable_dirty_noplug.dae) and .ent file (/home/lm/.local/share/Steam"
+    },
+    "ERROR: Loading entity tentacle_poseable_nocollide_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/commo": {
+     "count": 21,
+     "example": "ERROR: Loading entity tentacle_poseable_nocollide_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/robot/special/tentacle_poseable/tentacle_poseable.dae) and .ent file (/home/lm/.local/share/Steam/steama"
+    }
+   },
+   "log_warnings": 303,
+   "render": {
+    "draw_calls": 80,
+    "fog_areas_in_list": 0,
+    "gl_errors": {},
+    "lights_in_list": 15,
+    "lights_rendered": 15,
+    "occlusion_queries": 0,
+    "shader_failures": 0,
+    "solid_objects": 21,
+    "trans_objects": 14
+   },
+   "shader_failures": [],
+   "status": "crash_on_exit",
+   "wall_s": 44.9,
+   "warmup": {
+    "frames": 120,
+    "timed_out": false
+   },
+   "world": {
+    "aabb_max": [
+     696.869934,
+     912.038757,
+     990
+    ],
+    "aabb_min": [
+     -648.723694,
+     -238021114694984819554658103537594007552,
+     -974.626343
+    ],
+    "billboards": 487,
+    "dynamic_mesh_entities": 0,
+    "fog_areas": 1,
+    "lights": 837,
+    "lights_box": 0,
+    "lights_point": 778,
+    "lights_spot": 59,
+    "name": "04_01_tau_outside.hpm",
+    "no_material_top": {},
+    "particle_systems": 98,
+    "physics_bodies": 5488,
+    "physics_bodies_awake": 407,
+    "physics_bodies_dynamic": 479,
+    "sound_entities": 4,
+    "static_mesh_entities": 7652,
+    "submeshes_without_material": 0
+   }
   },
   "04_02_tau_inside.hpm": {
    "allowlisted": [

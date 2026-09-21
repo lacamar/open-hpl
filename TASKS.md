@@ -4,9 +4,15 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-0. Intermittent heap corruption: `04_01_tau_outside` died 1 run in 4 with SIGBUS inside `free()`
-   (shader preprocessor `std::list<iParserSymbol*>::clear`) and 1 in 4 with a crash on exit.
-   Run the sweep against the ASan build (`amnesia/src/build-asan`) before anything else.
+0. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
+   reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
+   abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
+   lock, or an abort in `~cSubMeshEntity` at exit. Three full ASan runs of the same map
+   (`amnesia/src/build-asan-soma`, load + 60 frames + exit) are clean apart from two
+   out-of-bounds reads that are now fixed - so the writer is probably in uninstrumented code:
+   the prebuilt Newton libs (mesh/tree collision on this map's huge static meshes), assimp,
+   DevIL or the GL driver. Next: build Newton from source with ASan, or bisect by disabling
+   `CreateStaticBodyForMesh`, the FBX loader and the DetailMeshes track in turn (3 runs each).
 1. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
    one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
    100-400 lights per frame without any light culling. Batch static collision like

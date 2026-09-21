@@ -235,7 +235,7 @@ namespace hpl {
 				++pWeight; ++pBoneIdx; ++lCount;
 
 				//Iterate weights until 0 is found or count < 4
-				while(*pWeight != 0 && lCount < 4)
+				while(lCount < 4 && *pWeight != 0)
 				{
 					//Log("Boneidx: %d Count %d Weight: %f\n",(int)*pBoneIdx,lCount, *pWeight);				
 					const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];

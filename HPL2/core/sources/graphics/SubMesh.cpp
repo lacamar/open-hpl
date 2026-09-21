@@ -344,7 +344,7 @@ namespace hpl {
 
 			float fTotal=0;
 			int lNum=0;
-			while(pWeight[lNum]!=0 && lNum<4)
+			while(lNum<4 && pWeight[lNum]!=0)
 			{
 				fTotal += pWeight[lNum];
 				lNum++;

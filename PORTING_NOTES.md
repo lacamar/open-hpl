@@ -5743,6 +5743,13 @@ sanity check.
     static object); with shadows this gives 0.6-4 fps. Shadows alone: 4.2 s -> 1.6 s per frame
     on `01_04_transport_station`.
 
+18. ASan (`amnesia/src/build-asan-soma`, fresh Debug build with `-fsanitize=address`) found two
+    original-engine out-of-bounds reads: `while(pWeight[lNum]!=0 && lNum<4)` in
+    `cSubMesh::CompileBonePairs()` and the same pattern in `cSubMeshEntity` skinning - both read
+    one float past the weights array on the last vertex. Operand order swapped.
+19. **Open: intermittent heap corruption on `04_01_tau_outside`**, release build only; details
+    and next steps are TASKS.md item 0.
+
 Dark Descent regression check after all shared-core changes: `02_entrance_hall.map` boots
 headless, 0 shader failures, normal G-buffer healthy (no NaN), frame luminance 8.4; ctest 4/4.
 
