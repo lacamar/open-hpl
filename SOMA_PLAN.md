@@ -19,6 +19,8 @@ data.
 - P5: started - the sweep's black frames were root-caused (rect vs 2D G-buffer samplers,
   ignored per-light falloff, CHC culling). Open items in TASKS.md.
 - P6: not started.
+- Sweep 2026-09-21: every map boots and renders; 11-12/29 pass all checks (0/29 on the first run).
+  Dominant remaining failures: `fps` on big maps, residual `no_material`, one flaky heap corruption.
 
 ## 1. Review findings
 
