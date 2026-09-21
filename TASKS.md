@@ -11,8 +11,12 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    (`amnesia/src/build-asan-soma`, load + 60 frames + exit) are clean apart from two
    out-of-bounds reads that are now fixed - so the writer is probably in uninstrumented code:
    the prebuilt Newton libs (mesh/tree collision on this map's huge static meshes), assimp,
-   DevIL or the GL driver. Next: build Newton from source with ASan, or bisect by disabling
-   `CreateStaticBodyForMesh`, the FBX loader and the DetailMeshes track in turn (3 runs each).
+   DevIL or the GL driver. Bisected: with `cWorldLoaderHpm::CreateStaticBodyForMesh()` disabled
+   the map passes 4/4; with only DetailMeshes disabled it still fails 3/4. The inputs are sane
+   (index count multiple of 3, indices in range, finite coordinates < 20 km), so the writer is
+   inside the prebuilt Newton tree-collision code or in how shapes/compounds are owned and
+   freed. Next: build Newton from source with ASan; try one batched static body per map
+   (`cWorldLoaderHplMap::AddObjectsToStaticMeshBody()` style), which item 1 wants anyway.
 1. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
    one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
    100-400 lights per frame without any light culling. Batch static collision like
