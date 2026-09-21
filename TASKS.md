@@ -4,25 +4,32 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. FBX mesh loader (121 `.fbx`-only meshes: characters, creatures, animated props). assimp is
-   available. Removes every `entity_failed:*.ent` sweep failure.
-2. Material types `projecteduv` (15), `terrain` (23), `terraindecal` (8); then re-check
-   `no_material:N` per map.
-3. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
+1. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
+   one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
+   100-400 lights per frame without any light culling. Batch static collision like
+   `cWorldLoaderHplMap::AddObjectsToStaticMeshBody()`; find what wakes the bodies.
+2. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
+3. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
+4. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
    tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
-4. `decal_mesh_failed` cases (a handful per map) - inspect the XML of the failing decals.
-5. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
-6. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
-7. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
-   unknown `.ent` sub-entity type).
-8. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
-9. Reference-pose comparison against official screenshots (needs user-supplied images).
-10. P6 soak test (movement + RSS/fps sampling).
-11. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+5. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
+   logs a missing `aSkyboxMap` sampler.
+6. FBX skeletons + animations (loader is static bind pose only).
+7. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
+8. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
+9. Verify ATI2/BC5U channel order against a reference screenshot.
+10. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+11. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+12. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
+    unknown `.ent` sub-entity type).
+13. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+14. Reference-pose comparison against official screenshots (needs user-supplied images).
+15. P6 soak test (movement + RSS/fps sampling).
+16. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
 
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,
-two crash fixes, mesh cache in `$XDG_CACHE_HOME`. Details in PORTING_NOTES.md.
+four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`. Details in PORTING_NOTES.md.
 
 ## History
 

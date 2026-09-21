@@ -23,6 +23,7 @@
 #include "math/Math.h"
 
 #include "physics/PhysicsWorld.h"
+#include "physics/PhysicsBody.h"
 
 #include <GL/glew.h>
 
@@ -182,7 +183,7 @@ namespace hpl {
 			if(pLight->GetLightType() < eLightType_LastEnum) ++lLights[pLight->GetLightType()];
 		}
 
-		int lBillboards=0, lParticleSystems=0, lFogAreas=0, lSounds=0, lBodies=0;
+		int lBillboards=0, lParticleSystems=0, lFogAreas=0, lSounds=0, lBodies=0, lBodiesDynamic=0, lBodiesAwake=0;
 		{ cBillboardIterator it = apWorld->GetBillboardIterator(); while(it.HasNext()) { it.Next(); ++lBillboards; } }
 		{ cParticleSystemIterator it = apWorld->GetParticleSystemIterator(); while(it.HasNext()) { it.Next(); ++lParticleSystems; } }
 		{ cFogAreaIterator it = apWorld->GetFogAreaIterator(); while(it.HasNext()) { it.Next(); ++lFogAreas; } }
@@ -190,7 +191,14 @@ namespace hpl {
 		if(apWorld->GetPhysicsWorld())
 		{
 			cPhysicsBodyIterator it = apWorld->GetPhysicsWorld()->GetBodyIterator();
-			while(it.HasNext()) { it.Next(); ++lBodies; }
+			while(it.HasNext())
+			{
+				iPhysicsBody *pBody = it.Next();
+				++lBodies;
+				if(pBody->GetMass() <= 0) continue;
+				++lBodiesDynamic;
+				if(pBody->GetEnabled()) ++lBodiesAwake;
+			}
 		}
 
 		tString sOut = "{";
@@ -217,6 +225,8 @@ namespace hpl {
 		sOut += ",\"fog_areas\":" + cString::ToString(lFogAreas);
 		sOut += ",\"sound_entities\":" + cString::ToString(lSounds);
 		sOut += ",\"physics_bodies\":" + cString::ToString(lBodies);
+		sOut += ",\"physics_bodies_dynamic\":" + cString::ToString(lBodiesDynamic);
+		sOut += ",\"physics_bodies_awake\":" + cString::ToString(lBodiesAwake);
 		sOut += ",\"aabb_min\":" + Vec3(vMin) + ",\"aabb_max\":" + Vec3(vMax);
 		return sOut + "}";
 	}

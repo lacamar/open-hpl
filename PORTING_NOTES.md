@@ -5717,6 +5717,35 @@ sanity check.
 10. `HpslTranspilerTests` was already failing on master: it asserted the pre-`vtx_vTangent`-fix
     behaviour. Updated to the intended alias.
 
+11. **Almost every normal map was an empty texture.** `ATI2` DDS (1780 files) decoded by DevIL
+    to a format with no `ePixelFormat`, so `GetGLCompressionFormatFromPixelFormat()` returned 0
+    and `glCompressedTexImage2D` failed; `BC5U` (165 files) was rejected by DevIL outright, which
+    failed the whole material (the sweep's `no_material:N` in the thousands). New raw DDS path
+    (`TryLoadRgtc2DDS`), `ePixelFormat_RGTC2_XY/YX` -> `GL_COMPRESSED_RG_RGTC2`, plus a texture
+    swizzle to the DXT5nm layout `UnpackNormalmapYW()` expects (x in alpha, y in green). Block
+    order assumed: BC5U = X,Y; ATI2 = Y,X (documented convention, not verified against the
+    official renderer - a wrong guess would rotate bump detail by 90 degrees).
+12. **SIGSEGV in `cSubMeshEntity::UpdateGraphicsForFrame`** (02_06, 02_07): a sub mesh without
+    bone weights inside a skinned mesh (`mpVertexWeights == NULL`). Guarded.
+13. **`cAnimationManager::CreateAnimation` called `AddResource(NULL)`** when a loader returns no
+    animation (first hit by `.fbx` animation files). Guarded.
+14. **FBX**: `cMeshLoaderAssimp` (static bind-pose geometry, node names as sub mesh names,
+    `<diffuse texture>.mat` / `<mesh>.mat` material convention, V flipped like the Collada
+    loader). libassimp is a new build + runtime dependency (spec needs `assimp-devel`).
+15. **Mesh cache**: `cResources::SetMeshCacheDir()`; SOMA writes `.msh` caches to
+    `$XDG_CACHE_HOME/open-hpl/soma/meshcache/` and never looks at the depot's HPL3 `.msh`
+    (removes the "does not have right MSH version" noise and the per-load `.dae` re-parse).
+16. `projecteduv` materials are approximated as `soliddiffuse` with the `*Side` textures and
+    mesh UVs - visible instead of missing, not conformant. Real triplanar path is open.
+17. Prop bodies are put to sleep after load (`iPhysicsBody::Sleep()`), but ~90% wake again
+    within 10 frames (cause not found). On maps with >200 dynamic bodies the main thread sits in
+    `cPhysicsWorldNewton::Simulate` (compound-vs-collision-tree contacts, one static body per
+    static object); with shadows this gives 0.6-4 fps. Shadows alone: 4.2 s -> 1.6 s per frame
+    on `01_04_transport_station`.
+
+Dark Descent regression check after all shared-core changes: `02_entrance_hall.map` boots
+headless, 0 shader failures, normal G-buffer healthy (no NaN), frame luminance 8.4; ctest 4/4.
+
 ### Tracks now loaded
 
 Decal, Billboard (+ light connections), ParticleSystem, FogArea via the shared

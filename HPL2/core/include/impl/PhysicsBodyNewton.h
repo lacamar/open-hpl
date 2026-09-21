@@ -73,6 +73,7 @@ namespace hpl {
 		void AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos);
 
 		void Enable();
+		void Sleep();
 		bool GetEnabled() const;
 		void SetAutoDisable(bool abEnabled);
 		bool GetAutoDisable() const;

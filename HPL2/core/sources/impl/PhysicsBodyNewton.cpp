@@ -351,6 +351,11 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+	void cPhysicsBodyNewton::Sleep()
+	{
+		NewtonBodySetSleepState(mpNewtonBody, 1);
+	}
+
 	void cPhysicsBodyNewton::Enable()
 	{
 		NewtonBodySetFreezeState(mpNewtonBody, 0);

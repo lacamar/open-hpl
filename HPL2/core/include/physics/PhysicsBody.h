@@ -120,6 +120,8 @@ namespace hpl {
 		virtual void AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)=0;
 
 		virtual void Enable()=0;
+		// Put to sleep; the solver wakes it again on contact.
+		virtual void Sleep()=0;
 		virtual bool GetEnabled() const=0;
 		virtual void SetAutoDisable(bool abEnabled)=0;
 		virtual bool GetAutoDisable() const=0;

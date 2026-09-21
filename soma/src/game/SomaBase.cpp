@@ -17,6 +17,8 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Texture.h"
 #include "system/EngineDiagnostics.h"
+#include "physics/PhysicsBody.h"
+#include "physics/PhysicsWorld.h"
 #include "resources/WorldLoaderHpm.h"
 
 #include <vector>
@@ -1337,6 +1339,18 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// which way the PlayerStart actually faced), needed for the real player
 	// controller below and applied to the free-fly camera too as a minor
 	// side-fix.
+	// Props are authored at rest. Starting all of them awake costs seconds per
+	// physics step on the big maps; Newton wakes a body again on contact.
+	if (pNewWorld->GetPhysicsWorld())
+	{
+		cPhysicsBodyIterator bodyIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
+		while (bodyIt.HasNext())
+		{
+			iPhysicsBody *pBody = bodyIt.Next();
+			if (pBody->GetMass() > 0) pBody->Sleep();
+		}
+	}
+
 	cVector3f vAreaPos = avStartPos;
 	float fAreaYaw = 0;
 	bool bFoundArea = false;

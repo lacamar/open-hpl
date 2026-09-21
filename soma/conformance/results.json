@@ -329,7 +329,7 @@
    "boot_s": 2.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.455894,
+    "fps": 60.21719,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -337,7 +337,7 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 60.455894,
+   "fps": 60.21719,
    "frame": {
     "black_frac": 0.42596,
     "height": 720,
@@ -455,19 +455,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 1605,
+    "total_ms": 1626,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 23,
+      "ms": 25,
       "skipped": {},
       "xml": 20
      },
@@ -483,21 +483,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 65,
+      "ms": 66,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 956,
+      "ms": 955,
       "skipped": {},
       "xml": 436
      },
@@ -518,7 +518,7 @@
      "LensFlare": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 4
       },
@@ -550,14 +550,14 @@
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 39,
+      "ms": 41,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 161,
+      "ms": 169,
       "skipped": {},
       "xml": 7
      },
@@ -571,7 +571,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 315,
+      "ms": 320,
       "skipped": {},
       "xml": 145
      },
@@ -584,10 +584,10 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2989583.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3090348.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 932,
+     "count": 939,
      "example": "ERROR: Cannot find sound entity 'Entities_Urban/tech/laptop/laptop_hum'"
     },
     "ERROR: Couldn'*'core_falloff_linear'": {
@@ -599,7 +599,7 @@
      "example": "ERROR: Couldn't create animation 'entities/creatures/birds/pigeon/animation/pigeon_flap.fbx'"
     },
     "ERROR: Couldn'*'physics/ceramic/plate/plate_roll.snt'": {
-     "count": 378,
+     "count": 382,
      "example": "ERROR: Couldn't create SoundEntity 'physics/ceramic/plate/plate_roll.snt'"
     },
     "ERROR: Couldn'*'physics/clothing/beanie_hat/beanie_hat_roll.snt'": {
@@ -615,7 +615,7 @@
      "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/office_chair/office_chair_impact.snt'"
     },
     "ERROR: Couldn'*'physics/furniture/office_chair/office_chair_roll.snt'": {
-     "count": 104,
+     "count": 105,
      "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/office_chair/office_chair_roll.snt'"
     },
     "ERROR: Couldn'*'physics/glass/glass_mug/impact.snt'": {
@@ -671,7 +671,7 @@
      "example": "ERROR: Couldn't create SoundEntity 'physics/paper/roll.snt'"
     },
     "ERROR: Couldn'*'physics/plastic/pencil/roll.snt'": {
-     "count": 101,
+     "count": 103,
      "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/pencil/roll.snt'"
     },
     "ERROR: Couldn'*'physics/plastic/small_pen/roll.snt'": {
@@ -701,7 +701,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 4.8,
+   "wall_s": 4.9,
    "warmup": {
     "frames": 120,
     "timed_out": false
@@ -728,6 +728,8 @@
     "no_material_top": {},
     "particle_systems": 15,
     "physics_bodies": 494,
+    "physics_bodies_awake": 57,
+    "physics_bodies_dynamic": 181,
     "sound_entities": 7,
     "static_mesh_entities": 737,
     "submeshes_without_material": 0
@@ -2837,7 +2839,7 @@
    "boot_s": 8.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 0.585823,
+    "fps": 0.962463,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 6.5,
@@ -2845,9 +2847,9 @@
     "yaw": 3e-06
    },
    "failures": [
-    "fps:0.6"
+    "fps:0.9"
    ],
-   "fps": 0.588235,
+   "fps": 0.918273,
    "frame": {
     "black_frac": 0,
     "height": 720,
@@ -2965,19 +2967,19 @@
    "load_report": {
     "map": "01_04_transport_station.hpm",
     "terrain_active": false,
-    "total_ms": 7947,
+    "total_ms": 7942,
     "tracks": {
      "Area": {
       "created": 264,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 264
      },
      "Billboard": {
       "created": 64,
       "file_missing": false,
-      "ms": 27,
+      "ms": 28,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -2995,21 +2997,21 @@
      "Decal": {
       "created": 270,
       "file_missing": false,
-      "ms": 331,
+      "ms": 333,
       "skipped": {},
       "xml": 270
      },
      "DetailMeshes": {
       "created": 1285,
       "file_missing": false,
-      "ms": 80,
+      "ms": 86,
       "skipped": {},
       "xml": 1285
      },
      "Entity": {
       "created": 797,
       "file_missing": false,
-      "ms": 2978,
+      "ms": 2958,
       "skipped": {},
       "xml": 797
      },
@@ -3048,21 +3050,21 @@
      "ParticleSystem": {
       "created": 245,
       "file_missing": false,
-      "ms": 72,
+      "ms": 70,
       "skipped": {},
       "xml": 245
      },
      "Primitive": {
       "created": 25,
       "file_missing": false,
-      "ms": 14,
+      "ms": 13,
       "skipped": {},
       "xml": 25
      },
      "Sound": {
       "created": 1,
       "file_missing": false,
-      "ms": 16,
+      "ms": 17,
       "skipped": {
        "load_failed": 97
       },
@@ -3078,7 +3080,7 @@
      "StaticObject": {
       "created": 1052,
       "file_missing": false,
-      "ms": 4343,
+      "ms": 4352,
       "skipped": {},
       "xml": 1052
      },
@@ -3093,10 +3095,10 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2998521.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3441332.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 3789,
+     "count": 4129,
      "example": "ERROR: Cannot find sound entity 'level_amb_shared_interior/amb/spot/sparks/spark_train_crash_small'"
     },
     "ERROR: Couldn'*'.snt'": {
@@ -3116,15 +3118,15 @@
      "example": "ERROR: Couldn't create SoundEntity 'level_amb_shared_machines/misc/lights/fluorescent_light_buzz.snt'"
     },
     "ERROR: Couldn'*'physics/default/soft/roll.snt'": {
-     "count": 177,
+     "count": 292,
      "example": "ERROR: Couldn't create SoundEntity 'physics/default/soft/roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/compact/roll.snt'": {
-     "count": 27,
+     "count": 25,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/compact/scrape.snt'": {
-     "count": 80,
+     "count": 48,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/compact/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/fuel_can/fuel_can_roll.snt'": {
@@ -3132,31 +3134,31 @@
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/fuel_can/fuel_can_roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/hollow/impact.snt'": {
-     "count": 11,
+     "count": 8,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/impact.snt'"
     },
     "ERROR: Couldn'*'physics/metal/hollow/roll.snt'": {
-     "count": 368,
+     "count": 318,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/hollow/scrape.snt'": {
-     "count": 144,
+     "count": 199,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/hollow/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'": {
-     "count": 34,
+     "count": 25,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'": {
-     "count": 31,
+     "count": 20,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/robust/roll.snt'": {
-     "count": 234,
+     "count": 290,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/robust/scrape.snt'": {
-     "count": 111,
+     "count": 128,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/robust/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/rock/buddha_statue/buddha_roll.snt'": {
@@ -3164,27 +3166,27 @@
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/buddha_statue/buddha_roll.snt'"
     },
     "ERROR: Couldn'*'physics/rock/buddha_statue/buddha_scrape.snt'": {
-     "count": 20,
+     "count": 17,
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/buddha_statue/buddha_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/rock/robust/impact.snt'": {
-     "count": 27,
+     "count": 38,
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/impact.snt'"
     },
     "ERROR: Couldn'*'physics/rock/robust/roll.snt'": {
-     "count": 1291,
+     "count": 1371,
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/roll.snt'"
     },
     "ERROR: Couldn'*'physics/rock/robust/scrape.snt'": {
-     "count": 731,
+     "count": 862,
      "example": "ERROR: Couldn't create SoundEntity 'physics/rock/robust/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/toys/car/car_roll.snt'": {
-     "count": 319,
+     "count": 300,
      "example": "ERROR: Couldn't create SoundEntity 'physics/toys/car/car_roll.snt'"
     },
     "ERROR: Couldn'*'physics/water/puddle/scrape.snt'": {
-     "count": 43,
+     "count": 49,
      "example": "ERROR: Couldn't create SoundEntity 'physics/water/puddle/scrape.snt'"
     },
     "ERROR: No animation event named '*'": {
@@ -3198,21 +3200,21 @@
    },
    "log_warnings": 164,
    "render": {
-    "draw_calls": 2886,
+    "draw_calls": 2882,
     "fog_areas_in_list": 2,
     "gl_errors": {},
-    "lights_in_list": 182,
-    "lights_rendered": 182,
+    "lights_in_list": 183,
+    "lights_rendered": 183,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 1049,
+    "solid_objects": 1046,
     "trans_objects": 252
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 60.3,
+   "wall_s": 54.8,
    "warmup": {
-    "frames": 10,
+    "frames": 11,
     "timed_out": true
    },
    "world": {
@@ -3235,8 +3237,10 @@
     "lights_spot": 43,
     "name": "01_04_transport_station.hpm",
     "no_material_top": {},
-    "particle_systems": 307,
+    "particle_systems": 254,
     "physics_bodies": 1801,
+    "physics_bodies_awake": 219,
+    "physics_bodies_dynamic": 245,
     "sound_entities": 1,
     "static_mesh_entities": 3429,
     "submeshes_without_material": 0
@@ -6562,10 +6566,10 @@
     "LightMask:0/47",
     "Sound:4/121"
    ],
-   "boot_s": 23.1,
+   "boot_s": 22.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 0.706214,
+    "fps": 0.761615,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": -2.25,
@@ -6577,7 +6581,7 @@
     "fps:0.7",
     "lum_mean:1.5"
    ],
-   "fps": 0.69541,
+   "fps": 0.728332,
    "frame": {
     "black_frac": 0.638075,
     "height": 720,
@@ -6695,7 +6699,7 @@
    "load_report": {
     "map": "03_02_omicron_inside.hpm",
     "terrain_active": false,
-    "total_ms": 22389,
+    "total_ms": 21790,
     "tracks": {
      "Area": {
       "created": 690,
@@ -6714,7 +6718,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 242
       },
@@ -6723,28 +6727,28 @@
      "Decal": {
       "created": 628,
       "file_missing": false,
-      "ms": 510,
+      "ms": 503,
       "skipped": {},
       "xml": 628
      },
      "DetailMeshes": {
       "created": 1490,
       "file_missing": false,
-      "ms": 15,
+      "ms": 14,
       "skipped": {},
       "xml": 1490
      },
      "Entity": {
       "created": 3718,
       "file_missing": false,
-      "ms": 14413,
+      "ms": 13853,
       "skipped": {},
       "xml": 3718
      },
      "FogArea": {
       "created": 6,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 6
      },
@@ -6758,14 +6762,14 @@
      "Light": {
       "created": 749,
       "file_missing": false,
-      "ms": 19,
+      "ms": 20,
       "skipped": {},
       "xml": 749
      },
      "LightMask": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 47
       },
@@ -6774,21 +6778,21 @@
      "ParticleSystem": {
       "created": 215,
       "file_missing": false,
-      "ms": 59,
+      "ms": 60,
       "skipped": {},
       "xml": 215
      },
      "Primitive": {
       "created": 371,
       "file_missing": false,
-      "ms": 82,
+      "ms": 77,
       "skipped": {},
       "xml": 371
      },
      "Sound": {
       "created": 4,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {
        "load_failed": 117
       },
@@ -6804,7 +6808,7 @@
      "StaticObject": {
       "created": 4934,
       "file_missing": false,
-      "ms": 6998,
+      "ms": 6979,
       "skipped": {},
       "xml": 4934
      },
@@ -6817,10 +6821,10 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3022997.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3444312.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 8567,
+     "count": 8877,
      "example": "ERROR: Cannot find sound entity 'level_amb_shared_machines/tech/server/hum'"
     },
     "ERROR: Could not find bone '*' in model '*'": {
@@ -6832,92 +6836,92 @@
      "example": "ERROR: Couldn't texture 'core_falloff_linear'"
     },
     "ERROR: Couldn'*'physics/clothing/hard_hat/hard_hat_roll.snt'": {
-     "count": 327,
+     "count": 253,
      "example": "ERROR: Couldn't create SoundEntity 'physics/clothing/hard_hat/hard_hat_roll.snt'"
     },
     "ERROR: Couldn'*'physics/clothing/leather_boot/leather_boot_roll.snt'": {
-     "count": 195,
+     "count": 178,
      "example": "ERROR: Couldn't create SoundEntity 'physics/clothing/leather_boot/leather_boot_roll.snt'"
     },
     "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_roll.snt'": {
-     "count": 407,
+     "count": 432,
      "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_roll.snt'"
     },
     "ERROR: Couldn'*'physics/furniture/metal_chair/metal_chair_scrape.snt'": {
-     "count": 387,
+     "count": 421,
      "example": "ERROR: Couldn't create SoundEntity 'physics/furniture/metal_chair/metal_chair_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/glass/whiskey_shards/whiskey_shards_impact.snt'": {
-     "count": 1661,
+     "count": 1893,
      "example": "ERROR: Couldn't create SoundEntity 'physics/glass/whiskey_shards/whiskey_shards_impact.snt'"
     },
     "ERROR: Couldn'*'physics/metal/fire_extinguisher/fire_extinguisher_scrape.snt'": {
-     "count": 547,
+     "count": 500,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/fire_extinguisher/fire_extinguisher_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/heavy_lab_appliance/roll.snt'": {
-     "count": 205,
+     "count": 220,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/heavy_lab_appliance/roll.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/heavy_lab_appliance/scrape.snt'": {
-     "count": 148,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/heavy_lab_appliance/scrape.snt'"
-    },
     "ERROR: Couldn'*'physics/metal/large_crate/scrape.snt'": {
-     "count": 259,
+     "count": 231,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/large_crate/scrape.snt'"
     },
     "ERROR: Couldn'*'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'": {
-     "count": 227,
+     "count": 159,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_comp_crate/metal_comp_crate_scrape.snt'"
     },
-    "ERROR: Couldn'*'physics/metal/metal_weights/metal_weights_roll.snt'": {
-     "count": 90,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_weights/metal_weights_roll.snt'"
-    },
     "ERROR: Couldn'*'physics/metal/pipe/pipe_roll.snt'": {
-     "count": 389,
+     "count": 391,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/pipe/pipe_roll.snt'"
     },
     "ERROR: Couldn'*'physics/metal/round_canister/roll.snt'": {
-     "count": 116,
+     "count": 104,
      "example": "ERROR: Couldn't create SoundEntity 'physics/metal/round_canister/roll.snt'"
     },
+    "ERROR: Couldn'*'physics/metal/surgery_scissors/surgery_scissors_roll.snt'": {
+     "count": 101,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/surgery_scissors/surgery_scissors_roll.snt'"
+    },
     "ERROR: Couldn'*'physics/objects/drill/drill_scrape.snt'": {
-     "count": 108,
+     "count": 119,
      "example": "ERROR: Couldn't create SoundEntity 'physics/objects/drill/drill_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/objects/plastic_pippette/roll.snt'": {
-     "count": 187,
+     "count": 191,
      "example": "ERROR: Couldn't create SoundEntity 'physics/objects/plastic_pippette/roll.snt'"
     },
+    "ERROR: Couldn'*'physics/objects/sturdy_plastic_syringe/roll.snt'": {
+     "count": 119,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/sturdy_plastic_syringe/roll.snt'"
+    },
     "ERROR: Couldn'*'physics/objects/toothpaste_full/toothpaste_full_roll.snt'": {
-     "count": 146,
+     "count": 145,
      "example": "ERROR: Couldn't create SoundEntity 'physics/objects/toothpaste_full/toothpaste_full_roll.snt'"
     },
     "ERROR: Couldn'*'physics/paper/cardboard_box/cardboard_box_roll.snt'": {
-     "count": 557,
+     "count": 553,
      "example": "ERROR: Couldn't create SoundEntity 'physics/paper/cardboard_box/cardboard_box_roll.snt'"
     },
+    "ERROR: Couldn'*'physics/paper/cardboard_box/cardboard_box_scrape.snt'": {
+     "count": 97,
+     "example": "ERROR: Couldn't create SoundEntity 'physics/paper/cardboard_box/cardboard_box_scrape.snt'"
+    },
     "ERROR: Couldn'*'physics/plastic/large_plastic_box/large_plastic_box_roll.snt'": {
-     "count": 149,
+     "count": 150,
      "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/large_plastic_box/large_plastic_box_roll.snt'"
     },
     "ERROR: Couldn'*'physics/plastic/large_plastic_box/large_plastic_box_scrape.snt'": {
-     "count": 94,
+     "count": 127,
      "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/large_plastic_box/large_plastic_box_scrape.snt'"
     },
     "ERROR: Couldn'*'physics/plastic/pencil/roll.snt'": {
-     "count": 304,
+     "count": 283,
      "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/pencil/roll.snt'"
     },
     "ERROR: Couldn'*'physics/plastic/small_pen/roll.snt'": {
-     "count": 204,
+     "count": 266,
      "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/small_pen/roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/toys/football/football_roll.snt'": {
-     "count": 92,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/toys/football/football_roll.snt'"
     }
    },
    "log_warnings": 544,
@@ -6934,9 +6938,9 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 71.2,
+   "wall_s": 70.2,
    "warmup": {
-    "frames": 17,
+    "frames": 18,
     "timed_out": true
    },
    "world": {
@@ -6965,6 +6969,8 @@
     },
     "particle_systems": 205,
     "physics_bodies": 8363,
+    "physics_bodies_awake": 308,
+    "physics_bodies_dynamic": 617,
     "sound_entities": 7,
     "static_mesh_entities": 11141,
     "submeshes_without_material": 10
