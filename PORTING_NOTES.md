@@ -5750,6 +5750,29 @@ sanity check.
 19. **Open: intermittent heap corruption on `04_01_tau_outside`**, release build only; details
     and next steps are TASKS.md item 0.
 
+## SOMA: drawers and doors were invisible - joints had no axis (2026-09-23)
+
+User report: "none of the moveable drawers have loaded". This is the `nan_bounds` item the
+sweep had been flagging on every map (2-142 entities).
+
+`entity_info` showed the drawers loading with the right mesh and material and `visible=true`,
+but with a NaN bounding volume; extending it to per-sub-mesh transforms showed the sub mesh's
+*world position* was NaN too, already at frame 1, so it was load-time and not physics drift.
+The mesh data itself is clean (no non-finite values in the `.dae`).
+
+`cEntityLoader_Object`'s `CreateJoint()` reads the joint axis from a `PinDir` attribute.
+**Not one of SOMA's 4928 joints has it** - HPL3's editor stores the axis as `Rotation`. So every
+drawer and door got a zero-length pin, Newton normalized it to NaN, the jointed body's transform
+became NaN, and every entity attached to it vanished.
+
+The fallback is not a guess: of Dark Descent's own joints, 295 carry both attributes, and for
+all 295, `PinDir == MatrixRotate(Rotation, XYZ) * (0,1,0)` exactly. So `CreateJoint()` now
+derives the axis that way when `PinDir` is absent. Dark Descent has 906 joints with no `PinDir`
+either, which were silently hitting the same zero-axis path.
+
+Verified: `entities_nan_bounds` 32 -> 0 on the apartment, drawers sit at desk height, and the
+dresser/desk drawer fronts are visible in a screenshot.
+
 ## SOMA: every mesh was 100x too large - the Collada unit gate is exporter-specific (2026-09-23)
 
 User report with a screenshot: the apartment is "just a bunch of vertex explosions". Reproduced

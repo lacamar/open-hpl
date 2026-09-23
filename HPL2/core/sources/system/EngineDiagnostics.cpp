@@ -315,6 +315,7 @@ namespace hpl {
 		cBoundingVolume *pBV = pEnt->GetBoundingVolume();
 		if(pBV) sOut += ",\"aabb_min\":" + Vec3(pBV->GetMin()) + ",\"aabb_max\":" + Vec3(pBV->GetMax());
 		if(pEnt->GetMesh()) sOut += ",\"mesh\":\"" + JsonEscape(pEnt->GetMesh()->GetName()) + "\"";
+		sOut += ",\"has_body\":" + tString(pEnt->GetBody() ? "true" : "false");
 
 		sOut += ",\"submeshes\":[";
 		for(int i=0; i<pEnt->GetSubMeshEntityNum(); ++i)
@@ -322,9 +323,12 @@ namespace hpl {
 			cSubMeshEntity *pSub = pEnt->GetSubMeshEntity(i);
 			cMaterial *pMat = pSub->GetMaterial();
 			if(i>0) sOut += ",";
+			cBoundingVolume *pSubBV = pSub->GetBoundingVolume();
 			sOut += "{\"name\":\"" + JsonEscape(pSub->GetName()) + "\",\"material\":" +
 					(pMat ? "\"" + JsonEscape(pMat->GetName()) + "\"" : tString("null")) +
-					",\"visible\":" + (pSub->IsVisible() ? "true" : "false") + "}";
+					",\"visible\":" + (pSub->IsVisible() ? "true" : "false") +
+					",\"pos\":" + Vec3(pSub->GetWorldPosition()) +
+					(pSubBV ? ",\"aabb_min\":" + Vec3(pSubBV->GetMin()) + ",\"aabb_max\":" + Vec3(pSubBV->GetMax()) : tString("")) + "}";
 		}
 		return sOut + "]}";
 	}

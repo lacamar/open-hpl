@@ -190,7 +190,23 @@ namespace hpl {
 		/////////////////////////////
 		//Get pin direction and pivot and transform according to entity
 		cVector3f vPivot = apJointElem->GetAttributeVector3f("WorldPos") * avScale;
-		cVector3f vPinDir = apJointElem->GetAttributeVector3f("PinDir");
+
+		// HPL3's editor (and a majority of HPL2's own .ent files) writes no PinDir and
+		// stores the joint axis as Rotation instead. Without this, the axis is a zero
+		// vector, Newton normalizes it to NaN, and every body on the joint - drawers,
+		// doors - gets a NaN transform and disappears. Derived from the 295 Dark Descent
+		// joints that carry both attributes: PinDir == MatrixRotate(Rotation,XYZ)*(0,1,0)
+		// for all 295, exactly.
+		cVector3f vPinDir;
+		if(apJointElem->GetAttributeString("PinDir","") != "")
+		{
+			vPinDir = apJointElem->GetAttributeVector3f("PinDir");
+		}
+		else
+		{
+			vPinDir = cMath::MatrixMul3x3(cMath::MatrixRotate(apJointElem->GetAttributeVector3f("Rotation"),
+																eEulerRotationOrder_XYZ), cVector3f(0,1,0));
+		}
 
 		vPivot = cMath::MatrixMul(a_mtxTransform, vPivot);
 		vPinDir = cMath::MatrixMul3x3(a_mtxTransform, vPinDir);
