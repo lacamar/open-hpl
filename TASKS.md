@@ -14,6 +14,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
+
 2. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
    reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
    abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
@@ -29,12 +30,14 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    (`cWorldLoaderHplMap::AddObjectsToStaticMeshBody()` style), which item 1 wants anyway.
 
 
+
 3. Intro slideshow has no ambience or SFX cues. The real `00_00_intro.hps` plays
    `Sound_PlayGui("00_05_apartment2/SFX/game_intro_seq")` plus per-slide `AddSound()` cues; these
    are FMOD event paths with no file on disk, and `cSomaIntroSequence` only plays the voice-line
    `.ogg`s. The sample is in `sounds/level/00_05_apartment2_streamvip.fsb`, which the existing
    FSB5 reader in `SomaMenuSfx`/`SomaAmbientSfx` can already decode - wire that bank in and play
    the cue on the intro's timeline.
+
 
 
 4. Window glass renders opaque. `plain_glass_livingroom.mat` is `Type="translucent"`,
@@ -47,58 +50,79 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-5. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
+
+5. Doors and drawers are pinned (mass 0) by `cSomaBase::LoadMap()` because nothing holds them
+   shut without the map scripts. Unpin when a script layer exists; until then they are visible
+   but immovable.
+
+
+6. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
    one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
    100-400 lights per frame without any light culling. Batch static collision like
    `cWorldLoaderHplMap::AddObjectsToStaticMeshBody()`; find what wakes the bodies.
 
 
-6. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
+
+7. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
 
 
-7. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
+
+8. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
 
 
-8. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
+
+9. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
    tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
 
 
-9. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
+
+10. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
    logs a missing `aSkyboxMap` sampler.
 
 
-10. FBX skeletons + animations (loader is static bind pose only).
+
+11. FBX skeletons + animations (loader is static bind pose only).
 
 
-11. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
+
+12. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
 
 
-12. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
+
+13. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
 
 
-13. Verify ATI2/BC5U channel order against a reference screenshot.
+
+14. Verify ATI2/BC5U channel order against a reference screenshot.
 
 
-14. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+
+15. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
 
 
-15. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+
+16. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
 
 
-16. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
+
+17. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
    unknown `.ent` sub-entity type).
 
 
-17. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+
+18. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
 
 
-18. Reference-pose comparison against official screenshots (needs user-supplied images).
+
+19. Reference-pose comparison against official screenshots (needs user-supplied images).
 
 
-19. P6 soak test (movement + RSS/fps sampling).
+
+20. P6 soak test (movement + RSS/fps sampling).
 
 
-20. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+
+21. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
 
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,

@@ -19,10 +19,12 @@
 #include "system/EngineDiagnostics.h"
 #include "impl/MeshLoaderCollada.h"
 #include "physics/PhysicsBody.h"
+#include "physics/PhysicsJoint.h"
 #include "physics/PhysicsWorld.h"
 #include "resources/WorldLoaderHpm.h"
 
 #include <vector>
+#include <set>
 #include <limits>
 #include <cmath>
 
@@ -1334,15 +1336,30 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// which way the PlayerStart actually faced), needed for the real player
 	// controller below and applied to the free-fly camera too as a minor
 	// side-fix.
-	// Props are authored at rest. Starting all of them awake costs seconds per
-	// physics step on the big maps; Newton wakes a body again on contact.
 	if (pNewWorld->GetPhysicsWorld())
 	{
+		// Doors and drawers hang off joints and are held shut by the map's own
+		// scripts, which this port does not run yet - simulated, they swing open
+		// on load, grind along the static geometry and cost more solver time than
+		// the rest of the map put together (60 -> 10 fps on 03_03_omicron_descent).
+		// Pin them until there is a script layer to open and close them.
+		std::set<iPhysicsBody*> setJointed;
+		cPhysicsJointIterator jointIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
+		while (jointIt.HasNext())
+		{
+			iPhysicsJoint *pJoint = jointIt.Next();
+			if (pJoint->GetChildBody()) setJointed.insert(pJoint->GetChildBody());
+			if (pJoint->GetParentBody()) setJointed.insert(pJoint->GetParentBody());
+		}
+
+		// Everything else is authored at rest; Newton wakes a body again on contact.
 		cPhysicsBodyIterator bodyIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
 		while (bodyIt.HasNext())
 		{
 			iPhysicsBody *pBody = bodyIt.Next();
-			if (pBody->GetMass() > 0) pBody->Sleep();
+			if (pBody->GetMass() <= 0) continue;
+			if (setJointed.count(pBody)) pBody->SetMass(0);
+			else pBody->Sleep();
 		}
 	}
 

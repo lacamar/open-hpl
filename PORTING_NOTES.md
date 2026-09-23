@@ -5773,6 +5773,18 @@ either, which were silently hitting the same zero-axis path.
 Verified: `entities_nan_bounds` 32 -> 0 on the apartment, drawers sit at desk height, and the
 dresser/desk drawer fronts are visible in a screenshot.
 
+**The fix then cost 6x the frame rate, so SOMA now pins jointed bodies.** A clean A/B on
+`03_03_omicron_descent` (three alternating runs each, since this machine's load gives ~2x noise
+on its own) measured 59-60 fps with the old zero-axis behaviour against 8.8-16 fps with the
+joints working - with identical draw calls, render lists and body counts, and all of the time in
+`cPhysicsWorldNewton::Simulate`. Only five entities on that map were affected. Tracking one of
+them (`swingdoor_airlock_2`) showed it drifting 2.1 m in 60 frames: with the joints alive and no
+AngelScript layer to hold doors shut, they swing open on load and grind along the static
+geometry. `cSomaBase::LoadMap()` therefore sets mass 0 on every body that is an endpoint of a
+joint (unjointed props still sleep as before). 03_03 is back to 60.5 fps with nan_bounds 0, the
+apartment holds 58.6, and 01_01_upsilon_awake improved on both earlier builds (1.9 -> 4.3).
+Undo this when there is a script layer that can open and close doors.
+
 ## SOMA: every mesh was 100x too large - the Collada unit gate is exporter-specific (2026-09-23)
 
 User report with a screenshot: the apartment is "just a bunch of vertex explosions". Reproduced
