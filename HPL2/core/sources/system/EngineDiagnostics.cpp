@@ -140,7 +140,7 @@ namespace hpl {
 
 	tString cEngineDiagnostics::GetWorldStatsJson(cWorld *apWorld)
 	{
-		int lStaticMesh=0, lDynamicMesh=0, lSubMeshNoMaterial=0;
+		int lStaticMesh=0, lDynamicMesh=0, lSubMeshNoMaterial=0, lOversized=0, lNanBounds=0;
 		std::map<tString,int> mapNoMaterial;
 		cBoundingVolume totalBV;
 		bool bHasBV = false;
@@ -163,6 +163,12 @@ namespace hpl {
 
 				cBoundingVolume *pBV = pEnt->GetBoundingVolume();
 				if(pBV == NULL) continue;
+				{
+					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
+					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { ++lNanBounds; continue; }
+					// Nothing authored in these games is a 100 m mesh except sky domes.
+					if(vExt.x > 100 || vExt.y > 100 || vExt.z > 100) ++lOversized;
+				}
 				if(!bHasBV) { vMin = pBV->GetMin(); vMax = pBV->GetMax(); bHasBV = true; }
 				else
 				{
@@ -206,6 +212,8 @@ namespace hpl {
 		sOut += ",\"static_mesh_entities\":" + cString::ToString(lStaticMesh);
 		sOut += ",\"dynamic_mesh_entities\":" + cString::ToString(lDynamicMesh);
 		sOut += ",\"submeshes_without_material\":" + cString::ToString(lSubMeshNoMaterial);
+		sOut += ",\"entities_oversized\":" + cString::ToString(lOversized);
+		sOut += ",\"entities_nan_bounds\":" + cString::ToString(lNanBounds);
 		{
 			// Worst offenders as "mesh:material name"
 			std::multimap<int,tString> mapSorted;

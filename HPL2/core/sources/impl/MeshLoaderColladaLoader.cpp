@@ -167,7 +167,7 @@ namespace hpl {
 
 			TiXmlElement *pUnitElem = pAssetElem->FirstChildElement("unit");
 
-			if(pUnitElem && bGetUnit && mbConvertUnit)
+			if(pUnitElem && (bGetUnit || mbConvertUnitFromAnyTool) && mbConvertUnit)
 			{
 				float fUnitTypeScale = 1.0f;
 				float fUnitValue = 1.0f;

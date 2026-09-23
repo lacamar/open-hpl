@@ -211,6 +211,13 @@ def judge(name, result, expected, allow):
         fails.append(f"shaders:{len(result['shader_failures'])}")
     if result.get("render", {}).get("gl_errors"):
         fails.append("gl_errors:" + ",".join(result["render"]["gl_errors"]))
+    w = result.get("world", {})
+    if w.get("entities_nan_bounds"):
+        fails.append(f"nan_bounds:{w['entities_nan_bounds']}")
+    # A handful of 100 m+ meshes is normal outdoors (sky domes, sea floor, block volumes);
+    # a whole map of them means the mesh scale is wrong.
+    if w.get("entities_oversized", 0) > 20:
+        fails.append(f"oversized:{w['entities_oversized']}")
     if result.get("world", {}).get("submeshes_without_material"):
         fails.append(f"no_material:{result['world']['submeshes_without_material']}")
 
@@ -251,6 +258,7 @@ def main():
     ap.add_argument("--boot-timeout", type=float, default=900)
     ap.add_argument("--out", default=os.path.join(CONF, "results.json"))
     ap.add_argument("--compare", help="older results.json to diff verdicts against")
+    ap.add_argument("--rejudge", action="store_true", help="re-run the checks over an existing --out, booting nothing")
     ap.add_argument("--scratch", default=os.environ.get("OPENHPL_SOMA_SCRATCH") or os.path.join(
         os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "open-hpl/soma-scratch"))
     args = ap.parse_args()
@@ -283,6 +291,18 @@ def main():
             path = os.path.join(state, f)
             if f.startswith("hpl-") and f.endswith(".log") and time.time() - os.path.getmtime(path) > 86400:
                 os.unlink(path)
+
+    if args.rejudge:
+        for name, result in results["maps"].items():
+            result["failures"], result["allowlisted"] = judge(name, result, expected, allow)
+        with open(args.out, "w") as f:
+            json.dump(results, f, indent=1, sort_keys=True)
+            f.write("\n")
+        for name, result in sorted(results["maps"].items()):
+            print(f"{name:34s} {'PASS' if not result['failures'] else 'FAIL'} {' '.join(result['failures'])}")
+        passing = sum(1 for r in results["maps"].values() if not r["failures"])
+        print(f"\n{passing}/{len(results['maps'])} maps passing -> {args.out}")
+        sys.exit(0 if passing == len(results["maps"]) else 1)
 
     sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ohpl-sweep.sock")
     for name in names:

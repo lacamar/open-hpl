@@ -5750,6 +5750,42 @@ sanity check.
 19. **Open: intermittent heap corruption on `04_01_tau_outside`**, release build only; details
     and next steps are TASKS.md item 0.
 
+## SOMA: every mesh was 100x too large - the Collada unit gate is exporter-specific (2026-09-23)
+
+User report with a screenshot: the apartment is "just a bunch of vertex explosions". Reproduced
+headless immediately (the same pose renders as a few huge dark triangles), then localised with
+`entity_info`: `bed_1` had a 311 x 141 x 181 m bounding box, `walls_livingroom_concave_4` was
+360 m tall. Every mesh in the map was exactly 100x its authored size, i.e. centimetres read as
+metres.
+
+`cMeshLoaderColladaLoader.cpp` only honours a `.dae`'s `<unit meter="0.01">` when
+`<authoring_tool>` is literally `"FBX COLLADA exporter"` - an original-engine heuristic, because
+Dark Descent's own data has 99 centimetre files from Blender/Maya/OpenCOLLADA whose geometry is
+nevertheless already in metres. SOMA's depot is the other way round: 3600+ `.dae` from
+OpenCOLLADA2008/modo/Maya, nearly all declaring centimetres and meaning it. So the gate must stay
+per game: added `cMeshLoaderCollada::SetConvertUnitFromAnyTool()`, set once in `cSomaBase::Init()`.
+Verified: `bed_1` is now 3.1 x 1.4 x 1.8 m and the apartment renders as a real lit room.
+
+Ruled out first, each by a direct A/B rather than by reasoning: the FBX loader, the four new map
+tracks (Decal/Billboard/ParticleSystem/DetailMeshes), the lazy-VBO change, the XML text change,
+and occlusion culling.
+
+**Two process notes.** (1) The 100x geometry was present in the 1.3.24 build shipped to COPR -
+the sweep passed it because nothing checked object size. `world_stats` now reports
+`entities_oversized` / `entities_nan_bounds` and the sweep fails on them; this class of bug will
+not pass again. (2) A screenshot saved by the headless `screenshot` command carried whatever
+alpha the framebuffer held, and ImageMagick composited it into convincing full-screen block
+noise - I briefly read that as a rendering bug. `CmdScreenshot` now forces alpha opaque; when
+inspecting an older `.bmp`, use `magick <file> -alpha off`.
+
+**Mesh cache reverted.** `cResources::SetMeshCacheDir()` (added the day before to stop re-parsing
+`.dae` on every load) is no longer enabled for SOMA. It was not the cause of the 100x bug, and
+the `.msh` round-trip reproduces geometry exactly (cold and warm loads give identical AABBs and
+identical G-buffer targets 0/1/2 to six decimals) - but with it enabled the light accumulation
+buffer's blue mean goes 0.21 -> 0.90 and the frame takes a strong blue cast, even on a cold
+cache where every mesh still comes from `.dae`. Unexplained, so the optimisation is off until it
+is understood; the API and a `.v2` cache-key version remain in place.
+
 Dark Descent regression check after all shared-core changes: `02_entrance_hall.map` boots
 headless, 0 shader failures, normal G-buffer healthy (no NaN), frame luminance 8.4; ctest 4/4.
 

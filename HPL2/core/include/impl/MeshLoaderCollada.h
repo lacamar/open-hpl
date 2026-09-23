@@ -474,6 +474,9 @@ namespace hpl {
 
 		static void SetConvertUnit(bool abX) { mbConvertUnit = abX; }
 		static bool GetConvertUnit() { return mbConvertUnit; }
+		// Honour <unit> from every exporter, not only "FBX COLLADA exporter".
+		// HPL3 data (SOMA) is authored in centimetres by OpenCOLLADA/modo/Maya.
+		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
 
 	private:
 		cMeshLoaderMSH *mpMeshLoaderMSH;
@@ -483,6 +486,7 @@ namespace hpl {
 		bool mbZToY;
 		cMatrixf m_mtxZToY;
 		static bool mbConvertUnit;
+		static bool mbConvertUnitFromAnyTool;
 
 		tWorldLoadFlag mFlags;
 

@@ -4,7 +4,16 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-0. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
+1. Mesh cache turns the frame blue. `cResources::SetMeshCacheDir()` is implemented and correct
+   for geometry (identical AABBs and G-buffer targets 0/1/2 cold vs warm), but enabling it for
+   SOMA raises the light accumulation buffer's blue mean from 0.21 to 0.90 even on a cold cache,
+   where every mesh is still parsed from `.dae`. So a load-order or resource-allocation side
+   effect, not the cached data. Reproduce by restoring the `SetMeshCacheDir()` block in
+   `cSomaBase::Init()`; compare `read_gbuffer_stats target=4`. Until then SOMA re-parses `.dae`
+   on every load (the reason the big maps take 1-2 minutes to start).
+
+
+2. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
    reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
    abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
    lock, or an abort in `~cSubMeshEntity` at exit. Three full ASan runs of the same map
@@ -17,28 +26,55 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    inside the prebuilt Newton tree-collision code or in how shapes/compounds are owned and
    freed. Next: build Newton from source with ASan; try one batched static body per map
    (`cWorldLoaderHplMap::AddObjectsToStaticMeshBody()` style), which item 1 wants anyway.
-1. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
+
+3. NaN bounding volumes: 2-142 entities per map (`nan_bounds` in the sweep; e.g.
+   `desk_work_drawer_1`, `shelf_glass_doors_door_left_2`). They are invisible and poison frustum
+   culling. Pre-existing - the count was the same before the unit-scale fix, so it is not the
+   `<unit>` change. Ruled out: a degenerate node scale making `MatrixInverse(mtxScale)` blow up
+   (these meshes are all scale 1, and `desk_work_drawer.dae` has no `<unit>` element at all).
+   Leading theory: a sub mesh whose geometry was skipped leaves the bounding volume at its
+   +/-FLT_MAX init, and `max - min` then evaluates to inf - inf = NaN. Check
+   `cBoundingVolume`/`cSubMesh::Compile()` for the empty-geometry case; a zero-size volume at the
+   entity origin would be correct. Shared with Dark Descent, so verify there too.
+
+
+4. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
    one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
    100-400 lights per frame without any light culling. Batch static collision like
    `cWorldLoaderHplMap::AddObjectsToStaticMeshBody()`; find what wakes the bodies.
-2. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
-3. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
-4. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
+
+5. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
+
+6. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
+
+7. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
    tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
-5. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
+
+8. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
    logs a missing `aSkyboxMap` sampler.
-6. FBX skeletons + animations (loader is static bind pose only).
-7. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
-8. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
-9. Verify ATI2/BC5U channel order against a reference screenshot.
-10. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
-11. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
-12. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
-    unknown `.ent` sub-entity type).
-13. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
-14. Reference-pose comparison against official screenshots (needs user-supplied images).
-15. P6 soak test (movement + RSS/fps sampling).
-16. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+
+9. FBX skeletons + animations (loader is static bind pose only).
+
+10. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
+
+11. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
+
+12. Verify ATI2/BC5U channel order against a reference screenshot.
+
+13. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+
+14. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+
+15. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
+   unknown `.ent` sub-entity type).
+
+16. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+
+17. Reference-pose comparison against official screenshots (needs user-supplied images).
+
+18. P6 soak test (movement + RSS/fps sampling).
+
+19. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
 
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,

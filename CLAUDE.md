@@ -63,6 +63,9 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `camera_state` / `set_camera` | camera pose |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
+Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
+`magick <file> -alpha off` or the image is composited into convincing fake noise.
+
 Localising a render bug: G-buffer targets 0-2 -> accumulation (4) -> `frame_stats`; the first
 stage whose numbers go wrong is where the bug is. Prefer these over screenshots. Screenshots only for comparing against reference images.
 Hangs: `gdb -p <pid> -batch -ex bt`. Crashes: `coredumpctl debug <pid>`.

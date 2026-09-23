@@ -61,6 +61,7 @@ namespace hpl {
 #define GetAdress(sStr) if(sStr[0]=='#') sStr = cString::Sub(sStr,1);
 
 	bool cMeshLoaderCollada::mbConvertUnit = true; 
+	bool cMeshLoaderCollada::mbConvertUnitFromAnyTool = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -181,7 +182,7 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		return cResources::GetMeshCacheDir() + sFlat + _W(".msh");
+		return cResources::GetMeshCacheDir() + sFlat + _W(".v2.msh");
 	}
 
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
