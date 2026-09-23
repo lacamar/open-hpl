@@ -619,6 +619,12 @@ struct cAmbSfxWantedSample
 	const char *pCacheFile; // basename only, written into the cache dir
 };
 
+// 00_00_intro.hps' OnStart plays Sound_PlayGui("00_05_apartment2/SFX/game_intro_seq"),
+// the intro slideshow's whole ambience/score bed. One mode=2 (PCM16) sample, ~27 MB.
+static const cAmbSfxWantedSample kPcmBank_00_05_apartment2_streamvip[] = {
+	{"game_intro_seq", "game_intro_seq.wav"},
+};
+
 static const cAmbSfxWantedSample kPcmBank_00_06_lab[] = {
 	{"car_drive_01", "car_drive_01.wav"}, {"car_drive_02", "car_drive_02.wav"},
 	{"car_drive_03", "car_drive_03.wav"}, {"car_drive_04", "car_drive_04.wav"},
@@ -776,7 +782,8 @@ void cSomaAmbientSfx::EnsureCached(cResources *apResources)
 
 	tWString sCacheDir = AmbSfx_GetCacheDir();
 
-	bool bAllPresent = cPlatform::FileExists(sCacheDir + _W("hum_loop.snt")) &&
+	bool bAllPresent = cPlatform::FileExists(sCacheDir + _W("game_intro_seq.wav")) &&
+						cPlatform::FileExists(sCacheDir + _W("hum_loop.snt")) &&
 						cPlatform::FileExists(sCacheDir + _W("idle.snt")) &&
 						cPlatform::FileExists(sCacheDir + _W("loop.snt")) &&
 						cPlatform::FileExists(sCacheDir + _W("car_drive.snt")) &&
@@ -786,6 +793,9 @@ void cSomaAmbientSfx::EnsureCached(cResources *apResources)
 
 	if (bAllPresent == false)
 	{
+		AmbSfx_ExtractPcmBank(apResources, "00_05_apartment2_streamvip.fsb", sCacheDir,
+							   kPcmBank_00_05_apartment2_streamvip,
+							   sizeof(kPcmBank_00_05_apartment2_streamvip) / sizeof(kPcmBank_00_05_apartment2_streamvip[0]));
 		AmbSfx_ExtractPcmBank(apResources, "00_06_lab.fsb", sCacheDir, kPcmBank_00_06_lab,
 							   sizeof(kPcmBank_00_06_lab) / sizeof(kPcmBank_00_06_lab[0]));
 

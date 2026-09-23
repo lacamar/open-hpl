@@ -3,6 +3,7 @@
  */
 
 #include "SomaIntroSequence.h"
+#include "sound/SoundHandler.h"
 #include "SomaBase.h"
 
 //---------------------------------------
@@ -96,6 +97,11 @@ cSomaIntroSequence::cSomaIntroSequence(cEngine *apEngine, cSomaBase *apBase) : i
 	mbCurrentLineAudioStarted = false;
 
 	mbFinished = false;
+
+	// The real intro's ambience/score bed, started with the sequence itself.
+	mpAmbience = mpEngine->GetSound()->GetSoundHandler()->PlayGui("game_intro_seq.wav", false, 1.0f);
+	if (mpAmbience == NULL)
+		Log("SOMA intro: 'game_intro_seq.wav' not available - the slideshow will have dialogue but no ambience\n");
 }
 
 //-----------------------------------------------------------------------
@@ -457,6 +463,12 @@ void cSomaIntroSequence::Finish()
 		return;
 
 	mbFinished = true;
+
+	if (mpAmbience)
+	{
+		mpAmbience->Stop();
+		mpAmbience = NULL;
+	}
 
 	mpViewport->SetActive(false);
 
