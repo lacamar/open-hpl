@@ -35,8 +35,8 @@ scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHAD
 - `soma/conformance/results.json`: per-map status, load report, render/frame/G-buffer stats,
   aggregated log errors, `failures`. Source of truth for what passes.
 - `TASKS.md`: todo list. `PORTING_NOTES.md`: narrative/root-cause history.
-- Session start: read `SOMA_PLAN.md`, `results.json` failures, `git log -15`; run
-  `soma-init.sh`; sweep one map as a smoke test.
+- Session start: read `HANDOVER.md` first, then `SOMA_PLAN.md`, `results.json` failures and
+  `git log -15`; run `soma-init.sh`; sweep one map as a smoke test.
 
 ## Interrogating a running engine
 
