@@ -148,6 +148,8 @@ namespace hpl {
 		// HPSL shaders sample the G-buffer/accumulation buffer as sampler2D;
 		// Dark Descent's GLSL uses sampler2DRect (the default).
 		static void SetGBufferTextureType(eTextureType aType){ mGBufferTextureType = aType; }
+		// HPSL keeps linear depth in the normal target's alpha
+		static void SetDepthInNormalAlpha(bool abX){ mbDepthInNormalAlpha = abX; }
 		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
 
 		static void SetNumOfGBufferTextures(int alNum){ mlNumOfGBufferTextures = alNum;}
@@ -233,6 +235,7 @@ namespace hpl {
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
 		void RenderDecals();
+		void SetFogDepthTexture(bool abBind);
 		void RenderFullScreenFog();
 		void RenderFog();
 		void RenderTranslucent();
@@ -329,6 +332,8 @@ namespace hpl {
 		iGpuProgram *mpEdgeSmooth_UnpackDepthProgram;
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
+		iGpuProgram *mpFxaaProgram;
+
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
 
@@ -343,6 +348,7 @@ namespace hpl {
 		//Static setting variables
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
+		static bool mbDepthInNormalAlpha;
 		static int mlNumOfGBufferTextures;
 		static bool mbDepthCullLights;
 

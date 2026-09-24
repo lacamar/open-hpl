@@ -8,6 +8,8 @@
 #include "HpslTranspiler.h"
 #include "SomaLoaders.h"
 #include "SomaAmbientSfx.h"
+#include "SomaMenuSfx.h"
+#include "SomaFsb.h"
 #include "SomaSplash.h"
 
 #include "system/HeadlessControl.h"
@@ -267,10 +269,20 @@ static void cSomaBase_HeadlessCmd_Lights(void *apUserData, const cHeadlessReques
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
 	if(pBase->GetCurrentWorld() == NULL || pBase->GetDebugCamera() == NULL) { aResp.SetError("no world loaded"); return; }
-	aResp.SetRaw("lights", cEngineDiagnostics::GetLightsJson(pBase->GetCurrentWorld(), pBase->GetDebugCamera()->GetPosition(), aReq.GetInt("n", 8)));
+	iRenderer *pRenderer = pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main);
+	aResp.SetRaw("lights", cEngineDiagnostics::GetLightsJson(pBase->GetCurrentWorld(), pBase->GetDebugCamera()->GetPosition(), aReq.GetInt("n", 8), pRenderer ? pRenderer->GetCurrentRenderList() : NULL));
 }
 
-// A/B switches for cRenderSettings: occlusion_culling, ssao, shadows, edge_smooth.
+static void cSomaBase_HeadlessCmd_SetLight(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentWorld() == NULL) { aResp.SetError("no world loaded"); return; }
+	iLight *pLight = pBase->GetCurrentWorld()->GetLight(aReq.GetString("name", ""));
+	if(pLight == NULL) { aResp.SetError("no light with that name"); return; }
+	pLight->SetVisible(aReq.GetBool("visible", true));
+}
+
+// A/B switches for cRenderSettings: occlusion_culling, ssao, shadows, edge_smooth, fxaa; fog is the world's.
 static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -283,6 +295,8 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "ssao") pSettings->mbSSAOActive = bValue;
 	else if(sName == "shadows") pSettings->mbRenderShadows = bValue;
 	else if(sName == "edge_smooth") pSettings->mbUseEdgeSmooth = bValue;
+	else if(sName == "fxaa") pSettings->mbUseFxaa = bValue;
+	else if(sName == "fog" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetFogActive(bValue);
 	else aResp.SetError("unknown setting '" + sName + "'");
 }
 
@@ -294,8 +308,10 @@ static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest 
 	if(pDeferred == NULL) { aResp.SetError("no deferred renderer yet"); return; }
 
 	tString sOut = "[";
-	for(int lTarget=0; lTarget<3; ++lTarget)
+	static const int vTargets[] = {0, 1, 2, 4};
+	for(int t=0; t<4; ++t)
 	{
+		int lTarget = vTargets[t];
 		iTexture *pTex = pDeferred->GetDebugGBufferTexture(lTarget);
 		std::vector<float> vPixels;
 		if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("G-buffer target has no GPU data yet"); return; }
@@ -508,6 +524,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// above.
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
+	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 
 	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
@@ -563,10 +580,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// this call's own original site.
 	cResources::SetForceCacheLoadingAndSkipSaving(true);
 
-	// No mesh cache for SOMA. cResources::SetMeshCacheDir() works and the .msh
-	// round-trip preserves geometry exactly, but enabling it turns the light
-	// accumulation buffer blue (b_mean 0.21 -> 0.90) with a byte-identical
-	// G-buffer, even on a cold cache. Unexplained - see TASKS.md.
+	// Never next to the game data; also skips probing SOMA's own (HPL3-format) .msh files
+	cResources::SetMeshCacheDir(cSomaFsb::GetCacheDir(_W("meshcache")));
 
 	/////////////////////////////
 	// Init the engine: create the window, load resources.cfg/materials.cfg,
@@ -604,6 +619,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("entity_info", cSomaBase_HeadlessCmd_EntityInfo, this);
 		pCtrl->RegisterHandler("lights", cSomaBase_HeadlessCmd_Lights, this);
 		pCtrl->RegisterHandler("pick", cSomaBase_HeadlessCmd_Pick, this);
+		pCtrl->RegisterHandler("set_light", cSomaBase_HeadlessCmd_SetLight, this);
 		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
 		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
 		pCtrl->RegisterHandler("keybind_set", cSomaBase_HeadlessCmd_KeybindSet, this);
@@ -877,12 +893,8 @@ bool cSomaBase::InitEngine()
 	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
 
-	// See SomaAmbientSfx.h/.cpp - real map-authored ambient sound entities
-	// (car honks, distant dogs, seagulls, a fridge hum, ...) reference real
-	// FMOD-event names with no matching .snt resource anywhere in the
-	// install, so cWorldLoaderHpm::LoadSoundsTrack() (which already runs,
-	// unmodified) silently fails to create every one. Must run before any
-	// map load, same as RegisterSomaLoaders() above.
+	// FMOD-banked audio -> cache resource dirs; before any map or menu loads
+	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
 	cSomaAmbientSfx::EnsureCached(mpEngine->GetResources());
 
 	/////////////////////////
@@ -1131,11 +1143,8 @@ bool cSomaBase::InitMainMenuScene()
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
 
-	// Real Anti-Aliasing row's live backend - see SomaConfig.h's
-	// mbAntiAliasing comment. cRenderSettings defaults mbUseEdgeSmooth to
-	// false (Renderer.cpp), so this needs applying explicitly on every fresh
-	// cRenderSettings a new cViewport creates.
-	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
+	// Each new viewport's cRenderSettings starts with FXAA off
+	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
 
 	// CHC occlusion culling reads query results back synchronously, which
 	// stalls a tile-based GPU (0.1 fps on real maps) and culled everything
@@ -1192,12 +1201,7 @@ void cSomaBase::OnIntroSequenceFinished()
 {
 	tString sError;
 	if (LoadMap("00_01_apartment.hpm", cVector3f(0, 1.7f, 0), sError, "PlayerStartArea_1") == false)
-	{
 		Log("SOMA: intro sequence finished but failed to load next map (%s)\n", sError.c_str());
-		return;
-	}
-
-	if (mpPlayer) mpPlayer->SetActive(true);
 }
 
 //-----------------------------------------------------------------------
@@ -1233,7 +1237,7 @@ bool cSomaBase::InitTestMap()
 	mpDebugCamera = pCamera;
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
-	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing; // see InitMainMenuScene()'s copy of this line
+	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing; // see InitMainMenuScene()'s copy of this line
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
@@ -1265,6 +1269,8 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// destroy yet), but a second one (e.g. a headless "start_map" reload)
 	// crashed immediately in cSomaPlayer::DestroyCharacterBody().
 	if (mpPlayer) mpPlayer->DestroyCharacterBody();
+	if (mpApartmentIntroCall) mpApartmentIntroCall->Cancel();
+	if (mpIntroSequence) mpIntroSequence->Cancel();
 
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
 	mpTestWorld = pNewWorld;
@@ -1290,12 +1296,8 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		mpDebugViewport->SetWorld(mpTestWorld);
 	}
 
-	// Real Anti-Aliasing row's live backend (see SomaConfig.h's
-	// mbAntiAliasing comment) - reapplied unconditionally on every map load,
-	// covering both the "brand new cRenderSettings" branch above (which
-	// defaults mbUseEdgeSmooth to false) and the "reused viewport" branch
-	// (already correct, but cheap to just re-set).
-	mpDebugViewport->GetRenderSettings()->mbUseEdgeSmooth = mConfig.mbAntiAliasing;
+	// Each new viewport's cRenderSettings starts with FXAA off
+	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
 	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
 
 	// Controller hand-off: InitMainMenuScene() always creates a free-fly
@@ -1410,25 +1412,18 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// so it also fires for a direct "start_map" headless reload used to
 	// verify it - same as the real engine, which runs this map's OnEnter()
 	// regardless of how it was reached.
+	if (mpPlayer) mpPlayer->SetActive(asMapFile != "00_00_intro.hpm");
 	if (asMapFile == "00_00_intro.hpm")
 	{
-		if (mpPlayer) mpPlayer->SetActive(false);
-
 		if (mpIntroSequence == NULL)
 		{
 			mpIntroSequence = hplNew(cSomaIntroSequence, (mpEngine, this));
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpIntroSequence);
 		}
-		else
-		{
-			Log("SOMA: intro sequence object already exists, not starting a second one\n");
-		}
+		mpIntroSequence->Restart();
 	}
 
-	// Real 00_01_apartment.hpm Munshi phone-call hand-port (see
-	// SomaApartmentIntroCall.h) - as narrowly scoped/one-map-gated as the
-	// intro sequence's own construction just above, and same "constructed
-	// once, never destroyed" pattern.
+	// Munshi phone call (SomaApartmentIntroCall.h); cUpdater has no remove, so the object persists
 	if (asMapFile == "00_01_apartment.hpm")
 	{
 		if (mpApartmentIntroCall == NULL)
@@ -1436,10 +1431,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			mpApartmentIntroCall = hplNew(cSomaApartmentIntroCall, (mpEngine, this));
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpApartmentIntroCall);
 		}
-		else
-		{
-			Log("SOMA: apartment intro call object already exists, not starting a second one\n");
-		}
+		mpApartmentIntroCall->Restart();
 	}
 
 	return true;

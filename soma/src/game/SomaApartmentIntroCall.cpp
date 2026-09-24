@@ -76,30 +76,51 @@ cSomaApartmentIntroCall::cSomaApartmentIntroCall(cEngine *apEngine, cSomaBase *a
 
 	mpSubtitleFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_medium_bold.fnt");
 
-	// Task 2 - register the real wake-up phone interact point on cSomaPlayer
-	// (see kPhoneWorldPos's own citation above and SomaPlayer.h's
-	// RegisterInteractPoint()). mpBase->GetPlayer() should already be
-	// non-NULL here (LoadMap() creates cSomaPlayer before this object - see
-	// SomaBase.cpp's own ordering), but this is defensive: with no player
-	// (OPENHPL_SOMA_FREECAM), the phone would otherwise just ring forever,
-	// same as the real game with nobody to answer it.
+	BuildDialogue();
+
+	mpRingWorld = NULL;
+	mpRing = NULL;
+	mlRingCreationID = -1;
+	mPhase = eCallPhase_Finished;
+	mpViewport->SetActive(false);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaApartmentIntroCall::Restart()
+{
+	Cancel();
+
 	if (mpBase && mpBase->GetPlayer())
 		mpBase->GetPlayer()->RegisterInteractPoint(kPhoneInteractName, kPhoneWorldPos, kPhoneMaxInteractDistance);
 
-	BuildDialogue();
-
 	mPhase = eCallPhase_WaitingForRing;
 	mfTimer = 0;
-
 	mlCurrentLineIndex = -1;
 	mfLineFallbackTimer = 0;
 	msPlayingFile = "";
+	msCurrentSpeaker = "";
+	msCurrentSubtitle = "";
+	mpViewport->SetActive(true);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaApartmentIntroCall::Cancel()
+{
+	StopRing();
+	if (msPlayingFile != "")
+		mpEngine->GetSound()->GetSoundHandler()->Stop(msPlayingFile);
+	msPlayingFile = "";
+	mPhase = eCallPhase_Finished;
+	mpViewport->SetActive(false);
 }
 
 //-----------------------------------------------------------------------
 
 cSomaApartmentIntroCall::~cSomaApartmentIntroCall()
 {
+	StopRing();
 }
 
 //-----------------------------------------------------------------------
@@ -189,12 +210,28 @@ void cSomaApartmentIntroCall::EnterRinging()
 {
 	mPhase = eCallPhase_Ringing;
 
-	// Real ring SFX ("Entities_Urban/tech/cellphone/vibrating_wood") is an
-	// FMOD Designer soundbank event with no plain-file fallback anywhere in
-	// the real install (see the .h's citation) - this engine has no FMOD
-	// reader, so no audio plays here at all. Logged clearly so this moment
-	// is still verifiable without sound.
-	Log("SOMA apartment intro call: phone starts ringing (real ring SFX unavailable - FMOD-banked, see SomaApartmentIntroCall.h)\n");
+	// Entities_Urban/tech/cellphone/vibrating_wood, synthesized by cSomaAmbientSfx
+	mpRingWorld = mpBase ? mpBase->GetCurrentWorld() : NULL;
+	mpRing = mpRingWorld ? mpRingWorld->CreateSoundEntity("PhoneRing", "vibrating_wood", false) : NULL;
+	if (mpRing)
+	{
+		mlRingCreationID = mpRing->GetCreationID();
+		mpRing->SetPosition(kPhoneWorldPos);
+	}
+	else
+	{
+		Log("SOMA apartment intro call: ring sound unavailable\n");
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaApartmentIntroCall::StopRing()
+{
+	if (mpRing && mpBase && mpBase->GetCurrentWorld() == mpRingWorld && mpRingWorld->SoundEntityExists(mpRing, mlRingCreationID))
+		mpRingWorld->DestroySoundEntity(mpRing);
+	mpRing = NULL;
+	mpRingWorld = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -205,6 +242,9 @@ void cSomaApartmentIntroCall::AnswerCall()
 	mlCurrentLineIndex = -1;
 	msPlayingFile = "";
 	mfLineFallbackTimer = 0;
+
+	StopRing();
+	mpEngine->GetSound()->GetSoundHandler()->PlayGui("pickup_phone_counter_01.ogg", false, 1.0f);
 
 	Log("SOMA apartment intro call: real interact detected while looking at the phone - "
 		"starting real '1_PhoneCall' dialogue\n");
@@ -352,8 +392,6 @@ void cSomaApartmentIntroCall::DrawSubtitle()
 	tString sLine;
 	if (mPhase == eCallPhase_Ringing)
 	{
-		// Stands in for the real (FMOD-banked, unavailable) ring SFX - see
-		// EnterRinging()'s comment.
 		sLine = "(phone ringing...)";
 	}
 	else if (mPhase == eCallPhase_InCall && msCurrentSubtitle != "")

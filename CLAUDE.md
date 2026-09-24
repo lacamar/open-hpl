@@ -54,8 +54,9 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `frame_stats` | final-frame luminance mean/histogram, black/white/magenta fractions |
 | `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation |
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
-| `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth` |
-| `pick x= y=` | raw G-buffer values under a pixel |
+| `set_light name= visible=` | show/hide one light (per-light attribution) |
+| `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog` |
+| `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel |
 | `shader_report [failed_only=false]` | compile/link status + info log per shader |
 | `entity_info name=` | transform, AABB, mesh, per-submesh material/visibility |
 | `wait_frames n= [max_ms=]` | replies after n rendered frames or the time cap |

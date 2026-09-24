@@ -1,32 +1,11 @@
-/*
- * A second real FMOD Vorbis "setup" codebook packet (4038 bytes), keyed by
- * the crc32 SOMA's own entities_urban.fsb stores per-sample (0xb62ad8df /
- * 3056261343 decimal) - a DIFFERENT standard FMOD codebook preset than the
- * one SomaMenuSfxVorbisSetup.h already embeds (0x6d39bf3e), needed because
- * this port's real map-authored ambient sound entities (see
- * SomaAmbientSfx.cpp) reference samples FMOD encoded with this other preset
- * (confirmed via this session's own FSB5 header parse of a real
- * entities_urban.fsb: 'hum_loop' and the 'dvd_player_idle_sweet_0N' samples
- * all carry this exact crc32, distinct from special_fx.fsb's samples).
- *
- * Like SomaMenuSfxVorbisSetup.h's entry, this is NOT game-specific content
- * extracted from SOMA - it's one more entry from FMOD Ex/Studio's own fixed,
- * generic, quality-preset codebook table (the same handful of standard setup
- * packets FMOD's authoring tool reuses across every game that ships
- * FSB5-Vorbis audio), independently reverse-engineered and published under
- * the MIT licence by the python-fsb5 project
- * (https://github.com/HearthSim/python-fsb5, fsb5/vorbis_headers.py) - this
- * entry was copied out of that public, MIT-licensed table (Copyright (c)
- * 2016 Simon Pinfold) keyed by this crc32, not extracted from this session's
- * own SOMA install.
- */
+// FMOD FSB5 Vorbis setup packet for crc32 0xb62ad8df, from python-fsb5's vorbis_headers.py
+// (MIT, Copyright (c) 2016 Simon Pinfold) - a generic FMOD preset, not SOMA content.
 
-#ifndef SOMA_AMBIENT_SFX_VORBIS_SETUP_H
-#define SOMA_AMBIENT_SFX_VORBIS_SETUP_H
+#ifndef SOMA_VORBIS_SETUP_B62AD8DF_H
+#define SOMA_VORBIS_SETUP_B62AD8DF_H
 
-static const unsigned int kSomaAmbientVorbisSetupCrc32 = 3056261343u;
-static const int kSomaAmbientVorbisSetupHeaderSize = 4038;
-static const unsigned char kSomaAmbientVorbisSetupHeaderData[] = {
+static const unsigned int kVorbisSetupCrc32_b62ad8df = 0xb62ad8dfu;
+static const unsigned char kVorbisSetupData_b62ad8df[] = {
 0x05,0x76,0x6f,0x72,0x62,0x69,0x73,0x2b,0x42,0x43,0x56,0x01,0x00,0x08,0x00,0x00,0x00,0x31,0x4c,0x20,
 0xc5,0x80,0xd0,0x90,0x55,0x00,0x00,0x10,0x00,0x00,0x60,0x24,0x29,0x0e,0x93,0x66,0x49,0x29,0xa5,0x94,
 0xa1,0x28,0x79,0x98,0x94,0x48,0x49,0x29,0xa5,0x94,0xc5,0x30,0x89,0x98,0x94,0x89,0xc5,0x18,0x63,0x8c,
@@ -231,4 +210,5 @@ static const unsigned char kSomaAmbientVorbisSetupHeaderData[] = {
 0x00,0x00,0x00,0x00,0x80,0x80,0x80,0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x80,0x80
 };
 
-#endif // SOMA_AMBIENT_SFX_VORBIS_SETUP_H
+#endif
+

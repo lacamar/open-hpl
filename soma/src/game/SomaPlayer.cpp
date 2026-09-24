@@ -156,6 +156,10 @@ void cSomaPlayer::ResetForNewMap(iPhysicsWorld *apPhysicsWorld, const cVector3f 
 	mpPhysicsWorld = apPhysicsWorld;
 	CreateCharacterBody();
 
+	mvInteractPoints.clear();
+	msCurrentLookTarget = "";
+	mbInteractKeyPressedThisFrame = false;
+
 	// NOTE: deliberately no StopMovement() call here (unlike LuxPlayer::
 	// PlaceAtStartNode(), which this was originally modeled on) - the body
 	// was JUST created fresh above, so there is no residual movement to

@@ -42,18 +42,10 @@ is the ordered backlog; `soma/conformance/results.json` is what actually passes.
 
 ## Open, in the order I would take them
 
-`TASKS.md` has the full list. The three the user reported last and that are not yet diagnosed:
+`TASKS.md` has the full list. Fixed on 2026-09-24 (see PORTING_NOTES): detached legs (inactive
+map entities), lighting shifting while turning (fog read specular as depth), blue accumulation
+clear, skinned-mesh bounds, silent phone ring, dead AA toggle; mesh cache back on. Still open:
 
-- **Simon detached from his legs.** Almost certainly not physics: `legs_human.ent` is an ordinary
-  map entity that the real game attaches to the player each frame. We have no attachment, so the
-  legs sit where the map put them. Newly visible only because that mesh is FBX-only and used to
-  fail to load. Confirm with `entity_info name=legs_human_1` vs the PlayerStart position.
-- **Looking around messes up the lighting.** Not reproduced from static poses: over eight yaw
-  angles, lights rendered fall 67 -> 28 and luminance moves 22.8 -> 31.8, which is ordinary
-  frustum culling plus different lamps in view. Leading untested theory is a one-frame mismatch
-  between the G-buffer pass and the light pass - invisible while still, obvious while turning.
-  Test: rotate a few degrees per frame while sampling `read_gbuffer_stats target=1` (G-buffer)
-  and `target=4` (accumulation); if the accumulation lags, that is it.
 - **Physics objects not interactable.** Expected - there is no general interact system, only a
   hardcoded point for the apartment phone. Jointed props are also pinned (item above).
 
@@ -96,5 +88,5 @@ whose numbers go wrong is where the bug is.
   `--setopt=<repoid>.baseurl=https://copr-be.cloud.fedoraproject.org/results/lacamar/arm64-misc/fedora-44-aarch64/`.
 - `soma/conformance/expected.json` is generated; never hand-edit it, and never add to
   `allowlist.json` without a reason taken from the data.
-- The mesh cache is implemented and correct for geometry but turns the accumulation buffer blue
-  (`TASKS.md` item 1), so it is off - large maps re-parse `.dae` and take 1-2 minutes to load.
+- The mesh cache lives in `$XDG_CACHE_HOME/open-hpl/soma/meshcache`; bump the `.v3` key in
+  `GetExternalMeshCacheFile()` whenever mesh-loader output changes, or stale meshes load.

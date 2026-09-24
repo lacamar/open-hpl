@@ -4,18 +4,7 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. Mesh cache turns the frame blue. `cResources::SetMeshCacheDir()` is implemented and correct
-   for geometry (identical AABBs and G-buffer targets 0/1/2 cold vs warm), but enabling it for
-   SOMA raises the light accumulation buffer's blue mean from 0.21 to 0.90 even on a cold cache,
-   where every mesh is still parsed from `.dae`. So a load-order or resource-allocation side
-   effect, not the cached data. Reproduce by restoring the `SetMeshCacheDir()` block in
-   `cSomaBase::Init()`; compare `read_gbuffer_stats target=4`. Until then SOMA re-parses `.dae`
-   on every load (the reason the big maps take 1-2 minutes to start).
-
-
-
-
-2. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
+1. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
    reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
    abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
    lock, or an abort in `~cSubMeshEntity` at exit. Three full ASan runs of the same map
@@ -31,98 +20,115 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-3. Intro slideshow has no ambience or SFX cues. The real `00_00_intro.hps` plays
-   `Sound_PlayGui("00_05_apartment2/SFX/game_intro_seq")` plus per-slide `AddSound()` cues; these
-   are FMOD event paths with no file on disk, and `cSomaIntroSequence` only plays the voice-line
-   `.ogg`s. The sample is in `sounds/level/00_05_apartment2_streamvip.fsb`, which the existing
-   FSB5 reader in `SomaMenuSfx`/`SomaAmbientSfx` can already decode - wire that bank in and play
-   the cue on the intro's timeline.
-
-
-
-4. Window glass renders opaque. `plain_glass_livingroom.mat` is `Type="translucent"`,
+2. Window glass renders opaque. `plain_glass_livingroom.mat` is `Type="translucent"`,
    `BlendMode="Mulx2"`, `Refraction=true`. Blend-mode parsing is fine (it lowercases, so
    "Mulx2" matches) and the translucent objects do reach the render list (49 per frame in the
-   apartment), so suspect the refraction path: `mpRefractionTexture` still comes from
-   `GetTempFrameBuffer()` as a rect texture while SOMA's G-buffer is now `eTextureType_2D`, and
-   the HPSL transparent shader samples it as `sampler2D`. Compare `deferred_transparent_frag`'s
-   dumped GLSL against what the renderer binds.
+   apartment). Confirmed: `cGraphics::GetTempFrameBuffer()` always creates `eTextureType_Rect`,
+   so `mpRefractionTexture` is rect while HPSL samples `sampler2D`. The same blocks the post-effect
+   composite (bloom etc.) for SOMA, which also passes pixel UVs. Needs a per-game temp-buffer
+   texture type plus normalized UVs in `iPostEffect::DrawQuad()`.
 
 
 
 
-5. Doors and drawers are pinned (mass 0) by `cSomaBase::LoadMap()` because nothing holds them
+3. Doors and drawers are pinned (mass 0) by `cSomaBase::LoadMap()` because nothing holds them
    shut without the map scripts. Unpin when a script layer exists; until then they are visible
    but immovable.
 
 
-6. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
+4. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
    one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
    100-400 lights per frame without any light culling. Batch static collision like
    `cWorldLoaderHplMap::AddObjectsToStaticMeshBody()`; find what wakes the bodies.
 
 
 
-7. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
+5. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
 
 
 
-8. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
+6. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
 
 
 
-9. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
+7. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
    tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
 
 
 
-10. `05_03_space` and `03_02_omicron_inside` render (near) black at the start pose; space also
-   logs a missing `aSkyboxMap` sampler.
+8. `05_03_space`, `03_02_omicron_inside`, `03_03_omicron_descent` and `02_02_ms_curie_inside`
+   render (near) black at the start pose; the last two lost the
+   fake light of the blue accumulation clear (fixed 2026-09-24). Space also logs a missing `aSkyboxMap` sampler.
 
 
 
-11. FBX skeletons + animations (loader is static bind pose only).
+9. SSAO still binds G-buffer target 2 as depth (Dark Descent's layout); SOMA's depth is target
+   1 `.w`. HPL3's SSAO is a different chain (`deferred_ssao_depth_downsample` ->
+   render -> temporal -> blur -> upsample), so not a one-line rebind like the fog fix. Toggling
+   `ssao` currently changes nothing measurable.
 
 
 
-12. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
+10. Newton exit crash (`02_05_theta_inside`; `01_01_upsilon_awake` too when inactive entities'
+   bodies reject contacts): `NewtonDestroy` -> `dgDeadBodies::DestroyBodies` ->
+   `RemoveContactJoint` on a row whose body was already removed. Reproducible by returning 0 from
+   the material AABB-overlap callback for some bodies (`IsActive()`/`GetCollide()` false). Needed
+   before inactive map entities can drop their collision.
+
+
+11. Physics-material sound entities: ~1.4k "Couldn't create SoundEntity 'physics/...'" per map -
+   the same FMOD-event-without-.snt gap cSomaAmbientSfx closes for map ambiences; extend it with
+   the physics banks via cSomaFsb.
 
 
 
-13. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
+12. Oversized check leftovers after the skinned-mesh fix: `02_03` `02_03_akers_scribble1_1`,
+   `03_03` `exit_flesher_door` (the descent-shaft walls are plausibly real).
 
 
 
-14. Verify ATI2/BC5U channel order against a reference screenshot.
+13. FBX skeletons + animations (loader is static bind pose only).
 
 
 
-15. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+14. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
 
 
 
-16. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+15. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
 
 
 
-17. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
+16. Verify ATI2/BC5U channel order against a reference screenshot.
+
+
+
+17. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+
+
+
+18. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+
+
+
+19. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
    unknown `.ent` sub-entity type).
 
 
 
-18. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+20. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
 
 
 
-19. Reference-pose comparison against official screenshots (needs user-supplied images).
+21. Reference-pose comparison against official screenshots (needs user-supplied images).
 
 
 
-20. P6 soak test (movement + RSS/fps sampling).
+22. P6 soak test (movement + RSS/fps sampling).
 
 
 
-21. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+23. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
 
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,

@@ -88,16 +88,8 @@ public:
 	int mlScreenWidth;
 	int mlScreenHeight;
 
-	// Graphics - LIVE via cViewport::GetRenderSettings()->mbUseEdgeSmooth
-	// (HPL2/core/include/graphics/Renderer.h's cRenderSettings, consumed
-	// every frame by RendererDeferred.cpp's RenderEdgeSmooth() pass) - the
-	// exact same FXAA-style edge-smoothing setting
-	// amnesia/src/game/LuxConfigHandler.cpp's own "EdgeSmooth" field drives
-	// via cLuxMapHandler::UpdateViewportRenderProperties(). Real SOMA only
-	// ever offers "Off"/"FXAA" (helper_imgui_options.hps' vAAValues), so this
-	// engine's single edge-smooth pass covers the full real option range -
-	// stored as a bool rather than a string, same simplification already
-	// applied to mbFullscreen/mbVSync above.
+	// Off/FXAA (helper_imgui_options.hps' vAAValues); drives cRenderSettings::mbUseFxaa,
+	// SOMA's own posteffect_fxaa shader applied in cRendererDeferred::CopyToFrameBuffer()
 	bool mbAntiAliasing;
 
 	// Gameplay - LIVE via cCamera::SetFOV() (radians) - real key

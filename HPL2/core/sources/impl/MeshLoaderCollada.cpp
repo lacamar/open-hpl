@@ -182,7 +182,8 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		return cResources::GetMeshCacheDir() + sFlat + _W(".v2.msh");
+		// bump when loader output changes: v3 = Collada unit applied for every exporter
+		return cResources::GetMeshCacheDir() + sFlat + _W(".v3.msh");
 	}
 
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
@@ -626,9 +627,6 @@ namespace hpl {
 			pVtxBuffer->Compile(0);//eVertexCompileFlag_CreateTangents);
 		}
 
-		/////////////////////////////////////
-		//Compile the bones and submeshes
-		pMesh->CompileBonesAndSubMeshes();
 
 		///////////////////////////////////////////////
 		// Set colliders to sub meshes
@@ -772,6 +770,9 @@ namespace hpl {
 				}
 			}
 		}
+
+		// Bone radii need the final (unit-scaled) skeleton
+		pMesh->CompileBonesAndSubMeshes();
 
 		/////////////////////////////////////////////////
 		// SAVE MSH FORMAT

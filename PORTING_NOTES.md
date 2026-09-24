@@ -5847,3 +5847,80 @@ depot are planes, so nothing else is needed there.
 - Engine exit blocks for minutes in the driver's `close()` on big maps.
 - Mesh cache writes are disabled to protect the Steam dir, so every load re-parses `.dae`
   (2 min on the largest maps). Redirecting the cache to `$XDG_CACHE_HOME` would fix both.
+
+## SOMA: lighting changed while turning - fog read specular as depth (2026-09-24)
+
+User report: "looking around messes up the lighting". Static-pose stats could not show it, and
+the one-frame-lag theory was wrong (accumulation after 1 frame == settled). What did show it:
+`pick` (now returns target 4 too) at a fixed world point while rotating the camera in place -
+pure rotation must leave that point's lighting unchanged. It moved by up to 0.17 of a ~0.4
+accumulation value. Per-light attribution (`set_light visible=false` for every light in the
+render list) explained only part of it; skipping passes one at a time pinned the rest on
+`RenderFullScreenFog()`.
+
+Cause: HPL2 binds G-buffer target 2 as the fog's depth (Dark Descent's layout). SOMA's HPSL
+G-buffer keeps linear depth in target 1's alpha (target 2 is specular), and the real
+`deferred_fog_frag.hpsl` reads `aDepthMap.x` - HPL3 fills that from a
+`deferred_unpack_depth_frag.hpsl` pass that copies `.w` into red. `afNegFarPlane` was also only
+set for the 32-bit G-buffer, so the reconstructed position had z = 0. Fog distance was
+specular x screen-space ray, which changes as a surface moves across the screen.
+
+Fix: `cRendererDeferred::SetDepthInNormalAlpha()` (SOMA only) - the fog passes bind target 1 with
+a `GL_TEXTURE_SWIZZLE_R = GL_ALPHA` swizzle (`iTexture::SetRedFromAlpha()`, reset after the
+pass) and always set `afNegFarPlane`. Same test afterwards: max deviation 0.012. SSAO and edge
+smooth still bind target 2 as depth - same class of bug, not yet addressed.
+
+**The accumulation buffer was cleared to blue.** Fixing the fog exposed a saturated blue frame on
+`05_01_phi_inside` (accumulation blue mean 1.0). Skipping both fog passes on the *old* code gave
+the same blue - the broken fog had been painting over it. Hiding each light never lowered it, so
+it was not a light: `RenderGbufferSetup()` sets the clear colour to (0,0,1,1) for the 64-bit
+G-buffer (far depth, unit normal) and never restored it, and `RenderLights()` then clears the
+accumulation buffer with that colour. Box lights (SOMA's ambient probes) overwrite most of it in
+the apartment, which is why it only showed where none are in view - and why skipping box lights,
+or enabling the mesh cache (TASKS item 1), turned frames blue. Now restored to the settings'
+clear colour: phi accumulation blue 1.0 -> 0.10, magenta 0.
+
+Also: map entities with `Active="false"` were loaded visible. 1051 across the maps, e.g. the
+apartment's `Legs` (the "Simon detached from his legs" report), which the script only activates
+for the phone scene. `cSomaGenericEntityLoader::AfterLoad()` now hides them (mesh, lights, particles, billboards,
+beams, sounds) as `iLuxProp::OnSetActive(false)` does. Their bodies stay live: marking them
+inactive, or `SetCollide(false)`, makes the material AABB-overlap callback reject their pairs,
+and that reliably trips the Newton exit crash `02_05` already had (`01_01_upsilon_awake`,
+`dgBodyMasterListRow::RemoveContactJoint` with `this=0x8` in `NewtonDestroy` - a contact still
+linked to a body whose master-list row is gone).
+
+## SOMA module audit (2026-09-24)
+
+- **FSB5 extraction was copy-pasted** between `SomaMenuSfx.cpp` and `SomaAmbientSfx.cpp` (~500
+  lines each, prefix-renamed), and callers picked a Vorbis setup preset by hand. Now one
+  `cSomaFsb` (parse, Ogg mux, WAV, cache dir) that picks the preset from the sample's own crc32.
+  Presets renamed by crc (`SomaVorbisSetup_<crc>.h`). Re-extraction is byte-identical to the old
+  cache. Both SFX caches are prepared at engine init (the menu one used to be lazily triggered
+  from the splash and the menu).
+- **Phone ring and pickup were silent** while comments still said "no FMOD reader". The ring
+  (`entities_urban.fsb`, 8 variants, FMOD spawns one every 1 s, max one instance, ~2 s each) is
+  a synthesized `vibrating_wood.snt` played as a 3D sound at the phone; pickup is
+  `pickup_phone_counter_01` from `00_05_apartment2_sfx.fsb`. The intro's only per-slide
+  `AddSound` is commented out in the real script, so the intro audio was already complete.
+- **Cross-map leaks.** The intro slideshow and the apartment call are created once and never
+  removed (cUpdater has no remove), and nothing reset them: loading another map mid-intro let
+  the intro finish later and yank the player into the apartment, a ring/subtitle would carry
+  into later maps, a second New Game never replayed them, and the phone's interact point stayed
+  registered on every later map. Both now have `Restart()`/`Cancel()` driven by `LoadMap()`,
+  `cSomaPlayer::ResetForNewMap()` clears interact points, and `LoadMap()` owns the player's
+  active flag. The intro's ambience pointer is checked with `cSoundHandler::IsValid()` - the
+  51.6 s sample can end before the slideshow does.
+- **Anti-aliasing toggle did nothing.** It drove `mbUseEdgeSmooth`, but SOMA never calls
+  `SetEdgeSmoothLoaded(true)` and ships no edge-smooth shader. Now `cRenderSettings::mbUseFxaa`
+  runs SOMA's own `posteffect_fxaa` in `CopyToFrameBuffer()` (created only for 2D G-buffers, so
+  Dark Descent never loads it). A/B: 7.4% of pixels change, edge energy 3.75 -> 3.15, mean
+  luminance unchanged, no offset.
+- **Mesh cache re-enabled** (`$XDG_CACHE_HOME/open-hpl/soma/meshcache`, key bumped to `.v3`):
+  the blue frame that blocked it was the accumulation clear colour. It also stops the per-mesh
+  probe of SOMA's own HPL3 `.msh` files (244 ERROR lines on the apartment). `02_03_delta` total
+  22.7 s -> 16 s warm.
+- **Skinned meshes had ~100x bounding volumes on the uncached path.** The cache comparison
+  showed it: cold 13 oversized entities / 973 draws on `02_03_delta`, warm 1 / 925.
+  `CompileBonesAndSubMeshes()` computed per-bone radii before the skeleton got its unit scale;
+  the `.msh` path compiles after loading. Moved after the scaling: cold == warm, `03_03`
+  oversized 21 -> 7. `world_stats` now lists `oversized_top`.

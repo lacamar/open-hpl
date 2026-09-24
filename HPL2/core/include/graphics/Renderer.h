@@ -160,6 +160,7 @@ namespace hpl {
 		bool mbUseOcclusionCulling;
 
 		bool mbUseEdgeSmooth;
+		bool mbUseFxaa;
 
 		tPlanefVec mvOcclusionPlanes;
 		

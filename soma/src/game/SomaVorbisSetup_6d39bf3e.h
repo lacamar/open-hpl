@@ -1,31 +1,11 @@
-/*
- * One real FMOD Vorbis "setup" codebook packet (3908 bytes), keyed by the
- * crc32 SOMA's own special_fx.fsb stores per-sample (0x6d39bf3e / 1832501054
- * decimal) to say which of FMOD's own small set of built-in standard
- * codebook configurations was used to encode it - every sample this session
- * needed (frontend_menu_change/focus/select/slider, all 12 menu_glitch
- * variants) shares this exact one crc32, confirmed against a real SOMA
- * install (see SomaMenuSfx.cpp's top comment for how/why).
- *
- * This is NOT game-specific content extracted from SOMA - it's one entry
- * from FMOD Ex/Studio's own fixed, generic, quality-preset codebook table
- * (the same handful of standard setup packets FMOD's authoring tool reuses
- * across every game that ships FSB5-Vorbis audio), independently reverse-
- * engineered and published under the MIT licence by the python-fsb5
- * project (https://github.com/HearthSim/python-fsb5,
- * fsb5/vorbis_headers.py) - this one entry was copied out of that public,
- * MIT-licensed table (Copyright (c) 2016 Simon Pinfold), not extracted from
- * this session's own SOMA install. See vorbis.py's rebuild()/
- * rebuild_id_header() there for the exact Ogg-container reconstruction
- * algorithm SomaMenuSfx.cpp's OggMuxVorbisSample() ports to C++.
- */
+// FMOD FSB5 Vorbis setup packet for crc32 0x6d39bf3e, from python-fsb5's vorbis_headers.py
+// (MIT, Copyright (c) 2016 Simon Pinfold) - a generic FMOD preset, not SOMA content.
 
-#ifndef SOMA_MENU_SFX_VORBIS_SETUP_H
-#define SOMA_MENU_SFX_VORBIS_SETUP_H
+#ifndef SOMA_VORBIS_SETUP_6D39BF3E_H
+#define SOMA_VORBIS_SETUP_6D39BF3E_H
 
-static const unsigned int kSomaVorbisSetupCrc32 = 1832501054u;
-static const int kSomaVorbisSetupHeaderSize = 3908;
-static const unsigned char kSomaVorbisSetupHeaderData[] = {
+static const unsigned int kVorbisSetupCrc32_6d39bf3e = 0x6d39bf3eu;
+static const unsigned char kVorbisSetupData_6d39bf3e[] = {
 	0x05,0x76,0x6f,0x72,0x62,0x69,0x73,0x2b,0x42,0x43,0x56,0x01,0x00,0x08,0x00,0x00,0x00,0x31,0x4c,0x20,
 	0xc5,0x80,0xd0,0x90,0x55,0x00,0x00,0x10,0x00,0x00,0x60,0x24,0x29,0x0e,0x93,0x66,0x49,0x29,0xa5,0x94,
 	0xa1,0x28,0x79,0x98,0x94,0x48,0x49,0x29,0xa5,0x94,0xc5,0x30,0x89,0x98,0x94,0x89,0xc5,0x18,0x63,0x8c,
@@ -224,4 +204,5 @@ static const unsigned char kSomaVorbisSetupHeaderData[] = {
 	0x00,0x00,0x01,0x00,0x00,0x00,0x02,0x02,
 };
 
-#endif // SOMA_MENU_SFX_VORBIS_SETUP_H
+#endif
+

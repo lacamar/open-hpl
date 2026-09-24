@@ -66,6 +66,7 @@ namespace hpl {
 
 	eDeferredGBuffer cRendererDeferred::mGBufferType = eDeferredGBuffer_32Bit;
 	eTextureType cRendererDeferred::mGBufferTextureType = eTextureType_Rect;
+	bool cRendererDeferred::mbDepthInNormalAlpha = false;
 	int cRendererDeferred::mlNumOfGBufferTextures = 4;
 	bool cRendererDeferred::mbDepthCullLights = true;
 
@@ -200,6 +201,7 @@ namespace hpl {
 		mfShadowDistanceNone = 40;
 
 		mlMaxBatchLights = 100;
+		mpFxaaProgram = NULL;
 
 		mbReflectionTextureCleared = false;
 	}
@@ -462,7 +464,7 @@ namespace hpl {
 
 			mpFogProgramManager->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
 
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
+			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
 					mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
@@ -723,6 +725,18 @@ namespace hpl {
 		}
 
 		////////////////////////////////////
+		// FXAA, applied in CopyToFrameBuffer(); HPSL games only (normalized UVs on a 2D accumulation buffer)
+		mpFxaaProgram = NULL;
+		if(mGBufferTextureType != eTextureType_Rect)
+		{
+			cParserVarContainer programVars;
+			programVars.Add("UseUv");
+			mpFxaaProgram = mpGraphics->CreateGpuProgramFromShaders("Fxaa","deferred_base_vtx.glsl", "posteffect_fxaa_frag.glsl",&programVars);
+			if(mpFxaaProgram)
+				mpFxaaProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
+		}
+
+		////////////////////////////////////
 		//Create light shapes
 		tFlag lVtxFlag = eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0;
 		mpShapeSphere[eDeferredShapeQuality_High] = LoadVertexBufferFromMesh("core_12_12_sphere.dae",lVtxFlag);	
@@ -835,6 +849,8 @@ namespace hpl {
 			mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
 		}
 		
+		if(mpFxaaProgram) mpGraphics->DestroyGpuProgram(mpFxaaProgram);
+
 		/////////////////////////
 		//Gpu programs
 		mpGraphics->DestroyGpuProgram(mpSkyBoxProgram);
@@ -889,7 +905,10 @@ namespace hpl {
 
 		SetFlatProjection();
 
-		SetProgram(NULL);
+		iGpuProgram *pCopyProgram = mpCurrentSettings->mbUseFxaa ? mpFxaaProgram : NULL;
+		SetProgram(pCopyProgram);
+		if(pCopyProgram)
+			pCopyProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
 		SetTexture(0,mpAccumBufferTexture);
 		SetTextureRange(NULL, 1);
 
@@ -907,6 +926,7 @@ namespace hpl {
 			vUvMax = vUvMax / mvScreenSizeFloat;
 		}
 		DrawQuad(cVector2f(0,0),1, vUvMin, vUvMax, true);
+		SetProgram(NULL);
 
 		////////////////////////////////////
 		// Global exposure (see cWorld::SetGlobalExposure()'s own comment) -
@@ -1068,6 +1088,7 @@ namespace hpl {
 			// Far depth (w=1) and a valid unit normal, so lights attenuate to exactly 0 there.
 			mpLowLevelGraphics->SetClearColor(cColor(0,0,1,1));
 			ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
+			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
 		}
 		else
 		{
@@ -2869,6 +2890,19 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cRendererDeferred::SetFogDepthTexture(bool abBind)
+	{
+		if(mbDepthInNormalAlpha == false)
+		{
+			if(abBind) SetTexture(0, GetGbufferTexture(2));
+			return;
+		}
+		GetGbufferTexture(1)->SetRedFromAlpha(abBind);
+		if(abBind) SetTexture(0, GetGbufferTexture(1));
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cRendererDeferred::RenderFullScreenFog()
 	{
 		if(mpCurrentWorld->GetFogActive()==false) return;
@@ -2884,7 +2918,7 @@ namespace hpl {
 		SetAlphaMode(eMaterialAlphaMode_Solid);
 		SetBlendMode(eMaterialBlendMode_Alpha);
 
-		SetTexture(0, GetGbufferTexture(2)); //depth!
+		SetFogDepthTexture(true);
 		SetTextureRange(NULL, 1);
 
 		SetMatrix(NULL);
@@ -2898,7 +2932,7 @@ namespace hpl {
         
 		if(pProgram)
 		{
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
+			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
 				pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
 			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
@@ -2929,6 +2963,7 @@ namespace hpl {
 		// Reset
 		SetNormalFrustumProjection();
 		SetDepthTest(true);
+		SetFogDepthTexture(false);
 
 		END_RENDER_PASS();
 	}
@@ -2955,7 +2990,7 @@ namespace hpl {
 		SetAlphaMode(eMaterialAlphaMode_Solid);
 		SetBlendMode(eMaterialBlendMode_Alpha);
 		
-		SetTexture(0, GetGbufferTexture(2)); //depth!
+		SetFogDepthTexture(true);
 		SetTextureRange(NULL, 1);
 
 		
@@ -2984,7 +3019,7 @@ namespace hpl {
 			// Setup program
 			SetProgram(pProgram);
 			
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
+			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
 					pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
 			pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
@@ -3038,6 +3073,7 @@ namespace hpl {
 		// Reset settings
 		SetCullMode(eCullMode_CounterClockwise);
 		SetDepthTest(true);
+		SetFogDepthTexture(false);
 
 		END_RENDER_PASS();
 	}

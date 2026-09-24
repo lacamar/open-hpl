@@ -2,6 +2,8 @@
 
 #include "system/String.h"
 
+#include <set>
+
 #include "scene/World.h"
 #include "scene/Viewport.h"
 #include "scene/MeshEntity.h"
@@ -146,6 +148,7 @@ namespace hpl {
 		bool bHasBV = false;
 		cVector3f vMin(0), vMax(0);
 
+		tStringVec vOversized;
 		for(int lPass=0; lPass<2; ++lPass)
 		{
 			cMeshEntityIterator it = lPass==0 ? apWorld->GetStaticMeshEntityIterator() : apWorld->GetDynamicMeshEntityIterator();
@@ -167,7 +170,11 @@ namespace hpl {
 					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
 					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { ++lNanBounds; continue; }
 					// Nothing authored in these games is a 100 m mesh except sky domes.
-					if(vExt.x > 100 || vExt.y > 100 || vExt.z > 100) ++lOversized;
+					if(vExt.x > 100 || vExt.y > 100 || vExt.z > 100)
+					{
+						if(lOversized < 12) vOversized.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")));
+						++lOversized;
+					}
 				}
 				if(!bHasBV) { vMin = pBV->GetMin(); vMax = pBV->GetMax(); bHasBV = true; }
 				else
@@ -214,6 +221,9 @@ namespace hpl {
 		sOut += ",\"submeshes_without_material\":" + cString::ToString(lSubMeshNoMaterial);
 		sOut += ",\"entities_oversized\":" + cString::ToString(lOversized);
 		sOut += ",\"entities_nan_bounds\":" + cString::ToString(lNanBounds);
+		sOut += ",\"oversized_top\":[";
+		for(size_t i=0; i<vOversized.size(); ++i) sOut += (i ? ",\"" : "\"") + JsonEscape(vOversized[i]) + "\"";
+		sOut += "]";
 		{
 			// Worst offenders as "mesh:material name"
 			std::multimap<int,tString> mapSorted;
@@ -261,8 +271,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	tString cEngineDiagnostics::GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax)
+	tString cEngineDiagnostics::GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax, cRenderList *apRenderList)
 	{
+		std::set<iLight*> setInList;
+		if(apRenderList) for(int i=0; i<apRenderList->GetLightNum(); ++i) setInList.insert(apRenderList->GetLight(i));
+
 		std::multimap<float, iLight*> mapByDist;
 		cLightListIterator it = apWorld->GetLightIterator();
 		while(it.HasNext())
@@ -283,6 +296,7 @@ namespace hpl {
 			sOut += ",\"dist\":" + Num(mIt->first) + ",\"radius\":" + Num(pLight->GetRadius());
 			sOut += ",\"color\":[" + Num(col.r) + "," + Num(col.g) + "," + Num(col.b) + "," + Num(col.a) + "]";
 			sOut += ",\"visible\":" + tString(pLight->IsVisible() ? "true" : "false");
+			if(apRenderList) sOut += ",\"in_list\":" + tString(setInList.count(pLight) ? "true" : "false");
 			sOut += ",\"shadows\":" + tString(pLight->GetCastShadows() ? "true" : "false");
 			sOut += ",\"falloff_map\":" + tString(pLight->GetFalloffMap() ? "true" : "false");
 			sOut += ",\"gobo\":" + tString(pLight->GetGoboTexture() ? "true" : "false") + "}";

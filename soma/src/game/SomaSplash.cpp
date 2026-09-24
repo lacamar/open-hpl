@@ -93,11 +93,6 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	// once here rather than via CreateChild() every frame.
 	mpBarClipRegion = hplNew(cGuiClipRegion, ());
 
-	// Idempotent (checks its own cache dir first) and safe to call again
-	// even though soma/src/game/SomaMainMenu.cpp's cSomaMainMenu also calls
-	// this - see SomaSplash.h point 6 for what this provides.
-	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
-
 	// Real order: boot-init (native cLuxLoadHandler) first, FG logo
 	// (scripted GuiPreMenu(), part of the already-loaded main menu's own
 	// update) second - see the file-top comment in SomaSplash.h for the

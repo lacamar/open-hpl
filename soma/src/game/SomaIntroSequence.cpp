@@ -85,23 +85,58 @@ cSomaIntroSequence::cSomaIntroSequence(cEngine *apEngine, cSomaBase *apBase) : i
 	mfEndTime = 0;
 	BuildTimeline();
 
-	mfTimer = 0;
+	mpAmbience = NULL;
+	mlAmbienceId = -1;
+	mbFinished = true;
+	mpViewport->SetActive(false);
+}
 
+//-----------------------------------------------------------------------
+
+void cSomaIntroSequence::Restart()
+{
+	Cancel();
+
+	mfTimer = 0;
 	mlCurrentSlideIndex = -1;
 	mfSlideFadeTimer = 0;
-
 	mlCurrentSubjectIndex = -1;
 	mlCurrentLineIndex = -1;
 	mfLineTimer = 0;
 	mbCurrentLineFinished = false;
 	mbCurrentLineAudioStarted = false;
-
+	msCurrentSpeaker = "";
+	msCurrentSubtitle = "";
 	mbFinished = false;
+	mpViewport->SetActive(true);
 
-	// The real intro's ambience/score bed, started with the sequence itself.
 	mpAmbience = mpEngine->GetSound()->GetSoundHandler()->PlayGui("game_intro_seq.wav", false, 1.0f);
-	if (mpAmbience == NULL)
+	if (mpAmbience)
+		mlAmbienceId = mpAmbience->GetId();
+	else
 		Log("SOMA intro: 'game_intro_seq.wav' not available - the slideshow will have dialogue but no ambience\n");
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaIntroSequence::Cancel()
+{
+	StopAudio();
+	mbFinished = true;
+	mpViewport->SetActive(false);
+}
+
+//-----------------------------------------------------------------------
+
+void cSomaIntroSequence::StopAudio()
+{
+	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
+	if (mpAmbience && pHandler->IsValid(mpAmbience, mlAmbienceId))
+		mpAmbience->Stop();
+	mpAmbience = NULL;
+	if (msCurrentLineFile != "")
+		pHandler->Stop(msCurrentLineFile);
+	msCurrentLineFile = "";
 }
 
 //-----------------------------------------------------------------------
@@ -339,6 +374,7 @@ void cSomaIntroSequence::PlayLine(const cIntroVoiceLine &aLine)
 	{
 		mpEngine->GetSound()->GetSoundHandler()->PlayGui(aLine.msFile, false, 1.0f);
 	}
+	msCurrentLineFile = aLine.msFile;
 }
 
 //-----------------------------------------------------------------------
@@ -462,15 +498,7 @@ void cSomaIntroSequence::Finish()
 	if (mbFinished)
 		return;
 
-	mbFinished = true;
-
-	if (mpAmbience)
-	{
-		mpAmbience->Stop();
-		mpAmbience = NULL;
-	}
-
-	mpViewport->SetActive(false);
+	Cancel();
 
 	if (mpBase)
 		mpBase->OnIntroSequenceFinished();

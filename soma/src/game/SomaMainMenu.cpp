@@ -348,14 +348,6 @@ cSomaMainMenu::cSomaMainMenu(cEngine *apEngine, cSomaBase *apBase, cViewport *ap
 	CreateParticleEmitters();
 	BuildResolutionList();
 
-	// Real menu click/hover/glitch/sting sound effects - unlike Menu_Music.ogg
-	// below, these are FMOD Studio/Designer-banked in the real install (see
-	// SomaMenuSfx.cpp's top comment for the real background and how this
-	// converts them into plain files this engine's sound backend can
-	// already play). Idempotent/cheap after the first call, safe even if
-	// the real install can't be found.
-	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
-
 	// Real menu music - "Menu_Music.ogg" ships as a plain OGG file (not
 	// FMOD-banked like most of SOMA's other audio), directly playable
 	// through this engine's existing OpenAL music backend with no extra
@@ -1978,9 +1970,7 @@ void cSomaMainMenu::BuildOptionsRows()
 		mOptionsRows.push_back(MakeToggleRow(_W("DISPLAY MODE"), &pCfg->mbFullscreen, true, _W("FULLSCREEN"), _W("WINDOWED")));
 		mOptionsRows.push_back(MakeToggleRow(_W("V-SYNC"), &pCfg->mbVSync));
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("REFRESH RATE"), {_W("AUTO")}, 0));
-		// Real live backend: cRenderSettings::mbUseEdgeSmooth (see
-		// SomaConfig.h's mbAntiAliasing comment) - genuinely toggles
-		// RendererDeferred.cpp's real FXAA-style edge-smoothing pass.
+		// Live: cRenderSettings::mbUseFxaa
 		mOptionsRows.push_back(MakeMultiSelectRow(_W("ANTI-ALIASING"), {_W("OFF"), _W("FXAA")}, pCfg->mbAntiAliasing ? 1 : 0,
 												   true, cSomaOptionsRow::eOptionId_AntiAliasing));
 
@@ -2157,11 +2147,9 @@ void cSomaMainMenu::ClickOptionsRow(int alIndex)
 			break;
 
 		case cSomaOptionsRow::eOptionId_AntiAliasing:
-			// Live: only two real values exist (Off/FXAA), so cycling either
-			// direction just flips it - see SomaConfig.h's mbAntiAliasing
-			// comment for the real cRenderSettings field this drives.
+			// Off/FXAA only, so either direction flips it
 			pCfg->mbAntiAliasing = (lNewIndex != 0);
-			if (mpViewport) mpViewport->GetRenderSettings()->mbUseEdgeSmooth = pCfg->mbAntiAliasing;
+			if (mpViewport) mpViewport->GetRenderSettings()->mbUseFxaa = pCfg->mbAntiAliasing;
 			break;
 
 		default:

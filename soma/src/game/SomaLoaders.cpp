@@ -76,6 +76,37 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		bool bDefaultShowMesh = (msEntityType != "StaticCollider");
 		mpEntity->SetVisible(GetVarBool("ShowMesh", bDefaultShowMesh));
 	}
+
+	// Map Active="false": script-activated later (e.g. the apartment's Legs), as iLuxProp::OnSetActive.
+	// Bodies stay live: rejecting their contacts trips a Newton teardown crash (TASKS.md)
+	if (mbActive) return;
+	if (mpEntity)
+	{
+		mpEntity->SetActive(false);
+		mpEntity->SetVisible(false);
+	}
+	for (size_t i = 0; i < mvLights.size(); ++i)
+	{
+		mvLights[i]->SetVisible(false);
+		mvLights[i]->SetActive(false);
+	}
+	for (size_t i = 0; i < mvParticleSystems.size(); ++i)
+	{
+		if (mvParticleSystems[i] == NULL) continue;
+		mvParticleSystems[i]->SetVisible(false);
+		mvParticleSystems[i]->SetActive(false);
+	}
+	for (size_t i = 0; i < mvBillboards.size(); ++i)
+	{
+		mvBillboards[i]->SetActive(false);
+		mvBillboards[i]->SetVisible(false);
+	}
+	for (size_t i = 0; i < mvBeams.size(); ++i)
+	{
+		mvBeams[i]->SetActive(false);
+		mvBeams[i]->SetVisible(false);
+	}
+	for (size_t i = 0; i < mvSoundEntities.size(); ++i) mvSoundEntities[i]->Stop(false);
 }
 
 //////////////////////////////////////////////////////////////////////////

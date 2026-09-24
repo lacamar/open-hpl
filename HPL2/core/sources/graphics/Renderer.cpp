@@ -132,6 +132,7 @@ namespace hpl {
 		mbUseCallbacks = true;
 
 		mbUseEdgeSmooth = false;
+		mbUseFxaa = false;
 
 		mbUseOcclusionCulling = true;
 

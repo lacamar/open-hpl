@@ -16,6 +16,7 @@ namespace hpl {
 	class cViewport;
 	class cGraphics;
 	class iTexture;
+	class cRenderList;
 
 	class cEngineDiagnostics
 	{
@@ -39,7 +40,7 @@ namespace hpl {
 		static tString GetWorldStatsJson(cWorld *apWorld);
 		static tString GetRenderStatsJson(cViewport *apViewport, cGraphics *apGraphics);
 		// The alMax lights nearest to avPos.
-		static tString GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax);
+		static tString GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax, cRenderList *apRenderList=NULL);
 		static tString GetEntityInfoJson(cWorld *apWorld, const tString &asName);
 
 		// Per-channel min/max/mean + NaN/zero counts of RGBA float pixels.

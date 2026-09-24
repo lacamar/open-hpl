@@ -58,6 +58,7 @@ namespace hpl {
 
 		void SetCompareMode(eTextureCompareMode aMode);
 		void SetCompareFunc(eTextureCompareFunc aFunc);
+		void SetRedFromAlpha(bool abX);
 
 		void AutoGenerateMipmaps();
 

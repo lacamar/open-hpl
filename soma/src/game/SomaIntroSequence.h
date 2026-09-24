@@ -55,11 +55,6 @@
  *    cosmetic; omitted to keep this port's timeline logic simple and
  *    correct rather than also chasing a coordinate-space match for a subtle
  *    effect.
- *  - No ambient SFX cue: the real one ("00_05_apartment2/SFX/game_intro_seq")
- *    lives inside sounds/level/00_05_apartment2_sfx.fsb, an FMOD Studio
- *    soundbank - this engine has no FMOD reader (see PORTING_NOTES.md's FMOD
- *    section), so it cannot be played back at all, plain-file re-encode or
- *    otherwise, without that separate reverse-engineering effort.
  *  - Real per-line VoiceOffset/EndPadding fields (00_00_intro.voice) that
  *    let the real engine start a line slightly before the previous one in
  *    the same Subject has fully finished (EndPadding is negative for nearly
@@ -123,8 +118,13 @@ public:
 	void Update(float afTimeStep);
 	void OnDraw(float afFrameTime);
 
+	// LoadMap(): Restart() after the intro map is loaded, Cancel() before any world is destroyed
+	void Restart();
+	void Cancel();
+
 private:
 	void BuildTimeline();
+	void StopAudio();
 
 	// Mirrors the real script's AddTimeToSlideShow()/AddSlide()/AddCustomSlide()/
 	// AddVoice() - see .cpp - accumulating mfLength exactly like the real
@@ -196,6 +196,8 @@ private:
 	// Extracted from its FMOD bank by cSomaAmbientSfx; kept so it can be stopped
 	// when the sequence ends instead of bleeding into the apartment.
 	cSoundEntry *mpAmbience;
+	int mlAmbienceId;
+	tString msCurrentLineFile;
 };
 
 //----------------------------------------------

@@ -89,6 +89,7 @@ namespace hpl {
 
 		virtual void SetCompareMode(eTextureCompareMode aMode)=0;
 		virtual void SetCompareFunc(eTextureCompareFunc aFunc)=0;
+		virtual void SetRedFromAlpha(bool abX)=0;
 
 		eTextureCompareMode GetCompareMode(){ return mCompareMode;}
 		eTextureCompareFunc GetCompareFunc(){ return mCompareFunc;}

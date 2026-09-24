@@ -63,16 +63,9 @@
  *    binding isn't a plain single key in the default config data this
  *    engine reads - "E" was chosen as a plain, sensible default, consistent
  *    with cSomaPlayer's existing raw-keyboard-check pattern for Escape).
- *  - No real ring/pickup SFX: both real sounds
- *    ("Entities_Urban/tech/cellphone/vibrating_wood" and
- *    "00_05_apartment2/SFX/phone/pickup_counter") are FMOD Designer
- *    soundbank events (confirmed by reading sounds/entities/Entities_Urban.fdp
- *    directly - real underlying waveforms live inside
- *    sounds/entities/entities_urban.fsb, an FMOD-compiled bank) - this engine
- *    has no FMOD reader anywhere (see SomaIntroSequence.h's identical citation
- *    for the intro's own missing ambient cue). A silent ring/pickup is used
- *    instead; an on-screen "(phone ringing...)" line stands in for the real
- *    audio cue so the moment is still externally observable/verifiable.
+ *  - Ring (Entities_Urban/tech/cellphone/vibrating_wood) and pickup
+ *    (00_05_apartment2/SFX/phone/pickup_counter) are FMOD events; their samples
+ *    are extracted by cSomaAmbientSfx. The ring is a 3D sound at the phone.
  *  - The real IntroSequence() also drives a whole "waking up" camera
  *    animation/crouch-collision swap/HUD-disable sequence
  *    (CameraAnimation_Begin("CamAnim_WakeUp"), Player_SetJumpDisabled(true),
@@ -150,6 +143,14 @@ private:
 	void AdvanceCall(float afTimeStep);
 	void PlayLine(const cApartmentCallLine &aLine);
 	void FinishCall();
+	void StopRing();
+
+public:
+	// LoadMap(): Restart() after the apartment is loaded, Cancel() before any world is destroyed
+	void Restart();
+	void Cancel();
+
+private:
 
 	void DrawSubtitle();
 	void DrawWrappedText(const tString &asText, iFontData *apFont, const cVector2f &avFontSize,
@@ -178,6 +179,10 @@ private:
 	tString msPlayingFile;     // "" once no line's audio is being waited on
 	tString msCurrentSpeaker;
 	tString msCurrentSubtitle;
+
+	cWorld *mpRingWorld;
+	cSoundEntity *mpRing;
+	int mlRingCreationID;
 };
 
 //----------------------------------------------

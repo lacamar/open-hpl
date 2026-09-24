@@ -596,6 +596,22 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cSDLTexture::SetRedFromAlpha(bool abX)
+	{
+		if(mbContainsData==false || mType != eTextureType_2D) return;
+
+		GLint lPrevBound = 0;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &lPrevBound);
+		for(size_t i=0; i < mvTextureHandles.size(); ++i)
+		{
+			glBindTexture(GL_TEXTURE_2D, mvTextureHandles[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, abX ? GL_ALPHA : GL_RED);
+		}
+		glBindTexture(GL_TEXTURE_2D, lPrevBound);
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cSDLTexture::AutoGenerateMipmaps()
 	{
 		if(mbUseMipMaps==false) return;
