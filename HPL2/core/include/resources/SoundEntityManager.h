@@ -22,6 +22,8 @@
 
 #include "resources/ResourceManager.h"
 
+#include <map>
+
 namespace hpl {
 
 	class cSound;
@@ -37,6 +39,12 @@ namespace hpl {
 		void Preload(const tString& asFile);
 
 		cSoundEntityData* CreateSoundEntity(const tString& asName);
+
+		// Data built in code (not from a .snt file), found by CreateSoundEntity under asName
+		void AddCustomSoundEntity(const tString& asName, cSoundEntityData *apData);
+		// Asked for names with no .snt file; returns NULL if it has none
+		typedef cSoundEntityData* (*tCustomSoundEntityResolver)(const tString& asName);
+		void SetCustomResolver(tCustomSoundEntityResolver apResolver){ mpCustomResolver = apResolver; }
 		
 		void Destroy(iResourceBase* apResource);
 		void Unload(iResourceBase* apResource);
@@ -44,6 +52,8 @@ namespace hpl {
 	private:
 		cSound* mpSound;
 		cResources* mpResources;
+		std::map<tString, cSoundEntityData*> m_mapCustom;
+		tCustomSoundEntityResolver mpCustomResolver = NULL;
 	};
 
 };

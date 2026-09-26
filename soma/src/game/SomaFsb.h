@@ -8,6 +8,9 @@
 
 #include "hpl.h"
 
+#include <map>
+#include <vector>
+
 using namespace hpl;
 
 struct cSomaFsbWanted
@@ -26,6 +29,10 @@ public:
 	static void ExtractBank(cResources *apResources, const char *apBankPath, const tWString &asCacheDir,
 							const cSomaFsbWanted *apWanted, size_t alCount);
 
+	// Extracts the named samples as <asPrefix><sample>.ogg/.wav (by bank format) unless already cached;
+	// amapOut maps each extracted sample to its file name
+	static void ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
+							   const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut);
 	static bool WriteTextFile(const tWString &asPath, const tString &asText);
 };
 

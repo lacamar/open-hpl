@@ -1,6 +1,7 @@
 #include "SomaFsb.h"
-#include "SomaVorbisSetup_6d39bf3e.h"
-#include "SomaVorbisSetup_b62ad8df.h"
+#include "SomaVorbisSetups.h"
+
+#include <set>
 
 #include <cstring>
 #include <fstream>
@@ -337,18 +338,6 @@ static std::vector<unsigned char> BuildVorbisCommentHeader()
 	return out;
 }
 
-struct cVorbisSetup
-{
-	unsigned int mlCrc;
-	const unsigned char *mpData;
-	int mlSize;
-};
-
-static const cVorbisSetup kVorbisSetups[] = {
-	{kVorbisSetupCrc32_6d39bf3e, kVorbisSetupData_6d39bf3e, (int)sizeof(kVorbisSetupData_6d39bf3e)},
-	{kVorbisSetupCrc32_b62ad8df, kVorbisSetupData_b62ad8df, (int)sizeof(kVorbisSetupData_b62ad8df)},
-};
-
 static const cVorbisSetup *FindVorbisSetup(unsigned int alCrc)
 {
 	for (size_t i = 0; i < sizeof(kVorbisSetups) / sizeof(kVorbisSetups[0]); ++i)
@@ -509,5 +498,50 @@ void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, cons
 			WriteWholeFile(asCacheDir + cString::To16Char(apWanted[w].pCacheFile), vOut);
 			break;
 		}
+	}
+}
+
+void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
+							  const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut)
+{
+	std::vector<tString> vMissing;
+	for (const tString &sSample : avSamples)
+	{
+		tString sOgg = asPrefix + sSample + ".ogg", sWav = asPrefix + sSample + ".wav";
+		if (cPlatform::FileExists(asCacheDir + cString::To16Char(sOgg)))
+			amapOut[sSample] = sOgg;
+		else if (cPlatform::FileExists(asCacheDir + cString::To16Char(sWav)))
+			amapOut[sSample] = sWav;
+		else
+			vMissing.push_back(sSample);
+	}
+	if (vMissing.empty())
+		return;
+	const tWString &sPath = apResources->GetFileSearcher()->GetFilePath(asBankPath);
+	std::vector<unsigned char> vFile;
+	unsigned int lMode = 0;
+	std::vector<cFsbSample> vSamples;
+	if (sPath == _W("") || ReadWholeFile(sPath, vFile) == false || ParseFsb5(vFile, lMode, vSamples) == false)
+		return;
+	if (lMode != kFsbMode_Pcm16 && lMode != kFsbMode_Vorbis)
+		return;
+	std::set<tString> setWanted(vMissing.begin(), vMissing.end());
+	for (const cFsbSample &sample : vSamples)
+	{
+		if (setWanted.count(sample.msName) == 0)
+			continue;
+		std::vector<unsigned char> vOut;
+		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Pcm16 ? ".wav" : ".ogg");
+		if (lMode == kFsbMode_Pcm16)
+			WritePcm16Wav(sample, vFile.data(), vOut);
+		else
+		{
+			const cVorbisSetup *pSetup = sample.mbHasVorbisCrc ? FindVorbisSetup(sample.mlVorbisCrc) : NULL;
+			if (pSetup == NULL)
+				continue;
+			OggMuxVorbisSample(sample, vFile.data(), *pSetup, vOut);
+		}
+		WriteWholeFile(asCacheDir + cString::To16Char(sFile), vOut);
+		amapOut[sample.msName] = sFile;
 	}
 }
