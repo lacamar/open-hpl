@@ -28,7 +28,15 @@ scripts/soma-sweep.py --only-failed --compare old.json
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
 scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
 scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
+scripts/soma-script-check.sh               # compile all game .hps against the recovered API (~2 s)
+scripts/soma-re-script-api.py <Soma_NoSteam.bin.x86_64> re.json api.json soma/data/script_api.txt
 ```
+
+The script API (`soma/data/script_api.txt`: types, enum values, methods, properties with offsets,
+globals, and the native C++ function each binds to) is recovered statically from the official
+binary's registration code. The binary has a full symbol table; disassemble a bound native
+(`objdump -d -C`) to learn what an API call really does. Never run the official binary with its
+install directory writable.
 
 ## State
 

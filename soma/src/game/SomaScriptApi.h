@@ -1,0 +1,54 @@
+/*
+ * SOMA's script API as registered by the official engine, recovered from its binary
+ * (scripts/soma-re-script-api.py -> soma/data/script_api.txt), registered into an
+ * AngelScript engine. Anything without a native implementation gets a generic stub that
+ * returns a default value and is counted, so every game script compiles and runs.
+ */
+
+#ifndef SOMA_SCRIPT_API_H
+#define SOMA_SCRIPT_API_H
+
+#include <angelscript.h>
+
+#include <map>
+#include <string>
+#include <vector>
+
+struct cSomaScriptApiType
+{
+	std::string msName;
+	std::string msKind; // value, ref, interface, template
+	int mlSize;
+	std::vector<std::pair<std::string, std::string>> mvBehaviours; // kind, params
+	std::vector<std::string> mvMethods;
+	std::vector<std::pair<std::string, int>> mvProps; // decl, offset (-1 unknown)
+	std::vector<std::string> mvCasts;
+};
+
+class cSomaScriptApi
+{
+public:
+	bool Load(const std::string &asFile);
+
+	// Natives must already be registered; returns the number of failed registrations.
+	int Register(asIScriptEngine *apEngine);
+
+	const std::vector<std::string> &GetErrors() const { return mvErrors; }
+
+	static std::map<std::string, int> &GetStubCallCounts();
+	static bool IsValueTypeNative(const std::string &asName);
+
+private:
+	void RegisterPropertyAccessors(asIScriptEngine *apEngine, const cSomaScriptApiType &aType, const std::string &asDecl);
+	void Fail(const std::string &asWhat, int alCode);
+
+	std::vector<std::pair<std::string, std::vector<std::pair<std::string, int>>>> mvEnums;
+	std::vector<cSomaScriptApiType> mvTypes;
+	std::vector<std::string> mvGlobals;
+	std::vector<std::string> mvGlobalProps;
+	std::vector<std::string> mvErrors;
+};
+
+void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);
+
+#endif // SOMA_SCRIPT_API_H

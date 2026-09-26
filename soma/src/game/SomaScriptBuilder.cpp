@@ -1,0 +1,161 @@
+#include "SomaScriptBuilder.h"
+
+#include <algorithm>
+#include <cstring>
+#include <dirent.h>
+#include <fstream>
+#include <sstream>
+#include <sys/stat.h>
+
+// Constructs AngelScript 2.28 accepted but 2.38 rejects, as {file suffix, from, to}.
+static const char *gvCompatPatches[][3] = {
+	{"custom_depth/agent_deepsea_suit.hps", "CheckShapeWorldCollision(cVector3f_Zero,", "CheckShapeWorldCollision(void,"},
+	{"modules/emotionhandler.hps", "lBeat<0 ? null : mvHeartbeats[lBeat]", "lBeat<0 ? null : @mvHeartbeats[lBeat]"},
+	{"helper_custom_depth_imgui.hps", "const cGuiDialogBoxSettings &in aSettings", "cGuiDialogBoxSettings &in aSettings"},
+	{"03_02_omicron_inside.hps", ".length-", ".length()-"},
+	{"03_02_omicron_inside.hps", ".length -", ".length() -"},
+};
+
+static int CountLines(const std::string &s, size_t alPos)
+{
+	return 1 + (int)std::count(s.begin(), s.begin() + alPos, '\n');
+}
+
+static std::string Lower(std::string s)
+{
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	return s;
+}
+
+static void Index(const std::string &asRoot, const std::string &asRel, std::map<std::string, std::string> &aByRel,
+				  std::map<std::string, std::string> &aByBase)
+{
+	DIR *pDir = opendir((asRoot + "/" + asRel).c_str());
+	if (pDir == NULL)
+		return;
+	while (dirent *pEnt = readdir(pDir))
+	{
+		std::string sName = pEnt->d_name;
+		if (sName == "." || sName == "..")
+			continue;
+		std::string sRel = asRel.empty() ? sName : asRel + "/" + sName;
+		std::string sFull = asRoot + "/" + sRel;
+		struct stat st;
+		if (stat(sFull.c_str(), &st) != 0)
+			continue;
+		if (S_ISDIR(st.st_mode))
+			Index(asRoot, sRel, aByRel, aByBase);
+		else if (Lower(sName).size() > 4 && Lower(sName).compare(Lower(sName).size() - 4, 4, ".hps") == 0)
+		{
+			aByRel[Lower(sRel)] = sFull;
+			aByBase.insert(std::make_pair(Lower(sName), sFull));
+		}
+	}
+	closedir(pDir);
+}
+
+cSomaScriptBuilder::cSomaScriptBuilder(const std::string &asGameDir) : msGameDir(asGameDir)
+{
+	Index(asGameDir + "/script", "", mmapByRelPath, mmapByBaseName);
+}
+
+std::string cSomaScriptBuilder::Resolve(const std::string &asInclude, const std::string &asFromFile) const
+{
+	std::string sKey = Lower(asInclude);
+	std::replace(sKey.begin(), sKey.end(), '\\', '/');
+	std::map<std::string, std::string>::const_iterator it = mmapByRelPath.find(sKey);
+	if (it != mmapByRelPath.end())
+		return it->second;
+
+	std::string sDir = asFromFile.substr(0, asFromFile.find_last_of('/') + 1);
+	std::ifstream f((sDir + asInclude).c_str());
+	if (f.is_open())
+		return sDir + asInclude;
+
+	size_t lSlash = sKey.find_last_of('/');
+	it = mmapByBaseName.find(lSlash == std::string::npos ? sKey : sKey.substr(lSlash + 1));
+	return it != mmapByBaseName.end() ? it->second : "";
+}
+
+bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &asFile, std::map<std::string, bool> &aIncluded,
+								 std::string *apMissingInclude)
+{
+	if (aIncluded[asFile])
+		return true;
+	aIncluded[asFile] = true;
+
+	std::ifstream f(asFile.c_str(), std::ios::binary);
+	if (f.is_open() == false)
+		return false;
+	std::stringstream ss;
+	ss << f.rdbuf();
+	std::string sCode = ss.str();
+
+	std::string sLowerFile = Lower(asFile);
+	for (auto &patch : gvCompatPatches)
+	{
+		size_t lSuffix = strlen(patch[0]);
+		if (sLowerFile.size() < lSuffix || sLowerFile.compare(sLowerFile.size() - lSuffix, lSuffix, patch[0]) != 0)
+			continue;
+		for (size_t p = sCode.find(patch[1]); p != std::string::npos; p = sCode.find(patch[1], p + 1))
+			sCode.replace(p, strlen(patch[1]), patch[2]);
+	}
+
+	// Blank out #include lines (keeping line numbers) and add each include as its own section.
+	std::vector<std::string> vIncludes;
+	size_t lPos = 0;
+	while (lPos < sCode.size())
+	{
+		size_t lEnd = sCode.find('\n', lPos);
+		if (lEnd == std::string::npos)
+			lEnd = sCode.size();
+		size_t lFirst = sCode.find_first_not_of(" \t", lPos);
+		// Save-system metadata on declarations ([nosave], [volatile]): recorded, then blanked out.
+		while (lFirst < lEnd && sCode[lFirst] == '[')
+		{
+			size_t lClose = sCode.find(']', lFirst);
+			if (lClose == std::string::npos || lClose >= lEnd)
+				break;
+			mvMetadata.push_back(cSomaScriptMetadata{asFile, CountLines(sCode, lFirst), sCode.substr(lFirst + 1, lClose - lFirst - 1)});
+			for (size_t i = lFirst; i <= lClose; ++i)
+				sCode[i] = ' ';
+			lFirst = sCode.find_first_not_of(" \t", lClose + 1);
+		}
+		if (lFirst < lEnd && sCode.compare(lFirst, 8, "#include") == 0)
+		{
+			size_t q1 = sCode.find('"', lFirst);
+			size_t q2 = q1 == std::string::npos ? q1 : sCode.find('"', q1 + 1);
+			if (q2 != std::string::npos && q2 < lEnd)
+				vIncludes.push_back(sCode.substr(q1 + 1, q2 - q1 - 1));
+			for (size_t i = lPos; i < lEnd; ++i)
+				if (sCode[i] != '\r')
+					sCode[i] = ' ';
+		}
+		lPos = lEnd + 1;
+	}
+
+	apModule->AddScriptSection(asFile.c_str(), sCode.c_str(), sCode.size());
+
+	for (size_t i = 0; i < vIncludes.size(); ++i)
+	{
+		std::string sPath = Resolve(vIncludes[i], asFile);
+		if (sPath.empty())
+		{
+			if (apMissingInclude && apMissingInclude->empty())
+				*apMissingInclude = vIncludes[i] + " (from " + asFile + ")";
+			continue;
+		}
+		AddFile(apModule, sPath, aIncluded, apMissingInclude);
+	}
+	return true;
+}
+
+int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asModuleName, const std::string &asEntryFile,
+							  std::string *apMissingInclude)
+{
+	asIScriptModule *pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
+	std::map<std::string, bool> mapIncluded;
+	if (AddFile(pModule, asEntryFile, mapIncluded, apMissingInclude) == false)
+		return asERROR;
+	return pModule->Build();
+}
