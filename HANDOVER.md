@@ -7,9 +7,12 @@ Read with `CLAUDE.md` (commands, hard rules) and `SOMA_PLAN.md`. `TASKS.md` is t
 - SOMA now runs its own game scripts: `player/Player.hps` and its states drive movement and the
   camera, `base/InputHandler.hps` defines the input actions, map scripts run with timers,
   collide/interact/look-at callbacks, voice and dialog, fades, map changes and the HUD ImGui.
-- Verified end to end (headless): `00_00_intro` slideshow and quote card; `00_01_apartment`
-  wake-up camera animation -> answer the phone -> full voiced call with subtitles -> put the
-  phone away -> get out of bed -> walk.
+- Verified end to end (headless): `00_00_intro` slideshow, narration; `00_01_apartment` wake-up,
+  phone call, tracer fluid pickup and use, exit door -> `00_02_subway`; `00_03_laboratory`
+  keypad code on the in-world terminal unlocks the door.
+- Doors, drawers, grabbing, prop GUIs on in-world screens (laptops, keypads) work.
+- Saves: autosave on map entry and at script checkpoints; mid-map saves restore in place.
+  Menu CONTINUE loads the latest save; SAVE AND EXIT saves.
 - `OPENHPL_SOMA_SCRIPT_PLAYER=0` falls back to the hand-written `cSomaPlayer` (and the
   hand-ported intro/phone call).
 - `scripts/soma-script-check.sh`: 190/190 scripts compile; `stub_calls` in
@@ -30,9 +33,12 @@ Read with `CLAUDE.md` (commands, hard rules) and `SOMA_PLAN.md`. `TASKS.md` is t
 ## Debugging
 
 `player_state`, `lux_entity name=`, `script_exec code=` (AngelScript against the live API,
-`__print()` returns output), `imgui_stats`. Script exceptions are logged with file:line.
+`__print()` returns output), `imgui_stats`, `stub_report`, `sound_stats`, `body_contacts`.
+Script exceptions are logged with file:line. Memory bugs: build with ASan
+(`-fsanitize=address`) into the scratchpad; writes through wrongly typed pointers (recovered
+offsets on our smaller objects) are invisible to ASan, use a gdb hardware watchpoint.
 
 ## Next
 
-See `TASKS.md` "Script layer". Biggest gaps: terminals drawn on in-world screens (3D gui sets),
-the save system, main menu -> New Game via the script intro, grab/door interaction states.
+See `TASKS.md` "Script layer": a real playthrough past the laboratory, post effects,
+agents (Munshi etc. use `cLuxCharMover`/pathfinder stubs), hands skeleton, LOAD GAME list.

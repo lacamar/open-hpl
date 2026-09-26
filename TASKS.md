@@ -138,12 +138,15 @@ four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`
 
 ## Script layer (story playthrough)
 
-Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves.
+Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves;
+laboratory keypad terminal.
 
 - Saves restore in place (script objects by member name, entity state, timers, player pose).
   Not saved yet: playing voices/music, handles to engine objects in script members (re-acquired
   by scripts), agents' native state.
-- Terminals on in-world screens (prop GUIs are 2D sets, not drawn on the mesh yet).
+- Agents: `cLuxCharMover`, `cLuxPathfinder`, head tracker are stubs (NPCs stand still).
+- `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
+- Laboratory scan-chair sequence past `InteractScanChair` unverified.
 - `stub_report`: post effects (`cLux_GetViewport` has no composite), eye tracker,
   `cCamera::SetExtended{Yaw,Pitch}`, `iPhysicsWorld::GetBodiesInAABB`, preload hints.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
