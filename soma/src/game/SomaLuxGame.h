@@ -56,6 +56,7 @@ public:
 	void BroadcastAnalog(int alAnalogId, const cVector3f &avAmount);
 	// Off while a menu or pause screen has the input
 	bool mbGameInput = true;
+	cVector2l mvMouseRel = 0;
 
 	cSomaLuxModule *GetModule(int alId);
 	cSomaLuxModule *GetModule(const tString &asName);

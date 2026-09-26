@@ -236,8 +236,123 @@ void cSomaLuxEntity::ApplyInstanceVars()
 		mbInteractionDisabled = true;
 }
 
+// Fits position = origin + u * right + v * down over the submesh vertices, so GUI (0,0) is the
+// UV (0,0) corner of the screen
+void cSomaLuxEntity::SetupGuiScreen(const tString &asSubMesh)
+{
+	if (mpMesh == NULL)
+		return;
+	cSubMeshEntity *pSub = mpMesh->GetSubMeshEntityName(asSubMesh);
+	for (int i = 0; pSub == NULL && i < mpMesh->GetSubMeshEntityNum(); ++i)
+		if (cString::ToLowerCase(mpMesh->GetSubMeshEntity(i)->GetName()).find(cString::ToLowerCase(asSubMesh)) != tString::npos)
+			pSub = mpMesh->GetSubMeshEntity(i);
+	iVertexBuffer *pVtx = pSub ? pSub->GetSubMesh()->GetVertexBuffer() : NULL;
+	if (pVtx == NULL)
+		return;
+	const float *pPos = pVtx->GetFloatArray(eVertexBufferElement_Position);
+	const float *pUV = pVtx->GetFloatArray(eVertexBufferElement_Texture0);
+	int lPosNum = pVtx->GetElementNum(eVertexBufferElement_Position);
+	int lUVNum = pVtx->GetElementNum(eVertexBufferElement_Texture0);
+	if (pPos == NULL || pUV == NULL)
+		return;
+	// Normal equations of [1 u v] x = p
+	double A[3][3] = {}, B[3][3] = {};
+	for (int i = 0; i < pVtx->GetVertexNum(); ++i)
+	{
+		double r[3] = {1, pUV[i * lUVNum], pUV[i * lUVNum + 1]};
+		for (int a = 0; a < 3; ++a)
+			for (int b = 0; b < 3; ++b)
+			{
+				A[a][b] += r[a] * r[b];
+				B[a][b] += r[a] * pPos[i * lPosNum + b];
+			}
+	}
+	double fDet = A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
+				  A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+	if (std::abs(fDet) < 1e-12)
+		return;
+	double Inv[3][3];
+	for (int a = 0; a < 3; ++a)
+		for (int b = 0; b < 3; ++b)
+		{
+			int a1 = (b + 1) % 3, a2 = (b + 2) % 3, b1 = (a + 1) % 3, b2 = (a + 2) % 3;
+			Inv[a][b] = (A[a1][b1] * A[a2][b2] - A[a1][b2] * A[a2][b1]) / fDet;
+		}
+	cVector3f vRows[3];
+	for (int k = 0; k < 3; ++k)
+		for (int c = 0; c < 3; ++c)
+		{
+			double x = 0;
+			for (int j = 0; j < 3; ++j)
+				x += Inv[k][j] * B[j][c];
+			vRows[k].v[c] = (float)x;
+		}
+	mpGuiSubMesh = pSub;
+	mvGuiOrigin = vRows[0];
+	mvGuiRight = vRows[1];
+	mvGuiDown = vRows[2];
+}
+
+void cSomaLuxEntity::UpdateGuiScreen()
+{
+	if (mpGuiSubMesh == NULL || mpImGui == NULL)
+		return;
+	cGuiSet *pSet = mpImGui->GetSet();
+	cMatrixf mtx = mpGuiSubMesh->GetWorldMatrix();
+	cVector3f vRight = cMath::MatrixMul3x3(mtx, mvGuiRight);
+	cVector3f vDown = cMath::MatrixMul3x3(mtx, mvGuiDown);
+	float fW = vRight.Length(), fH = vDown.Length();
+	if (fW <= 0 || fH <= 0)
+		return;
+	cVector3f vX = vRight / fW, vY = vDown * (-1.0f / fH);
+	cVector3f vZ = cMath::Vector3Normalize(cMath::Vector3Cross(vX, vY));
+	cVector3f vOrigin = cMath::MatrixMul(mtx, mvGuiOrigin) + vZ * 0.002f;
+	cMatrixf mtxScreen = cMath::MatrixUnitVectors(vX, vY, vZ, vOrigin);
+	pSet->Set3DTransform(mtxScreen);
+	pSet->Set3DSize(cVector3f(fW, fH, 0.001f));
+	static cSomaGuiScreenRenderer gRenderer;
+	gRenderer.Register();
+}
+
+// HPL2 render lists skip gui set renderables, so prop screens are drawn after the translucent pass
+void cSomaGuiScreenRenderer::Register()
+{
+	cViewport *pViewport = gpSomaBase->GetCurrentViewport();
+	if (pViewport == NULL || pViewport == mpViewport)
+		return;
+	pViewport->AddRendererCallback(this);
+	mpViewport = pViewport;
+}
+
+void cSomaGuiScreenRenderer::OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+		return;
+	iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
+	cFrustum *pFrustum = apFunctions->GetFrustum();
+	apFunctions->SetProgram(NULL);
+	apFunctions->SetTextureRange(NULL, 0);
+	apFunctions->SetVertexBuffer(NULL);
+	pLowLevel->SetMatrix(eMatrix_Projection, pFrustum->GetProjectionMatrix());
+	for (cSomaLuxEntity *p : pMap->GetEntities())
+	{
+		if (p->mpGuiSubMesh == NULL || p->mpImGui == NULL || p->mbGuiActive == false || p->mbActive == false)
+			continue;
+		cGuiSet *pSet = p->mpImGui->GetSet();
+		cVector3f vCorner = pSet->Get3DTransform().GetTranslation(), vReach = pSet->Get3DSize().Length() + 0.1f;
+		cBoundingVolume bv;
+		bv.SetPosition(vCorner);
+		bv.SetSize(vReach * 2);
+		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
+			continue;
+		pSet->Render(pFrustum);
+	}
+}
+
 void cSomaLuxEntity::UpdateGui(float afTimeStep)
 {
+	UpdateGuiScreen();
 	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
 		return;
 	cSomaImGui *pPrev = cSomaImGui::GetCurrent();
@@ -250,6 +365,9 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 			c->SetArgFloat(1, afTimeStep);
 		});
 	mpImGui->End();
+	// Drawn into the set now: 3D sets render with the scene, before OnDraw
+	if (mpGuiSubMesh)
+		mpImGui->DrawAll();
 	cSomaImGui::SetCurrent(pPrev);
 }
 
@@ -768,6 +886,11 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						cGuiSet *pSet = pGui->CreateSet(p->msName + "_gui", NULL);
 						pSet->SetVirtualSize(size, -1000, 1000);
 						p->mpImGui = new cSomaImGui(p->msName, pSet);
+						p->SetupGuiScreen(sub);
+						if (p->mpGuiSubMesh)
+							pSet->SetIs3D(true);
+						else
+							Warning("SOMA: GUI submesh '%s' not found on '%s'\n", sub.c_str(), p->msName.c_str());
 					});
 	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; });

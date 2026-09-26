@@ -177,12 +177,21 @@ public:
 	void CreateActionInput(const tString &asInput, int alActionId);
 	tString GetActionName(int alId);
 
+	// Per-frame action edges; HPL2's cAction::BecameTriggerd consumes the edge on the first call
+	void LatchActions();
+	bool IsDown(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId]; }
+	bool BecameDown(int alId) { return IsDown(alId) && mvPrevDown[alId] == false; }
+	bool BecameUp(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId] == false && mvPrevDown[alId]; }
+
 	bool mbInvertMouse = false;
 	bool mbSmoothMouse = true;
 	float mfMouseSensitivity = 1;
 	float mfGamepadSensitivity = 2;
 
 private:
+	static const int kMaxActions = 256;
+	bool mvDown[kMaxActions] = {};
+	bool mvPrevDown[kMaxActions] = {};
 	static cSomaLuxInputHandler *mpInstance;
 };
 

@@ -64,6 +64,8 @@ cSomaImGui::~cSomaImGui()
 
 void cSomaImGui::SetInputFocus(cSomaImGui *apImGui, bool abShowMouse)
 {
+	if (apImGui && apImGui != mpInputFocus)
+		apImGui->mvCursor3D = apImGui->mpSet->GetVirtualSize() * 0.5f;
 	mpInputFocus = apImGui;
 	if (apImGui)
 		apImGui->mbShowMouse = abShowMouse;
@@ -167,6 +169,16 @@ void cSomaImGui::SendMousePosition(const cVector2l &avPos, const cVector2l &avRe
 {
 	cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 	cVector2f vVirtual = mpSet->GetVirtualSize();
+	if (mpSet->Is3D())
+	{
+		// Screens in the world: the captured mouse moves a cursor across the screen
+		float fScale = vVirtual.y / vScreen.y * 1.5f;
+		cVector2f vRel((float)avRel.x * fScale, (float)avRel.y * fScale);
+		mvCursor3D.x = cMath::Clamp(mvCursor3D.x + vRel.x, 0.0f, vVirtual.x);
+		mvCursor3D.y = cMath::Clamp(mvCursor3D.y + vRel.y, 0.0f, vVirtual.y);
+		SendMouseVirtualPosition(mvCursor3D, vRel);
+		return;
+	}
 	cVector2f vScale(vVirtual.x / vScreen.x, vVirtual.y / vScreen.y);
 	SendMouseVirtualPosition(cVector2f((float)avPos.x * vScale.x, (float)avPos.y * vScale.y) - mpSet->GetVirtualSizeOffset(),
 							 cVector2f((float)avRel.x * vScale.x, (float)avRel.y * vScale.y));

@@ -48,6 +48,7 @@ public:
 	const cVector2f &GetMousePosition() { return mvMousePos; }
 	const cVector2f &GetMouseRel() { return mvMouseRel; }
 	bool mbShowMouse = false;
+	cVector2f mvCursor3D = 0;
 	bool mbShowMouseAutomatically = true;
 
 	// Named state

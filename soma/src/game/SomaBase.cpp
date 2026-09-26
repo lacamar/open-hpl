@@ -153,7 +153,15 @@ static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRe
 	aResp.Set("hud_ops", pHud->GetDrawnOpNum());
 	aResp.Set("hud_virtual_w", pHud->GetSet()->GetVirtualSize().x);
 	aResp.Set("hud_virtual_h", pHud->GetSet()->GetVirtualSize().y);
-	aResp.Set("focus", cSomaImGui::GetInputFocus() ? cSomaImGui::GetInputFocus()->GetName() : tString(""));
+	cSomaImGui *pFocus = cSomaImGui::GetInputFocus();
+	aResp.Set("focus", pFocus ? pFocus->GetName() : tString(""));
+	if (pFocus)
+	{
+		aResp.Set("mouse_x", pFocus->GetMousePosition().x);
+		aResp.Set("mouse_y", pFocus->GetMousePosition().y);
+		aResp.Set("virtual_w", pFocus->GetSet()->GetVirtualSize().x);
+		aResp.Set("virtual_h", pFocus->GetSet()->GetVirtualSize().y);
+	}
 }
 
 static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

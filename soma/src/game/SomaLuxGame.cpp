@@ -196,6 +196,10 @@ void cSomaLuxGame::Load()
 
 void cSomaLuxGame::Update(float afTimeStep)
 {
+	// Read once: iMouse::GetRelPosition resets the motion
+	mvMouseRel = gpSomaBase->mpEngine->GetInput()->GetMouse()->GetRelPosition();
+	if (cSomaLuxInputHandler::Get())
+		cSomaLuxInputHandler::Get()->LatchActions();
 	if (cSomaLuxInputHandler::Get())
 		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); });
@@ -218,7 +222,7 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 		if (cSomaLuxHandler *pGui = GetHandler("GuiHandler"))
 			pGui->CallWithObject("void UpdateDefaultInput(cImGui @apImGui)", pFocus);
 		iMouse *pMouse = gpSomaBase->mpEngine->GetInput()->GetMouse();
-		pFocus->SendMousePosition(pMouse->GetAbsPosition(), pMouse->GetRelPosition());
+		pFocus->SendMousePosition(pMouse->GetAbsPosition(), mvMouseRel);
 	}
 	cSomaImGui *pHud = SomaHudImGui();
 	cSomaImGui::SetCurrent(pHud);

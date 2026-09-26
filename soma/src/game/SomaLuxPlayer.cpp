@@ -439,6 +439,16 @@ void cSomaLuxInputHandler::LoadKeyConfig()
 	Log("SOMA script: %d input actions\n", (int)mvActions.size());
 }
 
+void cSomaLuxInputHandler::LatchActions()
+{
+	cInput *pInput = gpSomaBase->mpEngine->GetInput();
+	for (int i = 0; i < kMaxActions; ++i)
+	{
+		mvPrevDown[i] = mvDown[i];
+		mvDown[i] = pInput->GetAction(i) && pInput->IsTriggerd(i);
+	}
+}
+
 void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 {
 	if (abGameInput == false)
@@ -450,9 +460,9 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		cLuxAction a = mvActions[i];
 		if (a.mbGamepad)
 			continue;
-		if (pInput->BecameTriggerd(a.mlId))
+		if (BecameDown(a.mlId))
 			pGame->BroadcastAction(a.mlId, true);
-		else if (pInput->WasTriggerd(a.mlId))
+		else if (BecameUp(a.mlId))
 			pGame->BroadcastAction(a.mlId, false);
 		if (a.mlAnalogId >= 0 && a.mlAxis >= 0 && a.mlAxis < 3 && pInput->IsTriggerd(a.mlId) && a.mfMul != 0)
 		{
@@ -462,7 +472,7 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		}
 	}
 
-	cVector2l vRel = pInput->GetMouse()->GetRelPosition();
+	cVector2l vRel = pGame->mvMouseRel;
 	if (vRel.x != 0 || vRel.y != 0)
 	{
 		float fHeight = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y;
@@ -657,6 +667,16 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 
 void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
 {
+	SOMA_FUNC(e, "bool cInput_BecameTriggered(int alId)", +[](int id) { return mpInstance && mpInstance->BecameDown(id); });
+	SOMA_FUNC(e, "bool cInput_WasTriggered(int alId)", +[](int id) { return mpInstance && mpInstance->BecameUp(id); });
+	SOMA_FUNC(e, "bool cInput_BecameTriggered(const tString&in asName)", +[](const tString &n) {
+		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(n);
+		return mpInstance && pAction && mpInstance->BecameDown(pAction->GetId());
+	});
+	SOMA_FUNC(e, "bool cInput_WasTriggered(const tString&in asName)", +[](const tString &n) {
+		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(n);
+		return mpInstance && pAction && mpInstance->BecameUp(pAction->GetId());
+	});
 	typedef cSomaLuxInputHandler I;
 	typedef const tString &S;
 	const char *T = "cLuxInputHandler";

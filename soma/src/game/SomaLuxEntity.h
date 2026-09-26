@@ -33,6 +33,17 @@ enum eSomaLuxEntityType
 	eSomaLuxEntityType_Player,
 };
 
+class cSomaGuiScreenRenderer : public iRendererCallback
+{
+public:
+	void Register();
+	void OnPostSolidDraw(cRendererCallbackFunctions *) override {}
+	void OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions) override;
+
+private:
+	cViewport *mpViewport = NULL;
+};
+
 class cSomaLuxEntity : public cSomaLuxScriptable
 {
 public:
@@ -107,6 +118,11 @@ public:
 	class cSomaImGui *mpImGui = NULL;
 	tString msOnGuiFunc;
 	bool mbGuiActive = false;
+	// Prop GUI drawn on a submesh: a 3D gui set over the screen rectangle fitted from its UVs
+	cSubMeshEntity *mpGuiSubMesh = NULL;
+	cVector3f mvGuiOrigin = 0, mvGuiRight = 0, mvGuiDown = 0;
+	void SetupGuiScreen(const tString &asSubMesh);
+	void UpdateGuiScreen();
 	void UpdateGui(float afTimeStep);
 	tString msAnimCallback;
 	std::vector<std::pair<tString, bool>> mvAnimQueue;
