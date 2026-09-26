@@ -83,6 +83,13 @@ static std::vector<cXmlElement *> ChildElements(iXmlNode *apNode)
 void cSomaLuxGame::Load()
 {
 	LoadConfigs();
+
+	// cLuxBase::LoadLanguage
+	tString sLang = gpUserConfig->GetString("Main", "Language", "english");
+	cResources *pLangRes = gpSomaBase->mpEngine->GetResources();
+	pLangRes->ClearTranslations();
+	pLangRes->AddLanguageFile("config/base_" + cString::SetFileExt(sLang, "lang"), false);
+	pLangRes->AddLanguageFile("config/lang_main/" + cString::SetFileExt(sLang, "lang"), false);
 	gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(new cSomaLuxVoiceHandler(gpSomaBase->mpEngine));
 
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
@@ -217,6 +224,9 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 	cSomaImGui::SetCurrent(pHud);
 	pHud->Begin(afTimeStep);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); });
+	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+		if (pMap->GetScript())
+			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void OnGui(float afTimeStep)", [=](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); });
 	pHud->End();
 	cSomaImGui::SetCurrent(NULL);
 }

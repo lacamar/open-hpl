@@ -223,7 +223,7 @@ static cGuiGfxElement *GfxElement(const void *apGfx)
 	if (it != mapCache.end())
 		return it->second;
 	cGui *pGui = gpSomaBase->mpEngine->GetGui();
-	cGuiGfxElement *pGfx = lType == 2 || lType == 3 ? pGui->CreateGfxTexture(sFile, (eGuiMaterial)lMaterial, eTextureType_2D)
+	cGuiGfxElement *pGfx = lType == 2 || lType == 3 ? pGui->CreateGfxTexture(sFile, (eGuiMaterial)lMaterial, eTextureType_2D, cColor(1, 1), true)
 													: pGui->CreateGfxImage(sFile, (eGuiMaterial)lMaterial);
 	mapCache[sKey] = pGfx;
 	return pGfx;

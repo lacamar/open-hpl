@@ -14,6 +14,7 @@
 #include "SomaFsb.h"
 #include "SomaSplash.h"
 #include "SomaLuxPlayer.h"
+#include "SomaImGui.h"
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
 #include "SomaScriptRuntime.h"
@@ -129,6 +130,16 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 }
 
 extern std::string gsSomaExecOutput;
+cSomaImGui *SomaHudImGui();
+
+static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaImGui *pHud = SomaHudImGui();
+	aResp.Set("hud_ops", pHud->GetDrawnOpNum());
+	aResp.Set("hud_virtual_w", pHud->GetSet()->GetVirtualSize().x);
+	aResp.Set("hud_virtual_h", pHud->GetSet()->GetVirtualSize().y);
+	aResp.Set("focus", cSomaImGui::GetInputFocus() ? cSomaImGui::GetInputFocus()->GetName() : tString(""));
+}
 
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -687,6 +698,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("player_state", cSomaBase_HeadlessCmd_PlayerState, this);
 		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
+		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
@@ -1528,7 +1540,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// verify it - same as the real engine, which runs this map's OnEnter()
 	// regardless of how it was reached.
 	if (mpPlayer) mpPlayer->SetActive(asMapFile != "00_00_intro.hpm");
-	if (asMapFile == "00_00_intro.hpm")
+	if (asMapFile == "00_00_intro.hpm" && mbUseScriptPlayer == false)
 	{
 		if (mpIntroSequence == NULL)
 		{

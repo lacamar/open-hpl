@@ -159,6 +159,7 @@ public:
 	float GetFontLength(const void *apFont, float afMul, const tWString &asText);
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
+	int GetDrawnOpNum() { return (int)mvDrawn.size(); }
 
 private:
 	struct cOp

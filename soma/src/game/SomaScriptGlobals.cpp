@@ -1,6 +1,7 @@
 // cScript_*: script-to-script calls by object name with typed global args, vars and return value
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
+#include "SomaLux.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
 
@@ -42,6 +43,10 @@ static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const
 		if (p->Call("void " + asFunc + "()"))
 			bFound = true;
 	}
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap && pMap->GetScript() && SomaWildcardMatch(asObject, pMap->GetName()) &&
+		(asClass == "" || asClass == pMap->GetScript()->GetObjectType()->GetName()))
+		bFound = cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + asFunc + "()") || bFound;
 	return bFound;
 }
 
@@ -95,6 +100,7 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return gReturn.id; });
 
 	typedef const tString &S;
+	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { static tString s("english"); return s; });
 	SOMA_FUNC(e, "void __print(const tString&in asText)", +[](S s) { gsSomaExecOutput += s + "\n"; });
 	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s", s.c_str()); });
 	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s", s.c_str()); });

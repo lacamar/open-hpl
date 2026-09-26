@@ -181,6 +181,28 @@ bool cSomaScriptRuntime::CallByName(asIScriptObject *apObj, const std::string &a
 {
 	if (apObj == NULL)
 		return false;
+	// "$Func": a global function of the object's module rather than a method
+	if (asName.size() > 1 && asName[0] == '$')
+	{
+		asIScriptModule *pModule = apObj->GetObjectType()->GetModule();
+		std::string sFunc = asName.substr(1);
+		asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByDecl(("void " + sFunc + "(const tString &in)").c_str()) : NULL;
+		bool bArg = pFunc != NULL;
+		if (pFunc == NULL && pModule)
+			pFunc = pModule->GetFunctionByDecl(("void " + sFunc + "()").c_str());
+		if (pFunc == NULL)
+		{
+			Warning("SOMA script: global callback '%s' not found\n", sFunc.c_str());
+			return false;
+		}
+		asIScriptContext *pCtx = mpEngine->RequestContext();
+		pCtx->Prepare(pFunc);
+		if (bArg)
+			pCtx->SetArgObject(0, (void *)&asArg);
+		bool bOk = Execute(pCtx, sFunc);
+		mpEngine->ReturnContext(pCtx);
+		return bOk;
+	}
 	asITypeInfo *pType = apObj->GetObjectType();
 	std::string sWithArg = "void " + asName + "(const tString &in)";
 	if (pType->GetMethodByDecl(sWithArg.c_str()))
