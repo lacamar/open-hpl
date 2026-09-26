@@ -3,6 +3,7 @@
 #include "SomaLux.h"
 #include "SomaLuxPlayer.h"
 #include "SomaLuxVoice.h"
+#include "SomaImGui.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
@@ -109,7 +110,7 @@ void cSomaLuxGame::Load()
 									: strcmp(def.mpAttr, "InputHandler") == 0 ? new cSomaLuxInputHandler()
 																			   : new cSomaLuxHandler();
 		pHandler->msName = def.mpAttr;
-		pHandler->msScriptName = def.mpAttr;
+		pHandler->msScriptName = strcmp(def.mpAttr, "Player") == 0 ? "LuxPlayer" : def.mpAttr;
 		pHandler->msBaseType = def.mpBase;
 		if (pHandler->LoadScript(mpRuntime, sFile, def.mpClass, def.mpBase))
 			mvHandlers.push_back(pHandler);
@@ -182,6 +183,8 @@ void cSomaLuxGame::Load()
 	}
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
+	// cLuxBase::Reset before a new game
+	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
 }
 
 void cSomaLuxGame::Update(float afTimeStep)
@@ -192,8 +195,30 @@ void cSomaLuxGame::Update(float afTimeStep)
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
 	cSomaLuxDialogHandler::Get()->Update(afTimeStep);
+	UpdateGui(afTimeStep);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); });
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); });
+}
+
+cSomaImGui *SomaHudImGui();
+
+// cLuxGuiHandler::Update: default input to the focused ImGui, then the HUD's OnGui pass
+void cSomaLuxGame::UpdateGui(float afTimeStep)
+{
+	cSomaImGui::UpdateFocusHistory();
+	if (cSomaImGui *pFocus = cSomaImGui::GetInputFocus())
+	{
+		if (cSomaLuxHandler *pGui = GetHandler("GuiHandler"))
+			pGui->CallWithObject("void UpdateDefaultInput(cImGui @apImGui)", pFocus);
+		iMouse *pMouse = gpSomaBase->mpEngine->GetInput()->GetMouse();
+		pFocus->SendMousePosition(pMouse->GetAbsPosition(), pMouse->GetRelPosition());
+	}
+	cSomaImGui *pHud = SomaHudImGui();
+	cSomaImGui::SetCurrent(pHud);
+	pHud->Begin(afTimeStep);
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); });
+	pHud->End();
+	cSomaImGui::SetCurrent(NULL);
 }
 
 void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)

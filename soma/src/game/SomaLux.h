@@ -83,6 +83,7 @@ private:
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
 
 	void UpdateCollideCallbacks();
+	void UpdateLookAtCallbacks(float afTimeStep);
 	bool SetupEntityScript(cSomaLuxEntity *apEnt);
 	void AddEntity(cSomaLuxEntity *apEnt);
 	int mlNextId = 1;
@@ -98,6 +99,7 @@ class cSomaLuxUpdater : public iUpdateable
 public:
 	cSomaLuxUpdater() : iUpdateable("SomaLuxUpdater") {}
 	void Update(float afTimeStep);
+	void OnDraw(float afFrameTime);
 
 private:
 	bool mbEscapeDown = false;

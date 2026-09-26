@@ -21,8 +21,25 @@ cSomaGenericEntityLoader::cSomaGenericEntityLoader(const tString &asName) : cEnt
 
 //-----------------------------------------------------------------------
 
+extern tString gsSomaSpawnName;
+
+// Static meshes are never animated or moved by HPL2's world update
 void cSomaGenericEntityLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
+	bool bDynamic = gsSomaSpawnName != "";
+	cXmlElement *pModel = apRootElem->GetFirstElement("ModelData");
+	cXmlElement *pAnims = pModel ? pModel->GetFirstElement("Animations") : NULL;
+	if (pAnims && pAnims->GetFirstElement("Animation"))
+		bDynamic = true;
+	cXmlElement *pBodies = pModel ? pModel->GetFirstElement("Bodies") : NULL;
+	if (pBodies)
+	{
+		cXmlNodeListIterator it = pBodies->GetChildIterator();
+		while (it.HasNext() && bDynamic == false)
+			if (cXmlElement *pBody = it.Next()->ToElement())
+				bDynamic = pBody->GetAttributeFloat("Mass", 0) > 0;
+	}
+	mbLoadAsStatic = bDynamic == false;
 }
 
 //-----------------------------------------------------------------------

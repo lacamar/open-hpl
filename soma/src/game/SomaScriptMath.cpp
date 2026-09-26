@@ -1,5 +1,6 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptBind.h"
+#include "SomaLuxScriptable.h"
 
 #include "graphics/Color.h"
 #include "math/Math.h"
@@ -36,7 +37,7 @@ struct cSomaVector4f
 	}
 };
 
-static std::set<std::string> gsetNativeBehaviourTypes = {"cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
+static std::set<std::string> gsetNativeBehaviourTypes = {"cImGuiGfx", "cImGuiFont", "cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
 														  "cColor", "cMatrixf", "cQuaternion"};
 
 bool SomaScriptHasNativeBehaviours(const char *apType)
@@ -256,6 +257,8 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ToDeg(const cVector3f &in avVec)", +[](const cVector3f &v) { return cMath::Vector3ToDeg(v); });
 	SOMA_FUNC(e, "cVector2f cMath_Vector2ToRad(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2ToRad(v); });
 	SOMA_FUNC(e, "cVector2f cMath_Vector2ToDeg(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2ToDeg(v); });
+	SOMA_FUNC(e, "float cMath_Easing(eEasing aType, float afT, float afMin = 0, float afMax = 1)",
+			  +[](int t, float x, float a, float b) { return a + (b - a) * SomaEasing(t, cMath::Clamp(x, 0.0f, 1.0f)); });
 	SOMA_FUNC(e, "float cMath_Wrap(float afX, float afMin, float afMax)", +[](float x, float a, float b) { return cMath::Wrap(x, a, b); });
 	SOMA_FUNC(e, "float cMath_TurnAngle(float afAngle, float afFinalAngle, float afSpeed, float afMaxAngle)",
 			  +[](float a, float f, float s, float m) { return cMath::TurnAngle(a, f, s, m); });

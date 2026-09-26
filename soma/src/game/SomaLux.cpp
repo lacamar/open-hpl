@@ -73,6 +73,7 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 
 bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 {
+	apEnt->ApplyInstanceVars();
 	static const char *vGroups[] = {"PropTypes", "AreaTypes", "LiquidAreaTypes", "LiquidAreaTypes", "CritterTypes", "AgentTypes"};
 	if (apEnt->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
 		return false;
@@ -225,8 +226,49 @@ void cSomaLuxMap::Update(float afTimeStep)
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
+	{
 		mvEntities[i]->UpdateAnimation(afTimeStep);
+		mvEntities[i]->UpdateGui(afTimeStep);
+	}
+	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
+}
+
+// iLuxEntity look-at callbacks: 1 when the player starts looking at the entity, -1 when looking away
+void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
+{
+	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+	cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
+	if (pCam == NULL)
+		return;
+	cVector3f vStart = pCam->GetPosition(), vDir = pCam->GetForward();
+	for (size_t i = 0; i < mvEntities.size(); ++i)
+	{
+		cSomaLuxEntity *pEnt = mvEntities[i];
+		if (pEnt->msLookAtCallback == "" || pEnt->mbActive == false)
+			continue;
+		float fMax = pEnt->mfLookAtMaxDistance > 0 ? pEnt->mfLookAtMaxDistance : 1000.0f;
+		float fDist = 0;
+		bool bLooking = SomaRayHitsEntity(pEnt, vStart, vDir, fMax, fDist);
+		if (bLooking && pEnt->mbLookAtCheckRay)
+			bLooking = SomaLineOfSight(vStart, vStart + vDir * fDist, pEnt);
+		if (bLooking)
+			pEnt->mfLookAtTime += afTimeStep;
+		else
+			pEnt->mfLookAtTime = 0;
+		bool bNow = bLooking && pEnt->mfLookAtTime >= pEnt->mfLookAtDelay;
+		if (bNow == pEnt->mbLookedAt)
+			continue;
+		pEnt->mbLookedAt = bNow;
+		tString sFunc = pEnt->msLookAtCallback;
+		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
+			pEnt->msLookAtCallback = "";
+		int lState = bNow ? 1 : -1;
+		mpRuntime->Call(mpScript, "void " + sFunc + "(const tString &in, int)", [&](asIScriptContext *c) {
+			c->SetArgObject(0, &pEnt->msName);
+			c->SetArgDWord(1, lState);
+		});
+	}
 }
 
 void cSomaLuxMap::OnAction(int alAction, bool abPressed)
@@ -339,6 +381,12 @@ cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
 //---------------------------------------
 
 bool SomaTakePendingMapChange(tString &asMap, tString &asStart);
+void SomaDrawImGuis();
+
+void cSomaLuxUpdater::OnDraw(float afFrameTime)
+{
+	SomaDrawImGuis();
+}
 
 void cSomaLuxUpdater::Update(float afTimeStep)
 {

@@ -1,4 +1,6 @@
 #include "SomaScriptApi.h"
+#include "SomaImGuiDefaults.h"
+#include "SomaImGui.h"
 #include "SomaScriptNatives.h"
 
 #include <cstdio>
@@ -270,12 +272,45 @@ static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, cha
 	}
 }
 
+const tString *SomaIntern(const tString &asStr)
+{
+	static std::set<tString> setStrings;
+	return &*setStrings.insert(asStr).first;
+}
+
+static const cSomaStructDefaults *FindStructDefaults(const char *apType)
+{
+	for (int i = 0; i < glSomaStructDefaultsNum; ++i)
+		if (strcmp(gvSomaStructDefaults[i].mpType, apType) == 0)
+			return &gvSomaStructDefaults[i];
+	return NULL;
+}
+
+static void ApplyStructDefaults(const cSomaStructDefaults *apDefaults, char *apObj)
+{
+	memcpy(apObj + 16, apDefaults->mpBytes, apDefaults->mlSize - 16);
+	for (int lOff : apDefaults->mvStringOffsets)
+		*(const tString **)(apObj + lOff) = SomaIntern("");
+}
+
+void *SomaNewScriptStruct(const char *apType)
+{
+	char *pObj = (char *)calloc(1, 4096);
+	if (const cSomaStructDefaults *pDefaults = FindStructDefaults(apType))
+		ApplyStructDefaults(pDefaults, pObj);
+	return pObj;
+}
+
 static void StubFactory(asIScriptGeneric *apGen)
 {
-	CountStub(apGen);
-	char *pObj = (char *)calloc(1, 4096);
 	asITypeInfo *pType = apGen->GetEngine()->GetTypeInfoById(apGen->GetFunction()->GetReturnTypeId() & ~asTYPEID_OBJHANDLE);
-	if (pType)
+	const cSomaStructDefaults *pDefaults = pType ? FindStructDefaults(pType->GetName()) : NULL;
+	if (pDefaults == NULL || apGen->GetArgCount() > 0)
+		CountStub(apGen);
+	char *pObj = (char *)calloc(1, 4096);
+	if (pDefaults)
+		ApplyStructDefaults(pDefaults, pObj);
+	else if (pType)
 		ConstructMembers(apGen->GetEngine(), pType, pObj);
 	*(void **)apGen->GetAddressOfReturnLocation() = pObj;
 }
@@ -309,6 +344,14 @@ static void AssignMembers(asIScriptEngine *apEngine, asITypeInfo *apType, char *
 static void MemberAssign(asIScriptGeneric *apGen)
 {
 	asITypeInfo *pType = apGen->GetFunction()->GetObjectType();
+	// Structs with recovered layouts carry unregistered members (file names)
+	if (const cSomaStructDefaults *pDefaults = FindStructDefaults(pType->GetName()))
+	{
+		if (apGen->GetObject() != apGen->GetArgObject(0))
+			memcpy((char *)apGen->GetObject() + 16, (const char *)apGen->GetArgObject(0) + 16, pDefaults->mlSize - 16);
+		apGen->SetReturnAddress(apGen->GetObject());
+		return;
+	}
 	AssignMembers(apGen->GetEngine(), pType, (char *)apGen->GetObject(), (const char *)apGen->GetArgObject(0));
 	apGen->SetReturnAddress(apGen->GetObject());
 }

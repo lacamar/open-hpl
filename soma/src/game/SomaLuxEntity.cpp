@@ -1,9 +1,12 @@
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
+#include "SomaImGui.h"
+#include "SomaBase.h"
 #include <algorithm>
 #include "SomaLuxGame.h"
 
 #include <cmath>
+#include <set>
 #include "SomaLux.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
@@ -199,6 +202,53 @@ void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 				c->SetArgObject(1, &sAnim);
 			});
 	}
+}
+
+void cSomaLuxEntity::ApplyInstanceVars()
+{
+	cResourceVarsObject &v = mInstanceVars;
+	if (v.GetVarString("PlayerInteractCallback", "") != "")
+	{
+		msInteractCallback = v.GetVarString("PlayerInteractCallback", "");
+		mbInteractCallbackAutoRemove = v.GetVarBool("PlayerInteractCallbackAutoRemove", false);
+	}
+	if (v.GetVarString("PlayerLookAtCallback", "") != "")
+	{
+		msLookAtCallback = v.GetVarString("PlayerLookAtCallback", "");
+		mbLookAtCallbackAutoRemove = v.GetVarBool("PlayerLookAtCallbackAutoRemove", false);
+		mbLookAtCheckCenter = v.GetVarBool("PlayerLookAtCheckCenterOfScreen", true);
+		mbLookAtCheckRay = v.GetVarBool("PlayerLookAtCheckRayIntersection", true);
+		mfLookAtMaxDistance = v.GetVarFloat("PlayerLookAtMaxDistance", -1);
+		mfLookAtDelay = v.GetVarFloat("PlayerLookAtCallbackDelay", 0);
+	}
+	tString sSep = ";, ";
+	tStringVec vEnts, vFuncs;
+	cString::GetStringVec(v.GetVarString("CC_Entities", ""), vEnts, &sSep);
+	cString::GetStringVec(v.GetVarString("CC_Funcs", ""), vFuncs, &sSep);
+	for (size_t i = 0; i < vEnts.size() && vFuncs.empty() == false; ++i)
+		mvCollideCallbacks.push_back(cCollideCallback{cString::ToLowerCase(vEnts[i]) == "player" ? tString("Player") : vEnts[i],
+													  vFuncs[std::min(i, vFuncs.size() - 1)]});
+	if (v.GetVarFloat("MaxInteractDistance", 0) > 0)
+		mfMaxInteractDistance = v.GetVarFloat("MaxInteractDistance", 0);
+	if (v.GetVarBool("InteractionDisabled", false))
+		mbInteractionDisabled = true;
+}
+
+void cSomaLuxEntity::UpdateGui(float afTimeStep)
+{
+	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
+		return;
+	cSomaImGui *pPrev = cSomaImGui::GetCurrent();
+	cSomaImGui::SetCurrent(mpImGui);
+	mpImGui->Begin(afTimeStep);
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (pMap && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msOnGuiFunc + "(const tString&in, float)", [&](asIScriptContext *c) {
+			c->SetArgObject(0, &msName);
+			c->SetArgFloat(1, afTimeStep);
+		});
+	mpImGui->End();
+	cSomaImGui::SetCurrent(pPrev);
 }
 
 float cSomaLuxEntity::GetMaxInteractDistance()
@@ -429,6 +479,72 @@ static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 	return true;
 }
 
+bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut)
+{
+	std::vector<cSomaOBB> vBoxes;
+	EntityBoxes(apEnt, vBoxes);
+	bool bHit = false;
+	afDistOut = afMaxDist;
+	for (const cSomaOBB &b : vBoxes)
+	{
+		cVector3f vRel = avStart - b.mvCenter;
+		float tMin = 0, tMax = afMaxDist;
+		bool bOk = true;
+		for (int i = 0; i < 3 && bOk; ++i)
+		{
+			float o = cMath::Vector3Dot(vRel, b.mvAxis[i]);
+			float d = cMath::Vector3Dot(avDir, b.mvAxis[i]);
+			if (std::fabs(d) < 1e-6f)
+			{
+				if (std::fabs(o) > b.mvHalf.v[i])
+					bOk = false;
+				continue;
+			}
+			float t1 = (-b.mvHalf.v[i] - o) / d, t2 = (b.mvHalf.v[i] - o) / d;
+			if (t1 > t2)
+				std::swap(t1, t2);
+			tMin = std::max(tMin, t1);
+			tMax = std::min(tMax, t2);
+			if (tMin > tMax)
+				bOk = false;
+		}
+		if (bOk && tMin < afDistOut)
+		{
+			afDistOut = tMin;
+			bHit = true;
+		}
+	}
+	return bHit;
+}
+
+class cSomaLosRay : public iPhysicsRayCallback
+{
+public:
+	std::set<iPhysicsBody *> msetIgnore;
+	bool mbBlocked = false;
+	bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
+	{
+		if (apBody->IsCharacter() || apBody->GetCollide() == false || apBody->GetBlocksLight() == false || msetIgnore.count(apBody))
+			return true;
+		mbBlocked = true;
+		return false;
+	}
+};
+
+bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxEntity *apIgnore)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL || (avEnd - avStart).SqrLength() < 0.0001f)
+		return true;
+	cSomaLosRay ray;
+	if (apIgnore)
+		ray.msetIgnore.insert(apIgnore->mvBodies.begin(), apIgnore->mvBodies.end());
+	// Stop short of the target surface
+	cVector3f vEnd = avEnd - (avEnd - avStart) * (0.05f / std::max((avEnd - avStart).Length(), 0.05f));
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, vEnd, false, false, false);
+	return ray.mbBlocked == false;
+}
+
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB)
 {
 	std::vector<cSomaOBB> vA, vB;
@@ -527,6 +643,29 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		if (p->mpMesh && p->mlCurrentAnim >= 0)
 			p->mpMesh->GetAnimationState(p->mlCurrentAnim)->SetPaused(b);
 	});
+	SOMA_METHOD_NEW(e, T, "void CreateAndSetupGui(tString asSubmesh, const cColor&in aColorMul, const cColor&in aClearColor, const cColor&in aOfflineClearColor, const cVector2f&in avScreenSize)",
+					+[](E *p, tString sub, const cColor &, const cColor &, const cColor &, const cVector2f &size) {
+						if (p->mpImGui)
+							return;
+						cGui *pGui = gpSomaBase->mpEngine->GetGui();
+						cGuiSet *pSet = pGui->CreateSet(p->msName + "_gui", NULL);
+						pSet->SetVirtualSize(size, -1000, 1000);
+						p->mpImGui = new cSomaImGui(p->msName, pSet);
+					});
+	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; });
+	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
+	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui && p->mbGuiActive; });
+	SOMA_METHOD_NEW(e, T, "bool SetGuiIsFocused(bool abX, bool abShowMouse=true)", +[](E *p, bool b, bool mouse) {
+		if (p->mpImGui == NULL)
+			return false;
+		if (b)
+			cSomaImGui::SetInputFocus(p->mpImGui, mouse);
+		else if (cSomaImGui::GetInputFocus() == p->mpImGui)
+			cSomaImGui::SetInputFocus(NULL, false);
+		return true;
+	});
+	SOMA_METHOD_NEW(e, T, "bool IsGuiFocused()", +[](E *p) { return p->mpImGui && cSomaImGui::GetInputFocus() == p->mpImGui; });
 	SOMA_METHOD_NEW(e, T, "void SetIsInteractedWith(bool abX)", +[](E *p, bool b) { p->mbInteractedWith = b; });
 	SOMA_METHOD_NEW(e, T, "bool IsInteractedWith()", +[](E *p) { return p->mbInteractedWith; });
 	SOMA_METHOD_NEW(e, T, "void SetMaxInteractDistance(float afX)", +[](E *p, float f) { p->mfMaxInteractDistance = f; });

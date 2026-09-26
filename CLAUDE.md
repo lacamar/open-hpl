@@ -28,6 +28,8 @@ scripts/soma-sweep.py --only-failed --compare old.json
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
 scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
 scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
+scripts/soma-gen-bindings.py               # regenerate SomaScriptGenBindings.cpp (compiler-verified)
+scripts/soma-re-struct-defaults.py         # recover script struct defaults from the official binary
 scripts/soma-script-check.sh               # compile all game .hps against the recovered API (~2 s)
 scripts/soma-re-script-api.py <Soma_NoSteam.bin.x86_64> re.json api.json soma/data/script_api.txt
 ```

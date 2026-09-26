@@ -46,6 +46,7 @@ public:
 	void Load();
 
 	void Update(float afTimeStep);
+	void UpdateGui(float afTimeStep);
 	void PreloadData(cSomaLuxMap *apMap);
 	void EnterMap(cSomaLuxMap *apMap);
 	void LeaveMap(cSomaLuxMap *apMap);
