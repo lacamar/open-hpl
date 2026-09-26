@@ -15,6 +15,8 @@ add_executable(Soma
     ${all_sources}
 )
 target_link_libraries(Soma HPL2)
+set_target_properties(Soma PROPERTIES CXX_STANDARD 20)
+target_compile_definitions(Soma PRIVATE OPENHPL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../..")
 
 IF(APPLE)
     add_definitions(

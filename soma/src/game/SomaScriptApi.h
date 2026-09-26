@@ -30,10 +30,13 @@ class cSomaScriptApi
 public:
 	bool Load(const std::string &asFile);
 
-	// Natives must already be registered; returns the number of failed registrations.
+	// Enums and types only, so natives can be registered on them before the rest.
+	void RegisterTypes(asIScriptEngine *apEngine);
+	// Everything not registered yet (natives first) gets a stub; returns the number of failures.
 	int Register(asIScriptEngine *apEngine);
 
 	const std::vector<std::string> &GetErrors() const { return mvErrors; }
+	const std::vector<std::string> &GetWarnings() const { return mvWarnings; }
 
 	static std::map<std::string, int> &GetStubCallCounts();
 	static bool IsValueTypeNative(const std::string &asName);
@@ -47,8 +50,13 @@ private:
 	std::vector<std::string> mvGlobals;
 	std::vector<std::string> mvGlobalProps;
 	std::vector<std::string> mvErrors;
+	std::vector<std::string> mvWarnings;
+	bool mbTypesRegistered = false;
 };
 
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);
+
+bool SomaScriptIsDummy(void *apObj);
+void SomaScriptStubCall(asIScriptGeneric *apGen);
 
 #endif // SOMA_SCRIPT_API_H

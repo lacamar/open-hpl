@@ -22,6 +22,9 @@
 #include "SomaConfig.h"
 #include "SomaIntroSequence.h"
 #include "SomaApartmentIntroCall.h"
+#include "SomaLux.h"
+#include "SomaLuxGame.h"
+#include "SomaScriptRuntime.h"
 
 using namespace hpl;
 
@@ -286,6 +289,13 @@ private:
 	// that specific map loads, NULL otherwise. Same never-destroyed
 	// no-remove-from-cUpdater constraint as mpIntroSequence above.
 	cSomaApartmentIntroCall *mpApartmentIntroCall;
+
+	// SOMA's own game scripts (disabled with OPENHPL_SOMA_SCRIPTS=0)
+	cSomaScriptRuntime *mpScriptRuntime;
+	cSomaLuxMap *mpLuxMap;
+	cSomaLuxUpdater *mpLuxUpdater;
+	cSomaLuxGame *mpLuxGame;
+	std::set<tString> msetVisitedMaps;
 };
 
 //----------------------------------------------

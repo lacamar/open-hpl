@@ -2,6 +2,7 @@
 #include "SomaScriptApi.h"
 #include "SomaScriptBuilder.h"
 #include "SomaScriptStrings.h"
+#include "SomaScriptNatives.h"
 
 #include "impl/scriptarray.h"
 
@@ -112,7 +113,11 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 		fprintf(stderr, "cannot read script API '%s'\n", asApiFile.c_str());
 		return 1;
 	}
+	api.RegisterTypes(pEngine);
+	RegisterSomaScriptNatives(pEngine);
 	api.Register(pEngine);
+	for (size_t i = 0; i < api.GetWarnings().size(); ++i)
+		fprintf(stderr, "warning: %s\n", api.GetWarnings()[i].c_str());
 	std::vector<std::string> vApiErrors = api.GetErrors();
 	vApiErrors.insert(vApiErrors.end(), msgs.mvErrors.begin(), msgs.mvErrors.end());
 	msgs.mvErrors.clear();

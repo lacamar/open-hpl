@@ -4,6 +4,8 @@
  */
 
 #include "SomaBase.h"
+
+#include <cstring>
 #include "HpslTranspilerSelfTest.h"
 #include "HpslTranspiler.h"
 #include "SomaLoaders.h"
@@ -431,6 +433,10 @@ cSomaBase::cSomaBase()
 
 	mpIntroSequence = NULL;
 	mpApartmentIntroCall = NULL;
+	mpScriptRuntime = NULL;
+	mpLuxMap = NULL;
+	mpLuxUpdater = NULL;
+	mpLuxGame = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -893,6 +899,24 @@ bool cSomaBase::InitEngine()
 	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
 
+	const char *pScripts = getenv("OPENHPL_SOMA_SCRIPTS");
+	if (pScripts == NULL || strcmp(pScripts, "0") != 0)
+	{
+		mpScriptRuntime = hplNew(cSomaScriptRuntime, ());
+		if (mpScriptRuntime->Init(cString::To8Char(cPlatform::GetWorkingDir())))
+		{
+			mpLuxGame = new cSomaLuxGame(mpScriptRuntime);
+			mpLuxGame->Load();
+			mpLuxUpdater = hplNew(cSomaLuxUpdater, ());
+			mpEngine->GetUpdater()->AddGlobalUpdate(mpLuxUpdater);
+		}
+		else
+		{
+			hplDelete(mpScriptRuntime);
+			mpScriptRuntime = NULL;
+		}
+	}
+
 	// FMOD-banked audio -> cache resource dirs; before any map or menu loads
 	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
 	cSomaAmbientSfx::EnsureCached(mpEngine->GetResources());
@@ -1270,6 +1294,14 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// crashed immediately in cSomaPlayer::DestroyCharacterBody().
 	if (mpPlayer) mpPlayer->DestroyCharacterBody();
 	if (mpApartmentIntroCall) mpApartmentIntroCall->Cancel();
+	if (mpLuxMap)
+	{
+		mpLuxMap->OnLeave();
+		if (mpLuxGame)
+			mpLuxGame->LeaveMap(mpLuxMap);
+		hplDelete(mpLuxMap);
+		mpLuxMap = NULL;
+	}
 	if (mpIntroSequence) mpIntroSequence->Cancel();
 
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
@@ -1432,6 +1464,24 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpApartmentIntroCall);
 		}
 		mpApartmentIntroCall->Restart();
+	}
+
+	if (mpScriptRuntime)
+	{
+		tWString sHpm = mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asMapFile);
+		mpLuxMap = hplNew(cSomaLuxMap, (mpTestWorld, asMapFile));
+		cSomaLuxMap::SetCurrent(mpLuxMap);
+		if (sHpm != _W("") && mpLuxMap->CreateScript(mpScriptRuntime, cString::To8Char(cString::SetFileExtW(sHpm, _W("hps")))))
+		{
+			if (mpLuxGame)
+			{
+				mpLuxGame->PreloadData(mpLuxMap);
+				mpLuxGame->EnterMap(mpLuxMap);
+			}
+			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
+			mpLuxMap->OnEnter(bFirstTime);
+		}
+		mpScriptRuntime->LogStubReport(40);
 	}
 
 	return true;

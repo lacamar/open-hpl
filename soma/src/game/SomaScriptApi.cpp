@@ -1,4 +1,5 @@
 #include "SomaScriptApi.h"
+#include "SomaScriptNatives.h"
 
 #include <cstdio>
 #include <cstring>
@@ -157,6 +158,38 @@ static void ConstructDefaultAt(asIScriptEngine *apEngine, int alTypeId, void *ap
 		memset(apMem, 0, pType->GetSize());
 }
 
+static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, char *apObj);
+
+// Engine objects not implemented yet: stubs hand out one zeroed "null object" per type instead of
+// null, so scripts keep running; natives called on one fall back to the stub (SomaBind).
+static std::set<void *> gsetDummies;
+
+bool SomaScriptIsDummy(void *apObj)
+{
+	return apObj && gsetDummies.count(apObj) != 0;
+}
+
+static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc, int alTypeId)
+{
+	asITypeInfo *pType = apEngine->GetTypeInfoById(alTypeId & ~asTYPEID_OBJHANDLE);
+	if (pType == NULL || (pType->GetFlags() & asOBJ_SCRIPT_OBJECT) || (pType->GetFlags() & asOBJ_NOCOUNT) == 0)
+		return NULL;
+	// Lookups: null means "not found"
+	std::string sName = apFunc->GetName();
+	if (sName.find("By") != std::string::npos || sName.compare(0, 4, "Find") == 0 || sName.find("Latest") != std::string::npos ||
+		sName.find("FromName") != std::string::npos || sName.find("FromID") != std::string::npos)
+		return NULL;
+	static std::map<int, void *> mapDummies;
+	void *&pDummy = mapDummies[pType->GetTypeId()];
+	if (pDummy == NULL)
+	{
+		pDummy = calloc(1, 4096);
+		ConstructMembers(apEngine, pType, (char *)pDummy);
+		gsetDummies.insert(pDummy);
+	}
+	return pDummy;
+}
+
 static void CountStub(asIScriptGeneric *apGen)
 {
 	asIScriptFunction *pFunc = apGen->GetFunction();
@@ -179,10 +212,15 @@ static void Stub(asIScriptGeneric *apGen)
 	}
 	if (lTypeId & asTYPEID_OBJHANDLE)
 	{
-		apGen->SetReturnAddress(NULL);
+		apGen->SetReturnAddress(DummyForReturn(apGen->GetEngine(), pFunc, lTypeId));
 		return;
 	}
 	ConstructDefaultAt(apGen->GetEngine(), lTypeId, apGen->GetAddressOfReturnLocation());
+}
+
+void SomaScriptStubCall(asIScriptGeneric *apGen)
+{
+	Stub(apGen);
 }
 
 static void StubConstruct(asIScriptGeneric *apGen)
@@ -328,8 +366,11 @@ void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const 
 		Fail(aType.msName + "::" + sSet, r);
 }
 
-int cSomaScriptApi::Register(asIScriptEngine *apEngine)
+void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 {
+	if (mbTypesRegistered)
+		return;
+	mbTypesRegistered = true;
 	int r;
 	for (size_t i = 0; i < mvEnums.size(); ++i)
 	{
@@ -360,6 +401,12 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 		if (r < 0 && r != asALREADY_REGISTERED)
 			Fail("type " + t.msName, r);
 	}
+}
+
+int cSomaScriptApi::Register(asIScriptEngine *apEngine)
+{
+	RegisterTypes(apEngine);
+	int r;
 
 	for (size_t i = 0; i < mvTypes.size(); ++i)
 	{
@@ -379,7 +426,7 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 			continue;
 		}
 
-		for (size_t j = 0; j < t.mvBehaviours.size() && IsValueTypeNative(t.msName) == false; ++j)
+		for (size_t j = 0; j < t.mvBehaviours.size() && IsValueTypeNative(t.msName) == false && SomaScriptHasNativeBehaviours(pName) == false; ++j)
 		{
 			const std::string &sKind = t.mvBehaviours[j].first;
 			const std::string &sParams = t.mvBehaviours[j].second;
@@ -448,10 +495,18 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 		}
 	}
 
+	std::set<std::string> setNativeNames;
+	for (asUINT i = 0; i < apEngine->GetGlobalFunctionCount(); ++i)
+		setNativeNames.insert(apEngine->GetGlobalFunctionByIndex(i)->GetName());
 	for (size_t i = 0; i < mvGlobals.size(); ++i)
 	{
 		if (apEngine->GetGlobalFunctionByDecl(mvGlobals[i].c_str()))
 			continue;
+		size_t lParen = mvGlobals[i].find('(');
+		size_t lNameStart = mvGlobals[i].find_last_of(" &@", lParen) + 1;
+		std::string sName = mvGlobals[i].substr(lNameStart, lParen - lNameStart);
+		if (setNativeNames.count(sName))
+			mvWarnings.push_back("native overload of '" + sName + "' does not match API declaration: " + mvGlobals[i]);
 		r = apEngine->RegisterGlobalFunction(mvGlobals[i].c_str(), asFUNCTION(Stub), asCALL_GENERIC);
 		if (r < 0 && r != asALREADY_REGISTERED)
 			Fail(mvGlobals[i], r);
@@ -459,6 +514,9 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 
 	for (size_t i = 0; i < mvGlobalProps.size(); ++i)
 	{
+		std::string sName = mvGlobalProps[i].substr(mvGlobalProps[i].find_last_of(' ') + 1);
+		if (apEngine->GetGlobalPropertyIndexByName(sName.c_str()) >= 0)
+			continue;
 		void *pMem = calloc(1, 256);
 		r = apEngine->RegisterGlobalProperty(mvGlobalProps[i].c_str(), pMem);
 		if (r < 0 && r != asALREADY_REGISTERED)
