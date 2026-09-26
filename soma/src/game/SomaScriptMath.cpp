@@ -50,6 +50,12 @@ bool SomaScriptHasNativeBehaviours(const char *apType)
 
 template <class V> static V &Elem(V &v, asQWORD i) { return v; }
 
+template <class V> static V SomaCatmullRom(const V &p0, const V &p1, const V &p2, const V &p3, float t)
+{
+	float t2 = t * t, t3 = t2 * t;
+	return ((p1 * 2) + (p2 - p0) * t + (p0 * 2 - p1 * 5 + p2 * 4 - p3) * t2 + (p1 * 3 - p0 - p2 * 3 + p3) * t3) * 0.5f;
+}
+
 template <class V, class S> static S GetElem(const V &v, asQWORD i) { return ((const S *)&v)[i]; }
 template <class V, class S> static void SetElem(const V &v, asQWORD i, S f) { ((S *)&v)[i] = f; }
 
@@ -259,6 +265,19 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector2f cMath_Vector2ToDeg(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2ToDeg(v); });
 	SOMA_FUNC(e, "float cMath_Easing(eEasing aType, float afT, float afMin = 0, float afMax = 1)",
 			  +[](int t, float x, float a, float b) { return a + (b - a) * SomaEasing(t, cMath::Clamp(x, 0.0f, 1.0f)); });
+	SOMA_FUNC(e, "float cMath_Vector3MaxElement(const cVector3f &in avVec)", +[](const cVector3f &v) { return std::max(v.x, std::max(v.y, v.z)); });
+	SOMA_FUNC(e, "cQuaternion cMath_QuaternionEuler(const cVector3f&in avEuler, eEulerRotationOrder aOrder)", +[](const cVector3f &v, int o) {
+		cQuaternion q;
+		q.FromRotationMatrix(cMath::MatrixRotate(v, (eEulerRotationOrder)o));
+		return q;
+	});
+	SOMA_FUNC(e, "cVector3f cMath_Vector3CatmullRom(const cVector3f&in avP0, const cVector3f&in avP1, const cVector3f&in avP2, const cVector3f&in avP3, float afFract)",
+			  +[](const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { return SomaCatmullRom(a, b, c, d, t); });
+	SOMA_FUNC(e, "cVector2f cMath_Vector2CatmullRom(const cVector2f &in avP0, const cVector2f &in avP1, const cVector2f &in avP2, const cVector2f &in avP3, float afFract)",
+			  +[](const cVector2f &a, const cVector2f &b, const cVector2f &c, const cVector2f &d, float t) { return SomaCatmullRom(a, b, c, d, t); });
+	SOMA_FUNC(e, "void Math_CatmullRom(cVector3f &out avResult, const cVector3f &in avP0, const cVector3f &in avP1, const cVector3f &in avP2, const cVector3f &in avP3, float afFract)",
+			  +[](cVector3f &r, const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { r = SomaCatmullRom(a, b, c, d, t); });
+	SOMA_METHOD(e, "cQuaternion", "void FromAngleAxis(float afAngle, const cVector3f &in)", +[](cQuaternion &q, float a, const cVector3f &v) { q.FromAngleAxis(a, v); });
 	SOMA_FUNC(e, "float cMath_Wrap(float afX, float afMin, float afMax)", +[](float x, float a, float b) { return cMath::Wrap(x, a, b); });
 	SOMA_FUNC(e, "float cMath_TurnAngle(float afAngle, float afFinalAngle, float afSpeed, float afMaxAngle)",
 			  +[](float a, float f, float s, float m) { return cMath::TurnAngle(a, f, s, m); });

@@ -58,6 +58,12 @@ void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);
 
 bool SomaScriptIsDummy(void *apObj);
 
+// Native objects smaller than the official layout keep the recovered offset members in a side block
+// that a pointer member (at alPointerOffset) addresses
+void SomaSetIndirectProps(const std::string &asType, int alPointerOffset);
+char *SomaNewPropBlock(const std::string &asType);
+void SomaFreePropBlock(const std::string &asType, char *apBlock);
+
 // Registered from the recovered API without an implementation
 const asPWORD kSomaStubUserData = 0x50b0;
 bool SomaScriptIsStub(asIScriptFunction *apFunc);

@@ -3,12 +3,14 @@
 #include "SomaImGui.h"
 #include "SomaScriptNatives.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <new>
 #include <set>
 #include <sstream>
+#include <unordered_map>
 
 //---------------------------------------
 
@@ -301,6 +303,45 @@ void *SomaNewScriptStruct(const char *apType)
 	return pObj;
 }
 
+// Refcounts of script-created structs; embedded or native-owned structs are absent
+static std::unordered_map<void *, int> gmapStructRefs;
+
+void *SomaNewOwnedScriptStruct(const char *apType)
+{
+	void *pObj = SomaNewScriptStruct(apType);
+	gmapStructRefs[pObj] = 1;
+	return pObj;
+}
+
+static void StructAddRef(asIScriptGeneric *apGen)
+{
+	auto it = gmapStructRefs.find(apGen->GetObject());
+	if (it != gmapStructRefs.end())
+		++it->second;
+}
+
+static void StructRelease(asIScriptGeneric *apGen)
+{
+	auto it = gmapStructRefs.find(apGen->GetObject());
+	if (it != gmapStructRefs.end() && --it->second == 0)
+	{
+		free(it->first);
+		gmapStructRefs.erase(it);
+	}
+}
+
+static bool IsScriptStruct(const cSomaScriptApiType &aType)
+{
+	// Backed by HPL2 objects
+	static const std::set<std::string> setEngine = {"cBoundingVolume", "cCollideData", "cFrustum", "cAINodeIterator", "cBinaryBuffer"};
+	if (aType.msKind != "ref" || setEngine.count(aType.msName))
+		return false;
+	for (const auto &b : aType.mvBehaviours)
+		if (b.first == "factory" || b.first == "FactoryDefault")
+			return true;
+	return false;
+}
+
 static void StubFactory(asIScriptGeneric *apGen)
 {
 	asITypeInfo *pType = apGen->GetEngine()->GetTypeInfoById(apGen->GetFunction()->GetReturnTypeId() & ~asTYPEID_OBJHANDLE);
@@ -312,6 +353,8 @@ static void StubFactory(asIScriptGeneric *apGen)
 		ApplyStructDefaults(pDefaults, pObj);
 	else if (pType)
 		ConstructMembers(apGen->GetEngine(), pType, pObj);
+	if (pType && (pType->GetFlags() & asOBJ_NOCOUNT) == 0)
+		gmapStructRefs[pObj] = 1;
 	*(void **)apGen->GetAddressOfReturnLocation() = pObj;
 }
 
@@ -383,6 +426,37 @@ void cSomaScriptApi::Fail(const std::string &asWhat, int alCode)
 	char sBuf[32];
 	snprintf(sBuf, sizeof(sBuf), " (%d)", alCode);
 	mvErrors.push_back(asWhat + sBuf);
+}
+
+namespace
+{
+	struct cIndirectProps
+	{
+		int mlPointerOffset = -1;
+		int mlSize = 0;
+		std::vector<int> mvStringOffsets;
+	};
+	std::map<std::string, cIndirectProps> gmapIndirect;
+}
+
+void SomaSetIndirectProps(const std::string &asType, int alPointerOffset) { gmapIndirect[asType].mlPointerOffset = alPointerOffset; }
+
+char *SomaNewPropBlock(const std::string &asType)
+{
+	const cIndirectProps &props = gmapIndirect[asType];
+	char *pBlock = (char *)calloc(1, props.mlSize + 64);
+	for (int lOff : props.mvStringOffsets)
+		new (pBlock + lOff) std::string();
+	return pBlock;
+}
+
+void SomaFreePropBlock(const std::string &asType, char *apBlock)
+{
+	if (apBlock == NULL)
+		return;
+	for (int lOff : gmapIndirect[asType].mvStringOffsets)
+		((std::string *)(apBlock + lOff))->~basic_string();
+	free(apBlock);
 }
 
 static bool IsPrimitiveTypeName(const std::string &asType, const std::set<std::string> &aEnums)
@@ -457,6 +531,15 @@ void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 			r = apEngine->RegisterObjectType(t.msName.c_str(), t.mlSize, asOBJ_VALUE | asOBJ_POD | asOBJ_APP_PRIMITIVE);
 		else if (t.msKind == "template")
 			continue;
+		else if (IsScriptStruct(t))
+		{
+			r = apEngine->RegisterObjectType(t.msName.c_str(), 0, asOBJ_REF);
+			if (r >= 0)
+			{
+				apEngine->RegisterObjectBehaviour(t.msName.c_str(), asBEHAVE_ADDREF, "void f()", asFUNCTION(StructAddRef), asCALL_GENERIC);
+				apEngine->RegisterObjectBehaviour(t.msName.c_str(), asBEHAVE_RELEASE, "void f()", asFUNCTION(StructRelease), asCALL_GENERIC);
+			}
+		}
 		else
 			r = apEngine->RegisterObjectType(t.msName.c_str(), 0, asOBJ_REF | asOBJ_NOCOUNT);
 		if (r < 0 && r != asALREADY_REGISTERED)
@@ -526,7 +609,18 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 		{
 			if (HasProperty(pTypeInfo, t.mvProps[j].first))
 				continue;
-			if (t.mvProps[j].second >= 0)
+			auto itIndirect = gmapIndirect.find(t.msName);
+			if (t.mvProps[j].second >= 0 && itIndirect != gmapIndirect.end())
+			{
+				cIndirectProps &props = itIndirect->second;
+				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), t.mvProps[j].second, props.mlPointerOffset, true);
+				props.mlSize = std::max(props.mlSize, t.mvProps[j].second + 32);
+				if (t.mvProps[j].first.compare(0, 8, "tString ") == 0)
+					props.mvStringOffsets.push_back(t.mvProps[j].second);
+				if (r < 0 && r != asALREADY_REGISTERED)
+					Fail(t.msName + " prop " + t.mvProps[j].first, r);
+			}
+			else if (t.mvProps[j].second >= 0)
 			{
 				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), t.mvProps[j].second);
 				if (r < 0 && r != asALREADY_REGISTERED)

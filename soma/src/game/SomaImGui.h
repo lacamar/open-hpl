@@ -129,7 +129,7 @@ public:
 
 	// Widgets
 	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize);
-	void Advance(const cVector3f &avPos, const cVector2f &avSize);
+	void Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated = false);
 	bool MouseOver(const cVector3f &avPos, const cVector2f &avSize);
 	void DrawWidgetBase(const void *apData, const cVector3f &avPos, const cVector2f &avSize, bool abInFocus, bool abTriggered, int alInFocusGfx,
 						int alTriggeredGfx);
@@ -195,6 +195,7 @@ private:
 
 // Struct helpers shared with the natives of other script types
 void *SomaNewScriptStruct(const char *apType);
+void *SomaNewOwnedScriptStruct(const char *apType);
 const tString *SomaIntern(const tString &asStr);
 
 #endif // SOMA_IMGUI_H

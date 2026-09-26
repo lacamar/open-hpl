@@ -114,6 +114,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvScale = mvScale;
 		pEnt->mpMesh = mpEntity;
 		pEnt->mvBodies = mvBodies;
+		pEnt->mvJoints = mvJoints;
 		pEnt->mvLights = mvLights;
 		pEnt->mvParticleSystems = mvParticleSystems;
 		pEnt->mvBillboards = mvBillboards;

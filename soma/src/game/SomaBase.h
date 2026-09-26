@@ -140,6 +140,7 @@ public:
 	// "PlayerStartArea_1". Used by the main menu's "New Game" action instead
 	// of a hardcoded map file.
 	bool StartNewGame(tString &asErrorOut);
+	std::set<tString> &GetVisitedMaps() { return msetVisitedMaps; }
 
 	cEngine *mpEngine;
 

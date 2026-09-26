@@ -108,6 +108,7 @@ class cSomaBase;
 enum eSomaMainMenuAction
 {
 	eSomaMainMenuAction_None,
+	eSomaMainMenuAction_Continue,
 	eSomaMainMenuAction_NewGame,
 	eSomaMainMenuAction_Options,
 	eSomaMainMenuAction_Exit,

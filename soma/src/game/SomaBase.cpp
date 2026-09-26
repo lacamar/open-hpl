@@ -15,6 +15,9 @@
 #include "SomaSplash.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
+#include "SomaScriptApi.h"
+#include "SomaSave.h"
+#include <algorithm>
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
 #include "SomaScriptRuntime.h"
@@ -139,6 +142,32 @@ static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRe
 	aResp.Set("hud_virtual_w", pHud->GetSet()->GetVirtualSize().x);
 	aResp.Set("hud_virtual_h", pHud->GetSet()->GetVirtualSize().y);
 	aResp.Set("focus", cSomaImGui::GetInputFocus() ? cSomaImGui::GetInputFocus()->GetName() : tString(""));
+}
+
+static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	std::map<tString, int> mapCount;
+	tSoundEntryList *pList = gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetEntryList();
+	for (cSoundEntry *pEntry : *pList)
+		mapCount[pEntry->GetName() + (pEntry->GetChannel()->GetLooping() ? " (loop)" : "")]++;
+	tString sEntries;
+	for (auto &it : mapCount)
+		sEntries += cString::ToString(it.second) + " " + it.first + "\n";
+	aResp.Set("count", (int)pList->size());
+	aResp.Set("entries", sEntries);
+}
+
+static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	std::vector<std::pair<int, std::string>> v;
+	for (auto &it : cSomaScriptApi::GetStubCallCounts())
+		v.push_back(std::make_pair(it.second, it.first));
+	std::sort(v.rbegin(), v.rend());
+	tString sOut;
+	for (int i = 0; i < (int)v.size() && i < aReq.GetInt("n", 60); ++i)
+		sOut += cString::ToString(v[i].first) + " " + v[i].second + "\n";
+	aResp.Set("count", (int)v.size());
+	aResp.Set("stubs", sOut);
 }
 
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -699,6 +728,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
+		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
+		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
@@ -1575,8 +1606,10 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 				if (mbUseScriptPlayer && mbUseRealPlayer)
 					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw);
 			}
+			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
 			mpLuxMap->OnEnter(bFirstTime);
+			cSomaSaveHandler::AutoSave(false, false);
 		}
 		mpScriptRuntime->LogStubReport(40);
 	}

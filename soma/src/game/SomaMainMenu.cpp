@@ -5,6 +5,7 @@
  */
 
 #include "SomaMainMenu.h"
+#include "SomaSave.h"
 #include "SomaBase.h"
 #include "SomaConfig.h"
 #include "SomaMenuSfx.h"
@@ -445,16 +446,13 @@ void cSomaMainMenu::BuildMainMenuItems()
 {
 	////////////////////////////////////
 	// Real menu item list/order/captions (MainMenu.Continue/NewGame/
-	// LoadGame/Options/Exit in config/base_english.lang) and real
-	// enable rule: with no save system in this scaffold, mbCanContinue is
-	// always false, same as a real fresh install - Continue/LoadGame show
-	// as disabled labels rather than buttons (GuiMainMenuSelection()).
+	// LoadGame/Options/Exit in config/base_english.lang); Continue needs a save
 	mItems.clear();
 	mItems.resize(5);
 
 	mItems[0].msLabel = _W("CONTINUE");
-	mItems[0].mbEnabled = false;
-	mItems[0].mAction = eSomaMainMenuAction_None;
+	mItems[0].mbEnabled = cSomaSaveHandler::GetLatestSave() != _W("");
+	mItems[0].mAction = eSomaMainMenuAction_Continue;
 
 	mItems[1].msLabel = _W("NEW GAME");
 	mItems[1].mbEnabled = true;
@@ -982,6 +980,10 @@ void cSomaMainMenu::RunPendingAction()
 
 	switch (action)
 	{
+	case eSomaMainMenuAction_Continue:
+		if (cSomaSaveHandler::Load(cSomaSaveHandler::GetLatestSave(), true))
+			SetVisible(false);
+		break;
 	case eSomaMainMenuAction_NewGame:
 		// Real GuiMainMenuSelection() case 1 (NewGame): opens the
 		// difficulty-select screen (GuiGameModeSelection()) whenever
@@ -1539,15 +1541,7 @@ void cSomaMainMenu::UpdateExitConfirmDialog(bool abMouseDown, bool abPressedEdge
 	if (mlExitConfirmHovered == 0) // Yes
 	{
 		if (mbExitConfirmSaveAndExit)
-		{
-			// Honest scope limitation (see SomaMainMenu.h/PORTING_NOTES.md):
-			// HPL2/core has a generic iSaveObject/iSaveData serialization
-			// framework and Dark Descent has a concrete cLuxSaveHandler built
-			// on it, but nothing SOMA-specific exists in soma/src/game yet -
-			// so SAVE AND EXIT performs the exact same close action as EXIT,
-			// without actually saving anything.
-			Log("SOMA main menu: SAVE AND EXIT confirmed - no SOMA save system exists in this engine yet, behaving identically to EXIT (nothing saved)\n");
-		}
+			cSomaSaveHandler::AutoSave(false, true);
 		DoQuitToMainMenu();
 	}
 	else // No

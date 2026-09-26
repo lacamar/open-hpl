@@ -4,7 +4,9 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. Intermittent heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
+1. Re-check first: a likely cause is fixed (critter scripts wrote `cLuxCritter` members at the
+   official offsets past the end of `cSomaLuxEntity`; they now live in a side block). Intermittent
+   heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
    reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
    abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
    lock, or an abort in `~cSubMeshEntity` at exit. Three full ASan runs of the same map
@@ -133,6 +135,20 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,
 four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`. Details in PORTING_NOTES.md.
+
+## Script layer (story playthrough)
+
+Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves.
+
+- Saves are checkpoints: map + entry start position + global vars. Loading replays the map
+  from its entry point. Next: serialize map/module script objects and entity state so a
+  mid-map save resumes in place.
+- Terminals on in-world screens (prop GUIs are 2D sets, not drawn on the mesh yet).
+- `stub_report`: post effects (`cLux_GetViewport` has no composite), eye tracker,
+  `cCamera::SetExtended{Yaw,Pitch}`, `iPhysicsWorld::GetBodiesInAABB`, preload hints.
+- Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
+- Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
+- Physics impact sound burst right after map load.
 
 ## History
 

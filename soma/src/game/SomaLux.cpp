@@ -1,4 +1,5 @@
 #include "SomaLux.h"
+#include "SomaScriptApi.h"
 #include <type_traits>
 #include <cstring>
 #include <functional>
@@ -77,6 +78,8 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	static const char *vGroups[] = {"PropTypes", "AreaTypes", "LiquidAreaTypes", "LiquidAreaTypes", "CritterTypes", "AgentTypes"};
 	if (apEnt->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
 		return false;
+	if (apEnt->meType == eSomaLuxEntityType_Critter && apEnt->mpCritterProps == NULL)
+		apEnt->mpCritterProps = SomaNewPropBlock("cLuxCritter");
 	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->msClassName) : NULL;
 	if (pScript == NULL || apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
@@ -562,6 +565,12 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 
 static tString gsPendingMap, gsPendingStart;
 
+void SomaRequestMapChange(const tString &asMap, const tString &asStart)
+{
+	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
+	gsPendingStart = asStart;
+}
+
 bool SomaTakePendingMapChange(tString &asMap, tString &asStart)
 {
 	if (gsPendingMap.empty())
@@ -577,8 +586,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	typedef const tString &S;
 	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound)",
 			  +[](S map, S start, S, S, S) {
-				  gsPendingMap = cString::SetFileExt(cString::GetFileName(map), "hpm");
-				  gsPendingStart = start;
+				  SomaRequestMapChange(map, start);
 				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
 			  });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
@@ -596,6 +604,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 
 	const char *M = "cLuxMap";
 	SOMA_METHOD(e, M, "cWorld@ GetWorld()", +[](cSomaLuxMap &m) { return m.GetWorld(); });
+	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return &m == cSomaLuxMap::GetCurrent(); });
 	SOMA_METHOD(e, M, "iPhysicsWorld@ GetPhysicsWorld()", +[](cSomaLuxMap &m) { return m.GetWorld()->GetPhysicsWorld(); });
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int t, const tString &c) {

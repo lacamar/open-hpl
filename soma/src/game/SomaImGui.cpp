@@ -336,11 +336,11 @@ void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &av
 	}
 }
 
-void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize)
+void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated)
 {
 	mPrev.mvPos = avPos;
 	mPrev.mvSize = avSize;
-	mPrev.mbUpdated = true;
+	mPrev.mbUpdated = abUpdated;
 	if (mvLayouts.empty())
 		return;
 	cLayout &l = mvLayouts.back();
@@ -427,7 +427,7 @@ bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const v
 	mPrev.mbMouseOver = bOver;
 	mPrev.mbPressed = bDown;
 	mPrev.mbBecamePressed = bClicked;
-	Advance(avPos, avSize);
+	Advance(avPos, avSize, bResult);
 	return bResult;
 }
 
@@ -502,6 +502,7 @@ float cSomaImGui::DoSlider(const tString &asName, float afDefault, float afMin, 
 		st.mlInt = 1;
 	if (ActionIsDown(1) == false)
 		st.mlInt = 0;
+	float fOld = st.mfFloat;
 	if (st.mlInt && avSize.x > 0 && avSize.y > 0)
 	{
 		float t = abVertical ? 1 - (mvMousePos.y - avPos.y) / avSize.y : (mvMousePos.x - avPos.x) / avSize.x;
@@ -519,7 +520,7 @@ float cSomaImGui::DoSlider(const tString &asName, float afDefault, float afMin, 
 		DrawGfx((char *)apData + kSliderGfxButton, vButtonPos, vButton, cColor(1, 1));
 	mPrev.mbMouseOver = bOver;
 	mPrev.mbInFocus = bOver;
-	Advance(avPos, avSize);
+	Advance(avPos, avSize, st.mfFloat != fOld);
 	return st.mfFloat;
 }
 
@@ -533,7 +534,8 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 		st.mbSetInt = true;
 	}
 	bool bOver = MouseOver(avPos, avSize);
-	if (bOver && ActionTriggered(1))
+	bool bToggled = bOver && ActionTriggered(1);
+	if (bToggled)
 		st.mlInt = !st.mlInt;
 	DrawWidgetBase(apData, avPos, avSize, bOver, false, -1, -1);
 	cVector2f vBox = F<cVector2f>(apData, kCheckBoxSize);
@@ -543,7 +545,7 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 	DrawText(asText, (char *)apData + kWFont, F<cColor>(apData, kWColorText), eFontAlign_Left, avPos + cVector3f(vBox.x + 4, 0, 0), avSize - cVector2f(vBox.x + 4, 0), 1);
 	mPrev.mbMouseOver = bOver;
 	mPrev.mbInFocus = bOver;
-	Advance(avPos, avSize);
+	Advance(avPos, avSize, bToggled);
 	return st.mlInt != 0;
 }
 
@@ -557,6 +559,7 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 		st.mbSetInt = true;
 	}
 	int lNum = (int)mvItems.size();
+	int lOld = st.mlInt;
 	cVector2f vArrow = F<cVector2f>(apData, kMultiArrowSize);
 	bool bOver = MouseOver(avPos, avSize);
 	if (bOver && ActionTriggered(1) && lNum > 0)
@@ -574,7 +577,7 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 	mvItems.clear();
 	mPrev.mbMouseOver = bOver;
 	mPrev.mbInFocus = bOver;
-	Advance(avPos, avSize);
+	Advance(avPos, avSize, st.mlInt != lOld);
 	return st.mlInt;
 }
 
@@ -636,7 +639,7 @@ static const void *P(D d) { return &d; }
 
 static void GfxFactory(asIScriptGeneric *g)
 {
-	void *p = SomaNewScriptStruct("cImGuiGfx");
+	void *p = SomaNewOwnedScriptStruct("cImGuiGfx");
 	int n = g->GetArgCount();
 	for (int i = 0; i < n; ++i)
 	{
@@ -656,7 +659,7 @@ static void GfxFactory(asIScriptGeneric *g)
 
 static void FontFactory(asIScriptGeneric *g)
 {
-	void *p = SomaNewScriptStruct("cImGuiFont");
+	void *p = SomaNewOwnedScriptStruct("cImGuiFont");
 	if (g->GetArgCount() == 2)
 	{
 		F<const tString *>(p, kFontFile) = SomaIntern(*(tString *)g->GetArgObject(0));
@@ -713,6 +716,9 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cImGuiGfx", "const tString& GetFile()const", +[](S_ &g) -> const tString & { return StrAt(&g, kGfxFile); });
 	SOMA_METHOD(e, "cImGuiGfx", "void CopyFrom(const cImGuiGfx &in aGfx)", +[](S_ &g, D o) { memcpy((char *)&g + 16, (char *)&o + 16, kGfxSize - 16); });
 	SOMA_METHOD(e, "cImGuiGfx", "uint64 GetId()", +[](S_ &g) { return (asQWORD)SomaHash64(StrAt(&g, kGfxFile)); });
+	SOMA_METHOD(e, "cImGuiFont", "void SetFile(const tString&in asFile)", +[](S_ &g, Str s) { F<const tString *>(&g, kFontFile) = SomaIntern(s); });
+	SOMA_METHOD(e, "cImGuiFont", "const tString& GetFile()const", +[](S_ &g) -> const tString & { return StrAt(&g, kFontFile); });
+	SOMA_METHOD(e, "cImGuiFont", "uint64 GetId()", +[](S_ &g) { return (asQWORD)SomaHash64(StrAt(&g, kFontFile)); });
 	SOMA_METHOD(e, "cImGuiFrameGfx", "void CopyFrom(const cImGuiFrameGfx &in aFrame)", +[](S_ &g, D o) { memcpy((char *)&g + 16, (char *)&o + 16, 1592 - 16); });
 
 	// Contexts
@@ -990,12 +996,17 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 					std::vector<tWString> vItems = p->mvItems;
 					p->mvItems.clear();
 					cols = std::max(cols, 1u);
+					bool bUpdated = false;
 					for (size_t i = 0; i < vItems.size(); ++i)
 					{
 						cVector3f vPos = pos + cVector3f((size.x + spacing.x) * (float)(i % cols), (size.y + spacing.y) * (float)(i / cols), 0);
 						if (p->DoButton(n + "_" + cString::ToString((int)i), vItems[i], P(d), vPos, size, 0))
+						{
+							bUpdated = st.mlInt != (int)i;
 							st.mlInt = (int)i;
+						}
 					}
+					p->mPrev.mbUpdated = bUpdated;
 					return st.mlInt;
 				});
 	SOMA_METHOD(e, T, "void DoFrame(const cImGuiFrameData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1)", +[](I *p, D d, V3 pos, V2 size) { p->DoFrame(P(d), pos, size); });

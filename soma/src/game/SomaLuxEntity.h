@@ -36,6 +36,8 @@ enum eSomaLuxEntityType
 class cSomaLuxEntity : public cSomaLuxScriptable
 {
 public:
+	~cSomaLuxEntity();
+
 	tString msName;
 	tString msClassName; // EntityType / AreaType
 	tString msFileName;
@@ -51,6 +53,9 @@ public:
 
 	cMeshEntity *mpMesh = NULL;
 	std::vector<iPhysicsBody *> mvBodies;
+	std::vector<iPhysicsJoint *> mvJoints;
+	// cLuxCritter members at the official offsets, see SomaNewPropBlock
+	char *mpCritterProps = NULL;
 	std::vector<iLight *> mvLights;
 	std::vector<cParticleSystem *> mvParticleSystems;
 	std::vector<cBillboard *> mvBillboards;

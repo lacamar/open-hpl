@@ -193,6 +193,7 @@ namespace hpl {
 		bool AddLanguageFile(const tString &asFilePath, bool abAddResourceDirs, const tWString &asAltPath = _W(""));
 		void ClearTranslations();
 		const tWString& Translate(const tString& asCat, const tString& asName);
+		cLanguageFile* GetLanguageFile(){ return mpLanguageFile; }
 
 		void AddEntityLoader(iEntityLoader* apLoader, bool abSetAsDefault=false);
 		iEntityLoader* GetEntityLoader(const tString& asName);

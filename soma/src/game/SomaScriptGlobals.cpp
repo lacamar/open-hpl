@@ -2,10 +2,14 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaLux.h"
+#include "SomaSave.h"
+#include "SomaBase.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
 
 #include <map>
+#include <limits>
+#include <sstream>
 
 struct cSomaVariant
 {
@@ -28,6 +32,77 @@ static std::map<int, cSomaVariant> gmapArgs;
 static cSomaVariant gReturn;
 
 std::string gsSomaExecOutput;
+
+tString SomaSerializeGlobalVars()
+{
+	std::ostringstream out;
+	out.precision(9);
+	for (auto &it : gmapVars)
+	{
+		const cSomaVariant &v = it.second;
+		out << "var\t" << it.first.size() << ":" << it.first << v.s.size() << ":" << v.s << " " << v.b << " " << v.i << " " << v.f << " "
+			<< v.v2.x << " " << v.v2.y << " " << v.v3.x << " " << v.v3.y << " " << v.v3.z << " " << v.v4[0] << " " << v.v4[1] << " "
+			<< v.v4[2] << " " << v.v4[3] << " " << v.c.r << " " << v.c.g << " " << v.c.b << " " << v.c.a << " " << (int)v.id.mA << " "
+			<< v.id.mB << " " << v.id.mC;
+		for (int i = 0; i < 16; ++i)
+			out << " " << v.m.v[i];
+		out << "\n";
+	}
+	return out.str();
+}
+
+void SomaDeserializeGlobalVars(const tString &asData)
+{
+	gmapVars.clear();
+	std::istringstream in(asData);
+	std::string sKey;
+	while (in >> sKey)
+	{
+		if (sKey != "var")
+		{
+			in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			continue;
+		}
+		auto ReadStr = [&in]() {
+			size_t lLen = 0;
+			in >> lLen;
+			in.get();
+			std::string s(lLen, '\0');
+			in.read(&s[0], lLen);
+			return s;
+		};
+		in.get();
+		tString sName = ReadStr();
+		cSomaVariant &v = gmapVars[sName];
+		v.s = ReadStr();
+		int lA = 0;
+		in >> v.b >> v.i >> v.f >> v.v2.x >> v.v2.y >> v.v3.x >> v.v3.y >> v.v3.z >> v.v4[0] >> v.v4[1] >> v.v4[2] >> v.v4[3] >> v.c.r >> v.c.g >> v.c.b >> v.c.a >>
+			lA >> v.id.mB >> v.id.mC;
+		v.id.mA = (uint8_t)lA;
+		for (int i = 0; i < 16; ++i)
+			in >> v.m.v[i];
+	}
+}
+
+// "$Input{Action}" -> the key bound to the action
+tWString SomaParseString(const tWString &asText)
+{
+	tWString sOut;
+	size_t lPos = 0;
+	while (true)
+	{
+		size_t lStart = asText.find(_W("$Input{"), lPos);
+		size_t lEnd = lStart == tWString::npos ? tWString::npos : asText.find(_W('}'), lStart);
+		if (lEnd == tWString::npos)
+			break;
+		sOut += asText.substr(lPos, lStart - lPos);
+		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(cString::To8Char(asText.substr(lStart + 7, lEnd - lStart - 7)));
+		tString sKey = pAction && pAction->GetSubActionNum() > 0 ? pAction->GetSubAction(0)->GetInputName() : "?";
+		sOut += _W("[") + cString::To16Char(sKey) + _W("]");
+		lPos = lEnd + 1;
+	}
+	return sOut + asText.substr(lPos);
+}
 
 static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
 {
@@ -101,6 +176,21 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 
 	typedef const tString &S;
 	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { static tString s("english"); return s; });
+	SOMA_FUNC(e, "const tWString& cLux_Translate(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
+	SOMA_FUNC(e, "bool cLux_HasTranslation(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) {
+				  cLanguageFile *pLang = gpSomaBase->mpEngine->GetResources()->GetLanguageFile();
+				  if (pLang == NULL)
+					  return false;
+				  auto it = pLang->GetCategoryMap()->find(c);
+				  return it != pLang->GetCategoryMap()->end() && it->second->m_mapEntries.count(n) > 0;
+			  });
+	SOMA_FUNC(e, "tWString cLux_ParseString(const tWString&in asInput)", +[](const tWString &s) { return SomaParseString(s); });
+	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
+	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
+	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { return false; });
+	SOMA_FUNC(e, "bool cLux_GetUnderwaterEffectsActive()", +[]() { return false; });
 	SOMA_FUNC(e, "void __print(const tString&in asText)", +[](S s) { gsSomaExecOutput += s + "\n"; });
 	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s", s.c_str()); });
 	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s", s.c_str()); });
