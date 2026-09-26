@@ -1607,9 +1607,11 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw);
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
+			bool bRestored = cSomaSaveHandler::ApplyPendingState();
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
 			mpLuxMap->OnEnter(bFirstTime);
-			cSomaSaveHandler::AutoSave(false, false);
+			if (bRestored == false)
+				cSomaSaveHandler::AutoSave(false);
 		}
 		mpScriptRuntime->LogStubReport(40);
 	}

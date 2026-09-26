@@ -66,6 +66,7 @@ void SomaFreePropBlock(const std::string &asType, char *apBlock);
 
 // Registered from the recovered API without an implementation
 const asPWORD kSomaStubUserData = 0x50b0;
+const asPWORD kSomaForwardUserData = 0x50b1;
 bool SomaScriptIsStub(asIScriptFunction *apFunc);
 void SomaScriptStubCall(asIScriptGeneric *apGen);
 

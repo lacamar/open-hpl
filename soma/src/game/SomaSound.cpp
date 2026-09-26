@@ -194,11 +194,11 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 				});
 	SOMA_METHOD(e, "cWorld", "tID CreateSoundEntityID(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver)",
 				+[](cWorld *w, S n, S file, bool remove) {
-					return SomaObjectID(w->CreateSoundEntity(n, file, remove));
+					return SomaObjectID(w->CreateSoundEntity(n, file, remove), "cSoundEntity");
 				});
 	SOMA_METHOD(e, "cWorld", "tID CreateSoundEntityExID(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver, bool abNonBlockLoad)",
 				+[](cWorld *w, S n, S file, bool remove, bool) {
-					return SomaObjectID(w->CreateSoundEntity(n, file, remove));
+					return SomaObjectID(w->CreateSoundEntity(n, file, remove), "cSoundEntity");
 				});
 	SOMA_FUNC(e, "bool cLux_PlayGuiSoundData(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom)",
 			  +[](S n, int type, float vol, bool) { return cSomaSoundEvents::Get()->PlayGui(n, vol, type) != NULL; });

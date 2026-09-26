@@ -1,7 +1,8 @@
 /*
- * Checkpoint saves: the map and start position the player entered it at, the script global
- * variables from before the map started and the visited maps. Loading re-enters that map, so a
- * save resumes at the map's entry point. Files live in $XDG_DATA_HOME/open-hpl/soma/saves.
+ * Save games: map, start position, visited maps, script global variables and the world state
+ * (map, entity, module and player script objects by member name, entity flags and callbacks,
+ * dynamic bodies, timers, player pose). Loading enters the map without OnStart and restores the
+ * state before OnEnter. Files live in $XDG_DATA_HOME/open-hpl/soma/saves.
  */
 
 #ifndef SOMA_SAVE_H
@@ -21,8 +22,10 @@ public:
 
 	// Called by cSomaBase::LoadMap before the map script starts
 	static void OnMapEnter(const tString &asMapFile, const tString &asStartPos);
-	static bool Save(const tWString &asFile, bool abCurrentVars);
-	static bool AutoSave(bool abCheckpoint, bool abCurrentVars);
+	// Restores a loaded save into the current map; false when there is none
+	static bool ApplyPendingState();
+	static bool Save(const tWString &asFile);
+	static bool AutoSave(bool abCheckpoint);
 	// Immediate from native code (menu); scripts change map on the next update
 	static bool Load(const tWString &asFile, bool abImmediate = false);
 

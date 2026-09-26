@@ -7,6 +7,10 @@
 #include <sstream>
 #include <sys/stat.h>
 
+static std::set<std::string> gsetNoSave;
+
+const std::set<std::string> &SomaScriptNoSaveNames() { return gsetNoSave; }
+
 // Constructs AngelScript 2.28 accepted but 2.38 rejects, as {file suffix, from, to}.
 static const char *gvCompatPatches[][3] = {
 	{"custom_depth/agent_deepsea_suit.hps", "CheckShapeWorldCollision(cVector3f_Zero,", "CheckShapeWorldCollision(void,"},
@@ -116,7 +120,18 @@ bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &a
 			size_t lClose = sCode.find(']', lFirst);
 			if (lClose == std::string::npos || lClose >= lEnd)
 				break;
-			mvMetadata.push_back(cSomaScriptMetadata{asFile, CountLines(sCode, lFirst), sCode.substr(lFirst + 1, lClose - lFirst - 1)});
+			cSomaScriptMetadata meta{asFile, CountLines(sCode, lFirst), sCode.substr(lFirst + 1, lClose - lFirst - 1), ""};
+			size_t lDeclEnd = sCode.find_first_of(";=(", lClose);
+			if (lDeclEnd != std::string::npos)
+			{
+				size_t lNameEnd = sCode.find_last_not_of(" \t\r\n", lDeclEnd - 1);
+				size_t lNameStart = sCode.find_last_of(" \t\r\n&@", lNameEnd);
+				if (lNameEnd != std::string::npos && lNameStart != std::string::npos && lNameStart < lNameEnd)
+					meta.msName = sCode.substr(lNameStart + 1, lNameEnd - lNameStart);
+			}
+			if (meta.msValue == "nosave" || meta.msValue == "volatile")
+				gsetNoSave.insert(meta.msName);
+			mvMetadata.push_back(meta);
 			for (size_t i = lFirst; i <= lClose; ++i)
 				sCode[i] = ' ';
 			lFirst = sCode.find_first_not_of(" \t", lClose + 1);

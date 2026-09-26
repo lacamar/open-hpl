@@ -1541,7 +1541,7 @@ void cSomaMainMenu::UpdateExitConfirmDialog(bool abMouseDown, bool abPressedEdge
 	if (mlExitConfirmHovered == 0) // Yes
 	{
 		if (mbExitConfirmSaveAndExit)
-			cSomaSaveHandler::AutoSave(false, true);
+			cSomaSaveHandler::AutoSave(false);
 		DoQuitToMainMenu();
 	}
 	else // No

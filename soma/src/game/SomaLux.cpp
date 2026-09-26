@@ -38,6 +38,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 
 cSomaLuxMap::~cSomaLuxMap()
 {
+	SomaClearObjectIDs();
 	for (cSomaLuxEntity *pEnt : mvDestroyed)
 		delete pEnt;
 	for (cSomaLuxEntity *pEnt : mvEntities)

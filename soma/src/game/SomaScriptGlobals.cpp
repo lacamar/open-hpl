@@ -3,6 +3,7 @@
 #include "SomaScriptBind.h"
 #include "SomaLux.h"
 #include "SomaSave.h"
+#include "SomaGlobalFuncsTable.h"
 #include "SomaBase.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
@@ -130,8 +131,72 @@ static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const
 	SOMA_FUNC(e, "void cScript_SetGlobalArg" NAME "(int alIdx, " ASTYPE ")", +[](int i, CTYPE x) { gmapArgs[i].FIELD = x; });                              \
 	SOMA_FUNC(e, "void cScript_SetGlobalReturn" NAME "(" ASTYPE ")", +[](CTYPE x) { gReturn.FIELD = x; });
 
+// Official natives that set the global args, run an entity script's _Global_ function and return
+// the global return value (SomaGlobalFuncsTable.cpp)
+static void ForwardToEntityScript(asIScriptGeneric *g)
+{
+	const cSomaGlobalFunc *pFunc = (const cSomaGlobalFunc *)g->GetFunction()->GetUserData(kSomaForwardUserData);
+	asIScriptEngine *pEngine = g->GetEngine();
+	auto TypeName = [pEngine](int alTypeId) -> std::string {
+		asITypeInfo *t = pEngine->GetTypeInfoById(alTypeId);
+		return t ? t->GetName() : "";
+	};
+	for (asUINT i = 1; i < g->GetArgCount(); ++i)
+	{
+		int lTypeId = g->GetArgTypeId(i);
+		cSomaVariant &v = gmapArgs[(int)i - 1];
+		std::string sType = TypeName(lTypeId);
+		if (lTypeId == asTYPEID_BOOL)
+			v.b = g->GetArgByte(i) != 0;
+		else if (lTypeId == asTYPEID_FLOAT)
+			v.f = g->GetArgFloat(i);
+		else if (lTypeId <= asTYPEID_DOUBLE || (pEngine->GetTypeInfoById(lTypeId) && (pEngine->GetTypeInfoById(lTypeId)->GetFlags() & asOBJ_ENUM)))
+			v.i = (int)g->GetArgDWord(i);
+		else if (sType == "tString")
+			v.s = *(tString *)g->GetArgObject(i);
+		else if (sType == "cVector3f")
+			v.v3 = *(cVector3f *)g->GetArgObject(i);
+		else if (sType == "cVector2f")
+			v.v2 = *(cVector2f *)g->GetArgObject(i);
+		else if (sType == "cColor")
+			v.c = *(cColor *)g->GetArgObject(i);
+		else if (sType == "tID")
+			v.id = *(cSomaID *)g->GetArgObject(i);
+	}
+	gReturn = cSomaVariant();
+	RunGlobalFunc(*(tString *)g->GetArgObject(0), pFunc->mpClass, pFunc->mpFunc);
+	int lRet = g->GetFunction()->GetReturnTypeId();
+	std::string sRet = TypeName(lRet);
+	if (lRet == asTYPEID_VOID)
+		return;
+	if (lRet == asTYPEID_BOOL)
+		g->SetReturnByte(gReturn.b);
+	else if (lRet == asTYPEID_FLOAT)
+		g->SetReturnFloat(gReturn.f);
+	else if (lRet <= asTYPEID_DOUBLE || (pEngine->GetTypeInfoById(lRet) && (pEngine->GetTypeInfoById(lRet)->GetFlags() & asOBJ_ENUM)))
+		g->SetReturnDWord((asDWORD)gReturn.i);
+	else if (sRet == "tString")
+		new (g->GetAddressOfReturnLocation()) tString(gReturn.s);
+	else if (sRet == "cVector3f")
+		new (g->GetAddressOfReturnLocation()) cVector3f(gReturn.v3);
+	else if (sRet == "cVector2f")
+		new (g->GetAddressOfReturnLocation()) cVector2f(gReturn.v2);
+}
+
 void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 {
+	for (int i = 0; i < glSomaGlobalFuncsNum; ++i)
+	{
+		const cSomaGlobalFunc &f = gvSomaGlobalFuncs[i];
+		if (e->GetGlobalFunctionByDecl(f.mpDecl))
+			continue;
+		int r = e->RegisterGlobalFunction(f.mpDecl, asFUNCTION(ForwardToEntityScript), asCALL_GENERIC);
+		if (r >= 0)
+			e->GetFunctionById(r)->SetUserData((void *)&f, kSomaForwardUserData);
+		else
+			Warning("SOMA script: could not register forwarding function %s (%d)\n", f.mpDecl, r);
+	}
+
 	SOMA_FUNC(e, "bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", (RunGlobalFunc));
 
 	SOMA_GLOBAL_TYPE("String", "const tString &in asVar", const tString &, s)
@@ -187,6 +252,12 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 				  return it != pLang->GetCategoryMap()->end() && it->second->m_mapEntries.count(n) > 0;
 			  });
 	SOMA_FUNC(e, "tWString cLux_ParseString(const tWString&in asInput)", +[](const tWString &s) { return SomaParseString(s); });
+	SOMA_FUNC(e, "cMaterial@ cResources_CreateMaterial(const tString&in asName)",
+			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(cString::SetFileExt(n, "mat")); });
+	SOMA_FUNC(e, "void cResources_DestroyMaterial(cMaterial @apMaterial)",
+			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
+	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
+			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
 	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { return false; });

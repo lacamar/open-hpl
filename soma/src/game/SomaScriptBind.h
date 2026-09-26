@@ -31,7 +31,12 @@ namespace SomaBind
 	};
 	template <typename T> struct Arg<T *>
 	{
-		static T *Get(asIScriptGeneric *g, asUINT i) { return *(T **)g->GetAddressOfArg(i); }
+		// Placeholders returned by unimplemented functions never reach engine code
+		static T *Get(asIScriptGeneric *g, asUINT i)
+		{
+			T *p = *(T **)g->GetAddressOfArg(i);
+			return SomaScriptIsDummy((void *)p) ? nullptr : p;
+		}
 	};
 	template <typename T> struct Arg<T, typename std::enable_if<std::is_class<T>::value>::type>
 	{

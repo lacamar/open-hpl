@@ -4,8 +4,8 @@
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. Re-check first: a likely cause is fixed (critter scripts wrote `cLuxCritter` members at the
-   official offsets past the end of `cSomaLuxEntity`; they now live in a side block). Intermittent
+1. Likely fixed: critter scripts wrote `cLuxCritter` members at the official offsets past the end
+   of `cSomaLuxEntity` (now a side block); the sweep no longer crashes there. Intermittent
    heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
    reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
    abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
@@ -140,9 +140,9 @@ four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`
 
 Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves.
 
-- Saves are checkpoints: map + entry start position + global vars. Loading replays the map
-  from its entry point. Next: serialize map/module script objects and entity state so a
-  mid-map save resumes in place.
+- Saves restore in place (script objects by member name, entity state, timers, player pose).
+  Not saved yet: playing voices/music, handles to engine objects in script members (re-acquired
+  by scripts), agents' native state.
 - Terminals on in-world screens (prop GUIs are 2D sets, not drawn on the mesh yet).
 - `stub_report`: post effects (`cLux_GetViewport` has no composite), eye tracker,
   `cCamera::SetExtended{Yaw,Pitch}`, `iPhysicsWorld::GetBodiesInAABB`, preload hints.

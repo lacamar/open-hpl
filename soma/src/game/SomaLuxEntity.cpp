@@ -1,5 +1,6 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptApi.h"
+#include "scene/GuiSetEntity.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
 #include "SomaBase.h"
@@ -318,30 +319,103 @@ void cSomaLuxEntity::CreateAreaBody(iPhysicsWorld *apWorld)
 
 //---------------------------------------
 
-static std::map<void *, cSomaID> gmapObjectToID;
-static std::map<int32_t, void *> gmapIDToObject;
+namespace
+{
+	struct cObjectEntry
+	{
+		void *mpObj;
+		tString msType;
+		int mlCreationID;
+	};
+	std::map<void *, cSomaID> gmapObjectToID;
+	std::map<int32_t, cObjectEntry> gmapIDToObject;
+	int32_t glNextObjectID = 1;
 
-cSomaID SomaObjectID(void *apObj)
+	bool IsEntity3DType(const tString &asType) { return asType != "iPhysicsJoint" && asType.compare(0, 13, "iPhysicsJoint") != 0 && asType != "iCharacterBody"; }
+
+	// Script type -> the object as that HPL2 class, NULL when it is not one
+	void *CastEntity3D(iEntity3D *e, const tString &asType)
+	{
+		if (asType == "iEntity3D") return e;
+		if (asType == "cMeshEntity") return dynamic_cast<cMeshEntity *>(e);
+		if (asType == "cSubMeshEntity") return dynamic_cast<cSubMeshEntity *>(e);
+		if (asType == "iLight") return dynamic_cast<iLight *>(e);
+		if (asType == "cLightPoint") return dynamic_cast<cLightPoint *>(e);
+		if (asType == "cLightSpot") return dynamic_cast<cLightSpot *>(e);
+		if (asType == "cLightBox") return dynamic_cast<cLightBox *>(e);
+		if (asType == "cBillboard") return dynamic_cast<cBillboard *>(e);
+		if (asType == "cBeam") return dynamic_cast<cBeam *>(e);
+		if (asType == "cParticleSystem") return dynamic_cast<cParticleSystem *>(e);
+		if (asType == "cGuiSetEntity") return dynamic_cast<cGuiSetEntity *>(e);
+		if (asType == "cFogArea") return dynamic_cast<cFogArea *>(e);
+		if (asType == "cSoundEntity") return dynamic_cast<cSoundEntity *>(e);
+		if (asType == "iPhysicsBody") return dynamic_cast<iPhysicsBody *>(e);
+		return NULL;
+	}
+
+	bool IsAlive(const cObjectEntry &aEntry)
+	{
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		cWorld *pWorld = pMap ? pMap->GetWorld() : NULL;
+		if (aEntry.msType == "cSoundEntity")
+			return pWorld && pWorld->SoundEntityExists((cSoundEntity *)aEntry.mpObj, aEntry.mlCreationID);
+		if (aEntry.msType == "cParticleSystem")
+			return pWorld && pWorld->ParticleSystemExists((cParticleSystem *)aEntry.mpObj);
+		return true;
+	}
+}
+
+void SomaClearObjectIDs()
+{
+	gmapObjectToID.clear();
+	gmapIDToObject.clear();
+}
+
+cSomaID SomaObjectID(void *apObj, const tString &asType)
 {
 	if (apObj == NULL)
 		return cSomaID();
 	auto it = gmapObjectToID.find(apObj);
 	if (it != gmapObjectToID.end())
-		return it->second;
+	{
+		const cObjectEntry &entry = gmapIDToObject[it->second.mB];
+		// Same object when alive and of the same kind; freed memory reused by a new object gets a new id
+		if (IsAlive(entry) && IsEntity3DType(entry.msType) == IsEntity3DType(asType) &&
+			(entry.msType == asType || IsEntity3DType(asType) == false || CastEntity3D((iEntity3D *)apObj, entry.msType) != NULL))
+			return it->second;
+		gmapIDToObject.erase(it->second.mB);
+	}
 	cSomaID id;
 	id.mA = 0xfe;
-	id.mB = (int32_t)gmapIDToObject.size() + 1;
+	id.mB = glNextObjectID++;
+	int lCreationID = asType == "cSoundEntity" ? ((cSoundEntity *)apObj)->GetCreationID() : 0;
 	gmapObjectToID[apObj] = id;
-	gmapIDToObject[id.mB] = apObj;
+	gmapIDToObject[id.mB] = cObjectEntry{apObj, asType, lCreationID};
 	return id;
 }
 
-void *SomaObjectFromID(const cSomaID &aID)
+void *SomaObjectFromID(const cSomaID &aID, const tString &asType)
 {
 	if (aID.mA != 0xfe)
 		return NULL;
 	auto it = gmapIDToObject.find(aID.mB);
-	return it == gmapIDToObject.end() ? NULL : it->second;
+	if (it == gmapIDToObject.end() || IsAlive(it->second) == false)
+		return NULL;
+	const cObjectEntry &entry = it->second;
+	if (entry.msType == asType)
+		return entry.mpObj;
+	if (IsEntity3DType(entry.msType) && IsEntity3DType(asType))
+		return CastEntity3D((iEntity3D *)entry.mpObj, asType);
+	if (asType == "iPhysicsJoint" && entry.msType.compare(0, 13, "iPhysicsJoint") == 0)
+		return entry.mpObj;
+	if (asType.compare(0, 13, "iPhysicsJoint") == 0 && entry.msType == "iPhysicsJoint")
+	{
+		iPhysicsJoint *j = (iPhysicsJoint *)entry.mpObj;
+		if (asType == "iPhysicsJointHinge") return dynamic_cast<iPhysicsJointHinge *>(j);
+		if (asType == "iPhysicsJointSlider") return dynamic_cast<iPhysicsJointSlider *>(j);
+		if (asType == "iPhysicsJointBall") return dynamic_cast<iPhysicsJointBall *>(j);
+	}
+	return NULL;
 }
 
 //---------------------------------------
@@ -618,8 +692,10 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		return (iPhysicsBody *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cMeshEntity@ GetMeshEntity()", +[](E *p) { return p->mpMesh; });
+	SOMA_METHOD_NEW(e, T, "int GetParentType()", +[](E *) { return 0; });
 	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->mvJoints.size(); });
-	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvJoints.size() ? p->mvJoints[i] : (iPhysicsJoint *)NULL; });
+	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
+		return i >= 0 && i < (int)p->mvJoints.size() ? p->mvJoints[i] : (iPhysicsJoint *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); });
 	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); });
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
@@ -805,8 +881,6 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  return true;
 			  });
 	SOMA_FUNC(e, "iLuxEntity@ cLux_ID_Entity(tID aID)", +[](cSomaID id) { return cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : (cSomaLuxEntity *)NULL; });
-	SOMA_FUNC(e, "iPhysicsBody@ cLux_ID_Body(tID aID)", +[](cSomaID id) { return (iPhysicsBody *)SomaObjectFromID(id); });
-	SOMA_FUNC(e, "iEntity3D@ cLux_ID_Entity3D(tID aID)", +[](cSomaID id) { return (iEntity3D *)SomaObjectFromID(id); });
 	// Engine objects: tIDs from a registry, looked up by typed cLux_ID_* functions
 	const char *vIdTypes[] = {"iEntity3D", "cMeshEntity", "cSubMeshEntity", "iLight", "cLightPoint", "cLightSpot", "cLightBox",
 							  "cLightMaskBox", "cBillboard", "cBillboardGroup", "cLensFlare", "cBeam", "cParticleSystem", "cGuiSetEntity",
@@ -820,7 +894,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		if (pInfo->GetMethodByDecl("tID GetID()") == NULL)
 			e->RegisterObjectMethod(pType, "tID GetID()", asFUNCTION(+[](asIScriptGeneric *g) {
 				// Placeholder objects get IDs too, so cLux_ID_* hands them back
-				new (g->GetAddressOfReturnLocation()) cSomaID(SomaObjectID(g->GetObject()));
+				new (g->GetAddressOfReturnLocation()) cSomaID(SomaObjectID(g->GetObject(), g->GetFunction()->GetObjectType()->GetName()));
 			}), asCALL_GENERIC);
 	}
 	const char *vIdFuncs[] = {"iEntity3D@ cLux_ID_Entity3D(tID aID)", "cMeshEntity@ cLux_ID_MeshEntity(tID aID)", "cSubMeshEntity@ cLux_ID_SubMeshEntity(tID aID)",
@@ -833,13 +907,20 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 							  "iCharacterBody@ cLux_ID_CharacterBody(tID aID)"};
 	for (const char *pDecl : vIdFuncs)
 		if (e->GetGlobalFunctionByDecl(pDecl) == NULL)
-			e->RegisterGlobalFunction(pDecl, asFUNCTION((SomaBind::GenericFunc<+[](cSomaID id) { return SomaObjectFromID(id); }>)), asCALL_GENERIC);
+			e->RegisterGlobalFunction(pDecl, asFUNCTION(+[](asIScriptGeneric *g) {
+				asITypeInfo *pRet = g->GetEngine()->GetTypeInfoById(g->GetFunction()->GetReturnTypeId());
+				*(void **)g->GetAddressOfReturnLocation() = SomaObjectFromID(*(cSomaID *)g->GetArgObject(0), pRet ? pRet->GetName() : "");
+			}), asCALL_GENERIC);
 
 	SOMA_FUNC(e, "cLuxProp@ cLux_ID_Prop(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Prop ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxArea@ cLux_ID_Area(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Area ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxLiquidArea@ cLux_ID_LiquidArea(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_LiquidArea ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxCritter@ cLux_ID_Critter(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Critter ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxAgent@ cLux_ID_Agent(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Agent ? p : (cSomaLuxEntity *)NULL; });
+	SOMA_FUNC(e, "bool Entity_GetCollide(const tString &in asEntityA, const tString &in asEntityB)", +[](S a, S b) {
+		cSomaLuxEntity *pA = Find(a), *pB = Find(b);
+		return pA && pB && SomaEntitiesCollide(pA, pB);
+	});
 	SOMA_FUNC(e, "iPhysicsJointHinge@ cPhysics_ToJointHinge(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointHinge *>(j); });
 	SOMA_FUNC(e, "iPhysicsJointSlider@ cPhysics_ToJointSlider(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointSlider *>(j); });
 	SOMA_FUNC(e, "iPhysicsJointBall@ cPhysics_ToJointBall(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointBall *>(j); });

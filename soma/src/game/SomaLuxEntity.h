@@ -124,8 +124,10 @@ public:
 };
 
 // tIDs for engine objects that have none in HPL2 (bodies, lights...)
-cSomaID SomaObjectID(void *apObj);
-void *SomaObjectFromID(const cSomaID &aID);
+// tIDs of engine objects, typed by their script type; lookups check the type and liveness
+cSomaID SomaObjectID(void *apObj, const tString &asType);
+void *SomaObjectFromID(const cSomaID &aID, const tString &asType);
+void SomaClearObjectIDs();
 
 // Oriented boxes of bodies, areas and the player's character body
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);

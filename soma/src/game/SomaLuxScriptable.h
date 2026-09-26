@@ -73,6 +73,7 @@ public:
 	static void RegisterTimerNatives(asIScriptEngine *apEngine, const char *apType);
 
 protected:
+	friend class cSomaSaveState;
 	struct cTimer
 	{
 		uint64_t mlId;
