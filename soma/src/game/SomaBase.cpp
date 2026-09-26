@@ -135,6 +135,18 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 extern std::string gsSomaExecOutput;
 cSomaImGui *SomaHudImGui();
 
+class cSomaJointFrameFilter : public iPhysicsBodyCallback
+{
+public:
+	std::map<iPhysicsBody *, std::set<iPhysicsBody *>> mmapIgnored;
+	bool OnAABBCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody) override
+	{
+		auto it = mmapIgnored.find(apBody);
+		return it == mmapIgnored.end() || it->second.count(apCollideBody) == 0;
+	}
+	void OnBodyCollide(iPhysicsBody *, iPhysicsBody *, cPhysicsContactData *) override {}
+};
+
 static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaImGui *pHud = SomaHudImGui();
@@ -168,6 +180,34 @@ static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRe
 		sOut += cString::ToString(v[i].first) + " " + v[i].second + "\n";
 	aResp.Set("count", (int)v.size());
 	aResp.Set("stubs", sOut);
+}
+
+static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(aReq.GetString("name", "")) : NULL;
+	if (pEnt == NULL)
+	{
+		aResp.SetError("no such entity");
+		return;
+	}
+	iPhysicsWorld *pWorld = pMap->GetWorld()->GetPhysicsWorld();
+	tString sOut;
+	for (iPhysicsBody *pBody : pEnt->mvBodies)
+	{
+		cPhysicsBodyIterator it = pWorld->GetBodyIterator();
+		while (it.HasNext())
+		{
+			iPhysicsBody *pOther = it.Next();
+			if (pOther == pBody || pOther->GetCollide() == false || cMath::CheckBVIntersection(*pBody->GetBoundingVolume(), *pOther->GetBoundingVolume()) == false)
+				continue;
+			cCollideData data;
+			data.SetMaxSize(4);
+			if (pWorld->CheckShapeCollision(pBody->GetShape(), pBody->GetLocalMatrix(), pOther->GetShape(), pOther->GetLocalMatrix(), data, 4, true))
+				sOut += pBody->GetName() + " x " + pOther->GetName() + " depth " + cString::ToString(data.mvContactPoints[0].mfDepth) + "\n";
+		}
+	}
+	aResp.Set("contacts", sOut);
 }
 
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -729,6 +769,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
 		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
+		pCtrl->RegisterHandler("body_contacts", cSomaBase_HeadlessCmd_BodyContacts, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
@@ -1498,11 +1539,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	// side-fix.
 	if (pNewWorld->GetPhysicsWorld())
 	{
-		// Doors and drawers hang off joints and are held shut by the map's own
-		// scripts, which this port does not run yet - simulated, they swing open
-		// on load, grind along the static geometry and cost more solver time than
-		// the rest of the map put together (60 -> 10 fps on 03_03_omicron_descent).
-		// Pin them until there is a script layer to open and close them.
+		// Doors and drawers hang off joints and are held shut by the map scripts;
+		// without them they swing open on load and grind along the static geometry
+		// (60 -> 10 fps on 03_03_omicron_descent), so they are pinned then.
 		std::set<iPhysicsBody*> setJointed;
 		cPhysicsJointIterator jointIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
 		while (jointIt.HasNext())
@@ -1512,13 +1551,46 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			if (pJoint->GetParentBody()) setJointed.insert(pJoint->GetParentBody());
 		}
 
+		// Doors and drawers are held by their joints; contacts with the static frame they are
+		// mounted in and what rests against it would pin them with friction
+		if (mbUseScriptPlayer)
+		{
+			static cSomaJointFrameFilter gFrameFilter;
+			gFrameFilter.mmapIgnored.clear();
+			std::vector<iPhysicsBody*> vStatic;
+			cPhysicsBodyIterator staticIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
+			while (staticIt.HasNext())
+			{
+				iPhysicsBody *pBody = staticIt.Next();
+				if (pBody->GetMass() <= 0 && pBody->GetCollide()) vStatic.push_back(pBody);
+			}
+			cPhysicsJointIterator frameIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
+			while (frameIt.HasNext())
+			{
+				iPhysicsJoint *pJoint = frameIt.Next();
+				iPhysicsBody *pChild = pJoint->GetChildBody();
+				if (pChild == NULL || pChild->GetMass() <= 0 || (pJoint->GetParentBody() && pJoint->GetParentBody()->GetMass() > 0))
+					continue;
+				cBoundingVolume *pBV = pChild->GetBoundingVolume();
+				cVector3f vMin = pBV->GetMin() - 0.02f, vMax = pBV->GetMax() + 0.02f;
+				for (iPhysicsBody *pStatic : vStatic)
+				{
+					cBoundingVolume *pOther = pStatic->GetBoundingVolume();
+					if (cMath::CheckAABBIntersection(vMin, vMax, pOther->GetMin(), pOther->GetMax()))
+						gFrameFilter.mmapIgnored[pChild].insert(pStatic);
+				}
+				if (gFrameFilter.mmapIgnored.count(pChild))
+					pChild->AddBodyCallback(&gFrameFilter);
+			}
+		}
+
 		// Everything else is authored at rest; Newton wakes a body again on contact.
 		cPhysicsBodyIterator bodyIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
 		while (bodyIt.HasNext())
 		{
 			iPhysicsBody *pBody = bodyIt.Next();
 			if (pBody->GetMass() <= 0) continue;
-			if (setJointed.count(pBody)) pBody->SetMass(0);
+			if (setJointed.count(pBody) && mbUseScriptPlayer == false) pBody->SetMass(0);
 			else pBody->Sleep();
 		}
 	}

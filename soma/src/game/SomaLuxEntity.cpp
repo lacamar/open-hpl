@@ -685,6 +685,19 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "int GetBodyNum()", +[](E *p) { return (int)p->mvBodies.size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBody(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBodies.size() ? p->mvBodies[i] : (iPhysicsBody *)NULL; });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetMainBody()", +[](E *p) { return p->GetMainBody(); });
+	SOMA_METHOD_NEW(e, T, "int GetBodyIndexFromName(const tString&in asName)", +[](E *p, S n) {
+		for (size_t i = 0; i < p->mvBodies.size(); ++i)
+			if (p->mvBodies[i]->GetName() == n || SomaWildcardMatch("*_" + n, p->mvBodies[i]->GetName()))
+				return (int)i;
+		return -1;
+	});
+	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBodyFromID(int alID)", +[](E *p, int id) {
+		for (iPhysicsBody *b : p->mvBodies)
+			if (b->GetUniqueID() == id)
+				return b;
+		return (iPhysicsBody *)NULL;
+	});
+
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBodyFromName(const tString&in asName)", +[](E *p, S n) {
 		for (iPhysicsBody *b : p->mvBodies)
 			if (b->GetName() == n || cString::GetFileName(b->GetName()) == n || SomaWildcardMatch("*_" + n, b->GetName()))
@@ -917,6 +930,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxLiquidArea@ cLux_ID_LiquidArea(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_LiquidArea ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxCritter@ cLux_ID_Critter(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Critter ? p : (cSomaLuxEntity *)NULL; });
 	SOMA_FUNC(e, "cLuxAgent@ cLux_ID_Agent(tID aID)", +[](cSomaID id) { cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : NULL; return p && p->meType == eSomaLuxEntityType_Agent ? p : (cSomaLuxEntity *)NULL; });
+	SOMA_FUNC(e, "iLuxEntity@ cLux_GetBodyEntity(iPhysicsBody @apBody)", +[](iPhysicsBody *b) {
+		if (b && cSomaLuxMap::GetCurrent())
+			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
+				for (iPhysicsBody *pb : p->mvBodies)
+					if (pb == b)
+						return p;
+		return (cSomaLuxEntity *)NULL;
+	});
 	SOMA_FUNC(e, "bool Entity_GetCollide(const tString &in asEntityA, const tString &in asEntityB)", +[](S a, S b) {
 		cSomaLuxEntity *pA = Find(a), *pB = Find(b);
 		return pA && pB && SomaEntitiesCollide(pA, pB);

@@ -9,7 +9,9 @@
 
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 #include <set>
+#include "SomaImGui.h"
 #include <string>
 
 using namespace hpl;
@@ -38,7 +40,7 @@ struct cSomaVector4f
 };
 
 static std::set<std::string> gsetNativeBehaviourTypes = {"cImGuiGfx", "cImGuiFont", "cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
-														  "cColor", "cMatrixf", "cQuaternion"};
+														  "cColor", "cMatrixf", "cQuaternion", "cPidControllerVec3", "cPidControllerf"};
 
 bool SomaScriptHasNativeBehaviours(const char *apType)
 {
@@ -351,8 +353,102 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 			  +[](const cVector3f &p, const cVector3f &s, float r) { return cMath::CheckPointInSphereIntersection(p, s, r); });
 }
 
+//---------------------------------------
+// cPidController<T> in the script struct block: p, i, d at 16/20/24 (recovered), then the history
+
+template <class T> struct cSomaPid
+{
+	static const int kMaxErrors = 64;
+	float p, i, d;
+	int mlErrorNum, mlCur, mlLastPlusOne;
+	T mLastError, mLastDerivative, mLastIntegral;
+	T mvErrors[kMaxErrors];
+	float mvTimeSteps[kMaxErrors];
+
+	static cSomaPid *At(void *apObj) { return (cSomaPid *)((char *)apObj + 16); }
+
+	void SetErrorNum(int alNum)
+	{
+		mlErrorNum = std::clamp(alNum, 1, kMaxErrors);
+		Reset();
+	}
+	void Reset()
+	{
+		mlCur = 0;
+		mlLastPlusOne = 0;
+		for (int k = 0; k < kMaxErrors; ++k)
+		{
+			mvErrors[k] = T(0);
+			mvTimeSteps[k] = 0;
+		}
+	}
+	T Output(const T &aError, float afTimeStep)
+	{
+		if (mlErrorNum <= 0)
+			SetErrorNum(10);
+		mvErrors[mlCur] = aError;
+		mvTimeSteps[mlCur] = afTimeStep;
+		T integral = T(0);
+		for (int k = 0; k < mlErrorNum; ++k)
+			integral += mvErrors[k] * mvTimeSteps[k];
+		T derivative = T(0);
+		if (mlLastPlusOne > 0 && afTimeStep > 0)
+			derivative = (mvErrors[mlCur] - mvErrors[mlLastPlusOne - 1]) / afTimeStep;
+		mlLastPlusOne = mlCur + 1;
+		mlCur = (mlCur + 1) % mlErrorNum;
+		mLastError = aError;
+		mLastDerivative = derivative;
+		mLastIntegral = integral;
+		return aError * p + integral * i + derivative * d;
+	}
+};
+static_assert(sizeof(cSomaPid<cVector3f>) + 16 <= 4096, "pid state exceeds the struct block");
+
+template <class T> static void RegisterPid(asIScriptEngine *e, const char *apType, const char *apT)
+{
+	typedef cSomaPid<T> P;
+	std::string sType = apType, sT = apT;
+	e->RegisterObjectBehaviour(apType, asBEHAVE_FACTORY, (sType + "@ f()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		void *pObj = SomaNewOwnedScriptStruct(g->GetEngine()->GetTypeInfoById(g->GetFunction()->GetReturnTypeId())->GetName());
+		P::At(pObj)->SetErrorNum(10);
+		*(void **)g->GetAddressOfReturnLocation() = pObj;
+	}), asCALL_GENERIC);
+	e->RegisterObjectBehaviour(apType, asBEHAVE_FACTORY, (sType + "@ f(float afP, float afI, float afD, int alErrorNum)").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		void *pObj = SomaNewOwnedScriptStruct(g->GetEngine()->GetTypeInfoById(g->GetFunction()->GetReturnTypeId())->GetName());
+		P *pPid = P::At(pObj);
+		pPid->p = g->GetArgFloat(0);
+		pPid->i = g->GetArgFloat(1);
+		pPid->d = g->GetArgFloat(2);
+		pPid->SetErrorNum((int)g->GetArgDWord(3));
+		*(void **)g->GetAddressOfReturnLocation() = pObj;
+	}), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, (sT + " Output(const " + sT + "&in avError, float afTimeStep)").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		T r = P::At(g->GetObject())->Output(*(const T *)g->GetArgAddress(0), g->GetArgFloat(1));
+		if constexpr (std::is_same<T, float>::value)
+			g->SetReturnFloat(r);
+		else
+			g->SetReturnObject(&r);
+	}), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, "void SetErrorNum(int alErrorNum)", asFUNCTION(+[](asIScriptGeneric *g) { P::At(g->GetObject())->SetErrorNum((int)g->GetArgDWord(0)); }), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, "void Reset()", asFUNCTION(+[](asIScriptGeneric *g) { P::At(g->GetObject())->Reset(); }), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, (sT + " GetLastError()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		T r = P::At(g->GetObject())->mLastError;
+		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
+	}), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, (sT + " GetLastDerivative()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		T r = P::At(g->GetObject())->mLastDerivative;
+		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
+	}), asCALL_GENERIC);
+	e->RegisterObjectMethod(apType, (sT + " GetLastIntegral()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
+		T r = P::At(g->GetObject())->mLastIntegral;
+		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
+	}), asCALL_GENERIC);
+}
+
 void RegisterSomaScriptMathNatives(asIScriptEngine *apEngine)
 {
+	RegisterPid<cVector3f>(apEngine, "cPidControllerVec3", "cVector3f");
+	RegisterPid<float>(apEngine, "cPidControllerf", "float");
 	RegisterVectors(apEngine);
 	RegisterColor(apEngine);
 	RegisterMatrixQuat(apEngine);

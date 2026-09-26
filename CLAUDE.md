@@ -78,6 +78,7 @@ player/Player.hps). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 | `script_exec code=` | compiles and runs AngelScript against the live API; `__print(s)` returns output |
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |
+| `body_contacts name=` | bodies overlapping an entity's bodies (stuck props) |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
 Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
