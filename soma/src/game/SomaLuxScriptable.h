@@ -38,6 +38,18 @@ public:
 	bool CallWithFloat(const std::string &asDecl, float afX);
 	bool CallWithObject(const std::string &asDecl, void *apObj);
 	bool CallWithString(const std::string &asDecl, const tString &asX);
+	// Result of a bool method, abDefault if it is missing or throws
+	bool CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault);
+	bool HasMethod(const std::string &asDecl);
+
+	// iLuxUpdateable callbacks as the engine dispatches them; overridden where the engine object adds behaviour
+	virtual void OnMessage(const char *apDecl) { Call(apDecl); }
+	virtual void OnUpdate(float afTimeStep);
+	virtual void OnPostUpdate(float afTimeStep);
+	virtual void OnVariableUpdate(float afTimeStep);
+	virtual void OnMapMessage(const char *apDecl, void *apMap);
+	virtual void OnAction(int alAction, bool abPressed);
+	virtual void OnAnalogInput(int alAnalogId, const cVector3f &avAmount);
 
 	// Timers and faders, advanced before the script's own Update
 	void UpdateTimers(float afTimeStep);

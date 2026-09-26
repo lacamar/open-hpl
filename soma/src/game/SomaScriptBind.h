@@ -35,8 +35,7 @@ namespace SomaBind
 	};
 	template <typename T> struct Arg<T, typename std::enable_if<std::is_class<T>::value>::type>
 	{
-		// Value objects by value: the slot holds a pointer to the object
-		static T Get(asIScriptGeneric *g, asUINT i) { return **(T **)g->GetAddressOfArg(i); }
+		static T Get(asIScriptGeneric *g, asUINT i) { return *(T *)g->GetArgObject(i); }
 	};
 
 	template <typename T> struct Obj
@@ -134,5 +133,8 @@ namespace SomaBind
 #define SOMA_METHOD_NEW(engine, type, decl, ...) \
 	do { asITypeInfo *t_ = (engine)->GetTypeInfoByName(type); if (t_ && t_->GetMethodByDecl(decl) == NULL) \
 		(engine)->RegisterObjectMethod(type, decl, asFUNCTION((SomaBind::GenericMethod<__VA_ARGS__>)), asCALL_GENERIC); } while (0)
+#define SOMA_FUNC_NEW(engine, decl, ...) \
+	do { if ((engine)->GetGlobalFunctionByDecl(decl) == NULL) \
+		(engine)->RegisterGlobalFunction(decl, asFUNCTION((SomaBind::GenericFunc<__VA_ARGS__>)), asCALL_GENERIC); } while (0)
 
 #endif // SOMA_SCRIPT_BIND_H

@@ -50,6 +50,12 @@ public:
 	void EnterMap(cSomaLuxMap *apMap);
 	void LeaveMap(cSomaLuxMap *apMap);
 
+	// cLuxBase::BroadcastInputAction/BroadcastInputAnalog
+	void BroadcastAction(int alAction, bool abPressed);
+	void BroadcastAnalog(int alAnalogId, const cVector3f &avAmount);
+	// Off while a menu or pause screen has the input
+	bool mbGameInput = true;
+
 	cSomaLuxModule *GetModule(int alId);
 	cSomaLuxModule *GetModule(const tString &asName);
 	cSomaLuxEffect *GetEffect(int alId);
@@ -64,6 +70,8 @@ public:
 	const cEntityScript *GetEntityScript(const tString &asGroup, const tString &asType);
 
 	static cSomaLuxGame *Get() { return mpInstance; }
+	// game.cfg <Prop|Critter DefaultMaxInteractDistance>
+	float GetDefaultInteractDistance(int alEntityType) { return alEntityType == 4 ? mfCritterInteractDistance : mfPropInteractDistance; }
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
 private:
@@ -77,6 +85,11 @@ private:
 	std::vector<cSomaLuxEffect *> mvEffects;
 	std::map<tString, cEntityScript> mmapEntityScripts;
 	bool mbStarted = false;
+	float mfPropInteractDistance = 2;
+	float mfCritterInteractDistance = 2;
 };
+
+cConfigFile *SomaUserConfig();
+cConfigFile *SomaKeyConfig();
 
 #endif // SOMA_LUX_GAME_H

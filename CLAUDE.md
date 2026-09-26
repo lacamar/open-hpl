@@ -50,7 +50,8 @@ install directory writable.
 
 Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 `OPENHPL_SOMA_MAP=<file.hpm>`, `OPENHPL_SOMA_SKIP_BOOT=1`, `OPENHPL_SOMA_FREECAM=1`,
-`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`. Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
+`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`, `OPENHPL_SOMA_SCRIPT_PLAYER=0` (hand-written cSomaPlayer instead of
+player/Player.hps). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 
 `scripts/hpl_control.py --socket <sock> <cmd> [k=v ...]`:
 
@@ -70,6 +71,9 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `wait_frames n= [max_ms=]` | replies after n rendered frames or the time cap |
 | `start_map map= [pos=]` | load a map (default: first PlayerStart), hides menus |
 | `camera_state` / `set_camera` | camera pose |
+| `player_state` | script player: state, move state, health, feet position, yaw |
+| `lux_entity name=` | script entity: type, class, script class, active, callbacks, position |
+| `script_exec code=` | compiles and runs AngelScript against the live API; `__print(s)` returns output |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
 Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use

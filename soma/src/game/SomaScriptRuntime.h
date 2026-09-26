@@ -32,12 +32,16 @@ public:
 
 	// Calls a method on a script object if it exists; returns false if missing or it threw.
 	bool Call(asIScriptObject *apObj, const std::string &asDecl,
-			  const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
+			  const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>(),
+			  const std::function<void(asIScriptContext *)> &aGetResult = std::function<void(asIScriptContext *)>());
 
 	// Calls a method by name taking (const tString &in) or nothing: timer and callback targets.
 	bool CallByName(asIScriptObject *apObj, const std::string &asName, const std::string &asArg);
 
 	void LogStubReport(int alTop);
+
+	// Compiles asCode as the body of a void function and runs it (headless script_exec)
+	bool Exec(const std::string &asCode, std::string &asError);
 
 	static cSomaScriptRuntime *Get() { return mpInstance; }
 

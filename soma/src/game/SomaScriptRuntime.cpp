@@ -156,7 +156,8 @@ bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::string &asW
 	return false;
 }
 
-bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs)
+bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs,
+							  const std::function<void(asIScriptContext *)> &aGetResult)
 {
 	if (apObj == NULL)
 		return false;
@@ -170,6 +171,8 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	if (aSetArgs)
 		aSetArgs(pCtx);
 	bool bOk = Execute(pCtx, std::string(apObj->GetObjectType()->GetName()) + "::" + asDecl);
+	if (bOk && aGetResult)
+		aGetResult(pCtx);
 	mpEngine->ReturnContext(pCtx);
 	return bOk;
 }
@@ -199,4 +202,31 @@ void cSomaScriptRuntime::LogStubReport(int alTop)
 	Log("SOMA script: %d unimplemented API functions called\n", (int)v.size());
 	for (int i = 0; i < (int)v.size() && i < alTop; ++i)
 		Log("  %6d  %s\n", v[i].first, v[i].second.c_str());
+}
+
+bool cSomaScriptRuntime::Exec(const std::string &asCode, std::string &asError)
+{
+	asIScriptModule *pModule = mpEngine->GetModule("__exec", asGM_ALWAYS_CREATE);
+	asIScriptFunction *pFunc = NULL;
+	std::string sMessages;
+	mpEngine->SetMessageCallback(asFUNCTION(+[](const asSMessageInfo *msg, void *param) {
+		*(std::string *)param += std::string(msg->message) + " (" + std::to_string(msg->row) + ":" + std::to_string(msg->col) + ")\n";
+	}), &sMessages, asCALL_CDECL);
+	int r = pModule->CompileFunction("exec", ("void __exec() {\n" + asCode + "\n}").c_str(), -1, 0, &pFunc);
+	mpEngine->SetMessageCallback(asFUNCTION(MessageCallback), NULL, asCALL_CDECL);
+	if (r < 0)
+	{
+		asError = sMessages;
+		mpEngine->DiscardModule("__exec");
+		return false;
+	}
+	asIScriptContext *pCtx = mpEngine->RequestContext();
+	pCtx->Prepare(pFunc);
+	bool bOk = Execute(pCtx, "script_exec");
+	if (bOk == false)
+		asError = pCtx->GetExceptionString() ? pCtx->GetExceptionString() : "failed";
+	mpEngine->ReturnContext(pCtx);
+	pFunc->Release();
+	mpEngine->DiscardModule("__exec");
+	return bOk;
 }

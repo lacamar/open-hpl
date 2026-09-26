@@ -10,6 +10,8 @@
 
 #include <angelscript.h>
 #include <map>
+#include <set>
+#include <tuple>
 
 using namespace hpl;
 
@@ -40,12 +42,14 @@ public:
 	void OnEnter(bool abFirstTime);
 	void OnLeave();
 	void Update(float afTimeStep);
+	void OnAction(int alAction, bool abPressed);
 
 	void AddTimer(const tString &asName, float afTime, const tString &asFunction);
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
 
 	cWorld *GetWorld() { return mpWorld; }
+	asIScriptObject *GetScript() { return mpScript; }
 
 	cSomaLuxEntity *GetEntity(const tString &asName);
 	cSomaLuxEntity *GetEntity(const struct cSomaID &aID);
@@ -53,6 +57,7 @@ public:
 	const tString &GetName() const { return msName; }
 	const tString &GetFileName() const { return msFileName; }
 	tString msDisplayNameEntry;
+	float mfMaxInteractDistance = 3; // cLuxMap::cLuxMap
 
 	static cSomaLuxMap *GetCurrent() { return mpCurrent; }
 	static void SetCurrent(cSomaLuxMap *apMap) { mpCurrent = apMap; }
@@ -68,6 +73,9 @@ private:
 	std::vector<cSomaLuxTimer> mvTimers;
 	std::vector<cSomaLuxEntity *> mvEntities;
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
+
+	void UpdateCollideCallbacks();
+	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 };
 
 // Advances the current map's script every frame (cUpdater has no remove, so this persists).
@@ -76,6 +84,9 @@ class cSomaLuxUpdater : public iUpdateable
 public:
 	cSomaLuxUpdater() : iUpdateable("SomaLuxUpdater") {}
 	void Update(float afTimeStep);
+
+private:
+	bool mbEscapeDown = false;
 };
 
 #endif // SOMA_LUX_H

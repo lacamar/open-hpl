@@ -13,6 +13,10 @@
 #include "SomaMenuSfx.h"
 #include "SomaFsb.h"
 #include "SomaSplash.h"
+#include "SomaLuxPlayer.h"
+#include "SomaLuxEntity.h"
+#include "SomaLux.h"
+#include "SomaScriptRuntime.h"
 
 #include "system/HeadlessControl.h"
 #include "resources/GpuShaderManager.h"
@@ -75,6 +79,71 @@ static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessR
 	// real Options screen's Horizontal FOV slider (see SomaConfig.h's
 	// mfFOV/SomaPlayer.cpp) actually reaches the real camera live.
 	aResp.Set("fov_deg", cMath::ToDeg(pBase->GetDebugCamera()->GetFOV()));
+}
+
+static void cSomaBase_HeadlessCmd_PlayerState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+	if (pPlayer == NULL)
+	{
+		aResp.SetError("no script player");
+		return;
+	}
+	aResp.Set("active", pPlayer->IsActive());
+	aResp.Set("state", pPlayer->GetState() ? pPlayer->GetState()->msName : tString(""));
+	aResp.Set("move_state", pPlayer->GetMoveState() ? pPlayer->GetMoveState()->msName : tString(""));
+	aResp.Set("health", pPlayer->mfHealth);
+	if (iCharacterBody *pBody = pPlayer->GetCharacterBody())
+	{
+		cVector3f v = pBody->GetFeetPosition();
+		aResp.Set("feet_x", v.x);
+		aResp.Set("feet_y", v.y);
+		aResp.Set("feet_z", v.z);
+		aResp.Set("yaw", pBody->GetYaw());
+		aResp.Set("on_ground", pBody->IsOnGround());
+		aResp.Set("max_fwd_speed", pBody->GetMaxPositiveMoveSpeed(eCharDir_Forward));
+	}
+}
+
+static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(aReq.GetString("name", "")) : NULL;
+	if (pEnt == NULL)
+	{
+		aResp.SetError("no such entity");
+		return;
+	}
+	aResp.Set("name", pEnt->msName);
+	aResp.Set("type", pEnt->meType);
+	aResp.Set("class", pEnt->msClassName);
+	aResp.Set("script", pEnt->GetScript() ? tString(pEnt->GetScript()->GetObjectType()->GetName()) : tString(""));
+	aResp.Set("active", pEnt->mbActive);
+	aResp.Set("interaction_disabled", pEnt->mbInteractionDisabled);
+	aResp.Set("interact_callback", pEnt->msInteractCallback);
+	aResp.Set("collide_callbacks", (int)pEnt->mvCollideCallbacks.size());
+	cVector3f v = pEnt->GetPosition();
+	aResp.Set("x", v.x);
+	aResp.Set("y", v.y);
+	aResp.Set("z", v.z);
+	aResp.Set("size", cString::ToString(pEnt->mvSize.x) + " " + cString::ToString(pEnt->mvSize.y) + " " + cString::ToString(pEnt->mvSize.z));
+}
+
+extern std::string gsSomaExecOutput;
+
+static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaScriptRuntime *pRuntime = cSomaScriptRuntime::Get();
+	if (pRuntime == NULL)
+	{
+		aResp.SetError("no script runtime");
+		return;
+	}
+	std::string sError;
+	gsSomaExecOutput.clear();
+	bool bOk = pRuntime->Exec(aReq.GetString("code", ""), sError);
+	aResp.Set("output", gsSomaExecOutput);
+	if (bOk == false)
+		aResp.SetError(sError);
 }
 
 // Headless debug hook onto cRendererDeferred's own existing debug quad-view
@@ -615,6 +684,9 @@ bool cSomaBase::Init(const tString &asCommandline)
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
 		pCtrl->RegisterHandler("camera_state", cSomaBase_HeadlessCmd_CameraState, this);
+		pCtrl->RegisterHandler("player_state", cSomaBase_HeadlessCmd_PlayerState, this);
+		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
+		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
@@ -836,7 +908,8 @@ bool cSomaBase::InitEngine()
 	// (InitMainMenuScene()) and the old InitTestMap() fallback always keep
 	// using the free-fly camera regardless of this flag - no player body
 	// makes sense there.
-	mbUseRealPlayer = (getenv("OPENHPL_SOMA_FREECAM") == NULL);
+	const char *pFreeCam = getenv("OPENHPL_SOMA_FREECAM");
+	mbUseRealPlayer = pFreeCam == NULL || pFreeCam[0] == 0 || strcmp(pFreeCam, "0") == 0;
 
 	cEngineInitVars vars;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
@@ -907,6 +980,8 @@ bool cSomaBase::InitEngine()
 		{
 			mpLuxGame = new cSomaLuxGame(mpScriptRuntime);
 			mpLuxGame->Load();
+			const char *pScriptPlayer = getenv("OPENHPL_SOMA_SCRIPT_PLAYER");
+			mbUseScriptPlayer = cSomaLuxPlayer::Get() && (pScriptPlayer == NULL || strcmp(pScriptPlayer, "0") != 0);
 			mpLuxUpdater = hplNew(cSomaLuxUpdater, ());
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpLuxUpdater);
 		}
@@ -1349,16 +1424,24 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		if (mpDebugCameraController)
 			mpDebugCameraController->SetActive(false);
 
-		if (mpPlayer == NULL)
+		if (mbUseScriptPlayer)
+			cSomaLuxPlayer::Get()->SetCamera(mpDebugCamera);
+		else if (mpPlayer == NULL)
 		{
 			mpPlayer = hplNew(cSomaPlayer, (mpDebugCamera, mpEngine->GetInput()));
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpPlayer);
 		}
 	}
-	else if (mpDebugCameraController == NULL)
+	else
 	{
-		mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
-		mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+		if (mpDebugCameraController == NULL)
+		{
+			mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
+			mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
+		}
+		// The player script still needs a camera; this one is never rendered
+		if (mbUseScriptPlayer && cSomaLuxPlayer::Get()->GetCamera() == NULL)
+			cSomaLuxPlayer::Get()->SetCamera(mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
 	}
 
 	// Resolve a real PlayerStart Area by name if asked for (requires
@@ -1456,7 +1539,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	}
 
 	// Munshi phone call (SomaApartmentIntroCall.h); cUpdater has no remove, so the object persists
-	if (asMapFile == "00_01_apartment.hpm")
+	if (asMapFile == "00_01_apartment.hpm" && mbUseScriptPlayer == false)
 	{
 		if (mpApartmentIntroCall == NULL)
 		{
@@ -1477,6 +1560,8 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			{
 				mpLuxGame->PreloadData(mpLuxMap);
 				mpLuxGame->EnterMap(mpLuxMap);
+				if (mbUseScriptPlayer && mbUseRealPlayer)
+					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw);
 			}
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
 			mpLuxMap->OnEnter(bFirstTime);

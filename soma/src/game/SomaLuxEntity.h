@@ -44,6 +44,7 @@ public:
 	bool mbActive = true;
 	bool mbInteractionDisabled = false;
 	float mfMaxInteractDistance = -1;
+	bool mbInteractedWith = false;
 	cMatrixf m_mtxOnLoad = cMatrixf::Identity;
 	cVector3f mvScale = 1;
 	cVector3f mvSize = 1; // areas
@@ -80,6 +81,12 @@ public:
 	cMatrixf GetMatrix();
 	void SetMatrix(const cMatrixf &a_mtx);
 	iPhysicsBody *GetMainBody() { return mvBodies.empty() ? NULL : mvBodies[0]; }
+	void RemoveCollideCallbacks(const tString &asChild);
+	float GetMaxInteractDistance();
+	bool CanInteract(int alType, iPhysicsBody *apBody);
+	bool OnInteract(int alType, iPhysicsBody *apBody, const cVector3f &avFocusPos, const tString &asData);
+	// HPL3 areas are raycastable bodies that collide with nothing
+	void CreateAreaBody(iPhysicsWorld *apWorld);
 	const char *GetBaseTypeName() const;
 
 	// Created by the loaders while a world loads; the next cSomaLuxMap takes them
@@ -87,6 +94,13 @@ public:
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
 };
+
+// tIDs for engine objects that have none in HPL2 (bodies, lights...)
+cSomaID SomaObjectID(void *apObj);
+void *SomaObjectFromID(const cSomaID &aID);
+
+// Oriented boxes of bodies, areas and the player's character body
+bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);
 
 // "*" matches any run of characters, as HPL3's wildcard entity names
 bool SomaWildcardMatch(const tString &asPattern, const tString &asName);

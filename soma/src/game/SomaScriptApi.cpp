@@ -230,6 +230,13 @@ static void StubConstruct(asIScriptGeneric *apGen)
 	ConstructDefaultAt(apGen->GetEngine(), pType->GetTypeId(), apGen->GetObject());
 }
 
+// Copy constructors of POD value types copy the bytes
+static void CopyConstructPod(asIScriptGeneric *apGen)
+{
+	asITypeInfo *pType = apGen->GetFunction()->GetObjectType();
+	memcpy(apGen->GetObject(), apGen->GetArgObject(0), pType->GetSize());
+}
+
 // Properties sit at their recovered offsets (max 3560), so a zeroed block holds any of them;
 // only string members need constructing.
 static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, char *apObj)
@@ -433,7 +440,9 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 			if (sKind == "construct" && t.msKind == "value")
 			{
 				std::string sDecl = "void f(" + sParams + ")";
-				r = apEngine->RegisterObjectBehaviour(pName, asBEHAVE_CONSTRUCT, sDecl.c_str(), asFUNCTION(StubConstruct), asCALL_GENERIC);
+				bool bCopy = sParams == "const " + t.msName + " &in" || sParams == "const " + t.msName + "&in";
+				r = apEngine->RegisterObjectBehaviour(pName, asBEHAVE_CONSTRUCT, sDecl.c_str(), bCopy ? asFUNCTION(CopyConstructPod) : asFUNCTION(StubConstruct),
+													  asCALL_GENERIC);
 			}
 			else if ((sKind == "factory" || sKind == "FactoryDefault") && t.msKind == "ref")
 			{

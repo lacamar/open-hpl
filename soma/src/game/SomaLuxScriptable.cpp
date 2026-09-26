@@ -93,7 +93,56 @@ bool cSomaLuxScriptable::LoadScript(cSomaScriptRuntime *apRuntime, const tString
 	if (mpScript == NULL)
 		return false;
 	CallWithObject("void SetupBaseInterface(" + asBaseType + " @aObj)", this);
+	Call("void Init()");
 	return true;
+}
+
+bool cSomaLuxScriptable::HasMethod(const std::string &asDecl)
+{
+	return mpScript && mpScript->GetObjectType()->GetMethodByDecl(asDecl.c_str()) != NULL;
+}
+
+bool cSomaLuxScriptable::CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault)
+{
+	bool bRet = abDefault;
+	if (mpScript)
+		mpRuntime->Call(mpScript, asDecl, aSetArgs, [&bRet](asIScriptContext *c) { bRet = c->GetReturnByte() != 0; });
+	return bRet;
+}
+
+void cSomaLuxScriptable::OnUpdate(float afTimeStep)
+{
+	UpdateTimers(afTimeStep);
+	CallWithFloat("void Update(float afTimeStep)", afTimeStep);
+}
+
+void cSomaLuxScriptable::OnPostUpdate(float afTimeStep)
+{
+	CallWithFloat("void PostUpdate(float afTimeStep)", afTimeStep);
+}
+
+void cSomaLuxScriptable::OnVariableUpdate(float afTimeStep)
+{
+	CallWithFloat("void VariableUpdate(float afDeltaTime)", afTimeStep);
+}
+
+void cSomaLuxScriptable::OnMapMessage(const char *apDecl, void *apMap)
+{
+	CallWithObject(apDecl, apMap);
+}
+
+void cSomaLuxScriptable::OnAction(int alAction, bool abPressed)
+{
+	auto args = [=](asIScriptContext *c) { c->SetArgDWord(0, alAction); c->SetArgByte(1, abPressed); };
+	if (Call("void OnAction(int alAction, bool abPressed)", args) == false)
+		Call("bool OnAction(int alAction, bool abPressed)", args);
+}
+
+void cSomaLuxScriptable::OnAnalogInput(int alAnalogId, const cVector3f &avAmount)
+{
+	auto args = [&](asIScriptContext *c) { c->SetArgDWord(0, alAnalogId); c->SetArgAddress(1, (void *)&avAmount); };
+	if (Call("void OnAnalogInput(int alAnalogId, const cVector3f &in avAmount)", args) == false)
+		Call("bool OnAnalogInput(int alAnalogId, const cVector3f &in avAmount)", args);
 }
 
 bool cSomaLuxScriptable::Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs)

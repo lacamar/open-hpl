@@ -277,6 +277,12 @@ private:
 	// camera instead (no player body makes sense in the menu scene).
 	cSomaPlayer *mpPlayer;
 	bool mbUseRealPlayer;
+	// The game's own player script (cSomaLuxPlayer) drives the camera instead of cSomaPlayer
+	bool mbUseScriptPlayer = false;
+public:
+	bool UsesScriptPlayer() { return mbUseScriptPlayer; }
+	bool UsesRealPlayer() { return mbUseRealPlayer; }
+private:
 
 	// Real 00_00_intro.hpm opening slideshow (see SomaIntroSequence.h) -
 	// created once by StartNewGame() the first time that specific map loads,

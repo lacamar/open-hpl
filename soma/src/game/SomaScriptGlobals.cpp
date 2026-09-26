@@ -26,6 +26,8 @@ static std::map<tString, cSomaVariant> gmapVars;
 static std::map<int, cSomaVariant> gmapArgs;
 static cSomaVariant gReturn;
 
+std::string gsSomaExecOutput;
+
 static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
 {
 	bool bFound = false;
@@ -91,4 +93,14 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalReturnMatrix()", +[]() { return gReturn.m; });
 	SOMA_FUNC(e, "cColor cScript_GetGlobalReturnColor()", +[]() { return gReturn.c; });
 	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return gReturn.id; });
+
+	typedef const tString &S;
+	SOMA_FUNC(e, "void __print(const tString&in asText)", +[](S s) { gsSomaExecOutput += s + "\n"; });
+	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s", s.c_str()); });
+	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s", s.c_str()); });
+	SOMA_FUNC(e, "void Error(const tString&in asString)", +[](S s) { Error("%s", s.c_str()); });
+	SOMA_FUNC(e, "void cLux_AddDebugMessage(const tString&in asText, bool abCheckForDuplicates)", +[](S s, bool) { Log("SOMA debug: %s\n", s.c_str()); });
+	SOMA_FUNC(e, "void cLux_AddDebugMessage(const tString&in asText)", +[](S s) { Log("SOMA debug: %s\n", s.c_str()); });
+	SOMA_FUNC(e, "void cLux_AddTodoMessage(const tString&in asText, bool abCheckForDuplicates)", +[](S s, bool) { Log("SOMA todo: %s\n", s.c_str()); });
+	SOMA_FUNC(e, "void cLux_AddTodoMessage(const tString&in asText)", +[](S s) { Log("SOMA todo: %s\n", s.c_str()); });
 }

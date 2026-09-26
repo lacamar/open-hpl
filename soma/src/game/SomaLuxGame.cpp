@@ -1,8 +1,11 @@
 #include "SomaLuxGame.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
+#include "SomaLuxPlayer.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
+
+#include <cstring>
 
 cSomaLuxGame *cSomaLuxGame::mpInstance = NULL;
 
@@ -47,6 +50,9 @@ static cConfigFile *OpenConfig(const tWString &asUserFile, const tWString &asDef
 }
 
 static cConfigFile *gpUserConfig = NULL, *gpKeyConfig = NULL, *gpGameConfig = NULL;
+
+cConfigFile *SomaUserConfig() { return gpUserConfig; }
+cConfigFile *SomaKeyConfig() { return gpKeyConfig; }
 
 static void LoadConfigs()
 {
@@ -97,7 +103,9 @@ void cSomaLuxGame::Load()
 		tString sFile = pFiles ? pFiles->GetAttributeString(def.mpAttr, "") : "";
 		if (sFile.empty())
 			continue;
-		cSomaLuxHandler *pHandler = new cSomaLuxHandler();
+		cSomaLuxHandler *pHandler = strcmp(def.mpAttr, "Player") == 0		   ? new cSomaLuxPlayer()
+									: strcmp(def.mpAttr, "InputHandler") == 0 ? new cSomaLuxInputHandler()
+																			   : new cSomaLuxHandler();
 		pHandler->msName = def.mpAttr;
 		pHandler->msScriptName = def.mpAttr;
 		pHandler->msBaseType = def.mpBase;
@@ -107,7 +115,29 @@ void cSomaLuxGame::Load()
 			delete pHandler;
 	}
 	if (pGame)
+	{
+		if (cXmlElement *pProp = pGame->GetFirstElement("Prop"))
+			mfPropInteractDistance = pProp->GetAttributeFloat("DefaultMaxInteractDistance", 2);
+		if (cXmlElement *pCritter = pGame->GetFirstElement("Critter"))
+			mfCritterInteractDistance = pCritter->GetAttributeFloat("DefaultMaxInteractDistance", 2);
 		pRes->DestroyXmlDocument(pGame);
+	}
+
+	iXmlDocument *pEffects = pRes->LoadXmlDocument("config/Effects.cfg");
+	std::vector<cXmlElement *> vEffectElems = ChildElements(pEffects);
+	for (cXmlElement *pElem : vEffectElems)
+	{
+		cSomaLuxEffect *pEffect = new cSomaLuxEffect();
+		pEffect->msName = pElem->GetAttributeString("Name", "");
+		pEffect->msScriptName = pEffect->msName;
+		pEffect->mlId = pElem->GetAttributeInt("ID", -1);
+		if (pEffect->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxEffect"))
+			mvEffects.push_back(pEffect);
+		else
+			delete pEffect;
+	}
+	if (pEffects)
+		pRes->DestroyXmlDocument(pEffects);
 
 	iXmlDocument *pModules = pRes->LoadXmlDocument("config/Modules.cfg");
 	std::vector<cXmlElement *> vModuleElems = ChildElements(pModules);
@@ -129,22 +159,6 @@ void cSomaLuxGame::Load()
 	if (pModules)
 		pRes->DestroyXmlDocument(pModules);
 
-	iXmlDocument *pEffects = pRes->LoadXmlDocument("config/Effects.cfg");
-	std::vector<cXmlElement *> vEffectElems = ChildElements(pEffects);
-	for (cXmlElement *pElem : vEffectElems)
-	{
-		cSomaLuxEffect *pEffect = new cSomaLuxEffect();
-		pEffect->msName = pElem->GetAttributeString("Name", "");
-		pEffect->msScriptName = pEffect->msName;
-		pEffect->mlId = pElem->GetAttributeInt("ID", -1);
-		if (pEffect->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxEffect"))
-			mvEffects.push_back(pEffect);
-		else
-			delete pEffect;
-	}
-	if (pEffects)
-		pRes->DestroyXmlDocument(pEffects);
-
 	iXmlDocument *pTypes = pRes->LoadXmlDocument("config/EntityTypes.cfg");
 	for (cXmlElement *pGroup : ChildElements(pTypes))
 		for (cXmlElement *pType : ChildElements(pGroup))
@@ -159,35 +173,51 @@ void cSomaLuxGame::Load()
 
 	Log("SOMA script: %d handlers, %d user modules, %d effects\n", (int)mvHandlers.size(), (int)mvModules.size(), (int)mvEffects.size());
 
-	ForEach([](cSomaLuxScriptable *p) { p->Call("void LoadUserConfig()"); });
-	ForEach([](cSomaLuxScriptable *p) { p->Call("void OnStart()"); });
+	if (cSomaLuxInputHandler::Get())
+	{
+		cSomaLuxInputHandler::Get()->LoadUserConfig();
+		cSomaLuxInputHandler::Get()->LoadKeyConfig();
+	}
+	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
+	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
 }
 
 void cSomaLuxGame::Update(float afTimeStep)
 {
-	ForEach([afTimeStep](cSomaLuxScriptable *p) {
-		p->UpdateTimers(afTimeStep);
-		p->CallWithFloat("void Update(float afTimeStep)", afTimeStep);
-	});
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void PostUpdate(float afTimeStep)", afTimeStep); });
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void VariableUpdate(float afDeltaTime)", afTimeStep); });
+	if (cSomaLuxInputHandler::Get())
+		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); });
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); });
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); });
+}
+
+void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
+{
+	ForEach([=](cSomaLuxScriptable *p) { p->OnAction(alAction, abPressed); });
+	if (cSomaLuxMap::GetCurrent())
+		cSomaLuxMap::GetCurrent()->OnAction(alAction, abPressed);
+}
+
+void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
+{
+	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); });
 }
 
 void cSomaLuxGame::PreloadData(cSomaLuxMap *apMap)
 {
-	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void PreloadData(cLuxMap @apMap)", apMap); });
+	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void PreloadData(cLuxMap @apMap)", apMap); });
 }
 
 void cSomaLuxGame::EnterMap(cSomaLuxMap *apMap)
 {
-	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void CreateWorldEntities(cLuxMap @apMap)", apMap); });
-	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void OnMapEnter(cLuxMap @apMap)", apMap); });
+	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void CreateWorldEntities(cLuxMap @apMap)", apMap); });
+	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapEnter(cLuxMap @apMap)", apMap); });
 }
 
 void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
 {
-	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void OnMapLeave(cLuxMap @apMap)", apMap); });
-	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
+	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapLeave(cLuxMap @apMap)", apMap); });
+	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
 }
 
 const cSomaLuxGame::cEntityScript *cSomaLuxGame::GetEntityScript(const tString &asGroup, const tString &asType)
@@ -277,6 +307,8 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "iLuxHeroStatsHandler@ cLux_GetHeroStatsHandler()", +[]() { return (void *)HandlerByName<4>(); });
 	SOMA_FUNC(e, "iLuxRichPresenceHandler@ cLux_GetRichPresenceHandler()", +[]() { return (void *)HandlerByName<5>(); });
 	SOMA_FUNC(e, "cLuxPlayer@ cLux_GetPlayer()", +[]() { return (void *)HandlerByName<6>(); });
+	cSomaLuxPlayer::RegisterNatives(e);
+	cSomaLuxInputHandler::RegisterNatives(e);
 
 	const char *vTimerTypes[] = {"cLuxUserModule", "cLuxEffect", "cLuxPlayer", "cLuxInputHandler", "cLuxGuiHandler",
 								 "cLuxEventDatabaseHandler"};
