@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <dirent.h>
 #include <fstream>
+#include <map>
+#include <set>
 #include <regex>
 #include <sstream>
 
@@ -79,6 +81,46 @@ static void FindMapScripts(const std::string &asDir, std::vector<std::string> &a
 }
 
 // Script entry points named by config/*.cfg (ScriptFile="..." and the game.cfg handlers).
+// Stubbed application functions a module calls (asBC_CALLSYS / asBC_Thiscall1 operands), counted once per module
+static void CollectStubCalls(asIScriptModule *apModule, std::map<std::string, int> &amapOut)
+{
+	asIScriptEngine *pEngine = apModule->GetEngine();
+	std::set<std::string> setSeen;
+	std::vector<asIScriptFunction *> vFuncs;
+	for (asUINT i = 0; i < apModule->GetFunctionCount(); ++i)
+		vFuncs.push_back(apModule->GetFunctionByIndex(i));
+	for (asUINT i = 0; i < apModule->GetObjectTypeCount(); ++i)
+	{
+		asITypeInfo *pType = apModule->GetObjectTypeByIndex(i);
+		for (asUINT j = 0; j < pType->GetMethodCount(); ++j)
+			vFuncs.push_back(pType->GetMethodByIndex(j, false));
+		for (asUINT j = 0; j < pType->GetBehaviourCount(); ++j)
+			vFuncs.push_back(pType->GetBehaviourByIndex(j, NULL));
+		for (asUINT j = 0; j < pType->GetFactoryCount(); ++j)
+			vFuncs.push_back(pType->GetFactoryByIndex(j));
+	}
+	for (asIScriptFunction *pFunc : vFuncs)
+	{
+		asUINT lLen = 0;
+		asDWORD *pCode = pFunc ? pFunc->GetByteCode(&lLen) : NULL;
+		for (asUINT pos = 0; pCode && pos < lLen;)
+		{
+			asBYTE op = *(asBYTE *)&pCode[pos];
+			if (op == asBC_CALLSYS || op == asBC_Thiscall1)
+			{
+				asIScriptFunction *pCalled = pEngine->GetFunctionById((int)pCode[pos + 1]);
+				if (SomaScriptIsStub(pCalled))
+				{
+					std::string sName = pCalled->GetDeclaration(true, false, false);
+					if (setSeen.insert(sName).second)
+						++amapOut[sName];
+				}
+			}
+			pos += asBCTypeSize[asBCInfo[op].type];
+		}
+	}
+}
+
 static void FindConfigScripts(const std::string &asGameDir, std::vector<std::string> &aOut)
 {
 	const char *vCfgs[] = {"EntityTypes.cfg", "Modules.cfg", "PlayerStates.cfg", "game.cfg", "Effects.cfg"};
@@ -138,6 +180,7 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 		out << (i ? "," : "") << "\"" << JsonEscape(vApiErrors[i]) << "\"";
 	out << "],\"modules\":{";
 
+	std::map<std::string, int> mapStubModules;
 	int lOk = 0, lMissing = 0;
 	for (size_t i = 0; i < vEntries.size(); ++i)
 	{
@@ -160,10 +203,19 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 		for (size_t j = 0; j < msgs.mvErrors.size() && j < 20; ++j)
 			out << (j ? "," : "") << "\"" << JsonEscape(msgs.mvErrors[j].substr(msgs.mvErrors[j].find("/script/") != std::string::npos ? msgs.mvErrors[j].find("/script/") + 1 : 0)) << "\"";
 		out << "]}";
+		if (asIScriptModule *pModule = pEngine->GetModule(("check_" + std::to_string(i)).c_str()))
+			CollectStubCalls(pModule, mapStubModules);
 		pEngine->DiscardModule(("check_" + std::to_string(i)).c_str());
 	}
 	int lTotal = (int)vEntries.size() - lMissing;
-	out << "},\"summary\":{\"modules\":" << lTotal << ",\"compiled\":" << lOk << ",\"not_shipped\":" << lMissing
+	std::vector<std::pair<int, std::string>> vStubs;
+	for (auto &it : mapStubModules)
+		vStubs.push_back(std::make_pair(it.second, it.first));
+	std::sort(vStubs.rbegin(), vStubs.rend());
+	out << "},\"stub_calls\":{";
+	for (size_t i = 0; i < vStubs.size(); ++i)
+		out << (i ? "," : "") << "\"" << JsonEscape(vStubs[i].second) << "\":" << vStubs[i].first;
+	out << "},\"summary\":{\"stubs_referenced\":" << vStubs.size() << ",\"modules\":" << lTotal << ",\"compiled\":" << lOk << ",\"not_shipped\":" << lMissing
 		<< ",\"api_errors\":" << vApiErrors.size() << "}}\n";
 	printf("script check: %d/%d modules compile (%d named in config but not shipped), %d API registration errors -> %s\n",
 		   lOk, lTotal, lMissing, (int)vApiErrors.size(), asReport.c_str());

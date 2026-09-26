@@ -82,6 +82,15 @@ public:
 	void SetMatrix(const cMatrixf &a_mtx);
 	iPhysicsBody *GetMainBody() { return mvBodies.empty() ? NULL : mvBodies[0]; }
 	void RemoveCollideCallbacks(const tString &asChild);
+
+	// iLuxEntity animation controller on the mesh's animation states
+	int PlayAnimation(const tString &asName, float afFadeTime, bool abLoop, const tString &asCallback);
+	bool GetAnimationIsPlaying();
+	void StopAnimations(float afFadeTime);
+	void UpdateAnimation(float afTimeStep);
+	int mlCurrentAnim = -1;
+	tString msAnimCallback;
+	std::vector<std::pair<tString, bool>> mvAnimQueue;
 	float GetMaxInteractDistance();
 	bool CanInteract(int alType, iPhysicsBody *apBody);
 	bool OnInteract(int alType, iPhysicsBody *apBody, const cVector3f &avFocusPos, const tString &asData);

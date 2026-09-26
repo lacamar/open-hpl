@@ -57,6 +57,10 @@ private:
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);
 
 bool SomaScriptIsDummy(void *apObj);
+
+// Registered from the recovered API without an implementation
+const asPWORD kSomaStubUserData = 0x50b0;
+bool SomaScriptIsStub(asIScriptFunction *apFunc);
 void SomaScriptStubCall(asIScriptGeneric *apGen);
 
 #endif // SOMA_SCRIPT_API_H

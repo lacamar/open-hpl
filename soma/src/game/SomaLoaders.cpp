@@ -79,12 +79,15 @@ static void CreateAreaEntity(const tString &asName, const tString &asType, bool 
 	cSomaLuxEntity::Pending().push_back(pEnt);
 }
 
+// Name of an entity created at runtime by cLuxMap::CreateEntity
+tString gsSomaSpawnName;
+
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
-	if (cWorldLoaderHpm::GetCurrentElement())
+	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
 	{
 		cSomaLuxEntity *pEnt = new cSomaLuxEntity();
-		pEnt->msName = cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "");
+		pEnt->msName = cWorldLoaderHpm::GetCurrentElement() ? cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "") : gsSomaSpawnName;
 		pEnt->msClassName = msEntityType;
 		pEnt->msFileName = msFileName;
 		pEnt->meType = TypeFromEntityType(msEntityType);

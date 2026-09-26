@@ -27,6 +27,7 @@ struct cSomaLuxTimer
 	float mfUserFloat;
 	int mlUserInt;
 	tString msUserString;
+	float mfLength = 0;
 };
 
 // Script type cLuxMap
@@ -45,6 +46,10 @@ public:
 	void OnAction(int alAction, bool abPressed);
 
 	void AddTimer(const tString &asName, float afTime, const tString &asFunction);
+	// cLuxMap::RestartCurrentTimer, only valid inside a timer callback
+	void RestartCurrentTimer(float afTime);
+	std::vector<cSomaLuxTimer> &GetTimers() { return mvTimers; }
+	double GetTime() { return mfTime; }
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
 
@@ -54,6 +59,9 @@ public:
 	cSomaLuxEntity *GetEntity(const tString &asName);
 	cSomaLuxEntity *GetEntity(const struct cSomaID &aID);
 	const std::vector<cSomaLuxEntity *> &GetEntities() { return mvEntities; }
+	cSomaLuxEntity *CreateEntity(const tString &asName, const tString &asFile, const cMatrixf &a_mtx, const cVector3f &avScale);
+	void DestroyEntity(cSomaLuxEntity *apEnt);
+	cSomaLuxEntity *mpLatestEntity = NULL;
 	const tString &GetName() const { return msName; }
 	const tString &GetFileName() const { return msFileName; }
 	tString msDisplayNameEntry;
@@ -75,6 +83,12 @@ private:
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
 
 	void UpdateCollideCallbacks();
+	bool SetupEntityScript(cSomaLuxEntity *apEnt);
+	void AddEntity(cSomaLuxEntity *apEnt);
+	int mlNextId = 1;
+	std::vector<cSomaLuxEntity *> mvDestroyed;
+	cSomaLuxTimer *mpFiringTimer = NULL;
+	double mfTime = 0;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 };
 

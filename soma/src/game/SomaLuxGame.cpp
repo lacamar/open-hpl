@@ -2,6 +2,7 @@
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxPlayer.h"
+#include "SomaLuxVoice.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
@@ -81,6 +82,7 @@ static std::vector<cXmlElement *> ChildElements(iXmlNode *apNode)
 void cSomaLuxGame::Load()
 {
 	LoadConfigs();
+	gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(new cSomaLuxVoiceHandler(gpSomaBase->mpEngine));
 
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
 
@@ -187,6 +189,9 @@ void cSomaLuxGame::Update(float afTimeStep)
 	if (cSomaLuxInputHandler::Get())
 		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); });
+	if (cSomaLuxVoiceHandler::Get())
+		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
+	cSomaLuxDialogHandler::Get()->Update(afTimeStep);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); });
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); });
 }
@@ -216,6 +221,7 @@ void cSomaLuxGame::EnterMap(cSomaLuxMap *apMap)
 
 void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
 {
+	cSomaLuxDialogHandler::Get()->StopAll();
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapLeave(cLuxMap @apMap)", apMap); });
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
 }
@@ -308,6 +314,8 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "iLuxRichPresenceHandler@ cLux_GetRichPresenceHandler()", +[]() { return (void *)HandlerByName<5>(); });
 	SOMA_FUNC(e, "cLuxPlayer@ cLux_GetPlayer()", +[]() { return (void *)HandlerByName<6>(); });
 	cSomaLuxPlayer::RegisterNatives(e);
+	cSomaLuxVoiceHandler::RegisterNatives(e);
+	cSomaLuxDialogHandler::RegisterNatives(e);
 	cSomaLuxInputHandler::RegisterNatives(e);
 
 	const char *vTimerTypes[] = {"cLuxUserModule", "cLuxEffect", "cLuxPlayer", "cLuxInputHandler", "cLuxGuiHandler",

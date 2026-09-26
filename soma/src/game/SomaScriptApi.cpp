@@ -230,6 +230,17 @@ static void StubConstruct(asIScriptGeneric *apGen)
 	ConstructDefaultAt(apGen->GetEngine(), pType->GetTypeId(), apGen->GetObject());
 }
 
+static void MarkStub(asIScriptEngine *apEngine, int alFuncId)
+{
+	if (asIScriptFunction *pFunc = apEngine->GetFunctionById(alFuncId))
+		pFunc->SetUserData((void *)1, kSomaStubUserData);
+}
+
+bool SomaScriptIsStub(asIScriptFunction *apFunc)
+{
+	return apFunc && apFunc->GetUserData(kSomaStubUserData) != NULL;
+}
+
 // Copy constructors of POD value types copy the bytes
 static void CopyConstructPod(asIScriptGeneric *apGen)
 {
@@ -462,6 +473,8 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 				continue;
 			bool bLayoutAssign = t.msKind == "ref" && !t.mvProps.empty() && t.mvMethods[j].find("opAssign(const " + t.msName) != std::string::npos;
 			r = apEngine->RegisterObjectMethod(pName, t.mvMethods[j].c_str(), asFUNCTION(bLayoutAssign ? MemberAssign : Stub), asCALL_GENERIC);
+			if (r >= 0 && bLayoutAssign == false)
+				MarkStub(apEngine, r);
 			if (r < 0 && r != asALREADY_REGISTERED)
 				Fail(t.msName + "::" + t.mvMethods[j], r);
 		}
@@ -517,6 +530,8 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 		if (setNativeNames.count(sName))
 			mvWarnings.push_back("native overload of '" + sName + "' does not match API declaration: " + mvGlobals[i]);
 		r = apEngine->RegisterGlobalFunction(mvGlobals[i].c_str(), asFUNCTION(Stub), asCALL_GENERIC);
+		if (r >= 0)
+			MarkStub(apEngine, r);
 		if (r < 0 && r != asALREADY_REGISTERED)
 			Fail(mvGlobals[i], r);
 	}
