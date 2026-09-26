@@ -99,6 +99,7 @@ void cSomaLuxGame::Load()
 			continue;
 		cSomaLuxHandler *pHandler = new cSomaLuxHandler();
 		pHandler->msName = def.mpAttr;
+		pHandler->msScriptName = def.mpAttr;
 		pHandler->msBaseType = def.mpBase;
 		if (pHandler->LoadScript(mpRuntime, sFile, def.mpClass, def.mpBase))
 			mvHandlers.push_back(pHandler);
@@ -116,6 +117,7 @@ void cSomaLuxGame::Load()
 			continue;
 		cSomaLuxModule *pModule = new cSomaLuxModule();
 		pModule->msName = pElem->GetAttributeString("Name", "");
+		pModule->msScriptName = pModule->msName;
 		pModule->msContainer = pElem->GetAttributeString("Container", "Default");
 		pModule->mlId = pElem->GetAttributeInt("ID", -1);
 		pModule->mbGlobal = pElem->GetAttributeBool("IsGlobal", false);
@@ -133,6 +135,7 @@ void cSomaLuxGame::Load()
 	{
 		cSomaLuxEffect *pEffect = new cSomaLuxEffect();
 		pEffect->msName = pElem->GetAttributeString("Name", "");
+		pEffect->msScriptName = pEffect->msName;
 		pEffect->mlId = pElem->GetAttributeInt("ID", -1);
 		if (pEffect->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxEffect"))
 			mvEffects.push_back(pEffect);
@@ -141,6 +144,18 @@ void cSomaLuxGame::Load()
 	}
 	if (pEffects)
 		pRes->DestroyXmlDocument(pEffects);
+
+	iXmlDocument *pTypes = pRes->LoadXmlDocument("config/EntityTypes.cfg");
+	for (cXmlElement *pGroup : ChildElements(pTypes))
+		for (cXmlElement *pType : ChildElements(pGroup))
+		{
+			cEntityScript es;
+			es.msFile = pType->GetAttributeString("ScriptFile", "");
+			es.msClass = pType->GetAttributeString("ScriptClass", "");
+			mmapEntityScripts[pGroup->GetValue() + ":" + pType->GetAttributeString("Name", "")] = es;
+		}
+	if (pTypes)
+		pRes->DestroyXmlDocument(pTypes);
 
 	Log("SOMA script: %d handlers, %d user modules, %d effects\n", (int)mvHandlers.size(), (int)mvModules.size(), (int)mvEffects.size());
 
@@ -173,6 +188,12 @@ void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
 {
 	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void OnMapLeave(cLuxMap @apMap)", apMap); });
 	ForEach([apMap](cSomaLuxScriptable *p) { p->CallWithObject("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
+}
+
+const cSomaLuxGame::cEntityScript *cSomaLuxGame::GetEntityScript(const tString &asGroup, const tString &asType)
+{
+	std::map<tString, cEntityScript>::iterator it = mmapEntityScripts.find(asGroup + ":" + asType);
+	return it == mmapEntityScripts.end() ? NULL : &it->second;
 }
 
 cSomaLuxModule *cSomaLuxGame::GetModule(int alId)

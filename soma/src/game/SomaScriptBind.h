@@ -130,4 +130,9 @@ namespace SomaBind
 #define SOMA_CONSTRUCT(engine, type, decl, ...) \
 	do { int r_ = (engine)->RegisterObjectBehaviour(type, asBEHAVE_CONSTRUCT, decl, asFUNCTION((SomaBind::GenericConstruct<__VA_ARGS__>)), asCALL_GENERIC); assert(r_ >= 0 || r_ == asALREADY_REGISTERED); (void)r_; } while (0)
 
+// Skips declarations already registered (hand-written natives take precedence over generated ones)
+#define SOMA_METHOD_NEW(engine, type, decl, ...) \
+	do { asITypeInfo *t_ = (engine)->GetTypeInfoByName(type); if (t_ && t_->GetMethodByDecl(decl) == NULL) \
+		(engine)->RegisterObjectMethod(type, decl, asFUNCTION((SomaBind::GenericMethod<__VA_ARGS__>)), asCALL_GENERIC); } while (0)
+
 #endif // SOMA_SCRIPT_BIND_H

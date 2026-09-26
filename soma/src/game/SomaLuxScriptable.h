@@ -30,6 +30,10 @@ public:
 	bool LoadScript(cSomaScriptRuntime *apRuntime, const tString &asFile, const tString &asClass, const tString &asBaseType);
 
 	asIScriptObject *GetScript() { return mpScript; }
+
+	// Name cScript_RunGlobalFunc addresses this object by (entity, module, player state...)
+	tString msScriptName;
+	static const std::vector<cSomaLuxScriptable *> &GetAll() { return mvAll; }
 	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
 	bool CallWithFloat(const std::string &asDecl, float afX);
 	bool CallWithObject(const std::string &asDecl, void *apObj);
@@ -78,6 +82,8 @@ protected:
 	};
 	cTimer *FindTimer(uint64_t alId);
 	cFader *FindFader(uint64_t alId);
+
+	static std::vector<cSomaLuxScriptable *> mvAll;
 
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;

@@ -9,6 +9,8 @@
 
 #include "SomaLuxScriptable.h"
 
+#include <map>
+
 class cSomaLuxMap;
 
 class cSomaLuxModule : public cSomaLuxScriptable
@@ -53,6 +55,14 @@ public:
 	cSomaLuxEffect *GetEffect(int alId);
 	cSomaLuxHandler *GetHandler(const tString &asName);
 
+	// config/EntityTypes.cfg: asGroup is the section (PropTypes, AreaTypes, AgentTypes...)
+	struct cEntityScript
+	{
+		tString msFile;
+		tString msClass;
+	};
+	const cEntityScript *GetEntityScript(const tString &asGroup, const tString &asType);
+
 	static cSomaLuxGame *Get() { return mpInstance; }
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
@@ -65,6 +75,7 @@ private:
 	std::vector<cSomaLuxHandler *> mvHandlers;
 	std::vector<cSomaLuxModule *> mvModules;
 	std::vector<cSomaLuxEffect *> mvEffects;
+	std::map<tString, cEntityScript> mmapEntityScripts;
 	bool mbStarted = false;
 };
 

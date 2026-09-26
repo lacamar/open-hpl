@@ -86,6 +86,8 @@ namespace hpl {
 
 		// Per-track xml/created/skipped counts of the last loaded map, as JSON.
 		static const tString& GetLastLoadReportJson() { return msLastLoadReportJson; }
+		// The map element (Entity/Area/...) being created, for loaders that need its UID/UserVariables
+		static cXmlElement* GetCurrentElement() { return mpCurrentElement; }
 
 	private:
 		////////////////////////////////////////
@@ -145,6 +147,7 @@ namespace hpl {
 		bool mbTerrainActive;
 
 		static tString msLastLoadReportJson;
+		static cXmlElement* mpCurrentElement;
 	};
 
 };

@@ -9,10 +9,12 @@
 #include "hpl.h"
 
 #include <angelscript.h>
+#include <map>
 
 using namespace hpl;
 
 class cSomaScriptRuntime;
+class cSomaLuxEntity;
 
 struct cSomaLuxTimer
 {
@@ -44,6 +46,10 @@ public:
 	cSomaLuxTimer *GetTimer(const tString &asName);
 
 	cWorld *GetWorld() { return mpWorld; }
+
+	cSomaLuxEntity *GetEntity(const tString &asName);
+	cSomaLuxEntity *GetEntity(const struct cSomaID &aID);
+	const std::vector<cSomaLuxEntity *> &GetEntities() { return mvEntities; }
 	const tString &GetName() const { return msName; }
 	const tString &GetFileName() const { return msFileName; }
 	tString msDisplayNameEntry;
@@ -60,6 +66,8 @@ private:
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;
 	std::vector<cSomaLuxTimer> mvTimers;
+	std::vector<cSomaLuxEntity *> mvEntities;
+	std::map<tString, cSomaLuxEntity *> mmapEntities;
 };
 
 // Advances the current map's script every frame (cUpdater has no remove, so this persists).

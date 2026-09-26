@@ -10,6 +10,9 @@ void RegisterSomaScriptNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptMathNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptStringNatives(asIScriptEngine *apEngine);
 void RegisterSomaScriptLuxNatives(asIScriptEngine *apEngine);
+void RegisterSomaScriptGlobalNatives(asIScriptEngine *apEngine);
+// scripts/soma-gen-bindings.py: recovered methods bound to same-named HPL2 methods
+void RegisterSomaScriptGenBindings(asIScriptEngine *apEngine);
 
 // Types whose constructors all come from natives (the API's recorded ones are skipped)
 bool SomaScriptHasNativeBehaviours(const char *apType);

@@ -3,6 +3,9 @@
  */
 
 #include "SomaLoaders.h"
+#include "SomaLuxEntity.h"
+
+#include "resources/WorldLoaderHpm.h"
 
 //////////////////////////////////////////////////////////////////////////
 // GENERIC ENTITY LOADER
@@ -24,8 +27,82 @@ void cSomaGenericEntityLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrix
 
 //-----------------------------------------------------------------------
 
+// UID="a b c" of the element being created (the map's hpl::cID)
+static cSomaID ElementID()
+{
+	cSomaID id;
+	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
+	if (pElem)
+	{
+		tIntVec v;
+		cString::GetIntVec(pElem->GetAttributeString("UID", ""), v, NULL);
+		if (v.size() == 3)
+		{
+			id.mA = (uint8_t)v[0];
+			id.mB = v[1];
+			id.mC = v[2];
+		}
+		else
+			id.mC = pElem->GetAttributeInt("ID", 0);
+	}
+	return id;
+}
+
+static void LoadInstanceVars(cResourceVarsObject &aVars)
+{
+	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
+	cXmlElement *pVars = pElem ? pElem->GetFirstElement("UserVariables") : NULL;
+	if (pVars)
+		aVars.LoadVariables(pVars);
+}
+
+static eSomaLuxEntityType TypeFromEntityType(const tString &asType)
+{
+	if (asType.compare(0, 6, "Agent_") == 0)
+		return eSomaLuxEntityType_Agent;
+	if (asType.compare(0, 8, "Critter_") == 0 || asType.compare(0, 8, "critter_") == 0)
+		return eSomaLuxEntityType_Critter;
+	return eSomaLuxEntityType_Prop;
+}
+
+static void CreateAreaEntity(const tString &asName, const tString &asType, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform)
+{
+	cSomaLuxEntity *pEnt = new cSomaLuxEntity();
+	pEnt->msName = asName;
+	pEnt->msClassName = asType;
+	pEnt->meType = asType == "Liquid" ? eSomaLuxEntityType_LiquidArea : eSomaLuxEntityType_Area;
+	pEnt->mID = ElementID();
+	pEnt->mbActive = abActive;
+	pEnt->mvSize = avSize;
+	pEnt->m_mtxOnLoad = a_mtxTransform;
+	LoadInstanceVars(pEnt->mInstanceVars);
+	cSomaLuxEntity::Pending().push_back(pEnt);
+}
+
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
+	if (cWorldLoaderHpm::GetCurrentElement())
+	{
+		cSomaLuxEntity *pEnt = new cSomaLuxEntity();
+		pEnt->msName = cWorldLoaderHpm::GetCurrentElement()->GetAttributeString("Name", "");
+		pEnt->msClassName = msEntityType;
+		pEnt->msFileName = msFileName;
+		pEnt->meType = TypeFromEntityType(msEntityType);
+		pEnt->mID = ElementID();
+		pEnt->mbActive = mbActive;
+		pEnt->m_mtxOnLoad = a_mtxTransform;
+		pEnt->mvScale = mvScale;
+		pEnt->mpMesh = mpEntity;
+		pEnt->mvBodies = mvBodies;
+		pEnt->mvLights = mvLights;
+		pEnt->mvParticleSystems = mvParticleSystems;
+		pEnt->mvBillboards = mvBillboards;
+		pEnt->mvSoundEntities = mvSoundEntities;
+		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
+		LoadInstanceVars(pEnt->mInstanceVars);
+		cSomaLuxEntity::Pending().push_back(pEnt);
+	}
+
 	// Same instance-var handling as Rebirth's cRebirthGenericEntityLoader /
 	// Dark Descent's cLuxStaticPropLoader - the only per-instance override
 	// that's meaningful with no gameplay wrapper object to hand it to.
@@ -126,6 +203,7 @@ void cSomaAreaLoader_PlayerStart::Load(const tString &asName, int alID, bool abA
 {
 	cStartPosEntity *pStartPos = apWorld->CreateStartPos(asName);
 	pStartPos->SetMatrix(a_mtxTransform);
+	CreateAreaEntity(asName, GetName(), abActive, avSize, a_mtxTransform);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -143,6 +221,7 @@ cSomaAreaLoader_Noop::cSomaAreaLoader_Noop(const tString &asName) : iAreaLoader(
 
 void cSomaAreaLoader_Noop::Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform, cWorld *apWorld)
 {
+	CreateAreaEntity(asName, GetName(), abActive, avSize, a_mtxTransform);
 }
 
 //////////////////////////////////////////////////////////////////////////

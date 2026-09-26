@@ -44,6 +44,7 @@
 
 namespace hpl {
 
+	cXmlElement* cWorldLoaderHpm::mpCurrentElement = NULL;
 	tString cWorldLoaderHpm::msLastLoadReportJson = "";
 
 	//-----------------------------------------------------------------------
@@ -335,7 +336,12 @@ namespace hpl {
 		if (asTrack == "Entity")
 		{
 			if (sTag != "Entity") return "unsupported_element:" + sTag;
-			return CreateMapEntity(apElement, avFileIndex);
+		{
+			mpCurrentElement = apElement;
+			tString sResult = CreateMapEntity(apElement, avFileIndex);
+			mpCurrentElement = NULL;
+			return sResult;
+		}
 		}
 		if (asTrack == "Light")
 		{
@@ -344,7 +350,12 @@ namespace hpl {
 		if (asTrack == "Area")
 		{
 			if (sTag != "Area") return "unsupported_element:" + sTag;
-			return CreateMapArea(apElement);
+		{
+			mpCurrentElement = apElement;
+			tString sResult = CreateMapArea(apElement);
+			mpCurrentElement = NULL;
+			return sResult;
+		}
 		}
 		if (asTrack == "Sound")
 		{
