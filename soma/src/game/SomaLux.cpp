@@ -237,6 +237,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	for (size_t i = 0; i < mvEntities.size(); ++i)
 	{
 		mvEntities[i]->UpdateAnimation(afTimeStep);
+		mvEntities[i]->UpdateMove(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}
 	UpdateLookAtCallbacks(afTimeStep);

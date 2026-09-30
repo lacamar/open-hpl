@@ -139,14 +139,14 @@ four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`
 ## Script layer (story playthrough)
 
 Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves;
-laboratory keypad terminal.
+laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awake
+(`scripts/soma-play.py`; the lab run teleports to `Area_ForceTalk`).
 
 - Saves restore in place (script objects by member name, entity state, timers, player pose).
   Not saved yet: playing voices/music, handles to engine objects in script members (re-acquired
   by scripts), agents' native state.
 - Agents: `cLuxCharMover`, `cLuxPathfinder`, head tracker are stubs (NPCs stand still).
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
-- Laboratory scan-chair sequence past `InteractScanChair` unverified.
 - Post effects (chromatic aberration, radial blur, image trail, video distortion, image fade)
   keep their parameters but aren't rendered; the aberration's params -> offsets/colours mapping
   is CPU-side in the exe.

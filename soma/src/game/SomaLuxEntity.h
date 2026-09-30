@@ -127,6 +127,12 @@ public:
 	bool GetAnimationIsPlaying();
 	void StopAnimations(float afFadeTime);
 	void UpdateAnimation(float afTimeStep);
+	void MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback);
+	void UpdateMove(float afTimeStep);
+	bool mbMoving = false;
+	cVector3f mvMoveGoal;
+	float mfMoveAcc = 0, mfMoveMaxSpeed = 0, mfMoveSlowdownDist = 0, mfMoveSpeed = 0;
+	tString msMoveCallback;
 	int mlCurrentAnim = -1;
 
 	// cLuxProp::CreateAndSetupGui: an ImGui drawn by the map's OnGui function

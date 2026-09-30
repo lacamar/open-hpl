@@ -276,6 +276,44 @@ void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 	}
 }
 
+void cSomaLuxEntity::MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback)
+{
+	mbMoving = true;
+	mvMoveGoal = avGoal;
+	mfMoveAcc = afAcc;
+	mfMoveMaxSpeed = afMaxSpeed;
+	mfMoveSlowdownDist = afSlowdownDist;
+	if (abResetSpeed)
+		mfMoveSpeed = 0;
+	msMoveCallback = asCallback;
+}
+
+void cSomaLuxEntity::UpdateMove(float afTimeStep)
+{
+	if (mbMoving == false)
+		return;
+	cMatrixf m = GetMatrix();
+	cVector3f vDelta = mvMoveGoal - m.GetTranslation();
+	float fDist = vDelta.Length();
+	mfMoveSpeed = cMath::Min(mfMoveSpeed + mfMoveAcc * afTimeStep, mfMoveMaxSpeed);
+	float fSpeed = mfMoveSpeed;
+	if (mfMoveSlowdownDist > 0 && fDist < mfMoveSlowdownDist)
+		fSpeed = cMath::Min(fSpeed, cMath::Max(mfMoveMaxSpeed * fDist / mfMoveSlowdownDist, mfMoveMaxSpeed * 0.05f));
+	float fStep = fSpeed * afTimeStep;
+	bool bDone = fStep >= fDist;
+	m.SetTranslation(bDone ? mvMoveGoal : m.GetTranslation() + vDelta * (fStep / fDist));
+	SetMatrix(m);
+	if (bDone == false)
+		return;
+	mbMoving = false;
+	mfMoveSpeed = 0;
+	tString sCallback = msMoveCallback;
+	msMoveCallback = "";
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (sCallback != "" && pMap && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &msName); });
+}
+
 void cSomaLuxEntity::ApplyInstanceVars()
 {
 	cResourceVarsObject &v = mInstanceVars;
@@ -1065,6 +1103,12 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		if (e->GetTypeInfoByName(pType))
 			RegisterEntityMethods(e, pType);
 
+	for (const char *pType : {"cLuxProp", "cLuxArea"})
+	{
+		SOMA_METHOD(e, pType, "void MoveLinearTo(const cVector3f&in avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
+					+[](cSomaLuxEntity *p, const cVector3f &g, float a, float m, float d, bool r, const tString &cb) { p->MoveLinearTo(g, a, m, d, r, cb); });
+		SOMA_METHOD(e, pType, "void StopMove()", +[](cSomaLuxEntity *p) { p->mbMoving = false; p->mfMoveSpeed = 0; });
+	}
 	if (e->GetTypeInfoByName("cLuxArea"))
 	{
 		SOMA_METHOD(e, "cLuxArea", "iPhysicsBody@ GetAreaBody()", +[](cSomaLuxEntity *p) { return p->GetMainBody(); });
@@ -1247,6 +1291,16 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool Entity_GetVarBool(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p && cString::ToBool(VarGet(p, v).c_str(), false); });
 	SOMA_FUNC(e, "int Entity_GetVarInt(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToInt(VarGet(p, v).c_str(), 0) : 0; });
 	SOMA_FUNC(e, "float Entity_GetVarFloat(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToFloat(VarGet(p, v).c_str(), 0) : 0.0f; });
+	SOMA_FUNC(e, "void Prop_MoveLinearTo(const tString &in asName, const tString &in asTargetEntity, float afAcceleration, float afMaxSpeed, float afSlowDownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
+			  +[](S n, S t, float a, float m, float d, bool r, S cb) {
+				  cSomaLuxEntity *pTarget = Find(t);
+				  if (pTarget == NULL)
+					  return;
+				  cVector3f vGoal = pTarget->GetPosition();
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveLinearTo(vGoal, a, m, d, r, cb); });
+			  });
+	SOMA_FUNC(e, "void Prop_StopMovement(const tString &in asPropName)",
+			  +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbMoving = false; p->mfMoveSpeed = 0; }); });
 	SOMA_FUNC(e, "void Entity_PlaceAtEntity(const tString &in asEntityName, const tString &in asTargetEntity, const cVector3f &in avOffset = cVector3f_Zero, bool abAlignRotation = false, bool abUseEntFileCenter=false)",
 			  +[](S n, S t, const cVector3f &off, bool bAlign, bool) {
 				  cSomaLuxEntity *pTarget = Find(t);
