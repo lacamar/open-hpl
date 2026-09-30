@@ -133,6 +133,15 @@ public:
 	tString msConnectionCallback;
 	void ChangeConnectionState(int alState);
 
+	cColor mEffectBaseColor = cColor(1, 1);
+	cColor mEffectColorFrom, mEffectColorTo;
+	float mfEffectColorTime = 0, mfEffectColorT = 0;
+	std::vector<cColor> mvEffectDefaults;
+	void SetEffectBaseColor(const cColor &aCol);
+	void FadeEffectBaseColor(const cColor &aCol, float afTime);
+	void UpdateEffectColor(float afTimeStep);
+	bool CollidesWithPlayer();
+
 	float mfHealth = 100;
 	bool mbBroken = false;
 	void SetHealth(float afX);
@@ -193,6 +202,7 @@ void SomaClearObjectIDs();
 
 // Oriented boxes of bodies, areas and the player's character body
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);
+bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax);
 // Ray against the entity's boxes; afDistOut is the entry distance
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut);
 // No colliding body other than apIgnore's between the points

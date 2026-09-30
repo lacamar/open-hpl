@@ -1,3 +1,4 @@
+#include "SomaCritter.h"
 #include "SomaLux.h"
 #include "SomaScriptApi.h"
 #include <type_traits>
@@ -85,7 +86,10 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	if (apEnt->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
 		return false;
 	if (apEnt->meType == eSomaLuxEntityType_Critter && apEnt->mpCritterProps == NULL)
+	{
 		apEnt->mpCritterProps = SomaNewPropBlock("cLuxCritter");
+		SomaInitCritterProps(apEnt);
+	}
 	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->msClassName) : NULL;
 	if (pScript == NULL || apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
@@ -233,12 +237,15 @@ void cSomaLuxMap::Update(float afTimeStep)
 		pEnt->UpdateTimers(afTimeStep);
 		pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
 		pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", afTimeStep);
+		if (pEnt->meType == eSomaLuxEntityType_Critter)
+			SomaUpdateCritter(pEnt, afTimeStep);
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
 	{
 		mvEntities[i]->UpdateAnimation(afTimeStep);
 		mvEntities[i]->UpdateMove(afTimeStep);
+		mvEntities[i]->UpdateEffectColor(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}
 	UpdateLookAtCallbacks(afTimeStep);
@@ -808,6 +815,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  }
 				  return fLevel;
 			  });
+	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
 	SOMA_FUNC(e, "double cLux_GetGameTime()", +[]() -> double {
 		return gpSomaBase->mfGameStartTime < 0 ? 0.0 : gpSomaBase->mpEngine->GetGameTime() - gpSomaBase->mfGameStartTime;
 	});

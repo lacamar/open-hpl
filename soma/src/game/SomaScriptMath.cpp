@@ -243,6 +243,8 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Sin(float afX)", +[](float x) { return sinf(x); });
 	SOMA_FUNC(e, "float cMath_Cos(float afX)", +[](float x) { return cosf(x); });
 	SOMA_FUNC(e, "float cMath_Tan(float afX)", +[](float x) { return tanf(x); });
+	SOMA_FUNC(e, "float cMath_SigmoidCurve(float afX)", +[](float x) { return x * x * (3 - 2 * x); });
+	SOMA_FUNC(e, "float cMath_InterpolateSigmoid(float afA,float afB,float afT)", +[](float a, float b, float t) { return a + (b - a) * t * t * (3 - 2 * t); });
 	SOMA_FUNC(e, "float cMath_ASin(float afX)", +[](float x) { return asinf(x); });
 	SOMA_FUNC(e, "float cMath_ACos(float afX)", +[](float x) { return acosf(x); });
 	SOMA_FUNC(e, "float cMath_ATan(float afX)", +[](float x) { return atanf(x); });

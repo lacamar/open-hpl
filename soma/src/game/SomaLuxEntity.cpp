@@ -6,6 +6,7 @@
 #include "SomaBase.h"
 #include <algorithm>
 #include "SomaLuxGame.h"
+#include "SomaCritter.h"
 
 #include <cmath>
 #include <set>
@@ -505,6 +506,54 @@ bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
 	}, false);
 }
 
+void cSomaLuxEntity::SetEffectBaseColor(const cColor &aCol)
+{
+	if (mvEffectDefaults.empty())
+	{
+		for (iLight *pLight : mvLights)
+			mvEffectDefaults.push_back(pLight->GetDiffuseColor());
+		for (cBillboard *pBB : mvBillboards)
+			mvEffectDefaults.push_back(pBB->GetColor());
+	}
+	mEffectBaseColor = aCol;
+	size_t i = 0;
+	for (iLight *pLight : mvLights)
+		pLight->SetDiffuseColor(mvEffectDefaults[i++] * aCol);
+	for (cBillboard *pBB : mvBillboards)
+		pBB->SetColor(mvEffectDefaults[i++] * aCol);
+}
+
+void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
+{
+	if (afTime <= 0)
+	{
+		mfEffectColorTime = 0;
+		SetEffectBaseColor(aCol);
+		return;
+	}
+	mEffectColorFrom = mEffectBaseColor;
+	mEffectColorTo = aCol;
+	mfEffectColorTime = afTime;
+	mfEffectColorT = 0;
+}
+
+void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
+{
+	if (mfEffectColorTime <= 0)
+		return;
+	mfEffectColorT = std::min(mfEffectColorT + afTimeStep / mfEffectColorTime, 1.0f);
+	SetEffectBaseColor(mEffectColorFrom * (1 - mfEffectColorT) + mEffectColorTo * mfEffectColorT);
+	if (mfEffectColorT >= 1)
+		mfEffectColorTime = 0;
+}
+
+bool cSomaLuxEntity::CollidesWithPlayer()
+{
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	cSomaLuxEntity *pPlayer = pMap ? pMap->GetEntity("Player") : NULL;
+	return pPlayer && mbActive && SomaEntitiesCollide(this, pPlayer);
+}
+
 void cSomaLuxEntity::SetHealth(float afX)
 {
 	mfHealth = afX;
@@ -996,6 +1045,17 @@ bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxE
 	return ray.mbBlocked == false;
 }
 
+bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax)
+{
+	std::vector<cSomaOBB> vA;
+	EntityBoxes(apEnt, vA);
+	cSomaOBB b = AABBToOBB(avMin, avMax);
+	for (const cSomaOBB &a : vA)
+		if (OBBOverlap(a, b))
+			return true;
+	return false;
+}
+
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB)
 {
 	std::vector<cSomaOBB> vA, vB;
@@ -1234,6 +1294,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 
 cSomaLuxEntity::~cSomaLuxEntity()
 {
+	SomaForgetCritter(this);
 	SomaFreePropBlock("cLuxCritter", mpCritterProps);
 }
 
@@ -1258,6 +1319,26 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		if (e->GetTypeInfoByName(pType))
 			SOMA_METHOD(e, pType, "void GiveDamage(float afAmount, int alStrength, const tString&in asType, const tString&in asSource)",
 						+[](cSomaLuxEntity *p, float a, int l, const tString &t, const tString &s) { p->GiveDamage(a, l, t, s); });
+	for (const char *pType : vTypes)
+		if (e->GetTypeInfoByName(pType))
+		{
+			SOMA_METHOD(e, pType, "void SetEffectBaseColor(const cColor&in aColor)", +[](cSomaLuxEntity *p, const cColor &c) { p->mfEffectColorTime = 0; p->SetEffectBaseColor(c); });
+			SOMA_METHOD(e, pType, "void FadeEffectBaseColor(const cColor &in aDestColor, float afTime)", +[](cSomaLuxEntity *p, const cColor &c, float t) { p->FadeEffectBaseColor(c, t); });
+			SOMA_METHOD(e, pType, "bool CollidesWithPlayer()", +[](cSomaLuxEntity *p) { return p->CollidesWithPlayer(); });
+			SOMA_METHOD(e, pType, "bool CheckCharacterCollision(iCharacterBody @apBody, cLuxMap @apMap)", +[](cSomaLuxEntity *p, iCharacterBody *b, void *) {
+				if (b == NULL || p->mbActive == false)
+					return false;
+				if (cSomaLuxPlayer::Get() && b == cSomaLuxPlayer::Get()->GetCharacterBody())
+					return p->CollidesWithPlayer();
+				return SomaEntityCollidesAABB(p, b->GetPosition() - b->GetSize() * 0.5f, b->GetPosition() + b->GetSize() * 0.5f);
+			});
+		}
+	SOMA_FUNC(e, "void Entity_SetEffectBaseColor(const tString &in asEntityName,const cColor&in aColor)",
+			  +[](const tString &n, const cColor &c) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mfEffectColorTime = 0; p->SetEffectBaseColor(c); }); });
+	SOMA_FUNC(e, "void Entity_FadeEffectBaseColor(const tString &in asEntityName,const cColor&in aColor, float afTime)",
+			  +[](const tString &n, const cColor &c, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { p->FadeEffectBaseColor(c, t); }); });
+	SOMA_FUNC(e, "void Entity_PlayAnimation(const tString &in asEntityName, const tString &in asAnimation, float afFadeTime=0.1f, bool abLoop=false, bool abPlayTransition=true, const tString &in asCallback = \"\")",
+			  +[](const tString &n, const tString &a, float f, bool l, bool, const tString &cb) { ForMatching(n, [&](cSomaLuxEntity *p) { p->PlayAnimation(a, f, l, cb); }); });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });

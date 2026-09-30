@@ -213,6 +213,11 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "int cSound_SetGlobalVolume(float afVolume, uint aAffectedTypes, int alId)", +[](float v, asUINT types, int id) {
 		return gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->SetGlobalVolume(v, types, id);
 	});
+	SOMA_FUNC(e, "float cSound_GetGlobalVolumeFromId(int alId)", +[](int id) {
+		cMultipleSettingsHandler *h = gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetGlobalVolumeSettingsHandler();
+		cMultipleSettingsHandler::cGSEntry *pEntry = h->GetEntry(id, false);
+		return pEntry ? pEntry->GetVal() : 1.0f;
+	});
 	SOMA_FUNC(e, "int cSound_FadeGlobalVolume(float afDestVolume, float afSpeed, uint aAffectedTypes, int alId, bool abDestroyIdAtDest)",
 			  +[](float v, float speed, asUINT types, int id, bool destroy) {
 				  return gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->FadeGlobalVolume(v, speed, types, id, destroy);

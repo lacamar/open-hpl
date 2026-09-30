@@ -62,6 +62,7 @@ void *SomaScriptDummyOf(asIScriptEngine *apEngine, const char *apType);
 // Native objects smaller than the official layout keep the recovered offset members in a side block
 // that a pointer member (at alPointerOffset) addresses
 void SomaSetIndirectProps(const std::string &asType, int alPointerOffset);
+int SomaIndirectPropOffset(const std::string &asType, const std::string &asName);
 char *SomaNewPropBlock(const std::string &asType);
 void SomaFreePropBlock(const std::string &asType, char *apBlock);
 

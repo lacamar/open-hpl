@@ -449,11 +449,19 @@ namespace
 		int mlPointerOffset = -1;
 		int mlSize = 0;
 		std::vector<int> mvStringOffsets;
+		std::map<std::string, int> mmapOffsets;
 	};
 	std::map<std::string, cIndirectProps> gmapIndirect;
 }
 
 void SomaSetIndirectProps(const std::string &asType, int alPointerOffset) { gmapIndirect[asType].mlPointerOffset = alPointerOffset; }
+
+int SomaIndirectPropOffset(const std::string &asType, const std::string &asName)
+{
+	auto &m = gmapIndirect[asType].mmapOffsets;
+	auto it = m.find(asName);
+	return it == m.end() ? -1 : it->second;
+}
 
 char *SomaNewPropBlock(const std::string &asType)
 {
@@ -619,18 +627,30 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 				Fail(t.msName + "::" + t.mvMethods[j], r);
 		}
 
+		// The official layout has 8-byte strings: move them past the other props
+		auto itIndirect = gmapIndirect.find(t.msName);
+		int lStringArea = 0;
+		if (itIndirect != gmapIndirect.end())
+			for (auto &prop : t.mvProps)
+				lStringArea = std::max(lStringArea, prop.second + 32);
 		for (size_t j = 0; j < t.mvProps.size(); ++j)
 		{
 			if (HasProperty(pTypeInfo, t.mvProps[j].first))
 				continue;
-			auto itIndirect = gmapIndirect.find(t.msName);
 			if (t.mvProps[j].second >= 0 && itIndirect != gmapIndirect.end())
 			{
 				cIndirectProps &props = itIndirect->second;
-				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), t.mvProps[j].second, props.mlPointerOffset, true);
-				props.mlSize = std::max(props.mlSize, t.mvProps[j].second + 32);
-				if (t.mvProps[j].first.compare(0, 8, "tString ") == 0)
-					props.mvStringOffsets.push_back(t.mvProps[j].second);
+				bool bString = t.mvProps[j].first.compare(0, 8, "tString ") == 0;
+				int lOffset = t.mvProps[j].second;
+				if (bString)
+				{
+					lOffset = lStringArea;
+					lStringArea += (int)sizeof(std::string);
+					props.mvStringOffsets.push_back(lOffset);
+				}
+				r = apEngine->RegisterObjectProperty(pName, t.mvProps[j].first.c_str(), lOffset, props.mlPointerOffset, true);
+				props.mmapOffsets[t.mvProps[j].first.substr(t.mvProps[j].first.find_last_of(' ') + 1)] = lOffset;
+				props.mlSize = std::max(props.mlSize, lOffset + 32);
 				if (r < 0 && r != asALREADY_REGISTERED)
 					Fail(t.msName + " prop " + t.mvProps[j].first, r);
 			}
