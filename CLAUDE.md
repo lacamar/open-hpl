@@ -25,6 +25,7 @@ eval "$(scripts/soma-init.sh)"             # build + scratch dir + deploy, expor
 scripts/soma-sweep.py --map 00_01_apartment  # one map, ~10 s
 scripts/soma-sweep.py                      # all 29 maps -> soma/conformance/results.json
 scripts/soma-sweep.py --only-failed --compare old.json
+scripts/soma-sweep.py --play 10                    # script player instead of freecam -> play.json (stubs, player)
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
 scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
 scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
@@ -88,7 +89,7 @@ player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the gam
 | `world_stats` | live counts by object type, world AABB, submeshes without material |
 | `render_stats` | draw calls, render-list sizes, lights rendered, GL errors, fps |
 | `frame_stats` | final-frame luminance mean/histogram, black/white/magenta fractions |
-| `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation |
+| `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation (HDR), 10-12 shadow maps high/med/low |
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
 | `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog` |
@@ -104,6 +105,8 @@ player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the gam
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |
 | `body_contacts name=` | bodies overlapping an entity's bodies (stuck props) |
+| `raycast x= y= z= x2= y2= z2=` | physics hits along a segment |
+| `physics_stats` | static/dynamic/awake bodies, fastest awake |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
 Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
@@ -111,4 +114,6 @@ Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
 
 Localising a render bug: G-buffer targets 0-2 -> accumulation (4) -> `frame_stats`; the first
 stage whose numbers go wrong is where the bug is. Prefer these over screenshots. Screenshots only for comparing against reference images.
+Toggling `occlusion_culling` off and on leaves objects culled; restart before measuring.
+GL call traces: `apitrace trace -o f.trace ./Soma.bin.aarch64` (no replay: context calls aren't captured).
 Hangs: `gdb -p <pid> -batch -ex bt`. Crashes: `coredumpctl debug <pid>`.
