@@ -122,6 +122,8 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	aResp.Set("type", pEnt->meType);
 	aResp.Set("class", pEnt->msClassName);
 	aResp.Set("script", pEnt->GetScript() ? tString(pEnt->GetScript()->GetObjectType()->GetName()) : tString(""));
+	aResp.Set("file", pEnt->msFileName);
+	aResp.Set("health", pEnt->mfHealth);
 	aResp.Set("active", pEnt->mbActive);
 	aResp.Set("interaction_disabled", pEnt->mbInteractionDisabled);
 	aResp.Set("interact_callback", pEnt->msInteractCallback);

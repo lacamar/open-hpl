@@ -88,6 +88,9 @@ private:
 	void AddEntity(cSomaLuxEntity *apEnt);
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvDestroyed;
+public:
+	std::vector<cSomaLuxEntity *> mvPendingBreaks;
+private:
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;

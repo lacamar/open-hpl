@@ -342,6 +342,13 @@ void cSomaLuxEntity::ApplyInstanceVars()
 	if (v.GetVarString("ConnectedEntity", "") != "")
 		mvConnections.push_back(cConnection{"", v.GetVarString("ConnectedEntity", ""), v.GetVarBool("ConnectedEntityInvertState", false),
 											v.GetVarInt("ConnectedEntityStatesUsed", 0)});
+	mfHealth = mVars.GetVarFloat("Health", 100);
+	if (mVars.GetVarBool("BreakActive", false) && v.GetVarBool("DisableBreakable", false) == false)
+	{
+		mBreakCallback.mpEntity = this;
+		for (iPhysicsBody *pBody : mvBodies)
+			pBody->AddBodyCallback(&mBreakCallback);
+	}
 	if (v.GetVarFloat("MaxInteractDistance", 0) > 0)
 		mfMaxInteractDistance = v.GetVarFloat("MaxInteractDistance", 0);
 	if (v.GetVarBool("InteractionDisabled", false))
@@ -496,6 +503,105 @@ bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
 		c->SetArgDWord(0, alType);
 		c->SetArgAddress(1, apBody);
 	}, false);
+}
+
+void cSomaLuxEntity::SetHealth(float afX)
+{
+	mfHealth = afX;
+	Call("void OnHealthChange()");
+	if (mfHealth <= 0 && mInstanceVars.GetVarBool("DisableBreakable", false) == false)
+		Break();
+}
+
+void cSomaLuxEntity::GiveDamage(float afAmount, int alStrength, const tString &asType, const tString &asSource)
+{
+	int lToughness = mVars.GetVarInt("Toughness", 0);
+	if (alStrength < lToughness - 1)
+		afAmount = 0;
+	else if (alStrength == lToughness - 1)
+		afAmount *= 0.5f;
+	SetHealth(mfHealth - afAmount);
+	Call("void GiveDamage(float, int, const tString&in, const tString&in)", [&](asIScriptContext *c) {
+		c->SetArgFloat(0, afAmount);
+		c->SetArgDWord(1, alStrength);
+		c->SetArgObject(2, (void *)&asType);
+		c->SetArgObject(3, (void *)&asSource);
+	});
+}
+
+// Deferred like cLuxMap::DestroyEntity: runs after the entity update loop
+void cSomaLuxEntity::Break()
+{
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (mbBroken || pMap == NULL)
+		return;
+	mbBroken = true;
+	pMap->mvPendingBreaks.push_back(this);
+}
+
+// cLuxProp_Object::BeforePropDestruction
+void cSomaLuxEntity::DoBreak()
+{
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	for (iPhysicsBody *pBody : mvBodies)
+		pBody->RemoveBodyCallback(&mBreakCallback);
+	if (mvBodies.empty() == false)
+	{
+		cWorld *pWorld = pMap->GetWorld();
+		iPhysicsBody *pBase = mvBodies[0];
+		tString sAlign = mVars.GetVarString("BreakEntityAlignBody", "");
+		for (iPhysicsBody *pBody : mvBodies)
+			if (sAlign != "" && pBody->GetName() == msName + "_" + sAlign)
+				pBase = pBody;
+		cMatrixf mtxCenter = pBase->GetLocalMatrix();
+		float fImpulse = mVars.GetVarFloat("BreakImpulse", 3);
+		if (mVars.GetVarBool("BreakDestroyJoints", false))
+		{
+			for (iPhysicsJoint *pJoint : mvJoints)
+				if (pJoint) pJoint->Break();
+			mvJoints.clear();
+		}
+		else if (mVars.GetVarString("BreakEntity", "") != "")
+		{
+			cVector3f vVel = pBase->GetLinearVelocity();
+			cSomaLuxEntity *pNew = pMap->CreateEntity(msName + "_broken", mVars.GetVarString("BreakEntity", ""), mtxCenter, mvScale);
+			if (pNew)
+				for (iPhysicsBody *pBody : pNew->mvBodies)
+				{
+					cVector3f vCenter = cMath::MatrixMul(pBody->GetLocalMatrix(), pBody->GetMassCentre());
+					pBody->AddImpulse(cMath::Vector3Normalize(vCenter - mtxCenter.GetTranslation()) * fImpulse + vVel);
+				}
+		}
+		tString sSound = mVars.GetVarString("BreakSound", "");
+		if (sSound != "")
+			if (cSoundEntity *pSound = pWorld->CreateSoundEntity(msName + "_BreakSound", sSound, true))
+				pSound->SetPosition(mtxCenter.GetTranslation());
+		tString sPS = mVars.GetVarString("BreakParticleSystem", "");
+		if (sPS != "")
+			if (cParticleSystem *pPS = pWorld->CreateParticleSystem(msName + "_BreakPS", sPS, 1))
+				pPS->SetMatrix(mtxCenter);
+	}
+	tString sCallback = mInstanceVars.GetVarString("OnBreakCallbackFunc", "");
+	if (sCallback != "" && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &msName); });
+	pMap->DestroyEntity(this);
+}
+
+// cLuxProp_Object_BodyCallback::OnBodyCollide
+void cSomaLuxEntity::cBreakBodyCallback::OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData *apContactData)
+{
+	if (mpEntity->mbBroken || mpEntity->mbActive == false)
+		return;
+	float fEnergy = 0;
+	for (iPhysicsBody *pBody : {apBody, apCollideBody})
+	{
+		if (pBody->GetMass() == 0)
+			continue;
+		cVector3f vVel = pBody->GetVelocityAtPosition(apContactData->mvContactPosition);
+		fEnergy += std::fabs(cMath::Vector3Dot(apContactData->mvContactNormal, vVel)) * pBody->GetMass();
+	}
+	if (fEnergy > mpEntity->mVars.GetVarFloat("BreakMinEnergy", 1000))
+		mpEntity->Break();
 }
 
 // iLuxEntity::ChangeConnectionState: the map callback, then every connected entity's script
@@ -1148,6 +1254,16 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					+[](cSomaLuxEntity *p, const cVector3f &g, float a, float m, float d, bool r, const tString &cb) { p->MoveLinearTo(g, a, m, d, r, cb); });
 		SOMA_METHOD(e, pType, "void StopMove()", +[](cSomaLuxEntity *p) { p->mbMoving = false; p->mfMoveSpeed = 0; });
 	}
+	for (const char *pType : vTypes)
+		if (e->GetTypeInfoByName(pType))
+			SOMA_METHOD(e, pType, "void GiveDamage(float afAmount, int alStrength, const tString&in asType, const tString&in asSource)",
+						+[](cSomaLuxEntity *p, float a, int l, const tString &t, const tString &s) { p->GiveDamage(a, l, t, s); });
+	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
+	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
+	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
+	SOMA_FUNC(e, "void Prop_SetHealth(const tString &in asPropName, float afHealth)", +[](const tString &n, float x) { ForMatching(n, [x](cSomaLuxEntity *p) { p->SetHealth(x); }); });
+	SOMA_FUNC(e, "void Prop_AddHealth(const tString &in asPropName, float afHealth)", +[](const tString &n, float x) { ForMatching(n, [x](cSomaLuxEntity *p) { p->SetHealth(p->mfHealth + x); }); });
+	SOMA_FUNC(e, "float Prop_GetHealth(const tString &in asPropName)", +[](const tString &n) { cSomaLuxEntity *p = Find(n); return p ? p->mfHealth : 0.0f; });
 	if (e->GetTypeInfoByName("cLuxArea"))
 	{
 		SOMA_METHOD(e, "cLuxArea", "iPhysicsBody@ GetAreaBody()", +[](cSomaLuxEntity *p) { return p->GetMainBody(); });

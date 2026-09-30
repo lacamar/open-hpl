@@ -133,6 +133,20 @@ public:
 	tString msConnectionCallback;
 	void ChangeConnectionState(int alState);
 
+	float mfHealth = 100;
+	bool mbBroken = false;
+	void SetHealth(float afX);
+	void GiveDamage(float afAmount, int alStrength, const tString &asType, const tString &asSource);
+	void Break();
+	void DoBreak();
+	class cBreakBodyCallback : public iPhysicsBodyCallback
+	{
+	public:
+		cSomaLuxEntity *mpEntity = NULL;
+		bool OnAABBCollide(iPhysicsBody *, iPhysicsBody *) override { return true; }
+		void OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData *apContactData) override;
+	} mBreakCallback;
+
 	// iLuxEntity animation controller on the mesh's animation states
 	int PlayAnimation(const tString &asName, float afFadeTime, bool abLoop, const tString &asCallback);
 	bool GetAnimationIsPlaying();

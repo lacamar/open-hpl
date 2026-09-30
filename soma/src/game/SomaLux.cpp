@@ -246,6 +246,10 @@ void cSomaLuxMap::Update(float afTimeStep)
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		if (pEnt->GetScript() && pEnt->mbActive)
 			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
+	std::vector<cSomaLuxEntity *> vBreaks;
+	vBreaks.swap(mvPendingBreaks);
+	for (cSomaLuxEntity *pEnt : vBreaks)
+		pEnt->DoBreak();
 }
 
 // iLuxEntity look-at callbacks: 1 when the player starts looking at the entity, -1 when looking away
