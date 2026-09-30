@@ -106,6 +106,7 @@ namespace hpl {
 		// Returns "" when the object was created, else a short skip reason.
 		tString CreateTrackObject(const tString& asTrack, cXmlElement* apElement, const tStringVec& avFileIndex);
 		void ConnectLightBillboards();
+		void ConnectLightMasks();
 		void CountUnsupportedFlatTracks(const tWString& asBaseFile);
 		void LoadDetailMeshesTrack(const tWString& asBaseFile);
 		void BuildLoadReport(const tString& asMap, int alTotalTimeMs);
@@ -144,6 +145,7 @@ namespace hpl {
 		};
 		std::map<tString, cHpmTrackStats> mmapTrackStats;
 		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
+		std::map<unsigned int, std::pair<cVector3f, cVector3f> > mmapLightMasks;
 		bool mbTerrainActive;
 
 		static tString msLastLoadReportJson;

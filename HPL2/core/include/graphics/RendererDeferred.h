@@ -184,6 +184,8 @@ namespace hpl {
 		static void SetOcclusionTestLargeLights(bool abX){ mbOcclusionTestLargeLights = abX;}
 		static bool GetOcclusionTestLargeLights(){ return mbOcclusionTestLargeLights;}
 
+		static int mlDebugSkipPasses;
+		static int mlDebugSkipTranslucent;
 		static void SetHdr(bool abX){ mbHdr = abX;}
 		static void SetShadowDistanceNone(float afX){ mfDefaultShadowDistanceNone = afX;}
 		static bool GetHdr(){ return mbHdr;}

@@ -307,6 +307,7 @@ namespace hpl {
 		pLight->SetFalloffPow(apElement->GetAttributeFloat("FalloffPow", 1));
 		pLight->SetSpotFalloffPow(apElement->GetAttributeFloat("SpotFalloffPow", 1));
 		pLight->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
+		pLight->SetMaskID((unsigned int)strtoul(apElement->GetAttributeString("ConnectedLightMaskID", "4294967295").c_str(), NULL, 10));
 
 		pLight->SetShadowMapResolution( ToShadowMapResolution(apElement->GetAttributeString("ShadowResolution", "High")) );
 		

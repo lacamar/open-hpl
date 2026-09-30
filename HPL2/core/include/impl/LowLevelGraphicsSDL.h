@@ -227,6 +227,7 @@ namespace hpl {
 									eBlendFunc aSrcFactorAlpha, eBlendFunc aDestFactorAlpha);
 
 		void SetPolygonOffsetActive(bool abX);
+		void SetDepthClampActive(bool abX);
 		void SetPolygonOffset(float afBias,float afSlopeScaleBias);
 
 		/////////////////////////////////////////////////////

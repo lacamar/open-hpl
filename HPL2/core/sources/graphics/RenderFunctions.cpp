@@ -955,6 +955,8 @@ namespace hpl {
 			mpLowLevelGraphics->CopyFrameBufferToTexure(apTexture, avPos, avSize, avTextureOffset + mpCurrentRenderTarget->mvPos);
 		else
 			mpLowLevelGraphics->CopyFrameBufferToTexure(apTexture, avPos, avSize, avTextureOffset);
+		// The low-level copy binds apTexture to unit 0.
+		mvCurrentTexture[0] = apTexture;
 	}
 
 	//-----------------------------------------------------------------------

@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include "resources/GpuShaderManager.h"
 
 #include "system/String.h"
@@ -211,6 +212,28 @@ namespace hpl {
 		{ "deferred_decal_frag.glsl",			"deferred_gbuffer_decal_frag.hpsl" },
 	};
 
+	// HPL3 only supports BoxMask in its texture-buffer light path; add it to
+	// the uniform path we use. Inserted before the last anchor occurrence.
+	static const char* const gvHpslSourcePatches[][3] = {
+		{ "deferred_light_frag.hpsl", "//Translucency\nuniform float afTranslucencyScale;",
+		  "@ifdef BoxMask\n\tuniform cMatrixf a_mtxInvView;\n\tuniform cVector3f avMaskCenter;\n\tuniform cVector3f avMaskExtent;\n@endif\n" },
+		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
+		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
+		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
+	};
+
+	static void PatchHpslSource(const tString& asFile, tString& asData)
+	{
+		asData.erase(std::remove(asData.begin(), asData.end(), '\r'), asData.end());
+		for(size_t i=0; i<sizeof(gvHpslSourcePatches)/sizeof(gvHpslSourcePatches[0]); ++i)
+		{
+			if(asFile != gvHpslSourcePatches[i][0]) continue;
+			size_t lPos = asData.rfind(gvHpslSourcePatches[i][1]);
+			if(lPos != tString::npos) asData.insert(lPos, gvHpslSourcePatches[i][2]);
+			else Warning("HPSL patch anchor not found in %s\n", asFile.c_str());
+		}
+	}
+
 	static tString GetHpslFallbackName(const tString& asGlslName)
 	{
 		for(size_t i=0; i<sizeof(gvHpslFilenameAliases)/sizeof(gvHpslFilenameAliases[0]); ++i)
@@ -326,6 +349,7 @@ namespace hpl {
 				// "px_fLinearDepth = ... * afInvFarPlane;" line, which
 				// reads afInvFarPlane from inside this gated block.
 				apVarContainer->Add("UseExtendedArgs");
+				PatchHpslSource(sHpslName, sFileData);
 			}
 			mpPreprocessParser->Parse(&sFileData, &sParsedOutput,apVarContainer,cString::GetFilePathW(sPath));
 

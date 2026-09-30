@@ -337,6 +337,46 @@ static void cSomaBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadl
 // target holds good data. "target": 0=color/diffuse, 1=normal+depth (the
 // one under investigation - see PORTING_NOTES.md), 2=specular, 3=4th
 // attachment if present. "x"/"y": pixel to sample directly, default center.
+// Writes a debug target as PFM (bottom-up float RGB, same row order as GL).
+static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
+	iTexture *pTex = pDeferred ? pDeferred->GetDebugGBufferTexture(aReq.GetInt("target", 4)) : NULL;
+	std::vector<float> vPixels;
+	if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("no such target or no GPU data"); return; }
+	tString sPath = aReq.GetString("path", "");
+	FILE *pFile = sPath != "" ? fopen(sPath.c_str(), "wb") : NULL;
+	if(pFile == NULL) { aResp.SetError("cannot open path"); return; }
+	int lW = pTex->GetWidth(), lH = pTex->GetHeight();
+	fprintf(pFile, "PF\n%d %d\n-1.0\n", lW, lH);
+	for(size_t i=0; i<(size_t)lW*lH; ++i) fwrite(&vPixels[i*4], sizeof(float), 3, pFile);
+	fclose(pFile);
+	aResp.Set("width", lW);
+	aResp.Set("height", lH);
+}
+
+// Translucent render list of the last frame; skip=N hides entry N (-1 none).
+static void cSomaBase_HeadlessCmd_Translucents(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
+	if(pDeferred == NULL || pDeferred->GetCurrentRenderList() == NULL) { aResp.SetError("no render list"); return; }
+	cRendererDeferred::mlDebugSkipTranslucent = aReq.GetInt("skip", -1);
+	tString sOut = "[";
+	cRenderableVecIterator it = pDeferred->GetCurrentRenderList()->GetArrayIterator(eRenderListType_Translucent);
+	for(int i=0; it.HasNext(); ++i)
+	{
+		iRenderable *pObj = it.Next();
+		cMaterial *pMat = pObj->GetMaterial();
+		if(i>0) sOut += ",";
+		iTexture *pDiffuse = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
+		sOut += "\"" + cString::ToString(i) + " " + pObj->GetName() + " " + (pMat ? pMat->GetName() : tString("-")) +
+				" diffuse=" + (pDiffuse ? pDiffuse->GetName() + ":" + cString::ToString((int)pDiffuse->GetPixelFormat()) : tString("none")) + "\"";
+	}
+	aResp.SetRaw("objects", sOut + "]");
+}
+
 static void cSomaBase_HeadlessCmd_ReadGbufferStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -530,6 +570,11 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "shadows") pSettings->mbRenderShadows = bValue;
 	else if(sName == "edge_smooth") pSettings->mbUseEdgeSmooth = bValue;
 	else if(sName == "fxaa") pSettings->mbUseFxaa = bValue;
+	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent")
+	{
+		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : 8;
+		cRendererDeferred::mlDebugSkipPasses = bValue ? (cRendererDeferred::mlDebugSkipPasses & ~lBit) : (cRendererDeferred::mlDebugSkipPasses | lBit);
+	}
 	else if(sName == "fog" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetFogActive(bValue);
 	else aResp.SetError("unknown setting '" + sName + "'");
 }
@@ -870,6 +915,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
+		pCtrl->RegisterHandler("dump_target", cSomaBase_HeadlessCmd_DumpTarget, this);
+		pCtrl->RegisterHandler("translucents", cSomaBase_HeadlessCmd_Translucents, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
 		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
 		pCtrl->RegisterHandler("load_report", cSomaBase_HeadlessCmd_LoadReport, this);

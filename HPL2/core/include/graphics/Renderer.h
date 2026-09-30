@@ -308,6 +308,7 @@ namespace hpl {
 
 		static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
 		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
+		static void SetShadowDepthClamp(bool abX) { mbShadowDepthClamp = abX;}
 
 		
 		//Debug
@@ -497,6 +498,7 @@ namespace hpl {
 		static bool mbParallaxEnabled;
 		static int mlReflectionSizeDiv;
 		static bool mbRefractionEnabled;
+		static bool mbShadowDepthClamp;
 	};
 
 	//---------------------------------------------

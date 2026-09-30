@@ -1495,6 +1495,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cLowLevelGraphicsSDL::SetDepthClampActive(bool abX)
+	{
+		if(abX)	glEnable(GL_DEPTH_CLAMP);
+		else	glDisable(GL_DEPTH_CLAMP);
+	}
+
 	void cLowLevelGraphicsSDL::SetPolygonOffsetActive(bool abX)
 	{
 		;

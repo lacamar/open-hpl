@@ -73,6 +73,7 @@ namespace hpl {
 	bool iRenderer::mbParallaxEnabled=true;
 	int iRenderer::mlReflectionSizeDiv = 2;
 	bool iRenderer::mbRefractionEnabled=true;
+	bool iRenderer::mbShadowDepthClamp=false;
 
 	//-----------------------------------------------------------------------
 
@@ -1833,6 +1834,7 @@ namespace hpl {
 		SetOcclusionPlanesActive(false);
 
 		mpLowLevelGraphics->SetPolygonOffsetActive(true);
+		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(true);
 		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(), 
 											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
 		
@@ -1873,6 +1875,7 @@ namespace hpl {
 		SetOcclusionPlanesActive(true);
 
 		mpLowLevelGraphics->SetPolygonOffsetActive(false);
+		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(false);
 
 		/////////////////////////
 		// Reset projection

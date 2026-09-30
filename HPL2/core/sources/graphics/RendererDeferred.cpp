@@ -84,6 +84,8 @@ namespace hpl {
 	//debug
 	bool cRendererDeferred::mbOcclusionTestLargeLights = true;
 	bool cRendererDeferred::mbDebugRenderFrameBuffers = false;
+	int cRendererDeferred::mlDebugSkipPasses = 0;
+	int cRendererDeferred::mlDebugSkipTranslucent = -1;
 	bool cRendererDeferred::mbHdr = false;
 	float cRendererDeferred::mfDefaultShadowDistanceNone = 40;
 	float cRendererDeferred::mfToneMapKey = 0.5f;
@@ -116,8 +118,9 @@ namespace hpl {
 	#define eFeature_Light_Gobo				eFlagBit_4
 	#define eFeature_Light_DivideInFrag		eFlagBit_5
 	#define eFeature_Light_ShadowMap		eFlagBit_6
+	#define eFeature_Light_BoxMask			eFlagBit_7
 	
-	#define kLightFeatureNum 7
+	#define kLightFeatureNum 8
 
 	cProgramComboFeature gvLightFeatureVec[] =
 	{
@@ -128,6 +131,7 @@ namespace hpl {
 		cProgramComboFeature("UseGobo", kPC_FragmentBit),
 		cProgramComboFeature("DivideInFrag", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseShadowMap", kPC_FragmentBit, eFeature_Light_SpotLight),
+		cProgramComboFeature("BoxMask", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -181,6 +185,9 @@ namespace hpl {
 	#define kVar_afExposure							29
 	#define kVar_afWhiteCut							30
 	#define kVar_afInvGammaCorrection				31
+	#define kVar_a_mtxInvView						32
+	#define kVar_avMaskCenter						33
+	#define kVar_avMaskExtent						34
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -601,6 +608,9 @@ namespace hpl {
 				// GLSL's default 0: pow(x,0)==1 means no falloff at all.
 				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avMaskCenter", kVar_avMaskCenter, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avMaskExtent", kVar_avMaskExtent, eDefferredProgramMode_Lights);
 			}
 
 			//////////////////////////////
@@ -1057,7 +1067,7 @@ namespace hpl {
 			return;
 		}
 		
-		RenderDecals();
+		if(!(mlDebugSkipPasses & 1)) RenderDecals();
 
 		RunCallback(eRendererMessage_PostGBuffer);
 
@@ -1075,7 +1085,7 @@ namespace hpl {
 		//return;
 
 
-		RenderIllumination();
+		if(!(mlDebugSkipPasses & 2)) RenderIllumination();
 
 		RenderFog();
 		RenderFullScreenFog();
@@ -1083,12 +1093,12 @@ namespace hpl {
 		RenderEdgeSmooth();
 
 		#ifndef kDebug_RenderLightData
-		RenderBasicSkyBox();
+		if(!(mlDebugSkipPasses & 4)) RenderBasicSkyBox();
 		#endif
 
 		RunCallback(eRendererMessage_PostSolid);
 		
-		RenderTranslucent();
+		if(!(mlDebugSkipPasses & 8)) RenderTranslucent();
 
 		RunCallback(eRendererMessage_PostTranslucent);
 
@@ -1606,6 +1616,7 @@ namespace hpl {
 		tFlag lFlags = alExtraFlags;
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
+		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
 		
 		//Spotlight specifics
 		if(lightType == eLightType_Spot)
@@ -1636,11 +1647,17 @@ namespace hpl {
 			// rectangle already computed once per frame in SetupRenderVariables().
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarBottom);
+								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarTop);
 			pProgram->SetVec2f(kVar_avInvScreenSize,
 								1.0f / (float)mvRenderTargetSize.x,
 								1.0f / (float)mvRenderTargetSize.y);
+			if(pLight->HasMaskBox())
+			{
+				pProgram->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
+				pProgram->SetVec3f(kVar_avMaskCenter, pLight->GetMaskCenter());
+				pProgram->SetVec3f(kVar_avMaskExtent, pLight->GetMaskSize());
+			}
 
 		}
 
@@ -2978,8 +2995,8 @@ namespace hpl {
 			// fixed deferred_light_frag.hpsl case.
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarBottom);
+								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarTop);
 			pProgram->SetVec2f(kVar_avInvScreenSize,
 								1.0f / (float)mvRenderTargetSize.x,
 								1.0f / (float)mvRenderTargetSize.y);
@@ -3066,8 +3083,8 @@ namespace hpl {
 			// case.
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarTop-mfFarBottom) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarBottom);
+								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+								mfFarLeft, mfFarTop);
 			pProgram->SetVec2f(kVar_avInvScreenSize,
 								1.0f / (float)mvRenderTargetSize.x,
 								1.0f / (float)mvRenderTargetSize.y);
@@ -3137,10 +3154,12 @@ namespace hpl {
 		///////////////////////////////
 		//Iterate transparent objects
 		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
+		int lTransIdx = -1;
 		while(transIt.HasNext())
 		{
 			iRenderable *pObject = transIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
+			if(++lTransIdx == mlDebugSkipTranslucent) continue;
 
 			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
 			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;

@@ -108,10 +108,11 @@ namespace hpl {
 		LoadTrack(asFile, "ParticleSystem", "");
 		LoadTrack(asFile, "FogArea", "");
 		ConnectLightBillboards();
+		LoadTrack(asFile, "LightMask", "");
+		ConnectLightMasks();
 
 		// Not loaded yet - run through LoadTrack() so the report counts them.
 		LoadTrack(asFile, "Compound", "");
-		LoadTrack(asFile, "LightMask", "");
 		LoadTrack(asFile, "LensFlare", "");
 		LoadTrack(asFile, "StaticComboArea", "");
 		CountUnsupportedFlatTracks(asFile);
@@ -392,7 +393,35 @@ namespace hpl {
 			return cEngineFileLoading::LoadFogArea(apElement, "", mpCurrentWorld, true) ? "" : "load_failed";
 		}
 
+		if (asTrack == "LightMask")
+		{
+			if (sTag != "LightMaskBox") return "unsupported_element:" + sTag;
+			cMatrixf mtxRot = cMath::MatrixRotate(apElement->GetAttributeVector3f("Rotation", 0), eEulerRotationOrder_XYZ);
+			cVector3f vHalf = apElement->GetAttributeVector3f("Size", 1) * apElement->GetAttributeVector3f("Scale", 1) * 0.5f;
+			cVector3f vExtent;
+			for (int i = 0; i < 3; ++i)
+				vExtent.v[i] = 2.0f * (std::fabs(mtxRot.m[i][0]) * vHalf.x + std::fabs(mtxRot.m[i][1]) * vHalf.y + std::fabs(mtxRot.m[i][2]) * vHalf.z);
+			unsigned int lID = (unsigned int)strtoul(apElement->GetAttributeString("ID", "0").c_str(), NULL, 10);
+			mmapLightMasks[lID] = std::make_pair(apElement->GetAttributeVector3f("WorldPos", 0), vExtent);
+			return "";
+		}
+
 		return "unsupported_track";
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cWorldLoaderHpm::ConnectLightMasks()
+	{
+		cLightListIterator it = mpCurrentWorld->GetLightIterator();
+		while (it.HasNext())
+		{
+			iLight* pLight = it.Next();
+			std::map<unsigned int, std::pair<cVector3f, cVector3f> >::iterator maskIt = mmapLightMasks.find(pLight->GetMaskID());
+			if (maskIt != mmapLightMasks.end())
+				pLight->SetMaskBox(true, maskIt->second.first, maskIt->second.second);
+		}
+		mmapLightMasks.clear();
 	}
 
 	//-----------------------------------------------------------------------

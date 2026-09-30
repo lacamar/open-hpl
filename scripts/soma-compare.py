@@ -38,7 +38,9 @@ SNIPPETS["entities"] = (
 SNIPPETS["lights"] = (
     'array<iLight@> v; Map_GetLightArray("%s", v); __print("count=" + v.length()); '
     'for(uint i = 0; i < v.length(); ++i) { iLight@ l = v[i]; cVector3f p = l.GetWorldPosition(); '
-    '__print(l.GetName() + "=" + l.IsVisible() + " " + p.x + " " + p.y + " " + p.z); }')
+    'cColor c = l.GetDiffuseColor(); '
+    '__print(l.GetName() + "=" + l.IsVisible() + " " + p.x + " " + p.y + " " + p.z + " r=" + l.GetRadius() '
+    '+ " c=" + c.r + " " + c.g + " " + c.b + " " + c.a); }')
 
 
 class Ours:
@@ -232,6 +234,10 @@ def same(a, b, tol=0.02):
     for x, y in ((a, b), (b, a)):
         if x.lower() in ("true", "false") or y.lower() in ("true", "false"):
             return x.lower() == y.lower()
+    if "=" in a and "=" in b and " " not in a + b:
+        (ka, a), (kb, b) = a.split("=", 1), b.split("=", 1)
+        if ka != kb:
+            return False
     na, nb = num_list(a), num_list(b)
     if na is None or nb is None:
         wa, wb = a.split(), b.split()
