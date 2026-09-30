@@ -761,6 +761,51 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		}
 		return a.GetSize() > 0;
 	});
+	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)",
+			  +[](const cVector3f &p, iLight *pSkip, float fAdd) -> float {
+				  if (cSomaLuxMap::GetCurrent() == NULL) return 0;
+				  float fLevel = 0;
+				  cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+				  while (it.HasNext())
+				  {
+					  iLight *pLight = it.Next();
+					  if (pLight == pSkip || pLight->IsVisible() == false) continue;
+					  const cColor &c = pLight->GetDiffuseColor();
+					  float fAmount = cMath::Max(c.r, cMath::Max(c.g, c.b)) * pLight->GetBrightness();
+					  if (pLight->GetLightType() == eLightType_Box)
+					  {
+						  if (cMath::CheckPointInAABBIntersection(p, pLight->GetBoundingVolume()->GetMin(), pLight->GetBoundingVolume()->GetMax()))
+						  {
+							  cLightBox *pBox = static_cast<cLightBox *>(pLight);
+							  const cVector3f &vDC = pBox->GetIrradianceBands()[0];
+							  // Ref's SH term fits max(DC) within ~15%
+							  fLevel += pBox->GetUseSphericalHarmonics() ? cMath::Max(vDC.x, cMath::Max(vDC.y, vDC.z)) * fAmount : fAmount;
+						  }
+						  continue;
+					  }
+					  if (pLight->GetLightType() == eLightType_Spot)
+					  {
+						  cLightSpot *pSpot = static_cast<cLightSpot *>(pLight);
+						  cVector3f vLocal = cMath::MatrixMul(pSpot->GetViewMatrix(), p);
+						  float fTan = tanf(pSpot->GetFOV() * 0.5f);
+						  if (vLocal.z >= 0 || std::fabs(vLocal.y) > -vLocal.z * fTan || std::fabs(vLocal.x) > -vLocal.z * fTan * pSpot->GetAspect())
+							  continue;
+					  }
+					  float fT = 1 - cMath::Vector3Dist(pLight->GetWorldPosition(), p) / (pLight->GetRadius() + fAdd);
+					  if (fT > 0 && (pLight->GetCastShadows() == false || SomaLineOfSight(pLight->GetWorldPosition(), p, NULL)))
+						  fLevel += fAmount * fT;
+				  }
+				  return fLevel;
+			  });
+	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
+	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
+				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {
+					cBoundingVolume bv;
+					bv.SetLocalMinMax(vMin, vMax);
+					std::vector<iPhysicsBody *> vBodies;
+					w->GetBodiesInBV(&bv, &vBodies);
+					for (iPhysicsBody *pBody : vBodies) a.InsertLast(&pBody);
+				});
 	SOMA_FUNC(e, "void Light_FadeTo(const tString &in asLightName, const cColor &in acColor, float afRadius, float afTime)",
 			  +[](S n, const cColor &c, float r, float t) {
 				  if (cSomaLuxMap::GetCurrent() == NULL) return;

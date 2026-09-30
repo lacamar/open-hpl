@@ -40,7 +40,8 @@ def log_path():
 
 
 def gt(*a, check=True):
-    r = subprocess.run([GT, *a], capture_output=True, text=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("XDG_") or k == "XDG_RUNTIME_DIR"}
+    r = subprocess.run([GT, *a], capture_output=True, text=True, env=env)
     if check and r.returncode:
         raise SystemExit(f"gt {' '.join(a)} failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-600:]}")
     return r.stdout

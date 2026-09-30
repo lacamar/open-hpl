@@ -1086,6 +1086,34 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  }
 				  return true;
 			  });
+	SOMA_FUNC(e, "iPhysicsBody@ cLux_GetClosestBody(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, float &out afDistance, cVector3f &out avSurfaceNormal)",
+			  +[](const cVector3f &st, const cVector3f &dir, float len, float &fDist, cVector3f &vNormal) -> iPhysicsBody * {
+				  struct cRay : iPhysicsRayCallback
+				  {
+					  iPhysicsBody *mpBody = NULL;
+					  float mfDist = 0;
+					  cVector3f mvNormal;
+					  bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
+					  {
+						  if (apBody->GetCollide() && apBody->IsCharacter() == false && (mpBody == NULL || apParams->mfDist < mfDist))
+						  {
+							  mpBody = apBody;
+							  mfDist = apParams->mfDist;
+							  mvNormal = apParams->mvNormal;
+						  }
+						  return true;
+					  }
+				  } ray;
+				  fDist = 0;
+				  vNormal = 0;
+				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				  if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
+					  return NULL;
+				  pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, st, st + dir * len, true, true, false);
+				  fDist = ray.mfDist;
+				  vNormal = ray.mvNormal;
+				  return ray.mpBody;
+			  });
 	SOMA_FUNC(e, "iLuxEntity@ cLux_ID_Entity(tID aID)", +[](cSomaID id) { return cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(id) : (cSomaLuxEntity *)NULL; });
 	// Engine objects: tIDs from a registry, looked up by typed cLux_ID_* functions
 	const char *vIdTypes[] = {"iEntity3D", "cMeshEntity", "cSubMeshEntity", "iLight", "cLightPoint", "cLightSpot", "cLightBox",

@@ -174,6 +174,12 @@ laboratory keypad terminal.
   ours renders spot shadows with near min(light, 0.05). Ref lights a wedge of wall through
   the lamp shade that ours doesn't.
 - Window light shaft visible in ours with all lights off; absent in ref.
+- `cLux_GetLightLevelAtPos`: spot pyramid gate, physics LOS for shadow casters, SH box =
+  max(DC band) x amount (ref's SH term unknown, fits ~15% median over 111 upsilon probes; a
+  0.0005 floor in upsilon). Ref also occludes shadow casters by render-only geometry (sun
+  inside the apartment: ours ~1.9, ref ~0.37).
+- `cLux_GetClosestBody` names static hits after the object; ref merges statics into
+  `CombinedObjects<N>` bodies.
 
 ## History
 
