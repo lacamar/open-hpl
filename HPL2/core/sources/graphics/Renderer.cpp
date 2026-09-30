@@ -74,6 +74,7 @@ namespace hpl {
 	int iRenderer::mlReflectionSizeDiv = 2;
 	bool iRenderer::mbRefractionEnabled=true;
 	bool iRenderer::mbShadowDepthClamp=false;
+	bool iRenderer::mbShadowCull=true;
 
 	//-----------------------------------------------------------------------
 
@@ -441,7 +442,7 @@ namespace hpl {
 		////////////
 		// Create shapes
 		//  Color and Texture because Geforce cards fail without it, no idea why...
-		mpShapeBox = LoadVertexBufferFromMesh("core_box.dae", eVertexElementFlag_Position | eVertexElementFlag_Texture0| eVertexElementFlag_Color0);
+		mpShapeBox = LoadVertexBufferFromMesh("core_box.dae", eVertexElementFlag_Position | eVertexElementFlag_Texture0| eVertexElementFlag_Color0, 0.5f);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1835,6 +1836,7 @@ namespace hpl {
 
 		mpLowLevelGraphics->SetPolygonOffsetActive(true);
 		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(true);
+		if(!mbShadowCull) SetCullActive(false);
 		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(), 
 											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
 		
@@ -1876,6 +1878,7 @@ namespace hpl {
 
 		mpLowLevelGraphics->SetPolygonOffsetActive(false);
 		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(false);
+		if(!mbShadowCull) SetCullActive(true);
 
 		/////////////////////////
 		// Reset projection
@@ -2562,10 +2565,28 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iVertexBuffer* iRenderer::LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy)
+	iVertexBuffer* iRenderer::LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy, float afMaxExtent)
 	{
 		iVertexBuffer *pVtxBuffer = mpResources->GetMeshManager()-> CreateVertexBufferFromMesh(asMeshName, alVtxToCopy);
 		if(pVtxBuffer==NULL) FatalError("Could not load vertex buffer from mesh '%s'\n",asMeshName.c_str());
+
+		// Shapes must be unit sized whatever <unit> the mesh file declares.
+		if(afMaxExtent > 0)
+		{
+			float *pPos = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+			int lStride = pVtxBuffer->GetElementNum(eVertexBufferElement_Position);
+			int lNum = pVtxBuffer->GetVertexNum();
+			float fMax = 0;
+			for(int i=0; i<lNum; ++i)
+				for(int j=0; j<3; ++j) fMax = cMath::Max(fMax, std::fabs(pPos[i*lStride+j]));
+			if(fMax > 0 && std::fabs(fMax - afMaxExtent) > afMaxExtent*0.01f)
+			{
+				float fScale = afMaxExtent / fMax;
+				for(int i=0; i<lNum; ++i)
+					for(int j=0; j<3; ++j) pPos[i*lStride+j] *= fScale;
+				pVtxBuffer->UpdateData(eVertexElementFlag_Position, false);
+			}
+		}
 
 		return pVtxBuffer;
 

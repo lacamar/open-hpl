@@ -309,6 +309,7 @@ namespace hpl {
 		static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
 		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
 		static void SetShadowDepthClamp(bool abX) { mbShadowDepthClamp = abX;}
+		static void SetShadowCull(bool abX) { mbShadowCull = abX;}
 
 		
 		//Debug
@@ -426,7 +427,7 @@ namespace hpl {
 												const cVector3f& avPos, const cVector2f& avSize, 
 												const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
 												bool abInvertY=false);
-		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
+		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy, float afMaxExtent=0);
 		void UpdateqQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
 
 		void RunCallback(eRendererMessage aMessage);
@@ -499,6 +500,7 @@ namespace hpl {
 		static int mlReflectionSizeDiv;
 		static bool mbRefractionEnabled;
 		static bool mbShadowDepthClamp;
+		static bool mbShadowCull;
 	};
 
 	//---------------------------------------------

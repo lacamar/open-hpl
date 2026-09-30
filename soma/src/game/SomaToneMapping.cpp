@@ -44,6 +44,7 @@ cSomaToneMapping::cSomaToneMapping() : iUpdateable("SomaToneMapping")
 {
 	mpInstance = this;
 	mpWorld = NULL;
+	mpGradingTexture = NULL;
 	mfKey = 0.5f;
 	mfGamma = 2.2f;
 	mfFilmGrainIntensity = 1;
@@ -63,6 +64,18 @@ cSomaToneMapping::cSomaToneMapping() : iUpdateable("SomaToneMapping")
 void cSomaToneMapping::OnMapLoaded(cWorld *apWorld)
 {
 	mpWorld = apWorld;
+	cTextureManager *pTexMgr = gpSomaBase->mpEngine->GetResources()->GetTextureManager();
+	if (mpGradingTexture) pTexMgr->Destroy(mpGradingTexture);
+	mpGradingTexture = NULL;
+	if (apWorld->GetColorGradingTexture() != "")
+	{
+		mpGradingTexture = pTexMgr->Create3D(apWorld->GetColorGradingTexture(), false);
+		if (mpGradingTexture)
+		{
+			mpGradingTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+			mpGradingTexture->SetFilter(eTextureFilter_Bilinear);
+		}
+	}
 	mfKey = apWorld->GetToneMappingKey();
 	mfWorldExposure = mfExposure = apWorld->GetToneMappingExposure();
 	mfWorldWhiteCut = mfWhiteCut = apWorld->GetToneMappingWhiteCut();
@@ -104,6 +117,7 @@ void cSomaToneMapping::Update(float afTimeStep)
 		Step(mfWhiteCut, gWhiteCutFade, fGoalWhiteCut, mfTransitionTime, afTimeStep);
 	}
 	cRendererDeferred::SetToneMapping(mfKey, powf(2.0f, mfExposure), mfWhiteCut, mfGamma);
+	cRendererDeferred::SetColorGradingTexture(mbColorGradingActive ? mpGradingTexture : NULL);
 }
 
 void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)

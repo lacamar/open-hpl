@@ -43,6 +43,17 @@ namespace hpl {
 		mvSize = 1;
 		mBlendFunc = eLightBoxBlendFunc_Replace;
 		mlBoxLightPrio =0;
+		mAmbientColorSky = cColor(1,1);
+		mAmbientColorGround = cColor(1,1);
+		mfWeight = 1;
+		mfBevel = 0;
+		mfFalloffPow = 0;
+		mbUseSphericalHarmonics = false;
+		mvProbeOffset = 0;
+		mpFadeTarget = NULL;
+		mfFadeT = 1;
+		mfFadeSpeed = 0;
+		for(int i=0; i<9; ++i) mvBands[i] = 0;
 
 		UpdateBoundingVolume();
 	}
@@ -63,6 +74,38 @@ namespace hpl {
 
 		//This is so that the render container is updated.
 		SetTransformUpdated();
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cLightBox::AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands)
+	{
+		bool bFirst = m_mapIrradianceSets.empty();
+		std::vector<cVector3f> &vBands = m_mapIrradianceSets[asName];
+		vBands = avBands;
+		vBands.resize(9, cVector3f(0));
+		if(bFirst) for(int i=0; i<9; ++i) mvBands[i] = vBands[i];
+	}
+
+	void cLightBox::FadeIrradianceSet(const tString& asName, float afTime)
+	{
+		std::map<tString, std::vector<cVector3f> >::iterator it = m_mapIrradianceSets.find(asName);
+		if(it == m_mapIrradianceSets.end()) return;
+		mpFadeTarget = &it->second;
+		for(int i=0; i<9; ++i) mvFadeFrom[i] = mvBands[i];
+		mfFadeT = 0;
+		mfFadeSpeed = afTime > 0 ? 1.0f / afTime : 1e9f;
+		UpdateLogic(0);
+	}
+
+	void cLightBox::UpdateLogic(float afTimeStep)
+	{
+		iLight::UpdateLogic(afTimeStep);
+		if(mpFadeTarget==NULL) return;
+		mfFadeT = cMath::Min(mfFadeT + mfFadeSpeed * afTimeStep, 1.0f);
+		if(mfFadeSpeed >= 1e9f) mfFadeT = 1;
+		for(int i=0; i<9; ++i) mvBands[i] = mvFadeFrom[i] + ((*mpFadeTarget)[i] - mvFadeFrom[i]) * mfFadeT;
+		if(mfFadeT >= 1) mpFadeTarget = NULL;
 	}
 
 	//-----------------------------------------------------------------------

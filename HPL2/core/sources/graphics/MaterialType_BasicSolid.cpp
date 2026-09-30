@@ -55,6 +55,7 @@ namespace hpl {
 	#define kVar_afDissolveAmount				4
 	#define kVar_avFrenselBiasPow				5
 	#define kVar_a_mtxInvViewRotation			6
+	#define kVar_avColorMul						7
 
 
 	//------------------------------
@@ -320,6 +321,11 @@ namespace hpl {
 
 		
 		
+		if(cRendererDeferred::GetHdr())
+		{
+			defaultVars.Add("UseColor");
+			defaultVars.Add("UseColorMul");
+		}
 		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "deferred_gbuffer_solid_frag.glsl", 
 													vDiffuseFeatureVec,kDiffuseFeatureNum, defaultVars);
 
@@ -338,6 +344,7 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
 		mpProgramManager->AddGenerateProgramVariableId("afColorMul",kVar_afColorMul,eMaterialRenderMode_Illumination);
@@ -352,6 +359,7 @@ namespace hpl {
 		//////////////////////////////////
 		//Z specifics
 		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
+		if(cRendererDeferred::GetHdr()) apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
 		apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
 		
 		//////////////////////////////////
@@ -584,6 +592,10 @@ namespace hpl {
 		else if(aRenderMode == eMaterialRenderMode_Illumination)
 		{
 			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
+		}
+		else if(aRenderMode == eMaterialRenderMode_Diffuse)
+		{
+			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
 		}
 	}
 

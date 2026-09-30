@@ -57,6 +57,7 @@ namespace hpl
 	{
 		eLightBoxBlendFunc_Replace,
 		eLightBoxBlendFunc_Add,
+		eLightBoxBlendFunc_Blend,
 		eLightBoxBlendFunc_LastEnum
 	};
 

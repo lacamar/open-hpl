@@ -1135,6 +1135,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		cSomaLuxEntity *pA = Find(a), *pB = Find(b);
 		return pA && pB && SomaEntitiesCollide(pA, pB);
 	});
+	SOMA_FUNC(e, "cSubMeshEntity@ cScene_ToSubMeshEntity(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cSubMeshEntity *>(p); });
+	SOMA_FUNC(e, "cMeshEntity@ cScene_ToMeshEntity(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cMeshEntity *>(p); });
+	SOMA_FUNC(e, "cBillboard@ cScene_ToBillboard(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cBillboard *>(p); });
+	SOMA_FUNC(e, "cBeam@ cScene_ToBeam(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cBeam *>(p); });
+	SOMA_FUNC(e, "cSoundEntity@ cScene_ToSoundEntity(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cSoundEntity *>(p); });
+	SOMA_FUNC(e, "cLightBox@ cScene_ToLightBox(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightBox *>(p); });
+	SOMA_FUNC(e, "cLightPoint@ cScene_ToLightPoint(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightPoint *>(p); });
+	SOMA_FUNC(e, "cLightSpot@ cScene_ToLightSpot(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightSpot *>(p); });
 	SOMA_FUNC(e, "iPhysicsJointHinge@ cPhysics_ToJointHinge(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointHinge *>(j); });
 	SOMA_FUNC(e, "iPhysicsJointSlider@ cPhysics_ToJointSlider(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointSlider *>(j); });
 	SOMA_FUNC(e, "iPhysicsJointBall@ cPhysics_ToJointBall(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointBall *>(j); });

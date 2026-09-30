@@ -40,6 +40,7 @@ namespace hpl {
 		mlRenderFlags =eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
 		
 		mfIlluminationAmount = 1.0f;
+		mColorMul = cColor(1,1);
 		mfCoverageAmount = 1.0f;
 
 		mlRenderFrameCount = -1;

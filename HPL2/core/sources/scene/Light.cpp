@@ -97,6 +97,7 @@ namespace hpl {
 		mfBrightness = 1.0f;
 		mlMaskID = 0xFFFFFFFF;
 		mbMaskBox = false;
+		mbGoboSpecular = false;
 
 		///////////////////////////////
 		//Data init

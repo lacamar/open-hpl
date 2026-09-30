@@ -219,6 +219,27 @@ namespace hpl {
 
 			pLightBox->SetSize(apElement->GetAttributeVector3f("Size", 1));
 			pLightBox->SetBlendFunc((eLightBoxBlendFunc) apElement->GetAttributeInt("BlendFunc", 1));
+			pLightBox->SetAmbientColorSky(apElement->GetAttributeColor("SkyColor", cColor(1,1)));
+			pLightBox->SetAmbientColorGround(apElement->GetAttributeColor("GroundColor", cColor(1,1)));
+			pLightBox->SetWeight(apElement->GetAttributeFloat("Weight", 1));
+			pLightBox->SetBevel(apElement->GetAttributeFloat("Bevel", 0));
+			pLightBox->SetFalloffPow(apElement->GetAttributeFloat("FalloffPow", 0));
+			pLightBox->SetUseSphericalHarmonics(apElement->GetAttributeBool("UseSphericalHarmonics", false));
+			pLightBox->SetProbeOffset(apElement->GetAttributeVector3f("ProbeOffset", 0));
+			cXmlElement *pIrrElem = apElement->GetFirstElement("Irradiance");
+			if(pIrrElem)
+			{
+				cXmlNodeListIterator setIt = pIrrElem->GetChildIterator();
+				while(setIt.HasNext())
+				{
+					cXmlElement *pSetElem = setIt.Next()->ToElement();
+					tFloatVec vValues;
+					cString::GetFloatVec(pSetElem->GetAttributeString("_Text"), vValues);
+					std::vector<cVector3f> vBands;
+					for(size_t i=0; i+2<vValues.size(); i+=3) vBands.push_back(cVector3f(vValues[i], vValues[i+1], vValues[i+2]));
+					pLightBox->AddIrradianceSet(pSetElem->GetAttributeString("SetName"), vBands);
+				}
+			}
 		}
 		//////////////////////////
 		// Spotlightt
@@ -270,6 +291,7 @@ namespace hpl {
 
 			//Gobo
 			tString sGobo = apElement->GetAttributeString("Gobo","");
+			pLight->SetGoboSpecular(apElement->GetAttributeString("GoboType","") == "Specular");
 			if(sGobo  != "")
 			{
 				eTextureAnimMode animMode = ToTextureAnimMode(apElement->GetAttributeString("GoboAnimMode",""));

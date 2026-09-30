@@ -189,6 +189,7 @@ namespace hpl {
 		static void SetHdr(bool abX){ mbHdr = abX;}
 		static void SetShadowDistanceNone(float afX){ mfDefaultShadowDistanceNone = afX;}
 		static bool GetHdr(){ return mbHdr;}
+		static void SetColorGradingTexture(iTexture *apTex){ mpColorGradingTexture = apTex;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
 
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
@@ -208,7 +209,7 @@ namespace hpl {
 		// instead of only ever seeing it through RenderGbufferContent()'s
 		// own quad-view draw.
 		// 0-3: G-buffer targets, 4: light accumulation buffer
-		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
+		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; if(alIdx==5) return mpBoxWeightTexture; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 
 	private:
 		void DrawAccumulationQuad();
@@ -236,6 +237,7 @@ namespace hpl {
 		void RenderLights_Batches();
 		void RenderLights_Box_StencilFront_RenderBack();
 		void RenderLights_Box_RenderBack();
+		bool RenderLights_BoxWeighted();
         
 		void RenderIllumination();
 
@@ -342,6 +344,7 @@ namespace hpl {
 
 		iGpuProgram *mpFxaaProgram;
 		iGpuProgram *mpToneMapProgram;
+		iGpuProgram *mpToneMapGradingProgram;
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
@@ -349,6 +352,10 @@ namespace hpl {
 		iGpuProgram *mpSkyBoxProgram; 
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
+		iGpuProgram *mpBoxWeightedProgram[3][2];
+		iGpuProgram *mpBoxResolveProgram;
+		iTexture *mpBoxWeightTexture;
+		iFrameBuffer *mpBoxWeightBuffer;
 
 		cProgramComboManager* mpFogProgramManager;
 		
@@ -361,6 +368,7 @@ namespace hpl {
 		static float mfToneMapExposure;
 		static float mfToneMapWhiteCut;
 		static float mfToneMapGamma;
+		static iTexture *mpColorGradingTexture;
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
 		static bool mbDepthInNormalAlpha;

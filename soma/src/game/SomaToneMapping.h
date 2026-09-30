@@ -43,9 +43,9 @@ public:
 	float mfTransitionTime;
 
 private:
-	void Approach(float &afValue, float afGoal, float afTime, float afTimeStep);
 
 	cWorld *mpWorld;
+	iTexture *mpGradingTexture;
 	static cSomaToneMapping *mpInstance;
 };
 

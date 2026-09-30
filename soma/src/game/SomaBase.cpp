@@ -350,7 +350,12 @@ static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRe
 	if(pFile == NULL) { aResp.SetError("cannot open path"); return; }
 	int lW = pTex->GetWidth(), lH = pTex->GetHeight();
 	fprintf(pFile, "PF\n%d %d\n-1.0\n", lW, lH);
-	for(size_t i=0; i<(size_t)lW*lH; ++i) fwrite(&vPixels[i*4], sizeof(float), 3, pFile);
+	int lCh = aReq.GetInt("channel", -1);
+	for(size_t i=0; i<(size_t)lW*lH; ++i)
+	{
+		if(lCh < 0) fwrite(&vPixels[i*4], sizeof(float), 3, pFile);
+		else for(int c=0; c<3; ++c) fwrite(&vPixels[i*4+lCh], sizeof(float), 1, pFile);
+	}
 	fclose(pFile);
 	aResp.Set("width", lW);
 	aResp.Set("height", lH);
@@ -570,6 +575,10 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "shadows") pSettings->mbRenderShadows = bValue;
 	else if(sName == "edge_smooth") pSettings->mbUseEdgeSmooth = bValue;
 	else if(sName == "fxaa") pSettings->mbUseFxaa = bValue;
+	else if(sName == "light_depth_cull") cRendererDeferred::SetDepthCullLights(bValue);
+	else if(sName == "log") pSettings->mbLog = bValue;
+	else if(sName == "shadow_cull") iRenderer::SetShadowCull(bValue);
+	else if(sName == "shadow_depth_clamp") iRenderer::SetShadowDepthClamp(bValue);
 	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent")
 	{
 		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : 8;

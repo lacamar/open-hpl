@@ -92,6 +92,7 @@ namespace hpl {
 	float cRendererDeferred::mfToneMapExposure = 1.0f;
 	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
 	float cRendererDeferred::mfToneMapGamma = 2.2f;
+	iTexture *cRendererDeferred::mpColorGradingTexture = NULL;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -119,8 +120,9 @@ namespace hpl {
 	#define eFeature_Light_DivideInFrag		eFlagBit_5
 	#define eFeature_Light_ShadowMap		eFlagBit_6
 	#define eFeature_Light_BoxMask			eFlagBit_7
+	#define eFeature_Light_GoboSpecular		eFlagBit_8
 	
-	#define kLightFeatureNum 8
+	#define kLightFeatureNum 9
 
 	cProgramComboFeature gvLightFeatureVec[] =
 	{
@@ -132,6 +134,7 @@ namespace hpl {
 		cProgramComboFeature("DivideInFrag", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseShadowMap", kPC_FragmentBit, eFeature_Light_SpotLight),
 		cProgramComboFeature("BoxMask", kPC_FragmentBit),
+		cProgramComboFeature("GoboSpecFlag", kPC_FragmentBit, eFeature_Light_Gobo),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -188,6 +191,15 @@ namespace hpl {
 	#define kVar_a_mtxInvView						32
 	#define kVar_avMaskCenter						33
 	#define kVar_avMaskExtent						34
+	#define kVar_avAmbientColorSky					35
+	#define kVar_avAmbientColorGround				36
+	#define kVar_avBoxCenter						37
+	#define kVar_avBoxExtent						38
+	#define kVar_afFalloff							39
+	#define kVar_afBevel							40
+	#define kVar_afWeight							41
+	#define kVar_avViewSpaceUp						42
+	#define kVar_avBand0							43
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -220,6 +232,11 @@ namespace hpl {
 		mlMaxBatchLights = 100;
 		mpFxaaProgram = NULL;
 		mpToneMapProgram = NULL;
+		mpToneMapGradingProgram = NULL;
+		mpBoxResolveProgram = NULL;
+		mpBoxWeightTexture = NULL;
+		mpBoxWeightBuffer = NULL;
+		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) mpBoxWeightedProgram[i][j] = NULL;
 
 		mbReflectionTextureCleared = false;
 	}
@@ -342,6 +359,17 @@ namespace hpl {
 		mpAccumBuffer->SetDepthStencilBuffer(mpDepthStencil[0]);
 
 		mpAccumBuffer->CompileAndValidate();
+
+		if(mbHdr)
+		{
+			mpBoxWeightTexture = mpGraphics->CreateTexture("BoxWeightTexture",mGBufferTextureType,eTextureUsage_RenderTarget);
+			mpBoxWeightTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA16, NULL);
+			mpBoxWeightTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+			mpBoxWeightBuffer = mpGraphics->CreateFrameBuffer("Deferred_BoxWeight");
+			mpBoxWeightBuffer->SetTexture2D(0,mpBoxWeightTexture);
+			mpBoxWeightBuffer->SetDepthStencilBuffer(mpDepthStencil[0]);
+			mpBoxWeightBuffer->CompileAndValidate();
+		}
 
 		////////////////////////////////////
 		//Create Refraction texture
@@ -544,6 +572,38 @@ namespace hpl {
 					{
 						mpLightBoxProgram[i]->GetVariableAsId("avLightColor",kVar_avLightColor);
 					}
+				}
+
+				if(mbHdr)
+				{
+					const char *vBlendVars[3] = {"Blend_Replace", "Blend_Add", "Blend_Blend"};
+					for(int i=0; i<3; ++i) for(int j=0; j<2; ++j)
+					{
+						cParserVarContainer boxVars;
+						boxVars.Add(vBlendVars[i]);
+						if(j==1) boxVars.Add("UseIrradiance");
+						iGpuProgram *pProg = mpGraphics->CreateGpuProgramFromShaders("LightBoxWeighted", "deferred_base_vtx.glsl",
+																					"deferred_light_box_frag.glsl", &boxVars);
+						mpBoxWeightedProgram[i][j] = pProg;
+						if(pProg==NULL) continue;
+						pProg->GetVariableAsId("afNegFarPlane",kVar_afNegFarPlane);
+						pProg->GetVariableAsId("avScreenToFarPlane",kVar_avScreenToFarPlane);
+						pProg->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
+						pProg->GetVariableAsId("a_mtxInvView",kVar_a_mtxInvView);
+						pProg->GetVariableAsId("avAmbientColorSky",kVar_avAmbientColorSky);
+						pProg->GetVariableAsId("avAmbientColorGround",kVar_avAmbientColorGround);
+						pProg->GetVariableAsId("avBoxCenter",kVar_avBoxCenter);
+						pProg->GetVariableAsId("avBoxExtent",kVar_avBoxExtent);
+						pProg->GetVariableAsId("afFalloff",kVar_afFalloff);
+						pProg->GetVariableAsId("afBevel",kVar_afBevel);
+						pProg->GetVariableAsId("afWeight",kVar_afWeight);
+						pProg->GetVariableAsId("avViewSpaceUp",kVar_avViewSpaceUp);
+						for(int k=0; k<9; ++k) pProg->GetVariableAsId("avBand["+cString::ToString(k)+"]",kVar_avBand0+k);
+					}
+					cParserVarContainer resolveVars;
+					resolveVars.Add("UseUv");
+					mpBoxResolveProgram = mpGraphics->CreateGpuProgramFromShaders("LightBoxResolve", "deferred_base_vtx.glsl",
+																				  "deferred_light_box_resolve_frag.glsl", &resolveVars);
 				}
 			}
 			
@@ -759,28 +819,33 @@ namespace hpl {
 		}
 
 		mpToneMapProgram = NULL;
+		mpToneMapGradingProgram = NULL;
 		if(mbHdr)
 		{
 			cParserVarContainer programVars;
 			programVars.Add("UseUv");
 			mpToneMapProgram = mpGraphics->CreateGpuProgramFromShaders("ToneMapping","deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
-			if(mpToneMapProgram)
+			programVars.Add("UseColorGrading");
+			mpToneMapGradingProgram = mpGraphics->CreateGpuProgramFromShaders("ToneMappingGrading","deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
+			iGpuProgram *vToneMapPrograms[2] = {mpToneMapProgram, mpToneMapGradingProgram};
+			for(int i=0; i<2; ++i)
 			{
-				mpToneMapProgram->GetVariableAsId("afKey",kVar_afKey);
-				mpToneMapProgram->GetVariableAsId("afExposure",kVar_afExposure);
-				mpToneMapProgram->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
-				mpToneMapProgram->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
+				if(vToneMapPrograms[i]==NULL) continue;
+				vToneMapPrograms[i]->GetVariableAsId("afKey",kVar_afKey);
+				vToneMapPrograms[i]->GetVariableAsId("afExposure",kVar_afExposure);
+				vToneMapPrograms[i]->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
+				vToneMapPrograms[i]->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
 			}
 		}
 
 		////////////////////////////////////
 		//Create light shapes
 		tFlag lVtxFlag = eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0;
-		mpShapeSphere[eDeferredShapeQuality_High] = LoadVertexBufferFromMesh("core_12_12_sphere.dae",lVtxFlag);	
-		mpShapeSphere[eDeferredShapeQuality_Medium] = LoadVertexBufferFromMesh("core_7_7_sphere.dae",lVtxFlag);
-		mpShapeSphere[eDeferredShapeQuality_Low] = LoadVertexBufferFromMesh("core_5_5_sphere.dae",lVtxFlag);
+		mpShapeSphere[eDeferredShapeQuality_High] = LoadVertexBufferFromMesh("core_12_12_sphere.dae",lVtxFlag,1.0f);	
+		mpShapeSphere[eDeferredShapeQuality_Medium] = LoadVertexBufferFromMesh("core_7_7_sphere.dae",lVtxFlag,1.0f);
+		mpShapeSphere[eDeferredShapeQuality_Low] = LoadVertexBufferFromMesh("core_5_5_sphere.dae",lVtxFlag,1.0f);
 
-		mpShapePyramid = LoadVertexBufferFromMesh("core_pyramid.dae",lVtxFlag);
+		mpShapePyramid = LoadVertexBufferFromMesh("core_pyramid.dae",lVtxFlag,1.0f);
 		
 		////////////////////////////////////
 		//Quad used when rendering light.
@@ -840,6 +905,8 @@ namespace hpl {
 		}
 		
 		mpGraphics->DestroyFrameBuffer(mpAccumBuffer);	
+		if(mpBoxWeightBuffer) mpGraphics->DestroyFrameBuffer(mpBoxWeightBuffer);
+		if(mpBoxWeightTexture) mpGraphics->DestroyTexture(mpBoxWeightTexture);
 		mpGraphics->DestroyFrameBuffer(mpReflectionBuffer);
 		
 		mpGraphics->DestroyTexture(mpAccumBufferTexture);
@@ -887,7 +954,10 @@ namespace hpl {
 		}
 		
 		if(mpFxaaProgram) mpGraphics->DestroyGpuProgram(mpFxaaProgram);
+		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
+		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
 		if(mpToneMapProgram) mpGraphics->DestroyGpuProgram(mpToneMapProgram);
+		if(mpToneMapGradingProgram) mpGraphics->DestroyGpuProgram(mpToneMapGradingProgram);
 
 		/////////////////////////
 		//Gpu programs
@@ -964,13 +1034,16 @@ namespace hpl {
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
 
-			SetProgram(mpToneMapProgram);
-			mpToneMapProgram->SetFloat(kVar_afKey, mfToneMapKey);
-			mpToneMapProgram->SetFloat(kVar_afExposure, mfToneMapExposure);
-			mpToneMapProgram->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
-			mpToneMapProgram->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
+			bool bGrading = mpColorGradingTexture && mpToneMapGradingProgram;
+			iGpuProgram *pToneMap = bGrading ? mpToneMapGradingProgram : mpToneMapProgram;
+			SetProgram(pToneMap);
+			pToneMap->SetFloat(kVar_afKey, mfToneMapKey);
+			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
+			pToneMap->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
+			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
+			if(bGrading) SetTexture(1, mpColorGradingTexture);
 			if(bFxaa)
 			{
 				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
@@ -1522,6 +1595,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static cColor LinearLightColor(const cColor& aCol)
+	{
+		if(cRendererDeferred::GetHdr()==false) return aCol;
+		return cColor(powf(aCol.r, 2.2f), powf(aCol.g, 2.2f), powf(aCol.b, 2.2f), aCol.a);
+	}
+
 	void cRendererDeferred::SetupLightProgramVariables(	iGpuProgram *apProgram,cDeferredLight* apLightData)
 	{
 		iLight *pLight = apLightData->mpLight;
@@ -1531,7 +1610,7 @@ namespace hpl {
 		///////////////////////
 		// General variables
 		apProgram->SetVec3f(kVar_avLightPos, apLightData->m_mtxViewSpaceRender.GetTranslation());
-		cColor lightColor = pLight->GetDiffuseColor();
+		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
 		lightColor.r *= pLight->GetBrightness(); lightColor.g *= pLight->GetBrightness(); lightColor.b *= pLight->GetBrightness();
 		apProgram->SetColor4f(kVar_avLightColor, lightColor);
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
@@ -1617,6 +1696,7 @@ namespace hpl {
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
+		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular;
 		
 		//Spotlight specifics
 		if(lightType == eLightType_Spot)
@@ -2598,7 +2678,7 @@ namespace hpl {
 		//Set up Light specific variables
 		if(mpLightBoxProgram[lProgramNum])
 		{
-			cColor boxColor = pLight->GetDiffuseColor();
+			cColor boxColor = LinearLightColor(pLight->GetDiffuseColor());
 			boxColor.r *= pLight->GetBrightness(); boxColor.g *= pLight->GetBrightness(); boxColor.b *= pLight->GetBrightness();
 			mpLightBoxProgram[lProgramNum]->SetColor4f(kVar_avLightColor,boxColor);
 		}
@@ -2753,6 +2833,96 @@ namespace hpl {
 	
 	//------------------------------------------------------------------------------
 
+	static bool SortFunc_BoxWeighted(const cDeferredLight* apLightDataA, const cDeferredLight* apLightDataB)
+	{
+		cLightBox *pA = static_cast<cLightBox*>(apLightDataA->mpLight);
+		cLightBox *pB = static_cast<cLightBox*>(apLightDataB->mpLight);
+		bool bReplaceA = pA->GetBlendFunc() == eLightBoxBlendFunc_Replace;
+		bool bReplaceB = pB->GetBlendFunc() == eLightBoxBlendFunc_Replace;
+		if(bReplaceA != bReplaceB) return bReplaceA;
+		if(pA->GetBoxLightPrio() != pB->GetBoxLightPrio()) return pA->GetBoxLightPrio() < pB->GetBoxLightPrio();
+		return pA < pB;
+	}
+
+	bool cRendererDeferred::RenderLights_BoxWeighted()
+	{
+		if(mpBoxWeightBuffer==NULL || mpBoxResolveProgram==NULL || mpCurrentSettings->mbIsReflection) return false;
+
+		std::vector<cDeferredLight*> vLights = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack];
+		vLights.insert(vLights.end(), mvSortedLights[eDeferredLightList_Box_RenderBack].begin(), mvSortedLights[eDeferredLightList_Box_RenderBack].end());
+		if(vLights.empty()) return true;
+		std::sort(vLights.begin(), vLights.end(), SortFunc_BoxWeighted);
+
+		// Real engine clears weight to this so rgb/w is 0 outside all boxes.
+		SetFrameBuffer(mpBoxWeightBuffer, true);
+		mpLowLevelGraphics->SetClearColor(cColor(0,0,0,1.5259022e-05f));
+		ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
+		mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
+
+		SetDepthTest(false);
+		SetStencilActive(false);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetCullMode(eCullMode_Clockwise);
+		SetVertexBuffer(mpShapeBox);
+
+		cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
+		cVector3f vViewUp = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix().GetRotation(), cVector3f(0,1,0));
+		for(size_t i=0; i<vLights.size(); ++i)
+		{
+			cLightBox *pBox = static_cast<cLightBox*>(vLights[i]->mpLight);
+			int lBlend = cMath::Clamp((int)pBox->GetBlendFunc(), 0, 2);
+			iGpuProgram *pProg = mpBoxWeightedProgram[lBlend][pBox->GetUseSphericalHarmonics() ? 1 : 0];
+			if(pProg==NULL) continue;
+			if(mbLog) Log(" Rendering weighted box light: '%s'\n", pBox->GetName().c_str());
+
+			SetBlendMode(lBlend == eLightBoxBlendFunc_Replace ? eMaterialBlendMode_PremulAlpha : eMaterialBlendMode_Add);
+			SetProgram(pProg);
+
+			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * pBox->GetBrightness();
+			const cColor &sky = pBox->GetAmbientColorSky();
+			const cColor &ground = pBox->GetAmbientColorGround();
+			pProg->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+			pProg->SetVec4f(kVar_avScreenToFarPlane,
+							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+							mfFarLeft, mfFarTop);
+			pProg->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)mvRenderTargetSize.x, 1.0f / (float)mvRenderTargetSize.y);
+			pProg->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
+			pProg->SetVec3f(kVar_avAmbientColorSky, sky.r*diffuse.r, sky.g*diffuse.g, sky.b*diffuse.b);
+			pProg->SetVec3f(kVar_avAmbientColorGround, ground.r*diffuse.r, ground.g*diffuse.g, ground.b*diffuse.b);
+			pProg->SetVec3f(kVar_avBoxCenter, pBox->GetWorldPosition() + pBox->GetProbeOffset() - vCamPos);
+			pProg->SetVec3f(kVar_avBoxExtent, pBox->GetSize() * 0.5f);
+			pProg->SetFloat(kVar_afFalloff, pBox->GetFalloffPow());
+			pProg->SetFloat(kVar_afBevel, pBox->GetBevel());
+			pProg->SetFloat(kVar_afWeight, pBox->GetWeight());
+			pProg->SetVec3f(kVar_avViewSpaceUp, vViewUp);
+			const cVector3f *pBands = pBox->GetIrradianceBands();
+			for(int k=0; k<9; ++k) pProg->SetVec3f(kVar_avBand0+k, pBands[k]);
+
+			SetModelViewMatrix(vLights[i]->m_mtxViewSpaceRender);
+			DrawCurrent();
+		}
+
+		SetAccumulationBuffer();
+		SetBlendMode(eMaterialBlendMode_None);
+		SetCullMode(eCullMode_CounterClockwise);
+		SetFlatProjection();
+		SetProgram(mpBoxResolveProgram);
+		SetTexture(0, mpBoxWeightTexture);
+		SetTextureRange(NULL, 1);
+		DrawAccumulationQuad();
+		SetNormalFrustumProjection();
+
+		for(int i=0; i<mlNumOfGBufferTextures; ++i) SetTexture(i, GetBufferTexture(i));
+		SetTextureRange(NULL, mlNumOfGBufferTextures);
+		SetBlendMode(eMaterialBlendMode_Add);
+		SetCullMode(eCullMode_Clockwise);
+		SetDepthTest(true);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------
+
 	void cRendererDeferred::RenderLights()
 	{
 		START_RENDER_PASS(Lights);
@@ -2789,8 +2959,11 @@ namespace hpl {
 
 		///////////////////////
 		// Render box lights
-		RenderLights_Box_StencilFront_RenderBack();
-		RenderLights_Box_RenderBack();
+		if(!RenderLights_BoxWeighted())
+		{
+			RenderLights_Box_StencilFront_RenderBack();
+			RenderLights_Box_RenderBack();
+		}
 		
 		///////////////////////
 		// Render lights that are inside near plane

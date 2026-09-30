@@ -43,12 +43,46 @@ namespace hpl {
 		void SetBoxLightPrio(int alX){ mlBoxLightPrio = alX;}
 		inline int GetBoxLightPrio()const{ return mlBoxLightPrio;}
 
+		void SetAmbientColorSky(const cColor& aX){ mAmbientColorSky = aX;}
+		void SetAmbientColorGround(const cColor& aX){ mAmbientColorGround = aX;}
+		const cColor& GetAmbientColorSky(){ return mAmbientColorSky;}
+		const cColor& GetAmbientColorGround(){ return mAmbientColorGround;}
+		void SetWeight(float afX){ mfWeight = afX;}
+		float GetWeight(){ return mfWeight;}
+		void SetBevel(float afX){ mfBevel = afX;}
+		float GetBevel(){ return mfBevel;}
+		void SetFalloffPow(float afX){ mfFalloffPow = afX;}
+		float GetFalloffPow(){ return mfFalloffPow;}
+		void SetUseSphericalHarmonics(bool abX){ mbUseSphericalHarmonics = abX;}
+		bool GetUseSphericalHarmonics(){ return mbUseSphericalHarmonics;}
+		void SetProbeOffset(const cVector3f& avX){ mvProbeOffset = avX;}
+		const cVector3f& GetProbeOffset(){ return mvProbeOffset;}
+
+		void AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands);
+		void FadeIrradianceSet(const tString& asName, float afTime);
+		const cVector3f* GetIrradianceBands(){ return mvBands;}
+		void UpdateLogic(float afTimeStep);
+
 	private:
 		void UpdateBoundingVolume();
 
 		cVector3f mvSize;
 		eLightBoxBlendFunc mBlendFunc;
 		int mlBoxLightPrio;
+
+		cColor mAmbientColorSky;
+		cColor mAmbientColorGround;
+		float mfWeight;
+		float mfBevel;
+		float mfFalloffPow;
+		bool mbUseSphericalHarmonics;
+		cVector3f mvProbeOffset;
+		std::map<tString, std::vector<cVector3f> > m_mapIrradianceSets;
+		cVector3f mvBands[9];
+		cVector3f mvFadeFrom[9];
+		const std::vector<cVector3f> *mpFadeTarget;
+		float mfFadeT;
+		float mfFadeSpeed;
 	};
 
 };

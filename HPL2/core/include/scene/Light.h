@@ -218,6 +218,8 @@ namespace hpl {
 		void SetBrightness(float afX){ mfBrightness = afX;}
 		float GetBrightness(){ return mfBrightness;}
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
+		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
+		bool GetGoboSpecular(){ return mbGoboSpecular;}
 		unsigned int GetMaskID(){ return mlMaskID;}
 		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mbMaskBox = abActive; mvMaskCenter = avCenter; mvMaskSize = avSize;}
 		bool HasMaskBox(){ return mbMaskBox;}
@@ -269,6 +271,7 @@ namespace hpl {
 		float mfSpotFalloffPow;
 		float mfBrightness;
 		unsigned int mlMaskID;
+		bool mbGoboSpecular;
 		bool mbMaskBox;
 		cVector3f mvMaskCenter;
 		cVector3f mvMaskSize;

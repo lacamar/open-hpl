@@ -1291,6 +1291,13 @@ namespace hpl {
 		}
 	}
 
+	void cMeshEntity::SetColorMul(const cColor& aX)
+	{
+		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetColorMul(aX);
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cMeshEntity::SetIlluminationAmount(float afX)
 	{
 		if(mfIlluminationAmount == afX) return;

@@ -137,6 +137,23 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	if (apInstanceVars && mpEntity)
 	{
 		mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, apInstanceVars->GetVarBool("CastShadows", true));
+		mpEntity->SetIlluminationAmount(apInstanceVars->GetVarFloat("IllumBrightness", 1));
+		mpEntity->SetColorMul(apInstanceVars->GetVarColor("ColorMul", cColor(1, 1)));
+	}
+	if (apInstanceVars)
+	{
+		cColor effectMul = apInstanceVars->GetVarColor("EffectColorMul", cColor(1, 1));
+		float fBrightnessMul = apInstanceVars->GetVarFloat("EffectBrightnessMul", 1);
+		for (iLight *pLight : mvLights)
+		{
+			cColor col = pLight->GetDiffuseColor();
+			col = cColor(col.r * effectMul.r, col.g * effectMul.g, col.b * effectMul.b, col.a);
+			pLight->SetDiffuseColor(col);
+			pLight->SetDefaultDiffuseColor(col);
+			pLight->SetBrightness(pLight->GetBrightness() * fBrightnessMul);
+		}
+		for (cBillboard *pBB : mvBillboards)
+			pBB->SetColor(pBB->GetColor() * effectMul);
 	}
 
 	// Real root cause of a severe, map-filling magenta/maroon corruption
