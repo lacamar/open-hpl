@@ -338,6 +338,10 @@ void cSomaLuxEntity::ApplyInstanceVars()
 	for (size_t i = 0; i < vEnts.size() && vFuncs.empty() == false; ++i)
 		mvCollideCallbacks.push_back(cCollideCallback{cString::ToLowerCase(vEnts[i]) == "player" ? tString("Player") : vEnts[i],
 													  vFuncs[std::min(i, vFuncs.size() - 1)]});
+	msConnectionCallback = v.GetVarString("ConnectionStateChangeCallback", "");
+	if (v.GetVarString("ConnectedEntity", "") != "")
+		mvConnections.push_back(cConnection{"", v.GetVarString("ConnectedEntity", ""), v.GetVarBool("ConnectedEntityInvertState", false),
+											v.GetVarInt("ConnectedEntityStatesUsed", 0)});
 	if (v.GetVarFloat("MaxInteractDistance", 0) > 0)
 		mfMaxInteractDistance = v.GetVarFloat("MaxInteractDistance", 0);
 	if (v.GetVarBool("InteractionDisabled", false))
@@ -492,6 +496,32 @@ bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
 		c->SetArgDWord(0, alType);
 		c->SetArgAddress(1, apBody);
 	}, false);
+}
+
+// iLuxEntity::ChangeConnectionState: the map callback, then every connected entity's script
+void cSomaLuxEntity::ChangeConnectionState(int alState)
+{
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+		return;
+	if (msConnectionCallback != "" && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msConnectionCallback + "(const tString &in, int)", [&](asIScriptContext *c) {
+			c->SetArgObject(0, &msName);
+			c->SetArgDWord(1, alState);
+		});
+	std::vector<cConnection> vConnections = mvConnections;
+	for (const cConnection &conn : vConnections)
+	{
+		if (conn.mlStatesUsed != 0 && alState != conn.mlStatesUsed)
+			continue;
+		int lState = conn.mbInvert ? -alState : alState;
+		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+			if (pEnt != this && SomaWildcardMatch(conn.msEntity, pEnt->msName))
+				pEnt->Call("void OnConnectionStateChange(iLuxEntity@ apEntity, int alState)", [&](asIScriptContext *c) {
+					c->SetArgAddress(0, this);
+					c->SetArgDWord(1, lState);
+				});
+	}
 }
 
 // iLuxEntity::OnInteract: the map's player interact callback first, then the entity script
@@ -1033,6 +1063,15 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetPlayerLookAtCallback(const tString &in asCallbackFunc, bool abRemoveWhenLookedAt, bool abCheckCenterOfScreen, bool abCheckRayIntersection, float afMaxDistance, float afCallbackDelay)",
 					+[](E *p, S f, bool r, bool, bool, float, float) { p->msLookAtCallback = f; p->mbLookAtCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerInteractCallback()", +[](E *p) { return p->msInteractCallback != ""; });
+	SOMA_METHOD_NEW(e, T, "void ChangeConnectionState(int alState)", +[](E *p, int l) { p->ChangeConnectionState(l); });
+	SOMA_METHOD_NEW(e, T, "void SetConnectionStateChangeCallback(const tString &in asCallbackFunc)", +[](E *p, S f) { p->msConnectionCallback = f; });
+	SOMA_METHOD_NEW(e, T, "void AddConnection(const tString&in asName, iLuxEntity @apEntity, bool abInvertStateSent, int alStatesUsed)",
+					+[](E *p, S n, E *c, bool i, int l) { if (c) p->mvConnections.push_back(E::cConnection{n, c->msName, i, l}); });
+	SOMA_METHOD_NEW(e, T, "void RemoveConnection(const tString&in asName)", +[](E *p, S n) {
+		p->mvConnections.erase(std::remove_if(p->mvConnections.begin(), p->mvConnections.end(), [&](const E::cConnection &c) { return c.msName == n; }),
+							   p->mvConnections.end());
+	});
+	SOMA_METHOD_NEW(e, T, "void RemoveAllConnections()", +[](E *p) { p->mvConnections.clear(); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerLookAtCallback()", +[](E *p) { return p->msLookAtCallback != ""; });
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive); });
 	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
@@ -1260,6 +1299,17 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  });
 	SOMA_FUNC(e, "void Entity_SetEffectsActive(const tString &in asEntityName, bool abActive, bool abFadeAndPlaySounds)",
 			  +[](S n, bool b, bool) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive); }); });
+	SOMA_FUNC(e, "void Entity_Connect(const tString &in asName, const tString &in asMainEntity, const tString &in asConnectEntity, bool abInvertStateSent, int alStatesUsed)",
+			  +[](S n, S m, S c, bool i, int l) { ForMatching(m, [&](cSomaLuxEntity *p) { p->mvConnections.push_back(cSomaLuxEntity::cConnection{n, c, i, l}); }); });
+	SOMA_FUNC(e, "void Entity_RemoveConnection(const tString &in asName, const tString &in asMainEntity)", +[](S n, S m) {
+		ForMatching(m, [&](cSomaLuxEntity *p) {
+			auto &v = p->mvConnections;
+			v.erase(std::remove_if(v.begin(), v.end(), [&](const cSomaLuxEntity::cConnection &c) { return c.msName == n; }), v.end());
+		});
+	});
+	SOMA_FUNC(e, "void Entity_RemoveAllConnections(const tString &in asMainEntity)", +[](S m) { ForMatching(m, [](cSomaLuxEntity *p) { p->mvConnections.clear(); }); });
+	SOMA_FUNC(e, "void Entity_SetConnectionStateChangeCallback(const tString &in asEntityName, const tString &in asCallback)",
+			  +[](S n, S f) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msConnectionCallback = f; }); });
 	SOMA_FUNC(e, "void Entity_SetPlayerInteractCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenInteracted)",
 			  +[](S n, S f, bool r) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; }); });
 	SOMA_FUNC(e, "void Entity_SetPlayerLookAtCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenLookedAt = true, bool abCheckCenterOfScreen = true, bool abCheckRayIntersection = true, float afMaxDistance = -1, float afCallbackDelay = 0)",

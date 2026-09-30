@@ -814,7 +814,7 @@ namespace hpl {
 
 		// One iCollideShape per submesh, each built from a Software copy of
 		// that submesh's own vertex buffer transformed into world space by
-		// the mesh entity's already-fully-set world matrix (position +
+		// its submesh entity's world matrix (mesh node matrix, position +
 		// rotation + scale - see both call sites above, which call this only
 		// after SetWorldMatrix()/SetPosition()) - same technique
 		// cWorldLoaderHplMap::AddObjectsToStaticMeshBody() uses for Amnesia's
@@ -831,7 +831,7 @@ namespace hpl {
 
 			iVertexBuffer* pVtxBuffer = pSrcVtxBuffer->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static,
 																   eVertexElementFlag_Position);
-			pVtxBuffer->Transform(apMeshEntity->GetWorldMatrix());
+			pVtxBuffer->Transform(apMeshEntity->GetSubMeshEntity(i)->GetWorldMatrix());
 
 			iCollideShape* pShape = mpCurrentPhysicsWorld->CreateMeshShape(pVtxBuffer);
 			hplDelete(pVtxBuffer);

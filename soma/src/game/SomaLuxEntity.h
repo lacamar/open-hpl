@@ -122,6 +122,17 @@ public:
 	iPhysicsBody *GetMainBody() { return mvBodies.empty() ? NULL : mvBodies[0]; }
 	void RemoveCollideCallbacks(const tString &asChild);
 
+	struct cConnection
+	{
+		tString msName;
+		tString msEntity;
+		bool mbInvert;
+		int mlStatesUsed;
+	};
+	std::vector<cConnection> mvConnections;
+	tString msConnectionCallback;
+	void ChangeConnectionState(int alState);
+
 	// iLuxEntity animation controller on the mesh's animation states
 	int PlayAnimation(const tString &asName, float afFadeTime, bool abLoop, const tString &asCallback);
 	bool GetAnimationIsPlaying();

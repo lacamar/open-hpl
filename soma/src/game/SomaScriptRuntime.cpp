@@ -140,9 +140,15 @@ asIScriptObject *cSomaScriptRuntime::CreateObject(asIScriptModule *apModule, con
 
 bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::string &asWhat)
 {
+	return Execute(apCtx, [&] { return asWhat; });
+}
+
+bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::function<std::string()> &aWhat)
+{
 	int r = apCtx->Execute();
 	if (r == asEXECUTION_FINISHED)
 		return true;
+	std::string asWhat = aWhat();
 	if (r == asEXECUTION_EXCEPTION)
 	{
 		const char *pSection = NULL;
@@ -161,7 +167,12 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 {
 	if (apObj == NULL)
 		return false;
-	asIScriptFunction *pFunc = apObj->GetObjectType()->GetMethodByDecl(asDecl.c_str());
+	asITypeInfo *pType = apObj->GetObjectType();
+	auto key = std::make_pair(pType, asDecl);
+	auto it = mmapMethods.find(key);
+	if (it == mmapMethods.end())
+		it = mmapMethods.emplace(key, pType->GetMethodByDecl(asDecl.c_str())).first;
+	asIScriptFunction *pFunc = it->second;
 	if (pFunc == NULL)
 		return false;
 
@@ -170,7 +181,7 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	pCtx->SetObject(apObj);
 	if (aSetArgs)
 		aSetArgs(pCtx);
-	bool bOk = Execute(pCtx, std::string(apObj->GetObjectType()->GetName()) + "::" + asDecl);
+	bool bOk = Execute(pCtx, [&] { return std::string(pType->GetName()) + "::" + asDecl; });
 	if (bOk && aGetResult)
 		aGetResult(pCtx);
 	mpEngine->ReturnContext(pCtx);

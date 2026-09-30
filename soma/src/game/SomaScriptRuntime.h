@@ -47,12 +47,14 @@ public:
 
 private:
 	bool Execute(asIScriptContext *apCtx, const std::string &asWhat);
+	bool Execute(asIScriptContext *apCtx, const std::function<std::string()> &aWhat);
 
 	static cSomaScriptRuntime *mpInstance;
 
 	asIScriptEngine *mpEngine;
 	cSomaScriptBuilder *mpBuilder;
 	std::map<std::string, asIScriptModule *> mmapModules;
+	std::map<std::pair<asITypeInfo *, std::string>, asIScriptFunction *> mmapMethods;
 	int mlModuleCount;
 };
 

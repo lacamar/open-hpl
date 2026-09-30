@@ -231,7 +231,8 @@ void cSomaLuxMap::Update(float afTimeStep)
 		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)
 			continue;
 		pEnt->UpdateTimers(afTimeStep);
-		pEnt->CallWithFloat("void Update(float afTimeStep)", afTimeStep);
+		pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
+		pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", afTimeStep);
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
@@ -242,6 +243,9 @@ void cSomaLuxMap::Update(float afTimeStep)
 	}
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
+	for (cSomaLuxEntity *pEnt : mvEntities)
+		if (pEnt->GetScript() && pEnt->mbActive)
+			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
 }
 
 // iLuxEntity look-at callbacks: 1 when the player starts looking at the entity, -1 when looking away
@@ -825,6 +829,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cCamera", "float GetExtendedPitch() const", +[](cCamera *c) { return mapCameraExtra[c].fExtPitch; });
 	SOMA_METHOD(e, "cCamera", "float GetExtenededRoll() const", +[](cCamera *c) { return mapCameraExtra[c].fExtRoll; });
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
+	SOMA_METHOD(e, "iPhysicsBody", "cVector3f GetMassCenter() const", +[](iPhysicsBody *b) { return b->GetMassCentre(); });
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
 				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {
 					cBoundingVolume bv;

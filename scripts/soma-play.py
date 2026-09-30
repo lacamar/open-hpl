@@ -6,6 +6,7 @@
   scripts/soma-play.py goto ENTITY [--dist 1.0]       # feet next to an entity, facing it
   scripts/soma-play.py look ENTITY                    # aim the camera at an entity
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
+  scripts/soma-play.py drag ENTITY DX DY [--steps 60]  # hold click, move the mouse by DX,DY over STEPS frames
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w]            # hold a movement key
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
@@ -31,7 +32,7 @@ def send(req, timeout=60):
     try:
         with HplControl(str(SOCK), timeout=timeout) as h:
             r = h.send(req)
-    except HplControlError as e:
+    except (HplControlError, OSError) as e:
         raise SystemExit(f"error: {e}")
     if not r.get("ok", True):
         raise SystemExit(r.get("error", "failed") + r.get("output", ""))
@@ -76,7 +77,7 @@ def cmd_start(a):
         if pid() is None:
             raise SystemExit("instance exited during load")
         time.sleep(0.5)
-    frames(1)
+    send({"cmd": "wait_frames", "n": 60, "max_ms": 120000}, timeout=150)
     if a.pos:
         ex(f'Entity_PlaceAtEntity("Player", "{a.pos}");')
     print(f"pid {out[0]} {m} in {time.time() - t:.0f}s")
@@ -137,13 +138,50 @@ def cmd_look(a):
     frames(0.2)
 
 
+def raycast(a, b):
+    r = send(dict(cmd="raycast", **{k: str(v) for k, v in zip(("x", "y", "z", "x2", "y2", "z2"), (*a, *b))}))
+    out = []
+    for l in r.get("hits", "").splitlines():
+        f = l.split()
+        out.append((float(f[0]), f[1], f[2].split("=", 1)[1]))
+    return out
+
+
+def stand_spot(target, feet, dist, name):
+    base = math.atan2(feet[0] - target[0], feet[2] - target[2])
+    best = None
+    for i in range(24):
+        ang = base + (i + 1) // 2 * (1 if i % 2 else -1) * math.pi / 12
+        x, z = target[0] + math.sin(ang) * dist, target[2] + math.cos(ang) * dist
+        top = target[1] + 0.3
+        hits = raycast((x, top, z), (x, top - 2.0, z))
+        if not hits or hits[0][0] < 0.05:
+            continue
+        floor = top - hits[0][0]
+        if raycast((x, floor + 0.1, z), (x, floor + 1.9, z)):
+            continue
+        eye = (x, floor + 1.6, z)
+        los = raycast(eye, target)
+        seg = math.dist(eye, target)
+        if los and los[0][0] < seg - 0.25 and name not in (los[0][1], los[0][2]):
+            continue
+        score = abs(floor - feet[1]) + i * 0.02
+        if best is None or score < best[0]:
+            best = (score, x, floor, z)
+    return best
+
+
 def cmd_goto(a):
     target = ent_pos(a.entity)
     _, feet = camera_pos()
-    dx, dz = feet[0] - target[0], feet[2] - target[2]
-    n = math.hypot(dx, dz) or 1.0
-    x, z = target[0] + dx / n * a.dist, target[2] + dz / n * a.dist
-    y = feet[1] if a.keep_height else target[1] - 0.5
+    spot = None if a.keep_height else stand_spot(target, feet, a.dist, a.entity)
+    if spot:
+        _, x, y, z = spot
+        y += 0.05
+    else:
+        dx, dz = feet[0] - target[0], feet[2] - target[2]
+        n = math.hypot(dx, dz) or 1.0
+        x, y, z = target[0] + dx / n * a.dist, feet[1], target[2] + dz / n * a.dist
     ex(f'cLux_GetPlayer().GetCharacterBody().SetFeetPosition(cVector3f({x}, {y}, {z}), true);')
     frames(0.3)
     aim(target)
@@ -167,6 +205,20 @@ def cmd_interact(a):
     aim(ent_pos(a.entity))
     frames(0.3)
     press("mouse", "left", a.hold)
+    cmd_log(argparse.Namespace(regex=None, all=False))
+
+
+def cmd_drag(a):
+    aim(ent_pos(a.entity))
+    frames(0.3)
+    send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
+    frames(0.2)
+    for _ in range(a.steps):
+        send({"cmd": "input", "type": "mouse_move", "xrel": str(int(a.dx / a.steps)), "yrel": str(int(a.dy / a.steps))})
+        send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+    frames(0.3)
+    send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
+    frames(0.3)
     cmd_log(argparse.Namespace(regex=None, all=False))
 
 
@@ -240,6 +292,8 @@ def main():
     s.add_argument("--keep-height", action="store_true")
     s = sub.add_parser("look"); s.add_argument("entity")
     s = sub.add_parser("interact"); s.add_argument("entity"); s.add_argument("--hold", type=float, default=0.1)
+    s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
+    s.add_argument("--steps", type=int, default=60)
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
