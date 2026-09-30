@@ -75,6 +75,7 @@ public:
 	std::map<uint64_t, cFade> mmapFades;
 	void Fade(uint64_t alId, int alType, const float *apGoal, float afTime, int alEasing, bool abReplace);
 	std::map<uint64_t, float> mmapTimers;
+	std::vector<uint64_t> mvTimersOver;
 
 	// Modifiers
 	struct cModifiers
@@ -120,6 +121,7 @@ public:
 		cVector2f mvSize = 0;
 	};
 	cPrev mPrev;
+	tString msFocus;
 
 	std::vector<tWString> mvItems;
 
@@ -175,6 +177,7 @@ private:
 		int mlAlign;
 		float mfAngle;
 	};
+	static const int kClipBegin = 1, kClipEnd = 2;
 	void Record(const cOp &aOp) { mvBuilding.push_back(aOp); }
 
 	static cSomaImGui *mpCurrent;

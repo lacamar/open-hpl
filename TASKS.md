@@ -163,6 +163,9 @@ laboratory keypad terminal.
 - `Camera` entity position is (0,0,0).
 - `"" + float` formats shortest; ref uses `%f` (visible in script-built strings).
 - `cLux_GetGameTime` returns 0; `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
+- Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
+  loading-screen hold ~3% brighter, brain icon on a different animation frame. Return doesn't
+  activate the focused menu button (mouse does).
 
 ## History
 

@@ -12,6 +12,9 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
+#include "SomaSave.h"
+
+static bool gbPendingNewGame = false;
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
 
@@ -394,19 +397,30 @@ void cSomaLuxUpdater::OnDraw(float afFrameTime)
 
 void cSomaLuxUpdater::Update(float afTimeStep)
 {
+	if (gpSomaBase->ScriptsHeld())
+		return;
 	bool bMap = cSomaLuxMap::GetCurrent() != NULL;
-	if (bMap && gpSomaBase->UsesScriptPlayer())
+	if (bMap && gpSomaBase->UsesScriptPlayer() && gpSomaBase->UsesScriptMenu() == false)
 	{
 		bool bEscape = gpSomaBase->mpEngine->GetInput()->GetKeyboard()->KeyIsDown(eKey_Escape);
 		if (bEscape && mbEscapeDown == false)
 			gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false);
 		mbEscapeDown = bEscape;
 	}
-	if (gpSomaBase->IsGameplayPaused())
+	if (gpSomaBase->IsGameplayPaused() && gpSomaBase->mbScriptGamePaused == false)
 		return;
 	tString sMap, sStart, sError;
 	if (SomaTakePendingMapChange(sMap, sStart))
 	{
+		if (gbPendingNewGame)
+		{
+			gbPendingNewGame = false;
+			gpSomaBase->mbScriptGamePaused = false;
+			gpSomaBase->GetVisitedMaps().clear();
+			SomaDeserializeGlobalVars("");
+			if (cSomaLuxGame::Get())
+				cSomaLuxGame::Get()->ResetScriptables();
+		}
 		if (gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart) == false)
 			Error("SOMA script: %s\n", sError.c_str());
 		return;
@@ -414,9 +428,9 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	if (cSomaLuxGame::Get())
 	{
 		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesScriptPlayer() && gpSomaBase->UsesRealPlayer();
-		cSomaLuxGame::Get()->Update(afTimeStep);
+		cSomaLuxGame::Get()->Update(afTimeStep, gpSomaBase->mbScriptGamePaused);
 	}
-	if (cSomaLuxMap::GetCurrent())
+	if (cSomaLuxMap::GetCurrent() && gpSomaBase->mbScriptGamePaused == false)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
 }
 
@@ -566,6 +580,12 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 
 static tString gsPendingMap, gsPendingStart;
 
+void SomaRequestNewGame(const tString &asMap, const tString &asStart)
+{
+	SomaRequestMapChange(asMap, asStart);
+	gbPendingNewGame = true;
+}
+
 void SomaRequestMapChange(const tString &asMap, const tString &asStart)
 {
 	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
@@ -590,6 +610,18 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  SomaRequestMapChange(map, start);
 				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
 			  });
+	SOMA_FUNC(e, "void cLux_StartNewGame()", +[]() {
+		SomaRequestNewGame(gpSomaBase->GetInitConfigString("StartMap", "File"), gpSomaBase->GetInitConfigString("StartMap", "Pos"));
+	});
+	SOMA_FUNC(e, "void cLux_StartMap(const tString&in asMapName)", +[](S map) { SomaRequestNewGame(map, ""); });
+	SOMA_FUNC(e, "const tString &cLux_GetMainMenuFile()", +[]() -> const tString & {
+		static tString sFile;
+		sFile = gpSomaBase->GetInitConfigString("MainMenu", "File");
+		return sFile;
+	});
+	SOMA_FUNC(e, "void cLux_Exit()", +[]() { gpSomaBase->mpEngine->Exit(); });
+	SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { gpSomaBase->mbScriptGamePaused = b; });
+	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return true; });
 	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return false; });

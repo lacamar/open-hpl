@@ -885,6 +885,9 @@ void cSomaBase::ProceedPastBoot()
 		}
 	}
 
+	if (UsesScriptMenu() && cSomaLuxMap::GetCurrent())
+		return;
+
 	if (InitMainMenuScene() == false)
 	{
 		Log("SOMA: could not load main menu scene ('%s'), falling back to the "
@@ -1231,7 +1234,20 @@ void cSomaBase::SetGameplayPaused(bool abPaused)
 
 bool cSomaBase::IsGameplayPaused()
 {
-	return mpMainMenu && mpMainMenu->IsPaused();
+	return mbScriptGamePaused || (mpMainMenu && mpMainMenu->IsPaused());
+}
+
+void cSomaBase::LoadScriptMainMenu()
+{
+	tString sError, sMenu = GetInitConfigString("MainMenu", "File");
+	if (LoadMap(sMenu.empty() ? "main_menu.hpm" : sMenu, cVector3f(0), sError, "*") == false)
+		Log("SOMA: scripted main menu failed (%s), using the native one\n", sError.c_str());
+}
+
+tString cSomaBase::GetInitConfigString(const tString &asLevel, const tString &asName)
+{
+	cConfigFile cfg(msInitConfigFile);
+	return cfg.Load() ? cfg.GetString(asLevel, asName, "") : "";
 }
 
 //-----------------------------------------------------------------------

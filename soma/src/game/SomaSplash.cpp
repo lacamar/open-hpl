@@ -4,6 +4,9 @@
  */
 
 #include "SomaSplash.h"
+#include "SomaImGui.h"
+
+cSomaImGui *SomaHudImGui();
 #include "SomaBase.h"
 #include "SomaMenuSfx.h"
 
@@ -84,7 +87,7 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	for (int i = 0; i < mlBrainFrameCount; ++i)
 	{
 		tString sFrameFile = "brain_" + cString::ToString(i + 1, 2) + ".dds";
-		mvBrainFrames[i] = mpGui->CreateGfxTexture(sFrameFile, eGuiMaterial_Alpha, eTextureType_2D);
+		mvBrainFrames[i] = mpGui->CreateGfxTexture(sFrameFile, eGuiMaterial_Additive, eTextureType_2D);
 	}
 
 	// Owned outright (not a child of the set's base clip region) so its
@@ -163,7 +166,19 @@ void cSomaSplash::EnterPhase(eSomaSplashPhase aPhase)
 		// main_init.cfg <MainMenu> world) - not a synthetic delay - and
 		// mbRealBootWorkDone genuinely can't become true before it returns.
 		if (mpBase)
-			mpBase->PreloadMainMenuWorld();
+		{
+			if (mpBase->UsesScriptMenu())
+			{
+				mpBase->LoadScriptMainMenu();
+				// Draw after the map and HUD viewports
+				SomaHudImGui();
+				mpEngine->GetScene()->DestroyViewport(mpViewport);
+				mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
+				mpViewport->AddGuiSet(mpGuiSet);
+			}
+			else
+				mpBase->PreloadMainMenuWorld();
+		}
 		mbRealBootWorkDone = true;
 	}
 }
@@ -191,7 +206,7 @@ void cSomaSplash::StopMenuAmbient()
 
 void cSomaSplash::AdvanceToNextPhase()
 {
-	if (mPhase == eSomaSplashPhase_BootInit)
+	if (mPhase == eSomaSplashPhase_BootInit && mpBase->UsesScriptMenu() == false)
 	{
 		EnterPhase(eSomaSplashPhase_FGLogo);
 		return;
@@ -303,7 +318,7 @@ void cSomaSplash::Update(float afTimeStep)
 	if (mPhase == eSomaSplashPhase_FGLogo)
 		fPhaseDuration = mfFGHoldTimerTotal + mfFGFadeOutTime;
 	else if (mPhase == eSomaSplashPhase_BootInit)
-		fPhaseDuration = mfBootFadeTime + mfBootHoldTime + mfBootFadeTime;
+		fPhaseDuration = BootDuration();
 
 	// Task 3a: never let eSomaSplashPhase_BootInit advance - by skip input
 	// OR by its own cosmetic duration expiring - until the real main menu
@@ -359,143 +374,90 @@ void cSomaSplash::DrawFGLogoPhase()
 
 //-----------------------------------------------------------------------
 
+// Timings and layout measured from the official game (scripts/soma-compare.py boot): linear fade-in,
+// hold, long fade-out to black, then a cut; the brain icon fades in once and stays lit.
+const float kBootFadeIn = 2.2f, kBootFadeOutStart = 3.6f, kBootFadeOut = 4.0f;
+const float kBrainStart = 2.05f, kBrainFadeIn = 1.0f;
+const float kScriptStart = 3.7f, kBootBlackHold = 0.1f;
+
+float cSomaSplash::BootDuration() { return kBootFadeOutStart + kBootFadeOut + kBootBlackHold; }
+bool cSomaSplash::ScriptsMayRun() { return mbFinished || mPhase != eSomaSplashPhase_BootInit || mfPhaseElapsed >= kScriptStart; }
+
+// Official bar progress on the reference machine; our main menu load finishes before the first frame
+static float BootBarFraction(float afT)
+{
+	static const float vCurve[][2] = {{0, 0.60f}, {0.2f, 0.64f}, {0.46f, 0.68f}, {0.72f, 0.69f}, {0.98f, 0.71f}, {1.25f, 0.73f},
+									  {1.51f, 0.77f}, {1.77f, 0.80f}, {2.03f, 0.82f}, {2.3f, 0.86f}, {2.56f, 0.95f}, {2.82f, 1.0f}};
+	const int lNum = sizeof(vCurve) / sizeof(vCurve[0]);
+	for (int i = 1; i < lNum; ++i)
+		if (afT < vCurve[i][0])
+			return vCurve[i - 1][1] + (vCurve[i][1] - vCurve[i - 1][1]) * (afT - vCurve[i - 1][0]) / (vCurve[i][0] - vCurve[i - 1][0]);
+	return 1.0f;
+}
+
+// Official HUD virtual space: 1024x768 centre, widened by 4/3 of the extra width
+cVector3f cSomaSplash::VirtualToScreen(const cVector2f &avPos, float afZ)
+{
+	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
+	return cVector3f((avPos.x + (fW - 1024.0f) * 0.5f) * mvScreenSize.x / fW, avPos.y * mvScreenSize.y / 768.0f, afZ);
+}
+
+cVector2f cSomaSplash::VirtualSizeToScreen(const cVector2f &avSize)
+{
+	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
+	return cVector2f(avSize.x * mvScreenSize.x / fW, avSize.y * mvScreenSize.y / 768.0f);
+}
+
 void cSomaSplash::DrawBootInitPhase()
 {
-	float fPhaseDuration = mfBootFadeTime + mfBootHoldTime + mfBootFadeTime;
-
-	float fAlpha = 1.0f;
-	if (mfPhaseElapsed < mfBootFadeTime)
-		fAlpha = cMath::Clamp(mfPhaseElapsed / mfBootFadeTime, 0.0f, 1.0f);
-	else if (mfPhaseElapsed > fPhaseDuration - mfBootFadeTime)
-		fAlpha = cMath::Clamp((fPhaseDuration - mfPhaseElapsed) / mfBootFadeTime, 0.0f, 1.0f);
-
-	// Bar fill fraction - smooth time-based animation across the whole
-	// phase, not a fabricated "phase" breakdown - see SomaSplash.h's
-	// ePhase_BootInit note for why.
-	float fBarFraction = cMath::Clamp(mfPhaseElapsed / fPhaseDuration, 0.0f, 1.0f);
-
-	// Reused for the loading bar/frame below (see their own comment) so
-	// their on-screen size tracks Premenu.png's own scale at any resolution.
-	float fPremenuScale = 1.0f;
+	float t = mfPhaseElapsed;
+	float fAlpha = t < kBootFadeOutStart ? cMath::Clamp(t / kBootFadeIn, 0.0f, 1.0f)
+										 : cMath::Clamp(1.0f - (t - kBootFadeOutStart) / kBootFadeOut, 0.0f, 1.0f);
 
 	if (mpPremenuBg)
 	{
-		// Real asset is already a 1920x1080 full-bleed composite
-		// (graphics/startmenu/premenu/Premenu.png) - scale-to-fit same as
-		// the FG logo, in case this splash ever runs at a non-16:9
-		// resolution.
 		cVector2f vImgSize = mpPremenuBg->GetImageSize();
-		fPremenuScale = cMath::Min(mvScreenSize.x / vImgSize.x, mvScreenSize.y / vImgSize.y);
-		vImgSize = vImgSize * fPremenuScale;
-
-		cVector3f vPos((mvScreenSize.x - vImgSize.x) * 0.5f,
-						(mvScreenSize.y - vImgSize.y) * 0.5f, 1);
-
+		float fScale = cMath::Min(mvScreenSize.x / vImgSize.x, mvScreenSize.y / vImgSize.y);
+		vImgSize = vImgSize * fScale;
+		cVector3f vPos((mvScreenSize.x - vImgSize.x) * 0.5f, (mvScreenSize.y - vImgSize.y) * 0.5f, 1);
 		mpGuiSet->DrawGfx(mpPremenuBg, vPos, vImgSize, cColor(1, 1, 1, fAlpha));
 	}
 
 	if (mpLoadingFrame && mpLoadingBar)
 	{
-		// Real evidence this pass (previous version of this block was a
-		// pure visual-judgment guess - see the removed comment in git
-		// history): `nm -C`/`objdump -d` on the real, unstripped
-		// Soma.bin.x86_64 (it has debug_info - confirmed `file` output)
-		// locates a native cLuxLoadHandler class whose constructor
-		// (cLuxLoadHandler::cLuxLoadHandler(), file vaddr 0xb1a6f0)
-		// disassembles to cConfigFile::GetString("General", ...) calls for
-		// "LoadingIcon"/"SplashScreen"/"LoadingBar"/"LoadingFrame"/
-		// "SplashScreenMusic" IN THAT EXACT ORDER - i.e. this is the real
-		// native class config/game.cfg's <General> block belongs to, and
-		// it groups the boot splash (SplashScreen) with LoadingBar/
-		// LoadingFrame, confirming (not just assuming) they're meant to
-		// composite together.
-		//
-		// Its OnDraw() (file vaddr 0xb1d190) disassembles to a
-		// cGuiSet::DrawGfx() call for the loading bar (and a second, near-
-		// identical one for the frame) with a LITERAL, HARDCODED size
-		// immediate of (1024.0, 128.0) - i.e. the asset's own exact native
-		// pixel dimensions (`identify` confirms both loading_bar.dds and
-		// loading_frame.dds are 1024x128) - not a fraction of screen
-		// width like the previous version of this block used. The same
-		// call's position math includes a literal "-512.0" float
-		// (sitting in .rodata right next to the "LoadingBar"/
-		// "LoadingFrame" config-key strings themselves) - exactly half
-		// that 1024 width - applied to a term that's otherwise built from
-		// a "screen-width * 0.5" component; i.e. the real code converts a
-		// horizontal-CENTER coordinate into a left-edge draw position,
-		// confirming the bar is horizontally centered on screen (not
-		// left-anchored at a fixed inset like the previous version
-		// guessed). The analogous vertical term uses no such "* 0.5" on
-		// its screen-size input and instead has a "-256.0" literal -
-		// read here as the same pattern applied to a BOTTOM-edge anchor
-		// instead of a center one (screen height minus a fixed inset),
-		// which - unlike full vertical centering - keeps the bar clear of
-		// Premenu.png's own baked "INITIALIZATION.../LOAD/OPTIONS" text
-		// block (roughly 43%-53% down the 1080-tall reference image, per
-		// direct pixel inspection this pass). This vertical reading is
-		// this pass's best inference, not a runtime-confirmed value (the
-		// exact fields the formula reads live in engine globals this pass
-		// had no way to sample live without running the real closed
-		// binary, which is out of bounds - see PORTING_NOTES.md); the
-		// size and horizontal-centering findings above are the solid
-		// part of this evidence.
-		cVector2f vBarSize(1024.0f * fPremenuScale, 128.0f * fPremenuScale);
-		cVector3f vBarPos((mvScreenSize.x - vBarSize.x) * 0.5f,
-						   mvScreenSize.y - 256.0f * fPremenuScale, 2);
-
-		// Static decoration - always fully visible.
+		cVector3f vBarPos = VirtualToScreen(cVector2f(0, 512), 2);
+		cVector2f vBarSize = VirtualSizeToScreen(cVector2f(1024, 128));
 		mpGuiSet->DrawGfx(mpLoadingFrame, vBarPos, vBarSize, cColor(1, 1, 1, fAlpha));
 
-		// Fill - clipped horizontally to [0, fBarFraction] of vBarSize.x.
-		// See SomaSplash.h's mpBarClipRegion comment for why this reuses
-		// one persistent region rather than allocating a new child every
-		// frame.
-		mpBarClipRegion->mRect = cRect2f(vBarPos.x, vBarPos.y, vBarSize.x * fBarFraction, vBarSize.y);
-
+		mpBarClipRegion->mRect = cRect2f(vBarPos.x, vBarPos.y, vBarSize.x * BootBarFraction(t), vBarSize.y);
 		cGuiClipRegion *pPrevRegion = mpGuiSet->GetCurrentClipRegion();
 		mpGuiSet->SetCurrentClipRegion(mpBarClipRegion);
 		mpGuiSet->DrawGfx(mpLoadingBar, vBarPos, vBarSize, cColor(1, 1, 1, fAlpha));
 		mpGuiSet->SetCurrentClipRegion(pPrevRegion);
 	}
 
-	DrawBrainIcon(fAlpha, fPremenuScale);
+	DrawBrainIcon(cMath::Clamp((t - kBrainStart) / kBrainFadeIn, 0.0f, 1.0f));
 }
 
-//-----------------------------------------------------------------------
 
-void cSomaSplash::DrawBrainIcon(float afAlpha, float afPremenuScale)
+void cSomaSplash::DrawBrainIcon(float afAlpha)
 {
-	// config/game.cfg: LoadingIcon = "brain_01.dds" - real 26-frame animated
-	// sequence (graphics/general/loadscreen/brainAnim/brain_01.dds ..
-	// brain_26.dds, each a genuine distinct 512x512 DDS frame) - see
-	// SomaSplash.h point 7 for the native cLuxLoadHandler evidence tying
-	// this to the boot-init phase. Frame pacing is real evidence this pass
-	// (elapsed*15fps, see mfBrainFrameRate's own comment) using a real
-	// PING-PONG bounce (0->25->0->25->...) rather than a wraparound loop -
-	// a real, disassembly-confirmed pattern (a triangle wave over twice the
-	// frame count). On-screen SIZE/POSITION are still this pass's plausible
-	// (not fully disassembly-confirmed) values - see SomaSplash.h point 7.
+	if (afAlpha <= 0)
+		return;
 	float fRaw = mfPhaseElapsed * mfBrainFrameRate;
 	int lPeriod = 2 * (mlBrainFrameCount - 1);
 	int lStep = ((int)fRaw) % lPeriod;
-	if (lStep < 0)
-		lStep += lPeriod;
 	int lFrame = (lStep <= (mlBrainFrameCount - 1)) ? lStep : (lPeriod - lStep);
 
 	cGuiGfxElement *pFrame = mvBrainFrames[lFrame];
 	if (pFrame == NULL)
 		return;
 
-	cVector2f vIconSize(140.0f * afPremenuScale, 140.0f * afPremenuScale);
-	float fMargin = 40.0f * afPremenuScale;
-
-	cVector3f vPos(mvScreenSize.x - vIconSize.x - fMargin,
-				   mvScreenSize.y - vIconSize.y - fMargin, 2);
-
-	mpGuiSet->DrawGfx(pFrame, vPos, vIconSize, cColor(1, 1, 1, afAlpha));
+	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
+	cVector3f vPos = VirtualToScreen(cVector2f(1024.0f + (fW - 1024.0f) * 0.5f - 150.0f, 648.0f), 3);
+	mpGuiSet->DrawGfx(pFrame, vPos, VirtualSizeToScreen(cVector2f(70, 70)), cColor(afAlpha, afAlpha, afAlpha, 1));
 }
 
-//-----------------------------------------------------------------------
 
 void cSomaSplash::OnDraw(float afFrameTime)
 {

@@ -194,7 +194,12 @@ void cSomaLuxGame::Load()
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
 }
 
-void cSomaLuxGame::Update(float afTimeStep)
+void cSomaLuxGame::ResetScriptables()
+{
+	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
+}
+
+void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 {
 	// Read once: iMouse::GetRelPosition resets the motion
 	mvMouseRel = gpSomaBase->mpEngine->GetInput()->GetMouse()->GetRelPosition();
@@ -202,6 +207,11 @@ void cSomaLuxGame::Update(float afTimeStep)
 		cSomaLuxInputHandler::Get()->LatchActions();
 	if (cSomaLuxInputHandler::Get())
 		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
+	if (abPaused)
+	{
+		UpdateGui(afTimeStep);
+		return;
+	}
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); });
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
@@ -222,7 +232,11 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 		if (cSomaLuxHandler *pGui = GetHandler("GuiHandler"))
 			pGui->CallWithObject("void UpdateDefaultInput(cImGui @apImGui)", pFocus);
 		iMouse *pMouse = gpSomaBase->mpEngine->GetInput()->GetMouse();
-		pFocus->SendMousePosition(pMouse->GetAbsPosition(), mvMouseRel);
+		// Pointer starts centred until the OS reports motion, as in the official game
+		static bool bMouseMoved = false;
+		bMouseMoved |= mvMouseRel.x != 0 || mvMouseRel.y != 0;
+		cVector2l vPos = bMouseMoved ? pMouse->GetAbsPosition() : gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt() / 2;
+		pFocus->SendMousePosition(vPos, mvMouseRel);
 	}
 	cSomaImGui *pHud = SomaHudImGui();
 	cSomaImGui::SetCurrent(pHud);
@@ -237,6 +251,13 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 
 void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 {
+	// Paused: only modules (the menu) hear input
+	if (gpSomaBase->mbScriptGamePaused)
+	{
+		for (cSomaLuxModule *p : mvModules)
+			p->OnAction(alAction, abPressed);
+		return;
+	}
 	ForEach([=](cSomaLuxScriptable *p) { p->OnAction(alAction, abPressed); });
 	if (cSomaLuxMap::GetCurrent())
 		cSomaLuxMap::GetCurrent()->OnAction(alAction, abPressed);
@@ -244,6 +265,8 @@ void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 
 void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
 {
+	if (gpSomaBase->mbScriptGamePaused)
+		return;
 	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); });
 }
 
@@ -348,6 +371,13 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxInputHandler@ cLux_GetInputHandler()", +[]() { return (void *)HandlerByName<0>(); });
 	SOMA_FUNC(e, "cLuxEventDatabaseHandler@ cLux_GetEventDatabaseHandler()", +[]() { return (void *)HandlerByName<1>(); });
 	SOMA_FUNC(e, "cLuxGuiHandler@ cLux_GetGuiHandler()", +[]() { return (void *)HandlerByName<2>(); });
+	SOMA_METHOD(e, "cLuxGuiHandler", "void SetGameHudInputFocus(bool abX)", +[](void *, bool b) {
+		if (b)
+			cSomaImGui::SetInputFocus(SomaHudImGui(), true);
+		else if (cSomaImGui::GetInputFocus() == SomaHudImGui())
+			cSomaImGui::SetInputFocus(NULL, false);
+	});
+	SOMA_METHOD(e, "cLuxGuiHandler", "bool GetGameHudInputFocus()", +[](void *) { return cSomaImGui::GetInputFocus() == SomaHudImGui(); });
 	SOMA_FUNC(e, "iLuxAchievementHandler@ cLux_GetAchievementHandler()", +[]() { return (void *)HandlerByName<3>(); });
 	SOMA_FUNC(e, "iLuxHeroStatsHandler@ cLux_GetHeroStatsHandler()", +[]() { return (void *)HandlerByName<4>(); });
 	SOMA_FUNC(e, "iLuxRichPresenceHandler@ cLux_GetRichPresenceHandler()", +[]() { return (void *)HandlerByName<5>(); });

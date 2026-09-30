@@ -105,4 +105,7 @@ private:
 	bool mbEscapeDown = false;
 };
 
+void SomaRequestMapChange(const tString &asMap, const tString &asStart);
+void SomaRequestNewGame(const tString &asMap, const tString &asStart);
+
 #endif // SOMA_LUX_H

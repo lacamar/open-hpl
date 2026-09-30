@@ -8,12 +8,12 @@
 
 #include "impl/scriptarray.h"
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <set>
 #include <sstream>
 
-void SomaRequestMapChange(const tString &asMap, const tString &asStart);
 
 namespace
 {
@@ -633,5 +633,23 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void ContinueLoading(bool abDisableWaits)", +[](void *, bool) {});
 	SOMA_METHOD(e, T, "bool IsDoneLoadingSavedGame()", +[](void *) { return true; });
 	SOMA_METHOD(e, T, "void StartLoadedGame()", +[](void *) {});
+	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
+				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {
+					tWStringList lstFiles;
+					cPlatform::FindFilesInDir(lstFiles, GetSaveDir(), _W("*.sav"));
+					std::vector<std::pair<cDate, tWString>> vSaves;
+					for (const tWString &sFile : lstFiles)
+						vSaves.push_back({cPlatform::FileModifiedDate(GetSaveDir() + sFile), sFile});
+					std::sort(vSaves.begin(), vSaves.end(), [](const auto &a, const auto &b) { return b.first < a.first; });
+					for (auto &it : vSaves)
+					{
+						tWString sName = cString::SetFileExtW(it.second, _W(""));
+						tString sDate = it.first.ToString();
+						names.InsertLast(&sName);
+						dates.InsertLast(&sDate);
+						files.InsertLast(&it.second);
+					}
+					return true;
+				});
 	SOMA_FUNC(e, "bool cLux_HasConfigLoadError(tString&out asError)", +[](tString &) { return false; });
 }

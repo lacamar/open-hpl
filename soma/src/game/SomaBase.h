@@ -227,6 +227,12 @@ public:
 	// either), so both are guarded.
 	void SetGameplayPaused(bool abPaused);
 	bool IsGameplayPaused();
+	// Official flow: main menu, pre-menu and pause menu come from script/modules/MenuHandler.hps
+	bool UsesScriptMenu() { return mbUseScriptPlayer && getenv("OPENHPL_SOMA_NATIVE_MENU") == NULL; }
+	bool mbScriptGamePaused = false;
+	tString GetInitConfigString(const tString &asLevel, const tString &asName);
+	void LoadScriptMainMenu();
+	bool ScriptsHeld() { return mpSplash && mpSplash->ScriptsMayRun() == false; }
 
 private:
 	/////////////////////////

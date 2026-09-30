@@ -50,6 +50,7 @@ scripts/soma-compare.py player | entities | lights [--pattern] [--diff]
 scripts/soma-compare.py view --pose X Y Z YAW PITCH   # screenshots + side-by-side + image metrics
 scripts/soma-compare.py fps --secs 10
 scripts/soma-compare.py report --map M            # all of the above -> report.json
+scripts/soma-compare.py boot [--record-ref]      # boot splash -> main menu, per-frame PSNR -> boot/timeline.png
 OPENHPL_SOMA_SCRIPT_CHECK_FILE=f.hps scripts/soma-script-check.sh   # compile one file, print errors
 ```
 
@@ -77,7 +78,7 @@ install directory writable.
 Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 `OPENHPL_SOMA_MAP=<file.hpm>`, `OPENHPL_SOMA_SKIP_BOOT=1`, `OPENHPL_SOMA_FREECAM=1`,
 `OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`, `OPENHPL_SOMA_SCRIPT_PLAYER=0` (hand-written cSomaPlayer instead of
-player/Player.hps). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
+player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the game's MenuHandler). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 
 `scripts/hpl_control.py --socket <sock> <cmd> [k=v ...]`:
 

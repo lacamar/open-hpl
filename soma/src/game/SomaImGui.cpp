@@ -5,6 +5,7 @@
 
 #include "impl/scriptarray.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -89,6 +90,7 @@ void cSomaImGui::ClearStates()
 	mmapStates.clear();
 	mmapFades.clear();
 	mmapTimers.clear();
+	mvTimersOver.clear();
 	mbFirstRun = true;
 }
 
@@ -120,6 +122,9 @@ void cSomaImGui::Begin(float afTimeStep)
 		else
 			st.mCol = cColor(v[0], v[1], v[2], v[3]);
 	}
+	for (uint64_t id : mvTimersOver)
+		mmapTimers.erase(id);
+	mvTimersOver.clear();
 	for (auto &it : mmapTimers)
 		it.second -= afTimeStep;
 }
@@ -142,13 +147,23 @@ void cSomaImGui::End()
 
 void cSomaImGui::DrawAll()
 {
+	std::vector<cGuiClipRegion *> vClip(1, mpSet->GetCurrentClipRegion());
 	for (const cOp &op : mvDrawn)
 	{
-		if (op.mpGfx)
+		if (op.mpGfx == NULL && op.mpFont == NULL)
+		{
+			if (op.mlAlign == kClipBegin)
+				vClip.push_back(vClip.back()->CreateChild(op.mvPos, op.mvSize));
+			else if (vClip.size() > 1)
+				vClip.pop_back();
+			mpSet->SetCurrentClipRegion(vClip.back());
+		}
+		else if (op.mpGfx)
 			mpSet->DrawGfx(op.mpGfx, op.mvPos, op.mvSize, op.mColor, (eGuiMaterial)op.mlMaterial, op.mfAngle);
 		else if (op.mpFont)
 			mpSet->DrawFont(op.msText, op.mpFont, op.mvPos, op.mvSize, op.mColor, (eFontAlign)op.mlAlign);
 	}
+	mpSet->SetCurrentClipRegion(vClip.front());
 }
 
 void cSomaImGui::SendAction(int alAction, bool abDown, bool abTriggered)
@@ -230,21 +245,39 @@ static cGuiGfxElement *GfxElement(const void *apGfx)
 			pWhite = gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
 		return pWhite;
 	}
+	const cVector2f &vUVMin = F<cVector2f>(apGfx, kGfxUVMin);
+	const cVector2f &vUVMax = F<cVector2f>(apGfx, kGfxUVMax);
+	bool bSubRect = vUVMin != cVector2f(0) || vUVMax != cVector2f(1);
 	tString sKey = sFile + "#" + cString::ToString(lType);
+	if (bSubRect)
+		sKey += "#" + vUVMin.ToString() + vUVMax.ToString();
 	auto it = mapCache.find(sKey);
 	if (it != mapCache.end())
 		return it->second;
 	cGui *pGui = gpSomaBase->mpEngine->GetGui();
-	cGuiGfxElement *pGfx = lType == 2 || lType == 3 ? pGui->CreateGfxTexture(sFile, (eGuiMaterial)lMaterial, eTextureType_2D, cColor(1, 1), true)
-													: pGui->CreateGfxImage(sFile, (eGuiMaterial)lMaterial);
+	cGuiGfxElement *pGfx = NULL;
+	if (bSubRect)
+	{
+		if (iTexture *pTex = gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(sFile, true))
+			pGfx = pGui->CreateGfxTexture(pTex, false, (eGuiMaterial)lMaterial, cColor(1, 1), true, vUVMin, vUVMax);
+	}
+	else if (lType == 2 || lType == 3)
+		pGfx = pGui->CreateGfxTexture(sFile, (eGuiMaterial)lMaterial, eTextureType_2D, cColor(1, 1), true);
+	else
+		pGfx = pGui->CreateGfxImage(sFile, (eGuiMaterial)lMaterial);
 	mapCache[sKey] = pGfx;
 	return pGfx;
 }
 
+// Full texture size; the official engine ignores mvUVMin/mvUVMax here
 cVector2f cSomaImGui::GetGfxSize(const void *apGfx)
 {
 	cGuiGfxElement *pGfx = GfxElement(apGfx);
-	return pGfx ? pGfx->GetImageSize() : cVector2f(0);
+	if (pGfx == NULL)
+		return 0;
+	cVector2f vUV = F<cVector2f>(apGfx, kGfxUVMax) - F<cVector2f>(apGfx, kGfxUVMin);
+	cVector2f vSize = pGfx->GetImageSize();
+	return cVector2f(vUV.x > 0 ? vSize.x / vUV.x : vSize.x, vUV.y > 0 ? vSize.y / vUV.y : vSize.y);
 }
 
 void cSomaImGui::DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f avSize, const cColor &aColor)
@@ -253,7 +286,7 @@ void cSomaImGui::DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f av
 	if (pGfx == NULL)
 		return;
 	if (avSize.x < 0 || avSize.y < 0)
-		avSize = pGfx->GetImageSize();
+		avSize = GetGfxSize(apGfx);
 	cOp op;
 	op.mpGfx = pGfx;
 	op.mpFont = NULL;
@@ -398,9 +431,13 @@ void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, cons
 bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
-	bool bOver = MouseOver(avPos, avSize);
-	bool bDown = bOver && ActionIsDown(1);
-	bool bClicked = bOver && ActionTriggered(1);
+	bool bMouse = MouseOver(avPos, avSize);
+	// Focus stays on the last widget the mouse moved over or SetFocus named
+	if (bMouse && (mvMouseRel.x != 0 || mvMouseRel.y != 0))
+		msFocus = asName;
+	bool bOver = asName.empty() || msFocus.empty() ? bMouse : msFocus == asName;
+	bool bDown = bMouse && ActionIsDown(1);
+	bool bClicked = bMouse && ActionTriggered(1);
 	cState &st = State(Id(asName));
 	bool bResult = bClicked;
 	if (alMode == 1) // toggle
@@ -688,6 +725,29 @@ struct cSomaScriptImGui
 };
 
 static cSomaImGui *gpHudImGui = NULL;
+
+// Matches the official engine at 4:3, 16:10 and 16:9: a 1024x768 centre area, widened by 4/3 of the extra width
+static cVector2f HudVirtualSize()
+{
+	cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	return cVector2f((4.0f * 768.0f * vScreen.x / vScreen.y - 1024.0f) / 3.0f, 768.0f);
+}
+
+static cVector2f gvHudSize, gvHudOffset, gvHudCenter(1024, 768);
+static cVector3f gvHudStart;
+
+static void Hud()
+{
+	gvHudSize = HudVirtualSize();
+	gvHudOffset = cVector2f((gvHudSize.x - 1024.0f) * 0.5f, 0);
+	gvHudStart = cVector3f(-gvHudOffset.x, 0, 0);
+}
+
+static void SetHudVirtualSize(cGuiSet *apSet)
+{
+	cVector2f vSize = HudVirtualSize();
+	apSet->SetVirtualSize(vSize, -1000, 1000, cVector2f((vSize.x - 1024.0f) * 0.5f, 0));
+}
 static std::vector<cSomaScriptImGui *> gvScriptImGuis;
 
 cSomaImGui *SomaHudImGui()
@@ -696,8 +756,7 @@ cSomaImGui *SomaHudImGui()
 	{
 		cGui *pGui = gpSomaBase->mpEngine->GetGui();
 		cGuiSet *pSet = pGui->CreateSet("GameHud", pGui->CreateSkin("gui_default.skin"));
-		cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
-		pSet->SetVirtualSize(cVector2f(768.0f * vScreen.x / vScreen.y, 768), -1000, 1000);
+		SetHudVirtualSize(pSet);
 		cViewport *pViewport = gpSomaBase->mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 		pViewport->AddGuiSet(pSet);
 		gpHudImGui = new cSomaImGui("GameHud", pSet);
@@ -736,6 +795,12 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	// Contexts
 	SOMA_FUNC(e, "cImGui@ cLux_GetCurrentImGui()", +[]() { return cSomaImGui::GetCurrent() ? cSomaImGui::GetCurrent() : SomaHudImGui(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetGameHudImGui()", +[]() { return SomaHudImGui(); });
+	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualCenterSize()", +[]() -> const cVector2f & { return gvHudCenter; });
+	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualSize()", +[]() -> const cVector2f & { Hud(); return gvHudSize; });
+	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualOffset()", +[]() -> const cVector2f & { Hud(); return gvHudOffset; });
+	SOMA_FUNC(e, "const cVector3f& cLux_GetHudVirtualStartPos()", +[]() -> const cVector3f & { Hud(); return gvHudStart; });
+	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualCenterScreenSize()", +[]() -> const cVector2f & { Hud(); return gvHudSize; });
+	SOMA_FUNC(e, "const cVector3f& cLux_GetHudVirtualCenterScreenStartPos()", +[]() -> const cVector3f & { Hud(); return gvHudStart; });
 	SOMA_FUNC(e, "void cLux_SetImGuiInputFocus(cImGui@ apImGui, bool abShowMouse)", +[](I *p, bool b) { cSomaImGui::SetInputFocus(p, b); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetInputFocus(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetPrevInputFocusImGui()", +[]() { return cSomaImGui::GetPrevInputFocus(); });
@@ -744,8 +809,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 			  +[](Str n, bool bDraw, bool) {
 				  cGui *pGui = gpSomaBase->mpEngine->GetGui();
 				  cGuiSet *pSet = pGui->CreateSet(n, pGui->CreateSkin("gui_default.skin"));
-				  cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
-				  pSet->SetVirtualSize(cVector2f(768.0f * vScreen.x / vScreen.y, 768), -1000, 1000);
+				  SetHudVirtualSize(pSet);
 				  cViewport *pViewport = gpSomaBase->mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 				  pViewport->AddGuiSet(pSet);
 				  cSomaScriptImGui *p = new cSomaScriptImGui{new cSomaImGui(n, pSet), NULL};
@@ -785,7 +849,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "cVector3f GetMouseRel3D()", +[](I *p) { return cVector3f(p->GetMouseRel().x, p->GetMouseRel().y, 0); });
 	SOMA_METHOD(e, T, "bool CheckMouseHasMoved()", +[](I *p) { return p->GetMouseRel().x != 0 || p->GetMouseRel().y != 0; });
 	SOMA_METHOD(e, T, "void SetAlignment(eImGuiAlign aAlign)", +[](I *p, int a) { p->mlAlign = a; });
-	SOMA_METHOD(e, T, "void SetFocus(const tString&in asWidgetName)", +[](I *, Str) {});
+	SOMA_METHOD(e, T, "void SetFocus(const tString&in asWidgetName)", +[](I *p, Str s) { p->msFocus = s; });
 	SOMA_METHOD(e, T, "void LockMouseFocus()", +[](I *) {});
 	SOMA_METHOD(e, T, "bool MouseFocusIsLocked()", +[](I *) { return false; });
 	SOMA_METHOD(e, T, "void SetDrawUIDebugBoxes(bool abX)", +[](I *, bool) {});
@@ -845,7 +909,10 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 				});
 
 	// Timers
-	SOMA_METHOD(e, T, "void AddTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) { p->mmapTimers[Id(n)] = t; });
+	SOMA_METHOD(e, T, "void AddTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) {
+		p->mmapTimers[Id(n)] = t;
+		p->mvTimersOver.erase(std::remove(p->mvTimersOver.begin(), p->mvTimersOver.end(), Id(n)), p->mvTimersOver.end());
+	});
 	SOMA_METHOD(e, T, "bool RepeatTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) {
 		auto it = p->mmapTimers.find(Id(n));
 		if (it == p->mmapTimers.end())
@@ -861,7 +928,13 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 		return false;
 	});
 	SOMA_METHOD(e, T, "void StopTimer(const tString&in asName)", +[](I *p, Str n) { p->mmapTimers.erase(Id(n)); });
-	SOMA_METHOD(e, T, "bool TimerOver(const tString&in asName)", +[](I *p, Str n) { auto it = p->mmapTimers.find(Id(n)); return it != p->mmapTimers.end() && it->second <= 0; });
+	SOMA_METHOD(e, T, "bool TimerOver(const tString&in asName)", +[](I *p, Str n) {
+		auto it = p->mmapTimers.find(Id(n));
+		if (it == p->mmapTimers.end() || it->second > 0)
+			return false;
+		p->mvTimersOver.push_back(it->first);
+		return true;
+	});
 	SOMA_METHOD(e, T, "bool TimerExists(const tString&in asName)", +[](I *p, Str n) { return p->mmapTimers.count(Id(n)) > 0; });
 
 	// Modifiers
@@ -904,8 +977,10 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void GroupEnd()", +[](I *p) { if (p->mvGroups.empty() == false) p->mvGroups.pop_back(); });
 	SOMA_METHOD(e, T, "const cVector3f &GetCurrentGroupPos()", +[](I *p) -> const cVector3f & { static cVector3f v; v = p->GroupPos(); return v; });
 	SOMA_METHOD(e, T, "const cVector2f &GetCurrentGroupSize()", +[](I *p) -> const cVector2f & { static cVector2f v; v = p->GroupSize(); return v; });
-	SOMA_METHOD(e, T, "void ClipAreaBegin(const cVector3f&in avPos, const cVector2f&in avSize)", +[](I *, V3, V2) {});
-	SOMA_METHOD(e, T, "void ClipAreaEnd()", +[](I *) {});
+	SOMA_METHOD(e, T, "void ClipAreaBegin(const cVector3f&in avPos, const cVector2f&in avSize)", +[](I *p, V3 pos, V2 size) {
+		p->Record({NULL, NULL, L"", pos, size, cColor(1, 1), 0, cSomaImGui::kClipBegin, 0});
+	});
+	SOMA_METHOD(e, T, "void ClipAreaEnd()", +[](I *p) { p->Record({NULL, NULL, L"", 0, 0, cColor(1, 1), 0, cSomaImGui::kClipEnd, 0}); });
 	SOMA_METHOD(e, T, "void LayoutBegin(eImGuiLayout aType, const cVector3f&in avPos=0, const cVector2f&in avSize=-1, const cVector2f&in avSpacing=0)",
 				+[](I *p, int t, V3 pos, V2 size, V2 spacing) {
 					cSomaImGui::cLayout l;

@@ -55,7 +55,7 @@ def game_pid():
     return None
 
 
-def write_mod(map_file, pos, size):
+def write_mod(map_file, pos, size, boot=False):
     if MOD.exists():
         shutil.rmtree(MOD)
     (MOD / "config").mkdir(parents=True)
@@ -75,7 +75,8 @@ def write_mod(map_file, pos, size):
     init = (SOMA / "config/main_init.cfg").read_text()
     init = init.replace('"config/Modules.cfg"', '"config/ohpl_modules.cfg"')
     init = re.sub(r'MainSaveFolder\s*=\s*"[^"]*"', f'MainSaveFolder = "{SAVE_FOLDER}"', init)
-    init = re.sub(r'<StartMap[^>]*/>', f'<StartMap File="{map_file}" Folder="maps/" Pos="{pos}"/>', init, flags=re.S)
+    if not boot:
+        init = re.sub(r'<StartMap[^>]*/>', f'<StartMap File="{map_file}" Folder="maps/" Pos="{pos}"/>', init, flags=re.S)
     (MOD / "config/ohpl_init.cfg").write_text(init)
     mods = (SOMA / "config/Modules.cfg").read_text().replace(
         "</Modules>", '\t<Module Name="OhplAgent" ScriptFile="ohpl/OhplAgent.hps" ScriptClass="cScrOhplAgent" '
@@ -86,7 +87,8 @@ def write_mod(map_file, pos, size):
     w, h = size.split("x")
     settings = (SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
     settings += (f'\n<Screen Width="{w}" Height="{h}" FullScreen="false" Vsync="false" />\n'
-                 '<Main FirstGameStart="false" SleepWhenOutOfFocus="false" ShowMenu="false" ShowPreMenu="false" />\n')
+                 '<Main FirstGameStart="false" SleepWhenOutOfFocus="false"' +
+                 ('' if boot else ' ShowMenu="false" ShowPreMenu="false"') + ' />\n')
     for f in d.glob("*_user_settings.cfg"):
         f.unlink()
     (d / "Default_user_settings.cfg").write_text(settings)
@@ -210,7 +212,7 @@ def ref_output(size):
         name = next(n for n in (o["name"] for o in swaymsg("-t", "get_outputs")) if n not in names)
         marker.write_text(name)
     w, h = size.split("x")
-    swaymsg("output", name, "mode", "--custom", f"{w}x{h}", "scale", "1", "position", "8000", "0")
+    swaymsg("output", name, "resolution", f"{w}x{h}", "scale", "1", "position", "8000", "0")
     return name
 
 
@@ -218,6 +220,22 @@ def screenshot(out):
     name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/ohpl-ref-output").read_text().strip()
     subprocess.run(["grim", "-o", name, str(out)], env=sway_env(), check=True)
     return out
+
+
+def record_frames(out, secs, fps, t0=None):
+    """Screenshots at `fps` for `secs`; names carry ms since `t0` (launch)."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = t0 or time.time()
+    name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/ohpl-ref-output").read_text().strip()
+    env, end, frames = sway_env(), time.time() + secs, []
+    while time.time() < end and game_pid():
+        tick = time.time()
+        f = out / f"{int((tick - t0) * 1000):06d}.png"
+        subprocess.run(["grim", "-o", name, str(f)], env=env)
+        frames.append(f)
+        time.sleep(max(0, 1 / fps - (time.time() - tick)))
+    return frames
 
 
 def walk_windows(n):
@@ -236,7 +254,8 @@ def stop():
             time.sleep(0.2)
 
 
-def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x720", timeout=300, hud=False):
+def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x720", timeout=300, hud=False, boot=False,
+          record=None):
     if not map_file.endswith(".hpm"):
         map_file += ".hpm"
     stop()
@@ -244,7 +263,7 @@ def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x72
     out = ref_output(size)
     prev = next((o["name"] for o in swaymsg("-t", "get_outputs") if o.get("focused")), None)
     swaymsg("focus", "output", out)
-    write_mod(map_file, pos, size)
+    write_mod(map_file, pos, size, boot)
     for f in IO.glob("*"):
         f.unlink()
     if log_path().exists():
@@ -260,6 +279,8 @@ def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x72
     swaymsg('[title="^SOMA"]', "fullscreen", "enable")
     if prev:
         swaymsg("focus", "output", prev)
+    if record:
+        return record_frames(*record, t0=t0)
     while not log_path().exists():
         if time.time() - t0 > 60:
             raise SystemExit("no hpl.log after 60 s: " + gt("log", SLUG, "-n", "5", check=False))

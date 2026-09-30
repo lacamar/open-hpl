@@ -291,6 +291,7 @@ public:
 	// and this method's definition in SomaSplash.cpp for the real bug this
 	// fixes.
 	void StopMenuAmbient();
+	bool ScriptsMayRun();
 
 private:
 	void EnterPhase(eSomaSplashPhase aPhase);
@@ -301,7 +302,10 @@ private:
 
 	void DrawFGLogoPhase();
 	void DrawBootInitPhase();
-	void DrawBrainIcon(float afAlpha, float afPremenuScale);
+	void DrawBrainIcon(float afAlpha);
+	cVector3f VirtualToScreen(const cVector2f &avPos, float afZ);
+	cVector2f VirtualSizeToScreen(const cVector2f &avSize);
+	float BootDuration();
 
 	cEngine *mpEngine;
 	cSomaBase *mpBase;

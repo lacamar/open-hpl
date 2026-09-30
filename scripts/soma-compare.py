@@ -85,6 +85,43 @@ class Ours:
             self.send({"cmd": "resize", "width": w, "height": h})
         print(f"ours: pid {self.pid()} up in {time.time() - t0:.0f}s")
 
+    def record_boot(self, out, secs, fps, size="1280x720"):
+        """Fresh first launch like the ref prefix: no saves, gamma already calibrated, `size` window."""
+        self.stop()
+        scratch = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", CACHE.parent / "soma-scratch"))
+        xdg = CACHE / "boot-xdg"
+        for k in ("config", "data", "state"):
+            subprocess.run(["rm", "-rf", str(xdg / k)])
+        (xdg / "config/open-hpl/soma").mkdir(parents=True)
+        (xdg / "state/open-hpl/soma").mkdir(parents=True)
+        w, h = size.split("x")
+        (xdg / "config/open-hpl/soma/main_settings.cfg").write_text(
+            f'<Screen Vsync="false" FullScreen="false" Width="{w}" Height="{h}" />\n')
+        (xdg / "state/open-hpl/soma/gamma_screen_seen").write_text("1\n")
+        (xdg / "config/open-hpl/soma/user_settings.cfg").write_text(
+            (ref_mod.SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
+            + '\n<Main FirstGameStart="false" />\n')
+        env = dict(os.environ, OPENHPL_HEADLESS_SOCKET=str(SOCK), XDG_CACHE_HOME=str(scratch / ".xdg/cache"),
+                   **{f"XDG_{k}_HOME": str(xdg / k.lower()) for k in ("CONFIG", "DATA", "STATE")})
+        t0 = time.time()
+        p = subprocess.Popen(["./Soma.bin.aarch64"], cwd=scratch, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             stdin=subprocess.DEVNULL, start_new_session=True)
+        PIDFILE.write_text(str(p.pid))
+        out = Path(out)
+        out.mkdir(parents=True, exist_ok=True)
+        frames = []
+        while time.time() - t0 < secs and self.pid():
+            tick = time.time()
+            if SOCK.exists():
+                f = out / f"{int((tick - t0) * 1000):06d}.png"
+                try:
+                    self.shot(f, timeout=5)
+                    frames.append(f)
+                except Exception:
+                    pass
+            time.sleep(max(0, 1 / fps - (time.time() - tick)))
+        return frames
+
     def send(self, req, timeout=60):
         with HplControl(str(SOCK), timeout=timeout) as h:
             r = h.send(req)
@@ -99,9 +136,9 @@ class Ours:
             raise RuntimeError(r.get("error", "failed") + r.get("output", ""))
         return r.get("output", "").splitlines()
 
-    def shot(self, path):
+    def shot(self, path, timeout=60):
         bmp = Path(path).with_suffix(".bmp")
-        self.send({"cmd": "screenshot", "path": str(bmp)})
+        self.send({"cmd": "screenshot", "path": str(bmp)}, timeout=timeout)
         for _ in range(50):
             if bmp.exists() and bmp.stat().st_size:
                 break
@@ -309,6 +346,68 @@ def cmd_fps(a, only=None):
     return res
 
 
+def small(path, size=(96, 54)):
+    import numpy as np
+    from PIL import Image
+    return np.asarray(Image.open(path).convert("L").resize(size, Image.BILINEAR), dtype=np.float64)
+
+
+def lum(path):
+    import numpy as np
+    from PIL import Image
+    return float(np.asarray(Image.open(path).convert("L"), dtype=np.float64).mean())
+
+
+def cmd_boot(a):
+    """Record both boots, align them on content, score every reference frame against ours."""
+    out = Path(a.out or CACHE / "boot")
+    ref_dir = Path(a.ref_dir or CACHE / "boot-ref")
+    if a.record_ref or not any(ref_dir.glob("*.png")):
+        subprocess.run(["rm", "-rf", str(ref_dir)])
+        ref_mod.start(boot=True, size=a.size, record=(ref_dir, a.secs + 15, 4))
+        ref_mod.stop()
+    subprocess.run(["rm", "-rf", str(out)])
+    o = Ours()
+    o.record_boot(out / "ours", a.secs, a.fps, a.size)
+    o.stop()
+    t = lambda f: int(f.stem) / 1000
+    ref = sorted(ref_dir.glob("*.png"))
+    ours = sorted((out / "ours").glob("*.png"))
+    rl = {f: lum(f) for f in ref}
+    ol = {f: lum(f) for f in ours}
+    first = lambda fs, l: next((t(f) for f in fs if l[f] > 0.3), None)
+    # ref starts later (wine); compare on time since first visible frame
+    r0, o0 = first(ref, rl), first(ours, ol)
+    osm = {f: small(f) for f in ours}
+    rows = []
+    for f in ref:
+        if t(f) < r0 or t(f) - r0 > a.secs:
+            continue
+        rs = small(f)
+        best = min(ours, key=lambda g: ((osm[g] - rs) ** 2).mean())
+        mse = ((osm[best] - rs) ** 2).mean()
+        at = min(ours, key=lambda g: abs((t(g) - o0) - (t(f) - r0)))
+        mse_at = ((osm[at] - rs) ** 2).mean()
+        psnr = lambda m: round(10 * math.log10(255 ** 2 / m), 1) if m else 99.0
+        rows.append({"t": round(t(f) - r0, 2), "ref": f.name, "lum_ref": round(rl[f], 2),
+                     "best": best.name, "best_t": round(t(best) - o0, 2), "best_psnr": psnr(mse),
+                     "same_time": at.name, "same_time_psnr": psnr(mse_at), "lum_ours": round(ol[at], 2)})
+    for r in rows:
+        print(f"{r['t']:6.2f}s  ref lum {r['lum_ref']:6.2f}  ours lum {r['lum_ours']:6.2f}  same-time psnr {r['same_time_psnr']:5.1f}"
+              f"   best {r['best_t']:6.2f}s psnr {r['best_psnr']:5.1f}")
+    keys = rows[::max(1, len(rows) // 16)]
+    args = []
+    for r in keys:
+        args += ["(", str(ref_dir / r["ref"]), str(out / "ours" / r["same_time"]), "+append", "-resize", "x180",
+                 "-gravity", "northwest", "-fill", "yellow", "-pointsize", "14", "-annotate", "+4+4",
+                 f"{r['t']}s ref | ours  psnr {r['same_time_psnr']}", ")"]
+    subprocess.run(["magick", *args, "-append", str(out / "timeline.png")], check=True)
+    summary = {"frames": len(rows), "mean_same_time_psnr": round(sum(r["same_time_psnr"] for r in rows) / len(rows), 2),
+               "min_same_time_psnr": min(r["same_time_psnr"] for r in rows), "first_visible": {"ref": r0, "ours": o0}}
+    (out / "boot.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1))
+    print(json.dumps(summary), f"-> {out}/timeline.png")
+
+
 def cmd_report(a):
     out = Path(a.out or CACHE / f"report-{Path(a.map).stem}-{time.strftime('%Y%m%d-%H%M%S')}")
     out.mkdir(parents=True, exist_ok=True)
@@ -352,6 +451,13 @@ def main():
     v.add_argument("--out")
     f = sp.add_parser("fps")
     f.add_argument("--secs", type=float, default=10)
+    b = sp.add_parser("boot")
+    b.add_argument("--secs", type=float, default=25)
+    b.add_argument("--fps", type=float, default=5)
+    b.add_argument("--size", default="1280x720")
+    b.add_argument("--out")
+    b.add_argument("--ref-dir")
+    b.add_argument("--record-ref", action="store_true")
     sp.add_parser("stop")
     a = p.parse_args()
 
@@ -365,6 +471,8 @@ def main():
         cmd_view(a, a.only)
     elif a.cmd == "fps":
         cmd_fps(a, a.only)
+    elif a.cmd == "boot":
+        cmd_boot(a)
     elif a.cmd == "report":
         cmd_report(a)
     else:
