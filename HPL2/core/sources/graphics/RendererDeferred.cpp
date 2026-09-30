@@ -200,6 +200,7 @@ namespace hpl {
 	#define kVar_afWeight							41
 	#define kVar_avViewSpaceUp						42
 	#define kVar_avBand0							43
+	#define kVar_afSpotNearClip						52
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -663,6 +664,7 @@ namespace hpl {
 				// both spellings; each is a no-op on whichever program doesn't
 				// declare it.
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
 				// HPSL's analytic falloff exponents; per-light FalloffPow/SpotFalloffPow
 				// from the map data (iLight::GetFalloffPow()). Must never stay at
 				// GLSL's default 0: pow(x,0)==1 means no falloff at all.
@@ -1663,6 +1665,7 @@ namespace hpl {
 			// the DD-native a_mtxSpotViewProj spelling below still is.
 			cMatrixf mtxFinal = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), m_mtxInvView);
 			apProgram->SetMatrixf(kVar_a_mtxLightViewProj, mtxFinal);
+			apProgram->SetFloat(kVar_afSpotNearClip, pLightSpot->GetNearClipPlane());
 
 			if(pLight->GetGoboTexture() || apLightData->mbCastShadows)
 			{

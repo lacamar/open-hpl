@@ -1790,6 +1790,7 @@ namespace hpl {
 
 	void iRenderer::RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum)
 	{
+		if(mbLog) Log("  Shadow caster '%s'\n", apObject->GetName().c_str());
 		RenderZObject(apObject, apLightFrustum);
 	}
 

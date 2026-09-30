@@ -826,6 +826,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	if (pHdr == NULL || pHdr[0] != '0')
 	{
 		cRendererDeferred::SetHdr(true);
+		cLightSpot::SetShadowNearClip(0.05f);
 		SetHpslStripHdrBoost(false);
 		cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 		cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");

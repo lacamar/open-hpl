@@ -216,15 +216,35 @@ namespace hpl {
 	// the uniform path we use. Inserted before the last anchor occurrence.
 	static const char* const gvHpslSourcePatches[][3] = {
 		{ "deferred_light_frag.hpsl", "//Translucency\nuniform float afTranslucencyScale;",
-		  "@ifdef BoxMask\n\tuniform cMatrixf a_mtxInvView;\n\tuniform cVector3f avMaskCenter;\n\tuniform cVector3f avMaskExtent;\n@endif\n" },
+		  "@ifdef BoxMask\n\tuniform cMatrixf a_mtxInvView;\n\tuniform cVector3f avMaskCenter;\n\tuniform cVector3f avMaskExtent;\n@endif\nuniform float afSpotNearClip;\n" },
 		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
 		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
 	};
 
+	// Uniform-path code replaced by what the texture-buffer path (used by the real engine) does.
+	static const char* const gvHpslSourceReplacements[][3] = {
+		{ "deferred_light_frag.hpsl",
+		  "\t\t\tfloat fOneMinusCos = max(0.0, 1.0 - dot( vLightDir,  avLightForward));\n"
+		  "\t\t\tfAttenuatuion *= pow(1.0 - sqrt(min(fOneMinusCos / afOneMinusCosHalfSpotFOV,1)), afSpotFalloffPow);",
+		  "\t\t\tfAttenuatuion *= pow(max(0.0, 1.0 - distance(vProjectedUv.xy, cVector2f(0.5)) * 2.0), afSpotFalloffPow);" },
+		{ "deferred_light_frag.hpsl",
+		  "\t\tfAttenuatuion *= max(0, vProjectedUv.z);\n",
+		  "\t\tfloat fSpotZ = (1.0 - afSpotNearClip / max(fDistance * dot(vLightDir, avLightForward), 1e-4)) / (1.0 - afSpotNearClip * afInvLightRadius);\n"
+		  "\t\tfAttenuatuion *= max(0, fSpotZ) * clamp((1.0 - fSpotZ) * 128.0, 0.0, 1.0);\n" },
+	};
+
 	static void PatchHpslSource(const tString& asFile, tString& asData)
 	{
 		asData.erase(std::remove(asData.begin(), asData.end(), '\r'), asData.end());
+		for(size_t i=0; i<sizeof(gvHpslSourceReplacements)/sizeof(gvHpslSourceReplacements[0]); ++i)
+		{
+			if(asFile != gvHpslSourceReplacements[i][0]) continue;
+			tString sOld = gvHpslSourceReplacements[i][1];
+			size_t lPos = asData.rfind(sOld);
+			if(lPos != tString::npos) asData.replace(lPos, sOld.size(), gvHpslSourceReplacements[i][2]);
+			else Warning("HPSL replacement anchor not found in %s\n", asFile.c_str());
+		}
 		for(size_t i=0; i<sizeof(gvHpslSourcePatches)/sizeof(gvHpslSourcePatches[0]); ++i)
 		{
 			if(asFile != gvHpslSourcePatches[i][0]) continue;

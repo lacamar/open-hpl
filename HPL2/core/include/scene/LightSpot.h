@@ -55,6 +55,9 @@ namespace hpl {
 		void SetNearClipPlane(float afX) { mfNearClipPlane = afX; mbProjectionUpdated = true;}
 		float GetNearClipPlane() { return mfNearClipPlane;}
 
+		static void SetShadowNearClip(float afX){ mfShadowNearClip = afX; }
+		static float GetShadowNearClip(){ return mfShadowNearClip; }
+
 		void SetRadius(float afX);
 		
 		cFrustum* GetFrustum();
@@ -81,6 +84,7 @@ namespace hpl {
 		float mfFOV;
 		float mfAspect;
 		float mfNearClipPlane;
+		static float mfShadowNearClip;
 
 		bool mbFovUpdated;
 		float mfTanHalfFOV;

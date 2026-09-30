@@ -329,10 +329,10 @@
     "Compound:0/13",
     "LensFlare:0/4"
    ],
-   "boot_s": 12.8,
+   "boot_s": 10.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 57.956745,
+    "fps": 59.05513,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -340,30 +340,30 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 57.956745,
+   "fps": 59.05513,
    "frame": {
-    "black_frac": 0.023419,
+    "black_frac": 0.023432,
     "height": 2160,
     "lum_hist16": [
-     0.350741,
-     0.421307,
-     0.067874,
-     0.044211,
-     0.046427,
-     0.017399,
-     0.014728,
-     0.006732,
-     0.002925,
+     0.363116,
+     0.408944,
+     0.067944,
+     0.044114,
+     0.046442,
+     0.017402,
+     0.014745,
+     0.006725,
+     0.002913,
      0.002189,
      0.002178,
-     0.001478,
-     0.001733,
-     0.002391,
+     0.001477,
+     0.001734,
+     0.002392,
      0.002815,
-     0.014871
+     0.014869
     ],
     "lum_max": 255,
-    "lum_mean": 30.964376,
+    "lum_mean": 30.864176,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.007235,
@@ -372,12 +372,12 @@
    "gbuffer": {
     "0": {
      "a_max": 0.357178,
-     "a_mean": 0.00287,
+     "a_mean": 0.002883,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 4830605,
      "b_max": 1,
-     "b_mean": 0.492972,
+     "b_mean": 0.492978,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 63548,
@@ -405,7 +405,7 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.447195,
+     "b_mean": 0.447196,
      "b_min": -0.989746,
      "b_nan_count": 0,
      "b_zero_count": 1092,
@@ -413,10 +413,10 @@
      "g_mean": 0.006227,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 47815,
+     "g_zero_count": 47809,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.035931,
+     "r_mean": -0.035932,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 1096,
@@ -458,19 +458,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 9121,
+    "total_ms": 6106,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 38,
+      "ms": 20,
       "skipped": {},
       "xml": 20
      },
@@ -486,7 +486,7 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 121,
+      "ms": 62,
       "skipped": {},
       "xml": 106
      },
@@ -500,7 +500,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 8268,
+      "ms": 5422,
       "skipped": {},
       "xml": 436
      },
@@ -530,35 +530,35 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 6,
+      "ms": 3,
       "skipped": {},
       "xml": 70
      },
      "LightMask": {
       "created": 10,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 10
      },
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 8,
+      "ms": 5,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 42,
+      "ms": 37,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 257,
+      "ms": 159,
       "skipped": {},
       "xml": 7
      },
@@ -572,7 +572,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 334,
+      "ms": 353,
       "skipped": {},
       "xml": 145
      },
@@ -585,7 +585,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2363268.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2491812.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -644,23 +644,23 @@
      "example": "ERROR: SOMA script exception in cScrAttackMeterHandler::void Reset(): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberration::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): '*' at /home/lm/.cache/op": {
-     "count": 145,
+     "count": 146,
      "example": "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberra"
     },
     "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/s": {
-     "count": 145,
+     "count": 146,
      "example": "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageFadeFX.hps:49 (void cScrEffect_ImageFadeFX::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 145,
+     "count": 146,
      "example": "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageTrail.hps:130 (void cScrEffect_ImageTrail::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 145,
+     "count": 146,
      "example": "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_RadialBlur.hps:157 (void cScrEffect_RadialBlur::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): '*' at /home/lm/.cache/open-h": {
-     "count": 145,
+     "count": 146,
      "example": "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_VideoDistortion.hps:57 (void cScrEffect_VideoDistortion::CreateP"
     },
     "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Init(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scrip": {
@@ -702,7 +702,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.7,
+   "wall_s": 13.4,
    "warmup": {
     "frames": 120,
     "timed_out": false

@@ -166,6 +166,14 @@ laboratory keypad terminal.
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
   loading-screen hold ~3% brighter, brain icon on a different animation frame. Return doesn't
   activate the focused menu button (mouse does).
+- Direct light intensity (apartment pose, linear radiance via tone-curve inversion,
+  scratchpad `lincmp.py`): ours/ref ~2-3.4 for spots, ~2.1 point, ~1.4 non-SH box, 1.0 SH box.
+  Ratio grows on dark albedo; spot cone edge wider than ref. Unresolved (instance-buffer
+  light colour is CPU-side in the exe).
+- Ref shadow near clip is smaller than the light's (shade occludes `bedlight_1` at near 0.2);
+  ours renders spot shadows with near min(light, 0.05). Ref lights a wedge of wall through
+  the lamp shade that ours doesn't.
+- Window light shaft visible in ours with all lights off; absent in ref.
 
 ## History
 

@@ -34,6 +34,9 @@
 #include "system/String.h"
 
 namespace hpl {
+
+	float cLightSpot::mfShadowNearClip = 0;
+
 	
 	static const cMatrixf g_mtxTextureUnitFix(	0.5f,0,   0,   0.5f,
 												0,   0.5f,0,   0.5f,
@@ -144,7 +147,7 @@ namespace hpl {
 		if(mbProjectionUpdated)
 		{
 			float fFar = mfRadius;
-			float fNear = mfNearClipPlane;
+			float fNear = mfShadowNearClip > 0 ? cMath::Min(mfNearClipPlane, mfShadowNearClip) : mfNearClipPlane;
 			float fTop = tan(mfFOV*0.5f) * fNear;
 			float fBottom = -fTop;
 			float fRight = mfAspect * fTop;
@@ -197,7 +200,7 @@ namespace hpl {
 		{
 			mpFrustum->SetupPerspectiveProj(GetProjectionMatrix(),
 											GetViewMatrix(),
-											mfRadius,mfNearClipPlane,
+											mfRadius,mfShadowNearClip > 0 ? cMath::Min(mfNearClipPlane, mfShadowNearClip) : mfNearClipPlane,
 											mfFOV,mfAspect,GetWorldPosition(),false);
 			mbFrustumUpdated = false;
 			mlFrustumMatrixCount = GetTransformUpdateCount();
