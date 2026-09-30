@@ -144,6 +144,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBillboard", "const cColor& GetColor()", +[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetHaloAlpha(float afX)", +[](cBillboard *o, float a0) { o->SetHaloAlpha(a0); });
 	SOMA_METHOD_NEW(e, "cBillboard", "float GetHaloAlpha()", +[](cBillboard *o) -> float { return o->GetHaloAlpha(); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void SetBrightness(float afX)", +[](cBillboard *o, float a0) { o->SetBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "float GetBrightness()", +[](cBillboard *o) -> float { return o->GetBrightness(); });
 	SOMA_METHOD_NEW(e, "cBoneState", "bool AddEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
 	SOMA_METHOD_NEW(e, "cBoneState", "bool RemoveEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); });
 	SOMA_METHOD_NEW(e, "cBoneState", "void ClearEntities()", +[](cBoneState *o) { o->ClearEntities(); });
@@ -456,6 +458,19 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetSize()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetBlendFunc(eLightBoxBlendFunc aFunc)", +[](cLightBox *o, int a0) { o->SetBlendFunc((eLightBoxBlendFunc)a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "eLightBoxBlendFunc GetBlendFunc()", +[](cLightBox *o) -> int { return (int)o->GetBlendFunc(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetAmbientColorSky(const cColor &in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetAmbientColorSky(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetAmbientColorGround(const cColor &in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetAmbientColorGround(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetAmbientColorSky()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorSky(); return r; });
+	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetAmbientColorGround()", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetAmbientColorGround(); return r; });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetWeight(float afX)", +[](cLightBox *o, float a0) { o->SetWeight(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "float GetWeight()", +[](cLightBox *o) -> float { return o->GetWeight(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetBevel(float afX)", +[](cLightBox *o, float a0) { o->SetBevel(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "float GetBevel()", +[](cLightBox *o) -> float { return o->GetBevel(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetUseSphericalHarmonics(bool abX)", +[](cLightBox *o, bool a0) { o->SetUseSphericalHarmonics(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "bool GetUseSphericalHarmonics()", +[](cLightBox *o) -> bool { return o->GetUseSphericalHarmonics(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetProbeOffset(const cVector3f&in avPosition)", +[](cLightBox *o, const cVector3f & a0) { o->SetProbeOffset(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetProbeOffset()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetProbeOffset(); return r; });
+	SOMA_METHOD_NEW(e, "cLightBox", "void FadeIrradianceSet(const tString&in asSetName, float afTime)", +[](cLightBox *o, const tString & a0, float a1) { o->FadeIrradianceSet(a0, a1); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetUniqueID()", +[](cLightPoint *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void UpdateLogic(float afTimeStep)", +[](cLightPoint *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetName()const", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -1046,6 +1061,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "cSoundEntity@ GetSoundEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cSoundEntity * { return o->GetSoundEntity(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void DestroyAllSoundEntities()", +[](cWorld *o) { o->DestroyAllSoundEntities(); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool SoundEntityExists(cSoundEntity@ apEntity, int alCreationID)", +[](cWorld *o, cSoundEntity * a0, int a1) -> bool { return o->SoundEntityExists(a0, a1); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingExposure()", +[](cWorld *o) -> float { return o->GetToneMappingExposure(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingKey()", +[](cWorld *o) -> float { return o->GetToneMappingKey(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingWhiteCut()", +[](cWorld *o) -> float { return o->GetToneMappingWhiteCut(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "const tString& GetName()", +[](iCharacterBody *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void Update(float afTimeStep)", +[](iCharacterBody *o, float a0) { o->Update(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetForce(const cVector3f &in avForce)", +[](iCharacterBody *o, const cVector3f & a0) { o->SetForce(a0); });

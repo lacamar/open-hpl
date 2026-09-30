@@ -329,10 +329,10 @@
     "Compound:0/13",
     "LensFlare:0/4"
    ],
-   "boot_s": 10.6,
+   "boot_s": 8.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.05513,
+    "fps": 58.070877,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -340,58 +340,58 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 59.05513,
+   "fps": 58.070877,
    "frame": {
-    "black_frac": 0.023432,
+    "black_frac": 0.024498,
     "height": 2160,
     "lum_hist16": [
-     0.363116,
-     0.408944,
-     0.067944,
-     0.044114,
-     0.046442,
-     0.017402,
-     0.014745,
-     0.006725,
-     0.002913,
-     0.002189,
-     0.002178,
-     0.001477,
-     0.001734,
-     0.002392,
-     0.002815,
-     0.014869
+     0.38786,
+     0.447575,
+     0.076725,
+     0.039985,
+     0.036514,
+     0.002918,
+     0.00045,
+     0.000418,
+     0.000275,
+     0.000297,
+     0.000387,
+     0.00036,
+     0.000622,
+     0.001105,
+     0.001035,
+     0.003475
     ],
     "lum_max": 255,
-    "lum_mean": 30.864176,
+    "lum_mean": 22.939438,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.007235,
+    "white_frac": 0.002684,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 0.357178,
-     "a_mean": 0.002883,
+     "a_mean": 0.002747,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 4830605,
+     "a_zero_count": 5032291,
      "b_max": 1,
-     "b_mean": 0.492978,
+     "b_mean": 0.456724,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 63548,
+     "b_zero_count": 63458,
      "g_max": 1,
-     "g_mean": 0.552076,
+     "g_mean": 0.5186,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1955,
+     "g_zero_count": 1915,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.512458,
+     "r_mean": 0.486267,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3151,
+     "r_zero_count": 3133,
      "sample_a": 0.000421,
      "sample_b": 0.430176,
      "sample_g": 0.510742,
@@ -399,24 +399,24 @@
      "width": 3840
     },
     "1": {
-     "a_max": 0.170776,
-     "a_mean": 0.018534,
+     "a_max": 0.157959,
+     "a_mean": 0.018497,
      "a_min": 0.004612,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.447196,
-     "b_min": -0.989746,
+     "b_mean": 0.368951,
+     "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 1092,
      "g_max": 1,
-     "g_mean": 0.006227,
+     "g_mean": 0.013477,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 47809,
+     "g_zero_count": 47671,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.035932,
+     "r_mean": -0.112349,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 1096,
@@ -428,26 +428,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.37905,
+     "a_mean": 0.344441,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 70123,
+     "a_zero_count": 70147,
      "b_max": 1,
-     "b_mean": 0.440211,
+     "b_mean": 0.402531,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 67397,
+     "b_zero_count": 437431,
      "g_max": 1,
-     "g_mean": 0.485864,
+     "g_mean": 0.439365,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 49542,
+     "g_zero_count": 333895,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.489974,
+     "r_mean": 0.443286,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 54983,
+     "r_zero_count": 252107,
      "sample_a": 0.410156,
      "sample_b": 0.623047,
      "sample_g": 0.635254,
@@ -458,19 +458,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 6106,
+    "total_ms": 5789,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 20,
+      "ms": 19,
       "skipped": {},
       "xml": 20
      },
@@ -486,21 +486,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 62,
+      "ms": 61,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 5422,
+      "ms": 5195,
       "skipped": {},
       "xml": 436
      },
@@ -551,14 +551,14 @@
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 37,
+      "ms": 34,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 159,
+      "ms": 158,
       "skipped": {},
       "xml": 7
      },
@@ -572,7 +572,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 353,
+      "ms": 284,
       "skipped": {},
       "xml": 145
      },
@@ -585,11 +585,15 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2491812.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2798363.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
      "example": "ERROR: Could not find bone '00_01_tap_(Conflict_Present)' in model '/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/organic/water/pouring/00_01_tap_pouring/00_01_tap_pouring.ent'"
+    },
+    "ERROR: Could not load image '*'!": {
+     "count": 1,
+     "example": "ERROR: Could not load image 'smartphone_backdrop'!"
     },
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -611,57 +615,41 @@
      "count": 2,
      "example": "ERROR: Couldn't find file 'posteffect_color_conv_tex_frag.glsl' in resources"
     },
-    "ERROR: Loading entity clothing_folded_shirt_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA": {
+    "ERROR: Couldn'*'smartphone_backdrop'": {
      "count": 1,
-     "example": "ERROR: Loading entity clothing_folded_shirt_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/ornaments/clothing_folded_shirt/clothing_folded_shirt.dae) and .ent file (/home/lm/.local/share/Steam/"
+     "example": "ERROR: Couldn't load image 'smartphone_backdrop'"
     },
-    "ERROR: Loading entity clothing_socks_single_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA": {
+    "ERROR: Imagemanager couldn'*'smartphone_backdrop'": {
      "count": 1,
-     "example": "ERROR: Loading entity clothing_socks_single_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/ornaments/clothing_socks_single/clothing_socks_single.dae) and .ent file (/home/lm/.local/share/Steam/"
-    },
-    "ERROR: Loading entity drapes_simon: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/u": {
-     "count": 1,
-     "example": "ERROR: Loading entity drapes_simon: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/urban/ornament_wall/drapes_simon/drapes_simon.fbx) and .ent file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entit"
-    },
-    "ERROR: Loading entity pigeon_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/creat": {
-     "count": 6,
-     "example": "ERROR: Loading entity pigeon_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/creatures/birds/pigeon/pigeon.fbx) and .ent file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/creatures/birds/"
-    },
-    "ERROR: Loading entity pillow_cabin_plain_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/en": {
-     "count": 1,
-     "example": "ERROR: Loading entity pillow_cabin_plain_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/furniture/pillow_cabin/pillow_cabin.dae) and .ent file (/home/lm/.local/share/Steam/steamapps/common/SOMA"
-    },
-    "ERROR: Loading entity shower_curtain_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entiti": {
-     "count": 1,
-     "example": "ERROR: Loading entity shower_curtain_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/urban/toilet/shower_curtain/shower_curtain.fbx) and .ent file (/home/lm/.local/share/Steam/steamapps/common/SOMA/enti"
-    },
-    "ERROR: Loading entity tap_pouring: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/or": {
-     "count": 1,
-     "example": "ERROR: Loading entity tap_pouring: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/organic/water/pouring/00_01_tap_pouring/00_01_tap_pouring.fbx) and .ent file (/home/lm/.local/share/Steam/steamapps/common"
+     "example": "ERROR: Imagemanager couldn't create image 'smartphone_backdrop'"
     },
     "ERROR: SOMA script exception in cScrAttackMeterHandler::void Reset(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scrip": {
      "count": 1,
      "example": "ERROR: SOMA script exception in cScrAttackMeterHandler::void Reset(): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberration::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): '*' at /home/lm/.cache/op": {
-     "count": 146,
+     "count": 147,
      "example": "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberra"
     },
     "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/s": {
-     "count": 146,
+     "count": 147,
      "example": "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageFadeFX.hps:49 (void cScrEffect_ImageFadeFX::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 146,
+     "count": 147,
      "example": "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageTrail.hps:130 (void cScrEffect_ImageTrail::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 146,
+     "count": 147,
      "example": "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_RadialBlur.hps:157 (void cScrEffect_RadialBlur::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): '*' at /home/lm/.cache/open-h": {
-     "count": 146,
+     "count": 147,
      "example": "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_VideoDistortion.hps:57 (void cScrEffect_VideoDistortion::CreateP"
+    },
+    "ERROR: SOMA script exception in cScrMap::void IntroSequence(const tString &in): '*' at /home/lm/.cache/open-hpl/soma-scr": {
+     "count": 1,
+     "example": "ERROR: SOMA script exception in cScrMap::void IntroSequence(const tString &in): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageTrail.hps:130 (void cScrEffect_ImageTrail::CreatePostEffect())"
     },
     "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Init(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scrip": {
      "count": 1,
@@ -679,6 +667,14 @@
      "count": 10,
      "example": "ERROR: Sampler aHeightMap does not exist, could not bind it to unit 3"
     },
+    "ERROR: Sampler aNoiseMap does not exist, could not bind it to unit N": {
+     "count": 1,
+     "example": "ERROR: Sampler aNoiseMap does not exist, could not bind it to unit 1"
+    },
+    "ERROR: Sampler aSkyboxMap does not exist, could not bind it to unit N": {
+     "count": 1,
+     "example": "ERROR: Sampler aSkyboxMap does not exist, could not bind it to unit 2"
+    },
     "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit N": {
      "count": 5,
      "example": "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit 2"
@@ -688,21 +684,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 19,
+   "log_warnings": 24,
    "render": {
-    "draw_calls": 1551,
+    "draw_calls": 1548,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 42,
     "lights_rendered": 42,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 324,
+    "solid_objects": 323,
     "trans_objects": 33
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.4,
+   "wall_s": 11.9,
    "warmup": {
     "frames": 120,
     "timed_out": false
@@ -710,7 +706,7 @@
    "world": {
     "aabb_max": [
      86.210304,
-     103.250031,
+     76.919456,
      14.57581
     ],
     "aabb_min": [
@@ -721,7 +717,7 @@
     "billboards": 28,
     "dynamic_mesh_entities": 183,
     "entities_nan_bounds": 0,
-    "entities_oversized": 6,
+    "entities_oversized": 4,
     "fog_areas": 0,
     "lights": 81,
     "lights_box": 10,
@@ -733,9 +729,7 @@
      "Plane_(Conflict1):Plane_(Conflict1)",
      "Plane_7:Plane_7",
      "Plane_8:Plane_8",
-     "Legs:legs_human.fbx",
-     "shower_curtain_1:shower_curtain.fbx",
-     "drapes_simon:drapes_simon.fbx"
+     "Legs:legs_human.fbx"
     ],
     "particle_systems": 15,
     "physics_bodies": 582,

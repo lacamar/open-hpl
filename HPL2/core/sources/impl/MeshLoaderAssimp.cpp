@@ -42,20 +42,20 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	// Every node becomes a bone; bound bones take their skin bind pose.
-	static void CreateBones(const aiNode *apNode, const aiMatrix4x4 &a_mtxParentWorld, cBone *apParent,
-							const std::map<tString, aiMatrix4x4> &amapBind)
+	static void CreateBones(const aiNode *apNode, const aiMatrix4x4 &a_mtxParentNodeWorld, const aiMatrix4x4 &a_mtxParentBoneWorld,
+							cBone *apParent, const std::map<tString, aiMatrix4x4> &amapBind)
 	{
 		tString sName = apNode->mName.C_Str();
-		aiMatrix4x4 mtxWorld = a_mtxParentWorld * apNode->mTransformation;
+		aiMatrix4x4 mtxWorld = a_mtxParentNodeWorld * apNode->mTransformation;
 		std::map<tString, aiMatrix4x4>::const_iterator it = amapBind.find(sName);
 		if(it != amapBind.end()) mtxWorld = it->second;
 
-		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentWorld).Inverse() * mtxWorld;
+		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentBoneWorld).Inverse() * mtxWorld;
 		cBone *pBone = apParent->CreateChildBone(sName, sName);
 		pBone->SetTransform(ToMatrix(mtxLocal));
 
 		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
-			CreateBones(apNode->mChildren[c], mtxWorld, pBone, amapBind);
+			CreateBones(apNode->mChildren[c], mtxWorld, mtxWorld, pBone, amapBind);
 	}
 
 	static void CollectBindPoses(const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
@@ -222,7 +222,8 @@ namespace hpl {
 			std::map<tString, aiMatrix4x4> mapBind;
 			CollectBindPoses(pScene, pScene->mRootNode, aiMatrix4x4(), mapBind);
 			pSkeleton = hplNew( cSkeleton, () );
-			CreateBones(pScene->mRootNode, aiMatrix4x4(), pSkeleton->GetRootBone(), mapBind);
+			for(unsigned int c=0; c<pScene->mRootNode->mNumChildren; ++c)
+				CreateBones(pScene->mRootNode->mChildren[c], pScene->mRootNode->mTransformation, aiMatrix4x4(), pSkeleton->GetRootBone(), mapBind);
 			pMesh->SetSkeleton(pSkeleton);
 		}
 
@@ -281,6 +282,18 @@ namespace hpl {
 		if(bOk == false) return NULL;
 
 		tString sFile = cString::To8Char(asFile);
+		float fUnitScale = 1;
+		{
+			Assimp::Importer importer;
+			const aiScene *pScene = importer.ReadFile(sFile, 0);
+			float fUnit;
+			double fUnitD;
+			if(pScene && pScene->mMetaData)
+			{
+				if(pScene->mMetaData->Get("UnitScaleFactor", fUnit)) fUnitScale = fUnit / 100.0f;
+				else if(pScene->mMetaData->Get("UnitScaleFactor", fUnitD)) fUnitScale = (float)fUnitD / 100.0f;
+			}
+		}
 		cAnimation *pAnimation = hplNew( cAnimation, (cString::GetFileName(sFile), asFile, cString::GetFileName(sFile)) );
 		pAnimation->SetAnimationName("Default");
 		pAnimation->SetLength(fLength);
@@ -298,7 +311,7 @@ namespace hpl {
 				float vKey[8];
 				Read(vKey, sizeof(vKey));
 				cKeyFrame *pKey = pTrack->CreateKeyFrame(vKey[0]);
-				pKey->trans = cVector3f(vKey[1], vKey[2], vKey[3]);
+				pKey->trans = cVector3f(vKey[1], vKey[2], vKey[3]) * fUnitScale;
 				pKey->rotation = cQuaternion(vKey[7], vKey[4], vKey[5], vKey[6]);
 			}
 		}

@@ -57,6 +57,7 @@ namespace hpl {
 		mvAxis = cVector3f(0,1,0);
 
 		mColor = cColor(1,1,1,1);
+		mfBrightness = 1;
 		mfForwardOffset =0;
 		mfHaloAlpha = 1.0f;
 	
@@ -185,18 +186,7 @@ namespace hpl {
 
 		mColor = aColor;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-
-		for(int i=0; i<4;++i)
-		{
-			pColors[0] = mColor.r * mfHaloAlpha;
-			pColors[1] = mColor.g * mfHaloAlpha;
-			pColors[2] = mColor.b * mfHaloAlpha;
-			pColors[3] = mColor.a * mfHaloAlpha;
-			pColors+=4;
-		}
-
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
+		UpdateVertexColors();
 	}
 
 	//-----------------------------------------------------------------------
@@ -210,17 +200,30 @@ namespace hpl {
 
 		mfHaloAlpha = afX;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+		UpdateVertexColors();
+	}
 
+	//-----------------------------------------------------------------------
+
+	void cBillboard::SetBrightness(float afX)
+	{
+		if(mfBrightness == afX) return;
+		mfBrightness = afX;
+		UpdateVertexColors();
+	}
+
+	void cBillboard::UpdateVertexColors()
+	{
+		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+		float fRgbMul = mfHaloAlpha * mfBrightness;
 		for(int i=0; i<4;++i)
 		{
-			pColors[0] = mColor.r * mfHaloAlpha;
-			pColors[1] = mColor.g * mfHaloAlpha;
-			pColors[2] = mColor.b * mfHaloAlpha;
+			pColors[0] = mColor.r * fRgbMul;
+			pColors[1] = mColor.g * fRgbMul;
+			pColors[2] = mColor.b * fRgbMul;
 			pColors[3] = mColor.a * mfHaloAlpha;
 			pColors+=4;
 		}
-
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 

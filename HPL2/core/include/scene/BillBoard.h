@@ -62,6 +62,8 @@ namespace hpl {
 
 		void SetColor(const cColor &aColor);
 		const cColor& GetColor(){ return mColor;}
+		void SetBrightness(float afX);
+		float GetBrightness(){ return mfBrightness;}
 
 		void SetHaloAlpha(float afX);
 		float GetHaloAlpha(){ return mfHaloAlpha;}
@@ -119,6 +121,8 @@ namespace hpl {
 		float mfForwardOffset;
 		cColor mColor;
 		float mfHaloAlpha;
+		float mfBrightness;
+		void UpdateVertexColors();
 	};
 
 };

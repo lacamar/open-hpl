@@ -40,7 +40,10 @@ def log_path():
 
 
 def gt(*a, check=True):
-    return subprocess.run([GT, *a], capture_output=True, text=True, check=check).stdout
+    r = subprocess.run([GT, *a], capture_output=True, text=True)
+    if check and r.returncode:
+        raise SystemExit(f"gt {' '.join(a)} failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-600:]}")
+    return r.stdout
 
 
 def game_pid():

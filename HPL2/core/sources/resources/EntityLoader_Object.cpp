@@ -721,15 +721,15 @@ namespace hpl {
 			//If no bones got attached to bodies, then add the entire entity to be attached. (Luis: this comment does not make much sense given the code below, not sure what the point is)
 			if(mpMesh->GetSkeleton())
 			{
+				// HPL3 exports count non-joint nodes as bones, so the counts may differ legitimately.
 				if(mapBoneStates.size() != mpEntity->GetBoneStateNum())
 				{
-					Error("Loading entity %s: Skeletons in mesh file (%ls) and .ent file (%ls) differ! Probably caused by .ent not being up to date with mesh\n", 
+					Warning("Loading entity %s: Skeletons in mesh file (%ls) and .ent file (%ls) differ\n", 
 						asName.c_str(), 
 						mpMesh->GetFullPath().c_str(), 
 						static_cast<iXmlDocument*>(apRootElem)->GetPath().c_str());
 				}
-				else
-					lstTempEntities.push_back(mpEntity);
+				lstTempEntities.push_back(mpEntity);
 			}
 
 			////////////////////////

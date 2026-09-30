@@ -163,6 +163,7 @@ namespace hpl {
 
 		pBillboard->SetForwardOffset(apElement->GetAttributeFloat("BillboardOffset"));
 		pBillboard->SetColor(apElement->GetAttributeColor("BillboardColor",cColor(1,1)));
+		pBillboard->SetBrightness(apElement->GetAttributeFloat("Brightness",1));
 
 		pBillboard->SetIsHalo(apElement->GetAttributeBool("IsHalo",false));
 		pBillboard->SetHaloSourceSize(apElement->GetAttributeVector3f("HaloSourceSize",1));
