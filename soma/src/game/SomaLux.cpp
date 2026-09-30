@@ -586,6 +586,39 @@ void SomaRequestNewGame(const tString &asMap, const tString &asStart)
 	gbPendingNewGame = true;
 }
 
+//---------------------------------------
+// Collide groups ("+a -b"): membership bits low, collide-with mask high
+
+static bool CollideFlagsMatch(tFlag alA, tFlag alB)
+{
+	return (alA & (alB >> 16) & 0xFFFF) && (alB & (alA >> 16) & 0xFFFF);
+}
+
+unsigned int SomaCollideFlag(const tString &asGroups)
+{
+	static std::map<tString, int> mapGroups;
+	iPhysicsBody::mpCollideFlagsMatch = CollideFlagsMatch;
+	unsigned int lMember = 0, lExclude = 0;
+	tStringVec vTokens;
+	cString::GetStringVec(asGroups, vTokens, NULL);
+	for (const tString &sTok : vTokens)
+	{
+		if (sTok.size() < 2 || (sTok[0] != '+' && sTok[0] != '-'))
+			continue;
+		auto it = mapGroups.find(sTok.substr(1));
+		if (it == mapGroups.end())
+		{
+			if (mapGroups.size() >= 16)
+				continue;
+			it = mapGroups.insert(std::make_pair(sTok.substr(1), (int)mapGroups.size())).first;
+		}
+		(sTok[0] == '+' ? lMember : lExclude) |= 1u << it->second;
+	}
+	if (lMember == 0 && lExclude == 0)
+		return 0;
+	return (lMember ? lMember : 0xFFFF) | ((0xFFFF & ~lExclude) << 16);
+}
+
 void SomaRequestMapChange(const tString &asMap, const tString &asStart)
 {
 	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
@@ -636,6 +669,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxMap@ cLux_GetCurrentMap()", +[]() { return CurrentMap(); });
 
 	const char *M = "cLuxMap";
+	SOMA_METHOD(e, M, "uint GetCollideFlag(const tString&in asGroupName)", +[](cSomaLuxMap &, const tString &s) { return SomaCollideFlag(s); });
 	SOMA_METHOD(e, M, "cWorld@ GetWorld()", +[](cSomaLuxMap &m) { return m.GetWorld(); });
 	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return &m == cSomaLuxMap::GetCurrent(); });
 	SOMA_METHOD(e, M, "iPhysicsWorld@ GetPhysicsWorld()", +[](cSomaLuxMap &m) { return m.GetWorld()->GetPhysicsWorld(); });

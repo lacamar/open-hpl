@@ -468,7 +468,7 @@ namespace hpl {
 			if(abIsCharacter && pBody->GetCollideCharacter()==false) continue;
 			if(abIsCharacter==false && pBody->GetCollide()==false) continue;
 			if(alMinPushStrength > pBody->GetPushStrength()) continue;
-			if( (alCollideFlags & pBody->GetCollideFlags()) == 0)continue; 
+			if(iPhysicsBody::CollideFlagsMatch(alCollideFlags, pBody->GetCollideFlags())==false) continue;
 
 			//Note: Still make this check, since GetBodiesInBV is not exact.
 			if(cMath::CheckBVIntersection(boundingVolume,*pBody->GetBoundingVolume())==false)

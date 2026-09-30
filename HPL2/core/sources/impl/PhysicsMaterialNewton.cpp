@@ -246,7 +246,7 @@ namespace hpl {
 		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody1);
 		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody2);
 
-		if( (pContactBody1->GetCollideFlags() & pContactBody2->GetCollideFlags())==0 ) return 0;
+		if(iPhysicsBody::CollideFlagsMatch(pContactBody1->GetCollideFlags(), pContactBody2->GetCollideFlags())==false) return 0;
 
 		if(pContactBody1->GetCollide()==false) return 0;
 		if(pContactBody2->GetCollide()==false) return 0;

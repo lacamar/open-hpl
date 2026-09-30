@@ -3,6 +3,7 @@
  */
 
 #include "SomaLoaders.h"
+#include "SomaLux.h"
 #include "SomaLuxEntity.h"
 
 #include "resources/WorldLoaderHpm.h"
@@ -114,6 +115,10 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvScale = mvScale;
 		pEnt->mpMesh = mpEntity;
 		pEnt->mvBodies = mvBodies;
+		if (apInstanceVars)
+			if (unsigned int lFlags = SomaCollideFlag(apInstanceVars->GetVarString("CollideGroup", "")))
+				for (iPhysicsBody *pBody : mvBodies)
+					pBody->SetCollideFlags(lFlags);
 		pEnt->mvJoints = mvJoints;
 		pEnt->mvLights = mvLights;
 		pEnt->mvParticleSystems = mvParticleSystems;

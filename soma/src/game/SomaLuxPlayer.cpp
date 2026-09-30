@@ -83,7 +83,10 @@ void cSomaLuxPlayer::SetCharacterBody(iCharacterBody *apBody)
 {
 	mpCharBody = apBody;
 	if (mpCharBody)
+	{
 		mpCharBody->SetCamera(mpCamera);
+		mpCharBody->SetCollideFlags(SomaCollideFlag("+player"));
+	}
 }
 
 void cSomaLuxPlayer::AddState(const tString &asName, int alId, const tString &asFile, const tString &asClass)

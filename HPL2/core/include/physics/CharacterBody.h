@@ -91,6 +91,7 @@ namespace hpl {
 		float mfMinDist;
 		cVector3f mvNormal;
 		bool mbCollide;
+		tFlag mlCollideFlags;
 	};
 
 	//------------------------------------------------

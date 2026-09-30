@@ -204,7 +204,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	cCharacterBodyRay::cCharacterBodyRay()
+	cCharacterBodyRay::cCharacterBodyRay() : mlCollideFlags(eFlagBit_All)
 	{
 
 	}
@@ -222,6 +222,7 @@ namespace hpl {
 	bool cCharacterBodyRay::OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)
 	{
 		if(	pBody->IsCharacter()==false && pBody->GetCollideCharacter() && 
+			iPhysicsBody::CollideFlagsMatch(mlCollideFlags, pBody->GetCollideFlags()) &&
 			apParams->mfDist < mfMinDist)
 		{
 			mfMinDist = apParams->mfDist;
@@ -1102,6 +1103,7 @@ namespace hpl {
 	bool iCharacterBody::CheckRayIntersection(const cVector3f &avStart, const cVector3f &avEnd, float *apDistance, cVector3f *apNormalVec)
 	{
 		mpRayCallback->Clear();
+		mpRayCallback->mlCollideFlags = mlCollideFlags;
 		mpWorld->CastRay(mpRayCallback,avStart,avEnd,apDistance!=NULL,apNormalVec!=NULL,false);
 		bool bCollide = mpRayCallback->mbCollide;
 		if(bCollide)
@@ -1895,6 +1897,7 @@ namespace hpl {
 				if(mlOnGroundCount > 0 && mbClimbing==false)
 				{
 					mpRayCallback->Clear();
+					mpRayCallback->mlCollideFlags = mlCollideFlags;
 					cVector3f vStart = GetFeetPosition() + cVector3f(0,0.001f,0);
 					cVector3f vEnd = vStart - cVector3f(0,mvSize.x*2.0001f,0);
 					mpWorld->CastRay(mpRayCallback,vStart,vEnd,true,true,false);
@@ -1947,6 +1950,7 @@ namespace hpl {
             if(pBody->GetMass() == 0) continue;
 			if(pBody->IsCharacter() && mbCollideCharacter==false) continue;
 			if(pBody->GetCollideCharacter()==false) continue;
+			if(iPhysicsBody::CollideFlagsMatch(mlCollideFlags, pBody->GetCollideFlags())==false) continue;
 						
 			if(cMath::CheckBVIntersection(boundingVolume,*pBody->GetBoundingVolume())==false)
 			{

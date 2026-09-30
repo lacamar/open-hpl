@@ -202,6 +202,8 @@ namespace hpl {
 
 		void SetCollideFlags(tFlag alX) { mlCollideFlags = alX;}
 		inline tFlag GetCollideFlags() const { return mlCollideFlags;}
+		static bool (*mpCollideFlagsMatch)(tFlag alA, tFlag alB);
+		static bool CollideFlagsMatch(tFlag alA, tFlag alB) { return mpCollideFlagsMatch ? mpCollideFlagsMatch(alA, alB) : (alA & alB) != 0; }
 		
 		void SetIsRagDoll(bool abX){ mbIsRagDoll = abX;}
 		bool IsRagDoll(){ return mbIsRagDoll;}

@@ -218,6 +218,40 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 	aResp.Set("contacts", sOut);
 }
 
+// Every body a ray hits: distance, body, owning map entity (collision conformance)
+static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+	{
+		aResp.SetError("no map");
+		return;
+	}
+	cVector3f vFrom(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0), aReq.GetFloat("z", 0));
+	cVector3f vTo(aReq.GetFloat("x2", vFrom.x), aReq.GetFloat("y2", vFrom.y - 10), aReq.GetFloat("z2", vFrom.z));
+	std::map<iPhysicsBody *, tString> mapOwner;
+	for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+		for (iPhysicsBody *pBody : pEnt->mvBodies)
+			mapOwner[pBody] = pEnt->msName;
+	struct cHits : iPhysicsRayCallback
+	{
+		std::vector<std::pair<float, iPhysicsBody *>> mvHits;
+		bool OnIntersect(iPhysicsBody *pBody, cPhysicsRayParams *apParams) override
+		{
+			mvHits.push_back(std::make_pair(apParams->mfDist, pBody));
+			return true;
+		}
+	} hits;
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&hits, vFrom, vTo, true, false, false);
+	std::sort(hits.mvHits.begin(), hits.mvHits.end());
+	tString sOut;
+	for (auto &h : hits.mvHits)
+		sOut += cString::ToString(h.first) + " " + h.second->GetName() + " entity=" + mapOwner[h.second] + " mass=" +
+				cString::ToString(h.second->GetMass()) + " collide=" + cString::ToString(h.second->GetCollide()) +
+				" char=" + cString::ToString(h.second->GetCollideCharacter()) + "\n";
+	aResp.Set("hits", sOut);
+}
+
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaScriptRuntime *pRuntime = cSomaScriptRuntime::Get();
@@ -778,6 +812,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
 		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
 		pCtrl->RegisterHandler("body_contacts", cSomaBase_HeadlessCmd_BodyContacts, this);
+		pCtrl->RegisterHandler("raycast", cSomaBase_HeadlessCmd_Raycast, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
