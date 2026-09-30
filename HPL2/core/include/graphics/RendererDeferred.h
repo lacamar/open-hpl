@@ -185,6 +185,7 @@ namespace hpl {
 		static bool GetOcclusionTestLargeLights(){ return mbOcclusionTestLargeLights;}
 
 		static void SetHdr(bool abX){ mbHdr = abX;}
+		static void SetShadowDistanceNone(float afX){ mfDefaultShadowDistanceNone = afX;}
 		static bool GetHdr(){ return mbHdr;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
 
@@ -205,7 +206,7 @@ namespace hpl {
 		// instead of only ever seeing it through RenderGbufferContent()'s
 		// own quad-view draw.
 		// 0-3: G-buffer targets, 4: light accumulation buffer
-		iTexture* GetDebugGBufferTexture(int alIdx){ return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
+		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 
 	private:
 		void DrawAccumulationQuad();
@@ -353,6 +354,7 @@ namespace hpl {
 		
 		//Static setting variables
 		static bool mbHdr;
+		static float mfDefaultShadowDistanceNone;
 		static float mfToneMapKey;
 		static float mfToneMapExposure;
 		static float mfToneMapWhiteCut;

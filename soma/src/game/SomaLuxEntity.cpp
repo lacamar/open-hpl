@@ -104,8 +104,45 @@ void cSomaLuxEntity::SetActive(bool abX)
 	Call("void OnSetActive(bool abX)", [abX](asIScriptContext *c) { c->SetArgByte(0, abX); });
 }
 
+void cSomaLuxEntity::ResolveConnectedLights()
+{
+	mbConnectedLightsResolved = true;
+	if (mpMap == NULL) return;
+	for (const char *pPrefix : {"", "Extra"})
+	{
+		tString sPrefix = pPrefix;
+		tString *pNames = mInstanceVars.GetUserVariable(sPrefix + "ConnectedLight");
+		if (pNames == NULL || pNames->empty()) continue;
+		tStringVec vPatterns;
+		cString::GetStringVec(*pNames, vPatterns, NULL);
+		float fAmount = mInstanceVars.GetVarFloat(sPrefix + "ConnectionLightAmount", 1);
+		tString *pType = mInstanceVars.GetUserVariable(sPrefix + "ConnectionLightType");
+		bool bMul = pType == NULL || *pType != "Add";
+		cLightListIterator it = mpMap->GetWorld()->GetLightIterator();
+		while (it.HasNext())
+		{
+			iLight *pLight = it.Next();
+			for (const tString &sPattern : vPatterns)
+				if (SomaWildcardMatch(sPattern, pLight->GetName()))
+				{
+					mvConnectedLights.push_back(cConnectedLight{pLight, pLight->GetDiffuseColor(), fAmount, bMul});
+					break;
+				}
+		}
+	}
+}
+
 void cSomaLuxEntity::SetEffectsActive(bool abX)
 {
+	if (mbConnectedLightsResolved == false) ResolveConnectedLights();
+	for (cConnectedLight &cl : mvConnectedLights)
+	{
+		float fEffect = abX ? 1.0f : 0.0f;
+		float fMul = cl.mbMul ? 1.0f - cl.mfAmount + cl.mfAmount * fEffect : cl.mfAmount * fEffect;
+		cColor col(cl.mBaseColor.r * fMul, cl.mBaseColor.g * fMul, cl.mBaseColor.b * fMul, cl.mBaseColor.a * fMul);
+		cl.mpLight->SetDiffuseColor(col);
+		cl.mpLight->SetVisible(fMul > 0);
+	}
 	for (iLight *pLight : mvLights)
 	{
 		pLight->SetVisible(abX);

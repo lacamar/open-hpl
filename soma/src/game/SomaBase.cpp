@@ -766,6 +766,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 
+	cRendererDeferred::SetShadowDistanceNone(1e6f);
+
 	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
 	if (pHdr == NULL || pHdr[0] != '0')
 	{

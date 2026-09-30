@@ -353,7 +353,14 @@ namespace hpl {
 		avOut.resize(mvSize.x * mvSize.y * 4);
 
 		glBindTexture(GLTarget, lHandle);
-		glGetTexImage(GLTarget, 0, GL_RGBA, GL_FLOAT, &avOut[0]);
+		if(mPixelFormat == ePixelFormat_Depth16 || mPixelFormat == ePixelFormat_Depth24 || mPixelFormat == ePixelFormat_Depth32)
+		{
+			std::vector<float> vDepth(mvSize.x * mvSize.y);
+			glGetTexImage(GLTarget, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &vDepth[0]);
+			for(size_t i=0; i<vDepth.size(); ++i) { avOut[i*4] = avOut[i*4+1] = avOut[i*4+2] = vDepth[i]; avOut[i*4+3] = 1; }
+		}
+		else
+			glGetTexImage(GLTarget, 0, GL_RGBA, GL_FLOAT, &avOut[0]);
 		glBindTexture(GLTarget, 0);
 
 		return true;

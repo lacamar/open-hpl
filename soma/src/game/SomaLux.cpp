@@ -750,6 +750,27 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 						}
 					return bAny;
 				});
+	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, CScriptArray &a) {
+		a.Resize(0);
+		if (cSomaLuxMap::GetCurrent() == NULL) return false;
+		cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+		while (it.HasNext())
+		{
+			iLight *pLight = it.Next();
+			if (SomaWildcardMatch(n, pLight->GetName())) a.InsertLast(&pLight);
+		}
+		return a.GetSize() > 0;
+	});
+	SOMA_FUNC(e, "void Light_FadeTo(const tString &in asLightName, const cColor &in acColor, float afRadius, float afTime)",
+			  +[](S n, const cColor &c, float r, float t) {
+				  if (cSomaLuxMap::GetCurrent() == NULL) return;
+				  cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+				  while (it.HasNext())
+				  {
+					  iLight *pLight = it.Next();
+					  if (SomaWildcardMatch(n, pLight->GetName())) pLight->FadeTo(c, r < 0 ? pLight->GetRadius() : r, t);
+				  }
+			  });
 	SOMA_METHOD(e, M, "void PlacePlayerAtStartPos(const tString&in asName)", +[](cSomaLuxMap &m, S n) {
 		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntity() : m.GetWorld()->GetStartPosEntity(n);
 		if (pStart && cSomaLuxPlayer::Get())

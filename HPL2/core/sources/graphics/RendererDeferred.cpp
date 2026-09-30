@@ -85,6 +85,7 @@ namespace hpl {
 	bool cRendererDeferred::mbOcclusionTestLargeLights = true;
 	bool cRendererDeferred::mbDebugRenderFrameBuffers = false;
 	bool cRendererDeferred::mbHdr = false;
+	float cRendererDeferred::mfDefaultShadowDistanceNone = 40;
 	float cRendererDeferred::mfToneMapKey = 0.5f;
 	float cRendererDeferred::mfToneMapExposure = 1.0f;
 	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
@@ -206,8 +207,8 @@ namespace hpl {
 		mfMinRenderReflectionNormilzedLength = 0.15f;
 
 		mfShadowDistanceMedium = 10;
-		mfShadowDistanceLow = 20;
-		mfShadowDistanceNone = 40;
+		mfShadowDistanceNone = mfDefaultShadowDistanceNone;
+		mfShadowDistanceLow = cMath::Min(20.0f, mfShadowDistanceNone);
 
 		mlMaxBatchLights = 100;
 		mpFxaaProgram = NULL;
@@ -365,12 +366,13 @@ namespace hpl {
 		if(mShadowMapResolution == eShadowMapResolution_Medium)		lStartSize = 1;
 		else if(mShadowMapResolution == eShadowMapResolution_Low)	lStartSize = 0;
 
+		// Depth16 shadow maps are never written on Mesa (asahi)
         for(int i=0; i<1; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_High, vShadowSize[lStartSize + eShadowMapResolution_High],ePixelFormat_Depth16);
+			CreateAndAddShadowMap(eShadowMapResolution_High, vShadowSize[lStartSize + eShadowMapResolution_High],ePixelFormat_Depth24);
 		for(int i=0; i<4; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_Medium, vShadowSize[lStartSize + eShadowMapResolution_Medium],ePixelFormat_Depth16);
+			CreateAndAddShadowMap(eShadowMapResolution_Medium, vShadowSize[lStartSize + eShadowMapResolution_Medium],ePixelFormat_Depth24);
 		for(int i=0; i<6; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_Low, vShadowSize[lStartSize + eShadowMapResolution_Low],ePixelFormat_Depth16);
+			CreateAndAddShadowMap(eShadowMapResolution_Low, vShadowSize[lStartSize + eShadowMapResolution_Low],ePixelFormat_Depth24);
 		
 		
 		// Select samples depending quality and shader model (if dynamic branching is supported)

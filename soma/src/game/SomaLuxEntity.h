@@ -71,6 +71,16 @@ public:
 	std::vector<cParticleSystem *> mvParticleSystems;
 	std::vector<cBillboard *> mvBillboards;
 	std::vector<cSoundEntity *> mvSoundEntities;
+	struct cConnectedLight
+	{
+		iLight *mpLight;
+		cColor mBaseColor;
+		float mfAmount;
+		bool mbMul;
+	};
+	std::vector<cConnectedLight> mvConnectedLights;
+	bool mbConnectedLightsResolved = false;
+	void ResolveConnectedLights();
 
 	cResourceVarsObject mVars;		   // .ent UserDefinedVariables
 	cResourceVarsObject mInstanceVars; // map UserVariables

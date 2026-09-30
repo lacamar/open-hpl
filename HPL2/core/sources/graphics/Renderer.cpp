@@ -710,16 +710,7 @@ namespace hpl {
 		pData->mpTexture->SetFilter(eTextureFilter_Nearest);	
 		pData->mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
-		//Hack to avoid ATI drier failure:
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_OGL_ATIFragmentShader))
-		{
-			pData->mpTempDiffTexture = mpGraphics->CreateTexture(sName+"_TempDiff",eTextureType_2D, eTextureUsage_RenderTarget);
-			pData->mpTempDiffTexture->CreateFromRawData(avSize, ePixelFormat_Alpha, NULL);
-		}
-		else
-		{
-			pData->mpTempDiffTexture = NULL;
-		}
+		pData->mpTempDiffTexture = NULL;
 
 		pData->mpBuffer = mpGraphics->CreateFrameBuffer(sName+"_Buffer");
 		if(pData->mpTempDiffTexture) pData->mpBuffer->SetTexture2D(0, pData->mpTempDiffTexture);
