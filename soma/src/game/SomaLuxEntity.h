@@ -100,6 +100,9 @@ public:
 	cSomaLuxMap *mpMap = NULL;
 
 	void SetActive(bool abX);
+	void SetStaticPhysics(bool abX);
+	bool mbStaticPhysics = false;
+	std::vector<float> mvDynamicMass;
 	void SetEffectsActive(bool abX);
 	cVector3f GetPosition();
 	cMatrixf GetMatrix();

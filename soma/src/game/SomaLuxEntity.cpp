@@ -63,6 +63,31 @@ const char *cSomaLuxEntity::GetBaseTypeName() const
 	}
 }
 
+void cSomaLuxEntity::SetStaticPhysics(bool abX)
+{
+	if (abX == mbStaticPhysics)
+		return;
+	mbStaticPhysics = abX;
+	if (abX)
+		mvDynamicMass.clear();
+	for (size_t i = 0; i < mvBodies.size(); ++i)
+	{
+		iPhysicsBody *pBody = mvBodies[i];
+		if (abX)
+		{
+			mvDynamicMass.push_back(pBody->GetMass());
+			pBody->SetMass(0);
+			pBody->SetLinearVelocity(0);
+			pBody->SetAngularVelocity(0);
+		}
+		else if (i < mvDynamicMass.size())
+		{
+			pBody->SetMass(mvDynamicMass[i]);
+			pBody->Enable();
+		}
+	}
+}
+
 void cSomaLuxEntity::SetActive(bool abX)
 {
 	if (mbActive == abX)
@@ -985,6 +1010,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	for (const char *pType : vTypes)
 		if (e->GetTypeInfoByName(pType))
 			RegisterEntityMethods(e, pType);
+
+	if (e->GetTypeInfoByName("cLuxProp"))
+	{
+		SOMA_METHOD(e, "cLuxProp", "void SetStaticPhysics(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetStaticPhysics(b); });
+		SOMA_METHOD(e, "cLuxProp", "bool GetStaticPhysics()", +[](cSomaLuxEntity *p) { return p->mbStaticPhysics; });
+	}
+	SOMA_FUNC(e, "void Prop_SetStaticPhysics(const tString &in asPropName, bool abX)",
+			  +[](const tString &n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetStaticPhysics(b); }); });
 
 	// tID
 	SOMA_METHOD(e, "tID", "bool opEquals(const tID &in) const", +[](const cSomaID &a, const cSomaID &b) { return a == b; });

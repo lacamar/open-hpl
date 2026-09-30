@@ -739,7 +739,15 @@ namespace hpl {
 				tString sFileData;
 				sFileData.resize(lFileSize);
 				cPlatform::CopyFileToBuffer(sPath,&sFileData[0],lFileSize);
-				
+
+				if(sFileData.find('@') != tString::npos)
+				{
+					cPreprocessParser includeParser;
+					includeParser.mEnvironmentVars = mEnvironmentVars;
+					tString sParsed;
+					if(includeParser.Parse(&sFileData, &sParsed, mpCurrentVars, msCurrentDirectory))
+						sFileData = sParsed;
+				}
 				*mpCurrentOutput += sFileData;
 			}
 			else

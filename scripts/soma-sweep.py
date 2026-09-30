@@ -77,7 +77,7 @@ def log_errors(scratch, pid):
     return path, errors, warnings
 
 
-def run_map(name, scratch, frames, boot_timeout, sock):
+def run_map(name, scratch, frames, boot_timeout, sock, play=0):
     result = {"status": "ok"}
     if os.path.exists(sock):
         os.unlink(sock)
@@ -87,7 +87,7 @@ def run_map(name, scratch, frames, boot_timeout, sock):
         "OPENHPL_HEADLESS_SOCKET": sock,
         "OPENHPL_SOMA_MAP": name,
         "OPENHPL_SOMA_SKIP_BOOT": "1",
-        "OPENHPL_SOMA_FREECAM": "1",
+        "OPENHPL_SOMA_FREECAM": "0" if play else "1",
         "XDG_CONFIG_HOME": os.path.join(scratch, ".xdg/config"),
         "XDG_CACHE_HOME": os.path.join(scratch, ".xdg/cache"),
         "XDG_DATA_HOME": os.path.join(scratch, ".xdg/data"),
@@ -138,6 +138,10 @@ def run_map(name, scratch, frames, boot_timeout, sock):
     result["boot_s"] = round(time.time() - start, 1)
     try:
         result["warmup"] = {k: v for k, v in hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 30000}).items() if k != "ok"}
+        if play:
+            hpl.send({"cmd": "wait_frames", "n": int(play * 60), "max_ms": int(play * 4000)})
+            result["stubs"] = {k: v for k, v in hpl.send({"cmd": "stub_report", "n": 40}).items() if k != "ok"}
+            result["player"] = {k: v for k, v in hpl.send({"cmd": "player_state"}).items() if k != "ok"}
         result["load_report"] = hpl.send({"cmd": "load_report"})["load_report"]
         result["world"] = hpl.send({"cmd": "world_stats"})["world"]
         render = hpl.send({"cmd": "render_stats"})
@@ -255,6 +259,8 @@ def main():
     ap.add_argument("--map", action="append", default=[], help="substring filter, repeatable")
     ap.add_argument("--only-failed", action="store_true", help="re-run only maps failing in --out")
     ap.add_argument("--frames", type=int, default=120)
+    ap.add_argument("--play", type=float, default=0, metavar="SECS",
+                    help="script player instead of freecam; run SECS more, record stub_report/player (default --out play.json)")
     ap.add_argument("--boot-timeout", type=float, default=900)
     ap.add_argument("--out", default=os.path.join(CONF, "results.json"))
     ap.add_argument("--compare", help="older results.json to diff verdicts against")
@@ -262,6 +268,8 @@ def main():
     ap.add_argument("--scratch", default=os.environ.get("OPENHPL_SOMA_SCRATCH") or os.path.join(
         os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "open-hpl/soma-scratch"))
     args = ap.parse_args()
+    if args.play and args.out == os.path.join(CONF, "results.json"):
+        args.out = os.path.join(CONF, "play.json")
 
     if not args.scratch or not os.path.exists(os.path.join(args.scratch, "Soma.bin.aarch64")):
         sys.exit('no scratch dir - run: eval "$(scripts/soma-init.sh)"')
@@ -307,7 +315,7 @@ def main():
     sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ohpl-sweep.sock")
     for name in names:
         print(f"{name:34s} ", end="", flush=True)
-        result = run_map(name, args.scratch, args.frames, args.boot_timeout, sock)
+        result = run_map(name, args.scratch, args.frames, args.boot_timeout, sock, args.play)
         errors = result["log_errors"]
         result["failures"], result["allowlisted"] = judge(name, result, expected, allow)
         results["maps"][name] = result

@@ -81,6 +81,7 @@ namespace hpl {
 		 * their .glsl-only lookups are completely unaffected.
 		 */
 		static void SetHpslTranspileCallback(tHpslTranspileCallback aCallback) { mpHpslTranspileCallback = aCallback; }
+		static void AddGlobalDefine(const tString& asName) { mvGlobalDefines.push_back(asName); }
 
 	private:
 		bool IsShaderSupported(const tString& asName, eGpuShaderType aType);
@@ -89,6 +90,7 @@ namespace hpl {
 		cPreprocessParser* mpPreprocessParser;
 
 		static tHpslTranspileCallback mpHpslTranspileCallback;
+		static tStringVec mvGlobalDefines;
 	};
 
 };

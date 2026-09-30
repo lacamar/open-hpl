@@ -84,6 +84,11 @@ namespace hpl {
 	//debug
 	bool cRendererDeferred::mbOcclusionTestLargeLights = true;
 	bool cRendererDeferred::mbDebugRenderFrameBuffers = false;
+	bool cRendererDeferred::mbHdr = false;
+	float cRendererDeferred::mfToneMapKey = 0.5f;
+	float cRendererDeferred::mfToneMapExposure = 1.0f;
+	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
+	float cRendererDeferred::mfToneMapGamma = 2.2f;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -171,6 +176,10 @@ namespace hpl {
 	#define kVar_a_mtxLightViewProj					25
 	#define kVar_afFalloffPow						26
 	#define kVar_afSpotFalloffPow					27
+	#define kVar_afKey								28
+	#define kVar_afExposure							29
+	#define kVar_afWhiteCut							30
+	#define kVar_afInvGammaCorrection				31
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -202,6 +211,7 @@ namespace hpl {
 
 		mlMaxBatchLights = 100;
 		mpFxaaProgram = NULL;
+		mpToneMapProgram = NULL;
 
 		mbReflectionTextureCleared = false;
 	}
@@ -314,7 +324,7 @@ namespace hpl {
 		////////////////////////////////////
 		//Create Accumulation texture
 		mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",mGBufferTextureType,eTextureUsage_RenderTarget);
-		mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA, NULL);
+		mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),mbHdr ? ePixelFormat_RGBA16 : ePixelFormat_RGBA, NULL);
 		mpAccumBufferTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
 		////////////////////////////////////
@@ -327,7 +337,7 @@ namespace hpl {
 
 		////////////////////////////////////
 		//Create Refraction texture
-		mpRefractionTexture = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
+		mpRefractionTexture = mpGraphics->GetTempFrameBuffer(mvScreenSize,mbHdr ? ePixelFormat_RGBA16 : ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
 		mpRefractionTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
 		////////////////////////////////////
@@ -736,6 +746,21 @@ namespace hpl {
 				mpFxaaProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		}
 
+		mpToneMapProgram = NULL;
+		if(mbHdr)
+		{
+			cParserVarContainer programVars;
+			programVars.Add("UseUv");
+			mpToneMapProgram = mpGraphics->CreateGpuProgramFromShaders("ToneMapping","deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
+			if(mpToneMapProgram)
+			{
+				mpToneMapProgram->GetVariableAsId("afKey",kVar_afKey);
+				mpToneMapProgram->GetVariableAsId("afExposure",kVar_afExposure);
+				mpToneMapProgram->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
+				mpToneMapProgram->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
+			}
+		}
+
 		////////////////////////////////////
 		//Create light shapes
 		tFlag lVtxFlag = eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0;
@@ -850,6 +875,7 @@ namespace hpl {
 		}
 		
 		if(mpFxaaProgram) mpGraphics->DestroyGpuProgram(mpFxaaProgram);
+		if(mpToneMapProgram) mpGraphics->DestroyGpuProgram(mpToneMapProgram);
 
 		/////////////////////////
 		//Gpu programs
@@ -889,31 +915,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::CopyToFrameBuffer()
+	void cRendererDeferred::DrawAccumulationQuad()
 	{
-		if(mpCurrentSettings->mbIsReflection) return;
-
-		START_RENDER_PASS(CopyToFrameBuffer);
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		
-		SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer,true);
-
-		SetFlatProjection();
-
-		iGpuProgram *pCopyProgram = mpCurrentSettings->mbUseFxaa ? mpFxaaProgram : NULL;
-		SetProgram(pCopyProgram);
-		if(pCopyProgram)
-			pCopyProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
-		SetTexture(0,mpAccumBufferTexture);
-		SetTextureRange(NULL, 1);
-
-		////////////////////////////////////
-		//Draw the accumulation buffer to the current frame buffer
 		//Since the texture v coordinate is reversed, need to do some math.
 		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
 		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
@@ -926,31 +929,61 @@ namespace hpl {
 			vUvMax = vUvMax / mvScreenSizeFloat;
 		}
 		DrawQuad(cVector2f(0,0),1, vUvMin, vUvMax, true);
-		SetProgram(NULL);
+	}
 
-		////////////////////////////////////
-		// Global exposure (see cWorld::SetGlobalExposure()'s own comment) -
-		// a real, simplified stand-in for HPL3-authored per-area exposure
-		// data (SOMA/Rebirth/Bunker's real .hpm_ExposureArea, unread by any
-		// loader yet) applied as one flat multiply over the whole frame,
-		// via a solid untextured quad in Mul blend mode - no new shader
-		// needed (this repo carries no .glsl/.hpsl of its own; every game's
-		// shaders come from its own real, separately-installed data, so a
-		// fixed-function blend is the only way to add a new visual effect
-		// from engine code alone). Skipped entirely at the default 1.0 (true
-		// no-op, byte-identical to before this existed) - the overwhelmingly
-		// common case, since only a world whose loader actually calls
-		// SetGlobalExposure() ever sets anything else.
-		float fExposure = mpCurrentWorld->GetGlobalExposure();
-		if(fExposure != 1.0f)
+	void cRendererDeferred::CopyToFrameBuffer()
+	{
+		if(mpCurrentSettings->mbIsReflection) return;
+
+		START_RENDER_PASS(CopyToFrameBuffer);
+
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+
+		iTexture *pSource = mpAccumBufferTexture;
+		if(mpToneMapProgram)
 		{
-			SetBlendMode(eMaterialBlendMode_Mul);
-			SetTexture(0,NULL);
-			DrawQuad(	cVector2f(0,0),1,
-						cVector2f(0,0), cVector2f(1,1),
-						false, cColor(fExposure,1));
-			SetBlendMode(eMaterialBlendMode_None);
+			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
+			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,5) : mpCurrentRenderTarget->mpFrameBuffer;
+			if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
+			else		SetFrameBuffer(pToneMapTarget,true);
+			SetFlatProjection();
+
+			SetProgram(mpToneMapProgram);
+			mpToneMapProgram->SetFloat(kVar_afKey, mfToneMapKey);
+			mpToneMapProgram->SetFloat(kVar_afExposure, mfToneMapExposure);
+			mpToneMapProgram->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
+			mpToneMapProgram->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
+			SetTexture(0,mpAccumBufferTexture);
+			SetTextureRange(NULL, 1);
+			if(bFxaa)
+			{
+				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+				pSource = pToneMapTarget->GetColorBuffer(0)->ToTexture();
+			}
+			else
+			{
+				DrawAccumulationQuad();
+				pSource = NULL;
+			}
 		}
+
+		if(pSource)
+		{
+			SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer,true);
+			SetFlatProjection();
+			iGpuProgram *pCopyProgram = mpCurrentSettings->mbUseFxaa ? mpFxaaProgram : NULL;
+			SetProgram(pCopyProgram);
+			if(pCopyProgram)
+				pCopyProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
+			SetTexture(0,pSource);
+			SetTextureRange(NULL, 1);
+			DrawAccumulationQuad();
+		}
+		SetProgram(NULL);
 
 		END_RENDER_PASS();
 	}

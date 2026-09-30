@@ -103,6 +103,9 @@ namespace hpl {
 
 		iFrameBuffer* GetTempFrameBuffer(const cVector2l& avSize, ePixelFormat aPixelFormat, int alIndex);
 
+		static void SetTempFrameBufferTextureType(eTextureType aType){ mTempFrameBufferTextureType = aType; }
+		static eTextureType GetTempFrameBufferTextureType(){ return mTempFrameBufferTextureType; }
+
 		iDepthStencilBuffer* CreateDepthStencilBuffer(	const cVector2l& avSize, int alDepthBits, int alStencilBits,
 														bool abLookForMatchingFirst);
 		iDepthStencilBuffer* FindDepthStencilBuffer(const cVector2l& avSize, int alMinDepthBits, int alMinStencilBits);
@@ -144,6 +147,8 @@ namespace hpl {
 		cResources *mpResources;
 
 		std::vector<cTempFrameBuffer> mvTempFrameBuffers;
+
+		static eTextureType mTempFrameBufferTextureType;
 		
 		std::vector<iRenderer*> mvRenderers;
 		std::vector<iPostEffectType*> mvPostEffectTypes;

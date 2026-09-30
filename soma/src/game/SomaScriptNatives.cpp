@@ -4,6 +4,7 @@
 #include "SomaSave.h"
 #include "SomaLuxGame.h"
 #include "SomaLuxEntity.h"
+#include "SomaToneMapping.h"
 
 void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
 {
@@ -16,5 +17,6 @@ void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
 	cSomaLuxGame::RegisterNatives(apEngine);
 	cSomaSoundEvents::RegisterNatives(apEngine);
 	cSomaSaveHandler::RegisterNatives(apEngine);
+	cSomaToneMapping::RegisterNatives(apEngine);
 	RegisterSomaScriptGenBindings(apEngine);
 }

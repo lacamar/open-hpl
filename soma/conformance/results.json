@@ -330,10 +330,10 @@
     "LensFlare:0/4",
     "LightMask:0/10"
    ],
-   "boot_s": 5.5,
+   "boot_s": 8.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 55.721386,
+    "fps": 59.05513,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -341,58 +341,58 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 55.721386,
+   "fps": 59.05513,
    "frame": {
-    "black_frac": 0.318935,
+    "black_frac": 0.348782,
     "height": 2160,
     "lum_hist16": [
-     0.508826,
-     0.23949,
-     0.111617,
-     0.085025,
-     0.038248,
-     0.007212,
-     0.009427,
-     7e-06,
-     7e-06,
-     5e-06,
-     6e-06,
-     4e-06,
-     9e-06,
-     6e-06,
-     1.1e-05,
-     0.0001
+     0.544542,
+     0.241109,
+     0.09579,
+     0.072292,
+     0.030914,
+     0.005498,
+     0.008867,
+     5e-05,
+     3.9e-05,
+     4e-05,
+     5.8e-05,
+     5.8e-05,
+     3.9e-05,
+     4.6e-05,
+     5.6e-05,
+     0.000602
     ],
     "lum_max": 255,
-    "lum_mean": 20.603178,
+    "lum_mean": 18.771942,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 8.9e-05,
+    "white_frac": 0.00055,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 0.357178,
-     "a_mean": 0.002735,
+     "a_mean": 0.002733,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5030382,
+     "a_zero_count": 5033069,
      "b_max": 1,
-     "b_mean": 0.460605,
+     "b_mean": 0.460699,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 62645,
+     "b_zero_count": 62657,
      "g_max": 1,
-     "g_mean": 0.521192,
+     "g_mean": 0.521237,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1914,
+     "g_zero_count": 1912,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.488588,
+     "r_mean": 0.488702,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3134,
+     "r_zero_count": 3132,
      "sample_a": 0.000421,
      "sample_b": 0.430176,
      "sample_g": 0.510742,
@@ -401,26 +401,26 @@
     },
     "1": {
      "a_max": 0.157959,
-     "a_mean": 0.018496,
+     "a_mean": 0.018494,
      "a_min": 0.004612,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.368836,
+     "b_mean": 0.368707,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 1092,
+     "b_zero_count": 27,
      "g_max": 1,
-     "g_mean": 0.013709,
+     "g_mean": 0.013869,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 47689,
+     "g_zero_count": 47669,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.112256,
+     "r_mean": -0.112571,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 1096,
+     "r_zero_count": 31,
      "sample_a": 0.017639,
      "sample_b": 0.70459,
      "sample_g": -0.003922,
@@ -429,26 +429,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.344704,
+     "a_mean": 0.34469,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 70097,
      "b_max": 1,
-     "b_mean": 0.402939,
+     "b_mean": 0.402776,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 436308,
+     "b_zero_count": 436116,
      "g_max": 1,
-     "g_mean": 0.439899,
+     "g_mean": 0.439688,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 332823,
+     "g_zero_count": 332644,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.443819,
+     "r_mean": 0.44361,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 251045,
+     "r_zero_count": 250859,
      "sample_a": 0.410156,
      "sample_b": 0.623047,
      "sample_g": 0.635254,
@@ -459,26 +459,26 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 4594,
+    "total_ms": 6001,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 28,
+      "ms": 19,
       "skipped": {},
       "xml": 20
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 13
       },
@@ -487,21 +487,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 90,
+      "ms": 60,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 4,
+      "ms": 1,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 3525,
+      "ms": 5376,
       "skipped": {},
       "xml": 436
      },
@@ -531,7 +531,7 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 5,
+      "ms": 3,
       "skipped": {},
       "xml": 70
      },
@@ -547,21 +547,21 @@
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 10,
+      "ms": 5,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 117,
+      "ms": 44,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 200,
+      "ms": 158,
       "skipped": {},
       "xml": 7
      },
@@ -575,7 +575,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 580,
+      "ms": 309,
       "skipped": {},
       "xml": 145
      },
@@ -588,124 +588,112 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-812124.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3402215.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 1010,
-     "example": "ERROR: Cannot find sound entity 'Entities_Urban/tech/laptop/laptop_hum'"
+     "count": 3,
+     "example": "ERROR: Cannot find sound entity 'physics/paper/roll'"
     },
-    "ERROR: Cannot find submesh '*' in node!": {
-     "count": 7,
-     "example": "ERROR: Cannot find submesh 'Directional_Light' in node!"
+    "ERROR: Could not load image '*'!": {
+     "count": 1,
+     "example": "ERROR: Could not load image 'smartphone_backdrop'!"
+    },
+    "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
+     "count": 1,
+     "example": "ERROR: Couldn't find test file '_test_array_support_frag.glsl' in resources"
     },
     "ERROR: Couldn'*'core_falloff_linear'": {
-     "count": 101,
+     "count": 104,
      "example": "ERROR: Couldn't texture 'core_falloff_linear'"
     },
     "ERROR: Couldn'*'entities/creatures/birds/pigeon/animation/pigeon_flap.fbx'": {
      "count": 6,
      "example": "ERROR: Couldn't create animation 'entities/creatures/birds/pigeon/animation/pigeon_flap.fbx'"
     },
-    "ERROR: Couldn'*'physics/ceramic/plate/plate_impact.snt'": {
-     "count": 11,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/ceramic/plate/plate_impact.snt'"
+    "ERROR: Couldn'*'entities/organic/water/pouring/N_N_tap_pouring/animation/N_N_tap_pouring_activate.fbx'": {
+     "count": 2,
+     "example": "ERROR: Couldn't create animation 'entities/organic/water/pouring/00_01_tap_pouring/animation/00_01_tap_pouring_activate.fbx'"
     },
-    "ERROR: Couldn'*'physics/ceramic/plate/plate_roll.snt'": {
-     "count": 568,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/ceramic/plate/plate_roll.snt'"
+    "ERROR: Couldn'*'entities/organic/water/pouring/N_N_tap_pouring/animation/N_N_tap_pouring_deactivate.fbx'": {
+     "count": 2,
+     "example": "ERROR: Couldn't create animation 'entities/organic/water/pouring/00_01_tap_pouring/animation/00_01_tap_pouring_deactivate.fbx'"
     },
-    "ERROR: Couldn'*'physics/ceramic/plate/plate_scrape.snt'": {
-     "count": 11,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/ceramic/plate/plate_scrape.snt'"
+    "ERROR: Couldn'*'entities/urban/ornament_wall/drapes_simon/animation/drapes_simon_open.fbx'": {
+     "count": 1,
+     "example": "ERROR: Couldn't create animation 'entities/urban/ornament_wall/drapes_simon/animation/drapes_simon_open.fbx'"
     },
-    "ERROR: Couldn'*'physics/clothing/beanie_hat/beanie_hat_roll.snt'": {
-     "count": 4,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/clothing/beanie_hat/beanie_hat_roll.snt'"
+    "ERROR: Couldn'*'entities/urban/toilet/shower_curtain/shower_curtain_open.fbx'": {
+     "count": 1,
+     "example": "ERROR: Couldn't create animation 'entities/urban/toilet/shower_curtain/shower_curtain_open.fbx'"
     },
-    "ERROR: Couldn'*'physics/default/soft/roll.snt'": {
-     "count": 7,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/default/soft/roll.snt'"
+    "ERROR: Couldn'*'posteffect_bloom_add_frag.glsl' in resources": {
+     "count": 1,
+     "example": "ERROR: Couldn't find file 'posteffect_bloom_add_frag.glsl' in resources"
     },
-    "ERROR: Couldn'*'physics/glass/glass_mug/impact.snt'": {
-     "count": 9,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/glass/glass_mug/impact.snt'"
+    "ERROR: Couldn'*'posteffect_bloom_blur_vtx.glsl' in resources": {
+     "count": 2,
+     "example": "ERROR: Couldn't find file 'posteffect_bloom_blur_vtx.glsl' in resources"
     },
-    "ERROR: Couldn'*'physics/glass/glass_mug/roll.snt'": {
-     "count": 77,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/glass/glass_mug/roll.snt'"
+    "ERROR: Couldn'*'posteffect_color_conv_tex_frag.glsl' in resources": {
+     "count": 2,
+     "example": "ERROR: Couldn't find file 'posteffect_color_conv_tex_frag.glsl' in resources"
     },
-    "ERROR: Couldn'*'physics/metal/metal_bucket/metal_bucket_impact.snt'": {
-     "count": 3,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/metal_bucket/metal_bucket_impact.snt'"
+    "ERROR: Couldn'*'smartphone_backdrop'": {
+     "count": 1,
+     "example": "ERROR: Couldn't load image 'smartphone_backdrop'"
     },
-    "ERROR: Couldn'*'physics/metal/saucepan/saucepan_roll.snt'": {
-     "count": 16,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/saucepan/saucepan_roll.snt'"
+    "ERROR: Imagemanager couldn'*'smartphone_backdrop'": {
+     "count": 1,
+     "example": "ERROR: Imagemanager couldn't create image 'smartphone_backdrop'"
     },
-    "ERROR: Couldn'*'physics/metal/tin_can/roll.snt'": {
-     "count": 20,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/metal/tin_can/roll.snt'"
+    "ERROR: Loading entity clothing_folded_shirt_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA": {
+     "count": 1,
+     "example": "ERROR: Loading entity clothing_folded_shirt_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/ornaments/clothing_folded_shirt/clothing_folded_shirt.dae) and .ent file (/home/lm/.local/share/Steam/"
     },
-    "ERROR: Couldn'*'physics/objects/pizza_box_empty/pizza_box_empty_roll.snt'": {
-     "count": 5,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/pizza_box_empty/pizza_box_empty_roll.snt'"
+    "ERROR: Loading entity clothing_socks_single_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA": {
+     "count": 1,
+     "example": "ERROR: Loading entity clothing_socks_single_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/ornaments/clothing_socks_single/clothing_socks_single.dae) and .ent file (/home/lm/.local/share/Steam/"
     },
-    "ERROR: Couldn'*'physics/objects/toothpaste_full/toothpaste_full_roll.snt'": {
-     "count": 3,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/objects/toothpaste_full/toothpaste_full_roll.snt'"
+    "ERROR: Loading entity pillow_cabin_plain_N: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/en": {
+     "count": 1,
+     "example": "ERROR: Loading entity pillow_cabin_plain_1: Skeletons in mesh file (/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/station/furniture/pillow_cabin/pillow_cabin.dae) and .ent file (/home/lm/.local/share/Steam/steamapps/common/SOMA"
     },
-    "ERROR: Couldn'*'physics/organic/goo/roll.snt'": {
-     "count": 72,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/organic/goo/roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/paper/cardboard_box/cardboard_box_roll.snt'": {
-     "count": 17,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/paper/cardboard_box/cardboard_box_roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/paper/paper_ball/paper_ball_scrape.snt'": {
-     "count": 4,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/paper/paper_ball/paper_ball_scrape.snt'"
-    },
-    "ERROR: Couldn'*'physics/paper/paper_ball/roll.snt'": {
-     "count": 53,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/paper/paper_ball/roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/paper/roll.snt'": {
-     "count": 4,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/paper/roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/plastic/pencil/roll.snt'": {
-     "count": 129,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/pencil/roll.snt'"
-    },
-    "ERROR: Couldn'*'physics/plastic/small_pen/roll.snt'": {
-     "count": 4,
-     "example": "ERROR: Couldn't create SoundEntity 'physics/plastic/small_pen/roll.snt'"
-    },
-    "ERROR: File '*' does not have right MSH version!": {
-     "count": 244,
-     "example": "ERROR: File '/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/urban/walls/bathroom_flat_doorway.msh' does not have right MSH version!"
+    "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit N": {
+     "count": 2,
+     "example": "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit 0"
     },
     "ERROR: Sampler aHeightMap does not exist, could not bind it to unit N": {
      "count": 10,
      "example": "ERROR: Sampler aHeightMap does not exist, could not bind it to unit 3"
+    },
+    "ERROR: Sampler aNoiseMap does not exist, could not bind it to unit N": {
+     "count": 1,
+     "example": "ERROR: Sampler aNoiseMap does not exist, could not bind it to unit 1"
+    },
+    "ERROR: Sampler aSkyboxMap does not exist, could not bind it to unit N": {
+     "count": 1,
+     "example": "ERROR: Sampler aSkyboxMap does not exist, could not bind it to unit 2"
+    },
+    "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit N": {
+     "count": 2,
+     "example": "ERROR: Sampler aSpecularMap does not exist, could not bind it to unit 2"
     }
    },
-   "log_warnings": 327,
+   "log_warnings": 25,
    "render": {
-    "draw_calls": 2157,
+    "draw_calls": 2133,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 60,
-    "lights_rendered": 60,
+    "lights_in_list": 56,
+    "lights_rendered": 56,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 324,
-    "trans_objects": 41
+    "solid_objects": 323,
+    "trans_objects": 33
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 8.7,
+   "wall_s": 11.6,
    "warmup": {
     "frames": 120,
     "timed_out": false
@@ -722,22 +710,27 @@
      -140.460312
     ],
     "billboards": 28,
-    "dynamic_mesh_entities": 0,
+    "dynamic_mesh_entities": 183,
     "entities_nan_bounds": 0,
     "entities_oversized": 3,
     "fog_areas": 0,
-    "lights": 79,
+    "lights": 81,
     "lights_box": 10,
-    "lights_point": 47,
-    "lights_spot": 22,
+    "lights_point": 48,
+    "lights_spot": 23,
     "name": "00_01_apartment.hpm",
     "no_material_top": {},
+    "oversized_top": [
+     "Plane_(Conflict1):Plane_(Conflict1)",
+     "Plane_7:Plane_7",
+     "Plane_8:Plane_8"
+    ],
     "particle_systems": 15,
-    "physics_bodies": 494,
-    "physics_bodies_awake": 9,
-    "physics_bodies_dynamic": 145,
-    "sound_entities": 7,
-    "static_mesh_entities": 737,
+    "physics_bodies": 565,
+    "physics_bodies_awake": 15,
+    "physics_bodies_dynamic": 181,
+    "sound_entities": 19,
+    "static_mesh_entities": 554,
     "submeshes_without_material": 0
    }
   },

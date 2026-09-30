@@ -237,6 +237,15 @@ namespace hpl {
 					mpCurrentWorld->SetFogCulling(pFog->GetAttributeBool("Culling", true));
 				}
 
+				cXmlElement* pPost = pGlobal->GetFirstElement("PostEffects");
+				if (pPost)
+				{
+					mpCurrentWorld->SetToneMapping(pPost->GetAttributeFloat("ToneMappingKey", 0.5f),
+												   pPost->GetAttributeFloat("ToneMappingExposure", 0),
+												   pPost->GetAttributeFloat("ToneMappingWhiteCut", 3.5f));
+					mpCurrentWorld->SetColorGradingTexture(pPost->GetAttributeString("ColorGradingTexture", ""));
+				}
+
 				cXmlElement* pSky = pGlobal->GetFirstElement("SkyBox");
 				if (pSky)
 				{
@@ -553,23 +562,6 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	// SOMA/Rebirth/Bunker's real HPL3-authored maps can carry a
-	// .hpm_ExposureArea sidecar (HPLMapTrack_ExposureArea) - real per-area
-	// exposure/white-point/transition-time data for a camera-position-based
-	// HDR exposure system this engine has never had a native concept of at
-	// all (Dark Descent's own maps never ship one, and cWorldLoaderHplMap -
-	// the separate, DD-only loader - has no matching track). Not every map
-	// has one (unlike StaticObject/Light/etc, always expected), so
-	// abWarnIfMissing=false below, unlike every other track load in this
-	// file. Deliberately simplified: applies only the FIRST ExposureArea
-	// entity found as one flat cWorld::SetGlobalExposure() value for the
-	// whole world, not the real system's spatial blend/fade between
-	// multiple overlapping areas as the camera moves through them
-	// (WorldPos/Scale/TransitionTime are read from the file but unused here)
-	// - a real, honest first step, not the full system. See
-	// cWorld::SetGlobalExposure()'s own doc comment and
-	// cRendererDeferred::CopyToFrameBuffer() for how the resulting scale is
-	// actually applied.
 	void cWorldLoaderHpm::LoadExposureAreaTrack(const tWString& asBaseFile)
 	{
 		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_ExposureArea"), false);
@@ -578,9 +570,8 @@ namespace hpl {
 		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_ExposureArea");
 		if (pRoot)
 		{
-			bool bApplied = false;
 			cXmlNodeListIterator sectionIt = pRoot->GetChildIterator();
-			while (bApplied == false && sectionIt.HasNext())
+			while (sectionIt.HasNext())
 			{
 				cXmlElement* pSection = sectionIt.Next()->ToElement();
 				if (pSection->GetValue() != "Section") continue;
@@ -589,29 +580,23 @@ namespace hpl {
 				if (pObjects == NULL) continue;
 
 				cXmlNodeListIterator objIt = pObjects->GetChildIterator();
-				while (bApplied == false && objIt.HasNext())
+				while (objIt.HasNext())
 				{
 					cXmlElement* pObjElem = objIt.Next()->ToElement();
 					if (pObjElem->GetValue() != "ExposureArea") continue;
 					++mmapTrackStats["ExposureArea"].mlInXml;
 					++mmapTrackStats["ExposureArea"].mlCreated;
 
-					// HPL3's Exposure attribute is a real photographic EV
-					// (stops) compensation, same convention as
-					// cCamera-less exposure systems elsewhere (2 == twice
-					// as bright, -1 == half as bright) - convert to the
-					// plain linear multiply cWorld::SetGlobalExposure()
-					// stores.
-					float fExposureEv = pObjElem->GetAttributeFloat("Exposure", 0);
-					mpCurrentWorld->SetGlobalExposure(powf(2.0f, fExposureEv));
-					bApplied = true;
-
-					Log("SOMA hpm: applying global exposure %f EV (%f linear) from '%s' - real per-area "
-						"exposure data exists (WorldPos %s, additional areas if any) but only this first "
-						"one is used, see LoadExposureAreaTrack()'s comment\n",
-						fExposureEv, powf(2.0f, fExposureEv),
-						pObjElem->GetAttributeString("Name", "").c_str(),
-						pObjElem->GetAttributeString("WorldPos", "").c_str());
+					cWorldExposureArea area;
+					area.msName = pObjElem->GetAttributeString("Name", "");
+					cMatrixf mtxTransform = cMath::MatrixRotate(pObjElem->GetAttributeVector3f("Rotation", 0), eEulerRotationOrder_XYZ);
+					mtxTransform.SetTranslation(pObjElem->GetAttributeVector3f("WorldPos", 0));
+					area.m_mtxInvTransform = cMath::MatrixInverse(mtxTransform);
+					area.mvHalfSize = pObjElem->GetAttributeVector3f("Scale", 1) * 0.5f;
+					area.mfExposure = pObjElem->GetAttributeFloat("Exposure", 0);
+					area.mfWhiteCut = pObjElem->GetAttributeFloat("WhiteCut", 3.5f);
+					area.mfTransitionTime = pObjElem->GetAttributeFloat("TransitionTime", 1);
+					mpCurrentWorld->AddExposureArea(area);
 				}
 			}
 		}
@@ -825,12 +810,12 @@ namespace hpl {
 			if (pShape) vShapes.push_back(pShape);
 		}
 
-		if (vShapes.empty()) return;
-
-		iCollideShape* pFinalShape = vShapes.size() > 1 ? mpCurrentPhysicsWorld->CreateCompundShape(vShapes) : vShapes[0];
-
-		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, pFinalShape);
-		pBody->SetMass(0); // static - real objects are never pushed/simulated by this loader
+		// One body per tree: Newton compounds only take convex children
+		for (size_t i = 0; i < vShapes.size(); ++i)
+		{
+			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, vShapes[i]);
+			pBody->SetMass(0);
+		}
 	}
 
 	//-----------------------------------------------------------------------

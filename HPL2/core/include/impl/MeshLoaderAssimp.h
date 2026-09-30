@@ -19,7 +19,7 @@ namespace hpl {
 		cMesh* LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags);
 		bool SaveMesh(cMesh* apMesh,const tWString& asFile){ return false; }
 
-		cAnimation* LoadAnimation(const tWString& asFile){ return NULL; }
+		cAnimation* LoadAnimation(const tWString& asFile);
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile){ return false; }
 	};
 

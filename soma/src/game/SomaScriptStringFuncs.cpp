@@ -41,10 +41,12 @@ template <class S> static int FindStr(const S &s, const S &sub, bool abLast)
 
 static void SplitInto(const tString &asData, const tString &asSep, std::vector<tString> &aOut)
 {
+	// Empty separators: cString::GetStringVec's defaults
+	const tString &sSep = asSep.empty() ? tString(" \n\r\t,") : asSep;
 	tString sCur;
 	for (char c : asData)
 	{
-		if (asSep.find(c) != tString::npos)
+		if (sSep.find(c) != tString::npos)
 		{
 			if (!sCur.empty())
 				aOut.push_back(sCur);

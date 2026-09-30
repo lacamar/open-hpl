@@ -57,6 +57,8 @@
 
 namespace hpl {
 
+	eTextureType cGraphics::mTempFrameBufferTextureType = eTextureType_Rect;
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -347,7 +349,7 @@ namespace hpl {
 
 		//Create texture
 		tString sNameSuffix = cString::ToString(avSize.x)+"x"+cString::ToString(avSize.y)+":"+cString::ToString((int)aPixelFormat);
-		iTexture *pTexture = CreateTexture("TempBufferTexture"+sNameSuffix, eTextureType_Rect, eTextureUsage_RenderTarget);
+		iTexture *pTexture = CreateTexture("TempBufferTexture"+sNameSuffix, mTempFrameBufferTextureType, eTextureUsage_RenderTarget);
 		pTexture->CreateFromRawData(cVector3l(avSize.x, avSize.y,0),aPixelFormat,NULL);
 		pTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 

@@ -340,7 +340,9 @@ namespace hpl {
 		//Refraction vars
 		if(bRefractionEnabled && (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_Diffuse) )
 		{
-			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x);
+			// Normalized UVs on 2D render targets
+			float fScale = cGraphics::GetTempFrameBufferTextureType() == eTextureType_Rect ? (float)apRenderer->GetRenderTargetSize().x : 1.0f;
+			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * fScale);
 		}
 
 		////////////////////////////

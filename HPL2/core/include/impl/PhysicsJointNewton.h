@@ -126,6 +126,8 @@ namespace hpl {
 			mpNewtonJoint = NewtonConstraintCreateUserJoint (mpNewtonWorld, mlMaxDOF, StaticSubmitConstraints, mpNewtonChildBody, mpNewtonParentBody);
 
 			NewtonJointSetUserData (mpNewtonJoint, this);
+			// Iterative solver, as in Newton 2; the exact skeleton solver costs seconds per frame on cable chains
+			NewtonUserJointSetSolverModel (mpNewtonJoint, 2);
 		}
 
 		//-------------------------------------------

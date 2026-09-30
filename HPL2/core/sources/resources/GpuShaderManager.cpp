@@ -113,6 +113,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	tHpslTranspileCallback cGpuShaderManager::mpHpslTranspileCallback = NULL;
+	tStringVec cGpuShaderManager::mvGlobalDefines;
 
 	//-----------------------------------------------------------------------
 
@@ -134,6 +135,9 @@ namespace hpl {
 		#elif defined(__linux__)
 			mpPreprocessParser->GetEnvVarContainer()->Add("OS_Linux");
 		#endif
+
+		for(size_t i=0; i<mvGlobalDefines.size(); ++i)
+			mpPreprocessParser->GetEnvVarContainer()->Add(mvGlobalDefines[i]);
 	}
 
 	cGpuShaderManager::~cGpuShaderManager()

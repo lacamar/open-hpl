@@ -8,6 +8,7 @@
 #include <cstring>
 #include "HpslTranspilerSelfTest.h"
 #include "HpslTranspiler.h"
+#include "SomaToneMapping.h"
 #include "SomaLoaders.h"
 #include "SomaAmbientSfx.h"
 #include "SomaMenuSfx.h"
@@ -216,6 +217,46 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 		}
 	}
 	aResp.Set("contacts", sOut);
+}
+
+// Body counts and the awake dynamic bodies (physics cost)
+static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+	{
+		aResp.SetError("no map");
+		return;
+	}
+	int lStatic = 0, lDynamic = 0, lAwake = 0, lChar = 0;
+	std::vector<std::pair<float, tString>> vAwake;
+	cPhysicsBodyIterator it = pMap->GetWorld()->GetPhysicsWorld()->GetBodyIterator();
+	while (it.HasNext())
+	{
+		iPhysicsBody *pBody = it.Next();
+		if (pBody->IsCharacter())
+			++lChar;
+		else if (pBody->GetMass() == 0)
+			++lStatic;
+		else
+		{
+			++lDynamic;
+			if (pBody->GetEnabled())
+			{
+				++lAwake;
+				vAwake.push_back(std::make_pair(pBody->GetLinearVelocity().Length() + pBody->GetAngularVelocity().Length(), pBody->GetName()));
+			}
+		}
+	}
+	std::sort(vAwake.rbegin(), vAwake.rend());
+	tString sOut;
+	for (size_t i = 0; i < vAwake.size() && i < (size_t)aReq.GetInt("n", 20); ++i)
+		sOut += cString::ToString(vAwake[i].first) + " " + vAwake[i].second + "\n";
+	aResp.Set("static", lStatic);
+	aResp.Set("dynamic", lDynamic);
+	aResp.Set("awake", lAwake);
+	aResp.Set("character", lChar);
+	aResp.Set("awake_top", sOut);
 }
 
 // Every body a ray hits: distance, body, owning map entity (collision conformance)
@@ -721,8 +762,18 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// above.
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
+	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
 	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
+
+	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
+	if (pHdr == NULL || pHdr[0] != '0')
+	{
+		cRendererDeferred::SetHdr(true);
+		SetHpslStripHdrBoost(false);
+		cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
+		cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
+	}
 
 	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
 	// a real GPU occlusion query (GetOcclusionQuery()) to any light whose
@@ -813,6 +864,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
 		pCtrl->RegisterHandler("body_contacts", cSomaBase_HeadlessCmd_BodyContacts, this);
 		pCtrl->RegisterHandler("raycast", cSomaBase_HeadlessCmd_Raycast, this);
+		pCtrl->RegisterHandler("physics_stats", cSomaBase_HeadlessCmd_PhysicsStats, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
@@ -838,6 +890,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	// real GLSL against the live GL context. Safe to run every boot: it
 	// only reads shader files and compiles throwaway GL shader objects.
 	RunHpslTranspilerSelfTest(mpEngine);
+
+	mpEngine->GetUpdater()->AddGlobalUpdate(hplNew(cSomaToneMapping, ()));
 
 	/////////////////////////////
 	// Real boot sequence: show the splash logos, then (via
@@ -1371,6 +1425,7 @@ bool cSomaBase::InitMainMenuScene()
 		return false;
 	}
 	mpTestWorld = pWorld;
+	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
 
 	////////////////////////////////////
 	// Debug free-fly camera, same as InitTestMap() below. main_menu.hpm's
@@ -1463,6 +1518,7 @@ bool cSomaBase::InitTestMap()
 		return false;
 	}
 	mpTestWorld = pWorld;
+	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
 
 	////////////////////////////////////
 	// Debug free-fly camera (see DebugFreeCamera.h) - no player controller.
@@ -1524,6 +1580,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
 	mpTestWorld = pNewWorld;
+	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
 
 	// Reuse the existing camera/viewport if this isn't the first load rather
 	// than destroying and recreating them - cUpdater has no "remove"

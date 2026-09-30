@@ -184,6 +184,10 @@ namespace hpl {
 		static void SetOcclusionTestLargeLights(bool abX){ mbOcclusionTestLargeLights = abX;}
 		static bool GetOcclusionTestLargeLights(){ return mbOcclusionTestLargeLights;}
 
+		static void SetHdr(bool abX){ mbHdr = abX;}
+		static bool GetHdr(){ return mbHdr;}
+		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
+
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
 
@@ -204,6 +208,7 @@ namespace hpl {
 		iTexture* GetDebugGBufferTexture(int alIdx){ return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 
 	private:
+		void DrawAccumulationQuad();
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
@@ -333,6 +338,7 @@ namespace hpl {
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
 		iGpuProgram *mpFxaaProgram;
+		iGpuProgram *mpToneMapProgram;
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
@@ -346,6 +352,11 @@ namespace hpl {
 		cMatrixf m_mtxTempLight;
 		
 		//Static setting variables
+		static bool mbHdr;
+		static float mfToneMapKey;
+		static float mfToneMapExposure;
+		static float mfToneMapWhiteCut;
+		static float mfToneMapGamma;
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
 		static bool mbDepthInNormalAlpha;

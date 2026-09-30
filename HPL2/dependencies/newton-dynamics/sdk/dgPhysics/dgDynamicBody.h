@@ -45,6 +45,7 @@ DG_MSC_VECTOR_ALIGNMENT
 class dgDynamicBody : public dgBody 
 {
 	public:
+	void SetRestingSleep() { m_restingSleep = true; }
 	dgDynamicBody();
 	dgDynamicBody (dgWorld* const world, const dgTree<const dgCollision*, dgInt32>* const collisionNode, dgDeserialize serializeCallback, void* const userData, dgInt32 revisionNumber);
 	virtual ~dgDynamicBody ();
@@ -103,6 +104,7 @@ class dgDynamicBody : public dgBody
 	dgVector m_cachedDampCoef;
 	dgFloat32 m_cachedTimeStep;
 	dgInt32 m_sleepingCounter;
+	bool m_restingSleep;
 	dgUnsigned32 m_isInDestructionArrayLRU;
 	dgSkeletonContainer* m_skeleton;
 	OnApplyExtForceAndTorque m_applyExtForces;

@@ -234,7 +234,7 @@ namespace
 	// rendered as a clipped, saturated bright magenta/purple. After, the
 	// same on-screen pixel reads (58,2,24) - matching raw_texture_color *
 	// the scene's own exposure multiplier (~0.435 at this camera pose,
-	// see cWorld::SetGlobalExposure()) almost exactly, confirming the boost
+	// from the map's ExposureArea) almost exactly, confirming the boost
 	// removal is both real and correctly scoped, not a coincidental color
 	// shift. (An earlier pass through this investigation wrongly concluded
 	// this fix had zero visible effect - that was a stale-binary artifact
@@ -785,14 +785,26 @@ namespace
 
 //---------------------------------------------------------------
 
+static bool gbStripHdrBoost = true;
+void SetHpslStripHdrBoost(bool abX) { gbStripHdrBoost = abX; }
+
 bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType,
 						  tString& asGlslOut, tString& asErrorOut)
 {
-	tString sSrc = ReplaceTypeNames(asPreprocessedHpsl);
+	tString sSrc = asPreprocessedHpsl;
+	// water_surface_frag.hpsl calls it without including helper_gamma_correction.hpsl
+	if (sSrc.find("GammaToLinearCorrection(") != tString::npos && sSrc.find("GammaToLinearCorrection(in ") == tString::npos)
+	{
+		size_t lMain = sSrc.find("void main");
+		if (lMain != tString::npos)
+			sSrc.insert(lMain, "cVector3f GammaToLinearCorrection(in cVector3f v) { return pow(v, cVector3f(2.2)); }\n"
+							   "cVector4f GammaToLinearCorrection(in cVector4f v) { return pow(v, cVector4f(2.2)); }\n");
+	}
+	sSrc = ReplaceTypeNames(sSrc);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
-	sSrc = RemoveUncompensatedHdrPrecisionBoost(sSrc);
+	if (gbStripHdrBoost) sSrc = RemoveUncompensatedHdrPrecisionBoost(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	if (RewriteSampleCmpIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;

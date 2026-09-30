@@ -277,16 +277,23 @@ def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x72
         time.sleep(0.5)
     swaymsg('[title="^SOMA"]', "move", "container", "to", "output", out)
     swaymsg('[title="^SOMA"]', "fullscreen", "enable")
-    if prev:
-        swaymsg("focus", "output", prev)
+    # The engine idles until its window has had focus once; give focus back after the map loads.
+    swaymsg('[title="^SOMA"]', "focus")
     if record:
-        return record_frames(*record, t0=t0)
+        frames = record_frames(*record, t0=t0)
+        if prev:
+            swaymsg("focus", "output", prev)
+        return frames
     while not log_path().exists():
         if time.time() - t0 > 60:
             raise SystemExit("no hpl.log after 60 s: " + gt("log", SLUG, "-n", "5", check=False))
         time.sleep(0.5)
     r = Ref()
-    line = r.wait_for(r"^OHPL\|map\|", timeout)
+    try:
+        line = r.wait_for(r"^OHPL\|map\|", timeout)
+    finally:
+        if prev:
+            swaymsg("focus", "output", prev)
     print(f"pid {game_pid()} {line.split('|')[2]} in {time.time() - t0:.0f}s")
     return r
 

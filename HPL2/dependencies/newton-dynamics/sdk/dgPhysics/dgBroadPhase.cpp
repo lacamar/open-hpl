@@ -316,9 +316,7 @@ void dgBroadPhase::SleepingState(dgBroadphaseSyncDescriptor* const descriptor, d
 			if (body->IsRTTIType(dgBody::m_dynamicBodyRTTI)) {
 				dgDynamicBody* const dynamicBody = (dgDynamicBody*)body;
 
-				if (!dynamicBody->m_equilibrium && (dynamicBody->GetInvMass().m_w == dgFloat32(0.0f))) {
-					descriptor->m_fullScan = true;
-				}
+				const bool movedStatic = !dynamicBody->m_equilibrium && (dynamicBody->GetInvMass().m_w == dgFloat32(0.0f));
 				if (dynamicBody->GetInvMass().m_w) {
 					dgAtomicExchangeAndAdd(atomicBodiesCount, 1);
 				}
@@ -327,6 +325,14 @@ void dgBroadPhase::SleepingState(dgBroadphaseSyncDescriptor* const descriptor, d
 					dynamicBody->m_sleeping = true;
 					dynamicBody->m_autoSleep = true;
 					dynamicBody->m_equilibrium = true;
+				}
+
+				if (dynamicBody->m_restingSleep) {
+					dynamicBody->m_restingSleep = false;
+					if (dynamicBody->m_sleeping) {
+						dynamicBody->m_savedExternalForce = dynamicBody->m_externalForce;
+						dynamicBody->m_savedExternalTorque = dynamicBody->m_externalTorque;
+					}
 				}
 
 				if (dynamicBody->IsInEquilibrium()) {
@@ -340,6 +346,12 @@ void dgBroadPhase::SleepingState(dgBroadphaseSyncDescriptor* const descriptor, d
 						dgInt32 pendingBodyIndex = dgAtomicExchangeAndAdd(atomicPendingBodiesCount, 1);
 						pendingBodies[pendingBodyIndex].m_body = dynamicBody;
 					}
+				}
+
+				if (movedStatic && dynamicBody->GetBroadPhase()) {
+					dynamicBody->UpdateCollisionMatrix(timestep, threadID);
+					dgInt32 pendingBodyIndex = dgAtomicExchangeAndAdd(atomicPendingBodiesCount, 1);
+					pendingBodies[pendingBodyIndex].m_body = dynamicBody;
 				}
 
 				dynamicBody->m_savedExternalForce = dynamicBody->m_externalForce;

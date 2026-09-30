@@ -5772,6 +5772,9 @@ void NewtonBodySetSleepState(const NewtonBody* const bodyPtr, int state)
 	TRACE_FUNCTION(__FUNCTION__);
 	dgBody* const body = (dgBody *)bodyPtr;
 	body->SetSleepState(state ? true : false);
+	if (state && body->IsRTTIType(dgBody::m_dynamicBodyRTTI)) {
+		((dgDynamicBody*)body)->SetRestingSleep();
+	}
 }
 
 

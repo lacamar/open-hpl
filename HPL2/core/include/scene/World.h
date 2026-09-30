@@ -145,6 +145,16 @@ namespace hpl {
 	typedef std::list<cStartPosEntity*> tStartPosEntityList;
 	typedef std::list<cStartPosEntity*>::iterator tStartPosEntityListIt;
 
+	struct cWorldExposureArea
+	{
+		tString msName;
+		cMatrixf m_mtxInvTransform;
+		cVector3f mvHalfSize;
+		float mfExposure;
+		float mfWhiteCut;
+		float mfTransitionTime;
+	};
+
 	//-------------------------------------------------------------------
 
 	class cWorld
@@ -228,20 +238,16 @@ namespace hpl {
 		const cColor& GetFogColor(){ return mFogColor; }
 		bool GetFogCulling() { return mbFogCulling;}
 
-		///// EXPOSURE ////////////////////////////////
-		// A single global linear scale applied to the final composited frame
-		// (cRendererDeferred::CopyToFrameBuffer(), see its own comment) -
-		// defaults to 1.0 (a true no-op: every existing world that never
-		// calls SetGlobalExposure() renders byte-identically to before this
-		// existed). Real HPL3-authored content (SOMA/Rebirth/Bunker) ships
-		// per-area exposure/white-point/transition-time data this engine has
-		// no loader for yet - this is deliberately just the single global
-		// scale a loader can set from the first/nearest such area as a real
-		// but simplified stand-in, not the full position-blended system. See
-		// soma/src/game/SomaLoaders.cpp's cSomaAreaLoader_Exposure.
+		///// TONE MAPPING ////////////////////////////////
+		void SetToneMapping(float afKey, float afExposure, float afWhiteCut){ mfToneMappingKey = afKey; mfToneMappingExposure = afExposure; mfToneMappingWhiteCut = afWhiteCut; }
+		float GetToneMappingKey(){ return mfToneMappingKey; }
+		float GetToneMappingExposure(){ return mfToneMappingExposure; }
+		float GetToneMappingWhiteCut(){ return mfToneMappingWhiteCut; }
+		void SetColorGradingTexture(const tString& asFile){ msColorGradingTexture = asFile; }
+		const tString& GetColorGradingTexture(){ return msColorGradingTexture; }
 
-		void SetGlobalExposure(float afX){ mfGlobalExposure = afX; }
-		float GetGlobalExposure(){ return mfGlobalExposure; }
+		void AddExposureArea(const cWorldExposureArea& aArea){ mvExposureAreas.push_back(aArea); }
+		std::vector<cWorldExposureArea>& GetExposureAreas(){ return mvExposureAreas; }
 
 		///// AREA ////////////////////////////////
 		
@@ -417,7 +423,11 @@ namespace hpl {
 		float mfFogFalloffExp;
 		cColor mFogColor;
 
-		float mfGlobalExposure;
+		float mfToneMappingKey;
+		float mfToneMappingExposure;
+		float mfToneMappingWhiteCut;
+		tString msColorGradingTexture;
+		std::vector<cWorldExposureArea> mvExposureAreas;
 
 		tLightList mlstLights;
 		tMeshEntityList mlstDynamicMeshEntities;

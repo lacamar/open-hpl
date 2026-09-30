@@ -8,15 +8,69 @@
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Material.h"
+#include "graphics/Skeleton.h"
+#include "graphics/Bone.h"
+#include "graphics/Animation.h"
+#include "graphics/AnimationTrack.h"
 
 #include "resources/MaterialManager.h"
 #include "resources/MeshManager.h"
+
+#include <cstdio>
+#include <cstring>
+#include <map>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
 namespace hpl {
+
+	static cMatrixf ToMatrix(const aiMatrix4x4 &a_mtx)
+	{
+		return cMatrixf(a_mtx.a1, a_mtx.a2, a_mtx.a3, a_mtx.a4, a_mtx.b1, a_mtx.b2, a_mtx.b3, a_mtx.b4,
+						a_mtx.c1, a_mtx.c2, a_mtx.c3, a_mtx.c4, a_mtx.d1, a_mtx.d2, a_mtx.d3, a_mtx.d4);
+	}
+
+	static bool SceneHasBones(const aiScene *apScene)
+	{
+		for(unsigned int i=0; i<apScene->mNumMeshes; ++i)
+			if(apScene->mMeshes[i]->mNumBones > 0) return true;
+		return false;
+	}
+
+	//-----------------------------------------------------------------------
+
+	// Every node becomes a bone; bound bones take their skin bind pose.
+	static void CreateBones(const aiNode *apNode, const aiMatrix4x4 &a_mtxParentWorld, cBone *apParent,
+							const std::map<tString, aiMatrix4x4> &amapBind)
+	{
+		tString sName = apNode->mName.C_Str();
+		aiMatrix4x4 mtxWorld = a_mtxParentWorld * apNode->mTransformation;
+		std::map<tString, aiMatrix4x4>::const_iterator it = amapBind.find(sName);
+		if(it != amapBind.end()) mtxWorld = it->second;
+
+		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentWorld).Inverse() * mtxWorld;
+		cBone *pBone = apParent->CreateChildBone(sName, sName);
+		pBone->SetTransform(ToMatrix(mtxLocal));
+
+		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
+			CreateBones(apNode->mChildren[c], mtxWorld, pBone, amapBind);
+	}
+
+	static void CollectBindPoses(const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
+								 std::map<tString, aiMatrix4x4> &amapBind)
+	{
+		aiMatrix4x4 mtxWorld = a_mtxParent * apNode->mTransformation;
+		for(unsigned int m=0; m<apNode->mNumMeshes; ++m)
+		{
+			const aiMesh *pSrc = apScene->mMeshes[apNode->mMeshes[m]];
+			for(unsigned int b=0; b<pSrc->mNumBones; ++b)
+				amapBind[pSrc->mBones[b]->mName.C_Str()] = mtxWorld * aiMatrix4x4(pSrc->mBones[b]->mOffsetMatrix).Inverse();
+		}
+		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
+			CollectBindPoses(apScene, apNode->mChildren[c], mtxWorld, amapBind);
+	}
 
 	//-----------------------------------------------------------------------
 
@@ -46,7 +100,7 @@ namespace hpl {
 
 	static void AddNodeMeshes(	const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
 								cMesh *apMesh, iLowLevelGraphics *apLowLevelGraphics,
-								cMaterialManager *apMaterialManager, const tString& asFallbackMaterial)
+								cMaterialManager *apMaterialManager, const tString& asFallbackMaterial, cSkeleton *apSkeleton)
 	{
 		aiMatrix4x4 mtxWorld = a_mtxParent * apNode->mTransformation;
 		aiMatrix3x3 mtxNormal(mtxWorld);
@@ -104,6 +158,25 @@ namespace hpl {
 			cSubMesh *pSubMesh = apMesh->CreateSubMesh(sName);
 			pSubMesh->SetVertexBuffer(pVtxBuff);
 
+			if(apSkeleton)
+			{
+				// Unskinned parts ride on their own node
+				if(pSrc->mNumBones == 0)
+				{
+					int lBone = apSkeleton->GetBoneIndexByName(apNode->mName.C_Str());
+					for(unsigned int v=0; lBone >= 0 && v<pSrc->mNumVertices; ++v)
+						pSubMesh->AddVertexBonePair(cVertexBonePair(v, lBone, 1.0f));
+				}
+				for(unsigned int b=0; b<pSrc->mNumBones; ++b)
+				{
+					const aiBone *pBone = pSrc->mBones[b];
+					int lBone = apSkeleton->GetBoneIndexByName(pBone->mName.C_Str());
+					if(lBone < 0) continue;
+					for(unsigned int w=0; w<pBone->mNumWeights; ++w)
+						pSubMesh->AddVertexBonePair(cVertexBonePair(pBone->mWeights[w].mVertexId, lBone, pBone->mWeights[w].mWeight));
+				}
+			}
+
 			tString sMaterial = GetMaterialFile(apScene->mMaterials[pSrc->mMaterialIndex]);
 			cMaterial *pMaterial = sMaterial != "" ? apMaterialManager->CreateMaterial(sMaterial) : NULL;
 			if(pMaterial == NULL && asFallbackMaterial != "")
@@ -118,7 +191,7 @@ namespace hpl {
 		}
 
 		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
-			AddNodeMeshes(apScene, apNode->mChildren[c], mtxWorld, apMesh, apLowLevelGraphics, apMaterialManager, asFallbackMaterial);
+			AddNodeMeshes(apScene, apNode->mChildren[c], mtxWorld, apMesh, apLowLevelGraphics, apMaterialManager, asFallbackMaterial, apSkeleton);
 	}
 
 	//-----------------------------------------------------------------------
@@ -126,6 +199,8 @@ namespace hpl {
 	cMesh* cMeshLoaderAssimp::LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags)
 	{
 		Assimp::Importer importer;
+		// Keep FBX node names as-is (animation tracks target them)
+		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 		const aiScene *pScene = importer.ReadFile(cString::To8Char(asFile),
 				aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals |
 				aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_SortByPType | aiProcess_GlobalScale);
@@ -141,7 +216,18 @@ namespace hpl {
 		// Frictional's convention: <mesh name>.mat next to the mesh.
 		tString sFallbackMaterial = cString::SetFileExt(sMeshName, "mat");
 
-		AddNodeMeshes(pScene, pScene->mRootNode, aiMatrix4x4(), pMesh, mpLowLevelGraphics, mpMaterialManager, sFallbackMaterial);
+		cSkeleton *pSkeleton = NULL;
+		if(SceneHasBones(pScene))
+		{
+			std::map<tString, aiMatrix4x4> mapBind;
+			CollectBindPoses(pScene, pScene->mRootNode, aiMatrix4x4(), mapBind);
+			pSkeleton = hplNew( cSkeleton, () );
+			CreateBones(pScene->mRootNode, aiMatrix4x4(), pSkeleton->GetRootBone(), mapBind);
+			pMesh->SetSkeleton(pSkeleton);
+		}
+
+		AddNodeMeshes(pScene, pScene->mRootNode, aiMatrix4x4(), pMesh, mpLowLevelGraphics, mpMaterialManager, sFallbackMaterial, pSkeleton);
+		if(pSkeleton) pMesh->CompileBonesAndSubMeshes();
 
 		if(pMesh->GetSubMeshNum() == 0)
 		{
@@ -150,6 +236,79 @@ namespace hpl {
 			return NULL;
 		}
 		return pMesh;
+	}
+
+	//-----------------------------------------------------------------------
+	//-----------------------------------------------------------------------
+
+	// HPL3 bakes each FBX animation to a sibling .anm: bone tracks relative to the bind pose, FBX units
+	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
+	{
+		tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
+		FILE *pFile = fopen(sAnm.c_str(), "rb");
+		if(pFile == NULL) return NULL;
+		std::vector<unsigned char> vData;
+		unsigned char vBuf[65536];
+		size_t lRead;
+		while((lRead = fread(vBuf, 1, sizeof(vBuf), pFile)) > 0) vData.insert(vData.end(), vBuf, vBuf + lRead);
+		fclose(pFile);
+
+		size_t lPos = 0;
+		bool bOk = true;
+		auto Read = [&](void *apDest, size_t alSize) {
+			if(lPos + alSize > vData.size()) { bOk = false; memset(apDest, 0, alSize); return; }
+			memcpy(apDest, &vData[lPos], alSize);
+			lPos += alSize;
+		};
+		auto ReadString = [&]() {
+			tString sStr;
+			while(lPos < vData.size() && vData[lPos]) sStr += (char)vData[lPos++];
+			if(lPos >= vData.size()) bOk = false;
+			++lPos;
+			return sStr;
+		};
+
+		char vMagic[4];
+		unsigned int lVersion, lTrackNum, lExtraNum;
+		float fLength;
+		Read(vMagic, 4);
+		Read(&lVersion, 4);
+		if(bOk == false || memcmp(vMagic, "iE\x03v", 4) != 0) return NULL;
+		ReadString();
+		Read(&fLength, 4);
+		Read(&lTrackNum, 4);
+		Read(&lExtraNum, 4);
+		if(bOk == false) return NULL;
+
+		tString sFile = cString::To8Char(asFile);
+		cAnimation *pAnimation = hplNew( cAnimation, (cString::GetFileName(sFile), asFile, cString::GetFileName(sFile)) );
+		pAnimation->SetAnimationName("Default");
+		pAnimation->SetLength(fLength);
+		pAnimation->ReserveTrackNum((int)lTrackNum);
+		for(unsigned int t=0; t<lTrackNum && bOk; ++t)
+		{
+			tString sName = ReadString();
+			unsigned short lFlags;
+			unsigned int lKeyNum;
+			Read(&lFlags, 2);
+			Read(&lKeyNum, 4);
+			cAnimationTrack *pTrack = pAnimation->CreateTrack(sName, eAnimTransformFlag_Translate | eAnimTransformFlag_Rotate);
+			for(unsigned int k=0; k<lKeyNum && bOk; ++k)
+			{
+				float vKey[8];
+				Read(vKey, sizeof(vKey));
+				cKeyFrame *pKey = pTrack->CreateKeyFrame(vKey[0]);
+				pKey->trans = cVector3f(vKey[1], vKey[2], vKey[3]);
+				pKey->rotation = cQuaternion(vKey[7], vKey[4], vKey[5], vKey[6]);
+			}
+		}
+		if(bOk == false)
+		{
+			Error("Corrupt animation '%s'\n", sAnm.c_str());
+			hplDelete(pAnimation);
+			return NULL;
+		}
+		return pAnimation;
 	}
 
 	//-----------------------------------------------------------------------

@@ -115,6 +115,8 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvScale = mvScale;
 		pEnt->mpMesh = mpEntity;
 		pEnt->mvBodies = mvBodies;
+		if (apInstanceVars && apInstanceVars->GetVarBool("StaticPhysics", false))
+			pEnt->SetStaticPhysics(true);
 		if (apInstanceVars)
 			if (unsigned int lFlags = SomaCollideFlag(apInstanceVars->GetVarString("CollideGroup", "")))
 				for (iPhysicsBody *pBody : mvBodies)
