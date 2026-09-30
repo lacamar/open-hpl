@@ -1,0 +1,25 @@
+#include "interfaces/UserModule_Interface.hps"
+
+class cOhplModuleBase : iScrUserModule, iScrUserModule_Interface
+{
+	void Update(float afTimeStep){}
+	void PostUpdate(float afTimeStep){}
+	void VariableUpdate(float afDeltaTime){}
+	void Reset(){}
+	void OnDraw(float afFrameTime){}
+	void OnPostRender(float afFrameTime){}
+	void LoadUserConfig(){}
+	void SaveUserConfig(){}
+	void OnMapEnter(cLuxMap @apMap){}
+	void OnMapLeave(cLuxMap @apMap){}
+	void CreateWorldEntities(cLuxMap @apMap){}
+	void DestroyWorldEntities(cLuxMap @apMap){}
+	void PreloadData(cLuxMap @apMap){}
+	void OnEnterContainer(const tString&in asOldContainer){}
+	void OnLeaveContainer(const tString&in asNewContainer){}
+	void OnExitPressed(){}
+	void OnAction(int alAction, bool abPressed){}
+	void OnAnalogInput(int alAnalogId, const cVector3f &in avAmount){}
+	void AppGotInputFocus(){}
+	void AppLostInputFocus(){}
+}

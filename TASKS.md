@@ -153,6 +153,17 @@ laboratory keypad terminal.
 - Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
 - Physics impact sound burst right after map load.
 
+## Differences vs the official game (`scripts/soma-compare.py`)
+
+- Camera yaw sign flipped (`cCamera::GetYaw`, apartment: ours -14.3, ref 14.3); teleport with
+  the same yaw faces a different way.
+- Player heights: ref feet 0.42 / body 1.02 / camera 1.52; ours feet == body 0.75, camera 1.85.
+- `iLuxEntity::GetClassName` returns the area type (`Trigger`), ref the script class
+  (`cScrAreaTrigger`); `GetEntityArray` includes PlayerStart areas (ref does not).
+- `Camera` entity position is (0,0,0).
+- `"" + float` formats shortest; ref uses `%f` (visible in script-built strings).
+- `cLux_GetGameTime` returns 0; `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
+
 ## History
 
 - SOMA: apartment-darkness root-caused and fixed - vtx_vTangent was a declared-but-never-bound

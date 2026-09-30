@@ -1,0 +1,32 @@
+#include "ohpl/OhplModuleBase.hps"
+
+int gOhplFrame = 0;
+
+class cScrOhplAgent : cOhplModuleBase
+{
+	int mlNext = 1;
+
+	cScrOhplAgent()
+	{
+		cEngine_SetWaitIfAppOutOfFocus(false);
+	}
+
+	void OnMapEnter(cLuxMap @apMap)
+	{
+		LogNewLine("OHPL|map|" + apMap.GetName() + "|" + gOhplFrame);
+	}
+
+	void VariableUpdate(float afDeltaTime)
+	{
+		gOhplFrame++;
+		if(gOhplFrame % 300 == 0)
+			LogNewLine("OHPL|tick|" + gOhplFrame + "|" + cEngine_GetFPS());
+
+		if(!cSystem_FileExists(cString_To16Char("C:/ohpl/io/go_" + mlNext)))
+			return;
+		int lId = mlNext++;
+		LogNewLine("OHPL|exec|" + lId + "|" + gOhplFrame);
+		cLux_GetPlayer().AddState("ohpl_exec_" + lId, 100000 + lId, "ohpl/exec/ohpl_exec_" + lId + ".hps", "cOhplExec" + lId);
+		LogNewLine("OHPL|done|" + lId);
+	}
+}

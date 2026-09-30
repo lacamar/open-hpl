@@ -34,6 +34,30 @@ scripts/soma-script-check.sh               # compile all game .hps against the r
 scripts/soma-re-script-api.py <Soma_NoSteam.bin.x86_64> re.json api.json soma/data/script_api.txt
 ```
 
+## Reference: the official game
+
+The Windows `Soma_NoSteam.exe` runs under wine-arm64ec (`gt`, test prefix `soma-test-claude`) in bwrap
+with the install dir read-only (`soma/ref/wine-ro.sh`), on its own scale-1 headless output, as a mod
+(`soma/ref/mod`) whose agent module runs AngelScript snippets inside the real engine.
+
+```
+scripts/soma-ref.py start --map 00_01_apartment   # real game, straight into a map
+scripts/soma-ref.py exec '__print("x=" + cLux_GetGameTime());'
+scripts/soma-ref.py player | perf | ping | teleport X Y Z --yaw D | shot out.png | log [re] | stop
+scripts/soma-compare.py start --map M             # ours (headless, script player) + ref
+scripts/soma-compare.py exec 'code' [--diff]      # same snippet on both, mismatches marked
+scripts/soma-compare.py player | entities | lights [--pattern] [--diff]
+scripts/soma-compare.py view --pose X Y Z YAW PITCH   # screenshots + side-by-side + image metrics
+scripts/soma-compare.py fps --secs 10
+scripts/soma-compare.py report --map M            # all of the above -> report.json
+OPENHPL_SOMA_SCRIPT_CHECK_FILE=f.hps scripts/soma-script-check.sh   # compile one file, print errors
+```
+
+Snippets: function bodies printing `key=value` via `__print`; the real engine formats floats as `%f`.
+Real compile errors are only "Couldn't build script"; compile locally first for messages. Exec slots
+(500) are per launch. The Linux `Soma_NoSteam.bin.x86_64` (needed by the `soma-re-*` scripts) is gone
+while Steam has the Windows depot installed.
+
 The script API (`soma/data/script_api.txt`: types, enum values, methods, properties with offsets,
 globals, and the native C++ function each binds to) is recovered statically from the official
 binary's registration code. The binary has a full symbol table; disassemble a bound native

@@ -165,6 +165,14 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 	msgs.mvErrors.clear();
 
 	cSomaScriptBuilder builder(asGameDir);
+	if (const char *pFile = getenv("OPENHPL_SOMA_SCRIPT_CHECK_FILE"))
+	{
+		int r = builder.Build(pEngine, "check_file", pFile, NULL);
+		for (const std::string &s : msgs.mvErrors)
+			fprintf(stderr, "%s\n", s.c_str());
+		pEngine->ShutDownAndRelease();
+		return r >= 0 ? 0 : 1;
+	}
 	std::vector<std::string> vEntries;
 	FindConfigScripts(asGameDir, vEntries);
 	for (std::string &s : vEntries)
