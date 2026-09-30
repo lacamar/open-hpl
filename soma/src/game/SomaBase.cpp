@@ -1607,6 +1607,8 @@ bool cSomaBase::InitTestMap()
 bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
 						 const tString &asStartPosName)
 {
+	if (mfGameStartTime < 0)
+		mfGameStartTime = mpEngine->GetGameTime();
 	// Found by basename via the resource dir search, same convention as
 	// InitTestMap()/InitMainMenuScene() above ("/maps" is registered with
 	// AddSubDirs in SOMA's real resources.cfg).

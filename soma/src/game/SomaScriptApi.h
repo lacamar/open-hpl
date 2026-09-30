@@ -57,6 +57,7 @@ private:
 void ConfigureSomaScriptEngine(asIScriptEngine *apEngine);
 
 bool SomaScriptIsDummy(void *apObj);
+void *SomaScriptDummyOf(asIScriptEngine *apEngine, const char *apType);
 
 // Native objects smaller than the official layout keep the recovered offset members in a side block
 // that a pointer member (at alPointerOffset) addresses

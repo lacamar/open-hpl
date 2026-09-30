@@ -1,6 +1,7 @@
 #include "SomaToneMapping.h"
 #include "SomaBase.h"
 #include "SomaScriptBind.h"
+#include "SomaScriptApi.h"
 
 #include <angelscript.h>
 
@@ -124,8 +125,13 @@ void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)
 {
 	typedef cSomaToneMapping T;
 	const char *pType = "cPostEffect_ToneMapping";
-	SOMA_FUNC(e, "cViewport@ cLux_GetViewport()", +[]() -> cViewport * { return gpSomaBase->GetCurrentViewport(); });
-	SOMA_METHOD(e, "cViewport", "cPostEffect_ToneMapping@ GetToneMappingEffect()", +[](cViewport *) -> T * { return T::Get(); });
+	// Effect handlers init before the first viewport exists
+	SOMA_FUNC(e, "cViewport@ cLux_GetViewport()", +[]() -> cViewport * {
+		cViewport *pViewport = gpSomaBase->GetCurrentViewport();
+		return pViewport ? pViewport : (cViewport *)SomaScriptDummyOf(asGetActiveContext()->GetEngine(), "cViewport");
+	});
+	e->RegisterObjectMethod("cViewport", "cPostEffect_ToneMapping@ GetToneMappingEffect()",
+							asFUNCTION(+[](asIScriptGeneric *g) { g->SetReturnAddress(T::Get()); }), asCALL_GENERIC);
 
 	SOMA_METHOD(e, pType, "void FadeExposure(float afExposure, float afWhiteCut, float afTime)",
 				+[](T *p, float x, float w, float t) { p->FadeExposure(x, w, t); });

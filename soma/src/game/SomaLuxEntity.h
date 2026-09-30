@@ -51,6 +51,8 @@ public:
 
 	tString msName;
 	tString msClassName; // EntityType / AreaType
+	tString msScriptClassName;
+	bool mbCameraProxy = false;
 	tString msFileName;
 	int meType = eSomaLuxEntityType_Prop;
 	cSomaID mID;

@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <cstring>
 #include <functional>
+#include <map>
 #include "SomaBase.h"
 #include "SomaLuxGame.h"
 #include "impl/scriptarray.h"
@@ -32,6 +33,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	mvEntities.push_back(pPlayer);
 	cSomaLuxEntity *pCamera = new cSomaLuxEntity();
 	pCamera->msName = "Camera";
+	pCamera->mbCameraProxy = true;
 	mvEntities.push_back(pCamera);
 	std::vector<cSomaLuxEntity *> vLoaded;
 	vLoaded.swap(mvEntities);
@@ -797,6 +799,30 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  }
 				  return fLevel;
 			  });
+	SOMA_FUNC(e, "double cLux_GetGameTime()", +[]() -> double {
+		return gpSomaBase->mfGameStartTime < 0 ? 0.0 : gpSomaBase->mpEngine->GetGameTime() - gpSomaBase->mfGameStartTime;
+	});
+	struct cCameraExtra
+	{
+		cMatrixf mtxWorld;
+		cVector3f vVelocity = 0;
+		float fExtYaw = 0, fExtPitch = 0, fExtRoll = 0;
+	};
+	static std::map<cCamera *, cCameraExtra> mapCameraExtra;
+	SOMA_METHOD(e, "cCamera", "const cMatrixf& GetMatrix()", +[](cCamera *c) -> const cMatrixf & {
+		cMatrixf &m = mapCameraExtra[c].mtxWorld;
+		m = cMath::MatrixInverse(c->GetViewMatrix());
+		return m;
+	});
+	SOMA_METHOD(e, "cCamera", "void SetVelocity(const cVector3f&in avVel)", +[](cCamera *c, const cVector3f &v) { mapCameraExtra[c].vVelocity = v; });
+	SOMA_METHOD(e, "cCamera", "const cVector3f& GetVelocity()const", +[](cCamera *c) -> const cVector3f & { return mapCameraExtra[c].vVelocity; });
+	// Eye-tracker view offsets; no tracker, so stored only
+	SOMA_METHOD(e, "cCamera", "void SetExtendedYaw(float afAngle)", +[](cCamera *c, float f) { mapCameraExtra[c].fExtYaw = f; });
+	SOMA_METHOD(e, "cCamera", "void SetExtendedPitch(float afAngle)", +[](cCamera *c, float f) { mapCameraExtra[c].fExtPitch = f; });
+	SOMA_METHOD(e, "cCamera", "void SetExtendedRoll(float afAngle)", +[](cCamera *c, float f) { mapCameraExtra[c].fExtRoll = f; });
+	SOMA_METHOD(e, "cCamera", "float GetExtendedYaw() const", +[](cCamera *c) { return mapCameraExtra[c].fExtYaw; });
+	SOMA_METHOD(e, "cCamera", "float GetExtendedPitch() const", +[](cCamera *c) { return mapCameraExtra[c].fExtPitch; });
+	SOMA_METHOD(e, "cCamera", "float GetExtenededRoll() const", +[](cCamera *c) { return mapCameraExtra[c].fExtRoll; });
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
 				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {

@@ -147,22 +147,20 @@ laboratory keypad terminal.
 - Agents: `cLuxCharMover`, `cLuxPathfinder`, head tracker are stubs (NPCs stand still).
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
 - Laboratory scan-chair sequence past `InteractScanChair` unverified.
-- `stub_report`: post effects (`cLux_GetViewport` has no composite), eye tracker,
-  `cCamera::SetExtended{Yaw,Pitch}`, `iPhysicsWorld::GetBodiesInAABB`, preload hints.
+- Post effects (chromatic aberration, radial blur, image trail, video distortion, image fade)
+  keep their parameters but aren't rendered; the aberration's params -> offsets/colours mapping
+  is CPU-side in the exe.
+- `stub_report`: eye tracker, `cWorld::SetDepthOfFieldActive`, `cForceField::SetPosition`,
+  preload hints.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
 - Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
 - Physics impact sound burst right after map load.
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
-- Camera yaw sign flipped (`cCamera::GetYaw`, apartment: ours -14.3, ref 14.3); teleport with
-  the same yaw faces a different way.
-- Player heights: ref feet 0.42 / body 1.02 / camera 1.52; ours feet == body 0.75, camera 1.85.
-- `iLuxEntity::GetClassName` returns the area type (`Trigger`), ref the script class
-  (`cScrAreaTrigger`); `GetEntityArray` includes PlayerStart areas (ref does not).
-- `Camera` entity position is (0,0,0).
+- `GetEntityArray` includes PlayerStart areas (ref does not).
 - `"" + float` formats shortest; ref uses `%f` (visible in script-built strings).
-- `cLux_GetGameTime` returns 0; `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
+- `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
   loading-screen hold ~3% brighter, brain icon on a different animation frame. Return doesn't
   activate the focused menu button (mouse does).

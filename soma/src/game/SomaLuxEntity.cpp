@@ -175,6 +175,8 @@ cMatrixf cSomaLuxEntity::GetMatrix()
 		iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
 		return pBody ? cMath::MatrixTranslate(pBody->GetFeetPosition()) : m_mtxOnLoad;
 	}
+	if (mbCameraProxy && cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCamera())
+		return cMath::MatrixInverse(cSomaLuxPlayer::Get()->GetCamera()->GetViewMatrix());
 	if (iPhysicsBody *pBody = GetMainBody())
 		return pBody->GetLocalMatrix();
 	if (mpMesh)
@@ -474,7 +476,9 @@ void cSomaLuxEntity::CreateAreaBody(iPhysicsWorld *apWorld)
 	if (apWorld == NULL || mvBodies.empty() == false)
 		return;
 	cMatrixf m = m_mtxOnLoad;
-	cVector3f vCols[3] = {m.GetRight(), m.GetUp(), m.GetForward()};
+	cVector3f vCols[3];
+	for (int i = 0; i < 3; ++i)
+		vCols[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
 	cVector3f vSize = mvSize;
 	for (int i = 0; i < 3; ++i)
 	{
@@ -702,7 +706,9 @@ static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut)
 		cMatrixf m = apEnt->GetMatrix();
 		cSomaOBB box;
 		box.mvCenter = m.GetTranslation();
-		cVector3f vCols[3] = {m.GetRight(), m.GetUp(), m.GetForward()};
+		cVector3f vCols[3];
+	for (int i = 0; i < 3; ++i)
+		vCols[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
 		for (int i = 0; i < 3; ++i)
 		{
 			float fLen = vCols[i].Length();
@@ -851,7 +857,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "const tString& GetName()", +[](E *p) -> const tString & { return p->msName; });
 	SOMA_METHOD_NEW(e, T, "const tID& GetID()", +[](E *p) -> const cSomaID & { return p->mID; });
 	SOMA_METHOD_NEW(e, T, "eLuxEntityType GetEntityType()", +[](E *p) { return p->meType; });
-	SOMA_METHOD_NEW(e, T, "const tString& GetClassName()", +[](E *p) -> const tString & { return p->msClassName; });
+	SOMA_METHOD_NEW(e, T, "const tString& GetClassName()", +[](E *p) -> const tString & {
+		if (p->GetScript() == NULL)
+			return p->msClassName;
+		p->msScriptClassName = p->GetScript()->GetObjectType()->GetName();
+		return p->msScriptClassName;
+	});
 	SOMA_METHOD_NEW(e, T, "const tString& GetFileName()", +[](E *p) -> const tString & { return p->msFileName; });
 	SOMA_METHOD_NEW(e, T, "void SetActive(bool abX)", +[](E *p, bool b) { p->SetActive(b); });
 	SOMA_METHOD_NEW(e, T, "bool IsActive()", +[](E *p) { return p->mbActive; });

@@ -41,6 +41,8 @@ public:
 
 	void Run();
 
+	double mfGameStartTime = -1;
+
 	// Called by cSomaSplash once its sequence finishes (or is skipped).
 	// Public because cSomaSplash calls it back via the global gpSomaBase
 	// pointer, same idiom as gpBase-> calls throughout amnesia/src/game.

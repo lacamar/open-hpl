@@ -109,7 +109,9 @@ namespace hpl {
 		// down, which already null-checks mpFalloffMap before destroying it,
 		// so NULL was always an anticipated state for this member, just not
 		// guarded here at construction time.
-		mpFalloffMap = mpTextureManager->Create1D("core_falloff_linear",false);
+		static bool bFalloffMissing = false;
+		mpFalloffMap = bFalloffMissing ? NULL : mpTextureManager->Create1D("core_falloff_linear",false);
+		bFalloffMissing = mpFalloffMap == NULL;
 		if(mpFalloffMap)
 		{
 			mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);

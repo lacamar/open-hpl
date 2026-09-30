@@ -196,10 +196,6 @@ def judge(name, result, expected, allow):
         for track, e in sorted(exp["tracks"].items()):
             got = tracks.get(track, {"created": 0, "skipped": {}})
             want = e["xml"]
-            if track == "ExposureArea":
-                want = min(want, 1)
-                if e["xml"] > 1:
-                    allowed.append(f"ExposureArea:{e['xml'] - 1} unused")
             if got["created"] == want:
                 continue
             msg = f"{track}:{got['created']}/{want}"
@@ -258,7 +254,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--map", action="append", default=[], help="substring filter, repeatable")
     ap.add_argument("--only-failed", action="store_true", help="re-run only maps failing in --out")
-    ap.add_argument("--frames", type=int, default=120)
+    ap.add_argument("--frames", type=int, default=360, help="warm-up frames; map fade-ins take ~4 s")
     ap.add_argument("--play", type=float, default=0, metavar="SECS",
                     help="script player instead of freecam; run SECS more, record stub_report/player (default --out play.json)")
     ap.add_argument("--boot-timeout", type=float, default=900)

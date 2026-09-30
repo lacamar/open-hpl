@@ -194,6 +194,20 @@ static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc
 	return pDummy;
 }
 
+void *SomaScriptDummyOf(asIScriptEngine *apEngine, const char *apType)
+{
+	static std::map<std::string, void *> mapDummies;
+	void *&pDummy = mapDummies[apType];
+	asITypeInfo *pType = apEngine->GetTypeInfoByName(apType);
+	if (pDummy == NULL && pType)
+	{
+		pDummy = calloc(1, 4096);
+		ConstructMembers(apEngine, pType, (char *)pDummy);
+		gsetDummies.insert(pDummy);
+	}
+	return pDummy;
+}
+
 static void CountStub(asIScriptGeneric *apGen)
 {
 	asIScriptFunction *pFunc = apGen->GetFunction();
