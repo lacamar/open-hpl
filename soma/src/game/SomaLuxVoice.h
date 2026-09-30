@@ -40,6 +40,7 @@ public:
 	bool SubjectIsPlaying(const tString &asName);
 	bool SceneIsActive(const tString &asScene);
 	bool SceneInvolvingCharacterIsActive(const tString &asName);
+	bool SubjectInvolvesCharacter(const tString &asSubject, const tString &asName);
 	bool AnySceneIsActive() { return mvPlaying.empty() == false; }
 	int GetSubjectLineNumber(const tString &asSubject);
 	const tString &GetSubjectSceneName(const tString &asSubject);

@@ -28,6 +28,7 @@ scripts/soma-sweep.py --only-failed --compare old.json
 scripts/soma-sweep.py --play 10                    # script player instead of freecam -> play.json (stubs, player)
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
 scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
+scripts/soma-play.py start --map M          # script player: goto/look/interact/key/walk/wait/state/entities/log/shot
 scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
 scripts/soma-gen-bindings.py               # regenerate SomaScriptGenBindings.cpp (compiler-verified)
 scripts/soma-re-struct-defaults.py         # recover script struct defaults from the official binary
@@ -96,6 +97,7 @@ player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the gam
 | `dump_target target=N path= [channel=C]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 10+ shadow maps; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
 | `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel |
+| `pick_entity x= y=` | submeshes under a screen point (0-1), nearest first (skinned included) |
 | `shader_report [failed_only=false]` | compile/link status + info log per shader |
 | `entity_info name=` | transform, AABB, mesh, per-submesh material/visibility |
 | `wait_frames n= [max_ms=]` | replies after n rendered frames or the time cap |

@@ -242,10 +242,18 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	//-----------------------------------------------------------------------
 
-	// HPL3 bakes each FBX animation to a sibling .anm: bone tracks relative to the bind pose, FBX units
-	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
+	bool cMeshLoaderAssimp::IsHpl3Anm(const tString& asAnmFile)
 	{
-		tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
+		FILE *pFile = fopen(asAnmFile.c_str(), "rb");
+		if(pFile == NULL) return false;
+		char vMagic[4] = {};
+		size_t lRead = fread(vMagic, 1, 4, pFile);
+		fclose(pFile);
+		return lRead == 4 && memcmp(vMagic, "iE\x03v", 4) == 0;
+	}
+
+	cAnimation* cMeshLoaderAssimp::LoadHpl3Anm(const tString& sAnm, const tWString& asFile, float fUnitScale)
+	{
 		FILE *pFile = fopen(sAnm.c_str(), "rb");
 		if(pFile == NULL) return NULL;
 		std::vector<unsigned char> vData;
@@ -282,18 +290,6 @@ namespace hpl {
 		if(bOk == false) return NULL;
 
 		tString sFile = cString::To8Char(asFile);
-		float fUnitScale = 1;
-		{
-			Assimp::Importer importer;
-			const aiScene *pScene = importer.ReadFile(sFile, 0);
-			float fUnit;
-			double fUnitD;
-			if(pScene && pScene->mMetaData)
-			{
-				if(pScene->mMetaData->Get("UnitScaleFactor", fUnit)) fUnitScale = fUnit / 100.0f;
-				else if(pScene->mMetaData->Get("UnitScaleFactor", fUnitD)) fUnitScale = (float)fUnitD / 100.0f;
-			}
-		}
 		cAnimation *pAnimation = hplNew( cAnimation, (cString::GetFileName(sFile), asFile, cString::GetFileName(sFile)) );
 		pAnimation->SetAnimationName("Default");
 		pAnimation->SetLength(fLength);
@@ -322,6 +318,25 @@ namespace hpl {
 			return NULL;
 		}
 		return pAnimation;
+	}
+
+	// HPL3 bakes each FBX animation to a sibling .anm in FBX units
+	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
+	{
+		tString sFile = cString::To8Char(asFile);
+		float fUnitScale = 1;
+		{
+			Assimp::Importer importer;
+			const aiScene *pScene = importer.ReadFile(sFile, 0);
+			float fUnit;
+			double fUnitD;
+			if(pScene && pScene->mMetaData)
+			{
+				if(pScene->mMetaData->Get("UnitScaleFactor", fUnit)) fUnitScale = fUnit / 100.0f;
+				else if(pScene->mMetaData->Get("UnitScaleFactor", fUnitD)) fUnitScale = (float)fUnitD / 100.0f;
+			}
+		}
+		return LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile, fUnitScale);
 	}
 
 	//-----------------------------------------------------------------------

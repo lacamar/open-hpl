@@ -63,6 +63,8 @@
 
 namespace hpl {
 
+	bool cEntityLoader_Object::mbSubMeshScaleIncludesModelScale = false;
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -416,9 +418,15 @@ namespace hpl {
 				// Get transform matrix
 				if(bHasSkeleton==false)
 				{
+					cVector3f vSubScale = pSubMeshElem->GetAttributeVector3f("Scale");
+					if(mbSubMeshScaleIncludesModelScale)
+					{
+						cVector3f vModelScale = pSubEntity->GetSubMesh()->GetModelScale();
+						for(int i=0; i<3; ++i) if(vModelScale.v[i] != 0) vSubScale.v[i] /= vModelScale.v[i];
+					}
 					cMatrixf mtxLocalTransform = GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
 																		pSubMeshElem->GetAttributeVector3f("Rotation"),
-																		pSubMeshElem->GetAttributeVector3f("Scale")*mvScale);
+																		vSubScale*mvScale);
 					
 					//mtxLocalTransform = cMath::MatrixMul(mtxLocalTransform, cMath::MatrixScale(mvScale));
 

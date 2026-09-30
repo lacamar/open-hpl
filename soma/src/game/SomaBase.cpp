@@ -544,6 +544,64 @@ static void cSomaBase_HeadlessCmd_EntityInfo(void *apUserData, const cHeadlessRe
 	aResp.SetRaw("entity", sInfo);
 }
 
+// Names the submeshes under a screen pixel (ray vs current triangles, skinned included)
+static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cWorld *pWorld = pBase->GetCurrentWorld();
+	cCamera *pCam = pBase->GetDebugCamera();
+	if(pWorld == NULL || pCam == NULL) { aResp.SetError("no world loaded"); return; }
+	cVector3f vStart, vDir;
+	pCam->UnProject(&vStart, &vDir, cVector2f(aReq.GetFloat("x", 0.5f), aReq.GetFloat("y", 0.5f)), 1);
+	std::vector<std::pair<float, tString>> vHits;
+	auto test = [&](cMeshEntity *pEnt) {
+		if(pEnt->IsVisible() == false) return;
+		for(int i = 0; i < pEnt->GetSubMeshEntityNum(); ++i)
+		{
+			cSubMeshEntity *pSub = pEnt->GetSubMeshEntity(i);
+			if(pSub->IsVisible() == false) continue;
+			iVertexBuffer *pVtx = pSub->GetVertexBuffer();
+			cMatrixf *pModel = pSub->GetModelMatrix(NULL);
+			cMatrixf mtxInv = pModel ? cMath::MatrixInverse(*pModel) : cMatrixf::Identity;
+			cVector3f vS = cMath::MatrixMul(mtxInv, vStart), vD = cMath::MatrixMul3x3(mtxInv, vDir);
+			const float *pPos = pVtx->GetFloatArray(eVertexBufferElement_Position);
+			int lStride = pVtx->GetElementNum(eVertexBufferElement_Position);
+			const unsigned int *pIdx = pVtx->GetIndices();
+			float fBest = 1e30f;
+			for(int t = 0; t + 2 < pVtx->GetIndexNum(); t += 3)
+			{
+				cVector3f v[3];
+				for(int k = 0; k < 3; ++k) v[k] = cVector3f(pPos[pIdx[t+k]*lStride], pPos[pIdx[t+k]*lStride+1], pPos[pIdx[t+k]*lStride+2]);
+				cVector3f e1 = v[1]-v[0], e2 = v[2]-v[0], p = cMath::Vector3Cross(vD, e2);
+				float det = cMath::Vector3Dot(e1, p);
+				if(std::fabs(det) < 1e-12f) continue;
+				cVector3f tv = vS - v[0];
+				float u = cMath::Vector3Dot(tv, p)/det;
+				if(u < 0 || u > 1) continue;
+				cVector3f q = cMath::Vector3Cross(tv, e1);
+				float w = cMath::Vector3Dot(vD, q)/det;
+				if(w < 0 || u + w > 1) continue;
+				float fT = cMath::Vector3Dot(e2, q)/det;
+				if(fT > 0 && fT < fBest) fBest = fT;
+			}
+			if(fBest < 1e30f)
+			{
+				cVector3f vHit = pModel ? cMath::MatrixMul(*pModel, vS + vD*fBest) : vS + vD*fBest;
+				vHits.push_back(std::make_pair(cMath::Vector3Dist(vStart, vHit), pEnt->GetName() + "/" + pSub->GetName() + (pSub->GetMaterial() ? " " + pSub->GetMaterial()->GetName() : "")));
+			}
+		}
+	};
+	cMeshEntityIterator it = pWorld->GetDynamicMeshEntityIterator();
+	while(it.HasNext()) test(it.Next());
+	it = pWorld->GetStaticMeshEntityIterator();
+	while(it.HasNext()) test(it.Next());
+	std::sort(vHits.begin(), vHits.end());
+	tString sOut = "";
+	for(size_t i = 0; i < vHits.size() && i < 8; ++i)
+		sOut += cString::ToString(vHits[i].first) + " " + vHits[i].second + "\n";
+	aResp.Set("hits", sOut);
+}
+
 static void cSomaBase_HeadlessCmd_Lights(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -823,6 +881,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 
 	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
+	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	if (pHdr == NULL || pHdr[0] != '0')
 	{
 		cRendererDeferred::SetHdr(true);
@@ -935,6 +994,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("entity_info", cSomaBase_HeadlessCmd_EntityInfo, this);
 		pCtrl->RegisterHandler("lights", cSomaBase_HeadlessCmd_Lights, this);
 		pCtrl->RegisterHandler("pick", cSomaBase_HeadlessCmd_Pick, this);
+		pCtrl->RegisterHandler("pick_entity", cSomaBase_HeadlessCmd_PickEntity, this);
 		pCtrl->RegisterHandler("set_light", cSomaBase_HeadlessCmd_SetLight, this);
 		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
 		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);

@@ -68,6 +68,9 @@ namespace hpl {
 		}
 		virtual ~cEntityLoader_Object(){}
 
+		// HPL3 .ent SubMesh scales include the mesh node scale the Collada loader bakes in
+		static void SetSubMeshScaleIncludesModelScale(bool abX){ mbSubMeshScaleIncludesModelScale = abX; }
+
         iEntity3D* Load(const tString &asName, int alID, bool abActive, cXmlElement *apRootElem, 
 						const cMatrixf &a_mtxTransform, const cVector3f &avScale, 
 						cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars);		
@@ -99,6 +102,7 @@ namespace hpl {
 		int mlID;
 		bool mbActive;
 		cVector3f mvScale;
+		static bool mbSubMeshScaleIncludesModelScale;
 
 		bool mbNodeAnimation;
 

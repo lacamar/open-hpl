@@ -20,6 +20,10 @@ namespace hpl {
 		bool SaveMesh(cMesh* apMesh,const tWString& asFile){ return false; }
 
 		cAnimation* LoadAnimation(const tWString& asFile);
+
+		// HPL3 .anm: bone tracks relative to the bind pose; translations times afUnitScale
+		static cAnimation* LoadHpl3Anm(const tString& asAnmFile, const tWString& asSourceFile, float afUnitScale);
+		static bool IsHpl3Anm(const tString& asAnmFile);
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile){ return false; }
 	};
 

@@ -188,6 +188,12 @@ cVector3f cSomaLuxEntity::GetPosition() { return GetMatrix().GetTranslation(); }
 
 void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 {
+	if (meType == eSomaLuxEntityType_Player)
+	{
+		if (iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL)
+			pBody->SetFeetPosition(a_mtx.GetTranslation(), true);
+		return;
+	}
 	if (iPhysicsBody *pBody = GetMainBody())
 		pBody->SetMatrix(a_mtx);
 	else if (mpMesh)
@@ -1059,6 +1065,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		if (e->GetTypeInfoByName(pType))
 			RegisterEntityMethods(e, pType);
 
+	if (e->GetTypeInfoByName("cLuxArea"))
+	{
+		SOMA_METHOD(e, "cLuxArea", "iPhysicsBody@ GetAreaBody()", +[](cSomaLuxEntity *p) { return p->GetMainBody(); });
+		SOMA_METHOD(e, "cLuxArea", "const cVector3f& GetSize()", +[](cSomaLuxEntity *p) -> const cVector3f & { return p->mvSize; });
+	}
 	if (e->GetTypeInfoByName("cLuxProp"))
 	{
 		SOMA_METHOD(e, "cLuxProp", "void SetStaticPhysics(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetStaticPhysics(b); });

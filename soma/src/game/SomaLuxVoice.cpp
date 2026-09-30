@@ -411,6 +411,17 @@ bool cSomaLuxVoiceHandler::SceneInvolvingCharacterIsActive(const tString &asName
 	return false;
 }
 
+bool cSomaLuxVoiceHandler::SubjectInvolvesCharacter(const tString &asSubject, const tString &asName)
+{
+	auto it = mmapSubjects.find(asSubject);
+	if (it == mmapSubjects.end())
+		return false;
+	for (const cLine &l : it->second->mvLines)
+		if (l.msCharacter == asName)
+			return true;
+	return false;
+}
+
 int cSomaLuxVoiceHandler::GetSubjectLineNumber(const tString &asSubject)
 {
 	auto it = mmapSubjects.find(asSubject);
@@ -630,7 +641,19 @@ void cSomaLuxDialogHandler::StopAll()
 
 bool cSomaLuxDialogHandler::CharacterIsActive(const tString &asName)
 {
-	return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SceneInvolvingCharacterIsActive(asName);
+	cSomaLuxVoiceHandler *pVoice = cSomaLuxVoiceHandler::Get();
+	if (pVoice == NULL)
+		return false;
+	if (pVoice->SceneInvolvingCharacterIsActive(asName))
+		return true;
+	// Pauses between subjects still count
+	for (auto &p : mvActive)
+		if (p->mbDone == false)
+			for (const cBranch &b : p->mvBranches)
+				for (const cItem &item : b.mvItems)
+					if (item.msSubject != "" && pVoice->SubjectInvolvesCharacter(item.msSubject, asName))
+						return true;
+	return false;
 }
 
 //---------------------------------------

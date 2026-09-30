@@ -373,7 +373,7 @@
    "boot_s": 8.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.940094,
+    "fps": 60,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -381,15 +381,15 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 59.940094,
+   "fps": 60,
    "frame": {
     "black_frac": 0.024498,
     "height": 2160,
     "lum_hist16": [
-     0.38781,
-     0.447628,
-     0.076728,
-     0.039983,
+     0.387836,
+     0.447604,
+     0.076725,
+     0.039984,
      0.036511,
      0.002916,
      0.00045,
@@ -404,7 +404,7 @@
      0.003475
     ],
     "lum_max": 255,
-    "lum_mean": 22.939531,
+    "lum_mean": 22.939428,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.002684,
@@ -418,21 +418,21 @@
      "a_nan_count": 0,
      "a_zero_count": 5032291,
      "b_max": 1,
-     "b_mean": 0.456728,
+     "b_mean": 0.456731,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 63458,
+     "b_zero_count": 63456,
      "g_max": 1,
-     "g_mean": 0.518605,
+     "g_mean": 0.518601,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1915,
+     "g_zero_count": 1913,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.486275,
+     "r_mean": 0.486269,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3133,
+     "r_zero_count": 3131,
      "sample_a": 0.000421,
      "sample_b": 0.430176,
      "sample_g": 0.510742,
@@ -454,10 +454,10 @@
      "g_mean": 0.013478,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 47669,
+     "g_zero_count": 47663,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.11235,
+     "r_mean": -0.112352,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 1096,
@@ -469,7 +469,7 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.344441,
+     "a_mean": 0.344442,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 70147,
@@ -499,12 +499,12 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 5764,
+    "total_ms": 5773,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 80
      },
@@ -527,7 +527,7 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 60,
+      "ms": 61,
       "skipped": {},
       "xml": 106
      },
@@ -541,7 +541,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 5169,
+      "ms": 5166,
       "skipped": {},
       "xml": 436
      },
@@ -571,7 +571,7 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 70
      },
@@ -613,7 +613,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 287,
+      "ms": 299,
       "skipped": {},
       "xml": 145
      },
@@ -626,7 +626,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3258165.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3434573.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -641,7 +641,7 @@
      "example": "ERROR: Couldn't find test file '_test_array_support_frag.glsl' in resources"
     },
     "ERROR: Couldn'*'core_falloff_linear'": {
-     "count": 24,
+     "count": 2,
      "example": "ERROR: Couldn't texture 'core_falloff_linear'"
     },
     "ERROR: Couldn'*'posteffect_bloom_add_frag.glsl' in resources": {
@@ -691,19 +691,19 @@
    },
    "log_warnings": 24,
    "render": {
-    "draw_calls": 1548,
+    "draw_calls": 1546,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 42,
     "lights_rendered": 42,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 323,
+    "solid_objects": 322,
     "trans_objects": 33
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.7,
+   "wall_s": 15.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1133,10 +1133,10 @@
     "Compound:0/18",
     "LensFlare:0/1"
    ],
-   "boot_s": 7.2,
+   "boot_s": 7.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 58.941036,
     "pitch": 0,
     "pos_x": 4.49557,
     "pos_y": 1.402786,
@@ -1146,33 +1146,33 @@
    "failures": [
     "no_material:7"
    ],
-   "fps": 60,
+   "fps": 58.941036,
    "frame": {
-    "black_frac": 0.205152,
+    "black_frac": 0.205208,
     "height": 2160,
     "lum_hist16": [
-     0.630649,
-     0.123504,
-     0.032376,
-     0.192202,
-     0.021269,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0
+     0.592507,
+     0.156446,
+     0.018469,
+     0.157065,
+     0.072592,
+     0.000119,
+     0.000123,
+     0.000109,
+     0.000109,
+     0.000119,
+     0.000141,
+     0.000134,
+     0.000142,
+     0.000125,
+     0.00017,
+     0.00163
     ],
-    "lum_max": 69,
-    "lum_mean": 20.479927,
+    "lum_max": 255,
+    "lum_mean": 22.404192,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0,
+    "white_frac": 0.001472,
     "width": 3840
    },
    "gbuffer": {
@@ -1264,7 +1264,7 @@
    "load_report": {
     "map": "00_03_laboratory.hpm",
     "terrain_active": false,
-    "total_ms": 4791,
+    "total_ms": 4978,
     "tracks": {
      "Area": {
       "created": 239,
@@ -1310,7 +1310,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 3169,
+      "ms": 3346,
       "skipped": {},
       "xml": 436
      },
@@ -1340,7 +1340,7 @@
      "Light": {
       "created": 126,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 126
      },
@@ -1361,28 +1361,28 @@
      "Primitive": {
       "created": 47,
       "file_missing": false,
-      "ms": 26,
+      "ms": 25,
       "skipped": {},
       "xml": 47
      },
      "Sound": {
       "created": 31,
       "file_missing": false,
-      "ms": 771,
+      "ms": 769,
       "skipped": {},
       "xml": 31
      },
      "StaticComboArea": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
      "StaticObject": {
       "created": 719,
       "file_missing": false,
-      "ms": 703,
+      "ms": 716,
       "skipped": {},
       "xml": 719
      },
@@ -1395,7 +1395,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3262796.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3435432.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -1484,7 +1484,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.9,
+   "wall_s": 14.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1544,10 +1544,10 @@
     "Compound:0/93",
     "LensFlare:0/1"
    ],
-   "boot_s": 28.2,
+   "boot_s": 26.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 51.844452,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": 3,
     "pos_y": 2.25,
@@ -1556,16 +1556,16 @@
    },
    "failures": [
     "no_material:13",
-    "lum_mean:0.0"
+    "lum_mean:3.0"
    ],
-   "fps": 51.844452,
+   "fps": 60.098557,
    "frame": {
-    "black_frac": 1,
+    "black_frac": 0.99483,
     "height": 2160,
     "lum_hist16": [
-     1,
-     0,
-     0,
+     0.999791,
+     0.000133,
+     7.5e-05,
      0,
      0,
      0,
@@ -1580,9 +1580,9 @@
      0,
      0
     ],
-    "lum_max": 0,
-    "lum_mean": 0,
-    "lum_min": 0,
+    "lum_max": 37,
+    "lum_mean": 2.974563,
+    "lum_min": 2,
     "magenta_frac": 0,
     "white_frac": 0,
     "width": 3840
@@ -1590,7 +1590,7 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.017995,
+     "a_mean": 0.017997,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 8063633,
@@ -1598,7 +1598,7 @@
      "b_mean": 0.229671,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 507813,
+     "b_zero_count": 507841,
      "g_max": 1.285156,
      "g_mean": 0.265471,
      "g_min": 0,
@@ -1606,10 +1606,10 @@
      "g_zero_count": 493695,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.284773,
+     "r_mean": 0.284772,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 498852,
+     "r_zero_count": 498855,
      "sample_a": 0,
      "sample_b": 0.210449,
      "sample_g": 0.228149,
@@ -1623,12 +1623,12 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.559967,
+     "b_mean": 0.559966,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 397,
      "g_max": 1,
-     "g_mean": 0.038246,
+     "g_mean": 0.038248,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 23133,
@@ -1651,7 +1651,7 @@
      "a_nan_count": 0,
      "a_zero_count": 40872,
      "b_max": 1,
-     "b_mean": 0.343772,
+     "b_mean": 0.343773,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 122277,
@@ -1676,19 +1676,19 @@
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 24920,
+    "total_ms": 23271,
     "tracks": {
      "Area": {
       "created": 370,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 370
      },
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 20,
+      "ms": 17,
       "skipped": {},
       "xml": 193
      },
@@ -1704,7 +1704,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 258,
+      "ms": 231,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1713,14 +1713,14 @@
      "DetailMeshes": {
       "created": 504,
       "file_missing": false,
-      "ms": 25,
+      "ms": 14,
       "skipped": {},
       "xml": 504
      },
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 9581,
+      "ms": 8618,
       "skipped": {},
       "xml": 1527
      },
@@ -1750,7 +1750,7 @@
      "Light": {
       "created": 685,
       "file_missing": false,
-      "ms": 47,
+      "ms": 28,
       "skipped": {},
       "xml": 685
      },
@@ -1764,21 +1764,21 @@
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 77,
+      "ms": 73,
       "skipped": {},
       "xml": 174
      },
      "Primitive": {
       "created": 513,
       "file_missing": false,
-      "ms": 103,
+      "ms": 95,
       "skipped": {},
       "xml": 513
      },
      "Sound": {
       "created": 128,
       "file_missing": false,
-      "ms": 4148,
+      "ms": 3966,
       "skipped": {},
       "xml": 128
      },
@@ -1792,7 +1792,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 10516,
+      "ms": 10083,
       "skipped": {},
       "xml": 3483
      },
@@ -1805,18 +1805,22 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3119026.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3436969.log",
    "log_errors": {
     "ERROR: Could not find any look entities '*' for Tool Area '*'ERROR: Could not find any look entities '*' for Tool Area '": {
      "count": 1,
-     "example": "ERROR: Could not find any look entities 'AreaInsertOmniTool_ObsTunnel' for Tool Area 'ToolAreaOmniToolTunnel'ERROR: Could not find any look entities 'AreaInsertOmniTool_ObsTunnel' for Tool Area 'ToolAreaOmniTool_3'ERROR: Couldn't texture 'c"
+     "example": "ERROR: Could not find any look entities 'AreaInsertOmniTool_ObsTunnel' for Tool Area 'ToolAreaOmniToolTunnel'ERROR: Could not find any look entities 'AreaInsertOmniTool_ObsTunnel' for Tool Area 'ToolAreaOmniTool_3'SOMA voice: 38 subjects fr"
+    },
+    "ERROR: Could not find sound entity aquarium_water_N in Sound_StopWARNING: Could not start sound '*', too many sounds pla": {
+     "count": 1,
+     "example": "ERROR: Could not find sound entity aquarium_water_1 in Sound_StopWARNING: Could not start sound 'level_amb_shared_interior__metal_groan_light_14.ogg', too many sounds playing!"
     },
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
      "example": "ERROR: Couldn't find test file '_test_array_support_frag.glsl' in resources"
     },
     "ERROR: Couldn'*'core_falloff_linear'": {
-     "count": 1141,
+     "count": 2,
      "example": "ERROR: Couldn't texture 'core_falloff_linear'"
     },
     "ERROR: Couldn'*'posteffect_bloom_add_frag.glsl' in resources": {
@@ -1847,42 +1851,6 @@
      "count": 2,
      "example": "ERROR: No shapes found for body 'Body_2'"
     },
-    "ERROR: SOMA script exception in cScrAttackMeterHandler::void Reset(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scrip": {
-     "count": 1,
-     "example": "ERROR: SOMA script exception in cScrAttackMeterHandler::void Reset(): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberration::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): '*' at /home/lm/.cache/op": {
-     "count": 178,
-     "example": "ERROR: SOMA script exception in cScrEffect_ChromaticAberration::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberra"
-    },
-    "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/s": {
-     "count": 178,
-     "example": "ERROR: SOMA script exception in cScrEffect_ImageFadeFX::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageFadeFX.hps:49 (void cScrEffect_ImageFadeFX::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 178,
-     "example": "ERROR: SOMA script exception in cScrEffect_ImageTrail::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageTrail.hps:130 (void cScrEffect_ImageTrail::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): '*' at /home/lm/.cache/open-hpl/so": {
-     "count": 178,
-     "example": "ERROR: SOMA script exception in cScrEffect_RadialBlur::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_RadialBlur.hps:157 (void cScrEffect_RadialBlur::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): '*' at /home/lm/.cache/open-h": {
-     "count": 178,
-     "example": "ERROR: SOMA script exception in cScrEffect_VideoDistortion::void Update(float afTimeStep): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_VideoDistortion.hps:57 (void cScrEffect_VideoDistortion::CreateP"
-    },
-    "ERROR: SOMA script exception in cScrMap::void TimerKickoffIntro(const tString &in): '*' at /home/lm/.cache/open-hpl/soma": {
-     "count": 1,
-     "example": "ERROR: SOMA script exception in cScrMap::void TimerKickoffIntro(const tString &in): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ImageTrail.hps:130 (void cScrEffect_ImageTrail::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Init(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scrip": {
-     "count": 1,
-     "example": "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Init(): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberration::CreatePostEffect())"
-    },
-    "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Reset(): '*' at /home/lm/.cache/open-hpl/soma-scratch/scri": {
-     "count": 1,
-     "example": "ERROR: SOMA script exception in cScrPlayerEnergyHandler::void Reset(): 'Null pointer access' at /home/lm/.cache/open-hpl/soma-scratch/script/effects/Effect_ChromaticAberration.hps:174 (void cScrEffect_ChromaticAberration::CreatePostEffect()"
-    },
     "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit N": {
      "count": 7,
      "example": "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit 0"
@@ -1908,7 +1876,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 229,
+   "log_warnings": 249,
    "render": {
     "draw_calls": 2412,
     "fog_areas_in_list": 0,
@@ -1922,9 +1890,9 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 32.2,
+   "wall_s": 34.0,
    "warmup": {
-    "frames": 120,
+    "frames": 360,
     "timed_out": false
    },
    "world": {
@@ -1956,11 +1924,11 @@
     "oversized_top": [
      "SimonLegs:legs_human.fbx"
     ],
-    "particle_systems": 223,
+    "particle_systems": 221,
     "physics_bodies": 6107,
-    "physics_bodies_awake": 40,
+    "physics_bodies_awake": 43,
     "physics_bodies_dynamic": 424,
-    "sound_entities": 138,
+    "sound_entities": 147,
     "static_mesh_entities": 6174,
     "submeshes_without_material": 13
    }

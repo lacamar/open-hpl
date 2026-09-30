@@ -18,6 +18,8 @@
  */
 
 #include "impl/MeshLoaderCollada.h"
+#include "impl/MeshLoaderAssimp.h"
+#include <set>
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -828,6 +830,62 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderCollada::LoadAnimation(const tWString& asFile)
 	{
+		// HPL3 data: the sibling .anm holds the tracks relative to the mesh bind pose, in metres.
+		// Only top-level bones are unit scaled here, deeper ones keep file units.
+		{
+			tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
+			if(cMeshLoaderAssimp::IsHpl3Anm(sAnm))
+			{
+				cAnimation *pAnim = cMeshLoaderAssimp::LoadHpl3Anm(sAnm, asFile, 1.0f);
+				if(pAnim)
+				{
+					tString sXml;
+					FILE *pFile = fopen(cString::To8Char(asFile).c_str(), "rb");
+					if(pFile)
+					{
+						char vBuf[65536];
+						size_t lRead;
+						while((lRead = fread(vBuf, 1, sizeof(vBuf), pFile)) > 0) sXml.append(vBuf, lRead);
+						fclose(pFile);
+					}
+					float fUnitScale = 1;
+					size_t lUnit = sXml.find("<unit meter=\"");
+					if(lUnit != tString::npos) fUnitScale = (float)atof(sXml.c_str() + lUnit + 13);
+					std::set<tString> setTop;
+					size_t lPos = sXml.find("<visual_scene");
+					int lDepth = 0;
+					while(lPos != tString::npos && (lPos = sXml.find("node", lPos)) != tString::npos)
+					{
+						bool bClose = lPos > 0 && sXml[lPos-1] == '/' && lPos > 1 && sXml[lPos-2] == '<';
+						bool bOpen = lPos > 0 && sXml[lPos-1] == '<' && (sXml[lPos+4] == ' ' || sXml[lPos+4] == '>');
+						size_t lEnd = sXml.find('>', lPos);
+						if(lEnd == tString::npos) break;
+						if(bClose) --lDepth;
+						else if(bOpen)
+						{
+							if(++lDepth == 1)
+							{
+								size_t lName = sXml.find("name=\"", lPos);
+								if(lName != tString::npos && lName < lEnd)
+									setTop.insert(sXml.substr(lName + 6, sXml.find('"', lName + 6) - lName - 6));
+							}
+							if(sXml[lEnd-1] == '/') --lDepth;
+						}
+						lPos = lEnd;
+					}
+					if(fUnitScale > 0 && fUnitScale != 1.0f)
+						for(int i=0; i<pAnim->GetTrackNum(); ++i)
+						{
+							cAnimationTrack *pTrack = pAnim->GetTrack(i);
+							if(setTop.count(pTrack->GetName())) continue;
+							for(int j=0; j<pTrack->GetKeyFrameNum(); ++j)
+								pTrack->GetKeyFrame(j)->trans = pTrack->GetKeyFrame(j)->trans / fUnitScale;
+						}
+					return pAnim;
+				}
+			}
+		}
+
 
 		/////////////////////////////////////////////////
 		// TRY USING MSH LOADER
