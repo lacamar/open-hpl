@@ -65,6 +65,13 @@ namespace hpl {
 	bool cMeshLoaderCollada::mbConvertUnit = true; 
 	bool cMeshLoaderCollada::mbConvertUnitFromAnyTool = false;
 	bool cMeshLoaderCollada::mbLoadVertexColors = false;
+	bool cMeshLoaderCollada::mbUnscaledSkeleton = false;
+
+	void cMeshLoaderCollada::SetUnscaledSkeleton(bool abX)
+	{
+		mbUnscaledSkeleton = abX;
+		cMeshLoaderMSH::mbBoneUnitScale = abX;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -185,8 +192,35 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		// bump when loader output changes: v3 = Collada unit for every exporter, v4 = vertex colours
-		return cResources::GetMeshCacheDir() + sFlat + _W(".v4.msh");
+		// bump when loader output changes: v3 = Collada unit for every exporter, v4 = vertex colours, v5 = unscaled skeleton
+		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v5.msh") : _W(".v4.msh"));
+	}
+
+	// HPL3: bone matrices carry no unit scale, the unit goes into every translation instead
+	static void UnscaleBone(cBone *apBone, float afUnit, const cMatrixf &a_mtxRootRot, bool abRoot)
+	{
+		cMatrixf mtx = apBone->GetLocalTransform();
+		mtx.SetTranslation(mtx.GetTranslation() * afUnit);
+		apBone->SetTransform(abRoot ? cMath::MatrixMul(a_mtxRootRot, mtx) : mtx);
+		apBone->SetLocalUnitScale(afUnit);
+		cBoneIterator it = apBone->GetChildIterator();
+		while(it.HasNext()) UnscaleBone(it.Next(), afUnit, a_mtxRootRot, false);
+	}
+
+	static void UnscaleSkeleton(cSkeleton *apSkeleton, float afUnit, const cMatrixf &a_mtxRootRot)
+	{
+		cBoneIterator it = apSkeleton->GetRootBone()->GetChildIterator();
+		while(it.HasNext()) UnscaleBone(it.Next(), afUnit, a_mtxRootRot, true);
+	}
+
+	static void ScaleAnimationTranslation(cAnimation *apAnimation, float afUnit)
+	{
+		for(int i = 0; i < apAnimation->GetTrackNum(); ++i)
+		{
+			cAnimationTrack *pTrack = apAnimation->GetTrack(i);
+			for(int j = 0; j < pTrack->GetKeyFrameNum(); ++j)
+				pTrack->GetKeyFrame(j)->trans = pTrack->GetKeyFrame(j)->trans * afUnit;
+		}
 	}
 
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
@@ -741,7 +775,13 @@ namespace hpl {
 
 		///////////////
 		// Rotate/Scale skeleton if needed
-		if(pSkeleton && (mbZToY || mfUnitScale != 1.0))
+		if(pSkeleton && mbUnscaledSkeleton && (mbZToY || mfUnitScale != 1.0))
+		{
+			UnscaleSkeleton(pSkeleton, mfUnitScale, mbZToY ? m_mtxZToY : cMatrixf::Identity);
+			for(int i = 0; pMesh && i < pMesh->GetAnimationNum(); ++i)
+				ScaleAnimationTranslation(pMesh->GetAnimation(i), mfUnitScale);
+		}
+		else if(pSkeleton && (mbZToY || mfUnitScale != 1.0))
 		{
 			cMatrixf mtxScale = cMath::MatrixScale(mfUnitScale);
 			//pSkeleton->GetRootBone()->SetTransform(cMath::MatrixMul(mtxScale, pSkeleton->GetRootBone()->GetLocalTransform()));
@@ -832,7 +872,7 @@ namespace hpl {
 	cAnimation* cMeshLoaderCollada::LoadAnimation(const tWString& asFile)
 	{
 		// HPL3 data: the sibling .anm holds the tracks relative to the mesh bind pose, in metres.
-		// Only top-level bones are unit scaled here, deeper ones keep file units.
+		// A scaled skeleton keeps file units below the top-level bones.
 		{
 			tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
 			if(cMeshLoaderAssimp::IsHpl3Anm(sAnm))
@@ -874,7 +914,7 @@ namespace hpl {
 						}
 						lPos = lEnd;
 					}
-					if(fUnitScale > 0 && fUnitScale != 1.0f)
+					if(fUnitScale > 0 && fUnitScale != 1.0f && mbUnscaledSkeleton == false)
 						for(int i=0; i<pAnim->GetTrackNum(); ++i)
 						{
 							cAnimationTrack *pTrack = pAnim->GetTrack(i);
@@ -1039,7 +1079,11 @@ namespace hpl {
 
 		///////////////
 		// Rotate/Scale skeleton if needed
-		if(pSkeleton && (mbZToY || mfUnitScale != 1.0))
+		if(pSkeleton && mbUnscaledSkeleton && mfUnitScale != 1.0 && pAnimation)
+		{
+			ScaleAnimationTranslation(pAnimation, mfUnitScale);
+		}
+		else if(pSkeleton && (mbZToY || mfUnitScale != 1.0))
 		{
 			cMatrixf mtxScale = cMath::MatrixScale(mfUnitScale);
 			//pSkeleton->GetRootBone()->SetTransform(cMath::MatrixMul(mtxScale, pSkeleton->GetRootBone()->GetLocalTransform()));

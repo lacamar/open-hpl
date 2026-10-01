@@ -54,6 +54,8 @@ namespace hpl {
 		cAnimation* LoadAnimation(const tWString& asFile);
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile);
 
+		static bool mbBoneUnitScale;
+
 	private:
 		void AddAnimation(cAnimation *apAnimation, cBinaryBuffer* apBuffer);
 		cAnimation* GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath);

@@ -483,6 +483,8 @@ namespace hpl {
 		// HPL3 data (SOMA) is authored in centimetres by OpenCOLLADA/modo/Maya.
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
 		static void SetLoadVertexColors(bool abX) { mbLoadVertexColors = abX; }
+		static void SetUnscaledSkeleton(bool abX);
+		static bool GetUnscaledSkeleton() { return mbUnscaledSkeleton; }
 
 	private:
 		cMeshLoaderMSH *mpMeshLoaderMSH;
@@ -494,6 +496,7 @@ namespace hpl {
 		static bool mbConvertUnit;
 		static bool mbConvertUnitFromAnyTool;
 		static bool mbLoadVertexColors;
+		static bool mbUnscaledSkeleton;
 
 		tWorldLoadFlag mFlags;
 

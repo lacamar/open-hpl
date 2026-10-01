@@ -1048,6 +1048,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 	cMeshLoaderCollada::SetLoadVertexColors(true);
+	cMeshLoaderCollada::SetUnscaledSkeleton(true);
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));

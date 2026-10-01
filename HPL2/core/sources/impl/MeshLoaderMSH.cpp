@@ -48,6 +48,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	
 	bool gbLogMSHLoad = false;
+	bool cMeshLoaderMSH::mbBoneUnitScale = false;
 	
 	//-----------------------------------------------------------------------
 
@@ -719,6 +720,7 @@ namespace hpl {
 		apBuffer->AddString(apBone->GetName());
 		apBuffer->AddString(apBone->GetSid());
 		apBuffer->AddMatrixf(apBone->GetLocalTransform());
+		if(mbBoneUnitScale) apBuffer->AddFloat32(apBone->GetLocalUnitScale());
 		apBuffer->AddInt32((int)apBone->GetChildList()->size());
 
 		if(gbLogMSHLoad) Log("%s Bone '%s' '%s' %d (%s)\n",	GetLevelSpaces(alLevel), apBone->GetName().c_str(), apBone->GetSid().c_str(), 
@@ -741,10 +743,12 @@ namespace hpl {
 		apBuffer->GetString(&sName);
 		apBuffer->GetString(&sSid);
 		apBuffer->GetMatrixf(&mtxTransform);
+		float fUnitScale = mbBoneUnitScale ? apBuffer->GetFloat32() : 1.0f;
 		int lChildNum = apBuffer->GetInt32();
 
 		cBone *pBone = apParentBone->CreateChildBone(sName, sSid);
 		pBone->SetTransform(mtxTransform);
+		pBone->SetLocalUnitScale(fUnitScale);
 		
 		if(gbLogMSHLoad) Log("%s Bone '%s' '%s' %d (%s)\n",	GetLevelSpaces(alLevel), pBone->GetName().c_str(), pBone->GetSid().c_str(), 
 															lChildNum, pBone->GetLocalTransform().ToString().c_str());
