@@ -49,6 +49,8 @@ public:
 	const cVector2f &GetMousePosition() { return mvMousePos; }
 	const cVector2f &GetMouseRel() { return mvMouseRel; }
 	bool mbShowMouse = false;
+	cColor mScreenClear = cColor(0, 0);
+	cColor mScreenOfflineClear = cColor(0, 0);
 	cVector2f mvCursor3D = 0;
 	bool mbShowMouseAutomatically = true;
 
@@ -133,6 +135,7 @@ public:
 
 	// Widgets
 	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize);
+	cVector3f Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign);
 	void Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated = false);
 	bool MouseOver(const cVector3f &avPos, const cVector2f &avSize);
 	void DrawWidgetBase(const void *apData, const cVector3f &avPos, const cVector2f &avSize, bool abInFocus, bool abTriggered, int alInFocusGfx,
@@ -156,6 +159,7 @@ public:
 
 	// Drawing
 	void DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f avSize, const cColor &aColor);
+	void DrawFrame(const void *apFrame, const cVector3f &avPos, const cVector2f &avSize, const cColor &aColor);
 	void DrawFont(const tWString &asText, const void *apFont, const cVector3f &avPos, int alAlign, const cVector2f &avSizeMul, const cColor &aColor);
 	cVector2f GetGfxSize(const void *apGfx);
 	iFontData *GetFont(const void *apFont);

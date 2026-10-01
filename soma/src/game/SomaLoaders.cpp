@@ -100,6 +100,37 @@ static void CreateAreaEntity(const tString &asName, const tString &asType, bool 
 // Name of an entity created at runtime by cLuxMap::CreateEntity
 tString gsSomaSpawnName;
 
+static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEntity *apEnt, const cVector3f &avScale)
+{
+	cXmlNodeListIterator it = apElem->GetChildIterator();
+	while (it.HasNext())
+	{
+		cXmlElement *pChild = it.Next()->ToElement();
+		if (pChild == NULL)
+			continue;
+		tString sValue = pChild->GetValue();
+		if (sValue == "Socket")
+		{
+			cMatrixf mtxSocket = cMath::MatrixRotate(pChild->GetAttributeVector3f("Rotation", 0), eEulerRotationOrder_XYZ);
+			mtxSocket.SetTranslation(pChild->GetAttributeVector3f("WorldPos", 0) * avScale);
+			cSomaLuxEntity::cSocket sock{pChild->GetAttributeString("Name", ""), NULL, mtxSocket};
+			cSkeleton *pSkel = apEnt->mpMesh && apEnt->mpMesh->GetMesh() ? apEnt->mpMesh->GetMesh()->GetSkeleton() : NULL;
+			for (const tString &sBone : {pChild->GetAttributeString("SourceBoneName", ""), asBone})
+			{
+				cBone *pBone = pSkel && sBone != "" ? pSkel->GetBoneByName(sBone) : NULL;
+				if (pBone == NULL)
+					continue;
+				sock.mpBone = apEnt->mpMesh->GetBoneStateFromName(sBone);
+				sock.m_mtxOffset = cMath::MatrixMul(cMath::MatrixInverse(pBone->GetWorldTransform()), mtxSocket);
+				break;
+			}
+			apEnt->mvSockets.push_back(sock);
+		}
+		else
+			LoadSockets(pChild, sValue == "Bone" ? pChild->GetAttributeString("Name", "") : asBone, apEnt, avScale);
+	}
+}
+
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
@@ -127,6 +158,8 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvBillboards = mvBillboards;
 		pEnt->mvSoundEntities = mvSoundEntities;
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
+		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
+			LoadSockets(pModel, "", pEnt, mvScale);
 		LoadInstanceVars(pEnt->mInstanceVars);
 		cSomaLuxEntity::Pending().push_back(pEnt);
 	}

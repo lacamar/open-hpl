@@ -456,6 +456,8 @@ namespace hpl {
 		void SetCullBackface(bool abX){ mbCullBackface = abX;}
 		bool GetCullBackface(){ return mbCullBackface;}
 
+		void SetFlipScreenY(bool abX){ mbFlipScreenY = abX;}
+
 		void Set3DTransform(const cMatrixf& a_mtxTransform);
 		const cMatrixf& Get3DTransform(){ return m_mtx3DTransform;}
 
@@ -578,6 +580,7 @@ namespace hpl {
 		cVector3f mvDrawOffset;
 
 		bool mbCullBackface;
+		bool mbFlipScreenY = false;
 		bool mbIs3D;
 		bool mbRendersBeforePostEffects;
 		cVector3f mv3DSize;

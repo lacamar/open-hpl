@@ -33,15 +33,29 @@ enum eSomaLuxEntityType
 	eSomaLuxEntityType_Player,
 };
 
+class cSomaLuxEntity;
+
 class cSomaGuiScreenRenderer : public iRendererCallback
 {
 public:
+	static cSomaGuiScreenRenderer *Get();
 	void Register();
-	void OnPostSolidDraw(cRendererCallbackFunctions *) override {}
-	void OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions) override;
+	void Forget(cSomaLuxEntity *apEnt);
+	void OnPostSolidDraw(cRendererCallbackFunctions *apFunctions) override;
+	void OnPostTranslucentDraw(cRendererCallbackFunctions *) override {}
+
+	struct cTarget
+	{
+		iTexture *mpTexture = NULL;
+		iFrameBuffer *mpBuffer = NULL;
+		cVector2l mvSize = 0;
+	};
 
 private:
+	cTarget &GetTarget(cSomaLuxEntity *apEnt, const cVector2l &avSize);
+
 	cViewport *mpViewport = NULL;
+	std::map<cSomaLuxEntity *, cTarget> mmapTargets;
 };
 
 class cSomaLuxEntity : public cSomaLuxScriptable
@@ -74,6 +88,32 @@ public:
 	std::vector<cParticleSystem *> mvParticleSystems;
 	std::vector<cBillboard *> mvBillboards;
 	std::vector<cSoundEntity *> mvSoundEntities;
+
+	// ent <Socket>s: a bone (or the mesh) plus an offset taken in the bind pose
+	struct cSocket
+	{
+		tString msName;
+		cBoneState *mpBone;
+		cMatrixf m_mtxOffset;
+	};
+	std::vector<cSocket> mvSockets;
+	bool GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut);
+
+	// iLuxEntity::AttachToEntity/AttachToSocket, driven from the parent after updates
+	struct cAttachment
+	{
+		tString msParent;
+		iPhysicsBody *mpBody = NULL;
+		tString msSocket;
+		bool mbUseRotation = false, mbLocked = false;
+		cMatrixf m_mtxParentPrev, m_mtxOffset;
+	};
+	cAttachment *mpAttachment = NULL;
+	void AttachTo(cSomaLuxEntity *apParent, iPhysicsBody *apBody, const tString &asSocket, bool abUseRotation, bool abSnap, bool abLocked);
+	void RemoveAttachment();
+	bool GetAttachmentParentMatrix(cMatrixf &a_mtxOut);
+	void UpdateAttachment();
+
 	struct cConnectedLight
 	{
 		iLight *mpLight;

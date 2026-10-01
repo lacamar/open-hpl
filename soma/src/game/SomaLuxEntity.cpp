@@ -203,7 +203,12 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentSetMatrix(this, a_mtx))
 		return;
 	if (iPhysicsBody *pBody = GetMainBody())
+	{
+		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
+		for (size_t i = 1; i < mvBodies.size(); ++i)
+			mvBodies[i]->SetMatrix(cMath::MatrixMul(a_mtx, cMath::MatrixMul(mtxInvMain, mvBodies[i]->GetLocalMatrix())));
 		pBody->SetMatrix(a_mtx);
+	}
 	else if (mpMesh)
 		mpMesh->SetMatrix(a_mtx);
 	m_mtxOnLoad = a_mtx;
@@ -523,11 +528,15 @@ void cSomaLuxEntity::UpdateGuiScreen()
 	cMatrixf mtxScreen = cMath::MatrixUnitVectors(vX, vY, vZ, vOrigin);
 	pSet->Set3DTransform(mtxScreen);
 	pSet->Set3DSize(cVector3f(fW, fH, 0.001f));
-	static cSomaGuiScreenRenderer gRenderer;
-	gRenderer.Register();
+	cSomaGuiScreenRenderer::Get()->Register();
 }
 
-// HPL2 render lists skip gui set renderables, so prop screens are drawn after the translucent pass
+cSomaGuiScreenRenderer *cSomaGuiScreenRenderer::Get()
+{
+	static cSomaGuiScreenRenderer gRenderer;
+	return &gRenderer;
+}
+
 void cSomaGuiScreenRenderer::Register()
 {
 	cViewport *pViewport = gpSomaBase->GetCurrentViewport();
@@ -537,37 +546,146 @@ void cSomaGuiScreenRenderer::Register()
 	mpViewport = pViewport;
 }
 
-void cSomaGuiScreenRenderer::OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions)
+void cSomaGuiScreenRenderer::Forget(cSomaLuxEntity *apEnt)
+{
+	auto it = mmapTargets.find(apEnt);
+	if (it == mmapTargets.end())
+		return;
+	cGraphics *pGraphics = gpSomaBase->mpEngine->GetGraphics();
+	pGraphics->DestroyFrameBuffer(it->second.mpBuffer);
+	pGraphics->DestroyTexture(it->second.mpTexture);
+	mmapTargets.erase(it);
+}
+
+// Like the original, the screen glass gets a material of its own whose diffuse is the gui render target
+static void SetScreenMaterial(cSubMeshEntity *apSub, iTexture *apTexture, const tString &asName)
+{
+	cMaterial *pMat = apSub->GetCustomMaterial();
+	if (pMat == NULL)
+	{
+		cMaterial *pOrig = apSub->GetMaterial();
+		if (pOrig == NULL)
+			return;
+		pMat = hplNew(cMaterial, (asName, cString::To16Char(asName), gpSomaBase->mpEngine->GetGraphics(), gpSomaBase->mpEngine->GetResources(), pOrig->GetType()));
+		pMat->SetAutoDestroyTextures(false);
+		pMat->SetDepthTest(pOrig->GetDepthTest());
+		pMat->SetBlendMode(pOrig->GetBlendMode());
+		pMat->SetAlphaMode(pOrig->GetAlphaMode());
+		pMat->SetPhysicsMaterial(pOrig->GetPhysicsMaterial());
+		for (int i = 0; i < eMaterialTexture_LastEnum; ++i)
+			pMat->SetTexture((eMaterialTexture)i, pOrig->GetTexture((eMaterialTexture)i));
+		cResourceVarsObject *pVars = pOrig->GetVarsObject();
+		// Lit screens in dark rooms match the original only at full light level
+		pVars->SetUserVariable("AffectedByLightLevel", "false");
+		pMat->LoadVariablesFromVarsObject(pVars);
+		hplDelete(pVars);
+		pMat->IncUserCount();
+		apSub->SetCustomMaterial(pMat);
+	}
+	pMat->SetTexture(eMaterialTexture_Diffuse, apTexture);
+	pMat->Compile();
+}
+
+cSomaGuiScreenRenderer::cTarget &cSomaGuiScreenRenderer::GetTarget(cSomaLuxEntity *apEnt, const cVector2l &avSize)
+{
+	cTarget &t = mmapTargets[apEnt];
+	if (t.mpBuffer && t.mvSize == avSize)
+		return t;
+	cGraphics *pGraphics = gpSomaBase->mpEngine->GetGraphics();
+	if (t.mpBuffer)
+	{
+		pGraphics->DestroyFrameBuffer(t.mpBuffer);
+		pGraphics->DestroyTexture(t.mpTexture);
+	}
+	tString sName = "SomaScreen_" + apEnt->msName;
+	t.mpTexture = pGraphics->CreateTexture(sName, eTextureType_2D, eTextureUsage_RenderTarget);
+	t.mpTexture->SetUseMipMaps(true);
+	t.mpTexture->CreateFromRawData(cVector3l(avSize.x, avSize.y, 0), ePixelFormat_RGBA, NULL);
+	t.mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+	t.mpTexture->SetFilter(eTextureFilter_Trilinear);
+	t.mpTexture->SetAnisotropyDegree(8);
+	t.mpBuffer = pGraphics->CreateFrameBuffer(sName);
+	t.mpBuffer->SetTexture2D(0, t.mpTexture);
+	t.mpBuffer->CompileAndValidate();
+	t.mvSize = avSize;
+	SetScreenMaterial(apEnt->mpGuiSubMesh, t.mpTexture, sName);
+	return t;
+}
+
+void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunctions)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
 		return;
-	iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
 	cFrustum *pFrustum = apFunctions->GetFrustum();
-	// Reflection passes share callbacks; Render consumes the set's objects
+	// Reflection passes share callbacks
 	if (mpViewport == NULL || mpViewport->GetCamera() == NULL || pFrustum != mpViewport->GetCamera()->GetFrustum())
 		return;
+	iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
+	std::vector<std::pair<cSomaLuxEntity *, cTarget *>> vScreens;
+	for (cSomaLuxEntity *p : pMap->GetEntities())
+	{
+		if (p->mpGuiSubMesh == NULL || p->mpImGui == NULL || p->mbActive == false)
+			continue;
+		cGuiSet *pSet = p->mpImGui->GetSet();
+		cBoundingVolume bv;
+		bv.SetPosition(pSet->Get3DTransform().GetTranslation());
+		bv.SetSize((pSet->Get3DSize().Length() + 0.1f) * 2);
+		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
+			continue;
+		cVector2f vVirtual = pSet->GetVirtualSize();
+		vScreens.push_back(std::make_pair(p, &GetTarget(p, cVector2l((int)vVirtual.x, (int)vVirtual.y))));
+	}
+	if (vScreens.empty())
+		return;
+
+	iFrameBuffer *pPrevBuffer = pLowLevel->GetCurrentFrameBuffer();
 	apFunctions->SetProgram(NULL);
 	apFunctions->SetTextureRange(NULL, 0);
 	apFunctions->SetVertexBuffer(NULL);
-	pLowLevel->SetMatrix(eMatrix_Projection, pFrustum->GetProjectionMatrix());
-	for (cSomaLuxEntity *p : pMap->GetEntities())
+	for (auto &it : vScreens)
 	{
-		if (p->mpGuiSubMesh == NULL || p->mpImGui == NULL || p->mbGuiActive == false || p->mbActive == false)
-			continue;
+		cSomaLuxEntity *p = it.first;
 		cGuiSet *pSet = p->mpImGui->GetSet();
-		cVector3f vCorner = pSet->Get3DTransform().GetTranslation(), vReach = pSet->Get3DSize().Length() + 0.1f;
-		cBoundingVolume bv;
-		bv.SetPosition(vCorner);
-		bv.SetSize(vReach * 2);
-		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
+		apFunctions->SetFrameBuffer(it.second->mpBuffer, false);
+		pLowLevel->SetClearColor(p->mbGuiActive ? p->mpImGui->mScreenClear : p->mpImGui->mScreenOfflineClear);
+		pLowLevel->ClearFrameBuffer(eClearFrameBufferFlag_Color);
+		if (p->mbGuiActive == false)
 			continue;
-		// The engine clears set objects after the buffer swap, which runs between update and render
+		pSet->SetIs3D(false);
+		pSet->SetFlipScreenY(true);
 		pSet->ClearRenderObjects();
 		p->mpImGui->DrawAll();
+		pLowLevel->SetCullActive(false);
 		pSet->Render(pFrustum);
+		pSet->SetFlipScreenY(false);
+		pSet->SetIs3D(true);
 		++p->mlGuiDraws;
 	}
+	apFunctions->SetFrameBuffer(pPrevBuffer, true);
+	pLowLevel->SetClearColor(cColor(0, 0));
+	for (auto &it : vScreens)
+		it.second->mpTexture->AutoGenerateMipmaps();
+
+	// The gui set changed GL state behind the renderer's cache
+	apFunctions->SetDepthTest(false);
+	apFunctions->SetDepthTest(true);
+	apFunctions->SetDepthWrite(false);
+	apFunctions->SetDepthWrite(true);
+	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
+	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	apFunctions->SetAlphaMode(eMaterialAlphaMode_Trans);
+	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
+	apFunctions->SetChannelMode(eMaterialChannelMode_None);
+	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
+	apFunctions->SetCullActive(false);
+	apFunctions->SetCullActive(true);
+	apFunctions->SetTexture(0, NULL);
+	static cMatrixf mtxDummy = cMatrixf::Identity;
+	apFunctions->SetMatrix(&mtxDummy);
+	apFunctions->SetMatrix(NULL);
+	apFunctions->SetFlatProjection();
+	apFunctions->SetNormalFrustumProjection();
 }
 
 void cSomaLuxEntity::UpdateGui(float afTimeStep)
@@ -1296,6 +1414,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "int GetBodyNum()", +[](E *p) { return (int)p->mvBodies.size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBody(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBodies.size() ? p->mvBodies[i] : (iPhysicsBody *)NULL; });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetMainBody()", +[](E *p) { return p->GetMainBody(); });
+	SOMA_METHOD_NEW(e, T, "void AttachToEntity(iLuxEntity@ apEntity, iPhysicsBody@ apTargetBody, bool abUseRotation, bool abSnapToParent, bool abLocked=false)",
+					+[](E *p, E *pParent, iPhysicsBody *pBody, bool r, bool snap, bool l) { p->AttachTo(pParent, pBody, "", r, snap, l); });
+	SOMA_METHOD_NEW(e, T, "void AttachToSocket(iLuxEntity@ apEntity, const tString&in asSocket, bool abUseRotation, bool abSnapToParent, bool abLocked=false)",
+					+[](E *p, E *pParent, S sock, bool r, bool snap, bool l) { p->AttachTo(pParent, NULL, sock, r, snap, l); });
+	SOMA_METHOD_NEW(e, T, "void UpdateEntityAttachment()", +[](E *p) { p->UpdateAttachment(); });
+	SOMA_METHOD_NEW(e, T, "void RemoveEntityAttachment()", +[](E *p) { p->RemoveAttachment(); });
 	SOMA_METHOD_NEW(e, T, "int GetBodyIndexFromName(const tString&in asName)", +[](E *p, S n) {
 		for (size_t i = 0; i < p->mvBodies.size(); ++i)
 			if (p->mvBodies[i]->GetName() == n || SomaWildcardMatch("*_" + n, p->mvBodies[i]->GetName()))
@@ -1372,16 +1496,21 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 			p->mpMesh->GetAnimationState(p->mlCurrentAnim)->SetPaused(b);
 	});
 	SOMA_METHOD_NEW(e, T, "void CreateAndSetupGui(tString asSubmesh, const cColor&in aColorMul, const cColor&in aClearColor, const cColor&in aOfflineClearColor, const cVector2f&in avScreenSize)",
-					+[](E *p, tString sub, const cColor &, const cColor &, const cColor &, const cVector2f &size) {
+					+[](E *p, tString sub, const cColor &mul, const cColor &clear, const cColor &offline, const cVector2f &size) {
 						if (p->mpImGui)
 							return;
 						cGui *pGui = gpSomaBase->mpEngine->GetGui();
 						cGuiSet *pSet = pGui->CreateSet(p->msName + "_gui", NULL);
 						pSet->SetVirtualSize(size, -1000, 1000);
 						p->mpImGui = new cSomaImGui(p->msName, pSet);
+						p->mpImGui->mScreenClear = clear;
+						p->mpImGui->mScreenOfflineClear = offline;
 						p->SetupGuiScreen(sub);
 						if (p->mpGuiSubMesh)
+						{
 							pSet->SetIs3D(true);
+							p->mpGuiSubMesh->SetColorMul(mul);
+						}
 						else
 							Warning("SOMA: GUI submesh '%s' not found on '%s'\n", sub.c_str(), p->msName.c_str());
 					});
@@ -1487,8 +1616,113 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 
 //---------------------------------------
 
+bool cSomaLuxEntity::GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut)
+{
+	for (cSocket &sock : mvSockets)
+	{
+		if (sock.msName != asName)
+			continue;
+		cMatrixf mtxBase = sock.mpBone ? sock.mpBone->GetWorldMatrix() : mpMesh ? mpMesh->GetWorldMatrix() : GetMatrix();
+		a_mtxOut = cMath::MatrixMul(mtxBase, sock.m_mtxOffset);
+		return true;
+	}
+	return false;
+}
+
+bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
+{
+	cSomaLuxEntity *pParent = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(mpAttachment->msParent) : NULL;
+	if (pParent == NULL)
+		return false;
+	if (mpAttachment->mpBody)
+	{
+		if (std::find(pParent->mvBodies.begin(), pParent->mvBodies.end(), mpAttachment->mpBody) == pParent->mvBodies.end())
+			return false;
+		a_mtxOut = mpAttachment->mpBody->GetLocalMatrix();
+		return true;
+	}
+	if (mpAttachment->msSocket != "" && pParent->GetSocketMatrix(mpAttachment->msSocket, a_mtxOut))
+		return true;
+	a_mtxOut = pParent->GetMatrix();
+	return true;
+}
+
+void cSomaLuxEntity::AttachTo(cSomaLuxEntity *apParent, iPhysicsBody *apBody, const tString &asSocket, bool abUseRotation, bool abSnap, bool abLocked)
+{
+	RemoveAttachment();
+	if (apParent == NULL || apParent == this)
+		return;
+	mpAttachment = new cAttachment();
+	mpAttachment->msParent = apParent->msName;
+	mpAttachment->mpBody = asSocket == "" ? (apBody ? apBody : apParent->GetMainBody()) : NULL;
+	mpAttachment->msSocket = asSocket;
+	if (asSocket != "" && apParent->GetSocketMatrix(asSocket, mpAttachment->m_mtxParentPrev) == false)
+		Warning("SOMA: socket '%s' not found on '%s'\n", asSocket.c_str(), apParent->msName.c_str());
+	mpAttachment->mbUseRotation = abUseRotation;
+	mpAttachment->mbLocked = abLocked;
+	cMatrixf mtxParent;
+	if (GetAttachmentParentMatrix(mtxParent) == false)
+		mtxParent = cMatrixf::Identity;
+	if (abSnap)
+		SetMatrix(mtxParent);
+	mpAttachment->m_mtxParentPrev = mtxParent;
+	if (abLocked)
+		mpAttachment->m_mtxOffset = cMath::MatrixMul(cMath::MatrixInverse(mtxParent), GetMatrix());
+}
+
+void cSomaLuxEntity::RemoveAttachment()
+{
+	delete mpAttachment;
+	mpAttachment = NULL;
+}
+
+// iLuxEntity::UpdateEntityAttachment: locked children are posed rigidly, unlocked ones get the parent's motion
+void cSomaLuxEntity::UpdateAttachment()
+{
+	if (mpAttachment == NULL)
+		return;
+	cMatrixf mtxParent;
+	if (GetAttachmentParentMatrix(mtxParent) == false)
+	{
+		RemoveAttachment();
+		return;
+	}
+	cAttachment *a = mpAttachment;
+	if (a->mbUseRotation)
+	{
+		if (mtxParent == a->m_mtxParentPrev)
+			return;
+		if (a->mbLocked)
+			SetMatrix(cMath::MatrixMul(mtxParent, a->m_mtxOffset));
+		else
+			SetMatrix(cMath::MatrixMul(cMath::MatrixMul(mtxParent, cMath::MatrixInverse(a->m_mtxParentPrev)), GetMatrix()));
+	}
+	else
+	{
+		cVector3f vDelta = mtxParent.GetTranslation() - a->m_mtxParentPrev.GetTranslation();
+		if (vDelta == cVector3f(0))
+			return;
+		cMatrixf mtx = GetMatrix();
+		mtx.SetTranslation(a->mbLocked ? cMath::MatrixMul(mtxParent, a->m_mtxOffset).GetTranslation() : mtx.GetTranslation() + vDelta);
+		SetMatrix(mtx);
+	}
+	a->m_mtxParentPrev = mtxParent;
+	for (iPhysicsBody *pBody : mvBodies)
+	{
+		pBody->Enable();
+		if (a->mpBody && pBody->GetMass() == 0)
+		{
+			pBody->SetLinearVelocity(a->mpBody->GetVelocityAtPosition(pBody->GetLocalPosition()));
+			if (a->mbUseRotation)
+				pBody->SetAngularVelocity(a->mpBody->GetAngularVelocity());
+		}
+	}
+}
+
 cSomaLuxEntity::~cSomaLuxEntity()
 {
+	delete mpAttachment;
+	cSomaGuiScreenRenderer::Get()->Forget(this);
 	SomaForgetCritter(this);
 	SomaDestroyAgent(this);
 	SomaFreePropBlock("cLuxCritter", mpCritterProps);
@@ -1588,6 +1822,34 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 
 	typedef const tString &S;
 	SOMA_FUNC(e, "bool Entity_Exists(const tString &in asName)", +[](S n) { return Find(n) != NULL; });
+	SOMA_FUNC(e, "bool Entity_AttachToEntity(const tString &in asName, const tString &in asParentName, const tString &in asParentBodyName, bool abUseRotation, bool abSnapToParent=false, bool abLocked=false)",
+			  +[](S n, S parent, S body, bool r, bool snap, bool l) {
+				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				  cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(n) : NULL, *pParent = pMap ? pMap->GetEntity(parent) : NULL;
+				  if (pEnt == NULL || pParent == NULL)
+					  return false;
+				  iPhysicsBody *pBody = NULL;
+				  for (iPhysicsBody *b : pParent->mvBodies)
+					  if (body != "" && (b->GetName() == body || (b->GetName().size() > body.size() && b->GetName().compare(b->GetName().size() - body.size() - 1, tString::npos, "_" + body) == 0)))
+						  pBody = b;
+				  pEnt->AttachTo(pParent, pBody, "", r, snap, l);
+				  return true;
+			  });
+	SOMA_FUNC(e, "bool Entity_AttachToSocket(const tString &in asName, const tString &in asParentName, const tString &in asParentSocketName, bool abUseRotation, bool abSnapToParent=true)",
+			  +[](S n, S parent, S sock, bool r, bool snap) {
+				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				  cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(n) : NULL, *pParent = pMap ? pMap->GetEntity(parent) : NULL;
+				  if (pEnt == NULL || pParent == NULL)
+					  return false;
+				  pEnt->AttachTo(pParent, NULL, sock, r, snap, false);
+				  return true;
+			  });
+	SOMA_FUNC(e, "bool Entity_RemoveEntityAttachment(const tString &in asName)", +[](S n) {
+		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL;
+		if (pEnt)
+			pEnt->RemoveAttachment();
+		return pEnt != NULL;
+	});
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	SOMA_FUNC(e, "bool Entity_IsActive(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbActive; });
 	SOMA_FUNC(e, "void Entity_SetInteractionDisabled(const tString &in asEntityName, bool abX)",

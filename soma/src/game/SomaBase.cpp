@@ -145,6 +145,11 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 		aResp.Set("gui_mtx", pSet->Get3DTransform().ToString());
 		aResp.Set("gui_size", pSet->Get3DSize().ToString());
 		aResp.Set("gui_virtual", pSet->GetVirtualSize().ToString());
+		if (pEnt->mpGuiSubMesh)
+		{
+			aResp.Set("gui_color_mul", pEnt->mpGuiSubMesh->GetColorMul().ToString());
+			aResp.Set("gui_material", pEnt->mpGuiSubMesh->GetMaterial() ? pEnt->mpGuiSubMesh->GetMaterial()->GetName() : tString("-"));
+		}
 	}
 }
 
@@ -396,6 +401,12 @@ static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRe
 	cSomaBase *pBase = (cSomaBase*)apUserData;
 	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
 	iTexture *pTex = pDeferred ? pDeferred->GetDebugGBufferTexture(aReq.GetInt("target", 4)) : NULL;
+	if (aReq.HasKey("screen"))
+	{
+		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(aReq.GetString("screen", "")) : NULL;
+		cMaterial *pMat = pEnt && pEnt->mpGuiSubMesh ? pEnt->mpGuiSubMesh->GetCustomMaterial() : NULL;
+		pTex = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
+	}
 	std::vector<float> vPixels;
 	if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("no such target or no GPU data"); return; }
 	tString sPath = aReq.GetString("path", "");

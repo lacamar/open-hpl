@@ -20,14 +20,15 @@ namespace
 	{
 		kGfxMaterial = 16, kGfxType = 20, kGfxColor = 40, kGfxUVMin = 64, kGfxUVMax = 72, kGfxFile = 152, kGfxSize = 168,
 		kFontMaterial = 16, kFontColor = 20, kFontSize = 36, kFontFile = 48,
-		kWColorBase = 16, kWColorText = 32, kWDefaultSize = 64, kWUseBg = 72, kWGfxBg = 80, kWFont = 248, kWFontAlign = 316,
-		kBUseInFocusGfx = 1920, kBGfxInFocus = 1928, kBUseInFocusColor = 2096, kBColorInFocus = 2100,
-		kBUseTrigGfx = 2116, kBGfxTrig = 2120, kBUseTrigColor = 2288, kBColorTrig = 2292,
+		kWColorBase = 16, kWColorText = 32, kWColorDisabled = 48, kWUseDisabledColor = 312, kWDefaultSize = 64, kWUseBg = 72, kWGfxBg = 80, kWFont = 248, kWFontAlign = 316,
+		kBUseFrame = 320, kBFrame = 328, kBUseInFocusGfx = 1920, kBGfxInFocus = 1928, kBUseInFocusColor = 2096, kBColorInFocus = 2100,
+		kBUseTrigGfx = 2116, kBGfxTrig = 2120, kBUseTrigColor = 2288, kBColorTrig = 2292, kBUseTrigFocusColor = 2308, kBColorTrigFocus = 2312,
 		kFrameGfxBg = 16,
 		kSliderUseButton = 320, kSliderGfxButton = 328, kSliderButtonSize = 496,
 		kCheckBoxSize = 496, kCheckGfxBox = 504, kCheckOverlaySize = 672, kCheckGfxOverlay = 680,
 		kMultiArrowSize = 496, kMultiGfxArrowRight = 512, kMultiGfxArrowLeft = 848,
-		kWindowFrame = 320, kWindowLabelPadTop = 3528, kWindowPadTop = 3548, kWindowPadRight = 3552, kWindowPadBottom = 3556, kWindowPadLeft = 3560,
+		kWindowFrame = 320, kWUseHeader = 1912, kWHeaderType = 1916, kWLabelOffset = 1920, kWCaptionSizeMul = 1928, kWLabelFrame = 1936,
+		kWindowLabelPadTop = 3528, kWindowLabelMinWidth = 3544, kWindowPadTop = 3548, kWindowPadRight = 3552, kWindowPadBottom = 3556, kWindowPadLeft = 3560,
 		kGaugeFrame = 320, kGaugeUseFrame = 1912, kGaugeFill = 1920, kGaugeOrient = 2092, kGaugePadding = 2096,
 	};
 	template <class T> T &F(const void *p, int off) { return *(T *)((char *)p + off); }
@@ -162,7 +163,12 @@ tString cSomaImGui::DebugOps(size_t alMax)
 void cSomaImGui::DrawAll()
 {
 	std::vector<cGuiClipRegion *> vClip(1, mpSet->GetCurrentClipRegion());
-	for (const cOp &op : mvDrawn)
+	if (mScreenClear.a > 0)
+	{
+		static cGuiGfxElement *pWhite = gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
+		mpSet->DrawGfx(pWhite, cVector3f(0, 0, -1), mpSet->GetVirtualSize(), mScreenClear, eGuiMaterial_Alpha);
+	}
+	for (cOp op : mvDrawn)
 	{
 		if (op.mpGfx == NULL && op.mpFont == NULL)
 		{
@@ -313,6 +319,30 @@ void cSomaImGui::DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f av
 	Record(op);
 }
 
+// cImGuiFrameGfx: background, then corners at native size and borders stretched between them
+void cSomaImGui::DrawFrame(const void *apFrame, const cVector3f &avPos, const cVector2f &avSize, const cColor &aColor)
+{
+	const char *p = (const char *)apFrame;
+	enum { kBg = 16, kTR = 184, kBR = 352, kBL = 520, kTL = 688, kTop = 856, kRight = 1024, kBottom = 1192, kLeft = 1360 };
+	auto Size = [&](int off) { return StrAt(p + off, kGfxFile).empty() ? cVector2f(0) : GetGfxSize(p + off); };
+	cVector2f vTL = Size(kTL), vTR = Size(kTR), vBL = Size(kBL), vBR = Size(kBR);
+	float fTop = Size(kTop).y, fBottom = Size(kBottom).y, fLeft = Size(kLeft).x, fRight = Size(kRight).x;
+	float x0 = avPos.x, y0 = avPos.y, x1 = avPos.x + avSize.x, y1 = avPos.y + avSize.y, z = avPos.z;
+	DrawGfx(p + kBg, cVector3f(x0 + fLeft, y0 + fTop, z), cVector2f(avSize.x - fLeft - fRight, avSize.y - fTop - fBottom), aColor);
+	auto Part = [&](int off, float x, float y, float w, float h) {
+		if (w > 0 && h > 0 && StrAt(p + off, kGfxFile).empty() == false)
+			DrawGfx(p + off, cVector3f(x, y, z), cVector2f(w, h), aColor);
+	};
+	Part(kTop, x0 + vTL.x, y0, avSize.x - vTL.x - vTR.x, fTop);
+	Part(kBottom, x0 + vBL.x, y1 - fBottom, avSize.x - vBL.x - vBR.x, fBottom);
+	Part(kLeft, x0, y0 + vTL.y, fLeft, avSize.y - vTL.y - vBL.y);
+	Part(kRight, x1 - fRight, y0 + vTR.y, fRight, avSize.y - vTR.y - vBR.y);
+	Part(kTL, x0, y0, vTL.x, vTL.y);
+	Part(kTR, x1 - vTR.x, y0, vTR.x, vTR.y);
+	Part(kBL, x0, y1 - vBL.y, vBL.x, vBL.y);
+	Part(kBR, x1 - vBR.x, y1 - vBR.y, vBR.x, vBR.y);
+}
+
 iFontData *cSomaImGui::GetFont(const void *apFont)
 {
 	tString sFile = apFont ? StrAt(apFont, kFontFile) : "";
@@ -370,7 +400,7 @@ void cSomaImGui::DrawText(const tWString &asText, const void *apFont, const cCol
 	cVector2f vFont = FontSize(apFont, afSizeMul);
 	float fX = alAlign == eFontAlign_Center ? avPos.x + avSize.x * 0.5f : alAlign == eFontAlign_Right ? avPos.x + avSize.x : avPos.x;
 	float fY = avPos.y + std::max(0.0f, (avSize.y - vFont.y) * 0.5f);
-	DrawFont(asText, apFont, cVector3f(fX, fY, avPos.z + 0.1f), alAlign, cVector2f(afSizeMul), aColor);
+	DrawFont(asText, apFont, cVector3f(fX, fY, avPos.z + 0.2f), alAlign, cVector2f(afSizeMul), aColor);
 }
 
 //---------------------------------------
@@ -386,13 +416,16 @@ void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &av
 		avPos = mvLayouts.back().mvCursor;
 	else
 		avPos += GroupPos();
-	// Alignment: the position names the given corner/centre of the widget
+	avPos = Align(avPos, avSize, mlAlign);
+}
+
+// The position names the given corner/centre of the widget
+cVector3f cSomaImGui::Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign)
+{
 	static const float vAlign[9][2] = {{0, 0}, {0, 1}, {0, 0.5f}, {1, 0}, {1, 1}, {1, 0.5f}, {0.5f, 0.5f}, {0.5f, 0}, {0.5f, 1}};
-	if (mlAlign > 0 && mlAlign < 9)
-	{
-		avPos.x -= avSize.x * vAlign[mlAlign][0];
-		avPos.y -= avSize.y * vAlign[mlAlign][1];
-	}
+	if (alAlign <= 0 || alAlign >= 9)
+		return avPos;
+	return cVector3f(avPos.x - avSize.x * vAlign[alAlign][0], avPos.y - avSize.y * vAlign[alAlign][1], avPos.z);
 }
 
 void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated)
@@ -445,11 +478,11 @@ void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, cons
 bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
-	bool bMouse = MouseOver(avPos, avSize);
+	bool bMouse = mMods.mbUseInput && MouseOver(avPos, avSize);
 	// Focus stays on the last widget the mouse moved over or SetFocus named
 	if (bMouse && (mvMouseRel.x != 0 || mvMouseRel.y != 0))
 		msFocus = asName;
-	bool bOver = asName.empty() || msFocus.empty() ? bMouse : msFocus == asName;
+	bool bOver = mMods.mbUseInput && (asName.empty() || msFocus.empty() ? bMouse : msFocus == asName);
 	bool bDown = bMouse && ActionIsDown(1);
 	bool bClicked = bMouse && ActionTriggered(1);
 	cState &st = State(Id(asName));
@@ -477,13 +510,40 @@ bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const v
 		else
 			st.mfFloat = 0.4f;
 	}
-	DrawWidgetBase(apData, avPos, avSize, bOver, bDown, kBGfxInFocus, kBGfxTrig);
+	// cImGui::DoButtonBase: state colours replace the base, disabled multiplies frame and text
+	bool bTrig = alMode == 1 ? bResult : bDown && bOver;
+	bool bUseTrigGfx = F<bool>(apData, kBUseTrigGfx), bUseFocusGfx = F<bool>(apData, kBUseInFocusGfx);
+	bool bFocus = bOver && (bTrig && (bUseTrigGfx || F<bool>(apData, kBUseTrigColor))) == false;
+	cColor col = F<cColor>(apData, kWColorBase);
+	if (bTrig && bFocus && F<bool>(apData, kBUseTrigFocusColor) && bUseTrigGfx == false)
+		col = F<cColor>(apData, kBColorTrigFocus);
+	else if (bTrig && F<bool>(apData, kBUseTrigColor) && bUseTrigGfx == false)
+		col = F<cColor>(apData, kBColorTrig);
+	else if (bFocus && F<bool>(apData, kBUseInFocusColor) && bUseFocusGfx == false)
+		col = F<cColor>(apData, kBColorInFocus);
 	cColor textCol = F<cColor>(apData, kWColorText);
-	if (bOver && F<bool>(apData, kBUseInFocusColor))
-		textCol = F<cColor>(apData, kBColorInFocus);
-	if (bDown && F<bool>(apData, kBUseTrigColor))
-		textCol = F<cColor>(apData, kBColorTrig);
+	if (mMods.mbUseInput == false && F<bool>(apData, kWUseDisabledColor))
+	{
+		col = Mul(col, F<cColor>(apData, kWColorDisabled));
+		textCol = Mul(textCol, F<cColor>(apData, kWColorDisabled));
+	}
+	if (F<bool>(apData, kBUseFrame))
+		DrawFrame((char *)apData + kBFrame, avPos, avSize, col);
+	else if (F<bool>(apData, kWUseBg))
+		DrawGfx((char *)apData + kWGfxBg, avPos, avSize, col);
 	DrawText(asText, (char *)apData + kWFont, textCol, F<int>(apData, kWFontAlign), avPos, avSize, 1);
+	if (bTrig && bUseTrigGfx)
+	{
+		cColor c(1, 1);
+		if (bFocus && F<bool>(apData, kBUseTrigFocusColor))
+			c = F<cColor>(apData, kBColorTrigFocus);
+		else if (F<bool>(apData, kBUseTrigColor))
+			c = F<cColor>(apData, kBColorTrig);
+		DrawGfx((char *)apData + kBGfxTrig, avPos + cVector3f(0, 0, 0.15f), avSize, c);
+	}
+	if (bFocus && bUseFocusGfx)
+		DrawGfx((char *)apData + kBGfxInFocus, avPos + cVector3f(0, 0, 0.1f), avSize,
+				F<bool>(apData, kBUseInFocusColor) ? F<cColor>(apData, kBColorInFocus) : cColor(1, 1));
 	mPrev.mbWasInFocus = mPrev.mbInFocus;
 	mPrev.mbBecameInFocus = bOver && mPrev.mbInFocus == false;
 	mPrev.mbInFocus = bOver;
@@ -550,7 +610,7 @@ void cSomaImGui::DoFrame(const void *apData, cVector3f avPos, cVector2f avSize)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
-	DrawGfx((char *)apData + 320 + kFrameGfxBg, avPos, avSize, F<cColor>(apData, kWColorBase));
+	DrawFrame((char *)apData + 320, avPos, avSize, F<cColor>(apData, kWColorBase));
 	Advance(avPos, avSize);
 }
 
@@ -653,7 +713,7 @@ void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVec
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
 	if (F<bool>(apData, kGaugeUseFrame))
-		DrawGfx((char *)apData + kGaugeFrame + kFrameGfxBg, avPos, avSize, cColor(1, 1));
+		DrawFrame((char *)apData + kGaugeFrame, avPos, avSize, F<cColor>(apData, kWColorBase));
 	cVector2f vPad = F<cVector2f>(apData, kGaugePadding);
 	cVector2f vInner = avSize - vPad * 2;
 	float fFill = cMath::Clamp(afFill, 0.0f, 1.0f);
@@ -667,15 +727,45 @@ void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVec
 void cSomaImGui::DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
-	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
-	DrawGfx((char *)apData + kWindowFrame + kFrameGfxBg, avPos, avSize, F<cColor>(apData, kWColorBase));
-	if (asCaption.empty() == false)
-		DrawFont(asCaption, (char *)apData + kWFont, avPos + cVector3f(4, 2, 0.2f), eFontAlign_Left, 1, F<cColor>(apData, kWColorText));
+	cColor colBase = F<cColor>(apData, kWColorBase);
+	DrawFrame((char *)apData + kWindowFrame, avPos, avSize, colBase);
+	float fHeader = 0;
+	if (F<bool>(apData, kWUseHeader))
+	{
+		const void *pFont = (char *)apData + kWFont;
+		const float *pLabelPad = &F<float>(apData, kWindowLabelPadTop);
+		float fPadT = pLabelPad[0], fPadR = pLabelPad[1], fPadB = pLabelPad[2], fPadL = pLabelPad[3];
+		cVector3f vOffset = F<cVector3f>(apData, kWLabelOffset);
+		float fMul = F<float>(apData, kWCaptionSizeMul);
+		cVector2f vFont = FontSize(pFont, fMul);
+		cVector3f vPos = avPos + cVector3f(vOffset.x, vOffset.y, 0.1f);
+		cVector2f vSize(vFont.x, fPadT + fPadB + vFont.y);
+		int lType = F<int>(apData, kWHeaderType);
+		if (lType == 1)
+			vSize.x = std::max(GetFontLength(pFont, fMul, asCaption) + fPadR + fPadL, F<float>(apData, kWindowLabelMinWidth));
+		else if (lType == 0)
+			vSize.x = avSize.x - 2 * vOffset.x;
+		DrawFrame((char *)apData + kWLabelFrame, vPos, vSize, colBase);
+		cVector3f vText = vPos + cVector3f(fPadL, fPadT, 0);
+		int lAlign = F<int>(apData, kWFontAlign);
+		float fFree = vSize.x - (2 * vOffset.x + fPadR + fPadL);
+		if (fFree > 0)
+		{
+			vText.y += (vSize.y - (fPadT + fPadB + vOffset.y) - vFont.y) * 0.5f;
+			vText.z += 0.2f;
+			if (lAlign == eFontAlign_Right)
+				vText.x += fFree;
+			else if (lAlign == eFontAlign_Center)
+				vText.x += fFree * 0.5f;
+		}
+		DrawFont(asCaption, pFont, vText, lAlign, cVector2f(fMul), F<cColor>(apData, kWColorText));
+		fHeader = vSize.y;
+	}
 	float fTop = F<float>(apData, kWindowPadTop), fLeft = F<float>(apData, kWindowPadLeft);
 	float fRight = F<float>(apData, kWindowPadRight), fBottom = F<float>(apData, kWindowPadBottom);
 	cGroup g;
-	g.mvPos = avPos + cVector3f(fLeft, fTop, 0.3f);
-	g.mvSize = avSize - cVector2f(fLeft + fRight, fTop + fBottom);
+	g.mvPos = avPos + cVector3f(fLeft, fHeader + fTop, 0.3f);
+	g.mvSize = avSize - cVector2f(fLeft + fRight, fTop + fBottom + fHeader);
 	mvGroups.push_back(g);
 	mPrev.mvPos = avPos;
 	mPrev.mvSize = avSize;
@@ -966,6 +1056,9 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetModTextColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mTextColorMul = c; });
 	SOMA_METHOD(e, T, "void SetModUseUIPos(bool abX)", +[](I *p, bool b) { p->mMods.mbUseUIPos = b; });
 	SOMA_METHOD(e, T, "void SetModUseInput(bool abX)", +[](I *p, bool b) { p->mMods.mbUseInput = b; });
+	// Only widens the gamepad navigation rect in the original; there is no gamepad navigation here
+	SOMA_METHOD(e, T, "void SetModUISizeHoriExpansion(float afNeg, float afPos)", +[](I *, float, float) {});
+	SOMA_METHOD(e, T, "void SetModUISizeVertExpansion(float afNeg, float afPos)", +[](I *, float, float) {});
 	SOMA_METHOD(e, T, "void SetModRotateAngle(float afX)", +[](I *p, float f) { p->mMods.mfRotateAngle = f; });
 	SOMA_METHOD(e, T, "void SetModRotateCustomPivot(bool abX)", +[](I *p, bool b) { p->mMods.mbRotateCustomPivot = b; });
 	SOMA_METHOD(e, T, "void SetModRotatePivot(const cVector2f&in avPivot)", +[](I *p, V2 v) { p->mMods.mvRotatePivot = v; });
@@ -1135,22 +1228,16 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 
 	// Raw drawing
 	SOMA_METHOD(e, T, "void DrawGfx(const cImGuiGfx &in aGfx, const cVector3f&in avPos, const cVector2f&in avSize=-1, const cColor&in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
-				+[](I *p, D g, V3 pos, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) { p->DrawGfx(P(g), p->GroupPos() + pos, size, c); });
+				+[](I *p, D g, V3 pos, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) { p->DrawGfx(P(g), pos, size, c); });
 	SOMA_METHOD(e, T, "void DrawAlignedGfx(const cImGuiGfx &in aGfx, const cVector3f &in avPos, eImGuiAlign aAlignment, const cVector2f&in avSize=-1, const cColor &in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, int align, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) {
 					cVector2f vSize = size.x < 0 || size.y < 0 ? p->GetGfxSize(P(g)) : size;
-					int lOld = p->mlAlign;
-					p->mlAlign = align;
-					cVector3f vPos = pos;
-					cVector2f vS = vSize;
-					p->Layout(vPos, vS, vSize);
-					p->mlAlign = lOld;
-					p->DrawGfx(P(g), vPos, vS, c);
+					p->DrawGfx(P(g), p->Align(pos, vSize, align), vSize, c);
 				});
 	SOMA_METHOD(e, T, "void DrawFont(const tWString&in asText, const cImGuiFont &in aFont, const cVector3f&in avPos, eFontAlign aAlign, const cVector2f&in avSizeMul=1, const cColor&in aColMul=cColor(1,1))",
-				+[](I *p, WStr t, D f, V3 pos, int align, V2 mul, const cColor &c) { p->DrawFont(t, P(f), p->GroupPos() + pos, align, mul, c); });
+				+[](I *p, WStr t, D f, V3 pos, int align, V2 mul, const cColor &c) { p->DrawFont(t, P(f), pos, align, mul, c); });
 	SOMA_METHOD(e, T, "void DrawFrame(const cImGuiFrameGfx &in aGfx, const cVector3f&in avPos, const cVector2f&in avSize=-1, const cColor&in aCol=cColor(1,1))",
-				+[](I *p, D g, V3 pos, V2 size, const cColor &c) { p->DrawGfx((const char *)P(g) + kFrameGfxBg, p->GroupPos() + pos, size, c); });
+				+[](I *p, D g, V3 pos, V2 size, const cColor &c) { p->DrawFrame(P(g), pos, size, c); });
 	SOMA_METHOD(e, T, "cVector2f GetGfxSize(const cImGuiGfx&in aGfx)", +[](I *p, D g) { return p->GetGfxSize(P(g)); });
 	SOMA_METHOD(e, T, "cVector2f GetUsedGfxSize(const cImGuiGfx&in aGfx, const cVector2f&in avCustomSize)",
 				+[](I *p, D g, V2 s) { return s.x < 0 || s.y < 0 ? p->GetGfxSize(P(g)) : s; });

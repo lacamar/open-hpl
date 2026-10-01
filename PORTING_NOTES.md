@@ -5924,3 +5924,24 @@ linked to a body whose master-list row is gone).
   `CompileBonesAndSubMeshes()` computed per-bone radii before the skeleton got its unit scale;
   the `.msh` path compiles after loading. Moved after the scaling: cold == warm, `03_03`
   oversized 21 -> 7. `world_stats` now lists `oversized_top`.
+
+## SOMA: prop GUI screens as material diffuse (2026-10-01)
+
+- **How the original composites screens.** `deferred_transparent_frag.hpsl` has no illumination
+  input, and the ref's screen goes fully black with the GUI off, so the GUI render target is the
+  screen submesh's diffuse map. Each screen gets a cloned material (`SomaScreen_<entity>`) whose
+  diffuse is the RT; the glass's env map x `CubeMapAlpha` adds the dirt/scratch layer seen in
+  the ref. The RT renders in `OnPostSolidDraw`, Y-flipped (`cGuiSet::SetFlipScreenY`), with
+  trilinear mipmaps (the scanline overlay aliased without them).
+- **`TerminalColorMul x TerminalBrightness`** (3 on the 01_01 tech terminal) can't live in an
+  8-bit RT: it is the submesh's `ColorMul`, and translucents now use `UseColorMul` like solids.
+- **Light level.** Our HPL2 `AffectedByLightLevel` estimate gives ~0.2 in the dark tech room
+  while the ref screen sits at ~1, so screen materials use 1.
+- **Laptop screen black, terminal fine.** The GUI pass changes GL modelview/projection behind
+  the renderer's matrix cache; in 01_01 an earlier refraction object happened to reset
+  projection. The pass now resyncs matrix and projection. Found with `dump_target screen=`.
+- **ImGui (from Amnesia Rebirth's symbols, `cImGui::DoWindowStart`/`DoButtonBase`):** windows
+  draw a header label frame (`FitCaption` = caption width + padding, min width) and offset the
+  content by its height; raw `DrawGfx/DrawFont/DrawFrame/DrawAlignedGfx` are not
+  group-relative (scripts add `GetCurrentGroupPos()` themselves); button state colours replace
+  the base, the disabled colour multiplies frame and text, disabled buttons take no input.

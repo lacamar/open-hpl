@@ -555,6 +555,7 @@ namespace hpl {
 			//Set up min and max for orth projection
 			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
 			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
+			if(mbFlipScreenY) std::swap(vProjMin.y, vProjMax.y);
 
 			pLowLevelGraphics->SetOrthoProjection(vProjMin,vProjMax);
 		}

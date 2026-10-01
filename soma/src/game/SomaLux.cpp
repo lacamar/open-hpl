@@ -255,6 +255,8 @@ void cSomaLuxMap::Update(float afTimeStep)
 		mvEntities[i]->UpdateEffectColor(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}
+	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
+		pEnt->UpdateAttachment();
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
 	for (cSomaLuxEntity *pEnt : mvEntities)
@@ -941,6 +943,23 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
 	SOMA_METHOD(e, "iPhysicsBody", "cVector3f GetMassCenter() const", +[](iPhysicsBody *b) { return b->GetMassCentre(); });
 	SOMA_METHOD(e, "cBoundingVolume", "void SetTransform(const cMatrixf&in a_mtxTransform, bool abUpdateSize = true)", +[](cBoundingVolume *b, const cMatrixf &m, bool) { b->SetTransform(m); });
+	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCylinderShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",
+				+[](iPhysicsWorld *w, float r, float h, cMatrixf &m) { return w->CreateCylinderShape(r, h, &m); });
+	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeWorldCollision(cVector3f&out avPushVector, iCollideShape@ apShape, const cMatrixf&in a_mtxTransform, iPhysicsBody@ apSkipBody, bool abSkipStatic, bool abIsCharacter, bool abCollideCharacter)",
+				+[](iPhysicsWorld *w, cVector3f &push, iCollideShape *pShape, const cMatrixf &m, iPhysicsBody *pSkip, bool bSkipStatic, bool bChar, bool bCollideChar) {
+					push = 0;
+					return pShape && w->CheckShapeWorldCollision(&push, pShape, m, pSkip, bSkipStatic, bChar, NULL, bCollideChar);
+				});
+	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeWorldCollision(cVector3f&out avPushVector, iCollideShape@ apShape, const cMatrixf&in a_mtxTransform, iPhysicsBody@ apSkipBody, bool abSkipStatic)",
+				+[](iPhysicsWorld *w, cVector3f &push, iCollideShape *pShape, const cMatrixf &m, iPhysicsBody *pSkip, bool bSkipStatic) {
+					push = 0;
+					return pShape && w->CheckShapeWorldCollision(&push, pShape, m, pSkip, bSkipStatic);
+				});
+	SOMA_METHOD(e, "iCharacterBody", "bool CheckCharacterFits(const cVector3f &in avPosition, bool abFeetPosition, int alSizeIdx, cVector3f &out avOutPushBackVec)",
+				+[](iCharacterBody *c, const cVector3f &p, bool bFeet, int lSize, cVector3f &push) {
+					push = 0;
+					return c->CheckCharacterFits(p, bFeet, lSize < c->GetShapeNum() ? lSize : -1, &push);
+				});
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
 				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {
 					cBoundingVolume bv;

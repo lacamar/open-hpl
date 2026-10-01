@@ -147,6 +147,7 @@ namespace hpl {
 		
 		iCollideShape *GetCurrentShape();
 		iCollideShape *GetShape(int alIdx);
+		int GetShapeNum(){ return (int)mvShapes.size();}
 		iPhysicsBody* GetCurrentBody();
 
 		void SetCollideCharacter(bool abX);

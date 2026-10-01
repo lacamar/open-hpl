@@ -40,6 +40,7 @@
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 #include "graphics/RenderList.h"
+#include "graphics/RendererDeferred.h"
 
 namespace hpl {
 
@@ -71,6 +72,7 @@ namespace hpl {
 	// the whole surface, exactly the "gray/magenta triangle" artifact
 	// bisected to this render pass. See PORTING_NOTES.md.
 	#define kVar_avInvScreenSize					10
+	#define kVar_avColorMul							11
 	
 	
 	//------------------------------
@@ -167,6 +169,7 @@ namespace hpl {
 			defaultVars.Add("UseUv");
 			defaultVars.Add("UseNormals");
 			defaultVars.Add("UseColor");
+			if(cRendererDeferred::GetHdr()) defaultVars.Add("UseColorMul");
 			
 			if(i==0) defaultVars.Add("BlendMode_Add");
 			if(i==1) defaultVars.Add("BlendMode_Mul");
@@ -190,6 +193,7 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avRimLightMulPow", kVar_avRimLightMulPow, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afLightLevel", kVar_afLightLevel, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -367,6 +371,7 @@ namespace hpl {
 	void cMaterialType_Translucent::SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer)
 	{
 		cMaterialType_Translucent_Vars *pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
+		if(cRendererDeferred::GetHdr()) apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
 
 		////////////////////////////
 		//Light affects Alpha
