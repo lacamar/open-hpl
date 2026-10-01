@@ -488,6 +488,12 @@ static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRe
 	cSomaBase *pBase = (cSomaBase*)apUserData;
 	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
 	iTexture *pTex = pDeferred ? pDeferred->GetDebugGBufferTexture(aReq.GetInt("target", 4)) : NULL;
+	if (aReq.HasKey("light") && pDeferred)
+	{
+		cWorld *pWorld = pBase->GetCurrentWorld();
+		iLight *pLight = pWorld ? pWorld->GetLight(aReq.GetString("light", "")) : NULL;
+		pTex = pLight ? pDeferred->GetDebugShadowTexture(pLight) : NULL;
+	}
 	if (aReq.HasKey("screen"))
 	{
 		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(aReq.GetString("screen", "")) : NULL;
@@ -1055,6 +1061,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 
 	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
+	iLight::SetHpl3Visibility(true);
 	if (pHdr == NULL || pHdr[0] != '0')
 	{
 		cRendererDeferred::SetHdr(true);

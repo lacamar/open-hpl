@@ -112,8 +112,7 @@ namespace hpl {
 
 	bool cLightBox::IsVisible()
 	{
-		if(mDiffuseColor.r <=0 && mDiffuseColor.g <=0 && mDiffuseColor.b <=0 && mDiffuseColor.a <=0) 
-			return false;
+		if(!IsLit()) return false;
 		
 		return mbIsVisible; 
 	}

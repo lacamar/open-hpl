@@ -731,6 +731,25 @@ namespace
 		return RewriteCallIntrinsic(asSrc, "sampleCmp", formatter, asOut, asErrorOut);
 	}
 
+	bool RewriteSampleLodGradIntrinsic(const tString& asSrc, const char* asName, const char* asGlslName, size_t alArgs,
+									   tString& asOut, bool& abFired, tString& asErrorOut)
+	{
+		auto formatter = [&](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != alArgs)
+			{
+				asErr = tString(asName) + "() with " + cString::ToString((int)aArgs.size()) + " argument(s) is not supported";
+				return false;
+			}
+			asRepl = tString(asGlslName) + "(";
+			for (size_t i = 0; i < aArgs.size(); ++i) asRepl += (i ? ", " : "") + aArgs[i];
+			asRepl += ")";
+			abFired = true;
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, asName, formatter, asOut, asErrorOut);
+	}
+
 	// load(texture, ivecN coords, mipLevel) - HPSL's HLSL-style
 	// Texture.Load() exact-texel fetch (no filtering, integer pixel
 	// coordinates) - real use: deferred_light_frag.hpsl's G-buffer readback,
@@ -811,6 +830,10 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	if (RewriteSampleIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	bool bNeedsTexelFetch = false;
 	if (RewriteLoadIntrinsic(sSrc, sSrc, bNeedsTexelFetch, asErrorOut) == false) return false;
+	bool bNeedsGrad = false;
+	if (RewriteSampleLodGradIntrinsic(sSrc, "sampleGrad", "textureGrad", 4, sSrc, bNeedsGrad, asErrorOut) == false) return false;
+	if (RewriteSampleLodGradIntrinsic(sSrc, "sampleLod", "textureLod", 3, sSrc, bNeedsGrad, asErrorOut) == false) return false;
+	bNeedsTexelFetch |= bNeedsGrad;
 
 	//////////////////////////////
 	// Find "void main(" ... ")" and the "{" ... "}" body that follows it.

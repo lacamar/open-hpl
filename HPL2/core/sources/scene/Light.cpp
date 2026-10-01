@@ -149,10 +149,18 @@ namespace hpl {
 		}
 	}
 
+	bool iLight::mbHpl3Visibility = false;
+
+	bool iLight::IsLit()
+	{
+		if(mbHpl3Visibility)
+			return (mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0) && mfBrightness != 0;
+		return mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0 || mDiffuseColor.a >0;
+	}
+
 	bool iLight::IsVisible()
 	{ 
-		if(mDiffuseColor.r <=0 && mDiffuseColor.g <=0 && mDiffuseColor.b <=0 && mDiffuseColor.a <=0) 
-			return false;
+		if(!IsLit()) return false;
 		if(mfRadius <= 0) return false;
 
 		return mbIsVisible; 
@@ -163,19 +171,25 @@ namespace hpl {
 
 	void iLight::SetDiffuseColor(cColor aColor)
 	{
-		bool bWasVisble = (mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0 || mDiffuseColor.a >0);
+		bool bWasVisble = IsLit();
 		
 		mDiffuseColor = aColor;
 
-		bool bVisible = (mDiffuseColor.r >0 || mDiffuseColor.g >0 || mDiffuseColor.b >0 || mDiffuseColor.a >0);
-		
 		//Check if the light changed its visibility
-		if(mbIsVisible && bVisible != bWasVisble && mpRenderCallback)
+		if(mbIsVisible && IsLit() != bWasVisble && mpRenderCallback)
 		{
 			mpRenderCallback->OnVisibleChange(this); 
 		}
 
 		OnSetDiffuse();
+	}
+
+	void iLight::SetBrightness(float afX)
+	{
+		bool bWasVisble = IsLit();
+		mfBrightness = afX;
+		if(mbIsVisible && IsLit() != bWasVisble && mpRenderCallback)
+			mpRenderCallback->OnVisibleChange(this);
 	}
 
 	//-----------------------------------------------------------------------

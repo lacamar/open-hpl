@@ -121,8 +121,9 @@ namespace hpl {
 	#define eFeature_Light_ShadowMap		eFlagBit_6
 	#define eFeature_Light_BoxMask			eFlagBit_7
 	#define eFeature_Light_GoboSpecular		eFlagBit_8
+	#define eFeature_Light_GoboTypeSpecular	eFlagBit_9
 	
-	#define kLightFeatureNum 9
+	#define kLightFeatureNum 10
 
 	cProgramComboFeature gvLightFeatureVec[] =
 	{
@@ -135,6 +136,7 @@ namespace hpl {
 		cProgramComboFeature("UseShadowMap", kPC_FragmentBit, eFeature_Light_SpotLight),
 		cProgramComboFeature("BoxMask", kPC_FragmentBit),
 		cProgramComboFeature("GoboSpecFlag", kPC_FragmentBit, eFeature_Light_Gobo),
+		cProgramComboFeature("GoboType_Specular", kPC_FragmentBit, eFeature_Light_Gobo),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -198,6 +200,9 @@ namespace hpl {
 	#define kVar_afFalloff							39
 	#define kVar_afBevel							40
 	#define kVar_afWeight							41
+	#define kVar_afLightSourceRadius				42
+	#define kVar_avLightUp							43
+	#define kVar_avLightRight						44
 	#define kVar_avViewSpaceUp						42
 	#define kVar_avBand0							43
 	#define kVar_afSpotNearClip						52
@@ -678,6 +683,9 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avMaskCenter", kVar_avMaskCenter, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avMaskExtent", kVar_avMaskExtent, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afLightSourceRadius", kVar_afLightSourceRadius, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avLightUp", kVar_avLightUp, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avLightRight", kVar_avLightRight, eDefferredProgramMode_Lights);
 			}
 
 			//////////////////////////////
@@ -1672,6 +1680,7 @@ namespace hpl {
 			{
 				cMatrixf mtxFinal = cMath::MatrixMul(pLight->GetWorldMatrix(),m_mtxInvView);
 				apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxFinal.GetRotation());
+				apProgram->SetFloat(kVar_afLightSourceRadius, 0.05f);
 			}	
 		}
 		////////////////////////
@@ -1711,6 +1720,15 @@ namespace hpl {
 			apProgram->SetMatrixf(kVar_a_mtxLightViewProj, mtxFinal);
 			apProgram->SetFloat(kVar_afSpotNearClip, pLightSpot->GetNearClipPlane());
 
+			if(pLight->GetGoboTexture() && pLight->GetGoboSpecular())
+			{
+				float fH = pLightSpot->GetTanHalfFOV() * pLightSpot->GetNearClipPlane();
+				const cMatrixf& mtxView = apLightData->m_mtxViewSpaceTransform;
+				apProgram->SetFloat(kVar_afLightSourceRadius, pLightSpot->GetNearClipPlane());
+				apProgram->SetVec3f(kVar_avLightUp, cMath::MatrixMul3x3(mtxView, cVector3f(0, 1.0f / fH, 0)));
+				apProgram->SetVec3f(kVar_avLightRight, cMath::MatrixMul3x3(mtxView, cVector3f(1.0f / (fH * pLightSpot->GetAspect()), 0, 0)));
+			}
+
 			if(pLight->GetGoboTexture() || apLightData->mbCastShadows)
 			{
 				apProgram->SetMatrixf(kVar_a_mtxSpotViewProj, mtxFinal);
@@ -1743,7 +1761,7 @@ namespace hpl {
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
-		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular;
+		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular | eFeature_Light_GoboTypeSpecular;
 		
 		//Spotlight specifics
 		if(lightType == eLightType_Spot)

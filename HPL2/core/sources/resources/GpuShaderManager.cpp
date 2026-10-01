@@ -235,6 +235,13 @@ namespace hpl {
 		  "\t\tfAttenuatuion *= max(0, vProjectedUv.z);\n",
 		  "\t\tfloat fSpotZ = (1.0 - afSpotNearClip / max(fDistance * dot(vLightDir, avLightForward), 1e-4)) / (1.0 - afSpotNearClip * afInvLightRadius);\n"
 		  "\t\tfAttenuatuion *= max(0, fSpotZ) * clamp((1.0 - fSpotZ) * 128.0, 0.0, 1.0);\n" },
+		{ "deferred_light_frag.hpsl",
+		  "\t@ifdef GoboType_Specular\n\t\tvDiffuse = cVector3f(fGradLen / 8.0f);\n\t@endif\n",
+		  "" },
+		{ "deferred_light_frag.hpsl",
+		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
+		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
+		  "\t\t\t\tvSpecular *= clamp((0.6 - max(abs(vSourceUV[0].x - 0.5), abs(vSourceUV[0].y - 0.5))) * 10.0, 0.0, 1.0);" },
 	};
 
 	static void PatchHpslSource(const tString& asFile, tString& asData)

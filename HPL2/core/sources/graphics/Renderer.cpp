@@ -377,6 +377,7 @@ namespace hpl {
 			cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
 			mfAspect = pSpotLight->GetAspect();
 			mfFOV = pSpotLight->GetFOV();
+			mfNearClip = pSpotLight->GetNearClipPlane();
 		}
 	}
 
@@ -792,7 +793,8 @@ namespace hpl {
 		if(bValid && apLight->GetLightType() == eLightType_Spot)
 		{
 			cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
-			bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV;
+			bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV &&
+					 pSpotLight->GetNearClipPlane() == cacheData.mfNearClip;
 		}
 
 		/////////////////////////////

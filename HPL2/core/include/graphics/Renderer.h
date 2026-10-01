@@ -214,7 +214,7 @@ namespace hpl {
 	class cShadowMapLightCache
 	{
 	public:
-		cShadowMapLightCache() : mpLight(NULL), mlTransformCount(-1), mfRadius(0),mfFOV(0), mfAspect(0) {}
+		cShadowMapLightCache() : mpLight(NULL), mlTransformCount(-1), mfRadius(0),mfFOV(0), mfAspect(0), mfNearClip(0) {}
 
 		void SetFromLight(iLight* apLight);
 
@@ -223,6 +223,7 @@ namespace hpl {
 		float mfRadius;
 		float mfFOV;
 		float mfAspect;
+		float mfNearClip;
 	};
 	
 	//---------------------------------------------

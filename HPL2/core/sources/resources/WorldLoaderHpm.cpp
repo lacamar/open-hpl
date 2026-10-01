@@ -370,7 +370,9 @@ namespace hpl {
 		if (asTrack == "Sound")
 		{
 			if (sTag != "Sound") return "unsupported_element:" + sTag;
-			return cEngineFileLoading::LoadSound(apElement, "", mpCurrentWorld) ? "" : "load_failed";
+			cSoundEntity *pSound = cEngineFileLoading::LoadSound(apElement, "", mpCurrentWorld);
+			if (pSound && !apElement->GetAttributeBool("Active", true)) pSound->SetActive(false);
+			return pSound ? "" : "load_failed";
 		}
 		if (asTrack == "Decal")
 		{

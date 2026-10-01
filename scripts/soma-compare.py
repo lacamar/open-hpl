@@ -10,6 +10,7 @@ game under wine (scripts/soma-ref.py). Snippets are AngelScript function bodies 
   scripts/soma-compare.py ping | player | perf | entities [--pattern '*'] | lights [--pattern '*']
   scripts/soma-compare.py view [--pose X Y Z YAW PITCH] [--settle 2] [--out DIR]
   scripts/soma-compare.py fps [--secs 10]                  # frame rate sampled on both
+  scripts/soma-compare.py lightattr [--n 12] [--solo] [names...]    # per-light luminance contribution (hide one / solo, diff)
   scripts/soma-compare.py report --map M [--out DIR]       # start, then all of the above -> DIR/report.json
   scripts/soma-compare.py ui start [--wait 45]          # both booted to the main menu
   scripts/soma-compare.py ui click FX FY | key K... | shot [--out F]   # same input on both (FX/FY 0-1), side by side
@@ -342,6 +343,55 @@ def cmd_view(a, only=None):
     return res
 
 
+def cmd_lightattr(a, only=None):
+    import numpy as np
+    from PIL import Image
+    out = Path(a.out or CACHE / time.strftime("lightattr-%Y%m%d-%H%M%S"))
+    out.mkdir(parents=True, exist_ok=True)
+    ts = running(only)
+    world = "cLux_GetCurrentMap().GetWorld()"
+    if a.solo:
+        visible = [n for n in Ours().exec(f'cLightListIterator@ it={world}.GetLightIterator(); '
+                                          'while(it.HasNext()){ iLight@ l=it.Next(); if(l.IsVisible()) __print(l.GetName()+"\\n"); }') if n]
+        names = a.names or visible
+    else:
+        names = a.names or [l["name"] for l in Ours().send({"cmd": "lights", "n": a.n})["lights"] if l["visible"]]
+    lum = lambda f: (lambda x: 0.2126 * x[..., 0] + 0.7152 * x[..., 1] + 0.0722 * x[..., 2])(
+        np.asarray(Image.open(f).convert("RGB"), dtype=np.float64))
+
+    def capture(t, f):
+        t.wait(a.settle) if t.name == "ours" else time.sleep(a.settle)
+        return lum(t.shot(out / f))
+
+    def set_vis(t, ns, v):
+        t.exec("".join(f'{{ iLight@ l = {world}.GetLight("{n}"); if(l !is null) l.SetVisible({v}); }}' for n in ns))
+
+    if a.solo:
+        for t in ts:
+            set_vis(t, visible, "false")
+    base = {t.name: capture(t, f"{t.name}_base.png") for t in ts}
+    rows = []
+    for n in names:
+        row = {"light": n}
+        for t in ts:
+            set_vis(t, [n], "true" if a.solo else "false")
+            d = capture(t, f"{t.name}_{n}.png") - base[t.name]
+            d = d if a.solo else -d
+            set_vis(t, [n], "false" if a.solo else "true")
+            h, w = d.shape
+            row[t.name] = round(float(d.mean()), 2)
+            row[t.name + "_3x3"] = [[round(float(d[y * h // 3:(y + 1) * h // 3, x * w // 3:(x + 1) * w // 3].mean()), 1)
+                                     for x in range(3)] for y in range(3)]
+            Image.fromarray(np.clip(d * 4 + 128, 0, 255).astype("uint8")).save(out / f"{t.name}_{n}_diff.png")
+        rows.append(row)
+        print(f"{n:32s} " + "  ".join(f"{t.name} {row[t.name]:6.2f}" for t in ts), flush=True)
+    if a.solo:
+        for t in ts:
+            set_vis(t, visible, "true")
+    (out / "lightattr.json").write_text(json.dumps(rows, indent=1))
+    print(out / "lightattr.json")
+
+
 def cmd_fps(a, only=None):
     ts = running(only)
     samples = {t.name: [] for t in ts}
@@ -508,6 +558,12 @@ def main():
     v.add_argument("--pose", type=float, nargs=5, metavar=("X", "Y", "Z", "YAW", "PITCH"))
     v.add_argument("--settle", type=float, default=2)
     v.add_argument("--out")
+    la = sp.add_parser("lightattr")
+    la.add_argument("names", nargs="*")
+    la.add_argument("--n", type=int, default=12)
+    la.add_argument("--settle", type=float, default=0.5)
+    la.add_argument("--out")
+    la.add_argument("--solo", action="store_true", help="all lights off, enable one at a time")
     f = sp.add_parser("fps")
     f.add_argument("--secs", type=float, default=10)
     b = sp.add_parser("boot")
@@ -537,6 +593,8 @@ def main():
             t.stop()
     elif a.cmd == "view":
         cmd_view(a, a.only)
+    elif a.cmd == "lightattr":
+        cmd_lightattr(a, a.only)
     elif a.cmd == "fps":
         cmd_fps(a, a.only)
     elif a.cmd == "boot":

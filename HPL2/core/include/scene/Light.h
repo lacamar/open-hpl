@@ -105,6 +105,7 @@ namespace hpl {
 
 		virtual bool IsVisible();
 		void OnChangeVisible();
+		static void SetHpl3Visibility(bool abX){ mbHpl3Visibility = abX;}
 		
 		///////////////////////////////
 		//Renderable implementation:
@@ -215,7 +216,7 @@ namespace hpl {
 		float GetFalloffPow(){ return mfFalloffPow;}
 		void SetSpotFalloffPow(float afX){ mfSpotFalloffPow = afX;}
 		float GetSpotFalloffPow(){ return mfSpotFalloffPow;}
-		void SetBrightness(float afX){ mfBrightness = afX;}
+		void SetBrightness(float afX);
 		float GetBrightness(){ return mfBrightness;}
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
 		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
@@ -270,6 +271,8 @@ namespace hpl {
 		float mfFalloffPow;
 		float mfSpotFalloffPow;
 		float mfBrightness;
+		static bool mbHpl3Visibility;
+		bool IsLit();
 		unsigned int mlMaskID;
 		bool mbGoboSpecular;
 		bool mbMaskBox;
