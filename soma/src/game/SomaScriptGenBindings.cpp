@@ -86,6 +86,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBeam", "bool IsVisible()", +[](cBeam *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cBeam", "void SetVisible(bool abVisible)", +[](cBeam *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cBeam", "bool GetVisibleVar()", +[](cBeam *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cBeam", "void SetIlluminationColor(const cColor&in aColor)", +[](cBeam *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cBeam", "const cColor& GetIlluminationColor()const", +[](cBeam *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cBeam", "void SetCoverageAmount(float afX)", +[](cBeam *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cBeam", "float GetCoverageAmount()const", +[](cBeam *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cBeam", "int GetMatrixUpdateCount()", +[](cBeam *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -130,6 +132,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBillboard", "bool IsVisible()", +[](cBillboard *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetVisible(bool abVisible)", +[](cBillboard *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cBillboard", "bool GetVisibleVar()", +[](cBillboard *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void SetIlluminationColor(const cColor&in aColor)", +[](cBillboard *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "const cColor& GetIlluminationColor()const", +[](cBillboard *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetCoverageAmount(float afX)", +[](cBillboard *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cBillboard", "float GetCoverageAmount()const", +[](cBillboard *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "int GetMatrixUpdateCount()", +[](cBillboard *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -282,6 +286,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cFogArea", "bool IsVisible()", +[](cFogArea *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cFogArea", "void SetVisible(bool abVisible)", +[](cFogArea *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cFogArea", "bool GetVisibleVar()", +[](cFogArea *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cFogArea", "void SetIlluminationColor(const cColor&in aColor)", +[](cFogArea *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cFogArea", "const cColor& GetIlluminationColor()const", +[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cFogArea", "void SetCoverageAmount(float afX)", +[](cFogArea *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cFogArea", "float GetCoverageAmount()const", +[](cFogArea *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cFogArea", "int GetMatrixUpdateCount()", +[](cFogArea *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -392,6 +398,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "bool IsVisible()", +[](cLightBox *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetVisible(bool abVisible)", +[](cLightBox *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "bool GetVisibleVar()", +[](cLightBox *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "const cColor& GetIlluminationColor()const", +[](cLightBox *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetCoverageAmount(float afX)", +[](cLightBox *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "float GetCoverageAmount()const", +[](cLightBox *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "int GetMatrixUpdateCount()", +[](cLightBox *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -500,6 +508,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsVisible()", +[](cLightPoint *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetVisible(bool abVisible)", +[](cLightPoint *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "bool GetVisibleVar()", +[](cLightPoint *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "const cColor& GetIlluminationColor()const", +[](cLightPoint *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetCoverageAmount(float afX)", +[](cLightPoint *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "float GetCoverageAmount()const", +[](cLightPoint *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetMatrixUpdateCount()", +[](cLightPoint *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -591,6 +601,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsVisible()", +[](cLightSpot *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetVisible(bool abVisible)", +[](cLightSpot *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "bool GetVisibleVar()", +[](cLightSpot *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void SetIlluminationColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "const cColor& GetIlluminationColor()const", +[](cLightSpot *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetCoverageAmount(float afX)", +[](cLightSpot *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetCoverageAmount()const", +[](cLightSpot *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetMatrixUpdateCount()", +[](cLightSpot *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -745,6 +757,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetStatic(bool abX)", +[](cMeshEntity *o, bool a0) { o->SetStatic(a0); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "bool IsStatic()", +[](cMeshEntity *o) -> bool { return o->IsStatic(); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetRenderFlagBit(int alFlagBit, bool abSet)", +[](cMeshEntity *o, int a0, bool a1) { o->SetRenderFlagBit(a0, a1); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetCoverageAmount(float afX)", +[](cMeshEntity *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetCoverageAmount()", +[](cMeshEntity *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cNode3D", "bool AddEntity(iEntity3D@ apEntity)", +[](cNode3D *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
@@ -911,6 +924,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool IsVisible()", +[](cSubMeshEntity *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetVisible(bool abVisible)", +[](cSubMeshEntity *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "bool GetVisibleVar()", +[](cSubMeshEntity *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cSubMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "cSubMeshEntity", "const cColor& GetIlluminationColor()const", +[](cSubMeshEntity *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetCoverageAmount(float afX)", +[](cSubMeshEntity *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "float GetCoverageAmount()const", +[](cSubMeshEntity *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetMatrixUpdateCount()", +[](cSubMeshEntity *o) -> int { return o->GetMatrixUpdateCount(); });
@@ -1061,6 +1076,14 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "cSoundEntity@ GetSoundEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cSoundEntity * { return o->GetSoundEntity(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void DestroyAllSoundEntities()", +[](cWorld *o) { o->DestroyAllSoundEntities(); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool SoundEntityExists(cSoundEntity@ apEntity, int alCreationID)", +[](cWorld *o, cSoundEntity * a0, int a1) -> bool { return o->SoundEntityExists(a0, a1); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDepthOfFieldActive(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusStart(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusStart(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusEnd(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusEnd(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFocusStart()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFocusStart(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFocusEnd()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFocusEnd(); });
+	SOMA_METHOD_NEW(e, "cWorld", "bool IsDepthOfFieldActive()", +[](cWorld *o) -> bool { return o->IsDepthOfFieldActive(); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFalloff(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFalloff(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDepthOfFieldFalloff()", +[](cWorld *o) -> float { return o->GetDepthOfFieldFalloff(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingExposure()", +[](cWorld *o) -> float { return o->GetToneMappingExposure(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingKey()", +[](cWorld *o) -> float { return o->GetToneMappingKey(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetToneMappingWhiteCut()", +[](cWorld *o) -> float { return o->GetToneMappingWhiteCut(); });
@@ -1279,6 +1302,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "bool IsVisible()", +[](iLight *o) -> bool { return o->IsVisible(); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetVisible(bool abVisible)", +[](iLight *o, bool a0) { o->SetVisible(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "bool GetVisibleVar()", +[](iLight *o) -> bool { return o->GetVisibleVar(); });
+	SOMA_METHOD_NEW(e, "iLight", "void SetIlluminationColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetIlluminationColor(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "const cColor& GetIlluminationColor()const", +[](iLight *o) -> const cColor & { static thread_local cColor r; r = o->GetIlluminationColor(); return r; });
 	SOMA_METHOD_NEW(e, "iLight", "void SetCoverageAmount(float afX)", +[](iLight *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "float GetCoverageAmount()const", +[](iLight *o) -> float { return o->GetCoverageAmount(); });
 	SOMA_METHOD_NEW(e, "iLight", "int GetMatrixUpdateCount()", +[](iLight *o) -> int { return o->GetMatrixUpdateCount(); });

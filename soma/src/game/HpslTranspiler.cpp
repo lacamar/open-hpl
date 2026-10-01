@@ -980,7 +980,8 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	// #version 130 bump for the specific files that actually use load()
 	// (texelFetch needs it - see RewriteLoadIntrinsic() above for why this
 	// narrow, per-file bump is safe unlike a blanket engine-wide one).
-	tString sVersionBlock = bNeedsTexelFetch ? "#version 130\n" : "#version 120\n";
+	bool bNeedsIntOps = std::regex_search(sBody, std::regex("%|>>|<<"));
+	tString sVersionBlock = bNeedsTexelFetch || bNeedsIntOps ? "#version 130\n" : "#version 120\n";
 	if (aType == eGpuShaderType_Fragment && bNeedsFragData)
 		sVersionBlock += "#extension GL_ARB_draw_buffers : enable\n";
 

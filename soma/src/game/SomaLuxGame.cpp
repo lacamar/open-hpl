@@ -30,14 +30,15 @@ cSomaLuxGame::~cSomaLuxGame()
 	mpInstance = NULL;
 }
 
-template <class F> void cSomaLuxGame::ForEach(F aFunc)
+template <class F> void cSomaLuxGame::ForEach(F aFunc, bool abActiveEffectsOnly)
 {
 	for (cSomaLuxHandler *p : mvHandlers)
 		aFunc(p);
 	for (cSomaLuxModule *p : mvModules)
 		aFunc(p);
 	for (cSomaLuxEffect *p : mvEffects)
-		aFunc(p);
+		if (p->mbActive || !abActiveEffectsOnly)
+			aFunc(p);
 }
 
 //---------------------------------------
@@ -289,20 +290,20 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 		UpdateGui(afTimeStep);
 		return;
 	}
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); });
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); }, true);
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
 	cSomaLuxDialogHandler::Get()->Update(afTimeStep);
 	UpdateGui(afTimeStep);
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); });
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); });
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); }, true);
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); }, true);
 }
 
 cSomaImGui *SomaHudImGui();
 
 void cSomaLuxGame::Draw(float afFrameTime)
 {
-	ForEach([afFrameTime](cSomaLuxScriptable *p) { p->CallWithFloat("void OnDraw(float afFrameTime)", afFrameTime); });
+	ForEach([afFrameTime](cSomaLuxScriptable *p) { p->CallWithFloat("void OnDraw(float afFrameTime)", afFrameTime); }, true);
 }
 
 // cLuxGuiHandler::Update: default input to the focused ImGui, then the HUD's OnGui pass
@@ -331,7 +332,7 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 	cSomaImGui *pHud = SomaHudImGui();
 	cSomaImGui::SetCurrent(pHud);
 	pHud->Begin(afTimeStep);
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); });
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); }, true);
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		if (pMap->GetScript())
 			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void OnGui(float afTimeStep)", [=](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); });
@@ -348,7 +349,7 @@ void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 			p->OnAction(alAction, abPressed);
 		return;
 	}
-	ForEach([=](cSomaLuxScriptable *p) { p->OnAction(alAction, abPressed); });
+	ForEach([=](cSomaLuxScriptable *p) { p->OnAction(alAction, abPressed); }, true);
 	if (cSomaLuxMap::GetCurrent())
 		cSomaLuxMap::GetCurrent()->OnAction(alAction, abPressed);
 }
@@ -357,7 +358,7 @@ void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
 {
 	if (gpSomaBase->mbScriptGamePaused)
 		return;
-	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); });
+	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); }, true);
 }
 
 void cSomaLuxGame::PreloadData(cSomaLuxMap *apMap)

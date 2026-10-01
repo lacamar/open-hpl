@@ -41,4 +41,4 @@ offsets on our smaller objects) are invisible to ASan, use a gdb hardware watchp
 ## Next
 
 See `TASKS.md` "Script layer": a real playthrough past the laboratory, post effects,
-agents (Munshi etc. use `cLuxCharMover`/pathfinder stubs), hands skeleton, LOAD GAME list.
+hands skeleton, LOAD GAME list.

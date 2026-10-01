@@ -245,7 +245,8 @@ namespace hpl {
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
 		void RenderDecals();
-		void SetFogDepthTexture(bool abBind);
+		void SetFogDepthTexture(bool abBind, int alUnit=0);
+		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
 		void RenderTranslucent();
@@ -343,6 +344,9 @@ namespace hpl {
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
 		iGpuProgram *mpFxaaProgram;
+		iGpuProgram *mpDofFocusProgram;
+		iGpuProgram *mpDofBlurProgram;
+		iTexture *mpDofGaussTexture;
 		iGpuProgram *mpToneMapProgram;
 		iGpuProgram *mpToneMapGradingProgram;
 

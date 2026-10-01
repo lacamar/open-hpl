@@ -238,6 +238,15 @@ namespace hpl {
 		const cColor& GetFogColor(){ return mFogColor; }
 		bool GetFogCulling() { return mbFogCulling;}
 
+		void SetDepthOfFieldActive(bool abX){ mbDepthOfFieldActive = abX;}
+		void SetDepthOfFieldFocusStart(float afX){ mfDepthOfFieldFocusStart = afX;}
+		void SetDepthOfFieldFocusEnd(float afX){ mfDepthOfFieldFocusEnd = afX;}
+		void SetDepthOfFieldFalloff(float afX){ mfDepthOfFieldFalloff = afX;}
+		bool IsDepthOfFieldActive(){ return mbDepthOfFieldActive;}
+		float GetDepthOfFieldFocusStart(){ return mfDepthOfFieldFocusStart;}
+		float GetDepthOfFieldFocusEnd(){ return mfDepthOfFieldFocusEnd;}
+		float GetDepthOfFieldFalloff(){ return mfDepthOfFieldFalloff;}
+
 		///// TONE MAPPING ////////////////////////////////
 		void SetToneMapping(float afKey, float afExposure, float afWhiteCut){ mfToneMappingKey = afKey; mfToneMappingExposure = afExposure; mfToneMappingWhiteCut = afWhiteCut; }
 		float GetToneMappingKey(){ return mfToneMappingKey; }
@@ -422,6 +431,11 @@ namespace hpl {
 		float mfFogEnd;
 		float mfFogFalloffExp;
 		cColor mFogColor;
+
+		bool mbDepthOfFieldActive = false;
+		float mfDepthOfFieldFocusStart = 0;
+		float mfDepthOfFieldFocusEnd = 0;
+		float mfDepthOfFieldFalloff = 0;
 
 		float mfToneMappingKey;
 		float mfToneMappingExposure;

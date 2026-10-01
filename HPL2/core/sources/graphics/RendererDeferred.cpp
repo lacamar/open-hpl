@@ -201,6 +201,8 @@ namespace hpl {
 	#define kVar_avViewSpaceUp						42
 	#define kVar_avBand0							43
 	#define kVar_afSpotNearClip						52
+	#define kVar_avFocusStartEnd					53
+	#define kVar_avOffsetMul						54
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -232,6 +234,9 @@ namespace hpl {
 
 		mlMaxBatchLights = 100;
 		mpFxaaProgram = NULL;
+		mpDofFocusProgram = NULL;
+		mpDofBlurProgram = NULL;
+		mpDofGaussTexture = NULL;
 		mpToneMapProgram = NULL;
 		mpToneMapGradingProgram = NULL;
 		mpBoxResolveProgram = NULL;
@@ -820,6 +825,39 @@ namespace hpl {
 				mpFxaaProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		}
 
+		if(mGBufferTextureType != eTextureType_Rect)
+		{
+			const int lDofSamples = 16;
+			cParserVarContainer programVars;
+			programVars.Add("UseUv");
+			mpDofFocusProgram = mpGraphics->CreateGpuProgramFromShaders("DOF - Focus","deferred_base_vtx.glsl", "deferred_dof_focus.glsl",&programVars);
+			programVars.Add("kNumSamples", lDofSamples);
+			mpDofBlurProgram = mpGraphics->CreateGpuProgramFromShaders("DOF - Blur","deferred_base_vtx.glsl", "deferred_dof_blur_fs.glsl",&programVars);
+			if(mpDofFocusProgram)
+			{
+				mpDofFocusProgram->GetVariableAsId("avFocusStartEnd",kVar_avFocusStartEnd);
+				mpDofFocusProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
+			}
+			if(mpDofBlurProgram)
+				mpDofBlurProgram->GetVariableAsId("avOffsetMul",kVar_avOffsetMul);
+
+			int lRows = cMath::Max(1, lDofSamples/8);
+			float fScale = lDofSamples==4 ? 256.0f : lDofSamples * 1.41421356f * mvScreenSizeFloat.x / 1280.0f;
+			std::vector<float> vTable(64*lRows*4, 0.0f);
+			for(int j=0; j<lRows; ++j)
+			for(int x=1; x<64; ++x)
+			for(int c=0; c<4; ++c)
+			{
+				float k = (float)(4*j+1+c);
+				vTable[(j*64+x)*4+c] = expf(k*k*-64.0f*64.0f / ((float)(x*x)*fScale));
+			}
+			mpDofGaussTexture = mpGraphics->CreateTexture("Guassian Lookup", eTextureType_2D, eTextureUsage_Normal);
+			mpDofGaussTexture->SetUseMipMaps(false);
+			mpDofGaussTexture->CreateFromRawData(cVector3l(64,lRows,1), ePixelFormat_RGBA16, (unsigned char*)&vTable[0]);
+			mpDofGaussTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+			mpDofGaussTexture->SetFilter(eTextureFilter_Bilinear);
+		}
+
 		mpToneMapProgram = NULL;
 		mpToneMapGradingProgram = NULL;
 		if(mbHdr)
@@ -956,6 +994,9 @@ namespace hpl {
 		}
 		
 		if(mpFxaaProgram) mpGraphics->DestroyGpuProgram(mpFxaaProgram);
+		if(mpDofFocusProgram) mpGraphics->DestroyGpuProgram(mpDofFocusProgram);
+		if(mpDofBlurProgram) mpGraphics->DestroyGpuProgram(mpDofBlurProgram);
+		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
 		if(mpToneMapProgram) mpGraphics->DestroyGpuProgram(mpToneMapProgram);
@@ -987,7 +1028,7 @@ namespace hpl {
 
 	iTexture* cRendererDeferred::GetGbufferTexture(int alIdx)
 	{ 
-		int lType = mpCurrentSettings->mbIsReflection ? 1 : 0;
+		int lType = mpCurrentSettings && mpCurrentSettings->mbIsReflection ? 1 : 0;
 		return mpGBufferTexture[lType][alIdx];
 	}
 	
@@ -1173,6 +1214,8 @@ namespace hpl {
 
 		RunCallback(eRendererMessage_PostSolid);
 		
+		RenderDepthOfField();
+
 		if(!(mlDebugSkipPasses & 8)) RenderTranslucent();
 
 		RunCallback(eRendererMessage_PostTranslucent);
@@ -3119,15 +3162,75 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::SetFogDepthTexture(bool abBind)
+	void cRendererDeferred::SetFogDepthTexture(bool abBind, int alUnit)
 	{
 		if(mbDepthInNormalAlpha == false)
 		{
-			if(abBind) SetTexture(0, GetGbufferTexture(2));
+			if(abBind) SetTexture(alUnit, GetGbufferTexture(2));
 			return;
 		}
 		GetGbufferTexture(1)->SetRedFromAlpha(abBind);
-		if(abBind) SetTexture(0, GetGbufferTexture(1));
+		if(abBind) SetTexture(alUnit, GetGbufferTexture(1));
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRendererDeferred::RenderDepthOfField()
+	{
+		if(mpCurrentSettings->mbIsReflection || mpDofFocusProgram==NULL || mpDofBlurProgram==NULL) return;
+		if(mpCurrentWorld->IsDepthOfFieldActive()==false || mpCurrentWorld->GetDepthOfFieldFalloff() <= 0) return;
+
+		START_RENDER_PASS(DepthOfField);
+
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetFlatProjection();
+
+		float fStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+		float fEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+		float fFalloffLen = (fEnd - fStart) * 0.5f / cMath::Max(1e-15f, mpCurrentWorld->GetDepthOfFieldFalloff());
+		float fNear = mpCurrentFrustum->GetNearPlane();
+
+		iFrameBuffer *pBufferA = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,6);
+		iFrameBuffer *pBufferB = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,7);
+		iTexture *pTexA = pBufferA->GetColorBuffer(0)->ToTexture();
+		iTexture *pTexB = pBufferB->GetColorBuffer(0)->ToTexture();
+
+		SetFrameBuffer(pBufferA, false);
+		SetProgram(mpDofFocusProgram);
+		mpDofFocusProgram->SetVec4f(kVar_avFocusStartEnd, fNear + 0.5f*fStart, fNear + fStart, fEnd, fEnd + fFalloffLen);
+		mpDofFocusProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		eTextureFilter accumFilter = mpAccumBufferTexture->GetFilter();
+		mpAccumBufferTexture->SetFilter(eTextureFilter_Nearest);
+		SetTexture(0, mpAccumBufferTexture);
+		SetFogDepthTexture(true, 1);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		SetFogDepthTexture(false, 1);
+		mpAccumBufferTexture->SetFilter(accumFilter);
+
+		SetFrameBuffer(pBufferB, false);
+		SetProgram(mpDofBlurProgram);
+		mpDofBlurProgram->SetVec2f(kVar_avOffsetMul, cVector2f(1.0f / mvScreenSizeFloat.x, 0));
+		pTexA->SetFilter(eTextureFilter_Nearest);
+		SetTexture(0, pTexA);
+		SetTexture(1, mpDofGaussTexture);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+
+		SetAccumulationBuffer();
+		mpDofBlurProgram->SetVec2f(kVar_avOffsetMul, cVector2f(0, -1.0f / mvScreenSizeFloat.y));
+		pTexB->SetFilter(eTextureFilter_Nearest);
+		SetTexture(0, pTexB);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+
+		SetTexture(0, NULL);
+		SetTexture(1, NULL);
+		SetProgram(NULL);
+		SetNormalFrustumProjection();
+
+		END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------
@@ -3811,7 +3914,7 @@ namespace hpl {
 
 	void cRendererDeferred::SetGBuffer(eGBufferComponents aComponents)
 	{
-		int lType = mpCurrentSettings->mbIsReflection ? 1 : 0;
+		int lType = mpCurrentSettings && mpCurrentSettings->mbIsReflection ? 1 : 0;
 		SetFrameBuffer(mpGBuffer[lType][aComponents], true);
 	}
 
@@ -3819,7 +3922,7 @@ namespace hpl {
 
 	iFrameBuffer* cRendererDeferred::GetGBufferFrameBuffer(eGBufferComponents aComponents)
 	{
-		int lType = mpCurrentSettings->mbIsReflection ? 1 : 0;
+		int lType = mpCurrentSettings && mpCurrentSettings->mbIsReflection ? 1 : 0;
 		
 		return mpGBuffer[lType][aComponents];
 	}
@@ -3828,7 +3931,7 @@ namespace hpl {
 
 	iTexture* cRendererDeferred::GetBufferTexture(int alIdx)
 	{
-		int lType = mpCurrentSettings->mbIsReflection ? 1 : 0;
+		int lType = mpCurrentSettings && mpCurrentSettings->mbIsReflection ? 1 : 0;
 		return mpGBufferTexture[lType][alIdx];
 	}
 

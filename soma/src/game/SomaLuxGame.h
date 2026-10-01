@@ -27,7 +27,7 @@ class cSomaLuxEffect : public cSomaLuxScriptable
 public:
 	tString msName;
 	int mlId = -1;
-	bool mbActive = true;
+	bool mbActive = false;
 };
 
 class cSomaLuxHandler : public cSomaLuxScriptable
@@ -79,7 +79,7 @@ public:
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
 private:
-	template <class F> void ForEach(F aFunc);
+	template <class F> void ForEach(F aFunc, bool abActiveEffectsOnly = false);
 
 	static cSomaLuxGame *mpInstance;
 
