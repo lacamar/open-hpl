@@ -4,6 +4,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
+#include "impl/scriptarray.h"
 
 #include <cmath>
 #include <cstring>
@@ -420,12 +421,74 @@ void cSomaLuxInputHandler::CreateActionInput(const tString &asInput, int alActio
 	}
 }
 
-tString cSomaLuxInputHandler::GetActionName(int alId)
+tString cSomaLuxInputHandler::GetActionName(int alId, bool abGamepad)
 {
+	const cLuxAction *pAny = NULL;
 	for (const cLuxAction &a : mvActions)
 		if (a.mlId == alId)
-			return a.msName;
-	return "";
+		{
+			if (a.mbGamepad == abGamepad)
+				return a.msName;
+			pAny = &a;
+		}
+	return pAny ? pAny->msName : "";
+}
+
+cSomaLuxInputHandler::cGamepadProfile *cSomaLuxInputHandler::GetGamepadProfile(const tString &asName)
+{
+	for (cGamepadProfile &p : mvGamepadProfiles)
+		if (p.msName == asName)
+			return &p;
+	return NULL;
+}
+
+cSomaLuxInputHandler::cGamepadPreset *cSomaLuxInputHandler::GetGamepadPreset()
+{
+	cGamepadProfile *pProfile = GetGamepadProfile(msGamepadProfile);
+	if (pProfile == NULL)
+		return NULL;
+	cGamepadPreset *pLast = NULL;
+	for (cGamepadPreset &p : pProfile->mvPresets)
+		if (p.msName == msGamepadPreset)
+			pLast = &p;
+	return pLast;
+}
+
+void cSomaLuxInputHandler::GetActionsAssociatedToGamepadControl(const tString &asProfile, const tString &asPreset, const tString &asControl, tString &asActions)
+{
+	cGamepadProfile *pProfile = GetGamepadProfile(asProfile);
+	if (pProfile == NULL)
+		return;
+	for (const cGamepadPreset &p : pProfile->mvPresets)
+	{
+		if (p.msName != asPreset)
+			continue;
+		for (size_t i = 0; i < p.mvActions.size(); ++i)
+			if (i < p.mvBindings.size() && p.mvBindings[i] == asControl)
+				asActions += GetActionName(p.mvActions[i], i < p.mvAnalog.size() && p.mvAnalog[i]) + "/";
+		if (asActions.empty() == false)
+			asActions.pop_back();
+	}
+}
+
+bool cSomaLuxInputHandler::FetchGamepadInputLayoutString(const tString &asInput, tString &asPrefix, tString &asLayout)
+{
+	tString sSep = ".";
+	tStringVec vParts;
+	cString::GetStringVec(cString::ToLowerCase(asInput), vParts, &sSep);
+	asPrefix.clear();
+	asLayout.clear();
+	cGamepadProfile *pProfile = vParts.size() >= 4 && vParts[0] == "gamepad" ? GetGamepadProfile(msGamepadProfile) : NULL;
+	if (pProfile == NULL)
+		return false;
+	asPrefix = pProfile->msPrefix;
+	int lIdx = cString::ToInt(vParts[3].c_str(), 0);
+	const tStringVec *pVec = vParts[2] == "button" ? &pProfile->mvButtons : vParts[2] == "axis" ? &pProfile->mvAxes : NULL;
+	if (pVec && lIdx >= 0 && lIdx < (int)pVec->size())
+		asLayout = (*pVec)[lIdx];
+	else
+		asPrefix.clear();
+	return true;
 }
 
 void cSomaLuxInputHandler::LoadUserConfig()
@@ -437,6 +500,14 @@ void cSomaLuxInputHandler::LoadUserConfig()
 	mbSmoothMouse = pCfg->GetBool("Input", "SmoothMouse", true);
 	mfMouseSensitivity = pCfg->GetFloat("Input", "MouseSensitivity", 1.0f);
 	mfGamepadSensitivity = pCfg->GetFloat("Input", "GamepadSensitivity", 2.0f);
+}
+
+void cSomaLuxInputHandler::LoadScript()
+{
+	mvGamepadProfiles.clear();
+	Call("void CreateGamepadProfiles()");
+	Call("void CreateInputLayoutMapping()");
+	LoadKeyConfig();
 }
 
 void cSomaLuxInputHandler::LoadKeyConfig()
@@ -722,5 +793,67 @@ void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void ResetSmoothMousePos()", +[](I *) {});
 	SOMA_METHOD(e, T, "void SetMaxSmoothMousePos(int alX)", +[](I *, int) {});
 	SOMA_METHOD(e, T, "void SetPrevSmoothMousePosMul(float afX)", +[](I *, float) {});
-	SOMA_METHOD(e, T, "tString GetActionName(int alId, bool abAnalog)", +[](I *p, int id, bool) { return p->GetActionName(id); });
+	SOMA_METHOD(e, T, "tString GetActionName(int alId, bool abAnalog)", +[](I *p, int id, bool a) { return p->GetActionName(id, a); });
+	SOMA_METHOD(e, T, "void CreateGamepadProfile(const tString&in asName, const tString&in asPrefix, array<tString> &in avButtons, array<tString> &in avAxes, array<uint> &in avDPad)",
+				+[](I *p, S n, S pre, CScriptArray &b, CScriptArray &a, CScriptArray &d) {
+					cGamepadProfile *pProfile = p->GetGamepadProfile(n);
+					if (pProfile == NULL)
+					{
+						p->mvGamepadProfiles.emplace_back();
+						pProfile = &p->mvGamepadProfiles.back();
+					}
+					pProfile->msName = n;
+					pProfile->msPrefix = pre;
+					pProfile->mvButtons.clear();
+					pProfile->mvAxes.clear();
+					pProfile->mvDPad.clear();
+					for (asUINT i = 0; i < b.GetSize(); ++i)
+						pProfile->mvButtons.push_back(*(tString *)b.At(i));
+					for (asUINT i = 0; i < a.GetSize(); ++i)
+						pProfile->mvAxes.push_back(*(tString *)a.At(i));
+					for (asUINT i = 0; i < d.GetSize(); ++i)
+						pProfile->mvDPad.push_back(*(unsigned *)d.At(i));
+				});
+	SOMA_METHOD(e, T, "void AddPresetToProfile(const tString&in asProfile, const tString&in asPreset, array<int> &in avActions, array<tString> &in avBindings, array<bool> &in avAnalog)",
+				+[](I *p, S n, S preset, CScriptArray &ac, CScriptArray &b, CScriptArray &an) {
+					cGamepadProfile *pProfile = p->GetGamepadProfile(n);
+					if (pProfile == NULL)
+						return;
+					pProfile->mvPresets.emplace_back();
+					cGamepadPreset &P = pProfile->mvPresets.back();
+					P.msName = preset;
+					for (asUINT i = 0; i < ac.GetSize(); ++i)
+						P.mvActions.push_back(*(int *)ac.At(i));
+					for (asUINT i = 0; i < b.GetSize(); ++i)
+						P.mvBindings.push_back(*(tString *)b.At(i));
+					for (asUINT i = 0; i < an.GetSize(); ++i)
+						P.mvAnalog.push_back(*(bool *)an.At(i));
+				});
+	SOMA_METHOD(e, T, "void SetGamepadMapping(const tString&in asProfile, const tString&in asPreset)", +[](I *p, S a, S b) {
+		p->msGamepadProfile = a;
+		p->msGamepadPreset = b;
+	});
+	SOMA_METHOD(e, T, "int GetGamepadMappingActionNum()", +[](I *p) {
+		cGamepadPreset *pPreset = p->GetGamepadPreset();
+		return pPreset ? (int)pPreset->mvActions.size() : 0;
+	});
+	SOMA_METHOD(e, T, "bool GetGamepadMappingAction(int alId, int&out alAction, tString&out asPrimary, bool&out abAnalog)",
+				+[](I *p, int id, int &action, tString &prim, bool &analog) {
+					cGamepadPreset *pPreset = p->GetGamepadPreset();
+					if (pPreset == NULL)
+					{
+						action = -1;
+						return false;
+					}
+					if (id < 0 || id >= (int)pPreset->mvActions.size() || id >= (int)pPreset->mvBindings.size() || id >= (int)pPreset->mvAnalog.size())
+						return false;
+					action = pPreset->mvActions[id];
+					prim = pPreset->mvBindings[id];
+					analog = pPreset->mvAnalog[id];
+					return true;
+				});
+	SOMA_METHOD(e, T, "void GetActionsAssociatedToGamepadControl(const tString &in asProfile, const tString &in asPreset, const tString &in asControl, tString &out asActions)",
+				+[](I *p, S a, S b, S c, tString &out) { p->GetActionsAssociatedToGamepadControl(a, b, c, out); });
+	SOMA_METHOD(e, T, "void FetchGamepadInputLayoutString(const tString &in asInputName, tString &out asPrefixName, tString &out asLayoutString)",
+				+[](I *p, S n, tString &a, tString &b) { p->FetchGamepadInputLayoutString(n, a, b); });
 }

@@ -154,6 +154,8 @@ public:
 
 	// cLuxInputHandler::LoadKeyConfig: script CreateActions(), then LoadKeyConfig(cfg) binds them
 	void LoadKeyConfig();
+	// cLuxInputHandler::LoadScript
+	void LoadScript();
 	void LoadUserConfig();
 	// cLuxInputHandler::Update: action edges and analog sums to every updateable, then mouse look
 	void UpdateInput(float afTimeStep, bool abGameInput);
@@ -175,7 +177,28 @@ public:
 
 	void CreateAction(const cLuxAction &aAction);
 	void CreateActionInput(const tString &asInput, int alActionId);
-	tString GetActionName(int alId);
+	tString GetActionName(int alId, bool abGamepad = false);
+
+	struct cGamepadPreset
+	{
+		tString msName;
+		std::vector<int> mvActions;
+		tStringVec mvBindings;
+		std::vector<bool> mvAnalog;
+	};
+	struct cGamepadProfile
+	{
+		tString msName, msPrefix;
+		tStringVec mvButtons, mvAxes;
+		std::vector<unsigned> mvDPad;
+		std::vector<cGamepadPreset> mvPresets;
+	};
+	std::vector<cGamepadProfile> mvGamepadProfiles;
+	tString msGamepadProfile, msGamepadPreset;
+	cGamepadProfile *GetGamepadProfile(const tString &asName);
+	cGamepadPreset *GetGamepadPreset();
+	void GetActionsAssociatedToGamepadControl(const tString &asProfile, const tString &asPreset, const tString &asControl, tString &asActions);
+	bool FetchGamepadInputLayoutString(const tString &asInput, tString &asPrefix, tString &asLayout);
 
 	// Per-frame action edges; HPL2's cAction::BecameTriggerd consumes the edge on the first call
 	void LatchActions();

@@ -74,7 +74,7 @@ static void LoadConfigs()
 static tString gsLanguage = "english";
 const tString &SomaCurrentLanguage() { return gsLanguage; }
 
-// cLuxConfigHandler::LoadUserConfig, [Screen] part
+// cLuxConfigHandler::LoadUserConfig: screen, gamma, subtitles
 void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 {
 	LoadConfigs();
@@ -86,6 +86,7 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	tString sVsync = cString::ToLowerCase(c->GetString("Screen", "Vsync", apCfg->mbVSync ? "true" : "false"));
 	apCfg->mbVSync = sVsync == "true" || sVsync == "adaptive";
 	apCfg->mfGamma = c->GetFloat("Graphics", "Brightness", apCfg->mfGamma);
+	apCfg->mbShowSubtitles = c->GetBool("Sound", "ShowSubtitles", false);
 	c->SetInt("Screen", "Width", apCfg->mlScreenWidth);
 	c->SetInt("Screen", "Height", apCfg->mlScreenHeight);
 	if (sFull != "borderless")
@@ -262,7 +263,7 @@ void cSomaLuxGame::Load()
 	if (cSomaLuxInputHandler::Get())
 	{
 		cSomaLuxInputHandler::Get()->LoadUserConfig();
-		cSomaLuxInputHandler::Get()->LoadKeyConfig();
+		cSomaLuxInputHandler::Get()->LoadScript();
 	}
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
