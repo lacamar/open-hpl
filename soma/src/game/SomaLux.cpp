@@ -959,6 +959,33 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 					  if (SomaWildcardMatch(n, pLight->GetName())) pLight->FadeTo(c, r < 0 ? pLight->GetRadius() : r, t);
 				  }
 			  });
+	static auto ForLights = [](const tString &n, std::function<void(iLight *)> f) {
+		if (cSomaLuxMap::GetCurrent() == NULL) return;
+		cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+		while (it.HasNext())
+		{
+			iLight *pLight = it.Next();
+			if (SomaWildcardMatch(n, pLight->GetName())) f(pLight);
+		}
+	};
+	SOMA_FUNC(e, "void Light_SetVisible(const tString &in asLightName, bool abVisible)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetVisible(b); }); });
+	SOMA_FUNC(e, "void Light_SetBrightness(const tString &in asLightName, float afBrightness)", +[](S n, float f) { ForLights(n, [f](iLight *l) { l->SetBrightness(f); }); });
+	SOMA_FUNC(e, "float Light_GetBrightness(const tString &in asLightName)", +[](S n) {
+		float f = 0;
+		ForLights(n, [&f](iLight *l) { f = l->GetBrightness(); });
+		return f;
+	});
+	SOMA_FUNC(e, "void Light_SetFlickerActive(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetFlickerActive(b); }); });
+	SOMA_FUNC(e, "void Light_SetCastShadows(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetCastShadows(b); }); });
+	SOMA_FUNC(e, "void Billboard_SetVisible(const tString &in asBillboardName, bool abVisible)", +[](S n, bool b) {
+		if (cSomaLuxMap::GetCurrent() == NULL) return;
+		cBillboardIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetBillboardIterator();
+		while (it.HasNext())
+		{
+			cBillboard *p = it.Next();
+			if (SomaWildcardMatch(n, p->GetName())) p->SetVisible(b);
+		}
+	});
 	SOMA_METHOD(e, M, "void PlacePlayerAtStartPos(const tString&in asName)", +[](cSomaLuxMap &m, S n) {
 		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntity() : m.GetWorld()->GetStartPosEntity(n);
 		if (pStart && cSomaLuxPlayer::Get())

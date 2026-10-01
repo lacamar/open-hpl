@@ -6,10 +6,13 @@
 #include "math/Math.h"
 #include "math/MathTypes.h"
 #include "math/Quaternion.h"
+#include "impl/scriptarray.h"
 
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <map>
+#include <set>
 #include <set>
 #include "SomaImGui.h"
 #include <string>
@@ -41,7 +44,7 @@ struct cSomaVector4f
 
 static std::set<std::string> gsetNativeBehaviourTypes = {"cImGuiGfx", "cImGuiFont", "cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
 														  "cColor", "cMatrixf", "cQuaternion", "cPidControllerVec3", "cPidControllerf",
-														  "cRect2f", "cRect2l", "cPlanef", "cDate"};
+														  "cRect2f", "cRect2l", "cPlanef", "cDate", "cScriptStringSet"};
 
 bool SomaScriptHasNativeBehaviours(const char *apType)
 {
@@ -307,6 +310,9 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_GetAngleDistance(float afAngle1, float afAngle2, float afMaxAngle)",
 			  +[](float a, float b, float m) { return cMath::GetAngleDistance(a, b, m); });
 	SOMA_FUNC(e, "float cMath_GetAngleDistanceRad(float afAngle1, float afAngle2)", +[](float a, float b) { return cMath::GetAngleDistanceRad(a, b); });
+	SOMA_FUNC(e, "cVector3f cMath_GetAngleDistanceVector3fRad(const cVector3f&in avAngles1, const cVector3f&in avAngles2)", +[](const cVector3f &a, const cVector3f &b) {
+		return cVector3f(cMath::GetAngleDistanceRad(a.x, b.x), cMath::GetAngleDistanceRad(a.y, b.y), cMath::GetAngleDistanceRad(a.z, b.z));
+	});
 	SOMA_FUNC(e, "float cMath_GetAngleDistanceDeg(float afAngle1, float afAngle2)", +[](float a, float b) { return cMath::GetAngleDistanceDeg(a, b); });
 	SOMA_FUNC(e, "float cMath_Vector2Dist(const cVector2f &in avPosA, const cVector2f &in avPosB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2Dist(a, b); });
 	SOMA_FUNC(e, "float cMath_Vector2DistSqr(const cVector2f &in avPosA, const cVector2f &in avPosB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2DistSqr(a, b); });
@@ -464,8 +470,37 @@ template <class T> static void RegisterPid(asIScriptEngine *e, const char *apTyp
 	}), asCALL_GENERIC);
 }
 
+// Keyed by struct block; a reused block address is cleared by the factory
+static std::map<void *, std::multiset<tString>> gmapStringSets;
+
+static void RegisterStringSet(asIScriptEngine *e)
+{
+	e->RegisterObjectBehaviour("cScriptStringSet", asBEHAVE_FACTORY, "cScriptStringSet@ f()", asFUNCTION(+[](asIScriptGeneric *g) {
+		void *pObj = SomaNewOwnedScriptStruct("cScriptStringSet");
+		gmapStringSets[pObj].clear();
+		*(void **)g->GetAddressOfReturnLocation() = pObj;
+	}), asCALL_GENERIC);
+	typedef const tString &S;
+	SOMA_METHOD(e, "cScriptStringSet", "cScriptStringSet& opAssign(const cScriptStringSet &in)", +[](void *p, void *o) -> void * {
+		gmapStringSets[p] = gmapStringSets[o];
+		return p;
+	});
+	SOMA_METHOD(e, "cScriptStringSet", "void Add(const tString &in asStr)", +[](void *p, S s) { gmapStringSets[p].insert(s); });
+	SOMA_METHOD(e, "cScriptStringSet", "void Erase(const tString &in asStr)", +[](void *p, S s) { gmapStringSets[p].erase(s); });
+	SOMA_METHOD(e, "cScriptStringSet", "bool Exists(const tString &in asStr)", +[](void *p, S s) { return gmapStringSets[p].count(s) != 0; });
+	SOMA_METHOD(e, "cScriptStringSet", "int Count(const tString &in asStr)", +[](void *p, S s) { return (int)gmapStringSets[p].count(s); });
+	SOMA_METHOD(e, "cScriptStringSet", "void Clear()", +[](void *p) { gmapStringSets[p].clear(); });
+	SOMA_METHOD(e, "cScriptStringSet", "int Size()", +[](void *p) { return (int)gmapStringSets[p].size(); });
+	SOMA_METHOD(e, "cScriptStringSet", "void ElementsToArray(array<tString> &out avOutElements)", +[](void *p, CScriptArray &a) {
+		a.Resize(0);
+		for (const tString &s : gmapStringSets[p])
+			a.InsertLast((void *)&s);
+	});
+}
+
 void RegisterSomaScriptMathNatives(asIScriptEngine *apEngine)
 {
+	RegisterStringSet(apEngine);
 	RegisterPid<cVector3f>(apEngine, "cPidControllerVec3", "cVector3f");
 	RegisterPid<float>(apEngine, "cPidControllerf", "float");
 	RegisterVectors(apEngine);

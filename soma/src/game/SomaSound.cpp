@@ -178,6 +178,77 @@ cSoundEntry *cSomaSoundEvents::PlayGui(const tString &asEvent, float afVolume, i
 
 //---------------------------------------
 
+namespace
+{
+struct cGameMusic
+{
+	tString msFile;
+	float mfVolume = 0;
+	bool mbLoop = false;
+	bool mbResume = false;
+};
+
+const int kMaxMusicPrio = 10;
+cGameMusic gvGameMusic[kMaxMusicPrio + 1];
+int glCurrentMusicPrio = -1;
+char gMusicTag;
+
+cMusicHandler *MusicHandler() { return gpSomaBase->mpEngine->GetSound()->GetMusicHandler(); }
+
+void PlayHighestMusic()
+{
+	for (int i = kMaxMusicPrio; i >= 0; --i)
+	{
+		cGameMusic &m = gvGameMusic[i];
+		if (m.msFile.empty())
+			continue;
+		if (m.mbLoop == false)
+		{
+			m.msFile = "";
+			continue;
+		}
+		MusicHandler()->Play(m.msFile, m.mfVolume, 0.3f, true, m.mbResume);
+		glCurrentMusicPrio = i;
+		return;
+	}
+}
+
+void RegisterMusicNatives(asIScriptEngine *e)
+{
+	typedef const tString &S;
+	SOMA_FUNC(e, "cLuxMusicHandler@ cLux_GetMusicHandler()", +[]() { return (void *)&gMusicTag; });
+	SOMA_METHOD(e, "cLuxMusicHandler",
+				"void Play(const tString &in asFile, bool abLoop,float afVolume, float afFreq, float afVolumeFadeTime, float afFreqFadeTime, int alPrio, bool abResume, bool abSpecialEffect)",
+				+[](void *, S f, bool loop, float vol, float, float fade, float, int prio, bool resume, bool) {
+					prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
+					cGameMusic &m = gvGameMusic[prio];
+					if (m.msFile == f)
+						return;
+					if (glCurrentMusicPrio <= prio)
+					{
+						MusicHandler()->Play(f, vol, fade > 0 ? vol / fade : 100.0f, loop, resume);
+						glCurrentMusicPrio = prio;
+					}
+					m.msFile = f;
+					m.mfVolume = vol;
+					m.mbLoop = loop;
+					m.mbResume = resume;
+				});
+	SOMA_METHOD(e, "cLuxMusicHandler", "void Stop(float afFadeTime, int alPrio)", +[](void *, float fade, int prio) {
+		prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
+		cGameMusic &m = gvGameMusic[prio];
+		if (m.msFile.empty())
+			return;
+		m.msFile = "";
+		if (prio != glCurrentMusicPrio)
+			return;
+		MusicHandler()->Stop(fade > 0 ? m.mfVolume / fade : 100.0f);
+		glCurrentMusicPrio = -1;
+		PlayHighestMusic();
+	});
+}
+} // namespace
+
 void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 {
 	if (gpSomaBase && gpSomaBase->mpEngine)
@@ -213,6 +284,26 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 				});
 	SOMA_FUNC(e, "bool cLux_PlayGuiSoundData(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom)",
 			  +[](S n, int type, float vol, bool) { return cSomaSoundEvents::Get()->PlayGui(n, vol, type) != NULL; });
+	SOMA_FUNC(e, "bool cLux_PlayGuiSoundDataEx(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom, cLuxSoundExtraData @apExtraData)",
+			  +[](S n, int type, float vol, bool, char *pExtra) {
+				  cSoundEntry *pEntry = cSomaSoundEvents::Get()->PlayGui(n, vol, type);
+				  if (pExtra)
+					  *(cSoundEntry **)(pExtra + 32) = pEntry;
+				  return pEntry != NULL;
+			  });
+	SOMA_FUNC(e, "void cSound_FadeMusicVolumeMul(float afDest, float afSpeed)",
+			  +[](float d, float sp) { gpSomaBase->mpEngine->GetSound()->GetMusicHandler()->FadeVolumeMul(d, sp); });
+	SOMA_FUNC(e, "float cSound_GetMusicVolumeMul()", +[]() { return gpSomaBase->mpEngine->GetSound()->GetMusicHandler()->GetVolumeMul(); });
+	RegisterMusicNatives(e);
+	SOMA_FUNC(e, "cSoundEntry@ cSound_GetEntry(const tString&in asName)", +[](S n) -> cSoundEntry * {
+		for (cSoundEntry *p : *gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetEntryList())
+			if (p->GetName() == n)
+				return p;
+		return NULL;
+	});
+	SOMA_METHOD(e, "cSoundEntry", "void Stop(bool abPlayEnd)", +[](cSoundEntry *p, bool) { p->Stop(); });
+	SOMA_METHOD(e, "cSoundEntry", "void FadeIn(float afVolumeMul,float afSpeed)", +[](cSoundEntry *p, float v, float sp) { p->FadeIn(v, sp); });
+	SOMA_METHOD(e, "cSoundEntry", "float GetVolumeMul()", +[](cSoundEntry *p) { return p->GetVolumeMul(); });
 	SOMA_FUNC(e, "cSoundEntry@ cSound_PlayGui(const tString&in asName, bool abLoop, float afVolume, const cVector3f&in avPos, eSoundEntryType aEntryType)",
 			  +[](S n, bool, float vol, const cVector3f &, int type) { return cSomaSoundEvents::Get()->PlayGui(n, vol, type); });
 	SOMA_FUNC(e, "cSoundEntry@ cSound_PlayGuiStream(const tString&in asFileName, bool abLoop, float afVolume, const cVector3f&in avPos, eSoundEntryType aEntryType)",

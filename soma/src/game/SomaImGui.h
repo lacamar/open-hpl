@@ -33,6 +33,7 @@ public:
 	// Replays the draw calls recorded by the last completed Begin/End
 	void DrawAll();
 	void ClearStates();
+	tString DebugOps(size_t alMax);
 
 	cGuiSet *GetSet() { return mpSet; }
 	const tString &GetName() { return msName; }

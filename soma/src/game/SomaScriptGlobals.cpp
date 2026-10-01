@@ -197,6 +197,11 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 			Warning("SOMA script: could not register forwarding function %s (%d)\n", f.mpDecl, r);
 	}
 
+	SOMA_FUNC(e, "void SlideDoor_SetClosed(const tString& in asName, bool abClosed, bool abInstant = false)", +[](const tString &n, bool c, bool i) {
+		gmapArgs[0].f = c ? 0.0f : 1.0f;
+		gmapArgs[1].b = i;
+		RunGlobalFunc(n, "cScrPropSlideDoor", "_Global_SetOpenAmount");
+	});
 	SOMA_FUNC(e, "bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", (RunGlobalFunc));
 
 	SOMA_GLOBAL_TYPE("String", "const tString &in asVar", const tString &, s)

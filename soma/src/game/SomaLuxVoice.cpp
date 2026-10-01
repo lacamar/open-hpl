@@ -1,6 +1,7 @@
 #include "SomaLuxVoice.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
+#include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
@@ -167,6 +168,8 @@ void cSomaLuxVoiceHandler::LoadMapFile(const tString &asHpmPath, const tString &
 void cSomaLuxVoiceHandler::Reset()
 {
 	StopAll();
+	mmapSources.clear();
+	mmapSceneVolumes.clear();
 }
 
 tString cSomaLuxVoiceHandler::SoundKey(cSubject *apSubject, size_t alLine, size_t alSound)
@@ -216,8 +219,22 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 
 	tString sFile = "voices/" + pSubject->msSet + "/" + sKey + ".ogg";
 	aP.mpEntry = NULL;
-	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) != _W(""))
-		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, sound.mfVolume * line.mfCharVolume);
+	aP.msSourceEntity = "";
+	float fVolume = sound.mfVolume * line.mfCharVolume * mmapSceneVolumes[pSubject->msScene].mfVolume;
+	auto itSource = mmapSources.find(line.msCharacter);
+	cSomaLuxEntity *pSource = itSource != mmapSources.end() && itSource->second.mbUse3D && cSomaLuxMap::GetCurrent()
+								  ? cSomaLuxMap::GetCurrent()->GetEntity(itSource->second.msEntity)
+								  : NULL;
+	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) == _W(""))
+		;
+	else if (pSource)
+	{
+		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), itSource->second.mfMinDist,
+																	  itSource->second.mfMaxDist, eSoundEntryType_World, false, 0, true);
+		aP.msSourceEntity = itSource->second.msEntity;
+	}
+	else
+		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume);
 	aP.mlEntryId = aP.mpEntry ? aP.mpEntry->GetId() : -1;
 	Log("SOMA voice: %s%s\n", sKey.c_str(), aP.mpEntry ? "" : " (no audio)");
 	// Missing audio still shows its subtitle for a reading time
@@ -245,6 +262,20 @@ void cSomaLuxVoiceHandler::Finish(size_t alIdx)
 		p.mOnDone();
 }
 
+void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D)
+{
+	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D};
+}
+
+void cSomaLuxVoiceHandler::FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime)
+{
+	cSceneVolume &v = mmapSceneVolumes[asScene];
+	v.mfGoal = afVolume;
+	v.mfSpeed = afTime > 0 ? std::fabs(afVolume - v.mfVolume) / afTime : 0;
+	if (afTime <= 0)
+		v.mfVolume = afVolume;
+}
+
 void cSomaLuxVoiceHandler::FadeTo(float afGoal, float afTime)
 {
 	mfFadeGoal = afGoal;
@@ -260,7 +291,26 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 	else if (mfFadeAlpha > mfFadeGoal)
 		mfFadeAlpha = std::max(mfFadeAlpha - mfFadeSpeed * afTimeStep, mfFadeGoal);
 
+	for (auto &it : mmapSceneVolumes)
+	{
+		cSceneVolume &v = it.second;
+		if (v.mfVolume < v.mfGoal)
+			v.mfVolume = std::min(v.mfVolume + v.mfSpeed * afTimeStep, v.mfGoal);
+		else if (v.mfVolume > v.mfGoal)
+			v.mfVolume = std::max(v.mfVolume - v.mfSpeed * afTimeStep, v.mfGoal);
+	}
 	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
+	for (cPlaying &p : mvPlaying)
+	{
+		if (p.mpEntry == NULL || pHandler->IsValid(p.mpEntry, p.mlEntryId) == false)
+			continue;
+		auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
+		if (itVol != mmapSceneVolumes.end())
+			p.mpEntry->SetVolumeMul(itVol->second.mfVolume);
+		cSomaLuxEntity *pSource = p.msSourceEntity != "" && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(p.msSourceEntity) : NULL;
+		if (pSource)
+			p.mpEntry->GetChannel()->SetPosition(pSource->GetPosition());
+	}
 	for (size_t i = 0; i < mvPlaying.size();)
 	{
 		cPlaying &p = mvPlaying[i];
@@ -700,6 +750,11 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool SceneIsActive(const tString&in asScene)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SceneIsActive(s); });
 	SOMA_METHOD(e, T, "bool SceneInvolvingCharacterIsActive(const tString&in asCharacter)",
 				+[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SceneInvolvingCharacterIsActive(s); });
+	SOMA_METHOD(e, T, "void FadeSceneVolumeTo(const tString&in asScene, float afVolume, float afTime)", +[](void *, S s, float v, float t) { VH->FadeSceneVolumeTo(s, v, t); });
+	SOMA_METHOD(e, T, "void SetFocusScene(const tString&in asScene)", +[](void *, S) {});
+	SOMA_METHOD(e, "cLuxMap",
+				"void SetVoiceSource(const tString &in asCharacter, const tString &in asEntityName, float afMinDistance, float afMaxDistance, bool abUse3D, float afMaxPlayerListeningRange, float afMinFreq = 22000, float afMaxFreq = 22000, uint aFrequencyFlags = 0)",
+				+[](void *, S c, S ent, float fMin, float fMax, bool b3D, float, float, float, asUINT) { VH->SetSource(c, ent, fMin, fMax, b3D); });
 	SOMA_METHOD(e, T, "bool AnySceneIsActive()", +[](void *) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->AnySceneIsActive(); });
 #undef VH
 }

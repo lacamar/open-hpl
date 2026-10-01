@@ -2,6 +2,7 @@
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
+#include "SomaLuxScriptable.h"
 #include "SomaScriptApi.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
@@ -47,13 +48,7 @@ namespace
 		eComp_LightSensor,
 	};
 
-	uint64_t Hash64(const tString &s)
-	{
-		uint64_t h = 14695981039346656037ull;
-		for (unsigned char c : s)
-			h = (h ^ c) * 1099511628211ull;
-		return h;
-	}
+	uint64_t Hash64(const tString &s) { return SomaHash64(s); }
 
 	float Wrap(float a)
 	{
@@ -1056,6 +1051,14 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		}
 	});
 	SOMA_METHOD(e, A, "float GetCurrentPlayerSightDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRange * a->mfSightRangeMul : 0.0f; });
+	for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
+		SOMA_METHOD(e, pType, "bool CheckIsOnScreen(bool abUseRayCast)", +[](E *p, bool b) { return SomaEntityIsOnScreen(p, b); });
+	for (const char *pType : {"cLuxAgent", "cLuxCritter"})
+		SOMA_METHOD(e, pType, "bool GetEntityIsInPlayerFOV()", +[](E *p) { return SomaEntityIsOnScreen(p, false); });
+	SOMA_FUNC(e, "bool Entity_IsInPlayerFOV(const tString &in asEntity)", +[](S n) {
+		cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL;
+		return SomaEntityIsOnScreen(p, false);
+	});
 	SOMA_METHOD(e, A, "void SetCheckForDoorsCount(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfCheckDoorsCount = x; });
 	for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 	{

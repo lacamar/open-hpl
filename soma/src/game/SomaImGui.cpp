@@ -27,7 +27,7 @@ namespace
 		kSliderUseButton = 320, kSliderGfxButton = 328, kSliderButtonSize = 496,
 		kCheckBoxSize = 496, kCheckGfxBox = 504, kCheckOverlaySize = 672, kCheckGfxOverlay = 680,
 		kMultiArrowSize = 496, kMultiGfxArrowRight = 512, kMultiGfxArrowLeft = 848,
-		kWindowFrame = 320, kWindowPadTop = 3548, kWindowPadRight = 3552, kWindowPadBottom = 3556, kWindowPadLeft = 3560,
+		kWindowFrame = 320, kWindowLabelPadTop = 3528, kWindowPadTop = 3548, kWindowPadRight = 3552, kWindowPadBottom = 3556, kWindowPadLeft = 3560,
 		kGaugeFrame = 320, kGaugeUseFrame = 1912, kGaugeFill = 1920, kGaugeOrient = 2092, kGaugePadding = 2096,
 	};
 	template <class T> T &F(const void *p, int off) { return *(T *)((char *)p + off); }
@@ -116,11 +116,11 @@ void cSomaImGui::Begin(float afTimeStep)
 			v[i] = f.mvStart[i] + (f.mvGoal[i] - f.mvStart[i]) * t;
 		cState &st = mmapStates[it->first];
 		if (f.mlType == 0)
-			st.mfFloat = v[0];
+			st.mfFloat = v[0], st.mbSetFloat = true;
 		else if (f.mlType == 1)
-			st.mvVec = cVector3f(v[0], v[1], v[2]);
+			st.mvVec = cVector3f(v[0], v[1], v[2]), st.mbSetVec = true;
 		else
-			st.mCol = cColor(v[0], v[1], v[2], v[3]);
+			st.mCol = cColor(v[0], v[1], v[2], v[3]), st.mbSetCol = true;
 	}
 	for (uint64_t id : mvTimersOver)
 		mmapTimers.erase(id);
@@ -143,6 +143,20 @@ void cSomaImGui::End()
 	}
 	mvDrawn.swap(mvBuilding);
 	mvBuilding.clear();
+}
+
+tString cSomaImGui::DebugOps(size_t alMax)
+{
+	tString s = cString::ToString((int)mvDrawn.size()) + ": ";
+	for (size_t i = 0; i < mvDrawn.size() && i < alMax; ++i)
+	{
+		const cOp &op = mvDrawn[i];
+		char sBuf[160];
+		snprintf(sBuf, sizeof(sBuf), "%.1f,%.1f,%.1f %.1fx%.1f c=%.2f,%.2f,%.2f,%.2f m=%d", op.mvPos.x, op.mvPos.y, op.mvPos.z, op.mvSize.x, op.mvSize.y, op.mColor.r,
+				 op.mColor.g, op.mColor.b, op.mColor.a, op.mlMaterial);
+		s += (op.mpGfx ? tString("gfx ") : op.mpFont ? "text '" + cString::To8Char(op.msText.substr(0, 12)) + "' " : tString("clip ")) + sBuf + "; ";
+	}
+	return s;
 }
 
 void cSomaImGui::DrawAll()
@@ -517,15 +531,19 @@ float cSomaImGui::DoTextFrame(const tWString &asText, const cVector2f &avEdge, f
 	tWStringVec vRows;
 	if (pFontData)
 		pFontData->GetWordWrapRows(avSize.x - avEdge.x * 2, vFont.y + afRowSpace, vFont, asText, &vRows);
-	float fY = avPos.y + avEdge.y - afStartRow;
+	float fRowH = vFont.y + afRowSpace;
+	float fY = avPos.y + avEdge.y - afStartRow * fRowH;
 	for (size_t i = 0; i < vRows.size(); ++i)
 	{
-		if (fY >= avPos.y && fY + vFont.y <= avPos.y + avSize.y + 0.5f)
-			DrawFont(vRows[i], pFont, cVector3f(avPos.x + avEdge.x, fY, avPos.z + 0.1f), F<int>(apData, kWFontAlign), 1, F<cColor>(apData, kWColorText));
-		fY += vFont.y + afRowSpace;
+		if (fY >= avPos.y - 0.5f && fY + vFont.y <= avPos.y + avSize.y + 0.5f)
+			DrawText(vRows[i], pFont, F<cColor>(apData, kWColorText), F<int>(apData, kWFontAlign), cVector3f(avPos.x + avEdge.x, fY, avPos.z),
+					 cVector2f(avSize.x - avEdge.x * 2, vFont.y), 1);
+		fY += fRowH;
 	}
 	Advance(avPos, avSize);
-	return (float)vRows.size() * (vFont.y + afRowSpace);
+	if (fRowH <= 0)
+		return 0;
+	return cMath::Max((float)vRows.size() - (avSize.y - avEdge.y * 2 + afRowSpace) / fRowH, 0.0f);
 }
 
 void cSomaImGui::DoFrame(const void *apData, cVector3f avPos, cVector2f avSize)
@@ -787,6 +805,12 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cImGuiGfx", "const tString& GetFile()const", +[](S_ &g) -> const tString & { return StrAt(&g, kGfxFile); });
 	SOMA_METHOD(e, "cImGuiGfx", "void CopyFrom(const cImGuiGfx &in aGfx)", +[](S_ &g, D o) { memcpy((char *)&g + 16, (char *)&o + 16, kGfxSize - 16); });
 	SOMA_METHOD(e, "cImGuiGfx", "uint64 GetId()", +[](S_ &g) { return (asQWORD)SomaHash64(StrAt(&g, kGfxFile)); });
+	SOMA_METHOD(e, "cImGuiWindowData", "void SetLabelPadding(float afTop, float afRight, float afBottom, float afLeft)", +[](S_ &g, float t, float r, float b, float l) {
+		F<float>(&g, kWindowLabelPadTop) = t, F<float>(&g, kWindowLabelPadTop + 4) = r, F<float>(&g, kWindowLabelPadTop + 8) = b, F<float>(&g, kWindowLabelPadTop + 12) = l;
+	});
+	SOMA_METHOD(e, "cImGuiWindowData", "void SetPadding(float afTop, float afRight, float afBottom, float afLeft)", +[](S_ &g, float t, float r, float b, float l) {
+		F<float>(&g, kWindowPadTop) = t, F<float>(&g, kWindowPadRight) = r, F<float>(&g, kWindowPadBottom) = b, F<float>(&g, kWindowPadLeft) = l;
+	});
 	SOMA_METHOD(e, "cImGuiFont", "void SetFile(const tString&in asFile)", +[](S_ &g, Str s) { F<const tString *>(&g, kFontFile) = SomaIntern(s); });
 	SOMA_METHOD(e, "cImGuiFont", "const tString& GetFile()const", +[](S_ &g) -> const tString & { return StrAt(&g, kFontFile); });
 	SOMA_METHOD(e, "cImGuiFont", "uint64 GetId()", +[](S_ &g) { return (asQWORD)SomaHash64(StrAt(&g, kFontFile)); });

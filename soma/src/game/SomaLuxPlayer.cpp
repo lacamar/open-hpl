@@ -575,8 +575,12 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 		cSomaLuxPlayer::cFadeValue &f = p->mmapCameraRoll[id];
 		f.mfValue = f.mfGoal = x;
 	});
-	SOMA_METHOD(e, T, "float GetDefaultFOV()", +[](P *p) { return p->GetDefaultFOV(); });
-	SOMA_METHOD(e, T, "void FadeCameraFOVTo(float afTargetFOV, float afSpeed)", +[](P *p, float x, float s) { p->mFOV.mfGoal = x; p->mFOV.mfSpeed = s; p->mFOV.mfSpeedMul = 0; });
+	SOMA_METHOD(e, T, "float GetDefaultFOV()", +[](P *p) { return cMath::ToRad(p->GetDefaultFOV()); });
+	SOMA_METHOD(e, T, "void FadeCameraFOVTo(float afTargetFOV, float afSpeed)", +[](P *p, float x, float s) {
+		p->mFOV.mfGoal = x < 0 ? p->GetDefaultFOV() : cMath::ToDeg(x);
+		p->mFOV.mfSpeed = cMath::ToDeg(s);
+		p->mFOV.mfSpeedMul = 0;
+	});
 	SOMA_METHOD(e, T, "void AutomoveCharBodyTo(float afAcc, float afSpeedMul, float afMaxSpeed, const cVector3f&in avPosition)",
 				+[](P *p, float, float mul, float max, V pos) {
 					p->mbAutomoveActive = true;

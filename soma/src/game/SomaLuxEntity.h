@@ -185,6 +185,8 @@ public:
 	// cLuxProp::CreateAndSetupGui: an ImGui drawn by the map's OnGui function
 	class cSomaImGui *mpImGui = NULL;
 	tString msOnGuiFunc;
+	int mlGuiDraws = 0;
+	int mlGuiCalls = 0;
 	bool mbGuiActive = false;
 	// Prop GUI drawn on a submesh: a 3D gui set over the screen rectangle fitted from its UVs
 	cSubMeshEntity *mpGuiSubMesh = NULL;
@@ -220,6 +222,7 @@ bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut);
 // No colliding body other than apIgnore's between the points
 bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxEntity *apIgnore);
+bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast);
 
 // "*" matches any run of characters, as HPL3's wildcard entity names
 bool SomaWildcardMatch(const tString &asPattern, const tString &asName);

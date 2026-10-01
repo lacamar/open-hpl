@@ -430,6 +430,8 @@ void cSomaLuxEntity::ApplyInstanceVars()
 	for (size_t i = 0; i < vEnts.size() && vFuncs.empty() == false; ++i)
 		mvCollideCallbacks.push_back(cCollideCallback{cString::ToLowerCase(vEnts[i]) == "player" ? tString("Player") : vEnts[i],
 													  vFuncs[std::min(i, vFuncs.size() - 1)]});
+	if (v.GetVarString("UserVar", "") != "")
+		mmapScriptVars[""] = v.GetVarString("UserVar", "");
 	msConnectionCallback = v.GetVarString("ConnectionStateChangeCallback", "");
 	if (v.GetVarString("ConnectedEntity", "") != "")
 		mvConnections.push_back(cConnection{"", v.GetVarString("ConnectedEntity", ""), v.GetVarBool("ConnectedEntityInvertState", false),
@@ -542,6 +544,9 @@ void cSomaGuiScreenRenderer::OnPostTranslucentDraw(cRendererCallbackFunctions *a
 		return;
 	iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
 	cFrustum *pFrustum = apFunctions->GetFrustum();
+	// Reflection passes share callbacks; Render consumes the set's objects
+	if (mpViewport == NULL || mpViewport->GetCamera() == NULL || pFrustum != mpViewport->GetCamera()->GetFrustum())
+		return;
 	apFunctions->SetProgram(NULL);
 	apFunctions->SetTextureRange(NULL, 0);
 	apFunctions->SetVertexBuffer(NULL);
@@ -557,7 +562,11 @@ void cSomaGuiScreenRenderer::OnPostTranslucentDraw(cRendererCallbackFunctions *a
 		bv.SetSize(vReach * 2);
 		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
 			continue;
+		// The engine clears set objects after the buffer swap, which runs between update and render
+		pSet->ClearRenderObjects();
+		p->mpImGui->DrawAll();
 		pSet->Render(pFrustum);
+		++p->mlGuiDraws;
 	}
 }
 
@@ -566,6 +575,7 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 	UpdateGuiScreen();
 	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
 		return;
+	++mlGuiCalls;
 	cSomaImGui *pPrev = cSomaImGui::GetCurrent();
 	cSomaImGui::SetCurrent(mpImGui);
 	mpImGui->Begin(afTimeStep);
@@ -576,9 +586,6 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 			c->SetArgFloat(1, afTimeStep);
 		});
 	mpImGui->End();
-	// Drawn into the set now: 3D sets render with the scene, before OnDraw
-	if (mpGuiSubMesh)
-		mpImGui->DrawAll();
 	cSomaImGui::SetCurrent(pPrev);
 }
 
@@ -963,11 +970,15 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 	for (auto &hit : ray.mvHits)
 	{
 		auto it = mapOwner.find(hit.second);
-		if (it == mapOwner.end())
+		// Static props are world geometry in the original, not lux entities
+		bool bWorld = it == mapOwner.end() || it->second->msClassName == "StaticProp" || it->second->msClassName == "StaticCollider";
+		if (bWorld)
 		{
-			if (hit.second->GetCollide())
-				return false;
-			continue;
+			if (hit.second->GetCollide() == false)
+				continue;
+			apBodyOut = hit.second;
+			afDistOut = hit.first;
+			return false;
 		}
 		cSomaLuxEntity *pEnt = it->second;
 		if (pEnt->mbActive == false)
@@ -1068,6 +1079,31 @@ static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 			if (separated(cMath::Vector3Cross(a.mvAxis[i], b.mvAxis[j])))
 				return false;
 	return true;
+}
+
+bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
+{
+	cCamera *pCam = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCamera() : NULL;
+	if (pCam == NULL || apEnt == NULL || apEnt->mbActive == false)
+		return false;
+	cFrustum *pFrustum = pCam->GetFrustum();
+	std::vector<cSomaOBB> vBoxes;
+	EntityBoxes(apEnt, vBoxes);
+	if (vBoxes.empty())
+		vBoxes.push_back(AABBToOBB(apEnt->GetPosition(), apEnt->GetPosition()));
+	for (const cSomaOBB &box : vBoxes)
+	{
+		cVector3f vHalf;
+		for (int k = 0; k < 3; ++k)
+			vHalf.v[k] = std::fabs(box.mvAxis[0].v[k]) * box.mvHalf.x + std::fabs(box.mvAxis[1].v[k]) * box.mvHalf.y + std::fabs(box.mvAxis[2].v[k]) * box.mvHalf.z;
+		cBoundingVolume bv;
+		bv.SetLocalMinMax(box.mvCenter - vHalf - cVector3f(0.001f), box.mvCenter + vHalf + cVector3f(0.001f));
+		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
+			continue;
+		if (abRayCast == false || SomaLineOfSight(pCam->GetPosition(), box.mvCenter, apEnt))
+			return true;
+	}
+	return false;
 }
 
 static bool BodyInArea(cSomaLuxEntity *apArea, iPhysicsBody *apBody, bool abCenter)
@@ -1383,6 +1419,21 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	});
 	SOMA_METHOD_NEW(e, T, "void RemoveAllConnections()", +[](E *p) { p->mvConnections.clear(); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerLookAtCallback()", +[](E *p) { return p->msLookAtCallback != ""; });
+	SOMA_METHOD_NEW(e, T, "cSoundEntity@ PlaySound(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
+					+[](E *p, S n, S file, bool remove, bool attach) -> cSoundEntity * {
+						cSomaLuxMap *pMap = p->mpMap ? p->mpMap : cSomaLuxMap::GetCurrent();
+						cSoundEntity *pSound = pMap ? pMap->GetWorld()->CreateSoundEntity(n, file, remove) : NULL;
+						if (pSound == NULL)
+							return NULL;
+						pSound->SetPosition(p->GetPosition());
+						iEntity3D *pParent = p->mpMesh ? (iEntity3D *)p->mpMesh : (iEntity3D *)p->GetMainBody();
+						if (attach && pParent)
+						{
+							pSound->SetPosition(0);
+							pParent->AddChild(pSound);
+						}
+						return pSound;
+					});
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive); });
 	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });
@@ -1501,6 +1552,15 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  +[](const tString &n, const cColor &c, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { p->FadeEffectBaseColor(c, t); }); });
 	SOMA_FUNC(e, "void Entity_PlayAnimation(const tString &in asEntityName, const tString &in asAnimation, float afFadeTime=0.1f, bool abLoop=false, bool abPlayTransition=true, const tString &in asCallback = \"\")",
 			  +[](const tString &n, const tString &a, float f, bool l, bool, const tString &cb) { ForMatching(n, [&](cSomaLuxEntity *p) { p->PlayAnimation(a, f, l, cb); }); });
+	SOMA_FUNC(e, "void Entity_StopAnimation(const tString &in asEntityName)", +[](const tString &n) { ForMatching(n, [](cSomaLuxEntity *p) { p->StopAnimations(0); }); });
+	SOMA_FUNC(e, "void Entity_SetAnimationPaused(const tString &in asEntityName, const tString &in asAnimationName, bool abPaused = true)",
+			  +[](const tString &n, const tString &a, bool b) {
+				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  if (p->mpMesh == NULL) return;
+					  int lIdx = a == "" ? p->mlCurrentAnim : p->mpMesh->GetAnimationStateIndex(a);
+					  if (lIdx >= 0) p->mpMesh->GetAnimationState(lIdx)->SetPaused(b);
+				  });
+			  });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
@@ -1540,15 +1600,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  cSomaLuxEntity *pEnt = NULL;
 				  iPhysicsBody *pBody = NULL;
 				  float fDist = 0;
-				  if (SomaGetClosestEntity(st, dir, len, type, pEnt, pBody, fDist) == false)
-					  return false;
-				  if (out)
+				  bool bFound = SomaGetClosestEntity(st, dir, len, type, pEnt, pBody, fDist);
+				  if (out && (bFound || pBody))
 				  {
 					  *(float *)(out + 16) = fDist;
 					  *(iPhysicsBody **)(out + 24) = pBody;
 					  *(cSomaLuxEntity **)(out + 32) = pEnt;
 				  }
-				  return true;
+				  return bFound;
 			  });
 	SOMA_FUNC(e, "iPhysicsBody@ cLux_GetClosestBody(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, float &out afDistance, cVector3f &out avSurfaceNormal)",
 			  +[](const cVector3f &st, const cVector3f &dir, float len, float &fDist, cVector3f &vNormal) -> iPhysicsBody * {
@@ -1708,6 +1767,49 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  cVector3f vGoal = pTarget->GetPosition();
 				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveLinearTo(vGoal, a, m, d, r, cb); });
 			  });
+	SOMA_FUNC(e, "void Terminal_SetGuiActive(const tString& in asName, bool abX, float afFadeTime=0.0f)",
+			  +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiActive = b; }); });
+	SOMA_FUNC(e, "bool Terminal_IsGuiActive(const tString& in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbGuiActive; });
+	SOMA_FUNC(e, "void Terminal_SetShowMouse(const tString& in asPropName, bool abShow)",
+			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { if (p->mpImGui) p->mpImGui->mbShowMouse = b; }); });
+	SOMA_FUNC(e, "void Terminal_SetUpdateWhenOutOfView(const tString& in asName, bool abX)", +[](S, bool) {});
+	SOMA_FUNC(e, "void Terminal_ForceCacheUpdate(const tString& in asName)", +[](S) {});
+	SOMA_FUNC(e, "void Terminal_SetFPSWhenIdle(const tString& in asName, float afFPS)", +[](S, float) {});
+	{
+		static auto Gui = [](S n) -> cSomaImGui * { cSomaLuxEntity *p = Find(n); return p ? p->mpImGui : NULL; };
+#define TERM_STATE(TYPE, RET, ARG, INTYPE, FIELD, FLAG, DEF)                                                                                                 \
+	SOMA_FUNC(e, RET " Terminal_GetImGuiState" TYPE "(const tString&in asPropName, const tString&in asVarName, " ARG " a" DEF ")",                           \
+			  +[](S n, S v, INTYPE d) -> std::decay<INTYPE>::type {                                                                                              \
+				  cSomaImGui *g = Gui(n);                                                                                                                    \
+				  auto it = g ? g->mmapStates.find(SomaHash64(v)) : std::map<uint64_t, cSomaImGui::cState>::iterator();                                     \
+				  return g && it != g->mmapStates.end() && it->second.FLAG ? it->second.FIELD : d;                                                           \
+			  });                                                                                                                                            \
+	SOMA_FUNC(e, "void Terminal_SetImGuiState" TYPE "(const tString&in asPropName, const tString&in asVarName, " ARG " aVal)", +[](S n, S v, INTYPE x) {     \
+		if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.FIELD = x; st.FLAG = true; }                                                \
+	});
+		TERM_STATE("Int", "int", "int", int, mlInt, mbSetInt, "lDefault=0")
+		TERM_STATE("Bool", "bool", "bool", bool, mlInt, mbSetInt, "lDefault=false")
+		TERM_STATE("Float", "float", "float", float, mfFloat, mbSetFloat, "fDefault=0.0f")
+		TERM_STATE("Vector3f", "cVector3f", "const cVector3f&in", const cVector3f &, mvVec, mbSetVec, "vDefault")
+		TERM_STATE("Color", "cColor", "const cColor&in", const cColor &, mCol, mbSetCol, "Default")
+#undef TERM_STATE
+		SOMA_FUNC(e, "void Terminal_IncImGuiStateInt(const tString&in asPropName, const tString&in asVarName, int alVal)",
+				  +[](S n, S v, int x) { if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.mlInt += x; st.mbSetInt = true; } });
+		SOMA_FUNC(e, "void Terminal_IncImGuiStateFloat(const tString&in asPropName, const tString&in asVarName, float afVal)",
+				  +[](S n, S v, float x) { if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.mfFloat += x; st.mbSetFloat = true; } });
+		SOMA_FUNC(e, "void Terminal_IncImGuiStateVector3f(const tString&in asPropName, const tString&in asVarName, const cVector3f&in avVal)",
+				  +[](S n, S v, const cVector3f &x) { if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.mvVec += x; st.mbSetVec = true; } });
+		SOMA_FUNC(e, "void Terminal_IncImGuiStateColor(const tString&in asPropName, const tString&in asVarName, const cColor&in aVal)",
+				  +[](S n, S v, const cColor &x) { if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.mCol = st.mCol + x; st.mbSetCol = true; } });
+		SOMA_FUNC(e, "void Terminal_FadeImGuiStateFloat(const tString&in asPropName, const tString&in asVarName, float afGoalVal, float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)",
+				  +[](S n, S v, float x, float t, int ease, bool r) { if (cSomaImGui *g = Gui(n)) { float f[4] = {x, 0, 0, 0}; g->Fade(SomaHash64(v), 0, f, t, ease, r); } });
+		SOMA_FUNC(e, "void Terminal_FadeImGuiStateVector3f(const tString&in asPropName, const tString&in asVarName, cVector3f avGoalVal, float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)",
+				  +[](S n, S v, cVector3f x, float t, int ease, bool r) { if (cSomaImGui *g = Gui(n)) { float f[4] = {x.x, x.y, x.z, 0}; g->Fade(SomaHash64(v), 1, f, t, ease, r); } });
+		SOMA_FUNC(e, "void Terminal_FadeImGuiStateColor(const tString&in asPropName, const tString&in asVarName, cColor aGoalVal, float afTime, eEasing aType=eEasing_QuadInOut, bool abReplaceIfExist=true)",
+				  +[](S n, S v, cColor x, float t, int ease, bool r) { if (cSomaImGui *g = Gui(n)) { float f[4] = {x.r, x.g, x.b, x.a}; g->Fade(SomaHash64(v), 2, f, t, ease, r); } });
+		SOMA_FUNC(e, "void Terminal_StopImGuiFade(const tString&in asPropName, const tString&in asVarName)",
+				  +[](S n, S v) { if (cSomaImGui *g = Gui(n)) g->mmapFades.erase(SomaHash64(v)); });
+	}
 	SOMA_FUNC(e, "void Prop_StopMovement(const tString &in asPropName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->StopMove(); }); });
 	SOMA_FUNC(e, "void Prop_AlignRotation(const tString &in asName, const tString &in asTargetEntity, float afAcceleration, float afMaxSpeed, float afSlowDownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
 			  +[](S n, S t, float a, float m, float d, bool r, S cb) {

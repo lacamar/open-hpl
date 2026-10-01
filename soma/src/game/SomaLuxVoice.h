@@ -46,6 +46,8 @@ public:
 	const tString &GetSubjectSceneName(const tString &asSubject);
 	void SetPaused(const tString &asScene, bool abX);
 	void SetPausedAll(bool abX);
+	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
+	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
@@ -94,6 +96,7 @@ private:
 		float mfFallback = 0;
 		tString msSubtitle;
 		bool mbPaused = false;
+		tString msSourceEntity;
 	};
 	bool LoadVoiceFile(const tString &asFile, const tString &asSet);
 	void LoadLangFile(const tString &asFile);
@@ -109,6 +112,18 @@ private:
 	std::map<tString, tString> mmapText; // lowercase key -> text
 	std::vector<tString> mvLoadedSets;
 	std::vector<cPlaying> mvPlaying;
+	struct cSource
+	{
+		tString msEntity;
+		float mfMinDist, mfMaxDist;
+		bool mbUse3D;
+	};
+	std::map<tString, cSource> mmapSources;
+	struct cSceneVolume
+	{
+		float mfVolume = 1, mfGoal = 1, mfSpeed = 0;
+	};
+	std::map<tString, cSceneVolume> mmapSceneVolumes;
 
 	float mfFadeAlpha = 0;
 	float mfFadeGoal = 0;

@@ -97,6 +97,7 @@ namespace hpl {
 		void SetDefaultSpeed(float afSpeed);
 
 		void SetVolumeMul(float afMul);
+		float GetVolumeMul() const { return mfVolumeMul; }
 		void SetSpeedMul(float afMul);
 
 		void FadeVolumeMulTo(float afDestMul, float afSpeed);

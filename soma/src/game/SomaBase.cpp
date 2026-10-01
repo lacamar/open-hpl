@@ -133,6 +133,19 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	aResp.Set("y", v.y);
 	aResp.Set("z", v.z);
 	aResp.Set("size", cString::ToString(pEnt->mvSize.x) + " " + cString::ToString(pEnt->mvSize.y) + " " + cString::ToString(pEnt->mvSize.z));
+	if (pEnt->mpImGui)
+	{
+		aResp.Set("gui_active", pEnt->mbGuiActive);
+		aResp.Set("gui_func", pEnt->msOnGuiFunc);
+		aResp.Set("gui_screen", pEnt->mpGuiSubMesh != NULL);
+		aResp.Set("gui_calls", pEnt->mlGuiCalls);
+		aResp.Set("gui_draws", pEnt->mlGuiDraws);
+		aResp.Set("gui_ops", pEnt->mpImGui->DebugOps(12));
+		cGuiSet *pSet = pEnt->mpImGui->GetSet();
+		aResp.Set("gui_mtx", pSet->Get3DTransform().ToString());
+		aResp.Set("gui_size", pSet->Get3DSize().ToString());
+		aResp.Set("gui_virtual", pSet->GetVirtualSize().ToString());
+	}
 }
 
 extern std::string gsSomaExecOutput;
@@ -167,6 +180,41 @@ static void cSomaBase_HeadlessCmd_ImGuiStats(void *apUserData, const cHeadlessRe
 	}
 }
 
+static cSomaImGui *HeadlessImGui(const cHeadlessRequest &aReq)
+{
+	tString sName = aReq.GetString("name", "");
+	if (sName.empty())
+		return cSomaImGui::GetInputFocus();
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(sName) : NULL;
+	return pEnt ? pEnt->mpImGui : NULL;
+}
+
+static void cSomaBase_HeadlessCmd_ImGuiOps(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaImGui *pGui = HeadlessImGui(aReq);
+	if (pGui == NULL)
+	{
+		aResp.SetError("no imgui");
+		return;
+	}
+	aResp.Set("ops", pGui->DebugOps(aReq.GetInt("n", 400)));
+}
+
+static void cSomaBase_HeadlessCmd_ImGuiCursor(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaImGui *pGui = HeadlessImGui(aReq);
+	if (pGui == NULL)
+	{
+		aResp.SetError("no imgui");
+		return;
+	}
+	cVector2f vPos(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0));
+	cVector2f vRel = vPos - pGui->mvCursor3D;
+	pGui->mvCursor3D = vPos;
+	pGui->SendMouseVirtualPosition(vPos, vRel);
+}
+
 static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	std::map<tString, int> mapCount;
@@ -178,6 +226,9 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 		sEntries += cString::ToString(it.second) + " " + it.first + "\n";
 	aResp.Set("count", (int)pList->size());
 	aResp.Set("entries", sEntries);
+	cMusicHandler *pMusic = gpSomaBase->mpEngine->GetSound()->GetMusicHandler();
+	aResp.Set("music", pMusic->GetCurrentSongName());
+	aResp.Set("music_volume", pMusic->GetCurrentSongVolume());
 }
 
 static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -979,6 +1030,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
+		pCtrl->RegisterHandler("imgui_ops", cSomaBase_HeadlessCmd_ImGuiOps, this);
+		pCtrl->RegisterHandler("imgui_cursor", cSomaBase_HeadlessCmd_ImGuiCursor, this);
 		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
 		pCtrl->RegisterHandler("body_contacts", cSomaBase_HeadlessCmd_BodyContacts, this);
 		pCtrl->RegisterHandler("raycast", cSomaBase_HeadlessCmd_Raycast, this);

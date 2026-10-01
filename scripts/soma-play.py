@@ -12,7 +12,8 @@
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code'                    # AngelScript, __print() output
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
-  scripts/soma-play.py shot OUT.png | stop
+  scripts/soma-play.py gui [TEXT] [--entity E]       # list GUI texts of the focused screen, or click one
+scripts/soma-play.py shot OUT.png | stop
 """
 import argparse, math, os, re, signal, subprocess, sys, time
 from pathlib import Path
@@ -272,6 +273,36 @@ def cmd_log(a):
             print(line)
 
 
+OP = re.compile(r"(gfx|text '(.*?)') ([-\d.]+),([-\d.]+),[-\d.]+ ([-\d.]+)x([-\d.]+)")
+
+
+def gui_texts(entity):
+    req = {"cmd": "imgui_ops"}
+    if entity:
+        req["name"] = entity
+    ops = send(req)["ops"].split(": ", 1)[-1].split("; ")
+    return [(m.group(2), float(m.group(3)), float(m.group(4)), float(m.group(6))) for m in map(OP.match, ops) if m and m.group(2)]
+
+
+def cmd_gui(a):
+    texts = gui_texts(a.entity)
+    if a.text is None:
+        for t, x, y, h in texts:
+            print(f"{x:7.1f} {y:7.1f}  {t}")
+        return
+    hits = [t for t in texts if a.text.lower() in t[0].lower()]
+    if not hits:
+        raise SystemExit(f"no text matching {a.text!r}")
+    t, x, y, h = hits[0]
+    req = {"cmd": "imgui_cursor", "x": x + 4, "y": y + h * 0.5}
+    if a.entity:
+        req["name"] = a.entity
+    send(req)
+    frames(0.1)
+    press("mouse", "left", 0.1)
+    print(f"clicked {t!r} at {x + 4:.0f},{y + h * 0.5:.0f}")
+
+
 def cmd_shot(a):
     bmp = Path(a.out).resolve().with_suffix(".bmp")
     send({"cmd": "screenshot", "path": str(bmp)})
@@ -302,6 +333,7 @@ def main():
     s = sub.add_parser("exec"); s.add_argument("code")
     s = sub.add_parser("log"); s.add_argument("regex", nargs="?"); s.add_argument("--all", action="store_true")
     s = sub.add_parser("shot"); s.add_argument("out")
+    s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity")
     a = ap.parse_args()
     globals()["cmd_" + a.cmd](a)
 

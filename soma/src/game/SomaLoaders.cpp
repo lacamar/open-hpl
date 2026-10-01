@@ -200,8 +200,9 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	}
 
 	// Map Active="false": script-activated later (e.g. the apartment's Legs), as iLuxProp::OnSetActive.
-	// Bodies stay live: rejecting their contacts trips a Newton teardown crash (TASKS.md)
 	if (mbActive) return;
+	for (iPhysicsBody *pBody : mvBodies)
+		pBody->SetActive(false);
 	if (mpEntity)
 	{
 		mpEntity->SetActive(false);
