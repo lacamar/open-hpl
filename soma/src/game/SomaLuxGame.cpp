@@ -85,6 +85,7 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	apCfg->mbFullscreen = sFull != "false";
 	tString sVsync = cString::ToLowerCase(c->GetString("Screen", "Vsync", apCfg->mbVSync ? "true" : "false"));
 	apCfg->mbVSync = sVsync == "true" || sVsync == "adaptive";
+	apCfg->mfGamma = c->GetFloat("Graphics", "Brightness", apCfg->mfGamma);
 }
 
 static void LoadLanguage()
@@ -108,6 +109,7 @@ static bool ApplyUserConfig()
 		SDL_SetWindowSize(pWindow, pCfg->mlScreenWidth, pCfg->mlScreenHeight);
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
+	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
 	pCfg->mfMasterVolume = gpUserConfig->GetFloat("Sound", "Volume", pCfg->mfMasterVolume);
 	gpSomaBase->mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
 	pCfg->Save();

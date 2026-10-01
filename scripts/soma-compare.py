@@ -11,6 +11,8 @@ game under wine (scripts/soma-ref.py). Snippets are AngelScript function bodies 
   scripts/soma-compare.py view [--pose X Y Z YAW PITCH] [--settle 2] [--out DIR]
   scripts/soma-compare.py fps [--secs 10]                  # frame rate sampled on both
   scripts/soma-compare.py report --map M [--out DIR]       # start, then all of the above -> DIR/report.json
+  scripts/soma-compare.py ui start [--wait 45]          # both booted to the main menu
+  scripts/soma-compare.py ui click FX FY | key K... | shot [--out F]   # same input on both (FX/FY 0-1), side by side
   scripts/soma-compare.py stop
 """
 import argparse, importlib.util, json, math, os, re, signal, subprocess, sys, time
@@ -104,7 +106,7 @@ class Ours:
             (xdg / "state/open-hpl/soma/gamma_screen_seen").write_text("1\n")
             (xdg / "config/open-hpl/soma/user_settings.cfg").write_text(
                 (ref_mod.SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
-                + '\n<Main FirstGameStart="false" />\n')
+                + f'\n<Main FirstGameStart="false" />\n<Screen Vsync="false" FullScreen="false" Width="{w}" Height="{h}" />\n')
         env = dict(muted_env(), OPENHPL_HEADLESS_SOCKET=str(SOCK), XDG_CACHE_HOME=str(scratch / ".xdg/cache"),
                    **{f"XDG_{k}_HOME": str(xdg / k.lower()) for k in ("CONFIG", "DATA", "STATE")})
         t0 = time.time()
@@ -416,6 +418,52 @@ def cmd_boot(a):
     print(json.dumps(summary), f"-> {out}/timeline.png")
 
 
+def cmd_ui(a):
+    w, h = map(int, a.size.split("x"))
+    o, only = Ours(), a.only
+    if a.action == "start":
+        import threading
+        th = None
+        if only != "ours":
+            th = threading.Thread(target=lambda: ref_mod.start(boot=True, size=a.size, record=(CACHE / "ui-ref", a.wait, 0.2)))
+            th.start()
+        if only != "ref":
+            o.record_boot(CACHE / "ui-ours", a.wait, 0.2, a.size)
+        if th:
+            th.join()
+    elif a.action == "click":
+        fx, fy = float(a.args[0]), float(a.args[1])
+        x, y = int(fx * w), int(fy * h)
+        if only != "ref" and o.pid():
+            o.send({"cmd": "input", "type": "mouse_move", "x": x, "y": y, "xrel": 1, "yrel": 1})
+            o.send({"cmd": "wait_frames", "n": 2, "max_ms": 500})
+            for act in ("down", "up"):
+                o.send({"cmd": "input", "type": "mouse_button", "button": a.button, "action": act, "x": x, "y": y})
+                o.send({"cmd": "wait_frames", "n": 2, "max_ms": 500})
+        if only != "ours" and ref_mod.game_pid():
+            ref_mod.gt("click", str(x), str(y), "-o", ref_mod.ref_output(a.size), *(["-b", "right"] if a.button == "right" else []))
+    elif a.action == "key":
+        for k in a.args:
+            if only != "ref" and o.pid():
+                o.send({"cmd": "input", "type": "key", "key": k, "action": "tap"})
+                o.send({"cmd": "wait_frames", "n": 2, "max_ms": 500})
+            if only != "ours" and ref_mod.game_pid():
+                ref_mod.swaymsg('[title="^SOMA"]', "focus")
+                ref_mod.gt("key", k)
+    if a.action != "start":
+        time.sleep(a.settle)
+    out = Path(a.out or CACHE / "ui.png")
+    shots = []
+    for t in targets(only):
+        if t.pid():
+            f = out.with_name(f"{out.stem}-{t.name}.png")
+            t.shot(f)
+            shots.append(f)
+    if shots:
+        subprocess.run(["magick", *map(str, shots), "-resize", f"{w}x{h}!", "+append", str(out)], check=True)
+        print(out)
+
+
 def cmd_report(a):
     out = Path(a.out or CACHE / f"report-{Path(a.map).stem}-{time.strftime('%Y%m%d-%H%M%S')}")
     out.mkdir(parents=True, exist_ok=True)
@@ -467,6 +515,14 @@ def main():
     b.add_argument("--ref-dir")
     b.add_argument("--record-ref", action="store_true")
     b.add_argument("--first-launch", action="store_true", help="ours without user_settings.cfg/gamma marker, fullscreen")
+    u = sp.add_parser("ui")
+    u.add_argument("action", choices=("start", "click", "key", "shot"))
+    u.add_argument("args", nargs="*")
+    u.add_argument("--size", default="1280x720")
+    u.add_argument("--wait", type=float, default=45)
+    u.add_argument("--settle", type=float, default=1)
+    u.add_argument("--button", default="left")
+    u.add_argument("--out")
     sp.add_parser("stop")
     a = p.parse_args()
 
@@ -484,6 +540,8 @@ def main():
         cmd_boot(a)
     elif a.cmd == "report":
         cmd_report(a)
+    elif a.cmd == "ui":
+        cmd_ui(a)
     else:
         if a.cmd == "exec":
             code = Path(a.f).read_text() if a.f else a.code

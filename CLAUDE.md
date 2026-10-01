@@ -53,6 +53,7 @@ scripts/soma-compare.py view --pose X Y Z YAW PITCH   # screenshots + side-by-si
 scripts/soma-compare.py fps --secs 10
 scripts/soma-compare.py report --map M            # all of the above -> report.json
 scripts/soma-compare.py boot [--record-ref] [--first-launch]  # boot splash -> main menu, per-frame PSNR -> boot/timeline.png
+scripts/soma-compare.py ui start|click FX FY|key K..|shot   # both main menus, driven in lockstep
 scripts/soma-audio.py menu | map --map M [--out DIR] [--keep]  # record both games' audio (null sinks), levels/bands/spectrograms
 scripts/soma-audio.py identify X.wav --bank 'Player*'  # which extracted event samples are in a recording
 scripts/soma-audio.py playing                     # ours: live sound entries, FMOD events, recent starts

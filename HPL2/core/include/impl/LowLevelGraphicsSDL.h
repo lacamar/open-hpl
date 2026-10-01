@@ -366,6 +366,10 @@ namespace hpl {
 		//Gamma
 		Uint16 mvStartGammaArray[3][256];
 		float mfGammaCorrection;
+		unsigned int mlGammaProgram;
+		unsigned int mlGammaTexture;
+		cVector2l mvGammaTextureSize;
+		void ApplyShaderGamma();
 
 		//////////////////////////////////////
 		//Clipping

@@ -34,6 +34,7 @@
 #include "system/Platform.h"
 #include "system/Mutex.h"
 #include "system/String.h"
+#include "math/Math.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLFontData.h"
@@ -372,9 +373,10 @@ namespace hpl {
 
 		//Gamma
 		mfGammaCorrection = 1.0f;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
-#else
+		mlGammaProgram = 0;
+		mlGammaTexture = 0;
+		mvGammaTextureSize = 0;
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_GetGammaRamp(mvStartGammaArray[0],mvStartGammaArray[1],mvStartGammaArray[2]);
 
 		SDL_SetGamma(mfGammaCorrection,mfGammaCorrection,mfGammaCorrection);
@@ -785,9 +787,7 @@ namespace hpl {
 		;
 
 		mfGammaCorrection = afX;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
-#else
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_SetGamma(mfGammaCorrection,mfGammaCorrection,mfGammaCorrection);
 #endif
 	}
@@ -1161,9 +1161,69 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	// Wayland has no gamma ramps; same curve as SDL_SetWindowBrightness
+	void cLowLevelGraphicsSDL::ApplyShaderGamma()
+	{
+		if(mlGammaProgram == 0)
+		{
+			const char *pVtx = "#version 120\nvarying vec2 uv;\nvoid main(){ uv = gl_Vertex.xy*0.5+0.5; gl_Position = gl_Vertex; }\n";
+			const char *pFrag = "#version 120\nuniform sampler2D tex; uniform float invGamma; varying vec2 uv;\n"
+								"void main(){ vec4 c = texture2D(tex, uv); gl_FragColor = vec4(pow(c.rgb, vec3(invGamma)), c.a); }\n";
+			GLuint lVtx = glCreateShader(GL_VERTEX_SHADER), lFrag = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(lVtx, 1, &pVtx, NULL); glCompileShader(lVtx);
+			glShaderSource(lFrag, 1, &pFrag, NULL); glCompileShader(lFrag);
+			mlGammaProgram = glCreateProgram();
+			glAttachShader(mlGammaProgram, lVtx); glAttachShader(mlGammaProgram, lFrag);
+			glLinkProgram(mlGammaProgram);
+			glDeleteShader(lVtx); glDeleteShader(lFrag);
+			glGenTextures(1, &mlGammaTexture);
+		}
+
+		GLint lPrevProgram, lPrevFrameBuffer, lPrevActiveTex, lPrevTex, lPrevArrayBuffer;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &lPrevProgram);
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &lPrevFrameBuffer);
+		glGetIntegerv(GL_ACTIVE_TEXTURE, &lPrevActiveTex);
+		glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &lPrevArrayBuffer);
+		glActiveTexture(GL_TEXTURE0);
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &lPrevTex);
+		glPushAttrib(GL_ALL_ATTRIB_BITS);
+
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, mlGammaTexture);
+		if(mvGammaTextureSize != mvScreenSize)
+		{
+			mvGammaTextureSize = mvScreenSize;
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mvScreenSize.x, mvScreenSize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		}
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, mvScreenSize.x, mvScreenSize.y);
+
+		glViewport(0, 0, mvScreenSize.x, mvScreenSize.y);
+		glDisable(GL_DEPTH_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
+		glDisable(GL_SCISSOR_TEST); glDisable(GL_STENCIL_TEST); glDisable(GL_ALPHA_TEST);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glUseProgram(mlGammaProgram);
+		glUniform1i(glGetUniformLocation(mlGammaProgram, "tex"), 0);
+		glUniform1f(glGetUniformLocation(mlGammaProgram, "invGamma"), 1.0f / mfGammaCorrection);
+		glBegin(GL_TRIANGLE_STRIP);
+		glVertex2f(-1, -1); glVertex2f(1, -1); glVertex2f(-1, 1); glVertex2f(1, 1);
+		glEnd();
+
+		glPopAttrib();
+		glUseProgram(lPrevProgram);
+		glBindTexture(GL_TEXTURE_2D, lPrevTex);
+		glActiveTexture(lPrevActiveTex);
+		glBindBuffer(GL_ARRAY_BUFFER, lPrevArrayBuffer);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, lPrevFrameBuffer);
+	}
+
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
 		;
+		if(cMath::Abs(mfGammaCorrection - 1.0f) > 0.001f && mfGammaCorrection > 0)
+			ApplyShaderGamma();
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         SDL_GL_SwapWindow(mpScreen);
 #else

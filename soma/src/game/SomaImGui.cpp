@@ -1026,6 +1026,7 @@ static void SetHudVirtualSize(cGuiSet *apSet)
 	apSet->SetVirtualSize(vSize, -1000, 1000, cVector2f((vSize.x - 1024.0f) * 0.5f, 0));
 }
 static std::vector<cSomaScriptImGui *> gvScriptImGuis;
+static std::vector<cGuiSet *> gvHudSets;
 
 cSomaImGui *SomaHudImGui()
 {
@@ -1034,6 +1035,7 @@ cSomaImGui *SomaHudImGui()
 		cGui *pGui = gpSomaBase->mpEngine->GetGui();
 		cGuiSet *pSet = pGui->CreateSet("GameHud", pGui->CreateSkin("gui_default.skin"));
 		SetHudVirtualSize(pSet);
+		gvHudSets.push_back(pSet);
 		cViewport *pViewport = gpSomaBase->mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 		pViewport->AddGuiSet(pSet);
 		gpHudImGui = new cSomaImGui("GameHud", pSet);
@@ -1043,6 +1045,15 @@ cSomaImGui *SomaHudImGui()
 
 void SomaDrawImGuis()
 {
+	static cVector2l vLastScreen(0, 0);
+	cVector2l vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
+	if (vScreen != vLastScreen)
+	{
+		vLastScreen = vScreen;
+		for (cGuiSet *pSet : gvHudSets)
+			if (pSet->Is3D() == false)
+				SetHudVirtualSize(pSet);
+	}
 	if (gpHudImGui)
 		gpHudImGui->DrawAll();
 	for (cSomaScriptImGui *p : gvScriptImGuis)
@@ -1094,6 +1105,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 				  cGui *pGui = gpSomaBase->mpEngine->GetGui();
 				  cGuiSet *pSet = pGui->CreateSet(n, pGui->CreateSkin("gui_default.skin"));
 				  SetHudVirtualSize(pSet);
+				  gvHudSets.push_back(pSet);
 				  cViewport *pViewport = gpSomaBase->mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 				  pViewport->AddGuiSet(pSet);
 				  cSomaScriptImGui *p = new cSomaScriptImGui{new cSomaImGui(n, pSet), NULL};

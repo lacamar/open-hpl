@@ -24,6 +24,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Graphics.h"
 #include "graphics/Texture.h"
+#include "graphics/FrameBuffer.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
 #include "graphics/PostEffect.h"
@@ -68,6 +69,11 @@ namespace hpl {
 		////////////////////////////////
 		//Set up stuff needed for rendering
 		BeginRendering(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
+		if(mpFinalTempBuffer[0]->GetSize() != mvScreenSize)
+		{
+			for(int i=0; i<2; ++i)
+				mpFinalTempBuffer[i] = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,i);
+		}
 
 		////////////////////////////////
 		//Iterate post effects and find the last one.
