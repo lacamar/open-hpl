@@ -1049,6 +1049,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cMeshLoaderCollada::SetLoadVertexColors(true);
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
+	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));
 
 	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
@@ -2096,11 +2097,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
-			bool bRestored = cSomaSaveHandler::ApplyPendingState();
+			cSomaSaveHandler::ApplyPendingState();
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
 			mpLuxMap->OnEnter(bFirstTime);
-			if (bRestored == false)
-				cSomaSaveHandler::AutoSave(false);
 		}
 		mpScriptRuntime->LogStubReport(40);
 	}

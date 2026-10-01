@@ -13,14 +13,71 @@
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <sys/stat.h>
+#include <ctime>
 
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV2";
+	const char kMagic[] = "OHPLSAV3", kMagicV2[] = "OHPLSAV2";
 
 	tString gsMapFile, gsStartPos;
+	bool gbExplorationMode = false;
 	std::string gsPendingState;
+	int glSaveNameCount = 0;
+	cDate gLatestSaveDate;
+	const int kMaxAutoSaves = 20; // game.cfg Saving/MaxAutoSaves
+
+	tWString GetSaveName(const tWString &asPrefix)
+	{
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		tString sMapName = pMap && pMap->msDisplayNameEntry != "" ? pMap->msDisplayNameEntry : "NULL";
+		cDate d = cPlatform::GetDate();
+		tWString sName = asPrefix + _W("_") + cString::To16Char(sMapName);
+		for (int lX : {d.year, d.month + 1, d.month_day, d.hours, d.minutes, d.seconds, glSaveNameCount})
+			sName += _W("_") + cString::ToStringW(lX);
+		if (++glSaveNameCount >= 100 || d != gLatestSaveDate)
+			glSaveNameCount = 0;
+		gLatestSaveDate = d;
+		return sName + _W(".sav");
+	}
+
+	void DeleteOldestSaveFiles(const tWString &asDir, int alMax)
+	{
+		tWStringList lstFiles;
+		cPlatform::FindFilesInDir(lstFiles, asDir, _W("*.sav"));
+		std::vector<std::pair<cDate, tWString>> vFiles;
+		for (const tWString &sFile : lstFiles)
+			vFiles.push_back({cPlatform::FileModifiedDate(asDir + sFile), sFile});
+		std::sort(vFiles.begin(), vFiles.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
+		for (size_t i = 0; (int)(vFiles.size() - i) >= alMax; ++i)
+			cPlatform::RemoveFile(asDir + vFiles[i].second);
+	}
+
+	// HPL3 lists "Prefix_map_Y_M_D_h_m_s_n" saves as "Prefix - <level> - ", "D/M-Y hh:mm:ss"
+	void GetProperSaveName(const tWString &asFile, tWString &asName, tString &asDate)
+	{
+		tWStringVec vParts;
+		tWString sSep = _W("_");
+		cString::GetStringVecW(cString::SetFileExtW(asFile, _W("")), vParts, &sSep);
+		if (vParts.size() != 9)
+		{
+			asName = cString::SetFileExtW(asFile, _W(""));
+			struct stat st = {};
+			stat(cString::To8Char(cSomaSaveHandler::GetSaveDir() + asFile).c_str(), &st);
+			struct tm t = {};
+			localtime_r(&st.st_mtime, &t);
+			char vBuf[64];
+			snprintf(vBuf, sizeof(vBuf), "%d/%d-%d %d:%02d:%d", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900, t.tm_hour, t.tm_min, t.tm_sec);
+			asDate = vBuf;
+			return;
+		}
+		asName = vParts[0] + _W(" - ") + gpSomaBase->mpEngine->GetResources()->Translate("Levels", cString::To8Char(vParts[1])) + _W(" - ");
+		for (int i = 5; i <= 7; ++i)
+			if (vParts[i].size() == 1)
+				vParts[i] = _W("0") + vParts[i];
+		asDate = cString::To8Char(vParts[4] + _W("/") + vParts[3] + _W("-") + vParts[2] + _W(" ") + vParts[5] + _W(":") + vParts[6] + _W(":") + vParts[7]);
+	}
 
 	struct cOut
 	{
@@ -536,6 +593,7 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 	for (const tString &sMap : gpSomaBase->GetVisitedMaps())
 		o.Str(sMap);
 	o.Str(SomaSerializeGlobalVars());
+	o.Pod(gbExplorationMode);
 	cSomaSaveState::WriteWorld(o);
 
 	tWString sPath = GetSaveDir() + cString::GetFileNameW(asFile);
@@ -551,7 +609,8 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 
 bool cSomaSaveHandler::AutoSave(bool abCheckpoint)
 {
-	bool bOk = Save(_W("auto.sav"));
+	DeleteOldestSaveFiles(GetSaveDir(), kMaxAutoSaves);
+	bool bOk = Save(GetSaveName(_W("AutoSave")));
 	if (abCheckpoint)
 		bOk = Save(_W("CheckPoint.sav")) && bOk;
 	return bOk;
@@ -567,7 +626,8 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	cIn in(sData);
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 8) != 0)
+	bool bV2 = memcmp(vMagic, kMagicV2, 8) == 0;
+	if (file.is_open() == false || (memcmp(vMagic, kMagic, 8) != 0 && bV2 == false))
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -579,8 +639,11 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	for (uint32_t i = 0; i < n && in.ok; ++i)
 		setVisited.insert(in.Str());
 	tString sVars = in.Str();
+	bool bExploration = bV2 ? false : in.Pod<bool>();
 	if (in.ok == false || sMap.empty())
 		return false;
+
+	gbExplorationMode = bExploration;
 
 	SomaDeserializeGlobalVars(sVars);
 	// The saved state replaces OnStart
@@ -619,6 +682,8 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	const char *T = "cLuxSaveHandler";
 	static char gHandler;
 	typedef const tWString &W;
+	SOMA_FUNC(e, "void cLux_SetExplorationModeActive(bool abX)", +[](bool b) { gbExplorationMode = b; });
+	SOMA_FUNC(e, "bool cLux_GetExplorationModeActive()", +[]() { return gbExplorationMode; });
 	SOMA_FUNC(e, "cLuxSaveHandler@ cLux_GetSaveHandler()", +[]() { return (void *)&gHandler; });
 	SOMA_METHOD(e, T, "void SaveGameToFile(const tWString&in asSaveFile)", +[](void *, W f) { Save(f); });
 	SOMA_METHOD(e, T, "void LoadGameFromFile(const tWString&in asSaveFile)", +[](void *, W f) { Load(f); });
@@ -643,8 +708,9 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 					std::sort(vSaves.begin(), vSaves.end(), [](const auto &a, const auto &b) { return b.first < a.first; });
 					for (auto &it : vSaves)
 					{
-						tWString sName = cString::SetFileExtW(it.second, _W(""));
-						tString sDate = it.first.ToString();
+						tWString sName;
+						tString sDate;
+						GetProperSaveName(it.second, sName, sDate);
 						names.InsertLast(&sName);
 						dates.InsertLast(&sDate);
 						files.InsertLast(&it.second);

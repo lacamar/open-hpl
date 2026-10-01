@@ -36,6 +36,8 @@
 
 namespace hpl {
 
+	cVector2l cImageManager::mvDefaultFrameSize(512,512);
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -50,7 +52,7 @@ namespace hpl {
 
 	   mpBitmapLoaderHandler = mpResources->GetBitmapLoaderHandler();
 
-	   mvFrameSize = cVector2l(512,512);
+	   mvFrameSize = mvDefaultFrameSize;
 	   mlFrameHandle = 0;
 	}
 

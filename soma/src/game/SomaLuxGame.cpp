@@ -464,6 +464,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_ApplyUserConfig()", +[]() { return ApplyUserConfig(); });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetKeyConfig()", +[]() { return gpKeyConfig; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetGameConfig()", +[]() { return gpGameConfig; });
+	SOMA_FUNC(e, "bool cLux_GetSupportExplorationMode()", +[]() { return gpGameConfig && gpGameConfig->GetBool("General", "SupportExplorationMode", false); });
 	const char *C = "cConfigFile";
 	typedef const tString &S;
 	SOMA_METHOD(e, C, "bool Load()", +[](cConfigFile *c) { return c->Load(); });

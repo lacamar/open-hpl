@@ -71,7 +71,11 @@ namespace hpl {
 		
         int CreateFrame(cVector2l avSize);
 		void SetFrameLocked(int alHandle, bool abLocked);
+
+		static void SetDefaultFrameSize(const cVector2l &avSize) { mvDefaultFrameSize = avSize; }
 	private:
+		static cVector2l mvDefaultFrameSize;
+
 		iLowLevelGraphics *mpLowLevelGraphics;
 		cBitmapLoaderHandler *mpBitmapLoaderHandler;
 		
