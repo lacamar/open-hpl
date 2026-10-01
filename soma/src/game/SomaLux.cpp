@@ -1112,9 +1112,9 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cCamera", "float GetExtenededRoll() const", +[](cCamera *c) { return mapCameraExtra[c].fExtRoll; });
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
 	SOMA_METHOD(e, "iPhysicsBody", "cVector3f GetMassCenter() const", +[](iPhysicsBody *b) { return b->GetMassCentre(); });
-	SOMA_FUNC(e, "bool cMath_CheckPointInBVIntersection(const cVector3f&in avPoint, cBoundingVolume@+ aBV)",
+	SOMA_FUNC(e, "bool cMath_CheckPointInBVIntersection(const cVector3f&in avPoint, cBoundingVolume@ aBV)",
 			  +[](const cVector3f &v, cBoundingVolume *b) { return b && cMath::CheckPointInBVIntersection(v, *b); });
-	SOMA_FUNC(e, "bool cMath_CheckBVIntersection(cBoundingVolume@+ aBV1,cBoundingVolume@+ aBV2)",
+	SOMA_FUNC(e, "bool cMath_CheckBVIntersection(cBoundingVolume@ aBV1,cBoundingVolume@ aBV2)",
 			  +[](cBoundingVolume *a, cBoundingVolume *b) { return a && b && cMath::CheckBVIntersection(*a, *b); });
 	SOMA_METHOD(e, "cBoundingVolume", "void SetTransform(const cMatrixf&in a_mtxTransform, bool abUpdateSize = true)", +[](cBoundingVolume *b, const cMatrixf &m, bool) { b->SetTransform(m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCylinderShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",

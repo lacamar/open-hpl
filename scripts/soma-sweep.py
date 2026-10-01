@@ -207,6 +207,8 @@ def judge(name, result, expected, allow):
         if exp["terrain_active"]:
             allowed.append("terrain")
 
+    if any("Invalid configuration" in k or "Failed in call to function" in k for k in result.get("log_errors", {})):
+        fails.append("script_config")
     if result.get("shader_failures"):
         fails.append(f"shaders:{len(result['shader_failures'])}")
     if result.get("render", {}).get("gl_errors"):
