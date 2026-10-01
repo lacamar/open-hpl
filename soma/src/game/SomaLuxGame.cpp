@@ -57,6 +57,7 @@ static cConfigFile *gpUserConfig = NULL, *gpKeyConfig = NULL, *gpGameConfig = NU
 
 cConfigFile *SomaUserConfig() { return gpUserConfig; }
 cConfigFile *SomaKeyConfig() { return gpKeyConfig; }
+cConfigFile *SomaGameConfig() { return gpGameConfig; }
 
 static void LoadConfigs()
 {
@@ -183,12 +184,10 @@ void cSomaLuxGame::Load()
 		{"RichPresenceHandler", "cScrRichPresenceHandler", "iLuxRichPresenceHandler"},
 		{"Player", "cScrPlayer", "cLuxPlayer"},
 	};
-	iXmlDocument *pGame = pRes->LoadXmlDocument("config/game.cfg");
-	// A cfg with several top-level elements loads as its first one
-	cXmlElement *pFiles = pGame ? (pGame->GetValue() == "ScriptFiles" ? pGame : pGame->GetFirstElement("ScriptFiles")) : NULL;
+	cConfigFile *pGame = gpGameConfig;
 	for (const cHandlerDef &def : vHandlers)
 	{
-		tString sFile = pFiles ? pFiles->GetAttributeString(def.mpAttr, "") : "";
+		tString sFile = pGame->GetString("ScriptFiles", def.mpAttr, "");
 		if (sFile.empty())
 			continue;
 		cSomaLuxHandler *pHandler = strcmp(def.mpAttr, "Player") == 0		   ? new cSomaLuxPlayer()
@@ -202,14 +201,8 @@ void cSomaLuxGame::Load()
 		else
 			delete pHandler;
 	}
-	if (pGame)
-	{
-		if (cXmlElement *pProp = pGame->GetFirstElement("Prop"))
-			mfPropInteractDistance = pProp->GetAttributeFloat("DefaultMaxInteractDistance", 2);
-		if (cXmlElement *pCritter = pGame->GetFirstElement("Critter"))
-			mfCritterInteractDistance = pCritter->GetAttributeFloat("DefaultMaxInteractDistance", 2);
-		pRes->DestroyXmlDocument(pGame);
-	}
+	mfPropInteractDistance = pGame->GetFloat("Prop", "DefaultMaxInteractDistance", 2);
+	mfCritterInteractDistance = pGame->GetFloat("Critter", "DefaultMaxInteractDistance", 2);
 
 	iXmlDocument *pEffects = pRes->LoadXmlDocument("config/Effects.cfg");
 	std::vector<cXmlElement *> vEffectElems = ChildElements(pEffects);

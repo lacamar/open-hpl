@@ -13,7 +13,7 @@
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code'                    # AngelScript, __print() output
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
-  scripts/soma-play.py gui [TEXT] [--entity E]       # list GUI texts of the focused screen, or click one
+  scripts/soma-play.py gui [TEXT] [--entity E] [--at X Y]  # list GUI texts of the focused screen, or click one
 scripts/soma-play.py shot OUT.png | stop
 """
 import argparse, math, os, re, signal, subprocess, sys, time
@@ -135,8 +135,31 @@ def aim(target):
        f"p.GetCharacterBody().SetPitch({pitch}); p.GetCamera().SetPitch({pitch});")
 
 
+def aim_entity(name):
+    target = ent_pos(name)
+    cam, _ = camera_pos()
+    hits = raycast(cam, target)
+    if not hits or hits[0][2] == name:
+        return aim(target)
+    d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetMainBody() is null) return;'
+           'cBoundingVolume@ bv = e.GetMainBody().GetBoundingVolume(); cVector3f a = bv.GetMin(), b = bv.GetMax();'
+           '__print("a=" + a.x + " " + a.y + " " + a.z); __print("b=" + b.x + " " + b.y + " " + b.z);')
+    if "a" not in d:
+        return aim(target)
+    lo, hi = [float(v) for v in d["a"].split()], [float(v) for v in d["b"].split()]
+    n = 4
+    pts = [[lo[k] + (hi[k] - lo[k]) * (0.1 + 0.8 * (i, j, l)[k] / n) for k in range(3)]
+           for i in range(n + 1) for j in range(n + 1) for l in range(n + 1)]
+    pts.sort(key=lambda q: math.dist(q, target))
+    for q in pts:
+        h = raycast(cam, q)
+        if h and h[0][2] == name:
+            return aim(q)
+    aim(target)
+
+
 def cmd_look(a):
-    aim(ent_pos(a.entity))
+    aim_entity(a.entity)
     frames(0.2)
 
 
@@ -204,14 +227,14 @@ def press(kind, name, hold):
 
 
 def cmd_interact(a):
-    aim(ent_pos(a.entity))
+    aim_entity(a.entity)
     frames(0.3)
     press("mouse", "left", a.hold)
     cmd_log(argparse.Namespace(regex=None, all=False))
 
 
 def cmd_drag(a):
-    aim(ent_pos(a.entity))
+    aim_entity(a.entity)
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
     frames(0.2)
@@ -293,7 +316,20 @@ def gui_texts(entity):
     return [(m.group(2), float(m.group(3)), float(m.group(4)), float(m.group(6))) for m in map(OP.match, ops) if m and m.group(2)]
 
 
+def gui_click(entity, x, y):
+    req = {"cmd": "imgui_cursor", "x": x, "y": y}
+    if entity:
+        req["name"] = entity
+    send(req)
+    frames(0.1)
+    press("mouse", "left", 0.1)
+
+
 def cmd_gui(a):
+    if a.at:
+        gui_click(a.entity, *a.at)
+        print(f"clicked {a.at[0]:.0f},{a.at[1]:.0f}")
+        return
     texts = gui_texts(a.entity)
     if a.text is None:
         for t, x, y, h in texts:
@@ -303,12 +339,7 @@ def cmd_gui(a):
     if not hits:
         raise SystemExit(f"no text matching {a.text!r}")
     t, x, y, h = hits[0]
-    req = {"cmd": "imgui_cursor", "x": x + 4, "y": y + h * 0.5}
-    if a.entity:
-        req["name"] = a.entity
-    send(req)
-    frames(0.1)
-    press("mouse", "left", 0.1)
+    gui_click(a.entity, x + 4, y + h * 0.5)
     print(f"clicked {t!r} at {x + 4:.0f},{y + h * 0.5:.0f}")
 
 
@@ -344,7 +375,7 @@ def main():
     s = sub.add_parser("exec"); s.add_argument("code")
     s = sub.add_parser("log"); s.add_argument("regex", nargs="?"); s.add_argument("--all", action="store_true")
     s = sub.add_parser("shot"); s.add_argument("out")
-    s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity")
+    s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2)
     a = ap.parse_args()
     globals()["cmd_" + a.cmd](a)
 

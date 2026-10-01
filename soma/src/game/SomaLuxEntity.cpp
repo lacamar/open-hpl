@@ -311,7 +311,8 @@ int cSomaLuxEntity::PlayAnimation(const tString &asName, float afFadeTime, bool 
 	int lIdx = mpMesh->GetAnimationStateIndex(asName);
 	if (lIdx < 0)
 	{
-		Warning("SOMA script: entity '%s' has no animation '%s'\n", msName.c_str(), asName.c_str());
+		if (asName.empty() == false)
+			Warning("SOMA script: entity '%s' has no animation '%s'\n", msName.c_str(), asName.c_str());
 		return -1;
 	}
 	mvAnimQueue.clear();
@@ -1867,6 +1868,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				if (cSomaLuxPlayer::Get() && b == cSomaLuxPlayer::Get()->GetCharacterBody())
 					return p->CollidesWithPlayer();
 				return SomaEntityCollidesAABB(p, b->GetPosition() - b->GetSize() * 0.5f, b->GetPosition() + b->GetSize() * 0.5f);
+			});
+			SOMA_METHOD(e, pType, "bool CheckEntityCollision(iLuxEntity@ apEntity)", +[](cSomaLuxEntity *p, cSomaLuxEntity *c) {
+				if (c == NULL || p->mbActive == false)
+					return false;
+				return c->msName == "Player" ? p->CollidesWithPlayer() : SomaEntitiesCollide(p, c);
 			});
 		}
 	SOMA_FUNC(e, "void Entity_SetEffectBaseColor(const tString &in asEntityName,const cColor&in aColor)",

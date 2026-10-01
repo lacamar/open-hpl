@@ -94,6 +94,7 @@ private:
 };
 
 cConfigFile *SomaUserConfig();
+cConfigFile *SomaGameConfig();
 cConfigFile *SomaKeyConfig();
 
 #endif // SOMA_LUX_GAME_H

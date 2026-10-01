@@ -2,6 +2,7 @@
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
+#include "SomaLuxGame.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 #include "impl/scriptarray.h"
@@ -62,20 +63,12 @@ cSomaLuxPlayer::~cSomaLuxPlayer()
 void cSomaLuxPlayer::SetCamera(cCamera *apCamera)
 {
 	mpCamera = apCamera;
-	cResources *pRes = gpSomaBase->mpEngine->GetResources();
-	iXmlDocument *pGame = pRes->LoadXmlDocument("config/game.cfg");
-	cXmlElement *pPlayer = pGame ? pGame->GetFirstElement("Player") : NULL;
-	float fMin = -70, fMax = 70;
-	if (pPlayer)
-	{
-		mfDefaultFOV = pPlayer->GetAttributeFloat("FOV", 70);
-		fMin = pPlayer->GetAttributeFloat("CameraPitchLimit_Min", -70);
-		fMax = pPlayer->GetAttributeFloat("CameraPitchLimit_Max", 70);
-		mpCamera->SetNearClipPlane(pPlayer->GetAttributeFloat("NearClipPlane", 0.03f));
-		mpCamera->SetFarClipPlane(pPlayer->GetAttributeFloat("FarClipPlane", 1000));
-	}
-	if (pGame)
-		pRes->DestroyXmlDocument(pGame);
+	cConfigFile *pGame = SomaGameConfig();
+	mfDefaultFOV = pGame->GetFloat("Player", "FOV", 70);
+	float fMin = pGame->GetFloat("Player", "CameraPitchLimit_Min", -70);
+	float fMax = pGame->GetFloat("Player", "CameraPitchLimit_Max", 70);
+	mpCamera->SetNearClipPlane(pGame->GetFloat("Player", "NearClipPlane", 0.03f));
+	mpCamera->SetFarClipPlane(pGame->GetFloat("Player", "FarClipPlane", 1000));
 	mFOV.mfValue = mFOV.mfGoal = mfDefaultFOV;
 	mpCamera->SetPitchLimits(cMath::ToRad(fMin), cMath::ToRad(fMax));
 }
