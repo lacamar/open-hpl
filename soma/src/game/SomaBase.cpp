@@ -695,7 +695,7 @@ static void cSomaBase_HeadlessCmd_EntityInfo(void *apUserData, const cHeadlessRe
 	aResp.SetRaw("entity", sInfo);
 }
 
-// Names the submeshes under a screen pixel (ray vs current triangles, skinned included)
+// Names the submeshes under a screen pixel, or along x,y,z -> x2,y2,z2 (ray vs current triangles, skinned included)
 static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -703,7 +703,16 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 	cCamera *pCam = pBase->GetDebugCamera();
 	if(pWorld == NULL || pCam == NULL) { aResp.SetError("no world loaded"); return; }
 	cVector3f vStart, vDir;
-	pCam->UnProject(&vStart, &vDir, cVector2f(aReq.GetFloat("x", 0.5f), aReq.GetFloat("y", 0.5f)), 1);
+	float fMaxT = 1e30f;
+	if(aReq.HasKey("x2"))
+	{
+		vStart = cVector3f(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0), aReq.GetFloat("z", 0));
+		vDir = cVector3f(aReq.GetFloat("x2", 0), aReq.GetFloat("y2", 0), aReq.GetFloat("z2", 0)) - vStart;
+		fMaxT = vDir.Length();
+		vDir.Normalize();
+	}
+	else
+		pCam->UnProject(&vStart, &vDir, cVector2f(aReq.GetFloat("x", 0.5f), aReq.GetFloat("y", 0.5f)), 1);
 	std::vector<std::pair<float, tString>> vHits;
 	auto test = [&](cMeshEntity *pEnt) {
 		if(pEnt->IsVisible() == false) return;
@@ -738,7 +747,10 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 			if(fBest < 1e30f)
 			{
 				cVector3f vHit = pModel ? cMath::MatrixMul(*pModel, vS + vD*fBest) : vS + vD*fBest;
-				vHits.push_back(std::make_pair(cMath::Vector3Dist(vStart, vHit), pEnt->GetName() + "/" + pSub->GetName() + (pSub->GetMaterial() ? " " + pSub->GetMaterial()->GetName() : "")));
+				float fDist = cMath::Vector3Dist(vStart, vHit);
+				if(fDist < fMaxT)
+					vHits.push_back(std::make_pair(fDist, pEnt->GetName() + "/" + pSub->GetName() + (pSub->GetMaterial() ? " " + pSub->GetMaterial()->GetName() : "") +
+						(pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster) ? "" : " noshadow")));
 			}
 		}
 	};
@@ -1043,7 +1055,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 	if (pHdr == NULL || pHdr[0] != '0')
 	{
 		cRendererDeferred::SetHdr(true);
-		cLightSpot::SetShadowNearClip(0.05f);
 		SetHpslStripHdrBoost(false);
 		cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 		cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");

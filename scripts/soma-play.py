@@ -7,6 +7,7 @@
   scripts/soma-play.py look ENTITY                    # aim the camera at an entity
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
   scripts/soma-play.py drag ENTITY DX DY [--steps 60]  # hold click, move the mouse by DX,DY over STEPS frames
+  scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w]            # hold a movement key
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
@@ -223,6 +224,14 @@ def cmd_drag(a):
     cmd_log(argparse.Namespace(regex=None, all=False))
 
 
+def cmd_mouse(a):
+    for _ in range(a.steps):
+        send({"cmd": "input", "type": "mouse_move", "xrel": str(int(a.dx / a.steps)), "yrel": str(int(a.dy / a.steps))})
+        send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+    frames(0.2)
+    cmd_state(a)
+
+
 def cmd_key(a):
     press("key", a.key, a.hold)
 
@@ -325,6 +334,8 @@ def main():
     s = sub.add_parser("interact"); s.add_argument("entity"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
+    s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
+    s.add_argument("--steps", type=int, default=30)
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")

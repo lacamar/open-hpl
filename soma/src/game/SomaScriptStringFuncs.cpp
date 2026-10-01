@@ -123,4 +123,20 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "tString cString_GetFilePath(const tString&in aString)", +[](const tString &s) { return cString::GetFilePath(s); });
 	SOMA_FUNC(e, "tString cString_AddSlashAtEnd(const tString&in asPath)", +[](const tString &s) { return cString::AddSlashAtEnd(s); });
 	SOMA_FUNC(e, "tString cString_RemoveSlashAtEnd(const tString&in asPath)", +[](const tString &s) { return cString::RemoveSlashAtEnd(s); });
+	SOMA_FUNC(e, "tString String_SecondsToClockDisplay(float afSeconds, bool abShowHours, bool abShowMinutes, bool abShowSeconds, bool abShowHundredths)",
+			  +[](float s, bool bH, bool bM, bool bS, bool bC) {
+				  std::vector<int> v;
+				  int h = (int)(s / 3600.0f); s -= (float)(h * 3600); if (bH) v.push_back(h);
+				  int m = (int)(s / 60.0f); s -= (float)(m * 60); if (bM) v.push_back(m);
+				  int sec = (int)s; if (bS) v.push_back(sec);
+				  if (bC) v.push_back((int)((s - (float)sec) * 100.0f));
+				  tString r;
+				  for (size_t i = 0; i < v.size(); ++i)
+				  {
+					  if (i) r += ":";
+					  if (v[i] <= 9) r += "0";
+					  r += cString::ToString(v[i]);
+				  }
+				  return r;
+			  });
 }
