@@ -719,8 +719,76 @@ bool SomaTakePendingMapChange(tString &asMap, tString &asStart)
 	return true;
 }
 
+// Script iterators are NOCOUNT handles; a recycled pool bounds the leak
+template <class It>
+static It *SomaPooledIterator(const It &aIt)
+{
+	static std::vector<It *> vPool;
+	static size_t lNext = 0;
+	if (vPool.size() < 256)
+	{
+		vPool.push_back(new It(aIt));
+		return vPool.back();
+	}
+	It *pIt = vPool[lNext++ % vPool.size()];
+	*pIt = aIt;
+	return pIt;
+}
+
+template <class It, class T>
+static void SomaRegisterIterator(asIScriptEngine *e, const char *apType, const char *apElem)
+{
+	SOMA_METHOD(e, apType, "bool HasNext()", +[](It *p) { return p->HasNext(); });
+	SOMA_METHOD(e, apType, (tString(apElem) + "@ Next()").c_str(), +[](It *p) -> T { return p->Next(); });
+	SOMA_METHOD(e, apType, (tString(apElem) + "@ PeekNext()").c_str(), +[](It *p) -> T { return p->PeekNext(); });
+}
+
+template <class T>
+static void SomaRegisterChildIterator(asIScriptEngine *e, const char *apType)
+{
+	SOMA_METHOD(e, apType, "cEntity3DIterator@ GetChildIterator()", +[](T *p) { return SomaPooledIterator(static_cast<iEntity3D *>(p)->GetChildIterator()); });
+}
+
+static void RegisterSomaScriptIterators(asIScriptEngine *e)
+{
+	SomaRegisterIterator<cEntity3DIterator, iEntity3D *>(e, "cEntity3DIterator", "iEntity3D");
+	SomaRegisterIterator<cLightListIterator, iLight *>(e, "cLightListIterator", "iLight");
+	SomaRegisterIterator<cMeshEntityIterator, cMeshEntity *>(e, "cMeshEntityIterator", "cMeshEntity");
+	SomaRegisterIterator<cParticleSystemIterator, cParticleSystem *>(e, "cParticleSystemIterator", "cParticleSystem");
+	SomaRegisterIterator<cSoundEntityIterator, cSoundEntity *>(e, "cSoundEntityIterator", "cSoundEntity");
+	SomaRegisterIterator<cBillboardIterator, cBillboard *>(e, "cBillboardIterator", "cBillboard");
+	SomaRegisterIterator<cBeamIterator, cBeam *>(e, "cBeamIterator", "cBeam");
+	SomaRegisterIterator<cFogAreaIterator, cFogArea *>(e, "cFogAreaIterator", "cFogArea");
+	SomaRegisterIterator<cGuiSetEntityIterator, cGuiSetEntity *>(e, "cGuiSetEntityIterator", "cGuiSetEntity");
+
+	SOMA_METHOD(e, "cWorld", "cLightListIterator@ GetLightIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetLightIterator()); });
+	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetStaticMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetStaticMeshEntityIterator()); });
+	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetDynamicMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetDynamicMeshEntityIterator()); });
+	SOMA_METHOD(e, "cWorld", "cParticleSystemIterator@ GetParticleSystemIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetParticleSystemIterator()); });
+	SOMA_METHOD(e, "cWorld", "cSoundEntityIterator@ GetSoundEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetSoundEntityIterator()); });
+	SOMA_METHOD(e, "cWorld", "cBillboardIterator@ GetBillboardIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBillboardIterator()); });
+	SOMA_METHOD(e, "cWorld", "cBeamIterator@ GetBeamIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBeamIterator()); });
+	SOMA_METHOD(e, "cWorld", "cFogAreaIterator@ GetFogAreaIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetFogAreaIterator()); });
+	SOMA_METHOD(e, "cWorld", "cGuiSetEntityIterator@ GetGuiSetEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetGuiSetEntityIterator()); });
+
+	SomaRegisterChildIterator<iEntity3D>(e, "iEntity3D");
+	SomaRegisterChildIterator<iPhysicsBody>(e, "iPhysicsBody");
+	SomaRegisterChildIterator<cMeshEntity>(e, "cMeshEntity");
+	SomaRegisterChildIterator<cSubMeshEntity>(e, "cSubMeshEntity");
+	SomaRegisterChildIterator<iLight>(e, "iLight");
+	SomaRegisterChildIterator<cLightPoint>(e, "cLightPoint");
+	SomaRegisterChildIterator<cLightSpot>(e, "cLightSpot");
+	SomaRegisterChildIterator<cLightBox>(e, "cLightBox");
+	SomaRegisterChildIterator<cParticleSystem>(e, "cParticleSystem");
+	SomaRegisterChildIterator<cSoundEntity>(e, "cSoundEntity");
+	SomaRegisterChildIterator<cBillboard>(e, "cBillboard");
+	SomaRegisterChildIterator<cBeam>(e, "cBeam");
+	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
+}
+
 void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 {
+	RegisterSomaScriptIterators(e);
 	typedef const tString &S;
 	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound)",
 			  +[](S map, S start, S transfer, S, S) {
