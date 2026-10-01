@@ -109,6 +109,7 @@ private:
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
+float SomaStartYaw(const cMatrixf &a_mtxArea);
 bool SomaStartPosCrouching(const tString &asName);
 void SomaUpdateLightConnections();
 unsigned int SomaCollideFlag(const tString &asGroups);

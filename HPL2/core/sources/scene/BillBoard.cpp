@@ -30,6 +30,7 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Renderer.h"
+#include "graphics/RendererDeferred.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -83,6 +84,8 @@ namespace hpl {
 								cVector3f(-1,-1,0),
 								cVector3f(-1,1,0),
 								cVector3f(1,1,0)};
+		if(cRendererDeferred::GetHdr())
+			for(int i=0;i<4;i++) vTexCoords[i].y = -vTexCoords[i].y;
 		for(int i=0;i<4;i++)
 		{
 			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vCoords[i]);
@@ -216,11 +219,13 @@ namespace hpl {
 	{
 		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 		float fRgbMul = mfHaloAlpha * mfBrightness;
+		cColor col = mColor;
+		if(cRendererDeferred::GetHdr()) col = cColor(col.r*col.r, col.g*col.g, col.b*col.b, col.a);
 		for(int i=0; i<4;++i)
 		{
-			pColors[0] = mColor.r * fRgbMul;
-			pColors[1] = mColor.g * fRgbMul;
-			pColors[2] = mColor.b * fRgbMul;
+			pColors[0] = col.r * fRgbMul;
+			pColors[1] = col.g * fRgbMul;
+			pColors[2] = col.b * fRgbMul;
 			pColors[3] = mColor.a * mfHaloAlpha;
 			pColors+=4;
 		}

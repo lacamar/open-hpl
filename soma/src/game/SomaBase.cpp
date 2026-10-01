@@ -2027,7 +2027,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		if (pStartPos)
 		{
 			vAreaPos = pStartPos->GetWorldMatrix().GetTranslation();
-			fAreaYaw = cMath::MatrixToEulerAngles(pStartPos->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y;
+			fAreaYaw = SomaStartYaw(pStartPos->GetWorldMatrix());
 			bFoundArea = true;
 			sStartName = pStartPos->GetName();
 		}

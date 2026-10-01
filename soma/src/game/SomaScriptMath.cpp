@@ -185,7 +185,7 @@ static void RegisterMatrixQuat(asIScriptEngine *e)
 				   });
 	SOMA_METHOD(e, "cMatrixf", "cMatrixf&opAssign(const cMatrixf &in)", +[](cMatrixf &a, const cMatrixf &b) -> cMatrixf & { return a = b; });
 	SOMA_METHOD(e, "cMatrixf", "bool opEquals(const cMatrixf &in) const", +[](const cMatrixf &a, const cMatrixf &b) { return memcmp(&a, &b, sizeof(cMatrixf)) == 0; });
-	SOMA_METHOD(e, "cMatrixf", "float GetElement(uint64, uint64) const", +[](const cMatrixf &m, asQWORD r, asQWORD c) { return m.m[r][c]; });
+	SOMA_METHOD(e, "cMatrixf", "float GetElement(uint64, uint64) const", +[](const cMatrixf &m, asQWORD c, asQWORD r) { return r < 4 && c < 4 ? m.m[r][c] : 0.0f; });
 	SOMA_METHOD(e, "cMatrixf", "cVector3f GetRight() const", +[](const cMatrixf &m) { return m.GetRight(); });
 	SOMA_METHOD(e, "cMatrixf", "void SetRight(const cVector3f&in avVec)", +[](cMatrixf &m, const cVector3f &v) { m.SetRight(v); });
 	SOMA_METHOD(e, "cMatrixf", "cVector3f GetUp() const", +[](const cMatrixf &m) { return m.GetUp(); });

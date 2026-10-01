@@ -267,6 +267,9 @@ def diff_table(res, show_all=True):
     for k in list(dict.fromkeys(list(ours) + list(ref))):
         a, b = ours.get(k), ref.get(k)
         ok = same(a, b)
+        if not ok and k == "yaw" and num_list(a or "x") and num_list(b or "x"):
+            d = (float(a) - float(b)) % 360
+            ok = min(d, 360 - d) <= 0.02
         bad += not ok
         if show_all or not ok:
             rows.append((k, a, b, ok))

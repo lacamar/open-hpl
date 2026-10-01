@@ -488,7 +488,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		{
 			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
 			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
-			fYawRel = pBody->GetYaw() - cMath::MatrixToEulerAngles(pArea->GetMatrix().GetRotation(), eEulerRotationOrder_XYZ).y;
+			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
 		}
 		gsPreloadMap.clear();
 		if (gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart) == false)
@@ -497,7 +497,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
-									  cMath::MatrixToEulerAngles(pNew->GetMatrix().GetRotation(), eEulerRotationOrder_XYZ).y + fYawRel);
+									  SomaStartYaw(pNew->GetMatrix()) + fYawRel);
 			else
 				Warning("SOMA script: transfer area '%s' not found in %s\n", sTransfer.c_str(), sMap.c_str());
 		}
@@ -694,6 +694,12 @@ unsigned int SomaCollideFlag(const tString &asGroups)
 	if (lMember == 0 && lExclude == 0)
 		return 0;
 	return (lMember ? lMember : 0xFFFF) | ((0xFFFF & ~lExclude) << 16);
+}
+
+// Unwrapped, in (-2pi, 0]: yaw limits set by map scripts clamp against it
+float SomaStartYaw(const cMatrixf &a_mtxArea)
+{
+	return -cMath::GetAngleFromPoints2D(0, cVector2f(a_mtxArea.m[0][2], a_mtxArea.m[2][2]));
 }
 
 bool SomaStartPosCrouching(const tString &asName)
@@ -1173,7 +1179,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntity() : m.GetWorld()->GetStartPosEntity(n);
 		if (pStart && cSomaLuxPlayer::Get())
 			cSomaLuxPlayer::Get()->PlaceAtStart(pStart->GetWorldMatrix().GetTranslation(),
-												 cMath::MatrixToEulerAngles(pStart->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y,
+												 SomaStartYaw(pStart->GetWorldMatrix()),
 												 SomaStartPosCrouching(pStart->GetName()));
 	});
 	SOMA_METHOD(e, M, "float GetTimerTime(const tString&in asName)",
