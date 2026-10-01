@@ -1600,7 +1600,7 @@ namespace hpl {
 	static cColor LinearLightColor(const cColor& aCol)
 	{
 		if(cRendererDeferred::GetHdr()==false) return aCol;
-		return cColor(powf(aCol.r, 2.2f), powf(aCol.g, 2.2f), powf(aCol.b, 2.2f), aCol.a);
+		return cColor(aCol.r * aCol.r, aCol.g * aCol.g, aCol.b * aCol.b, aCol.a);
 	}
 
 	void cRendererDeferred::SetupLightProgramVariables(	iGpuProgram *apProgram,cDeferredLight* apLightData)
@@ -1617,8 +1617,9 @@ namespace hpl {
 		apProgram->SetColor4f(kVar_avLightColor, lightColor);
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
 		// No-ops for Dark Descent's GLSL (variables don't exist there).
-		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow());
-		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow());
+		// HPL3 doubles both exponents when packing light instance data.
+		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
+		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow() * 2);
 
 		////////////////////////
 		// Point light specific

@@ -713,6 +713,9 @@ namespace hpl {
 		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 		pMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, bCastsShadows);
 		pMeshEntity->SetUniqueID(lID);
+		pMeshEntity->SetColorMul(apElement->GetAttributeColor("ColorMul", cColor(1, 1)));
+		pMeshEntity->SetIlluminationAmount(apElement->GetAttributeFloat("IllumBrightness", 1));
+		pMeshEntity->SetIlluminationColor(apElement->GetAttributeColor("IllumColor", cColor(1, 1)));
 
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);

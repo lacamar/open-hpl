@@ -72,7 +72,7 @@ public:
 	cSomaLuxMoveState *GetMoveState() { return mpMoveState; }
 
 	// cLuxMapHandler::SetCurrentMap: after CreateWorldEntities/OnMapEnter
-	void PlaceAtStart(const cVector3f &avFeetPos, float afYaw);
+	void PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool abCrouching = false);
 
 	void OnMessage(const char *apDecl) override;
 	void OnUpdate(float afTimeStep) override;

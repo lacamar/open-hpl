@@ -109,6 +109,8 @@ private:
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
+bool SomaStartPosCrouching(const tString &asName);
+void SomaUpdateLightConnections();
 unsigned int SomaCollideFlag(const tString &asGroups);
 void SomaRequestNewGame(const tString &asMap, const tString &asStart);
 

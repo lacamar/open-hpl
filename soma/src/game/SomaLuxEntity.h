@@ -114,14 +114,6 @@ public:
 	bool GetAttachmentParentMatrix(cMatrixf &a_mtxOut);
 	void UpdateAttachment();
 
-	struct cConnectedLight
-	{
-		iLight *mpLight;
-		cColor mBaseColor;
-		float mfAmount;
-		bool mbMul;
-	};
-	std::vector<cConnectedLight> mvConnectedLights;
 	bool mbConnectedLightsResolved = false;
 	void ResolveConnectedLights();
 
@@ -156,7 +148,10 @@ public:
 	void SetStaticPhysics(bool abX);
 	bool mbStaticPhysics = false;
 	std::vector<float> mvDynamicMass;
-	void SetEffectsActive(bool abX);
+	void SetEffectsActive(bool abX, bool abFade = false);
+	float mfEffectsAlpha = 1, mfEffectsFadeSpeed = 0;
+	void ApplyEffectsAlpha();
+	void CaptureEffectDefaults();
 	cVector3f GetPosition();
 	cMatrixf GetMatrix();
 	void SetMatrix(const cMatrixf &a_mtx);

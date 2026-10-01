@@ -56,6 +56,7 @@ namespace hpl {
 	#define kVar_avFrenselBiasPow				5
 	#define kVar_a_mtxInvViewRotation			6
 	#define kVar_avColorMul						7
+	#define kVar_avIlluminationMul				8
 
 
 	//------------------------------
@@ -348,6 +349,7 @@ namespace hpl {
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
 		mpProgramManager->AddGenerateProgramVariableId("afColorMul",kVar_afColorMul,eMaterialRenderMode_Illumination);
+		mpProgramManager->AddGenerateProgramVariableId("avIlluminationMul",kVar_avIlluminationMul,eMaterialRenderMode_Illumination);
 	}
 
 	//--------------------------------------------------------------------------
@@ -592,6 +594,7 @@ namespace hpl {
 		else if(aRenderMode == eMaterialRenderMode_Illumination)
 		{
 			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
+			apProgram->SetColor4f(kVar_avIlluminationMul, apObject->GetIlluminationColor() * apObject->GetIlluminationAmount());
 		}
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{

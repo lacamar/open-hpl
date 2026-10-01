@@ -224,6 +224,9 @@ namespace hpl {
 
 	// Uniform-path code replaced by what the texture-buffer path (used by the real engine) does.
 	static const char* const gvHpslSourceReplacements[][3] = {
+		{ "deferred_illumination_solid_frag.hpsl",
+		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@endif",
+		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@else\n\t\tvIllumination.rgb *= avIlluminationMul.rgb;\n\t@endif" },
 		{ "deferred_light_frag.hpsl",
 		  "\t\t\tfloat fOneMinusCos = max(0.0, 1.0 - dot( vLightDir,  avLightForward));\n"
 		  "\t\t\tfAttenuatuion *= pow(1.0 - sqrt(min(fOneMinusCos / afOneMinusCosHalfSpotFOV,1)), afSpotFalloffPow);",

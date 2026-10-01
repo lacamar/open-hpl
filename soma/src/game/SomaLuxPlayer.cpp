@@ -161,12 +161,21 @@ void cSomaLuxPlayer::ChangeMoveState(int alId)
 	mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(pPrev ? pPrev->mlId : -1));
 }
 
-void cSomaLuxPlayer::PlaceAtStart(const cVector3f &avFeetPos, float afYaw)
+void cSomaLuxPlayer::PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool abCrouching)
 {
 	if (mpCharBody == NULL)
 		return;
-	mpCharBody->SetFeetPosition(avFeetPos);
-	mpCharBody->SetYaw(afYaw);
+	cVector3f vPos = avFeetPos;
+	bool bScript = Call("void SetupStartPos(const cVector3f&in avPos, float afAngle, bool abCrouching)", [&](asIScriptContext *c) {
+		c->SetArgObject(0, &vPos);
+		c->SetArgFloat(1, afYaw);
+		c->SetArgByte(2, abCrouching);
+	});
+	if (bScript == false)
+	{
+		mpCharBody->SetFeetPosition(avFeetPos);
+		mpCharBody->SetYaw(afYaw);
+	}
 	mpCharBody->SetForceVelocity(0);
 	mpCharBody->Update(0.001f);
 	if (mpCamera)

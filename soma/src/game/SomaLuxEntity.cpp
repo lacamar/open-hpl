@@ -103,9 +103,31 @@ void cSomaLuxEntity::SetActive(bool abX)
 	}
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->SetActive(abX);
+	float fAlpha = mfEffectsAlpha;
 	SetEffectsActive(abX && mbEffectsActive);
+	if (mbEffectsActive)
+	{
+		mfEffectsAlpha = fAlpha > 0 ? fAlpha : 1.0f;
+		mfEffectsFadeSpeed = 0;
+		ApplyEffectsAlpha();
+	}
 	Call("void OnSetActive(bool abX)", [abX](asIScriptContext *c) { c->SetArgByte(0, abX); });
 }
+
+// cLuxPropLightConnection: one per light, combining every prop connected to it
+struct cSomaLightConnection
+{
+	struct cProp
+	{
+		cSomaLuxEntity *mpEnt;
+		float mfAmount;
+		bool mbUseOnColor, mbUseSpec, mbMul;
+	};
+	iLight *mpLight;
+	cColor mBaseColor;
+	std::vector<cProp> mvProps;
+};
+static std::vector<cSomaLightConnection> gvLightConnections;
 
 void cSomaLuxEntity::ResolveConnectedLights()
 {
@@ -118,9 +140,10 @@ void cSomaLuxEntity::ResolveConnectedLights()
 		if (pNames == NULL || pNames->empty()) continue;
 		tStringVec vPatterns;
 		cString::GetStringVec(*pNames, vPatterns, NULL);
-		float fAmount = mInstanceVars.GetVarFloat(sPrefix + "ConnectionLightAmount", 1);
-		tString *pType = mInstanceVars.GetUserVariable(sPrefix + "ConnectionLightType");
-		bool bMul = pType == NULL || *pType != "Add";
+		cSomaLightConnection::cProp prop{this, mInstanceVars.GetVarFloat(sPrefix + "ConnectionLightAmount", 1),
+										 mInstanceVars.GetVarBool(sPrefix + "ConnectionLightUseOnColor", false),
+										 mInstanceVars.GetVarBool(sPrefix + "ConnectionLightUseSpec", false),
+										 mInstanceVars.GetVarString(sPrefix + "ConnectionLightType", "Add") != "Add"};
 		cLightListIterator it = mpMap->GetWorld()->GetLightIterator();
 		while (it.HasNext())
 		{
@@ -128,47 +151,114 @@ void cSomaLuxEntity::ResolveConnectedLights()
 			for (const tString &sPattern : vPatterns)
 				if (SomaWildcardMatch(sPattern, pLight->GetName()))
 				{
-					mvConnectedLights.push_back(cConnectedLight{pLight, pLight->GetDiffuseColor(), fAmount, bMul});
+					auto conn = std::find_if(gvLightConnections.begin(), gvLightConnections.end(),
+											 [pLight](const cSomaLightConnection &c) { return c.mpLight == pLight; });
+					if (conn == gvLightConnections.end())
+						conn = gvLightConnections.insert(gvLightConnections.end(), cSomaLightConnection{pLight, pLight->GetDiffuseColor(), {}});
+					conn->mvProps.push_back(prop);
 					break;
 				}
 		}
 	}
 }
 
-void cSomaLuxEntity::SetEffectsActive(bool abX)
+void SomaUpdateLightConnections()
 {
-	if (mbConnectedLightsResolved == false) ResolveConnectedLights();
-	for (cConnectedLight &cl : mvConnectedLights)
+	for (cSomaLightConnection &conn : gvLightConnections)
 	{
-		float fEffect = abX ? 1.0f : 0.0f;
-		float fMul = cl.mbMul ? 1.0f - cl.mfAmount + cl.mfAmount * fEffect : cl.mfAmount * fEffect;
-		cColor col(cl.mBaseColor.r * fMul, cl.mBaseColor.g * fMul, cl.mBaseColor.b * fMul, cl.mBaseColor.a * fMul);
-		cl.mpLight->SetDiffuseColor(col);
-		cl.mpLight->SetVisible(fMul > 0);
+		cColor add(0, 0);
+		float fMulSum = 0, fMulAcc = 0;
+		bool bMul = false;
+		for (const cSomaLightConnection::cProp &p : conn.mvProps)
+		{
+			cSomaLuxEntity *pEnt = p.mpEnt;
+			if (p.mbMul)
+			{
+				fMulSum += p.mfAmount;
+				fMulAcc += p.mfAmount * pEnt->mfEffectsAlpha;
+				bMul = true;
+				continue;
+			}
+			cColor col;
+			if (pEnt->mvLights.empty() == false)
+				col = p.mbUseOnColor ? pEnt->mvEffectDefaults[0] * pEnt->mEffectBaseColor * pEnt->mfEffectsAlpha : pEnt->mvLights[0]->GetDiffuseColor();
+			else if (pEnt->mvBillboards.empty() == false)
+				col = pEnt->mvBillboards[0]->GetColor();
+			else
+				col = pEnt->mInstanceVars.GetVarColor("IllumColor", cColor(1, 1)) * pEnt->mfEffectsAlpha;
+			if (p.mbUseSpec == false)
+				col.a = 0;
+			add = add + col * p.mfAmount;
+		}
+		cColor col = (bMul ? conn.mBaseColor * (1 - fMulSum + fMulAcc) : conn.mBaseColor) + add;
+		conn.mpLight->SetDiffuseColor(col);
 	}
-	for (iLight *pLight : mvLights)
-	{
-		pLight->SetVisible(abX);
-		pLight->SetActive(abX);
-	}
+}
+
+static void ForgetLightConnections(cSomaLuxEntity *apEnt)
+{
+	for (cSomaLightConnection &conn : gvLightConnections)
+		conn.mvProps.erase(std::remove_if(conn.mvProps.begin(), conn.mvProps.end(), [apEnt](const cSomaLightConnection::cProp &p) { return p.mpEnt == apEnt; }),
+						   conn.mvProps.end());
+	gvLightConnections.erase(std::remove_if(gvLightConnections.begin(), gvLightConnections.end(),
+											[](const cSomaLightConnection &c) { return c.mvProps.empty(); }),
+							 gvLightConnections.end());
+}
+
+void cSomaLuxEntity::SetEffectsActive(bool abX, bool abFade)
+{
+	CaptureEffectDefaults();
+	float fTime = abFade ? mVars.GetVarFloat(abX ? "EffectsOnTime" : "EffectsOffTime", 1) : 0;
+	mfEffectsFadeSpeed = fTime > 0 ? (abX ? 1 : -1) / fTime : 0;
+	if (mfEffectsFadeSpeed == 0)
+		mfEffectsAlpha = abX ? 1.0f : 0.0f;
 	for (cParticleSystem *pPS : mvParticleSystems)
 		if (pPS)
 		{
 			pPS->SetVisible(abX);
 			pPS->SetActive(abX);
 		}
-	for (cBillboard *pBB : mvBillboards)
-	{
-		pBB->SetVisible(abX);
-		pBB->SetActive(abX);
-	}
 	for (cSoundEntity *pSound : mvSoundEntities)
 	{
 		if (abX)
-			pSound->Play(false);
+			abFade ? pSound->FadeIn(mfEffectsFadeSpeed) : pSound->Play(false);
 		else
-			pSound->Stop(false);
+			abFade && mfEffectsFadeSpeed != 0 ? pSound->FadeOut(-mfEffectsFadeSpeed) : pSound->Stop(false);
 	}
+	ApplyEffectsAlpha();
+}
+
+void cSomaLuxEntity::CaptureEffectDefaults()
+{
+	if (mvEffectDefaults.empty() == false)
+		return;
+	for (iLight *pLight : mvLights)
+		mvEffectDefaults.push_back(pLight->GetDiffuseColor());
+	for (cBillboard *pBB : mvBillboards)
+		mvEffectDefaults.push_back(pBB->GetColor());
+}
+
+void cSomaLuxEntity::ApplyEffectsAlpha()
+{
+	CaptureEffectDefaults();
+	bool bOn = mfEffectsAlpha > 0 && mbActive;
+	size_t i = 0;
+	for (iLight *pLight : mvLights)
+	{
+		cColor col = mvEffectDefaults[i++] * mEffectBaseColor * mfEffectsAlpha;
+		bool bLit = bOn && col.r + col.g + col.b > 0;
+		pLight->SetDiffuseColor(col);
+		pLight->SetVisible(bLit);
+		pLight->SetActive(bLit);
+	}
+	for (cBillboard *pBB : mvBillboards)
+	{
+		pBB->SetColor(mvEffectDefaults[i++] * mEffectBaseColor * mfEffectsAlpha);
+		pBB->SetVisible(bOn);
+		pBB->SetActive(bOn);
+	}
+	if (mpMesh)
+		mpMesh->SetIlluminationColor(mInstanceVars.GetVarColor("IllumColor", cColor(1, 1)) * mEffectBaseColor * mfEffectsAlpha);
 }
 
 cMatrixf cSomaLuxEntity::GetMatrix()
@@ -724,19 +814,9 @@ bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
 
 void cSomaLuxEntity::SetEffectBaseColor(const cColor &aCol)
 {
-	if (mvEffectDefaults.empty())
-	{
-		for (iLight *pLight : mvLights)
-			mvEffectDefaults.push_back(pLight->GetDiffuseColor());
-		for (cBillboard *pBB : mvBillboards)
-			mvEffectDefaults.push_back(pBB->GetColor());
-	}
+	CaptureEffectDefaults();
 	mEffectBaseColor = aCol;
-	size_t i = 0;
-	for (iLight *pLight : mvLights)
-		pLight->SetDiffuseColor(mvEffectDefaults[i++] * aCol);
-	for (cBillboard *pBB : mvBillboards)
-		pBB->SetColor(mvEffectDefaults[i++] * aCol);
+	ApplyEffectsAlpha();
 }
 
 void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
@@ -755,6 +835,13 @@ void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
 
 void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 {
+	if (mfEffectsFadeSpeed != 0)
+	{
+		mfEffectsAlpha = cMath::Clamp(mfEffectsAlpha + mfEffectsFadeSpeed * afTimeStep, 0.0f, 1.0f);
+		if (mfEffectsAlpha == 0 || mfEffectsAlpha == 1)
+			mfEffectsFadeSpeed = 0;
+		ApplyEffectsAlpha();
+	}
 	if (mfEffectColorTime <= 0)
 		return;
 	mfEffectColorT = std::min(mfEffectColorT + afTimeStep / mfEffectColorTime, 1.0f);
@@ -1563,8 +1650,9 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						}
 						return pSound;
 					});
-	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive); });
+	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool f) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); });
 	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
+	SOMA_METHOD_NEW(e, T, "float GetEffectsAlpha()", +[](E *p) { return p->mfEffectsAlpha; });
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });
 	SOMA_METHOD_NEW(e, T, "void AddCollideCallback(iLuxEntity @apEntity, const tString&in asCallbackFunc)",
 					+[](E *p, E *c, S f) { if (c) p->mvCollideCallbacks.push_back(E::cCollideCallback{c->msName, f}); });
@@ -1721,6 +1809,7 @@ void cSomaLuxEntity::UpdateAttachment()
 
 cSomaLuxEntity::~cSomaLuxEntity()
 {
+	ForgetLightConnections(this);
 	delete mpAttachment;
 	cSomaGuiScreenRenderer::Get()->Forget(this);
 	SomaForgetCritter(this);
@@ -1978,7 +2067,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  });
 			  });
 	SOMA_FUNC(e, "void Entity_SetEffectsActive(const tString &in asEntityName, bool abActive, bool abFadeAndPlaySounds)",
-			  +[](S n, bool b, bool) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive); }); });
+			  +[](S n, bool b, bool f) { ForMatching(n, [b, f](cSomaLuxEntity *p) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); }); });
 	SOMA_FUNC(e, "void Entity_Connect(const tString &in asName, const tString &in asMainEntity, const tString &in asConnectEntity, bool abInvertStateSent, int alStatesUsed)",
 			  +[](S n, S m, S c, bool i, int l) { ForMatching(m, [&](cSomaLuxEntity *p) { p->mvConnections.push_back(cSomaLuxEntity::cConnection{n, c, i, l}); }); });
 	SOMA_FUNC(e, "void Entity_RemoveConnection(const tString &in asName, const tString &in asMainEntity)", +[](S n, S m) {

@@ -77,6 +77,14 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 	Log("SOMA script: %d map entities, %d with a script class\n", (int)mvEntities.size(), lScripted);
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 		pEnt->Call("void OnAfterWorldLoad()");
+	for (cSomaLuxEntity *pEnt : mvEntities)
+	{
+		pEnt->CaptureEffectDefaults();
+		if (pEnt->mbEffectsActive == false)
+			pEnt->mfEffectsAlpha = 0;
+		pEnt->ApplyEffectsAlpha();
+		pEnt->ResolveConnectedLights();
+	}
 
 	apRuntime->Call(mpScript, "void PreloadData()");
 	return true;
@@ -272,6 +280,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	}
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 		pEnt->UpdateAttachment();
+	SomaUpdateLightConnections();
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
 	for (cSomaLuxEntity *pEnt : mvEntities)
@@ -681,6 +690,12 @@ unsigned int SomaCollideFlag(const tString &asGroups)
 	return (lMember ? lMember : 0xFFFF) | ((0xFFFF & ~lExclude) << 16);
 }
 
+bool SomaStartPosCrouching(const tString &asName)
+{
+	cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(asName) : NULL;
+	return pEnt && pEnt->mInstanceVars.GetVarBool("Crouching", false);
+}
+
 void SomaRequestMapChange(const tString &asMap, const tString &asStart)
 {
 	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
@@ -1047,7 +1062,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntity() : m.GetWorld()->GetStartPosEntity(n);
 		if (pStart && cSomaLuxPlayer::Get())
 			cSomaLuxPlayer::Get()->PlaceAtStart(pStart->GetWorldMatrix().GetTranslation(),
-												 cMath::MatrixToEulerAngles(pStart->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y);
+												 cMath::MatrixToEulerAngles(pStart->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y,
+												 SomaStartPosCrouching(pStart->GetName()));
 	});
 	SOMA_METHOD(e, M, "float GetTimerTime(const tString&in asName)",
 				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mfTime : 0.0f; });

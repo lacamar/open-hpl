@@ -84,6 +84,8 @@ namespace hpl {
 		
 		virtual void SetIlluminationAmount(float afX){ mfIlluminationAmount = afX;}
 		inline float GetIlluminationAmount()const { return mfIlluminationAmount;}
+		void SetIlluminationColor(const cColor& aX){ mIlluminationColor = aX;}
+		inline const cColor& GetIlluminationColor()const { return mIlluminationColor;}
 		void SetColorMul(const cColor& aX){ mColorMul = aX;}
 		inline const cColor& GetColorMul()const { return mColorMul;}
 		
@@ -159,6 +161,7 @@ namespace hpl {
 		float mfViewSpaceZ;
 
 		float mfIlluminationAmount;
+		cColor mIlluminationColor = cColor(1,1);
 		cColor mColorMul;
 		float mfCoverageAmount;
 

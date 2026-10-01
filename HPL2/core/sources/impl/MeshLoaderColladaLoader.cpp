@@ -1305,6 +1305,7 @@ namespace hpl {
 				if(lSize>0)
 				{
 					pGeometry->mvVertexVec.resize(lSize);
+					for(size_t i=0; i<pGeometry->mvVertexVec.size(); ++i) pGeometry->mvVertexVec[i].col = cColor(1,1);
 
 					tFloatVec vRawData; 
 					vRawData.resize(lSize * 3);

@@ -96,7 +96,7 @@ player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the gam
 | `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
 | `dump_target target=N path= [channel=C] [screen=ENT]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 10+ shadow maps, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
-| `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel |
+| `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel (ints) or screen point (0-1 with a dot) |
 | `pick_entity x= y=` | submeshes under a screen point (0-1), nearest first (skinned included) |
 | `shader_report [failed_only=false]` | compile/link status + info log per shader |
 | `entity_info name=` | transform, AABB, mesh, per-submesh material/visibility |

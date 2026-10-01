@@ -64,6 +64,7 @@ namespace hpl {
 
 	bool cMeshLoaderCollada::mbConvertUnit = true; 
 	bool cMeshLoaderCollada::mbConvertUnitFromAnyTool = false;
+	bool cMeshLoaderCollada::mbLoadVertexColors = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -184,8 +185,8 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		// bump when loader output changes: v3 = Collada unit applied for every exporter
-		return cResources::GetMeshCacheDir() + sFlat + _W(".v3.msh");
+		// bump when loader output changes: v3 = Collada unit for every exporter, v4 = vertex colours
+		return cResources::GetMeshCacheDir() + sFlat + _W(".v4.msh");
 	}
 
 	cMesh* cMeshLoaderCollada::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)

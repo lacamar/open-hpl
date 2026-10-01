@@ -439,7 +439,7 @@ def main():
     for name in ("start", "report"):
         s = sp.add_parser(name)
         s.add_argument("--map", default="00_01_apartment.hpm")
-        s.add_argument("--pos", default="")
+        s.add_argument("--pos", default="PlayerStartArea_1")
         s.add_argument("--size", default="1280x720")
         s.add_argument("--settle", type=float, default=2)
         s.add_argument("--out")

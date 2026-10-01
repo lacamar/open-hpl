@@ -187,6 +187,7 @@ namespace hpl {
 		//inline tRenderableFlag GetRenderFlags() const { return mlRenderFlags;}
 
 		void SetIlluminationAmount(float afX);
+		void SetIlluminationColor(const cColor& aX);
 		void SetColorMul(const cColor& aX);
 		float GetIlluminationAmount(){ return mfIlluminationAmount; }
 

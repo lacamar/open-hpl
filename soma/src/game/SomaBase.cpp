@@ -726,8 +726,12 @@ static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest 
 		std::vector<float> vPixels;
 		if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("G-buffer target has no GPU data yet"); return; }
 
-		int lX = cMath::Clamp(aReq.GetInt("x", pTex->GetWidth()/2), 0, pTex->GetWidth()-1);
-		int lY = cMath::Clamp(aReq.GetInt("y", pTex->GetHeight()/2), 0, pTex->GetHeight()-1);
+		tString sX = aReq.GetString("x", "0.5"), sY = aReq.GetString("y", "0.5");
+		float fX = cString::ToFloat(sX.c_str(), 0), fY = cString::ToFloat(sY.c_str(), 0);
+		if(sX.find('.') != tString::npos) fX *= pTex->GetWidth();
+		if(sY.find('.') != tString::npos) fY *= pTex->GetHeight();
+		int lX = cMath::Clamp((int)fX, 0, pTex->GetWidth()-1);
+		int lY = cMath::Clamp((int)fY, 0, pTex->GetHeight()-1);
 		// GL rows are bottom-up, request coordinates are top-down.
 		size_t lIdx = ((size_t)(pTex->GetHeight()-1-lY) * pTex->GetWidth() + lX) * 4;
 
@@ -941,6 +945,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
 	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
+	cMeshLoaderCollada::SetLoadVertexColors(true);
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 
@@ -1903,21 +1908,23 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	cVector3f vAreaPos = avStartPos;
 	float fAreaYaw = 0;
 	bool bFoundArea = false;
+	tString sStartName;
 	if (asStartPosName != "")
 	{
 		// "*" = the map's first PlayerStart area
-		cStartPosEntity *pStartPos = asStartPosName == "*" ? pNewWorld->GetFirstStartPosEntity()
-															: pNewWorld->GetStartPosEntity(asStartPosName);
+		cStartPosEntity *pStartPos = asStartPosName == "*" ? NULL : pNewWorld->GetStartPosEntity(asStartPosName);
+		if (pStartPos == NULL)
+		{
+			if (asStartPosName != "*")
+				Log("SOMA: map '%s' has no PlayerStart Area named '%s', using the first\n", asMapFile.c_str(), asStartPosName.c_str());
+			pStartPos = pNewWorld->GetFirstStartPosEntity();
+		}
 		if (pStartPos)
 		{
 			vAreaPos = pStartPos->GetWorldMatrix().GetTranslation();
 			fAreaYaw = cMath::MatrixToEulerAngles(pStartPos->GetWorldMatrix().GetRotation(), eEulerRotationOrder_XYZ).y;
 			bFoundArea = true;
-		}
-		else
-		{
-			Log("SOMA: map '%s' has no PlayerStart Area named '%s', using fallback position\n",
-				asMapFile.c_str(), asStartPosName.c_str());
+			sStartName = pStartPos->GetName();
 		}
 	}
 
@@ -1981,7 +1988,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 				mpLuxGame->PreloadData(mpLuxMap);
 				mpLuxGame->EnterMap(mpLuxMap);
 				if (mbUseScriptPlayer && mbUseRealPlayer)
-					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw);
+					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
 			bool bRestored = cSomaSaveHandler::ApplyPendingState();

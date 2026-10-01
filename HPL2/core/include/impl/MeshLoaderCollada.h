@@ -125,6 +125,7 @@ namespace hpl {
         int mlVtx;
 		int mlNorm;
 		int mlTex;
+		int mlCol = -1;
 	};
 	
 	typedef std::vector<cColladaVtxIndex> tColladaVtxIndexVec;
@@ -135,12 +136,13 @@ namespace hpl {
 	class cColladaExtraVtx
 	{
 	public:
-		cColladaExtraVtx(int alVtx,int alNorm,int alTex,int alNewVtx)
+		cColladaExtraVtx(int alVtx,int alNorm,int alTex,int alNewVtx,int alCol=-1)
 		{
 			mlVtx = alVtx;
 			mlNorm = alNorm;
 			mlTex = alTex;
 			mlNewVtx = alNewVtx;
+			mlCol = alCol;
 		}
 
 		cColladaExtraVtx(){}
@@ -148,12 +150,13 @@ namespace hpl {
 		int mlVtx;
 		int mlNorm;
 		int mlTex;
+		int mlCol = -1;
 
 		int mlNewVtx;
 
 		bool Equals(const cColladaVtxIndex& aData)
 		{
-			if(mlVtx == aData.mlVtx && mlNorm == aData.mlNorm && mlTex == aData.mlTex)
+			if(mlVtx == aData.mlVtx && mlNorm == aData.mlNorm && mlTex == aData.mlTex && mlCol == aData.mlCol)
 			{
 				return true;
 			}
@@ -173,7 +176,7 @@ namespace hpl {
 	{
 	public:
 		cColladaGeometry() : mlPosArrayIdx(-1),mlNormArrayIdx(-1),mlTexArrayIdx(-1),
-						mlPosIdxNum(-1),mlNormIdxNum(-1),mlTexIdxNum(-1)  {}
+						mlPosIdxNum(-1),mlNormIdxNum(-1),mlTexIdxNum(-1),mlColIdxNum(-1),mlColArrayIdx(-1)  {}
 
 		void Clear()
 		{
@@ -206,6 +209,8 @@ namespace hpl {
 		int mlPosIdxNum; //The position in the triangle element
 		int mlNormIdxNum; //for eternal use only
 		int mlTexIdxNum;
+		int mlColIdxNum;
+		int mlColArrayIdx;
 
 		int mlPosArrayIdx; //The index for array containing positions
 		int mlNormArrayIdx; //The index for array containing normals
@@ -477,6 +482,7 @@ namespace hpl {
 		// Honour <unit> from every exporter, not only "FBX COLLADA exporter".
 		// HPL3 data (SOMA) is authored in centimetres by OpenCOLLADA/modo/Maya.
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
+		static void SetLoadVertexColors(bool abX) { mbLoadVertexColors = abX; }
 
 	private:
 		cMeshLoaderMSH *mpMeshLoaderMSH;
@@ -487,6 +493,7 @@ namespace hpl {
 		cMatrixf m_mtxZToY;
 		static bool mbConvertUnit;
 		static bool mbConvertUnitFromAnyTool;
+		static bool mbLoadVertexColors;
 
 		tWorldLoadFlag mFlags;
 

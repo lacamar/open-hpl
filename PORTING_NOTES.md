@@ -5945,3 +5945,35 @@ linked to a body whose master-list row is gone).
   content by its height; raw `DrawGfx/DrawFont/DrawFrame/DrawAlignedGfx` are not
   group-relative (scripts add `GetCurrentGroupPos()` themselves); button state colours replace
   the base, the disabled colour multiplies frame and text, disabled buttons take no input.
+
+## SOMA: light intensity vs the reference (2026-10-01)
+
+Method: same pose on ours and the ref (`soma-compare.py view --pose`), one light isolated via
+`SetBrightness` on both, ref pixels inverted through the tonemap curve, ours checked against a
+CPU replica of `deferred_light_frag.hpsl` fed from `pick` (matched to 1%). So when the pass is
+right and the frame isn't, the inputs differ.
+
+- **Falloff exponents are doubled** by the real `cRendererDeferred::GetLightInstanceData`
+  (Rebirth symbols): `FalloffPow` (0x248) and `SpotFalloffPow` (0x44c) are `addss x,x` before
+  packing; box lights are not. Colour is `diffuse^2 x brightness x distance fade` (not pow 2.2).
+  Slot alpha: 0 when `CastSpecularLight` is off.
+- **Vertex colours.** HPL3's Collada loader reads the `COLOR` triangle input and the G-buffer
+  multiplies albedo by it (`UseColor`). SOMA's tunnels carry ~0.5 colours (set named
+  "UV_Distortion"), i.e. ~4.6x darker after linearisation. Ours always wrote white. SOMA-only
+  flag `cMeshLoaderCollada::SetLoadVertexColors`; mesh cache key `.v4`. 01_02 start lum 8.0 ->
+  4.0 (ref 3.5), PSNR 26.5 -> 31.7.
+- **Illumination follows effects.** `iLuxEntity::UpdateEffectFading`/`SetEffectBaseColor` set
+  the mesh illumination colour to IllumColor x EffectBaseColor x EffectsAlpha. Our uniform-path
+  HPSL illumination shader multiplied by nothing (`afIlluminationMul` is texture-buffer only);
+  patched to use `avIlluminationMul` = renderable illum colour x amount. Lamps with effects off
+  (00_01 pendant, alarm clock) no longer glow.
+- **Effects alpha is independent of `Active`** in the ref (inactive entities report 1); ours
+  zeroed it. `GetEffectsAlpha` was unbound. Light connections no longer set visibility (RE:
+  `cLuxPropLightConnection::Update` only sets colour).
+- `pick x= y=` takes screen fractions when given with a dot; integer pixels otherwise. Earlier
+  "depth mismatch" readings were pixel (0,0).
+- Harness: `soma-compare.py start` now gives ours `PlayerStartArea_1` like the ref; a missing
+  named start falls back to the map's first.
+- Still open: 00_01 is ~2x brighter than the ref at the bed (spot cone on the floor beside the
+  table, upward spot on the ceiling); SH box probes ~3x darker than the ref; under-floor point
+  light in 01_02 lights walls the ref leaves dark.

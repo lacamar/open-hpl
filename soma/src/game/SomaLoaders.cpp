@@ -133,6 +133,24 @@ static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEnti
 
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
+	// HPL2 only attaches these to bodies; HPL3 parents them to the mesh entity otherwise
+	if (mpEntity && mvBodies.empty())
+	{
+		std::vector<iEntity3D *> vChildren(mvLights.begin(), mvLights.end());
+		vChildren.insert(vChildren.end(), mvBillboards.begin(), mvBillboards.end());
+		vChildren.insert(vChildren.end(), mvParticleSystems.begin(), mvParticleSystems.end());
+		vChildren.insert(vChildren.end(), mvSoundEntities.begin(), mvSoundEntities.end());
+		// The mesh entity carries the scale there, on top of the loader's scaled offsets
+		for (iEntity3D *pChild : vChildren)
+			if (pChild->GetEntityParent() == NULL && pChild->GetParent() == NULL)
+			{
+				pChild->SetPosition(pChild->GetLocalPosition() * mvScale);
+				mpEntity->AddChild(pChild);
+			}
+	}
+	for (iLight *pLight : mvLights)
+		pLight->SetRadius(pLight->GetRadius() * mvScale.x);
+
 	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
 	{
 		cSomaLuxEntity *pEnt = new cSomaLuxEntity();
