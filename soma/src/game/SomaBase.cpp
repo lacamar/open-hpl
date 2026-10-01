@@ -951,6 +951,7 @@ cSomaBase::cSomaBase()
 }
 
 void SomaReadUserScreenConfig(cSomaConfig *apCfg);
+void SomaApplyWindowMode(const cSomaConfig *apCfg);
 
 //-----------------------------------------------------------------------
 
@@ -1439,6 +1440,7 @@ bool cSomaBase::InitEngine()
 		msErrorMessage = _W("Could not create HPL engine!");
 		return false;
 	}
+	SomaApplyWindowMode(&mConfig);
 
 	/////////////////////////
 	// Load SOMA's real resource directory listing and physics surface data.

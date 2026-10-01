@@ -86,6 +86,12 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	tString sVsync = cString::ToLowerCase(c->GetString("Screen", "Vsync", apCfg->mbVSync ? "true" : "false"));
 	apCfg->mbVSync = sVsync == "true" || sVsync == "adaptive";
 	apCfg->mfGamma = c->GetFloat("Graphics", "Brightness", apCfg->mfGamma);
+	c->SetInt("Screen", "Width", apCfg->mlScreenWidth);
+	c->SetInt("Screen", "Height", apCfg->mlScreenHeight);
+	if (sFull != "borderless")
+		c->SetString("Screen", "FullScreen", apCfg->mbFullscreen ? "true" : "false");
+	if (sVsync != "adaptive")
+		c->SetString("Screen", "Vsync", apCfg->mbVSync ? "true" : "false");
 }
 
 static void LoadLanguage()
@@ -97,16 +103,42 @@ static void LoadLanguage()
 	pRes->AddLanguageFile("config/lang_main/" + gsLanguage + ".lang", false);
 }
 
+// FullScreen "true" is exclusive at Width x Height (emulated by SDL on Wayland), "borderless" the desktop
+void SomaApplyWindowMode(const cSomaConfig *apCfg)
+{
+	SDL_Window *pWindow = SDL_GL_GetCurrentWindow();
+	if (pWindow == NULL || getenv("OPENHPL_HEADLESS_SOCKET"))
+		return;
+	tString sFull = cString::ToLowerCase(gpUserConfig->GetString("Screen", "FullScreen", apCfg->mbFullscreen ? "true" : "false"));
+	if (sFull == "true" && apCfg->mlScreenWidth > 0 && apCfg->mlScreenHeight > 0)
+	{
+		int lDisplay = SDL_GetWindowDisplayIndex(pWindow);
+		SDL_DisplayMode want = {}, mode = {};
+		SDL_GetDesktopDisplayMode(lDisplay, &want);
+		want.w = apCfg->mlScreenWidth;
+		want.h = apCfg->mlScreenHeight;
+		mode = want;
+		SDL_GetClosestDisplayMode(lDisplay, &want, &mode);
+		SDL_SetWindowFullscreen(pWindow, 0);
+		SDL_SetWindowDisplayMode(pWindow, &mode);
+		SDL_SetWindowFullscreen(pWindow, SDL_WINDOW_FULLSCREEN);
+	}
+	else if (sFull != "false")
+		SDL_SetWindowFullscreen(pWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	else
+	{
+		SDL_SetWindowFullscreen(pWindow, 0);
+		if (apCfg->mlScreenWidth > 0 && apCfg->mlScreenHeight > 0)
+			SDL_SetWindowSize(pWindow, apCfg->mlScreenWidth, apCfg->mlScreenHeight);
+	}
+}
+
 // cGlobalScriptFuncs::ApplyUserConfig: UpdateGraphicSettings, UpdateSoundSettings, LoadLanguage; never asks for a restart
 static bool ApplyUserConfig()
 {
 	cSomaConfig *pCfg = gpSomaBase->GetConfig();
 	SomaReadUserScreenConfig(pCfg);
-	SDL_Window *pWindow = SDL_GL_GetCurrentWindow();
-	if (pWindow && getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
-		SDL_SetWindowFullscreen(pWindow, pCfg->mbFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-	if (pWindow && pCfg->mbFullscreen == false && pCfg->mlScreenWidth > 0 && pCfg->mlScreenHeight > 0)
-		SDL_SetWindowSize(pWindow, pCfg->mlScreenWidth, pCfg->mlScreenHeight);
+	SomaApplyWindowMode(pCfg);
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
@@ -462,6 +494,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
 	SOMA_FUNC(e, "bool cLux_ApplyUserConfig()", +[]() { return ApplyUserConfig(); });
+	SOMA_FUNC(e, "bool cLux_GetSaveConfigAtExit()", +[]() { return true; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetKeyConfig()", +[]() { return gpKeyConfig; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetGameConfig()", +[]() { return gpGameConfig; });
 	SOMA_FUNC(e, "bool cLux_GetSupportExplorationMode()", +[]() { return gpGameConfig && gpGameConfig->GetBool("General", "SupportExplorationMode", false); });
