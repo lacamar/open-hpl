@@ -114,6 +114,7 @@ player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the gam
 | `player_state` | script player: state, move state, health, feet position, yaw |
 | `lux_entity name=` | script entity: type, class, script class, active, callbacks, position |
 | `script_exec code=` | compiles and runs AngelScript against the live API; `__print(s)` returns output |
+| `script_vars [name=]` | properties of a script object (e.g. `LuxPlayer`); no name lists objects |
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |
 | `body_contacts name=` | bodies overlapping an entity's bodies (stuck props) |
