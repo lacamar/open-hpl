@@ -50,6 +50,7 @@ struct cFsbSample
 };
 
 static const unsigned int kFsbMode_Pcm16 = 2;
+static const unsigned int kFsbMode_ImaAdpcm = 7;
 static const unsigned int kFsbMode_Vorbis = 15;
 static const unsigned int kFsbChunkType_Frequency = 2;
 static const unsigned int kFsbChunkType_VorbisData = 11;
@@ -377,12 +378,10 @@ static void OggMuxVorbisSample(const cFsbSample &aSample, const unsigned char *a
 	aOutOgg = muxer.Bytes();
 }
 
-static void WritePcm16Wav(const cFsbSample &aSample, const unsigned char *apFileData, std::vector<unsigned char> &aOutWav)
+static void WritePcm16Wav(const cFsbSample &aSample, const unsigned char *apPcm, size_t alBytes, std::vector<unsigned char> &aOutWav)
 {
 	unsigned int lBlockAlign = aSample.mlChannels * 2;
-	unsigned int lDataBytes = (unsigned int)(aSample.mlNumPcmSamples * lBlockAlign);
-	if (lDataBytes > aSample.mlDataSize)
-		lDataBytes = (unsigned int)aSample.mlDataSize;
+	unsigned int lDataBytes = (unsigned int)std::min<size_t>(aSample.mlNumPcmSamples * lBlockAlign, alBytes);
 
 	aOutWav.clear();
 	aOutWav.reserve(44 + lDataBytes);
@@ -396,9 +395,72 @@ static void WritePcm16Wav(const cFsbSample &aSample, const unsigned char *apFile
 	AppendU32LE(aOutWav, aSample.mlFrequency * lBlockAlign);
 	aOutWav.insert(aOutWav.end(), {(unsigned char)lBlockAlign, 0, 16, 0, 'd', 'a', 't', 'a'});
 	AppendU32LE(aOutWav, lDataBytes);
+	aOutWav.insert(aOutWav.end(), apPcm, apPcm + lDataBytes);
+}
 
-	const unsigned char *pData = apFileData + aSample.mlDataOffset;
-	aOutWav.insert(aOutWav.end(), pData, pData + lDataBytes);
+// FMOD stores mono/stereo IMA ADPCM in the Xbox layout: 36-byte blocks per channel,
+// 4-byte channel headers, then 4-byte words interleaved per channel, 64 samples each
+static std::vector<short> DecodeXboxImaAdpcm(const cFsbSample &aSample, const unsigned char *apData)
+{
+	static const int kStep[89] = {7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80,
+								  88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544,
+								  598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749,
+								  3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635,
+								  13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767};
+	static const int kIndex[16] = {-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8};
+	int lCh = aSample.mlChannels;
+	size_t lBlock = 36 * lCh;
+	std::vector<short> vOut;
+	vOut.reserve((size_t)aSample.mlNumPcmSamples * lCh);
+	for (size_t lOff = 0; lOff + lBlock <= aSample.mlDataSize && vOut.size() < (size_t)aSample.mlNumPcmSamples * lCh; lOff += lBlock)
+	{
+		const unsigned char *pBlock = apData + lOff;
+		std::vector<short> vBlock(64 * lCh);
+		for (int c = 0; c < lCh; ++c)
+		{
+			int lPred = (short)(pBlock[c * 4] | (pBlock[c * 4 + 1] << 8));
+			int lIdx = std::min(88, (int)pBlock[c * 4 + 2]);
+			for (int w = 0; w < 8; ++w)
+				for (int b = 0; b < 8; ++b)
+				{
+					unsigned char lByte = pBlock[4 * lCh + (w * lCh + c) * 4 + b / 2];
+					int n = (b & 1) ? lByte >> 4 : lByte & 0xF;
+					int lStep = kStep[lIdx], lDiff = lStep >> 3;
+					if (n & 1) lDiff += lStep >> 2;
+					if (n & 2) lDiff += lStep >> 1;
+					if (n & 4) lDiff += lStep;
+					lPred = std::max(-32768, std::min(32767, (n & 8) ? lPred - lDiff : lPred + lDiff));
+					lIdx = std::max(0, std::min(88, lIdx + kIndex[n]));
+					vBlock[(w * 8 + b) * lCh + c] = (short)lPred;
+				}
+		}
+		vOut.insert(vOut.end(), vBlock.begin(), vBlock.end());
+	}
+	return vOut;
+}
+
+static bool EncodeSample(unsigned int alMode, const cFsbSample &aSample, const unsigned char *apFileData, std::vector<unsigned char> &aOut)
+{
+	if (alMode == kFsbMode_Pcm16)
+		WritePcm16Wav(aSample, apFileData + aSample.mlDataOffset, aSample.mlDataSize, aOut);
+	else if (alMode == kFsbMode_ImaAdpcm)
+	{
+		std::vector<short> vPcm = DecodeXboxImaAdpcm(aSample, apFileData + aSample.mlDataOffset);
+		WritePcm16Wav(aSample, (const unsigned char *)vPcm.data(), vPcm.size() * 2, aOut);
+	}
+	else
+	{
+		const cVorbisSetup *pSetup = aSample.mbHasVorbisCrc ? FindVorbisSetup(aSample.mlVorbisCrc) : NULL;
+		if (pSetup == NULL)
+			return false;
+		OggMuxVorbisSample(aSample, apFileData, *pSetup, aOut);
+	}
+	return true;
+}
+
+static bool FsbModeSupported(unsigned int alMode)
+{
+	return alMode == kFsbMode_Pcm16 || alMode == kFsbMode_ImaAdpcm || alMode == kFsbMode_Vorbis;
 }
 
 //---------------------------------------
@@ -466,7 +528,7 @@ void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, cons
 		Log("SOMA fsb: failed to read '%s' as an FSB5 bank\n", apBankPath);
 		return;
 	}
-	if (lMode != kFsbMode_Pcm16 && lMode != kFsbMode_Vorbis)
+	if (FsbModeSupported(lMode) == false)
 	{
 		Log("SOMA fsb: '%s' uses unsupported mode %u\n", apBankPath, lMode);
 		return;
@@ -480,20 +542,11 @@ void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, cons
 				continue;
 
 			std::vector<unsigned char> vOut;
-			if (lMode == kFsbMode_Pcm16)
+			if (EncodeSample(lMode, vSamples[i], vFile.data(), vOut) == false)
 			{
-				WritePcm16Wav(vSamples[i], vFile.data(), vOut);
-			}
-			else
-			{
-				const cVorbisSetup *pSetup = vSamples[i].mbHasVorbisCrc ? FindVorbisSetup(vSamples[i].mlVorbisCrc) : NULL;
-				if (pSetup == NULL)
-				{
-					Log("SOMA fsb: '%s' in '%s' uses unknown Vorbis setup crc32 %u - skipped\n",
-						vSamples[i].msName.c_str(), apBankPath, vSamples[i].mlVorbisCrc);
-					break;
-				}
-				OggMuxVorbisSample(vSamples[i], vFile.data(), *pSetup, vOut);
+				Log("SOMA fsb: '%s' in '%s' uses unknown Vorbis setup crc32 %u - skipped\n",
+					vSamples[i].msName.c_str(), apBankPath, vSamples[i].mlVorbisCrc);
+				break;
 			}
 			WriteWholeFile(asCacheDir + cString::To16Char(apWanted[w].pCacheFile), vOut);
 			break;
@@ -523,7 +576,7 @@ void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath
 	std::vector<cFsbSample> vSamples;
 	if (sPath == _W("") || ReadWholeFile(sPath, vFile) == false || ParseFsb5(vFile, lMode, vSamples) == false)
 		return;
-	if (lMode != kFsbMode_Pcm16 && lMode != kFsbMode_Vorbis)
+	if (FsbModeSupported(lMode) == false)
 		return;
 	std::set<tString> setWanted(vMissing.begin(), vMissing.end());
 	for (const cFsbSample &sample : vSamples)
@@ -531,16 +584,9 @@ void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath
 		if (setWanted.count(sample.msName) == 0)
 			continue;
 		std::vector<unsigned char> vOut;
-		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Pcm16 ? ".wav" : ".ogg");
-		if (lMode == kFsbMode_Pcm16)
-			WritePcm16Wav(sample, vFile.data(), vOut);
-		else
-		{
-			const cVorbisSetup *pSetup = sample.mbHasVorbisCrc ? FindVorbisSetup(sample.mlVorbisCrc) : NULL;
-			if (pSetup == NULL)
-				continue;
-			OggMuxVorbisSample(sample, vFile.data(), *pSetup, vOut);
-		}
+		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Vorbis ? ".ogg" : ".wav");
+		if (EncodeSample(lMode, sample, vFile.data(), vOut) == false)
+			continue;
 		WriteWholeFile(asCacheDir + cString::To16Char(sFile), vOut);
 		amapOut[sample.msName] = sFile;
 	}

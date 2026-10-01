@@ -1551,7 +1551,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ PlaySound(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
 					+[](E *p, S n, S file, bool remove, bool attach) -> cSoundEntity * {
 						cSomaLuxMap *pMap = p->mpMap ? p->mpMap : cSomaLuxMap::GetCurrent();
-						cSoundEntity *pSound = pMap ? pMap->GetWorld()->CreateSoundEntity(n, file, remove) : NULL;
+						cSoundEntity *pSound = pMap && file != "" ? pMap->GetWorld()->CreateSoundEntity(n, file, remove) : NULL;
 						if (pSound == NULL)
 							return NULL;
 						pSound->SetPosition(p->GetPosition());

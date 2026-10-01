@@ -145,7 +145,8 @@ cSoundEntityData *cSomaSoundEvents::Resolve(const tString &asEvent)
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
 	if (ev.mvFiles.empty())
 	{
-		Warning("SOMA sound: event '%s' has no playable samples\n", asEvent.c_str());
+		if (ev.mvWaves.empty() == false)
+			Warning("SOMA sound: event '%s' has no playable samples\n", asEvent.c_str());
 		return NULL;
 	}
 
@@ -257,7 +258,7 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 	typedef const tString &S;
 	SOMA_METHOD(e, "cWorld", "cSoundEntity@ CreateSoundEntity(const tString&in asName, const tString&in asSoundEntity, bool abRemoveWhenOver)",
 				+[](cWorld *w, S n, S file, bool remove) -> cSoundEntity * {
-					return w->CreateSoundEntity(n, file, remove);
+					return (file.empty() ? NULL : w->CreateSoundEntity(n, file, remove));
 				});
 	SOMA_METHOD(e, "cSoundEntity", "void FadeIn(float afSpeed, float afTargetVol)", +[](cSoundEntity *o, float speed, float vol) {
 		o->Play(false);
@@ -272,15 +273,15 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cSoundEntity", "bool IsOneShot()", +[](cSoundEntity *o) { return o->GetData() == NULL || o->GetData()->GetLoop() == false; });
 	SOMA_METHOD(e, "cWorld", "cSoundEntity@ CreateSoundEntityEx(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver, bool abNonBlockLoad)",
 				+[](cWorld *w, S n, S file, bool remove, bool) -> cSoundEntity * {
-					return w->CreateSoundEntity(n, file, remove);
+					return (file.empty() ? NULL : w->CreateSoundEntity(n, file, remove));
 				});
 	SOMA_METHOD(e, "cWorld", "tID CreateSoundEntityID(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver)",
 				+[](cWorld *w, S n, S file, bool remove) {
-					return SomaObjectID(w->CreateSoundEntity(n, file, remove), "cSoundEntity");
+					return SomaObjectID((file.empty() ? NULL : w->CreateSoundEntity(n, file, remove)), "cSoundEntity");
 				});
 	SOMA_METHOD(e, "cWorld", "tID CreateSoundEntityExID(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver, bool abNonBlockLoad)",
 				+[](cWorld *w, S n, S file, bool remove, bool) {
-					return SomaObjectID(w->CreateSoundEntity(n, file, remove), "cSoundEntity");
+					return SomaObjectID((file.empty() ? NULL : w->CreateSoundEntity(n, file, remove)), "cSoundEntity");
 				});
 	SOMA_FUNC(e, "bool cLux_PlayGuiSoundData(const tString&in asName, eSoundEntryType aDestType, float afVolMul, bool abSkipPreviousRandom)",
 			  +[](S n, int type, float vol, bool) { return cSomaSoundEvents::Get()->PlayGui(n, vol, type) != NULL; });

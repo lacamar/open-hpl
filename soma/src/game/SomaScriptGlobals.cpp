@@ -105,6 +105,16 @@ tWString SomaParseString(const tWString &asText)
 	return sOut + asText.substr(lPos);
 }
 
+static const char *EndLine(const tString &s) { return s.empty() || s.back() != '\n' ? "\n" : ""; }
+
+static bool IsClassOrDerived(asITypeInfo *apType, const tString &asClass)
+{
+	for (; apType; apType = apType->GetBaseType())
+		if (asClass == apType->GetName())
+			return true;
+	return false;
+}
+
 static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
 {
 	bool bFound = false;
@@ -114,14 +124,14 @@ static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const
 		asIScriptObject *pScript = p->GetScript();
 		if (pScript == NULL || p->msScriptName.empty() || SomaWildcardMatch(asObject, p->msScriptName) == false)
 			continue;
-		if (asClass != "" && asClass != pScript->GetObjectType()->GetName())
+		if (asClass != "" && IsClassOrDerived(pScript->GetObjectType(), asClass) == false)
 			continue;
 		if (p->Call("void " + asFunc + "()"))
 			bFound = true;
 	}
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 	if (pMap && pMap->GetScript() && SomaWildcardMatch(asObject, pMap->GetName()) &&
-		(asClass == "" || asClass == pMap->GetScript()->GetObjectType()->GetName()))
+		(asClass == "" || IsClassOrDerived(pMap->GetScript()->GetObjectType(), asClass)))
 		bFound = cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + asFunc + "()") || bFound;
 	return bFound;
 }
@@ -268,9 +278,9 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_GetUnderwaterEffectsActive()", +[]() { return false; });
 	SOMA_FUNC(e, "void __print(const tString&in asText)", +[](S s) { gsSomaExecOutput += s + "\n"; });
-	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s", s.c_str()); });
-	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s", s.c_str()); });
-	SOMA_FUNC(e, "void Error(const tString&in asString)", +[](S s) { Error("%s", s.c_str()); });
+	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s%s", s.c_str(), EndLine(s)); });
+	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s%s", s.c_str(), EndLine(s)); });
+	SOMA_FUNC(e, "void Error(const tString&in asString)", +[](S s) { Error("%s%s", s.c_str(), EndLine(s)); });
 	SOMA_FUNC(e, "void cLux_AddDebugMessage(const tString&in asText, bool abCheckForDuplicates)", +[](S s, bool) { Log("SOMA debug: %s\n", s.c_str()); });
 	SOMA_FUNC(e, "void cLux_AddDebugMessage(const tString&in asText)", +[](S s) { Log("SOMA debug: %s\n", s.c_str()); });
 	SOMA_FUNC(e, "void cLux_AddTodoMessage(const tString&in asText, bool abCheckForDuplicates)", +[](S s, bool) { Log("SOMA todo: %s\n", s.c_str()); });

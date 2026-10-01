@@ -160,6 +160,13 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
 			LoadSockets(pModel, "", pEnt, mvScale);
+		if (mpEntity)
+			for (int i = 0; i < mpEntity->GetBoneStateNum(); ++i)
+			{
+				cBoneState *pBone = mpEntity->GetBoneState(i);
+				if (cString::ToLowerCase(cString::Sub(pBone->GetName(), 0, 7)) == "socket_")
+					pEnt->mvSockets.push_back({cString::Sub(pBone->GetName(), 7), pBone, cMatrixf::Identity});
+			}
 		LoadInstanceVars(pEnt->mInstanceVars);
 		cSomaLuxEntity::Pending().push_back(pEnt);
 	}

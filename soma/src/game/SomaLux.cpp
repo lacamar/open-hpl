@@ -17,6 +17,8 @@
 #include "SomaScriptRuntime.h"
 #include "SomaSave.h"
 
+static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
+
 static bool gbPendingNewGame = false;
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
@@ -94,7 +96,13 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	if (apEnt->meType == eSomaLuxEntityType_Agent)
 		SomaCreateAgent(apEnt);
 	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->msClassName) : NULL;
-	if (pScript == NULL || apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
+	if (pScript == NULL)
+		return false;
+	tString sCustomFile = apEnt->mVars.GetVarString("CustomScriptFile", "");
+	tString sCustomClass = apEnt->mVars.GetVarString("CustomScriptClass", "");
+	bool bLoaded = sCustomFile != "" && sCustomClass != "" &&
+				   apEnt->LoadScript(mpRuntime, sCustomFile, sCustomClass, apEnt->GetBaseTypeName());
+	if (bLoaded == false && apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
 	cWorld *pWorld = mpWorld;
 	if (apEnt->meType == eSomaLuxEntityType_Area || apEnt->meType == eSomaLuxEntityType_LiquidArea)
@@ -165,9 +173,16 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 		}
 }
 
+static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
+{
+	if (apEnt->meType == eSomaLuxEntityType_Player)
+		return cString::ToLowerCase(asPattern) == "player" || SomaWildcardMatch(asPattern, apEnt->msName);
+	return SomaWildcardMatch(asPattern, apEnt->msName);
+}
+
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
 {
-	std::map<tString, cSomaLuxEntity *>::iterator it = mmapEntities.find(asName);
+	std::map<tString, cSomaLuxEntity *>::iterator it = mmapEntities.find(cString::ToLowerCase(asName) == "player" ? tString("Player") : asName);
 	if (it != mmapEntities.end())
 		return it->second;
 	if (asName.find('*') != tString::npos)
@@ -448,8 +463,29 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			if (cSomaLuxGame::Get())
 				cSomaLuxGame::Get()->ResetScriptables();
 		}
+		cMatrixf mtxRel;
+		float fYawRel = 0;
+		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
+		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+		cSomaLuxEntity *pArea = bMap && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
+		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
+		if (pArea && pBody)
+		{
+			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
+			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
+			fYawRel = pBody->GetYaw() - cMath::MatrixToEulerAngles(pArea->GetMatrix().GetRotation(), eEulerRotationOrder_XYZ).y;
+		}
+		gsPreloadMap.clear();
 		if (gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart) == false)
 			Error("SOMA script: %s\n", sError.c_str());
+		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
+		{
+			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
+				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
+									  cMath::MatrixToEulerAngles(pNew->GetMatrix().GetRotation(), eEulerRotationOrder_XYZ).y + fYawRel);
+			else
+				Warning("SOMA script: transfer area '%s' not found in %s\n", sTransfer.c_str(), sMap.c_str());
+		}
 		return;
 	}
 	if (cSomaLuxGame::Get())
@@ -605,7 +641,6 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 	reg("tString GetReturnString()", +[](asIScriptGeneric *g) { g->SetReturnObject(&gmapPrepared[g->GetObject()].msRet); });
 }
 
-static tString gsPendingMap, gsPendingStart;
 
 void SomaRequestNewGame(const tString &asMap, const tString &asStart)
 {
@@ -650,6 +685,7 @@ void SomaRequestMapChange(const tString &asMap, const tString &asStart)
 {
 	gsPendingMap = cString::SetFileExt(cString::GetFileName(asMap), "hpm");
 	gsPendingStart = asStart;
+	gsPendingTransfer.clear();
 }
 
 bool SomaTakePendingMapChange(tString &asMap, tString &asStart)
@@ -666,8 +702,9 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 {
 	typedef const tString &S;
 	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound)",
-			  +[](S map, S start, S, S, S) {
+			  +[](S map, S start, S transfer, S, S) {
 				  SomaRequestMapChange(map, start);
+				  gsPendingTransfer = transfer;
 				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
 			  });
 	SOMA_FUNC(e, "void cLux_StartNewGame()", +[]() {
@@ -684,11 +721,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return true; });
-	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return false; });
-	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S, int) {});
+	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false; });
+	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int) { gsPreloadMap = map; });
 	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S) {});
 	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int) {});
-	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() { return (cSomaLuxMap *)NULL; });
+	// No streaming: the next map's settings aren't loaded yet, so the copy fades to the current ones
+	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() { return gsPreloadMap.empty() ? NULL : cSomaLuxMap::GetCurrent(); });
 
 	for (const char *pType : {"cLuxMap", "iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 		RegisterSomaScriptCallNatives(e, pType);
@@ -753,7 +791,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t == 7 || p->meType == t) && SomaWildcardMatch(n, p->msName) && SomaEntityIsClass(p, c))
+						if ((t == 7 || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
 							a.InsertLast(&p);
 							bAny = true;
@@ -770,7 +808,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t == 7 || p->meType == t) && SomaWildcardMatch(n, p->msName) && SomaEntityIsClass(p, c))
+						if ((t == 7 || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
 							a.InsertLast(&p->mID);
 							bAny = true;
