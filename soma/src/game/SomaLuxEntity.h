@@ -57,6 +57,7 @@ public:
 	int meType = eSomaLuxEntityType_Prop;
 	cSomaID mID;
 	bool mbActive = true;
+	bool mbIsDoor = false, mbIsClosedDoor = false;
 	bool mbInteractionDisabled = false;
 	float mfMaxInteractDistance = -1;
 	bool mbInteractedWith = false;
@@ -163,10 +164,22 @@ public:
 	void UpdateAnimation(float afTimeStep);
 	void MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback);
 	void UpdateMove(float afTimeStep);
+	void UpdateRotate(float afTimeStep);
+	void UpdateCheckCollision(float afTimeStep);
+	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false, mbCheckCharacters = false;
+	float mfTimeSinceCheck = 0;
 	bool mbMoving = false;
 	cVector3f mvMoveGoal;
 	float mfMoveAcc = 0, mfMoveMaxSpeed = 0, mfMoveSlowdownDist = 0, mfMoveSpeed = 0;
 	tString msMoveCallback;
+	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal, const tString &asCallback);
+	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal);
+	void StopMove();
+	int mlRotateMode = 0; // 1 align to goal, 2 constant speed
+	cMatrixf m_mtxRotateGoal = cMatrixf::Identity;
+	cVector3f mvRotateAxis = 0, mvPivotLocal = 0;
+	float mfRotateAcc = 0, mfRotateMaxSpeed = 0, mfRotateSlowdown = 0, mfRotateSpeed = 0;
+	tString msRotateCallback;
 	int mlCurrentAnim = -1;
 
 	// cLuxProp::CreateAndSetupGui: an ImGui drawn by the map's OnGui function

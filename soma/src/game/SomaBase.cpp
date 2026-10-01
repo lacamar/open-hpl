@@ -1217,6 +1217,8 @@ bool cSomaBase::InitEngine()
 	mbUseRealPlayer = pFreeCam == NULL || pFreeCam[0] == 0 || strcmp(pFreeCam, "0") == 0;
 
 	cEngineInitVars vars;
+	// FMOD virtualises voices past its 64 (MaxVirtualChannels=1000); OpenAL fails instead
+	vars.mSound.mlMaxChannels = 128;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 	// Load persisted settings (see SomaConfig.h) - deliberately AFTER

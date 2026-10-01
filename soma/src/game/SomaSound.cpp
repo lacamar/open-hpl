@@ -188,6 +188,17 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 				+[](cWorld *w, S n, S file, bool remove) -> cSoundEntity * {
 					return w->CreateSoundEntity(n, file, remove);
 				});
+	SOMA_METHOD(e, "cSoundEntity", "void FadeIn(float afSpeed, float afTargetVol)", +[](cSoundEntity *o, float speed, float vol) {
+		o->Play(false);
+		if (cSoundEntry *pEntry = o->GetSoundEntry(eSoundEntityType_Main, false))
+		{
+			if (speed > 0)
+				pEntry->FadeIn(vol, speed);
+			else
+				pEntry->SetVolumeMul(vol);
+		}
+	});
+	SOMA_METHOD(e, "cSoundEntity", "bool IsOneShot()", +[](cSoundEntity *o) { return o->GetData() == NULL || o->GetData()->GetLoop() == false; });
 	SOMA_METHOD(e, "cWorld", "cSoundEntity@ CreateSoundEntityEx(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver, bool abNonBlockLoad)",
 				+[](cWorld *w, S n, S file, bool remove, bool) -> cSoundEntity * {
 					return w->CreateSoundEntity(n, file, remove);

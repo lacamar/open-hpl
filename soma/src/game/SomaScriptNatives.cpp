@@ -6,6 +6,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaToneMapping.h"
 #include "SomaPostEffects.h"
+#include "SomaAgent.h"
 #include "SomaCritter.h"
 
 void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
@@ -22,5 +23,6 @@ void RegisterSomaScriptNatives(asIScriptEngine *apEngine)
 	cSomaToneMapping::RegisterNatives(apEngine);
 	cSomaPostEffects::RegisterNatives(apEngine);
 	SomaRegisterCritterNatives(apEngine);
+	SomaRegisterAgentNatives(apEngine);
 	RegisterSomaScriptGenBindings(apEngine);
 }

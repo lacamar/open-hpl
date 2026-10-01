@@ -1,3 +1,4 @@
+#include "SomaAgent.h"
 #include "SomaCritter.h"
 #include "SomaLux.h"
 #include "SomaScriptApi.h"
@@ -90,6 +91,8 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 		apEnt->mpCritterProps = SomaNewPropBlock("cLuxCritter");
 		SomaInitCritterProps(apEnt);
 	}
+	if (apEnt->meType == eSomaLuxEntityType_Agent)
+		SomaCreateAgent(apEnt);
 	const cSomaLuxGame::cEntityScript *pScript = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetEntityScript(vGroups[apEnt->meType], apEnt->msClassName) : NULL;
 	if (pScript == NULL || apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
@@ -230,7 +233,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	float fStep = afTimeStep;
 	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 
-	for (cSomaLuxEntity *pEnt : mvEntities)
+	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 	{
 		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)
 			continue;
@@ -239,6 +242,10 @@ void cSomaLuxMap::Update(float afTimeStep)
 		pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", afTimeStep);
 		if (pEnt->meType == eSomaLuxEntityType_Critter)
 			SomaUpdateCritter(pEnt, afTimeStep);
+		else if (pEnt->meType == eSomaLuxEntityType_Agent)
+			SomaUpdateAgent(pEnt, afTimeStep);
+		else if (pEnt->meType == eSomaLuxEntityType_Area)
+			pEnt->UpdateCheckCollision(afTimeStep);
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
@@ -842,6 +849,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cCamera", "float GetExtenededRoll() const", +[](cCamera *c) { return mapCameraExtra[c].fExtRoll; });
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
 	SOMA_METHOD(e, "iPhysicsBody", "cVector3f GetMassCenter() const", +[](iPhysicsBody *b) { return b->GetMassCentre(); });
+	SOMA_METHOD(e, "cBoundingVolume", "void SetTransform(const cMatrixf&in a_mtxTransform, bool abUpdateSize = true)", +[](cBoundingVolume *b, const cMatrixf &m, bool) { b->SetTransform(m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, array<iPhysicsBody@> &inout apBodyVec)",
 				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, CScriptArray &a) {
 					cBoundingVolume bv;

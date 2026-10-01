@@ -2,10 +2,10 @@
  "maps": {
   "00_00_intro.hpm": {
    "allowlisted": [],
-   "boot_s": 2.4,
+   "boot_s": 2.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.039383,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 1.75,
@@ -13,7 +13,7 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 60,
+   "fps": 60.039383,
    "frame": {
     "black_frac": 0.993462,
     "height": 2160,
@@ -131,7 +131,7 @@
    "load_report": {
     "map": "00_00_intro.hpm",
     "terrain_active": false,
-    "total_ms": 47,
+    "total_ms": 46,
     "tracks": {
      "Area": {
       "created": 1,
@@ -143,7 +143,7 @@
      "Billboard": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -247,7 +247,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3914213.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-212787.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -338,10 +338,10 @@
     "Compound:0/13",
     "LensFlare:0/4"
    ],
-   "boot_s": 9.5,
+   "boot_s": 8.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -349,17 +349,17 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 60,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 0.024498,
     "height": 2160,
     "lum_hist16": [
-     0.387828,
-     0.447611,
-     0.076726,
-     0.039984,
+     0.387806,
+     0.447633,
+     0.076725,
+     0.039985,
      0.036511,
-     0.002917,
+     0.002916,
      0.00045,
      0.000418,
      0.000275,
@@ -372,7 +372,7 @@
      0.003475
     ],
     "lum_max": 255,
-    "lum_mean": 22.939501,
+    "lum_mean": 22.939558,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.002684,
@@ -381,23 +381,23 @@
    "gbuffer": {
     "0": {
      "a_max": 0.357178,
-     "a_mean": 0.002735,
+     "a_mean": 0.002733,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 5032289,
      "b_max": 1,
-     "b_mean": 0.456733,
+     "b_mean": 0.456735,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 63458,
      "g_max": 1,
-     "g_mean": 0.518602,
+     "g_mean": 0.518606,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 1915,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.486272,
+     "r_mean": 0.486275,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 3133,
@@ -467,19 +467,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 6560,
+    "total_ms": 5968,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 21,
+      "ms": 20,
       "skipped": {},
       "xml": 20
      },
@@ -495,7 +495,7 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 69,
+      "ms": 60,
       "skipped": {},
       "xml": 106
      },
@@ -509,7 +509,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 5852,
+      "ms": 5344,
       "skipped": {},
       "xml": 436
      },
@@ -539,35 +539,35 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 70
      },
      "LightMask": {
       "created": 10,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 10
      },
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 47,
+      "ms": 41,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 185,
+      "ms": 161,
       "skipped": {},
       "xml": 7
      },
@@ -581,7 +581,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 346,
+      "ms": 306,
       "skipped": {},
       "xml": 145
      },
@@ -594,7 +594,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3914840.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-213967.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -671,7 +671,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.2,
+   "wall_s": 15.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -717,10 +717,10 @@
    "allowlisted": [
     "Compound:0/9"
    ],
-   "boot_s": 4.4,
+   "boot_s": 3.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098557,
+    "fps": 60.157795,
     "pitch": 0,
     "pos_x": -18.4849,
     "pos_y": 1,
@@ -728,7 +728,7 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 60.098557,
+   "fps": 60.157795,
    "frame": {
     "black_frac": 0.045834,
     "height": 2160,
@@ -816,37 +816,37 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.551314,
+     "a_mean": 0.551387,
      "a_min": 0.203369,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.428697,
+     "b_mean": 0.428861,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2402,
-     "g_max": 0.95166,
-     "g_mean": 0.325167,
+     "b_zero_count": 2406,
+     "g_max": 0.952148,
+     "g_mean": 0.325097,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 854725,
+     "g_zero_count": 856530,
      "height": 2160,
-     "r_max": 0.966797,
-     "r_mean": 0.321674,
+     "r_max": 0.960938,
+     "r_mean": 0.321608,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 856405,
-     "sample_a": 0.434814,
-     "sample_b": 0.261963,
-     "sample_g": 0.254395,
-     "sample_r": 0.243042,
+     "r_zero_count": 858210,
+     "sample_a": 0.432617,
+     "sample_b": 0.264404,
+     "sample_g": 0.257324,
+     "sample_r": 0.246216,
      "width": 3840
     }
    },
    "load_report": {
     "map": "00_02_subway.hpm",
     "terrain_active": false,
-    "total_ms": 1529,
+    "total_ms": 1408,
     "tracks": {
      "Area": {
       "created": 37,
@@ -874,7 +874,7 @@
      "Decal": {
       "created": 52,
       "file_missing": false,
-      "ms": 44,
+      "ms": 46,
       "skipped": {},
       "xml": 52
      },
@@ -888,7 +888,7 @@
      "Entity": {
       "created": 215,
       "file_missing": false,
-      "ms": 1244,
+      "ms": 1132,
       "skipped": {},
       "xml": 215
      },
@@ -923,14 +923,14 @@
      "ParticleSystem": {
       "created": 6,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 6
      },
      "Primitive": {
       "created": 7,
       "file_missing": false,
-      "ms": 16,
+      "ms": 15,
       "skipped": {},
       "xml": 7
      },
@@ -951,7 +951,7 @@
      "StaticObject": {
       "created": 6,
       "file_missing": false,
-      "ms": 193,
+      "ms": 190,
       "skipped": {},
       "xml": 6
      },
@@ -964,7 +964,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3916798.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-215416.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -1025,7 +1025,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 11.1,
+   "wall_s": 10.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1056,7 +1056,7 @@
      "simon_body:legs_human.fbx"
     ],
     "particle_systems": 6,
-    "physics_bodies": 286,
+    "physics_bodies": 290,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 44,
     "sound_entities": 4,
@@ -1069,10 +1069,10 @@
     "Compound:0/18",
     "LensFlare:0/1"
    ],
-   "boot_s": 7.8,
+   "boot_s": 7.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.039383,
     "pitch": 0,
     "pos_x": 4.49557,
     "pos_y": 1.402786,
@@ -1082,33 +1082,33 @@
    "failures": [
     "no_material:7"
    ],
-   "fps": 60,
+   "fps": 60.039383,
    "frame": {
-    "black_frac": 0.205346,
+    "black_frac": 0.20515,
     "height": 2160,
     "lum_hist16": [
-     0.624068,
-     0.122937,
-     0.032866,
-     0.191966,
-     0.021558,
-     0.0003,
-     0.000277,
-     0.000244,
-     0.000273,
-     0.000275,
-     0.000271,
-     0.000279,
-     0.000309,
-     0.000334,
-     0.000349,
-     0.003692
+     0.630652,
+     0.123501,
+     0.032376,
+     0.192202,
+     0.021269,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
     ],
-    "lum_max": 255,
-    "lum_mean": 21.831533,
+    "lum_max": 69,
+    "lum_mean": 20.479929,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.003288,
+    "white_frac": 0,
     "width": 3840
    },
    "gbuffer": {
@@ -1200,19 +1200,19 @@
    "load_report": {
     "map": "00_03_laboratory.hpm",
     "terrain_active": false,
-    "total_ms": 5437,
+    "total_ms": 5133,
     "tracks": {
      "Area": {
       "created": 239,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 239
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 6,
+      "ms": 4,
       "skipped": {
        "connect_light_missing": 4
       },
@@ -1221,7 +1221,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 18
       },
@@ -1230,7 +1230,7 @@
      "Decal": {
       "created": 117,
       "file_missing": false,
-      "ms": 73,
+      "ms": 57,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1246,7 +1246,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 3643,
+      "ms": 3401,
       "skipped": {},
       "xml": 436
      },
@@ -1276,7 +1276,7 @@
      "Light": {
       "created": 126,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 126
      },
@@ -1290,21 +1290,21 @@
      "ParticleSystem": {
       "created": 15,
       "file_missing": false,
-      "ms": 11,
+      "ms": 9,
       "skipped": {},
       "xml": 15
      },
      "Primitive": {
       "created": 47,
       "file_missing": false,
-      "ms": 39,
+      "ms": 26,
       "skipped": {},
       "xml": 47
      },
      "Sound": {
       "created": 31,
       "file_missing": false,
-      "ms": 825,
+      "ms": 813,
       "skipped": {},
       "xml": 31
      },
@@ -1318,7 +1318,7 @@
      "StaticObject": {
       "created": 719,
       "file_missing": false,
-      "ms": 784,
+      "ms": 766,
       "skipped": {},
       "xml": 719
      },
@@ -1331,7 +1331,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3917129.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-217654.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -1420,7 +1420,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 14.6,
+   "wall_s": 14.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1467,7 +1467,7 @@
      "urban/special/00_03_outside_waitroom_00_03_outside_building_d_11:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_urban_special_00_03_outside_waitroom_00_03_outside_building_m.dae.v3.msh"
     ],
     "particle_systems": 17,
-    "physics_bodies": 882,
+    "physics_bodies": 888,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 64,
     "sound_entities": 35,
@@ -1480,10 +1480,10 @@
     "Compound:0/93",
     "LensFlare:0/1"
    ],
-   "boot_s": 29.2,
+   "boot_s": 27.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.102425,
+    "fps": 60,
     "pitch": 0,
     "pos_x": 3,
     "pos_y": 2.25,
@@ -1492,11 +1492,11 @@
    },
    "failures": [
     "no_material:13",
-    "lum_mean:1.0"
+    "lum_mean:0.0"
    ],
-   "fps": 56.102425,
+   "fps": 60,
    "frame": {
-    "black_frac": 0.999329,
+    "black_frac": 1,
     "height": 2160,
     "lum_hist16": [
      1,
@@ -1516,36 +1516,36 @@
      0,
      0
     ],
-    "lum_max": 14,
-    "lum_mean": 1.003958,
-    "lum_min": 1,
+    "lum_max": 0,
+    "lum_mean": 0,
+    "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
     "width": 3840
    },
    "gbuffer": {
     "0": {
-     "a_max": 1,
-     "a_mean": 0.017997,
+     "a_max": 2,
+     "a_mean": 0.018079,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 8063633,
      "b_max": 1,
-     "b_mean": 0.229671,
+     "b_mean": 0.229672,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 507841,
-     "g_max": 1.285156,
-     "g_mean": 0.265471,
+     "b_zero_count": 507813,
+     "g_max": 1.329102,
+     "g_mean": 0.265546,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 493695,
+     "g_zero_count": 493694,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.284772,
+     "r_mean": 0.284782,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 498855,
+     "r_zero_count": 498851,
      "sample_a": 0,
      "sample_b": 0.210449,
      "sample_g": 0.228149,
@@ -1559,18 +1559,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.559966,
+     "b_mean": 0.559967,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 397,
      "g_max": 1,
-     "g_mean": 0.038246,
+     "g_mean": 0.038249,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 23133,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.0652,
+     "r_mean": 0.065199,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 17774,
@@ -1582,26 +1582,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.446041,
+     "a_mean": 0.446042,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 40872,
+     "a_zero_count": 40870,
      "b_max": 1,
-     "b_mean": 0.343772,
+     "b_mean": 0.343773,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 122277,
+     "b_zero_count": 122275,
      "g_max": 1,
      "g_mean": 0.349292,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 113956,
+     "g_zero_count": 113954,
      "height": 2160,
      "r_max": 1,
      "r_mean": 0.35802,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 118648,
+     "r_zero_count": 118646,
      "sample_a": 0.355469,
      "sample_b": 0.371582,
      "sample_g": 0.39209,
@@ -1612,26 +1612,26 @@
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 25695,
+    "total_ms": 24886,
     "tracks": {
      "Area": {
       "created": 370,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 370
      },
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 19,
+      "ms": 17,
       "skipped": {},
       "xml": 193
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 93
       },
@@ -1640,7 +1640,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 223,
+      "ms": 218,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1656,7 +1656,7 @@
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 8794,
+      "ms": 8422,
       "skipped": {},
       "xml": 1527
      },
@@ -1686,35 +1686,35 @@
      "Light": {
       "created": 685,
       "file_missing": false,
-      "ms": 27,
+      "ms": 26,
       "skipped": {},
       "xml": 685
      },
      "LightMask": {
       "created": 13,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 13
      },
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 73,
+      "ms": 71,
       "skipped": {},
       "xml": 174
      },
      "Primitive": {
       "created": 513,
       "file_missing": false,
-      "ms": 87,
+      "ms": 83,
       "skipped": {},
       "xml": 513
      },
      "Sound": {
       "created": 128,
       "file_missing": false,
-      "ms": 3990,
+      "ms": 3936,
       "skipped": {},
       "xml": 128
      },
@@ -1728,7 +1728,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 12315,
+      "ms": 11958,
       "skipped": {},
       "xml": 3483
      },
@@ -1741,7 +1741,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3918722.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-219818.log",
    "log_errors": {
     "ERROR: Could not find any look entities '*' for Tool Area '*'ERROR: Could not find any look entities '*' for Tool Area '": {
      "count": 1,
@@ -1749,7 +1749,7 @@
     },
     "ERROR: Could not find sound entity aquarium_water_N in Sound_StopWARNING: Could not start sound '*', too many sounds pla": {
      "count": 1,
-     "example": "ERROR: Could not find sound entity aquarium_water_1 in Sound_StopWARNING: Could not start sound 'level_amb_shared_interior__metal_groan_light_12.ogg', too many sounds playing!"
+     "example": "ERROR: Could not find sound entity aquarium_water_1 in Sound_StopWARNING: Could not start sound 'physics__physic_lock_imp_medium_02.ogg', too many sounds playing!"
     },
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -1812,7 +1812,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 422,
+   "log_warnings": 50,
    "render": {
     "draw_calls": 2279,
     "fog_areas_in_list": 0,
@@ -1826,7 +1826,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 37.9,
+   "wall_s": 36.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1835,7 +1835,7 @@
     "aabb_max": [
      78.766052,
      25.369999,
-     96.500008
+     147.37442
     ],
     "aabb_min": [
      -29.305708,
@@ -1861,10 +1861,10 @@
      "SimonLegs:legs_human.fbx"
     ],
     "particle_systems": 224,
-    "physics_bodies": 6107,
+    "physics_bodies": 6111,
     "physics_bodies_awake": 59,
     "physics_bodies_dynamic": 424,
-    "sound_entities": 148,
+    "sound_entities": 162,
     "static_mesh_entities": 6174,
     "submeshes_without_material": 13
    }
@@ -1875,10 +1875,10 @@
     "LensFlare:0/3",
     "StaticObjectBatches:0/110"
    ],
-   "boot_s": 22.9,
+   "boot_s": 21.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 54.13382,
+    "fps": 59.523842,
     "pitch": 0,
     "pos_x": 31.999201,
     "pos_y": 18,
@@ -1888,30 +1888,30 @@
    "failures": [
     "no_material:49"
    ],
-   "fps": 54.13382,
+   "fps": 59.523842,
    "frame": {
-    "black_frac": 0.055141,
+    "black_frac": 0.055111,
     "height": 2160,
     "lum_hist16": [
-     0.722623,
-     0.235481,
-     0.035201,
-     0.003232,
-     0.001139,
-     0.000331,
-     6.8e-05,
+     0.729075,
+     0.221987,
+     0.041739,
+     0.003769,
+     0.001112,
+     0.000326,
+     6.6e-05,
      1.4e-05,
      1e-05,
      7e-06,
      1.3e-05,
-     2.1e-05,
-     1.1e-05,
+     2e-05,
+     1.2e-05,
      1.4e-05,
      2.2e-05,
      0.001814
     ],
     "lum_max": 255,
-    "lum_mean": 14.656293,
+    "lum_mean": 14.714118,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.001782,
@@ -2006,7 +2006,7 @@
    "load_report": {
     "map": "01_02_upsilon_inside.hpm",
     "terrain_active": false,
-    "total_ms": 20170,
+    "total_ms": 19190,
     "tracks": {
      "Area": {
       "created": 979,
@@ -2018,14 +2018,14 @@
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 36,
+      "ms": 33,
       "skipped": {},
       "xml": 359
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 171
       },
@@ -2034,28 +2034,28 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 442,
+      "ms": 403,
       "skipped": {},
       "xml": 536
      },
      "DetailMeshes": {
       "created": 1032,
       "file_missing": false,
-      "ms": 47,
+      "ms": 20,
       "skipped": {},
       "xml": 1032
      },
      "Entity": {
       "created": 2232,
       "file_missing": false,
-      "ms": 7973,
+      "ms": 7447,
       "skipped": {},
       "xml": 2232
      },
      "FogArea": {
       "created": 3,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
@@ -2071,35 +2071,35 @@
      "Light": {
       "created": 524,
       "file_missing": false,
-      "ms": 42,
+      "ms": 22,
       "skipped": {},
       "xml": 524
      },
      "LightMask": {
       "created": 14,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 14
      },
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 81,
+      "ms": 70,
       "skipped": {},
       "xml": 148
      },
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 40,
+      "ms": 35,
       "skipped": {},
       "xml": 128
      },
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 3868,
+      "ms": 3757,
       "skipped": {},
       "xml": 109
      },
@@ -2113,7 +2113,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 7418,
+      "ms": 7254,
       "skipped": {},
       "xml": 3381
      },
@@ -2128,7 +2128,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3921415.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-226431.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -2143,24 +2143,24 @@
      "example": "ERROR: Could not find headtracker target entity 'player' for entity 'CarlConstruct'ERROR: Could not find any entities 'player' for Doorway 'TriggerEnterCommRoom'ERROR: Entity 'note_post_it_amy_1' used by InteractAux 'InteractAuxArea_4' does"
     },
     "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Cannot find sound entity '*'": {
-     "count": 10,
+     "count": 9,
      "example": "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Cannot find sound entity 'level_amb_shared_props/lever_clunk/activate'"
     },
     "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopER": {
-     "count": 8,
+     "count": 9,
      "example": "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERRO"
     },
     "ERROR: Could not find sound entity LeverSound in Sound_StopSOMA debug: StateChangeStairsLever": {
      "count": 1,
      "example": "ERROR: Could not find sound entity LeverSound in Sound_StopSOMA debug: StateChangeStairsLever"
     },
-    "ERROR: Could not find sound entity LeverSound in Sound_StopWARNING: Could not start sound '*', too many sounds playing!": {
-     "count": 6,
-     "example": "ERROR: Could not find sound entity LeverSound in Sound_StopWARNING: Could not start sound '01_02_upsilon_inside_02_sfx__briefcase_creak_04.ogg', too many sounds playing!"
-    },
     "ERROR: Could not find sound entity RobotArmBroken in Sound_StopERROR: Could not find sound entity water_leak_* in Sound_": {
      "count": 1,
      "example": "ERROR: Could not find sound entity RobotArmBroken in Sound_StopERROR: Could not find sound entity water_leak_* in Sound_StopSOMA debug: Setting LastOnSomaText to 01_02_upsilon_inside_1"
+    },
+    "ERROR: Could not find sound entity SlideDoorCloseFast in Sound_StopSOMA debug: StateChangeStairsLever": {
+     "count": 1,
+     "example": "ERROR: Could not find sound entity SlideDoorCloseFast in Sound_StopSOMA debug: StateChangeStairsLever"
     },
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/commu": {
      "count": 1,
@@ -2231,7 +2231,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 133,
+   "log_warnings": 85,
    "render": {
     "draw_calls": 4043,
     "fog_areas_in_list": 1,
@@ -2245,7 +2245,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 31.6,
+   "wall_s": 30.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2280,10 +2280,10 @@
     },
     "oversized_top": [],
     "particle_systems": 162,
-    "physics_bodies": 5926,
-    "physics_bodies_awake": 0,
+    "physics_bodies": 5929,
+    "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 123,
+    "sound_entities": 124,
     "static_mesh_entities": 6901,
     "submeshes_without_material": 49
    }
@@ -2294,10 +2294,10 @@
     "LensFlare:0/1",
     "terrain"
    ],
-   "boot_s": 13.6,
+   "boot_s": 14.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.93998,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": 22.004,
     "pos_y": 256.018005,
@@ -2308,7 +2308,7 @@
     "no_material:1",
     "lum_mean:0.0"
    ],
-   "fps": 59.93998,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -2340,23 +2340,23 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.022118,
+     "a_mean": 0.022114,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 7954708,
      "b_max": 1,
-     "b_mean": 0.205073,
+     "b_mean": 0.20508,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 24640,
      "g_max": 1,
-     "g_mean": 0.251483,
+     "g_mean": 0.251487,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 4454,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.277246,
+     "r_mean": 0.277248,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 5463,
@@ -2426,26 +2426,26 @@
    "load_report": {
     "map": "01_03_upsilon_outside.hpm",
     "terrain_active": true,
-    "total_ms": 10899,
+    "total_ms": 11343,
     "tracks": {
      "Area": {
       "created": 646,
       "file_missing": false,
-      "ms": 7,
+      "ms": 5,
       "skipped": {},
       "xml": 646
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 56
       },
@@ -2454,7 +2454,7 @@
      "Decal": {
       "created": 333,
       "file_missing": false,
-      "ms": 277,
+      "ms": 270,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -2463,14 +2463,14 @@
      "DetailMeshes": {
       "created": 5076,
       "file_missing": false,
-      "ms": 120,
+      "ms": 78,
       "skipped": {},
       "xml": 5076
      },
      "Entity": {
       "created": 924,
       "file_missing": false,
-      "ms": 3093,
+      "ms": 3232,
       "skipped": {},
       "xml": 924
      },
@@ -2493,35 +2493,35 @@
      "Light": {
       "created": 109,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 109
      },
      "LightMask": {
       "created": 2,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 2
      },
      "ParticleSystem": {
       "created": 63,
       "file_missing": false,
-      "ms": 75,
+      "ms": 74,
       "skipped": {},
       "xml": 63
      },
      "Primitive": {
       "created": 14,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 14
      },
      "Sound": {
       "created": 54,
       "file_missing": false,
-      "ms": 1373,
+      "ms": 1338,
       "skipped": {},
       "xml": 54
      },
@@ -2535,7 +2535,7 @@
      "StaticObject": {
       "created": 1273,
       "file_missing": false,
-      "ms": 5756,
+      "ms": 6152,
       "skipped": {},
       "xml": 1273
      },
@@ -2548,20 +2548,8 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3923622.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-229280.log",
    "log_errors": {
-    "ERROR: --- IMPORTANT END ----": {
-     "count": 1,
-     "example": "ERROR: --- IMPORTANT END ----"
-    },
-    "ERROR: --- IMPORTANT START ----": {
-     "count": 1,
-     "example": "ERROR: --- IMPORTANT START ----"
-    },
-    "ERROR: Body N_N_power_box__door_N_Body_N jumped more than N units (N)- restoring!": {
-     "count": 1,
-     "example": "ERROR: Body 01_03_power_box__door_1_Body_2 jumped more than 70 units (400012)- restoring!"
-    },
     "ERROR: Cannot find sound entity '*'": {
      "count": 2,
      "example": "ERROR: Cannot find sound entity ''"
@@ -2635,9 +2623,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 61,
+   "log_warnings": 33,
    "render": {
-    "draw_calls": 1381,
+    "draw_calls": 1377,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 28,
@@ -2649,21 +2637,21 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 20.8,
+   "wall_s": 21.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
    },
    "world": {
     "aabb_max": [
-     368814129152,
-     21864849408,
-     67682373632
+     928603635712,
+     690721652736,
+     523592400896
     ],
     "aabb_min": [
-     -88093753344,
-     -64429948928,
-     -48525369344
+     -1203801292800,
+     -1516058181632,
+     -1903163998208
     ],
     "billboards": 329,
     "dynamic_mesh_entities": 197,
@@ -2685,10 +2673,10 @@
      "PowerCable_3:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_gameplay_power_cable_dirty_power_cable_dirty.dae.v3.msh"
     ],
     "particle_systems": 86,
-    "physics_bodies": 2363,
+    "physics_bodies": 2369,
     "physics_bodies_awake": 9,
     "physics_bodies_dynamic": 43,
-    "sound_entities": 81,
+    "sound_entities": 82,
     "static_mesh_entities": 7425,
     "submeshes_without_material": 1
    }
@@ -2700,10 +2688,10 @@
     "Sound:88/98",
     "StaticObjectBatches:0/22"
    ],
-   "boot_s": 14.9,
+   "boot_s": 15.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.039326,
+    "fps": 60.217148,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 6.5,
@@ -2711,30 +2699,30 @@
     "yaw": 3e-06
    },
    "failures": [],
-   "fps": 60.039326,
+   "fps": 60.217148,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.334907,
-     0.561624,
-     0.069958,
-     0.017897,
-     0.007084,
-     0.00324,
-     0.001658,
-     0.000961,
-     0.000515,
-     0.000231,
-     9e-05,
+     0.333007,
+     0.562353,
+     0.070974,
+     0.018121,
+     0.007068,
+     0.00321,
+     0.001693,
+     0.000953,
+     0.000488,
+     0.000215,
+     8.5e-05,
      5.2e-05,
      4.2e-05,
      5e-05,
      9.9e-05,
-     0.001591
+     0.00159
     ],
     "lum_max": 254,
-    "lum_mean": 21.196842,
+    "lum_mean": 21.23591,
     "lum_min": 5,
     "magenta_frac": 0,
     "white_frac": 0.001403,
@@ -2743,26 +2731,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.064838,
+     "a_mean": 0.064823,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 6937285,
      "b_max": 1,
-     "b_mean": 0.188887,
+     "b_mean": 0.189652,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 79607,
+     "b_zero_count": 78932,
      "g_max": 1,
-     "g_mean": 0.251828,
+     "g_mean": 0.252029,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 61625,
+     "g_zero_count": 61628,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.279429,
+     "r_mean": 0.280575,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 67937,
+     "r_zero_count": 67906,
      "sample_a": 0,
      "sample_b": 0.102234,
      "sample_g": 0.150391,
@@ -2776,21 +2764,21 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.29835,
+     "b_mean": 0.298322,
      "b_min": -1,
      "b_nan_count": 0,
-     "b_zero_count": 3264,
+     "b_zero_count": 3275,
      "g_max": 1,
-     "g_mean": 0.012022,
+     "g_mean": 0.012217,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 1074,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.013099,
+     "r_mean": -0.012953,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 3287,
+     "r_zero_count": 3298,
      "sample_a": 0.025558,
      "sample_b": 0.999512,
      "sample_g": 0.0224,
@@ -2799,23 +2787,23 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.575943,
+     "a_mean": 0.575938,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3886,
+     "a_zero_count": 3884,
      "b_max": 1,
-     "b_mean": 0.244693,
+     "b_mean": 0.245162,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 196948,
+     "b_zero_count": 196949,
      "g_max": 1,
-     "g_mean": 0.25053,
+     "g_mean": 0.250794,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 145336,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.252133,
+     "r_mean": 0.252687,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 196741,
@@ -2829,7 +2817,7 @@
    "load_report": {
     "map": "01_04_transport_station.hpm",
     "terrain_active": false,
-    "total_ms": 12226,
+    "total_ms": 12163,
     "tracks": {
      "Area": {
       "created": 264,
@@ -2859,21 +2847,21 @@
      "Decal": {
       "created": 270,
       "file_missing": false,
-      "ms": 335,
+      "ms": 341,
       "skipped": {},
       "xml": 270
      },
      "DetailMeshes": {
       "created": 1285,
       "file_missing": false,
-      "ms": 76,
+      "ms": 69,
       "skipped": {},
       "xml": 1285
      },
      "Entity": {
       "created": 797,
       "file_missing": false,
-      "ms": 4031,
+      "ms": 3890,
       "skipped": {},
       "xml": 797
      },
@@ -2896,7 +2884,7 @@
      "Light": {
       "created": 155,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 155
      },
@@ -2910,21 +2898,21 @@
      "ParticleSystem": {
       "created": 245,
       "file_missing": false,
-      "ms": 65,
+      "ms": 69,
       "skipped": {},
       "xml": 245
      },
      "Primitive": {
       "created": 25,
       "file_missing": false,
-      "ms": 13,
+      "ms": 12,
       "skipped": {},
       "xml": 25
      },
      "Sound": {
       "created": 88,
       "file_missing": false,
-      "ms": 3218,
+      "ms": 3175,
       "skipped": {
        "load_failed": 10
       },
@@ -2940,7 +2928,7 @@
      "StaticObject": {
       "created": 1052,
       "file_missing": false,
-      "ms": 4380,
+      "ms": 4496,
       "skipped": {},
       "xml": 1052
      },
@@ -2955,7 +2943,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3926839.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-231755.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 10,
@@ -3014,13 +3002,13 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 83,
+   "log_warnings": 26,
    "render": {
-    "draw_calls": 2644,
+    "draw_calls": 2645,
     "fog_areas_in_list": 2,
     "gl_errors": {},
-    "lights_in_list": 68,
-    "lights_rendered": 68,
+    "lights_in_list": 69,
+    "lights_rendered": 69,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 1041,
@@ -3028,7 +3016,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 22.4,
+   "wall_s": 22.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3057,10 +3045,10 @@
     "no_material_top": {},
     "oversized_top": [],
     "particle_systems": 246,
-    "physics_bodies": 2080,
+    "physics_bodies": 2082,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 99,
-    "sound_entities": 91,
+    "sound_entities": 92,
     "static_mesh_entities": 3200,
     "submeshes_without_material": 0
    }
@@ -3072,10 +3060,10 @@
     "Sound:105/109",
     "terrain"
    ],
-   "boot_s": 28.0,
+   "boot_s": 27.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.396141,
+    "fps": 60.039215,
     "pitch": 0,
     "pos_x": -14.3506,
     "pos_y": 34.540401,
@@ -3083,19 +3071,19 @@
     "yaw": -1.542107
    },
    "failures": [],
-   "fps": 60.396141,
+   "fps": 60.039215,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.077454,
-     0.098655,
-     0.088999,
-     0.151938,
-     0.418401,
-     0.064147,
-     0.052652,
-     0.033424,
+     0.077434,
+     0.09859,
+     0.088961,
+     0.15198,
+     0.418356,
+     0.064192,
+     0.052707,
+     0.033449,
      0.01398,
      0.00035,
      0,
@@ -3106,7 +3094,7 @@
      0
     ],
     "lum_max": 146,
-    "lum_mean": 61.08744,
+    "lum_mean": 61.096218,
     "lum_min": 4,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3115,26 +3103,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.588234,
+     "a_mean": 0.588322,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3415351,
+     "a_zero_count": 3414623,
      "b_max": 1,
-     "b_mean": 0.670437,
+     "b_mean": 0.670542,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 79050,
      "g_max": 1,
-     "g_mean": 0.109359,
+     "g_mean": 0.109368,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4880775,
+     "g_zero_count": 4881503,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.115749,
+     "r_mean": 0.11576,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4882447,
+     "r_zero_count": 4883175,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -3143,26 +3131,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.626659,
+     "a_mean": 0.626752,
      "a_min": 0.032257,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.794465,
+     "b_mean": 0.794263,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.035246,
+     "g_mean": 0.035149,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 4879049,
+     "g_zero_count": 4879818,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.047732,
+     "r_mean": 0.047496,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 4879049,
+     "r_zero_count": 4879818,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -3176,21 +3164,21 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.609413,
+     "b_mean": 0.609517,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1941610,
+     "b_zero_count": 1941592,
      "g_max": 1,
-     "g_mean": 0.024043,
+     "g_mean": 0.024023,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6795686,
+     "g_zero_count": 6796810,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.024206,
+     "r_mean": 0.024198,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6820714,
+     "r_zero_count": 6821829,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -3201,7 +3189,7 @@
    "load_report": {
     "map": "02_01_ms_curie_outside.hpm",
     "terrain_active": true,
-    "total_ms": 25194,
+    "total_ms": 24418,
     "tracks": {
      "Area": {
       "created": 663,
@@ -3213,7 +3201,7 @@
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 18,
+      "ms": 17,
       "skipped": {
        "connect_light_missing": 20
       },
@@ -3222,7 +3210,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 185
       },
@@ -3231,7 +3219,7 @@
      "Decal": {
       "created": 455,
       "file_missing": false,
-      "ms": 289,
+      "ms": 282,
       "skipped": {
        "decal_mesh_failed": 8
       },
@@ -3240,14 +3228,14 @@
      "DetailMeshes": {
       "created": 3788,
       "file_missing": false,
-      "ms": 111,
+      "ms": 105,
       "skipped": {},
       "xml": 3788
      },
      "Entity": {
       "created": 1579,
       "file_missing": false,
-      "ms": 8972,
+      "ms": 8459,
       "skipped": {},
       "xml": 1579
      },
@@ -3261,7 +3249,7 @@
      "LensFlare": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 2
       },
@@ -3270,14 +3258,14 @@
      "Light": {
       "created": 413,
       "file_missing": false,
-      "ms": 25,
+      "ms": 23,
       "skipped": {},
       "xml": 413
      },
      "LightMask": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
@@ -3291,14 +3279,14 @@
      "Primitive": {
       "created": 257,
       "file_missing": false,
-      "ms": 163,
+      "ms": 152,
       "skipped": {},
       "xml": 257
      },
      "Sound": {
       "created": 105,
       "file_missing": false,
-      "ms": 4073,
+      "ms": 4012,
       "skipped": {
        "load_failed": 4
       },
@@ -3314,7 +3302,7 @@
      "StaticObject": {
       "created": 4961,
       "file_missing": false,
-      "ms": 11273,
+      "ms": 11101,
       "skipped": {},
       "xml": 4961
      },
@@ -3327,7 +3315,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3929014.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-236155.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 8,
@@ -3390,7 +3378,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 137,
+   "log_warnings": 30,
    "render": {
     "draw_calls": 320,
     "fog_areas_in_list": 0,
@@ -3404,7 +3392,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 35.5,
+   "wall_s": 34.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3439,10 +3427,10 @@
      "rocks_rock_rounded_small01_320:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v3.msh"
     ],
     "particle_systems": 125,
-    "physics_bodies": 7467,
+    "physics_bodies": 7481,
     "physics_bodies_awake": 3,
     "physics_bodies_dynamic": 189,
-    "sound_entities": 116,
+    "sound_entities": 119,
     "static_mesh_entities": 10742,
     "submeshes_without_material": 0
    }
@@ -3453,10 +3441,10 @@
     "Sound:85/87",
     "StaticComboArea:0/2"
    ],
-   "boot_s": 23.5,
+   "boot_s": 22.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.980324,
+    "fps": 60.276733,
     "pitch": 0,
     "pos_x": 8.5,
     "pos_y": -5.5,
@@ -3466,7 +3454,7 @@
    "failures": [
     "no_material:5"
    ],
-   "fps": 59.980324,
+   "fps": 60.276733,
    "frame": {
     "black_frac": 0.05062,
     "height": 2160,
@@ -3584,19 +3572,19 @@
    "load_report": {
     "map": "02_02_ms_curie_inside.hpm",
     "terrain_active": false,
-    "total_ms": 20416,
+    "total_ms": 19987,
     "tracks": {
      "Area": {
       "created": 1183,
       "file_missing": false,
-      "ms": 12,
+      "ms": 13,
       "skipped": {},
       "xml": 1183
      },
      "Billboard": {
       "created": 132,
       "file_missing": false,
-      "ms": 12,
+      "ms": 13,
       "skipped": {},
       "xml": 132
      },
@@ -3612,7 +3600,7 @@
      "Decal": {
       "created": 2080,
       "file_missing": false,
-      "ms": 732,
+      "ms": 726,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -3621,21 +3609,21 @@
      "DetailMeshes": {
       "created": 5976,
       "file_missing": false,
-      "ms": 71,
+      "ms": 70,
       "skipped": {},
       "xml": 5976
      },
      "Entity": {
       "created": 2271,
       "file_missing": false,
-      "ms": 6180,
+      "ms": 5801,
       "skipped": {},
       "xml": 2271
      },
      "FogArea": {
       "created": 2,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 2
      },
@@ -3649,7 +3637,7 @@
      "Light": {
       "created": 309,
       "file_missing": false,
-      "ms": 24,
+      "ms": 23,
       "skipped": {},
       "xml": 309
      },
@@ -3663,21 +3651,21 @@
      "ParticleSystem": {
       "created": 129,
       "file_missing": false,
-      "ms": 21,
+      "ms": 20,
       "skipped": {},
       "xml": 129
      },
      "Primitive": {
       "created": 303,
       "file_missing": false,
-      "ms": 96,
+      "ms": 93,
       "skipped": {},
       "xml": 303
      },
      "Sound": {
       "created": 85,
       "file_missing": false,
-      "ms": 1881,
+      "ms": 1854,
       "skipped": {
        "load_failed": 2
       },
@@ -3695,7 +3683,7 @@
      "StaticObject": {
       "created": 7380,
       "file_missing": false,
-      "ms": 11098,
+      "ms": 11090,
       "skipped": {},
       "xml": 7380
      },
@@ -3708,7 +3696,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3935397.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-241878.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 2,
@@ -3771,7 +3759,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 81,
+   "log_warnings": 41,
    "render": {
     "draw_calls": 200,
     "fog_areas_in_list": 1,
@@ -3785,7 +3773,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 30.8,
+   "wall_s": 30.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3817,8 +3805,8 @@
     },
     "oversized_top": [],
     "particle_systems": 132,
-    "physics_bodies": 7839,
-    "physics_bodies_awake": 0,
+    "physics_bodies": 7843,
+    "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 652,
     "sound_entities": 99,
     "static_mesh_entities": 17490,
@@ -3831,10 +3819,10 @@
     "LensFlare:0/1",
     "terrain"
    ],
-   "boot_s": 16.8,
+   "boot_s": 15.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.820522,
+    "fps": 36,
     "pitch": 0,
     "pos_x": 28.593,
     "pos_y": 129.826004,
@@ -3845,7 +3833,7 @@
     "no_material:5",
     "lum_mean:1.2"
    ],
-   "fps": 59.820522,
+   "fps": 36,
    "frame": {
     "black_frac": 0.992806,
     "height": 2160,
@@ -3882,21 +3870,21 @@
      "a_nan_count": 0,
      "a_zero_count": 3899651,
      "b_max": 1,
-     "b_mean": 0.505765,
+     "b_mean": 0.50598,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 7322,
+     "b_zero_count": 7319,
      "g_max": 0.983887,
-     "g_mean": 0.073736,
+     "g_mean": 0.07393,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 3709332,
      "height": 2160,
      "r_max": 0.997559,
-     "r_mean": 0.117732,
+     "r_mean": 0.117904,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3709277,
+     "r_zero_count": 3709278,
      "sample_a": 0,
      "sample_b": 0.099243,
      "sample_g": 0.097046,
@@ -3910,18 +3898,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.829828,
+     "b_mean": 0.829879,
      "b_min": -0.998535,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.257753,
+     "g_mean": 0.258404,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 3710963,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.001912,
+     "r_mean": -0.002034,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 3710962,
@@ -3933,26 +3921,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.774097,
+     "a_mean": 0.773964,
      "a_min": 0.176392,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.564563,
+     "b_mean": 0.564596,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 101341,
+     "b_zero_count": 101303,
      "g_max": 1,
-     "g_mean": 0.112245,
+     "g_mean": 0.112289,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3805652,
+     "g_zero_count": 3805646,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.101613,
+     "r_mean": 0.101666,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3814022,
+     "r_zero_count": 3813980,
      "sample_a": 0.59668,
      "sample_b": 0.141113,
      "sample_g": 0.13916,
@@ -3963,7 +3951,7 @@
    "load_report": {
     "map": "02_03_delta.hpm",
     "terrain_active": true,
-    "total_ms": 14115,
+    "total_ms": 13318,
     "tracks": {
      "Area": {
       "created": 935,
@@ -3975,7 +3963,7 @@
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 39
      },
@@ -3991,28 +3979,28 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 501,
+      "ms": 389,
       "skipped": {},
       "xml": 375
      },
      "DetailMeshes": {
       "created": 4882,
       "file_missing": false,
-      "ms": 146,
+      "ms": 105,
       "skipped": {},
       "xml": 4882
      },
      "Entity": {
       "created": 1749,
       "file_missing": false,
-      "ms": 5092,
+      "ms": 4831,
       "skipped": {},
       "xml": 1749
      },
      "FogArea": {
       "created": 7,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 7
      },
@@ -4028,7 +4016,7 @@
      "Light": {
       "created": 217,
       "file_missing": false,
-      "ms": 36,
+      "ms": 30,
       "skipped": {},
       "xml": 217
      },
@@ -4042,21 +4030,21 @@
      "ParticleSystem": {
       "created": 92,
       "file_missing": false,
-      "ms": 32,
+      "ms": 19,
       "skipped": {},
       "xml": 92
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 27,
+      "ms": 25,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 33,
       "file_missing": false,
-      "ms": 1815,
+      "ms": 1776,
       "skipped": {},
       "xml": 33
      },
@@ -4070,7 +4058,7 @@
      "StaticObject": {
       "created": 1714,
       "file_missing": false,
-      "ms": 6213,
+      "ms": 5901,
       "skipped": {},
       "xml": 1714
      },
@@ -4083,19 +4071,15 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3940712.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-246820.log",
    "log_errors": {
     "ERROR: Could not find any entities '*' for Doorway '*'ERROR: Could not find any entities '*' for Doorway '*'ERROR: Could": {
      "count": 1,
      "example": "ERROR: Could not find any entities 'player' for Doorway 'EscapePodDoorwayTrigger'ERROR: Could not find any entities 'player' for Doorway 'LaunchBunkerEngineTrigger'ERROR: Could not find any entities 'player' for Doorway 'MainBaseEngineTrigg"
     },
-    "ERROR: Could not find sound entity AntennaMoveLoop in Sound_StopWARNING: Could not start sound '*', too many sounds play": {
+    "ERROR: Could not find sound entity AntennaMoveLoop in Sound_StopERROR: Could not find sound entity LadderMove in Sound_S": {
      "count": 1,
-     "example": "ERROR: Could not find sound entity AntennaMoveLoop in Sound_StopWARNING: Could not start sound 'level_amb_shared_underwater__metal_train_track_oneshot_10.ogg', too many sounds playing!"
-    },
-    "ERROR: Could not find sound entity LadderMove in Sound_StopERROR: Could not find sound entity HatchOpen in Sound_StopSOM": {
-     "count": 1,
-     "example": "ERROR: Could not find sound entity LadderMove in Sound_StopERROR: Could not find sound entity HatchOpen in Sound_StopSOMA voice: Comment_2_DoorIsStuck_001_Player_001"
+     "example": "ERROR: Could not find sound entity AntennaMoveLoop in Sound_StopERROR: Could not find sound entity LadderMove in Sound_StopERROR: Could not find sound entity HatchOpen in Sound_StopSOMA voice: Comment_2_DoorIsStuck_001_Player_001"
     },
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/organic/mind_coral/mind_coral_colony_edges_sm": {
      "count": 1,
@@ -4154,7 +4138,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 72,
+   "log_warnings": 49,
    "render": {
     "draw_calls": 947,
     "fog_areas_in_list": 1,
@@ -4168,7 +4152,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 24.4,
+   "wall_s": 25.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4176,12 +4160,12 @@
    "world": {
     "aabb_max": [
      219102372618625065539994521744542007296,
-     156.094482,
+     168.286362,
      174.065048
     ],
     "aabb_min": [
      -107.97113,
-     -43,
+     -59.372543,
      -92768638318433381813559863452790423552
     ],
     "billboards": 323,
@@ -4201,10 +4185,10 @@
      "02_03_akers_scribble1_1:02_03_akers_scribble1_1"
     ],
     "particle_systems": 142,
-    "physics_bodies": 5493,
-    "physics_bodies_awake": 21,
+    "physics_bodies": 5495,
+    "physics_bodies_awake": 11,
     "physics_bodies_dynamic": 65,
-    "sound_entities": 58,
+    "sound_entities": 54,
     "static_mesh_entities": 8481,
     "submeshes_without_material": 5
    }
@@ -4214,10 +4198,10 @@
     "Compound:0/72",
     "terrain"
    ],
-   "boot_s": 13.6,
+   "boot_s": 12.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 53.94598,
+    "fps": 29.543404,
     "pitch": 0,
     "pos_x": -3.75,
     "pos_y": 244.296005,
@@ -4227,30 +4211,30 @@
    "failures": [
     "Entity:1071/1072 entity_failed:entities/_temp/aaron/bass_robot_posed.entx1"
    ],
-   "fps": 53.94598,
+   "fps": 29.543404,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
      0.000856,
-     0.052031,
-     0.042435,
-     0.033365,
-     0.291424,
-     0.359377,
-     0.067979,
-     0.039078,
-     0.031934,
-     0.032838,
-     0.03144,
-     0.017171,
-     6.6e-05,
-     6e-06,
-     0,
+     0.0519,
+     0.042302,
+     0.033108,
+     0.526804,
+     0.139873,
+     0.054279,
+     0.037534,
+     0.032145,
+     0.032754,
+     0.031209,
+     0.017041,
+     0.00012,
+     7.2e-05,
+     3e-06,
      0
     ],
-    "lum_max": 214,
-    "lum_mean": 86.628395,
+    "lum_max": 228,
+    "lum_mean": 82.573967,
     "lum_min": 8,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -4259,26 +4243,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.34768,
+     "a_mean": 0.346192,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5408258,
+     "a_zero_count": 5420601,
      "b_max": 1,
-     "b_mean": 0.4716,
+     "b_mean": 0.470361,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 98458,
      "g_max": 1,
-     "g_mean": 0.158071,
+     "g_mean": 0.158433,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2884655,
+     "g_zero_count": 2872312,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.169812,
+     "r_mean": 0.17022,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2889747,
+     "r_zero_count": 2877404,
      "sample_a": 0,
      "sample_b": 0.185425,
      "sample_g": 0.277832,
@@ -4287,26 +4271,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.383314,
+     "a_mean": 0.382293,
      "a_min": 0.027267,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.692793,
+     "b_mean": 0.692244,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 0,
+     "b_zero_count": 1,
      "g_max": 0.999512,
-     "g_mean": 0.040603,
+     "g_mean": 0.040583,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 2877897,
+     "g_zero_count": 2865561,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.097519,
+     "r_mean": -0.096938,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 2877833,
+     "r_zero_count": 2865490,
      "sample_a": 0.052185,
      "sample_b": 0.194824,
      "sample_g": 0.512207,
@@ -4315,26 +4299,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.512917,
-     "a_min": 0.042145,
+     "a_mean": 0.511785,
+     "a_min": 0.012985,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.398908,
+     "b_mean": 0.397417,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1687844,
+     "b_zero_count": 1700521,
      "g_max": 1,
-     "g_mean": 0.053386,
+     "g_mean": 0.053391,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4506159,
+     "g_zero_count": 4506415,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.053438,
+     "r_mean": 0.053445,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4565423,
+     "r_zero_count": 4565678,
      "sample_a": 0.188232,
      "sample_b": 0.12323,
      "sample_g": 0.122009,
@@ -4345,7 +4329,7 @@
    "load_report": {
     "map": "02_04_theta_outside.hpm",
     "terrain_active": true,
-    "total_ms": 10529,
+    "total_ms": 9869,
     "tracks": {
      "Area": {
       "created": 96,
@@ -4357,14 +4341,14 @@
      "Billboard": {
       "created": 29,
       "file_missing": false,
-      "ms": 6,
+      "ms": 4,
       "skipped": {},
       "xml": 29
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 72
       },
@@ -4373,21 +4357,21 @@
      "Decal": {
       "created": 194,
       "file_missing": false,
-      "ms": 149,
+      "ms": 140,
       "skipped": {},
       "xml": 194
      },
      "DetailMeshes": {
       "created": 4002,
       "file_missing": false,
-      "ms": 103,
+      "ms": 82,
       "skipped": {},
       "xml": 4002
      },
      "Entity": {
       "created": 1071,
       "file_missing": false,
-      "ms": 2690,
+      "ms": 2381,
       "skipped": {
        "entity_failed:entities/_temp/aaron/bass_robot_posed.ent": 1
       },
@@ -4410,7 +4394,7 @@
      "Light": {
       "created": 102,
       "file_missing": false,
-      "ms": 25,
+      "ms": 16,
       "skipped": {},
       "xml": 102
      },
@@ -4424,21 +4408,21 @@
      "ParticleSystem": {
       "created": 98,
       "file_missing": false,
-      "ms": 109,
+      "ms": 67,
       "skipped": {},
       "xml": 98
      },
      "Primitive": {
       "created": 8,
       "file_missing": false,
-      "ms": 33,
+      "ms": 30,
       "skipped": {},
       "xml": 8
      },
      "Sound": {
       "created": 28,
       "file_missing": false,
-      "ms": 1126,
+      "ms": 1063,
       "skipped": {},
       "xml": 28
      },
@@ -4452,7 +4436,7 @@
      "StaticObject": {
       "created": 1493,
       "file_missing": false,
-      "ms": 6009,
+      "ms": 5889,
       "skipped": {},
       "xml": 1493
      },
@@ -4465,7 +4449,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3944775.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-250261.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -4520,21 +4504,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 167,
+   "log_warnings": 50,
    "render": {
-    "draw_calls": 3312,
+    "draw_calls": 4967,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 25,
-    "lights_rendered": 25,
+    "lights_in_list": 35,
+    "lights_rendered": 35,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 1612,
-    "trans_objects": 35
+    "solid_objects": 2407,
+    "trans_objects": 53
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 21.2,
+   "wall_s": 24.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4542,7 +4526,7 @@
    "world": {
     "aabb_max": [
      636.796021,
-     459.571014,
+     489.849609,
      412.25
     ],
     "aabb_min": [
@@ -4570,8 +4554,8 @@
      "block_box_static_2:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_technical_block_box_block_box.dae.v3.msh"
     ],
     "particle_systems": 99,
-    "physics_bodies": 5163,
-    "physics_bodies_awake": 1,
+    "physics_bodies": 5165,
+    "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 17,
     "sound_entities": 41,
     "static_mesh_entities": 6599,
@@ -4583,10 +4567,10 @@
     "Compound:0/172",
     "LensFlare:0/5"
    ],
-   "boot_s": 36.0,
+   "boot_s": 33.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 11.928423,
+    "fps": 16.865089,
     "pitch": 0,
     "pos_x": -12.75,
     "pos_y": 3.7502,
@@ -4596,7 +4580,7 @@
    "failures": [
     "no_material:24"
    ],
-   "fps": 11.928423,
+   "fps": 16.865089,
    "frame": {
     "black_frac": 0,
     "height": 2160,
@@ -4714,19 +4698,19 @@
    "load_report": {
     "map": "02_05_theta_inside.hpm",
     "terrain_active": false,
-    "total_ms": 32320,
+    "total_ms": 30172,
     "tracks": {
      "Area": {
       "created": 672,
       "file_missing": false,
-      "ms": 11,
+      "ms": 8,
       "skipped": {},
       "xml": 672
      },
      "Billboard": {
       "created": 177,
       "file_missing": false,
-      "ms": 32,
+      "ms": 29,
       "skipped": {},
       "xml": 177
      },
@@ -4742,21 +4726,21 @@
      "Decal": {
       "created": 1076,
       "file_missing": false,
-      "ms": 481,
+      "ms": 478,
       "skipped": {},
       "xml": 1076
      },
      "DetailMeshes": {
       "created": 2071,
       "file_missing": false,
-      "ms": 18,
+      "ms": 16,
       "skipped": {},
       "xml": 2071
      },
      "Entity": {
       "created": 2867,
       "file_missing": false,
-      "ms": 16577,
+      "ms": 15388,
       "skipped": {},
       "xml": 2867
      },
@@ -4779,7 +4763,7 @@
      "Light": {
       "created": 820,
       "file_missing": false,
-      "ms": 57,
+      "ms": 35,
       "skipped": {},
       "xml": 820
      },
@@ -4793,21 +4777,21 @@
      "ParticleSystem": {
       "created": 201,
       "file_missing": false,
-      "ms": 58,
+      "ms": 55,
       "skipped": {},
       "xml": 201
      },
      "Primitive": {
       "created": 333,
       "file_missing": false,
-      "ms": 158,
+      "ms": 150,
       "skipped": {},
       "xml": 333
      },
      "Sound": {
       "created": 140,
       "file_missing": false,
-      "ms": 3377,
+      "ms": 3250,
       "skipped": {},
       "xml": 140
      },
@@ -4821,7 +4805,7 @@
      "StaticObject": {
       "created": 4460,
       "file_missing": false,
-      "ms": 11352,
+      "ms": 10563,
       "skipped": {},
       "xml": 4460
      },
@@ -4834,7 +4818,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3948599.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-253781.log",
    "log_errors": {
     "ERROR: CathSourceArea: No entity specified in UserVarERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -4921,9 +4905,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 2827,
+   "log_warnings": 185,
    "render": {
-    "draw_calls": 6601,
+    "draw_calls": 6605,
     "fog_areas_in_list": 3,
     "gl_errors": {},
     "lights_in_list": 167,
@@ -4931,11 +4915,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 1968,
-    "trans_objects": 118
+    "trans_objects": 122
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 62.6,
+   "wall_s": 53.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4973,11 +4957,11 @@
      "beach_water:beach_water",
      "02_05_beach_sky_1:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_urban_special_skyline.dae.v3.msh"
     ],
-    "particle_systems": 207,
-    "physics_bodies": 8770,
-    "physics_bodies_awake": 17,
+    "particle_systems": 209,
+    "physics_bodies": 8783,
+    "physics_bodies_awake": 6,
     "physics_bodies_dynamic": 774,
-    "sound_entities": 227,
+    "sound_entities": 231,
     "static_mesh_entities": 9972,
     "submeshes_without_material": 24
    }
@@ -4987,10 +4971,10 @@
     "Compound:0/55",
     "Sound:111/117"
    ],
-   "boot_s": 25.8,
+   "boot_s": 25.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 15.355089,
+    "fps": 16.732302,
     "pitch": 0,
     "pos_x": 2.75,
     "pos_y": 4.75,
@@ -5000,7 +4984,7 @@
    "failures": [
     "no_material:36"
    ],
-   "fps": 15.355089,
+   "fps": 16.732302,
    "frame": {
     "black_frac": 3e-06,
     "height": 2160,
@@ -5023,7 +5007,7 @@
      0.034461
     ],
     "lum_max": 255,
-    "lum_mean": 39.546627,
+    "lum_mean": 39.5466,
     "lum_min": 2,
     "magenta_frac": 0,
     "white_frac": 0.032703,
@@ -5032,7 +5016,7 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.002452,
+     "a_mean": 0.002451,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 8042250,
@@ -5040,18 +5024,18 @@
      "b_mean": 0.460015,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 40922,
+     "b_zero_count": 40839,
      "g_max": 1.393555,
      "g_mean": 0.503211,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 24436,
+     "g_zero_count": 24354,
      "height": 2160,
      "r_max": 1.466797,
      "r_mean": 0.520473,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 24913,
+     "r_zero_count": 24833,
      "sample_a": 0,
      "sample_b": 0.566895,
      "sample_g": 0.57959,
@@ -5065,21 +5049,21 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.604031,
+     "b_mean": 0.604036,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 1426,
      "g_max": 1,
-     "g_mean": 0.081868,
+     "g_mean": 0.081973,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 345,
+     "g_zero_count": 346,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.006979,
+     "r_mean": 0.00701,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 1675,
+     "r_zero_count": 1683,
      "sample_a": 0.057526,
      "sample_b": 0.688477,
      "sample_g": 0.011299,
@@ -5088,26 +5072,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.543166,
+     "a_mean": 0.543126,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 22749,
+     "a_zero_count": 23763,
      "b_max": 1,
-     "b_mean": 0.528545,
+     "b_mean": 0.528509,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 122445,
+     "b_zero_count": 123468,
      "g_max": 1,
-     "g_mean": 0.520303,
+     "g_mean": 0.520268,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 115761,
+     "g_zero_count": 116776,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.52363,
+     "r_mean": 0.523596,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 120409,
+     "r_zero_count": 121432,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -5118,19 +5102,19 @@
    "load_report": {
     "map": "02_06_theta_tunnels.hpm",
     "terrain_active": false,
-    "total_ms": 22953,
+    "total_ms": 22270,
     "tracks": {
      "Area": {
       "created": 886,
       "file_missing": false,
-      "ms": 11,
+      "ms": 10,
       "skipped": {},
       "xml": 886
      },
      "Billboard": {
       "created": 127,
       "file_missing": false,
-      "ms": 38,
+      "ms": 37,
       "skipped": {},
       "xml": 127
      },
@@ -5146,7 +5130,7 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 376,
+      "ms": 369,
       "skipped": {
        "decal_mesh_failed": 5
       },
@@ -5155,21 +5139,21 @@
      "DetailMeshes": {
       "created": 639,
       "file_missing": false,
-      "ms": 65,
+      "ms": 57,
       "skipped": {},
       "xml": 639
      },
      "Entity": {
       "created": 2220,
       "file_missing": false,
-      "ms": 9940,
+      "ms": 9542,
       "skipped": {},
       "xml": 2220
      },
      "FogArea": {
       "created": 3,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 3
      },
@@ -5183,7 +5167,7 @@
      "Light": {
       "created": 499,
       "file_missing": false,
-      "ms": 47,
+      "ms": 44,
       "skipped": {},
       "xml": 499
      },
@@ -5197,21 +5181,21 @@
      "ParticleSystem": {
       "created": 60,
       "file_missing": false,
-      "ms": 49,
+      "ms": 48,
       "skipped": {},
       "xml": 60
      },
      "Primitive": {
       "created": 171,
       "file_missing": false,
-      "ms": 110,
+      "ms": 109,
       "skipped": {},
       "xml": 171
      },
      "Sound": {
       "created": 111,
       "file_missing": false,
-      "ms": 3177,
+      "ms": 3125,
       "skipped": {
        "load_failed": 6
       },
@@ -5227,7 +5211,7 @@
      "StaticObject": {
       "created": 5121,
       "file_missing": false,
-      "ms": 8992,
+      "ms": 8784,
       "skipped": {},
       "xml": 5121
      },
@@ -5240,7 +5224,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3960128.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-259637.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 11,
@@ -5327,21 +5311,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 112,
+   "log_warnings": 64,
    "render": {
-    "draw_calls": 16101,
+    "draw_calls": 16042,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 381,
-    "lights_rendered": 381,
+    "lights_in_list": 382,
+    "lights_rendered": 382,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 5261,
-    "trans_objects": 298
+    "trans_objects": 299
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 52.0,
+   "wall_s": 46.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5377,7 +5361,7 @@
     },
     "oversized_top": [],
     "particle_systems": 91,
-    "physics_bodies": 7314,
+    "physics_bodies": 7320,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 340,
     "sound_entities": 152,
@@ -5389,10 +5373,10 @@
    "allowlisted": [
     "Compound:0/144"
    ],
-   "boot_s": 37.9,
+   "boot_s": 37.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 27.450968,
+    "fps": 40.959064,
     "pitch": 0,
     "pos_x": -41.3974,
     "pos_y": 1.75,
@@ -5403,7 +5387,7 @@
     "no_material:15",
     "lum_mean:0.0"
    ],
-   "fps": 27.450968,
+   "fps": 40.959064,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -5434,27 +5418,27 @@
    },
    "gbuffer": {
     "0": {
-     "a_max": 1.953125,
-     "a_mean": 0.104308,
+     "a_max": 1.998047,
+     "a_mean": 0.106028,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 7304267,
      "b_max": 0.896973,
-     "b_mean": 0.15406,
+     "b_mean": 0.153919,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 583814,
+     "b_zero_count": 608825,
      "g_max": 0.958984,
-     "g_mean": 0.185496,
+     "g_mean": 0.185618,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 252677,
+     "g_zero_count": 268100,
      "height": 2160,
      "r_max": 1.493164,
-     "r_mean": 0.256783,
+     "r_mean": 0.258545,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 14869,
+     "r_zero_count": 17423,
      "sample_a": 0,
      "sample_b": 0.006371,
      "sample_g": 0.017639,
@@ -5463,23 +5447,23 @@
     },
     "1": {
      "a_max": 0.028732,
-     "a_mean": 0.020057,
-     "a_min": 0.009819,
+     "a_mean": 0.020127,
+     "a_min": 0.011383,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.589664,
+     "b_mean": 0.598603,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 6631,
      "g_max": 1,
-     "g_mean": 0.073554,
+     "g_mean": 0.080582,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 3505,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.052595,
+     "r_mean": -0.049637,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 9801,
@@ -5491,26 +5475,26 @@
     },
     "2": {
      "a_max": 0.970703,
-     "a_mean": 0.546219,
+     "a_mean": 0.55397,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 6095,
+     "a_zero_count": 5269,
      "b_max": 1,
-     "b_mean": 0.367116,
+     "b_mean": 0.369764,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 35549,
+     "b_zero_count": 34044,
      "g_max": 1,
-     "g_mean": 0.356115,
+     "g_mean": 0.358202,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 16861,
+     "g_zero_count": 15527,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.388546,
+     "r_mean": 0.391136,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 9413,
+     "r_zero_count": 7726,
      "sample_a": 0.693848,
      "sample_b": 0.071777,
      "sample_g": 0.094116,
@@ -5521,12 +5505,12 @@
    "load_report": {
     "map": "02_07_theta_exit.hpm",
     "terrain_active": false,
-    "total_ms": 35219,
+    "total_ms": 34369,
     "tracks": {
      "Area": {
       "created": 727,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 727
      },
@@ -5549,28 +5533,28 @@
      "Decal": {
       "created": 802,
       "file_missing": false,
-      "ms": 511,
+      "ms": 476,
       "skipped": {},
       "xml": 802
      },
      "DetailMeshes": {
       "created": 2147,
       "file_missing": false,
-      "ms": 53,
+      "ms": 48,
       "skipped": {},
       "xml": 2147
      },
      "Entity": {
       "created": 1720,
       "file_missing": false,
-      "ms": 10446,
+      "ms": 9919,
       "skipped": {},
       "xml": 1720
      },
      "FogArea": {
       "created": 8,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 8
      },
@@ -5584,7 +5568,7 @@
      "Light": {
       "created": 566,
       "file_missing": false,
-      "ms": 52,
+      "ms": 51,
       "skipped": {},
       "xml": 566
      },
@@ -5598,21 +5582,21 @@
      "ParticleSystem": {
       "created": 206,
       "file_missing": false,
-      "ms": 125,
+      "ms": 114,
       "skipped": {},
       "xml": 206
      },
      "Primitive": {
       "created": 551,
       "file_missing": false,
-      "ms": 185,
+      "ms": 178,
       "skipped": {},
       "xml": 551
      },
      "Sound": {
       "created": 224,
       "file_missing": false,
-      "ms": 4127,
+      "ms": 4077,
       "skipped": {},
       "xml": 224
      },
@@ -5626,7 +5610,7 @@
      "StaticObject": {
       "created": 6263,
       "file_missing": false,
-      "ms": 19505,
+      "ms": 19294,
       "skipped": {},
       "xml": 6263
      },
@@ -5639,7 +5623,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3968346.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-262128.log",
    "log_errors": {
     "ERROR: Could not find any entities '*' for Doorway '*'ERROR: Could not find any entities '*' for Doorway '*'SOMA voice: ": {
      "count": 1,
@@ -5714,21 +5698,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 235,
+   "log_warnings": 126,
    "render": {
-    "draw_calls": 8632,
+    "draw_calls": 8155,
     "fog_areas_in_list": 6,
     "gl_errors": {},
-    "lights_in_list": 254,
-    "lights_rendered": 254,
+    "lights_in_list": 255,
+    "lights_rendered": 255,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 2675,
-    "trans_objects": 183
+    "trans_objects": 182
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 53.6,
+   "wall_s": 51.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5764,7 +5748,7 @@
      "legs_human_1:legs_human.fbx"
     ],
     "particle_systems": 215,
-    "physics_bodies": 8897,
+    "physics_bodies": 8910,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 192,
     "sound_entities": 237,
@@ -5777,10 +5761,10 @@
     "Compound:0/63",
     "terrain"
    ],
-   "boot_s": 12.5,
+   "boot_s": 12.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880306,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": 151.880997,
     "pos_y": 151.479996,
@@ -5790,7 +5774,7 @@
    "failures": [
     "lum_mean:0.4"
    ],
-   "fps": 59.880306,
+   "fps": 60.098557,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -5908,19 +5892,19 @@
    "load_report": {
     "map": "03_01_omicron_outside.hpm",
     "terrain_active": true,
-    "total_ms": 9761,
+    "total_ms": 9473,
     "tracks": {
      "Area": {
       "created": 249,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 249
      },
      "Billboard": {
       "created": 87,
       "file_missing": false,
-      "ms": 10,
+      "ms": 9,
       "skipped": {
        "connect_light_missing": 2
       },
@@ -5929,7 +5913,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 63
       },
@@ -5938,21 +5922,21 @@
      "Decal": {
       "created": 246,
       "file_missing": false,
-      "ms": 285,
+      "ms": 330,
       "skipped": {},
       "xml": 246
      },
      "DetailMeshes": {
       "created": 3268,
       "file_missing": false,
-      "ms": 114,
+      "ms": 108,
       "skipped": {},
       "xml": 3268
      },
      "Entity": {
       "created": 1494,
       "file_missing": false,
-      "ms": 4357,
+      "ms": 4092,
       "skipped": {},
       "xml": 1494
      },
@@ -5966,7 +5950,7 @@
      "LensFlare": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -6001,7 +5985,7 @@
      "Sound": {
       "created": 16,
       "file_missing": false,
-      "ms": 1687,
+      "ms": 1659,
       "skipped": {},
       "xml": 16
      },
@@ -6015,7 +5999,7 @@
      "StaticObject": {
       "created": 1078,
       "file_missing": false,
-      "ms": 3039,
+      "ms": 3006,
       "skipped": {},
       "xml": 1078
      },
@@ -6028,7 +6012,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3977214.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-266116.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -6079,7 +6063,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 75,
+   "log_warnings": 202,
    "render": {
     "draw_calls": 56,
     "fog_areas_in_list": 0,
@@ -6093,7 +6077,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 19.3,
+   "wall_s": 19.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6124,7 +6108,7 @@
      "Plane:Plane"
     ],
     "particle_systems": 73,
-    "physics_bodies": 2962,
+    "physics_bodies": 2965,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 40,
     "sound_entities": 40,
@@ -6137,10 +6121,10 @@
     "Compound:0/242",
     "Sound:120/121"
    ],
-   "boot_s": 31.6,
+   "boot_s": 30.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 6.548198,
+    "fps": 8.858278,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": -2.25,
@@ -6150,7 +6134,7 @@
    "failures": [
     "no_material:10"
    ],
-   "fps": 6.548198,
+   "fps": 8.858278,
    "frame": {
     "black_frac": 0.084225,
     "height": 2160,
@@ -6268,7 +6252,7 @@
    "load_report": {
     "map": "03_02_omicron_inside.hpm",
     "terrain_active": false,
-    "total_ms": 28717,
+    "total_ms": 27710,
     "tracks": {
      "Area": {
       "created": 690,
@@ -6280,14 +6264,14 @@
      "Billboard": {
       "created": 238,
       "file_missing": false,
-      "ms": 42,
+      "ms": 43,
       "skipped": {},
       "xml": 238
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 242
       },
@@ -6303,21 +6287,21 @@
      "DetailMeshes": {
       "created": 1490,
       "file_missing": false,
-      "ms": 14,
+      "ms": 12,
       "skipped": {},
       "xml": 1490
      },
      "Entity": {
       "created": 3718,
       "file_missing": false,
-      "ms": 16800,
+      "ms": 15899,
       "skipped": {},
       "xml": 3718
      },
      "FogArea": {
       "created": 6,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 6
      },
@@ -6345,21 +6329,21 @@
      "ParticleSystem": {
       "created": 215,
       "file_missing": false,
-      "ms": 52,
+      "ms": 53,
       "skipped": {},
       "xml": 215
      },
      "Primitive": {
       "created": 371,
       "file_missing": false,
-      "ms": 74,
+      "ms": 69,
       "skipped": {},
       "xml": 371
      },
      "Sound": {
       "created": 120,
       "file_missing": false,
-      "ms": 3520,
+      "ms": 3492,
       "skipped": {
        "load_failed": 1
       },
@@ -6375,7 +6359,7 @@
      "StaticObject": {
       "created": 4934,
       "file_missing": false,
-      "ms": 7514,
+      "ms": 7441,
       "skipped": {},
       "xml": 4934
      },
@@ -6388,7 +6372,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3979225.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-266489.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -6479,9 +6463,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 2074282,
+   "log_warnings": 1244269,
    "render": {
-    "draw_calls": 2028,
+    "draw_calls": 2025,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 317,
@@ -6489,11 +6473,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 712,
-    "trans_objects": 111
+    "trans_objects": 108
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 66.3,
+   "wall_s": 54.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6526,10 +6510,10 @@
     },
     "oversized_top": [],
     "particle_systems": 199,
-    "physics_bodies": 9232,
+    "physics_bodies": 9236,
     "physics_bodies_awake": 12,
     "physics_bodies_dynamic": 510,
-    "sound_entities": 2978,
+    "sound_entities": 2404,
     "static_mesh_entities": 10554,
     "submeshes_without_material": 10
    }
@@ -6540,10 +6524,10 @@
     "LensFlare:0/2",
     "Sound:5/6"
    ],
-   "boot_s": 7.8,
+   "boot_s": 7.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.157795,
+    "fps": 60,
     "pitch": 0,
     "pos_x": 48.75,
     "pos_y": 128.5,
@@ -6551,7 +6535,7 @@
     "yaw": -4e-06
    },
    "failures": [],
-   "fps": 60.157795,
+   "fps": 60,
    "frame": {
     "black_frac": 0,
     "height": 2160,
@@ -6669,12 +6653,12 @@
    "load_report": {
     "map": "03_03_omicron_descent.hpm",
     "terrain_active": false,
-    "total_ms": 5163,
+    "total_ms": 4853,
     "tracks": {
      "Area": {
       "created": 102,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 102
      },
@@ -6688,7 +6672,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 40
       },
@@ -6697,28 +6681,28 @@
      "Decal": {
       "created": 85,
       "file_missing": false,
-      "ms": 52,
+      "ms": 48,
       "skipped": {},
       "xml": 85
      },
      "DetailMeshes": {
       "created": 1550,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 1550
      },
      "Entity": {
       "created": 643,
       "file_missing": false,
-      "ms": 2447,
+      "ms": 2252,
       "skipped": {},
       "xml": 643
      },
      "FogArea": {
       "created": 1,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 1
      },
@@ -6734,7 +6718,7 @@
      "Light": {
       "created": 43,
       "file_missing": false,
-      "ms": 14,
+      "ms": 15,
       "skipped": {},
       "xml": 43
      },
@@ -6755,14 +6739,14 @@
      "Primitive": {
       "created": 2,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 2
      },
      "Sound": {
       "created": 5,
       "file_missing": false,
-      "ms": 324,
+      "ms": 325,
       "skipped": {
        "load_failed": 1
       },
@@ -6778,7 +6762,7 @@
      "StaticObject": {
       "created": 887,
       "file_missing": false,
-      "ms": 2194,
+      "ms": 2117,
       "skipped": {},
       "xml": 887
      },
@@ -6791,7 +6775,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3988947.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-270485.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -6846,9 +6830,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 48,
+   "log_warnings": 47,
    "render": {
-    "draw_calls": 2290,
+    "draw_calls": 2293,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 53,
@@ -6860,7 +6844,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 14.6,
+   "wall_s": 14.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6896,7 +6880,7 @@
      "Loop3_Part1:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_oceanbottom_special_03_03_walls_descent_03_03_wall_descent_loop0.dae.v3.msh"
     ],
     "particle_systems": 13,
-    "physics_bodies": 2047,
+    "physics_bodies": 2048,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 10,
     "sound_entities": 24,
@@ -6909,10 +6893,10 @@
     "Compound:0/310",
     "terrain"
    ],
-   "boot_s": 23.8,
+   "boot_s": 19.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.083649,
+    "fps": 59.980324,
     "pitch": 0,
     "pos_x": -13.4867,
     "pos_y": 817.039001,
@@ -6920,32 +6904,32 @@
     "yaw": 0.013099
    },
    "failures": [
-    "lum_mean:2.6"
+    "lum_mean:1.4"
    ],
-   "fps": 56.083649,
+   "fps": 59.980324,
    "frame": {
-    "black_frac": 0.864638,
+    "black_frac": 0.941654,
     "height": 2160,
     "lum_hist16": [
-     0.954088,
-     0.02525,
-     0.009361,
-     0.003919,
-     0.001929,
-     0.001647,
-     0.001479,
-     0.000965,
-     0.000607,
-     0.000322,
-     0.00023,
-     9.6e-05,
-     4.5e-05,
-     3.2e-05,
-     3.1e-05,
+     0.977492,
+     0.008507,
+     0.004419,
+     0.003318,
+     0.002231,
+     0.00196,
+     0.001197,
+     0.000514,
+     0.000254,
+     8.2e-05,
+     1.8e-05,
+     5e-06,
+     3e-06,
+     1e-06,
+     0,
      0
     ],
-    "lum_max": 244,
-    "lum_mean": 2.582231,
+    "lum_max": 213,
+    "lum_mean": 1.377092,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -6954,26 +6938,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.599311,
+     "a_mean": 0.609372,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3323471,
+     "a_zero_count": 3240023,
      "b_max": 1,
-     "b_mean": 0.672623,
+     "b_mean": 0.68648,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6605,
-     "g_max": 0.98291,
-     "g_mean": 0.09448,
+     "b_zero_count": 6260,
+     "g_max": 0.949219,
+     "g_mean": 0.095819,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4972598,
+     "g_zero_count": 5056145,
      "height": 2160,
      "r_max": 0.949707,
-     "r_mean": 0.12119,
+     "r_mean": 0.12324,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4983137,
+     "r_zero_count": 5067103,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -6982,26 +6966,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.5993,
-     "a_min": 0.002144,
+     "a_mean": 0.609392,
+     "a_min": 0.003202,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.863137,
-     "b_min": -0.983887,
+     "b_mean": 0.880564,
+     "b_min": -0.978516,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 1,
-     "g_mean": -0.016072,
+     "g_mean": 0.007788,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 4970677,
+     "g_zero_count": 5054379,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.002951,
+     "r_mean": 0.007326,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 4970675,
+     "r_zero_count": 5054377,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -7010,26 +6994,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.777669,
+     "a_mean": 0.785593,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 207,
+     "a_zero_count": 8,
      "b_max": 1,
-     "b_mean": 0.667154,
+     "b_mean": 0.674284,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 47543,
+     "b_zero_count": 45089,
      "g_max": 1,
-     "g_mean": 0.077728,
+     "g_mean": 0.073626,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 5010568,
+     "g_zero_count": 5092302,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.076715,
+     "r_mean": 0.072492,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 5026326,
+     "r_zero_count": 5105415,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -7040,19 +7024,19 @@
    "load_report": {
     "map": "04_01_tau_outside.hpm",
     "terrain_active": true,
-    "total_ms": 20563,
+    "total_ms": 16243,
     "tracks": {
      "Area": {
       "created": 414,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 414
      },
      "Billboard": {
       "created": 53,
       "file_missing": false,
-      "ms": 7,
+      "ms": 6,
       "skipped": {},
       "xml": 53
      },
@@ -7068,7 +7052,7 @@
      "Decal": {
       "created": 406,
       "file_missing": false,
-      "ms": 329,
+      "ms": 287,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -7077,14 +7061,14 @@
      "DetailMeshes": {
       "created": 673,
       "file_missing": false,
-      "ms": 18,
+      "ms": 12,
       "skipped": {},
       "xml": 673
      },
      "Entity": {
       "created": 2843,
       "file_missing": false,
-      "ms": 7976,
+      "ms": 6182,
       "skipped": {},
       "xml": 2843
      },
@@ -7119,7 +7103,7 @@
      "ParticleSystem": {
       "created": 95,
       "file_missing": false,
-      "ms": 18,
+      "ms": 16,
       "skipped": {},
       "xml": 95
      },
@@ -7133,7 +7117,7 @@
      "Sound": {
       "created": 20,
       "file_missing": false,
-      "ms": 1357,
+      "ms": 1078,
       "skipped": {},
       "xml": 20
      },
@@ -7147,7 +7131,7 @@
      "StaticObject": {
       "created": 3695,
       "file_missing": false,
-      "ms": 10677,
+      "ms": 8503,
       "skipped": {},
       "xml": 3695
      },
@@ -7160,7 +7144,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3991616.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-272211.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -7231,9 +7215,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 175,
+   "log_warnings": 127,
    "render": {
-    "draw_calls": 60,
+    "draw_calls": 59,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 12,
@@ -7241,11 +7225,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 14,
-    "trans_objects": 15
+    "trans_objects": 14
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 33.3,
+   "wall_s": 26.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7277,8 +7261,8 @@
      "dustcoat_dirt_10:dustcoat_dirt_10"
     ],
     "particle_systems": 98,
-    "physics_bodies": 5908,
-    "physics_bodies_awake": 6,
+    "physics_bodies": 5914,
+    "physics_bodies_awake": 5,
     "physics_bodies_dynamic": 112,
     "sound_entities": 98,
     "static_mesh_entities": 7077,
@@ -7291,10 +7275,10 @@
     "LensFlare:0/1",
     "Sound:143/144"
    ],
-   "boot_s": 50.6,
+   "boot_s": 36.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 54.726311,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": -30.445801,
     "pos_y": 1.5,
@@ -7302,7 +7286,7 @@
     "yaw": 1.570796
    },
    "failures": [],
-   "fps": 54.726311,
+   "fps": 60.098557,
    "frame": {
     "black_frac": 0.012816,
     "height": 2160,
@@ -7342,18 +7326,18 @@
      "b_mean": 0.15757,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 55093,
+     "b_zero_count": 55092,
      "g_max": 0.952637,
      "g_mean": 0.211547,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4692,
+     "g_zero_count": 4691,
      "height": 2160,
      "r_max": 0.968262,
      "r_mean": 0.337344,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4321,
+     "r_zero_count": 4320,
      "sample_a": 0,
      "sample_b": 0.062744,
      "sample_g": 0.188232,
@@ -7398,18 +7382,18 @@
      "b_mean": 0.54334,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2729,
+     "b_zero_count": 2728,
      "g_max": 1,
      "g_mean": 0.513032,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2768,
+     "g_zero_count": 2767,
      "height": 2160,
      "r_max": 1,
      "r_mean": 0.508738,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2883,
+     "r_zero_count": 2882,
      "sample_a": 0.509766,
      "sample_b": 0.666992,
      "sample_g": 0.592285,
@@ -7420,19 +7404,19 @@
    "load_report": {
     "map": "04_02_tau_inside.hpm",
     "terrain_active": false,
-    "total_ms": 46430,
+    "total_ms": 33888,
     "tracks": {
      "Area": {
       "created": 662,
       "file_missing": false,
-      "ms": 9,
+      "ms": 7,
       "skipped": {},
       "xml": 662
      },
      "Billboard": {
       "created": 65,
       "file_missing": false,
-      "ms": 13,
+      "ms": 6,
       "skipped": {},
       "xml": 65
      },
@@ -7448,21 +7432,21 @@
      "Decal": {
       "created": 1335,
       "file_missing": false,
-      "ms": 1321,
+      "ms": 1044,
       "skipped": {},
       "xml": 1335
      },
      "DetailMeshes": {
       "created": 739,
       "file_missing": false,
-      "ms": 7,
+      "ms": 4,
       "skipped": {},
       "xml": 739
      },
      "Entity": {
       "created": 2187,
       "file_missing": false,
-      "ms": 17113,
+      "ms": 12016,
       "skipped": {},
       "xml": 2187
      },
@@ -7485,35 +7469,35 @@
      "Light": {
       "created": 531,
       "file_missing": false,
-      "ms": 33,
+      "ms": 16,
       "skipped": {},
       "xml": 531
      },
      "LightMask": {
       "created": 14,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 14
      },
      "ParticleSystem": {
       "created": 44,
       "file_missing": false,
-      "ms": 54,
+      "ms": 32,
       "skipped": {},
       "xml": 44
      },
      "Primitive": {
       "created": 212,
       "file_missing": false,
-      "ms": 108,
+      "ms": 83,
       "skipped": {},
       "xml": 212
      },
      "Sound": {
       "created": 143,
       "file_missing": false,
-      "ms": 4790,
+      "ms": 3493,
       "skipped": {
        "load_failed": 1
       },
@@ -7529,7 +7513,7 @@
      "StaticObject": {
       "created": 3432,
       "file_missing": false,
-      "ms": 22770,
+      "ms": 17038,
       "skipped": {},
       "xml": 3432
      },
@@ -7542,7 +7526,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3996749.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-274040.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -7601,7 +7585,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 219,
+   "log_warnings": 95,
    "render": {
     "draw_calls": 58,
     "fog_areas_in_list": 0,
@@ -7615,7 +7599,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 62.0,
+   "wall_s": 44.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7644,7 +7628,7 @@
     "no_material_top": {},
     "oversized_top": [],
     "particle_systems": 48,
-    "physics_bodies": 8075,
+    "physics_bodies": 8080,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 473,
     "sound_entities": 175,
@@ -7658,10 +7642,10 @@
     "Sound:76/83",
     "terrain"
    ],
-   "boot_s": 36.6,
+   "boot_s": 27.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 13.358774,
+    "fps": 17.964092,
     "pitch": 0,
     "pos_x": -0.045191,
     "pos_y": 94.445801,
@@ -7671,58 +7655,58 @@
    "failures": [
     "no_material:1"
    ],
-   "fps": 13.358774,
+   "fps": 17.964092,
    "frame": {
-    "black_frac": 0.227903,
+    "black_frac": 0.229909,
     "height": 2160,
     "lum_hist16": [
-     0.386935,
-     0.141447,
-     0.197198,
-     0.163544,
-     0.038342,
-     0.020434,
-     0.014308,
-     0.008431,
-     0.005773,
-     0.005657,
-     0.005751,
-     0.004498,
-     0.003035,
-     0.001406,
-     0.000824,
-     0.002417
+     0.392519,
+     0.140417,
+     0.192538,
+     0.162346,
+     0.03863,
+     0.020782,
+     0.014853,
+     0.008444,
+     0.005558,
+     0.005614,
+     0.005837,
+     0.004582,
+     0.003085,
+     0.001443,
+     0.000864,
+     0.002489
     ],
     "lum_max": 255,
-    "lum_mean": 33.791126,
+    "lum_mean": 33.692703,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.001698,
+    "white_frac": 0.001721,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.002242,
+     "a_mean": 0.002023,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8253500,
+     "a_zero_count": 8255315,
      "b_max": 1.306641,
-     "b_mean": 0.255353,
+     "b_mean": 0.258137,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2131,
+     "b_zero_count": 2054,
      "g_max": 1.333008,
-     "g_mean": 0.290162,
+     "g_mean": 0.292665,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2934,
+     "g_zero_count": 357,
      "height": 2160,
      "r_max": 1.360352,
-     "r_mean": 0.340473,
+     "r_mean": 0.344506,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3239,
+     "r_zero_count": 648,
      "sample_a": 0,
      "sample_b": 0.323486,
      "sample_g": 0.335693,
@@ -7731,26 +7715,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.01731,
+     "a_mean": 0.015232,
      "a_min": 0.005306,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.194079,
+     "b_mean": 0.206781,
      "b_min": -1,
      "b_nan_count": 0,
-     "b_zero_count": 208,
+     "b_zero_count": 119,
      "g_max": 1,
-     "g_mean": -0.087599,
+     "g_mean": -0.087485,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 41967,
+     "g_zero_count": 40194,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.011434,
+     "r_mean": -0.009462,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 1934,
+     "r_zero_count": 75,
      "sample_a": 0.306885,
      "sample_b": 0.546387,
      "sample_g": 0.828613,
@@ -7759,26 +7743,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.443296,
+     "a_mean": 0.450216,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 2,
      "b_max": 1,
-     "b_mean": 0.392253,
+     "b_mean": 0.394196,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 85890,
+     "b_zero_count": 46840,
      "g_max": 1,
-     "g_mean": 0.391458,
+     "g_mean": 0.394675,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 78647,
+     "g_zero_count": 36577,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.398746,
+     "r_mean": 0.402493,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 89248,
+     "r_zero_count": 46750,
      "sample_a": 0.447021,
      "sample_b": 0.083313,
      "sample_g": 0.098267,
@@ -7789,19 +7773,19 @@
    "load_report": {
     "map": "04_03_tau_escape.hpm",
     "terrain_active": true,
-    "total_ms": 33643,
+    "total_ms": 24939,
     "tracks": {
      "Area": {
       "created": 465,
       "file_missing": false,
-      "ms": 8,
+      "ms": 5,
       "skipped": {},
       "xml": 465
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 10,
+      "ms": 9,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -7819,7 +7803,7 @@
      "Decal": {
       "created": 957,
       "file_missing": false,
-      "ms": 490,
+      "ms": 364,
       "skipped": {
        "decal_mesh_failed": 4
       },
@@ -7828,21 +7812,21 @@
      "DetailMeshes": {
       "created": 3025,
       "file_missing": false,
-      "ms": 32,
+      "ms": 23,
       "skipped": {},
       "xml": 3025
      },
      "Entity": {
       "created": 2060,
       "file_missing": false,
-      "ms": 7188,
+      "ms": 4801,
       "skipped": {},
       "xml": 2060
      },
      "FogArea": {
       "created": 9,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 9
      },
@@ -7856,7 +7840,7 @@
      "Light": {
       "created": 490,
       "file_missing": false,
-      "ms": 12,
+      "ms": 10,
       "skipped": {},
       "xml": 490
      },
@@ -7870,21 +7854,21 @@
      "ParticleSystem": {
       "created": 213,
       "file_missing": false,
-      "ms": 118,
+      "ms": 98,
       "skipped": {},
       "xml": 213
      },
      "Primitive": {
       "created": 28,
       "file_missing": false,
-      "ms": 15,
+      "ms": 8,
       "skipped": {},
       "xml": 28
      },
      "Sound": {
       "created": 76,
       "file_missing": false,
-      "ms": 2876,
+      "ms": 2394,
       "skipped": {
        "load_failed": 7
       },
@@ -7900,7 +7884,7 @@
      "StaticObject": {
       "created": 4795,
       "file_missing": false,
-      "ms": 22670,
+      "ms": 17025,
       "skipped": {},
       "xml": 4795
      },
@@ -7913,7 +7897,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4008840.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-276381.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -7972,21 +7956,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 89,
+   "log_warnings": 65,
    "render": {
-    "draw_calls": 15973,
+    "draw_calls": 15980,
     "fog_areas_in_list": 6,
     "gl_errors": {},
-    "lights_in_list": 245,
-    "lights_rendered": 245,
+    "lights_in_list": 249,
+    "lights_rendered": 249,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 5736,
-    "trans_objects": 243
+    "trans_objects": 245
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 65.7,
+   "wall_s": 43.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8026,10 +8010,10 @@
      "block_box_14:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_technical_block_box_block_box.dae.v3.msh"
     ],
     "particle_systems": 212,
-    "physics_bodies": 5893,
-    "physics_bodies_awake": 0,
+    "physics_bodies": 5902,
+    "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 41,
-    "sound_entities": 101,
+    "sound_entities": 103,
     "static_mesh_entities": 10721,
     "submeshes_without_material": 1
    }
@@ -8039,7 +8023,7 @@
     "Compound:0/118",
     "terrain"
    ],
-   "boot_s": 28.3,
+   "boot_s": 19.9,
    "camera": {
     "fov_deg": 70.000008,
     "fps": 60,
@@ -8168,19 +8152,19 @@
    "load_report": {
     "map": "05_01_phi_inside.hpm",
     "terrain_active": true,
-    "total_ms": 25343,
+    "total_ms": 17476,
     "tracks": {
      "Area": {
       "created": 175,
       "file_missing": false,
-      "ms": 7,
+      "ms": 3,
       "skipped": {},
       "xml": 175
      },
      "Billboard": {
       "created": 235,
       "file_missing": false,
-      "ms": 25,
+      "ms": 23,
       "skipped": {
        "connect_light_missing": 2
       },
@@ -8189,7 +8173,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 118
       },
@@ -8198,21 +8182,21 @@
      "Decal": {
       "created": 212,
       "file_missing": false,
-      "ms": 223,
+      "ms": 164,
       "skipped": {},
       "xml": 212
      },
      "DetailMeshes": {
       "created": 652,
       "file_missing": false,
-      "ms": 71,
+      "ms": 62,
       "skipped": {},
       "xml": 652
      },
      "Entity": {
       "created": 1440,
       "file_missing": false,
-      "ms": 10712,
+      "ms": 5885,
       "skipped": {},
       "xml": 1440
      },
@@ -8233,7 +8217,7 @@
      "Light": {
       "created": 587,
       "file_missing": false,
-      "ms": 15,
+      "ms": 11,
       "skipped": {},
       "xml": 587
      },
@@ -8247,21 +8231,21 @@
      "ParticleSystem": {
       "created": 80,
       "file_missing": false,
-      "ms": 69,
+      "ms": 60,
       "skipped": {},
       "xml": 80
      },
      "Primitive": {
       "created": 117,
       "file_missing": false,
-      "ms": 47,
+      "ms": 33,
       "skipped": {},
       "xml": 117
      },
      "Sound": {
       "created": 85,
       "file_missing": false,
-      "ms": 3587,
+      "ms": 3417,
       "skipped": {},
       "xml": 85
      },
@@ -8275,7 +8259,7 @@
      "StaticObject": {
       "created": 2578,
       "file_missing": false,
-      "ms": 10414,
+      "ms": 7710,
       "skipped": {},
       "xml": 2578
      },
@@ -8288,7 +8272,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4019172.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-279943.log",
    "log_errors": {
     "ERROR: Could not find any entities '*' for Doorway '*'SOMA voice: N subjects from '*'": {
      "count": 1,
@@ -8351,7 +8335,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 52,
+   "log_warnings": 28,
    "render": {
     "draw_calls": 44,
     "fog_areas_in_list": 0,
@@ -8365,7 +8349,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 35.3,
+   "wall_s": 27.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8394,7 +8378,7 @@
     "no_material_top": {},
     "oversized_top": [],
     "particle_systems": 77,
-    "physics_bodies": 4282,
+    "physics_bodies": 4283,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 49,
     "sound_entities": 96,
@@ -8408,7 +8392,7 @@
     "LensFlare:0/3",
     "terrain"
    ],
-   "boot_s": 9.7,
+   "boot_s": 9.4,
    "camera": {
     "fov_deg": 70.000008,
     "fps": 60,
@@ -8486,7 +8470,7 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.696054,
+     "b_mean": 0.696053,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
@@ -8517,18 +8501,18 @@
      "b_mean": 0.104969,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2877956,
+     "b_zero_count": 2877959,
      "g_max": 0.983887,
      "g_mean": 0.097125,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2877956,
+     "g_zero_count": 2877959,
      "height": 2160,
      "r_max": 0.999512,
      "r_mean": 0.093529,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2877956,
+     "r_zero_count": 2877959,
      "sample_a": 0.399902,
      "sample_b": 0.212402,
      "sample_g": 0.194336,
@@ -8539,7 +8523,7 @@
    "load_report": {
     "map": "05_02_ARK_inside.hpm",
     "terrain_active": true,
-    "total_ms": 7335,
+    "total_ms": 7161,
     "tracks": {
      "Area": {
       "created": 63,
@@ -8558,7 +8542,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 135
       },
@@ -8576,14 +8560,14 @@
      "DetailMeshes": {
       "created": 1576,
       "file_missing": false,
-      "ms": 18,
+      "ms": 13,
       "skipped": {},
       "xml": 1576
      },
      "Entity": {
       "created": 578,
       "file_missing": false,
-      "ms": 927,
+      "ms": 887,
       "skipped": {},
       "xml": 578
      },
@@ -8606,7 +8590,7 @@
      "Light": {
       "created": 174,
       "file_missing": false,
-      "ms": 18,
+      "ms": 13,
       "skipped": {},
       "xml": 174
      },
@@ -8620,21 +8604,21 @@
      "ParticleSystem": {
       "created": 163,
       "file_missing": false,
-      "ms": 28,
+      "ms": 24,
       "skipped": {},
       "xml": 163
      },
      "Primitive": {
       "created": 1,
       "file_missing": false,
-      "ms": 11,
+      "ms": 7,
       "skipped": {},
       "xml": 1
      },
      "Sound": {
       "created": 52,
       "file_missing": false,
-      "ms": 839,
+      "ms": 819,
       "skipped": {},
       "xml": 52
      },
@@ -8648,7 +8632,7 @@
      "StaticObject": {
       "created": 2818,
       "file_missing": false,
-      "ms": 5337,
+      "ms": 5243,
       "skipped": {},
       "xml": 2818
      },
@@ -8661,7 +8645,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4025700.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-280739.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -8726,7 +8710,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.4,
+   "wall_s": 16.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8760,7 +8744,7 @@
      "05_02_city_vista_1:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_urban_special_05_02_city_vista_05_02_city_vista.dae.v3.msh"
     ],
     "particle_systems": 163,
-    "physics_bodies": 1282,
+    "physics_bodies": 1283,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 0,
     "sound_entities": 52,
@@ -8772,7 +8756,7 @@
    "allowlisted": [
     "LensFlare:0/2"
    ],
-   "boot_s": 3.6,
+   "boot_s": 3.1,
    "camera": {
     "fov_deg": 70.000008,
     "fps": 60,
@@ -8904,19 +8888,19 @@
    "load_report": {
     "map": "05_03_space.hpm",
     "terrain_active": false,
-    "total_ms": 1466,
+    "total_ms": 1021,
     "tracks": {
      "Area": {
       "created": 17,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 17
      },
      "Billboard": {
       "created": 30,
       "file_missing": false,
-      "ms": 14,
+      "ms": 12,
       "skipped": {},
       "xml": 30
      },
@@ -8944,7 +8928,7 @@
      "Entity": {
       "created": 9,
       "file_missing": false,
-      "ms": 1436,
+      "ms": 993,
       "skipped": {},
       "xml": 9
      },
@@ -8967,7 +8951,7 @@
      "Light": {
       "created": 14,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 14
      },
@@ -9022,7 +9006,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4027184.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-282479.log",
    "log_errors": {
     "ERROR: Couldn'*'D:/depth/redist/core/textures/space.dds'": {
      "count": 1,
@@ -9083,7 +9067,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 10.2,
+   "wall_s": 9.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9130,10 +9114,10 @@
     "Compound:0/92",
     "LensFlare:0/1"
    ],
-   "boot_s": 26.0,
+   "boot_s": 25.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 57.504818,
+    "fps": 59.113335,
     "pitch": 0,
     "pos_x": 1.25,
     "pos_y": 2.25,
@@ -9143,30 +9127,30 @@
    "failures": [
     "no_material:3"
    ],
-   "fps": 57.504818,
+   "fps": 59.113335,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
      0.258518,
-     0.739775,
-     0.000218,
-     3.3e-05,
-     4.8e-05,
-     6.1e-05,
-     3.6e-05,
-     5.4e-05,
-     8.6e-05,
-     0.000109,
-     0.00013,
-     0.000141,
-     0.000351,
-     0.000347,
-     6e-05,
+     0.739999,
+     0.000219,
+     3.4e-05,
+     4.7e-05,
+     5.5e-05,
+     3.7e-05,
+     5.1e-05,
+     7.4e-05,
+     7.8e-05,
+     9.8e-05,
+     0.000132,
+     0.000299,
+     0.000277,
+     5e-05,
      3.3e-05
     ],
     "lum_max": 249,
-    "lum_mean": 18.826326,
+    "lum_mean": 18.788214,
     "lum_min": 8,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -9174,27 +9158,27 @@
    },
    "gbuffer": {
     "0": {
-     "a_max": 1,
-     "a_mean": 0.04554,
+     "a_max": 2,
+     "a_mean": 0.045559,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 7526548,
      "b_max": 1,
-     "b_mean": 0.242505,
+     "b_mean": 0.242552,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 267892,
-     "g_max": 1.287109,
-     "g_mean": 0.275222,
+     "b_zero_count": 268016,
+     "g_max": 1.289062,
+     "g_mean": 0.275313,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 246494,
+     "g_zero_count": 246567,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.295904,
+     "r_mean": 0.295982,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 255464,
+     "r_zero_count": 255631,
      "sample_a": 0,
      "sample_b": 0,
      "sample_g": 0,
@@ -9203,23 +9187,23 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.02368,
+     "a_mean": 0.023679,
      "a_min": 0.009163,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.492752,
+     "b_mean": 0.492745,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 547,
      "g_max": 1,
-     "g_mean": 0.112435,
+     "g_mean": 0.112529,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 14153,
+     "g_zero_count": 14152,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.143404,
+     "r_mean": 0.144037,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 599,
@@ -9231,26 +9215,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.462274,
+     "a_mean": 0.462378,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 63203,
+     "a_zero_count": 63273,
      "b_max": 1,
-     "b_mean": 0.366015,
+     "b_mean": 0.366006,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 138704,
+     "b_zero_count": 138787,
      "g_max": 1,
-     "g_mean": 0.371913,
+     "g_mean": 0.371899,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 130085,
+     "g_zero_count": 130152,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.378786,
+     "r_mean": 0.378768,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 135226,
+     "r_zero_count": 135309,
      "sample_a": 0.674316,
      "sample_b": 0.186646,
      "sample_g": 0.191162,
@@ -9261,19 +9245,19 @@
    "load_report": {
     "map": "_e3_01_01.hpm",
     "terrain_active": false,
-    "total_ms": 23378,
+    "total_ms": 23076,
     "tracks": {
      "Area": {
       "created": 312,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 312
      },
      "Billboard": {
       "created": 134,
       "file_missing": false,
-      "ms": 99,
+      "ms": 91,
       "skipped": {},
       "xml": 134
      },
@@ -9289,7 +9273,7 @@
      "Decal": {
       "created": 562,
       "file_missing": false,
-      "ms": 208,
+      "ms": 198,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -9305,7 +9289,7 @@
      "Entity": {
       "created": 1378,
       "file_missing": false,
-      "ms": 8601,
+      "ms": 8394,
       "skipped": {},
       "xml": 1378
      },
@@ -9319,7 +9303,7 @@
      "FogArea": {
       "created": 6,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 6
      },
@@ -9335,7 +9319,7 @@
      "Light": {
       "created": 569,
       "file_missing": false,
-      "ms": 27,
+      "ms": 25,
       "skipped": {},
       "xml": 569
      },
@@ -9349,21 +9333,21 @@
      "ParticleSystem": {
       "created": 156,
       "file_missing": false,
-      "ms": 48,
+      "ms": 46,
       "skipped": {},
       "xml": 156
      },
      "Primitive": {
       "created": 464,
       "file_missing": false,
-      "ms": 82,
+      "ms": 74,
       "skipped": {},
       "xml": 464
      },
      "Sound": {
       "created": 108,
       "file_missing": false,
-      "ms": 3843,
+      "ms": 3847,
       "skipped": {},
       "xml": 108
      },
@@ -9377,7 +9361,7 @@
      "StaticObject": {
       "created": 3177,
       "file_missing": false,
-      "ms": 10304,
+      "ms": 10238,
       "skipped": {},
       "xml": 3177
      },
@@ -9390,7 +9374,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4027451.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-282729.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -9400,9 +9384,9 @@
      "count": 1,
      "example": "ERROR: Could not find bone 'Root_Ctrl' in model '/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/character/player/hands/hands_human.ent'"
     },
-    "ERROR: Could not find sound entity aquarium_water_N in Sound_StopWARNING: Could not start sound '*', too many sounds pla": {
+    "ERROR: Could not find sound entity aquarium_water_N in Sound_Stop-------------------------------------------------------": {
      "count": 1,
-     "example": "ERROR: Could not find sound entity aquarium_water_1 in Sound_StopWARNING: Could not start sound 'level_amb_shared_interior__metal_groan_light_14.ogg', too many sounds playing!"
+     "example": "ERROR: Could not find sound entity aquarium_water_1 in Sound_Stop--------------------------------------------------------"
     },
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -9465,9 +9449,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 402,
+   "log_warnings": 45,
    "render": {
-    "draw_calls": 2530,
+    "draw_calls": 2529,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 90,
@@ -9475,11 +9459,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 930,
-    "trans_objects": 82
+    "trans_objects": 81
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 34.2,
+   "wall_s": 33.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9488,7 +9472,7 @@
     "aabb_max": [
      78.766052,
      25.369999,
-     93
+     145.899796
     ],
     "aabb_min": [
      -29.25,
@@ -9511,10 +9495,10 @@
     },
     "oversized_top": [],
     "particle_systems": 183,
-    "physics_bodies": 5552,
+    "physics_bodies": 5555,
     "physics_bodies_awake": 48,
     "physics_bodies_dynamic": 443,
-    "sound_entities": 124,
+    "sound_entities": 143,
     "static_mesh_entities": 5675,
     "submeshes_without_material": 3
    }
@@ -9525,10 +9509,10 @@
     "LensFlare:0/3",
     "StaticObjectBatches:0/110"
    ],
-   "boot_s": 22.5,
+   "boot_s": 21.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 44.554447,
+    "fps": 59.523842,
     "pitch": 0,
     "pos_x": 31.999201,
     "pos_y": 18,
@@ -9540,7 +9524,7 @@
     "no_material:49",
     "lum_mean:1.2"
    ],
-   "fps": 44.554447,
+   "fps": 59.523842,
    "frame": {
     "black_frac": 0.992511,
     "height": 2160,
@@ -9658,19 +9642,19 @@
    "load_report": {
     "map": "_e3_01_02.hpm",
     "terrain_active": false,
-    "total_ms": 19793,
+    "total_ms": 19147,
     "tracks": {
      "Area": {
       "created": 971,
       "file_missing": false,
-      "ms": 11,
+      "ms": 10,
       "skipped": {},
       "xml": 971
      },
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 34,
+      "ms": 33,
       "skipped": {},
       "xml": 359
      },
@@ -9686,21 +9670,21 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 416,
+      "ms": 402,
       "skipped": {},
       "xml": 536
      },
      "DetailMeshes": {
       "created": 1032,
       "file_missing": false,
-      "ms": 21,
+      "ms": 20,
       "skipped": {},
       "xml": 1032
      },
      "Entity": {
       "created": 2227,
       "file_missing": false,
-      "ms": 7810,
+      "ms": 7411,
       "skipped": {},
       "xml": 2227
      },
@@ -9723,7 +9707,7 @@
      "Light": {
       "created": 524,
       "file_missing": false,
-      "ms": 37,
+      "ms": 23,
       "skipped": {},
       "xml": 524
      },
@@ -9737,7 +9721,7 @@
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 74,
+      "ms": 70,
       "skipped": {
        "load_failed": 23
       },
@@ -9746,14 +9730,14 @@
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 37,
+      "ms": 35,
       "skipped": {},
       "xml": 128
      },
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 3816,
+      "ms": 3771,
       "skipped": {},
       "xml": 109
      },
@@ -9767,7 +9751,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 7396,
+      "ms": 7235,
       "skipped": {},
       "xml": 3381
      },
@@ -9782,14 +9766,14 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4030955.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-284814.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
      "example": "ERROR: Cannot find sound 'Entities_Station/tech/robot_arm/robot_arm_broken_idle' and play at entity RobotArmPSArea_1"
     },
     "ERROR: Cannot find sound entity '*'": {
-     "count": 60,
+     "count": 57,
      "example": "ERROR: Cannot find sound entity 'Entities_Station/tech/robot_arm/robot_arm_broken_idle'"
     },
     "ERROR: Could not find headtracker target entity '*' for entity '*'ERROR: Could not find any entities '*' for Doorway '*'": {
@@ -9801,7 +9785,7 @@
      "example": "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Cannot find sound entity 'level_amb_shared_props/lever_clunk/activate'"
     },
     "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopER": {
-     "count": 19,
+     "count": 18,
      "example": "ERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERROR: Could not find sound entity LeverSound in Sound_StopERRO"
     },
     "ERROR: Could not find sound entity RobotArmBroken in Sound_StopERROR: Could not find sound entity water_leak_* in Sound_": {
@@ -9885,9 +9869,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 127,
+   "log_warnings": 84,
    "render": {
-    "draw_calls": 4043,
+    "draw_calls": 4045,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 194,
@@ -9895,11 +9879,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 1194,
-    "trans_objects": 187
+    "trans_objects": 188
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 31.5,
+   "wall_s": 30.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9934,10 +9918,10 @@
     },
     "oversized_top": [],
     "particle_systems": 162,
-    "physics_bodies": 5920,
+    "physics_bodies": 5923,
     "physics_bodies_awake": 2,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 125,
+    "sound_entities": 124,
     "static_mesh_entities": 6896,
     "submeshes_without_material": 49
    }
@@ -9948,10 +9932,10 @@
     "LensFlare:0/1",
     "terrain"
    ],
-   "boot_s": 9.5,
+   "boot_s": 10.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880249,
+    "fps": 60,
     "pitch": 0,
     "pos_x": 24.75,
     "pos_y": 255.852005,
@@ -9961,30 +9945,30 @@
    "failures": [
     "no_material:1"
    ],
-   "fps": 59.880249,
+   "fps": 60,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.008406,
-     0.084787,
-     0.306417,
-     0.233501,
-     0.181619,
-     0.060235,
-     0.039295,
-     0.032828,
-     0.027253,
-     0.015044,
-     0.004691,
+     0.008405,
+     0.084786,
+     0.306452,
+     0.233494,
+     0.181532,
+     0.060335,
+     0.039265,
+     0.032812,
+     0.027259,
+     0.015059,
+     0.004677,
      0.002553,
      0.001614,
-     0.001058,
+     0.001059,
      0.000442,
      0.000257
     ],
     "lum_max": 255,
-    "lum_mean": 60.510803,
+    "lum_mean": 60.510273,
     "lum_min": 3,
     "magenta_frac": 0,
     "white_frac": 3.4e-05,
@@ -9998,7 +9982,7 @@
      "a_nan_count": 0,
      "a_zero_count": 7550541,
      "b_max": 1,
-     "b_mean": 0.259172,
+     "b_mean": 0.259171,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 45395,
@@ -10009,7 +9993,7 @@
      "g_zero_count": 606634,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.253105,
+     "r_mean": 0.253104,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 609440,
@@ -10037,7 +10021,7 @@
      "g_zero_count": 602270,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.094876,
+     "r_mean": 0.094875,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 602088,
@@ -10052,23 +10036,23 @@
      "a_mean": 0.324829,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 643,
+     "a_zero_count": 644,
      "b_max": 1,
-     "b_mean": 0.191376,
+     "b_mean": 0.191377,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1821381,
+     "b_zero_count": 1821378,
      "g_max": 1,
-     "g_mean": 0.11927,
+     "g_mean": 0.119271,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2343230,
+     "g_zero_count": 2343227,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.119378,
+     "r_mean": 0.119379,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2409753,
+     "r_zero_count": 2409750,
      "sample_a": 0.188232,
      "sample_b": 0,
      "sample_g": 0,
@@ -10079,7 +10063,7 @@
    "load_report": {
     "map": "_e3_01_03.hpm",
     "terrain_active": true,
-    "total_ms": 7089,
+    "total_ms": 7418,
     "tracks": {
      "Area": {
       "created": 131,
@@ -10091,14 +10075,14 @@
      "Billboard": {
       "created": 35,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 35
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 24
       },
@@ -10107,7 +10091,7 @@
      "Decal": {
       "created": 178,
       "file_missing": false,
-      "ms": 153,
+      "ms": 232,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -10116,14 +10100,14 @@
      "DetailMeshes": {
       "created": 2145,
       "file_missing": false,
-      "ms": 84,
+      "ms": 106,
       "skipped": {},
       "xml": 2145
      },
      "Entity": {
       "created": 465,
       "file_missing": false,
-      "ms": 1946,
+      "ms": 2004,
       "skipped": {},
       "xml": 465
      },
@@ -10160,21 +10144,21 @@
      "ParticleSystem": {
       "created": 23,
       "file_missing": false,
-      "ms": 3,
+      "ms": 4,
       "skipped": {},
       "xml": 23
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 23,
       "file_missing": false,
-      "ms": 826,
+      "ms": 1156,
       "skipped": {},
       "xml": 23
      },
@@ -10188,7 +10172,7 @@
      "StaticObject": {
       "created": 598,
       "file_missing": false,
-      "ms": 3968,
+      "ms": 3758,
       "skipped": {},
       "xml": 598
      },
@@ -10201,7 +10185,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4033084.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-286838.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -10264,9 +10248,9 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 20,
+   "log_warnings": 19,
    "render": {
-    "draw_calls": 1819,
+    "draw_calls": 1773,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 30,
@@ -10278,7 +10262,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.3,
+   "wall_s": 16.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -10312,7 +10296,7 @@
      "building/waste_exhaust_waste_exhaust_large_2:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_oceanbottom_building_waste_exhaust_waste_exhaust_large.dae.v3.msh"
     ],
     "particle_systems": 42,
-    "physics_bodies": 1069,
+    "physics_bodies": 1070,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 15,
     "sound_entities": 29,
@@ -10325,7 +10309,7 @@
    "boot_s": 2.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.999973,
+    "fps": 59.940063,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 0.5,
@@ -10333,7 +10317,7 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 59.999973,
+   "fps": 59.940063,
    "frame": {
     "black_frac": 0.417535,
     "height": 2160,
@@ -10567,7 +10551,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4033547.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-288565.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -10612,7 +10596,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 8.7,
+   "wall_s": 8.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -10654,7 +10638,7 @@
    "boot_s": 2.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.98035,
+    "fps": 59.940063,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 0.5,
@@ -10662,7 +10646,7 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 59.98035,
+   "fps": 59.940063,
    "frame": {
     "black_frac": 0.417535,
     "height": 2160,
@@ -10780,7 +10764,7 @@
    "load_report": {
     "map": "main_menu.hpm",
     "terrain_active": false,
-    "total_ms": 15,
+    "total_ms": 14,
     "tracks": {
      "Area": {
       "created": 1,
@@ -10841,7 +10825,7 @@
      "Light": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
@@ -10855,7 +10839,7 @@
      "ParticleSystem": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -10896,7 +10880,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-4033781.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-288828.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -10941,7 +10925,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 9.1,
+   "wall_s": 8.8,
    "warmup": {
     "frames": 360,
     "timed_out": false

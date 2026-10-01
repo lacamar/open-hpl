@@ -1,0 +1,1352 @@
+#include "SomaAgent.h"
+#include "SomaLux.h"
+#include "SomaLuxEntity.h"
+#include "SomaLuxPlayer.h"
+#include "SomaScriptApi.h"
+#include "SomaScriptBind.h"
+#include "SomaScriptRuntime.h"
+
+#include "impl/tinyXML/tinyxml.h"
+
+#include <angelscript.h>
+#include <cmath>
+#include <cstring>
+#include <map>
+#include <memory>
+#include <new>
+#include <unordered_map>
+
+namespace
+{
+	typedef cSomaLuxEntity E;
+
+	enum
+	{
+		eMsg_StuckCounterIsAtMax = 1,
+		eMsg_EndOfPath = 2,
+		eMsg_AnimationOver = 3,
+		eMsg_SoundHeard = 4,
+		eMsg_TurningDone = 5,
+		eMsg_PlayerDetected = 8,
+		eMsg_PlayerUndetected = 9,
+		eMsg_AtTrackNode = 11,
+		eMsg_EndOfTrack = 12,
+	};
+
+	enum
+	{
+		eComp_User,
+		eComp_Pathfinder,
+		eComp_CharMover,
+		eComp_SoundListener,
+		eComp_StateMachine,
+		eComp_HeadTracker,
+		eComp_ForceEmitter,
+		eComp_BarkMachine,
+		eComp_BackboneTail,
+		eComp_LightSensor,
+	};
+
+	uint64_t Hash64(const tString &s)
+	{
+		uint64_t h = 14695981039346656037ull;
+		for (unsigned char c : s)
+			h = (h ^ c) * 1099511628211ull;
+		return h;
+	}
+
+	float Wrap(float a)
+	{
+		while (a > kPif) a -= k2Pif;
+		while (a < -kPif) a += k2Pif;
+		return a;
+	}
+
+	float YawTo(const cVector3f &avDir) { return std::atan2(-avDir.x, -avDir.z); }
+
+	void SetYawNear(iCharacterBody *apBody, float afYaw) { apBody->SetYaw(apBody->GetYaw() + Wrap(afYaw - apBody->GetYaw())); }
+
+	iCharacterBody *PlayerBody() { return cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL; }
+
+	// cLuxEntityMessageData in the official layout: mvX@12 mvY@24 mlX@36 mlY@40 mID@44 msX@56
+	struct cAgentMessageData
+	{
+		alignas(8) char mBlock[128] = {};
+		cAgentMessageData() { new (mBlock + 56) std::string(); }
+		~cAgentMessageData() { ((std::string *)(mBlock + 56))->~basic_string(); }
+		void Set(const cVector3f &avX, int alX)
+		{
+			memcpy(mBlock + 12, &avX, sizeof(cVector3f));
+			memcpy(mBlock + 36, &alX, sizeof(int));
+		}
+	};
+
+	struct cAgentComponent
+	{
+		cSomaLuxEntity *mpEntity;
+		int mlType;
+		tString msName;
+		bool mbActive = true;
+		cAgentComponent(E *apEnt, int alType) : mpEntity(apEnt), mlType(alType) {}
+		virtual ~cAgentComponent() {}
+		virtual void Update(float) {}
+		virtual void OnMessage(int) {}
+	};
+
+	struct cAgent;
+	cAgent *Agent(E *apEnt);
+
+	//---------------------------------------
+
+	struct cAgentStateMachine : cAgentComponent
+	{
+		std::map<int, tString> mapStates, mapSubStates;
+		int mlCur = -1, mlPrev = -1, mlNext = -1;
+		int mlSubCur = -1, mlSubPrev = -1, mlSubNext = -1;
+		struct cTimer { uint64_t mlId; float mfTime; };
+		std::vector<cTimer> mvTimers;
+		int mlDepth = 0;
+		cAgentMessageData *mpMessage = NULL;
+
+		cAgentStateMachine(E *p) : cAgentComponent(p, eComp_StateMachine) {}
+
+		tString Name(int alId) { auto it = mapStates.find(alId); return it == mapStates.end() ? tString() : it->second; }
+		tString SubName(int alId) { auto it = mapSubStates.find(alId); return it == mapSubStates.end() ? tString() : it->second; }
+
+		void CallVoid(const tString &asState, const char *apSuffix)
+		{
+			if (asState != "")
+				mpEntity->Call("void State_" + asState + "_" + apSuffix + "()");
+		}
+
+		void ChangeState(int alState)
+		{
+			if (mapStates.count(alState) == 0 || ++mlDepth > 16)
+			{
+				--mlDepth;
+				return;
+			}
+			mlNext = alState;
+			CallVoid(Name(mlCur), "Leave");
+			mlPrev = mlCur;
+			mlCur = alState;
+			mlNext = -1;
+			mvTimers.clear();
+			CallVoid(Name(mlCur), "Enter");
+			--mlDepth;
+		}
+
+		void ChangeSubState(int alState)
+		{
+			mlSubNext = alState;
+			if (SubName(mlSubCur) != "")
+				mpEntity->Call("void SubState_" + SubName(mlSubCur) + "_Leave()");
+			mlSubPrev = mlSubCur;
+			mlSubCur = alState;
+			mlSubNext = -1;
+			if (SubName(mlSubCur) != "")
+				mpEntity->Call("void SubState_" + SubName(mlSubCur) + "_Enter()");
+		}
+
+		void AddTimer(uint64_t alId, float afTime)
+		{
+			StopTimer(alId);
+			mvTimers.push_back(cTimer{alId, afTime});
+		}
+
+		void StopTimer(uint64_t alId)
+		{
+			for (size_t i = 0; i < mvTimers.size(); ++i)
+				if (mvTimers[i].mlId == alId)
+				{
+					mvTimers.erase(mvTimers.begin() + i);
+					return;
+				}
+		}
+
+		bool TimerExists(uint64_t alId)
+		{
+			for (const cTimer &t : mvTimers)
+				if (t.mlId == alId)
+					return true;
+			return false;
+		}
+
+		void Update(float afTimeStep) override
+		{
+			int lState = mlCur;
+			std::vector<uint64_t> vDue;
+			for (size_t i = 0; i < mvTimers.size();)
+			{
+				mvTimers[i].mfTime -= afTimeStep;
+				if (mvTimers[i].mfTime <= 0)
+				{
+					vDue.push_back(mvTimers[i].mlId);
+					mvTimers.erase(mvTimers.begin() + i);
+				}
+				else
+					++i;
+			}
+			for (uint64_t lId : vDue)
+			{
+				if (mlCur != lState)
+					break;
+				mpEntity->Call("void State_" + Name(mlCur) + "_TimerUp(uint64)", [lId](asIScriptContext *c) { c->SetArgQWord(0, lId); });
+			}
+			if (Name(mlCur) != "")
+				mpEntity->CallWithFloat("void State_" + Name(mlCur) + "_Update(float)", afTimeStep);
+			mpEntity->CallWithFloat("void State_Default_Update(float)", afTimeStep);
+		}
+
+		void OnMessage(int alMessage) override
+		{
+			bool bHandled = false;
+			if (Name(mlCur) != "")
+				bHandled = mpEntity->CallBool("bool State_" + Name(mlCur) + "_Message(int)", [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); }, false);
+			if (bHandled == false)
+				mpEntity->CallBool("bool State_Default_Message(int)", [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); }, false);
+		}
+	};
+
+	//---------------------------------------
+
+	struct cAgentSpeedState
+	{
+		float mfForward = 1, mfBackward = 1, mfSideways = 1;
+		float mfTurnBreakMul = -1, mfTurnSpeedMul = -1, mfTurnMaxSpeed = -1;
+		float mfForwardAcc = -1, mfForwardDeacc = -1, mfSidewayAcc = -1, mfSidewayDeacc = -1;
+	};
+
+	struct cAgentCharMover : cAgentComponent
+	{
+		iCharacterBody *mpBody;
+		float mfMaxForward = 1, mfMaxBackward = 1;
+		float mfTurnMinBreakAngle = cMath::ToRad(40), mfTurnBreakMul = 0, mfTurnSpeedMul = 3, mfTurnMaxSpeed = 4;
+		float mfStoppedToWalk = 0.05f, mfWalkToRun = 3, mfWalkToStopped = 0.025f, mfRunToWalk = 0.8f;
+		float mfMoveSpeedAnimMul = 1;
+		bool mbUseMoveStateAnims = true;
+		tString msIdleAnim = "Idle", msWalkAnim = "Walk", msRunAnim = "Run", msBackwardAnim;
+		std::map<int, cAgentSpeedState> mapSpeedStates;
+		int mlEditState = -1, mlSpeedState = -1;
+		bool mbMoving = false, mbSlowDownAtGoal = false;
+		cVector3f mvGoal = 0;
+		bool mbTurning = false;
+		float mfTurnGoal = 0;
+		tString msTurnedCallback;
+		int mlAnimState = -1;
+		float mfStuck = 0;
+
+		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
+
+		cAgentSpeedState *Edit() { return mlEditState >= 0 ? &mapSpeedStates[mlEditState] : NULL; }
+		cAgentSpeedState *Current()
+		{
+			auto it = mapSpeedStates.find(mlSpeedState);
+			return it == mapSpeedStates.end() ? NULL : &it->second;
+		}
+
+		void LoadFromVariables(cResourceVarsObject *apVars)
+		{
+			if (apVars == NULL)
+				return;
+			msIdleAnim = apVars->GetVarString("CharMover_IdleAnim", msIdleAnim);
+			msWalkAnim = apVars->GetVarString("CharMover_WalkAnim", msWalkAnim);
+			msRunAnim = apVars->GetVarString("CharMover_RunAnim", msRunAnim);
+			msBackwardAnim = apVars->GetVarString("CharMover_BackwardAnim", msBackwardAnim);
+		}
+
+		void MoveToPos(const cVector3f &avPos, bool abSlowDown)
+		{
+			mvGoal = avPos;
+			mbMoving = true;
+			mbSlowDownAtGoal = abSlowDown;
+			mbTurning = false;
+		}
+
+		void Stop() { mbMoving = false; }
+
+		void TurnTo(float afYaw)
+		{
+			mbMoving = false;
+			mbTurning = true;
+			mfTurnGoal = afYaw;
+		}
+
+		float ForwardSpeed()
+		{
+			cAgentSpeedState *pState = Current();
+			return pState ? pState->mfForward : mfMaxForward;
+		}
+
+		void PlayMoveAnim(int alState, float afSpeed)
+		{
+			if (mbUseMoveStateAnims == false)
+			{
+				mlAnimState = -1;
+				return;
+			}
+			const tString &sAnim = alState == 0 ? msIdleAnim : alState == 1 ? msWalkAnim : msRunAnim;
+			if (alState != mlAnimState && sAnim != "")
+			{
+				mlAnimState = alState;
+				mpEntity->PlayAnimation(sAnim, 0.3f, true, "");
+			}
+			if (alState > 0 && mpEntity->mpMesh && mpEntity->mlCurrentAnim >= 0)
+				if (cAnimationState *pAnim = mpEntity->mpMesh->GetAnimationState(mpEntity->mlCurrentAnim))
+					pAnim->SetSpeed(cMath::Max(afSpeed * mfMoveSpeedAnimMul / cMath::Max(alState == 1 ? 1.0f : mfWalkToRun, 0.1f), 0.2f));
+		}
+
+		void Update(float afTimeStep) override
+		{
+			if (mpBody == NULL)
+				return;
+			cAgentSpeedState *pState = Current();
+			float fTurnSpeedMul = pState && pState->mfTurnSpeedMul >= 0 ? pState->mfTurnSpeedMul : mfTurnSpeedMul;
+			float fTurnMax = pState && pState->mfTurnMaxSpeed >= 0 ? pState->mfTurnMaxSpeed : mfTurnMaxSpeed;
+			float fBreakMul = pState && pState->mfTurnBreakMul >= 0 ? pState->mfTurnBreakMul : mfTurnBreakMul;
+
+			float fYaw = mpBody->GetYaw();
+			float fGoalYaw = fYaw;
+			bool bRotate = false;
+			float fDist = 0;
+			if (mbMoving)
+			{
+				cVector3f vDelta = mvGoal - mpBody->GetFeetPosition();
+				vDelta.y = 0;
+				fDist = vDelta.Length();
+				if (fDist > 0.05f)
+				{
+					fGoalYaw = YawTo(vDelta);
+					bRotate = true;
+				}
+			}
+			else if (mbTurning)
+			{
+				fGoalYaw = mfTurnGoal;
+				bRotate = true;
+			}
+			float fDiff = Wrap(fGoalYaw - fYaw);
+			if (bRotate)
+			{
+				float fStep = cMath::Min(std::fabs(fDiff) * fTurnSpeedMul, fTurnMax) * afTimeStep;
+				fStep = cMath::Min(fStep, std::fabs(fDiff));
+				mpBody->SetYaw(fYaw + (fDiff < 0 ? -fStep : fStep));
+				if (mbTurning && std::fabs(fDiff) < cMath::ToRad(2))
+				{
+					mbTurning = false;
+					SetYawNear(mpBody, fGoalYaw);
+					SomaAgentSendMessage(mpEntity, eMsg_TurningDone);
+					if (msTurnedCallback != "")
+						mpEntity->Call("void " + msTurnedCallback + "()");
+				}
+			}
+
+			float fWanted = 0;
+			if (mbMoving)
+			{
+				fWanted = ForwardSpeed();
+				if (std::fabs(fDiff) > mfTurnMinBreakAngle)
+					fWanted *= fBreakMul;
+				if (mbSlowDownAtGoal && fDist < 1.0f)
+					fWanted *= cMath::Max(fDist, 0.2f);
+			}
+			mpBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, cMath::Max(fWanted, 0.001f));
+			if (pState && pState->mfForwardAcc > 0)
+				mpBody->SetMoveAcc(eCharDir_Forward, pState->mfForwardAcc);
+			if (pState && pState->mfForwardDeacc > 0)
+				mpBody->SetMoveDeacc(eCharDir_Forward, pState->mfForwardDeacc);
+			if (fWanted > 0)
+				mpBody->Move(eCharDir_Forward, 1);
+
+			float fSpeed = mpBody->GetMoveSpeed(eCharDir_Forward);
+			if (fWanted > 0.05f && fSpeed < 0.02f)
+				mfStuck += afTimeStep;
+			else
+				mfStuck = 0;
+
+			int lAnim = mlAnimState < 0 ? 0 : mlAnimState;
+			if (lAnim == 0 && fSpeed > mfStoppedToWalk)
+				lAnim = 1;
+			else if (lAnim == 1 && fSpeed > mfWalkToRun)
+				lAnim = 2;
+			else if (lAnim == 2 && fSpeed < mfRunToWalk)
+				lAnim = 1;
+			else if (lAnim == 1 && fSpeed < mfWalkToStopped)
+				lAnim = 0;
+			PlayMoveAnim(lAnim, fSpeed);
+		}
+	};
+
+	//---------------------------------------
+
+	struct cNodeData
+	{
+		std::unique_ptr<cAINodeContainer> mpContainer;
+		std::unique_ptr<cAStarHandler> mpAStar;
+	};
+	std::map<std::pair<cWorld *, tString>, cNodeData> gmapContainers;
+
+	cNodeData *GetContainer(cSomaLuxMap *apMap, const tString &asName, const cVector3f &avSize, float afMaxHeight)
+	{
+		cWorld *pWorld = apMap->GetWorld();
+		auto key = std::make_pair(pWorld, asName);
+		auto it = gmapContainers.find(key);
+		if (it != gmapContainers.end())
+			return &it->second;
+		for (auto i = gmapContainers.begin(); i != gmapContainers.end();)
+			i = i->first.first != pWorld ? gmapContainers.erase(i) : std::next(i);
+
+		tWString sFile = cString::SetFileExtW(pWorld->GetFilePath(), _W("")) + _W("_") + cString::To16Char(asName) + _W(".nodes");
+		std::map<tString, int> mapIds;
+		TiXmlDocument doc;
+		FILE *pFile = cPlatform::OpenFile(sFile, _W("rb"));
+		bool bHasFile = pFile && doc.LoadFile(pFile);
+		if (pFile)
+			fclose(pFile);
+		if (bHasFile && doc.RootElement())
+			for (TiXmlElement *p = doc.RootElement()->FirstChildElement("Node"); p; p = p->NextSiblingElement("Node"))
+				mapIds[cString::ToString(p->Attribute("Name"), "")] = cString::ToInt(p->Attribute("ID"), -1);
+
+		cNodeData &data = gmapContainers[key];
+		data.mpContainer.reset(new cAINodeContainer(asName, "PathNode", pWorld, avSize));
+		cAINodeContainer *pCont = data.mpContainer.get();
+		pCont->SetMinEdges(2);
+		pCont->SetMaxEdges(5);
+		pCont->SetMaxEdgeDistance(5);
+		pCont->SetMaxHeight(afMaxHeight);
+		pCont->SetNodeIsAtCenter(false);
+		int lNextId = 1 << 30;
+		for (cSomaLuxEntity *pEnt : apMap->GetEntities())
+			if (pEnt->msClassName == "PathNode")
+			{
+				auto idIt = mapIds.find(pEnt->msName);
+				pCont->AddNode(pEnt->msName, idIt != mapIds.end() ? idIt->second : lNextId++, pEnt->GetPosition(), NULL);
+			}
+		if (bHasFile)
+			pCont->LoadFromFile(sFile);
+		else
+			pCont->Compile();
+		data.mpAStar.reset(new cAStarHandler(pCont));
+		data.mpAStar->SetMaxIterations(2000);
+		Log("SOMA agent: node container '%s' %d nodes%s\n", asName.c_str(), pCont->GetNodeNum(), bHasFile ? "" : " (compiled)");
+		return &data;
+	}
+
+	struct cAgentTrackNode
+	{
+		tString msNode;
+		float mfMinWait, mfMaxWait;
+		tString msAnim;
+		bool mbLoopAnim;
+	};
+
+	struct cAgentPathfinder : cAgentComponent
+	{
+		tString msContainer;
+		cNodeData *mpNodes = NULL;
+		float mfMaxHeight = 1.0f;
+		std::vector<cVector3f> mvPath;
+		size_t mlPathIdx = 0;
+		bool mbMoving = false, mbExact = false;
+		cVector3f mvGoal = 0;
+		tString msResultCallback, msEndOfPathCallback;
+		bool mbCallbackInMap = false;
+		std::vector<cAINode *> mvNodeArray;
+		std::vector<float> mvNodeArrayDist;
+
+		std::vector<cAgentTrackNode> mvTrack;
+		int mlTrackIdx = -1;
+		bool mbTrackActive = false, mbTrackPaused = false, mbTrackLoop = false;
+		bool mbAtTrackNode = false;
+		float mfTrackWait = 0, mfTrackFreq = 1;
+		tString msTrackCallback;
+
+		cAgentPathfinder(E *p) : cAgentComponent(p, eComp_Pathfinder) {}
+
+		cAgentCharMover *Mover();
+
+		cNodeData *Nodes()
+		{
+			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+			if (mpNodes == NULL && pMap && msContainer != "")
+				mpNodes = GetContainer(pMap, msContainer, cVector3f(0.6f, 1.5f, 0.6f), mfMaxHeight);
+			return mpNodes;
+		}
+
+		cVector3f Feet();
+
+		bool BuildPath(const cVector3f &avGoal, std::vector<cVector3f> &avOut)
+		{
+			avOut.clear();
+			cNodeData *pNodes = Nodes();
+			if (pNodes == NULL)
+			{
+				avOut.push_back(avGoal);
+				return true;
+			}
+			tAINodeList lstNodes;
+			if (pNodes->mpAStar->GetPath(Feet(), avGoal, &lstNodes) == false)
+				return false;
+			for (auto it = lstNodes.rbegin(); it != lstNodes.rend(); ++it)
+				avOut.push_back((*it)->GetPosition());
+			avOut.push_back(avGoal);
+			return true;
+		}
+
+		void MoveTo(const cVector3f &avGoal, bool abExact, const tString &asCallback, bool abInMap)
+		{
+			mvGoal = avGoal;
+			mbExact = abExact;
+			msResultCallback = asCallback;
+			mbCallbackInMap = abInMap;
+			if (BuildPath(avGoal, mvPath) == false)
+				mvPath.assign(1, avGoal);
+			mlPathIdx = 0;
+			mbMoving = true;
+			if (cAgentCharMover *pMover = Mover())
+				pMover->MoveToPos(mvPath[0], abExact && mvPath.size() == 1);
+		}
+
+		void Stop()
+		{
+			mbMoving = false;
+			if (cAgentCharMover *pMover = Mover())
+				pMover->Stop();
+		}
+
+		void RunResultCallback(bool abOk)
+		{
+			if (msResultCallback == "")
+				return;
+			tString sFunc = msResultCallback;
+			msResultCallback = "";
+			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+			if (mbCallbackInMap && pMap && pMap->GetScript())
+				cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sFunc + "(const tString &in, bool)", [&](asIScriptContext *c) {
+					c->SetArgObject(0, &mpEntity->msName);
+					c->SetArgByte(1, abOk);
+				});
+			else
+				mpEntity->Call("void " + sFunc + "(bool)", [abOk](asIScriptContext *c) { c->SetArgByte(0, abOk); });
+		}
+
+		void ArriveEnd()
+		{
+			mbMoving = false;
+			if (cAgentCharMover *pMover = Mover())
+				pMover->Stop();
+			if (mbTrackActive && mlTrackIdx >= 0 && mlTrackIdx < (int)mvTrack.size())
+			{
+				mbAtTrackNode = true;
+				const cAgentTrackNode &node = mvTrack[mlTrackIdx];
+				mfTrackWait = cMath::RandRectf(node.mfMinWait, node.mfMaxWait);
+				if (node.msAnim != "")
+					mpEntity->PlayAnimation(node.msAnim, 0.3f, node.mbLoopAnim, "");
+				SomaAgentSendMessage(mpEntity, eMsg_AtTrackNode);
+			}
+			else
+			{
+				SomaAgentSendMessage(mpEntity, eMsg_EndOfPath);
+				if (msEndOfPathCallback != "")
+					mpEntity->Call("void " + msEndOfPathCallback + "()");
+				RunResultCallback(true);
+			}
+		}
+
+		void StartTrackNode()
+		{
+			if (mlTrackIdx < 0 || mlTrackIdx >= (int)mvTrack.size())
+				return;
+			cNodeData *pNodes = Nodes();
+			cAINode *pNode = pNodes ? pNodes->mpContainer->GetNodeFromName(mvTrack[mlTrackIdx].msNode) : NULL;
+			if (pNode == NULL)
+			{
+				Warning("SOMA agent '%s': track node '%s' not found\n", mpEntity->msName.c_str(), mvTrack[mlTrackIdx].msNode.c_str());
+				mbTrackActive = false;
+				return;
+			}
+			mbAtTrackNode = false;
+			tString sKeep = msResultCallback;
+			MoveTo(pNode->GetPosition(), false, "", false);
+			msResultCallback = sKeep;
+		}
+
+		void GoToNextTrackNode()
+		{
+			if (mvTrack.empty())
+				return;
+			++mlTrackIdx;
+			if (mlTrackIdx >= (int)mvTrack.size())
+			{
+				SomaAgentSendMessage(mpEntity, eMsg_EndOfTrack);
+				if (msTrackCallback != "")
+					mpEntity->Call("void " + msTrackCallback + "()");
+				if (mbTrackLoop == false)
+				{
+					mbTrackActive = false;
+					mlTrackIdx = (int)mvTrack.size() - 1;
+					return;
+				}
+				mlTrackIdx = 0;
+			}
+			StartTrackNode();
+		}
+
+		void Update(float afTimeStep) override
+		{
+			if (mbTrackActive && mbTrackPaused == false && mbAtTrackNode && mbMoving == false)
+			{
+				mfTrackWait -= afTimeStep;
+				if (mfTrackWait <= 0)
+					GoToNextTrackNode();
+			}
+			if (mbMoving == false || mvPath.empty())
+				return;
+			cVector3f vDelta = mvPath[mlPathIdx] - Feet();
+			bool bLast = mlPathIdx + 1 >= mvPath.size();
+			float fHeight = std::fabs(vDelta.y);
+			vDelta.y = 0;
+			float fReach = bLast ? (mbExact ? 0.15f : 0.4f) : 0.6f;
+			if (vDelta.Length() < fReach && fHeight < 2.0f)
+			{
+				if (bLast)
+				{
+					ArriveEnd();
+					return;
+				}
+				++mlPathIdx;
+				if (cAgentCharMover *pMover = Mover())
+					pMover->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
+			}
+		}
+
+		cAINode *NodeAtPos(const cVector3f &avPos, float afMin, float afMax, bool abClosest, bool abLOS, cAINode *apSkip)
+		{
+			cNodeData *pNodes = Nodes();
+			if (pNodes == NULL)
+				return NULL;
+			cAINode *pBest = NULL;
+			float fBest = 1e30f;
+			std::vector<cAINode *> vCandidates;
+			for (int i = 0; i < pNodes->mpContainer->GetNodeNum(); ++i)
+			{
+				cAINode *pNode = pNodes->mpContainer->GetNode(i);
+				if (pNode == apSkip)
+					continue;
+				float fDist = cMath::Vector3Dist(pNode->GetPosition(), avPos);
+				if (fDist < afMin || fDist > afMax)
+					continue;
+				if (abLOS && pNodes->mpContainer->FreePath(avPos + cVector3f(0, 0.5f, 0), pNode->GetPosition() + cVector3f(0, 0.5f, 0), 1, eAIFreePathFlag_SkipDynamic) == false)
+					continue;
+				vCandidates.push_back(pNode);
+				if (fDist < fBest)
+				{
+					fBest = fDist;
+					pBest = pNode;
+				}
+			}
+			if (abClosest || vCandidates.empty())
+				return pBest;
+			return vCandidates[cMath::RandRectl(0, (int)vCandidates.size() - 1)];
+		}
+	};
+
+	//---------------------------------------
+
+	struct cAgentBarkMachine : cAgentComponent
+	{
+		struct cState
+		{
+			tString msSound;
+			float mfMin = 0, mfMax = 0;
+		};
+		std::map<int, cState> mapStates;
+		int mlEdit = -1, mlCur = -1;
+		float mfCount = 0;
+
+		cAgentBarkMachine(E *p) : cAgentComponent(p, eComp_BarkMachine) {}
+
+		void Update(float afTimeStep) override
+		{
+			auto it = mapStates.find(mlCur);
+			if (mbActive == false || it == mapStates.end() || it->second.msSound == "")
+				return;
+			mfCount -= afTimeStep;
+			if (mfCount > 0)
+				return;
+			mfCount = cMath::RandRectf(it->second.mfMin, it->second.mfMax);
+			if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+				if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity(mpEntity->msName + "_Bark", it->second.msSound, true))
+					pSound->SetPosition(mpEntity->GetPosition());
+		}
+	};
+
+	struct cAgentSoundListener : cAgentComponent
+	{
+		float mfHearRadius = 30, mfRadiusMul = 1, mfMinRadius = 0, mfMaxRadius = 1000, mfIgnoreRadius = 0, mfMaxPlayerInteractTime = 0;
+		int mlMinPrio = 0;
+		cAgentSoundListener(E *p) : cAgentComponent(p, eComp_SoundListener) {}
+	};
+
+	struct cAgentHeadTracker : cAgentComponent
+	{
+		cSomaLuxEntity *mpTrack = NULL;
+		float mfMaxAngle = cMath::ToRad(70);
+		cAgentHeadTracker(E *p) : cAgentComponent(p, eComp_HeadTracker) { mbActive = false; }
+	};
+
+	struct cGenericComponent : cAgentComponent
+	{
+		cGenericComponent(E *p, int alType) : cAgentComponent(p, alType) {}
+	};
+
+	//---------------------------------------
+
+	struct cAgent
+	{
+		cSomaLuxEntity *mpEnt;
+		iCharacterBody *mpBody = NULL;
+		cMatrixf mtxMeshOffset = cMatrixf::Identity;
+		std::vector<std::unique_ptr<cAgentComponent>> mvComponents;
+		cAgentMessageData mMessage;
+		tString msMessageCallback;
+
+		bool mbSensesActive = true, mbUpdateDetection = true;
+		float mfFOV = cMath::ToRad(90), mfFOVMul = 1, mfSightRange = 30, mfSightRangeMul = 1, mfEyeHeight = 0.9f;
+		float mfDetectMinTime = 0, mfDetectCount = 0, mfUnseenTime = 0;
+		bool mbSeen = false, mbDetected = false;
+		cVector3f mvLastKnownPlayerPos = 0;
+		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
+		float mfMaxDoorDist = 1, mfCheckDoorsCount = 0, mfDoorCheckTimer = 0;
+
+		template <class T> T *Find(int alType)
+		{
+			for (auto &p : mvComponents)
+				if (p->mlType == alType)
+					return static_cast<T *>(p.get());
+			return NULL;
+		}
+
+		cVector3f Eye() { return mpBody ? mpBody->GetFeetPosition() + cVector3f(0, mpBody->GetSize().y * mfEyeHeight, 0) : mpEnt->GetPosition(); }
+		cVector3f Forward() { return mpBody ? mpBody->GetForward() : cVector3f(0, 0, -1); }
+
+		void UpdateSenses(float afTimeStep)
+		{
+			iCharacterBody *pPlayer = PlayerBody();
+			if (mbSensesActive == false || mbUpdateDetection == false || pPlayer == NULL)
+				return;
+			cVector3f vEye = Eye();
+			cVector3f vHead = pPlayer->GetPosition() + cVector3f(0, pPlayer->GetSize().y * 0.4f, 0);
+			cVector3f vDir = vHead - vEye;
+			float fDist = vDir.Length();
+			bool bSeen = fDist < mfSightRange * mfSightRangeMul &&
+						 cMath::Vector3Angle(cMath::Vector3Normalize(vDir), Forward()) < mfFOV * mfFOVMul * 0.5f &&
+						 SomaLineOfSight(vEye, vHead, mpEnt);
+			mbSeen = bSeen;
+			if (bSeen)
+			{
+				mvLastKnownPlayerPos = pPlayer->GetFeetPosition();
+				mfUnseenTime = 0;
+				mfDetectCount += afTimeStep;
+				if (mbDetected == false && mfDetectCount >= mfDetectMinTime)
+				{
+					mbDetected = true;
+					SomaAgentSendMessage(mpEnt, eMsg_PlayerDetected, mvLastKnownPlayerPos);
+				}
+			}
+			else
+			{
+				mfDetectCount = cMath::Max(mfDetectCount - afTimeStep, 0.0f);
+				mfUnseenTime += afTimeStep;
+				if (mbDetected && mfUnseenTime > 1.0f)
+				{
+					mbDetected = false;
+					SomaAgentSendMessage(mpEnt, eMsg_PlayerUndetected, mvLastKnownPlayerPos);
+				}
+			}
+		}
+
+		void CheckForDoors(float afTimeStep)
+		{
+			mfCheckDoorsCount -= afTimeStep;
+			mfDoorCheckTimer -= afTimeStep;
+			if (mbCheckForDoors == false || mpBody == NULL || mfCheckDoorsCount > 0 || mfDoorCheckTimer > 0 || mpEnt->mpMap == NULL)
+				return;
+			mfDoorCheckTimer = 0.1f;
+			if (mpBody->GetMoveSpeed(eCharDir_Forward) < 0.05f)
+				return;
+			float fMax = mpBody->GetSize().x * 0.5f + mfMaxDoorDist;
+			for (cSomaLuxEntity *pDoor : mpEnt->mpMap->GetEntities())
+			{
+				float fDist;
+				if (pDoor->mbIsDoor && pDoor->mbIsClosedDoor && pDoor->mbActive &&
+					SomaRayHitsEntity(pDoor, mpBody->GetPosition(), Forward(), fMax, fDist))
+				{
+					memcpy(mMessage.mBlock + 44, &pDoor->mID, sizeof(cSomaID));
+					SomaAgentSendMessage(mpEnt, 18, pDoor->GetPosition());
+					return;
+				}
+			}
+		}
+
+		void SyncMesh()
+		{
+			if (mpBody == NULL || mpEnt->mpMesh == NULL)
+				return;
+			cMatrixf mtx = cMath::MatrixRotateY(mpBody->GetYaw() + kPif);
+			mtx.SetTranslation(mpBody->GetFeetPosition());
+			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxMeshOffset));
+		}
+	};
+
+	std::unordered_map<cSomaLuxEntity *, std::unique_ptr<cAgent>> gmapAgents;
+
+	cAgent *Agent(E *apEnt)
+	{
+		auto it = gmapAgents.find(apEnt);
+		return it == gmapAgents.end() ? NULL : it->second.get();
+	}
+
+	cAgentCharMover *cAgentPathfinder::Mover()
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		return pAgent ? pAgent->Find<cAgentCharMover>(eComp_CharMover) : NULL;
+	}
+
+	cVector3f cAgentPathfinder::Feet()
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		return pAgent && pAgent->mpBody ? pAgent->mpBody->GetFeetPosition() : mpEntity->GetPosition();
+	}
+
+	cAgent *AgentOrNew(E *apEnt)
+	{
+		std::unique_ptr<cAgent> &p = gmapAgents[apEnt];
+		if (p == NULL)
+		{
+			p.reset(new cAgent());
+			p->mpEnt = apEnt;
+		}
+		return p.get();
+	}
+
+	template <class T> T *AddComponent(E *apEnt, T *apComp)
+	{
+		AgentOrNew(apEnt)->mvComponents.emplace_back(apComp);
+		return apComp;
+	}
+
+	cVector3f PlayerFeet()
+	{
+		iCharacterBody *p = PlayerBody();
+		return p ? p->GetFeetPosition() : cVector3f(0);
+	}
+
+	cVector3f AgentPos(E *p)
+	{
+		cAgent *pAgent = Agent(p);
+		return pAgent && pAgent->mpBody ? pAgent->mpBody->GetFeetPosition() : p->GetPosition();
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void SomaCreateAgent(cSomaLuxEntity *apEnt)
+{
+	cSomaLuxMap *pMap = apEnt->mpMap;
+	if (pMap == NULL || (Agent(apEnt) && Agent(apEnt)->mpBody))
+		return;
+	cAgent *pAgent = AgentOrNew(apEnt);
+
+	cResourceVarsObject &v = apEnt->mVars;
+	cVector3f vSize = v.GetVarVector3f("CharBodySize", cVector3f(0.9f, 1.9f, 0.9f));
+	pAgent->mpBody = pMap->GetWorld()->GetPhysicsWorld()->CreateCharacterBody(apEnt->msName, vSize);
+	iCharacterBody *pBody = pAgent->mpBody;
+	pBody->SetMass(80);
+	pBody->SetCustomGravity(cVector3f(0, -12, 0));
+	pBody->SetCustomGravityActive(true);
+	pBody->SetGravityActive(true);
+	pBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, 1);
+	pBody->SetMaxNegativeMoveSpeed(eCharDir_Forward, -1);
+
+	cMatrixf mtx = apEnt->m_mtxOnLoad;
+	pBody->SetFeetPosition(mtx.GetTranslation());
+	pBody->SetYaw(std::atan2(mtx.m[0][2], mtx.m[2][2]) - kPif);
+
+	cVector3f vRot = v.GetVarVector3f("MeshRotationOffset", 0);
+	cMatrixf mtxOffset = cMath::MatrixRotate(cVector3f(cMath::ToRad(vRot.x), cMath::ToRad(vRot.y), cMath::ToRad(vRot.z)), eEulerRotationOrder_XYZ);
+	mtxOffset = cMath::MatrixMul(mtxOffset, cMath::MatrixScale(v.GetVarVector3f("MeshScaleOffset", 1)));
+	mtxOffset.SetTranslation(v.GetVarVector3f("MeshPositionOffset", 0));
+	pAgent->mtxMeshOffset = mtxOffset;
+	pAgent->mbSensesActive = apEnt->mInstanceVars.GetVarBool("SensesActive", true);
+	pAgent->mbStaticCollider = apEnt->mInstanceVars.GetVarBool("StaticCollider", false);
+	pBody->SetGravityActive(pAgent->mbStaticCollider == false);
+	pBody->SetTestCollision(pAgent->mbStaticCollider == false);
+	pBody->SetActive(apEnt->mbActive);
+	pAgent->SyncMesh();
+}
+
+void SomaDestroyAgent(cSomaLuxEntity *apEnt)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL)
+		return;
+	if (pAgent->mpBody && apEnt->mpMap)
+		apEnt->mpMap->GetWorld()->GetPhysicsWorld()->DestroyCharacterBody(pAgent->mpBody);
+	gmapAgents.erase(apEnt);
+	if (gmapAgents.empty())
+		gmapContainers.clear();
+}
+
+void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX)
+{
+	if (cAgent *pAgent = Agent(apEnt))
+		if (pAgent->mpBody)
+			pAgent->mpBody->SetActive(abX);
+}
+
+bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL || pAgent->mpBody == NULL)
+		return false;
+	aMtx = cMatrixf::Identity;
+	aMtx.SetTranslation(pAgent->mpBody->GetPosition());
+	return true;
+}
+
+bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL || pAgent->mpBody == NULL)
+		return false;
+	pAgent->mpBody->SetPosition(aMtx.GetTranslation());
+	pAgent->SyncMesh();
+	return true;
+}
+
+void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f &avX, int alX)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL)
+		return;
+	if (alMessage != 18)
+		memset(pAgent->mMessage.mBlock + 44, 0, sizeof(cSomaID));
+	pAgent->mMessage.Set(avX, alX);
+	void *pData = pAgent->mMessage.mBlock;
+	apEnt->Call("void OnRecieveMessage(int, cLuxEntityMessageData@)", [&](asIScriptContext *c) {
+		c->SetArgDWord(0, alMessage);
+		c->SetArgAddress(1, pData);
+	});
+	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
+		pSM->OnMessage(alMessage);
+}
+
+void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL || apEnt->mbActive == false)
+		return;
+	pAgent->UpdateSenses(afTimeStep);
+	pAgent->CheckForDoors(afTimeStep);
+	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
+		if (pAgent->mvComponents[i]->mbActive)
+			pAgent->mvComponents[i]->Update(afTimeStep);
+	pAgent->SyncMesh();
+}
+
+void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio)
+{
+	for (auto &it : gmapAgents)
+	{
+		cAgent *pAgent = it.second.get();
+		cAgentSoundListener *pListener = pAgent->Find<cAgentSoundListener>(eComp_SoundListener);
+		if (pListener == NULL || pListener->mbActive == false || pAgent->mpEnt->mbActive == false || alPrio < pListener->mlMinPrio)
+			continue;
+		float fRadius = cMath::Clamp(afRadius * pListener->mfRadiusMul, pListener->mfMinRadius, pListener->mfMaxRadius);
+		float fDist = cMath::Vector3Dist(AgentPos(pAgent->mpEnt), avPos);
+		if (fDist < fRadius && fDist < pListener->mfHearRadius + fRadius && fDist >= pListener->mfIgnoreRadius)
+			SomaAgentSendMessage(pAgent->mpEnt, eMsg_SoundHeard, avPos, alPrio);
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void SomaRegisterAgentNatives(asIScriptEngine *e)
+{
+	typedef const tString &S;
+	typedef const cVector3f &V;
+
+	SOMA_FUNC(e, "uint64 H64(const tString&in asStr)", +[](S s) -> asQWORD { return Hash64(s); });
+
+	// Agent
+	const char *A = "cLuxAgent";
+	SOMA_METHOD(e, A, "iCharacterBody@ GetCharBody()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mpBody : (iCharacterBody *)NULL; });
+	SOMA_METHOD(e, A, "float GetDistanceToPlayer()", +[](E *p) { return cMath::Vector3Dist(AgentPos(p), PlayerFeet()); });
+	SOMA_METHOD(e, A, "float GetDistanceToPlayer2D()", +[](E *p) { cVector3f d = AgentPos(p) - PlayerFeet(); d.y = 0; return d.Length(); });
+	SOMA_METHOD(e, A, "float GetDistanceToPos(const cVector3f&in avPos)", +[](E *p, V v) { return cMath::Vector3Dist(AgentPos(p), v); });
+	SOMA_METHOD(e, A, "float GetDistanceToPos2D(const cVector3f&in avPos)", +[](E *p, V v) { cVector3f d = AgentPos(p) - v; d.y = 0; return d.Length(); });
+	SOMA_METHOD(e, A, "const cVector3f& GetPlayerPos()", +[](E *) -> const cVector3f & { static cVector3f v; iCharacterBody *b = PlayerBody(); v = b ? b->GetPosition() : cVector3f(0); return v; });
+	SOMA_METHOD(e, A, "cVector3f GetPlayerFeetPos()", +[](E *) { return PlayerFeet(); });
+	SOMA_METHOD(e, A, "cVector3f GetPlayerHeadPos()", +[](E *) { iCharacterBody *b = PlayerBody(); return b ? b->GetPosition() + cVector3f(0, b->GetSize().y * 0.4f, 0) : cVector3f(0); });
+	SOMA_METHOD(e, A, "cVector3f GetEyePostion()", +[](E *p) { cAgent *a = Agent(p); return a ? a->Eye() : p->GetPosition(); });
+	SOMA_METHOD(e, A, "void SetRelativeEyeHeight(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfEyeHeight = x; });
+	SOMA_METHOD(e, A, "float GetRelativeEyeHeight()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfEyeHeight : 0.0f; });
+	SOMA_METHOD(e, A, "bool GetPointIsInFOV(const cVector3f&in avPoint, float afFOV, const cVector3f &in avForward)", +[](E *p, V pt, float fov, V fwd) {
+		cAgent *a = Agent(p);
+		cVector3f vDir = cMath::Vector3Normalize(pt - (a ? a->Eye() : p->GetPosition()));
+		return cMath::Vector3Angle(vDir, cMath::Vector3Normalize(fwd)) < fov * 0.5f;
+	});
+	SOMA_METHOD(e, A, "bool GetPlayerIsInFOV(float afFOV, const cVector3f &in avForward)", +[](E *p, float fov, V fwd) {
+		cVector3f vDir = cMath::Vector3Normalize(PlayerFeet() - AgentPos(p));
+		return cMath::Vector3Angle(vDir, cMath::Vector3Normalize(fwd)) < fov * 0.5f;
+	});
+	SOMA_METHOD(e, A, "bool GetPlayerIsInLineOfSight()", +[](E *p) {
+		cAgent *a = Agent(p);
+		iCharacterBody *b = PlayerBody();
+		return a && b && SomaLineOfSight(a->Eye(), b->GetPosition(), p);
+	});
+	SOMA_METHOD(e, A, "bool GetPlayerIsInLineOfSight(float afFOV, const cVector3f &in avForward, bool abCheckFOV)", +[](E *p, float fov, V fwd, bool bFov) {
+		cAgent *a = Agent(p);
+		iCharacterBody *b = PlayerBody();
+		if (a == NULL || b == NULL)
+			return false;
+		if (bFov && cMath::Vector3Angle(cMath::Vector3Normalize(b->GetPosition() - a->Eye()), cMath::Vector3Normalize(fwd)) > fov * 0.5f)
+			return false;
+		return SomaLineOfSight(a->Eye(), b->GetPosition(), p);
+	});
+	SOMA_METHOD(e, A, "float GetAngleToPos2D(const cVector3f&in avPos)", +[](E *p, V v) {
+		cAgent *a = Agent(p);
+		cVector3f d = v - AgentPos(p);
+		d.y = 0;
+		return a && a->mpBody ? std::fabs(Wrap(YawTo(d) - a->mpBody->GetYaw())) : 0.0f;
+	});
+	SOMA_METHOD(e, A, "float GetAngleToPlayer2D()", +[](E *p) {
+		cAgent *a = Agent(p);
+		cVector3f d = PlayerFeet() - AgentPos(p);
+		d.y = 0;
+		return a && a->mpBody ? std::fabs(Wrap(YawTo(d) - a->mpBody->GetYaw())) : 0.0f;
+	});
+	SOMA_METHOD(e, A, "void SetSensesActive(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbSensesActive = b; });
+	SOMA_METHOD(e, A, "bool GetSensesActive()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSensesActive; });
+	SOMA_METHOD(e, A, "void SetPlayerDetectedMinTime(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfDetectMinTime = x; });
+	SOMA_METHOD(e, A, "float GetPlayerDetectedCount()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfDetectCount : 0.0f; });
+	SOMA_METHOD(e, A, "void SetUpdatePlayerDetection(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbUpdateDetection = b; });
+	SOMA_METHOD(e, A, "bool SetUpdatePlayerDetection()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbUpdateDetection; });
+	SOMA_METHOD(e, A, "bool PlayerIsSeen()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSeen; });
+	SOMA_METHOD(e, A, "bool PlayerIsDetected()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbDetected; });
+	SOMA_METHOD(e, A, "void ResetPlayerDetectionState()", +[](E *p) { if (cAgent *a = Agent(p)) { a->mbDetected = a->mbSeen = false; a->mfDetectCount = 0; } });
+	SOMA_METHOD(e, A, "void SetFOV(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfFOV = x; });
+	SOMA_METHOD(e, A, "float GetFOV()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfFOV : 0.0f; });
+	SOMA_METHOD(e, A, "void SetFOVMul(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfFOVMul = x; });
+	SOMA_METHOD(e, A, "float GetFOVMul()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfFOVMul : 1.0f; });
+	SOMA_METHOD(e, A, "void SetSightRange(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfSightRange = x; });
+	SOMA_METHOD(e, A, "float GetSightRange()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRange : 0.0f; });
+	SOMA_METHOD(e, A, "void SetSightRangeMul(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfSightRangeMul = x; });
+	SOMA_METHOD(e, A, "float GetSightRangeMul()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRangeMul : 1.0f; });
+	SOMA_METHOD(e, A, "const cVector3f& GetLastKnownPlayerPos()", +[](E *p) -> const cVector3f & { static cVector3f z(0); cAgent *a = Agent(p); return a ? a->mvLastKnownPlayerPos : z; });
+	SOMA_METHOD(e, A, "float GetDistFromLastKnownToActualPlayerPos()", +[](E *p) { cAgent *a = Agent(p); return a ? cMath::Vector3Dist(a->mvLastKnownPlayerPos, PlayerFeet()) : 0.0f; });
+	SOMA_METHOD(e, A, "void RevealPlayerPos()", +[](E *p) {
+		if (cAgent *a = Agent(p))
+		{
+			a->mvLastKnownPlayerPos = PlayerFeet();
+			a->mbSeen = a->mbDetected = true;
+			a->mfUnseenTime = 0;
+			a->mfDetectCount = cMath::Max(a->mfDetectCount, a->mfDetectMinTime);
+		}
+	});
+	SOMA_METHOD(e, A, "float GetCurrentPlayerSightDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRange * a->mfSightRangeMul : 0.0f; });
+	SOMA_METHOD(e, A, "void SetCheckForDoorsCount(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfCheckDoorsCount = x; });
+	for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
+	{
+		SOMA_METHOD(e, pType, "void SetIsDoor(bool abX)", +[](E *p, bool b) { p->mbIsDoor = b; });
+		SOMA_METHOD(e, pType, "bool GetIsDoor()", +[](E *p) { return p->mbIsDoor; });
+		SOMA_METHOD(e, pType, "void SetIsClosedDoor(bool abX)", +[](E *p, bool b) { p->mbIsClosedDoor = b; });
+		SOMA_METHOD(e, pType, "bool GetIsClosedDoor()", +[](E *p) { return p->mbIsClosedDoor; });
+	}
+	SOMA_METHOD(e, A, "void SetStaticCollider(bool abX)", +[](E *p, bool b) {
+		cAgent *a = Agent(p);
+		if (a == NULL)
+			return;
+		a->mbStaticCollider = b;
+		if (a->mpBody)
+		{
+			a->mpBody->SetGravityActive(b == false);
+			a->mpBody->SetTestCollision(b == false);
+		}
+	});
+	SOMA_METHOD(e, A, "bool GetStaticCollider()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbStaticCollider; });
+	SOMA_METHOD(e, A, "void SetCheckForDoors(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbCheckForDoors = b; });
+	SOMA_METHOD(e, A, "bool GetCheckForDoors()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbCheckForDoors; });
+	SOMA_METHOD(e, A, "void SetMaxCheckDoorDistance(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfMaxDoorDist = x; });
+	SOMA_METHOD(e, A, "float GetMaxCheckDoorDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfMaxDoorDist : 0.0f; });
+	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRay(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbAlignGround = b; });
+	SOMA_METHOD(e, A, "bool GetAlignEntityWithGroundRay()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbAlignGround; });
+	SOMA_METHOD(e, A, "void BroadcastMessage(int alMessageId, iLuxEntityComponent@ apSource, const cVector3f &in avData, int alData)",
+				+[](E *p, int m, void *, V v, int l) { SomaAgentSendMessage(p, m, v, l); });
+	SOMA_METHOD(e, A, "void SetRecieveMessageCallback(const tString&in asCallbackFunc)", +[](E *p, S f) { if (cAgent *a = Agent(p)) a->msMessageCallback = f; });
+
+	// Component factories
+	SOMA_FUNC(e, "cLuxStateMachine@ cLux_CreateEntityComponent_StateMachine(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentStateMachine(p)); });
+	SOMA_FUNC(e, "cLuxCharMover@ cLux_CreateEntityComponent_CharMover(iLuxEntity @apEntity, iCharacterBody @apCharBody)",
+			  +[](E *p, iCharacterBody *b) { return AddComponent(p, new cAgentCharMover(p, b)); });
+	SOMA_FUNC(e, "cLuxPathfinder@ cLux_CreateEntityComponent_Pathfinder(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentPathfinder(p)); });
+	SOMA_FUNC(e, "cLuxBarkMachine@ cLux_CreateEntityComponent_BarkMachine(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentBarkMachine(p)); });
+	SOMA_FUNC(e, "cLuxSoundListener@ cLux_CreateEntityComponent_SoundListener(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentSoundListener(p)); });
+	SOMA_FUNC(e, "cLuxHeadTracker@ cLux_CreateEntityComponent_HeadTracker(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentHeadTracker(p)); });
+
+	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, 10)); });
+	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_ForceEmitter)); });
+	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_LightSensor)); });
+	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_BackboneTail)); });
+	for (const char *pType : {"iLuxEntityComponent", "cLuxStateMachine", "cLuxCharMover", "cLuxPathfinder", "cLuxBarkMachine", "cLuxSoundListener", "cLuxHeadTracker",
+							  "cLuxEdgeGlow", "cLuxForceEmitter", "cLuxLightSensor", "cLuxBackboneTail"})
+	{
+		SOMA_METHOD(e, pType, "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
+		SOMA_METHOD(e, pType, "eLuxEntityComponentType GetType()", +[](cAgentComponent *c) { return c->mlType; });
+	}
+	SOMA_METHOD(e, "cLuxMap", "iLuxEntityComponent@ GetEntityComponent(eLuxEntityComponentType aType, const tString&in asName)", +[](cSomaLuxMap *m, int t, S n) -> cAgentComponent * {
+		cSomaLuxEntity *pEnt = m->GetEntity(n);
+		cAgent *a = pEnt ? Agent(pEnt) : NULL;
+		return a ? a->Find<cAgentComponent>(t) : NULL;
+	});
+
+	// State machine
+	const char *T = "cLuxStateMachine";
+	typedef cAgentStateMachine SM;
+	SOMA_METHOD(e, T, "void AddState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapStates[id] = n; });
+	SOMA_METHOD(e, T, "void AddSubState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapSubStates[id] = n; });
+	SOMA_METHOD(e, T, "void ChangeState(int alState)", +[](SM *s, int id) { s->ChangeState(id); });
+	SOMA_METHOD(e, T, "void ChangeSubState(int alState)", +[](SM *s, int id) { s->ChangeSubState(id); });
+	SOMA_METHOD(e, T, "int GetNextState()", +[](SM *s) { return s->mlNext; });
+	SOMA_METHOD(e, T, "int GetPrevState()", +[](SM *s) { return s->mlPrev; });
+	SOMA_METHOD(e, T, "int GetCurrentState()", +[](SM *s) { return s->mlCur; });
+	SOMA_METHOD(e, T, "int GetNextSubState()", +[](SM *s) { return s->mlSubNext; });
+	SOMA_METHOD(e, T, "int GetPrevSubState()", +[](SM *s) { return s->mlSubPrev; });
+	SOMA_METHOD(e, T, "int GetCurrentSubState()", +[](SM *s) { return s->mlSubCur; });
+	SOMA_METHOD(e, T, "void AddTimer(uint64 alId, float afTime)", +[](SM *s, asQWORD id, float t) { s->AddTimer(id, t); });
+	SOMA_METHOD(e, T, "void StopTimer(uint64 alId)", +[](SM *s, asQWORD id) { s->StopTimer(id); });
+	SOMA_METHOD(e, T, "bool TimerExists(uint64 alId)", +[](SM *s, asQWORD id) { return s->TimerExists(id); });
+	SOMA_METHOD(e, T, "void AddTimer(const tString& in asId, float afTime)", +[](SM *s, S id, float t) { s->AddTimer(Hash64(id), t); });
+	SOMA_METHOD(e, T, "void StopTimer(const tString& in asId)", +[](SM *s, S id) { s->StopTimer(Hash64(id)); });
+	SOMA_METHOD(e, T, "bool TimerExists(const tString& in asId)", +[](SM *s, S id) { return s->TimerExists(Hash64(id)); });
+	SOMA_METHOD(e, T, "cLuxEntityMessageData@ GetCurrentMessageData()", +[](SM *s) -> void * { cAgent *a = Agent(s->mpEntity); return a ? a->mMessage.mBlock : NULL; });
+
+	// Char mover
+	T = "cLuxCharMover";
+	typedef cAgentCharMover CM;
+	SOMA_METHOD(e, T, "iCharacterBody@ GetCharBody()", +[](CM *m) { return m->mpBody; });
+	SOMA_METHOD(e, T, "void LoadFromVariables(cResourceVarsObject@ apVars)", +[](CM *m, cResourceVarsObject *v) { m->LoadFromVariables(v); });
+	SOMA_METHOD(e, T, "void MoveToPos(const cVector3f&in avFeetPos, bool abSlowDownAndStopAtGoal=false)", +[](CM *m, V v, bool b) { m->MoveToPos(v, b); });
+	SOMA_METHOD(e, T, "void TurnToPos(const cVector3f&in avFeetPos)", +[](CM *m, V v) { cVector3f d = v - m->mpBody->GetFeetPosition(); d.y = 0; m->TurnTo(YawTo(d)); });
+	SOMA_METHOD(e, T, "void TurnToAngle(float afAngle)", +[](CM *m, float a) { m->TurnTo(a); });
+	SOMA_METHOD(e, T, "void TurnToAngles(float afYaw, float afPitch)", +[](CM *m, float a, float) { m->TurnTo(a); });
+	SOMA_METHOD(e, T, "void TurnInstantlyToPos(const cVector3f&in avGoalPos)", +[](CM *m, V v) { cVector3f d = v - m->mpBody->GetFeetPosition(); d.y = 0; SetYawNear(m->mpBody, YawTo(d)); m->mbTurning = false; });
+	SOMA_METHOD(e, T, "void TurnInstantlyToAngle(float afAngle)", +[](CM *m, float a) { SetYawNear(m->mpBody, a); m->mbTurning = false; });
+	SOMA_METHOD(e, T, "void TurnInstantlyToAngle(float afYaw, float afPitch)", +[](CM *m, float a, float) { SetYawNear(m->mpBody, a); m->mbTurning = false; });
+	SOMA_METHOD(e, T, "void StopTurning()", +[](CM *m) { m->mbTurning = false; });
+	SOMA_METHOD(e, T, "int PlayAnimation(const tString&in asName, float afFadeTime=0.3f, bool abLoop=false, bool abPlayTransition=true, const tString&in asCallback=\"\")",
+				+[](CM *m, S n, float f, bool l, bool, S cb) { m->mlAnimState = -1; return m->mpEntity->PlayAnimation(n, f, l, cb); });
+	SOMA_METHOD(e, T, "void SetUseMoveStateAnimations(bool abX)", +[](CM *m, bool b) { m->mbUseMoveStateAnims = b; m->mlAnimState = -1; });
+	SOMA_METHOD(e, T, "bool GetUseMoveStateAnimations()", +[](CM *m) { return m->mbUseMoveStateAnims; });
+	SOMA_METHOD(e, T, "void SetTurnedToGoalCallbackFunc(const tString &in asFunc)", +[](CM *m, S f) { m->msTurnedCallback = f; });
+	SOMA_METHOD(e, T, "float GetMoveSpeed()", +[](CM *m) { return m->mpBody ? m->mpBody->GetMoveSpeed(eCharDir_Forward) : 0.0f; });
+	SOMA_METHOD(e, T, "float GetWantedSpeedAmount()", +[](CM *m) { return m->mbMoving ? 1.0f : 0.0f; });
+	SOMA_METHOD(e, T, "float GetStuckCounter()", +[](CM *m) { return m->mfStuck; });
+	SOMA_METHOD(e, T, "float GetMaxStuckCounter()", +[](CM *) { return 3.0f; });
+	SOMA_METHOD(e, T, "void ResetStuckCounter()", +[](CM *m) { m->mfStuck = 0; });
+	SOMA_METHOD(e, T, "void SetMaxForwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxForward = x; });
+	SOMA_METHOD(e, T, "void SetMaxBackwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxBackward = x; });
+	SOMA_METHOD(e, T, "void SetTurnMinBreakAngle(float afX)", +[](CM *m, float x) { m->mfTurnMinBreakAngle = x; });
+	SOMA_METHOD(e, T, "void SetTurnBreakMul(float afX)", +[](CM *m, float x) { m->mfTurnBreakMul = x; });
+	SOMA_METHOD(e, T, "void SetTurnSpeedMul(float afX)", +[](CM *m, float x) { m->mfTurnSpeedMul = x; });
+	SOMA_METHOD(e, T, "void SetTurnMaxSpeed(float afX)", +[](CM *m, float x) { m->mfTurnMaxSpeed = x; });
+	SOMA_METHOD(e, T, "void SetStoppedToWalkSpeed(float afX)", +[](CM *m, float x) { m->mfStoppedToWalk = x; });
+	SOMA_METHOD(e, T, "void SetWalkToRunSpeed(float afX)", +[](CM *m, float x) { m->mfWalkToRun = x; });
+	SOMA_METHOD(e, T, "void SetWalkToStoppedSpeed(float afX)", +[](CM *m, float x) { m->mfWalkToStopped = x; });
+	SOMA_METHOD(e, T, "void SetRunToWalkSpeed(float afX)", +[](CM *m, float x) { m->mfRunToWalk = x; });
+	SOMA_METHOD(e, T, "void SetMoveSpeedAnimMul(float afX)", +[](CM *m, float x) { m->mfMoveSpeedAnimMul = x; });
+	SOMA_METHOD(e, T, "void SetIdleAnimName(const tString&in asName)", +[](CM *m, S n) { m->msIdleAnim = n; m->mlAnimState = -1; });
+	SOMA_METHOD(e, T, "void SetWalkAnimName(const tString&in asName)", +[](CM *m, S n) { m->msWalkAnim = n; m->mlAnimState = -1; });
+	SOMA_METHOD(e, T, "void SetRunAnimName(const tString&in asName)", +[](CM *m, S n) { m->msRunAnim = n; m->mlAnimState = -1; });
+	SOMA_METHOD(e, T, "void SetBackwardAnimName(const tString&in asName)", +[](CM *m, S n) { m->msBackwardAnim = n; });
+	SOMA_METHOD(e, T, "void AddSpeedState(int alId)", +[](CM *m, int id) { m->mapSpeedStates[id]; m->mlEditState = id; });
+	SOMA_METHOD(e, T, "void SetSpeedState(int alId)", +[](CM *m, int id) { m->mlSpeedState = id; });
+	SOMA_METHOD(e, T, "void SetSpeedState_Forward(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfForward = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_Backward(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfBackward = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_Sideways(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSideways = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_TurnBreakMul(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfTurnBreakMul = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_TurnSpeedMul(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfTurnSpeedMul = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_TurnMaxSpeed(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfTurnMaxSpeed = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_ForwardAcc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfForwardAcc = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_ForwardDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfForwardDeacc = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_SidewayAcc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayAcc = x; });
+	SOMA_METHOD(e, T, "void SetSpeedState_SidewayDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayDeacc = x; });
+	for (const char *pNoop : {"void SetWallAvoidanceActive(bool abX)", "void SetDynamicObjectAvoidanceActive(bool abX)", "void SetBankingActive(bool abX)",
+							  "void SetIdleExtraAnimActive(bool abX)", "void SetUse3DMovement(bool abX)"})
+		SOMA_METHOD(e, T, pNoop, +[](CM *, bool) {});
+	for (const char *pNoop : {"void SetTurnStoppedToWalkSpeed(float afX)", "void SetTurnWalkToStoppedSpeed(float afX)", "void SetVerticalMoveSpeedExtraAnimMul(float afX)",
+							  "void SetBankingAngleMul(float afX)", "void SetBankingMaxAngle(float afX)", "void SetBankingSpeedMul(float afX)", "void SetBankingMaxSpeed(float afX)"})
+		SOMA_METHOD(e, T, pNoop, +[](CM *, float) {});
+	SOMA_METHOD(e, T, "void SetIdleExtraAnimName(const tString&in asName)", +[](CM *, S) {});
+	SOMA_METHOD(e, T, "void SetupWallAvoidance(float afRadius, float afSteerAmount, int alSamples)", +[](CM *, float, float, int) {});
+	SOMA_METHOD(e, T, "void SetupDynamicObjectAvoidance(float afMaxDistance, float afMinMass, float afSteerAmount)", +[](CM *, float, float, float) {});
+	SOMA_METHOD(e, T, "void SetupIdleExtra(const tString&in asAnimName, float afMinWait, float afMaxWait, bool abPauseProceduralAnims)", +[](CM *, S, float, float, bool) {});
+	SOMA_METHOD(e, T, "bool GetIdleExtraAnimActive()", +[](CM *) { return false; });
+
+	// Pathfinder
+	T = "cLuxPathfinder";
+	typedef cAgentPathfinder PF;
+	SOMA_METHOD(e, T, "void MoveTo(const cVector3f&in avPos, float afUpdateFreq, bool abExactStopAtEnd, const tString&in asResultCallback=\"\", bool abCallbackInMap=false)",
+				+[](PF *p, V v, float, bool x, S cb, bool m) { p->MoveTo(v, x, cb, m); });
+	SOMA_METHOD(e, T, "void MoveToNode(const tString&in asNodeName, float afUpdateFreq, bool abExactStopAtEnd, const tString&in asResultCallback=\"\", bool abCallbackInMap=false)",
+				+[](PF *p, S n, float, bool x, S cb, bool m) {
+					cNodeData *pNodes = p->Nodes();
+					cAINode *pNode = pNodes ? pNodes->mpContainer->GetNodeFromName(n) : NULL;
+					if (pNode)
+						p->MoveTo(pNode->GetPosition(), x, cb, m);
+					else if (cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL)
+						p->MoveTo(pEnt->GetPosition(), x, cb, m);
+				});
+	SOMA_METHOD(e, T, "void Stop()", +[](PF *p) { p->Stop(); });
+	SOMA_METHOD(e, T, "void SetEndOfPathCallbackFunc(const tString &in asCallbackFunc)", +[](PF *p, S f) { p->msEndOfPathCallback = f; });
+	SOMA_METHOD(e, T, "bool IsMoving()", +[](PF *p) { return p->mbMoving; });
+	SOMA_METHOD(e, T, "cVector3f GetNextGoalPos()", +[](PF *p) { return p->mvPath.empty() ? p->Feet() : p->mvPath[std::min(p->mlPathIdx, p->mvPath.size() - 1)]; });
+	SOMA_METHOD(e, T, "cAINode@ GetNodeFromName(const tString&in asName)", +[](PF *p, S n) { cNodeData *d = p->Nodes(); return d ? d->mpContainer->GetNodeFromName(n) : (cAINode *)NULL; });
+	SOMA_METHOD(e, T, "cAINodeContainer@ GetNodeContainer()", +[](PF *p) { cNodeData *d = p->Nodes(); return d ? d->mpContainer.get() : (cAINodeContainer *)NULL; });
+	SOMA_METHOD(e, T, "cAINode@ GetNodeAtPos(const cVector3f &in avPos,float afMinDistance,float afMaxDistance, bool abGetClosest, bool abPosToNodeFreeDirectPathCheck,bool abAgentToNodeFreeDirectPathCheck, cAINode@ apSkipNode, int alFreePathRayNum, uint alFreePathFlags, bool abSkipUsedNodes)",
+				+[](PF *p, V v, float mn, float mx, bool c, bool los, bool, cAINode *skip, int, asUINT, bool) { return p->NodeAtPos(v, mn, mx, c, los, skip); });
+	SOMA_METHOD(e, T, "cAINode@ GetNodeAtPos(const cVector3f &in avPos,float afMinDistance,float afMaxDistance, bool abGetClosest, bool abPosToNodeFreeDirectPathCheck,bool abAgentToNodeFreeDirectPathCheck, cAINode@ apSkipNode)",
+				+[](PF *p, V v, float mn, float mx, bool c, bool los, bool, cAINode *skip) { return p->NodeAtPos(v, mn, mx, c, los, skip); });
+	SOMA_METHOD(e, T, "cAINode@ GetNodeInPosLOS(const cVector3f &in avPos, float afMinDistance,float afMaxDistance,bool abAgentToNodeFreeDirectPathCheck=false)",
+				+[](PF *p, V v, float mn, float mx, bool) { return p->NodeAtPos(v, mn, mx, true, true, NULL); });
+	SOMA_METHOD(e, T, "bool CheckFreePath(const cVector3f &in avStartPos, const cVector3f &in avTargetPos)", +[](PF *p, V a, V b) {
+		cNodeData *d = p->Nodes();
+		return d ? d->mpContainer->FreePath(a, b, 1, eAIFreePathFlag_SkipDynamic) : SomaLineOfSight(a, b, p->mpEntity);
+	});
+	SOMA_METHOD(e, T, "bool BuildPathNodeArrayToPos(const cVector3f &in avPos)", +[](PF *p, V v) {
+		p->mvNodeArray.clear();
+		p->mvNodeArrayDist.clear();
+		cNodeData *d = p->Nodes();
+		if (d == NULL)
+			return false;
+		tAINodeList lst;
+		if (d->mpAStar->GetPath(p->Feet(), v, &lst) == false)
+			return false;
+		float fTotal = 0;
+		cVector3f vPrev = p->Feet();
+		for (auto it = lst.rbegin(); it != lst.rend(); ++it)
+		{
+			fTotal += cMath::Vector3Dist(vPrev, (*it)->GetPosition());
+			vPrev = (*it)->GetPosition();
+			p->mvNodeArray.push_back(*it);
+			p->mvNodeArrayDist.push_back(fTotal);
+		}
+		return true;
+	});
+	SOMA_METHOD(e, T, "int GetPathNodeArraySize()", +[](PF *p) { return (int)p->mvNodeArray.size(); });
+	SOMA_METHOD(e, T, "cAINode@ GetPathNodeArrayNode(int alIdx)", +[](PF *p, int i) { return i >= 0 && i < (int)p->mvNodeArray.size() ? p->mvNodeArray[i] : (cAINode *)NULL; });
+	SOMA_METHOD(e, T, "float GetPathNodeArrayDist(int alIdx)", +[](PF *p, int i) { return i >= 0 && i < (int)p->mvNodeArrayDist.size() ? p->mvNodeArrayDist[i] : 0.0f; });
+	SOMA_METHOD(e, T, "float GetPathNodeArrayFullLength()", +[](PF *p) { return p->mvNodeArrayDist.empty() ? 0.0f : p->mvNodeArrayDist.back(); });
+	SOMA_METHOD(e, T, "void ClearTrackNodes()", +[](PF *p) { p->mvTrack.clear(); p->mlTrackIdx = -1; });
+	SOMA_METHOD(e, T, "void AddTrackNode(const tString&in asNodeName, float afMinWaitTime, float afMaxWaitTime, const tString&in asAnimName, bool abLoopAnim)",
+				+[](PF *p, S n, float mn, float mx, S a, bool l) { p->mvTrack.push_back(cAgentTrackNode{n, mn, mx, a, l}); });
+	SOMA_METHOD(e, T, "void StartTrack(bool abLoop, float afUpdateFreq, const tString &in asEndOfTrackCallback)", +[](PF *p, bool l, float f, S cb) {
+		p->mbTrackLoop = l;
+		p->mfTrackFreq = f;
+		p->msTrackCallback = cb;
+		p->mbTrackActive = true;
+		p->mbTrackPaused = false;
+		p->mlTrackIdx = 0;
+		p->StartTrackNode();
+	});
+	SOMA_METHOD(e, T, "void StopTrack()", +[](PF *p) { p->mbTrackActive = false; p->Stop(); });
+	SOMA_METHOD(e, T, "void ResetCurrentTrackNode()", +[](PF *p) { p->mlTrackIdx = 0; });
+	SOMA_METHOD(e, T, "int GetTrackNodeNum()", +[](PF *p) { return (int)p->mvTrack.size(); });
+	SOMA_METHOD(e, T, "cLuxTrackNode@ GetTrackNode(int alIdx)", +[](PF *p, int i) -> void * { return i >= 0 && i < (int)p->mvTrack.size() ? &p->mvTrack[i] : NULL; });
+	SOMA_METHOD(e, T, "int GetCurrentTrackNode()", +[](PF *p) { return p->mlTrackIdx; });
+	SOMA_METHOD(e, T, "cLuxTrackNode@ GetCurrentTrackNodeData()", +[](PF *p) -> void * { return p->mlTrackIdx >= 0 && p->mlTrackIdx < (int)p->mvTrack.size() ? &p->mvTrack[p->mlTrackIdx] : NULL; });
+	SOMA_METHOD(e, T, "void SetCurrentTrackWaitTime(float afX)", +[](PF *p, float x) { p->mfTrackWait = x; });
+	SOMA_METHOD(e, T, "float GetCurrentTrackWaitTime()", +[](PF *p) { return p->mfTrackWait; });
+	SOMA_METHOD(e, T, "void GoToNextTrackNode()", +[](PF *p) { p->GoToNextTrackNode(); });
+	SOMA_METHOD(e, T, "bool GetTrackActive()", +[](PF *p) { return p->mbTrackActive; });
+	SOMA_METHOD(e, T, "void SetTrackPaused(bool abX)", +[](PF *p, bool b) {
+		if (p->mbTrackPaused == b)
+			return;
+		p->mbTrackPaused = b;
+		if (b)
+			p->Stop();
+		else if (p->mbTrackActive && p->mbAtTrackNode == false)
+			p->StartTrackNode();
+	});
+	SOMA_METHOD(e, T, "bool GetTrackPaused()", +[](PF *p) { return p->mbTrackPaused; });
+	SOMA_METHOD(e, T, "void SetTrackLoop(bool abX)", +[](PF *p, bool b) { p->mbTrackLoop = b; });
+	SOMA_METHOD(e, T, "bool GetTrackLoop()", +[](PF *p) { return p->mbTrackLoop; });
+	SOMA_METHOD(e, T, "const tString& GetTrackCallback()", +[](PF *p) -> const tString & { return p->msTrackCallback; });
+	SOMA_METHOD(e, T, "float GetTrackUpdateFreq()", +[](PF *p) { return p->mfTrackFreq; });
+	SOMA_METHOD(e, T, "void SetNodeContainerName(const tString &in asName)", +[](PF *p, S n) { p->msContainer = n; p->mpNodes = NULL; });
+	SOMA_METHOD(e, T, "void SetMaxHeight(float afX)", +[](PF *p, float x) { p->mfMaxHeight = x; });
+	SOMA_METHOD(e, T, "void SetNodeName(const tString &in asName)", +[](PF *, S) {});
+	SOMA_METHOD(e, T, "void SetNodeIsAtCenter(bool abX)", +[](PF *, bool) {});
+	SOMA_METHOD(e, T, "void SetMinEdges(int alX)", +[](PF *, int) {});
+	SOMA_METHOD(e, T, "void SetMaxEdges(int alX)", +[](PF *, int) {});
+	SOMA_METHOD(e, T, "void SetMaxEdgeDistance(float afX)", +[](PF *, float) {});
+
+	T = "cLuxTrackNode";
+	SOMA_METHOD(e, T, "const tString& GetNodeName()", +[](cAgentTrackNode *n) -> const tString & { return n->msNode; });
+	SOMA_METHOD(e, T, "float GetMinWaitTime()", +[](cAgentTrackNode *n) { return n->mfMinWait; });
+	SOMA_METHOD(e, T, "float GetMaxWaitTime()", +[](cAgentTrackNode *n) { return n->mfMaxWait; });
+	SOMA_METHOD(e, T, "const tString& GetAnimName()", +[](cAgentTrackNode *n) -> const tString & { return n->msAnim; });
+	SOMA_METHOD(e, T, "bool GetLoopAnim()", +[](cAgentTrackNode *n) { return n->mbLoopAnim; });
+
+	// Bark machine
+	T = "cLuxBarkMachine";
+	typedef cAgentBarkMachine BM;
+	SOMA_METHOD(e, T, "void AddState(int alId)", +[](BM *b, int id) { b->mapStates[id]; b->mlEdit = id; });
+	SOMA_METHOD(e, T, "void ChangeState(int alId)", +[](BM *b, int id) { if (b->mlCur != id) { b->mlCur = id; b->mfCount = 0; auto it = b->mapStates.find(id); if (it != b->mapStates.end()) b->mfCount = cMath::RandRectf(it->second.mfMin, it->second.mfMax); } });
+	SOMA_METHOD(e, T, "void SetState_SoundBark(const tString&in asSound, float afMinBetweenTime, float afMaxBetweenTime, bool abWaitForSoundToBeDone)",
+				+[](BM *b, S s, float mn, float mx, bool) { if (b->mlEdit >= 0) b->mapStates[b->mlEdit] = cAgentBarkMachine::cState{s, mn, mx}; });
+	SOMA_METHOD(e, T, "void SetState_VoiceBark(const tString&in asSubject, float afMinBetweenTime, float afMaxBetweenTime, bool abWaitForSoundToBeDone,int alPrio=0,float afMinDistance=-1, float afMaxDistance=-1, float afMaxPlayerListeningRange=-1)",
+				+[](BM *, S, float, float, bool, int, float, float, float) {});
+	SOMA_METHOD(e, T, "void SetupVoice(const tString&in asCharacter, bool abUse3D, float afDefaultMinDistance,float afDefaultMaxDistance ,float afDefaultMaxPlayerListeningRange)",
+				+[](BM *, S, bool, float, float, float) {});
+	SOMA_METHOD(e, T, "void PlayVoice(const tString&in asSubject, int alPrio, float afMinDistance=-1, float afMaxDistance=-1, float afMaxPlayerListeningRange=-1)",
+				+[](BM *, S, int, float, float, float) {});
+	SOMA_METHOD(e, T, "void SetActive(bool abX)", +[](BM *b, bool x) { b->mbActive = x; });
+	SOMA_METHOD(e, T, "bool IsActive()", +[](BM *b) { return b->mbActive; });
+
+	// Sound listener
+	T = "cLuxSoundListener";
+	typedef cAgentSoundListener SL;
+	SOMA_METHOD(e, T, "void LoadFromInstanceVariables(cResourceVarsObject@ apInstanceVars)", +[](SL *, cResourceVarsObject *) {});
+	SOMA_METHOD(e, T, "void SetHearRadius(float afX)", +[](SL *l, float x) { l->mfHearRadius = x; });
+	SOMA_METHOD(e, T, "float GetHearRadius()", +[](SL *l) { return l->mfHearRadius; });
+	SOMA_METHOD(e, T, "void SetMinHearPrio(int alX)", +[](SL *l, int x) { l->mlMinPrio = x; });
+	SOMA_METHOD(e, T, "int GetMinHearPrio()", +[](SL *l) { return l->mlMinPrio; });
+	SOMA_METHOD(e, T, "float GetSoundRadiusMul()", +[](SL *l) { return l->mfRadiusMul; });
+	SOMA_METHOD(e, T, "float GetSoundMinRadius()", +[](SL *l) { return l->mfMinRadius; });
+	SOMA_METHOD(e, T, "float GetSoundMaxRadius()", +[](SL *l) { return l->mfMaxRadius; });
+	SOMA_METHOD(e, T, "void SetSoundRadiusMul(float afX)", +[](SL *l, float x) { l->mfRadiusMul = x; });
+	SOMA_METHOD(e, T, "void SetSoundMinRadius(float afX)", +[](SL *l, float x) { l->mfMinRadius = x; });
+	SOMA_METHOD(e, T, "void SetSoundMaxRadius(float afX)", +[](SL *l, float x) { l->mfMaxRadius = x; });
+	SOMA_METHOD(e, T, "void SetActive(bool bX)", +[](SL *l, bool b) { l->mbActive = b; });
+	SOMA_METHOD(e, T, "bool IsActive()", +[](SL *l) { return l->mbActive; });
+	SOMA_METHOD(e, T, "bool IsListening()", +[](SL *l) { return l->mbActive; });
+	SOMA_METHOD(e, T, "void SetIgnoreSoundRadius(float afX)", +[](SL *l, float x) { l->mfIgnoreRadius = x; });
+	SOMA_METHOD(e, T, "float GetIgnoreSoundRadius()", +[](SL *l) { return l->mfIgnoreRadius; });
+	SOMA_METHOD(e, T, "void SetMaxPlayerPhysicsInteractTime(float afX)", +[](SL *l, float x) { l->mfMaxPlayerInteractTime = x; });
+	SOMA_METHOD(e, T, "float GetMaxPlayerPhysicsInteractTime()", +[](SL *l) { return l->mfMaxPlayerInteractTime; });
+
+	// Head tracker
+	T = "cLuxHeadTracker";
+	typedef cAgentHeadTracker HT;
+	SOMA_METHOD(e, T, "void SetTrackEntity(iLuxEntity @apEntity)", +[](HT *h, E *p) { h->mpTrack = p; });
+	SOMA_METHOD(e, T, "void SetActive(bool abX)", +[](HT *h, bool b) { h->mbActive = b; });
+	SOMA_METHOD(e, T, "bool IsActive()", +[](HT *h) { return h->mbActive; });
+	SOMA_METHOD(e, T, "float GetMaxAngle()", +[](HT *h) { return h->mfMaxAngle; });
+	SOMA_METHOD(e, T, "void SetMaxAngle(float afX)", +[](HT *h, float x) { h->mfMaxAngle = x; });
+	SOMA_METHOD(e, T, "void LoadFromVariables(cResourceVarsObject@ apVars)", +[](HT *, cResourceVarsObject *) {});
+	SOMA_METHOD(e, T, "void SetMoveSpeedMul(float afX)", +[](HT *, float) {});
+	SOMA_METHOD(e, T, "void SetMoveMaxSpeed(float afX)", +[](HT *, float) {});
+	SOMA_METHOD(e, T, "void SetAngleOffset(float afX)", +[](HT *, float) {});
+}

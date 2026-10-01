@@ -6,6 +6,7 @@
 #include "SomaBase.h"
 #include <algorithm>
 #include "SomaLuxGame.h"
+#include "SomaAgent.h"
 #include "SomaCritter.h"
 
 #include <cmath>
@@ -94,6 +95,7 @@ void cSomaLuxEntity::SetActive(bool abX)
 	if (mbActive == abX)
 		return;
 	mbActive = abX;
+	SomaAgentSetActive(this, abX);
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
@@ -176,6 +178,9 @@ cMatrixf cSomaLuxEntity::GetMatrix()
 		iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
 		return pBody ? cMath::MatrixTranslate(pBody->GetFeetPosition()) : m_mtxOnLoad;
 	}
+	cMatrixf mtxAgent;
+	if (meType == eSomaLuxEntityType_Agent && SomaAgentGetMatrix(this, mtxAgent))
+		return mtxAgent;
 	if (mbCameraProxy && cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCamera())
 		return cMath::MatrixInverse(cSomaLuxPlayer::Get()->GetCamera()->GetViewMatrix());
 	if (iPhysicsBody *pBody = GetMainBody())
@@ -195,6 +200,8 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 			pBody->SetFeetPosition(a_mtx.GetTranslation(), true);
 		return;
 	}
+	if (meType == eSomaLuxEntityType_Agent && SomaAgentSetMatrix(this, a_mtx))
+		return;
 	if (iPhysicsBody *pBody = GetMainBody())
 		pBody->SetMatrix(a_mtx);
 	else if (mpMesh)
@@ -289,8 +296,96 @@ void cSomaLuxEntity::MoveLinearTo(const cVector3f &avGoal, float afAcc, float af
 	msMoveCallback = asCallback;
 }
 
+void cSomaLuxEntity::MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotWorld,
+								   const cVector3f &avPivotLocal, const tString &asCallback)
+{
+	mlRotateMode = 1;
+	m_mtxRotateGoal = a_mtxGoal.GetRotation();
+	mfRotateAcc = afAcc;
+	mfRotateMaxSpeed = afMaxSpeed;
+	mfRotateSlowdown = afSlowdownDist;
+	if (abResetSpeed)
+		mfRotateSpeed = 0;
+	mvPivotLocal = avPivotLocal + cMath::MatrixMul3x3(cMath::MatrixInverse(GetMatrix().GetRotation()), avPivotWorld);
+	msRotateCallback = asCallback;
+}
+
+void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal)
+{
+	mlRotateMode = 2;
+	mfRotateAcc = afAcc;
+	mfRotateMaxSpeed = afGoalSpeed;
+	mvRotateAxis = avAxis;
+	if (abResetSpeed)
+		mfRotateSpeed = 0;
+	mvPivotLocal = avPivotLocal + cMath::MatrixMul3x3(cMath::MatrixInverse(GetMatrix().GetRotation()), avPivotWorld);
+}
+
+void cSomaLuxEntity::StopMove()
+{
+	mbMoving = false;
+	mfMoveSpeed = 0;
+	mlRotateMode = 0;
+	mfRotateSpeed = 0;
+}
+
+static void RunMoveCallback(cSomaLuxEntity *apEnt, tString &asCallback)
+{
+	tString sCallback = asCallback;
+	asCallback = "";
+	cSomaLuxMap *pMap = apEnt->mpMap ? apEnt->mpMap : cSomaLuxMap::GetCurrent();
+	if (sCallback != "" && pMap && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &apEnt->msName); });
+}
+
+void cSomaLuxEntity::UpdateRotate(float afTimeStep)
+{
+	cMatrixf m = GetMatrix();
+	cMatrixf mtxRot = m.GetRotation();
+	cVector3f vPivot = m.GetTranslation() + cMath::MatrixMul3x3(mtxRot, mvPivotLocal);
+	cMatrixf mtxStep;
+	bool bDone = false;
+	if (mlRotateMode == 2)
+	{
+		float fDiff = mfRotateMaxSpeed - mfRotateSpeed;
+		mfRotateSpeed += cMath::Clamp(fDiff, -mfRotateAcc * afTimeStep, mfRotateAcc * afTimeStep);
+		cVector3f vAxis = cMath::MatrixMul3x3(mtxRot, mvRotateAxis);
+		if (vAxis.SqrLength() < 1e-8f || mfRotateSpeed == 0)
+			return;
+		cQuaternion q;
+		q.FromAngleAxis(mfRotateSpeed * afTimeStep, cMath::Vector3Normalize(vAxis));
+		mtxStep = cMath::MatrixQuaternion(q);
+	}
+	else
+	{
+		cQuaternion qCur, qGoal;
+		qCur.FromRotationMatrix(mtxRot);
+		qGoal.FromRotationMatrix(m_mtxRotateGoal);
+		float fAngle = 2 * std::acos(cMath::Min(std::fabs(cMath::QuaternionDot(qCur, qGoal)), 1.0f));
+		mfRotateSpeed = cMath::Min(mfRotateSpeed + mfRotateAcc * afTimeStep, mfRotateMaxSpeed);
+		float fSpeed = mfRotateSpeed;
+		if (mfRotateSlowdown > 0 && fAngle < mfRotateSlowdown)
+			fSpeed = cMath::Min(fSpeed, cMath::Max(mfRotateMaxSpeed * fAngle / mfRotateSlowdown, mfRotateMaxSpeed * 0.05f));
+		float fStep = fSpeed * afTimeStep;
+		bDone = fStep >= fAngle;
+		cQuaternion qNew = bDone ? qGoal : cMath::QuaternionSlerp(fStep / fAngle, qCur, qGoal, true);
+		mtxStep = cMath::MatrixMul(cMath::MatrixQuaternion(qNew), cMath::MatrixInverse(mtxRot));
+	}
+	cMatrixf mtxNew = cMath::MatrixMul(mtxStep, mtxRot);
+	mtxNew.SetTranslation(vPivot + cMath::MatrixMul3x3(mtxStep, m.GetTranslation() - vPivot));
+	SetMatrix(mtxNew);
+	if (bDone)
+	{
+		mlRotateMode = 0;
+		mfRotateSpeed = 0;
+		RunMoveCallback(this, msRotateCallback);
+	}
+}
+
 void cSomaLuxEntity::UpdateMove(float afTimeStep)
 {
+	if (mlRotateMode)
+		UpdateRotate(afTimeStep);
 	if (mbMoving == false)
 		return;
 	cMatrixf m = GetMatrix();
@@ -308,11 +403,7 @@ void cSomaLuxEntity::UpdateMove(float afTimeStep)
 		return;
 	mbMoving = false;
 	mfMoveSpeed = 0;
-	tString sCallback = msMoveCallback;
-	msMoveCallback = "";
-	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
-	if (sCallback != "" && pMap && pMap->GetScript())
-		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &msName); });
+	RunMoveCallback(this, msMoveCallback);
 }
 
 void cSomaLuxEntity::ApplyInstanceVars()
@@ -979,6 +1070,59 @@ static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 	return true;
 }
 
+static bool BodyInArea(cSomaLuxEntity *apArea, iPhysicsBody *apBody, bool abCenter)
+{
+	std::vector<cSomaOBB> vBoxes;
+	EntityBoxes(apArea, vBoxes);
+	if (vBoxes.empty())
+		return false;
+	const cSomaOBB &box = vBoxes[0];
+	if (abCenter == false)
+		return OBBOverlap(box, AABBToOBB(apBody->GetBoundingVolume()->GetMin(), apBody->GetBoundingVolume()->GetMax()));
+	cVector3f vDelta = cMath::MatrixMul(apBody->GetLocalMatrix(), apBody->GetMassCentre()) - box.mvCenter;
+	for (int i = 0; i < 3; ++i)
+		if (std::fabs(cMath::Vector3Dot(vDelta, box.mvAxis[i])) > box.mvHalf.v[i])
+			return false;
+	return true;
+}
+
+void cSomaLuxEntity::UpdateCheckCollision(float afTimeStep)
+{
+	if (mbCheckCollision == false || mbActive == false || mpMap == NULL)
+		return;
+	mfTimeSinceCheck += afTimeStep;
+	float fSince = mfTimeSinceCheck;
+	if (CallBool("bool OnStartCheckCollision(float, float)", [&](asIScriptContext *c) {
+			c->SetArgFloat(0, afTimeStep);
+			c->SetArgFloat(1, fSince);
+		}, false) == false)
+		return;
+	mfTimeSinceCheck = 0;
+	bool bContinue = true;
+	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mpMap->GetEntities()))
+	{
+		if (bContinue == false)
+			break;
+		if (pEnt == this || pEnt->mbActive == false || pEnt->meType == eSomaLuxEntityType_Area || pEnt->meType == eSomaLuxEntityType_LiquidArea)
+			continue;
+		for (iPhysicsBody *pBody : std::vector<iPhysicsBody *>(pEnt->mvBodies))
+		{
+			bool bDynamic = pBody->GetMass() > 0;
+			if (pBody->IsActive() == false || (bDynamic ? mbCheckDynamic : mbCheckStatic) == false || BodyInArea(this, pBody, mbCheckCenterInArea) == false)
+				continue;
+			if (CallBool("bool OnCheckCollision(iPhysicsBody@, iLuxEntity@)", [&](asIScriptContext *c) {
+					c->SetArgAddress(0, pBody);
+					c->SetArgAddress(1, pEnt);
+				}, true) == false)
+			{
+				bContinue = false;
+				break;
+			}
+		}
+	}
+	CallWithFloat("void OnEndCheckCollision(float)", afTimeStep);
+}
+
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut)
 {
 	std::vector<cSomaOBB> vBoxes;
@@ -1295,6 +1439,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 cSomaLuxEntity::~cSomaLuxEntity()
 {
 	SomaForgetCritter(this);
+	SomaDestroyAgent(this);
 	SomaFreePropBlock("cLuxCritter", mpCritterProps);
 }
 
@@ -1313,7 +1458,24 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	{
 		SOMA_METHOD(e, pType, "void MoveLinearTo(const cVector3f&in avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
 					+[](cSomaLuxEntity *p, const cVector3f &g, float a, float m, float d, bool r, const tString &cb) { p->MoveLinearTo(g, a, m, d, r, cb); });
-		SOMA_METHOD(e, pType, "void StopMove()", +[](cSomaLuxEntity *p) { p->mbMoving = false; p->mfMoveSpeed = 0; });
+		SOMA_METHOD(e, pType, "void StopMove()", +[](cSomaLuxEntity *p) { p->StopMove(); });
+		SOMA_METHOD(e, pType, "void SetCheckCollision(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbCheckCollision = b; });
+		SOMA_METHOD(e, pType, "bool GetCheckCollision()", +[](cSomaLuxEntity *p) { return p->mbCheckCollision; });
+		SOMA_METHOD(e, pType, "void SetupCheckCollision(bool abCheckIfCenterInSide, bool abCheckDynamic, bool abCheckStatic, bool abCheckCharacters)",
+					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool ch) {
+						p->mbCheckCenterInArea = c;
+						p->mbCheckDynamic = d;
+						p->mbCheckStatic = st;
+						p->mbCheckCharacters = ch;
+					});
+		SOMA_METHOD(e, pType, "void MoveAngularTo(const cMatrixf&in a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset, const tString&in asCallback=\"\")",
+					+[](cSomaLuxEntity *p, const cMatrixf &m, float a, float s, float d, bool r, bool o, const cVector3f &w, const cVector3f &l, const tString &cb) {
+						p->MoveAngularTo(m, a, s, d, r, o ? w : cVector3f(0), o ? l : cVector3f(0), cb);
+					});
+		SOMA_METHOD(e, pType, "void RotateAtSpeed( float afAcc, float afGoalSpeed, const cVector3f&in avAxis, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset)",
+					+[](cSomaLuxEntity *p, float a, float s, const cVector3f &ax, bool r, bool o, const cVector3f &w, const cVector3f &l) {
+						p->RotateAtSpeed(a, s, ax, r, o ? w : cVector3f(0), o ? l : cVector3f(0));
+					});
 	}
 	for (const char *pType : vTypes)
 		if (e->GetTypeInfoByName(pType))
@@ -1546,8 +1708,25 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  cVector3f vGoal = pTarget->GetPosition();
 				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveLinearTo(vGoal, a, m, d, r, cb); });
 			  });
-	SOMA_FUNC(e, "void Prop_StopMovement(const tString &in asPropName)",
-			  +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbMoving = false; p->mfMoveSpeed = 0; }); });
+	SOMA_FUNC(e, "void Prop_StopMovement(const tString &in asPropName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->StopMove(); }); });
+	SOMA_FUNC(e, "void Prop_AlignRotation(const tString &in asName, const tString &in asTargetEntity, float afAcceleration, float afMaxSpeed, float afSlowDownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
+			  +[](S n, S t, float a, float m, float d, bool r, S cb) {
+				  cSomaLuxEntity *pTarget = Find(t);
+				  if (pTarget == NULL)
+					  return;
+				  cMatrixf mtxGoal = pTarget->GetMatrix();
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveAngularTo(mtxGoal, a, m, d, r, 0, 0, cb); });
+			  });
+	SOMA_FUNC(e, "void Prop_RotateToSpeed(const tString &in asPropName, float afAcc, float afGoalSpeed, const cVector3f &in avAxis, bool abResetSpeed, const tString &in asOffsetEntity)",
+			  +[](S n, float a, float s, const cVector3f &ax, bool r, S off) {
+				  cSomaLuxEntity *pOff = off != "" ? Find(off) : NULL;
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, ax, r, pOff ? pOff->GetPosition() - p->GetPosition() : cVector3f(0), 0); });
+			  });
+	SOMA_FUNC(e, "void Prop_RotateToSpeed(const tString &in asPropName, float afAcc, float afGoalSpeed, bool abResetSpeed, const tString &in asOffsetEntity)",
+			  +[](S n, float a, float s, bool r, S off) {
+				  cSomaLuxEntity *pOff = off != "" ? Find(off) : NULL;
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, p->mvRotateAxis.SqrLength() > 0 ? p->mvRotateAxis : cVector3f(0, 1, 0), r, pOff ? pOff->GetPosition() - p->GetPosition() : cVector3f(0), 0); });
+			  });
 	SOMA_FUNC(e, "void Entity_PlaceAtEntity(const tString &in asEntityName, const tString &in asTargetEntity, const cVector3f &in avOffset = cVector3f_Zero, bool abAlignRotation = false, bool abUseEntFileCenter=false)",
 			  +[](S n, S t, const cVector3f &off, bool bAlign, bool) {
 				  cSomaLuxEntity *pTarget = Find(t);
