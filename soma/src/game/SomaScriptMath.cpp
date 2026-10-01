@@ -40,7 +40,8 @@ struct cSomaVector4f
 };
 
 static std::set<std::string> gsetNativeBehaviourTypes = {"cImGuiGfx", "cImGuiFont", "cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
-														  "cColor", "cMatrixf", "cQuaternion", "cPidControllerVec3", "cPidControllerf"};
+														  "cColor", "cMatrixf", "cQuaternion", "cPidControllerVec3", "cPidControllerf",
+														  "cRect2f", "cRect2l", "cPlanef", "cDate"};
 
 bool SomaScriptHasNativeBehaviours(const char *apType)
 {
@@ -96,6 +97,22 @@ static cSomaVector4f V4(float f) { return {f, f, f, f}; }
 static void RegisterVectors(asIScriptEngine *e)
 {
 	VEC_OPS(cVector2f, float, "cVector2f", "float")
+	SOMA_CONSTRUCT(e, "cRect2f", "void f()", +[](cRect2f *p) { new (p) cRect2f(0, 0, 0, 0); });
+	SOMA_CONSTRUCT(e, "cRect2f", "void f(const cRect2f &in)", +[](cRect2f *p, const cRect2f &o) { new (p) cRect2f(o); });
+	SOMA_CONSTRUCT(e, "cRect2f", "void f(float afX, float afY, float afW, float afH)", +[](cRect2f *p, float x, float y, float w, float h) { new (p) cRect2f(x, y, w, h); });
+	SOMA_CONSTRUCT(e, "cRect2f", "void f(float afX, float afY)", +[](cRect2f *p, float x, float y) { new (p) cRect2f(x, y, 0, 0); });
+	SOMA_CONSTRUCT(e, "cRect2l", "void f()", +[](cRect2l *p) { new (p) cRect2l(0, 0, 0, 0); });
+	SOMA_CONSTRUCT(e, "cRect2l", "void f(const cRect2l &in)", +[](cRect2l *p, const cRect2l &o) { new (p) cRect2l(o); });
+	SOMA_CONSTRUCT(e, "cRect2l", "void f(int afX, int afY, int afW, int afH)", +[](cRect2l *p, int x, int y, int w, int h) { new (p) cRect2l(x, y, w, h); });
+	SOMA_CONSTRUCT(e, "cRect2l", "void f(int afX, int afY)", +[](cRect2l *p, int x, int y) { new (p) cRect2l(x, y, 0, 0); });
+	SOMA_CONSTRUCT(e, "cPlanef", "void f()", +[](cPlanef *p) { new (p) cPlanef(0, 0, 0, 0); });
+	SOMA_CONSTRUCT(e, "cPlanef", "void f(const cPlanef &in)", +[](cPlanef *p, const cPlanef &o) { new (p) cPlanef(o); });
+	SOMA_CONSTRUCT(e, "cPlanef", "void f(float afA, float afB, float afC, float afD)", +[](cPlanef *p, float a, float b, float c, float d) { new (p) cPlanef(a, b, c, d); });
+	SOMA_CONSTRUCT(e, "cPlanef", "void f(const cVector3f &in avNormal, const cVector3f &in avPoint)", +[](cPlanef *p, const cVector3f &n, const cVector3f &pt) { new (p) cPlanef(n, pt); });
+	SOMA_CONSTRUCT(e, "cPlanef", "void f(const cVector3f &in avPoint0,const cVector3f &in avPoint1, const cVector3f &in avPoint2)",
+				   +[](cPlanef *p, const cVector3f &a, const cVector3f &b, const cVector3f &c) { new (p) cPlanef(a, b, c); });
+	SOMA_CONSTRUCT(e, "cDate", "void f()", +[](cDate *p) { memset((void *)p, 0, sizeof(cDate)); });
+	SOMA_CONSTRUCT(e, "cDate", "void f(const cDate &in)", +[](cDate *p, const cDate &o) { memcpy((void *)p, &o, sizeof(cDate)); });
 	SOMA_CONSTRUCT(e, "cVector2f", "void f(float afX)", +[](cVector2f *p, float x) { new (p) cVector2f(x); });
 	SOMA_CONSTRUCT(e, "cVector2f", "void f(float afX, float afY)", +[](cVector2f *p, float x, float y) { new (p) cVector2f(x, y); });
 	SOMA_CONSTRUCT(e, "cVector2f", "void f(const cVector3f& in avX)", +[](cVector2f *p, const cVector3f &v) { new (p) cVector2f(v.x, v.y); });

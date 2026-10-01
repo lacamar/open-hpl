@@ -775,6 +775,97 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 						}
 					return bAny;
 				});
+	{
+		static auto World = []() { return cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetWorld() : (cWorld *)NULL; };
+		static auto ForPS = [](S n, const std::function<void(cParticleSystem *)> &f) {
+			if (World() == NULL) return;
+			std::vector<cParticleSystem *> v;
+			cParticleSystemIterator it = World()->GetParticleSystemIterator();
+			while (it.HasNext())
+			{
+				cParticleSystem *p = it.Next();
+				if (SomaWildcardMatch(n, p->GetName())) v.push_back(p);
+			}
+			for (cParticleSystem *p : v) f(p);
+		};
+		static auto AttachTarget = [](cSomaLuxEntity *p) -> iEntity3D * {
+			if (p->mpMesh) return p->mpMesh;
+			if (p->GetMainBody()) return p->GetMainBody();
+			iCharacterBody *pBody = p->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+			return pBody ? pBody->GetCurrentBody() : NULL;
+		};
+		static std::map<cParticleSystem *, cColor> mapBaseColor;
+		static auto CreateAt = [](S n, S f, S ent, bool attach) -> cParticleSystem * {
+			cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(cString::ToLowerCase(ent) == "player" ? tString("Player") : ent) : NULL;
+			if (pEnt == NULL || World() == NULL)
+			{
+				Error("Could not find entity '%s' to create particle system '%s' at\n", ent.c_str(), n.c_str());
+				return NULL;
+			}
+			cParticleSystem *pPS = World()->CreateParticleSystem(n, f, 1);
+			if (pPS == NULL)
+				return NULL;
+			mapBaseColor.erase(pPS);
+			iEntity3D *pTarget = attach ? AttachTarget(pEnt) : NULL;
+			if (pTarget)
+			{
+				pPS->SetMatrix(cMath::MatrixMul(cMath::MatrixInverse(pTarget->GetWorldMatrix()), pEnt->GetMatrix()));
+				pTarget->AddChild(pPS);
+			}
+			else
+				pPS->SetMatrix(pEnt->GetMatrix());
+			return pPS;
+		};
+		SOMA_FUNC(e, "cParticleSystem@ ParticleSystem_CreateAtEntity(const tString &in asPSName, const tString &in asPSFile, const tString &in asEntity, bool abAttach)",
+				  +[](S n, S f, S ent, bool attach) { return CreateAt(n, f, ent, attach); });
+		SOMA_FUNC(e, "cParticleSystem@ ParticleSystem_CreateAtEntityExt(const tString &in asPSName, const tString &in asPSFile, const tString &in asEntity, bool abAttach, const cColor &in acColor, float afBrightness = 1.0f, bool abFadeAtDistance = false, float afFadeMinEnd = 1.0f, float afFadeMinStart = 2.0f, float afFadeMaxStart = 100.0f, float afFadeMaxEnd = 110.0f)",
+				  +[](S n, S f, S ent, bool attach, const cColor &c, float b, bool fade, float minEnd, float minStart, float maxStart, float maxEnd) {
+					  cParticleSystem *pPS = CreateAt(n, f, ent, attach);
+					  if (pPS == NULL) return pPS;
+					  mapBaseColor[pPS] = c;
+					  pPS->SetColor(cColor(c.r * b, c.g * b, c.b * b, c.a));
+					  pPS->SetFadeAtDistance(fade);
+					  pPS->SetMinFadeDistanceEnd(minEnd);
+					  pPS->SetMinFadeDistanceStart(minStart);
+					  pPS->SetMaxFadeDistanceStart(maxStart);
+					  pPS->SetMaxFadeDistanceEnd(maxEnd);
+					  return pPS;
+				  });
+		SOMA_FUNC(e, "void ParticleSystem_Destroy(const tString &in asPSName)", +[](S n) { ForPS(n, [](cParticleSystem *p) { p->Kill(); }); });
+		SOMA_FUNC(e, "void ParticleSystem_SetVisible(const tString &in asPSName, bool abVisible)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetVisible(b); }); });
+		SOMA_FUNC(e, "void ParticleSystem_SetActive(const tString &in asPSName, bool abActive)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetActive(b); }); });
+		SOMA_FUNC(e, "void ParticleSystem_SetColor(const tString &in asPSName, const cColor &in acColor)", +[](S n, const cColor &c) {
+			ForPS(n, [&c](cParticleSystem *p) { mapBaseColor[p] = c; p->SetColor(c); });
+		});
+		SOMA_FUNC(e, "void ParticleSystem_SetBrightness(const tString &in asPSName, float afBrightness)", +[](S n, float b) {
+			ForPS(n, [b](cParticleSystem *p) {
+				auto it = mapBaseColor.find(p);
+				cColor c = it != mapBaseColor.end() ? it->second : cColor(1, 1);
+				p->SetColor(cColor(c.r * b, c.g * b, c.b * b, c.a));
+			});
+		});
+		SOMA_FUNC(e, "void ParticleSystem_AttachToEntity(const tString &in asPSName, const tString &in asEntityName)", +[](S n, S ent) {
+			cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(ent) : NULL;
+			iEntity3D *pTarget = pEnt ? AttachTarget(pEnt) : NULL;
+			if (pTarget == NULL) return;
+			ForPS(n, [pTarget](cParticleSystem *p) {
+				p->SetMatrix(cMath::MatrixMul(cMath::MatrixInverse(pTarget->GetWorldMatrix()), p->GetWorldMatrix()));
+				pTarget->AddChild(p);
+			});
+		});
+		SOMA_FUNC(e, "bool ParticleSystem_Exists(const tString &in asPSName)", +[](S n) { bool b = false; ForPS(n, [&b](cParticleSystem *) { b = true; }); return b; });
+		SOMA_FUNC(e, "bool Map_GetParticleSystemArray(const tString &in asName, array<cParticleSystem@> &inout avOutParticles)", +[](S n, CScriptArray &a) {
+			a.Resize(0);
+			ForPS(n, [&a](cParticleSystem *p) { a.InsertLast(&p); });
+			return a.GetSize() > 0;
+		});
+		SOMA_METHOD(e, "cWorld", "cParticleSystem@ CreateParticleSystem( const tString&in asName,const tString&in asType, const cVector3f&in avSize, bool abRemoveWhenDead, bool abStatic)",
+					+[](cWorld *w, S n, S t, const cVector3f &size, bool remove, bool) { return w->CreateParticleSystem(n, t, size, remove); });
+		for (const char *pDecl : {"void ParticleSystem_Preload(const tString &in asFile)", "void cLux_PreloadParticleSystem(const tString &in asFile)",
+								  "void cResources_PreloadParticleSystem(const tString&in asDataName)"})
+			SOMA_FUNC(e, pDecl, +[](S) {});
+		SOMA_METHOD(e, "cLuxMap", "void PreloadParticleSystem(const tString&in asFile)", +[](cSomaLuxMap *, S) {});
+	}
 	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, CScriptArray &a) {
 		a.Resize(0);
 		if (cSomaLuxMap::GetCurrent() == NULL) return false;

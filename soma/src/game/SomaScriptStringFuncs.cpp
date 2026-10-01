@@ -1,3 +1,4 @@
+#include "SomaScriptStrings.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptBind.h"
 
@@ -61,6 +62,7 @@ static void SplitInto(const tString &asData, const tString &asSep, std::vector<t
 
 void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 {
+	RegisterSomaScriptStringConcats(e);
 	SOMA_FUNC(e, "tWString cString_To16Char(const tString &in asString)", +[](const tString &s) { return cString::To16Char(s); });
 	SOMA_FUNC(e, "tString cString_To8Char(const tWString &in awsString)", +[](const tWString &s) { return cString::To8Char(s); });
 	SOMA_FUNC(e, "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", (FloatToString));
