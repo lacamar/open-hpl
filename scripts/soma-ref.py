@@ -93,6 +93,9 @@ def write_mod(map_file, pos, size, boot=False):
     settings += (f'\n<Screen Width="{w}" Height="{h}" FullScreen="false" Vsync="false" />\n'
                  '<Main FirstGameStart="false" SleepWhenOutOfFocus="false"' +
                  ('' if boot else ' ShowMenu="false" ShowPreMenu="false"') + ' />\n')
+    for kv in os.environ.get("OHPL_REF_GFX", "").split():
+        k, v = kv.split("=", 1)
+        settings = re.sub(rf'\b{k}="[^"]*"', f'{k}="{v}"', settings)
     for f in d.glob("*_user_settings.cfg"):
         f.unlink()
     (d / "Default_user_settings.cfg").write_text(settings)

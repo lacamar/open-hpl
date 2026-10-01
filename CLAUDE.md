@@ -44,6 +44,7 @@ with the install dir read-only (`soma/ref/wine-ro.sh`), on its own scale-1 headl
 
 ```
 scripts/soma-ref.py start --map 00_01_apartment   # real game, straight into a map
+OHPL_REF_GFX="SSAOActive=false" scripts/soma-ref.py start ...   # override user_settings graphics keys
 scripts/soma-ref.py exec '__print("x=" + cLux_GetGameTime());'
 scripts/soma-ref.py player | perf | ping | teleport X Y Z --yaw D | shot out.png | log [re] | stop
 scripts/soma-compare.py start --map M             # ours (headless, script player) + ref
