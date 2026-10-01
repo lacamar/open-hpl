@@ -41,6 +41,8 @@ namespace hpl {
 		mpParent = NULL;
 
 		mbNeedsUpdate = true;
+		mbHasInvBind = false;
+		mfLocalUnitScale = 1;
 
 		mlValue = 0;
 	}

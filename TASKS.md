@@ -154,6 +154,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
 - Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
 - Physics impact sound burst right after map load.
+- Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
+  static `.dae` (tinyxml dtor); rerun passed.
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
@@ -167,9 +169,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   scratchpad `lincmp.py`): ours/ref ~2-3.4 for spots, ~2.1 point, ~1.4 non-SH box, 1.0 SH box.
   Ratio grows on dark albedo; spot cone edge wider than ref. Unresolved (instance-buffer
   light colour is CPU-side in the exe).
-- Ref shadow near clip is smaller than the light's (shade occludes `bedlight_1` at near 0.2);
-  ours renders spot shadows with near min(light, 0.05). Ref lights a wedge of wall through
-  the lamp shade that ours doesn't.
+- `bedlight_1` alone at the bed pose: ours 0.83, ref 1.41 (both unshadowed, no SSAO).
 - Window light shaft visible in ours with all lights off; absent in ref.
 - `cLux_GetLightLevelAtPos`: spot pyramid gate, physics LOS for shadow casters, SH box =
   max(DC band) x amount (ref's SH term unknown, fits ~15% median over 111 upsilon probes; a

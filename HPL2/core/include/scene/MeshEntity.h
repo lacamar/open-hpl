@@ -125,6 +125,7 @@ namespace hpl {
 		int GetBoneStateIndexFromPtr(cBoneState* apBoneState);
 		cBoneState* GetBoneStateFromName(const tString &asName);
 		int GetBoneStateNum();
+		void SetBoneRestPose(const std::vector<cMatrixf> &avLocal);
 
 		//Skeleton physics
 		void SetSkeletonPhysicsActive(bool abX);
@@ -250,6 +251,7 @@ namespace hpl {
 		tNodeStateVec mvBoneStates;
 		tNodeStateIndexMap m_mapBoneStateIndices;
 		tNodeStateVec mvTempBoneStates;
+		std::vector<cMatrixf> mvBoneRestPose;
 
 		std::vector<cMatrixf> mvBoneMatrices;
 

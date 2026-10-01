@@ -433,14 +433,14 @@ namespace hpl {
 
 						if(pState->IsActive())
 						{
-							pState->SetMatrix(pBone->GetLocalTransform(),false);
+							pState->SetMatrix(mvBoneRestPose.empty() ? pBone->GetLocalTransform() : mvBoneRestPose[i],false);
 						}
 						
 						//can optimize this by doing it in the order of the tree
 						//and using recursive. (should be enough as is...)
 						if(mbSkeletonPhysics && mfSkeletonPhysicsWeight!=1.0f)
 						{
-							mvTempBoneStates[i]->SetMatrix(pBone->GetLocalTransform(),false);
+							mvTempBoneStates[i]->SetMatrix(mvBoneRestPose.empty() ? pBone->GetLocalTransform() : mvBoneRestPose[i],false);
 						}
 					}
 
@@ -901,6 +901,14 @@ namespace hpl {
 		return (int)mvBoneStates.size();
 	}
 
+	void cMeshEntity::SetBoneRestPose(const std::vector<cMatrixf> &avLocal)
+	{
+		if(avLocal.size() != mvBoneStates.size()) return;
+		mvBoneRestPose = avLocal;
+		for(size_t i=0; i<mvBoneStates.size(); ++i) mvBoneStates[i]->SetMatrix(avLocal[i]);
+		mbUpdatedBones = false;
+	}
+
 	//----------------------------------------------------------------------
 	
 	void cMeshEntity::SetSkeletonPhysicsActive(bool abX)
@@ -1199,7 +1207,7 @@ namespace hpl {
 				//Bind pose's local space.
 				cMatrixf mtxLocal = cMath::MatrixMul(m_mtxInvWorldMatrix,pState->GetWorldMatrix());
 				
-				mvBoneMatrices[i] = cMath::MatrixMul(mtxLocal,pBone->GetInvWorldTransform());
+				mvBoneMatrices[i] = cMath::MatrixMul(mtxLocal,pBone->GetInvBindTransform());
 			}
 		}
 	}

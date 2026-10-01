@@ -41,27 +41,57 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// Every node becomes a bone; bound bones take their skin bind pose.
-	static void CreateBones(const aiNode *apNode, const aiMatrix4x4 &a_mtxParentNodeWorld, const aiMatrix4x4 &a_mtxParentBoneWorld,
-							cBone *apParent, const std::map<tString, aiMatrix4x4> &amapBind)
+	static aiMatrix4x4 Rigid(const aiMatrix4x4 &a_mtx)
+	{
+		// Bone poses are rigid (anm keys carry no scale); cm-rig scale would blow up skinning
+		aiVector3D vScale, vPos;
+		aiQuaternion qRot;
+		a_mtx.Decompose(vScale, qRot, vPos);
+		return aiMatrix4x4(aiVector3D(1,1,1), qRot, vPos);
+	}
+
+	// HPL3 keeps raw FBX units in .anm keys and map poses
+	static float UnitScale(const aiScene *apScene)
+	{
+		float fUnit;
+		double fUnitD;
+		if(apScene && apScene->mMetaData)
+		{
+			if(apScene->mMetaData->Get("UnitScaleFactor", fUnit)) return fUnit / 100.0f;
+			if(apScene->mMetaData->Get("UnitScaleFactor", fUnitD)) return (float)fUnitD / 100.0f;
+		}
+		return 1;
+	}
+
+	static bool NodeHasSkin(const aiScene *apScene, const aiNode *apNode)
+	{
+		for(unsigned int m=0; m<apNode->mNumMeshes; ++m)
+			if(apScene->mMeshes[apNode->mMeshes[m]]->mNumBones > 0) return true;
+		return false;
+	}
+
+	// Every node becomes a bone resting in its scene pose (as HPL3); skinned bones keep their bind as inverse bind.
+	static void CreateBones(const aiScene *apScene, float afUnitScale, const aiNode *apNode, const aiMatrix4x4 &a_mtxParentNodeWorld,
+							const aiMatrix4x4 &a_mtxParentBoneWorld, cBone *apParent, const std::map<tString, aiMatrix4x4> &amapBind)
 	{
 		tString sName = apNode->mName.C_Str();
 		aiMatrix4x4 mtxWorld = a_mtxParentNodeWorld * apNode->mTransformation;
 		std::map<tString, aiMatrix4x4>::const_iterator it = amapBind.find(sName);
-		if(it != amapBind.end()) mtxWorld = it->second;
 
-		// Bone poses are rigid (anm keys carry no scale); cm-rig scale would blow up skinning
-		aiVector3D vScale, vPos;
-		aiQuaternion qRot;
-		mtxWorld.Decompose(vScale, qRot, vPos);
-		aiMatrix4x4 mtxBoneWorld = aiMatrix4x4(aiVector3D(1,1,1), qRot, vPos);
+		aiMatrix4x4 mtxBoneWorld = Rigid(mtxWorld);
+		if(it == amapBind.end() && NodeHasSkin(apScene, apNode)) mtxBoneWorld = a_mtxParentBoneWorld;
 
 		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentBoneWorld).Inverse() * mtxBoneWorld;
 		cBone *pBone = apParent->CreateChildBone(sName, sName);
 		pBone->SetTransform(ToMatrix(mtxLocal));
+		if(it != amapBind.end()) pBone->SetInvBindTransform(ToMatrix(Rigid(it->second).Inverse()));
+		aiVector3D vParentScale, vParentPos;
+		aiQuaternion qParentRot;
+		a_mtxParentNodeWorld.Decompose(vParentScale, qParentRot, vParentPos);
+		pBone->SetLocalUnitScale(vParentScale.x * afUnitScale);
 
 		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
-			CreateBones(apNode->mChildren[c], mtxWorld, mtxBoneWorld, pBone, amapBind);
+			CreateBones(apScene, afUnitScale, apNode->mChildren[c], mtxWorld, mtxBoneWorld, pBone, amapBind);
 	}
 
 	static void CollectBindPoses(const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
@@ -229,7 +259,7 @@ namespace hpl {
 			CollectBindPoses(pScene, pScene->mRootNode, aiMatrix4x4(), mapBind);
 			pSkeleton = hplNew( cSkeleton, () );
 			for(unsigned int c=0; c<pScene->mRootNode->mNumChildren; ++c)
-				CreateBones(pScene->mRootNode->mChildren[c], pScene->mRootNode->mTransformation, aiMatrix4x4(), pSkeleton->GetRootBone(), mapBind);
+				CreateBones(pScene, UnitScale(pScene), pScene->mRootNode->mChildren[c], pScene->mRootNode->mTransformation, aiMatrix4x4(), pSkeleton->GetRootBone(), mapBind);
 			pMesh->SetSkeleton(pSkeleton);
 		}
 
@@ -330,18 +360,8 @@ namespace hpl {
 	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
 	{
 		tString sFile = cString::To8Char(asFile);
-		float fUnitScale = 1;
-		{
-			Assimp::Importer importer;
-			const aiScene *pScene = importer.ReadFile(sFile, 0);
-			float fUnit;
-			double fUnitD;
-			if(pScene && pScene->mMetaData)
-			{
-				if(pScene->mMetaData->Get("UnitScaleFactor", fUnit)) fUnitScale = fUnit / 100.0f;
-				else if(pScene->mMetaData->Get("UnitScaleFactor", fUnitD)) fUnitScale = (float)fUnitD / 100.0f;
-			}
-		}
+		Assimp::Importer importer;
+		float fUnitScale = UnitScale(importer.ReadFile(sFile, 0));
 		return LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile, fUnitScale);
 	}
 

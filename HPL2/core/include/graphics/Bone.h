@@ -50,6 +50,11 @@ namespace hpl {
 		const cMatrixf& GetWorldTransform();
 		const cMatrixf& GetInvWorldTransform();
 
+		void SetInvBindTransform(const cMatrixf &a_mtxInvBind){ m_mtxInvBind = a_mtxInvBind; mbHasInvBind = true; }
+		const cMatrixf& GetInvBindTransform(){ return mbHasInvBind ? m_mtxInvBind : GetInvWorldTransform(); }
+		void SetLocalUnitScale(float afX){ mfLocalUnitScale = afX; }
+		float GetLocalUnitScale(){ return mfLocalUnitScale; }
+
 		//// -- <UNSCALED> -- ///
 		void SetTransformUnscaled(const cMatrixf &a_mtxTransform);
 		const cMatrixf& GetWorldTransformUnscaled();
@@ -83,6 +88,9 @@ namespace hpl {
 
 		cMatrixf m_mtxWorldTransform;
 		cMatrixf m_mtxInvWorldTransform;
+		cMatrixf m_mtxInvBind;
+		bool mbHasInvBind;
+		float mfLocalUnitScale;
 		
 		//// -- <UNSCALED> -- ///
 		cMatrixf m_mtxTransformUnscaled;

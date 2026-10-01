@@ -2,10 +2,10 @@
  "maps": {
   "00_00_intro.hpm": {
    "allowlisted": [],
-   "boot_s": 2.4,
+   "boot_s": 2.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.98035,
+    "fps": 60.039383,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 1.75,
@@ -13,10 +13,10 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 59.98035,
+   "fps": 60.039383,
    "frame": {
     "black_frac": 1,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
      1,
      0,
@@ -40,98 +40,98 @@
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.763777,
+     "a_mean": 0.763765,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 1959328,
+     "a_zero_count": 217714,
      "b_max": 1,
-     "b_mean": 0.865726,
-     "b_min": 0.034302,
+     "b_mean": 0.865845,
+     "b_min": 0.224487,
      "b_nan_count": 0,
      "b_zero_count": 0,
-     "g_max": 0.780273,
-     "g_mean": 0.119022,
+     "g_max": 0.666504,
+     "g_mean": 0.119016,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6335072,
-     "height": 2160,
-     "r_max": 0.807617,
-     "r_mean": 0.129203,
+     "g_zero_count": 703886,
+     "height": 720,
+     "r_max": 0.709473,
+     "r_mean": 0.129008,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6335072,
+     "r_zero_count": 703886,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.767832,
-     "a_min": 0.012497,
+     "a_mean": 0.767791,
+     "a_min": 0.012512,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.75983,
-     "b_min": -0.744141,
+     "b_mean": 0.759934,
+     "b_min": -0.220215,
      "b_nan_count": 0,
-     "b_zero_count": 2201,
+     "b_zero_count": 274,
      "g_max": 1,
-     "g_mean": 0.235891,
+     "g_mean": 0.236164,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6335072,
-     "height": 2160,
-     "r_max": 0.852539,
-     "r_mean": 0.004197,
-     "r_min": -0.796387,
+     "g_zero_count": 703886,
+     "height": 720,
+     "r_max": 0.200439,
+     "r_mean": 0.004106,
+     "r_min": -0.182251,
      "r_nan_count": 0,
-     "r_zero_count": 6337094,
+     "r_zero_count": 704141,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.837503,
+     "a_mean": 0.836822,
      "a_min": 0.30957,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.843353,
-     "b_min": 0.042389,
+     "b_mean": 0.843384,
+     "b_min": 0.185669,
      "b_nan_count": 0,
      "b_zero_count": 0,
-     "g_max": 0.790039,
-     "g_mean": 0.079683,
+     "g_max": 0.573242,
+     "g_mean": 0.07966,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6335072,
-     "height": 2160,
-     "r_max": 0.80127,
-     "r_mean": 0.079573,
+     "g_zero_count": 703886,
+     "height": 720,
+     "r_max": 0.580078,
+     "r_mean": 0.079617,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6335072,
+     "r_zero_count": 703886,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "00_00_intro.hpm",
     "terrain_active": false,
-    "total_ms": 45,
+    "total_ms": 71,
     "tracks": {
      "Area": {
       "created": 1,
@@ -213,7 +213,7 @@
      "Primitive": {
       "created": 1,
       "file_missing": false,
-      "ms": 31,
+      "ms": 53,
       "skipped": {},
       "xml": 1
      },
@@ -247,7 +247,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3001586.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2730851.log",
    "log_errors": {
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -296,7 +296,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 9.1,
+   "wall_s": 9.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -338,10 +338,10 @@
     "Compound:0/13",
     "LensFlare:0/4"
    ],
-   "boot_s": 9.6,
+   "boot_s": 9.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098503,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -349,130 +349,130 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 60.098503,
+   "fps": 59.940094,
    "frame": {
-    "black_frac": 0.023693,
-    "height": 2160,
+    "black_frac": 0.026178,
+    "height": 720,
     "lum_hist16": [
-     0.458172,
-     0.436324,
-     0.079218,
-     0.024201,
-     0.000575,
-     0.000139,
-     8.5e-05,
-     0.000158,
+     0.489545,
+     0.422292,
+     0.066788,
+     0.01982,
+     0.000195,
+     8.8e-05,
      6.5e-05,
-     5.2e-05,
-     0.00017,
-     7.1e-05,
-     5.1e-05,
-     5.5e-05,
+     0.000117,
      6e-05,
-     0.000604
+     5e-05,
+     0.000128,
+     4.2e-05,
+     5e-05,
+     3.7e-05,
+     6.2e-05,
+     0.000661
     ],
     "lum_max": 255,
-    "lum_mean": 18.728476,
+    "lum_mean": 17.088358,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000551,
-    "width": 3840
+    "white_frac": 0.000597,
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 0.357178,
-     "a_mean": 0.002733,
+     "a_mean": 0.002677,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5032289,
+     "a_zero_count": 553282,
      "b_max": 1,
-     "b_mean": 0.455305,
+     "b_mean": 0.445803,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 63458,
+     "b_zero_count": 6885,
      "g_max": 1,
-     "g_mean": 0.517064,
+     "g_mean": 0.508234,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1915,
-     "height": 2160,
+     "g_zero_count": 336,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.484773,
+     "r_mean": 0.482182,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3133,
-     "sample_a": 0.000421,
-     "sample_b": 0.430176,
-     "sample_g": 0.510742,
-     "sample_r": 0.314697,
-     "width": 3840
+     "r_zero_count": 500,
+     "sample_a": 0,
+     "sample_b": 0.434814,
+     "sample_g": 0.521484,
+     "sample_r": 0.321533,
+     "width": 1280
     },
     "1": {
      "a_max": 0.157959,
-     "a_mean": 0.018497,
-     "a_min": 0.004612,
+     "a_mean": 0.018921,
+     "a_min": 0.004616,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.368952,
-     "b_min": -0.999512,
+     "b_mean": 0.434142,
+     "b_min": -0.930176,
      "b_nan_count": 0,
-     "b_zero_count": 1092,
+     "b_zero_count": 119,
      "g_max": 1,
-     "g_mean": 0.013475,
+     "g_mean": 0.012178,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 47671,
-     "height": 2160,
+     "g_zero_count": 5422,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": -0.112351,
+     "r_mean": -0.0373,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 1096,
+     "r_zero_count": 119,
      "sample_a": 0.017639,
-     "sample_b": 0.70459,
-     "sample_g": -0.003922,
-     "sample_r": -0.708984,
-     "width": 3840
+     "sample_b": 0.704102,
+     "sample_g": -0.004532,
+     "sample_r": -0.709473,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.344441,
+     "a_mean": 0.347185,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 70147,
-     "b_max": 1,
-     "b_mean": 0.402532,
+     "a_zero_count": 6627,
+     "b_max": 0.983398,
+     "b_mean": 0.419029,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 437431,
-     "g_max": 1,
-     "g_mean": 0.439366,
+     "b_zero_count": 46515,
+     "g_max": 0.983887,
+     "g_mean": 0.425002,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 333895,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.443286,
+     "g_zero_count": 35334,
+     "height": 720,
+     "r_max": 0.983398,
+     "r_mean": 0.432172,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 252107,
-     "sample_a": 0.410156,
+     "r_zero_count": 29021,
+     "sample_a": 0.411377,
      "sample_b": 0.623047,
      "sample_g": 0.635254,
      "sample_r": 0.643066,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 6404,
+    "total_ms": 6570,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
@@ -486,7 +486,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 13
       },
@@ -495,21 +495,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 68,
+      "ms": 71,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 5401,
+      "ms": 5542,
       "skipped": {},
       "xml": 436
      },
@@ -539,7 +539,7 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 3,
+      "ms": 4,
       "skipped": {},
       "xml": 70
      },
@@ -553,28 +553,28 @@
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 39,
+      "ms": 38,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 505,
+      "ms": 527,
       "skipped": {},
       "xml": 7
      },
      "StaticComboArea": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -594,7 +594,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-1568765.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2733462.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -675,7 +675,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.1,
+   "wall_s": 17.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -688,13 +688,13 @@
     ],
     "aabb_min": [
      -120.773315,
-     -48.67844,
+     -16.75,
      -140.460312
     ],
     "billboards": 28,
     "dynamic_mesh_entities": 183,
     "entities_nan_bounds": 0,
-    "entities_oversized": 4,
+    "entities_oversized": 3,
     "fog_areas": 0,
     "lights": 81,
     "lights_box": 10,
@@ -705,8 +705,7 @@
     "oversized_top": [
      "Plane_(Conflict1):Plane_(Conflict1)",
      "Plane_7:Plane_7",
-     "Plane_8:Plane_8",
-     "Legs:legs_human.fbx"
+     "Plane_8:Plane_8"
     ],
     "particle_systems": 15,
     "physics_bodies": 582,
@@ -721,10 +720,10 @@
    "allowlisted": [
     "Compound:0/9"
    ],
-   "boot_s": 7.8,
+   "boot_s": 5.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": -18.4849,
     "pos_y": 1,
@@ -732,130 +731,130 @@
     "yaw": 0
    },
    "failures": [],
-   "fps": 60,
+   "fps": 59.940094,
    "frame": {
-    "black_frac": 0.045991,
-    "height": 2160,
+    "black_frac": 0.04504,
+    "height": 720,
     "lum_hist16": [
-     0.182136,
-     0.37531,
-     0.142601,
-     0.05869,
-     0.033797,
-     0.030005,
-     0.031939,
-     0.034555,
-     0.031487,
-     0.031122,
-     0.018764,
-     0.014692,
-     0.009291,
-     0.004773,
-     0.000707,
-     0.000132
+     0.188644,
+     0.405341,
+     0.113429,
+     0.054431,
+     0.035033,
+     0.031252,
+     0.033859,
+     0.034247,
+     0.033416,
+     0.027766,
+     0.017952,
+     0.011819,
+     0.007753,
+     0.004411,
+     0.000523,
+     0.000126
     ],
     "lum_max": 243,
-    "lum_mean": 49.870998,
+    "lum_mean": 48.124043,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.10338,
+     "a_mean": 0.103209,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7436927,
+     "a_zero_count": 826483,
      "b_max": 1,
-     "b_mean": 0.341214,
+     "b_mean": 0.337326,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2,
-     "g_max": 0.910156,
-     "g_mean": 0.243705,
+     "b_zero_count": 46,
+     "g_max": 0.973633,
+     "g_mean": 0.238077,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 857475,
-     "height": 2160,
-     "r_max": 0.944824,
-     "r_mean": 0.407659,
+     "g_zero_count": 95119,
+     "height": 720,
+     "r_max": 0.98291,
+     "r_mean": 0.401049,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 857475,
+     "r_zero_count": 95247,
      "sample_a": 0,
-     "sample_b": 0.117615,
-     "sample_g": 0.121521,
-     "sample_r": 0.462646,
-     "width": 3840
+     "sample_b": 0.110535,
+     "sample_g": 0.117859,
+     "sample_r": 0.449707,
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.107884,
-     "a_min": 0.003368,
+     "a_mean": 0.108947,
+     "a_min": 0.003361,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.646027,
-     "b_min": -0.916992,
+     "b_mean": 0.64113,
+     "b_min": -0.8125,
      "b_nan_count": 0,
-     "b_zero_count": 134,
+     "b_zero_count": 18,
      "g_max": 1,
-     "g_mean": 0.189356,
-     "g_min": -0.996582,
+     "g_mean": 0.190514,
+     "g_min": -0.982422,
      "g_nan_count": 0,
-     "g_zero_count": 857474,
-     "height": 2160,
+     "g_zero_count": 95118,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": 0.174183,
+     "r_mean": 0.173115,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 857635,
-     "sample_a": 0.009613,
+     "r_zero_count": 95131,
+     "sample_a": 0.009605,
      "sample_b": 0.996094,
-     "sample_g": 0.077454,
-     "sample_r": -0.029938,
-     "width": 3840
+     "sample_g": 0.079712,
+     "sample_r": -0.032684,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.551387,
-     "a_min": 0.203369,
+     "a_mean": 0.526687,
+     "a_min": 0.197021,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.428861,
+     "b_mean": 0.426695,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2406,
-     "g_max": 0.952148,
-     "g_mean": 0.325097,
+     "b_zero_count": 686,
+     "g_max": 0.949707,
+     "g_mean": 0.323294,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 856530,
-     "height": 2160,
-     "r_max": 0.960938,
-     "r_mean": 0.321608,
+     "g_zero_count": 95343,
+     "height": 720,
+     "r_max": 0.950684,
+     "r_mean": 0.319277,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 858210,
-     "sample_a": 0.432617,
-     "sample_b": 0.264404,
-     "sample_g": 0.257324,
-     "sample_r": 0.246216,
-     "width": 3840
+     "r_zero_count": 95782,
+     "sample_a": 0.424805,
+     "sample_b": 0.290771,
+     "sample_g": 0.291992,
+     "sample_r": 0.290771,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "00_02_subway.hpm",
     "terrain_active": false,
-    "total_ms": 2329,
+    "total_ms": 2672,
     "tracks": {
      "Area": {
       "created": 37,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 37
      },
@@ -869,7 +868,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 9
       },
@@ -878,7 +877,7 @@
      "Decal": {
       "created": 52,
       "file_missing": false,
-      "ms": 42,
+      "ms": 53,
       "skipped": {},
       "xml": 52
      },
@@ -892,7 +891,7 @@
      "Entity": {
       "created": 215,
       "file_missing": false,
-      "ms": 1955,
+      "ms": 2255,
       "skipped": {},
       "xml": 215
      },
@@ -927,14 +926,14 @@
      "ParticleSystem": {
       "created": 6,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 6
      },
      "Primitive": {
       "created": 7,
       "file_missing": false,
-      "ms": 20,
+      "ms": 26,
       "skipped": {},
       "xml": 7
      },
@@ -955,7 +954,7 @@
      "StaticObject": {
       "created": 6,
       "file_missing": false,
-      "ms": 276,
+      "ms": 303,
       "skipped": {},
       "xml": 6
      },
@@ -968,12 +967,8 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3005899.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2737742.log",
    "log_errors": {
-    "ERROR: Cannot find entity '*' and play sound '*' at it": {
-     "count": 1,
-     "example": "ERROR: Cannot find entity 'Subway_bum_1' and play sound '00_01_subway/ambience/spot/bum_rambling_1' at it"
-    },
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 3,
      "example": "ERROR: Cannot find submesh 'Directional_Light' in node!"
@@ -1033,21 +1028,21 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 14.9,
+   "wall_s": 13.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
    },
    "world": {
     "aabb_max": [
-     123.731552,
-     4.334988,
-     125.923676
+     180.744476,
+     7.76754,
+     51.042179
     ],
     "aabb_min": [
      -365.251068,
-     -146.215637,
-     -8.76608
+     -145.506638,
+     -46.527504
     ],
     "billboards": 42,
     "dynamic_mesh_entities": 30,
@@ -1061,13 +1056,13 @@
     "name": "00_02_subway.hpm",
     "no_material_top": {},
     "oversized_top": [
-     "simon_body:legs_human.fbx"
+     "subway_girl_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/character/urban/subway_girl/subway_girl.dae"
     ],
     "particle_systems": 6,
     "physics_bodies": 290,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 44,
-    "sound_entities": 4,
+    "sound_entities": 3,
     "static_mesh_entities": 250,
     "submeshes_without_material": 0
    }
@@ -1077,10 +1072,10 @@
     "Compound:0/18",
     "LensFlare:0/1"
    ],
-   "boot_s": 8.9,
+   "boot_s": 11.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.512108,
     "pitch": 0,
     "pos_x": 4.49557,
     "pos_y": 1.402786,
@@ -1090,34 +1085,34 @@
    "failures": [
     "no_material:7"
    ],
-   "fps": 60,
+   "fps": 59.512108,
    "frame": {
-    "black_frac": 0.555694,
-    "height": 2160,
+    "black_frac": 0.453008,
+    "height": 720,
     "lum_hist16": [
-     0.941054,
-     0.058946,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0
+     0.836816,
+     0.155566,
+     0.00043,
+     0.000359,
+     0.00032,
+     0.000189,
+     0.000242,
+     0.000296,
+     0.000226,
+     0.000283,
+     0.000269,
+     0.000423,
+     0.000318,
+     0.00036,
+     0.000345,
+     0.003557
     ],
-    "lum_max": 18,
-    "lum_mean": 4.767381,
+    "lum_max": 255,
+    "lum_mean": 6.982867,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0,
-    "width": 3840
+    "white_frac": 0.003044,
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -1125,90 +1120,90 @@
      "a_mean": 0.000217,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 6596516,
-     "b_max": 0.918457,
-     "b_mean": 0.517053,
+     "a_zero_count": 733086,
+     "b_max": 0.995117,
+     "b_mean": 0.51744,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 63858,
-     "g_max": 0.919434,
-     "g_mean": 0.554333,
-     "g_min": 0.031372,
+     "b_zero_count": 6766,
+     "g_max": 0.964355,
+     "g_mean": 0.569235,
+     "g_min": 0.033813,
      "g_nan_count": 0,
      "g_zero_count": 0,
-     "height": 2160,
-     "r_max": 0.975586,
-     "r_mean": 0.650955,
-     "r_min": 0.050964,
+     "height": 720,
+     "r_max": 1,
+     "r_mean": 0.640192,
+     "r_min": 0.03479,
      "r_nan_count": 0,
      "r_zero_count": 0,
      "sample_a": 0,
-     "sample_b": 0.441162,
+     "sample_b": 0.442383,
      "sample_g": 0.616211,
-     "sample_r": 0.637207,
-     "width": 3840
+     "sample_r": 0.638184,
+     "width": 1280
     },
     "1": {
      "a_max": 0.007084,
-     "a_mean": 0.007331,
+     "a_mean": 0.006809,
      "a_min": 0.006081,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.957744,
+     "b_mean": 0.954466,
      "b_min": -0.600586,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.00145,
-     "g_min": -0.999512,
+     "g_mean": 0.000556,
+     "g_min": -0.998535,
      "g_nan_count": 0,
-     "g_zero_count": 383,
-     "height": 2160,
+     "g_zero_count": 70,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": 0.026251,
+     "r_mean": 0.02585,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 1,
+     "r_zero_count": 0,
      "sample_a": 0.007057,
      "sample_b": 0.999512,
      "sample_g": 0.003922,
      "sample_r": 0.027451,
-     "width": 3840
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.675514,
-     "a_min": 0.370605,
+     "a_mean": 0.662593,
+     "a_min": 0.374268,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.94873,
-     "b_mean": 0.416427,
+     "b_mean": 0.401933,
      "b_min": 0.125488,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.944824,
-     "g_mean": 0.426876,
+     "g_mean": 0.410775,
      "g_min": 0.129395,
      "g_nan_count": 0,
      "g_zero_count": 0,
-     "height": 2160,
+     "height": 720,
      "r_max": 0.94873,
-     "r_mean": 0.428733,
+     "r_mean": 0.413877,
      "r_min": 0.125488,
      "r_nan_count": 0,
      "r_zero_count": 0,
-     "sample_a": 0.50293,
+     "sample_a": 0.501953,
      "sample_b": 0.517578,
      "sample_g": 0.552734,
      "sample_r": 0.548828,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "00_03_laboratory.hpm",
     "terrain_active": false,
-    "total_ms": 6631,
+    "total_ms": 8378,
     "tracks": {
      "Area": {
       "created": 239,
@@ -1220,7 +1215,7 @@
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 13,
       "skipped": {
        "connect_light_missing": 4
       },
@@ -1238,7 +1233,7 @@
      "Decal": {
       "created": 117,
       "file_missing": false,
-      "ms": 61,
+      "ms": 91,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1254,7 +1249,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 4334,
+      "ms": 5465,
       "skipped": {},
       "xml": 436
      },
@@ -1275,7 +1270,7 @@
      "LensFlare": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 1
       },
@@ -1284,7 +1279,7 @@
      "Light": {
       "created": 126,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 126
      },
@@ -1298,21 +1293,21 @@
      "ParticleSystem": {
       "created": 15,
       "file_missing": false,
-      "ms": 10,
+      "ms": 19,
       "skipped": {},
       "xml": 15
      },
      "Primitive": {
       "created": 47,
       "file_missing": false,
-      "ms": 32,
+      "ms": 41,
       "skipped": {},
       "xml": 47
      },
      "Sound": {
       "created": 31,
       "file_missing": false,
-      "ms": 813,
+      "ms": 1113,
       "skipped": {},
       "xml": 31
      },
@@ -1326,7 +1321,7 @@
      "StaticObject": {
       "created": 719,
       "file_missing": false,
-      "ms": 1322,
+      "ms": 1579,
       "skipped": {},
       "xml": 719
      },
@@ -1339,14 +1334,14 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3008229.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2739529.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
      "example": "ERROR: Cannot find sound entity ''"
     },
     "ERROR: Cannot find submesh '*' in node!": {
-     "count": 9,
+     "count": 6,
      "example": "ERROR: Cannot find submesh 'Directional_Light' in node!"
     },
     "ERROR: Could not load image '*'!": {
@@ -1414,21 +1409,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 139,
+   "log_warnings": 137,
    "render": {
-    "draw_calls": 707,
+    "draw_calls": 815,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 14,
     "lights_rendered": 14,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 32,
+    "solid_objects": 48,
     "trans_objects": 5
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.1,
+   "wall_s": 18.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1437,17 +1432,17 @@
     "aabb_max": [
      435.729523,
      377.496429,
-     261.668701
+     527.362427
     ],
     "aabb_min": [
-     -25.750019,
+     -44.823212,
      -85.056099,
      -313.237946
     ],
     "billboards": 73,
     "dynamic_mesh_entities": 93,
     "entities_nan_bounds": 0,
-    "entities_oversized": 13,
+    "entities_oversized": 18,
     "fog_areas": 1,
     "lights": 134,
     "lights_box": 13,
@@ -1488,10 +1483,10 @@
     "Compound:0/93",
     "LensFlare:0/1"
    ],
-   "boot_s": 37.0,
+   "boot_s": 41.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217148,
+    "fps": 53.518394,
     "pitch": 0,
     "pos_x": 3,
     "pos_y": 2.25,
@@ -1501,19 +1496,19 @@
    "failures": [
     "no_material:13"
    ],
-   "fps": 60.217148,
+   "fps": 53.518394,
    "frame": {
-    "black_frac": 0.992262,
-    "height": 2160,
+    "black_frac": 0,
+    "height": 720,
     "lum_hist16": [
-     0.999987,
-     1.3e-05,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
+     0.005953,
+     0.992381,
+     0.001617,
+     2.4e-05,
+     1.2e-05,
+     8e-06,
+     3e-06,
+     3e-06,
      0,
      0,
      0,
@@ -1523,103 +1518,103 @@
      0,
      0
     ],
-    "lum_max": 24,
-    "lum_mean": 3.006397,
-    "lum_min": 2,
+    "lum_max": 123,
+    "lum_mean": 17.956705,
+    "lum_min": 14,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.017997,
+     "a_mean": 0.017999,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8063633,
+     "a_zero_count": 895827,
      "b_max": 1,
-     "b_mean": 0.222238,
+     "b_mean": 0.219329,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 507841,
-     "g_max": 1.285156,
-     "g_mean": 0.256052,
+     "b_zero_count": 55114,
+     "g_max": 1.245117,
+     "g_mean": 0.255413,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 493695,
-     "height": 2160,
+     "g_zero_count": 53957,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.27048,
+     "r_mean": 0.274777,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 498855,
+     "r_zero_count": 54217,
      "sample_a": 0,
-     "sample_b": 0.210449,
-     "sample_g": 0.228149,
-     "sample_r": 0.232056,
-     "width": 3840
+     "sample_b": 0.203857,
+     "sample_g": 0.212158,
+     "sample_r": 0.216064,
+     "width": 1280
     },
     "1": {
      "a_max": 0.024323,
-     "a_mean": 0.019805,
+     "a_mean": 0.020477,
      "a_min": 0.012787,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.559967,
-     "b_min": -1,
+     "b_mean": 0.561351,
+     "b_min": -0.999023,
      "b_nan_count": 0,
-     "b_zero_count": 397,
+     "b_zero_count": 47,
      "g_max": 1,
-     "g_mean": 0.038248,
+     "g_mean": 0.039774,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 23133,
-     "height": 2160,
+     "g_zero_count": 2562,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.065199,
+     "r_mean": 0.065445,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 17774,
+     "r_zero_count": 1960,
      "sample_a": 0.022797,
      "sample_b": 0.999512,
      "sample_g": 0.003922,
-     "sample_r": 0.000983,
-     "width": 3840
+     "sample_r": 0.003922,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.446041,
+     "a_mean": 0.449636,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 40874,
+     "a_zero_count": 3485,
      "b_max": 1,
-     "b_mean": 0.343773,
+     "b_mean": 0.346998,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 122279,
+     "b_zero_count": 8188,
      "g_max": 1,
-     "g_mean": 0.349292,
+     "g_mean": 0.352998,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 113958,
-     "height": 2160,
+     "g_zero_count": 7289,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.35802,
+     "r_mean": 0.358942,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 118650,
-     "sample_a": 0.355469,
-     "sample_b": 0.371582,
-     "sample_g": 0.39209,
-     "sample_r": 0.399902,
-     "width": 3840
+     "r_zero_count": 7794,
+     "sample_a": 0.47168,
+     "sample_b": 0.383301,
+     "sample_g": 0.399414,
+     "sample_r": 0.407227,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 33740,
+    "total_ms": 37423,
     "tracks": {
      "Area": {
       "created": 370,
@@ -1631,14 +1626,14 @@
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 18,
+      "ms": 23,
       "skipped": {},
       "xml": 193
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 93
       },
@@ -1647,7 +1642,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 230,
+      "ms": 341,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1656,14 +1651,14 @@
      "DetailMeshes": {
       "created": 504,
       "file_missing": false,
-      "ms": 24,
+      "ms": 38,
       "skipped": {},
       "xml": 504
      },
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 15473,
+      "ms": 12292,
       "skipped": {},
       "xml": 1527
      },
@@ -1693,35 +1688,35 @@
      "Light": {
       "created": 685,
       "file_missing": false,
-      "ms": 35,
+      "ms": 54,
       "skipped": {},
       "xml": 685
      },
      "LightMask": {
       "created": 13,
       "file_missing": false,
-      "ms": 0,
+      "ms": 2,
       "skipped": {},
       "xml": 13
      },
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 72,
+      "ms": 87,
       "skipped": {},
       "xml": 174
      },
      "Primitive": {
       "created": 513,
       "file_missing": false,
-      "ms": 90,
+      "ms": 135,
       "skipped": {},
       "xml": 513
      },
      "Sound": {
       "created": 128,
       "file_missing": false,
-      "ms": 3970,
+      "ms": 10394,
       "skipped": {},
       "xml": 128
      },
@@ -1735,7 +1730,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 13684,
+      "ms": 13902,
       "skipped": {},
       "xml": 3483
      },
@@ -1748,12 +1743,8 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3008713.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2743772.log",
    "log_errors": {
-    "ERROR: Cannot find submesh '*' in node!": {
-     "count": 52,
-     "example": "ERROR: Cannot find submesh 'Render' in node!"
-    },
     "ERROR: Could not find any look entities '*' for Tool Area '*'": {
      "count": 2,
      "example": "ERROR: Could not find any look entities 'AreaInsertOmniTool_ObsTunnel' for Tool Area 'ToolAreaOmniToolTunnel'"
@@ -1823,21 +1814,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 179,
+   "log_warnings": 53,
    "render": {
-    "draw_calls": 2275,
+    "draw_calls": 2249,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 87,
-    "lights_rendered": 87,
+    "lights_in_list": 86,
+    "lights_rendered": 86,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 816,
+    "solid_objects": 815,
     "trans_objects": 65
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 44.8,
+   "wall_s": 55.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1850,13 +1841,13 @@
     ],
     "aabb_min": [
      -29.305708,
-     -36.300934,
-     -132.653503
+     -25.2743,
+     -19.327477
     ],
     "billboards": 415,
     "dynamic_mesh_entities": 436,
     "entities_nan_bounds": 0,
-    "entities_oversized": 1,
+    "entities_oversized": 0,
     "fog_areas": 8,
     "lights": 945,
     "lights_box": 124,
@@ -1864,18 +1855,16 @@
     "lights_spot": 197,
     "name": "01_01_upsilon_awake.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 1,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 9,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 3
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 1,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 9,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 3
     },
-    "oversized_top": [
-     "SimonLegs:legs_human.fbx"
-    ],
-    "particle_systems": 220,
+    "oversized_top": [],
+    "particle_systems": 221,
     "physics_bodies": 6111,
-    "physics_bodies_awake": 42,
+    "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 424,
-    "sound_entities": 141,
+    "sound_entities": 140,
     "static_mesh_entities": 6174,
     "submeshes_without_material": 13
    }
@@ -1886,10 +1875,10 @@
     "LensFlare:0/3",
     "StaticObjectBatches:0/110"
    ],
-   "boot_s": 22.2,
+   "boot_s": 27.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 52.319916,
+    "fps": 22.77038,
     "pitch": 0,
     "pos_x": 31.999201,
     "pos_y": 18,
@@ -1899,20 +1888,20 @@
    "failures": [
     "no_material:49"
    ],
-   "fps": 52.319916,
+   "fps": 22.77038,
    "frame": {
-    "black_frac": 0.058235,
-    "height": 2160,
+    "black_frac": 0.057967,
+    "height": 720,
     "lum_hist16": [
-     0.85138,
-     0.136967,
-     0.007865,
-     0.002098,
-     0.0011,
-     0.000402,
-     0.000167,
-     2.1e-05,
-     1e-06,
+     0.850941,
+     0.137706,
+     0.00778,
+     0.002141,
+     0.000983,
+     0.000336,
+     0.000104,
+     9e-06,
+     0,
      0,
      0,
      0,
@@ -1921,12 +1910,12 @@
      0,
      0
     ],
-    "lum_max": 130,
-    "lum_mean": 11.042697,
+    "lum_max": 121,
+    "lum_mean": 11.033298,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -1934,109 +1923,109 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.795898,
-     "b_mean": 0.232884,
+     "a_zero_count": 921600,
+     "b_max": 0.78418,
+     "b_mean": 0.226052,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6651,
-     "g_max": 0.740723,
-     "g_mean": 0.252329,
+     "b_zero_count": 736,
+     "g_max": 0.73291,
+     "g_mean": 0.254432,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6651,
-     "height": 2160,
-     "r_max": 0.739258,
-     "r_mean": 0.262151,
+     "g_zero_count": 736,
+     "height": 720,
+     "r_max": 0.70459,
+     "r_mean": 0.265321,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6651,
+     "r_zero_count": 736,
      "sample_a": 0,
-     "sample_b": 0.256592,
-     "sample_g": 0.313477,
-     "sample_r": 0.34375,
-     "width": 3840
+     "sample_b": 0.255127,
+     "sample_g": 0.303711,
+     "sample_r": 0.324707,
+     "width": 1280
     },
     "1": {
-     "a_max": 0.015343,
-     "a_mean": 0.007225,
-     "a_min": 0.003729,
+     "a_max": 0.015305,
+     "a_mean": 0.007224,
+     "a_min": 0.003731,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.838948,
-     "b_min": -0.999512,
+     "b_mean": 0.818279,
+     "b_min": -0.99707,
      "b_nan_count": 0,
-     "b_zero_count": 1,
+     "b_zero_count": 0,
      "g_max": 1,
-     "g_mean": 0.054993,
+     "g_mean": 0.054701,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 175,
-     "height": 2160,
-     "r_max": 0.999512,
-     "r_mean": 0.106192,
+     "g_zero_count": 19,
+     "height": 720,
+     "r_max": 0.99707,
+     "r_mean": 0.105752,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 2,
+     "r_zero_count": 1,
      "sample_a": 0.008194,
-     "sample_b": 0.989746,
+     "sample_b": 0.990234,
      "sample_g": -0.003918,
-     "sample_r": 0.140869,
-     "width": 3840
+     "sample_r": 0.137207,
+     "width": 1280
     },
     "2": {
-     "a_max": 0.980957,
-     "a_mean": 0.386697,
+     "a_max": 0.960938,
+     "a_mean": 0.387725,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 12863,
+     "a_zero_count": 1447,
      "b_max": 1,
-     "b_mean": 0.410412,
+     "b_mean": 0.411104,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6651,
+     "b_zero_count": 736,
      "g_max": 1,
-     "g_mean": 0.414515,
+     "g_mean": 0.412889,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6651,
-     "height": 2160,
+     "g_zero_count": 736,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.422129,
+     "r_mean": 0.417249,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6651,
-     "sample_a": 0.161499,
-     "sample_b": 0.358643,
-     "sample_g": 0.357666,
-     "sample_r": 0.36377,
-     "width": 3840
+     "r_zero_count": 736,
+     "sample_a": 0.221558,
+     "sample_b": 0.37085,
+     "sample_g": 0.375488,
+     "sample_r": 0.387207,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "01_02_upsilon_inside.hpm",
     "terrain_active": false,
-    "total_ms": 19433,
+    "total_ms": 23908,
     "tracks": {
      "Area": {
       "created": 979,
       "file_missing": false,
-      "ms": 10,
+      "ms": 15,
       "skipped": {},
       "xml": 979
      },
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 33,
+      "ms": 63,
       "skipped": {},
       "xml": 359
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 171
       },
@@ -2045,21 +2034,21 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 398,
+      "ms": 491,
       "skipped": {},
       "xml": 536
      },
      "DetailMeshes": {
       "created": 1032,
       "file_missing": false,
-      "ms": 20,
+      "ms": 36,
       "skipped": {},
       "xml": 1032
      },
      "Entity": {
       "created": 2232,
       "file_missing": false,
-      "ms": 7402,
+      "ms": 9662,
       "skipped": {},
       "xml": 2232
      },
@@ -2082,35 +2071,35 @@
      "Light": {
       "created": 524,
       "file_missing": false,
-      "ms": 22,
+      "ms": 63,
       "skipped": {},
       "xml": 524
      },
      "LightMask": {
       "created": 14,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 14
      },
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 69,
+      "ms": 93,
       "skipped": {},
       "xml": 148
      },
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 35,
+      "ms": 52,
       "skipped": {},
       "xml": 128
      },
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 3757,
+      "ms": 5268,
       "skipped": {},
       "xml": 109
      },
@@ -2124,7 +2113,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 7553,
+      "ms": 8010,
       "skipped": {},
       "xml": 3381
      },
@@ -2139,7 +2128,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3012916.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2754598.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -2150,7 +2139,7 @@
      "example": "ERROR: Cannot find sound entity 'Entities_Station/tech/robot_arm/robot_arm_broken_idle'"
     },
     "ERROR: Could not find sound entity LeverSound in Sound_Stop": {
-     "count": 105,
+     "count": 311,
      "example": "ERROR: Could not find sound entity LeverSound in Sound_Stop"
     },
     "ERROR: Could not find sound entity RobotArmBroken in Sound_Stop": {
@@ -2165,9 +2154,9 @@
      "count": 1,
      "example": "ERROR: Could not find sound entity ThermalMachinery_Close in Sound_Fade"
     },
-    "ERROR: Could not find sound entity water_leak_* in Sound_Stop": {
+    "ERROR: Could not find sound entity ThermalMachinery_Corridor in Sound_Fade": {
      "count": 1,
-     "example": "ERROR: Could not find sound entity water_leak_* in Sound_Stop"
+     "example": "ERROR: Could not find sound entity ThermalMachinery_Corridor in Sound_Fade"
     },
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/commu": {
      "count": 1,
@@ -2244,7 +2233,7 @@
    },
    "log_warnings": 94,
    "render": {
-    "draw_calls": 4009,
+    "draw_calls": 4007,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 165,
@@ -2256,7 +2245,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 30.8,
+   "wall_s": 53.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2283,18 +2272,18 @@
     "lights_spot": 127,
     "name": "01_02_upsilon_inside.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_tech_communication_table_pplant_communication_table_pplant_GUI.dae.v3.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/communication_table_pplant_GUI.mat": 1,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_T_plain.dae.v3.msh:": 4,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 6,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 28,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 10
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_tech_communication_table_pplant_communication_table_pplant_GUI.dae.v4.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/communication_table_pplant_GUI.mat": 1,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_T_plain.dae.v4.msh:": 4,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 6,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 28,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 10
     },
     "oversized_top": [],
     "particle_systems": 175,
     "physics_bodies": 5929,
-    "physics_bodies_awake": 1,
+    "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 121,
+    "sound_entities": 117,
     "static_mesh_entities": 6901,
     "submeshes_without_material": 49
    }
@@ -2305,10 +2294,10 @@
     "LensFlare:0/1",
     "terrain"
    ],
-   "boot_s": 16.1,
+   "boot_s": 29.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 37.937748,
     "pitch": 0,
     "pos_x": 22.004,
     "pos_y": 256.018005,
@@ -2319,10 +2308,10 @@
     "no_material:1",
     "lum_mean:0.0"
    ],
-   "fps": 60,
+   "fps": 37.937748,
    "frame": {
     "black_frac": 1,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
      1,
      0,
@@ -2346,117 +2335,117 @@
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.022118,
+     "a_mean": 0.020817,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7954708,
+     "a_zero_count": 880648,
      "b_max": 1,
-     "b_mean": 0.205076,
+     "b_mean": 0.205272,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 24640,
+     "b_zero_count": 1710,
      "g_max": 1,
-     "g_mean": 0.251484,
+     "g_mean": 0.251262,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4454,
-     "height": 2160,
+     "g_zero_count": 370,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.277247,
+     "r_mean": 0.277196,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 5463,
+     "r_zero_count": 416,
      "sample_a": 0,
-     "sample_b": 0.139404,
-     "sample_g": 0.176147,
-     "sample_r": 0.253418,
-     "width": 3840
+     "sample_b": 0.094116,
+     "sample_g": 0.109802,
+     "sample_r": 0.160767,
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.036513,
+     "a_mean": 0.03653,
      "a_min": 0.004669,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.353165,
+     "b_mean": 0.357921,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 3597,
+     "b_zero_count": 326,
      "g_max": 1,
-     "g_mean": 0.069268,
-     "g_min": -1,
+     "g_mean": 0.073481,
+     "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 1055,
-     "height": 2160,
+     "g_zero_count": 127,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.031088,
+     "r_mean": 0.023262,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 3845,
-     "sample_a": 0.076599,
-     "sample_b": 0.665039,
-     "sample_g": -0.578125,
-     "sample_r": -0.472168,
-     "width": 3840
+     "r_zero_count": 354,
+     "sample_a": 0.076538,
+     "sample_b": 0.47998,
+     "sample_g": -0.807617,
+     "sample_r": -0.342285,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.333867,
+     "a_mean": 0.331152,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 1843,
+     "a_zero_count": 165,
      "b_max": 1,
-     "b_mean": 0.219385,
+     "b_mean": 0.218098,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1058058,
+     "b_zero_count": 106385,
      "g_max": 1,
-     "g_mean": 0.221453,
+     "g_mean": 0.220389,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1014415,
-     "height": 2160,
+     "g_zero_count": 101192,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.220248,
+     "r_mean": 0.21911,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 1044196,
-     "sample_a": 0.529785,
-     "sample_b": 0.221558,
-     "sample_g": 0.21936,
-     "sample_r": 0.221558,
-     "width": 3840
+     "r_zero_count": 104575,
+     "sample_a": 0.368164,
+     "sample_b": 0.228149,
+     "sample_g": 0.225708,
+     "sample_r": 0.223511,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "01_03_upsilon_outside.hpm",
     "terrain_active": true,
-    "total_ms": 13024,
+    "total_ms": 26232,
     "tracks": {
      "Area": {
       "created": 646,
       "file_missing": false,
-      "ms": 6,
+      "ms": 8,
       "skipped": {},
       "xml": 646
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 13,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 56
       },
@@ -2465,7 +2454,7 @@
      "Decal": {
       "created": 333,
       "file_missing": false,
-      "ms": 270,
+      "ms": 656,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -2474,14 +2463,14 @@
      "DetailMeshes": {
       "created": 5076,
       "file_missing": false,
-      "ms": 197,
+      "ms": 409,
       "skipped": {},
       "xml": 5076
      },
      "Entity": {
       "created": 924,
       "file_missing": false,
-      "ms": 3813,
+      "ms": 14464,
       "skipped": {},
       "xml": 924
      },
@@ -2504,35 +2493,35 @@
      "Light": {
       "created": 109,
       "file_missing": false,
-      "ms": 3,
+      "ms": 5,
       "skipped": {},
       "xml": 109
      },
      "LightMask": {
       "created": 2,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 2
      },
      "ParticleSystem": {
       "created": 63,
       "file_missing": false,
-      "ms": 75,
+      "ms": 146,
       "skipped": {},
       "xml": 63
      },
      "Primitive": {
       "created": 14,
       "file_missing": false,
-      "ms": 4,
+      "ms": 15,
       "skipped": {},
       "xml": 14
      },
      "Sound": {
       "created": 54,
       "file_missing": false,
-      "ms": 1357,
+      "ms": 1887,
       "skipped": {},
       "xml": 54
      },
@@ -2546,7 +2535,7 @@
      "StaticObject": {
       "created": 1273,
       "file_missing": false,
-      "ms": 7106,
+      "ms": 8329,
       "skipped": {},
       "xml": 1273
      },
@@ -2559,11 +2548,11 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3014987.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2763881.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
-     "count": 2,
-     "example": "ERROR: Cannot find sound entity ''"
+     "count": 8,
+     "example": "ERROR: Cannot find sound entity 'Entities_OceanBottom/tech/pump_machine/loop'"
     },
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 36,
@@ -2636,33 +2625,33 @@
    },
    "log_warnings": 208,
    "render": {
-    "draw_calls": 1362,
+    "draw_calls": 1368,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 18,
-    "lights_rendered": 18,
+    "lights_in_list": 19,
+    "lights_rendered": 19,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 413,
-    "trans_objects": 79
+    "trans_objects": 85
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 23.7,
+   "wall_s": 39.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
    },
    "world": {
     "aabb_max": [
-     959276318720,
-     712682962944,
-     538703167488
+     25262301184,
+     15794804736,
+     18094759936
     ],
     "aabb_min": [
-     -1240388075520,
-     -1563287486464,
-     -1961906798592
+     -21955604480,
+     -34075330560,
+     -41906696192
     ],
     "billboards": 329,
     "dynamic_mesh_entities": 197,
@@ -2675,19 +2664,19 @@
     "lights_spot": 75,
     "name": "01_03_upsilon_outside.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_tech_communication_table_pplant_communication_table_pplant_GUI.dae.v3.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/communication_table_pplant_GUI.mat": 1
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_tech_communication_table_pplant_communication_table_pplant_GUI.dae.v4.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/communication_table_pplant_GUI.mat": 1
     },
     "oversized_top": [
      "building/waste_exhaust_waste_exhaust_large_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/oceanbottom/building/waste_exhaust/waste_exhaust_large.dae",
      "building/waste_exhaust_waste_exhaust_large_2:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/oceanbottom/building/waste_exhaust/waste_exhaust_large.dae",
      "rocks_wall_ridge_15_(Conflict_Present)_(Conflict_Present)_3:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/environment/rocks/wall_ridge.dae",
-     "PowerCable_3:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_gameplay_power_cable_dirty_power_cable_dirty.dae.v3.msh"
+     "PowerCable_3:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_station_gameplay_power_cable_dirty_power_cable_dirty.dae.v4.msh"
     ],
-    "particle_systems": 86,
+    "particle_systems": 88,
     "physics_bodies": 2369,
     "physics_bodies_awake": 9,
     "physics_bodies_dynamic": 43,
-    "sound_entities": 82,
+    "sound_entities": 78,
     "static_mesh_entities": 7425,
     "submeshes_without_material": 1
    }
@@ -2699,10 +2688,10 @@
     "Sound:88/98",
     "StaticObjectBatches:0/22"
    ],
-   "boot_s": 17.8,
+   "boot_s": 20.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217148,
+    "fps": 36.8526,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 6.5,
@@ -2710,137 +2699,137 @@
     "yaw": 3e-06
    },
    "failures": [],
-   "fps": 60.217148,
+   "fps": 36.8526,
    "frame": {
     "black_frac": 0,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
-     0.574277,
-     0.385896,
-     0.028444,
-     0.006695,
-     0.002156,
-     0.00074,
-     0.00038,
-     0.000164,
-     7e-05,
-     4.8e-05,
-     3.6e-05,
-     5.5e-05,
-     0.001006,
-     3.1e-05,
+     0.539797,
+     0.419569,
+     0.029361,
+     0.006704,
+     0.002104,
+     0.000705,
+     0.00037,
+     0.000131,
+     8e-05,
+     6.9e-05,
+     6.5e-05,
+     7.5e-05,
+     0.000957,
+     1.2e-05,
      0,
      0
     ],
-    "lum_max": 209,
-    "lum_mean": 16.659199,
+    "lum_max": 208,
+    "lum_mean": 17.17816,
     "lum_min": 4,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.065302,
+     "a_mean": 0.071061,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 6918427,
-     "b_max": 0.996582,
-     "b_mean": 0.176775,
+     "a_zero_count": 750465,
+     "b_max": 0.986816,
+     "b_mean": 0.177909,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 78908,
-     "g_max": 1,
-     "g_mean": 0.241441,
+     "b_zero_count": 6686,
+     "g_max": 0.98291,
+     "g_mean": 0.244148,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 61615,
-     "height": 2160,
-     "r_max": 1.204102,
-     "r_mean": 0.27239,
+     "g_zero_count": 5231,
+     "height": 720,
+     "r_max": 1,
+     "r_mean": 0.271852,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 67892,
+     "r_zero_count": 5825,
      "sample_a": 0,
-     "sample_b": 0.052399,
-     "sample_g": 0.09259,
-     "sample_r": 0.116089,
-     "width": 3840
+     "sample_b": 0.174927,
+     "sample_g": 0.234741,
+     "sample_r": 0.280273,
+     "width": 1280
     },
     "1": {
-     "a_max": 0.076416,
-     "a_mean": 0.017606,
-     "a_min": 0.007034,
+     "a_max": 0.264648,
+     "a_mean": 0.019747,
+     "a_min": 0.007038,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.293553,
-     "b_min": -1,
+     "b_mean": 0.253347,
+     "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 3269,
+     "b_zero_count": 419,
      "g_max": 1,
-     "g_mean": 0.009718,
+     "g_mean": -0.010284,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 1079,
-     "height": 2160,
+     "g_zero_count": 101,
+     "height": 720,
      "r_max": 1,
-     "r_mean": -0.012995,
-     "r_min": -1,
+     "r_mean": -0.012574,
+     "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 3297,
-     "sample_a": 0.025375,
-     "sample_b": 0.979492,
-     "sample_g": -0.19873,
-     "sample_r": -0.029892,
-     "width": 3840
+     "r_zero_count": 383,
+     "sample_a": 0.079956,
+     "sample_b": 0.284912,
+     "sample_g": -0.822754,
+     "sample_r": -0.490967,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.576327,
+     "a_mean": 0.58173,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3886,
+     "a_zero_count": 120,
      "b_max": 1,
-     "b_mean": 0.245962,
+     "b_mean": 0.247913,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 185413,
+     "b_zero_count": 14566,
      "g_max": 1,
-     "g_mean": 0.251375,
+     "g_mean": 0.252961,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 136679,
-     "height": 2160,
+     "g_zero_count": 9859,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.253173,
+     "r_mean": 0.254218,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 187080,
-     "sample_a": 0.517578,
-     "sample_b": 0.204346,
-     "sample_g": 0.187744,
-     "sample_r": 0.146484,
-     "width": 3840
+     "r_zero_count": 15140,
+     "sample_a": 0.686035,
+     "sample_b": 0.160767,
+     "sample_g": 0.15686,
+     "sample_r": 0.160767,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "01_04_transport_station.hpm",
     "terrain_active": false,
-    "total_ms": 15009,
+    "total_ms": 17266,
     "tracks": {
      "Area": {
       "created": 264,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 264
      },
      "Billboard": {
       "created": 64,
       "file_missing": false,
-      "ms": 25,
+      "ms": 32,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -2849,7 +2838,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 28
       },
@@ -2858,21 +2847,21 @@
      "Decal": {
       "created": 270,
       "file_missing": false,
-      "ms": 312,
+      "ms": 364,
       "skipped": {},
       "xml": 270
      },
      "DetailMeshes": {
       "created": 1285,
       "file_missing": false,
-      "ms": 81,
+      "ms": 116,
       "skipped": {},
       "xml": 1285
      },
      "Entity": {
       "created": 797,
       "file_missing": false,
-      "ms": 5865,
+      "ms": 6930,
       "skipped": {},
       "xml": 797
      },
@@ -2895,35 +2884,35 @@
      "Light": {
       "created": 155,
       "file_missing": false,
-      "ms": 3,
+      "ms": 4,
       "skipped": {},
       "xml": 155
      },
      "LightMask": {
       "created": 3,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
      "ParticleSystem": {
       "created": 245,
       "file_missing": false,
-      "ms": 66,
+      "ms": 76,
       "skipped": {},
       "xml": 245
      },
      "Primitive": {
       "created": 25,
       "file_missing": false,
-      "ms": 12,
+      "ms": 41,
       "skipped": {},
       "xml": 25
      },
      "Sound": {
       "created": 88,
       "file_missing": false,
-      "ms": 3200,
+      "ms": 3449,
       "skipped": {
        "load_failed": 10
       },
@@ -2939,7 +2928,7 @@
      "StaticObject": {
       "created": 1052,
       "file_missing": false,
-      "ms": 5373,
+      "ms": 6170,
       "skipped": {},
       "xml": 1052
      },
@@ -2954,7 +2943,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3017237.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2771297.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 10,
@@ -3019,7 +3008,7 @@
    },
    "log_warnings": 139,
    "render": {
-    "draw_calls": 2577,
+    "draw_calls": 2573,
     "fog_areas_in_list": 2,
     "gl_errors": {},
     "lights_in_list": 59,
@@ -3027,11 +3016,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 1041,
-    "trans_objects": 157
+    "trans_objects": 153
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 25.4,
+   "wall_s": 33.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3059,11 +3048,11 @@
     "name": "01_04_transport_station.hpm",
     "no_material_top": {},
     "oversized_top": [],
-    "particle_systems": 246,
+    "particle_systems": 245,
     "physics_bodies": 2082,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 99,
-    "sound_entities": 92,
+    "sound_entities": 91,
     "static_mesh_entities": 3200,
     "submeshes_without_material": 0
    }
@@ -3075,10 +3064,10 @@
     "Sound:105/109",
     "terrain"
    ],
-   "boot_s": 29.3,
+   "boot_s": 34.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 33.630016,
     "pitch": 0,
     "pos_x": -14.3506,
     "pos_y": 34.540401,
@@ -3086,21 +3075,21 @@
     "yaw": -1.542107
    },
    "failures": [],
-   "fps": 60,
+   "fps": 33.630016,
    "frame": {
     "black_frac": 0,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
-     0.077544,
-     0.098771,
-     0.089055,
-     0.159864,
-     0.410446,
-     0.063849,
-     0.052694,
-     0.033449,
-     0.013979,
-     0.00035,
+     0.082995,
+     0.101834,
+     0.092347,
+     0.262458,
+     0.306219,
+     0.06245,
+     0.048601,
+     0.031263,
+     0.011809,
+     2.5e-05,
      0,
      0,
      0,
@@ -3108,115 +3097,115 @@
      0,
      0
     ],
-    "lum_max": 146,
-    "lum_mean": 61.003998,
-    "lum_min": 4,
+    "lum_max": 144,
+    "lum_mean": 58.807243,
+    "lum_min": 3,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.588762,
+     "a_mean": 0.589044,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3410969,
+     "a_zero_count": 378737,
      "b_max": 1,
-     "b_mean": 0.670813,
+     "b_mean": 0.669694,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 79050,
-     "g_max": 1,
-     "g_mean": 0.109176,
+     "b_zero_count": 2230,
+     "g_max": 0.935547,
+     "g_mean": 0.109183,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4885157,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.115574,
+     "g_zero_count": 542906,
+     "height": 720,
+     "r_max": 0.937012,
+     "r_mean": 0.115524,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4886829,
+     "r_zero_count": 543016,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.627188,
-     "a_min": 0.032257,
+     "a_mean": 0.63521,
+     "a_min": 0.032288,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.794561,
-     "b_min": -0.999512,
+     "b_mean": 0.802137,
+     "b_min": -0.996582,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.035347,
+     "g_mean": 0.036593,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 4883431,
-     "height": 2160,
+     "g_zero_count": 542863,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": 0.047658,
-     "r_min": -1,
+     "r_mean": 0.055838,
+     "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 4883431,
+     "r_zero_count": 542863,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.702626,
-     "a_min": 0.176392,
+     "a_mean": 0.692773,
+     "a_min": 0.184448,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.609726,
+     "b_mean": 0.612211,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1941587,
-     "g_max": 1,
-     "g_mean": 0.023859,
+     "b_zero_count": 200175,
+     "g_max": 0.949219,
+     "g_mean": 0.023856,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6800062,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.024058,
+     "g_zero_count": 739893,
+     "height": 720,
+     "r_max": 0.963867,
+     "r_mean": 0.023993,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6825058,
+     "r_zero_count": 743038,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_01_ms_curie_outside.hpm",
     "terrain_active": true,
-    "total_ms": 26345,
+    "total_ms": 31094,
     "tracks": {
      "Area": {
       "created": 663,
       "file_missing": false,
-      "ms": 7,
+      "ms": 12,
       "skipped": {},
       "xml": 663
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 17,
+      "ms": 22,
       "skipped": {
        "connect_light_missing": 20
       },
@@ -3234,7 +3223,7 @@
      "Decal": {
       "created": 455,
       "file_missing": false,
-      "ms": 282,
+      "ms": 404,
       "skipped": {
        "decal_mesh_failed": 8
       },
@@ -3243,14 +3232,14 @@
      "DetailMeshes": {
       "created": 3788,
       "file_missing": false,
-      "ms": 112,
+      "ms": 145,
       "skipped": {},
       "xml": 3788
      },
      "Entity": {
       "created": 1579,
       "file_missing": false,
-      "ms": 9049,
+      "ms": 11858,
       "skipped": {},
       "xml": 1579
      },
@@ -3273,7 +3262,7 @@
      "Light": {
       "created": 413,
       "file_missing": false,
-      "ms": 22,
+      "ms": 56,
       "skipped": {},
       "xml": 413
      },
@@ -3287,21 +3276,21 @@
      "ParticleSystem": {
       "created": 116,
       "file_missing": false,
-      "ms": 23,
+      "ms": 30,
       "skipped": {},
       "xml": 116
      },
      "Primitive": {
       "created": 257,
       "file_missing": false,
-      "ms": 155,
+      "ms": 203,
       "skipped": {},
       "xml": 257
      },
      "Sound": {
       "created": 105,
       "file_missing": false,
-      "ms": 4017,
+      "ms": 4363,
       "skipped": {
        "load_failed": 4
       },
@@ -3317,7 +3306,7 @@
      "StaticObject": {
       "created": 4961,
       "file_missing": false,
-      "ms": 12436,
+      "ms": 13742,
       "skipped": {},
       "xml": 4961
      },
@@ -3330,7 +3319,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3018952.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2776402.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 8,
@@ -3403,11 +3392,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 144,
-    "trans_objects": 16
+    "trans_objects": 15
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 36.8,
+   "wall_s": 45.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3420,7 +3409,7 @@
     ],
     "aabb_min": [
      -2055.552002,
-     -30.65777,
+     -42.149624,
      -728.19989
     ],
     "billboards": 257,
@@ -3436,16 +3425,16 @@
     "no_material_top": {},
     "oversized_top": [
      "mscurie_mscurie_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/oceanbottom/mscurie/mscurie.dae",
-     "rocks_ridge_reef01_27:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v3.msh",
-     "rocks_ridge_reef01_35:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v3.msh",
-     "rocks_rock_rounded_small01_203:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v3.msh",
-     "rocks_rock_rounded_small01_320:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v3.msh"
+     "rocks_ridge_reef01_27:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v4.msh",
+     "rocks_ridge_reef01_35:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v4.msh",
+     "rocks_rock_rounded_small01_203:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v4.msh",
+     "rocks_rock_rounded_small01_320:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v4.msh"
     ],
-    "particle_systems": 125,
+    "particle_systems": 124,
     "physics_bodies": 7481,
-    "physics_bodies_awake": 3,
+    "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 189,
-    "sound_entities": 119,
+    "sound_entities": 116,
     "static_mesh_entities": 10742,
     "submeshes_without_material": 0
    }
@@ -3456,10 +3445,10 @@
     "Sound:85/87",
     "StaticComboArea:0/2"
    ],
-   "boot_s": 22.9,
+   "boot_s": 26.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 26.036676,
     "pitch": 0,
     "pos_x": 8.5,
     "pos_y": -5.5,
@@ -3469,34 +3458,34 @@
    "failures": [
     "no_material:5"
    ],
-   "fps": 60,
+   "fps": 26.036676,
    "frame": {
-    "black_frac": 0.106514,
-    "height": 2160,
+    "black_frac": 0.106643,
+    "height": 720,
     "lum_hist16": [
-     0.861765,
-     0.13136,
-     0.00194,
-     0.000244,
-     0.000259,
-     0.000213,
-     0.000161,
-     0.000136,
-     0.000189,
-     0.000173,
-     0.000215,
-     0.000199,
-     0.00021,
-     0.000204,
-     0.000241,
-     0.00249
+     0.881759,
+     0.117452,
+     0.000789,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
     ],
-    "lum_max": 255,
-    "lum_mean": 7.721399,
+    "lum_max": 42,
+    "lum_mean": 6.112515,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.002248,
-    "width": 3840
+    "white_frac": 0,
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -3504,109 +3493,109 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.964844,
-     "b_mean": 0.171396,
+     "a_zero_count": 921600,
+     "b_max": 0.897461,
+     "b_mean": 0.169554,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 536,
-     "g_max": 0.956055,
-     "g_mean": 0.203729,
+     "b_zero_count": 60,
+     "g_max": 0.907715,
+     "g_mean": 0.205826,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 140,
-     "height": 2160,
-     "r_max": 0.968262,
-     "r_mean": 0.218848,
+     "g_zero_count": 14,
+     "height": 720,
+     "r_max": 0.964355,
+     "r_mean": 0.220312,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 90,
+     "r_zero_count": 8,
      "sample_a": 0,
      "sample_b": 0.094116,
-     "sample_g": 0.111023,
-     "sample_r": 0.113708,
-     "width": 3840
+     "sample_g": 0.104126,
+     "sample_r": 0.104858,
+     "width": 1280
     },
     "1": {
      "a_max": 0.010986,
-     "a_mean": 0.006021,
+     "a_mean": 0.006237,
      "a_min": 0.004139,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.558231,
-     "b_min": -0.937988,
+     "b_mean": 0.552078,
+     "b_min": -0.874023,
      "b_nan_count": 0,
-     "b_zero_count": 1,
+     "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.081522,
+     "g_mean": 0.081802,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 3,
-     "height": 2160,
+     "g_zero_count": 0,
+     "height": 720,
      "r_max": 1,
-     "r_mean": -0.023775,
-     "r_min": -1,
+     "r_mean": -0.023862,
+     "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 3,
+     "r_zero_count": 0,
      "sample_a": 0.009438,
-     "sample_b": 0.989258,
-     "sample_g": -0.017014,
-     "sample_r": -0.142578,
-     "width": 3840
+     "sample_b": 0.998535,
+     "sample_g": -0.013603,
+     "sample_r": -0.045135,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.663874,
-     "a_min": 0.001961,
+     "a_mean": 0.658728,
+     "a_min": 0.002941,
      "a_nan_count": 0,
      "a_zero_count": 0,
-     "b_max": 0.999023,
-     "b_mean": 0.240586,
+     "b_max": 0.998535,
+     "b_mean": 0.240102,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 15111,
-     "g_max": 0.999023,
-     "g_mean": 0.241167,
+     "b_zero_count": 1663,
+     "g_max": 0.998535,
+     "g_mean": 0.24163,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 11088,
-     "height": 2160,
-     "r_max": 0.999023,
-     "r_mean": 0.241631,
+     "g_zero_count": 1211,
+     "height": 720,
+     "r_max": 0.998535,
+     "r_mean": 0.24159,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 13444,
+     "r_zero_count": 1478,
      "sample_a": 0.646973,
-     "sample_b": 0.413574,
-     "sample_g": 0.424805,
-     "sample_r": 0.413574,
-     "width": 3840
+     "sample_b": 0.418213,
+     "sample_g": 0.428955,
+     "sample_r": 0.418213,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_02_ms_curie_inside.hpm",
     "terrain_active": false,
-    "total_ms": 20256,
+    "total_ms": 23256,
     "tracks": {
      "Area": {
       "created": 1183,
       "file_missing": false,
-      "ms": 12,
+      "ms": 13,
       "skipped": {},
       "xml": 1183
      },
      "Billboard": {
       "created": 132,
       "file_missing": false,
-      "ms": 12,
+      "ms": 17,
       "skipped": {},
       "xml": 132
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 3,
       "skipped": {
        "unsupported_track": 311
       },
@@ -3615,7 +3604,7 @@
      "Decal": {
       "created": 2080,
       "file_missing": false,
-      "ms": 730,
+      "ms": 790,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -3624,35 +3613,35 @@
      "DetailMeshes": {
       "created": 5976,
       "file_missing": false,
-      "ms": 70,
+      "ms": 86,
       "skipped": {},
       "xml": 5976
      },
      "Entity": {
       "created": 2271,
       "file_missing": false,
-      "ms": 6062,
+      "ms": 7897,
       "skipped": {},
       "xml": 2271
      },
      "FogArea": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
      "LensFlare": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
      "Light": {
       "created": 309,
       "file_missing": false,
-      "ms": 24,
+      "ms": 34,
       "skipped": {},
       "xml": 309
      },
@@ -3666,21 +3655,21 @@
      "ParticleSystem": {
       "created": 129,
       "file_missing": false,
-      "ms": 19,
+      "ms": 32,
       "skipped": {},
       "xml": 129
      },
      "Primitive": {
       "created": 303,
       "file_missing": false,
-      "ms": 91,
+      "ms": 121,
       "skipped": {},
       "xml": 303
      },
      "Sound": {
       "created": 85,
       "file_missing": false,
-      "ms": 1854,
+      "ms": 1999,
       "skipped": {
        "load_failed": 2
       },
@@ -3698,7 +3687,7 @@
      "StaticObject": {
       "created": 7380,
       "file_missing": false,
-      "ms": 11109,
+      "ms": 11955,
       "skipped": {},
       "xml": 7380
      },
@@ -3711,7 +3700,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3021564.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2782070.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 2,
@@ -3780,7 +3769,7 @@
    },
    "log_warnings": 171,
    "render": {
-    "draw_calls": 897,
+    "draw_calls": 888,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 20,
@@ -3792,7 +3781,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 30.8,
+   "wall_s": 42.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3800,11 +3789,11 @@
    "world": {
     "aabb_max": [
      20.5214,
-     29.650919,
+     27.28471,
      86.089882
     ],
     "aabb_min": [
-     -27.798674,
+     -24.141146,
      -12.56,
      -1
     ],
@@ -3827,7 +3816,7 @@
     "physics_bodies": 7843,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 652,
-    "sound_entities": 99,
+    "sound_entities": 93,
     "static_mesh_entities": 17490,
     "submeshes_without_material": 5
    }
@@ -3838,10 +3827,10 @@
     "LensFlare:0/1",
     "terrain"
    ],
-   "boot_s": 18.6,
+   "boot_s": 23.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.823513,
+    "fps": 14.89573,
     "pitch": 0,
     "pos_x": 28.593,
     "pos_y": 129.826004,
@@ -3849,147 +3838,146 @@
     "yaw": 0.593195
    },
    "failures": [
-    "no_material:5",
-    "lum_mean:1.2"
+    "no_material:5"
    ],
-   "fps": 58.823513,
+   "fps": 14.89573,
    "frame": {
-    "black_frac": 0.992806,
-    "height": 2160,
+    "black_frac": 0,
+    "height": 720,
     "lum_hist16": [
-     0.993415,
-     0.000432,
-     0.000403,
-     0.000298,
-     0.000287,
-     0.000211,
-     0.000182,
-     0.000169,
-     0.000214,
-     0.000227,
-     0.000245,
-     0.000207,
-     0.00029,
-     0.000216,
-     0.000267,
-     0.002939
+     0.028688,
+     0.051993,
+     0.460969,
+     0.154732,
+     0.068175,
+     0.067081,
+     0.049785,
+     0.045802,
+     0.036399,
+     0.02398,
+     0.010211,
+     0.002179,
+     7e-06,
+     0,
+     0,
+     0
     ],
-    "lum_max": 255,
-    "lum_mean": 1.180015,
-    "lum_min": 0,
+    "lum_max": 194,
+    "lum_mean": 61.705406,
+    "lum_min": 7,
     "magenta_frac": 0,
-    "white_frac": 0.002641,
-    "width": 3840
+    "white_frac": 0,
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.488562,
+     "a_mean": 0.488584,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3899651,
+     "a_zero_count": 433293,
      "b_max": 1,
-     "b_mean": 0.506036,
+     "b_mean": 0.506124,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 7323,
-     "g_max": 0.983887,
-     "g_mean": 0.073979,
+     "b_zero_count": 548,
+     "g_max": 0.905762,
+     "g_mean": 0.073911,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3709332,
-     "height": 2160,
-     "r_max": 0.997559,
-     "r_mean": 0.117949,
+     "g_zero_count": 412136,
+     "height": 720,
+     "r_max": 0.905762,
+     "r_mean": 0.117887,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3709278,
+     "r_zero_count": 412096,
      "sample_a": 0,
-     "sample_b": 0.099243,
-     "sample_g": 0.097046,
-     "sample_r": 0.15332,
-     "width": 3840
+     "sample_b": 0.125977,
+     "sample_g": 0.132324,
+     "sample_r": 0.195312,
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.45433,
+     "a_mean": 0.454318,
      "a_min": 0.006248,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.829888,
-     "b_min": -0.998535,
+     "b_mean": 0.831058,
+     "b_min": -0.984375,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.258542,
-     "g_min": -0.999512,
+     "g_mean": 0.2597,
+     "g_min": -0.999023,
      "g_nan_count": 0,
-     "g_zero_count": 3710963,
-     "height": 2160,
+     "g_zero_count": 412329,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": -0.002093,
+     "r_mean": -0.001904,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 3710962,
-     "sample_a": 0.012161,
-     "sample_b": 0.423584,
-     "sample_g": 0.286621,
-     "sample_r": -0.858887,
-     "width": 3840
+     "r_zero_count": 412329,
+     "sample_a": 0.012177,
+     "sample_b": 0.407715,
+     "sample_g": 0.254639,
+     "sample_r": -0.876465,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.773904,
+     "a_mean": 0.771425,
      "a_min": 0.176392,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.564605,
+     "b_mean": 0.564579,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 101298,
+     "b_zero_count": 9309,
      "g_max": 1,
-     "g_mean": 0.112305,
+     "g_mean": 0.112322,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3805637,
-     "height": 2160,
+     "g_zero_count": 420996,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.101684,
+     "r_mean": 0.101682,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3813970,
-     "sample_a": 0.59668,
-     "sample_b": 0.141113,
-     "sample_g": 0.13916,
-     "sample_r": 0.137939,
-     "width": 3840
+     "r_zero_count": 421834,
+     "sample_a": 0.619629,
+     "sample_b": 0.288818,
+     "sample_g": 0.281738,
+     "sample_r": 0.280273,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_03_delta.hpm",
     "terrain_active": true,
-    "total_ms": 15870,
+    "total_ms": 19792,
     "tracks": {
      "Area": {
       "created": 935,
       "file_missing": false,
-      "ms": 9,
+      "ms": 13,
       "skipped": {},
       "xml": 935
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 10,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 66
       },
@@ -3998,28 +3986,28 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 390,
+      "ms": 458,
       "skipped": {},
       "xml": 375
      },
      "DetailMeshes": {
       "created": 4882,
       "file_missing": false,
-      "ms": 112,
+      "ms": 153,
       "skipped": {},
       "xml": 4882
      },
      "Entity": {
       "created": 1749,
       "file_missing": false,
-      "ms": 6813,
+      "ms": 8511,
       "skipped": {},
       "xml": 1749
      },
      "FogArea": {
       "created": 7,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 7
      },
@@ -4035,7 +4023,7 @@
      "Light": {
       "created": 217,
       "file_missing": false,
-      "ms": 31,
+      "ms": 50,
       "skipped": {},
       "xml": 217
      },
@@ -4049,21 +4037,21 @@
      "ParticleSystem": {
       "created": 92,
       "file_missing": false,
-      "ms": 18,
+      "ms": 25,
       "skipped": {},
       "xml": 92
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 26,
+      "ms": 38,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 33,
       "file_missing": false,
-      "ms": 1773,
+      "ms": 2841,
       "skipped": {},
       "xml": 33
      },
@@ -4077,7 +4065,7 @@
      "StaticObject": {
       "created": 1714,
       "file_missing": false,
-      "ms": 6459,
+      "ms": 7430,
       "skipped": {},
       "xml": 1714
      },
@@ -4090,7 +4078,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3024168.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2786201.log",
    "log_errors": {
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 23,
@@ -4179,7 +4167,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 26.9,
+   "wall_s": 46.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4187,12 +4175,12 @@
    "world": {
     "aabb_max": [
      219102372618625065539994521744542007296,
-     163.25058,
-     174.065048
+     211.786987,
+     227.387802
     ],
     "aabb_min": [
      -107.97113,
-     -43,
+     -372.914398,
      -92768638318433381813559863452790423552
     ],
     "billboards": 323,
@@ -4213,9 +4201,9 @@
     ],
     "particle_systems": 145,
     "physics_bodies": 5495,
-    "physics_bodies_awake": 19,
+    "physics_bodies_awake": 3,
     "physics_bodies_dynamic": 65,
-    "sound_entities": 66,
+    "sound_entities": 53,
     "static_mesh_entities": 8481,
     "submeshes_without_material": 5
    }
@@ -4225,10 +4213,10 @@
     "Compound:0/72",
     "terrain"
    ],
-   "boot_s": 13.4,
+   "boot_s": 20.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.93998,
+    "fps": 10.20409,
     "pitch": 0,
     "pos_x": -3.75,
     "pos_y": 244.296005,
@@ -4238,144 +4226,144 @@
    "failures": [
     "Entity:1071/1072 entity_failed:entities/_temp/aaron/bass_robot_posed.entx1"
    ],
-   "fps": 59.93998,
+   "fps": 10.20409,
    "frame": {
-    "black_frac": 0,
-    "height": 2160,
+    "black_frac": 4.3e-05,
+    "height": 720,
     "lum_hist16": [
-     0.000856,
-     0.05203,
-     0.042335,
-     0.033227,
-     0.220561,
-     0.422995,
-     0.078843,
-     0.035698,
-     0.031554,
-     0.033019,
-     0.031555,
-     0.017245,
-     8.3e-05,
-     0,
-     0,
-     0
+     0.001147,
+     0.050761,
+     0.042231,
+     0.315672,
+     0.340929,
+     0.059811,
+     0.037382,
+     0.033983,
+     0.030988,
+     0.032852,
+     0.031054,
+     0.017225,
+     0.000514,
+     0.000569,
+     0.000608,
+     0.004275
     ],
-    "lum_max": 208,
-    "lum_mean": 87.906906,
-    "lum_min": 8,
+    "lum_max": 255,
+    "lum_mean": 76.79216,
+    "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0,
-    "width": 3840
+    "white_frac": 0.003536,
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.348514,
+     "a_mean": 0.335927,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5401340,
+     "a_zero_count": 611748,
      "b_max": 1,
-     "b_mean": 0.471851,
+     "b_mean": 0.461364,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 97517,
-     "g_max": 1,
-     "g_mean": 0.156909,
+     "b_zero_count": 8274,
+     "g_max": 0.974121,
+     "g_mean": 0.159753,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2891470,
-     "height": 2160,
+     "g_zero_count": 309449,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.16836,
+     "r_mean": 0.171367,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2896495,
+     "r_zero_count": 309846,
      "sample_a": 0,
-     "sample_b": 0.185425,
-     "sample_g": 0.277832,
-     "sample_r": 0.331787,
-     "width": 3840
+     "sample_b": 0.165161,
+     "sample_g": 0.259033,
+     "sample_r": 0.302002,
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.383894,
-     "a_min": 0.027267,
+     "a_mean": 0.377468,
+     "a_min": 0.027283,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.692855,
+     "b_mean": 0.711898,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.040515,
-     "g_min": -1,
+     "g_mean": 0.044975,
+     "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 2884815,
-     "height": 2160,
+     "g_zero_count": 308939,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": -0.097854,
+     "r_mean": -0.101958,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 2884751,
-     "sample_a": 0.052185,
-     "sample_b": 0.194824,
-     "sample_g": 0.512207,
-     "sample_r": 0.835938,
-     "width": 3840
+     "r_zero_count": 308929,
+     "sample_a": 0.052216,
+     "sample_b": 0.449219,
+     "sample_g": 0.511719,
+     "sample_r": 0.731934,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.513227,
-     "a_min": 0.042145,
+     "a_mean": 0.481038,
+     "a_min": 0.019104,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.399276,
+     "b_mean": 0.388754,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1686342,
+     "b_zero_count": 171615,
      "g_max": 1,
-     "g_mean": 0.053419,
+     "g_mean": 0.054399,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4507093,
-     "height": 2160,
+     "g_zero_count": 473684,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.053498,
+     "r_mean": 0.05451,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4566342,
+     "r_zero_count": 480532,
      "sample_a": 0.188232,
-     "sample_b": 0.12323,
-     "sample_g": 0.122009,
-     "sample_r": 0.12323,
-     "width": 3840
+     "sample_b": 0.057098,
+     "sample_g": 0.056122,
+     "sample_r": 0.057098,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_04_theta_outside.hpm",
     "terrain_active": true,
-    "total_ms": 10235,
+    "total_ms": 16146,
     "tracks": {
      "Area": {
       "created": 96,
       "file_missing": false,
-      "ms": 2,
+      "ms": 13,
       "skipped": {},
       "xml": 96
      },
      "Billboard": {
       "created": 29,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 29
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 72
       },
@@ -4384,21 +4372,21 @@
      "Decal": {
       "created": 194,
       "file_missing": false,
-      "ms": 136,
+      "ms": 188,
       "skipped": {},
       "xml": 194
      },
      "DetailMeshes": {
       "created": 4002,
       "file_missing": false,
-      "ms": 82,
+      "ms": 235,
       "skipped": {},
       "xml": 4002
      },
      "Entity": {
       "created": 1071,
       "file_missing": false,
-      "ms": 2566,
+      "ms": 4390,
       "skipped": {
        "entity_failed:entities/_temp/aaron/bass_robot_posed.ent": 1
       },
@@ -4421,7 +4409,7 @@
      "Light": {
       "created": 102,
       "file_missing": false,
-      "ms": 16,
+      "ms": 37,
       "skipped": {},
       "xml": 102
      },
@@ -4435,21 +4423,21 @@
      "ParticleSystem": {
       "created": 98,
       "file_missing": false,
-      "ms": 67,
+      "ms": 113,
       "skipped": {},
       "xml": 98
      },
      "Primitive": {
       "created": 8,
       "file_missing": false,
-      "ms": 29,
+      "ms": 182,
       "skipped": {},
       "xml": 8
      },
      "Sound": {
       "created": 28,
       "file_missing": false,
-      "ms": 1070,
+      "ms": 1937,
       "skipped": {},
       "xml": 28
      },
@@ -4463,7 +4451,7 @@
      "StaticObject": {
       "created": 1493,
       "file_missing": false,
-      "ms": 6072,
+      "ms": 8778,
       "skipped": {},
       "xml": 1493
      },
@@ -4476,7 +4464,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3028207.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2797512.log",
    "log_errors": {
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 2,
@@ -4511,7 +4499,7 @@
      "example": "ERROR: No animation event named 'CreateParticle'"
     },
     "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit N": {
-     "count": 4,
+     "count": 5,
      "example": "ERROR: Sampler aDiffuseMap does not exist, could not bind it to unit 0"
     },
     "ERROR: Sampler aHeightMap does not exist, could not bind it to unit N": {
@@ -4535,21 +4523,21 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 104,
+   "log_warnings": 106,
    "render": {
-    "draw_calls": 3169,
+    "draw_calls": 9952,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 25,
-    "lights_rendered": 25,
+    "lights_in_list": 57,
+    "lights_rendered": 57,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 1547,
-    "trans_objects": 31
+    "solid_objects": 4696,
+    "trans_objects": 91
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 20.5,
+   "wall_s": 37.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4578,17 +4566,17 @@
     "no_material_top": {},
     "oversized_top": [
      "rocks_wall_u_turn_concave_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/environment/rocks/wall_u_turn_concave.dae",
-     "rocks_wall_ridge_16:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_wall_ridge.dae.v3.msh",
-     "rocks_wall_ridge_22:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_wall_ridge.dae.v3.msh",
+     "rocks_wall_ridge_16:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_wall_ridge.dae.v4.msh",
+     "rocks_wall_ridge_22:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_wall_ridge.dae.v4.msh",
      "building/research_site_research_site_antenna_mountaintop_large_6:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/oceanbottom/building/research_site/research_site_antenna_mountaintop_large.dae",
      "Plane:Plane",
-     "block_box_static_2:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_technical_block_box_block_box.dae.v3.msh"
+     "block_box_static_2:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_technical_block_box_block_box.dae.v4.msh"
     ],
     "particle_systems": 99,
     "physics_bodies": 5165,
     "physics_bodies_awake": 2,
     "physics_bodies_dynamic": 17,
-    "sound_entities": 41,
+    "sound_entities": 39,
     "static_mesh_entities": 6599,
     "submeshes_without_material": 0
    }
@@ -4598,10 +4586,10 @@
     "Compound:0/172",
     "LensFlare:0/5"
    ],
-   "boot_s": 34.2,
+   "boot_s": 45.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 27.210901,
+    "fps": 7.272738,
     "pitch": 0,
     "pos_x": -12.75,
     "pos_y": 3.7502,
@@ -4609,24 +4597,25 @@
     "yaw": -1.570796
    },
    "failures": [
+    "gl_errors:0x0501",
     "no_material:24"
    ],
-   "fps": 27.210901,
+   "fps": 7.272738,
    "frame": {
     "black_frac": 0,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
      0,
-     0.676795,
-     0.319215,
-     0.001342,
-     0.000572,
-     0.000148,
-     0.000184,
-     0.000407,
-     0.000596,
-     0.000131,
-     0.000611,
+     0.676989,
+     0.318912,
+     0.001684,
+     0.000347,
+     0.000207,
+     0.00022,
+     0.000394,
+     0.000515,
+     0.00014,
+     0.000591,
      0,
      0,
      0,
@@ -4634,11 +4623,11 @@
      0
     ],
     "lum_max": 162,
-    "lum_mean": 29.575998,
+    "lum_mean": 29.569567,
     "lum_min": 23,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -4646,90 +4635,90 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.890137,
-     "b_mean": 0.323348,
+     "a_zero_count": 921600,
+     "b_max": 0.904785,
+     "b_mean": 0.321659,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 81669,
+     "b_zero_count": 9148,
      "g_max": 0.937012,
-     "g_mean": 0.349645,
+     "g_mean": 0.345552,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 22667,
-     "height": 2160,
+     "g_zero_count": 2562,
+     "height": 720,
      "r_max": 0.937012,
-     "r_mean": 0.373148,
+     "r_mean": 0.371506,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 28169,
+     "r_zero_count": 3185,
      "sample_a": 0,
-     "sample_b": 0.424316,
-     "sample_g": 0.447998,
-     "sample_r": 0.481201,
-     "width": 3840
+     "sample_b": 0.419434,
+     "sample_g": 0.443115,
+     "sample_r": 0.474365,
+     "width": 1280
     },
     "1": {
      "a_max": 0.007263,
-     "a_mean": 0.00698,
+     "a_mean": 0.006598,
      "a_min": 0.003548,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.864657,
-     "b_min": -0.966797,
+     "b_mean": 0.85195,
+     "b_min": -0.87793,
      "b_nan_count": 0,
-     "b_zero_count": 31,
+     "b_zero_count": 3,
      "g_max": 0.999512,
-     "g_mean": 0.002616,
+     "g_mean": 0.002508,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 11941,
-     "height": 2160,
+     "g_zero_count": 1260,
+     "height": 720,
      "r_max": 1,
-     "r_mean": -0.012793,
+     "r_mean": -0.012799,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 133,
+     "r_zero_count": 15,
      "sample_a": 0.007183,
      "sample_b": 0.999512,
-     "sample_g": 0.017166,
-     "sample_r": -0.006084,
-     "width": 3840
+     "sample_g": 0.017288,
+     "sample_r": -0.01049,
+     "width": 1280
     },
     "2": {
      "a_max": 0.882324,
-     "a_mean": 0.644365,
-     "a_min": 0.437744,
+     "a_mean": 0.673471,
+     "a_min": 0.344482,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.264919,
+     "b_mean": 0.265609,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 296591,
+     "b_zero_count": 32761,
      "g_max": 1,
-     "g_mean": 0.29006,
+     "g_mean": 0.290362,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 166362,
-     "height": 2160,
+     "g_zero_count": 18099,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.28868,
+     "r_mean": 0.289017,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 188658,
-     "sample_a": 0.643066,
-     "sample_b": 0.078186,
-     "sample_g": 0.093872,
-     "sample_r": 0.078186,
-     "width": 3840
+     "r_zero_count": 20651,
+     "sample_a": 0.641113,
+     "sample_b": 0.066895,
+     "sample_g": 0.082581,
+     "sample_r": 0.066895,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_05_theta_inside.hpm",
     "terrain_active": false,
-    "total_ms": 31278,
+    "total_ms": 41374,
     "tracks": {
      "Area": {
       "created": 672,
@@ -4741,14 +4730,14 @@
      "Billboard": {
       "created": 177,
       "file_missing": false,
-      "ms": 27,
+      "ms": 38,
       "skipped": {},
       "xml": 177
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 3,
       "skipped": {
        "unsupported_track": 172
       },
@@ -4757,21 +4746,21 @@
      "Decal": {
       "created": 1076,
       "file_missing": false,
-      "ms": 468,
+      "ms": 555,
       "skipped": {},
       "xml": 1076
      },
      "DetailMeshes": {
       "created": 2071,
       "file_missing": false,
-      "ms": 16,
+      "ms": 25,
       "skipped": {},
       "xml": 2071
      },
      "Entity": {
       "created": 2867,
       "file_missing": false,
-      "ms": 16524,
+      "ms": 23136,
       "skipped": {},
       "xml": 2867
      },
@@ -4794,49 +4783,49 @@
      "Light": {
       "created": 820,
       "file_missing": false,
-      "ms": 34,
+      "ms": 63,
       "skipped": {},
       "xml": 820
      },
      "LightMask": {
       "created": 19,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 19
      },
      "ParticleSystem": {
       "created": 201,
       "file_missing": false,
-      "ms": 55,
+      "ms": 73,
       "skipped": {},
       "xml": 201
      },
      "Primitive": {
       "created": 333,
       "file_missing": false,
-      "ms": 145,
+      "ms": 362,
       "skipped": {},
       "xml": 333
      },
      "Sound": {
       "created": 140,
       "file_missing": false,
-      "ms": 3244,
+      "ms": 3627,
       "skipped": {},
       "xml": 140
      },
      "StaticComboArea": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
      "StaticObject": {
       "created": 4460,
       "file_missing": false,
-      "ms": 10575,
+      "ms": 13268,
       "skipped": {},
       "xml": 4460
      },
@@ -4849,7 +4838,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3028779.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2811089.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -4940,24 +4929,26 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 377,
+   "log_warnings": 336,
    "render": {
-    "draw_calls": 6592,
+    "draw_calls": 6379,
     "fog_areas_in_list": 3,
-    "gl_errors": {},
-    "lights_in_list": 157,
-    "lights_rendered": 157,
+    "gl_errors": {
+     "0x0501": 1
+    },
+    "lights_in_list": 156,
+    "lights_rendered": 156,
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 1968,
-    "trans_objects": 120
+    "trans_objects": 122
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 51.4,
+   "wall_s": 80.8,
    "warmup": {
-    "frames": 360,
-    "timed_out": false
+    "frames": 228,
+    "timed_out": true
    },
    "world": {
     "aabb_max": [
@@ -4984,19 +4975,19 @@
      "/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/station/tunnel/maintenance_tunnel/maintenance_tunnel_open_bottom.dae:": 1,
      "/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/station/tunnel/maintenance_tunnel/maintenance_tunnel_open_top.dae:": 1,
      "Plane_2:textures/terrain/sand/sand_wavy.mat": 1,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 2,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 15,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 4
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 15,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 4
     },
     "oversized_top": [
      "beach_water:beach_water",
      "02_05_beach_sky_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/urban/special/skyline.dae"
     ],
-    "particle_systems": 207,
+    "particle_systems": 208,
     "physics_bodies": 8783,
     "physics_bodies_awake": 2,
     "physics_bodies_dynamic": 774,
-    "sound_entities": 230,
+    "sound_entities": 227,
     "static_mesh_entities": 9972,
     "submeshes_without_material": 24
    }
@@ -5006,10 +4997,10 @@
     "Compound:0/55",
     "Sound:111/117"
    ],
-   "boot_s": 25.6,
+   "boot_s": 29.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 21.484331,
+    "fps": 8.973062,
     "pitch": 0,
     "pos_x": 2.75,
     "pos_y": 4.75,
@@ -5019,144 +5010,144 @@
    "failures": [
     "no_material:36"
    ],
-   "fps": 21.484331,
+   "fps": 8.973062,
    "frame": {
-    "black_frac": 2.7e-05,
-    "height": 2160,
+    "black_frac": 1e-05,
+    "height": 720,
     "lum_hist16": [
-     0.19717,
-     0.709683,
-     0.081453,
-     0.009438,
-     0.000904,
-     0.001094,
-     0.000136,
-     3e-05,
-     9e-06,
-     6e-06,
+     0.198143,
+     0.709606,
+     0.080655,
+     0.009384,
+     0.000955,
+     0.001045,
+     0.000102,
+     2.9e-05,
      1.2e-05,
      9e-06,
+     1.2e-05,
      1e-05,
-     3.7e-05,
-     1e-05,
-     2e-06
+     1.5e-05,
+     2e-05,
+     3e-06,
+     0
     ],
-    "lum_max": 241,
-    "lum_mean": 22.172546,
-    "lum_min": 2,
+    "lum_max": 224,
+    "lum_mean": 22.178555,
+    "lum_min": 3,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.002451,
+     "a_mean": 0.002095,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8042250,
+     "a_zero_count": 890523,
      "b_max": 1.163086,
-     "b_mean": 0.37142,
+     "b_mean": 0.373369,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1310405,
-     "g_max": 1.393555,
-     "g_mean": 0.4345,
+     "b_zero_count": 144245,
+     "g_max": 1.400391,
+     "g_mean": 0.421735,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 68169,
-     "height": 2160,
+     "g_zero_count": 6863,
+     "height": 720,
      "r_max": 1.466797,
-     "r_mean": 0.514011,
+     "r_mean": 0.505647,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 25723,
+     "r_zero_count": 2188,
      "sample_a": 0,
-     "sample_b": 0.566895,
-     "sample_g": 0.57959,
-     "sample_r": 0.612305,
-     "width": 3840
+     "sample_b": 0.641602,
+     "sample_g": 0.651855,
+     "sample_r": 0.683594,
+     "width": 1280
     },
     "1": {
      "a_max": 0.191284,
-     "a_mean": 0.028856,
-     "a_min": 0.007065,
+     "a_mean": 0.028845,
+     "a_min": 0.007072,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.604027,
-     "b_min": -1,
+     "b_mean": 0.609462,
+     "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 1426,
+     "b_zero_count": 271,
      "g_max": 1,
-     "g_mean": 0.081885,
-     "g_min": -1,
+     "g_mean": 0.084538,
+     "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 346,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.007034,
+     "g_zero_count": 23,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": 0.008094,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 1678,
-     "sample_a": 0.057526,
-     "sample_b": 0.688477,
-     "sample_g": 0.011299,
-     "sample_r": -0.725098,
-     "width": 3840
+     "r_zero_count": 290,
+     "sample_a": 0.057495,
+     "sample_b": 0.98291,
+     "sample_g": 0.01059,
+     "sample_r": -0.181641,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.543135,
+     "a_mean": 0.550161,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 23476,
+     "a_zero_count": 1929,
      "b_max": 1,
-     "b_mean": 0.528516,
+     "b_mean": 0.523189,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 123331,
+     "b_zero_count": 12592,
      "g_max": 1,
-     "g_mean": 0.520274,
+     "g_mean": 0.517522,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 116590,
-     "height": 2160,
+     "g_zero_count": 11773,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.523602,
+     "r_mean": 0.518192,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 121284,
+     "r_zero_count": 12288,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
      "sample_r": 0,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_06_theta_tunnels.hpm",
     "terrain_active": false,
-    "total_ms": 22672,
+    "total_ms": 26187,
     "tracks": {
      "Area": {
       "created": 886,
       "file_missing": false,
-      "ms": 10,
+      "ms": 12,
       "skipped": {},
       "xml": 886
      },
      "Billboard": {
       "created": 127,
       "file_missing": false,
-      "ms": 38,
+      "ms": 58,
       "skipped": {},
       "xml": 127
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 55
       },
@@ -5165,7 +5156,7 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 370,
+      "ms": 430,
       "skipped": {
        "decal_mesh_failed": 5
       },
@@ -5174,14 +5165,14 @@
      "DetailMeshes": {
       "created": 639,
       "file_missing": false,
-      "ms": 70,
+      "ms": 99,
       "skipped": {},
       "xml": 639
      },
      "Entity": {
       "created": 2220,
       "file_missing": false,
-      "ms": 9789,
+      "ms": 12290,
       "skipped": {},
       "xml": 2220
      },
@@ -5202,7 +5193,7 @@
      "Light": {
       "created": 499,
       "file_missing": false,
-      "ms": 44,
+      "ms": 59,
       "skipped": {},
       "xml": 499
      },
@@ -5216,21 +5207,21 @@
      "ParticleSystem": {
       "created": 60,
       "file_missing": false,
-      "ms": 47,
+      "ms": 57,
       "skipped": {},
       "xml": 60
      },
      "Primitive": {
       "created": 171,
       "file_missing": false,
-      "ms": 106,
+      "ms": 141,
       "skipped": {},
       "xml": 171
      },
      "Sound": {
       "created": 111,
       "file_missing": false,
-      "ms": 3147,
+      "ms": 3315,
       "skipped": {
        "load_failed": 6
       },
@@ -5246,7 +5237,7 @@
      "StaticObject": {
       "created": 5121,
       "file_missing": false,
-      "ms": 8908,
+      "ms": 9547,
       "skipped": {},
       "xml": 5121
      },
@@ -5259,7 +5250,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3032936.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2826833.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 11,
@@ -5346,24 +5337,24 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 267,
+   "log_warnings": 250,
    "render": {
-    "draw_calls": 15472,
+    "draw_calls": 15183,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 364,
-    "lights_rendered": 364,
+    "lights_in_list": 363,
+    "lights_rendered": 363,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 5261,
-    "trans_objects": 306
+    "solid_objects": 5258,
+    "trans_objects": 305
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 46.9,
+   "wall_s": 63.4,
    "warmup": {
-    "frames": 360,
-    "timed_out": false
+    "frames": 244,
+    "timed_out": true
    },
    "world": {
     "aabb_max": [
@@ -5387,19 +5378,19 @@
     "lights_spot": 156,
     "name": "02_06_theta_tunnels.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_organic_mind_coral_mind_coral_colony_pile.dae.v3.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/organic/mind_coral/mind_coral_colony_edges_small_solid.mat": 2,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 2,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_bottom.dae.v3.msh:": 3,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_top.dae.v3.msh:": 2,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 21,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 6
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_organic_mind_coral_mind_coral_colony_pile.dae.v4.msh:../../../.local/share/Steam/steamapps/common/SOMA/entities/organic/mind_coral/mind_coral_colony_edges_small_solid.mat": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_bottom.dae.v4.msh:": 3,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_open_top.dae.v4.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 21,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 6
     },
     "oversized_top": [],
     "particle_systems": 91,
     "physics_bodies": 7320,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 153,
+    "sound_entities": 150,
     "static_mesh_entities": 8155,
     "submeshes_without_material": 36
    }
@@ -5408,10 +5399,10 @@
    "allowlisted": [
     "Compound:0/144"
    ],
-   "boot_s": 38.0,
+   "boot_s": 44.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 42.701092,
+    "fps": 10.289989,
     "pitch": 0,
     "pos_x": -41.3974,
     "pos_y": 1.75,
@@ -5419,18 +5410,17 @@
     "yaw": -1.570796
    },
    "failures": [
-    "no_material:15",
-    "lum_mean:0.0"
+    "no_material:15"
    ],
-   "fps": 42.701092,
+   "fps": 10.289989,
    "frame": {
-    "black_frac": 1,
-    "height": 2160,
+    "black_frac": 0.678741,
+    "height": 720,
     "lum_hist16": [
-     1,
-     0,
-     0,
-     0,
+     0.752967,
+     0.246303,
+     0.000725,
+     5e-06,
      0,
      0,
      0,
@@ -5444,103 +5434,103 @@
      0,
      0
     ],
-    "lum_max": 0,
-    "lum_mean": 0,
+    "lum_max": 54,
+    "lum_mean": 6.525415,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
-     "a_max": 1.998047,
-     "a_mean": 0.106008,
+     "a_max": 1.985352,
+     "a_mean": 0.103096,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7304267,
-     "b_max": 0.775391,
-     "b_mean": 0.147807,
+     "a_zero_count": 806955,
+     "b_max": 0.709473,
+     "b_mean": 0.148989,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 608704,
-     "g_max": 0.874023,
-     "g_mean": 0.178921,
+     "b_zero_count": 53041,
+     "g_max": 0.842773,
+     "g_mean": 0.180208,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 268093,
-     "height": 2160,
-     "r_max": 1.493164,
-     "r_mean": 0.251872,
+     "g_zero_count": 24414,
+     "height": 720,
+     "r_max": 1.329102,
+     "r_mean": 0.250935,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 17419,
+     "r_zero_count": 1936,
      "sample_a": 0,
-     "sample_b": 0.006371,
-     "sample_g": 0.017639,
-     "sample_r": 0.033813,
-     "width": 3840
+     "sample_b": 0.012009,
+     "sample_g": 0.031616,
+     "sample_r": 0.051453,
+     "width": 1280
     },
     "1": {
-     "a_max": 0.028732,
-     "a_mean": 0.020127,
-     "a_min": 0.011383,
+     "a_max": 0.028717,
+     "a_mean": 0.020747,
+     "a_min": 0.011391,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.598623,
-     "b_min": -0.999512,
+     "b_mean": 0.605104,
+     "b_min": -0.999023,
      "b_nan_count": 0,
-     "b_zero_count": 6631,
+     "b_zero_count": 762,
      "g_max": 1,
-     "g_mean": 0.080567,
+     "g_mean": 0.085111,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 3505,
-     "height": 2160,
+     "g_zero_count": 404,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": -0.049634,
+     "r_mean": -0.047209,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 9801,
+     "r_zero_count": 1073,
      "sample_a": 0.016006,
-     "sample_b": 0.962402,
-     "sample_g": -0.122925,
-     "sample_r": 0.241699,
-     "width": 3840
+     "sample_b": 0.943359,
+     "sample_g": -0.166382,
+     "sample_r": 0.285889,
+     "width": 1280
     },
     "2": {
-     "a_max": 0.970703,
-     "a_mean": 0.553966,
+     "a_max": 0.915527,
+     "a_mean": 0.553069,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5266,
+     "a_zero_count": 542,
      "b_max": 1,
-     "b_mean": 0.369762,
+     "b_mean": 0.372632,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 34041,
+     "b_zero_count": 3022,
      "g_max": 1,
-     "g_mean": 0.358201,
+     "g_mean": 0.36216,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 15517,
-     "height": 2160,
+     "g_zero_count": 1345,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.391134,
+     "r_mean": 0.392795,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 7721,
-     "sample_a": 0.693848,
-     "sample_b": 0.071777,
-     "sample_g": 0.094116,
-     "sample_r": 0.133789,
-     "width": 3840
+     "r_zero_count": 650,
+     "sample_a": 0.733887,
+     "sample_b": 0.116394,
+     "sample_g": 0.131836,
+     "sample_r": 0.171997,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "02_07_theta_exit.hpm",
     "terrain_active": false,
-    "total_ms": 35233,
+    "total_ms": 41099,
     "tracks": {
      "Area": {
       "created": 727,
@@ -5552,14 +5542,14 @@
      "Billboard": {
       "created": 43,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 43
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 5,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 144
       },
@@ -5568,28 +5558,28 @@
      "Decal": {
       "created": 802,
       "file_missing": false,
-      "ms": 520,
+      "ms": 540,
       "skipped": {},
       "xml": 802
      },
      "DetailMeshes": {
       "created": 2147,
       "file_missing": false,
-      "ms": 45,
+      "ms": 62,
       "skipped": {},
       "xml": 2147
      },
      "Entity": {
       "created": 1720,
       "file_missing": false,
-      "ms": 10157,
+      "ms": 12603,
       "skipped": {},
       "xml": 1720
      },
      "FogArea": {
       "created": 8,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 8
      },
@@ -5603,7 +5593,7 @@
      "Light": {
       "created": 566,
       "file_missing": false,
-      "ms": 65,
+      "ms": 60,
       "skipped": {},
       "xml": 566
      },
@@ -5617,21 +5607,21 @@
      "ParticleSystem": {
       "created": 206,
       "file_missing": false,
-      "ms": 117,
+      "ms": 137,
       "skipped": {},
       "xml": 206
      },
      "Primitive": {
       "created": 551,
       "file_missing": false,
-      "ms": 176,
+      "ms": 214,
       "skipped": {},
       "xml": 551
      },
      "Sound": {
       "created": 224,
       "file_missing": false,
-      "ms": 4226,
+      "ms": 6268,
       "skipped": {},
       "xml": 224
      },
@@ -5645,7 +5635,7 @@
      "StaticObject": {
       "created": 6263,
       "file_missing": false,
-      "ms": 19694,
+      "ms": 20969,
       "skipped": {},
       "xml": 6263
      },
@@ -5658,7 +5648,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3037665.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2837864.log",
    "log_errors": {
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 8,
@@ -5729,28 +5719,28 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 177,
+   "log_warnings": 103,
    "render": {
-    "draw_calls": 8030,
+    "draw_calls": 8437,
     "fog_areas_in_list": 6,
     "gl_errors": {},
-    "lights_in_list": 249,
-    "lights_rendered": 249,
+    "lights_in_list": 250,
+    "lights_rendered": 250,
     "occlusion_queries": 0,
     "shader_failures": 0,
-    "solid_objects": 2675,
-    "trans_objects": 176
+    "solid_objects": 2674,
+    "trans_objects": 178
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 53.5,
+   "wall_s": 77.6,
    "warmup": {
-    "frames": 360,
-    "timed_out": false
+    "frames": 296,
+    "timed_out": true
    },
    "world": {
     "aabb_max": [
-     109.014763,
+     50.000008,
      128.503296,
      187.609329
     ],
@@ -5770,19 +5760,19 @@
     "lights_spot": 141,
     "name": "02_07_theta_exit.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_T_plain.dae.v3.msh:": 1,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 4,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 8,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 2
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_T_plain.dae.v4.msh:": 1,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 4,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 8,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 2
     },
     "oversized_top": [
-     "legs_human_1:legs_human.fbx"
+     "SimonDreamHands:_home_lm_.local_share_Steam_steamapps_common_SOMA_entities_character_player_hands_hands_human.dae.v4.msh"
     ],
-    "particle_systems": 215,
+    "particle_systems": 216,
     "physics_bodies": 8910,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 192,
-    "sound_entities": 239,
+    "sound_entities": 237,
     "static_mesh_entities": 11072,
     "submeshes_without_material": 15
    }
@@ -5792,10 +5782,10 @@
     "Compound:0/63",
     "terrain"
    ],
-   "boot_s": 14.1,
+   "boot_s": 17.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 43.912224,
+    "fps": 36.779373,
     "pitch": 0,
     "pos_x": 151.880997,
     "pos_y": 151.479996,
@@ -5805,10 +5795,10 @@
    "failures": [
     "lum_mean:0.4"
    ],
-   "fps": 43.912224,
+   "fps": 36.779373,
    "frame": {
     "black_frac": 1,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
      1,
      0,
@@ -5828,11 +5818,11 @@
      0
     ],
     "lum_max": 2,
-    "lum_mean": 0.360217,
+    "lum_mean": 0.360205,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -5840,102 +5830,102 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.837891,
-     "b_mean": 0.37564,
+     "a_zero_count": 921600,
+     "b_max": 0.833984,
+     "b_mean": 0.375834,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 3834,
-     "g_max": 0.874023,
-     "g_mean": 0.44927,
+     "b_zero_count": 444,
+     "g_max": 0.87207,
+     "g_mean": 0.451029,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1318,
-     "height": 2160,
-     "r_max": 0.870117,
-     "r_mean": 0.490366,
+     "g_zero_count": 147,
+     "height": 720,
+     "r_max": 0.868652,
+     "r_mean": 0.494403,
      "r_min": 0.031372,
      "r_nan_count": 0,
      "r_zero_count": 0,
      "sample_a": 0,
-     "sample_b": 0.2854,
-     "sample_g": 0.341797,
-     "sample_r": 0.383545,
-     "width": 3840
+     "sample_b": 0.286377,
+     "sample_g": 0.343262,
+     "sample_r": 0.384521,
+     "width": 1280
     },
     "1": {
      "a_max": 0.009796,
-     "a_mean": 0.008427,
+     "a_mean": 0.008731,
      "a_min": 0.006538,
      "a_nan_count": 0,
      "a_zero_count": 0,
-     "b_max": 1,
-     "b_mean": 0.936092,
-     "b_min": -0.521484,
+     "b_max": 0.999512,
+     "b_mean": 0.892253,
+     "b_min": -0.466309,
      "b_nan_count": 0,
      "b_zero_count": 0,
-     "g_max": 0.988281,
-     "g_mean": -0.145195,
-     "g_min": -0.967285,
+     "g_max": 0.98291,
+     "g_mean": -0.144933,
+     "g_min": -0.949707,
      "g_nan_count": 0,
      "g_zero_count": 0,
-     "height": 2160,
+     "height": 720,
      "r_max": 0.999512,
-     "r_mean": 0.022561,
+     "r_mean": 0.022545,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 7,
+     "r_zero_count": 0,
      "sample_a": 0.009338,
-     "sample_b": 0.962402,
-     "sample_g": -0.256836,
-     "sample_r": 0.083252,
-     "width": 3840
+     "sample_b": 0.959961,
+     "sample_g": -0.256104,
+     "sample_r": 0.112671,
+     "width": 1280
     },
     "2": {
      "a_max": 0.493896,
-     "a_mean": 0.498997,
+     "a_mean": 0.490948,
      "a_min": 0.454834,
      "a_nan_count": 0,
      "a_zero_count": 0,
-     "b_max": 0.54834,
-     "b_mean": 0.167413,
-     "b_min": 0.000245,
+     "b_max": 0.538086,
+     "b_mean": 0.171996,
+     "b_min": 0.00539,
      "b_nan_count": 0,
      "b_zero_count": 0,
-     "g_max": 0.489258,
-     "g_mean": 0.153533,
-     "g_min": 0.000245,
+     "g_max": 0.487305,
+     "g_mean": 0.155312,
+     "g_min": 0.006371,
      "g_nan_count": 0,
      "g_zero_count": 0,
-     "height": 2160,
-     "r_max": 0.547852,
-     "r_mean": 0.168678,
-     "r_min": 0.031372,
+     "height": 720,
+     "r_max": 0.545898,
+     "r_mean": 0.173257,
+     "r_min": 0.035767,
      "r_nan_count": 0,
      "r_zero_count": 0,
      "sample_a": 0.486084,
-     "sample_b": 0.135254,
-     "sample_g": 0.115662,
-     "sample_r": 0.135254,
-     "width": 3840
+     "sample_b": 0.134033,
+     "sample_g": 0.114441,
+     "sample_r": 0.134033,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "03_01_omicron_outside.hpm",
     "terrain_active": true,
-    "total_ms": 11248,
+    "total_ms": 14066,
     "tracks": {
      "Area": {
       "created": 249,
       "file_missing": false,
-      "ms": 4,
+      "ms": 6,
       "skipped": {},
       "xml": 249
      },
      "Billboard": {
       "created": 87,
       "file_missing": false,
-      "ms": 9,
+      "ms": 11,
       "skipped": {
        "connect_light_missing": 2
       },
@@ -5953,21 +5943,21 @@
      "Decal": {
       "created": 246,
       "file_missing": false,
-      "ms": 276,
+      "ms": 311,
       "skipped": {},
       "xml": 246
      },
      "DetailMeshes": {
       "created": 3268,
       "file_missing": false,
-      "ms": 106,
+      "ms": 155,
       "skipped": {},
       "xml": 3268
      },
      "Entity": {
       "created": 1494,
       "file_missing": false,
-      "ms": 5617,
+      "ms": 7078,
       "skipped": {},
       "xml": 1494
      },
@@ -6002,21 +5992,21 @@
      "ParticleSystem": {
       "created": 62,
       "file_missing": false,
-      "ms": 82,
+      "ms": 91,
       "skipped": {},
       "xml": 62
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 18,
+      "ms": 31,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 16,
       "file_missing": false,
-      "ms": 1649,
+      "ms": 1850,
       "skipped": {},
       "xml": 16
      },
@@ -6030,7 +6020,7 @@
      "StaticObject": {
       "created": 1078,
       "file_missing": false,
-      "ms": 3317,
+      "ms": 4345,
       "skipped": {},
       "xml": 1078
      },
@@ -6043,8 +6033,12 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3041401.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2845174.log",
    "log_errors": {
+    "ERROR: Cannot find sound entity '*'": {
+     "count": 1,
+     "example": "ERROR: Cannot find sound entity 'Entities_OceanBottom/tech/pump_machine/loop'"
+    },
     "ERROR: Cannot find submesh '*' in node!": {
      "count": 5,
      "example": "ERROR: Cannot find submesh 'Directional_Light' in node!"
@@ -6100,7 +6094,7 @@
    },
    "log_warnings": 277,
    "render": {
-    "draw_calls": 56,
+    "draw_calls": 54,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 0,
@@ -6108,11 +6102,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 17,
-    "trans_objects": 21
+    "trans_objects": 19
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 21.4,
+   "wall_s": 26.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6142,11 +6136,11 @@
     "oversized_top": [
      "Plane:Plane"
     ],
-    "particle_systems": 80,
+    "particle_systems": 79,
     "physics_bodies": 2965,
-    "physics_bodies_awake": 2,
+    "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 40,
-    "sound_entities": 41,
+    "sound_entities": 38,
     "static_mesh_entities": 5946,
     "submeshes_without_material": 0
    }
@@ -6156,10 +6150,10 @@
     "Compound:0/242",
     "Sound:120/121"
    ],
-   "boot_s": 34.1,
+   "boot_s": 44.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 19.644524,
+    "fps": 8.310248,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": -2.25,
@@ -6169,16 +6163,16 @@
    "failures": [
     "no_material:10"
    ],
-   "fps": 23.691992,
+   "fps": 8.310248,
    "frame": {
-    "black_frac": 0.133522,
-    "height": 2160,
+    "black_frac": 0.134564,
+    "height": 720,
     "lum_hist16": [
-     0.848988,
-     0.136232,
-     0.007524,
-     0.004857,
-     0.002399,
+     0.847393,
+     0.137855,
+     0.007943,
+     0.004698,
+     0.002112,
      0,
      0,
      0,
@@ -6191,12 +6185,12 @@
      0,
      0
     ],
-    "lum_max": 75,
-    "lum_mean": 9.645222,
+    "lum_max": 73,
+    "lum_mean": 9.653636,
     "lum_min": 1,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -6204,109 +6198,109 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.95459,
-     "b_mean": 0.210561,
+     "a_zero_count": 921600,
+     "b_max": 0.932617,
+     "b_mean": 0.213608,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 97298,
-     "g_max": 0.990723,
-     "g_mean": 0.215513,
+     "b_zero_count": 10765,
+     "g_max": 0.97998,
+     "g_mean": 0.218041,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1749811,
-     "height": 2160,
-     "r_max": 0.999512,
-     "r_mean": 0.237665,
+     "g_zero_count": 195023,
+     "height": 720,
+     "r_max": 0.990234,
+     "r_mean": 0.238053,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 71428,
+     "r_zero_count": 8095,
      "sample_a": 0,
      "sample_b": 0.175659,
      "sample_g": 0,
-     "sample_r": 0.201416,
-     "width": 3840
+     "sample_r": 0.200562,
+     "width": 1280
     },
     "1": {
      "a_max": 0.010353,
-     "a_mean": 0.009345,
-     "a_min": 0.007454,
+     "a_mean": 0.009664,
+     "a_min": 0.007458,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.792593,
-     "b_min": -0.999512,
+     "b_mean": 0.78757,
+     "b_min": -1,
      "b_nan_count": 0,
-     "b_zero_count": 22,
-     "g_max": 1,
-     "g_mean": 0.000486,
+     "b_zero_count": 5,
+     "g_max": 0.999512,
+     "g_mean": 0.001228,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 1199,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": -0.006837,
-     "r_min": -1,
+     "g_zero_count": 128,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": -0.007106,
+     "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 35,
+     "r_zero_count": 3,
      "sample_a": 0.010094,
      "sample_b": 0.999512,
-     "sample_g": 0.014458,
-     "sample_r": -0.007355,
-     "width": 3840
+     "sample_g": 0.015068,
+     "sample_r": -0.012131,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.738151,
+     "a_mean": 0.754951,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 2999,
+     "a_zero_count": 1109,
      "b_max": 1,
-     "b_mean": 0.306311,
+     "b_mean": 0.306642,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 66352,
+     "b_zero_count": 7689,
      "g_max": 1,
-     "g_mean": 0.297751,
+     "g_mean": 0.299235,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 45877,
-     "height": 2160,
+     "g_zero_count": 5462,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.294922,
+     "r_mean": 0.296652,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 80540,
+     "r_zero_count": 9555,
      "sample_a": 1,
-     "sample_b": 0.482178,
-     "sample_g": 0.47876,
-     "sample_r": 0.482178,
-     "width": 3840
+     "sample_b": 0.473633,
+     "sample_g": 0.480469,
+     "sample_r": 0.473633,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "03_02_omicron_inside.hpm",
     "terrain_active": false,
-    "total_ms": 31146,
+    "total_ms": 40693,
     "tracks": {
      "Area": {
       "created": 690,
       "file_missing": false,
-      "ms": 8,
+      "ms": 13,
       "skipped": {},
       "xml": 690
      },
      "Billboard": {
       "created": 238,
       "file_missing": false,
-      "ms": 43,
+      "ms": 51,
       "skipped": {},
       "xml": 238
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 242
       },
@@ -6315,28 +6309,28 @@
      "Decal": {
       "created": 628,
       "file_missing": false,
-      "ms": 471,
+      "ms": 556,
       "skipped": {},
       "xml": 628
      },
      "DetailMeshes": {
       "created": 1490,
       "file_missing": false,
-      "ms": 12,
+      "ms": 21,
       "skipped": {},
       "xml": 1490
      },
      "Entity": {
       "created": 3718,
       "file_missing": false,
-      "ms": 18884,
+      "ms": 26966,
       "skipped": {},
       "xml": 3718
      },
      "FogArea": {
       "created": 6,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 6
      },
@@ -6350,35 +6344,35 @@
      "Light": {
       "created": 749,
       "file_missing": false,
-      "ms": 18,
+      "ms": 27,
       "skipped": {},
       "xml": 749
      },
      "LightMask": {
       "created": 47,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 47
      },
      "ParticleSystem": {
       "created": 215,
       "file_missing": false,
-      "ms": 53,
+      "ms": 72,
       "skipped": {},
       "xml": 215
      },
      "Primitive": {
       "created": 371,
       "file_missing": false,
-      "ms": 69,
+      "ms": 124,
       "skipped": {},
       "xml": 371
      },
      "Sound": {
       "created": 120,
       "file_missing": false,
-      "ms": 3485,
+      "ms": 3886,
       "skipped": {
        "load_failed": 1
       },
@@ -6394,7 +6388,7 @@
      "StaticObject": {
       "created": 4934,
       "file_missing": false,
-      "ms": 7905,
+      "ms": 8753,
       "skipped": {},
       "xml": 4934
      },
@@ -6407,7 +6401,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3043227.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2848192.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -6502,7 +6496,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 648026,
+   "log_warnings": 342,
    "render": {
     "draw_calls": 1851,
     "fog_areas_in_list": 1,
@@ -6516,10 +6510,10 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 50.4,
+   "wall_s": 77.8,
    "warmup": {
-    "frames": 360,
-    "timed_out": false
+    "frames": 212,
+    "timed_out": true
    },
    "world": {
     "aabb_max": [
@@ -6543,16 +6537,16 @@
     "lights_spot": 326,
     "name": "03_02_omicron_inside.hpm",
     "no_material_top": {
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v3.msh:": 2,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v3.msh:": 6,
-     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v3.msh:": 2
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_end_plain.dae.v4.msh:": 2,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_straight_plain.dae.v4.msh:": 6,
+     "_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_station_tunnel_maintenance_tunnel_maintenance_tunnel_turn_plain.dae.v4.msh:": 2
     },
     "oversized_top": [],
     "particle_systems": 215,
     "physics_bodies": 9236,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 510,
-    "sound_entities": 1768,
+    "sound_entities": 162,
     "static_mesh_entities": 10554,
     "submeshes_without_material": 10
    }
@@ -6563,10 +6557,10 @@
     "LensFlare:0/2",
     "Sound:5/6"
    ],
-   "boot_s": 9.2,
+   "boot_s": 11.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 48.419014,
     "pitch": 0,
     "pos_x": 48.75,
     "pos_y": 128.5,
@@ -6574,20 +6568,20 @@
     "yaw": -4e-06
    },
    "failures": [],
-   "fps": 60,
+   "fps": 48.419014,
    "frame": {
     "black_frac": 0,
-    "height": 2160,
+    "height": 720,
     "lum_hist16": [
      0,
      0,
-     6.4e-05,
-     0.256591,
-     0.697324,
-     0.035236,
-     0.00982,
-     0.000958,
-     7e-06,
+     0.000864,
+     0.500648,
+     0.463122,
+     0.028079,
+     0.00701,
+     0.000278,
+     0,
      0,
      0,
      0,
@@ -6596,103 +6590,103 @@
      0,
      0
     ],
-    "lum_max": 134,
-    "lum_mean": 66.371483,
-    "lum_min": 47,
+    "lum_max": 123,
+    "lum_mean": 64.085953,
+    "lum_min": 45,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.033191,
+     "a_mean": 0.032963,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7102100,
-     "b_max": 0.998047,
-     "b_mean": 0.218831,
+     "a_zero_count": 789122,
+     "b_max": 0.937012,
+     "b_mean": 0.218069,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6452,
-     "g_max": 0.997559,
-     "g_mean": 0.249587,
+     "b_zero_count": 486,
+     "g_max": 0.983887,
+     "g_mean": 0.250413,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3549,
-     "height": 2160,
+     "g_zero_count": 323,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.275796,
+     "r_mean": 0.279347,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3325,
+     "r_zero_count": 337,
      "sample_a": 0,
-     "sample_b": 0.168091,
-     "sample_g": 0.224976,
-     "sample_r": 0.25708,
-     "width": 3840
+     "sample_b": 0.177612,
+     "sample_g": 0.236694,
+     "sample_r": 0.27002,
+     "width": 1280
     },
     "1": {
      "a_max": 0.014328,
-     "a_mean": 0.012414,
-     "a_min": 0.006004,
+     "a_mean": 0.011877,
+     "a_min": 0.006008,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.656473,
+     "b_mean": 0.65458,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 539,
+     "b_zero_count": 61,
      "g_max": 1,
-     "g_mean": 0.065599,
+     "g_mean": 0.064762,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 2123,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.002925,
+     "g_zero_count": 250,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": 0.00277,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 805,
+     "r_zero_count": 50,
      "sample_a": 0.014328,
-     "sample_b": 0.729004,
-     "sample_g": 0.683594,
-     "sample_r": -0.012352,
-     "width": 3840
+     "sample_b": 0.85791,
+     "sample_g": 0.512695,
+     "sample_r": -0.02829,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.53394,
+     "a_mean": 0.559781,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 36,
+     "a_zero_count": 39,
      "b_max": 1,
-     "b_mean": 0.209216,
+     "b_mean": 0.209211,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 289232,
+     "b_zero_count": 29220,
      "g_max": 1,
-     "g_mean": 0.22396,
+     "g_mean": 0.224337,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 196669,
-     "height": 2160,
+     "g_zero_count": 19694,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.233201,
+     "r_mean": 0.233517,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 259120,
+     "r_zero_count": 27133,
      "sample_a": 0.517578,
      "sample_b": 0.160767,
      "sample_g": 0.172485,
      "sample_r": 0.160767,
-     "width": 3840
+     "width": 1280
     }
    },
    "load_report": {
     "map": "03_03_omicron_descent.hpm",
     "terrain_active": false,
-    "total_ms": 6683,
+    "total_ms": 8470,
     "tracks": {
      "Area": {
       "created": 102,
@@ -6704,7 +6698,7 @@
      "Billboard": {
       "created": 34,
       "file_missing": false,
-      "ms": 4,
+      "ms": 8,
       "skipped": {},
       "xml": 34
      },
@@ -6720,21 +6714,21 @@
      "Decal": {
       "created": 85,
       "file_missing": false,
-      "ms": 48,
+      "ms": 53,
       "skipped": {},
       "xml": 85
      },
      "DetailMeshes": {
       "created": 1550,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 1550
      },
      "Entity": {
       "created": 643,
       "file_missing": false,
-      "ms": 3132,
+      "ms": 4085,
       "skipped": {},
       "xml": 643
      },
@@ -6757,7 +6751,7 @@
      "Light": {
       "created": 43,
       "file_missing": false,
-      "ms": 14,
+      "ms": 30,
       "skipped": {},
       "xml": 43
      },
@@ -6778,14 +6772,14 @@
      "Primitive": {
       "created": 2,
       "file_missing": false,
-      "ms": 4,
+      "ms": 7,
       "skipped": {},
       "xml": 2
      },
      "Sound": {
       "created": 5,
       "file_missing": false,
-      "ms": 314,
+      "ms": 789,
       "skipped": {
        "load_failed": 1
       },
@@ -6801,7 +6795,7 @@
      "StaticObject": {
       "created": 887,
       "file_missing": false,
-      "ms": 3078,
+      "ms": 3401,
       "skipped": {},
       "xml": 887
      },
@@ -6814,7 +6808,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3049056.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2859419.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -6887,7 +6881,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.3,
+   "wall_s": 19.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6936,10 +6930,10 @@
     "Compound:0/310",
     "terrain"
    ],
-   "boot_s": 21.2,
+   "boot_s": 26.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 57.25565,
     "pitch": 0,
     "pos_x": -13.4867,
     "pos_y": 817.039001,
@@ -6947,21 +6941,21 @@
     "yaw": 0.013099
    },
    "failures": [
-    "lum_mean:0.6"
+    "lum_mean:0.4"
    ],
-   "fps": 60,
+   "fps": 57.25565,
    "frame": {
-    "black_frac": 0.964121,
-    "height": 2160,
+    "black_frac": 0.986541,
+    "height": 720,
     "lum_hist16": [
-     0.988707,
-     0.005868,
-     0.003689,
-     0.001457,
-     0.000231,
-     4e-05,
-     8e-06,
-     0,
+     0.995435,
+     0.001172,
+     0.001325,
+     0.001096,
+     0.00075,
+     0.000163,
+     4.6e-05,
+     1.4e-05,
      0,
      0,
      0,
@@ -6971,108 +6965,108 @@
      0,
      0
     ],
-    "lum_max": 113,
-    "lum_mean": 0.559413,
+    "lum_max": 123,
+    "lum_mean": 0.437324,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.609377,
+     "a_mean": 0.088046,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3239986,
+     "a_zero_count": 840457,
      "b_max": 1,
-     "b_mean": 0.686485,
+     "b_mean": 0.265312,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6262,
-     "g_max": 0.949219,
-     "g_mean": 0.095819,
+     "b_zero_count": 376,
+     "g_max": 0.61377,
+     "g_mean": 0.199382,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 5056182,
-     "height": 2160,
-     "r_max": 0.949707,
-     "r_mean": 0.123238,
+     "g_zero_count": 81275,
+     "height": 720,
+     "r_max": 0.842773,
+     "r_mean": 0.331547,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 5067142,
-     "sample_a": 1,
-     "sample_b": 1,
-     "sample_g": 0,
-     "sample_r": 0,
-     "width": 3840
+     "r_zero_count": 81810,
+     "sample_a": 0,
+     "sample_b": 0.180054,
+     "sample_g": 0.199707,
+     "sample_r": 0.395508,
+     "width": 1280
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.609396,
-     "a_min": 0.003202,
+     "a_mean": 0.097964,
+     "a_min": 0.001623,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.880567,
-     "b_min": -0.978516,
+     "b_mean": 0.398323,
+     "b_min": -0.863281,
      "b_nan_count": 0,
      "b_zero_count": 0,
-     "g_max": 1,
-     "g_mean": 0.007787,
-     "g_min": -1,
+     "g_max": 0.999512,
+     "g_mean": -0.402563,
+     "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 5054416,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.007327,
+     "g_zero_count": 81145,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": 0.025783,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 5054414,
-     "sample_a": 1,
-     "sample_b": 1,
-     "sample_g": 0,
-     "sample_r": 0,
-     "width": 3840
+     "r_zero_count": 81144,
+     "sample_a": 0.003729,
+     "sample_b": 0.430664,
+     "sample_g": -0.902344,
+     "sample_r": -0.008987,
+     "width": 1280
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.785591,
-     "a_min": 0,
+     "a_mean": 0.296849,
+     "a_min": 0.006615,
      "a_nan_count": 0,
-     "a_zero_count": 11,
+     "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.674283,
+     "b_mean": 0.178904,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 45086,
-     "g_max": 1,
-     "g_mean": 0.073624,
+     "b_zero_count": 3692,
+     "g_max": 0.941406,
+     "g_mean": 0.087993,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 5092302,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.07249,
+     "g_zero_count": 83711,
+     "height": 720,
+     "r_max": 0.937012,
+     "r_mean": 0.073971,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 5105414,
-     "sample_a": 1,
-     "sample_b": 1,
-     "sample_g": 0,
-     "sample_r": 0,
-     "width": 3840
+     "r_zero_count": 86056,
+     "sample_a": 0.184448,
+     "sample_b": 0.049255,
+     "sample_g": 0.049255,
+     "sample_r": 0.032349,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "04_01_tau_outside.hpm",
     "terrain_active": true,
-    "total_ms": 17989,
+    "total_ms": 22169,
     "tracks": {
      "Area": {
       "created": 414,
       "file_missing": false,
-      "ms": 5,
+      "ms": 7,
       "skipped": {},
       "xml": 414
      },
@@ -7086,7 +7080,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {
        "unsupported_track": 310
       },
@@ -7095,7 +7089,7 @@
      "Decal": {
       "created": 406,
       "file_missing": false,
-      "ms": 286,
+      "ms": 362,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -7104,14 +7098,14 @@
      "DetailMeshes": {
       "created": 673,
       "file_missing": false,
-      "ms": 13,
+      "ms": 18,
       "skipped": {},
       "xml": 673
      },
      "Entity": {
       "created": 2843,
       "file_missing": false,
-      "ms": 7068,
+      "ms": 9886,
       "skipped": {},
       "xml": 2843
      },
@@ -7132,7 +7126,7 @@
      "Light": {
       "created": 268,
       "file_missing": false,
-      "ms": 5,
+      "ms": 13,
       "skipped": {},
       "xml": 268
      },
@@ -7146,21 +7140,21 @@
      "ParticleSystem": {
       "created": 95,
       "file_missing": false,
-      "ms": 16,
+      "ms": 24,
       "skipped": {},
       "xml": 95
      },
      "Primitive": {
       "created": 35,
       "file_missing": false,
-      "ms": 4,
+      "ms": 8,
       "skipped": {},
       "xml": 35
      },
      "Sound": {
       "created": 20,
       "file_missing": false,
-      "ms": 1075,
+      "ms": 1358,
       "skipped": {},
       "xml": 20
      },
@@ -7174,7 +7168,7 @@
      "StaticObject": {
       "created": 3695,
       "file_missing": false,
-      "ms": 9355,
+      "ms": 10334,
       "skipped": {},
       "xml": 3695
      },
@@ -7187,14 +7181,14 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3049383.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2890732.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
      "example": "ERROR: Cannot find sound entity ''"
     },
     "ERROR: Cannot find submesh '*' in node!": {
-     "count": 21,
+     "count": 8,
      "example": "ERROR: Cannot find submesh 'Render' in node!"
     },
     "ERROR: Could not find sound entity ElevatorAudioStop_BackgroundAmbience in Sound_Stop": {
@@ -7262,7 +7256,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 200,
+   "log_warnings": 165,
    "render": {
     "draw_calls": 59,
     "fog_areas_in_list": 0,
@@ -7276,7 +7270,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 29.0,
+   "wall_s": 36.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7290,7 +7284,7 @@
     "aabb_min": [
      -134.150436,
      -238021114694984819554658103537594007552,
-     -498.086792
+     -498.086823
     ],
     "billboards": 487,
     "dynamic_mesh_entities": 576,
@@ -7304,14 +7298,14 @@
     "name": "04_01_tau_outside.hpm",
     "no_material_top": {},
     "oversized_top": [
-     "rocks_wall_ridge_11:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/environment/rocks_abyss/wall_ridge.dae",
+     "rocks_wall_ridge_11:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_abyss_wall_ridge.dae.v4.msh",
      "dustcoat_dirt_10:dustcoat_dirt_10"
     ],
     "particle_systems": 98,
     "physics_bodies": 5914,
     "physics_bodies_awake": 4,
     "physics_bodies_dynamic": 111,
-    "sound_entities": 100,
+    "sound_entities": 97,
     "static_mesh_entities": 7077,
     "submeshes_without_material": 0
    }
@@ -7322,10 +7316,10 @@
     "LensFlare:0/1",
     "Sound:143/144"
    ],
-   "boot_s": 40.5,
+   "boot_s": 50.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 26.574833,
     "pitch": 0,
     "pos_x": -30.445801,
     "pos_y": 1.5,
@@ -7333,18 +7327,18 @@
     "yaw": 1.570796
    },
    "failures": [],
-   "fps": 60,
+   "fps": 26.574833,
    "frame": {
-    "black_frac": 0.035631,
-    "height": 2160,
+    "black_frac": 0.037483,
+    "height": 720,
     "lum_hist16": [
-     0.592292,
-     0.277061,
-     0.086399,
-     0.038621,
-     0.004553,
-     0.000925,
-     0.000149,
+     0.591272,
+     0.278026,
+     0.086897,
+     0.038568,
+     0.004253,
+     0.000879,
+     0.000105,
      0,
      0,
      0,
@@ -7355,12 +7349,12 @@
      0,
      0
     ],
-    "lum_max": 105,
-    "lum_mean": 16.877563,
+    "lum_max": 103,
+    "lum_mean": 16.858597,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
-    "width": 3840
+    "width": 1280
    },
    "gbuffer": {
     "0": {
@@ -7368,90 +7362,90 @@
      "a_mean": 0,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294400,
-     "b_max": 0.968262,
-     "b_mean": 0.153789,
+     "a_zero_count": 921600,
+     "b_max": 0.998535,
+     "b_mean": 0.152379,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 55094,
-     "g_max": 0.952637,
-     "g_mean": 0.206025,
+     "b_zero_count": 5684,
+     "g_max": 0.998535,
+     "g_mean": 0.204293,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4693,
-     "height": 2160,
-     "r_max": 0.968262,
-     "r_mean": 0.323425,
+     "g_zero_count": 422,
+     "height": 720,
+     "r_max": 0.998535,
+     "r_mean": 0.319422,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4322,
+     "r_zero_count": 403,
      "sample_a": 0,
      "sample_b": 0.062744,
      "sample_g": 0.188232,
-     "sample_r": 0.560547,
-     "width": 3840
+     "sample_r": 0.561523,
+     "width": 1280
     },
     "1": {
      "a_max": 0.006817,
-     "a_mean": 0.006253,
+     "a_mean": 0.006201,
      "a_min": 0.005257,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.857989,
-     "b_min": -0.935547,
+     "b_mean": 0.850725,
+     "b_min": -0.922363,
      "b_nan_count": 0,
-     "b_zero_count": 0,
-     "g_max": 1,
-     "g_mean": -0.030469,
+     "b_zero_count": 1,
+     "g_max": 0.999512,
+     "g_mean": -0.030269,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 3,
-     "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.001127,
+     "g_zero_count": 0,
+     "height": 720,
+     "r_max": 0.999512,
+     "r_mean": 0.001124,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 4,
-     "sample_a": 0.00642,
-     "sample_b": 0.986816,
-     "sample_g": 0.158569,
-     "sample_r": -0.027603,
-     "width": 3840
+     "r_zero_count": 1,
+     "sample_a": 0.006424,
+     "sample_b": 0.986328,
+     "sample_g": 0.161255,
+     "sample_r": -0.029739,
+     "width": 1280
     },
     "2": {
      "a_max": 0.509766,
-     "a_mean": 0.500617,
+     "a_mean": 0.506572,
      "a_min": 0.368408,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.54334,
+     "b_mean": 0.5473,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2730,
+     "b_zero_count": 296,
      "g_max": 1,
-     "g_mean": 0.513032,
+     "g_mean": 0.511113,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2769,
-     "height": 2160,
+     "g_zero_count": 307,
+     "height": 720,
      "r_max": 1,
-     "r_mean": 0.508738,
+     "r_mean": 0.502849,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2884,
+     "r_zero_count": 318,
      "sample_a": 0.509766,
-     "sample_b": 0.666992,
-     "sample_g": 0.592285,
-     "sample_r": 0.560547,
-     "width": 3840
+     "sample_b": 0.668457,
+     "sample_g": 0.592773,
+     "sample_r": 0.561035,
+     "width": 1280
     }
    },
    "load_report": {
     "map": "04_02_tau_inside.hpm",
     "terrain_active": false,
-    "total_ms": 37444,
+    "total_ms": 46940,
     "tracks": {
      "Area": {
       "created": 662,
@@ -7463,7 +7457,7 @@
      "Billboard": {
       "created": 65,
       "file_missing": false,
-      "ms": 7,
+      "ms": 18,
       "skipped": {},
       "xml": 65
      },
@@ -7479,21 +7473,21 @@
      "Decal": {
       "created": 1335,
       "file_missing": false,
-      "ms": 1047,
+      "ms": 1167,
       "skipped": {},
       "xml": 1335
      },
      "DetailMeshes": {
       "created": 739,
       "file_missing": false,
-      "ms": 17,
+      "ms": 21,
       "skipped": {},
       "xml": 739
      },
      "Entity": {
       "created": 2187,
       "file_missing": false,
-      "ms": 14761,
+      "ms": 20030,
       "skipped": {},
       "xml": 2187
      },
@@ -7516,35 +7510,35 @@
      "Light": {
       "created": 531,
       "file_missing": false,
-      "ms": 17,
+      "ms": 32,
       "skipped": {},
       "xml": 531
      },
      "LightMask": {
       "created": 14,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 14
      },
      "ParticleSystem": {
       "created": 44,
       "file_missing": false,
-      "ms": 34,
+      "ms": 62,
       "skipped": {},
       "xml": 44
      },
      "Primitive": {
       "created": 212,
       "file_missing": false,
-      "ms": 85,
+      "ms": 135,
       "skipped": {},
       "xml": 212
      },
      "Sound": {
       "created": 143,
       "file_missing": false,
-      "ms": 3507,
+      "ms": 4964,
       "skipped": {
        "load_failed": 1
       },
@@ -7560,7 +7554,7 @@
      "StaticObject": {
       "created": 3432,
       "file_missing": false,
-      "ms": 17811,
+      "ms": 20332,
       "skipped": {},
       "xml": 3432
      },
@@ -7573,7 +7567,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3051733.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2864919.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -7584,12 +7578,8 @@
      "example": "ERROR: Cannot find sound entity ''"
     },
     "ERROR: Cannot find submesh '*' in node!": {
-     "count": 19,
+     "count": 27,
      "example": "ERROR: Cannot find submesh 'Render' in node!"
-    },
-    "ERROR: Could not find sound entity airlocklightmotor_* in Sound_Play": {
-     "count": 3,
-     "example": "ERROR: Could not find sound entity airlocklightmotor_* in Sound_Play"
     },
     "ERROR: Couldn'*'_test_array_support_frag.glsl' in resources": {
      "count": 1,
@@ -7636,7 +7626,7 @@
      "example": "ERROR: Sampler gradingMap does not exist, could not bind it to unit 1"
     }
    },
-   "log_warnings": 259,
+   "log_warnings": 263,
    "render": {
     "draw_calls": 58,
     "fog_areas_in_list": 0,
@@ -7650,7 +7640,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 48.4,
+   "wall_s": 63.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7682,7 +7672,7 @@
     "physics_bodies": 8080,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 473,
-    "sound_entities": 176,
+    "sound_entities": 172,
     "static_mesh_entities": 7388,
     "submeshes_without_material": 0
    }

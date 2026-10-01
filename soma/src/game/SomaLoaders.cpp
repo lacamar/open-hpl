@@ -131,8 +131,32 @@ static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEnti
 	}
 }
 
+// Map placements carry a bone pose: per bone quaternion (w x y z) + translation in FBX units
+void cSomaGenericEntityLoader::LoadPose()
+{
+	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
+	cXmlElement *pPose = pElem ? pElem->GetFirstElement("Pose") : NULL;
+	cSkeleton *pSkeleton = mpEntity && mpEntity->GetMesh() ? mpEntity->GetMesh()->GetSkeleton() : NULL;
+	if (pPose == NULL || pSkeleton == NULL) return;
+
+	tFloatVec vVals;
+	cString::GetFloatVec(pPose->GetAttributeString("_Text"), vVals, NULL);
+	if ((int)vVals.size() != pSkeleton->GetBoneNum() * 7) return;
+
+	std::vector<cMatrixf> vLocal(pSkeleton->GetBoneNum());
+	for (int i = 0; i < pSkeleton->GetBoneNum(); ++i)
+	{
+		const float *v = &vVals[i * 7];
+		vLocal[i] = cMath::MatrixQuaternion(cQuaternion(v[0], v[1], v[2], v[3]));
+		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pSkeleton->GetBoneByIndex(i)->GetLocalUnitScale());
+	}
+	mpEntity->SetBoneRestPose(vLocal);
+}
+
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
+	LoadPose();
+
 	// HPL2 only attaches these to bodies; HPL3 parents them to the mesh entity otherwise
 	if (mpEntity && mvBodies.empty())
 	{

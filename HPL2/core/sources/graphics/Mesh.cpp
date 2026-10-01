@@ -239,6 +239,9 @@ namespace hpl {
 		// Calculate the bounding radius for all bones
 		// - this based on the greatest distance to an attached node.
 		mvBoneBoundingRadii.resize(mpSkeleton->GetBoneNum(), 0);
+		std::vector<cVector3f> vBindPos(mpSkeleton->GetBoneNum());
+		for(int i=0; i<mpSkeleton->GetBoneNum(); ++i)
+			vBindPos[i] = cMath::MatrixInverse(mpSkeleton->GetBoneByIndex(i)->GetInvBindTransform()).GetTranslation();
 
 		for(size_t i=0; i<mvSubMeshes.size(); ++i)
 		{
@@ -258,9 +261,7 @@ namespace hpl {
 				float *pPos = &pPosArray[Pair.vtxIdx * lVtxStride];
 				cVector3f vPos(pPos[0], pPos[1],pPos[2]);
 
-				cBone *pBone = mpSkeleton->GetBoneByIndex(Pair.boneIdx);
-
-				float fDistSqr = cMath::Vector3DistSqr(vPos, pBone->GetWorldTransform().GetTranslation() );
+				float fDistSqr = cMath::Vector3DistSqr(vPos, vBindPos[Pair.boneIdx]);
 				float fRadius = mvBoneBoundingRadii[Pair.boneIdx];
 				if(fDistSqr > fRadius*fRadius)
 				{
