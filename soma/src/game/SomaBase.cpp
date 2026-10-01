@@ -23,6 +23,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
 #include "SomaScriptRuntime.h"
+#include "SomaLuxScriptable.h"
 
 #include "system/HeadlessControl.h"
 #include "resources/GpuShaderManager.h"
@@ -390,6 +391,67 @@ static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRe
 	aResp.Set("output", gsSomaExecOutput);
 	if (bOk == false)
 		aResp.SetError(sError);
+}
+
+static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, void *apAddr)
+{
+	char sBuf[64];
+	switch (alTypeId)
+	{
+	case asTYPEID_BOOL: return *(bool *)apAddr ? "true" : "false";
+	case asTYPEID_INT8: return std::to_string(*(int8_t *)apAddr);
+	case asTYPEID_INT16: return std::to_string(*(int16_t *)apAddr);
+	case asTYPEID_INT32: return std::to_string(*(int32_t *)apAddr);
+	case asTYPEID_INT64: return std::to_string(*(int64_t *)apAddr);
+	case asTYPEID_UINT8: return std::to_string(*(uint8_t *)apAddr);
+	case asTYPEID_UINT16: return std::to_string(*(uint16_t *)apAddr);
+	case asTYPEID_UINT32: return std::to_string(*(uint32_t *)apAddr);
+	case asTYPEID_UINT64: return std::to_string(*(uint64_t *)apAddr);
+	case asTYPEID_FLOAT: snprintf(sBuf, sizeof(sBuf), "%g", *(float *)apAddr); return sBuf;
+	case asTYPEID_DOUBLE: snprintf(sBuf, sizeof(sBuf), "%g", *(double *)apAddr); return sBuf;
+	}
+	asITypeInfo *pType = apEngine->GetTypeInfoById(alTypeId);
+	if (pType == NULL)
+		return "?";
+	tString sName = pType->GetName();
+	if (pType->GetFlags() & asOBJ_ENUM)
+		return std::to_string(*(int *)apAddr);
+	if (alTypeId & asTYPEID_OBJHANDLE)
+		return *(void **)apAddr ? sName + "@" : "null";
+	if (sName == "tString")
+		return "\"" + *(tString *)apAddr + "\"";
+	if (sName == "cVector3f")
+	{
+		cVector3f v = *(cVector3f *)apAddr;
+		snprintf(sBuf, sizeof(sBuf), "(%g %g %g)", v.x, v.y, v.z);
+		return sBuf;
+	}
+	return sName;
+}
+
+static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	tString sName = aReq.GetString("name", "");
+	std::string sOut;
+	for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
+	{
+		asIScriptObject *pObj = p->GetScript();
+		if (pObj == NULL)
+			continue;
+		tString sClass = pObj->GetObjectType()->GetName();
+		if (sName.empty())
+		{
+			sOut += p->msScriptName + " " + sClass + "\n";
+			continue;
+		}
+		if (p->msScriptName != sName && sClass != sName)
+			continue;
+		sOut += "[" + p->msScriptName + " " + sClass + "]\n";
+		for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)
+			sOut += tString(pObj->GetPropertyName(i)) + "=" +
+					ScriptValueString(pObj->GetEngine(), pObj->GetPropertyTypeId(i), pObj->GetAddressOfProperty(i)) + "\n";
+	}
+	aResp.Set("output", sOut);
 }
 
 // Headless debug hook onto cRendererDeferred's own existing debug quad-view
@@ -1072,6 +1134,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("player_state", cSomaBase_HeadlessCmd_PlayerState, this);
 		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
+		pCtrl->RegisterHandler("script_vars", cSomaBase_HeadlessCmd_ScriptVars, this);
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
 		pCtrl->RegisterHandler("imgui_ops", cSomaBase_HeadlessCmd_ImGuiOps, this);
 		pCtrl->RegisterHandler("imgui_cursor", cSomaBase_HeadlessCmd_ImGuiCursor, this);

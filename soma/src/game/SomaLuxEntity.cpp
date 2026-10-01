@@ -99,7 +99,7 @@ void cSomaLuxEntity::SetActive(bool abX)
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
-		mpMesh->SetVisible(abX);
+		mpMesh->SetVisible(abX && mbShowMesh);
 	}
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->SetActive(abX);

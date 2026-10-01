@@ -219,7 +219,13 @@ namespace hpl {
 				int lCount = 0;
 				//Get pointer to weights and bone index.
 				const float *pWeight = &mpSubMesh->mpVertexWeights[vtx*4];
-				if(*pWeight==0) continue;
+				if(*pWeight==0)
+				{
+					pBindPos += lVtxStride; pSkinPos += lVtxStride;
+					pBindNormal += 3; pSkinNormal += 3;
+					pBindTangent += 4; pSkinTangent += 4;
+					continue;
+				}
 
 				const unsigned char *pBoneIdx = &mpSubMesh->mpVertexBones[vtx*4];
 

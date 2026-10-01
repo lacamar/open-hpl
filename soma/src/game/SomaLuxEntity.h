@@ -71,6 +71,7 @@ public:
 	int meType = eSomaLuxEntityType_Prop;
 	cSomaID mID;
 	bool mbActive = true;
+	bool mbShowMesh = true;
 	bool mbIsDoor = false, mbIsClosedDoor = false;
 	bool mbInteractionDisabled = false;
 	float mfMaxInteractDistance = -1;

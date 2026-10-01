@@ -50,12 +50,18 @@ namespace hpl {
 		std::map<tString, aiMatrix4x4>::const_iterator it = amapBind.find(sName);
 		if(it != amapBind.end()) mtxWorld = it->second;
 
-		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentBoneWorld).Inverse() * mtxWorld;
+		// Bone poses are rigid (anm keys carry no scale); cm-rig scale would blow up skinning
+		aiVector3D vScale, vPos;
+		aiQuaternion qRot;
+		mtxWorld.Decompose(vScale, qRot, vPos);
+		aiMatrix4x4 mtxBoneWorld = aiMatrix4x4(aiVector3D(1,1,1), qRot, vPos);
+
+		aiMatrix4x4 mtxLocal = aiMatrix4x4(a_mtxParentBoneWorld).Inverse() * mtxBoneWorld;
 		cBone *pBone = apParent->CreateChildBone(sName, sName);
 		pBone->SetTransform(ToMatrix(mtxLocal));
 
 		for(unsigned int c=0; c<apNode->mNumChildren; ++c)
-			CreateBones(apNode->mChildren[c], mtxWorld, mtxWorld, pBone, amapBind);
+			CreateBones(apNode->mChildren[c], mtxWorld, mtxBoneWorld, pBone, amapBind);
 	}
 
 	static void CollectBindPoses(const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
@@ -147,7 +153,7 @@ namespace hpl {
 			}
 
 			for(unsigned int f=0; f<pSrc->mNumFaces; ++f)
-				for(int i=0; i<3; ++i) pVtxBuff->AddIndex(pSrc->mFaces[f].mIndices[i]);
+				for(int i=2; i>=0; --i) pVtxBuff->AddIndex(pSrc->mFaces[f].mIndices[i]); // HPL winding, as the Collada loader
 
 			pVtxBuff->Compile(0);
 
