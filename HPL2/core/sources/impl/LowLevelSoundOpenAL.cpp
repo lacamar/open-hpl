@@ -300,6 +300,9 @@ namespace hpl {
 			}
 		}
 
+		if(const char *pEnvDev = getenv("OPENHPL_SOUND_DEVICE"))
+			initParams.msDeviceName = pEnvDev;
+
 		Log("  Trying to open device \'%s\'... ", initParams.msDeviceName.c_str());
 		tString sLogFileName = cString::ReplaceCharTo(initParams.msDeviceName, " ", "_");
 		OAL_SetupLogging(mbLogSounds, eOAL_LogOutput_File, eOAL_LogVerbose_High, "HPL_OpenAL_" + sLogFileName);

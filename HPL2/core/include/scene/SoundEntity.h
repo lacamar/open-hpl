@@ -51,6 +51,19 @@ namespace hpl {
 		virtual void OnStart(cSoundEntity *apSoundEntity)=0;
 	};
 
+	class iSoundEntityEvent
+	{
+	public:
+		virtual ~iSoundEntityEvent(){}
+		virtual void Play()=0;
+		virtual void Stop(bool abPlayEnd)=0;
+		virtual void FadeIn(float afSpeed)=0;
+		virtual void FadeOut(float afSpeed)=0;
+		virtual bool IsStopped()=0;
+		virtual void Update(float afTimeStep)=0;
+	};
+	typedef iSoundEntityEvent* (*tSoundEntityEventFactory)(cSoundEntity *apEntity);
+
 	typedef std::list<iSoundEntityGlobalCallback*> tSoundEntityGlobalCallbackList;
 	typedef tSoundEntityGlobalCallbackList::iterator tSoundEntityGlobalCallbackListIt;
 
@@ -109,6 +122,9 @@ namespace hpl {
 		static void AddGlobalCallback(iSoundEntityGlobalCallback *apCallback);
 		static void RemoveGlobalCallback(iSoundEntityGlobalCallback *apCallback);
 
+		static void SetEventFactory(tSoundEntityEventFactory apFactory){ mpEventFactory = apFactory; }
+		iSoundEntityEvent* GetEvent(){ return mpEvent; }
+
 
 	private:
 		bool CheckIsOutOfRange();
@@ -156,6 +172,8 @@ namespace hpl {
 		float mfSleepCount;
 
 		static tSoundEntityGlobalCallbackList mlstGobalCallbacks;
+		static tSoundEntityEventFactory mpEventFactory;
+		iSoundEntityEvent *mpEvent;
 	};
 
 };

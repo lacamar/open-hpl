@@ -1,5 +1,6 @@
 #include "SomaFsb.h"
 #include "SomaVorbisSetups.h"
+#include <vorbis/vorbisfile.h>
 
 #include <set>
 
@@ -52,6 +53,7 @@ struct cFsbSample
 static const unsigned int kFsbMode_Pcm16 = 2;
 static const unsigned int kFsbMode_ImaAdpcm = 7;
 static const unsigned int kFsbMode_Vorbis = 15;
+static const unsigned int kFsbChunkType_Channels = 1;
 static const unsigned int kFsbChunkType_Frequency = 2;
 static const unsigned int kFsbChunkType_VorbisData = 11;
 
@@ -85,6 +87,7 @@ static bool ParseFsb5(const std::vector<unsigned char> &aFile, unsigned int &alM
 	if (lPos + lSampleHeadersSize + lNameTableSize > aFile.size())
 		return false;
 
+	static const int kChannels[4] = {1, 2, 6, 8};
 	for (unsigned int i = 0; i < lNumSamples; ++i)
 	{
 		if (lPos + 8 > aFile.size())
@@ -97,8 +100,8 @@ static bool ParseFsb5(const std::vector<unsigned char> &aFile, unsigned int &alM
 
 		cFsbSample sample;
 		sample.mlFrequency = FsbFrequencyEnum((unsigned int)((raw >> 1) & 0xF));
-		sample.mlChannels = (int)((raw >> 5) & 0x1) + 1;
-		sample.mlDataOffset = (size_t)((raw >> 6) & 0xFFFFFFFull) * 16;
+		sample.mlChannels = kChannels[(raw >> 5) & 0x3];
+		sample.mlDataOffset = (size_t)((raw >> 7) & 0x7FFFFFFull) * 32;
 		sample.mlNumPcmSamples = (unsigned int)((raw >> 34) & 0x3FFFFFFFull);
 		sample.mbHasVorbisCrc = false;
 		sample.mlVorbisCrc = 0;
@@ -122,6 +125,10 @@ static bool ParseFsb5(const std::vector<unsigned char> &aFile, unsigned int &alM
 			{
 				sample.mbHasVorbisCrc = true;
 				sample.mlVorbisCrc = ReadU32LE(pData + lPos);
+			}
+			else if (lChunkType == kFsbChunkType_Channels && lChunkSize >= 1)
+			{
+				sample.mlChannels = pData[lPos];
 			}
 			else if (lChunkType == kFsbChunkType_Frequency && lChunkSize >= 4)
 			{
@@ -439,14 +446,110 @@ static std::vector<short> DecodeXboxImaAdpcm(const cFsbSample &aSample, const un
 	return vOut;
 }
 
+struct cMemReader
+{
+	const std::vector<unsigned char> *mpData;
+	size_t mlPos;
+};
+
+static size_t MemRead(void *apDest, size_t alSize, size_t alCount, void *apSrc)
+{
+	cMemReader *r = (cMemReader *)apSrc;
+	size_t lBytes = std::min(alSize * alCount, r->mpData->size() - r->mlPos);
+	std::memcpy(apDest, r->mpData->data() + r->mlPos, lBytes);
+	r->mlPos += lBytes;
+	return alSize ? lBytes / alSize : 0;
+}
+
+// OpenAL only plays mono and stereo: fold 5.1/7.1 (Vorbis channel order) down like FMOD's stereo mix, LFE dropped
+// FSB multichannel is Vorbis order (FL C FR SL SR [BL BR] LFE); gains fitted to the official game's output
+static void DownmixMatrix(int alCh, std::vector<float> &aL, std::vector<float> &aR)
+{
+	aL.assign(alCh, 0.5f);
+	aR.assign(alCh, 0.5f);
+	aL[0] = aR[2] = 1;
+	aL[2] = aR[0] = 0;
+	for (int c = 3; c + 1 < alCh - 1; c += 2)
+	{
+		aR[c] = 0;
+		aL[c + 1] = 0;
+	}
+}
+
+static bool DownmixOggToWav(const cFsbSample &aSample, const std::vector<unsigned char> &aOgg, std::vector<unsigned char> &aOutWav)
+{
+	cMemReader reader = {&aOgg, 0};
+	ov_callbacks cb = {MemRead, NULL, NULL, NULL};
+	OggVorbis_File vf;
+	if (ov_open_callbacks(&reader, &vf, NULL, 0, cb) != 0)
+		return false;
+	int lCh = aSample.mlChannels;
+	std::vector<float> vL, vR;
+	DownmixMatrix(lCh, vL, vR);
+	std::vector<short> vPcm;
+	vPcm.reserve((size_t)aSample.mlNumPcmSamples * 2);
+	int lSection = 0;
+	for (;;)
+	{
+		float **pBuf;
+		long n = ov_read_float(&vf, &pBuf, 4096, &lSection);
+		if (n <= 0)
+			break;
+		for (long i = 0; i < n; ++i)
+		{
+			float l = 0, r = 0;
+			for (int c = 0; c < lCh; ++c)
+			{
+				l += pBuf[c][i] * vL[c];
+				r += pBuf[c][i] * vR[c];
+			}
+			vPcm.push_back((short)cMath::Clamp(l * 32767.0f, -32768.0f, 32767.0f));
+			vPcm.push_back((short)cMath::Clamp(r * 32767.0f, -32768.0f, 32767.0f));
+		}
+	}
+	ov_clear(&vf);
+	cFsbSample stereo = aSample;
+	stereo.mlChannels = 2;
+	WritePcm16Wav(stereo, (const unsigned char *)vPcm.data(), vPcm.size() * 2, aOutWav);
+	return true;
+}
+
+static void WritePcm16WavStereo(const cFsbSample &aSample, const short *apPcm, size_t alCount, std::vector<unsigned char> &aOutWav)
+{
+	int lCh = aSample.mlChannels;
+	if (lCh <= 2)
+	{
+		WritePcm16Wav(aSample, (const unsigned char *)apPcm, alCount * 2, aOutWav);
+		return;
+	}
+	std::vector<float> vL, vR;
+	DownmixMatrix(lCh, vL, vR);
+	std::vector<short> vOut;
+	vOut.reserve(alCount / lCh * 2);
+	for (size_t i = 0; i + lCh <= alCount; i += lCh)
+	{
+		float l = 0, r = 0;
+		for (int c = 0; c < lCh; ++c)
+		{
+			l += apPcm[i + c] * vL[c];
+			r += apPcm[i + c] * vR[c];
+		}
+		vOut.push_back((short)cMath::Clamp(l, -32768.0f, 32767.0f));
+		vOut.push_back((short)cMath::Clamp(r, -32768.0f, 32767.0f));
+	}
+	cFsbSample stereo = aSample;
+	stereo.mlChannels = 2;
+	WritePcm16Wav(stereo, (const unsigned char *)vOut.data(), vOut.size() * 2, aOutWav);
+}
+
 static bool EncodeSample(unsigned int alMode, const cFsbSample &aSample, const unsigned char *apFileData, std::vector<unsigned char> &aOut)
 {
 	if (alMode == kFsbMode_Pcm16)
-		WritePcm16Wav(aSample, apFileData + aSample.mlDataOffset, aSample.mlDataSize, aOut);
+		WritePcm16WavStereo(aSample, (const short *)(apFileData + aSample.mlDataOffset), aSample.mlDataSize / 2, aOut);
 	else if (alMode == kFsbMode_ImaAdpcm)
 	{
 		std::vector<short> vPcm = DecodeXboxImaAdpcm(aSample, apFileData + aSample.mlDataOffset);
-		WritePcm16Wav(aSample, (const unsigned char *)vPcm.data(), vPcm.size() * 2, aOut);
+		WritePcm16WavStereo(aSample, vPcm.data(), vPcm.size(), aOut);
 	}
 	else
 	{
@@ -454,6 +557,12 @@ static bool EncodeSample(unsigned int alMode, const cFsbSample &aSample, const u
 		if (pSetup == NULL)
 			return false;
 		OggMuxVorbisSample(aSample, apFileData, *pSetup, aOut);
+		if (aSample.mlChannels > 2)
+		{
+			std::vector<unsigned char> vOgg;
+			vOgg.swap(aOut);
+			return DownmixOggToWav(aSample, vOgg, aOut);
+		}
 	}
 	return true;
 }
@@ -584,7 +693,7 @@ void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath
 		if (setWanted.count(sample.msName) == 0)
 			continue;
 		std::vector<unsigned char> vOut;
-		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Vorbis ? ".ogg" : ".wav");
+		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Vorbis && sample.mlChannels <= 2 ? ".ogg" : ".wav");
 		if (EncodeSample(lMode, sample, vFile.data(), vOut) == false)
 			continue;
 		WriteWholeFile(asCacheDir + cString::To16Char(sFile), vOut);

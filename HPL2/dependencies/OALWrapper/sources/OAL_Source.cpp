@@ -65,6 +65,7 @@ cOAL_Source::cOAL_Source(cOAL_SourceManager *apSourceManager, int alId, int alSe
 			cOAL_SourceSend* pSend = new cOAL_SourceSend;
 			mvSends.push_back(pSend);
 		}
+		mpFilter = new cOAL_Filter;
 	}
 
 	// This resets the source

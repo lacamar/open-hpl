@@ -251,6 +251,7 @@ namespace hpl {
 		iSoundChannel* CreateChannel(const tString& asName, int alPriority, bool abStream, bool *apNotEnoughChannels);
 
 		tSoundEntryList* GetEntryList();
+		const std::list<tString>& GetRecentStarts() const { return mlstRecentStarts; }
 		
 		bool CheckSoundIsBlocked(const cVector3f& avSoundPosition);
 	
@@ -261,6 +262,7 @@ namespace hpl {
 		cResources* mpResources;
 
 		tSoundEntryList m_lstSoundEntries;
+		std::list<tString> mlstRecentStarts;
 
 		//tSoundEntryList m_lstSoundEntriesPool;
 		
@@ -273,8 +275,8 @@ namespace hpl {
 		int mlCount;
 		int mlIdCount;
 
-		float mfGlobalVolume[2];
-		float mfGlobalSpeed[2];
+		float mfGlobalVolume[32];
+		float mfGlobalSpeed[32];
 
 		cMultipleSettingsHandler mGlobalVolumeHandler;
 		cMultipleSettingsHandler mGlobalSpeedHandler;

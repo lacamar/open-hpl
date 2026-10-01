@@ -7,6 +7,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
+#include <SDL2/SDL.h>
 #include <cstring>
 
 cSomaLuxGame *cSomaLuxGame::mpInstance = NULL;
@@ -58,6 +59,8 @@ cConfigFile *SomaKeyConfig() { return gpKeyConfig; }
 
 static void LoadConfigs()
 {
+	if (gpUserConfig)
+		return;
 	tWString sGame = cPlatform::GetWorkingDir();
 	tWString sUserDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome) + _W("open-hpl/");
 	cPlatform::CreateFolder(sUserDir);
@@ -66,6 +69,50 @@ static void LoadConfigs()
 	gpUserConfig = OpenConfig(sUserDir + _W("user_settings.cfg"), sGame + _W("/config/default_user_settings.cfg"));
 	gpKeyConfig = OpenConfig(sUserDir + _W("user_keys.cfg"), sGame + _W("/config/default_user_keys.cfg"));
 	gpGameConfig = OpenConfig(_W(""), sGame + _W("/config/game.cfg"));
+}
+
+static tString gsLanguage = "english";
+const tString &SomaCurrentLanguage() { return gsLanguage; }
+
+// cLuxConfigHandler::LoadUserConfig, [Screen] part
+void SomaReadUserScreenConfig(cSomaConfig *apCfg)
+{
+	LoadConfigs();
+	cConfigFile *c = gpUserConfig;
+	apCfg->mlScreenWidth = c->GetInt("Screen", "Width", apCfg->mlScreenWidth);
+	apCfg->mlScreenHeight = c->GetInt("Screen", "Height", apCfg->mlScreenHeight);
+	tString sFull = cString::ToLowerCase(c->GetString("Screen", "FullScreen", apCfg->mbFullscreen ? "true" : "false"));
+	apCfg->mbFullscreen = sFull != "false";
+	tString sVsync = cString::ToLowerCase(c->GetString("Screen", "Vsync", apCfg->mbVSync ? "true" : "false"));
+	apCfg->mbVSync = sVsync == "true" || sVsync == "adaptive";
+}
+
+static void LoadLanguage()
+{
+	gsLanguage = cString::SetFileExt(gpUserConfig->GetString("Main", "StartLanguage", "english.lang"), "");
+	cResources *pRes = gpSomaBase->mpEngine->GetResources();
+	pRes->ClearTranslations();
+	pRes->AddLanguageFile("config/base_" + gsLanguage + ".lang", false);
+	pRes->AddLanguageFile("config/lang_main/" + gsLanguage + ".lang", false);
+}
+
+// cGlobalScriptFuncs::ApplyUserConfig: UpdateGraphicSettings, UpdateSoundSettings, LoadLanguage; never asks for a restart
+static bool ApplyUserConfig()
+{
+	cSomaConfig *pCfg = gpSomaBase->GetConfig();
+	SomaReadUserScreenConfig(pCfg);
+	SDL_Window *pWindow = SDL_GL_GetCurrentWindow();
+	if (pWindow && getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
+		SDL_SetWindowFullscreen(pWindow, pCfg->mbFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	if (pWindow && pCfg->mbFullscreen == false && pCfg->mlScreenWidth > 0 && pCfg->mlScreenHeight > 0)
+		SDL_SetWindowSize(pWindow, pCfg->mlScreenWidth, pCfg->mlScreenHeight);
+	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
+	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
+	pCfg->mfMasterVolume = gpUserConfig->GetFloat("Sound", "Volume", pCfg->mfMasterVolume);
+	gpSomaBase->mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
+	pCfg->Save();
+	LoadLanguage();
+	return false;
 }
 
 static std::vector<cXmlElement *> ChildElements(iXmlNode *apNode)
@@ -84,12 +131,7 @@ void cSomaLuxGame::Load()
 {
 	LoadConfigs();
 
-	// cLuxBase::LoadLanguage
-	tString sLang = gpUserConfig->GetString("Main", "Language", "english");
-	cResources *pLangRes = gpSomaBase->mpEngine->GetResources();
-	pLangRes->ClearTranslations();
-	pLangRes->AddLanguageFile("config/base_" + cString::SetFileExt(sLang, "lang"), false);
-	pLangRes->AddLanguageFile("config/lang_main/" + cString::SetFileExt(sLang, "lang"), false);
+	LoadLanguage();
 	gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(new cSomaLuxVoiceHandler(gpSomaBase->mpEngine));
 
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
@@ -223,10 +265,23 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 
 cSomaImGui *SomaHudImGui();
 
+void cSomaLuxGame::Draw(float afFrameTime)
+{
+	ForEach([afFrameTime](cSomaLuxScriptable *p) { p->CallWithFloat("void OnDraw(float afFrameTime)", afFrameTime); });
+}
+
 // cLuxGuiHandler::Update: default input to the focused ImGui, then the HUD's OnGui pass
 void cSomaLuxGame::UpdateGui(float afTimeStep)
 {
 	cSomaImGui::UpdateFocusHistory();
+	// cLuxGuiHandler::SetImGuiInputFocus: absolute pointer only while an ImGui has input
+	static int lRelative = -1;
+	int lWantRelative = cSomaImGui::GetInputFocus() == NULL;
+	if (lWantRelative != lRelative)
+	{
+		lRelative = lWantRelative;
+		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(lRelative);
+	}
 	if (cSomaImGui *pFocus = cSomaImGui::GetInputFocus())
 	{
 		if (cSomaLuxHandler *pGui = GetHandler("GuiHandler"))
@@ -404,6 +459,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
+	SOMA_FUNC(e, "bool cLux_ApplyUserConfig()", +[]() { return ApplyUserConfig(); });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetKeyConfig()", +[]() { return gpKeyConfig; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetGameConfig()", +[]() { return gpGameConfig; });
 	const char *C = "cConfigFile";

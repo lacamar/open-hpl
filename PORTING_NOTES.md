@@ -5977,3 +5977,31 @@ right and the frame isn't, the inputs differ.
 - Still open: 00_01 is ~2x brighter than the ref at the bed (spot cone on the floor beside the
   table, upward spot on the ceiling); SH box probes ~3x darker than the ref; under-floor point
   light in 01_02 lights walls the ref leaves dark.
+
+## SOMA: audio vs the reference (2026-10-01)
+
+Tool: `scripts/soma-audio.py`. Ours plays into the `ohpl-ours` null sink, the ref into
+`claude-test`. It records both monitors, then analyzes them: levels, L-R, octave bands, timeline,
+spectrograms, and `identify` (cross-correlation against extracted event samples). `playing` lists
+our live entries and events.
+
+- **FMOD events instead of synthesized `.snt`s.** `cSomaSoundEvents` resolves `.fdp` events, with
+  layers, parameters, volume envelopes, spawn and `spawn_max`, and samples cut from `.fsb` banks by
+  `cSomaFsb`. HPL2 `cSoundEntity` delegates to an event when the factory resolves one.
+  `cSomaSoundscape` (map Soundscape areas) replaces `cSomaAmbientSfx`.
+- **Entry types.** SOMA's `eSoundEntryType` is World=1, WorldClean=2, Gui=4, GuiWorld=8 (masks
+  WorldAll=3, GuiAll=12, All=0x7fffffff). HPL2 kept two global volume slots (World=1, Gui=2), so
+  SOMA's GuiWorld fades never applied, and a "Gui" fade muted WorldClean. `cSoundHandler` now keeps
+  32 slots, each computed with `CalcResults(1<<i)`. `.voice` `EntryType` is honoured. The slideshow
+  ambience (`game_intro_seq`) went from silent to 0.891.
+- **FSB5 sample header.** The data offset is bits 7-33 ×32. We read one bit too many, so
+  6/8-channel samples (which carry a channel chunk) started 16 bytes late. That produced
+  channel-rotated noise in every multichannel ambience (e.g. `level_amb_shared_interior_streams`,
+  12 of 12 samples). This was the "glitch/choking" loudness.
+- **Downmix.** Multichannel data is in Vorbis order (FL C FR SL SR [BL BR] LFE), PCM too. The
+  official game's stereo output fits L = FL + 0.5(C+SL+LFE), R = FR + 0.5(C+SR+LFE) (least squares,
+  7-9% residual). Before this, 6-channel PCM was played as mono at 6× length.
+- Results: intro rms -21.1 vs ref -20.3 dB, L-R -0.1 vs +0.3. Menu -36.6 vs -36.8. Apartment
+  spectra match. The floor between phone pulses is within 1 dB.
+- Still open: the menu is 12 dB short at 63 Hz; the intro is +6..8 dB above 4 kHz; no reverb/EFX
+  matching yet. The apartment L-R is +7.0 vs +3.8 (pan law of near 3D sources).

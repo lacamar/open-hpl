@@ -52,9 +52,16 @@ scripts/soma-compare.py player | entities | lights [--pattern] [--diff]
 scripts/soma-compare.py view --pose X Y Z YAW PITCH   # screenshots + side-by-side + image metrics
 scripts/soma-compare.py fps --secs 10
 scripts/soma-compare.py report --map M            # all of the above -> report.json
-scripts/soma-compare.py boot [--record-ref]      # boot splash -> main menu, per-frame PSNR -> boot/timeline.png
+scripts/soma-compare.py boot [--record-ref] [--first-launch]  # boot splash -> main menu, per-frame PSNR -> boot/timeline.png
+scripts/soma-audio.py menu | map --map M [--out DIR] [--keep]  # record both games' audio (null sinks), levels/bands/spectrograms
+scripts/soma-audio.py identify X.wav --bank 'Player*'  # which extracted event samples are in a recording
+scripts/soma-audio.py playing                     # ours: live sound entries, FMOD events, recent starts
 OPENHPL_SOMA_SCRIPT_CHECK_FILE=f.hps scripts/soma-script-check.sh   # compile one file, print errors
 ```
+
+Extracted event samples:
+`$XDG_CACHE_HOME/open-hpl/soma/events-v4` (bump the version in SomaSound.cpp and soma-audio.py when
+extraction changes).
 
 Snippets: function bodies printing `key=value` via `__print`; the real engine formats floats as `%f`.
 Real compile errors are only "Couldn't build script"; compile locally first for messages. Exec slots

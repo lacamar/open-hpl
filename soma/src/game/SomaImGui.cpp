@@ -106,6 +106,12 @@ void cSomaImGui::Begin(float afTimeStep)
 	mvLayouts.clear();
 	mlAlign = 0;
 	mvItems.clear();
+	mvNav.clear();
+	mbFoundFocus = false;
+	mlWrapMode = 3;
+	mlGroupFlags = 1;
+	if (mlMouseLock > 0)
+		--mlMouseLock;
 
 	for (auto it = mmapFades.begin(); it != mmapFades.end(); ++it)
 	{
@@ -132,9 +138,15 @@ void cSomaImGui::Begin(float afTimeStep)
 
 void cSomaImGui::End()
 {
+	UpdateUIMovement();
 	mbFirstRun = false;
 	for (int i = 0; i < 10; ++i)
+	{
 		mvActionTriggered[i] = false;
+		mvActionUsed[i] = false;
+		if (i >= 4)
+			mvActionDown[i] = false;
+	}
 	mvMouseRel = 0;
 	if (mbShowMouse && this == mpInputFocus)
 	{
@@ -475,17 +487,167 @@ void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, cons
 		DrawGfx((char *)apData + alTriggeredGfx, avPos + cVector3f(0, 0, 0.06f), avSize, cColor(1, 1));
 }
 
+// Per widget across frames: the previous widget is a different one each call
+void cSomaImGui::SetPrevFocus(cState &aState, bool abOver)
+{
+	mPrev.mbWasInFocus = aState.mbInFocus && abOver == false;
+	mPrev.mbBecameInFocus = abOver && aState.mbInFocus == false;
+	mPrev.mbInFocus = abOver;
+	aState.mbInFocus = abOver;
+}
+
+void cSomaImGui::SetFocus(const tString &asName)
+{
+	mlFocus = mlPrevFocus = asName.empty() ? 0 : Id(asName);
+	mvLastDir = 0;
+	mlLastCount = 0;
+}
+
+// cImGui::DoWidgetBase: the mouse takes focus only when it moves or clicks, the earliest drawn widget wins
+bool cSomaImGui::WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector2f &avSize, cState &aState)
+{
+	bool bOver = false;
+	if (mMods.mbUseInput)
+	{
+		if (mbShowMouse == false || mlMouseLock > 0 || this != mpInputFocus)
+		{
+			if (mlFocus == alId)
+				mbFoundFocus = true;
+		}
+		else
+		{
+			if (mlFocus == 0 && mbFirstRun && mbFoundFocus == false)
+			{
+				mlFocus = alId;
+				mbFoundFocus = true;
+			}
+			bOver = MouseOver(avPos, avSize);
+			bool bAct = mvMouseRel.x != 0 || mvMouseRel.y != 0 || mvActionTriggered[1] || mvActionTriggered[0];
+			if (bOver && bAct && mbFoundFocus == false)
+			{
+				mlFocus = alId;
+				mbFoundFocus = true;
+			}
+			else if (bOver == false && bAct && mlFocus == alId)
+				mlFocus = 0;
+		}
+		if (mMods.mbUseUIPos)
+		{
+			const cVector2f &h = mMods.mvExpHori, &v = mMods.mvExpVert;
+			cNavEntry e;
+			e.mlId = alId;
+			e.mvPos = cVector2l((int)(avPos.x - h.x * avSize.x), (int)(avPos.y - v.x * avSize.y));
+			e.mvSize = cVector2l((int)((h.x + h.y) * avSize.x + avSize.x), (int)((v.x + v.y) * avSize.y + avSize.y));
+			e.mlWrap = mlWrapMode;
+			e.mlGroup = mlGroupFlags;
+			mvNav.push_back(e);
+		}
+	}
+	bool bIn = mMods.mbUseInput && mlFocus == alId;
+	SetPrevFocus(aState, bIn);
+	mPrev.mbMouseOver = bOver;
+	return bIn;
+}
+
+bool cSomaImGui::BecamePressed(bool abKeys, bool abMouse)
+{
+	bool b = false;
+	if (abKeys)
+		b = ActionTriggered(2);
+	if (abMouse)
+		b = ActionTriggered(1) || b;
+	return b;
+}
+
+const cSomaImGui::cNavEntry *cSomaImGui::FindNav(uint64_t alId)
+{
+	for (const cNavEntry &e : mvNav)
+		if (e.mlId == alId)
+			return &e;
+	return NULL;
+}
+
+// cImGui::GetClosestUIPos: distance along the move axis between top-left corners, lanes must overlap
+uint64_t cSomaImGui::NavClosest(const cNavEntry &aCur, const cVector2l &avDir, bool abAhead, bool abLoose)
+{
+	int mv = avDir.x == 0 ? 1 : 0, perp = 1 - mv;
+	const cNavEntry *pBest = NULL;
+	int lBest = 0;
+	for (const cNavEntry &e : mvNav)
+	{
+		if (e.mlId == mlFocus || (e.mlGroup & aCur.mlGroup) == 0)
+			continue;
+		int lo = abLoose ? e.mvPos.v[perp] - e.mvSize.v[perp] / 2 : e.mvPos.v[perp];
+		int ext = abLoose ? 2 * e.mvSize.v[perp] : e.mvSize.v[perp];
+		if ((lo < aCur.mvPos.v[perp] + aCur.mvSize.v[perp] && aCur.mvPos.v[perp] < lo + ext) == false)
+			continue;
+		int lDelta = e.mvPos.v[mv] - aCur.mvPos.v[mv];
+		if ((lDelta * avDir.v[mv] > 0) != abAhead)
+			continue;
+		int lDist = std::abs(lDelta);
+		if (pBest == NULL || (abAhead ? lDist < lBest : lDist > lBest))
+		{
+			pBest = &e;
+			lBest = lDist;
+		}
+	}
+	return pBest ? pBest->mlId : 0;
+}
+
+void cSomaImGui::UpdateUIMovement()
+{
+	static const int kDirs[4][3] = {{4, 0, -1}, {5, 0, 1}, {6, 1, 0}, {7, -1, 0}};
+	cVector2l vDir(0, 0);
+	for (const auto &d : kDirs)
+		if (ActionTriggered(d[0], true) && vDir.x == 0 && vDir.y == 0)
+			vDir = cVector2l(d[1], d[2]);
+	bool bConfirm = ActionTriggered(2, true);
+	bool bMove = vDir.x != 0 || vDir.y != 0;
+	if ((bMove == false && bConfirm == false) || mvNav.empty())
+		return;
+	const cNavEntry *pCur = FindNav(mlFocus);
+	if (pCur == NULL)
+	{
+		mlFocus = mlPrevFocus = mvNav[0].mlId;
+		mvLastDir = 0;
+		mlLastCount = 0;
+		return;
+	}
+	if (mvNav.size() < 2 || bMove == false)
+		return;
+	uint64_t lTarget = 0;
+	if ((int)mvNav.size() == mlLastCount && mvLastDir.x == -vDir.x && mvLastDir.y == -vDir.y && FindNav(mlPrevFocus))
+		lTarget = mlPrevFocus;
+	else
+	{
+		bool bHori = vDir.x != 0;
+		bool bWrap = pCur->mlWrap == 3 || (pCur->mlWrap == 1 && bHori) || (pCur->mlWrap == 2 && bHori == false);
+		lTarget = NavClosest(*pCur, vDir, true, false);
+		if (lTarget == 0 && bWrap)
+			lTarget = NavClosest(*pCur, vDir, false, false);
+		if (lTarget == 0)
+			lTarget = NavClosest(*pCur, vDir, true, true);
+		if (lTarget == 0 && bWrap)
+			lTarget = NavClosest(*pCur, vDir, false, true);
+	}
+	if (lTarget)
+	{
+		mlPrevFocus = mlFocus;
+		mlFocus = lTarget;
+		mvLastDir = vDir;
+		mlLastCount = (int)mvNav.size();
+	}
+}
+
 bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
-	bool bMouse = mMods.mbUseInput && MouseOver(avPos, avSize);
-	// Focus stays on the last widget the mouse moved over or SetFocus named
-	if (bMouse && (mvMouseRel.x != 0 || mvMouseRel.y != 0))
-		msFocus = asName;
-	bool bOver = mMods.mbUseInput && (asName.empty() || msFocus.empty() ? bMouse : msFocus == asName);
-	bool bDown = bMouse && ActionIsDown(1);
-	bool bClicked = bMouse && ActionTriggered(1);
-	cState &st = State(Id(asName));
+	uint64_t lId = asName.empty() ? Id(avPos.ToString()) : Id(asName);
+	cState &st = State(lId);
+	bool bOver = WidgetBase(lId, avPos, avSize, st);
+	bool bMouseOver = mPrev.mbMouseOver;
+	bool bClicked = bOver && BecamePressed(true, true);
+	bool bDown = bOver && (mvActionDown[2] || (bMouseOver && mvActionDown[1]));
 	bool bResult = bClicked;
 	if (alMode == 1) // toggle
 	{
@@ -544,10 +706,7 @@ bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const v
 	if (bFocus && bUseFocusGfx)
 		DrawGfx((char *)apData + kBGfxInFocus, avPos + cVector3f(0, 0, 0.1f), avSize,
 				F<bool>(apData, kBUseInFocusColor) ? F<cColor>(apData, kBColorInFocus) : cColor(1, 1));
-	mPrev.mbWasInFocus = mPrev.mbInFocus;
-	mPrev.mbBecameInFocus = bOver && mPrev.mbInFocus == false;
-	mPrev.mbInFocus = bOver;
-	mPrev.mbMouseOver = bOver;
+	mPrev.mbMouseOver = bMouseOver;
 	mPrev.mbPressed = bDown;
 	mPrev.mbBecamePressed = bClicked;
 	Advance(avPos, avSize, bResult);
@@ -575,8 +734,9 @@ void cSomaImGui::DoImage(const void *apGfx, cVector3f avPos, cVector2f avSize)
 	DrawGfx(apGfx, avPos, avSize, cColor(1, 1));
 	mPrev.mbMouseOver = MouseOver(avPos, avSize);
 	mPrev.mbInFocus = mPrev.mbMouseOver;
-	mPrev.mbBecamePressed = mPrev.mbMouseOver && ActionTriggered(1);
-	mPrev.mbPressed = mPrev.mbMouseOver && ActionIsDown(1);
+	mPrev.mbBecameInFocus = false;
+	mPrev.mbBecamePressed = mPrev.mbMouseOver && mvActionTriggered[1];
+	mPrev.mbPressed = mPrev.mbMouseOver && mvActionDown[1];
 	Advance(avPos, avSize);
 }
 
@@ -624,29 +784,40 @@ float cSomaImGui::DoSlider(const tString &asName, float afDefault, float afMin, 
 		st.mfFloat = afDefault;
 		st.mbSetFloat = true;
 	}
-	bool bOver = MouseOver(avPos, avSize);
-	if (bOver && ActionTriggered(1))
-		st.mlInt = 1;
-	if (ActionIsDown(1) == false)
-		st.mlInt = 0;
+	bool bIn = WidgetBase(Id(asName), avPos, avSize, st);
+	bool bOver = mPrev.mbMouseOver;
 	float fOld = st.mfFloat;
+	if (bIn)
+	{
+		float fStep = afStep > 0 ? afStep : (afMax - afMin) * 0.05f;
+		int lInc = abVertical ? 5 : 6, lDec = abVertical ? 4 : 7;
+		float d = (ActionTriggered(lInc) ? fStep : 0) - (ActionTriggered(lDec) ? fStep : 0);
+		d += (ActionTriggered(8) ? fStep : 0) - (ActionTriggered(9) ? fStep : 0);
+		if (abVertical)
+			d = -d;
+		if (d != 0)
+			st.mfFloat = cMath::Clamp(st.mfFloat + d, cMath::Min(afMin, afMax), cMath::Max(afMin, afMax));
+		if (bOver && ActionTriggered(1))
+			st.mlInt = 1;
+	}
+	if (mvActionDown[1] == false)
+		st.mlInt = 0;
 	if (st.mlInt && avSize.x > 0 && avSize.y > 0)
 	{
+		mlMouseLock = 2;
 		float t = abVertical ? 1 - (mvMousePos.y - avPos.y) / avSize.y : (mvMousePos.x - avPos.x) / avSize.x;
 		float v = afMin + cMath::Clamp(t, 0.0f, 1.0f) * (afMax - afMin);
 		if (afStep > 0)
 			v = afMin + std::round((v - afMin) / afStep) * afStep;
 		st.mfFloat = v;
 	}
-	DrawWidgetBase(apData, avPos, avSize, bOver, false, -1, -1);
+	DrawWidgetBase(apData, avPos, avSize, bIn, false, -1, -1);
 	float t = afMax > afMin ? (st.mfFloat - afMin) / (afMax - afMin) : 0;
 	cVector2f vButton = F<cVector2f>(apData, kSliderButtonSize);
 	cVector3f vButtonPos = abVertical ? cVector3f(avPos.x, avPos.y + (1 - t) * (avSize.y - vButton.y), avPos.z + 0.1f)
 									  : cVector3f(avPos.x + t * (avSize.x - vButton.x), avPos.y, avPos.z + 0.1f);
 	if (F<bool>(apData, kSliderUseButton))
 		DrawGfx((char *)apData + kSliderGfxButton, vButtonPos, vButton, cColor(1, 1));
-	mPrev.mbMouseOver = bOver;
-	mPrev.mbInFocus = bOver;
 	Advance(avPos, avSize, st.mfFloat != fOld);
 	return st.mfFloat;
 }
@@ -660,8 +831,8 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 		st.mlInt = abDefault;
 		st.mbSetInt = true;
 	}
-	bool bOver = MouseOver(avPos, avSize);
-	bool bToggled = bOver && ActionTriggered(1);
+	bool bOver = WidgetBase(Id(asName), avPos, avSize, st);
+	bool bToggled = bOver && BecamePressed(true, true);
 	if (bToggled)
 		st.mlInt = !st.mlInt;
 	DrawWidgetBase(apData, avPos, avSize, bOver, false, -1, -1);
@@ -670,8 +841,6 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 	if (st.mlInt)
 		DrawGfx((char *)apData + kCheckGfxOverlay, avPos + cVector3f(0, 0, 0.2f), F<cVector2f>(apData, kCheckOverlaySize), cColor(1, 1));
 	DrawText(asText, (char *)apData + kWFont, F<cColor>(apData, kWColorText), eFontAlign_Left, avPos + cVector3f(vBox.x + 4, 0, 0), avSize - cVector2f(vBox.x + 4, 0), 1);
-	mPrev.mbMouseOver = bOver;
-	mPrev.mbInFocus = bOver;
 	Advance(avPos, avSize, bToggled);
 	return st.mlInt != 0;
 }
@@ -688,11 +857,13 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 	int lNum = (int)mvItems.size();
 	int lOld = st.mlInt;
 	cVector2f vArrow = F<cVector2f>(apData, kMultiArrowSize);
-	bool bOver = MouseOver(avPos, avSize);
-	if (bOver && ActionTriggered(1) && lNum > 0)
+	bool bOver = WidgetBase(Id(asName), avPos, avSize, st);
+	if (bOver && lNum > 0)
 	{
-		bool bLeft = mvMousePos.x < avPos.x + avSize.x * 0.5f;
-		st.mlInt = (st.mlInt + (bLeft ? lNum - 1 : 1)) % lNum;
+		int d = ActionTriggered(2) + ActionTriggered(6) - ActionTriggered(7);
+		if (ActionTriggered(1) && mPrev.mbMouseOver)
+			d += mvMousePos.x < avPos.x + avSize.x * 0.5f ? -1 : 1;
+		st.mlInt = ((st.mlInt + d) % lNum + lNum) % lNum;
 	}
 	if (lNum > 0)
 		st.mlInt = cMath::Clamp(st.mlInt, 0, lNum - 1);
@@ -702,8 +873,6 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 	if (st.mlInt >= 0 && st.mlInt < lNum)
 		DrawText(mvItems[st.mlInt], (char *)apData + kWFont, F<cColor>(apData, kWColorText), eFontAlign_Center, avPos, avSize, 1);
 	mvItems.clear();
-	mPrev.mbMouseOver = bOver;
-	mPrev.mbInFocus = bOver;
 	Advance(avPos, avSize, st.mlInt != lOld);
 	return st.mlInt;
 }
@@ -909,6 +1078,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	// Contexts
 	SOMA_FUNC(e, "cImGui@ cLux_GetCurrentImGui()", +[]() { return cSomaImGui::GetCurrent() ? cSomaImGui::GetCurrent() : SomaHudImGui(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetGameHudImGui()", +[]() { return SomaHudImGui(); });
+	SOMA_FUNC(e, "cGuiSet@ cLux_GetGameHudSet()", +[]() { return SomaHudImGui()->GetSet(); });
 	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualCenterSize()", +[]() -> const cVector2f & { return gvHudCenter; });
 	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualSize()", +[]() -> const cVector2f & { Hud(); return gvHudSize; });
 	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualOffset()", +[]() -> const cVector2f & { Hud(); return gvHudOffset; });
@@ -955,17 +1125,19 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SendMousePosition(const cVector2l&in avPos, const cVector2l&in avRel)", +[](I *p, const cVector2l &a, const cVector2l &r) { p->SendMousePosition(a, r); });
 	SOMA_METHOD(e, T, "void SendMouseVirtualPosition(const cVector2f&in avPos, const cVector2f&in avRel)", +[](I *p, V2 a, V2 r) { p->SendMouseVirtualPosition(a, r); });
 	SOMA_METHOD(e, T, "void SendAction(eImGuiAction aAction, bool abDown, bool abTriggered)", +[](I *p, int a, bool d, bool t) { p->SendAction(a, d, t); });
-	SOMA_METHOD(e, T, "bool ActionTriggered(eImGuiAction aAction, bool abCheckIfUsed=false)", +[](I *p, int a, bool) { return p->ActionTriggered(a); });
-	SOMA_METHOD(e, T, "bool ActionIsDown(eImGuiAction aAction, bool abCheckIfUsed=false)", +[](I *p, int a, bool) { return p->ActionIsDown(a); });
+	SOMA_METHOD(e, T, "bool ActionTriggered(eImGuiAction aAction, bool abCheckIfUsed=false)", +[](I *p, int a, bool c) { return p->ActionTriggered(a, c); });
+	SOMA_METHOD(e, T, "bool ActionIsDown(eImGuiAction aAction, bool abCheckIfUsed=false)", +[](I *p, int a, bool c) { return p->ActionIsDown(a, c); });
 	SOMA_METHOD(e, T, "const cVector2f& GetMouseRel()", +[](I *p) -> const cVector2f & { return p->GetMouseRel(); });
 	SOMA_METHOD(e, T, "const cVector2f& GetMousePosition()", +[](I *p) -> const cVector2f & { return p->GetMousePosition(); });
 	SOMA_METHOD(e, T, "cVector3f GetMousePosition3D()", +[](I *p) { return cVector3f(p->GetMousePosition().x, p->GetMousePosition().y, 0); });
 	SOMA_METHOD(e, T, "cVector3f GetMouseRel3D()", +[](I *p) { return cVector3f(p->GetMouseRel().x, p->GetMouseRel().y, 0); });
 	SOMA_METHOD(e, T, "bool CheckMouseHasMoved()", +[](I *p) { return p->GetMouseRel().x != 0 || p->GetMouseRel().y != 0; });
 	SOMA_METHOD(e, T, "void SetAlignment(eImGuiAlign aAlign)", +[](I *p, int a) { p->mlAlign = a; });
-	SOMA_METHOD(e, T, "void SetFocus(const tString&in asWidgetName)", +[](I *p, Str s) { p->msFocus = s; });
-	SOMA_METHOD(e, T, "void LockMouseFocus()", +[](I *) {});
-	SOMA_METHOD(e, T, "bool MouseFocusIsLocked()", +[](I *) { return false; });
+	SOMA_METHOD(e, T, "void SetFocus(const tString&in asWidgetName)", +[](I *p, Str s) { p->SetFocus(s); });
+	SOMA_METHOD(e, T, "void SetUIMoveGroupFlags(int alGroupFlags)", +[](I *p, int f) { p->mlGroupFlags = f; });
+	SOMA_METHOD(e, T, "void SetUIMoveWrapMode(eImGuiWrap aWrap)", +[](I *p, int w) { p->mlWrapMode = w; });
+	SOMA_METHOD(e, T, "void LockMouseFocus()", +[](I *p) { p->mlMouseLock = 2; });
+	SOMA_METHOD(e, T, "bool MouseFocusIsLocked()", +[](I *p) { return p->mlMouseLock > 0; });
 	SOMA_METHOD(e, T, "void SetDrawUIDebugBoxes(bool abX)", +[](I *, bool) {});
 	SOMA_METHOD(e, T, "bool CheckMouseOver(const cVector3f&in avPos, const cVector2f &in avSize)", +[](I *p, V3 a, V2 s) { return p->MouseOver(a + p->GroupPos(), s); });
 
@@ -1056,9 +1228,8 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetModTextColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mTextColorMul = c; });
 	SOMA_METHOD(e, T, "void SetModUseUIPos(bool abX)", +[](I *p, bool b) { p->mMods.mbUseUIPos = b; });
 	SOMA_METHOD(e, T, "void SetModUseInput(bool abX)", +[](I *p, bool b) { p->mMods.mbUseInput = b; });
-	// Only widens the gamepad navigation rect in the original; there is no gamepad navigation here
-	SOMA_METHOD(e, T, "void SetModUISizeHoriExpansion(float afNeg, float afPos)", +[](I *, float, float) {});
-	SOMA_METHOD(e, T, "void SetModUISizeVertExpansion(float afNeg, float afPos)", +[](I *, float, float) {});
+	SOMA_METHOD(e, T, "void SetModUISizeHoriExpansion(float afNeg, float afPos)", +[](I *p, float a, float b) { p->mMods.mvExpHori = cVector2f(a, b); });
+	SOMA_METHOD(e, T, "void SetModUISizeVertExpansion(float afNeg, float afPos)", +[](I *p, float a, float b) { p->mMods.mvExpVert = cVector2f(a, b); });
 	SOMA_METHOD(e, T, "void SetModRotateAngle(float afX)", +[](I *p, float f) { p->mMods.mfRotateAngle = f; });
 	SOMA_METHOD(e, T, "void SetModRotateCustomPivot(bool abX)", +[](I *p, bool b) { p->mMods.mbRotateCustomPivot = b; });
 	SOMA_METHOD(e, T, "void SetModRotatePivot(const cVector2f&in avPivot)", +[](I *p, V2 v) { p->mMods.mvRotatePivot = v; });

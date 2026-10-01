@@ -5,6 +5,7 @@
 #include "SomaIntroSequence.h"
 #include "sound/SoundHandler.h"
 #include "SomaBase.h"
+#include "SomaSound.h"
 
 //---------------------------------------
 
@@ -110,11 +111,8 @@ void cSomaIntroSequence::Restart()
 	mbFinished = false;
 	mpViewport->SetActive(true);
 
-	mpAmbience = mpEngine->GetSound()->GetSoundHandler()->PlayGui("game_intro_seq.wav", false, 1.0f);
-	if (mpAmbience)
-		mlAmbienceId = mpAmbience->GetId();
-	else
-		Log("SOMA intro: 'game_intro_seq.wav' not available - the slideshow will have dialogue but no ambience\n");
+	mpAmbience = cSomaSoundEvents::Get()->PlayGui("00_05_apartment2/SFX/game_intro_seq", 1.0f, eSomaSoundEntryType_Gui);
+	mlAmbienceId = mpAmbience ? mpAmbience->GetId() : -1;
 }
 
 //-----------------------------------------------------------------------
@@ -131,8 +129,8 @@ void cSomaIntroSequence::Cancel()
 void cSomaIntroSequence::StopAudio()
 {
 	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	if (mpAmbience && pHandler->IsValid(mpAmbience, mlAmbienceId))
-		mpAmbience->Stop();
+	if (mpAmbience && cSomaSoundEvents::Get()->IsLive(mpAmbience, mlAmbienceId))
+		mpAmbience->StopNow();
 	mpAmbience = NULL;
 	if (msCurrentLineFile != "")
 		pHandler->Stop(msCurrentLineFile);
@@ -372,7 +370,7 @@ void cSomaIntroSequence::PlayLine(const cIntroVoiceLine &aLine)
 
 	if (aLine.msFile != "")
 	{
-		mpEngine->GetSound()->GetSoundHandler()->PlayGui(aLine.msFile, false, 1.0f);
+		mpEngine->GetSound()->GetSoundHandler()->PlayGui(aLine.msFile, false, 1.0f, cVector3f(0, 0, 1), eSomaSoundEntryType_Gui);
 	}
 	msCurrentLineFile = aLine.msFile;
 }

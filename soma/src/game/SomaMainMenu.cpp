@@ -9,6 +9,7 @@
 #include "SomaBase.h"
 #include "SomaConfig.h"
 #include "SomaMenuSfx.h"
+#include "SomaSound.h"
 
 #include <cmath>
 
@@ -366,7 +367,7 @@ static void PlaySomaMenuSfx(cEngine *apEngine, const tString &asFile)
 {
 	if (asFile.empty())
 		return;
-	apEngine->GetSound()->GetSoundHandler()->PlayGui(asFile, false, 1.0f);
+	apEngine->GetSound()->GetSoundHandler()->PlayGui(asFile, false, 1.0f, cVector3f(0, 0, 1), eSomaSoundEntryType_Gui);
 }
 
 //-----------------------------------------------------------------------

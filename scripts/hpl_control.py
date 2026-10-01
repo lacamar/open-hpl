@@ -30,8 +30,24 @@ string):
 
 import argparse
 import json
+import os
 import socket
+import subprocess
 import sys
+
+
+OURS_SINK = "ohpl-ours"
+
+
+def muted_env(env=None):
+    """Route a headless instance's OpenAL output to the ohpl-ours null sink."""
+    sinks = subprocess.run(["pactl", "list", "short", "sinks"], capture_output=True, text=True).stdout
+    if f"\t{OURS_SINK}\t" not in sinks:
+        subprocess.run(["pactl", "load-module", "module-null-sink", f"sink_name={OURS_SINK}",
+                        f"sink_properties=device.description={OURS_SINK}"], capture_output=True)
+    # own application.name so stream-restore never ties the user's real runs to the null sink
+    return dict(os.environ if env is None else env, ALSOFT_DRIVERS="pulse", ALSOFT_PULSE_DEFAULT=OURS_SINK,
+                OPENHPL_SOUND_DEVICE=OURS_SINK, PULSE_SINK=OURS_SINK, PULSE_PROP=f"application.name={OURS_SINK}")
 
 
 class HplControlError(RuntimeError):

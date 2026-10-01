@@ -42,8 +42,15 @@ public:
 	float GetTimeCount() { return mfTimeCount; }
 
 	void SendAction(int alAction, bool abDown, bool abTriggered);
-	bool ActionTriggered(int alAction) { return alAction >= 0 && alAction < 10 && mvActionTriggered[alAction]; }
-	bool ActionIsDown(int alAction) { return alAction >= 0 && alAction < 10 && mvActionDown[alAction]; }
+	bool ActionTriggered(int alAction, bool abCheckIfUsed = false) { return UseAction(alAction, abCheckIfUsed) && mvActionTriggered[alAction]; }
+	bool ActionIsDown(int alAction, bool abCheckIfUsed = false) { return UseAction(alAction, abCheckIfUsed) && mvActionDown[alAction]; }
+	bool UseAction(int alAction, bool abCheckIfUsed)
+	{
+		if (alAction < 0 || alAction >= 10 || (abCheckIfUsed && mvActionUsed[alAction]))
+			return false;
+		mvActionUsed[alAction] = true;
+		return true;
+	}
 	void SendMouseVirtualPosition(const cVector2f &avPos, const cVector2f &avRel);
 	void SendMousePosition(const cVector2l &avPos, const cVector2l &avRel);
 	const cVector2f &GetMousePosition() { return mvMousePos; }
@@ -62,6 +69,7 @@ public:
 		cVector3f mvVec = 0;
 		cColor mCol = cColor(1, 1);
 		bool mbSetInt = false, mbSetFloat = false, mbSetVec = false, mbSetCol = false;
+		bool mbInFocus = false;
 	};
 	std::map<uint64_t, cState> mmapStates;
 	cState &State(uint64_t alId) { return mmapStates[alId]; }
@@ -87,6 +95,7 @@ public:
 		cColor mTextColorMul = cColor(1, 1);
 		bool mbUseInput = true;
 		bool mbUseUIPos = true;
+		cVector2f mvExpHori = 0, mvExpVert = 0;
 		float mfRotateAngle = 0;
 		bool mbRotateCustomPivot = false;
 		cVector2f mvRotatePivot = 0;
@@ -124,7 +133,28 @@ public:
 		cVector2f mvSize = 0;
 	};
 	cPrev mPrev;
-	tString msFocus;
+	void SetPrevFocus(cState &aState, bool abOver);
+
+	// Keyboard/gamepad focus: widgets register a nav rect per frame, End() moves focus along it
+	struct cNavEntry
+	{
+		uint64_t mlId;
+		cVector2l mvPos, mvSize;
+		int mlWrap, mlGroup;
+	};
+	std::vector<cNavEntry> mvNav;
+	uint64_t mlFocus = 0, mlPrevFocus = 0;
+	cVector2l mvLastDir = 0;
+	int mlLastCount = 0;
+	bool mbFoundFocus = false;
+	int mlWrapMode = 3, mlGroupFlags = 1;
+	int mlMouseLock = 0;
+	void SetFocus(const tString &asName);
+	bool WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector2f &avSize, cState &aState);
+	bool BecamePressed(bool abKeys, bool abMouse);
+	const cNavEntry *FindNav(uint64_t alId);
+	uint64_t NavClosest(const cNavEntry &aCur, const cVector2l &avDir, bool abAhead, bool abLoose);
+	void UpdateUIMovement();
 
 	std::vector<tWString> mvItems;
 
@@ -196,6 +226,7 @@ private:
 	float mfTimeCount = 0;
 	bool mvActionDown[10] = {};
 	bool mvActionTriggered[10] = {};
+	bool mvActionUsed[10] = {};
 	cVector2f mvMousePos = 0;
 	cVector2f mvMouseRel = 0;
 	std::vector<cOp> mvBuilding;

@@ -4,13 +4,14 @@
  */
 
 #include "SomaBase.h"
+#include "SomaSound.h"
+#include "SomaSoundscape.h"
 
 #include <cstring>
 #include "HpslTranspilerSelfTest.h"
 #include "HpslTranspiler.h"
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
-#include "SomaAmbientSfx.h"
 #include "SomaMenuSfx.h"
 #include "SomaFsb.h"
 #include "SomaSplash.h"
@@ -229,8 +230,32 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	tString sEntries;
 	for (auto &it : mapCount)
 		sEntries += cString::ToString(it.second) + " " + it.first + "\n";
+	cVector3f vListener = gpSomaBase->mpEngine->GetSound()->GetLowLevel()->GetListenerPosition();
+	tString sDetail;
+	for (cSoundEntry *pEntry : *pList)
+	{
+		iSoundChannel *pCh = pEntry->GetChannel();
+		float fDist = pCh->Get3D() ? cMath::Vector3Dist(pCh->GetPositionIsRelative() ? vListener + pCh->GetRelPosition() : pCh->GetPosition(), vListener) : 0;
+		sDetail += pEntry->GetName() + "|" + (pCh->GetData() ? pCh->GetData()->GetName() : "") + "|" + cString::ToString(pEntry->GetType()) + "|" +
+				   cString::ToString(pCh->GetVolume()) + "|" + cString::ToString(pEntry->GetVolumeMul()) + "|" + (pCh->GetLooping() ? "1" : "0") + "|" +
+				   (pCh->Get3D() ? "1" : "0") + "|" + cString::ToString(fDist) + "|" + cString::ToString(pCh->GetMinDistance()) + "|" +
+				   cString::ToString(pCh->GetMaxDistance()) + "|" + cString::ToString((float)pCh->GetElapsedTime()) + "|" +
+				   cString::ToString((float)pCh->GetTotalTime()) + "|" + (pCh->GetPaused() ? "1" : "0") + "\n";
+	}
 	aResp.Set("count", (int)pList->size());
 	aResp.Set("entries", sEntries);
+	aResp.Set("detail", sDetail);
+	tString sRecent;
+	for (const tString &sLine : gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetRecentStarts())
+		sRecent += sLine + "\n";
+	aResp.Set("recent", sRecent);
+	aResp.Set("now", (int)cPlatform::GetApplicationTime());
+	aResp.Set("listener", vListener.ToString());
+	aResp.Set("soundscape", cSomaSoundscape::Get()->Describe());
+	tString sEvents;
+	for (cSomaSoundInstance *pInst : cSomaSoundEvents::Get()->GetInstances())
+		sEvents += pInst->Describe() + "\n";
+	aResp.Set("events", sEvents);
 	cMusicHandler *pMusic = gpSomaBase->mpEngine->GetSound()->GetMusicHandler();
 	aResp.Set("music", pMusic->GetCurrentSongName());
 	aResp.Set("music_volume", pMusic->GetCurrentSongVolume());
@@ -851,6 +876,8 @@ cSomaBase::cSomaBase()
 	mpLuxGame = NULL;
 }
 
+void SomaReadUserScreenConfig(cSomaConfig *apCfg);
+
 //-----------------------------------------------------------------------
 
 cSomaBase::~cSomaBase()
@@ -1288,6 +1315,7 @@ bool cSomaBase::InitEngine()
 	cEngineInitVars vars;
 	// FMOD virtualises voices past its 64 (MaxVirtualChannels=1000); OpenAL fails instead
 	vars.mSound.mlMaxChannels = 128;
+	vars.mSound.mbUseEnvironmentalAudio = true;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 	// Load persisted settings (see SomaConfig.h) - deliberately AFTER
@@ -1307,6 +1335,7 @@ bool cSomaBase::InitEngine()
 	// unlike Gamma/Volume/VSync, applied live further down once cGraphics/
 	// cSound exist.
 	mConfig.Load();
+	SomaReadUserScreenConfig(&mConfig);
 	vars.mGraphics.mbFullscreen = mConfig.mbFullscreen;
 
 	// Real Resolution row's own restart-required contract - see
@@ -1370,7 +1399,6 @@ bool cSomaBase::InitEngine()
 
 	// FMOD-banked audio -> cache resource dirs; before any map or menu loads
 	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
-	cSomaAmbientSfx::EnsureCached(mpEngine->GetResources());
 
 	/////////////////////////
 	// Apply the persisted settings that DO have a live/runtime API (unlike
@@ -1631,6 +1659,7 @@ bool cSomaBase::InitMainMenuScene()
 	mpDebugCamera = pCamera;
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
+	mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
 
 	// Each new viewport's cRenderSettings starts with FXAA off
 	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
@@ -1727,6 +1756,7 @@ bool cSomaBase::InitTestMap()
 	mpDebugCamera = pCamera;
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
+	mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
 	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing; // see InitMainMenuScene()'s copy of this line
 
 	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
@@ -1791,6 +1821,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		mpDebugCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
 		mpDebugCamera->SetFarClipPlane(200.0f);
 		mpDebugViewport = mpEngine->GetScene()->CreateViewport(mpDebugCamera, mpTestWorld, true);
+		mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
 	}
 	else
 	{

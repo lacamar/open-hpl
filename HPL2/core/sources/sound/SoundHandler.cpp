@@ -22,6 +22,7 @@
 #include "resources/Resources.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "system/Platform.h"
 #include "math/Math.h"
 #include "sound/LowLevelSound.h"
 #include "sound/SoundChannel.h"
@@ -477,10 +478,11 @@ namespace hpl {
 
 		mbSilent = false;
 
-		mfGlobalVolume[0] = 1;
-		mfGlobalVolume[1] = 1;
-		mfGlobalSpeed[0] = 1;
-		mfGlobalSpeed[1] = 1;
+		for(int i=0; i<32; ++i)
+		{
+			mfGlobalVolume[i] = 1;
+			mfGlobalSpeed[i] = 1;
+		}
 	}
 	
 	//-----------------------------------------------------------------------
@@ -503,11 +505,11 @@ namespace hpl {
 		///////////////////////////////////////////////
 		// Update global volume and speed
 		
-		mfGlobalVolume[0] = mGlobalVolumeHandler.CalcResults(eSoundEntryType_World,eMultipleSettingsCalcType_Min,1.0f);
-		mfGlobalVolume[1] = mGlobalVolumeHandler.CalcResults(eSoundEntryType_Gui,eMultipleSettingsCalcType_Min,1.0f);
-
-		mfGlobalSpeed[0] = mGlobalSpeedHandler.CalcResults(eSoundEntryType_World,eMultipleSettingsCalcType_Min,1.0f);
-		mfGlobalSpeed[1] = mGlobalSpeedHandler.CalcResults(eSoundEntryType_Gui,eMultipleSettingsCalcType_Min,1.0f);
+		for(int i=0; i<32; ++i)
+		{
+			mfGlobalVolume[i] = mGlobalVolumeHandler.CalcResults(1u<<i,eMultipleSettingsCalcType_Min,1.0f);
+			mfGlobalSpeed[i] = mGlobalSpeedHandler.CalcResults(1u<<i,eMultipleSettingsCalcType_Min,1.0f);
+		}
 
 		mGlobalVolumeHandler.Update(afTimeStep);
 		mGlobalSpeedHandler.Update(afTimeStep);
@@ -650,6 +652,11 @@ namespace hpl {
 		}*/
 
 		m_lstSoundEntries.push_back(pEntry);
+		mlstRecentStarts.push_back(cString::ToString((int)cPlatform::GetApplicationTime()) + "|" + asName + "|" + cString::ToString(afVolume) + "|" +
+								   (abLoop ? "1" : "0") + "|" + (ab3D ? "1" : "0") + "|" + (abRelative ? "1" : "0") + "|" +
+								   cString::ToString(ab3D && !abRelative ? cMath::Vector3Dist(avPos, mpLowLevelSound->GetListenerPosition()) : avPos.Length()) + "|" +
+								   cString::ToString(afMinDist) + "|" + cString::ToString(afMaxDist));
+		if(mlstRecentStarts.size() > 256) mlstRecentStarts.pop_front();
 
 		mlIdCount++;
 
@@ -879,14 +886,12 @@ namespace hpl {
 
 	float cSoundHandler::GetGlobalVolume(eSoundEntryType aType)
 	{
-		if(aType == eSoundEntryType_World)	return mfGlobalVolume[0];
-		else								return mfGlobalVolume[1];
+		return aType ? mfGlobalVolume[__builtin_ctz((unsigned)aType)] : 1.0f;
 	}
 
 	float cSoundHandler::GetGlobalSpeed(eSoundEntryType aType)
 	{
-		if(aType == eSoundEntryType_World)	return mfGlobalSpeed[0];
-		else								return mfGlobalSpeed[1];
+		return aType ? mfGlobalSpeed[__builtin_ctz((unsigned)aType)] : 1.0f;
 	}
 
 	//-----------------------------------------------------------------------

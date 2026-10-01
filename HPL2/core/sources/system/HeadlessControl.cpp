@@ -690,6 +690,12 @@ namespace hpl {
 			ev.key.keysym.sym = lKeyCode;
 			ev.key.keysym.scancode = SDL_GetScancodeFromKey(lKeyCode);
 			SDL_PushEvent(&ev);
+			if(sAction == "tap")
+			{
+				ev.type = SDL_KEYUP;
+				ev.key.state = SDL_RELEASED;
+				SDL_PushEvent(&ev);
+			}
 		}
 		else if(sType == "mouse_move")
 		{

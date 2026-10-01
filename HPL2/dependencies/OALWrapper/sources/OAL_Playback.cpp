@@ -271,6 +271,22 @@ void OAL_Source_SetPositionRelative ( const int alSource, const bool abRelative 
 	}
 }
 
+// Multichannel buffers are only positioned with AL_SOFT_source_spatialize
+void OAL_Source_SetSpatialize ( const int alSource, const bool abSpatialize )
+{
+	if (gpDevice == NULL) return;
+	static int lSupported = -1;
+	if (lSupported < 0) lSupported = alIsExtensionPresent("AL_SOFT_source_spatialize") ? 1 : 0;
+	if (lSupported == 0) return;
+	cOAL_Source* pSource = gpDevice->GetSource(alSource);
+	if (pSource)
+	{
+		pSource->Lock();
+		alSourcei(pSource->GetObjectID(), 0x1214 /* AL_SOURCE_SPATIALIZE_SOFT */, abSpatialize ? AL_TRUE : 2 /* AL_AUTO_SOFT */);
+		pSource->Unlock();
+	}
+}
+
 //////////////////////////////////////////////////////////////////
 ////	void OAL_Listener_SetAttributes ( const float* apPos, const float* apVel, const float* apForward, const float* apUp )
 ////	-	Sets 3D audio attributes for the listener.

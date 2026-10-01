@@ -35,6 +35,7 @@
 namespace hpl {
 
 	tSoundEntityGlobalCallbackList cSoundEntity::mlstGobalCallbacks;
+	tSoundEntityEventFactory cSoundEntity::mpEventFactory = NULL;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -106,10 +107,13 @@ namespace hpl {
 
 		//if( mpData->GetName() == "scrape_wood.snt") mbLog = true;
 		if(mbLog)Log("Created %d\n", this);
+
+		mpEvent = mpEventFactory ? mpEventFactory(this) : NULL;
 	}
 	
 	cSoundEntity::~cSoundEntity()
 	{
+		hplDelete(mpEvent);
 		if(mbLog)Log("Deleting %d\n", this);
 		for(int i=0; i<3; i++)
 		{
@@ -250,6 +254,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void cSoundEntity::Play(bool abPlayStart)
 	{
+		if(mpEvent){ mbStopped = false; mpEvent->Play(); return; }
 		if(mpSoundHandler->GetSilent())	return;
 
 		if(mbLog)Log("Playing %d\n", this);
@@ -282,6 +287,7 @@ namespace hpl {
 
 	void cSoundEntity::Stop(bool abPlayEnd)
 	{
+		if(mpEvent){ mbStopped = true; mpEvent->Stop(abPlayEnd); return; }
 		if(mbStopped) return;
 
 		mbStopped = true;
@@ -318,6 +324,7 @@ namespace hpl {
 
 	void cSoundEntity::FadeIn(float afSpeed)
 	{
+		if(mpEvent){ mbStopped = false; mbFadingOut = false; mpEvent->FadeIn(afSpeed); return; }
 		if(mpSoundHandler->GetSilent())	return;
 
         if(mbLog)Log("Fade in %d\n", this);
@@ -335,6 +342,7 @@ namespace hpl {
 	
 	void cSoundEntity::FadeOut(float afSpeed)
 	{
+		if(mpEvent){ mbFadingOut = true; mpEvent->FadeOut(afSpeed); return; }
 		mbFadingOut = true;
 	
 		if(mpSoundHandler->GetSilent())	return;
@@ -364,6 +372,7 @@ namespace hpl {
 
 	bool cSoundEntity::IsStopped()
 	{
+		if(mpEvent) return mpEvent->IsStopped();
 		if(mbStopped && mvSoundEntries[eSoundEntityType_Stop]==NULL)
 		{
 			return true;
@@ -389,6 +398,7 @@ namespace hpl {
 
 	void cSoundEntity::UpdateLogic(float afTimeStep)
 	{
+		if(mpEvent){ mpEvent->Update(afTimeStep); return; }
 		if(mpSoundHandler->GetSilent())
 		{
 			return;

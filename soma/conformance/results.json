@@ -338,10 +338,10 @@
     "Compound:0/13",
     "LensFlare:0/4"
    ],
-   "boot_s": 8.6,
+   "boot_s": 9.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 50.847443,
+    "fps": 60.098503,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -349,14 +349,14 @@
     "yaw": -0.786437
    },
    "failures": [],
-   "fps": 50.847443,
+   "fps": 60.098503,
    "frame": {
     "black_frac": 0.023693,
     "height": 2160,
     "lum_hist16": [
-     0.458174,
-     0.436321,
-     0.07922,
+     0.458172,
+     0.436324,
+     0.079218,
      0.024201,
      0.000575,
      0.000139,
@@ -372,7 +372,7 @@
      0.000604
     ],
     "lum_max": 255,
-    "lum_mean": 18.728472,
+    "lum_mean": 18.728476,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.000551,
@@ -389,18 +389,18 @@
      "b_mean": 0.455305,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 63456,
+     "b_zero_count": 63458,
      "g_max": 1,
-     "g_mean": 0.517063,
+     "g_mean": 0.517064,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1913,
+     "g_zero_count": 1915,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.484772,
+     "r_mean": 0.484773,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3131,
+     "r_zero_count": 3133,
      "sample_a": 0.000421,
      "sample_b": 0.430176,
      "sample_g": 0.510742,
@@ -437,7 +437,7 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.344442,
+     "a_mean": 0.344441,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 70147,
@@ -453,7 +453,7 @@
      "g_zero_count": 333895,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.443287,
+     "r_mean": 0.443286,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 252107,
@@ -467,19 +467,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 5753,
+    "total_ms": 6404,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 19,
+      "ms": 23,
       "skipped": {},
       "xml": 20
      },
@@ -495,21 +495,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 60,
+      "ms": 68,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 5163,
+      "ms": 5401,
       "skipped": {},
       "xml": 436
      },
@@ -553,35 +553,35 @@
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 33,
+      "ms": 39,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 158,
+      "ms": 505,
       "skipped": {},
       "xml": 7
      },
      "StaticComboArea": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 285,
+      "ms": 327,
       "skipped": {},
       "xml": 145
      },
@@ -594,7 +594,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3004163.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-1568765.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -663,7 +663,7 @@
    },
    "log_warnings": 42,
    "render": {
-    "draw_calls": 1541,
+    "draw_calls": 1540,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 42,
@@ -671,11 +671,11 @@
     "occlusion_queries": 0,
     "shader_failures": 0,
     "solid_objects": 322,
-    "trans_objects": 28
+    "trans_objects": 27
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.0,
+   "wall_s": 17.1,
    "warmup": {
     "frames": 360,
     "timed_out": false

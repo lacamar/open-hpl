@@ -3,6 +3,7 @@
  */
 
 #include "SomaApartmentIntroCall.h"
+#include "SomaSound.h"
 #include "SomaBase.h"
 
 //---------------------------------------
@@ -210,9 +211,9 @@ void cSomaApartmentIntroCall::EnterRinging()
 {
 	mPhase = eCallPhase_Ringing;
 
-	// Entities_Urban/tech/cellphone/vibrating_wood, synthesized by cSomaAmbientSfx
+	// FMOD event, resolved by cSomaSoundEvents
 	mpRingWorld = mpBase ? mpBase->GetCurrentWorld() : NULL;
-	mpRing = mpRingWorld ? mpRingWorld->CreateSoundEntity("PhoneRing", "vibrating_wood", false) : NULL;
+	mpRing = mpRingWorld ? mpRingWorld->CreateSoundEntity("PhoneRing", "Entities_Urban/tech/cellphone/vibrating_wood", false) : NULL;
 	if (mpRing)
 	{
 		mlRingCreationID = mpRing->GetCreationID();
@@ -244,7 +245,7 @@ void cSomaApartmentIntroCall::AnswerCall()
 	mfLineFallbackTimer = 0;
 
 	StopRing();
-	mpEngine->GetSound()->GetSoundHandler()->PlayGui("pickup_phone_counter_01.ogg", false, 1.0f);
+	cSomaSoundEvents::Get()->PlayGui("00_05_apartment2/SFX/phone/pickup_counter", 1.0f, eSomaSoundEntryType_Gui);
 
 	Log("SOMA apartment intro call: real interact detected while looking at the phone - "
 		"starting real '1_PhoneCall' dialogue\n");
@@ -257,7 +258,7 @@ void cSomaApartmentIntroCall::PlayLine(const cApartmentCallLine &aLine)
 	msCurrentSpeaker = aLine.msSpeaker;
 	msCurrentSubtitle = aLine.msText;
 
-	mpEngine->GetSound()->GetSoundHandler()->PlayGui(aLine.msFile, false, 1.0f);
+	mpEngine->GetSound()->GetSoundHandler()->PlayGui(aLine.msFile, false, 1.0f, cVector3f(0, 0, 1), eSomaSoundEntryType_Gui);
 	msPlayingFile = aLine.msFile;
 	mfLineFallbackTimer = aLine.mfFallbackHoldTime;
 }

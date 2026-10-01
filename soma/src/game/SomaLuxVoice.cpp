@@ -119,6 +119,8 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 		c.msCharacter = p->GetAttributeString("Name", "");
 		c.msDisplayName = p->GetAttributeString("DisplayName", c.msCharacter);
 		c.mfCharVolume = p->GetAttributeFloat("Volume", 1);
+		tString sType = p->GetAttributeString("EntryType", "GUIWorld");
+		c.mlEntryType = sType == "World" ? 1 : sType == "WorldClean" ? 2 : sType == "GUI" ? 4 : 8;
 	}
 	std::map<int, tString> mapScenes;
 	for (cXmlElement *p : Children(pDoc->GetFirstElement("Scenes"), "Scene"))
@@ -230,11 +232,11 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	else if (pSource)
 	{
 		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), itSource->second.mfMinDist,
-																	  itSource->second.mfMaxDist, eSoundEntryType_World, false, 0, true);
+																	  itSource->second.mfMaxDist, (eSoundEntryType)line.mlEntryType, false, 0, true);
 		aP.msSourceEntity = itSource->second.msEntity;
 	}
 	else
-		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume);
+		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume, cVector3f(0, 0, 1), (eSoundEntryType)line.mlEntryType);
 	aP.mlEntryId = aP.mpEntry ? aP.mpEntry->GetId() : -1;
 	Log("SOMA voice: %s%s\n", sKey.c_str(), aP.mpEntry ? "" : " (no audio)");
 	// Missing audio still shows its subtitle for a reading time

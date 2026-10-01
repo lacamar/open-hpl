@@ -64,8 +64,7 @@
  *    engine reads - "E" was chosen as a plain, sensible default, consistent
  *    with cSomaPlayer's existing raw-keyboard-check pattern for Escape).
  *  - Ring (Entities_Urban/tech/cellphone/vibrating_wood) and pickup
- *    (00_05_apartment2/SFX/phone/pickup_counter) are FMOD events; their samples
- *    are extracted by cSomaAmbientSfx. The ring is a 3D sound at the phone.
+ *    (00_05_apartment2/SFX/phone/pickup_counter) are FMOD events (SomaSound.h). The ring is a 3D sound at the phone.
  *  - The real IntroSequence() also drives a whole "waking up" camera
  *    animation/crouch-collision swap/HUD-disable sequence
  *    (CameraAnimation_Begin("CamAnim_WakeUp"), Player_SetJumpDisabled(true),

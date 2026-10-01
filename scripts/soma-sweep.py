@@ -17,7 +17,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hpl_control import HplControl, HplControlError  # noqa: E402
+from hpl_control import HplControl, HplControlError, muted_env  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONF = os.path.join(REPO, "soma/conformance")
@@ -82,7 +82,7 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
     if os.path.exists(sock):
         os.unlink(sock)
 
-    env = dict(os.environ)
+    env = muted_env()
     env.update({
         "OPENHPL_HEADLESS_SOCKET": sock,
         "OPENHPL_SOMA_MAP": name,

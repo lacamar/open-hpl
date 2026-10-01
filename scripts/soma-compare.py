@@ -18,7 +18,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl  # noqa: E402
+from hpl_control import HplControl, muted_env  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("soma_ref", HERE / "soma-ref.py")
 ref_mod = importlib.util.module_from_spec(_spec)
@@ -87,8 +87,9 @@ class Ours:
             self.send({"cmd": "resize", "width": w, "height": h})
         print(f"ours: pid {self.pid()} up in {time.time() - t0:.0f}s")
 
-    def record_boot(self, out, secs, fps, size="1280x720"):
-        """Fresh first launch like the ref prefix: no saves, gamma already calibrated, `size` window."""
+    def record_boot(self, out, secs, fps, size="1280x720", first_launch=False):
+        """Fresh launch like the ref prefix: no saves, gamma already calibrated, `size` window.
+        first_launch: no user_settings.cfg or gamma marker, fullscreen."""
         self.stop()
         scratch = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", CACHE.parent / "soma-scratch"))
         xdg = CACHE / "boot-xdg"
@@ -98,12 +99,13 @@ class Ours:
         (xdg / "state/open-hpl/soma").mkdir(parents=True)
         w, h = size.split("x")
         (xdg / "config/open-hpl/soma/main_settings.cfg").write_text(
-            f'<Screen Vsync="false" FullScreen="false" Width="{w}" Height="{h}" />\n')
-        (xdg / "state/open-hpl/soma/gamma_screen_seen").write_text("1\n")
-        (xdg / "config/open-hpl/soma/user_settings.cfg").write_text(
-            (ref_mod.SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
-            + '\n<Main FirstGameStart="false" />\n')
-        env = dict(os.environ, OPENHPL_HEADLESS_SOCKET=str(SOCK), XDG_CACHE_HOME=str(scratch / ".xdg/cache"),
+            f'<Screen Vsync="false" FullScreen="{str(first_launch).lower()}" Width="{w}" Height="{h}" />\n')
+        if not first_launch:
+            (xdg / "state/open-hpl/soma/gamma_screen_seen").write_text("1\n")
+            (xdg / "config/open-hpl/soma/user_settings.cfg").write_text(
+                (ref_mod.SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
+                + '\n<Main FirstGameStart="false" />\n')
+        env = dict(muted_env(), OPENHPL_HEADLESS_SOCKET=str(SOCK), XDG_CACHE_HOME=str(scratch / ".xdg/cache"),
                    **{f"XDG_{k}_HOME": str(xdg / k.lower()) for k in ("CONFIG", "DATA", "STATE")})
         t0 = time.time()
         p = subprocess.Popen(["./Soma.bin.aarch64"], cwd=scratch, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -374,7 +376,7 @@ def cmd_boot(a):
         ref_mod.stop()
     subprocess.run(["rm", "-rf", str(out)])
     o = Ours()
-    o.record_boot(out / "ours", a.secs, a.fps, a.size)
+    o.record_boot(out / "ours", a.secs, a.fps, a.size, a.first_launch)
     o.stop()
     t = lambda f: int(f.stem) / 1000
     ref = sorted(ref_dir.glob("*.png"))
@@ -464,6 +466,7 @@ def main():
     b.add_argument("--out")
     b.add_argument("--ref-dir")
     b.add_argument("--record-ref", action="store_true")
+    b.add_argument("--first-launch", action="store_true", help="ours without user_settings.cfg/gamma marker, fullscreen")
     sp.add_parser("stop")
     a = p.parse_args()
 

@@ -9,6 +9,8 @@
 #include "SomaBase.h"
 #include "SomaLuxGame.h"
 #include "impl/scriptarray.h"
+#include <SDL2/SDL.h>
+#include <algorithm>
 #include "SomaLuxPlayer.h"
 #include "SomaLuxVoice.h"
 #include "SomaLuxEntity.h"
@@ -16,6 +18,7 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
 #include "SomaSave.h"
+#include "SomaSoundscape.h"
 
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
 
@@ -281,6 +284,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 		pEnt->UpdateAttachment();
 	SomaUpdateLightConnections();
+	cSomaSoundscape::Get()->Update(this, afTimeStep);
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
 	for (cSomaLuxEntity *pEnt : mvEntities)
@@ -443,6 +447,8 @@ void SomaDrawImGuis();
 
 void cSomaLuxUpdater::OnDraw(float afFrameTime)
 {
+	if (cSomaLuxGame::Get() && gpSomaBase->ScriptsHeld() == false)
+		cSomaLuxGame::Get()->Draw(afFrameTime);
 	SomaDrawImGuis();
 }
 
@@ -969,6 +975,43 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  return fLevel;
 			  });
 	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
+	SOMA_FUNC(e, "void cSystem_GetAvailableVideoModes(array<cVector2l> &inout avScreenSizes, array<int> &inout avBpps, array<int> &inout avMinRefreshRates, int alMinBpp, int alMinRefreshRate, bool abRemoveDuplicates)",
+			  +[](CScriptArray &sizes, CScriptArray &bpps, CScriptArray &rates, int minBpp, int minRate, bool unique) {
+				  std::vector<std::pair<cVector2l, int>> vModes;
+				  std::vector<int> vRates;
+				  for (int d = 0; d < SDL_GetNumVideoDisplays(); ++d)
+					  for (int m = 0; m < SDL_GetNumDisplayModes(d); ++m)
+					  {
+						  SDL_DisplayMode mode;
+						  if (SDL_GetDisplayMode(d, m, &mode) != 0)
+							  continue;
+						  int bpp = SDL_BYTESPERPIXEL(mode.format) * 8;
+						  if (bpp < minBpp || (mode.refresh_rate && mode.refresh_rate < minRate))
+							  continue;
+						  vModes.push_back({cVector2l(mode.w, mode.h), bpp});
+						  if (mode.refresh_rate && std::find(vRates.begin(), vRates.end(), mode.refresh_rate) == vRates.end())
+							  vRates.push_back(mode.refresh_rate);
+					  }
+				  std::sort(vModes.begin(), vModes.end(), [](const std::pair<cVector2l, int> &a, const std::pair<cVector2l, int> &b) {
+					  return a.first.x != b.first.x ? a.first.x < b.first.x : a.first.y < b.first.y;
+				  });
+				  if (unique)
+					  vModes.erase(std::unique(vModes.begin(), vModes.end(), [](const std::pair<cVector2l, int> &a, const std::pair<cVector2l, int> &b) { return a.first == b.first; }),
+								   vModes.end());
+				  std::sort(vRates.begin(), vRates.end());
+				  if (vRates.empty())
+					  vRates.push_back(60);
+				  sizes.Resize((asUINT)vModes.size());
+				  bpps.Resize((asUINT)vModes.size());
+				  for (size_t i = 0; i < vModes.size(); ++i)
+				  {
+					  sizes.SetValue((asUINT)i, &vModes[i].first);
+					  bpps.SetValue((asUINT)i, &vModes[i].second);
+				  }
+				  rates.Resize((asUINT)vRates.size());
+				  for (size_t i = 0; i < vRates.size(); ++i)
+					  rates.SetValue((asUINT)i, &vRates[i]);
+			  });
 	SOMA_FUNC(e, "double cLux_GetGameTime()", +[]() -> double {
 		return gpSomaBase->mfGameStartTime < 0 ? 0.0 : gpSomaBase->mpEngine->GetGameTime() - gpSomaBase->mfGameStartTime;
 	});

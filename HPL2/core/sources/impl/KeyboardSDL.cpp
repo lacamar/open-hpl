@@ -71,6 +71,9 @@ namespace hpl {
 	{
 		mlstKeysPressed.clear();
 		mlstKeysReleased.clear();
+		for(size_t i=0; i<mvDeferredReleases.size(); ++i) mvKeyArray[mvDeferredReleases[i]] = false;
+		mvDeferredReleases.clear();
+		std::vector<bool> vPressedNow(mvKeyArray.size(), false);
 		std::list<SDL_Event>::iterator it = mpLowLevelInputSDL->mlstEvents.begin();
         for(; it != mpLowLevelInputSDL->mlstEvents.end(); ++it)
 		{
@@ -81,7 +84,10 @@ namespace hpl {
 			{
                 eKey key = SDLToKey(pEvent->key.keysym.sym);
 
-                mvKeyArray[key] = pEvent->key.state == SDL_PRESSED?true:false;
+                // Tap-remapped keys (e.g. caps-lock as Escape) press and release within one frame; keep them down for it
+                if(pEvent->key.state == SDL_PRESSED) { mvKeyArray[key] = true; vPressedNow[key] = true; }
+                else if(vPressedNow[key]) mvDeferredReleases.push_back(key);
+                else mvKeyArray[key] = false;
                 int sdl_mod = pEvent->key.keysym.mod;
 
                 if(pEvent->key.state == SDL_PRESSED)

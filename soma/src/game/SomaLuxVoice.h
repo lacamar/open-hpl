@@ -69,6 +69,7 @@ public:
 		tString msCharacter;
 		tString msDisplayName;
 		float mfCharVolume = 1;
+		int mlEntryType = 8;
 		std::vector<cSound> mvSounds;
 	};
 	struct cSubject

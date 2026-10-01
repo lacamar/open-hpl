@@ -33,6 +33,7 @@ static std::map<int, cSomaVariant> gmapArgs;
 static cSomaVariant gReturn;
 
 std::string gsSomaExecOutput;
+const tString &SomaCurrentLanguage();
 
 tString SomaSerializeGlobalVars()
 {
@@ -255,7 +256,8 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return gReturn.id; });
 
 	typedef const tString &S;
-	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { static tString s("english"); return s; });
+	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { return SomaCurrentLanguage(); });
+	SOMA_FUNC(e, "tString cLux_GetDefaultGameLanguage()", +[]() { return tString("english.lang"); });
 	SOMA_FUNC(e, "const tWString& cLux_Translate(const tString &in asCat, const tString &in asEntry)",
 			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
 	SOMA_FUNC(e, "bool cLux_HasTranslation(const tString &in asCat, const tString &in asEntry)",

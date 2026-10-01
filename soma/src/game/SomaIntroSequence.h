@@ -193,9 +193,9 @@ private:
 	bool mbFinished;
 
 	// 00_00_intro.hps' OnStart: Sound_PlayGui("00_05_apartment2/SFX/game_intro_seq").
-	// Extracted from its FMOD bank by cSomaAmbientSfx; kept so it can be stopped
+	// Kept so it can be stopped
 	// when the sequence ends instead of bleeding into the apartment.
-	cSoundEntry *mpAmbience;
+	class cSomaSoundInstance *mpAmbience;
 	int mlAmbienceId;
 	tString msCurrentLineFile;
 };

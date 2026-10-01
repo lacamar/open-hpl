@@ -44,6 +44,7 @@ namespace hpl {
 
 		OAL_Source_SetAttributes ( mlChannel, mfPosition, mfVelocity );
 		OAL_Source_SetFilterType(mlChannel, eOALFilterType_LowPass);
+		OAL_Source_SetSpatialize(mlChannel, false);
 //		SetAffectedByEnv(true);
 //		SetFilterGainHF(0.01f);
 		
@@ -146,7 +147,8 @@ namespace hpl {
 
 	void cOpenALSoundChannel::Set3D(bool ab3D)
 	{
-		mb3D = ab3D;		
+		mb3D = ab3D;
+		OAL_Source_SetSpatialize(mlChannel, ab3D && !mbPositionRelative);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -154,7 +156,7 @@ namespace hpl {
 	void cOpenALSoundChannel::SetPositionIsRelative(bool abRelative)
 	{
 		mbPositionRelative = abRelative;
-//		OAL_Source_SetPositionRelative ( mlChannel, abRelative );
+		OAL_Source_SetSpatialize(mlChannel, mb3D && !abRelative);
 	}
 
 	//-----------------------------------------------------------------------

@@ -78,9 +78,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    before inactive map entities can drop their collision.
 
 
-11. Physics-material sound entities: ~1.4k "Couldn't create SoundEntity 'physics/...'" per map -
-   the same FMOD-event-without-.snt gap cSomaAmbientSfx closes for map ambiences; extend it with
-   the physics banks via cSomaFsb.
+11. Audio vs the ref (`soma-audio.py`): menu 12 dB short at 63 Hz; intro +6..8 dB above 4 kHz;
+   no reverb/EFX matching; near 3D sources pan wider than the ref (apartment L-R +7.0 vs +3.8).
 
 
 
