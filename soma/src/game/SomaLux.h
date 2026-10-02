@@ -84,6 +84,7 @@ private:
 public:
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;
 private:
+	std::vector<cSomaLuxTimer> mvDueTimers;
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;

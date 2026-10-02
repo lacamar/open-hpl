@@ -160,6 +160,8 @@ def raycast(a, b):
     r = send(dict(cmd="raycast", **{k: str(v) for k, v in zip(("x", "y", "z", "x2", "y2", "z2"), (*a, *b))}))
     out = []
     for l in r.get("hits", "").splitlines():
+        if "char=1" not in l:
+            continue
         f = l.split()
         out.append((float(f[0]), f[1], f[2].split("=", 1)[1]))
     return out

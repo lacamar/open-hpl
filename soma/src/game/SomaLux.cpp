@@ -233,7 +233,8 @@ void cSomaLuxMap::Update(float afTimeStep)
 		return;
 
 	// Collect due timers first: callbacks may add or remove timers
-	std::vector<cSomaLuxTimer> vDue;
+	std::vector<cSomaLuxTimer> &vDue = mvDueTimers;
+	vDue.clear();
 	for (size_t i = 0; i < mvTimers.size();)
 	{
 		if (mvTimers[i].mbPaused == false)
@@ -422,6 +423,9 @@ void cSomaLuxMap::RestartCurrentTimer(float afTime)
 void cSomaLuxMap::RemoveTimer(const tString &asName)
 {
 	std::erase_if(mvTimers, [&](const cSomaLuxTimer &t) { return t.msName == asName; });
+	for (cSomaLuxTimer &t : mvDueTimers)
+		if (&t != mpFiringTimer && t.msName == asName)
+			t.msFunction.clear();
 }
 
 cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
