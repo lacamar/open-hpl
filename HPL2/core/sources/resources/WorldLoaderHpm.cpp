@@ -66,6 +66,7 @@ namespace hpl {
 		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
 		mmapTrackStats.clear();
 		mlstLightBillboardConnections.clear();
+		mvLightParticleConnections.clear();
 
 		mbTerrainActive = false;
 
@@ -320,7 +321,10 @@ namespace hpl {
 		if (asTrack == "ParticleSystem")
 		{
 			if (sTag != "ParticleSystem") return "unsupported_element:" + sTag;
-			return cEngineFileLoading::LoadParticleSystem(apElement, "", mpCurrentWorld) ? "" : "load_failed";
+			cParticleSystem *pPS = cEngineFileLoading::LoadParticleSystem(apElement, "", mpCurrentWorld);
+			tString sLight = apElement->GetAttributeString("ConnectLight");
+			if (pPS && sLight != "") mvLightParticleConnections.push_back(std::make_pair(pPS, sLight));
+			return pPS ? "" : "load_failed";
 		}
 		if (asTrack == "FogArea")
 		{
@@ -372,6 +376,14 @@ namespace hpl {
 			pLight->AttachBillboard(pBB, pBB->GetColor());
 		}
 		mlstLightBillboardConnections.clear();
+
+		for (size_t i = 0; i < mvLightParticleConnections.size(); ++i)
+		{
+			iLight* pLight = mpCurrentWorld->GetLight(mvLightParticleConnections[i].second);
+			if (pLight) pLight->AttachParticleSystem(mvLightParticleConnections[i].first);
+			else ++mmapTrackStats["ParticleSystem"].mmapSkipped["connect_light_missing"];
+		}
+		mvLightParticleConnections.clear();
 	}
 
 	void cWorldLoaderHpm::CountUnsupportedFlatTracks(const tWString& asBaseFile)

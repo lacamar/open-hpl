@@ -17,6 +17,7 @@ namespace hpl {
 	class iXmlDocument;
 	class iPhysicsWorld;
 	class cMeshEntity;
+	class cParticleSystem;
 
 	class cWorldLoaderHpm : public iWorldLoader
 	{
@@ -71,6 +72,7 @@ namespace hpl {
 		};
 		std::map<tString, cHpmTrackStats> mmapTrackStats;
 		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
+		std::vector<std::pair<cParticleSystem*, tString> > mvLightParticleConnections;
 		std::map<unsigned int, std::pair<cVector3f, cVector3f> > mmapLightMasks;
 		bool mbTerrainActive;
 

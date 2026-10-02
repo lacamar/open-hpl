@@ -19,6 +19,8 @@
 
 #include "scene/Light.h"
 
+#include <algorithm>
+
 #include "system/String.h"
 
 #include "impl/tinyXML/tinyxml.h"
@@ -120,6 +122,7 @@ namespace hpl {
 
 	iLight::~iLight()
 	{
+		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->mpLight = NULL;
 		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 		if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
@@ -139,6 +142,7 @@ namespace hpl {
 		{
 			mvBillboards[i].mpBillboard->SetVisible(mbIsVisible);
 		}
+		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->SetVisible(mbIsVisible);
 	}
 
 	bool iLight::mbHpl3Visibility = false;
@@ -180,6 +184,7 @@ namespace hpl {
 	{
 		bool bWasVisble = IsLit();
 		mfBrightness = afX;
+		for(size_t i=0; i<mvParticleSystems.size(); ++i) mvParticleSystems[i]->mfLightBrightness = afX;
 		if(mbIsVisible && IsLit() != bWasVisble && mpRenderCallback)
 			mpRenderCallback->OnVisibleChange(this);
 	}
@@ -587,6 +592,26 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void iLight::AttachParticleSystem(cParticleSystem *apPS)
+	{
+		apPS->mLightColor = cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1);
+		apPS->mfLightBrightness = mfBrightness;
+		apPS->SetVisible(mbIsVisible);
+		if(apPS->mpLight) apPS->mpLight->RemoveParticleSystem(apPS);
+		apPS->mpLight = this;
+		mvParticleSystems.push_back(apPS);
+	}
+
+	void iLight::RemoveParticleSystem(cParticleSystem *apPS)
+	{
+		std::vector<cParticleSystem*>::iterator it = std::find(mvParticleSystems.begin(), mvParticleSystems.end(), apPS);
+		if(it == mvParticleSystems.end()) return;
+		mvParticleSystems.erase(it);
+		apPS->mpLight = NULL;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void iLight::RemoveBillboard(cBillboard *apBillboard)
 	{
 		std::vector<cLightBillboardConnection>::iterator it = mvBillboards.begin();
@@ -649,6 +674,8 @@ namespace hpl {
 		{
 			mvBillboards[i].mpBillboard->SetColor( mvBillboards[i].mBaseColor * cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1));
 		}
+		for(size_t i=0; i<mvParticleSystems.size(); ++i)
+			mvParticleSystems[i]->mLightColor = cColor(mDiffuseColor.r,mDiffuseColor.g,mDiffuseColor.b,1);
 	}
 
 	

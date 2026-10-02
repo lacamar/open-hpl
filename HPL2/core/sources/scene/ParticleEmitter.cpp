@@ -28,6 +28,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Renderer.h"
+#include "graphics/Material.h"
 
 #include "scene/Camera.h"
 #include "math/Math.h"
@@ -299,6 +300,11 @@ namespace hpl {
 		apPos[2] = aPos.z;
 	}
 
+	static inline cColor LinearColor(const cColor &aC)
+	{
+		return aC * cColor(aC.r, aC.g, aC.b, 1);
+	}
+
 	static inline void SetTex(float *apTex, const cVector3f &aPos)
 	{
 		apTex[0] = aPos.x;
@@ -319,6 +325,21 @@ namespace hpl {
 		//////////////////////////
 		// Set up color mul
         cColor colorMul = mpParentSystem->mColor;
+		const bool bLinear = cParticleSystem::mbHpl3Color;
+		if(bLinear)
+		{
+			cParticleSystem *pPS = mpParentSystem;
+			colorMul = LinearColor(pPS->mColor) * cColor(pPS->mfBrightness, 1);
+			cColor light = LinearColor(pPS->mLightColor) * cColor(pPS->mfLightBrightness, 1);
+			float fMax = cMath::Max(light.r, cMath::Max(light.g, light.b));
+			cMaterial *pMat = GetMaterial();
+			if((pMat && pMat->GetBlendMode() == eMaterialBlendMode_Add) || fMax > 1)
+				colorMul = colorMul * light;
+			else if(fMax <= 0)
+				colorMul = cColor(0,0,0,1);
+			else
+				colorMul = colorMul * cColor(light.r/fMax, light.g/fMax, light.b/fMax, fMax);
+		}
 		
 		//Set alpha based on fade distance.
 		if(mpParentSystem->mbFadeAtDistance)
@@ -453,7 +474,7 @@ namespace hpl {
 					}
 
 					cVector3f vPos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos);
-					cColor finalColor = pParticle->mColor * colorMul;
+					cColor finalColor = (bLinear ? LinearColor(pParticle->mColor) : pParticle->mColor) * colorMul;
 
 					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + vAdd[0]);
 					SetCol(&pColArray[i*16 + 0*4], finalColor);
@@ -506,7 +527,7 @@ namespace hpl {
 					// NEW
 
 					cVector3f vParticleSize = pParticle->mvSize;
-					cColor finalColor = pParticle->mColor * colorMul;
+					cColor finalColor = (bLinear ? LinearColor(pParticle->mColor) : pParticle->mColor) * colorMul;
 
 					if ( mbUsePartSpin )
 					{
@@ -590,7 +611,7 @@ namespace hpl {
 
 					if(apFrustum->GetInvertsCullMode()) vDirY = vDirY*-1;
 
-					cColor finalColor = pParticle->mColor * colorMul;
+					cColor finalColor = (bLinear ? LinearColor(pParticle->mColor) : pParticle->mColor) * colorMul;
 					
 					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos2 + vDirY*-1 + vDirX);
 					SetCol(&pColArray[i*16 + 0*4], finalColor);
@@ -649,7 +670,7 @@ namespace hpl {
 					vAdd[2] = mvRight * -vSize.x	 +	mvForward * -vSize.y;
 					vAdd[3] = mvRight	* vSize.x	 +	mvForward * -vSize.y;
 
-					cColor finalColor = pParticle->mColor * colorMul;
+					cColor finalColor = (bLinear ? LinearColor(pParticle->mColor) : pParticle->mColor) * colorMul;
 
 					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + vAdd[0]);
 					SetCol(&pColArray[i*16 + 0*4], finalColor);

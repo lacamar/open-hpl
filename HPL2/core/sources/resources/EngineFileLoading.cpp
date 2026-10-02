@@ -104,6 +104,7 @@ namespace hpl {
 		if(pPS)
 		{
 			pPS->SetColor(apElement->GetAttributeColor("Color",cColor(1,1)));
+			pPS->SetBrightness(apElement->GetAttributeFloat("Brightness",1));
 			pPS->SetFadeAtDistance(apElement->GetAttributeBool("FadeAtDistance", false));
 			pPS->SetMinFadeDistanceStart(apElement->GetAttributeFloat("MinFadeDistanceStart"));
 			pPS->SetMinFadeDistanceEnd(apElement->GetAttributeFloat("MinFadeDistanceEnd"));

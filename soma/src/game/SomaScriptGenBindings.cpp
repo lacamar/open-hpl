@@ -415,6 +415,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetGoboTexture(iTexture @apTexture)", +[](cLightBox *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "iTexture@ GetGoboTexture()", +[](cLightBox *o) -> iTexture * { return o->GetGoboTexture(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightBox *o, cBillboard * a0) { o->RemoveBillboard(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightBox *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightBox *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightBox *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void StopFading()", +[](cLightBox *o) { o->StopFading(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "bool IsFading()", +[](cLightBox *o) -> bool { return o->IsFading(); });
@@ -525,6 +527,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetGoboTexture(iTexture @apTexture)", +[](cLightPoint *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "iTexture@ GetGoboTexture()", +[](cLightPoint *o) -> iTexture * { return o->GetGoboTexture(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightPoint *o, cBillboard * a0) { o->RemoveBillboard(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightPoint *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightPoint *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightPoint *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void StopFading()", +[](cLightPoint *o) { o->StopFading(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "bool IsFading()", +[](cLightPoint *o) -> bool { return o->IsFading(); });
@@ -618,6 +622,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetGoboTexture(iTexture @apTexture)", +[](cLightSpot *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "iTexture@ GetGoboTexture()", +[](cLightSpot *o) -> iTexture * { return o->GetGoboTexture(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void RemoveBillboard(cBillboard @apBillboard)", +[](cLightSpot *o, cBillboard * a0) { o->RemoveBillboard(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void AttachParticleSystem(cParticleSystem @apPS)", +[](cLightSpot *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](cLightSpot *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](cLightSpot *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void StopFading()", +[](cLightSpot *o) { o->StopFading(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "bool IsFading()", +[](cLightSpot *o) -> bool { return o->IsFading(); });
@@ -835,12 +841,14 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMinFadeDistanceEnd(float afX)", +[](cParticleSystem *o, float a0) { o->SetMinFadeDistanceEnd(a0); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMaxFadeDistanceStart(float afX)", +[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceStart(a0); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetMaxFadeDistanceEnd(float afX)", +[](cParticleSystem *o, float a0) { o->SetMaxFadeDistanceEnd(a0); });
+	SOMA_METHOD_NEW(e, "cParticleSystem", "void SetBrightness(float afX)", +[](cParticleSystem *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "const cColor& GetColor()", +[](cParticleSystem *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "bool GetFadeAtDistance()", +[](cParticleSystem *o) -> bool { return o->GetFadeAtDistance(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMinFadeDistanceStart()", +[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceStart(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMinFadeDistanceEnd()", +[](cParticleSystem *o) -> float { return o->GetMinFadeDistanceEnd(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceStart()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceStart(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceEnd()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceEnd(); });
+	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetBrightness()", +[](cParticleSystem *o) -> float { return o->GetBrightness(); });
 	SOMA_METHOD_NEW(e, "cPostEffectComposite", "int GetPostEffectNum()", +[](cPostEffectComposite *o) -> int { return o->GetPostEffectNum(); });
 	SOMA_METHOD_NEW(e, "cPostEffectComposite", "bool HasActiveEffects()", +[](cPostEffectComposite *o) -> bool { return o->HasActiveEffects(); });
 	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarBool(const tString&in asName, bool abDefault)", +[](cResourceVarsObject *o, const tString & a0, bool a1) { o->AddVarBool(a0, a1); });
@@ -1325,6 +1333,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "void SetGoboTexture(iTexture @apTexture)", +[](iLight *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "iTexture@ GetGoboTexture()", +[](iLight *o) -> iTexture * { return o->GetGoboTexture(); });
 	SOMA_METHOD_NEW(e, "iLight", "void RemoveBillboard(cBillboard @apBillboard)", +[](iLight *o, cBillboard * a0) { o->RemoveBillboard(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void AttachParticleSystem(cParticleSystem @apPS)", +[](iLight *o, cParticleSystem * a0) { o->AttachParticleSystem(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void RemoveParticleSystem(cParticleSystem @apPS)", +[](iLight *o, cParticleSystem * a0) { o->RemoveParticleSystem(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "void FadeTo(const cColor&in aCol, float afRadius, float afTime)", +[](iLight *o, const cColor & a0, float a1, float a2) { o->FadeTo(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "iLight", "void StopFading()", +[](iLight *o) { o->StopFading(); });
 	SOMA_METHOD_NEW(e, "iLight", "bool IsFading()", +[](iLight *o) -> bool { return o->IsFading(); });

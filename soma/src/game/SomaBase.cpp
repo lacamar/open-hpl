@@ -846,6 +846,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	iLight::SetHpl3Visibility(true);
+	cParticleSystem::SetHpl3Color(true);
 	iCharacterBody::SetHpl3(true);
 	cRendererDeferred::SetHpl3SSAO(true);
 	cWorld::SetHpl3SkyBox(true);

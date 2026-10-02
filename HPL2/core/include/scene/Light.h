@@ -40,6 +40,7 @@ namespace hpl {
 	class cResources;
 	class cFileSearcher;
 	class cBillboard;
+	class cParticleSystem;
 	class cSectorVisibilityContainer;
 	class cWorld;
 	class cVisibleRCNodeTracker;
@@ -127,6 +128,8 @@ namespace hpl {
 		void AttachBillboard(cBillboard *apBillboard, const cColor &aBaseColor);
 		void RemoveBillboard(cBillboard *apBillboard);
 		std::vector<cLightBillboardConnection>* GetBillboardVec(){ return &mvBillboards;}
+		void AttachParticleSystem(cParticleSystem *apPS);
+		void RemoveParticleSystem(cParticleSystem *apPS);
 
 		//////////////////////////
 		//Shadow caster cache
@@ -260,6 +263,7 @@ namespace hpl {
 		cVisibleRCNodeTracker *mpVisibleNodeTracker;
 
 		std::vector<cLightBillboardConnection> mvBillboards;
+		std::vector<cParticleSystem*> mvParticleSystems;
 
 		cColor mDiffuseColor;
 		cColor mDefaultDiffuseColor;

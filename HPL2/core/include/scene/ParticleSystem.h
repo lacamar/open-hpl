@@ -36,6 +36,7 @@ namespace hpl {
 	class iParticleEmitterData;
 	class cParticleManager;
 	class cXmlElement;
+	class iLight;
 
 	//----------------------------------------------------
 
@@ -76,6 +77,7 @@ namespace hpl {
 		typedef iEntity3D __super;
 	#endif
 	friend class iParticleEmitter;
+	friend class iLight;
 	public:
 		cParticleSystem(	const tString asName,cParticleSystemData *apData, 
 							cResources *apResources, cGraphics *apGraphics);
@@ -113,6 +115,10 @@ namespace hpl {
 		void SetMaxFadeDistanceStart(float afX){ mfMaxFadeDistanceStart = afX;}
 		void SetMaxFadeDistanceEnd(float afX){ mfMaxFadeDistanceEnd = afX;}
 
+		void SetBrightness(float afX){ mfBrightness = afX;}
+		float GetBrightness(){ return mfBrightness;}
+		static void SetHpl3Color(bool abX){ mbHpl3Color = abX;}
+
 		cColor GetColor(){ return mColor;}
 		bool GetFadeAtDistance(){ return mbFadeAtDistance;}
 		float GetMinFadeDistanceStart(){ return mfMinFadeDistanceStart;}
@@ -140,6 +146,11 @@ namespace hpl {
 		bool mbIsVisible;
 
 		cColor mColor;
+		float mfBrightness;
+		cColor mLightColor;
+		float mfLightBrightness;
+		iLight *mpLight;
+		static bool mbHpl3Color;
 		bool mbFadeAtDistance;
 		float mfMinFadeDistanceStart;
 		float mfMinFadeDistanceEnd;

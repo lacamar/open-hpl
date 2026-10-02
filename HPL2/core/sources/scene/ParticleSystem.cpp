@@ -34,6 +34,7 @@
 
 #include "scene/Scene.h"
 #include "scene/World.h"
+#include "scene/Light.h"
 
 namespace hpl {
 
@@ -190,6 +191,10 @@ namespace hpl {
 		mbFirstUpdate = true;
 
 		mColor = cColor(1,1);
+		mfBrightness = 1;
+		mLightColor = cColor(1,1);
+		mfLightBrightness = 1;
+		mpLight = NULL;
 		mbFadeAtDistance = false;
 		mfMinFadeDistanceStart = 2;
 		mfMinFadeDistanceEnd = 1;
@@ -199,8 +204,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cParticleSystem::mbHpl3Color = false;
+
 	cParticleSystem::~cParticleSystem()
 	{
+		if(mpLight) mpLight->RemoveParticleSystem(this);
 		for(size_t i=0; i< mvEmitters.size(); ++i)
 		{
 			hplDelete(mvEmitters[i]);
