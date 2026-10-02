@@ -21,6 +21,7 @@
 #include "SomaSoundscape.h"
 
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
+static bool gbMapChangeIsTransfer = false;
 
 static bool gbPendingNewGame = false;
 
@@ -466,6 +467,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cMatrixf mtxRel;
 		float fYawRel = 0;
 		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
+		gbMapChangeIsTransfer = sTransfer != "";
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		cSomaLuxEntity *pArea = bMap && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
 		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
@@ -795,6 +797,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { gpSomaBase->mbScriptGamePaused = b; });
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
+	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });
 	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return true; });
 	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false; });
 	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int) { gsPreloadMap = map; });
