@@ -1756,3 +1756,11 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
     full trace and the recommended next step (check whether real Dark Descent shows the same
     G-buffer symptom, to tell general-engine-bug from SOMA-specific). Shipped 1.3.19-1 anyway -
     both real fixes kept, all 4 ctest suites green throughout.
+
+## Unimplemented script/data inputs (dropped write-only fields)
+- PlayerLookAtCheckCenterOfScreen; SetPlayerLookAtCallback ignores ray/distance/delay args
+- SetupCheckCollision abCheckCharacters
+- AutomoveCharBodyTo afMaxSpeed
+- Voice Sound TextOffset
+- Modules.cfg Container, IsGlobal
+- Input action abConfigurable/asCat

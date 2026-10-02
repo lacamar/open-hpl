@@ -60,7 +60,6 @@ public:
 	{
 		tString msText;
 		float mfVoiceOffset = 0;
-		float mfTextOffset = 0;
 		float mfEndPadding = 0;
 		float mfVolume = 1;
 	};

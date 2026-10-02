@@ -37,7 +37,6 @@ public:
 	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
 	bool CallWithFloat(const std::string &asDecl, float afX);
 	bool CallWithObject(const std::string &asDecl, void *apObj);
-	bool CallWithString(const std::string &asDecl, const tString &asX);
 	// Result of a bool method, abDefault if it is missing or throws
 	bool CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault);
 	bool HasMethod(const std::string &asDecl);
@@ -95,6 +94,7 @@ protected:
 	};
 	cTimer *FindTimer(uint64_t alId);
 	cFader *FindFader(uint64_t alId);
+	cFader *GetOrAddFader(uint64_t alId, bool abSkipIfExists);
 
 	static std::vector<cSomaLuxScriptable *> mvAll;
 

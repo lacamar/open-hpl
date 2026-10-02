@@ -119,7 +119,7 @@ public:
 
 	bool mbAutomoveActive = false;
 	cVector3f mvAutomoveTarget = 0;
-	float mfAutomoveSpeedMul = 0, mfAutomoveMaxSpeed = 0;
+	float mfAutomoveSpeedMul = 0;
 
 	std::map<int, float> mmapVisibilityRangeMul;
 	std::map<int, float> mmapVisibilityMaxRange;
@@ -166,8 +166,6 @@ public:
 	{
 		tString msName;
 		int mlId;
-		bool mbConfigurable;
-		tString msCategory;
 		int mlAxis = -1;
 		float mfMul = 0;
 		int mlAnalogId = -1;

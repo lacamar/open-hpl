@@ -131,7 +131,6 @@ static std::vector<cSomaLightConnection> gvLightConnections;
 
 void cSomaLuxEntity::ResolveConnectedLights()
 {
-	mbConnectedLightsResolved = true;
 	if (mpMap == NULL) return;
 	for (const char *pPrefix : {"", "Extra"})
 	{
@@ -198,11 +197,8 @@ void SomaUpdateLightConnections()
 static void ForgetLightConnections(cSomaLuxEntity *apEnt)
 {
 	for (cSomaLightConnection &conn : gvLightConnections)
-		conn.mvProps.erase(std::remove_if(conn.mvProps.begin(), conn.mvProps.end(), [apEnt](const cSomaLightConnection::cProp &p) { return p.mpEnt == apEnt; }),
-						   conn.mvProps.end());
-	gvLightConnections.erase(std::remove_if(gvLightConnections.begin(), gvLightConnections.end(),
-											[](const cSomaLightConnection &c) { return c.mvProps.empty(); }),
-							 gvLightConnections.end());
+		std::erase_if(conn.mvProps, [apEnt](const cSomaLightConnection::cProp &p) { return p.mpEnt == apEnt; });
+	std::erase_if(gvLightConnections, [](const cSomaLightConnection &c) { return c.mvProps.empty(); });
 }
 
 void cSomaLuxEntity::SetEffectsActive(bool abX, bool abFade)
@@ -514,7 +510,6 @@ void cSomaLuxEntity::ApplyInstanceVars()
 	{
 		msLookAtCallback = v.GetVarString("PlayerLookAtCallback", "");
 		mbLookAtCallbackAutoRemove = v.GetVarBool("PlayerLookAtCallbackAutoRemove", false);
-		mbLookAtCheckCenter = v.GetVarBool("PlayerLookAtCheckCenterOfScreen", true);
 		mbLookAtCheckRay = v.GetVarBool("PlayerLookAtCheckRayIntersection", true);
 		mfLookAtMaxDistance = v.GetVarFloat("PlayerLookAtMaxDistance", -1);
 		mfLookAtDelay = v.GetVarFloat("PlayerLookAtCallbackDelay", 0);
@@ -1202,11 +1197,7 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 
 void cSomaLuxEntity::RemoveCollideCallbacks(const tString &asChild)
 {
-	for (size_t i = 0; i < mvCollideCallbacks.size();)
-		if (SomaWildcardMatch(asChild, mvCollideCallbacks[i].msChild) || SomaWildcardMatch(mvCollideCallbacks[i].msChild, asChild))
-			mvCollideCallbacks.erase(mvCollideCallbacks.begin() + i);
-		else
-			++i;
+	std::erase_if(mvCollideCallbacks, [&](const cCollideCallback &c) { return SomaWildcardMatch(asChild, c.msChild) || SomaWildcardMatch(c.msChild, asChild); });
 }
 
 //---------------------------------------
@@ -1630,10 +1621,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetConnectionStateChangeCallback(const tString &in asCallbackFunc)", +[](E *p, S f) { p->msConnectionCallback = f; });
 	SOMA_METHOD_NEW(e, T, "void AddConnection(const tString&in asName, iLuxEntity @apEntity, bool abInvertStateSent, int alStatesUsed)",
 					+[](E *p, S n, E *c, bool i, int l) { if (c) p->mvConnections.push_back(E::cConnection{n, c->msName, i, l}); });
-	SOMA_METHOD_NEW(e, T, "void RemoveConnection(const tString&in asName)", +[](E *p, S n) {
-		p->mvConnections.erase(std::remove_if(p->mvConnections.begin(), p->mvConnections.end(), [&](const E::cConnection &c) { return c.msName == n; }),
-							   p->mvConnections.end());
-	});
+	SOMA_METHOD_NEW(e, T, "void RemoveConnection(const tString&in asName)",
+					+[](E *p, S n) { std::erase_if(p->mvConnections, [&](const E::cConnection &c) { return c.msName == n; }); });
 	SOMA_METHOD_NEW(e, T, "void RemoveAllConnections()", +[](E *p) { p->mvConnections.clear(); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerLookAtCallback()", +[](E *p) { return p->msLookAtCallback != ""; });
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ PlaySound(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
@@ -1657,13 +1646,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });
 	SOMA_METHOD_NEW(e, T, "void AddCollideCallback(iLuxEntity @apEntity, const tString&in asCallbackFunc)",
 					+[](E *p, E *c, S f) { if (c) p->mvCollideCallbacks.push_back(E::cCollideCallback{c->msName, f}); });
-	SOMA_METHOD_NEW(e, T, "void RemoveCollideCallback(const tString&in asEntityName)", +[](E *p, S n) {
-		for (size_t i = 0; i < p->mvCollideCallbacks.size();)
-			if (p->mvCollideCallbacks[i].msChild == n)
-				p->mvCollideCallbacks.erase(p->mvCollideCallbacks.begin() + i);
-			else
-				++i;
-	});
+	SOMA_METHOD_NEW(e, T, "void RemoveCollideCallback(const tString&in asEntityName)",
+					+[](E *p, S n) { std::erase_if(p->mvCollideCallbacks, [&](const E::cCollideCallback &c) { return c.msChild == n; }); });
 	SOMA_METHOD_NEW(e, T, "iLight@ GetLightFromName(const tString&in asName)", +[](E *p, S n) {
 		for (iLight *l : p->mvLights)
 			if (l->GetName() == n || SomaWildcardMatch("*" + n, l->GetName()))
@@ -1837,11 +1821,10 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, pType, "void SetCheckCollision(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbCheckCollision = b; });
 		SOMA_METHOD(e, pType, "bool GetCheckCollision()", +[](cSomaLuxEntity *p) { return p->mbCheckCollision; });
 		SOMA_METHOD(e, pType, "void SetupCheckCollision(bool abCheckIfCenterInSide, bool abCheckDynamic, bool abCheckStatic, bool abCheckCharacters)",
-					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool ch) {
+					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool) {
 						p->mbCheckCenterInArea = c;
 						p->mbCheckDynamic = d;
 						p->mbCheckStatic = st;
-						p->mbCheckCharacters = ch;
 					});
 		SOMA_METHOD(e, pType, "void MoveAngularTo(const cMatrixf&in a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset, const tString&in asCallback=\"\")",
 					+[](cSomaLuxEntity *p, const cMatrixf &m, float a, float s, float d, bool r, bool o, const cVector3f &w, const cVector3f &l, const tString &cb) {
@@ -2077,10 +2060,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_Connect(const tString &in asName, const tString &in asMainEntity, const tString &in asConnectEntity, bool abInvertStateSent, int alStatesUsed)",
 			  +[](S n, S m, S c, bool i, int l) { ForMatching(m, [&](cSomaLuxEntity *p) { p->mvConnections.push_back(cSomaLuxEntity::cConnection{n, c, i, l}); }); });
 	SOMA_FUNC(e, "void Entity_RemoveConnection(const tString &in asName, const tString &in asMainEntity)", +[](S n, S m) {
-		ForMatching(m, [&](cSomaLuxEntity *p) {
-			auto &v = p->mvConnections;
-			v.erase(std::remove_if(v.begin(), v.end(), [&](const cSomaLuxEntity::cConnection &c) { return c.msName == n; }), v.end());
-		});
+		ForMatching(m, [&](cSomaLuxEntity *p) { std::erase_if(p->mvConnections, [&](const cSomaLuxEntity::cConnection &c) { return c.msName == n; }); });
 	});
 	SOMA_FUNC(e, "void Entity_RemoveAllConnections(const tString &in asMainEntity)", +[](S m) { ForMatching(m, [](cSomaLuxEntity *p) { p->mvConnections.clear(); }); });
 	SOMA_FUNC(e, "void Entity_SetConnectionStateChangeCallback(const tString &in asEntityName, const tString &in asCallback)",
@@ -2095,13 +2075,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		return bAny;
 	});
 	SOMA_FUNC(e, "bool Entity_RemoveCollideCallback(const tString &in asParentName, const tString &in asChildName)", +[](S par, S child) {
-		ForMatching(par, [&](cSomaLuxEntity *p) {
-			for (size_t i = 0; i < p->mvCollideCallbacks.size();)
-				if (SomaWildcardMatch(child, p->mvCollideCallbacks[i].msChild))
-					p->mvCollideCallbacks.erase(p->mvCollideCallbacks.begin() + i);
-				else
-					++i;
-		});
+		ForMatching(par, [&](cSomaLuxEntity *p) { std::erase_if(p->mvCollideCallbacks, [&](const cSomaLuxEntity::cCollideCallback &c) { return SomaWildcardMatch(child, c.msChild); }); });
 		return true;
 	});
 	SOMA_FUNC(e, "void Entity_SetVarString(const tString&in asEntityName, const tString&in asVarName, const tString&in asX)",

@@ -655,10 +655,9 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 		p->mFOV.mfSpeedMul = 0;
 	});
 	SOMA_METHOD(e, T, "void AutomoveCharBodyTo(float afAcc, float afSpeedMul, float afMaxSpeed, const cVector3f&in avPosition)",
-				+[](P *p, float, float mul, float max, V pos) {
+				+[](P *p, float, float mul, float, V pos) {
 					p->mbAutomoveActive = true;
 					p->mfAutomoveSpeedMul = mul;
-					p->mfAutomoveMaxSpeed = max;
 					p->mvAutomoveTarget = pos;
 				});
 	SOMA_METHOD(e, T, "void SetAutomoveCharBodyTarget(const cVector3f&in avPosition)", +[](P *p, V pos) { p->mvAutomoveTarget = pos; });
@@ -761,12 +760,12 @@ void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
 	typedef const tString &S;
 	const char *T = "cLuxInputHandler";
 	SOMA_METHOD(e, T, "void CreateAction(const tString&in asName, int alId, bool abConfigurable, const tString&in asCat)",
-				+[](I *p, S n, int id, bool c, S cat) { p->CreateAction(cLuxAction{n, id, c, cat}); });
-	SOMA_METHOD(e, T, "void CreateDebugAction(const tString&in asName, int alId)", +[](I *p, S n, int id) { p->CreateAction(cLuxAction{n, id, false, ""}); });
+				+[](I *p, S n, int id, bool, S) { p->CreateAction(cLuxAction{n, id}); });
+	SOMA_METHOD(e, T, "void CreateDebugAction(const tString&in asName, int alId)", +[](I *p, S n, int id) { p->CreateAction(cLuxAction{n, id}); });
 	SOMA_METHOD(e, T, "void CreateAnalogAction(const tString&in asName, int alId, bool abConfigurable, const tString&in asCat, int alAxis, float afMul, int alAnalogId)",
-				+[](I *p, S n, int id, bool c, S cat, int axis, float mul, int analog) { p->CreateAction(cLuxAction{n, id, c, cat, axis, mul, analog}); });
+				+[](I *p, S n, int id, bool, S, int axis, float mul, int analog) { p->CreateAction(cLuxAction{n, id, axis, mul, analog}); });
 	SOMA_METHOD(e, T, "void CreateAnalogGamepadAction(const tString&in asName, int alId, const tString&in asCat, int alAnalogId, float afSmoothness, int alDirectionLimit)",
-				+[](I *p, S n, int id, S cat, int analog, float, int) { p->CreateAction(cLuxAction{n, id, false, cat, -1, 0, analog, true}); });
+				+[](I *p, S n, int id, S, int analog, float, int) { p->CreateAction(cLuxAction{n, id, -1, 0, analog, true}); });
 	SOMA_METHOD(e, T, "void CreateActionInput(const tString&in asInputType, int alActionId)", +[](I *p, S s, int id) { p->CreateActionInput(s, id); });
 	SOMA_METHOD(e, T, "void CreateAnalogGamepadActionInput(const tString&in asInputType, int alActionId)", +[](I *, S, int) {});
 	SOMA_METHOD(e, T, "bool IsGamepadConnected()", +[](I *) { return false; });

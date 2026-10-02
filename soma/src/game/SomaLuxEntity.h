@@ -115,7 +115,6 @@ public:
 	bool GetAttachmentParentMatrix(cMatrixf &a_mtxOut);
 	void UpdateAttachment();
 
-	bool mbConnectedLightsResolved = false;
 	void ResolveConnectedLights();
 
 	cResourceVarsObject mVars;		   // .ent UserDefinedVariables
@@ -126,7 +125,6 @@ public:
 	bool mbInteractCallbackAutoRemove = false;
 	tString msLookAtCallback;
 	bool mbLookAtCallbackAutoRemove = true;
-	bool mbLookAtCheckCenter = true;
 	bool mbLookAtCheckRay = true;
 	float mfLookAtMaxDistance = -1;
 	float mfLookAtDelay = 0;
@@ -202,7 +200,7 @@ public:
 	void UpdateMove(float afTimeStep);
 	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
-	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false, mbCheckCharacters = false;
+	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false;
 	float mfTimeSinceCheck = 0;
 	bool mbMoving = false;
 	cVector3f mvMoveGoal;

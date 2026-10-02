@@ -423,13 +423,7 @@ void cSomaLuxMap::RestartCurrentTimer(float afTime)
 
 void cSomaLuxMap::RemoveTimer(const tString &asName)
 {
-	for (size_t i = 0; i < mvTimers.size();)
-	{
-		if (mvTimers[i].msName == asName)
-			mvTimers.erase(mvTimers.begin() + i);
-		else
-			++i;
-	}
+	std::erase_if(mvTimers, [&](const cSomaLuxTimer &t) { return t.msName == asName; });
 }
 
 cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)

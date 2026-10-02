@@ -37,7 +37,7 @@ void cSomaPostEffectComposite::Add(cSomaPostEffect *apEffect, int alPrio)
 
 void cSomaPostEffectComposite::Remove(cSomaPostEffect *apEffect)
 {
-	mvEffects.erase(std::remove_if(mvEffects.begin(), mvEffects.end(), [&](const auto &e) { return e.second == apEffect; }), mvEffects.end());
+	std::erase_if(mvEffects, [&](const auto &e) { return e.second == apEffect; });
 }
 
 cSomaPostEffect *cSomaPostEffectComposite::FromType(const tString &asType)

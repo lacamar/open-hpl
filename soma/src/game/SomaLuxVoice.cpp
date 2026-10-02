@@ -142,7 +142,6 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 				cSound sound;
 				sound.msText = pSound->GetAttributeString("Text", "");
 				sound.mfVoiceOffset = pSound->GetAttributeFloat("VoiceOffset", 0);
-				sound.mfTextOffset = pSound->GetAttributeFloat("TextOffset", 0);
 				sound.mfEndPadding = pSound->GetAttributeFloat("EndPadding", 0);
 				sound.mfVolume = pSound->GetAttributeFloat("Volume", 1);
 				line.mvSounds.push_back(sound);

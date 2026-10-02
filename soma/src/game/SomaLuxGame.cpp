@@ -195,7 +195,6 @@ void cSomaLuxGame::Load()
 																			   : new cSomaLuxHandler();
 		pHandler->msName = def.mpAttr;
 		pHandler->msScriptName = strcmp(def.mpAttr, "Player") == 0 ? "LuxPlayer" : def.mpAttr;
-		pHandler->msBaseType = def.mpBase;
 		if (pHandler->LoadScript(mpRuntime, sFile, def.mpClass, def.mpBase))
 			mvHandlers.push_back(pHandler);
 		else
@@ -229,9 +228,7 @@ void cSomaLuxGame::Load()
 		cSomaLuxModule *pModule = new cSomaLuxModule();
 		pModule->msName = pElem->GetAttributeString("Name", "");
 		pModule->msScriptName = pModule->msName;
-		pModule->msContainer = pElem->GetAttributeString("Container", "Default");
 		pModule->mlId = pElem->GetAttributeInt("ID", -1);
-		pModule->mbGlobal = pElem->GetAttributeBool("IsGlobal", false);
 		if (pModule->LoadScript(mpRuntime, pElem->GetAttributeString("ScriptFile", ""), pElem->GetAttributeString("ScriptClass", ""), "cLuxUserModule"))
 			mvModules.push_back(pModule);
 		else

@@ -2,6 +2,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
+#include <algorithm>
 #include <cmath>
 
 //---------------------------------------
@@ -160,27 +161,24 @@ bool cSomaLuxScriptable::CallWithObject(const std::string &asDecl, void *apObj)
 	return Call(asDecl, [apObj](asIScriptContext *c) { c->SetArgAddress(0, apObj); });
 }
 
-bool cSomaLuxScriptable::CallWithString(const std::string &asDecl, const tString &asX)
-{
-	return Call(asDecl, [&asX](asIScriptContext *c) { c->SetArgObject(0, (void *)&asX); });
-}
-
 //---------------------------------------
 
-cSomaLuxScriptable::cTimer *cSomaLuxScriptable::FindTimer(uint64_t alId)
+template <class T> static T *FindById(std::vector<T> &avItems, uint64_t alId)
 {
-	for (size_t i = 0; i < mvTimers.size(); ++i)
-		if (mvTimers[i].mlId == alId)
-			return &mvTimers[i];
-	return NULL;
+	auto it = std::find_if(avItems.begin(), avItems.end(), [alId](const T &x) { return x.mlId == alId; });
+	return it == avItems.end() ? NULL : &*it;
 }
 
-cSomaLuxScriptable::cFader *cSomaLuxScriptable::FindFader(uint64_t alId)
+cSomaLuxScriptable::cTimer *cSomaLuxScriptable::FindTimer(uint64_t alId) { return FindById(mvTimers, alId); }
+cSomaLuxScriptable::cFader *cSomaLuxScriptable::FindFader(uint64_t alId) { return FindById(mvFaders, alId); }
+
+cSomaLuxScriptable::cFader *cSomaLuxScriptable::GetOrAddFader(uint64_t alId, bool abSkipIfExists)
 {
-	for (size_t i = 0; i < mvFaders.size(); ++i)
-		if (mvFaders[i].mlId == alId)
-			return &mvFaders[i];
-	return NULL;
+	cFader *f = FindFader(alId);
+	if (f)
+		return abSkipIfExists ? NULL : f;
+	mvFaders.push_back(cFader{alId, 0, 0, 0, 0, false, false});
+	return &mvFaders.back();
 }
 
 void cSomaLuxScriptable::UpdateTimers(float afTimeStep)
@@ -253,12 +251,7 @@ void cSomaLuxScriptable::Timer_Add(uint64_t alId, float afTime, const tString &a
 
 void cSomaLuxScriptable::Timer_Remove(uint64_t alId)
 {
-	for (size_t i = 0; i < mvTimers.size(); ++i)
-		if (mvTimers[i].mlId == alId)
-		{
-			mvTimers.erase(mvTimers.begin() + i);
-			return;
-		}
+	std::erase_if(mvTimers, [alId](const cTimer &t) { return t.mlId == alId; });
 }
 
 bool cSomaLuxScriptable::Timer_Exists(uint64_t alId) { return FindTimer(alId) != NULL; }
@@ -292,14 +285,9 @@ float cSomaLuxScriptable::Timer_GetValue(uint64_t alId, float afMin, float afMax
 
 void cSomaLuxScriptable::Fader_FadeTo(uint64_t alId, float afGoal, float afTime, bool abReverseAtEnd, bool abSkipIfExists)
 {
-	cFader *f = FindFader(alId);
-	if (f && abSkipIfExists)
-		return;
+	cFader *f = GetOrAddFader(alId, abSkipIfExists);
 	if (f == NULL)
-	{
-		mvFaders.push_back(cFader{alId, 0, 0, 0, 0, false, false});
-		f = &mvFaders.back();
-	}
+		return;
 	f->mfStart = f->mfValue;
 	f->mfGoal = afGoal;
 	f->mfSpeed = afTime > 0 ? fabsf(afGoal - f->mfValue) / afTime : 1e9f;
@@ -308,15 +296,8 @@ void cSomaLuxScriptable::Fader_FadeTo(uint64_t alId, float afGoal, float afTime,
 
 void cSomaLuxScriptable::Fader_Set(uint64_t alId, float afX, bool abSkipIfExists)
 {
-	cFader *f = FindFader(alId);
-	if (f && abSkipIfExists)
-		return;
-	if (f == NULL)
-	{
-		mvFaders.push_back(cFader{alId, 0, 0, 0, 0, false, false});
-		f = &mvFaders.back();
-	}
-	f->mfValue = f->mfStart = f->mfGoal = afX;
+	if (cFader *f = GetOrAddFader(alId, abSkipIfExists))
+		f->mfValue = f->mfStart = f->mfGoal = afX;
 }
 
 void cSomaLuxScriptable::Fader_SetPaused(uint64_t alId, bool abPaused)

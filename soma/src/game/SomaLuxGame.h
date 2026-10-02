@@ -17,9 +17,7 @@ class cSomaLuxModule : public cSomaLuxScriptable
 {
 public:
 	tString msName;
-	tString msContainer;
 	int mlId = -1;
-	bool mbGlobal = false;
 };
 
 class cSomaLuxEffect : public cSomaLuxScriptable
@@ -34,7 +32,6 @@ class cSomaLuxHandler : public cSomaLuxScriptable
 {
 public:
 	tString msName;
-	tString msBaseType;
 };
 
 class cSomaLuxGame
