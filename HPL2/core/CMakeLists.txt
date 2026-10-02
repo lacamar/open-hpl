@@ -198,6 +198,16 @@ target_compile_definitions(HPL2
     ${HPL2_DEFINES}
 )
 
+set(OPENHPL_VERSION "" CACHE STRING "Version shown by the dev HUD (default: git describe)")
+set(hud_version "${OPENHPL_VERSION}")
+if(NOT hud_version)
+    execute_process(COMMAND git describe --tags --dirty WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE hud_version OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+endif()
+if(hud_version)
+    set_property(SOURCE sources/engine/DevHud.cpp APPEND PROPERTY COMPILE_DEFINITIONS OPENHPL_VERSION="${hud_version}")
+endif()
+
 set(PLATFORM_LIBS
     binreloc
     pthread

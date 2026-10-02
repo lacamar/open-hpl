@@ -46,6 +46,7 @@ namespace hpl {
 	class iTimer;
 	class iMutex;
 	class cHeadlessControlServer;
+	class cDevHud;
 
 	//------------------------------------------------------
 	
@@ -130,6 +131,7 @@ namespace hpl {
 		cGenerate* GetGenerate(){ return mpGenerate;}
 
 		cHeadlessControlServer* GetHeadlessControl(){ return mpHeadlessControl;}
+		void SetDevHudActive(bool abX);
 
 		void ResetLogicTimer();
 		void SetUpdatesPerSec(int alUpdatesPerSec);
@@ -241,6 +243,8 @@ namespace hpl {
 		cGenerate* mpGenerate;
 
 		cHeadlessControlServer *mpHeadlessControl;
+		cDevHud *mpDevHud;
+		bool mbDevHudActive;
 	};
 
 };

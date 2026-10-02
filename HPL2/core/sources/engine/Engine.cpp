@@ -50,6 +50,7 @@
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
 #include "system/HeadlessControl.h"
+#include "engine/DevHud.h"
 
 #include "impl/SDLEngineSetup.h"
 
@@ -197,6 +198,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cEngine::SetDevHudActive(bool abX)
+	{
+		const char *pEnv = getenv("OPENHPL_DEV_HUD");
+		mbDevHudActive = abX || (pEnv && pEnv[0] == '1');
+	}
+
+	//-----------------------------------------------------------------------
+
 	cEngine::cEngine(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars)
 	{
 		mpHeadlessControl = NULL;
@@ -211,6 +220,9 @@ namespace hpl {
 		{
 			mpHeadlessControl = hplNew(cHeadlessControlServer, (this, tString(pHeadlessSocketPath)));
 		}
+
+		mpDevHud = hplNew(cDevHud, (this));
+		SetDevHudActive(false);
 
 		mbApplicationHasInputFocus = false;
 		mbApplicationHasMouseFocus = false;
@@ -380,6 +392,7 @@ namespace hpl {
 
 		if(mpHeadlessControl) hplDelete(mpHeadlessControl);
 		mpHeadlessControl = NULL;
+		hplDelete(mpDevHud);
 
 		hplDelete(mpLogicTimer);
 		hplDelete(mpFPSCounter);
@@ -558,7 +571,9 @@ namespace hpl {
 				START_TIMING(PostRender)
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
-				
+
+				if(mbDevHudActive) mpDevHud->Render();
+
 				START_TIMING(FlushRender)
 				mpGraphics->GetLowLevel()->FlushRendering();
 				STOP_TIMING(FlushRender)
