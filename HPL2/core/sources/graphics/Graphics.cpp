@@ -206,6 +206,7 @@ namespace hpl {
 			AddMaterialType(hplNew( cMaterialType_Water, (this, apResources) ), "water");
 			AddMaterialType(hplNew( cMaterialType_Decal, (this, apResources) ), "decal");
 			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "projecteduv");
+			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "terrain");
 
 
 			////////////////////////////////////////////////

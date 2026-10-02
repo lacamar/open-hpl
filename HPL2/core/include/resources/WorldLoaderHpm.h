@@ -44,7 +44,8 @@ namespace hpl {
 		void LoadDetailMeshesTrack(const tWString& asBaseFile);
 		void BuildLoadReport(const tString& asMap, int alTotalTimeMs);
 		void LoadExposureAreaTrack(const tWString& asBaseFile);
-		void CheckTerrainTrackInactive(const tWString& asBaseFile);
+		void LoadTerrain(const tWString& asBaseFile);
+		void CreateTerrain(const tWString& asBaseFile, cXmlElement* apTerrain);
 
 		tString CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);
 		tString CreatePlanePrimitive(cXmlElement* apElement);

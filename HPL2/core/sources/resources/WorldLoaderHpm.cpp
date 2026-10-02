@@ -6,6 +6,7 @@
 
 #include "resources/Resources.h"
 #include "resources/MeshManager.h"
+#include "resources/MaterialManager.h"
 #include "resources/TextureManager.h"
 #include "resources/LowLevelResources.h"
 #include "resources/XmlDocument.h"
@@ -36,6 +37,8 @@
 #include "physics/CollideShape.h"
 
 #include "math/Math.h"
+
+#include <cmath>
 
 namespace hpl {
 
@@ -98,7 +101,7 @@ namespace hpl {
 		LoadDetailMeshesTrack(asFile);
 
 		LoadExposureAreaTrack(asFile);
-		CheckTerrainTrackInactive(asFile);
+		LoadTerrain(asFile);
 
 		mpCurrentWorld->Compile(true);
 
@@ -550,30 +553,91 @@ namespace hpl {
 		hplDelete(pDoc);
 	}
 
-	void cWorldLoaderHpm::CheckTerrainTrackInactive(const tWString& asBaseFile)
+	void cWorldLoaderHpm::LoadTerrain(const tWString& asBaseFile)
 	{
 		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Terrain"), false);
-		if (pDoc == NULL)
+		if (pDoc == NULL) return;
+
+		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Terrain");
+		cXmlElement* pTerrain = pRoot ? pRoot->GetFirstElement("Terrain") : NULL;
+		mbTerrainActive = pTerrain && pTerrain->GetAttributeBool("Active", false);
+		if (mbTerrainActive) CreateTerrain(asBaseFile, pTerrain);
+
+		hplDelete(pDoc);
+	}
+
+	void cWorldLoaderHpm::CreateTerrain(const tWString& asBaseFile, cXmlElement* apTerrain)
+	{
+		const int lSize = apTerrain->GetAttributeInt("HeightMapSize", 1024);
+		const int lPatch = apTerrain->GetAttributeInt("GeometryPatchSize", 32);
+		const float fUnit = apTerrain->GetAttributeFloat("UnitSize", 1);
+		const float fMaxHeight = apTerrain->GetAttributeFloat("MaxHeight", 1);
+		const float fTile = apTerrain->GetAttributeFloat("BaseMaterialTileAmount", 1);
+		const tString sMaterial = apTerrain->GetAttributeString("BaseMaterialFile");
+
+		tWString sPath = asBaseFile + _W("_Terrain_heightmap.dds");
+		std::vector<unsigned char> vData(cPlatform::GetFileSize(sPath));
+		if (vData.size() < 128 + (size_t)lSize * lSize * 3 || !cPlatform::CopyFileToBuffer(sPath, vData.data(), vData.size()))
 		{
-			Log("  SOMA hpm: no Terrain track file - skipping (expected)\n");
+			Warning("SOMA hpm: bad terrain heightmap '%s'\n", cString::To8Char(sPath).c_str());
 			return;
 		}
 
-		cXmlElement* pRoot = GetTrackRoot(pDoc, "HPLMapTrack_Terrain");
-		bool bActive = false;
-		if (pRoot)
+		std::vector<float> vHeight((size_t)lSize * lSize);
+		for (size_t i = 0; i < vHeight.size(); ++i)
 		{
-			cXmlElement* pTerrain = pRoot->GetFirstElement("Terrain");
-			if (pTerrain) bActive = pTerrain->GetAttributeBool("Active", false);
+			const unsigned char* p = &vData[128 + i * 3];
+			unsigned int lVal = p[0] | (p[1] << 8) | (p[2] << 16);
+			vHeight[i] = lVal ? lVal * (fMaxHeight / 16777215.0f) : NAN;
 		}
-		mbTerrainActive = bActive;
+		auto Height = [&](int x, int z) { return vHeight[(size_t)cMath::Clamp(z, 0, lSize - 1) * lSize + cMath::Clamp(x, 0, lSize - 1)]; };
+		auto Solid = [&](int x, int z, float fFallback) { float h = Height(x, z); return std::isnan(h) ? fFallback : h; };
 
-		if (bActive)
-			Warning("SOMA hpm: map has an ACTIVE terrain track - HPL2 has no terrain renderer, terrain will NOT be visible (out of scope for Phase 1)\n");
-		else
-			Log("  SOMA hpm: Terrain track present but inactive - skipping (as expected)\n");
+		const float fOffset = lSize * fUnit * 0.5f;
+		for (int z0 = 0; z0 < lSize - 1; z0 += lPatch)
+		for (int x0 = 0; x0 < lSize - 1; x0 += lPatch)
+		{
+			const int lW = std::min(lPatch, lSize - 1 - x0) + 1;
+			const int lH = std::min(lPatch, lSize - 1 - z0) + 1;
 
-		hplDelete(pDoc);
+			iVertexBuffer* pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																				 eVertexBufferUsageType_Static, lW * lH, (lW - 1) * (lH - 1) * 6);
+			pVtx->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
+			pVtx->CreateElementArray(eVertexBufferElement_Normal, eVertexBufferElementFormat_Float, 3);
+			pVtx->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+
+			for (int z = z0; z < z0 + lH; ++z)
+			for (int x = x0; x < x0 + lW; ++x)
+			{
+				float h = Solid(x, z, 0);
+				cVector3f vPos(x * fUnit - fOffset, h, z * fUnit - fOffset);
+				cVector3f vNormal(Solid(x - 1, z, h) - Solid(x + 1, z, h), 2 * fUnit, Solid(x, z - 1, h) - Solid(x, z + 1, h));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Position, vPos);
+				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cMath::Vector3Normalize(vNormal));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(vPos.x, vPos.z, 0) * fTile);
+			}
+
+			for (int z = 0; z < lH - 1; ++z)
+			for (int x = 0; x < lW - 1; ++x)
+			{
+				if (std::isnan(Height(x0 + x, z0 + z)) || std::isnan(Height(x0 + x + 1, z0 + z)) ||
+					std::isnan(Height(x0 + x, z0 + z + 1)) || std::isnan(Height(x0 + x + 1, z0 + z + 1))) continue;
+				int i = z * lW + x;
+				for (int lIdx : {i, i + 1, i + lW, i + 1, i + lW + 1, i + lW}) pVtx->AddIndex(lIdx);
+			}
+			if (pVtx->GetIndexNum() == 0) { hplDelete(pVtx); continue; }
+			pVtx->Compile(eVertexCompileFlag_CreateTangents);
+
+			tString sName = "Terrain_" + cString::ToString(x0 / lPatch) + "_" + cString::ToString(z0 / lPatch);
+			cMesh* pMesh = hplNew(cMesh, (sName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
+			cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+			pSubMesh->SetVertexBuffer(pVtx);
+			pSubMesh->SetMaterial(mpResources->GetMaterialManager()->CreateMaterial(sMaterial));
+
+			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
+			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
+			CreateStaticBodyForMesh(pEntity, sName);
+		}
 	}
 
 	tString cWorldLoaderHpm::CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex)
