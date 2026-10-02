@@ -11,7 +11,6 @@ particles), inspect distance (readables open at half scale: `SetMeshScaleMul`), 
 applies live.
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- Hint key names: grab hint shows `[?]` (scroll?); the ref draws button glyphs, ours `[RightMouse]`.
 - Scan machine visual effect missing.
 - GUI screens skip fog/DoF.
 - Slow map loads; no loading screen when loading a save.

@@ -85,25 +85,7 @@ void SomaDeserializeGlobalVars(const tString &asData)
 	}
 }
 
-// "$Input{Action}" -> the key bound to the action
-tWString SomaParseString(const tWString &asText)
-{
-	tWString sOut;
-	size_t lPos = 0;
-	while (true)
-	{
-		size_t lStart = asText.find(_W("$Input{"), lPos);
-		size_t lEnd = lStart == tWString::npos ? tWString::npos : asText.find(_W('}'), lStart);
-		if (lEnd == tWString::npos)
-			break;
-		sOut += asText.substr(lPos, lStart - lPos);
-		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(cString::To8Char(asText.substr(lStart + 7, lEnd - lStart - 7)));
-		tString sKey = pAction && pAction->GetSubActionNum() > 0 ? pAction->GetSubAction(0)->GetInputName() : "?";
-		sOut += _W("[") + cString::To16Char(sKey) + _W("]");
-		lPos = lEnd + 1;
-	}
-	return sOut + asText.substr(lPos);
-}
+tWString SomaParseString(const tWString &asText);
 
 static const char *EndLine(const tString &s) { return s.empty() || s.back() != '\n' ? "\n" : ""; }
 

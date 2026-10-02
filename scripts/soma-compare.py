@@ -132,7 +132,9 @@ class Ours:
 
     def exec(self, code, timeout=60):
         with HplControl(str(SOCK), timeout=timeout) as h:
-            r = h.send({"cmd": "script_exec", "code": code})
+            inc = "#include" in code
+            code = "\n".join(l for l in code.splitlines() if not l.startswith("#include"))
+            r = h.send({"cmd": "script_exec", "code": code, "module": "/maps/" if inc else ""})
         if not r.get("ok", True):
             raise RuntimeError(r.get("error", "failed") + r.get("output", ""))
         return r.get("output", "").splitlines()

@@ -367,6 +367,12 @@ cSomaLuxInputHandler::cSomaLuxInputHandler()
 	mpInstance = this;
 	mlMaxSmoothMousePos = SomaGameConfig()->GetInt("Input", "MaxSmoothMousePos", 7);
 	mfPrevSmoothMousePosMul = SomaGameConfig()->GetFloat("Input", "PrevSmoothMousePosMul", 0.7f);
+	// HPL3 engine actions; hints use "$Input{ScrollUp}"
+	cInput *pInput = gpSomaBase->mpEngine->GetInput();
+	const char *vMouse[] = {"LeftClick", "MiddleClick", "RightClick", "ScrollUp", "ScrollDown"};
+	for (int i = 0; i < 5; ++i)
+		if (pInput->GetAction(vMouse[i]) == NULL)
+			pInput->CreateAction(vMouse[i], 199004 + i)->AddMouseButton((eMouseButton)i);
 }
 
 void cSomaLuxInputHandler::CreateAction(const cLuxAction &aAction)

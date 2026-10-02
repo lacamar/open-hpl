@@ -84,8 +84,9 @@ namespace hpl {
 		// Load Common info
 		TiXmlElement *pCommonElem = pRootElem->FirstChildElement("common");
 
-		int lLineHeight = cString::ToInt(pCommonElem->Attribute("lineHeight"),0);
-		int lBase = cString::ToInt(pCommonElem->Attribute("base"),0);
+		int lOutline = cString::ToInt(pRootElem->FirstChildElement("info")->Attribute("outline"),0);
+		int lLineHeight = cString::ToInt(pCommonElem->Attribute("lineHeight"),0) + 2*lOutline;
+		int lBase = cString::ToInt(pCommonElem->Attribute("base"),0) + 2*lOutline;
 
 		mfHeight = (float)lLineHeight;
 
@@ -179,7 +180,7 @@ namespace hpl {
 			int lXOffset = cString::ToInt(pCharElem->Attribute("xoffset"),0);
 			int lYOffset = cString::ToInt(pCharElem->Attribute("yoffset"),0);
 
-			int lAdvance = cString::ToInt(pCharElem->Attribute("xadvance"),0);
+			int lAdvance = cString::ToInt(pCharElem->Attribute("xadvance"),0) + lOutline;
 
 			int lPage = cString::ToInt(pCharElem->Attribute("page"),0);
 

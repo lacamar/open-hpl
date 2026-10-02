@@ -140,8 +140,10 @@ class Ref:
         n = self.next_id()
         if n > SLOTS:
             raise ExecError(f"all {SLOTS} exec slots used, restart", [])
+        inc = "".join(l + "\n" for l in code.splitlines() if l.startswith("#include"))
+        code = "\n".join(l for l in code.splitlines() if not l.startswith("#include"))
         (MOD / f"script/ohpl/exec/ohpl_exec_{n}.hps").write_text(
-            f'#include "player/PlayerState_Null.hps"\n'
+            f'#include "player/PlayerState_Null.hps"\n{inc}'
             f'void __print(const tString&in s){{ LogNewLine("OHPL|out|{n}|" + s); }}\n'
             f'class cOhplExec{n} : cScrPlayerState_Null {{ cOhplExec{n}(){{ __exec(); }} }}\n'
             f'void __exec()\n{{\n{code}\n}}\n')

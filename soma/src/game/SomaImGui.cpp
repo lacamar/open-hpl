@@ -5,6 +5,8 @@
 #include "SomaScriptBind.h"
 
 #include "impl/scriptarray.h"
+#include "input/ActionKeyboard.h"
+#include "input/ActionMouseButton.h"
 
 #include <algorithm>
 #include <cmath>
@@ -957,14 +959,149 @@ typedef cSomaImGui I;
 
 static const void *P(D d) { return &d; }
 
-tWString SomaParseString(const tWString &asText);
+// cLuxInputHandler glyph layouts and cLuxScreenTextIcon (HPL3 FetchKeyboardInputLayout, ParseStringIntoScreenText, Icon::Draw)
+namespace
+{
+	struct cKeyLayout
+	{
+		int mlType, mlMin, mlMax;
+		char mGfx[kGfxSize], mLabel[336];
+	};
+	std::vector<cKeyLayout> gvKeyLayouts;
+	cKeyLayout gKeyDefault{-1, 0, 0, {}, {}};
+	tStringVec gvMouseLayout;
 
-static void ParseScreenText(WStr asInput, I *p, D aParams, CScriptArray &aLines, CScriptArray &, CScriptArray &aIconsPerLine, float &afLineHeight,
+	struct cIcon
+	{
+		char mHeader[16];
+		float mfTimer, mfX, mfW, mfH;
+		int mlCol, mlChars, mlLayers;
+		char mGfx[3][kGfxSize], mLabel[336];
+		wchar_t msText[32];
+	};
+	static_assert(sizeof(cIcon) <= 4096, "script struct block");
+}
+
+static cIcon *NewIcon(iSubAction *apSub, const void *apParams)
+{
+	cIcon *pIcon = NULL;
+	if (apSub->GetInputType() == "Keyboard")
+	{
+		eKey key = static_cast<cActionKeyboard *>(apSub)->GetKey();
+		const cKeyLayout *pLayout = &gKeyDefault;
+		for (const cKeyLayout &l : gvKeyLayouts)
+			if (l.mlMin <= key && key <= l.mlMax)
+			{
+				pLayout = &l;
+				break;
+			}
+		if (pLayout->mlType < 0)
+			return NULL;
+		pIcon = (cIcon *)SomaNewOwnedScriptStruct("cLuxScreenTextIcon");
+		memcpy(pIcon->mGfx[0], pLayout->mGfx, kGfxSize);
+		memcpy(pIcon->mLabel, pLayout->mLabel, sizeof(pIcon->mLabel));
+		if (pLayout->mlType != 0)
+		{
+			tString sKey = gpSomaBase->mpEngine->GetInput()->GetKeyboard()->KeyToString(key);
+			tWString sName = gpSomaBase->mpEngine->GetResources()->Translate("ButtonNames", sKey);
+			wcsncpy(pIcon->msText, (sName.empty() ? cString::To16Char(sKey) : sName).c_str(), 31);
+		}
+		pIcon->mfH = F<float>(apParams, 364);
+	}
+	else if (apSub->GetInputType() == "MouseButton")
+	{
+		size_t lButton = static_cast<cActionMouseButton *>(apSub)->GetButton();
+		tStringVec vFiles;
+		tString sSep = ",";
+		if (lButton < gvMouseLayout.size())
+			cString::GetStringVec(gvMouseLayout[lButton], vFiles, &sSep);
+		if (vFiles.empty())
+			return NULL;
+		pIcon = (cIcon *)SomaNewOwnedScriptStruct("cLuxScreenTextIcon");
+		void *pDefault = SomaNewScriptStruct("cImGuiGfx");
+		pIcon->mlLayers = std::min<int>(vFiles.size(), 3) - 1;
+		for (int i = 0; i <= pIcon->mlLayers; ++i)
+		{
+			memcpy(pIcon->mGfx[i], pDefault, kGfxSize);
+			F<const tString *>(pIcon->mGfx[i], kGfxFile) = SomaIntern(vFiles[i]);
+			F<int>(pIcon->mGfx[i], kGfxMaterial) = eGuiMaterial_Alpha;
+			F<int>(pIcon->mGfx[i], kGfxType) = 0;
+		}
+		free(pDefault);
+		pIcon->mfH = F<float>(apParams, 368);
+	}
+	return pIcon;
+}
+
+// "$Input{Action}" -> one '.' per glyph icon when apIcons is set, else translated button names
+static tWString ParseString(const tWString &asText, std::vector<cIcon *> *apIcons, const void *apParams)
+{
+	tWString sOut;
+	size_t lPos = 0;
+	while (true)
+	{
+		size_t lStart = asText.find(_W("$Input{"), lPos);
+		size_t lEnd = lStart == tWString::npos ? tWString::npos : asText.find(_W('}'), lStart);
+		if (lEnd == tWString::npos)
+			break;
+		sOut += asText.substr(lPos, lStart - lPos);
+		lPos = lEnd + 1;
+		cAction *pAction = gpSomaBase->mpEngine->GetInput()->GetAction(cString::To8Char(asText.substr(lStart + 7, lEnd - lStart - 7)));
+		if (pAction == NULL || pAction->GetSubActionNum() == 0)
+		{
+			sOut += _W("BADACTION");
+			continue;
+		}
+		for (int i = 0; i < pAction->GetSubActionNum(); ++i)
+		{
+			if (i > 0)
+				sOut += _W(" / ");
+			iSubAction *pSub = pAction->GetSubAction(i);
+			if (cIcon *pIcon = apIcons ? NewIcon(pSub, apParams) : NULL)
+			{
+				pIcon->mlCol = sOut.size();
+				sOut += _W('.');
+				apIcons->push_back(pIcon);
+				continue;
+			}
+			tWString sName = gpSomaBase->mpEngine->GetResources()->Translate("ButtonNames", pSub->GetInputName());
+			sOut += sName.empty() ? cString::To16Char(pSub->GetInputName()) : sName;
+		}
+	}
+	return sOut + asText.substr(lPos);
+}
+
+tWString SomaParseString(const tWString &asText) { return ParseString(asText, NULL, NULL); }
+
+static void ParseScreenText(WStr asInput, I *p, D aParams, CScriptArray &aLines, CScriptArray &aIcons, CScriptArray &aIconsPerLine, float &afLineHeight,
 							float &afTime, bool)
 {
 	const void *pFont = (char *)P(aParams) + 24 + kWFont;
-	tWString sText = SomaParseString(asInput);
+	std::vector<cIcon *> vIcons;
+	tWString sText = ParseString(asInput, &vIcons, P(aParams));
 	cVector2f vSize = p->FontSize(pFont, 1);
+	float fDot = std::max(p->GetFontLength(pFont, 1, _W(".")), 1e-4f), fSpace = std::max(p->GetFontLength(pFont, 1, _W(" ")), 1e-4f);
+	afLineHeight = vSize.y;
+	int lInserted = 0;
+	for (cIcon *pIcon : vIcons)
+	{
+		pIcon->mlCol += lInserted;
+		cVector2f vGfx = p->GetGfxSize(pIcon->mGfx[0]);
+		if (vGfx.x <= 0)
+			vGfx.x = vSize.x;
+		if (vGfx.y <= 0)
+			vGfx.y = vSize.y;
+		if (pIcon->mfH < 0 || pIcon->mfH > vGfx.y)
+			pIcon->mfH = vGfx.y;
+		pIcon->mfW = vGfx.x / vGfx.y * pIcon->mfH;
+		if (pIcon->msText[0])
+			pIcon->mfW = std::max(pIcon->mfW, p->GetFontLength(pIcon->mLabel + kWFont, 1, pIcon->msText) + 4 * fSpace);
+		pIcon->mlChars = std::max(1, (int)ceilf(pIcon->mfW / fDot));
+		sText.insert(pIcon->mlCol, pIcon->mlChars - 1, _W('.'));
+		lInserted += pIcon->mlChars - 1;
+		afLineHeight = std::max(afLineHeight, pIcon->mfH);
+	}
+	afTime = SomaStringDuration(sText);
 	float fWidth = F<float>(P(aParams), 16);
 	tWStringVec vRows;
 	iFontData *pFontData = p->GetFont(pFont);
@@ -972,30 +1109,75 @@ static void ParseScreenText(WStr asInput, I *p, D aParams, CScriptArray &aLines,
 		pFontData->GetWordWrapRows(fWidth, vSize.y, vSize, sText, &vRows);
 	else
 		vRows.push_back(sText);
-	for (tWString &sRow : vRows)
+	aIconsPerLine.Resize(vRows.size());
+	size_t lStart = 0, k = 0;
+	for (size_t r = 0; r < vRows.size(); ++r)
+	{
+		tWString &sRow = vRows[r];
+		size_t lEnd = lStart + sRow.size();
+		int lShift = 0;
+		for (; k < vIcons.size() && vIcons[k]->mlCol < (int)lEnd; ++k)
+		{
+			cIcon *pIcon = vIcons[k];
+			int lCol = pIcon->mlCol - lStart + lShift, lSpaces = (int)ceilf(pIcon->mlChars * fDot / fSpace);
+			sRow.replace(lCol, pIcon->mlChars, lSpaces, _W(' '));
+			lShift += lSpaces - pIcon->mlChars;
+			pIcon->mfX = p->GetFontLength(pFont, 1, sRow.substr(0, lCol)) + (lSpaces * fSpace - pIcon->mfW) * 0.5f;
+			int lIndex = k;
+			((CScriptArray *)aIconsPerLine.At(r))->InsertLast(&lIndex);
+		}
+		lStart = lEnd < sText.size() && (sText[lEnd] == _W(' ') || sText[lEnd] == _W('\n')) ? lEnd + 1 : lEnd;
 		aLines.InsertLast(&sRow);
-	aIconsPerLine.Resize(aLines.GetSize());
-	afLineHeight = vSize.y;
-	afTime = SomaStringDuration(sText);
+	}
+	aIcons.Resize(vIcons.size());
+	for (size_t i = 0; i < vIcons.size(); ++i)
+		*(cIcon **)aIcons.At(i) = vIcons[i];
 }
 
-static void DrawScreenText(I *p, D aLabel, V3 avPos, float afLineWidth, float afLineSpacing, const CScriptArray &avLines, bool abHint)
+static void DrawIcon(I *p, cIcon *apIcon, float afTimeStep, const cVector3f &avBase)
+{
+	apIcon->mfTimer += afTimeStep;
+	cVector3f vPos(avBase.x + apIcon->mfX, avBase.y - apIcon->mfH * 0.5f, avBase.z);
+	cVector2f vSize(apIcon->mfW, apIcon->mfH);
+	p->DoImage(apIcon->mGfx[0], vPos, vSize);
+	float t = apIcon->mlLayers > 0 ? fmodf(apIcon->mfTimer, apIcon->mlLayers) : 0;
+	for (int i = 0; i < apIcon->mlLayers; ++i)
+	{
+		F<cColor>(apIcon->mGfx[i + 1], kGfxColor) = cColor(1, t > i && t < i + 1 ? sinf((t - i) * kPif) : 0);
+		p->DoImage(apIcon->mGfx[i + 1], vPos + cVector3f(0, 0, 0.01f), vSize);
+	}
+	if (apIcon->msText[0])
+		p->DoLabel(apIcon->msText, apIcon->mLabel, vPos, vSize, 1);
+}
+
+// HPL3 DrawHint: first line centred, the rest left-aligned under its start
+static void DrawScreenText(I *p, float afTimeStep, D aLabel, V3 avPos, float afLineWidth, float afLineSpacing, const CScriptArray &avLines,
+						   const CScriptArray &avIcons, const CScriptArray &avIconsPerLine, bool abHint)
 {
 	char vLabel[336];
 	memcpy(vLabel, P(aLabel), sizeof(vLabel));
 	const void *pFont = vLabel + kWFont;
-	cVector2f vSize(afLineWidth, p->FontSize(pFont, 1).y);
-	cVector3f vPos = avPos;
+	float fFontH = p->FontSize(pFont, 1).y;
+	int lAlign = F<int>(vLabel, kWFontAlign);
+	float fHintX = avLines.GetSize() ? avPos.x + (afLineWidth - p->GetFontLength(pFont, 1, *(const tWString *)avLines.At(0))) * 0.5f : 0;
 	for (asUINT i = 0; i < avLines.GetSize(); ++i)
 	{
 		const tWString &sLine = *(const tWString *)avLines.At(i);
-		// HPL3 DrawHint: first line centred, the rest left-aligned under its start
+		cVector3f vPos(abHint && i > 0 ? fHintX : avPos.x, avPos.y + i * afLineSpacing, avPos.z);
 		if (abHint)
 			F<int>(vLabel, kWFontAlign) = i == 0 ? eFontAlign_Center : eFontAlign_Left;
-		p->DoLabel(sLine, vLabel, vPos, vSize, 1);
-		if (abHint && i == 0)
-			vPos.x += (afLineWidth - p->GetFontLength(pFont, 1, sLine)) * 0.5f;
-		vPos.y += afLineSpacing;
+		p->DoLabel(sLine, vLabel, vPos, cVector2f(afLineWidth, fFontH), 1);
+		if (i >= avIconsPerLine.GetSize())
+			continue;
+		float fLen = p->GetFontLength(pFont, 1, sLine);
+		float fX = abHint ? fHintX : lAlign == eFontAlign_Right ? avPos.x + afLineWidth - fLen : lAlign == eFontAlign_Center ? avPos.x + (afLineWidth - fLen) * 0.5f : avPos.x;
+		const CScriptArray &vIndices = *(const CScriptArray *)avIconsPerLine.At(i);
+		for (asUINT j = 0; j < vIndices.GetSize(); ++j)
+		{
+			asUINT lIdx = *(const int *)vIndices.At(j);
+			if (lIdx < avIcons.GetSize())
+				DrawIcon(p, *(cIcon *const *)avIcons.At(lIdx), afTimeStep, cVector3f(fX, vPos.y + fFontH * 0.5f, avPos.z));
+		}
 	}
 }
 
@@ -1134,9 +1316,37 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_ParseStringIntoScreenText(const tWString &in asInput, cImGui @apImGui, const cLuxScreenTextFormatParameters &aFormatParams, array<tWString> &out aOutLines, array<cLuxScreenTextIcon@> &out aIconArray, array<array<int>> &out aOutIconsPerLine, float &out afMaxLineHeight, float &out afDisplayTime, bool abTriggeredByGamepad)",
 			  ParseScreenText);
 	SOMA_FUNC(e, "void cLux_DrawScreenText(cImGui @apImGui, float afTimeStep, const cImGuiLabelData &in aLabel, const cVector3f &in avPosition, float afLineWidth, float afLineSpacing, const array<tWString> &in avTextLines, const array<cLuxScreenTextIcon@> &in avIcons, const array<array<int>> &in avIconsPerLine)",
-			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, false); });
+			  +[](I *p, float dt, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &icons, const CScriptArray &perLine) {
+				  DrawScreenText(p, dt, l, pos, w, sp, lines, icons, perLine, false);
+			  });
 	SOMA_FUNC(e, "void cLux_DrawHint(cImGui @apImGui, float afTimeStep, const cImGuiLabelData &in aLabel, const cVector3f &in avPosition, float afLineWidth, float afLineSpacing, const array<tWString> &in avTextLines, const array<cLuxScreenTextIcon@> &in avIcons, const array<array<int>> &in avIconsPerLine)",
-			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, true); });
+			  +[](I *p, float dt, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &icons, const CScriptArray &perLine) {
+				  DrawScreenText(p, dt, l, pos, w, sp, lines, icons, perLine, true);
+			  });
+	const char *IH = "cLuxInputHandler";
+	SOMA_METHOD(e, IH, "void ClearKeyboardLayout()", +[](void *) { gvKeyLayouts.clear(); });
+	SOMA_METHOD(e, IH, "void AddKeyboardLayoutRange(eKey aFirstKey, eKey aLastKey, eLuxKeyboardLayoutType aType, const cImGuiGfx &in aGfxKey, const cImGuiLabelData &in aLabelKey)",
+				+[](void *, int a, int b, int t, D g, D l) {
+					gvKeyLayouts.push_back({t, a, b, {}, {}});
+					memcpy(gvKeyLayouts.back().mGfx, P(g), kGfxSize);
+					memcpy(gvKeyLayouts.back().mLabel, P(l), sizeof(cKeyLayout::mLabel));
+				});
+	SOMA_METHOD(e, IH, "void AddKeyboardLayoutKey(eKey aKey, eLuxKeyboardLayoutType aType, const cImGuiGfx &in aGfxKey, const cImGuiLabelData &in aLabelKey)",
+				+[](void *, int k, int t, D g, D l) {
+					gvKeyLayouts.push_back({t, k, k, {}, {}});
+					memcpy(gvKeyLayouts.back().mGfx, P(g), kGfxSize);
+					memcpy(gvKeyLayouts.back().mLabel, P(l), sizeof(cKeyLayout::mLabel));
+				});
+	SOMA_METHOD(e, IH, "void SetKeyboardLayoutDefaults(const cImGuiGfx &in aGfxKey, const cImGuiLabelData &in aLabelKey)", +[](void *, D g, D l) {
+		gKeyDefault.mlType = 1;
+		memcpy(gKeyDefault.mGfx, P(g), kGfxSize);
+		memcpy(gKeyDefault.mLabel, P(l), sizeof(gKeyDefault.mLabel));
+	});
+	SOMA_METHOD(e, IH, "void SetMouseLayout(array<tString> &in avButtons)", +[](void *, const CScriptArray &v) {
+		gvMouseLayout.clear();
+		for (asUINT i = 0; i < v.GetSize(); ++i)
+			gvMouseLayout.push_back(*(const tString *)v.At(i));
+	});
 	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetScriptInputFocus(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetPrevInputFocusImGui()", +[]() { return cSomaImGui::GetPrevInputFocus(); });
 	SOMA_FUNC(e, "void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)", +[](Str, int) {});
