@@ -1519,12 +1519,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		return (iPhysicsBody *)NULL;
 	});
 
-	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBodyFromName(const tString&in asName)", +[](E *p, S n) {
-		for (iPhysicsBody *b : p->mvBodies)
-			if (b->GetName() == n || cString::GetFileName(b->GetName()) == n || SomaWildcardMatch("*_" + n, b->GetName()))
-				return b;
-		return (iPhysicsBody *)NULL;
-	});
+	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBodyFromName(const tString&in asName)", +[](E *p, S n) { return p->GetBodyFromName(n); });
 	SOMA_METHOD_NEW(e, T, "cMeshEntity@ GetMeshEntity()", +[](E *p) { return p->mpMesh; });
 	SOMA_METHOD_NEW(e, T, "void SetupParent(int alTypeId, tID alId, const tString &in asName)", +[](E *p, int t, cSomaID id, S n) {
 		p->mlParentType = t;
@@ -1788,6 +1783,14 @@ bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
 	return true;
 }
 
+iPhysicsBody *cSomaLuxEntity::GetBodyFromName(const tString &asName)
+{
+	for (iPhysicsBody *b : mvBodies)
+		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || SomaWildcardMatch("*_" + asName, b->GetName())))
+			return b;
+	return NULL;
+}
+
 void cSomaLuxEntity::AttachTo(cSomaLuxEntity *apParent, iPhysicsBody *apBody, const tString &asSocket, bool abUseRotation, bool abSnap, bool abLocked)
 {
 	RemoveAttachment();
@@ -1849,15 +1852,7 @@ void cSomaLuxEntity::UpdateAttachment()
 	}
 	a->m_mtxParentPrev = mtxParent;
 	for (iPhysicsBody *pBody : mvBodies)
-	{
 		pBody->Enable();
-		if (a->mpBody && pBody->GetMass() == 0)
-		{
-			pBody->SetLinearVelocity(a->mpBody->GetVelocityAtPosition(pBody->GetLocalPosition()));
-			if (a->mbUseRotation)
-				pBody->SetAngularVelocity(a->mpBody->GetAngularVelocity());
-		}
-	}
 }
 
 cSomaLuxEntity::~cSomaLuxEntity()
@@ -1970,15 +1965,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool Entity_AttachToEntity(const tString &in asName, const tString &in asParentName, const tString &in asParentBodyName, bool abUseRotation, bool abSnapToParent=false, bool abLocked=false)",
 			  +[](S n, S parent, S body, bool r, bool snap, bool l) {
 				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-				  cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(n) : NULL, *pParent = pMap ? pMap->GetEntity(parent) : NULL;
-				  if (pEnt == NULL || pParent == NULL)
-					  return false;
-				  iPhysicsBody *pBody = NULL;
-				  for (iPhysicsBody *b : pParent->mvBodies)
-					  if (body != "" && (b->GetName() == body || (b->GetName().size() > body.size() && b->GetName().compare(b->GetName().size() - body.size() - 1, tString::npos, "_" + body) == 0)))
-						  pBody = b;
-				  pEnt->AttachTo(pParent, pBody, "", r, snap, l);
-				  return true;
+				  cSomaLuxEntity *pParent = pMap ? pMap->GetEntity(parent) : NULL;
+				  bool bFound = false;
+				  if (pParent)
+					  ForMatching(n, [&](cSomaLuxEntity *p) { p->AttachTo(pParent, pParent->GetBodyFromName(body), "", r, snap, l); bFound = true; });
+				  return bFound;
 			  });
 	SOMA_FUNC(e, "bool Entity_AttachToSocket(const tString &in asName, const tString &in asParentName, const tString &in asParentSocketName, bool abUseRotation, bool abSnapToParent=true)",
 			  +[](S n, S parent, S sock, bool r, bool snap) {

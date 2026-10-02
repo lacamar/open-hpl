@@ -108,6 +108,7 @@ public:
 		cMatrixf m_mtxParentPrev, m_mtxOffset;
 	};
 	cAttachment *mpAttachment = NULL;
+	iPhysicsBody *GetBodyFromName(const tString &asName);
 	void AttachTo(cSomaLuxEntity *apParent, iPhysicsBody *apBody, const tString &asSocket, bool abUseRotation, bool abSnap, bool abLocked);
 	void RemoveAttachment();
 	bool GetAttachmentParentMatrix(cMatrixf &a_mtxOut);

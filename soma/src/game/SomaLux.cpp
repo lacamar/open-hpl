@@ -77,6 +77,13 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		lScripted += SetupEntityScript(pEnt) ? 1 : 0;
 	Log("SOMA script: %d map entities, %d with a script class\n", (int)mvEntities.size(), lScripted);
+	for (cSomaLuxEntity *pEnt : mvEntities)
+	{
+		cResourceVarsObject &v = pEnt->mInstanceVars;
+		if (cSomaLuxEntity *pParent = GetEntity(v.GetVarString("ParentAttachEntity", "")))
+			pEnt->AttachTo(pParent, pParent->GetBodyFromName(v.GetVarString("ParentAttachBody", "")), v.GetVarString("ParentAttachSocket", ""),
+						   v.GetVarBool("ParentAttachUseRotation", true), v.GetVarBool("ParentAttachSnap", false), v.GetVarBool("ParentAttachLocked", false));
+	}
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 		pEnt->Call("void OnAfterWorldLoad()");
 	for (cSomaLuxEntity *pEnt : mvEntities)

@@ -23,9 +23,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from hpl_control import HplControl, HplControlError, RUNTIME, SCRATCH, pidfile_pid  # noqa: E402
 
-SOCK = RUNTIME / "ohpl-play.sock"
-PIDFILE = RUNTIME / "ohpl-play.pid"
-LOGPOS = RUNTIME / "ohpl-play.logpos"
+NAME = os.environ.get("OHPL_PLAY_NAME", "ohpl-play")
+SOCK = RUNTIME / f"{NAME}.sock"
+PIDFILE = RUNTIME / f"{NAME}.pid"
+LOGPOS = RUNTIME / f"{NAME}.logpos"
 
 
 def send(req, timeout=60):

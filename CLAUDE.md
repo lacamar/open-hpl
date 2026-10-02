@@ -29,6 +29,7 @@ scripts/soma-sweep.py --play 10                    # script player instead of fr
 scripts/soma-census.py                     # regenerate expected.json from the Steam data
 scripts/soma-run.sh <map.hpm> [socket]     # one headless instance, prints "<pid> <socket>"
 scripts/soma-play.py start --map M          # script player: goto/look/interact/key/walk/wait/state/entities/log/shot
+OHPL_PLAY_NAME=ohpl-x scripts/soma-play.py ...  # separate socket/pid for a second instance
 scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHADERS_DIR dumps
 scripts/soma-gen-bindings.py               # regenerate SomaScriptGenBindings.cpp (compiler-verified)
 scripts/soma-re-struct-defaults.py         # recover script struct defaults from the official binary

@@ -1,5 +1,24 @@
 # Tasks
 
+## SOMA playtest 2026-10-02
+
+Done: terminal mouse pointer, secret codes, paused audio, focus pause, save/load control, gamma,
+language change duplicating saves (`GetSaveFiles` didn't clear its arrays), drawer contents
+(`ParentAttach*` instance vars, applied after `SetupAfterLoad` so `OpenAmount` comes first; attached
+static bodies no longer get the parent's velocity, which pushed drawers open).
+Untested: subway exterior (wildcard `Entity_AttachToEntity`).
+Open:
+- Opening sequence subtitles missing.
+- Inspect (InteractRotate) holds the object too close; measure camera distance vs the ref.
+- 00_03 waiting-room drapes don't open: `Prop_MovingButton` scrubs the mesh's own animation
+  (ref: 1 state, 1.958 s, 17 bones).
+- Munshi renders as a pile of clothes (char body offset).
+- Scan machine visual effect missing.
+- GUI screens skip fog/DoF.
+- Fog appears to rotate with the camera.
+- Slow map loads; no loading screen when loading a save.
+- Treemail list entries overlap.
+
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
