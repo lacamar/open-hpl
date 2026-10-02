@@ -155,27 +155,11 @@ void cSomaGammaScreen::Finish()
 
 	mpViewport->SetActive(false);
 
-	// Deactivating the viewport alone doesn't stop this - a GuiSet's own
-	// SetActive()/focus state (here: true/this-set, set in the
-	// constructor) is tracked separately from whatever viewport it's
-	// attached to, and cGuiSet's real cWidgetSlider/cWidgetButton (unlike
-	// cSomaSplash's plain OnDraw()-gated DrawGfx calls, which this
-	// mbFinished check already handles) render themselves via cGui's own
-	// widget pass regardless of viewport activity. Without this, the
-	// slider/Continue button kept rendering on top of every later scene
-	// (main menu, then real gameplay maps) - confirmed live, screenshots
-	// showing them still present well after Finish() ran. Same two calls
-	// cSomaMainMenu::SetVisible(false) already makes for its own GuiSet.
+	// cGui draws widgets regardless of viewport activity
 	mpGuiSet->SetActive(false);
 	if (mpGui->GetFocusedSet() == mpGuiSet)
 		mpGui->SetFocus(NULL);
 
-	// Persist whatever gamma the user landed on, so it survives past this
-	// process - without this, the calibration would only ever affect the
-	// live cLowLevelGraphics state for the current run (SetGammaCorrection()
-	// above in GammaSliderMoved() has no config-writing side effect of its
-	// own), and the real Options screen's own Gamma slider (see
-	// SomaMainMenu.cpp/SomaConfig.h) would silently forget it on next boot.
 	if (mpBase)
 	{
 		mpBase->GetConfig()->mfGamma = mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection();
@@ -218,14 +202,7 @@ void cSomaGammaScreen::Update(float afTimeStep)
 	if (mbFinished)
 		return;
 
-	// cGui does not poll iMouse on its own anywhere in this engine - the
-	// real game's own LuxInputHandler.cpp does this manually every frame
-	// for Dark Descent (see its UpdateGlobalInput()), and cSomaMainMenu.cpp
-	// does the same locally for its own hand-rolled hit-testing. This
-	// screen uses real cWidgetSlider/cWidgetButton widgets instead (unlike
-	// the main menu), which route through cGui's own internal widget click
-	// handling - SendMousePos()+SendMouseClickDown()/Up() (the same calls
-	// LuxInputHandler.cpp makes) is the minimal real pump those need.
+	// cGui does not poll iMouse itself
 	iMouse *pMouse = mpEngine->GetInput()->GetMouse();
 	if (pMouse)
 	{

@@ -105,7 +105,6 @@ public:
 	void OnDraw(float afFrameTime);
 
 private:
-	bool mbEscapeDown = false;
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);

@@ -85,7 +85,7 @@ protected:
 
 // AreaType="PlayerStart" -> a real cStartPosEntity, so
 // cWorld::GetStartPosEntity() can find it by name (same mechanism Rebirth's
-// cRebirthAreaLoader_PlayerStart uses - see cSomaBase::LoadMap()/InitTestMap()
+// cRebirthAreaLoader_PlayerStart uses - see cSomaBase::LoadMap()
 // in SomaBase.cpp for how/whether this is queried).
 class cSomaAreaLoader_PlayerStart : public iAreaLoader
 {

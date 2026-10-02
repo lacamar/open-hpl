@@ -457,15 +457,6 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	if (gpSomaBase->ScriptsHeld())
 		return;
 	bool bMap = cSomaLuxMap::GetCurrent() != NULL;
-	if (bMap && gpSomaBase->UsesScriptPlayer() && gpSomaBase->UsesScriptMenu() == false)
-	{
-		bool bEscape = gpSomaBase->mpEngine->GetInput()->GetKeyboard()->KeyIsDown(eKey_Escape);
-		if (bEscape && mbEscapeDown == false)
-			gpSomaBase->SetGameplayPaused(gpSomaBase->IsGameplayPaused() == false);
-		mbEscapeDown = bEscape;
-	}
-	if (gpSomaBase->IsGameplayPaused() && gpSomaBase->mbScriptGamePaused == false)
-		return;
 	tString sMap, sStart, sError;
 	if (SomaTakePendingMapChange(sMap, sStart))
 	{
@@ -505,7 +496,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	}
 	if (cSomaLuxGame::Get())
 	{
-		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesScriptPlayer() && gpSomaBase->UsesRealPlayer();
+		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesRealPlayer();
 		cSomaLuxGame::Get()->Update(afTimeStep, gpSomaBase->mbScriptGamePaused);
 	}
 	if (cSomaLuxMap::GetCurrent() && gpSomaBase->mbScriptGamePaused == false)

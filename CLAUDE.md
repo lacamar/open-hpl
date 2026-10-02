@@ -88,8 +88,7 @@ install directory writable.
 
 Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 `OPENHPL_SOMA_MAP=<file.hpm>`, `OPENHPL_SOMA_SKIP_BOOT=1`, `OPENHPL_SOMA_FREECAM=1`,
-`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`, `OPENHPL_SOMA_SCRIPT_PLAYER=0` (hand-written cSomaPlayer instead of
-player/Player.hps), `OPENHPL_SOMA_NATIVE_MENU=1` (native menu instead of the game's MenuHandler). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
+`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`. Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 
 `scripts/hpl_control.py --socket <sock> <cmd> [k=v ...]`:
 

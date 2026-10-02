@@ -12,7 +12,6 @@
 #include "HpslTranspiler.h"
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
-#include "SomaMenuSfx.h"
 #include "SomaFsb.h"
 #include "SomaSplash.h"
 #include "SomaLuxPlayer.h"
@@ -53,19 +52,6 @@ cSomaBase *gpSomaBase = NULL;
 
 //---------------------------------------
 
-//////////////////////////////////////////////////////////////////////////
-// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
-//
-// Still just the shared debug camera's own transform, whether it's actually
-// being driven by cSomaDebugFreeCamera or (see SomaPlayer.h) a real
-// character body - both write straight into the same cCamera, so this needs
-// no changes to support the real player controller. mpDebugCamera is
-// checked at call time, not registration time: it doesn't exist until
-// InitMainMenuScene()/InitTestMap() run, which happens later (after the
-// splash sequence, via OnSplashFinished()) than where these are registered
-// below. There is still no script layer at all - see SomaPlayer.h/PORTING_NOTES.md.
-//////////////////////////////////////////////////////////////////////////
-
 static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -82,9 +68,6 @@ static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessR
 	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
 	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
 	aResp.Set("fps", pBase->mpEngine->GetFPS());
-	// Degrees, not cCamera::GetFOV()'s native radians - added to verify the
-	// real Options screen's Horizontal FOV slider (see SomaConfig.h's
-	// mfFOV/SomaPlayer.cpp) actually reaches the real camera live.
 	aResp.Set("fov_deg", cMath::ToDeg(pBase->GetDebugCamera()->GetFOV()));
 }
 
@@ -639,13 +622,6 @@ static void cSomaBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessReq
 	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
 }
 
-// Lets a headless caller load any real map by basename (found via the same
-// resource-dir search InitTestMap()/InitMainMenuScene() already use) instead
-// of being stuck with whatever InitMainMenuScene()/InitTestMap()'s
-// boot-time fallback logic decided - added specifically so this scaffold's
-// real content (e.g. 00_01_apartment.hpm) can be inspected headlessly now
-// that InitMainMenuScene() succeeds (loading a real but legitimately empty
-// main_menu.hpm - see PORTING_NOTES.md) and no longer falls back to it.
 static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -665,7 +641,6 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 		aResp.SetError(sError);
 		return;
 	}
-	pBase->HideMenusForHeadlessMapStart();
 
 	aResp.SetRaw("load_report", cWorldLoaderHpm::GetLastLoadReportJson());
 }
@@ -853,81 +828,6 @@ static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest 
 	aResp.SetRaw("gbuffer", sOut + "]");
 }
 
-// "forward"/"backward"/"left"/"right"/"jump" -> eSomaPlayerAction, shared by
-// the two headless commands below. Returns false (aResp gets an error set by
-// the caller) for anything else.
-static bool ParsePlayerActionName(const tString &asName, cSomaBase::eSomaPlayerAction &aActionOut)
-{
-	tString sLower = cString::ToLowerCase(asName);
-	if(sLower == "forward") { aActionOut = cSomaBase::eSomaPlayerAction_Forward; return true; }
-	if(sLower == "backward") { aActionOut = cSomaBase::eSomaPlayerAction_Backward; return true; }
-	if(sLower == "left") { aActionOut = cSomaBase::eSomaPlayerAction_Left; return true; }
-	if(sLower == "right") { aActionOut = cSomaBase::eSomaPlayerAction_Right; return true; }
-	if(sLower == "jump") { aActionOut = cSomaBase::eSomaPlayerAction_Jump; return true; }
-	return false;
-}
-
-// Headless-only verification hooks for SomaMainMenu.cpp's real KEYBINDINGS
-// screen (see cSomaBase::RebindPlayerAction()/GetPlayerActionKeyName()) -
-// same idea as camera_state/set_camera above, letting this be tested without
-// clicking through the actual menu UI pixel-by-pixel. "keybind_get" reads
-// the current binding; "keybind_set" rebinds it exactly like clicking a row
-// and pressing a key would (used together with the generic "input" command's
-// type=key events and "action_triggered" below to prove a rebind actually
-// changes which real key the player controller responds to).
-static void cSomaBase_HeadlessCmd_KeybindGet(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
-{
-	cSomaBase *pBase = (cSomaBase*)apUserData;
-	cSomaBase::eSomaPlayerAction action;
-	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
-	{
-		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
-		return;
-	}
-
-	aResp.Set("key", pBase->GetPlayerActionKeyName(action));
-}
-
-static void cSomaBase_HeadlessCmd_KeybindSet(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
-{
-	cSomaBase *pBase = (cSomaBase*)apUserData;
-	cSomaBase::eSomaPlayerAction action;
-	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
-	{
-		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
-		return;
-	}
-
-	tString sKeyName = aReq.GetString("key", "");
-	eKey key = pBase->mpEngine->GetInput()->GetKeyboard()->StringToKey(sKeyName);
-	if(key == eKey_LastEnum)
-	{
-		aResp.SetError("unknown 'key' name: '" + sKeyName + "'");
-		return;
-	}
-
-	pBase->RebindPlayerAction(action, key);
-	aResp.Set("key", pBase->GetPlayerActionKeyName(action));
-}
-
-// Real cAction::IsTriggerd() readback for one of cSomaBase's 5 player
-// actions - lets a headless test confirm which real key an action responds
-// to after a keybind_set rebind, by injecting a raw "input" type=key event
-// for a specific key and checking whether the ACTION (not the key itself)
-// reports triggered.
-static void cSomaBase_HeadlessCmd_ActionTriggered(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
-{
-	cSomaBase *pBase = (cSomaBase*)apUserData;
-	cSomaBase::eSomaPlayerAction action;
-	if(ParsePlayerActionName(aReq.GetString("action", ""), action) == false)
-	{
-		aResp.SetError("unknown 'action' - expected forward/backward/left/right/jump");
-		return;
-	}
-
-	aResp.Set("triggered", pBase->mpEngine->GetInput()->IsTriggerd(cSomaBase::GetPlayerActionName(action)));
-}
-
 //---------------------------------------
 
 cSomaBase::cSomaBase()
@@ -936,20 +836,13 @@ cSomaBase::cSomaBase()
 
 	mpSplash = NULL;
 	mpGammaScreen = NULL;
-	mpMainMenu = NULL;
 
 	mpTestWorld = NULL;
 	mpDebugCamera = NULL;
 	mpDebugViewport = NULL;
 	mpDebugCameraController = NULL;
-	mpPlayer = NULL;
 	mbUseRealPlayer = true;
 
-	mpPreloadedMainMenuWorld = NULL;
-	mbMainMenuWorldPreloadAttempted = false;
-
-	mpIntroSequence = NULL;
-	mpApartmentIntroCall = NULL;
 	mpScriptRuntime = NULL;
 	mpLuxMap = NULL;
 	mpLuxUpdater = NULL;
@@ -1180,9 +1073,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("pick_entity", cSomaBase_HeadlessCmd_PickEntity, this);
 		pCtrl->RegisterHandler("set_light", cSomaBase_HeadlessCmd_SetLight, this);
 		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
-		pCtrl->RegisterHandler("keybind_get", cSomaBase_HeadlessCmd_KeybindGet, this);
-		pCtrl->RegisterHandler("keybind_set", cSomaBase_HeadlessCmd_KeybindSet, this);
-		pCtrl->RegisterHandler("action_triggered", cSomaBase_HeadlessCmd_ActionTriggered, this);
 	}
 
 	/////////////////////////////
@@ -1242,67 +1132,33 @@ void cSomaBase::OnGammaScreenFinished()
 
 void cSomaBase::ProceedPastBoot()
 {
-	// Opt-in escape hatch for interactively looking at real map content -
-	// InitMainMenuScene() (the normal path) loads a real but legitimately
-	// empty main_menu.hpm, since there's no menu/script layer yet to make
-	// anything else of it. Set OPENHPL_SOMA_MAP to a real map filename
-	// (e.g. "00_01_apartment.hpm") to load that instead, so a real desktop
-	// launch can show real geometry/lighting without needing the headless
-	// control-socket workflow. No effect when unset.
 	const char *pTestMap = getenv("OPENHPL_SOMA_MAP");
 	if (pTestMap != NULL && pTestMap[0] != '\0')
 	{
 		tString sError;
-		tString sStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS") ? getenv("OPENHPL_SOMA_MAP_STARTPOS") : "*";
-		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, sStartPos) == false)
-		{
-			Log("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s), falling back to the main menu scene\n",
-				pTestMap, sError.c_str());
-		}
-		else
-		{
-			// A custom test map won instead of the real main menu - destroy
-			// any real main-menu world cSomaSplash's boot-init phase already
-			// loaded via PreloadMainMenuWorld() (see that method's own
-			// comment), else it leaks: InitMainMenuScene() (the only other
-			// consumer) never runs on this path, so nothing else will ever
-			// free the cWorld cScene::LoadWorld() heap-allocated for it.
-			if (mpPreloadedMainMenuWorld)
-			{
-				mpEngine->GetScene()->DestroyWorld(mpPreloadedMainMenuWorld);
-				mpPreloadedMainMenuWorld = NULL;
-			}
+		const char *pStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS");
+		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, pStartPos ? pStartPos : "*"))
 			return;
-		}
+		Log("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s)\n", pTestMap, sError.c_str());
 	}
 
-	if (UsesScriptMenu() && cSomaLuxMap::GetCurrent())
-		return;
-
-	if (InitMainMenuScene() == false)
-	{
-		Log("SOMA: could not load main menu scene ('%s'), falling back to the "
-			"apartment test map\n", cString::To8Char(msErrorMessage).c_str());
-		InitTestMap();
-	}
+	if (cSomaLuxMap::GetCurrent() == NULL)
+		LoadScriptMainMenu();
 }
 
 //-----------------------------------------------------------------------
 
 void cSomaBase::Exit()
 {
-	ExitTestMap();
-	ExitEngine();
+	if (mpEngine)
+		DestroyHPLEngine(mpEngine);
+	mpEngine = NULL;
 }
 
 //-----------------------------------------------------------------------
 
 void cSomaBase::Run()
 {
-	// Main loop - a map is loaded and either the debug free-fly camera or
-	// (the default for real game maps - see LoadMap()) a real physics-based
-	// player controller (see SomaPlayer.h) is active, but there is still no
-	// script layer running at all (no OnStart()/quest/door/intro logic).
 	mpEngine->Run();
 }
 
@@ -1387,13 +1243,6 @@ void cSomaBase::SetupLogFile()
 
 bool cSomaBase::InitEngine()
 {
-	// Real physics-based player controller (see SomaPlayer.h/.cpp) for real
-	// game maps loaded via LoadMap() - the debug free-fly camera stays
-	// available as an opt-out escape hatch (e.g. to no-clip through a level
-	// for inspection) via OPENHPL_SOMA_FREECAM=1. Main menu scenes
-	// (InitMainMenuScene()) and the old InitTestMap() fallback always keep
-	// using the free-fly camera regardless of this flag - no player body
-	// makes sense there.
 	const char *pFreeCam = getenv("OPENHPL_SOMA_FREECAM");
 	mbUseRealPlayer = pFreeCam == NULL || pFreeCam[0] == 0 || strcmp(pFreeCam, "0") == 0;
 
@@ -1401,7 +1250,7 @@ bool cSomaBase::InitEngine()
 	// FMOD virtualises voices past its 64 (MaxVirtualChannels=1000); OpenAL fails instead
 	vars.mSound.mlMaxChannels = 128;
 	vars.mSound.mbUseEnvironmentalAudio = true;
-	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
+	vars.mGraphics.msWindowCaption = msGameName;
 
 	// Load persisted settings (see SomaConfig.h) - deliberately AFTER
 	// SetLogFile() above: cConfigFile::Load()/cSomaConfig::Load() both Log()
@@ -1471,8 +1320,6 @@ bool cSomaBase::InitEngine()
 		{
 			mpLuxGame = new cSomaLuxGame(mpScriptRuntime);
 			mpLuxGame->Load();
-			const char *pScriptPlayer = getenv("OPENHPL_SOMA_SCRIPT_PLAYER");
-			mbUseScriptPlayer = cSomaLuxPlayer::Get() && (pScriptPlayer == NULL || strcmp(pScriptPlayer, "0") != 0);
 			mpLuxUpdater = hplNew(cSomaLuxUpdater, ());
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpLuxUpdater);
 		}
@@ -1483,9 +1330,6 @@ bool cSomaBase::InitEngine()
 		}
 	}
 
-	// FMOD-banked audio -> cache resource dirs; before any map or menu loads
-	cSomaMenuSfx::EnsureCached(mpEngine->GetResources());
-
 	/////////////////////////
 	// Apply the persisted settings that DO have a live/runtime API (unlike
 	// Fullscreen above, which only applies at the next InitEngine()) - same
@@ -1495,148 +1339,16 @@ bool cSomaBase::InitEngine()
 	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mConfig.mfGamma);
 	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mConfig.mbVSync, false);
 
-	CreateInputActions();
-
 	return true;
 }
 
 //-----------------------------------------------------------------------
 
-const char* cSomaBase::GetPlayerActionName(eSomaPlayerAction aAction)
-{
-	switch (aAction)
-	{
-	case eSomaPlayerAction_Forward: return "SomaMoveForward";
-	case eSomaPlayerAction_Backward: return "SomaMoveBackward";
-	case eSomaPlayerAction_Left: return "SomaMoveLeft";
-	case eSomaPlayerAction_Right: return "SomaMoveRight";
-	case eSomaPlayerAction_Jump: return "SomaJump";
-	default: return "";
-	}
-}
-
-//-----------------------------------------------------------------------
-
-const wchar_t* cSomaBase::GetPlayerActionLabel(eSomaPlayerAction aAction)
-{
-	switch (aAction)
-	{
-	case eSomaPlayerAction_Forward: return L"MOVE FORWARD";
-	case eSomaPlayerAction_Backward: return L"MOVE BACKWARD";
-	case eSomaPlayerAction_Left: return L"MOVE LEFT";
-	case eSomaPlayerAction_Right: return L"MOVE RIGHT";
-	case eSomaPlayerAction_Jump: return L"JUMP";
-	default: return L"";
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cSomaBase::CreateInputActions()
-{
-	// Real defaults matching cSomaPlayer's own previous hardcoded
-	// eKey_W/S/A/D/Space checks (see SomaPlayer.cpp) - used whenever the
-	// persisted config has no value yet (fresh install) or an
-	// unparseable one (hand-edited typo).
-	struct cDefaultBinding { eSomaPlayerAction mAction; tString *mpConfigField; eKey mDefaultKey; };
-	cDefaultBinding vDefaults[] = {
-		{ eSomaPlayerAction_Forward,  &mConfig.msKeyForward,  eKey_W },
-		{ eSomaPlayerAction_Backward, &mConfig.msKeyBackward, eKey_S },
-		{ eSomaPlayerAction_Left,     &mConfig.msKeyLeft,     eKey_A },
-		{ eSomaPlayerAction_Right,    &mConfig.msKeyRight,    eKey_D },
-		{ eSomaPlayerAction_Jump,     &mConfig.msKeyJump,     eKey_Space },
-	};
-
-	iKeyboard *pKeyboard = mpEngine->GetInput()->GetKeyboard();
-
-	for (size_t i = 0; i < sizeof(vDefaults) / sizeof(vDefaults[0]); ++i)
-	{
-		const cDefaultBinding &def = vDefaults[i];
-
-		cAction *pAction = mpEngine->GetInput()->CreateAction(GetPlayerActionName(def.mAction));
-
-		eKey key = pKeyboard->StringToKey(*def.mpConfigField);
-		if (key == eKey_LastEnum)
-		{
-			// Unparseable (or empty, on a fresh install where the config
-			// field's constructor default is already the right string, but
-			// this also self-heals a hand-edited bad value) - fall back to
-			// the real hardcoded default and persist the corrected value so
-			// it reads back clean next time.
-			key = def.mDefaultKey;
-			*def.mpConfigField = pKeyboard->KeyToString(key);
-		}
-
-		pAction->AddKey(key);
-	}
-
-	mConfig.Save();
-}
-
-//-----------------------------------------------------------------------
-
-void cSomaBase::RebindPlayerAction(eSomaPlayerAction aAction, eKey aKey)
-{
-	cAction *pAction = mpEngine->GetInput()->GetAction(GetPlayerActionName(aAction));
-	if (pAction == NULL)
-		return;
-
-	pAction->ClearSubActions();
-	pAction->AddKey(aKey);
-
-	tString sKeyName = mpEngine->GetInput()->GetKeyboard()->KeyToString(aKey);
-	switch (aAction)
-	{
-	case eSomaPlayerAction_Forward:  mConfig.msKeyForward  = sKeyName; break;
-	case eSomaPlayerAction_Backward: mConfig.msKeyBackward = sKeyName; break;
-	case eSomaPlayerAction_Left:     mConfig.msKeyLeft     = sKeyName; break;
-	case eSomaPlayerAction_Right:    mConfig.msKeyRight    = sKeyName; break;
-	case eSomaPlayerAction_Jump:     mConfig.msKeyJump     = sKeyName; break;
-	default: break;
-	}
-
-	mConfig.Save();
-}
-
-//-----------------------------------------------------------------------
-
-tString cSomaBase::GetPlayerActionKeyName(eSomaPlayerAction aAction)
-{
-	cAction *pAction = mpEngine->GetInput()->GetAction(GetPlayerActionName(aAction));
-	if (pAction == NULL || pAction->GetSubActionNum() == 0)
-		return "-";
-
-	return pAction->GetSubAction(0)->GetInputName();
-}
-
-//-----------------------------------------------------------------------
-
-void cSomaBase::SetGameplayPaused(bool abPaused)
-{
-	if (mpPlayer)
-		mpPlayer->SetActive(abPaused == false);
-
-	if (mpMainMenu)
-	{
-		if (abPaused)
-			mpMainMenu->ShowPaused();
-		else
-			mpMainMenu->HidePaused();
-	}
-}
-
-//-----------------------------------------------------------------------
-
-bool cSomaBase::IsGameplayPaused()
-{
-	return mbScriptGamePaused || (mpMainMenu && mpMainMenu->IsPaused());
-}
-
 void cSomaBase::LoadScriptMainMenu()
 {
 	tString sError, sMenu = GetInitConfigString("MainMenu", "File");
 	if (LoadMap(sMenu.empty() ? "main_menu.hpm" : sMenu, cVector3f(0), sError, "*") == false)
-		Log("SOMA: scripted main menu failed (%s), using the native one\n", sError.c_str());
+		Error("SOMA: main menu failed (%s)\n", sError.c_str());
 }
 
 tString cSomaBase::GetInitConfigString(const tString &asLevel, const tString &asName)
@@ -1647,220 +1359,11 @@ tString cSomaBase::GetInitConfigString(const tString &asLevel, const tString &as
 
 //-----------------------------------------------------------------------
 
-void cSomaBase::ExitEngine()
-{
-	if (mpEngine)
-		DestroyHPLEngine(mpEngine);
-	mpEngine = NULL;
-}
-
-//-----------------------------------------------------------------------
-
-// See this method's own declaration comment in SomaBase.h. Reads the same
-// main_init.cfg <MainMenu File=.../> entry InitMainMenuScene() below reads -
-// duplicated rather than cached earlier for the same reason InitMainMenuScene()
-// already re-reads it itself (Phase 0 only kept the two fields InitMainConfig()
-// needed at the time).
-cWorld* cSomaBase::PreloadMainMenuWorld()
-{
-	if (mbMainMenuWorldPreloadAttempted)
-		return mpPreloadedMainMenuWorld;
-	mbMainMenuWorldPreloadAttempted = true;
-
-	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
-	if (pInitCfg->Load() == false)
-	{
-		hplDelete(pInitCfg);
-		return NULL;
-	}
-	tString sMainMenuFile = pInitCfg->GetString("MainMenu", "File", "");
-	hplDelete(pInitCfg);
-
-	if (sMainMenuFile == "")
-		return NULL;
-
-	mpPreloadedMainMenuWorld = mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
-	return mpPreloadedMainMenuWorld;
-}
-
-//-----------------------------------------------------------------------
-
-bool cSomaBase::InitMainMenuScene()
-{
-	// Consume whatever cSomaSplash's real boot-work step already loaded
-	// (see PreloadMainMenuWorld()'s own comment) - grabbed unconditionally
-	// up front so every return path below (including the early error
-	// returns) leaves mpPreloadedMainMenuWorld NULL again, never orphaned.
-	cWorld *pPreloadedWorld = mpPreloadedMainMenuWorld;
-	mpPreloadedMainMenuWorld = NULL;
-
-	////////////////////////////////////
-	// Read the <MainMenu File="..."/> entry back out of main_init.cfg -
-	// the same file InitMainConfig() already loaded once, re-loaded here
-	// rather than caching it earlier since Phase 0 only kept the two
-	// fields it needed at the time.
-	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
-	if (pInitCfg->Load() == false)
-	{
-		msErrorMessage = _W("Could not reload main init file for <MainMenu> entry: ") + msInitConfigFile;
-		hplDelete(pInitCfg);
-		if (pPreloadedWorld) mpEngine->GetScene()->DestroyWorld(pPreloadedWorld);
-		return false;
-	}
-	tString sMainMenuFile = pInitCfg->GetString("MainMenu", "File", "");
-	hplDelete(pInitCfg);
-
-	if (sMainMenuFile == "")
-	{
-		msErrorMessage = _W("main_init.cfg has no <MainMenu File=.../> entry");
-		if (pPreloadedWorld) mpEngine->GetScene()->DestroyWorld(pPreloadedWorld);
-		return false;
-	}
-
-	////////////////////////////////////
-	// Found by basename via the resource dir search, same convention as
-	// InitTestMap()'s apartment map load below - Folder="maps/" from the
-	// config is not needed, "/maps" is already registered with AddSubDirs
-	// in SOMA's real resources.cfg. Reuses cSomaSplash's real preload
-	// (see PreloadMainMenuWorld()) instead of loading a second time when
-	// one is already available.
-	cWorld *pWorld = pPreloadedWorld ? pPreloadedWorld : mpEngine->GetScene()->LoadWorld(sMainMenuFile, 0);
-	if (pWorld == NULL)
-	{
-		msErrorMessage = _W("Could not load main menu scene '") + cString::To16Char(sMainMenuFile) + _W("'");
-		return false;
-	}
-	mpTestWorld = pWorld;
-	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
-
-	////////////////////////////////////
-	// Debug free-fly camera, same as InitTestMap() below. main_menu.hpm's
-	// own PlayerStartArea_1 has WorldPos="0 0 0" - the real menu camera
-	// path is driven entirely by scripted logic this port doesn't have
-	// (main_menu.hps plus the closed ImGui menu layer), so world origin is
-	// the only position the map data itself actually declares.
-	cCamera *pCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
-	pCamera->SetPosition(cVector3f(0, 1.7f, 0));
-	pCamera->SetFarClipPlane(200.0f);
-	mpDebugCamera = pCamera;
-
-	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
-	mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
-
-	// Each new viewport's cRenderSettings starts with FXAA off
-	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
-
-	// CHC occlusion culling reads query results back synchronously, which
-	// stalls a tile-based GPU (0.1 fps on real maps) and culled everything
-	// on AGX. Frustum culling still applies.
-	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
-
-	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
-	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
-
-	////////////////////////////////////
-	// Real interactive menu - see SomaMainMenu.h. Attached to this same
-	// camera+world viewport (not a separate GUI-only one like the splash
-	// uses), since there's a real scene behind it.
-	mpMainMenu = hplNew(cSomaMainMenu, (mpEngine, this, mpDebugViewport));
-	mpEngine->GetUpdater()->AddGlobalUpdate(mpMainMenu);
-
-	return true;
-}
-
-//-----------------------------------------------------------------------
-
-bool cSomaBase::StartNewGame(tString &asErrorOut)
-{
-	////////////////////////////////////
-	// Read the real <StartMap File="..." Pos="..."/> entry back out of
-	// main_init.cfg - same file/pattern InitMainMenuScene() already uses
-	// for <MainMenu>. A real install declares "00_00_intro.hpm"/
-	// "PlayerStartArea_1" here; the previous New Game handler hardcoded
-	// "00_01_apartment.hpm" instead (a real, but wrong, map - apartment is
-	// reached later in the intro sequence, not where a new game starts).
-	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
-	if (pInitCfg->Load() == false)
-	{
-		asErrorOut = "Could not reload main init file for <StartMap> entry";
-		hplDelete(pInitCfg);
-		return false;
-	}
-	tString sStartMapFile = pInitCfg->GetString("StartMap", "File", "");
-	tString sStartMapPos = pInitCfg->GetString("StartMap", "Pos", "");
-	hplDelete(pInitCfg);
-
-	if (sStartMapFile == "")
-	{
-		asErrorOut = "main_init.cfg has no <StartMap File=.../> entry";
-		return false;
-	}
-
-	return LoadMap(sStartMapFile, cVector3f(0, 1.7f, 0), asErrorOut, sStartMapPos);
-}
-
-//-----------------------------------------------------------------------
-
-void cSomaBase::OnIntroSequenceFinished()
-{
-	tString sError;
-	if (LoadMap("00_01_apartment.hpm", cVector3f(0, 1.7f, 0), sError, "PlayerStartArea_1") == false)
-		Log("SOMA: intro sequence finished but failed to load next map (%s)\n", sError.c_str());
-}
-
-//-----------------------------------------------------------------------
-
-bool cSomaBase::InitTestMap()
-{
-	////////////////////////////////////
-	// Hardcoded Phase 1 test map: chapter00/00_01_apartment - smallest,
-	// earliest, indoor map, expected not to need terrain. Found by basename
-	// via the resource dir search ("/maps" is registered with AddSubDirs in
-	// SOMA's real resources.cfg), same convention meshes/entities use - so
-	// this is not an absolute filesystem path.
-	cWorld *pWorld = mpEngine->GetScene()->LoadWorld("00_01_apartment.hpm", 0);
-	if (pWorld == NULL)
-	{
-		msErrorMessage = _W("Could not load test map '00_01_apartment.hpm'!");
-		return false;
-	}
-	mpTestWorld = pWorld;
-	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
-
-	////////////////////////////////////
-	// Debug free-fly camera (see DebugFreeCamera.h) - no player controller.
-	// Start position/facing taken directly from the map's own
-	// "PlayerStartArea_1" PlayerStart Area (WorldPos="-10.75 1.01415 8.25"
-	// Rotation="-0 3.92803 -0" in 00_01_apartment.hpm_Area), nudged up to a
-	// more eye-like height. Hardcoded rather than resolved through the
-	// engine's Area system, since Phase 1 has no game-side PlayerStart area
-	// loader registered to query.
-	cCamera *pCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
-	pCamera->SetPosition(cVector3f(-10.75f, 1.7f, 8.25f));
-	pCamera->SetYaw(3.92803f);
-	pCamera->SetFarClipPlane(200.0f);
-	mpDebugCamera = pCamera;
-
-	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
-	mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
-	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing; // see InitMainMenuScene()'s copy of this line
-
-	mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (pCamera, mpEngine->GetInput()));
-	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
-
-	return true;
-}
-
-//-----------------------------------------------------------------------
-
 bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
 						 const tString &asStartPosName)
 {
 	if (mfGameStartTime < 0)
 		mfGameStartTime = mpEngine->GetGameTime();
-	// Found by basename via the resource dir search, same convention as
-	// InitTestMap()/InitMainMenuScene() above ("/maps" is registered with
-	// AddSubDirs in SOMA's real resources.cfg).
 	cWorld *pNewWorld = mpEngine->GetScene()->LoadWorld(asMapFile, 0);
 	if (pNewWorld == NULL)
 	{
@@ -1868,16 +1371,6 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		return false;
 	}
 
-	// mpPlayer's character body (if any) belongs to mpTestWorld's specific
-	// physics world - must be destroyed before DestroyWorld() below frees
-	// that physics world out from under it, or cSomaPlayer::ResetForNewMap()
-	// (called further down) would call iPhysicsWorld::DestroyCharacterBody()
-	// on an already-dangling pointer. Found live via a real SIGSEGV: the
-	// first LoadMap() call (menu -> New Game) worked fine (no old body to
-	// destroy yet), but a second one (e.g. a headless "start_map" reload)
-	// crashed immediately in cSomaPlayer::DestroyCharacterBody().
-	if (mpPlayer) mpPlayer->DestroyCharacterBody();
-	if (mpApartmentIntroCall) mpApartmentIntroCall->Cancel();
 	if (mpLuxMap)
 	{
 		mpLuxMap->OnLeave();
@@ -1886,22 +1379,12 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		hplDelete(mpLuxMap);
 		mpLuxMap = NULL;
 	}
-	if (mpIntroSequence) mpIntroSequence->Cancel();
 
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
 	mpTestWorld = pNewWorld;
 	cSomaToneMapping::Get()->OnMapLoaded(mpTestWorld);
 
-	// Reuse the existing camera/viewport if this isn't the first load rather
-	// than destroying and recreating them - cUpdater has no "remove"
-	// counterpart to AddGlobalUpdate() (see ExitTestMap()'s own comment on
-	// this), so a fresh controller on every call would leak one dangling
-	// iUpdateable per call once its camera is destroyed below.
-	// cViewport::SetWorld() is the real engine API for exactly this "same
-	// camera, new world" case. Note this camera/viewport may already exist
-	// from InitMainMenuScene() (StartNewGame() calling this after the menu
-	// was shown is the normal "New Game" path), not just from an earlier
-	// LoadMap() call.
+	// cUpdater has no remove, so the camera, viewport and controller are reused
 	if (mpDebugCamera == NULL)
 	{
 		mpDebugCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
@@ -1916,32 +1399,14 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 
 	// Each new viewport's cRenderSettings starts with FXAA off
 	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
+	// CHC occlusion culling reads queries back synchronously: 0.1 fps and everything culled on AGX
 	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
 
-	// Controller hand-off: InitMainMenuScene() always creates a free-fly
-	// mpDebugCameraController for the menu scene itself (see there), so the
-	// *first* real game map to load via LoadMap() (typically "New Game")
-	// needs to both disable that (rather than destroy it - same
-	// no-remove-from-cUpdater constraint as above; a live but disabled
-	// controller just returns immediately, see cSomaDebugFreeCamera::Update())
-	// and create the real player controller for the first time. A
-	// cSomaPlayer, once created, is reused/reset for every later map (see
-	// cSomaPlayer::ResetForNewMap()) rather than recreated - unlike its
-	// character body, which really does need destroying and recreating on
-	// every call, since it belongs to the old world's specific physics
-	// world, just torn down by DestroyWorld() above.
+	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 	if (mbUseRealPlayer)
 	{
-		if (mpDebugCameraController)
-			mpDebugCameraController->SetActive(false);
-
-		if (mbUseScriptPlayer)
-			cSomaLuxPlayer::Get()->SetCamera(mpDebugCamera);
-		else if (mpPlayer == NULL)
-		{
-			mpPlayer = hplNew(cSomaPlayer, (mpDebugCamera, mpEngine->GetInput()));
-			mpEngine->GetUpdater()->AddGlobalUpdate(mpPlayer);
-		}
+		if (pPlayer)
+			pPlayer->SetCamera(mpDebugCamera);
 	}
 	else
 	{
@@ -1951,74 +1416,48 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 		}
 		// The player script still needs a camera; this one is never rendered
-		if (mbUseScriptPlayer && cSomaLuxPlayer::Get()->GetCamera() == NULL)
-			cSomaLuxPlayer::Get()->SetCamera(mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
+		if (pPlayer && pPlayer->GetCamera() == NULL)
+			pPlayer->SetCamera(mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
 	}
 
-	// Resolve a real PlayerStart Area by name if asked for (requires
-	// cSomaAreaLoader_PlayerStart - see SomaLoaders.h - to have populated
-	// one via CreateStartPos() while pNewWorld loaded above); otherwise fall
-	// back to the caller-supplied position, same as before this existed.
-	// Also pulls the Area's real yaw rotation now (previously discarded -
-	// the free-fly camera always started facing world-forward regardless of
-	// which way the PlayerStart actually faced), needed for the real player
-	// controller below and applied to the free-fly camera too as a minor
-	// side-fix.
 	if (pNewWorld->GetPhysicsWorld())
 	{
-		// Doors and drawers hang off joints and are held shut by the map scripts;
-		// without them they swing open on load and grind along the static geometry
-		// (60 -> 10 fps on 03_03_omicron_descent), so they are pinned then.
-		std::set<iPhysicsBody*> setJointed;
-		cPhysicsJointIterator jointIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
-		while (jointIt.HasNext())
-		{
-			iPhysicsJoint *pJoint = jointIt.Next();
-			if (pJoint->GetChildBody()) setJointed.insert(pJoint->GetChildBody());
-			if (pJoint->GetParentBody()) setJointed.insert(pJoint->GetParentBody());
-		}
-
 		// Doors and drawers are held by their joints; contacts with the static frame they are
 		// mounted in and what rests against it would pin them with friction
-		if (mbUseScriptPlayer)
+		static cSomaJointFrameFilter gFrameFilter;
+		gFrameFilter.mmapIgnored.clear();
+		std::vector<iPhysicsBody*> vStatic;
+		cPhysicsBodyIterator staticIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
+		while (staticIt.HasNext())
 		{
-			static cSomaJointFrameFilter gFrameFilter;
-			gFrameFilter.mmapIgnored.clear();
-			std::vector<iPhysicsBody*> vStatic;
-			cPhysicsBodyIterator staticIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
-			while (staticIt.HasNext())
+			iPhysicsBody *pBody = staticIt.Next();
+			if (pBody->GetMass() <= 0 && pBody->GetCollide()) vStatic.push_back(pBody);
+		}
+		cPhysicsJointIterator frameIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
+		while (frameIt.HasNext())
+		{
+			iPhysicsJoint *pJoint = frameIt.Next();
+			iPhysicsBody *pChild = pJoint->GetChildBody();
+			if (pChild == NULL || pChild->GetMass() <= 0 || (pJoint->GetParentBody() && pJoint->GetParentBody()->GetMass() > 0))
+				continue;
+			cBoundingVolume *pBV = pChild->GetBoundingVolume();
+			cVector3f vMin = pBV->GetMin() - 0.02f, vMax = pBV->GetMax() + 0.02f;
+			for (iPhysicsBody *pStatic : vStatic)
 			{
-				iPhysicsBody *pBody = staticIt.Next();
-				if (pBody->GetMass() <= 0 && pBody->GetCollide()) vStatic.push_back(pBody);
+				cBoundingVolume *pOther = pStatic->GetBoundingVolume();
+				if (cMath::CheckAABBIntersection(vMin, vMax, pOther->GetMin(), pOther->GetMax()))
+					gFrameFilter.mmapIgnored[pChild].insert(pStatic);
 			}
-			cPhysicsJointIterator frameIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
-			while (frameIt.HasNext())
-			{
-				iPhysicsJoint *pJoint = frameIt.Next();
-				iPhysicsBody *pChild = pJoint->GetChildBody();
-				if (pChild == NULL || pChild->GetMass() <= 0 || (pJoint->GetParentBody() && pJoint->GetParentBody()->GetMass() > 0))
-					continue;
-				cBoundingVolume *pBV = pChild->GetBoundingVolume();
-				cVector3f vMin = pBV->GetMin() - 0.02f, vMax = pBV->GetMax() + 0.02f;
-				for (iPhysicsBody *pStatic : vStatic)
-				{
-					cBoundingVolume *pOther = pStatic->GetBoundingVolume();
-					if (cMath::CheckAABBIntersection(vMin, vMax, pOther->GetMin(), pOther->GetMax()))
-						gFrameFilter.mmapIgnored[pChild].insert(pStatic);
-				}
-				if (gFrameFilter.mmapIgnored.count(pChild))
-					pChild->AddBodyCallback(&gFrameFilter);
-			}
+			if (gFrameFilter.mmapIgnored.count(pChild))
+				pChild->AddBodyCallback(&gFrameFilter);
 		}
 
-		// Everything else is authored at rest; Newton wakes a body again on contact.
+		// Everything is authored at rest; Newton wakes a body again on contact.
 		cPhysicsBodyIterator bodyIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
 		while (bodyIt.HasNext())
 		{
 			iPhysicsBody *pBody = bodyIt.Next();
-			if (pBody->GetMass() <= 0) continue;
-			if (setJointed.count(pBody) && mbUseScriptPlayer == false) pBody->SetMass(0);
-			else pBody->Sleep();
+			if (pBody->GetMass() > 0) pBody->Sleep();
 		}
 	}
 
@@ -2045,53 +1484,10 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		}
 	}
 
-	if (mbUseRealPlayer && mpPlayer)
-	{
-		// Real feet position: the PlayerStart Area's raw translation (no
-		// eye-height fudge - the character body's own size/CameraPosAdd
-		// handles that, see SomaPlayer.cpp), or the caller-supplied
-		// fallback position when no named Area was found (only exercised by
-		// the OPENHPL_SOMA_MAP debug env var / the "start_map" headless
-		// command with no 'pos' field).
-		mpPlayer->ResetForNewMap(mpTestWorld->GetPhysicsWorld(), vAreaPos, fAreaYaw);
-	}
-	else
-	{
-		cVector3f vCamPos = bFoundArea ? (vAreaPos + cVector3f(0, 0.5f, 0)) : avStartPos;
-		mpDebugCamera->SetPosition(vCamPos);
-		mpDebugCamera->SetPitch(0);
-		mpDebugCamera->SetYaw(fAreaYaw);
-	}
-
-	// Real 00_00_intro.hpm is a non-interactive 2D slideshow, not walkable 3D
-	// content - real OnEnter() calls Player_SetActive(false) for the whole
-	// map (see SomaIntroSequence.h for the full reverse-engineering
-	// citation). Matched on the real map filename here in LoadMap() itself,
-	// not just the "New Game" call site (StartNewGame() just calls this),
-	// so it also fires for a direct "start_map" headless reload used to
-	// verify it - same as the real engine, which runs this map's OnEnter()
-	// regardless of how it was reached.
-	if (mpPlayer) mpPlayer->SetActive(asMapFile != "00_00_intro.hpm");
-	if (asMapFile == "00_00_intro.hpm" && mbUseScriptPlayer == false)
-	{
-		if (mpIntroSequence == NULL)
-		{
-			mpIntroSequence = hplNew(cSomaIntroSequence, (mpEngine, this));
-			mpEngine->GetUpdater()->AddGlobalUpdate(mpIntroSequence);
-		}
-		mpIntroSequence->Restart();
-	}
-
-	// Munshi phone call (SomaApartmentIntroCall.h); cUpdater has no remove, so the object persists
-	if (asMapFile == "00_01_apartment.hpm" && mbUseScriptPlayer == false)
-	{
-		if (mpApartmentIntroCall == NULL)
-		{
-			mpApartmentIntroCall = hplNew(cSomaApartmentIntroCall, (mpEngine, this));
-			mpEngine->GetUpdater()->AddGlobalUpdate(mpApartmentIntroCall);
-		}
-		mpApartmentIntroCall->Restart();
-	}
+	cVector3f vCamPos = bFoundArea ? (vAreaPos + cVector3f(0, 0.5f, 0)) : avStartPos;
+	mpDebugCamera->SetPosition(vCamPos);
+	mpDebugCamera->SetPitch(0);
+	mpDebugCamera->SetYaw(fAreaYaw);
 
 	if (mpScriptRuntime)
 	{
@@ -2104,8 +1500,8 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			{
 				mpLuxGame->PreloadData(mpLuxMap);
 				mpLuxGame->EnterMap(mpLuxMap);
-				if (mbUseScriptPlayer && mbUseRealPlayer)
-					cSomaLuxPlayer::Get()->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
+				if (pPlayer && mbUseRealPlayer)
+					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
 			cSomaSaveHandler::ApplyPendingState();
@@ -2117,33 +1513,3 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
-
-void cSomaBase::HideMenusForHeadlessMapStart()
-{
-	if (mpMainMenu) mpMainMenu->SetVisible(false);
-}
-
-void cSomaBase::ExitTestMap()
-{
-	// mpDebugCamera / mpDebugViewport / mpTestWorld are owned by cScene and
-	// torn down together with the rest of the engine in ExitEngine().
-	//
-	// mpDebugCameraController was registered with cUpdater::AddGlobalUpdate,
-	// which (like the rest of this codebase's global systems - input,
-	// physics, scene, graphics, sound, AI, gui, resources, all added the
-	// same way in cEngine::GameInit) has no matching "remove" API; cUpdater
-	// itself is destroyed as part of DestroyHPLEngine() right after this
-	// call, with no further Update() in between, so it's left for that
-	// teardown rather than explicitly deleted here against a dangling
-	// reference in the updater's list.
-	mpDebugCameraController = NULL;
-	mpPlayer = NULL;
-
-	mpDebugViewport = NULL;
-	mpDebugCamera = NULL;
-	mpTestWorld = NULL;
-}
-
-//-----------------------------------------------------------------------
