@@ -11,8 +11,9 @@ particles), "Last on SOMA" save-load screen, lights/particles/sounds/billboards 
 applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when behind the focus.
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- World fog `Underwater`/`UseSkybox`/`Secondary*`/noise (most outside maps) not loaded or
-  rendered.
+- `<DirLight>` cascaded shadow maps (sun lights interiors on the 14 maps that use it).
+- `<EnvParticles>` (marine snow, 13 maps), `EnvParticlesToClip` areas, `cEnvironmentParticles`.
+- Translucents ignore underwater/secondary world fog.
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
 - Slow map loads.
 - Treemail list entries overlap.

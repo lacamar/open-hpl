@@ -55,6 +55,7 @@
 #include "scene/LightPoint.h"
 #include "scene/LightSpot.h"
 #include "scene/LightBox.h"
+#include "scene/LightDirectional.h"
 #include "scene/MeshEntity.h"
 #include "scene/SoundEntity.h"
 #include "scene/ParticleEmitter.h"
@@ -156,8 +157,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	cLightDirectional* cWorld::GetDirectionalLight()
+	{
+		if(mpDirectionalLight==NULL) mpDirectionalLight = hplNew(cLightDirectional, ("WorldDirectional", mpResources));
+		return mpDirectionalLight;
+	}
+
+	//-----------------------------------------------------------------------
+
 	cWorld::~cWorld()
 	{
+		if(mpDirectionalLight) hplDelete(mpDirectionalLight);
 		if(mpSkyBoxVtxBuffer) hplDelete(mpSkyBoxVtxBuffer);
 		if(mpSkyBoxTexture && mbAutoDestroySkybox)
 		{

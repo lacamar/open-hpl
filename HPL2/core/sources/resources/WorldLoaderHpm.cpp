@@ -16,7 +16,7 @@
 #include "scene/World.h"
 #include "scene/MeshEntity.h"
 #include "scene/SubMeshEntity.h"
-#include "scene/Light.h"
+#include "scene/LightDirectional.h"
 #include "scene/BillBoard.h"
 #include "scene/FogArea.h"
 #include "scene/ParticleSystem.h"
@@ -187,6 +187,36 @@ namespace hpl {
 					mpCurrentWorld->SetFogStart(pFog->GetAttributeFloat("FadeStart", 0.0f));
 					mpCurrentWorld->SetFogEnd(pFog->GetAttributeFloat("FadeEnd", 0.0f));
 					mpCurrentWorld->SetFogCulling(pFog->GetAttributeBool("Culling", true));
+					mpCurrentWorld->SetFogBrightness(pFog->GetAttributeFloat("Brightness", 1));
+					mpCurrentWorld->SetFogUnderwater(pFog->GetAttributeBool("Underwater", false));
+					mpCurrentWorld->SetFogUseSkybox(pFog->GetAttributeBool("UseSkybox", false));
+					mpCurrentWorld->SetFogApplyAfterFogAreas(pFog->GetAttributeBool("ApplyAfterFogAreas", true));
+					mpCurrentWorld->SetFogNoise(pFog->GetAttributeFloat("NoiseStrength", 0), pFog->GetAttributeFloat("NoiseSize", 1),
+												pFog->GetAttributeVector3f("NoiseTurbulence", 0));
+					mpCurrentWorld->SetSecondaryFogActive(pFog->GetAttributeBool("SecondaryActive", false));
+					mpCurrentWorld->SetSecondaryFogColor(pFog->GetAttributeColor("SecondaryColor", cColor(0, 0)));
+					mpCurrentWorld->SetSecondaryFogStart(pFog->GetAttributeFloat("SecondaryFadeStart", 0));
+					mpCurrentWorld->SetSecondaryFogEnd(pFog->GetAttributeFloat("SecondaryFadeEnd", 0));
+					mpCurrentWorld->SetSecondaryFogFalloffExp(pFog->GetAttributeFloat("SecondaryFalloffExp", 1));
+				}
+
+				cXmlElement* pDir = pGlobal->GetFirstElement("DirLight");
+				if (pDir)
+				{
+					cLightDirectional* pLight = mpCurrentWorld->GetDirectionalLight();
+					mpCurrentWorld->SetDirectionalLightActive(pDir->GetAttributeBool("Active", false));
+					pLight->SetDiffuseColor(pDir->GetAttributeColor("DiffuseColor", cColor(1, 1)));
+					pLight->SetBrightness(pDir->GetAttributeFloat("Brightness", 1));
+					pLight->SetDirection(pDir->GetAttributeVector3f("Direction", cVector3f(0, -1, 0)));
+					pLight->SetAmbientColorSky(pDir->GetAttributeColor("SkyCol", cColor(0, 0)));
+					pLight->SetAmbientColorGround(pDir->GetAttributeColor("GroundCol", cColor(0, 0)));
+					pLight->SetCastShadows(pDir->GetAttributeBool("CastShadows", false));
+					pLight->SetShadowCasterDistance(pDir->GetAttributeFloat("ShadowCasterDist", 40));
+					pLight->SetShadowMapBiasMul(pDir->GetAttributeFloat("ShadowMapBiasMul", 1));
+					pLight->SetShadowMapSlopeScaleBiasMul(pDir->GetAttributeFloat("ShadowMapSlopeScaleBiasMul", 1));
+					pLight->SetShadowMapBlurAmount(pDir->GetAttributeFloat("ShadowBlurAmount", 6));
+					pLight->SetAutoShadowSliceSettings(pDir->GetAttributeBool("AutoShadowSliceSettings", true));
+					pLight->SetAutoShadowSliceLogTerm(pDir->GetAttributeFloat("AutoShadowSliceLogTerm", 0.9f));
 				}
 
 				cXmlElement* pPost = pGlobal->GetFirstElement("PostEffects");

@@ -46,6 +46,7 @@ namespace hpl {
 	class cLightSpot;
 	class cLightPoint;
 	class cLightBox;
+	class cLightDirectional;
 	class iLight;
 	class cImageEntity;
 	class cParticleManager;
@@ -235,6 +236,16 @@ namespace hpl {
 		void SetFogCulling(bool abX) {mbFogCulling=abX;}
 		void SetFogBrightness(float afX){ mfFogBrightness = afX > 0.0001f ? afX : 0.0001f; }
 		void SetSecondaryFogBrightness(float afX){ mfSecondaryFogBrightness = afX > 0.0001f ? afX : 0.0001f; }
+		void SetFogUnderwater(bool abX){ mbFogUnderwater = abX; }
+		void SetFogUseSkybox(bool abX){ mbFogUseSkybox = abX; }
+		void SetFogSkyboxTexture(iTexture *apTexture){ mpFogSkyboxTexture = apTexture; }
+		void SetFogApplyAfterFogAreas(bool abX){ mbFogApplyAfterFogAreas = abX; }
+		void SetFogNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mfFogNoiseStrength = afStrength; mfFogNoiseSize = afSize; mvFogNoiseTurbulence = avTurbulence; }
+		void SetSecondaryFogActive(bool abX){ mbSecondaryFogActive = abX; }
+		void SetSecondaryFogStart(float afX){ mfSecondaryFogStart = afX; }
+		void SetSecondaryFogEnd(float afX){ mfSecondaryFogEnd = afX; }
+		void SetSecondaryFogFalloffExp(float afX){ mfSecondaryFogFalloffExp = afX; }
+		void SetSecondaryFogColor(const cColor& aCol){ mSecondaryFogColor = aCol; }
 
 		bool GetFogActive(){ return mbFogActive;}
 		float GetFogStart(){ return mfFogStart;}
@@ -244,6 +255,22 @@ namespace hpl {
 		bool GetFogCulling() { return mbFogCulling;}
 		float GetFogBrightness(){ return mfFogBrightness;}
 		float GetSecondaryFogBrightness(){ return mfSecondaryFogBrightness;}
+		bool GetFogUnderwater(){ return mbFogUnderwater; }
+		bool GetFogUseSkybox(){ return mbFogUseSkybox; }
+		iTexture* GetFogSkyboxTexture(){ return mpFogSkyboxTexture ? mpFogSkyboxTexture : mpSkyBoxTexture; }
+		bool GetFogApplyAfterFogAreas(){ return mbFogApplyAfterFogAreas; }
+		float GetFogNoiseStrength(){ return mfFogNoiseStrength; }
+		float GetFogNoiseSize(){ return mfFogNoiseSize; }
+		const cVector3f& GetFogNoiseTurbulence(){ return mvFogNoiseTurbulence; }
+		bool GetSecondaryFogActive(){ return mbSecondaryFogActive; }
+		float GetSecondaryFogStart(){ return mfSecondaryFogStart; }
+		float GetSecondaryFogEnd(){ return mfSecondaryFogEnd; }
+		float GetSecondaryFogFalloffExp(){ return mfSecondaryFogFalloffExp; }
+		const cColor& GetSecondaryFogColor(){ return mSecondaryFogColor; }
+
+		cLightDirectional* GetDirectionalLight();
+		void SetDirectionalLightActive(bool abX){ mbDirectionalLightActive = abX; }
+		bool GetDirectionalLightActive(){ return mbDirectionalLightActive; }
 
 		void SetDepthOfFieldActive(bool abX){ mbDepthOfFieldActive = abX;}
 		void SetDepthOfFieldFocusStart(float afX){ mfDepthOfFieldFocusStart = afX;}
@@ -434,6 +461,9 @@ namespace hpl {
 		static bool mbHpl3SkyBox;
 		void UpdateSkyBoxVBColor();
 
+		cLightDirectional *mpDirectionalLight = NULL;
+		bool mbDirectionalLightActive = false;
+
 		bool mbFogActive;
 		bool mbFogCulling;
 		float mfFogStart;
@@ -442,6 +472,18 @@ namespace hpl {
 		cColor mFogColor;
 		float mfFogBrightness = 1;
 		float mfSecondaryFogBrightness = 1;
+		bool mbFogUnderwater = false;
+		bool mbFogUseSkybox = false;
+		iTexture *mpFogSkyboxTexture = NULL;
+		bool mbFogApplyAfterFogAreas = true;
+		float mfFogNoiseStrength = 0;
+		float mfFogNoiseSize = 1;
+		cVector3f mvFogNoiseTurbulence = 0;
+		bool mbSecondaryFogActive = false;
+		float mfSecondaryFogStart = 0;
+		float mfSecondaryFogEnd = 0;
+		float mfSecondaryFogFalloffExp = 1;
+		cColor mSecondaryFogColor = cColor(0, 0);
 
 		bool mbDepthOfFieldActive = false;
 		float mfDepthOfFieldFocusStart = 0;

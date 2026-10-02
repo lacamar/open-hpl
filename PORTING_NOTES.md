@@ -6069,3 +6069,14 @@ our live entries and events.
   toward it instead of faded. Script `GetFogBrightness` binds to `GetSecondaryFogBrightness`.
   Translucents whose near edge is past the DoF focus end render before the blur.
 
+
+## SOMA: HPL3 world fog, directional light (2026-10-03)
+
+- World fog: `Underwater` (fog colour multiplies the lit scene; lights get `UseUnderwaterFog`),
+  `UseSkybox`, `Secondary*` (second distance fog), 3D noise (`NoiseStrength/Size/Turbulence`),
+  `ApplyAfterFogAreas` pass order. Fog areas: `Underwater`, `Skybox`, noise.
+- `<DirLight>` in GlobalSettings: `cLightDirectional` owned by `cWorld`, drawn as a full-screen
+  `LightType_Directional` pass after box lights (their resolve blends with None). From Rebirth's
+  `cRendererDeferred::SetupDirectionalLight`: sky/ground ambient = colour² × brightness, direction
+  = view rotation × -Direction. `Brightness` is a colour string; the first float is used. 01_03:
+  sun contribution matches the ref (+12,21,23 vs +12,22,20 mean RGB). No cascaded shadow maps yet.

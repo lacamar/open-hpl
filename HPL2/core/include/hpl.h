@@ -134,6 +134,7 @@
 #include "scene/LightPoint.h"
 #include "scene/LightSpot.h"
 #include "scene/LightBox.h"
+#include "scene/LightDirectional.h"
 #include "scene/AnimationState.h"
 #include "scene/NodeState.h"
 #include "scene/SoundEntity.h"

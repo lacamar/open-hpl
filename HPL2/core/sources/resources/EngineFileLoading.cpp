@@ -87,6 +87,10 @@ namespace hpl {
 			pFog->SetFalloffExp(apElement->GetAttributeFloat("FalloffExp", 0));
 			pFog->SetShowBacksideWhenInside(apElement->GetAttributeBool("ShownBacksideWhenInside", true));
 			pFog->SetShowBacksideWhenOutside(apElement->GetAttributeBool("ShownBacksideWhenOutside", true));
+			pFog->SetUnderwater(apElement->GetAttributeBool("Underwater", false));
+			pFog->SetSkybox(apElement->GetAttributeBool("Skybox", false));
+			pFog->SetNoise(apElement->GetAttributeFloat("NoiseStrength", 0), apElement->GetAttributeFloat("NoiseSize", 1),
+							apElement->GetAttributeVector3f("NoiseTurbulence", 0));
 		}
 
 		kEndWorldEntityLoad(pFog);

@@ -2112,6 +2112,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cBeam@ cScene_ToBeam(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cBeam *>(p); });
 	SOMA_FUNC(e, "cSoundEntity@ cScene_ToSoundEntity(iEntity3D@ apEntity)", +[](iEntity3D *p) { return dynamic_cast<cSoundEntity *>(p); });
 	SOMA_FUNC(e, "cLightBox@ cScene_ToLightBox(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightBox *>(p); });
+	SOMA_FUNC(e, "cLightDirectional@ cScene_ToLightDirectional(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightDirectional *>(p); });
 	SOMA_FUNC(e, "cLightPoint@ cScene_ToLightPoint(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightPoint *>(p); });
 	SOMA_FUNC(e, "cLightSpot@ cScene_ToLightSpot(iLight@ apLight)", +[](iLight *p) { return dynamic_cast<cLightSpot *>(p); });
 	SOMA_FUNC(e, "iPhysicsJointHinge@ cPhysics_ToJointHinge(iPhysicsJoint@ apJoint)", +[](iPhysicsJoint *j) { return dynamic_cast<iPhysicsJointHinge *>(j); });

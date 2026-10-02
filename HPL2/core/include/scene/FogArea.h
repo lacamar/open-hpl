@@ -64,6 +64,15 @@ namespace hpl {
 		bool GetShowBacksideWhenOutside(){ return mbShowBacksideWhenOutside; }
 		bool GetShowBacksideWhenInside(){ return mbShowBacksideWhenInside; }
 
+		void SetUnderwater(bool abX){ mbUnderwater = abX; }
+		bool GetUnderwater(){ return mbUnderwater; }
+		void SetSkybox(bool abX){ mbSkybox = abX; }
+		bool GetSkybox(){ return mbSkybox; }
+		void SetNoise(float afStrength, float afSize, const cVector3f& avTurbulence){ mfNoiseStrength = afStrength; mfNoiseSize = afSize; mvNoiseTurbulence = avTurbulence; }
+		float GetNoiseStrength(){ return mfNoiseStrength; }
+		float GetNoiseSize(){ return mfNoiseSize; }
+		const cVector3f& GetNoiseTurbulence(){ return mvNoiseTurbulence; }
+
 		//////////////////////////////
 		//iEntity implementation
 		tString GetEntityType(){ return "cFogArea";}
@@ -88,6 +97,11 @@ namespace hpl {
 
 		bool mbShowBacksideWhenOutside;
 		bool mbShowBacksideWhenInside;
+		bool mbUnderwater = false;
+		bool mbSkybox = false;
+		float mfNoiseStrength = 0;
+		float mfNoiseSize = 1;
+		cVector3f mvNoiseTurbulence = 0;
 
 		cMatrixf m_mtxModelOutput;
 	};

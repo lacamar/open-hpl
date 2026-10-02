@@ -230,6 +230,7 @@ namespace hpl {
 		void RenderLights_Box_StencilFront_RenderBack();
 		void RenderLights_Box_RenderBack();
 		bool RenderLights_BoxWeighted();
+		void RenderLights_Directional();
         
 		void RenderIllumination();
 
@@ -243,6 +244,7 @@ namespace hpl {
 		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
+		iGpuProgram* SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass);
 		void RenderTranslucent(int alDofPass=0);
 		
 		void SetAccumulationBuffer();
@@ -369,6 +371,7 @@ namespace hpl {
 		iFrameBuffer *mpBoxWeightBuffer;
 
 		cProgramComboManager* mpFogProgramManager;
+		iTexture *mpFogNoiseTexture = NULL;
 		
 		cMatrixf m_mtxTempLight;
 		

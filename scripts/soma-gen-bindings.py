@@ -20,7 +20,7 @@ TYPES = {
     'iPhysicsJointHinge': 'iPhysicsJointHinge', 'iPhysicsJointSlider': 'iPhysicsJointSlider', 'iPhysicsJointBall': 'iPhysicsJointBall',
     'iPhysicsMaterial': 'iPhysicsMaterial', 'cSurfaceData': 'cSurfaceData',
     'cWorld': 'cWorld', 'iEntity3D': 'iEntity3D', 'cMeshEntity': 'cMeshEntity', 'cSubMeshEntity': 'cSubMeshEntity',
-    'iLight': 'iLight', 'cLightPoint': 'cLightPoint', 'cLightSpot': 'cLightSpot', 'cLightBox': 'cLightBox',
+    'iLight': 'iLight', 'cLightPoint': 'cLightPoint', 'cLightSpot': 'cLightSpot', 'cLightBox': 'cLightBox', 'cLightDirectional': 'cLightDirectional',
     'cBillboard': 'cBillboard', 'cParticleSystem': 'cParticleSystem', 'cSoundEntity': 'cSoundEntity',
     'cBoundingVolume': 'cBoundingVolume', 'cResourceVarsObject': 'cResourceVarsObject',
     'cAnimationState': 'cAnimationState', 'cGuiSet': 'cGuiSet', 'iFontData': 'iFontData',

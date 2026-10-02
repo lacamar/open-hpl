@@ -54,6 +54,7 @@
 #include "scene/Light.h"
 #include "scene/LightSpot.h"
 #include "scene/LightBox.h"
+#include "scene/LightDirectional.h"
 #include "scene/FogArea.h"
 #include "scene/MeshEntity.h"
 
@@ -125,8 +126,10 @@ namespace hpl {
 	#define eFeature_Light_GoboSpecular		eFlagBit_8
 	#define eFeature_Light_GoboTypeSpecular	eFlagBit_9
 	#define eFeature_Light_Translucency		eFlagBit_10
+	#define eFeature_Light_UnderwaterFog	eFlagBit_11
+	#define eFeature_Light_Directional		eFlagBit_12
 	
-	#define kLightFeatureNum 11
+	#define kLightFeatureNum 13
 
 	cProgramComboFeature gvLightFeatureVec[] =
 	{
@@ -141,6 +144,8 @@ namespace hpl {
 		cProgramComboFeature("GoboSpecFlag", kPC_FragmentBit, eFeature_Light_Gobo),
 		cProgramComboFeature("GoboType_Specular", kPC_FragmentBit, eFeature_Light_Gobo),
 		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
+		cProgramComboFeature("UseUnderwaterFog", kPC_FragmentBit),
+		cProgramComboFeature("LightType_Directional", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -149,13 +154,23 @@ namespace hpl {
 	
 	#define eFeature_FogArea_OutsideBox		eFlagBit_0
 	#define eFeature_FogArea_Backside		eFlagBit_1
+	#define eFeature_FogArea_Underwater		eFlagBit_2
+	#define eFeature_FogArea_Noise			eFlagBit_3
+	#define eFeature_FogArea_Skybox			eFlagBit_4
+	#define eFeature_FogArea_Secondary		eFlagBit_5
+	#define eFeature_FogArea_FogArea		eFlagBit_6
 	
-	#define kFogAreaFeatureNum 2
+	#define kFogAreaFeatureNum 7
 
 	cProgramComboFeature gvFogAreaFeatureVec[] =
 	{
 		cProgramComboFeature("OutsideBox", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseBackside", kPC_FragmentBit | kPC_VertexBit),
+		cProgramComboFeature("UseUnderwaterFog", kPC_FragmentBit),
+		cProgramComboFeature("UseNoise", kPC_FragmentBit),
+		cProgramComboFeature("UseSkybox", kPC_FragmentBit),
+		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
+		cProgramComboFeature("FogArea", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -227,6 +242,15 @@ namespace hpl {
 	#define kVar_afSizeDiv							67
 	#define kVar_afPower							68
 	#define kVar_afTranslucencyScale				69
+	#define kVar_a_mtxNoise							70
+	#define kVar_afInvNoiseScale					71
+	#define kVar_afNoiseStrength					72
+	#define kVar_avSkyboxColor						73
+	#define kVar_avSecondFogColor					74
+	#define kVar_avSecondFogStartAndLength			75
+	#define kVar_afSecondFalloffExp					76
+	#define kVar_afFogFalloffExp					77
+	#define kVar_avLightDirection					78
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -549,6 +573,13 @@ namespace hpl {
 
 			mpFogProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, 0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxNoise", kVar_a_mtxNoise, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("afInvNoiseScale", kVar_afInvNoiseScale, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("afNoiseStrength", kVar_afNoiseStrength, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avSkyboxColor", kVar_avSkyboxColor, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogColor", kVar_avSecondFogColor, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, 0);
+			mpFogProgramManager->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, 0);
 		}
 		
 		////////////////////////////////////
@@ -667,6 +698,13 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("afLightSourceRadius", kVar_afLightSourceRadius, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avLightUp", kVar_avLightUp, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avLightRight", kVar_avLightRight, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afFogFalloffExp", kVar_afFogFalloffExp, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avLightDirection", kVar_avLightDirection, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorSky", kVar_avAmbientColorSky, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorGround", kVar_avAmbientColorGround, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avViewSpaceUp", kVar_avViewSpaceUp, eDefferredProgramMode_Lights);
 			}
 
 			//////////////////////////////
@@ -1097,6 +1135,8 @@ namespace hpl {
 		//Gpu programs
 		mpGraphics->DestroyGpuProgram(mpSkyBoxProgram);
 		mpGraphics->DestroyTexture(mpWhiteCubeTexture);
+		if(mpFogNoiseTexture) mpResources->GetTextureManager()->Destroy(mpFogNoiseTexture);
+		mpFogNoiseTexture = NULL;
 
 		mpProgramManager->DestroyShadersAndPrograms();
 	}
@@ -1298,13 +1338,15 @@ namespace hpl {
 
 		if(!(mlDebugSkipPasses & 2)) RenderIllumination();
 
-		RenderFog();
-		RenderFullScreenFog();
+		if(mpCurrentWorld->GetFogApplyAfterFogAreas())	{ RenderFog(); RenderFullScreenFog(); }
+		else											{ RenderFullScreenFog(); RenderFog(); }
 
 		RenderEdgeSmooth();
 
 		#ifndef kDebug_RenderLightData
-		if(!(mlDebugSkipPasses & 4)) RenderBasicSkyBox();
+		bool bFogIsSkybox = mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogUseSkybox() &&
+							mpCurrentWorld->GetFogSkyboxTexture() == mpCurrentWorld->GetSkyBoxTexture();
+		if(!(mlDebugSkipPasses & 4) && !bFogIsSkybox) RenderBasicSkyBox();
 		#endif
 
 		RunCallback(eRendererMessage_PostSolid);
@@ -1745,6 +1787,17 @@ namespace hpl {
 		return cColor(aCol.r * aCol.r, aCol.g * aCol.g, aCol.b * aCol.b, aCol.a);
 	}
 
+	static cColor UnderwaterFogColor(const cColor& aCol)
+	{
+		float fInvLen2 = 1.0f / (aCol.r*aCol.r + aCol.g*aCol.g + aCol.b*aCol.b + 1e-13f);
+		return cColor(aCol.r*aCol.r*fInvLen2, aCol.g*aCol.g*fInvLen2, aCol.b*aCol.b*fInvLen2, aCol.a);
+	}
+
+	static bool WorldUnderwaterFog(cWorld *apWorld)
+	{
+		return apWorld->GetFogActive() && apWorld->GetFogUnderwater();
+	}
+
 	void cRendererDeferred::SetupLightProgramVariables(	iGpuProgram *apProgram,cDeferredLight* apLightData)
 	{
 		iLight *pLight = apLightData->mpLight;
@@ -1761,6 +1814,12 @@ namespace hpl {
 		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
+		if(WorldUnderwaterFog(mpCurrentWorld))
+		{
+			apProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
+			apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
+			apProgram->SetFloat(kVar_afFogFalloffExp, mpCurrentWorld->GetFogFalloffExp());
+		}
 
 		////////////////////////
 		// Point light specific
@@ -1845,6 +1904,7 @@ namespace hpl {
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
+		if(WorldUnderwaterFog(mpCurrentWorld))	lFlags |= eFeature_Light_UnderwaterFog;
 		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular | eFeature_Light_GoboTypeSpecular;
 		
 		//Spotlight specifics
@@ -3021,6 +3081,11 @@ namespace hpl {
 			SetProgram(pProg);
 
 			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * pBox->GetBrightness();
+			if(WorldUnderwaterFog(mpCurrentWorld) && !pBox->GetUseSphericalHarmonics())
+			{
+				cColor fogCol = UnderwaterFogColor(mpCurrentWorld->GetFogColor());
+				diffuse.r *= fogCol.r; diffuse.g *= fogCol.g; diffuse.b *= fogCol.b;
+			}
 			const cColor &sky = pBox->GetAmbientColorSky();
 			const cColor &ground = pBox->GetAmbientColorGround();
 			pProg->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
@@ -3061,6 +3126,54 @@ namespace hpl {
 		SetCullMode(eCullMode_Clockwise);
 		SetDepthTest(true);
 		return true;
+	}
+
+	void cRendererDeferred::RenderLights_Directional()
+	{
+		if(mpCurrentWorld->GetDirectionalLightActive()==false) return;
+		cLightDirectional *pLight = mpCurrentWorld->GetDirectionalLight();
+		if(pLight->GetBrightness() <= 0) return;
+
+		tFlag lFlags = eFeature_Light_Directional;
+		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
+		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
+		if(WorldUnderwaterFog(mpCurrentWorld))	lFlags |= eFeature_Light_UnderwaterFog;
+		iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
+		if(pProgram==NULL) return;
+		if(mbLog) Log(" Rendering directional light\n");
+
+		SetProgram(pProgram);
+		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+		pProgram->SetVec4f(kVar_avScreenToFarPlane,
+							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+							mfFarLeft, mfFarTop);
+		pProgram->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)mvRenderTargetSize.x, 1.0f / (float)mvRenderTargetSize.y);
+
+		float fBrightness = pLight->GetBrightness();
+		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
+		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
+		pProgram->SetColor4f(kVar_avLightColor, lightColor);
+		cColor sky = LinearLightColor(pLight->GetAmbientColorSky()) * fBrightness;
+		cColor ground = LinearLightColor(pLight->GetAmbientColorGround()) * fBrightness;
+		pProgram->SetVec3f(kVar_avAmbientColorSky, sky.r, sky.g, sky.b);
+		pProgram->SetVec3f(kVar_avAmbientColorGround, ground.r, ground.g, ground.b);
+		const cMatrixf &mtxView = mpCurrentFrustum->GetViewMatrix();
+		pProgram->SetVec3f(kVar_avLightDirection, cMath::MatrixMul3x3(mtxView, pLight->GetDirection() * -1.0f));
+		pProgram->SetVec3f(kVar_avViewSpaceUp, cMath::MatrixMul3x3(mtxView, cVector3f(0,1,0)));
+		pProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
+		if(WorldUnderwaterFog(mpCurrentWorld)) pProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
+
+		// ponytail: no cascaded shadow maps yet, the sun lights interiors
+		SetStencilActive(false);
+		SetDepthTest(false);
+		SetCullMode(eCullMode_CounterClockwise);
+		SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
+		SetVertexBuffer(mpFullscreenLightQuad);
+		DrawCurrent();
+		SetNormalFrustumProjection();
+		SetCullMode(eCullMode_Clockwise);
+		SetDepthTest(true);
 	}
 
 	void cRendererDeferred::RenderLights()
@@ -3105,6 +3218,7 @@ namespace hpl {
 			RenderLights_Box_StencilFront_RenderBack();
 			RenderLights_Box_RenderBack();
 		}
+		RenderLights_Directional();
 		
 		///////////////////////
 		// Render lights that are inside near plane
@@ -3475,6 +3589,95 @@ namespace hpl {
 		END_RENDER_PASS();
 	}
 
+	static cVector3f FogNoiseTurbulence(const cVector3f& avTurb, float afSize, float afTime)
+	{
+		float t = afTime*0.0625f, a = 4*t, b = a+1;
+		float d1 = 0.125f*sin(2.5f*b+13+1.13f*t) + 0.25f*sin(b+17+1.17f*t) + sin(0.5f*b+103+t);
+		float b2 = b+d1;
+		float d2 = 0.125f*sin(2.5f*b2+103+1.13f*t) + 0.25f*sin(b2+13+1.17f*t) + sin(0.5f*b2+113+t);
+		return cVector3f(d1*avTurb.x, a*avTurb.y, d2*avTurb.z) * cMath::Max(1.0f, afSize*0.25f);
+	}
+
+	iGpuProgram* cRendererDeferred::SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass)
+	{
+		cWorld *pWorld = mpCurrentWorld;
+		float fStart = apFogArea ? apFogArea->GetStart() : pWorld->GetFogStart();
+		float fEnd = apFogArea ? apFogArea->GetEnd() : pWorld->GetFogEnd();
+		float fFalloff = apFogArea ? apFogArea->GetFalloffExp() : pWorld->GetFogFalloffExp();
+		const cColor& color = apFogArea ? apFogArea->GetColor() : pWorld->GetFogColor();
+		float fBrightness = apFogArea ? apFogArea->GetBrightness() : pWorld->GetFogBrightness();
+		float fNoiseStrength = apFogArea ? apFogArea->GetNoiseStrength() : pWorld->GetFogNoiseStrength();
+		float fNoiseSize = apFogArea ? apFogArea->GetNoiseSize() : pWorld->GetFogNoiseSize();
+		const cVector3f& vTurb = apFogArea ? apFogArea->GetNoiseTurbulence() : pWorld->GetFogNoiseTurbulence();
+		bool bSecondary = apFogArea==NULL && pWorld->GetSecondaryFogActive();
+
+		if(fNoiseStrength > 0)
+		{
+			if(mpFogNoiseTexture==NULL) mpFogNoiseTexture = mpResources->GetTextureManager()->Create3D("core_value_noise.dds", true);
+			if(mpFogNoiseTexture) alFlags |= eFeature_FogArea_Noise;
+		}
+		bool bSkybox = false;
+		if(abUnderwaterPass)
+		{
+			alFlags |= eFeature_FogArea_Underwater;
+		}
+		else
+		{
+			bSkybox = (apFogArea ? apFogArea->GetSkybox() : pWorld->GetFogUseSkybox()) && pWorld->GetFogSkyboxTexture() && pWorld->GetSkyBoxActive();
+			if(bSkybox) alFlags |= eFeature_FogArea_Skybox;
+			if(apFogArea) alFlags |= eFeature_FogArea_FogArea;
+		}
+		if(bSecondary) alFlags |= eFeature_FogArea_Secondary;
+
+		iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, alFlags);
+		SetProgram(pProgram);
+		if(pProgram==NULL) return NULL;
+
+		cVector2f vStartAndLength(fStart, fEnd - fStart);
+		cColor fogColor = abUnderwaterPass ? UnderwaterFogColor(color) : GetFogRenderColor(color, fBrightness);
+		if(bSecondary)
+		{
+			cVector2f vSecStartAndLength(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart());
+			cColor secColor = GetFogRenderColor(pWorld->GetSecondaryFogColor(), pWorld->GetSecondaryFogBrightness());
+			float fSecFalloff = pWorld->GetSecondaryFogFalloffExp();
+			if(abUnderwaterPass==false && pWorld->GetSecondaryFogEnd() > fEnd)
+			{
+				std::swap(vStartAndLength, vSecStartAndLength);
+				std::swap(fogColor, secColor);
+				std::swap(fFalloff, fSecFalloff);
+			}
+			pProgram->SetColor4f(kVar_avSecondFogColor, secColor);
+			pProgram->SetVec2f(kVar_avSecondFogStartAndLength, vSecStartAndLength);
+			pProgram->SetFloat(kVar_afSecondFalloffExp, fSecFalloff);
+		}
+
+		if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
+			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+		pProgram->SetVec2f(kVar_avFogStartAndLength, vStartAndLength);
+		pProgram->SetColor4f(kVar_avFogColor, fogColor);
+		pProgram->SetFloat(kVar_afFalloffExp, fFalloff);
+		pProgram->SetVec4f(kVar_avScreenToFarPlane,
+							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
+							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
+							mfFarLeft, mfFarTop);
+		pProgram->SetVec2f(kVar_avInvScreenSize,
+							1.0f / (float)mvRenderTargetSize.x,
+							1.0f / (float)mvRenderTargetSize.y);
+		pProgram->SetMatrixf(kVar_a_mtxNoise, cMath::MatrixMul(cMath::MatrixTranslate(FogNoiseTurbulence(vTurb, fNoiseSize, GetTimeCount())), m_mtxInvView));
+		if(alFlags & eFeature_FogArea_Noise)
+		{
+			pProgram->SetFloat(kVar_afInvNoiseScale, 1.0f / fNoiseSize);
+			pProgram->SetFloat(kVar_afNoiseStrength, fNoiseStrength);
+			SetTexture(1, mpFogNoiseTexture);
+		}
+		if(bSkybox)
+		{
+			pProgram->SetColor4f(kVar_avSkyboxColor, GetFogRenderColor(pWorld->GetSkyBoxColor(), pWorld->GetSkyBoxBrightness()));
+			SetTexture(2, pWorld->GetFogSkyboxTexture());
+		}
+		return pProgram;
+	}
+
 	void cRendererDeferred::RenderFullScreenFog()
 	{
 		if(mpCurrentWorld->GetFogActive()==false) return;
@@ -3488,51 +3691,23 @@ namespace hpl {
 		SetChannelMode(eMaterialChannelMode_RGBA);
 
 		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetBlendMode(eMaterialBlendMode_Alpha);
 
 		SetFogDepthTexture(true);
 		SetTextureRange(NULL, 1);
 
 		SetMatrix(NULL);
-		
-
-		//////////////////////////
-		// Set up program
-		int lFlags =0;
-		iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
-		SetProgram(pProgram);
-        
-		if(pProgram)
-		{
-			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
-				pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
-			pProgram->SetColor4f(kVar_avFogColor, GetFogRenderColor(mpCurrentWorld->GetFogColor(), mpCurrentWorld->GetFogBrightness()));
-			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
-
-			pProgram->SetVec4f(kVar_avScreenToFarPlane,
-								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarTop);
-			pProgram->SetVec2f(kVar_avInvScreenSize,
-								1.0f / (float)mvRenderTargetSize.x,
-								1.0f / (float)mvRenderTargetSize.y);
-		}
-
-
-		//////////////////////////
-		// Set up flat project
 		SetFlatProjection();
 
-		//////////////////////////
-		// Render
-		DrawQuad(0, 1);
+		for(int lPass = mpCurrentWorld->GetFogUnderwater() ? 0 : 1; lPass < 2; ++lPass)
+		{
+			SetBlendMode(lPass==0 ? eMaterialBlendMode_Mul : eMaterialBlendMode_Alpha);
+			if(SetupFogProgram(NULL, 0, lPass==0)) DrawQuad(0, 1);
+		}
 
-		//////////////////////////
-		// Reset
 		SetNormalFrustumProjection();
 		SetDepthTest(true);
 		SetFogDepthTexture(false);
+		SetTextureRange(NULL, 1);
 
 		END_RENDER_PASS();
 	}
@@ -3557,7 +3732,6 @@ namespace hpl {
 		SetChannelMode(eMaterialChannelMode_RGBA);
 
 		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetBlendMode(eMaterialBlendMode_Alpha);
 		
 		SetFogDepthTexture(true);
 		SetTextureRange(NULL, 1);
@@ -3581,57 +3755,43 @@ namespace hpl {
 				lFlags |= eFeature_FogArea_OutsideBox;
 			}
 			
-			iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
-			if(pProgram==NULL) continue;
-
-			/////////////////////////////////////////////
-			// Setup program
-			SetProgram(pProgram);
-			
-			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
-					pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
-			pProgram->SetColor4f(kVar_avFogColor, GetFogRenderColor(pFogArea->GetColor(), pFogArea->GetBrightness()));
-			pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
-
-			pProgram->SetVec4f(kVar_avScreenToFarPlane,
-								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarTop);
-			pProgram->SetVec2f(kVar_avInvScreenSize,
-								1.0f / (float)mvRenderTargetSize.x,
-								1.0f / (float)mvRenderTargetSize.y);
-
-			/////////////////////////////////////////////
-			//Outside of box setup
-			if(fogData.mbInsideNearFrustum==false)
+			for(int lPass = pFogArea->GetUnderwater() ? 0 : 1; lPass < 2; ++lPass)
 			{
-				cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
-				cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+				SetBlendMode(lPass==0 ? eMaterialBlendMode_Mul : eMaterialBlendMode_Alpha);
+				iGpuProgram *pProgram = SetupFogProgram(pFogArea, lFlags, lPass==0);
+				if(pProgram==NULL) continue;
+
+				/////////////////////////////////////////////
+				//Outside of box setup
+				if(fogData.mbInsideNearFrustum==false)
+				{
+					cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
+					cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
 
 				
-				pProgram->SetVec3f(kVar_avRayCastStart, vRayCastStart);
-				pProgram->SetMatrixf(kVar_a_mtxBoxInvViewModelRotation, mtxInvModelView.GetRotation());
+					pProgram->SetVec3f(kVar_avRayCastStart, vRayCastStart);
+					pProgram->SetMatrixf(kVar_a_mtxBoxInvViewModelRotation, mtxInvModelView.GetRotation());
 
-				cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
-				cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
+					cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
+					cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
 
-				pProgram->SetVec3f(kVar_avNegPlaneDistNeg, vNegPlaneDistNeg*-1);
-				pProgram->SetVec3f(kVar_avNegPlaneDistPos, vNegPlaneDistPos*-1);
-			}
+					pProgram->SetVec3f(kVar_avNegPlaneDistNeg, vNegPlaneDistNeg*-1);
+					pProgram->SetVec3f(kVar_avNegPlaneDistPos, vNegPlaneDistPos*-1);
+				}
 			
-			/////////////////////////////////////////////
-			// Render
-			SetCullMode(fogData.mbInsideNearFrustum ? eCullMode_Clockwise : eCullMode_CounterClockwise);
-			SetDepthTest(!fogData.mbInsideNearFrustum);
+				/////////////////////////////////////////////
+				// Render
+				SetCullMode(fogData.mbInsideNearFrustum ? eCullMode_Clockwise : eCullMode_CounterClockwise);
+				SetDepthTest(!fogData.mbInsideNearFrustum);
 
-			SetMatrix(pFogArea->GetModelMatrixPtr());
+				SetMatrix(pFogArea->GetModelMatrixPtr());
 
-			SetVertexBuffer(mpShapeBox);
+				SetVertexBuffer(mpShapeBox);
 
-			DrawCurrent();
+				DrawCurrent();
+			}
 		}
 
 		//////////////////////////////////
@@ -3639,6 +3799,7 @@ namespace hpl {
 		SetCullMode(eCullMode_CounterClockwise);
 		SetDepthTest(true);
 		SetFogDepthTexture(false);
+		SetTextureRange(NULL, 1);
 
 		END_RENDER_PASS();
 	}
