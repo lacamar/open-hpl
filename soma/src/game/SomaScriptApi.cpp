@@ -261,28 +261,6 @@ static void CopyConstructPod(asIScriptGeneric *apGen)
 	memcpy(apGen->GetObject(), apGen->GetArgObject(0), pType->GetSize());
 }
 
-// Properties sit at their recovered offsets (max 3560), so a zeroed block holds any of them;
-// only string members need constructing.
-static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, char *apObj)
-{
-	for (asUINT i = 0; i < apType->GetPropertyCount(); ++i)
-	{
-		int lTypeId, lOffset;
-		apType->GetProperty(i, NULL, &lTypeId, NULL, NULL, &lOffset);
-		if (lTypeId & asTYPEID_OBJHANDLE)
-			continue;
-		asITypeInfo *pPropType = apEngine->GetTypeInfoById(lTypeId);
-		if (pPropType == NULL)
-			continue;
-		if (strcmp(pPropType->GetName(), "tString") == 0)
-			new (apObj + lOffset) std::string();
-		else if (strcmp(pPropType->GetName(), "tWString") == 0)
-			new (apObj + lOffset) std::wstring();
-		else
-			ConstructMembers(apEngine, pPropType, apObj + lOffset);
-	}
-}
-
 const tString *SomaIntern(const tString &asStr)
 {
 	static std::set<tString> setStrings;
@@ -302,6 +280,30 @@ static void ApplyStructDefaults(const cSomaStructDefaults *apDefaults, char *apO
 	memcpy(apObj + 16, apDefaults->mpBytes, apDefaults->mlSize - 16);
 	for (int lOff : apDefaults->mvStringOffsets)
 		*(const tString **)(apObj + lOff) = SomaIntern("");
+}
+
+// Properties sit at their recovered offsets (max 3560), so a zeroed block holds any of them;
+// only strings and structs with recovered defaults need constructing.
+static void ConstructMembers(asIScriptEngine *apEngine, asITypeInfo *apType, char *apObj)
+{
+	for (asUINT i = 0; i < apType->GetPropertyCount(); ++i)
+	{
+		int lTypeId, lOffset;
+		apType->GetProperty(i, NULL, &lTypeId, NULL, NULL, &lOffset);
+		if (lTypeId & asTYPEID_OBJHANDLE)
+			continue;
+		asITypeInfo *pPropType = apEngine->GetTypeInfoById(lTypeId);
+		if (pPropType == NULL)
+			continue;
+		if (strcmp(pPropType->GetName(), "tString") == 0)
+			new (apObj + lOffset) std::string();
+		else if (strcmp(pPropType->GetName(), "tWString") == 0)
+			new (apObj + lOffset) std::wstring();
+		else if (const cSomaStructDefaults *pDefaults = FindStructDefaults(pPropType->GetName()))
+			ApplyStructDefaults(pDefaults, apObj + lOffset);
+		else
+			ConstructMembers(apEngine, pPropType, apObj + lOffset);
+	}
 }
 
 void *SomaNewScriptStruct(const char *apType)

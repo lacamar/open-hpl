@@ -113,7 +113,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `camera_state` / `set_camera` | camera pose |
 | `player_state` | script player: state, move state, health, feet position, yaw |
 | `lux_entity name=` | script entity: type, class, script class, active, callbacks, position |
-| `script_exec code=` | compiles and runs AngelScript against the live API; `__print(s)` returns output |
+| `script_exec code= [module=]` | compiles and runs AngelScript against the live API (or in the script file matching `module`); `__print(s)` returns output |
 | `script_vars [name=]` | properties of a script object (e.g. `LuxPlayer`); no name lists objects |
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |

@@ -233,9 +233,19 @@ void cSomaScriptRuntime::LogStubReport(int alTop)
 		Log("  %6d  %s\n", v[i].first, v[i].second.c_str());
 }
 
-bool cSomaScriptRuntime::Exec(const std::string &asCode, std::string &asError)
+bool cSomaScriptRuntime::Exec(const std::string &asCode, const std::string &asModule, std::string &asError)
 {
-	asIScriptModule *pModule = mpEngine->GetModule("__exec", asGM_ALWAYS_CREATE);
+	asIScriptModule *pModule = asModule.empty() ? mpEngine->GetModule("__exec", asGM_ALWAYS_CREATE) : NULL;
+	for (std::map<std::string, asIScriptModule *>::iterator it = mmapModules.begin(); pModule == NULL && it != mmapModules.end(); ++it)
+		if (it->second && it->first.find(asModule) != std::string::npos)
+			pModule = it->second;
+	if (pModule == NULL)
+	{
+		asError = "script files:";
+		for (std::map<std::string, asIScriptModule *>::iterator it = mmapModules.begin(); it != mmapModules.end(); ++it)
+			asError += " " + it->first;
+		return false;
+	}
 	asIScriptFunction *pFunc = NULL;
 	std::string sMessages;
 	mpEngine->SetMessageCallback(asFUNCTION(+[](const asSMessageInfo *msg, void *param) {
@@ -246,7 +256,8 @@ bool cSomaScriptRuntime::Exec(const std::string &asCode, std::string &asError)
 	if (r < 0)
 	{
 		asError = sMessages;
-		mpEngine->DiscardModule("__exec");
+		if (asModule.empty())
+			mpEngine->DiscardModule("__exec");
 		return false;
 	}
 	asIScriptContext *pCtx = mpEngine->RequestContext();
@@ -256,6 +267,7 @@ bool cSomaScriptRuntime::Exec(const std::string &asCode, std::string &asError)
 		asError = pCtx->GetExceptionString() ? pCtx->GetExceptionString() : "failed";
 	mpEngine->ReturnContext(pCtx);
 	pFunc->Release();
-	mpEngine->DiscardModule("__exec");
+	if (asModule.empty())
+		mpEngine->DiscardModule("__exec");
 	return bOk;
 }

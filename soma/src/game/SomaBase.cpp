@@ -359,7 +359,7 @@ static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRe
 	}
 	std::string sError;
 	gsSomaExecOutput.clear();
-	bool bOk = pRuntime->Exec(aReq.GetString("code", ""), sError);
+	bool bOk = pRuntime->Exec(aReq.GetString("code", ""), aReq.GetString("module", ""), sError);
 	aResp.Set("output", gsSomaExecOutput);
 	if (bOk == false)
 		aResp.SetError(sError);

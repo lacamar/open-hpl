@@ -31,7 +31,7 @@ public:
 
 	void LogStubReport(int alTop);
 
-	bool Exec(const std::string &asCode, std::string &asError);
+	bool Exec(const std::string &asCode, const std::string &asModule, std::string &asError);
 
 	static cSomaScriptRuntime *Get() { return mpInstance; }
 

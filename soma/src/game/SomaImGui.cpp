@@ -1,5 +1,6 @@
 #include "SomaImGui.h"
 #include "SomaBase.h"
+#include "SomaLuxGame.h"
 #include "SomaLuxScriptable.h"
 #include "SomaScriptBind.h"
 
@@ -949,6 +950,50 @@ typedef cSomaImGui I;
 
 static const void *P(D d) { return &d; }
 
+tWString SomaParseString(const tWString &asText);
+
+static void ParseScreenText(WStr asInput, I *p, D aParams, CScriptArray &aLines, CScriptArray &, CScriptArray &aIconsPerLine, float &afLineHeight,
+							float &afTime, bool)
+{
+	const void *pFont = (char *)P(aParams) + 24 + kWFont;
+	tWString sText = SomaParseString(asInput);
+	cVector2f vSize = p->FontSize(pFont, 1);
+	float fWidth = F<float>(P(aParams), 16);
+	tWStringVec vRows;
+	iFontData *pFontData = p->GetFont(pFont);
+	if (fWidth > 0 && pFontData)
+		pFontData->GetWordWrapRows(fWidth, vSize.y, vSize, sText, &vRows);
+	else
+		vRows.push_back(sText);
+	for (tWString &sRow : vRows)
+		aLines.InsertLast(&sRow);
+	aIconsPerLine.Resize(aLines.GetSize());
+	afLineHeight = vSize.y;
+	cConfigFile *pCfg = SomaGameConfig();
+	afTime = std::max(pCfg->GetFloat("General", "TextDuration_MinTime", 2.5f),
+					  pCfg->GetFloat("General", "TextDuration_StartTime", 1.5f) + sText.size() * pCfg->GetFloat("General", "TextDuration_CharTime", 0.07f));
+}
+
+static void DrawScreenText(I *p, D aLabel, V3 avPos, float afLineWidth, float afLineSpacing, const CScriptArray &avLines, bool abHint)
+{
+	char vLabel[336];
+	memcpy(vLabel, P(aLabel), sizeof(vLabel));
+	const void *pFont = vLabel + kWFont;
+	cVector2f vSize(afLineWidth, p->FontSize(pFont, 1).y);
+	cVector3f vPos = avPos;
+	for (asUINT i = 0; i < avLines.GetSize(); ++i)
+	{
+		const tWString &sLine = *(const tWString *)avLines.At(i);
+		// HPL3 DrawHint: first line centred, the rest left-aligned under its start
+		if (abHint)
+			F<int>(vLabel, kWFontAlign) = i == 0 ? eFontAlign_Center : eFontAlign_Left;
+		p->DoLabel(sLine, vLabel, vPos, vSize, 1);
+		if (abHint && i == 0)
+			vPos.x += (afLineWidth - p->GetFontLength(pFont, 1, sLine)) * 0.5f;
+		vPos.y += afLineSpacing;
+	}
+}
+
 static void GfxFactory(asIScriptGeneric *g)
 {
 	void *p = SomaNewOwnedScriptStruct("cImGuiGfx");
@@ -1081,6 +1126,12 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "const cVector2f& cLux_GetHudVirtualCenterScreenSize()", +[]() -> const cVector2f & { Hud(); return gvHudSize; });
 	SOMA_FUNC(e, "const cVector3f& cLux_GetHudVirtualCenterScreenStartPos()", +[]() -> const cVector3f & { Hud(); return gvHudStart; });
 	SOMA_FUNC(e, "void cLux_SetImGuiInputFocus(cImGui@ apImGui, bool abShowMouse)", +[](I *p, bool b) { cSomaImGui::SetInputFocus(p, b); });
+	SOMA_FUNC(e, "void cLux_ParseStringIntoScreenText(const tWString &in asInput, cImGui @apImGui, const cLuxScreenTextFormatParameters &aFormatParams, array<tWString> &out aOutLines, array<cLuxScreenTextIcon@> &out aIconArray, array<array<int>> &out aOutIconsPerLine, float &out afMaxLineHeight, float &out afDisplayTime, bool abTriggeredByGamepad)",
+			  ParseScreenText);
+	SOMA_FUNC(e, "void cLux_DrawScreenText(cImGui @apImGui, float afTimeStep, const cImGuiLabelData &in aLabel, const cVector3f &in avPosition, float afLineWidth, float afLineSpacing, const array<tWString> &in avTextLines, const array<cLuxScreenTextIcon@> &in avIcons, const array<array<int>> &in avIconsPerLine)",
+			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, false); });
+	SOMA_FUNC(e, "void cLux_DrawHint(cImGui @apImGui, float afTimeStep, const cImGuiLabelData &in aLabel, const cVector3f &in avPosition, float afLineWidth, float afLineSpacing, const array<tWString> &in avTextLines, const array<cLuxScreenTextIcon@> &in avIcons, const array<array<int>> &in avIconsPerLine)",
+			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, true); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetInputFocus(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetPrevInputFocusImGui()", +[]() { return cSomaImGui::GetPrevInputFocus(); });
 	SOMA_FUNC(e, "void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)", +[](Str, int) {});

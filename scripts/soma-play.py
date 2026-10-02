@@ -11,7 +11,7 @@
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w]            # hold a movement key
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
-  scripts/soma-play.py exec 'code'                    # AngelScript, __print() output
+  scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
   scripts/soma-play.py gui [TEXT] [--entity E] [--at X Y]  # list GUI texts of the focused screen, or click one
 scripts/soma-play.py shot OUT.png | stop
@@ -39,8 +39,8 @@ def send(req, timeout=60):
     return r
 
 
-def ex(code):
-    return send({"cmd": "script_exec", "code": code}).get("output", "")
+def ex(code, module=""):
+    return send({"cmd": "script_exec", "code": code, "module": module}).get("output", "")
 
 
 def kv(code):
@@ -278,7 +278,7 @@ def cmd_entities(a):
 
 
 def cmd_exec(a):
-    print(ex(a.code).rstrip())
+    print(ex(a.code, a.module).rstrip())
 
 
 NOISE = re.compile(r"script warning|Sampler \w+ does not exist|Signed/Unsigned")
@@ -365,7 +365,7 @@ def main():
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
-    s = sub.add_parser("exec"); s.add_argument("code")
+    s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
     s = sub.add_parser("log"); s.add_argument("regex", nargs="?"); s.add_argument("--all", action="store_true")
     s = sub.add_parser("shot"); s.add_argument("out")
     s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2)
