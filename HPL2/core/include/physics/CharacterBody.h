@@ -124,6 +124,8 @@ namespace hpl {
 
 		void Update(float afTimeStep);
 
+		static void SetHpl3(bool abX){ mbHpl3 = abX; }
+
 		///////////////////////////////////////
 		//Helpers
 
@@ -363,7 +365,8 @@ namespace hpl {
 
 		void CheckMoveCollision(const cVector3f &avPosAdd, float afTimeStep);
 		
-		void CheckStepClimbing(const cVector3f &avPosAdd, float afTimeStep);
+		void CheckStepClimbing(const cVector3f &avPosAdd, bool abCollided, const cVector3f &avPushBack, float afTimeStep);
+		static bool mbHpl3;
 
 		void UpdateStepClimbing(float afTimeStep);
 

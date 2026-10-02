@@ -1589,9 +1589,10 @@ namespace hpl {
 					vForwardVel = vForwardVel - vNormal * cMath::Vector3Dot(vNormal, vForwardVel);
 					float fForwardSpeed = vForwardVel.Length();
 					if(mfMoveSpeed[eCharDir_Forward] > 0)
+					{
 						if(mfMoveSpeed[eCharDir_Forward] > fForwardSpeed) mfMoveSpeed[eCharDir_Forward] = fForwardSpeed;
-					else
-						if(mfMoveSpeed[eCharDir_Forward] < fForwardSpeed) mfMoveSpeed[eCharDir_Forward] = -fForwardSpeed;
+					}
+					else if(mfMoveSpeed[eCharDir_Forward] < fForwardSpeed) mfMoveSpeed[eCharDir_Forward] = -fForwardSpeed;
 				}
 				
 				/////////////////////////////////////	
@@ -1602,9 +1603,10 @@ namespace hpl {
 					vRightVel = vRightVel - vNormal * cMath::Vector3Dot(vNormal, vRightVel);
 					float fRightSpeed = vRightVel.Length();
 					if(mfMoveSpeed[eCharDir_Right] > 0)
+					{
 						if(mfMoveSpeed[eCharDir_Right] > fRightSpeed) mfMoveSpeed[eCharDir_Right] = fRightSpeed;
-					else
-						if(mfMoveSpeed[eCharDir_Right] < fRightSpeed) mfMoveSpeed[eCharDir_Right] = -fRightSpeed;
+					}
+					else if(mfMoveSpeed[eCharDir_Right] < fRightSpeed) mfMoveSpeed[eCharDir_Right] = -fRightSpeed;
 				}
 			}
 		}
@@ -1612,15 +1614,18 @@ namespace hpl {
 
 		/////////////////////////////
 		//Always check climbing!
-		CheckStepClimbing(avPosAdd,afTimeStep);
+		CheckStepClimbing(avPosAdd, bCollide, vPushBack, afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iCharacterBody::CheckStepClimbing(const cVector3f &avPosAdd, float afTimeStep)
+	bool iCharacterBody::mbHpl3 = false;
+
+	void iCharacterBody::CheckStepClimbing(const cVector3f &avPosAdd, bool abCollided, const cVector3f &avPushBack, float afTimeStep)
 	{
 		if(mfCheckStepClimbCount > 0) return;
 		if(avPosAdd.SqrLength() < kEpsilonf) return;
+		if(mbHpl3 && !abCollided) return;
 		
 		//Send a ray in front of the player.
 		float fRadius = mpCurrentShape->GetRadius();
@@ -1635,6 +1640,7 @@ namespace hpl {
 		cVector3f vEnd[3];
 		bool bCollided[3];
 		float fMinDist[3];
+		cVector3f vNormal[3];
 		int lNumRays= mbAccurateClimbing ? 3 : 1;
 		
 		/////////////////////////////////
@@ -1658,12 +1664,23 @@ namespace hpl {
 			vStart[i] = mvPosition+ vStepAdd[i];//mvPosition + cVector3f(0,mvSize.y/2,0)+ vStepAdd[i];
 			vEnd[i] = vStart[i] - cVector3f(0,mvSize.y/2.0f,0);//cVector3f(0,mvSize.y,0);
 
-			bCollided[i] = CheckRayIntersection(vStart[i],vEnd[i],&fMinDist[i], NULL);
+			bCollided[i] = CheckRayIntersection(vStart[i],vEnd[i],&fMinDist[i], &vNormal[i]);
 		}
 		
 
 		bool bFirmlyOnGround = mlOnGroundCount > mlMaxOnGroundCount-4;
 		float fMaxHeight = (bFirmlyOnGround || mbClimbing) ? mfMaxStepHeight : mfMaxStepHeightInAir;
+		float fMinHeight = 0.025f;
+		if(mbHpl3)
+		{
+			if(fMaxHeight <= 0)
+			{
+				mfCheckStepClimbCount = mfCheckStepClimbInterval;
+				mbClimbing = false;
+			}
+			// blocked: climb any height
+			if(avPosAdd.Length()*0.75f > (avPosAdd + avPushBack).Length()) fMinHeight = 0;
+		}
 
 		/////////////////////////////////
 		// Check if the step can be climbed.
@@ -1672,8 +1689,9 @@ namespace hpl {
 			if(bCollided[i]==false) continue;
 			
 			float fHeight = mvSize.y/2.0f - fMinDist[i];
+			if(mbHpl3) fHeight = cMath::Max(fHeight, 0.0f);
 
-			if(fHeight <= fMaxHeight && fHeight>0.025f)
+			if(fHeight <= fMaxHeight && fHeight>fMinHeight)
 			{
 				//Check if there is any collision on the new pos
 				cVector3f vStepPos = mvPosition + cVector3f(0,fHeight+mfClimbHeightAdd,0)+ (vMoveDir*fForwadAdd*mfClimbForwardMul);
@@ -1683,6 +1701,7 @@ namespace hpl {
 					//Climb the stair.
 					mvPosition.y += mfStepClimbSpeed * afTimeStep;
 					mbClimbing = true;
+					if(mbHpl3 && vNormal[i].y > 0.2f) mvLastGroundNormal = vNormal[i];
 					break;
 				}
 			}
