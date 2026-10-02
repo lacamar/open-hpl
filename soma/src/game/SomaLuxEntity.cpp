@@ -2114,6 +2114,24 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					  p->OnInteract(0, pBody, vPos, data);
 				  });
 			  });
+	static auto FindBody = [](S n) -> iPhysicsBody * {
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		return pMap && pMap->GetWorld()->GetPhysicsWorld() ? pMap->GetWorld()->GetPhysicsWorld()->GetBody(n) : NULL;
+	};
+	static auto BodyVec = [](iPhysicsBody *b, const cVector3f &v, bool bLocal) { return bLocal ? cMath::MatrixMul(b->GetLocalMatrix().GetRotation(), v) : v; };
+	SOMA_FUNC(e, "void Body_AddForce(const tString &in asBodyName, const cVector3f &in avForce, bool abLocalSpace)",
+			  +[](S n, const cVector3f &v, bool l) { if (iPhysicsBody *b = FindBody(n)) b->AddForce(BodyVec(b, v, l)); });
+	SOMA_FUNC(e, "void Body_AddImpulse(const tString &in asBodyName, const cVector3f &in avImpulse, bool abLocalSpace)",
+			  +[](S n, const cVector3f &v, bool l) { if (iPhysicsBody *b = FindBody(n)) b->AddImpulse(BodyVec(b, v, l)); });
+	SOMA_FUNC(e, "void Body_SetCollides(const tString &in asBodyName, bool abCollides)", +[](S n, bool c) { if (iPhysicsBody *b = FindBody(n)) b->SetCollide(c); });
+	SOMA_FUNC(e, "tString Body_GetEntityName(const tString &in asBodyName)", +[](S n) -> tString {
+		iPhysicsBody *b = FindBody(n);
+		if (cSomaLuxMap *pMap = b ? cSomaLuxMap::GetCurrent() : NULL)
+			for (cSomaLuxEntity *p : pMap->GetEntities())
+				if (std::find(p->mvBodies.begin(), p->mvBodies.end(), b) != p->mvBodies.end())
+					return p->msName;
+		return "";
+	});
 	SOMA_FUNC(e, "void Entity_SetEffectsActive(const tString &in asEntityName, bool abActive, bool abFadeAndPlaySounds)",
 			  +[](S n, bool b, bool f) { ForMatching(n, [b, f](cSomaLuxEntity *p) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); }); });
 	SOMA_FUNC(e, "void Entity_Connect(const tString &in asName, const tString &in asMainEntity, const tString &in asConnectEntity, bool abInvertStateSent, int alStatesUsed)",

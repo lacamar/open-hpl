@@ -1439,6 +1439,14 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 
 	SOMA_METHOD(e, T, "void DrawGfx(const cImGuiGfx &in aGfx, const cVector3f&in avPos, const cVector2f&in avSize=-1, const cColor&in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) { p->DrawGfx(P(g), pos, size, c); });
+	SOMA_METHOD(e, T, "void DrawLine(const cVector2f&in avStart, const cVector2f&in avEnd,float afZ, float afThickness=1.0f, const cColor&in aCol=cColor(1,1), const cImGuiGfx &in aGfx=cImGuiGfx())",
+				+[](I *p, V2 a, V2 b, float z, float t, const cColor &c, D g) {
+					cVector2f d = b - a;
+					float fLen = d.Length(), fAngle = p->mMods.mfRotateAngle;
+					p->mMods.mfRotateAngle += atan2f(d.y, d.x);
+					p->DrawGfx(P(g), cVector3f((a.x + b.x - fLen) * 0.5f, (a.y + b.y - t) * 0.5f, z), cVector2f(fLen, t), c);
+					p->mMods.mfRotateAngle = fAngle;
+				});
 	SOMA_METHOD(e, T, "void DrawAlignedGfx(const cImGuiGfx &in aGfx, const cVector3f &in avPos, eImGuiAlign aAlignment, const cVector2f&in avSize=-1, const cColor &in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, int align, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) {
 					cVector2f vSize = size.x < 0 || size.y < 0 ? p->GetGfxSize(P(g)) : size;
