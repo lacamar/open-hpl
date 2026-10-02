@@ -185,7 +185,7 @@ def stand_spot(target, feet, dist, name):
         seg = math.dist(eye, target)
         if los and los[0][0] < seg - 0.25 and name not in (los[0][1], los[0][2]):
             continue
-        score = abs(floor - feet[1]) + i * 0.02
+        score = abs(floor + 1.6 - target[1]) + i * 0.02
         if best is None or score < best[0]:
             best = (score, x, floor, z)
     return best

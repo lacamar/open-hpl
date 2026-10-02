@@ -79,6 +79,7 @@ public:
 
 	cMeshEntity *mpMesh = NULL;
 	std::vector<iPhysicsBody *> mvBodies;
+	iPhysicsBody *mpMainBody = NULL;
 	std::vector<iPhysicsJoint *> mvJoints;
 	// cLuxCritter members at the official offsets, see SomaNewPropBlock
 	char *mpCritterProps = NULL;
@@ -158,7 +159,7 @@ public:
 	cVector3f GetPosition();
 	cMatrixf GetMatrix();
 	void SetMatrix(const cMatrixf &a_mtx);
-	iPhysicsBody *GetMainBody() { return mvBodies.empty() ? NULL : mvBodies[0]; }
+	iPhysicsBody *GetMainBody() { return mpMainBody ? mpMainBody : mvBodies.empty() ? NULL : mvBodies[0]; }
 	void RemoveCollideCallbacks(const tString &asChild);
 
 	struct cConnection

@@ -189,6 +189,9 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvBillboards = mvBillboards;
 		pEnt->mvSoundEntities = mvSoundEntities;
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
+		for (iPhysicsBody *pBody : mvBodies)
+			if (pBody->GetName() == pEnt->msName + "_" + pEnt->mVars.GetVarString("MainPhysicsBody", ""))
+				pEnt->mpMainBody = pBody;
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
 			LoadSockets(pModel, "", pEnt, mvScale);
 		if (mpEntity)
