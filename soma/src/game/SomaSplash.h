@@ -17,6 +17,7 @@ public:
 	void OnDraw(float afFrameTime);
 
 	bool ScriptsMayRun();
+	void DrawLoadingScreen();
 
 private:
 	void Finish();

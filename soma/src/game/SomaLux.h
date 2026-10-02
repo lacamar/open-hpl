@@ -97,11 +97,11 @@ public:
 	cSomaLuxUpdater() : iUpdateable("SomaLuxUpdater") {}
 	void Update(float afTimeStep);
 	void OnDraw(float afFrameTime);
-
-private:
+	void AppLostInputFocus();
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
+void SomaSetGamePaused(bool abX);
 float SomaStartYaw(const cMatrixf &a_mtxArea);
 bool SomaStartPosCrouching(const tString &asName);
 void SomaUpdateLightConnections();

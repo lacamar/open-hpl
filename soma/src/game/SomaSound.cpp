@@ -714,7 +714,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			return;
 		Start();
 	}
-	if (mbPaused)
+	if (mbPaused || (gpSomaBase->mbScriptGamePaused && (mType & 11)))
 		return;
 	if (mbStopped && mvVoices.empty())
 		return;

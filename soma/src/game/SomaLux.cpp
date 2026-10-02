@@ -449,6 +449,34 @@ void cSomaLuxUpdater::OnDraw(float afFrameTime)
 	SomaDrawImGuis();
 }
 
+void SomaSetGamePaused(bool abX)
+{
+	if (gpSomaBase->mbScriptGamePaused == abX)
+		return;
+	gpSomaBase->mbScriptGamePaused = abX;
+	cSound *pSound = gpSomaBase->mpEngine->GetSound();
+	const tFlag lWorld = 11;
+	if (abX)
+	{
+		pSound->GetSoundHandler()->PauseAll(lWorld);
+		pSound->GetMusicHandler()->Pause();
+	}
+	else
+	{
+		pSound->GetSoundHandler()->ResumeAll(lWorld);
+		pSound->GetMusicHandler()->Resume();
+	}
+}
+
+void cSomaLuxUpdater::AppLostInputFocus()
+{
+	cSomaLuxModule *pMenu = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetModule("MenuHandler") : NULL;
+	if (pMenu == NULL || gpSomaBase->ScriptsHeld() || cSomaLuxMap::GetCurrent() == NULL || gpSomaBase->mbScriptGamePaused ||
+		pMenu->CallBool("bool GetMenuActive()", nullptr, true))
+		return;
+	pMenu->OnAction(11, true);
+}
+
 void cSomaLuxUpdater::Update(float afTimeStep)
 {
 	if (gpSomaBase->ScriptsHeld())
@@ -460,7 +488,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		if (gbPendingNewGame)
 		{
 			gbPendingNewGame = false;
-			gpSomaBase->mbScriptGamePaused = false;
+			SomaSetGamePaused(false);
 			gpSomaBase->GetVisitedMaps().clear();
 			SomaDeserializeGlobalVars("");
 			if (cSomaLuxGame::Get())
@@ -480,6 +508,8 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
 		}
 		gsPreloadMap.clear();
+		if (gpSomaBase->GetSplash())
+			gpSomaBase->GetSplash()->DrawLoadingScreen();
 		if (gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart) == false)
 			Error("SOMA script: %s\n", sError.c_str());
 		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
@@ -796,7 +826,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		return sFile;
 	});
 	SOMA_FUNC(e, "void cLux_Exit()", +[]() { gpSomaBase->mpEngine->Exit(); });
-	SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { gpSomaBase->mbScriptGamePaused = b; });
+	SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });

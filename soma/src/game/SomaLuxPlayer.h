@@ -205,11 +205,14 @@ public:
 	int mlMaxSmoothMousePos = 7;
 	float mfPrevSmoothMousePosMul = 0.7f;
 	std::deque<cVector2f> mlstSmoothMousePos;
+	tString msLatestKey;
 
 private:
 	static const int kMaxActions = 256;
 	bool mvDown[kMaxActions] = {};
 	bool mvPrevDown[kMaxActions] = {};
+	bool mvPrevKeys[eKey_LastEnum] = {};
+	bool mvPrevButtons[eMouseButton_LastEnum] = {};
 	static cSomaLuxInputHandler *mpInstance;
 };
 

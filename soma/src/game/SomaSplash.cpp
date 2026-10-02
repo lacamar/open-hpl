@@ -63,8 +63,6 @@ void cSomaSplash::Finish()
 	mpGui->DestroyGfx(mpPremenuBg);
 	mpGui->DestroyGfx(mpLoadingBar);
 	mpGui->DestroyGfx(mpLoadingFrame);
-	for (int i = 0; i < mlBrainFrameCount; ++i)
-		mpGui->DestroyGfx(mvBrainFrames[i]);
 	mpPremenuBg = mpLoadingBar = mpLoadingFrame = NULL;
 
 	mpViewport->SetActive(false);
@@ -140,6 +138,18 @@ void cSomaSplash::DrawBrainIcon(float afAlpha)
 
 	cVector3f vPos = VirtualToScreen(cVector2f(1024.0f + (mfVirtualWidth - 1024.0f) * 0.5f - 150.0f, 648.0f), 3);
 	mpGuiSet->DrawGfx(pFrame, vPos, VirtualSizeToScreen(cVector2f(70, 70)), cColor(afAlpha, afAlpha, afAlpha, 1));
+}
+
+void cSomaSplash::DrawLoadingScreen()
+{
+	iLowLevelGraphics *pLowGfx = mpEngine->GetGraphics()->GetLowLevel();
+	pLowGfx->SetClearColor(cColor(0, 1));
+	pLowGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
+	DrawBrainIcon(1);
+	mpGuiSet->Render(NULL);
+	mpGuiSet->ClearRenderObjects();
+	pLowGfx->FlushRendering();
+	pLowGfx->SwapBuffers();
 }
 
 void cSomaSplash::OnDraw(float afFrameTime)

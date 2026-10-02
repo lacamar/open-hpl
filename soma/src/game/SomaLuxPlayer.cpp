@@ -523,6 +523,23 @@ void cSomaLuxInputHandler::LatchActions()
 		mvPrevDown[i] = mvDown[i];
 		mvDown[i] = pInput->GetAction(i) && pInput->IsTriggerd(i);
 	}
+	msLatestKey = "";
+	iKeyboard *pKeyboard = pInput->GetKeyboard();
+	for (int i = 0; i < eKey_LastEnum; ++i)
+	{
+		bool bDown = pKeyboard->KeyIsDown((eKey)i);
+		if (bDown && mvPrevKeys[i] == false && msLatestKey.empty())
+			msLatestKey = "Keyboard." + pKeyboard->KeyToString((eKey)i);
+		mvPrevKeys[i] = bDown;
+	}
+	iMouse *pMouse = pInput->GetMouse();
+	for (int i = 0; i < eMouseButton_LastEnum; ++i)
+	{
+		bool bDown = pMouse->ButtonIsDown((eMouseButton)i);
+		if (bDown && mvPrevButtons[i] == false && msLatestKey.empty())
+			msLatestKey = "MouseButton." + pMouse->ButtonToString((eMouseButton)i);
+		mvPrevButtons[i] = bDown;
+	}
 }
 
 void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
@@ -782,6 +799,7 @@ void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "float GetTimeSinceGamepadWasUsed(int alID)", +[](I *, int) { return 100000.0f; });
 	SOMA_METHOD(e, T, "int GetLastUsedGamepadIndex(float afTimeLimit=-1.0f)", +[](I *, float) { return -1; });
 	SOMA_METHOD(e, T, "bool GetGamepadWasLastDeviceUsed()", +[](I *) { return false; });
+	SOMA_METHOD(e, T, "const tString& GetLatestKeyPressed()", +[](I *p) -> const tString & { return p->msLatestKey; });
 	SOMA_METHOD(e, T, "bool IsYAxisInverted()", +[](I *p) { return p->mbInvertMouse; });
 	SOMA_METHOD(e, T, "bool WasAnalogueInputFromPad()", +[](I *) { return false; });
 	SOMA_METHOD(e, T, "bool GetSmoothMouse()", +[](I *p) { return p->mbSmoothMouse; });

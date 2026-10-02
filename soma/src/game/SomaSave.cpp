@@ -24,6 +24,7 @@ namespace
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
+	bool gbHoldAfterLoad = false;
 	int glSaveNameCount = 0;
 	cDate gLatestSaveDate;
 	const int kMaxAutoSaves = 20; // game.cfg Saving/MaxAutoSaves
@@ -674,6 +675,10 @@ bool cSomaSaveHandler::ApplyPendingState()
 	cSomaSaveState::ReadWorld(in);
 	if (in.ok == false)
 		Warning("SOMA save: saved state is truncated\n");
+	if (cSomaLuxPlayer::Get())
+		cSomaLuxPlayer::Get()->SetActive(true);
+	if (gbHoldAfterLoad)
+		SomaSetGamePaused(true);
 	return true;
 }
 
@@ -691,15 +696,22 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool GetSaveThreadActive()", +[](void *) { return false; });
 	SOMA_METHOD(e, T, "bool HasLoadError(tString&out asError)", +[](void *, tString &) { return false; });
 	SOMA_METHOD(e, T, "void DelayedLoadGameFromFile(const tWString&in asSaveFile, const tString&in asCallbackObject, const tString&in asCallbackFunction, bool abWaitAfterHeader, bool abWaitAfterLoad)",
-				+[](void *, W f, const tString &, const tString &, bool, bool) { Load(f); });
+				+[](void *, W f, const tString &, const tString &, bool, bool bWait) { gbHoldAfterLoad = Load(f) && bWait; });
 	SOMA_METHOD(e, T, "void DelayedSaveGameToFile(const tWString&in asSaveFile, bool abSaveAsCheckpoint)", +[](void *, W f, bool) { Save(f); });
 	SOMA_METHOD(e, T, "void DeleteSaveFile(const tWString&in asSaveFile)", +[](void *, W f) { cPlatform::RemoveFile(GetSaveDir() + cString::GetFileNameW(f)); });
 	SOMA_METHOD(e, T, "bool IsDoneLoadingHeader()", +[](void *) { return true; });
-	SOMA_METHOD(e, T, "void ContinueLoading(bool abDisableWaits)", +[](void *, bool) {});
-	SOMA_METHOD(e, T, "bool IsDoneLoadingSavedGame()", +[](void *) { return true; });
-	SOMA_METHOD(e, T, "void StartLoadedGame()", +[](void *) {});
+	SOMA_METHOD(e, T, "void ContinueLoading(bool abDisableWaits)", +[](void *, bool b) { gbHoldAfterLoad &= !b; });
+	SOMA_METHOD(e, T, "bool IsDoneLoadingSavedGame()", +[](void *) { return gsPendingState.empty(); });
+	SOMA_METHOD(e, T, "void StartLoadedGame()", +[](void *) {
+		if (gbHoldAfterLoad)
+			SomaSetGamePaused(false);
+		gbHoldAfterLoad = false;
+	});
 	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
 				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {
+					names.Resize(0);
+					dates.Resize(0);
+					files.Resize(0);
 					tWStringList lstFiles;
 					cPlatform::FindFilesInDir(lstFiles, GetSaveDir(), _W("*.sav"));
 					std::vector<std::pair<cDate, tWString>> vSaves;

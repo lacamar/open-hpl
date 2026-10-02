@@ -59,6 +59,7 @@ public:
 	tString GetInitConfigString(const tString &asLevel, const tString &asName);
 	void LoadScriptMainMenu();
 	bool ScriptsHeld() { return mpSplash && mpSplash->ScriptsMayRun() == false; }
+	cSomaSplash *GetSplash() { return mpSplash; }
 	bool UsesRealPlayer() { return mbUseRealPlayer; }
 
 private:
