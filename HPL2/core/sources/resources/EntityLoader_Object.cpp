@@ -379,7 +379,7 @@ namespace hpl {
 			if(mpMesh==NULL) return NULL;
 
 			//Create entity
-			mpEntity = apWorld->CreateMeshEntity(asName, mpMesh, mbLoadAsStatic);
+			mpEntity = apWorld->CreateMeshEntity(asName, mpMesh, mbLoadAsStatic && mpMesh->GetAnimationNum() == 0);
 			
 			if(mpMesh->GetSkeleton()!=NULL)
 				mpEntity->SetMatrix(cMath::MatrixScale(mvScale));
