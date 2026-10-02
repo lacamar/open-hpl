@@ -470,6 +470,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetSourceRadius(float afX)", +[](cLightBox *o, float a0) { o->SetSourceRadius(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetBrightness(float afX)", +[](cLightBox *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "float GetBrightness()", +[](cLightBox *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "float GetTranslucency()", +[](cLightBox *o) -> float { return o->GetTranslucency(); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetTranslucency(float afX)", +[](cLightBox *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetSize(const cVector3f&in avSize)", +[](cLightBox *o, const cVector3f & a0) { o->SetSize(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetSize()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetBlendFunc(eLightBoxBlendFunc aFunc)", +[](cLightBox *o, int a0) { o->SetBlendFunc((eLightBoxBlendFunc)a0); });
@@ -582,6 +584,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSourceRadius(float afX)", +[](cLightPoint *o, float a0) { o->SetSourceRadius(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetBrightness(float afX)", +[](cLightPoint *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "float GetBrightness()", +[](cLightPoint *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "float GetTranslucency()", +[](cLightPoint *o) -> float { return o->GetTranslucency(); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void SetTranslucency(float afX)", +[](cLightPoint *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetUniqueID()", +[](cLightSpot *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void UpdateLogic(float afTimeStep)", +[](cLightSpot *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetName()const", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -677,6 +681,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSourceRadius(float afX)", +[](cLightSpot *o, float a0) { o->SetSourceRadius(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetBrightness(float afX)", +[](cLightSpot *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetBrightness()", +[](cLightSpot *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "float GetTranslucency()", +[](cLightSpot *o) -> float { return o->GetTranslucency(); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void SetTranslucency(float afX)", +[](cLightSpot *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetViewMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetProjectionMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const cMatrixf& GetViewProjMatrix()", +[](cLightSpot *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewProjMatrix(); return r; });
@@ -1388,6 +1394,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "void SetSourceRadius(float afX)", +[](iLight *o, float a0) { o->SetSourceRadius(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetBrightness(float afX)", +[](iLight *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "float GetBrightness()", +[](iLight *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "iLight", "float GetTranslucency()", +[](iLight *o) -> float { return o->GetTranslucency(); });
+	SOMA_METHOD_NEW(e, "iLight", "void SetTranslucency(float afX)", +[](iLight *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "cVector2f GetScreenSizeFloat()", +[](iLowLevelGraphics *o) -> cVector2f { return o->GetScreenSizeFloat(); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "const cVector2l& GetScreenSizeInt()", +[](iLowLevelGraphics *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetScreenSizeInt(); return r; });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLine(const cVector3f&in avBegin, const cVector3f&in avEnd, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawLine(a0, a1, a2); });

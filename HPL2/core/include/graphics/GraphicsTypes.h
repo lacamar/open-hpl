@@ -31,7 +31,7 @@ namespace hpl {
 
 	//-----------------------------------------
 
-	#define kMaxTextureUnits (8)
+	#define kMaxTextureUnits (16)
 	#define kMaxNumOfLights (30)
 	#define kMaxClipPlanes (6)
 	#define kMaxDrawColorBuffers (4)
@@ -558,6 +558,9 @@ namespace hpl {
 		eMaterialTexture_CubeMap,
 		eMaterialTexture_DissolveAlpha,
 		eMaterialTexture_CubeMapAlpha,
+		eMaterialTexture_DetailDiffuse,
+		eMaterialTexture_DetailNMap,
+		eMaterialTexture_Translucency,
 		eMaterialTexture_Special,	//This means that the texture is not data in the material, but retrieved else where. Such as a reflection texture.
 		eMaterialTexture_LastEnum
 	};

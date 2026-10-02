@@ -168,6 +168,17 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl",
 		  "\t@ifdef GoboType_Specular\n\t\tvDiffuse = cVector3f(fGradLen / 8.0f);\n\t@endif\n",
 		  "" },
+		// official path: pow(neg, 16.0) is NaN and min(2.0, NaN) is 2
+		{ "deferred_light_frag.hpsl",
+		  "\t\tfLightTransport = fLightTransport * fLightTransport; // pow(fLightTransport, 8.0)\n"
+		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n"
+		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n"
+		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n",
+		  "\t\tfLightTransport = fLightTransport < 0.0 ? 0.125 : 0.0;\n" },
+		// official uses hardware sRGB, which leaves translucency alpha linear
+		{ "deferred_light_frag.hpsl",
+		  "vColorVal.rgba = GammaToLinearCorrection(vColorVal.rgba);",
+		  "vColorVal.rgb = GammaToLinearCorrection(vColorVal.rgb);" },
 		{ "deferred_light_frag.hpsl",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"

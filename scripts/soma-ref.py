@@ -74,8 +74,12 @@ def write_mod(map_file, pos, size, boot=False):
         (MOD / f).symlink_to(SOMA / f)
     (MOD / "entry.hpc").write_text('<Content Version="1.0" Type="StandAlone" Title="ohpl-ref" Author="open-hpl" '
                                    'Description="open-hpl reference agent" InitCfg="config/ohpl_init.cfg"/>\n')
-    (MOD / "resources.cfg").write_text('<Resources>\n\t<Directory Path="/config" AddSubDirs="true"/>\n'
-                                       '\t<Directory Path="/script" AddSubDirs="true"/>\n</Resources>\n')
+    over = Path(os.environ["OHPL_REF_OVERRIDE"]) if os.environ.get("OHPL_REF_OVERRIDE") else None
+    if over:
+        shutil.copytree(over, MOD, dirs_exist_ok=True)
+    dirs = ["config", "script"] + ([d.name for d in over.iterdir() if d.is_dir()] if over else [])
+    (MOD / "resources.cfg").write_text("<Resources>\n" + "".join(
+        f'\t<Directory Path="/{d}" AddSubDirs="true"/>\n' for d in dirs) + "</Resources>\n")
     init = (SOMA / "config/main_init.cfg").read_text()
     init = init.replace('"config/Modules.cfg"', '"config/ohpl_modules.cfg"')
     init = re.sub(r'MainSaveFolder\s*=\s*"[^"]*"', f'MainSaveFolder = "{SAVE_FOLDER}"', init)

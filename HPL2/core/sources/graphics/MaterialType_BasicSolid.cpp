@@ -24,6 +24,7 @@
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
+#include "resources/GpuShaderManager.h"
 
 #include "math/Frustum.h"
 #include "math/Math.h"
@@ -64,6 +65,9 @@ namespace hpl {
 	#define kVar_avSwaySingleDirection			13
 	#define kVar_avSwaySinglesampleDirection	14
 	#define kVar_a_mtxModel						15
+	#define kVar_afFarPlane						16
+	#define kVar_avDetailProperties				17
+	#define kVar_avDetailWeights				18
 
 
 	//------------------------------
@@ -79,8 +83,11 @@ namespace hpl {
 	#define eFeature_Diffuse_Sway			eFlagBit_7
 	#define eFeature_Diffuse_SwaySingleDir	eFlagBit_8
 	#define eFeature_Diffuse_SwayMap		eFlagBit_9
+	#define eFeature_Diffuse_DetailDiffuse	eFlagBit_10
+	#define eFeature_Diffuse_DetailNormal	eFlagBit_11
+	#define eFeature_Diffuse_Translucency	eFlagBit_12
 		
-	#define kDiffuseFeatureNum 10
+	#define kDiffuseFeatureNum 13
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -94,6 +101,9 @@ namespace hpl {
 		cProgramComboFeature("UseSway", kPC_VertexBit),
 		cProgramComboFeature("UseSwaySingleDir", kPC_VertexBit),
 		cProgramComboFeature("UseSwayMap", kPC_VertexBit),
+		cProgramComboFeature("UseDetailDiffuse", kPC_FragmentBit),
+		cProgramComboFeature("UseDetailNormal", kPC_FragmentBit, eFeature_Diffuse_NormalMaps),
+		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
 	};
 
 	//------------------------------
@@ -312,6 +322,9 @@ namespace hpl {
 		AddUsedTexture(eMaterialTexture_DissolveAlpha);
 		AddUsedTexture(eMaterialTexture_CubeMap);
 		AddUsedTexture(eMaterialTexture_CubeMapAlpha);
+		AddUsedTexture(eMaterialTexture_DetailDiffuse);
+		AddUsedTexture(eMaterialTexture_DetailNMap);
+		AddUsedTexture(eMaterialTexture_Translucency);
 
 		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
 
@@ -387,6 +400,9 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afFarPlane", kVar_afFarPlane,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avDetailProperties", kVar_avDetailProperties,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avDetailWeights", kVar_avDetailWeights,eMaterialRenderMode_Diffuse);
 		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Diffuse);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
@@ -482,6 +498,18 @@ namespace hpl {
 		//Diffuse
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
+			if(alUnit > 3 && cGpuShaderManager::IsHpsl())
+			{
+				switch(alUnit)
+				{
+				case 5: return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+				case 6: return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+				case 8: return apMaterial->GetTexture(eMaterialTexture_DetailDiffuse);
+				case 9: return apMaterial->GetTexture(eMaterialTexture_NMap) ? apMaterial->GetTexture(eMaterialTexture_DetailNMap) : NULL;
+				case 10: return apMaterial->GetTexture(eMaterialTexture_Translucency);
+				}
+				return NULL;
+			}
 			switch(alUnit)
 			{
 			case 0: return apMaterial->GetTexture(eMaterialTexture_Diffuse);
@@ -558,6 +586,9 @@ namespace hpl {
 				if(apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha))	lFlags |= eFeature_Diffuse_CubeMapAlpha;
 			}
 			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Diffuse_UvAnimation;
+			if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse))	lFlags |= eFeature_Diffuse_DetailDiffuse;
+			if(apMaterial->GetTexture(eMaterialTexture_DetailNMap))		lFlags |= eFeature_Diffuse_DetailNormal;
+			if(apMaterial->GetTexture(eMaterialTexture_Translucency))	lFlags |= eFeature_Diffuse_Translucency;
 			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap);
 
 			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
@@ -586,6 +617,7 @@ namespace hpl {
 			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
 
 			apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/pFrustum->GetFarPlane());
+			apProgram->SetFloat(kVar_afFarPlane, pFrustum->GetFarPlane());
 		}
 		
 	}
@@ -635,6 +667,13 @@ namespace hpl {
 					
 					cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
 					apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
+				}
+
+				if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse) || apMaterial->GetTexture(eMaterialTexture_DetailNMap))
+				{
+					const float *p = pVars->mvDetailProperties;
+					apProgram->SetVec4f(kVar_avDetailProperties, p[0], p[1], p[2], p[3]);
+					apProgram->SetVec3f(kVar_avDetailWeights, pVars->mvDetailWeights);
 				}
 			}
 		}
@@ -702,6 +741,13 @@ namespace hpl {
 		pVars->mfSwayYFreqMul = apVars->GetVarFloat("SwayYFreqMul", 0);
 		pVars->mvSwaySingleDir = apVars->GetVarVector3f("SwaySingleDirVector", cVector3f(0, 0, 1));
 		pVars->mvSwaySingleSampleDir = apVars->GetVarVector3f("SwaySingleSampleVector", cVector3f(1, 0, 0));
+		float fFadeStart = apVars->GetVarFloat("DetailFadeStart", 5);
+		cVector2f vDetailUvMul = apVars->GetVarVector2f("DetailUvMul", 4);
+		pVars->mvDetailProperties[0] = fFadeStart;
+		pVars->mvDetailProperties[1] = apVars->GetVarFloat("DetailFadeEnd", 10) - fFadeStart;
+		pVars->mvDetailProperties[2] = vDetailUvMul.x;
+		pVars->mvDetailProperties[3] = vDetailUvMul.y;
+		pVars->mvDetailWeights = cVector3f(apVars->GetVarFloat("DetailWeight_Diffuse", 1), apVars->GetVarFloat("DetailWeight_Specular", 1), apVars->GetVarFloat("DetailWeight_Normal", 1));
 	}
 
 	//--------------------------------------------------------------------------

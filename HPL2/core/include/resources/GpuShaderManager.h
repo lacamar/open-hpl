@@ -59,6 +59,7 @@ namespace hpl {
 		void Unload(iResourceBase* apResource);
 
 		static void SetHpslTranspileCallback(tHpslTranspileCallback aCallback) { mpHpslTranspileCallback = aCallback; }
+		static bool IsHpsl() { return mpHpslTranspileCallback != NULL; }
 		static void AddGlobalDefine(const tString& asName) { mvGlobalDefines.push_back(asName); }
 
 	private:

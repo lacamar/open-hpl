@@ -1627,6 +1627,7 @@ namespace hpl {
 		if(apTex)	NewTarget = GetGLTextureTargetEnum(apTex->GetType());
 		
 		GLenum LastTarget = mvCurrentTextureTarget[alUnit];
+		bool bFixed = alUnit < 8;
 
 		//Check if multi texturing is supported.
 		if(GLEW_ARB_multitexture && mlCurrentActiveTextureUnit != (int)alUnit){
@@ -1637,7 +1638,7 @@ namespace hpl {
 		//Disable this unit if NULL
 		if(apTex == NULL)
 		{
-			if(LastTarget!=0)
+			if(LastTarget!=0 && bFixed)
 				glDisable(LastTarget);
 
 			//glBindTexture(LastTarget,0);
@@ -1645,7 +1646,7 @@ namespace hpl {
 		//Enable the unit, set the texture handle and bind the pbuffer
 		else
 		{
-			if(LastTarget!=0 && NewTarget != LastTarget)
+			if(LastTarget!=0 && NewTarget != LastTarget && bFixed)
 			{
 				glDisable(LastTarget);
 			}
@@ -1654,7 +1655,7 @@ namespace hpl {
 
 			glBindTexture(NewTarget, pSDLTex->GetTextureHandle());
 
-			if(NewTarget != LastTarget) glEnable(NewTarget);
+			if(NewTarget != LastTarget && bFixed) glEnable(NewTarget);
 
 			//if it is a render target we need to do some more binding.
 			if(pSDLTex->GetUsage() == eTextureUsage_RenderTarget)

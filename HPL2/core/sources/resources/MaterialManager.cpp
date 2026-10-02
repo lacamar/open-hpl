@@ -518,6 +518,9 @@ namespace hpl {
 			case eMaterialTexture_CubeMap: return "CubeMap";
 			case eMaterialTexture_DissolveAlpha: return "DissolveAlpha";
 			case eMaterialTexture_CubeMapAlpha: return "CubeMapAlpha";
+			case eMaterialTexture_DetailDiffuse: return "DetailDiffuse";
+			case eMaterialTexture_DetailNMap: return "DetailNMap";
+			case eMaterialTexture_Translucency: return "Translucency";
 		}
 
 		return "";

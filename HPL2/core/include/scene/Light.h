@@ -218,6 +218,8 @@ namespace hpl {
 		float GetFalloffPow(){ return mfFalloffPow;}
 		void SetSpotFalloffPow(float afX){ mfSpotFalloffPow = afX;}
 		float GetSpotFalloffPow(){ return mfSpotFalloffPow;}
+		void SetTranslucency(float afX){ mfTranslucency = afX;}
+		float GetTranslucency(){ return mfTranslucency;}
 		void SetBrightness(float afX);
 		float GetBrightness(){ return mfBrightness;}
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
@@ -273,6 +275,7 @@ namespace hpl {
 		float mfRadius;
 		float mfFalloffPow;
 		float mfSpotFalloffPow;
+		float mfTranslucency = 1;
 		float mfBrightness;
 		static bool mbHpl3Visibility;
 		bool IsLit();

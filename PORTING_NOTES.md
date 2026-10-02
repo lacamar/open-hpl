@@ -6020,3 +6020,20 @@ our live entries and events.
   before this date are suspect.
 - The official game merges static geometry into `CombinedObjectsN`, split by material and
   shadow-caster flag.
+
+## SOMA: translucency, detail maps (2026-10-02)
+
+- Light translucency: `afTranslucencyScale = t*t*0.5` (RE: light instance data +0x64 at
+  0x1403fbfc4); `t` defaults to 1 and no map sets it.
+- The official renderer uses the `UseTextureBuffer` half of `deferred_light_frag.hpsl`; ours
+  the backward-compatible half. Two differences matter:
+  - transport there is `pow(x, 16.0)` with x <= 0: NaN for x < 0, and `min(2.0, NaN)` is 2,
+    so any back-lit pixel gets the full transport term. The squaring in our half gave ~0.
+  - colour space mode is `GetCaps(0xe) ? 3 : 1` (RE: 0x14020afbe); 3 = hardware sRGB
+    (`LinearColorSpaceCorrectionType_Hardware`, no shader `pow 2.2`), so G-buffer alpha
+    (translucency) stays linear. Ours raised it to 2.2 (0.077 -> 0.0035).
+  Both patched in `gvHpslSourceReplacements`. 00_03 drapes, shadowless: 130 vs ref 128.
+- Ref A/B of a material: `OHPL_REF_OVERRIDE=<dir> scripts/soma-ref.py start ...` copies `<dir>`
+  into the mod and adds its top-level dirs to `resources.cfg`; mod files override the game's.
+- Toggling `set_render_setting shadows` 0 -> 1 breaks shadows until restart; use the
+  script `iLight.SetCastShadows`.

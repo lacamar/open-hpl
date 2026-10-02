@@ -124,8 +124,9 @@ namespace hpl {
 	#define eFeature_Light_BoxMask			eFlagBit_7
 	#define eFeature_Light_GoboSpecular		eFlagBit_8
 	#define eFeature_Light_GoboTypeSpecular	eFlagBit_9
+	#define eFeature_Light_Translucency		eFlagBit_10
 	
-	#define kLightFeatureNum 10
+	#define kLightFeatureNum 11
 
 	cProgramComboFeature gvLightFeatureVec[] =
 	{
@@ -139,6 +140,7 @@ namespace hpl {
 		cProgramComboFeature("BoxMask", kPC_FragmentBit),
 		cProgramComboFeature("GoboSpecFlag", kPC_FragmentBit, eFeature_Light_Gobo),
 		cProgramComboFeature("GoboType_Specular", kPC_FragmentBit, eFeature_Light_Gobo),
+		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -224,6 +226,7 @@ namespace hpl {
 	#define kVar_afTemporalBlurAmount				66
 	#define kVar_afSizeDiv							67
 	#define kVar_afPower							68
+	#define kVar_afTranslucencyScale				69
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -656,6 +659,7 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afTranslucencyScale", kVar_afTranslucencyScale, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avMaskCenter", kVar_avMaskCenter, eDefferredProgramMode_Lights);
@@ -1752,6 +1756,7 @@ namespace hpl {
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
 		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow() * 2);
+		apProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
 
 		////////////////////////
 		// Point light specific
@@ -1835,6 +1840,7 @@ namespace hpl {
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
+		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
 		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular | eFeature_Light_GoboTypeSpecular;
 		
 		//Spotlight specifics
