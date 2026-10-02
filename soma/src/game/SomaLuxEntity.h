@@ -75,6 +75,7 @@ public:
 	bool mbInteractedWith = false;
 	cMatrixf m_mtxOnLoad = cMatrixf::Identity;
 	cVector3f mvScale = 1;
+	bool mbGlobalSpaceAnim = false;
 	cVector3f mvSize = 1; // areas
 
 	cMeshEntity *mpMesh = NULL;

@@ -1563,7 +1563,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		return lRet;
 	});
 	SOMA_METHOD_NEW(e, T, "int PlayAnimation(const tString&in asName, float afFadeTime=0.3f, bool abLoop=false, bool abPlayTransition=true, const tString&in asCallback=\"\", bool abGlobalSpace=false)",
-					+[](E *p, S n, float f, bool l, bool, S cb, bool) { return p->PlayAnimation(n, f, l, cb); });
+					+[](E *p, S n, float f, bool l, bool, S cb, bool g) {
+						if (g && p->mbGlobalSpaceAnim == false && p->mpMesh)
+							p->mpMesh->SetMatrix(cMath::MatrixScale(p->mvScale));
+						p->mbGlobalSpaceAnim = g;
+						return p->PlayAnimation(n, f, l, cb);
+					});
 	SOMA_METHOD_NEW(e, T, "void AppendAnimation(const tString&in asName, bool abLoop)", +[](E *p, S n, bool l) {
 		if (p->GetAnimationIsPlaying())
 			p->mvAnimQueue.push_back(std::make_pair(n, l));

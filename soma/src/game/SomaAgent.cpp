@@ -745,6 +745,9 @@ namespace
 		bool mbSeen = false, mbDetected = false;
 		cVector3f mvLastKnownPlayerPos = 0;
 		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
+		cBoneState *mpPosBone = NULL;
+		bool mbPosBoneIsFeet = true, mbGlobalSpace = false;
+		float mfPosBoneYOffset = 0;
 		float mfMaxDoorDist = 1, mfCheckDoorsCount = 0, mfDoorCheckTimer = 0;
 
 		template <class T> T *Find(int alType)
@@ -821,6 +824,25 @@ namespace
 		{
 			if (mpBody == NULL || mpEnt->mpMesh == NULL)
 				return;
+			if (mbGlobalSpace != mpEnt->mbGlobalSpaceAnim)
+			{
+				mbGlobalSpace = mpEnt->mbGlobalSpaceAnim;
+				mpBody->SetGravityActive(mbGlobalSpace == false && mbStaticCollider == false);
+				mpBody->SetTestCollision(mbGlobalSpace == false && mbStaticCollider == false);
+				if (mbGlobalSpace)
+					mpBody->SetYaw(0);
+			}
+			if (mbGlobalSpace)
+			{
+				if (mpPosBone == NULL)
+					return;
+				cVector3f vPos = mpPosBone->GetWorldPosition() + cVector3f(0, mfPosBoneYOffset * mpEnt->mvScale.y, 0);
+				if (mbPosBoneIsFeet)
+					mpBody->SetFeetPosition(vPos);
+				else
+					mpBody->SetPosition(vPos);
+				return;
+			}
 			cMatrixf mtx = cMath::MatrixRotateY(mpBody->GetYaw() + kPif);
 			mtx.SetTranslation(mpBody->GetFeetPosition());
 			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxMeshOffset));
@@ -904,6 +926,13 @@ void SomaCreateAgent(cSomaLuxEntity *apEnt)
 	mtxOffset = cMath::MatrixMul(mtxOffset, cMath::MatrixScale(v.GetVarVector3f("MeshScaleOffset", 1)));
 	mtxOffset.SetTranslation(v.GetVarVector3f("MeshPositionOffset", 0));
 	pAgent->mtxMeshOffset = mtxOffset;
+	if (apEnt->mpMesh && apEnt->mpMesh->GetBoneStateNum() > 0)
+	{
+		tString sBone = v.GetVarString("CharBodyPosBone", "");
+		pAgent->mpPosBone = sBone.empty() ? apEnt->mpMesh->GetBoneState(0) : apEnt->mpMesh->GetBoneStateFromName(sBone);
+	}
+	pAgent->mbPosBoneIsFeet = v.GetVarBool("CharBodyBoneIsFeet", true);
+	pAgent->mfPosBoneYOffset = v.GetVarFloat("CharBodyBoneYOffset", 0);
 	pAgent->mbSensesActive = apEnt->mInstanceVars.GetVarBool("SensesActive", true);
 	pAgent->mbStaticCollider = apEnt->mInstanceVars.GetVarBool("StaticCollider", false);
 	pBody->SetGravityActive(pAgent->mbStaticCollider == false);
