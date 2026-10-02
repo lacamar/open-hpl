@@ -179,6 +179,14 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl",
 		  "vColorVal.rgba = GammaToLinearCorrection(vColorVal.rgba);",
 		  "vColorVal.rgb = GammaToLinearCorrection(vColorVal.rgb);" },
+		// and multiplies linear albedo by the vertex/ColorMul colour
+		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
+		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
+		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
+		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_light_frag.hpsl",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"

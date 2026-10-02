@@ -19,7 +19,7 @@ Open:
 - Force fields (`cWorld::CreateForceField`) stubbed.
 - 00_03 server room ~2x brighter than the ref.
 - Official colour space is hardware sRGB (exact curve, sRGB textures); ours is `pow 2.2` in
-  shaders, darker in deep shadows. 00_03 waiting room walls: ours orange-red, ref olive.
+  shaders, darker in deep shadows.
 
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 

@@ -6033,6 +6033,10 @@ our live entries and events.
     (`LinearColorSpaceCorrectionType_Hardware`, no shader `pow 2.2`), so G-buffer alpha
     (translucency) stays linear. Ours raised it to 2.2 (0.077 -> 0.0035).
   Both patched in `gvHpslSourceReplacements`. 00_03 drapes, shadowless: 130 vs ref 128.
+- Same cause: hardware sRGB multiplies the linear albedo by the vertex colour / static object
+  `ColorMul`; ours multiplied the gamma albedo, then the light pass raised both to 2.2. 00_03
+  waiting room wall (`ColorMul 0.90 0.38 0.0035`) went orange-red instead of olive. G-buffer
+  shaders now use `pow(px_vColor, 1/2.2)`; wall 17/11/1 vs ref 16/11/1.
 - Ref A/B of a material: `OHPL_REF_OVERRIDE=<dir> scripts/soma-ref.py start ...` copies `<dir>`
   into the mod and adds its top-level dirs to `resources.cfg`; mod files override the game's.
 - Toggling `set_render_setting shadows` 0 -> 1 breaks shadows until restart; use the
