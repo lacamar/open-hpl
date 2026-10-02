@@ -21,6 +21,7 @@
 #define HPL_LANGUAGE_FILE_H
 
 #include <map>
+#include <strings.h>
 #include "system/SystemTypes.h"
 
 namespace hpl {
@@ -35,7 +36,12 @@ namespace hpl {
 		tWString mwsText;		
 	};
 
-	typedef std::map<tString, cLanguageEntry*> tLanguageEntryMap;
+	struct cLanguageNameLess
+	{
+		bool operator()(const tString& a, const tString& b) const { return strcasecmp(a.c_str(), b.c_str()) < 0; }
+	};
+
+	typedef std::map<tString, cLanguageEntry*, cLanguageNameLess> tLanguageEntryMap;
 	typedef tLanguageEntryMap::iterator tLanguageEntryMapIt;
 
 	//--------------------------------
@@ -50,7 +56,7 @@ namespace hpl {
 		tLanguageEntryMap m_mapEntries;
 	};
 
-	typedef std::map<tString, cLanguageCategory*> tLanguageCategoryMap;
+	typedef std::map<tString, cLanguageCategory*, cLanguageNameLess> tLanguageCategoryMap;
 	typedef tLanguageCategoryMap::iterator tLanguageCategoryMapIt;
 
 	//--------------------------------

@@ -405,7 +405,7 @@ public:
 		bool bActive = in.Pod<bool>();
 		t->mbInteractionDisabled = in.Pod<bool>();
 		t->mbInteractedWith = in.Pod<bool>();
-		t->mbEffectsActive = in.Pod<bool>();
+		bool bEffects = in.Pod<bool>();
 		t->mlParentType = in.Pod<int>();
 		t->mParentID = in.Pod<cSomaID>();
 		t->msParentName = in.Str();
@@ -430,6 +430,9 @@ public:
 		}
 		ReadTimers(in, t);
 		ReadScript(in, t->GetScript());
+		if (p && p->mbEffectsActive != bEffects)
+			p->SetEffectsActive(bEffects && p->mbActive);
+		t->mbEffectsActive = bEffects;
 		if (p && p->mbActive != bActive)
 			p->SetActive(bActive);
 	}
@@ -477,6 +480,24 @@ public:
 			o.Str(ScriptableKey(p));
 			WriteTimers(o, p);
 			WriteScript(o, p->GetScript());
+		}
+
+		std::vector<iLight *> vLights;
+		cLightListIterator it = pMap->GetWorld()->GetLightIterator();
+		while (it.HasNext())
+			if (iLight *l = it.Next(); l->GetParent() == NULL && l->GetEntityParent() == NULL)
+				vLights.push_back(l);
+		o.Pod((uint32_t)vLights.size());
+		for (iLight *l : vLights)
+		{
+			bool bFlicker = l->GetFlickerActive();
+			o.Str(l->GetName());
+			o.Pod(l->IsActive());
+			o.Pod(l->GetVisibleVar());
+			o.Pod(bFlicker);
+			o.Pod(bFlicker ? l->GetFlickerOnColor() : l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
+			o.Pod(bFlicker ? l->GetFlickerOnRadius() : l->IsFading() ? l->GetDestRadius() : l->GetRadius());
+			o.Pod(l->GetBrightness());
 		}
 	}
 
@@ -530,6 +551,23 @@ public:
 			cSomaLuxScriptable *p = it != mapOther.end() ? it->second : &dummy;
 			ReadTimers(in, p);
 			ReadScript(in, p->GetScript());
+		}
+
+		n = in.Pod<uint32_t>();
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			iLight *l = pMap->GetWorld()->GetLight(in.Str());
+			bool bActive = in.Pod<bool>(), bVisible = in.Pod<bool>(), bFlicker = in.Pod<bool>();
+			cColor col = in.Pod<cColor>();
+			float fRadius = in.Pod<float>(), fBrightness = in.Pod<float>();
+			if (l == NULL || in.ok == false)
+				continue;
+			l->SetActive(bActive);
+			l->SetVisible(bVisible);
+			l->SetDiffuseColor(col);
+			l->SetRadius(fRadius);
+			l->SetBrightness(fBrightness);
+			l->SetFlickerActive(bFlicker);
 		}
 
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();

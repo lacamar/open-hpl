@@ -7,12 +7,12 @@ language change duplicating saves (`GetSaveFiles` didn't clear its arrays), draw
 (`ParentAttach*` instance vars, applied after `SetupAfterLoad` so `OpenAmount` comes first; attached
 static bodies no longer get the parent's velocity, which pushed drawers open), Munshi (DAE bone
 poses; global-space animations move the char body to `CharBodyPosBone`), fog rotating (soft
-particles), inspect distance (readables open at half scale: `SetMeshScaleMul`), drapes (meshes with embedded animations load dynamic). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
+particles), "Last on SOMA" save-load screen, light state in saves, inspect distance (readables open at half scale: `SetMeshScaleMul`), drapes (meshes with embedded animations load dynamic). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
 applies live.
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
 - GUI screens skip fog/DoF.
-- Slow map loads; no loading screen when loading a save.
+- Slow map loads.
 - Treemail list entries overlap.
 - Liquid areas (`AreaType="Liquid"`, ~20 maps): water surface, `<Area>_FogArea`, buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed).

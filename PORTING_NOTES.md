@@ -6041,3 +6041,19 @@ our live entries and events.
   into the mod and adds its top-level dirs to `resources.cfg`; mod files override the game's.
 - Toggling `set_render_setting shadows` 0 -> 1 breaks shadows until restart; use the
   script `iLight.SetCastShadows`.
+
+## SOMA: save loading (2026-10-02)
+
+- "Last on SOMA" recap (`MenuHandler.hps` `cLastOnSomaScreen`) never showed:
+  - `cLux_Translate("LastOnSomaText", ...)`: the lang file has `LastOnSOMAText`; official
+    category and entry lookups are case-insensitive (checked on the ref). `LanguageFile.h`
+    maps now compare with `strcasecmp`.
+  - `cLuxScriptImGui.mpImGui` is a script property at offset 16; ours was at 0.
+  - `cImGui::Begin` now drops the last frame's ops: the screen's final update calls `Begin`
+    and returns before `End`, which left its full-screen black layer drawn forever.
+- Saves held only script state; lights changed by scripts came back at map defaults and lamps
+  lit (00_03 waiting room +3 on every connected light, overexposed). Unparented world lights
+  (active, visible, colour or fade/flicker goal, radius, brightness, flicker flag) are appended
+  to the save, Amnesia's `cEngineLight_SaveData` subset; entity effects are reapplied on load.
+  Older saves stop at the light block ("saved state is truncated").
+

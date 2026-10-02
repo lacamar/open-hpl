@@ -108,6 +108,7 @@ void cSomaImGui::Begin(float afTimeStep)
 	mfTimeStep = afTimeStep;
 	mfTimeCount += afTimeStep;
 	mvBuilding.clear();
+	mvDrawn.clear();
 	mMods = cModifiers();
 	mvModStack.clear();
 	mvGroups.clear();
@@ -1215,9 +1216,11 @@ static void FontFactory(asIScriptGeneric *g)
 // cLuxScriptImGui: a script-owned ImGui drawn by the GUI handler
 struct cSomaScriptImGui
 {
+	void *mvPad[2] = {};
 	cSomaImGui *mpImGui;
-	void *mpProp;
+	void *mpProp = NULL;
 };
+static_assert(offsetof(cSomaScriptImGui, mpImGui) == 16, "script property mpImGui");
 
 static cSomaImGui *gpHudImGui = NULL;
 
@@ -1358,7 +1361,8 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 				  gvHudSets.push_back(pSet);
 				  cViewport *pViewport = gpSomaBase->mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
 				  pViewport->AddGuiSet(pSet);
-				  cSomaScriptImGui *p = new cSomaScriptImGui{new cSomaImGui(n, pSet), NULL};
+				  cSomaScriptImGui *p = new cSomaScriptImGui;
+				  p->mpImGui = new cSomaImGui(n, pSet);
 				  if (bDraw)
 					  gvScriptImGuis.push_back(p);
 				  return p;
