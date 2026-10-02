@@ -234,7 +234,7 @@ bool cBunkerBase::InitTestMap()
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
 
-	mpDebugCameraController = hplNew(cBunkerDebugFreeCamera, (pCamera, mpEngine->GetInput()));
+	mpDebugCameraController = hplNew(cDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 
 	return true;

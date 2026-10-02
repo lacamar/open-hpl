@@ -167,7 +167,7 @@ bool cAmfpBase::InitTestMap()
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
 
-	mpDebugCameraController = hplNew(cAmfpDebugFreeCamera, (pCamera, mpEngine->GetInput()));
+	mpDebugCameraController = hplNew(cDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 
 	return true;

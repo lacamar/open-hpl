@@ -209,7 +209,7 @@ bool cRebirthBase::InitTestMap()
 
 	mpDebugViewport = mpEngine->GetScene()->CreateViewport(pCamera, pWorld, true);
 
-	mpDebugCameraController = hplNew(cRebirthDebugFreeCamera, (pCamera, mpEngine->GetInput()));
+	mpDebugCameraController = hplNew(cDebugFreeCamera, (pCamera, mpEngine->GetInput()));
 	mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 
 	return true;

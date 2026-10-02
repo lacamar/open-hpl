@@ -1114,7 +1114,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	{
 		if (mpDebugCameraController == NULL)
 		{
-			mpDebugCameraController = hplNew(cSomaDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
+			mpDebugCameraController = hplNew(cDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 		}
 		// The player script still needs a camera; this one is never rendered

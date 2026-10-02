@@ -3,7 +3,6 @@
 
 #include "hpl.h"
 
-#include "DebugFreeCamera.h"
 #include "SomaSplash.h"
 #include "SomaGammaScreen.h"
 #include "SomaConfig.h"
@@ -76,7 +75,7 @@ private:
 	cWorld *mpTestWorld;
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
-	cSomaDebugFreeCamera *mpDebugCameraController;
+	cDebugFreeCamera *mpDebugCameraController;
 
 	// false with OPENHPL_SOMA_FREECAM: the free camera drives the view instead of the player script
 	bool mbUseRealPlayer;

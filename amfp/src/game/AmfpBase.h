@@ -4,7 +4,6 @@
 
 #include "hpl.h"
 
-#include "DebugFreeCamera.h"
 
 using namespace hpl;
 
@@ -47,7 +46,7 @@ private:
 	cWorld *mpTestWorld;
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
-	cAmfpDebugFreeCamera *mpDebugCameraController;
+	cDebugFreeCamera *mpDebugCameraController;
 };
 
 extern cAmfpBase *gpAmfpBase;

@@ -5,7 +5,6 @@
 #include "hpl.h"
 
 #include "BunkerAreaLoader.h"
-#include "DebugFreeCamera.h"
 
 using namespace hpl;
 
@@ -51,7 +50,7 @@ private:
 	cWorld *mpTestWorld;
 	cCamera *mpDebugCamera;
 	cViewport *mpDebugViewport;
-	cBunkerDebugFreeCamera *mpDebugCameraController;
+	cDebugFreeCamera *mpDebugCameraController;
 };
 
 extern cBunkerBase *gpBunkerBase;
