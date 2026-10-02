@@ -12,12 +12,17 @@ typedef cSomaSoundEvents::cEvent cEvent;
 namespace
 {
 cSoundHandler *Handler() { return gpSomaBase->mpEngine->GetSound()->GetSoundHandler(); }
+void UpdateGameMusic();
 
 class cSomaSoundUpdater : public iUpdateable
 {
 public:
 	cSomaSoundUpdater() : iUpdateable("SomaSoundEvents") {}
-	void Update(float afTimeStep) { cSomaSoundEvents::Get()->Update(afTimeStep); }
+	void Update(float afTimeStep)
+	{
+		cSomaSoundEvents::Get()->Update(afTimeStep);
+		UpdateGameMusic();
+	}
 	void OnPauseUpdate(float afTimeStep) { cSomaSoundEvents::Get()->Update(afTimeStep); }
 };
 
@@ -926,6 +931,15 @@ void PlayHighestMusic()
 		glCurrentMusicPrio = i;
 		return;
 	}
+}
+
+void UpdateGameMusic()
+{
+	if (glCurrentMusicPrio < 0 || MusicHandler()->GetCurrentSong())
+		return;
+	gvGameMusic[glCurrentMusicPrio].msFile = "";
+	glCurrentMusicPrio = -1;
+	PlayHighestMusic();
 }
 
 void RegisterMusicNatives(asIScriptEngine *e)
