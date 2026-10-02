@@ -136,6 +136,18 @@ static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const
 	return bFound;
 }
 
+// cGlobalScriptFuncs::FAKE_*: secret codes, keys measured on the official game
+static void ShowSecretCode(const char *apKey, tString asX)
+{
+	if (asX.size() < 3)
+		return;
+	asX.resize(3);
+	for (int i = 0; i < 3; ++i)
+		asX[i] ^= apKey[i];
+	gmapArgs[0].s = asX;
+	RunGlobalFunc("DescriptionHandler", "", "_Global_Add");
+}
+
 #define SOMA_GLOBAL_TYPE(NAME, ASTYPE, CTYPE, FIELD)                                                                                                         \
 	SOMA_FUNC(e, "void cScript_SetGlobalVar" NAME "(const tString &in asName, " ASTYPE ")", +[](const tString &n, CTYPE x) { gmapVars[n].FIELD = x; });    \
 	SOMA_FUNC(e, "void cScript_SetGlobalArg" NAME "(int alIdx, " ASTYPE ")", +[](int i, CTYPE x) { gmapArgs[i].FIELD = x; });                              \
@@ -243,6 +255,12 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalArgMatrix(int alIdx)", +[](int i) { return gmapArgs[i].m; });
 	SOMA_FUNC(e, "cColor cScript_GetGlobalArgColor(int alIdx)", +[](int i) { return gmapArgs[i].c; });
 	SOMA_FUNC(e, "tID cScript_GetGlobalArgID(int alIdx)", +[](int i) { return gmapArgs[i].id; });
+
+	SOMA_FUNC(e, "void cLux_DropPageFocus(const tString&in asX)", +[](const tString &x) { ShowSecretCode("\x1e\x28\x56", x); });
+	SOMA_FUNC(e, "void cLux_PreloadWebpage(const tString &in asX)", +[](const tString &x) { ShowSecretCode("\x53\x58\x15", x); });
+	SOMA_FUNC(e, "void cLux_SetAreaOffline(int alX)", +[](int x) { ShowSecretCode("\x40\x48\x21", tString(3, (char)x)); });
+	SOMA_FUNC(e, "void cLux_RegisterCollisionRadius(int alX)", +[](int x) { ShowSecretCode("\x62\x71\x60", tString(3, (char)x)); });
+	SOMA_FUNC(e, "void cLux_ResetShudderEffects(int alX)", +[](int x) { ShowSecretCode("\x4e\x41\x53", tString(3, (char)x)); });
 
 	SOMA_FUNC(e, "const tString& cScript_GetGlobalReturnString()", +[]() -> const tString & { return gReturn.s; });
 	SOMA_FUNC(e, "bool cScript_GetGlobalReturnBool()", +[]() { return gReturn.b; });

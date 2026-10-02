@@ -976,9 +976,7 @@ static void ParseScreenText(WStr asInput, I *p, D aParams, CScriptArray &aLines,
 		aLines.InsertLast(&sRow);
 	aIconsPerLine.Resize(aLines.GetSize());
 	afLineHeight = vSize.y;
-	cConfigFile *pCfg = SomaGameConfig();
-	afTime = std::max(pCfg->GetFloat("General", "TextDuration_MinTime", 2.5f),
-					  pCfg->GetFloat("General", "TextDuration_StartTime", 1.5f) + sText.size() * pCfg->GetFloat("General", "TextDuration_CharTime", 0.07f));
+	afTime = SomaStringDuration(sText);
 }
 
 static void DrawScreenText(I *p, D aLabel, V3 avPos, float afLineWidth, float afLineSpacing, const CScriptArray &avLines, bool abHint)

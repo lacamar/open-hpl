@@ -86,6 +86,7 @@ private:
 
 cConfigFile *SomaUserConfig();
 cConfigFile *SomaGameConfig();
+float SomaStringDuration(const tWString &asText);
 cConfigFile *SomaKeyConfig();
 
 #endif // SOMA_LUX_GAME_H

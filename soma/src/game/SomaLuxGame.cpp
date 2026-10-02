@@ -6,6 +6,7 @@
 #include "SomaImGui.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
+#include "impl/scriptarray.h"
 
 #include <SDL2/SDL.h>
 #include <cstring>
@@ -55,6 +56,13 @@ static cConfigFile *gpUserConfig = NULL, *gpKeyConfig = NULL, *gpGameConfig = NU
 cConfigFile *SomaUserConfig() { return gpUserConfig; }
 cConfigFile *SomaKeyConfig() { return gpKeyConfig; }
 cConfigFile *SomaGameConfig() { return gpGameConfig; }
+
+float SomaStringDuration(const tWString &asText)
+{
+	cConfigFile *c = gpGameConfig;
+	return std::max(c->GetFloat("General", "TextDuration_MinTime", 2.5f),
+					c->GetFloat("General", "TextDuration_StartTime", 1.5f) + asText.size() * c->GetFloat("General", "TextDuration_CharTime", 0.07f));
+}
 
 static void LoadConfigs()
 {
@@ -477,7 +485,20 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
+	SOMA_FUNC(e, "float cLux_GetStringDuration(const tWString&in asStr)", SomaStringDuration);
 	SOMA_METHOD(e, "iLowLevelGraphics", "void SetBrightness(float afX)", +[](iLowLevelGraphics *g, float x) { g->SetGammaCorrection(x); });
+	SOMA_FUNC(e, "iFontData@ cResources_CreateFontData(const tString&in asName)", +[](const tString &s) { return gpSomaBase->mpEngine->GetResources()->GetFontManager()->CreateFontData(s); });
+	SOMA_METHOD(e, "cGuiSet", "void DrawFontEx(const tWString &in asText, iFontData @apFont, const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aColor, eFontAlign aAlign, eGuiMaterial aMaterial)",
+				+[](cGuiSet *g, const tWString &t, iFontData *f, const cVector3f &p, const cVector2f &v, const cColor &c, eFontAlign al, eGuiMaterial m) { g->DrawFont(t, f, p, v, c, al, m); });
+	SOMA_METHOD(e, "iFontData", "void GetWordWrapRows(float afLength,const cVector2f&in avSize,const tWString&in asString, array<tWString> &inout avRows)",
+				+[](iFontData *f, float l, const cVector2f &v, const tWString &t, CScriptArray &rows) {
+					tWStringVec vRows;
+					f->GetWordWrapRows(l, v.y, v, t, &vRows);
+					rows.Resize(0);
+					for (tWString &r : vRows)
+						rows.InsertLast(&r);
+				});
+	SOMA_METHOD(e, "iFontData", "float GetLength(const cVector2f&in avSize,const tWString&in asString)", +[](iFontData *f, const cVector2f &v, const tWString &t) { return f->GetLength(v, t.c_str()); });
 	SOMA_FUNC(e, "bool cLux_ApplyUserConfig()", +[]() { return ApplyUserConfig(); });
 	SOMA_FUNC(e, "bool cLux_GetSaveConfigAtExit()", +[]() { return true; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetKeyConfig()", +[]() { return gpKeyConfig; });
