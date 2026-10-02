@@ -138,8 +138,7 @@ Engine (`HeadlessControl.cpp`, shared) and `SomaBase.cpp`:
 - `scripts/soma-census.py`: offline XML census → `soma/conformance/expected.json`.
 - `scripts/soma-sweep.py`: one process per map; `start_map`, `wait_frames`, collect
   `load_report` + `shader_report` + `render_stats` + `frame_stats` + G-buffer stats; on death
-  attach coredumpctl/gdb backtrace; on stall use the `/proc/<pid>/stat` tick check from
-  `headless-check.sh`. Output `soma/conformance/results.json` plus a one-screen text table.
+  attach coredumpctl/gdb backtrace; on stall use a `/proc/<pid>/stat` tick check. Output `soma/conformance/results.json` plus a one-screen text table.
 - `--map`, `--only-failed`, `--compare <old.json>` for regression diffs.
 - First full run is the real bug list. Triage crashes/hangs first, across all 29 maps,
   before any feature work.

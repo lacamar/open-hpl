@@ -12,19 +12,17 @@ into `claude-test` (gt). Both monitors are recorded at the same time.
   scripts/soma-audio.py menu [--secs 20]                    # boot both to the main menu, record, analyze
   scripts/soma-audio.py map --map M [--secs 15] [--keep]    # both in a map (soma-compare start), record, analyze
 """
-import argparse, fnmatch, hashlib, importlib.util, json, os, subprocess, sys, time, wave
+import argparse, fnmatch, hashlib, importlib.util, json, subprocess, sys, time, wave
 from pathlib import Path
 
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, OURS_SINK, muted_env  # noqa: E402
+from hpl_control import HplControl, OURS_SINK, XDG_CACHE, SCRATCH, muted_env  # noqa: E402
 
 REF_SINK = "claude-test"
 RATE = 48000
-XDG_CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-SCRATCH = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", XDG_CACHE / "open-hpl/soma-scratch"))
 SAMPLES = SCRATCH / ".xdg/cache/open-hpl/soma/events-v4"
 OUT = XDG_CACHE / "open-hpl/soma-audio"
 DECODED = OUT / "decoded"
@@ -242,10 +240,13 @@ def playing(sock, recent=0):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
-    r = sp.add_parser("record")
+    io = argparse.ArgumentParser(add_help=False)
+    io.add_argument("--only", choices=["ours", "ref"])
+    io.add_argument("--out")
+    keep = argparse.ArgumentParser(add_help=False, parents=[io])
+    keep.add_argument("--keep", action="store_true", help="leave both games running")
+    r = sp.add_parser("record", parents=[io])
     r.add_argument("--secs", type=float, default=10)
-    r.add_argument("--only", choices=["ours", "ref"])
-    r.add_argument("--out")
     a = sp.add_parser("analyze")
     a.add_argument("files", nargs="+")
     a.add_argument("--out")
@@ -257,18 +258,12 @@ def main():
     pl = sp.add_parser("playing")
     pl.add_argument("--socket")
     pl.add_argument("--recent", type=int, default=40)
-    m = sp.add_parser("menu")
+    m = sp.add_parser("menu", parents=[keep])
     m.add_argument("--secs", type=float, default=20)
     m.add_argument("--wait", type=float, default=40)
-    m.add_argument("--only", choices=["ours", "ref"])
-    m.add_argument("--out")
-    m.add_argument("--keep", action="store_true", help="leave both games running")
-    mp = sp.add_parser("map")
+    mp = sp.add_parser("map", parents=[keep])
     mp.add_argument("--map", default="00_01_apartment")
     mp.add_argument("--secs", type=float, default=15)
-    mp.add_argument("--only", choices=["ours", "ref"])
-    mp.add_argument("--out")
-    mp.add_argument("--keep", action="store_true", help="leave both games running")
     args = p.parse_args()
 
     if args.cmd == "record":

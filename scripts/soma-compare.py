@@ -16,21 +16,20 @@ game under wine (scripts/soma-ref.py). Snippets are AngelScript function bodies 
   scripts/soma-compare.py ui click FX FY | key K... | shot [--out F]   # same input on both (FX/FY 0-1), side by side
   scripts/soma-compare.py stop
 """
-import argparse, importlib.util, json, math, os, re, signal, subprocess, sys, time
+import argparse, importlib.util, json, math, os, signal, subprocess, sys, time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, muted_env  # noqa: E402
+from hpl_control import HplControl, RUNTIME, XDG_CACHE, SCRATCH, muted_env, pidfile_pid  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("soma_ref", HERE / "soma-ref.py")
 ref_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ref_mod)
 
-RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
 SOCK = RUNTIME / "ohpl-cmp.sock"
 PIDFILE = RUNTIME / "ohpl-cmp.pid"
-CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "open-hpl/soma-compare"
+CACHE = XDG_CACHE / "open-hpl/soma-compare"
 
 SNIPPETS = dict(ref_mod.SNIPPETS)
 SNIPPETS["entities"] = (
@@ -50,12 +49,7 @@ class Ours:
     name = "ours"
 
     def pid(self):
-        try:
-            pid = int(PIDFILE.read_text())
-            os.kill(pid, 0)
-            return pid
-        except (OSError, ValueError):
-            return None
+        return pidfile_pid(PIDFILE)
 
     def start(self, map_file, pos, size):
         self.stop()
@@ -94,7 +88,7 @@ class Ours:
         """Fresh launch like the ref prefix: no saves, gamma already calibrated, `size` window.
         first_launch: no user_settings.cfg or gamma marker, fullscreen."""
         self.stop()
-        scratch = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", CACHE.parent / "soma-scratch"))
+        scratch = SCRATCH
         xdg = CACHE / "boot-xdg"
         for k in ("config", "data", "state"):
             subprocess.run(["rm", "-rf", str(xdg / k)])

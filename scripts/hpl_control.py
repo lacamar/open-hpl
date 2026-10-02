@@ -34,9 +34,22 @@ import os
 import socket
 import subprocess
 import sys
+from pathlib import Path
 
 
 OURS_SINK = "ohpl-ours"
+RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+XDG_CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+SCRATCH = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", XDG_CACHE / "open-hpl/soma-scratch"))
+
+
+def pidfile_pid(path):
+    try:
+        p = int(Path(path).read_text())
+        os.kill(p, 0)
+        return p
+    except (OSError, ValueError):
+        return None
 
 
 def muted_env(env=None):

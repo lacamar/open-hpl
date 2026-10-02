@@ -21,13 +21,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, HplControlError  # noqa: E402
+from hpl_control import HplControl, HplControlError, RUNTIME, SCRATCH, pidfile_pid  # noqa: E402
 
-RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
 SOCK = RUNTIME / "ohpl-play.sock"
 PIDFILE = RUNTIME / "ohpl-play.pid"
 LOGPOS = RUNTIME / "ohpl-play.logpos"
-SCRATCH = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "open-hpl/soma-scratch"))
 
 
 def send(req, timeout=60):
@@ -50,12 +48,7 @@ def kv(code):
 
 
 def pid():
-    try:
-        p = int(PIDFILE.read_text())
-        os.kill(p, 0)
-        return p
-    except (OSError, ValueError):
-        return None
+    return pidfile_pid(PIDFILE)
 
 
 def frames(secs):
