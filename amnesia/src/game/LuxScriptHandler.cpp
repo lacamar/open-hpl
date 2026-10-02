@@ -417,14 +417,8 @@ void cLuxScriptHandler::InitScriptFunctions()
 
 	AddFunc("void AutoSave()", (void *)AutoSave);
 	AddFunc("void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry)", (void *)CheckPoint);
-	// AMFP's real map scripts call a 6-arg CheckPoint (see CheckPointAmfp's comment) -
-	// registered as a second overload under the same script-visible name rather than
-	// changing the signature above, so Dark Descent's own 5-arg call sites keep compiling
-	// unmodified. AngelScript resolves overloads by declared signature same as C++.
 	AddFunc("void CheckPoint(const string &in asName,const string &in asStartPos ,const string &in asCallback, const string &in asDeathHintCat, const string &in asDeathHintEntry, bool abAmfpExtraArg)", (void *)CheckPointAmfp);
 
-	////////////////////////////
-	// AMFP-only script API - see the AmfpStub_* declarations in LuxScriptHandler.h.
 	AddFunc("void AddHint(const string &in asEntity, const string &in asUnknown)", (void *)AmfpStub_AddHint);
 	AddFunc("bool GetEntityActive(const string &in asName)", (void *)AmfpStub_GetEntityActive);
 	AddFunc("void SetEnemyMoveType(const string &in asEnemyName, const string &in asMoveType)", (void *)AmfpStub_SetEnemyMoveType);
@@ -696,7 +690,6 @@ void cLuxScriptHandler::InitScriptFunctions()
 	AddFunc("void AddEntityCollideCallback(const string &in asParentName, const string &in asChildName, const string &in asFunction, bool abDeleteOnCollide, int alStates)",(void *)AddEntityCollideCallback);
 	AddFunc("void RemoveEntityCollideCallback(const string &in asParentName, const string &in asChildName)", (void *)RemoveEntityCollideCallback);
 
-	//AddFunc("void CreateRope(const string &in asName,const string &in asStartArea, const string &in asEndArea, const string &in asStartBody, const string &in asEndBody,float afMinTotalLength, float afMaxTotalLength,float afSegmentLength, float afDamping,float afStrength, float afStiffness, const string &in asMaterial, float afRadius, float afLengthTileAmount, float afLengthTileSize, const string &in asSound,float afSoundStartSpeed, float afSoundStopSpeed,bool abAutoMove, float afAutoMoveAcc, float afAutoMoveMaxSpeed)",(void *)CreateRope);
 
 	AddFunc("void InteractConnectPropWithRope(const string &in asName, string& asLeverName, string& asPropName, bool abInteractOnly, float afSpeedMul,float afMinSpeed, float afMaxSpeed, bool abInvert, int alStatesUsed)",(void *)InteractConnectPropWithRope);
 	AddFunc("void InteractConnectPropWithMoveObject(const string &in asName, const string &in asPropName, const string &in asMoveObjectName, bool abInteractOnly,bool abInvert, int alStatesUsed)",(void *)InteractConnectPropWithMoveObject);
@@ -1053,20 +1046,11 @@ void __stdcall cLuxScriptHandler::CheckPoint(string& asName,string& asStartPos ,
 
 void __stdcall cLuxScriptHandler::CheckPointAmfp(string& asName,string& asStartPos ,string& asCallback, string &asDeathHintCat, string &asDeathHintEntry, bool abAmfpExtraArg)
 {
-	// AMFP's real map scripts (e.g. maps/01_mansion_01.hps) call CheckPoint with a 6th
-	// bool argument Dark Descent's original signature doesn't have - exact semantics not
-	// yet reverse-engineered (candidates: disable auto-save, skip the death hint, force a
-	// full respawn vs. a soft one). Accepted here purely so AMFP's scripts compile at all;
-	// intentionally not wired into cLuxMap::SetCheckPoint yet to avoid guessing wrong.
+	// 6th arg semantics unknown; ignored
 	CheckPoint(asName, asStartPos, asCallback, asDeathHintCat, asDeathHintEntry);
 }
 
-//-----------------------------------------------------------------------
 
-// AMFP-only script API stubs - see LuxScriptHandler.h. Each logs once (via the engine's
-// normal Warning() so it's visible in hpl.log without spamming every call) and otherwise
-// safely no-ops / returns a conservative default. Real behavior is unimplemented pending
-// further reverse engineering - do not treat these as correct gameplay yet.
 void __stdcall cLuxScriptHandler::AmfpStub_AddHint(string &asEntity, string &asUnknown)
 {
 	Warning("AMFP stub: AddHint('%s', '%s') not implemented\n", asEntity.c_str(), asUnknown.c_str());
@@ -1142,7 +1126,6 @@ void __stdcall cLuxScriptHandler::AmfpStub_AddEffectVoice4(string &asVoiceFile, 
 	AddEffectVoice(asVoiceFile, asEffectFile, asTextCat, asTextEntry1, abUsePosition, asPosEntity, afMinDistance, afMaxDistance);
 }
 
-//-----------------------------------------------------------------------
 
 void __stdcall cLuxScriptHandler::ChangeMap(string& asMapName, string& asStartPos, string& asStartSound, string& asEndSound)
 {

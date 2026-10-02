@@ -1,10 +1,5 @@
-/*
- * See DebugFreeCamera.h for scope notes.
- */
 
 #include "DebugFreeCamera.h"
-
-//---------------------------------------
 
 cAmfpDebugFreeCamera::cAmfpDebugFreeCamera(cCamera *apCamera, cInput *apInput) : iUpdateable("AmfpDebugFreeCamera")
 {
@@ -18,13 +13,9 @@ cAmfpDebugFreeCamera::cAmfpDebugFreeCamera(cCamera *apCamera, cInput *apInput) :
 	mvLastMousePos = cVector2l(0, 0);
 }
 
-//-----------------------------------------------------------------------
-
 cAmfpDebugFreeCamera::~cAmfpDebugFreeCamera()
 {
 }
-
-//-----------------------------------------------------------------------
 
 void cAmfpDebugFreeCamera::Update(float afTimeStep)
 {
@@ -33,10 +24,6 @@ void cAmfpDebugFreeCamera::Update(float afTimeStep)
 	iKeyboard *pKeyboard = mpInput->GetKeyboard();
 	iMouse *pMouse = mpInput->GetMouse();
 
-	//////////////////////////
-	// Mouse look, only while right mouse button is held (so the cursor is
-	// still free to use for anything else, and so this doesn't fight with
-	// a window manager / desktop that owns the pointer).
 	if (pMouse && pMouse->ButtonIsDown(eMouseButton_Right))
 	{
 		cVector2l vMousePos = pMouse->GetAbsPosition();
@@ -58,8 +45,6 @@ void cAmfpDebugFreeCamera::Update(float afTimeStep)
 		mbFirstUpdate = true;
 	}
 
-	//////////////////////////
-	// WASD + Q/E movement, Shift to move faster.
 	if (pKeyboard)
 	{
 		float fSpeed = mfMoveSpeed;
@@ -76,5 +61,3 @@ void cAmfpDebugFreeCamera::Update(float afTimeStep)
 		if (pKeyboard->KeyIsDown(eKey_Q)) mpCamera->MoveUp(-fDist);
 	}
 }
-
-//-----------------------------------------------------------------------

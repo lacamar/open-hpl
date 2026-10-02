@@ -29,35 +29,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// UNCOMPRESSED 8BPP ALPHA-ONLY DDS FALLBACK
-	//
-	// DevIL (libIL) mis-decodes plain uncompressed 8bpp "A8"-format DDS files
-	// (DDS_PIXELFORMAT.dwFlags == DDPF_ALPHA, dwRGBBitCount == 8, no FourCC) -
-	// confirmed via a standalone probe against the real SOMA font atlas
-	// (fonts/vera_00.dds, shipped by SOMA itself): ilGetInteger(IL_IMAGE_FORMAT)
-	// comes back IL_RGB with every byte of pixel data zeroed, rather than the
-	// real per-pixel alpha coverage the file's header describes. Since an
-	// all-zero RGB texture samples as opaque black (RGB textures have no alpha
-	// channel, so blending treats them as alpha=1), every glyph on this DDS's
-	// atlas page rendered as a solid black box instead of real antialiased
-	// text - found while building soma/src/game/SomaMainMenu.cpp, whose
-	// button/title labels are the first real text this port has ever drawn
-	// through a font with a page in this exact format (vera.fnt's second
-	// page, vera_01.dds, is a normal RGBA DDS and decodes/renders fine).
-	//
-	// This is a narrow, well-defined DDS variant DevIL's DDS reader appears
-	// to not support at all (as opposed to a general "this file is corrupt"
-	// case) - the fix parses the DDS header ourselves and reads the raw
-	// pixel payload directly, entirely bypassing DevIL, only for files that
-	// match this exact pixel-format signature. Every other DDS variant
-	// (compressed DXT1/3/5, uncompressed RGB/RGBA/Luminance) is untouched -
-	// this returns false immediately for anything that doesn't match.
-	//////////////////////////////////////////////////////////////////////////
-
-	// 'ATI2'/'BC5U' two-channel normal maps: DevIL rejects BC5U outright and
-	// decodes ATI2 to a format this engine cannot upload. Pass the blocks
-	// through untouched for GL_COMPRESSED_RG_RGTC2.
 	static bool TryLoadRgtc2DDS(const tWString& asFile, cBitmap** apBitmapOut)
 	{
 		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
@@ -201,10 +172,6 @@ namespace hpl {
 	{
 		Initialize();
 
-		// See TryLoadUncompressedAlphaDDS() above - DevIL cannot decode this
-		// specific uncompressed 8bpp alpha-only DDS variant correctly. Only
-		// takes effect for files matching that exact pixel-format signature;
-		// everything else falls through to the normal DevIL path below.
 		{
 			cBitmap* pRgtc2Bitmap = NULL;
 			if (TryLoadRgtc2DDS(asFile, &pRgtc2Bitmap))

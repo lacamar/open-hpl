@@ -1,4 +1,3 @@
-// cScript_*: script-to-script calls by object name with typed global args, vars and return value
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaLux.h"

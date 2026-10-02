@@ -135,7 +135,6 @@ namespace
 		}
 	};
 
-	//---------------------------------------
 	// Script objects: properties by name and declaration, [nosave]/[volatile] members skipped
 
 	void WriteObject(cOut &o, asIScriptObject *apObj, std::set<void *> &aVisited);
@@ -327,9 +326,6 @@ namespace
 		return p->msScriptName + "|" + (p->GetScript() ? p->GetScript()->GetObjectType()->GetName() : "");
 	}
 }
-
-//---------------------------------------
-// World state
 
 class cSomaSaveState
 {
@@ -542,8 +538,6 @@ public:
 		}
 	}
 };
-
-//---------------------------------------
 
 tWString cSomaSaveHandler::GetSaveDir()
 {

@@ -37,10 +37,7 @@
 
 //-----------------------------------------------------------------------
 
-// Retail language.lang files don't have entries for UI strings this port added
-// (kTranslate/cLanguageFile::Translate() returns an empty string on a missing
-// key, so the widget would render with no visible label at all) - fall back
-// to a hardcoded string in that case instead of leaving it blank.
+// retail language.lang lacks port-added keys
 static tWString TranslateOrFallback(const tString& asCat, const tString& asName, const tWString& asFallback)
 {
 	tWString sText = kTranslate(asCat, asName);
@@ -499,15 +496,11 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 //		mpChBAdaptiveVSync = mpGuiSet->CreateWidgetCheckBox(vPosInGroup + cVector3f(mpChBVSync->GetSize().x+10,mpChBFullScreen->GetSize().y+10,0), 0, kTranslate("OptionsMenu","AdaptiveVSync"), pGroup);
 //		SetUpInput(NULL, mpChBAdaptiveVSync, false, kTranslate("OptionsMenu","AdaptiveVSyncTip"));
 
-		/////////////////////////////////
-		// UI/GUI scale
 		cVector3f vPosGuiScale(fBorderSize, mpChBVSync->GetLocalPosition().y + mpChBVSync->GetSize().y + 15, 0.1f);
 		pLabel = mpGuiSet->CreateWidgetLabel(vPosGuiScale, -1, kTranslate("OptionsMenu","GuiScale"), pGroup);
 		mpCBGuiScale = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(70, 25), _W(""), pGroup);
 		SetUpInput(pLabel, mpCBGuiScale, true, kTranslate("OptionsMenu","GuiScaleTip"));
 
-		/////////////////////////////////
-		// Show FPS
 		cVector3f vPosShowFPS(fBorderSize, vPosGuiScale.y + mpCBGuiScale->GetSize().y + 10, 0.1f);
 		mpChBShowFPS = mpGuiSet->CreateWidgetCheckBox(vPosShowFPS, 0, TranslateOrFallback("OptionsMenu","ShowFPS", _W("Show FPS")), pGroup);
 		SetUpInput(NULL, mpChBShowFPS, false, TranslateOrFallback("OptionsMenu","ShowFPSTip", _W("Show a frames-per-second counter during gameplay.")));
@@ -1120,10 +1113,6 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 			cVector2f vCurrentResf = aObj.GetVarVector2f("Resolution");
 			cVideoMode vCurrentRes = cVideoMode(aObj.GetVarInt("Display"), cVector2l((int)vCurrentResf.x, (int)vCurrentResf.y), -1, -1);
 
-			/////////////////
-			// Check whether more than one display is present, so resolution labels can be
-			// disambiguated below (two displays commonly share resolutions, e.g. a laptop
-			// panel and an external monitor both supporting 1920x1080).
 			bool bMultiDisplay = false;
 			for(size_t i=1;i<vVidModes.size();++i)
 			{
@@ -1138,10 +1127,7 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 				int lRefreshRate = vVidModes[i].mlRefreshRate;
 
 				//////////////
-				// Move forward until there are no more matches. Must also match mlDisplay -
-				// vVidModes is sorted by display first then size, so without this check a
-				// resolution shared by two displays (e.g. both support 1920x1080) collapses
-				// at the display boundary, silently dropping one display's entry entirely.
+				// vVidModes is sorted by display, then size
 				for(size_t j=i+1;j<vVidModes.size();++j)
 				{
 					if(vVidModes[i].mvScreenSize == vVidModes[j].mvScreenSize && vVidModes[i].mlDisplay == vVidModes[j].mlDisplay)
@@ -1177,7 +1163,6 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 					sRes = cString::ToStringW(mode.mvScreenSize.x) + _W("x") + cString::ToStringW(mode.mvScreenSize.y);
 					if(bMultiDisplay)
 					{
-						// Disambiguate identically-sized modes on different displays.
 						sRes += _W(" (") + cPlatform::GetDisplayName(mode.mlDisplay) + _W(")");
 					}
             	}
@@ -1210,8 +1195,6 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 
 		mpChBShowFPS->SetChecked(aObj.GetVarBool("ShowFPS"), false);
 
-		/////////////////////////
-		// UI/GUI scale
 		{
 			mpCBGuiScale->ClearItems();
 			mpCBGuiScale->AddItem(_W("1x"));
@@ -1503,7 +1486,6 @@ void cLuxMainMenu_Options::ApplyChanges()
 
 		gpBase->mpDebugHandler->SetShowFPS(mpChBShowFPS->IsChecked());
 
-		// GUI scale (needs restart - cGuiSet bakes the scale into each set at construction)
 		pCfgHdr->mlGuiScale = mpCBGuiScale->GetSelectedItem()+1;
 
 		// Parallax
@@ -1817,8 +1799,6 @@ void cLuxMainMenu_Options::DumpInitialValues(cResourceVarsObject &aObj)
 
 		aObj.AddVarBool("ShowFPS", gpBase->mpDebugHandler->GetShowFPS());
 
-		/////////////////////////
-		// UI/GUI scale
 		aObj.AddVarInt("GuiScale", gpBase->mpConfigHandler->mlGuiScale);
 
 		/////////////////////////
@@ -1918,8 +1898,6 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 
 		aObj.AddVarBool("ShowFPS",		mpChBShowFPS->IsChecked());
 
-		/////////////////////////
-		// UI/GUI scale
 		aObj.AddVarInt("GuiScale", mpCBGuiScale->GetSelectedItem()+1);
 
 		/////////////////////////

@@ -146,9 +146,6 @@ namespace hpl {
 		mvWorldSizeMin = avMin;
 		mvWorldSizeMax = avMax;
 
-		// Newton 3.14 dropped the fixed-extent world size concept: the broadphase
-		// now grows dynamically, so there is nothing to configure here. Min/max are
-		// still cached above purely so GetWorldSizeMin/Max keep returning what was set.
 	}
 
 	cVector3f cPhysicsWorldNewton::GetWorldSizeMin()
@@ -182,11 +179,6 @@ namespace hpl {
 	{
 		mAccuracy = aAccuracy;
 		
-		// Newton 3.14 renamed NewtonSetSolverModel to NewtonSetSolverIterations (same
-		// meaning: 0 = exact/iterative, N = N approximation passes). NewtonSetFrictionModel
-		// (global exact-vs-approximate Coulomb friction toggle) was removed entirely -
-		// the solver always uses the old "exact" (0) friction model now, so there is
-		// nothing to set for that axis any more.
 		switch(mAccuracy)
 		{
 		case ePhysicsAccuracy_Low:

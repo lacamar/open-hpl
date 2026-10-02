@@ -39,18 +39,14 @@ namespace hpl {
 		return false;
 	}
 
-	//-----------------------------------------------------------------------
-
 	static aiMatrix4x4 Rigid(const aiMatrix4x4 &a_mtx)
 	{
-		// Bone poses are rigid (anm keys carry no scale); cm-rig scale would blow up skinning
 		aiVector3D vScale, vPos;
 		aiQuaternion qRot;
 		a_mtx.Decompose(vScale, qRot, vPos);
 		return aiMatrix4x4(aiVector3D(1,1,1), qRot, vPos);
 	}
 
-	// HPL3 keeps raw FBX units in .anm keys and map poses
 	static float UnitScale(const aiScene *apScene)
 	{
 		float fUnit;
@@ -70,7 +66,6 @@ namespace hpl {
 		return false;
 	}
 
-	// Every node becomes a bone resting in its scene pose (as HPL3); skinned bones keep their bind as inverse bind.
 	static void CreateBones(const aiScene *apScene, float afUnitScale, const aiNode *apNode, const aiMatrix4x4 &a_mtxParentNodeWorld,
 							const aiMatrix4x4 &a_mtxParentBoneWorld, cBone *apParent, const std::map<tString, aiMatrix4x4> &amapBind)
 	{
@@ -108,18 +103,13 @@ namespace hpl {
 			CollectBindPoses(apScene, apNode->mChildren[c], mtxWorld, amapBind);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMeshLoaderAssimp::cMeshLoaderAssimp(iLowLevelGraphics *apLowLevelGraphics) : iMeshLoader(apLowLevelGraphics)
 	{
 		AddSupportedExtension("fbx");
 	}
 
-	//-----------------------------------------------------------------------
-
 	static tString GetMaterialFile(const aiMaterial *apMaterial)
 	{
-		// Same convention as the Collada loader: <diffuse texture name>.mat
 		aiString sTexture;
 		if(apMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &sTexture) == AI_SUCCESS && sTexture.length > 0)
 		{
@@ -131,8 +121,6 @@ namespace hpl {
 			return cString::SetFileExt(tString(sName.C_Str()), "mat");
 		return "";
 	}
-
-	//-----------------------------------------------------------------------
 
 	static void AddNodeMeshes(	const aiScene *apScene, const aiNode *apNode, const aiMatrix4x4 &a_mtxParent,
 								cMesh *apMesh, iLowLevelGraphics *apLowLevelGraphics,
@@ -183,11 +171,10 @@ namespace hpl {
 			}
 
 			for(unsigned int f=0; f<pSrc->mNumFaces; ++f)
-				for(int i=2; i>=0; --i) pVtxBuff->AddIndex(pSrc->mFaces[f].mIndices[i]); // HPL winding, as the Collada loader
+				for(int i=2; i>=0; --i) pVtxBuff->AddIndex(pSrc->mFaces[f].mIndices[i]);
 
 			pVtxBuff->Compile(0);
 
-			// .ent files reference sub meshes by the FBX node name.
 			tString sName = apNode->mName.C_Str();
 			if(apNode->mNumMeshes > 1) sName += "_" + cString::ToString((int)m);
 
@@ -196,7 +183,6 @@ namespace hpl {
 
 			if(apSkeleton)
 			{
-				// Unskinned parts ride on their own node
 				if(pSrc->mNumBones == 0)
 				{
 					int lBone = apSkeleton->GetBoneIndexByName(apNode->mName.C_Str());
@@ -230,12 +216,9 @@ namespace hpl {
 			AddNodeMeshes(apScene, apNode->mChildren[c], mtxWorld, apMesh, apLowLevelGraphics, apMaterialManager, asFallbackMaterial, apSkeleton);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMesh* cMeshLoaderAssimp::LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags)
 	{
 		Assimp::Importer importer;
-		// Keep FBX node names as-is (animation tracks target them)
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 		const aiScene *pScene = importer.ReadFile(cString::To8Char(asFile),
 				aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals |
@@ -249,7 +232,6 @@ namespace hpl {
 		tString sMeshName = cString::GetFileName(cString::To8Char(asFile));
 		cMesh *pMesh = hplNew( cMesh, (sMeshName, asFile, mpMaterialManager, mpAnimationManager) );
 
-		// Frictional's convention: <mesh name>.mat next to the mesh.
 		tString sFallbackMaterial = cString::SetFileExt(sMeshName, "mat");
 
 		cSkeleton *pSkeleton = NULL;
@@ -274,9 +256,6 @@ namespace hpl {
 		}
 		return pMesh;
 	}
-
-	//-----------------------------------------------------------------------
-	//-----------------------------------------------------------------------
 
 	bool cMeshLoaderAssimp::IsHpl3Anm(const tString& asAnmFile)
 	{
@@ -356,7 +335,6 @@ namespace hpl {
 		return pAnimation;
 	}
 
-	// HPL3 bakes each FBX animation to a sibling .anm in FBX units
 	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
 	{
 		tString sFile = cString::To8Char(asFile);
@@ -365,5 +343,4 @@ namespace hpl {
 		return LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile, fUnitScale);
 	}
 
-	//-----------------------------------------------------------------------
 }

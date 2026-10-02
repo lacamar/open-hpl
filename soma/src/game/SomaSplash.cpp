@@ -4,8 +4,6 @@
 
 cSomaImGui *SomaHudImGui();
 
-//---------------------------------------
-
 // Timings and layout measured from the official game (scripts/soma-compare.py boot): linear fade-in,
 // hold, long fade-out to black, then a cut; the brain icon fades in once and stays lit.
 static const float kBootFadeIn = 2.2f, kBootFadeOutStart = 3.6f, kBootFadeOut = 4.0f;
@@ -14,8 +12,6 @@ static const float kScriptStart = 3.7f, kBootBlackHold = 0.1f;
 static const float kBootDuration = kBootFadeOutStart + kBootFadeOut + kBootBlackHold;
 // cLuxLoadHandler::OnDraw: 15 frames/s, ping-pong
 static const float kBrainFrameRate = 15.0f;
-
-//---------------------------------------
 
 cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("SomaSplash")
 {
@@ -53,14 +49,10 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	mpViewport->AddGuiSet(mpGuiSet);
 }
 
-//-----------------------------------------------------------------------
-
 cSomaSplash::~cSomaSplash()
 {
 	hplDelete(mpBarClipRegion);
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaSplash::Finish()
 {
@@ -79,8 +71,6 @@ void cSomaSplash::Finish()
 
 	mpBase->OnSplashFinished();
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaSplash::AnySkipInputThisFrame()
 {
@@ -102,8 +92,6 @@ bool cSomaSplash::AnySkipInputThisFrame()
 	return bClick;
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaSplash::Update(float afTimeStep)
 {
 	if (mbFinished)
@@ -113,8 +101,6 @@ void cSomaSplash::Update(float afTimeStep)
 	if (AnySkipInputThisFrame() || mfElapsed >= kBootDuration)
 		Finish();
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaSplash::ScriptsMayRun() { return mbFinished || mfElapsed >= kScriptStart; }
 

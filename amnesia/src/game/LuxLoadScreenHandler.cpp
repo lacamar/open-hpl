@@ -47,11 +47,7 @@ cLuxLoadScreenHandler::cLuxLoadScreenHandler() : iLuxUpdateable("LuxLoadScreenHa
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	// Background image and hint text below are drawn at fixed positions assuming the
-	// original 800x600 canvas (e.g. centered on (400,300)) - never updated to reflow for a
-	// GuiScale-shrunk virtual space the way the main menu was, so scaling this set instead
-	// of exempting it just pushes that fixed-position content past the (now smaller)
-	// canvas's own edges. Same fix/rationale as cLuxPreMenu's splash sequence.
+	// fixed 800x600 layout: exempt from GuiScale
 	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 	mpGuiSet->SetActive(false);
 

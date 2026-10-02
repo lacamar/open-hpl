@@ -375,7 +375,6 @@ namespace hpl {
 			//Log("Trying to load type: %s\n",sTextureType.c_str());
 			
 			cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
-			// projectedUV materials name their units DiffuseSide/Top/Bottom etc.
 			if(pTexChild==NULL) pTexChild = pTexRoot->GetFirstElement((sTextureType + "Side").c_str());
 			if(pTexChild==NULL){
 				//Log(" Texture unit element missing!\n");

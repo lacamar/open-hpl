@@ -128,9 +128,6 @@ namespace hpl {
 
 		bool mbGraphicsUpdated;
 
-		// Signed explicitly: -1/0/1 tri-state sentinel (see SubMeshEntity.cpp),
-		// and plain `char` is unsigned by default on AArch64 (unlike x86_64),
-		// which would make the -1 "not yet computed" state read back as 255.
 		signed char mlStaticNullMatrixCount;
 		void *mpUserData;
 	};

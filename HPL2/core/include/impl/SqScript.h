@@ -52,10 +52,6 @@ namespace hpl {
 		int mlHandle;
 		tString msModuleName;
 
-		// AngelScript identifies functions via asIScriptFunction* rather than an
-		// integer id (since the pre-2.24-ish "function id" API was removed). This
-		// table lets GetFuncHandle()/Run(int) keep their original int-handle-based
-		// public interface (iScript) while mapping to the modern pointer API.
 		std::vector<asIScriptFunction*> mvFuncHandles;
 
 		char* LoadCharBuffer(const tWString& asFileName, int& alLength);

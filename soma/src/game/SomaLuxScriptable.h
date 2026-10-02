@@ -1,10 +1,3 @@
-/*
- * Engine-side half of a SOMA script class: the object scripts see as their mBaseObj
- * (cLuxUserModule, cLuxEffect, cLuxMap, entities...). Owns the script instance, dispatches the
- * iLuxUpdateable_ScriptInterface callbacks and the per-class timers and faders
- * (cLuxScriptClassTimerContainer).
- */
-
 #ifndef SOMA_LUX_SCRIPTABLE_H
 #define SOMA_LUX_SCRIPTABLE_H
 
@@ -26,18 +19,15 @@ public:
 	cSomaLuxScriptable();
 	virtual ~cSomaLuxScriptable();
 
-	// Compiles asFile, creates asClass and calls SetupBaseInterface(<asBaseType> @) with this
 	bool LoadScript(cSomaScriptRuntime *apRuntime, const tString &asFile, const tString &asClass, const tString &asBaseType);
 
 	asIScriptObject *GetScript() { return mpScript; }
 
-	// Name cScript_RunGlobalFunc addresses this object by (entity, module, player state...)
 	tString msScriptName;
 	static const std::vector<cSomaLuxScriptable *> &GetAll() { return mvAll; }
 	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
 	bool CallWithFloat(const std::string &asDecl, float afX);
 	bool CallWithObject(const std::string &asDecl, void *apObj);
-	// Result of a bool method, abDefault if it is missing or throws
 	bool CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault);
 	bool HasMethod(const std::string &asDecl);
 
@@ -50,7 +40,6 @@ public:
 	virtual void OnAction(int alAction, bool abPressed);
 	virtual void OnAnalogInput(int alAnalogId, const cVector3f &avAmount);
 
-	// Timers and faders, advanced before the script's own Update
 	void UpdateTimers(float afTimeStep);
 
 	void Timer_Add(uint64_t alId, float afTime, const tString &asFunc, bool abCreateIfExist, bool abRepeat);
@@ -68,7 +57,6 @@ public:
 	float Fader_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs);
 	void Fader_ClearAll() { mvFaders.clear(); }
 
-	// Registers the Timer_*/Fader_* script methods on a base type (all overloads)
 	static void RegisterTimerNatives(asIScriptEngine *apEngine, const char *apType);
 
 protected:

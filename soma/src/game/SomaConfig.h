@@ -1,12 +1,9 @@
-// $XDG_CONFIG_HOME/open-hpl/soma/main_settings.cfg
 #ifndef SOMA_CONFIG_H
 #define SOMA_CONFIG_H
 
 #include "hpl.h"
 
 using namespace hpl;
-
-//----------------------------------------------
 
 class cSomaConfig
 {
@@ -27,7 +24,5 @@ public:
 private:
 	tWString GetConfigFilePath();
 };
-
-//----------------------------------------------
 
 #endif // SOMA_CONFIG_H

@@ -206,10 +206,6 @@ namespace hpl {
 		//Set up variables
 		mbWaitIfAppOutOfFocus = false;
 
-		//////////////////////////////////////////
-		// Opt-in headless automation server - see HeadlessControl.h. Off
-		// (mpHeadlessControl stays NULL, zero overhead) unless this env var
-		// is set, so it can never affect normal play.
 		const char *pHeadlessSocketPath = getenv("OPENHPL_HEADLESS_SOCKET");
 		if(pHeadlessSocketPath != NULL && pHeadlessSocketPath[0] != '\0')
 		{
@@ -382,8 +378,6 @@ namespace hpl {
 	{
 		Log("--------------------------------------------------------\n\n");
 
-		// Stop the listener thread and close the socket before anything it
-		// might touch (mpGraphics, mpResources, ...) is torn down below.
 		if(mpHeadlessControl) hplDelete(mpHeadlessControl);
 		mpHeadlessControl = NULL;
 
@@ -509,10 +503,6 @@ namespace hpl {
 				mpLogicTimer->EndUpdateLoop();
 			}
 
-			/////////////////////////////////////////////
-			// Drain any queued headless-control commands (see
-			// HeadlessControl.h) once per outer loop iteration - including
-			// while paused, so a test script can still query state/quit.
 			if(mpHeadlessControl) mpHeadlessControl->Update();
 
 			//if(GetGameIsDone()) Log("1\n");

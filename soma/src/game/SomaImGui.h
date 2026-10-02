@@ -1,10 +1,3 @@
-/*
- * SOMA's immediate-mode GUI (hpl::cImGui) on an HPL2 cGuiSet: widget state, fades and timers keyed
- * by GetHash64 ids, actions sent by the GUI handler script, and draw calls recorded between Begin()
- * and End() and replayed every rendered frame. The script data structs (cImGuiGfx, cImGuiFont,
- * cImGui*Data) are the recovered layouts, read by field offset.
- */
-
 #ifndef SOMA_IMGUI_H
 #define SOMA_IMGUI_H
 
@@ -30,7 +23,6 @@ public:
 
 	void Begin(float afTimeStep);
 	void End();
-	// Replays the draw calls recorded by the last completed Begin/End
 	void DrawAll();
 	void ClearStates();
 	tString DebugOps(size_t alMax);
@@ -61,7 +53,6 @@ public:
 	cVector2f mvCursor3D = 0;
 	bool mbShowMouseAutomatically = true;
 
-	// Named state
 	struct cState
 	{
 		int mlInt = 0;
@@ -88,7 +79,6 @@ public:
 	std::map<uint64_t, float> mmapTimers;
 	std::vector<uint64_t> mvTimersOver;
 
-	// Modifiers
 	struct cModifiers
 	{
 		cColor mColorMul = cColor(1, 1);
@@ -104,7 +94,6 @@ public:
 	std::vector<cModifiers> mvModStack;
 	int mlAlign = 0;
 
-	// Groups and layouts
 	struct cGroup
 	{
 		cVector3f mvPos;
@@ -124,7 +113,6 @@ public:
 	cVector3f GroupPos() { return mvGroups.empty() ? cVector3f(0) : mvGroups.back().mvPos; }
 	cVector2f GroupSize() { return mvGroups.empty() ? mpSet->GetVirtualSize() : mvGroups.back().mvSize; }
 
-	// Previous widget
 	struct cPrev
 	{
 		bool mbPressed = false, mbBecamePressed = false, mbInFocus = false, mbBecameInFocus = false;
@@ -158,12 +146,10 @@ public:
 
 	std::vector<tWString> mvItems;
 
-	// Default data blocks (script struct layouts)
 	std::map<tString, void *> mmapDefaults;
 	void *GetDefault(const char *apType);
 	void SetDefault(const char *apType, const void *apData);
 
-	// Widgets
 	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize);
 	cVector3f Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign);
 	void Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated = false);
@@ -187,7 +173,6 @@ public:
 	void DoWindowEnd();
 	void DoMouse(const void *apGfx, const cVector3f &avOffset, cVector2f avSize);
 
-	// Drawing
 	void DrawGfx(const void *apGfx, const cVector3f &avPos, cVector2f avSize, const cColor &aColor);
 	void DrawFrame(const void *apFrame, const cVector3f &avPos, const cVector2f &avSize, const cColor &aColor);
 	void DrawFont(const tWString &asText, const void *apFont, const cVector3f &avPos, int alAlign, const cVector2f &avSizeMul, const cColor &aColor);
@@ -233,7 +218,6 @@ private:
 	std::vector<cOp> mvDrawn;
 };
 
-// Struct helpers shared with the natives of other script types
 void *SomaNewScriptStruct(const char *apType);
 void *SomaNewOwnedScriptStruct(const char *apType);
 const tString *SomaIntern(const tString &asStr);

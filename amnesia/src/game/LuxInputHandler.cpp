@@ -709,10 +709,6 @@ void cLuxInputHandler::UpdateGlobalInput()
 		tWString sFileName = _W("");
 		tWString sBaseName = _W("Screen_");
 #ifndef WIN32
-		// XDG user directories (xdg-user-dirs, ~/.config/user-dirs.dirs): a screenshot is
-		// user-facing media the player will want to find/share, so it belongs under
-		// XDG_PICTURES_DIR (falls back to ~/Pictures/ if unset - see GetXDGUserDir() in
-		// PlatformUnix.cpp), not the old ~/Desktop-or-bust guess.
 		tWString sScreenShotDir = cString::AddSlashAtEndW(cPlatform::GetSystemSpecialPath(eSystemPath_XDGPictures)) + _W("OpenHPL");
 		if (cPlatform::FolderExists(sScreenShotDir) == false) cPlatform::CreateFolder(sScreenShotDir);
 		sBaseName = cString::AddSlashAtEndW(sScreenShotDir) + _W("Amnesia_");
@@ -760,10 +756,7 @@ void cLuxInputHandler::UpdateGlobalInput()
 			cKeyPress key = mpInput->GetKeyboard()->GetKey();
 			pGui->SendKeyPress(key);
 
-			//Any key skips a pre-menu/splash section with no interactive widget (Continue
-			//button/gamma slider) for it to hit instead - sections that do show one keep
-			//using their own eGuiMessage_ButtonPressed callback and the Escape/UIPrimary
-			//check below, so arrow keys etc. still reach the gamma slider undisturbed.
+			// sections with a widget handle their own input
 			if(mState==eLuxInputState_PreMenu && gpBase->mpPreMenu->IsContinueButtonVisible()==false)
 			{
 				gpBase->mpPreMenu->ButtonPressed();
@@ -1336,18 +1329,11 @@ void cLuxInputHandler::UpdatePreMenuInput()
 	}
 
 	////////////////////
-	//Key press (Escape or the UI "confirm" action - same trigger cLuxPreMenu's own
-	//Continue button uses - skips the current splash/pre-menu section immediately)
 	if(mpInput->BecameTriggerd(eLuxAction_Exit) || mpInput->BecameTriggerd(eLuxAction_UIPrimary))
 	{
 		gpBase->mpPreMenu->ButtonPressed();
 	}
-	////////////////////
-	//Mouse click - only treat a raw click anywhere on screen as "skip" when there's no
-	//on-screen widget (Continue button / gamma slider) for the click to interact with
-	//instead. Sections with a visible Continue button already advance normally via its
-	//own eGuiMessage_ButtonPressed callback; treating every click as "skip" while it's
-	//showing would make it impossible to drag the gamma slider on those sections.
+	// sections with a widget handle their own input
 	else if(gpBase->mpPreMenu->IsContinueButtonVisible()==false &&
 			(mpInput->BecameTriggerd(eLuxAction_LeftClick) ||
 			 mpInput->BecameTriggerd(eLuxAction_MiddleClick) ||

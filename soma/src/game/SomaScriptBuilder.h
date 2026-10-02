@@ -11,8 +11,6 @@
 // Members declared [nosave] or [volatile], skipped by save games
 const std::set<std::string> &SomaScriptNoSaveNames();
 
-// Compiles SOMA .hps files: resolves #include against the game's script/ tree (paths and bare
-// basenames, case-insensitively), each file included once per module.
 class cSomaScriptBuilder
 {
 public:
@@ -20,7 +18,6 @@ public:
 
 	std::string Resolve(const std::string &asInclude, const std::string &asFromFile) const;
 
-	// Returns the asIScriptModule::Build() result; sections are added for every included file.
 	int Build(asIScriptEngine *apEngine, const std::string &asModuleName, const std::string &asEntryFile,
 			  std::string *apMissingInclude = NULL);
 

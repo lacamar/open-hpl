@@ -11,8 +11,6 @@
 #include <new>
 #include <string>
 
-//---------------------------------------
-
 class cStringFactory : public asIStringFactory
 {
 public:
@@ -47,8 +45,6 @@ private:
 };
 
 static cStringFactory gStringFactory;
-
-//---------------------------------------
 
 template <class S> static void Construct(S *apMem) { new (apMem) S(); }
 template <class S> static void CopyConstruct(const S &aOther, S *apMem) { new (apMem) S(aOther); }
@@ -188,7 +184,6 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 	(void)r;
 }
 
-//---------------------------------------
 // SOMA's array<T> also has STL-style names
 
 static void ArrPushBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }

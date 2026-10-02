@@ -57,20 +57,6 @@ namespace hpl {
 	#define kVar_avFrenselBiasPow					7
 	#define kVar_avRimLightMulPow					8
 	#define kVar_afLightLevel						9
-	// SOMA/HPSL: deferred_transparent_frag.hpsl's cTransparentFragArguments
-	// cBuffer declares "cVector2f avInvScreenSize" (used for refraction's
-	// screen-space UV: "px_vPosition.xy * avInvScreenSize + vRefractOffset")
-	// - Dark Descent's own hand-written deferred_transparent_frag.glsl never
-	// declares this uniform at all, so no slot for it existed here. Left
-	// unset it silently defaulted to (0,0),
-	// collapsing every refracting glass/translucent surface's sampled UV to
-	// near the framebuffer's (0,0) corner (whatever stale/uninitialized
-	// pixels happen to live in mpRefractionTexture there, since
-	// CopyFrameBufferToTexure() only ever updates the object's own clip
-	// rect, not the whole texture) instead of the fragment's real screen
-	// position - a flat, garish, camera-position-insensitive color across
-	// the whole surface, exactly the "gray/magenta triangle" artifact
-	// bisected to this render pass. See PORTING_NOTES.md.
 	#define kVar_avInvScreenSize					10
 	#define kVar_avColorMul							11
 	
@@ -344,7 +330,6 @@ namespace hpl {
 		//Refraction vars
 		if(bRefractionEnabled && (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_Diffuse) )
 		{
-			// Normalized UVs on 2D render targets
 			float fScale = cGraphics::GetTempFrameBufferTextureType() == eTextureType_Rect ? (float)apRenderer->GetRenderTargetSize().x : 1.0f;
 			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * fScale);
 		}

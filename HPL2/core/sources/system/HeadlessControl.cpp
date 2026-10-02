@@ -50,22 +50,11 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// SINGLE-INSTANCE LOCK (see HeadlessControl.h)
-	//////////////////////////////////////////////////////////////////////////
-
 	void AcquireHeadlessSingleInstanceLock()
 	{
 		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL) return;
 
 #ifdef HPL_HEADLESS_CONTROL_POSIX
-		// flock() on an fd, not a pidfile: the lock is released automatically
-		// by the kernel when this process's last reference to the fd goes
-		// away, including on a crash/SIGKILL - no stale-lock cleanup logic
-		// needed (a pidfile approach would need to detect and break a lock
-		// left behind by a process that died without removing it). The fd is
-		// deliberately never closed - held for the rest of this process's
-		// life, released implicitly on exit.
 		const char *pRuntimeDir = getenv("XDG_RUNTIME_DIR");
 		tString sLockPath = (pRuntimeDir && pRuntimeDir[0] != '\0' ? tString(pRuntimeDir) : tString("/tmp"))
 							 + "/open-hpl-headless.lock";
@@ -78,7 +67,7 @@ namespace hpl {
 			return;
 		}
 
-		if(flock(lFd, LOCK_EX | LOCK_NB) == 0) return; // uncontended - common case
+		if(flock(lFd, LOCK_EX | LOCK_NB) == 0) return;
 
 		Log("Another headless instance already holds '%s' - waiting for it to exit "
 			"(this is expected, not a hang - see AcquireHeadlessSingleInstanceLock())\n",
@@ -91,10 +80,6 @@ namespace hpl {
 		}
 #endif
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// MINIMAL FLAT-JSON HELPERS (see HeadlessControl.h - not a general parser)
-	//////////////////////////////////////////////////////////////////////////
 
 	static tString JsonEscape(const tString &asIn)
 	{
@@ -122,8 +107,6 @@ namespace hpl {
 		while(alPos < asLine.size() && isspace((unsigned char)asLine[alPos])) ++alPos;
 	}
 
-	// Parses one JSON string literal starting at asLine[alPos]=='"'; leaves
-	// alPos just past the closing quote.
 	static tString ParseJsonString(const tString &asLine, size_t &alPos)
 	{
 		tString sOut;
@@ -140,7 +123,7 @@ namespace hpl {
 				case 'n': sOut += '\n'; break;
 				case 'r': sOut += '\r'; break;
 				case 't': sOut += '\t'; break;
-				default: sOut += cNext; break; // covers \" \\ \/ and anything else
+				default: sOut += cNext; break;
 				}
 				alPos += 2;
 			}
@@ -150,12 +133,10 @@ namespace hpl {
 				++alPos;
 			}
 		}
-		if(alPos < asLine.size()) ++alPos; // closing quote
+		if(alPos < asLine.size()) ++alPos;
 		return sOut;
 	}
 
-	// Parses one bare token (number/true/false/null), stopping at ',' '}' or
-	// whitespace.
 	static tString ParseJsonBareToken(const tString &asLine, size_t &alPos)
 	{
 		size_t lStart = alPos;
@@ -168,8 +149,6 @@ namespace hpl {
 		return asLine.substr(lStart, alPos - lStart);
 	}
 
-	// Parses one flat {"key":value, ...} object into a key->raw-value-text
-	// map. No nested objects/arrays - this protocol never needs them.
 	static void ParseFlatJsonObject(const tString &asLine, std::map<tString,tString> &aOutFields)
 	{
 		size_t lPos = 0;
@@ -181,7 +160,7 @@ namespace hpl {
 		{
 			SkipWhitespace(asLine, lPos);
 			if(lPos >= asLine.size() || asLine[lPos] == '}') break;
-			if(asLine[lPos] != '"') break; // malformed - keep whatever parsed so far
+			if(asLine[lPos] != '"') break;
 
 			tString sKey = ParseJsonString(asLine, lPos);
 
@@ -201,10 +180,6 @@ namespace hpl {
 			break;
 		}
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// cHeadlessRequest
-	//////////////////////////////////////////////////////////////////////////
 
 	tString cHeadlessRequest::GetString(const tString &asKey, const tString &asDefault) const
 	{
@@ -231,10 +206,6 @@ namespace hpl {
 		return mmapFields.find(asKey) != mmapFields.end();
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// cHeadlessResponse
-	//////////////////////////////////////////////////////////////////////////
-
 	cHeadlessResponse::cHeadlessResponse() : mbOk(true)
 	{
 	}
@@ -249,7 +220,6 @@ namespace hpl {
 	}
 	void cHeadlessResponse::Set(const tString &asKey, float afVal)
 	{
-		// NaN/inf are not valid JSON
 		mvExtraFields.push_back(std::make_pair(asKey, (afVal != afVal || afVal - afVal != 0) ? tString("null") : cString::ToString(afVal, 6, true)));
 	}
 	void cHeadlessResponse::Set(const tString &asKey, int alVal)
@@ -282,22 +252,12 @@ namespace hpl {
 		return sOut;
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// LOG CAPTURE - only ever one headless instance per process (env-var
-	// gated singleton), so a plain global forwarding pointer is sufficient
-	// to bridge SetLogMessageCallback's plain-C-function-pointer signature.
-	//////////////////////////////////////////////////////////////////////////
-
 	static cHeadlessControlServer *gpHeadlessLogInstance = NULL;
 
 	static void HeadlessLogCallback(eLogOutputType aType, const char *asMessage)
 	{
 		if(gpHeadlessLogInstance) gpHeadlessLogInstance->PushLogLine(aType, asMessage);
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
 
 	cHeadlessControlServer::cHeadlessControlServer(cEngine *apEngine, const tString &asSocketPath)
 		: mpEngine(apEngine), msSocketPath(asSocketPath), mbListening(false), mlListenFd(-1), mpThread(NULL)
@@ -313,7 +273,7 @@ namespace hpl {
 		}
 		else
 		{
-			unlink(msSocketPath.c_str()); // remove a stale socket from a previous crashed run
+			unlink(msSocketPath.c_str());
 
 			struct sockaddr_un addr;
 			memset(&addr, 0, sizeof(addr));
@@ -350,8 +310,6 @@ namespace hpl {
 		SetLogMessageCallback(HeadlessLogCallback);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cHeadlessControlServer::~cHeadlessControlServer()
 	{
 		if(gpHeadlessLogInstance == this)
@@ -363,8 +321,6 @@ namespace hpl {
 #ifdef HPL_HEADLESS_CONTROL_POSIX
 		if(mlListenFd >= 0)
 		{
-			// close() alone does not wake a thread blocked in accept() on
-			// Linux; shutdown() does.
 			int lFd = mlListenFd;
 			mlListenFd = -1;
 			shutdown(lFd, SHUT_RDWR);
@@ -385,10 +341,6 @@ namespace hpl {
 		if(mpLogMutex) hplDelete(mpLogMutex);
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
 	void cHeadlessControlServer::RegisterHandler(const tString &asCmd, tHeadlessCommandFunc apFunc, void *apUserData)
 	{
 		cHandlerEntry entry;
@@ -396,8 +348,6 @@ namespace hpl {
 		entry.mpUserData = apUserData;
 		mmapHandlers[asCmd] = entry;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cHeadlessControlServer::Update()
 	{
@@ -434,22 +384,20 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cHeadlessControlServer::UpdateThread()
 	{
 #ifdef HPL_HEADLESS_CONTROL_POSIX
 		if(mlListenFd < 0) return;
 
 		int lClientFd = accept(mlListenFd, NULL, NULL);
-		if(lClientFd < 0) return; // shutting down, or a transient error - retried next call
+		if(lClientFd < 0) return;
 
 		tString sBuffer;
 		char vReadBuf[4096];
 		while(true)
 		{
 			ssize_t lRead = recv(lClientFd, vReadBuf, sizeof(vReadBuf), 0);
-			if(lRead <= 0) break; // disconnected or error
+			if(lRead <= 0) break;
 
 			sBuffer.append(vReadBuf, (size_t)lRead);
 
@@ -474,8 +422,6 @@ namespace hpl {
 #endif
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cHeadlessControlServer::PushLogLine(eLogOutputType aType, const tString &asLine)
 	{
 		mpLogMutex->Lock();
@@ -483,10 +429,6 @@ namespace hpl {
 		while(mlstLogLines.size() > 500) mlstLogLines.pop_front();
 		mpLogMutex->Unlock();
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
 
 	void cHeadlessControlServer::Dispatch(const cPendingRequest &aPending)
 	{
@@ -518,8 +460,6 @@ namespace hpl {
 		SendResponse(aPending.mlClientFd, response);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cHeadlessControlServer::SendResponse(int alClientFd, const cHeadlessResponse &aResp)
 	{
 #ifdef HPL_HEADLESS_CONTROL_POSIX
@@ -527,8 +467,6 @@ namespace hpl {
 		send(alClientFd, sLine.c_str(), sLine.size(), MSG_NOSIGNAL);
 #endif
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cHeadlessControlServer::RegisterBuiltins()
 	{
@@ -543,10 +481,6 @@ namespace hpl {
 		RegisterHandler("frame_stats", SCmdFrameStats, this);
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// BUILT-IN COMMANDS
-	//////////////////////////////////////////////////////////////////////////
-
 	void cHeadlessControlServer::CmdPing(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{
 		aResp.Set("pong", true);
@@ -559,10 +493,6 @@ namespace hpl {
 
 	void cHeadlessControlServer::CmdScreenshot(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{
-		// A caller-given path (the normal case - see hpl_control.py) is used verbatim, but
-		// the fallback default used to be a bare relative filename, landing wherever cwd
-		// happens to be (typically the game's own Steam install directory). Cache data
-		// belongs under XDG_CACHE_HOME instead.
 		tString sDefaultPath = aReq.HasKey("path") ? "" :
 			cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome)) + "open-hpl/headless_screenshot.bmp";
 		tString sPath = aReq.GetString("path", sDefaultPath);
@@ -645,11 +575,6 @@ namespace hpl {
 
 	void cHeadlessControlServer::CmdResizeWindow(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{
-		// Test-only hook for reproducing "the compositor resized/fullscreened
-		// our window and we never noticed" bugs headlessly: even a hidden
-		// (SDL_WINDOW_HIDDEN) window has a real SDL_Window, so this can drive
-		// the exact same SDL_WINDOWEVENT_RESIZED path a real compositor action
-		// would, with no visible on-screen effect.
 		int lW = aReq.GetInt("width", 0);
 		int lH = aReq.GetInt("height", 0);
 		if(lW <= 0 || lH <= 0)
@@ -726,14 +651,6 @@ namespace hpl {
 		}
 		else if(sType == "focus")
 		{
-			// Test-only hook: a hidden headless window's real SDL_WINDOW_INPUT_FOCUS
-			// flag never changes (see the SDL_WINDOW_HIDDEN block in Init() above), so
-			// cEngine::CheckAndBroadcastFocusChange()'s own real polling of that flag
-			// can never fire here - this drives the exact same cUpdater::RunMessage()
-			// call it would make on a real alt-tab, letting focus-loss/gain consumers
-			// (e.g. cSound::AppLostInputFocus/AppGotInputFocus) be tested headlessly
-			// without a real window and without touching mbApplicationHasInputFocus,
-			// so it can't desync the real polling path.
 			tString sState = aReq.GetString("state", "");
 			if(sState == "lost")
 			{
@@ -756,11 +673,6 @@ namespace hpl {
 		aResp.SetError("input injection requires USE_SDL2");
 #endif
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// BUILT-IN COMMAND FORWARDERS (tHeadlessCommandFunc can't bind a member
-	// function directly - see the .h)
-	//////////////////////////////////////////////////////////////////////////
 
 	void cHeadlessControlServer::SCmdShaderReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 	{ ((cHeadlessControlServer*)apUserData)->CmdShaderReport(aReq, aResp); }

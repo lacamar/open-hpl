@@ -366,8 +366,6 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSDLTexture::SetFilter(eTextureFilter aFilter)
 	{
 		if(mFilter == aFilter) return;
@@ -616,8 +614,6 @@ namespace hpl {
 		}
 		glBindTexture(GL_TEXTURE_2D, lPrevBound);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSDLTexture::AutoGenerateMipmaps()
 	{
@@ -985,7 +981,6 @@ namespace hpl {
 					avSize.x, avSize.y,
 					0, alDataSize, apData);
 
-				// Shaders unpack normal maps DXT5nm-style (x in alpha, y in green).
 				if(aPixelFormat == ePixelFormat_RGTC2_XY || aPixelFormat == ePixelFormat_RGTC2_YX)
 				{
 					bool bXFirst = aPixelFormat == ePixelFormat_RGTC2_XY;

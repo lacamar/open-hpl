@@ -138,25 +138,6 @@ namespace hpl {
 
 		////////////////////////////////////////////////
 		//Setup the graphic directories:
-		// core/shaders needs subdirectories included: Dark Descent/AMFP ship
-		// no subdirectories under it (so this was always a no-op for them),
-		// but SOMA/Rebirth/Bunker's real HPSL shader source lives one level
-		// down at core/shaders/hpsl/ - a game module's own resources.cfg
-		// (loaded later, in InitEngine() after CreateHPLEngine() returns -
-		// see cSomaBase::InitEngine()) does redeclare "/core/shaders" with
-		// AddSubDirs="true", but every GPU program this constructor and its
-		// callees build directly (cRendererDeferred/cRendererSimple's own
-		// LoadData(), the material types and post-effect types added below)
-		// runs during this earlier bootstrap window, so their shader lookups
-		// saw an index with zero .hpsl files in it regardless of the HPSL
-		// fallback machinery in GpuShaderManager.cpp - straight to
-		// "Couldn't find file" for every one of them. Found live (real
-		// headless boot of 00_01_apartment.hpm): deferred_base_vtx.glsl,
-		// deferred_gbuffer_skybox_frag.glsl, and posteffect_bloom_blur_vtx.glsl
-		// all failed this way even after fixing HpslTranspileCallback
-		// registration order and adding filename aliases - neither fix
-		// touches this, since the file genuinely wasn't indexed yet at this
-		// point. See PORTING_NOTES.md "SOMA" section.
 		apResources->AddResourceDir(_W("core/shaders"),true);
 		apResources->AddResourceDir(_W("core/textures"),false);
 		apResources->AddResourceDir(_W("core/models"),false);
@@ -224,8 +205,6 @@ namespace hpl {
 			AddMaterialType(hplNew( cMaterialType_Translucent, (this, apResources) ), "translucent");
 			AddMaterialType(hplNew( cMaterialType_Water, (this, apResources) ), "water");
 			AddMaterialType(hplNew( cMaterialType_Decal, (this, apResources) ), "decal");
-			// HPL3 triplanar type. Approximation: rendered as soliddiffuse with the
-			// mesh's own UVs and the *Side textures (see cMaterialManager::LoadFromFile).
 			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "projecteduv");
 
 
@@ -247,15 +226,6 @@ namespace hpl {
 
 	void cGraphics::Update(float afTimeStep)
 	{
-		// Catches the window's real size changing out from under the engine (e.g. a
-		// Wayland compositor fullscreening/tiling this window on its own) - without
-		// this, every size-dependent render target and viewport calc keeps using the
-		// stale size, leaving rendering pinned to a stale-sized rectangle with the
-		// rest of the window showing undrawn framebuffer content. Reloading here
-		// (rather than live-resizing individual buffers) reuses the exact same
-		// DestroyData()/LoadData() path every renderer already implements for its
-		// own (previously-unused) initial setup, so every size-dependent resource
-		// is rebuilt consistently at the new size.
 		if(mpLowLevelGraphics->CheckAndUpdateScreenSize())
 		{
 			ReloadRendererData();
@@ -286,16 +256,6 @@ namespace hpl {
 		{
 			iRenderer *pRenderer = mvRenderers[i];
 
-			// This runs from cGraphics::Update(), which fires during the Update phase of
-			// the frame - BEFORE the Render phase that would otherwise refresh mvScreenSize/
-			// mvScreenSizeFloat via iRenderFunctions::InitAndResetRenderFunctions() (called
-			// per-viewport from SetFrameBuffer()). Without this, LoadData() below rebuilds
-			// every size-dependent G-buffer/accumulation/reflection render target using the
-			// STILL-STALE pre-resize size, even though CheckAndUpdateScreenSize() just
-			// confirmed the real window size changed - leaving the deferred renderer's own
-			// intermediate targets pinned to the old (smaller) size while everything drawn
-			// into them next frame correctly targets the new viewport, so real content only
-			// ever fills the old rectangle and the newly-exposed screen area stays black.
 			pRenderer->SetupRenderFunctions(mpLowLevelGraphics);
 
 			pRenderer->DestroyData();

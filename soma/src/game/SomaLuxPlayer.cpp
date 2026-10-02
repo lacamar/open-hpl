@@ -21,8 +21,6 @@ static auto IntArg(int alX)
 	return [alX](asIScriptContext *c) { c->SetArgDWord(0, alX); };
 }
 
-//---------------------------------------
-
 void cSomaLuxMoveState::OnUpdate(float afTimeStep)
 {
 	cSomaLuxScriptable::OnUpdate(afTimeStep);
@@ -40,8 +38,6 @@ void cSomaLuxMoveState::OnUpdate(float afTimeStep)
 	pBody->SetMoveOppositeDirAccMul(eCharDir_Forward, mfForwardOppositeDirAccMul);
 	pBody->SetMoveOppositeDirAccMul(eCharDir_Right, mfSidewayOppositeDirAccMul);
 }
-
-//---------------------------------------
 
 cSomaLuxPlayer::cSomaLuxPlayer()
 {
@@ -362,8 +358,6 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 		mpCamera->SetYaw(mpCharBody->GetYaw());
 }
 
-//---------------------------------------
-
 cSomaLuxInputHandler::cSomaLuxInputHandler()
 {
 	mpInstance = this;
@@ -558,9 +552,6 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		pGame->BroadcastAnalog(0, v);
 	}
 }
-
-//---------------------------------------
-// Natives
 
 void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 {

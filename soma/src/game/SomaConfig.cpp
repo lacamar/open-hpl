@@ -1,7 +1,5 @@
 #include "SomaConfig.h"
 
-//---------------------------------------
-
 tWString cSomaConfig::GetConfigFilePath()
 {
 	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome) + _W("open-hpl/");
@@ -13,8 +11,6 @@ tWString cSomaConfig::GetConfigFilePath()
 
 	return sDir + _W("main_settings.cfg");
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaConfig::Load()
 {
@@ -39,8 +35,6 @@ void cSomaConfig::Load()
 
 	hplDelete(pCfg);
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaConfig::Save()
 {

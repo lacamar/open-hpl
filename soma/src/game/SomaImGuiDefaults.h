@@ -1,9 +1,3 @@
-/*
- * Default field values of script value structs (cImGui*Data...), recovered from the official
- * binary's default factories by scripts/soma-re-struct-defaults.py. String members are slots
- * holding an interned tString pointer.
- */
-
 #ifndef SOMA_IMGUI_DEFAULTS_H
 #define SOMA_IMGUI_DEFAULTS_H
 

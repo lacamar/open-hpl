@@ -48,25 +48,6 @@ namespace hpl {
 	#define MAP_CACHE_FORMAT_MAGIC_NUMBER		0xF441451F
 #endif
 
-	// Bumped for the Newton 2.x -> 3.14 port: .map_cache files bake serialized
-	// Newton collision blobs (see cCollideShapeNewton::SaveToSerializedData),
-	// and that binary format is not compatible between Newton versions.
-	// Bumping this forces every pre-existing cache file (including all the
-	// ones shipped with the original game) to be treated as stale and
-	// rebuilt from the .map source data instead of hanging while
-	// misinterpreting old-format bytes as new-format ones.
-	//
-	// Bumped again: a truncated/corrupt .map_cache (e.g. from a process
-	// killed mid-save) was found to make Newton's mesh-collision
-	// deserializer (dgWorld::CreateCollisionFromSerialization) spin
-	// forever - cBinaryBuffer::GetData() silently no-ops past EOF
-	// (returns false, leaves the destination untouched) and nothing in
-	// Newton's C callback protocol checks that, so it just keeps
-	// "reading" stale/uninitialized memory as if it were valid stream
-	// data indefinitely instead of failing fast. This version adds a
-	// stored total-payload-size field, checked against the actually
-	// loaded byte count before any Newton deserialization is attempted,
-	// so a truncated file is rejected immediately instead of hanging.
 	#define MAP_CACHE_FORMAT_VERSION			12
 	
 	//----------------------------------------

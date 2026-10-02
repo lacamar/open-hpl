@@ -15,8 +15,6 @@
 #include <regex>
 #include <sstream>
 
-//---------------------------------------
-
 struct cCheckMessages
 {
 	std::vector<std::string> mvErrors;
@@ -80,7 +78,6 @@ static void FindMapScripts(const std::string &asDir, std::vector<std::string> &a
 	closedir(pDir);
 }
 
-// Script entry points named by config/*.cfg (ScriptFile="..." and the game.cfg handlers).
 // Stubbed application functions a module calls (asBC_CALLSYS / asBC_Thiscall1 operands), counted once per module
 static void CollectStubCalls(asIScriptModule *apModule, std::map<std::string, int> &amapOut)
 {

@@ -1,10 +1,3 @@
-/*
- * Binds plain C++ functions and lambdas to AngelScript declarations through the generic calling
- * convention (ABI independent). Arguments: primitives/enums by value, everything else through
- * the pointer AngelScript passes (references, value objects, handles). Methods take the object
- * as the first parameter (T& / const T& / T*).
- */
-
 #ifndef SOMA_SCRIPT_BIND_H
 #define SOMA_SCRIPT_BIND_H
 
@@ -113,7 +106,6 @@ namespace SomaBind
 		CallMethod<F>(g, F, std::make_index_sequence<Traits<decltype(F)>::Arity - 1>());
 	}
 
-	// Constructors: first parameter is the memory to construct into
 	template <auto F, typename P, typename... A, size_t... I>
 	void CallConstruct(asIScriptGeneric *g, void (*)(P, A...), std::index_sequence<I...>)
 	{
@@ -126,7 +118,6 @@ namespace SomaBind
 	}
 }
 
-// Script-facing registration; a failed registration is a programming error in the declaration.
 #define SOMA_FUNC(engine, decl, ...) \
 	do { int r_ = (engine)->RegisterGlobalFunction(decl, asFUNCTION((SomaBind::GenericFunc<(__VA_ARGS__)>)), asCALL_GENERIC); assert(r_ >= 0 || r_ == asALREADY_REGISTERED); (void)r_; } while (0)
 #define SOMA_METHOD(engine, type, decl, ...) \

@@ -1,10 +1,3 @@
-/*
- * Engine half of SOMA's player and input (cLuxPlayer, cLuxPlayerState, cLuxMoveState,
- * cLuxInputHandler), following the official binary: the player script (player/Player.hps)
- * adds its states in Init(), creates the character body in CreateWorldEntities(), and input
- * actions defined by base/InputHandler.hps reach every updateable as OnAction/OnAnalogInput.
- */
-
 #ifndef SOMA_LUX_PLAYER_H
 #define SOMA_LUX_PLAYER_H
 

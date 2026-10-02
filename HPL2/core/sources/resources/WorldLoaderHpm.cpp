@@ -1,8 +1,3 @@
-/*
- * SOMA Phase 1 data loading. See WorldLoaderHpm.h for the full design
- * rationale (why this is a new, additive loader rather than a modification
- * of cWorldLoaderHplMap).
- */
 
 #include "resources/WorldLoaderHpm.h"
 
@@ -47,8 +42,6 @@ namespace hpl {
 	cXmlElement* cWorldLoaderHpm::mpCurrentElement = NULL;
 	tString cWorldLoaderHpm::msLastLoadReportJson = "";
 
-	//-----------------------------------------------------------------------
-
 	cWorldLoaderHpm::cWorldLoaderHpm()
 	{
 		AddSupportedExtension("hpm");
@@ -59,13 +52,9 @@ namespace hpl {
 		mbTerrainActive = false;
 	}
 
-	//-----------------------------------------------------------------------
-
 	cWorldLoaderHpm::~cWorldLoaderHpm()
 	{
 	}
-
-	//-----------------------------------------------------------------------
 
 	cWorld* cWorldLoaderHpm::LoadWorld(const tWString& asFile, tWorldLoadFlag aFlags)
 	{
@@ -77,11 +66,6 @@ namespace hpl {
 
 		mbTerrainActive = false;
 
-		///////////////////////
-		// Create world and set up physics world with default values.
-		// No collision bodies are created by this loader (Phase 1 has no
-		// player controller), but a physics world is still attached since
-		// other engine systems (e.g. cWorld::Compile) expect one to exist.
 		mpCurrentWorld = mpScene->CreateWorld(cString::To8Char(cString::GetFileNameW(asFile)));
 		mpCurrentWorld->SetFilePath(asFile);
 
@@ -91,12 +75,8 @@ namespace hpl {
 		mpCurrentPhysicsWorld->SetMaxTimeStep(1.0f / 60.0f);
 		mpCurrentWorld->SetPhysicsWorld(mpCurrentPhysicsWorld);
 
-		///////////////////////
-		// Root .hpm: fog / skybox
 		LoadGlobalSettings(asFile);
 
-		///////////////////////
-		// Sidecar track files
 		LoadTrack(asFile, "StaticObject", "FileIndex_StaticObjects");
 		LoadTrack(asFile, "Primitive", "");
 		LoadTrack(asFile, "Entity", "FileIndex_Entities");
@@ -111,7 +91,6 @@ namespace hpl {
 		LoadTrack(asFile, "LightMask", "");
 		ConnectLightMasks();
 
-		// Not loaded yet - run through LoadTrack() so the report counts them.
 		LoadTrack(asFile, "Compound", "");
 		LoadTrack(asFile, "LensFlare", "");
 		LoadTrack(asFile, "StaticComboArea", "");
@@ -121,8 +100,6 @@ namespace hpl {
 		LoadExposureAreaTrack(asFile);
 		CheckTerrainTrackInactive(asFile);
 
-		///////////////////////
-		// Compile (sets up physics world size etc. from what was added)
 		mpCurrentWorld->Compile(true);
 
 		BuildLoadReport(cString::To8Char(cString::GetFileNameW(asFile)), (int)(cPlatform::GetApplicationTime() - lLoadStartTime));
@@ -130,14 +107,6 @@ namespace hpl {
 
 		return mpCurrentWorld;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// SIDECAR FILE HELPERS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	iXmlDocument* cWorldLoaderHpm::OpenSidecar(const tWString& asBaseFile, const tWString& asSuffix, bool abWarnIfMissing)
 	{
@@ -155,18 +124,8 @@ namespace hpl {
 		return pDoc;
 	}
 
-	//-----------------------------------------------------------------------
-
 	cXmlElement* cWorldLoaderHpm::GetTrackRoot(iXmlDocument* apDoc, const tString& asExpectedRootValue)
 	{
-		// NOTE: cXmlDocumentTiny::LoadFromTinyXMLData() (see
-		// impl/XmlDocumentTiny.cpp) sets the *document node's own*
-		// value/attributes to those of the file's single top-level XML
-		// element - the root element is not a child of the document, the
-		// document IS the root element. Every ".hpm"/".hpm_*" file has
-		// exactly one such top-level element (HPLMap, HPLMapTrack_Entity,
-		// etc.), so apDoc itself (not a GetFirstElement() lookup on it) is
-		// that element.
 		if (apDoc->GetValue() != asExpectedRootValue)
 		{
 			Warning("SOMA hpm: sidecar file has unexpected root element '%s' (expected '%s')\n",
@@ -175,8 +134,6 @@ namespace hpl {
 		}
 		return static_cast<cXmlElement*>(apDoc);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cWorldLoaderHpm::LoadLocalFileIndex(cXmlElement* apSection, const tString& asIndexElement, tStringVec& avIndexOut)
 	{
@@ -196,8 +153,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cWorldLoaderHpm::CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale)
 	{
 		if (cMath::Abs(avPos.x) > 10000.0f || cMath::Abs(avPos.y) > 10000.0f || cMath::Abs(avPos.z) > 10000.0f)
@@ -207,14 +162,6 @@ namespace hpl {
 		}
 		return true;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// ROOT .hpm: GLOBAL SETTINGS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cWorldLoaderHpm::LoadGlobalSettings(const tWString& asBaseFile)
 	{
@@ -253,12 +200,6 @@ namespace hpl {
 					mpCurrentWorld->SetSkyBoxActive(pSky->GetAttributeBool("Active", false));
 					mpCurrentWorld->SetSkyBoxColor(pSky->GetAttributeColor("Color", cColor(1, 1)));
 
-					// NOTE: SOMA's map data often bakes in an absolute
-					// developer-machine path for the skybox texture (e.g.
-					// "D:/work/depth/redist/textures/..."). That will not
-					// resolve here; CreateCubeMap() logs a warning and
-					// returns NULL, which is handled gracefully below. Not
-					// a parsing bug - a known Phase 1 data-path gap.
 					tString sSkyTex = pSky->GetAttributeString("Texture", "");
 					if (sSkyTex != "")
 					{
@@ -276,14 +217,6 @@ namespace hpl {
 
 		hplDelete(pDoc);
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// TRACK LOADERS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cWorldLoaderHpm::LoadTrack(const tWString& asBaseFile, const tString& asTrack, const tString& asFileIndexElement)
 	{
@@ -306,8 +239,6 @@ namespace hpl {
 				cXmlElement* pSection = sectionIt.Next()->ToElement();
 				if (pSection->GetValue() != "Section") continue;
 
-				// Each Section has its OWN local file index - the same
-				// numeric index means a different file in another Section.
 				tStringVec vFileIndex;
 				if (asFileIndexElement != "") LoadLocalFileIndex(pSection, asFileIndexElement, vFileIndex);
 
@@ -330,8 +261,6 @@ namespace hpl {
 		hplDelete(pDoc);
 		stats.mlTimeMs = (int)(cPlatform::GetApplicationTime() - lStartTime);
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cWorldLoaderHpm::CreateTrackObject(const tString& asTrack, cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
@@ -411,8 +340,6 @@ namespace hpl {
 		return "unsupported_track";
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cWorldLoaderHpm::ConnectLightMasks()
 	{
 		cLightListIterator it = mpCurrentWorld->GetLightIterator();
@@ -425,8 +352,6 @@ namespace hpl {
 		}
 		mmapLightMasks.clear();
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cWorldLoaderHpm::ConnectLightBillboards()
 	{
@@ -445,9 +370,6 @@ namespace hpl {
 		mlstLightBillboardConnections.clear();
 	}
 
-	//-----------------------------------------------------------------------
-
-	// Tracks whose file layout is not Section/Objects - counted only.
 	void cWorldLoaderHpm::CountUnsupportedFlatTracks(const tWString& asBaseFile)
 	{
 		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_StaticObjectBatches"), false);
@@ -467,8 +389,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	static cXmlElement* HpmFirstChildWithText(cXmlElement* apParent, const tString& asName, tFloatVec& avOut)
 	{
 		cXmlElement* pElem = apParent->GetFirstElement(asName);
@@ -478,7 +398,6 @@ namespace hpl {
 		return pElem;
 	}
 
-	// One static, non-colliding mesh entity per instance; no batching.
 	void cWorldLoaderHpm::LoadDetailMeshesTrack(const tWString& asBaseFile)
 	{
 		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_DetailMeshes"), false);
@@ -514,7 +433,6 @@ namespace hpl {
 
 					for (int i = 0; i < lNum; ++i)
 					{
-						// A fresh CreateMesh() per instance only bumps the shared resource's user count.
 						cMesh* pMesh = mpResources->GetMeshManager()->CreateMesh(sFile);
 						if (pMesh == NULL)
 						{
@@ -539,8 +457,6 @@ namespace hpl {
 		hplDelete(pDoc);
 		stats.mlTimeMs = (int)(cPlatform::GetApplicationTime() - lStartTime);
 	}
-
-	//-----------------------------------------------------------------------
 
 	static tString HpmJsonEscape(const tString& asIn)
 	{
@@ -590,8 +506,6 @@ namespace hpl {
 		msLastLoadReportJson = sJson;
 	}
 
-	//-----------------------------------------------------------------------
-
 
 	void cWorldLoaderHpm::LoadExposureAreaTrack(const tWString& asBaseFile)
 	{
@@ -635,15 +549,8 @@ namespace hpl {
 		hplDelete(pDoc);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cWorldLoaderHpm::CheckTerrainTrackInactive(const tWString& asBaseFile)
 	{
-		// Explicitly out of scope: HPL2 has no terrain renderer at all, and
-		// every SOMA map's Terrain track is Active="false" in practice
-		// (confirmed for 00_01_apartment). Parse only far enough to log
-		// a clear warning in the (currently never observed) case a map
-		// actually has it active - never render or otherwise act on it.
 		iXmlDocument* pDoc = OpenSidecar(asBaseFile, _W("_Terrain"), false);
 		if (pDoc == NULL)
 		{
@@ -667,14 +574,6 @@ namespace hpl {
 
 		hplDelete(pDoc);
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PER-OBJECT CREATION
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	tString cWorldLoaderHpm::CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
@@ -722,16 +621,11 @@ namespace hpl {
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);
 
-		// Real collision body from the real "Collides" attribute - see
-		// CreateStaticBodyForMesh() and the class comment in the header for
-		// why this now exists (it didn't in the original Phase 1 loader).
 		if (bCollides)
 			CreateStaticBodyForMesh(pMeshEntity, sName);
 
 		return "";
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cWorldLoaderHpm::CreatePlanePrimitive(cXmlElement* apElement)
 	{
@@ -783,8 +677,6 @@ namespace hpl {
 		return "";
 	}
 
-	//-----------------------------------------------------------------------
-
 	tString cWorldLoaderHpm::CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
 		tString sName = apElement->GetAttributeString("Name");
@@ -795,7 +687,6 @@ namespace hpl {
 		else if (lMaterialIdx < (int)avFileIndex.size()) sMaterial = avFileIndex[lMaterialIdx];
 		else return "file_index_out_of_bounds";
 
-		// Decal geometry is baked in world space - no transform applied.
 		cMesh* pMesh = cEngineFileLoading::LoadDecalMeshHelper(apElement->GetFirstElement("DecalMesh"), mpGraphics, mpResources,
 																sName, sMaterial, apElement->GetAttributeColor("Color", cColor(1, 1)));
 		if (pMesh == NULL) return "decal_mesh_failed";
@@ -807,8 +698,6 @@ namespace hpl {
 		return "";
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName)
 	{
 		cMesh* pMesh = apMeshEntity->GetMesh();
@@ -817,16 +706,6 @@ namespace hpl {
 		int lSubMeshNum = pMesh->GetSubMeshNum();
 		if (lSubMeshNum <= 0) return;
 
-		// One iCollideShape per submesh, each built from a Software copy of
-		// that submesh's own vertex buffer transformed into world space by
-		// its submesh entity's world matrix (mesh node matrix, position +
-		// rotation + scale - see both call sites above, which call this only
-		// after SetWorldMatrix()/SetPosition()) - same technique
-		// cWorldLoaderHplMap::AddObjectsToStaticMeshBody() uses for Amnesia's
-		// own batched static bodies, just one object (not a spatially-batched
-		// group of many) per call here, matching this loader's existing
-		// "one cMeshEntity per source object, not batched" simplification
-		// for rendering (see the class comment in WorldLoaderHpm.h).
 		tCollideShapeVec vShapes;
 		for (int i = 0; i < lSubMeshNum; ++i)
 		{
@@ -844,15 +723,12 @@ namespace hpl {
 			if (pShape) vShapes.push_back(pShape);
 		}
 
-		// One body per tree: Newton compounds only take convex children
 		for (size_t i = 0; i < vShapes.size(); ++i)
 		{
 			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, vShapes[i]);
 			pBody->SetMass(0);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cWorldLoaderHpm::CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex)
 	{
@@ -892,8 +768,6 @@ namespace hpl {
 		return pEntity ? "" : "entity_failed:" + sFilename;
 	}
 
-	//-----------------------------------------------------------------------
-
 	tString cWorldLoaderHpm::CreateMapArea(cXmlElement* apElement)
 	{
 		tString sName = apElement->GetAttributeString("Name");
@@ -924,7 +798,5 @@ namespace hpl {
 
 		return "";
 	}
-
-	//-----------------------------------------------------------------------
 
 };

@@ -103,24 +103,6 @@ int main(int argc, char *argv[])
         } else if (strncmp(argv[i], "-psn", 4) == 0) {
             // skip "finder" process number
 		} else if (bGotGameDirArg == false && argv[i][0] != '-') {
-			// Real game-data-directory override, e.g.
-			// "./Soma.bin.aarch64 /path/to/steamapps/common/SOMA" - lets
-			// every engine binary be installed anywhere (e.g. a real
-			// system-wide /usr/libexec/open-hpl/) and simply be told where
-			// the actual game data lives, instead of requiring itself to
-			// be physically deployed inside that directory just so
-			// GetDataDir()'s binreloc-based chdir() below resolves to the
-			// right place (see PORTING_NOTES.md - that requirement was the
-			// entire reason a stray copy of this binary kept ending up
-			// inside a real Steam install directory, and it's what real
-			// package launcher scripts have to `cp` around today). Only
-			// the FIRST plain (non-flag) argument is ever treated this
-			// way, and only if it's a real, existing directory - a config
-			// FILE path (this engine's other existing use of a bare
-			// argument, see e.g. cSomaBase::ParseCommandLine()) can never
-			// satisfy S_ISDIR, so the two uses can never collide. Excluded
-			// from cmdline below since it's consumed here, not meant for
-			// the game module's own argument parsing.
 			struct stat dirStat;
 			if (stat(argv[i], &dirStat) == 0 && S_ISDIR(dirStat.st_mode))
 			{
@@ -213,19 +195,6 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	// Defense-in-depth backstop against ever opening a log file that
-	// resolves inside a real Steam install directory - every real game
-	// module in this codebase (see soma/src/game/SomaBase.cpp's
-	// SetupLogFile(), amnesia/src/game's equivalent) is expected to route
-	// its log through an XDG state path, never a bare relative "hpl.log"
-	// (this file's own default, gLogWriter below) resolved against
-	// whatever cwd happens to be - which, for a real Steam launch, IS the
-	// install directory. This happened for real once (see PORTING_NOTES.md/
-	// TASKS.md): a real Steam SOMA install's files were corrupted badly
-	// enough that Steam's own integrity check flagged them and forced a
-	// re-download. Checked here, in shared core code, rather than only in
-	// each game module's own setup, so a future game module or test script
-	// mistake can't reintroduce the same failure mode silently.
 	static bool PathLooksLikeSteamInstall(const tWString &asFile)
 	{
 		tString sPath = cString::To8Char(asFile);
@@ -308,12 +277,6 @@ namespace hpl {
 #endif
 		SDL_Quit();
 #endif
-		// A headless run has nobody to click the native dialog's "Dismiss" button - it would
-		// otherwise hang forever (the whole process, including the control socket thread,
-		// since this call never returns), turning one bad headless command into a stuck
-		// process that has to be killed by hand instead of just exiting like any other fatal
-		// error. Same OPENHPL_HEADLESS_SOCKET check already used at every other headless-mode
-		// call site (see Engine.cpp/LowLevelGraphicsSDL.cpp/SDLEngineSetup.cpp).
 		if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
 		{
 			cPlatform::CreateMessageBox(eMsgBoxType_Error, _W("FATAL ERROR"), _W("%ls"), cString::To16Char(sMess).c_str());
@@ -502,13 +465,6 @@ namespace hpl {
 
 		RegisterScriptString(mpScriptEngine);
 
-		// AngelScript 2.19.2 (the original vendored version) had a built-in
-		// default array type usable via bare `T[]` script syntax. That was
-		// removed from the language in later AngelScript versions - now
-		// available only via the `array<T>` addon, which must explicitly
-		// opt in to also being usable as the default `T[]` array (the
-		// `defaultArray=true` argument here) for existing game scripts
-		// written against the old built-in syntax to keep compiling.
 		RegisterScriptArray(mpScriptEngine, true);
 
 		mlHandleCount = 0;

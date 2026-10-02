@@ -15,8 +15,6 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
-//---------------------------------------
-
 bool SomaWildcardMatch(const tString &asPattern, const tString &asName)
 {
 	if (asPattern.find('*') == tString::npos)
@@ -1039,8 +1037,6 @@ void cSomaLuxEntity::CreateAreaBody(iPhysicsWorld *apWorld)
 	mvBodies.push_back(pBody);
 }
 
-//---------------------------------------
-
 namespace
 {
 	struct cObjectEntry
@@ -1140,7 +1136,6 @@ void *SomaObjectFromID(const cSomaID &aID, const tString &asType)
 	return NULL;
 }
 
-//---------------------------------------
 // cLuxMapHelper::GetClosestEntity: nearest entity along the ray, blocked by colliding world geometry
 
 class cSomaClosestRay : public iPhysicsRayCallback
@@ -1209,8 +1204,6 @@ void cSomaLuxEntity::RemoveCollideCallbacks(const tString &asChild)
 {
 	std::erase_if(mvCollideCallbacks, [&](const cCollideCallback &c) { return SomaWildcardMatch(asChild, c.msChild) || SomaWildcardMatch(c.msChild, asChild); });
 }
-
-//---------------------------------------
 
 struct cSomaOBB
 {
@@ -1455,8 +1448,6 @@ bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB)
 	return false;
 }
 
-//---------------------------------------
-
 static cSomaLuxEntity *Find(const tString &asName)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -1697,8 +1688,6 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	cSomaLuxScriptable::RegisterTimerNatives(e, T);
 }
 
-//---------------------------------------
-
 bool cSomaLuxEntity::GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut)
 {
 	for (cSocket &sock : mvSockets)
@@ -1902,7 +1891,6 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Prop_SetStaticPhysics(const tString &in asPropName, bool abX)",
 			  +[](const tString &n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetStaticPhysics(b); }); });
 
-	// tID
 	SOMA_METHOD(e, "tID", "bool opEquals(const tID &in) const", +[](const cSomaID &a, const cSomaID &b) { return a == b; });
 	SOMA_METHOD(e, "tID", "tID&opAssign(const tID &in)", +[](cSomaID &a, const cSomaID &b) -> cSomaID & { return a = b; });
 	static cSomaID invalidId;

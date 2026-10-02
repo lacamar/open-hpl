@@ -164,14 +164,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	mfTopMenuFadeInTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeInTime", 0);
 	mfTopMenuFadeOutTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeOutTime", 0);
 	
-	// These "Relative" config values are fractions (0-1) of the menu's own coordinate
-	// space, not of the real screen - use GetVirtualSize() (already GuiScale-adjusted,
-	// see cGuiSet::SetVirtualSize()) rather than the raw mvScreenSize, so the top menu
-	// and logo land at the same *fraction* of what's actually visible at any GuiScale
-	// instead of a fraction of the pre-scale screen (which, since GuiScale zooms the
-	// visible window in around the origin, pushed this content - anchored well away
-	// from (0,0), e.g. TopMenuStartRelativePos's default 80% across - outside that
-	// window and off screen at scale > 1).
+	// relative to GuiScale-adjusted virtual size
 	const cVector2f& vMenuSpace = mpGuiSet->GetVirtualSize();
 
 	mvTopMenuStartPos = gpBase->mpMenuCfg->GetVector2f("Main","TopMenuStartRelativePos", 0) * vMenuSpace;
@@ -465,12 +458,7 @@ void cLuxMainMenu::Update(float afTimeStep)
 
 void cLuxMainMenu::OnDraw(float afFrameTime)
 {
-	// Full-screen backgrounds/overlays need to be sized in the same (possibly
-	// GuiScale-shrunk) coordinate space the projection actually maps to the real
-	// screen - see cGuiSet::SetVirtualSize() - not raw mvScreenSize, or they only
-	// cover the space's origin corner instead of the whole visible window (seen
-	// live as the paused-game background screenshot behind this same MainMenu
-	// GuiSet appearing zoomed into just its top-left corner at GuiScale > 1).
+	// size in virtual space, not raw screen
 	const cVector2f& vMenuSpace = mpGuiSet->GetVirtualSize();
 
 	/////////////////////////////////

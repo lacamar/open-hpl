@@ -3,7 +3,6 @@
 
 #include <angelscript.h>
 
-// tString (std::string) and tWString (std::wstring) value types, tString literals
 void RegisterSomaScriptStrings(asIScriptEngine *apEngine);
 
 // After the API value types: tString + cVector3f, cColor, tID...

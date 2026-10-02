@@ -97,8 +97,6 @@ void cLuxConfigHandler::LoadMainConfig()
 	mlShadowQuality =	gpBase->mpMainConfig->GetInt("Graphics", "ShadowQuality", eShadowMapQuality_Medium);
 	mlShadowRes =		gpBase->mpMainConfig->GetInt("Graphics", "ShadowResolution", eShadowMapResolution_High);
 
-	// GUI scale: integer (or fractional) multiplier making menus/HUD/dialogs/subtitles bigger
-	// on high-resolution displays. 1 = original size (default, matches original game).
 	mlGuiScale =		gpBase->mpMainConfig->GetInt("Graphics", "GuiScale", 1);
 
 	// Misc

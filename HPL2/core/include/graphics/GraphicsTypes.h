@@ -508,7 +508,6 @@ namespace hpl {
 			ePixelFormat_DXT3,
 			ePixelFormat_DXT4,
 			ePixelFormat_DXT5,
-			// Two-channel normal maps (BC5/3Dc). XY: 'BC5U' block order, YX: 'ATI2'.
 			ePixelFormat_RGTC2_XY,
 			ePixelFormat_RGTC2_YX,
 			ePixelFormat_Depth16,

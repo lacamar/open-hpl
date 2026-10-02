@@ -479,8 +479,6 @@ namespace hpl {
 
 		static void SetConvertUnit(bool abX) { mbConvertUnit = abX; }
 		static bool GetConvertUnit() { return mbConvertUnit; }
-		// Honour <unit> from every exporter, not only "FBX COLLADA exporter".
-		// HPL3 data (SOMA) is authored in centimetres by OpenCOLLADA/modo/Maya.
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
 		static void SetLoadVertexColors(bool abX) { mbLoadVertexColors = abX; }
 		static void SetUnscaledSkeleton(bool abX);

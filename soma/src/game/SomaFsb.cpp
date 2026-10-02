@@ -8,8 +8,6 @@
 #include <fstream>
 #include <vector>
 
-//---------------------------------------
-
 static unsigned int ReadU32LE(const unsigned char *apData)
 {
 	return (unsigned int)apData[0] | ((unsigned int)apData[1] << 8) | ((unsigned int)apData[2] << 16) | ((unsigned int)apData[3] << 24);
@@ -35,8 +33,6 @@ static void AppendU64LE(std::vector<unsigned char> &aOut, unsigned long long aVa
 	AppendU32LE(aOut, (unsigned int)(aVal & 0xFFFFFFFFull));
 	AppendU32LE(aOut, (unsigned int)((aVal >> 32) & 0xFFFFFFFFull));
 }
-
-//---------------------------------------
 
 struct cFsbSample
 {
@@ -174,8 +170,6 @@ static bool ParseFsb5(const std::vector<unsigned char> &aFile, unsigned int &alM
 	return true;
 }
 
-//---------------------------------------
-
 // libogg's CRC: MSB-first, poly 0x04c11db7, no reflection - not zlib's
 static unsigned int OggCrc32(const unsigned char *apData, size_t alSize)
 {
@@ -287,8 +281,6 @@ private:
 	std::vector<unsigned char> mBody;
 	std::vector<unsigned char> mOut;
 };
-
-//---------------------------------------
 
 class cBitPackerLSB
 {
@@ -572,8 +564,6 @@ static bool FsbModeSupported(unsigned int alMode)
 	return alMode == kFsbMode_Pcm16 || alMode == kFsbMode_ImaAdpcm || alMode == kFsbMode_Vorbis;
 }
 
-//---------------------------------------
-
 static bool ReadWholeFile(const tWString &asPath, std::vector<unsigned char> &aOut)
 {
 	std::ifstream f(cString::To8Char(asPath).c_str(), std::ios::binary | std::ios::ate);
@@ -598,8 +588,6 @@ static bool WriteWholeFile(const tWString &asPath, const std::vector<unsigned ch
 	f.write(reinterpret_cast<const char *>(aData.data()), (std::streamsize)aData.size());
 	return f.good();
 }
-
-//---------------------------------------
 
 tWString cSomaFsb::GetCacheDir(const tWString &asSubDir)
 {

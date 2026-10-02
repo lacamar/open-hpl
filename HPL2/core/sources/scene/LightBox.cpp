@@ -108,8 +108,6 @@ namespace hpl {
 		if(mfFadeT >= 1) mpFadeTarget = NULL;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cLightBox::IsVisible()
 	{
 		if(!IsLit()) return false;

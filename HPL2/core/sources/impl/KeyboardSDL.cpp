@@ -84,7 +84,6 @@ namespace hpl {
 			{
                 eKey key = SDLToKey(pEvent->key.keysym.sym);
 
-                // Tap-remapped keys (e.g. caps-lock as Escape) press and release within one frame; keep them down for it
                 if(pEvent->key.state == SDL_PRESSED) { mvKeyArray[key] = true; vPressedNow[key] = true; }
                 else if(vPressedNow[key]) mvDeferredReleases.push_back(key);
                 else mvKeyArray[key] = false;

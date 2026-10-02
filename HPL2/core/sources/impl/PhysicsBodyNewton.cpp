@@ -44,10 +44,6 @@ namespace hpl {
 		cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(apShape);
 		
 		mpNewtonWorld = pWorldNewton->GetNewtonWorld();
-		// Newton 3.14 split NewtonCreateBody into Dynamic/Kinematic/AsymetricDynamic
-		// variants and requires an initial transform up front (the old API defaulted
-		// to identity and let the caller set the real transform afterward via the
-		// normal engine transform-sync path, same as happens here).
 		cMatrixf mtxIdentityTranspose = cMatrixf::Identity.GetTranspose();
 		mpNewtonBody = NewtonCreateDynamicBody(pWorldNewton->GetNewtonWorld(),
 										pShapeNewton->GetNewtonCollision(),
@@ -64,10 +60,6 @@ namespace hpl {
 		NewtonBodySetTransformCallback(mpNewtonBody, OnTransformCallback);
 		NewtonBodySetUserData(mpNewtonBody, this);
 
-		// Newton 3.14 moved continuous collision from a per-material-pair setting to
-		// a per-body one (see the comment in cPhysicsMaterialNewton::UpdateMaterials).
-		// The old code enabled it unconditionally for every material pair, so
-		// enabling it unconditionally on every body reproduces the same effect.
 		NewtonBodySetContinuousCollisionMode(mpNewtonBody, 1);
 
 		//Set default property settings
@@ -324,10 +316,6 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddImpulse(const cVector3f &avImpulse)
 	{
-		// Newton 3.14's NewtonBodyAddImpulse takes an explicit timestep (it converts
-		// the desired delta-velocity into a force applied over that timestep) - the
-		// old 2.x API applied it over an implicit internal step. The world's fixed
-		// simulation timestep is the correct value to pass here.
 		float fTimeStep = mpWorld->GetMaxTimeStep();
 
 		cVector3f vMassCentre = GetMassCentre();
@@ -518,18 +506,6 @@ namespace hpl {
 
 		////////////////////////////
 		// Create Buoyancy
-		//
-		// Newton 3.14 removed the NewtonBodyAddBuoyancyForce convenience wrapper
-		// entirely (only the lower-level NewtonConvexCollisionCalculateBuoyancyVolume
-		// primitive - submerged volume + center of buoyancy for a convex shape against
-		// a fluid plane - remains). This reimplements the same physical effect
-		// (Archimedes' force applied at the center of buoyancy, plus linear/angular
-		// drag scaled by how submerged the shape currently is) on top of that
-		// primitive. It is a faithful reimplementation of the standard buoyancy
-		// algorithm, not a byte-for-byte port of Newton 2.x's internal formula (which
-		// is not available to compare against) - the mfDensity/mfLinearViscosity/
-		// mfAngularViscosity values set on liquid areas may need re-tuning against
-		// real game content.
 		if (pRigidBody->mBuoyancy.mbActive && pRigidBody->mfBuoyancyDensityMul>0)
 		{
 			cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(pRigidBody->mpShape);
@@ -552,18 +528,13 @@ namespace hpl {
 				float fSubmergedFraction = fTotalVolume > 0.0f ?
 					cMath::Min(fSubmergedVolume / fTotalVolume, 1.0f) : 0.0f;
 
-				//Archimedes' force: opposes gravity, magnitude = weight of displaced fluid.
 				cVector3f vBuoyancyForce = vGravity * (-fDensity * fSubmergedVolume);
 				NewtonBodyAddForce(apBody, vBuoyancyForce.v);
 
-				//Apply at the center of buoyancy rather than the body origin, by
-				//converting the offset into an equivalent torque (same technique as
-				//AddForceAtPosition above).
 				cVector3f vCentreOffset = vCenterOfBuoyancy - pRigidBody->GetWorldPosition();
 				cVector3f vBuoyancyTorque = cMath::Vector3Cross(vCentreOffset, vBuoyancyForce);
 				NewtonBodyAddTorque(apBody, vBuoyancyTorque.v);
 
-				//Fluid drag, scaled by mass and by how submerged the body currently is.
 				cVector3f vLinearDrag = pRigidBody->GetLinearVelocity() *
 					(-pRigidBody->mBuoyancy.mfLinearViscosity * fSubmergedFraction * pRigidBody->mfMass);
 				cVector3f vAngularDrag = pRigidBody->GetAngularVelocity() *

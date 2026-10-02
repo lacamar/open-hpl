@@ -26,8 +26,6 @@ static bool gbPendingNewGame = false;
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
 
-//---------------------------------------
-
 cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	: mpWorld(apWorld), msFileName(asFileName), mpRuntime(NULL), mpScript(NULL)
 {
@@ -434,8 +432,6 @@ cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
 	return NULL;
 }
 
-//---------------------------------------
-
 bool SomaTakePendingMapChange(tString &asMap, tString &asStart);
 void SomaDrawImGuis();
 
@@ -497,9 +493,6 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
 }
 
-//---------------------------------------
-// Natives
-
 static cSomaLuxMap *CurrentMap() { return cSomaLuxMap::GetCurrent(); }
 
 // Class filters name the script class (cScrAreaCameraAnimationNode) or the entity type
@@ -510,7 +503,6 @@ static bool SomaEntityIsClass(cSomaLuxEntity *apEnt, const tString &asClass)
 	return apEnt->GetScript() && asClass == apEnt->GetScript()->GetObjectType()->GetName();
 }
 
-//---------------------------------------
 // iScriptUserClassInterface: ScriptPrepare(decl), SetArg*, ScriptExecute, GetReturn* on a script-backed object
 
 struct cSomaPreparedCall
@@ -648,7 +640,6 @@ void SomaRequestNewGame(const tString &asMap, const tString &asStart)
 	gbPendingNewGame = true;
 }
 
-//---------------------------------------
 // Collide groups ("+a -b"): membership bits low, collide-with mask high
 
 static bool CollideFlagsMatch(tFlag alA, tFlag alB)

@@ -1,8 +1,3 @@
-/*
- * The engine side of SOMA's script layer ("Lux" in HPL3): objects scripts see as cLuxMap etc.
- * Behaviour follows the official binary (see scripts/soma-re-script-api.py for the bound natives).
- */
-
 #ifndef SOMA_LUX_H
 #define SOMA_LUX_H
 
@@ -30,14 +25,12 @@ struct cSomaLuxTimer
 	float mfLength = 0;
 };
 
-// Script type cLuxMap
 class cSomaLuxMap
 {
 public:
 	cSomaLuxMap(cWorld *apWorld, const tString &asFileName);
 	~cSomaLuxMap();
 
-	// Compiles the map's .hps, creates its cScrMap and runs PreloadData() (cLuxMap::LoadFromFile)
 	bool CreateScript(cSomaScriptRuntime *apRuntime, const tString &asScriptFile);
 	// Setup(), then OnStart() the first time and OnEnter() (cLuxMapHandler::SetCurrentMap)
 	void OnEnter(bool abFirstTime);

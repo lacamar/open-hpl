@@ -40,9 +40,7 @@ namespace hpl {
 
 		cSoundEntityData* CreateSoundEntity(const tString& asName);
 
-		// Data built in code (not from a .snt file), found by CreateSoundEntity under asName
 		void AddCustomSoundEntity(const tString& asName, cSoundEntityData *apData);
-		// Asked for names with no .snt file; returns NULL if it has none
 		typedef cSoundEntityData* (*tCustomSoundEntityResolver)(const tString& asName);
 		void SetCustomResolver(tCustomSoundEntityResolver apResolver){ mpCustomResolver = apResolver; }
 		

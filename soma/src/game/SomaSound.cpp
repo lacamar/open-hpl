@@ -417,8 +417,6 @@ bool cSomaSoundEvents::IsLive(cSomaSoundInstance *apInstance, int alId)
 	return it != mmapLive.end() && (alId < 0 || it->second == alId);
 }
 
-//---------------------------------------
-
 cSomaSoundInstance::cSomaSoundInstance(cEvent *apEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType)
 	: mpEvent(apEvent), msName(asName), mpEntity(apEntity), mType(aType)
 {
@@ -894,8 +892,6 @@ tString cSomaSoundInstance::Describe()
 		s += " " + mpEvent->mvParams[i].msName + "=" + cString::ToString(mvParamValue[i]);
 	return s;
 }
-
-//---------------------------------------
 
 namespace
 {

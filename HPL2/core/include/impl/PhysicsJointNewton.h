@@ -116,17 +116,9 @@ namespace hpl {
 		void CreateCustomJoint(int alMaxDOF)
 		{
 			mlMaxDOF = alMaxDOF;
-			// Newton 3.14's NewtonConstraintCreateUserJoint dropped the separate
-			// "get info" callback parameter - only the constraint-submission callback
-			// remains. This was never a real loss here: every joint's GetInfo()
-			// override is either the empty base default or (cPhysicsJointHingeNewton)
-			// an empty stub that was never wired to anything - all real introspection
-			// (angle, force, limits) already goes through each joint's own methods,
-			// not through Newton's NewtonJointRecord mechanism.
 			mpNewtonJoint = NewtonConstraintCreateUserJoint (mpNewtonWorld, mlMaxDOF, StaticSubmitConstraints, mpNewtonChildBody, mpNewtonParentBody);
 
 			NewtonJointSetUserData (mpNewtonJoint, this);
-			// Iterative solver, as in Newton 2; the exact skeleton solver costs seconds per frame on cable chains
 			NewtonUserJointSetSolverModel (mpNewtonJoint, 2);
 		}
 

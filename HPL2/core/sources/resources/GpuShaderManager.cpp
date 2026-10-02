@@ -39,25 +39,6 @@
 
 namespace hpl {
 
-	//-----------------------------------------------------------------------
-
-	// HPSL declares each texture uniform's binding as a D3D-style
-	// "uniform cTextureX NAME : N;" suffix (see HpslTranspiler.cpp's
-	// StripUniformBindingIndices(), which discards it since GLSL 120 has no
-	// such syntax) - unlike Dark Descent's own hand-written .glsl shaders,
-	// which instead rely on a "@define sampler_NAME N" preprocessor line
-	// parsed into cPreprocessParser's own var container and consumed just
-	// below (the "Sampler to texture units setup" block). HPSL source has no
-	// such @define, so that block finds nothing and every fragment-shader
-	// sampler silently stays bound to GLSL's default texture unit 0 - live-
-	// confirmed via SOMA's real deferred_light_frag.hpsl: aDiffuseMap/
-	// aNormalDepthMap/aSpecMap/aShadowMap/aShadowOffsetMap all sampling
-	// whatever happened to be bound to unit 0, producing visible garbage
-	// instead of real lighting even once the shader compiles and runs.
-	// Extracted here (from the pre-transpile, post-@ifdef-preprocessing HPSL
-	// text, where the ": N" suffix is still present) and fed to the same
-	// iGpuShader::AddSamplerUnit() the @define path already uses, so both
-	// mechanisms land on the same consumer (cGLSLProgram::Compile()).
 	static void ApplyHpslTextureBindings(iGpuShader* apShader, const tString& asHpslText)
 	{
 		static const std::regex bindRe("uniform\\s+cTexture\\w*\\s+(\\w+)\\s*:\\s*(\\d+)\\s*;");
@@ -68,24 +49,6 @@ namespace hpl {
 		}
 	}
 
-	// Debug-only: writes a transpiled HPSL->GLSL shader's final real source
-	// straight to a file (fwrite, never Log()/vsprintf - see PORTING_NOTES.md's
-	// SOMA lighting investigation for the real stack-buffer-overflow crash
-	// that came from routing a multi-KB shader source through Log()'s fixed
-	// 4096-byte buffer) so it can actually be read for the first time. Opt-in
-	// via OPENHPL_DUMP_HPSL_SHADERS_DIR (no-op, zero overhead, when unset) -
-	// never fires for Dark Descent/AMFP, which never register a transpile
-	// callback and never reach either call site below.
-	// Every combo compile reuses the same bare "asName" (e.g.
-	// "deferred_base_vtx.glsl" for the Z/Diffuse/Illumination passes alike -
-	// see CreateShader()'s "do NOT add the shader as a resource" comment
-	// below: apVarContainer-driven compiles never touch the resource cache,
-	// so the same source file gets re-preprocessed per-combo, on demand),
-	// so a plain per-name dump file would just keep getting overwritten by
-	// whichever combo happened to compile last. An incrementing counter
-	// gives each real compile its own file instead; since a vertex shader
-	// and its paired fragment shader are always compiled back-to-back (see
-	// CreateProgramFromShaders() below), consecutive indices pair up.
 	static int gnHpslDumpCounter = 0;
 
 	static void DumpTranspiledShaderIfRequested(const tString &asName, const tString &asGlsl)
@@ -115,8 +78,6 @@ namespace hpl {
 
 	tHpslTranspileCallback cGpuShaderManager::mpHpslTranspileCallback = NULL;
 	tStringVec cGpuShaderManager::mvGlobalDefines;
-
-	//-----------------------------------------------------------------------
 
 	cGpuShaderManager::cGpuShaderManager(cFileSearcher *apFileSearcher,iLowLevelGraphics *apLowLevelGraphics, 
 		iLowLevelResources *apLowLevelResources,iLowLevelSystem *apLowLevelSystem)
@@ -177,43 +138,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// HPSL FILENAME ALIASES
-	//////////////////////////////////////////////////////////////////////////
-	// HPL2's own material/renderer C++ (MaterialType_BasicSolid.cpp,
-	// MaterialType_Decal.cpp, RendererDeferred.cpp) hardcodes exact .glsl
-	// filenames written for Dark Descent's own hand-authored shader set. A
-	// handful of them have no file of that exact name anywhere in the real
-	// SOMA/Rebirth/Bunker HPSL corpus - HPL3 simply renamed the equivalent
-	// shader when it restructured the pipeline - so the plain
-	// SetFileExt(asName, "hpsl") fallback below finds nothing and
-	// CreateShader() errors out ("Couldn't find file") before ever attempting
-	// a transpile, for materials/passes that would otherwise work fine. Same
-	// shape of fix as the UseDepth->UseLinearDepth combo-variable alias
-	// below, but for filenames instead of combo-variable names. Found live
-	// (real headless start_map run against 00_01_apartment.hpm): the decal
-	// entry below is what was behind "Invalid material type 'projectedUV'!"/
-	// "Couldn't load material 'static_objects/urban/cables/cable.mat'" -
-	// MaterialManager.cpp falls back to material type "projectedUV" (itself
-	// unrecognized - a separate, pre-existing Rebirth-side gap, see
-	// TASKS.md) once "decal" material loading fails from this shader lookup
-	// dying first.
-	// posteffect_bloom_blur_vtx.glsl/posteffect_bloom_blur_frag.glsl/
-	// posteffect_bloom_add_frag.glsl (PostEffect_Bloom.cpp) are deliberately
-	// NOT aliased here: no real HPSL file corresponds to any of the three
-	// (confirmed by searching the whole corpus) - HPL3's bloom is
-	// structured entirely differently (posteffect_bloomhdr_brightpass_frag.
-	// hpsl + posteffect_bloomhdr_blur_frag.hpsl, no separate "add" pass),
-	// not just renamed. See PostEffect_Bloom.cpp for the graceful-skip fix
-	// instead.
 	static const char* const gvHpslFilenameAliases[][2] = {
 		{ "deferred_illumination_frag.glsl",	"deferred_illumination_solid_frag.hpsl" },
 		{ "deferred_gbuffer_skybox_frag.glsl",	"deferred_skybox_frag.hpsl" },
 		{ "deferred_decal_frag.glsl",			"deferred_gbuffer_decal_frag.hpsl" },
 	};
 
-	// HPL3 only supports BoxMask in its texture-buffer light path; add it to
-	// the uniform path we use. Inserted before the last anchor occurrence.
 	static const char* const gvHpslSourcePatches[][3] = {
 		{ "deferred_light_frag.hpsl", "//Translucency\nuniform float afTranslucencyScale;",
 		  "@ifdef BoxMask\n\tuniform cMatrixf a_mtxInvView;\n\tuniform cVector3f avMaskCenter;\n\tuniform cVector3f avMaskExtent;\n@endif\nuniform float afSpotNearClip;\n" },
@@ -222,7 +152,6 @@ namespace hpl {
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
 	};
 
-	// Uniform-path code replaced by what the texture-buffer path (used by the real engine) does.
 	static const char* const gvHpslSourceReplacements[][3] = {
 		{ "deferred_illumination_solid_frag.hpsl",
 		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@endif",
@@ -273,8 +202,6 @@ namespace hpl {
 		return cString::SetFileExt(asGlslName, "hpsl");
 	}
 
-	//-----------------------------------------------------------------------
-
 	iGpuShader* cGpuShaderManager::CreateShader(const tString& asName, eGpuShaderType aType,
 												cParserVarContainer *apVarContainer)
 	{
@@ -296,16 +223,6 @@ namespace hpl {
 			tWString sPath = mpFileSearcher->GetFilePath(asName);
 			if(sPath==_W("") && mpHpslTranspileCallback)
 			{
-				/////////////////////////////////
-				// No .glsl by this name - see if a same-named .hpsl exists
-				// (SOMA/Rebirth/Bunker's HPL3 shader source). Only tried
-				// when a game module has registered a transpiler via
-				// SetHpslTranspileCallback(); Dark Descent/AMFP never do,
-				// so this block is unreachable for them and sPath=="" falls
-				// straight into the existing error path below unchanged.
-				// GetHpslFallbackName() applies the gvHpslFilenameAliases
-				// table above for the handful of names HPL3 genuinely
-				// renamed, falling back to plain SetFileExt() otherwise.
 				sHpslName = GetHpslFallbackName(asName);
 				tWString sHpslPath = mpFileSearcher->GetFilePath(sHpslName);
 				if(sHpslPath != _W(""))
@@ -331,62 +248,14 @@ namespace hpl {
 			//Parse file
 			if(bIsHpslFallback)
 			{
-				/////////////////////////////////
-				// HPL2's own material combo-variable-setting C++
-				// (MaterialType_BasicSolid.cpp etc.) was written for Dark
-				// Descent's own hand-written GLSL @ifdef vocabulary, and is
-				// reused as-is here (Dark Descent's own compiles never take
-				// this bIsHpslFallback branch at all, so mutating
-				// apVarContainer here can't affect them). Most flag names
-				// happen to already match HPSL's own vocabulary verbatim
-				// (UseUv/UseNormals/UseNormalMapping/UseColor/UseEnvMap/
-				// UseCubeMapAlpha/...), but a few HPL2-legacy names
-				// represent the same real concept under a different exact
-				// spelling HPSL's own @ifdefs never check for - alias them
-				// here. Found live (real headless start_map run against
-				// 00_01_apartment.hpm, see PORTING_NOTES.md "SOMA" section):
-				// cMaterialType_SolidDiffuse::LoadSpecificData()
-				// unconditionally sets "UseDepth" whenever G-buffer solid
-				// rendering needs linear depth written (which is always),
-				// but deferred_base_vtx.hpsl/deferred_gbuffer_solid_frag.hpsl
-				// gate their own (also always-written) linear-depth
-				// interpolant behind "UseLinearDepth" instead - without this
-				// alias, the fragment shader's body unconditionally reads
-				// px_fLinearDepth while neither shader ever declares it,
-				// since the combo variable their @ifdef actually checks for
-				// is never set.
 				if(apVarContainer->Get("UseDepth") != NULL)
 					apVarContainer->Add("UseLinearDepth");
 
-				/////////////////////////////////
-				// "UseExtendedArgs" gates deferred_base_vtx.hpsl's legacy
-				// cVertexArguments cBuffer's extra members (afInvFarPlane/
-				// afT/sway/force-field/scrolling-noise/soft-particle/
-				// instancing-offset uniforms) - the *only* place this name
-				// appears anywhere in the real .hpsl corpus (confirmed via
-				// grep across every file), and every one of those members
-				// is a plain declaration only read by code that's itself
-				// separately gated behind its own specific combo variable
-				// (UseSway/UseScrollingNoise/UseSoftParticle/...) - so
-				// there's no downside to always declaring them, unused or
-				// not. Unlike "UseDepth"/"UseLinearDepth" above, this has
-				// no HPL2-legacy equivalent flag to alias from at all (it's
-				// pure HPSL-side cBuffer-visibility bookkeeping with no
-				// Dark-Descent-shader analog) - just always turn it on for
-				// every HPSL compile. Found live the same way as the
-				// UseDepth/UseLinearDepth alias above: turning that alias
-				// on newly activated deferred_base_vtx.hpsl's
-				// "px_fLinearDepth = ... * afInvFarPlane;" line, which
-				// reads afInvFarPlane from inside this gated block.
 				apVarContainer->Add("UseExtendedArgs");
 				PatchHpslSource(sHpslName, sFileData);
 			}
 			mpPreprocessParser->Parse(&sFileData, &sParsedOutput,apVarContainer,cString::GetFilePathW(sPath));
 
-			/////////////////////////////////
-			//HPSL -> GLSL fallback: same preprocessor as the .glsl path
-			//above, transpiled the rest of the way by the registered
-			//game-module callback.
 			tString sHpslPreTranspile;
 			if(bIsHpslFallback)
 			{
@@ -464,11 +333,6 @@ namespace hpl {
 
 				AddResource(pShader);
 			}
-			//////////////////////////////////////////////
-			// HPSL -> GLSL fallback (see the apVarContainer branch above for
-			// the full explanation) - only reachable when a game module has
-			// registered a transpiler; Dark Descent/AMFP leave
-			// mpHpslTranspileCallback NULL and never enter this block.
 			else if(pShader==NULL && sPath==_W("") && mpHpslTranspileCallback)
 			{
 				tString sHpslName = GetHpslFallbackName(asName);

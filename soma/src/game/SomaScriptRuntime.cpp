@@ -16,8 +16,6 @@ using namespace hpl;
 
 cSomaScriptRuntime *cSomaScriptRuntime::mpInstance = NULL;
 
-//---------------------------------------
-
 static void MessageCallback(const asSMessageInfo *apMsg, void *)
 {
 	if (apMsg->type == asMSGTYPE_ERROR)
@@ -50,8 +48,6 @@ static std::string FindApiFile()
 			return vCandidates[i];
 	return "";
 }
-
-//---------------------------------------
 
 cSomaScriptRuntime::cSomaScriptRuntime() : mpEngine(NULL), mpBuilder(NULL), mlModuleCount(0)
 {

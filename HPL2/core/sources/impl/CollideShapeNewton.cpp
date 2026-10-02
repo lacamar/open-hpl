@@ -67,16 +67,10 @@ namespace hpl {
 												mvSize.x, mvSize.y, mvSize.z, 
 												0, pMtx); break;
 		
-		// Newton 3.14's sphere collision only takes a single uniform radius (the old
-		// engine already only ever passed equal x/y/z values here, per the comment
-		// below - a non-uniform "sphere" was never actually usable even on 2.x).
 		case eCollideShapeType_Sphere:		mpNewtonCollision = NewtonCreateSphere(apNewtonWorld,
 												mvSize.x,
 												0, pMtx); break;
 
-		// Newton 3.14's cylinder/capsule collisions support elliptical cross-sections
-		// (two independent radii) - pass mvSize.x for both to keep the original
-		// circular-cross-section shape this engine always used.
 		case eCollideShapeType_Cylinder:	mpNewtonCollision = NewtonCreateCylinder(apNewtonWorld,
 												mvSize.x, mvSize.x, mvSize.y,
 												0, pMtx); break;
@@ -134,19 +128,6 @@ namespace hpl {
 		if(mpNewtonCollision)
 			NewtonDestroyCollision(mpNewtonCollision);
 
-		// NOTE: this used to also call mpWorld->DestroyShape() on every entry
-		// in mvSubShapes here (for Compound/Scene shapes). That was a
-		// pre-existing double-free: every sub-shape passed to
-		// CreateCompundShape()/CreateStaticSceneFromShapeVec() is *already*
-		// independently registered in the world's own mlstShapes by its own
-		// CreateBoxShape()/CreateSphereShape()/etc. call, and
-		// iPhysicsWorld::DestroyAll() unconditionally deletes every shape in
-		// that list (STLDeleteAll, not the ref-counted DestroyShape()).
-		// Whichever of the two (this destructor, or DestroyAll's own sweep)
-		// ran second ended up operating on an already-freed pointer. mvSubShapes
-		// here exists only so this shape can enumerate its members (e.g.
-		// GetSubShape/GetSubShapeNum), not to own them - ownership is (and
-		// always was) mlstShapes'.
 	}
 
 	//-----------------------------------------------------------------------
@@ -239,9 +220,6 @@ namespace hpl {
 
 		mvSubShapes.reserve(avShapes.size());
 
-		// Newton 3.14 replaced the old CreateProxy/Optimize API with an explicit
-		// Begin/Add/End bracket around scene-collision edits (which optimizes
-		// internally on End, same as the old explicit Optimize call used to).
 		NewtonSceneCollisionBeginAddRemove(mpNewtonCollision);
 		for(size_t i=0; i<avShapes.size(); ++i)
 		{
@@ -251,7 +229,6 @@ namespace hpl {
 
 			void* pProxy = NewtonSceneCollisionAddSubCollision(mpNewtonCollision, pNewtonShape->GetNewtonCollision());
 			//cMatrixf mtxTransform = cMatrixf::Identity;
-			//NewtonSceneCollisionSetSubCollisionMatrix(mpNewtonCollision, pProxy, &mtxTransform.GetTranspose().m[0][0]);
 			if(apMatrices)
 			{
 				//TODO!
@@ -284,8 +261,6 @@ namespace hpl {
 			mfVolume += pNewtonShape->GetVolume();
 		}
 
-		// Newton 3.14 dropped the count+array constructor form in favor of an
-		// explicit Begin/Add/End bracket, same pattern as scene collisions above.
 		mpNewtonCollision = NewtonCreateCompoundCollision(mpNewtonWorld, 0);
 		NewtonCompoundCollisionBeginAddRemove(mpNewtonCollision);
 		for(size_t i=0; i<vNewtonColliders.size(); ++i)

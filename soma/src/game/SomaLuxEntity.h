@@ -1,9 +1,3 @@
-/*
- * SOMA map entities (iLuxEntity: cLuxProp, cLuxArea, cLuxAgent, cLuxCritter...): the HPL2 objects
- * the loaders created, the per-instance variables and the entity's script class from
- * config/EntityTypes.cfg.
- */
-
 #ifndef SOMA_LUX_ENTITY_H
 #define SOMA_LUX_ENTITY_H
 

@@ -181,12 +181,6 @@ namespace hpl {
 				Combine(frictionMode,mfStaticFriction, pMat->mfStaticFriction),
 				Combine(frictionMode,mfKineticFriction, pMat->mfKineticFriction));
 
-			// Newton 3.14 removed the per-material-pair continuous collision toggle -
-			// it's now set per body instead (see NewtonBodySetContinuousCollisionMode
-			// in cPhysicsBodyNewton's constructor). This used to be unconditionally
-			// enabled for every material pair here, which is equivalent to enabling
-			// it on every body at creation time.
-
 			NewtonMaterialSetCollisionCallback(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
 												OnAABBOverlapCallback,ContactsProcessCallback);
 		}
@@ -237,9 +231,6 @@ namespace hpl {
 
 	int cPhysicsMaterialNewton::OnAABBOverlapCallback(const NewtonJoint* apContactJoint, dFloat afTimestep, int alThreadIndex)
 	{
-		// Newton 3.14 folded the AABB-overlap pre-filter into the same persistent
-		// per-pair contact joint used by the contacts-process callback, rather than
-		// passing the two bodies directly.
 		const NewtonBody* apBody1 = NewtonJointGetBody0(apContactJoint);
 		const NewtonBody* apBody2 = NewtonJointGetBody1(apContactJoint);
 

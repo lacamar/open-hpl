@@ -247,7 +247,6 @@ namespace hpl {
 		float GetDepthOfFieldFocusEnd(){ return mfDepthOfFieldFocusEnd;}
 		float GetDepthOfFieldFalloff(){ return mfDepthOfFieldFalloff;}
 
-		///// TONE MAPPING ////////////////////////////////
 		void SetToneMapping(float afKey, float afExposure, float afWhiteCut){ mfToneMappingKey = afKey; mfToneMappingExposure = afExposure; mfToneMappingWhiteCut = afWhiteCut; }
 		float GetToneMappingKey(){ return mfToneMappingKey; }
 		float GetToneMappingExposure(){ return mfToneMappingExposure; }

@@ -71,12 +71,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// Master-volume mute rather than pausing every cSoundEntry/music stream: one call
-	// silences literally everything (env audio, GUI SFX, streams not tracked by
-	// cSoundHandler) instead of needing to iterate every currently-playing sound, and
-	// it composes cleanly with any per-map pause a game layer already does on its own
-	// (e.g. cLuxMapHandler::PauseSoundsAndMusic()) since that acts on individual
-	// channels' paused flags, not the device volume.
 	void cSound::AppLostInputFocus()
 	{
 		if(mbMutedByFocusLoss) return;
@@ -97,8 +91,6 @@ namespace hpl {
 
 		Log("Sound: window regained focus, restoring audio volume\n");
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cSound::Init(	cResources *apResources, int alSoundDeviceID, bool abUseEnvAudio, int alMaxChannels, 
 						int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,

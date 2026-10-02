@@ -145,10 +145,7 @@ namespace hpl {
 
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
-		// HPSL shaders sample the G-buffer/accumulation buffer as sampler2D;
-		// Dark Descent's GLSL uses sampler2DRect (the default).
 		static void SetGBufferTextureType(eTextureType aType){ mGBufferTextureType = aType; }
-		// HPSL keeps linear depth in the normal target's alpha
 		static void SetDepthInNormalAlpha(bool abX){ mbDepthInNormalAlpha = abX; }
 		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
 
@@ -196,20 +193,8 @@ namespace hpl {
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
 
-		// See iRenderer::GetSkyBoxProgram()'s doc comment / RenderBasicSkyBox()
-		// in Renderer.cpp - mpSkyBoxProgram is a real, working GLSL/transpiled
-		// program (built in LoadData(), same as every other program this
-		// renderer owns), so expose it instead of leaving the base class's
-		// fixed-function default.
 		iGpuProgram* GetSkyBoxProgram(){ return mpSkyBoxProgram; }
 
-		// Public alias of the private GetBufferTexture() for headless numeric
-		// G-buffer readback (see read_gbuffer_stats in Soma/LuxBase.cpp) -
-		// lets a headless command pull real GPU pixel data (iTexture::
-		// GetRawPixelsRGBAFloat()) straight from a live render target
-		// instead of only ever seeing it through RenderGbufferContent()'s
-		// own quad-view draw.
-		// 0-3: G-buffer targets, 4: light accumulation buffer
 		iTexture* GetDebugShadowTexture(iLight *apLight){ for(int r=0; r<eShadowMapResolution_LastEnum; ++r) for(size_t i=0; i<mvShadowMapData[r].size(); ++i) if(mvShadowMapData[r][i]->mCache.mpLight == apLight) return mvShadowMapData[r][i]->mpTexture; return NULL; }
 		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; if(alIdx==5) return mpBoxWeightTexture; if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6]; if(alIdx==9) return mpH3SSAOMipTexture; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 

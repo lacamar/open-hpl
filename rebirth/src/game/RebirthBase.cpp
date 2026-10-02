@@ -1,7 +1,3 @@
-/*
- * Phase 0 scaffolding for an Amnesia: Rebirth game module running on the
- * HPL2 engine. See RebirthBase.h for scope notes.
- */
 
 #include "RebirthBase.h"
 
@@ -13,20 +9,7 @@
 #include <unistd.h>
 #endif
 
-//---------------------------------------
-
 cRebirthBase *gpRebirthBase = NULL;
-
-//---------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
-//
-// Same shape as cSomaBase's/cAmfpBase's own camera_state/set_camera pair
-// (soma/src/game/SomaBase.cpp, amfp/src/game/AmfpBase.cpp) - no player/
-// script layer exists in this free-fly scaffold, so this is just the debug
-// camera's own transform.
-//////////////////////////////////////////////////////////////////////////
 
 static void cRebirthBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -65,8 +48,6 @@ static void cRebirthBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadless
 	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
 }
 
-//---------------------------------------
-
 cRebirthBase::cRebirthBase()
 {
 	mpEngine = NULL;
@@ -77,13 +58,9 @@ cRebirthBase::cRebirthBase()
 	mpDebugCameraController = NULL;
 }
 
-//-----------------------------------------------------------------------
-
 cRebirthBase::~cRebirthBase()
 {
 }
-
-//-----------------------------------------------------------------------
 
 bool cRebirthBase::Init(const tString &asCommandline)
 {
@@ -98,8 +75,6 @@ bool cRebirthBase::Init(const tString &asCommandline)
 	if (InitEngine() == false)
 		return false;
 
-	// Headless control: register camera commands if a control server is
-	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
 	if (mpEngine->GetHeadlessControl())
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
@@ -113,25 +88,16 @@ bool cRebirthBase::Init(const tString &asCommandline)
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
 void cRebirthBase::Exit()
 {
 	ExitTestMap();
 	ExitEngine();
 }
 
-//-----------------------------------------------------------------------
-
 void cRebirthBase::Run()
 {
-	// Main loop - a map is loaded and a debug free-fly camera is active
-	// (see InitTestMap()), but there is still no player controller and no
-	// scripts running.
 	mpEngine->Run();
 }
-
-//-----------------------------------------------------------------------
 
 bool cRebirthBase::ParseCommandLine(const tString &asCommandline)
 {
@@ -141,8 +107,6 @@ bool cRebirthBase::ParseCommandLine(const tString &asCommandline)
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
 
 bool cRebirthBase::InitMainConfig()
 {
@@ -166,8 +130,6 @@ bool cRebirthBase::InitMainConfig()
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
 bool cRebirthBase::InitEngine()
 {
 	cEngineInitVars vars;
@@ -176,24 +138,13 @@ bool cRebirthBase::InitEngine()
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
 #if defined(__linux__)
-	// hpl.log otherwise defaults to a bare relative "hpl.log" (see
-	// LowLevelSystemSDL.cpp), landing wherever cwd happens to be at first
-	// Log() - the real game's Steam install directory, since that's where
-	// this binary gets deployed and run from. XDG_STATE_HOME is the
-	// correct home for transient log/state data (see amnesia/src/game/
-	// LuxBasePersonal.h's equivalent for the real Amnesia game module).
 	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
 	tWString sStateDir = sStateRoot + _W("open-hpl/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 	sStateDir += _W("rebirth/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 
-	// A fixed hpl.log path collides across concurrent headless test runs -
-	// cLogWriter::ReopenFile() truncates on open, so a second process
-	// launched while a first is still running silently wipes whatever the
-	// first had already logged (see TASKS.md). Suffix with the PID under
-	// OPENHPL_HEADLESS_SOCKET only, so normal interactive play keeps the
-	// stable, predictable filename.
+	// PID suffix: concurrent runs truncate a shared log
 	tWString sLogFile = sStateDir + _W("hpl.log");
 	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
 	{
@@ -209,21 +160,13 @@ bool cRebirthBase::InitEngine()
 		return false;
 	}
 
-	// Both parsers are fully generic (no Amnesia: The Dark Descent-specific
-	// assumptions), so Rebirth's own resources.cfg/materials.cfg load
-	// unmodified.
 	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
 
-	// See RebirthLoaders.h - without these, cWorldLoaderHpm silently drops
-	// every <Entity>/<Area> element in a real Rebirth map (confirmed via a
-	// real boot log against real game data).
 	RegisterRebirthLoaders(mpEngine->GetResources());
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
 
 void cRebirthBase::ExitEngine()
 {
@@ -231,8 +174,6 @@ void cRebirthBase::ExitEngine()
 		DestroyHPLEngine(mpEngine);
 	mpEngine = NULL;
 }
-
-//-----------------------------------------------------------------------
 
 bool cRebirthBase::InitTestMap()
 {
@@ -242,10 +183,6 @@ bool cRebirthBase::InitTestMap()
 		return false;
 	}
 
-	////////////////////////////////////
-	// Found by basename via the resource dir search - GameMapFolder="maps/"
-	// from main_init.cfg's <Directories> is already registered with
-	// AddSubDirs in Rebirth's real resources.cfg.
 	cWorld *pWorld = mpEngine->GetScene()->LoadWorld(msStartMapFile, 0);
 	if (pWorld == NULL)
 	{
@@ -254,13 +191,7 @@ bool cRebirthBase::InitTestMap()
 	}
 	mpTestWorld = pWorld;
 
-	////////////////////////////////////
-	// Camera position from the map's own declared start position (see
-	// RebirthBase.h for why this is resolved generically rather than
-	// hardcoded per-map, unlike SOMA's Phase 0). Nudged up half a metre from
-	// whatever the entity's own transform gives - PlayerStart areas in this
-	// engine generation are typically placed at floor/foot level, not eye
-	// level.
+	// PlayerStart is at foot level
 	cVector3f vPos(0, 1.7f, 0);
 	if (msStartMapPos != "")
 	{
@@ -284,20 +215,12 @@ bool cRebirthBase::InitTestMap()
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
 void cRebirthBase::ExitTestMap()
 {
-	// mpDebugCamera / mpDebugViewport / mpTestWorld are owned by cScene and
-	// torn down together with the rest of the engine in ExitEngine().
-	// mpDebugCameraController was registered with cUpdater::AddGlobalUpdate,
-	// which has no matching "remove" API (see cSomaBase::ExitTestMap()'s
-	// comment for the same constraint) - left for cUpdater's own teardown.
+	// no cUpdater remove API; freed with the updater
 	mpDebugCameraController = NULL;
 
 	mpDebugViewport = NULL;
 	mpDebugCamera = NULL;
 	mpTestWorld = NULL;
 }
-
-//-----------------------------------------------------------------------

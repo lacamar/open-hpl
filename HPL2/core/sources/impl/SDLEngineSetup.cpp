@@ -70,39 +70,14 @@ namespace hpl {
 #if SDL_VERSION_ATLEAST(2,0,0)
 		SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
 #endif
-		// Only one headless instance runs at a time - see
-		// AcquireHeadlessSingleInstanceLock()'s own doc comment
-		// (HeadlessControl.h) for why, and why this is the right place to
-		// call it (earliest possible headless-gated point, before SDL_Init
-		// below even runs). A no-op when OPENHPL_HEADLESS_SOCKET is unset.
 		AcquireHeadlessSingleInstanceLock();
 
-		// Headless test runs must never make real sound come out of the
-		// physical speakers. OpenAL-soft (the only sound backend this engine
-		// builds) reads ALSOFT_DRIVERS at alcOpenDevice() time to restrict
-		// which backends it considers - "null" gives a real, silently-
-		// succeeding device with no hardware/server access at all. Set this
-		// as early as possible (before any subsystem, sound included, is
-		// initialized below) and only if a caller hasn't already chosen a
-		// driver list, same guard shape as the SDL_VIDEODRIVER one further
-		// down. Inert for normal play, where OPENHPL_HEADLESS_SOCKET is unset.
 		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL && getenv("ALSOFT_DRIVERS") == NULL)
 		{
 			setenv("ALSOFT_DRIVERS", "null", 1);
 		}
 		if(alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video))
 		{
-			// Under the opt-in headless automation server (OPENHPL_HEADLESS_SOCKET -
-			// see HeadlessControl.h), prefer X11/XWayland over this system's default
-			// Wayland driver, if a caller hasn't already forced one and an X server
-			// looks available (DISPLAY set): a hidden (SDL_WINDOW_HIDDEN, see
-			// LowLevelGraphicsSDL::Init()) window never gets mapped, and on Wayland
-			// that means its wl_egl_window surface never receives the compositor's
-			// initial configure event, so rendering into it silently produces
-			// nothing (CopyFrameBufferToBitmap() reads back solid black) - verified
-			// live, X11's hidden-window model has no such requirement. Left alone
-			// (and normal, on-screen play unaffected) when DISPLAY isn't set, since
-			// forcing x11 with no X server available would just fail SDL_Init below.
 			if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL &&
 			   getenv("SDL_VIDEODRIVER") == NULL &&
 			   getenv("DISPLAY") != NULL)
@@ -115,12 +90,6 @@ namespace hpl {
 				exit(1);
 			}
 #if SDL_VERSION_ATLEAST(2,0,0)
-            // Don't suspend the real desktop's screensaver/DPMS on behalf of a
-            // headless test run - X11_SuspendScreenSaver() resets the X server's
-            // idle timer, which under this repo's headless testing (the hidden
-            // window still lives on the real DISPLAY, see the driver-selection
-            // comment above) was observed waking the physical monitor even
-            // though the window itself is never shown.
             if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
             {
                 SDL_DisableScreenSaver();

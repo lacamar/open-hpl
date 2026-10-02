@@ -51,9 +51,6 @@ bool SomaScriptHasNativeBehaviours(const char *apType)
 	return gsetNativeBehaviourTypes.count(apType) != 0;
 }
 
-//---------------------------------------
-// Vector operators, shared by all vector types
-
 template <class V> static V &Elem(V &v, asQWORD i) { return v; }
 
 template <class V> static V SomaCatmullRom(const V &p0, const V &p1, const V &p2, const V &p3, float t)
@@ -216,9 +213,6 @@ static void RegisterMatrixQuat(asIScriptEngine *e)
 	SOMA_METHOD(e, "cQuaternion", "void FromRotationMatrix(const cMatrixf &in)", +[](cQuaternion &q, const cMatrixf &m) { q.FromRotationMatrix(m); });
 }
 
-//---------------------------------------
-// Global constants
-
 static void RegisterConstants(asIScriptEngine *e)
 {
 	static float vFloats[] = {kPif, kPi2f, kPi4f, k2Pif, kEpsilonf, 1.41421356f};
@@ -254,9 +248,6 @@ static void RegisterConstants(asIScriptEngine *e)
 	static cQuaternion qIdentity = cQuaternion::Identity;
 	e->RegisterGlobalProperty("const cQuaternion cQuaternion_Identity", &qIdentity);
 }
-
-//---------------------------------------
-// cMath_*
 
 static void RegisterMathFunctions(asIScriptEngine *e)
 {
@@ -311,7 +302,6 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMax(const cVector3f&in avBaseMax, const cVector3f&in avAddMax)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
 }
 
-//---------------------------------------
 // cPidController<T> in the script struct block: p, i, d at 16/20/24 (recovered), then the history
 
 template <class T> struct cSomaPid

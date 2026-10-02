@@ -192,11 +192,9 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		// bump when loader output changes: v3 = Collada unit for every exporter, v4 = vertex colours, v5 = unscaled skeleton
 		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v5.msh") : _W(".v4.msh"));
 	}
 
-	// HPL3: bone matrices carry no unit scale, the unit goes into every translation instead
 	static void UnscaleBone(cBone *apBone, float afUnit, const cMatrixf &a_mtxRootRot, bool abRoot)
 	{
 		cMatrixf mtx = apBone->GetLocalTransform();
@@ -814,7 +812,6 @@ namespace hpl {
 			}
 		}
 
-		// Bone radii need the final (unit-scaled) skeleton
 		pMesh->CompileBonesAndSubMeshes();
 
 		/////////////////////////////////////////////////
@@ -871,8 +868,6 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderCollada::LoadAnimation(const tWString& asFile)
 	{
-		// HPL3 data: the sibling .anm holds the tracks relative to the mesh bind pose, in metres.
-		// A scaled skeleton keeps file units below the top-level bones.
 		{
 			tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
 			if(cMeshLoaderAssimp::IsHpl3Anm(sAnm))

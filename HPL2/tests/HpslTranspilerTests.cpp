@@ -1,26 +1,3 @@
-/*
- * Regression tests for soma/src/game/HpslTranspiler.cpp - the best-effort
- * HPSL->GLSL 120 syntax transpiler for SOMA's HPL3-format shaders (see that
- * file's header comment for full scope notes).
- *
- * Plain, dependency-free checks (no GL/SDL/game-data needed - same rationale
- * as PhysicsNewtonTests.cpp: run fast and deterministically under CTest,
- * without depending on a live GPU context or a real SOMA install being
- * present on the machine running the test).
- *
- * IMPORTANT SCOPE NOTE: this only checks that TranspileHpslToGlsl() produces
- * the *expected GLSL syntax* (string-level assertions on the output) - it
- * does NOT run a real GLSL compiler (scripts/soma-shader-check.py does, on
- * OPENHPL_DUMP_HPSL_SHADERS_DIR dumps). The five source strings below are verbatim copies of five real
- * files from a real SOMA install
- * (~/.local/share/Steam/steamapps/common/SOMA/core/shaders/hpsl/), already
- * run through the same @ifdef-stripping cPreprocessParser would apply (only
- * deferred_posteffect_quad_vtx.hpsl has any directives - the UseUvCoord1
- * block, stripped here to match what Parse() produces when that var is
- * undefined, exactly as it is for every material that doesn't request a
- * second UV channel).
- */
-
 #include <cstdio>
 #include <cstring>
 
@@ -49,9 +26,6 @@ static int gFailures = 0;
 #define CHECK_NOT_CONTAINS(haystack, needle) \
 	CHECK((haystack).find(needle) == tString::npos)
 
-//-----------------------------------------------------------------------
-
-// Verbatim from clear_vtx.hpsl (already preprocessed - it has no @ifdef).
 static const char* gpsClearVtx =
 	"void main(in cVector4f vtx_vPosition,\n"
 	"		  in cVector4f vtx_vColor, \n"
@@ -62,7 +36,6 @@ static const char* gpsClearVtx =
 	"	px_vColor = vtx_vColor;\n"
 	"}";
 
-// Verbatim from clear_frag.hpsl.
 static const char* gpsClearFrag =
 	"void main(in cVector4f px_vPosition,\n"
 	"		  in cVector4f px_vColor,\n"
@@ -74,8 +47,6 @@ static const char* gpsClearFrag =
 	"	out_vColor0 = out_vColor1 = out_vColor2 = out_vColor3 = px_vColor;\n"
 	"}";
 
-// Verbatim from null_vtx.hpsl - exercises mul() and a plain (non-texture)
-// uniform declaration with no binding-index suffix.
 static const char* gpsNullVtx =
 	"uniform cMatrixf a_mtxModelViewProjection;\n"
 	"\n"
@@ -91,8 +62,6 @@ static const char* gpsNullVtx =
 	"	px_vTexCoord0 = vtx_vTexCoord0;\n"
 	"}";
 
-// Verbatim from null_frag.hpsl - exercises sample() and a texture uniform
-// with a D3D-style ": N" binding-index suffix that must be stripped.
 static const char* gpsNullFrag =
 	"uniform cTexture2D aColorMap : 0;\n"
 	"\n"
@@ -113,7 +82,6 @@ static const char* gpsNullFrag =
 	"	out_vColor0 = out_vColor1 = out_vColor2 = out_vColor3 = vColor;\n"
 	"}";
 
-// Verbatim from deferred_depthonly_frag.hpsl.
 static const char* gpsDepthonlyFrag =
 	"void main(in cVector4f px_vPosition,\n"
 	"		  out cVector4f px_vColor : 0)\n"
@@ -121,9 +89,7 @@ static const char* gpsDepthonlyFrag =
 	"	px_vColor = cVector4f(1.0);\n"
 	"}";
 
-// deferred_posteffect_quad_vtx.hpsl, preprocessed with UseUvCoord1
-// undefined (the @ifdef block removed) - matches what cPreprocessParser
-// produces for any material that doesn't request a second UV channel.
+// UseUvCoord1 undefined
 static const char* gpsPosteffectQuadVtx =
 	"void main(in cVector4f vtx_vPosition,\n"
 	"	      in cVector4f vtx_vTexCoord0,\n"
@@ -135,15 +101,12 @@ static const char* gpsPosteffectQuadVtx =
 	"	px_vTexCoord0 = vtx_vTexCoord0;\n"
 	"}";
 
-// Verbatim from debug_overdraw_frag.hpsl.
 static const char* gpsDebugOverdrawFrag =
 	"void main(in cVector4f px_vPosition,\n"
 	"		  out cVector4f out_vColor : 0)\n"
 	"{\n"
 	"	out_vColor = cVector4f(1.0f / 48.0f);\n"
 	"}";
-
-//-----------------------------------------------------------------------
 
 static void TestClearPair()
 {
@@ -152,7 +115,7 @@ static void TestClearPair()
 	CHECK(TranspileHpslToGlsl(gpsClearVtx, eGpuShaderType_Vertex, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_Position = gl_Vertex");
 	CHECK_CONTAINS(sGlsl, "varying vec4 px_vColor");
-	CHECK_NOT_CONTAINS(sGlsl, "varying vec4 px_vPosition"); // must NOT be a varying
+	CHECK_NOT_CONTAINS(sGlsl, "varying vec4 px_vPosition");
 
 	CHECK(TranspileHpslToGlsl(gpsClearFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0]");
@@ -165,13 +128,6 @@ static void TestNullPair()
 	tString sGlsl, sErr;
 
 	CHECK(TranspileHpslToGlsl(gpsNullVtx, eGpuShaderType_Vertex, sGlsl, sErr));
-	// a_mtxModelViewProjection becomes gl_ModelViewProjectionMatrix (see
-	// SubstituteFixedFunctionMatrixUniforms() in HpslTranspiler.cpp) - not
-	// a lingering plain uniform. This is real, live-found behavior (see
-	// PORTING_NOTES.md "SOMA" section): this engine's own C++ never sets a
-	// by-name "a_mtxModelViewProjection" uniform for any real per-object
-	// draw, only the legacy fixed-function matrix stack, so a plain
-	// uniform here would always read as zero.
 	CHECK_NOT_CONTAINS(sGlsl, "a_mtxModelViewProjection");
 	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex)");
 	CHECK_NOT_CONTAINS(sGlsl, "mul(");
@@ -181,22 +137,12 @@ static void TestNullPair()
 	CHECK_NOT_CONTAINS(sGlsl, "aColorMap : 0");
 	CHECK_CONTAINS(sGlsl, "texture2D(aColorMap, px_vTexCoord0.xy)");
 	CHECK_NOT_CONTAINS(sGlsl, "sample(");
-	// null_frag.hpsl declares "in cVector4f px_vPosition" but never
-	// references it in the body - the substitution table maps it to
-	// gl_FragCoord (see TestFragPositionUsed() below for a case that
-	// actually uses it), but an unused parameter naturally leaves no
-	// trace either way. The regression-worthy assertion here is just
-	// that it's never emitted as a bogus varying (nothing on the vertex
-	// side would ever write to one, since px_vPosition is special-cased
-	// to gl_Position there instead).
 	CHECK_NOT_CONTAINS(sGlsl, "varying vec4 px_vPosition");
 }
 
 static void TestFragPositionUsed()
 {
-	// A synthetic case (no real .hpsl file happens to actually reference
-	// px_vPosition in its body) proving the gl_FragCoord substitution
-	// itself actually fires when it's not a no-op.
+	// synthetic: no real file uses px_vPosition in a fragment body
 	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f px_vPosition,\n"
@@ -213,10 +159,6 @@ static void TestDepthonlyFrag()
 	tString sGlsl, sErr;
 	CHECK(TranspileHpslToGlsl(gpsDepthonlyFrag, eGpuShaderType_Fragment, sGlsl, sErr));
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0]");
-	// px_vPosition is declared but unused in the body - just must not be
-	// emitted as a bogus varying (nothing would ever write to a
-	// vertex-side px_vPosition varying, since that identifier is special-
-	// cased to gl_Position on the vertex side instead).
 	CHECK_NOT_CONTAINS(sGlsl, "varying vec4 px_vPosition");
 }
 
@@ -224,24 +166,13 @@ static void TestPosteffectQuadVtx()
 {
 	tString sGlsl, sErr;
 	CHECK(TranspileHpslToGlsl(gpsPosteffectQuadVtx, eGpuShaderType_Vertex, sGlsl, sErr));
-	// No mul() in this file (uses GLSL-native '*'/'+' operators directly),
-	// so no extra parens get added - only the identifier substitution
-	// (vtx_vPosition->gl_Vertex, px_vPosition->gl_Position) applies here.
 	CHECK_CONTAINS(sGlsl, "gl_Position = gl_Vertex * vec4(2.0,-2.0, 0.0, 0.0) + vec4(-1.0, 1.0, 0.0, 1.0)");
 	CHECK_CONTAINS(sGlsl, "varying vec4 px_vTexCoord0");
-	// vtx_vTexCoord1 is declared but never referenced in this file's body
-	// (its counterpart px_vTexCoord1 was stripped by preprocessing, since
-	// this copy simulates UseUvCoord1 undefined) - the gl_MultiTexCoord1
-	// mapping itself is exercised directly below instead.
 }
 
 static void TestVertexTexCoord1Builtin()
 {
-	// Directly exercises the vtx_vTexCoord1->gl_MultiTexCoord1 guess (see
-	// HpslTranspiler.cpp's gmapVertexBuiltins) - unverified against any
-	// real .hpsl file (none of the ones examined this pass reference it
-	// in a shader body), but confirms the mapping table entry itself
-	// fires correctly when it IS referenced.
+	// unverified guess; no real file references it
 	tString sGlsl, sErr;
 	static const char* psSrc =
 		"void main(in cVector4f vtx_vTexCoord1,\n"
@@ -284,15 +215,6 @@ static void TestSampleRejectsUnknownTexture()
 	CHECK_CONTAINS(sErr, "aNotDeclared");
 }
 
-// Verbatim from deferred_base_vtx.hpsl's "TEMP BACKWARD COMPATIBILITY"
-// @else-UseTextureBuffer branch (lines 517-569 of a real SOMA install's
-// copy) - the single flat "cBuffer cVertexArguments" block real material
-// shaders declare when UseTextureBuffer is left undefined (see
-// PORTING_NOTES.md and HpslTranspiler.h for why that's the combo this port
-// targets). Trimmed to just the cBuffer block plus a trivial main() that
-// references one flattened member unqualified, exactly as the real file's
-// body does (e.g. "mul(a_mtxModelViewProjection, ...)", never
-// "cVertexArguments.a_mtx...").
 static const char* gpsVertexArgumentsCBuffer =
 	"cBuffer cVertexArguments //make sure the struct in c++ has the same layout!\n"
 	"{\n"
@@ -321,40 +243,19 @@ static void TestConstantBufferFlattening()
 	tString sGlsl, sErr;
 	CHECK(TranspileHpslToGlsl(gpsVertexArgumentsCBuffer, eGpuShaderType_Vertex, sGlsl, sErr));
 
-	// The "cBuffer NAME { ... };" wrapper itself must be gone - GLSL 120
-	// has no such syntax.
 	CHECK_NOT_CONTAINS(sGlsl, "cBuffer");
 	CHECK_NOT_CONTAINS(sGlsl, "cVertexArguments");
 
-	// Every member becomes its own top-level "uniform TYPE NAME;",
-	// unqualified, using the same type mapping as any other uniform. Using
-	// a_mtxModel here (not a_mtxModelViewProjection/a_mtxNormal, both of
-	// which SubstituteFixedFunctionMatrixUniforms() now rewrites away - see
-	// TestFixedFunctionMatrixSubstitution() for that behavior specifically;
-	// a_mtxModel has no fixed-function equivalent so it stays a real,
-	// plain flattened uniform, same as these other non-matrix members).
+	// a_mtxModel: no fixed-function equivalent, stays a uniform
 	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxModel;");
 	CHECK_CONTAINS(sGlsl, "uniform float afInvFarPlane;");
 	CHECK_CONTAINS(sGlsl, "uniform vec4 avColorMul;");
 	CHECK_CONTAINS(sGlsl, "uniform int alInstanceOffset;");
 
-	// The body's unqualified reference to a flattened member still
-	// resolves (same name, now a plain global uniform instead of a
-	// cbuffer member) - proves the flattening didn't just declare the
-	// uniforms but leave the body unable to use them. a_mtxModelViewProjection
-	// itself becomes gl_ModelViewProjectionMatrix (see
-	// TestFixedFunctionMatrixSubstitution()), still proving the same
-	// point (an unqualified cBuffer-member reference resolves correctly).
 	CHECK_CONTAINS(sGlsl, "gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex)");
 }
 
-// Exercises a #define *inside* a cBuffer body (real case: helper_type_
-// arguments.hpsl-adjacent deferred_base_vtx.hpsl's "cBuffer cSkinningData"
-// block, gated behind UseSkeleton, defines "kMaxBones" this way right
-// before using it in an array size) - the #define must survive verbatim
-// (it's real C-preprocessor syntax GLSL itself understands, not something
-// FlattenConstantBuffers should try to interpret), and an array member
-// must still get "uniform " prepended like any other declaration.
+// #define inside a cBuffer body must survive verbatim
 static void TestConstantBufferPreservesDefine()
 {
 	tString sGlsl, sErr;
@@ -374,10 +275,7 @@ static void TestConstantBufferPreservesDefine()
 	CHECK_CONTAINS(sGlsl, "uniform vec4 avDualQuatBones[kMaxBones*2];");
 }
 
-// A "cBuffer NAME : N { ... };" with the D3D-register-style binding index
-// (helper_type_arguments.hpsl's actual spelling, e.g. "cBuffer
-// cInstanceArguments : 2") - the ": N" must be discarded along with the
-// rest of the header, same as a texture uniform's own ": N" suffix.
+// ": N" register binding is discarded
 static void TestConstantBufferWithBindingIndex()
 {
 	tString sGlsl, sErr;
@@ -399,11 +297,7 @@ static void TestConstantBufferWithBindingIndex()
 	CHECK_CONTAINS(sGlsl, "uniform int alInstanceStride;");
 }
 
-// Exercises the custom-"attribute"-fallback path for vertex inputs with no
-// known GLSL 120 fixed-function built-in (e.g. deferred_base_vtx.hpsl's
-// vtx_vTangent/vtx_vBoneIndices/vtx_vBoneWeight - real, unconditional main()
-// parameters in that file even when skinning/normal-mapping combo vars are
-// off). Must compile (not the old hard error).
+// vertex inputs without a built-in fall back to plain attributes
 static void TestUnknownVertexInputBecomesAttribute()
 {
 	tString sGlsl, sErr;
@@ -417,17 +311,12 @@ static void TestUnknownVertexInputBecomesAttribute()
 		"	px_vPosition = vtx_vPosition + vtx_vTangent + vtx_vBoneIndices + vtx_vBoneWeight;\n"
 		"}";
 	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Vertex, sGlsl, sErr));
-	// vtx_vTangent reads the engine's per-vertex tangent stream
-	// (eVertexBufferElement_Texture1Tangent, texture unit 1).
 	CHECK_NOT_CONTAINS(sGlsl, "attribute vec4 vtx_vTangent;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneIndices;");
 	CHECK_CONTAINS(sGlsl, "attribute vec4 vtx_vBoneWeight;");
 	CHECK_CONTAINS(sGlsl, "gl_Vertex + gl_MultiTexCoord1 + vtx_vBoneIndices + vtx_vBoneWeight");
 }
 
-// cTexture3D (real use: deferred_base_frag.hpsl's dissolve map,
-// "uniform cTexture3D aDissolveMap : 14;") must map to sampler3D/texture3D,
-// same pattern as the other texture types.
 static void TestTexture3D()
 {
 	tString sGlsl, sErr;
@@ -443,17 +332,7 @@ static void TestTexture3D()
 	CHECK_CONTAINS(sGlsl, "texture3D(aDissolveMap, vec3(0.0, 0.0, 0.0))");
 }
 
-// cTexture2DCmp/sampleCmp (real use: deferred_light_frag.hpsl's shadow-map
-// lookup, "uniform cTexture2DCmp aShadowMap : 6;" +
-// "sampleCmp(aShadowMap, avLocation.xy + avOffset, avLocation.z)") - found
-// live via the real GpuShaderManager wiring path (start_map against
-// 00_01_apartment.hpm, see PORTING_NOTES.md), not the self-test. Must map
-// to sampler2DShadow / shadow2D(tex, vec3(uv, refZ)).x - deliberately the
-// non-projective shadow2D (this engine's own hand-written
-// deferred_light_frag.glsl uses the projective shadow2DProj with a vec4,
-// but every real sampleCmp() call site only ever passes 3 arguments and
-// never reads a .w component, so there's no perspective-divide term to
-// preserve).
+// non-projective shadow2D: call sites pass no .w
 static void TestShadowSample()
 {
 	tString sGlsl, sErr;
@@ -474,8 +353,6 @@ static void TestShadowSample()
 	CHECK_CONTAINS(sGlsl, "uniform sampler2DShadow aShadowMap;");
 	CHECK_CONTAINS(sGlsl, "sampler2DShadow aTex");
 	CHECK_CONTAINS(sGlsl, "shadow2D(aTex, vec3(avLocation.xy + avOffset, avLocation.z)).x");
-	// px_vPosition is special-cased to gl_FragCoord in a fragment shader
-	// body (see HpslTranspiler.h) - expected here, not a mistake.
 	CHECK_CONTAINS(sGlsl, "shadow2D(aShadowMap, vec3(gl_FragCoord.xy, gl_FragCoord.z)).x");
 	CHECK_NOT_CONTAINS(sGlsl, "sampleCmp(");
 	CHECK_NOT_CONTAINS(sGlsl, "cTexture2DCmp");
@@ -493,16 +370,7 @@ static void TestSampleCmpRejectsWrongArgCount()
 	CHECK_CONTAINS(sErr, "sampleCmp()");
 }
 
-// load()/texelFetch (real use: deferred_light_frag.hpsl's G-buffer
-// readback, "cVector2l vMapCoords = cVector2l(gl_FragCoord.xy);" +
-// "load(aNormalDepthMap, vMapCoords, 0)" - found live via the real
-// GpuShaderManager wiring path, see PORTING_NOTES.md). cVector2l must map
-// to ivec2 (same as the existing cVector2i, just HPSL's other integer-
-// vector spelling), load(tex, coords, mip) must become
-// texelFetch(tex, coords, mip) verbatim (no argument reshuffling, unlike
-// sampleCmp), and - because texelFetch needs GLSL 130, unlike everything
-// else this transpiler emits - the file must get "#version 130" instead of
-// the usual 120, but *only* when load() actually appears.
+// load() -> texelFetch, needs #version 130
 static void TestLoadBecomesTexelFetch()
 {
 	tString sGlsl, sErr;
@@ -523,11 +391,7 @@ static void TestLoadBecomesTexelFetch()
 	CHECK_NOT_CONTAINS(sGlsl, "cVector2l");
 }
 
-// A file that never uses load() must still get the usual #version 120 -
-// the bump above must be strictly per-file/opt-in, not a global default
-// change (this is the whole reason a blanket engine-wide version bump was
-// avoided in favor of a narrow, load()-triggered one - see
-// RewriteLoadIntrinsic()'s comment in HpslTranspiler.cpp).
+// #version 130 only when load() is used
 static void TestNoLoadKeepsVersion120()
 {
 	tString sGlsl, sErr;
@@ -550,20 +414,7 @@ static void TestLoadRejectsNonSampler2D()
 	CHECK_CONTAINS(sErr, "aEnvMap");
 }
 
-// a_mtxModelViewProjection/a_mtxModelView/a_mtxProjection/a_mtxNormal must
-// become GLSL 120's fixed-function built-ins (gl_ModelViewProjectionMatrix/
-// gl_ModelViewMatrix/gl_ProjectionMatrix/gl_NormalMatrix), not stay plain
-// uniforms - found live via a real start_map run against 00_01_apartment.hpm
-// (see PORTING_NOTES.md): this engine's own C++ (RenderFunctions.cpp's
-// iRenderFunctions::SetMatrix()) only ever feeds per-object transforms
-// through the legacy fixed-function matrix stack, never through a by-name
-// "a_mtxModelViewProjection" uniform - left as a flattened uniform, it
-// would sit at GLSL's default zero value forever, transforming every real
-// vertex to the origin (degenerate, invisible geometry - compiles fine,
-// renders nothing). a_mtxUV must NOT be touched (it has no fixed-function
-// equivalent and - unlike the other four - is genuinely fed real per-
-// object data through a different, already-working by-name mechanism, see
-// MaterialType_BasicSolid.cpp's SetMatrixf(kVar_a_mtxUV, ...)).
+// a_mtxUV stays a uniform: fed by name, no fixed-function equivalent
 static void TestFixedFunctionMatrixSubstitution()
 {
 	tString sGlsl, sErr;
@@ -592,37 +443,18 @@ static void TestFixedFunctionMatrixSubstitution()
 	CHECK_NOT_CONTAINS(sGlsl, "a_mtxModelViewProjection");
 	CHECK_NOT_CONTAINS(sGlsl, "a_mtxNormal");
 	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxModelViewProjection");
-	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxModelView;"); // unused here, but must not linger as a real uniform either
+	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxModelView;");
 	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxProjection;");
 	CHECK_NOT_CONTAINS(sGlsl, "uniform mat4 a_mtxNormal;");
 
-	// a_mtxUV must survive as a real uniform, untouched. vtx_vPosition
-	// itself is separately substituted to gl_Vertex (the usual vertex-
-	// builtin mapping, unrelated to this test's own subject) - expected,
-	// not a second substitution firing on a_mtxUV.
 	CHECK_CONTAINS(sGlsl, "uniform mat4 a_mtxUV;");
 	CHECK_CONTAINS(sGlsl, "(a_mtxUV * gl_Vertex)");
-	CHECK_NOT_CONTAINS(sGlsl, "gl_ModelViewMatrix"); // a_mtxModelView itself unused in this source - substitution only fires for names actually declared+present, doesn't invent gl_ModelViewMatrix out of nowhere
+	CHECK_NOT_CONTAINS(sGlsl, "gl_ModelViewMatrix");
 }
 
-// cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
-// "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
-// bug this pass's live glCompileShader() self-test caught (see
-// PORTING_NOTES.md): the syntax-level checks in this file didn't know to
-// look for it until the live compile failed with "syntax error, unexpected
-// NEW_IDENTIFIER" at exactly this line, because an unmapped type name is
-// silently passed through unchanged rather than erroring - GLSL's own
-// parser was the only thing that caught it. Locked in here so a regression
-// doesn't need a live GPU to catch again.
 static void TestMatrix3f()
 {
-	// Deliberately NOT named "a_mtxNormal" (unlike the real file this is
-	// otherwise modeled on) - that exact name is now special-cased by
-	// SubstituteFixedFunctionMatrixUniforms() (see
-	// TestFixedFunctionMatrixSubstitution() for that behavior), which
-	// would fire here too and defeat the point of this test (isolating
-	// the cMatrix3f->mat3 type mapping on its own, independent of that
-	// separate rewrite).
+	// not a_mtxNormal: that name is rewritten by the matrix substitution
 	tString sGlsl, sErr;
 	static const char* psSrc =
 		"uniform cMatrixf a_mtxCustomNormal;\n"
@@ -637,13 +469,7 @@ static void TestMatrix3f()
 	CHECK_NOT_CONTAINS(sGlsl, "cMatrix3f");
 }
 
-// Verbatim (parameter list only) from deferred_gbuffer_solid_frag.hpsl's
-// main() - a real, live-found bug (see PORTING_NOTES.md): a trailing
-// "//comment" after a parameter's ": N" semantic, where the comment text
-// itself contains a comma ("//diffuse rgb, translucency a"), used to
-// corrupt SplitParams()'s naive comma-split into bogus pieces that failed
-// ParseParam()'s regex. Found by a different concurrent session's real
-// GpuShaderManager wiring work, fixed here (StripLineComments()).
+// trailing comment containing a comma must not split params
 static void TestParameterListTrailingCommentWithComma()
 {
 	tString sGlsl, sErr;
@@ -662,8 +488,6 @@ static void TestParameterListTrailingCommentWithComma()
 	CHECK_CONTAINS(sGlsl, "gl_FragData[1] = gl_FragCoord");
 	CHECK_CONTAINS(sGlsl, "gl_FragData[2] = gl_FragCoord");
 }
-
-//-----------------------------------------------------------------------
 
 int main()
 {

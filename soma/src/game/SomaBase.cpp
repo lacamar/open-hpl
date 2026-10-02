@@ -1,8 +1,3 @@
-/*
- * Phase 0 scaffolding for a SOMA game module running on the HPL2 engine.
- * See SomaBase.h for scope notes.
- */
-
 #include "SomaBase.h"
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
@@ -45,11 +40,7 @@
 #include <unistd.h>
 #endif
 
-//---------------------------------------
-
 cSomaBase *gpSomaBase = NULL;
-
-//---------------------------------------
 
 static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -285,7 +276,6 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 	aResp.Set("contacts", sOut);
 }
 
-// Body counts and the awake dynamic bodies (physics cost)
 static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -325,7 +315,6 @@ static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadless
 	aResp.Set("awake_top", sOut);
 }
 
-// Every body a ray hits: distance, body, owning map entity (collision conformance)
 static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -436,7 +425,6 @@ static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRe
 	aResp.Set("output", sOut);
 }
 
-// Writes a debug target as PFM (bottom-up float RGB, same row order as GL).
 static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -472,7 +460,6 @@ static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRe
 	aResp.Set("height", lH);
 }
 
-// Translucent render list of the last frame; skip=N hides entry N (-1 none).
 static void cSomaBase_HeadlessCmd_Translucents(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -647,7 +634,6 @@ static void cSomaBase_HeadlessCmd_EntityInfo(void *apUserData, const cHeadlessRe
 	aResp.SetRaw("entity", sInfo);
 }
 
-// Names the submeshes under a screen pixel, or along x,y,z -> x2,y2,z2 (ray vs current triangles, skinned included)
 static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -734,7 +720,6 @@ static void cSomaBase_HeadlessCmd_SetLight(void *apUserData, const cHeadlessRequ
 	pLight->SetVisible(aReq.GetBool("visible", true));
 }
 
-// A/B switches for cRenderSettings: occlusion_culling, ssao, shadows, edge_smooth, fxaa; fog is the world's.
 static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -761,7 +746,6 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else aResp.SetError("unknown setting '" + sName + "'");
 }
 
-// Raw G-buffer values under one pixel: target 0 color, 1 normal+depth, 2 specular.
 static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -799,8 +783,6 @@ static void cSomaBase_HeadlessCmd_Pick(void *apUserData, const cHeadlessRequest 
 	aResp.SetRaw("gbuffer", sOut + "]");
 }
 
-//---------------------------------------
-
 cSomaBase::cSomaBase()
 {
 	mpEngine = NULL;
@@ -823,95 +805,25 @@ cSomaBase::cSomaBase()
 void SomaReadUserScreenConfig(cSomaConfig *apCfg);
 void SomaApplyWindowMode(const cSomaConfig *apCfg);
 
-//-----------------------------------------------------------------------
-
 cSomaBase::~cSomaBase()
 {
 }
 
-//-----------------------------------------------------------------------
-
 bool cSomaBase::Init(const tString &asCommandline)
 {
-	/////////////////////////////
-	// Set the real log destination FIRST, before anything below that could
-	// Log()/Error() - see SetupLogFile()'s own comment for why this can't
-	// wait until InitEngine() (that used to be where this happened, and
-	// InitMainConfig() below - which can genuinely fail and Error() on a
-	// missing/malformed main_init.cfg - ran before it).
+	// log file first: early Log()/Error() must not land in the Steam install
 	SetupLogFile();
 
-	/////////////////////////////
-	// Parse the command line (an alternate init config file path, same
-	// convention as cLuxBase::ParseCommandLine)
 	if (ParseCommandLine(asCommandline) == false)
 		return false;
 
-	/////////////////////////////
-	// Load SOMA's real main_init.cfg to get resource/material config paths
-	// and the game name - unlike Amnesia's main_init.cfg, SOMA's has no
-	// separate "main settings"/Menu/PreMenu/Demo config file entries, so
-	// InitMainConfig() here only pulls out what Phase 0 actually needs.
 	if (InitMainConfig() == false)
 		return false;
 
-	/////////////////////////////
-	// Wire the HPSL->GLSL transpiler (soma/src/game/HpslTranspiler.cpp) into
-	// cGpuShaderManager as its .glsl-not-found fallback, so SOMA's real
-	// .hpsl material shaders get transpiled-and-compiled instead of just
-	// erroring (see PORTING_NOTES.md "SOMA" section). HPL2/core can't call
-	// TranspileHpslToGlsl() directly (that's game-module code), so this is
-	// the only place in this codebase that calls SetHpslTranspileCallback -
-	// Dark Descent/AMFP never do, so cGpuShaderManager's fallback path stays
-	// dead code for them.
-	//
-	// MUST run before InitEngine(): CreateHPLEngine() (called from inside
-	// InitEngine() below) constructs cGraphics, which in turn constructs
-	// cRendererDeferred/cRendererSimple/the post-effect types/some material
-	// types - several of which build GPU programs (deferred_base_vtx.glsl
-	// and friends) directly in their own constructors, not lazily on first
-	// use. When this call came after InitEngine(), every one of those
-	// engine-init-time shader lookups saw mpHpslTranspileCallback still
-	// NULL, so cGpuShaderManager::CreateShader()'s HPSL-fallback branch
-	// never even triggered - straight to "Couldn't find file
-	// 'deferred_base_vtx.glsl' in resources", permanently (those program
-	// pointers are cached NULL for the object's lifetime, never retried).
-	// Found live: a real headless boot of 00_01_apartment.hpm showed 14
-	// "Couldn't find file 'deferred_base_vtx.glsl'" / 6 "Could not load
-	// material ... shader 'deferred_base_vtx.glsl'" lines in hpl.log even
-	// though most materials (loaded later, well after Init() returns and
-	// the callback is registered) resolved through the same fallback fine.
+	// before InitEngine(): engine-init shader lookups cache NULL otherwise
 	cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl);
 
-	/////////////////////////////
-	// Real SOMA's own .hpsl corpus (deferred_gbuffer_solid_frag.hpsl,
-	// deferred_light_frag.hpsl, ...) always writes/reads the deferred
-	// normal G-buffer raw and unconditionally stores linear (unpacked)
-	// depth in its alpha channel - there is no HPL2-style "@ifdef
-	// Deferred_32bit ... *0.5+0.5 ... @elseif Deferred_64bit ... raw ...
-	// @endif" branch anywhere in the real shipped source (confirmed via a
-	// full grep of the real corpus: every gl_FragData[1]/out_vNormal write
-	// is unconditional). That's exactly what HPL2's existing
-	// eDeferredGBuffer_64Bit renderer mode already means (see
-	// RendererDeferred.cpp's own matching @ifdef Deferred_32bit/@elseif
-	// Deferred_64bit branches in the real Dark Descent .glsl corpus) - but
-	// cRendererDeferred::mGBufferType defaults to (and, with no call
-	// anywhere in this codebase to ever change it, always stays)
-	// eDeferredGBuffer_32Bit, a standard 8-bit-per-channel UNSIGNED G-buffer
-	// texture. Writing SOMA's real raw signed (-1..1) normal components
-	// into that unsigned target silently clamps every negative component
-	// to 0 on write - corrupting the surface normal on nearly every pixel
-	// in the game and starving real lights of any dot(N,L) contribution.
-	// Root-caused live: a real New-Game boot into 00_01_apartment.hpm
-	// rendered almost entirely black despite 38 real lights being
-	// correctly culled into view near the camera - a LIGHTDIAG-SHADER
-	// dump of the real transpiled deferred_gbuffer_solid_frag.glsl (with
-	// the real Deferred_32bit=1 combo var actually set) showed the
-	// unconditional, un-biased `gl_FragData[1].xyz = vScreenNormal;` this
-	// comment describes. Must run before InitEngine() (which constructs
-	// cRendererDeferred and allocates the G-buffer textures based on this
-	// value) - same ordering constraint as SetHpslTranspileCallback()
-	// above.
+	// SOMA writes raw signed normals; unsigned 32-bit G-buffer clamps them. Before InitEngine()
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
@@ -930,84 +842,20 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
 
-	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
-	// a real GPU occlusion query (GetOcclusionQuery()) to any light whose
-	// projected screen area exceeds mlMinLargeLightArea, then skips
-	// re-rendering that light entirely on a later frame once the query's
-	// sample count comes back at or below mlSampleVisiblilityLimit - a real
-	// performance optimization (never re-shade a light that's fully hidden
-	// behind other geometry). Root-caused live: a real New Game boot into
-	// 00_01_apartment.hpm rendered near pure black (mean pixel value ~10/255)
-	// despite 38 real lights correctly culled into view - a temporary
-	// counter on cRenderSettings::mlNumberOfLightsRendered showed a real,
-	// nonzero count (16, then 19) in the first couple of rendered frames,
-	// then permanently 0 from then on. Every light in this small apartment
-	// bedroom sits very close to the camera, so each has a large projected
-	// screen area and takes this occlusion-query path - consistent with
-	// queries reporting these lights as occluded/invisible once their
-	// results are actually available (a 1-frame-later readback), which
-	// would never happen for a real light this close to the camera. This
-	// GPU/driver stack (Mesa on Apple Silicon, not what HPL2's occlusion
-	// query path was ever verified against) is the plausible source, not
-	// verified further than that. Disabling this test for SOMA (verified
-	// live: mean pixel value rose from ~10/255 to ~26/255 and real
-	// previously-invisible room geometry/detail became visible in a
-	// screenshot at the identical camera pose) trades a real-but-broken
-	// perf optimization for correct light visibility - Dark Descent/AMFP
-	// are untouched by this (SOMA-only call, and mbOcclusionTestLargeLights
-	// is a process-wide static, but each game module is its own process).
+	// occlusion queries wrongly hide near lights on this driver (near-black render)
 	cRendererDeferred::SetOcclusionTestLargeLights(false);
 
-	// CRITICAL, must run before CreateHPLEngine() below, not merely before
-	// map/resource loading: cMeshLoaderCollada's real, original behavior is
-	// to treat a shipped `.msh` as a rebuildable cache of the `.dae` source,
-	// recompiling and unconditionally SaveMesh()-ing over it. On this Linux
-	// port that install directory is the real Steam depot, and this
-	// (correctly, for everything loaded later) used to be disabled by a
-	// call placed inside InitEngine() itself, right after CreateHPLEngine().
-	// That was too late for one specific case: CreateHPLEngine() (below)
-	// constructs cGraphics, which constructs cRendererDeferred, whose own
-	// constructor immediately calls LoadVertexBufferFromMesh("core_box.dae",
-	// ...) (and core_pyramid/core_*_sphere) to build its debug/light-volume
-	// shapes - before InitEngine() ever returns, let alone reaches its own
-	// old call site. Found live: a real (non-headless) SOMA launch just
-	// rewrote exactly these 5 files' real `.msh` caches in the real Steam
-	// install directory (confirmed via mtimes matching the launch, and
-	// Steam's own "5 files failed to validate" integrity check reacting to
-	// it) - the exact zero-tolerance class of bug already fixed once for
-	// every other, later-loaded mesh, just never for these five, since
-	// nothing reached this code path at all before this session's earlier
-	// fix made core_box.dae loadable in the first place (previously the
-	// engine just crashed here instead - see the FatalError fix earlier
-	// this session). Hardcoded true, not config-driven, same reasoning as
-	// this call's own original site.
+	// before CreateHPLEngine(): renderer ctor loads core_*.dae and would rewrite .msh caches in the Steam install
 	cResources::SetForceCacheLoadingAndSkipSaving(true);
 
 	// Never next to the game data; also skips probing SOMA's own (HPL3-format) .msh files
 	cResources::SetMeshCacheDir(cSomaFsb::GetCacheDir(_W("meshcache")));
 
-	/////////////////////////////
-	// Init the engine: create the window, load resources.cfg/materials.cfg,
-	// and get to a state where an empty scene can be rendered.
 	if (InitEngine() == false)
 		return false;
 
-	// Safe wherever this sits now - SetupLogFile() at the very top of Init()
-	// already set a real, XDG-routed log destination before anything else
-	// in this function could Log()/Error(). This used to need to sit after
-	// InitEngine() specifically (which used to be the only place
-	// SetLogFile() was called) - confirmed live, once: running a build with
-	// this Log() call in its old spot (right after InitMainConfig(), before
-	// SetLogFile() existed anywhere) from a scratch test directory that (per
-	// this project's own established headless-testing pattern) symlinks
-	// "hpl.log" back to the real install for tailing wrote this exact line
-	// into the real Steam SOMA install's hpl.log - exactly what this
-	// project has a zero-tolerance policy against.
-	Log("SOMA game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
+	Log("SOMA game module (%s)\n", msGameName.c_str());
 
-	/////////////////////////////
-	// Headless control: register camera commands if a control server is
-	// active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
 	if (mpEngine->GetHeadlessControl())
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
@@ -1042,11 +890,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 
 	mpEngine->GetUpdater()->AddGlobalUpdate(hplNew(cSomaToneMapping, ()));
 
-	/////////////////////////////
-	// Real boot sequence: show the splash logos, then (via
-	// OnSplashFinished(), called back from cSomaSplash once its sequence
-	// ends) load SOMA's own declared main menu scene. No map is loaded
-	// synchronously here anymore - see SomaSplash.h/cpp.
 	// Headless sweeps: no splash, no first-run gamma screen.
 	if (getenv("OPENHPL_SOMA_SKIP_BOOT") != NULL)
 	{
@@ -1060,14 +903,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaBase::OnSplashFinished()
 {
-	// Real SOMA only shows its gamma-calibration screen once, on a
-	// completely fresh install (MenuHandler.hps's mbPremenuActive flag) -
-	// see cSomaGammaScreen::ShouldShowAndMarkSeen() for how that's tracked
-	// here. On every later boot this goes straight to ProceedPastBoot().
 	if (cSomaGammaScreen::ShouldShowAndMarkSeen())
 	{
 		mpGammaScreen = hplNew(cSomaGammaScreen, (mpEngine, this));
@@ -1078,14 +915,10 @@ void cSomaBase::OnSplashFinished()
 	ProceedPastBoot();
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaBase::OnGammaScreenFinished()
 {
 	ProceedPastBoot();
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaBase::ProceedPastBoot()
 {
@@ -1103,8 +936,6 @@ void cSomaBase::ProceedPastBoot()
 		LoadScriptMainMenu();
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaBase::Exit()
 {
 	if (mpEngine)
@@ -1112,14 +943,10 @@ void cSomaBase::Exit()
 	mpEngine = NULL;
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaBase::Run()
 {
 	mpEngine->Run();
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaBase::ParseCommandLine(const tString &asCommandline)
 {
@@ -1129,8 +956,6 @@ bool cSomaBase::ParseCommandLine(const tString &asCommandline)
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaBase::InitMainConfig()
 {
@@ -1151,42 +976,17 @@ bool cSomaBase::InitMainConfig()
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
-// Split out of InitEngine() and called first thing from Init(), before
-// InitMainConfig() - InitMainConfig()'s cConfigFile::Load() calls Error()
-// on a missing/malformed main_init.cfg, which (like cSomaConfig::Load()'s
-// own Log() call, see the comment below) needs a real log destination
-// already set up to avoid falling back to the engine's pre-SetLogFile()
-// default: a bare relative "hpl.log" resolved against cwd, which for a
-// real Steam launch (or a headless-check.sh run against a real install -
-// see that script's own guard, added for exactly this reason) is the real
-// Steam install directory. This was a real, confirmed-live gap: this one
-// call site was missed when the equivalent pre-SetLogFile() ordering bug
-// was fixed for cSomaConfig::Load()/the old "Phase 0 scaffolding" Log()
-// call (see PORTING_NOTES.md).
 void cSomaBase::SetupLogFile()
 {
 #if defined(__linux__)
-	// hpl.log otherwise defaults to a bare relative "hpl.log" (see
-	// LowLevelSystemSDL.cpp), landing wherever cwd happens to be at first
-	// Log() - the real game's Steam install directory, since that's where
-	// this binary gets deployed and run from. XDG_STATE_HOME is the
-	// correct home for transient log/state data (see amnesia/src/game/
-	// LuxBasePersonal.h's equivalent for the real Amnesia game module).
+	// default hpl.log lands in cwd, the Steam install
 	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
 	tWString sStateDir = sStateRoot + _W("open-hpl/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 	sStateDir += _W("soma/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 
-	// A fixed hpl.log path collides across concurrent headless test runs
-	// (now a normal occurrence with multiple agents each testing their own
-	// Soma.<branch>.aarch64 build) - cLogWriter::ReopenFile() truncates on
-	// open, so a second process launched while a first is still running
-	// silently wipes whatever the first had already logged. Suffix with the
-	// PID under OPENHPL_HEADLESS_SOCKET only, so normal interactive play
-	// keeps the stable, predictable filename.
+	// per-PID: concurrent headless runs would truncate each other
 	tWString sLogFile = sStateDir + _W("hpl.log");
 	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
 	{
@@ -1195,8 +995,6 @@ void cSomaBase::SetupLogFile()
 	SetLogFile(sLogFile);
 #endif
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaBase::InitEngine()
 {
@@ -1209,33 +1007,13 @@ bool cSomaBase::InitEngine()
 	vars.mSound.mbUseEnvironmentalAudio = true;
 	vars.mGraphics.msWindowCaption = msGameName;
 
-	// Load persisted settings (see SomaConfig.h) - deliberately AFTER
-	// SetLogFile() above: cConfigFile::Load()/cSomaConfig::Load() both Log()
-	// on a missing/fresh-install config file (the common case), and doing
-	// this any earlier sends that Log() to the engine's pre-SetLogFile()
-	// default destination - a bare relative "hpl.log" in whatever the
-	// process's cwd happens to be (see the comment above). A real headless
-	// test run from a scratch directory containing an "hpl.log" symlink
-	// (this project's own established pattern, e.g. for tailing it via the
-	// headless control socket) turned that into a real, confirmed write
-	// into the actual Steam install directory the very first time this bug
-	// existed - exactly what this project has a zero-tolerance policy
-	// against. mbFullscreen only takes effect at window-creation time
-	// (cLowLevelGraphics::Init()'s abFullscreen param), so it has to be
-	// read back and applied to vars here, before CreateHPLEngine() below -
-	// unlike Gamma/Volume/VSync, applied live further down once cGraphics/
-	// cSound exist.
+	// fullscreen only applies at window creation; after SetLogFile()
 	mConfig.Load();
 	SomaReadUserScreenConfig(&mConfig);
 	vars.mGraphics.mbFullscreen = mConfig.mbFullscreen;
 
-	// Real Resolution row's own restart-required contract - see
-	// SomaConfig.h's mlScreenWidth/mlScreenHeight comment. Was hardcoded
-	// 1280x720 here before those fields existed.
 	vars.mGraphics.mvScreenSize = cVector2l(mConfig.mlScreenWidth, mConfig.mlScreenHeight);
 
-	/////////////////////////
-	// Create the engine
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 	if (mpEngine == NULL)
 	{
@@ -1244,16 +1022,9 @@ bool cSomaBase::InitEngine()
 	}
 	SomaApplyWindowMode(&mConfig);
 
-	/////////////////////////
-	// Load SOMA's real resource directory listing and physics surface data.
-	// Both parsers are fully generic (no Amnesia-specific assumptions), so
-	// SOMA's own files load unmodified.
 	mpEngine->GetResources()->LoadResourceDirsFile(msResourceConfigPath);
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
 
-	// See SomaLoaders.h - without these, cWorldLoaderHpm silently drops
-	// every <Entity>/<Area> element in a real SOMA map (confirmed via a real
-	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
 
 	mpScriptRuntime = hplNew(cSomaScriptRuntime, ());
@@ -1270,19 +1041,12 @@ bool cSomaBase::InitEngine()
 		mpScriptRuntime = NULL;
 	}
 
-	/////////////////////////
-	// Apply the persisted settings that DO have a live/runtime API (unlike
-	// Fullscreen above, which only applies at the next InitEngine()) - same
-	// APIs amnesia/src/game/LuxMainMenu_Options.cpp's own Options menu uses
-	// for these.
 	mpEngine->GetSound()->GetLowLevel()->SetVolume(mConfig.mfMasterVolume);
 	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mConfig.mfGamma);
 	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mConfig.mbVSync, false);
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaBase::LoadScriptMainMenu()
 {
@@ -1296,8 +1060,6 @@ tString cSomaBase::GetInitConfigString(const tString &asLevel, const tString &as
 	cConfigFile cfg(msInitConfigFile);
 	return cfg.Load() ? cfg.GetString(asLevel, asName, "") : "";
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, tString &asErrorOut,
 						 const tString &asStartPosName)

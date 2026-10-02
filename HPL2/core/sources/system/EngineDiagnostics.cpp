@@ -50,8 +50,6 @@ namespace hpl {
 	static std::vector<cShaderReportEntry> gvShaderReport;
 	static std::map<int, int> gmapGLErrors;
 
-	//-----------------------------------------------------------------------
-
 	tString cEngineDiagnostics::JsonEscape(const tString &asIn)
 	{
 		tString sOut;
@@ -76,8 +74,6 @@ namespace hpl {
 	{
 		return "[" + Num(avX.x) + "," + Num(avX.y) + "," + Num(avX.z) + "]";
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cEngineDiagnostics::ReportShader(const tString &asName, const char *apStage, bool abOk, const tString &asInfoLog)
 	{
@@ -105,8 +101,6 @@ namespace hpl {
 		}
 		return sOut + "]";
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cEngineDiagnostics::EndFrame()
 	{
@@ -138,8 +132,6 @@ namespace hpl {
 		return sOut;
 	}
 
-	//-----------------------------------------------------------------------
-
 	tString cEngineDiagnostics::GetWorldStatsJson(cWorld *apWorld)
 	{
 		int lStaticMesh=0, lDynamicMesh=0, lSubMeshNoMaterial=0, lOversized=0, lNanBounds=0;
@@ -169,7 +161,6 @@ namespace hpl {
 				{
 					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
 					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { ++lNanBounds; continue; }
-					// Nothing authored in these games is a 100 m mesh except sky domes.
 					if(vExt.x > 100 || vExt.y > 100 || vExt.z > 100)
 					{
 						if(lOversized < 12) vOversized.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")));
@@ -225,7 +216,6 @@ namespace hpl {
 		for(size_t i=0; i<vOversized.size(); ++i) sOut += (i ? ",\"" : "\"") + JsonEscape(vOversized[i]) + "\"";
 		sOut += "]";
 		{
-			// Worst offenders as "mesh:material name"
 			std::multimap<int,tString> mapSorted;
 			for(std::map<tString,int>::iterator it = mapNoMaterial.begin(); it != mapNoMaterial.end(); ++it) mapSorted.insert(std::make_pair(-it->second, it->first));
 			sOut += ",\"no_material_top\":{";
@@ -249,8 +239,6 @@ namespace hpl {
 		return sOut + "}";
 	}
 
-	//-----------------------------------------------------------------------
-
 	tString cEngineDiagnostics::GetRenderStatsJson(cViewport *apViewport, cGraphics *apGraphics)
 	{
 		cRenderSettings *pSettings = apViewport->GetRenderSettings();
@@ -268,8 +256,6 @@ namespace hpl {
 		sOut += ",\"gl_errors\":" + PollGLErrorsJson(false);
 		return sOut + "}";
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cEngineDiagnostics::GetLightsJson(cWorld *apWorld, const cVector3f &avPos, int alMax, cRenderList *apRenderList)
 	{
@@ -303,8 +289,6 @@ namespace hpl {
 		}
 		return sOut + "]";
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cEngineDiagnostics::GetEntityInfoJson(cWorld *apWorld, const tString &asName)
 	{
@@ -347,8 +331,6 @@ namespace hpl {
 		return sOut + "]}";
 	}
 
-	//-----------------------------------------------------------------------
-
 	tString cEngineDiagnostics::GetPixelStatsJson(const float *apPixels, int alWidth, int alHeight)
 	{
 		static const char* vChannelNames[4] = {"r","g","b","a"};
@@ -376,8 +358,6 @@ namespace hpl {
 		}
 		return sOut + "}";
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cEngineDiagnostics::GetFrameStatsJson(const unsigned char *apPixels, int alWidth, int alHeight, int alBytesPerPixel)
 	{

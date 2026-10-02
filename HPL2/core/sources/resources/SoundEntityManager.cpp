@@ -74,7 +74,6 @@ namespace hpl {
 
 	void cSoundEntityManager::AddCustomSoundEntity(const tString& asName, cSoundEntityData *apData)
 	{
-		// The manager's own reference keeps custom data alive
 		apData->IncUserCount();
 		m_mapCustom[cString::ToLowerCase(asName)] = apData;
 	}
@@ -84,7 +83,6 @@ namespace hpl {
 		std::map<tString, cSoundEntityData*>::iterator customIt = m_mapCustom.find(cString::ToLowerCase(asName));
 		if(customIt != m_mapCustom.end())
 		{
-			// NULL: a name the resolver has already turned down
 			if(customIt->second) customIt->second->IncUserCount();
 			return customIt->second;
 		}

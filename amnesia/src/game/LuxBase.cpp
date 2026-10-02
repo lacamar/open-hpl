@@ -411,14 +411,6 @@ cLuxBase::~cLuxBase()
 
 //-----------------------------------------------------------------------
 
-//////////////////////////////////////////////////////////////////////////
-// HEADLESS CONTROL COMMANDS (see HPL2/core/include/system/HeadlessControl.h)
-//
-// Registered below in Init(), after InitGame() has created mpMapHandler/
-// mpPlayer, whenever OPENHPL_HEADLESS_SOCKET is set. Each checks map/player
-// state at call time rather than registration time, since no map is loaded
-// yet at registration.
-//////////////////////////////////////////////////////////////////////////
 
 static void cLuxBase_HeadlessCmd_RunScript(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -431,21 +423,11 @@ static void cLuxBase_HeadlessCmd_RunScript(void *apUserData, const cHeadlessRequ
 	pBase->mpMapHandler->GetCurrentMap()->RunScript(aReq.GetString("line",""));
 }
 
-// Headless debug hook onto cRendererDeferred's own existing debug quad-view
-// of the raw G-buffer contents - see SomaBase.cpp's identical hook for the
-// full rationale (used there to root-cause SOMA's own deferred rendering
-// darkness). Added here purely as a comparison point: does real, known-
-// working Dark Descent show the same "normal+depth target renders solid
-// black" symptom on this GPU/driver stack, or is it SOMA-specific?
 static void cLuxBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cRendererDeferred::SetDebugRenderFrameBuffers(aReq.GetBool("enabled", false));
 }
 
-// Numeric comparison point for SomaBase.cpp's identical read_gbuffer_stats -
-// see there for the full rationale. Registered here purely to confirm known-
-// working Dark Descent's real min/max/mean pixel values for the same target
-// index, to compare against SOMA's own readback.
 static void cLuxBase_HeadlessCmd_ReadGbufferStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cLuxBase *pBase = (cLuxBase*)apUserData;
@@ -539,12 +521,7 @@ static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest 
 		aResp.Set("map_file", pMap->GetFileName());
 	}
 
-	// mpPlayer itself is created at InitGame() time and lives for the whole process,
-	// but its iCharacterBody is only created once a map is actually loaded (see
-	// cLuxPlayer::LoadCharacterBody(), called from map setup) - calling this command
-	// at the main menu / between maps used to dereference a NULL GetCharacterBody(),
-	// crashing the whole engine (confirmed via coredumpctl/gdb: SIGSEGV in
-	// iCharacterBody::GetFeetPosition() with this=0x0).
+	// character body exists only while a map is loaded
 	iCharacterBody *pBody = pBase->mpPlayer ? pBase->mpPlayer->GetCharacterBody() : NULL;
 	if(pBody)
 	{
@@ -575,9 +552,6 @@ static void cLuxBase_HeadlessCmd_Teleport(void *apUserData, const cHeadlessReque
 
 	cVector3f vPos(aReq.GetFloat("x",0), aReq.GetFloat("y",0), aReq.GetFloat("z",0));
 
-	// Same order as the fix for the teleport-while-falling bug (see
-	// PORTING_NOTES.md): clear residual velocity, or a teleport straight
-	// into/through solid floor can carry stale fall speed through it.
 	iCharacterBody *pBody = pBase->mpPlayer->GetCharacterBody();
 	pBody->SetFeetPosition(vPos);
 	pBody->StopMovement();
@@ -593,12 +567,7 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 		return;
 	}
 
-	// StartGame() reads mpUserConfig (Map/StartPos etc.) - normally already set up by the
-	// time it's reachable through the real UI (cLuxPreMenu::Update() creates/loads the
-	// default profile before ever calling StartGame()), but a headless run driving this
-	// command straight from boot never goes through that flow, leaving mpUserConfig NULL -
-	// SIGSEGVs inside cConfigFile::GetString() (TiXmlNode::FirstChildElement() on garbage
-	// `this`). Mirror that same bootstrap here so this command works standalone.
+	// headless start skips PreMenu profile setup
 	if(pBase->mpUserConfig == NULL)
 	{
 		pBase->CreateProfile(pBase->msDefaultProfileName);
@@ -610,13 +579,7 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 		}
 	}
 
-	// The real UI (cLuxMainMenu::ExitMenu(), eLuxMainMenuExit_StartGame case) always
-	// switches the input handler to eLuxInputState_Game and the updater container to
-	// "Default" *before* calling StartGame() - without this, StartGame() still loads
-	// the map and runs its scripts/physics correctly, but injected "input" keys are
-	// silently dropped (the input handler stays in whatever non-gameplay state it was
-	// in, e.g. still PreMenu/MainMenu), making the player look permanently frozen to
-	// anyone driving movement through this command. Mirror that same sequencing here.
+	// input is dropped unless input/updater state is Game/Default
 	pBase->mpInputHandler->ChangeState(eLuxInputState_Game);
 	pBase->mpEngine->GetUpdater()->SetContainer("Default");
 
@@ -626,7 +589,6 @@ static void cLuxBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessReque
 	}
 }
 
-//-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
 // PUBLIC METHODS
@@ -691,9 +653,6 @@ bool cLuxBase::Init(const tString &asCommandline)
 	// Init the game data and structures
 	if(InitGame()==false) return false;
 
-	/////////////////////////////
-	// Headless control: register game-specific commands if a control
-	// server is active (OPENHPL_HEADLESS_SOCKET) - see HeadlessControl.h.
 	if(mpEngine->GetHeadlessControl())
 	{
 		cHeadlessControlServer *pCtrl = mpEngine->GetHeadlessControl();
@@ -1108,9 +1067,6 @@ bool cLuxBase::InitApp()
 	msFirstStartFlagPath = msBaseSavePath + _W("first_start_flag");
 
 	/////////////////////////
-	//Set up log file locations - logs are transient state, not save data, so on Linux
-	//they get their own XDG_STATE_HOME tree (same relative layout, reusing vDirs) rather
-	//than living alongside actual save games under msBaseSavePath.
 #if defined(__linux__)
 	tWString sLogDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
 	hpl::CreateBaseDirs(vDirs, sLogDir);
@@ -1119,13 +1075,7 @@ bool cLuxBase::InitApp()
 	const tWString &msBaseLogPath = msBaseSavePath;
 #endif
 
-	// A fixed hpl.log path collides across concurrent headless test runs
-	// (this project's own scripted testing regularly launches more than one
-	// instance at once) - cLogWriter::ReopenFile() truncates on open, so a
-	// second process launched while a first is still running silently wipes
-	// whatever the first had already logged. Suffix with the PID under
-	// OPENHPL_HEADLESS_SOCKET only, so normal interactive play (almost
-	// always exactly one instance) keeps the stable, predictable filename.
+	// PID suffix: concurrent runs truncate a shared log
 	tWString sLogSuffix = _W("");
 #if defined(__linux__)
 	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
@@ -1424,10 +1374,7 @@ bool cLuxBase::InitEngine()
 	iRenderer::SetParallaxQuality((eParallaxQuality)mpConfigHandler->mlParallaxQuality);
 	iRenderer::SetParallaxEnabled(mpConfigHandler->mbParallaxEnabled);
 
-	//Must be set before any cGuiSet is created (CreateHPLEngine() below creates the engine's
-	//own GUI sets, and PreMenu/MainMenu/HUD sets are created shortly after) since each set
-	//bakes the current global scale into its virtual-to-screen mapping when constructed or
-	//when SetVirtualSize() is called on it.
+	// before any cGuiSet exists; sets bake the scale in
 	cGuiSet::SetGlobalGuiScale((float)mpConfigHandler->mlGuiScale);
 
 	iRenderer::SetRefractionEnabled(mpConfigHandler->mbRefraction);
@@ -1537,10 +1484,7 @@ bool cLuxBase::InitGame()
 	mvHudVirtualStartPos = cVector3f(-mvHudVirtualOffset.x,-mvHudVirtualOffset.y,0);
 
 	mpGameHudSet = mpEngine->GetGui()->CreateSet("GameHud",NULL);
-	// Health/sanity bars, item pickups, and hint text (LuxHintHandler::DrawHintText(),
-	// cVector3f(400,...) etc.) are all drawn at fixed positions assuming the original
-	// 800x600 canvas - same GuiScale exemption and rationale as cLuxPreMenu's splash
-	// sequence and cLuxLoadScreenHandler/cLuxCredits/cLuxJournal/cLuxInventory.
+	// fixed 800x600 layout: exempt from GuiScale
 	mpGameHudSet->SetVirtualSize(mvHudVirtualSize,-1000, 1000, mvHudVirtualOffset, true);
 	mpGameDebugSet = mpEngine->GetGui()->CreateSet("GameDebug",NULL);
 	mpGameDebugSet->SetDrawPriority(1);

@@ -41,13 +41,6 @@
 #define PERSONAL_RELATIVEPIECES_COUNT 0
 #define PERSONAL_SYSTEMPATH_TYPE eSystemPath_Personal
 #elif defined(__linux__)
-// XDG Base Directory Specification: saves/config/resources live under
-// $XDG_DATA_HOME/open-hpl/ (see cPlatform::GetSystemSpecialPath()'s
-// eSystemPath_XDGDataHome case), not a bare ~/.frictionalgames dotfile -
-// PERSONAL_RELATIVEROOT plays the same "vendor folder" role either way, just
-// resolved from a different, already-hidden root. See
-// MigrateLegacyPersonalDir() below for the one-time move of any real data an
-// older build already wrote to the old location.
 #define PERSONAL_RELATIVEROOT _W("open-hpl/")
 #define PERSONAL_RELATIVEPIECES _W("open-hpl"),
 #define PERSONAL_RELATIVEPIECES_COUNT 1
@@ -63,22 +56,12 @@
 namespace hpl {
 
 #if defined(__linux__)
-// One-time best-effort migration of a real pre-XDG install
-// (~/.frictionalgames/Amnesia/) to the new $XDG_DATA_HOME/open-hpl/Amnesia/
-// location, so upgrading this package doesn't strand existing save games.
-// Whole-subtree rename (not per-file), and only when the new location
-// doesn't already exist - never overwrites anything. Failure (e.g. old
-// location never existed, or new one's parent is on a different filesystem)
-// is silently non-fatal: CreateBaseDirs() below creates a fresh tree either way.
 inline void MigrateLegacyPersonalDir(const tWString &asNewGameParentDir)
 {
 	const char *pHome = getenv("HOME");
 	if(pHome == NULL) return;
 
-	// rename() requires the destination's parent to already exist - this runs before
-	// CreateBaseDirs() below has had a chance to create it, so make sure of it here too
-	// (just the one "open-hpl/" piece; asNewGameParentDir's own root, e.g. $XDG_DATA_HOME,
-	// is assumed to already exist, same as everywhere else this session's XDG work does).
+	// rename() needs the destination parent to exist
 	tWString sParent = asNewGameParentDir;
 	if(!sParent.empty() && cString::GetLastCharW(sParent) == _W("/")) sParent.resize(sParent.size()-1);
 	size_t lSlashPos = sParent.find_last_of(_W('/'));
@@ -87,13 +70,11 @@ inline void MigrateLegacyPersonalDir(const tWString &asNewGameParentDir)
 
 	tString sOldDir = tString(pHome) + "/.frictionalgames/Amnesia";
 	tString sNewDir = cString::To8Char(asNewGameParentDir);
-	// Strip a trailing slash - rename() on some filesystems is picky about it
-	// on the destination when the source has none.
 	if(!sNewDir.empty() && sNewDir[sNewDir.size()-1] == '/') sNewDir.resize(sNewDir.size()-1);
 
 	struct stat oldStat, newStat;
-	if(stat(sOldDir.c_str(), &oldStat) != 0) return;   // nothing to migrate
-	if(stat(sNewDir.c_str(), &newStat) == 0) return;   // already migrated (or fresh install already has data)
+	if(stat(sOldDir.c_str(), &oldStat) != 0) return;
+	if(stat(sNewDir.c_str(), &newStat) == 0) return;
 
 	if(rename(sOldDir.c_str(), sNewDir.c_str()) == 0)
 	{

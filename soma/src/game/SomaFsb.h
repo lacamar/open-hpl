@@ -1,7 +1,4 @@
-/*
- * FMOD FSB5 bank extraction: named samples -> plain .ogg (Vorbis banks) or .wav (PCM16 banks)
- * in a per-user cache dir. Format per python-fsb5 (MIT), https://github.com/HearthSim/python-fsb5.
- */
+// Format per python-fsb5 (MIT)
 
 #ifndef SOMA_FSB_H
 #define SOMA_FSB_H
@@ -25,12 +22,9 @@ public:
 	// $XDG_CACHE_HOME/open-hpl/soma/<asSubDir>/, created if missing
 	static tWString GetCacheDir(const tWString &asSubDir);
 
-	// apBankPath is resolved through the resource file searcher
 	static void ExtractBank(cResources *apResources, const char *apBankPath, const tWString &asCacheDir,
 							const cSomaFsbWanted *apWanted, size_t alCount);
 
-	// Extracts the named samples as <asPrefix><sample>.ogg/.wav (by bank format) unless already cached;
-	// amapOut maps each extracted sample to its file name
 	static void ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
 							   const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut);
 };

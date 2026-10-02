@@ -50,8 +50,7 @@ cLuxDemoEnd::cLuxDemoEnd() : iLuxUpdateable("LuxDemoEnd")
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	// Fixed-position full-screen content - same GuiScale exemption and rationale as
-	// cLuxPreMenu's splash sequence and cLuxLoadScreenHandler/cLuxCredits.
+	// fixed 800x600 layout: exempt from GuiScale
 	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 
 	///////////////////////////////

@@ -2060,21 +2060,6 @@ namespace hpl {
 
 		/////////////////////////
 		//Program
-		// Was unconditionally SetProgram(NULL) (fixed-function) - correct
-		// enough on the mature desktop OpenGL drivers this engine shipped
-		// against, but real on this project's actual test platform (Mesa's
-		// AGX driver, Asahi Linux/Apple Silicon): fixed-function rendering
-		// of a bound GL_TEXTURE_CUBE_MAP with no shader produced a solid,
-		// wrong, saturated flat color (found live: a real headless
-		// screenshot of SOMA's 00_01_apartment.hpm, which - unlike any real
-		// Dark Descent map, none of which ship a non-empty SkyBoxTexture -
-		// has both SkyBoxActive=true and a real cubemap set, showed two
-		// large flat magenta triangles exactly where the skybox mesh should
-		// be - see PORTING_NOTES.md "SOMA" section). GetSkyBoxProgram()
-		// defaults to NULL (unchanged fixed-function behavior) unless a
-		// renderer subclass overrides it with a real, working program -
-		// cRendererDeferred does (see mpSkyBoxProgram in RendererDeferred.cpp),
-		// so this is a real fix there, not just a workaround.
 		SetProgram(GetSkyBoxProgram());
 
 		/////////////////////////
@@ -2199,9 +2184,6 @@ namespace hpl {
 			cMaterial *pMaterial = apObject->GetMaterial();
 			iMaterialType *pMatType = pMaterial->GetType();
 
-			// mpCurrentProgram can be NULL here for materials whose shader failed to load
-			// (e.g. SOMA's HPSL shaders, which HPL2 cannot compile) - skip rather than
-			// let SetupObjectSpecificData() dereference a NULL program.
 			if(pMaterial->HasObjectSpecificsSettings(aRenderMode) && mpCurrentProgram)
 			{
 				pMatType->SetupObjectSpecificData(aRenderMode,mpCurrentProgram,apObject,this);
@@ -2573,7 +2555,6 @@ namespace hpl {
 		iVertexBuffer *pVtxBuffer = mpResources->GetMeshManager()-> CreateVertexBufferFromMesh(asMeshName, alVtxToCopy);
 		if(pVtxBuffer==NULL) FatalError("Could not load vertex buffer from mesh '%s'\n",asMeshName.c_str());
 
-		// Shapes must be unit sized whatever <unit> the mesh file declares.
 		if(afMaxExtent > 0)
 		{
 			float *pPos = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);

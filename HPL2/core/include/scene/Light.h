@@ -211,7 +211,6 @@ namespace hpl {
 		virtual void SetRadius(float afX);
 		float GetRadius(){return mfRadius;}
 
-		// HPL3 map data; only read by the HPSL light path.
 		void SetFalloffPow(float afX){ mfFalloffPow = afX;}
 		float GetFalloffPow(){ return mfFalloffPow;}
 		void SetSpotFalloffPow(float afX){ mfSpotFalloffPow = afX;}

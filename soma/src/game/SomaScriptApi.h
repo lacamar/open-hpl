@@ -1,10 +1,3 @@
-/*
- * SOMA's script API as registered by the official engine, recovered from its binary
- * (scripts/soma-re-script-api.py -> soma/data/script_api.txt), registered into an
- * AngelScript engine. Anything without a native implementation gets a generic stub that
- * returns a default value and is counted, so every game script compiles and runs.
- */
-
 #ifndef SOMA_SCRIPT_API_H
 #define SOMA_SCRIPT_API_H
 
@@ -30,9 +23,7 @@ class cSomaScriptApi
 public:
 	bool Load(const std::string &asFile);
 
-	// Enums and types only, so natives can be registered on them before the rest.
 	void RegisterTypes(asIScriptEngine *apEngine);
-	// Everything not registered yet (natives first) gets a stub; returns the number of failures.
 	int Register(asIScriptEngine *apEngine);
 
 	const std::vector<std::string> &GetErrors() const { return mvErrors; }
@@ -66,7 +57,6 @@ int SomaIndirectPropOffset(const std::string &asType, const std::string &asName)
 char *SomaNewPropBlock(const std::string &asType);
 void SomaFreePropBlock(const std::string &asType, char *apBlock);
 
-// Registered from the recovered API without an implementation
 const asPWORD kSomaStubUserData = 0x50b0;
 const asPWORD kSomaForwardUserData = 0x50b1;
 bool SomaScriptIsStub(asIScriptFunction *apFunc);

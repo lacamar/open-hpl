@@ -299,36 +299,7 @@ namespace hpl {
 			snprintf(sSpec,256,"%s%s",sDir8.c_str(),_entry->d_name);
 			
 			// skip unreadable
-			// lstat(), not stat(): a symlinked directory must NEVER be treated
-			// as a real subdirectory to recurse into here - both of this
-			// function's real callers (cFileSearcher::AddDirectory()'s
-			// recursive AddSubDirs walk, and RemoveFolder()'s recursive
-			// delete) would otherwise follow it. Found live: real SOMA's own
-			// Steam depot ships several top-level directories containing a
-			// same-named self-referential symlink (e.g. a real
-			// "entities/entities" symlink pointing at "entities" itself -
-			// confirmed via readlink() against the real install; also
-			// "graphics/graphics", "lang/lang", "maps/maps", "music/music",
-			// "sounds/sounds", "static_objects/static_objects",
-			// "textures/textures" - presumably a leftover packaging artifact
-			// from Frictional's own Linux/macOS port build, not something any
-			// game module here needs to load through). resources.cfg marks
-			// every one of these real top-level directories AddSubDirs="true",
-			// so AddDirectory() recursing into "entities/" found
-			// "entities/entities", stat()'d it as S_ISDIR (stat() follows
-			// symlinks), recursed into it (resolving back to "entities/"),
-			// found "entities/entities" again, and so on - unbounded
-			// recursion, a real stack-overflow-shaped hang (high CPU, no
-			// crash, no further log output) on every real SOMA launch that
-			// reaches this code path at all. Never reached before this
-			// session's earlier crash fixes let SOMA's boot get this far -
-			// this exact bug shape (self-referential symlinks under
-			// AddSubDirs="true" real directories) may also affect Rebirth/
-			// Bunker's own real depots, not confirmed either way.
 			if (lstat(sSpec,&statbuff) ==-1) continue;
-			// skip non-directories (and, per the above, skip symlinks to
-			// directories too - a real directory can never form a cycle this
-			// way on a POSIX filesystem, only a symlink can)
 			if (!S_ISDIR(statbuff.st_mode)) continue;
 			
 			// add updir
@@ -492,9 +463,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// XDG Base Directory Specification: an env var counts as set only if it holds a
-	// non-empty *absolute* path (a relative value "should be considered as if it was
-	// not set" per the spec) - falls back to asDefaultRelativeToHome under $HOME otherwise.
 	static tWString GetXDGBaseDir(const char *asEnvVar, const tWString &asDefaultRelativeToHome)
 	{
 		const char *pEnv = getenv(asEnvVar);
@@ -511,10 +479,6 @@ namespace hpl {
 		return sHome + asDefaultRelativeToHome;
 	}
 
-	// xdg-user-dirs (~/.config/user-dirs.dirs, XDG_CONFIG_HOME-relative): a small
-	// KEY="value"-per-line file, values using a literal "$HOME" token rather than an
-	// already-expanded path - not shell-sourced (no other expansions/quoting to handle),
-	// so a plain substring search is sufficient without pulling in a real shell parser.
 	static tWString GetXDGUserDir(const char *asKey, const tWString &asDefaultRelativeToHome)
 	{
 		const char *home = getenv("HOME");

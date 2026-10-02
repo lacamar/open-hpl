@@ -106,7 +106,6 @@ namespace hpl {
 
 			if(pEvent->type == SDL_MOUSEMOTION)
 			{
-				// Injected headless events never reach SDL's relative-state accumulator.
 				if(bHeadless) vInjectedRel += cVector2l(pEvent->motion.xrel, pEvent->motion.yrel);
 #if SDL_VERSION_ATLEAST(2, 0, 0) && WIN32
 				/*if(pLowLevelGfx->GetFullscreenModeActive() == false)

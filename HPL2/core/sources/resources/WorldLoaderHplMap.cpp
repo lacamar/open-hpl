@@ -435,9 +435,6 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 #if defined(__linux__)
-	// mkdir each path segment in turn (cPlatform::CreateFolder() is a single mkdir(), not
-	// mkdir -p) - needed since GetMapCacheFilePath() below mirrors the source map's full
-	// absolute path under the cache root, which can be arbitrarily deep.
 	static void CreateFolderRecursive(const tWString &asDir)
 	{
 		size_t lPos = 0;
@@ -450,14 +447,6 @@ namespace hpl {
 		}
 	}
 
-	// Cache files used to live alongside their source .map file (SetFileExtW(asFile,...) on
-	// its own), which meant writing into the game's own (often read-only, always outside
-	// this engine's business to touch) install directory - not this engine's data to leave
-	// lying around there, and not XDG-compliant either. Now mirrored under
-	// $XDG_CACHE_HOME/open-hpl/maps/<source's own absolute path>, keyed by that full path
-	// (not just basename) so two same-named maps from different games/custom stories can
-	// never collide - the source map is looked up purely by basename elsewhere (resource
-	// dir search), but this cache doesn't get that luxury since it isn't part of that search.
 	static tWString GetMapCacheFilePath(const tWString &asFile, const tWString &asCacheExt)
 	{
 		tWString sRelative = asFile;
@@ -480,11 +469,6 @@ namespace hpl {
 #endif
 #if defined(__linux__)
 		tWString sCacheFile = GetMapCacheFilePath(asFile, msCacheFileExt);
-		// Read-compat fallback only (never written back here) - a cache built by a
-		// pre-XDG-fix engine still sits next to its source map; use it rather than a cold
-		// reload, since GetForceCacheLoadingAndSkipSaving() (see below) can mean a fresh
-		// cache never gets saved to the new location at all, and a full reload of every map
-		// is real, unnecessary reload time regardless.
 		if(cPlatform::FileExists(sCacheFile) == false)
 		{
 			tWString sLegacyCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
@@ -535,12 +519,6 @@ namespace hpl {
 			return;
 		}
 
-		//Check the file isn't truncated/corrupt (e.g. a process killed
-		//mid-save) before touching anything below, which includes
-		//Newton's mesh-collision deserializer - that spins forever on
-		//exhausted/corrupt data instead of failing, since nothing in
-		//Newton's C callback protocol checks cBinaryBuffer::GetData()'s
-		//past-EOF return value (see MAP_CACHE_FORMAT_VERSION's comment).
 		{
 			int lExpectedTotalSize = binBuff.GetInt32();
 			if((size_t)lExpectedTotalSize != binBuff.GetSize())
@@ -787,12 +765,6 @@ namespace hpl {
 		binBuff.AddInt32(MAP_CACHE_FORMAT_MAGIC_NUMBER);
 		binBuff.AddInt32(MAP_CACHE_FORMAT_VERSION);
 
-		// Reserved now, patched with the final total byte count once
-		// everything below has been written - lets LoadCacheFile detect a
-		// truncated/corrupt file (e.g. from a process killed mid-save)
-		// before it ever reaches Newton's mesh-collision deserializer,
-		// which otherwise spins forever on exhausted/corrupt data instead
-		// of failing (see MAP_CACHE_FORMAT_VERSION's comment).
 		size_t iTotalSizePos = binBuff.GetPos();
 		binBuff.AddInt32(0);
 
@@ -964,8 +936,6 @@ namespace hpl {
 			}
 		}
 		
-		////////////////////////////////////////
-		// Patch in the final total size (see the reservation above)
 		binBuff.SetInt32((int)binBuff.GetPos(), iTotalSizePos);
 
 		////////////////////////////////////////

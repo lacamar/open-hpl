@@ -500,32 +500,6 @@ namespace hpl {
 		{
 			cParserVarContainer vars;
 			vars.Add("UseUv");
-			// HPSL's real deferred_skybox_frag.hpsl unconditionally reads a
-			// px_vColor varying (multiplies it into the sampled cubemap
-			// color - a real, used input, not dead code: see the file's
-			// "Multiply with 8.0 to increase precision" comment), but
-			// deferred_base_vtx.hpsl only emits px_vColor when "UseColor"
-			// (or "UseAngleFade") is set - this call site never set it, so
-			// the HPSL path's vertex/fragment pair failed to link ("varying
-			// px_vColor not written by vertex shader"). Dark Descent's own
-			// hand-written deferred_gbuffer_skybox_frag.glsl doesn't
-			// reference gl_Color at all, so adding this is a no-op for it -
-			// confirmed by reading the real file, not assumed.
-			//
-			// mpSkyBoxProgram itself is NOT used by this file's own (dead -
-			// commented out, see RenderDeferredSkyBox()/its call site)
-			// duplicate skybox pass, but IS the real fix for a genuine
-			// magenta full-screen rendering artifact this session went
-			// looking for: the LIVE skybox pass is actually
-			// iRenderer::RenderBasicSkyBox() (Renderer.cpp, shared base
-			// class, called from RenderObjects() below), which rendered a
-			// real skybox cubemap through fixed-function (SetProgram(NULL))
-			// - correct enough on the mature desktop drivers this engine
-			// shipped against, but produced solid, wrong, saturated color
-			// on this project's real Mesa/AGX test platform. See
-			// GetSkyBoxProgram() in this class/Renderer.h/Renderer.cpp for
-			// the actual fix, and PORTING_NOTES.md "SOMA" section for the
-			// live before/after verification.
 			vars.Add("UseColor");
 			iGpuShader *pVtxShader = mpShaderManager->CreateShader("deferred_base_vtx.glsl",eGpuShaderType_Vertex,&vars);
 			iGpuShader *pFragShader = mpShaderManager->CreateShader("deferred_gbuffer_skybox_frag.glsl", eGpuShaderType_Fragment,&vars);
@@ -557,23 +531,6 @@ namespace hpl {
 			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
 
-			// HPSL's real deferred_fog_frag.hpsl unconditionally reconstructs
-			// view-space position from gl_FragCoord using "avScreenToFarPlane"/
-			// "avInvScreenSize" (no per-vertex ray the way Dark Descent's own
-			// deferred_fog_frag.glsl gets one via a gvVertexPos varying - see
-			// that real file, which has no such uniform at all). Neither was
-			// ever registered/set for this program, so they silently stayed at
-			// GLSL's default (0,0,0,0) - real found live via a magenta/white
-			// full-screen rendering artifact (see PORTING_NOTES.md "SOMA"
-			// section). Same uniforms, same exact formula, and the same
-			// per-frame values as the (already-fixed, by a separate concurrent
-			// session's real-time-lighting fix) deferred_light_frag.hpsl case
-			// a few hundred lines down in RenderLightObject() - reusing the
-			// identical kVar_avScreenToFarPlane/kVar_avInvScreenSize slot IDs
-			// here is safe: each iGpuProgram keeps its own private id->location
-			// table, so the same small integer is already reused for
-			// kVar_afNegFarPlane between the light and fog programs in this
-			// very file.
 			mpFogProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, 0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, 0);
 		}
@@ -681,28 +638,10 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
-				// SOMA/HPSL's real deferred_light_frag.hpsl reconstructs view-space
-				// position from gl_FragCoord + two uniforms Dark Descent's own
-				// hand-written deferred_light_frag.glsl never needed (it instead
-				// interpolates a per-vertex far-plane ray, gvFarPlanePos, computed
-				// in the vertex shader) - harmless no-op registration for DD's own
-				// program (name doesn't exist there, GetVariableAsId just returns
-				// false), required for HPSL's GetPos() to produce anything but a
-				// degenerate on-axis position. See SetupProgramAndTextures().
 				mpProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
-				// HPSL's real spotlight uniform is named "a_mtxLightViewProj", not
-				// "a_mtxSpotViewProj" (confirmed via the real deferred_light_frag.hpsl
-				// source) - same shape of name-mismatch as the UseDepth/UseLinearDepth
-				// combo-variable alias found earlier. Registered alongside the
-				// existing DD-native name so SetupLightProgramVariables() can feed
-				// both spellings; each is a no-op on whichever program doesn't
-				// declare it.
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
-				// HPSL's analytic falloff exponents; per-light FalloffPow/SpotFalloffPow
-				// from the map data (iLight::GetFalloffPow()). Must never stay at
-				// GLSL's default 0: pow(x,0)==1 means no falloff at all.
 				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotFalloffPow", kVar_afSpotFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvView, eDefferredProgramMode_Lights);
@@ -846,8 +785,6 @@ namespace hpl {
 			}
 		}
 
-		////////////////////////////////////
-		// FXAA, applied in CopyToFrameBuffer(); HPSL games only (normalized UVs on a 2D accumulation buffer)
 		mpFxaaProgram = NULL;
 		if(mGBufferTextureType != eTextureType_Rect)
 		{
@@ -1179,12 +1116,10 @@ namespace hpl {
 
 	void cRendererDeferred::DrawAccumulationQuad()
 	{
-		//Since the texture v coordinate is reversed, need to do some math.
 		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
 		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
 		cVector2f vUvMin(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y );
 		cVector2f vUvMax(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y);
-		// Rect textures take pixel coordinates, 2D textures normalized ones.
 		if(mGBufferTextureType != eTextureType_Rect)
 		{
 			vUvMin = vUvMin / mvScreenSizeFloat;
@@ -1381,11 +1316,8 @@ namespace hpl {
 		// Clear depth (no need to clear any of the textures!)
 		
 		mpLowLevelGraphics->SetClearDepth(1);
-		// A float G-buffer keeps NaNs from uninitialized memory in pixels no
-		// geometry covers, and lights then propagate them; clear those too.
 		if(mGBufferType == eDeferredGBuffer_64Bit)
 		{
-			// Far depth (w=1) and a valid unit normal, so lights attenuate to exactly 0 there.
 			mpLowLevelGraphics->SetClearColor(cColor(0,0,1,1));
 			ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
 			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
@@ -1796,8 +1728,6 @@ namespace hpl {
 		lightColor.r *= pLight->GetBrightness(); lightColor.g *= pLight->GetBrightness(); lightColor.b *= pLight->GetBrightness();
 		apProgram->SetColor4f(kVar_avLightColor, lightColor);
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
-		// No-ops for Dark Descent's GLSL (variables don't exist there).
-		// HPL3 doubles both exponents when packing light instance data.
 		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow() * 2);
 
@@ -1838,13 +1768,6 @@ namespace hpl {
 				apLightData->mpShadowTexture = NULL;
 			}
 			
-			// HPSL's real deferred_light_frag.hpsl reads this matrix
-			// unconditionally for every spot light (both its UseGobo and
-			// no-gobo branches use it just to derive the near-clip/cone
-			// attenuation term, not only for gobo projection or shadowing),
-			// unlike Dark Descent's own deferred_light_frag.glsl - so this
-			// can't stay gated behind GetGoboTexture()/mbCastShadows the way
-			// the DD-native a_mtxSpotViewProj spelling below still is.
 			cMatrixf mtxFinal = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), m_mtxInvView);
 			apProgram->SetMatrixf(kVar_a_mtxLightViewProj, mtxFinal);
 			apProgram->SetFloat(kVar_afSpotNearClip, pLightSpot->GetNearClipPlane());
@@ -1913,12 +1836,6 @@ namespace hpl {
 		{
 			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 
-			// HPSL's GetPos(vec2 avUV, float afDepth) reconstructs view-space
-			// position purely from gl_FragCoord + these two uniforms (no
-			// per-vertex ray, unlike Dark Descent's own gvFarPlanePos varying -
-			// see the registration comment above). Map pixel coords directly
-			// (avUV is gl_FragCoord.xy, not normalized) onto the far-plane
-			// rectangle already computed once per frame in SetupRenderVariables().
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
 								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
@@ -3047,7 +2964,6 @@ namespace hpl {
 		if(vLights.empty()) return true;
 		std::sort(vLights.begin(), vLights.end(), SortFunc_BoxWeighted);
 
-		// Real engine clears weight to this so rgb/w is 0 outside all boxes.
 		SetFrameBuffer(mpBoxWeightBuffer, true);
 		mpLowLevelGraphics->SetClearColor(cColor(0,0,0,1.5259022e-05f));
 		ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
@@ -3114,8 +3030,6 @@ namespace hpl {
 		SetDepthTest(true);
 		return true;
 	}
-
-	//------------------------------------------------------------------------------
 
 	void cRendererDeferred::RenderLights()
 	{
@@ -3323,8 +3237,6 @@ namespace hpl {
 		if(abBind) SetTexture(alUnit, GetGbufferTexture(1));
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cRendererDeferred::RenderHpl3SSAO()
 	{
 		mbH3SSAORendered = false;
@@ -3431,8 +3343,6 @@ namespace hpl {
 		END_RENDER_PASS();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cRendererDeferred::ApplyHpl3SSAO()
 	{
 		if(mbH3SSAORendered==false) return;
@@ -3462,8 +3372,6 @@ namespace hpl {
 		SetNormalFrustumProjection();
 		SetDepthTest(true);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderDepthOfField()
 	{
@@ -3523,8 +3431,6 @@ namespace hpl {
 		END_RENDER_PASS();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cRendererDeferred::RenderFullScreenFog()
 	{
 		if(mpCurrentWorld->GetFogActive()==false) return;
@@ -3560,9 +3466,6 @@ namespace hpl {
 			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
 			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
 
-			// See the registration comment in LoadData() ("Create Fog
-			// program") - same formula as RenderLightObject()'s already-
-			// fixed deferred_light_frag.hpsl case.
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
 								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
@@ -3647,10 +3550,6 @@ namespace hpl {
 			pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
 			pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
 
-			// See the registration comment in LoadData() ("Create Fog
-			// program") - same formula as RenderFullScreenFog() above and
-			// RenderLightObject()'s already-fixed deferred_light_frag.hpsl
-			// case.
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
 								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
 								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,

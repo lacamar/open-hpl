@@ -193,12 +193,6 @@ namespace hpl {
 		//Get pin direction and pivot and transform according to entity
 		cVector3f vPivot = apJointElem->GetAttributeVector3f("WorldPos") * avScale;
 
-		// HPL3's editor (and a majority of HPL2's own .ent files) writes no PinDir and
-		// stores the joint axis as Rotation instead. Without this, the axis is a zero
-		// vector, Newton normalizes it to NaN, and every body on the joint - drawers,
-		// doors - gets a NaN transform and disappears. Derived from the 295 Dark Descent
-		// joints that carry both attributes: PinDir == MatrixRotate(Rotation,XYZ)*(0,1,0)
-		// for all 295, exactly.
 		cVector3f vPinDir;
 		if(apJointElem->GetAttributeString("PinDir","") != "")
 		{
@@ -729,7 +723,6 @@ namespace hpl {
 			//If no bones got attached to bodies, then add the entire entity to be attached. (Luis: this comment does not make much sense given the code below, not sure what the point is)
 			if(mpMesh->GetSkeleton())
 			{
-				// HPL3 exports count non-joint nodes as bones, so the counts may differ legitimately.
 				if(mapBoneStates.size() != mpEntity->GetBoneStateNum())
 				{
 					Warning("Loading entity %s: Skeletons in mesh file (%ls) and .ent file (%ls) differ\n", 

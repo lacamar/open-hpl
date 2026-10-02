@@ -13,8 +13,6 @@
 
 using namespace hpl;
 
-//----------------------------------------------
-
 class cSomaBase
 {
 public:
@@ -90,10 +88,6 @@ private:
 	std::set<tString> msetVisitedMaps;
 };
 
-//----------------------------------------------
-
 extern cSomaBase *gpSomaBase;
-
-//----------------------------------------------
 
 #endif // SOMA_BASE_H

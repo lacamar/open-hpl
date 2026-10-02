@@ -1,26 +1,14 @@
-/*
- * See SomaLoaders.h for scope notes.
- */
-
 #include "SomaLoaders.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 
 #include "resources/WorldLoaderHpm.h"
 
-//////////////////////////////////////////////////////////////////////////
-// GENERIC ENTITY LOADER
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 cSomaGenericEntityLoader::cSomaGenericEntityLoader(const tString &asName) : cEntityLoader_Object(asName)
 {
 	mbLoadAsStatic = true;
 	mbCreatesStaticEntity = true;
 }
-
-//-----------------------------------------------------------------------
 
 extern tString gsSomaSpawnName;
 
@@ -42,8 +30,6 @@ void cSomaGenericEntityLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrix
 	}
 	mbLoadAsStatic = bDynamic == false;
 }
-
-//-----------------------------------------------------------------------
 
 // UID="a b c" of the element being created (the map's hpl::cID)
 static cSomaID ElementID()
@@ -214,9 +200,6 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		cSomaLuxEntity::Pending().push_back(pEnt);
 	}
 
-	// Same instance-var handling as Rebirth's cRebirthGenericEntityLoader /
-	// Dark Descent's cLuxStaticPropLoader - the only per-instance override
-	// that's meaningful with no gameplay wrapper object to hand it to.
 	if (apInstanceVars && mpEntity)
 	{
 		mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, apInstanceVars->GetVarBool("CastShadows", true));
@@ -239,43 +222,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			pBB->SetColor(pBB->GetColor() * effectMul);
 	}
 
-	// Real root cause of a severe, map-filling magenta/maroon corruption
-	// (see PORTING_NOTES.md) initially mistaken for a resolution-dependent
-	// light-volume bug: real SOMA .ent files mark physics-only, deliberately
-	// invisible collision-blocker meshes with
-	// <UserDefinedVariables><Var Name="ShowMesh" Value="false" /></...>
-	// (confirmed live: entities/technical/block_box/block_box_bed.ent, the
-	// exact entity filling most of the screen at 00_01_apartment.hpm's real
-	// PlayerStartArea_1 - a bed's crouch-collision volume, never meant to be
-	// player-visible in the real game). Dark Descent's own LuxProp.cpp reads
-	// this same variable and calls SetVisible() on its wrapped entity
-	// (LuxProp.cpp: "pProp->mbShowMesh = GetVarBool(\"ShowMesh\", true); if
-	// (mpEntity) mpEntity->SetVisible(pProp->mbShowMesh);") - this port's own
-	// SOMA entity loader had no equivalent at all (no gameplay "Prop" wrapper
-	// object exists yet for SOMA, per this file's own header comment), so
-	// every such collision-only mesh across every real SOMA map rendered
-	// fully visible, using whatever raw diffuse texture the artist left on
-	// it (block_box.dds is a solid, saturated placeholder color, by design
-	// never meant to reach the screen). GetVarBool() here reads directly off
-	// `this` (cEntityLoader_Object inherits cResourceVarsObject, and the
-	// base class's Load() already calls LoadUserVariables(apRootElem) - the
-	// .ent file's own <UserDefinedVariables>, not apInstanceVars's separate
-	// per-map-placement <UserVariables> block above - right before calling
-	// AfterLoad()), so no extra parsing is needed here.
-	//
-	// One real sibling gap found verifying this fix at other resolutions: a
-	// second, smaller magenta patch remained visible even after the above -
-	// entities/technical/block_box/block_box_static.ent, same "technical/
-	// block_box" invisible-collision-volume family, but with EntityType=
-	// "StaticCollider" and an EMPTY <UserDefinedVariables/> (no Var children
-	// at all, confirmed by reading the real file) - GetVarBool("ShowMesh",
-	// true) legitimately finds nothing and returns the default, which is
-	// wrong specifically for this type: unlike "Prop_Rigid" (a real,
-	// sometimes-visible prop that merely happens to default visible),
-	// "StaticCollider" is BY DEFINITION collision-only - Dark Descent's own
-	// LuxStaticProp-family loaders never register a visible mesh for this
-	// type either. So the true no-authored-Var default depends on
-	// msEntityType, not a single hardcoded bool.
+	// ShowMesh=false marks collision-only meshes; StaticCollider has no such var but is never visible
 	if (mpEntity)
 	{
 		bool bDefaultShowMesh = (msEntityType != "StaticCollider");
@@ -315,18 +262,10 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	for (size_t i = 0; i < mvSoundEntities.size(); ++i) mvSoundEntities[i]->Stop(false);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// PLAYERSTART AREA LOADER
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 cSomaAreaLoader_PlayerStart::cSomaAreaLoader_PlayerStart(const tString &asName) : iAreaLoader(asName)
 {
 	mbCreatesStaticArea = true;
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaAreaLoader_PlayerStart::Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform, cWorld *apWorld)
 {
@@ -335,34 +274,18 @@ void cSomaAreaLoader_PlayerStart::Load(const tString &asName, int alID, bool abA
 	CreateAreaEntity(asName, GetName(), abActive, avSize, a_mtxTransform);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// NO-OP AREA LOADER
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 cSomaAreaLoader_Noop::cSomaAreaLoader_Noop(const tString &asName) : iAreaLoader(asName)
 {
 	mbCreatesStaticArea = true;
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaAreaLoader_Noop::Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform, cWorld *apWorld)
 {
 	CreateAreaEntity(asName, GetName(), abActive, avSize, a_mtxTransform);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// REGISTRATION
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 void RegisterSomaLoaders(cResources *apResources)
 {
-	// Full census from entities/**/*.ent's EntityType="..." across a real
-	// SOMA install - see SomaLoaders.h for how this was collected.
 	static const char* apEntityTypeNames[] = {
 		"Agent_Anglerfish",
 		"Agent_Construct_Crawler",
@@ -420,8 +343,6 @@ void RegisterSomaLoaders(cResources *apResources)
 
 	apResources->AddAreaLoader(hplNew(cSomaAreaLoader_PlayerStart, ("PlayerStart")));
 
-	// Full census from maps/*/*/*.hpm_Area's AreaType="..." across a real
-	// SOMA install, minus PlayerStart (registered above).
 	static const char* apNoopAreaTypeNames[] = {
 		"AgentRepel",
 		"AmbientLight",
@@ -453,5 +374,3 @@ void RegisterSomaLoaders(cResources *apResources)
 		apResources->AddAreaLoader(hplNew(cSomaAreaLoader_Noop, (apNoopAreaTypeNames[i])));
 	}
 }
-
-//-----------------------------------------------------------------------

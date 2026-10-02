@@ -1,12 +1,3 @@
-/*
- * SOMA's FMOD Designer sound events. An event path ("project/group/event") is resolved through the
- * project's .fdp (event -> layers -> sounds -> sound definitions -> waveforms and their banks); the
- * samples are extracted from the .fsb banks into the cache. A playing event is a cSomaSoundInstance:
- * it starts HPL2 sound entries per layer and drives their volume and pitch from the event's
- * parameters, envelopes, spawn timing and 3D rolloff. Script cSoundEntry handles are instances, and
- * sound entities whose data is an event delegate to one (iSoundEntityEvent).
- */
-
 #ifndef SOMA_SOUND_H
 #define SOMA_SOUND_H
 
@@ -30,7 +21,6 @@ class cSomaSoundEvents
 public:
 	static cSomaSoundEvents *Get();
 
-	// Sound entity data for an event path, NULL when it is not a known event (cSoundEntityManager resolver)
 	cSoundEntityData *Resolve(const tString &asEvent);
 	cSomaSoundInstance *PlayGui(const tString &asEvent, float afVolume, int alEntryType, bool abLoop = false, bool abStream = false);
 	cSomaSoundInstance *Play3D(const tString &asEvent, float afVolume, const cVector3f &avPos, int alEntryType);
@@ -142,7 +132,6 @@ public:
 	cSomaSoundInstance(cEvent *apEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType);
 	~cSomaSoundInstance();
 
-	// iSoundEntityEvent
 	void Play();
 	void Stop(bool abPlayEnd);
 	void FadeIn(float afSpeed) { FadeInTo(1, afSpeed); }

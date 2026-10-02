@@ -12,8 +12,6 @@
 
 cSomaLuxGame *cSomaLuxGame::mpInstance = NULL;
 
-//---------------------------------------
-
 cSomaLuxGame::cSomaLuxGame(cSomaScriptRuntime *apRuntime) : mpRuntime(apRuntime)
 {
 	mpInstance = this;
@@ -41,7 +39,6 @@ template <class F> void cSomaLuxGame::ForEach(F aFunc, bool abActiveEffectsOnly)
 			aFunc(p);
 }
 
-//---------------------------------------
 // Config files: user settings and keys live under $XDG_CONFIG_HOME/open-hpl/soma, seeded from the game's defaults
 
 static cConfigFile *OpenConfig(const tWString &asUserFile, const tWString &asDefaultFile)
@@ -406,9 +403,6 @@ cSomaLuxHandler *cSomaLuxGame::GetHandler(const tString &asName)
 			return p;
 	return NULL;
 }
-
-//---------------------------------------
-// Natives
 
 // Script objects returned as interface handles need a reference for the caller
 static void ReturnScript(asIScriptGeneric *g, cSomaLuxScriptable *apObj)

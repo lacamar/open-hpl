@@ -71,8 +71,6 @@ static std::vector<cXmlElement *> Children(iXmlNode *apNode, const tString &asNa
 	return v;
 }
 
-//---------------------------------------
-
 cSomaLuxVoiceHandler::cSomaLuxVoiceHandler(cEngine *apEngine) : iUpdateable("SomaLuxVoice"), mpEngine(apEngine)
 {
 	mpInstance = this;
@@ -499,8 +497,6 @@ void cSomaLuxVoiceHandler::SetPausedAll(bool abX)
 		p.mbPaused = abX;
 }
 
-//---------------------------------------
-
 cSomaLuxDialogHandler *cSomaLuxDialogHandler::Get()
 {
 	static cSomaLuxDialogHandler handler;
@@ -707,7 +703,6 @@ bool cSomaLuxDialogHandler::CharacterIsActive(const tString &asName)
 	return false;
 }
 
-//---------------------------------------
 // Natives: both handlers are singletons, any non-null pointer identifies them
 
 static int gVoiceTag, gDialogTag;

@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <cmath>
 
-//---------------------------------------
-
 // hpl::cString::GetHash64 in the official binary: FNV-style, characters taken from the end, sign-extended
 uint64_t SomaHash64(const tString &asStr)
 {
@@ -65,8 +63,6 @@ float SomaEasing(int alType, float t)
 	default: return t;
 	}
 }
-
-//---------------------------------------
 
 std::vector<cSomaLuxScriptable *> cSomaLuxScriptable::mvAll;
 
@@ -160,8 +156,6 @@ bool cSomaLuxScriptable::CallWithObject(const std::string &asDecl, void *apObj)
 {
 	return Call(asDecl, [apObj](asIScriptContext *c) { c->SetArgAddress(0, apObj); });
 }
-
-//---------------------------------------
 
 template <class T> static T *FindById(std::vector<T> &avItems, uint64_t alId)
 {
@@ -314,8 +308,6 @@ float cSomaLuxScriptable::Fader_GetValue(uint64_t alId, float afMin, float afMax
 	float fV = afMin + (afMax - afMin) * SomaEasing(alEasing, fT);
 	return abAbs ? fabsf(fV) : fV;
 }
-
-//---------------------------------------
 
 static uint64_t Id(const tString &s) { return SomaHash64(s); }
 

@@ -1,9 +1,3 @@
-/*
- * cLuxVoiceHandler and cLuxDialogHandler: .voice files (characters, scenes, subjects of lines),
- * voice lines as lang/<language>/voices/<map>/<Scene>_<Subject>_<line>_<Character>_<sound>.ogg with
- * subtitles from the map's .lang category Voices_<map>, and dialogs as branches of subjects.
- */
-
 #ifndef SOMA_LUX_VOICE_H
 #define SOMA_LUX_VOICE_H
 

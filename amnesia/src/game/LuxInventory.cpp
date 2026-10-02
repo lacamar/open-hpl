@@ -59,9 +59,7 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 	LuxCalcGuiSetScreenOffset(mvGuiSetCenterSize, mvGuiSetSize, mvGuiSetOffset);
 	mvGuiSetStartPos = cVector3f(-mvGuiSetOffset.x,-mvGuiSetOffset.y,0);
 
-	// Slot grid/item icons are laid out via mvLayout_* positions loaded from config, fixed
-	// relative to the original 800x600 canvas - same GuiScale exemption and rationale as
-	// cLuxPreMenu's splash sequence and cLuxLoadScreenHandler/cLuxCredits/cLuxJournal.
+	// fixed 800x600 layout: exempt from GuiScale
 	mpGuiSet->SetVirtualSize(mvGuiSetSize, -1000,1000, mvGuiSetOffset, true);
 	mpGuiSet->SetActive(false);
 	mpGuiSet->SetDrawMouse(false);//Init

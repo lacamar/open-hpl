@@ -46,8 +46,6 @@ namespace
 	};
 }
 
-//---------------------------------------
-
 cSomaImGui::cSomaImGui(const tString &asName, cGuiSet *apSet) : msName(asName), mpSet(apSet)
 {
 }
@@ -261,9 +259,6 @@ void cSomaImGui::Fade(uint64_t alId, int alType, const float *apGoal, float afTi
 	mmapFades[alId] = f;
 }
 
-//---------------------------------------
-// Drawing
-
 static cGuiGfxElement *GfxElement(const void *apGfx)
 {
 	const tString &sFile = StrAt(apGfx, kGfxFile);
@@ -415,9 +410,6 @@ void cSomaImGui::DrawText(const tWString &asText, const void *apFont, const cCol
 	DrawFont(asText, apFont, cVector3f(fX, fY, avPos.z + 0.2f), alAlign, cVector2f(afSizeMul), aColor);
 }
 
-//---------------------------------------
-// Layout
-
 void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize)
 {
 	if (avSize.x < 0)
@@ -471,9 +463,6 @@ bool cSomaImGui::MouseOver(const cVector3f &avPos, const cVector2f &avSize)
 		return false;
 	return mvMousePos.x >= avPos.x && mvMousePos.y >= avPos.y && mvMousePos.x < avPos.x + avSize.x && mvMousePos.y < avPos.y + avSize.y;
 }
-
-//---------------------------------------
-// Widgets
 
 void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, const cVector2f &avSize, bool abInFocus, bool abTriggered, int alInFocusGfx,
 								int alTriggeredGfx)
@@ -951,9 +940,6 @@ void cSomaImGui::DoMouse(const void *apGfx, const cVector3f &avOffset, cVector2f
 	DrawGfx(apGfx, cVector3f(mvMousePos.x, mvMousePos.y, 100) + avOffset, avSize, cColor(1, 1));
 }
 
-//---------------------------------------
-// Natives
-
 typedef const S_ &D; // a script struct passed by reference
 typedef const tString &Str;
 typedef const tWString &WStr;
@@ -1062,7 +1048,6 @@ void SomaDrawImGuis()
 
 void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 {
-	// Struct helpers
 	const char *vGfxFactories[] = {"cImGuiGfx@ f()", "cImGuiGfx@ f(const tString &in asFile)", "cImGuiGfx@ f(const tString &in asFile, eGuiMaterial aMat)",
 								   "cImGuiGfx@ f(const tString &in asFile, eGuiMaterial aMat, eImGuiGfx aType)",
 								   "cImGuiGfx@ f(const tString &in asFile, eImGuiGfx aType)", "cImGuiGfx@ f(const cImGuiGfx &in aGfx)"};
@@ -1086,7 +1071,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cImGuiFont", "uint64 GetId()", +[](S_ &g) { return (asQWORD)SomaHash64(StrAt(&g, kFontFile)); });
 	SOMA_METHOD(e, "cImGuiFrameGfx", "void CopyFrom(const cImGuiFrameGfx &in aFrame)", +[](S_ &g, D o) { memcpy((char *)&g + 16, (char *)&o + 16, 1592 - 16); });
 
-	// Contexts
 	SOMA_FUNC(e, "cImGui@ cLux_GetCurrentImGui()", +[]() { return cSomaImGui::GetCurrent() ? cSomaImGui::GetCurrent() : SomaHudImGui(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetGameHudImGui()", +[]() { return SomaHudImGui(); });
 	SOMA_FUNC(e, "cGuiSet@ cLux_GetGameHudSet()", +[]() { return SomaHudImGui()->GetSet(); });
@@ -1118,7 +1102,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, SI, "cGuiSet@ GetSet()", +[](cSomaScriptImGui *p) { return p->mpImGui->GetSet(); });
 	SOMA_METHOD(e, SI, "void DrawAll()", +[](cSomaScriptImGui *p) { p->mpImGui->DrawAll(); });
 
-	// cImGui
 	const char *T = "cImGui";
 	SOMA_METHOD(e, T, "void Begin(float afTimeStep)", +[](I *p, float t) { p->Begin(t); cSomaImGui::SetCurrent(p); });
 	SOMA_METHOD(e, T, "void End()", +[](I *p) { p->End(); });
@@ -1153,7 +1136,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetDrawUIDebugBoxes(bool abX)", +[](I *, bool) {});
 	SOMA_METHOD(e, T, "bool CheckMouseOver(const cVector3f&in avPos, const cVector2f &in avSize)", +[](I *p, V3 a, V2 s) { return p->MouseOver(a + p->GroupPos(), s); });
 
-	// States
 #define STATE(TYPE, RET, ARG, FIELD, FLAG, INTYPE, DEF1, DEF2, CRET)                                                                                        \
 	SOMA_METHOD(e, T, RET " GetState" TYPE "(uint64 alId, " ARG " aDefault" DEF1 ")", +[](I *p, asQWORD id, INTYPE d) -> CRET {                           \
 		auto it = p->mmapStates.find(id);                                                                                                                \
@@ -1206,7 +1188,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 					return a + (b - a) * SomaEasing(ease, ph <= 1 ? ph : 2 - ph);
 				});
 
-	// Timers
 	SOMA_METHOD(e, T, "void AddTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) {
 		p->mmapTimers[Id(n)] = t;
 		p->mvTimersOver.erase(std::remove(p->mvTimersOver.begin(), p->mvTimersOver.end(), Id(n)), p->mvTimersOver.end());
@@ -1235,7 +1216,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, T, "bool TimerExists(const tString&in asName)", +[](I *p, Str n) { return p->mmapTimers.count(Id(n)) > 0; });
 
-	// Modifiers
 	SOMA_METHOD(e, T, "void SetModColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mColorMul = c; });
 	SOMA_METHOD(e, T, "void SetModTextColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mTextColorMul = c; });
 	SOMA_METHOD(e, T, "void SetModUseUIPos(bool abX)", +[](I *p, bool b) { p->mMods.mbUseUIPos = b; });
@@ -1255,7 +1235,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 		}
 	});
 
-	// Previous widget
 	SOMA_METHOD(e, T, "bool PrevPressed()", +[](I *p) { return p->mPrev.mbPressed; });
 	SOMA_METHOD(e, T, "bool PrevBecamePressed()", +[](I *p) { return p->mPrev.mbBecamePressed; });
 	SOMA_METHOD(e, T, "bool PrevInFocus()", +[](I *p) { return p->mPrev.mbInFocus; });
@@ -1304,7 +1283,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, T, "void ClearItems()", +[](I *p) { p->mvItems.clear(); });
 
-	// Defaults
 #define DEFAULT(NAME, TYPE)                                                                                                            \
 	SOMA_METHOD(e, T, "void SetDefault" NAME "(const " TYPE " &in aData)", +[](I *p, D d) { p->SetDefault(TYPE, P(d)); });                \
 	SOMA_METHOD(e, T, "const " TYPE "& GetDefault" NAME "()", +[](I *p) -> const S_ & { return *(const S_ *)p->GetDefault(TYPE); });
@@ -1330,7 +1308,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 				memcpy((char *)p->GetDefault(pType) + kWFont + 16, (const char *)P(d) + 16, 48);
 	});
 
-	// Widgets
 	SOMA_METHOD(e, T, "bool DoButton(const tString&in asName,const tWString&in asText, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
 				+[](I *p, Str n, WStr t, D d, V3 pos, V2 size) { return p->DoButton(n, t, P(d), pos, size, 0); });
 	SOMA_METHOD(e, T, "bool DoButton(const tString&in asName,const tWString&in asText, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
@@ -1409,7 +1386,6 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 				+[](I *p, float f, V3 pos, V2 size) { p->DoGauge(p->GetDefault("cImGuiGaugeData"), f, pos, size); });
 	SOMA_METHOD(e, T, "void DoMouse(const cImGuiGfx &in aGfx, const cVector3f&in avOffset=0, const cVector2f&in avSize=-1)", +[](I *p, D g, V3 off, V2 size) { p->DoMouse(P(g), off, size); });
 
-	// Raw drawing
 	SOMA_METHOD(e, T, "void DrawGfx(const cImGuiGfx &in aGfx, const cVector3f&in avPos, const cVector2f&in avSize=-1, const cColor&in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) { p->DrawGfx(P(g), pos, size, c); });
 	SOMA_METHOD(e, T, "void DrawAlignedGfx(const cImGuiGfx &in aGfx, const cVector3f &in avPos, eImGuiAlign aAlignment, const cVector2f&in avSize=-1, const cColor &in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",

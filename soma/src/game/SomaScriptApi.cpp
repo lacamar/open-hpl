@@ -12,8 +12,6 @@
 #include <sstream>
 #include <unordered_map>
 
-//---------------------------------------
-
 static std::vector<std::string> SplitTabs(const std::string &asLine)
 {
 	std::vector<std::string> v;
@@ -117,9 +115,6 @@ bool cSomaScriptApi::Load(const std::string &asFile)
 	}
 	return true;
 }
-
-//---------------------------------------
-// Default values for stubs
 
 static void *DefaultInstance(asIScriptEngine *apEngine, int alTypeId)
 {
@@ -417,8 +412,6 @@ static void StubCastSelf(asIScriptGeneric *apGen)
 {
 	*(void **)apGen->GetAddressOfReturnLocation() = apGen->GetObject();
 }
-
-//---------------------------------------
 
 static bool HasProperty(asITypeInfo *apType, const std::string &asDecl)
 {

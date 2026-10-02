@@ -1,10 +1,3 @@
-/*
- * cLuxSoundscapeHandler: Soundscape areas around the camera pick a background sound and fade named
- * sound entities in and out per level (Global, Area, Room, SubRoom); the areas around the player's
- * body give the sound prefix used by Sound_CreateAtEntity_UsePrefix and footsteps. Reverb areas pick the
- * global reverb (FMOD Ex presets, faded in the mB domain, sent to an EFX EAX reverb).
- */
-
 #ifndef SOMA_SOUNDSCAPE_H
 #define SOMA_SOUNDSCAPE_H
 

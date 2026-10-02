@@ -60,7 +60,7 @@ public:
 	int mlShadowQuality;
 	int mlShadowRes;
 
-	int mlGuiScale; //Integer scale factor for the in-game GUI (menus/HUD/dialogs/subtitles). 1 = original size.
+	int mlGuiScale;
 
 	bool mbSSAOActive;
 	int mlSSAOSamples;

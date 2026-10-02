@@ -1,5 +1,3 @@
-// Native boot screen (cLuxLoadHandler): Premenu.png, loading bar, brain icon, while the main menu map loads.
-
 #ifndef SOMA_SPLASH_H
 #define SOMA_SPLASH_H
 
@@ -8,8 +6,6 @@
 using namespace hpl;
 
 class cSomaBase;
-
-//----------------------------------------------
 
 class cSomaSplash : public iUpdateable
 {
@@ -58,7 +54,5 @@ private:
 	bool mbFinished;
 	bool mbMouseWasDown;
 };
-
-//----------------------------------------------
 
 #endif // SOMA_SPLASH_H

@@ -268,7 +268,7 @@ void StringSplit_Generic(asIScriptGeneric *gen)
         CScriptString *part = new CScriptString();
         part->buffer.assign(&str->buffer[prev], pos-prev);
         array->InsertLast(&part);
-        part->Release(); // the array holds its own reference now
+        part->Release();
 
         // Find the next part
         prev = pos + (int)delim->buffer.length();
@@ -278,7 +278,7 @@ void StringSplit_Generic(asIScriptGeneric *gen)
     CScriptString *part = new CScriptString();
     part->buffer.assign(&str->buffer[prev]);
     array->InsertLast(&part);
-    part->Release(); // the array holds its own reference now
+    part->Release();
 
     // Return the array by handle
     *(CScriptArray**)gen->GetAddressOfReturnLocation() = array;
@@ -352,9 +352,6 @@ void RegisterScriptStringUtils(asIScriptEngine *engine)
 {
     int r;
 
-    // split()/join() need the "array" template type. Register it here (with the
-    // legacy "T[]" bracket syntax kept alive via the defaultArray flag) since
-    // nothing else in the engine currently registers "array".
     RegisterScriptArray(engine, true);
 
     r = engine->RegisterGlobalFunction("string@ substring(const string &in, int, int)", asFUNCTION(StringSubString_Generic), asCALL_GENERIC); assert(r >= 0);

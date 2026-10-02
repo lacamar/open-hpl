@@ -1,11 +1,5 @@
-/*
- * Phase 0 scaffolding entry point for the Amnesia: Rebirth game module.
- * Mirrors soma/src/game/Main.cpp - see that file for the pattern.
- */
 
 #include "RebirthBase.h"
-
-//---------------------------------------
 
 int hplMain(const tString &asCommandline)
 {

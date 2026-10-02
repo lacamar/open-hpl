@@ -226,14 +226,6 @@ namespace hpl {
             mvScreenSize = cVector2l(800,600);
             mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         } else if (abFullscreen) {
-            // Wayland has no exclusive-fullscreen modesetting - compositors either
-            // ignore SDL_WINDOW_FULLSCREEN's mode-switch request outright or reject
-            // a size that doesn't match an existing output mode, leaving the window
-            // stuck at desktop size anyway but having gone through a jarring
-            // attempted mode change first. SDL_WINDOW_FULLSCREEN_DESKTOP (borderless,
-            // no modeset) is the documented-recommended flag for compositor-managed
-            // desktops and degrades to the same real modeset on X11/Windows outputs
-            // that do support it, so only divert on Wayland specifically.
             const char *pDriver = SDL_GetCurrentVideoDriver();
             if(pDriver != NULL && cString::ToLowerCase(pDriver) == "wayland")
             {
@@ -245,10 +237,6 @@ namespace hpl {
             }
         }
 
-        // Under the opt-in headless automation server (see HeadlessControl.h),
-        // still create a real window/GL context - CopyFrameBufferToBitmap()
-        // needs one to read pixels from - but keep it off-screen so scripted
-        // test runs never pop a window in front of whoever's at the desktop.
         if (getenv("OPENHPL_HEADLESS_SOCKET") != NULL) {
             mlFlags |= SDL_WINDOW_HIDDEN;
         }
@@ -671,11 +659,6 @@ namespace hpl {
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
         mbGrab = abX;
-        // Skip the real X11 grab under headless testing - the window is never
-        // shown (see the SDL_WINDOW_HIDDEN block in Init() above), and calling
-        // it anyway exercises real pointer/keyboard grab machinery against the
-        // physical desktop's X server for no benefit (headless camera control
-        // goes through HeadlessControl's JSON protocol, not OS input).
         if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         if (mpScreen) {
@@ -688,12 +671,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
-		// Same headless guard as SetWindowGrab() above - and more directly
-		// motivated: on X11, SDL2 relative-mouse-mode emulation periodically
-		// calls XWarpPointer() to re-center the real cursor, which is real
-		// synthetic input activity against the physical desktop's X server
-		// even though the game window is hidden. Observed waking the monitor
-		// during headless mouselook-driven camera testing.
 		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL) return;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
@@ -828,26 +805,14 @@ namespace hpl {
 #endif
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cLowLevelGraphicsSDL::CheckAndUpdateScreenSize()
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-		// Nothing in this engine listens for SDL_WINDOWEVENT_RESIZED/SIZE_CHANGED
-		// (e.g. a Wayland compositor fullscreening or tiling this window on its
-		// own, outside the engine's own SDL_WINDOW_FULLSCREEN_DESKTOP path), so
-		// mvScreenSize can silently go stale: the real window/backbuffer grows or
-		// shrinks but every size-dependent render target/viewport calc keeps using
-		// the old cached value, leaving rendering pinned to a stale-sized rectangle
-		// with the rest of the (now larger) window showing undrawn framebuffer
-		// content. Called once a frame from cGraphics::Update() so any such resize
-		// is caught and reconciled within a frame, without needing new SDL event
-		// plumbing threaded through the input layer.
 		if(mpScreen == NULL) return false;
 
 		int lW = 0, lH = 0;
 		SDL_GetWindowSize(mpScreen, &lW, &lH);
-		if(lW <= 0 || lH <= 0) return false; // e.g. minimized - keep the last known good size
+		if(lW <= 0 || lH <= 0) return false;
 
 		if(lW == mvScreenSize.x && lH == mvScreenSize.y) return false;
 
@@ -857,8 +822,6 @@ namespace hpl {
 		return false;
 #endif
 	}
-
-	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
 	// DATA CREATION
@@ -1161,7 +1124,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// Wayland has no gamma ramps; same curve as SDL_SetWindowBrightness
 	void cLowLevelGraphicsSDL::ApplyShaderGamma()
 	{
 		if(mlGammaProgram == 0)
@@ -1667,9 +1629,6 @@ namespace hpl {
 		GLenum LastTarget = mvCurrentTextureTarget[alUnit];
 
 		//Check if multi texturing is supported.
-		// Skip the driver call when this unit is already the active one -
-		// SetTexture is called for every texture unit of every material, so
-		// consecutive calls on the same unit (very common) used to reselect it for nothing.
 		if(GLEW_ARB_multitexture && mlCurrentActiveTextureUnit != (int)alUnit){
 			glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
 			mlCurrentActiveTextureUnit = (int)alUnit;
@@ -1695,7 +1654,6 @@ namespace hpl {
 
 			glBindTexture(NewTarget, pSDLTex->GetTextureHandle());
 
-			//Target is already enabled from a previous bind on this unit unless it just changed above.
 			if(NewTarget != LastTarget) glEnable(NewTarget);
 
 			//if it is a render target we need to do some more binding.

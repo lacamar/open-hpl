@@ -1,9 +1,3 @@
-/*
- * The script-driven parts of SOMA's game layer: user modules (config/Modules.cfg), effects
- * (config/Effects.cfg) and the game.cfg handlers/player, created once, driven through the
- * iLuxUpdateable_ScriptInterface callbacks in the official order (cLuxMapHandler::SetCurrentMap).
- */
-
 #ifndef SOMA_LUX_GAME_H
 #define SOMA_LUX_GAME_H
 

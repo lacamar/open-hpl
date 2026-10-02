@@ -1,13 +1,7 @@
-/*
- * See SomaGammaScreen.h for scope notes.
- */
-
 #include "SomaGammaScreen.h"
 #include "SomaBase.h"
 
 #include <fstream>
-
-//---------------------------------------
 
 cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("SomaGammaScreen")
 {
@@ -24,17 +18,12 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	mpGuiSet = mpGui->CreateSet("GammaScreen", mpGuiSkin);
 	mpGuiSet->SetDrawMouse(true);
 
-	// GUI-only viewport, same idiom as cSomaSplash - no camera/world exists
-	// yet at this point in boot.
 	mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL, true);
 	mpViewport->AddGuiSet(mpGuiSet);
 
 	mpGuiSet->SetActive(true);
 	mpGui->SetFocus(mpGuiSet);
 
-	// Real assets, confirmed present at graphics/startmenu/misc/ in a real
-	// SOMA install - gamma_background.tga is full-bleed, gamma.tga is the
-	// checkerboard test pattern the user adjusts until barely visible.
 	mpBackgroundGfx = mpGui->CreateGfxTexture("gamma_background.tga", eGuiMaterial_Diffuse, eTextureType_2D);
 	mpCheckerboardGfx = mpGui->CreateGfxTexture("gamma.tga", eGuiMaterial_Alpha, eTextureType_2D);
 
@@ -45,12 +34,6 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 									   (mvScreenSize.y - mvCheckerboardSize.y) * 0.5f - 40);
 	}
 
-	////////////////////////////////////
-	// Instructional text - real GammaInstructions0 (config/base_english.lang):
-	// "Adjust gamma so you can barely make out the details on the robot
-	// poster on the left." Real font/size is Sansation Large Bold at 24
-	// (MenuHandler.hps's GuiGammaCorrection()) - reused here via the same
-	// font file SomaMainMenu.cpp's own real button font uses.
 	mpInstructionsFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large_bold.fnt");
 	mfInstructionsFontHeight = 24.0f;
 	mfInstructionsRowHeight = mfInstructionsFontHeight + 6.0f;
@@ -68,18 +51,10 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 
 		float fBlockHeight = mfInstructionsRowHeight * (float)mvInstructionRows.size();
 
-		// Sits in a horizontal band directly above the checkerboard test
-		// pattern (and, in turn, the Gamma slider/Continue button below it -
-		// see the constructor below) - matches the real layout's own
-		// instructions-above-the-slider-row placement, clamped so it never
-		// scrolls off the top of a short headless window.
 		mvInstructionsPos = cVector2f((mvScreenSize.x - fWrapWidth) * 0.5f,
 									   cMath::Max(20.0f, mvCheckerboardPos.y - 20.0f - fBlockHeight));
 	}
 
-	////////////////////////////////////
-	// Gamma slider - same mechanism as Dark Descent's cLuxPreMenu
-	// (amnesia/src/game/LuxPreMenu.cpp), same min/max range.
 	mfGammaMinValue = 0.3f;
 	mfGammaMaxValue = 2.0f;
 
@@ -90,8 +65,6 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	mpSlider = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, vSliderPos, vSliderSize, 100, NULL);
 	mpSlider->AddCallback(eGuiMessage_SliderMove, this, &cSomaGammaScreen::GammaSliderMoved_static_gui);
 
-	// Initialize the slider to the engine's current gamma value, same
-	// clamp/round math as cLuxPreMenu::SetGammaValueToInput().
 	{
 		float fCurrentGamma = mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection();
 		fCurrentGamma = cMath::Clamp(fCurrentGamma, mfGammaMinValue, mfGammaMaxValue);
@@ -99,11 +72,7 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 		mpSlider->SetValue(lValue, false);
 	}
 
-	////////////////////////////////////
-	// Continue button - deliberately a real widget (not a global "any
-	// click continues" like cSomaSplash uses) so dragging the slider can
-	// never be misread as "continue" - only Enter/Escape or clicking this
-	// specific button advance past the screen.
+	// Real button: dragging the slider must not count as continue
 	cVector2f vButtonSize(120, 30);
 	cVector3f vButtonPos((mvScreenSize.x - vButtonSize.x) * 0.5f,
 						  vSliderPos.y + vSliderSize.y + 30, 0.1f);
@@ -114,13 +83,9 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	mpGuiSet->SetFocusedWidget(mpContinueButton);
 }
 
-//-----------------------------------------------------------------------
-
 cSomaGammaScreen::~cSomaGammaScreen()
 {
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaGammaScreen::ShouldShowAndMarkSeen()
 {
@@ -143,8 +108,6 @@ bool cSomaGammaScreen::ShouldShowAndMarkSeen()
 
 	return true;
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaGammaScreen::Finish()
 {
@@ -169,8 +132,6 @@ void cSomaGammaScreen::Finish()
 	}
 }
 
-//-----------------------------------------------------------------------
-
 bool cSomaGammaScreen::AnyContinueInputThisFrame()
 {
 	cInput *pInput = mpEngine->GetInput();
@@ -180,12 +141,6 @@ bool cSomaGammaScreen::AnyContinueInputThisFrame()
 	iKeyboard *pKeyboard = pInput->GetKeyboard();
 	if (pKeyboard && pKeyboard->KeyIsPressed())
 	{
-		// Same drain-one-event pattern as cSomaSplash::AnySkipInputThisFrame()
-		// - only reacts to real, distinct key presses, and only Enter/
-		// Escape/Space specifically (not "any key", since typing isn't
-		// possible on this screen anyway, but being explicit matches the
-		// real intent - confirm/skip keys, not e.g. arrow keys which a
-		// keyboard-driven slider-focus-nav might otherwise want).
 		eKey key = pKeyboard->GetKey().mKey;
 		if (key == eKey_Return || key == eKey_Escape || key == eKey_Space)
 			return true;
@@ -194,8 +149,6 @@ bool cSomaGammaScreen::AnyContinueInputThisFrame()
 
 	return false;
 }
-
-//-----------------------------------------------------------------------
 
 void cSomaGammaScreen::Update(float afTimeStep)
 {
@@ -220,8 +173,6 @@ void cSomaGammaScreen::Update(float afTimeStep)
 		Finish();
 }
 
-//-----------------------------------------------------------------------
-
 void cSomaGammaScreen::OnDraw(float afFrameTime)
 {
 	if (mbFinished)
@@ -233,12 +184,7 @@ void cSomaGammaScreen::OnDraw(float afFrameTime)
 	if (mpCheckerboardGfx)
 		mpGuiSet->DrawGfx(mpCheckerboardGfx, cVector3f(mvCheckerboardPos.x, mvCheckerboardPos.y, 0.1f), mvCheckerboardSize);
 
-	// Real GammaInstructions0 text - see the constructor for how
-	// mvInstructionRows/mvInstructionsPos were computed. The "glitchy S"
-	// logo mark visible in the top-left corner of the reference screenshot
-	// is already baked into gamma_background.tga's own pixels (confirmed by
-	// viewing the real texture directly - a poster graphic within the scene
-	// photo, not a separate overlay) - no extra draw call needed for it.
+	// The logo is baked into gamma_background.tga
 	if (mpInstructionsFont)
 	{
 		for (size_t i = 0; i < mvInstructionRows.size(); ++i)
@@ -249,8 +195,6 @@ void cSomaGammaScreen::OnDraw(float afFrameTime)
 		}
 	}
 }
-
-//-----------------------------------------------------------------------
 
 bool cSomaGammaScreen::GammaSliderMoved_static_gui(void *apObject, iWidget *apWidget, const cGuiMessageData &aData)
 {
@@ -267,8 +211,6 @@ bool cSomaGammaScreen::GammaSliderMoved(iWidget *apWidget, const cGuiMessageData
 	return true;
 }
 
-//-----------------------------------------------------------------------
-
 bool cSomaGammaScreen::ContinuePressed_static_gui(void *apObject, iWidget *apWidget, const cGuiMessageData &aData)
 {
 	return ((cSomaGammaScreen *)apObject)->ContinuePressed(apWidget, aData);
@@ -279,5 +221,3 @@ bool cSomaGammaScreen::ContinuePressed(iWidget *apWidget, const cGuiMessageData 
 	Finish();
 	return true;
 }
-
-//-----------------------------------------------------------------------

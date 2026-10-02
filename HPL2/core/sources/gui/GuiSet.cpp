@@ -79,11 +79,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// Global integer (or fractional) GUI scale factor - see cGuiSet::SetGlobalGuiScale()
-	// in GuiSet.h for what this does and why it's implemented this way.
 	float cGuiSet::mfGlobalGuiScale = 1.0f;
-
-	//-----------------------------------------------------------------------
 
 	// This is temporary, but works now. Used for sorting widgets Z-wise before sending input
 
@@ -1278,27 +1274,6 @@ namespace hpl {
 		mfVirtualMinZ = afMinZ;
 		mfVirtualMaxZ = afMaxZ;
 
-		////////////////////////////////////////////////////////////////////////////////
-		// Apply the global GUI scale by zooming the visible virtual-coordinate window in
-		// around the set's own origin (avOffset - whatever the caller already uses for its
-		// own aspect-ratio centering, (0,0) for sets like MainMenu that don't bother). At
-		// scale 1 this is an identity transform (avSize/avOffset pass through unchanged).
-		// At scale N, only a 1/N (linear) portion of the original virtual space remains
-		// visible, but since it is stretched to fill the same real screen area, everything
-		// drawn in it (and every mouse-hit-test against it, since GetVirtualSize()/
-		// GetVirtualSizeOffset() are also used for that - see cGui::SendMousePos in
-		// Gui.cpp) ends up N times bigger on screen.
-		//
-		// This used to zoom around the centre of avSize instead of avOffset, which - since
-		// widget positions throughout the game (amnesia/src/game/Lux*.cpp) are hardcoded in
-		// absolute virtual units measured from (0,0), not from the canvas centre - pushed
-		// most of a set's actual content outside the now-smaller visible window rather than
-		// keeping it on screen. Anchoring at the origin instead keeps (0,0)-relative content
-		// on screen at any scale; content already positioned via GetVirtualSize()/2 (centred
-		// dialogs, popups) is unaffected either way, since that math is expressed in the
-		// already-scaled GetVirtualSize() and doesn't depend on where the zoom is anchored.
-		// Content far from the origin (bottom/right-heavy layouts) can still clip at high
-		// scale - a true per-widget-anchor fix remains unattempted, see PORTING_NOTES.md.
 		mvVirtualSize = (mfGlobalGuiScale != 1.0f && abIgnoreGlobalScale==false) ? avSize / mfGlobalGuiScale : avSize;
 		mvVirtualSizeOffset = avOffset;
 	}

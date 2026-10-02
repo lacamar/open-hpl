@@ -206,8 +206,6 @@ namespace hpl {
 		UpdateVertexColors();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cBillboard::SetBrightness(float afX)
 	{
 		if(mfBrightness == afX) return;

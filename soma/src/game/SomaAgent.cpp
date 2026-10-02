@@ -91,8 +91,6 @@ namespace
 	struct cAgent;
 	cAgent *Agent(E *apEnt);
 
-	//---------------------------------------
-
 	struct cAgentStateMachine : cAgentComponent
 	{
 		std::map<int, tString> mapStates, mapSubStates;
@@ -202,8 +200,6 @@ namespace
 				mpEntity->CallBool("bool State_Default_Message(int)", [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); }, false);
 		}
 	};
-
-	//---------------------------------------
 
 	struct cAgentSpeedState
 	{
@@ -371,8 +367,6 @@ namespace
 			PlayMoveAnim(lAnim, fSpeed);
 		}
 	};
-
-	//---------------------------------------
 
 	struct cNodeData
 	{
@@ -646,8 +640,6 @@ namespace
 		}
 	};
 
-	//---------------------------------------
-
 	struct cAgentBarkMachine : cAgentComponent
 	{
 		struct cState
@@ -694,8 +686,6 @@ namespace
 	{
 		cGenericComponent(E *p, int alType) : cAgentComponent(p, alType) {}
 	};
-
-	//---------------------------------------
 
 	struct cAgent
 	{
@@ -844,8 +834,6 @@ namespace
 	}
 }
 
-//-----------------------------------------------------------------------
-
 void SomaCreateAgent(cSomaLuxEntity *apEnt)
 {
 	cSomaLuxMap *pMap = apEnt->mpMap;
@@ -965,8 +953,6 @@ void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio)
 	}
 }
 
-//-----------------------------------------------------------------------
-
 void SomaRegisterAgentNatives(asIScriptEngine *e)
 {
 	typedef const tString &S;
@@ -974,7 +960,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 
 	SOMA_FUNC(e, "uint64 H64(const tString&in asStr)", +[](S s) -> asQWORD { return Hash64(s); });
 
-	// Agent
 	const char *A = "cLuxAgent";
 	SOMA_METHOD(e, A, "iCharacterBody@ GetCharBody()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mpBody : (iCharacterBody *)NULL; });
 	SOMA_METHOD(e, A, "float GetDistanceToPlayer()", +[](E *p) { return cMath::Vector3Dist(AgentPos(p), PlayerFeet()); });
@@ -1089,7 +1074,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 				+[](E *p, int m, void *, V v, int l) { SomaAgentSendMessage(p, m, v, l); });
 	SOMA_METHOD(e, A, "void SetRecieveMessageCallback(const tString&in asCallbackFunc)", +[](E *p, S f) { if (cAgent *a = Agent(p)) a->msMessageCallback = f; });
 
-	// Component factories
 	SOMA_FUNC(e, "cLuxStateMachine@ cLux_CreateEntityComponent_StateMachine(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentStateMachine(p)); });
 	SOMA_FUNC(e, "cLuxCharMover@ cLux_CreateEntityComponent_CharMover(iLuxEntity @apEntity, iCharacterBody @apCharBody)",
 			  +[](E *p, iCharacterBody *b) { return AddComponent(p, new cAgentCharMover(p, b)); });
@@ -1114,7 +1098,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		return a ? a->Find<cAgentComponent>(t) : NULL;
 	});
 
-	// State machine
 	const char *T = "cLuxStateMachine";
 	typedef cAgentStateMachine SM;
 	SOMA_METHOD(e, T, "void AddState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapStates[id] = n; });
@@ -1135,7 +1118,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool TimerExists(const tString& in asId)", +[](SM *s, S id) { return s->TimerExists(Hash64(id)); });
 	SOMA_METHOD(e, T, "cLuxEntityMessageData@ GetCurrentMessageData()", +[](SM *s) -> void * { cAgent *a = Agent(s->mpEntity); return a ? a->mMessage.mBlock : NULL; });
 
-	// Char mover
 	T = "cLuxCharMover";
 	typedef cAgentCharMover CM;
 	SOMA_METHOD(e, T, "iCharacterBody@ GetCharBody()", +[](CM *m) { return m->mpBody; });
@@ -1197,7 +1179,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetupIdleExtra(const tString&in asAnimName, float afMinWait, float afMaxWait, bool abPauseProceduralAnims)", +[](CM *, S, float, float, bool) {});
 	SOMA_METHOD(e, T, "bool GetIdleExtraAnimActive()", +[](CM *) { return false; });
 
-	// Pathfinder
 	T = "cLuxPathfinder";
 	typedef cAgentPathfinder PF;
 	SOMA_METHOD(e, T, "void MoveTo(const cVector3f&in avPos, float afUpdateFreq, bool abExactStopAtEnd, const tString&in asResultCallback=\"\", bool abCallbackInMap=false)",
@@ -1302,7 +1283,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "const tString& GetAnimName()", +[](cAgentTrackNode *n) -> const tString & { return n->msAnim; });
 	SOMA_METHOD(e, T, "bool GetLoopAnim()", +[](cAgentTrackNode *n) { return n->mbLoopAnim; });
 
-	// Bark machine
 	T = "cLuxBarkMachine";
 	typedef cAgentBarkMachine BM;
 	SOMA_METHOD(e, T, "void AddState(int alId)", +[](BM *b, int id) { b->mapStates[id]; b->mlEdit = id; });
@@ -1318,7 +1298,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetActive(bool abX)", +[](BM *b, bool x) { b->mbActive = x; });
 	SOMA_METHOD(e, T, "bool IsActive()", +[](BM *b) { return b->mbActive; });
 
-	// Sound listener
 	T = "cLuxSoundListener";
 	typedef cAgentSoundListener SL;
 	SOMA_METHOD(e, T, "void LoadFromInstanceVariables(cResourceVarsObject@ apInstanceVars)", +[](SL *, cResourceVarsObject *) {});
@@ -1340,7 +1319,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetMaxPlayerPhysicsInteractTime(float afX)", +[](SL *l, float x) { l->mfMaxPlayerInteractTime = x; });
 	SOMA_METHOD(e, T, "float GetMaxPlayerPhysicsInteractTime()", +[](SL *l) { return l->mfMaxPlayerInteractTime; });
 
-	// Head tracker
 	T = "cLuxHeadTracker";
 	typedef cAgentHeadTracker HT;
 	SOMA_METHOD(e, T, "void SetTrackEntity(iLuxEntity @apEntity)", +[](HT *h, E *p) { h->mpTrack = p; });
