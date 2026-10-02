@@ -161,7 +161,7 @@ namespace hpl {
 				{
 					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
 					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { ++lNanBounds; continue; }
-					if(vExt.x > 100 || vExt.y > 100 || vExt.z > 100)
+					if((vExt.x > 100 || vExt.y > 100 || vExt.z > 100) && !(pEnt->GetMesh() && pEnt->GetMesh()->GetFullPath().empty()))
 					{
 						if(lOversized < 12) vOversized.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")));
 						++lOversized;

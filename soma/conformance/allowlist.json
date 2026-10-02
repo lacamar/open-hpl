@@ -1,6 +1,6 @@
 {
  "exposure_area_first_only": "loader applies only the first ExposureArea as a global value",
- "terrain": "no terrain renderer (SOMA_PLAN P4.9)",
+ "terrain": "geometry and collision only; no blend layers or undergrowth (SOMA_PLAN P4.9)",
  "tracks": {
   "Compound": "editor grouping; semantics unverified (SOMA_PLAN P4.6)",
   "DetailMeshes": "not implemented (SOMA_PLAN P4.8)",
