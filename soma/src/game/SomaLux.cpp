@@ -94,7 +94,7 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 
 bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 {
-	apEnt->ApplyInstanceVars();
+	apEnt->ApplyInstanceVars(GetEntity(tString("Player")));
 	static const char *vGroups[] = {"PropTypes", "AreaTypes", "LiquidAreaTypes", "LiquidAreaTypes", "CritterTypes", "AgentTypes"};
 	if (apEnt->meType >= (int)(sizeof(vGroups) / sizeof(vGroups[0])))
 		return false;

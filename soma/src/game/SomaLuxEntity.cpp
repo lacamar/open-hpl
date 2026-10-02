@@ -506,7 +506,7 @@ void cSomaLuxEntity::UpdateMove(float afTimeStep)
 	RunMoveCallback(this, msMoveCallback);
 }
 
-void cSomaLuxEntity::ApplyInstanceVars()
+void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 {
 	cResourceVarsObject &v = mInstanceVars;
 	if (v.GetVarString("PlayerInteractCallback", "") != "")
@@ -526,9 +526,15 @@ void cSomaLuxEntity::ApplyInstanceVars()
 	tStringVec vEnts, vFuncs;
 	cString::GetStringVec(v.GetVarString("CC_Entities", ""), vEnts, &sSep);
 	cString::GetStringVec(v.GetVarString("CC_Funcs", ""), vFuncs, &sSep);
+	// iLuxEntity::SetupCollideCallbacks: "player" goes on the player's container, this entity as child
 	for (size_t i = 0; i < vEnts.size() && vFuncs.empty() == false; ++i)
-		mvCollideCallbacks.push_back(cCollideCallback{cString::ToLowerCase(vEnts[i]) == "player" ? tString("Player") : vEnts[i],
-													  vFuncs[std::min(i, vFuncs.size() - 1)]});
+	{
+		const tString &sFunc = vFuncs[std::min(i, vFuncs.size() - 1)];
+		if (cString::ToLowerCase(vEnts[i]) != "player")
+			mvCollideCallbacks.push_back(cCollideCallback{vEnts[i], sFunc});
+		else if (apPlayer && apPlayer != this)
+			apPlayer->mvCollideCallbacks.push_back(cCollideCallback{msName, sFunc});
+	}
 	if (v.GetVarString("UserVar", "") != "")
 		mmapScriptVars[""] = v.GetVarString("UserVar", "");
 	msConnectionCallback = v.GetVarString("ConnectionStateChangeCallback", "");

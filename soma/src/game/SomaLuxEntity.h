@@ -136,7 +136,7 @@ public:
 	float mfLookAtTime = 0;
 	bool mbLookedAt = false;
 	// cLuxPropLoader::AfterLoad: callbacks and interaction settings from the map's UserVariables
-	void ApplyInstanceVars();
+	void ApplyInstanceVars(cSomaLuxEntity *apPlayer);
 	bool mbEffectsActive = true;
 
 	struct cCollideCallback
