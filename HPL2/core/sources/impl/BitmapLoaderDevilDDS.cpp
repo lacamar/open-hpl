@@ -226,6 +226,8 @@ namespace hpl {
 		//Det properties on the pixel data
 		int lBytesPerPixel = ilGetInteger(IL_IMAGE_BYTES_PER_PIXEL);
 		ePixelFormat pixelFormat = DevilPixelFormatToHPL(ilGetInteger(IL_IMAGE_FORMAT));
+		if (ilGetInteger(IL_IMAGE_TYPE) == IL_FLOAT && pixelFormat == ePixelFormat_RGBA)
+			pixelFormat = ePixelFormat_RGBA32;
 
 		//Get the compression format used (if any)
 		int lDXTFormat = ilGetInteger( IL_DXTC_DATA_FORMAT );
