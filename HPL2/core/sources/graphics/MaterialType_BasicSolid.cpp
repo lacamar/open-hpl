@@ -57,6 +57,13 @@ namespace hpl {
 	#define kVar_a_mtxInvViewRotation			6
 	#define kVar_avColorMul						7
 	#define kVar_avIlluminationMul				8
+	#define kVar_afT							9
+	#define kVar_avSwayProperties				10
+	#define kVar_avSwayOctavesMul				11
+	#define kVar_afSwayYFreqMul					12
+	#define kVar_avSwaySingleDirection			13
+	#define kVar_avSwaySinglesampleDirection	14
+	#define kVar_a_mtxModel						15
 
 
 	//------------------------------
@@ -69,8 +76,11 @@ namespace hpl {
 	#define eFeature_Diffuse_Skeleton		eFlagBit_4
 	#define eFeature_Diffuse_EnvMap			eFlagBit_5
 	#define eFeature_Diffuse_CubeMapAlpha	eFlagBit_6
+	#define eFeature_Diffuse_Sway			eFlagBit_7
+	#define eFeature_Diffuse_SwaySingleDir	eFlagBit_8
+	#define eFeature_Diffuse_SwayMap		eFlagBit_9
 		
-	#define kDiffuseFeatureNum 7
+	#define kDiffuseFeatureNum 10
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -81,6 +91,9 @@ namespace hpl {
 		cProgramComboFeature("UseSkeleton",	kPC_VertexBit),	
 		cProgramComboFeature("UseEnvMap", kPC_VertexBit | kPC_FragmentBit),
 		cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
+		cProgramComboFeature("UseSway", kPC_VertexBit),
+		cProgramComboFeature("UseSwaySingleDir", kPC_VertexBit),
+		cProgramComboFeature("UseSwayMap", kPC_VertexBit),
 	};
 
 	//------------------------------
@@ -105,8 +118,11 @@ namespace hpl {
 	#define eFeature_Z_Dissolve					eFlagBit_2
 	#define eFeature_Z_DissolveAlpha			eFlagBit_3
 	#define eFeature_Z_UseAlphaDissolveFilter	eFlagBit_4
+	#define eFeature_Z_Sway						eFlagBit_5
+	#define eFeature_Z_SwaySingleDir			eFlagBit_6
+	#define eFeature_Z_SwayMap					eFlagBit_7
 	
-	#define kZFeatureNum 5
+	#define kZFeatureNum 8
 
 	cProgramComboFeature vZFeatureVec[] =
 	{
@@ -114,8 +130,31 @@ namespace hpl {
 			cProgramComboFeature("UseUvAnimation",				kPC_VertexBit),
 			cProgramComboFeature("UseDissolve",					kPC_FragmentBit),
 			cProgramComboFeature("UseDissolveAlphaMap",			kPC_FragmentBit),
-			cProgramComboFeature("UseAlphaUseDissolveFilter",	kPC_FragmentBit)
+			cProgramComboFeature("UseAlphaUseDissolveFilter",	kPC_FragmentBit),
+			cProgramComboFeature("UseSway",						kPC_VertexBit),
+			cProgramComboFeature("UseSwaySingleDir",			kPC_VertexBit),
+			cProgramComboFeature("UseSwayMap",					kPC_VertexBit),
 	};
+
+	static void AddSwayVariableIds(cProgramComboManager *apManager, int alMode)
+	{
+		apManager->AddGenerateProgramVariableId("afT", kVar_afT, alMode);
+		apManager->AddGenerateProgramVariableId("avSwayProperties", kVar_avSwayProperties, alMode);
+		apManager->AddGenerateProgramVariableId("avSwayOctavesMul", kVar_avSwayOctavesMul, alMode);
+		apManager->AddGenerateProgramVariableId("afSwayYFreqMul", kVar_afSwayYFreqMul, alMode);
+		apManager->AddGenerateProgramVariableId("avSwaySingleDirection", kVar_avSwaySingleDirection, alMode);
+		apManager->AddGenerateProgramVariableId("avSwaySinglesampleDirection", kVar_avSwaySinglesampleDirection, alMode);
+		apManager->AddGenerateProgramVariableId("a_mtxModel", kVar_a_mtxModel, alMode);
+	}
+
+	static tFlag SwayFlags(cMaterialType_SolidDiffuse_Vars *apVars, cMaterial *apMaterial, tFlag alSway, tFlag alSingleDir, tFlag alMap)
+	{
+		if(apVars->mbSwayActive == false) return 0;
+		tFlag lFlags = alSway;
+		if(apVars->mbSwaySingleDir) lFlags |= alSingleDir;
+		if(apMaterial->GetTexture(eMaterialTexture_Height)) lFlags |= alMap;
+		return lFlags;
+	}
 
 	//------------------------------
 	
@@ -188,6 +227,7 @@ namespace hpl {
 		
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Z);
 		mpProgramManager->AddGenerateProgramVariableId("afDissolveAmount",kVar_afDissolveAmount,eMaterialRenderMode_Z);
+		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Z);
 
 		mpGlobalProgramManager = mpProgramManager;
 	}
@@ -347,6 +387,7 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
+		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Diffuse);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
 		mpProgramManager->AddGenerateProgramVariableId("afColorMul",kVar_afColorMul,eMaterialRenderMode_Illumination);
@@ -364,6 +405,14 @@ namespace hpl {
 		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
 		if(cRendererDeferred::GetHdr()) apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
 		apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
+		if(pVars->mbSwayActive)
+		{
+			for(eMaterialRenderMode mode : {eMaterialRenderMode_Z, eMaterialRenderMode_Z_Dissolve, eMaterialRenderMode_Diffuse})
+			{
+				apMaterial->SetHasSpecificSettings(mode,true);
+				apMaterial->SetHasObjectSpecificsSettings(mode,true);
+			}
+		}
 		
 		//////////////////////////////////
 		//Normal map and height specifics
@@ -414,6 +463,7 @@ namespace hpl {
 			{
 			case 0: return apMaterial->GetTexture(eMaterialTexture_Alpha);
 			case 1: return mpDissolveTexture;
+			case 3: return pVars->mbSwayActive ? apMaterial->GetTexture(eMaterialTexture_Height) : NULL;
 			}
 		}
 		////////////////////////////
@@ -425,6 +475,7 @@ namespace hpl {
 			case 0: return apMaterial->GetTexture(eMaterialTexture_Alpha);
 			case 1: return mpDissolveTexture;
 			case 2: return apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
+			case 3: return pVars->mbSwayActive ? apMaterial->GetTexture(eMaterialTexture_Height) : NULL;
 			}
 		}
 		////////////////////////////
@@ -474,6 +525,7 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_Alpha))	lFlags |= eFeature_Z_UseAlpha;
 			if(apMaterial->HasUvAnimation())					lFlags |= eFeature_Z_UvAnimation;
 			if(pVars->mbAlphaDissolveFilter)					lFlags |= eFeature_Z_UseAlphaDissolveFilter;
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap);
 
 			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
 		}
@@ -487,6 +539,7 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_DissolveAlpha))	lFlags |= eFeature_Z_DissolveAlpha;
 			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Z_UvAnimation;
 			if(pVars->mbAlphaDissolveFilter)							lFlags |= eFeature_Z_UseAlphaDissolveFilter;
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap);
 
 			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
 		}
@@ -498,14 +551,14 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_NMap))			lFlags |= eFeature_Diffuse_NormalMaps;
 			if(apMaterial->GetTexture(eMaterialTexture_Specular))		lFlags |= eFeature_Diffuse_Specular;
 			if(	apMaterial->GetTexture(eMaterialTexture_Height) && 
-				iRenderer::GetParallaxEnabled())			    		lFlags |= eFeature_Diffuse_Parallax;
+				iRenderer::GetParallaxEnabled() && pVars->mbSwayActive == false)	lFlags |= eFeature_Diffuse_Parallax;
 			if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
 			{	
 				lFlags |= eFeature_Diffuse_EnvMap;
 				if(apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha))	lFlags |= eFeature_Diffuse_CubeMapAlpha;
 			}
 			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Diffuse_UvAnimation;
-			
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap);
 
 			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
 		}
@@ -553,13 +606,23 @@ namespace hpl {
 			{
 				apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
 			}
+
+			cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
+			if(pVars->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
+			{
+				apProgram->SetFloat(kVar_afT, apRenderer->GetTimeCount());
+				apProgram->SetVec3f(kVar_avSwayProperties, pVars->mvSwayProperties);
+				apProgram->SetVec3f(kVar_avSwayOctavesMul, pVars->mvSwayOctaveMuls);
+				apProgram->SetFloat(kVar_afSwayYFreqMul, pVars->mfSwayYFreqMul);
+				apProgram->SetVec3f(kVar_avSwaySingleDirection, pVars->mvSwaySingleDir);
+				apProgram->SetVec3f(kVar_avSwaySinglesampleDirection, pVars->mvSwaySingleSampleDir);
+			}
 			
 			if(aRenderMode == eMaterialRenderMode_Diffuse)
 			{
 				/////////////////////////
 				//Parallax
-				cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-				if(apMaterial->GetTexture(eMaterialTexture_Height) && iRenderer::GetParallaxEnabled())
+				if(apMaterial->GetTexture(eMaterialTexture_Height) && iRenderer::GetParallaxEnabled() && pVars->mbSwayActive == false)
 				{
 					apProgram->SetVec2f(kVar_avHeightMapScaleAndBias, pVars->mfHeightMapScale, pVars->mfHeightMapBias);
 				}
@@ -582,6 +645,11 @@ namespace hpl {
 	void cMaterialType_SolidDiffuse::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 																iRenderer *apRenderer)
 	{
+		if(((cMaterialType_SolidDiffuse_Vars*)apObject->GetMaterial()->GetVars())->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
+		{
+			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
+			apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
+		}
 		
 		////////////////////////////
 		//Z Dissolve
@@ -627,7 +695,13 @@ namespace hpl {
 		pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
 		pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0f);
 		pVars->mbAlphaDissolveFilter = apVars->GetVarBool("AlphaDissolveFilter", false);
-
+		pVars->mbSwayActive = apVars->GetVarBool("SwayActive", false);
+		pVars->mbSwaySingleDir = apVars->GetVarBool("SwaySingleDir", false);
+		pVars->mvSwayProperties = cVector3f(apVars->GetVarFloat("SwayFreq", 1), apVars->GetVarFloat("SwayAmplitude", 0.1f), apVars->GetVarFloat("SwaySpeed", 1));
+		pVars->mvSwayOctaveMuls = apVars->GetVarVector3f("SwayOctaveMuls", cVector3f(0.125f, 0.25f, 1));
+		pVars->mfSwayYFreqMul = apVars->GetVarFloat("SwayYFreqMul", 0);
+		pVars->mvSwaySingleDir = apVars->GetVarVector3f("SwaySingleDirVector", cVector3f(0, 0, 1));
+		pVars->mvSwaySingleSampleDir = apVars->GetVarVector3f("SwaySingleSampleVector", cVector3f(1, 0, 0));
 	}
 
 	//--------------------------------------------------------------------------

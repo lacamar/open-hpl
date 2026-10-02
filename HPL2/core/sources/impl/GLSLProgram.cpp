@@ -119,22 +119,21 @@ namespace hpl{
 
 		///////////////////////////////////////
 		//Set up sampler units
-		iGpuShader* pFragShader = mpShader[eGpuShaderType_Fragment];
-		if(pFragShader && pFragShader->GetSamplerUnitNum()>0)
+		for(eGpuShaderType type : {eGpuShaderType_Vertex, eGpuShaderType_Fragment})
 		{
-			
-			//Log("Setting up samplers in '%s'\n", msName.c_str());
+			iGpuShader* pShader = mpShader[type];
+			if(pShader == NULL || pShader->GetSamplerUnitNum() == 0) continue;
 			glUseProgram(mlHandle);
 			
-			for(int i=0; i<pFragShader->GetSamplerUnitNum(); ++i)
+			for(int i=0; i<pShader->GetSamplerUnitNum(); ++i)
 			{
-				tString &sSamplerName = pFragShader->GetSamplerUnit(i)->msName;
-				int lUnit = pFragShader->GetSamplerUnit(i)->mlUnit;
+				tString &sSamplerName = pShader->GetSamplerUnit(i)->msName;
+				int lUnit = pShader->GetSamplerUnit(i)->mlUnit;
 				
-				//Log("Setting %s to %d\n",sSamplerName.c_str(), lUnit);
 				GLint lVarHandle = glGetUniformLocation(mlHandle,sSamplerName.c_str());
 				if(lVarHandle<0){
-					Error("Sampler %s does not exist, could not bind it to unit %d\n",sSamplerName.c_str(),lUnit);
+					if(type == eGpuShaderType_Fragment)
+						Error("Sampler %s does not exist, could not bind it to unit %d\n",sSamplerName.c_str(),lUnit);
 					continue;
 				}
 			

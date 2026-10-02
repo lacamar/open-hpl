@@ -84,6 +84,10 @@ namespace hpl {
 		float mfFrenselBias;
 		float mfFrenselPow;
 		bool mbAlphaDissolveFilter;
+		bool mbSwayActive = false;
+		bool mbSwaySingleDir = false;
+		cVector3f mvSwayProperties, mvSwayOctaveMuls, mvSwaySingleDir, mvSwaySingleSampleDir;
+		float mfSwayYFreqMul = 0;
 	};
 
 	//---------------------------------------------------
