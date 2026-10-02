@@ -1497,6 +1497,23 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "cVector3f GetPosition()", +[](E *p) { return p->GetPosition(); });
 	SOMA_METHOD_NEW(e, T, "const cMatrixf& GetOnLoadTransform()", +[](E *p) -> const cMatrixf & { return p->m_mtxOnLoad; });
 	SOMA_METHOD_NEW(e, T, "const cVector3f& GetOnLoadScale()", +[](E *p) -> const cVector3f & { return p->mvScale; });
+	SOMA_METHOD_NEW(e, T, "cVector3f GetMeshScaleMul()", +[](E *p) { return p->mvMeshScaleMul; });
+	SOMA_METHOD_NEW(e, T, "void SetMeshScaleMul(const cVector3f&in avScale)", +[](E *p, const cVector3f &v) {
+		if (v == p->mvMeshScaleMul || p->mpMesh == NULL)
+			return;
+		cVector3f vNew = v;
+		if (v.x == 0 || v.y == 0 || v.z == 0)
+			vNew += cVector3f(0.001f);
+		cMatrixf mtxRel = cMath::MatrixScale(vNew / p->mvMeshScaleMul);
+		p->mvMeshScaleMul = vNew;
+		for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
+		{
+			cSubMeshEntity *pSub = p->mpMesh->GetSubMeshEntity(i);
+			cMatrixf mtx = cMath::MatrixMul(pSub->GetLocalMatrix(), mtxRel);
+			mtx.SetTranslation(pSub->GetLocalMatrix().GetTranslation());
+			pSub->SetMatrix(mtx);
+		}
+	});
 	SOMA_METHOD_NEW(e, T, "int GetBodyNum()", +[](E *p) { return (int)p->mvBodies.size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBody(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBodies.size() ? p->mvBodies[i] : (iPhysicsBody *)NULL; });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetMainBody()", +[](E *p) { return p->GetMainBody(); });

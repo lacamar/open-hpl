@@ -7,11 +7,11 @@ language change duplicating saves (`GetSaveFiles` didn't clear its arrays), draw
 (`ParentAttach*` instance vars, applied after `SetupAfterLoad` so `OpenAmount` comes first; attached
 static bodies no longer get the parent's velocity, which pushed drawers open), Munshi (DAE bone
 poses; global-space animations move the char body to `CharBodyPosBone`), fog rotating (soft
-particles). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
+particles), inspect distance (readables open at half scale: `SetMeshScaleMul`). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
 applies live.
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- Inspect (InteractRotate) holds the object too close; measure camera distance vs the ref.
+- Hint key names: grab hint shows `[?]` (scroll?); the ref draws button glyphs, ours `[RightMouse]`.
 - 00_03 waiting-room drapes don't open: `Prop_MovingButton` scrubs the mesh's own animation
   (ref: 1 state, 1.958 s, 17 bones).
 - Scan machine visual effect missing.

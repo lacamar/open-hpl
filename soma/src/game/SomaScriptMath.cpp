@@ -308,6 +308,7 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return roundf(x); });
 	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return 1 << n; });
 	SOMA_FUNC(e, "void cMath_SetBitFlag(int&out alFlagNum, int alBit, bool abSet)", +[](int &f, int b, bool s) { if (s) f |= b; else f &= ~b; });
+	SOMA_FUNC(e, "void cMath_GetAngleFromVector(const cVector2f &in avVec, float &out afAngle, float &out afLength)", +[](const cVector2f &v, float &a, float &l) { cMath::GetAngleFromVector(v, &a, &l); });
 	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return (f & b) != 0; });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMin(const cVector3f&in avBaseMin, const cVector3f&in avAddMin)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMax(const cVector3f&in avBaseMax, const cVector3f&in avAddMax)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
