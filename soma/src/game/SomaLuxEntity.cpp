@@ -194,6 +194,16 @@ void SomaUpdateLightConnections()
 	}
 }
 
+static void SetLookAtCallback(cSomaLuxEntity *p, const tString &f, bool r, bool ray, float d, float t)
+{
+	p->msLookAtCallback = f;
+	p->mbLookAtCallbackAutoRemove = r;
+	p->mbLookAtCheckRay = ray;
+	p->mfLookAtMaxDistance = d;
+	p->mfLookAtDelay = t;
+	p->mfLookAtTime = 0;
+}
+
 static void ForgetLightConnections(cSomaLuxEntity *apEnt)
 {
 	for (cSomaLightConnection &conn : gvLightConnections)
@@ -1615,7 +1625,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetPlayerInteractCallback(const tString &in asCallbackFunc, bool abRemoveWhenInteracted)",
 					+[](E *p, S f, bool r) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "void SetPlayerLookAtCallback(const tString &in asCallbackFunc, bool abRemoveWhenLookedAt, bool abCheckCenterOfScreen, bool abCheckRayIntersection, float afMaxDistance, float afCallbackDelay)",
-					+[](E *p, S f, bool r, bool, bool, float, float) { p->msLookAtCallback = f; p->mbLookAtCallbackAutoRemove = r; });
+					+[](E *p, S f, bool r, bool, bool ray, float d, float t) { SetLookAtCallback(p, f, r, ray, d, t); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerInteractCallback()", +[](E *p) { return p->msInteractCallback != ""; });
 	SOMA_METHOD_NEW(e, T, "void ChangeConnectionState(int alState)", +[](E *p, int l) { p->ChangeConnectionState(l); });
 	SOMA_METHOD_NEW(e, T, "void SetConnectionStateChangeCallback(const tString &in asCallbackFunc)", +[](E *p, S f) { p->msConnectionCallback = f; });
@@ -2068,7 +2078,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_SetPlayerInteractCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenInteracted)",
 			  +[](S n, S f, bool r) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; }); });
 	SOMA_FUNC(e, "void Entity_SetPlayerLookAtCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenLookedAt = true, bool abCheckCenterOfScreen = true, bool abCheckRayIntersection = true, float afMaxDistance = -1, float afCallbackDelay = 0)",
-			  +[](S n, S f, bool r, bool, bool, float, float) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msLookAtCallback = f; p->mbLookAtCallbackAutoRemove = r; }); });
+			  +[](S n, S f, bool r, bool, bool ray, float d, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { SetLookAtCallback(p, f, r, ray, d, t); }); });
 	SOMA_FUNC(e, "bool Entity_AddCollideCallback(const tString &in asParentName, const tString &in asChildName, const tString &in asFunction)", +[](S par, S child, S f) {
 		bool bAny = false;
 		ForMatching(par, [&](cSomaLuxEntity *p) { p->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{child, f}); bAny = true; });
