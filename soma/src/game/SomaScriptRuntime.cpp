@@ -186,7 +186,7 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 
 bool cSomaScriptRuntime::CallByName(asIScriptObject *apObj, const std::string &asName, const std::string &asArg)
 {
-	if (apObj == NULL)
+	if (apObj == NULL || asName.empty())
 		return false;
 	// "$Func": a global function of the object's module rather than a method
 	if (asName.size() > 1 && asName[0] == '$')

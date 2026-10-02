@@ -55,6 +55,7 @@ template <class S> static asQWORD Length(const S &s) { return s.size(); }
 template <class S> static void Resize(asQWORD alSize, S &s) { s.resize((size_t)alSize); }
 
 static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem) { new (apMem) std::wstring(asIn.begin(), asIn.end()); }
+static std::wstring &AssignWFromNarrow(const std::string &asIn, std::wstring &asOut) { return asOut.assign(asIn.begin(), asIn.end()); }
 
 static uint8_t &CharAt(unsigned int alIdx, std::string &s)
 {
@@ -175,6 +176,7 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f(const tString &in)", asFUNCTION(ConstructWFromNarrow), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(Destruct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAssign(const tWString &in)", asMETHODPR(std::wstring, operator=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
+	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAssign(const tString &in)", asFUNCTION(AssignWFromNarrow), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAddAssign(const tWString &in)", asMETHODPR(std::wstring, operator+=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "bool opEquals(const tWString &in) const", asFUNCTIONPR(std::operator==, (const std::wstring &, const std::wstring &), bool), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "int opCmp(const tWString &in) const", asFUNCTION(Cmp<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);

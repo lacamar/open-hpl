@@ -64,6 +64,9 @@ public:
 	tString msFileName;
 	int meType = eSomaLuxEntityType_Prop;
 	cSomaID mID;
+	int mlParentType = -1;
+	cSomaID mParentID;
+	tString msParentName;
 	bool mbActive = true;
 	bool mbShowMesh = true;
 	bool mbIsDoor = false, mbIsClosedDoor = false;

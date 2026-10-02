@@ -375,6 +375,9 @@ public:
 		o.Pod(p->mbInteractionDisabled);
 		o.Pod(p->mbInteractedWith);
 		o.Pod(p->mbEffectsActive);
+		o.Pod(p->mlParentType);
+		o.Pod(p->mParentID);
+		o.Str(p->msParentName);
 		o.Str(p->msInteractCallback);
 		o.Pod(p->mbInteractCallbackAutoRemove);
 		o.Str(p->msLookAtCallback);
@@ -402,6 +405,9 @@ public:
 		t->mbInteractionDisabled = in.Pod<bool>();
 		t->mbInteractedWith = in.Pod<bool>();
 		t->mbEffectsActive = in.Pod<bool>();
+		t->mlParentType = in.Pod<int>();
+		t->mParentID = in.Pod<cSomaID>();
+		t->msParentName = in.Str();
 		t->msInteractCallback = in.Str();
 		t->mbInteractCallbackAutoRemove = in.Pod<bool>();
 		t->msLookAtCallback = in.Str();

@@ -1520,7 +1520,16 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		return (iPhysicsBody *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cMeshEntity@ GetMeshEntity()", +[](E *p) { return p->mpMesh; });
-	SOMA_METHOD_NEW(e, T, "int GetParentType()", +[](E *) { return 0; });
+	SOMA_METHOD_NEW(e, T, "void SetupParent(int alTypeId, tID alId, const tString &in asName)", +[](E *p, int t, cSomaID id, S n) {
+		p->mlParentType = t;
+		p->mParentID = id;
+		p->msParentName = n;
+	});
+	SOMA_METHOD_NEW(e, T, "int GetParentType()", +[](E *p) { return p->mlParentType; });
+	SOMA_METHOD_NEW(e, T, "tID GetParentId()", +[](E *p) { return p->mParentID; });
+	SOMA_METHOD_NEW(e, T, "const tString& GetParentName()", +[](E *p) -> const tString & { return p->msParentName; });
+	SOMA_METHOD_NEW(e, T, "float GetEffectsOnTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOnTime", 1); });
+	SOMA_METHOD_NEW(e, T, "float GetEffectsOffTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOffTime", 1); });
 	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->mvJoints.size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
 		return i >= 0 && i < (int)p->mvJoints.size() ? p->mvJoints[i] : (iPhysicsJoint *)NULL; });

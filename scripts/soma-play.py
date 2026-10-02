@@ -172,7 +172,7 @@ def stand_spot(target, feet, dist, name):
         ang = base + (i + 1) // 2 * (1 if i % 2 else -1) * math.pi / 12
         x, z = target[0] + math.sin(ang) * dist, target[2] + math.cos(ang) * dist
         top = target[1] + 0.3
-        hits = raycast((x, top, z), (x, top - 2.0, z))
+        hits = raycast((x, top, z), (x, top - 4.0, z))
         if not hits or hits[0][0] < 0.05:
             continue
         floor = top - hits[0][0]
