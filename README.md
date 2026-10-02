@@ -8,6 +8,16 @@ the GPLv3. Unofficial, not affiliated with or endorsed by Frictional Games.
 Game data (maps, textures, audio) is not included — you need a legitimate
 copy of the game to actually play.
 
+Screenshots
+-----------
+Dev HUD on (`OPENHPL_DEV_HUD=1`).
+
+![Amnesia: The Dark Descent](screenshots/amnesia-old-archives.jpg)
+![Amnesia: The Dark Descent](screenshots/amnesia-rainy-hall.jpg)
+![SOMA](screenshots/soma-apartment.jpg)
+![SOMA](screenshots/soma-laboratory.jpg)
+![SOMA](screenshots/soma-upsilon.jpg)
+
 What changed from upstream
 ---------------------------
 The original codebase only targeted 32-bit x86 Linux, Windows, and
