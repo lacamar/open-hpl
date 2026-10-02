@@ -2064,7 +2064,8 @@ namespace hpl {
 
 		/////////////////////////
 		//Texture and vertex buffer
-		SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
+		iTexture *pSkyTex = mpCurrentWorld->GetSkyBoxTexture();
+		SetTexture(0, pSkyTex ? pSkyTex : mpWhiteCubeTexture);
 		SetTextureRange(NULL,1);
         
 		SetVertexBuffer(mpCurrentWorld->GetSkyBoxVertexBuffer());

@@ -199,6 +199,7 @@ namespace hpl {
 				{
 					mpCurrentWorld->SetSkyBoxActive(pSky->GetAttributeBool("Active", false));
 					mpCurrentWorld->SetSkyBoxColor(pSky->GetAttributeColor("Color", cColor(1, 1)));
+					mpCurrentWorld->SetSkyBoxBrightness(pSky->GetAttributeFloat("Brightness", 1));
 
 					tString sSkyTex = pSky->GetAttributeString("Texture", "");
 					if (sSkyTex != "")

@@ -341,20 +341,36 @@ namespace hpl {
 		mbSkyBoxActive = abX;
 	}
 
+	bool cWorld::mbHpl3SkyBox = false;
+
 	void cWorld::SetSkyBoxColor(const cColor& aColor)
 	{
 		if(mSkyBoxColor == aColor) return;
-
 		mSkyBoxColor = aColor;
+		UpdateSkyBoxVBColor();
+	}
+
+	void cWorld::SetSkyBoxBrightness(float afX)
+	{
+		if(mfSkyBoxBrightness == afX) return;
+		mfSkyBoxBrightness = afX;
+		UpdateSkyBoxVBColor();
+	}
+
+	void cWorld::UpdateSkyBoxVBColor()
+	{
+		cColor col = mSkyBoxColor;
+		if(mbHpl3SkyBox) col = col * cColor(col.r, col.g, col.b, 1);
+		col = cColor(col.r * mfSkyBoxBrightness, col.g * mfSkyBoxBrightness, col.b * mfSkyBoxBrightness, col.a);
 
 		float *pColors = mpSkyBoxVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 		int lNum = mpSkyBoxVtxBuffer->GetVertexNum();
 		for(int i=0; i<lNum;++i)
 		{
-			pColors[0] = mSkyBoxColor.r;
-			pColors[1] = mSkyBoxColor.g;
-			pColors[2] = mSkyBoxColor.b;
-			pColors[3] = mSkyBoxColor.a;
+			pColors[0] = col.r;
+			pColors[1] = col.g;
+			pColors[2] = col.b;
+			pColors[3] = col.a;
 			pColors+=4;
 		}
 

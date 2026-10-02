@@ -1035,9 +1035,11 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBox(iTexture @apTexture, bool abAutoDestroy)", +[](cWorld *o, iTexture * a0, bool a1) { o->SetSkyBox(a0, a1); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxActive(bool abX)", +[](cWorld *o, bool a0) { o->SetSkyBoxActive(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxColor(const cColor&in aColor)", +[](cWorld *o, const cColor & a0) { o->SetSkyBoxColor(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxBrightness(float afX)", +[](cWorld *o, float a0) { o->SetSkyBoxBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "iTexture@ GetSkyBoxTexture()", +[](cWorld *o) -> iTexture * { return o->GetSkyBoxTexture(); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool GetSkyBoxActive()", +[](cWorld *o) -> bool { return o->GetSkyBoxActive(); });
 	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetSkyBoxColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetSkyBoxColor(); return r; });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetSkyBoxBrightness()", +[](cWorld *o) -> float { return o->GetSkyBoxBrightness(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogActive(bool abX)", +[](cWorld *o, bool a0) { o->SetFogActive(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogStart(float afX)", +[](cWorld *o, float a0) { o->SetFogStart(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogEnd(float afX)", +[](cWorld *o, float a0) { o->SetFogEnd(a0); });

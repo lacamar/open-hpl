@@ -39,6 +39,7 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/OcclusionQuery.h"
 #include "graphics/TextureCreator.h"
+#include "graphics/Bitmap.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -508,6 +509,18 @@ namespace hpl {
 			mpSkyBoxProgram->SetShader(eGpuShaderType_Vertex, pVtxShader);
 			mpSkyBoxProgram->SetShader(eGpuShaderType_Fragment, pFragShader);
 			mpSkyBoxProgram->Link();
+
+			std::vector<cBitmap> vFaces(6);
+			std::vector<cBitmap*> vFacePtrs;
+			for(cBitmap &bmp : vFaces)
+			{
+				bmp.CreateData(cVector3l(1,1,1), ePixelFormat_RGBA, 0, 0);
+				bmp.Clear(cColor(1,1), 0, 0);
+				vFacePtrs.push_back(&bmp);
+			}
+			mpWhiteCubeTexture = mpGraphics->CreateTexture("WhiteCube", eTextureType_CubeMap, eTextureUsage_Normal);
+			mpWhiteCubeTexture->SetUseMipMaps(false);
+			mpWhiteCubeTexture->CreateCubeFromBitmapVec(&vFacePtrs);
 		}
 		
 		
@@ -1079,6 +1092,7 @@ namespace hpl {
 		/////////////////////////
 		//Gpu programs
 		mpGraphics->DestroyGpuProgram(mpSkyBoxProgram);
+		mpGraphics->DestroyTexture(mpWhiteCubeTexture);
 
 		mpProgramManager->DestroyShadersAndPrograms();
 	}

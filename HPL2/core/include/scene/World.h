@@ -216,6 +216,9 @@ namespace hpl {
 		void SetSkyBox(iTexture *apTexture, bool abAutoDestroy);
 		void SetSkyBoxActive(bool abX);
 		void SetSkyBoxColor(const cColor& aColor);
+		void SetSkyBoxBrightness(float afX);
+		float GetSkyBoxBrightness(){ return mfSkyBoxBrightness;}
+		static void SetHpl3SkyBox(bool abX){ mbHpl3SkyBox = abX;}
 
 		iTexture* GetSkyBoxTexture(){return mpSkyBoxTexture;}
 		iVertexBuffer *GetSkyBoxVertexBuffer(){ return mpSkyBoxVtxBuffer;}
@@ -423,6 +426,9 @@ namespace hpl {
 		bool mbAutoDestroySkybox;
 		bool mbSkyBoxActive;
 		cColor mSkyBoxColor;
+		float mfSkyBoxBrightness = 1;
+		static bool mbHpl3SkyBox;
+		void UpdateSkyBoxVBColor();
 
 		bool mbFogActive;
 		bool mbFogCulling;

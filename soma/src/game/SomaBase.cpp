@@ -840,6 +840,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	iLight::SetHpl3Visibility(true);
 	iCharacterBody::SetHpl3(true);
 	cRendererDeferred::SetHpl3SSAO(true);
+	cWorld::SetHpl3SkyBox(true);
 	cMaterialType_Translucent::SetLightProbes(true);
 	cRendererDeferred::SetHdr(true);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
