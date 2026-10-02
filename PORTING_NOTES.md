@@ -6005,3 +6005,18 @@ our live entries and events.
   spectra match. The floor between phone pulses is within 1 dB.
 - Still open: the menu is 12 dB short at 63 Hz; the intro is +6..8 dB above 4 kHz; no reverb/EFX
   matching yet. The apartment L-R is +7.0 vs +3.8 (pan law of near 3D sources).
+
+## SOMA: reference renderer artifacts on asahi (2026-10-02)
+
+- **LATC.** The official game decodes 3DC normal maps through `GL_EXT_texture_compression_latc`;
+  without it normals come out sideways. `soma/ref/wine-ro.sh` adds it via
+  `MESA_EXTENSION_OVERRIDE`.
+- **Depth16 polygon offset.** The official shadow maps are Depth16 (ours Depth24). Asahi Mesa
+  applies `glPolygonOffset` units unscaled on D16 (effective r ~0.3-3 instead of 2^-16), so the
+  constant bias (4 x `ShadowMapBiasMul`) pushes every caster out and the ref showed no spot
+  shadows (00_03 Window_2 lit the floor through a wall). Bias/slope code is identical to ours
+  (RE: shadow pass at 0x1403f8b79). The ref agent divides every light's `ShadowMapBiasMul` by
+  65536 on map enter; floor and plant shadows then match ours. Ref comparisons of shadowed lights
+  before this date are suspect.
+- The official game merges static geometry into `CombinedObjectsN`, split by material and
+  shadow-caster flag.
