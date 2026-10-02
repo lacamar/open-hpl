@@ -1065,12 +1065,16 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogEnd(float afX)", +[](cWorld *o, float a0) { o->SetFogEnd(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogFalloffExp(float afX)", +[](cWorld *o, float a0) { o->SetFogFalloffExp(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogColor(const cColor&in aCol)", +[](cWorld *o, const cColor & a0) { o->SetFogColor(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetFogBrightness(float afX)", +[](cWorld *o, float a0) { o->SetFogBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogBrightness(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogCulling(bool abX)", +[](cWorld *o, bool a0) { o->SetFogCulling(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogActive()", +[](cWorld *o) -> bool { return o->GetFogActive(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetFogStart()", +[](cWorld *o) -> float { return o->GetFogStart(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetFogEnd()", +[](cWorld *o) -> float { return o->GetFogEnd(); });
 	SOMA_METHOD_NEW(e, "cWorld", "float GetFogFalloffExp()", +[](cWorld *o) -> float { return o->GetFogFalloffExp(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetFogBrightness()", +[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); });
 	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetFogColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetFogColor(); return r; });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetSecondaryFogBrightness()", +[](cWorld *o) -> float { return o->GetSecondaryFogBrightness(); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogCulling()", +[](cWorld *o) -> bool { return o->GetFogCulling(); });
 	SOMA_METHOD_NEW(e, "cWorld", "cMeshEntity@ CreateMeshEntity(const tString &in asName,cMesh@ apMesh, bool abStatic)", +[](cWorld *o, const tString & a0, cMesh * a1, bool a2) -> cMeshEntity * { return o->CreateMeshEntity(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "cWorld", "void DestroyMeshEntity(cMeshEntity@ apMesh)", +[](cWorld *o, cMeshEntity * a0) { o->DestroyMeshEntity(a0); });

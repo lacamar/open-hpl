@@ -287,6 +287,7 @@ namespace hpl {
 
 		//Temp variables used by material.
 		float GetTempAlpha(){ return mfTempAlpha; }
+		const cColor& GetTempFogAreaColor(){ return mTempFogAreaColor; }
 		
 		//Static settings. Must be set before renderer data load.
 		static void SetShadowMapQuality(eShadowMapQuality aQuality) { mShadowMapQuality = aQuality;}
@@ -491,6 +492,7 @@ namespace hpl {
 		std::vector<cShadowMapData*> mvShadowMapData[eShadowMapResolution_LastEnum];
 
 		float mfTempAlpha;
+		cColor mTempFogAreaColor;
 
         //Static variables
 		static eShadowMapQuality mShadowMapQuality;

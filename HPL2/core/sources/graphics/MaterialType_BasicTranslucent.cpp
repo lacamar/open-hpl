@@ -69,6 +69,8 @@ namespace hpl {
 	#define kVar_afSoftParticleThickness			15
 	#define kVar_afSoftParticleAlphaBasedThickness	16
 	#define kVar_afSoftParticleDepthBias			17
+	#define kVar_avFogColor							18
+	#define kVar_avFogAreaColor						19
 	
 	
 	//------------------------------
@@ -203,6 +205,8 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleThickness", kVar_afSoftParticleThickness, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleAlphaBasedThickness", kVar_afSoftParticleAlphaBasedThickness, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleDepthBias", kVar_afSoftParticleDepthBias, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFogAreaColor", kVar_avFogAreaColor, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -377,10 +381,12 @@ namespace hpl {
 		if(aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
 		{
 			cWorld *pWorld = apRenderer->GetCurrentWorld();
+			bool bWorldFog = pWorld->GetFogActive();
 
-			apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
+			apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()) : cVector2f(0, 1));
 			apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
 			apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
+			apProgram->SetColor4f(kVar_avFogColor, bWorldFog ? cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()) : cColor(0, 0));
 		}
 	}
 	
@@ -514,6 +520,8 @@ namespace hpl {
 	{
 		cMaterialType_Translucent_Vars *pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
 		if(cRendererDeferred::GetHdr()) apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
+		if(aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
+			apProgram->SetColor4f(kVar_avFogAreaColor, apRenderer->GetTempFogAreaColor());
 
 		if(mbLightProbes && pVars->mbAffectedByLightLevel)
 		{

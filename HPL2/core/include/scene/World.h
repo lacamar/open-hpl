@@ -233,6 +233,8 @@ namespace hpl {
 		void SetFogFalloffExp(float afX){ mfFogFalloffExp = afX;}
 		void SetFogColor(const cColor& aCol){ mFogColor = aCol; }
 		void SetFogCulling(bool abX) {mbFogCulling=abX;}
+		void SetFogBrightness(float afX){ mfFogBrightness = afX > 0.0001f ? afX : 0.0001f; }
+		void SetSecondaryFogBrightness(float afX){ mfSecondaryFogBrightness = afX > 0.0001f ? afX : 0.0001f; }
 
 		bool GetFogActive(){ return mbFogActive;}
 		float GetFogStart(){ return mfFogStart;}
@@ -240,6 +242,8 @@ namespace hpl {
 		float GetFogFalloffExp(){ return mfFogFalloffExp;}
 		const cColor& GetFogColor(){ return mFogColor; }
 		bool GetFogCulling() { return mbFogCulling;}
+		float GetFogBrightness(){ return mfFogBrightness;}
+		float GetSecondaryFogBrightness(){ return mfSecondaryFogBrightness;}
 
 		void SetDepthOfFieldActive(bool abX){ mbDepthOfFieldActive = abX;}
 		void SetDepthOfFieldFocusStart(float afX){ mfDepthOfFieldFocusStart = afX;}
@@ -436,6 +440,8 @@ namespace hpl {
 		float mfFogEnd;
 		float mfFogFalloffExp;
 		cColor mFogColor;
+		float mfFogBrightness = 1;
+		float mfSecondaryFogBrightness = 1;
 
 		bool mbDepthOfFieldActive = false;
 		float mfDepthOfFieldFocusStart = 0;

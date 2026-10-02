@@ -35,7 +35,8 @@ TYPES = {
 
 # HPL3 names whose HPL2 spelling differs
 RENAME = {'IsTriggered': 'IsTriggerd', 'WasTriggered': 'WasTriggerd', 'BecameTriggered': 'BecameTriggerd',
-          'DoubleTriggered': 'DoubleTriggerd', 'SetMaxPushForce': 'SetPushForce', 'GetMaxPushForce': 'GetPushForce'}
+          'DoubleTriggered': 'DoubleTriggerd', 'SetMaxPushForce': 'SetPushForce', 'GetMaxPushForce': 'GetPushForce',
+          'GetFogBrightness': 'GetSecondaryFogBrightness'}  # official binding
 
 # global prefix -> HPL2 object the cFoo_Bar() globals call Bar() on
 GLOBALS = {

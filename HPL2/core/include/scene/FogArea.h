@@ -44,6 +44,8 @@ namespace hpl {
 		//Properties
 		const cColor& GetColor(){ return mColor; }
 		void SetColor(const cColor& aCol){ mColor = aCol; }
+		float GetBrightness(){ return mfBrightness; }
+		void SetBrightness(float afX){ mfBrightness = afX; }
 		
 		const cVector3f& GetSize(){ return mvSize;}
 		void SetSize(const cVector3f& avSize);
@@ -78,6 +80,7 @@ namespace hpl {
 		
 	private:
 		cColor mColor;
+		float mfBrightness = 1;
 		cVector3f mvSize;
 		float mfStart;
 		float mfEnd;

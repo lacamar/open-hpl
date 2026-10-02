@@ -81,6 +81,7 @@ namespace hpl {
 		if(pFog)
 		{
 			pFog->SetColor(apElement->GetAttributeColor("Color",cColor(1,1)));
+			pFog->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
 			pFog->SetStart(apElement->GetAttributeFloat("Start", 0));
 			pFog->SetEnd(apElement->GetAttributeFloat("End", 0));
 			pFog->SetFalloffExp(apElement->GetAttributeFloat("FalloffExp", 0));

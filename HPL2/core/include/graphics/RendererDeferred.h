@@ -188,6 +188,7 @@ namespace hpl {
 		static void SetHdr(bool abX){ mbHdr = abX;}
 		static void SetShadowDistanceNone(float afX){ mfDefaultShadowDistanceNone = afX;}
 		static bool GetHdr(){ return mbHdr;}
+		static cColor GetFogRenderColor(const cColor& aCol, float afBrightness){ return mbHdr ? cColor(aCol.r*aCol.r*afBrightness, aCol.g*aCol.g*afBrightness, aCol.b*aCol.b*afBrightness, aCol.a) : aCol; }
 		static void SetColorGradingTexture(iTexture *apTex){ mpColorGradingTexture = apTex;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
 
@@ -237,10 +238,12 @@ namespace hpl {
 
 		void RenderDecals();
 		void SetFogDepthTexture(bool abBind, int alUnit=0);
+		bool DepthOfFieldIsActive();
+		bool IsBehindDepthOfFieldFocus(iRenderable *apObject);
 		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
-		void RenderTranslucent();
+		void RenderTranslucent(int alDofPass=0);
 		
 		void SetAccumulationBuffer();
 		void SetGBuffer(eGBufferComponents aComponents);

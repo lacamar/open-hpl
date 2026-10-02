@@ -37,6 +37,7 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
+#include "graphics/RendererDeferred.h"
 
 
 
@@ -283,7 +284,7 @@ namespace hpl {
 			cWorld *pWorld = apRenderer->GetCurrentWorld();
 
 			apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
-			apProgram->SetColor4f(kVar_avFogColor, pWorld->GetFogColor());
+			apProgram->SetColor4f(kVar_avFogColor, cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()));
 			apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
 
 			//////////////////////////////

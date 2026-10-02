@@ -6063,4 +6063,9 @@ our live entries and events.
 - Unparented saved sound entities (`cEngineSound_SaveData` plus the FMOD instance's fade target,
   volume mul and parameters) and billboards (visible, colour). `Sound_CreateAtEntity` marks only
   `abSaveSound` loops as saved; map sounds stopped by script (00_03 waiting room buzz) stay stopped.
+- Screens skipped fog and DoF. HPL3 fog colours are `rgb² × Brightness` (world `FogBrightness`,
+  fog area `Brightness`); translucents get `avFogColor` and a per-object `avFogAreaColor`
+  (`iRenderer::GetFogAreaColor`: areas blended in order, alpha = start..end ramp) and are fogged
+  toward it instead of faded. Script `GetFogBrightness` binds to `GetSecondaryFogBrightness`.
+  Translucents whose near edge is past the DoF focus end render before the blur.
 

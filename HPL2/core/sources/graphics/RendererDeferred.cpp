@@ -1309,9 +1309,13 @@ namespace hpl {
 
 		RunCallback(eRendererMessage_PostSolid);
 		
+		// HPL3: translucents reaching past the focus end are blurred with the solids
+		bool bDof = DepthOfFieldIsActive();
+		if(!(mlDebugSkipPasses & 8) && bDof) RenderTranslucent(1);
+
 		RenderDepthOfField();
 
-		if(!(mlDebugSkipPasses & 8)) RenderTranslucent();
+		if(!(mlDebugSkipPasses & 8)) RenderTranslucent(bDof ? 2 : 0);
 
 		RunCallback(eRendererMessage_PostTranslucent);
 
@@ -3401,10 +3405,22 @@ namespace hpl {
 		SetDepthTest(true);
 	}
 
+	bool cRendererDeferred::DepthOfFieldIsActive()
+	{
+		return mpCurrentSettings->mbIsReflection==false && mpDofFocusProgram && mpDofBlurProgram &&
+			mpCurrentWorld->IsDepthOfFieldActive() && mpCurrentWorld->GetDepthOfFieldFalloff() > 0;
+	}
+
+	bool cRendererDeferred::IsBehindDepthOfFieldFocus(iRenderable *apObject)
+	{
+		cBoundingVolume *pBV = apObject->GetBoundingVolume();
+		float fZ = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pBV->GetWorldCenter()).z;
+		return -fZ - pBV->GetRadius() > mpCurrentWorld->GetDepthOfFieldFocusEnd();
+	}
+
 	void cRendererDeferred::RenderDepthOfField()
 	{
-		if(mpCurrentSettings->mbIsReflection || mpDofFocusProgram==NULL || mpDofBlurProgram==NULL) return;
-		if(mpCurrentWorld->IsDepthOfFieldActive()==false || mpCurrentWorld->GetDepthOfFieldFalloff() <= 0) return;
+		if(DepthOfFieldIsActive()==false) return;
 
 		START_RENDER_PASS(DepthOfField);
 
@@ -3491,7 +3507,7 @@ namespace hpl {
 			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
 				pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
-			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
+			pProgram->SetColor4f(kVar_avFogColor, GetFogRenderColor(mpCurrentWorld->GetFogColor(), mpCurrentWorld->GetFogBrightness()));
 			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
 
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
@@ -3575,7 +3591,7 @@ namespace hpl {
 			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
 					pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
-			pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
+			pProgram->SetColor4f(kVar_avFogColor, GetFogRenderColor(pFogArea->GetColor(), pFogArea->GetBrightness()));
 			pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
 
 			pProgram->SetVec4f(kVar_avScreenToFarPlane,
@@ -3630,7 +3646,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cRendererDeferred::RenderTranslucent()
+	void cRendererDeferred::RenderTranslucent(int alDofPass)
 	{
 		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)==false) return;
 
@@ -3658,6 +3674,7 @@ namespace hpl {
 			iRenderable *pObject = transIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 			if(++lTransIdx == mlDebugSkipTranslucent) continue;
+			if(alDofPass && IsBehindDepthOfFieldFocus(pObject) != (alDofPass==1)) continue;
 
 			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
 			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;
@@ -3668,12 +3685,21 @@ namespace hpl {
 			////////////////////////////////////////
 			// Check the fog area alpha
 			mfTempAlpha = 1;
+			mTempFogAreaColor = cColor(0,0);
 			if(pMaterial->GetAffectedByFog())
 			{
 				for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
 				{
-					mfTempAlpha *= GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], pObject);
+					float fVisibility = GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], pObject);
+					if(mbHdr==false) { mfTempAlpha *= fVisibility; continue; }
+
+					// HPL3 fogs translucents toward the area colour instead of fading them
+					cFogArea *pFogArea = mpCurrentSettings->mvFogRenderData[i].mpFogArea;
+					cColor fogCol = GetFogRenderColor(pFogArea->GetColor(), pFogArea->GetBrightness());
+					fogCol.a = 1 - fVisibility;
+					mTempFogAreaColor = mTempFogAreaColor * (1 - fogCol.a) + fogCol * fogCol.a;
 				}
+				if(mTempFogAreaColor.a > 0) renderMode = eMaterialRenderMode_DiffuseFog;
 			}
 			
 			
