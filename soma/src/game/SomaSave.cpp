@@ -485,7 +485,7 @@ public:
 		std::vector<iLight *> vLights;
 		cLightListIterator it = pMap->GetWorld()->GetLightIterator();
 		while (it.HasNext())
-			if (iLight *l = it.Next(); l->GetParent() == NULL && l->GetEntityParent() == NULL)
+			if (iLight *l = it.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() == NULL)
 				vLights.push_back(l);
 		o.Pod((uint32_t)vLights.size());
 		for (iLight *l : vLights)
@@ -498,6 +498,32 @@ public:
 			o.Pod(bFlicker ? l->GetFlickerOnColor() : l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
 			o.Pod(bFlicker ? l->GetFlickerOnRadius() : l->IsFading() ? l->GetDestRadius() : l->GetRadius());
 			o.Pod(l->GetBrightness());
+		}
+
+		std::vector<cParticleSystem *> vPS;
+		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
+		while (psIt.HasNext())
+			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL && ps->IsDying() == false)
+				vPS.push_back(ps);
+		o.Pod((uint32_t)vPS.size());
+		for (cParticleSystem *ps : vPS)
+		{
+			o.Str(ps->GetName());
+			o.Str(ps->GetDataName());
+			o.Pod(ps->GetDataSize());
+			o.Pod(ps->GetLocalMatrix());
+			o.Pod(ps->GetColor());
+			o.Pod(ps->GetBrightness());
+			o.Pod(ps->IsActive());
+			o.Pod(ps->IsVisible());
+			o.Pod(ps->GetFadeAtDistance());
+			for (float f : {ps->GetMinFadeDistanceStart(), ps->GetMinFadeDistanceEnd(), ps->GetMaxFadeDistanceStart(), ps->GetMaxFadeDistanceEnd()})
+				o.Pod(f);
+			uint32_t lDead = 0;
+			for (int i = 0; i < ps->GetEmitterNum() && i < 32; ++i)
+				if (ps->GetEmitter(i)->IsDying())
+					lDead |= 1u << i;
+			o.Pod(lDead);
 		}
 	}
 
@@ -569,6 +595,53 @@ public:
 			l->SetBrightness(fBrightness);
 			l->SetFlickerActive(bFlicker);
 		}
+
+		std::multimap<tString, cParticleSystem *> mapPS;
+		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
+		while (psIt.HasNext())
+			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL)
+				mapPS.emplace(ps->GetName(), ps);
+		n = in.Pod<uint32_t>();
+		bool bHasPS = in.ok;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sName = in.Str(), sData = in.Str();
+			cVector3f vSize = in.Pod<cVector3f>();
+			cMatrixf m = in.Pod<cMatrixf>();
+			cColor col = in.Pod<cColor>();
+			float fBrightness = in.Pod<float>();
+			bool bActive = in.Pod<bool>(), bVisible = in.Pod<bool>(), bFade = in.Pod<bool>();
+			float vFade[4];
+			for (float &f : vFade)
+				f = in.Pod<float>();
+			uint32_t lDead = in.Pod<uint32_t>();
+			if (in.ok == false)
+				break;
+			cParticleSystem *ps = NULL;
+			if (auto it = mapPS.find(sName); it != mapPS.end())
+			{
+				ps = it->second;
+				mapPS.erase(it);
+			}
+			else if ((ps = pMap->GetWorld()->CreateParticleSystem(sName, sData, vSize)) == NULL)
+				continue;
+			ps->SetMatrix(m);
+			ps->SetColor(col);
+			ps->SetBrightness(fBrightness);
+			ps->SetActive(bActive);
+			ps->SetVisible(bVisible);
+			ps->SetFadeAtDistance(bFade);
+			ps->SetMinFadeDistanceStart(vFade[0]);
+			ps->SetMinFadeDistanceEnd(vFade[1]);
+			ps->SetMaxFadeDistanceStart(vFade[2]);
+			ps->SetMaxFadeDistanceEnd(vFade[3]);
+			for (int e = 0; e < ps->GetEmitterNum() && e < 32; ++e)
+				if (lDead & (1u << e))
+					ps->GetEmitter(e)->KillInstantly();
+		}
+		if (bHasPS)
+			for (auto &it : mapPS)
+				it.second->KillInstantly();
 
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		if (bPlayer && pPlayer)

@@ -6056,4 +6056,8 @@ our live entries and events.
   (active, visible, colour or fade/flicker goal, radius, brightness, flicker flag) are appended
   to the save, Amnesia's `cEngineLight_SaveData` subset; entity effects are reapplied on load.
   Older saves stop at the light block ("saved state is truncated").
+- Unparented world particle systems follow (`cEnginePS_SaveData`: data file, size, matrix,
+  colour, brightness, active/visible, fade distances, dead emitters); script-created ones are
+  recreated, script-destroyed ones killed. Dying systems are skipped, as in Amnesia.
+  `SetScriptableIsSaved` is bound for lights and particle systems.
 
