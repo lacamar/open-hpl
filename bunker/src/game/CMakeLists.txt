@@ -14,14 +14,6 @@ add_executable(Bunker
 )
 target_link_libraries(Bunker HPL2)
 
-IF(APPLE)
-    add_definitions(
-        -DMAC_OS
-    )
-ELSEIF(LINUX)
-    add_definitions(
-        -DLINUX
-    )
-ENDIF()
+add_definitions(-DLINUX)
 
 # vim: noet ts=4:

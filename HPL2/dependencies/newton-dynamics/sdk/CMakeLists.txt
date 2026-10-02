@@ -10,60 +10,6 @@
 
 cmake_minimum_required(VERSION 3.10...3.28)
 
-include_directories(dModel)
-include_directories(dVehicle)
-include_directories(dgMeshUtil)
-include_directories(dCustomJoints)
-include_directories(dVehicle/dPlayerController)
-include_directories(dVehicle/dVehicleMultiBody)
-
-
 add_subdirectory(dgCore)
 add_subdirectory(dgNewton)
 add_subdirectory(dgPhysics)
-
-if(NOT NEWTON_BUILD_CORE_ONLY)
-	add_subdirectory(dMath)
-	add_subdirectory(dScene)
-	add_subdirectory(dModel)
-	add_subdirectory(dNewton)
-	add_subdirectory(dVehicle)
-	add_subdirectory(dAnimation)
-	add_subdirectory(dContainers)
-	add_subdirectory(dCustomJoints)
-	add_subdirectory(thirdParty)
-endif()
-
-if (NEWTON_BUILD_PROFILER)
-	add_subdirectory(dProfiler)
-endif (NEWTON_BUILD_PROFILER)
-
-if (NEWTON_WITH_SSE_PLUGIN)
-	add_subdirectory(dgNewtonSse)
-endif()
-
-if (NEWTON_WITH_SSE4_PLUGIN)
-	add_subdirectory(dgNewtonSse4.2)
-endif()
-
-if (NEWTON_WITH_AVX_PLUGIN)
-	if(ANDROID)
-		message(FATAL_ERROR "NEWTON_WITH_AVX_PLUGIN and ANDROID are not compatible")
-	endif()
-	add_subdirectory(dgNewtonAvx)
-endif()
-	
-if (NEWTON_WITH_AVX2_PLUGIN)
-	add_subdirectory(dgNewtonAvx2)
-endif()
-
-if (NEWTON_WITH_REFERENCE_GPU_PLUGIN)
-	if(ANDROID)
-		message(FATAL_ERROR "NEWTON_WITH_REFERENCE_GPU_PLUGIN and ANDROID are not compatible")
-	endif()
-	add_subdirectory(dgNewtonReferenceGPU)
-endif()
-	
-if (NEWTON_WITH_GPU_PLUGIN)
-#	add_subdirectory(dgNewtonVulkan)
-endif()

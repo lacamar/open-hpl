@@ -23,13 +23,13 @@ PowerPC-era macOS. This port:
 - Fixes assorted portability/correctness bugs found while running the port
   against real game data — see [PORTING_NOTES.md](PORTING_NOTES.md).
 
-Scope is the engine, game, and launcher. The FLTK-based content-creation
-tools are not built by default.
+Scope is the engine, game, and launcher. Upstream's editor tools and
+Windows/macOS build files are dropped.
 
 Building
 --------
 CMake project files are in `amnesia/src/`. Newton Dynamics
-(`HPL2/dependencies/newton-dynamics/`) must be built first, with its
+(`HPL2/dependencies/newton-dynamics/`, core only) must be built first, with its
 static libs placed under `HPL2/dependencies/lib/linux/lib/` — see the RPM
 spec's `%build` section for the exact steps.
 

@@ -14,14 +14,6 @@ add_executable(Rebirth
 )
 target_link_libraries(Rebirth HPL2)
 
-IF(APPLE)
-    add_definitions(
-        -DMAC_OS
-    )
-ELSEIF(LINUX)
-    add_definitions(
-        -DLINUX
-    )
-ENDIF()
+add_definitions(-DLINUX)
 
 # vim: noet ts=4:

@@ -13,8 +13,6 @@ if(FORCE32)
     if(LINUX)
         set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-    elseif(APPLE)
-        set(CMAKE_OSX_ARCHITECTURES "i386")
     endif()
 endif()
 
@@ -25,10 +23,6 @@ endif()
 
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-
-if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-endif()
 
 if(LINUX)
     set(PLATFORM_PREFIX             "linux")
@@ -64,24 +58,6 @@ if(LINUX)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH      TRUE)
     set(CMAKE_INSTALL_RPATH                 ${BIN_RPATH})
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH   FALSE)
-elseif(APPLE)
-    set(PLATFORM_PREFIX             "macosx")
-
-    ## NOTE setting the rpath this way only works with CMAKE 2.8.12+
-    # A workaround for 2.8.11 is do also set 
-    # set(CMAKE_XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS ${BIN_RPATH})
-    ##
-    
-    set(BIN_RPATH "@executable_path/../Frameworks")
-
-    set(CMAKE_SKIP_BUILD_RPATH              TRUE)
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH      TRUE)
-    set(CMAKE_INSTALL_RPATH                 ${BIN_RPATH})
-    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH   FALSE)
-elseif(WIN32)
-    set(PLATFORM_PREFIX             "win32")
-
-    MESSAGE(FATAL_ERROR "TODO Windows specific stuff")
 else()
     MESSAGE(FATAL_ERROR "Unhandled Platform")
 endif()
@@ -95,11 +71,6 @@ if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(PLATFORM_PREFIX                     ${PLATFORM_PREFIX} PARENT_SCOPE)
 
     set(CMAKE_INCLUDE_CURRENT_DIR           ${CMAKE_INCLUDE_CURRENT_DIR} PARENT_SCOPE)
-
-if(APPLE)
-    set(CMAKE_OSX_ARCHITECTURES             ${CMAKE_OSX_ARCHITECTURES} PARENT_SCOPE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET         ${CMAKE_OSX_DEPLOYMENT_TARGET} PARENT_SCOPE)
-endif()
 
     set(CMAKE_C_FLAGS                       ${CMAKE_C_FLAGS} PARENT_SCOPE)
     set(CMAKE_CXX_FLAGS                     ${CMAKE_CXX_FLAGS} PARENT_SCOPE)

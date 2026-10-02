@@ -17,14 +17,6 @@ add_executable(Amfp
 )
 target_link_libraries(Amfp HPL2)
 
-IF(APPLE)
-    add_definitions(
-        -DMAC_OS
-    )
-ELSEIF(LINUX)
-    add_definitions(
-        -DLINUX
-    )
-ENDIF()
+add_definitions(-DLINUX)
 
 # vim: noet ts=4:

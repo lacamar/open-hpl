@@ -6,13 +6,8 @@ include(BoilerPlate)
 
 set(HPL2_VERSION_MAJOR 2)
 set(HPL2_VERSION_MINOR 0)
-if(IS_APPLE_64)
-    set(BIN_LIBROOT "${PLATFORM_PREFIX}64")
-else()
-    set(BIN_LIBROOT ${PLATFORM_PREFIX})
-endif()
 
-set(DEP_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/lib/${BIN_LIBROOT}")
+set(DEP_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/lib/${PLATFORM_PREFIX}")
 set(DEP_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/include")
 find_path(PREBUILT_PLATFORM_ROOT .
     PATHS "${DEP_LIB_DIR}"
@@ -25,22 +20,6 @@ mark_as_advanced(
 )
 
 include(UtilityFunctions)
-
-IF(APPLE)
-    SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
-    if(IS_APPLE_64)
-        SET(PRIVATE_LIB_SUFFIX "lib/macosx64")
-    else()
-        SET(PRIVATE_LIB_SUFFIX "lib/macosx")
-    endif()
-ELSEIF(LINUX)
-    SET(PRIVATE_LIB_SUFFIX "lib/linux")
-    # PRIVATE_LIB_DIR intentionally left unset on Linux: it would make
-    # OALWrapper look for ogg/vorbis/openal/SDL under our own prebuilt-binary
-    # tree (dependencies/lib/linux), which no longer ships those on Linux -
-    # they come from the system aarch64 packages via OALWrapper's normal
-    # find_package() fallback instead.
-ENDIF()
 
 OPTION(USE_SDL2 "Use SDL2 instead of SDL1.2" ON)
 
@@ -60,35 +39,9 @@ set(HPL2_INCLUDES
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
 )
 
-IF(LINUX)
-    # ../dependencies/include holds vendored headers still needed on Linux
-    # (Newton.h in particular - already updated in place to the 3.14 API
-    # this port builds against, and there's no Fedora package for it), but
-    # also a much older bundled FL/ (FLTK 1.3.3), kept only for the
-    # Windows/macOS project files which don't go through this CMake build.
-    # A plain -I would let that stale FL/ shadow the real system FLTK
-    # (fltk-devel, >=1.4 - the first release with a native Wayland backend)
-    # and the Launcher would fail to link against its newer libfltk.so ABI.
-    # -idirafter searches this directory only after the compiler's normal
-    # (including implicit system) include paths, so /usr/include/FL wins
-    # while everything else vendored here is still found as a fallback.
-    # (Applied via target_compile_options below, once the HPL2 target
-    # exists.)
-    set(HPL2_VENDORED_INCLUDE_IDIRAFTER "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/include")
-ELSE()
-    list(APPEND HPL2_INCLUDES
-        PUBLIC ../dependencies/include
-    )
-ENDIF()
-
-IF(LINUX)
-    add_library(binreloc STATIC ../dependencies/sources/binreloc/binreloc.c)
-    set_target_properties(binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
-
-    list(APPEND HPL2_INCLUDES
-        ../dependencies/sources/binreloc/
-    )
-ENDIF()
+add_library(binreloc STATIC ../dependencies/sources/binreloc/binreloc.c)
+set_target_properties(binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
+list(APPEND HPL2_INCLUDES ../dependencies/sources/binreloc/)
 
 
 # common shared source
@@ -178,35 +131,14 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderAssimp.cpp
 )
 
-IF(APPLE)
-    LIST(APPEND impl_sources
-        sources/impl/PlatformMacOSX.mm
-        sources/impl/PlatformUnix.cpp
-        sources/impl/PlatformSDL.cpp
-    )
-    IF(NOT USE_SDL2)
-        LIST(APPEND impl_sources
-            SDLMain.m
-            SDLMain.h
-        )
-    ENDIF()
-ELSEIF(LINUX)
-    LIST(APPEND impl_sources
-        sources/impl/PlatformUnix.cpp
-        sources/impl/PlatformSDL.cpp
-    )
-ENDIF()
+LIST(APPEND impl_sources
+    sources/impl/PlatformUnix.cpp
+    sources/impl/PlatformSDL.cpp
+)
 
 # Setup buildID source
 
-IF(APPLE)
-    SET(BUILDID_SUFFIX MacOSX)
-ELSEIF(LINUX)
-    SET(BUILDID_SUFFIX Linux)
-ELSE()
-    message(FATAL_ERROR "Unknown platform")
-ENDIF()
-SET(BUILDID_SUFFIX ${BUILDID_SUFFIX} CACHE STRING "Build ID Suffix")
+SET(BUILDID_SUFFIX Linux CACHE STRING "Build ID Suffix")
 find_file(BUILDID_BIN buildcounter.pl
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}
     NO_DEFAULT_PATH
@@ -232,31 +164,6 @@ GenerateBuildID(version_source
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/sources
 )
-
-# setup source groups
-source_group("AI" REGULAR_EXPRESSION "\\/ai\\/.+")
-source_group("Engine" REGULAR_EXPRESSION "\\/engine\\/.+")
-source_group("Generate" REGULAR_EXPRESSION "\\/generate\\/.+")
-source_group("Graphics" REGULAR_EXPRESSION "\\/graphics\\/.+")
-source_group("GUI" REGULAR_EXPRESSION "\\/gui\\/.+")
-source_group("Input" REGULAR_EXPRESSION "\\/input\\/.+")
-source_group("Math" REGULAR_EXPRESSION "\\/math\\/.+")
-source_group("Physics" REGULAR_EXPRESSION "\\/physics\\/.+")
-source_group("Resources" REGULAR_EXPRESSION "\\/resources\\/.+")
-source_group("Scene" REGULAR_EXPRESSION "\\/scene\\/.+")
-source_group("Sound" REGULAR_EXPRESSION "\\/sound\\/.+")
-source_group("System" REGULAR_EXPRESSION "\\/system\\/.+")
-
-source_group("Implementation Specific" REGULAR_EXPRESSION "\\/impl\\/.+")
-source_group("TinyXML" REGULAR_EXPRESSION "\\/impl\\/tiny.+")
-source_group("SDL Specific" REGULAR_EXPRESSION "\\/impl\\/.*SDL.+")
-source_group("OpenGL Specific" REGULAR_EXPRESSION "\\/impl\\/.*GL.+")
-source_group("HaptX Specific" REGULAR_EXPRESSION "\\/impl\\/.+HaptX.+")
-source_group("Newton Specific" REGULAR_EXPRESSION "\\/impl\\/.+Newton.+")
-source_group("Mesh Loaders" REGULAR_EXPRESSION "\\/impl\\/Mesh.+")
-source_group("OpenAL Specific" REGULAR_EXPRESSION "\\/impl\\/.*OpenAL.+")
-source_group("Win32" REGULAR_EXPRESSION "\\/impl\\/.+Win32.+")
-source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
 
 # setup libs
@@ -285,30 +192,17 @@ target_include_directories(HPL2
     ${HPL2_INCLUDES}
 )
 
-if(HPL2_VENDORED_INCLUDE_IDIRAFTER)
-    target_compile_options(HPL2 PUBLIC -idirafter "${HPL2_VENDORED_INCLUDE_IDIRAFTER}")
-endif()
+target_compile_options(HPL2 PUBLIC -idirafter "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/include")
 
 target_compile_definitions(HPL2
     ${HPL2_DEFINES}
 )
 
-if(LINUX)
-    set(PLATFORM_LIBS
-        binreloc
-        pthread
-        dl
-    )
-elseif(APPLE)
-    FIND_LIBRARY(SC_LIBRARY SystemConfiguration)
-    FIND_LIBRARY(COCOA_LIBRARY Cocoa)
-    mark_as_advanced(COCOA_LIBRARY THEORA_LIBRARY SC_LIBRARY)
-
-    set(PLATFORM_LIBS
-        iconv ${SC_LIBRARY}
-        ${COCOA_LIBRARY}
-    )
-endif()
+set(PLATFORM_LIBS
+    binreloc
+    pthread
+    dl
+)
 
 target_link_libraries(HPL2
     OALWrapper # also pulls in ogg,vorbis,SDL
@@ -329,52 +223,12 @@ target_link_libraries(HPL2
 )
 
 
-if(APPLE)
-    # helper function to copy the needed frameworks in at build time
-    SET(HPL2_FRAMEWORKS ${HPL2_FRAMEWORKS} CACHE STRING "HPL2 copy frameworks")
-    SET(HPL2_LIBRARIES libSDL2.dylib libIL.1.dylib)
-    SET(HPL2_LIBRARIES ${HPL2_LIBRARIES}  CACHE STRING "HPL2 copy libs")
-    mark_as_advanced(HPL2_FRAMEWORKS HPL2_LIBRARIES)
-
-    FUNCTION(PostBuildMacBundle APP_TARGET framework_list lib_list)
-        INCLUDE(BundleUtilities)
-        GET_TARGET_PROPERTY(_BIN_NAME ${APP_TARGET} LOCATION)
-        GET_DOTAPP_DIR(${_BIN_NAME} _BUNDLE_DIR)
-
-        set(_SCRIPT_FILE ${CMAKE_CURRENT_BINARY_DIR}/${APP_TARGET}_prep.cmake)
-        file(WRITE ${_SCRIPT_FILE}
-            "# Generated Script file\n"
-            "include(BundleUtilities)\n"
-            "get_bundle_and_executable(\"\${BUNDLE_APP}\" bundle executable valid)\n"
-            "if(valid)\n"
-            "  set(framework_path \"\${bundle}/Contents/Frameworks\")\n"
-            "  foreach(framework ${framework_list})\n"
-            "    file(MAKE_DIRECTORY \"\${framework_path}/\${framework}.framework/Versions/A/\")\n"
-            "    copy_resolved_framework_into_bundle(\${DEP_LIB_DIR}/\${framework}.framework/Versions/A/\${framework} \${framework_path}/\${framework}.framework/Versions/A/\${framework})\n"
-            "  endforeach()\n"
-            "  foreach(lib ${lib_list})\n"
-            "    copy_resolved_item_into_bundle(\${DEP_LIB_DIR}/\${lib} \${framework_path}/\${lib})\n"
-            "  endforeach()\n"
-            "else()\n"
-            "  message(ERROR \"App Not found? \${BUNDLE_APP}\")\n"
-            "endif()\n"
-            "#fixup_bundle(\"\${BUNDLE_APP}\" \"\" \"\${DEP_LIB_DIR}\")\n"
-        )
-
-        ADD_CUSTOM_COMMAND(TARGET ${APP_TARGET}
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -DBUNDLE_APP="${_BUNDLE_DIR}" -DDEP_LIB_DIR="${DEP_LIB_DIR}" -P "${_SCRIPT_FILE}"
-        )
-    ENDFUNCTION()
-ENDIF()
-
 FUNCTION(AddTestTarget target_name)
     add_executable(${target_name} EXCLUDE_FROM_ALL
         ${ARGN}
     )
     target_link_libraries(${target_name} HPL2)
     set_target_properties(${target_name} PROPERTIES
-        XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "${DEP_LIB_DIR}"
         INSTALL_RPATH "${DEP_LIB_DIR}"
     )
 ENDFUNCTION()
