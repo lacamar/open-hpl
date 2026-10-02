@@ -20,6 +20,7 @@ public:
 	// helper_imgui_options.hps default: FXAA
 	bool mbAntiAliasing = true;
 	bool mbShowSubtitles = true;
+	bool mbDevHud = false;
 
 private:
 	tWString GetConfigFilePath();

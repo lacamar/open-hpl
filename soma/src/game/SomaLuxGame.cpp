@@ -94,6 +94,7 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	apCfg->mbVSync = sVsync == "true" || sVsync == "adaptive";
 	apCfg->mfGamma = c->GetFloat("Graphics", "Brightness", apCfg->mfGamma);
 	apCfg->mbShowSubtitles = c->GetBool("Sound", "ShowSubtitles", false);
+	apCfg->mbDevHud = c->GetBool("Gameplay", "OpenHplHud", false);
 	c->SetInt("Screen", "Width", apCfg->mlScreenWidth);
 	c->SetInt("Screen", "Height", apCfg->mlScreenHeight);
 	if (sFull != "borderless")
@@ -109,6 +110,10 @@ static void LoadLanguage()
 	pRes->ClearTranslations();
 	pRes->AddLanguageFile("config/base_" + gsLanguage + ".lang", false);
 	pRes->AddLanguageFile("config/lang_main/" + gsLanguage + ".lang", false);
+	cLanguageCategory *&pMenu = (*pRes->GetLanguageFile()->GetCategoryMap())["Menu"];
+	if (pMenu == NULL)
+		pMenu = new cLanguageCategory();
+	pMenu->m_mapEntries["OpenHplHud"] = new cLanguageEntry{_W("OPEN-HPL HUD")};
 }
 
 // FullScreen "true" is exclusive at Width x Height (emulated by SDL on Wayland), "borderless" the desktop
@@ -150,6 +155,7 @@ static bool ApplyUserConfig()
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+	gpSomaBase->mpEngine->SetDevHudActive(pCfg->mbDevHud);
 	pCfg->mfMasterVolume = gpUserConfig->GetFloat("Sound", "Volume", pCfg->mfMasterVolume);
 	gpSomaBase->mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);
 	pCfg->Save();

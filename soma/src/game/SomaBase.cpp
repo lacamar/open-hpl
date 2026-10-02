@@ -1055,6 +1055,7 @@ bool cSomaBase::InitEngine()
 
 	mpEngine->GetSound()->GetLowLevel()->SetVolume(mConfig.mfMasterVolume);
 	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mConfig.mfGamma);
+	mpEngine->SetDevHudActive(mConfig.mbDevHud);
 	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mConfig.mbVSync, false);
 
 	return true;

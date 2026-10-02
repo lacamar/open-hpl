@@ -18,6 +18,14 @@ static const char *gvCompatPatches[][3] = {
 	{"helper_custom_depth_imgui.hps", "const cGuiDialogBoxSettings &in aSettings", "cGuiDialogBoxSettings &in aSettings"},
 	{"03_02_omicron_inside.hps", ".length-", ".length()-"},
 	{"03_02_omicron_inside.hps", ".length -", ".length() -"},
+	{"modules/menuhandler.hps", "kOptionsGameplayBgSize = cVector2f(680, 255)", "kOptionsGameplayBgSize = cVector2f(680, 293)"},
+	{"modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true);", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true); OptionMenu_UpdateExtraWidth(\"OpenHplHud\", true);"},
+	{"modules/menuhandler.hps", "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton);",
+	 "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton); } {"
+	 " bool bValue = mpConfig.GetBool(\"Gameplay\", \"OpenHplHud\", false);"
+	 " bool bNewValue = OptionMenu_ButtonOptionsToggle(\"OpenHplHud\", kMainMenuButtonPos, lY++, msSelectedGameplayButton, bValue, mlActionHorizontal);"
+	 " if(bValue != bNewValue) { mpConfig.SetBool(\"Gameplay\", \"OpenHplHud\", bNewValue); ApplySettings(); }"
+	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
 };
 
 static std::string Lower(std::string s)
