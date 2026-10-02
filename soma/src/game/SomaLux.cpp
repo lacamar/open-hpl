@@ -821,6 +821,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 
 	const char *M = "cLuxMap";
 	SOMA_METHOD(e, M, "uint GetCollideFlag(const tString&in asGroupName)", +[](cSomaLuxMap &, const tString &s) { return SomaCollideFlag(s); });
+	SOMA_METHOD(e, M, "void BroadcastSoundHeardEvent(const tString& in asName, const cVector3f&in avPosition, float afRadius, int alPrio, bool abPhysicsObject=false)",
+				+[](cSomaLuxMap &, const tString &, const cVector3f &p, float r, int prio, bool) { SomaBroadcastSoundHeard(p, r, prio); });
 	SOMA_METHOD(e, M, "cWorld@ GetWorld()", +[](cSomaLuxMap &m) { return m.GetWorld(); });
 	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return &m == cSomaLuxMap::GetCurrent(); });
 	SOMA_METHOD(e, M, "iPhysicsWorld@ GetPhysicsWorld()", +[](cSomaLuxMap &m) { return m.GetWorld()->GetPhysicsWorld(); });
