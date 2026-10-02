@@ -1,5 +1,6 @@
 #include "SomaGammaScreen.h"
 #include "SomaBase.h"
+#include "SomaLuxGame.h"
 
 #include <fstream>
 
@@ -125,8 +126,14 @@ void cSomaGammaScreen::Finish()
 
 	if (mpBase)
 	{
-		mpBase->GetConfig()->mfGamma = mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection();
+		float fGamma = mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection();
+		mpBase->GetConfig()->mfGamma = fGamma;
 		mpBase->GetConfig()->Save();
+		if (cConfigFile *pUser = SomaUserConfig())
+		{
+			pUser->SetFloat("Graphics", "Brightness", fGamma);
+			pUser->Save();
+		}
 
 		mpBase->OnGammaScreenFinished();
 	}

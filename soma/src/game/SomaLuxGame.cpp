@@ -477,6 +477,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
+	SOMA_METHOD(e, "iLowLevelGraphics", "void SetBrightness(float afX)", +[](iLowLevelGraphics *g, float x) { g->SetGammaCorrection(x); });
 	SOMA_FUNC(e, "bool cLux_ApplyUserConfig()", +[]() { return ApplyUserConfig(); });
 	SOMA_FUNC(e, "bool cLux_GetSaveConfigAtExit()", +[]() { return true; });
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetKeyConfig()", +[]() { return gpKeyConfig; });
