@@ -214,10 +214,11 @@ namespace hpl {
 		cVector2f vTexSize = apTexture->GetSizeFloat2D();
 		cVector2f vUvPos, vUvSize;
 		GetTextureUvPosAndSize(vTexSize,vUvPos,vUvSize);
+		cVector2f vUvScale = apTexture->GetType() == eTextureType_Rect ? cVector2f(1) : cVector2f(1) / vTexSize;
 
 		mpCurrentComposite->DrawQuad(avPos,avSize,
-									cVector2f(vUvPos.x, (vTexSize.y - vUvSize.y)-vUvPos.y), 
-									cVector2f(vUvPos.x + vUvSize.x,vTexSize.y - vUvPos.y),
+									cVector2f(vUvPos.x, (vTexSize.y - vUvSize.y)-vUvPos.y) * vUvScale, 
+									cVector2f(vUvPos.x + vUvSize.x,vTexSize.y - vUvPos.y) * vUvScale,
 									abFlipY);
 	}
 
@@ -233,8 +234,9 @@ namespace hpl {
 		{
 			cVector2f vUvPos, vUvSize;
 			GetTextureUvPosAndSize(vTexSize[i],vUvPos,vUvSize);
-			vTexMin[i] = cVector2f(vUvPos.x, (vTexSize[i].y - vUvSize.y)-vUvPos.y); 
-			vTexMax[i] = cVector2f(vUvPos.x + vUvSize.x,vTexSize[i].y - vUvPos.y);
+			cVector2f vUvScale = (i ? apTexture1 : apTexture0)->GetType() == eTextureType_Rect ? cVector2f(1) : cVector2f(1) / vTexSize[i];
+			vTexMin[i] = cVector2f(vUvPos.x, (vTexSize[i].y - vUvSize.y)-vUvPos.y) * vUvScale; 
+			vTexMax[i] = cVector2f(vUvPos.x + vUvSize.x,vTexSize[i].y - vUvPos.y) * vUvScale;
 		}
 
 		mpCurrentComposite->DrawQuad(cVector2f(0,0),1,vTexMin[0],vTexMax[0],vTexMin[1],vTexMax[1],abFlipY0,abFlipY1);

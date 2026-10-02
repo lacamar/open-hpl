@@ -49,6 +49,7 @@ namespace hpl {
 		 * Highest prio is first!
 		 */
 		void AddPostEffect(iPostEffect *apPostEffect, int alPrio);
+		void RemovePostEffect(iPostEffect *apPostEffect);
 		inline int GetPostEffectNum()const{ return (int)mvPostEffects.size(); }
 		inline iPostEffect* GetPostEffect(int alIdx)const{ return mvPostEffects[alIdx]; }
 

@@ -202,6 +202,7 @@ namespace hpl {
 	private:
 		void DrawAccumulationQuad();
 		void CopyToFrameBuffer();
+		void CopyAccumTo(iFrameBuffer *apTarget);
 		void SetupRenderList();
 		void RenderObjects();
 

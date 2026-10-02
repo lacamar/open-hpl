@@ -11,7 +11,6 @@ particles), inspect distance (readables open at half scale: `SetMeshScaleMul`), 
 applies live.
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- Scan machine visual effect missing.
 - GUI screens skip fog/DoF.
 - Slow map loads; no loading screen when loading a save.
 - Treemail list entries overlap.
@@ -166,9 +165,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   by scripts), agents' native state.
 - Agents: char mover wall/object avoidance, banking and idle extras are no-ops.
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
-- Post effects (chromatic aberration, radial blur, image trail, video distortion, image fade)
-  keep their parameters but aren't rendered; the aberration's params -> offsets/colours mapping
-  is CPU-side in the exe.
+- Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
 - `stub_report`: eye tracker, `cForceField::SetPosition`,
   preload hints.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).

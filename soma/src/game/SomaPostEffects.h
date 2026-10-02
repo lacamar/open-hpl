@@ -4,44 +4,38 @@
 #include "hpl.h"
 #include <array>
 #include <initializer_list>
-#include <utility>
-#include <vector>
 
 using namespace hpl;
 
 class asIScriptEngine;
 
-class cSomaPostEffect
+class cSomaPostEffect : public iPostEffect
 {
 public:
 	cSomaPostEffect(const tString &asType);
 	~cSomaPostEffect();
 
-	void Reset();
-	void Set(std::initializer_list<float> alParams) { std::copy(alParams.begin(), alParams.end(), mfParams); }
-	bool IsOn() const { return mbActive && mbDisabled == false; }
+	void Reset() override { mbClear = true; }
+	void Set(std::initializer_list<float> alParams);
 
 	tString msType;
-	bool mbActive = true;
-	bool mbDisabled = false;
 	float mfParams[8] = {};
 	std::array<iTexture *, 3> mvTextures = {};
-};
 
-class cSomaPostEffectComposite
-{
-public:
-	void Add(cSomaPostEffect *apEffect, int alPrio);
-	void Remove(cSomaPostEffect *apEffect);
-	cSomaPostEffect *FromType(const tString &asType);
+private:
+	void OnSetActive(bool abX) override { if (abX == false) Reset(); }
+	void OnSetParams() override {}
+	iPostEffectParams *GetTypeSpecificParams() override { return NULL; }
+	iTexture *RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer) override;
 
-	static cSomaPostEffectComposite *GetViewport();
-
-	std::vector<std::pair<int, cSomaPostEffect *>> mvEffects;
+	int mlType;
+	bool mbClear = true;
+	float mfT = 0;
 };
 
 namespace cSomaPostEffects
 {
+	cPostEffectComposite *GetViewportComposite();
 	void RegisterNatives(asIScriptEngine *apEngine);
 }
 

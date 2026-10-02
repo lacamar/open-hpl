@@ -1,82 +1,196 @@
 #include "SomaPostEffects.h"
+#include "SomaBase.h"
 #include "SomaScriptBind.h"
 
 #include <angelscript.h>
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <set>
 
 namespace
 {
+	struct cType
+	{
+		const char *mpName, *mpShader;
+		int mlKey;
+		float mfDefaults[8];
+	};
+	const cType gvTypes[] = {
+		{"ChromaticAberration", "chromatic_aberration", 0, {0, kPif / 3}},
+		{"RadialBlur", "radial_blur", 1, {0.06f}},
+		{"ImageTrail", "image_trail", 0, {0.3f}},
+		{"ImageFadeFX", "image_fade_fx", 0, {1}},
+		{"VideoDistortion", "video_distortion", 0, {1, 0, 0.15f, 1}},
+		{"FXAA", NULL, -1, {}},
+	};
+	enum { eChromatic, eRadialBlur, eImageTrail, eImageFade, eVideoDistortion };
+	iGpuProgram *gvPrograms[std::size(gvTypes)] = {};
+	bool gvProgramTried[std::size(gvTypes)] = {};
+
 	std::set<cSomaPostEffect *> gsetEffects;
-	cSomaPostEffectComposite gViewportComposite;
+	cPostEffectComposite *gpViewportComposite = NULL;
 
 	cSomaPostEffect *Effect(void *apObj)
 	{
 		cSomaPostEffect *pEffect = static_cast<cSomaPostEffect *>(apObj);
 		return gsetEffects.count(pEffect) ? pEffect : NULL;
 	}
+
+	cColor Hue(float afDeg)
+	{
+		auto f = [&](float n) { float k = fmodf(n + afDeg / 60.0f, 6.0f); return 1 - std::max(0.0f, std::min({k, 4 - k, 1.0f})); };
+		return cColor(f(5), f(3), f(1), 1);
+	}
 }
 
-cSomaPostEffect::cSomaPostEffect(const tString &asType) : msType(asType) { gsetEffects.insert(this); }
+cSomaPostEffect::cSomaPostEffect(const tString &asType)
+	: iPostEffect(gpSomaBase->mpEngine->GetGraphics(), gpSomaBase->mpEngine->GetResources(), NULL), msType(asType)
+{
+	mlType = std::find_if(std::begin(gvTypes), std::end(gvTypes), [&](const cType &t) { return asType == t.mpName; }) - gvTypes;
+	std::copy(gvTypes[mlType].mfDefaults, gvTypes[mlType].mfDefaults + 8, mfParams);
+	gsetEffects.insert(this);
+}
+
 cSomaPostEffect::~cSomaPostEffect() { gsetEffects.erase(this); }
 
-void cSomaPostEffect::Reset()
+void cSomaPostEffect::Set(std::initializer_list<float> alParams)
 {
-	mbActive = true;
-	std::fill(mfParams, mfParams + 8, 0.0f);
-	mvTextures.fill(NULL);
+	std::copy(alParams.begin(), alParams.end(), mfParams);
+	SetActive(mfParams[gvTypes[mlType].mlKey] > 0);
 }
 
-void cSomaPostEffectComposite::Add(cSomaPostEffect *apEffect, int alPrio)
+iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 {
-	Remove(apEffect);
-	auto it = std::find_if(mvEffects.begin(), mvEffects.end(), [&](const auto &e) { return e.first > alPrio; });
-	mvEffects.insert(it, std::make_pair(alPrio, apEffect));
+	const cType &type = gvTypes[mlType];
+	if (type.mpShader && gvProgramTried[mlType] == false)
+	{
+		gvProgramTried[mlType] = true;
+		cParserVarContainer vars;
+		vars.Add("UseUv");
+		gvPrograms[mlType] = mpGraphics->CreateGpuProgramFromShaders(tString("Soma") + type.mpName, "posteffect_quad_vtx.glsl",
+																	 tString("posteffect_") + type.mpShader + "_frag.glsl", &vars);
+	}
+	iGpuProgram *pProg = gvPrograms[mlType];
+	if (pProg == NULL)
+		return apIn;
+
+	cPostEffectComposite *c = mpCurrentComposite;
+	auto U = [&](const char *n) { return pProg->GetVariableId(n); };
+	const float *p = mfParams;
+	cVector2f vTex = apIn->GetSizeFloat2D();
+	float fFrameTime = c->GetCurrentFrameTime();
+
+	c->SetFlatProjection();
+	c->SetBlendMode(eMaterialBlendMode_None);
+	c->SetChannelMode(eMaterialChannelMode_RGBA);
+	c->SetTextureRange(NULL, 1);
+	c->SetTexture(0, apIn);
+
+	iFrameBuffer *pTarget = apOut;
+	if (mlType == eImageTrail)
+	{
+		// ponytail: trail mixes tone-mapped LDR, the original mixes HDR before tone mapping
+		pTarget = mpGraphics->GetTempFrameBuffer(mpLowLevelGraphics->GetScreenSizeInt(), ePixelFormat_RGBA, 8);
+		c->SetFrameBuffer(pTarget, true);
+		c->SetProgram(pProg);
+		float fAlpha = 1;
+		if (mbClear)
+			c->ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
+		else
+			fAlpha = std::max(0.05f, 1 - powf(1 - expf(p[0] * -60 * 0.015f), fFrameTime * 60));
+		mbClear = false;
+		pProg->SetFloat(U("afAlpha"), fAlpha);
+		c->SetBlendMode(eMaterialBlendMode_Alpha);
+	}
+	else
+	{
+		SetFinalFrameBuffer(apOut);
+		c->SetProgram(pProg);
+		if (mlType != eRadialBlur)
+			apIn->SetFilter(eTextureFilter_Bilinear);
+	}
+
+	if (mlType == eChromatic)
+	{
+		cVector2f vScale = cVector2f(mpLowLevelGraphics->GetScreenSizeFloat().y * p[0]) / vTex;
+		cVector2f vDir(sinf(p[1]), -cosf(p[1])), vOffset(p[3], p[4]);
+		pProg->SetVec2f(U("avOffsetA"), (vOffset + vDir) * vScale);
+		pProg->SetVec2f(U("avOffsetB"), vOffset * vScale);
+		pProg->SetVec2f(U("avOffsetC"), (vOffset - vDir) * vScale);
+		cColor vCol[3] = {Hue(fmodf(p[2], 360)), Hue(fmodf(p[2] + 120, 360)), Hue(fmodf(p[2] + 240, 360))};
+		cColor sum = vCol[0] + vCol[1] + vCol[2];
+		const char *vNames[] = {"avColorA", "avColorB", "avColorC"};
+		for (int i = 0; i < 3; ++i)
+			pProg->SetVec4f(U(vNames[i]), vCol[i].r / sum.r, vCol[i].g / sum.g, vCol[i].b / sum.b, vCol[i].a / sum.a);
+	}
+	else if (mlType == eRadialBlur)
+	{
+		pProg->SetFloat(U("afSize"), p[0]);
+		pProg->SetFloat(U("afBlurStartDist"), p[2]);
+		pProg->SetFloat(U("afAlpha"), p[1]);
+	}
+	else if (mlType == eImageFade)
+	{
+		mfT += fFrameTime;
+		pProg->SetVec2f(U("avScreenSize"), vTex);
+		pProg->SetFloat(U("afAmount"), p[0]);
+		pProg->SetFloat(U("afT"), mfT);
+		for (int i = 0; i < 3; ++i)
+			c->SetTexture(i + 1, mvTextures[i]);
+	}
+	else if (mlType == eVideoDistortion)
+	{
+		pProg->SetVec2f(U("avScreenSize"), vTex);
+		pProg->SetFloat(U("afAmount"), p[0]);
+		pProg->SetFloat(U("afSeed"), p[1]);
+		pProg->SetFloat(U("afLineDensity"), p[2]);
+		pProg->SetFloat(U("afOffsetMul"), p[3]);
+		pProg->SetVec2f(U("avScreenOffset"), cVector2f(p[4], p[5]));
+		pProg->SetVec2f(U("avScreenBendAmount"), cVector2f(p[6], p[7]));
+	}
+
+	DrawQuad(0, 1, apIn, true);
+	c->SetProgram(NULL);
+	c->SetBlendMode(eMaterialBlendMode_None);
+	c->SetTextureRange(NULL, 0);
+	return pTarget->GetColorBuffer(0)->ToTexture();
 }
 
-void cSomaPostEffectComposite::Remove(cSomaPostEffect *apEffect)
+cPostEffectComposite *cSomaPostEffects::GetViewportComposite()
 {
-	std::erase_if(mvEffects, [&](const auto &e) { return e.second == apEffect; });
+	if (gpViewportComposite == NULL)
+		gpViewportComposite = gpSomaBase->mpEngine->GetGraphics()->CreatePostEffectComposite();
+	return gpViewportComposite;
 }
-
-cSomaPostEffect *cSomaPostEffectComposite::FromType(const tString &asType)
-{
-	for (auto &e : mvEffects)
-		if (e.second->msType == asType)
-			return e.second;
-	return NULL;
-}
-
-cSomaPostEffectComposite *cSomaPostEffectComposite::GetViewport() { return &gViewportComposite; }
 
 void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 {
-	typedef cSomaPostEffectComposite C;
+	typedef cPostEffectComposite C;
 	e->RegisterObjectMethod("cViewport", "cPostEffectComposite@ GetPostEffectComposite()",
-							asFUNCTION(+[](asIScriptGeneric *g) { g->SetReturnAddress(C::GetViewport()); }), asCALL_GENERIC);
-	SOMA_FUNC(e, "cPostEffectComposite@ cGraphics_CreatePostEffectComposite()", +[]() { return new C(); });
-	SOMA_FUNC(e, "void cGraphics_DestroyPostEffectComposite(cPostEffectComposite@ apComposite)",
-			  +[](C *p) { if (p != C::GetViewport()) delete p; });
-	SOMA_METHOD(e, "cPostEffectComposite", "void AddPostEffect(iPostEffect@ apPostEffect, int alPrio)",
-				+[](C *c, void *p, int l) { if (cSomaPostEffect *pEffect = Effect(p)) c->Add(pEffect, l); });
-	SOMA_METHOD(e, "cPostEffectComposite", "void RemovePostEffect(iPostEffect@ apPostEffect)",
-				+[](C *c, void *p) { if (cSomaPostEffect *pEffect = Effect(p)) c->Remove(pEffect); });
-	SOMA_METHOD(e, "cPostEffectComposite", "int GetPostEffectNum()", +[](C *c) { return (int)c->mvEffects.size(); });
-	SOMA_METHOD(e, "cPostEffectComposite", "iPostEffect@ GetPostEffect(int alIdx)", +[](C *c, int i) -> void * {
-		return i >= 0 && i < (int)c->mvEffects.size() ? c->mvEffects[i].second : NULL;
+							asFUNCTION(+[](asIScriptGeneric *g) { g->SetReturnAddress(GetViewportComposite()); }), asCALL_GENERIC);
+	SOMA_METHOD(e, "cPostEffectComposite", "void AddPostEffect(iPostEffect@ apPostEffect, int alPrio)", +[](C *c, void *p, int l) {
+		if (cSomaPostEffect *pEffect = Effect(p))
+		{
+			c->RemovePostEffect(pEffect);
+			c->AddPostEffect(pEffect, -l);
+		}
 	});
-	SOMA_METHOD(e, "cPostEffectComposite", "iPostEffect@ GetPostEffectFromType(const tString&in asType)",
-				+[](C *c, const tString &s) -> void * { return c->FromType(s); });
-	SOMA_METHOD(e, "cPostEffectComposite", "bool HasActiveEffects()", +[](C *c) {
-		for (auto &p : c->mvEffects)
-			if (p.second->IsOn()) return true;
-		return false;
+	SOMA_METHOD(e, "cPostEffectComposite", "void RemovePostEffect(iPostEffect@ apPostEffect)",
+				+[](C *c, void *p) { if (cSomaPostEffect *pEffect = Effect(p)) c->RemovePostEffect(pEffect); });
+	SOMA_METHOD(e, "cPostEffectComposite", "iPostEffect@ GetPostEffect(int alIdx)", +[](C *c, int i) -> void * {
+		return i >= 0 && i < c->GetPostEffectNum() ? c->GetPostEffect(i) : NULL;
+	});
+	SOMA_METHOD(e, "cPostEffectComposite", "iPostEffect@ GetPostEffectFromType(const tString&in asType)", +[](C *c, const tString &s) -> void * {
+		for (int i = 0; i < c->GetPostEffectNum(); ++i)
+			if (cSomaPostEffect *p = Effect(c->GetPostEffect(i)); p && p->msType == s)
+				return p;
+		return NULL;
 	});
 	SOMA_FUNC(e, "void cGraphics_DestroyPostEffect(iPostEffect@ apPostEffect)", +[](void *p) {
 		if (cSomaPostEffect *pEffect = Effect(p))
 		{
-			gViewportComposite.Remove(pEffect);
+			GetViewportComposite()->RemovePostEffect(pEffect);
 			delete pEffect;
 		}
 	});
@@ -85,10 +199,10 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion"};
 	for (const char *pType : vTypes)
 	{
-		SOMA_METHOD(e, pType, "void SetDisabled(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->mbDisabled = b; });
-		SOMA_METHOD(e, pType, "bool IsDisabled()", +[](void *p) { cSomaPostEffect *x = Effect(p); return x && x->mbDisabled; });
-		SOMA_METHOD(e, pType, "void SetActive(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->mbActive = b; });
-		SOMA_METHOD(e, pType, "bool IsActive()", +[](void *p) { cSomaPostEffect *x = Effect(p); return x && x->mbActive; });
+		SOMA_METHOD(e, pType, "void SetDisabled(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->SetDisabled(b); });
+		SOMA_METHOD(e, pType, "bool IsDisabled()", +[](void *p) { cSomaPostEffect *x = Effect(p); return x && x->IsDisabled(); });
+		SOMA_METHOD(e, pType, "void SetActive(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->SetActive(b); });
+		SOMA_METHOD(e, pType, "bool IsActive()", +[](void *p) { cSomaPostEffect *x = Effect(p); return x && x->IsActive(); });
 		if (strcmp(pType, "iPostEffect") != 0)
 			SOMA_METHOD(e, pType, "void Reset()", +[](void *p) { if (cSomaPostEffect *x = Effect(p)) x->Reset(); });
 	}

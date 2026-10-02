@@ -1101,6 +1101,7 @@ namespace hpl {
 
 	iTexture* cRendererDeferred::GetPostEffectTexture()
 	{
+		if(mpToneMapProgram) return mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,6)->GetColorBuffer(0)->ToTexture();
 		return mpAccumBufferTexture;
 
 		//This should never be needed since if a post effect is used, 
@@ -1145,7 +1146,11 @@ namespace hpl {
 	void cRendererDeferred::CopyToFrameBuffer()
 	{
 		if(mpCurrentSettings->mbIsReflection) return;
+		CopyAccumTo(mpCurrentRenderTarget->mpFrameBuffer);
+	}
 
+	void cRendererDeferred::CopyAccumTo(iFrameBuffer *apTarget)
+	{
 		START_RENDER_PASS(CopyToFrameBuffer);
 
 		SetDepthTest(false);
@@ -1158,7 +1163,7 @@ namespace hpl {
 		if(mpToneMapProgram)
 		{
 			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
-			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,5) : mpCurrentRenderTarget->mpFrameBuffer;
+			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,5) : apTarget;
 			if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
@@ -1187,7 +1192,7 @@ namespace hpl {
 
 		if(pSource)
 		{
-			SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer,true);
+			SetFrameBuffer(apTarget,true);
 			SetFlatProjection();
 			iGpuProgram *pCopyProgram = mpCurrentSettings->mbUseFxaa ? mpFxaaProgram : NULL;
 			SetProgram(pCopyProgram);
@@ -1308,6 +1313,9 @@ namespace hpl {
 
 		if(mbOcclusionTestLargeLights)
 			RetrieveAllLightOcclusionPair(false); //false = we do not stop and wait.
+
+		if(mbSendFrameBufferToPostEffects && mpToneMapProgram && mpCurrentSettings->mbIsReflection==false)
+			CopyAccumTo(mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,6));
 
 		//Debug for testing reflection!
 		/*if(mpCurrentSettings->mbIsReflection==false)

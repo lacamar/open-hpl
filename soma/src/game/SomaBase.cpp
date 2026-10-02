@@ -1,4 +1,5 @@
 #include "SomaBase.h"
+#include "SomaPostEffects.h"
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
 
@@ -1106,6 +1107,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		mpDebugCamera = mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
 		mpDebugCamera->SetFarClipPlane(200.0f);
 		mpDebugViewport = mpEngine->GetScene()->CreateViewport(mpDebugCamera, mpTestWorld, true);
+		mpDebugViewport->SetPostEffectComposite(cSomaPostEffects::GetViewportComposite());
 		mpEngine->GetScene()->SetCurrentListener(mpDebugViewport);
 	}
 	else

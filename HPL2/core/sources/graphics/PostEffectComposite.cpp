@@ -30,6 +30,8 @@
 #include "graphics/PostEffect.h"
 #include "graphics/VertexBuffer.h"
 
+#include <algorithm>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -117,6 +119,15 @@ namespace hpl {
 
 		m_mapPostEffects.insert(tPostEffectMap::value_type(alPrio, apPostEffect));
 		mvPostEffects.push_back(apPostEffect);
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cPostEffectComposite::RemovePostEffect(iPostEffect *apPostEffect)
+	{
+		for(tPostEffectMapIt it = m_mapPostEffects.begin(); it != m_mapPostEffects.end();)
+			it = it->second == apPostEffect ? m_mapPostEffects.erase(it) : std::next(it);
+		mvPostEffects.erase(std::remove(mvPostEffects.begin(), mvPostEffects.end(), apPostEffect), mvPostEffects.end());
 	}
 
 	//-----------------------------------------------------------------------
