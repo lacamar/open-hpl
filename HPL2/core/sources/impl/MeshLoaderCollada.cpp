@@ -192,7 +192,7 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v5.msh") : _W(".v4.msh"));
+		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v6.msh") : _W(".v4.msh"));
 	}
 
 	static void UnscaleBone(cBone *apBone, float afUnit, const cMatrixf &a_mtxRootRot, bool abRoot)
@@ -200,7 +200,6 @@ namespace hpl {
 		cMatrixf mtx = apBone->GetLocalTransform();
 		mtx.SetTranslation(mtx.GetTranslation() * afUnit);
 		apBone->SetTransform(abRoot ? cMath::MatrixMul(a_mtxRootRot, mtx) : mtx);
-		apBone->SetLocalUnitScale(afUnit);
 		cBoneIterator it = apBone->GetChildIterator();
 		while(it.HasNext()) UnscaleBone(it.Next(), afUnit, a_mtxRootRot, false);
 	}
