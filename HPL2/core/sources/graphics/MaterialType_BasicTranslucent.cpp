@@ -64,6 +64,11 @@ namespace hpl {
 	#define kVar_avInvScreenSize					10
 	#define kVar_avColorMul							11
 	#define kVar_px_mtxLightProbe					12
+	#define kVar_afNearPlane						13
+	#define kVar_afInvFarPlane						14
+	#define kVar_afSoftParticleThickness			15
+	#define kVar_afSoftParticleAlphaBasedThickness	16
+	#define kVar_afSoftParticleDepthBias			17
 	
 	
 	//------------------------------
@@ -78,8 +83,9 @@ namespace hpl {
 	#define eFeature_Diffuse_CubeMapAlpha			eFlagBit_6
 	#define eFeature_Diffuse_UseScreenNormal		eFlagBit_7
 	#define eFeature_Diffuse_Lit					eFlagBit_8
+	#define eFeature_Diffuse_SoftParticle			eFlagBit_9
 	
-	#define kDiffuseFeatureNum 9
+	#define kDiffuseFeatureNum 10
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -92,6 +98,7 @@ namespace hpl {
 		cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
 		cProgramComboFeature("UseScreenNormal", kPC_FragmentBit),
 		cProgramComboFeature("Lit", kPC_FragmentBit),
+		cProgramComboFeature("UseSoftParticle", kPC_FragmentBit | kPC_VertexBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -191,6 +198,11 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("px_mtxLightProbe", kVar_px_mtxLightProbe, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afNearPlane", kVar_afNearPlane, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afInvFarPlane", kVar_afInvFarPlane, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleThickness", kVar_afSoftParticleThickness, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleAlphaBasedThickness", kVar_afSoftParticleAlphaBasedThickness, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleDepthBias", kVar_afSoftParticleDepthBias, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -221,6 +233,7 @@ namespace hpl {
 						return NULL;
 			case 3: return apMaterial->GetTexture(eMaterialTexture_CubeMap);
 			case 4: return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+			case 7: return bRefractionEnabled || pVars->mbSoftParticle ? mpGraphics->GetRenderer(eRenderer_Main)->GetSceneDepthTexture() : NULL;
 			}
 		}
 		////////////////////////////
@@ -272,6 +285,7 @@ namespace hpl {
 			if(bRefractionEnabled)									lFlags |= eFeature_Diffuse_UseRefraction;
 			if(pVars->mbRefractionNormals && bRefractionEnabled)	lFlags |= eFeature_Diffuse_UseScreenNormal;
 			if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
+			if(pVars->mbSoftParticle)								lFlags |= eFeature_Diffuse_SoftParticle;
 			
 			return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 		}
@@ -308,6 +322,9 @@ namespace hpl {
 		{
 			cVector2l vScreenSize = apRenderer->GetRenderTargetSize();
 			apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f/(float)vScreenSize.x, 1.0f/(float)vScreenSize.y);
+			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
+			apProgram->SetFloat(kVar_afNearPlane, pFrustum->GetNearPlane());
+			apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/pFrustum->GetFarPlane());
 		}
 	}
 	
@@ -346,6 +363,13 @@ namespace hpl {
 		{
 			float fScale = cGraphics::GetTempFrameBufferTextureType() == eTextureType_Rect ? (float)apRenderer->GetRenderTargetSize().x : 1.0f;
 			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * fScale);
+		}
+
+		if(pVars->mbSoftParticle && bIlluminationPass==false)
+		{
+			apProgram->SetFloat(kVar_afSoftParticleThickness, pVars->mfSoftPartThickness);
+			apProgram->SetFloat(kVar_afSoftParticleAlphaBasedThickness, pVars->mfSoftPartAlphaBasedThickness);
+			apProgram->SetFloat(kVar_afSoftParticleDepthBias, pVars->mfSoftPartDepthBias);
 		}
 
 		////////////////////////////
@@ -577,6 +601,10 @@ namespace hpl {
 		pVars->mfRimLightMul =  apVars->GetVarFloat("RimLightMul", 0.0f);
 		pVars->mfRimLightPow = apVars->GetVarFloat("RimLightPow", 8.0f);
 		pVars->mbAffectedByLightLevel = apVars->GetVarBool("AffectedByLightLevel", false);
+		pVars->mbSoftParticle = apVars->GetVarBool("SoftParticleActive", false);
+		pVars->mfSoftPartThickness = apVars->GetVarFloat("SoftPartThickness", 1.0f);
+		pVars->mfSoftPartAlphaBasedThickness = apVars->GetVarFloat("SoftPartAlphaBasedThickness", 0.0f);
+		pVars->mfSoftPartDepthBias = apVars->GetVarFloat("SoftPartDepthBias", 0.0f);
 	}
 
 	//--------------------------------------------------------------------------

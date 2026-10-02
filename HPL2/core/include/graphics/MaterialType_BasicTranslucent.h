@@ -35,7 +35,7 @@ namespace hpl {
 	{
 	public:
 		cMaterialType_Translucent_Vars() :	mbRefraction(false), mbRefractionEdgeCheck(true), mbRefractionNormals(false), mfRefractionScale(0.1f), 
-											mfFrenselBias(0.2f), mfFrenselPow(8.0f) {}
+											mfFrenselBias(0.2f), mfFrenselPow(8.0f), mbSoftParticle(false) {}
 		~cMaterialType_Translucent_Vars(){}
 
 		bool mbRefraction;
@@ -47,6 +47,10 @@ namespace hpl {
 		float mfRimLightMul;
 		float mfRimLightPow;
 		bool mbAffectedByLightLevel;
+		bool mbSoftParticle;
+		float mfSoftPartThickness;
+		float mfSoftPartAlphaBasedThickness;
+		float mfSoftPartDepthBias;
 	};
 
 	//--------------------------------------------------

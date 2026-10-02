@@ -159,7 +159,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			}
 	}
 	for (iLight *pLight : mvLights)
-		pLight->SetRadius(pLight->GetRadius() * mvScale.x);
+		pLight->SetRadius(pLight->GetRadius() * (mvScale.x + mvScale.y + mvScale.z) / 3.0f);
 
 	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
 	{

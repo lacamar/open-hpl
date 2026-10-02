@@ -141,6 +141,7 @@ namespace hpl {
 		iFrameBuffer *GetAccumBuffer(){ return mpAccumBuffer;}
 
 		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
+		iTexture* GetSceneDepthTexture(){ return GetGbufferTexture(mbDepthInNormalAlpha ? 1 : 2);}
 		iTexture* GetReflectionTexture(){ return mpReflectionTexture;}
 
 		//Static properties. Must be set before renderer data load.

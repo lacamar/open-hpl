@@ -266,6 +266,7 @@ namespace hpl {
 		virtual iTexture* GetPostEffectTexture();
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
+		virtual iTexture* GetSceneDepthTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
 
 		virtual iGpuProgram* GetSkyBoxProgram(){ return NULL; }

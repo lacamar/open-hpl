@@ -150,7 +150,7 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
 		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
-		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n" },
+		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n\t\tfloat afInvFarPlane;\n" },
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {

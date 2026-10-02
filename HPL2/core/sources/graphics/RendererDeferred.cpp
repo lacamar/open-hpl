@@ -3629,6 +3629,7 @@ namespace hpl {
 
 		SetAlphaLimit(0.01f);
 		SetAlphaMode(eMaterialAlphaMode_Trans);
+		if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(true);
 
 		///////////////////////////////
 		//Set up variables
@@ -3694,7 +3695,9 @@ namespace hpl {
 				///////////////////////////////////
 				//Render the reflection
 				cSubMeshEntity *pReflectSubMeshEnt = static_cast<cSubMeshEntity*>(pObject);
+				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(false);
 				RenderReflection(pReflectSubMeshEnt);
+				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(true);
 			}
 
 			////////////////////////////////////////
@@ -3794,6 +3797,7 @@ namespace hpl {
 
 		SetAlphaMode(eMaterialAlphaMode_Solid);
 		SetAlphaLimit(mfDefaultAlphaLimit);
+		if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(false);
 
 		
 
