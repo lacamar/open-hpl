@@ -5,6 +5,7 @@
 #include "SomaLuxPlayer.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptBuilder.h"
+#include "SomaSound.h"
 
 #include "impl/scriptarray.h"
 
@@ -525,6 +526,44 @@ public:
 					lDead |= 1u << i;
 			o.Pod(lDead);
 		}
+
+		std::vector<cSoundEntity *> vSounds;
+		cSoundEntityIterator sIt = pMap->GetWorld()->GetSoundEntityIterator();
+		while (sIt.HasNext())
+			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL && s->GetData())
+				vSounds.push_back(s);
+		o.Pod((uint32_t)vSounds.size());
+		for (cSoundEntity *s : vSounds)
+		{
+			o.Str(s->GetName());
+			o.Str(s->GetData()->GetName());
+			o.Pod(s->GetRemoveWhenOver());
+			o.Pod(s->IsActive());
+			o.Pod(s->IsStopped() || s->IsFadingOut());
+			o.Pod(s->GetMinDistance());
+			o.Pod(s->GetMaxDistance());
+			o.Pod(s->GetVolume());
+			o.Pod(s->GetLocalPosition());
+			cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent();
+			o.Pod(pInst ? pInst->mfFadeDest : 1.0f);
+			o.Pod(pInst ? pInst->mfVolumeMulDest : 1.0f);
+			o.Pod((uint32_t)(pInst ? pInst->GetParamNum() : 0));
+			for (int i = 0; pInst && i < pInst->GetParamNum(); ++i)
+				o.Pod(pInst->GetParamValue(i));
+		}
+
+		std::vector<cBillboard *> vBillboards;
+		cBillboardIterator bIt = pMap->GetWorld()->GetBillboardIterator();
+		while (bIt.HasNext())
+			if (cBillboard *b = bIt.Next(); b->IsSaved() && b->GetParent() == NULL && b->GetEntityParent() == NULL)
+				vBillboards.push_back(b);
+		o.Pod((uint32_t)vBillboards.size());
+		for (cBillboard *b : vBillboards)
+		{
+			o.Str(b->GetName());
+			o.Pod(b->GetVisibleVar());
+			o.Pod(b->GetColor());
+		}
 	}
 
 	static void ReadWorld(cIn &in)
@@ -642,6 +681,65 @@ public:
 		if (bHasPS)
 			for (auto &it : mapPS)
 				it.second->KillInstantly();
+
+		std::multimap<tString, cSoundEntity *> mapSounds;
+		cSoundEntityIterator sIt = pMap->GetWorld()->GetSoundEntityIterator();
+		while (sIt.HasNext())
+			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL)
+				mapSounds.emplace(s->GetName(), s);
+		n = in.Pod<uint32_t>();
+		bool bHasSounds = in.ok;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sName = in.Str(), sData = in.Str();
+			bool bRemove = in.Pod<bool>(), bActive = in.Pod<bool>(), bStopped = in.Pod<bool>();
+			float fMin = in.Pod<float>(), fMax = in.Pod<float>(), fVol = in.Pod<float>();
+			cVector3f vPos = in.Pod<cVector3f>();
+			float fFade = in.Pod<float>(), fVolMul = in.Pod<float>();
+			std::vector<float> vParams(std::min(in.Pod<uint32_t>(), 256u));
+			for (float &f : vParams)
+				f = in.Pod<float>();
+			if (in.ok == false)
+				break;
+			cSoundEntity *s = NULL;
+			if (auto it = mapSounds.find(sName); it != mapSounds.end())
+			{
+				s = it->second;
+				mapSounds.erase(it);
+			}
+			else if ((s = pMap->GetWorld()->CreateSoundEntity(sName, sData, bRemove)) == NULL)
+				continue;
+			s->SetActive(bActive);
+			s->SetMinDistance(fMin);
+			s->SetMaxDistance(fMax);
+			s->SetVolume(fVol);
+			s->SetPosition(vPos);
+			if (cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent())
+			{
+				pInst->FadeInTo(fFade, 0);
+				pInst->SetVolumeMul(fVolMul);
+				for (size_t p = 0; p < vParams.size(); ++p)
+					pInst->SetParam((int)p, vParams[p]);
+			}
+			if (bStopped)
+				s->Stop(false);
+		}
+		if (bHasSounds)
+			for (auto &it : mapSounds)
+				it.second->Stop(false);
+
+		n = in.Pod<uint32_t>();
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sName = in.Str();
+			bool bVisible = in.Pod<bool>();
+			cColor col = in.Pod<cColor>();
+			if (cBillboard *b = in.ok ? pMap->GetWorld()->GetBillboard(sName) : NULL)
+			{
+				b->SetVisible(bVisible);
+				b->SetColor(col);
+			}
+		}
 
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		if (bPlayer && pPlayer)

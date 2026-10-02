@@ -177,6 +177,7 @@ public:
 
 private:
 	friend class cSomaSoundEvents;
+	friend class cSomaSaveState;
 	struct cVoice
 	{
 		cSoundEntry *mpEntry;

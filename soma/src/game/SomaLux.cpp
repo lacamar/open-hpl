@@ -993,6 +993,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD_NEW(e, "cLightSpot", "void SetScriptableIsSaved(bool abX)", +[](cLightSpot *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cLightBox", "void SetScriptableIsSaved(bool abX)", +[](cLightBox *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cParticleSystem", "void SetScriptableIsSaved(bool abX)", +[](cParticleSystem *o, bool b) { o->SetIsSaved(b); });
+		SOMA_METHOD_NEW(e, "cSoundEntity", "void SetScriptableIsSaved(bool abX)", +[](cSoundEntity *o, bool b) { o->SetIsSaved(b); });
+		SOMA_METHOD_NEW(e, "cBillboard", "void SetScriptableIsSaved(bool abX)", +[](cBillboard *o, bool b) { o->SetIsSaved(b); });
 		SOMA_FUNC(e, "void ParticleSystem_Destroy(const tString &in asPSName)", +[](S n) { ForPS(n, [](cParticleSystem *p) { p->Kill(); }); });
 		SOMA_FUNC(e, "void ParticleSystem_SetVisible(const tString &in asPSName, bool abVisible)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetVisible(b); }); });
 		SOMA_FUNC(e, "void ParticleSystem_SetActive(const tString &in asPSName, bool abActive)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetActive(b); }); });

@@ -6059,5 +6059,8 @@ our live entries and events.
 - Unparented world particle systems follow (`cEnginePS_SaveData`: data file, size, matrix,
   colour, brightness, active/visible, fade distances, dead emitters); script-created ones are
   recreated, script-destroyed ones killed. Dying systems are skipped, as in Amnesia.
-  `SetScriptableIsSaved` is bound for lights and particle systems.
+  `SetScriptableIsSaved` is bound for lights, particle systems, sound entities and billboards.
+- Unparented saved sound entities (`cEngineSound_SaveData` plus the FMOD instance's fade target,
+  volume mul and parameters) and billboards (visible, colour). `Sound_CreateAtEntity` marks only
+  `abSaveSound` loops as saved; map sounds stopped by script (00_03 waiting room buzz) stay stopped.
 
