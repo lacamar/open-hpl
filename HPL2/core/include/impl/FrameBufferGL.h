@@ -73,6 +73,7 @@ namespace hpl {
 		GLuint mlHandle;
 
 		bool mbIsUpdated;
+		bool mbExplicitMipLevel;
 	};
 };
 #endif // HPL_TEXTURE_H

@@ -159,6 +159,7 @@ namespace hpl {
 		static int GetDepthCullLights(){ return mbDepthCullLights;}
 
 		static void SetSSAOLoaded(bool abX){ mbSSAOLoaded = abX;}
+		static void SetHpl3SSAO(bool abX){ mbHpl3SSAO = abX;}
 		static void SetSSAONumOfSamples(int alX){ mlSSAONumOfSamples = alX;}
 		static void SetSSAOBufferSizeDiv(int alX){ mlSSAOBufferSizeDiv = alX;}
 		static void SetSSAOScatterLengthMul(float afX){ mfSSAOScatterLengthMul = afX;}
@@ -210,7 +211,7 @@ namespace hpl {
 		// own quad-view draw.
 		// 0-3: G-buffer targets, 4: light accumulation buffer
 		iTexture* GetDebugShadowTexture(iLight *apLight){ for(int r=0; r<eShadowMapResolution_LastEnum; ++r) for(size_t i=0; i<mvShadowMapData[r].size(); ++i) if(mvShadowMapData[r][i]->mCache.mpLight == apLight) return mvShadowMapData[r][i]->mpTexture; return NULL; }
-		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; if(alIdx==5) return mpBoxWeightTexture; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
+		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; if(alIdx==5) return mpBoxWeightTexture; if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6]; if(alIdx==9) return mpH3SSAOMipTexture; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
 
 	private:
 		void DrawAccumulationQuad();
@@ -226,6 +227,8 @@ namespace hpl {
 		void RenderDynamicZTemp();
 		void RenderGbuffer();
 		void RenderSSAO();
+		void RenderHpl3SSAO();
+		void ApplyHpl3SSAO();
 		void RenderEdgeSmooth();
 		void RenderDeferredSkyBox();
 		
@@ -345,6 +348,19 @@ namespace hpl {
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
 		iGpuProgram *mpFxaaProgram;
+		iTexture *mpH3SSAOTexture[3];
+		iTexture *mpH3SSAOMipTexture;
+		iFrameBuffer *mpH3SSAOBuffer[3];
+		std::vector<iFrameBuffer*> mvH3SSAOMipBuffers;
+		iGpuProgram *mpH3SSAODownsampleProgram;
+		iGpuProgram *mpH3SSAORenderProgram;
+		iGpuProgram *mpH3SSAOBlurProgram;
+		iGpuProgram *mpH3SSAOTemporalProgram;
+		iGpuProgram *mpH3SSAOUpsampleProgram;
+		float mfH3SSAOTime;
+		bool mbH3SSAOFirstFrame;
+		bool mbH3SSAORendered;
+		cMatrixf m_mtxH3SSAOPrevView;
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
@@ -381,6 +397,7 @@ namespace hpl {
 		static bool mbDepthCullLights;
 
 		static bool mbSSAOLoaded;
+		static bool mbHpl3SSAO;
 		static int mlSSAONumOfSamples;
 		static float mfSSAOScatterLengthMul;
 		static float mfSSAOScatterLengthMin;

@@ -673,12 +673,18 @@ namespace
 		return RewriteCallIntrinsic(asSrc, "mul", formatter, asOut, asErrorOut);
 	}
 
-	bool RewriteSampleIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
+	bool RewriteSampleIntrinsic(const tString& asSrc, tString& asOut, bool& abNeedsOffset, tString& asErrorOut)
 	{
 		std::map<tString, tString> mapSamplers = CollectSamplerTypes(asSrc);
 
-		auto formatter = [&mapSamplers](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		auto formatter = [&mapSamplers, &abNeedsOffset](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
 		{
+			if (aArgs.size() == 3)
+			{
+				asRepl = "textureOffset(" + aArgs[0] + ", " + aArgs[1] + ", " + aArgs[2] + ")";
+				abNeedsOffset = true;
+				return true;
+			}
 			if (aArgs.size() != 2)
 			{
 				asErr = "sample() with " + cString::ToString((int)aArgs.size()) +
@@ -777,7 +783,6 @@ namespace
 	bool RewriteLoadIntrinsic(const tString& asSrc, tString& asOut, bool& abFired, tString& asErrorOut)
 	{
 		std::map<tString, tString> mapSamplers = CollectSamplerTypes(asSrc);
-		abFired = false;
 
 		auto formatter = [&mapSamplers, &abFired](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
 		{
@@ -827,8 +832,8 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	if (RewriteSampleCmpIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
-	if (RewriteSampleIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	bool bNeedsTexelFetch = false;
+	if (RewriteSampleIntrinsic(sSrc, sSrc, bNeedsTexelFetch, asErrorOut) == false) return false;
 	if (RewriteLoadIntrinsic(sSrc, sSrc, bNeedsTexelFetch, asErrorOut) == false) return false;
 	bool bNeedsGrad = false;
 	if (RewriteSampleLodGradIntrinsic(sSrc, "sampleGrad", "textureGrad", 4, sSrc, bNeedsGrad, asErrorOut) == false) return false;
@@ -1003,7 +1008,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	// #version 130 bump for the specific files that actually use load()
 	// (texelFetch needs it - see RewriteLoadIntrinsic() above for why this
 	// narrow, per-file bump is safe unlike a blanket engine-wide one).
-	bool bNeedsIntOps = std::regex_search(sBody, std::regex("%|>>|<<"));
+	bool bNeedsIntOps = std::regex_search(sBody, std::regex("%|>>|<<|\\bisnan\\("));
 	tString sVersionBlock = bNeedsTexelFetch || bNeedsIntOps ? "#version 130\n" : "#version 120\n";
 	if (aType == eGpuShaderType_Fragment && bNeedsFragData)
 		sVersionBlock += "#extension GL_ARB_draw_buffers : enable\n";

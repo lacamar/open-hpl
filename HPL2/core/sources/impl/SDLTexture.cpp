@@ -629,6 +629,10 @@ namespace hpl {
 		{
 			GLenum GLTarget = GetGLTextureTargetEnum(mType);
 
+			GLenum GLBinding = GLTarget == GL_TEXTURE_CUBE_MAP ? GL_TEXTURE_BINDING_CUBE_MAP : GLTarget == GL_TEXTURE_3D ? GL_TEXTURE_BINDING_3D :
+							   GLTarget == GL_TEXTURE_RECTANGLE ? GL_TEXTURE_BINDING_RECTANGLE : GLTarget == GL_TEXTURE_1D ? GL_TEXTURE_BINDING_1D : GL_TEXTURE_BINDING_2D;
+			GLint lPrevBound = 0;
+			glGetIntegerv(GLBinding, &lPrevBound);
 			glEnable(GLTarget);
 			for(size_t i=0; i < mvTextureHandles.size(); ++i)
 			{
@@ -637,6 +641,7 @@ namespace hpl {
 			}
 
 			glDisable(GLTarget);
+			glBindTexture(GLTarget, lPrevBound);
 		}
 	}
 	

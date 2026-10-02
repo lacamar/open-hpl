@@ -20,6 +20,7 @@
 #include "impl/FrameBufferGL.h"
 
 #include "system/LowLevelSystem.h"
+#include "math/Math.h"
 
 #include "impl/SDLTexture.h"
 #include "impl/LowLevelGraphicsSDL.h"
@@ -139,7 +140,7 @@ namespace hpl {
 		glGenFramebuffersEXT(1, &mlHandle);
 
 		mbIsUpdated = true;
-
+		mbExplicitMipLevel = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -348,6 +349,7 @@ namespace hpl {
 
 	void cFrameBufferGL::PostBindUpdate()
 	{
+		if(mbExplicitMipLevel) return;
 		for(int i=0; i<kMaxDrawColorBuffers; ++i)
 		{
 			if(mpColorBuffer[i]) PostBindUpdateAttachment(mpColorBuffer[i]);
@@ -393,6 +395,7 @@ namespace hpl {
 	{
 		;
 
+		if(alMipmapLevel > 0) mbExplicitMipLevel = true;
 		eTextureType texType = apTexture->GetType();
 		GLenum GLTarget = TextureTypeToGLTarget(texType);
 
@@ -441,7 +444,7 @@ namespace hpl {
 
 		//////////////////////////////////////
 		//If this is the first thing set to the frame buffer, use that size.
-		SetFirstSize(cVector2l(apTexture->GetSize().x,apTexture->GetSize().y));
+		SetFirstSize(cVector2l(cMath::Max(1, apTexture->GetSize().x >> alMipmapLevel), cMath::Max(1, apTexture->GetSize().y >> alMipmapLevel)));
 
 		mbIsUpdated = true;
 	}

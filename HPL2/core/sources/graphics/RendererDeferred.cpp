@@ -71,6 +71,7 @@ namespace hpl {
 	bool cRendererDeferred::mbDepthCullLights = true;
 
 	bool cRendererDeferred::mbSSAOLoaded = false;
+	bool cRendererDeferred::mbHpl3SSAO = false;
 	int cRendererDeferred::mlSSAONumOfSamples = 8;
 	int cRendererDeferred::mlSSAOBufferSizeDiv = 2;
 	float cRendererDeferred::mfSSAOScatterLengthMul = 0.2f;
@@ -208,6 +209,20 @@ namespace hpl {
 	#define kVar_afSpotNearClip						52
 	#define kVar_avFocusStartEnd					53
 	#define kVar_avOffsetMul						54
+	#define kVar_avUVToView0						55
+	#define kVar_avUVToView1						56
+	#define kVar_afT								57
+	#define kVar_afStepSizeMax						58
+	#define kVar_afRadius							59
+	#define kVar_afScreenSizeDiv					60
+	#define kVar_afLodScale							61
+	#define kVar_afDepthDifference					62
+	#define kVar_avDirection						63
+	#define kVar_a_mtxTemporalView					64
+	#define kVar_a_mtxTemporalProjection			65
+	#define kVar_afTemporalBlurAmount				66
+	#define kVar_afSizeDiv							67
+	#define kVar_afPower							68
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -240,6 +255,16 @@ namespace hpl {
 		mlMaxBatchLights = 100;
 		mpFxaaProgram = NULL;
 		mpDofFocusProgram = NULL;
+		for(int i=0; i<3; ++i) { mpH3SSAOTexture[i] = NULL; mpH3SSAOBuffer[i] = NULL; }
+		mpH3SSAOMipTexture = NULL;
+		mpH3SSAODownsampleProgram = NULL;
+		mpH3SSAORenderProgram = NULL;
+		mpH3SSAOBlurProgram = NULL;
+		mpH3SSAOTemporalProgram = NULL;
+		mpH3SSAOUpsampleProgram = NULL;
+		mfH3SSAOTime = 0;
+		mbH3SSAOFirstFrame = true;
+		mbH3SSAORendered = false;
 		mpDofBlurProgram = NULL;
 		mpDofGaussTexture = NULL;
 		mpToneMapProgram = NULL;
@@ -866,6 +891,100 @@ namespace hpl {
 			mpDofGaussTexture->SetFilter(eTextureFilter_Bilinear);
 		}
 
+		if(mbHpl3SSAO && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat))
+		{
+			const int lDiv = 2;
+			cVector2l vSize = mvScreenSize / lDiv;
+			const char* vNames[3] = {"SSAO", "SSAOBlur1", "SSAOTemporal"};
+			for(int i=0; i<3; ++i)
+			{
+				mpH3SSAOTexture[i] = mpGraphics->CreateTexture(vNames[i], eTextureType_2D, eTextureUsage_RenderTarget);
+				mpH3SSAOTexture[i]->SetUseMipMaps(false);
+				mpH3SSAOTexture[i]->CreateFromRawData(cVector3l(vSize.x, vSize.y, 1), ePixelFormat_RGB16, NULL);
+				mpH3SSAOTexture[i]->SetWrapSTR(eTextureWrap_ClampToEdge);
+				mpH3SSAOTexture[i]->SetFilter(eTextureFilter_Nearest);
+				mpH3SSAOBuffer[i] = mpGraphics->CreateFrameBuffer(vNames[i]);
+				mpH3SSAOBuffer[i]->SetTexture2D(0, mpH3SSAOTexture[i]);
+				mpH3SSAOBuffer[i]->CompileAndValidate();
+			}
+
+			cVector2l vMipSize(1 << (int)floorf(log2f((float)vSize.x) + 0.5f), 1 << (int)floorf(log2f((float)vSize.y) + 0.5f));
+			int lMips = cMath::Max(1, (int)log2f((float)cMath::Max(vMipSize.x, vMipSize.y)) - 4);
+			mpH3SSAOMipTexture = mpGraphics->CreateTexture("SSAOMip", eTextureType_2D, eTextureUsage_RenderTarget);
+			mpH3SSAOMipTexture->SetUseMipMaps(true);
+			mpH3SSAOMipTexture->CreateFromRawData(cVector3l(vMipSize.x, vMipSize.y, 1), ePixelFormat_RGB16, NULL);
+			mpH3SSAOMipTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+			mpH3SSAOMipTexture->SetFilter(eTextureFilter_Nearest);
+			int lMipLevels = (int)log2f((float)cMath::Max(vMipSize.x, vMipSize.y)) + 1;
+			for(int i=0; i<lMipLevels; ++i)
+			{
+				iFrameBuffer *pFB = mpGraphics->CreateFrameBuffer("SSAOMip" + cString::ToString(i));
+				pFB->SetTexture2D(0, mpH3SSAOMipTexture, i);
+				pFB->CompileAndValidate();
+				mvH3SSAOMipBuffers.push_back(pFB);
+			}
+
+			cParserVarContainer vars;
+			vars.Add("UseUv");
+			vars.Add("SSAO_VERSION_050");
+			vars.Add("UseUnpackNormal");
+			vars.Add("UseRotatedGrid");
+			mpH3SSAODownsampleProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Downsample", "deferred_base_vtx.glsl", "deferred_ssao_depth_downsample_frag.glsl", &vars);
+			vars.Clear();
+			vars.Add("UseUv");
+			vars.Add("SSAO_VERSION_050");
+			mpH3SSAOBlurProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Blur", "deferred_base_vtx.glsl", "deferred_ssao_blur_frag.glsl", &vars);
+			mpH3SSAOTemporalProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Temporal", "deferred_base_vtx.glsl", "deferred_ssao_temporal_frag.glsl", &vars);
+			vars.Add("UseUpsample");
+			vars.Add("UseTemporal");
+			mpH3SSAOUpsampleProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Upsample", "deferred_base_vtx.glsl", "deferred_ssao_upsample_frag.glsl", &vars);
+			vars.Clear();
+			vars.Add("UseUv");
+			vars.Add("SSAO_VERSION_050");
+			vars.Add("kNumSamples", 16);
+			vars.Add("kMaxLod", lMips - 1);
+			vars.Add("UseDownsample");
+			mpH3SSAORenderProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Render", "deferred_base_vtx.glsl", "deferred_ssao_render_frag.glsl", &vars);
+
+			if(mpH3SSAODownsampleProgram)
+				mpH3SSAODownsampleProgram->GetVariableAsId("avInvScreenSize", kVar_avInvScreenSize);
+			if(mpH3SSAORenderProgram)
+			{
+				iGpuProgram *p = mpH3SSAORenderProgram;
+				p->GetVariableAsId("avUVToView0", kVar_avUVToView0);
+				p->GetVariableAsId("avUVToView1", kVar_avUVToView1);
+				p->GetVariableAsId("afT", kVar_afT);
+				p->GetVariableAsId("afStepSizeMax", kVar_afStepSizeMax);
+				p->GetVariableAsId("afFarPlane", kVar_afFarPlane);
+				p->GetVariableAsId("afRadius", kVar_afRadius);
+				p->GetVariableAsId("afScreenSizeDiv", kVar_afScreenSizeDiv);
+				p->GetVariableAsId("afLodScale", kVar_afLodScale);
+			}
+			if(mpH3SSAOBlurProgram)
+			{
+				mpH3SSAOBlurProgram->GetVariableAsId("afFarPlane", kVar_afFarPlane);
+				mpH3SSAOBlurProgram->GetVariableAsId("afDepthDifference", kVar_afDepthDifference);
+				mpH3SSAOBlurProgram->GetVariableAsId("avDirection", kVar_avDirection);
+			}
+			if(mpH3SSAOTemporalProgram)
+			{
+				iGpuProgram *p = mpH3SSAOTemporalProgram;
+				p->GetVariableAsId("afFarPlane", kVar_afFarPlane);
+				p->GetVariableAsId("avUVToView0", kVar_avUVToView0);
+				p->GetVariableAsId("avUVToView1", kVar_avUVToView1);
+				p->GetVariableAsId("a_mtxTemporalView", kVar_a_mtxTemporalView);
+				p->GetVariableAsId("a_mtxTemporalProjection", kVar_a_mtxTemporalProjection);
+				p->GetVariableAsId("avScreenSize", kVar_avScreenSize);
+				p->GetVariableAsId("afTemporalBlurAmount", kVar_afTemporalBlurAmount);
+			}
+			if(mpH3SSAOUpsampleProgram)
+			{
+				mpH3SSAOUpsampleProgram->GetVariableAsId("afFarPlane", kVar_afFarPlane);
+				mpH3SSAOUpsampleProgram->GetVariableAsId("afSizeDiv", kVar_afSizeDiv);
+				mpH3SSAOUpsampleProgram->GetVariableAsId("afPower", kVar_afPower);
+			}
+		}
+
 		mpToneMapProgram = NULL;
 		mpToneMapGradingProgram = NULL;
 		if(mbHdr)
@@ -1003,6 +1122,16 @@ namespace hpl {
 		
 		if(mpFxaaProgram) mpGraphics->DestroyGpuProgram(mpFxaaProgram);
 		if(mpDofFocusProgram) mpGraphics->DestroyGpuProgram(mpDofFocusProgram);
+		for(int i=0; i<3; ++i)
+		{
+			if(mpH3SSAOBuffer[i]) mpGraphics->DestroyFrameBuffer(mpH3SSAOBuffer[i]);
+			if(mpH3SSAOTexture[i]) mpGraphics->DestroyTexture(mpH3SSAOTexture[i]);
+		}
+		for(size_t i=0; i<mvH3SSAOMipBuffers.size(); ++i) mpGraphics->DestroyFrameBuffer(mvH3SSAOMipBuffers[i]);
+		mvH3SSAOMipBuffers.clear();
+		if(mpH3SSAOMipTexture) mpGraphics->DestroyTexture(mpH3SSAOMipTexture);
+		iGpuProgram *vH3SSAOPrograms[] = {mpH3SSAODownsampleProgram, mpH3SSAORenderProgram, mpH3SSAOBlurProgram, mpH3SSAOTemporalProgram, mpH3SSAOUpsampleProgram};
+		for(int i=0; i<5; ++i) if(vH3SSAOPrograms[i]) mpGraphics->DestroyGpuProgram(vH3SSAOPrograms[i]);
 		if(mpDofBlurProgram) mpGraphics->DestroyGpuProgram(mpDofBlurProgram);
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
@@ -3000,6 +3129,7 @@ namespace hpl {
 		/////////////////////////////////////////
 		// Render SSAO (used by box lights)
 		RenderSSAO();
+		RenderHpl3SSAO();
 		
 		/////////////////////////////////////////
 		// Set up general render states.
@@ -3052,6 +3182,8 @@ namespace hpl {
 		SetStencilActive(false);
 		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
 		SetCullMode(eCullMode_CounterClockwise);
+
+		ApplyHpl3SSAO();
 
 		////////////////////////////
 		//Debug: Draw wire frame for all lights!
@@ -3189,6 +3321,146 @@ namespace hpl {
 		}
 		GetGbufferTexture(1)->SetRedFromAlpha(abBind);
 		if(abBind) SetTexture(alUnit, GetGbufferTexture(1));
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRendererDeferred::RenderHpl3SSAO()
+	{
+		mbH3SSAORendered = false;
+		if(mpH3SSAORenderProgram==NULL || mpH3SSAODownsampleProgram==NULL || mpH3SSAOBlurProgram==NULL ||
+			mpH3SSAOTemporalProgram==NULL || mpH3SSAOUpsampleProgram==NULL) return;
+		if(mpCurrentSettings->mbIsReflection || mpCurrentSettings->mbSSAOActive==false) return;
+
+		START_RENDER_PASS(SSAO);
+
+		const float fDiv = 2.0f;
+		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV() * 0.5f);
+		float fT = fTanHalfFov * mfFarPlane;
+		float fW = mpCurrentFrustum->GetAspect() * fT;
+		cVector3f vUVToView0(2*fW, 2*fT, 0), vUVToView1(-fW, -fT, -mfFarPlane);
+		cVector2f vSize((float)mpH3SSAOTexture[0]->GetWidth(), (float)mpH3SSAOTexture[0]->GetHeight());
+		iTexture *pDepthN = GetBufferTexture(1);
+
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetTextureRange(NULL, 0);
+		SetFlatProjection();
+
+		SetProgram(mpH3SSAODownsampleProgram);
+		mpH3SSAODownsampleProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f / mvScreenSizeFloat.x, 1.0f / mvScreenSizeFloat.y));
+		SetFogDepthTexture(true, 0);
+		for(size_t i=0; i<mvH3SSAOMipBuffers.size(); ++i)
+		{
+			SetFrameBuffer(mvH3SSAOMipBuffers[i], false, false);
+			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		}
+		SetFogDepthTexture(false, 0);
+
+		mfH3SSAOTime = fmodf(mfH3SSAOTime + mfCurrentFrameTime, 256.0f);
+		cVector2f vMipSize((float)mpH3SSAOMipTexture->GetWidth(), (float)mpH3SSAOMipTexture->GetHeight());
+		SetFrameBuffer(mpH3SSAOBuffer[0], false, false);
+		SetProgram(mpH3SSAORenderProgram);
+		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
+		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
+		mpH3SSAORenderProgram->SetFloat(kVar_afT, mfH3SSAOTime * 1.9416110515594482f);
+		mpH3SSAORenderProgram->SetFloat(kVar_afStepSizeMax, 0.5f / fTanHalfFov);
+		mpH3SSAORenderProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		mpH3SSAORenderProgram->SetFloat(kVar_afRadius, 1.5f);
+		mpH3SSAORenderProgram->SetFloat(kVar_afScreenSizeDiv, fDiv);
+		mpH3SSAORenderProgram->SetFloat(kVar_afLodScale, 0.4f * (int)sqrtf(vMipSize.x*vMipSize.x + vMipSize.y*vMipSize.y + 1));
+		SetTexture(0, pDepthN);
+		SetTexture(1, mpH3SSAOMipTexture);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		SetTexture(1, NULL);
+
+		SetProgram(mpH3SSAOBlurProgram);
+		mpH3SSAOBlurProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		mpH3SSAOBlurProgram->SetFloat(kVar_afDepthDifference, 0.0625f);
+		cVector2f vBlurDir[2] = {cVector2f(0, 1.0f / vSize.y), cVector2f(1.0f / vSize.x, 0)};
+		int vBlurPasses[4][3] = {{0,1,0}, {1,0,1}, {1,0,0}, {0,2,1}};
+
+		for(int i=0; i<2; ++i)
+		{
+			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
+			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
+			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
+			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		}
+
+		const cMatrixf& mtxView = mpCurrentFrustum->GetViewMatrix();
+		cMatrixf mtxTemporalView = mbH3SSAOFirstFrame ? cMatrixf::Identity : cMath::MatrixMul(m_mtxH3SSAOPrevView, cMath::MatrixInverse(mtxView));
+		float fAmount = cMath::Clamp(mfCurrentFrameTime, 1.0f/60.0f, 1.0f/15.0f);
+		float fMoved = mtxTemporalView.GetTranslation().Length();
+		if(fMoved > 0.1f) fAmount += (fMoved - 0.1f) / 10.0f;
+		if(mbH3SSAOFirstFrame) fAmount += 2.0f;
+		mbH3SSAOFirstFrame = false;
+		m_mtxH3SSAOPrevView = mtxView;
+
+		SetFrameBuffer(mpH3SSAOBuffer[1], false, false);
+		SetProgram(mpH3SSAOTemporalProgram);
+		mpH3SSAOTemporalProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
+		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
+		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalView, mtxTemporalView);
+		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalProjection, mpCurrentFrustum->GetProjectionMatrix());
+		mpH3SSAOTemporalProgram->SetVec2f(kVar_avScreenSize, vSize);
+		mpH3SSAOTemporalProgram->SetFloat(kVar_afTemporalBlurAmount, cMath::Clamp(fAmount, 0.0f, 1.0f));
+		SetTexture(0, mpH3SSAOTexture[0]);
+		SetTexture(1, mpH3SSAOTexture[2]);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		SetTexture(1, NULL);
+
+		SetProgram(mpH3SSAOBlurProgram);
+		for(int i=2; i<4; ++i)
+		{
+			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
+			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
+			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
+			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		}
+
+		SetTexture(0, NULL);
+		SetProgram(NULL);
+		SetNormalFrustumProjection();
+		mbH3SSAORendered = true;
+
+		END_RENDER_PASS();
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRendererDeferred::ApplyHpl3SSAO()
+	{
+		if(mbH3SSAORendered==false) return;
+
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetStencilActive(false);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetBlendMode(eMaterialBlendMode_Mul);
+		SetFlatProjection();
+
+		SetAccumulationBuffer();
+		SetProgram(mpH3SSAOUpsampleProgram);
+		mpH3SSAOUpsampleProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		mpH3SSAOUpsampleProgram->SetFloat(kVar_afSizeDiv, 0.5f);
+		mpH3SSAOUpsampleProgram->SetFloat(kVar_afPower, 8.0f);
+		SetTexture(0, mpH3SSAOTexture[2]);
+		SetFogDepthTexture(true, 1);
+		cVector2f vHalfTexel(0.5f / mpH3SSAOTexture[2]->GetWidth(), 0.5f / mpH3SSAOTexture[2]->GetHeight());
+		DrawQuad(cVector2f(0,0),1, vHalfTexel * -1.0f, cVector2f(1,1) - vHalfTexel, true);
+		SetFogDepthTexture(false, 1);
+		SetTexture(0, NULL);
+		SetTexture(1, NULL);
+		SetProgram(NULL);
+
+		SetBlendMode(eMaterialBlendMode_Add);
+		SetNormalFrustumProjection();
+		SetDepthTest(true);
 	}
 
 	//-----------------------------------------------------------------------

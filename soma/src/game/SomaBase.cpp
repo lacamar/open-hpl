@@ -1062,6 +1062,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	iLight::SetHpl3Visibility(true);
+	cRendererDeferred::SetHpl3SSAO(true);
 	if (pHdr == NULL || pHdr[0] != '0')
 	{
 		cRendererDeferred::SetHdr(true);
