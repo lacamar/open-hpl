@@ -152,7 +152,7 @@ def aim_entity(name):
 
 
 def cmd_look(a):
-    aim_entity(a.entity)
+    aim([float(v) for v in a.entity]) if len(a.entity) == 3 else aim_entity(a.entity[0])
     frames(0.2)
 
 
@@ -330,10 +330,12 @@ def cmd_gui(a):
         for t, x, y, h in texts:
             print(f"{x:7.1f} {y:7.1f}  {t}")
         return
-    hits = [t for t in texts if a.text.lower() in t[0].lower()]
-    if not hits:
+    hits = [t for t in texts if a.text.lower() == t[0].lower()] or [t for t in texts if a.text.lower() in t[0].lower()]
+    if len(hits) <= a.nth:
         raise SystemExit(f"no text matching {a.text!r}")
-    t, x, y, h = hits[0]
+    if len(hits) > 1:
+        print(f"{len(hits)} matches, using --nth {a.nth}: " + ", ".join(f"{x:.0f},{y:.0f}" for _, x, y, _ in hits), file=sys.stderr)
+    t, x, y, h = hits[a.nth]
     gui_click(a.entity, x + 4, y + h * 0.5)
     print(f"clicked {t!r} at {x + 4:.0f},{y + h * 0.5:.0f}")
 
@@ -356,7 +358,7 @@ def main():
     sub.add_parser("stop"); sub.add_parser("state")
     s = sub.add_parser("goto"); s.add_argument("entity"); s.add_argument("--dist", type=float, default=1.0)
     s.add_argument("--keep-height", action="store_true")
-    s = sub.add_parser("look"); s.add_argument("entity")
+    s = sub.add_parser("look"); s.add_argument("entity", nargs="+", help="name or X Y Z")
     s = sub.add_parser("interact"); s.add_argument("entity"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
@@ -370,7 +372,7 @@ def main():
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
     s = sub.add_parser("log"); s.add_argument("regex", nargs="?"); s.add_argument("--all", action="store_true")
     s = sub.add_parser("shot"); s.add_argument("out")
-    s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2)
+    s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2); s.add_argument("--nth", type=int, default=0)
     a = ap.parse_args()
     globals()["cmd_" + a.cmd](a)
 

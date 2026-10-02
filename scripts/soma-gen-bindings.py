@@ -27,7 +27,7 @@ TYPES = {
     'cGuiGfxElement': 'cGuiGfxElement', 'cViewport': 'cViewport', 'cNode3D': 'cNode3D', 'cBone': 'cBone',
     'cMesh': 'cMesh', 'cSubMesh': 'cSubMesh', 'cMaterial': 'cMaterial', 'iTexture': 'iTexture',
     'cAction': 'cAction', 'cBeam': 'cBeam', 'cRopeEntity': 'cRopeEntity', 'cFogArea': 'cFogArea',
-    'iWidget': 'iWidget', 'cWidgetWindow': 'cWidgetWindow', 'cGuiSkin': 'cGuiSkin', 'cAINodeContainer': 'cAINodeContainer',
+    'iWidget': 'iWidget', 'cWidgetWindow': 'cWidgetWindow', 'cGuiSkin': 'cGuiSkin', 'cAINodeContainer': 'cAINodeContainer', 'cAINode': 'cAINode',
     'cColliderEntity': 'cColliderEntity', 'cCollideData': 'cCollideData', 'cSoundHandler': 'cSoundHandler',
     'cBoneState': 'cBoneState', 'iKeyboard': 'iKeyboard', 'iMouse': 'iMouse', 'iGamepad': 'iGamepad', 'cForceField': 'cForceField',
     'iLowLevelGraphics': 'iLowLevelGraphics', 'cPostEffectComposite': 'cPostEffectComposite',
@@ -35,7 +35,7 @@ TYPES = {
 
 # HPL3 names whose HPL2 spelling differs
 RENAME = {'IsTriggered': 'IsTriggerd', 'WasTriggered': 'WasTriggerd', 'BecameTriggered': 'BecameTriggerd',
-          'DoubleTriggered': 'DoubleTriggerd'}
+          'DoubleTriggered': 'DoubleTriggerd', 'SetMaxPushForce': 'SetPushForce', 'GetMaxPushForce': 'GetPushForce'}
 
 # global prefix -> HPL2 object the cFoo_Bar() globals call Bar() on
 GLOBALS = {

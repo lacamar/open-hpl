@@ -179,19 +179,22 @@ namespace hpl {
 			float fMinY = mpCharBody->GetFeetPosition().y;
 			fMinY += 0.01f;
 			if(vMedianPoint.y  <  fMinY) return;
+
+			float fForce = mpCharBody->GetPushForce();
+			if(mpCharBody->GetPushImpulse() > 0) fForce = cMath::Min(fForce, apBody->GetMass() * mpCharBody->GetPushImpulse());
 			
 			if(mpCharBody->GetPushIn2D())
 			{
 				cVector3f vDir = vMedianPoint - mpCharBody->GetPosition();
 				vDir.y =0; vDir.Normalize();
 			
-				apBody->AddForceAtPosition(vDir * mpCharBody->GetPushForce(), vMedianPoint);
+				apBody->AddForceAtPosition(vDir * fForce, vMedianPoint);
 			}
 			else
 			{
 				cVector3f vDir = cMath::Vector3Normalize(vMedianPoint - mpCharBody->GetPosition());
 
-				apBody->AddForceAtPosition(vDir * mpCharBody->GetPushForce(), vMedianPoint);
+				apBody->AddForceAtPosition(vDir * fForce, vMedianPoint);
 			}
 		}
 	}
@@ -376,6 +379,7 @@ namespace hpl {
 
 		mfMaxPushMass = 0;
 		mfPushForce = 0;
+		mfPushImpulse = 0;
 		mbPushIn2D = true;
 
 		mfCharacterMaxPushMass =0;

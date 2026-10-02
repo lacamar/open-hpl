@@ -115,7 +115,9 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 	if (bLoaded == false && apEnt->LoadScript(mpRuntime, pScript->msFile, pScript->msClass, apEnt->GetBaseTypeName()) == false)
 		return false;
 	cWorld *pWorld = mpWorld;
-	if (apEnt->meType == eSomaLuxEntityType_Area || apEnt->meType == eSomaLuxEntityType_LiquidArea)
+	if (apEnt->meType == eSomaLuxEntityType_Agent)
+		apEnt->Call("void SetupCharBody()");
+	if (apEnt->meType == eSomaLuxEntityType_Area ||apEnt->meType == eSomaLuxEntityType_LiquidArea)
 		apEnt->Call("void SetupAfterLoad(cWorld @apWorld, cResourceVarsObject @apVars)", [&](asIScriptContext *c) {
 			c->SetArgAddress(0, pWorld);
 			c->SetArgAddress(1, &apEnt->mInstanceVars);

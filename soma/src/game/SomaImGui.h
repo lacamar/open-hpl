@@ -16,7 +16,9 @@ public:
 
 	static cSomaImGui *GetCurrent() { return mpCurrent; }
 	static void SetCurrent(cSomaImGui *apImGui) { mpCurrent = apImGui; }
-	static cSomaImGui *GetInputFocus() { return mpInputFocus; }
+	static cSomaImGui *GetInputFocus();
+	static cSomaImGui *GetScriptInputFocus() { return mpInputFocus; }
+	static bool mbGameHudFocus;
 	static cSomaImGui *GetPrevInputFocus() { return mpPrevInputFocus; }
 	static void SetInputFocus(cSomaImGui *apImGui, bool abShowMouse);
 	static void UpdateFocusHistory() { mpPrevInputFocus = mpInputFocus; }

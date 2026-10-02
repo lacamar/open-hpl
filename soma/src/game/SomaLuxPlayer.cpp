@@ -129,6 +129,8 @@ void cSomaLuxPlayer::ChangeState(int alId)
 		Error("Could not change to state id %d. It does not exist!\n", alId);
 		return;
 	}
+	if (it->second == mpState)
+		return;
 	cSomaLuxPlayerState *pPrev = mpState;
 	if (pPrev)
 		pPrev->Call("void OnLeaveState(int alNextStateId)", IntArg(alId));
@@ -144,6 +146,8 @@ void cSomaLuxPlayer::ChangeMoveState(int alId)
 		Error("Could not change to move state id %d. It does not exist!\n", alId);
 		return;
 	}
+	if (it->second == mpMoveState)
+		return;
 	cSomaLuxMoveState *pPrev = mpMoveState;
 	if (pPrev)
 		pPrev->Call("void OnLeaveState(int alNextStateId)", IntArg(alId));
@@ -361,6 +365,8 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 cSomaLuxInputHandler::cSomaLuxInputHandler()
 {
 	mpInstance = this;
+	mlMaxSmoothMousePos = SomaGameConfig()->GetInt("Input", "MaxSmoothMousePos", 7);
+	mfPrevSmoothMousePosMul = SomaGameConfig()->GetFloat("Input", "PrevSmoothMousePosMul", 0.7f);
 }
 
 void cSomaLuxInputHandler::CreateAction(const cLuxAction &aAction)
@@ -542,15 +548,27 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		}
 	}
 
-	cVector2l vRel = pGame->mvMouseRel;
-	if (vRel.x != 0 || vRel.y != 0)
+	float fHeight = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y;
+	cVector2f v = cVector2f((float)pGame->mvMouseRel.x, (float)pGame->mvMouseRel.y) * mfMouseSensitivity / fHeight;
+	if (mbSmoothMouse)
 	{
-		float fHeight = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y;
-		cVector3f v((float)vRel.x * mfMouseSensitivity / fHeight, (float)vRel.y * mfMouseSensitivity / fHeight, 0);
-		if (mbInvertMouse)
-			v.y = -v.y;
-		pGame->BroadcastAnalog(0, v);
+		mlstSmoothMousePos.push_front(v);
+		if ((int)mlstSmoothMousePos.size() > mlMaxSmoothMousePos)
+			mlstSmoothMousePos.pop_back();
+		cVector2f vSum(0);
+		float fMul = 1, fTotal = 0;
+		for (const cVector2f &p : mlstSmoothMousePos)
+		{
+			vSum += p * fMul;
+			fTotal += fMul;
+			fMul *= mfPrevSmoothMousePosMul;
+		}
+		v = vSum / fTotal;
 	}
+	if (mbInvertMouse)
+		v.y = -v.y;
+	if (v.x != 0 || v.y != 0)
+		pGame->BroadcastAnalog(0, cVector3f(v.x, v.y, 0));
 }
 
 void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
@@ -773,9 +791,9 @@ void cSomaLuxInputHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "float GetGamepadSensitivity()", +[](I *p) { return p->mfGamepadSensitivity; });
 	SOMA_METHOD(e, T, "void SetGamepadSensitivity(float afX)", +[](I *p, float x) { p->mfGamepadSensitivity = x; });
 	SOMA_METHOD(e, T, "void SetRumble(int alDevice, float afStrength, float afDuration)", +[](I *, int, float, float) {});
-	SOMA_METHOD(e, T, "void ResetSmoothMousePos()", +[](I *) {});
-	SOMA_METHOD(e, T, "void SetMaxSmoothMousePos(int alX)", +[](I *, int) {});
-	SOMA_METHOD(e, T, "void SetPrevSmoothMousePosMul(float afX)", +[](I *, float) {});
+	SOMA_METHOD(e, T, "void ResetSmoothMousePos()", +[](I *p) { p->mlstSmoothMousePos.clear(); });
+	SOMA_METHOD(e, T, "void SetMaxSmoothMousePos(int alX)", +[](I *p, int x) { p->mlMaxSmoothMousePos = x; });
+	SOMA_METHOD(e, T, "void SetPrevSmoothMousePosMul(float afX)", +[](I *p, float x) { p->mfPrevSmoothMousePosMul = x; });
 	SOMA_METHOD(e, T, "tString GetActionName(int alId, bool abAnalog)", +[](I *p, int id, bool a) { return p->GetActionName(id, a); });
 	SOMA_METHOD(e, T, "void CreateGamepadProfile(const tString&in asName, const tString&in asPrefix, array<tString> &in avButtons, array<tString> &in avAxes, array<uint> &in avDPad)",
 				+[](I *p, S n, S pre, CScriptArray &b, CScriptArray &a, CScriptArray &d) {

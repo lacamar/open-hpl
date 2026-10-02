@@ -3,6 +3,7 @@
 
 #include "SomaLuxGame.h"
 
+#include <deque>
 #include <map>
 
 class cSomaLuxPlayer;
@@ -201,6 +202,9 @@ public:
 	bool mbSmoothMouse = true;
 	float mfMouseSensitivity = 1;
 	float mfGamepadSensitivity = 2;
+	int mlMaxSmoothMousePos = 7;
+	float mfPrevSmoothMousePosMul = 0.7f;
+	std::deque<cVector2f> mlstSmoothMousePos;
 
 private:
 	static const int kMaxActions = 256;

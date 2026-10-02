@@ -10,10 +10,16 @@ using namespace hpl;
 
 void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 {
+	SOMA_METHOD_NEW(e, "cAINode", "const cVector3f& GetPosition()", +[](cAINode *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
+	SOMA_METHOD_NEW(e, "cAINode", "const tString& GetName()", +[](cAINode *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
+	SOMA_METHOD_NEW(e, "cAINode", "int GetID()", +[](cAINode *o) -> int { return o->GetID(); });
 	SOMA_METHOD_NEW(e, "cAINodeContainer", "const tString& GetNodeName()", +[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetNodeName(); return r; });
 	SOMA_METHOD_NEW(e, "cAINodeContainer", "const tString& GetName()", +[](cAINodeContainer *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "cAINodeContainer", "const cVector3f& GetCollideSize()", +[](cAINodeContainer *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetCollideSize(); return r; });
 	SOMA_METHOD_NEW(e, "cAINodeContainer", "int GetNodeNum() const", +[](cAINodeContainer *o) -> int { return o->GetNodeNum(); });
+	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNode(int alIdx)", +[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNode(a0); });
+	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNodeFromName(const tString &in asName)", +[](cAINodeContainer *o, const tString & a0) -> cAINode * { return o->GetNodeFromName(a0); });
+	SOMA_METHOD_NEW(e, "cAINodeContainer", "cAINode@ GetNodeFromID(int alID)", +[](cAINodeContainer *o, int a0) -> cAINode * { return o->GetNodeFromID(a0); });
 	SOMA_METHOD_NEW(e, "cAction", "void AddKey(eKey aKey)", +[](cAction *o, int a0) { o->AddKey((eKey)a0); });
 	SOMA_METHOD_NEW(e, "cAction", "void AddMouseButton(eMouseButton aButton)", +[](cAction *o, int a0) { o->AddMouseButton((eMouseButton)a0); });
 	SOMA_METHOD_NEW(e, "cAction", "void AddGamepadButton(int alPadIndex, eGamepadButton aButton)", +[](cAction *o, int a0, int a1) { o->AddGamepadButton(a0, (eGamepadButton)a1); });
@@ -1165,7 +1171,11 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetDisableDiagSpeedBoost()", +[](iCharacterBody *o) -> bool { return o->GetDisableDiagSpeedBoost(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetMovedLastUpdate()", +[](iCharacterBody *o) -> bool { return o->GetMovedLastUpdate(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPushMass(float afX)", +[](iCharacterBody *o, float a0) { o->SetMaxPushMass(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPushForce(float afX)", +[](iCharacterBody *o, float a0) { o->SetPushForce(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPushImpulse(float afX)", +[](iCharacterBody *o, float a0) { o->SetPushImpulse(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPushMass()", +[](iCharacterBody *o) -> float { return o->GetMaxPushMass(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPushForce()", +[](iCharacterBody *o) -> float { return o->GetPushForce(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetPushImpulse()", +[](iCharacterBody *o) -> float { return o->GetPushImpulse(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPushIn2D()", +[](iCharacterBody *o) -> bool { return o->GetPushIn2D(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPushIn2D(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPushIn2D(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCharacterMaxPushMass(float afX)", +[](iCharacterBody *o, float a0) { o->SetCharacterMaxPushMass(a0); });

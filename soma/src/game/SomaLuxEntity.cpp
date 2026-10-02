@@ -93,7 +93,6 @@ void cSomaLuxEntity::SetActive(bool abX)
 	if (mbActive == abX)
 		return;
 	mbActive = abX;
-	SomaAgentSetActive(this, abX);
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
@@ -110,6 +109,7 @@ void cSomaLuxEntity::SetActive(bool abX)
 		ApplyEffectsAlpha();
 	}
 	Call("void OnSetActive(bool abX)", [abX](asIScriptContext *c) { c->SetArgByte(0, abX); });
+	SomaAgentSetActive(this, abX);
 }
 
 // cLuxPropLightConnection: one per light, combining every prop connected to it
@@ -1612,11 +1612,11 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 			return false;
 		if (b)
 			cSomaImGui::SetInputFocus(p->mpImGui, mouse);
-		else if (cSomaImGui::GetInputFocus() == p->mpImGui)
+		else if (cSomaImGui::GetScriptInputFocus() == p->mpImGui)
 			cSomaImGui::SetInputFocus(NULL, false);
 		return true;
 	});
-	SOMA_METHOD_NEW(e, T, "bool IsGuiFocused()", +[](E *p) { return p->mpImGui && cSomaImGui::GetInputFocus() == p->mpImGui; });
+	SOMA_METHOD_NEW(e, T, "bool IsGuiFocused()", +[](E *p) { return p->mpImGui && cSomaImGui::GetScriptInputFocus() == p->mpImGui; });
 	SOMA_METHOD_NEW(e, T, "void SetIsInteractedWith(bool abX)", +[](E *p, bool b) { p->mbInteractedWith = b; });
 	SOMA_METHOD_NEW(e, T, "bool IsInteractedWith()", +[](E *p) { return p->mbInteractedWith; });
 	SOMA_METHOD_NEW(e, T, "void SetMaxInteractDistance(float afX)", +[](E *p, float f) { p->mfMaxInteractDistance = f; });

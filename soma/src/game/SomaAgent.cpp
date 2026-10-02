@@ -9,6 +9,7 @@
 
 #include "impl/tinyXML/tinyxml.h"
 
+#include <algorithm>
 #include <angelscript.h>
 #include <cmath>
 #include <cstring>
@@ -86,6 +87,7 @@ namespace
 		virtual ~cAgentComponent() {}
 		virtual void Update(float) {}
 		virtual void OnMessage(int) {}
+		virtual void OnSetActive() {}
 	};
 
 	struct cAgent;
@@ -96,108 +98,117 @@ namespace
 		std::map<int, tString> mapStates, mapSubStates;
 		int mlCur = -1, mlPrev = -1, mlNext = -1;
 		int mlSubCur = -1, mlSubPrev = -1, mlSubNext = -1;
+		bool mbInSub = false;
 		struct cTimer { uint64_t mlId; float mfTime; };
-		std::vector<cTimer> mvTimers;
-		int mlDepth = 0;
-		cAgentMessageData *mpMessage = NULL;
+		std::vector<cTimer> mvTimers[2];
 
 		cAgentStateMachine(E *p) : cAgentComponent(p, eComp_StateMachine) {}
 
 		tString Name(int alId) { auto it = mapStates.find(alId); return it == mapStates.end() ? tString() : it->second; }
 		tString SubName(int alId) { auto it = mapSubStates.find(alId); return it == mapSubStates.end() ? tString() : it->second; }
 
-		void CallVoid(const tString &asState, const char *apSuffix)
+		// the state's own function, else State_Default_ (also when a Message handler returns false)
+		void Run(bool abSub, int alId, const char *apFunc, const std::function<void(asIScriptContext *)> &aArgs = nullptr)
 		{
-			if (asState != "")
-				mpEntity->Call("void State_" + asState + "_" + apSuffix + "()");
+			bool bMsg = strncmp(apFunc, "Message", 7) == 0;
+			tString sPre = tString(bMsg ? "bool " : "void ") + (abSub ? "SubState_" : "State_");
+			auto call = [&](const tString &asState) { tString d = sPre + asState + "_" + apFunc; return bMsg ? mpEntity->CallBool(d, aArgs, false) : mpEntity->Call(d, aArgs); };
+			mbInSub = abSub;
+			if (call(abSub ? SubName(alId) : Name(alId)) == false)
+				call("Default");
+			mbInSub = false;
 		}
 
 		void ChangeState(int alState)
 		{
-			if (mapStates.count(alState) == 0 || ++mlDepth > 16)
-			{
-				--mlDepth;
-				return;
-			}
-			mlNext = alState;
-			CallVoid(Name(mlCur), "Leave");
-			mlPrev = mlCur;
-			mlCur = alState;
-			mlNext = -1;
-			mvTimers.clear();
-			CallVoid(Name(mlCur), "Enter");
-			--mlDepth;
+			if (mbInSub)
+				Error("Entity '%s' cannot change to state %d inside a sub state ('%s').\n", mpEntity->msName.c_str(), alState, SubName(mlSubCur).c_str());
+			else if (mapStates.count(alState) == 0)
+				Error("State %d does not exist in Entity '%s'\n", alState, mpEntity->msName.c_str());
+			else
+				mlNext = alState;
 		}
 
 		void ChangeSubState(int alState)
 		{
-			mlSubNext = alState;
-			if (SubName(mlSubCur) != "")
-				mpEntity->Call("void SubState_" + SubName(mlSubCur) + "_Leave()");
-			mlSubPrev = mlSubCur;
-			mlSubCur = alState;
-			mlSubNext = -1;
-			if (SubName(mlSubCur) != "")
-				mpEntity->Call("void SubState_" + SubName(mlSubCur) + "_Enter()");
+			if (alState > 0 && mapSubStates.count(alState) == 0)
+				Error("State %d does not exist in Entity '%s'\n", alState, mpEntity->msName.c_str());
+			else
+				mlSubNext = alState;
 		}
 
-		void AddTimer(uint64_t alId, float afTime)
+		void Reset()
 		{
-			StopTimer(alId);
-			mvTimers.push_back(cTimer{alId, afTime});
+			mlCur = mlPrev = mlSubCur = mlSubPrev = mlSubNext = -1;
+			mlNext = mapStates.empty() ? -1 : 0;
+			mbInSub = false;
+			mvTimers[0].clear();
+			mvTimers[1].clear();
 		}
 
-		void StopTimer(uint64_t alId)
+		void OnSetActive() override { Reset(); }
+
+		void AddTimer(uint64_t alId, float afTime) { mvTimers[mbInSub].push_back(cTimer{alId, afTime}); }
+		void StopTimer(uint64_t alId) { std::erase_if(mvTimers[mbInSub], [alId](const cTimer &t) { return t.mlId == alId; }); }
+		bool TimerExists(uint64_t alId) { return std::any_of(mvTimers[mbInSub].begin(), mvTimers[mbInSub].end(), [alId](const cTimer &t) { return t.mlId == alId; }); }
+
+		void UpdateTimers(bool abSub, int alState, float afTimeStep)
 		{
-			for (size_t i = 0; i < mvTimers.size(); ++i)
-				if (mvTimers[i].mlId == alId)
-				{
-					mvTimers.erase(mvTimers.begin() + i);
-					return;
-				}
+			std::vector<uint64_t> vDue;
+			std::erase_if(mvTimers[abSub], [&](cTimer &t) { t.mfTime -= afTimeStep; return t.mfTime <= 0 && (vDue.push_back(t.mlId), true); });
+			for (uint64_t lId : vDue)
+				Run(abSub, alState, "TimerUp(uint64)", [lId](asIScriptContext *c) { c->SetArgQWord(0, lId); });
 		}
 
-		bool TimerExists(uint64_t alId)
-		{
-			for (const cTimer &t : mvTimers)
-				if (t.mlId == alId)
-					return true;
-			return false;
-		}
-
+		// cLuxStateMachine::OnUpdate: state changes requested last frame are applied here
 		void Update(float afTimeStep) override
 		{
-			int lState = mlCur;
-			std::vector<uint64_t> vDue;
-			for (size_t i = 0; i < mvTimers.size();)
+			auto dt = [afTimeStep](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); };
+			int lNext = mlNext;
+			if (lNext >= 0 ? mlCur != lNext : mlCur >= 0)
 			{
-				mvTimers[i].mfTime -= afTimeStep;
-				if (mvTimers[i].mfTime <= 0)
-				{
-					vDue.push_back(mvTimers[i].mlId);
-					mvTimers.erase(mvTimers.begin() + i);
-				}
-				else
-					++i;
+				mlPrev = mlCur;
+				if (mlCur >= 0)
+					Run(false, mlCur, "Leave()");
+				mlCur = mapStates.count(lNext) ? lNext : -1;
+				mlSubNext = -1;
+				mvTimers[0].clear();
+				if (mlCur >= 0)
+					Run(false, mlCur, "Enter()");
 			}
-			for (uint64_t lId : vDue)
+			if (mlCur >= 0)
 			{
-				if (mlCur != lState)
-					break;
-				mpEntity->Call("void State_" + Name(mlCur) + "_TimerUp(uint64)", [lId](asIScriptContext *c) { c->SetArgQWord(0, lId); });
+				Run(false, mlCur, "Update(float)", dt);
+				UpdateTimers(false, mlCur, afTimeStep);
 			}
-			if (Name(mlCur) != "")
-				mpEntity->CallWithFloat("void State_" + Name(mlCur) + "_Update(float)", afTimeStep);
-			mpEntity->CallWithFloat("void State_Default_Update(float)", afTimeStep);
+			lNext = mlSubNext;
+			if (lNext >= 0 ? mlSubCur != lNext : mlSubCur >= 0)
+			{
+				int lOld = mlSubCur;
+				mlSubPrev = mlSubCur;
+				if (lOld >= 0)
+					Run(true, lOld, "Leave()");
+				mlSubCur = mapSubStates.count(lNext) ? lNext : -1;
+				if (lOld >= 0 && mlCur >= 0)
+					Run(false, mlCur, "SubStateOver(int)", [lOld](asIScriptContext *c) { c->SetArgDWord(0, lOld); });
+				mvTimers[1].clear();
+				if (mlSubCur >= 0)
+					Run(true, mlSubCur, "Enter()");
+			}
+			if (mlSubCur >= 0)
+			{
+				Run(true, mlSubCur, "Update(float)", dt);
+				UpdateTimers(true, mlSubCur, afTimeStep);
+			}
 		}
 
 		void OnMessage(int alMessage) override
 		{
-			bool bHandled = false;
-			if (Name(mlCur) != "")
-				bHandled = mpEntity->CallBool("bool State_" + Name(mlCur) + "_Message(int)", [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); }, false);
-			if (bHandled == false)
-				mpEntity->CallBool("bool State_Default_Message(int)", [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); }, false);
+			auto msg = [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); };
+			if (mlCur >= 0)
+				Run(false, mlCur, "Message(int)", msg);
+			if (mlSubCur >= 0)
+				Run(true, mlSubCur, "Message(int)", msg);
 		}
 	};
 
@@ -225,6 +236,7 @@ namespace
 		float mfTurnGoal = 0;
 		tString msTurnedCallback;
 		int mlAnimState = -1;
+		bool mbAnimPlaying = false;
 		float mfStuck = 0;
 
 		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
@@ -269,8 +281,33 @@ namespace
 			return pState ? pState->mfForward : mfMaxForward;
 		}
 
+		int PlayAnimation(const tString &asName, float afFade, bool abLoop, const tString &asCallback)
+		{
+			int lIdx = mpEntity->PlayAnimation(asName, afFade, abLoop, asCallback);
+			if (lIdx >= 0)
+			{
+				mbAnimPlaying = true;
+				mbUseMoveStateAnims = false;
+			}
+			return lIdx;
+		}
+
+		void SetUseMoveStateAnims(bool abX)
+		{
+			if (abX == mbUseMoveStateAnims)
+				return;
+			mbUseMoveStateAnims = abX;
+			if (abX)
+			{
+				mbAnimPlaying = false;
+				mlAnimState = -1;
+			}
+		}
+
 		void PlayMoveAnim(int alState, float afSpeed)
 		{
+			if (mbAnimPlaying && mpEntity->mlCurrentAnim < 0)
+				SetUseMoveStateAnims(true);
 			if (mbUseMoveStateAnims == false)
 			{
 				mlAnimState = -1;
@@ -529,8 +566,8 @@ namespace
 				mbAtTrackNode = true;
 				const cAgentTrackNode &node = mvTrack[mlTrackIdx];
 				mfTrackWait = cMath::RandRectf(node.mfMinWait, node.mfMaxWait);
-				if (node.msAnim != "")
-					mpEntity->PlayAnimation(node.msAnim, 0.3f, node.mbLoopAnim, "");
+				if (node.msAnim != "" && Mover())
+					Mover()->PlayAnimation(node.msAnim, 0.3f, node.mbLoopAnim, "");
 				SomaAgentSendMessage(mpEntity, eMsg_AtTrackNode);
 			}
 			else
@@ -652,6 +689,12 @@ namespace
 		float mfCount = 0;
 
 		cAgentBarkMachine(E *p) : cAgentComponent(p, eComp_BarkMachine) {}
+
+		void OnSetActive() override
+		{
+			mlCur = mapStates.empty() ? -1 : 0;
+			mfCount = 0;
+		}
 
 		void Update(float afTimeStep) override
 		{
@@ -883,9 +926,13 @@ void SomaDestroyAgent(cSomaLuxEntity *apEnt)
 
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX)
 {
-	if (cAgent *pAgent = Agent(apEnt))
-		if (pAgent->mpBody)
-			pAgent->mpBody->SetActive(abX);
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL)
+		return;
+	if (pAgent->mpBody)
+		pAgent->mpBody->SetActive(abX);
+	for (auto &pComp : pAgent->mvComponents)
+		pComp->OnSetActive();
 }
 
 bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx)
@@ -923,6 +970,25 @@ void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f 
 	});
 	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
 		pSM->OnMessage(alMessage);
+}
+
+tString SomaAgentDebug(cSomaLuxEntity *apEnt)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL)
+		return "";
+	tString s;
+	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
+		s += "state=" + pSM->Name(pSM->mlCur) + " prev=" + pSM->Name(pSM->mlPrev) + " next=" + pSM->Name(pSM->mlNext) + " timers=" + cString::ToString((int)pSM->mvTimers[0].size());
+	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
+		s += " pf_moving=" + cString::ToString(pPF->mbMoving) + " path=" + cString::ToString((int)pPF->mlPathIdx) + "/" + cString::ToString((int)pPF->mvPath.size()) +
+			 " goal=" + pPF->mvGoal.ToString() + " track=" + cString::ToString(pPF->mlTrackIdx) + "/" + cString::ToString((int)pPF->mvTrack.size()) +
+			 " track_active=" + cString::ToString(pPF->mbTrackActive) + " paused=" + cString::ToString(pPF->mbTrackPaused) + " at_node=" + cString::ToString(pPF->mbAtTrackNode) +
+			 " wait=" + cString::ToString(pPF->mfTrackWait);
+	if (cAgentCharMover *pM = pAgent->Find<cAgentCharMover>(eComp_CharMover))
+		s += " cm_moving=" + cString::ToString(pM->mbMoving) + " cm_goal=" + pM->mvGoal.ToString() + " speed_state=" + cString::ToString(pM->mlSpeedState) +
+			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning);
+	return s;
 }
 
 void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
@@ -1100,7 +1166,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 
 	const char *T = "cLuxStateMachine";
 	typedef cAgentStateMachine SM;
-	SOMA_METHOD(e, T, "void AddState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapStates[id] = n; });
+	SOMA_METHOD(e, T, "void AddState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapStates[id] = n; if (s->mapStates.size() == 1) s->mlNext = 0; });
 	SOMA_METHOD(e, T, "void AddSubState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapSubStates[id] = n; });
 	SOMA_METHOD(e, T, "void ChangeState(int alState)", +[](SM *s, int id) { s->ChangeState(id); });
 	SOMA_METHOD(e, T, "void ChangeSubState(int alState)", +[](SM *s, int id) { s->ChangeSubState(id); });
@@ -1131,8 +1197,8 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void TurnInstantlyToAngle(float afYaw, float afPitch)", +[](CM *m, float a, float) { SetYawNear(m->mpBody, a); m->mbTurning = false; });
 	SOMA_METHOD(e, T, "void StopTurning()", +[](CM *m) { m->mbTurning = false; });
 	SOMA_METHOD(e, T, "int PlayAnimation(const tString&in asName, float afFadeTime=0.3f, bool abLoop=false, bool abPlayTransition=true, const tString&in asCallback=\"\")",
-				+[](CM *m, S n, float f, bool l, bool, S cb) { m->mlAnimState = -1; return m->mpEntity->PlayAnimation(n, f, l, cb); });
-	SOMA_METHOD(e, T, "void SetUseMoveStateAnimations(bool abX)", +[](CM *m, bool b) { m->mbUseMoveStateAnims = b; m->mlAnimState = -1; });
+				+[](CM *m, S n, float f, bool l, bool, S cb) { return m->PlayAnimation(n, f, l, cb); });
+	SOMA_METHOD(e, T, "void SetUseMoveStateAnimations(bool abX)", +[](CM *m, bool b) { m->SetUseMoveStateAnims(b); });
 	SOMA_METHOD(e, T, "bool GetUseMoveStateAnimations()", +[](CM *m) { return m->mbUseMoveStateAnims; });
 	SOMA_METHOD(e, T, "void SetTurnedToGoalCallbackFunc(const tString &in asFunc)", +[](CM *m, S f) { m->msTurnedCallback = f; });
 	SOMA_METHOD(e, T, "float GetMoveSpeed()", +[](CM *m) { return m->mpBody ? m->mpBody->GetMoveSpeed(eCharDir_Forward) : 0.0f; });

@@ -240,6 +240,8 @@ namespace hpl {
 		void SetPushForce(float afX){ mfPushForce = afX;}
 		float GetMaxPushMass(){ return mfMaxPushMass;}
 		float GetPushForce(){ return mfPushForce;}
+		void SetPushImpulse(float afX){ mfPushImpulse = afX;}
+		float GetPushImpulse(){ return mfPushImpulse;}
 		bool GetPushIn2D(){ return mbPushIn2D;}
 		void SetPushIn2D(bool abX){ mbPushIn2D = abX;}
 
@@ -435,6 +437,7 @@ namespace hpl {
 
 		float mfMaxPushMass;
 		float mfPushForce;
+		float mfPushImpulse;
 		bool mbPushIn2D;
 
 		float mfCharacterMaxPushMass;

@@ -17,6 +17,7 @@
 #include "SomaLux.h"
 #include "SomaScriptRuntime.h"
 #include "SomaLuxScriptable.h"
+#include "SomaAgent.h"
 
 #include "system/HeadlessControl.h"
 #include "resources/GpuShaderManager.h"
@@ -108,6 +109,7 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	aResp.Set("x", v.x);
 	aResp.Set("y", v.y);
 	aResp.Set("z", v.z);
+	aResp.Set("agent", SomaAgentDebug(pEnt));
 	aResp.Set("size", cString::ToString(pEnt->mvSize.x) + " " + cString::ToString(pEnt->mvSize.y) + " " + cString::ToString(pEnt->mvSize.z));
 	if (pEnt->mpImGui)
 	{
@@ -396,6 +398,12 @@ static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, vo
 	{
 		cVector3f v = *(cVector3f *)apAddr;
 		snprintf(sBuf, sizeof(sBuf), "(%g %g %g)", v.x, v.y, v.z);
+		return sBuf;
+	}
+	if (sName == "cVector2f")
+	{
+		cVector2f v = *(cVector2f *)apAddr;
+		snprintf(sBuf, sizeof(sBuf), "(%g %g)", v.x, v.y);
 		return sBuf;
 	}
 	return sName;

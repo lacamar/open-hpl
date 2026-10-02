@@ -13,6 +13,13 @@
 cSomaImGui *cSomaImGui::mpCurrent = NULL;
 cSomaImGui *cSomaImGui::mpInputFocus = NULL;
 cSomaImGui *cSomaImGui::mpPrevInputFocus = NULL;
+bool cSomaImGui::mbGameHudFocus = false;
+cSomaImGui *SomaHudImGui();
+
+cSomaImGui *cSomaImGui::GetInputFocus()
+{
+	return mbGameHudFocus ? SomaHudImGui() : mpInputFocus;
+}
 
 // Recovered struct layouts (script_api.txt property offsets, soma-re-struct-defaults.py)
 namespace
@@ -147,7 +154,7 @@ void cSomaImGui::End()
 			mvActionDown[i] = false;
 	}
 	mvMouseRel = 0;
-	if (mbShowMouse && this == mpInputFocus)
+	if (mbShowMouse && this == GetInputFocus())
 	{
 		void *pMouse = GetDefault("__mouse");
 		if (StrAt(pMouse, kGfxFile) != "")
@@ -166,7 +173,7 @@ tString cSomaImGui::DebugOps(size_t alMax)
 		char sBuf[160];
 		snprintf(sBuf, sizeof(sBuf), "%.1f,%.1f,%.1f %.1fx%.1f c=%.2f,%.2f,%.2f,%.2f m=%d", op.mvPos.x, op.mvPos.y, op.mvPos.z, op.mvSize.x, op.mvSize.y, op.mColor.r,
 				 op.mColor.g, op.mColor.b, op.mColor.a, op.mlMaterial);
-		s += (op.mpGfx ? tString("gfx ") : op.mpFont ? "text '" + cString::To8Char(op.msText.substr(0, 12)) + "' " : tString("clip ")) + sBuf + "; ";
+		s += (op.mpGfx ? tString("gfx ") : op.mpFont ? "text '" + cString::To8Char(op.msText.substr(0, 64)) + "' " : tString("clip ")) + sBuf + "; ";
 	}
 	return s;
 }
@@ -460,7 +467,7 @@ void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool a
 
 bool cSomaImGui::MouseOver(const cVector3f &avPos, const cVector2f &avSize)
 {
-	if (mMods.mbUseInput == false || this != mpInputFocus)
+	if (mMods.mbUseInput == false || this != GetInputFocus())
 		return false;
 	return mvMousePos.x >= avPos.x && mvMousePos.y >= avPos.y && mvMousePos.x < avPos.x + avSize.x && mvMousePos.y < avPos.y + avSize.y;
 }
@@ -499,7 +506,7 @@ bool cSomaImGui::WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector
 	bool bOver = false;
 	if (mMods.mbUseInput)
 	{
-		if (mbShowMouse == false || mlMouseLock > 0 || this != mpInputFocus)
+		if (mbShowMouse == false || mlMouseLock > 0 || this != GetInputFocus())
 		{
 			if (mlFocus == alId)
 				mbFoundFocus = true;
@@ -1132,7 +1139,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, false); });
 	SOMA_FUNC(e, "void cLux_DrawHint(cImGui @apImGui, float afTimeStep, const cImGuiLabelData &in aLabel, const cVector3f &in avPosition, float afLineWidth, float afLineSpacing, const array<tWString> &in avTextLines, const array<cLuxScreenTextIcon@> &in avIcons, const array<array<int>> &in avIconsPerLine)",
 			  +[](I *p, float, D l, V3 pos, float w, float sp, const CScriptArray &lines, const CScriptArray &, const CScriptArray &) { DrawScreenText(p, l, pos, w, sp, lines, true); });
-	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetInputFocus(); });
+	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetScriptInputFocus(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetPrevInputFocusImGui()", +[]() { return cSomaImGui::GetPrevInputFocus(); });
 	SOMA_FUNC(e, "void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)", +[](Str, int) {});
 	SOMA_FUNC(e, "cLuxScriptImGui@ cLux_CreateScriptImGui(const tString &in asName, bool abRegisterForDrawing, bool abSkipResetOnRegistration=true)",

@@ -351,6 +351,19 @@ namespace hpl {
 
 	void cHeadlessControlServer::Update()
 	{
+#if USE_SDL2
+		if(mlDragFrames > 0 && cEngineDiagnostics::GetRenderedFrameCount() != mlDragFrame)
+		{
+			--mlDragFrames;
+			mlDragFrame = cEngineDiagnostics::GetRenderedFrameCount();
+			SDL_Event ev;
+			memset(&ev, 0, sizeof(ev));
+			ev.type = SDL_MOUSEMOTION;
+			ev.motion.xrel = mlDragX;
+			ev.motion.yrel = mlDragY;
+			SDL_PushEvent(&ev);
+		}
+#endif
 		for(size_t i=0; i<mvFrameWaiters.size(); )
 		{
 			bool bTimedOut = cPlatform::GetApplicationTime() >= mvFrameWaiters[i].mlDeadlineMs;
@@ -630,6 +643,10 @@ namespace hpl {
 			ev.motion.xrel = aReq.GetInt("xrel", 0);
 			ev.motion.yrel = aReq.GetInt("yrel", 0);
 			SDL_PushEvent(&ev);
+			mlDragFrames = aReq.GetInt("frames", 1) - 1;
+			mlDragX = ev.motion.xrel;
+			mlDragY = ev.motion.yrel;
+			mlDragFrame = cEngineDiagnostics::GetRenderedFrameCount();
 		}
 		else if(sType == "mouse_button")
 		{

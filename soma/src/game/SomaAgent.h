@@ -11,6 +11,7 @@ class cSomaLuxEntity;
 void SomaCreateAgent(cSomaLuxEntity *apEnt);
 void SomaDestroyAgent(cSomaLuxEntity *apEnt);
 void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep);
+tString SomaAgentDebug(cSomaLuxEntity *apEnt);
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX);
 bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx);
 bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx);

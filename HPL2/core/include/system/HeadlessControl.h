@@ -149,6 +149,8 @@ namespace hpl {
 			unsigned long mlDeadlineMs;
 		};
 		std::vector<cFrameWaiter> mvFrameWaiters;
+		int mlDragFrames = 0, mlDragX = 0, mlDragY = 0;
+		unsigned int mlDragFrame = 0;
 		std::map<tString, cHandlerEntry> mmapHandlers;
 
 		std::deque<tString> mlstLogLines;
