@@ -23,6 +23,7 @@
 #include "graphics/RendererDeferred.h"
 #include "graphics/Graphics.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/MaterialType_BasicTranslucent.h"
 #include "graphics/Texture.h"
 #include "system/EngineDiagnostics.h"
 #include "impl/MeshLoaderCollada.h"
@@ -838,6 +839,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	iLight::SetHpl3Visibility(true);
 	cRendererDeferred::SetHpl3SSAO(true);
+	cMaterialType_Translucent::SetLightProbes(true);
 	cRendererDeferred::SetHdr(true);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");

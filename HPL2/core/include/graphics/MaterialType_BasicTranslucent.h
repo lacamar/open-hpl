@@ -75,8 +75,11 @@ namespace hpl {
 		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject *apVars);
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
+
+		static void SetLightProbes(bool abX){ mbLightProbes = abX; }
 	
 	private:
+		static bool mbLightProbes;
 		void LoadData();
 		void DestroyData();
 

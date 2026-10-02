@@ -345,6 +345,7 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);

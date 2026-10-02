@@ -146,6 +146,7 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("afT",kVar_afT,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afRefractionScale",kVar_afRefractionScale,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation",kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView",kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avReflectionMapSizeMul", kVar_avReflectionMapSizeMul, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avReflectionFadeStartAndLength", kVar_avReflectionFadeStartAndLength, eMaterialRenderMode_Diffuse);

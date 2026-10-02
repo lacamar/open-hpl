@@ -496,7 +496,7 @@ namespace hpl {
 
 	eTextureType cMaterialManager::GetType(const tString& asType)
 	{
-		if(cString::ToLowerCase(asType) == "cube") return eTextureType_CubeMap;
+		if(cString::ToLowerCase(asType) == "cube" || cString::ToLowerCase(asType) == "rect") return eTextureType_CubeMap;
 		else if(cString::ToLowerCase(asType) == "1d") return eTextureType_1D;
 		else if(cString::ToLowerCase(asType) == "2d") return eTextureType_2D;
 		else if(cString::ToLowerCase(asType) == "3d") return eTextureType_3D;

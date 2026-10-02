@@ -19,6 +19,8 @@
 
 #include "graphics/MaterialType_BasicTranslucent.h"
 
+#include <algorithm>
+
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 #include "system/String.h"
@@ -27,6 +29,8 @@
 
 #include "scene/World.h"
 #include "scene/Light.h"
+#include "scene/LightBox.h"
+#include "scene/LightSpot.h"
 
 #include "math/Math.h"
 #include "math/Frustum.h"
@@ -59,6 +63,7 @@ namespace hpl {
 	#define kVar_afLightLevel						9
 	#define kVar_avInvScreenSize					10
 	#define kVar_avColorMul							11
+	#define kVar_px_mtxLightProbe					12
 	
 	
 	//------------------------------
@@ -72,8 +77,9 @@ namespace hpl {
 	#define eFeature_Diffuse_DiffuseMap				eFlagBit_5
 	#define eFeature_Diffuse_CubeMapAlpha			eFlagBit_6
 	#define eFeature_Diffuse_UseScreenNormal		eFlagBit_7
+	#define eFeature_Diffuse_Lit					eFlagBit_8
 	
-	#define kDiffuseFeatureNum 8
+	#define kDiffuseFeatureNum 9
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -85,6 +91,7 @@ namespace hpl {
 		cProgramComboFeature("UseDiffuseMap", kPC_FragmentBit),
 		cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
 		cProgramComboFeature("UseScreenNormal", kPC_FragmentBit),
+		cProgramComboFeature("Lit", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -93,6 +100,8 @@ namespace hpl {
 	
 	//--------------------------------------------------------------------------
 	
+	bool cMaterialType_Translucent::mbLightProbes = false;
+
 	cMaterialType_Translucent::cMaterialType_Translucent(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
 		mbIsTranslucent = true;
@@ -175,11 +184,13 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afRefractionScale", kVar_afRefractionScale, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avRimLightMulPow", kVar_avRimLightMulPow, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afLightLevel", kVar_afLightLevel, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("px_mtxLightProbe", kVar_px_mtxLightProbe, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -260,6 +271,7 @@ namespace hpl {
 			}
 			if(bRefractionEnabled)									lFlags |= eFeature_Diffuse_UseRefraction;
 			if(pVars->mbRefractionNormals && bRefractionEnabled)	lFlags |= eFeature_Diffuse_UseScreenNormal;
+			if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
 			
 			return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 		}
@@ -279,6 +291,7 @@ namespace hpl {
 					lFlags |= eFeature_Diffuse_EnvMap;
 					if(apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha))	lFlags |= eFeature_Diffuse_CubeMapAlpha;
 				}
+				if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
 				
 				return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 			}
@@ -317,7 +330,8 @@ namespace hpl {
 		////////////////////////////
 		//Reflection vars
 		if(apMaterial->GetTexture(eMaterialTexture_CubeMap) && 
-			(bRefractionEnabled && bIlluminationPass==false) || (bRefractionEnabled==false && bIlluminationPass) )
+			(bRefractionEnabled && bIlluminationPass==false) || (bRefractionEnabled==false && bIlluminationPass) ||
+			(mbLightProbes && pVars->mbAffectedByLightLevel))
 		{
 			cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
 			apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
@@ -353,14 +367,139 @@ namespace hpl {
 		return cMath::Max(cMath::Max(aCol.r, aCol.g),aCol.b);
 	}
 
+	static float Smoothstep(float afMin, float afMax, float afX)
+	{
+		float fT = cMath::Clamp((afX - afMin) / (afMax - afMin), 0.0f, 1.0f);
+		return fT * fT * (3.0f - 2.0f * fT);
+	}
+
+	static float Volume(const cVector3f& avSize){ return avSize.x * avSize.y * avSize.z; }
+	static float Lerp(float afA, float afB, float afT){ return afA * (1.0f - afT) + afB * afT; }
+
+	// HPL3 cRendererDeferred::CalculateSphericalHarmoincs: rows are r,g,b over (normal.xyz, 1)
+	static cMatrixf CalcLightProbe(iRenderable *apObject, cRenderList *apList)
+	{
+		cBoundingVolume *pBV = apObject->GetBoundingVolume();
+		cVector3f vMin = pBV->GetMin(), vMax = pBV->GetMax();
+		float fInvVolume = 1.0f / cMath::Max(Volume(vMax - vMin), 1e-6f);
+
+		std::vector<iLight*> vBoxes;
+		for(int i=0; i<apList->GetLightNum(); ++i)
+			if(apList->GetLight(i)->GetLightType() == eLightType_Box) vBoxes.push_back(apList->GetLight(i));
+		std::stable_sort(vBoxes.begin(), vBoxes.end(), [](iLight *a, iLight *b){
+			return static_cast<cLightBox*>(a)->GetBlendFunc() < static_cast<cLightBox*>(b)->GetBlendFunc(); });
+
+		float fAcc[3][4] = {};
+		float fTotal = 1.5259022e-05f;
+		for(iLight *pLight : vBoxes)
+		{
+			cLightBox *pBox = static_cast<cLightBox*>(pLight);
+			cVector3f vLMin = pBox->GetBoundingVolume()->GetMin(), vLMax = pBox->GetBoundingVolume()->GetMax();
+			if(cMath::CheckAABBIntersection(vMin, vMax, vLMin, vLMax)==false) continue;
+			cVector3f vIMin(cMath::Max(vMin.x,vLMin.x), cMath::Max(vMin.y,vLMin.y), cMath::Max(vMin.z,vLMin.z));
+			cVector3f vIMax(cMath::Min(vMax.x,vLMax.x), cMath::Min(vMax.y,vLMax.y), cMath::Min(vMax.z,vLMax.z));
+			float fW = cMath::Min(0.5f * Volume(vLMax - vLMin), Volume(vIMax - vIMin)) * fInvVolume;
+			if(fW <= 0) continue;
+
+			cVector3f vD = (vLMin + vLMax - (vIMin + vIMax)) / (vLMax - vLMin);
+			vD = cVector3f(std::fabs(vD.x), std::fabs(vD.y), std::fabs(vD.z));
+			cVector3f vE(cMath::Max(0.0f, 1-vD.x), cMath::Max(0.0f, 1-vD.y), cMath::Max(0.0f, 1-vD.z));
+			// HPL3 sums y twice, in its box light shader too
+			float fBox = std::sqrt(1.0f / (1.0f/vE.x + 1.0f/vE.y + 1.0f/vE.y));
+			float fCutoff = cMath::Min(cMath::Min(vE.x, vE.y), vE.z);
+			float fSphere = Smoothstep(std::sqrt(Lerp(3.0f, 1.0f, pBox->GetBevel())), 0, vD.Length());
+			float fFalloff = Smoothstep(0, 1, fBox);
+			float fF = fFalloff * fFalloff * Smoothstep(0, 0.125f, fCutoff) * fSphere * fSphere;
+			float fW2 = fW * pBox->GetWeight() * std::pow(fF, pBox->GetFalloffPow() + 1e-5f);
+			if((fW2 > 0)==false) continue;
+
+			const cColor &diff = pBox->GetDiffuseColor();
+			float fCol[3] = { diff.r*diff.r, diff.g*diff.g, diff.b*diff.b };
+			const cVector3f *pBands = pBox->GetIrradianceBands();
+			for(int c=0; c<3; ++c)
+			{
+				float fC = fCol[c] * pBox->GetBrightness();
+				float fRow[4] = { 0, 0, 0, fC * 0.2820948f };
+				if(pBox->GetUseSphericalHarmonics())
+					for(int k=0; k<4; ++k) fRow[k] = fC * pBands[(k+1)%4].v[c];
+				for(int k=0; k<4; ++k)
+				{
+					if(pBox->GetBlendFunc() == eLightBoxBlendFunc_Replace)	fAcc[c][k] = Lerp(fAcc[c][k], fRow[k]*fW2*fW2, fW2);
+					else if(pBox->GetBlendFunc() == eLightBoxBlendFunc_Add)	fAcc[c][k] += fRow[k]*fW2*fTotal;
+					else													fAcc[c][k] += fRow[k]*fW2*fF;
+				}
+			}
+			if(pBox->GetBlendFunc() == eLightBoxBlendFunc_Replace)		fTotal = Lerp(fTotal, fW2, fW2);
+			else if(pBox->GetBlendFunc() == eLightBoxBlendFunc_Blend)	fTotal += fF * pBox->GetWeight();
+		}
+		for(int c=0; c<3; ++c) for(int k=0; k<4; ++k) fAcc[c][k] /= fTotal;
+
+		for(int i=0; i<apList->GetLightNum(); ++i)
+		{
+			iLight *pLight = apList->GetLight(i);
+			if(pLight->GetLightType() == eLightType_Box) continue;
+			cVector3f vLMin = pLight->GetBoundingVolume()->GetMin(), vLMax = pLight->GetBoundingVolume()->GetMax();
+			if(cMath::CheckAABBIntersection(vMin, vMax, vLMin, vLMax)==false) continue;
+			cVector3f vIMin(cMath::Max(vMin.x,vLMin.x), cMath::Max(vMin.y,vLMin.y), cMath::Max(vMin.z,vLMin.z));
+			cVector3f vIMax(cMath::Min(vMax.x,vLMax.x), cMath::Min(vMax.y,vLMax.y), cMath::Min(vMax.z,vLMax.z));
+
+			float fRadius = pLight->GetRadius();
+			cVector3f vDir = pLight->GetWorldPosition() - (vIMin + vIMax) * 0.5f;
+			float fDist = vDir.Length();
+			vDir = vDir / cMath::Max(fDist, 1e-6f);
+			float fAtt = cMath::Max(0.0f, 1.0f - fDist / fRadius);
+			if(pLight->GetFalloffPow() != 0.5f) fAtt = std::pow(fAtt, 2.0f * pLight->GetFalloffPow());
+			if(fAtt == 0) continue;
+			// r^2, not the sphere volume: as in HPL3
+			float fW = cMath::Min(0.5f * 4.1887903f * fRadius * fRadius, Volume(vIMax - vIMin)) * fInvVolume * fAtt;
+
+			if(pLight->GetLightType() == eLightType_Spot)
+			{
+				cLightSpot *pSpot = static_cast<cLightSpot*>(pLight);
+				cVector3f vRMin, vRMax;
+				if(cMath::GetNormalizedClipRectFromBV(vRMin, vRMax, *pBV, pSpot->GetFrustum(), pSpot->GetTanHalfFOV())==false) continue;
+				float fArea = (vRMax.x - vRMin.x) * (vRMax.y - vRMin.y);
+				vRMin = cVector3f(cMath::Max(vRMin.x, -1.0f), cMath::Max(vRMin.y, -1.0f), 0);
+				vRMax = cVector3f(cMath::Min(vRMax.x, 1.0f), cMath::Min(vRMax.y, 1.0f), 0);
+				fW *= (vRMax.x - vRMin.x) * (vRMax.y - vRMin.y) / fArea;
+				float fCenter = cVector2f((vRMin.x + vRMax.x) * 0.5f, (vRMin.y + vRMax.y) * 0.5f).Length();
+				float fNear = pSpot->GetNearClipPlane();
+				float fT = (fDist - fNear) / (fRadius - fNear);
+				fW *= cMath::Clamp(fT * 8.0f, 0.0f, 1.0f) * cMath::Clamp((1.0f - fT) * 128.0f, 0.0f, 1.0f) * cMath::Max(0.0f, 1.0f - fCenter);
+			}
+			if((fW > 0)==false) continue;
+
+			const cColor &diff = pLight->GetDiffuseColor();
+			float fCol[3] = { diff.r*diff.r, diff.g*diff.g, diff.b*diff.b };
+			for(int c=0; c<3; ++c)
+			{
+				float fC = fW * pLight->GetBrightness() * fCol[c];
+				fAcc[c][0] += vDir.x * 0.0575824f * fC;
+				fAcc[c][1] += vDir.y * 0.0575824f * fC;
+				fAcc[c][2] += vDir.z * 0.0575824f * fC;
+				fAcc[c][3] += 0.0705237f * fC;
+			}
+		}
+
+		cMatrixf mtxProbe = cMatrixf::Zero;
+		for(int c=0; c<3; ++c) for(int k=0; k<4; ++k) mtxProbe.m[c][k] = fAcc[c][k];
+		return mtxProbe;
+	}
+
 	void cMaterialType_Translucent::SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer)
 	{
 		cMaterialType_Translucent_Vars *pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
 		if(cRendererDeferred::GetHdr()) apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
 
+		if(mbLightProbes && pVars->mbAffectedByLightLevel)
+		{
+			apProgram->SetMatrixf(kVar_px_mtxLightProbe, CalcLightProbe(apObject, apRenderer->GetCurrentRenderList()));
+			apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
+			apProgram->SetFloat(kVar_afLightLevel, 1.0f);
+		}
 		////////////////////////////
 		//Light affects Alpha
-		if(pVars->mbAffectedByLightLevel)
+		else if(pVars->mbAffectedByLightLevel)
 		{
 			cVector3f vCenterPos = apObject->GetBoundingVolume()->GetWorldCenter();
             cRenderList *pRenderList = apRenderer->GetCurrentRenderList();

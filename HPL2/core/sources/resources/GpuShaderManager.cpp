@@ -150,6 +150,7 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
 		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
+		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n" },
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {
@@ -171,6 +172,9 @@ namespace hpl {
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
 		  "\t\t\t\tvSpecular *= clamp((0.6 - max(abs(vSourceUV[0].x - 0.5), abs(vSourceUV[0].y - 0.5))) * 10.0, 0.0, 1.0);" },
+		{ "deferred_transparent_frag.hpsl",
+		  "\t@endif\n\n\tcVector4f vFinalColor;",
+		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },
 	};
 
 	static void PatchHpslSource(const tString& asFile, tString& asData)
