@@ -63,8 +63,6 @@ static void SplitInto(const tString &asData, const tString &asSep, std::vector<t
 void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 {
 	RegisterSomaScriptStringConcats(e);
-	SOMA_FUNC(e, "tWString cString_To16Char(const tString &in asString)", +[](const tString &s) { return cString::To16Char(s); });
-	SOMA_FUNC(e, "tString cString_To8Char(const tWString &in awsString)", +[](const tWString &s) { return cString::To8Char(s); });
 	SOMA_FUNC(e, "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", (FloatToString));
 	SOMA_FUNC(e, "tString cString_ToString(int alX, int alPaddingZeros)", +[](int x, int p) { char b[32]; snprintf(b, sizeof(b), "%0*d", p, x); return tString(b); });
 	SOMA_FUNC(e, "tWString cString_ToStringW(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)",
@@ -76,15 +74,6 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector2f cString_ToVector2f(const tString&in asStr, const cVector2f&in avDefault)", +[](const tString &s, const cVector2f &d) { return cString::ToVector2f(s.c_str(), d); });
 	SOMA_FUNC(e, "cVector3f cString_ToVector3f(const tString&in asStr, const cVector3f&in avDefault)", +[](const tString &s, const cVector3f &d) { return cString::ToVector3f(s.c_str(), d); });
 	SOMA_FUNC(e, "cColor cString_ToColor(const tString&in asStr, const cColor&in aDefault)", +[](const tString &s, const cColor &d) { return cString::ToColor(s.c_str(), d); });
-	SOMA_FUNC(e, "tString cString_Sub(const tString&in asString,int alStart, int alCount=-1)", +[](const tString &s, int a, int c) { return cString::Sub(s, a, c); });
-	SOMA_FUNC(e, "tWString cString_SubW(const tWString&in asString,int alStart, int alCount=-1)", +[](const tWString &s, int a, int c) { return cString::SubW(s, a, c); });
-	SOMA_FUNC(e, "tString cString_ToLowerCase(const tString&in aString)", +[](const tString &s) { return cString::ToLowerCase(s); });
-	SOMA_FUNC(e, "tWString cString_ToLowerCaseW(const tWString&in aString)", +[](const tWString &s) { return cString::ToLowerCaseW(s); });
-	SOMA_FUNC(e, "tString cString_ToUpperCase(const tString&in aString)", +[](const tString &s) { return cString::ToUpperCase(s); });
-	SOMA_FUNC(e, "tString cString_ReplaceCharTo(const tString&in aString, const tString&in asOldChar,const tString&in asNewChar)",
-			  +[](const tString &s, const tString &a, const tString &b) { return cString::ReplaceCharTo(s, a, b); });
-	SOMA_FUNC(e, "tString cString_ReplaceStringTo(const tString&in aString, const tString&in asOldString,const tString&in asNewString)",
-			  +[](const tString &s, const tString &a, const tString &b) { return cString::ReplaceStringTo(s, a, b); });
 	SOMA_FUNC(e, "tString cString_GetLastChar(const tString&in aString)", +[](const tString &s) { return s.empty() ? tString() : s.substr(s.size() - 1); });
 	SOMA_FUNC(e, "int cString_GetFirstCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return FindChar(s, (char)c, false); });
 	SOMA_FUNC(e, "int cString_GetLastCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return FindChar(s, (char)c, true); });
@@ -117,12 +106,6 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 				  SplitInto(asData, asSep, v);
 				  for (tString &s : v) { int l = atoi(s.c_str()); aOut.InsertLast(&l); }
 			  });
-	SOMA_FUNC(e, "tString cString_GetFileExt(const tString&in aString)", +[](const tString &s) { return cString::GetFileExt(s); });
-	SOMA_FUNC(e, "tString cString_SetFileExt(const tString&in aString,const tString&in aExt)", +[](const tString &s, const tString &x) { return cString::SetFileExt(s, x); });
-	SOMA_FUNC(e, "tString cString_GetFileName(const tString&in aString)", +[](const tString &s) { return cString::GetFileName(s); });
-	SOMA_FUNC(e, "tString cString_GetFilePath(const tString&in aString)", +[](const tString &s) { return cString::GetFilePath(s); });
-	SOMA_FUNC(e, "tString cString_AddSlashAtEnd(const tString&in asPath)", +[](const tString &s) { return cString::AddSlashAtEnd(s); });
-	SOMA_FUNC(e, "tString cString_RemoveSlashAtEnd(const tString&in asPath)", +[](const tString &s) { return cString::RemoveSlashAtEnd(s); });
 	SOMA_FUNC(e, "tString String_SecondsToClockDisplay(float afSeconds, bool abShowHours, bool abShowMinutes, bool abShowSeconds, bool abShowHundredths)",
 			  +[](float s, bool bH, bool bM, bool bS, bool bC) {
 				  std::vector<int> v;

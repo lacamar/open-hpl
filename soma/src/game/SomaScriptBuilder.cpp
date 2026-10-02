@@ -20,11 +20,6 @@ static const char *gvCompatPatches[][3] = {
 	{"03_02_omicron_inside.hps", ".length -", ".length() -"},
 };
 
-static int CountLines(const std::string &s, size_t alPos)
-{
-	return 1 + (int)std::count(s.begin(), s.begin() + alPos, '\n');
-}
-
 static std::string Lower(std::string s)
 {
 	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -120,18 +115,15 @@ bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &a
 			size_t lClose = sCode.find(']', lFirst);
 			if (lClose == std::string::npos || lClose >= lEnd)
 				break;
-			cSomaScriptMetadata meta{asFile, CountLines(sCode, lFirst), sCode.substr(lFirst + 1, lClose - lFirst - 1), ""};
+			std::string sValue = sCode.substr(lFirst + 1, lClose - lFirst - 1);
 			size_t lDeclEnd = sCode.find_first_of(";=(", lClose);
-			if (lDeclEnd != std::string::npos)
+			if ((sValue == "nosave" || sValue == "volatile") && lDeclEnd != std::string::npos)
 			{
 				size_t lNameEnd = sCode.find_last_not_of(" \t\r\n", lDeclEnd - 1);
 				size_t lNameStart = sCode.find_last_of(" \t\r\n&@", lNameEnd);
 				if (lNameEnd != std::string::npos && lNameStart != std::string::npos && lNameStart < lNameEnd)
-					meta.msName = sCode.substr(lNameStart + 1, lNameEnd - lNameStart);
+					gsetNoSave.insert(sCode.substr(lNameStart + 1, lNameEnd - lNameStart));
 			}
-			if (meta.msValue == "nosave" || meta.msValue == "volatile")
-				gsetNoSave.insert(meta.msName);
-			mvMetadata.push_back(meta);
 			for (size_t i = lFirst; i <= lClose; ++i)
 				sCode[i] = ' ';
 			lFirst = sCode.find_first_not_of(" \t", lClose + 1);

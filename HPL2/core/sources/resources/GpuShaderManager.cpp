@@ -480,10 +480,6 @@ namespace hpl {
 					sFileData.resize(lFileSize);
 					cPlatform::CopyFileToBuffer(sHpslPath,&sFileData[0],lFileSize);
 
-					// This branch has no caller-supplied cParserVarContainer
-					// (that's what distinguishes it from the branch above),
-					// so preprocess with an empty one - same convention
-					// HpslTranspilerSelfTest.cpp uses.
 					cParserVarContainer emptyVars;
 					tString sParsedOutput;
 					mpPreprocessParser->Parse(&sFileData, &sParsedOutput, &emptyVars, cString::GetFilePathW(sHpslPath));

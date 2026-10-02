@@ -40,6 +40,7 @@ private:
 	cViewport *mpViewport;
 
 	cVector2f mvScreenSize;
+	float mfVirtualWidth;
 
 	cGuiGfxElement *mpBlackBg;
 	cGuiGfxElement *mpPremenuBg;

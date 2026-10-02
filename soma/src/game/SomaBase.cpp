@@ -8,7 +8,6 @@
 #include "SomaSoundscape.h"
 
 #include <cstring>
-#include "HpslTranspilerSelfTest.h"
 #include "HpslTranspiler.h"
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
@@ -437,34 +436,6 @@ static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRe
 	aResp.Set("output", sOut);
 }
 
-// Headless debug hook onto cRendererDeferred's own existing debug quad-view
-// of the raw G-buffer contents (color/diffuse top-left, normal+depth top-
-// right, specular bottom-left, a 4th target bottom-right if present) - lets
-// a headless screenshot inspect each render target directly instead of only
-// the final composited frame. Used to root-cause the SOMA "real lights get
-// routed for rendering but contribute ~0 visible brightness" investigation
-// (see PORTING_NOTES.md) - confirmed live that the color/diffuse target is
-// correctly populated (real, plausible lit texture data) while the normal+
-// depth target renders solid black regardless of cRendererDeferred's own
-// 32-bit vs 64-bit G-buffer texture format, meaning the deferred G-buffer
-// solid pass's fragment shader isn't reaching that attachment at all - real,
-// still-open investigation, not yet root-caused further than that (needs
-// real GPU frame-capture tooling this headless workflow doesn't have).
-static void cSomaBase_HeadlessCmd_SetDebugGbuffer(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
-{
-	cRendererDeferred::SetDebugRenderFrameBuffers(aReq.GetBool("enabled", false));
-}
-
-// Numeric follow-up to set_debug_gbuffer above: reads a real G-buffer render
-// target's actual GPU pixel data back via iTexture::GetRawPixelsRGBAFloat()
-// (glGetTexImage, bypassing RenderGbufferContent()'s own quad-view draw
-// entirely) and reports per-channel min/max/mean plus one sampled pixel -
-// added because the debug quad-view being solid black is consistent with
-// *either* the G-buffer target itself never being written, *or* the debug
-// view's own draw (texture unit, blend state) being wrong while the real
-// target holds good data. "target": 0=color/diffuse, 1=normal+depth (the
-// one under investigation - see PORTING_NOTES.md), 2=specular, 3=4th
-// attachment if present. "x"/"y": pixel to sample directly, default center.
 // Writes a debug target as PFM (bottom-up float RGB, same row order as GL).
 static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -952,17 +923,12 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));
 
-	const char *pHdr = getenv("OPENHPL_SOMA_HDR");
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	iLight::SetHpl3Visibility(true);
 	cRendererDeferred::SetHpl3SSAO(true);
-	if (pHdr == NULL || pHdr[0] != '0')
-	{
-		cRendererDeferred::SetHdr(true);
-		SetHpslStripHdrBoost(false);
-		cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
-		cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
-	}
+	cRendererDeferred::SetHdr(true);
+	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
+	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
 
 	// cRendererDeferred::InitLightRendering() (RendererDeferred.cpp) attaches
 	// a real GPU occlusion query (GetOcclusionQuery()) to any light whose
@@ -1058,7 +1024,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("raycast", cSomaBase_HeadlessCmd_Raycast, this);
 		pCtrl->RegisterHandler("physics_stats", cSomaBase_HeadlessCmd_PhysicsStats, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
-		pCtrl->RegisterHandler("set_debug_gbuffer", cSomaBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("dump_target", cSomaBase_HeadlessCmd_DumpTarget, this);
 		pCtrl->RegisterHandler("translucents", cSomaBase_HeadlessCmd_Translucents, this);
@@ -1074,14 +1039,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("set_light", cSomaBase_HeadlessCmd_SetLight, this);
 		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
 	}
-
-	/////////////////////////////
-	// One-shot HPSL->GLSL transpiler proof-of-concept - see
-	// HpslTranspilerSelfTest.h. Not part of real rendering yet; just
-	// proves whether the transpiled clear_vtx/clear_frag pair compiles as
-	// real GLSL against the live GL context. Safe to run every boot: it
-	// only reads shader files and compiles throwaway GL shader objects.
-	RunHpslTranspilerSelfTest(mpEngine);
 
 	mpEngine->GetUpdater()->AddGlobalUpdate(hplNew(cSomaToneMapping, ()));
 
@@ -1277,19 +1234,6 @@ bool cSomaBase::InitEngine()
 	// 1280x720 here before those fields existed.
 	vars.mGraphics.mvScreenSize = cVector2l(mConfig.mlScreenWidth, mConfig.mlScreenHeight);
 
-	// TEMP DEBUG ONLY - not for commit: lets a large windowed boot size be
-	// tested headlessly (a hidden window never picks up real monitor
-	// dimensions for SDL_WINDOW_FULLSCREEN_DESKTOP, so this is the only way
-	// to reproduce "booted directly at a large real resolution" headlessly).
-	// Deliberately AFTER the config-driven default above so this always wins
-	// over a persisted Resolution setting for debugging.
-	if (getenv("OPENHPL_SOMA_DEBUG_SCREENSIZE"))
-	{
-		int lW = 1280, lH = 720;
-		sscanf(getenv("OPENHPL_SOMA_DEBUG_SCREENSIZE"), "%dx%d", &lW, &lH);
-		vars.mGraphics.mvScreenSize = cVector2l(lW, lH);
-	}
-
 	/////////////////////////
 	// Create the engine
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
@@ -1312,22 +1256,18 @@ bool cSomaBase::InitEngine()
 	// boot log against real game data).
 	RegisterSomaLoaders(mpEngine->GetResources());
 
-	const char *pScripts = getenv("OPENHPL_SOMA_SCRIPTS");
-	if (pScripts == NULL || strcmp(pScripts, "0") != 0)
+	mpScriptRuntime = hplNew(cSomaScriptRuntime, ());
+	if (mpScriptRuntime->Init(cString::To8Char(cPlatform::GetWorkingDir())))
 	{
-		mpScriptRuntime = hplNew(cSomaScriptRuntime, ());
-		if (mpScriptRuntime->Init(cString::To8Char(cPlatform::GetWorkingDir())))
-		{
-			mpLuxGame = new cSomaLuxGame(mpScriptRuntime);
-			mpLuxGame->Load();
-			mpLuxUpdater = hplNew(cSomaLuxUpdater, ());
-			mpEngine->GetUpdater()->AddGlobalUpdate(mpLuxUpdater);
-		}
-		else
-		{
-			hplDelete(mpScriptRuntime);
-			mpScriptRuntime = NULL;
-		}
+		mpLuxGame = new cSomaLuxGame(mpScriptRuntime);
+		mpLuxGame->Load();
+		mpLuxUpdater = hplNew(cSomaLuxUpdater, ());
+		mpEngine->GetUpdater()->AddGlobalUpdate(mpLuxUpdater);
+	}
+	else
+	{
+		hplDelete(mpScriptRuntime);
+		mpScriptRuntime = NULL;
 	}
 
 	/////////////////////////

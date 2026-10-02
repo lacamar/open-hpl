@@ -15,7 +15,7 @@
  * core/shaders/deferred_base_vtx.glsl in a real Dark Descent/SOMA
  * install).
  *
- * Proven (real GL compile, see HpslTranspilerSelfTest) against five real
+ * Proven (real GL compile) against five real
  * SOMA .hpsl files: clear_vtx/clear_frag, null_vtx/null_frag,
  * deferred_depthonly_frag, deferred_posteffect_quad_vtx, and
  * debug_overdraw_frag. The vertex-input semantic name -> GLSL built-in
@@ -103,8 +103,6 @@ using namespace hpl;
  * \param asErrorOut receives a human-readable reason on failure.
  * \return false if the source uses a construct this best-effort transpiler doesn't understand.
  */
-void SetHpslStripHdrBoost(bool abX);
-
 bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType,
 						  tString& asGlslOut, tString& asErrorOut);
 

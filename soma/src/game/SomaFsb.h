@@ -33,7 +33,6 @@ public:
 	// amapOut maps each extracted sample to its file name
 	static void ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
 							   const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut);
-	static bool WriteTextFile(const tWString &asPath, const tString &asText);
 };
 
 #endif // SOMA_FSB_H

@@ -8,14 +8,6 @@
 #include <string>
 #include <vector>
 
-struct cSomaScriptMetadata
-{
-	std::string msFile;
-	int mlLine;
-	std::string msValue;
-	std::string msName; // declared member
-};
-
 // Members declared [nosave] or [volatile], skipped by save games
 const std::set<std::string> &SomaScriptNoSaveNames();
 
@@ -33,14 +25,12 @@ public:
 			  std::string *apMissingInclude = NULL);
 
 	const std::string &GetGameDir() const { return msGameDir; }
-	const std::vector<cSomaScriptMetadata> &GetMetadata() const { return mvMetadata; }
 
 private:
 	bool AddFile(asIScriptModule *apModule, const std::string &asFile, std::map<std::string, bool> &aIncluded,
 				 std::string *apMissingInclude);
 
 	std::string msGameDir;
-	std::vector<cSomaScriptMetadata> mvMetadata;
 	std::map<std::string, std::string> mmapByRelPath;  // lowercase path under script/
 	std::map<std::string, std::string> mmapByBaseName; // lowercase basename
 };

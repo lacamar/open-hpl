@@ -122,7 +122,6 @@ public:
 
 private:
 	void LoadProject(const tString &asProject);
-	void ExtractFiles(cEvent *apEvent);
 	cEvent *GetEvent(const tString &asName);
 	cEvent *FileEvent(const tString &asFile, bool abLoop, bool abStream);
 

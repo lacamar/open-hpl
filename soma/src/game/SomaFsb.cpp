@@ -614,11 +614,6 @@ tWString cSomaFsb::GetCacheDir(const tWString &asSubDir)
 	return sDir;
 }
 
-bool cSomaFsb::WriteTextFile(const tWString &asPath, const tString &asText)
-{
-	return WriteWholeFile(asPath, std::vector<unsigned char>(asText.begin(), asText.end()));
-}
-
 void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, const tWString &asCacheDir,
 						   const cSomaFsbWanted *apWanted, size_t alCount)
 {

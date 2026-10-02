@@ -272,21 +272,7 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Log(float afX)", +[](float x) { return logf(x); });
 	SOMA_FUNC(e, "float cMath_Pow(float afX, float afExp)", +[](float x, float p) { return powf(x, p); });
 	SOMA_FUNC(e, "float cMath_Sqrt(float afX)", +[](float x) { return sqrtf(x); });
-	SOMA_FUNC(e, "int cMath_RandRectl(int alMin, int alMax)", +[](int a, int b) { return cMath::RandRectl(a, b); });
-	SOMA_FUNC(e, "float cMath_RandRectf(float alMin, float alMax)", +[](float a, float b) { return cMath::RandRectf(a, b); });
-	SOMA_FUNC(e, "cVector2f cMath_RandRectVector2f(const cVector2f &in avMin, const cVector2f &in avMax)",
-			  +[](const cVector2f &a, const cVector2f &b) { return cMath::RandRectVector2f(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_RandRectVector3f(const cVector3f &in avMin, const cVector3f &in avMax)",
-			  +[](const cVector3f &a, const cVector3f &b) { return cMath::RandRectVector3f(a, b); });
-	SOMA_FUNC(e, "cColor cMath_RandRectColor(const cColor &in aMin, const cColor &in aMax)",
-			  +[](const cColor &a, const cColor &b) { return cMath::RandRectColor(a, b); });
 	SOMA_FUNC(e, "void cMath_Randomize(int alSeed)", +[](int s) { cMath::Randomize(s); });
-	SOMA_FUNC(e, "float cMath_ToRad(float afAngle)", +[](float x) { return cMath::ToRad(x); });
-	SOMA_FUNC(e, "float cMath_ToDeg(float afAngle)", +[](float x) { return cMath::ToDeg(x); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3ToRad(const cVector3f &in avVec)", +[](const cVector3f &v) { return cMath::Vector3ToRad(v); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3ToDeg(const cVector3f &in avVec)", +[](const cVector3f &v) { return cMath::Vector3ToDeg(v); });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2ToRad(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2ToRad(v); });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2ToDeg(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2ToDeg(v); });
 	SOMA_FUNC(e, "float cMath_Easing(eEasing aType, float afT, float afMin = 0, float afMax = 1)",
 			  +[](int t, float x, float a, float b) { return a + (b - a) * SomaEasing(t, cMath::Clamp(x, 0.0f, 1.0f)); });
 	SOMA_FUNC(e, "float cMath_Vector3MaxElement(const cVector3f &in avVec)", +[](const cVector3f &v) { return std::max(v.x, std::max(v.y, v.z)); });
@@ -302,80 +288,27 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Math_CatmullRom(cVector3f &out avResult, const cVector3f &in avP0, const cVector3f &in avP1, const cVector3f &in avP2, const cVector3f &in avP3, float afFract)",
 			  +[](cVector3f &r, const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { r = SomaCatmullRom(a, b, c, d, t); });
 	SOMA_METHOD(e, "cQuaternion", "void FromAngleAxis(float afAngle, const cVector3f &in)", +[](cQuaternion &q, float a, const cVector3f &v) { q.FromAngleAxis(a, v); });
-	SOMA_FUNC(e, "float cMath_Wrap(float afX, float afMin, float afMax)", +[](float x, float a, float b) { return cMath::Wrap(x, a, b); });
-	SOMA_FUNC(e, "float cMath_TurnAngle(float afAngle, float afFinalAngle, float afSpeed, float afMaxAngle)",
-			  +[](float a, float f, float s, float m) { return cMath::TurnAngle(a, f, s, m); });
-	SOMA_FUNC(e, "float cMath_TurnAngleRad(float afAngle,float afFinalAngle,float afSpeed)", +[](float a, float f, float s) { return cMath::TurnAngleRad(a, f, s); });
-	SOMA_FUNC(e, "float cMath_TurnAngleDeg(float afAngle,float afFinalAngle,float afSpeed)", +[](float a, float f, float s) { return cMath::TurnAngleDeg(a, f, s); });
-	SOMA_FUNC(e, "float cMath_GetAngleDistance(float afAngle1, float afAngle2, float afMaxAngle)",
-			  +[](float a, float b, float m) { return cMath::GetAngleDistance(a, b, m); });
-	SOMA_FUNC(e, "float cMath_GetAngleDistanceRad(float afAngle1, float afAngle2)", +[](float a, float b) { return cMath::GetAngleDistanceRad(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_GetAngleDistanceVector3fRad(const cVector3f&in avAngles1, const cVector3f&in avAngles2)", +[](const cVector3f &a, const cVector3f &b) {
 		return cVector3f(cMath::GetAngleDistanceRad(a.x, b.x), cMath::GetAngleDistanceRad(a.y, b.y), cMath::GetAngleDistanceRad(a.z, b.z));
 	});
-	SOMA_FUNC(e, "float cMath_GetAngleDistanceDeg(float afAngle1, float afAngle2)", +[](float a, float b) { return cMath::GetAngleDistanceDeg(a, b); });
-	SOMA_FUNC(e, "float cMath_Vector2Dist(const cVector2f &in avPosA, const cVector2f &in avPosB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2Dist(a, b); });
-	SOMA_FUNC(e, "float cMath_Vector2DistSqr(const cVector2f &in avPosA, const cVector2f &in avPosB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2DistSqr(a, b); });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2Normalize(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2Normalize(v); });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2Max(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2Max(a, b); });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2Min(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return cMath::Vector2Min(a, b); });
 	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return a.x * b.x + a.y * b.y; });
-	SOMA_FUNC(e, "cVector2f cMath_Vector2Abs(const cVector2f &in avVec)", +[](const cVector2f &v) { return cMath::Vector2Abs(v); });
-	SOMA_FUNC(e, "float cMath_Vector3Dist(const cVector3f &in avPosA, const cVector3f &in avPosB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Dist(a, b); });
-	SOMA_FUNC(e, "float cMath_Vector3DistSqr(const cVector3f &in avPosA, const cVector3f &in avPosB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3DistSqr(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Normalize(const cVector3f &in avVec)", +[](const cVector3f &v) { return cMath::Vector3Normalize(v); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Cross(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Cross(a, b); });
-	SOMA_FUNC(e, "float cMath_Vector3Dot(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Dot(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Max(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Min(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Abs(const cVector3f &in avVec)", +[](const cVector3f &v) { return cMath::Vector3Abs(v); });
-	SOMA_FUNC(e, "float cMath_Vector3Angle(const cVector3f &in avVecA, const cVector3f &in avVecB)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Angle(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Reflect(const cVector3f &in avVec, const cVector3f &in avNormal)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Reflect(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_Vector3Project(const cVector3f &in avSrcVec, const cVector3f &in avDestVec)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Project(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
 			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixMul(const cMatrixf &in a_mtxA, const cMatrixf &in a_mtxB)", +[](const cMatrixf &a, const cMatrixf &b) { return cMath::MatrixMul(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_MatrixMul(const cMatrixf &in a_mtxA, const cVector3f &in avB)", +[](const cMatrixf &a, const cVector3f &b) { return cMath::MatrixMul(a, b); });
-	SOMA_FUNC(e, "cVector3f cMath_MatrixMul3x3(const cMatrixf &in a_mtxA, const cVector3f &in avB)", +[](const cMatrixf &a, const cVector3f &b) { return cMath::MatrixMul3x3(a, b); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixInverse(const cMatrixf &in a_mtxA)", +[](const cMatrixf &a) { return cMath::MatrixInverse(a); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateX(float afRad)", +[](float a) { return cMath::MatrixRotateX(a); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateY(float afRad)", +[](float a) { return cMath::MatrixRotateY(a); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateZ(float afRad)", +[](float a) { return cMath::MatrixRotateZ(a); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXYZ(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XYZ); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXZY(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XZY); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateYXZ(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_YXZ); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateYZX(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_YZX); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateZXY(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_ZXY); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateZYX(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_ZYX); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixScale(const cVector3f &in avScale)", +[](const cVector3f &s) { return cMath::MatrixScale(s); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixTranslate(const cVector3f &in avTrans)", +[](const cVector3f &t) { return cMath::MatrixTranslate(t); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixQuaternion(const cQuaternion &in aqRot)", +[](const cQuaternion &q) { return cMath::MatrixQuaternion(q); });
-	SOMA_FUNC(e, "cMatrixf cMath_MatrixSlerp(float afT, const cMatrixf &in a_mtxA, const cMatrixf &in a_mtxB, bool abShortestPath)",
-			  +[](float t, const cMatrixf &a, const cMatrixf &b, bool s) { return cMath::MatrixSlerp(t, a, b, s); });
-	SOMA_FUNC(e, "cQuaternion cMath_QuaternionSlerp(float afT, const cQuaternion &in aqA, const cQuaternion &in aqB, bool abShortestPath)",
-			  +[](float t, const cQuaternion &a, const cQuaternion &b, bool s) { return cMath::QuaternionSlerp(t, a, b, s); });
-	SOMA_FUNC(e, "cQuaternion cMath_QuaternionMul(const cQuaternion &in aqA, const cQuaternion &in aqB)", +[](const cQuaternion &a, const cQuaternion &b) { return cMath::QuaternionMul(a, b); });
-	SOMA_FUNC(e, "float cMath_QuaternionDot(const cQuaternion &in aqA, const cQuaternion &in aqB)", +[](const cQuaternion &a, const cQuaternion &b) { return cMath::QuaternionDot(a, b); });
 	SOMA_FUNC(e, "float cMath_InterpolateLinear(float afA, float afB, float afT)", +[](float a, float b, float t) { return a + (b - a) * t; });
 	SOMA_FUNC(e, "float cMath_InterpolateCosine(float afA, float afB, float afT)",
 			  +[](float a, float b, float t) { float f = (1 - cosf(t * kPif)) * 0.5f; return a * (1 - f) + b * f; });
-	SOMA_FUNC(e, "float cMath_IncreaseTo(float afX, float afAdd, float afDest)", +[](float x, float a, float d) { return cMath::IncreaseTo(x, a, d); });
-	SOMA_FUNC(e, "float cMath_GetFraction(float afVal)", +[](float v) { return cMath::GetFraction(v); });
-	SOMA_FUNC(e, "float cMath_Modulus(float afDividend, float afDivisor)", +[](float a, float b) { return cMath::Modulus(a, b); });
-	SOMA_FUNC(e, "bool cMath_IsPow2(int alX)", +[](int x) { return cMath::IsPow2(x); });
 	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return roundf(x); });
-	SOMA_FUNC(e, "float cMath_RoundFloatToDecimals(float afVal, int alDecimals)", +[](float v, int d) { return cMath::RoundFloatToDecimals(v, d); });
 	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return 1 << n; });
 	SOMA_FUNC(e, "void cMath_SetBitFlag(int&out alFlagNum, int alBit, bool abSet)", +[](int &f, int b, bool s) { if (s) f |= b; else f &= ~b; });
 	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return (f & b) != 0; });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMin(const cVector3f&in avBaseMin, const cVector3f&in avAddMin)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMax(const cVector3f&in avBaseMax, const cVector3f&in avAddMax)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
-	SOMA_FUNC(e, "bool cMath_CheckAABBIntersection(const cVector3f&in avMin1, const cVector3f&in avMax1, const cVector3f&in avMin2, const cVector3f&in avMax2)",
-			  +[](const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d) { return cMath::CheckAABBIntersection(a, b, c, d); });
-	SOMA_FUNC(e, "bool cMath_CheckPointInAABBIntersection(const cVector3f&in avPoint, const cVector3f&in avMin, const cVector3f&in avMax)",
-			  +[](const cVector3f &p, const cVector3f &a, const cVector3f &b) { return cMath::CheckPointInAABBIntersection(p, a, b); });
-	SOMA_FUNC(e, "bool cMath_CheckPointInSphereIntersection(const cVector3f&in avPoint, const cVector3f&in avSpherePos, float afSphereRadius)",
-			  +[](const cVector3f &p, const cVector3f &s, float r) { return cMath::CheckPointInSphereIntersection(p, s, r); });
 }
 
 //---------------------------------------

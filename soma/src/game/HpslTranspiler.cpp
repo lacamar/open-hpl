@@ -209,120 +209,6 @@ namespace
 		return std::regex_replace(asSrc, bindRe, "$1$2");
 	}
 
-	// deferred_transparent_frag.hpsl's real source ends main() with
-	// "vFinalColor *= cVector4f(8.0, 8.0, 8.0, 1.0);" under
-	// "@ifdef UseRefraction || UseEnvMap || BlendMode_Add || BlendMode_Alpha
-	// || BlendMode_PremulAlpha" - the shader's own comment calls this
-	// "Multiply with 8.0 to increase precision", a real HPL3/HDR-precision
-	// convention with no equivalent in Dark Descent's own hand-written
-	// deferred_transparent_frag.glsl (confirmed by grep - zero matches) and,
-	// critically, no compensating downstream divide anywhere in this port:
-	// RenderTranslucent() blends this shader's output straight into the
-	// real framebuffer via ordinary GL blending (or, for UseRefraction
-	// materials, writes it directly - see RendererDeferred.cpp), neither of
-	// which expects an 8x-boosted input. A moderately-saturated color
-	// boosted 8x and blended clips straight to a fully-saturated flat
-	// color - this is the real, live-confirmed root cause of a solid
-	// magenta artifact on entities/technical/block_box/block_box.mat (Add
-	// blend, no refraction/envmap) in a real SOMA map.
-	//
-	// Verified live: before this fix, that material's own diffuse texture
-	// (block_box.dds, a single solid dark-magenta (119,2,49) - a real
-	// Frictional-internal debug/collision-marker placeholder color, this
-	// mesh is a physics-only "blocking volume" prop, e.g. instance name
-	// "BedCollider_Crouch_pCube1", never meant to be player-visible)
-	// rendered as a clipped, saturated bright magenta/purple. After, the
-	// same on-screen pixel reads (58,2,24) - matching raw_texture_color *
-	// the scene's own exposure multiplier (~0.435 at this camera pose,
-	// from the map's ExposureArea) almost exactly, confirming the boost
-	// removal is both real and correctly scoped, not a coincidental color
-	// shift. (An earlier pass through this investigation wrongly concluded
-	// this fix had zero visible effect - that was a stale-binary artifact
-	// from an interrupted `cp` deploy step timing out on an overwrite
-	// prompt, not a real result; corrected after re-deploying cleanly and
-	// re-verifying.)
-	//
-	// A later session's corpus-wide re-check (chasing a much more severe,
-	// map-filling version of this same symptom - see the second regex
-	// below) found this "vFinalColor *= cVector4f(8.0, ...)" pattern is
-	// NOT unique to deferred_transparent_frag.hpsl after all: the exact
-	// same "no compensating downstream divide anywhere in this port"
-	// problem also exists, worse, in deferred_light_frag.hpsl's real,
-	// UNCONDITIONAL "out_vColor.xyz = vDiffuse * 8.0;" (the real per-pixel
-	// point/spot-light shading output, run for every lit pixel every
-	// frame - not gated behind any particular blend mode/material like the
-	// transparent-shader case above). A full grep of the real HPSL corpus
-	// for "* 8.0"/"*8.0" also turned up deferred_light_box_frag.hpsl (box
-	// lights), deferred_fog_frag.hpsl, game_edge_glow.hpsl and
-	// null_frag_array*.hpsl with similar boosts - only the light_frag case
-	// is handled here (by far the dominant light type - point/spot -
-	// confirmed live to be the actual cause of a severe, map-filling,
-	// resolution/camera-independent magenta/maroon corruption of every real
-	// SOMA map with lights, reproduced at 720p/1080p/1440p/4K alike, i.e.
-	// this was never a resolution- or light-volume-geometry bug despite
-	// initially looking like one); the other three files are lower-traffic
-	// (box lights are a less common light type; fog/edge-glow/null-array are
-	// comparatively rare paths) and left as a follow-up if a similar
-	// artifact is ever traced to one of them specifically.
-	//
-	// Verified live, real 00_01_apartment.hpm, PlayerStartArea_1 (a
-	// deliberately light-dense starting room): before this fix, every
-	// direction and every resolution tested (720p through real 4K) showed
-	// large, flat, per-channel-clipped magenta/maroon shapes covering most
-	// of the frame - real, correctly-shaded, correctly-lit geometry that
-	// clipped hard because it was reaching the accumulation buffer roughly
-	// 8x too bright, the same failure shape as the block_box.mat case above
-	// but affecting the ENTIRE scene's real-time lighting instead of one
-	// Add-blended prop. After removing this boost too, the same camera
-	// position shows real, recognizable, correctly-exposed apartment
-	// geometry (walls/floor/furniture with visible texture detail and
-	// per-pixel shading gradients, not flat clipped color) at every
-	// resolution tested.
-	//
-	// Both patterns are whitespace-tolerant (the real light_frag file has
-	// no space before its own "= vDiffuse", but two spaces in most other
-	// occurrences of this convention elsewhere in the corpus - not worth
-	// relying on) rather than literal string matches. Must run after
-	// ReplaceTypeNames() (no-op for the light_frag pattern itself, which
-	// uses no vector-constructor syntax, but kept alongside the
-	// vFinalColor/vec4 pattern that does need it, and after
-	// StripUniformBindingIndices() for consistency with the rest of this
-	// pipeline's ordering).
-	tString RemoveUncompensatedHdrPrecisionBoost(const tString& asSrc)
-	{
-		std::regex boostRe("vFinalColor\\s*\\*=\\s*vec4\\(\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*8\\.0\\s*,\\s*1\\.0\\s*\\)\\s*;");
-		tString sOut = std::regex_replace(asSrc, boostRe, "");
-
-		std::regex lightBoostRe("out_vColor\\.xyz\\s*=\\s*vDiffuse\\s*\\*\\s*8\\.0\\s*;");
-		sOut = std::regex_replace(sOut, lightBoostRe, "out_vColor.xyz = vDiffuse;");
-
-		// deferred_light_box_frag.hpsl (box lights): same convention, same
-		// comment ("Multiply with 8.0 to increase precision"), on the final
-		// "* vLightColor[.xyz] * 8.0;" factor of two separate main()
-		// variants (one takes an SH-probe path, one a plain path; one
-		// spells the uniform "vLightColor.xyz", the other just
-		// "vLightColor" - both confirmed present verbatim in the real
-		// corpus). Strip only the trailing "* 8.0", not the whole
-		// statement, since unlike vFinalColor/light_frag's boost this one
-		// isn't the sole RHS - it's the last factor of a longer expression.
-		std::regex boxLightBoostRe("(vLightColor(?:\\.xyz)?)\\s*\\*\\s*8\\.0\\s*;");
-		sOut = std::regex_replace(sOut, boxLightBoostRe, "$1;");
-
-		// deferred_fog_frag.hpsl: same convention, two shapes depending on
-		// which @ifdef branch survived preprocessing - a standalone
-		// "*= 8.0;" compound-assign (secondary-fog branch, removed
-		// entirely like the vFinalColor pattern above) and a "* 8" baked
-		// into the RHS of a plain assignment (primary-fog branch, note:
-		// integer "8" not "8.0" in the real file - strip just that factor).
-		std::regex fogBoostCompoundRe("px_vColor\\.xyz\\s*\\*=\\s*8\\.0\\s*;");
-		sOut = std::regex_replace(sOut, fogBoostCompoundRe, "");
-
-		std::regex fogBoostScaleRe("px_vColor\\.xyz\\s*=\\s*vFogColor\\.xyz\\s*\\*\\s*8\\s*;");
-		sOut = std::regex_replace(sOut, fogBoostScaleRe, "px_vColor.xyz = vFogColor.xyz;");
-
-		return sOut;
-	}
-
 	// Rewrites one already-brace-matched "cBuffer" block BODY (the text
 	// between - but not including - the '{' and '}') into the same text
 	// with "uniform " prepended to every member-declaration line, leaving
@@ -809,9 +695,6 @@ namespace
 
 //---------------------------------------------------------------
 
-static bool gbStripHdrBoost = true;
-void SetHpslStripHdrBoost(bool abX) { gbStripHdrBoost = abX; }
-
 bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType,
 						  tString& asGlslOut, tString& asErrorOut)
 {
@@ -828,7 +711,6 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
-	if (gbStripHdrBoost) sSrc = RemoveUncompensatedHdrPrecisionBoost(sSrc);
 
 	if (RewriteMulIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;
 	if (RewriteSampleCmpIntrinsic(sSrc, sSrc, asErrorOut) == false) return false;

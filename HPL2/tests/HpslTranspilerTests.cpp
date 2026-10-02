@@ -10,10 +10,8 @@
  *
  * IMPORTANT SCOPE NOTE: this only checks that TranspileHpslToGlsl() produces
  * the *expected GLSL syntax* (string-level assertions on the output) - it
- * does NOT run a real GLSL compiler, unlike soma/src/game/
- * HpslTranspilerSelfTest.cpp (which does, via a live GL context inside a
- * fully-booted SOMA process, but needs the real game installed and running
- * to do it). The five source strings below are verbatim copies of five real
+ * does NOT run a real GLSL compiler (scripts/soma-shader-check.py does, on
+ * OPENHPL_DUMP_HPSL_SHADERS_DIR dumps). The five source strings below are verbatim copies of five real
  * files from a real SOMA install
  * (~/.local/share/Steam/steamapps/common/SOMA/core/shaders/hpsl/), already
  * run through the same @ifdef-stripping cPreprocessParser would apply (only
@@ -607,104 +605,6 @@ static void TestFixedFunctionMatrixSubstitution()
 	CHECK_NOT_CONTAINS(sGlsl, "gl_ModelViewMatrix"); // a_mtxModelView itself unused in this source - substitution only fires for names actually declared+present, doesn't invent gl_ModelViewMatrix out of nowhere
 }
 
-// deferred_light_frag.hpsl's real, unconditional "out_vColor.xyz =
-// vDiffuse * 8.0;" (a "Multiply with 8.0 to increase precision" HDR
-// convention with no compensating downstream divide anywhere in this port -
-// see RemoveUncompensatedHdrPrecisionBoost()'s own comment) must have the
-// "* 8.0" dropped, same shape of fix as the already-existing
-// deferred_transparent_frag.hpsl/vFinalColor case this function also
-// handles. Found live via a real start_map run against 00_01_apartment.hpm
-// (see PORTING_NOTES.md): left in, every lit pixel in a real scene reached
-// the screen roughly 8x too bright, well past clipping, producing a severe,
-// resolution/camera-independent magenta/maroon corruption of most of the
-// frame - not a resolution- or light-volume-geometry bug as it first
-// appeared.
-static void TestLightBoostRemoved()
-{
-	tString sGlsl, sErr;
-	static const char* psSrc =
-		"void main(out cVector4f out_vColor : 0)\n"
-		"{\n"
-		"	cVector3f vDiffuse = cVector3f(0.5, 0.5, 0.5);\n"
-		"\n"
-		"	// Multiply with 8.0 to increase precision\n"
-		"	out_vColor.xyz =vDiffuse * 8.0;\n"
-		"	out_vColor.w = 0;\n"
-		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
-	// "out_vColor : 0" itself becomes gl_FragData[0] (the usual single-
-	// render-target output mapping, unrelated to this test's own subject) -
-	// expected, not a sign the boost-removal regex (which matches on the
-	// still-named "out_vColor.xyz" text, run before that rename) missed.
-	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vDiffuse;");
-	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
-}
-
-// deferred_light_box_frag.hpsl: same ×8 convention as TestLightBoostRemoved,
-// but the boost is the trailing factor of a longer expression rather than
-// the sole RHS, and the real corpus has both a "vLightColor.xyz" and a bare
-// "vLightColor" spelling across its two main() variants - cover both.
-static void TestBoxLightBoostRemoved()
-{
-	tString sGlsl, sErr;
-	static const char* psSrc =
-		"void main(out cVector4f out_vColor : 0)\n"
-		"{\n"
-		"	cVector3f vColorVal = cVector3f(0.5, 0.5, 0.5);\n"
-		"	cVector3f vLightColor = cVector3f(1.0, 1.0, 1.0);\n"
-		"\n"
-		"	// Calculate color, multiply with 8.0 to increase precision\n"
-		"	out_vColor.xyz = vColorVal.xyz * vLightColor.xyz * 8.0;\n"
-		"	out_vColor.w = 0;\n"
-		"}";
-	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vColorVal.xyz * vLightColor.xyz;");
-	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
-
-	static const char* psSrcBare =
-		"void main(out cVector4f out_vColor : 0)\n"
-		"{\n"
-		"	cVector3f vColorVal = cVector3f(0.5, 0.5, 0.5);\n"
-		"	cVector3f vLightColor = cVector3f(1.0, 1.0, 1.0);\n"
-		"\n"
-		"	out_vColor.xyz = vColorVal.xyz * vLightColor * 8.0;\n"
-		"	out_vColor.w = 0;\n"
-		"}";
-	CHECK(TranspileHpslToGlsl(psSrcBare, eGpuShaderType_Fragment, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "gl_FragData[0].xyz = vColorVal.xyz * vLightColor;");
-	CHECK_NOT_CONTAINS(sGlsl, "* 8.0");
-}
-
-// deferred_fog_frag.hpsl: two real shapes depending on which @ifdef branch
-// survives preprocessing - a standalone compound-assign "*= 8.0;" (removed
-// entirely, same as the vFinalColor pattern) and a "* 8" (integer, not
-// "8.0") baked into a plain assignment's RHS.
-static void TestFogBoostRemoved()
-{
-	tString sGlsl, sErr;
-	static const char* psSrcCompound =
-		"void main(out cVector4f out_vColor : 0)\n"
-		"{\n"
-		"	cVector4f px_vColor = cVector4f(0.5, 0.5, 0.5, 1.0);\n"
-		"	px_vColor.xyz *= 8.0;\n"
-		"	out_vColor = px_vColor;\n"
-		"}";
-	CHECK(TranspileHpslToGlsl(psSrcCompound, eGpuShaderType_Fragment, sGlsl, sErr));
-	CHECK_NOT_CONTAINS(sGlsl, "8.0");
-
-	static const char* psSrcScale =
-		"void main(out cVector4f out_vColor : 0)\n"
-		"{\n"
-		"	cVector4f px_vColor;\n"
-		"	cVector4f vFogColor = cVector4f(0.5, 0.5, 0.5, 1.0);\n"
-		"	px_vColor.xyz = vFogColor.xyz * 8;\n"
-		"	out_vColor = px_vColor;\n"
-		"}";
-	CHECK(TranspileHpslToGlsl(psSrcScale, eGpuShaderType_Fragment, sGlsl, sErr));
-	CHECK_CONTAINS(sGlsl, "px_vColor.xyz = vFogColor.xyz;");
-	CHECK_NOT_CONTAINS(sGlsl, "* 8");
-}
-
 // cMatrix3f (real use: deferred_base_vtx.hpsl's normal matrix,
 // "cMatrix3f mtxNormal = cMatrix3f(a_mtxNormal);") must map to mat3 - a real
 // bug this pass's live glCompileShader() self-test caught (see
@@ -789,9 +689,6 @@ int main()
 	TestNoLoadKeepsVersion120();
 	TestLoadRejectsNonSampler2D();
 	TestFixedFunctionMatrixSubstitution();
-	TestLightBoostRemoved();
-	TestBoxLightBoostRemoved();
-	TestFogBoostRemoved();
 
 	if (gFailures == 0)
 	{

@@ -28,6 +28,8 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 
 	mpGui = mpEngine->GetGui();
 	mvScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	// Official HUD virtual space: 1024x768 centre, widened by 4/3 of the extra width
+	mfVirtualWidth = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
 
 	mpGuiSkin = mpGui->CreateSkin("gui_default.skin");
 	mpGuiSet = mpGui->CreateSet("Splash", mpGuiSkin);
@@ -128,17 +130,14 @@ static float BootBarFraction(float afT)
 	return 1.0f;
 }
 
-// Official HUD virtual space: 1024x768 centre, widened by 4/3 of the extra width
 cVector3f cSomaSplash::VirtualToScreen(const cVector2f &avPos, float afZ)
 {
-	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
-	return cVector3f((avPos.x + (fW - 1024.0f) * 0.5f) * mvScreenSize.x / fW, avPos.y * mvScreenSize.y / 768.0f, afZ);
+	return cVector3f((avPos.x + (mfVirtualWidth - 1024.0f) * 0.5f) * mvScreenSize.x / mfVirtualWidth, avPos.y * mvScreenSize.y / 768.0f, afZ);
 }
 
 cVector2f cSomaSplash::VirtualSizeToScreen(const cVector2f &avSize)
 {
-	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
-	return cVector2f(avSize.x * mvScreenSize.x / fW, avSize.y * mvScreenSize.y / 768.0f);
+	return cVector2f(avSize.x * mvScreenSize.x / mfVirtualWidth, avSize.y * mvScreenSize.y / 768.0f);
 }
 
 void cSomaSplash::DrawBrainIcon(float afAlpha)
@@ -153,8 +152,7 @@ void cSomaSplash::DrawBrainIcon(float afAlpha)
 	if (pFrame == NULL)
 		return;
 
-	float fW = (4.0f * 768.0f * mvScreenSize.x / mvScreenSize.y - 1024.0f) / 3.0f;
-	cVector3f vPos = VirtualToScreen(cVector2f(1024.0f + (fW - 1024.0f) * 0.5f - 150.0f, 648.0f), 3);
+	cVector3f vPos = VirtualToScreen(cVector2f(1024.0f + (mfVirtualWidth - 1024.0f) * 0.5f - 150.0f, 648.0f), 3);
 	mpGuiSet->DrawGfx(pFrame, vPos, VirtualSizeToScreen(cVector2f(70, 70)), cColor(afAlpha, afAlpha, afAlpha, 1));
 }
 
