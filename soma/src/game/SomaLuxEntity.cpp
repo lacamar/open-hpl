@@ -1600,6 +1600,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						p->mpImGui = new cSomaImGui(p->msName, pSet);
 						p->mpImGui->mScreenClear = clear;
 						p->mpImGui->mScreenOfflineClear = offline;
+						if (cSomaLuxHandler *pGui = cSomaLuxGame::Get()->GetHandler("GuiHandler"))
+							pGui->CallWithObject("void SetDefaultData(cImGui @apImGui)", p->mpImGui);
 						p->SetupGuiScreen(sub);
 						if (p->mpGuiSubMesh)
 						{
