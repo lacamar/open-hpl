@@ -297,7 +297,12 @@ namespace hpl {
 		tString sLowType = cString::ToLowerCase(asType);
 
         if(sLowType == "playsound")	return eAnimationEventType_PlaySound;
+		if(sLowType == "createparticle") return eAnimationEventType_CreateParticle;
 		if(sLowType == "step")		return eAnimationEventType_Step;
+		if(sLowType == "message")	return eAnimationEventType_Message;
+		if(sLowType == "playloopsound") return eAnimationEventType_PlayLoopSound;
+		if(sLowType == "stoploopsound") return eAnimationEventType_StopLoopSound;
+		if(sLowType == "") return eAnimationEventType_LastEnum;
 
 		Error("No animation event named '%s'\n", asType.c_str());
 		return eAnimationEventType_LastEnum;
@@ -485,6 +490,8 @@ namespace hpl {
 						pEvent->mfTime = pEventElem->GetAttributeFloat("Time");
 						pEvent->mType = ToAnimEventType(pEventElem->GetAttributeString("Type"));
 						pEvent->msValue = pEventElem->GetAttributeString("Value");
+						pEvent->msName = pEventElem->GetAttributeString("Name");
+						pEvent->msDestSocket = pEventElem->GetAttributeString("DestSocket");
 					}
 
 				}

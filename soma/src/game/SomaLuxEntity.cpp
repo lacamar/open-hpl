@@ -1697,6 +1697,58 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	cSomaLuxScriptable::RegisterTimerNatives(e, T);
 }
 
+void cSomaLuxEntity::AttachAnimationEventEntity(const tString &asSocket, iEntity3D *apEntity)
+{
+	for (cSocket &sock : mvSockets)
+		if (sock.msName == asSocket)
+		{
+			apEntity->SetMatrix(sock.m_mtxOffset);
+			if (sock.mpBone)
+				sock.mpBone->AddEntity(apEntity);
+			else
+				mpMesh->AddChild(apEntity);
+			return;
+		}
+	mpMesh->AddChild(apEntity);
+}
+
+// cMeshEntity::HandleAnimationEvent + iLuxEntity::OnAnimationEvent
+bool cSomaLuxEntity::OnAnimationEvent(cMeshEntity *apMesh, cAnimationEvent *apEvent)
+{
+	cWorld *pWorld = apMesh->GetWorld();
+	iEntity3D *pCreated = NULL;
+	if (apEvent->mType == eAnimationEventType_PlaySound && apEvent->msValue != "")
+	{
+		pCreated = pWorld->CreateSoundEntity(apMesh->GetName() + "_AnimEvent", apEvent->msValue, true);
+		if (pCreated == NULL)
+			Error("Failed to play sound %s during animation event for MeshEntity %s\n", apEvent->msValue.c_str(), apMesh->GetName().c_str());
+	}
+	else if (apEvent->mType == eAnimationEventType_CreateParticle && apEvent->msValue != "")
+		pCreated = pWorld->CreateParticleSystem(apMesh->GetName() + "_AnimEvent", apEvent->msValue, 1);
+	else if (apEvent->mType == eAnimationEventType_PlayLoopSound || apEvent->mType == eAnimationEventType_StopLoopSound)
+	{
+		bool bAlive = mpAnimLoopSound && pWorld->SoundEntityExists(mpAnimLoopSound, mlAnimLoopSoundID);
+		tString sSound = apEvent->mType == eAnimationEventType_PlayLoopSound ? apEvent->msValue : "";
+		if (bAlive && sSound == msAnimLoopSound)
+			return true;
+		if (bAlive)
+			mpAnimLoopSound->FadeOut(3);
+		mpAnimLoopSound = NULL;
+		msAnimLoopSound = sSound;
+		if (sSound == "" || (mpAnimLoopSound = pWorld->CreateSoundEntity(msName + "_LoopAnimSound", sSound, true)) == NULL)
+			return true;
+		mpAnimLoopSound->FadeIn(3);
+		mlAnimLoopSoundID = mpAnimLoopSound->GetCreationID();
+		pCreated = mpAnimLoopSound;
+	}
+	if (pCreated)
+	{
+		pCreated->SetIsSaved(false);
+		AttachAnimationEventEntity(apEvent->msDestSocket, pCreated);
+	}
+	return true;
+}
+
 bool cSomaLuxEntity::GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut)
 {
 	for (cSocket &sock : mvSockets)

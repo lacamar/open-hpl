@@ -39,6 +39,8 @@ namespace hpl {
 		float mfTime;
 		eAnimationEventType mType;
 		tString msValue;
+		tString msName;
+		tString msDestSocket;
 	};
 
 	//---------------------------------------------

@@ -66,6 +66,7 @@ namespace hpl {
 	{
 	public:
 		virtual void AfterAnimationUpdate(cMeshEntity *apMeshEntity, float afTimeStep)=0;
+		virtual bool OnAnimationEvent(cMeshEntity *apMeshEntity, cAnimationEvent *apEvent){ return false; }
 	};
 
 	//------------------------------------------

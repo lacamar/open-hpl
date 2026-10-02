@@ -173,6 +173,8 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->m_mtxOnLoad = a_mtxTransform;
 		pEnt->mvScale = mvScale;
 		pEnt->mpMesh = mpEntity;
+		if (mpEntity)
+			mpEntity->SetCallback(pEnt);
 		pEnt->mbShowMesh = GetVarBool("ShowMesh", msEntityType != "StaticCollider");
 		pEnt->mvBodies = mvBodies;
 		if (apInstanceVars && apInstanceVars->GetVarBool("StaticPhysics", false))

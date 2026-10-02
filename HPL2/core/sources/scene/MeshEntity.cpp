@@ -1461,6 +1461,7 @@ namespace hpl {
 
 	void cMeshEntity::HandleAnimationEvent(cAnimationEvent *apEvent)
 	{
+		if(mpCallback && mpCallback->OnAnimationEvent(this, apEvent)) return;
 		if(apEvent->msValue == "") return;
 
 		switch(apEvent->mType)

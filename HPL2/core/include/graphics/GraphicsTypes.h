@@ -738,7 +738,11 @@ namespace hpl {
 	enum eAnimationEventType
 	{
 		eAnimationEventType_PlaySound,
+		eAnimationEventType_CreateParticle,
 		eAnimationEventType_Step,
+		eAnimationEventType_Message,
+		eAnimationEventType_PlayLoopSound,
+		eAnimationEventType_StopLoopSound,
 		eAnimationEventType_LastEnum
 	};
 

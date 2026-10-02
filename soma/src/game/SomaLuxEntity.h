@@ -52,7 +52,7 @@ private:
 	std::map<cSomaLuxEntity *, cTarget> mmapTargets;
 };
 
-class cSomaLuxEntity : public cSomaLuxScriptable
+class cSomaLuxEntity : public cSomaLuxScriptable, public cMeshEntityCallback
 {
 public:
 	~cSomaLuxEntity();
@@ -111,6 +111,13 @@ public:
 	void RemoveAttachment();
 	bool GetAttachmentParentMatrix(cMatrixf &a_mtxOut);
 	void UpdateAttachment();
+
+	void AfterAnimationUpdate(cMeshEntity *, float) override {}
+	bool OnAnimationEvent(cMeshEntity *apMesh, cAnimationEvent *apEvent) override;
+	void AttachAnimationEventEntity(const tString &asSocket, iEntity3D *apEntity);
+	cSoundEntity *mpAnimLoopSound = NULL;
+	int mlAnimLoopSoundID = -1;
+	tString msAnimLoopSound;
 
 	void ResolveConnectedLights();
 
