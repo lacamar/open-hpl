@@ -195,6 +195,7 @@ public:
 	{
 	public:
 		cSomaLuxEntity *mpEntity = NULL;
+		double mfStartTime = 0;
 		bool OnAABBCollide(iPhysicsBody *, iPhysicsBody *) override { return true; }
 		void OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData *apContactData) override;
 	} mBreakCallback;

@@ -545,6 +545,7 @@ void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 	if (mVars.GetVarBool("BreakActive", false) && v.GetVarBool("DisableBreakable", false) == false)
 	{
 		mBreakCallback.mpEntity = this;
+		mBreakCallback.mfStartTime = mpMap ? mpMap->GetTime() : 0;
 		for (iPhysicsBody *pBody : mvBodies)
 			pBody->AddBodyCallback(&mBreakCallback);
 	}
@@ -952,17 +953,15 @@ void cSomaLuxEntity::DoBreak()
 // cLuxProp_Object_BodyCallback::OnBodyCollide
 void cSomaLuxEntity::cBreakBodyCallback::OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData *apContactData)
 {
-	if (mpEntity->mbBroken || mpEntity->mbActive == false)
+	cSomaLuxMap *pMap = mpEntity->mpMap ? mpEntity->mpMap : cSomaLuxMap::GetCurrent();
+	float fSpeed = apContactData->mfMaxContactNormalSpeed;
+	if (mpEntity->mbBroken || mpEntity->mbActive == false || fSpeed <= 0 || pMap == NULL || pMap->GetTime() - mfStartTime <= 0.5)
 		return;
-	float fEnergy = 0;
-	for (iPhysicsBody *pBody : {apBody, apCollideBody})
-	{
-		if (pBody->GetMass() == 0)
-			continue;
-		cVector3f vVel = pBody->GetVelocityAtPosition(apContactData->mvContactPosition);
-		fEnergy += std::fabs(cMath::Vector3Dot(apContactData->mvContactNormal, vVel)) * pBody->GetMass();
-	}
-	if (fEnergy > mpEntity->mVars.GetVarFloat("BreakMinEnergy", 1000))
+	float fMass2 = apCollideBody->GetMass() > 0 ? apCollideBody->GetMass() : 1e6f;
+	float fV1 = apBody->GetVelocityAtPosition(apContactData->mvContactPosition).Length();
+	float fV2 = apCollideBody->GetVelocityAtPosition(apContactData->mvContactPosition).Length();
+	float fMass = fV1 + fV2 > 0 ? apBody->GetMass() + (fMass2 - apBody->GetMass()) * (fV2 / (fV1 + fV2)) : apBody->GetMass();
+	if (0.5f * fSpeed * fSpeed * fMass > mpEntity->mVars.GetVarFloat("BreakMinEnergy", 1000))
 		mpEntity->Break();
 }
 

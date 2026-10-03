@@ -7,9 +7,10 @@
   scripts/soma-play.py look ENTITY                    # aim the camera at an entity
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
   scripts/soma-play.py drag ENTITY DX DY [--steps 60]  # hold click, move the mouse by DX,DY over STEPS frames
+  scripts/soma-play.py throw ENTITY TARGET            # grab ENTITY, aim at TARGET, throw
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
-  scripts/soma-play.py walk SECS [--key w]            # hold a movement key
+  scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
@@ -243,6 +244,20 @@ def cmd_drag(a):
     cmd_log(argparse.Namespace(regex=None, all=False))
 
 
+def cmd_throw(a):
+    aim_entity(a.entity)
+    frames(0.3)
+    send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
+    frames(0.5)
+    print(ex('__print(cLux_GetPlayer().GetCurrentStateName());').strip())
+    aim(ent_pos(a.target))
+    frames(0.5)
+    press("mouse", "right", 0.1)
+    send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
+    frames(1.0)
+    cmd_log(argparse.Namespace(regex=None, all=False))
+
+
 def cmd_mouse(a):
     for _ in range(a.steps):
         send({"cmd": "input", "type": "mouse_move", "xrel": str(int(a.dx / a.steps)), "yrel": str(int(a.dy / a.steps))})
@@ -260,7 +275,14 @@ def cmd_click(a):
 
 
 def cmd_walk(a):
-    press("key", a.key, a.secs)
+    if a.jump is None:
+        press("key", a.key, a.secs)
+    else:
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "down"})
+        frames(a.jump)
+        press("key", "space", 0.2)
+        frames(max(a.secs - a.jump - 0.4, 0))
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "up"})
     cmd_state(a)
 
 
@@ -363,11 +385,13 @@ def main():
     s = sub.add_parser("interact"); s.add_argument("entity"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
+    s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target")
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=30)
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
+    s.add_argument("--jump", type=float, help="press space after this many seconds")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
