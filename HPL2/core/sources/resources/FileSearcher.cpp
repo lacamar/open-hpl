@@ -79,12 +79,13 @@ namespace hpl {
 		tWStringList lstFileNames;
 
 		cPlatform::FindFilesInDir(lstFileNames,sPath, cString::To16Char(asMask));
+		tWString sFullPath = cString::ReplaceCharToW(cPlatform::GetFullFilePath(sPath), _W("\\"),_W("/"));
 			
 		for(tWStringListIt it = lstFileNames.begin();it!=lstFileNames.end();it++)
 		{
 			tWString& sFile = *it;
 			tString sLowFile = cString::ToLowerCase(cString::To8Char(sFile));
-			tWString sFilePath = cString::ReplaceCharToW( cPlatform::GetFullFilePath( cString::SetFilePathW(sFile,sPath)), _W("\\"),_W("/"));;
+			tWString sFilePath = cString::SetFilePathW(sFile,sFullPath);
 			
 			//Check if file and path already exist
 			tFilePathMapIt pathIt = m_mapFiles.find(sLowFile);
