@@ -1011,21 +1011,17 @@ namespace hpl {
 
 	void cMeshEntity::AlignBodiesToSkeleton(bool abCalculateSpeed)
 	{
+		// The entity may be attached to one of the bodies: moving it would move the remaining bones
+		std::vector<cMatrixf> vMatrices(GetBoneStateNum());
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
 		{
 			cBoneState *pState = GetBoneState(bone);
-			iPhysicsBody *pBody = pState->GetBody();
-
-			if(pBody)
-			{
-				cMatrixf mtxBody = cMath::MatrixMul(pState->GetWorldMatrix(), pState->GetBodyMatrix());
-				pBody->SetMatrix(mtxBody);
-
-				if(abCalculateSpeed)
-				{
-					//TODO: calculate speed based on the previous frame of the animation.
-				}
-			}
+			if(pState->GetBody()) vMatrices[bone] = cMath::MatrixMul(pState->GetWorldMatrix(), pState->GetBodyMatrix());
+		}
+		for(int bone =0; bone< GetBoneStateNum(); ++bone)
+		{
+			iPhysicsBody *pBody = GetBoneState(bone)->GetBody();
+			if(pBody) pBody->SetMatrix(vMatrices[bone]);
 		}
 	}
 

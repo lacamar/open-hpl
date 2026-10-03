@@ -22,12 +22,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV4";
+	const char kMagic[] = "OHPLSAV5";
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 4;
+	int glPendingVersion = 5;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -425,7 +425,10 @@ public:
 		}
 		o.Pod((uint32_t)p->mvBodies.size());
 		for (iPhysicsBody *b : p->mvBodies)
+		{
 			o.Pod(b->GetWorldMatrix());
+			o.Pod(b->IsActive());
+		}
 		WriteTimers(o, p);
 		WriteScript(o, p->GetScript());
 	}
@@ -459,8 +462,12 @@ public:
 		for (uint32_t i = 0; i < n && in.ok; ++i)
 		{
 			cMatrixf m = in.Pod<cMatrixf>();
-			if (p && i < p->mvBodies.size() && p->mvBodies[i]->GetMass() > 0)
-				p->mvBodies[i]->SetMatrix(m);
+			bool bBodyActive = glPendingVersion >= 5 ? in.Pod<bool>() : true;
+			if (p == NULL || i >= p->mvBodies.size())
+				continue;
+			p->mvBodies[i]->SetMatrix(m);
+			if (glPendingVersion >= 5)
+				p->mvBodies[i]->SetActive(bBodyActive);
 		}
 		ReadTimers(in, t);
 		ReadScript(in, t->GetScript());
@@ -927,7 +934,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 4)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 5)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

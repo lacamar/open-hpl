@@ -315,19 +315,30 @@ def cmd_walkto(a):
         _, feet = camera_pos()
         path = send({"cmd": "nav_path", "x": feet[0], "y": feet[1], "z": feet[2],
                      "x2": target[0], "y2": target[1], "z2": target[2]}).get("path", "")
-        route = [[float(v) for v in l.split()] for l in path.splitlines()] + route
-        print(f"nav: {len(route) - 1} nodes" if path else "nav: no path")
+        route = [l.split() for l in path.splitlines() if l != "partial"] + [target]
+        print(f"nav: {len(route) - 1} nodes" + (" (partial)" if path.startswith("partial") else "") if path else "nav: no path")
     deadline = time.time() + a.max
-    keys = ["w"] + (["left shift"] if a.run else [])
-    for k in keys:
-        send({"cmd": "input", "type": "key", "key": k, "action": "down"})
+    crouched = False
+
+    def key(k, down):
+        send({"cmd": "input", "type": "key", "key": k, "action": "down" if down else "up"})
+
+    key("w", True)
     try:
         for i, p in enumerate(route):
-            if not steer(p, a.tol if i == len(route) - 1 else 0.7, deadline):
+            crouch = len(p) > 3 and p[3] == "c"
+            if crouch != crouched:
+                key("left shift", False)
+                press("key", "left ctrl", 0.1)
+                crouched = crouch
+            key("left shift", a.run and not crouched)
+            if not steer([float(v) for v in p[:3]], a.tol if i == len(route) - 1 else 0.5, deadline):
                 break
     finally:
-        for k in keys:
-            send({"cmd": "input", "type": "key", "key": k, "action": "up"})
+        key("w", False)
+        key("left shift", False)
+        if crouched:
+            press("key", "left ctrl", 0.1)
     frames(0.2)
     cmd_state(a)
     cmd_log(argparse.Namespace(regex=None, all=False))

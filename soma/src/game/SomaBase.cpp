@@ -14,6 +14,8 @@
 #include "SomaScriptApi.h"
 #include "SomaSave.h"
 #include <algorithm>
+#include <queue>
+#include <tuple>
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
 #include "SomaScriptRuntime.h"
@@ -352,10 +354,126 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 	aResp.Set("hits", sOut);
 }
 
+// ponytail: player-size grid A* over live physics queries, expansion-capped; bake a navmesh if it gets slow.
+static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int alMaxExpand)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+		return "";
+	iPhysicsWorld *pPhys = pMap->GetWorld()->GetPhysicsWorld();
+	iPhysicsBody *pSkip = NULL;
+	if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
+		pSkip = cSomaLuxPlayer::Get()->GetCharacterBody()->GetCurrentBody();
+	const float kCell = 0.4f, kStep = 0.45f;
+	struct cFloor : iPhysicsRayCallback
+	{
+		float mfDist = 1e9f;
+		bool OnIntersect(iPhysicsBody *b, cPhysicsRayParams *p) override
+		{
+			if (b->IsCharacter() == false && b->GetCollideCharacter() && p->mfDist < mfDist)
+				mfDist = p->mfDist;
+			return true;
+		}
+	};
+	auto floorAt = [&](float x, float y, float z, float &afY) {
+		cFloor ray;
+		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - 1.2f, z), true, false, false);
+		afY = y + kStep + 0.15f - ray.mfDist;
+		return ray.mfDist < 1e8f;
+	};
+	iCollideShape *pStand = pPhys->CreateBoxShape(cVector3f(0.5f, 1.45f, 0.5f), NULL);
+	iCollideShape *pCrouch = pPhys->CreateBoxShape(cVector3f(0.5f, 0.7f, 0.5f), NULL);
+	auto clear = [&](iCollideShape *apShape, float x, float y, float z) {
+		float fMid = apShape == pStand ? 1.175f : 0.8f;
+		return pPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(x, y + fMid, z)), pSkip, false, true, NULL, false) == false;
+	};
+	struct cNode { cVector3f p; int ix, iz; float g; int parent; bool crouch; };
+	std::vector<cNode> vNodes;
+	std::map<std::tuple<int, int, int>, int> mapSeen;
+	typedef std::pair<float, int> tOpen;
+	std::priority_queue<tOpen, std::vector<tOpen>, std::greater<tOpen>> open;
+	auto key = [&](int ix, int iz, float y) { return std::make_tuple(ix, iz, (int)floorf(y / 0.5f + 0.5f)); };
+	float fY;
+	int lSx = (int)lroundf(vStart.x / kCell), lSz = (int)lroundf(vStart.z / kCell);
+	cVector3f vS(lSx * kCell, vStart.y, lSz * kCell);
+	if (floorAt(vS.x, vS.y, vS.z, fY))
+		vS.y = fY;
+	vNodes.push_back({vS, lSx, lSz, 0, -1, false});
+	mapSeen[key(lSx, lSz, vS.y)] = 0;
+	open.push(tOpen(cMath::Vector3Dist(vS, vGoal), 0));
+	int lBest = 0, lFound = -1;
+	float fBest = 1e9f;
+	for (int lExpand = 0; open.empty() == false && lExpand < alMaxExpand; ++lExpand)
+	{
+		int i = open.top().second;
+		open.pop();
+		cVector3f v = vNodes[i].p;
+		int ix = vNodes[i].ix, iz = vNodes[i].iz;
+		float fH = cMath::Vector3Dist(v, vGoal);
+		if (fH < fBest)
+			fBest = fH, lBest = i;
+		if (cMath::Vector2Dist(cVector2f(v.x, v.z), cVector2f(vGoal.x, vGoal.z)) < kCell * 1.5f && std::abs(v.y - vGoal.y) < 1.0f)
+		{
+			lFound = i;
+			break;
+		}
+		for (int dx = -1; dx <= 1; ++dx)
+			for (int dz = -1; dz <= 1; ++dz)
+			{
+				if (dx == 0 && dz == 0)
+					continue;
+				cVector3f n((ix + dx) * kCell, v.y, (iz + dz) * kCell);
+				float fMidY;
+				if (floorAt((n.x + v.x) * 0.5f, v.y, (n.z + v.z) * 0.5f, fMidY) == false || floorAt(n.x, fMidY, n.z, fY) == false) continue;
+				if (std::abs(fMidY - v.y) > kStep || std::abs(fY - fMidY) > kStep) continue;
+				n.y = fY;
+				auto k = key(ix + dx, iz + dz, n.y);
+				if (mapSeen.count(k))
+					continue;
+				mapSeen[k] = -1;
+				if (clear(pCrouch, n.x, n.y, n.z) == false || clear(pCrouch, (n.x + v.x) * 0.5f, std::max(fMidY, std::max(n.y, v.y)), (n.z + v.z) * 0.5f) == false)
+					continue;
+				bool bCrouch = clear(pStand, n.x, n.y, n.z) == false;
+				float g = vNodes[i].g + cMath::Vector3Dist(v, n) * (bCrouch ? 2.0f : 1.0f);
+				mapSeen[k] = (int)vNodes.size();
+				vNodes.push_back({n, ix + dx, iz + dz, g, i, bCrouch});
+				open.push(tOpen(g + cMath::Vector3Dist(n, vGoal), (int)vNodes.size() - 1));
+			}
+	}
+	pPhys->DestroyShape(pStand);
+	pPhys->DestroyShape(pCrouch);
+	std::vector<cVector3f> vPath;
+	std::vector<bool> vCrouch;
+	for (int i = lFound >= 0 ? lFound : lBest; i >= 0; i = vNodes[i].parent)
+	{
+		vPath.push_back(vNodes[i].p);
+		vCrouch.push_back(vNodes[i].crouch);
+	}
+	std::reverse(vCrouch.begin(), vCrouch.end());
+	std::reverse(vPath.begin(), vPath.end());
+	tString sOut = lFound >= 0 ? "" : "partial\n";
+	for (size_t i = 1; i < vPath.size(); ++i)
+	{
+		bool bCorner = i + 1 == vPath.size() || std::abs(vPath[i].y - vPath[i - 1].y) > 0.05f || vCrouch[i] != vCrouch[i + 1];
+		if (bCorner == false)
+		{
+			cVector3f d0 = vPath[i] - vPath[i - 1], d1 = vPath[i + 1] - vPath[i];
+			bCorner = std::abs(d0.x - d1.x) > 0.01f || std::abs(d0.z - d1.z) > 0.01f;
+		}
+		if (bCorner)
+			sOut += cString::ToString(vPath[i].x) + " " + cString::ToString(vPath[i].y) + " " + cString::ToString(vPath[i].z) + (vCrouch[i] ? " c\n" : "\n");
+	}
+	return sOut;
+}
+
 static void cSomaBase_HeadlessCmd_NavPath(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
-	aResp.Set("path", SomaNavPath(cVector3f(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0), aReq.GetFloat("z", 0)),
-								  cVector3f(aReq.GetFloat("x2", 0), aReq.GetFloat("y2", 0), aReq.GetFloat("z2", 0))));
+	cVector3f vFrom(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0), aReq.GetFloat("z", 0));
+	cVector3f vTo(aReq.GetFloat("x2", 0), aReq.GetFloat("y2", 0), aReq.GetFloat("z2", 0));
+	tString sPath = aReq.GetString("grid", "") == "1" ? "" : SomaNavPath(vFrom, vTo);
+	if (sPath.empty())
+		sPath = GridNavPath(vFrom, vTo, aReq.GetInt("max", 200000));
+	aResp.Set("path", sPath);
 }
 
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

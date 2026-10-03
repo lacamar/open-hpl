@@ -137,6 +137,7 @@ void cSomaGenericEntityLoader::LoadPose()
 		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pSkeleton->GetBoneByIndex(i)->GetLocalUnitScale());
 	}
 	mpEntity->SetBoneRestPose(vLocal);
+	mpEntity->AlignBodiesToSkeleton(false);
 }
 
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
