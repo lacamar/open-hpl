@@ -264,6 +264,10 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Pow(float afX, float afExp)", +[](float x, float p) { return powf(x, p); });
 	SOMA_FUNC(e, "float cMath_Sqrt(float afX)", +[](float x) { return sqrtf(x); });
 	SOMA_FUNC(e, "void cMath_Randomize(int alSeed)", +[](int s) { cMath::Randomize(s); });
+	SOMA_FUNC(e, "cVector2f cMath_RandomCircleEdgePoint(float afRadius)", +[](float r) {
+		float a = cMath::RandRectf(0, k2Pif);
+		return cVector2f(cos(a), sin(a)) * r;
+	});
 	SOMA_FUNC(e, "float cMath_Easing(eEasing aType, float afT, float afMin = 0, float afMax = 1)",
 			  +[](int t, float x, float a, float b) { return a + (b - a) * SomaEasing(t, cMath::Clamp(x, 0.0f, 1.0f)); });
 	SOMA_FUNC(e, "float cMath_Vector3MaxElement(const cVector3f &in avVec)", +[](const cVector3f &v) { return std::max(v.x, std::max(v.y, v.z)); });

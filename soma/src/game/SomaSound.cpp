@@ -2,8 +2,10 @@
 #include "SomaBase.h"
 #include "SomaFsb.h"
 #include "SomaScriptBind.h"
+#include "SomaLux.h"
 #include "SomaLuxEntity.h"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 
@@ -933,8 +935,81 @@ void PlayHighestMusic()
 	}
 }
 
+void PlayMusic(const tString &f, bool loop, float vol, float fade, int prio, bool resume)
+{
+	prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
+	cGameMusic &m = gvGameMusic[prio];
+	if (m.msFile == f)
+		return;
+	if (glCurrentMusicPrio <= prio)
+	{
+		MusicHandler()->Play(f, vol, fade > 0 ? vol / fade : 100.0f, loop, resume);
+		glCurrentMusicPrio = prio;
+	}
+	m.msFile = f;
+	m.mfVolume = vol;
+	m.mbLoop = loop;
+	m.mbResume = resume;
+}
+
+void StopMusic(float fade, int prio)
+{
+	prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
+	cGameMusic &m = gvGameMusic[prio];
+	if (m.msFile.empty())
+		return;
+	m.msFile = "";
+	if (prio != glCurrentMusicPrio)
+		return;
+	MusicHandler()->Stop(fade > 0 ? m.mfVolume / fade : 100.0f);
+	glCurrentMusicPrio = -1;
+	PlayHighestMusic();
+}
+
+struct cDynamicTrack
+{
+	cSomaID mID;
+	int mlTrackPrio = 0, mlMusicPrio = -1;
+	tString msFile;
+	float mfVolume = 0, mfFadeIn = 0, mfFadeOut = 0;
+};
+std::vector<cDynamicTrack> gvDynamicTracks;
+cDynamicTrack gCurrentDynamicTrack;
+
+// cLuxMusicHandler::VariableUpdate (Rebirth binary)
+void UpdateDynamicTracks()
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	std::erase_if(gvDynamicTracks, [pMap](const cDynamicTrack &t) {
+		if (t.mID == cSomaID())
+			return false;
+		cSomaLuxEntity *p = pMap ? pMap->GetEntity(t.mID) : NULL;
+		return p == NULL || p->mbActive == false;
+	});
+	const cDynamicTrack *pBest = NULL;
+	for (const cDynamicTrack &t : gvDynamicTracks)
+		if (pBest == NULL || t.mlTrackPrio >= pBest->mlTrackPrio)
+			pBest = &t;
+	cDynamicTrack &cur = gCurrentDynamicTrack;
+	if (pBest)
+	{
+		if (pBest->mID == cur.mID && pBest->msFile == cur.msFile && pBest->mfVolume == cur.mfVolume)
+			return;
+		if (cur.mlMusicPrio >= 0 && cur.mlMusicPrio != pBest->mlMusicPrio)
+			StopMusic(pBest->mfFadeIn, cur.mlMusicPrio);
+		PlayMusic(pBest->msFile, true, pBest->mfVolume, pBest->mfFadeIn, pBest->mlMusicPrio, true);
+		cur = *pBest;
+	}
+	else if (cur.msFile.empty() == false)
+	{
+		StopMusic(cur.mfFadeOut, cur.mlMusicPrio);
+		cur = cDynamicTrack();
+	}
+}
+
 void UpdateGameMusic()
 {
+	UpdateDynamicTracks();
 	if (glCurrentMusicPrio < 0 || MusicHandler()->GetCurrentSong())
 		return;
 	gvGameMusic[glCurrentMusicPrio].msFile = "";
@@ -948,32 +1023,23 @@ void RegisterMusicNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxMusicHandler@ cLux_GetMusicHandler()", +[]() { return (void *)&gMusicTag; });
 	SOMA_METHOD(e, "cLuxMusicHandler",
 				"void Play(const tString &in asFile, bool abLoop,float afVolume, float afFreq, float afVolumeFadeTime, float afFreqFadeTime, int alPrio, bool abResume, bool abSpecialEffect)",
-				+[](void *, S f, bool loop, float vol, float, float fade, float, int prio, bool resume, bool) {
-					prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
-					cGameMusic &m = gvGameMusic[prio];
-					if (m.msFile == f)
-						return;
-					if (glCurrentMusicPrio <= prio)
-					{
-						MusicHandler()->Play(f, vol, fade > 0 ? vol / fade : 100.0f, loop, resume);
-						glCurrentMusicPrio = prio;
-					}
-					m.msFile = f;
-					m.mfVolume = vol;
-					m.mbLoop = loop;
-					m.mbResume = resume;
+				+[](void *, S f, bool loop, float vol, float, float fade, float, int prio, bool resume, bool) { PlayMusic(f, loop, vol, fade, prio, resume); });
+	SOMA_METHOD(e, "cLuxMusicHandler", "void Stop(float afFadeTime, int alPrio)", +[](void *, float fade, int prio) { StopMusic(fade, prio); });
+	SOMA_METHOD(e, "cLuxMusicHandler",
+				"void AddDynamicTrack(tID a_idEntity, int alTrackPrio, int alMusicPrio, const tString&in asFile, float afVolume, float afFadeInTime, float afFadeOutTime)",
+				+[](void *, cSomaID id, int trackPrio, int musicPrio, S f, float vol, float fadeIn, float fadeOut) {
+					auto it = std::find_if(gvDynamicTracks.begin(), gvDynamicTracks.end(),
+										   [&](const cDynamicTrack &t) { return t.mID == id; });
+					cDynamicTrack &t = it != gvDynamicTracks.end() ? *it : gvDynamicTracks.emplace_back();
+					t = {id, trackPrio, musicPrio, f, vol, fadeIn, fadeOut};
 				});
-	SOMA_METHOD(e, "cLuxMusicHandler", "void Stop(float afFadeTime, int alPrio)", +[](void *, float fade, int prio) {
-		prio = cMath::Clamp(prio, 0, kMaxMusicPrio);
-		cGameMusic &m = gvGameMusic[prio];
-		if (m.msFile.empty())
-			return;
-		m.msFile = "";
-		if (prio != glCurrentMusicPrio)
-			return;
-		MusicHandler()->Stop(fade > 0 ? m.mfVolume / fade : 100.0f);
-		glCurrentMusicPrio = -1;
-		PlayHighestMusic();
+	SOMA_METHOD(e, "cLuxMusicHandler", "void RemoveDynamicTrack(tID a_idEntity)", +[](void *, cSomaID id) {
+		auto it = std::find_if(gvDynamicTracks.begin(), gvDynamicTracks.end(), [&](const cDynamicTrack &t) { return t.mID == id; });
+		if (it != gvDynamicTracks.end())
+		{
+			*it = gvDynamicTracks.back();
+			gvDynamicTracks.pop_back();
+		}
 	});
 }
 } // namespace

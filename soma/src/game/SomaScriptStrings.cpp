@@ -55,7 +55,6 @@ template <class S> static asQWORD Length(const S &s) { return s.size(); }
 template <class S> static void Resize(asQWORD alSize, S &s) { s.resize((size_t)alSize); }
 
 static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem) { new (apMem) std::wstring(asIn.begin(), asIn.end()); }
-static std::wstring &AssignWFromNarrow(const std::string &asIn, std::wstring &asOut) { return asOut.assign(asIn.begin(), asIn.end()); }
 
 static uint8_t &CharAt(unsigned int alIdx, std::string &s)
 {
@@ -119,8 +118,28 @@ template <class T> static std::string &AddAssignT(const T &v, std::string &s) { 
 template <class T> static std::string AddStrT(const std::string &s, const T &v) { return s + ToStr(v); }
 template <class T> static std::string AddTStr(const T &v, const std::string &s) { return ToStr(v) + s; }
 
+static std::string ToStr(const std::string &s) { return s; }
+static std::wstring ToWStr(const std::string &s) { return std::wstring(s.begin(), s.end()); }
+
+template <class T> static std::wstring &WAssignT(const T &v, std::wstring &s) { return s = ToWStr(ToStr(v)); }
+template <class T> static std::wstring &WAddAssignT(const T &v, std::wstring &s) { return s += ToWStr(ToStr(v)); }
+template <class T> static std::wstring WAddStrT(const std::wstring &s, const T &v) { return s + ToWStr(ToStr(v)); }
+template <class T> static std::wstring WAddTStr(const T &v, const std::wstring &s) { return ToWStr(ToStr(v)) + s; }
+
+template <class T> static void RegisterWConcat(asIScriptEngine *e, const char *apType)
+{
+	std::string t = apType;
+	int r;
+	r = e->RegisterObjectMethod("tWString", ("tWString &opAssign(const " + t + " &in)").c_str(), asFUNCTION(WAssignT<T>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = e->RegisterObjectMethod("tWString", ("tWString &opAddAssign(const " + t + " &in)").c_str(), asFUNCTION(WAddAssignT<T>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = e->RegisterObjectMethod("tWString", ("tWString opAdd(const " + t + " &in) const").c_str(), asFUNCTION(WAddStrT<T>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+	r = e->RegisterObjectMethod("tWString", ("tWString opAdd_r(const " + t + " &in) const").c_str(), asFUNCTION(WAddTStr<T>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	(void)r;
+}
+
 template <class T> static void RegisterConcat(asIScriptEngine *e, const char *apType)
 {
+	RegisterWConcat<T>(e, apType);
 	std::string t = apType;
 	int r;
 	r = e->RegisterObjectMethod("tString", ("tString &opAssign(const " + t + " &in)").c_str(), asFUNCTION(AssignT<T>), asCALL_CDECL_OBJLAST); assert(r >= 0);
@@ -166,23 +185,23 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 	r = apEngine->RegisterObjectMethod("tString", "void resize(uint64)", asFUNCTION(Resize<std::string>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tString", "uint8 &opIndex(uint)", asFUNCTION(CharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tString", "const uint8 &opIndex(uint) const", asFUNCTION(CharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
-	RegisterConcat<float>(apEngine, "float");
-	RegisterConcat<int>(apEngine, "int");
-	RegisterConcat<unsigned int>(apEngine, "uint");
-	RegisterConcat<bool>(apEngine, "bool");
 
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(Construct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f(const tWString &in)", asFUNCTION(CopyConstruct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_CONSTRUCT, "void f(const tString &in)", asFUNCTION(ConstructWFromNarrow), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectBehaviour("tWString", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(Destruct<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAssign(const tWString &in)", asMETHODPR(std::wstring, operator=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
-	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAssign(const tString &in)", asFUNCTION(AssignWFromNarrow), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString &opAddAssign(const tWString &in)", asMETHODPR(std::wstring, operator+=, (const std::wstring &), std::wstring &), asCALL_THISCALL); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "bool opEquals(const tWString &in) const", asFUNCTIONPR(std::operator==, (const std::wstring &, const std::wstring &), bool), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "int opCmp(const tWString &in) const", asFUNCTION(Cmp<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString opAdd(const tWString &in) const", asFUNCTION(Add<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "uint64 length() const", asFUNCTION(Length<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "void resize(uint64)", asFUNCTION(Resize<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	RegisterWConcat<std::string>(apEngine, "tString");
+	RegisterConcat<float>(apEngine, "float");
+	RegisterConcat<int>(apEngine, "int");
+	RegisterConcat<unsigned int>(apEngine, "uint");
+	RegisterConcat<bool>(apEngine, "bool");
 	(void)r;
 }
 

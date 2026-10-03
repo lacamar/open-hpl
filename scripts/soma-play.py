@@ -11,6 +11,7 @@
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
+  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] # steer with w until within TOL m (stops when stuck)
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
@@ -286,6 +287,31 @@ def cmd_walk(a):
     cmd_state(a)
 
 
+def cmd_walkto(a):
+    target = [float(v) for v in a.target] if len(a.target) == 3 else ent_pos(a.target[0])
+    send({"cmd": "input", "type": "key", "key": "w", "action": "down"})
+    best, stuck, t0 = 1e9, 0, time.time()
+    try:
+        while time.time() - t0 < a.max:
+            _, feet = camera_pos()
+            d = math.hypot(target[0] - feet[0], target[2] - feet[2])
+            if d < a.tol:
+                break
+            stuck = 0 if d < best - 0.05 else stuck + 1
+            best = min(best, d)
+            if stuck > 8:
+                print(f"stuck at {d:.2f} m")
+                break
+            yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2])
+            ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});")
+            frames(0.15)
+    finally:
+        send({"cmd": "input", "type": "key", "key": "w", "action": "up"})
+    frames(0.2)
+    cmd_state(a)
+    cmd_log(argparse.Namespace(regex=None, all=False))
+
+
 def cmd_wait(a):
     frames(a.secs)
     cmd_log(argparse.Namespace(regex=None, all=False))
@@ -392,6 +418,8 @@ def main():
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
     s.add_argument("--jump", type=float, help="press space after this many seconds")
+    s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z")
+    s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")

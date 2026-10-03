@@ -906,6 +906,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				});
 	SOMA_METHOD(e, M, "tID GetEntityIDByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int, const tString &) { cSomaLuxEntity *p = m.GetEntity(n); return p ? p->mID : cSomaID(); });
+	// ponytail: gates an EntityExists check; always true instead of a per-frame destroyed flag
+	SOMA_METHOD(e, M, "bool EntityWasDestroyed()", +[](cSomaLuxMap &) { return true; });
 	SOMA_METHOD(e, M, "bool EntityExists(iLuxEntity @apEntity)", +[](cSomaLuxMap &m, cSomaLuxEntity *p) {
 		for (cSomaLuxEntity *q : m.GetEntities())
 			if (q == p)
