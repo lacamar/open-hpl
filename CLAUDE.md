@@ -124,6 +124,9 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `physics_stats` | static/dynamic/awake bodies, fastest awake |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
 
+When a test run produces a good-looking frame (new feature rendering right, a nice vista), save it:
+`scripts/ohpl-album.sh <shot> <map>-<desc>` (alpha stripped, into `~/Pictures/Screenshots/openhpl-screenshots`).
+
 Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
 `magick <file> -alpha off` or the image is composited into convincing fake noise.
 

@@ -9,6 +9,8 @@ SCRATCH="${OPENHPL_SOMA_SCRATCH:-${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/soma-s
 
 pactl list short sinks | grep -q $'\tohpl-ours\t' ||
 	pactl load-module module-null-sink sink_name=ohpl-ours sink_properties=device.description=ohpl-ours >/dev/null
+python3 -c 'import socket,sys; socket.socket(socket.AF_UNIX).connect(sys.argv[1])' "$SOCK" 2>/dev/null &&
+	{ echo "$SOCK is in use by a live instance" >&2; exit 1; }
 rm -f "$SOCK"
 cd "$SCRATCH"
 ALSOFT_DRIVERS=pulse ALSOFT_PULSE_DEFAULT=ohpl-ours OPENHPL_SOUND_DEVICE=ohpl-ours PULSE_SINK=ohpl-ours PULSE_PROP=application.name=ohpl-ours \
