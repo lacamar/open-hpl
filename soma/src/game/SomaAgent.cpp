@@ -1001,6 +1001,22 @@ void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f 
 		pSM->OnMessage(alMessage);
 }
 
+tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	for (auto &it : gmapContainers)
+	{
+		tAINodeList lst;
+		if (pMap == NULL || it.first.first != pMap->GetWorld() || it.second.mpAStar->GetPath(avFrom, avTo, &lst) == false)
+			continue;
+		tString s;
+		for (auto n = lst.rbegin(); n != lst.rend(); ++n)
+			s += cString::ToString((*n)->GetPosition().x) + " " + cString::ToString((*n)->GetPosition().y) + " " + cString::ToString((*n)->GetPosition().z) + "\n";
+		return s;
+	}
+	return "";
+}
+
 tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 {
 	cAgent *pAgent = Agent(apEnt);

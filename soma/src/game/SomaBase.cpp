@@ -352,6 +352,12 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 	aResp.Set("hits", sOut);
 }
 
+static void cSomaBase_HeadlessCmd_NavPath(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	aResp.Set("path", SomaNavPath(cVector3f(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0), aReq.GetFloat("z", 0)),
+								  cVector3f(aReq.GetFloat("x2", 0), aReq.GetFloat("y2", 0), aReq.GetFloat("z2", 0))));
+}
+
 static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaScriptRuntime *pRuntime = cSomaScriptRuntime::Get();
@@ -885,6 +891,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("sound_stats", cSomaBase_HeadlessCmd_SoundStats, this);
 		pCtrl->RegisterHandler("body_contacts", cSomaBase_HeadlessCmd_BodyContacts, this);
 		pCtrl->RegisterHandler("raycast", cSomaBase_HeadlessCmd_Raycast, this);
+		pCtrl->RegisterHandler("nav_path", cSomaBase_HeadlessCmd_NavPath, this);
 		pCtrl->RegisterHandler("physics_stats", cSomaBase_HeadlessCmd_PhysicsStats, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);

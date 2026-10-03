@@ -11,7 +11,7 @@
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
-  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] # steer with w until within TOL m (stops when stuck)
+  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav] # steer with w until within TOL m (stops when stuck)
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
@@ -78,6 +78,9 @@ def cmd_start(a):
     send({"cmd": "wait_frames", "n": 60, "max_ms": 120000}, timeout=150)
     if a.pos:
         ex(f'Entity_PlaceAtEntity("Player", "{a.pos}");')
+    if a.save:
+        ex(f'cLux_GetSaveHandler().LoadGameFromFile("{a.save}");')
+        send({"cmd": "wait_frames", "n": 120, "max_ms": 120000}, timeout=150)
     print(f"pid {out[0]} {m} in {time.time() - t:.0f}s")
 
 
@@ -287,24 +290,39 @@ def cmd_walk(a):
     cmd_state(a)
 
 
+def steer(target, tol, deadline):
+    best, stuck = 1e9, 0
+    while time.time() < deadline:
+        _, feet = camera_pos()
+        d = math.hypot(target[0] - feet[0], target[2] - feet[2])
+        if d < tol:
+            return True
+        stuck = 0 if d < best - 0.05 else stuck + 1
+        best = min(best, d)
+        if stuck > 8:
+            print(f"stuck at {d:.2f} m from {target}")
+            return False
+        yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2])
+        ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});")
+        frames(0.15)
+    return False
+
+
 def cmd_walkto(a):
     target = [float(v) for v in a.target] if len(a.target) == 3 else ent_pos(a.target[0])
+    route = [target]
+    if a.nav:
+        _, feet = camera_pos()
+        path = send({"cmd": "nav_path", "x": feet[0], "y": feet[1], "z": feet[2],
+                     "x2": target[0], "y2": target[1], "z2": target[2]}).get("path", "")
+        route = [[float(v) for v in l.split()] for l in path.splitlines()] + route
+        print(f"nav: {len(route) - 1} nodes" if path else "nav: no path")
+    deadline = time.time() + a.max
     send({"cmd": "input", "type": "key", "key": "w", "action": "down"})
-    best, stuck, t0 = 1e9, 0, time.time()
     try:
-        while time.time() - t0 < a.max:
-            _, feet = camera_pos()
-            d = math.hypot(target[0] - feet[0], target[2] - feet[2])
-            if d < a.tol:
+        for i, p in enumerate(route):
+            if not steer(p, a.tol if i == len(route) - 1 else 0.7, deadline):
                 break
-            stuck = 0 if d < best - 0.05 else stuck + 1
-            best = min(best, d)
-            if stuck > 8:
-                print(f"stuck at {d:.2f} m")
-                break
-            yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2])
-            ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});")
-            frames(0.15)
     finally:
         send({"cmd": "input", "type": "key", "key": "w", "action": "up"})
     frames(0.2)
@@ -403,7 +421,7 @@ def cmd_shot(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("start"); s.add_argument("--map", default="00_03_laboratory"); s.add_argument("--pos")
+    s = sub.add_parser("start"); s.add_argument("--map", default="00_03_laboratory"); s.add_argument("--pos"); s.add_argument("--save", help="save file name in the saves dir")
     sub.add_parser("stop"); sub.add_parser("state")
     s = sub.add_parser("goto"); s.add_argument("entity"); s.add_argument("--dist", type=float, default=1.0)
     s.add_argument("--keep-height", action="store_true")
@@ -420,6 +438,7 @@ def main():
     s.add_argument("--jump", type=float, help="press space after this many seconds")
     s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z")
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
+    s.add_argument("--nav", action="store_true", help="follow the agent node graph")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
