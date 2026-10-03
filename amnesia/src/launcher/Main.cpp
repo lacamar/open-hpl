@@ -468,12 +468,14 @@ int hplMain(const tString &asCommandLine)
 #elif __linux__
 	// must match CMAKE_EXECUTABLE_SUFFIX
 	#if defined(__aarch64__)
-		sGameExe = _W("./Amnesia.bin.aarch64");
+		sGameExe = _W("/Amnesia.bin.aarch64");
 	#elif (defined(i386) && !defined(__LP64__))
-		sGameExe = _W("./Amnesia.bin.x86");
+		sGameExe = _W("/Amnesia.bin.x86");
 	#else
-		sGameExe = _W("./Amnesia.bin.x86_64");
+		sGameExe = _W("/Amnesia.bin.x86_64");
 	#endif
+	// next to this launcher, which runs from outside the game dir
+	sGameExe = cString::To16Char(cPlatform::GetDataDir()) + sGameExe;
 #endif
 
 
@@ -485,7 +487,11 @@ int hplMain(const tString &asCommandLine)
 	///////////////////////////////
 	// Call program
     if(exitflag!=0)
+#ifdef __linux__
+		cPlatform::RunProgram(sGameExe, _W("-cwd ") + sParams);
+#else
 		cPlatform::RunProgram(sGameExe, sParams);
+#endif
 		
 	///////////////////////////////////////
 	// Clean up

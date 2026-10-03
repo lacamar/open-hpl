@@ -1178,6 +1178,8 @@ namespace hpl {
 		tWString sAiFileName = cString::SetFileExtW(sMapPath,_W(""));
 		sAiFileName += _W("_")+cString::To16Char(asName);
 		sAiFileName = cString::SetFileExtW(sAiFileName,_W("nodes"));
+		tWString sAiCacheFile = cResources::GetCacheFile(sAiFileName, _W("nodes"));
+		if(cPlatform::FileExists(sAiCacheFile)) sAiFileName = sAiCacheFile;
 
 		//////////////////////////////////
 		//If there is no container created, create it.
@@ -1234,7 +1236,7 @@ namespace hpl {
 				//Save to disk
 				if(cResources::GetForceCacheLoadingAndSkipSaving()==false)
 				{
-					pContainer->SaveToFile(sAiFileName);
+					pContainer->SaveToFile(sAiCacheFile);
 				}
 			}
 		}

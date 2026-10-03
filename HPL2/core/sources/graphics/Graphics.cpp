@@ -141,6 +141,9 @@ namespace hpl {
 		apResources->AddResourceDir(_W("core/shaders"),true);
 		apResources->AddResourceDir(_W("core/textures"),false);
 		apResources->AddResourceDir(_W("core/models"),false);
+		// HPL3 data ships these core meshes only as HPL3 .msh
+		tWString sCompatDir = cString::To16Char(cPlatform::GetDataDir()) + _W("/compat");
+		if(cPlatform::FolderExists(sCompatDir)) apResources->AddResourceDir(sCompatDir,false);
 		
 		////////////////////////////////////////////////
 		// LowLevel Init

@@ -7,6 +7,8 @@ SOMA work follows `SOMA_PLAN.md`.
 
 - Never write under `*/steamapps/common/*`. Test only from a scratch dir made by
   `scripts/setup-test-scratch.sh`; deploy binaries only with `scripts/deploy-test-binary.sh`.
+- The engine never writes game data: caches go to `$XDG_CACHE_HOME/open-hpl/files/<abs path>`, and
+  `main()` remounts every reachable `steamapps/common` read-only in a private namespace.
 - Control socket paths must be short (<108 bytes): use `$XDG_RUNTIME_DIR/ohpl-*.sock`.
 - Never `pkill -f` with a loose pattern; kill by PID.
 - Headless instances serialize on a flock. A leftover `Soma.bin.aarch64` or an orphaned

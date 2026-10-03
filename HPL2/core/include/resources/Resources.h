@@ -235,6 +235,7 @@ namespace hpl {
 
 		static void SetMeshCacheDir(const tWString& asDir){ msMeshCacheDir = asDir; }
 		static const tWString& GetMeshCacheDir(){ return msMeshCacheDir; }
+		static tWString GetCacheFile(const tWString& asFile, const tWString& asExt);
 
 		static void SetCreateAndLoadCompressedMaps(bool abX){ mbCreateAndLoadCompressedMaps = abX;}
 		static bool GetCreateAndLoadCompressedMaps(){ return mbCreateAndLoadCompressedMaps ;}

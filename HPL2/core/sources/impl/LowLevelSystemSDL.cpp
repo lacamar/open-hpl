@@ -62,6 +62,17 @@
 #include <unistd.h>
 #endif
 
+#ifdef __linux__
+#include <dirent.h>
+#include <errno.h>
+#include <string.h>
+#include <limits.h>
+#include <sched.h>
+#include <sys/mount.h>
+#include <sys/statvfs.h>
+#include <set>
+#endif
+
 
 // Include for using the versioning header
 //#include "BuildID_HPL2_0.h"
@@ -78,6 +89,61 @@ int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLin
 	return hplMain(lpCmdLine);
 }
 #else
+#ifdef __linux__
+static bool WriteProcFile(const char *apPath, const std::string &asData)
+{
+	FILE *pFile = fopen(apPath, "w");
+	if(pFile == NULL) return false;
+	bool bOk = fputs(asData.c_str(), pFile) >= 0;
+	return fclose(pFile) == 0 && bOk;
+}
+
+// Game data is read-only to the engine: every steamapps/common reachable from the game dir gets a private read-only bind mount.
+static void ProtectSteamLibraries()
+{
+	std::set<std::string> setRoots;
+	DIR *pDir = opendir(".");
+	for(dirent *pEnt = pDir ? readdir(pDir) : NULL; pEnt; pEnt = readdir(pDir))
+	{
+		char vReal[PATH_MAX];
+		if(realpath(pEnt->d_name, vReal) == NULL) continue;
+		std::string sReal = std::string(vReal) + "/";
+		size_t lPos = sReal.find("/steamapps/common/");
+		if(lPos != std::string::npos) setRoots.insert(sReal.substr(0, lPos + 17));
+	}
+	if(pDir) closedir(pDir);
+	if(setRoots.empty()) return;
+
+	char vCwd[PATH_MAX];
+	uid_t lUid = getuid();
+	gid_t lGid = getgid();
+	if(getcwd(vCwd, sizeof(vCwd)) == NULL || unshare(CLONE_NEWUSER | CLONE_NEWNS) != 0 ||
+	   !WriteProcFile("/proc/self/setgroups", "deny") ||
+	   !WriteProcFile("/proc/self/uid_map", std::to_string(lUid) + " " + std::to_string(lUid) + " 1") ||
+	   !WriteProcFile("/proc/self/gid_map", std::to_string(lGid) + " " + std::to_string(lGid) + " 1") ||
+	   mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+	{
+		fprintf(stderr, "open-hpl: could not make Steam libraries read-only: %s\n", strerror(errno));
+		return;
+	}
+
+	static const unsigned long vFlags[][2] = { {ST_NOSUID, MS_NOSUID}, {ST_NODEV, MS_NODEV}, {ST_NOEXEC, MS_NOEXEC},
+		{ST_NOATIME, MS_NOATIME}, {ST_NODIRATIME, MS_NODIRATIME}, {ST_RELATIME, MS_RELATIME} };
+	for(const std::string &sRoot : setRoots)
+	{
+		struct statvfs st;
+		unsigned long lFlags = MS_BIND | MS_REMOUNT | MS_RDONLY;
+		bool bOk = mount(sRoot.c_str(), sRoot.c_str(), NULL, MS_BIND | MS_REC, NULL) == 0 && statvfs(sRoot.c_str(), &st) == 0;
+		for(size_t i = 0; bOk && i < sizeof(vFlags) / sizeof(vFlags[0]); ++i)
+			if(st.f_flag & vFlags[i][0]) lFlags |= vFlags[i][1];
+		if(!bOk || mount(NULL, sRoot.c_str(), NULL, lFlags, NULL) != 0)
+			fprintf(stderr, "open-hpl: could not make '%s' read-only: %s\n", sRoot.c_str(), strerror(errno));
+	}
+	// the old cwd still points into the writable mount
+	if(chdir(vCwd) != 0) fprintf(stderr, "open-hpl: chdir '%s': %s\n", vCwd, strerror(errno));
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 #ifdef __linux__
@@ -130,6 +196,9 @@ int main(int argc, char *argv[])
 
         chdir(dataDir.c_str());
 	}
+#ifdef __linux__
+	ProtectSteamLibraries();
+#endif
 
 	return hplMain(cmdline);
 }

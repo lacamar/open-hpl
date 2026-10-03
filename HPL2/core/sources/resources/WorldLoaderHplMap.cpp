@@ -434,41 +434,13 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-#if defined(__linux__)
-	static void CreateFolderRecursive(const tWString &asDir)
-	{
-		size_t lPos = 0;
-		while(true)
-		{
-			lPos = asDir.find(_W('/'), lPos+1);
-			if(lPos == tWString::npos) break;
-			tWString sPrefix = asDir.substr(0, lPos);
-			if(cPlatform::FolderExists(sPrefix) == false) cPlatform::CreateFolder(sPrefix);
-		}
-	}
-
-	static tWString GetMapCacheFilePath(const tWString &asFile, const tWString &asCacheExt)
-	{
-		tWString sRelative = asFile;
-		if(!sRelative.empty() && sRelative[0] == _W('/')) sRelative = sRelative.substr(1);
-
-		tWString sCacheFile = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome)
-			+ _W("open-hpl/maps/") + sRelative;
-		sCacheFile = cString::SetFileExtW(sCacheFile, asCacheExt);
-
-		CreateFolderRecursive(cString::GetFilePathW(sCacheFile));
-
-		return sCacheFile;
-	}
-#endif
-
 	void cWorldLoaderHplMap::LoadCacheFile(const tWString& asFile)
 	{
 #if (defined(__PPC__) || defined(__ppc__))
 		return;
 #endif
 #if defined(__linux__)
-		tWString sCacheFile = GetMapCacheFilePath(asFile, msCacheFileExt);
+		tWString sCacheFile = cResources::GetCacheFile(asFile, msCacheFileExt);
 		if(cPlatform::FileExists(sCacheFile) == false)
 		{
 			tWString sLegacyCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
@@ -754,7 +726,7 @@ namespace hpl {
 
         size_t iNewtonTotal = 0;
 #if defined(__linux__)
-		tWString sCacheFile = GetMapCacheFilePath(asFile, msCacheFileExt);
+		tWString sCacheFile = cResources::GetCacheFile(asFile, msCacheFileExt);
 #else
 		tWString sCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
 #endif

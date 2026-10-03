@@ -70,5 +70,8 @@ DEST="$SCRATCH_DIR/$(basename "$SRC")"
 rm -f "$DEST"
 cp "$SRC" "$DEST"
 chmod +x "$DEST"
+# HPL3 games load core_*.dae from <exe dir>/compat
+rm -rf "$SCRATCH_DIR/compat"
+cp -r "$(dirname "$0")/../soma/data/compat" "$SCRATCH_DIR/compat"
 
 echo "Deployed '$SRC' -> '$DEST' (destination unlinked first - never written through a symlink)." >&2

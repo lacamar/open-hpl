@@ -83,6 +83,19 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	tWString cResources::GetCacheFile(const tWString& asFile, const tWString& asExt)
+	{
+		tWString sFile = cString::SetFileExtW(cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome) + _W("open-hpl/files/") + asFile.substr(asFile.find_first_not_of(_W('/'))), asExt);
+		for(size_t lPos = sFile.find(_W('/'), 1); lPos != tWString::npos; lPos = sFile.find(_W('/'), lPos + 1))
+		{
+			tWString sDir = sFile.substr(0, lPos);
+			if(cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
+		}
+		return sFile;
+	}
+
+	//-----------------------------------------------------------------------
+
 	cResources::~cResources()
 	{
 		Log("Exiting Resources Module\n");

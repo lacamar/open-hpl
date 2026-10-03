@@ -189,6 +189,7 @@ namespace hpl {
 
 	static tWString GetExternalMeshCacheFile(const tWString& asFile)
 	{
+		if(cResources::GetMeshCacheDir() == _W("")) return cResources::GetCacheFile(asFile, _W("msh"));
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
@@ -224,8 +225,7 @@ namespace hpl {
 	{
 		/////////////////////////////////////////////////
 		// TRY USING MSH LOADER
-		bool bExternalCache = cResources::GetMeshCacheDir() != _W("");
-		if(mbLoadAndSaveMSHFormat && bExternalCache)
+		if(mbLoadAndSaveMSHFormat)
 		{
 			tWString sMSHFile = GetExternalMeshCacheFile(asFile);
 			if(cPlatform::FileExists(sMSHFile) && cPlatform::FileModifiedDate(sMSHFile) > cPlatform::FileModifiedDate(asFile))
@@ -238,7 +238,7 @@ namespace hpl {
 				}
 			}
 		}
-		else if(mbLoadAndSaveMSHFormat)
+		if(mbLoadAndSaveMSHFormat && cResources::GetMeshCacheDir() == _W(""))
 		{
 			tWString sMSHFile = cString::SetFileExtW(asFile, _W("msh"));
 			cDate currentDate = cPlatform::FileModifiedDate(asFile);
@@ -815,13 +815,8 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// SAVE MSH FORMAT
-		if(	(bExternalCache || cResources::GetForceCacheLoadingAndSkipSaving()==false) && 
-			mbLoadAndSaveMSHFormat && bMeshIsOKToCache)
-		{
-			tWString sMSHFile = bExternalCache ? GetExternalMeshCacheFile(asFile) : cString::SetFileExtW(asFile, _W("msh"));
-			
-			mpMeshLoaderMSH->SaveMesh(pMesh, sMSHFile);
-		}
+		if(mbLoadAndSaveMSHFormat && bMeshIsOKToCache)
+			mpMeshLoaderMSH->SaveMesh(pMesh, GetExternalMeshCacheFile(asFile));
 
 
 		///////////////////////////////////
@@ -924,8 +919,7 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// TRY USING MSH LOADER
-		bool bExternalCache = cResources::GetMeshCacheDir() != _W("");
-		if(mbLoadAndSaveMSHFormat && bExternalCache)
+		if(mbLoadAndSaveMSHFormat)
 		{
 			tWString sMSHFile = cString::SetFileExtW(GetExternalMeshCacheFile(asFile), _W("anm"));
 			if(cPlatform::FileExists(sMSHFile) && cPlatform::FileModifiedDate(sMSHFile) > cPlatform::FileModifiedDate(asFile))
@@ -938,7 +932,7 @@ namespace hpl {
 				}
 			}
 		}
-		else if(mbLoadAndSaveMSHFormat)
+		if(mbLoadAndSaveMSHFormat && cResources::GetMeshCacheDir() == _W(""))
 		{
 			tWString sMSHFile = cString::SetFileExtW(asFile, _W("anm"));
 			cDate currentDate = cPlatform::FileModifiedDate(asFile);
@@ -1110,16 +1104,8 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// SAVE MSH FORMAT
-		if(mbLoadAndSaveMSHFormat && bExternalCache)
-		{
+		if(mbLoadAndSaveMSHFormat)
 			mpMeshLoaderMSH->SaveAnimation(pAnimation, cString::SetFileExtW(GetExternalMeshCacheFile(asFile), _W("anm")));
-		}
-		else if(cResources::GetForceCacheLoadingAndSkipSaving()==false && mbLoadAndSaveMSHFormat)
-		{
-			tWString sMSHFile = cString::SetFileExtW(asFile, _W("anm"));
-
-			mpMeshLoaderMSH->SaveAnimation(pAnimation, sMSHFile);
-		}
 
 		return pAnimation;
 	}
