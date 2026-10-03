@@ -16,7 +16,8 @@ Open:
 - `<DirLight>` cascaded shadow maps (sun lights interiors on the 14 maps that use it).
 - Translucents ignore underwater/secondary world fog.
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
-- Slow map loads.
+- Slow map loads: 02_05 22 -> 10 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), script
+  compile+init 1.2 s, InitEngine 1.8 s.
 - Treemail list entries overlap.
 - Liquid areas (`AreaType="Liquid"`, ~20 maps): water surface, `<Area>_FogArea`, buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed).
@@ -29,23 +30,9 @@ Open:
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. Likely fixed: critter scripts wrote `cLuxCritter` members at the official offsets past the end
-   of `cSomaLuxEntity` (now a side block); the sweep no longer crashes there. Intermittent
-   heap corruption on `04_01_tau_outside` (release build: ~3 of 5 runs). glibc
-   reports `corrupted size vs. prev_size` / `double free or corruption`; symptoms are SIGBUS or
-   abort inside `free()` during early map load (shader preprocessor), a deadlocked allocator
-   lock, or an abort in `~cSubMeshEntity` at exit. Three full ASan runs of the same map
-   (`amnesia/src/build-asan-soma`, load + 60 frames + exit) are clean apart from two
-   out-of-bounds reads that are now fixed - so the writer is probably in uninstrumented code:
-   the prebuilt Newton libs (mesh/tree collision on this map's huge static meshes), assimp,
-   DevIL or the GL driver. Bisected: with `cWorldLoaderHpm::CreateStaticBodyForMesh()` disabled
-   the map passes 4/4; with only DetailMeshes disabled it still fails 3/4. The inputs are sane
-   (index count multiple of 3, indices in range, finite coordinates < 20 km), so the writer is
-   inside the prebuilt Newton tree-collision code or in how shapes/compounds are owned and
-   freed. Next: build Newton from source with ASan; try one batched static body per map
-   (`cWorldLoaderHplMap::AddObjectsToStaticMeshBody()` style), which item 1 wants anyway.
-
-
+1. Fixed: 04_01 heap corruption. Newton's `CalculateAdjacendy()` made a `dgStack(-1)` for an
+   empty tree collision; the allocator wrote its header past the block. Release recheck (5 runs)
+   pending: the GPU wedged (asahi compute queue timeouts) during an ASan run of this map.
 
 2. Window glass renders opaque. `plain_glass_livingroom.mat` is `Type="translucent"`,
    `BlendMode="Mulx2"`, `Refraction=true`. Blend-mode parsing is fine (it lowercases, so

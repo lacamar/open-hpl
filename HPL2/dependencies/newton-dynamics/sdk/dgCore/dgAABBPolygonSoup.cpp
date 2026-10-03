@@ -471,7 +471,7 @@ void dgAABBPolygonSoup::CalculateAdjacendy ()
 		t.join();
 	}
 
-	dgStack<dgTriplex> pool ((m_indexCount / 2) - 1);
+	dgStack<dgTriplex> pool (dgMax ((m_indexCount / 2) - 1, 1));
 	const dgTriplex* const vertexArray = (dgTriplex*)GetLocalVertexPool();
 	dgInt32 normalCount = 0;
 	for (dgInt32 i = 0; i < m_nodesCount; i ++) {

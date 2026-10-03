@@ -393,6 +393,7 @@ namespace hpl {
 	{
 		mpGraphics = apGraphics;
 		mpResources = apResources;
+		mpCurrentSettings = NULL;
 
 		//////////////
 		//Set variables from arguments
