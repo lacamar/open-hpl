@@ -4185,7 +4185,8 @@ namespace hpl {
 				}
 				
 				////////////////////////////////////
-				// Copy frame buffer to texture
+				// Copy frame buffer to texture (an empty rect would mean the whole screen)
+				if(clipRect.w > 0 && clipRect.h > 0)
 				CopyFrameBufferToTexure(mpRefractionTexture, 
 										cVector2l(clipRect.x, clipRect.y), 
 										cVector2l(clipRect.w, clipRect.h), 
