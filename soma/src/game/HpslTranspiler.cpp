@@ -17,7 +17,7 @@ namespace
 		int mlSemantic;			// -1 if none (no ": N" suffix)
 	};
 
-	const std::vector<std::pair<tString, tString> > gvTypeMap = {
+	const std::map<tString, tString> gmapTypeNames = {
 		{"cVector4f", "vec4"}, {"cVector3f", "vec3"}, {"cVector2f", "vec2"},
 		{"cVector4i", "ivec4"}, {"cVector3i", "ivec3"}, {"cVector2i", "ivec2"},
 		{"cVector4l", "ivec4"}, {"cVector3l", "ivec3"}, {"cVector2l", "ivec2"},
@@ -40,13 +40,18 @@ namespace
 		{"vtx_vTangent", "gl_MultiTexCoord1"},
 	};
 
-	tString ReplaceTypeNames(const tString& asSrc)
+	tString ReplaceIdentifiers(const tString& asSrc, const std::map<tString, tString>& aMap)
 	{
-		tString sOut = asSrc;
-		for (size_t i = 0; i < gvTypeMap.size(); ++i)
+		tString sOut;
+		sOut.reserve(asSrc.size());
+		for (size_t i = 0; i < asSrc.size();)
 		{
-			std::regex typeRe("\\b" + gvTypeMap[i].first + "\\b");
-			sOut = std::regex_replace(sOut, typeRe, gvTypeMap[i].second);
+			size_t j = i;
+			while (j < asSrc.size() && (isalnum((unsigned char)asSrc[j]) || asSrc[j] == '_')) ++j;
+			if (j == i) { sOut += asSrc[i++]; continue; }
+			std::map<tString, tString>::const_iterator it = aMap.find(asSrc.substr(i, j - i));
+			sOut.append(it != aMap.end() ? it->second : asSrc.substr(i, j - i));
+			i = j;
 		}
 		return sOut;
 	}
@@ -130,8 +135,7 @@ namespace
 
 	tString ReplaceIdentifier(const tString& asSrc, const tString& asFrom, const tString& asTo)
 	{
-		std::regex idRe("\\b" + asFrom + "\\b");
-		return std::regex_replace(asSrc, idRe, asTo);
+		return ReplaceIdentifiers(asSrc, {{asFrom, asTo}});
 	}
 
 	tString StripUniformBindingIndices(const tString& asSrc)
@@ -396,7 +400,7 @@ namespace
 			if (it == mapSamplers.end())
 			{
 				asErr = "sample() references '" + aArgs[0] + "', which isn't a declared uniform texture "
-						"(or is a texture type this transpiler doesn't map - see gvTypeMap)";
+						"(or is a texture type this transpiler doesn't map - see gmapTypeNames)";
 				return false;
 			}
 			asRepl = it->second + "(" + aArgs[0] + ", " + aArgs[1] + ")";
@@ -481,7 +485,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 			sSrc.insert(lMain, "cVector3f GammaToLinearCorrection(in cVector3f v) { return pow(v, cVector3f(2.2)); }\n"
 							   "cVector4f GammaToLinearCorrection(in cVector4f v) { return pow(v, cVector4f(2.2)); }\n");
 	}
-	sSrc = ReplaceTypeNames(sSrc);
+	sSrc = ReplaceIdentifiers(sSrc, gmapTypeNames);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;
 	sSrc = SubstituteFixedFunctionMatrixUniforms(sSrc);
 	sSrc = StripUniformBindingIndices(sSrc);
