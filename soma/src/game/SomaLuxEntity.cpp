@@ -321,8 +321,9 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 	if (iPhysicsBody *pBody = GetMainBody())
 	{
 		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
-		for (size_t i = 1; i < mvBodies.size(); ++i)
-			mvBodies[i]->SetMatrix(cMath::MatrixMul(a_mtx, cMath::MatrixMul(mtxInvMain, mvBodies[i]->GetLocalMatrix())));
+		for (iPhysicsBody *b : mvBodies)
+			if (b != pBody)
+				b->SetMatrix(cMath::MatrixMul(a_mtx, cMath::MatrixMul(mtxInvMain, b->GetLocalMatrix())));
 		pBody->SetMatrix(a_mtx);
 	}
 	else if (mpMesh)
@@ -2504,16 +2505,18 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
 					  cVector3f w = bLocal ? cMath::MatrixMul(p->GetMatrix().GetRotation(), v) : v;
-					  for (size_t i = 0; i < p->mvBodies.size() && (!bMain || i == 0); ++i)
-						  p->mvBodies[i]->AddImpulse(w);
+					  for (iPhysicsBody *b : p->mvBodies)
+						  if (!bMain || b == p->GetMainBody())
+							  b->AddImpulse(w);
 				  });
 			  });
 	SOMA_FUNC(e, "void Entity_AddForce(const tString &in asEntityName, const cVector3f &in avForce, bool abLocalSpace, bool abOnlyMainBody)",
 			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
 					  cVector3f w = bLocal ? cMath::MatrixMul(p->GetMatrix().GetRotation(), v) : v;
-					  for (size_t i = 0; i < p->mvBodies.size() && (!bMain || i == 0); ++i)
-						  p->mvBodies[i]->AddForce(w);
+					  for (iPhysicsBody *b : p->mvBodies)
+						  if (!bMain || b == p->GetMainBody())
+							  b->AddForce(w);
 				  });
 			  });
 }
