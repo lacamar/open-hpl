@@ -288,6 +288,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	iCollideShape* cPhysicsWorldNewton::CreateHeightFieldShape(int alWidth, int alDepth, const float* apHeights, float afUnitSize)
+	{
+		cCollideShapeNewton *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, mpNewtonWorld,this) );
+		pShape->CreateHeightField(alWidth, alDepth, apHeights, afUnitSize);
+		mlstShapes.push_back(pShape);
+
+		return pShape;
+	}
+
+	//-----------------------------------------------------------------------
+
 	iCollideShape* cPhysicsWorldNewton::LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer)
 	{
 		cCollideShapeNewton *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Mesh,0, NULL, mpNewtonWorld,this) );

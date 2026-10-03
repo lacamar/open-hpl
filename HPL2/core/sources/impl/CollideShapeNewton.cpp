@@ -23,6 +23,7 @@
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
+#include <algorithm>
 
 namespace hpl {
 
@@ -385,6 +386,16 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+	void cCollideShapeNewton::CreateHeightField(int alWidth, int alDepth, const float* apHeights, float afUnitSize)
+	{
+		std::vector<char> vAttributes(alWidth * alDepth, 1);
+		mpNewtonCollision = NewtonCreateHeightFieldCollision(mpNewtonWorld, alWidth, alDepth, 0, 0, apHeights, vAttributes.data(),
+															 1, afUnitSize, afUnitSize, 0);
+		const float* pEnd = apHeights + alWidth * alDepth;
+		mBoundingVolume.SetLocalMinMax(cVector3f(0, *std::min_element(apHeights, pEnd), 0),
+									   cVector3f((alWidth - 1) * afUnitSize, *std::max_element(apHeights, pEnd), (alDepth - 1) * afUnitSize));
+	}
 
 	static void NewtonWriteToBinaryBuffer(void* apSerializeHandle, const void* apNewtonBuffer, int alSize)
 	{

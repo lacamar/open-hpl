@@ -10,6 +10,8 @@
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
 
+#include <map>
+
 namespace hpl {
 
 	class iEntity3D;
@@ -18,6 +20,7 @@ namespace hpl {
 	class iPhysicsWorld;
 	class cMeshEntity;
 	class cParticleSystem;
+	class iCollideShape;
 
 	class cWorldLoaderHpm : public iWorldLoader
 	{
@@ -60,6 +63,7 @@ namespace hpl {
 
 		cWorld* mpCurrentWorld;
 		iPhysicsWorld* mpCurrentPhysicsWorld;
+		std::map<tString, iCollideShape*> m_mapStaticShapes;
 
 		struct cHpmTrackStats
 		{

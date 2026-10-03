@@ -57,6 +57,7 @@ namespace hpl {
 
 		void SaveToSerializedData(cBinaryBuffer* apBinBuffer);
 		void CreateFromSerializedData(cBinaryBuffer* apBinBuffer);
+		void CreateHeightField(int alWidth, int alDepth, const float* apHeights, float afUnitSize);
 
 		NewtonCollision* GetNewtonCollision(){ return mpNewtonCollision;}
 

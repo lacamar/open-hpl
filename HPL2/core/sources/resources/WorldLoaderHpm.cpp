@@ -75,6 +75,7 @@ namespace hpl {
 		mpCurrentWorld->SetFilePath(asFile);
 
 		mpCurrentPhysicsWorld = mpPhysics->CreateWorld(true);
+		m_mapStaticShapes.clear();
 		mpCurrentPhysicsWorld->SetAccuracyLevel(ePhysicsAccuracy_Medium);
 		mpCurrentPhysicsWorld->SetWorldSize(-300, 300);
 		mpCurrentPhysicsWorld->SetMaxTimeStep(1.0f / 60.0f);
@@ -708,7 +709,17 @@ namespace hpl {
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
-			CreateStaticBodyForMesh(pEntity, sName);
+			if (pVtx->GetIndexNum() < (lW - 1) * (lH - 1) * 6)
+			{
+				CreateStaticBodyForMesh(pEntity, sName);
+				continue;
+			}
+			std::vector<float> vPatch(lW * lH);
+			for (int z = 0; z < lH; ++z)
+			for (int x = 0; x < lW; ++x) vPatch[z * lW + x] = Height(x0 + x, z0 + z);
+			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(sName, mpCurrentPhysicsWorld->CreateHeightFieldShape(lW, lH, vPatch.data(), fUnit));
+			pBody->SetMass(0);
+			pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(x0 * fUnit - fOffset, 0, z0 * fUnit - fOffset)));
 		}
 	}
 
@@ -843,27 +854,52 @@ namespace hpl {
 		int lSubMeshNum = pMesh->GetSubMeshNum();
 		if (lSubMeshNum <= 0) return;
 
-		tCollideShapeVec vShapes;
 		for (int i = 0; i < lSubMeshNum; ++i)
 		{
 			cSubMesh* pSubMesh = pMesh->GetSubMesh(i);
 			iVertexBuffer* pSrcVtxBuffer = pSubMesh->GetVertexBuffer();
 			if (pSrcVtxBuffer == NULL) continue;
 
-			iVertexBuffer* pVtxBuffer = pSrcVtxBuffer->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																   eVertexElementFlag_Position);
-			pVtxBuffer->Transform(apMeshEntity->GetSubMeshEntity(i)->GetWorldMatrix());
+			// shared local-space shape per (submesh, scale); rotation/translation go in the body
+			const cMatrixf& mtxWorld = apMeshEntity->GetSubMeshEntity(i)->GetWorldMatrix();
+			cVector3f vAxis[3], vScale;
+			for (int c = 0; c < 3; ++c)
+			{
+				vAxis[c] = cVector3f(mtxWorld.m[0][c], mtxWorld.m[1][c], mtxWorld.m[2][c]);
+				vScale.v[c] = vAxis[c].Length();
+			}
+			bool bRigid = vScale.x > 0 && vScale.y > 0 && vScale.z > 0 &&
+						  cMath::Vector3Dot(cMath::Vector3Cross(vAxis[0], vAxis[1]), vAxis[2]) > 0;
+			for (int c = 0; c < 3 && bRigid; ++c)
+				bRigid = std::fabs(cMath::Vector3Dot(vAxis[c], vAxis[(c + 1) % 3])) < 1e-3f * vScale.v[c] * vScale.v[(c + 1) % 3];
 
-			iCollideShape* pShape = mpCurrentPhysicsWorld->CreateMeshShape(pVtxBuffer);
-			hplDelete(pVtxBuffer);
+			cMatrixf mtxBody = cMatrixf::Identity;
+			cMatrixf mtxShape = mtxWorld;
+			if (bRigid)
+			{
+				for (int c = 0; c < 3; ++c)
+					for (int r = 0; r < 3; ++r) mtxBody.m[r][c] = mtxWorld.m[r][c] / vScale.v[c];
+				mtxBody.SetTranslation(mtxWorld.GetTranslation());
+				mtxShape = cMath::MatrixScale(vScale);
+			}
 
-			if (pShape) vShapes.push_back(pShape);
-		}
+			char sKey[96];
+			snprintf(sKey, sizeof(sKey), "%p %g %g %g", (void*)pSubMesh, vScale.x, vScale.y, vScale.z);
+			iCollideShape* pShape = bRigid ? m_mapStaticShapes[sKey] : NULL;
+			if (pShape == NULL)
+			{
+				iVertexBuffer* pVtxBuffer = pSrcVtxBuffer->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static,
+																	   eVertexElementFlag_Position);
+				pVtxBuffer->Transform(mtxShape);
+				pShape = mpCurrentPhysicsWorld->CreateMeshShape(pVtxBuffer);
+				hplDelete(pVtxBuffer);
+				if (pShape == NULL) continue;
+				if (bRigid) m_mapStaticShapes[sKey] = pShape;
+			}
 
-		for (size_t i = 0; i < vShapes.size(); ++i)
-		{
-			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, vShapes[i]);
+			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, pShape);
 			pBody->SetMass(0);
+			pBody->SetMatrix(mtxBody);
 		}
 	}
 

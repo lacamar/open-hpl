@@ -59,6 +59,7 @@ namespace hpl {
 		iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx);
 		
 		iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer);
+		iCollideShape* CreateHeightFieldShape(int alWidth, int alDepth, const float* apHeights, float afUnitSize);
 		iCollideShape* LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer);
 		void SaveMeshShapeToBuffer(iCollideShape* apMeshShape, cBinaryBuffer *apBuffer);
 
