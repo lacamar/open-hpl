@@ -118,6 +118,21 @@ public:
 
 	std::map<int, float> mmapVisibilityRangeMul;
 	std::map<int, float> mmapVisibilityMaxRange;
+	float GetVisibilityRangeMul()
+	{
+		float f = 1;
+		for (auto &it : mmapVisibilityRangeMul)
+			f *= it.second;
+		return f;
+	}
+	float GetVisibilityMaxRange()
+	{
+		float f = -1;
+		for (auto &it : mmapVisibilityMaxRange)
+			if (it.second >= 0)
+				f = f < 0 ? it.second : std::min(f, it.second);
+		return f;
+	}
 
 	float mfTimeSincePhysicsInteraction = 0;
 	float mfAverageMoveSpeed = 0;

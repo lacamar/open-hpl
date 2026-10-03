@@ -741,8 +741,9 @@ namespace
 
 		bool mbSensesActive = true, mbUpdateDetection = true;
 		float mfFOV = cMath::ToRad(90), mfFOVMul = 1, mfSightRange = 30, mfSightRangeMul = 1, mfEyeHeight = 0.9f;
-		float mfDetectMinTime = 0, mfDetectCount = 0, mfUnseenTime = 0;
-		bool mbSeen = false, mbDetected = false;
+		float mfDetectMinTime = 0, mfDetectCount = 0, mfDetectTimer = 0, mfCurrentSightDist = 0;
+		int mlSeenCount = 0;
+		bool mbSeen = false, mbDetected = false, mbSightRangeAffectedByModifiers = true;
 		cVector3f mvLastKnownPlayerPos = 0;
 		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
 		cBoneState *mpPosBone = NULL;
@@ -759,42 +760,88 @@ namespace
 		}
 
 		cVector3f Eye() { return mpBody ? mpBody->GetFeetPosition() + cVector3f(0, mpBody->GetSize().y * mfEyeHeight, 0) : mpEnt->GetPosition(); }
+		float PlayerDist() { return cMath::Vector3Dist(mpBody ? mpBody->GetFeetPosition() : mpEnt->GetPosition(), PlayerBody()->GetFeetPosition()); }
 		cVector3f Forward() { return mpBody ? mpBody->GetForward() : cVector3f(0, 0, -1); }
 
-		void UpdateSenses(float afTimeStep)
+		bool PlayerInSight(float afFOV)
 		{
 			iCharacterBody *pPlayer = PlayerBody();
-			if (mbSensesActive == false || mbUpdateDetection == false || pPlayer == NULL)
-				return;
 			cVector3f vEye = Eye();
 			cVector3f vHead = pPlayer->GetPosition() + cVector3f(0, pPlayer->GetSize().y * 0.4f, 0);
 			cVector3f vDir = vHead - vEye;
-			float fDist = vDir.Length();
-			bool bSeen = fDist < mfSightRange * mfSightRangeMul &&
-						 cMath::Vector3Angle(cMath::Vector3Normalize(vDir), Forward()) < mfFOV * mfFOVMul * 0.5f &&
-						 SomaLineOfSight(vEye, vHead, mpEnt);
-			mbSeen = bSeen;
-			if (bSeen)
+			return cMath::Vector3Angle(cMath::Vector3Normalize(vDir), Forward()) < afFOV * 0.5f && SomaLineOfSight(vEye, vHead, mpEnt);
+		}
+
+		void SetUndetected()
+		{
+			if (mbDetected)
+				SomaAgentSendMessage(mpEnt, eMsg_PlayerUndetected, 0);
+			mbDetected = false;
+		}
+
+		void DetectedCallback(bool abX)
+		{
+			if (abX == false || mfDetectMinTime > mfDetectCount)
 			{
-				mvLastKnownPlayerPos = pPlayer->GetFeetPosition();
-				mfUnseenTime = 0;
-				mfDetectCount += afTimeStep;
-				if (mbDetected == false && mfDetectCount >= mfDetectMinTime)
-				{
-					mbDetected = true;
-					SomaAgentSendMessage(mpEnt, eMsg_PlayerDetected, mvLastKnownPlayerPos);
-				}
+				if (abX)
+					mfDetectCount += 0.15f;
+				else if (mfDetectCount > 0)
+					mfDetectCount -= 0.15f;
+				SetUndetected();
+				return;
 			}
-			else
+			mvLastKnownPlayerPos = PlayerBody()->GetFeetPosition();
+			if (mbDetected == false)
 			{
-				mfDetectCount = cMath::Max(mfDetectCount - afTimeStep, 0.0f);
-				mfUnseenTime += afTimeStep;
-				if (mbDetected && mfUnseenTime > 1.0f)
-				{
-					mbDetected = false;
-					SomaAgentSendMessage(mpEnt, eMsg_PlayerUndetected, mvLastKnownPlayerPos);
-				}
+				mbDetected = true;
+				SomaAgentSendMessage(mpEnt, eMsg_PlayerDetected, 0);
 			}
+		}
+
+		void SeenCallback(bool abX)
+		{
+			mbSeen = abX && ++mlSeenCount >= 4;
+			if (abX == false)
+				mlSeenCount = 0;
+			if (mbSeen)
+				return DetectedCallback(true);
+			if (mpBody && mpBody->GetSize().x > PlayerDist())
+				return DetectedCallback(PlayerInSight(mfFOV * mfFOVMul));
+			if (mfDetectCount > 0)
+				mfDetectCount -= 0.15f;
+			SetUndetected();
+		}
+
+		void UpdateSenses(float afTimeStep)
+		{
+			cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+			if (mbSensesActive == false || pPlayer == NULL || pPlayer->GetCharacterBody() == NULL)
+				return;
+			if (pPlayer->mfHealth <= 0)
+			{
+				SetUndetected();
+				mbSeen = false;
+				return;
+			}
+			mfDetectTimer += afTimeStep;
+			if (mfDetectTimer < 0.15f)
+				return;
+			mfDetectTimer = 0;
+			if (mbUpdateDetection == false)
+			{
+				mbSeen = false;
+				SetUndetected();
+				return;
+			}
+			float fRange = mfSightRange * mfSightRangeMul;
+			float fMax = -1;
+			if (mbSightRangeAffectedByModifiers)
+			{
+				fRange *= pPlayer->GetVisibilityRangeMul();
+				fMax = pPlayer->GetVisibilityMaxRange();
+			}
+			mfCurrentSightDist = fMax >= 0 ? std::min(fRange, fMax) : fRange;
+			SeenCallback(PlayerDist() <= mfCurrentSightDist && PlayerInSight(mfFOV * mfFOVMul));
 		}
 
 		void CheckForDoors(float afTimeStep)
@@ -1142,11 +1189,12 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		{
 			a->mvLastKnownPlayerPos = PlayerFeet();
 			a->mbSeen = a->mbDetected = true;
-			a->mfUnseenTime = 0;
 			a->mfDetectCount = cMath::Max(a->mfDetectCount, a->mfDetectMinTime);
 		}
 	});
-	SOMA_METHOD(e, A, "float GetCurrentPlayerSightDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRange * a->mfSightRangeMul : 0.0f; });
+	SOMA_METHOD(e, A, "float GetCurrentPlayerSightDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfCurrentSightDist : 0.0f; });
+	SOMA_METHOD(e, A, "void SetSightRangeAffectedByModifiers(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbSightRangeAffectedByModifiers = b; });
+	SOMA_METHOD(e, A, "bool GetSightRangeAffectedByModifiers()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSightRangeAffectedByModifiers; });
 	for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 		SOMA_METHOD(e, pType, "bool CheckIsOnScreen(bool abUseRayCast)", +[](E *p, bool b) { return SomaEntityIsOnScreen(p, b); });
 	for (const char *pType : {"cLuxAgent", "cLuxCritter"})

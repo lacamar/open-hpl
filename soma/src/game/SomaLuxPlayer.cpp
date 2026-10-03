@@ -745,21 +745,10 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(tString("Player")) : NULL;
 		return pEnt && c && SomaEntitiesCollide(pEnt, c);
 	});
-	SOMA_METHOD(e, T, "float GetVisibilityRangeMul()", +[](P *p) {
-		float f = 1;
-		for (auto &it : p->mmapVisibilityRangeMul)
-			f *= it.second;
-		return f;
-	});
+	SOMA_METHOD(e, T, "float GetVisibilityRangeMul()", +[](P *p) { return p->GetVisibilityRangeMul(); });
 	SOMA_METHOD(e, T, "void SetVisibilityRangeMul(int alId, float afX)", +[](P *p, int id, float x) { p->mmapVisibilityRangeMul[id] = x; });
 	SOMA_METHOD(e, T, "void SetVisibilityMaxRange(int alId, float afX)", +[](P *p, int id, float x) { p->mmapVisibilityMaxRange[id] = x; });
-	SOMA_METHOD(e, T, "float GetVisibilityMaxRange()", +[](P *p) {
-		float f = 10000;
-		for (auto &it : p->mmapVisibilityMaxRange)
-			if (it.second >= 0)
-				f = std::min(f, it.second);
-		return f;
-	});
+	SOMA_METHOD(e, T, "float GetVisibilityMaxRange()", +[](P *p) { return p->GetVisibilityMaxRange(); });
 	SOMA_METHOD(e, T, "float GetTimeSincePhysicsObjectInteraction()", +[](P *p) { return p->mfTimeSincePhysicsInteraction; });
 	SOMA_METHOD(e, T, "void ResetTimeSincePhysicsObjectInteraction()", +[](P *p) { p->mfTimeSincePhysicsInteraction = 0; });
 	SOMA_METHOD(e, T, "void SetMaxCameraTrackingAmount(int alSize)", +[](P *, int) {});
