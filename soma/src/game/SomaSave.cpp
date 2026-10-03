@@ -22,12 +22,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV;"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAV<"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 11;
+	int glPendingVersion = 12;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -460,6 +460,12 @@ public:
 		}
 		WriteTimers(o, p);
 		WriteScript(o, p->GetScript());
+		o.Pod((uint32_t)p->mmapScriptVars.size());
+		for (auto &v : p->mmapScriptVars)
+		{
+			o.Str(v.first);
+			o.Str(v.second);
+		}
 	}
 
 	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
@@ -574,6 +580,16 @@ public:
 				apMap->GetWorld()->GetPhysicsWorld()->DestroyJoint(j);
 		ReadTimers(in, t);
 		ReadScript(in, t->GetScript());
+		if (glPendingVersion >= 12)
+		{
+			t->mmapScriptVars.clear();
+			uint32_t lVars = in.Pod<uint32_t>();
+			for (uint32_t i = 0; i < lVars && in.ok; ++i)
+			{
+				tString sVar = in.Str();
+				t->mmapScriptVars[sVar] = in.Str();
+			}
+		}
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
 		t->mbEffectsActive = bEffects;
@@ -1094,7 +1110,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 11)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 12)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

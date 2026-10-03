@@ -1188,6 +1188,34 @@ static void DrawScreenText(I *p, float afTimeStep, D aLabel, V3 avPos, float afL
 	}
 }
 
+static int SomaMultiToggle(I *p, Str n, int def, asUINT alCols, V2 spacing, const void *apData, V3 pos, V2 size)
+{
+	auto &st = p->State(Id(n));
+	if (st.mbSetInt == false) { st.mlInt = def; st.mbSetInt = true; }
+	std::vector<tWString> vItems = p->mvItems;
+	p->mvItems.clear();
+	bool bUpdated = false;
+	if (vItems.empty() == false)
+	{
+		size_t cols = alCols ? std::min<size_t>(alCols, vItems.size()) : vItems.size();
+		size_t rows = (vItems.size() + cols - 1) / cols;
+		cVector2f vItem((size.x - (cols - 1) * spacing.x) / cols, (size.y - (rows - 1) * spacing.y) / rows);
+		p->mvGroups.push_back({p->GroupPos() + pos, size});
+		for (size_t i = 0; i < vItems.size(); ++i)
+		{
+			cVector3f vPos((vItem.x + spacing.x) * (float)(i % cols), (vItem.y + spacing.y) * (float)(i / cols), 0);
+			if (p->DoButton(n + "_" + cString::ToString((int)i), vItems[i], apData, vPos, vItem, 0))
+			{
+				bUpdated = st.mlInt != (int)i;
+				st.mlInt = (int)i;
+			}
+		}
+		p->mvGroups.pop_back();
+	}
+	p->mPrev.mbUpdated = bUpdated;
+	return st.mlInt;
+}
+
 static void GfxFactory(asIScriptGeneric *g)
 {
 	void *p = SomaNewOwnedScriptStruct("cImGuiGfx");
@@ -1622,25 +1650,9 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "int DoMultiSelect(const tString&in asName, int alDefaultSelectedItem, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
 				+[](I *p, Str n, int def, V3 pos, V2 size) { return p->DoMultiSelect(n, def, p->GetDefault("cImGuiMultiSelectData"), pos, size); });
 	SOMA_METHOD(e, T, "int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cImGuiButtonData &in aData, const cVector3f&in avPos, const cVector2f&in avSize)",
-				+[](I *p, Str n, int def, asUINT cols, V2 spacing, D d, V3 pos, V2 size) {
-					auto &st = p->State(Id(n));
-					if (st.mbSetInt == false) { st.mlInt = def; st.mbSetInt = true; }
-					std::vector<tWString> vItems = p->mvItems;
-					p->mvItems.clear();
-					cols = std::max(cols, 1u);
-					bool bUpdated = false;
-					for (size_t i = 0; i < vItems.size(); ++i)
-					{
-						cVector3f vPos = pos + cVector3f((size.x + spacing.x) * (float)(i % cols), (size.y + spacing.y) * (float)(i / cols), 0);
-						if (p->DoButton(n + "_" + cString::ToString((int)i), vItems[i], P(d), vPos, size, 0))
-						{
-							bUpdated = st.mlInt != (int)i;
-							st.mlInt = (int)i;
-						}
-					}
-					p->mPrev.mbUpdated = bUpdated;
-					return st.mlInt;
-				});
+				+[](I *p, Str n, int def, asUINT cols, V2 spacing, D d, V3 pos, V2 size) { return SomaMultiToggle(p, n, def, cols, spacing, P(d), pos, size); });
+	SOMA_METHOD(e, T, "int DoMultiToggle(const tString&in asName, int alDefaultSelectedItem, uint alColumnNum, const cVector2f&in avSpacing, const cVector3f&in avPos, const cVector2f&in avSize)",
+				+[](I *p, Str n, int def, asUINT cols, V2 spacing, V3 pos, V2 size) { return SomaMultiToggle(p, n, def, cols, spacing, p->GetDefault("cImGuiButtonData"), pos, size); });
 	SOMA_METHOD(e, T, "void DoFrame(const cImGuiFrameData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1)", +[](I *p, D d, V3 pos, V2 size) { p->DoFrame(P(d), pos, size); });
 	SOMA_METHOD(e, T, "void DoFrame(const cVector3f &in avPos=0, const cVector2f &in avSize=-1)", +[](I *p, V3 pos, V2 size) { p->DoFrame(p->GetDefault("cImGuiFrameData"), pos, size); });
 	SOMA_METHOD(e, T, "void DoWindowStart(const tWString &in asCaption, const cImGuiWindowData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1, bool abClip=true)",
