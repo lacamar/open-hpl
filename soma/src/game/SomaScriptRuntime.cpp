@@ -1,5 +1,6 @@
 #include "SomaScriptRuntime.h"
 #include "SomaScriptApi.h"
+#include "SomaFsb.h"
 #include "SomaScriptBuilder.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptStrings.h"
@@ -91,7 +92,7 @@ bool cSomaScriptRuntime::Init(const std::string &asGameDir)
 		return false;
 	}
 
-	mpBuilder = new cSomaScriptBuilder(asGameDir);
+	mpBuilder = new cSomaScriptBuilder(asGameDir, cString::To8Char(cSomaFsb::GetCacheDir(_W("scripts"))));
 	Log("SOMA script: runtime ready (%s)\n", sApi.c_str());
 	return true;
 }

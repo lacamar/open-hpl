@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <cstring>
 #include <dirent.h>
+#include <cstdio>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <sys/stat.h>
+#include <unistd.h>
 
 static std::set<std::string> gsetNoSave;
 
@@ -27,6 +30,39 @@ static const char *gvCompatPatches[][3] = {
 	 " if(bValue != bNewValue) { mpConfig.SetBool(\"Gameplay\", \"OpenHplHud\", bNewValue); ApplySettings(); }"
 	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
 };
+
+struct cByteStream : asIBinaryStream
+{
+	std::string msData;
+	size_t mlPos = 0;
+	int Write(const void *apData, asUINT alSize) override
+	{
+		msData.append((const char *)apData, alSize);
+		return 0;
+	}
+	int Read(void *apData, asUINT alSize) override
+	{
+		if (mlPos + alSize > msData.size())
+			return -1;
+		memcpy(apData, msData.data() + mlPos, alSize);
+		mlPos += alSize;
+		return 0;
+	}
+};
+
+static uint64_t Fnv(const void *apData, size_t alSize, uint64_t alHash = 14695981039346656037ull)
+{
+	for (size_t i = 0; i < alSize; ++i)
+		alHash = (alHash ^ ((const unsigned char *)apData)[i]) * 1099511628211ull;
+	return alHash;
+}
+
+static std::string Hex(uint64_t alValue)
+{
+	char vBuf[17];
+	snprintf(vBuf, sizeof(vBuf), "%016llx", (unsigned long long)alValue);
+	return vBuf;
+}
 
 static std::string Lower(std::string s)
 {
@@ -61,7 +97,8 @@ static void Index(const std::string &asRoot, const std::string &asRel, std::map<
 	closedir(pDir);
 }
 
-cSomaScriptBuilder::cSomaScriptBuilder(const std::string &asGameDir) : msGameDir(asGameDir)
+cSomaScriptBuilder::cSomaScriptBuilder(const std::string &asGameDir, const std::string &asCacheDir)
+	: msGameDir(asGameDir), msCacheDir(asCacheDir)
 {
 	Index(asGameDir + "/script", "", mmapByRelPath, mmapByBaseName);
 }
@@ -84,8 +121,8 @@ std::string cSomaScriptBuilder::Resolve(const std::string &asInclude, const std:
 	return it != mmapByBaseName.end() ? it->second : "";
 }
 
-bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &asFile, std::map<std::string, bool> &aIncluded,
-								 std::string *apMissingInclude)
+bool cSomaScriptBuilder::AddFile(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile,
+								 std::map<std::string, bool> &aIncluded, std::string *apMissingInclude)
 {
 	if (aIncluded[asFile])
 		return true;
@@ -149,7 +186,7 @@ bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &a
 		lPos = lEnd + 1;
 	}
 
-	apModule->AddScriptSection(asFile.c_str(), sCode.c_str(), sCode.size());
+	avSections.emplace_back(asFile, sCode);
 
 	for (size_t i = 0; i < vIncludes.size(); ++i)
 	{
@@ -160,7 +197,7 @@ bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &a
 				*apMissingInclude = vIncludes[i] + " (from " + asFile + ")";
 			continue;
 		}
-		AddFile(apModule, sPath, aIncluded, apMissingInclude);
+		AddFile(avSections, sPath, aIncluded, apMissingInclude);
 	}
 	return true;
 }
@@ -168,9 +205,45 @@ bool cSomaScriptBuilder::AddFile(asIScriptModule *apModule, const std::string &a
 int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asModuleName, const std::string &asEntryFile,
 							  std::string *apMissingInclude)
 {
-	asIScriptModule *pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
+	std::vector<std::pair<std::string, std::string>> vSections;
 	std::map<std::string, bool> mapIncluded;
-	if (AddFile(pModule, asEntryFile, mapIncluded, apMissingInclude) == false)
+	if (AddFile(vSections, asEntryFile, mapIncluded, apMissingInclude) == false)
 		return asERROR;
-	return pModule->Build();
+	asIScriptModule *pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
+
+	// Bytecode is only valid for the exact binary that registered the API
+	std::string sKey, sCacheFile;
+	struct stat st;
+	if (msCacheDir.empty() == false && stat("/proc/self/exe", &st) == 0)
+	{
+		uint64_t lHash = Fnv(&st.st_size, sizeof(st.st_size), Fnv(&st.st_mtim, sizeof(st.st_mtim)));
+		for (auto &sec : vSections)
+			lHash = Fnv(sec.second.data(), sec.second.size(), Fnv(sec.first.c_str(), sec.first.size() + 1, lHash));
+		sKey = Hex(lHash);
+		sCacheFile = msCacheDir + "/" + Hex(Fnv(asEntryFile.data(), asEntryFile.size())) + ".asb";
+
+		cByteStream in;
+		std::ifstream f(sCacheFile.c_str(), std::ios::binary);
+		in.msData.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+		if (in.msData.compare(0, sKey.size(), sKey) == 0)
+		{
+			in.mlPos = sKey.size();
+			if (pModule->LoadByteCode(&in) >= 0)
+				return 0;
+			pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
+		}
+	}
+
+	for (auto &sec : vSections)
+		pModule->AddScriptSection(sec.first.c_str(), sec.second.c_str(), sec.second.size());
+	int r = pModule->Build();
+	cByteStream out;
+	out.msData = sKey;
+	if (r >= 0 && sCacheFile.empty() == false && pModule->SaveByteCode(&out) >= 0)
+	{
+		std::string sTmp = sCacheFile + "." + std::to_string(getpid());
+		if (std::ofstream(sTmp.c_str(), std::ios::binary).write(out.msData.data(), out.msData.size()))
+			rename(sTmp.c_str(), sCacheFile.c_str());
+	}
+	return r;
 }

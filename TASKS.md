@@ -16,8 +16,9 @@ Open:
 - `<DirLight>` cascaded shadow maps (sun lights interiors on the 14 maps that use it).
 - Translucents ignore underwater/secondary world fog.
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
-- Slow map loads: 02_05 22 -> 10 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), script
-  compile+init 1.2 s, InitEngine 1.8 s.
+- Slow map loads: 02_05 22 -> 9.5 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), InitEngine
+  1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
+  still ~10% of load.
 - Treemail list entries overlap.
 - Liquid areas (`AreaType="Liquid"`, ~20 maps): water surface, `<Area>_FogArea`, buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed).

@@ -14,7 +14,7 @@ const std::set<std::string> &SomaScriptNoSaveNames();
 class cSomaScriptBuilder
 {
 public:
-	explicit cSomaScriptBuilder(const std::string &asGameDir);
+	explicit cSomaScriptBuilder(const std::string &asGameDir, const std::string &asCacheDir = "");
 
 	std::string Resolve(const std::string &asInclude, const std::string &asFromFile) const;
 
@@ -24,10 +24,11 @@ public:
 	const std::string &GetGameDir() const { return msGameDir; }
 
 private:
-	bool AddFile(asIScriptModule *apModule, const std::string &asFile, std::map<std::string, bool> &aIncluded,
-				 std::string *apMissingInclude);
+	bool AddFile(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile,
+				 std::map<std::string, bool> &aIncluded, std::string *apMissingInclude);
 
 	std::string msGameDir;
+	std::string msCacheDir;
 	std::map<std::string, std::string> mmapByRelPath;  // lowercase path under script/
 	std::map<std::string, std::string> mmapByBaseName; // lowercase basename
 };
