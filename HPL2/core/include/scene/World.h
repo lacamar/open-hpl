@@ -72,6 +72,7 @@ namespace hpl {
 	class iPhysicsRope;
 	class cResourceVarsObject;
 	class cFogArea;
+	class cEnvironmentParticles;
 	class cXmlElement;
 	class cEntFile;
 	class cDummyRenderable;
@@ -272,6 +273,13 @@ namespace hpl {
 		void SetDirectionalLightActive(bool abX){ mbDirectionalLightActive = abX; }
 		bool GetDirectionalLightActive(){ return mbDirectionalLightActive; }
 
+		cEnvironmentParticles* CreateEnvironmentParticles(const tString& asName);
+		cEnvironmentParticles* GetEnvironmentParticles(int alIdx){ return alIdx>=0 && alIdx<(int)mvEnvParticles.size() ? mvEnvParticles[alIdx] : NULL; }
+		cEnvironmentParticles* GetEnvironmentParticles(const tString& asName);
+		int GetEnvironmentParticleNum(){ return (int)mvEnvParticles.size(); }
+		void SetEnvironmentParticlesActive(bool abX){ mbEnvParticlesActive = abX; }
+		bool GetEnvironmentParticlesActive(){ return mbEnvParticlesActive; }
+
 		void SetDepthOfFieldActive(bool abX){ mbDepthOfFieldActive = abX;}
 		void SetDepthOfFieldFocusStart(float afX){ mfDepthOfFieldFocusStart = afX;}
 		void SetDepthOfFieldFocusEnd(float afX){ mfDepthOfFieldFocusEnd = afX;}
@@ -463,6 +471,9 @@ namespace hpl {
 
 		cLightDirectional *mpDirectionalLight = NULL;
 		bool mbDirectionalLightActive = false;
+
+		std::vector<cEnvironmentParticles*> mvEnvParticles;
+		bool mbEnvParticlesActive = true;
 
 		bool mbFogActive;
 		bool mbFogCulling;

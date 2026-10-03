@@ -290,6 +290,16 @@ namespace hpl{
 
 	//-----------------------------------------------------------------------
 
+	bool cGLSLProgram::SetFloatArray(int alVarId, const float *apX, int alCount)
+	{
+		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
+		if(mlCurrentProgram != mlHandle) Bind();
+		glUniform1fv(mvParameters[alVarId].mlId, alCount, apX);
+		return true;
+	}
+
+	//-----------------------------------------------------------------------
+
 	bool  cGLSLProgram::SetVec2f(int alVarId, float afX,float afY)
 	{
 		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;

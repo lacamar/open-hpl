@@ -2,6 +2,7 @@
 #include "SomaBase.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptApi.h"
+#include "SomaLuxGame.h"
 
 #include <angelscript.h>
 
@@ -119,6 +120,16 @@ void cSomaToneMapping::Update(float afTimeStep)
 	}
 	cRendererDeferred::SetToneMapping(mfKey, powf(2.0f, mfExposure), mfWhiteCut, mfGamma);
 	cRendererDeferred::SetColorGradingTexture(mbColorGradingActive ? mpGradingTexture : NULL);
+	cRendererDeferred::SetBloom(mbBloomActive && SomaUserConfig()->GetBool("Graphics", "BloomActive", true), mfBrightPass,
+								mfBloomWidth, mBloomTint);
+	static iTexture *pNoise = NULL;
+	if (pNoise == NULL && mbFilmGrainActive)
+	{
+		pNoise = gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D("core_noise2D.dds", false);
+		if (pNoise) pNoise->SetWrapSTR(eTextureWrap_Repeat);
+	}
+	cRendererDeferred::SetFilmGrain(mbFilmGrainActive ? pNoise : NULL, mfFilmGrainIntensity);
+	cRendererDeferred::SetToneMapSRGB(mbSRGB);
 }
 
 void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)

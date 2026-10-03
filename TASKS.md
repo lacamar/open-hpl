@@ -9,10 +9,11 @@ static bodies no longer get the parent's velocity, which pushed drawers open), M
 poses; global-space animations move the char body to `CharBodyPosBone`), fog rotating (soft
 particles), "Last on SOMA" save-load screen, lights/particles/sounds/billboards in saves, inspect distance (readables open at half scale: `SetMeshScaleMul`), drapes (meshes with embedded animations load dynamic). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
 applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when behind the focus.
+Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticles>` render (03_03 untested:
+GPU hang there, cause unknown).
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
 - `<DirLight>` cascaded shadow maps (sun lights interiors on the 14 maps that use it).
-- `<EnvParticles>` (marine snow, 13 maps), `EnvParticlesToClip` areas, `cEnvironmentParticles`.
 - Translucents ignore underwater/secondary world fog.
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
 - Slow map loads.

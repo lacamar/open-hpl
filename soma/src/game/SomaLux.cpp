@@ -813,6 +813,43 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
 }
 
+static float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
+{
+	if (cSomaLuxMap::GetCurrent() == NULL) return 0;
+	float fLevel = 0;
+	cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+	while (it.HasNext())
+	{
+		iLight *pLight = it.Next();
+		if (pLight == pSkip || pLight->IsVisible() == false) continue;
+		const cColor &c = pLight->GetDiffuseColor();
+		float fAmount = cMath::Max(c.r, cMath::Max(c.g, c.b)) * pLight->GetBrightness();
+		if (pLight->GetLightType() == eLightType_Box)
+		{
+			if (cMath::CheckPointInAABBIntersection(p, pLight->GetBoundingVolume()->GetMin(), pLight->GetBoundingVolume()->GetMax()))
+			{
+				cLightBox *pBox = static_cast<cLightBox *>(pLight);
+				const cVector3f &vDC = pBox->GetIrradianceBands()[0];
+				// Ref's SH term fits max(DC) within ~15%
+				fLevel += pBox->GetUseSphericalHarmonics() ? cMath::Max(vDC.x, cMath::Max(vDC.y, vDC.z)) * fAmount : fAmount;
+			}
+			continue;
+		}
+		if (pLight->GetLightType() == eLightType_Spot)
+		{
+			cLightSpot *pSpot = static_cast<cLightSpot *>(pLight);
+			cVector3f vLocal = cMath::MatrixMul(pSpot->GetViewMatrix(), p);
+			float fTan = tanf(pSpot->GetFOV() * 0.5f);
+			if (vLocal.z >= 0 || std::fabs(vLocal.y) > -vLocal.z * fTan || std::fabs(vLocal.x) > -vLocal.z * fTan * pSpot->GetAspect())
+				continue;
+		}
+		float fT = 1 - cMath::Vector3Dist(pLight->GetWorldPosition(), p) / (pLight->GetRadius() + fAdd);
+		if (fT > 0 && (pLight->GetCastShadows() == false || SomaLineOfSight(pLight->GetWorldPosition(), p, NULL)))
+			fLevel += fAmount * fT;
+	}
+	return fLevel;
+}
+
 void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 {
 	RegisterSomaScriptIterators(e);
@@ -1035,42 +1072,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		}
 		return a.GetSize() > 0;
 	});
-	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)",
-			  +[](const cVector3f &p, iLight *pSkip, float fAdd) -> float {
-				  if (cSomaLuxMap::GetCurrent() == NULL) return 0;
-				  float fLevel = 0;
-				  cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
-				  while (it.HasNext())
-				  {
-					  iLight *pLight = it.Next();
-					  if (pLight == pSkip || pLight->IsVisible() == false) continue;
-					  const cColor &c = pLight->GetDiffuseColor();
-					  float fAmount = cMath::Max(c.r, cMath::Max(c.g, c.b)) * pLight->GetBrightness();
-					  if (pLight->GetLightType() == eLightType_Box)
-					  {
-						  if (cMath::CheckPointInAABBIntersection(p, pLight->GetBoundingVolume()->GetMin(), pLight->GetBoundingVolume()->GetMax()))
-						  {
-							  cLightBox *pBox = static_cast<cLightBox *>(pLight);
-							  const cVector3f &vDC = pBox->GetIrradianceBands()[0];
-							  // Ref's SH term fits max(DC) within ~15%
-							  fLevel += pBox->GetUseSphericalHarmonics() ? cMath::Max(vDC.x, cMath::Max(vDC.y, vDC.z)) * fAmount : fAmount;
-						  }
-						  continue;
-					  }
-					  if (pLight->GetLightType() == eLightType_Spot)
-					  {
-						  cLightSpot *pSpot = static_cast<cLightSpot *>(pLight);
-						  cVector3f vLocal = cMath::MatrixMul(pSpot->GetViewMatrix(), p);
-						  float fTan = tanf(pSpot->GetFOV() * 0.5f);
-						  if (vLocal.z >= 0 || std::fabs(vLocal.y) > -vLocal.z * fTan || std::fabs(vLocal.x) > -vLocal.z * fTan * pSpot->GetAspect())
-							  continue;
-					  }
-					  float fT = 1 - cMath::Vector3Dist(pLight->GetWorldPosition(), p) / (pLight->GetRadius() + fAdd);
-					  if (fT > 0 && (pLight->GetCastShadows() == false || SomaLineOfSight(pLight->GetWorldPosition(), p, NULL)))
-						  fLevel += fAmount * fT;
-				  }
-				  return fLevel;
-			  });
+	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)", SomaLightLevelAtPos);
+	cEnvironmentParticles::mpLightLevelFunc = +[](const cVector3f &p) { return SomaLightLevelAtPos(p, NULL, 0); };
 	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
 	SOMA_FUNC(e, "void cSystem_GetAvailableVideoModes(array<cVector2l> &inout avScreenSizes, array<int> &inout avBpps, array<int> &inout avMinRefreshRates, int alMinBpp, int alMinRefreshRate, bool abRemoveDuplicates)",
 			  +[](CScriptArray &sizes, CScriptArray &bpps, CScriptArray &rates, int minBpp, int minRate, bool unique) {

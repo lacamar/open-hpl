@@ -26,7 +26,7 @@ TYPES = {
     'cAnimationState': 'cAnimationState', 'cGuiSet': 'cGuiSet', 'iFontData': 'iFontData',
     'cGuiGfxElement': 'cGuiGfxElement', 'cViewport': 'cViewport', 'cNode3D': 'cNode3D', 'cBone': 'cBone',
     'cMesh': 'cMesh', 'cSubMesh': 'cSubMesh', 'cMaterial': 'cMaterial', 'iTexture': 'iTexture',
-    'cAction': 'cAction', 'cBeam': 'cBeam', 'cRopeEntity': 'cRopeEntity', 'cFogArea': 'cFogArea',
+    'cAction': 'cAction', 'cBeam': 'cBeam', 'cRopeEntity': 'cRopeEntity', 'cFogArea': 'cFogArea', 'cEnvironmentParticles': 'cEnvironmentParticles',
     'iWidget': 'iWidget', 'cWidgetWindow': 'cWidgetWindow', 'cGuiSkin': 'cGuiSkin', 'cAINodeContainer': 'cAINodeContainer', 'cAINode': 'cAINode',
     'cColliderEntity': 'cColliderEntity', 'cCollideData': 'cCollideData', 'cSoundHandler': 'cSoundHandler',
     'cBoneState': 'cBoneState', 'iKeyboard': 'iKeyboard', 'iMouse': 'iMouse', 'iGamepad': 'iGamepad', 'cForceField': 'cForceField',

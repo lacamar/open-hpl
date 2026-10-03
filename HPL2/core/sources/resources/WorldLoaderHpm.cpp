@@ -19,6 +19,7 @@
 #include "scene/LightDirectional.h"
 #include "scene/BillBoard.h"
 #include "scene/FogArea.h"
+#include "scene/EnvironmentParticles.h"
 #include "scene/ParticleSystem.h"
 #include "scene/SoundEntity.h"
 
@@ -217,6 +218,35 @@ namespace hpl {
 					pLight->SetShadowMapBlurAmount(pDir->GetAttributeFloat("ShadowBlurAmount", 6));
 					pLight->SetAutoShadowSliceSettings(pDir->GetAttributeBool("AutoShadowSliceSettings", true));
 					pLight->SetAutoShadowSliceLogTerm(pDir->GetAttributeFloat("AutoShadowSliceLogTerm", 0.9f));
+				}
+
+				cXmlElement* pEnv = pGlobal->GetFirstElement("EnvParticles");
+				if (pEnv)
+				{
+					tString sTex = pEnv->GetAttributeString("Texture", "");
+					iTexture* pTex = sTex == "" ? NULL : mpResources->GetTextureManager()->Create2D(sTex, true);
+					cVector2f vSubDiv = pEnv->GetAttributeVector2f("SubDivUV", 1);
+					cEnvironmentParticles* pParticles = mpCurrentWorld->CreateEnvironmentParticles("WorldEnvParticles");
+					pParticles->Setup(pEnv->GetAttributeFloat("BoxSize", 1), pEnv->GetAttributeInt("NumParticles", 100),
+									  pEnv->GetAttributeVector2f("ParticleSize", 1), cVector2l((int)vSubDiv.x, (int)vSubDiv.y),
+									  pEnv->GetAttributeBool("AffectedByLight", false), pTex);
+					pParticles->SetColor(pEnv->GetAttributeColor("Color", cColor(1, 1)));
+					pParticles->SetBrightness(pEnv->GetAttributeFloat("Brightness", 1));
+					pParticles->SetBoxDistance(pEnv->GetAttributeFloat("BoxDistance", 2));
+					pParticles->SetGravityVelocity(pEnv->GetAttributeVector3f("GravityVelocity", cVector3f(0, -0.1f, 0)));
+					pParticles->SetGravitySpeedRandomAmount(pEnv->GetAttributeFloat("GravitySpeedRandomAmount", 0));
+					pParticles->SetWindVelocity(pEnv->GetAttributeVector3f("WindVelocity", 0));
+					pParticles->SetWindSpeedRandomAmount(pEnv->GetAttributeFloat("WindSpeedRandomAmount", 0));
+					pParticles->SetWindDirectionRandomAmount(pEnv->GetAttributeFloat("WindDirRandomAmount", 0));
+					pParticles->SetRotateVelocity(pEnv->GetAttributeVector3f("RotateVelocity", 0));
+					pParticles->SetRotateSpeedRandomAmount(pEnv->GetAttributeFloat("RotateSpeedRandomAmount", 0));
+					pParticles->SetRotateSpeedRandomBothDirs(pEnv->GetAttributeBool("RotateBothDirs", false));
+					pParticles->SetIterationNum(pEnv->GetAttributeFloat("NumIterations", 1));
+					pParticles->SetFadeInStart(pEnv->GetAttributeFloat("FadeInStart", 0.2f));
+					pParticles->SetFadeInEnd(pEnv->GetAttributeFloat("FadeInEnd", 1));
+					pParticles->SetFadeOutStart(pEnv->GetAttributeFloat("FadeOutStart", 10));
+					pParticles->SetFadeOutEnd(pEnv->GetAttributeFloat("FadeOutEnd", 20));
+					mpCurrentWorld->SetEnvironmentParticlesActive(pEnv->GetAttributeBool("Active", false));
 				}
 
 				cXmlElement* pPost = pGlobal->GetFirstElement("PostEffects");

@@ -56,6 +56,7 @@
 #include "scene/LightBox.h"
 #include "scene/LightDirectional.h"
 #include "scene/FogArea.h"
+#include "scene/EnvironmentParticles.h"
 #include "scene/MeshEntity.h"
 
 #include <algorithm>
@@ -96,6 +97,13 @@ namespace hpl {
 	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
 	float cRendererDeferred::mfToneMapGamma = 2.2f;
 	iTexture *cRendererDeferred::mpColorGradingTexture = NULL;
+	bool cRendererDeferred::mbBloom = false;
+	float cRendererDeferred::mfBloomBrightPass = 0.75f;
+	float cRendererDeferred::mfBloomWidth = 128;
+	cColor cRendererDeferred::mBloomTint = cColor(1, 1);
+	iTexture *cRendererDeferred::mpFilmGrainNoise = NULL;
+	float cRendererDeferred::mfFilmGrainIntensity = 1;
+	bool cRendererDeferred::mbToneMapSRGB = false;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -251,6 +259,14 @@ namespace hpl {
 	#define kVar_afSecondFalloffExp					76
 	#define kVar_afFogFalloffExp					77
 	#define kVar_avLightDirection					78
+	#define kVar_afBrightPass						79
+	#define kVar_avWeights							80
+	#define kVar_avOffsets							81
+	#define kVar_afIntensity						82
+	#define kVar_avTransform0						83
+	#define kVar_avTransform1						84
+	#define kVar_avBloomTint						85
+	#define kVar_avSizeWeight						86
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -296,7 +312,6 @@ namespace hpl {
 		mpDofBlurProgram = NULL;
 		mpDofGaussTexture = NULL;
 		mpToneMapProgram = NULL;
-		mpToneMapGradingProgram = NULL;
 		mpBoxResolveProgram = NULL;
 		mpBoxWeightTexture = NULL;
 		mpBoxWeightBuffer = NULL;
@@ -978,22 +993,29 @@ namespace hpl {
 		}
 
 		mpToneMapProgram = NULL;
-		mpToneMapGradingProgram = NULL;
+		for(int i=0; i<16; ++i) mpToneMapPrograms[i] = NULL;
+		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = NULL;
 		if(mbHdr)
 		{
-			cParserVarContainer programVars;
-			programVars.Add("UseUv");
-			mpToneMapProgram = mpGraphics->CreateGpuProgramFromShaders("ToneMapping","deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
-			programVars.Add("UseColorGrading");
-			mpToneMapGradingProgram = mpGraphics->CreateGpuProgramFromShaders("ToneMappingGrading","deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
-			iGpuProgram *vToneMapPrograms[2] = {mpToneMapProgram, mpToneMapGradingProgram};
+			mpToneMapProgram = GetToneMapProgram(0);
+
+			cParserVarContainer bloomVars;
+			bloomVars.Add("UseUv");
+			mpBloomBrightPassProgram = mpGraphics->CreateGpuProgramFromShaders("BloomBrightPass","deferred_base_vtx.glsl", "posteffect_bloomhdr_brightpass_frag.glsl",&bloomVars);
+			if(mpBloomBrightPassProgram)
+			{
+				mpBloomBrightPassProgram->GetVariableAsId("afBrightPass",kVar_afBrightPass);
+				mpBloomBrightPassProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
+			}
+			mlBloomBlurSamples = cMath::Max(8, mvScreenSize.x/160);
+			bloomVars.Add("kBlurSamples", mlBloomBlurSamples);
 			for(int i=0; i<2; ++i)
 			{
-				if(vToneMapPrograms[i]==NULL) continue;
-				vToneMapPrograms[i]->GetVariableAsId("afKey",kVar_afKey);
-				vToneMapPrograms[i]->GetVariableAsId("afExposure",kVar_afExposure);
-				vToneMapPrograms[i]->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
-				vToneMapPrograms[i]->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
+				if(i==1) bloomVars.Add("BlurHorisontal");
+				mpBloomBlurProgram[i] = mpGraphics->CreateGpuProgramFromShaders("BloomBlur"+cString::ToString(i),"deferred_base_vtx.glsl", "posteffect_bloomhdr_blur_frag.glsl",&bloomVars);
+				if(mpBloomBlurProgram[i]==NULL) continue;
+				mpBloomBlurProgram[i]->GetVariableAsId("avWeights",kVar_avWeights);
+				mpBloomBlurProgram[i]->GetVariableAsId("avOffsets",kVar_avOffsets);
 			}
 		}
 
@@ -1128,8 +1150,9 @@ namespace hpl {
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
-		if(mpToneMapProgram) mpGraphics->DestroyGpuProgram(mpToneMapProgram);
-		if(mpToneMapGradingProgram) mpGraphics->DestroyGpuProgram(mpToneMapGradingProgram);
+		for(int i=0; i<16; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
+		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1]};
+		for(int i=0; i<3; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
 
 		/////////////////////////
 		//Gpu programs
@@ -1212,8 +1235,19 @@ namespace hpl {
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
 
-			bool bGrading = mpColorGradingTexture && mpToneMapGradingProgram;
-			iGpuProgram *pToneMap = bGrading ? mpToneMapGradingProgram : mpToneMapProgram;
+			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
+						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0);
+			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
+			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
+			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
+			if(lCombo & 2)
+			{
+				RenderBloom();
+				if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
+				else		SetFrameBuffer(pToneMapTarget,true);
+				SetFlatProjection();
+			}
+
 			SetProgram(pToneMap);
 			pToneMap->SetFloat(kVar_afKey, mfToneMapKey);
 			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
@@ -1221,7 +1255,40 @@ namespace hpl {
 			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
-			if(bGrading) SetTexture(1, mpColorGradingTexture);
+			if(lCombo & 1) SetTexture(1, mpColorGradingTexture);
+			if(lCombo & 2)
+			{
+				for(int i=0; i<3; ++i)
+					SetTexture(4+i, mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<i),ePixelFormat_RGBA16,11+2*i)->GetColorBuffer(0)->ToTexture());
+				pToneMap->SetVec4f(kVar_avBloomTint, mBloomTint.r*mBloomTint.r, mBloomTint.g*mBloomTint.g, mBloomTint.b*mBloomTint.b, mBloomTint.a);
+				cVector3f vSizeWeight;
+				for(int i=0; i<3; ++i)
+				{
+					float fW = cMath::Clamp((mfBloomWidth - (4<<i)) / (4<<i), 0.0f, 1.0f);
+					vSizeWeight.v[i] = fW*fW;
+				}
+				pToneMap->SetVec3f(kVar_avSizeWeight, vSizeWeight);
+			}
+			if(lCombo & 4)
+			{
+				if(mfFilmGrainT == -1)
+				{
+					RandomizeFilmGrain();
+					RandomizeFilmGrain();
+					mfFilmGrainT = 0;
+				}
+				float fT = mfFilmGrainT + mfCurrentFrameTime * 49.0f / kPif;
+				if((int)fT != (int)mfFilmGrainT) RandomizeFilmGrain();
+				mfFilmGrainT = fmodf(fT, 128);
+				float fI = mfFilmGrainIntensity;
+				SetTexture(3, mpFilmGrainNoise);
+				pToneMap->SetFloat(kVar_afT, fmodf(fT, 1));
+				pToneMap->SetFloat(kVar_afIntensity, cMath::Max(-1.0f, 3.51f*fI + (1.13f*fI - 3.51f*fI) * sqrtf(mfToneMapExposure*0.125f + 0.375f)));
+				const float *t0 = mvFilmGrainTransform[0], *t1 = mvFilmGrainTransform[1];
+				pToneMap->SetVec4f(kVar_avTransform0, t0[0], t0[1], t0[2], t0[3]);
+				pToneMap->SetVec4f(kVar_avTransform1, t1[0], t1[1], t1[2], t1[3]);
+				pToneMap->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
+			}
 			if(bFxaa)
 			{
 				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
@@ -1249,6 +1316,123 @@ namespace hpl {
 		SetProgram(NULL);
 
 		END_RENDER_PASS();
+	}
+
+	//-----------------------------------------------------------------------
+
+	// cPostEffect_ToneMapping::RenderBrightPass/RenderBlur: buffers 1/4,1/4,1/8,1/8,1/16,1/16, result in odd ones
+	void cRendererDeferred::RenderBloom()
+	{
+		iTexture *vTex[6];
+		iFrameBuffer *vFB[6];
+		for(int i=0; i<6; ++i)
+		{
+			vFB[i] = mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<(i/2)),ePixelFormat_RGBA16,10+i);
+			vTex[i] = vFB[i]->GetColorBuffer(0)->ToTexture();
+		}
+
+		SetFrameBuffer(vFB[1],false);
+		SetFlatProjection();
+		SetProgram(mpBloomBrightPassProgram);
+		mpBloomBrightPassProgram->SetFloat(kVar_afBrightPass, mfToneMapWhiteCut * 8 * mfBloomBrightPass);
+		mpBloomBrightPassProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
+		SetTexture(0,mpAccumBufferTexture);
+		SetTextureRange(NULL, 1);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+
+		int lN = mlBloomBlurSamples;
+		std::vector<float> vWeights(lN), vOffsets[2] = {std::vector<float>(lN), std::vector<float>(lN)};
+		for(int lLevel=0; lLevel<3; ++lLevel)
+		{
+			if(lLevel>0)
+			{
+				// blur with only the centre tap = plain copy (fixed function doesn't texture here)
+				SetFrameBuffer(vFB[2*lLevel+1],false);
+				SetFlatProjection();
+				SetProgram(mpBloomBlurProgram[0]);
+				vWeights[0] = 1;
+				for(int i=1; i<lN; ++i) vWeights[i] = 0;
+				for(int i=0; i<lN; ++i) vOffsets[0][i] = 0;
+				mpBloomBlurProgram[0]->SetFloatArray(kVar_avWeights, &vWeights[0], lN);
+				mpBloomBlurProgram[0]->SetFloatArray(kVar_avOffsets, &vOffsets[0][0], lN);
+				SetTexture(0,vTex[2*lLevel-1]);
+				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+			}
+
+			float fS = cMath::Min((float)lN*4, mvScreenSizeFloat.x/1280.0f * mfBloomWidth / (float)(4<<lLevel));
+			cVector2f vInvSize = cVector2f(1.0f) / cVector2f((float)vTex[2*lLevel]->GetWidth(), (float)vTex[2*lLevel]->GetHeight());
+			vWeights[0] = 1;
+			vOffsets[0][0] = vOffsets[1][0] = 0;
+			for(int i=1; i<lN; ++i)
+			{
+				float fX = 2.0f*i - 1;
+				float fA = expf(-fX*fX/fS), fB = expf(-(fX+1)*(fX+1)/fS);
+				vWeights[i] = fA + fB;
+				float fOffset = fB/(fA+fB) + fX;
+				vOffsets[0][i] = fOffset * vInvSize.y;
+				vOffsets[1][i] = fOffset * vInvSize.x;
+			}
+
+			for(int lDir=0; lDir<2; ++lDir)
+			{
+				SetFrameBuffer(vFB[2*lLevel + lDir],false);
+				SetFlatProjection();
+				SetProgram(mpBloomBlurProgram[lDir]);
+				mpBloomBlurProgram[lDir]->SetFloatArray(kVar_avWeights, &vWeights[0], lN);
+				mpBloomBlurProgram[lDir]->SetFloatArray(kVar_avOffsets, &vOffsets[lDir][0], lN);
+				SetTexture(0,vTex[2*lLevel + 1 - lDir]);
+				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+			}
+		}
+	}
+
+	iTexture* cRendererDeferred::GetDebugGBufferTexture(int alIdx)
+	{
+		if(alIdx>=20 && alIdx<26) return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<((alIdx-20)/2)),ePixelFormat_RGBA16,alIdx-10)->GetColorBuffer(0)->ToTexture();
+		if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL;
+		if(alIdx==5) return mpBoxWeightTexture;
+		if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6];
+		if(alIdx==9) return mpH3SSAOMipTexture;
+		return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx);
+	}
+
+	iGpuProgram* cRendererDeferred::GetToneMapProgram(int alCombo)
+	{
+		iGpuProgram *&pProg = mpToneMapPrograms[alCombo];
+		if(pProg) return pProg;
+
+		cParserVarContainer programVars;
+		programVars.Add("UseUv");
+		if(alCombo & 1) programVars.Add("UseColorGrading");
+		if(alCombo & 2) programVars.Add("UseBloom");
+		if(alCombo & 4) programVars.Add("UseFilmGrain");
+		if(alCombo & 8) programVars.Add("UseSRGB");
+		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
+		if(pProg==NULL) return NULL;
+		pProg->GetVariableAsId("afKey",kVar_afKey);
+		pProg->GetVariableAsId("afExposure",kVar_afExposure);
+		pProg->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
+		pProg->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
+		pProg->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
+		pProg->GetVariableAsId("avBloomTint",kVar_avBloomTint);
+		pProg->GetVariableAsId("avSizeWeight",kVar_avSizeWeight);
+		pProg->GetVariableAsId("afT",kVar_afT);
+		pProg->GetVariableAsId("afIntensity",kVar_afIntensity);
+		pProg->GetVariableAsId("avTransform0",kVar_avTransform0);
+		pProg->GetVariableAsId("avTransform1",kVar_avTransform1);
+		return pProg;
+	}
+
+	void cRendererDeferred::RandomizeFilmGrain()
+	{
+		float *t0 = mvFilmGrainTransform[0], *t1 = mvFilmGrainTransform[1];
+		float fOldX = t0[0], fOldY = t0[1];
+		for(int i=0; i<4; ++i) t0[i] = t1[i];
+		float fScale = mvScreenSizeFloat.x / (float)mpFilmGrainNoise->GetWidth();
+		t1[2] = (cMath::RandRectf(0,1) >= 0.5f ? 1 : -1) * fScale;
+		t1[3] = (cMath::RandRectf(0,1) >= 0.5f ? 1 : -1) * fScale;
+		t1[0] = fmodf(fOldX + cMath::RandRectf(0.25f,0.75f), 1);
+		t1[1] = fmodf(fOldY + cMath::RandRectf(0.25f,0.75f), 1);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1353,11 +1537,13 @@ namespace hpl {
 		
 		// HPL3: translucents reaching past the focus end are blurred with the solids
 		bool bDof = DepthOfFieldIsActive();
+		if(!(mlDebugSkipPasses & 8)) RenderEnvironmentParticles(true);
 		if(!(mlDebugSkipPasses & 8) && bDof) RenderTranslucent(1);
 
 		RenderDepthOfField();
 
 		if(!(mlDebugSkipPasses & 8)) RenderTranslucent(bDof ? 2 : 0);
+		if(!(mlDebugSkipPasses & 8) && bDof) RenderEnvironmentParticles(false);
 
 		RunCallback(eRendererMessage_PostTranslucent);
 
@@ -3806,6 +3992,54 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
+
+	void cRendererDeferred::RenderEnvironmentParticles(bool abBehindFocus)
+	{
+		if(mpCurrentWorld->GetEnvironmentParticlesActive()==false || mpCurrentWorld->GetEnvironmentParticleNum()==0) return;
+		bool bDof = DepthOfFieldIsActive();
+		if(!bDof && !abBehindFocus) return;
+
+		float fDofParams[4] = {0, 0, abBehindFocus ? 0.0f : 1.0f, abBehindFocus ? 1.0f : -1.0f};
+		if(bDof)
+		{
+			const cMatrixf& mtxProj = mpCurrentFrustum->GetProjectionMatrix();
+			float fEndZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusEnd())).z;
+			float fStartZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusStart())).z;
+			fDofParams[0] = fEndZ;
+			fDofParams[1] = 1.0f / ((fStartZ - fEndZ) * 0.5f / cMath::Max(mpCurrentWorld->GetDepthOfFieldFalloff(), 1e-15f));
+		}
+
+		SetDepthTest(true);
+		SetDepthWrite(false);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetMatrix(NULL);
+		SetBlendMode(eMaterialBlendMode_Alpha);
+		SetCullActive(false);
+		SetNormalFrustumProjection();
+
+		for(int i=0; i<mpCurrentWorld->GetEnvironmentParticleNum(); ++i)
+		{
+			cEnvironmentParticles *pEnv = mpCurrentWorld->GetEnvironmentParticles(i);
+			if(pEnv->IsVisible(mpCurrentFrustum)==false) continue;
+			iGpuProgram *pProg = pEnv->GetProgram(bDof);
+			if(pProg==NULL) continue;
+			SetProgram(pProg);
+			pEnv->SetupProgramBase(pProg, mpCurrentFrustum, fDofParams);
+			SetTexture(0, pEnv->mpTexture);
+			SetVertexBuffer(pEnv->mpVtxBuffer);
+			for(int j=0; j<pEnv->GetIterationNumInt(); ++j)
+			{
+				pEnv->SetupProgramIteration(pProg, j);
+				DrawCurrent();
+			}
+		}
+
+		SetCullActive(true);
+		SetTexture(0, NULL);
+		SetProgram(NULL);
+		SetVertexBuffer(NULL);
+	}
 
 	void cRendererDeferred::RenderTranslucent(int alDofPass)
 	{

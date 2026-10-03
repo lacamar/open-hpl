@@ -65,6 +65,7 @@
 #include "scene/GuiSetEntity.h"
 #include "scene/RopeEntity.h"
 #include "scene/FogArea.h"
+#include "scene/EnvironmentParticles.h"
 #include "scene/RenderableContainer_List.h"
 #include "scene/RenderableContainer_BoxTree.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
@@ -165,9 +166,25 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	cEnvironmentParticles* cWorld::CreateEnvironmentParticles(const tString& asName)
+	{
+		cEnvironmentParticles *pEnv = hplNew(cEnvironmentParticles, (asName, this, mpGraphics, mpResources));
+		mvEnvParticles.push_back(pEnv);
+		return pEnv;
+	}
+
+	cEnvironmentParticles* cWorld::GetEnvironmentParticles(const tString& asName)
+	{
+		for(size_t i=0; i<mvEnvParticles.size(); ++i) if(mvEnvParticles[i]->GetName() == asName) return mvEnvParticles[i];
+		return NULL;
+	}
+
+	//-----------------------------------------------------------------------
+
 	cWorld::~cWorld()
 	{
 		if(mpDirectionalLight) hplDelete(mpDirectionalLight);
+		STLDeleteAll(mvEnvParticles);
 		if(mpSkyBoxVtxBuffer) hplDelete(mpSkyBoxVtxBuffer);
 		if(mpSkyBoxTexture && mbAutoDestroySkybox)
 		{
@@ -253,6 +270,8 @@ namespace hpl {
 		START_TIMING(SoundEntities);
 		UpdateSoundEntities(afTimeStep);
 		STOP_TIMING(SoundEntities);
+
+		for(size_t i=0; i<mvEnvParticles.size(); ++i) mvEnvParticles[i]->Update(afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------

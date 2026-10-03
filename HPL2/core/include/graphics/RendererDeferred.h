@@ -191,6 +191,9 @@ namespace hpl {
 		static cColor GetFogRenderColor(const cColor& aCol, float afBrightness){ return mbHdr ? cColor(aCol.r*aCol.r*afBrightness, aCol.g*aCol.g*afBrightness, aCol.b*aCol.b*afBrightness, aCol.a) : aCol; }
 		static void SetColorGradingTexture(iTexture *apTex){ mpColorGradingTexture = apTex;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
+		static void SetBloom(bool abActive, float afBrightPass, float afWidth, const cColor& aTint){ mbBloom = abActive; mfBloomBrightPass = afBrightPass; mfBloomWidth = afWidth; mBloomTint = aTint;}
+		static void SetFilmGrain(iTexture *apNoise, float afIntensity){ mpFilmGrainNoise = apNoise; mfFilmGrainIntensity = afIntensity;}
+		static void SetToneMapSRGB(bool abX){ mbToneMapSRGB = abX;}
 
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
@@ -198,7 +201,7 @@ namespace hpl {
 		iGpuProgram* GetSkyBoxProgram(){ return mpSkyBoxProgram; }
 
 		iTexture* GetDebugShadowTexture(iLight *apLight){ for(int r=0; r<eShadowMapResolution_LastEnum; ++r) for(size_t i=0; i<mvShadowMapData[r].size(); ++i) if(mvShadowMapData[r][i]->mCache.mpLight == apLight) return mvShadowMapData[r][i]->mpTexture; return NULL; }
-		iTexture* GetDebugGBufferTexture(int alIdx){ if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL; if(alIdx==5) return mpBoxWeightTexture; if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6]; if(alIdx==9) return mpH3SSAOMipTexture; return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx); }
+		iTexture* GetDebugGBufferTexture(int alIdx);
 
 	private:
 		void DrawAccumulationQuad();
@@ -246,6 +249,7 @@ namespace hpl {
 		void RenderFog();
 		iGpuProgram* SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass);
 		void RenderTranslucent(int alDofPass=0);
+		void RenderEnvironmentParticles(bool abBehindFocus);
 		
 		void SetAccumulationBuffer();
 		void SetGBuffer(eGBufferComponents aComponents);
@@ -356,8 +360,17 @@ namespace hpl {
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
+		void RenderBloom();
+		void RandomizeFilmGrain();
+		iGpuProgram* GetToneMapProgram(int alCombo);
+
 		iGpuProgram *mpToneMapProgram;
-		iGpuProgram *mpToneMapGradingProgram;
+		iGpuProgram *mpToneMapPrograms[16];//1=grading, 2=bloom, 4=film grain, 8=sRGB
+		iGpuProgram *mpBloomBrightPassProgram;
+		iGpuProgram *mpBloomBlurProgram[2];//0=vertical, 1=horizontal
+		int mlBloomBlurSamples;
+		float mfFilmGrainT = -1;
+		float mvFilmGrainTransform[2][4];
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
@@ -383,6 +396,13 @@ namespace hpl {
 		static float mfToneMapWhiteCut;
 		static float mfToneMapGamma;
 		static iTexture *mpColorGradingTexture;
+		static bool mbBloom;
+		static float mfBloomBrightPass;
+		static float mfBloomWidth;
+		static cColor mBloomTint;
+		static iTexture *mpFilmGrainNoise;
+		static float mfFilmGrainIntensity;
+		static bool mbToneMapSRGB;
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
 		static bool mbDepthInNormalAlpha;
