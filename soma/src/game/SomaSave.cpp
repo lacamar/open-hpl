@@ -26,9 +26,20 @@ namespace
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
 	bool gbHoldAfterLoad = false;
+	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
 	cDate gLatestSaveDate;
 	const int kMaxAutoSaves = 20; // game.cfg Saving/MaxAutoSaves
+
+	// cLuxSaveHandler::LoadSavedGame_StartGame
+	void RunLoadCallback()
+	{
+		tString sObj, sFunc;
+		sObj.swap(gsLoadCallbackObject);
+		sFunc.swap(gsLoadCallbackFunc);
+		if (sFunc.empty() == false)
+			SomaRunGlobalFunc(sObj, "", sFunc);
+	}
 
 	tWString GetSaveName(const tWString &asPrefix)
 	{
@@ -323,6 +334,25 @@ namespace
 			in.SkipObject();
 	}
 
+	// ponytail: primitives only; [nosave] handles/objects set up in Init keep their value
+	void ResetNoSave(asIScriptObject *apObj)
+	{
+		asIScriptEngine *e = apObj->GetEngine();
+		asIScriptObject *pFresh = (asIScriptObject *)e->CreateScriptObject(apObj->GetObjectType());
+		if (pFresh == NULL)
+			return;
+		const std::set<std::string> &setNoSave = SomaScriptNoSaveNames();
+		for (asUINT i = 0; i < apObj->GetPropertyCount(); ++i)
+		{
+			int lTypeId = apObj->GetPropertyTypeId(i);
+			asITypeInfo *t = e->GetTypeInfoById(lTypeId);
+			bool bEnum = t && (t->GetFlags() & asOBJ_ENUM);
+			if (setNoSave.count(apObj->GetPropertyName(i)) && (lTypeId <= asTYPEID_DOUBLE || bEnum))
+				memcpy(apObj->GetAddressOfProperty(i), pFresh->GetAddressOfProperty(i), bEnum ? 4 : e->GetSizeOfPrimitiveType(lTypeId));
+		}
+		pFresh->Release();
+	}
+
 	tString ScriptableKey(cSomaLuxScriptable *p)
 	{
 		return p->msScriptName + "|" + (p->GetScript() ? p->GetScript()->GetObjectType()->GetName() : "");
@@ -564,6 +594,7 @@ public:
 			o.Pod(b->GetVisibleVar());
 			o.Pod(b->GetColor());
 		}
+		o.Pod(pPlayer ? pPlayer->mfHealth : 1.0f);
 	}
 
 	static void ReadWorld(cIn &in)
@@ -615,6 +646,8 @@ public:
 			cSomaLuxScriptable dummy;
 			cSomaLuxScriptable *p = it != mapOther.end() ? it->second : &dummy;
 			ReadTimers(in, p);
+			if (dynamic_cast<cSomaLuxModule *>(p))
+				ResetNoSave(p->GetScript());
 			ReadScript(in, p->GetScript());
 		}
 
@@ -752,6 +785,9 @@ public:
 			if (pPlayer->GetCamera())
 				pPlayer->GetCamera()->SetPitch(fPitch);
 		}
+		// ponytail: trailing field so pre-health saves still load
+		if (pPlayer && in.p < in.s.size())
+			pPlayer->mfHealth = in.Pod<float>();
 	}
 };
 
@@ -888,6 +924,8 @@ bool cSomaSaveHandler::ApplyPendingState()
 		cSomaLuxPlayer::Get()->SetActive(true);
 	if (gbHoldAfterLoad)
 		SomaSetGamePaused(true);
+	else
+		RunLoadCallback();
 	return true;
 }
 
@@ -905,7 +943,11 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool GetSaveThreadActive()", +[](void *) { return false; });
 	SOMA_METHOD(e, T, "bool HasLoadError(tString&out asError)", +[](void *, tString &) { return false; });
 	SOMA_METHOD(e, T, "void DelayedLoadGameFromFile(const tWString&in asSaveFile, const tString&in asCallbackObject, const tString&in asCallbackFunction, bool abWaitAfterHeader, bool abWaitAfterLoad)",
-				+[](void *, W f, const tString &, const tString &, bool, bool bWait) { gbHoldAfterLoad = Load(f) && bWait; });
+				+[](void *, W f, const tString &o, const tString &fn, bool, bool bWait) {
+					gsLoadCallbackObject = o;
+					gsLoadCallbackFunc = fn;
+					gbHoldAfterLoad = Load(f) && bWait;
+				});
 	SOMA_METHOD(e, T, "void DelayedSaveGameToFile(const tWString&in asSaveFile, bool abSaveAsCheckpoint)", +[](void *, W f, bool) { Save(f); });
 	SOMA_METHOD(e, T, "void DeleteSaveFile(const tWString&in asSaveFile)", +[](void *, W f) { cPlatform::RemoveFile(GetSaveDir() + cString::GetFileNameW(f)); });
 	SOMA_METHOD(e, T, "bool IsDoneLoadingHeader()", +[](void *) { return true; });
@@ -915,6 +957,7 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 		if (gbHoldAfterLoad)
 			SomaSetGamePaused(false);
 		gbHoldAfterLoad = false;
+		RunLoadCallback();
 	});
 	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
 				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {

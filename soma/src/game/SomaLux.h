@@ -59,6 +59,7 @@ public:
 	const tString &GetFileName() const { return msFileName; }
 	tString msDisplayNameEntry;
 	float mfMaxInteractDistance = 3; // cLuxMap::cLuxMap
+	bool mbActive = true;
 
 	static cSomaLuxMap *GetCurrent() { return mpCurrent; }
 	static void SetCurrent(cSomaLuxMap *apMap) { mpCurrent = apMap; }
@@ -102,6 +103,7 @@ public:
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
 void SomaSetGamePaused(bool abX);
+bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc);
 float SomaStartYaw(const cMatrixf &a_mtxArea);
 bool SomaStartPosCrouching(const tString &asName);
 void SomaUpdateLightConnections();

@@ -2,7 +2,9 @@
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
+#include "SomaAgent.h"
 #include "SomaLuxGame.h"
+#include "SomaLuxVoice.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 #include "impl/scriptarray.h"
@@ -594,6 +596,25 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		pGame->BroadcastAnalog(0, cVector3f(v.x, v.y, 0));
 }
 
+// cLuxPlayer::SetHealth / CallPlayerDeadCallback (Rebirth binary)
+void cSomaLuxPlayer::SetHealth(float afX)
+{
+	bool bWasAlive = mfHealth > 0;
+	mfHealth = std::min(afX, mfMaxHealth);
+	if (bWasAlive == false || mfHealth > 0)
+		return;
+	tString sSource;
+	auto args = [&](asIScriptContext *c) {
+		c->SetArgDWord(0, (asDWORD)-1);
+		c->SetArgObject(1, &sSource);
+	};
+	Call("void OnPlayerDead(int, const tString&in)", args);
+	SomaMapScriptCall("void OnPlayerDead(int, const tString&in)", args);
+	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+		for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
+			SomaAgentSendMessage(pEnt, 10);
+}
+
 void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 {
 	typedef cSomaLuxPlayer P;
@@ -623,7 +644,7 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void AddMoveState(const tString&in asName, int alId, const tString&in asScriptFile, const tString&in asScriptClass)",
 				+[](P *p, S n, int id, S f, S c) { p->AddMoveState(n, id, f, c); });
 	SOMA_METHOD(e, T, "void GiveDamage(float afAmount, int alStrength, int aType, float afMinHealth, const tString&in asSource)",
-				+[](P *p, float a, int, int, float fMin, S) { p->mfHealth = std::max(std::min(p->mfHealth, std::max(p->mfHealth - a, fMin)), 0.0f); });
+				+[](P *p, float a, int, int, float fMin, S) { p->SetHealth(std::max(std::min(p->mfHealth, std::max(p->mfHealth - a, fMin)), 0.0f)); });
 	SOMA_METHOD(e, T, "void SetBaseCameraPosAdd(const cVector3f&in avVec)", +[](P *p, V v) { p->mvBaseCameraPosAdd = v; });
 	SOMA_METHOD(e, T, "const cVector3f& GetBaseCameraPosAdd()", +[](P *p) -> const cVector3f & { return p->mvBaseCameraPosAdd; });
 	SOMA_METHOD(e, T, "void SetCameraPosAdd(int alType, const cVector3f&in avVector)", +[](P *p, int t, V v) {
@@ -698,12 +719,12 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, T, "bool IsAutomoveCharBodyActive()", +[](P *p) { return p->mbAutomoveActive; });
 	SOMA_METHOD(e, T, "void StopAutomoveCharBody()", +[](P *p) { p->mbAutomoveActive = false; });
-	SOMA_METHOD(e, T, "void SetHealth(float afX)", +[](P *p, float x) { p->mfHealth = std::min(x, p->mfMaxHealth); });
+	SOMA_METHOD(e, T, "void SetHealth(float afX)", +[](P *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, T, "float GetHealth()", +[](P *p) { return p->mfHealth; });
 	SOMA_METHOD(e, T, "void SetMaxHealth(float afX)", +[](P *p, float x) { p->mfMaxHealth = x; });
 	SOMA_METHOD(e, T, "float GetMaxHealth()", +[](P *p) { return p->mfMaxHealth; });
 	SOMA_METHOD(e, T, "void AddHealth(float afX, float afMinHealth)", +[](P *p, float x, float fMin) {
-		p->mfHealth = std::min(std::max(p->mfHealth + x, fMin), p->mfMaxHealth);
+		p->SetHealth(std::max(p->mfHealth + x, fMin));
 	});
 	SOMA_METHOD(e, T, "bool IsDead()", +[](P *p) { return p->mfHealth <= 0; });
 	SOMA_METHOD(e, T, "bool HasCollideCallbacks()", +[](P *) {

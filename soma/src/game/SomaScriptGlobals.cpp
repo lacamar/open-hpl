@@ -97,7 +97,7 @@ static bool IsClassOrDerived(asITypeInfo *apType, const tString &asClass)
 	return false;
 }
 
-static bool RunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
+bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
 {
 	bool bFound = false;
 	std::vector<cSomaLuxScriptable *> vAll = cSomaLuxScriptable::GetAll();
@@ -127,7 +127,7 @@ static void ShowSecretCode(const char *apKey, tString asX)
 	for (int i = 0; i < 3; ++i)
 		asX[i] ^= apKey[i];
 	gmapArgs[0].s = asX;
-	RunGlobalFunc("DescriptionHandler", "", "_Global_Add");
+	SomaRunGlobalFunc("DescriptionHandler", "", "_Global_Add");
 }
 
 #define SOMA_GLOBAL_TYPE(NAME, ASTYPE, CTYPE, FIELD)                                                                                                         \
@@ -168,7 +168,7 @@ static void ForwardToEntityScript(asIScriptGeneric *g)
 			v.id = *(cSomaID *)g->GetArgObject(i);
 	}
 	gReturn = cSomaVariant();
-	RunGlobalFunc(*(tString *)g->GetArgObject(0), pFunc->mpClass, pFunc->mpFunc);
+	SomaRunGlobalFunc(*(tString *)g->GetArgObject(0), pFunc->mpClass, pFunc->mpFunc);
 	int lRet = g->GetFunction()->GetReturnTypeId();
 	std::string sRet = TypeName(lRet);
 	if (lRet == asTYPEID_VOID)
@@ -204,9 +204,9 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void SlideDoor_SetClosed(const tString& in asName, bool abClosed, bool abInstant = false)", +[](const tString &n, bool c, bool i) {
 		gmapArgs[0].f = c ? 0.0f : 1.0f;
 		gmapArgs[1].b = i;
-		RunGlobalFunc(n, "cScrPropSlideDoor", "_Global_SetOpenAmount");
+		SomaRunGlobalFunc(n, "cScrPropSlideDoor", "_Global_SetOpenAmount");
 	});
-	SOMA_FUNC(e, "bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", (RunGlobalFunc));
+	SOMA_FUNC(e, "bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", (SomaRunGlobalFunc));
 
 	SOMA_GLOBAL_TYPE("String", "const tString &in asVar", const tString &, s)
 	SOMA_GLOBAL_TYPE("Bool", "bool abX", bool, b)

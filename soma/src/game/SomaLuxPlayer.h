@@ -103,6 +103,7 @@ public:
 	std::map<int, cFadeValue> mmapCameraRoll;
 	cFadeValue mFOVMul, mAspectMul, mFOV;
 
+	void SetHealth(float afX);
 	float mfHealth = 1;
 	float mfMaxHealth = 1;
 

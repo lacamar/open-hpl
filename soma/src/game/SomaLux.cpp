@@ -534,7 +534,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesRealPlayer();
 		cSomaLuxGame::Get()->Update(afTimeStep, gpSomaBase->mbScriptGamePaused);
 	}
-	if (cSomaLuxMap::GetCurrent() && gpSomaBase->mbScriptGamePaused == false)
+	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive && gpSomaBase->mbScriptGamePaused == false)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
 }
 
@@ -892,7 +892,11 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "void BroadcastSoundHeardEvent(const tString& in asName, const cVector3f&in avPosition, float afRadius, int alPrio, bool abPhysicsObject=false)",
 				+[](cSomaLuxMap &, const tString &, const cVector3f &p, float r, int prio, bool) { SomaBroadcastSoundHeard(p, r, prio); });
 	SOMA_METHOD(e, M, "cWorld@ GetWorld()", +[](cSomaLuxMap &m) { return m.GetWorld(); });
-	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return &m == cSomaLuxMap::GetCurrent(); });
+	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return m.mbActive; });
+	SOMA_METHOD(e, M, "void SetActive(bool abX)", +[](cSomaLuxMap &m, bool b) {
+		m.mbActive = b;
+		m.GetWorld()->SetActive(b);
+	});
 	SOMA_METHOD(e, M, "iPhysicsWorld@ GetPhysicsWorld()", +[](cSomaLuxMap &m) { return m.GetWorld()->GetPhysicsWorld(); });
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int t, const tString &c) {
