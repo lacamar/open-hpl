@@ -80,9 +80,9 @@ private:
 	void UpdateLookAtCallbacks(float afTimeStep);
 	bool SetupEntityScript(cSomaLuxEntity *apEnt);
 	void AddEntity(cSomaLuxEntity *apEnt);
-	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvDestroyed;
 public:
+	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;
 private:
 	std::vector<cSomaLuxTimer> mvDueTimers;

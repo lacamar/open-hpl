@@ -618,12 +618,14 @@ namespace hpl {
 			int alID = cString::ToInt(pNodeElem->Attribute("ID"),-1);
 
 			cAINode *pNode = GetNodeFromID(alID);
+			if(pNode==NULL) continue;
             
 			TiXmlElement *pEdgeElem = pNodeElem->FirstChildElement("Edge");
 			for(; pEdgeElem != NULL; pEdgeElem = pEdgeElem->NextSiblingElement("Edge"))
 			{
 				tString sNodeName = cString::ToString(pEdgeElem->Attribute("Node"),"");			
 				cAINode *pEdgeNode = GetNodeFromName(sNodeName);
+				if(pEdgeNode==NULL) continue;
 
 				cAINodeEdge Edge;
 				Edge.mpNode = pEdgeNode;

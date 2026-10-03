@@ -1,4 +1,5 @@
 #include "SomaSave.h"
+#include "SomaAgent.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
@@ -6,6 +7,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptBuilder.h"
 #include "SomaSound.h"
+#include "SomaLuxVoice.h"
 
 #include "impl/scriptarray.h"
 
@@ -20,11 +22,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV3", kMagicV2[] = "OHPLSAV2";
+	const char kMagic[] = "OHPLSAV4";
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
+	int glPendingVersion = 4;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -497,6 +500,20 @@ public:
 		}
 		WriteScript(o, pMap->GetScript());
 
+		std::vector<cSomaLuxEntity *> vSpawned;
+		for (cSomaLuxEntity *p : pMap->GetEntities())
+			if (p->mbSpawned)
+				vSpawned.push_back(p);
+		o.Pod((uint32_t)vSpawned.size());
+		for (cSomaLuxEntity *p : vSpawned)
+		{
+			o.Str(p->msName);
+			o.Str(p->msFileName);
+			o.Pod(p->GetMatrix());
+			o.Pod(p->mvScale);
+			o.Pod(p->mID);
+		}
+
 		o.Pod((uint32_t)pMap->GetEntities().size());
 		for (cSomaLuxEntity *p : pMap->GetEntities())
 			WriteEntity(o, p);
@@ -595,6 +612,18 @@ public:
 			o.Pod(b->GetColor());
 		}
 		o.Pod(pPlayer ? pPlayer->mfHealth : 1.0f);
+		std::vector<std::pair<cSomaLuxEntity *, cMatrixf>> vAgents;
+		cMatrixf m;
+		for (cSomaLuxEntity *p : pMap->GetEntities())
+			if (SomaAgentGetMatrix(p, m))
+				vAgents.emplace_back(p, m);
+		o.Pod((uint32_t)vAgents.size());
+		for (auto &a : vAgents)
+		{
+			o.Str(a.first->msName);
+			o.Pod(a.second);
+			o.Pod(SomaAgentGetState(a.first));
+		}
 	}
 
 	static void ReadWorld(cIn &in)
@@ -629,6 +658,22 @@ public:
 			pMap->GetTimers().push_back(t);
 		}
 		ReadScript(in, pMap->GetScript());
+
+		n = glPendingVersion >= 4 ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sName = in.Str(), sFile = in.Str();
+			cMatrixf m = in.Pod<cMatrixf>();
+			cVector3f vScale = in.Pod<cVector3f>();
+			cSomaID id = in.Pod<cSomaID>();
+			cSomaLuxEntity *p = pMap->GetEntity(sName);
+			if (p == NULL || p->mbSpawned == false)
+				p = pMap->CreateEntity(sName, sFile, m, vScale);
+			if (p == NULL)
+				continue;
+			p->mID = id;
+			pMap->mlNextId = std::max(pMap->mlNextId, id.mB + 1);
+		}
 
 		n = in.Pod<uint32_t>();
 		for (uint32_t i = 0; i < n && in.ok; ++i)
@@ -788,6 +833,15 @@ public:
 		// ponytail: trailing field so pre-health saves still load
 		if (pPlayer && in.p < in.s.size())
 			pPlayer->mfHealth = in.Pod<float>();
+		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			cSomaLuxEntity *p = pMap->GetEntity(in.Str());
+			cMatrixf m = in.Pod<cMatrixf>();
+			int lState = in.Pod<int>();
+			if (p && SomaAgentSetMatrix(p, m))
+				SomaAgentChangeState(p, lState);
+		}
 	}
 };
 
@@ -872,8 +926,8 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	cIn in(sData);
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
-	bool bV2 = memcmp(vMagic, kMagicV2, 8) == 0;
-	if (file.is_open() == false || (memcmp(vMagic, kMagic, 8) != 0 && bV2 == false))
+	int lVersion = vMagic[7] - '0';
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 4)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -885,7 +939,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	for (uint32_t i = 0; i < n && in.ok; ++i)
 		setVisited.insert(in.Str());
 	tString sVars = in.Str();
-	bool bExploration = bV2 ? false : in.Pod<bool>();
+	bool bExploration = lVersion == 2 ? false : in.Pod<bool>();
 	if (in.ok == false || sMap.empty())
 		return false;
 
@@ -896,6 +950,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	setVisited.insert(sMap);
 	gpSomaBase->GetVisitedMaps() = setVisited;
 	gsPendingState = sData.substr(in.p);
+	glPendingVersion = lVersion;
 	Log("SOMA save: loading %s (%s)\n", cString::To8Char(sPath).c_str(), sMap.c_str());
 	if (abImmediate == false)
 	{
@@ -922,6 +977,8 @@ bool cSomaSaveHandler::ApplyPendingState()
 		Warning("SOMA save: saved state is truncated\n");
 	if (cSomaLuxPlayer::Get())
 		cSomaLuxPlayer::Get()->SetActive(true);
+	if (cSomaLuxVoiceHandler::Get())
+		cSomaLuxVoiceHandler::Get()->FadeTo(0, 0);
 	if (gbHoldAfterLoad)
 		SomaSetGamePaused(true);
 	else

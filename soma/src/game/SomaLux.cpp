@@ -172,7 +172,10 @@ cSomaLuxEntity *cSomaLuxMap::CreateEntity(const tString &asName, const tString &
 		}
 		mpLatestEntity = pEnt;
 	}
-	return vNew.empty() ? NULL : vNew.back();
+	if (vNew.empty())
+		return NULL;
+	vNew.back()->mbSpawned = true;
+	return vNew.back();
 }
 
 void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)

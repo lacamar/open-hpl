@@ -230,7 +230,7 @@ namespace
 		tString msIdleAnim = "Idle", msWalkAnim = "Walk", msRunAnim = "Run", msBackwardAnim;
 		std::map<int, cAgentSpeedState> mapSpeedStates;
 		int mlEditState = -1, mlSpeedState = -1;
-		bool mbMoving = false, mbSlowDownAtGoal = false;
+		bool mbMoving = false, mbSlowDownAtGoal = false, mb3D = false;
 		cVector3f mvGoal = 0;
 		bool mbTurning = false;
 		float mfTurnGoal = 0;
@@ -339,13 +339,20 @@ namespace
 			float fDist = 0;
 			if (mbMoving)
 			{
-				cVector3f vDelta = mvGoal - mpBody->GetFeetPosition();
+				cVector3f vDelta = mvGoal - mpBody->GetPosition();
+				float fDY = mb3D ? vDelta.y : 0;
 				vDelta.y = 0;
-				fDist = vDelta.Length();
-				if (fDist > 0.05f)
+				float fDistXZ = vDelta.Length();
+				fDist = std::sqrt(fDistXZ * fDistXZ + fDY * fDY);
+				if (fDistXZ > 0.05f)
 				{
 					fGoalYaw = YawTo(vDelta);
 					bRotate = true;
+				}
+				if (mb3D && fDist > 0.05f)
+				{
+					float fPitchDiff = std::atan2(fDY, fDistXZ) - mpBody->GetPitch();
+					mpBody->AddPitch(cMath::Clamp(fPitchDiff, -mfTurnMaxSpeed * afTimeStep, mfTurnMaxSpeed * afTimeStep));
 				}
 			}
 			else if (mbTurning)
@@ -412,7 +419,7 @@ namespace
 	};
 	std::map<std::pair<cWorld *, tString>, cNodeData> gmapContainers;
 
-	cNodeData *GetContainer(cSomaLuxMap *apMap, const tString &asName, const cVector3f &avSize, float afMaxHeight)
+	cNodeData *GetContainer(cSomaLuxMap *apMap, const tString &asName, const cVector3f &avSize, float afMaxHeight, float afMaxEdgeDist = 5, bool abAtCenter = false)
 	{
 		cWorld *pWorld = apMap->GetWorld();
 		auto key = std::make_pair(pWorld, asName);
@@ -438,9 +445,9 @@ namespace
 		cAINodeContainer *pCont = data.mpContainer.get();
 		pCont->SetMinEdges(2);
 		pCont->SetMaxEdges(5);
-		pCont->SetMaxEdgeDistance(5);
+		pCont->SetMaxEdgeDistance(afMaxEdgeDist);
 		pCont->SetMaxHeight(afMaxHeight);
-		pCont->SetNodeIsAtCenter(false);
+		pCont->SetNodeIsAtCenter(abAtCenter);
 		int lNextId = 1 << 30;
 		for (cSomaLuxEntity *pEnt : apMap->GetEntities())
 			if (pEnt->msClassName == "PathNode")
@@ -470,7 +477,8 @@ namespace
 	{
 		tString msContainer;
 		cNodeData *mpNodes = NULL;
-		float mfMaxHeight = 1.0f;
+		float mfMaxHeight = 1.0f, mfMaxEdgeDist = 5;
+		bool mbAtCenter = false;
 		std::vector<cVector3f> mvPath;
 		size_t mlPathIdx = 0;
 		bool mbMoving = false, mbExact = false;
@@ -494,8 +502,9 @@ namespace
 		cNodeData *Nodes()
 		{
 			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-			if (mpNodes == NULL && pMap && msContainer != "")
-				mpNodes = GetContainer(pMap, msContainer, cVector3f(0.6f, 1.5f, 0.6f), mfMaxHeight);
+			if (mpNodes == NULL && pMap)
+				mpNodes = GetContainer(pMap, msContainer != "" ? msContainer : cString::SetFileExt(cString::GetFileName(mpEntity->msFileName), ""),
+									   cVector3f(0.6f, 1.5f, 0.6f), mfMaxHeight, mfMaxEdgeDist, mbAtCenter);
 			return mpNodes;
 		}
 
@@ -572,9 +581,16 @@ namespace
 			}
 			else
 			{
-				SomaAgentSendMessage(mpEntity, eMsg_EndOfPath);
+				SomaAgentSendMessage(mpEntity, eMsg_EndOfPath, 0, 1);
 				if (msEndOfPathCallback != "")
-					mpEntity->Call("void " + msEndOfPathCallback + "()");
+				{
+					tString sFunc = msEndOfPathCallback;
+					msEndOfPathCallback = "";
+					mpEntity->Call("void " + sFunc + "(const tString &in, bool)", [this](asIScriptContext *c) {
+						c->SetArgObject(0, &mpEntity->msName);
+						c->SetArgByte(1, true);
+					});
+				}
 				RunResultCallback(true);
 			}
 		}
@@ -633,7 +649,8 @@ namespace
 			float fHeight = std::fabs(vDelta.y);
 			vDelta.y = 0;
 			float fReach = bLast ? (mbExact ? 0.15f : 0.4f) : 0.6f;
-			if (vDelta.Length() < fReach && fHeight < 2.0f)
+			cAgentCharMover *pMover3D = Mover();
+			if (pMover3D && pMover3D->mb3D ? std::hypot(vDelta.Length(), fHeight) < fReach : vDelta.Length() < fReach && fHeight < 2.0f)
 			{
 				if (bLast)
 				{
@@ -913,7 +930,9 @@ namespace
 	cVector3f cAgentPathfinder::Feet()
 	{
 		cAgent *pAgent = Agent(mpEntity);
-		return pAgent && pAgent->mpBody ? pAgent->mpBody->GetFeetPosition() : mpEntity->GetPosition();
+		if (pAgent == NULL || pAgent->mpBody == NULL)
+			return mpEntity->GetPosition();
+		return mbAtCenter ? pAgent->mpBody->GetPosition() : pAgent->mpBody->GetFeetPosition();
 	}
 
 	cAgent *AgentOrNew(E *apEnt)
@@ -1031,6 +1050,21 @@ bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx)
 	return true;
 }
 
+int SomaAgentGetState(cSomaLuxEntity *apEnt)
+{
+	cAgent *pAgent = Agent(apEnt);
+	cAgentStateMachine *pSM = pAgent ? pAgent->Find<cAgentStateMachine>(eComp_StateMachine) : NULL;
+	return pSM ? pSM->mlCur : -1;
+}
+
+void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState)
+{
+	cAgent *pAgent = Agent(apEnt);
+	cAgentStateMachine *pSM = pAgent ? pAgent->Find<cAgentStateMachine>(eComp_StateMachine) : NULL;
+	if (pSM && alState >= 0)
+		pSM->ChangeState(alState);
+}
+
 void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f &avX, int alX)
 {
 	cAgent *pAgent = Agent(apEnt);
@@ -1051,6 +1085,14 @@ void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f 
 tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap && std::none_of(gmapContainers.begin(), gmapContainers.end(), [&](auto &it) { return it.first.first == pMap->GetWorld(); }))
+	{
+		tWString sBase = cString::GetFileNameW(cString::SetFileExtW(pMap->GetWorld()->GetFilePath(), _W(""))) + _W("_");
+		tWStringList lstFiles;
+		cPlatform::FindFilesInDir(lstFiles, cString::GetFilePathW(pMap->GetWorld()->GetFilePath()), sBase + _W("*.nodes"));
+		for (const tWString &sFile : lstFiles)
+			GetContainer(pMap, cString::To8Char(cString::SetFileExtW(sFile, _W("")).substr(sBase.size())), cVector3f(0.6f, 1.5f, 0.6f), 1.0f);
+	}
 	for (auto &it : gmapContainers)
 	{
 		tAINodeList lst;
@@ -1327,8 +1369,9 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayAcc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayAcc = x; });
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayDeacc = x; });
 	for (const char *pNoop : {"void SetWallAvoidanceActive(bool abX)", "void SetDynamicObjectAvoidanceActive(bool abX)", "void SetBankingActive(bool abX)",
-							  "void SetIdleExtraAnimActive(bool abX)", "void SetUse3DMovement(bool abX)"})
+							  "void SetIdleExtraAnimActive(bool abX)"})
 		SOMA_METHOD(e, T, pNoop, +[](CM *, bool) {});
+	SOMA_METHOD(e, T, "void SetUse3DMovement(bool abX)", +[](CM *m, bool b) { m->mb3D = b; });
 	for (const char *pNoop : {"void SetTurnStoppedToWalkSpeed(float afX)", "void SetTurnWalkToStoppedSpeed(float afX)", "void SetVerticalMoveSpeedExtraAnimMul(float afX)",
 							  "void SetBankingAngleMul(float afX)", "void SetBankingMaxAngle(float afX)", "void SetBankingSpeedMul(float afX)", "void SetBankingMaxSpeed(float afX)"})
 		SOMA_METHOD(e, T, pNoop, +[](CM *, float) {});
@@ -1428,12 +1471,12 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "const tString& GetTrackCallback()", +[](PF *p) -> const tString & { return p->msTrackCallback; });
 	SOMA_METHOD(e, T, "float GetTrackUpdateFreq()", +[](PF *p) { return p->mfTrackFreq; });
 	SOMA_METHOD(e, T, "void SetNodeContainerName(const tString &in asName)", +[](PF *p, S n) { p->msContainer = n; p->mpNodes = NULL; });
-	SOMA_METHOD(e, T, "void SetMaxHeight(float afX)", +[](PF *p, float x) { p->mfMaxHeight = x; });
+	SOMA_METHOD(e, T, "void SetMaxHeight(float afX)", +[](PF *p, float x) { p->mfMaxHeight = x; p->mpNodes = NULL; });
 	SOMA_METHOD(e, T, "void SetNodeName(const tString &in asName)", +[](PF *, S) {});
-	SOMA_METHOD(e, T, "void SetNodeIsAtCenter(bool abX)", +[](PF *, bool) {});
+	SOMA_METHOD(e, T, "void SetNodeIsAtCenter(bool abX)", +[](PF *p, bool b) { p->mbAtCenter = b; p->mpNodes = NULL; });
 	SOMA_METHOD(e, T, "void SetMinEdges(int alX)", +[](PF *, int) {});
 	SOMA_METHOD(e, T, "void SetMaxEdges(int alX)", +[](PF *, int) {});
-	SOMA_METHOD(e, T, "void SetMaxEdgeDistance(float afX)", +[](PF *, float) {});
+	SOMA_METHOD(e, T, "void SetMaxEdgeDistance(float afX)", +[](PF *p, float x) { p->mfMaxEdgeDist = x; p->mpNodes = NULL; });
 
 	T = "cLuxTrackNode";
 	SOMA_METHOD(e, T, "const tString& GetNodeName()", +[](cAgentTrackNode *n) -> const tString & { return n->msNode; });

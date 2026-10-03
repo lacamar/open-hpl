@@ -16,6 +16,8 @@ tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo);
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX);
 bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx);
 bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx);
+int SomaAgentGetState(cSomaLuxEntity *apEnt);
+void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState);
 void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f &avX = 0, int alX = 0);
 void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio);
 void SomaRegisterAgentNatives(asIScriptEngine *apEngine);
