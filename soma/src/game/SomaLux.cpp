@@ -875,6 +875,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });
 	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return true; });
+	SOMA_FUNC(e, "bool cLux_IsPlayGoReady(int&out alETA)", +[](int &l) { l = 0; return true; });
 	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false; });
 	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int) { gsPreloadMap = map; });
 	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S) {});

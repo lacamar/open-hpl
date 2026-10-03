@@ -1194,8 +1194,7 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 		cSomaLuxEntity *pEnt = it->second;
 		if (pEnt->mbActive == false)
 			continue;
-		bool bArea = pEnt->meType == eSomaLuxEntityType_Area;
-		if (bArea && (pEnt->mbInteractionDisabled || pEnt->CanInteract(alType, hit.second) == false))
+		if (hit.second->GetCollide() == false && (pEnt->mbInteractionDisabled || pEnt->CanInteract(alType, hit.second) == false))
 			continue;
 		apEntOut = pEnt;
 		apBodyOut = hit.second;
@@ -2139,6 +2138,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 		return pMap && pMap->GetWorld()->GetPhysicsWorld() ? pMap->GetWorld()->GetPhysicsWorld()->GetBody(n) : NULL;
 	};
+	static auto FindJoint = [](S n) -> iPhysicsJoint * {
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		return pMap && pMap->GetWorld()->GetPhysicsWorld() ? pMap->GetWorld()->GetPhysicsWorld()->GetJoint(n) : NULL;
+	};
+	SOMA_FUNC(e, "void Joint_Break(const tString &in asJointName)", +[](S n) { if (iPhysicsJoint *j = FindJoint(n)) j->Break(); });
+	SOMA_FUNC(e, "bool Joint_IsBroken(const tString &in asJointName)", +[](S n) { iPhysicsJoint *j = FindJoint(n); return j == NULL || j->IsBroken(); });
+	SOMA_FUNC(e, "void Joint_SetBreakable(const tString &in asJointName, bool abBreakable)", +[](S n, bool b) { if (iPhysicsJoint *j = FindJoint(n)) j->SetBreakable(b); });
+	SOMA_FUNC(e, "float Joint_GetForceSize(const tString &in asJointName)", +[](S n) { iPhysicsJoint *j = FindJoint(n); return j ? j->GetForceSize() : 0.0f; });
 	static auto BodyVec = [](iPhysicsBody *b, const cVector3f &v, bool bLocal) { return bLocal ? cMath::MatrixMul(b->GetLocalMatrix().GetRotation(), v) : v; };
 	SOMA_FUNC(e, "void Body_AddForce(const tString &in asBodyName, const cVector3f &in avForce, bool abLocalSpace)",
 			  +[](S n, const cVector3f &v, bool l) { if (iPhysicsBody *b = FindBody(n)) b->AddForce(BodyVec(b, v, l)); });
