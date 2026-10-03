@@ -29,16 +29,26 @@
 
 namespace hpl {
 
-	static bool TryLoadRgtc2DDS(const tWString& asFile, cBitmap** apBitmapOut)
+	static bool TryLoadBlockCompressedDDS(const tWString& asFile, tBitmapLoadFlag aFlags, cBitmap** apBitmapOut)
 	{
 		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
 		if (pFile == NULL) return false;
 
-		unsigned char vHeader[128];
+		unsigned char vHeader[128] = {};
 		bool bOk = fread(vHeader, 1, sizeof(vHeader), pFile) == sizeof(vHeader) && memcmp(vHeader, "DDS ", 4) == 0;
-		bool bIsBC5U = bOk && memcmp(vHeader + 84, "BC5U", 4) == 0;
-		bool bIsATI2 = bOk && memcmp(vHeader + 84, "ATI2", 4) == 0;
-		if (bIsBC5U == false && bIsATI2 == false)
+		const unsigned char* pFourCC = vHeader + 84;
+		unsigned int lCaps2 = 0;
+		memcpy(&lCaps2, vHeader + 112, 4);
+		bool bDxt = (aFlags & eBitmapLoadFlag_ForceNoCompression) == 0 && (lCaps2 & 0x200000) == 0;
+		ePixelFormat format = ePixelFormat_Unknown;
+		int lBlockSize = 16, lBytesPerPixel = 4;
+		if (memcmp(pFourCC, "BC5U", 4) == 0) { format = ePixelFormat_RGTC2_XY; lBytesPerPixel = 1; }
+		else if (memcmp(pFourCC, "ATI2", 4) == 0) { format = ePixelFormat_RGTC2_YX; lBytesPerPixel = 1; }
+		else if (bDxt && memcmp(pFourCC, "DXT1", 4) == 0) { format = ePixelFormat_DXT1; lBlockSize = 8; }
+		else if (bDxt && memcmp(pFourCC, "DXT3", 4) == 0) format = ePixelFormat_DXT3;
+		else if (bDxt && memcmp(pFourCC, "DXT5", 4) == 0) format = ePixelFormat_DXT5;
+		bool bCube = (lCaps2 & 0x200) != 0;
+		if (bOk == false || format == ePixelFormat_Unknown || (bCube && (lCaps2 & 0xFE00) != 0xFE00))
 		{
 			fclose(pFile);
 			return false;
@@ -49,31 +59,34 @@ namespace hpl {
 		memcpy(&lWidth, vHeader + 16, 4);
 		memcpy(&lMipMaps, vHeader + 28, 4);
 		if (lMipMaps == 0) lMipMaps = 1;
+		int lImages = bCube ? 6 : 1;
 
 		cBitmap* pBitmap = hplNew(cBitmap, ());
-		if (lMipMaps > 1) pBitmap->SetUpData(1, (int)lMipMaps);
+		if (lImages > 1 || lMipMaps > 1) pBitmap->SetUpData(lImages, (int)lMipMaps);
 		pBitmap->SetSize(cVector3l((int)lWidth, (int)lHeight, 1));
-		pBitmap->SetBytesPerPixel(1);
+		pBitmap->SetBytesPerPixel(lBytesPerPixel);
 		pBitmap->SetIsCompressed(true);
-		pBitmap->SetPixelFormat(bIsBC5U ? ePixelFormat_RGTC2_XY : ePixelFormat_RGTC2_YX);
+		pBitmap->SetPixelFormat(format);
 
-		unsigned int lW = lWidth, lH = lHeight;
-		for (unsigned int mip = 0; mip < lMipMaps; ++mip)
+		for (int image = 0; image < lImages; ++image)
 		{
-			int lSize = (int)(((lW + 3) / 4) * ((lH + 3) / 4) * 16);
-			cBitmapData* pImage = pBitmap->GetData(0, (int)mip);
-			pImage->mlSize = lSize;
-			pImage->mpData = hplNewArray(unsigned char, lSize);
-			if (fread(pImage->mpData, 1, (size_t)lSize, pFile) != (size_t)lSize)
+			unsigned int lW = lWidth, lH = lHeight;
+			for (unsigned int mip = 0; mip < lMipMaps; ++mip)
 			{
-				fclose(pFile);
-				hplDelete(pBitmap);
-				return false;
+				int lSize = (int)(((lW + 3) / 4) * ((lH + 3) / 4) * lBlockSize);
+				cBitmapData* pImage = pBitmap->GetData(image, (int)mip);
+				pImage->mlSize = lSize;
+				pImage->mpData = hplNewArray(unsigned char, lSize);
+				if (fread(pImage->mpData, 1, (size_t)lSize, pFile) != (size_t)lSize)
+				{
+					fclose(pFile);
+					hplDelete(pBitmap);
+					return false;
+				}
+				lW = lW > 1 ? lW / 2 : 1;
+				lH = lH > 1 ? lH / 2 : 1;
 			}
-			lW = lW > 1 ? lW / 2 : 1;
-			lH = lH > 1 ? lH / 2 : 1;
 		}
-
 		fclose(pFile);
 		*apBitmapOut = pBitmap;
 		return true;
@@ -173,9 +186,9 @@ namespace hpl {
 		Initialize();
 
 		{
-			cBitmap* pRgtc2Bitmap = NULL;
-			if (TryLoadRgtc2DDS(asFile, &pRgtc2Bitmap))
-				return pRgtc2Bitmap;
+			cBitmap* pBlockBitmap = NULL;
+			if (TryLoadBlockCompressedDDS(asFile, aFlags, &pBlockBitmap))
+				return pBlockBitmap;
 		}
 		{
 			cBitmap* pRawAlphaBitmap = NULL;
@@ -253,7 +266,7 @@ namespace hpl {
 				if(lNumOfImages > 1 || lNumOfMipMaps > 1)
 				{
 					ilBindImage(lImageId); // For some reason this is needed....
-					if(lNumOfImages > 1)	ilActiveImage(image);
+					if(lNumOfImages > 1)	lCubeFlags ? ilActiveFace(image) : ilActiveImage(image);
 					if(lNumOfMipMaps > 1)	ilActiveMipmap(mip);
 				}
 
@@ -284,7 +297,7 @@ namespace hpl {
 				if(lNumOfImages > 1 || lNumOfMipMaps > 1)
 				{
 					ilBindImage(lImageId); // For some reason this is needed....
-					if(lNumOfImages > 1)	ilActiveImage(image);
+					if(lNumOfImages > 1)	lCubeFlags ? ilActiveFace(image) : ilActiveImage(image);
 					if(lNumOfMipMaps > 1)	ilActiveMipmap(mip);
 				}
 
