@@ -63,6 +63,19 @@ const char *cSomaLuxEntity::GetBaseTypeName() const
 	}
 }
 
+std::vector<iPhysicsJoint *> &cSomaLuxEntity::Joints()
+{
+	// broken joints are deleted by the physics world, which only unlinks them from their bodies
+	std::erase_if(mvJoints, [&](iPhysicsJoint *j) {
+		for (iPhysicsBody *b : mvBodies)
+			for (int i = 0; i < b->GetJointNum(); ++i)
+				if (b->GetJoint(i) == j)
+					return j->IsBroken();
+		return true;
+	});
+	return mvJoints;
+}
+
 void cSomaLuxEntity::SetStaticPhysics(bool abX)
 {
 	if (abX == mbStaticPhysics)
@@ -93,6 +106,12 @@ void cSomaLuxEntity::SetActive(bool abX)
 	if (mbActive == abX)
 		return;
 	mbActive = abX;
+	if (abX == false && mbCameraInLiquid)
+	{
+		mbCameraInLiquid = false;
+		if (--glSomaUnderwaterUsers <= 0)
+			gbSomaUnderwaterEffects = false;
+	}
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
@@ -192,10 +211,11 @@ void SomaUpdateLightConnections()
 	}
 }
 
-static void SetLookAtCallback(cSomaLuxEntity *p, const tString &f, bool r, bool ray, float d, float t)
+static void SetLookAtCallback(cSomaLuxEntity *p, const tString &f, bool r, bool c, bool ray, float d, float t)
 {
 	p->msLookAtCallback = f;
 	p->mbLookAtCallbackAutoRemove = r;
+	p->mbLookAtCheckCenter = c;
 	p->mbLookAtCheckRay = ray;
 	p->mfLookAtMaxDistance = d;
 	p->mfLookAtDelay = t;
@@ -296,6 +316,8 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 	}
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentSetMatrix(this, a_mtx))
 		return;
+	if (mpMesh && mpMesh->IsStatic() && mpMesh->GetWorld() && GetMatrix() != a_mtx)
+		mpMesh->GetWorld()->MakeMeshEntityDynamic(mpMesh);
 	if (iPhysicsBody *pBody = GetMainBody())
 	{
 		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
@@ -396,8 +418,8 @@ void cSomaLuxEntity::MoveLinearTo(const cVector3f &avGoal, float afAcc, float af
 	msMoveCallback = asCallback;
 }
 
-void cSomaLuxEntity::MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotWorld,
-								   const cVector3f &avPivotLocal, const tString &asCallback)
+void cSomaLuxEntity::MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal,
+								   const tString &asCallback)
 {
 	mlRotateMode = 1;
 	m_mtxRotateGoal = a_mtxGoal.GetRotation();
@@ -406,11 +428,11 @@ void cSomaLuxEntity::MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float
 	mfRotateSlowdown = afSlowdownDist;
 	if (abResetSpeed)
 		mfRotateSpeed = 0;
-	mvPivotLocal = avPivotLocal + cMath::MatrixMul3x3(cMath::MatrixInverse(GetMatrix().GetRotation()), avPivotWorld);
+	mvPivotLocal = avPivotLocal;
 	msRotateCallback = asCallback;
 }
 
-void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal)
+void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal)
 {
 	mlRotateMode = 2;
 	mfRotateAcc = afAcc;
@@ -418,7 +440,7 @@ void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector
 	mvRotateAxis = avAxis;
 	if (abResetSpeed)
 		mfRotateSpeed = 0;
-	mvPivotLocal = avPivotLocal + cMath::MatrixMul3x3(cMath::MatrixInverse(GetMatrix().GetRotation()), avPivotWorld);
+	mvPivotLocal = avPivotLocal;
 }
 
 void cSomaLuxEntity::StopMove()
@@ -518,6 +540,7 @@ void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 	{
 		msLookAtCallback = v.GetVarString("PlayerLookAtCallback", "");
 		mbLookAtCallbackAutoRemove = v.GetVarBool("PlayerLookAtCallbackAutoRemove", false);
+		mbLookAtCheckCenter = v.GetVarBool("PlayerLookAtCheckCenterOfScreen", true);
 		mbLookAtCheckRay = v.GetVarBool("PlayerLookAtCheckRayIntersection", true);
 		mfLookAtMaxDistance = v.GetVarFloat("PlayerLookAtMaxDistance", -1);
 		mfLookAtDelay = v.GetVarFloat("PlayerLookAtCallbackDelay", 0);
@@ -920,8 +943,8 @@ void cSomaLuxEntity::DoBreak()
 		float fImpulse = mVars.GetVarFloat("BreakImpulse", 3);
 		if (mVars.GetVarBool("BreakDestroyJoints", false))
 		{
-			for (iPhysicsJoint *pJoint : mvJoints)
-				if (pJoint) pJoint->Break();
+			for (iPhysicsJoint *pJoint : Joints())
+				pJoint->Break();
 			mvJoints.clear();
 		}
 		else if (mVars.GetVarString("BreakEntity", "") != "")
@@ -1094,6 +1117,21 @@ void SomaClearObjectIDs()
 	gmapIDToObject.clear();
 }
 
+// Saved script vars hold body tIDs: same map, same ids
+void SomaRegisterBodyIDs(const std::vector<cSomaLuxEntity *> &avEnts)
+{
+	int32_t l = 0;
+	for (cSomaLuxEntity *p : avEnts)
+		for (iPhysicsBody *b : p->mvBodies)
+		{
+			cSomaID id;
+			id.mA = 0xfe;
+			id.mB = --l;
+			gmapObjectToID[b] = id;
+			gmapIDToObject[id.mB] = cObjectEntry{b, "iPhysicsBody", 0};
+		}
+}
+
 cSomaID SomaObjectID(void *apObj, const tString &asType)
 {
 	if (apObj == NULL)
@@ -1260,6 +1298,56 @@ static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut)
 		avOut.push_back(AABBToOBB(apEnt->mpMesh->GetBoundingVolume()->GetMin(), apEnt->mpMesh->GetBoundingVolume()->GetMax()));
 }
 
+static bool PointInOBB(const cSomaOBB &b, const cVector3f &avPos)
+{
+	cVector3f d = avPos - b.mvCenter;
+	for (int i = 0; i < 3; ++i)
+		if (std::fabs(cMath::Vector3Dot(d, b.mvAxis[i])) > b.mvHalf.v[i])
+			return false;
+	return true;
+}
+
+float SomaLiquidHeightAt(const cVector3f &avPos)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap)
+		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+		{
+			if (pEnt->meType != eSomaLuxEntityType_LiquidArea || pEnt->mbActive == false)
+				continue;
+			std::vector<cSomaOBB> v;
+			EntityBoxes(pEnt, v);
+			if (PointInOBB(v[0], avPos))
+				return v[0].mvCenter.y + v[0].mvHalf.y;
+		}
+	return -10000.0f;
+}
+
+void cSomaLuxEntity::UpdateLiquid()
+{
+	cCamera *pCam = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCamera() : NULL;
+	std::vector<cSomaOBB> v;
+	EntityBoxes(this, v);
+	// ponytail: camera point, not cLuxPlayer::GetCameraCollideShape vs the area shape
+	bool bInside = pCam && PointInOBB(v[0], pCam->GetPosition());
+	if (bInside == mbCameraInLiquid)
+		return;
+	mbCameraInLiquid = bInside;
+	if (bInside)
+	{
+		gbSomaUnderwaterEffects = true;
+		++glSomaUnderwaterUsers;
+	}
+	else if (--glSomaUnderwaterUsers <= 0)
+		gbSomaUnderwaterEffects = false;
+	tString sCallback = mInstanceVars.GetVarString("CameraCollideCallback", "");
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	int lState = bInside ? 1 : -1;
+	if (sCallback != "" && pMap && pMap->GetScript())
+		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + sCallback + "(int)", [&](asIScriptContext *c) { c->SetArgDWord(0, (asDWORD)lState); });
+	Call(bInside ? "void OnCameraEnter()" : "void OnCameraExit()");
+}
+
 static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 {
 	cVector3f vT = b.mvCenter - a.mvCenter;
@@ -1307,6 +1395,28 @@ bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
 		if (abRayCast == false || SomaLineOfSight(pCam->GetPosition(), box.mvCenter, apEnt))
 			return true;
 	}
+	return false;
+}
+
+// iLuxAIBase::CheckLineOfSight: two clear rays out of 12 offsets across the entity's box
+bool SomaEntityInPlayerLOS(cSomaLuxEntity *apEnt, bool abCheckFOV)
+{
+	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+	if (pPlayer == NULL || apEnt == NULL || apEnt->mbActive == false || pPlayer->mfHealth <= 0)
+		return false;
+	if (abCheckFOV && SomaEntityIsOnScreen(apEnt, false) == false)
+		return false;
+	cBoundingVolume *pBV = apEnt->mpMesh ? apEnt->mpMesh->GetBoundingVolume() : NULL;
+	cVector3f vFrom = pPlayer->GetCamera()->GetPosition();
+	cVector3f vTo = pBV ? pBV->GetWorldCenter() : apEnt->GetPosition(), vSize = pBV ? pBV->GetSize() : cVector3f(0.5f);
+	cVector3f vRight = cMath::Vector3Cross(cMath::Vector3Normalize(vTo - vFrom), cVector3f(0, 1, 0));
+	// ponytail: fixed offsets, the official table is filled at runtime
+	static const float vOff[12][2] = {{0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-0.7f, -0.7f}, {0.7f, -0.7f}, {-0.7f, 0.7f}, {0.7f, 0.7f}, {-0.4f, 0.3f}, {0.4f, -0.3f}, {0, 0.5f}};
+	int lClear = 0;
+	for (const float *o : vOff)
+		if (SomaLineOfSight(vFrom + (vRight * o[0] + cVector3f(0, o[1], 0)) * 0.05f, vTo + vRight * (o[0] * vSize.x * 0.4f) + cVector3f(0, o[1] * vSize.y * 0.4f, 0), apEnt) &&
+			++lClear == 2)
+			return true;
 	return false;
 }
 
@@ -1363,41 +1473,45 @@ void cSomaLuxEntity::UpdateCheckCollision(float afTimeStep)
 	CallWithFloat("void OnEndCheckCollision(float)", afTimeStep);
 }
 
+static bool RayHitsOBB(const cSomaOBB &b, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afT)
+{
+	cVector3f vRel = avStart - b.mvCenter;
+	float tMin = 0, tMax = afMaxDist;
+	for (int i = 0; i < 3; ++i)
+	{
+		float o = cMath::Vector3Dot(vRel, b.mvAxis[i]);
+		float d = cMath::Vector3Dot(avDir, b.mvAxis[i]);
+		if (std::fabs(d) < 1e-6f)
+		{
+			if (std::fabs(o) > b.mvHalf.v[i])
+				return false;
+			continue;
+		}
+		float t1 = (-b.mvHalf.v[i] - o) / d, t2 = (b.mvHalf.v[i] - o) / d;
+		if (t1 > t2)
+			std::swap(t1, t2);
+		tMin = std::max(tMin, t1);
+		tMax = std::min(tMax, t2);
+		if (tMin > tMax)
+			return false;
+	}
+	afT = tMin;
+	return true;
+}
+
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut)
 {
 	std::vector<cSomaOBB> vBoxes;
 	EntityBoxes(apEnt, vBoxes);
 	bool bHit = false;
 	afDistOut = afMaxDist;
+	float t;
 	for (const cSomaOBB &b : vBoxes)
-	{
-		cVector3f vRel = avStart - b.mvCenter;
-		float tMin = 0, tMax = afMaxDist;
-		bool bOk = true;
-		for (int i = 0; i < 3 && bOk; ++i)
+		if (RayHitsOBB(b, avStart, avDir, afMaxDist, t) && t < afDistOut)
 		{
-			float o = cMath::Vector3Dot(vRel, b.mvAxis[i]);
-			float d = cMath::Vector3Dot(avDir, b.mvAxis[i]);
-			if (std::fabs(d) < 1e-6f)
-			{
-				if (std::fabs(o) > b.mvHalf.v[i])
-					bOk = false;
-				continue;
-			}
-			float t1 = (-b.mvHalf.v[i] - o) / d, t2 = (b.mvHalf.v[i] - o) / d;
-			if (t1 > t2)
-				std::swap(t1, t2);
-			tMin = std::max(tMin, t1);
-			tMax = std::min(tMax, t2);
-			if (tMin > tMax)
-				bOk = false;
-		}
-		if (bOk && tMin < afDistOut)
-		{
-			afDistOut = tMin;
+			afDistOut = t;
 			bHit = true;
 		}
-	}
 	return bHit;
 }
 
@@ -1427,6 +1541,33 @@ bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxE
 	cVector3f vEnd = avEnd - (avEnd - avStart) * (0.05f / std::max((avEnd - avStart).Length(), 0.05f));
 	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, vEnd, false, false, false);
 	return ray.mbBlocked == false;
+}
+
+// iLuxEntity::UpdatePlayerLookAt: per body, in frustum, within distance, optionally under the crosshair,
+// then line of sight to the near side of its bounding sphere and four points around it
+bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam)
+{
+	std::vector<cSomaOBB> vBoxes;
+	EntityBoxes(apEnt, vBoxes);
+	cVector3f vCam = apCam->GetPosition();
+	float fMax = apEnt->mfLookAtMaxDistance > 0 ? apEnt->mfLookAtMaxDistance : 1000.0f, t;
+	for (const cSomaOBB &b : vBoxes)
+	{
+		float fR = b.mvHalf.Length(), fDist = cMath::Vector3Dist(b.mvCenter, vCam);
+		cBoundingVolume bv;
+		bv.SetLocalMinMax(b.mvCenter - fR, b.mvCenter + fR);
+		if (apCam->GetFrustum()->CollideBoundingVolume(&bv) == eCollision_Outside || fDist > fMax)
+			continue;
+		if (apEnt->mbLookAtCheckCenter && RayHitsOBB(b, vCam, apCam->GetForward(), fMax, t) == false)
+			continue;
+		if (apEnt->mbLookAtCheckRay == false || fR * fR + 0.05f > fDist * fDist)
+			return true;
+		cVector3f vNear = b.mvCenter - (b.mvCenter - vCam) * (fR / fDist), vUp = apCam->GetUp() * (fR * 0.5f), vRight = apCam->GetRight() * (fR * 0.5f);
+		for (const cVector3f &p : {vNear, vNear + vUp, vNear - vUp, vNear + vRight, vNear - vRight})
+			if (SomaLineOfSight(vCam, p, apEnt))
+				return true;
+	}
+	return false;
 }
 
 bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax)
@@ -1546,9 +1687,9 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "const tString& GetParentName()", +[](E *p) -> const tString & { return p->msParentName; });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOnTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOnTime", 1); });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsOffTime()", +[](E *p) { return p->mVars.GetVarFloat("EffectsOffTime", 1); });
-	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->mvJoints.size(); });
+	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->Joints().size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
-		return i >= 0 && i < (int)p->mvJoints.size() ? p->mvJoints[i] : (iPhysicsJoint *)NULL; });
+		return i >= 0 && i < (int)p->Joints().size() ? p->Joints()[i] : (iPhysicsJoint *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); });
 	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); });
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
@@ -1648,7 +1789,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetPlayerInteractCallback(const tString &in asCallbackFunc, bool abRemoveWhenInteracted)",
 					+[](E *p, S f, bool r) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "void SetPlayerLookAtCallback(const tString &in asCallbackFunc, bool abRemoveWhenLookedAt, bool abCheckCenterOfScreen, bool abCheckRayIntersection, float afMaxDistance, float afCallbackDelay)",
-					+[](E *p, S f, bool r, bool, bool ray, float d, float t) { SetLookAtCallback(p, f, r, ray, d, t); });
+					+[](E *p, S f, bool r, bool c, bool ray, float d, float t) { SetLookAtCallback(p, f, r, c, ray, d, t); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerInteractCallback()", +[](E *p) { return p->msInteractCallback != ""; });
 	SOMA_METHOD_NEW(e, T, "void ChangeConnectionState(int alState)", +[](E *p, int l) { p->ChangeConnectionState(l); });
 	SOMA_METHOD_NEW(e, T, "void SetConnectionStateChangeCallback(const tString &in asCallbackFunc)", +[](E *p, S f) { p->msConnectionCallback = f; });
@@ -1658,6 +1799,11 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					+[](E *p, S n) { std::erase_if(p->mvConnections, [&](const E::cConnection &c) { return c.msName == n; }); });
 	SOMA_METHOD_NEW(e, T, "void RemoveAllConnections()", +[](E *p) { p->mvConnections.clear(); });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerLookAtCallback()", +[](E *p) { return p->msLookAtCallback != ""; });
+	SOMA_METHOD_NEW(e, T, "void SetForceLookAtCheck(bool abX)", +[](E *p, bool b) { p->mbForceLookAtCheck = b; });
+	SOMA_METHOD_NEW(e, T, "void SetLookAtCheckCenterOfScreen(bool abX)", +[](E *p, bool b) { p->mbLookAtCheckCenter = b; });
+	SOMA_METHOD_NEW(e, T, "void SetLookAtCheckRayIntersection(bool abX)", +[](E *p, bool b) { p->mbLookAtCheckRay = b; });
+	SOMA_METHOD_NEW(e, T, "void SetLookAtMaxDistance(float afX)", +[](E *p, float f) { p->mfLookAtMaxDistance = f; });
+	SOMA_METHOD_NEW(e, T, "bool IsLookedAtByPlayer()", +[](E *p) { return p->mbLookedAt; });
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ PlaySound(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
 					+[](E *p, S n, S file, bool remove, bool attach) -> cSoundEntity * {
 						cSomaLuxMap *pMap = p->mpMap ? p->mpMap : cSomaLuxMap::GetCurrent();
@@ -1785,6 +1931,30 @@ bool cSomaLuxEntity::GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut)
 	return false;
 }
 
+// ponytail: unparented node refreshed once per frame, so a frame behind the bone
+cNode3D *cSomaLuxEntity::GetSocketNode(int alIdx)
+{
+	if (alIdx < 0 || alIdx >= (int)mvSockets.size())
+		return NULL;
+	cSocket &sock = mvSockets[alIdx];
+	if (sock.mpNode == NULL)
+	{
+		sock.mpNode = new cNode3D(sock.msName, false);
+		UpdateSocketNodes();
+	}
+	return sock.mpNode;
+}
+
+void cSomaLuxEntity::UpdateSocketNodes()
+{
+	for (cSocket &sock : mvSockets)
+	{
+		cMatrixf mtx;
+		if (sock.mpNode && GetSocketMatrix(sock.msName, mtx))
+			sock.mpNode->SetMatrix(mtx);
+	}
+}
+
 bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
 {
 	cSomaLuxEntity *pParent = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(mpAttachment->msParent) : NULL;
@@ -1852,6 +2022,7 @@ void cSomaLuxEntity::UpdateAttachment()
 		return;
 	}
 	cAttachment *a = mpAttachment;
+	cMatrixf mtxOld = GetMatrix();
 	if (a->mbUseRotation)
 	{
 		if (mtxParent == a->m_mtxParentPrev)
@@ -1873,12 +2044,16 @@ void cSomaLuxEntity::UpdateAttachment()
 	a->m_mtxParentPrev = mtxParent;
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->Enable();
+	cMatrixf mtxAdd = cMath::MatrixMul(GetMatrix(), cMath::MatrixInverse(mtxOld));
+	Call("void OnAttachmentUpdate(const cMatrixf&in a_mtxTransformAdd)", [&](asIScriptContext *c) { c->SetArgObject(0, &mtxAdd); });
 }
 
 cSomaLuxEntity::~cSomaLuxEntity()
 {
 	ForgetLightConnections(this);
 	delete mpAttachment;
+	for (cSocket &sock : mvSockets)
+		delete sock.mpNode;
 	cSomaGuiScreenRenderer::Get()->Forget(this);
 	SomaForgetCritter(this);
 	SomaDestroyAgent(this);
@@ -1891,6 +2066,23 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 	SomaSetIndirectProps("cLuxCritter", (int)offsetof(cSomaLuxEntity, mpCritterProps));
 #pragma GCC diagnostic pop
+	static auto Owner = [](cMeshEntity *m) -> cSomaLuxEntity * {
+		if (cSomaLuxMap::GetCurrent())
+			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
+				if (p->mpMesh == m)
+					return p;
+		return NULL;
+	};
+	SOMA_METHOD(e, "cMeshEntity", "int GetSocketNum()", +[](cMeshEntity *m) { cSomaLuxEntity *p = Owner(m); return p ? (int)p->mvSockets.size() : 0; });
+	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocketFromIndex(int alIdx)", +[](cMeshEntity *m, int i) { cSomaLuxEntity *p = Owner(m); return p ? p->GetSocketNode(i) : (cNode3D *)NULL; });
+	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocket(const tString&in asName)", +[](cMeshEntity *m, const tString &s) -> cNode3D * {
+		cSomaLuxEntity *p = Owner(m);
+		for (int i = 0; p && i < (int)p->mvSockets.size(); ++i)
+			if (p->mvSockets[i].msName == s)
+				return p->GetSocketNode(i);
+		return NULL;
+	});
+
 	const char *vTypes[] = {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"};
 	for (const char *pType : vTypes)
 		if (e->GetTypeInfoByName(pType))
@@ -1911,13 +2103,17 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					});
 		SOMA_METHOD(e, pType, "void MoveAngularTo(const cMatrixf&in a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset, const tString&in asCallback=\"\")",
 					+[](cSomaLuxEntity *p, const cMatrixf &m, float a, float s, float d, bool r, bool o, const cVector3f &w, const cVector3f &l, const tString &cb) {
-						p->MoveAngularTo(m, a, s, d, r, o ? w : cVector3f(0), o ? l : cVector3f(0), cb);
+						p->MoveAngularTo(m, a, s, d, r, o ? l : cVector3f(0), cb);
 					});
 		SOMA_METHOD(e, pType, "void RotateAtSpeed( float afAcc, float afGoalSpeed, const cVector3f&in avAxis, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset)",
 					+[](cSomaLuxEntity *p, float a, float s, const cVector3f &ax, bool r, bool o, const cVector3f &w, const cVector3f &l) {
-						p->RotateAtSpeed(a, s, ax, r, o ? w : cVector3f(0), o ? l : cVector3f(0));
+						p->RotateAtSpeed(a, s, ax, r, o ? l : cVector3f(0));
 					});
 	}
+	SOMA_METHOD(e, "cLuxLiquidArea", "void MoveLinearTo(const cVector3f&in avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
+				+[](cSomaLuxEntity *p, const cVector3f &g, float a, float m, float d, bool r, const tString &cb) { p->MoveLinearTo(g, a, m, d, r, cb); });
+	SOMA_METHOD(e, "cLuxLiquidArea", "void StopMove()", +[](cSomaLuxEntity *p) { p->StopMove(); });
+	SOMA_METHOD(e, "cLuxLiquidArea", "iPhysicsBody@ GetAreaBody()", +[](cSomaLuxEntity *p) { return p->GetMainBody(); });
 	for (const char *pType : vTypes)
 		if (e->GetTypeInfoByName(pType))
 			SOMA_METHOD(e, pType, "void GiveDamage(float afAmount, int alStrength, const tString&in asType, const tString&in asSource)",
@@ -1940,6 +2136,23 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					return false;
 				return c->msName == "Player" ? p->CollidesWithPlayer() : SomaEntitiesCollide(p, c);
 			});
+			SOMA_METHOD(e, pType, "bool CheckShapeCollision(iCollideShape @apShape, const cMatrixf &in a_mtxTransform, cLuxMap @apMap)",
+						+[](cSomaLuxEntity *p, iCollideShape *s, const cMatrixf &m, void *) {
+							if (s == NULL || p->mbActive == false)
+								return false;
+							cBoundingVolume &bv = s->GetBoundingVolume();
+							cSomaOBB box;
+							box.mvCenter = cMath::MatrixMul(m, cMath::MatrixMul(s->GetOffset(), (bv.GetLocalMin() + bv.GetLocalMax()) * 0.5f));
+							box.mvHalf = (bv.GetLocalMax() - bv.GetLocalMin()) * 0.5f;
+							for (int i = 0; i < 3; ++i)
+								box.mvAxis[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
+							std::vector<cSomaOBB> v;
+							EntityBoxes(p, v);
+							for (const cSomaOBB &a : v)
+								if (OBBOverlap(a, box))
+									return true;
+							return false;
+						});
 		}
 	SOMA_FUNC(e, "void Entity_SetEffectBaseColor(const tString &in asEntityName,const cColor&in aColor)",
 			  +[](const tString &n, const cColor &c) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mfEffectColorTime = 0; p->SetEffectBaseColor(c); }); });
@@ -2007,6 +2220,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		return pEnt != NULL;
 	});
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
+	SOMA_FUNC(e, "void Entity_SetCollideCharacter(const tString &in asEntityName, bool abActive)",
+			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { for (iPhysicsBody *pBody : p->mvBodies) pBody->SetCollideCharacter(b); }); });
 	SOMA_FUNC(e, "bool Entity_IsActive(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbActive; });
 	SOMA_FUNC(e, "void Entity_SetInteractionDisabled(const tString &in asEntityName, bool abX)",
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbInteractionDisabled = b; }); });
@@ -2173,7 +2388,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_SetPlayerInteractCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenInteracted)",
 			  +[](S n, S f, bool r) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; }); });
 	SOMA_FUNC(e, "void Entity_SetPlayerLookAtCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenLookedAt = true, bool abCheckCenterOfScreen = true, bool abCheckRayIntersection = true, float afMaxDistance = -1, float afCallbackDelay = 0)",
-			  +[](S n, S f, bool r, bool, bool ray, float d, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { SetLookAtCallback(p, f, r, ray, d, t); }); });
+			  +[](S n, S f, bool r, bool c, bool ray, float d, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { SetLookAtCallback(p, f, r, c, ray, d, t); }); });
 	SOMA_FUNC(e, "bool Entity_AddCollideCallback(const tString &in asParentName, const tString &in asChildName, const tString &in asFunction)", +[](S par, S child, S f) {
 		bool bAny = false;
 		ForMatching(par, [&](cSomaLuxEntity *p) { p->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{child, f}); bAny = true; });
@@ -2191,6 +2406,10 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  +[](S n, S v, int x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = cString::ToString(x); }); });
 	SOMA_FUNC(e, "void Entity_SetVarFloat(const tString&in asEntityName, const tString&in asVarName, float afX)",
 			  +[](S n, S v, float x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = cString::ToString(x); }); });
+	SOMA_FUNC(e, "void Entity_IncVarInt(const tString&in asEntityName, const tString&in asVarName, int alX)",
+			  +[](S n, S v, int x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = cString::ToString(cString::ToInt(VarGet(p, v).c_str(), 0) + x); }); });
+	SOMA_FUNC(e, "void Entity_IncVarFloat(const tString&in asEntityName, const tString&in asVarName, float afX)",
+			  +[](S n, S v, float x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = cString::ToString(cString::ToFloat(VarGet(p, v).c_str(), 0) + x); }); });
 	SOMA_FUNC(e, "tString Entity_GetVarString(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? VarGet(p, v) : tString(); });
 	SOMA_FUNC(e, "bool Entity_GetVarBool(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p && cString::ToBool(VarGet(p, v).c_str(), false); });
 	SOMA_FUNC(e, "int Entity_GetVarInt(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToInt(VarGet(p, v).c_str(), 0) : 0; });
@@ -2253,17 +2472,17 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  if (pTarget == NULL)
 					  return;
 				  cMatrixf mtxGoal = pTarget->GetMatrix();
-				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveAngularTo(mtxGoal, a, m, d, r, 0, 0, cb); });
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveAngularTo(mtxGoal, a, m, d, r, 0, cb); });
 			  });
 	SOMA_FUNC(e, "void Prop_RotateToSpeed(const tString &in asPropName, float afAcc, float afGoalSpeed, const cVector3f &in avAxis, bool abResetSpeed, const tString &in asOffsetEntity)",
 			  +[](S n, float a, float s, const cVector3f &ax, bool r, S off) {
 				  cSomaLuxEntity *pOff = off != "" ? Find(off) : NULL;
-				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, ax, r, pOff ? pOff->GetPosition() - p->GetPosition() : cVector3f(0), 0); });
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, ax, r, pOff ? cMath::MatrixMul(cMath::MatrixInverse(p->GetMatrix()), pOff->GetPosition()) : cVector3f(0)); });
 			  });
 	SOMA_FUNC(e, "void Prop_RotateToSpeed(const tString &in asPropName, float afAcc, float afGoalSpeed, bool abResetSpeed, const tString &in asOffsetEntity)",
 			  +[](S n, float a, float s, bool r, S off) {
 				  cSomaLuxEntity *pOff = off != "" ? Find(off) : NULL;
-				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, p->mvRotateAxis.SqrLength() > 0 ? p->mvRotateAxis : cVector3f(0, 1, 0), r, pOff ? pOff->GetPosition() - p->GetPosition() : cVector3f(0), 0); });
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, p->mvRotateAxis.SqrLength() > 0 ? p->mvRotateAxis : cVector3f(0, 1, 0), r, pOff ? cMath::MatrixMul(cMath::MatrixInverse(p->GetMatrix()), pOff->GetPosition()) : cVector3f(0)); });
 			  });
 	SOMA_FUNC(e, "void Entity_PlaceAtEntity(const tString &in asEntityName, const tString &in asTargetEntity, const cVector3f &in avOffset = cVector3f_Zero, bool abAlignRotation = false, bool abUseEntFileCenter=false)",
 			  +[](S n, S t, const cVector3f &off, bool bAlign, bool) {
@@ -2282,17 +2501,19 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		return pA && pB ? pB->GetPosition() - pA->GetPosition() : cVector3f(0);
 	});
 	SOMA_FUNC(e, "void Entity_AddImpulse(const tString &in asEntityName, const cVector3f &in avImpulse, bool abLocalSpace, bool abOnlyMainBody)",
-			  +[](S n, const cVector3f &v, bool, bool bMain) {
+			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  cVector3f w = bLocal ? cMath::MatrixMul(p->GetMatrix().GetRotation(), v) : v;
 					  for (size_t i = 0; i < p->mvBodies.size() && (!bMain || i == 0); ++i)
-						  p->mvBodies[i]->AddImpulse(v);
+						  p->mvBodies[i]->AddImpulse(w);
 				  });
 			  });
 	SOMA_FUNC(e, "void Entity_AddForce(const tString &in asEntityName, const cVector3f &in avForce, bool abLocalSpace, bool abOnlyMainBody)",
-			  +[](S n, const cVector3f &v, bool, bool bMain) {
+			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  cVector3f w = bLocal ? cMath::MatrixMul(p->GetMatrix().GetRotation(), v) : v;
 					  for (size_t i = 0; i < p->mvBodies.size() && (!bMain || i == 0); ++i)
-						  p->mvBodies[i]->AddForce(v);
+						  p->mvBodies[i]->AddForce(w);
 				  });
 			  });
 }

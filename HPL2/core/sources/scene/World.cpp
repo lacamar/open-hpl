@@ -488,12 +488,12 @@ namespace hpl {
 
 		//////////////////////////////
 		// Add submeshes to renderable container
+		pMeshEntity->SetStatic(abStatic);
 		for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i) 
 		{
 			cSubMeshEntity *pSubEntity = pMeshEntity->GetSubMeshEntity(i);
 			if(pSubEntity->GetSubMesh()->IsCollideShape()) continue; //Collide shapes are never rendered!
             
-			pSubEntity->SetStatic(abStatic);
 			AddRenderableToContainer(pSubEntity);
 		}
 		
@@ -517,6 +517,24 @@ namespace hpl {
 			STLFindAndDelete(mlstStaticMeshEntities,apMesh);
 		else
 			STLFindAndDelete(mlstDynamicMeshEntities,apMesh);
+	}
+
+	//-----------------------------------------------------------------------
+
+	// The compiled static tree never updates object positions
+	void cWorld::MakeMeshEntityDynamic(cMeshEntity* apMesh)
+	{
+		if(apMesh->IsStatic()==false) return;
+		for(int i=0; i<apMesh->GetSubMeshEntityNum(); ++i)
+			RemoveRenderableFromContainer(apMesh->GetSubMeshEntity(i));
+		STLFindAndRemove(mlstStaticMeshEntities, apMesh);
+		mlstDynamicMeshEntities.push_back(apMesh);
+		apMesh->SetStatic(false);
+		for(int i=0; i<apMesh->GetSubMeshEntityNum(); ++i)
+		{
+			cSubMeshEntity *pSubEntity = apMesh->GetSubMeshEntity(i);
+			if(pSubEntity->GetSubMesh()->IsCollideShape()==false) AddRenderableToContainer(pSubEntity);
+		}
 	}
 
 	//-----------------------------------------------------------------------

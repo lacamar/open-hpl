@@ -98,8 +98,7 @@ void cSomaImGui::ClearStates()
 {
 	mmapStates.clear();
 	mmapFades.clear();
-	mmapTimers.clear();
-	mvTimersOver.clear();
+	mvTimers.clear();
 	mbFirstRun = true;
 }
 
@@ -138,15 +137,13 @@ void cSomaImGui::Begin(float afTimeStep)
 		else
 			st.mCol = cColor(v[0], v[1], v[2], v[3]), st.mbSetCol = true;
 	}
-	for (uint64_t id : mvTimersOver)
-		mmapTimers.erase(id);
-	mvTimersOver.clear();
-	for (auto &it : mmapTimers)
-		it.second -= afTimeStep;
+	for (cTimer &t : mvTimers)
+		t.mfTime -= afTimeStep, t.mbTouched = false;
 }
 
 void cSomaImGui::End()
 {
+	std::erase_if(mvTimers, [](const cTimer &t) { return t.mfTime <= 0 || (t.mbRepeat && !t.mbTouched); });
 	UpdateUIMovement();
 	mbFirstRun = false;
 	for (int i = 0; i < 10; ++i)
@@ -960,6 +957,15 @@ typedef cSomaImGui I;
 
 static const void *P(D d) { return &d; }
 
+static void DrawLine(I *p, V2 a, V2 b, float z, float t, const cColor &c, const void *g)
+{
+	cVector2f d = b - a;
+	float fLen = d.Length(), fAngle = p->mMods.mfRotateAngle;
+	p->mMods.mfRotateAngle += atan2f(d.y, d.x);
+	p->DrawGfx(g, cVector3f((a.x + b.x - fLen) * 0.5f, (a.y + b.y - t) * 0.5f, z), cVector2f(fLen, t), c);
+	p->mMods.mfRotateAngle = fAngle;
+}
+
 // cLuxInputHandler glyph layouts and cLuxScreenTextIcon (HPL3 FetchKeyboardInputLayout, ParseStringIntoScreenText, Icon::Draw)
 namespace
 {
@@ -1458,33 +1464,25 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 					return a + (b - a) * SomaEasing(ease, ph <= 1 ? ph : 2 - ph);
 				});
 
+	// Duplicates append; lookups see the oldest, expired entries drop in End()
 	SOMA_METHOD(e, T, "void AddTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) {
-		p->mmapTimers[Id(n)] = t;
-		p->mvTimersOver.erase(std::remove(p->mvTimersOver.begin(), p->mvTimersOver.end(), Id(n)), p->mvTimersOver.end());
+		p->mvTimers.push_back({Id(n), t, false, true});
 	});
 	SOMA_METHOD(e, T, "bool RepeatTimer(const tString&in asName, float afTime)", +[](I *p, Str n, float t) {
-		auto it = p->mmapTimers.find(Id(n));
-		if (it == p->mmapTimers.end())
-		{
-			p->mmapTimers[Id(n)] = t;
-			return false;
-		}
-		if (it->second <= 0)
-		{
-			it->second += t;
-			return true;
-		}
-		return false;
+		cTimer *pT = p->FindTimer(Id(n));
+		if (pT && pT->mfTime > 0)
+			return pT->mbTouched = true, false;
+		p->mvTimers.push_back({Id(n), t, true, true});
+		return pT != nullptr;
 	});
-	SOMA_METHOD(e, T, "void StopTimer(const tString&in asName)", +[](I *p, Str n) { p->mmapTimers.erase(Id(n)); });
+	SOMA_METHOD(e, T, "void StopTimer(const tString&in asName)", +[](I *p, Str n) {
+		std::erase_if(p->mvTimers, [&](const cTimer &t) { return t.mlId == Id(n); });
+	});
 	SOMA_METHOD(e, T, "bool TimerOver(const tString&in asName)", +[](I *p, Str n) {
-		auto it = p->mmapTimers.find(Id(n));
-		if (it == p->mmapTimers.end() || it->second > 0)
-			return false;
-		p->mvTimersOver.push_back(it->first);
-		return true;
+		cTimer *pT = p->FindTimer(Id(n));
+		return pT && pT->mfTime <= 0;
 	});
-	SOMA_METHOD(e, T, "bool TimerExists(const tString&in asName)", +[](I *p, Str n) { return p->mmapTimers.count(Id(n)) > 0; });
+	SOMA_METHOD(e, T, "bool TimerExists(const tString&in asName)", +[](I *p, Str n) { return p->FindTimer(Id(n)) != nullptr; });
 
 	SOMA_METHOD(e, T, "void SetModColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mColorMul = c; });
 	SOMA_METHOD(e, T, "void SetModTextColorMul(const cColor&in aCol)", +[](I *p, const cColor &c) { p->mMods.mTextColorMul = c; });
@@ -1659,12 +1657,13 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void DrawGfx(const cImGuiGfx &in aGfx, const cVector3f&in avPos, const cVector2f&in avSize=-1, const cColor&in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) { p->DrawGfx(P(g), pos, size, c); });
 	SOMA_METHOD(e, T, "void DrawLine(const cVector2f&in avStart, const cVector2f&in avEnd,float afZ, float afThickness=1.0f, const cColor&in aCol=cColor(1,1), const cImGuiGfx &in aGfx=cImGuiGfx())",
-				+[](I *p, V2 a, V2 b, float z, float t, const cColor &c, D g) {
-					cVector2f d = b - a;
-					float fLen = d.Length(), fAngle = p->mMods.mfRotateAngle;
-					p->mMods.mfRotateAngle += atan2f(d.y, d.x);
-					p->DrawGfx(P(g), cVector3f((a.x + b.x - fLen) * 0.5f, (a.y + b.y - t) * 0.5f, z), cVector2f(fLen, t), c);
-					p->mMods.mfRotateAngle = fAngle;
+				+[](I *p, V2 a, V2 b, float z, float t, const cColor &c, D g) { DrawLine(p, a, b, z, t, c, P(g)); });
+	SOMA_METHOD(e, T, "void AddLineStripVertex(const cVector2f &in avVertex)", +[](I *p, V2 v) { p->mvLineStrip.push_back(v); });
+	SOMA_METHOD(e, T, "void DrawAndClearLineStrip(float afZ, float afThickness, const cColor &in aCol=cColor_White, const cImGuiGfx &in aGfx=cImGuiGfx())",
+				+[](I *p, float z, float t, const cColor &c, D g) {
+					for (size_t i = 1; i < p->mvLineStrip.size(); ++i)
+						DrawLine(p, p->mvLineStrip[i - 1], p->mvLineStrip[i], z, t, c, P(g));
+					p->mvLineStrip.clear();
 				});
 	SOMA_METHOD(e, T, "void DrawAlignedGfx(const cImGuiGfx &in aGfx, const cVector3f &in avPos, eImGuiAlign aAlignment, const cVector2f&in avSize=-1, const cColor &in aCol=cColor(1,1), const cColor&in aColTopLeft=cColor(1,1), const cColor&in aColTopRight=cColor(1,1), const cColor&in aColBotRight=cColor(1,1), const cColor&in aColBotLeft=cColor(1,1))",
 				+[](I *p, D g, V3 pos, int align, V2 size, const cColor &c, const cColor &, const cColor &, const cColor &, const cColor &) {

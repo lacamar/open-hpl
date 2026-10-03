@@ -68,6 +68,9 @@ namespace hpl {
         
 		/////////////////////////////
 		// Motor
+		void SetPhysicsActive(bool abX){ mbPhysicsActive = abX; }
+		bool GetPhysicsActive(){ return mbPhysicsActive; }
+
         void SetMotorActive(bool abX);
 		bool GetMotorActive(){ return mbMotorActive; }
 
@@ -125,6 +128,7 @@ namespace hpl {
 
 		void SetSegmentLength(float afX);
 		float GetSegmentLength(){ return mfSegmentLength;}
+		float GetFirstSegmentLength(){ return mfFirstSegmentLength;}
 
 		void SetMaxIterations(int alX){ mlMaxIterations = alX;}
 		int GetMaxIterations(){ return mlMaxIterations;}
@@ -140,6 +144,8 @@ namespace hpl {
 
 		/////////////////////////////
 		// Debug
+		void UpdateConstraints();
+
 		void RenderDebug(iLowLevelGraphics *apLowLevel);
 
 	protected:
@@ -154,7 +160,6 @@ namespace hpl {
 		
 		void UpdateAttachedParticlePositions(float afTimeStep);
 		void UpdateAttachedBodies(float afTimeStep);
-		void UpdateConstraints(float afTimeStep);
 		void CalculateSmoothPositions(float afTimeStep);
 		
 		void BuildRopeParticles();
@@ -171,6 +176,7 @@ namespace hpl {
 
 		int mlUniqueID;
 
+		bool mbPhysicsActive = true;
 		bool mbMotorActive;
 		float mfMotorWantedLength;
 		float mfMotorSpeedMul;

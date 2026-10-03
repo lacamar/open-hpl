@@ -119,7 +119,8 @@ namespace hpl {
 
 	void cVerletParticle::UpdateMovement(float afTimeStep)
 	{
-		cVector3f vAcc = mfInvMass == 0 ? 0 : mpContainer->mvGravityForce;
+		cVector3f vAcc = mfInvMass == 0 ? 0 : mvForce*mfInvMass + mpContainer->mvGravityForce;
+		mvForce = 0;
 
 		cVector3f vTemp = mvPosition;
 		mvPosition += (mvPosition*mpContainer->mfDampingMul - mvPrevPosition*mpContainer->mfDampingMul) + vAcc * afTimeStep*afTimeStep;
@@ -271,15 +272,39 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength)
+	cVerletParticle* iVerletParticleContainer::GetParticle(int alIdx)
+	{
+		// ponytail: O(n) list walk, vector storage if ropes get long
+		if(alIdx<0 || alIdx>=(int)mlstParticles.size()) return NULL;
+		return *std::next(mlstParticles.begin(), alIdx);
+	}
+
+	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
 	{
 		cVector3f vDelta =  apP2->mvPosition - apP1->mvPosition;
 		float fDist = vDelta.Length();
 
-		float fDiff = (fDist- afLength)/(fDist*(apP1->mfInvMass + apP2->mfInvMass));
+		float fDiff = afStiffness*(fDist- afLength)/(fDist*cMath::Max(0.0001f, apP1->mfInvMass + apP2->mfInvMass));
 
 		apP1->mvPosition += vDelta * fDiff * apP1->mfInvMass;
 		apP2->mvPosition -= vDelta * fDiff * apP2->mfInvMass;
+	}
+
+	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afMinLength, float afMaxLength, float afStiffness)
+	{
+		float fDist = cMath::Vector3Dist(apP1->mvPosition, apP2->mvPosition);
+		if(fDist < afMinLength)		UpdateLengthConstraint(apP1, apP2, afMinLength, afStiffness);
+		else if(fDist > afMaxLength)	UpdateLengthConstraint(apP1, apP2, afMaxLength, afStiffness);
+	}
+
+	void iVerletParticleContainer::UpdateLengthConstraintStretch(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
+	{
+		cVector3f vDelta = apP1->mvPosition - apP2->mvPosition;
+		float fDist = vDelta.Length();
+
+		float fDiff = (fDist- afLength)/(fDist*cMath::Max(0.0001f, apP2->mfInvMass));
+
+		apP2->mvPosition += vDelta * fDiff * apP2->mfInvMass * afStiffness;
 	}
 
 	//-----------------------------------------------------------------------

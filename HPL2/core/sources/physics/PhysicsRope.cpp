@@ -120,20 +120,21 @@ namespace hpl {
 	{
 		mbHasUpdated = true;
 		
-		PreUpdate(afTimeStep);
-		if(mbSleeping)
+		if(mbPhysicsActive)
 		{
-			return;
+			PreUpdate(afTimeStep);
+			if(mbSleeping) return;
 		}
 
 		UpdateMotorAndAutoMove(afTimeStep);
-		UpdateMovement(afTimeStep);
+		if(mbPhysicsActive) UpdateMovement(afTimeStep);
 
 		UpdateAttachedParticlePositions(afTimeStep);
 
-		for(int i=0; i<mlMaxIterations; ++i)
+		if(mbPhysicsActive)
 		{
-			UpdateConstraints(afTimeStep);
+			for(int i=0; i<mlMaxIterations; ++i)
+				UpdateConstraints();
 		}
 
 		UpdateAttachedBodies(afTimeStep);
@@ -496,7 +497,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iPhysicsRope::UpdateConstraints(float afTimeStep)
+	void iPhysicsRope::UpdateConstraints()
 	{
 		cVerletParticle *pPrevPart = NULL;
 		tVerletParticleListIt it = mlstParticles.begin();
@@ -515,8 +516,7 @@ namespace hpl {
 			pPrevPart = pPart;
 		}
 
-		//Skip collision testing for now!
-		return;
+		if(mbCollide==false) return;
 		it = mlstParticles.begin();
 		for(int lCount = 0; it != mlstParticles.end(); ++it, ++lCount)
 		{	

@@ -294,19 +294,22 @@ namespace hpl {
 	{
 		cMeshEntity *pEnt = NULL;
 		bool bStatic = false;
-		for(int lPass=0; lPass<2 && pEnt==NULL; ++lPass)
+		int lMatches = 0;
+		for(int lPass=0; lPass<2; ++lPass)
 		{
 			cMeshEntityIterator it = lPass==0 ? apWorld->GetStaticMeshEntityIterator() : apWorld->GetDynamicMeshEntityIterator();
 			while(it.HasNext())
 			{
 				cMeshEntity *pTest = it.Next();
-				if(pTest->GetName() == asName) { pEnt = pTest; bStatic = lPass==0; break; }
+				if(pTest->GetName() != asName) continue;
+				if(lMatches++ == 0) { pEnt = pTest; bStatic = lPass==0; }
 			}
 		}
 		if(pEnt == NULL) return "";
 
 		tString sOut = "{\"name\":\"" + JsonEscape(pEnt->GetName()) + "\"";
 		sOut += ",\"static\":" + tString(bStatic ? "true" : "false");
+		sOut += ",\"matches\":" + cString::ToString(lMatches);
 		sOut += ",\"visible\":" + tString(pEnt->IsVisible() ? "true" : "false");
 		sOut += ",\"active\":" + tString(pEnt->IsActive() ? "true" : "false");
 		sOut += ",\"position\":" + Vec3(pEnt->GetWorldPosition());

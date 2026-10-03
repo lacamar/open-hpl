@@ -6,13 +6,20 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <regex>
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
 static std::set<std::string> gsetNoSave;
 
-const std::set<std::string> &SomaScriptNoSaveNames() { return gsetNoSave; }
+bool SomaScriptIsNoSave(asITypeInfo *apType, const char *asProp)
+{
+	for (; apType; apType = apType->GetBaseType())
+		if (gsetNoSave.count(std::string(apType->GetName()) + "::" + asProp))
+			return true;
+	return false;
+}
 
 // Constructs AngelScript 2.28 accepted but 2.38 rejects, as {file suffix, from, to}.
 static const char *gvCompatPatches[][3] = {
@@ -148,12 +155,18 @@ bool cSomaScriptBuilder::AddFile(std::vector<std::pair<std::string, std::string>
 	// Blank out #include lines (keeping line numbers) and add each include as its own section.
 	std::vector<std::string> vIncludes;
 	size_t lPos = 0;
+	std::string sClass;
 	while (lPos < sCode.size())
 	{
 		size_t lEnd = sCode.find('\n', lPos);
 		if (lEnd == std::string::npos)
 			lEnd = sCode.size();
 		size_t lFirst = sCode.find_first_not_of(" \t", lPos);
+		static const std::regex reClass("^\\s*(?:shared\\s+|abstract\\s+|mixin\\s+)*class\\s+(\\w+)");
+		std::smatch m;
+		std::string sLine = sCode.substr(lPos, lEnd - lPos);
+		if (sLine.find("class") != std::string::npos && std::regex_search(sLine, m, reClass))
+			sClass = m[1];
 		// Save-system metadata on declarations ([nosave], [volatile]): recorded, then blanked out.
 		while (lFirst < lEnd && sCode[lFirst] == '[')
 		{
@@ -167,7 +180,7 @@ bool cSomaScriptBuilder::AddFile(std::vector<std::pair<std::string, std::string>
 				size_t lNameEnd = sCode.find_last_not_of(" \t\r\n", lDeclEnd - 1);
 				size_t lNameStart = sCode.find_last_of(" \t\r\n&@", lNameEnd);
 				if (lNameEnd != std::string::npos && lNameStart != std::string::npos && lNameStart < lNameEnd)
-					gsetNoSave.insert(sCode.substr(lNameStart + 1, lNameEnd - lNameStart));
+					gsetNoSave.insert(sClass + "::" + sCode.substr(lNameStart + 1, lNameEnd - lNameStart));
 			}
 			for (size_t i = lFirst; i <= lClose; ++i)
 				sCode[i] = ' ';

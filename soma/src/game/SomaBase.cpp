@@ -107,7 +107,10 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 	aResp.Set("active", pEnt->mbActive);
 	aResp.Set("interaction_disabled", pEnt->mbInteractionDisabled);
 	aResp.Set("interact_callback", pEnt->msInteractCallback);
-	aResp.Set("collide_callbacks", (int)pEnt->mvCollideCallbacks.size());
+	tString sCallbacks;
+	for (auto &c : pEnt->mvCollideCallbacks)
+		sCallbacks += c.msChild + ":" + c.msFunc + " ";
+	aResp.Set("collide_callbacks", sCallbacks);
 	cVector3f v = pEnt->GetPosition();
 	aResp.Set("x", v.x);
 	aResp.Set("y", v.y);
@@ -264,19 +267,29 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 		return;
 	}
 	iPhysicsWorld *pWorld = pMap->GetWorld()->GetPhysicsWorld();
+	std::vector<iPhysicsBody *> vBodies = pEnt->mvBodies;
+	iCharacterBody *pChar = pEnt->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	if (pChar)
+		vBodies = {pChar->GetCurrentBody()};
 	tString sOut;
-	for (iPhysicsBody *pBody : pEnt->mvBodies)
+	for (iPhysicsBody *pBody : vBodies)
 	{
+		cMatrixf mtx = pBody->GetLocalMatrix();
+		if (pChar && aReq.HasKey("x"))
+			mtx.SetTranslation(cVector3f(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0) + pChar->GetSize().y / 2, aReq.GetFloat("z", 0)));
+		cBoundingVolume bv = *pBody->GetBoundingVolume();
+		bv.SetPosition(mtx.GetTranslation());
 		cPhysicsBodyIterator it = pWorld->GetBodyIterator();
 		while (it.HasNext())
 		{
 			iPhysicsBody *pOther = it.Next();
-			if (pOther == pBody || pOther->GetCollide() == false || cMath::CheckBVIntersection(*pBody->GetBoundingVolume(), *pOther->GetBoundingVolume()) == false)
+			if (pOther == pBody || (pChar ? pOther->GetCollideCharacter() : pOther->GetCollide()) == false || cMath::CheckBVIntersection(bv, *pOther->GetBoundingVolume()) == false)
 				continue;
 			cCollideData data;
 			data.SetMaxSize(4);
-			if (pWorld->CheckShapeCollision(pBody->GetShape(), pBody->GetLocalMatrix(), pOther->GetShape(), pOther->GetLocalMatrix(), data, 4, true))
-				sOut += pBody->GetName() + " x " + pOther->GetName() + " depth " + cString::ToString(data.mvContactPoints[0].mfDepth) + "\n";
+			if (pWorld->CheckShapeCollision(pBody->GetShape(), mtx, pOther->GetShape(), pOther->GetLocalMatrix(), data, 4, true))
+				sOut += pBody->GetName() + " x " + pOther->GetName() + (pOther->IsActive() ? "" : " (inactive)") + " depth " +
+						cString::ToString(data.mvContactPoints[0].mfDepth) + "\n";
 		}
 	}
 	aResp.Set("contacts", sOut);
@@ -364,7 +377,7 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 	iPhysicsBody *pSkip = NULL;
 	if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
 		pSkip = cSomaLuxPlayer::Get()->GetCharacterBody()->GetCurrentBody();
-	const float kCell = 0.4f, kStep = 0.45f;
+	const float kCell = 0.4f, kStep = 0.45f, kDrop = 1.5f;
 	struct cFloor : iPhysicsRayCallback
 	{
 		float mfDist = 1e9f;
@@ -377,14 +390,16 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 	};
 	auto floorAt = [&](float x, float y, float z, float &afY) {
 		cFloor ray;
-		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - 1.2f, z), true, false, false);
+		// rays exactly on a terrain patch edge miss both heightfields
+		x += 0.01f, z += 0.01f;
+		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - kDrop - 0.1f, z), true, false, false);
 		afY = y + kStep + 0.15f - ray.mfDist;
 		return ray.mfDist < 1e8f;
 	};
-	iCollideShape *pStand = pPhys->CreateBoxShape(cVector3f(0.5f, 1.45f, 0.5f), NULL);
+	iCollideShape *pStand = pPhys->CreateBoxShape(cVector3f(0.5f, 1.55f, 0.5f), NULL);
 	iCollideShape *pCrouch = pPhys->CreateBoxShape(cVector3f(0.5f, 0.7f, 0.5f), NULL);
 	auto clear = [&](iCollideShape *apShape, float x, float y, float z) {
-		float fMid = apShape == pStand ? 1.175f : 0.8f;
+		float fMid = apShape == pStand ? 1.225f : 0.8f;
 		return pPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(x, y + fMid, z)), pSkip, false, true, NULL, false) == false;
 	};
 	struct cNode { cVector3f p; int ix, iz; float g; int parent; bool crouch; };
@@ -425,7 +440,7 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 				cVector3f n((ix + dx) * kCell, v.y, (iz + dz) * kCell);
 				float fMidY;
 				if (floorAt((n.x + v.x) * 0.5f, v.y, (n.z + v.z) * 0.5f, fMidY) == false || floorAt(n.x, fMidY, n.z, fY) == false) continue;
-				if (std::abs(fMidY - v.y) > kStep || std::abs(fY - fMidY) > kStep) continue;
+				if (fMidY - v.y > kStep || fY - fMidY > kStep || v.y - fY > kDrop) continue;
 				n.y = fY;
 				auto k = key(ix + dx, iz + dz, n.y);
 				if (mapSeen.count(k))
@@ -538,20 +553,24 @@ static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRe
 {
 	tString sName = aReq.GetString("name", "");
 	std::string sOut;
+	std::vector<std::pair<tString, asIScriptObject *>> vObjs;
+	if (cSomaLuxMap::GetCurrent())
+		vObjs.emplace_back("Map", cSomaLuxMap::GetCurrent()->GetScript());
 	for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
+		vObjs.emplace_back(p->msScriptName, p->GetScript());
+	for (auto &[sObjName, pObj] : vObjs)
 	{
-		asIScriptObject *pObj = p->GetScript();
 		if (pObj == NULL)
 			continue;
 		tString sClass = pObj->GetObjectType()->GetName();
 		if (sName.empty())
 		{
-			sOut += p->msScriptName + " " + sClass + "\n";
+			sOut += sObjName + " " + sClass + "\n";
 			continue;
 		}
-		if (p->msScriptName != sName && sClass != sName)
+		if (sObjName != sName && sClass != sName)
 			continue;
-		sOut += "[" + p->msScriptName + " " + sClass + "]\n";
+		sOut += "[" + sObjName + " " + sClass + "]\n";
 		for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)
 			sOut += tString(pObj->GetPropertyName(i)) + "=" +
 					ScriptValueString(pObj->GetEngine(), pObj->GetPropertyTypeId(i), pObj->GetAddressOfProperty(i)) + "\n";
@@ -1348,9 +1367,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
-			cSomaSaveHandler::ApplyPendingState();
+			bool bLoaded = cSomaSaveHandler::ApplyPendingState();
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
-			mpLuxMap->OnEnter(bFirstTime);
+			mpLuxMap->OnEnter(bLoaded == false, bFirstTime);
 		}
 		mpScriptRuntime->LogStubReport(40);
 	}

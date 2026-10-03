@@ -119,6 +119,10 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 		c.mfCharVolume = p->GetAttributeFloat("Volume", 1);
 		tString sType = p->GetAttributeString("EntryType", "GUIWorld");
 		c.mlEntryType = sType == "World" ? 1 : sType == "WorldClean" ? 2 : sType == "GUI" ? 4 : 8;
+		c.msSource = p->GetAttributeString("EntitySource", "");
+		c.mfMinDist = p->GetAttributeFloat("MinDist", 0);
+		c.mfMaxDist = p->GetAttributeFloat("MaxDist", 0);
+		c.mbWorldSpace = p->GetAttributeBool("WorldSpace", false);
 	}
 	std::map<int, tString> mapScenes;
 	for (cXmlElement *p : Children(pDoc->GetFirstElement("Scenes"), "Scene"))
@@ -136,10 +140,18 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 		{
 			cLine line = mapChars[pLine->GetAttributeInt("CharacterId", -1)];
 			line.msCallback = pLine->GetAttributeString("Callback", "");
+			if (pLine->GetAttributeBool("ChangeSource", false))
+			{
+				line.msSource = pLine->GetAttributeString("EntitySource", "");
+				line.mfMinDist = pLine->GetAttributeFloat("MinDist", 0);
+				line.mfMaxDist = pLine->GetAttributeFloat("MaxDist", 0);
+				line.mbWorldSpace = line.mbChangeSource = true;
+			}
 			for (cXmlElement *pSound : Children(pLine, "Sound"))
 			{
 				cSound sound;
 				sound.msText = pSound->GetAttributeString("Text", "");
+				sound.msFile = pSound->GetAttributeString("FileName", "");
 				sound.mfVoiceOffset = pSound->GetAttributeFloat("VoiceOffset", 0);
 				sound.mfEndPadding = pSound->GetAttributeFloat("EndPadding", 0);
 				sound.mfVolume = pSound->GetAttributeFloat("Volume", 1);
@@ -174,6 +186,9 @@ void cSomaLuxVoiceHandler::Reset()
 
 tString cSomaLuxVoiceHandler::SoundKey(cSubject *apSubject, size_t alLine, size_t alSound)
 {
+	const tString &sFile = apSubject->mvLines[alLine].mvSounds[alSound].msFile;
+	if (sFile != "")
+		return sFile;
 	char vNum[32];
 	snprintf(vNum, sizeof(vNum), "_%03d_", (int)alLine + 1);
 	tString sKey = apSubject->msScene + "_" + apSubject->msName + vNum + apSubject->mvLines[alLine].msCharacter;
@@ -221,17 +236,18 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	aP.mpEntry = NULL;
 	aP.msSourceEntity = "";
 	float fVolume = sound.mfVolume * line.mfCharVolume * mmapSceneVolumes[pSubject->msScene].mfVolume;
+	cSource src = {line.msSource, line.mfMinDist, line.mfMaxDist, line.mbWorldSpace && line.msSource != ""};
 	auto itSource = mmapSources.find(line.msCharacter);
-	cSomaLuxEntity *pSource = itSource != mmapSources.end() && itSource->second.mbUse3D && cSomaLuxMap::GetCurrent()
-								  ? cSomaLuxMap::GetCurrent()->GetEntity(itSource->second.msEntity)
-								  : NULL;
+	if (itSource != mmapSources.end() && !line.mbChangeSource)
+		src = itSource->second;
+	cSomaLuxEntity *pSource = src.mbUse3D && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(src.msEntity) : NULL;
 	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) == _W(""))
 		;
 	else if (pSource)
 	{
-		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), itSource->second.mfMinDist,
-																	  itSource->second.mfMaxDist, (eSoundEntryType)line.mlEntryType, false, 0, true);
-		aP.msSourceEntity = itSource->second.msEntity;
+		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), src.mfMinDist, src.mfMaxDist,
+																	  (eSoundEntryType)line.mlEntryType, false, 0, true);
+		aP.msSourceEntity = src.msEntity;
 	}
 	else
 		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume, cVector3f(0, 0, 1), (eSoundEntryType)line.mlEntryType);

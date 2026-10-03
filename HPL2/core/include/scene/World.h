@@ -309,6 +309,7 @@ namespace hpl {
 		
 		cMeshEntity* CreateMeshEntity(const tString &asName,cMesh *apMesh, bool abStatic=false);
 		void DestroyMeshEntity(cMeshEntity* apMesh);
+		void MakeMeshEntityDynamic(cMeshEntity* apMesh);
 		cMeshEntity* GetDynamicMeshEntity(const tString& asName);
 		
 		cMeshEntityIterator GetDynamicMeshEntityIterator();

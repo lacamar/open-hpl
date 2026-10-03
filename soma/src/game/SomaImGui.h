@@ -78,8 +78,20 @@ public:
 	};
 	std::map<uint64_t, cFade> mmapFades;
 	void Fade(uint64_t alId, int alType, const float *apGoal, float afTime, int alEasing, bool abReplace);
-	std::map<uint64_t, float> mmapTimers;
-	std::vector<uint64_t> mvTimersOver;
+	struct cTimer
+	{
+		uint64_t mlId;
+		float mfTime;
+		bool mbRepeat, mbTouched;
+	};
+	std::vector<cTimer> mvTimers;
+	cTimer *FindTimer(uint64_t alId)
+	{
+		for (cTimer &t : mvTimers)
+			if (t.mlId == alId)
+				return &t;
+		return nullptr;
+	}
 
 	struct cModifiers
 	{
@@ -94,6 +106,7 @@ public:
 	};
 	cModifiers mMods;
 	std::vector<cModifiers> mvModStack;
+	std::vector<cVector2f> mvLineStrip;
 	int mlAlign = 0;
 
 	struct cGroup

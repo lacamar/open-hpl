@@ -22,12 +22,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV5";
+	const char kMagic[] = "OHPLSAV;"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 5;
+	int glPendingVersion = 11;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -273,10 +273,9 @@ namespace
 	{
 		aVisited.insert(apObj);
 		asIScriptEngine *e = apObj->GetEngine();
-		const std::set<std::string> &setNoSave = SomaScriptNoSaveNames();
 		std::vector<asUINT> vProps;
 		for (asUINT i = 0; i < apObj->GetPropertyCount(); ++i)
-			if (setNoSave.count(apObj->GetPropertyName(i)) == 0)
+			if (SomaScriptIsNoSave(apObj->GetObjectType(), apObj->GetPropertyName(i)) == false)
 				vProps.push_back(i);
 		o.Pod((uint32_t)vProps.size());
 		for (asUINT i : vProps)
@@ -344,13 +343,12 @@ namespace
 		asIScriptObject *pFresh = (asIScriptObject *)e->CreateScriptObject(apObj->GetObjectType());
 		if (pFresh == NULL)
 			return;
-		const std::set<std::string> &setNoSave = SomaScriptNoSaveNames();
 		for (asUINT i = 0; i < apObj->GetPropertyCount(); ++i)
 		{
 			int lTypeId = apObj->GetPropertyTypeId(i);
 			asITypeInfo *t = e->GetTypeInfoById(lTypeId);
 			bool bEnum = t && (t->GetFlags() & asOBJ_ENUM);
-			if (setNoSave.count(apObj->GetPropertyName(i)) && (lTypeId <= asTYPEID_DOUBLE || bEnum))
+			if (SomaScriptIsNoSave(apObj->GetObjectType(), apObj->GetPropertyName(i)) && (lTypeId <= asTYPEID_DOUBLE || bEnum))
 				memcpy(apObj->GetAddressOfProperty(i), pFresh->GetAddressOfProperty(i), bEnum ? 4 : e->GetSizeOfPrimitiveType(lTypeId));
 		}
 		pFresh->Release();
@@ -417,6 +415,10 @@ public:
 		o.Pod(p->mbInteractCallbackAutoRemove);
 		o.Str(p->msLookAtCallback);
 		o.Pod(p->mbLookAtCallbackAutoRemove);
+		o.Pod(p->mbLookAtCheckCenter);
+		o.Pod(p->mbLookAtCheckRay);
+		o.Pod(p->mfLookAtMaxDistance);
+		o.Pod(p->mfLookAtDelay);
 		o.Pod((uint32_t)p->mvCollideCallbacks.size());
 		for (auto &c : p->mvCollideCallbacks)
 		{
@@ -428,6 +430,33 @@ public:
 		{
 			o.Pod(b->GetWorldMatrix());
 			o.Pod(b->IsActive());
+			o.Pod(b->GetMass());
+			o.Pod(b->GetGravity());
+		}
+		if (p->mvBodies.empty())
+			o.Pod(p->GetMatrix());
+		cSomaLuxEntity::cAttachment *a = p->mpAttachment;
+		o.Pod(a != NULL);
+		if (a)
+		{
+			o.Str(a->msParent);
+			o.Str(a->mpBody ? a->mpBody->GetName() : "");
+			o.Str(a->msSocket);
+			o.Pod(a->mbUseRotation);
+			o.Pod(a->mbLocked);
+			o.Pod(a->m_mtxParentPrev);
+			o.Pod(a->m_mtxOffset);
+		}
+		o.Pod((uint32_t)p->Joints().size());
+		for (iPhysicsJoint *j : p->Joints())
+		{
+			o.Str(j->GetName());
+			cVector2f v(0, 0);
+			if (j->GetType() == ePhysicsJointType_Hinge)
+				v = cVector2f(static_cast<iPhysicsJointHinge *>(j)->GetMinAngle(), static_cast<iPhysicsJointHinge *>(j)->GetMaxAngle());
+			else if (j->GetType() == ePhysicsJointType_Slider)
+				v = cVector2f(static_cast<iPhysicsJointSlider *>(j)->GetMinDistance(), static_cast<iPhysicsJointSlider *>(j)->GetMaxDistance());
+			o.Pod(v);
 		}
 		WriteTimers(o, p);
 		WriteScript(o, p->GetScript());
@@ -450,6 +479,13 @@ public:
 		t->mbInteractCallbackAutoRemove = in.Pod<bool>();
 		t->msLookAtCallback = in.Str();
 		t->mbLookAtCallbackAutoRemove = in.Pod<bool>();
+		if (glPendingVersion >= 8)
+		{
+			t->mbLookAtCheckCenter = in.Pod<bool>();
+			t->mbLookAtCheckRay = in.Pod<bool>();
+			t->mfLookAtMaxDistance = in.Pod<float>();
+			t->mfLookAtDelay = in.Pod<float>();
+		}
 		t->mvCollideCallbacks.clear();
 		uint32_t n = in.Pod<uint32_t>();
 		for (uint32_t i = 0; i < n && in.ok; ++i)
@@ -463,12 +499,79 @@ public:
 		{
 			cMatrixf m = in.Pod<cMatrixf>();
 			bool bBodyActive = glPendingVersion >= 5 ? in.Pod<bool>() : true;
+			float fMass = glPendingVersion >= 9 ? in.Pod<float>() : -1;
+			bool bGravity = glPendingVersion >= 9 ? in.Pod<bool>() : true;
 			if (p == NULL || i >= p->mvBodies.size())
 				continue;
+			if (fMass >= 0)
+			{
+				p->mvBodies[i]->SetMass(fMass);
+				p->mvBodies[i]->SetGravity(bGravity);
+			}
+			if (p->mpMesh && p->mpMesh->IsStatic() && m != p->mvBodies[i]->GetLocalMatrix())
+				p->mpMesh->GetWorld()->MakeMeshEntityDynamic(p->mpMesh);
 			p->mvBodies[i]->SetMatrix(m);
 			if (glPendingVersion >= 5)
 				p->mvBodies[i]->SetActive(bBodyActive);
 		}
+		if (glPendingVersion >= 6)
+		{
+			if (n == 0)
+			{
+				cMatrixf m = in.Pod<cMatrixf>();
+				if (p && p->mvBodies.empty() && m != p->GetMatrix())
+					p->SetMatrix(m);
+			}
+			if (p)
+				p->RemoveAttachment();
+			if (in.Pod<bool>())
+			{
+				cSomaLuxEntity::cAttachment a;
+				a.msParent = in.Str();
+				tString sBody = in.Str();
+				a.msSocket = in.Str();
+				a.mbUseRotation = in.Pod<bool>();
+				a.mbLocked = in.Pod<bool>();
+				a.m_mtxParentPrev = in.Pod<cMatrixf>();
+				a.m_mtxOffset = in.Pod<cMatrixf>();
+				cSomaLuxEntity *pParent = apMap->GetEntity(a.msParent);
+				if (p && pParent)
+				{
+					for (iPhysicsBody *b : pParent->mvBodies)
+						if (b->GetName() == sBody)
+							a.mpBody = b;
+					if (sBody == "" || a.mpBody)
+						p->mpAttachment = new cSomaLuxEntity::cAttachment(a);
+				}
+			}
+		}
+		n = glPendingVersion >= 7 ? in.Pod<uint32_t>() : 0;
+		std::vector<iPhysicsJoint *> vBroken = p ? p->Joints() : std::vector<iPhysicsJoint *>();
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sJoint = glPendingVersion >= 11 ? in.Str() : "";
+			cVector2f v = in.Pod<cVector2f>();
+			iPhysicsJoint *j = p && i < p->mvJoints.size() ? p->mvJoints[i] : NULL;
+			if (glPendingVersion >= 11)
+			{
+				auto it = std::find_if(vBroken.begin(), vBroken.end(), [&](iPhysicsJoint *x) { return x->GetName() == sJoint; });
+				j = it != vBroken.end() ? *it : NULL;
+			}
+			std::erase(vBroken, j);
+			if (j && j->GetType() == ePhysicsJointType_Hinge)
+			{
+				static_cast<iPhysicsJointHinge *>(j)->SetMinAngle(v.x);
+				static_cast<iPhysicsJointHinge *>(j)->SetMaxAngle(v.y);
+			}
+			else if (j && j->GetType() == ePhysicsJointType_Slider)
+			{
+				static_cast<iPhysicsJointSlider *>(j)->SetMinDistance(v.x);
+				static_cast<iPhysicsJointSlider *>(j)->SetMaxDistance(v.y);
+			}
+		}
+		if (glPendingVersion >= 11)
+			for (iPhysicsJoint *j : vBroken)
+				apMap->GetWorld()->GetPhysicsWorld()->DestroyJoint(j);
 		ReadTimers(in, t);
 		ReadScript(in, t->GetScript());
 		if (p && p->mbEffectsActive != bEffects)
@@ -630,7 +733,22 @@ public:
 			o.Str(a.first->msName);
 			o.Pod(a.second);
 			o.Pod(SomaAgentGetState(a.first));
+			float fYaw;
+			bool bSenses, bDetection;
+			SomaAgentSaveExtra(a.first, fYaw, bSenses, bDetection);
+			o.Pod(fYaw);
+			o.Pod(bSenses);
+			o.Pod(bDetection);
 		}
+		o.Pod(pMap->mbIsUnderwater);
+		cWorld *w = pMap->GetWorld();
+		for (bool b : {w->GetFogActive(), w->GetFogCulling(), w->GetFogUnderwater(), w->GetSecondaryFogActive(), w->GetSkyBoxActive()})
+			o.Pod(b);
+		for (float f : {w->GetFogStart(), w->GetFogEnd(), w->GetFogFalloffExp(), w->GetFogBrightness(), w->GetSecondaryFogStart(),
+						w->GetSecondaryFogEnd(), w->GetSecondaryFogFalloffExp(), w->GetSecondaryFogBrightness(), w->GetSkyBoxBrightness()})
+			o.Pod(f);
+		for (cColor c : {w->GetFogColor(), w->GetSecondaryFogColor(), w->GetSkyBoxColor()})
+			o.Pod(c);
 	}
 
 	static void ReadWorld(cIn &in)
@@ -846,8 +964,50 @@ public:
 			cSomaLuxEntity *p = pMap->GetEntity(in.Str());
 			cMatrixf m = in.Pod<cMatrixf>();
 			int lState = in.Pod<int>();
+			float fYaw = glPendingVersion >= 10 ? in.Pod<float>() : 0;
+			bool bSenses = glPendingVersion >= 10 ? in.Pod<bool>() : true;
+			bool bDetection = glPendingVersion >= 10 ? in.Pod<bool>() : true;
 			if (p && SomaAgentSetMatrix(p, m))
+			{
+				if (glPendingVersion >= 10)
+					SomaAgentLoadExtra(p, fYaw, bSenses, bDetection);
 				SomaAgentChangeState(p, lState);
+			}
+		}
+		if (in.p < in.s.size() && (pMap->mbIsUnderwater = in.Pod<bool>()))
+		{
+			gbSomaUnderwaterEffects = true;
+			++glSomaUnderwaterUsers;
+		}
+		if (in.p < in.s.size())
+		{
+			cWorld *w = pMap->GetWorld();
+			bool b[5];
+			float f[9];
+			cColor c[3];
+			for (bool &x : b) x = in.Pod<bool>();
+			for (float &x : f) x = in.Pod<float>();
+			for (cColor &x : c) x = in.Pod<cColor>();
+			if (in.ok)
+			{
+				w->SetFogActive(b[0]);
+				w->SetFogCulling(b[1]);
+				w->SetFogUnderwater(b[2]);
+				w->SetSecondaryFogActive(b[3]);
+				w->SetSkyBoxActive(b[4]);
+				w->SetFogStart(f[0]);
+				w->SetFogEnd(f[1]);
+				w->SetFogFalloffExp(f[2]);
+				w->SetFogBrightness(f[3]);
+				w->SetSecondaryFogStart(f[4]);
+				w->SetSecondaryFogEnd(f[5]);
+				w->SetSecondaryFogFalloffExp(f[6]);
+				w->SetSecondaryFogBrightness(f[7]);
+				w->SetSkyBoxBrightness(f[8]);
+				w->SetFogColor(c[0]);
+				w->SetSecondaryFogColor(c[1]);
+				w->SetSkyBoxColor(c[2]);
+			}
 		}
 	}
 };
@@ -934,7 +1094,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 5)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 11)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

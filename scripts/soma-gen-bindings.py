@@ -31,6 +31,8 @@ TYPES = {
     'cColliderEntity': 'cColliderEntity', 'cCollideData': 'cCollideData', 'cSoundHandler': 'cSoundHandler',
     'cBoneState': 'cBoneState', 'iKeyboard': 'iKeyboard', 'iMouse': 'iMouse', 'iGamepad': 'iGamepad', 'cForceField': 'cForceField',
     'iLowLevelGraphics': 'iLowLevelGraphics', 'cPostEffectComposite': 'cPostEffectComposite',
+    'iPhysicsRope': 'iPhysicsRope', 'iVerletParticleContainer': 'iVerletParticleContainer', 'cVerletParticle': 'cVerletParticle',
+    'iRopeEntity': 'cRopeEntity',
 }
 
 # HPL3 names whose HPL2 spelling differs

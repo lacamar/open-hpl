@@ -3,6 +3,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
 #include "SomaLuxScriptable.h"
+#include "SomaLuxVoice.h"
 #include "SomaScriptApi.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
@@ -238,6 +239,10 @@ namespace
 		int mlAnimState = -1;
 		bool mbAnimPlaying = false;
 		float mfStuck = 0;
+		static constexpr int kStuckFrames = 30;
+		static constexpr float kMaxStuck = 2.0f;
+		cVector3f mvStuckDisp[kStuckFrames];
+		int mlStuckIdx = 0, mlStuckCount = 0;
 
 		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
 
@@ -324,6 +329,33 @@ namespace
 					pAnim->SetSpeed(cMath::Max(afSpeed * mfMoveSpeedAnimMul / cMath::Max(alState == 1 ? 1.0f : mfWalkToRun, 0.1f), 0.2f));
 		}
 
+		void UpdateStuck(float afTimeStep, float afSpeed)
+		{
+			cVector3f vDisp = mpBody->GetPosition() - mpBody->GetLastPosition();
+			mvStuckDisp[mlStuckIdx] = vDisp;
+			mlStuckIdx = (mlStuckIdx + 1) % kStuckFrames;
+			mlStuckCount = cMath::Min(mlStuckCount + 1, kStuckFrames);
+			if (mbAnimPlaying || afSpeed < 1e-5f)
+			{
+				mfStuck = 0;
+				return;
+			}
+			cVector3f vSum = 0;
+			for (int i = 0; i < mlStuckCount; ++i)
+				vSum += mvStuckDisp[i];
+			float fDist = vDisp.Length();
+			float fDot = cMath::Vector3Dot(mpBody->GetForward(), fDist > 1e-8f ? vDisp / fDist : vDisp);
+			if (vSum.Length() < 0.1f * afSpeed || fDist / afTimeStep / afSpeed < 0.3f || (std::fabs(fDot) < 0.3f && afSpeed > 0.001f))
+				mfStuck = cMath::Min(mfStuck + afTimeStep, kMaxStuck);
+			else
+				mfStuck = cMath::Max(mfStuck - 0.8f * afTimeStep, 0.0f);
+			if (mfStuck >= kMaxStuck)
+			{
+				mfStuck = 0;
+				SomaAgentSendMessage(mpEntity, eMsg_StuckCounterIsAtMax);
+			}
+		}
+
 		void Update(float afTimeStep) override
 		{
 			if (mpBody == NULL)
@@ -372,7 +404,7 @@ namespace
 					SetYawNear(mpBody, fGoalYaw);
 					SomaAgentSendMessage(mpEntity, eMsg_TurningDone);
 					if (msTurnedCallback != "")
-						mpEntity->Call("void " + msTurnedCallback + "()");
+						SomaMapScriptCall("void " + msTurnedCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEntity->msName); });
 				}
 			}
 
@@ -394,10 +426,7 @@ namespace
 				mpBody->Move(eCharDir_Forward, 1);
 
 			float fSpeed = mpBody->GetMoveSpeed(eCharDir_Forward);
-			if (fWanted > 0.05f && fSpeed < 0.02f)
-				mfStuck += afTimeStep;
-			else
-				mfStuck = 0;
+			UpdateStuck(afTimeStep, fSpeed);
 
 			int lAnim = mlAnimState < 0 ? 0 : mlAnimState;
 			if (lAnim == 0 && fSpeed > mfStoppedToWalk)
@@ -565,14 +594,27 @@ namespace
 				mpEntity->Call("void " + sFunc + "(bool)", [abOk](asIScriptContext *c) { c->SetArgByte(0, abOk); });
 		}
 
-		void ArriveEnd()
+		void ArriveEnd(bool abOk = true)
 		{
 			mbMoving = false;
 			if (cAgentCharMover *pMover = Mover())
 				pMover->Stop();
+			SomaAgentSendMessage(mpEntity, eMsg_EndOfPath, 0, abOk);
+			if (msEndOfPathCallback != "")
+			{
+				tString sFunc = msEndOfPathCallback;
+				msEndOfPathCallback = "";
+				SomaMapScriptCall("void " + sFunc + "(const tString &in, bool)", [&](asIScriptContext *c) {
+					c->SetArgObject(0, &mpEntity->msName);
+					c->SetArgByte(1, abOk);
+				});
+			}
 			if (mbTrackActive && mlTrackIdx >= 0 && mlTrackIdx < (int)mvTrack.size())
 			{
 				mbAtTrackNode = true;
+				mfTrackWait = 0;
+				if (abOk == false)
+					return;
 				const cAgentTrackNode &node = mvTrack[mlTrackIdx];
 				mfTrackWait = cMath::RandRectf(node.mfMinWait, node.mfMaxWait);
 				if (node.msAnim != "" && Mover())
@@ -580,19 +622,13 @@ namespace
 				SomaAgentSendMessage(mpEntity, eMsg_AtTrackNode);
 			}
 			else
-			{
-				SomaAgentSendMessage(mpEntity, eMsg_EndOfPath, 0, 1);
-				if (msEndOfPathCallback != "")
-				{
-					tString sFunc = msEndOfPathCallback;
-					msEndOfPathCallback = "";
-					mpEntity->Call("void " + sFunc + "(const tString &in, bool)", [this](asIScriptContext *c) {
-						c->SetArgObject(0, &mpEntity->msName);
-						c->SetArgByte(1, true);
-					});
-				}
-				RunResultCallback(true);
-			}
+				RunResultCallback(abOk);
+		}
+
+		void OnMessage(int alMessage) override
+		{
+			if (alMessage == eMsg_StuckCounterIsAtMax)
+				ArriveEnd(false);
 		}
 
 		void StartTrackNode()
@@ -622,7 +658,7 @@ namespace
 			{
 				SomaAgentSendMessage(mpEntity, eMsg_EndOfTrack);
 				if (msTrackCallback != "")
-					mpEntity->Call("void " + msTrackCallback + "()");
+					SomaMapScriptCall("void " + msTrackCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEntity->msName); });
 				if (mbTrackLoop == false)
 				{
 					mbTrackActive = false;
@@ -767,6 +803,9 @@ namespace
 		bool mbPosBoneIsFeet = true, mbGlobalSpace = false;
 		float mfPosBoneYOffset = 0;
 		float mfMaxDoorDist = 1, mfCheckDoorsCount = 0, mfDoorCheckTimer = 0;
+		bool mbAutoDisable = false;
+		float mfAutoDisableMinDist = 0, mfAutoDisableTimer = 0, mfAutoDisableCount = 0;
+		tString msAutoDisableCallback;
 
 		template <class T> T *Find(int alType)
 		{
@@ -859,6 +898,28 @@ namespace
 			}
 			mfCurrentSightDist = fMax >= 0 ? std::min(fRange, fMax) : fRange;
 			SeenCallback(PlayerDist() <= mfCurrentSightDist && PlayerInSight(mfFOV * mfFOVMul));
+		}
+
+		void UpdateAutoDisable(float afTimeStep)
+		{
+			if (mbAutoDisable == false || (mfAutoDisableTimer -= afTimeStep) > 0)
+				return;
+			mfAutoDisableTimer = 0.3f;
+			if (PlayerDist() < mfAutoDisableMinDist)
+				return;
+			if (SomaEntityInPlayerLOS(mpEnt, true) || cSomaLuxPlayer::Get()->mfHealth <= 0)
+			{
+				mfAutoDisableCount = 0;
+				return;
+			}
+			if ((mfAutoDisableCount += 0.3f) <= 3)
+				return;
+			mbAutoDisable = false;
+			mpEnt->SetActive(false);
+			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+			if (msAutoDisableCallback != "" && pMap && pMap->GetScript())
+				cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msAutoDisableCallback + "(const tString &in)",
+												[this](asIScriptContext *c) { c->SetArgObject(0, &mpEnt->msName); });
 		}
 
 		void CheckForDoors(float afTimeStep)
@@ -1057,6 +1118,23 @@ int SomaAgentGetState(cSomaLuxEntity *apEnt)
 	return pSM ? pSM->mlCur : -1;
 }
 
+void SomaAgentSaveExtra(cSomaLuxEntity *apEnt, float &afYaw, bool &abSenses, bool &abDetection)
+{
+	cAgent *pAgent = Agent(apEnt);
+	afYaw = pAgent->mpBody->GetYaw();
+	abSenses = pAgent->mbSensesActive;
+	abDetection = pAgent->mbUpdateDetection;
+}
+
+void SomaAgentLoadExtra(cSomaLuxEntity *apEnt, float afYaw, bool abSenses, bool abDetection)
+{
+	cAgent *pAgent = Agent(apEnt);
+	pAgent->mpBody->SetYaw(afYaw);
+	pAgent->mbSensesActive = abSenses;
+	pAgent->mbUpdateDetection = abDetection;
+	pAgent->SyncMesh();
+}
+
 void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState)
 {
 	cAgent *pAgent = Agent(apEnt);
@@ -1078,8 +1156,8 @@ void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f 
 		c->SetArgDWord(0, alMessage);
 		c->SetArgAddress(1, pData);
 	});
-	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
-		pSM->OnMessage(alMessage);
+	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
+		pAgent->mvComponents[i]->OnMessage(alMessage);
 }
 
 tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo)
@@ -1132,6 +1210,9 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 		return;
 	pAgent->UpdateSenses(afTimeStep);
 	pAgent->CheckForDoors(afTimeStep);
+	pAgent->UpdateAutoDisable(afTimeStep);
+	if (apEnt->mbActive == false)
+		return;
 	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
 		if (pAgent->mvComponents[i]->mbActive)
 			pAgent->mvComponents[i]->Update(afTimeStep);
@@ -1238,9 +1319,25 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, A, "void SetSightRangeAffectedByModifiers(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbSightRangeAffectedByModifiers = b; });
 	SOMA_METHOD(e, A, "bool GetSightRangeAffectedByModifiers()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSightRangeAffectedByModifiers; });
 	for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
+	{
 		SOMA_METHOD(e, pType, "bool CheckIsOnScreen(bool abUseRayCast)", +[](E *p, bool b) { return SomaEntityIsOnScreen(p, b); });
+		SOMA_METHOD_NEW(e, pType, "cParticleSystem@ CreateParticleSystem(const tString&in asName, const tString&in asFile, bool abRemoveWhenDone, bool abAttach)",
+						+[](E *p, S n, S f, bool bRemove, bool bAttach) -> cParticleSystem * {
+							if (f == "" || p->mpMap == NULL)
+								return NULL;
+							cParticleSystem *pPS = p->mpMap->GetWorld()->CreateParticleSystem(n, f, 1, bRemove);
+							if (pPS && p->mpMesh && bAttach)
+								p->mpMesh->AddChild(pPS);
+							else if (pPS)
+								pPS->SetPosition(p->mpMesh ? p->mpMesh->GetWorldPosition() : p->GetPosition());
+							return pPS;
+						});
+	}
 	for (const char *pType : {"cLuxAgent", "cLuxCritter"})
+	{
 		SOMA_METHOD(e, pType, "bool GetEntityIsInPlayerFOV()", +[](E *p) { return SomaEntityIsOnScreen(p, false); });
+		SOMA_METHOD(e, pType, "bool GetEntityIsInPlayerLineOfSight(bool abCheckFOV)", +[](E *p, bool b) { return SomaEntityInPlayerLOS(p, b); });
+	}
 	SOMA_FUNC(e, "bool Entity_IsInPlayerFOV(const tString &in asEntity)", +[](S n) {
 		cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL;
 		return SomaEntityIsOnScreen(p, false);
@@ -1265,6 +1362,11 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		}
 	});
 	SOMA_METHOD(e, A, "bool GetStaticCollider()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbStaticCollider; });
+	SOMA_METHOD(e, A, "void SetAutoDisableWhenOutOfSightActive(bool abX, float afMinDist)", +[](E *p, bool b, float d) {
+		if (cAgent *a = Agent(p))
+			a->mbAutoDisable = b, a->mfAutoDisableMinDist = d;
+	});
+	SOMA_METHOD(e, A, "void SetAutoDisableCallback(const tString&in asCallback)", +[](E *p, S f) { if (cAgent *a = Agent(p)) a->msAutoDisableCallback = f; });
 	SOMA_METHOD(e, A, "void SetCheckForDoors(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbCheckForDoors = b; });
 	SOMA_METHOD(e, A, "bool GetCheckForDoors()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbCheckForDoors; });
 	SOMA_METHOD(e, A, "void SetMaxCheckDoorDistance(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfMaxDoorDist = x; });
@@ -1339,7 +1441,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "float GetMoveSpeed()", +[](CM *m) { return m->mpBody ? m->mpBody->GetMoveSpeed(eCharDir_Forward) : 0.0f; });
 	SOMA_METHOD(e, T, "float GetWantedSpeedAmount()", +[](CM *m) { return m->mbMoving ? 1.0f : 0.0f; });
 	SOMA_METHOD(e, T, "float GetStuckCounter()", +[](CM *m) { return m->mfStuck; });
-	SOMA_METHOD(e, T, "float GetMaxStuckCounter()", +[](CM *) { return 3.0f; });
+	SOMA_METHOD(e, T, "float GetMaxStuckCounter()", +[](CM *) { return CM::kMaxStuck; });
 	SOMA_METHOD(e, T, "void ResetStuckCounter()", +[](CM *m) { m->mfStuck = 0; });
 	SOMA_METHOD(e, T, "void SetMaxForwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxForward = x; });
 	SOMA_METHOD(e, T, "void SetMaxBackwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxBackward = x; });

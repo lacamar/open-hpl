@@ -239,9 +239,18 @@ def cmd_drag(a):
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
     frames(0.2)
-    for _ in range(a.steps):
-        send({"cmd": "input", "type": "mouse_move", "xrel": str(int(a.dx / a.steps)), "yrel": str(int(a.dy / a.steps))})
-        send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+    if a.circles:
+        px = py = 0
+        for i in range(1, a.steps + 1):
+            t = 2 * math.pi * a.circles * i / a.steps * (1 if a.dy >= 0 else -1)
+            x, y = round(a.dx * math.cos(t)) - a.dx, round(a.dx * math.sin(t))
+            send({"cmd": "input", "type": "mouse_move", "xrel": str(x - px), "yrel": str(y - py)})
+            px, py = x, y
+            send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+    else:
+        # same motion every frame: slide/wheel states zero their speed on frames without mouse input
+        send({"cmd": "input", "type": "mouse_move", "xrel": str(round(a.dx / a.steps)), "yrel": str(round(a.dy / a.steps)), "frames": a.steps})
+        send({"cmd": "wait_frames", "n": a.steps, "max_ms": 30000}, timeout=60)
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
     frames(0.3)
@@ -290,7 +299,7 @@ def cmd_walk(a):
     cmd_state(a)
 
 
-def steer(target, tol, deadline):
+def steer(target, tol, deadline, back=False):
     best, stuck = 1e9, 0
     while time.time() < deadline:
         _, feet = camera_pos()
@@ -302,7 +311,7 @@ def steer(target, tol, deadline):
         if stuck > 20:
             print(f"stuck at {d:.2f} m from {target}")
             return False
-        yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2])
+        yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2]) + (math.pi if back else 0)
         ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});")
         frames(0.15)
     return False
@@ -323,7 +332,8 @@ def cmd_walkto(a):
     def key(k, down):
         send({"cmd": "input", "type": "key", "key": k, "action": "down" if down else "up"})
 
-    key("w", True)
+    move = "s" if a.back else "w"
+    key(move, True)
     try:
         for i, p in enumerate(route):
             crouch = len(p) > 3 and p[3] == "c"
@@ -332,10 +342,10 @@ def cmd_walkto(a):
                 press("key", "left ctrl", 0.1)
                 crouched = crouch
             key("left shift", a.run and not crouched)
-            if not steer([float(v) for v in p[:3]], a.tol if i == len(route) - 1 else 0.5, deadline):
+            if not steer([float(v) for v in p[:3]], a.tol if i == len(route) - 1 else 0.5, deadline, a.back):
                 break
     finally:
-        key("w", False)
+        key(move, False)
         key("left shift", False)
         if crouched:
             press("key", "left ctrl", 0.1)
@@ -443,6 +453,7 @@ def main():
     s = sub.add_parser("interact"); s.add_argument("entity"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
+    s.add_argument("--circles", type=float, default=0, help="circle mouse: radius dx, sign of dy = direction")
     s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target")
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=30)
@@ -454,6 +465,7 @@ def main():
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s.add_argument("--nav", action="store_true", help="follow the agent node graph")
     s.add_argument("--run", action="store_true", help="hold shift")
+    s.add_argument("--back", action="store_true", help="walk backwards, facing away from the target")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")

@@ -32,8 +32,8 @@ public:
 	~cSomaLuxMap();
 
 	bool CreateScript(cSomaScriptRuntime *apRuntime, const tString &asScriptFile);
-	// Setup(), then OnStart() the first time and OnEnter() (cLuxMapHandler::SetCurrentMap)
-	void OnEnter(bool abFirstTime);
+	// Setup(), then OnStart() the first time and OnEnter() unless loading a save (cLuxMap::OnEnter)
+	void OnEnter(bool abRunScript, bool abFirstTime);
 	void OnLeave();
 	void Update(float afTimeStep);
 	void OnAction(int alAction, bool abPressed);
@@ -60,6 +60,7 @@ public:
 	tString msDisplayNameEntry;
 	float mfMaxInteractDistance = 3; // cLuxMap::cLuxMap
 	bool mbActive = true;
+	bool mbIsUnderwater = false;
 
 	static cSomaLuxMap *GetCurrent() { return mpCurrent; }
 	static void SetCurrent(cSomaLuxMap *apMap) { mpCurrent = apMap; }

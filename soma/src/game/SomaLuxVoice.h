@@ -53,6 +53,7 @@ public:
 	struct cSound
 	{
 		tString msText;
+		tString msFile;
 		float mfVoiceOffset = 0;
 		float mfEndPadding = 0;
 		float mfVolume = 1;
@@ -64,6 +65,9 @@ public:
 		tString msCallback;
 		float mfCharVolume = 1;
 		int mlEntryType = 8;
+		tString msSource;
+		float mfMinDist = 0, mfMaxDist = 0;
+		bool mbWorldSpace = false, mbChangeSource = false;
 		std::vector<cSound> mvSounds;
 	};
 	struct cSubject

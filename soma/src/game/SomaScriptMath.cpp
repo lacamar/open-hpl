@@ -286,6 +286,10 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector3f cMath_GetAngleDistanceVector3fRad(const cVector3f&in avAngles1, const cVector3f&in avAngles2)", +[](const cVector3f &a, const cVector3f &b) {
 		return cVector3f(cMath::GetAngleDistanceRad(a.x, b.x), cMath::GetAngleDistanceRad(a.y, b.y), cMath::GetAngleDistanceRad(a.z, b.z));
 	});
+	SOMA_FUNC(e, "cVector3f cMath_Vector3SphereSurfacePoint(const cVector2f&in avSeed, float afRadius)", +[](const cVector2f &s, float r) {
+		float z = s.x * 2 - 1, a = s.y * k2Pif, w = sqrtf(1 - z * z);
+		return cVector3f(z, sinf(a) * w, cosf(a) * w) * r;
+	});
 	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return a.x * b.x + a.y * b.y; });
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
 			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });

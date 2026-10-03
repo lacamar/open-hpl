@@ -64,9 +64,6 @@ namespace hpl {
 		~cRenderableContainer_BoxTree();
 
 		void Add(iRenderable *apRenderable);
-		/**
-		 * Note that this is only allowed before compilation!
-		 */
 		void Remove(iRenderable *apRenderable);
 
 		iRenderableContainerNode* GetRoot();

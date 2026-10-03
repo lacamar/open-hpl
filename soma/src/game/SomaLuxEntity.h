@@ -84,6 +84,7 @@ public:
 	std::vector<iPhysicsBody *> mvBodies;
 	iPhysicsBody *mpMainBody = NULL;
 	std::vector<iPhysicsJoint *> mvJoints;
+	std::vector<iPhysicsJoint *> &Joints();
 	// cLuxCritter members at the official offsets, see SomaNewPropBlock
 	char *mpCritterProps = NULL;
 	std::vector<iLight *> mvLights;
@@ -97,9 +98,12 @@ public:
 		tString msName;
 		cBoneState *mpBone;
 		cMatrixf m_mtxOffset;
+		cNode3D *mpNode = nullptr;
 	};
 	std::vector<cSocket> mvSockets;
 	bool GetSocketMatrix(const tString &asName, cMatrixf &a_mtxOut);
+	cNode3D *GetSocketNode(int alIdx);
+	void UpdateSocketNodes();
 
 	// iLuxEntity::AttachToEntity/AttachToSocket, driven from the parent after updates
 	struct cAttachment
@@ -134,9 +138,11 @@ public:
 	bool mbInteractCallbackAutoRemove = false;
 	tString msLookAtCallback;
 	bool mbLookAtCallbackAutoRemove = true;
+	bool mbLookAtCheckCenter = true;
 	bool mbLookAtCheckRay = true;
 	float mfLookAtMaxDistance = -1;
 	float mfLookAtDelay = 0;
+	bool mbForceLookAtCheck = false;
 	float mfLookAtTime = 0;
 	bool mbLookedAt = false;
 	// cLuxPropLoader::AfterLoad: callbacks and interaction settings from the map's UserVariables
@@ -210,14 +216,16 @@ public:
 	void UpdateMove(float afTimeStep);
 	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
+	void UpdateLiquid();
+	bool mbCameraInLiquid = false;
 	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false;
 	float mfTimeSinceCheck = 0;
 	bool mbMoving = false;
 	cVector3f mvMoveGoal;
 	float mfMoveAcc = 0, mfMoveMaxSpeed = 0, mfMoveSlowdownDist = 0, mfMoveSpeed = 0;
 	tString msMoveCallback;
-	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal, const tString &asCallback);
-	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotWorld, const cVector3f &avPivotLocal);
+	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal, const tString &asCallback);
+	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal);
 	void StopMove();
 	int mlRotateMode = 0; // 1 align to goal, 2 constant speed
 	cMatrixf m_mtxRotateGoal = cMatrixf::Identity;
@@ -258,15 +266,21 @@ public:
 cSomaID SomaObjectID(void *apObj, const tString &asType);
 void *SomaObjectFromID(const cSomaID &aID, const tString &asType);
 void SomaClearObjectIDs();
+void SomaRegisterBodyIDs(const std::vector<cSomaLuxEntity *> &avEnts);
 
 // Oriented boxes of bodies, areas and the player's character body
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);
 bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax);
+float SomaLiquidHeightAt(const cVector3f &avPos);
+extern int glSomaUnderwaterUsers;
+extern bool gbSomaUnderwaterEffects;
 // Ray against the entity's boxes; afDistOut is the entry distance
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut);
 // No colliding body other than apIgnore's between the points
 bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxEntity *apIgnore);
+bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam);
 bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast);
+bool SomaEntityInPlayerLOS(cSomaLuxEntity *apEnt, bool abCheckFOV);
 
 // "*" matches any run of characters, as HPL3's wildcard entity names
 bool SomaWildcardMatch(const tString &asPattern, const tString &asName);

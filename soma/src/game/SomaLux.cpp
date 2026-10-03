@@ -50,6 +50,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 cSomaLuxMap::~cSomaLuxMap()
 {
 	SomaClearObjectIDs();
+	cSomaSoundscape::Get()->Forget(this);
 	for (cSomaLuxEntity *pEnt : mvDestroyed)
 		delete pEnt;
 	for (cSomaLuxEntity *pEnt : mvEntities)
@@ -76,6 +77,7 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 	int lScripted = 0;
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		lScripted += SetupEntityScript(pEnt) ? 1 : 0;
+	SomaRegisterBodyIDs(mvEntities);
 	Log("SOMA script: %d map entities, %d with a script class\n", (int)mvEntities.size(), lScripted);
 	for (cSomaLuxEntity *pEnt : mvEntities)
 	{
@@ -222,13 +224,15 @@ cSomaLuxEntity *cSomaLuxMap::GetEntity(const cSomaID &aID)
 	return NULL;
 }
 
-void cSomaLuxMap::OnEnter(bool abFirstTime)
+void cSomaLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
 {
 	if (mpScript == NULL)
 		return;
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->LoadMapFile(msFileName, msName);
 	mpRuntime->Call(mpScript, "void Setup()");
+	if (abRunScript == false)
+		return;
 	if (abFirstTime)
 		mpRuntime->Call(mpScript, "void OnStart()");
 	mpRuntime->Call(mpScript, "void OnEnter()");
@@ -238,6 +242,8 @@ void cSomaLuxMap::OnLeave()
 {
 	if (mpScript)
 		mpRuntime->Call(mpScript, "void OnLeave()");
+	glSomaUnderwaterUsers = 0;
+	gbSomaUnderwaterEffects = false;
 }
 
 void cSomaLuxMap::Update(float afTimeStep)
@@ -284,11 +290,14 @@ void cSomaLuxMap::Update(float afTimeStep)
 			SomaUpdateAgent(pEnt, afTimeStep);
 		else if (pEnt->meType == eSomaLuxEntityType_Area)
 			pEnt->UpdateCheckCollision(afTimeStep);
+		else if (pEnt->meType == eSomaLuxEntityType_LiquidArea)
+			pEnt->UpdateLiquid();
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
 	{
 		mvEntities[i]->UpdateAnimation(afTimeStep);
+		mvEntities[i]->UpdateSocketNodes();
 		mvEntities[i]->UpdateMove(afTimeStep);
 		mvEntities[i]->UpdateEffectColor(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
@@ -315,24 +324,24 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 	cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
 	if (pCam == NULL)
 		return;
-	cVector3f vStart = pCam->GetPosition(), vDir = pCam->GetForward();
 	for (size_t i = 0; i < mvEntities.size(); ++i)
 	{
 		cSomaLuxEntity *pEnt = mvEntities[i];
-		if (pEnt->msLookAtCallback == "" || pEnt->mbActive == false)
+		if ((pEnt->msLookAtCallback == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
 			continue;
-		float fMax = pEnt->mfLookAtMaxDistance > 0 ? pEnt->mfLookAtMaxDistance : 1000.0f;
-		float fDist = 0;
-		bool bLooking = SomaRayHitsEntity(pEnt, vStart, vDir, fMax, fDist);
-		if (bLooking && pEnt->mbLookAtCheckRay)
-			bLooking = SomaLineOfSight(vStart, vStart + vDir * fDist, pEnt);
+		bool bLooking = SomaPlayerLooksAt(pEnt, pCam);
 		if (bLooking)
 			pEnt->mfLookAtTime += afTimeStep;
 		else
 			pEnt->mfLookAtTime = 0;
 		bool bNow = bLooking && pEnt->mfLookAtTime >= pEnt->mfLookAtDelay;
-		if (bNow == pEnt->mbLookedAt)
+		if (pEnt->msLookAtCallback == "")
+			bNow = bLooking;
+		if (bNow == pEnt->mbLookedAt || pEnt->msLookAtCallback == "")
+		{
+			pEnt->mbLookedAt = bNow;
 			continue;
+		}
 		pEnt->mbLookedAt = bNow;
 		tString sFunc = pEnt->msLookAtCallback;
 		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
@@ -792,6 +801,9 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterIterator<cGuiSetEntityIterator, cGuiSetEntity *>(e, "cGuiSetEntityIterator", "cGuiSetEntity");
 
 	SOMA_METHOD(e, "cWorld", "cLightListIterator@ GetLightIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetLightIterator()); });
+	// ponytail: HPL2 rope is a camera-facing strip, no eRopeType_3D tube with ring segments
+	SOMA_METHOD(e, "cWorld", "iRopeEntity@ CreateRopeEntity(const tString&in asName, eRopeType aRopeType, iPhysicsRope @apRope, int alMaxSegments, int alRingSegments = 3)",
+				+[](cWorld *w, const tString &n, int, iPhysicsRope *r, int m, int) { return w->CreateRopeEntity(n, r, m); });
 	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetStaticMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetStaticMeshEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetDynamicMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetDynamicMeshEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cParticleSystemIterator@ GetParticleSystemIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetParticleSystemIterator()); });
@@ -896,6 +908,21 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "void BroadcastSoundHeardEvent(const tString& in asName, const cVector3f&in avPosition, float afRadius, int alPrio, bool abPhysicsObject=false)",
 				+[](cSomaLuxMap &, const tString &, const cVector3f &p, float r, int prio, bool) { SomaBroadcastSoundHeard(p, r, prio); });
 	SOMA_METHOD(e, M, "cWorld@ GetWorld()", +[](cSomaLuxMap &m) { return m.GetWorld(); });
+	SOMA_METHOD(e, M, "bool GetIsUnderwater()", +[](cSomaLuxMap &m) { return m.mbIsUnderwater; });
+	SOMA_METHOD(e, M, "void SetIsUnderwater(bool abX)", +[](cSomaLuxMap &m, bool b) { m.mbIsUnderwater = b; });
+	SOMA_METHOD(e, M, "void SetPlayerTerrainCollision(bool abX)", +[](cSomaLuxMap &m, bool b) {
+		unsigned int lFlags = SomaCollideFlag(b ? "+player" : "-player");
+		cPhysicsBodyIterator it = m.GetWorld()->GetPhysicsWorld()->GetBodyIterator();
+		while (it.HasNext())
+			if (iPhysicsBody *pBody = it.Next(); cString::GetFirstStringPos(pBody->GetName(), "Terrain_") == 0)
+				pBody->SetCollideFlags(lFlags);
+	});
+	SOMA_METHOD(e, "cWorld", "void SetTerrainActive(bool abX)", +[](cWorld *w, bool b) {
+		cMeshEntityIterator it = w->GetStaticMeshEntityIterator();
+		while (it.HasNext())
+			if (cMeshEntity *pEnt = it.Next(); cString::GetFirstStringPos(pEnt->GetName(), "Terrain_") == 0)
+				pEnt->SetVisible(b);
+	});
 	SOMA_METHOD(e, M, "bool IsActive()", +[](cSomaLuxMap &m) { return m.mbActive; });
 	SOMA_METHOD(e, M, "void SetActive(bool abX)", +[](cSomaLuxMap &m, bool b) {
 		m.mbActive = b;
@@ -1042,6 +1069,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD_NEW(e, "cParticleSystem", "void SetScriptableIsSaved(bool abX)", +[](cParticleSystem *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cSoundEntity", "void SetScriptableIsSaved(bool abX)", +[](cSoundEntity *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cBillboard", "void SetScriptableIsSaved(bool abX)", +[](cBillboard *o, bool b) { o->SetIsSaved(b); });
+		SOMA_METHOD_NEW(e, "iRopeEntity", "void SetScriptableIsSaved(bool abX)", +[](cRopeEntity *o, bool b) { o->SetIsSaved(b); });
 		SOMA_FUNC(e, "void ParticleSystem_Destroy(const tString &in asPSName)", +[](S n) { ForPS(n, [](cParticleSystem *p) { p->Kill(); }); });
 		SOMA_FUNC(e, "void ParticleSystem_SetVisible(const tString &in asPSName, bool abVisible)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetVisible(b); }); });
 		SOMA_FUNC(e, "void ParticleSystem_SetActive(const tString &in asPSName, bool abActive)", +[](S n, bool b) { ForPS(n, [b](cParticleSystem *p) { p->SetActive(b); }); });
@@ -1155,6 +1183,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cBoundingVolume", "void SetTransform(const cMatrixf&in a_mtxTransform, bool abUpdateSize = true)", +[](cBoundingVolume *b, const cMatrixf &m, bool) { b->SetTransform(m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCylinderShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",
 				+[](iPhysicsWorld *w, float r, float h, cMatrixf &m) { return w->CreateCylinderShape(r, h, &m); });
+	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCapsuleShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",
+				+[](iPhysicsWorld *w, float r, float h, cMatrixf &m) { return w->CreateCapsuleShape(r, h, &m); });
+	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateBoxShape(const cVector3f &in avSize, cMatrixf&in a_mtxOffsetMtx)",
+				+[](iPhysicsWorld *w, const cVector3f &v, cMatrixf &m) { return w->CreateBoxShape(v, &m); });
+	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateSphereShape(const cVector3f &in avRadii, cMatrixf&in a_mtxOffsetMtx)",
+				+[](iPhysicsWorld *w, const cVector3f &v, cMatrixf &m) { return w->CreateSphereShape(v, &m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeWorldCollision(cVector3f&out avPushVector, iCollideShape@ apShape, const cMatrixf&in a_mtxTransform, iPhysicsBody@ apSkipBody, bool abSkipStatic, bool abIsCharacter, bool abCollideCharacter)",
 				+[](iPhysicsWorld *w, cVector3f &push, iCollideShape *pShape, const cMatrixf &m, iPhysicsBody *pSkip, bool bSkipStatic, bool bChar, bool bCollideChar) {
 					push = 0;

@@ -32,6 +32,8 @@ static std::map<int, cSomaVariant> gmapArgs;
 static cSomaVariant gReturn;
 
 std::string gsSomaExecOutput;
+int glSomaUnderwaterUsers = 0;
+bool gbSomaUnderwaterEffects = false;
 const tString &SomaCurrentLanguage();
 
 tString SomaSerializeGlobalVars()
@@ -278,7 +280,12 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { return false; });
-	SOMA_FUNC(e, "bool cLux_GetUnderwaterEffectsActive()", +[]() { return false; });
+	SOMA_FUNC(e, "bool cLux_GetUnderwaterEffectsActive()", +[]() { return gbSomaUnderwaterEffects; });
+	// ponytail: state only, no underwater audio/voice filters yet
+	SOMA_FUNC(e, "void cLux_SetUnderwaterEffectsActive(bool abX, bool abUseStartAndEndEffects)", +[](bool b, bool) { gbSomaUnderwaterEffects = b; });
+	SOMA_FUNC(e, "void cLux_IncUnderwaterEffectUserCount()", +[]() { ++glSomaUnderwaterUsers; });
+	SOMA_FUNC(e, "void cLux_DecUnderwaterEffectUserCount()", +[]() { --glSomaUnderwaterUsers; });
+	SOMA_FUNC(e, "bool cLux_HasUnderwaterEffectUsers()", +[]() { return glSomaUnderwaterUsers > 0; });
 	SOMA_FUNC(e, "void __print(const tString&in asText)", +[](S s) { gsSomaExecOutput += s + "\n"; });
 	SOMA_FUNC(e, "void Log(const tString&in asString)", +[](S s) { Log("%s%s", s.c_str(), EndLine(s)); });
 	SOMA_FUNC(e, "void Warning(const tString&in asString)", +[](S s) { Warning("%s%s", s.c_str(), EndLine(s)); });

@@ -256,6 +256,9 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 		f = f < g ? std::min(f + a * t, g) : std::max(f - a * t, g);
 	});
 	SOMA_METHOD(e, T, "float GetDistanceToPlayer()", +[](E *p) { return (PlayerPos() - p->GetPosition()).Length(); });
+	SOMA_METHOD(e, T, "float GetDistanceToPlayer2D()", +[](E *p) { cVector3f d = PlayerPos() - p->GetPosition(); return cVector2f(d.x, d.z).Length(); });
+	SOMA_METHOD(e, T, "float GetDistanceToPos(const cVector3f&in avPos)", +[](E *p, const cVector3f &v) { return (v - p->GetPosition()).Length(); });
+	SOMA_METHOD(e, T, "float GetDistanceToPos2D(const cVector3f&in avPos)", +[](E *p, const cVector3f &v) { cVector3f d = v - p->GetPosition(); return cVector2f(d.x, d.z).Length(); });
 	SOMA_METHOD(e, T, "cVector3f Move_GetTowardPosAdd(const cVector3f&in avPos, bool abNormalize, float afTimeStep)", +[](E *p, const cVector3f &v, bool n, float t) {
 		cVector3f d = v - p->GetPosition();
 		return n ? SafeNormalize(d) : d * t;

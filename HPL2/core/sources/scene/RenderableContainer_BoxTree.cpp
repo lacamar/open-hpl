@@ -103,9 +103,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static void RemoveFromNode(iRenderableContainerNode *apNode, iRenderable *apRenderable)
+	{
+		apNode->GetObjectList()->remove(apRenderable);
+		for(iRenderableContainerNode *pChild : *apNode->GetChildNodeList())
+			RemoveFromNode(pChild, apRenderable);
+	}
+
 	void cRenderableContainer_BoxTree::Remove(iRenderable *apRenderable)
 	{
 		STLFindAndRemove(m_mlstTempObjects, apRenderable);
+		if(mpRoot) RemoveFromNode(mpRoot, apRenderable);
 	}
 
 	//-----------------------------------------------------------------------

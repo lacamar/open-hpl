@@ -17,6 +17,11 @@ public:
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
 	void Update(cSomaLuxMap *apMap, float afTimeStep);
+	void Forget(cSomaLuxMap *apMap)
+	{
+		if (apMap == mpMap)
+			Load(NULL);
+	}
 	void SetDefaultReverb(int alPreset, float afFadeTime);
 	void SetPaused(bool abX);
 	const tString &GetPrefix() { return msPrefix; }

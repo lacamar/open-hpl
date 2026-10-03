@@ -9,7 +9,7 @@
 #include <vector>
 
 // Members declared [nosave] or [volatile], skipped by save games
-const std::set<std::string> &SomaScriptNoSaveNames();
+bool SomaScriptIsNoSave(asITypeInfo *apType, const char *asProp);
 
 class cSomaScriptBuilder
 {

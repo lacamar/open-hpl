@@ -89,12 +89,15 @@ namespace hpl {
 		void SetInvMass(float afInvMass){ mfInvMass = afInvMass; }
 		inline float GetInvMass() const { return mfInvMass; }
 
+		void AddForce(const cVector3f& avForce){ mvForce += avForce; }
+
 	private:
 		iVerletParticleContainer *mpContainer;
 
 		cVector3f mvPosition;
 		cVector3f mvPrevPosition;
 		cVector3f mvSmoothPosition;
+		cVector3f mvForce = 0;
 		float mfInvMass;
 	};
 
@@ -133,6 +136,18 @@ namespace hpl {
 		void SetSleeping(bool abX);
 
 		inline int GetUpdateCount() const { return mlUpdateCount; }
+		void IncUpdateCount(){ ++mlUpdateCount; }
+
+		void SetActive(bool abX){ mbActive = abX; }
+		bool GetActive(){ return mbActive; }
+
+		int GetParticleNum(){ return (int)mlstParticles.size(); }
+		cVerletParticle* GetParticle(int alIdx);
+
+		void UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness=1);
+		void UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afMinLength, float afMaxLength, float afStiffness);
+		void UpdateLengthConstraintStretch(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness);
+		void UpdateParticleCollisionConstraint(cVerletParticle *apPart, const cVector3f &avPrevPos, float afRadius);
 
 		cVerletParticleIterator GetParticleIterator(){ return cVerletParticleIterator(&mlstParticles); }
 		
@@ -144,8 +159,6 @@ namespace hpl {
 		
 		void PreUpdate(float afTimeStep);
 
-		void UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength);
-		void UpdateParticleCollisionConstraint(cVerletParticle *apPart, const cVector3f &avPrevPos, float afRadius);
 
 		tString msName;
 		iPhysicsWorld *mpWorld;
@@ -156,6 +169,7 @@ namespace hpl {
 		
 		tVerletParticleList mlstParticles;
 
+		bool mbActive = true;
 		bool mbCollide;
 
 		bool mbSleeping;

@@ -82,8 +82,7 @@ namespace hpl {
 		for(tPhysicsRopeListIt it = mlstRopes.begin(); it != mlstRopes.end(); ++it)
 		{
 			iPhysicsRope *pRope = *it;
-			
-			pRope->UpdateBeforeSimulate(afTimeStep);
+			if(pRope->GetActive()) pRope->UpdateBeforeSimulate(afTimeStep);
 		}
 
 		////////////////////////////////////
