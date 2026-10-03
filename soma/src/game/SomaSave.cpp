@@ -22,12 +22,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV<"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAV="; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 12;
+	int glPendingVersion = 13;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -466,6 +466,7 @@ public:
 			o.Str(v.first);
 			o.Str(v.second);
 		}
+		o.Pod(p->mbGuiActive);
 	}
 
 	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
@@ -590,6 +591,8 @@ public:
 				t->mmapScriptVars[sVar] = in.Str();
 			}
 		}
+		if (glPendingVersion >= 13)
+			t->mbGuiActive = in.Pod<bool>();
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
 		t->mbEffectsActive = bEffects;
@@ -1110,7 +1113,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 12)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 13)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
