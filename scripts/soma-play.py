@@ -11,7 +11,7 @@
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
-  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav] # steer with w until within TOL m (stops when stuck)
+  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav] [--run] # steer with w until within TOL m (stops when stuck)
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
@@ -299,7 +299,7 @@ def steer(target, tol, deadline):
             return True
         stuck = 0 if d < best - 0.05 else stuck + 1
         best = min(best, d)
-        if stuck > 8:
+        if stuck > 20:
             print(f"stuck at {d:.2f} m from {target}")
             return False
         yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2])
@@ -318,13 +318,16 @@ def cmd_walkto(a):
         route = [[float(v) for v in l.split()] for l in path.splitlines()] + route
         print(f"nav: {len(route) - 1} nodes" if path else "nav: no path")
     deadline = time.time() + a.max
-    send({"cmd": "input", "type": "key", "key": "w", "action": "down"})
+    keys = ["w"] + (["left shift"] if a.run else [])
+    for k in keys:
+        send({"cmd": "input", "type": "key", "key": k, "action": "down"})
     try:
         for i, p in enumerate(route):
             if not steer(p, a.tol if i == len(route) - 1 else 0.7, deadline):
                 break
     finally:
-        send({"cmd": "input", "type": "key", "key": "w", "action": "up"})
+        for k in keys:
+            send({"cmd": "input", "type": "key", "key": k, "action": "up"})
     frames(0.2)
     cmd_state(a)
     cmd_log(argparse.Namespace(regex=None, all=False))
@@ -439,6 +442,7 @@ def main():
     s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z")
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s.add_argument("--nav", action="store_true", help="follow the agent node graph")
+    s.add_argument("--run", action="store_true", help="hold shift")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
