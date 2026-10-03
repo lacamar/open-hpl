@@ -38,6 +38,8 @@
 
 namespace hpl {
 
+	bool cSoundEntityData::mbLazyLoad = false;
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -152,7 +154,7 @@ namespace hpl {
 
 	void cSoundEntityData::PreloadSounds()
 	{
-		if(mbStream) return;
+		if(mbStream || mbLazyLoad) return;
 		
 		for(int i=0; i<3; ++i) PreloadSoundsOfType( (eSoundEntityType)i );
 	}

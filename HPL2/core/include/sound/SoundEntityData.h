@@ -62,6 +62,8 @@ namespace hpl {
 
 		void SetStream(bool abX){mbStream = abX;}
 		bool GetStream(){return mbStream;}
+
+		static void SetLazyLoad(bool abX){ mbLazyLoad = abX;}
 		void SetLoop(bool abX){mbLoop = abX;}
 		bool GetLoop(){return mbLoop;}
 		void SetUse3D(bool abX){ mbUse3D = abX;}
@@ -103,6 +105,7 @@ namespace hpl {
 		float mfMinDistance;
 		
 		bool mbStream;
+		static bool mbLazyLoad;
 		bool mbLoop;
 		bool mbUse3D;
 		

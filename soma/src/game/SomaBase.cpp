@@ -851,6 +851,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	iCharacterBody::SetHpl3(true);
 	cRendererDeferred::SetHpl3SSAO(true);
 	cWorld::SetHpl3SkyBox(true);
+	cSoundEntityData::SetLazyLoad(true);
 	cMaterialType_Translucent::SetLightProbes(true);
 	cRendererDeferred::SetHdr(true);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
