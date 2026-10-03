@@ -64,6 +64,7 @@ namespace hpl {
 
 		mvGravity = cVector3f(0,-9.81f,0);
 		mfMaxTimeStep = 1.0f/60.0f;
+		mbFlushCache = false;
 
 		/////////////////////////////////
 		//Create default material.
@@ -109,6 +110,7 @@ namespace hpl {
         //if(lUpdate % 30==0)
 		{
 
+			FlushCache();
 			while(afTimeStep>mfMaxTimeStep)
 			{
 				NewtonUpdate(mpNewtonWorld, mfMaxTimeStep);
@@ -321,11 +323,22 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 	
+	// compounds skip Newton's per-shape world flush (O(n^2) loads); the broadphase must be rebalanced before use
+	void cPhysicsWorldNewton::FlushCache()
+	{
+		if(mbFlushCache == false) return;
+		NewtonInvalidateCache(mpNewtonWorld);
+		mbFlushCache = false;
+	}
+
+	//-----------------------------------------------------------------------
+
 	iCollideShape* cPhysicsWorldNewton::CreateCompundShape(tCollideShapeVec &avShapes)
 	{
 		cCollideShapeNewton *pShape = hplNew( cCollideShapeNewton, (eCollideShapeType_Compound,0, NULL, mpNewtonWorld,this) );
 		pShape->CreateCompoundFromShapeVec(avShapes);
 		mlstShapes.push_back(pShape);
+		mbFlushCache = true;
 
 		return pShape;
 	}
@@ -406,6 +419,7 @@ namespace hpl {
 
 	void cPhysicsWorldNewton::GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec)
 	{
+		FlushCache();
 		gpBodyVec = apBodyVec;
 
 		NewtonWorldForEachBodyInAABBDo(mpNewtonWorld,apBV->GetMin().v, apBV->GetMax().v,AddNewtonBodyToVector, NULL);
@@ -529,6 +543,7 @@ namespace hpl {
 								bool abCalcDist, bool abCalcNormal,bool abCalcPoint,
 								bool abUsePrefilter)
 	{
+		FlushCache();
 		gbRayCalcPoint = abCalcPoint;
 		gbRayCalcNormal = abCalcNormal;
 		gbRayCalcDist = abCalcDist;

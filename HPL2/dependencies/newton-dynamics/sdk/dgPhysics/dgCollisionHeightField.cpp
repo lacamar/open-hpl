@@ -476,6 +476,9 @@ dgFloat32 dgCollisionHeightField::RayCastCell (const dgFastRayTest& ray, dgInt32
 	dgAssert (maxT <= 1.0);
 
 	dgInt32 base = zIndex0 * m_width + xIndex0;
+	if (m_atributeMap[base] == DG_HEIGHTFIELD_HOLE) {
+		return dgFloat32 (1.2f);
+	}
 	
 	switch (m_elevationDataType) 
 	{
@@ -1141,7 +1144,7 @@ void dgCollisionHeightField::GetCollidingFaces (dgPolygonMeshDesc* const data) c
 			for (dgInt32 i = 0; i < faceCount; i ++) {
 				const dgInt32* const indexArray = &indices[faceIndexCount1]; 
 				const dgVector& faceNormal = vertex[indexArray[4]];
-				dgFloat32 dist = data->PolygonBoxRayDistance (faceNormal, 3, indexArray, stride, &vertex[0].m_x, ray);
+				dgFloat32 dist = indexArray[3] == DG_HEIGHTFIELD_HOLE ? dgFloat32 (1.0f) : data->PolygonBoxRayDistance (faceNormal, 3, indexArray, stride, &vertex[0].m_x, ray);
 				if (dist < dgFloat32 (1.0f)) {
 					hitDistance[faceCount0] = dist;
 					address[faceCount0] = faceIndexCount0;
@@ -1155,7 +1158,7 @@ void dgCollisionHeightField::GetCollidingFaces (dgPolygonMeshDesc* const data) c
 			for (dgInt32 i = 0; i < faceCount; i ++) {
 				const dgInt32* const indexArray = &indices[faceIndexCount1]; 
 				const dgVector& faceNormal = vertex[indexArray[4]];
-				dgFloat32 dist = data->PolygonBoxDistance (faceNormal, 3, indexArray, stride, &vertex[0].m_x);
+				dgFloat32 dist = indexArray[3] == DG_HEIGHTFIELD_HOLE ? dgFloat32 (0.0f) : data->PolygonBoxDistance (faceNormal, 3, indexArray, stride, &vertex[0].m_x);
 				if (dist > dgFloat32 (0.0f)) {
 					hitDistance[faceCount0] = dist;
 					address[faceCount0] = faceIndexCount0;

@@ -24,6 +24,7 @@
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
 #include <algorithm>
+#include <cmath>
 
 namespace hpl {
 
@@ -389,12 +390,26 @@ namespace hpl {
 
 	void cCollideShapeNewton::CreateHeightField(int alWidth, int alDepth, const float* apHeights, float afUnitSize)
 	{
-		std::vector<char> vAttributes(alWidth * alDepth, 1);
-		mpNewtonCollision = NewtonCreateHeightFieldCollision(mpNewtonWorld, alWidth, alDepth, 0, 0, apHeights, vAttributes.data(),
+		std::vector<float> vHeights(apHeights, apHeights + alWidth * alDepth);
+		std::vector<char> vAttributes(vHeights.size(), 1);
+		float fMin = 1e30f, fMax = -1e30f;
+		for (int i = 0; i < (int)vHeights.size(); ++i)
+		{
+			if (std::isnan(vHeights[i])) continue;
+			fMin = std::min(fMin, vHeights[i]);
+			fMax = std::max(fMax, vHeights[i]);
+		}
+		for (int z = 0; z < alDepth - 1; ++z)
+		for (int x = 0; x < alWidth - 1; ++x)
+		{
+			const float* p = &apHeights[z * alWidth + x];
+			if (std::isnan(p[0]) || std::isnan(p[1]) || std::isnan(p[alWidth]) || std::isnan(p[alWidth + 1]))
+				vAttributes[z * alWidth + x] = 127; // DG_HEIGHTFIELD_HOLE
+		}
+		for (float& h : vHeights) if (std::isnan(h)) h = fMin;
+		mpNewtonCollision = NewtonCreateHeightFieldCollision(mpNewtonWorld, alWidth, alDepth, 0, 0, vHeights.data(), vAttributes.data(),
 															 1, afUnitSize, afUnitSize, 0);
-		const float* pEnd = apHeights + alWidth * alDepth;
-		mBoundingVolume.SetLocalMinMax(cVector3f(0, *std::min_element(apHeights, pEnd), 0),
-									   cVector3f((alWidth - 1) * afUnitSize, *std::max_element(apHeights, pEnd), (alDepth - 1) * afUnitSize));
+		mBoundingVolume.SetLocalMinMax(cVector3f(0, fMin, 0), cVector3f((alWidth - 1) * afUnitSize, fMax, (alDepth - 1) * afUnitSize));
 	}
 
 	static void NewtonWriteToBinaryBuffer(void* apSerializeHandle, const void* apNewtonBuffer, int alSize)

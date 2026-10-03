@@ -25,6 +25,8 @@
 #include "dgCollision.h"
 #include "dgCollisionMesh.h"
 
+#define DG_HEIGHTFIELD_HOLE 127
+
 class dgCollisionHeightField;
 typedef dgFloat32 (*dgCollisionHeightFieldRayCastCallback) (const dgBody* const body, const dgCollisionHeightField* const heightFieldCollision, dgFloat32 interception, dgInt32 row, dgInt32 col, dgVector* const normal, int faceId, void* const usedData);
 

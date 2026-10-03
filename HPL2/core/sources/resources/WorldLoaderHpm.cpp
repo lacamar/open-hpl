@@ -709,11 +709,6 @@ namespace hpl {
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
-			if (pVtx->GetIndexNum() < (lW - 1) * (lH - 1) * 6)
-			{
-				CreateStaticBodyForMesh(pEntity, sName);
-				continue;
-			}
 			std::vector<float> vPatch(lW * lH);
 			for (int z = 0; z < lH; ++z)
 			for (int x = 0; x < lW; ++x) vPatch[z * lW + x] = Height(x0 + x, z0 + z);

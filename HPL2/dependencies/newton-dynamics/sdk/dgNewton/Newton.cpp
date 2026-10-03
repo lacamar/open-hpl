@@ -2562,7 +2562,8 @@ void NewtonCompoundCollisionEndAddRemove (NewtonCollision* const compoundCollisi
 	dgCollisionInstance* const instance = (dgCollisionInstance*) compoundCollision;
 	if (instance->IsType (dgCollision::dgCollisionCompound_RTTI)) {
 		dgCollisionCompound* const collision = (dgCollisionCompound*) instance->GetChildShape();
-		collision->EndAddRemove();
+		// HPL flushes lazily: cPhysicsWorldNewton::FlushCache
+		collision->EndAddRemove(false);
 	}
 }
 

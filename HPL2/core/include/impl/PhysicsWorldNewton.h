@@ -107,6 +107,8 @@ namespace hpl {
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
 	private:
+		void FlushCache();
+
 		NewtonWorld *mpNewtonWorld;
 
 		float* mpTempPoints;
@@ -119,6 +121,7 @@ namespace hpl {
 		cVector3f mvWorldSizeMax;
 		cVector3f mvGravity;
 		float mfMaxTimeStep;
+		bool mbFlushCache;
 
 		ePhysicsAccuracy mAccuracy;
 	};

@@ -26,6 +26,10 @@
 #include "dgMatrix.h"
 #include "dgAABBPolygonSoup.h"
 #include "dgPolygonSoupBuilder.h"
+#include <algorithm>
+#include <atomic>
+#include <thread>
+#include <vector>
 
 
 #define DG_STACK_DEPTH 512
@@ -447,7 +451,25 @@ void dgAABBPolygonSoup::CalculateAdjacendy ()
 	dgVector p1;
 	GetAABB (p0, p1);
 	dgFastAABBInfo box (p0, p1);
-	ForAllSectors (box, dgVector (dgFloat32 (0.0f)), dgFloat32 (1.0f), CalculateAllFaceEdgeNormals, this);
+	// each face only writes its own edge normals, so faces can be processed in any order
+	std::vector<std::pair<const dgInt32*, dgInt32> > faces;
+	ForAllSectors (box, dgVector (dgFloat32 (0.0f)), dgFloat32 (1.0f), GatherFaces, &faces);
+	std::atomic<size_t> next (0);
+	auto work = [&] () {
+		for (size_t i0; (i0 = next.fetch_add (16)) < faces.size(); ) {
+			for (size_t i = i0; i < std::min (i0 + 16, faces.size()); i ++) {
+				CalculateAllFaceEdgeNormals (this, m_localVertex, sizeof (dgTriplex), faces[i].first, faces[i].second, dgFloat32 (0.0f));
+			}
+		}
+	};
+	std::vector<std::thread> threads;
+	for (size_t i = 1; i < std::min<size_t> (std::thread::hardware_concurrency(), faces.size() / 32); i ++) {
+		threads.emplace_back (work);
+	}
+	work ();
+	for (std::thread& t : threads) {
+		t.join();
+	}
 
 	dgStack<dgTriplex> pool ((m_indexCount / 2) - 1);
 	const dgTriplex* const vertexArray = (dgTriplex*)GetLocalVertexPool();
@@ -572,6 +594,12 @@ void dgAABBPolygonSoup::CalculateAdjacendy ()
 			}
 		}
 	}
+}
+
+dgIntersectStatus dgAABBPolygonSoup::GatherFaces (void* const context, const dgFloat32* const polygon, dgInt32 strideInBytes, const dgInt32* const indexArray, dgInt32 indexCount, dgFloat32 hitDistance)
+{
+	((std::vector<std::pair<const dgInt32*, dgInt32> >*)context)->emplace_back (indexArray, indexCount);
+	return t_ContinueSearh;
 }
 
 dgIntersectStatus dgAABBPolygonSoup::CalculateAllFaceEdgeNormals (void* const context, const dgFloat32* const polygon, dgInt32 strideInBytes, const dgInt32* const indexArray, dgInt32 indexCount, dgFloat32 hitDistance)
