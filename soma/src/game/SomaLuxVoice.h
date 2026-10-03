@@ -61,6 +61,7 @@ public:
 	{
 		tString msCharacter;
 		tString msDisplayName;
+		tString msCallback;
 		float mfCharVolume = 1;
 		int mlEntryType = 8;
 		std::vector<cSound> mvSounds;
@@ -97,6 +98,7 @@ private:
 	void StartSound(cPlaying &aP);
 	void StopSound(cPlaying &aP);
 	void Finish(size_t alIdx);
+	void LineCallback(cSubject *apSubject, int alLine, bool abStart);
 	tString SoundKey(cSubject *apSubject, size_t alLine, size_t alSound);
 
 	static cSomaLuxVoiceHandler *mpInstance;

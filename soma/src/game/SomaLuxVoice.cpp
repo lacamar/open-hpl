@@ -135,6 +135,7 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 		for (cXmlElement *pLine : Children(pSubj, "Line"))
 		{
 			cLine line = mapChars[pLine->GetAttributeInt("CharacterId", -1)];
+			line.msCallback = pLine->GetAttributeString("Callback", "");
 			for (cXmlElement *pSound : Children(pLine, "Sound"))
 			{
 				cSound sound;
@@ -261,6 +262,18 @@ void cSomaLuxVoiceHandler::Finish(size_t alIdx)
 		p.mOnDone();
 }
 
+void cSomaLuxVoiceHandler::LineCallback(cSubject *apSubject, int alLine, bool abStart)
+{
+	tString sFunc = apSubject->mvLines[alLine].msCallback;
+	if (sFunc != "")
+		SomaMapScriptCall("void " + sFunc + "(const tString&in, const tString&in, int, bool)", [&](asIScriptContext *c) {
+			c->SetArgObject(0, &apSubject->msScene);
+			c->SetArgObject(1, &apSubject->msName);
+			c->SetArgDWord(2, alLine);
+			c->SetArgByte(3, abStart);
+		});
+}
+
 void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D)
 {
 	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D};
@@ -326,10 +339,13 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		const cLine &line = p.mpSubject->mvLines[p.mvLines[p.mlLine]];
 		if (p.mlSound >= line.mvSounds.size())
 		{
+			int lLine = p.mvLines[p.mlLine];
+			cSubject *pSubject = p.mpSubject;
 			++p.mlLine;
 			p.mlSound = 0;
 			p.mlStep = 0;
 			p.mfTime = 0;
+			LineCallback(pSubject, lLine, false);
 			continue;
 		}
 		const cSound &sound = line.mvSounds[p.mlSound];
@@ -339,6 +355,12 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 			StartSound(p);
 			p.mlStep = 1;
 			p.mfTime = 0;
+			if (p.mlSound == 0)
+			{
+				LineCallback(p.mpSubject, p.mvLines[p.mlLine], true);
+				++i;
+				continue;
+			}
 		}
 		else if (p.mlStep == 1)
 		{
