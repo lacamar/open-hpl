@@ -112,7 +112,7 @@ namespace hpl {
 
 	float cLogicTimer::GetStepSize()
 	{
-		return ((float)mlLocalTimeAdd)/1000.0f;
+		return (float)(mlLocalTimeAdd/1000.0);
 	}
 
 	//-----------------------------------------------------------------------
