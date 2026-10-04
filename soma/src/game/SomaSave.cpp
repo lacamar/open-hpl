@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV="; // version char is '0' + n
+	const char kMagic[] = "OHPLSAV?"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 13;
+	int glPendingVersion = 15;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -468,6 +468,13 @@ public:
 			o.Str(v.second);
 		}
 		o.Pod(p->mbGuiActive);
+		o.Pod((uint32_t)(p->mpImGui ? p->mpImGui->mmapStates.size() : 0));
+		if (p->mpImGui)
+			for (auto &st : p->mpImGui->mmapStates)
+			{
+				o.Pod(st.first);
+				o.Pod(st.second);
+			}
 	}
 
 	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
@@ -594,6 +601,14 @@ public:
 		}
 		if (glPendingVersion >= 13)
 			t->mbGuiActive = in.Pod<bool>();
+		n = glPendingVersion >= 14 ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			uint64_t lId = in.Pod<uint64_t>();
+			cSomaImGui::cState st = in.Pod<cSomaImGui::cState>();
+			if (t->mpImGui)
+				t->mpImGui->mmapStates[lId] = st;
+		}
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
 		t->mbEffectsActive = bEffects;
@@ -614,6 +629,8 @@ public:
 			o.Pod(pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0.0f);
 			o.Pod(pPlayer->GetState() ? pPlayer->GetState()->mlId : -1);
 			o.Pod(pPlayer->GetMoveState() ? pPlayer->GetMoveState()->mlId : -1);
+			// int return read as its low byte: 0/1 crouching
+			o.Pod((int)pPlayer->CallBool("int GetCharacterState()", nullptr, false));
 		}
 
 		o.Pod((uint32_t)pMap->GetTimers().size());
@@ -790,7 +807,7 @@ public:
 		bool bPlayer = in.Pod<uint8_t>() != 0;
 		cVector3f vFeet(0);
 		float fYaw = 0, fPitch = 0;
-		int lState = -1, lMoveState = -1;
+		int lState = -1, lMoveState = -1, lCharState = 0;
 		if (bPlayer)
 		{
 			vFeet = in.Pod<cVector3f>();
@@ -798,6 +815,8 @@ public:
 			fPitch = in.Pod<float>();
 			lState = in.Pod<int>();
 			lMoveState = in.Pod<int>();
+			if (glPendingVersion >= 15)
+				lCharState = in.Pod<int>();
 		}
 
 		pMap->GetTimers().clear();
@@ -984,7 +1003,7 @@ public:
 				pPlayer->ChangeMoveState(lMoveState);
 			if (lState >= 0)
 				pPlayer->ChangeState(lState);
-			pPlayer->PlaceAtStart(vFeet, fYaw);
+			pPlayer->PlaceAtStart(vFeet, fYaw, lCharState > 0);
 			if (pPlayer->GetCamera())
 				pPlayer->GetCamera()->SetPitch(fPitch);
 		}
@@ -1143,7 +1162,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 13)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 15)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
