@@ -106,7 +106,7 @@ bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tS
 	for (cSomaLuxScriptable *p : vAll)
 	{
 		asIScriptObject *pScript = p->GetScript();
-		if (pScript == NULL || p->msScriptName.empty() || SomaWildcardMatch(asObject, p->msScriptName) == false)
+		if (pScript == NULL || p->msScriptName.empty() || cString::MatchesWildcard(asObject, p->msScriptName) == false)
 			continue;
 		if (asClass != "" && IsClassOrDerived(pScript->GetObjectType(), asClass) == false)
 			continue;
@@ -114,7 +114,7 @@ bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tS
 			bFound = true;
 	}
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-	if (pMap && pMap->GetScript() && SomaWildcardMatch(asObject, pMap->GetName()) &&
+	if (pMap && pMap->GetScript() && cString::MatchesWildcard(asObject, pMap->GetName()) &&
 		(asClass == "" || IsClassOrDerived(pMap->GetScript()->GetObjectType(), asClass)))
 		bFound = cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + asFunc + "()") || bFound;
 	return bFound;

@@ -204,8 +204,8 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
 {
 	if (apEnt->meType == eSomaLuxEntityType_Player)
-		return cString::ToLowerCase(asPattern) == "player" || SomaWildcardMatch(asPattern, apEnt->msName);
-	return SomaWildcardMatch(asPattern, apEnt->msName);
+		return cString::ToLowerCase(asPattern) == "player" || cString::MatchesWildcard(asPattern, apEnt->msName);
+	return cString::MatchesWildcard(asPattern, apEnt->msName);
 }
 
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
@@ -215,7 +215,7 @@ cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
 		return it->second;
 	if (asName.find('*') != tString::npos)
 		for (cSomaLuxEntity *pEnt : mvEntities)
-			if (SomaWildcardMatch(asName, pEnt->msName))
+			if (cString::MatchesWildcard(asName, pEnt->msName))
 				return pEnt;
 	return NULL;
 }
@@ -398,7 +398,7 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 				{
 					it = mmapWildcardCache.emplace(cb.msChild, std::vector<cSomaLuxEntity *>()).first;
 					for (cSomaLuxEntity *pEnt : mvEntities)
-						if (SomaWildcardMatch(cb.msChild, pEnt->msName))
+						if (cString::MatchesWildcard(cb.msChild, pEnt->msName))
 							it->second.push_back(pEnt);
 				}
 				vChildren = it->second;
@@ -1005,7 +1005,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "bool GetTimersNamed(const tString&in asName, array<tString>&inout avNames)", +[](cSomaLuxMap &m, S n, CScriptArray &a) {
 		bool bAny = false;
 		for (cSomaLuxTimer &t : m.GetTimers())
-			if (SomaWildcardMatch(n, t.msName))
+			if (cString::MatchesWildcard(n, t.msName))
 			{
 				a.InsertLast(&t.msName);
 				bAny = true;
@@ -1051,7 +1051,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			while (it.HasNext())
 			{
 				cParticleSystem *p = it.Next();
-				if (SomaWildcardMatch(n, p->GetName())) v.push_back(p);
+				if (cString::MatchesWildcard(n, p->GetName())) v.push_back(p);
 			}
 			for (cParticleSystem *p : v) f(p);
 		};
@@ -1140,7 +1140,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		while (it.HasNext())
 		{
 			iLight *pLight = it.Next();
-			if (SomaWildcardMatch(n, pLight->GetName())) a.InsertLast(&pLight);
+			if (cString::MatchesWildcard(n, pLight->GetName())) a.InsertLast(&pLight);
 		}
 		return a.GetSize() > 0;
 	});
@@ -1270,7 +1270,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  while (it.HasNext())
 				  {
 					  iLight *pLight = it.Next();
-					  if (SomaWildcardMatch(n, pLight->GetName())) pLight->FadeTo(c, r < 0 ? pLight->GetRadius() : r, t);
+					  if (cString::MatchesWildcard(n, pLight->GetName())) pLight->FadeTo(c, r < 0 ? pLight->GetRadius() : r, t);
 				  }
 			  });
 	static auto ForLights = [](const tString &n, std::function<void(iLight *)> f) {
@@ -1279,7 +1279,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		while (it.HasNext())
 		{
 			iLight *pLight = it.Next();
-			if (SomaWildcardMatch(n, pLight->GetName())) f(pLight);
+			if (cString::MatchesWildcard(n, pLight->GetName())) f(pLight);
 		}
 	};
 	SOMA_FUNC(e, "void Light_SetVisible(const tString &in asLightName, bool abVisible)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetVisible(b); }); });
@@ -1297,7 +1297,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		while (it.HasNext())
 		{
 			cBillboard *p = it.Next();
-			if (SomaWildcardMatch(n, p->GetName())) p->SetVisible(b);
+			if (cString::MatchesWildcard(n, p->GetName())) p->SetVisible(b);
 		}
 	});
 	SOMA_METHOD(e, M, "void PlacePlayerAtStartPos(const tString&in asName)", +[](cSomaLuxMap &m, S n) {

@@ -15,36 +15,6 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
-bool SomaWildcardMatch(const tString &asPattern, const tString &asName)
-{
-	if (asPattern.find('*') == tString::npos)
-		return asPattern == asName;
-	size_t p = 0, n = 0, lStar = tString::npos, lMatch = 0;
-	while (n < asName.size())
-	{
-		if (p < asPattern.size() && asPattern[p] == asName[n])
-		{
-			++p;
-			++n;
-		}
-		else if (p < asPattern.size() && asPattern[p] == '*')
-		{
-			lStar = p++;
-			lMatch = n;
-		}
-		else if (lStar != tString::npos)
-		{
-			p = lStar + 1;
-			n = ++lMatch;
-		}
-		else
-			return false;
-	}
-	while (p < asPattern.size() && asPattern[p] == '*')
-		++p;
-	return p == asPattern.size();
-}
-
 std::vector<cSomaLuxEntity *> &cSomaLuxEntity::Pending()
 {
 	static std::vector<cSomaLuxEntity *> v;
@@ -170,7 +140,7 @@ void cSomaLuxEntity::ResolveConnectedLights()
 		{
 			iLight *pLight = it.Next();
 			for (const tString &sPattern : vPatterns)
-				if (SomaWildcardMatch(sPattern, pLight->GetName()))
+				if (cString::MatchesWildcard(sPattern, pLight->GetName()))
 				{
 					auto conn = std::find_if(gvLightConnections.begin(), gvLightConnections.end(),
 											 [pLight](const cSomaLightConnection &c) { return c.mpLight == pLight; });
@@ -1030,7 +1000,7 @@ void cSomaLuxEntity::ChangeConnectionState(int alState)
 			continue;
 		int lState = conn.mbInvert ? -alState : alState;
 		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-			if (pEnt != this && SomaWildcardMatch(conn.msEntity, pEnt->msName))
+			if (pEnt != this && cString::MatchesWildcard(conn.msEntity, pEnt->msName))
 				pEnt->Call("void OnConnectionStateChange(iLuxEntity@ apEntity, int alState)", [&](asIScriptContext *c) {
 					c->SetArgAddress(0, this);
 					c->SetArgDWord(1, lState);
@@ -1278,7 +1248,7 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 
 void cSomaLuxEntity::RemoveCollideCallbacks(const tString &asChild)
 {
-	std::erase_if(mvCollideCallbacks, [&](const cCollideCallback &c) { return SomaWildcardMatch(asChild, c.msChild) || SomaWildcardMatch(c.msChild, asChild); });
+	std::erase_if(mvCollideCallbacks, [&](const cCollideCallback &c) { return cString::MatchesWildcard(asChild, c.msChild) || cString::MatchesWildcard(c.msChild, asChild); });
 }
 
 struct cSomaOBB
@@ -1750,7 +1720,7 @@ template <class F> static void ForMatching(const tString &asName, F aFunc)
 {
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-			if (SomaWildcardMatch(asName, pEnt->msName))
+			if (cString::MatchesWildcard(asName, pEnt->msName))
 				aFunc(pEnt);
 }
 
@@ -1811,7 +1781,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void RemoveEntityAttachment()", +[](E *p) { p->RemoveAttachment(); });
 	SOMA_METHOD_NEW(e, T, "int GetBodyIndexFromName(const tString&in asName)", +[](E *p, S n) {
 		for (size_t i = 0; i < p->mvBodies.size(); ++i)
-			if (p->mvBodies[i]->GetName() == n || SomaWildcardMatch("*_" + n, p->mvBodies[i]->GetName()))
+			if (p->mvBodies[i]->GetName() == n || cString::MatchesWildcard("*_" + n, p->mvBodies[i]->GetName()))
 				return (int)i;
 		return -1;
 	});
@@ -1983,25 +1953,25 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					+[](E *p, S n) { std::erase_if(p->mvCollideCallbacks, [&](const E::cCollideCallback &c) { return c.msChild == n; }); });
 	SOMA_METHOD_NEW(e, T, "iLight@ GetLightFromName(const tString&in asName)", +[](E *p, S n) {
 		for (iLight *l : p->mvLights)
-			if (l->GetName() == n || SomaWildcardMatch("*" + n, l->GetName()))
+			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
 				return l;
 		return (iLight *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cParticleSystem@ GetParticleSystemFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cParticleSystem *l : p->mvParticleSystems)
-			if (l && (l->GetName() == n || SomaWildcardMatch("*" + n, l->GetName())))
+			if (l && (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName())))
 				return l;
 		return (cParticleSystem *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cBillboard@ GetBillboardFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cBillboard *l : p->mvBillboards)
-			if (l->GetName() == n || SomaWildcardMatch("*" + n, l->GetName()))
+			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
 				return l;
 		return (cBillboard *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ GetSoundEntityFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cSoundEntity *l : p->mvSoundEntities)
-			if (l->GetName() == n || SomaWildcardMatch("*" + n, l->GetName()))
+			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
 				return l;
 		return (cSoundEntity *)NULL;
 	});
@@ -2138,7 +2108,7 @@ bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
 iPhysicsBody *cSomaLuxEntity::GetBodyFromName(const tString &asName)
 {
 	for (iPhysicsBody *b : mvBodies)
-		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || SomaWildcardMatch("*_" + asName, b->GetName())))
+		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || cString::MatchesWildcard("*_" + asName, b->GetName())))
 			return b;
 	return NULL;
 }
@@ -2505,7 +2475,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
 					  iPhysicsBody *pBody = p->GetMainBody();
 					  for (iPhysicsBody *b : p->mvBodies)
-						  if (body != "" && (b->GetName() == body || SomaWildcardMatch("*_" + body, b->GetName())))
+						  if (body != "" && (b->GetName() == body || cString::MatchesWildcard("*_" + body, b->GetName())))
 							  pBody = b;
 					  cVector3f vPos = (pBody ? pBody->GetWorldPosition() : p->GetPosition()) + off;
 					  p->OnInteract(0, pBody, vPos, data);
@@ -2557,7 +2527,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		return bAny;
 	});
 	SOMA_FUNC(e, "bool Entity_RemoveCollideCallback(const tString &in asParentName, const tString &in asChildName)", +[](S par, S child) {
-		ForMatching(par, [&](cSomaLuxEntity *p) { std::erase_if(p->mvCollideCallbacks, [&](const cSomaLuxEntity::cCollideCallback &c) { return SomaWildcardMatch(child, c.msChild); }); });
+		ForMatching(par, [&](cSomaLuxEntity *p) { std::erase_if(p->mvCollideCallbacks, [&](const cSomaLuxEntity::cCollideCallback &c) { return cString::MatchesWildcard(child, c.msChild); }); });
 		return true;
 	});
 	SOMA_FUNC(e, "void Entity_SetVarString(const tString&in asEntityName, const tString&in asVarName, const tString&in asX)",

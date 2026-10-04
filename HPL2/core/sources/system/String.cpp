@@ -1190,6 +1190,24 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cString::MatchesWildcard(const tString& asPattern, const tString& asName)
+	{
+		if(asPattern.find('*') == tString::npos)
+			return asPattern == asName;
+		long lPrev = -1;
+		for(size_t b = 0, e; b < asPattern.size(); b = e + 1)
+		{
+			e = std::min(asPattern.find('*', b), asPattern.size());
+			if(e == b)
+				continue;
+			size_t lPos = asName.find(asPattern.substr(b, e - b));
+			if(lPos == tString::npos || (long)lPos <= lPrev || (lPrev < 0 && asPattern[0] != '*' && lPos != 0))
+				return false;
+			lPrev = (long)lPos;
+		}
+		return true;
+	}
+
 	///Helper
 	//returns first char in a string
 	int cString::GetFirstStringPos(const tString& aString, const tString&  aChar)

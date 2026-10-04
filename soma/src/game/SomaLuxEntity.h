@@ -292,7 +292,4 @@ bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam);
 bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast);
 bool SomaEntityInPlayerLOS(cSomaLuxEntity *apEnt, bool abCheckFOV);
 
-// "*" matches any run of characters, as HPL3's wildcard entity names
-bool SomaWildcardMatch(const tString &asPattern, const tString &asName);
-
 #endif // SOMA_LUX_ENTITY_H

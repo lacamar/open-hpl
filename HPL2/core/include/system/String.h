@@ -242,6 +242,8 @@ namespace hpl {
 		 * \return >=0 if string is found else -1
 		 */
 		static int GetFirstStringPos(const tString& aString, const tString& aChar);
+		// HPL3 entity-name match: segments searched from the start, tail unanchored
+		static bool MatchesWildcard(const tString& asPattern, const tString& asName);
 		static int GetFirstStringPosW(const tWString& aString, const tWString& aChar);
 		/**
 		 * Get the last pos where aChar is found.

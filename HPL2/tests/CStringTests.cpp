@@ -143,6 +143,19 @@ static void TestVecParsing()
 	CHECK(vBad == vDefault);
 }
 
+// Verified against the official SOMA's GetEntityArray.
+static void TestMatchesWildcard()
+{
+	CHECK(cString::MatchesWildcard("*shutter_door*Hydroponics", "shutter_door_5_Hydroponics"));
+	CHECK(cString::MatchesWildcard("*shutter_door*Hydroponics", "shutter_door_5_Hydroponics_1"));
+	CHECK(cString::MatchesWildcard("*door_5_Hydro", "shutter_door_5_Hydroponics_1"));
+	CHECK(!cString::MatchesWildcard("shutter_door_5*o*o", "shutter_door_5_Hydroponics"));
+	CHECK(!cString::MatchesWildcard("door*", "shutter_door"));
+	CHECK(cString::MatchesWildcard("*", "x"));
+	CHECK(cString::MatchesWildcard("abc", "abc"));
+	CHECK(!cString::MatchesWildcard("abc", "abcd"));
+}
+
 //-----------------------------------------------------------------------
 
 int hplMain(const tString&)
@@ -153,6 +166,7 @@ int hplMain(const tString&)
 	TestRelativePath();
 	TestNumericConversions();
 	TestVecParsing();
+	TestMatchesWildcard();
 
 	if (gFailures > 0)
 	{
