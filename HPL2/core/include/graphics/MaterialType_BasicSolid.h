@@ -125,5 +125,38 @@ namespace hpl {
 
 	//---------------------------------------------------
 
+	class cMaterialType_ProjectedUV_Vars : public iMaterialVars
+	{
+	public:
+		float mfBlendHardness;
+		float mfNormalMapBlendImpact;
+		cVector3f mvTextureScale;
+		bool mbDynamicObjectSupport;
+	};
+
+	class cMaterialType_ProjectedUV : public iMaterialType_SolidBase
+	{
+	public:
+		cMaterialType_ProjectedUV(cGraphics *apGraphics, cResources *apResources);
+
+		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit);
+		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+
+		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer);
+		void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
+										iRenderer *apRenderer);
+		void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
+										iRenderer *apRenderer);
+
+		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialType_ProjectedUV_Vars,()); }
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
+
+	private:
+		void CompileSolidSpecifics(cMaterial *apMaterial);
+		void LoadSpecificData();
+	};
+
+	//---------------------------------------------------
+
 };
 #endif // HPL_MATERIAL_TYPE_BASIC_SURFACES_H

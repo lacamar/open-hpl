@@ -327,7 +327,8 @@ namespace
 		};
 
 		std::map<tString, tString> mapOut;
-		std::regex declRe("uniform\\s+(sampler2D|samplerCube|sampler2DRect|sampler3D)\\s+(\\w+)\\s*;");
+		// uniforms and function parameters
+		std::regex declRe("(?:uniform\\s+|[(,]\\s*)(sampler2D|samplerCube|sampler2DRect|sampler3D)\\s+(\\w+)(?=\\s*[;,)])");
 		auto begin = std::sregex_iterator(asSrc.begin(), asSrc.end(), declRe);
 		for (auto it = begin; it != std::sregex_iterator(); ++it)
 		{

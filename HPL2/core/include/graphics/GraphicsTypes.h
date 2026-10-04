@@ -561,6 +561,15 @@ namespace hpl {
 		eMaterialTexture_DetailDiffuse,
 		eMaterialTexture_DetailNMap,
 		eMaterialTexture_Translucency,
+		eMaterialTexture_DiffuseSide,
+		eMaterialTexture_DiffuseTop,
+		eMaterialTexture_DiffuseBottom,
+		eMaterialTexture_NMapSide,
+		eMaterialTexture_NMapTop,
+		eMaterialTexture_NMapBottom,
+		eMaterialTexture_SpecularSide,
+		eMaterialTexture_SpecularTop,
+		eMaterialTexture_SpecularBottom,
 		eMaterialTexture_Special,	//This means that the texture is not data in the material, but retrieved else where. Such as a reflection texture.
 		eMaterialTexture_LastEnum
 	};

@@ -211,7 +211,7 @@ namespace hpl {
 			AddMaterialType(hplNew( cMaterialType_TerrainBlend, (this, apResources) ), "terrainblend");
 			AddMaterialType(hplNew( cMaterialType_TerrainDecal, (this, apResources) ), "terraindecal");
 			AddMaterialType(hplNew( cMaterialType_Undergrowth, (this, apResources) ), "undergrowth");
-			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "projecteduv");
+			AddMaterialType(hplNew( cMaterialType_ProjectedUV, (this, apResources) ), "projecteduv");
 			AddMaterialType(hplNew( cMaterialType_SolidDiffuse, (this, apResources) ), "terrain");
 
 

@@ -68,6 +68,11 @@ namespace hpl {
 	#define kVar_afFarPlane						16
 	#define kVar_avDetailProperties				17
 	#define kVar_avDetailWeights				18
+	#define kVar_a_mtxNormalFrag				19
+	#define kVar_afBlendHardness				20
+	#define kVar_afBlendHardnessVtx				21
+	#define kVar_afNormalMapBlendImpact			22
+	#define kVar_avTextureScale					23
 
 
 	//------------------------------
@@ -145,6 +150,28 @@ namespace hpl {
 			cProgramComboFeature("UseSwaySingleDir",			kPC_VertexBit),
 			cProgramComboFeature("UseSwayMap",					kPC_VertexBit),
 	};
+
+	//------------------------------
+	//Projected UV Features and data
+	//------------------------------
+	#define eFeature_PUV_NormalMaps			eFlagBit_0
+	#define eFeature_PUV_Specular			eFlagBit_1
+	#define eFeature_PUV_BottomTexture		eFlagBit_2
+	#define eFeature_PUV_DiffuseMap			eFlagBit_3
+	#define eFeature_PUV_NMapBlendWeight	eFlagBit_4
+
+	#define kProjectedUVFeatureNum 5
+
+	static cProgramComboFeature vProjectedUVFeatureVec[] =
+	{
+		cProgramComboFeature("UseNormalMapping", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseSpecular", kPC_FragmentBit),
+		cProgramComboFeature("UseBottomTexture", kPC_FragmentBit),
+		cProgramComboFeature("UseDiffuseMap", kPC_FragmentBit),
+		cProgramComboFeature("UseNormalMapBlendWeight", kPC_FragmentBit, eFeature_PUV_NormalMaps),
+	};
+
+	//------------------------------
 
 	static void AddSwayVariableIds(cProgramComboManager *apManager, int alMode)
 	{
@@ -761,6 +788,159 @@ namespace hpl {
 		apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
 		apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
 		apVars->AddVarBool("AlphaDissolveFilter", pVars->mbAlphaDissolveFilter);
+	}
+
+	//--------------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////////
+	// PROJECTED UV
+	//////////////////////////////////////////////////////////////////////////
+
+	//--------------------------------------------------------------------------
+
+	// ponytail: no detail/blend maps or PlanarUVRotation/TextureUVOffset (unused or all default in SOMA data)
+	cMaterialType_ProjectedUV::cMaterialType_ProjectedUV(cGraphics *apGraphics, cResources *apResources) : iMaterialType_SolidBase(apGraphics, apResources)
+	{
+		for(int i=eMaterialTexture_DiffuseSide; i<=eMaterialTexture_SpecularBottom; ++i)
+			AddUsedTexture((eMaterialTexture)i);
+
+		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::LoadSpecificData()
+	{
+		cParserVarContainer defaultVars;
+		defaultVars.Add("UseUv");
+		defaultVars.Add("UseNormals");
+		defaultVars.Add("UseDepth");
+		defaultVars.Add("UseColor");
+		defaultVars.Add("UseColorMul");
+		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_projected_uv_vtx.glsl", "deferred_projected_uv_frag.glsl",
+													vProjectedUVFeatureVec,kProjectedUVFeatureNum, defaultVars);
+
+		mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane",kVar_afInvFarPlane,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxNormalFrag", kVar_a_mtxNormalFrag,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afBlendHardness", kVar_afBlendHardness,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afBlendHardnessVtx", kVar_afBlendHardnessVtx,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afNormalMapBlendImpact", kVar_afNormalMapBlendImpact,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avTextureScale", kVar_avTextureScale,eMaterialRenderMode_Diffuse);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::CompileSolidSpecifics(cMaterial *apMaterial)
+	{
+		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
+	}
+
+	//--------------------------------------------------------------------------
+
+	static bool HasProjectedTexture(cMaterial *apMaterial, int alFirst, int alStep)
+	{
+		for(int i=0; i<3; ++i)
+			if(apMaterial->GetTexture((eMaterialTexture)(alFirst + i*alStep))) return true;
+		return false;
+	}
+
+	iTexture* cMaterialType_ProjectedUV::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z || aRenderMode == eMaterialRenderMode_Z_Dissolve)
+			return alUnit == 1 ? mpDissolveTexture : NULL;
+
+		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 8) return NULL;
+
+		//Units 0-8: Diffuse, NMap, Specular x Side, Top, Bottom; a missing one falls back to another of its kind
+		int lFirst = eMaterialTexture_DiffuseSide + alUnit/3*3;
+		for(int i=0; i<3; ++i)
+			if(iTexture *pTex = apMaterial->GetTexture((eMaterialTexture)(lFirst + (alUnit%3 + i)%3))) return pTex;
+		return NULL;
+	}
+
+	//--------------------------------------------------------------------------
+
+	iGpuProgram* cMaterialType_ProjectedUV::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z)			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, 0);
+		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)	return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, eFeature_Z_Dissolve);
+		if(aRenderMode != eMaterialRenderMode_Diffuse)		return NULL;
+
+		cMaterialType_ProjectedUV_Vars *pVars = (cMaterialType_ProjectedUV_Vars*)apMaterial->GetVars();
+		tFlag lFlags = 0;
+		if(HasProjectedTexture(apMaterial, eMaterialTexture_DiffuseSide, 1))	lFlags |= eFeature_PUV_DiffuseMap;
+		if(HasProjectedTexture(apMaterial, eMaterialTexture_NMapSide, 1))		lFlags |= eFeature_PUV_NormalMaps;
+		if(HasProjectedTexture(apMaterial, eMaterialTexture_SpecularSide, 1))	lFlags |= eFeature_PUV_Specular;
+		if(HasProjectedTexture(apMaterial, eMaterialTexture_DiffuseBottom, 3))	lFlags |= eFeature_PUV_BottomTexture;
+		if(pVars->mfNormalMapBlendImpact > 0)									lFlags |= eFeature_PUV_NMapBlendWeight;
+
+		return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
+
+		apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/apRenderer->GetCurrentFrustum()->GetFarPlane());
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
+																iRenderer *apRenderer)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
+
+		cMaterialType_ProjectedUV_Vars *pVars = (cMaterialType_ProjectedUV_Vars*)apMaterial->GetVars();
+		apProgram->SetFloat(kVar_afBlendHardness, pVars->mfBlendHardness);
+		apProgram->SetFloat(kVar_afBlendHardnessVtx, pVars->mfBlendHardness);
+		apProgram->SetFloat(kVar_afNormalMapBlendImpact, pVars->mfNormalMapBlendImpact);
+		apProgram->SetVec3f(kVar_avTextureScale, pVars->mvTextureScale);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
+																iRenderer *apRenderer)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
+		{
+			apProgram->SetFloat(kVar_afDissolveAmount, apObject->GetCoverageAmount());
+		}
+		else if(aRenderMode == eMaterialRenderMode_Diffuse)
+		{
+			//Official static batches are in world space; other objects only project in world space with DynamicObjectSupport
+			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
+			bool bWorld = pMtx && (apObject->IsStatic() || ((cMaterialType_ProjectedUV_Vars*)apObject->GetMaterial()->GetVars())->mbDynamicObjectSupport);
+			apProgram->SetMatrixf(kVar_a_mtxUV, bWorld ? *pMtx : cMatrixf::Identity);
+			const cMatrixf &mtxView = apRenderer->GetCurrentFrustum()->GetViewMatrix();
+			apProgram->SetMatrixf(kVar_a_mtxNormalFrag, bWorld || pMtx == NULL ? mtxView : cMath::MatrixMul(mtxView, *pMtx));
+			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
+		}
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_ProjectedUV::LoadVariables(cMaterial* apMaterial, cResourceVarsObject *apVars)
+	{
+		cMaterialType_ProjectedUV_Vars *pVars = (cMaterialType_ProjectedUV_Vars*)apMaterial->GetVars();
+		if(pVars==NULL)
+		{
+			pVars = (cMaterialType_ProjectedUV_Vars*)CreateSpecificVariables();
+			apMaterial->SetVars(pVars);
+		}
+
+		pVars->mfBlendHardness = cMath::Clamp(1 - apVars->GetVarFloat("BlendSmoothness", 0.5f), 0.0f, 0.99f);
+		pVars->mfNormalMapBlendImpact = cMath::Clamp(apVars->GetVarFloat("NormalMapBlendImpact", 0), 0.0f, 1.0f);
+		pVars->mvTextureScale = cVector3f(	1.0f / apVars->GetVarFloat("TextureUVScaleSide", 1),
+											1.0f / apVars->GetVarFloat("TextureUVScaleTop", 1),
+											1.0f / apVars->GetVarFloat("TextureUVScaleBottom", 1));
+		pVars->mbDynamicObjectSupport = apVars->GetVarBool("DynamicObjectSupport", false);
 	}
 
 	//--------------------------------------------------------------------------

@@ -523,6 +523,15 @@ namespace hpl {
 			case eMaterialTexture_DetailDiffuse: return "DetailDiffuse";
 			case eMaterialTexture_DetailNMap: return "DetailNMap";
 			case eMaterialTexture_Translucency: return "Translucency";
+			case eMaterialTexture_DiffuseSide: return "DiffuseSide";
+			case eMaterialTexture_DiffuseTop: return "DiffuseTop";
+			case eMaterialTexture_DiffuseBottom: return "DiffuseBottom";
+			case eMaterialTexture_NMapSide: return "NMapSide";
+			case eMaterialTexture_NMapTop: return "NMapTop";
+			case eMaterialTexture_NMapBottom: return "NMapBottom";
+			case eMaterialTexture_SpecularSide: return "SpecularSide";
+			case eMaterialTexture_SpecularTop: return "SpecularTop";
+			case eMaterialTexture_SpecularBottom: return "SpecularBottom";
 		}
 
 		return "";
