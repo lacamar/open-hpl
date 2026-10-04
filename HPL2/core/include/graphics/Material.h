@@ -114,6 +114,8 @@ namespace hpl {
 
 		void SetDecalSortOrder(int alX){ mlDecalSortOrder = alX;}
 		int GetDecalSortOrder(){ return mlDecalSortOrder;}
+		void SetUVSubDivisions(const cVector2l& avX){ mvUVSubDivisions = avX;}
+		const cVector2l& GetUVSubDivisions(){ return mvUVSubDivisions;}
 		
 		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mvTextureInUnit[aRenderMode][alUnit];}
 		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mvPrograms[alSkeleton][aRenderMode];}
@@ -189,6 +191,7 @@ namespace hpl {
 
 		bool mbAffectedByFog;
 		int mlDecalSortOrder = 0;
+		cVector2l mvUVSubDivisions = cVector2l(1,1);
 
 		bool mbUseAlphaDissolveFilter;
 

@@ -37,6 +37,8 @@
 #include "graphics/Material.h"
 #include "graphics/MaterialType_Decal.h"
 #include "graphics/Texture.h"
+#include "graphics/DecalCreator.h"
+#include "scene/SubMeshEntity.h"
 
 #include "physics/Physics.h"
 #include "physics/PhysicsWorld.h"
@@ -691,6 +693,7 @@ namespace hpl {
 		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
 		std::vector<cMaterial*> vBlend = CreateTerrainBlendMaterials(asBaseFile, apTerrain, lSize * fUnit);
 
+		std::vector<cSubMeshEntity*> vPatches;
 		const float fOffset = lSize * fUnit * 0.5f;
 		for (int z0 = 0; z0 < lSize - 1; z0 += lPatch)
 		for (int x0 = 0; x0 < lSize - 1; x0 += lPatch)
@@ -764,6 +767,7 @@ namespace hpl {
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
+			vPatches.push_back(pEntity->GetSubMeshEntity(0));
 			std::vector<float> vPatch(lW * lH);
 			for (int z = 0; z < lH; ++z)
 			for (int x = 0; x < lW; ++x) vPatch[z * lW + x] = Height(x0 + x, z0 + z);
@@ -772,6 +776,57 @@ namespace hpl {
 			pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(x0 * fUnit - fOffset, 0, z0 * fUnit - fOffset)));
 		}
 		for (cMaterial* pMat : vBlend) pMatMgr->Destroy(pMat);
+		CreateTerrainDecals(apTerrain, vPatches, fMaxHeight);
+	}
+
+	void cWorldLoaderHpm::CreateTerrainDecals(cXmlElement* apTerrain, const std::vector<cSubMeshEntity*>& avPatches, float afMaxHeight)
+	{
+		cXmlElement* pSections = apTerrain->GetFirstElement("Sections");
+		if (pSections == NULL) return;
+		cDecalCreator creator(mpGraphics->GetLowLevel(), mpResources);
+		creator.SetMaxTrianglesPerDecal(100000);
+		creator.SetDecalOffset(0.02f);
+		int lCount = 0;
+		cXmlNodeListIterator sectionIt = pSections->GetChildIterator();
+		while (sectionIt.HasNext())
+		{
+			cXmlElement* pSection = sectionIt.Next()->ToElement();
+			tStringVec vFiles;
+			if (cXmlElement* pIndex = pSection->GetFirstElement("FileIndex_TerrainDecals"))
+			{
+				cXmlNodeListIterator fileIt = pIndex->GetChildIterator();
+				while (fileIt.HasNext()) vFiles.push_back(fileIt.Next()->ToElement()->GetAttributeString("Path"));
+			}
+			cXmlElement* pDecals = pSection->GetFirstElement("Decals");
+			if (pDecals == NULL) continue;
+			cXmlNodeListIterator decalIt = pDecals->GetChildIterator();
+			while (decalIt.HasNext())
+			{
+				cXmlElement* pDecal = decalIt.Next()->ToElement();
+				int lFile = pDecal->GetAttributeInt("FileIndex", -1);
+				if (lFile < 0 || lFile >= (int)vFiles.size()) continue;
+				cVector2f vPos = pDecal->GetAttributeVector2f("Position", 0);
+				cVector2f vSize = pDecal->GetAttributeVector2f("Size", 1);
+				cMatrixf mtxRot = cMath::MatrixRotateY(pDecal->GetAttributeFloat("Angle", 0));
+
+				creator.ClearMeshes();
+				creator.SetMaterial(vFiles[lFile]);
+				if (creator.GetMaterial() == NULL) continue;
+				creator.SetDecalPosition(cVector3f(vPos.x, afMaxHeight * 0.5f, vPos.y));
+				creator.SetDecalRight(mtxRot.GetRight(), false);
+				creator.SetDecalForward(mtxRot.GetForward(), false);
+				creator.SetDecalSize(cVector3f(vSize.x, afMaxHeight + 2, vSize.y));
+				creator.SetColor(pDecal->GetAttributeColor("Color", cColor(1, 1)));
+				creator.SetUVSubDivisions(creator.GetMaterial()->GetUVSubDivisions());
+				creator.SetCurrentSubDiv(pDecal->GetAttributeInt("CurrentUVSubDiv", 0));
+				for (cSubMeshEntity* pPatch : avPatches) creator.AddSubMesh(pPatch);
+				cMesh* pMesh = creator.CreateDecalMesh();
+				if (pMesh == NULL) continue;
+				cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("TerrainDecal_" + cString::ToString(lCount++), pMesh, true);
+				pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
+			}
+		}
+		creator.ClearMeshes();
 	}
 
 	std::vector<cMaterial*> cWorldLoaderHpm::CreateTerrainBlendMaterials(const tWString& asBaseFile, cXmlElement* apTerrain, float afSize)

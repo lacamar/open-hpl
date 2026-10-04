@@ -73,6 +73,8 @@ namespace hpl {
 
 	cDecalCreator::~cDecalCreator()
 	{
+		if(mpDecalVB) hplDelete(mpDecalVB);
+		if(mpDecalMaterial) mpResources->GetMaterialManager()->Destroy(mpDecalMaterial);
 	}
 
 	//-----------------------------------------------------------------------

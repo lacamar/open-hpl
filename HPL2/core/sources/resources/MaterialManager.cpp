@@ -352,6 +352,8 @@ namespace hpl {
 		
 		pMat->SetDepthTest(bDepthTest);
 		pMat->SetPhysicsMaterial(sPhysicsMatName);
+		cVector2f vSubDivs = pMain->GetAttributeVector2f("UVSubDivs", 1);
+		pMat->SetUVSubDivisions(cVector2l((int)vSubDivs.x, (int)vSubDivs.y));
         if(pMatType->IsTranslucent())
 			pMat->SetBlendMode(GetBlendMode(sBlendMode));
 

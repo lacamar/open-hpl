@@ -105,5 +105,13 @@ namespace hpl {
 
 		iTexture *mpWhiteTexture = NULL;
 	};
+// HPL3 draws terrain decals into the terrain cache alpha-blended, whatever the .mat says
+	class cMaterialType_TerrainDecal : public cMaterialType_Decal
+	{
+	public:
+		using cMaterialType_Decal::cMaterialType_Decal;
+		void CompileMaterialSpecifics(cMaterial *apMaterial){ cMaterialType_Decal::CompileMaterialSpecifics(apMaterial); apMaterial->SetBlendMode(eMaterialBlendMode_Alpha); }
+	};
+
 };
 #endif // HPL_MATERIAL_DECAL_H
