@@ -1018,10 +1018,12 @@ namespace hpl {
 			cBoneState *pState = GetBoneState(bone);
 			if(pState->GetBody()) vMatrices[bone] = cMath::MatrixMul(pState->GetWorldMatrix(), pState->GetBodyMatrix());
 		}
+		// A body carrying several bones follows the first
+		std::set<iPhysicsBody*> setDone;
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
 		{
 			iPhysicsBody *pBody = GetBoneState(bone)->GetBody();
-			if(pBody) pBody->SetMatrix(vMatrices[bone]);
+			if(pBody && setDone.insert(pBody).second) pBody->SetMatrix(vMatrices[bone]);
 		}
 	}
 
