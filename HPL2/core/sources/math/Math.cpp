@@ -54,6 +54,13 @@ namespace hpl {
 		return afMin + fRand*(afMax-afMin);
 	}
 
+	float cMath::FastRandomFloat(int alSeed)
+	{
+		unsigned int x = ((unsigned int)alSeed << 13) ^ (unsigned int)alSeed;
+		unsigned int v = (x * (x * x * 15731u + 789221u) + 1376312589u) & 0x7fffffffu;
+		return 1.0f - (float)v / 1073741824.0f;
+	}
+
 	//-----------------------------------------------------------------------
 	
 	cVector2f cMath::RandRectVector2f(const cVector2f &avMin,const cVector2f &avMax)

@@ -113,5 +113,36 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial){ cMaterialType_Decal::CompileMaterialSpecifics(apMaterial); apMaterial->SetBlendMode(eMaterialBlendMode_Alpha); }
 	};
 
+	class cMaterialType_Undergrowth_Vars : public iMaterialVars
+	{
+	public:
+		bool mbWind = false;
+		cVector3f mvWind = 0, mvWindOctaves = 0;
+		cVector2f mvDissolve = 0;
+	};
+
+	// HPL3 terrain undergrowth on CPU-baked plants: the shader's non-instanced path
+	class cMaterialType_Undergrowth : public iMaterialType
+	{
+	public:
+		cMaterialType_Undergrowth(cGraphics *apGraphics, cResources *apResources);
+
+		void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
+		bool SupportsHWSkinning(){ return false; }
+		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit);
+		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer);
+		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer);
+		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer){}
+		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialType_Undergrowth_Vars,()); }
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){}
+		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars){}
+		void CompileMaterialSpecifics(cMaterial *apMaterial);
+
+	private:
+		void LoadData();
+		void DestroyData();
+	};
+
 };
 #endif // HPL_MATERIAL_DECAL_H

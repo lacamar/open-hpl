@@ -297,4 +297,71 @@ namespace hpl {
 		apProgram->SetFloat(2, pVars->mfBaseTextureCoordScale);
 	}
 
+	//--------------------------------------------------------------------------
+
+	static bool UndergrowthMode(eMaterialRenderMode aMode){ return aMode == eMaterialRenderMode_Z || aMode == eMaterialRenderMode_Diffuse; }
+
+	cMaterialType_Undergrowth::cMaterialType_Undergrowth(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
+	{
+		mbHasTypeSpecifics[eMaterialRenderMode_Z] = true;
+		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+	}
+
+	void cMaterialType_Undergrowth::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
+	{
+		mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
+	}
+
+	void cMaterialType_Undergrowth::LoadData()
+	{
+		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseWind", kPC_VertexBit) };
+		cParserVarContainer vars;
+		for (eMaterialRenderMode mode : {eMaterialRenderMode_Z, eMaterialRenderMode_Diffuse})
+		{
+			mpProgramManager->SetupGenerateProgramData(mode, mode == eMaterialRenderMode_Z ? "Z" : "Diffuse", "deferred_undergrowth_gbuffer_vtx.glsl",
+													   "deferred_undergrowth_gbuffer_frag.glsl", vFeatures, 1, vars);
+			mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane", 0, mode);
+			mpProgramManager->AddGenerateProgramVariableId("afT", 1, mode);
+			mpProgramManager->AddGenerateProgramVariableId("avDissolveStartSizeDepth", 2, mode);
+			mpProgramManager->AddGenerateProgramVariableId("avWindProperties", 3, mode);
+			mpProgramManager->AddGenerateProgramVariableId("avWindOctavesMul", 4, mode);
+		}
+	}
+
+	void cMaterialType_Undergrowth::DestroyData()
+	{
+		mpProgramManager->DestroyShadersAndPrograms();
+	}
+
+	iTexture* cMaterialType_Undergrowth::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
+	{
+		return UndergrowthMode(aRenderMode) && alUnit == 0 ? apMaterial->GetTexture(eMaterialTexture_Diffuse) : NULL;
+	}
+
+	iGpuProgram* cMaterialType_Undergrowth::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
+	{
+		if(!UndergrowthMode(aRenderMode)) return NULL;
+		return mpProgramManager->GenerateProgram(aRenderMode, static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars())->mbWind ? eFlagBit_0 : 0);
+	}
+
+	void cMaterialType_Undergrowth::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer)
+	{
+		apProgram->SetFloat(0, 1.0f / apRenderer->GetCurrentFrustum()->GetFarPlane());
+		apProgram->SetFloat(1, apRenderer->GetTimeCount());
+	}
+
+	void cMaterialType_Undergrowth::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
+	{
+		cMaterialType_Undergrowth_Vars *pVars = static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars());
+		apProgram->SetVec2f(2, pVars->mvDissolve);
+		apProgram->SetVec3f(3, pVars->mvWind);
+		apProgram->SetVec3f(4, pVars->mvWindOctaves);
+	}
+
+	void cMaterialType_Undergrowth::CompileMaterialSpecifics(cMaterial *apMaterial)
+	{
+		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Z, true);
+		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+	}
+
 }

@@ -57,6 +57,7 @@ namespace hpl {
 		 * \return 
 		 */
 		static float RandRectf(float alMin, float alMax);
+		static float FastRandomFloat(int alSeed);
 
 		/**
 		* Generates a random float from min to max

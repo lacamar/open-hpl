@@ -51,6 +51,7 @@ namespace hpl {
 		void LoadTerrain(const tWString& asBaseFile);
 		void CreateTerrain(const tWString& asBaseFile, cXmlElement* apTerrain);
 		void CreateTerrainDecals(cXmlElement* apTerrain, const std::vector<cSubMeshEntity*>& avPatches, float afMaxHeight);
+		void CreateTerrainUndergrowth(cXmlElement* apTerrain, const std::vector<float>& avHeight, int alSize, float afUnit);
 		std::vector<cMaterial*> CreateTerrainBlendMaterials(const tWString& asBaseFile, cXmlElement* apTerrain, float afSize);
 
 		tString CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);

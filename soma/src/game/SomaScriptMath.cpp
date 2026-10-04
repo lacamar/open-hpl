@@ -302,16 +302,11 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_InterpolateLinear(float afA, float afB, float afT)", +[](float a, float b, float t) { return a + (b - a) * t; });
 	SOMA_FUNC(e, "float cMath_InterpolateCosine(float afA, float afB, float afT)",
 			  +[](float a, float b, float t) { float f = (1 - cosf(t * kPif)) * 0.5f; return a * (1 - f) + b * f; });
-	static auto FastRandomFloat = [](int alSeed) {
-		unsigned n = (unsigned)alSeed;
-		n = (n << 13) ^ n;
-		return 1.0f - (int)((n * (n * n * 15731u + 789221u) + 1376312589u) & 0x7fffffff) / 1073741824.0f;
-	};
-	SOMA_FUNC(e, "float cMath_FastRandomFloat(int alSeed)", +[](int s) { return FastRandomFloat(s); });
+	SOMA_FUNC(e, "float cMath_FastRandomFloat(int alSeed)", +[](int s) { return cMath::FastRandomFloat(s); });
 	// The engine's GetNoisePerlin1D wrapper calls the cosine noise
 	SOMA_FUNC(e, "float cGenerate_GetNoisePerlin1D(float afX)", +[](float x) {
 		float fFloor = floorf(x), f = (1 - cosf((x - fFloor) * kPif)) * 0.5f;
-		return FastRandomFloat((int)fFloor) * (1 - f) + FastRandomFloat((int)fFloor + 1) * f;
+		return cMath::FastRandomFloat((int)fFloor) * (1 - f) + cMath::FastRandomFloat((int)fFloor + 1) * f;
 	});
 	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return roundf(x); });
 	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return 1 << n; });

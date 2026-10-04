@@ -40,13 +40,6 @@ namespace hpl {
 
 	float (*cEnvironmentParticles::mpLightLevelFunc)(const cVector3f& avPos) = NULL;
 
-	static float FastRandomFloat(int alX)
-	{
-		unsigned int x = ((unsigned int)alX << 13) ^ (unsigned int)alX;
-		unsigned int v = (x * (x * x * 15731u + 789221u) + 1376312589u) & 0x7fffffffu;
-		return 1.0f - (float)v / 1073741824.0f;
-	}
-
 	//-----------------------------------------------------------------------
 
 	cEnvironmentParticles::cEnvironmentParticles(const tString& asName, cWorld *apWorld, cGraphics *apGraphics, cResources *apResources)
@@ -126,15 +119,15 @@ namespace hpl {
 		for(int i=1; i<kMaxEnvParticleIterations; ++i)
 		{
 			int s = 22 + 13*(i-1);
-			mvIterGravityVel[i] = mvGravityVel + mvGravityVel * mfGravitySpeedRand * FastRandomFloat(s-9);
-			mvIterWindVel[i] = mvWindVel + mvWindVel * mfWindSpeedRand * FastRandomFloat(s-8);
-			mvIterRotateVel[i] = mvRotateVel + mvRotateVel * mfRotateSpeedRand * FastRandomFloat(s-7);
+			mvIterGravityVel[i] = mvGravityVel + mvGravityVel * mfGravitySpeedRand * cMath::FastRandomFloat(s-9);
+			mvIterWindVel[i] = mvWindVel + mvWindVel * mfWindSpeedRand * cMath::FastRandomFloat(s-8);
+			mvIterRotateVel[i] = mvRotateVel + mvRotateVel * mfRotateSpeedRand * cMath::FastRandomFloat(s-7);
 			if(mbRotateBothDirs)
-				for(int k=0; k<3; ++k) if(FastRandomFloat(s-6+k) > 0) mvIterRotateVel[i].v[k] = -mvIterRotateVel[i].v[k];
+				for(int k=0; k<3; ++k) if(cMath::FastRandomFloat(s-6+k) > 0) mvIterRotateVel[i].v[k] = -mvIterRotateVel[i].v[k];
 			if(mfWindDirRand > 0)
 			{
-				cVector3f vAxis = cMath::Vector3Normalize(cVector3f(FastRandomFloat(s-3), FastRandomFloat(s-2), FastRandomFloat(s-1)));
-				cMatrixf mtxRot = cMath::MatrixRotate(vAxis * (mfWindDirRand * kPif * FastRandomFloat(s)), eEulerRotationOrder_XYZ);
+				cVector3f vAxis = cMath::Vector3Normalize(cVector3f(cMath::FastRandomFloat(s-3), cMath::FastRandomFloat(s-2), cMath::FastRandomFloat(s-1)));
+				cMatrixf mtxRot = cMath::MatrixRotate(vAxis * (mfWindDirRand * kPif * cMath::FastRandomFloat(s)), eEulerRotationOrder_XYZ);
 				mvIterWindVel[i] = cMath::MatrixMul(mtxRot, mvIterWindVel[i]);
 			}
 		}
