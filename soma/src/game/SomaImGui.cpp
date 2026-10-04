@@ -278,6 +278,8 @@ struct cSomaCameraTexture : public iViewportCallback
 	cViewport *mpViewport = NULL;
 	cGuiGfxElement *mpGfx = NULL;
 	unsigned long mlFrameMs = 33, mlLastDraw = 0, mlLastUsed = 0;
+	cVector2l mvSize;
+	unsigned mlFPS = 30;
 	cSomaID mAttached;
 	bool mbAttached = false;
 	void OnPreWorldDraw() override { mlLastDraw = cPlatform::GetApplicationTime(); }
@@ -317,6 +319,8 @@ static void CreateCameraTexture(const tString &asName, const cVector2l &avSize, 
 	cEngine *pEngine = gpSomaBase->mpEngine;
 	cSomaCameraTexture *p = new cSomaCameraTexture();
 	p->mlFrameMs = 1000 / (alFPS ? alFPS : 1);
+	p->mvSize = avSize;
+	p->mlFPS = alFPS;
 	p->mlLastDraw = cPlatform::GetApplicationTime();
 	p->mpCamera = pEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
 	p->mpCamera->SetAspect((float)avSize.x / (float)avSize.y);
@@ -362,6 +366,36 @@ void SomaUpdateCameraTextures()
 		p->mpCamera->SetRotationMatrix(cMath::MatrixMul(mtx.GetRotation(), cMath::MatrixRotateY(kPif)).GetTranspose());
 		p->mpCamera->SetPosition(mtx.GetTranslation());
 	}
+}
+
+std::vector<cSomaCameraTextureState> SomaGetCameraTextures()
+{
+	std::vector<cSomaCameraTextureState> v;
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	for (auto &it : gmapCameraTextures)
+	{
+		cSomaCameraTexture *p = it.second;
+		cSomaLuxEntity *pEnt = p->mbAttached && pMap ? pMap->GetEntity(p->mAttached) : NULL;
+		cCamera *c = p->mpCamera;
+		v.push_back({it.first, pEnt ? pEnt->msName : "", p->mvSize, p->mlFPS, cMath::ToDeg(c->GetFOV()), c->GetNearClipPlane(), c->GetFarClipPlane(),
+					 c->GetRotationMatrix(), c->GetPosition()});
+	}
+	return v;
+}
+
+void SomaRestoreCameraTexture(const cSomaCameraTextureState &s)
+{
+	CreateCameraTexture(s.msName, s.mvSize, s.mlFPS, s.mfFOV, s.mfNear, s.mfFar);
+	auto it = gmapCameraTextures.find(s.msName);
+	if (it == gmapCameraTextures.end())
+		return;
+	cSomaCameraTexture *p = it->second;
+	p->mpCamera->SetRotationMatrix(s.mtxRotation);
+	p->mpCamera->SetPosition(s.mvPosition);
+	cSomaLuxEntity *pEnt = s.msAttached.empty() ? NULL : cSomaLuxMap::GetCurrent()->GetEntity(s.msAttached);
+	p->mbAttached = pEnt != NULL;
+	if (pEnt)
+		p->mAttached = pEnt->mID;
 }
 
 static cGuiGfxElement *GfxElement(const void *apGfx)
@@ -1437,6 +1471,14 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 					it->second->mpCamera->SetNearClipPlane(n);
 					it->second->mpCamera->SetFarClipPlane(f);
 				});
+	SOMA_METHOD(e, "cLuxGuiHandler", "void SetCameraTextureMatrix(const tString&in asName, const cMatrixf&in a_mtxCamera)", +[](void *, Str s, const cMatrixf &m) {
+		auto it = gmapCameraTextures.find(s);
+		if (it == gmapCameraTextures.end())
+			return;
+		it->second->mpCamera->SetRotationMatrix(m.GetRotation());
+		it->second->mpCamera->SetPosition(m.GetTranslation());
+		it->second->mbAttached = false;
+	});
 	SOMA_METHOD(e, "cLuxGuiHandler", "void AttachCameraTextureToEntity(const tString&in asName, iLuxEntity@ apEnt)", +[](void *, Str s, cSomaLuxEntity *pEnt) {
 		auto it = gmapCameraTextures.find(s);
 		if (it == gmapCameraTextures.end() || pEnt == NULL)

@@ -8,6 +8,18 @@
 
 using namespace hpl;
 
+struct cSomaCameraTextureState
+{
+	tString msName, msAttached;
+	cVector2l mvSize;
+	unsigned mlFPS;
+	float mfFOV, mfNear, mfFar;
+	cMatrixf mtxRotation;
+	cVector3f mvPosition;
+};
+std::vector<cSomaCameraTextureState> SomaGetCameraTextures();
+void SomaRestoreCameraTexture(const cSomaCameraTextureState &aState);
+
 class cSomaImGui
 {
 public:

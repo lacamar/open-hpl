@@ -1,6 +1,7 @@
 #include "SomaSave.h"
 #include "SomaAgent.h"
 #include "SomaBase.h"
+#include "SomaImGui.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
@@ -768,6 +769,19 @@ public:
 			o.Pod(f);
 		for (cColor c : {w->GetFogColor(), w->GetSecondaryFogColor(), w->GetSkyBoxColor()})
 			o.Pod(c);
+		std::vector<cSomaCameraTextureState> vCams = SomaGetCameraTextures();
+		o.Pod((uint32_t)vCams.size());
+		for (const cSomaCameraTextureState &c : vCams)
+		{
+			o.Str(c.msName);
+			o.Str(c.msAttached);
+			o.Pod(c.mvSize);
+			o.Pod(c.mlFPS);
+			for (float f : {c.mfFOV, c.mfNear, c.mfFar})
+				o.Pod(f);
+			o.Pod(c.mtxRotation);
+			o.Pod(c.mvPosition);
+		}
 	}
 
 	static void ReadWorld(cIn &in)
@@ -1027,6 +1041,22 @@ public:
 				w->SetSecondaryFogColor(c[1]);
 				w->SetSkyBoxColor(c[2]);
 			}
+		}
+		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			cSomaCameraTextureState c;
+			c.msName = in.Str();
+			c.msAttached = in.Str();
+			c.mvSize = in.Pod<cVector2l>();
+			c.mlFPS = in.Pod<unsigned>();
+			c.mfFOV = in.Pod<float>();
+			c.mfNear = in.Pod<float>();
+			c.mfFar = in.Pod<float>();
+			c.mtxRotation = in.Pod<cMatrixf>();
+			c.mvPosition = in.Pod<cVector3f>();
+			if (in.ok)
+				SomaRestoreCameraTexture(c);
 		}
 	}
 };
