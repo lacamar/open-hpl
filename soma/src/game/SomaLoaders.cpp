@@ -86,7 +86,7 @@ static void CreateAreaEntity(const tString &asName, const tString &asType, bool 
 // Name of an entity created at runtime by cLuxMap::CreateEntity
 tString gsSomaSpawnName;
 
-static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEntity *apEnt, const cVector3f &avScale)
+static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEntity *apEnt)
 {
 	cXmlNodeListIterator it = apElem->GetChildIterator();
 	while (it.HasNext())
@@ -98,7 +98,7 @@ static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEnti
 		if (sValue == "Socket")
 		{
 			cMatrixf mtxSocket = cMath::MatrixRotate(pChild->GetAttributeVector3f("Rotation", 0), eEulerRotationOrder_XYZ);
-			mtxSocket.SetTranslation(pChild->GetAttributeVector3f("WorldPos", 0) * avScale);
+			mtxSocket.SetTranslation(pChild->GetAttributeVector3f("WorldPos", 0));
 			cSomaLuxEntity::cSocket sock{pChild->GetAttributeString("Name", ""), NULL, mtxSocket};
 			cSkeleton *pSkel = apEnt->mpMesh && apEnt->mpMesh->GetMesh() ? apEnt->mpMesh->GetMesh()->GetSkeleton() : NULL;
 			for (const tString &sBone : {pChild->GetAttributeString("SourceBoneName", ""), asBone})
@@ -113,7 +113,7 @@ static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEnti
 			apEnt->mvSockets.push_back(sock);
 		}
 		else
-			LoadSockets(pChild, sValue == "Bone" ? pChild->GetAttributeString("Name", "") : asBone, apEnt, avScale);
+			LoadSockets(pChild, sValue == "Bone" ? pChild->GetAttributeString("Name", "") : asBone, apEnt);
 	}
 }
 
@@ -194,7 +194,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			if (pBody->GetName() == pEnt->msName + "_" + pEnt->mVars.GetVarString("MainPhysicsBody", ""))
 				pEnt->mpMainBody = pBody;
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
-			LoadSockets(pModel, "", pEnt, mvScale);
+			LoadSockets(pModel, "", pEnt);
 		if (mpEntity)
 			for (int i = 0; i < mpEntity->GetBoneStateNum(); ++i)
 			{

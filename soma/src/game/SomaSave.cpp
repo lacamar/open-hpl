@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVA"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVB"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 17;
+	int glPendingVersion = 18;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -479,6 +479,20 @@ public:
 				o.Pod(st.first);
 				o.Pod(st.second);
 			}
+		int lAnims = p->mpMesh ? p->mpMesh->GetAnimationStateNum() : 0;
+		o.Pod((uint32_t)lAnims);
+		for (int i = 0; i < lAnims; ++i)
+		{
+			cAnimationState *a = p->mpMesh->GetAnimationState(i);
+			o.Str(a->GetName());
+			o.Pod(a->IsActive());
+			o.Pod(a->IsLooping());
+			o.Pod(a->IsPaused());
+			o.Pod(a->GetTimePosition());
+			o.Pod(a->GetWeight());
+			o.Pod(a->GetSpeed());
+			o.Pod(a->GetFadeStep());
+		}
 	}
 
 	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
@@ -627,6 +641,23 @@ public:
 			cSomaImGui::cState st = in.Pod<cSomaImGui::cState>();
 			if (t->mpImGui)
 				t->mpImGui->mmapStates[lId] = st;
+		}
+		n = glPendingVersion >= 18 ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sAnim = in.Str();
+			bool bOn = in.Pod<bool>(), bLoop = in.Pod<bool>(), bPaused = in.Pod<bool>();
+			float fTime = in.Pod<float>(), fWeight = in.Pod<float>(), fSpeed = in.Pod<float>(), fFade = in.Pod<float>();
+			cAnimationState *a = t->mpMesh ? t->mpMesh->GetAnimationStateFromName(sAnim) : NULL;
+			if (a == NULL)
+				continue;
+			a->SetActive(bOn);
+			a->SetLoop(bLoop);
+			a->SetPaused(bPaused);
+			a->SetTimePosition(fTime);
+			a->SetWeight(fWeight);
+			a->SetSpeed(fSpeed);
+			a->SetFadeStep(fFade);
 		}
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
@@ -1216,7 +1247,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 17)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 18)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
