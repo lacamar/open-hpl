@@ -27,8 +27,9 @@ _spec = importlib.util.spec_from_file_location("soma_ref", HERE / "soma-ref.py")
 ref_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ref_mod)
 
-SOCK = RUNTIME / "ohpl-cmp.sock"
-PIDFILE = RUNTIME / "ohpl-cmp.pid"
+NAME = os.environ.get("OHPL_CMP_NAME", "ohpl-cmp")
+SOCK = RUNTIME / f"{NAME}.sock"
+PIDFILE = RUNTIME / f"{NAME}.pid"
 CACHE = XDG_CACHE / "open-hpl/soma-compare"
 
 SNIPPETS = dict(ref_mod.SNIPPETS)

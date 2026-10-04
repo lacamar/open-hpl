@@ -7,7 +7,7 @@
   scripts/soma-play.py look ENTITY                    # aim the camera at an entity
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
   scripts/soma-play.py drag ENTITY DX DY [--steps 60]  # hold click, move the mouse by DX,DY over STEPS frames
-  scripts/soma-play.py throw ENTITY TARGET            # grab ENTITY, aim at TARGET, throw
+  scripts/soma-play.py throw ENTITY TARGET [--place S] # grab ENTITY, aim at TARGET, throw (or hold S s and release)
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
@@ -134,12 +134,21 @@ def aim(target):
        f"p.GetCamera().SetPitch({pitch});")
 
 
+def focused(name):
+    # all of Utility_PickBasics' offset rays, any may become the sticky one
+    return kv('cCamera@ c = cLux_GetPlayer().GetCamera(); array<cVector2f> o = {cVector2f(0,0), cVector2f(1,0), cVector2f(-1,0), cVector2f(0,1), cVector2f(0,-1)};'
+              f'int n = 0; for (uint i = 0; i < o.length(); ++i) {{ cLuxClosestEntityData d; cVector3f p = c.GetPosition() + c.GetRight()*o[i].x*0.02 + c.GetUp()*o[i].y*0.02;'
+              f'if (cLux_GetClosestEntity(p, c.GetForward(), 5, 0, false, d) && d.mpEntity.GetName() == "{name}") ++n; }} __print("n=" + n);').get("n") == "5"
+
+
 def aim_entity(name):
     target = ent_pos(name)
     cam, _ = camera_pos()
     hits = raycast(cam, target)
     if not hits or hits[0][2] == name:
-        return aim(target)
+        aim(target)
+        if not hits or focused(name):
+            return
     d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetMainBody() is null) return;'
            'cBoundingVolume@ bv = e.GetMainBody().GetBoundingVolume(); cVector3f a = bv.GetMin(), b = bv.GetMax();'
            '__print("a=" + a.x + " " + a.y + " " + a.z); __print("b=" + b.x + " " + b.y + " " + b.z);')
@@ -151,9 +160,13 @@ def aim_entity(name):
            for i in range(n + 1) for j in range(n + 1) for l in range(n + 1)]
     pts.sort(key=lambda q: math.dist(q, target))
     for q in pts:
-        h = raycast(cam, q)
+        h = raycast(cam, [c + (v - c) * 1.5 for c, v in zip(cam, q)])
         if h and h[0][2] == name:
-            return aim(q)
+            aim(q)
+            # camera moves with pitch
+            if focused(name):
+                return
+            cam, _ = camera_pos()
     aim(target)
 
 
@@ -264,8 +277,9 @@ def cmd_throw(a):
     frames(0.5)
     print(ex('__print(cLux_GetPlayer().GetCurrentStateName());').strip())
     aim(ent_pos(a.target))
-    frames(0.5)
-    press("mouse", "right", 0.1)
+    frames(a.place or 0.5)
+    if not a.place:
+        press("mouse", "right", 0.1)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
     frames(1.0)
     cmd_log(argparse.Namespace(regex=None, all=False))
@@ -454,7 +468,7 @@ def main():
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
     s.add_argument("--circles", type=float, default=0, help="circle mouse: radius dx, sign of dy = direction")
-    s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target")
+    s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target"); s.add_argument("--place", type=float)
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=30)
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)

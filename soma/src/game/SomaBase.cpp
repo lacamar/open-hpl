@@ -570,7 +570,13 @@ static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, vo
 
 static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
-	tString sName = aReq.GetString("name", "");
+	tString sName = aReq.GetString("name", ""), sPath;
+	size_t lDot = sName.find('.');
+	if (lDot != tString::npos)
+	{
+		sPath = sName.substr(lDot + 1);
+		sName = sName.substr(0, lDot);
+	}
 	std::string sOut;
 	std::vector<std::pair<tString, asIScriptObject *>> vObjs;
 	if (cSomaLuxMap::GetCurrent())
@@ -589,6 +595,23 @@ static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRe
 		}
 		if (sObjName != sName && sClass != sName)
 			continue;
+		for (tString sRest = sPath; pObj && !sRest.empty();)
+		{
+			size_t l = sRest.find('.');
+			tString sProp = sRest.substr(0, l);
+			sRest = l == tString::npos ? "" : sRest.substr(l + 1);
+			asIScriptObject *pNext = NULL;
+			for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)
+				if (sProp == pObj->GetPropertyName(i) && (pObj->GetPropertyTypeId(i) & asTYPEID_SCRIPTOBJECT))
+				{
+					void *pAddr = pObj->GetAddressOfProperty(i);
+					pNext = (asIScriptObject *)((pObj->GetPropertyTypeId(i) & asTYPEID_OBJHANDLE) ? *(void **)pAddr : pAddr);
+				}
+			pObj = pNext;
+		}
+		if (pObj == NULL)
+			continue;
+		sClass = pObj->GetObjectType()->GetName();
 		sOut += "[" + sObjName + " " + sClass + "]\n";
 		for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)
 			sOut += tString(pObj->GetPropertyName(i)) + "=" +
@@ -614,6 +637,8 @@ static void cSomaBase_HeadlessCmd_DumpTarget(void *apUserData, const cHeadlessRe
 		cMaterial *pMat = pEnt && pEnt->mpGuiSubMesh ? pEnt->mpGuiSubMesh->GetCustomMaterial() : NULL;
 		pTex = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
 	}
+	if (aReq.HasKey("camera"))
+		pTex = SomaGetCameraTexture(aReq.GetString("camera", ""));
 	std::vector<float> vPixels;
 	if(pTex == NULL || pTex->GetRawPixelsRGBAFloat(vPixels) == false) { aResp.SetError("no such target or no GPU data"); return; }
 	tString sPath = aReq.GetString("path", "");
