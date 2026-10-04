@@ -64,6 +64,7 @@
 namespace hpl {
 
 	bool cEntityLoader_Object::mbSubMeshScaleIncludesModelScale = false;
+	bool cEntityLoader_Object::mbSubMeshMaterials = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -401,7 +402,6 @@ namespace hpl {
 				//////////////////////////
 				// Load the sub entity
 				tString sName = pSubMeshElem->GetAttributeString("Name");
-				//tString sMaterialFile = cString::ToString(pSubMeshElem->Attribute("MaterialFile"),"");
 
 				cSubMeshEntity *pSubEntity = mpEntity->GetSubMeshEntityName(sName);
 				if(pSubEntity==NULL)
@@ -440,17 +440,12 @@ namespace hpl {
 				pSubEntity->SetUniqueID(lID);
 
 
-				//////////////////////////
-				// Set material
-				//TODO:
-				/*if(sMaterialFile != "")
+				tString sMaterial = mbSubMeshMaterials ? pSubMeshElem->GetAttributeString("Material") : "";
+				if(sMaterial != "")
 				{
-				cMaterial *pMaterial = apWorld->GetResources()->GetMaterialManager()->CreateMaterial(sMaterialFile);
-				if(pMaterial)
-				{
-				pSubEntity->SetCustomMaterial(pMaterial);
+					cMaterial *pMaterial = apWorld->GetResources()->GetMaterialManager()->CreateMaterial(sMaterial);
+					if(pMaterial) pSubEntity->SetCustomMaterial(pMaterial);
 				}
-				}*/
 			}
 		}
 

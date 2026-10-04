@@ -1070,6 +1070,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));
 
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
+	cEntityLoader_Object::SetSubMeshMaterials(true);
 	iLight::SetHpl3Visibility(true);
 	cParticleSystem::SetHpl3Color(true);
 	iCharacterBody::SetHpl3(true);
