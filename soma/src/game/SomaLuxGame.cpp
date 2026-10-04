@@ -278,6 +278,9 @@ void cSomaLuxGame::ResetScriptables()
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
 }
 
+void SomaUpdateCameraTextures();
+void SomaDestroyCameraTextures();
+
 void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 {
 	// Read once: iMouse::GetRelPosition resets the motion
@@ -298,6 +301,7 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 	UpdateGui(afTimeStep);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); }, true);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); }, true);
+	SomaUpdateCameraTextures();
 }
 
 cSomaImGui *SomaHudImGui();
@@ -376,6 +380,7 @@ void cSomaLuxGame::EnterMap(cSomaLuxMap *apMap)
 void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
 {
 	cSomaLuxDialogHandler::Get()->StopAll();
+	SomaDestroyCameraTextures();
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapLeave(cLuxMap @apMap)", apMap); });
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
 }

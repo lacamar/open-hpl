@@ -1,5 +1,7 @@
 #include "SomaImGui.h"
 #include "SomaBase.h"
+#include "SomaLux.h"
+#include "SomaLuxEntity.h"
 #include "SomaLuxGame.h"
 #include "SomaLuxScriptable.h"
 #include "SomaScriptBind.h"
@@ -267,11 +269,117 @@ void cSomaImGui::Fade(uint64_t alId, int alType, const float *apGoal, float afTi
 	mmapFades[alId] = f;
 }
 
+// cLuxGuiCameraTexture
+struct cSomaCameraTexture : public iViewportCallback
+{
+	cCamera *mpCamera = NULL;
+	iTexture *mpTexture = NULL;
+	iFrameBuffer *mpBuffer = NULL;
+	cViewport *mpViewport = NULL;
+	cGuiGfxElement *mpGfx = NULL;
+	unsigned long mlFrameMs = 33, mlLastDraw = 0, mlLastUsed = 0;
+	cSomaID mAttached;
+	bool mbAttached = false;
+	void OnPreWorldDraw() override { mlLastDraw = cPlatform::GetApplicationTime(); }
+	void OnPostWorldDraw() override {}
+};
+static std::map<tString, cSomaCameraTexture *> gmapCameraTextures;
+
+static void DestroyCameraTexture(const tString &asName)
+{
+	auto it = gmapCameraTextures.find(asName);
+	if (it == gmapCameraTextures.end())
+		return;
+	cSomaCameraTexture *p = it->second;
+	cEngine *pEngine = gpSomaBase->mpEngine;
+	pEngine->GetScene()->DestroyViewport(p->mpViewport);
+	pEngine->GetScene()->DestroyCamera(p->mpCamera);
+	if (p->mpGfx)
+		pEngine->GetGui()->DestroyGfx(p->mpGfx);
+	pEngine->GetGraphics()->DestroyFrameBuffer(p->mpBuffer);
+	pEngine->GetGraphics()->DestroyTexture(p->mpTexture);
+	delete p;
+	gmapCameraTextures.erase(it);
+}
+
+void SomaDestroyCameraTextures()
+{
+	while (!gmapCameraTextures.empty())
+		DestroyCameraTexture(gmapCameraTextures.begin()->first);
+}
+
+static void CreateCameraTexture(const tString &asName, const cVector2l &avSize, unsigned alFPS, float afFOV, float afNear, float afFar)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+		return;
+	DestroyCameraTexture(asName);
+	cEngine *pEngine = gpSomaBase->mpEngine;
+	cSomaCameraTexture *p = new cSomaCameraTexture();
+	p->mlFrameMs = 1000 / (alFPS ? alFPS : 1);
+	p->mlLastDraw = cPlatform::GetApplicationTime();
+	p->mpCamera = pEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly);
+	p->mpCamera->SetAspect((float)avSize.x / (float)avSize.y);
+	p->mpCamera->SetFOV(cMath::ToRad(afFOV));
+	p->mpCamera->SetNearClipPlane(afNear);
+	p->mpCamera->SetFarClipPlane(afFar);
+	p->mpCamera->SetRotateMode(eCameraRotateMode_Matrix);
+	p->mpTexture = pEngine->GetGraphics()->CreateTexture("CameraTexture_" + asName, eTextureType_2D, eTextureUsage_RenderTarget);
+	p->mpTexture->CreateFromRawData(cVector3l(avSize.x, avSize.y, 0), ePixelFormat_RGBA, NULL);
+	p->mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+	p->mpTexture->SetFilter(eTextureFilter_Bilinear);
+	p->mpBuffer = pEngine->GetGraphics()->CreateFrameBuffer("CameraTexture_" + asName);
+	p->mpBuffer->SetTexture2D(0, p->mpTexture);
+	p->mpBuffer->CompileAndValidate();
+	p->mpViewport = pEngine->GetScene()->CreateViewport(p->mpCamera, pMap->GetWorld(), true);
+	p->mpViewport->SetFrameBuffer(p->mpBuffer);
+	p->mpViewport->SetVisible(false);
+	cRenderSettings *pSettings = p->mpViewport->GetRenderSettings();
+	pSettings->mbRenderShadows = false;
+	pSettings->mbSSAOActive = false;
+	pSettings->mbUseEdgeSmooth = false;
+	pSettings->mbUseFxaa = false;
+	pSettings->mbRenderWorldReflection = false;
+	pSettings->mbRenderWorldFog = false;
+	pSettings->mbUseDelayedOcclusionCulling = true;
+	p->mpViewport->AddViewportCallback(p);
+	gmapCameraTextures[asName] = p;
+}
+
+// cLuxGuiCameraTexture::VariableUpdate: render at most alFrameRate times a second, and only while a gui shows it
+void SomaUpdateCameraTextures()
+{
+	unsigned long lNow = cPlatform::GetApplicationTime();
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	for (auto &it : gmapCameraTextures)
+	{
+		cSomaCameraTexture *p = it.second;
+		p->mpViewport->SetVisible(lNow - p->mlLastDraw > p->mlFrameMs && p->mlLastUsed >= p->mlLastDraw);
+		cSomaLuxEntity *pEnt = p->mbAttached && pMap ? pMap->GetEntity(p->mAttached) : NULL;
+		if (pEnt == NULL)
+			continue;
+		cMatrixf mtx = pEnt->GetMatrix();
+		p->mpCamera->SetRotationMatrix(cMath::MatrixMul(mtx.GetRotation(), cMath::MatrixRotateY(kPif)).GetTranspose());
+		p->mpCamera->SetPosition(mtx.GetTranslation());
+	}
+}
+
 static cGuiGfxElement *GfxElement(const void *apGfx)
 {
 	const tString &sFile = StrAt(apGfx, kGfxFile);
 	int lMaterial = F<int>(apGfx, kGfxMaterial);
 	int lType = F<int>(apGfx, kGfxType);
+	if (lType == 4)
+	{
+		auto it = gmapCameraTextures.find(sFile);
+		if (it == gmapCameraTextures.end())
+			return NULL;
+		cSomaCameraTexture *p = it->second;
+		if (p->mpGfx == NULL)
+			p->mpGfx = gpSomaBase->mpEngine->GetGui()->CreateGfxTexture(p->mpTexture, false, (eGuiMaterial)lMaterial, cColor(1, 1), true);
+		p->mlLastUsed = cPlatform::GetApplicationTime();
+		return p->mpGfx;
+	}
 	static std::map<tString, cGuiGfxElement *> mapCache;
 	if (sFile.empty())
 	{
@@ -1317,6 +1425,25 @@ void SomaDrawImGuis()
 
 void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 {
+	SOMA_METHOD(e, "cLuxGuiHandler", "void CreateCameraTexture(const tString&in asName, const cVector2l&in avSize, uint alFrameRate, float afFOV, float afNearPlane, float afFarPlane)",
+				+[](void *, Str s, const cVector2l &v, unsigned f, float fov, float n, float fa) { CreateCameraTexture(s, v, f, fov, n, fa); });
+	SOMA_METHOD(e, "cLuxGuiHandler", "void DestroyCameraTexture(const tString&in asName)", +[](void *, Str s) { DestroyCameraTexture(s); });
+	SOMA_METHOD(e, "cLuxGuiHandler", "void SetCameraTextureSettings(const tString&in asName, float afFOV, float afNearPlane, float afFarPlane)",
+				+[](void *, Str s, float fov, float n, float f) {
+					auto it = gmapCameraTextures.find(s);
+					if (it == gmapCameraTextures.end())
+						return;
+					it->second->mpCamera->SetFOV(cMath::ToRad(fov));
+					it->second->mpCamera->SetNearClipPlane(n);
+					it->second->mpCamera->SetFarClipPlane(f);
+				});
+	SOMA_METHOD(e, "cLuxGuiHandler", "void AttachCameraTextureToEntity(const tString&in asName, iLuxEntity@ apEnt)", +[](void *, Str s, cSomaLuxEntity *pEnt) {
+		auto it = gmapCameraTextures.find(s);
+		if (it == gmapCameraTextures.end() || pEnt == NULL)
+			return;
+		it->second->mAttached = pEnt->mID;
+		it->second->mbAttached = true;
+	});
 	const char *vGfxFactories[] = {"cImGuiGfx@ f()", "cImGuiGfx@ f(const tString &in asFile)", "cImGuiGfx@ f(const tString &in asFile, eGuiMaterial aMat)",
 								   "cImGuiGfx@ f(const tString &in asFile, eGuiMaterial aMat, eImGuiGfx aType)",
 								   "cImGuiGfx@ f(const tString &in asFile, eImGuiGfx aType)", "cImGuiGfx@ f(const cImGuiGfx &in aGfx)"};
