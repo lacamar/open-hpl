@@ -137,8 +137,13 @@ def aim(target):
 def focused(name):
     # the game's own pick: range, CanInteract, offset rays
     frames(0.15)
-    return kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
-              '__print("f=" + cScript_GetGlobalReturnString());').get("f") == name
+    f = kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
+           '__print("f=" + cScript_GetGlobalReturnString());').get("f")
+    if f == name:
+        return True
+    # InteractAux areas forward interaction to their parent
+    out = send({"cmd": "script_vars", "name": f}).get("output", "") if f else ""
+    return f'msInteractParent="{name}"' in out
 
 
 def aim_entity(name):
@@ -147,7 +152,7 @@ def aim_entity(name):
     hits = raycast(cam, target, name)
     if not hits or hits[0][2] == name:
         aim(target)
-        if not hits or focused(name):
+        if focused(name):
             return
     d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetMainBody() is null) return;'
            'cBoundingVolume@ bv = e.GetMainBody().GetBoundingVolume(); cVector3f a = bv.GetMin(), b = bv.GetMax();'
@@ -156,7 +161,7 @@ def aim_entity(name):
         return aim(target)
     lo, hi = [float(v) for v in d["a"].split()], [float(v) for v in d["b"].split()]
     n = 4
-    pts = [[lo[k] + (hi[k] - lo[k]) * (0.1 + 0.8 * (i, j, l)[k] / n) for k in range(3)]
+    pts = [[lo[k] + (hi[k] - lo[k]) * (0.03 + 0.94 * (i, j, l)[k] / n) for k in range(3)]
            for i in range(n + 1) for j in range(n + 1) for l in range(n + 1)]
     # interact range is short: nearest points first
     pts.sort(key=lambda q: math.dist(q, cam))
@@ -244,6 +249,8 @@ def press(kind, name, hold, xy=(0, 0)):
 
 def cmd_interact(a):
     aim_entity(a.entity)
+    if not focused(a.entity):
+        print(f"not focused: {a.entity}")
     frames(0.3)
     press("mouse", "left", a.hold)
     cmd_log(argparse.Namespace(regex=None, all=False))
@@ -251,6 +258,8 @@ def cmd_interact(a):
 
 def cmd_drag(a):
     aim_entity(a.entity)
+    if not focused(a.entity):
+        print(f"not focused: {a.entity}")
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
     frames(0.2)

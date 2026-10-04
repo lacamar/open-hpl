@@ -2341,18 +2341,16 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  });
 	SOMA_FUNC(e, "bool Entity_AttachToSocket(const tString &in asName, const tString &in asParentName, const tString &in asParentSocketName, bool abUseRotation, bool abSnapToParent=true)",
 			  +[](S n, S parent, S sock, bool r, bool snap) {
-				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-				  cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(n) : NULL, *pParent = pMap ? pMap->GetEntity(parent) : NULL;
-				  if (pEnt == NULL || pParent == NULL)
-					  return false;
-				  pEnt->AttachTo(pParent, NULL, sock, r, snap, false);
-				  return true;
+				  cSomaLuxEntity *pParent = Find(parent);
+				  bool bFound = false;
+				  if (pParent)
+					  ForMatching(n, [&](cSomaLuxEntity *p) { p->AttachTo(pParent, NULL, sock, r, snap, false); bFound = true; });
+				  return bFound;
 			  });
 	SOMA_FUNC(e, "bool Entity_RemoveEntityAttachment(const tString &in asName)", +[](S n) {
-		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL;
-		if (pEnt)
-			pEnt->RemoveAttachment();
-		return pEnt != NULL;
+		bool bFound = false;
+		ForMatching(n, [&](cSomaLuxEntity *p) { p->RemoveAttachment(); bFound = true; });
+		return bFound;
 	});
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	SOMA_FUNC(e, "void Entity_SetCollideCharacter(const tString &in asEntityName, bool abActive)",
@@ -2680,6 +2678,25 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 							  b->AddForce(w);
 				  });
 			  });
+	SOMA_FUNC(e, "void Entity_AddForceFromEntity(const tString &in asEntityName, const tString &in asForceEntityName, float afForce, bool abOnlyMainBody)",
+			  +[](S n, S from, float f, bool bMain) {
+				  cSomaLuxEntity *pFrom = Find(from);
+				  if (!pFrom) return;
+				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  cVector3f v = p->GetPosition() - pFrom->GetPosition();
+					  float l = v.Length();
+					  if (l > 0.0001f) v = v / l;
+					  for (iPhysicsBody *b : p->mvBodies)
+						  if (!bMain || b == p->GetMainBody())
+							  b->AddForce(v * f);
+				  });
+			  });
+	SOMA_FUNC(e, "void Entity_SetCollide(const tString &in asEntityName, bool abActive)", +[](S n, bool c) {
+		ForMatching(n, [c](cSomaLuxEntity *p) {
+			for (iPhysicsBody *b : p->mvBodies)
+				b->SetCollide(c);
+		});
+	});
 	SOMA_FUNC(e, "void Entity_AddTorque(const tString &in asEntityName, const cVector3f &in avTorque, bool abLocalSpace, bool abOnlyMainBody)",
 			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
