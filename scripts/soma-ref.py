@@ -202,7 +202,7 @@ def teleport_code(x, y, z, yaw=None, pitch=None):
     if yaw is not None:
         code += f" b.SetYaw(cMath_ToRad({yaw})); p.GetCamera().SetYaw(cMath_ToRad({yaw}));"
     if pitch is not None:
-        code += f" b.SetPitch(cMath_ToRad({pitch})); p.GetCamera().SetPitch(cMath_ToRad({pitch}));"
+        code += f" p.GetCamera().SetPitch(cMath_ToRad({pitch}));"
     return code
 
 

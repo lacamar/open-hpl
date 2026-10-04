@@ -131,7 +131,7 @@ def aim(target):
     yaw = -math.atan2(dx, -dz)
     pitch = math.atan2(dy, math.hypot(dx, dz))
     ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});"
-       f"p.GetCharacterBody().SetPitch({pitch}); p.GetCamera().SetPitch({pitch});")
+       f"p.GetCamera().SetPitch({pitch});")
 
 
 def aim_entity(name):

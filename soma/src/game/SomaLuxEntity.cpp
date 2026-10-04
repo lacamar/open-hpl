@@ -2508,6 +2508,19 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		cSomaLuxEntity *pA = Find(a), *pB = Find(b);
 		return pA && pB ? pB->GetPosition() - pA->GetPosition() : cVector3f(0);
 	});
+	static auto InFront = [](const cVector3f &avPos, cSomaLuxEntity *apFwd) {
+		cMatrixf m = cMath::MatrixInverse(apFwd->GetMatrix());
+		return cMath::Vector3Dot(cMath::Vector3Normalize(avPos - apFwd->GetPosition()), cVector3f(m.m[2][0], m.m[2][1], m.m[2][2])) > 0;
+	};
+	SOMA_FUNC(e, "bool Entity_EntityIsInFront(const tString &in asTargetEntity, const tString &in asForwardEntity)", +[](S t, S f) {
+		cSomaLuxEntity *pT = Find(t), *pF = Find(f);
+		return pT && pF && InFront(pT->GetPosition(), pF);
+	});
+	SOMA_FUNC(e, "bool Entity_PlayerIsInFront(const tString &in asName)", +[](S n) {
+		cSomaLuxEntity *p = Find(n);
+		iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+		return p && pBody && InFront(pBody->GetPosition(), p);
+	});
 	SOMA_FUNC(e, "void Entity_AddImpulse(const tString &in asEntityName, const cVector3f &in avImpulse, bool abLocalSpace, bool abOnlyMainBody)",
 			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
