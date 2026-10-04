@@ -1479,6 +1479,7 @@ namespace hpl {
 		//Brute force
 		else
 		{
+			if(mpCurrentSettings->mbUseDelayedOcclusionCulling) FetchDelayedOcclusionResults();
 			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
 			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
 			
@@ -1489,6 +1490,7 @@ namespace hpl {
 											eRenderListCompileFlag_Illumination);
 			if(mbLog)mpCurrentRenderList->PrintAllObjects();
 			RenderZ(); 
+			if(mpCurrentSettings->mbUseDelayedOcclusionCulling) RenderDelayedOcclusionQueries();
 
 			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
 

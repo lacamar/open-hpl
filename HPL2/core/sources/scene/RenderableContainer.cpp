@@ -22,6 +22,7 @@
 #include "system/LowLevelSystem.h"
 
 #include "graphics/Renderable.h"
+#include "graphics/OcclusionQuery.h"
 #include "math/Math.h"
 
 namespace hpl {
@@ -64,12 +65,22 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	cVisibleRCNodeTracker::~cVisibleRCNodeTracker()
+	{
+		Reset();
+	}
+
 	void cVisibleRCNodeTracker::Reset()
 	{
 		mlCurrentVisibleNodeSet =0;
 		mlFrameCounter =0;
 
 		for(int i=0; i<2; i++) m_setVisibleNodes[i].clear();
+
+		for(auto &it : m_mapPendingQueries) hplDelete(it.second);
+		m_mapPendingQueries.clear();
+		m_mapOccludedFrame.clear();
+		mvQueryNodes.clear();
 	}
 
 	//-----------------------------------------------------------------------

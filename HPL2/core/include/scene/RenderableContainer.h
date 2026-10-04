@@ -30,6 +30,7 @@ namespace hpl {
 	//-------------------------------------------
 
 	class iRenderableContainerNode;
+	class iOcclusionQuery;
 	class cRendererCallbackFunctions;
 	class iRenderable;
 	class cFrustum;
@@ -40,6 +41,7 @@ namespace hpl {
 	{
 	public:
 		cVisibleRCNodeTracker();
+		~cVisibleRCNodeTracker();
 
 		void SwitchAndClearVisibleNodeSet();
 		void SetNodeVisible(iRenderableContainerNode *apNode);
@@ -47,10 +49,15 @@ namespace hpl {
 
 		void Reset();
 
+		// Delayed occlusion culling: results of earlier frames' queries, never waited on
+		std::map<iRenderableContainerNode*, iOcclusionQuery*> m_mapPendingQueries;
+		std::map<iRenderableContainerNode*, int> m_mapOccludedFrame;
+		std::vector<iRenderableContainerNode*> mvQueryNodes;
+		int mlFrameCounter;
+
 	private:
 		tRenderableContainerNodeSet m_setVisibleNodes[2];
 		int mlCurrentVisibleNodeSet;
-		int mlFrameCounter;
 
 	};
 

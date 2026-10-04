@@ -137,6 +137,7 @@ namespace hpl {
 		mbUseFxaa = false;
 
 		mbUseOcclusionCulling = true;
+		mbUseDelayedOcclusionCulling = false;
 
 		mMaxShadowMapResolution = eShadowMapResolution_High;
 		if(mbIsReflection)
@@ -893,6 +894,7 @@ namespace hpl {
 		{
 			if(	frustumCollision == eCollision_Outside) return;
 			if(CheckNodeIsVisible(apNode)==false)		return;
+			if(mpCurrentSettings->mbUseDelayedOcclusionCulling && DelayedOcclusionCulled(apNode)) return;
 		}
 
 		////////////////////////
@@ -924,6 +926,71 @@ namespace hpl {
 				}
 			}
 		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iRenderer::FetchDelayedOcclusionResults()
+	{
+		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
+		int lFrame = ++pTracker->mlFrameCounter;
+		mpCurrentSettings->mlNumberOfOcclusionQueries =0;
+		pTracker->mvQueryNodes.clear();
+
+		for(auto it = pTracker->m_mapPendingQueries.begin(); it != pTracker->m_mapPendingQueries.end();)
+		{
+			if(it->second->FetchResults()==false) { ++it; continue; }
+
+			if((int)it->second->GetSampleCount() > mpCurrentSettings->mlSampleVisiblilityLimit)
+				pTracker->m_mapOccludedFrame.erase(it->first);
+			else
+				pTracker->m_mapOccludedFrame[it->first] = lFrame;
+
+			ReleaseOcclusionQuery(it->second);
+			it = pTracker->m_mapPendingQueries.erase(it);
+		}
+
+		if((lFrame & 255)==0)
+			std::erase_if(pTracker->m_mapOccludedFrame, [lFrame](auto &e){ return e.second < lFrame - 8; });
+	}
+
+	// Occluded only while queries keep confirming it; unknown counts as visible.
+	bool iRenderer::DelayedOcclusionCulled(iRenderableContainerNode *apNode)
+	{
+		if(apNode->HasChildNodes() || apNode->HasObjects()==false) return false;
+		if(mpCurrentFrustum->CheckAABBNearPlaneIntersection(apNode->GetMin(), apNode->GetMax())) return false;
+
+		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
+		int lFrame = pTracker->mlFrameCounter;
+		bool bPending = pTracker->m_mapPendingQueries.count(apNode) > 0;
+
+		auto it = pTracker->m_mapOccludedFrame.find(apNode);
+		bool bOccluded = it != pTracker->m_mapOccludedFrame.end() && it->second >= lFrame - 4;
+
+		// Visible leaves are re-tested every 4th frame, staggered
+		if(bPending==false && (bOccluded || ((lFrame + ((size_t)apNode >> 6)) & 3)==0))
+			pTracker->mvQueryNodes.push_back(apNode);
+
+		return bOccluded;
+	}
+
+	void iRenderer::RenderDelayedOcclusionQueries()
+	{
+		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
+		if(pTracker->mvQueryNodes.empty()) return;
+
+		SetDepthTest(true);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetChannelMode(eMaterialChannelMode_None);
+		SetTextureRange(NULL,0);
+
+		for(iRenderableContainerNode *pNode : pTracker->mvQueryNodes)
+		{
+			iOcclusionQuery *pQuery = GetOcclusionQuery();
+			RenderNodeBoundingBox(pNode, pQuery);
+			pTracker->m_mapPendingQueries[pNode] = pQuery;
+		}
+		pTracker->mvQueryNodes.clear();
 	}
 
 	//-----------------------------------------------------------------------

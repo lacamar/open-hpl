@@ -158,6 +158,7 @@ namespace hpl {
 		bool mbClipReflectionScreenRect;
 
 		bool mbUseOcclusionCulling;
+		bool mbUseDelayedOcclusionCulling;
 
 		bool mbUseEdgeSmooth;
 		bool mbUseFxaa;
@@ -343,6 +344,10 @@ namespace hpl {
 		void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags); 
 
 		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
+
+		void FetchDelayedOcclusionResults();
+		bool DelayedOcclusionCulled(iRenderableContainerNode *apNode);
+		void RenderDelayedOcclusionQueries();
 
 
 		/**
