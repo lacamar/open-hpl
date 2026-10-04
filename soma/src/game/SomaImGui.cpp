@@ -383,6 +383,12 @@ std::vector<cSomaCameraTextureState> SomaGetCameraTextures()
 	return v;
 }
 
+iTexture *SomaGetCameraTexture(const tString &asName)
+{
+	auto it = gmapCameraTextures.find(asName);
+	return it == gmapCameraTextures.end() ? NULL : it->second->mpTexture;
+}
+
 void SomaRestoreCameraTexture(const cSomaCameraTextureState &s)
 {
 	CreateCameraTexture(s.msName, s.mvSize, s.mlFPS, s.mfFOV, s.mfNear, s.mfFar);
@@ -812,9 +818,9 @@ bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const v
 			st.mfFloat = 0.4f;
 	}
 	// cImGui::DoButtonBase: state colours replace the base, disabled multiplies frame and text
-	bool bTrig = alMode == 1 ? bResult : bDown && bOver;
+	bool bTrig = alMode == 1 ? bResult : alMode == 3 || (alMode != 4 && bDown && bOver);
 	bool bUseTrigGfx = F<bool>(apData, kBUseTrigGfx), bUseFocusGfx = F<bool>(apData, kBUseInFocusGfx);
-	bool bFocus = bOver && (bTrig && (bUseTrigGfx || F<bool>(apData, kBUseTrigColor))) == false;
+	bool bFocus = bOver && (alMode == 2 && bTrig && (bUseTrigGfx || F<bool>(apData, kBUseTrigColor))) == false;
 	cColor col = F<cColor>(apData, kWColorBase);
 	if (bTrig && bFocus && F<bool>(apData, kBUseTrigFocusColor) && bUseTrigGfx == false)
 		col = F<cColor>(apData, kBColorTrigFocus);
@@ -1032,7 +1038,7 @@ void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVec
 	Advance(avPos, avSize);
 }
 
-void cSomaImGui::DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize)
+void cSomaImGui::DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize, bool abClip)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	cColor colBase = F<cColor>(apData, kWColorBase);
@@ -1074,15 +1080,15 @@ void cSomaImGui::DoWindowStart(const tWString &asCaption, const void *apData, cV
 	cGroup g;
 	g.mvPos = avPos + cVector3f(fLeft, fHeader + fTop, 0.3f);
 	g.mvSize = avSize - cVector2f(fLeft + fRight, fTop + fBottom + fHeader);
-	mvGroups.push_back(g);
+	g.mbClip = abClip;
+	PushGroup(g);
 	mPrev.mvPos = avPos;
 	mPrev.mvSize = avSize;
 }
 
 void cSomaImGui::DoWindowEnd()
 {
-	if (mvGroups.empty() == false)
-		mvGroups.pop_back();
+	PopGroup();
 }
 
 void cSomaImGui::DoMouse(const void *apGfx, const cVector3f &avOffset, cVector2f avSize)
@@ -1346,7 +1352,7 @@ static int SomaMultiToggle(I *p, Str n, int def, asUINT alCols, V2 spacing, cons
 		for (size_t i = 0; i < vItems.size(); ++i)
 		{
 			cVector3f vPos((vItem.x + spacing.x) * (float)(i % cols), (vItem.y + spacing.y) * (float)(i / cols), 0);
-			if (p->DoButton(n + "_" + cString::ToString((int)i), vItems[i], apData, vPos, vItem, 0))
+			if (p->DoButton(n + "_" + cString::ToString((int)i), vItems[i], apData, vPos, vItem, st.mlInt == (int)i ? 3 : 4))
 			{
 				bUpdated = st.mlInt != (int)i;
 				st.mlInt = (int)i;
@@ -1712,13 +1718,14 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void ClearPrevData()", +[](I *p) { p->mPrev = cSomaImGui::cPrev(); });
 
 	// Groups, layouts, items
-	SOMA_METHOD(e, T, "void GroupBegin(const cVector3f&in avPos, const cVector2f&in avSize=0, bool abClip=false)", +[](I *p, V3 pos, V2 size, bool) {
+	SOMA_METHOD(e, T, "void GroupBegin(const cVector3f&in avPos, const cVector2f&in avSize=0, bool abClip=false)", +[](I *p, V3 pos, V2 size, bool clip) {
 		cSomaImGui::cGroup g;
 		g.mvPos = p->GroupPos() + pos;
 		g.mvSize = size.x > 0 || size.y > 0 ? size : p->GroupSize();
-		p->mvGroups.push_back(g);
+		g.mbClip = clip;
+		p->PushGroup(g);
 	});
-	SOMA_METHOD(e, T, "void GroupEnd()", +[](I *p) { if (p->mvGroups.empty() == false) p->mvGroups.pop_back(); });
+	SOMA_METHOD(e, T, "void GroupEnd()", +[](I *p) { p->PopGroup(); });
 	SOMA_METHOD(e, T, "const cVector3f &GetCurrentGroupPos()", +[](I *p) -> const cVector3f & { static cVector3f v; v = p->GroupPos(); return v; });
 	SOMA_METHOD(e, T, "const cVector2f &GetCurrentGroupSize()", +[](I *p) -> const cVector2f & { static cVector2f v; v = p->GroupSize(); return v; });
 	SOMA_METHOD(e, T, "void ClipAreaBegin(const cVector3f&in avPos, const cVector2f&in avSize)", +[](I *p, V3 pos, V2 size) {
@@ -1825,9 +1832,9 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void DoFrame(const cImGuiFrameData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1)", +[](I *p, D d, V3 pos, V2 size) { p->DoFrame(P(d), pos, size); });
 	SOMA_METHOD(e, T, "void DoFrame(const cVector3f &in avPos=0, const cVector2f &in avSize=-1)", +[](I *p, V3 pos, V2 size) { p->DoFrame(p->GetDefault("cImGuiFrameData"), pos, size); });
 	SOMA_METHOD(e, T, "void DoWindowStart(const tWString &in asCaption, const cImGuiWindowData &in aData, const cVector3f &in avPos=0, const cVector2f &in avSize=-1, bool abClip=true)",
-				+[](I *p, WStr c, D d, V3 pos, V2 size, bool) { p->DoWindowStart(c, P(d), pos, size); });
+				+[](I *p, WStr c, D d, V3 pos, V2 size, bool clip) { p->DoWindowStart(c, P(d), pos, size, clip); });
 	SOMA_METHOD(e, T, "void DoWindowStart(const tWString &in asCaption, const cVector3f &in avPos=0, const cVector2f &in avSize=-1, bool abClip=true)",
-				+[](I *p, WStr c, V3 pos, V2 size, bool) { p->DoWindowStart(c, p->GetDefault("cImGuiWindowData"), pos, size); });
+				+[](I *p, WStr c, V3 pos, V2 size, bool clip) { p->DoWindowStart(c, p->GetDefault("cImGuiWindowData"), pos, size, clip); });
 	SOMA_METHOD(e, T, "void DoWindowEnd()", +[](I *p) { p->DoWindowEnd(); });
 	SOMA_METHOD(e, T, "void DoGauge(const cImGuiGaugeData &in aData, float afFillAmount, const cVector3f &in avPos=0, const cVector2f &in avSize=-1)",
 				+[](I *p, D d, float f, V3 pos, V2 size) { p->DoGauge(P(d), f, pos, size); });

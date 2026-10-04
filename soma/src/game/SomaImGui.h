@@ -18,6 +18,7 @@ struct cSomaCameraTextureState
 	cVector3f mvPosition;
 };
 std::vector<cSomaCameraTextureState> SomaGetCameraTextures();
+iTexture *SomaGetCameraTexture(const tString &asName);
 void SomaRestoreCameraTexture(const cSomaCameraTextureState &aState);
 
 class cSomaImGui
@@ -125,8 +126,23 @@ public:
 	{
 		cVector3f mvPos;
 		cVector2f mvSize;
+		bool mbClip = false;
 	};
 	std::vector<cGroup> mvGroups;
+	void PushGroup(const cGroup &aGroup)
+	{
+		mvGroups.push_back(aGroup);
+		if (aGroup.mbClip)
+			Record({NULL, NULL, L"", aGroup.mvPos, aGroup.mvSize, cColor(1, 1), 0, kClipBegin, 0});
+	}
+	void PopGroup()
+	{
+		if (mvGroups.empty())
+			return;
+		if (mvGroups.back().mbClip)
+			Record({NULL, NULL, L"", 0, 0, cColor(1, 1), 0, kClipEnd, 0});
+		mvGroups.pop_back();
+	}
 	struct cLayout
 	{
 		int mlType;
@@ -185,7 +201,7 @@ public:
 						int alTriggeredGfx);
 	void DrawText(const tWString &asText, const void *apFont, const cColor &aColor, int alAlign, const cVector3f &avPos, const cVector2f &avSize,
 				  float afSizeMul);
-	bool DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode);
+	bool DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode); // 1 toggle, 2 repeat, 3/4 multi-toggle item on/off
 	void DoLabel(const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, float afSizeMul);
 	void DoImage(const void *apGfx, cVector3f avPos, cVector2f avSize);
 	float DoTextFrame(const tWString &asText, const cVector2f &avEdge, float afRowSpace, float afStartRow, const void *apData, cVector3f avPos,
@@ -196,7 +212,7 @@ public:
 	bool DoCheckBox(const tString &asName, const tWString &asText, bool abDefault, const void *apData, cVector3f avPos, cVector2f avSize);
 	int DoMultiSelect(const tString &asName, int alDefault, const void *apData, cVector3f avPos, cVector2f avSize);
 	void DoGauge(const void *apData, float afFill, cVector3f avPos, cVector2f avSize);
-	void DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize);
+	void DoWindowStart(const tWString &asCaption, const void *apData, cVector3f avPos, cVector2f avSize, bool abClip);
 	void DoWindowEnd();
 	void DoMouse(const void *apGfx, const cVector3f &avOffset, cVector2f avSize);
 
