@@ -981,10 +981,10 @@ namespace hpl {
 					avSize.x, avSize.y,
 					0, alDataSize, apData);
 
-				if(aPixelFormat == ePixelFormat_RGTC2_XY || aPixelFormat == ePixelFormat_RGTC2_YX)
+				if(aPixelFormat == ePixelFormat_RGTC2)
 				{
-					bool bXFirst = aPixelFormat == ePixelFormat_RGTC2_XY;
-					GLint vSwizzle[4] = { GL_ONE, bXFirst ? GL_GREEN : GL_RED, GL_ZERO, bXFirst ? GL_RED : GL_GREEN };
+					// SOMA uploads these as LATC2
+					GLint vSwizzle[4] = { GL_RED, GL_RED, GL_RED, GL_GREEN };
 					glTexParameteriv(GLTarget, GL_TEXTURE_SWIZZLE_RGBA, vSwizzle);
 				}
 			}

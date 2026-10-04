@@ -42,8 +42,7 @@ namespace hpl {
 		bool bDxt = (aFlags & eBitmapLoadFlag_ForceNoCompression) == 0 && (lCaps2 & 0x200000) == 0;
 		ePixelFormat format = ePixelFormat_Unknown;
 		int lBlockSize = 16, lBytesPerPixel = 4;
-		if (memcmp(pFourCC, "BC5U", 4) == 0) { format = ePixelFormat_RGTC2_XY; lBytesPerPixel = 1; }
-		else if (memcmp(pFourCC, "ATI2", 4) == 0) { format = ePixelFormat_RGTC2_YX; lBytesPerPixel = 1; }
+		if (memcmp(pFourCC, "BC5U", 4) == 0 || memcmp(pFourCC, "ATI2", 4) == 0) { format = ePixelFormat_RGTC2; lBytesPerPixel = 1; }
 		else if (bDxt && memcmp(pFourCC, "DXT1", 4) == 0) { format = ePixelFormat_DXT1; lBlockSize = 8; }
 		else if (bDxt && memcmp(pFourCC, "DXT3", 4) == 0) format = ePixelFormat_DXT3;
 		else if (bDxt && memcmp(pFourCC, "DXT5", 4) == 0) format = ePixelFormat_DXT5;
