@@ -249,6 +249,7 @@ public:
 	bool mbGuiActive = false;
 	// cLuxProp::OnVariableUpdate gating of unfocused screens
 	float mfGuiFPS = 30, mfGuiTimeAcc = 0;
+	bool mbGuiSetUseInput = true;
 	bool mbGuiUpdateWhenOutOfView = false, mbGuiDirty = true;
 	// Prop GUI drawn on a submesh: a 3D gui set over the screen rectangle fitted from its UVs
 	cSubMeshEntity *mpGuiSubMesh = NULL;

@@ -662,7 +662,7 @@ void cSomaGuiScreenRenderer::Forget(cSomaLuxEntity *apEnt)
 static void SetScreenMaterial(cSubMeshEntity *apSub, iTexture *apTexture, const tString &asName)
 {
 	cMaterial *pMat = apSub->GetCustomMaterial();
-	if (pMat == NULL)
+	if (pMat == NULL || pMat->GetName() != asName)
 	{
 		cMaterial *pOrig = apSub->GetMaterial();
 		if (pOrig == NULL)
@@ -681,7 +681,8 @@ static void SetScreenMaterial(cSubMeshEntity *apSub, iTexture *apTexture, const 
 		pMat->LoadVariablesFromVarsObject(pVars);
 		hplDelete(pVars);
 		pMat->IncUserCount();
-		apSub->SetCustomMaterial(pMat);
+		// a .ent override stays alive: the copy shares its textures
+		apSub->SetCustomMaterial(pMat, false);
 	}
 	pMat->SetTexture(eMaterialTexture_Diffuse, apTexture);
 	pMat->Compile();
@@ -1887,6 +1888,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiVariableFPS(float afX)", +[](E *p, float f) { p->mfGuiFPS = f; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiSetUseInput(bool)", +[](E *p, bool b) { p->mbGuiSetUseInput = b; });
+	SOMA_METHOD_NEW(e, T, "bool GetGuiSetUseInput()", +[](E *p) { return p->mbGuiSetUseInput; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiUpdateWhenOutOfView(bool abX)", +[](E *p, bool b) { p->mbGuiUpdateWhenOutOfView = b; });
 	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
