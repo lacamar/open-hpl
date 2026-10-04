@@ -960,7 +960,8 @@ namespace hpl {
 		}
 
 		if((lFrame & 255)==0)
-			std::erase_if(pTracker->m_mapOccludedFrame, [lFrame](auto &e){ return e.second < lFrame - 8; });
+			for(auto it = pTracker->m_mapOccludedFrame.begin(); it != pTracker->m_mapOccludedFrame.end();)
+				it = it->second < lFrame - 8 ? pTracker->m_mapOccludedFrame.erase(it) : std::next(it);
 	}
 
 	// Occluded only while queries keep confirming it; unknown counts as visible.
