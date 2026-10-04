@@ -6080,3 +6080,12 @@ our live entries and events.
   `cRendererDeferred::SetupDirectionalLight`: sky/ground ambient = colour² × brightness, direction
   = view rotation × -Direction. `Brightness` is a colour string; the first float is used. 01_03:
   sun contribution matches the ref (+12,21,23 vs +12,22,20 mean RGB). No cascaded shadow maps yet.
+
+## SOMA: projectedUV, cascaded shadows (2026-10-04)
+
+- `projecteduv` (Rebirth's `cMaterialType_ProjectedUV`): side/top/bottom texture sets, blend
+  hardness = clamp(1 - BlendSmoothness, 0, 0.99), scale = 1/TextureUVScale*. Static renderables
+  project in world space (official static batches are world-space vertices); other objects only
+  with `DynamicObjectSupport`, so grabbable debris keeps its texture. 02_03 platform top-down:
+  PSNR 22.0 -> 25.7 vs the ref.
+- HPSL: `sample()` sampler types now also come from function parameters.

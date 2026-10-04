@@ -60,7 +60,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-6. Real `projecteduv` (triplanar) material; `terrain` (23 .mat) and `terraindecal` (8).
+6. Done: `projecteduv`, `terrain`, `terraindecal`. Left: terrain DetailTextures.
 
 
 
