@@ -44,7 +44,7 @@ struct cSomaVector4f
 
 static std::set<std::string> gsetNativeBehaviourTypes = {"cImGuiGfx", "cImGuiFont", "cVector2f", "cVector3f", "cVector4f", "cVector2l", "cVector3l",
 														  "cColor", "cMatrixf", "cQuaternion", "cPidControllerVec3", "cPidControllerf",
-														  "cRect2f", "cRect2l", "cPlanef", "cDate", "cScriptStringSet"};
+														  "cRect2f", "cRect2l", "cPlanef", "cDate", "cScriptStringSet", "cCollideData"};
 
 bool SomaScriptHasNativeBehaviours(const char *apType)
 {

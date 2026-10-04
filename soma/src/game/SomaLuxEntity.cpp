@@ -1895,6 +1895,14 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "bool GetVarBool(const tString&in asName)", +[](E *p, S n) { return cString::ToBool(VarGet(p, n).c_str(), false); });
 	SOMA_METHOD_NEW(e, T, "int GetVarInt(const tString&in asName)", +[](E *p, S n) { return cString::ToInt(VarGet(p, n).c_str(), 0); });
 	SOMA_METHOD_NEW(e, T, "float GetVarFloat(const tString&in asName)", +[](E *p, S n) { return cString::ToFloat(VarGet(p, n).c_str(), 0); });
+	SOMA_METHOD_NEW(e, T, "void SetVarVector2f(const tString&in asName, const cVector2f&in avX)", +[](E *p, S n, const cVector2f &v) { p->mmapScriptVars[n] = v.ToFileString(); });
+	SOMA_METHOD_NEW(e, T, "void SetVarVector3f(const tString&in asName, const cVector3f&in avX)", +[](E *p, S n, const cVector3f &v) { p->mmapScriptVars[n] = v.ToFileString(); });
+	SOMA_METHOD_NEW(e, T, "void SetVarColor(const tString&in asName, const cColor&in aX)", +[](E *p, S n, const cColor &v) { p->mmapScriptVars[n] = v.ToFileString(); });
+	SOMA_METHOD_NEW(e, T, "void IncVarVector2f(const tString&in asName, const cVector2f&in avX)", +[](E *p, S n, const cVector2f &v) { p->mmapScriptVars[n] = (cString::ToVector2f(VarGet(p, n).c_str(), 0) + v).ToFileString(); });
+	SOMA_METHOD_NEW(e, T, "void IncVarVector3f(const tString&in asName, const cVector3f&in avX)", +[](E *p, S n, const cVector3f &v) { p->mmapScriptVars[n] = (cString::ToVector3f(VarGet(p, n).c_str(), 0) + v).ToFileString(); });
+	SOMA_METHOD_NEW(e, T, "cVector2f GetVarVector2f(const tString&in asName)", +[](E *p, S n) { return cString::ToVector2f(VarGet(p, n).c_str(), 0); });
+	SOMA_METHOD_NEW(e, T, "cVector3f GetVarVector3f(const tString&in asName)", +[](E *p, S n) { return cString::ToVector3f(VarGet(p, n).c_str(), 0); });
+	SOMA_METHOD_NEW(e, T, "cColor GetVarColor(const tString&in asName)", +[](E *p, S n) { return cString::ToColor(VarGet(p, n).c_str(), cColor(0, 0)); });
 
 	cSomaLuxScriptable::RegisterTimerNatives(e, T);
 }
@@ -2447,6 +2455,19 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool Entity_GetVarBool(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p && cString::ToBool(VarGet(p, v).c_str(), false); });
 	SOMA_FUNC(e, "int Entity_GetVarInt(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToInt(VarGet(p, v).c_str(), 0) : 0; });
 	SOMA_FUNC(e, "float Entity_GetVarFloat(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToFloat(VarGet(p, v).c_str(), 0) : 0.0f; });
+	SOMA_FUNC(e, "void Entity_SetVarVector2f(const tString&in asEntityName, const tString&in asVarName, const cVector2f&in avX)",
+			  +[](S n, S v, const cVector2f &x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = x.ToFileString(); }); });
+	SOMA_FUNC(e, "void Entity_SetVarVector3f(const tString&in asEntityName, const tString&in asVarName, const cVector3f&in avX)",
+			  +[](S n, S v, const cVector3f &x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = x.ToFileString(); }); });
+	SOMA_FUNC(e, "void Entity_SetVarColor(const tString&in asEntityName, const tString&in asVarName, const cColor&in aX)",
+			  +[](S n, S v, const cColor &x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = x.ToFileString(); }); });
+	SOMA_FUNC(e, "void Entity_IncVarVector2f(const tString&in asEntityName, const tString&in asVarName, const cVector2f&in avX)",
+			  +[](S n, S v, const cVector2f &x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = (cString::ToVector2f(VarGet(p, v).c_str(), 0) + x).ToFileString(); }); });
+	SOMA_FUNC(e, "void Entity_IncVarVector3f(const tString&in asEntityName, const tString&in asVarName, const cVector3f&in avX)",
+			  +[](S n, S v, const cVector3f &x) { ForMatching(n, [&](cSomaLuxEntity *p) { p->mmapScriptVars[v] = (cString::ToVector3f(VarGet(p, v).c_str(), 0) + x).ToFileString(); }); });
+	SOMA_FUNC(e, "cVector2f Entity_GetVarVector2f(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToVector2f(VarGet(p, v).c_str(), 0) : cVector2f(0); });
+	SOMA_FUNC(e, "cVector3f Entity_GetVarVector3f(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToVector3f(VarGet(p, v).c_str(), 0) : cVector3f(0); });
+	SOMA_FUNC(e, "cColor Entity_GetVarColor(const tString&in asEntityName, const tString&in asVarName)", +[](S n, S v) { cSomaLuxEntity *p = Find(n); return p ? cString::ToColor(VarGet(p, v).c_str(), cColor(0, 0)) : cColor(0, 0); });
 	SOMA_FUNC(e, "void Prop_MoveLinearTo(const tString &in asName, const tString &in asTargetEntity, float afAcceleration, float afMaxSpeed, float afSlowDownDist, bool abResetSpeed, const tString&in asCallback=\"\")",
 			  +[](S n, S t, float a, float m, float d, bool r, S cb) {
 				  cSomaLuxEntity *pTarget = Find(t);
@@ -2563,6 +2584,15 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					  for (iPhysicsBody *b : p->mvBodies)
 						  if (!bMain || b == p->GetMainBody())
 							  b->AddForce(w);
+				  });
+			  });
+	SOMA_FUNC(e, "void Entity_AddTorque(const tString &in asEntityName, const cVector3f &in avTorque, bool abLocalSpace, bool abOnlyMainBody)",
+			  +[](S n, const cVector3f &v, bool bLocal, bool bMain) {
+				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  cVector3f w = bLocal ? cMath::MatrixMul(p->GetMatrix().GetRotation(), v) : v;
+					  for (iPhysicsBody *b : p->mvBodies)
+						  if (!bMain || b == p->GetMainBody())
+							  b->AddTorque(w);
 				  });
 			  });
 }

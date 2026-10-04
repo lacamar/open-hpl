@@ -616,7 +616,13 @@ static void ScriptPrepare(asIScriptGeneric *g)
 	call.mvVecs.reserve(16);
 	call.mpObj = ScriptOf(g);
 	const tString &sDecl = *(tString *)g->GetArgObject(0);
-	if (call.mpObj)
+	size_t lGlobal = sDecl.find('$');
+	if (call.mpObj && lGlobal != tString::npos)
+	{
+		asIScriptModule *pModule = call.mpObj->GetObjectType()->GetModule();
+		call.mpFunc = pModule ? pModule->GetFunctionByDecl(tString(sDecl).erase(lGlobal, 1).c_str()) : NULL;
+	}
+	else if (call.mpObj)
 	{
 		call.mpFunc = call.mpObj->GetObjectType()->GetMethodByDecl(sDecl.c_str());
 		if (call.mpFunc == NULL)
@@ -634,7 +640,8 @@ static void ScriptExecute(asIScriptGeneric *g)
 		asIScriptEngine *pEngine = g->GetEngine();
 		asIScriptContext *pCtx = pEngine->RequestContext();
 		pCtx->Prepare(call.mpFunc);
-		pCtx->SetObject(call.mpObj);
+		if (call.mpFunc->GetObjectType())
+			pCtx->SetObject(call.mpObj);
 		for (auto &f : call.mvArgs)
 			f(pCtx);
 		bOk = pCtx->Execute() == asEXECUTION_FINISHED;
@@ -1214,6 +1221,23 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](iPhysicsWorld *w, const cVector3f &v, cMatrixf &m) { return w->CreateBoxShape(v, &m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateSphereShape(const cVector3f &in avRadii, cMatrixf&in a_mtxOffsetMtx)",
 				+[](iPhysicsWorld *w, const cVector3f &v, cMatrixf &m) { return w->CreateSphereShape(v, &m); });
+	// ponytail: NOCOUNT type, never released; a ring of 64 covers per-frame locals
+	e->RegisterObjectBehaviour("cCollideData", asBEHAVE_FACTORY, "cCollideData@ f()", asFUNCTION(+[](asIScriptGeneric *g) {
+		static cCollideData aData[64];
+		static int lNext = 0;
+		cCollideData *p = &aData[lNext++ & 63];
+		p->mlNumOfPoints = 0;
+		*(void **)g->GetAddressOfReturnLocation() = p;
+	}), asCALL_GENERIC);
+	SOMA_METHOD(e, "cCollideData", "int GetPointNum()", +[](cCollideData *d) { return d->mlNumOfPoints; });
+	// Official cCollidePoint fields start at +16
+	SOMA_METHOD(e, "cCollideData", "const cCollidePoint& GetPoint(int alIdx)", +[](cCollideData *d, int i) { return (void *)((char *)&d->mvContactPoints[i] - 16); });
+	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeCollision(iCollideShape@ apShapeA, const cMatrixf&in a_mtxA, iCollideShape@ apShapeB, const cMatrixf&in a_mtxB, cCollideData &inout aCollideData, int alMaxPoints, bool abCorrectNormalDirection, int alThreadID=0)",
+				+[](iPhysicsWorld *w, iCollideShape *a, const cMatrixf &ma, iCollideShape *b, const cMatrixf &mb, cCollideData &d, int n, bool bCorrect, int) {
+					if ((int)d.mvContactPoints.size() < n)
+						d.SetMaxSize(n);
+					return a && b && w->CheckShapeCollision(a, ma, b, mb, d, n, bCorrect);
+				});
 	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeWorldCollision(cVector3f&out avPushVector, iCollideShape@ apShape, const cMatrixf&in a_mtxTransform, iPhysicsBody@ apSkipBody, bool abSkipStatic, bool abIsCharacter, bool abCollideCharacter)",
 				+[](iPhysicsWorld *w, cVector3f &push, iCollideShape *pShape, const cMatrixf &m, iPhysicsBody *pSkip, bool bSkipStatic, bool bChar, bool bCollideChar) {
 					push = 0;
