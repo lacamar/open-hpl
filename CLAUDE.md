@@ -111,6 +111,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation (HDR), 10-12 shadow maps high/med/low |
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
+| `set_entity name= visible=` | show/hide mesh entities by glob (restart to undo: hidden-by-design ones get shown) |
 | `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
 | `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10+ shadow maps, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |

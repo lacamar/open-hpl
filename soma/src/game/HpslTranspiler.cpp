@@ -557,7 +557,8 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	}
 
 	std::vector<tString> vRawParams = SplitParams(sParamList);
-	tString sGlobals;
+	// Z prepass and G-buffer programs must hit identical depths (Equal test)
+	tString sGlobals = aType == eGpuShaderType_Vertex ? "invariant gl_Position;\n" : "";
 	std::vector<std::pair<tString, tString> > vBodySubs;
 	bool bNeedsFragData = false;
 

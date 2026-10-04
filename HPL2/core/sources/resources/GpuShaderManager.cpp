@@ -186,6 +186,8 @@ namespace hpl {
 		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
 		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		// official squares the sRGB-decoded terrain cache
+		{ "cache_terrain_diffuse_frag.hpsl", "out_vColor.xyz =  vDiffuseColor.xyz;", "out_vColor.xyz = vDiffuseColor.xyz * vDiffuseColor.xyz;" },
 		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_light_frag.hpsl",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
@@ -310,10 +312,9 @@ namespace hpl {
 
 			/////////////////////////////////
 			//Sampler to texture units setup, if needed
+			if(bIsHpslFallback && pShader->SamplerNeedsTextureUnitSetup()) ApplyHpslTextureBindings(pShader, sHpslPreTranspile);
 			if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
 			{
-				if(bIsHpslFallback) ApplyHpslTextureBindings(pShader, sHpslPreTranspile);
-
 				tParseVarMap *pVarMap = mpPreprocessParser->GetParsingVarContainer()->GetMapPtr();
 				tParseVarMapIt varIt = pVarMap->begin();
 				for(; varIt != pVarMap->end(); ++varIt)
@@ -388,7 +389,7 @@ namespace hpl {
 						}
 						else
 						{
-							if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
+							if(pShader->SamplerNeedsTextureUnitSetup())
 								ApplyHpslTextureBindings(pShader, sParsedOutput);
 
 							AddResource(pShader);

@@ -4,6 +4,7 @@
 #include "SomaSoundscape.h"
 
 #include <cstring>
+#include <fnmatch.h>
 #include "HpslTranspiler.h"
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
@@ -917,6 +918,27 @@ static void cSomaBase_HeadlessCmd_SetLight(void *apUserData, const cHeadlessRequ
 	pLight->SetVisible(aReq.GetBool("visible", true));
 }
 
+static void cSomaBase_HeadlessCmd_SetEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	if(pBase->GetCurrentWorld() == NULL) { aResp.SetError("no world loaded"); return; }
+	tString sPattern = aReq.GetString("name", "");
+	bool bVisible = aReq.GetBool("visible", true);
+	int lCount = 0;
+	for(int lPass=0; lPass<2; ++lPass)
+	{
+		cMeshEntityIterator it = lPass==0 ? pBase->GetCurrentWorld()->GetStaticMeshEntityIterator() : pBase->GetCurrentWorld()->GetDynamicMeshEntityIterator();
+		while(it.HasNext())
+		{
+			cMeshEntity *pEnt = it.Next();
+			if(fnmatch(sPattern.c_str(), pEnt->GetName().c_str(), 0) != 0) continue;
+			pEnt->SetVisible(bVisible);
+			++lCount;
+		}
+	}
+	aResp.Set("count", lCount);
+}
+
 static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -1090,6 +1112,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("pick", cSomaBase_HeadlessCmd_Pick, this);
 		pCtrl->RegisterHandler("pick_entity", cSomaBase_HeadlessCmd_PickEntity, this);
 		pCtrl->RegisterHandler("set_light", cSomaBase_HeadlessCmd_SetLight, this);
+		pCtrl->RegisterHandler("set_entity", cSomaBase_HeadlessCmd_SetEntity, this);
 		pCtrl->RegisterHandler("set_render_setting", cSomaBase_HeadlessCmd_SetRenderSetting, this);
 	}
 
