@@ -502,9 +502,11 @@ namespace hpl {
 					tString sFile = pMeshElem->GetAttributeString("File", "");
 					stats.mlInXml += lNum;
 
-					tFloatVec vPositions, vRotations;
+					tFloatVec vPositions, vRotations, vRadii;
 					HpmFirstChildWithText(pMeshElem, "DetailMeshEntityPositions", vPositions);
 					HpmFirstChildWithText(pMeshElem, "DetailMeshEntityRotations", vRotations);
+					HpmFirstChildWithText(pMeshElem, "DetailMeshEntityRadii", vRadii);
+					float fMeshRadius = 0;
 					if ((int)vPositions.size() < lNum * 3 || (int)vRotations.size() < lNum * 4)
 					{
 						stats.mmapSkipped["instance_data_short:" + sFile] += lNum;
@@ -520,11 +522,25 @@ namespace hpl {
 							break;
 						}
 
+						// Instance scale = stored radius / mesh radius (cDetailMesh)
+						if (fMeshRadius == 0)
+						{
+							cVector3f vMin(1e9f), vMax(-1e9f);
+							for (int j = 0; j < pMesh->GetSubMeshNum(); ++j)
+							{
+								cBoundingVolume bv = pMesh->GetSubMesh(j)->GetVertexBuffer()->CreateBoundingVolume();
+								vMin = cMath::Vector3Min(vMin, bv.GetLocalMin());
+								vMax = cMath::Vector3Max(vMax, bv.GetLocalMax());
+							}
+							fMeshRadius = cMath::Max(vMin.Length(), vMax.Length());
+						}
+						float fScale = i < (int)vRadii.size() && fMeshRadius > 0 ? vRadii[i] / fMeshRadius : 1;
+
 						cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity("DetailMesh_" + cString::ToString(stats.mlCreated), pMesh, true);
 						pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, false);
 
 						cQuaternion qRot(vRotations[i*4], vRotations[i*4+1], vRotations[i*4+2], vRotations[i*4+3]);
-						cMatrixf mtxTransform = cMath::MatrixQuaternion(qRot);
+						cMatrixf mtxTransform = cMath::MatrixMul(cMath::MatrixQuaternion(qRot), cMath::MatrixScale(fScale));
 						mtxTransform.SetTranslation(cVector3f(vPositions[i*3], vPositions[i*3+1], vPositions[i*3+2]));
 						pEntity->SetMatrix(mtxTransform);
 
