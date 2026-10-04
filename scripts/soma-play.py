@@ -473,6 +473,7 @@ def main():
     s = sub.add_parser("shot"); s.add_argument("out")
     s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2); s.add_argument("--nth", type=int, default=0)
     a = ap.parse_args()
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # run finally blocks: release held keys
     globals()["cmd_" + a.cmd](a)
 
 
