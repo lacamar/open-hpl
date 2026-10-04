@@ -121,12 +121,9 @@ namespace hpl {
 		//lUpdate++;
 		//cPhysicsBodyNewton::SetUseCallback(true);
         			
-		tPhysicsBodyListIt it = mlstBodies.begin();
-		for(;it != mlstBodies.end(); ++it)
-		{
-			cPhysicsBodyNewton* pBody = static_cast<cPhysicsBodyNewton*>(*it);
-			pBody->ClearForces();
-		}
+		// Forces are only applied to awake bodies, which the force callback puts in the update set
+		for(iPhysicsBody *pBody : m_setUpdateBodies)
+			static_cast<cPhysicsBodyNewton*>(pBody)->ClearForces();
 	}
 	
 	//-----------------------------------------------------------------------

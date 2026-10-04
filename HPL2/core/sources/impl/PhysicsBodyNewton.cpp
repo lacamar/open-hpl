@@ -56,7 +56,6 @@ namespace hpl {
 		// Setup the callbacks and set this body as user data
 		// This is so that the transform gets updated and
 		// to add gravity, forces and user sink.
-		NewtonBodySetForceAndTorqueCallback(mpNewtonBody,OnUpdateCallback);
 		NewtonBodySetTransformCallback(mpNewtonBody, OnTransformCallback);
 		NewtonBodySetUserData(mpNewtonBody, this);
 
@@ -255,6 +254,8 @@ namespace hpl {
 		NewtonBodySetCentreOfMass(mpNewtonBody,vOffset.v);
 
 		NewtonBodySetMassMatrix(mpNewtonBody, afMass, vInertia.x, vInertia.y, vInertia.z);
+		// Newton 3 calls the force callback for every body that has one, static or asleep
+		NewtonBodySetForceAndTorqueCallback(mpNewtonBody, afMass > 0 ? OnUpdateCallback : NULL);
 		mfMass = afMass;
 	}
 	float cPhysicsBodyNewton::GetMass() const
@@ -479,6 +480,7 @@ namespace hpl {
 
 		if(pRigidBody->IsActive()==false)
 		{
+			pRigidBody->ClearForces();
 			return;
 		}
 		
