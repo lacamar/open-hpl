@@ -148,6 +148,7 @@ namespace hpl {
 		mbUseScissorRect = false;
 
 		mbRenderWorldReflection = true;
+		mbRenderWorldFog = true;
 
 		////////////////////////
 		// Set up Shadow Variables
@@ -227,6 +228,7 @@ namespace hpl {
 		////////////////////////////
 		//Shadow settings
 		RenderSettingsCopy(mbRenderShadows);
+		RenderSettingsCopy(mbRenderWorldFog);
 		RenderSettingsCopy(mfShadowMapBias);
 		RenderSettingsCopy(mfShadowMapSlopeScaleBias);
 
@@ -541,6 +543,13 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	bool iRenderer::WorldFogActive()
+	{
+		return mpCurrentWorld->GetFogActive() && mpCurrentSettings->mbRenderWorldFog;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void iRenderer::BeginRendering(	float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
 									bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList, bool abAtStartOfRendering)
 	{
@@ -588,7 +597,7 @@ namespace hpl {
 			mvCurrentOcclusionPlanes.push_back(apSettings->mvOcclusionPlanes[i]);
 
         //Fog
-		if(mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
+		if(mbSetupOcclusionPlaneForFog && WorldFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
 		{
 			cPlanef fogPlane;
 			fogPlane.FromNormalPoint(	apFrustum->GetForward(), 

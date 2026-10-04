@@ -1530,7 +1530,7 @@ namespace hpl {
 		RenderEdgeSmooth();
 
 		#ifndef kDebug_RenderLightData
-		bool bFogIsSkybox = mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogUseSkybox() &&
+		bool bFogIsSkybox = WorldFogActive() && mpCurrentWorld->GetFogUseSkybox() &&
 							mpCurrentWorld->GetFogSkyboxTexture() == mpCurrentWorld->GetSkyBoxTexture();
 		if(!(mlDebugSkipPasses & 4) && !bFogIsSkybox) RenderBasicSkyBox();
 		#endif
@@ -1981,9 +1981,9 @@ namespace hpl {
 		return cColor(aCol.r*aCol.r*fInvLen2, aCol.g*aCol.g*fInvLen2, aCol.b*aCol.b*fInvLen2, aCol.a);
 	}
 
-	static bool WorldUnderwaterFog(cWorld *apWorld)
+	static bool WorldUnderwaterFog(iRenderer *apRenderer)
 	{
-		return apWorld->GetFogActive() && apWorld->GetFogUnderwater();
+		return apRenderer->WorldFogActive() && apRenderer->GetCurrentWorld()->GetFogUnderwater();
 	}
 
 	void cRendererDeferred::SetupLightProgramVariables(	iGpuProgram *apProgram,cDeferredLight* apLightData)
@@ -2002,7 +2002,7 @@ namespace hpl {
 		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afSpotFalloffPow, pLight->GetSpotFalloffPow() * 2);
 		apProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
-		if(WorldUnderwaterFog(mpCurrentWorld))
+		if(WorldUnderwaterFog(this))
 		{
 			apProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
 			apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
@@ -2092,7 +2092,7 @@ namespace hpl {
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
-		if(WorldUnderwaterFog(mpCurrentWorld))	lFlags |= eFeature_Light_UnderwaterFog;
+		if(WorldUnderwaterFog(this))	lFlags |= eFeature_Light_UnderwaterFog;
 		if(pLight->GetGoboTexture() && pLight->GetGoboSpecular()) lFlags |= eFeature_Light_GoboSpecular | eFeature_Light_GoboTypeSpecular;
 		
 		//Spotlight specifics
@@ -3270,7 +3270,7 @@ namespace hpl {
 			SetProgram(pProg);
 
 			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * pBox->GetBrightness();
-			if(WorldUnderwaterFog(mpCurrentWorld) && !pBox->GetUseSphericalHarmonics())
+			if(WorldUnderwaterFog(this) && !pBox->GetUseSphericalHarmonics())
 			{
 				cColor fogCol = UnderwaterFogColor(mpCurrentWorld->GetFogColor());
 				diffuse.r *= fogCol.r; diffuse.g *= fogCol.g; diffuse.b *= fogCol.b;
@@ -3326,7 +3326,7 @@ namespace hpl {
 		tFlag lFlags = eFeature_Light_Directional;
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
-		if(WorldUnderwaterFog(mpCurrentWorld))	lFlags |= eFeature_Light_UnderwaterFog;
+		if(WorldUnderwaterFog(this))	lFlags |= eFeature_Light_UnderwaterFog;
 		iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
 		if(pProgram==NULL) return;
 		if(mbLog) Log(" Rendering directional light\n");
@@ -3351,7 +3351,7 @@ namespace hpl {
 		pProgram->SetVec3f(kVar_avLightDirection, cMath::MatrixMul3x3(mtxView, pLight->GetDirection() * -1.0f));
 		pProgram->SetVec3f(kVar_avViewSpaceUp, cMath::MatrixMul3x3(mtxView, cVector3f(0,1,0)));
 		pProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
-		if(WorldUnderwaterFog(mpCurrentWorld)) pProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
+		if(WorldUnderwaterFog(this)) pProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
 
 		// ponytail: no cascaded shadow maps yet, the sun lights interiors
 		SetStencilActive(false);
@@ -3869,7 +3869,7 @@ namespace hpl {
 
 	void cRendererDeferred::RenderFullScreenFog()
 	{
-		if(mpCurrentWorld->GetFogActive()==false) return;
+		if(WorldFogActive()==false) return;
 
 		START_RENDER_PASS(FullScreenFog);
 
@@ -4074,7 +4074,7 @@ namespace hpl {
 			if(++lTransIdx == mlDebugSkipTranslucent) continue;
 			if(alDofPass && IsBehindDepthOfFieldFocus(pObject) != (alDofPass==1)) continue;
 
-			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
+			eMaterialRenderMode renderMode = WorldFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
 			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;
 
 			//No world reflections in a reflection!

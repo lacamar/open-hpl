@@ -174,6 +174,7 @@ namespace hpl {
 		cVector2l mvScissorRectSize;
 
 		bool mbRenderWorldReflection;
+		bool mbRenderWorldFog;
 		
 		////////////////////////////
 		//Shadow settings
@@ -273,6 +274,7 @@ namespace hpl {
 		virtual iGpuProgram* GetSkyBoxProgram(){ return NULL; }
 
 		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
+		bool WorldFogActive();
 		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
 		cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
 		

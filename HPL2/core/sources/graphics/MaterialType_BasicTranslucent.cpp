@@ -381,7 +381,7 @@ namespace hpl {
 		if(aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
 		{
 			cWorld *pWorld = apRenderer->GetCurrentWorld();
-			bool bWorldFog = pWorld->GetFogActive();
+			bool bWorldFog = apRenderer->WorldFogActive();
 
 			apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()) : cVector2f(0, 1));
 			apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
