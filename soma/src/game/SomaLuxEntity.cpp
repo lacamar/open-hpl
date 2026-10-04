@@ -1782,7 +1782,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void RemoveEntityAttachment()", +[](E *p) { p->RemoveAttachment(); });
 	SOMA_METHOD_NEW(e, T, "int GetBodyIndexFromName(const tString&in asName)", +[](E *p, S n) {
 		for (size_t i = 0; i < p->mvBodies.size(); ++i)
-			if (p->mvBodies[i]->GetName() == n || cString::MatchesWildcard("*_" + n, p->mvBodies[i]->GetName()))
+			if (p->mvBodies[i]->GetName() == n || p->mvBodies[i]->GetName().ends_with("_" + n))
 				return (int)i;
 		return -1;
 	});
@@ -1956,25 +1956,25 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					+[](E *p, S n) { std::erase_if(p->mvCollideCallbacks, [&](const E::cCollideCallback &c) { return c.msChild == n; }); });
 	SOMA_METHOD_NEW(e, T, "iLight@ GetLightFromName(const tString&in asName)", +[](E *p, S n) {
 		for (iLight *l : p->mvLights)
-			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
+			if (l->GetName() == n || l->GetName().ends_with(n))
 				return l;
 		return (iLight *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cParticleSystem@ GetParticleSystemFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cParticleSystem *l : p->mvParticleSystems)
-			if (l && (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName())))
+			if (l && (l->GetName() == n || l->GetName().ends_with(n)))
 				return l;
 		return (cParticleSystem *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cBillboard@ GetBillboardFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cBillboard *l : p->mvBillboards)
-			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
+			if (l->GetName() == n || l->GetName().ends_with(n))
 				return l;
 		return (cBillboard *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ GetSoundEntityFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cSoundEntity *l : p->mvSoundEntities)
-			if (l->GetName() == n || cString::MatchesWildcard("*" + n, l->GetName()))
+			if (l->GetName() == n || l->GetName().ends_with(n))
 				return l;
 		return (cSoundEntity *)NULL;
 	});
@@ -2111,7 +2111,7 @@ bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
 iPhysicsBody *cSomaLuxEntity::GetBodyFromName(const tString &asName)
 {
 	for (iPhysicsBody *b : mvBodies)
-		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || cString::MatchesWildcard("*_" + asName, b->GetName())))
+		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || b->GetName().ends_with("_" + asName)))
 			return b;
 	return NULL;
 }
@@ -2476,7 +2476,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  ForMatching(n, [&](cSomaLuxEntity *p) {
 					  iPhysicsBody *pBody = p->GetMainBody();
 					  for (iPhysicsBody *b : p->mvBodies)
-						  if (body != "" && (b->GetName() == body || cString::MatchesWildcard("*_" + body, b->GetName())))
+						  if (body != "" && (b->GetName() == body || b->GetName().ends_with("_" + body)))
 							  pBody = b;
 					  cVector3f vPos = (pBody ? pBody->GetWorldPosition() : p->GetPosition()) + off;
 					  p->OnInteract(0, pBody, vPos, data);

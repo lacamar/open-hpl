@@ -6089,3 +6089,10 @@ our live entries and events.
   with `DynamicObjectSupport`, so grabbable debris keeps its texture. 02_03 platform top-down:
   PSNR 22.0 -> 25.7 vs the ref.
 - HPSL: `sample()` sampler types now also come from function parameters.
+
+## SOMA: physics notes (2026-10-05)
+
+- 03_02 trench under the dive suit (`pipes_lab_pipes_box_*`, `Collides="false"`) has no collision in
+  the ref either: a helmet dropped at its centre leaves the world there too. Newton 2 still
+  supports a sphere whose centre is past an open mesh edge (ref rests at x=0.45 on the 0.5 plate
+  edge, ours rolls off); Newton 3 edge contacts differ. Not a loader bug.
