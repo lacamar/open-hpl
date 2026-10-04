@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV?"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAV@"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 15;
+	int glPendingVersion = 16;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -799,6 +799,16 @@ public:
 			o.Pod(c.mtxRotation);
 			o.Pod(c.mvPosition);
 		}
+		std::vector<cFogArea *> vFog;
+		cFogAreaIterator fIt = w->GetFogAreaIterator();
+		while (fIt.HasNext())
+			vFog.push_back(fIt.Next());
+		o.Pod((uint32_t)vFog.size());
+		for (cFogArea *f : vFog)
+		{
+			o.Str(f->GetName());
+			o.Pod(f->IsVisible());
+		}
 	}
 
 	static void ReadWorld(cIn &in)
@@ -1077,6 +1087,14 @@ public:
 			if (in.ok)
 				SomaRestoreCameraTexture(c);
 		}
+		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sName = in.Str();
+			bool bVisible = in.Pod<bool>();
+			if (cFogArea *f = in.ok ? pMap->GetWorld()->GetFogArea(sName) : NULL)
+				f->SetVisible(bVisible);
+		}
 	}
 };
 
@@ -1162,7 +1180,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 15)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 16)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

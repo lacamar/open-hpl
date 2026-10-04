@@ -21,8 +21,7 @@ Open:
   still ~10% of load.
 - Treemail list entries overlap.
 - Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
-  player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles, inactive
-  liquids' fog areas should be inactive, `PuppetFogArea_*` should start hidden.
+  player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
 - Force fields (`cWorld::CreateForceField`) stubbed.
 - 00_03 server room ~2x brighter than the ref.
 - Official colour space is hardware sRGB (exact curve, sRGB textures); ours is `pow 2.2` in
