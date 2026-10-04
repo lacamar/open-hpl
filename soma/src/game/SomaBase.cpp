@@ -200,6 +200,16 @@ static void cSomaBase_HeadlessCmd_ImGuiCursor(void *apUserData, const cHeadlessR
 		return;
 	}
 	cVector2f vPos(aReq.GetFloat("x", 0), aReq.GetFloat("y", 0));
+	if (pGui->GetSet()->Is3D() == false)
+	{
+		// 2D sets follow the real mouse every frame: the caller moves it there
+		cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+		cVector2f vVirtual = pGui->GetSet()->GetVirtualSize();
+		cVector2f v = vPos + pGui->GetSet()->GetVirtualSizeOffset();
+		aResp.Set("screen_x", (int)(v.x * vScreen.x / vVirtual.x));
+		aResp.Set("screen_y", (int)(v.y * vScreen.y / vVirtual.y));
+		return;
+	}
 	cVector2f vRel = vPos - pGui->mvCursor3D;
 	pGui->mvCursor3D = vPos;
 	pGui->SendMouseVirtualPosition(vPos, vRel);

@@ -1036,10 +1036,27 @@ public:
 				SomaAgentChangeState(p, lState);
 			}
 		}
-		if (in.p < in.s.size() && (pMap->mbIsUnderwater = in.Pod<bool>()))
+		if (in.p < in.s.size())
 		{
-			gbSomaUnderwaterEffects = true;
-			++glSomaUnderwaterUsers;
+			bool bUnderwater = in.Pod<bool>();
+			// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
+			asIScriptModule *pModule = pMap->GetScript() ? pMap->GetScript()->GetObjectType()->GetModule() : NULL;
+			asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByName("Map_SetUnderwater") : NULL;
+			if (bUnderwater != pMap->mbIsUnderwater && pFunc)
+			{
+				asIScriptContext *pCtx = pModule->GetEngine()->RequestContext();
+				pCtx->Prepare(pFunc);
+				pCtx->SetArgByte(0, bUnderwater);
+				pCtx->SetArgByte(1, false);
+				pCtx->Execute();
+				pModule->GetEngine()->ReturnContext(pCtx);
+			}
+			else if (bUnderwater && pMap->mbIsUnderwater == false)
+			{
+				pMap->mbIsUnderwater = true;
+				gbSomaUnderwaterEffects = true;
+				++glSomaUnderwaterUsers;
+			}
 		}
 		if (in.p < in.s.size())
 		{

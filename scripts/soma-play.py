@@ -229,15 +229,16 @@ def cmd_goto(a):
     cmd_state(a)
 
 
-def press(kind, name, hold):
+def press(kind, name, hold, xy=(0, 0)):
     if kind == "key":
         send({"cmd": "input", "type": "key", "key": name, "action": "down"})
         frames(hold)
         send({"cmd": "input", "type": "key", "key": name, "action": "up"})
     else:
-        send({"cmd": "input", "type": "mouse_button", "button": name, "action": "down"})
+        x, y = xy
+        send({"cmd": "input", "type": "mouse_button", "button": name, "action": "down", "x": x, "y": y})
         frames(hold)
-        send({"cmd": "input", "type": "mouse_button", "button": name, "action": "up"})
+        send({"cmd": "input", "type": "mouse_button", "button": name, "action": "up", "x": x, "y": y})
     frames(0.2)
 
 
@@ -424,9 +425,13 @@ def gui_click(entity, x, y):
     req = {"cmd": "imgui_cursor", "x": x, "y": y}
     if entity:
         req["name"] = entity
-    send(req)
+    r = send(req)
+    xy = (0, 0)
+    if "screen_x" in r:
+        xy = (r["screen_x"], r["screen_y"])
+        send({"cmd": "input", "type": "mouse_move", "x": xy[0], "y": xy[1], "xrel": 1, "yrel": 1})
     frames(0.1)
-    press("mouse", "left", 0.1)
+    press("mouse", "left", 0.1, xy)
 
 
 def cmd_gui(a):
