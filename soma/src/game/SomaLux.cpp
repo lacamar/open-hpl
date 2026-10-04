@@ -139,6 +139,8 @@ bool cSomaLuxMap::SetupEntityScript(cSomaLuxEntity *apEnt)
 		});
 	if (apEnt->meType == eSomaLuxEntityType_Area)
 		apEnt->CreateAreaBody(mpWorld->GetPhysicsWorld());
+	else if (apEnt->meType == eSomaLuxEntityType_LiquidArea)
+		apEnt->CreateLiquidGraphics(mpWorld);
 	return true;
 }
 

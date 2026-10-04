@@ -4094,8 +4094,12 @@ namespace hpl {
 					// HPL3 fogs translucents toward the area colour instead of fading them
 					cFogArea *pFogArea = mpCurrentSettings->mvFogRenderData[i].mpFogArea;
 					cColor fogCol = GetFogRenderColor(pFogArea->GetColor(), pFogArea->GetBrightness());
-					fogCol.a = 1 - fVisibility;
-					mTempFogAreaColor = mTempFogAreaColor * (1 - fogCol.a) + fogCol * fogCol.a;
+					float fA = 1 - fVisibility;
+					float fPrevA = mTempFogAreaColor.a * (1 - fA);
+					float fNewA = fPrevA + fA;
+					if(fNewA <= 0) continue;
+					mTempFogAreaColor = (mTempFogAreaColor * fPrevA + fogCol * fA) * (1 / fNewA);
+					mTempFogAreaColor.a = fNewA;
 				}
 				if(mTempFogAreaColor.a > 0) renderMode = eMaterialRenderMode_DiffuseFog;
 			}

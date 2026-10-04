@@ -117,6 +117,11 @@ void cSomaLuxEntity::SetActive(bool abX)
 		mpMesh->SetActive(abX);
 		mpMesh->SetVisible(abX && mbShowMesh);
 	}
+	if (meType == eSomaLuxEntityType_LiquidArea)
+	{
+		m_mtxLiquidPlaced = cMatrixf::Zero;
+		PlaceLiquidGraphics();
+	}
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->SetActive(abX);
 	float fAlpha = mfEffectsAlpha;
@@ -1372,8 +1377,99 @@ float SomaLiquidHeightAt(const cVector3f &avPos)
 	return -10000.0f;
 }
 
+// cMeshCreator::CreateGridPlane: upper submesh faces +y, lower (reversed winding) faces -y
+static cMesh *CreateGridPlane(const tString &asName, const tString &asUpper, const tString &asLower, const cVector2f &avSize, float afGrid, float afTile)
+{
+	cResources *pRes = gpSomaBase->mpEngine->GetResources();
+	int nx = afGrid > 0 ? (int)(avSize.x / afGrid + 0.99f) : 1, nz = afGrid > 0 ? (int)(avSize.y / afGrid + 0.99f) : 1;
+	cVector2f vStep = afGrid > 0 ? cVector2f(afGrid) : avSize;
+	cMesh *pMesh = hplNew(cMesh, (asName, _W(""), pRes->GetMaterialManager(), pRes->GetAnimationManager()));
+	for (int m = 0; m < (asLower != "" ? 2 : 1); ++m)
+	{
+		iVertexBuffer *pVtx = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->CreateVertexBuffer(
+			eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, (nx + 1) * (nz + 1), nx * nz * 6);
+		pVtx->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
+		pVtx->CreateElementArray(eVertexBufferElement_Normal, eVertexBufferElementFormat_Float, 3);
+		pVtx->CreateElementArray(eVertexBufferElement_Color0, eVertexBufferElementFormat_Float, 4);
+		pVtx->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+		for (int z = 0; z <= nz; ++z)
+			for (int x = 0; x <= nx; ++x)
+			{
+				cVector2f v(std::min(x * vStep.x, avSize.x), std::min(z * vStep.y, avSize.y));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Position, cVector3f(v.x - avSize.x * 0.5f, 0, v.y - avSize.y * 0.5f));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cVector3f(0, m == 0 ? 1.0f : -1.0f, 0));
+				pVtx->AddVertexColor(eVertexBufferElement_Color0, cColor(1, 1));
+				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(v.x / afTile, v.y / afTile, 0));
+			}
+		for (int z = 0; z < nz; ++z)
+			for (int x = 0; x < nx; ++x)
+			{
+				int a = z * (nx + 1) + x, b = a + nx + 1;
+				int vTri[6] = {a, a + 1, b, b, a + 1, b + 1};
+				for (int i = 0; i < 6; ++i)
+					pVtx->AddIndex(vTri[m == 0 ? i : i - 2 * (i % 3) + 2]);
+			}
+		pVtx->Compile(eVertexCompileFlag_CreateTangents);
+		tString sMat = cString::GetFileName(m == 0 ? asUpper : asLower);
+		cSubMesh *pSub = pMesh->CreateSubMesh(m == 0 ? "Upper" : "Lower");
+		pSub->SetMaterial(pRes->GetMaterialManager()->CreateMaterial(sMat));
+		pSub->SetVertexBuffer(pVtx);
+		pSub->SetMaterialName(sMat);
+		pSub->Compile();
+	}
+	return pMesh;
+}
+
+// cLuxLiquidArea::GenerateGraphics
+void cSomaLuxEntity::CreateLiquidGraphics(cWorld *apWorld)
+{
+	cResourceVarsObject &v = mInstanceVars;
+	// ponytail: always dynamic, the static container is already compiled when areas are set up
+	bool bStatic = false;
+	tString sUpper = v.GetVarString("UpperMaterial", ""), sLower = v.GetVarString("LowerMaterial", "");
+	if (sUpper != "" && sLower != "")
+	{
+		cMesh *pMesh = CreateGridPlane(msName + "_surface", sUpper, sLower, cVector2f(mvSize.x, mvSize.z), v.GetVarFloat("GridSize", 0), v.GetVarFloat("TextureTileSize", 1));
+		mpLiquidMesh = apWorld->CreateMeshEntity(msName, pMesh, bStatic);
+		if (mpLiquidMesh->GetSubMeshEntityNum() > 1)
+			mpLiquidMesh->GetSubMeshEntity(1)->SetRenderFlagBit(eRenderableFlag_VisibleInReflection, false);
+	}
+	mpLiquidFog = apWorld->CreateFogArea(msName + "_FogArea", bStatic);
+	mpLiquidFog->SetSize(mvSize);
+	mpLiquidFog->SetColor(v.GetVarColor("FogColor", cColor(1, 1)));
+	mpLiquidFog->SetStart(v.GetVarFloat("FogStart", 0));
+	mpLiquidFog->SetEnd(v.GetVarFloat("FogEnd", 2));
+	mpLiquidFog->SetFalloffExp(v.GetVarFloat("FogFalloffExp", 1));
+	mpLiquidFog->SetBrightness(v.GetVarFloat("FogBrightness", 1));
+	mpLiquidFog->SetUnderwater(v.GetVarBool("FogUnderwater", false));
+	mpLiquidFog->SetSkybox(v.GetVarBool("FogSkybox", false));
+	mpLiquidFog->SetRenderFlagBit(eRenderableFlag_VisibleInReflection, false);
+	m_mtxLiquidPlaced = cMatrixf::Zero;
+	PlaceLiquidGraphics();
+}
+
+void cSomaLuxEntity::PlaceLiquidGraphics()
+{
+	cMatrixf m = GetMatrix();
+	if (m == m_mtxLiquidPlaced)
+		return;
+	m_mtxLiquidPlaced = m;
+	if (mpLiquidMesh)
+	{
+		mpLiquidMesh->SetMatrix(m.GetRotation());
+		mpLiquidMesh->SetPosition(m.GetTranslation() + cVector3f(0, mvSize.y * 0.5f, 0));
+		mpLiquidMesh->SetVisible(mbActive);
+	}
+	if (mpLiquidFog)
+	{
+		mpLiquidFog->SetMatrix(m);
+		mpLiquidFog->SetVisible(mbActive && mInstanceVars.GetVarBool("UseFog", false));
+	}
+}
+
 void cSomaLuxEntity::UpdateLiquid()
 {
+	PlaceLiquidGraphics();
 	cCamera *pCam = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCamera() : NULL;
 	std::vector<cSomaOBB> v;
 	EntityBoxes(this, v);

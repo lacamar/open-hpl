@@ -219,7 +219,12 @@ public:
 	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
 	void UpdateLiquid();
+	void CreateLiquidGraphics(cWorld *apWorld);
+	void PlaceLiquidGraphics();
 	bool mbCameraInLiquid = false;
+	cMeshEntity *mpLiquidMesh = NULL;
+	cFogArea *mpLiquidFog = NULL;
+	cMatrixf m_mtxLiquidPlaced = cMatrixf::Identity;
 	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false;
 	float mfTimeSinceCheck = 0;
 	bool mbMoving = false;

@@ -44,6 +44,8 @@ namespace hpl {
 		float mfWaveSpeed;
 		float mfWaveAmplitude;
 		float mfWaveFreq;
+		float mfFadeWhenShallowMul = 0;
+		float mfFadeWhenShallowPow = 1;
 	};
 
 	//-----------------------------------------------------

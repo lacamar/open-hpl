@@ -61,6 +61,11 @@ namespace hpl {
 	#define kVar_avFogStartAndLength				8
 	#define kVar_avFogColor							9
 	#define kVar_afFalloffExp						10
+	#define kVar_avInvScreenSize					11
+	#define kVar_afNearPlane						12
+	#define kVar_afFarPlane							13
+	#define kVar_afReflectionAlpha					14
+	#define kVar_avFadeWhenShallowProps				15
 
 	//------------------------------
 	//Diffuse Features and data
@@ -69,8 +74,9 @@ namespace hpl {
 	#define eFeature_Diffuse_CubeMapReflection		eFlagBit_1
 	#define eFeature_Diffuse_ReflectionFading		eFlagBit_2
 	#define eFeature_Diffuse_Fog					eFlagBit_3
+	#define eFeature_Diffuse_FadeWhenShallow		eFlagBit_4
 	
-	#define kDiffuseFeatureNum 4
+	#define kDiffuseFeatureNum 5
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -78,6 +84,7 @@ namespace hpl {
 		cProgramComboFeature("UseCubeMapReflection", kPC_FragmentBit, eFeature_Diffuse_Reflection),
 		cProgramComboFeature("UseReflectionFading", kPC_FragmentBit, eFeature_Diffuse_Reflection),
 		cProgramComboFeature("UseFog", kPC_FragmentBit | kPC_VertexBit),
+		cProgramComboFeature("UseFadeWhenShallow", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -103,6 +110,9 @@ namespace hpl {
 		AddVarFloat("WaveFreq", 1.0f, "The frequency of the waves.");
 		AddVarFloat("ReflectionFadeStart",0,"Where the reflection starts fading.");
 		AddVarFloat("ReflectionFadeEnd",0,"Where the reflection stops fading. 0 or less means no fading.");
+
+		AddVarFloat("FadeWhenShallowMul",0,"Depth over which the water fades in. 0 means no fading.");
+		AddVarFloat("FadeWhenShallowPow",1,"Exponent of the shallow fade.");
 
 		AddVarBool("HasReflection", true, "If a reflection should be shown or not.");
 		AddVarBool("OcclusionCullWorldReflection", true, "If occlusion culling should be used on reflection.");
@@ -157,6 +167,11 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("avFogStartAndLength",kVar_avFogStartAndLength, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avFogColor",kVar_avFogColor, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp	, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize",kVar_avInvScreenSize, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afNearPlane",kVar_afNearPlane, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afFarPlane",kVar_afFarPlane, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afReflectionAlpha",kVar_afReflectionAlpha, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avFadeWhenShallowProps",kVar_avFadeWhenShallowProps, eMaterialRenderMode_Diffuse);
 
 	}
 	void cMaterialType_Water::DestroyData()
@@ -187,6 +202,7 @@ namespace hpl {
 			{
 			case 0: return apMaterial->GetTexture(eMaterialTexture_Diffuse);
 			case 1: return apMaterial->GetTexture(eMaterialTexture_NMap);
+			case 7: return iRenderer::GetRefractionEnabled() || pVars->mfFadeWhenShallowMul>0 ? mpGraphics->GetRenderer(eRenderer_Main)->GetSceneDepthTexture() : NULL;
 			case 2: 
 					if(iRenderer::GetRefractionEnabled())
 						return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
@@ -243,6 +259,7 @@ namespace hpl {
 
 			if(pVars->mfReflectionFadeEnd>0)						lFlags |= eFeature_Diffuse_ReflectionFading;
 			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog;
+			if(pVars->mfFadeWhenShallowMul>0)						lFlags |= eFeature_Diffuse_FadeWhenShallow;
 			
 			return mpProgramManager->GenerateProgram(eMaterialRenderMode_Diffuse,lFlags);
 		}
@@ -282,10 +299,31 @@ namespace hpl {
 			////////////////////////////
 			// Fog
 			cWorld *pWorld = apRenderer->GetCurrentWorld();
+			bool bWorldFog = apRenderer->WorldFogActive();
 
-			apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
-			apProgram->SetColor4f(kVar_avFogColor, cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()));
-			apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
+			// the water shader has no fog area input; an enclosing fog area replaces world fog
+			const cColor& fogAreaCol = apRenderer->GetTempFogAreaColor();
+			if(fogAreaCol.a > 0)
+			{
+				apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(-1, 1));
+				apProgram->SetColor4f(kVar_avFogColor, fogAreaCol);
+				apProgram->SetFloat(kVar_afFalloffExp, 1);
+			}
+			else
+			{
+				apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()) : cVector2f(0, 1));
+				apProgram->SetColor4f(kVar_avFogColor, bWorldFog ? cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()) : cColor(0, 0));
+				apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
+			}
+
+			cVector2l vScreenSize = apRenderer->GetRenderTargetSize();
+			apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f/vScreenSize.x, 1.0f/vScreenSize.y);
+			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
+			apProgram->SetFloat(kVar_afNearPlane, pFrustum->GetNearPlane());
+			apProgram->SetFloat(kVar_afFarPlane, pFrustum->GetFarPlane());
+			apProgram->SetFloat(kVar_afReflectionAlpha, 1);
+			if(pVars->mfFadeWhenShallowMul>0)
+				apProgram->SetVec2f(kVar_avFadeWhenShallowProps, cVector2f(1.0f/pVars->mfFadeWhenShallowMul, pVars->mfFadeWhenShallowPow));
 
 			//////////////////////////////
 			//Reflection
@@ -359,6 +397,8 @@ namespace hpl {
 		pVars->mfWaveSpeed = apVars->GetVarFloat("WaveSpeed", 1.0f);
 		pVars->mfWaveAmplitude = apVars->GetVarFloat("WaveAmplitude", 1.0f);
 		pVars->mfWaveFreq = apVars->GetVarFloat("WaveFreq", 1.0f);
+		pVars->mfFadeWhenShallowMul = apVars->GetVarFloat("FadeWhenShallowMul", 0);
+		pVars->mfFadeWhenShallowPow = apVars->GetVarFloat("FadeWhenShallowPow", 1);
 
 		apMaterial->SetWorldReflectionOcclusionTest( apVars->GetVarBool("OcclusionCullWorldReflection", true));
 		apMaterial->SetMaxReflectionDistance( apVars->GetVarFloat("ReflectionFadeEnd", 0.0f));
@@ -380,6 +420,8 @@ namespace hpl {
 		apVars->AddVarFloat("WaveSpeed",pVars->mfWaveSpeed);
 		apVars->AddVarFloat("WaveAmplitude",pVars->mfWaveAmplitude);
 		apVars->AddVarFloat("WaveFreq",pVars->mfWaveFreq);
+		apVars->AddVarFloat("FadeWhenShallowMul",pVars->mfFadeWhenShallowMul);
+		apVars->AddVarFloat("FadeWhenShallowPow",pVars->mfFadeWhenShallowPow);
 
 		apVars->AddVarBool("OcclusionCullWorldReflection", apMaterial->GetWorldReflectionOcclusionTest());
 		apVars->AddVarBool("LargeSurface", apMaterial->GetLargeTransperantSurface());
