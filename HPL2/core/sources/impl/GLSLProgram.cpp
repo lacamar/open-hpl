@@ -131,11 +131,7 @@ namespace hpl{
 				int lUnit = pShader->GetSamplerUnit(i)->mlUnit;
 				
 				GLint lVarHandle = glGetUniformLocation(mlHandle,sSamplerName.c_str());
-				if(lVarHandle<0){
-					if(type == eGpuShaderType_Fragment)
-						Error("Sampler %s does not exist, could not bind it to unit %d\n",sSamplerName.c_str(),lUnit);
-					continue;
-				}
+				if(lVarHandle<0) continue; // inactive, optimised out by the driver
 			
 				glUniform1i(lVarHandle, lUnit);
 			}

@@ -18,6 +18,7 @@
  */
 
 #include "graphics/RendererDeferred.h"
+#include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "math/Math.h"
 
@@ -230,7 +231,7 @@ namespace hpl {
 	#define kVar_afLightSourceRadius				42
 	#define kVar_avLightUp							43
 	#define kVar_avLightRight						44
-	#define kVar_avViewSpaceUp						42
+	#define kVar_avViewSpaceUp						94
 	#define kVar_avBand0							43
 	#define kVar_afSpotNearClip						52
 	#define kVar_avFocusStartEnd					53
@@ -4223,6 +4224,8 @@ namespace hpl {
 		///////////////////////////////
 		//Set up variables
 		float fHalfFovTan=0;
+		cMaterialType_Translucent::SetWorldFog(WorldUnderwaterFog(this), WorldFogActive() && mpCurrentWorld->GetSecondaryFogActive());
+		tFlag lWorldFog = cMaterialType_Translucent::GetWorldFog();
 
 		///////////////////////////////
 		//Iterate transparent objects
@@ -4233,6 +4236,7 @@ namespace hpl {
 			iRenderable *pObject = transIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 			if(++lTransIdx == mlDebugSkipTranslucent) continue;
+			if(pMaterial->mlCompiledWorldFog != lWorldFog) pMaterial->Compile();
 			if(alDofPass && IsBehindDepthOfFieldFocus(pObject) != (alDofPass==1)) continue;
 
 			eMaterialRenderMode renderMode = WorldFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;

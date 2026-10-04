@@ -81,9 +81,12 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
 		static void SetLightProbes(bool abX){ mbLightProbes = abX; }
+		static void SetWorldFog(bool abUnderwater, bool abSecondary);
+		static tFlag GetWorldFog(){ return mlWorldFog; }
 	
 	private:
 		static bool mbLightProbes;
+		static tFlag mlWorldFog;
 		void LoadData();
 		void DestroyData();
 

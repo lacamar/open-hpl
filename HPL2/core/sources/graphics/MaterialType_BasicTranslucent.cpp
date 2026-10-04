@@ -71,6 +71,9 @@ namespace hpl {
 	#define kVar_afSoftParticleDepthBias			17
 	#define kVar_avFogColor							18
 	#define kVar_avFogAreaColor						19
+	#define kVar_avSecondFogColor					20
+	#define kVar_avSecondFogStartAndLength			21
+	#define kVar_afSecondFalloffExp					22
 	
 	
 	//------------------------------
@@ -86,8 +89,10 @@ namespace hpl {
 	#define eFeature_Diffuse_UseScreenNormal		eFlagBit_7
 	#define eFeature_Diffuse_Lit					eFlagBit_8
 	#define eFeature_Diffuse_SoftParticle			eFlagBit_9
+	#define eFeature_Diffuse_UnderwaterFog			eFlagBit_10
+	#define eFeature_Diffuse_SecondaryFog			eFlagBit_11
 	
-	#define kDiffuseFeatureNum 10
+	#define kDiffuseFeatureNum 12
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -101,6 +106,8 @@ namespace hpl {
 		cProgramComboFeature("UseScreenNormal", kPC_FragmentBit),
 		cProgramComboFeature("Lit", kPC_FragmentBit),
 		cProgramComboFeature("UseSoftParticle", kPC_FragmentBit | kPC_VertexBit),
+		cProgramComboFeature("UseUnderwaterFog", kPC_FragmentBit),
+		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -110,6 +117,7 @@ namespace hpl {
 	//--------------------------------------------------------------------------
 	
 	bool cMaterialType_Translucent::mbLightProbes = false;
+	tFlag cMaterialType_Translucent::mlWorldFog = 0;
 
 	cMaterialType_Translucent::cMaterialType_Translucent(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
@@ -146,6 +154,13 @@ namespace hpl {
 			hplDelete(mpBlendProgramManager[i]);
 	}
 
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_Translucent::SetWorldFog(bool abUnderwater, bool abSecondary)
+	{
+		mlWorldFog = (abUnderwater ? eFeature_Diffuse_UnderwaterFog : 0) | (abSecondary ? eFeature_Diffuse_SecondaryFog : 0);
+	}
 
 	//--------------------------------------------------------------------------
 
@@ -207,6 +222,9 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSoftParticleDepthBias", kVar_afSoftParticleDepthBias, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFogAreaColor", kVar_avFogAreaColor, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avSecondFogColor", kVar_avSecondFogColor, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -278,7 +296,7 @@ namespace hpl {
 			
 			tFlag lFlags =0;
 			if(apMaterial->GetTexture(eMaterialTexture_Diffuse))	lFlags |= eFeature_Diffuse_DiffuseMap;
-			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog;
+			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog | mlWorldFog;
 			if(apMaterial->HasUvAnimation())						lFlags |= eFeature_Diffuse_UvAnimation;
 			if(apMaterial->GetTexture(eMaterialTexture_NMap))		lFlags |= eFeature_Diffuse_NormalMap;
 			if(bRefractionEnabled && apMaterial->GetTexture(eMaterialTexture_CubeMap))
@@ -302,7 +320,7 @@ namespace hpl {
 				int lProgramNum = eMaterialBlendMode_Add - 1;
 				
 				tFlag lFlags =0;
-				if(aRenderMode == eMaterialRenderMode_IlluminationFog)	lFlags |= eFeature_Diffuse_Fog;
+				if(aRenderMode == eMaterialRenderMode_IlluminationFog)	lFlags |= eFeature_Diffuse_Fog | mlWorldFog;
 				if(apMaterial->GetTexture(eMaterialTexture_NMap))		lFlags |= eFeature_Diffuse_NormalMap;
 				if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
 				{
@@ -387,6 +405,12 @@ namespace hpl {
 			apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
 			apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
 			apProgram->SetColor4f(kVar_avFogColor, bWorldFog ? cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()) : cColor(0, 0));
+			if(mlWorldFog & eFeature_Diffuse_SecondaryFog)
+			{
+				apProgram->SetColor4f(kVar_avSecondFogColor, cRendererDeferred::GetFogRenderColor(pWorld->GetSecondaryFogColor(), pWorld->GetSecondaryFogBrightness()));
+				apProgram->SetVec2f(kVar_avSecondFogStartAndLength, cVector2f(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart()));
+				apProgram->SetFloat(kVar_afSecondFalloffExp, pWorld->GetSecondaryFogFalloffExp());
+			}
 		}
 	}
 	

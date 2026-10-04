@@ -30,6 +30,7 @@
 #include "graphics/GPUShader.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/MaterialType.h"
+#include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "math/Math.h"
 
@@ -177,6 +178,8 @@ namespace hpl {
 			mbHasSpecificSettings[i] = false;
 			mbHasObjectSpecificsSettings[i] = false;
 		}
+
+		mlCompiledWorldFog = cMaterialType_Translucent::GetWorldFog();
 
 		///////////////////
 		// Get the programs

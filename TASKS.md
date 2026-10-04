@@ -13,8 +13,6 @@ Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticle
 GPU hang there, cause unknown).
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- `<DirLight>` cascaded shadow maps (sun lights interiors on the 14 maps that use it).
-- Translucents ignore underwater/secondary world fog.
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
 - Slow map loads: 02_05 22 -> 9.5 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), InitEngine
   1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
