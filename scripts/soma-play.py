@@ -253,6 +253,9 @@ def cmd_drag(a):
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
     frames(0.2)
+    # interact states ignore look input under 0.01 screen heights per frame
+    path = 2 * math.pi * abs(a.dx) * a.circles if a.circles else math.hypot(a.dx, a.dy)
+    a.steps = max(1, min(a.steps, int(path / 40)))
     if a.circles:
         px = py = 0
         for i in range(1, a.steps + 1):
