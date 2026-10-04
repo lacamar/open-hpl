@@ -232,6 +232,16 @@ void cSomaLuxPlayer::OnMessage(const char *apDecl)
 void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 {
 	bool bDestroy = strcmp(apDecl, "void DestroyWorldEntities(cLuxMap @apMap)") == 0;
+	// Real engine (ResetMapSpecifics): states back to id 0, no OnLeaveState
+	if (strcmp(apDecl, "void OnMapEnter(cLuxMap @apMap)") == 0)
+	{
+		mpState = mmapStates.count(0) ? mmapStates[0] : NULL;
+		if (mpState)
+			mpState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
+		mpMoveState = mmapMoveStates.count(0) ? mmapMoveStates[0] : NULL;
+		if (mpMoveState)
+			mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
+	}
 	cSomaLuxScriptable::OnMapMessage(apDecl, apMap);
 	for (auto &it : mmapStates)
 		it.second->OnMapMessage(apDecl, apMap);
