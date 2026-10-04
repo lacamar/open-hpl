@@ -733,6 +733,7 @@ cSomaGuiScreenRenderer::cTarget &cSomaGuiScreenRenderer::GetTarget(cSomaLuxEntit
 	t.mpBuffer->SetTexture2D(0, t.mpTexture);
 	t.mpBuffer->CompileAndValidate();
 	t.mvSize = avSize;
+	t.mlGuiCalls = -1;
 	SetScreenMaterial(apEnt->mpGuiSubMesh, t.mpTexture, sName);
 	return t;
 }
@@ -759,7 +760,12 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
 			continue;
 		cVector2f vVirtual = pSet->GetVirtualSize();
-		vScreens.push_back(std::make_pair(p, &GetTarget(p, cVector2l((int)vVirtual.x, (int)vVirtual.y))));
+		cTarget &t = GetTarget(p, cVector2l((int)vVirtual.x, (int)vVirtual.y));
+		if (t.mlGuiCalls == p->mlGuiCalls && t.mbGuiActive == p->mbGuiActive)
+			continue;
+		t.mlGuiCalls = p->mlGuiCalls;
+		t.mbGuiActive = p->mbGuiActive;
+		vScreens.push_back(std::make_pair(p, &t));
 	}
 	if (vScreens.empty())
 		return;
@@ -818,6 +824,17 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 	UpdateGuiScreen();
 	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
 		return;
+	if (cSomaImGui::GetScriptInputFocus() != mpImGui)
+	{
+		mfGuiTimeAcc += afTimeStep;
+		if (mfGuiTimeAcc < 1.0f / cMath::Clamp(mfGuiFPS, 1.0f, 30.0f) && mbGuiDirty == false)
+			return;
+		afTimeStep = mfGuiTimeAcc;
+		mfGuiTimeAcc = 0;
+		mbGuiDirty = false;
+		if (mbGuiUpdateWhenOutOfView == false && mpGuiSubMesh && mpGuiSubMesh->GetRenderFrameCount() != iRenderer::GetRenderFrameCount())
+			return;
+	}
 	++mlGuiCalls;
 	cSomaImGui *pPrev = cSomaImGui::GetCurrent();
 	cSomaImGui::SetCurrent(mpImGui);
@@ -1775,13 +1792,17 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						else
 							Warning("SOMA: GUI submesh '%s' not found on '%s'\n", sub.c_str(), p->msName.c_str());
 					});
-	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; });
-	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; });
+	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; p->mbGuiDirty = true; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; p->mbGuiDirty = true; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiVariableFPS(float afX)", +[](E *p, float f) { p->mfGuiFPS = f; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiUpdateWhenOutOfView(bool abX)", +[](E *p, bool b) { p->mbGuiUpdateWhenOutOfView = b; });
+	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
 	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui && p->mbGuiActive; });
 	SOMA_METHOD_NEW(e, T, "bool SetGuiIsFocused(bool abX, bool abShowMouse=true)", +[](E *p, bool b, bool mouse) {
 		if (p->mpImGui == NULL)
 			return false;
+		p->mbGuiDirty = true;
 		if (b)
 			cSomaImGui::SetInputFocus(p->mpImGui, mouse);
 		else if (cSomaImGui::GetScriptInputFocus() == p->mpImGui)
@@ -2431,13 +2452,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveLinearTo(vGoal, a, m, d, r, cb); });
 			  });
 	SOMA_FUNC(e, "void Terminal_SetGuiActive(const tString& in asName, bool abX, float afFadeTime=0.0f)",
-			  +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiActive = b; }); });
+			  +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiActive = b; p->mbGuiDirty = true; }); });
 	SOMA_FUNC(e, "bool Terminal_IsGuiActive(const tString& in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbGuiActive; });
 	SOMA_FUNC(e, "void Terminal_SetShowMouse(const tString& in asPropName, bool abShow)",
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { if (p->mpImGui) p->mpImGui->mbShowMouse = b; }); });
-	SOMA_FUNC(e, "void Terminal_SetUpdateWhenOutOfView(const tString& in asName, bool abX)", +[](S, bool) {});
-	SOMA_FUNC(e, "void Terminal_ForceCacheUpdate(const tString& in asName)", +[](S) {});
-	SOMA_FUNC(e, "void Terminal_SetFPSWhenIdle(const tString& in asName, float afFPS)", +[](S, float) {});
+	SOMA_FUNC(e, "void Terminal_SetUpdateWhenOutOfView(const tString& in asName, bool abX)",
+			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiUpdateWhenOutOfView = b; }); });
+	SOMA_FUNC(e, "void Terminal_ForceCacheUpdate(const tString& in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbGuiDirty = true; }); });
+	SOMA_FUNC(e, "void Terminal_SetFPSWhenIdle(const tString& in asName, float afFPS)", +[](S n, float f) { ForMatching(n, [f](cSomaLuxEntity *p) { p->mfGuiFPS = f; }); });
 	{
 		static auto Gui = [](S n) -> cSomaImGui * { cSomaLuxEntity *p = Find(n); return p ? p->mpImGui : NULL; };
 #define TERM_STATE(TYPE, RET, ARG, INTYPE, FIELD, FLAG, DEF)                                                                                                 \

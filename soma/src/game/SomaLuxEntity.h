@@ -43,6 +43,8 @@ public:
 		iTexture *mpTexture = NULL;
 		iFrameBuffer *mpBuffer = NULL;
 		cVector2l mvSize = 0;
+		int mlGuiCalls = -1;
+		bool mbGuiActive = false;
 	};
 
 private:
@@ -240,6 +242,9 @@ public:
 	int mlGuiDraws = 0;
 	int mlGuiCalls = 0;
 	bool mbGuiActive = false;
+	// cLuxProp::OnVariableUpdate gating of unfocused screens
+	float mfGuiFPS = 30, mfGuiTimeAcc = 0;
+	bool mbGuiUpdateWhenOutOfView = false, mbGuiDirty = true;
 	// Prop GUI drawn on a submesh: a 3D gui set over the screen rectangle fitted from its UVs
 	cSubMeshEntity *mpGuiSubMesh = NULL;
 	cVector3f mvGuiOrigin = 0, mvGuiRight = 0, mvGuiDown = 0;
