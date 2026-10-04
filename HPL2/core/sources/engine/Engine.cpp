@@ -54,6 +54,7 @@
 
 #include "impl/SDLEngineSetup.h"
 
+#include <chrono>
 #include <cstdlib>
 
 namespace hpl {
@@ -452,6 +453,10 @@ namespace hpl {
 		bool bIsUpdated = true;
 		bool bBufferSwap = false;
 		bool bSwappedOnce = false;
+		typedef std::chrono::steady_clock tClock;
+		auto MsSince = [](tClock::time_point t) { return std::chrono::duration<double, std::milli>(tClock::now() - t).count(); };
+		double fLogicMs = 0, fSwapMs = 0;
+		int lSteps = 0;
 		
 		//cMemoryManager::SetLogCreation(true);
 
@@ -475,8 +480,10 @@ namespace hpl {
 			{
 				//////////////////////////
 				//Update logic.
+				tClock::time_point tLogic = tClock::now();
 				while(mpLogicTimer->WantUpdate() && !GetGameIsDone())
 				{
+					++lSteps;
 					/////////////////////////////////////////////
 					// Run Update callback in updater
 					mpUpdater->RunMessage(eUpdateableMessage_PreUpdate, GetStepSize());
@@ -514,6 +521,7 @@ namespace hpl {
 					mfGameTime += GetStepSize();
 				}
 				mpLogicTimer->EndUpdateLoop();
+				fLogicMs += MsSince(tLogic);
 			}
 
 			if(mpHeadlessControl) mpHeadlessControl->Update();
@@ -539,7 +547,9 @@ namespace hpl {
 				STOP_TIMING(WaitAndFinishRendering)
 
 				START_TIMING(SwapBuffers)
+				tClock::time_point tSwap = tClock::now();
 				mpGraphics->GetLowLevel()->SwapBuffers();
+				fSwapMs += MsSince(tSwap);
 				STOP_TIMING(SwapBuffers)
 				
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -557,6 +567,7 @@ namespace hpl {
 				///////////////////////////////////////
            		//Get the the from the last frame.
 				UpdateFrameTimer();
+				tClock::time_point tRender = tClock::now();
 
 				//On draw callback sending that to gui, etc
 				START_TIMING(OnDraw)
@@ -579,6 +590,9 @@ namespace hpl {
 				STOP_TIMING(FlushRender)
 
 				cEngineDiagnostics::EndFrame();
+				cEngineDiagnostics::AddFrameTiming(fLogicMs, lSteps, MsSince(tRender), fSwapMs);
+				fLogicMs = fSwapMs = 0;
+				lSteps = 0;
 				
 				//Update fps counter.
 				mpFPSCounter->AddFrame();

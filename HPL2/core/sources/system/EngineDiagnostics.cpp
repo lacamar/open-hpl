@@ -39,6 +39,8 @@ namespace hpl {
 	int cEngineDiagnostics::mlLastFrameDrawCalls = 0;
 	int cEngineDiagnostics::mlShaderFailCount = 0;
 	unsigned int cEngineDiagnostics::mlRenderedFrames = 0;
+	double cEngineDiagnostics::mfTimingMs[3] = {0, 0, 0};
+	int cEngineDiagnostics::mlTimingSteps = 0, cEngineDiagnostics::mlTimingFrames = 0;
 
 	struct cShaderReportEntry
 	{
@@ -107,6 +109,12 @@ namespace hpl {
 		mlLastFrameDrawCalls = mlDrawCalls;
 		mlDrawCalls = 0;
 		++mlRenderedFrames;
+	}
+
+	void cEngineDiagnostics::AddFrameTiming(double afLogicMs, int alSteps, double afRenderMs, double afSwapMs)
+	{
+		mfTimingMs[0] += afLogicMs; mfTimingMs[1] += afRenderMs; mfTimingMs[2] += afSwapMs;
+		mlTimingSteps += alSteps; ++mlTimingFrames;
 	}
 
 	tString cEngineDiagnostics::PollGLErrorsJson(bool abReset)
@@ -254,6 +262,13 @@ namespace hpl {
 		sOut += ",\"occlusion_queries\":" + cString::ToString(pSettings->mlNumberOfOcclusionQueries);
 		sOut += ",\"shader_failures\":" + cString::ToString(mlShaderFailCount);
 		sOut += ",\"gl_errors\":" + PollGLErrorsJson(false);
+		float fFrames = (float)cMath::Max(mlTimingFrames, 1);
+		sOut += ",\"per_frame\":{\"frames\":" + cString::ToString(mlTimingFrames) +
+				",\"logic_steps\":" + cString::ToString(mlTimingSteps / fFrames) +
+				",\"logic_ms\":" + cString::ToString((float)mfTimingMs[0] / fFrames) +
+				",\"render_ms\":" + cString::ToString((float)mfTimingMs[1] / fFrames) +
+				",\"swap_ms\":" + cString::ToString((float)mfTimingMs[2] / fFrames) + "}";
+		mfTimingMs[0] = mfTimingMs[1] = mfTimingMs[2] = 0; mlTimingSteps = mlTimingFrames = 0;
 		return sOut + "}";
 	}
 
