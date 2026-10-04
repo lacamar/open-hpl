@@ -74,6 +74,12 @@ Real compile errors are only "Couldn't build script"; compile locally first for 
 (500) are per launch. The Linux `Soma_NoSteam.bin.x86_64` (needed by the `soma-re-*` scripts) is gone
 while Steam has the Windows depot installed.
 
+Script player gotchas: terminals need `interact` within ~2 m, `click --button right` leaves them;
+areas need look + click; interactive camera animations need W; MovingButton drag direction comes from
+`InputDirectionToOn`; map paths are `maps/chapterNN/`. Ref `teleport` needs
+`cLux_GetPlayer().ChangeState(ePlayerState_Normal);` first. Meshes: `GetDynamicMeshEntity`.
+`translucents` indices shift every frame. SOMA screen targets are 2D (not rect); light accumulation is x8.
+
 The script API (`soma/data/script_api.txt`: types, enum values, methods, properties with offsets,
 globals, and the native C++ function each binds to) is recovered statically from the official
 binary's registration code. The binary has a full symbol table; disassemble a bound native
