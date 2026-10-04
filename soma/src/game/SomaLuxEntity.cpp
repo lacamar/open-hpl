@@ -567,9 +567,10 @@ void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 	if (v.GetVarString("UserVar", "") != "")
 		mmapScriptVars[""] = v.GetVarString("UserVar", "");
 	msConnectionCallback = v.GetVarString("ConnectionStateChangeCallback", "");
-	if (v.GetVarString("ConnectedEntity", "") != "")
-		mvConnections.push_back(cConnection{"", v.GetVarString("ConnectedEntity", ""), v.GetVarBool("ConnectedEntityInvertState", false),
-											v.GetVarInt("ConnectedEntityStatesUsed", 0)});
+	tStringVec vConnected;
+	cString::GetStringVec(v.GetVarString("ConnectedEntity", ""), vConnected, &sSep);
+	for (const tString &sEnt : vConnected)
+		mvConnections.push_back(cConnection{"", sEnt, v.GetVarBool("ConnectedEntityInvertState", false), v.GetVarInt("ConnectedEntityStatesUsed", 0)});
 	mfHealth = mVars.GetVarFloat("Health", 100);
 	if (mVars.GetVarBool("BreakActive", false) && v.GetVarBool("DisableBreakable", false) == false)
 	{
