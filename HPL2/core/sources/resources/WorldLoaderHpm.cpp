@@ -11,6 +11,9 @@
 #include "resources/LowLevelResources.h"
 #include "resources/XmlDocument.h"
 #include "resources/EngineFileLoading.h"
+#include "resources/EntityLoader_Object.h"
+#include "resources/FileSearcher.h"
+#include "physics/PhysicsMaterial.h"
 
 #include "scene/Scene.h"
 #include "scene/World.h"
@@ -765,9 +768,70 @@ namespace hpl {
 		pMeshEntity->SetPosition(vPosition);
 
 		if (bCollides)
-			CreateStaticBodyForMesh(pMeshEntity, sName);
+		{
+			cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
+			mtxTransform.SetTranslation(vPosition);
+			if (CreateStaticBodiesFromEnt(sFileName, mtxTransform, vScale, sName) == false)
+				CreateStaticBodyForMesh(pMeshEntity, sName);
+		}
 
 		return "";
+	}
+
+	// HPL3 iHplMapLoader::CreateStaticMeshEntity: a sibling .ent's bodies replace the mesh collider
+	bool cWorldLoaderHpm::CreateStaticBodiesFromEnt(const tString& asFile, const cMatrixf& a_mtxTransform, const cVector3f& avScale, const tString& asName)
+	{
+		tWString sPath = mpResources->GetFileSearcher()->GetFilePath(asFile);
+		if (sPath == _W("")) return false;
+		sPath = cString::SetFileExtW(sPath, _W("ent"));
+		if (cPlatform::FileExists(sPath) == false) return false;
+
+		iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
+		cXmlElement* pModel = pDoc->CreateFromFile(sPath) ? pDoc->GetFirstElement("ModelData") : NULL;
+		cXmlElement* pShapes = pModel ? pModel->GetFirstElement("Shapes") : NULL;
+		cXmlElement* pBodies = pModel ? pModel->GetFirstElement("Bodies") : NULL;
+		bool bCreated = false;
+		if (pShapes && pBodies)
+		{
+			std::map<int, cXmlElement*> mapShapes;
+			cXmlNodeListIterator it = pShapes->GetChildIterator();
+			while (it.HasNext())
+			{
+				cXmlElement* pElem = it.Next()->ToElement();
+				mapShapes[pElem->GetAttributeInt("ID")] = pElem;
+			}
+
+			cXmlNodeListIterator bodyIt = pBodies->GetChildIterator();
+			while (bodyIt.HasNext())
+			{
+				cXmlElement* pBodyElem = bodyIt.Next()->ToElement();
+				tCollideShapeVec vShapes;
+				cXmlNodeListIterator shapeIt = pBodyElem->GetChildIterator();
+				while (shapeIt.HasNext())
+				{
+					cXmlElement* pElem = shapeIt.Next()->ToElement();
+					if (pElem->GetValue() != "Shape") continue;
+					std::map<int, cXmlElement*>::iterator itShape = mapShapes.find(pElem->GetAttributeInt("ID"));
+					iCollideShape* pShape = itShape != mapShapes.end() ? CreateCollideShape(itShape->second, mpCurrentPhysicsWorld, avScale) : NULL;
+					if (pShape) vShapes.push_back(pShape);
+				}
+				if (vShapes.empty()) continue;
+
+				iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(asName, vShapes.size() == 1 ? vShapes[0] : mpCurrentPhysicsWorld->CreateCompundShape(vShapes));
+				pBody->SetMass(0);
+				cMatrixf mtxBody = cMath::MatrixRotate(pBodyElem->GetAttributeVector3f("Rotation"), eEulerRotationOrder_XYZ);
+				mtxBody.SetTranslation(pBodyElem->GetAttributeVector3f("WorldPos") * avScale);
+				pBody->SetMatrix(cMath::MatrixMul(a_mtxTransform, mtxBody));
+				pBody->SetCollideCharacter(pBodyElem->GetAttributeBool("CollideCharacter", true));
+				pBody->SetCollide(pBodyElem->GetAttributeBool("CollideNonCharacter", true));
+				pBody->SetBlocksSound(pBodyElem->GetAttributeBool("BlocksSound", false));
+				iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(pBodyElem->GetAttributeString("Material"));
+				if (pMat) pBody->SetMaterial(pMat);
+				bCreated = true;
+			}
+		}
+		hplDelete(pDoc);
+		return bCreated;
 	}
 
 	tString cWorldLoaderHpm::CreatePlanePrimitive(cXmlElement* apElement)

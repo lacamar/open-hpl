@@ -58,6 +58,7 @@ namespace hpl {
 		tString CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex);
 
 		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName);
+		bool CreateStaticBodiesFromEnt(const tString& asFile, const cMatrixf& a_mtxTransform, const cVector3f& avScale, const tString& asName);
 
 		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
 

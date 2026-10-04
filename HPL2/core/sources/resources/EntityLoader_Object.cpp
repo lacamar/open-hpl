@@ -131,7 +131,7 @@ namespace hpl {
 		return eCollideShapeType_Null;
 	}
 
-	static iCollideShape* CreateCollideShape(cXmlElement *apShapeElem, iPhysicsWorld *apPhysicsWorld, const cVector3f &avScale)
+	iCollideShape* CreateCollideShape(cXmlElement *apShapeElem, iPhysicsWorld *apPhysicsWorld, const cVector3f &avScale)
 	{
 		eCollideShapeType type = ToCollideShape(apShapeElem->GetAttributeString("ShapeType"));
 		cVector3f vSize = apShapeElem->GetAttributeVector3f("Scale") * avScale;

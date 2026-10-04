@@ -33,6 +33,10 @@ namespace hpl {
 	class iPhysicsBody;
 	class iPhysicsJoint;
 	class iPhysicsWorld;
+	class iCollideShape;
+	class cXmlElement;
+
+	iCollideShape* CreateCollideShape(cXmlElement *apShapeElem, iPhysicsWorld *apPhysicsWorld, const cVector3f &avScale);
 	class cMesh;
 	class cMeshEntity;
 	class cParticleSystem;
