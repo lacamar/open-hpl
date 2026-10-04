@@ -337,7 +337,7 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 	cSomaImGui *pHud = SomaHudImGui();
 	cSomaImGui::SetCurrent(pHud);
 	pHud->Begin(afTimeStep);
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); }, true);
+	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnGui(afTimeStep); }, true);
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		if (pMap->GetScript())
 			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void OnGui(float afTimeStep)", [=](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); });
@@ -375,6 +375,13 @@ void cSomaLuxGame::EnterMap(cSomaLuxMap *apMap)
 {
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void CreateWorldEntities(cLuxMap @apMap)", apMap); });
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapEnter(cLuxMap @apMap)", apMap); });
+}
+
+// Saved module state (e.g. an open pause menu) must not outlive the load
+void cSomaLuxGame::ModulesMapEnter(cSomaLuxMap *apMap)
+{
+	for (cSomaLuxModule *p : mvModules)
+		p->OnMapMessage("void OnMapEnter(cLuxMap @apMap)", apMap);
 }
 
 void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)

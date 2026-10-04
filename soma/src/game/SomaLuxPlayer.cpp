@@ -211,6 +211,15 @@ void cSomaLuxPlayer::OnPostUpdate(float afTimeStep)
 		mpMoveState->OnPostUpdate(afTimeStep);
 }
 
+void cSomaLuxPlayer::OnGui(float afTimeStep)
+{
+	cSomaLuxScriptable::OnGui(afTimeStep);
+	if (mpState)
+		mpState->OnGui(afTimeStep);
+	if (mpMoveState)
+		mpMoveState->OnGui(afTimeStep);
+}
+
 void cSomaLuxPlayer::OnMessage(const char *apDecl)
 {
 	cSomaLuxScriptable::OnMessage(apDecl);

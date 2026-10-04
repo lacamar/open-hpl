@@ -35,6 +35,7 @@ public:
 	virtual void OnMessage(const char *apDecl) { Call(apDecl); }
 	virtual void OnUpdate(float afTimeStep);
 	virtual void OnPostUpdate(float afTimeStep);
+	virtual void OnGui(float afTimeStep) { CallWithFloat("void OnGui(float afTimeStep)", afTimeStep); }
 	virtual void OnVariableUpdate(float afTimeStep);
 	virtual void OnMapMessage(const char *apDecl, void *apMap);
 	virtual void OnAction(int alAction, bool abPressed);

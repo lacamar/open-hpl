@@ -42,6 +42,7 @@ public:
 	void Draw(float afFrameTime);
 	void PreloadData(cSomaLuxMap *apMap);
 	void EnterMap(cSomaLuxMap *apMap);
+	void ModulesMapEnter(cSomaLuxMap *apMap);
 	void LeaveMap(cSomaLuxMap *apMap);
 
 	// cLuxBase::BroadcastInputAction/BroadcastInputAnalog
