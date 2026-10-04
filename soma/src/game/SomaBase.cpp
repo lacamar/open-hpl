@@ -1367,6 +1367,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
+			mpLuxMap->Setup();
 			bool bLoaded = cSomaSaveHandler::ApplyPendingState();
 			bool bFirstTime = msetVisitedMaps.insert(asMapFile).second;
 			mpLuxMap->OnEnter(bLoaded == false, bFirstTime);

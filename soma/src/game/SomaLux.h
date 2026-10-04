@@ -32,7 +32,9 @@ public:
 	~cSomaLuxMap();
 
 	bool CreateScript(cSomaScriptRuntime *apRuntime, const tString &asScriptFile);
-	// Setup(), then OnStart() the first time and OnEnter() unless loading a save (cLuxMap::OnEnter)
+	// Before a save is applied: cLuxMapHandler::SetCurrentMap runs ahead of LoadSavedGame_PostMapLoadSetup
+	void Setup();
+	// OnStart() the first time and OnEnter() unless loading a save (cLuxMap::OnEnter)
 	void OnEnter(bool abRunScript, bool abFirstTime);
 	void OnLeave();
 	void Update(float afTimeStep);

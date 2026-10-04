@@ -224,14 +224,18 @@ cSomaLuxEntity *cSomaLuxMap::GetEntity(const cSomaID &aID)
 	return NULL;
 }
 
-void cSomaLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
+void cSomaLuxMap::Setup()
 {
 	if (mpScript == NULL)
 		return;
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->LoadMapFile(msFileName, msName);
 	mpRuntime->Call(mpScript, "void Setup()");
-	if (abRunScript == false)
+}
+
+void cSomaLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
+{
+	if (mpScript == NULL || abRunScript == false)
 		return;
 	if (abFirstTime)
 		mpRuntime->Call(mpScript, "void OnStart()");
