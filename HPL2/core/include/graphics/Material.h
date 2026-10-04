@@ -111,6 +111,9 @@ namespace hpl {
 
 		void SetAffectedByFog(bool abX){ mbAffectedByFog = abX;}
 		bool GetAffectedByFog(){ return mbAffectedByFog;}
+
+		void SetDecalSortOrder(int alX){ mlDecalSortOrder = alX;}
+		int GetDecalSortOrder(){ return mlDecalSortOrder;}
 		
 		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mvTextureInUnit[aRenderMode][alUnit];}
 		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mvPrograms[alSkeleton][aRenderMode];}
@@ -185,6 +188,7 @@ namespace hpl {
 		bool mbLargeTransperantSurface;
 
 		bool mbAffectedByFog;
+		int mlDecalSortOrder = 0;
 
 		bool mbUseAlphaDissolveFilter;
 

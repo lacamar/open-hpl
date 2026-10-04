@@ -50,6 +50,7 @@ namespace hpl {
 		void LoadExposureAreaTrack(const tWString& asBaseFile);
 		void LoadTerrain(const tWString& asBaseFile);
 		void CreateTerrain(const tWString& asBaseFile, cXmlElement* apTerrain);
+		std::vector<cMaterial*> CreateTerrainBlendMaterials(const tWString& asBaseFile, cXmlElement* apTerrain, float afSize);
 
 		tString CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);
 		tString CreatePlanePrimitive(cXmlElement* apElement);

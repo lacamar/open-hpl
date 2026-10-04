@@ -28,6 +28,8 @@
 #include "math/Frustum.h"
 
 #include "graphics/Graphics.h"
+#include "graphics/Bitmap.h"
+#include "graphics/Texture.h"
 #include "graphics/Material.h"
 #include "graphics/GPUShader.h"
 #include "graphics/GPUProgram.h"
@@ -231,5 +233,68 @@ namespace hpl {
 	
 	//--------------------------------------------------------------------------
 
+
+
+	//--------------------------------------------------------------------------
+
+	cMaterialType_TerrainBlend::cMaterialType_TerrainBlend(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
+	{
+		mbIsTranslucent = true;
+		mbIsDecal = true;
+		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+	}
+
+	void cMaterialType_TerrainBlend::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
+	{
+		mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
+	}
+
+	void cMaterialType_TerrainBlend::LoadData()
+	{
+		cParserVarContainer defaultVars;
+		defaultVars.Add("UseUv");
+		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseBaseTexture", kPC_FragmentBit) };
+		mpProgramManager->SetupGenerateProgramData(eMaterialRenderMode_Diffuse, "Diffuse", "deferred_base_vtx.glsl", "cache_terrain_diffuse_frag.glsl",
+												   vFeatures, 1, defaultVars);
+		mpProgramManager->AddGenerateProgramVariableId("avTextureCoordScale", 0, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avOneMinusFadeStart", 1, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afBaseTextureCoordScale", 2, eMaterialRenderMode_Diffuse);
+
+		cBitmap bmp;
+		bmp.CreateData(cVector3l(1,1,1), ePixelFormat_RGBA, 0, 0);
+		bmp.Clear(cColor(1,1), 0, 0);
+		mpWhiteTexture = mpGraphics->CreateTexture("TerrainBlendWhite", eTextureType_2D, eTextureUsage_Normal);
+		mpWhiteTexture->SetUseMipMaps(false);
+		mpWhiteTexture->CreateFromBitmap(&bmp);
+	}
+
+	void cMaterialType_TerrainBlend::DestroyData()
+	{
+		mpProgramManager->DestroyShadersAndPrograms();
+		if(mpWhiteTexture) mpGraphics->DestroyTexture(mpWhiteTexture);
+		mpWhiteTexture = NULL;
+	}
+
+	iTexture* cMaterialType_TerrainBlend::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 9) return NULL;
+		iTexture *pTex = apMaterial->GetTexture((eMaterialTexture)alUnit);
+		return pTex ? pTex : mpWhiteTexture;
+	}
+
+	iGpuProgram* cMaterialType_TerrainBlend::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse) return NULL;
+		return mpProgramManager->GenerateProgram(aRenderMode, apMaterial->GetTexture(eMaterialTexture_Illumination) ? eFlagBit_0 : 0);
+	}
+
+	void cMaterialType_TerrainBlend::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
+	{
+		cMaterialType_TerrainBlend_Vars *pVars = static_cast<cMaterialType_TerrainBlend_Vars*>(apMaterial->GetVars());
+		const float *s = pVars->mvTextureCoordScale, *f = pVars->mvOneMinusFadeStart;
+		apProgram->SetVec4f(0, s[0], s[1], s[2], s[3]);
+		apProgram->SetVec4f(1, f[0], f[1], f[2], f[3]);
+		apProgram->SetFloat(2, pVars->mfBaseTextureCoordScale);
+	}
 
 }

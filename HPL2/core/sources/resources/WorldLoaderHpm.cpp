@@ -34,6 +34,9 @@
 #include "graphics/MeshCreator.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
+#include "graphics/Material.h"
+#include "graphics/MaterialType_Decal.h"
+#include "graphics/Texture.h"
 
 #include "physics/Physics.h"
 #include "physics/PhysicsWorld.h"
@@ -685,6 +688,9 @@ namespace hpl {
 		auto Height = [&](int x, int z) { return vHeight[(size_t)cMath::Clamp(z, 0, lSize - 1) * lSize + cMath::Clamp(x, 0, lSize - 1)]; };
 		auto Solid = [&](int x, int z, float fFallback) { float h = Height(x, z); return std::isnan(h) ? fFallback : h; };
 
+		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
+		std::vector<cMaterial*> vBlend = CreateTerrainBlendMaterials(asBaseFile, apTerrain, lSize * fUnit);
+
 		const float fOffset = lSize * fUnit * 0.5f;
 		for (int z0 = 0; z0 < lSize - 1; z0 += lPatch)
 		for (int x0 = 0; x0 < lSize - 1; x0 += lPatch)
@@ -697,6 +703,14 @@ namespace hpl {
 			pVtx->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
 			pVtx->CreateElementArray(eVertexBufferElement_Normal, eVertexBufferElementFormat_Float, 3);
 			pVtx->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+			std::vector<iVertexBuffer*> vBlendVtx;
+			for (size_t i = 0; i < vBlend.size(); ++i)
+			{
+				vBlendVtx.push_back(mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																				   eVertexBufferUsageType_Static, lW * lH, (lW - 1) * (lH - 1) * 6));
+				vBlendVtx.back()->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
+				vBlendVtx.back()->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+			}
 
 			for (int z = z0; z < z0 + lH; ++z)
 			for (int x = x0; x < x0 + lW; ++x)
@@ -707,6 +721,11 @@ namespace hpl {
 				pVtx->AddVertexVec3f(eVertexBufferElement_Position, vPos);
 				pVtx->AddVertexVec3f(eVertexBufferElement_Normal, cMath::Vector3Normalize(vNormal));
 				pVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(vPos.x, vPos.z, 0) * fTile);
+				for (iVertexBuffer* pBlendVtx : vBlendVtx)
+				{
+					pBlendVtx->AddVertexVec3f(eVertexBufferElement_Position, vPos);
+					pBlendVtx->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f((float)x, (float)z, 0) / (float)lSize);
+				}
 			}
 
 			for (int z = 0; z < lH - 1; ++z)
@@ -715,16 +734,33 @@ namespace hpl {
 				if (std::isnan(Height(x0 + x, z0 + z)) || std::isnan(Height(x0 + x + 1, z0 + z)) ||
 					std::isnan(Height(x0 + x, z0 + z + 1)) || std::isnan(Height(x0 + x + 1, z0 + z + 1))) continue;
 				int i = z * lW + x;
-				for (int lIdx : {i, i + 1, i + lW, i + 1, i + lW + 1, i + lW}) pVtx->AddIndex(lIdx);
+				for (int lIdx : {i, i + 1, i + lW, i + 1, i + lW + 1, i + lW})
+				{
+					pVtx->AddIndex(lIdx);
+					for (iVertexBuffer* pBlendVtx : vBlendVtx) pBlendVtx->AddIndex(lIdx);
+				}
 			}
-			if (pVtx->GetIndexNum() == 0) { hplDelete(pVtx); continue; }
+			if (pVtx->GetIndexNum() == 0)
+			{
+				hplDelete(pVtx);
+				for (iVertexBuffer* pBlendVtx : vBlendVtx) hplDelete(pBlendVtx);
+				continue;
+			}
 			pVtx->Compile(eVertexCompileFlag_CreateTangents);
 
 			tString sName = "Terrain_" + cString::ToString(x0 / lPatch) + "_" + cString::ToString(z0 / lPatch);
 			cMesh* pMesh = hplNew(cMesh, (sName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
 			cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
 			pSubMesh->SetVertexBuffer(pVtx);
-			pSubMesh->SetMaterial(mpResources->GetMaterialManager()->CreateMaterial(sMaterial));
+			pSubMesh->SetMaterial(pMatMgr->CreateMaterial(sMaterial));
+			for (size_t i = 0; i < vBlend.size(); ++i)
+			{
+				vBlendVtx[i]->Compile(0);
+				cSubMesh* pBlendSub = pMesh->CreateSubMesh("Blend" + cString::ToString((int)i));
+				pBlendSub->SetVertexBuffer(vBlendVtx[i]);
+				vBlend[i]->IncUserCount();
+				pBlendSub->SetMaterial(vBlend[i]);
+			}
 
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
@@ -735,6 +771,63 @@ namespace hpl {
 			pBody->SetMass(0);
 			pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(x0 * fUnit - fOffset, 0, z0 * fUnit - fOffset)));
 		}
+		for (cMaterial* pMat : vBlend) pMatMgr->Destroy(pMat);
+	}
+
+	std::vector<cMaterial*> cWorldLoaderHpm::CreateTerrainBlendMaterials(const tWString& asBaseFile, cXmlElement* apTerrain, float afSize)
+	{
+		std::vector<cMaterial*> vMats;
+		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
+		cXmlElement* pLayers = apTerrain->GetFirstElement("BlendLayers");
+		if (pLayers == NULL) return vMats;
+
+		auto ShareTexture = [](cMaterial* apDest, int alSlot, cMaterial* apSrc, eMaterialTexture aType)
+		{
+			iTexture* pTex = apSrc ? apSrc->GetTexture(aType) : NULL;
+			if (pTex == NULL) return;
+			pTex->IncUserCount();
+			apDest->SetTexture((eMaterialTexture)alSlot, pTex);
+		};
+
+		cXmlNodeListIterator layerIt = pLayers->GetChildIterator();
+		while (layerIt.HasNext())
+		{
+			cXmlElement* pLayer = layerIt.Next()->ToElement();
+			tString sId = pLayer->GetAttributeString("ID", "0");
+			tString sMap = cString::To8Char(cString::GetFileNameW(asBaseFile)) + "_Terrain_blendlayer_" + sId + ".dds";
+			iTexture* pMap = mpResources->GetTextureManager()->Create2D(sMap, true);
+			if (pMap == NULL) continue;
+
+			cMaterial* pMat = pMatMgr->CreateCustomMaterial(sMap, mpGraphics->GetMaterialType("terrainblend"));
+			cMaterialType_TerrainBlend_Vars* pVars = static_cast<cMaterialType_TerrainBlend_Vars*>(pMat->GetVars());
+			pMat->SetTexture((eMaterialTexture)0, pMap);
+			if (vMats.empty())
+			{
+				cMaterial* pBase = pMatMgr->CreateMaterial(apTerrain->GetAttributeString("BaseMaterialFile"));
+				ShareTexture(pMat, 5, pBase, eMaterialTexture_Diffuse);
+				if (pBase) pMatMgr->Destroy(pBase);
+			}
+			pVars->mfBaseTextureCoordScale = apTerrain->GetAttributeFloat("BaseMaterialTileAmount", 1) * afSize;
+
+			cXmlNodeListIterator matIt = pLayer->GetChildIterator();
+			for (int i = 0; i < 4 && matIt.HasNext(); ++i)
+			{
+				cXmlElement* pLayerMat = matIt.Next()->ToElement();
+				pVars->mvTextureCoordScale[i] = pLayerMat->GetAttributeFloat("TileAmount", 1) * afSize;
+				pVars->mvOneMinusFadeStart[i] = 1 - pLayerMat->GetAttributeFloat("StartFadeValue", 0);
+				tString sFile = pLayerMat->GetAttributeString("File");
+				cMaterial* pSrc = sFile != "" ? pMatMgr->CreateMaterial(sFile) : NULL;
+				ShareTexture(pMat, 1 + i, pSrc, eMaterialTexture_Diffuse);
+				ShareTexture(pMat, 6 + i, pSrc, eMaterialTexture_Alpha);
+				if (pSrc) pMatMgr->Destroy(pSrc);
+			}
+
+			pMat->SetBlendMode(vMats.empty() ? eMaterialBlendMode_None : eMaterialBlendMode_Alpha);
+			pMat->SetDecalSortOrder((int)vMats.size() - 100);
+			pMat->Compile();
+			vMats.push_back(pMat);
+		}
+		return vMats;
 	}
 
 	tString cWorldLoaderHpm::CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex)

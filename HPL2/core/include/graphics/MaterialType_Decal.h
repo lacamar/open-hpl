@@ -70,5 +70,40 @@ namespace hpl {
 
 	//---------------------------------------------------
 
+
+	//---------------------------------------------------
+
+	class cMaterialType_TerrainBlend_Vars : public iMaterialVars
+	{
+	public:
+		float mvTextureCoordScale[4] = {1, 1, 1, 1};
+		float mvOneMinusFadeStart[4] = {1, 1, 1, 1};
+		float mfBaseTextureCoordScale = 1;
+	};
+
+	// HPL3 terrain blend layers: cache_terrain_diffuse_frag over the base pass, units = eMaterialTexture slots
+	class cMaterialType_TerrainBlend : public iMaterialType
+	{
+	public:
+		cMaterialType_TerrainBlend(cGraphics *apGraphics, cResources *apResources);
+
+		void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
+		bool SupportsHWSkinning(){ return false; }
+		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit);
+		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer){}
+		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer);
+		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer){}
+		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialType_TerrainBlend_Vars,()); }
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){}
+		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars){}
+		void CompileMaterialSpecifics(cMaterial *apMaterial){ apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true); }
+
+	private:
+		void LoadData();
+		void DestroyData();
+
+		iTexture *mpWhiteTexture = NULL;
+	};
 };
 #endif // HPL_MATERIAL_DECAL_H

@@ -387,6 +387,9 @@ namespace hpl {
 	{
 		cMaterial *pMatA = apObjectA->GetMaterial();
 		cMaterial *pMatB = apObjectB->GetMaterial();
+
+		if(pMatA->GetDecalSortOrder() != pMatB->GetDecalSortOrder())
+			return pMatA->GetDecalSortOrder() < pMatB->GetDecalSortOrder();
 		
 		//////////////////////////
 		//Texture

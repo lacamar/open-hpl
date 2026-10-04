@@ -3527,7 +3527,8 @@ namespace hpl {
 
 		SetAlphaLimit(0.01f);
 		SetAlphaMode(eMaterialAlphaMode_Trans);
-		SetChannelMode(eMaterialChannelMode_RGBA); //RGB?
+		// HPL3 keeps diffuse alpha (translucency) out of decals
+		SetChannelMode(mbDepthInNormalAlpha ? eMaterialChannelMode_RGB : eMaterialChannelMode_RGBA);
 		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
 
 
@@ -3554,6 +3555,7 @@ namespace hpl {
 
 		SetAlphaMode(eMaterialAlphaMode_Solid);
 		SetAlphaLimit(mfDefaultAlphaLimit);
+		SetChannelMode(eMaterialChannelMode_RGBA);
 
 
 		END_RENDER_PASS();
