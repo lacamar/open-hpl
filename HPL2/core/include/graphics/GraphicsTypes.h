@@ -582,6 +582,7 @@ namespace hpl {
 		eMaterialBlendMode_MulX2,
 		eMaterialBlendMode_Alpha,
 		eMaterialBlendMode_PremulAlpha,
+		eMaterialBlendMode_ModulateSource,
 		eMaterialBlendMode_LastEnum
 	};
 

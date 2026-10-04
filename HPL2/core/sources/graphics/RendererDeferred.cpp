@@ -3228,9 +3228,9 @@ namespace hpl {
 	{
 		cLightBox *pA = static_cast<cLightBox*>(apLightDataA->mpLight);
 		cLightBox *pB = static_cast<cLightBox*>(apLightDataB->mpLight);
-		bool bReplaceA = pA->GetBlendFunc() == eLightBoxBlendFunc_Replace;
-		bool bReplaceB = pB->GetBlendFunc() == eLightBoxBlendFunc_Replace;
-		if(bReplaceA != bReplaceB) return bReplaceA;
+		static const int vRank[3] = {0, 2, 1};
+		int lA = vRank[(int)cMath::Clamp((int)pA->GetBlendFunc(), 0, 2)], lB = vRank[(int)cMath::Clamp((int)pB->GetBlendFunc(), 0, 2)];
+		if(lA != lB) return lA < lB;
 		if(pA->GetBoxLightPrio() != pB->GetBoxLightPrio()) return pA->GetBoxLightPrio() < pB->GetBoxLightPrio();
 		return pA < pB;
 	}
@@ -3265,7 +3265,8 @@ namespace hpl {
 			if(pProg==NULL) continue;
 			if(mbLog) Log(" Rendering weighted box light: '%s'\n", pBox->GetName().c_str());
 
-			SetBlendMode(lBlend == eLightBoxBlendFunc_Replace ? eMaterialBlendMode_PremulAlpha : eMaterialBlendMode_Add);
+			SetBlendMode(lBlend == eLightBoxBlendFunc_Replace ? eMaterialBlendMode_PremulAlpha :
+						 lBlend == eLightBoxBlendFunc_Add ? eMaterialBlendMode_ModulateSource : eMaterialBlendMode_Add);
 			SetProgram(pProg);
 
 			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * pBox->GetBrightness();

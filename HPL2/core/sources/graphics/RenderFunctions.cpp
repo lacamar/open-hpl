@@ -506,6 +506,10 @@ namespace hpl {
 				if(mbLog) Log("  Setting blend mode: PremulAlpha\n");
 				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_One,eBlendFunc_OneMinusSrcAlpha);
 				break;
+			case eMaterialBlendMode_ModulateSource:
+				if(mbLog) Log("  Setting blend mode: ModulateSource\n");
+				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_DestAlpha,eBlendFunc_One);
+				break;
 			}
 		}
 
