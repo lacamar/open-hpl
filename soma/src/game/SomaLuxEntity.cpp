@@ -1188,8 +1188,7 @@ public:
 	std::vector<std::pair<float, iPhysicsBody *>> mvHits;
 	bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
 	{
-		if (apBody->IsCharacter() == false)
-			mvHits.push_back(std::make_pair(apParams->mfDist, apBody));
+		mvHits.push_back(std::make_pair(apParams->mfDist, apBody));
 		return true;
 	}
 };
@@ -1219,6 +1218,13 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 	std::sort(ray.mvHits.begin(), ray.mvHits.end(), [](auto &a, auto &b) { return a.first < b.first; });
 	for (auto &hit : ray.mvHits)
 	{
+		if (hit.second->IsCharacter())
+		{
+			iCharacterBody *pChar = hit.second->GetCharacterBody();
+			if (pChar == NULL || pChar->GetUserData() == NULL)
+				continue;
+			mapOwner[hit.second] = (cSomaLuxEntity *)pChar->GetUserData();
+		}
 		auto it = mapOwner.find(hit.second);
 		// Static props are world geometry in the original, not lux entities
 		bool bWorld = it == mapOwner.end() || it->second->msClassName == "StaticProp" || it->second->msClassName == "StaticCollider";
@@ -1377,7 +1383,8 @@ static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
 {
 	cCamera *pCam = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCamera() : NULL;
-	if (pCam == NULL || apEnt == NULL || apEnt->mbActive == false)
+	// the original ignores the active flag: an inactive mesh still counts
+	if (pCam == NULL || apEnt == NULL)
 		return false;
 	cFrustum *pFrustum = pCam->GetFrustum();
 	std::vector<cSomaOBB> vBoxes;

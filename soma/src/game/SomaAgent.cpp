@@ -694,9 +694,10 @@ namespace
 					return;
 				}
 				++mlPathIdx;
-				if (cAgentCharMover *pMover = Mover())
-					pMover->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
 			}
+			// the real pathfinder re-sends the goal every frame, overriding script turns
+			if (pMover3D)
+				pMover3D->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
 		}
 
 		cAINode *NodeAtPos(const cVector3f &avPos, float afMin, float afMax, bool abClosest, bool abLOS, cAINode *apSkip)
@@ -1037,6 +1038,7 @@ void SomaCreateAgent(cSomaLuxEntity *apEnt)
 	cVector3f vSize = v.GetVarVector3f("CharBodySize", cVector3f(0.9f, 1.9f, 0.9f));
 	pAgent->mpBody = pMap->GetWorld()->GetPhysicsWorld()->CreateCharacterBody(apEnt->msName, vSize);
 	iCharacterBody *pBody = pAgent->mpBody;
+	pBody->SetUserData(apEnt);
 	pBody->SetMass(80);
 	pBody->SetCustomGravity(cVector3f(0, -12, 0));
 	pBody->SetCustomGravityActive(true);
