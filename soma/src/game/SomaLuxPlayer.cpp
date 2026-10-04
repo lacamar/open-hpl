@@ -241,6 +241,14 @@ void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 		mpMoveState = mmapMoveStates.count(0) ? mmapMoveStates[0] : NULL;
 		if (mpMoveState)
 			mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
+		if (mpCamera)
+		{
+			SetCamera(mpCamera);
+			mpCamera->SetRotateMode(eCameraRotateMode_EulerAngles);
+			mpCamera->SetRoll(0);
+			mpCamera->SetPitch(0);
+			mpCamera->SetYaw(0);
+		}
 	}
 	cSomaLuxScriptable::OnMapMessage(apDecl, apMap);
 	for (auto &it : mmapStates)

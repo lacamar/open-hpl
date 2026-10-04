@@ -135,16 +135,16 @@ def aim(target):
 
 
 def focused(name):
-    # all of Utility_PickBasics' offset rays, any may become the sticky one
-    return kv('cCamera@ c = cLux_GetPlayer().GetCamera(); array<cVector2f> o = {cVector2f(0,0), cVector2f(1,0), cVector2f(-1,0), cVector2f(0,1), cVector2f(0,-1)};'
-              f'int n = 0; for (uint i = 0; i < o.length(); ++i) {{ cLuxClosestEntityData d; cVector3f p = c.GetPosition() + c.GetRight()*o[i].x*0.02 + c.GetUp()*o[i].y*0.02;'
-              f'if (cLux_GetClosestEntity(p, c.GetForward(), 5, 0, false, d) && d.mpEntity.GetName() == "{name}") ++n; }} __print("n=" + n);').get("n") == "5"
+    # the game's own pick: range, CanInteract, offset rays
+    frames(0.15)
+    return kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
+              '__print("f=" + cScript_GetGlobalReturnString());').get("f") == name
 
 
 def aim_entity(name):
     target = ent_pos(name)
     cam, _ = camera_pos()
-    hits = raycast(cam, target)
+    hits = raycast(cam, target, name)
     if not hits or hits[0][2] == name:
         aim(target)
         if not hits or focused(name):
@@ -158,9 +158,10 @@ def aim_entity(name):
     n = 4
     pts = [[lo[k] + (hi[k] - lo[k]) * (0.1 + 0.8 * (i, j, l)[k] / n) for k in range(3)]
            for i in range(n + 1) for j in range(n + 1) for l in range(n + 1)]
-    pts.sort(key=lambda q: math.dist(q, target))
+    # interact range is short: nearest points first
+    pts.sort(key=lambda q: math.dist(q, cam))
     for q in pts:
-        h = raycast(cam, [c + (v - c) * 1.5 for c, v in zip(cam, q)])
+        h = raycast(cam, [c + (v - c) * 1.5 for c, v in zip(cam, q)], name)
         if h and h[0][2] == name:
             aim(q)
             # camera moves with pitch
@@ -175,11 +176,11 @@ def cmd_look(a):
     frames(0.2)
 
 
-def raycast(a, b):
+def raycast(a, b, keep=None):
     r = send(dict(cmd="raycast", **{k: str(v) for k, v in zip(("x", "y", "z", "x2", "y2", "z2"), (*a, *b))}))
     out = []
     for l in r.get("hits", "").splitlines():
-        if "char=1" not in l:
+        if "char=1" not in l and f"entity={keep} " not in l:
             continue
         f = l.split()
         out.append((float(f[0]), f[1], f[2].split("=", 1)[1]))
