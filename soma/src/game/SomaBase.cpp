@@ -405,21 +405,24 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 		return "";
 	iPhysicsWorld *pPhys = pMap->GetWorld()->GetPhysicsWorld();
 	iPhysicsBody *pSkip = NULL;
+	tFlag lFlags = SomaCollideFlag("+player");
 	if (cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCharacterBody())
 		pSkip = cSomaLuxPlayer::Get()->GetCharacterBody()->GetCurrentBody();
 	const float kCell = 0.4f, kStep = 0.45f, kDrop = 1.5f;
 	struct cFloor : iPhysicsRayCallback
 	{
 		float mfDist = 1e9f;
+		tFlag mlFlags;
 		bool OnIntersect(iPhysicsBody *b, cPhysicsRayParams *p) override
 		{
-			if (b->IsCharacter() == false && b->GetCollideCharacter() && p->mfDist < mfDist)
+			if (b->IsCharacter() == false && b->GetCollideCharacter() && iPhysicsBody::CollideFlagsMatch(mlFlags, b->GetCollideFlags()) && p->mfDist < mfDist)
 				mfDist = p->mfDist;
 			return true;
 		}
 	};
 	auto floorAt = [&](float x, float y, float z, float &afY) {
 		cFloor ray;
+		ray.mlFlags = lFlags;
 		// rays exactly on a terrain patch edge miss both heightfields
 		x += 0.01f, z += 0.01f;
 		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - kDrop - 0.1f, z), true, false, false);
@@ -430,7 +433,7 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 	iCollideShape *pCrouch = pPhys->CreateBoxShape(cVector3f(0.5f, 0.7f, 0.5f), NULL);
 	auto clear = [&](iCollideShape *apShape, float x, float y, float z) {
 		float fMid = apShape == pStand ? 1.225f : 0.8f;
-		return pPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(x, y + fMid, z)), pSkip, false, true, NULL, false) == false;
+		return pPhys->CheckShapeWorldCollision(NULL, apShape, cMath::MatrixTranslate(cVector3f(x, y + fMid, z)), pSkip, false, true, NULL, false, 0, lFlags) == false;
 	};
 	struct cNode { cVector3f p; int ix, iz; float g; int parent; bool crouch; };
 	std::vector<cNode> vNodes;
