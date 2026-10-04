@@ -68,6 +68,13 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "tWString cString_ToStringW(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)",
 			  +[](float f, int d, bool r) { return cString::To16Char(FloatToString(f, d, r)); });
 	SOMA_FUNC(e, "tWString cString_ToStringW(int alX, int alPaddingZeros)", +[](int x, int p) { char b[32]; snprintf(b, sizeof(b), "%0*d", p, x); return cString::To16Char(b); });
+	SOMA_FUNC(e, "tWString cString_ReplaceStringToW(const tWString&in aString, const tWString&in asOldString,const tWString&in asNewString)",
+			  +[](const tWString &s, const tWString &o, const tWString &n) {
+				  tWString r = s;
+				  for (size_t i = o.empty() ? tWString::npos : r.find(o); i != tWString::npos; i = r.find(o, i + n.size()))
+					  r.replace(i, o.size(), n);
+				  return r;
+			  });
 	SOMA_FUNC(e, "float cString_ToFloat(const tString&in asStr, float afDefault)", +[](const tString &s, float d) { return cString::ToFloat(s.c_str(), d); });
 	SOMA_FUNC(e, "int cString_ToInt(const tString&in asStr, int alDefault)", +[](const tString &s, int d) { return cString::ToInt(s.c_str(), d); });
 	SOMA_FUNC(e, "bool cString_ToBool(const tString&in asStr, bool abDefault)", +[](const tString &s, bool d) { return cString::ToBool(s.c_str(), d); });
