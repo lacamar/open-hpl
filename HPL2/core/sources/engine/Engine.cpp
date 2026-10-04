@@ -850,6 +850,8 @@ namespace hpl {
 
 	void cEngine::CheckAndBroadcastFocusChange()
 	{
+		// Hidden headless window: focus comes from the control socket only
+		if(mpHeadlessControl) return;
 		bool bHadInputFocus = mbApplicationHasInputFocus;
 		bool bHadMouseFocus = mbApplicationHasMouseFocus;
 		bool bHadVisibility = mbApplicationIsVisible;
