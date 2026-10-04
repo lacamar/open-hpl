@@ -1024,7 +1024,6 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVector2f avSize)
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
-	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
 	if (F<bool>(apData, kGaugeUseFrame))
 		DrawFrame((char *)apData + kGaugeFrame, avPos, avSize, F<cColor>(apData, kWColorBase));
 	cVector2f vPad = F<cVector2f>(apData, kGaugePadding);
@@ -1033,7 +1032,7 @@ void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVec
 	bool bVert = F<int>(apData, kGaugeOrient) == 1;
 	cVector2f vFill = bVert ? cVector2f(vInner.x, vInner.y * fFill) : cVector2f(vInner.x * fFill, vInner.y);
 	cVector3f vFillPos = avPos + cVector3f(vPad.x, vPad.y + (bVert ? vInner.y - vFill.y : 0), 0.1f);
-	DrawGfx((char *)apData + kGaugeFill, vFillPos, vFill, cColor(1, 1));
+	DrawGfx((char *)apData + kGaugeFill, vFillPos, vFill, F<cColor>(apData, kWColorBase));
 	Advance(avPos, avSize);
 }
 
@@ -1616,12 +1615,10 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 
 #define STATE(TYPE, RET, ARG, FIELD, FLAG, INTYPE, DEF1, DEF2, CRET)                                                                                        \
 	SOMA_METHOD(e, T, RET " GetState" TYPE "(uint64 alId, " ARG " aDefault" DEF1 ")", +[](I *p, asQWORD id, INTYPE d) -> CRET {                           \
-		auto it = p->mmapStates.find(id);                                                                                                                \
-		return it != p->mmapStates.end() && it->second.FLAG ? it->second.FIELD : d;                                                                      \
+		return p->GetOrSetState(id, &cState::FIELD, &cState::FLAG, d);                                                                                 \
 	});                                                                                                                                                  \
 	SOMA_METHOD(e, T, RET " GetState" TYPE "(const tString&in asVarName, " ARG " aDefault" DEF2 ")", +[](I *p, Str n, INTYPE d) -> CRET {                 \
-		auto it = p->mmapStates.find(Id(n));                                                                                                             \
-		return it != p->mmapStates.end() && it->second.FLAG ? it->second.FIELD : d;                                                                      \
+		return p->GetOrSetState(Id(n), &cState::FIELD, &cState::FLAG, d);                                                                              \
 	});                                                                                                                                                  \
 	SOMA_METHOD(e, T, "void SetState" TYPE "(uint64 alId, " ARG " aVal)", +[](I *p, asQWORD id, INTYPE v) { auto &s = p->State(id); s.FIELD = v; s.FLAG = true; }); \
 	SOMA_METHOD(e, T, "void SetState" TYPE "(const tString&in asVarName, " ARG " aVal)", +[](I *p, Str n, INTYPE v) { auto &s = p->State(Id(n)); s.FIELD = v; s.FLAG = true; }); \

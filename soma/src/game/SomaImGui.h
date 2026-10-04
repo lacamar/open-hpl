@@ -79,6 +79,15 @@ public:
 	};
 	std::map<uint64_t, cState> mmapStates;
 	cState &State(uint64_t alId) { return mmapStates[alId]; }
+	template <class F> F GetOrSetState(uint64_t alId, F cState::*apField, bool cState::*apSet, const F &aDefault)
+	{
+		cState &s = State(alId);
+		if(!(s.mbSetInt || s.mbSetFloat || s.mbSetVec || s.mbSetCol)) {
+			s.*apField = aDefault;
+			s.*apSet = true;
+		}
+		return s.*apSet ? s.*apField : aDefault;
+	}
 
 	struct cFade
 	{

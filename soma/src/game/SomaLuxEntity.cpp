@@ -2582,8 +2582,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, RET " Terminal_GetImGuiState" TYPE "(const tString&in asPropName, const tString&in asVarName, " ARG " a" DEF ")",                           \
 			  +[](S n, S v, INTYPE d) -> std::decay<INTYPE>::type {                                                                                              \
 				  cSomaImGui *g = Gui(n);                                                                                                                    \
-				  auto it = g ? g->mmapStates.find(SomaHash64(v)) : std::map<uint64_t, cSomaImGui::cState>::iterator();                                     \
-				  return g && it != g->mmapStates.end() && it->second.FLAG ? it->second.FIELD : d;                                                           \
+				  using F = decltype(cSomaImGui::cState::FIELD);                                                                                             \
+				  return g ? g->GetOrSetState<F>(SomaHash64(v), &cSomaImGui::cState::FIELD, &cSomaImGui::cState::FLAG, F(d)) : d;                           \
 			  });                                                                                                                                            \
 	SOMA_FUNC(e, "void Terminal_SetImGuiState" TYPE "(const tString&in asPropName, const tString&in asVarName, " ARG " aVal)", +[](S n, S v, INTYPE x) {     \
 		if (cSomaImGui *g = Gui(n)) { auto &st = g->State(SomaHash64(v)); st.FIELD = x; st.FLAG = true; }                                                \
