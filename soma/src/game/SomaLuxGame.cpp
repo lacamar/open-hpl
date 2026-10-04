@@ -146,12 +146,23 @@ void SomaApplyWindowMode(const cSomaConfig *apCfg)
 	}
 }
 
+// cLuxBase::UpdateGraphicSettings: texture quality and filtering
+void SomaApplyTextureConfig()
+{
+	LoadConfigs();
+	cMaterialManager *pMatMgr = gpSomaBase->mpEngine->GetResources()->GetMaterialManager();
+	pMatMgr->SetTextureSizeDownScaleLevel(gpUserConfig->GetInt("Graphics", "TextureQuality", 0));
+	pMatMgr->SetTextureFilter((eTextureFilter)gpUserConfig->GetInt("Graphics", "TextureFilter", eTextureFilter_Trilinear));
+	pMatMgr->SetTextureAnisotropy(gpUserConfig->GetFloat("Graphics", "TextureAnisotropy", 1));
+}
+
 // cGlobalScriptFuncs::ApplyUserConfig: UpdateGraphicSettings, UpdateSoundSettings, LoadLanguage; never asks for a restart
 static bool ApplyUserConfig()
 {
 	cSomaConfig *pCfg = gpSomaBase->GetConfig();
 	SomaReadUserScreenConfig(pCfg);
 	SomaApplyWindowMode(pCfg);
+	SomaApplyTextureConfig();
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);

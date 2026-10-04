@@ -1023,6 +1023,7 @@ cSomaBase::cSomaBase()
 }
 
 void SomaReadUserScreenConfig(cSomaConfig *apCfg);
+void SomaApplyTextureConfig();
 void SomaApplyWindowMode(const cSomaConfig *apCfg);
 
 cSomaBase::~cSomaBase()
@@ -1254,6 +1255,7 @@ bool cSomaBase::InitEngine()
 	mpEngine->GetPhysics()->LoadSurfaceData(msMaterialConfigPath);
 
 	RegisterSomaLoaders(mpEngine->GetResources());
+	SomaApplyTextureConfig();
 
 	mpScriptRuntime = hplNew(cSomaScriptRuntime, ());
 	if (mpScriptRuntime->Init(cString::To8Char(cPlatform::GetWorkingDir())))
