@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAV@"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVA"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 16;
+	int glPendingVersion = 17;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -436,6 +436,10 @@ public:
 		}
 		if (p->mvBodies.empty())
 			o.Pod(p->GetMatrix());
+		o.Pod(p->mbStaticPhysics);
+		o.Pod((uint32_t)p->mvDynamicMass.size());
+		for (float f : p->mvDynamicMass)
+			o.Pod(f);
 		cSomaLuxEntity::cAttachment *a = p->mpAttachment;
 		o.Pod(a != NULL);
 		if (a)
@@ -520,6 +524,8 @@ public:
 				continue;
 			if (fMass >= 0)
 			{
+				if (glPendingVersion < 17 && fMass == 0 && p->mvBodies[i]->GetMass() > 0)
+					p->SetStaticPhysics(true);
 				p->mvBodies[i]->SetMass(fMass);
 				p->mvBodies[i]->SetGravity(bGravity);
 			}
@@ -536,6 +542,19 @@ public:
 				cMatrixf m = in.Pod<cMatrixf>();
 				if (p && p->mvBodies.empty() && m != p->GetMatrix())
 					p->SetMatrix(m);
+			}
+			if (glPendingVersion >= 17)
+			{
+				bool bStatic = in.Pod<bool>();
+				std::vector<float> vMass;
+				uint32_t lMass = in.Pod<uint32_t>();
+				for (uint32_t i = 0; i < lMass && in.ok; ++i)
+					vMass.push_back(in.Pod<float>());
+				if (p)
+				{
+					p->mbStaticPhysics = bStatic;
+					p->mvDynamicMass = vMass;
+				}
 			}
 			if (p)
 				p->RemoveAttachment();
@@ -1197,7 +1216,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 16)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 17)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
