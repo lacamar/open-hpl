@@ -714,6 +714,11 @@ namespace hpl {
 	{
 		tString sName = "ShadowMap"+cString::ToString(avSize.x)+"x"+cString::ToString(avSize.y)+"_"+
 						cString::ToString((int)mvShadowMapData[aResolution].size());
+		mvShadowMapData[aResolution].push_back(CreateShadowMap(sName, avSize, aFormat));
+	}
+
+	cShadowMapData* iRenderer::CreateShadowMap(const tString& sName, const cVector3l &avSize, ePixelFormat aFormat)
+	{
 		cShadowMapData *pData = hplNew(cShadowMapData, ());
 		pData->mlFrameCount = -1;
 
@@ -732,7 +737,7 @@ namespace hpl {
 
 		pData->mpBuffer->CompileAndValidate();
 
-		mvShadowMapData[aResolution].push_back(pData);
+		return pData;
 	}
 
 	//-----------------------------------------------------------------------
@@ -832,17 +837,17 @@ namespace hpl {
 	{
 		for(int res=0; res < eShadowMapResolution_LastEnum; ++res)
 		{
-			for(size_t i=0; i<mvShadowMapData[res].size(); ++i)
-			{
-				cShadowMapData *pData = mvShadowMapData[res][i];
-
-				mpGraphics->DestroyFrameBuffer(pData->mpBuffer);
-				mpGraphics->DestroyTexture(pData->mpTexture);
-				if(pData->mpTempDiffTexture) mpGraphics->DestroyTexture(pData->mpTempDiffTexture);
-			}
-			STLDeleteAll(mvShadowMapData[res]);
+			for(size_t i=0; i<mvShadowMapData[res].size(); ++i) DestroyShadowMap(mvShadowMapData[res][i]);
+			mvShadowMapData[res].clear();
 		}
-		
+	}
+
+	void iRenderer::DestroyShadowMap(cShadowMapData *apData)
+	{
+		mpGraphics->DestroyFrameBuffer(apData->mpBuffer);
+		mpGraphics->DestroyTexture(apData->mpTexture);
+		if(apData->mpTempDiffTexture) mpGraphics->DestroyTexture(apData->mpTempDiffTexture);
+		hplDelete(apData);
 	}
 
 	//-----------------------------------------------------------------------

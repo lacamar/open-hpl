@@ -21,6 +21,7 @@
 #define HPL_RENDERER_DEFERRED_H
 
 #include "graphics/Renderer.h"
+#include "math/Frustum.h"
 
 namespace hpl {
 
@@ -42,6 +43,7 @@ namespace hpl {
 	class iTexture;
 	class iLight;
 	class cSubMeshEntity;
+	class cLightDirectional;
 	
 	//---------------------------------------------
 
@@ -234,6 +236,7 @@ namespace hpl {
 		void RenderLights_Box_RenderBack();
 		bool RenderLights_BoxWeighted();
 		void RenderLights_Directional();
+		void RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul);
         
 		void RenderIllumination();
 
@@ -322,6 +325,8 @@ namespace hpl {
 		iFrameBuffer *mpShadowBuffer[eShadowMapResolution_LastEnum];
 		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
+		cShadowMapData *mpDirShadowData;
+		cFrustum mDirShadowFrustum[4];
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
 

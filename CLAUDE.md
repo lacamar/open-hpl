@@ -113,7 +113,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
 | `set_entity name= visible=` | show/hide mesh entities by glob (restart to undo: hidden-by-design ones get shown) |
 | `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
-| `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10+ shadow maps, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
+| `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10-12 shadow maps, 13 sun cascade atlas, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
 | `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel (ints) or screen point (0-1 with a dot) |
 | `pick_entity x= y= [x2= y2= z2=]` | submeshes under a screen point (0-1), or along a world segment x,y,z -> x2,y2,z2; nearest first (skinned included) |

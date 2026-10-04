@@ -147,7 +147,7 @@ namespace hpl {
 		cProgramComboFeature("LightType_Spot", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseGobo", kPC_FragmentBit),
 		cProgramComboFeature("DivideInFrag", kPC_FragmentBit | kPC_VertexBit),
-		cProgramComboFeature("UseShadowMap", kPC_FragmentBit, eFeature_Light_SpotLight),
+		cProgramComboFeature("UseShadowMap", kPC_FragmentBit),
 		cProgramComboFeature("BoxMask", kPC_FragmentBit),
 		cProgramComboFeature("GoboSpecFlag", kPC_FragmentBit, eFeature_Light_Gobo),
 		cProgramComboFeature("GoboType_Specular", kPC_FragmentBit, eFeature_Light_Gobo),
@@ -267,6 +267,10 @@ namespace hpl {
 	#define kVar_avTransform1						84
 	#define kVar_avBloomTint						85
 	#define kVar_avSizeWeight						86
+	#define kVar_a_mtxLightViewProj0				87
+	#define kVar_avSplitsNear						91
+	#define kVar_avSplitsFar						92
+	#define kVar_avSplitOffsetMul					93
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -288,6 +292,7 @@ namespace hpl {
 		// Set up variables
 		mfLastFrustumFOV = -1;
 		mfLastFrustumFarPlane = -1;
+		mpDirShadowData = NULL;
 		
 		mfMinLargeLightNormalizedArea = 0.2f*0.2f;
 		mfMinRenderReflectionNormilzedLength = 0.15f;
@@ -703,6 +708,11 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
+				for(int i=0; i<4; ++i)
+					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj"+cString::ToString(i), kVar_a_mtxLightViewProj0+i, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avSplitsNear", kVar_avSplitsNear, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avSplitsFar", kVar_avSplitsFar, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avSplitOffsetMul", kVar_avSplitOffsetMul, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afSpotNearClip", kVar_afSpotNearClip, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afFalloffPow", kVar_afFalloffPow, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("afTranslucencyScale", kVar_afTranslucencyScale, eDefferredProgramMode_Lights);
@@ -1097,6 +1107,8 @@ namespace hpl {
 		/////////////////////////
 		//Shadow textures
 		DestroyShadowMaps();
+		if(mpDirShadowData) DestroyShadowMap(mpDirShadowData);
+		mpDirShadowData = NULL;
 		
 		if(mpShadowJitterTexture) mpGraphics->DestroyTexture(mpShadowJitterTexture);
 
@@ -1389,6 +1401,7 @@ namespace hpl {
 	iTexture* cRendererDeferred::GetDebugGBufferTexture(int alIdx)
 	{
 		if(alIdx>=20 && alIdx<26) return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<((alIdx-20)/2)),ePixelFormat_RGBA16,alIdx-10)->GetColorBuffer(0)->ToTexture();
+		if(alIdx==13) return mpDirShadowData ? mpDirShadowData->mpTexture : NULL;
 		if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL;
 		if(alIdx==5) return mpBoxWeightTexture;
 		if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6];
@@ -3327,6 +3340,13 @@ namespace hpl {
 		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
 		if(WorldUnderwaterFog(this))	lFlags |= eFeature_Light_UnderwaterFog;
+		cMatrixf vShadowMtx[4];
+		float vSplitsNear[4], vSplitsFar[4], vSplitOffsetMul[4];
+		if(pLight->GetCastShadows() && mpCurrentSettings->mbRenderShadows)
+		{
+			lFlags |= eFeature_Light_ShadowMap;
+			RenderDirectionalShadowMap(pLight, vShadowMtx, vSplitsNear, vSplitsFar, vSplitOffsetMul);
+		}
 		iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
 		if(pProgram==NULL) return;
 		if(mbLog) Log(" Rendering directional light\n");
@@ -3353,7 +3373,17 @@ namespace hpl {
 		pProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
 		if(WorldUnderwaterFog(this)) pProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
 
-		// ponytail: no cascaded shadow maps yet, the sun lights interiors
+		if(lFlags & eFeature_Light_ShadowMap)
+		{
+			for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProj0+i, vShadowMtx[i]);
+			pProgram->SetVec4f(kVar_avSplitsNear, vSplitsNear[0], vSplitsNear[1], vSplitsNear[2], vSplitsNear[3]);
+			pProgram->SetVec4f(kVar_avSplitsFar, vSplitsFar[0], vSplitsFar[1], vSplitsFar[2], vSplitsFar[3]);
+			pProgram->SetVec4f(kVar_avSplitOffsetMul, vSplitOffsetMul[0], vSplitOffsetMul[1], vSplitOffsetMul[2], vSplitOffsetMul[3]);
+			pProgram->SetVec2f(kVar_avShadowMapOffsetMul, pLight->GetShadowMapBlurAmount() / (float)mpDirShadowData->mpTexture->GetWidth());
+			SetTexture(6, mpDirShadowData->mpTexture);
+			if(mpShadowJitterTexture) SetTexture(7, mpShadowJitterTexture);
+		}
+
 		SetStencilActive(false);
 		SetDepthTest(false);
 		SetCullMode(eCullMode_CounterClockwise);
@@ -3363,6 +3393,135 @@ namespace hpl {
 		SetNormalFrustumProjection();
 		SetCullMode(eCullMode_Clockwise);
 		SetDepthTest(true);
+	}
+
+	void cRendererDeferred::RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul)
+	{
+		const int lSlices = 4;
+		if(mpDirShadowData==NULL)
+		{
+			int lSize = mShadowMapResolution == eShadowMapResolution_High ? 2048 : mShadowMapResolution == eShadowMapResolution_Medium ? 1024 : 512;
+			mpDirShadowData = CreateShadowMap("DirShadowMap", cVector3l(lSize, lSize, 1), ePixelFormat_Depth24);
+		}
+		int lSliceRes = mpDirShadowData->mpTexture->GetWidth() / 2;
+
+		////////////////////////
+		// Practical split scheme
+		float fNear = mpCurrentFrustum->GetNearPlane(), fFar = mpCurrentFrustum->GetFarPlane();
+		float fLogTerm = apLight->GetAutoShadowSliceLogTerm();
+		float vSplit[lSlices+1];
+		for(int i=0; i<=lSlices; ++i)
+		{
+			float fT = (float)i / (float)lSlices;
+			vSplit[i] = cMath::Interpolate(fNear + (fFar-fNear)*fT, fNear * powf(fFar/fNear, fT), fLogTerm);
+		}
+
+		////////////////////////
+		// Light rotation, rows: right, up, back
+		cVector3f vBack = apLight->GetDirection() * -1.0f;
+		vBack.Normalize();
+		cVector3f vUp0 = fabsf(vBack.y) > 0.99f ? cVector3f(1,0,0) : cVector3f(0,1,0);
+		cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp0, vBack));
+		cVector3f vUp = cMath::Vector3Cross(vBack, vRight);
+
+		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV()*0.5f);
+		float fAspect = mpCurrentFrustum->GetAspect();
+		float fCasterDist = apLight->GetShadowCasterDistance();
+
+		////////////////////////
+		// Render states
+		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+		SetDepthTest(true);
+		SetDepthWrite(true);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetAlphaLimit(mfDefaultAlphaLimit);
+		SetChannelMode(eMaterialChannelMode_None);
+		SetTextureRange(NULL,0);
+		SetOcclusionPlanesActive(false);
+		mpLowLevelGraphics->SetPolygonOffsetActive(true);
+		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(true);
+		if(!mbShadowCull) SetCullActive(false);
+		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(),
+											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
+		SetFrameBuffer(mpDirShadowData->mpBuffer, false, false);
+		mpLowLevelGraphics->SetClearDepth(1);
+		ClearFrameBuffer(eClearFrameBufferFlag_Depth, false);
+
+		cFrustum *pLastFrustum = mpCurrentFrustum;
+		for(int i=0; i<lSlices; ++i)
+		{
+			////////////////////////
+			// Bounding sphere of the slice, rotation stable
+			cVector3f vCorners[8];
+			cVector3f vCenter(0);
+			for(int j=0; j<8; ++j)
+			{
+				float fZ = vSplit[i + j/4];
+				float fH = fZ * fTanHalfFov;
+				vCorners[j] = cMath::MatrixMul(m_mtxInvView, cVector3f((j&1 ? 1 : -1)*fH*fAspect, (j&2 ? 1 : -1)*fH, -fZ));
+				vCenter += vCorners[j] / 8.0f;
+			}
+			float fRadius = 0;
+			for(int j=0; j<8; ++j) fRadius = cMath::Max(fRadius, cMath::Vector3Dist(vCorners[j], vCenter));
+			fRadius = ceilf(fRadius * 16.0f) / 16.0f;
+
+			////////////////////////
+			// Light view snapped to texels so the map does not swim
+			cVector3f vC(cMath::Vector3Dot(vRight, vCenter), cMath::Vector3Dot(vUp, vCenter), cMath::Vector3Dot(vBack, vCenter));
+			float fTexel = 2.0f * fRadius / (float)lSliceRes;
+			vC.x = floorf(vC.x / fTexel) * fTexel;
+			vC.y = floorf(vC.y / fTexel) * fTexel;
+			vC.z += fRadius + fCasterDist;
+			cMatrixf mtxView(	vRight.x, vRight.y, vRight.z, -vC.x,
+								vUp.x,    vUp.y,    vUp.z,    -vC.y,
+								vBack.x,  vBack.y,  vBack.z,  -vC.z,
+								0, 0, 0, 1);
+			float fDepth = 2.0f * fRadius + fCasterDist;
+			cMatrixf mtxProj = cMath::MatrixOrthographicProjection(0, fDepth, cVector2f(2.0f * fRadius));
+			cVector3f vEye = vRight * vC.x + vUp * vC.y + vBack * vC.z;
+			cFrustum *pFrustum = &mDirShadowFrustum[i];
+			pFrustum->SetupOrthoProj(mtxProj, mtxView, fDepth, 0, cVector2f(2.0f * fRadius), vEye);
+
+			////////////////////////
+			// Casters
+			mvShadowCasters.resize(0);
+			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Dynamic)
+				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvShadowCasters, pFrustum);
+			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Static)
+				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvShadowCasters, pFrustum);
+
+			mpLowLevelGraphics->SetCurrentFrameBuffer(mpDirShadowData->mpBuffer, cVector2l((i%2)*lSliceRes, (1-i/2)*lSliceRes), cVector2l(lSliceRes));
+			mpCurrentFrustum = pFrustum;
+			SetFrustumProjection(pFrustum);
+			RenderShadowCastersNormal(pFrustum);
+			mpCurrentFrustum = pLastFrustum;
+
+			////////////////////////
+			// Lookup: view space -> atlas quadrant
+			cMatrixf mtxAtlas(	0.25f, 0, 0, 0.25f + 0.5f*(i%2),
+								0, 0.25f, 0, 0.25f + 0.5f*(i/2),
+								0, 0, 0.5f, 0.5f,
+								0, 0, 0, 1);
+			apMtx[i] = cMath::MatrixMul(cMath::MatrixMul(mtxAtlas, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
+			apNear[i] = -vSplit[i];
+			apFar[i] = i == lSlices-1 ? -1e6f : -vSplit[i+1];
+			apOffsetMul[i] = (vSplit[1]-vSplit[0]) / (vSplit[i+1]-vSplit[i]);
+		}
+
+		SetTexture(0,NULL);
+		SetOcclusionPlanesActive(true);
+		mpLowLevelGraphics->SetPolygonOffsetActive(false);
+		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(false);
+		if(!mbShadowCull) SetCullActive(true);
+		SetNormalFrustumProjection();
+
+		SetAccumulationBuffer();
+		for(int i=0; i<mlNumOfGBufferTextures; ++i) SetTexture(i, GetBufferTexture(i));
+		SetDepthTestFunc(eDepthTestFunc_GreaterOrEqual);
+		SetDepthWrite(false);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetBlendMode(eMaterialBlendMode_Add);
 	}
 
 	void cRendererDeferred::RenderLights()

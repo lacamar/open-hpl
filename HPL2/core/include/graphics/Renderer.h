@@ -333,6 +333,8 @@ namespace hpl {
 		void EndRendering(bool abAtEndOfRendering=true);
 
 		void CreateAndAddShadowMap(eShadowMapResolution aResolution, const cVector3l &avSize, ePixelFormat aFormat);
+		cShadowMapData* CreateShadowMap(const tString& sName, const cVector3l &avSize, ePixelFormat aFormat);
+		void DestroyShadowMap(cShadowMapData *apData);
 		cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 		bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
 		void DestroyShadowMaps();
