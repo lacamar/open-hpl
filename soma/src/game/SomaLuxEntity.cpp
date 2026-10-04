@@ -1218,33 +1218,38 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 		return false;
 	cSomaClosestRay ray;
 	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, avStart + avDir * afLength, true, false, false);
-	std::map<iPhysicsBody *, cSomaLuxEntity *> mapOwner;
 	for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-		for (iPhysicsBody *pBody : pEnt->mvBodies)
-		{
-			mapOwner[pBody] = pEnt;
-			// Rays starting inside an area hit it at once (whole-room tool use areas)
-			if (pEnt->meType == eSomaLuxEntityType_Area && pEnt->mbActive && pBody->GetShape())
+		if (pEnt->meType == eSomaLuxEntityType_Area && pEnt->mbActive)
+			for (iPhysicsBody *pBody : pEnt->mvBodies)
 			{
+				// Rays starting inside an area hit it at once (whole-room tool use areas)
+				if (pBody->GetShape() == NULL)
+					continue;
 				cVector3f vLocal = cMath::MatrixMul(cMath::MatrixInverse(pBody->GetWorldMatrix()), avStart);
 				cVector3f vHalf = pBody->GetShape()->GetSize() * 0.5f;
 				if (std::abs(vLocal.x) <= vHalf.x && std::abs(vLocal.y) <= vHalf.y && std::abs(vLocal.z) <= vHalf.z)
 					ray.mvHits.push_back(std::make_pair(0.0f, pBody));
 			}
-		}
 	std::sort(ray.mvHits.begin(), ray.mvHits.end(), [](auto &a, auto &b) { return a.first < b.first; });
 	for (auto &hit : ray.mvHits)
 	{
+		cSomaLuxEntity *pEnt = NULL;
 		if (hit.second->IsCharacter())
 		{
 			iCharacterBody *pChar = hit.second->GetCharacterBody();
 			if (pChar == NULL || pChar->GetUserData() == NULL)
 				continue;
-			mapOwner[hit.second] = (cSomaLuxEntity *)pChar->GetUserData();
+			pEnt = (cSomaLuxEntity *)pChar->GetUserData();
 		}
-		auto it = mapOwner.find(hit.second);
+		else
+			for (cSomaLuxEntity *pOwner : pMap->GetEntities())
+				if (std::find(pOwner->mvBodies.begin(), pOwner->mvBodies.end(), hit.second) != pOwner->mvBodies.end())
+				{
+					pEnt = pOwner;
+					break;
+				}
 		// Static props are world geometry in the original, not lux entities
-		bool bWorld = it == mapOwner.end() || it->second->msClassName == "StaticProp" || it->second->msClassName == "StaticCollider";
+		bool bWorld = pEnt == NULL || pEnt->msClassName == "StaticProp" || pEnt->msClassName == "StaticCollider";
 		if (bWorld)
 		{
 			if (hit.second->GetCollide() == false)
@@ -1253,7 +1258,6 @@ static bool SomaGetClosestEntity(const cVector3f &avStart, const cVector3f &avDi
 			afDistOut = hit.first;
 			return false;
 		}
-		cSomaLuxEntity *pEnt = it->second;
 		if (pEnt->mbActive == false)
 			continue;
 		if (hit.second->GetCollide() == false && (pEnt->mbInteractionDisabled || pEnt->CanInteract(alType, hit.second) == false))

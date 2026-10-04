@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <map>
+#include <unordered_map>
 #include <string>
 
 class cSomaScriptBuilder;
@@ -48,7 +49,7 @@ private:
 	asIScriptEngine *mpEngine;
 	cSomaScriptBuilder *mpBuilder;
 	std::map<std::string, asIScriptModule *> mmapModules;
-	std::map<std::pair<asITypeInfo *, std::string>, asIScriptFunction *> mmapMethods;
+	std::unordered_map<asITypeInfo *, std::unordered_map<std::string, asIScriptFunction *>> mmapMethods;
 	int mlModuleCount;
 };
 

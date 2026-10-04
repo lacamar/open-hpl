@@ -173,10 +173,10 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	if (apObj == NULL)
 		return false;
 	asITypeInfo *pType = apObj->GetObjectType();
-	auto key = std::make_pair(pType, asDecl);
-	auto it = mmapMethods.find(key);
-	if (it == mmapMethods.end())
-		it = mmapMethods.emplace(key, pType->GetMethodByDecl(asDecl.c_str())).first;
+	auto &mapType = mmapMethods[pType];
+	auto it = mapType.find(asDecl);
+	if (it == mapType.end())
+		it = mapType.emplace(asDecl, pType->GetMethodByDecl(asDecl.c_str())).first;
 	asIScriptFunction *pFunc = it->second;
 	if (pFunc == NULL)
 		return false;

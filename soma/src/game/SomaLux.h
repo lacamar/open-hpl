@@ -78,6 +78,7 @@ private:
 	std::vector<cSomaLuxTimer> mvTimers;
 	std::vector<cSomaLuxEntity *> mvEntities;
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
+	std::map<tString, std::vector<cSomaLuxEntity *>> mmapWildcardCache;
 
 	void UpdateCollideCallbacks();
 	void UpdateLookAtCallbacks(float afTimeStep);

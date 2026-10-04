@@ -153,6 +153,7 @@ void cSomaLuxMap::AddEntity(cSomaLuxEntity *apEnt)
 	apEnt->msScriptName = apEnt->msName;
 	mvEntities.push_back(apEnt);
 	mmapEntities[apEnt->msName] = apEnt;
+	mmapWildcardCache.clear();
 }
 
 extern tString gsSomaSpawnName;
@@ -187,6 +188,7 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 		{
 			apEnt->SetActive(false);
 			mvEntities.erase(mvEntities.begin() + i);
+			mmapWildcardCache.clear();
 			if (mmapEntities[apEnt->msName] == apEnt)
 				mmapEntities.erase(apEnt->msName);
 			if (mpLatestEntity == apEnt)
@@ -388,9 +390,17 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 					vChildren.push_back(it->second);
 			}
 			else
-				for (cSomaLuxEntity *pEnt : mvEntities)
-					if (SomaWildcardMatch(cb.msChild, pEnt->msName))
-						vChildren.push_back(pEnt);
+			{
+				auto it = mmapWildcardCache.find(cb.msChild);
+				if (it == mmapWildcardCache.end())
+				{
+					it = mmapWildcardCache.emplace(cb.msChild, std::vector<cSomaLuxEntity *>()).first;
+					for (cSomaLuxEntity *pEnt : mvEntities)
+						if (SomaWildcardMatch(cb.msChild, pEnt->msName))
+							it->second.push_back(pEnt);
+				}
+				vChildren = it->second;
+			}
 			for (size_t c = 0; c < vChildren.size() && bRemove == false; ++c)
 			{
 				cSomaLuxEntity *pChild = vChildren[c];
