@@ -187,7 +187,8 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	if (aSetArgs)
 		aSetArgs(pCtx);
 	bool bOk = Execute(pCtx, [&] { return std::string(pType->GetName()) + "::" + asDecl; });
-	if (bOk && aGetResult)
+	// an exception reads as 0/false, like iScriptUserClassInterface::GetReturn*
+	if (aGetResult)
 		aGetResult(pCtx);
 	mpEngine->ReturnContext(pCtx);
 	return bOk;

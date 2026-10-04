@@ -559,6 +559,14 @@ void cSomaLuxInputHandler::LatchActions()
 	}
 }
 
+// cLuxInputHandler::ClearGuiInput: consumes the menu action edges
+void cSomaLuxInputHandler::ClearGuiInput()
+{
+	for (const cLuxAction &a : mvActions)
+		if (a.mlId >= 0 && a.mlId < kMaxActions && a.msName.compare(0, 4, "Menu") == 0)
+			mvPrevDown[a.mlId] = mvDown[a.mlId];
+}
+
 void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 {
 	if (abGameInput == false)

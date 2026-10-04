@@ -211,6 +211,7 @@ public:
 
 	// Per-frame action edges; HPL2's cAction::BecameTriggerd consumes the edge on the first call
 	void LatchActions();
+	void ClearGuiInput();
 	bool IsDown(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId]; }
 	bool BecameDown(int alId) { return IsDown(alId) && mvPrevDown[alId] == false; }
 	bool BecameUp(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId] == false && mvPrevDown[alId]; }

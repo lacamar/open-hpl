@@ -1807,6 +1807,9 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		if (p->mpImGui == NULL)
 			return false;
 		p->mbGuiDirty = true;
+		// cLuxGuiSet::SetIsFocused: the interact click must not also press a widget
+		if (cSomaLuxInputHandler::Get())
+			cSomaLuxInputHandler::Get()->ClearGuiInput();
 		if (b)
 			cSomaImGui::SetInputFocus(p->mpImGui, mouse);
 		else if (cSomaImGui::GetScriptInputFocus() == p->mpImGui)
