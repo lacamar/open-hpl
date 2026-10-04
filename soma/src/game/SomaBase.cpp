@@ -257,6 +257,25 @@ static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRe
 	aResp.Set("stubs", sOut);
 }
 
+// on=1 starts (and clears) collection, then report by inclusive time
+static void cSomaBase_HeadlessCmd_ScriptProfile(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaScriptRuntime *pRt = cSomaScriptRuntime::Get();
+	if (aReq.GetInt("on", 0))
+	{
+		pRt->mmapProfile.clear();
+		pRt->mbProfile = true;
+	}
+	std::vector<std::pair<std::pair<double, int>, std::string>> v;
+	for (auto &it : pRt->mmapProfile)
+		v.push_back(std::make_pair(it.second, it.first));
+	std::sort(v.rbegin(), v.rend());
+	tString sOut;
+	for (int i = 0; i < (int)v.size() && i < aReq.GetInt("n", 30); ++i)
+		sOut += cString::ToString((float)(v[i].first.first * 1000), 1) + "ms " + cString::ToString(v[i].first.second) + " " + v[i].second + "\n";
+	aResp.Set("profile", sOut);
+}
+
 static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -882,6 +901,7 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	tString sName = aReq.GetString("name", "");
 	bool bValue = aReq.GetBool("value", true);
 	if(sName == "occlusion_culling") pSettings->mbUseOcclusionCulling = bValue;
+	else if(sName == "delayed_occlusion") pSettings->mbUseDelayedOcclusionCulling = bValue;
 	else if(sName == "ssao") pSettings->mbSSAOActive = bValue;
 	else if(sName == "shadows") pSettings->mbRenderShadows = bValue;
 	else if(sName == "edge_smooth") pSettings->mbUseEdgeSmooth = bValue;
@@ -1031,6 +1051,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("nav_path", cSomaBase_HeadlessCmd_NavPath, this);
 		pCtrl->RegisterHandler("physics_stats", cSomaBase_HeadlessCmd_PhysicsStats, this);
 		pCtrl->RegisterHandler("stub_report", cSomaBase_HeadlessCmd_StubReport, this);
+		pCtrl->RegisterHandler("script_profile", cSomaBase_HeadlessCmd_ScriptProfile, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("dump_target", cSomaBase_HeadlessCmd_DumpTarget, this);
 		pCtrl->RegisterHandler("translucents", cSomaBase_HeadlessCmd_Translucents, this);
@@ -1264,6 +1285,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
 	// CHC occlusion culling reads queries back synchronously: 0.1 fps and everything culled on AGX
 	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
+	mpDebugViewport->GetRenderSettings()->mbUseDelayedOcclusionCulling = true;
 
 	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 	if (mbUseRealPlayer)

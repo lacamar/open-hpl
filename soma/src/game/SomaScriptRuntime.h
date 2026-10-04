@@ -35,6 +35,10 @@ public:
 
 	static cSomaScriptRuntime *Get() { return mpInstance; }
 
+	// inclusive seconds and calls per function, collected while mbProfile is set
+	bool mbProfile = false;
+	std::map<std::string, std::pair<double, int>> mmapProfile;
+
 private:
 	bool Execute(asIScriptContext *apCtx, const std::string &asWhat);
 	bool Execute(asIScriptContext *apCtx, const std::function<std::string()> &aWhat);

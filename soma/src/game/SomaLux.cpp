@@ -380,10 +380,21 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 		{
 			cSomaLuxEntity::cCollideCallback cb = pParent->mvCollideCallbacks[i];
 			bool bRemove = false;
-			for (size_t c = 0; c < mvEntities.size() && bRemove == false; ++c)
+			std::vector<cSomaLuxEntity *> vChildren;
+			if (cb.msChild.find('*') == tString::npos)
 			{
-				cSomaLuxEntity *pChild = mvEntities[c];
-				if (pChild == pParent || pChild->mbActive == false || SomaWildcardMatch(cb.msChild, pChild->msName) == false)
+				auto it = mmapEntities.find(cb.msChild);
+				if (it != mmapEntities.end())
+					vChildren.push_back(it->second);
+			}
+			else
+				for (cSomaLuxEntity *pEnt : mvEntities)
+					if (SomaWildcardMatch(cb.msChild, pEnt->msName))
+						vChildren.push_back(pEnt);
+			for (size_t c = 0; c < vChildren.size() && bRemove == false; ++c)
+			{
+				cSomaLuxEntity *pChild = vChildren[c];
+				if (pChild == pParent || pChild->mbActive == false)
 					continue;
 				auto key = std::make_tuple(pParent, pChild, cb.msFunc);
 				bool bWas = msetColliding.count(key) > 0;

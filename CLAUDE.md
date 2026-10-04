@@ -105,7 +105,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation (HDR), 10-12 shadow maps high/med/low |
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
-| `set_render_setting name= value=` | A/B `occlusion_culling`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
+| `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
 | `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10+ shadow maps, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
 | `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel (ints) or screen point (0-1 with a dot) |
@@ -120,6 +120,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `script_exec code= [module=]` | compiles and runs AngelScript against the live API (or in the script file matching `module`); `__print(s)` returns output |
 | `script_vars [name=]` | properties of a script object (e.g. `LuxPlayer`); no name lists objects |
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
+| `script_profile [on=1] [n=30]` | script calls by inclusive time; `on=1` starts/clears collection |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |
 | `body_contacts name=` | bodies overlapping an entity's bodies (stuck props) |
 | `raycast x= y= z= x2= y2= z2=` | physics hits along a segment |

@@ -9,6 +9,7 @@
 #include "system/LowLevelSystem.h"
 
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <unistd.h>
 #include <vector>
@@ -142,7 +143,14 @@ bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::string &asW
 
 bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::function<std::string()> &aWhat)
 {
+	auto t0 = std::chrono::steady_clock::now();
 	int r = apCtx->Execute();
+	if (mbProfile)
+	{
+		auto &e = mmapProfile[aWhat()];
+		e.first += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+		++e.second;
+	}
 	if (r == asEXECUTION_FINISHED)
 		return true;
 	std::string asWhat = aWhat();
