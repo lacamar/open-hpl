@@ -1293,7 +1293,36 @@ static cSomaOBB AABBToOBB(const cVector3f &avMin, const cVector3f &avMax)
 	return box;
 }
 
-static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut)
+static cSomaOBB MatrixOBB(const cMatrixf &am, const cVector3f &avMin, const cVector3f &avMax)
+{
+	cSomaOBB box;
+	box.mvCenter = cMath::MatrixMul(am, (avMin + avMax) * 0.5f);
+	for (int i = 0; i < 3; ++i)
+	{
+		cVector3f vCol(am.m[0][i], am.m[1][i], am.m[2][i]);
+		float fLen = vCol.Length();
+		box.mvAxis[i] = fLen > 0 ? vCol / fLen : cVector3f(i == 0, i == 1, i == 2);
+		box.mvHalf.v[i] = (avMax.v[i] - avMin.v[i]) * 0.5f * (fLen > 0 ? fLen : 1);
+	}
+	return box;
+}
+
+// iLuxCollideCallbackContainer::CheckEntityCollision tests the body shapes, not their AABBs
+static void ShapeBoxes(iCollideShape *apShape, const cMatrixf &am, std::vector<cSomaOBB> &avOut)
+{
+	if (apShape->GetType() == eCollideShapeType_Compound)
+	{
+		for (int i = 0; i < apShape->GetSubShapeNum(); ++i)
+			ShapeBoxes(apShape->GetSubShape(i), am, avOut);
+		return;
+	}
+	if (apShape->GetType() == eCollideShapeType_Null)
+		return;
+	cBoundingVolume &bv = apShape->GetBoundingVolume();
+	avOut.push_back(MatrixOBB(cMath::MatrixMul(am, apShape->GetOffset()), bv.GetLocalMin(), bv.GetLocalMax()));
+}
+
+static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut, bool abShapes = true)
 {
 	if (apEnt->meType == eSomaLuxEntityType_Player)
 	{
@@ -1304,23 +1333,15 @@ static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut)
 	}
 	if (apEnt->meType == eSomaLuxEntityType_Area || apEnt->meType == eSomaLuxEntityType_LiquidArea)
 	{
-		cMatrixf m = apEnt->GetMatrix();
-		cSomaOBB box;
-		box.mvCenter = m.GetTranslation();
-		cVector3f vCols[3];
-	for (int i = 0; i < 3; ++i)
-		vCols[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
-		for (int i = 0; i < 3; ++i)
-		{
-			float fLen = vCols[i].Length();
-			box.mvAxis[i] = fLen > 0 ? vCols[i] / fLen : cVector3f(i == 0, i == 1, i == 2);
-			box.mvHalf.v[i] = apEnt->mvSize.v[i] * 0.5f * (fLen > 0 ? fLen : 1);
-		}
-		avOut.push_back(box);
+		avOut.push_back(MatrixOBB(apEnt->GetMatrix(), apEnt->mvSize * -0.5f, apEnt->mvSize * 0.5f));
 		return;
 	}
 	for (iPhysicsBody *pBody : apEnt->mvBodies)
-		if (pBody->IsActive())
+		if (pBody->IsActive() == false)
+			continue;
+		else if (abShapes && pBody->GetShape())
+			ShapeBoxes(pBody->GetShape(), pBody->GetLocalMatrix(), avOut);
+		else
 			avOut.push_back(AABBToOBB(pBody->GetBoundingVolume()->GetMin(), pBody->GetBoundingVolume()->GetMax()));
 	if (avOut.empty() && apEnt->mpMesh)
 		avOut.push_back(AABBToOBB(apEnt->mpMesh->GetBoundingVolume()->GetMin(), apEnt->mpMesh->GetBoundingVolume()->GetMax()));
@@ -1577,7 +1598,7 @@ bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxE
 bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam)
 {
 	std::vector<cSomaOBB> vBoxes;
-	EntityBoxes(apEnt, vBoxes);
+	EntityBoxes(apEnt, vBoxes, false);
 	cVector3f vCam = apCam->GetPosition();
 	float fMax = apEnt->mfLookAtMaxDistance > 0 ? apEnt->mfLookAtMaxDistance : 1000.0f, t;
 	for (const cSomaOBB &b : vBoxes)

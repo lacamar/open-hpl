@@ -378,7 +378,7 @@ def cmd_entities(a):
             'cVector3f c = cLux_GetPlayer().GetCamera().GetPosition();'
             'for(uint i = 0; i < v.length(); ++i) { iLuxEntity@ e = v[i]; cVector3f p = e.GetPosition();'
             'float d = cMath_Vector3Dist(p, c); if(d > %f) continue;'
-            '__print(e.GetName() + "=" + (e.IsActive() ? "on " : "off ") + e.GetClassName() + " d=" + d'
+            '__print(e.GetName() + "=" + (e.IsActive() ? "on " : "off ") + e.GetClassName() + " d=" + d + " @" + p.x + "," + p.y + "," + p.z'
             ' + (e.GetInteractionDisabled() ? " nointeract" : "")); }') % (a.pattern, a.near)
     for l in sorted(ex(code).splitlines(), key=lambda l: float(re.search(r"d=([\d.e+-]+)", l).group(1)) if "d=" in l else 0):
         print(l)
