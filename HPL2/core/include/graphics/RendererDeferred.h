@@ -207,6 +207,7 @@ namespace hpl {
 
 	private:
 		void DrawAccumulationQuad();
+		void SetScreenPositionVars(iGpuProgram *apProgram);
 		void CopyToFrameBuffer();
 		void CopyAccumTo(iFrameBuffer *apTarget);
 		void SetupRenderList();

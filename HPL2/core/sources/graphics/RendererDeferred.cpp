@@ -1223,6 +1223,16 @@ namespace hpl {
 		DrawQuad(cVector2f(0,0),1, vUvMin, vUvMax, true);
 	}
 
+	// px_vPosition is gl_FragCoord in the whole G-buffer; a smaller target sits at its top left
+	void cRendererDeferred::SetScreenPositionVars(iGpuProgram *apProgram)
+	{
+		iTexture *pGBuffer = GetGbufferTexture(0);
+		cVector2f vScale((mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x, (mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y);
+		cVector2f vOrigin((float)mpCurrentRenderTarget->mvPos.x, (float)(pGBuffer->GetHeight() - mvRenderTargetSize.y - mpCurrentRenderTarget->mvPos.y));
+		apProgram->SetVec4f(kVar_avScreenToFarPlane, vScale.x, vScale.y, mfFarLeft - vOrigin.x*vScale.x, mfFarTop - vOrigin.y*vScale.y);
+		apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)pGBuffer->GetWidth(), 1.0f / (float)pGBuffer->GetHeight());
+	}
+
 	void cRendererDeferred::CopyToFrameBuffer()
 	{
 		if(mpCurrentSettings->mbIsReflection) return;
@@ -2130,13 +2140,7 @@ namespace hpl {
 		{
 			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 
-			pProgram->SetVec4f(kVar_avScreenToFarPlane,
-								(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-								(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-								mfFarLeft, mfFarTop);
-			pProgram->SetVec2f(kVar_avInvScreenSize,
-								1.0f / (float)mvRenderTargetSize.x,
-								1.0f / (float)mvRenderTargetSize.y);
+			SetScreenPositionVars(pProgram);
 			if(pLight->HasMaskBox())
 			{
 				pProgram->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
@@ -3292,11 +3296,7 @@ namespace hpl {
 			const cColor &sky = pBox->GetAmbientColorSky();
 			const cColor &ground = pBox->GetAmbientColorGround();
 			pProg->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			pProg->SetVec4f(kVar_avScreenToFarPlane,
-							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-							mfFarLeft, mfFarTop);
-			pProg->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)mvRenderTargetSize.x, 1.0f / (float)mvRenderTargetSize.y);
+			SetScreenPositionVars(pProg);
 			pProg->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
 			pProg->SetVec3f(kVar_avAmbientColorSky, sky.r*diffuse.r, sky.g*diffuse.g, sky.b*diffuse.b);
 			pProg->SetVec3f(kVar_avAmbientColorGround, ground.r*diffuse.r, ground.g*diffuse.g, ground.b*diffuse.b);
@@ -3354,11 +3354,7 @@ namespace hpl {
 
 		SetProgram(pProgram);
 		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-		pProgram->SetVec4f(kVar_avScreenToFarPlane,
-							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-							mfFarLeft, mfFarTop);
-		pProgram->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)mvRenderTargetSize.x, 1.0f / (float)mvRenderTargetSize.y);
+		SetScreenPositionVars(pProgram);
 
 		float fBrightness = pLight->GetBrightness();
 		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
@@ -3930,7 +3926,7 @@ namespace hpl {
 		mpDofBlurProgram->SetVec2f(kVar_avOffsetMul, cVector2f(0, -1.0f / mvScreenSizeFloat.y));
 		pTexB->SetFilter(eTextureFilter_Nearest);
 		SetTexture(0, pTexB);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		DrawAccumulationQuad();
 
 		SetTexture(0, NULL);
 		SetTexture(1, NULL);
@@ -4007,13 +4003,7 @@ namespace hpl {
 		pProgram->SetVec2f(kVar_avFogStartAndLength, vStartAndLength);
 		pProgram->SetColor4f(kVar_avFogColor, fogColor);
 		pProgram->SetFloat(kVar_afFalloffExp, fFalloff);
-		pProgram->SetVec4f(kVar_avScreenToFarPlane,
-							(mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x,
-							(mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y,
-							mfFarLeft, mfFarTop);
-		pProgram->SetVec2f(kVar_avInvScreenSize,
-							1.0f / (float)mvRenderTargetSize.x,
-							1.0f / (float)mvRenderTargetSize.y);
+		SetScreenPositionVars(pProgram);
 		pProgram->SetMatrixf(kVar_a_mtxNoise, cMath::MatrixMul(cMath::MatrixTranslate(FogNoiseTurbulence(vTurb, fNoiseSize, GetTimeCount())), m_mtxInvView));
 		if(alFlags & eFeature_FogArea_Noise)
 		{

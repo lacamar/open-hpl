@@ -344,7 +344,6 @@ static void CreateCameraTexture(const tString &asName, const cVector2l &avSize, 
 	pSettings->mbUseEdgeSmooth = false;
 	pSettings->mbUseFxaa = false;
 	pSettings->mbRenderWorldReflection = false;
-	pSettings->mbRenderWorldFog = false;
 	pSettings->mbUseDelayedOcclusionCulling = true;
 	p->mpViewport->AddViewportCallback(p);
 	gmapCameraTextures[asName] = p;
