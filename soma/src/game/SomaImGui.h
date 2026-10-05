@@ -76,7 +76,23 @@ public:
 		cColor mCol = cColor(1, 1);
 		bool mbSetInt = false, mbSetFloat = false, mbSetVec = false, mbSetCol = false;
 		bool mbInFocus = false;
+		int mlDefInt = 0;
+		float mfDefFloat = 0;
+		bool mbDefInt = false, mbDefFloat = false;
 	};
+	// cImGui::GetDefaultOrCurrent*: a widget's default re-applies whenever the caller changes it
+	static int DefaultOrCurrent(cState &s, int alDef)
+	{
+		if (s.mbSetInt == false || (s.mbDefInt && s.mlDefInt != alDef)) s.mlInt = alDef, s.mbSetInt = true;
+		s.mlDefInt = alDef, s.mbDefInt = true;
+		return s.mlInt;
+	}
+	static float DefaultOrCurrent(cState &s, float afDef)
+	{
+		if (s.mbSetFloat == false || (s.mbDefFloat && s.mfDefFloat != afDef)) s.mfFloat = afDef, s.mbSetFloat = true;
+		s.mfDefFloat = afDef, s.mbDefFloat = true;
+		return s.mfFloat;
+	}
 	std::map<uint64_t, cState> mmapStates;
 	cState &State(uint64_t alId) { return mmapStates[alId]; }
 	template <class F> F GetOrSetState(uint64_t alId, F cState::*apField, bool cState::*apSet, const F &aDefault)

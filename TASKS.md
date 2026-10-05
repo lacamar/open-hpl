@@ -17,7 +17,6 @@ Open:
 - Slow map loads: 02_05 22 -> 9.5 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), InitEngine
   1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
   still ~10% of load.
-- Treemail list entries overlap.
 - Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
 - Force fields (`cWorld::CreateForceField`) stubbed.

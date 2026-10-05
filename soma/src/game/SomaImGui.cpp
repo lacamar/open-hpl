@@ -925,11 +925,7 @@ float cSomaImGui::DoSlider(const tString &asName, float afDefault, float afMin, 
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	cState &st = State(Id(asName));
-	if (st.mbSetFloat == false)
-	{
-		st.mfFloat = afDefault;
-		st.mbSetFloat = true;
-	}
+	DefaultOrCurrent(st, afDefault);
 	bool bIn = WidgetBase(Id(asName), avPos, avSize, st);
 	bool bOver = mPrev.mbMouseOver;
 	float fOld = st.mfFloat;
@@ -972,11 +968,7 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	cState &st = State(Id(asName));
-	if (st.mbSetInt == false)
-	{
-		st.mlInt = abDefault;
-		st.mbSetInt = true;
-	}
+	DefaultOrCurrent(st, (int)abDefault);
 	bool bOver = WidgetBase(Id(asName), avPos, avSize, st);
 	bool bToggled = bOver && BecamePressed(true, true);
 	if (bToggled)
@@ -995,11 +987,7 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 {
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	cState &st = State(Id(asName));
-	if (st.mbSetInt == false)
-	{
-		st.mlInt = alDefault;
-		st.mbSetInt = true;
-	}
+	DefaultOrCurrent(st, alDefault);
 	int lNum = (int)mvItems.size();
 	int lOld = st.mlInt;
 	cVector2f vArrow = F<cVector2f>(apData, kMultiArrowSize);
@@ -1339,7 +1327,7 @@ static void DrawScreenText(I *p, float afTimeStep, D aLabel, V3 avPos, float afL
 static int SomaMultiToggle(I *p, Str n, int def, asUINT alCols, V2 spacing, const void *apData, V3 pos, V2 size)
 {
 	auto &st = p->State(Id(n));
-	if (st.mbSetInt == false) { st.mlInt = def; st.mbSetInt = true; }
+	cSomaImGui::DefaultOrCurrent(st, def);
 	std::vector<tWString> vItems = p->mvItems;
 	p->mvItems.clear();
 	bool bUpdated = false;
@@ -1789,13 +1777,13 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cImGuiButtonData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
 				+[](I *p, Str n, WStr t, bool def, D d, V3 pos, V2 size) {
 					auto &st = p->State(Id(n));
-					if (st.mbSetInt == false) { st.mlInt = def; st.mbSetInt = true; }
+					cSomaImGui::DefaultOrCurrent(st, (int)def);
 					return p->DoButton(n, t, P(d), pos, size, 1);
 				});
 	SOMA_METHOD(e, T, "bool DoToggleButton(const tString&in asName,const tWString&in asText, bool abDefaultChecked, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
 				+[](I *p, Str n, WStr t, bool def, V3 pos, V2 size) {
 					auto &st = p->State(Id(n));
-					if (st.mbSetInt == false) { st.mlInt = def; st.mbSetInt = true; }
+					cSomaImGui::DefaultOrCurrent(st, (int)def);
 					return p->DoButton(n, t, p->GetDefault("cImGuiButtonData"), pos, size, 1);
 				});
 	SOMA_METHOD(e, T, "float DoSliderHorizontal(const tString&in asName, float afDefaultValue, float afMin, float afMax, float afStepSize, const cImGuiSliderData &in aData, const cVector3f&in avPos=0, const cVector2f&in avSize=-1)",
