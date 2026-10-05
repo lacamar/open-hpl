@@ -724,4 +724,6 @@ void ConfigureSomaScriptEngine(asIScriptEngine *apEngine)
 	apEngine->SetEngineProperty(asEP_USE_CHARACTER_LITERALS, 1);
 	apEngine->SetEngineProperty(asEP_ALLOW_UNSAFE_REFERENCES, 1);
 	apEngine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 3);
+	// AS 2.28 (official): members exist before the constructor body (CreditsHandler's `this = cCreditsStyle();`)
+	apEngine->SetEngineProperty(asEP_MEMBER_INIT_MODE, 0);
 }

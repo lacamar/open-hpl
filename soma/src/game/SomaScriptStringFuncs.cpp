@@ -4,6 +4,7 @@
 
 #include "impl/scriptarray.h"
 #include "math/MathTypes.h"
+#include "resources/LanguageFile.h"
 #include "system/String.h"
 
 #include <cstdio>
@@ -90,6 +91,7 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "int cString_GetLastStringPosW(const tWString&in aString, const tWString&in aChar)", +[](const tWString &s, const tWString &c) { return FindStr(s, c, true); });
 	SOMA_FUNC(e, "int cString_CountCharsInString(const tString&in aString, const tString&in aChar)",
 			  +[](const tString &s, const tString &c) { int n = 0; for (size_t p = s.find(c); !c.empty() && p != tString::npos; p = s.find(c, p + c.size())) ++n; return n; });
+	SOMA_FUNC(e, "tWString cString_GetDecodedString(const tString&in asStr)", +[](const tString &s) { return GetDecodedString(s); });
 	SOMA_FUNC(e, "uint cString_GetHash(const tString&in asStr)", +[](const tString &s) { unsigned int h = 5381; for (char c : s) h = h * 33 + (unsigned char)c; return h; });
 	SOMA_FUNC(e, "tString cString_GetNumericSuffix(const tString&in asStr)", +[](const tString &s) { size_t p = s.find_last_not_of("0123456789"); return p == tString::npos ? s : s.substr(p + 1); });
 	SOMA_FUNC(e, "int cString_GetNumericSuffixInt(const tString&in aString, int alDefault=0)",

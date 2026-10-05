@@ -35,6 +35,77 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	tWString GetDecodedString(const tString &asString)
+	{
+		tWString wsText;
+
+		//if(sCatName == "TEST") Log("String: '%s' %d\n",asString.c_str(),asString.size());
+
+		for(size_t i=0; i< asString.length(); ++i)
+		{
+			unsigned char c = asString[i];
+			if(c=='[')
+			{
+				bool bFoundCommand = true;
+				tString sCommand = "";
+				int lCount =1;
+
+				while(asString[i+lCount] != ']' && i+lCount<asString.length() && lCount < 16)
+				{
+					sCommand += asString[i+lCount];
+					lCount++;
+				}
+
+				if(sCommand=="br")
+				{
+					wsText += _W('\n');
+				}
+				else if(sCommand[0]=='u')
+				{
+					int lNum = cString::ToInt(sCommand.substr(1).c_str(),0);	
+					wsText += (wchar_t)lNum;
+				}
+				else
+				{
+					bFoundCommand = false;
+				}
+
+				//Go forward or add [ to string
+				if(bFoundCommand)
+				{
+					i += lCount;
+				}
+				else
+				{
+					wsText += asString[i];
+				}
+			}
+			//Decode UTF-8!
+			else if(c >= 128)
+			{
+				unsigned char c2 = asString[i+1];
+
+				int lNum = c & 0x1f; // c AND 0001 1111
+				lNum = lNum << 6;
+				lNum = lNum | (c2 & 0x3f);// c AND 0011 1111
+
+				wsText += (wchar_t)lNum;
+				++i;
+				//Log(" %d: (%x %x) -> %d\n",i,c,c2,(wchar_t)lNum);
+			}
+			else
+			{
+				//if(sCatName == "TEST") Log(" %d: %c | %d\n",i,c,c);
+				wsText += c;
+				//if(sCatName == "TEST") Log(" '%s'\n",cString::To8Char(wsText).c_str());
+			}
+		}
+
+		return wsText;
+	}
+
+	//-----------------------------------------------------------------------
+
 	cLanguageFile::cLanguageFile(cResources *apResources)
 	{
 		mpResources = apResources;
@@ -176,71 +247,7 @@ namespace hpl {
 						//pEntry->msText = pTextNode->Value();
 						//pEntry->msText = cString::ReplaceStringTo(pEntry->msText,"[br]","\n");
 
-						tString sString = pTextNode->Value();
-						pEntry->mwsText = _W("");
-
-						//if(sCatName == "TEST") Log("String: '%s' %d\n",sString.c_str(),sString.size());
-
-						for(size_t i=0; i< sString.length(); ++i)
-						{
-							unsigned char c = sString[i];
-							if(c=='[')
-							{
-								bool bFoundCommand = true;
-								tString sCommand = "";
-								int lCount =1;
-
-								while(sString[i+lCount] != ']' && i+lCount<sString.length() && lCount < 16)
-								{
-									sCommand += sString[i+lCount];
-									lCount++;
-								}
-
-								if(sCommand=="br")
-								{
-									pEntry->mwsText += _W('\n');
-								}
-								else if(sCommand[0]=='u')
-								{
-									int lNum = cString::ToInt(sCommand.substr(1).c_str(),0);	
-									pEntry->mwsText += (wchar_t)lNum;
-								}
-								else
-								{
-									bFoundCommand = false;
-								}
-
-								//Go forward or add [ to string
-								if(bFoundCommand)
-								{
-									i += lCount;
-								}
-								else
-								{
-									pEntry->mwsText += sString[i];
-								}
-							}
-							//Decode UTF-8!
-							else if(c >= 128)
-							{
-								unsigned char c2 = sString[i+1];
-
-								int lNum = c & 0x1f; // c AND 0001 1111
-								lNum = lNum << 6;
-								lNum = lNum | (c2 & 0x3f);// c AND 0011 1111
-
-								pEntry->mwsText += (wchar_t)lNum;
-								++i;
-								//Log(" %d: (%x %x) -> %d\n",i,c,c2,(wchar_t)lNum);
-							}
-							else
-							{
-								//if(sCatName == "TEST") Log(" %d: %c | %d\n",i,c,c);
-								pEntry->mwsText += c;
-								//if(sCatName == "TEST") Log(" '%s'\n",cString::To8Char(pEntry->mwsText).c_str());
-							}
-						}
-
+						pEntry->mwsText = GetDecodedString(pTextNode->Value());
 					}
 				}
 				//////////

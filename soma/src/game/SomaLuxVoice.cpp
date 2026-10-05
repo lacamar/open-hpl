@@ -1,12 +1,15 @@
 #include "SomaLuxVoice.h"
 #include "SomaBase.h"
 #include "SomaLux.h"
+#include "SomaImGui.h"
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
 #include <fstream>
 #include <sstream>
+
+cSomaImGui *SomaHudImGui();
 
 cSomaLuxVoiceHandler *cSomaLuxVoiceHandler::mpInstance = NULL;
 
@@ -443,8 +446,14 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 
 void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 {
+	// cLuxFadeEffect::OnDraw: on the HUD set at z 0.9, so HUD ImGui (credits) draws over it
 	if (mfFadeAlpha > 0 && cSomaLuxMap::GetCurrent())
-		mpGuiSet->DrawGfx(mpFadeGfx, cVector3f(0, 0, 1), mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat(), cColor(0, mfFadeAlpha));
+	{
+		cGuiSet *pHud = SomaHudImGui()->GetSet();
+		cVector2f vSize = pHud->GetVirtualSize();
+		cVector2f vPos = pHud->GetVirtualSizeOffset() * -1.0f - vSize * 0.125f;
+		pHud->DrawGfx(mpFadeGfx, cVector3f(vPos.x, vPos.y, 0.9f), vSize * 1.25f, cColor(0, mfFadeAlpha));
+	}
 	if (mpFont == NULL || (gpSomaBase && gpSomaBase->GetConfig()->mbShowSubtitles == false))
 		return;
 	cVector2f vScreen = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();

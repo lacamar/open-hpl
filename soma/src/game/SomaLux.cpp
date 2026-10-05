@@ -853,6 +853,31 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterIterator<cFogAreaIterator, cFogArea *>(e, "cFogAreaIterator", "cFogArea");
 	SomaRegisterIterator<cGuiSetEntityIterator, cGuiSetEntity *>(e, "cGuiSetEntityIterator", "cGuiSetEntity");
 
+	SomaRegisterIterator<cXmlNodeListIterator, iXmlNode *>(e, "cXmlNodeListIterator", "iXmlNode");
+	SOMA_METHOD(e, "cXmlText", "const tString& GetValue()", +[](iXmlNode *p) -> const tString & { return (*static_cast<cXmlElement *>(p)->GetAttributeMap())["_Text"]; });
+	for (const char *pType : {"iXmlNode", "cXmlElement", "cXmlText", "iXmlDocument"})
+	{
+		SOMA_METHOD_NEW(e, pType, "const tString& GetValue()", +[](iXmlNode *p) -> const tString & { return p->GetValue(); });
+		SOMA_METHOD(e, pType, "cXmlElement@ ToElement()", +[](iXmlNode *p) { return p->ToElement(); });
+		SOMA_METHOD(e, pType, "cXmlElement@ GetFirstElement()", +[](iXmlNode *p) { return p->GetFirstElement(); });
+		SOMA_METHOD(e, pType, "cXmlElement@ GetFirstElement(const tString&in asName)", +[](iXmlNode *p, const tString &n) { return p->GetFirstElement(n); });
+		SOMA_METHOD(e, pType, "cXmlNodeListIterator@ GetChildIterator()", +[](iXmlNode *p) { return SomaPooledIterator(p->GetChildIterator()); });
+		// HPL2 keeps element text in the "_Text" attribute; the element stands in for its text node
+		SOMA_METHOD(e, pType, "cXmlText@ GetFirstText()", +[](iXmlNode *p) -> iXmlNode * {
+			cXmlElement *pElem = p->ToElement();
+			return pElem && pElem->GetAttribute("_Text") ? pElem : NULL;
+		});
+	}
+	for (const char *pType : {"cXmlElement", "iXmlDocument"})
+	{
+		SOMA_METHOD(e, pType, "tString GetAttributeString(const tString&in asName, const tString&in asDefault)", +[](cXmlElement *p, const tString &n, const tString &d) { return p->GetAttributeString(n, d); });
+		SOMA_METHOD(e, pType, "float GetAttributeFloat(const tString&in asName, float afDefault)", +[](cXmlElement *p, const tString &n, float d) { return p->GetAttributeFloat(n, d); });
+		SOMA_METHOD(e, pType, "int GetAttributeInt(const tString&in asName, int alDefault)", +[](cXmlElement *p, const tString &n, int d) { return p->GetAttributeInt(n, d); });
+		SOMA_METHOD(e, pType, "bool GetAttributeBool(const tString&in asName, bool abDefault)", +[](cXmlElement *p, const tString &n, bool d) { return p->GetAttributeBool(n, d); });
+	}
+	SOMA_FUNC(e, "iXmlDocument@ cResources_LoadXmlDocument(const tString&in asFile)", +[](const tString &f) { return gpSomaBase->mpEngine->GetResources()->LoadXmlDocument(f); });
+	SOMA_FUNC(e, "void cResources_DestroyXmlDocument(iXmlDocument@ apDoc)", +[](iXmlDocument *d) { if (d) gpSomaBase->mpEngine->GetResources()->DestroyXmlDocument(d); });
+
 	SOMA_METHOD(e, "cWorld", "cLightListIterator@ GetLightIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetLightIterator()); });
 	// ponytail: HPL2 rope is a camera-facing strip, no eRopeType_3D tube with ring segments
 	SOMA_METHOD(e, "cWorld", "iRopeEntity@ CreateRopeEntity(const tString&in asName, eRopeType aRopeType, iPhysicsRope @apRope, int alMaxSegments, int alRingSegments = 3)",

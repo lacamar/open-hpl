@@ -28,6 +28,8 @@ namespace hpl {
 
 	class cResources;
 
+	tWString GetDecodedString(const tString &asString);
+
 	//--------------------------------
 
 	class cLanguageEntry

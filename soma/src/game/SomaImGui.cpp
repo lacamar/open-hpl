@@ -597,8 +597,13 @@ void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool a
 	cLayout &l = mvLayouts.back();
 	if (l.mlType == 3)
 		l.mvCursor.y = avPos.y + avSize.y + l.mvSpacing.y;
-	else if (l.mlType == 1 || l.mlType == 2)
+	else if (l.mlType == 1)
 		l.mvCursor.x = avPos.x + avSize.x + l.mvSpacing.x;
+	else if (l.mlType == 2)
+	{
+		if (l.mvSpacing.x > 0.1f)
+			l.mvCursor.x += std::ceil(avSize.x / l.mvSpacing.x) * l.mvSpacing.x;
+	}
 	else
 	{
 		l.mvCursor.x = avPos.x + avSize.x + l.mvSpacing.x;
