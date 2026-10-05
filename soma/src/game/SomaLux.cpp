@@ -545,6 +545,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		}
 		cMatrixf mtxRel;
 		float fYawRel = 0;
+		int lActiveSize = 0;
 		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
 		gbMapChangeIsTransfer = sTransfer != "";
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
@@ -555,6 +556,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
 			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
 			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
+			lActiveSize = pBody->GetActiveSize();
 		}
 		gsPreloadMap.clear();
 		if (gpSomaBase->GetSplash())
@@ -564,8 +566,12 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
+			{
 				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
 									  SomaStartYaw(pNew->GetMatrix()) + fYawRel);
+				// iCharacterBody::CopyFromBodySettings: the transferred player stays crouched
+				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
+			}
 			else
 				Warning("SOMA script: transfer area '%s' not found in %s\n", sTransfer.c_str(), sMap.c_str());
 		}
@@ -777,6 +783,8 @@ bool SomaStartPosCrouching(const tString &asName)
 	cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(asName) : NULL;
 	return pEnt && pEnt->mInstanceVars.GetVarBool("Crouching", false);
 }
+
+tString &SomaPreloadMap() { return gsPreloadMap; }
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart)
 {

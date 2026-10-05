@@ -23,12 +23,13 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVB"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVC"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 18;
+	int glPendingVersion = 19;
+	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
@@ -1214,6 +1215,8 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 		o.Str(sMap);
 	o.Str(SomaSerializeGlobalVars());
 	o.Pod(gbExplorationMode);
+	// cLuxSaveHandler: a running map stream resumes after load
+	o.Str(SomaPreloadMap());
 	cSomaSaveState::WriteWorld(o);
 
 	tWString sPath = GetSaveDir() + cString::GetFileNameW(asFile);
@@ -1247,7 +1250,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 18)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 19)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -1260,6 +1263,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 		setVisited.insert(in.Str());
 	tString sVars = in.Str();
 	bool bExploration = lVersion == 2 ? false : in.Pod<bool>();
+	gsPendingPreload = lVersion >= 19 ? in.Str() : "";
 	if (in.ok == false || sMap.empty())
 		return false;
 
@@ -1292,6 +1296,7 @@ bool cSomaSaveHandler::ApplyPendingState()
 	std::string sState;
 	sState.swap(gsPendingState);
 	cIn in(sState);
+	SomaPreloadMap() = gsPendingPreload;
 	cSomaSaveState::ReadWorld(in);
 	if (in.ok == false)
 		Warning("SOMA save: saved state is truncated\n");
