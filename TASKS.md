@@ -20,8 +20,10 @@ Open:
 - Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
 - 00_03 server room ~2x brighter than the ref.
-- Official colour space is hardware sRGB (exact curve, sRGB textures); ours is `pow 2.2` in
-  shaders, darker in deep shadows.
+- Colour space: exact sRGB decode in shaders (official mode 3 = hardware sRGB textures). Gui
+  screens render to an sRGB RT with `base_*.hpsl` (linear blending). Main-screen gui still blends
+  in gamma space (official enables `FRAMEBUFFER_SRGB` on the backbuffer).
+- 04_01 elevator: ControlsLight red halo larger than the ref; cyan-lit gap right of the cage.
 
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 

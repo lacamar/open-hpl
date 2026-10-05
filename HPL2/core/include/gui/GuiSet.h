@@ -40,6 +40,7 @@ namespace hpl {
 	class cGui;
 	class cGuiSkin;
 	class iGuiMaterial;
+	class iGpuProgram;
 	class iGuiPopUp;
 	class iWidget;
 	
@@ -440,6 +441,7 @@ namespace hpl {
 		bool GetCullBackface(){ return mbCullBackface;}
 
 		void SetFlipScreenY(bool abX){ mbFlipScreenY = abX;}
+		void SetPrograms(iGpuProgram *apTextured, iGpuProgram *apFlat){ mpPrograms[0] = apTextured; mpPrograms[1] = apFlat;}
 
 		void Set3DTransform(const cMatrixf& a_mtxTransform);
 		const cMatrixf& Get3DTransform(){ return m_mtx3DTransform;}
@@ -564,6 +566,7 @@ namespace hpl {
 
 		bool mbCullBackface;
 		bool mbFlipScreenY = false;
+		iGpuProgram *mpPrograms[2] = {NULL, NULL};
 		bool mbIs3D;
 		bool mbRendersBeforePostEffects;
 		cVector3f mv3DSize;

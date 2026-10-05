@@ -142,6 +142,8 @@ namespace hpl {
 		{ "deferred_illumination_frag.glsl",	"deferred_illumination_solid_frag.hpsl" },
 		{ "deferred_gbuffer_skybox_frag.glsl",	"deferred_skybox_frag.hpsl" },
 		{ "deferred_decal_frag.glsl",			"deferred_gbuffer_decal_frag.hpsl" },
+		{ "gui_vtx.glsl",						"base_vtx.hpsl" },
+		{ "gui_frag.glsl",						"base_frag.hpsl" },
 	};
 
 	static const char* const gvHpslSourcePatches[][3] = {
@@ -193,6 +195,8 @@ namespace hpl {
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
 		  "\t\t\t\tvSpecular *= clamp((0.6 - max(abs(vSourceUV[0].x - 0.5), abs(vSourceUV[0].y - 0.5))) * 10.0, 0.0, 1.0);" },
+		{ "base_frag.hpsl", "sample(aDiffuseMap, px_vTexCoord0.xy);",
+		  "sample(aDiffuseMap, px_vTexCoord0.xy);\n\t\t@ifdef UseSRGBDiffuse\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);\n\t\t@endif" },
 		{ "deferred_transparent_frag.hpsl",
 		  "\t@endif\n\n\tcVector4f vFinalColor;",
 		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },
@@ -209,6 +213,9 @@ namespace hpl {
 			if(lPos != tString::npos) asData.replace(lPos, sOld.size(), gvHpslSourceReplacements[i][2]);
 			else Warning("HPSL replacement anchor not found in %s\n", asFile.c_str());
 		}
+		// official hardware sRGB mode decodes cube maps with GammaCorrectCubeMaps (pow 2.2)
+		static const std::regex rxCubeGamma("@ifdef UseLinearColorSpaceCorrection\\s*\\n[^\\n]*GammaToLinearCorrection[^\\n]*\\n\\s*@elseif GammaCorrectCubeMaps");
+		asData = std::regex_replace(asData, rxCubeGamma, "@ifdef UseLinearColorSpaceCorrection");
 		for(size_t i=0; i<sizeof(gvHpslSourcePatches)/sizeof(gvHpslSourcePatches[0]); ++i)
 		{
 			if(asFile != gvHpslSourcePatches[i][0]) continue;

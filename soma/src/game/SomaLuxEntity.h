@@ -162,6 +162,7 @@ public:
 
 	void SetActive(bool abX);
 	void SetStaticPhysics(bool abX);
+	void MakeDynamic();
 	bool mbStaticPhysics = false;
 	std::vector<float> mvDynamicMass;
 	void SetEffectsActive(bool abX, bool abFade = false);
@@ -247,6 +248,9 @@ public:
 	int mlGuiDraws = 0;
 	int mlGuiCalls = 0;
 	bool mbGuiActive = true;
+	// cGuiSetEntity::FadeIn/FadeOut
+	float mfGuiFade = 1, mfGuiFadeSpeed = 0;
+	void SetGuiActive(bool abX, float afFadeTime);
 	// cLuxProp::OnVariableUpdate gating of unfocused screens
 	float mfGuiFPS = 30, mfGuiTimeAcc = 0;
 	bool mbGuiSetUseInput = true;

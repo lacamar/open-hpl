@@ -1,6 +1,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptApi.h"
 #include "scene/GuiSetEntity.h"
+#include "graphics/MaterialType_BasicTranslucent.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
 #include "SomaBase.h"
@@ -282,6 +283,16 @@ cMatrixf cSomaLuxEntity::GetMatrix()
 
 cVector3f cSomaLuxEntity::GetPosition() { return GetMatrix().GetTranslation(); }
 
+void cSomaLuxEntity::MakeDynamic()
+{
+	cWorld *pWorld = mpMesh->GetWorld();
+	pWorld->MakeMeshEntityDynamic(mpMesh);
+	for (iLight *pLight : mvLights)
+		pWorld->MakeRenderableDynamic(pLight);
+	for (cBillboard *pBillboard : mvBillboards)
+		pWorld->MakeRenderableDynamic(pBillboard);
+}
+
 void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 {
 	if (meType == eSomaLuxEntityType_Player)
@@ -293,7 +304,7 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentSetMatrix(this, a_mtx))
 		return;
 	if (mpMesh && mpMesh->IsStatic() && mpMesh->GetWorld() && GetMatrix() != a_mtx)
-		mpMesh->GetWorld()->MakeMeshEntityDynamic(mpMesh);
+		MakeDynamic();
 	if (iPhysicsBody *pBody = GetMainBody())
 	{
 		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
@@ -613,10 +624,30 @@ void cSomaLuxEntity::SetupGuiScreen(const tString &asSubMesh)
 	mvGuiDown = vRows[2];
 }
 
+void cSomaLuxEntity::SetGuiActive(bool abX, float afFadeTime)
+{
+	mbGuiDirty = true;
+	if (afFadeTime > 0)
+	{
+		mfGuiFadeSpeed = (abX ? 1 : -1) / afFadeTime;
+		mbGuiActive |= abX;
+		return;
+	}
+	mfGuiFadeSpeed = 0;
+	mfGuiFade = abX;
+	mbGuiActive = abX;
+}
+
 void cSomaLuxEntity::UpdateGuiScreen()
 {
 	if (mpGuiSubMesh == NULL || mpImGui == NULL)
 		return;
+	// The original hides the submesh and draws its own copy while the gui set entity is active
+	bool bVisible = mbGuiActive && mpMesh->IsVisible();
+	if (mpGuiSubMesh->GetVisibleVar() != bVisible)
+		mpGuiSubMesh->SetVisible(bVisible);
+	if (cMaterial *pMat = mpGuiSubMesh->GetCustomMaterial(); pMat && dynamic_cast<cMaterialType_Translucent *>(pMat->GetType()))
+		((cMaterialType_Translucent_Vars *)pMat->GetVars())->mFadeColor.a = 1 - mfGuiFade;
 	cGuiSet *pSet = mpImGui->GetSet();
 	cMatrixf mtx = mpGuiSubMesh->GetWorldMatrix();
 	cVector3f vRight = cMath::MatrixMul3x3(mtx, mvGuiRight);
@@ -677,10 +708,11 @@ static void SetScreenMaterial(cSubMeshEntity *apSub, iTexture *apTexture, const 
 		for (int i = 0; i < eMaterialTexture_LastEnum; ++i)
 			pMat->SetTexture((eMaterialTexture)i, pOrig->GetTexture((eMaterialTexture)i));
 		cResourceVarsObject *pVars = pOrig->GetVarsObject();
-		// Lit screens in dark rooms match the original only at full light level
-		pVars->SetUserVariable("AffectedByLightLevel", "false");
 		pMat->LoadVariablesFromVarsObject(pVars);
 		hplDelete(pVars);
+		// cGuiSetEntity renders with UseFadeColor
+		if (dynamic_cast<cMaterialType_Translucent *>(pMat->GetType()))
+			((cMaterialType_Translucent_Vars *)pMat->GetVars())->mbFadeColor = true;
 		pMat->IncUserCount();
 		// a .ent override stays alive: the copy shares its textures
 		apSub->SetCustomMaterial(pMat, false);
@@ -703,6 +735,7 @@ cSomaGuiScreenRenderer::cTarget &cSomaGuiScreenRenderer::GetTarget(cSomaLuxEntit
 	tString sName = "SomaScreen_" + apEnt->msName;
 	t.mpTexture = pGraphics->CreateTexture(sName, eTextureType_2D, eTextureUsage_RenderTarget);
 	t.mpTexture->SetUseMipMaps(true);
+	t.mpTexture->SetsRGB(true);
 	t.mpTexture->CreateFromRawData(cVector3l(avSize.x, avSize.y, 0), ePixelFormat_RGBA, NULL);
 	t.mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 	t.mpTexture->SetFilter(eTextureFilter_Trilinear);
@@ -748,6 +781,20 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 	if (vScreens.empty())
 		return;
 
+	// official gui: base shaders, hardware-decoded textures, sRGB target
+	static iGpuProgram *vPrograms[2] = {};
+	if (static bool bTried = false; bTried == false)
+	{
+		bTried = true;
+		cGraphics *pGraphics = gpSomaBase->mpEngine->GetGraphics();
+		cParserVarContainer vars;
+		vars.Add("UseUv");
+		vars.Add("UseColor");
+		vPrograms[1] = pGraphics->CreateGpuProgramFromShaders("SomaGuiFlat", "gui_vtx.glsl", "gui_frag.glsl", &vars);
+		vars.Add("UseDiffuse");
+		vars.Add("UseSRGBDiffuse");
+		vPrograms[0] = pGraphics->CreateGpuProgramFromShaders("SomaGuiDiffuse", "gui_vtx.glsl", "gui_frag.glsl", &vars);
+	}
 	iFrameBuffer *pPrevBuffer = pLowLevel->GetCurrentFrameBuffer();
 	apFunctions->SetProgram(NULL);
 	apFunctions->SetTextureRange(NULL, 0);
@@ -766,7 +813,9 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 		pSet->ClearRenderObjects();
 		p->mpImGui->DrawAll();
 		pLowLevel->SetCullActive(false);
+		pSet->SetPrograms(vPrograms[0], vPrograms[1]);
 		pSet->Render(pFrustum);
+		pSet->SetPrograms(NULL, NULL);
 		pSet->SetFlipScreenY(false);
 		pSet->SetIs3D(true);
 		++p->mlGuiDraws;
@@ -799,6 +848,16 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 
 void cSomaLuxEntity::UpdateGui(float afTimeStep)
 {
+	if (mfGuiFadeSpeed != 0)
+	{
+		mfGuiFade += mfGuiFadeSpeed * afTimeStep;
+		if (mfGuiFade <= 0 || mfGuiFade >= 1)
+		{
+			mbGuiActive = mfGuiFade > 0;
+			mfGuiFade = mbGuiActive ? 1 : 0;
+			mfGuiFadeSpeed = 0;
+		}
+	}
 	UpdateGuiScreen();
 	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
 		return;
@@ -1893,14 +1952,14 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 							Warning("SOMA: GUI submesh '%s' not found on '%s'\n", sub.c_str(), p->msName.c_str());
 					});
 	SOMA_METHOD_NEW(e, T, "void SetOnGuiFunction(const tString&in asFunction)", +[](E *p, S f) { p->msOnGuiFunc = f; p->mbGuiDirty = true; });
-	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float) { p->mbGuiActive = b; p->mbGuiDirty = true; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiActive(bool abX, float afFadeTime=0.0f)", +[](E *p, bool b, float f) { p->SetGuiActive(b, f); });
 	SOMA_METHOD_NEW(e, T, "void SetGuiVariableFPS(float afX)", +[](E *p, float f) { p->mfGuiFPS = f; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiSetUseInput(bool)", +[](E *p, bool b) { p->mbGuiSetUseInput = b; });
 	SOMA_METHOD_NEW(e, T, "bool GetGuiSetUseInput()", +[](E *p) { return p->mbGuiSetUseInput; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiUpdateWhenOutOfView(bool abX)", +[](E *p, bool b) { p->mbGuiUpdateWhenOutOfView = b; });
 	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = true; });
 	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
-	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui && p->mbGuiActive; });
+	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui != NULL; });
 	SOMA_METHOD_NEW(e, T, "bool SetGuiIsFocused(bool abX, bool abShowMouse=true)", +[](E *p, bool b, bool mouse) {
 		if (p->mpImGui == NULL)
 			return false;
@@ -2605,7 +2664,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  ForMatching(n, [&](cSomaLuxEntity *p) { p->MoveLinearTo(vGoal, a, m, d, r, cb); });
 			  });
 	SOMA_FUNC(e, "void Terminal_SetGuiActive(const tString& in asName, bool abX, float afFadeTime=0.0f)",
-			  +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiActive = b; p->mbGuiDirty = true; }); });
+			  +[](S n, bool b, float f) { ForMatching(n, [b, f](cSomaLuxEntity *p) { p->SetGuiActive(b, f); }); });
 	SOMA_FUNC(e, "bool Terminal_IsGuiActive(const tString& in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbGuiActive; });
 	SOMA_FUNC(e, "void Terminal_SetShowMouse(const tString& in asPropName, bool abShow)",
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { if (p->mpImGui) p->mpImGui->mbShowMouse = b; }); });

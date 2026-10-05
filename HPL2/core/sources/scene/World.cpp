@@ -553,6 +553,16 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cWorld::MakeRenderableDynamic(iRenderable* apObject)
+	{
+		if(apObject->IsStatic()==false) return;
+		RemoveRenderableFromContainer(apObject);
+		apObject->SetStatic(false);
+		AddRenderableToContainer(apObject);
+	}
+
+	//-----------------------------------------------------------------------
+
 	cMeshEntity* cWorld::GetDynamicMeshEntity(const tString& asName)
 	{
 		 return (cMeshEntity*)STLFindByName(mlstDynamicMeshEntities, asName);

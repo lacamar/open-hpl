@@ -6126,3 +6126,20 @@ our live entries and events.
   bodies (the rest are entity bodies), 42 -> 48 fps at the start.
 - dgAABBPolygonSoup padded each face's adjacency query by 0.5 m: quadratic on dense combined meshes
   (04_02 +4.6 s load). Faces sharing an edge always touch its box; 0.01 m now.
+
+## SOMA: colour space, gui screens (2026-10-05)
+
+- Official colour space mode 3 = hardware sRGB: textures get sRGB internal formats (pixel format ->
+  GL format 0x140436490 picks 0x8C41/0x8C43, compressed 0x8C4D/0x8C4F), `SetCurrentFrameBuffer`
+  (0x140437840) toggles `GL_FRAMEBUFFER_SRGB` per target. Ours decodes in shaders with the exact
+  curve (`UseLinearColorSpaceCorrection`); cubemaps stay `pow 2.2`. Tonemap/bloom match the RE.
+- Map `Setup()` runs after a save is restored (not before), then the saved underwater state is
+  reapplied.
+- Gui screens: the official draws the cGuiSet with `base_vtx/base_frag.hpsl` into an sRGB target.
+  Ours: RT is `GL_SRGB8_ALPHA8` sampled with `SKIP_DECODE` (the screen material decodes), framebuffer
+  sRGB on while drawing, gui textures decoded by `UseSRGBDiffuse`. Aliased as `gui_*.glsl` because
+  SOMA's legacy `core/shaders/base_frag.glsl` would win the lookup.
+- Font pages: A8 DDS pages must become white LuminanceAlpha like Luminance ones (official does
+  both); GL_ALPHA sampled in a shader is black, so screen text vanished.
+- Saves v22: entity-owned particle systems saved by name (like Amnesia props); the 04_01 elevator
+  dust stayed visible after a load.

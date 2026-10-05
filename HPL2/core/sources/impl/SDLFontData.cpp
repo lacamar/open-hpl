@@ -133,7 +133,7 @@ namespace hpl {
 			}
 			
 			//Make a fix here so we get a white luminence and alpha filled with data.
-			if(pBitmap->GetPixelFormat() == ePixelFormat_Luminance)
+			if(pBitmap->GetPixelFormat() == ePixelFormat_Luminance || pBitmap->GetPixelFormat() == ePixelFormat_Alpha)
 			{
 				cBitmap *pTempBitmap = hplNew( cBitmap, ());
 				pTempBitmap->CreateData(pBitmap->GetSize(),ePixelFormat_LuminanceAlpha,0,0);

@@ -74,6 +74,7 @@ namespace hpl {
 	#define kVar_avSecondFogColor					20
 	#define kVar_avSecondFogStartAndLength			21
 	#define kVar_afSecondFalloffExp					22
+	#define kVar_avFadeColor						23
 	
 	
 	//------------------------------
@@ -91,8 +92,9 @@ namespace hpl {
 	#define eFeature_Diffuse_SoftParticle			eFlagBit_9
 	#define eFeature_Diffuse_UnderwaterFog			eFlagBit_10
 	#define eFeature_Diffuse_SecondaryFog			eFlagBit_11
+	#define eFeature_Diffuse_FadeColor				eFlagBit_12
 	
-	#define kDiffuseFeatureNum 12
+	#define kDiffuseFeatureNum 13
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -108,6 +110,7 @@ namespace hpl {
 		cProgramComboFeature("UseSoftParticle", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseUnderwaterFog", kPC_FragmentBit),
 		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
+		cProgramComboFeature("UseFadeColor", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -225,6 +228,7 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avSecondFogColor", kVar_avSecondFogColor, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFadeColor", kVar_avFadeColor, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -308,6 +312,7 @@ namespace hpl {
 			if(pVars->mbRefractionNormals && bRefractionEnabled)	lFlags |= eFeature_Diffuse_UseScreenNormal;
 			if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
 			if(pVars->mbSoftParticle)								lFlags |= eFeature_Diffuse_SoftParticle;
+			if(pVars->mbFadeColor)									lFlags |= eFeature_Diffuse_FadeColor;
 			
 			return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 		}
@@ -386,6 +391,9 @@ namespace hpl {
 			float fScale = cGraphics::GetTempFrameBufferTextureType() == eTextureType_Rect ? (float)apRenderer->GetRenderTargetSize().x : 1.0f;
 			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * fScale);
 		}
+
+		if(pVars->mbFadeColor && bIlluminationPass==false)
+			apProgram->SetColor4f(kVar_avFadeColor, pVars->mFadeColor);
 
 		if(pVars->mbSoftParticle && bIlluminationPass==false)
 		{

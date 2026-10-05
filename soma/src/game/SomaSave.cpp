@@ -23,12 +23,13 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVE"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVF"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 21;
+	int gnSavedUnderwater = -1;
+	int glPendingVersion = 22;
 	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
@@ -554,7 +555,7 @@ public:
 				p->mvBodies[i]->SetGravity(bGravity);
 			}
 			if (p->mpMesh && p->mpMesh->IsStatic() && m != p->mvBodies[i]->GetLocalMatrix())
-				p->mpMesh->GetWorld()->MakeMeshEntityDynamic(p->mpMesh);
+				p->MakeDynamic();
 			p->mvBodies[i]->SetMatrix(m);
 			if (glPendingVersion >= 5)
 				p->mvBodies[i]->SetActive(bBodyActive);
@@ -643,7 +644,10 @@ public:
 			}
 		}
 		if (glPendingVersion >= 13)
+		{
 			t->mbGuiActive = in.Pod<bool>();
+			t->mfGuiFade = t->mbGuiActive;
+		}
 		n = glPendingVersion >= 14 ? in.Pod<uint32_t>() : 0;
 		for (uint32_t i = 0; i < n && in.ok; ++i)
 		{
@@ -773,7 +777,7 @@ public:
 		std::vector<cParticleSystem *> vPS;
 		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
 		while (psIt.HasNext())
-			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL && ps->IsDying() == false)
+			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && (ps->GetParent() == NULL || ps->GetEntityParent()) && ps->IsDying() == false)
 				vPS.push_back(ps);
 		o.Pod((uint32_t)vPS.size());
 		for (cParticleSystem *ps : vPS)
@@ -794,6 +798,7 @@ public:
 				if (ps->GetEmitter(i)->IsDying())
 					lDead |= 1u << i;
 			o.Pod(lDead);
+			o.Pod(ps->GetEntityParent() != NULL);
 		}
 
 		std::vector<cSoundEntity *> vSounds;
@@ -886,6 +891,28 @@ public:
 		}
 	}
 
+	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
+	static void ApplyUnderwater(cSomaLuxMap *pMap, bool bUnderwater)
+	{
+		asIScriptModule *pModule = pMap->GetScript() ? pMap->GetScript()->GetObjectType()->GetModule() : NULL;
+		asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByName("Map_SetUnderwater") : NULL;
+		if (bUnderwater != pMap->mbIsUnderwater && pFunc)
+		{
+			asIScriptContext *pCtx = pModule->GetEngine()->RequestContext();
+			pCtx->Prepare(pFunc);
+			pCtx->SetArgByte(0, bUnderwater);
+			pCtx->SetArgByte(1, false);
+			pCtx->Execute();
+			pModule->GetEngine()->ReturnContext(pCtx);
+		}
+		else if (bUnderwater && pMap->mbIsUnderwater == false)
+		{
+			pMap->mbIsUnderwater = true;
+			gbSomaUnderwaterEffects = true;
+			++glSomaUnderwaterUsers;
+		}
+	}
+
 	static void ReadWorld(cIn &in)
 	{
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -975,11 +1002,13 @@ public:
 			l->SetFlickerActive(bFlicker);
 		}
 
-		std::multimap<tString, cParticleSystem *> mapPS;
+		std::multimap<tString, cParticleSystem *> mapPS, mapOwnedPS;
 		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
 		while (psIt.HasNext())
 			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL)
 				mapPS.emplace(ps->GetName(), ps);
+			else if (ps->IsSaved() && ps->GetEntityParent())
+				mapOwnedPS.emplace(ps->GetName(), ps);
 		n = in.Pod<uint32_t>();
 		bool bHasPS = in.ok;
 		for (uint32_t i = 0; i < n && in.ok; ++i)
@@ -994,15 +1023,17 @@ public:
 			for (float &f : vFade)
 				f = in.Pod<float>();
 			uint32_t lDead = in.Pod<uint32_t>();
+			bool bOwned = glPendingVersion >= 22 && in.Pod<bool>();
 			if (in.ok == false)
 				break;
 			cParticleSystem *ps = NULL;
-			if (auto it = mapPS.find(sName); it != mapPS.end())
+			auto &mapSrc = bOwned ? mapOwnedPS : mapPS;
+			if (auto it = mapSrc.find(sName); it != mapSrc.end())
 			{
 				ps = it->second;
-				mapPS.erase(it);
+				mapSrc.erase(it);
 			}
-			else if ((ps = pMap->GetWorld()->CreateParticleSystem(sName, sData, vSize)) == NULL)
+			else if (bOwned || (ps = pMap->GetWorld()->CreateParticleSystem(sName, sData, vSize)) == NULL)
 				continue;
 			ps->SetMatrix(m);
 			ps->SetColor(col);
@@ -1113,25 +1144,7 @@ public:
 		}
 		if (in.p < in.s.size())
 		{
-			bool bUnderwater = in.Pod<bool>();
-			// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
-			asIScriptModule *pModule = pMap->GetScript() ? pMap->GetScript()->GetObjectType()->GetModule() : NULL;
-			asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByName("Map_SetUnderwater") : NULL;
-			if (bUnderwater != pMap->mbIsUnderwater && pFunc)
-			{
-				asIScriptContext *pCtx = pModule->GetEngine()->RequestContext();
-				pCtx->Prepare(pFunc);
-				pCtx->SetArgByte(0, bUnderwater);
-				pCtx->SetArgByte(1, false);
-				pCtx->Execute();
-				pModule->GetEngine()->ReturnContext(pCtx);
-			}
-			else if (bUnderwater && pMap->mbIsUnderwater == false)
-			{
-				pMap->mbIsUnderwater = true;
-				gbSomaUnderwaterEffects = true;
-				++glSomaUnderwaterUsers;
-			}
+			gnSavedUnderwater = in.Pod<bool>();
 		}
 		if (in.p < in.s.size())
 		{
@@ -1280,7 +1293,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 21)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 22)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -1333,7 +1346,11 @@ bool cSomaSaveHandler::ApplyPendingState()
 	sState.swap(gsPendingState);
 	cIn in(sState);
 	SomaPreloadMap() = gsPendingPreload;
+	gnSavedUnderwater = -1;
 	cSomaSaveState::ReadWorld(in);
+	cSomaLuxMap::GetCurrent()->Setup();
+	if (gnSavedUnderwater >= 0)
+		cSomaSaveState::ApplyUnderwater(cSomaLuxMap::GetCurrent(), gnSavedUnderwater != 0);
 	if (in.ok == false)
 		Warning("SOMA save: saved state is truncated\n");
 	if (cSomaLuxPlayer::Get())

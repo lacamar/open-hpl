@@ -1001,6 +1001,7 @@ namespace hpl {
 		else
 		{
 			GLenum glType = PixelFormatIsFloatingPoint(aPixelFormat) ? GL_FLOAT : GL_UNSIGNED_BYTE;
+			if(mbsRGB && GLInternalFormat == GL_RGBA) GLInternalFormat = GL_SRGB8_ALPHA8;
 
 			if(mType == eTextureType_1D)
 			{
@@ -1056,6 +1057,7 @@ namespace hpl {
 		}
 
 		glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		if(mbsRGB && GLEW_EXT_texture_sRGB_decode) glTexParameteri(GLTarget, GL_TEXTURE_SRGB_DECODE_EXT, GL_SKIP_DECODE_EXT);
 
 		//////////////////////
 		// Rect (force clamp to edge skip anisotropy)

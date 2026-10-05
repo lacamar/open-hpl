@@ -38,6 +38,7 @@ namespace hpl {
 				mpLowLevelGraphics(apLowLevelGraphics),
 				mbUseMipMaps(false), 
 				mbIsCompressed(false),
+				mbsRGB(false),
 				mlMemorySize(0),
 				mPixelFormat(ePixelFormat_Unknown),
 				mWrapS(eTextureWrap_Repeat), mWrapT(eTextureWrap_Repeat),mWrapR(eTextureWrap_Repeat),
@@ -128,6 +129,10 @@ namespace hpl {
 
 		virtual bool GetRawPixelsRGBAFloat(std::vector<float> &avOut)=0;
 
+		// rendered to with sRGB encoding, sampled raw
+		void SetsRGB(bool abX){ mbsRGB = abX; }
+		bool GetsRGB(){ return mbsRGB; }
+
 	protected:
 		eTextureUsage mUsage;
 		eTextureType mType;
@@ -147,6 +152,7 @@ namespace hpl {
 		
 		bool mbUseMipMaps;
 		bool mbIsCompressed;
+		bool mbsRGB;
 		ePixelFormat mPixelFormat;
 		iLowLevelGraphics* mpLowLevelGraphics;
 		float mfFrameTime;

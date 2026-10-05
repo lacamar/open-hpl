@@ -92,7 +92,7 @@ bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asS
 	{
 		pEnt->CaptureEffectDefaults();
 		if (pEnt->mbEffectsActive == false)
-			pEnt->mfEffectsAlpha = 0;
+			pEnt->SetEffectsActive(false);
 		pEnt->ApplyEffectsAlpha();
 		pEnt->ResolveConnectedLights();
 	}

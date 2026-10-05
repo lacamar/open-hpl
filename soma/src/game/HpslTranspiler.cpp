@@ -478,13 +478,23 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 						  tString& asGlslOut, tString& asErrorOut)
 {
 	tString sSrc = asPreprocessedHpsl;
+	// official hardware sRGB textures: exact curve, not helper_gamma_correction.hpsl's pow 2.2
+	sSrc = cString::ReplaceStringTo(sSrc, "return pow(avsRGB.rgb, cVector3f(2.2));", "return SRGBToLinear(avsRGB.rgb);");
+	sSrc = cString::ReplaceStringTo(sSrc, "return pow(avsRGB.rgba, cVector4f(2.2));", "return SRGBToLinear(avsRGB);");
+	if (sSrc.find("GammaToLinearCorrection(") != tString::npos)
+	{
+		size_t lFirst = std::min(sSrc.find("cVector3f GammaToLinearCorrection("), sSrc.find("void main"));
+		if (lFirst != tString::npos)
+			sSrc.insert(lFirst, "cVector3f SRGBToLinear(in cVector3f v) { return mix(v / 12.92, pow((v + 0.055) / 1.055, cVector3f(2.4)), step(cVector3f(0.04045), v)); }\n"
+								"cVector4f SRGBToLinear(in cVector4f v) { return mix(v / 12.92, pow((v + 0.055) / 1.055, cVector4f(2.4)), step(cVector4f(0.04045), v)); }\n");
+	}
 	// water_surface_frag.hpsl calls it without including helper_gamma_correction.hpsl
 	if (sSrc.find("GammaToLinearCorrection(") != tString::npos && sSrc.find("GammaToLinearCorrection(in ") == tString::npos)
 	{
 		size_t lMain = sSrc.find("void main");
 		if (lMain != tString::npos)
-			sSrc.insert(lMain, "cVector3f GammaToLinearCorrection(in cVector3f v) { return pow(v, cVector3f(2.2)); }\n"
-							   "cVector4f GammaToLinearCorrection(in cVector4f v) { return pow(v, cVector4f(2.2)); }\n");
+			sSrc.insert(lMain, "cVector3f GammaToLinearCorrection(in cVector3f v) { return SRGBToLinear(v); }\n"
+							   "cVector4f GammaToLinearCorrection(in cVector4f v) { return SRGBToLinear(v); }\n");
 	}
 	sSrc = ReplaceIdentifiers(sSrc, gmapTypeNames);
 	if (FlattenConstantBuffers(sSrc, sSrc, asErrorOut) == false) return false;

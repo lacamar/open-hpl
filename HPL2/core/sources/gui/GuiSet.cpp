@@ -24,6 +24,7 @@
 #include "system/String.h"
 
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/GPUProgram.h"
 #include "graphics/Graphics.h"
 #include "graphics/FontData.h"
 
@@ -1606,6 +1607,7 @@ namespace hpl {
 			}
 			
 			pLowLevelGraphics->SetTexture(0,pTexture);
+			if(mpPrograms[0] && mpPrograms[1]) mpPrograms[pTexture ? 0 : 1]->Bind();
 			if(kLogRender)Log("Texture %d\n",pTexture);
 
 			//////////////////////////
@@ -1728,6 +1730,7 @@ namespace hpl {
 			}
 		}
 		
+		if(mpPrograms[0]) mpPrograms[0]->UnBind();
 		if(kLogRender)Log("---------- END %d -----------\n");
 	}
 	//-----------------------------------------------------------------------
