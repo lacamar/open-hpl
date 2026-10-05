@@ -192,12 +192,23 @@ def raycast(a, b, keep=None):
     return out
 
 
+def screen_normal(name):
+    m = send({"cmd": "lux_entity", "name": name}).get("gui_mtx")
+    if not m:
+        return None
+    rows = [[float(v) for v in r.split(":")] for r in m.strip("[]").split("] [")]
+    return rows[0][2], rows[2][2]
+
+
 def stand_spot(target, feet, dist, name):
-    base = math.atan2(feet[0] - target[0], feet[2] - target[2])
+    front = screen_normal(name)
+    base = math.atan2(*front) if front else math.atan2(feet[0] - target[0], feet[2] - target[2])
     best = None
     for i in range(24):
         ang = base + (i + 1) // 2 * (1 if i % 2 else -1) * math.pi / 12
         x, z = target[0] + math.sin(ang) * dist, target[2] + math.cos(ang) * dist
+        if front and (x - target[0]) * front[0] + (z - target[2]) * front[1] < 0.2 * dist:
+            continue
         top = target[1] + 0.3
         hits = raycast((x, top, z), (x, top - 4.0, z))
         if not hits or hits[0][0] < 0.05:
