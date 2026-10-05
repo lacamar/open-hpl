@@ -10,6 +10,7 @@
 #include "SomaCritter.h"
 
 #include <cmath>
+#include <random>
 #include <set>
 #include "SomaLux.h"
 #include "SomaScriptBind.h"
@@ -1070,7 +1071,8 @@ namespace
 	};
 	std::map<void *, cSomaID> gmapObjectToID;
 	std::map<int32_t, cObjectEntry> gmapIDToObject;
-	int32_t glNextObjectID = 1;
+	// Saved tIDs of runtime objects must not alias this session's objects
+	int32_t glNextObjectID = (int32_t)(std::random_device{}() & 0x3fffffff) + 1;
 
 	bool IsEntity3DType(const tString &asType) { return asType != "iPhysicsJoint" && asType.compare(0, 13, "iPhysicsJoint") != 0 && asType != "iCharacterBody"; }
 
@@ -1161,7 +1163,12 @@ void *SomaObjectFromID(const cSomaID &aID, const tString &asType)
 	if (entry.msType == asType)
 		return entry.mpObj;
 	if (IsEntity3DType(entry.msType) && IsEntity3DType(asType))
+	{
+		// Lights etc. have no liveness check: never dynamic_cast a concrete entry, it may be freed
+		if (entry.msType != "iEntity3D" && entry.msType != "iLight")
+			return asType == "iEntity3D" || (asType == "iLight" && entry.msType.compare(0, 6, "cLight") == 0) ? entry.mpObj : NULL;
 		return CastEntity3D((iEntity3D *)entry.mpObj, asType);
+	}
 	if (asType == "iPhysicsJoint" && entry.msType.compare(0, 13, "iPhysicsJoint") == 0)
 		return entry.mpObj;
 	if (asType.compare(0, 13, "iPhysicsJoint") == 0 && entry.msType == "iPhysicsJoint")
