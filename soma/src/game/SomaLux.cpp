@@ -284,6 +284,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 
 	float fStep = afTimeStep;
 	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
+	mpRuntime->Call(mpScript, "void VariableUpdate(float afDeltaTime)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 	{

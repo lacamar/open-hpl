@@ -1721,7 +1721,7 @@ template <class F> static void ForMatching(const tString &asName, F aFunc)
 {
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-			if (cString::MatchesWildcard(asName, pEnt->msName))
+			if (cString::MatchesWildcard(asName, pEnt->msName) || (pEnt->meType == eSomaLuxEntityType_Player && cString::ToLowerCase(asName) == "player"))
 				aFunc(pEnt);
 }
 
