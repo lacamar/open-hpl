@@ -73,6 +73,7 @@ namespace hpl {
 	cWorld* cWorldLoaderHpm::LoadWorld(const tWString& asFile, tWorldLoadFlag aFlags)
 	{
 		Log(" -------- Loading SOMA hpm map '%s' ---------\n", cString::To8Char(cString::GetFileNameW(asFile)).c_str());
+		mlCombinedObjects = 0;
 
 		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
 		mmapTrackStats.clear();
@@ -1227,7 +1228,7 @@ namespace hpl {
 			cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
 			mtxTransform.SetTranslation(vPosition);
 			if (CreateStaticBodiesFromEnt(sFileName, mtxTransform, vScale, sName) == false)
-				CreateStaticBodyForMesh(pMeshEntity, sName);
+				CreateStaticBodyForMesh(pMeshEntity);
 		}
 
 		return "";
@@ -1333,7 +1334,7 @@ namespace hpl {
 		pMeshEntity->SetPosition(vPosition);
 
 		if (bCollides)
-			CreateStaticBodyForMesh(pMeshEntity, sName);
+			CreateStaticBodyForMesh(pMeshEntity);
 
 		return "";
 	}
@@ -1360,7 +1361,7 @@ namespace hpl {
 	}
 
 	// HPL3 iHplMapLoader::CombineObjectsAndCreatePhysics: one body per physics material and area, not per submesh
-	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName)
+	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity)
 	{
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
@@ -1373,7 +1374,6 @@ namespace hpl {
 								(int)std::floor(vCell.x), (int)std::floor(vCell.y), (int)std::floor(vCell.z));
 			cStaticBatch& batch = m_mapStaticBatches[key];
 			if (batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000) FlushStaticBatch(std::get<0>(key), batch);
-			if (batch.mvIdx.empty()) batch.msName = asName;
 
 			iVertexBuffer* pVtx = pSrcVtx->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static, eVertexElementFlag_Position);
 			pVtx->Transform(pSubEnt->GetWorldMatrix());
@@ -1402,7 +1402,7 @@ namespace hpl {
 		hplDelete(pVtx);
 		if (pShape)
 		{
-			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(aBatch.msName, pShape);
+			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("CombinedObjects" + cString::ToString(mlCombinedObjects++), pShape);
 			pBody->SetMass(0);
 			if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(asPhysicsMaterial)) pBody->SetMaterial(pMat);
 		}

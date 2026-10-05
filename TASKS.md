@@ -49,10 +49,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    but immovable.
 
 
-4. Frame rate on big maps (`fps:N` in the sweep): physics step dominates (>200 dynamic bodies,
-   one static body per static object, bodies re-wake after `Sleep()`), then shadow maps for
-   100-400 lights per frame without any light culling. Batch static collision like
-   `cWorldLoaderHplMap::AddObjectsToStaticMeshBody()`; find what wakes the bodies.
+4. Frame rate on big maps (`fps:N` in the sweep): static collision is combined like HPL3
+   (04_02: 5738 -> 2569 static bodies, 42 -> 48 fps). Left: Lux script updates, render.
 
 
 
@@ -184,8 +182,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   max(DC band) x amount (ref's SH term unknown, fits ~15% median over 111 upsilon probes; a
   0.0005 floor in upsilon). Ref also occludes shadow casters by render-only geometry (sun
   inside the apartment: ours ~1.9, ref ~0.37).
-- `cLux_GetClosestBody` names static hits after the object; ref merges statics into
-  `CombinedObjects<N>` bodies.
 
 ## History
 

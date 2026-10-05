@@ -61,7 +61,7 @@ namespace hpl {
 		tString CreateMapArea(cXmlElement* apElement);
 		tString CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex);
 
-		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const tString& asName);
+		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity);
 		bool CreateStaticBodiesFromEnt(const tString& asFile, const cMatrixf& a_mtxTransform, const cVector3f& avScale, const tString& asName);
 
 		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
@@ -70,13 +70,13 @@ namespace hpl {
 		iPhysicsWorld* mpCurrentPhysicsWorld;
 		struct cStaticBatch
 		{
-			tString msName;
 			std::vector<float> mvPos;
 			std::vector<unsigned int> mvIdx;
 		};
 		typedef std::tuple<tString, int, int, int> tStaticBatchKey;
 		void FlushStaticBatch(const tString& asPhysicsMaterial, cStaticBatch& aBatch);
 		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
+		int mlCombinedObjects;
 
 		struct cStaticShapeBatch
 		{
