@@ -424,6 +424,7 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &avGoal, int
 			return true;
 		}
 	};
+	iCollideShape *pSlab = pPhys->CreateBoxShape(cVector3f(0.3f, 0.06f, 0.3f), NULL);
 	auto floorAt = [&](float x, float y, float z, float &afY) {
 		cFloor ray;
 		ray.mlFlags = lFlags;
@@ -431,6 +432,13 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &avGoal, int
 		x += 0.01f, z += 0.01f;
 		pPhys->CastRay(&ray, cVector3f(x, y + kStep + 0.15f, z), cVector3f(x, y - kDrop - 0.1f, z), true, false, false);
 		afY = y + kStep + 0.15f - ray.mfDist;
+		// rays fall between grating bars
+		if (afY < y - 0.05f &&
+			pPhys->CheckShapeWorldCollision(NULL, pSlab, cMath::MatrixTranslate(cVector3f(x, y - 0.04f, z)), pSkip, false, true, NULL, false, 0, lFlags))
+		{
+			afY = y;
+			return true;
+		}
 		return ray.mfDist < 1e8f;
 	};
 	iCollideShape *pStand = pPhys->CreateBoxShape(cVector3f(0.5f, 1.55f, 0.5f), NULL);
@@ -501,6 +509,7 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &avGoal, int
 	}
 	pPhys->DestroyShape(pStand);
 	pPhys->DestroyShape(pCrouch);
+	pPhys->DestroyShape(pSlab);
 	std::vector<cVector3f> vPath;
 	std::vector<bool> vCrouch;
 	for (int i = lFound >= 0 ? lFound : lBest; i >= 0; i = vNodes[i].parent)
