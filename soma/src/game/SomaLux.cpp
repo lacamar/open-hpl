@@ -546,6 +546,8 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			SomaSetGamePaused(false);
 			gpSomaBase->GetVisitedMaps().clear();
 			SomaDeserializeGlobalVars("");
+			if (cSomaLuxVoiceHandler::Get())
+				cSomaLuxVoiceHandler::Get()->msetPlayedLines.clear();
 			if (cSomaLuxGame::Get())
 				cSomaLuxGame::Get()->ResetScriptables();
 		}

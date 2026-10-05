@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVD"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVE"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 20;
+	int glPendingVersion = 21;
 	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
@@ -1241,6 +1241,12 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 	o.Pod(gbExplorationMode);
 	// cLuxSaveHandler: a running map stream resumes after load
 	o.Str(SomaPreloadMap());
+	std::set<tString> setPlayed;
+	if (cSomaLuxVoiceHandler::Get())
+		setPlayed = cSomaLuxVoiceHandler::Get()->msetPlayedLines;
+	o.Pod((uint32_t)setPlayed.size());
+	for (const tString &sLine : setPlayed)
+		o.Str(sLine);
 	cSomaSaveState::WriteWorld(o);
 
 	tWString sPath = GetSaveDir() + cString::GetFileNameW(asFile);
@@ -1274,7 +1280,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 20)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 21)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -1288,10 +1294,16 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	tString sVars = in.Str();
 	bool bExploration = lVersion == 2 ? false : in.Pod<bool>();
 	gsPendingPreload = lVersion >= 19 ? in.Str() : "";
+	std::set<tString> setPlayed;
+	n = lVersion >= 21 ? in.Pod<uint32_t>() : 0;
+	for (uint32_t i = 0; i < n && in.ok; ++i)
+		setPlayed.insert(in.Str());
 	if (in.ok == false || sMap.empty())
 		return false;
 
 	gbExplorationMode = bExploration;
+	if (cSomaLuxVoiceHandler::Get())
+		cSomaLuxVoiceHandler::Get()->msetPlayedLines = setPlayed;
 
 	SomaDeserializeGlobalVars(sVars);
 	// The saved state replaces OnStart

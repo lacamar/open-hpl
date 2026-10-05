@@ -7,6 +7,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 
 using namespace hpl;
 
@@ -43,6 +44,8 @@ public:
 	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
 
+	std::set<tString> msetPlayedLines; // PlayOnce lines, "subject#index"
+
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
 	// cLuxEffectHandler::FadeIn/FadeOut: black overlay under the subtitles
@@ -68,6 +71,8 @@ public:
 		tString msSource;
 		float mfMinDist = 0, mfMaxDist = 0;
 		bool mbWorldSpace = false, mbChangeSource = false;
+		int mlPrio = 0;
+		bool mbPlayOnce = false;
 		std::vector<cSound> mvSounds;
 	};
 	struct cSubject
@@ -76,6 +81,7 @@ public:
 		tString msScene;
 		tString msSet; // map name or "global"
 		bool mbSingleRandomLine = false;
+		int mlLastLine = -1;
 		std::vector<cLine> mvLines;
 	};
 
@@ -83,6 +89,7 @@ private:
 	struct cPlaying
 	{
 		cSubject *mpSubject;
+		int mlPrio = 0;
 		tString msCallback;
 		std::function<void()> mOnDone;
 		std::vector<int> mvLines;

@@ -140,6 +140,8 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 		{
 			cLine line = mapChars[pLine->GetAttributeInt("CharacterId", -1)];
 			line.msCallback = pLine->GetAttributeString("Callback", "");
+			line.mlPrio = pLine->GetAttributeInt("Prio", 0);
+			line.mbPlayOnce = pLine->GetAttributeBool("PlayOnce", false);
 			if (pLine->GetAttributeBool("ChangeSource", false))
 			{
 				line.msSource = pLine->GetAttributeString("EntitySource", "");
@@ -205,19 +207,59 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 		return false;
 	}
 	cSubject *pSubject = it->second.get();
+	// cLuxVoiceSceneInstance::Play: a busy scene only yields to a higher prio
+	for (const cPlaying &q : mvPlaying)
+		if (q.mpSubject->msScene == pSubject->msScene && q.mlPrio >= alPrio)
+			return false;
 	Stop(pSubject->msScene);
 
 	cPlaying p;
 	p.mpSubject = pSubject;
+	p.mlPrio = alPrio;
 	p.msCallback = asCallback;
 	p.mOnDone = aOnDone;
-	if (alLine >= 0 && alLine < (int)pSubject->mvLines.size())
+	const std::vector<cLine> &vLines = pSubject->mvLines;
+	if (vLines.empty())
+		return false;
+	auto Key = [&](int i) { return pSubject->msName + "#" + cString::ToString(i); };
+	auto Played = [&](int i) { return msetPlayedLines.count(Key(i)) > 0; };
+	if (alLine >= 0)
+	{
+		if (alLine >= (int)vLines.size())
+			return false;
 		p.mvLines.push_back(alLine);
-	else if (pSubject->mbSingleRandomLine && pSubject->mvLines.empty() == false)
-		p.mvLines.push_back(cMath::RandRectl(0, (int)pSubject->mvLines.size() - 1));
+	}
+	else if (pSubject->mbSingleRandomLine)
+	{
+		// highest Prio among unplayed lines, not the previous pick when there is a choice
+		std::vector<int> vCand;
+		for (int i = 0; i < (int)vLines.size(); ++i)
+		{
+			if (vLines[i].mbPlayOnce && Played(i))
+				continue;
+			if (vCand.empty() || vLines[i].mlPrio > vLines[vCand[0]].mlPrio)
+				vCand = {i};
+			else if (vLines[i].mlPrio == vLines[vCand[0]].mlPrio)
+				vCand.push_back(i);
+		}
+		if (vCand.empty())
+			return false;
+		int r = cMath::RandRectl(0, (int)vCand.size() - 1);
+		if (vCand.size() > 2 && vCand[r] == pSubject->mlLastLine)
+			r = (r + 1) % (int)vCand.size();
+		pSubject->mlLastLine = vCand[r];
+		p.mvLines.push_back(vCand[r]);
+	}
 	else
-		for (size_t i = 0; i < pSubject->mvLines.size(); ++i)
-			p.mvLines.push_back((int)i);
+	{
+		p.mvLines.push_back(0);
+		// the engine tests the first line's PlayOnce for every queued line
+		for (int i = 1; i < (int)vLines.size(); ++i)
+			if (vLines[0].mbPlayOnce == false || msetPlayedLines.insert(Key(i)).second)
+				p.mvLines.push_back(i);
+	}
+	if (vLines[p.mvLines[0]].mbPlayOnce && msetPlayedLines.insert(Key(p.mvLines[0])).second == false)
+		return false;
 	mvPlaying.push_back(p);
 	return true;
 }
@@ -627,7 +669,7 @@ void cSomaLuxDialogHandler::StartItem(cDialog &aD)
 	for (auto &p : mvActive)
 		if (p.get() == &aD)
 			wD = p;
-	bool bOk = cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(item.msSubject, -1, "", 0, [this, wD]() {
+	bool bOk = cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(item.msSubject, -1, "", 100, [this, wD]() {
 		if (auto p = wD.lock())
 			p->mbWaiting = false;
 	});
