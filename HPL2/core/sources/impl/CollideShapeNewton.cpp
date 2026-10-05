@@ -92,7 +92,7 @@ namespace hpl {
 		}
 		else if(mType == eCollideShapeType_Sphere)
 		{
-			mBoundingVolume.SetSize(mvSize*2);
+			mBoundingVolume.SetSize(mvSize.x*2);
 
 			mfVolume = (4.0f / 3.0f) * kPif * (mvSize.x*mvSize.x*mvSize.x);
 		}

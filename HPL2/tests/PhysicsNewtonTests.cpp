@@ -37,6 +37,7 @@ static void TestShapeCreation()
 	iCollideShape* pSphere = world.CreateSphereShape(cVector3f(1, 1, 1), NULL);
 	CHECK(pSphere != NULL);
 	CHECK(pSphere->GetVolume() > 0.0f);
+	CHECK(world.CreateSphereShape(cVector3f(0.5f, 0, 0), NULL)->GetBoundingVolume().GetSize() == cVector3f(1));
 
 	iCollideShape* pCylinder = world.CreateCylinderShape(0.5f, 2.0f, NULL);
 	CHECK(pCylinder != NULL);
