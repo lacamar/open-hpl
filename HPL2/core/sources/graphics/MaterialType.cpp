@@ -27,6 +27,8 @@
 #include "graphics/GPUProgram.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/ProgramComboManager.h"
+#include "graphics/Material.h"
+#include "scene/ForceField.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -189,6 +191,44 @@ namespace hpl {
 	void iMaterialType::AddVarEnum(const tString& asName, const tString& asDefaultValue, const tStringVec& avEnumValues, const tString& asDesc)
 	{
 		AddVar(asName, eVariableType_Enum, asDefaultValue, asDesc, avEnumValues);
+	}
+
+	//-----------------------------------------------------------------------
+	iGpuProgram* iMaterialType::GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer)
+	{
+		return apMaterial->GetProgram(0, aRenderMode);
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iMaterialType::AddForceFieldVariableIds(cProgramComboManager *apManager, int alFirstId, int alMode)
+	{
+		const char *vNames[] = {"avForceFieldPos0", "avForceFieldPos1", "avForceFieldPos2", "avForceFieldPos3", "avForceFieldFadeStarts",
+								"avForceFieldFadeLengths", "avForceFieldForces", "avForceFieldTs", "afForceFieldMaxForce"};
+		for(int i=0; i<9; ++i) apManager->AddGenerateProgramVariableId(vNames[i], alFirstId + i, alMode);
+	}
+
+	void iMaterialType::SetForceFieldVars(iGpuProgram *apProgram, int alFirstId, cForceField **apFields, int alNum, float afForceMul, float afMaxForce)
+	{
+		float vStart[4] = {0,0,0,0}, vLength[4] = {1,1,1,1}, vForce[4] = {0,0,0,0}, vT[4] = {0,0,0,0};
+		for(int i=0; i<4; ++i)
+		{
+			cVector3f vPos = 0;
+			if(i < alNum)
+			{
+				vPos = apFields[i]->GetWorldPosition();
+				vStart[i] = apFields[i]->GetFinalFalloffStartRadius();
+				vLength[i] = apFields[i]->GetFinalRadius() - vStart[i];
+				vForce[i] = apFields[i]->GetFinalForce() * afForceMul;
+				vT[i] = apFields[i]->GetT();
+			}
+			apProgram->SetVec3f(alFirstId + i, vPos);
+		}
+		apProgram->SetVec4f(alFirstId + 4, vStart[0], vStart[1], vStart[2], vStart[3]);
+		apProgram->SetVec4f(alFirstId + 5, vLength[0], vLength[1], vLength[2], vLength[3]);
+		apProgram->SetVec4f(alFirstId + 6, vForce[0], vForce[1], vForce[2], vForce[3]);
+		apProgram->SetVec4f(alFirstId + 7, vT[0], vT[1], vT[2], vT[3]);
+		apProgram->SetFloat(alFirstId + 8, afMaxForce);
 	}
 
 	//-----------------------------------------------------------------------

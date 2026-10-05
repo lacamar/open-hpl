@@ -197,6 +197,7 @@ namespace hpl
 	class cAStarHandler;
 	class cRopeEntity;
 	class cFogArea;
+	class cForceField;
 	class cAnimationState;
 	class cDummyRenderable;
 
@@ -232,6 +233,9 @@ namespace hpl
 	typedef std::list<cFogArea*> tFogAreaList;
 	typedef std::list<cFogArea*>::iterator tFogAreaListIt;
 
+	typedef std::list<cForceField*> tForceFieldList;
+	typedef std::list<cForceField*>::iterator tForceFieldListIt;
+
 	typedef std::list<cDummyRenderable*> tDummyRenderableList;
 	typedef tDummyRenderableList::iterator tDummyRenderableListIt;
 
@@ -258,6 +262,7 @@ namespace hpl
 	typedef cSTLIterator<cGuiSetEntity*, tGuiSetEntityList, tGuiSetEntityListIt> cGuiSetEntityIterator;
 	typedef cSTLIterator<cRopeEntity*, tRopeEntityList, tRopeEntityListIt> cRopeEntityIterator;
 	typedef cSTLIterator<cFogArea*, tFogAreaList, tFogAreaListIt> cFogAreaIterator;
+	typedef cSTLIterator<cForceField*, tForceFieldList, tForceFieldListIt> cForceFieldIterator;
 	typedef cSTLIterator<cDummyRenderable*, tDummyRenderableList, tDummyRenderableListIt> cDummyRenderableIterator;
 
 	//------------------------------------------

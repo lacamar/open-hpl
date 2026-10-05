@@ -41,6 +41,7 @@ namespace hpl {
 	class cProgramComboManager;
 	class cResourceVarsObject;
 	class iMaterialVars;
+	class cForceField;
 
 	//---------------------------------------------------
 
@@ -120,9 +121,14 @@ namespace hpl {
 		virtual void CompileMaterialSpecifics(cMaterial *apMaterial)=0;
 
 		inline bool HasTypeSpecifics(eMaterialRenderMode aMode) const { return mbHasTypeSpecifics[aMode];}
-		
+
+		virtual iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer);
+
+		static void AddForceFieldVariableIds(cProgramComboManager *apManager, int alFirstId, int alMode);
+		static void SetForceFieldVars(iGpuProgram *apProgram, int alFirstId, cForceField **apFields, int alNum, float afForceMul, float afMaxForce);
 
 	protected:
+
 		void AddUsedTexture(eMaterialTexture aType);
 
 		void AddVar(const tString& asName, eVariableType aType, const tString& asDefaultValue, const tString& asDesc="", const tStringVec& avEnumValues = tStringVec());

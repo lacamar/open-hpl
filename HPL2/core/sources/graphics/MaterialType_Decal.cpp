@@ -37,6 +37,8 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
+#include "scene/World.h"
+#include "scene/ForceField.h"
 
 
 
@@ -314,23 +316,28 @@ namespace hpl {
 
 	void cMaterialType_Undergrowth::LoadData()
 	{
-		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseWind", kPC_VertexBit) };
+		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseWind", kPC_VertexBit), cProgramComboFeature("UseSingleForceField", kPC_VertexBit),
+													cProgramComboFeature("UseFourForceFields", kPC_VertexBit) };
 		cParserVarContainer vars;
 		for (eMaterialRenderMode mode : {eMaterialRenderMode_Z, eMaterialRenderMode_Diffuse})
 		{
 			mpProgramManager->SetupGenerateProgramData(mode, mode == eMaterialRenderMode_Z ? "Z" : "Diffuse", "deferred_undergrowth_gbuffer_vtx.glsl",
-													   "deferred_undergrowth_gbuffer_frag.glsl", vFeatures, 1, vars);
+													   "deferred_undergrowth_gbuffer_frag.glsl", vFeatures, 3, vars);
 			mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane", 0, mode);
 			mpProgramManager->AddGenerateProgramVariableId("afT", 1, mode);
 			mpProgramManager->AddGenerateProgramVariableId("avDissolveStartSizeDepth", 2, mode);
 			mpProgramManager->AddGenerateProgramVariableId("avWindProperties", 3, mode);
 			mpProgramManager->AddGenerateProgramVariableId("avWindOctavesMul", 4, mode);
+			AddForceFieldVariableIds(mpProgramManager, 5, mode);
+			mpProgramManager->AddGenerateProgramVariableId("avForceFieldPos", 14, mode);
+			mpProgramManager->AddGenerateProgramVariableId("avForceFieldProp", 15, mode);
 		}
 	}
 
 	void cMaterialType_Undergrowth::DestroyData()
 	{
 		mpProgramManager->DestroyShadersAndPrograms();
+		for(auto& vProgs : mvPrograms) for(iGpuProgram*& pProg : vProgs) pProg = NULL;
 	}
 
 	iTexture* cMaterialType_Undergrowth::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
@@ -356,6 +363,33 @@ namespace hpl {
 		apProgram->SetVec2f(2, pVars->mvDissolve);
 		apProgram->SetVec3f(3, pVars->mvWind);
 		apProgram->SetVec3f(4, pVars->mvWindOctaves);
+		if(mlFieldNum == 1)
+		{
+			cForceField *pField = mvFields[0];
+			float fStart = pField->GetFinalFalloffStartRadius();
+			apProgram->SetVec4f(14, pField->GetWorldPosition().x, pField->GetWorldPosition().y, pField->GetWorldPosition().z, pField->GetT());
+			apProgram->SetVec4f(15, fStart, pField->GetFinalRadius() - fStart, pField->GetFinalForce() * pVars->mfForceFieldMul, pVars->mfForceFieldMul);
+		}
+		else if(mlFieldNum > 1)
+			SetForceFieldVars(apProgram, 5, mvFields, mlFieldNum, pVars->mfForceFieldMul, pVars->mfMaxForceFieldForce);
+	}
+
+	// Rebirth's SetupUndergrowth: single/four field variant from the fields within fade range of the camera
+	iGpuProgram* cMaterialType_Undergrowth::GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer)
+	{
+		if(!UndergrowthMode(aRenderMode)) return NULL;
+		cMaterialType_Undergrowth_Vars *pVars = static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars());
+		mlFieldNum = 0;
+		if(pVars->mfForceFieldMul > 0)
+		{
+			cVector3f vCam = apRenderer->GetCurrentFrustum()->GetOrigin();
+			float fRange = pVars->mvDissolve.x + pVars->mvDissolve.y;
+			mlFieldNum = apRenderer->GetCurrentWorld()->GetForceFields(vCam - fRange, vCam + fRange, mvFields);
+		}
+		int lFlags = (pVars->mbWind ? eFlagBit_0 : 0) | (mlFieldNum == 1 ? eFlagBit_1 : mlFieldNum > 1 ? eFlagBit_2 : 0);
+		iGpuProgram*& pProg = mvPrograms[aRenderMode][lFlags];
+		if(pProg == NULL) pProg = mpProgramManager->GenerateProgram(aRenderMode, lFlags);
+		return pProg;
 	}
 
 	void cMaterialType_Undergrowth::CompileMaterialSpecifics(cMaterial *apMaterial)

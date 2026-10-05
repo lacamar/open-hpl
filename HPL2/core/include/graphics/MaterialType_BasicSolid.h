@@ -88,6 +88,8 @@ namespace hpl {
 		bool mbSwaySingleDir = false;
 		cVector3f mvSwayProperties, mvSwayOctaveMuls, mvSwaySingleDir, mvSwaySingleSampleDir;
 		float mfSwayYFreqMul = 0;
+		bool mbSwayForceFieldAffected = false;
+		float mfSwayForceFieldMul = 0, mfSwayForceFieldMax = 0;
 		float mvDetailProperties[4];
 		cVector3f mvDetailWeights;
 	};

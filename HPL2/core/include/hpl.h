@@ -144,6 +144,7 @@
 #include "scene/ParticleEmitter_UserData.h"
 #include "scene/RopeEntity.h"
 #include "scene/FogArea.h"
+#include "scene/ForceField.h"
 #include "scene/EnvironmentParticles.h"
 #include "scene/DummyRenderable.h"
 

@@ -2184,7 +2184,7 @@ namespace hpl {
 	void iRenderer::SetMaterialProgram(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
 	{
 		iMaterialType *pMatType = apMaterial->GetType();
-		iGpuProgram *pProgram = apMaterial->GetProgram(0,aRenderMode);
+		iGpuProgram *pProgram = pMatType->GetRenderProgram(apMaterial, aRenderMode, this);
 		
 		///////////////////////////////////////
 		// Check if program is set

@@ -119,6 +119,7 @@ namespace hpl {
 		bool mbWind = false;
 		cVector3f mvWind = 0, mvWindOctaves = 0;
 		cVector2f mvDissolve = 0;
+		float mfForceFieldMul = 0, mfMaxForceFieldForce = 0;
 	};
 
 	// HPL3 terrain undergrowth on CPU-baked plants: the shader's non-instanced path
@@ -138,10 +139,15 @@ namespace hpl {
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){}
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars){}
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
+		iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer);
 
 	private:
 		void LoadData();
 		void DestroyData();
+
+		iGpuProgram* mvPrograms[eMaterialRenderMode_LastEnum][8] = {};
+		cForceField* mvFields[4];
+		int mlFieldNum = 0;
 	};
 
 };

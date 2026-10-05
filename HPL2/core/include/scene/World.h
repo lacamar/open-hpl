@@ -72,6 +72,7 @@ namespace hpl {
 	class iPhysicsRope;
 	class cResourceVarsObject;
 	class cFogArea;
+	class cForceField;
 	class cEnvironmentParticles;
 	class cXmlElement;
 	class cEntFile;
@@ -382,6 +383,12 @@ namespace hpl {
 		cFogArea* GetFogAreaFromUniqueID(int alID);
 		cFogAreaIterator GetFogAreaIterator();
 
+		cForceField* CreateForceField(const tString& asName, bool abAutoRemove, bool abStatic);
+		void DestroyForceField(cForceField* apField);
+		cForceField* GetForceField(const tString& asName);
+		cForceFieldIterator GetForceFieldIterator(){ return cForceFieldIterator(&mlstForceFields); }
+		int GetForceFields(const cVector3f& avMin, const cVector3f& avMax, cForceField **apOut);
+
 		///// SOUND ENTITY METHODS ////////////////////
 
 		cSoundEntity* CreateSoundEntity(const tString &asName,const tString &asSoundEntity, 
@@ -520,6 +527,7 @@ namespace hpl {
 		tStartPosEntityList mlstStartPosEntities;
 		tAreaEntityMap m_mapAreaEntities;
 		tFogAreaList mlstFogAreas;
+		tForceFieldList mlstForceFields;
 		tDummyRenderableList mlstDummyRenderables;
 
 		int mlSoundCreationIDCount;

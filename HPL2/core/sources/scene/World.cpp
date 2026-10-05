@@ -65,6 +65,7 @@
 #include "scene/GuiSetEntity.h"
 #include "scene/RopeEntity.h"
 #include "scene/FogArea.h"
+#include "scene/ForceField.h"
 #include "scene/EnvironmentParticles.h"
 #include "scene/RenderableContainer_List.h"
 #include "scene/RenderableContainer_BoxTree.h"
@@ -227,6 +228,7 @@ namespace hpl {
 		STLDeleteAll(mlstGuiSetEntities);
 		STLDeleteAll(mlstRopeEntities);
 		STLDeleteAll(mlstFogAreas);
+		STLDeleteAll(mlstForceFields);
 		STLDeleteAll(mlstStartPosEntities);
 		STLMapDeleteAll(m_mapAreaEntities);
 
@@ -262,6 +264,18 @@ namespace hpl {
 		START_TIMING(Particles);
 		UpdateParticles(afTimeStep);
 		STOP_TIMING(Particles);
+
+		for(tForceFieldListIt it = mlstForceFields.begin(); it != mlstForceFields.end();)
+		{
+			cForceField *pField = *it;
+			pField->UpdateLogic(afTimeStep);
+			if(pField->GetAutoRemove() && pField->IsDead())
+			{
+				hplDelete(pField);
+				it = mlstForceFields.erase(it);
+			}
+			else ++it;
+		}
 
 		START_TIMING(Lights);
 		UpdateLights(afTimeStep);
@@ -1020,6 +1034,44 @@ namespace hpl {
 	cFogAreaIterator cWorld::GetFogAreaIterator()
 	{
 		return cFogAreaIterator(&mlstFogAreas);
+	}
+
+	//-----------------------------------------------------------------------
+
+	cForceField* cWorld::CreateForceField(const tString& asName, bool abAutoRemove, bool abStatic)
+	{
+		cForceField *pField = hplNew(cForceField, (asName, abAutoRemove));
+		pField->SetStatic(abStatic);
+		mlstForceFields.push_back(pField);
+		return pField;
+	}
+
+	void cWorld::DestroyForceField(cForceField* apField)
+	{
+		STLFindAndDelete(mlstForceFields, apField);
+	}
+
+	cForceField* cWorld::GetForceField(const tString& asName)
+	{
+		return static_cast<cForceField*>(STLFindByName(mlstForceFields, asName));
+	}
+
+	// Visible fields touching the box, biggest radius first, at most 4
+	int cWorld::GetForceFields(const cVector3f& avMin, const cVector3f& avMax, cForceField **apOut)
+	{
+		int lNum = 0;
+		for(cForceField *pField : mlstForceFields)
+		{
+			if(pField->IsVisible() == false) continue;
+			cBoundingVolume *pBV = pField->GetBoundingVolume();
+			if(cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), avMin, avMax) == false) continue;
+
+			int i = lNum < 4 ? lNum++ : 4;
+			for(; i > 0 && apOut[i-1]->GetFinalRadius() < pField->GetFinalRadius(); --i)
+				if(i < 4) apOut[i] = apOut[i-1];
+			if(i < 4) apOut[i] = pField;
+		}
+		return lNum;
 	}
 
 	//-----------------------------------------------------------------------

@@ -38,6 +38,8 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/RendererDeferred.h"
+#include "scene/World.h"
+#include "scene/ForceField.h"
 
 
 namespace hpl {
@@ -73,6 +75,7 @@ namespace hpl {
 	#define kVar_afBlendHardnessVtx				21
 	#define kVar_afNormalMapBlendImpact			22
 	#define kVar_avTextureScale					23
+	#define kVar_avForceFieldPos0				24
 
 
 	//------------------------------
@@ -91,8 +94,9 @@ namespace hpl {
 	#define eFeature_Diffuse_DetailDiffuse	eFlagBit_10
 	#define eFeature_Diffuse_DetailNormal	eFlagBit_11
 	#define eFeature_Diffuse_Translucency	eFlagBit_12
+	#define eFeature_Diffuse_ForceFields	eFlagBit_13
 		
-	#define kDiffuseFeatureNum 13
+	#define kDiffuseFeatureNum 14
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -109,6 +113,7 @@ namespace hpl {
 		cProgramComboFeature("UseDetailDiffuse", kPC_FragmentBit),
 		cProgramComboFeature("UseDetailNormal", kPC_FragmentBit, eFeature_Diffuse_NormalMaps),
 		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
+		cProgramComboFeature("UseFourForceFields", kPC_VertexBit),
 	};
 
 	//------------------------------
@@ -136,8 +141,9 @@ namespace hpl {
 	#define eFeature_Z_Sway						eFlagBit_5
 	#define eFeature_Z_SwaySingleDir			eFlagBit_6
 	#define eFeature_Z_SwayMap					eFlagBit_7
+	#define eFeature_Z_ForceFields				eFlagBit_8
 	
-	#define kZFeatureNum 8
+	#define kZFeatureNum 9
 
 	cProgramComboFeature vZFeatureVec[] =
 	{
@@ -149,6 +155,7 @@ namespace hpl {
 			cProgramComboFeature("UseSway",						kPC_VertexBit),
 			cProgramComboFeature("UseSwaySingleDir",			kPC_VertexBit),
 			cProgramComboFeature("UseSwayMap",					kPC_VertexBit),
+			cProgramComboFeature("UseFourForceFields",			kPC_VertexBit),
 	};
 
 	//------------------------------
@@ -182,13 +189,15 @@ namespace hpl {
 		apManager->AddGenerateProgramVariableId("avSwaySingleDirection", kVar_avSwaySingleDirection, alMode);
 		apManager->AddGenerateProgramVariableId("avSwaySinglesampleDirection", kVar_avSwaySinglesampleDirection, alMode);
 		apManager->AddGenerateProgramVariableId("a_mtxModel", kVar_a_mtxModel, alMode);
+		iMaterialType::AddForceFieldVariableIds(apManager, kVar_avForceFieldPos0, alMode);
 	}
 
-	static tFlag SwayFlags(cMaterialType_SolidDiffuse_Vars *apVars, cMaterial *apMaterial, tFlag alSway, tFlag alSingleDir, tFlag alMap)
+	static tFlag SwayFlags(cMaterialType_SolidDiffuse_Vars *apVars, cMaterial *apMaterial, tFlag alSway, tFlag alSingleDir, tFlag alMap, tFlag alForceFields)
 	{
 		if(apVars->mbSwayActive == false) return 0;
 		tFlag lFlags = alSway;
 		if(apVars->mbSwaySingleDir) lFlags |= alSingleDir;
+		if(apVars->mbSwayForceFieldAffected) lFlags |= alForceFields;
 		if(apMaterial->GetTexture(eMaterialTexture_Height)) lFlags |= alMap;
 		return lFlags;
 	}
@@ -580,7 +589,7 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_Alpha))	lFlags |= eFeature_Z_UseAlpha;
 			if(apMaterial->HasUvAnimation())					lFlags |= eFeature_Z_UvAnimation;
 			if(pVars->mbAlphaDissolveFilter)					lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap);
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap, eFeature_Z_ForceFields);
 
 			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
 		}
@@ -594,7 +603,7 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_DissolveAlpha))	lFlags |= eFeature_Z_DissolveAlpha;
 			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Z_UvAnimation;
 			if(pVars->mbAlphaDissolveFilter)							lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap);
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap, eFeature_Z_ForceFields);
 
 			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
 		}
@@ -616,7 +625,7 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse))	lFlags |= eFeature_Diffuse_DetailDiffuse;
 			if(apMaterial->GetTexture(eMaterialTexture_DetailNMap))		lFlags |= eFeature_Diffuse_DetailNormal;
 			if(apMaterial->GetTexture(eMaterialTexture_Translucency))	lFlags |= eFeature_Diffuse_Translucency;
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap);
+			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap, eFeature_Diffuse_ForceFields);
 
 			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
 		}
@@ -711,10 +720,18 @@ namespace hpl {
 	void cMaterialType_SolidDiffuse::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 																iRenderer *apRenderer)
 	{
-		if(((cMaterialType_SolidDiffuse_Vars*)apObject->GetMaterial()->GetVars())->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
+		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apObject->GetMaterial()->GetVars();
+		if(pVars->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
 		{
 			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
 			apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
+			if(pVars->mbSwayForceFieldAffected)
+			{
+				cForceField *vFields[4];
+				cBoundingVolume *pBV = apObject->GetBoundingVolume();
+				int lNum = apRenderer->GetCurrentWorld()->GetForceFields(pBV->GetMin(), pBV->GetMax(), vFields);
+				iMaterialType::SetForceFieldVars(apProgram, kVar_avForceFieldPos0, vFields, lNum, pVars->mfSwayForceFieldMul, pVars->mfSwayForceFieldMax);
+			}
 		}
 		
 		////////////////////////////
@@ -768,6 +785,9 @@ namespace hpl {
 		pVars->mfSwayYFreqMul = apVars->GetVarFloat("SwayYFreqMul", 0);
 		pVars->mvSwaySingleDir = apVars->GetVarVector3f("SwaySingleDirVector", cVector3f(0, 0, 1));
 		pVars->mvSwaySingleSampleDir = apVars->GetVarVector3f("SwaySingleSampleVector", cVector3f(1, 0, 0));
+		pVars->mbSwayForceFieldAffected = apVars->GetVarBool("SwayForceFieldAffected", false);
+		pVars->mfSwayForceFieldMul = apVars->GetVarFloat("SwayForceFieldMul", 0);
+		pVars->mfSwayForceFieldMax = apVars->GetVarFloat("SwayForceFieldMax", 0);
 		float fFadeStart = apVars->GetVarFloat("DetailFadeStart", 5);
 		cVector2f vDetailUvMul = apVars->GetVarVector2f("DetailUvMul", 4);
 		pVars->mvDetailProperties[0] = fFadeStart;

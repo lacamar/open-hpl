@@ -894,6 +894,8 @@ namespace hpl {
 				pVars->mvWindOctaves = pDoc->GetAttributeVector3f("WindOctaveMuls", 1);
 			}
 			pVars->mvDissolve = cVector2f(fFadeStart, fFadeEnd - fFadeStart);
+			pVars->mfForceFieldMul = pDoc->GetAttributeFloat("ForceFieldForceMul", 0);
+			pVars->mfMaxForceFieldForce = pDoc->GetAttributeFloat("MaxForceFieldForce", 0);
 			mat.mpMat->Compile();
 			mat.mvSubDiv = pDoc->GetAttributeVector2f("TextureSubDivisions", 1);
 			mat.mMinColor = pDoc->GetAttributeColor("MinColor", cColor(1, 1));
