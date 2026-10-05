@@ -1534,12 +1534,13 @@ dgIntersectStatus dgAABBPolygonSoup::CalculateAllFaceEdgeNormals(void *context, 
 		i0 = i1;
 	}
 
-	p0.m_x -= dgFloat32(0.5f);
-	p0.m_y -= dgFloat32(0.5f);
-	p0.m_z -= dgFloat32(0.5f);
-	p1.m_x += dgFloat32(0.5f);
-	p1.m_y += dgFloat32(0.5f);
-	p1.m_z += dgFloat32(0.5f);
+	// faces sharing an edge touch this box; 0.5 made combined meshes quadratic
+	p0.m_x -= dgFloat32(0.01f);
+	p0.m_y -= dgFloat32(0.01f);
+	p0.m_z -= dgFloat32(0.01f);
+	p1.m_x += dgFloat32(0.01f);
+	p1.m_y += dgFloat32(0.01f);
+	p1.m_z += dgFloat32(0.01f);
 
 	me->ForAllSectors(p0, p1, CalculateThisFaceEdgeNormals, &adjacentFaces);
 

@@ -11,6 +11,7 @@
 #include "physics/PhysicsTypes.h"
 
 #include <map>
+#include <tuple>
 
 namespace hpl {
 
@@ -67,7 +68,23 @@ namespace hpl {
 
 		cWorld* mpCurrentWorld;
 		iPhysicsWorld* mpCurrentPhysicsWorld;
-		std::map<tString, iCollideShape*> m_mapStaticShapes;
+		struct cStaticBatch
+		{
+			tString msName;
+			std::vector<float> mvPos;
+			std::vector<unsigned int> mvIdx;
+		};
+		typedef std::tuple<tString, int, int, int> tStaticBatchKey;
+		void FlushStaticBatch(const tString& asPhysicsMaterial, cStaticBatch& aBatch);
+		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
+
+		struct cStaticShapeBatch
+		{
+			tString msName;
+			std::vector<iCollideShape*> mvShapes;
+		};
+		typedef std::tuple<tString, bool, bool, bool, int, int, int> tStaticShapeBatchKey;
+		std::map<tStaticShapeBatchKey, cStaticShapeBatch> m_mapStaticShapeBatches;
 
 		struct cHpmTrackStats
 		{

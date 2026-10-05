@@ -339,6 +339,7 @@ static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadless
 	}
 	int lStatic = 0, lDynamic = 0, lAwake = 0, lChar = 0;
 	std::vector<std::pair<float, tString>> vAwake;
+	std::map<tString, int> mapStatic;
 	cPhysicsBodyIterator it = pMap->GetWorld()->GetPhysicsWorld()->GetBodyIterator();
 	while (it.HasNext())
 	{
@@ -346,7 +347,12 @@ static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadless
 		if (pBody->IsCharacter())
 			++lChar;
 		else if (pBody->GetMass() == 0)
+		{
 			++lStatic;
+			tString sName = pBody->GetName();
+			sName.erase(sName.find_last_not_of("0123456789_") + 1);
+			++mapStatic[sName];
+		}
 		else
 		{
 			++lDynamic;
@@ -366,6 +372,14 @@ static void cSomaBase_HeadlessCmd_PhysicsStats(void *apUserData, const cHeadless
 	aResp.Set("awake", lAwake);
 	aResp.Set("character", lChar);
 	aResp.Set("awake_top", sOut);
+	std::vector<std::pair<int, tString>> vStatic;
+	for (auto &[sName, lCount] : mapStatic)
+		vStatic.push_back(std::make_pair(lCount, sName));
+	std::sort(vStatic.rbegin(), vStatic.rend());
+	sOut = "";
+	for (size_t i = 0; i < vStatic.size() && i < (size_t)aReq.GetInt("n", 20); ++i)
+		sOut += cString::ToString(vStatic[i].first) + " " + vStatic[i].second + "\n";
+	aResp.Set("static_top", sOut);
 }
 
 static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -1452,14 +1466,6 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			}
 			if (gFrameFilter.mmapIgnored.count(pChild))
 				pChild->AddBodyCallback(&gFrameFilter);
-		}
-
-		// Everything is authored at rest; Newton wakes a body again on contact.
-		cPhysicsBodyIterator bodyIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
-		while (bodyIt.HasNext())
-		{
-			iPhysicsBody *pBody = bodyIt.Next();
-			if (pBody->GetMass() > 0) pBody->Sleep();
 		}
 	}
 

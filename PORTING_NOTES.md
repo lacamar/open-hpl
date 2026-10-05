@@ -6116,3 +6116,13 @@ our live entries and events.
 - Results: rock pile climbs like the ref (feet after 4 s: ours -39.50 94.68 286.73, ref -39.38 94.66
   286.82); 04_02 bulkhead `PushOpen` reaches 90° at ~430 steps (ref ~470) with no emulation.
 - Test targets are not in `all`: build `PhysicsNewtonTests` etc. explicitly before `ctest`.
+- `SetWorldSize` after the bodies exist (cWorld::Compile) re-added every body to the root broadphase
+  cell and left it there (unchanged AABB or sleeping: SetMatrix does nothing), so 5.7k of 6.2k
+  bodies on 04_02 paired with every cell each step. Now relocated with `UpdateBodyBroadphase`.
+- Static collision combined like HPL3 (`CombineObjectsAndCreatePhysics`, `CombineStaticBodies`):
+  mesh colliders per physics material and 16 m cell (50000 indices max, material from the .mat, so
+  footsteps on static geometry use the right step type); `.ent` static bodies into compounds per
+  material, flags and 8x8x24 m cell (Rebirth's CompareStaticBody). 04_02: 5738 -> 2569 static
+  bodies (the rest are entity bodies), 42 -> 48 fps at the start.
+- dgAABBPolygonSoup padded each face's adjacency query by 0.5 m: quadratic on dense combined meshes
+  (04_02 +4.6 s load). Faces sharing an edge always touch its box; 0.01 m now.

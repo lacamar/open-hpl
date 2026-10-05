@@ -378,6 +378,8 @@ void dgBroadPhaseCollision::SetWorldSize(const dgVector &min,
 		body = node->GetInfo().GetBody();
 		Add(body);
 		body->SetMatrix(body->GetMatrix());
+		// unchanged AABB or sleeping: SetMatrix leaves it in the root cell
+		UpdateBodyBroadphase(body, 0);
 	}
 
 	m_boxSize = m_max - m_min;

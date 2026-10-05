@@ -132,7 +132,7 @@ namespace hpl {
 		return eCollideShapeType_Null;
 	}
 
-	iCollideShape* CreateCollideShape(cXmlElement *apShapeElem, iPhysicsWorld *apPhysicsWorld, const cVector3f &avScale)
+	iCollideShape* CreateCollideShape(cXmlElement *apShapeElem, iPhysicsWorld *apPhysicsWorld, const cVector3f &avScale, const cMatrixf &a_mtxParent)
 	{
 		eCollideShapeType type = ToCollideShape(apShapeElem->GetAttributeString("ShapeType"));
 		cVector3f vSize = apShapeElem->GetAttributeVector3f("Scale") * avScale;
@@ -141,6 +141,7 @@ namespace hpl {
 
 		cMatrixf mtxOffset = cMath::MatrixRotate(vRot,eEulerRotationOrder_XYZ);
 		mtxOffset.SetTranslation(vPos);
+		mtxOffset = cMath::MatrixMul(a_mtxParent, mtxOffset);
 
 		switch(type)
 		{
