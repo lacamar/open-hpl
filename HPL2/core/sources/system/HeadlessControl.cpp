@@ -199,7 +199,7 @@ namespace hpl {
 	bool cHeadlessRequest::GetBool(const tString &asKey, bool abDefault) const
 	{
 		std::map<tString,tString>::const_iterator it = mmapFields.find(asKey);
-		return it == mmapFields.end() ? abDefault : cString::ToBool(it->second.c_str(), abDefault);
+		return it == mmapFields.end() ? abDefault : it->second == "1" || cString::ToBool(it->second.c_str(), abDefault);
 	}
 	bool cHeadlessRequest::HasKey(const tString &asKey) const
 	{

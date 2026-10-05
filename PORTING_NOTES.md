@@ -6143,3 +6143,8 @@ our live entries and events.
   both); GL_ALPHA sampled in a shader is black, so screen text vanished.
 - Saves v22: entity-owned particle systems saved by name (like Amnesia props); the 04_01 elevator
   dust stayed visible after a load.
+- Entity scale: billboard size scales by the entity's mean scale like light radius (HPL3 entity
+  loader); the 04_01 ControlsLight halo was too big.
+- Gui set fade (Rebirth `cGuiSetEntity::GetFadeColor` 0x1011f70): screen alpha = `1 - fade^2`.
+- HPL3 SSAO is applied (accumulation x0.74 at 00_01, ref final image x0.876). Headless bools
+  accept `1`; `ToBool` alone took `value=1` as false.

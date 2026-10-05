@@ -23,7 +23,8 @@ Open:
 - Colour space: exact sRGB decode in shaders (official mode 3 = hardware sRGB textures). Gui
   screens render to an sRGB RT with `base_*.hpsl` (linear blending). Main-screen gui still blends
   in gamma space (official enables `FRAMEBUFFER_SRGB` on the backbuffer).
-- 04_01 elevator: ControlsLight red halo larger than the ref; cyan-lit gap right of the cage.
+- 04_01 elevator pose: ours ~37% brighter (mostly lower half); TerminalElevatorMain screen ~0.35x
+  in the ref.
 
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 
@@ -70,13 +71,6 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 8. `05_03_space`, `03_02_omicron_inside`, `03_03_omicron_descent` and `02_02_ms_curie_inside`
    render (near) black at the start pose; the last two lost the
    fake light of the blue accumulation clear (fixed 2026-09-24). Space also logs a missing `aSkyboxMap` sampler.
-
-
-
-9. SSAO still binds G-buffer target 2 as depth (Dark Descent's layout); SOMA's depth is target
-   1 `.w`. HPL3's SSAO is a different chain (`deferred_ssao_depth_downsample` ->
-   render -> temporal -> blur -> upsample), so not a one-line rebind like the fog fix. Toggling
-   `ssao` currently changes nothing measurable.
 
 
 

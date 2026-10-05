@@ -159,8 +159,11 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 				mpEntity->AddChild(pChild);
 			}
 	}
+	float fMeanScale = (mvScale.x + mvScale.y + mvScale.z) / 3.0f;
 	for (iLight *pLight : mvLights)
-		pLight->SetRadius(pLight->GetRadius() * (mvScale.x + mvScale.y + mvScale.z) / 3.0f);
+		pLight->SetRadius(pLight->GetRadius() * fMeanScale);
+	for (cBillboard *pBB : mvBillboards)
+		pBB->SetSize(pBB->GetSize() * fMeanScale);
 
 	if (cWorldLoaderHpm::GetCurrentElement() || gsSomaSpawnName != "")
 	{

@@ -647,7 +647,7 @@ void cSomaLuxEntity::UpdateGuiScreen()
 	if (mpGuiSubMesh->GetVisibleVar() != bVisible)
 		mpGuiSubMesh->SetVisible(bVisible);
 	if (cMaterial *pMat = mpGuiSubMesh->GetCustomMaterial(); pMat && dynamic_cast<cMaterialType_Translucent *>(pMat->GetType()))
-		((cMaterialType_Translucent_Vars *)pMat->GetVars())->mFadeColor.a = 1 - mfGuiFade;
+		((cMaterialType_Translucent_Vars *)pMat->GetVars())->mFadeColor.a = 1 - mfGuiFade * mfGuiFade;
 	cGuiSet *pSet = mpImGui->GetSet();
 	cMatrixf mtx = mpGuiSubMesh->GetWorldMatrix();
 	cVector3f vRight = cMath::MatrixMul3x3(mtx, mvGuiRight);
