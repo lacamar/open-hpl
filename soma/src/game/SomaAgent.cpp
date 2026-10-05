@@ -36,6 +36,7 @@ namespace
 		eMsg_PlayerUndetected = 9,
 		eMsg_AtTrackNode = 11,
 		eMsg_EndOfTrack = 12,
+		eMsg_SensesDeactivated = 17,
 	};
 
 	enum
@@ -838,6 +839,22 @@ namespace
 			return cMath::Vector3Angle(cMath::Vector3Normalize(vDir), Forward()) < afFOV * 0.5f && SomaLineOfSight(vEye, vHead, mpEnt);
 		}
 
+		void ResetPlayerDetectionState()
+		{
+			mbDetected = mbSeen = false;
+			mfDetectCount = 0;
+		}
+
+		void SetSensesActive(bool abX)
+		{
+			if (mbSensesActive == abX)
+				return;
+			mbSensesActive = abX;
+			if (abX == false)
+				SomaAgentSendMessage(mpEnt, eMsg_SensesDeactivated, 0);
+			ResetPlayerDetectionState();
+		}
+
 		void SetUndetected()
 		{
 			if (mbDetected)
@@ -1330,7 +1347,8 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		d.y = 0;
 		return a && a->mpBody ? std::fabs(Wrap(YawTo(d) - a->mpBody->GetYaw())) : 0.0f;
 	});
-	SOMA_METHOD(e, A, "void SetSensesActive(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbSensesActive = b; });
+	SOMA_METHOD(e, A, "void SetSensesActive(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->SetSensesActive(b); });
+	SOMA_METHOD(e, A, "void ResetPlayerDetectionState()", +[](E *p) { if (cAgent *a = Agent(p)) a->ResetPlayerDetectionState(); });
 	SOMA_METHOD(e, A, "bool GetSensesActive()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSensesActive; });
 	SOMA_METHOD(e, A, "void SetPlayerDetectedMinTime(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfDetectMinTime = x; });
 	SOMA_METHOD(e, A, "float GetPlayerDetectedCount()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfDetectCount : 0.0f; });
@@ -1338,7 +1356,6 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, A, "bool SetUpdatePlayerDetection()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbUpdateDetection; });
 	SOMA_METHOD(e, A, "bool PlayerIsSeen()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbSeen; });
 	SOMA_METHOD(e, A, "bool PlayerIsDetected()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbDetected; });
-	SOMA_METHOD(e, A, "void ResetPlayerDetectionState()", +[](E *p) { if (cAgent *a = Agent(p)) { a->mbDetected = a->mbSeen = false; a->mfDetectCount = 0; } });
 	SOMA_METHOD(e, A, "void SetFOV(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfFOV = x; });
 	SOMA_METHOD(e, A, "float GetFOV()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfFOV : 0.0f; });
 	SOMA_METHOD(e, A, "void SetFOVMul(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfFOVMul = x; });
