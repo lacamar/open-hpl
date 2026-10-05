@@ -402,7 +402,7 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 }
 
 // ponytail: player-size grid A* over live physics queries, expansion-capped; bake a navmesh if it gets slow.
-static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int alMaxExpand)
+static tString GridNavPath(const cVector3f &vStart, const cVector3f &avGoal, int alMaxExpand)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
@@ -446,6 +446,13 @@ static tString GridNavPath(const cVector3f &vStart, const cVector3f &vGoal, int 
 	std::priority_queue<tOpen, std::vector<tOpen>, std::greater<tOpen>> open;
 	auto key = [&](int ix, int iz, float y) { return std::make_tuple(ix, iz, (int)floorf(y / 0.5f + 0.5f)); };
 	float fY;
+	cVector3f vGoal = avGoal;
+	for (float d = 0; d < 6; d += kDrop)
+		if (floorAt(vGoal.x, avGoal.y - d, vGoal.z, fY))
+		{
+			vGoal.y = fY;
+			break;
+		}
 	int lSx = (int)lroundf(vStart.x / kCell), lSz = (int)lroundf(vStart.z / kCell);
 	cVector3f vS(lSx * kCell, vStart.y, lSz * kCell);
 	if (floorAt(vS.x, vS.y, vS.z, fY))

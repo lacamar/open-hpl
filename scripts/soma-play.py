@@ -336,12 +336,15 @@ def cmd_walk(a):
     cmd_state(a)
 
 
-def steer(target, tol, deadline, back=False):
+def steer(target, tol, deadline, back=False, prev=None):
     best, stuck = 1e9, 0
     while time.time() < deadline:
         _, feet = camera_pos()
         d = math.hypot(target[0] - feet[0], target[2] - feet[2])
         if d < tol:
+            return True
+        # overshot an intermediate waypoint between polls
+        if prev and (target[0] - feet[0]) * (target[0] - prev[0]) + (target[2] - feet[2]) * (target[2] - prev[2]) < 0:
             return True
         stuck = 0 if d < best - 0.05 else stuck + 1
         best = min(best, d)
@@ -350,7 +353,7 @@ def steer(target, tol, deadline, back=False):
             return False
         yaw = -math.atan2(target[0] - feet[0], feet[2] - target[2]) + (math.pi if back else 0)
         ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});")
-        frames(0.15)
+        send({"cmd": "wait_frames", "n": 9, "max_ms": 100})
     return False
 
 
@@ -379,7 +382,8 @@ def cmd_walkto(a):
                 press("key", "left ctrl", 0.1)
                 crouched = crouch
             key("left shift", a.run and not crouched)
-            if not steer([float(v) for v in p[:3]], a.tol if i == len(route) - 1 else 0.5, deadline, a.back):
+            last = i == len(route) - 1
+            if not steer([float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]]):
                 break
     finally:
         key(move, False)
