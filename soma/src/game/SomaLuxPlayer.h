@@ -71,6 +71,7 @@ public:
 	void OnMessage(const char *apDecl) override;
 	void OnUpdate(float afTimeStep) override;
 	void OnPostUpdate(float afTimeStep) override;
+	void OnVariableUpdate(float afTimeStep) override;
 	void OnGui(float afTimeStep) override;
 	void OnMapMessage(const char *apDecl, void *apMap) override;
 	void OnAction(int alAction, bool abPressed) override;

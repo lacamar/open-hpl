@@ -181,8 +181,13 @@ void cSomaLuxPlayer::PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool 
 	}
 }
 
+// cLuxPlayer::Update/PostUpdate/VariableUpdate skip without an active map (game over)
+static bool MapActive() { return cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive; }
+
 void cSomaLuxPlayer::OnUpdate(float afTimeStep)
 {
+	if (MapActive() == false)
+		return;
 	cSomaLuxScriptable::OnUpdate(afTimeStep);
 	if (mpState)
 		mpState->OnUpdate(afTimeStep);
@@ -204,11 +209,19 @@ void cSomaLuxPlayer::OnUpdate(float afTimeStep)
 
 void cSomaLuxPlayer::OnPostUpdate(float afTimeStep)
 {
+	if (MapActive() == false)
+		return;
 	cSomaLuxScriptable::OnPostUpdate(afTimeStep);
 	if (mpState)
 		mpState->OnPostUpdate(afTimeStep);
 	if (mpMoveState)
 		mpMoveState->OnPostUpdate(afTimeStep);
+}
+
+void cSomaLuxPlayer::OnVariableUpdate(float afTimeStep)
+{
+	if (MapActive())
+		cSomaLuxScriptable::OnVariableUpdate(afTimeStep);
 }
 
 void cSomaLuxPlayer::OnGui(float afTimeStep)
