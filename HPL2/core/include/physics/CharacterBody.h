@@ -343,6 +343,8 @@ namespace hpl {
 		void SetUseEntitySmoothYPos(bool abX){ mbEntitySmoothYPos = abX;}
 		void SetEntitySmoothYPosNum(int alX){ mlEntitySmoothYPosNum = alX;}
 		bool GetUseEntitySmoothYPos(){ return mbEntitySmoothYPos;}
+		void SetEntityPitchAmount(float afX){ mfEntityPitchAmount = afX;}
+		float GetEntityPitchAmount(){ return mfEntityPitchAmount;}
 		int GetEntitySmoothYPosNum(){ return mlEntitySmoothYPosNum;}
 
 
@@ -481,6 +483,7 @@ namespace hpl {
 		tVector3fList mlstEntityPos;
 
 		bool mbEntitySmoothYPos;
+		float mfEntityPitchAmount = 1;
 		int mlEntitySmoothYPosNum;
 		tFloatList mlstEntityYPositions;
 

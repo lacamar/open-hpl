@@ -1478,6 +1478,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntityPostOffset(const cMatrixf &in a_mtxOffset)", +[](iCharacterBody *o, const cMatrixf & a0) { o->SetEntityPostOffset(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "const cMatrixf & GetEntityPostOffset()", +[](iCharacterBody *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetEntityPostOffset(); return r; });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntitySmoothPosNum(int alNum)", +[](iCharacterBody *o, int a0) { o->SetEntitySmoothPosNum(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntityPitchAmount(float afX)", +[](iCharacterBody *o, float a0) { o->SetEntityPitchAmount(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetEntityPitchAmount()", +[](iCharacterBody *o) { return o->GetEntityPitchAmount(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetEntitySmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetEntitySmoothPosNum(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetUseEntitySmoothYPos(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetUseEntitySmoothYPos(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntitySmoothYPosNum(int alX)", +[](iCharacterBody *o, int a0) { o->SetEntitySmoothYPosNum(a0); });

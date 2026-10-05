@@ -1159,7 +1159,7 @@ namespace
 					mpBody->SetPosition(vPos);
 				return;
 			}
-			cMatrixf mtx = cMath::MatrixRotateY(mpBody->GetYaw() + kPif);
+			cMatrixf mtx = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw() + kPif), cMath::MatrixRotateX(-mpBody->GetPitch() * mpBody->GetEntityPitchAmount()));
 			mtx.SetTranslation(mpBody->GetFeetPosition());
 			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxMeshOffset));
 		}
