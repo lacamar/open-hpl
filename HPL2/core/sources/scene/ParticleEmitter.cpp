@@ -112,6 +112,8 @@ namespace hpl {
 		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
 		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture1Tangent,eVertexBufferElementFormat_Float,4);
 		
 		//////////////////////////////////
 		//Fill the indices with quads
@@ -137,6 +139,8 @@ namespace hpl {
 		for(int i=0;i<(int)alMaxParticles*4;i++){
 			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, 0);
 			mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1));
+			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal, cVector3f(0,0,1));
+			mpVtxBuffer->AddVertexVec4f(eVertexBufferElement_Texture1Tangent, cVector3f(1,0,0), 1);
 		}
 		
 		////////////////////////////////////
