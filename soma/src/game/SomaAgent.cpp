@@ -789,6 +789,49 @@ namespace
 		cAgentHeadTracker(E *p) : cAgentComponent(p, eComp_HeadTracker) { mbActive = false; }
 	};
 
+	struct cAgentForceEmitter : cAgentComponent
+	{
+		cForceField *mpField;
+		iCharacterBody *mpBody = NULL;
+		cVector3f mvOffset = 0;
+		bool mbAtFoot = false;
+		float mfMinSpeed = 0, mfMaxSpeed = 0;
+		cAgentForceEmitter(E *p) : cAgentComponent(p, eComp_ForceEmitter)
+		{
+			mpField = p->mpMap->GetWorld()->CreateForceField(p->msName + "_ForceField", false, false);
+			mpField->SetForce(3);
+			mpField->SetRadius(1.1f);
+			mpField->SetFreq(2.4f);
+			mpField->FadeOut(0.001f);
+		}
+		~cAgentForceEmitter() { mpEntity->mpMap->GetWorld()->DestroyForceField(mpField); }
+		void SetActive(bool abX)
+		{
+			mbActive = abX;
+			OnSetActive();
+		}
+		void OnSetActive() { mpField->SetActive(mpEntity->mbActive && mbActive); }
+		void Update(float afTimeStep)
+		{
+			if (mpBody == NULL)
+				return;
+			if (mfMaxSpeed > 0)
+			{
+				float fSpeed = mpBody->GetVelocity(afTimeStep).Length();
+				if (fSpeed > mfMinSpeed)
+					mpField->FadeTo(cMath::Clamp(fSpeed / (mfMaxSpeed - mfMinSpeed), 0.0f, 1.0f), 0.25f);
+				else if (fSpeed < mfMinSpeed * 0.66f && !mpField->IsDead())
+					mpField->FadeOut(1);
+			}
+			if (mpField->IsDead())
+				return;
+			cVector3f vPos = mbAtFoot ? mpBody->GetFeetPosition() : mpBody->GetPosition();
+			if (mvOffset != 0)
+				vPos += cMath::MatrixMul(cMath::MatrixRotate(cVector3f(mpBody->GetPitch(), mpBody->GetYaw(), 0), eEulerRotationOrder_ZXY), mvOffset);
+			mpField->SetPosition(vPos);
+		}
+	};
+
 	struct cGenericComponent : cAgentComponent
 	{
 		cGenericComponent(E *p, int alType) : cAgentComponent(p, alType) {}
@@ -1445,7 +1488,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxHeadTracker@ cLux_CreateEntityComponent_HeadTracker(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentHeadTracker(p)); });
 
 	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, 10)); });
-	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_ForceEmitter)); });
+	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentForceEmitter(p)); });
 	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_LightSensor)); });
 	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_BackboneTail)); });
 	for (const char *pType : {"iLuxEntityComponent", "cLuxStateMachine", "cLuxCharMover", "cLuxPathfinder", "cLuxBarkMachine", "cLuxSoundListener", "cLuxHeadTracker",
@@ -1460,7 +1503,21 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		return a ? a->Find<cAgentComponent>(t) : NULL;
 	});
 
-	const char *T = "cLuxStateMachine";
+	const char *T = "cLuxForceEmitter";
+	typedef cAgentForceEmitter FE;
+	SOMA_METHOD(e, T, "void SetActive(bool abX)", +[](FE *f, bool b) { f->SetActive(b); });
+	SOMA_METHOD(e, T, "bool IsActive()", +[](FE *f) { return f->mbActive; });
+	SOMA_METHOD(e, T, "void SetCharacterBody(iCharacterBody @apCharBody, const cVector3f &in avOffset, bool abAtFoot)",
+				+[](FE *f, iCharacterBody *b, const cVector3f &o, bool a) { f->mpBody = b; f->mvOffset = o; f->mbAtFoot = a; });
+	SOMA_METHOD(e, T, "void SetRadius(float afX)", +[](FE *f, float x) { f->mpField->SetRadius(x); });
+	SOMA_METHOD(e, T, "void SetForce(float afX)", +[](FE *f, float x) { f->mpField->SetForce(x); });
+	SOMA_METHOD(e, T, "void SetFreq(float afX)", +[](FE *f, float x) { f->mpField->SetFreq(x); });
+	SOMA_METHOD(e, T, "void FadeIn(float afTime)", +[](FE *f, float x) { f->mpField->FadeIn(x); });
+	SOMA_METHOD(e, T, "void FadeOut(float afTime)", +[](FE *f, float x) { f->mpField->FadeOut(x); });
+	SOMA_METHOD(e, T, "void SetMinForceSpeed(float afX)", +[](FE *f, float x) { f->mfMinSpeed = x; });
+	SOMA_METHOD(e, T, "void SetMaxForceSpeed(float afX)", +[](FE *f, float x) { f->mfMaxSpeed = x; });
+
+	T = "cLuxStateMachine";
 	typedef cAgentStateMachine SM;
 	SOMA_METHOD(e, T, "void AddState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapStates[id] = n; if (s->mapStates.size() == 1) s->mlNext = 0; });
 	SOMA_METHOD(e, T, "void AddSubState(const tString&in asName, int alId)", +[](SM *s, S n, int id) { s->mapSubStates[id] = n; });

@@ -847,6 +847,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterIterator<cLightListIterator, iLight *>(e, "cLightListIterator", "iLight");
 	SomaRegisterIterator<cMeshEntityIterator, cMeshEntity *>(e, "cMeshEntityIterator", "cMeshEntity");
 	SomaRegisterIterator<cParticleSystemIterator, cParticleSystem *>(e, "cParticleSystemIterator", "cParticleSystem");
+	SomaRegisterIterator<cForceFieldIterator, cForceField *>(e, "cForceFieldIterator", "cForceField");
 	SomaRegisterIterator<cSoundEntityIterator, cSoundEntity *>(e, "cSoundEntityIterator", "cSoundEntity");
 	SomaRegisterIterator<cBillboardIterator, cBillboard *>(e, "cBillboardIterator", "cBillboard");
 	SomaRegisterIterator<cBeamIterator, cBeam *>(e, "cBeamIterator", "cBeam");
@@ -885,6 +886,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetStaticMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetStaticMeshEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cMeshEntityIterator@ GetDynamicMeshEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetDynamicMeshEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cParticleSystemIterator@ GetParticleSystemIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetParticleSystemIterator()); });
+	SOMA_METHOD(e, "cWorld", "cForceFieldIterator@ GetForceFieldIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetForceFieldIterator()); });
 	SOMA_METHOD(e, "cWorld", "cSoundEntityIterator@ GetSoundEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetSoundEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cBillboardIterator@ GetBillboardIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBillboardIterator()); });
 	SOMA_METHOD(e, "cWorld", "cBeamIterator@ GetBeamIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBeamIterator()); });

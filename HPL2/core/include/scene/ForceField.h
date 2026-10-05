@@ -19,6 +19,7 @@ namespace hpl {
 		}
 
 		void FadeTo(float afAmount, float afTime){ mfFadeGoal = afAmount; mfFadeSpeed = afTime > 0 ? 1 / afTime : 1000; }
+		void FadeIn(float afTime){ mfFade = 0; FadeTo(1, afTime); }
 		void FadeOut(float afTime){ FadeTo(0, afTime); }
 		bool IsDead(){ return mfFade <= 0; }
 

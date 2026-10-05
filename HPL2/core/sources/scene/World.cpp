@@ -268,7 +268,7 @@ namespace hpl {
 		for(tForceFieldListIt it = mlstForceFields.begin(); it != mlstForceFields.end();)
 		{
 			cForceField *pField = *it;
-			pField->UpdateLogic(afTimeStep);
+			if(pField->IsActive()) pField->UpdateLogic(afTimeStep);
 			if(pField->GetAutoRemove() && pField->IsDead())
 			{
 				hplDelete(pField);
@@ -1062,7 +1062,7 @@ namespace hpl {
 		int lNum = 0;
 		for(cForceField *pField : mlstForceFields)
 		{
-			if(pField->IsVisible() == false) continue;
+			if(pField->IsActive() == false || pField->IsVisible() == false) continue;
 			cBoundingVolume *pBV = pField->GetBoundingVolume();
 			if(cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), avMin, avMax) == false) continue;
 
