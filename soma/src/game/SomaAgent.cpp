@@ -10,6 +10,8 @@
 
 #include "impl/tinyXML/tinyxml.h"
 
+#include <deque>
+
 #include <algorithm>
 #include <angelscript.h>
 #include <cmath>
@@ -231,7 +233,7 @@ namespace
 		tString msIdleAnim = "Idle", msWalkAnim = "Walk", msRunAnim = "Run", msBackwardAnim;
 		std::map<int, cAgentSpeedState> mapSpeedStates;
 		int mlEditState = -1, mlSpeedState = -1;
-		bool mbMoving = false, mbSlowDownAtGoal = false, mb3D = false;
+		bool mbMoving = false, mbMoveRequested = false, mbSlowDownAtGoal = false, mb3D = false;
 		cVector3f mvGoal = 0;
 		bool mbTurning = false;
 		float mfTurnGoal = 0;
@@ -266,16 +268,16 @@ namespace
 		void MoveToPos(const cVector3f &avPos, bool abSlowDown)
 		{
 			mvGoal = avPos;
-			mbMoving = true;
+			mbMoveRequested = true;
 			mbSlowDownAtGoal = abSlowDown;
 			mbTurning = false;
 		}
 
-		void Stop() { mbMoving = false; }
+		void Stop() { mbMoving = mbMoveRequested = false; }
 
 		void TurnTo(float afYaw)
 		{
-			mbMoving = false;
+			mbMoving = mbMoveRequested = false;
 			mbTurning = true;
 			mfTurnGoal = afYaw;
 		}
@@ -360,6 +362,8 @@ namespace
 		{
 			if (mpBody == NULL)
 				return;
+			// the real MoveToPos moves the body for one frame only; callers re-send it every frame
+			mbMoving = std::exchange(mbMoveRequested, false);
 			cAgentSpeedState *pState = Current();
 			float fTurnSpeedMul = pState && pState->mfTurnSpeedMul >= 0 ? pState->mfTurnSpeedMul : mfTurnSpeedMul;
 			float fTurnMax = pState && pState->mfTurnMaxSpeed >= 0 ? pState->mfTurnMaxSpeed : mfTurnMaxSpeed;
@@ -510,8 +514,9 @@ namespace
 		bool mbAtCenter = false;
 		std::vector<cVector3f> mvPath;
 		size_t mlPathIdx = 0;
-		bool mbMoving = false, mbExact = false;
+		bool mbMoving = false, mbExact = false, mbGoalPending = false;
 		cVector3f mvGoal = 0;
+		std::deque<float> mvDistHistory;
 		tString msResultCallback, msEndOfPathCallback;
 		bool mbCallbackInMap = false;
 		std::vector<cAINode *> mvNodeArray;
@@ -567,6 +572,7 @@ namespace
 				mvPath.assign(1, avGoal);
 			mlPathIdx = 0;
 			mbMoving = true;
+			mvDistHistory.clear();
 			if (cAgentCharMover *pMover = Mover())
 				pMover->MoveToPos(mvPath[0], abExact && mvPath.size() == 1);
 		}
@@ -680,14 +686,10 @@ namespace
 			}
 			if (mbMoving == false || mvPath.empty())
 				return;
-			cVector3f vDelta = mvPath[mlPathIdx] - Feet();
 			bool bLast = mlPathIdx + 1 >= mvPath.size();
-			float fHeight = std::fabs(vDelta.y);
-			vDelta.y = 0;
-			float fReach = bLast ? (mbExact ? 0.15f : 0.4f) : 0.6f;
-			cAgentCharMover *pMover3D = Mover();
-			if (pMover3D && pMover3D->mb3D ? std::hypot(vDelta.Length(), fHeight) < fReach : vDelta.Length() < fReach && fHeight < 2.0f)
+			if (Arrived(mvPath[mlPathIdx], bLast))
 			{
+				mvDistHistory.clear();
 				if (bLast)
 				{
 					ArriveEnd();
@@ -695,9 +697,16 @@ namespace
 				}
 				++mlPathIdx;
 			}
-			// the real pathfinder re-sends the goal every frame, overriding script turns
-			if (pMover3D)
-				pMover3D->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
+			mbGoalPending = true;
+		}
+
+		bool Arrived(const cVector3f &avNode, bool abLast);
+
+		// queued like the real goal message, so it lands after the state machine's MoveToPos
+		void SendGoal()
+		{
+			if (std::exchange(mbGoalPending, false) && mbMoving && mlPathIdx < mvPath.size() && Mover())
+				Mover()->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
 		}
 
 		cAINode *NodeAtPos(const cVector3f &avPos, float afMin, float afMax, bool abClosest, bool abLOS, cAINode *apSkip)
@@ -801,7 +810,7 @@ namespace
 		cVector3f mvLastKnownPlayerPos = 0;
 		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
 		cBoneState *mpPosBone = NULL;
-		bool mbPosBoneIsFeet = true, mbGlobalSpace = false;
+		bool mbPosBoneIsFeet = true, mbGlobalSpace = false, mbGravityBeforeGlobal = true, mbCollisionBeforeGlobal = true;
 		float mfPosBoneYOffset = 0;
 		float mfMaxDoorDist = 1, mfCheckDoorsCount = 0, mfDoorCheckTimer = 0;
 		bool mbAutoDisable = false;
@@ -953,8 +962,10 @@ namespace
 			if (mbGlobalSpace != mpEnt->mbGlobalSpaceAnim)
 			{
 				mbGlobalSpace = mpEnt->mbGlobalSpaceAnim;
-				mpBody->SetGravityActive(mbGlobalSpace == false && mbStaticCollider == false);
-				mpBody->SetTestCollision(mbGlobalSpace == false && mbStaticCollider == false);
+				if (mbGlobalSpace)
+					mbGravityBeforeGlobal = mpBody->GravityIsActive(), mbCollisionBeforeGlobal = mpBody->GetTestCollision();
+				mpBody->SetGravityActive(mbGlobalSpace == false && mbGravityBeforeGlobal);
+				mpBody->SetTestCollision(mbGlobalSpace == false && mbCollisionBeforeGlobal);
 				if (mbGlobalSpace)
 					mpBody->SetYaw(0);
 			}
@@ -997,6 +1008,33 @@ namespace
 		return mbAtCenter ? pAgent->mpBody->GetPosition() : pAgent->mpBody->GetFeetPosition();
 	}
 
+	// cLuxPathfinder::UpdateMoving: node inside the enlarged body box, or no progress for 150 frames near it
+	bool cAgentPathfinder::Arrived(const cVector3f &avNode, bool abLast)
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent == NULL || pAgent->mpBody == NULL)
+		{
+			cVector3f vDelta = avNode - Feet();
+			float fHeight = std::fabs(vDelta.y);
+			vDelta.y = 0;
+			return vDelta.Length() < (abLast ? (mbExact ? 0.15f : 0.4f) : 0.6f) && fHeight < 2.0f;
+		}
+		cVector3f vSize = pAgent->mpBody->GetSize(), vPos = pAgent->mpBody->GetPosition();
+		float fDistSqr = cMath::Vector3DistSqr(vPos, avNode);
+		mvDistHistory.push_back(fDistSqr);
+		if (mvDistHistory.size() > 150)
+		{
+			mvDistHistory.pop_front();
+			float fGrowth = 0;
+			for (float f : mvDistHistory)
+				fGrowth += f - mvDistHistory.front();
+			if (fGrowth > 0 && fDistSqr < vSize.y * 1.5f)
+				return true;
+		}
+		cVector3f vD = avNode - vPos + cVector3f(0, 0.1f * vSize.y, 0);
+		return std::fabs(vD.x) <= vSize.x * 0.65f && std::fabs(vD.y) <= vSize.y * 0.6f + 0.225f && std::fabs(vD.z) <= vSize.z * 0.65f;
+	}
+
 	cAgent *AgentOrNew(E *apEnt)
 	{
 		std::unique_ptr<cAgent> &p = gmapAgents[apEnt];
@@ -1035,7 +1073,7 @@ void SomaCreateAgent(cSomaLuxEntity *apEnt)
 	cAgent *pAgent = AgentOrNew(apEnt);
 
 	cResourceVarsObject &v = apEnt->mVars;
-	cVector3f vSize = v.GetVarVector3f("CharBodySize", cVector3f(0.9f, 1.9f, 0.9f));
+	cVector3f vSize = v.GetVarVector3f("CharBodySize", cVector3f(0.9f, 1.9f, 0.9f)) * apEnt->mvScale;
 	pAgent->mpBody = pMap->GetWorld()->GetPhysicsWorld()->CreateCharacterBody(apEnt->msName, vSize);
 	iCharacterBody *pBody = pAgent->mpBody;
 	pBody->SetUserData(apEnt);
@@ -1054,7 +1092,7 @@ void SomaCreateAgent(cSomaLuxEntity *apEnt)
 	cMatrixf mtxOffset = cMath::MatrixRotate(cVector3f(cMath::ToRad(vRot.x), cMath::ToRad(vRot.y), cMath::ToRad(vRot.z)), eEulerRotationOrder_XYZ);
 	mtxOffset = cMath::MatrixMul(mtxOffset, cMath::MatrixScale(v.GetVarVector3f("MeshScaleOffset", 1)));
 	mtxOffset.SetTranslation(v.GetVarVector3f("MeshPositionOffset", 0));
-	pAgent->mtxMeshOffset = mtxOffset;
+	pAgent->mtxMeshOffset = cMath::MatrixMul(cMath::MatrixScale(apEnt->mvScale), mtxOffset);
 	if (apEnt->mpMesh && apEnt->mpMesh->GetBoneStateNum() > 0)
 	{
 		tString sBone = v.GetVarString("CharBodyPosBone", "");
@@ -1218,6 +1256,8 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
 		if (pAgent->mvComponents[i]->mbActive)
 			pAgent->mvComponents[i]->Update(afTimeStep);
+	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
+		pPF->SendGoal();
 	pAgent->SyncMesh();
 }
 
