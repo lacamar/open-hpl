@@ -125,6 +125,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `player_state` | script player: state, move state, health, feet position, yaw |
 | `lux_entity name=` | script entity: type, class, script class, active, callbacks, position |
 | `script_exec code= [module=]` | compiles and runs AngelScript against the live API (or in the script file matching `module`); `__print(s)` returns output |
+| `script_tick code= [module=] [steps=60]` | runs `code` once per map update with `int n` = step; without `code` returns step and output so far |
 | `script_vars [name=]` | properties of a script object (e.g. `LuxPlayer`); no name lists objects |
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `script_profile [on=1] [n=30]` | script calls by inclusive time; `on=1` starts/clears collection |

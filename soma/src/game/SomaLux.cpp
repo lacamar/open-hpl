@@ -254,6 +254,8 @@ void cSomaLuxMap::OnLeave()
 	gbSomaUnderwaterEffects = false;
 }
 
+void SomaScriptTick();
+
 void cSomaLuxMap::Update(float afTimeStep)
 {
 	if (mpScript == NULL)
@@ -326,6 +328,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	vBreaks.swap(mvPendingBreaks);
 	for (cSomaLuxEntity *pEnt : vBreaks)
 		pEnt->DoBreak();
+	SomaScriptTick();
 }
 
 // iLuxEntity look-at callbacks: 1 when the player starts looking at the entity, -1 when looking away
@@ -482,6 +485,8 @@ void cSomaLuxMap::RemoveTimer(const tString &asName)
 
 cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
 {
+	if (mpFiringTimer && mpFiringTimer->msName == asName)
+		return mpFiringTimer;
 	for (size_t i = 0; i < mvTimers.size(); ++i)
 		if (mvTimers[i].msName == asName)
 			return &mvTimers[i];

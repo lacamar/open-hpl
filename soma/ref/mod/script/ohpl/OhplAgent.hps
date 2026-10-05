@@ -2,9 +2,19 @@
 
 int gOhplFrame = 0;
 
-class cScrOhplAgent : cOhplModuleBase
+class cScrOhplAgent : cOhplModuleBase, iOhplAgent
 {
 	int mlNext = 1;
+	array<iOhplTick@> mvTicks;
+
+	void AddTicker(iOhplTick@ apTick) { mvTicks.push_back(apTick); }
+
+	void Update(float afTimeStep)
+	{
+		for(int i = int(mvTicks.length()) - 1; i >= 0; i--)
+			if(!mvTicks[i].Tick(afTimeStep))
+				mvTicks.removeAt(i);
+	}
 
 	cScrOhplAgent()
 	{

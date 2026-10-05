@@ -1,5 +1,8 @@
 #include "interfaces/UserModule_Interface.hps"
 
+shared interface iOhplTick { bool Tick(float afTimeStep); }
+shared interface iOhplAgent { void AddTicker(iOhplTick@ apTick); }
+
 class cOhplModuleBase : iScrUserModule, iScrUserModule_Interface
 {
 	void Update(float afTimeStep){}

@@ -144,6 +144,7 @@ class Ref:
         n = self.next_id()
         if n > SLOTS:
             raise ExecError(f"all {SLOTS} exec slots used, restart", [])
+        code = code.replace("__OHPL_EXEC_FILE__", f"ohpl/exec/ohpl_exec_{n}.hps")
         inc = "".join(l + "\n" for l in code.splitlines() if l.startswith("#include"))
         code = "\n".join(l for l in code.splitlines() if not l.startswith("#include"))
         (MOD / f"script/ohpl/exec/ohpl_exec_{n}.hps").write_text(

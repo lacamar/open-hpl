@@ -610,6 +610,20 @@ void dgWorldDynamicUpdate::IntegrateVelocity(const dgBodyCluster* const cluster,
 	}
 
 	if (cluster->m_jointCount) {
+		// ponytail: emulates Newton 2.36, whose solver residual keeps a one-joint island awake ~12 steps after a disturbance (HPL3 door pushes stack on it)
+		const bool coast = (cluster->m_jointCount == 1);
+		if (coast && (!stackSleeping || (sleepCounter < 12))) {
+			for (dgInt32 i = 0; i < count; i++) {
+				dgBody* const body = bodyArray[i].m_body;
+				body->m_equilibrium = 0;
+				if (!stackSleeping && body->IsRTTIType(dgBody::m_dynamicBodyRTTI)) {
+					((dgDynamicBody*)body)->m_sleepingCounter = 0;
+				}
+			}
+			if (stackSleeping) {
+				return;
+			}
+		}
 		if (stackSleeping) {
 			for (dgInt32 i = 0; i < count; i++) {
 				dgBody* const body = bodyArray[i].m_body;

@@ -540,6 +540,38 @@ static void cSomaBase_HeadlessCmd_ScriptExec(void *apUserData, const cHeadlessRe
 		aResp.SetError(sError);
 }
 
+static std::string gsTickCode, gsTickModule, gsTickOutput;
+static int glTickSteps = 0, glTickStep = 0;
+
+void SomaScriptTick()
+{
+	if (glTickStep >= glTickSteps)
+		return;
+	std::string sError;
+	gsSomaExecOutput.clear();
+	if (cSomaScriptRuntime::Get()->Exec("int n = " + std::to_string(glTickStep++) + ";\n" + gsTickCode, gsTickModule, sError) == false)
+	{
+		gsTickOutput += sError + "\n";
+		glTickSteps = 0;
+	}
+	gsTickOutput += gsSomaExecOutput;
+}
+
+static void cSomaBase_HeadlessCmd_ScriptTick(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	if (aReq.HasKey("code"))
+	{
+		gsTickCode = aReq.GetString("code", "");
+		gsTickModule = aReq.GetString("module", "");
+		glTickSteps = aReq.GetInt("steps", 60);
+		glTickStep = 0;
+		gsTickOutput.clear();
+	}
+	aResp.Set("step", std::to_string(glTickStep));
+	aResp.Set("output", gsTickOutput);
+	gsTickOutput.clear();
+}
+
 static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, void *apAddr)
 {
 	char sBuf[64];
@@ -1103,6 +1135,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("player_state", cSomaBase_HeadlessCmd_PlayerState, this);
 		pCtrl->RegisterHandler("lux_entity", cSomaBase_HeadlessCmd_LuxEntity, this);
 		pCtrl->RegisterHandler("script_exec", cSomaBase_HeadlessCmd_ScriptExec, this);
+	pCtrl->RegisterHandler("script_tick", cSomaBase_HeadlessCmd_ScriptTick, this);
 		pCtrl->RegisterHandler("script_vars", cSomaBase_HeadlessCmd_ScriptVars, this);
 		pCtrl->RegisterHandler("imgui_stats", cSomaBase_HeadlessCmd_ImGuiStats, this);
 		pCtrl->RegisterHandler("imgui_ops", cSomaBase_HeadlessCmd_ImGuiOps, this);
