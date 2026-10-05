@@ -318,6 +318,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	cSomaSoundscape::Get()->Update(this, afTimeStep);
 	UpdateLookAtCallbacks(afTimeStep);
 	UpdateCollideCallbacks();
+	mpRuntime->Call(mpScript, "void PostUpdate(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		if (pEnt->GetScript() && pEnt->mbActive)
 			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
