@@ -34,7 +34,7 @@ def parse(path):
         return None
 
 
-def census_map(path):
+def census_map(path, files):
     tracks = {}
     for track in SECTION_TRACKS:
         root = parse(path + "_" + track)
@@ -46,7 +46,12 @@ def census_map(path):
             objects = section.find("Objects")
             if objects is None:
                 continue
+            index = {f.get("Id"): f.get("Path") for fi in section if fi.tag.startswith("FileIndex") for f in fi}
             for child in objects:
+                # A few objects reference files the depot doesn't ship.
+                ref = child.get("File") or index.get(child.get("FileIndex"))
+                if ref and os.path.basename(ref.replace("\\", "/")).lower() not in files:
+                    continue
                 # 24 decals in the depot are authored with an empty DecalMesh: nothing to create.
                 if track == "Decal":
                     mesh = child.find("DecalMesh")
@@ -84,9 +89,10 @@ def main():
     if not maps:
         sys.exit(f"no .hpm maps under {args.soma_root}/maps")
 
+    files = {f.lower() for _, _, fs in os.walk(args.soma_root) for f in fs}
     out = {"maps": {}}
     for name, path in maps.items():
-        entry = census_map(path)
+        entry = census_map(path, files)
         entry["path"] = os.path.relpath(path, args.soma_root)
         out["maps"][name] = entry
         total = sum(t["xml"] for t in entry["tracks"].values())
