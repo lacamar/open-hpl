@@ -989,11 +989,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "bool GetIsUnderwater()", +[](cSomaLuxMap &m) { return m.mbIsUnderwater; });
 	SOMA_METHOD(e, M, "void SetIsUnderwater(bool abX)", +[](cSomaLuxMap &m, bool b) { m.mbIsUnderwater = b; });
 	SOMA_METHOD(e, M, "void SetPlayerTerrainCollision(bool abX)", +[](cSomaLuxMap &m, bool b) {
-		unsigned int lFlags = SomaCollideFlag(b ? "+player" : "-player");
-		cPhysicsBodyIterator it = m.GetWorld()->GetPhysicsWorld()->GetBodyIterator();
-		while (it.HasNext())
-			if (iPhysicsBody *pBody = it.Next(); cString::GetFirstStringPos(pBody->GetName(), "Terrain_") == 0)
-				pBody->SetCollideFlags(lFlags);
+		if (iPhysicsBody *pBody = m.GetWorld()->GetPhysicsWorld()->GetBody("Terrain"))
+			pBody->SetCollideFlags(SomaCollideFlag(b ? "+player" : "-player"));
 	});
 	SOMA_METHOD(e, "cWorld", "void SetTerrainActive(bool abX)", +[](cWorld *w, bool b) {
 		cMeshEntityIterator it = w->GetStaticMeshEntityIterator();
