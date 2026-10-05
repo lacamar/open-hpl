@@ -294,6 +294,7 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
 			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXYZ(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XYZ); });
+	SOMA_FUNC(e, "cVector3f cMath_MatrixToEulerAngles(const cMatrixf &in a_mtxA)", +[](const cMatrixf &m) { return cMath::MatrixToEulerAngles(m, eEulerRotationOrder_XYZ); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXZY(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XZY); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateYXZ(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_YXZ); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateYZX(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_YZX); });

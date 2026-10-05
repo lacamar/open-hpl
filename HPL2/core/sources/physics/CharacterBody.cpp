@@ -354,6 +354,7 @@ namespace hpl {
 		mpUserData = NULL;
 
 		mlCameraSmoothPosNum =0;
+		mbCameraUpdateActive = true;
 		mlEntitySmoothPosNum =0;
 
 		mlOnGroundCount = 0;
@@ -2023,6 +2024,11 @@ namespace hpl {
 	void iCharacterBody::UpdateCamera()
 	{
 		if(mpCamera==NULL) return;
+		if(!mbCameraUpdateActive)
+		{
+			mlstCameraPos.clear();
+			return;
+		}
 
 		//////////////////
 		//Get the camera pos add.
