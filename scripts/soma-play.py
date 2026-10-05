@@ -11,7 +11,7 @@
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
-  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav] [--run] # steer with w until within TOL m (stops when stuck)
+  scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav|--grid] [--run] # steer with w until within TOL m (stops when stuck)
   scripts/soma-play.py entities [PATTERN] [--near 5]  # entities: active, class, interactable, distance
   scripts/soma-play.py exec 'code' [--module M]       # AngelScript, __print() output; M: inside the first script file matching M
   scripts/soma-play.py log [REGEX] [--all]            # new log lines since the last call
@@ -357,10 +357,10 @@ def steer(target, tol, deadline, back=False):
 def cmd_walkto(a):
     target = [float(v) for v in a.target[:3]] if len(a.target) > 2 else ent_pos(a.target[0])
     route = [target + a.target[3:]]
-    if a.nav:
+    if a.nav or a.grid:
         _, feet = camera_pos()
         path = send({"cmd": "nav_path", "x": feet[0], "y": feet[1], "z": feet[2],
-                     "x2": target[0], "y2": target[1], "z2": target[2]}).get("path", "")
+                     "x2": target[0], "y2": target[1], "z2": target[2], "grid": "1" if a.grid else ""}).get("path", "")
         route = [l.split() for l in path.splitlines() if l != "partial"] + [target]
         print(f"nav: {len(route) - 1} nodes" + (" (partial)" if path.startswith("partial") else "") if path else "nav: no path")
     deadline = time.time() + a.max
@@ -505,6 +505,7 @@ def main():
     s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z [c]")
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s.add_argument("--nav", action="store_true", help="follow the agent node graph")
+    s.add_argument("--grid", action="store_true", help="player-size grid A* (crouches where needed)")
     s.add_argument("--run", action="store_true", help="hold shift")
     s.add_argument("--back", action="store_true", help="walk backwards, facing away from the target")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
