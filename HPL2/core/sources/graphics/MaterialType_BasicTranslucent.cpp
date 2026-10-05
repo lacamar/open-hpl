@@ -95,8 +95,9 @@ namespace hpl {
 	#define eFeature_Diffuse_SecondaryFog			eFlagBit_11
 	#define eFeature_Diffuse_FadeColor				eFlagBit_12
 	#define eFeature_Diffuse_SRGBDiffuseMap			eFlagBit_13
+	#define eFeature_Diffuse_AngleFade				eFlagBit_14
 	
-	#define kDiffuseFeatureNum 14
+	#define kDiffuseFeatureNum 15
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -114,6 +115,7 @@ namespace hpl {
 		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
 		cProgramComboFeature("UseFadeColor", kPC_FragmentBit),
 		cProgramComboFeature("UseSRGBDiffuseMap", kPC_FragmentBit),
+		cProgramComboFeature("UseAngleFade", kPC_VertexBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -317,6 +319,7 @@ namespace hpl {
 			if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
 			if(pVars->mbSoftParticle)								lFlags |= eFeature_Diffuse_SoftParticle;
 			if(pVars->mbFadeColor)									lFlags |= eFeature_Diffuse_FadeColor;
+			if(pVars->mbAngleFade)									lFlags |= eFeature_Diffuse_AngleFade;
 			
 			return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 		}
@@ -646,6 +649,7 @@ namespace hpl {
 		pVars->mfRimLightPow = apVars->GetVarFloat("RimLightPow", 8.0f);
 		pVars->mbAffectedByLightLevel = apVars->GetVarBool("AffectedByLightLevel", false);
 		pVars->mbSoftParticle = apVars->GetVarBool("SoftParticleActive", false);
+		pVars->mbAngleFade = apVars->GetVarBool("AngleFadeActive", false);
 		pVars->mfSoftPartThickness = apVars->GetVarFloat("SoftPartThickness", 1.0f);
 		pVars->mfSoftPartAlphaBasedThickness = apVars->GetVarFloat("SoftPartAlphaBasedThickness", 0.0f);
 		pVars->mfSoftPartDepthBias = apVars->GetVarFloat("SoftPartDepthBias", 0.0f);
