@@ -246,7 +246,7 @@ public:
 	tString msOnGuiFunc;
 	int mlGuiDraws = 0;
 	int mlGuiCalls = 0;
-	bool mbGuiActive = false;
+	bool mbGuiActive = true;
 	// cLuxProp::OnVariableUpdate gating of unfocused screens
 	float mfGuiFPS = 30, mfGuiTimeAcc = 0;
 	bool mbGuiSetUseInput = true;

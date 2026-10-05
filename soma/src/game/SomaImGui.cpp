@@ -571,10 +571,7 @@ void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &av
 		avSize.x = avDefaultSize.x;
 	if (avSize.y < 0)
 		avSize.y = avDefaultSize.y;
-	if (mvLayouts.empty() == false && avPos == cVector3f(0))
-		avPos = mvLayouts.back().mvCursor;
-	else
-		avPos += GroupPos();
+	avPos += mvLayouts.empty() ? GroupPos() : mvLayouts.back().mvCursor;
 	avPos = Align(avPos, avSize, mlAlign);
 }
 

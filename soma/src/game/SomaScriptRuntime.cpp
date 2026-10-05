@@ -176,14 +176,21 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	auto &mapType = mmapMethods[pType];
 	auto it = mapType.find(asDecl);
 	if (it == mapType.end())
-		it = mapType.emplace(asDecl, pType->GetMethodByDecl(asDecl.c_str())).first;
+	{
+		// "$Func": a global function of the object's module, like iScriptUserClassInterface::ScriptPrepare
+		size_t lGlobal = asDecl.find('$');
+		asIScriptFunction *pFound = lGlobal == std::string::npos ? pType->GetMethodByDecl(asDecl.c_str())
+									: pType->GetModule() ? pType->GetModule()->GetFunctionByDecl(std::string(asDecl).erase(lGlobal, 1).c_str()) : NULL;
+		it = mapType.emplace(asDecl, pFound).first;
+	}
 	asIScriptFunction *pFunc = it->second;
 	if (pFunc == NULL)
 		return false;
 
 	asIScriptContext *pCtx = mpEngine->RequestContext();
 	pCtx->Prepare(pFunc);
-	pCtx->SetObject(apObj);
+	if (pFunc->GetObjectType())
+		pCtx->SetObject(apObj);
 	if (aSetArgs)
 		aSetArgs(pCtx);
 	bool bOk = Execute(pCtx, [&] { return std::string(pType->GetName()) + "::" + asDecl; });
