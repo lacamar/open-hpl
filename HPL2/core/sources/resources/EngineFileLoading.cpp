@@ -129,6 +129,7 @@ namespace hpl {
 		tString sSoundFile = apElement->GetAttributeString("SoundEntityFile");
 		bool bUseDefault = apElement->GetAttributeBool("UseDefault");
 		if(apElement->GetAttribute("UseCustomProperties")) bUseDefault = !apElement->GetAttributeBool("UseCustomProperties");
+		if(sSoundFile=="") return NULL;
 
 		cSoundEntity *pSound = apWorld->CreateSoundEntity(asNamePrefix+sName,sSoundFile,false);
 		if(pSound==NULL) return NULL;
