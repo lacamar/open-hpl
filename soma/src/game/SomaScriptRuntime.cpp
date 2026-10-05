@@ -1,4 +1,5 @@
 #include "SomaScriptRuntime.h"
+#include "SomaBase.h"
 #include "SomaScriptApi.h"
 #include "SomaFsb.h"
 #include "SomaScriptBuilder.h"
@@ -107,6 +108,8 @@ asIScriptModule *cSomaScriptRuntime::GetModule(const std::string &asFile)
 	std::string sPath = asFile;
 	if (std::ifstream(sPath.c_str()).is_open() == false)
 		sPath = mpBuilder->Resolve(asFile, mpBuilder->GetGameDir() + "/script/");
+	if (sPath.empty() && gpSomaBase)
+		sPath = cString::To8Char(gpSomaBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile));
 
 	std::string sModule = "m" + std::to_string(mlModuleCount++);
 	std::string sMissing;
