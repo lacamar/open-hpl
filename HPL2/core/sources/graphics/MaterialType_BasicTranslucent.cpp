@@ -43,6 +43,7 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
+#include "graphics/Texture.h"
 #include "graphics/RenderList.h"
 #include "graphics/RendererDeferred.h"
 
@@ -93,8 +94,9 @@ namespace hpl {
 	#define eFeature_Diffuse_UnderwaterFog			eFlagBit_10
 	#define eFeature_Diffuse_SecondaryFog			eFlagBit_11
 	#define eFeature_Diffuse_FadeColor				eFlagBit_12
+	#define eFeature_Diffuse_SRGBDiffuseMap			eFlagBit_13
 	
-	#define kDiffuseFeatureNum 13
+	#define kDiffuseFeatureNum 14
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -111,6 +113,7 @@ namespace hpl {
 		cProgramComboFeature("UseUnderwaterFog", kPC_FragmentBit),
 		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
 		cProgramComboFeature("UseFadeColor", kPC_FragmentBit),
+		cProgramComboFeature("UseSRGBDiffuseMap", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -300,6 +303,7 @@ namespace hpl {
 			
 			tFlag lFlags =0;
 			if(apMaterial->GetTexture(eMaterialTexture_Diffuse))	lFlags |= eFeature_Diffuse_DiffuseMap;
+			if(apMaterial->GetTexture(eMaterialTexture_Diffuse) && apMaterial->GetTexture(eMaterialTexture_Diffuse)->GetsRGB())	lFlags |= eFeature_Diffuse_SRGBDiffuseMap;
 			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog | mlWorldFog;
 			if(apMaterial->HasUvAnimation())						lFlags |= eFeature_Diffuse_UvAnimation;
 			if(apMaterial->GetTexture(eMaterialTexture_NMap))		lFlags |= eFeature_Diffuse_NormalMap;

@@ -1049,11 +1049,6 @@ namespace hpl {
 			{
 				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,0);
 			}
-			iFrameBufferAttachment *pColor = mpFrameBuffer ? mpFrameBuffer->GetColorBuffer(0) : NULL;
-			if(pColor && pColor->GetFrameBufferAttachmentType() == eFrameBufferAttachment_Texture && static_cast<iTexture*>(pColor)->GetsRGB())
-				glEnable(GL_FRAMEBUFFER_SRGB);
-			else
-				glDisable(GL_FRAMEBUFFER_SRGB);
 
 			// Post tasks like generating mipmaps
 			if(pPrevFameBuffer)

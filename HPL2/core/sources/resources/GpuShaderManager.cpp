@@ -195,8 +195,9 @@ namespace hpl {
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
 		  "\t\t\t\tvSpecular *= clamp((0.6 - max(abs(vSourceUV[0].x - 0.5), abs(vSourceUV[0].y - 0.5))) * 10.0, 0.0, 1.0);" },
-		{ "base_frag.hpsl", "sample(aDiffuseMap, px_vTexCoord0.xy);",
-		  "sample(aDiffuseMap, px_vTexCoord0.xy);\n\t\t@ifdef UseSRGBDiffuse\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);\n\t\t@endif" },
+		{ "deferred_transparent_frag.hpsl",
+		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);",
+		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t@ifdef UseSRGBDiffuseMap\n\t\t@else\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);\n\t\t@endif" },
 		{ "deferred_transparent_frag.hpsl",
 		  "\t@endif\n\n\tcVector4f vFinalColor;",
 		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },

@@ -129,7 +129,6 @@ namespace hpl {
 
 		virtual bool GetRawPixelsRGBAFloat(std::vector<float> &avOut)=0;
 
-		// rendered to with sRGB encoding, sampled raw
 		void SetsRGB(bool abX){ mbsRGB = abX; }
 		bool GetsRGB(){ return mbsRGB; }
 

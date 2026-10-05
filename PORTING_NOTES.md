@@ -6131,14 +6131,22 @@ our live entries and events.
 
 - Official colour space mode 3 = hardware sRGB: textures get sRGB internal formats (pixel format ->
   GL format 0x140436490 picks 0x8C41/0x8C43, compressed 0x8C4D/0x8C4F), `SetCurrentFrameBuffer`
-  (0x140437840) toggles `GL_FRAMEBUFFER_SRGB` per target. Ours decodes in shaders with the exact
+  (0x140437840) disables `GL_FRAMEBUFFER_SRGB` for the backbuffer and ForceLinearSpace targets,
+  enables it otherwise. Ours decodes in shaders with the exact
   curve (`UseLinearColorSpaceCorrection`); cubemaps stay `pow 2.2`. Tonemap/bloom match the RE.
 - Map `Setup()` runs after a save is restored (not before), then the saved underwater state is
   reapplied.
-- Gui screens: the official draws the cGuiSet with `base_vtx/base_frag.hpsl` into an sRGB target.
-  Ours: RT is `GL_SRGB8_ALPHA8` sampled with `SKIP_DECODE` (the screen material decodes), framebuffer
-  sRGB on while drawing, gui textures decoded by `UseSRGBDiffuse`. Aliased as `gui_*.glsl` because
-  SOMA's legacy `core/shaders/base_frag.glsl` would win the lookup.
+- Gui screens: the official draws the cGuiSet with `base_vtx/base_frag.hpsl` into an sRGB target
+  with ForceLinearSpace (no encode); textures are hardware-decoded, the screen material samples the
+  RT with hardware decode. Ours does the same (`GL_SRGB8_ALPHA8`, no `FRAMEBUFFER_SRGB`); translucent
+  materials skip the shader decode for sRGB diffuse maps (`UseSRGBDiffuseMap`). Shaders aliased as
+  `gui_*.glsl` because SOMA's legacy `core/shaders/base_frag.glsl` would win the lookup. 04_01
+  elevator screen within ~1.1x of the ref up close.
+- SpatialGui (official 0x1401ed230 decide, 0x1401efb20 render): one 1024 RT/FB (0x320/0x330) and a
+  512 cache of 16 128-px cells (0x328/0x338), both ForceLinearSpace, no depth. Res = even(1.5 *
+  projected max side scaled to 1024/virtual) + 2, capped 1024; viewport `res * virtual / 1024`.
+  Cache cell if the projected side < ~144 px or `avgTop2Extents * tan(fov/2) < CacheAtScreenSize *
+  dist` (0x20c, renderer 0x4d4 = tan(fov/2)). Virtual size at gui set 0x100.
 - Font pages: A8 DDS pages must become white LuminanceAlpha like Luminance ones (official does
   both); GL_ALPHA sampled in a shader is black, so screen text vanished.
 - Saves v22: entity-owned particle systems saved by name (like Amnesia props); the 04_01 elevator

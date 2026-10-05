@@ -781,7 +781,7 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 	if (vScreens.empty())
 		return;
 
-	// official gui: base shaders, hardware-decoded textures, sRGB target
+	// official gui: base shaders, sRGB target without encode (ForceLinearSpace)
 	static iGpuProgram *vPrograms[2] = {};
 	if (static bool bTried = false; bTried == false)
 	{
@@ -792,7 +792,6 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 		vars.Add("UseColor");
 		vPrograms[1] = pGraphics->CreateGpuProgramFromShaders("SomaGuiFlat", "gui_vtx.glsl", "gui_frag.glsl", &vars);
 		vars.Add("UseDiffuse");
-		vars.Add("UseSRGBDiffuse");
 		vPrograms[0] = pGraphics->CreateGpuProgramFromShaders("SomaGuiDiffuse", "gui_vtx.glsl", "gui_frag.glsl", &vars);
 	}
 	iFrameBuffer *pPrevBuffer = pLowLevel->GetCurrentFrameBuffer();

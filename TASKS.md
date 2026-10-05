@@ -20,11 +20,10 @@ Open:
 - Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
 - 00_03 server room ~2x brighter than the ref.
-- Colour space: exact sRGB decode in shaders (official mode 3 = hardware sRGB textures). Gui
-  screens render to an sRGB RT with `base_*.hpsl` (linear blending). Main-screen gui still blends
-  in gamma space (official enables `FRAMEBUFFER_SRGB` on the backbuffer).
-- 04_01 elevator pose: ours ~37% brighter (mostly lower half); TerminalElevatorMain screen ~0.35x
-  in the ref.
+- 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the
+  logo brighter, glow smaller (sharp step between camera x -13.05 and -13.1, feet y 250.25 z 438.27,
+  yaw -90). Not the SpatialGui cache (needs <0.1 m extent at that range), projected size, fog or
+  script. Ours matches the near look.
 
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 

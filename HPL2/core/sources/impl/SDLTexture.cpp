@@ -1057,7 +1057,6 @@ namespace hpl {
 		}
 
 		glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		if(mbsRGB && GLEW_EXT_texture_sRGB_decode) glTexParameteri(GLTarget, GL_TEXTURE_SRGB_DECODE_EXT, GL_SKIP_DECODE_EXT);
 
 		//////////////////////
 		// Rect (force clamp to edge skip anisotropy)
