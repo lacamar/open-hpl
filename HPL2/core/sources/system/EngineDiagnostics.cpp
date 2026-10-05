@@ -159,7 +159,7 @@ namespace hpl {
 
 				for(int i=0; i<pEnt->GetSubMeshEntityNum(); ++i)
 				{
-					if(pEnt->GetSubMeshEntity(i)->GetMaterial() != NULL) continue;
+					if(pEnt->GetSubMeshEntity(i)->GetMaterial() != NULL || pEnt->GetSubMeshEntity(i)->GetSubMesh()->GetMaterialName().empty()) continue;
 					++lSubMeshNoMaterial;
 					++mapNoMaterial[(pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")) + ":" + pEnt->GetSubMeshEntity(i)->GetSubMesh()->GetMaterialName()];
 				}

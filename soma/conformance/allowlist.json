@@ -1,5 +1,10 @@
 {
  "exposure_area_first_only": "loader applies only the first ExposureArea as a global value",
+ "no_material": {
+  "communication_table_pplant_GUI.mat": "its diffuse graphics/imgui/station/Scanlines/scanlines_standard.dds is not in the game data",
+  "mind_coral_colony_edges_small_solid.mat": "not in the game data",
+  "televison_small_screen.mat": "not in the game data"
+ },
  "terrain": "geometry and collision only; no blend layers or undergrowth (SOMA_PLAN P4.9)",
  "tracks": {
   "Compound": "editor grouping; semantics unverified (SOMA_PLAN P4.6)",

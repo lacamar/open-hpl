@@ -222,8 +222,13 @@ def judge(name, result, expected, allow):
     # a whole map of them means the mesh scale is wrong.
     if w.get("entities_oversized", 0) > 20:
         fails.append(f"oversized:{w['entities_oversized']}")
-    if result.get("world", {}).get("submeshes_without_material"):
-        fails.append(f"no_material:{result['world']['submeshes_without_material']}")
+    missing = w.get("submeshes_without_material", 0)
+    for key, n in (w.get("no_material_top") or {}).items():
+        if any(key.endswith(m) for m in allow.get("no_material", {})):
+            missing -= n
+            allowed.append(f"no_material:{key.rsplit('/', 1)[-1]}")
+    if missing:
+        fails.append(f"no_material:{missing}")
 
     # Maps with no geometry never write the G-buffer; nothing to judge.
     renderables = sum(exp["tracks"][t]["xml"] for t in ("StaticObject", "Entity", "Primitive")) if exp else 1
