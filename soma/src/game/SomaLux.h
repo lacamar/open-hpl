@@ -4,6 +4,7 @@
 #include "hpl.h"
 
 #include <angelscript.h>
+#include <list>
 #include <map>
 #include <set>
 #include <tuple>
@@ -23,6 +24,7 @@ struct cSomaLuxTimer
 	int mlUserInt;
 	tString msUserString;
 	float mfLength = 0;
+	bool mbRemoved = false;
 };
 
 class cSomaLuxMap
@@ -43,7 +45,7 @@ public:
 	void AddTimer(const tString &asName, float afTime, const tString &asFunction);
 	// cLuxMap::RestartCurrentTimer, only valid inside a timer callback
 	void RestartCurrentTimer(float afTime);
-	std::vector<cSomaLuxTimer> &GetTimers() { return mvTimers; }
+	std::list<cSomaLuxTimer> &GetTimers() { return mvTimers; }
 	double GetTime() { return mfTime; }
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
@@ -76,7 +78,8 @@ private:
 	tString msFileName;
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;
-	std::vector<cSomaLuxTimer> mvTimers;
+	// newest first, like cLuxMap: a re-added timer shadows the one firing
+	std::list<cSomaLuxTimer> mvTimers;
 	std::vector<cSomaLuxEntity *> mvEntities;
 	std::map<tString, cSomaLuxEntity *> mmapEntities;
 	std::map<tString, std::vector<cSomaLuxEntity *>> mmapWildcardCache;
@@ -90,7 +93,7 @@ public:
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;
 private:
-	std::vector<cSomaLuxTimer> mvDueTimers;
+	bool mbUpdatingTimers = false;
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;

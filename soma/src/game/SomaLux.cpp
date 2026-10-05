@@ -261,28 +261,25 @@ void cSomaLuxMap::Update(float afTimeStep)
 	if (mpScript == NULL)
 		return;
 
-	// Collect due timers first: callbacks may add or remove timers
-	std::vector<cSomaLuxTimer> &vDue = mvDueTimers;
-	vDue.clear();
-	for (size_t i = 0; i < mvTimers.size();)
-	{
-		if (mvTimers[i].mbPaused == false)
-			mvTimers[i].mfTime -= afTimeStep;
-		if (mvTimers[i].mfTime <= 0 && mvTimers[i].mbPaused == false)
-		{
-			vDue.push_back(mvTimers[i]);
-			mvTimers.erase(mvTimers.begin() + i);
-		}
-		else
-			++i;
-	}
+	for (cSomaLuxTimer &t : mvTimers)
+		if (t.mbPaused == false)
+			t.mfTime -= afTimeStep;
 	mfTime += afTimeStep;
-	for (size_t i = 0; i < vDue.size(); ++i)
+	mbUpdatingTimers = true;
+	for (auto it = mvTimers.begin(); it != mvTimers.end();)
 	{
-		mpFiringTimer = &vDue[i];
-		mpRuntime->CallByName(mpScript, vDue[i].msFunction, vDue[i].msName);
+		if (it->mbPaused || it->mfTime > 0 || it->mbRemoved)
+		{
+			++it;
+			continue;
+		}
+		mpFiringTimer = &*it;
+		mpRuntime->CallByName(mpScript, it->msFunction, it->msName);
 		mpFiringTimer = NULL;
+		it = it->mfTime <= 0 ? mvTimers.erase(it) : std::next(it);
 	}
+	mbUpdatingTimers = false;
+	std::erase_if(mvTimers, [](const cSomaLuxTimer &t) { return t.mbRemoved; });
 
 	float fStep = afTimeStep;
 	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
@@ -463,30 +460,26 @@ void cSomaLuxMap::AddTimer(const tString &asName, float afTime, const tString &a
 	timer.mfUserFloat = 0;
 	timer.mlUserInt = 0;
 	timer.mfLength = timer.mfTime;
-	mvTimers.push_back(timer);
+	mvTimers.push_front(timer);
 }
 
 void cSomaLuxMap::RestartCurrentTimer(float afTime)
 {
-	if (mpFiringTimer == NULL)
-		return;
-	cSomaLuxTimer timer = *mpFiringTimer;
-	timer.mfTime = afTime < 0 ? timer.mfLength : afTime;
-	mvTimers.push_back(timer);
+	if (mpFiringTimer)
+		mpFiringTimer->mfTime = afTime < 0 ? mpFiringTimer->mfLength : afTime;
 }
 
 void cSomaLuxMap::RemoveTimer(const tString &asName)
 {
-	std::erase_if(mvTimers, [&](const cSomaLuxTimer &t) { return t.msName == asName; });
-	for (cSomaLuxTimer &t : mvDueTimers)
-		if (&t != mpFiringTimer && t.msName == asName)
-			t.msFunction.clear();
+	for (cSomaLuxTimer &t : mvTimers)
+		if (t.msName == asName)
+			t.mbRemoved = true;
+	if (mbUpdatingTimers == false)
+		std::erase_if(mvTimers, [](const cSomaLuxTimer &t) { return t.mbRemoved; });
 }
 
 void cSomaLuxMap::SetTimerPaused(const tString &asName, bool abX)
 {
-	if (mpFiringTimer && mpFiringTimer->msName == asName)
-		mpFiringTimer->mbPaused = abX;
 	for (cSomaLuxTimer &t : mvTimers)
 		if (t.msName == asName)
 			t.mbPaused = abX;
@@ -494,11 +487,9 @@ void cSomaLuxMap::SetTimerPaused(const tString &asName, bool abX)
 
 cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
 {
-	if (mpFiringTimer && mpFiringTimer->msName == asName)
-		return mpFiringTimer;
-	for (size_t i = 0; i < mvTimers.size(); ++i)
-		if (mvTimers[i].msName == asName)
-			return &mvTimers[i];
+	for (cSomaLuxTimer &t : mvTimers)
+		if (t.msName == asName)
+			return &t;
 	return NULL;
 }
 
