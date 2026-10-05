@@ -355,8 +355,8 @@ def steer(target, tol, deadline, back=False):
 
 
 def cmd_walkto(a):
-    target = [float(v) for v in a.target] if len(a.target) == 3 else ent_pos(a.target[0])
-    route = [target]
+    target = [float(v) for v in a.target[:3]] if len(a.target) > 2 else ent_pos(a.target[0])
+    route = [target + a.target[3:]]
     if a.nav:
         _, feet = camera_pos()
         path = send({"cmd": "nav_path", "x": feet[0], "y": feet[1], "z": feet[2],
@@ -502,7 +502,7 @@ def main():
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
     s.add_argument("--jump", type=float, help="press space after this many seconds")
-    s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z")
+    s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z [c]")
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s.add_argument("--nav", action="store_true", help="follow the agent node graph")
     s.add_argument("--run", action="store_true", help="hold shift")
