@@ -316,10 +316,14 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 			if (pOther == pBody || (pChar ? pOther->GetCollideCharacter() : pOther->GetCollide()) == false || cMath::CheckBVIntersection(bv, *pOther->GetBoundingVolume()) == false)
 				continue;
 			cCollideData data;
-			data.SetMaxSize(4);
-			if (pWorld->CheckShapeCollision(pBody->GetShape(), mtx, pOther->GetShape(), pOther->GetLocalMatrix(), data, 4, true))
-				sOut += pBody->GetName() + " x " + pOther->GetName() + (pOther->IsActive() ? "" : " (inactive)") + " depth " +
-						cString::ToString(data.mvContactPoints[0].mfDepth) + "\n";
+			data.SetMaxSize(32);
+			if (pWorld->CheckShapeCollision(pBody->GetShape(), mtx, pOther->GetShape(), pOther->GetLocalMatrix(), data, 32, true))
+			{
+				sOut += pBody->GetName() + " x " + pOther->GetName() + (pOther->IsActive() ? "" : " (inactive)") + "\n";
+				for (int i = 0; i < data.mlNumOfPoints; ++i)
+					sOut += "  depth " + cString::ToString(data.mvContactPoints[i].mfDepth) + " n " + data.mvContactPoints[i].mvNormal.ToString() +
+							" at " + data.mvContactPoints[i].mvPoint.ToString() + "\n";
+			}
 		}
 	}
 	aResp.Set("contacts", sOut);

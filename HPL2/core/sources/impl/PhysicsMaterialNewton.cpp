@@ -181,8 +181,11 @@ namespace hpl {
 				Combine(frictionMode,mfStaticFriction, pMat->mfStaticFriction),
 				Combine(frictionMode,mfKineticFriction, pMat->mfKineticFriction));
 
+			NewtonMaterialSetContinuousCollisionMode(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
+													1);
+
 			NewtonMaterialSetCollisionCallback(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-												OnAABBOverlapCallback,ContactsProcessCallback);
+												(void*)NULL,OnAABBOverlapCallback,ContactsProcessCallback);
 		}
 	}
 
@@ -207,13 +210,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cNewtonLockBodyUntilReturn::cNewtonLockBodyUntilReturn(const NewtonBody* apNewtonBody, int alThreadIndex)
+	cNewtonLockBodyUntilReturn::cNewtonLockBodyUntilReturn(const NewtonBody* apNewtonBody)
 	{
 		mpNewtonBody = apNewtonBody;
-		mlThreadIndex = alThreadIndex;
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (mpNewtonBody), mlThreadIndex);
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (mpNewtonBody));
 	}
-
+	
 	//-----------------------------------------------------------------------
 
 	cNewtonLockBodyUntilReturn::~cNewtonLockBodyUntilReturn()
@@ -229,11 +231,10 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	int cPhysicsMaterialNewton::OnAABBOverlapCallback(const NewtonJoint* apContactJoint, dFloat afTimestep, int alThreadIndex)
+	int cPhysicsMaterialNewton::OnAABBOverlapCallback(	const NewtonMaterial* apMaterial,
+														const NewtonBody* apBody1, const NewtonBody* apBody2,
+														int alThreadIndex)
 	{
-		const NewtonBody* apBody1 = NewtonJointGetBody0(apContactJoint);
-		const NewtonBody* apBody2 = NewtonJointGetBody1(apContactJoint);
-
 		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody1);
 		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody2);
 
@@ -258,8 +259,8 @@ namespace hpl {
 		//													mpContactBody2->GetName().c_str());
 
 		//Thread lock
-		cNewtonLockBodyUntilReturn criticalLock1(apBody1, alThreadIndex);
-		cNewtonLockBodyUntilReturn criticalLock2(apBody2, alThreadIndex);
+		cNewtonLockBodyUntilReturn criticalLock1(apBody1);
+		cNewtonLockBodyUntilReturn criticalLock2(apBody2);
 		
 		//Call the callbacks
 		if(pContactBody1->OnAABBCollision(pContactBody2)==false) return 0;
@@ -309,12 +310,12 @@ namespace hpl {
 
 			//Force
 			cVector3f vForce;
-			NewtonMaterialGetContactForce(pMaterial,pBody0,vForce.v);
+			NewtonMaterialGetContactForce(pMaterial,(NewtonBody*)pBody0,vForce.v);
 			contactData.mvForce += vForce;
 
 			//Position and normal
 			cVector3f vPos, vNormal;
-			NewtonMaterialGetContactPositionAndNormal(pMaterial,pBody0,vPos.v, vNormal.v);
+			NewtonMaterialGetContactPositionAndNormal(pMaterial,(NewtonBody*)pBody0,vPos.v, vNormal.v);
 
 			contactData.mvContactNormal += vNormal;
 			contactData.mvContactPosition += vPos;
@@ -328,11 +329,11 @@ namespace hpl {
 			if(pContactBody1->GetWorld()->GetSaveContactPoints())
 			{
 				//Thread lock
-				NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0), alThreadIndex);
+				NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
 
 				cCollidePoint collidePoint;
 				collidePoint.mfDepth = 1;
-				NewtonMaterialGetContactPositionAndNormal (pMaterial, pBody0, collidePoint.mvPoint.v, collidePoint.mvNormal.v);
+				NewtonMaterialGetContactPositionAndNormal (pMaterial, (NewtonBody*)pBody0, collidePoint.mvPoint.v, collidePoint.mvNormal.v);
 
 				pContactBody1->GetWorld()->GetContactPoints()->push_back(collidePoint);
 
@@ -352,8 +353,8 @@ namespace hpl {
 		contactData.mvContactPosition = contactData.mvContactPosition / (float)lContactNum;
 
 		//Thread lock
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0), alThreadIndex);
-		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1), alThreadIndex);
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
+		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody1));
 
 		////////////////////////////
 		//Surface data stuff

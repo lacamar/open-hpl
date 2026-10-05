@@ -116,10 +116,9 @@ namespace hpl {
 		void CreateCustomJoint(int alMaxDOF)
 		{
 			mlMaxDOF = alMaxDOF;
-			mpNewtonJoint = NewtonConstraintCreateUserJoint (mpNewtonWorld, mlMaxDOF, StaticSubmitConstraints, mpNewtonChildBody, mpNewtonParentBody);
+			mpNewtonJoint = NewtonConstraintCreateUserJoint (mpNewtonWorld, mlMaxDOF, StaticSubmitConstraints, StaticGetInfo, mpNewtonChildBody, mpNewtonParentBody); 
 
 			NewtonJointSetUserData (mpNewtonJoint, this);
-			NewtonUserJointSetSolverModel (mpNewtonJoint, 2);
 		}
 
 		//-------------------------------------------

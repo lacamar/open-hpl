@@ -59,7 +59,7 @@ namespace hpl {
 		iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx);
 		
 		iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer);
-		iCollideShape* CreateHeightFieldShape(int alWidth, int alDepth, const float* apHeights, float afUnitSize);
+		iCollideShape* CreateHeightFieldShape(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale);
 		iCollideShape* LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer);
 		void SaveMeshShapeToBuffer(iCollideShape* apMeshShape, cBinaryBuffer *apBuffer);
 
@@ -107,21 +107,16 @@ namespace hpl {
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
 	private:
-		void FlushCache();
-
 		NewtonWorld *mpNewtonWorld;
 
 		float* mpTempPoints;
 		float* mpTempNormals;
 		float* mpTempDepths;
-		long long* mpTempAttributeA;
-		long long* mpTempAttributeB;
 
 		cVector3f mvWorldSizeMin;
 		cVector3f mvWorldSizeMax;
 		cVector3f mvGravity;
 		float mfMaxTimeStep;
-		bool mbFlushCache;
 
 		ePhysicsAccuracy mAccuracy;
 	};

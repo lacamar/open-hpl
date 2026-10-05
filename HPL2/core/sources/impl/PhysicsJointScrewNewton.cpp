@@ -40,7 +40,6 @@ namespace hpl {
 
 		mpNewtonJoint = NewtonConstraintCreateCorkscrew(mpNewtonWorld, avPivotPoint.v, avPinDir.v, mpNewtonChildBody,
 			mpNewtonParentBody);
-		NewtonUserJointSetSolverModel(mpNewtonJoint, 2);
 
 		NewtonJointSetUserData(mpNewtonJoint, (void*) this);
 		NewtonCorkscrewSetUserCallback(mpNewtonJoint,LimitCallback);

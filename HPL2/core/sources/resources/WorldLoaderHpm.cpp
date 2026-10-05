@@ -1,6 +1,8 @@
 
 #include "resources/WorldLoaderHpm.h"
 
+#include <algorithm>
+
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 
@@ -681,12 +683,16 @@ namespace hpl {
 		}
 
 		std::vector<float> vHeight((size_t)lSize * lSize);
+		std::vector<unsigned short> vElev((size_t)(lSize + 1) * (lSize + 1));
 		for (size_t i = 0; i < vHeight.size(); ++i)
 		{
 			const unsigned char* p = &vData[128 + i * 3];
 			unsigned int lVal = p[0] | (p[1] << 8) | (p[2] << 16);
 			vHeight[i] = lVal ? lVal * (fMaxHeight / 16777215.0f) : NAN;
+			vElev[i / lSize * (lSize + 1) + i % lSize] = (unsigned short)lroundf(lVal / 16777215.0f * 65535.0f);
 		}
+		for (int i = 0; i < lSize; ++i) vElev[(size_t)i * (lSize + 1) + lSize] = vElev[(size_t)i * (lSize + 1) + lSize - 1];
+		std::copy_n(&vElev[(size_t)(lSize - 1) * (lSize + 1)], lSize + 1, &vElev[(size_t)lSize * (lSize + 1)]);
 		auto Height = [&](int x, int z) { return vHeight[(size_t)cMath::Clamp(z, 0, lSize - 1) * lSize + cMath::Clamp(x, 0, lSize - 1)]; };
 		auto Solid = [&](int x, int z, float fFallback) { float h = Height(x, z); return std::isnan(h) ? fFallback : h; };
 
@@ -768,13 +774,10 @@ namespace hpl {
 			cMeshEntity* pEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
 			vPatches.push_back(pEntity->GetSubMeshEntity(0));
-			std::vector<float> vPatch(lW * lH);
-			for (int z = 0; z < lH; ++z)
-			for (int x = 0; x < lW; ++x) vPatch[z * lW + x] = Height(x0 + x, z0 + z);
-			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody(sName, mpCurrentPhysicsWorld->CreateHeightFieldShape(lW, lH, vPatch.data(), fUnit));
-			pBody->SetMass(0);
-			pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(x0 * fUnit - fOffset, 0, z0 * fUnit - fOffset)));
 		}
+		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("Terrain", mpCurrentPhysicsWorld->CreateHeightFieldShape(lSize + 1, vElev.data(), fUnit, fMaxHeight / 65535.0f));
+		pBody->SetMass(0);
+		pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(-fOffset, 0, -fOffset)));
 		for (cMaterial* pMat : vBlend) pMatMgr->Destroy(pMat);
 		CreateTerrainDecals(apTerrain, vPatches, fMaxHeight);
 		CreateTerrainUndergrowth(apTerrain, vHeight, lSize, fUnit);

@@ -44,10 +44,9 @@ namespace hpl {
 		cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(apShape);
 		
 		mpNewtonWorld = pWorldNewton->GetNewtonWorld();
-		cMatrixf mtxIdentityTranspose = cMatrixf::Identity.GetTranspose();
-		mpNewtonBody = NewtonCreateDynamicBody(pWorldNewton->GetNewtonWorld(),
-										pShapeNewton->GetNewtonCollision(),
-										&mtxIdentityTranspose.m[0][0]);
+		cMatrixf mtxIdentity = cMatrixf::Identity;
+		mpNewtonBody = NewtonCreateBody(pWorldNewton->GetNewtonWorld(), 
+										pShapeNewton->GetNewtonCollision(), &mtxIdentity.m[0][0]);
 
 		mpCallback = hplNew( cPhysicsBodyNewtonCallback, () );
 
@@ -56,10 +55,9 @@ namespace hpl {
 		// Setup the callbacks and set this body as user data
 		// This is so that the transform gets updated and
 		// to add gravity, forces and user sink.
+		NewtonBodySetForceAndTorqueCallback(mpNewtonBody,OnUpdateCallback);
 		NewtonBodySetTransformCallback(mpNewtonBody, OnTransformCallback);
 		NewtonBodySetUserData(mpNewtonBody, this);
-
-		NewtonBodySetContinuousCollisionMode(mpNewtonBody, 1);
 
 		//Set default property settings
 		mbGravity = true;
@@ -91,7 +89,7 @@ namespace hpl {
 	void cPhysicsBodyNewton::DeleteLowLevel()
 	{
 		//Log(" Newton body %d\n", (size_t)mpNewtonBody);
-		NewtonDestroyBody(mpNewtonBody);
+		NewtonDestroyBody(mpNewtonWorld,mpNewtonBody);
 		//Log(" Callback\n");
 		hplDelete(mpCallback);
 	}
@@ -215,7 +213,7 @@ namespace hpl {
 	{
 		float fIxx, fIyy, fIzz, fMass;
 
-		NewtonBodyGetMass(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
+		NewtonBodyGetMassMatrix(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
 		
 		return cVector3f(fIxx, fIyy, fIzz);
 	}
@@ -226,7 +224,7 @@ namespace hpl {
 	{
 		float fIxx, fIyy, fIzz, fMass;
 
-		NewtonBodyGetMass(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
+		NewtonBodyGetMassMatrix(mpNewtonBody,&fMass, &fIxx, &fIyy, &fIzz);
 
         cMatrixf mtxRot = GetLocalMatrix().GetRotation();
 		cMatrixf mtxTransRot = mtxRot.GetTranspose();
@@ -254,8 +252,6 @@ namespace hpl {
 		NewtonBodySetCentreOfMass(mpNewtonBody,vOffset.v);
 
 		NewtonBodySetMassMatrix(mpNewtonBody, afMass, vInertia.x, vInertia.y, vInertia.z);
-		// Newton 3 calls the force callback for every body that has one, static or asleep
-		NewtonBodySetForceAndTorqueCallback(mpNewtonBody, afMass > 0 ? OnUpdateCallback : NULL);
 		mfMass = afMass;
 	}
 	float cPhysicsBodyNewton::GetMass() const
@@ -317,8 +313,6 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddImpulse(const cVector3f &avImpulse)
 	{
-		float fTimeStep = mpWorld->GetMaxTimeStep();
-
 		cVector3f vMassCentre = GetMassCentre();
 		if(vMassCentre != cVector3f(0,0,0))
 		{
@@ -326,29 +320,28 @@ namespace hpl {
 														vMassCentre);
 
 			cVector3f vWorldPosition = GetWorldPosition() + vCentreOffset;
-			NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, vWorldPosition.v, fTimeStep);
+			NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, vWorldPosition.v);
 		}
 		else
 		{
-			NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, GetWorldPosition().v, fTimeStep);
+			NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, GetWorldPosition().v);
 		}
 	}
 	void cPhysicsBodyNewton::AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)
 	{
-		NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, avPos.v, mpWorld->GetMaxTimeStep());
+		NewtonBodyAddImpulse(mpNewtonBody, avImpulse.v, avPos.v);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cPhysicsBodyNewton::Sleep()
 	{
-		NewtonBodySetSleepState(mpNewtonBody, 1);
+		NewtonBodySetFreezeState(mpNewtonBody, 1);
 	}
 
 	void cPhysicsBodyNewton::Enable()
 	{
 		NewtonBodySetFreezeState(mpNewtonBody, 0);
-		NewtonBodySetSleepState(mpNewtonBody, 0);
 	}
 	bool cPhysicsBodyNewton::GetEnabled() const
 	{
@@ -471,16 +464,26 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	
 	//callback for buoyancy
+	static cPlanef gSurfacePlane;
+	static int BuoyancyPlaneCallback (const int alCollisionID, void *apContext, 
+									const float* afGlobalSpaceMatrix, float* afGlobalSpacePlane)
+	{
+		afGlobalSpacePlane[0] = gSurfacePlane.a;
+		afGlobalSpacePlane[1] = gSurfacePlane.b;
+		afGlobalSpacePlane[2] = gSurfacePlane.c;
+		afGlobalSpacePlane[3] = gSurfacePlane.d;
+		return 1;   
+	} 
+
 	//-----------------------------------------------------------------------
 
-	void cPhysicsBodyNewton::OnUpdateCallback(const NewtonBody* apBody, dFloat afTimestep, int alThreadIndex)
+	void cPhysicsBodyNewton::OnUpdateCallback(NewtonBody* apBody, dFloat afTimestep, int alThreadIndex)
 	{
 		
 		cPhysicsBodyNewton* pRigidBody = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody);
 
 		if(pRigidBody->IsActive()==false)
 		{
-			pRigidBody->ClearForces();
 			return;
 		}
 		
@@ -510,40 +513,16 @@ namespace hpl {
 		// Create Buoyancy
 		if (pRigidBody->mBuoyancy.mbActive && pRigidBody->mfBuoyancyDensityMul>0)
 		{
-			cCollideShapeNewton *pShapeNewton = static_cast<cCollideShapeNewton*>(pRigidBody->mpShape);
-			const cPlanef &surface = pRigidBody->mBuoyancy.mSurface;
-			dFloat fluidPlane[4] = { surface.a, surface.b, surface.c, surface.d };
+			cVector3f vGravity = pRigidBody->mpWorld->GetGravity();
 
-			dFloat afBodyMatrix[16];
-			NewtonBodyGetMatrix(apBody, afBodyMatrix);
-
-			cVector3f vCenterOfBuoyancy;
-			dFloat fSubmergedVolume = NewtonConvexCollisionCalculateBuoyancyVolume(
-											pShapeNewton->GetNewtonCollision(), afBodyMatrix,
-											fluidPlane, vCenterOfBuoyancy.v);
-
-			if(fSubmergedVolume > 0.0f)
-			{
-				cVector3f vGravity = pRigidBody->mpWorld->GetGravity();
-				float fDensity = pRigidBody->mBuoyancy.mfDensity * pRigidBody->mfBuoyancyDensityMul;
-				float fTotalVolume = pShapeNewton->GetVolume();
-				float fSubmergedFraction = fTotalVolume > 0.0f ?
-					cMath::Min(fSubmergedVolume / fTotalVolume, 1.0f) : 0.0f;
-
-				cVector3f vBuoyancyForce = vGravity * (-fDensity * fSubmergedVolume);
-				NewtonBodyAddForce(apBody, vBuoyancyForce.v);
-
-				cVector3f vCentreOffset = vCenterOfBuoyancy - pRigidBody->GetWorldPosition();
-				cVector3f vBuoyancyTorque = cMath::Vector3Cross(vCentreOffset, vBuoyancyForce);
-				NewtonBodyAddTorque(apBody, vBuoyancyTorque.v);
-
-				cVector3f vLinearDrag = pRigidBody->GetLinearVelocity() *
-					(-pRigidBody->mBuoyancy.mfLinearViscosity * fSubmergedFraction * pRigidBody->mfMass);
-				cVector3f vAngularDrag = pRigidBody->GetAngularVelocity() *
-					(-pRigidBody->mBuoyancy.mfAngularViscosity * fSubmergedFraction * pRigidBody->mfMass);
-				NewtonBodyAddForce(apBody, vLinearDrag.v);
-				NewtonBodyAddTorque(apBody, vAngularDrag.v);
-			}
+			gSurfacePlane = pRigidBody->mBuoyancy.mSurface;
+			
+			NewtonBodyAddBuoyancyForce( apBody, 
+										pRigidBody->mBuoyancy.mfDensity * pRigidBody->mfBuoyancyDensityMul,
+										pRigidBody->mBuoyancy.mfLinearViscosity,
+										pRigidBody->mBuoyancy.mfAngularViscosity,
+										vGravity.v, BuoyancyPlaneCallback,
+										pRigidBody);
 		}
 
 		////////////////////////////

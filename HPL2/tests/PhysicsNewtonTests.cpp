@@ -1,18 +1,9 @@
-/*
- * Focused regression tests for the Newton Dynamics 2.x -> 3.14 port.
- *
- * These are plain, dependency-free checks (no GL/SDL/game-data needed) run
- * via CTest with a timeout, specifically so a hang like the one found in
- * cWorldLoaderHplMap::LoadCacheFile (deserializing a Newton collision blob
- * baked by the original Newton 2.x with our Newton 3.14 deserializer, which
- * has a different internal binary format) fails fast as a test timeout
- * instead of silently hanging deep inside a full game boot.
- */
-
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 
 #include "impl/PhysicsWorldNewton.h"
+#include "math/Math.h"
 #include "impl/CollideShapeNewton.h"
 #include "physics/PhysicsBody.h"
 #include "resources/BinaryBuffer.h"
@@ -77,9 +68,6 @@ static void TestBodySimulationStep()
 	pBody->SetMass(1.0f);
 	cVector3f vStartPos = pBody->GetLocalPosition();
 
-	// A handful of steps is enough to confirm the world/body/material
-	// bindings (NewtonUpdate, the force/torque callback, mass matrix) all
-	// still work end to end after the Newton 3.14 API port.
 	for (int i = 0; i < 10; ++i)
 	{
 		world.Simulate(1.0f / 60.0f);
@@ -93,11 +81,6 @@ static void TestBodySimulationStep()
 
 static void TestBuoyancyDoesNotCrash()
 {
-	// Buoyancy has no Newton 3.14 equivalent to NewtonBodyAddBuoyancyForce -
-	// PhysicsBodyNewton.cpp reimplements it on top of
-	// NewtonConvexCollisionCalculateBuoyancyVolume. This just exercises that
-	// path for a body sitting in the fluid plane and confirms it doesn't
-	// crash; it is not a check of the physical accuracy of the result.
 	cPhysicsWorldNewton world;
 	world.SetGravity(cVector3f(0, -9.81f, 0));
 	world.SetMaxTimeStep(1.0f / 60.0f);
@@ -125,17 +108,6 @@ static void TestBuoyancyDoesNotCrash()
 
 static void TestMeshCollisionSerializationRoundTrip()
 {
-	// This is the direct regression test for the incident that motivated
-	// this file: loading a real game's main-menu background world hung
-	// inside cCollideShapeNewton::CreateFromSerializedData while
-	// deserializing a Newton collision blob. That specific hang was caused
-	// by reading a blob baked by the *original* Newton 2.x, which this test
-	// cannot reproduce (that data no longer exists in a form we can
-	// generate). What this test guards instead: that our own Newton 3.14
-	// serialize -> deserialize round trip is internally self-consistent, so
-	// a *future* regression in that path fails fast as a CTest timeout
-	// rather than resurfacing as an unexplained hang deep in a real game
-	// boot.
 	cPhysicsWorldNewton world;
 
 	cCollideShapeNewton* pMeshShape = hplNew(cCollideShapeNewton,
@@ -169,6 +141,27 @@ static void TestMeshCollisionSerializationRoundTrip()
 
 //-----------------------------------------------------------------------
 
+static void TestHeightFieldSupportsBody()
+{
+	cPhysicsWorldNewton world;
+	world.SetGravity(cVector3f(0, -9.81f, 0));
+	world.SetMaxTimeStep(1.0f / 60.0f);
+
+	std::vector<unsigned short> vElev(9 * 9, 32768);
+	iPhysicsBody* pGround = world.CreateBody("Terrain", world.CreateHeightFieldShape(9, vElev.data(), 1.0f, 2.0f / 65535.0f));
+	pGround->SetMass(0);
+	pGround->SetMatrix(cMath::MatrixTranslate(cVector3f(-4, 0, -4)));
+
+	iPhysicsBody* pBox = world.CreateBody("Box", world.CreateBoxShape(cVector3f(1, 1, 1), NULL));
+	pBox->SetMass(1.0f);
+	pBox->SetPosition(cVector3f(0, 3, 0));
+	for (int i = 0; i < 180; ++i) world.Simulate(1.0f / 60.0f);
+
+	CHECK(cMath::Abs(pBox->GetLocalPosition().y - 1.5f) < 0.1f);
+}
+
+//-----------------------------------------------------------------------
+
 // HPL2's own LowLevelSystemSDL.cpp provides main() (it wraps SDL's platform
 // entry point) and expects the caller to define this instead - same
 // contract the Amnesia/Launcher executables use.
@@ -178,6 +171,7 @@ int hplMain(const tString&)
 	TestBodySimulationStep();
 	TestBuoyancyDoesNotCrash();
 	TestMeshCollisionSerializationRoundTrip();
+	TestHeightFieldSupportsBody();
 
 	if (gFailures > 0)
 	{

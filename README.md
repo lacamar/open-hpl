@@ -25,8 +25,8 @@ PowerPC-era macOS. This port:
 
 - Replaces bundled 32-bit x86 third-party libraries with native aarch64
   system packages.
-- Ports the Newton Dynamics physics bindings to Newton 3.14 (the original
-  2.x line has no recoverable upstream history).
+- Builds Newton Dynamics 2.36 from source (ScummVM's copy), the version SOMA
+  and Rebirth ship.
 - Upgrades AngelScript to 2.38 for aarch64 calling-convention support.
 - Drops the x86-only FBX mesh loader (unused — shipped content uses
   Collada/`.msh`).
@@ -38,10 +38,7 @@ Windows/macOS build files are dropped.
 
 Building
 --------
-CMake project files are in `amnesia/src/`. Newton Dynamics
-(`HPL2/dependencies/newton-dynamics/`, core only) must be built first, with its
-static libs placed under `HPL2/dependencies/lib/linux/lib/` — see the RPM
-spec's `%build` section for the exact steps.
+CMake project files are in `amnesia/src/`.
 
 License
 -------

@@ -128,7 +128,7 @@ namespace hpl {
 		virtual iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)=0;
 		
 		virtual iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer)=0;
-		virtual iCollideShape* CreateHeightFieldShape(int alWidth, int alDepth, const float* apHeights, float afUnitSize)=0;
+		virtual iCollideShape* CreateHeightFieldShape(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale)=0;
 		/**
 		 * The buffer position must be pointing to where the data is saved!
 		 */

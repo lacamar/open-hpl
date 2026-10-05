@@ -7,23 +7,12 @@ include(BoilerPlate)
 set(HPL2_VERSION_MAJOR 2)
 set(HPL2_VERSION_MINOR 0)
 
-set(DEP_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/lib/${PLATFORM_PREFIX}")
-set(DEP_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/include")
-find_path(PREBUILT_PLATFORM_ROOT .
-    PATHS "${DEP_LIB_DIR}"
-    NO_DEFAULT_PATH
-)
-set(DEP_LIB_DIR ${DEP_LIB_DIR} PARENT_SCOPE)
-set(DEP_INCLUDE_DIR ${DEP_INCLUDE_DIR} PARENT_SCOPE)
-mark_as_advanced(
-    PREBUILT_PLATFORM_ROOT
-)
-
 include(UtilityFunctions)
 
 OPTION(USE_SDL2 "Use SDL2 instead of SDL1.2" ON)
 
 add_subdirectory(../dependencies/OALWrapper OALWrapper)
+add_subdirectory(../dependencies/newton newton)
 
 SET(HPL2_DEFINES
     PUBLIC $<$<BOOL:${USE_SDL2}>:USE_SDL2>
@@ -168,9 +157,6 @@ GenerateBuildID(version_source
 
 # setup libs
 
-FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
-FindPrebuiltLibrary(DGPHYSICS_LIBRARY dgPhysics)
-FindPrebuiltLibrary(DGCORE_LIBRARY dgCore)
 FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
 FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
 FindPrebuiltLibrary(THEORA_LIBRARY theora)
@@ -178,7 +164,7 @@ FindPrebuiltLibrary(DEVIL_LIBRARY IL)
 
 find_package(OpenGL)
 find_package(assimp REQUIRED)
-mark_as_advanced(NEWTON_LIBRARY DGPHYSICS_LIBRARY DGCORE_LIBRARY ANGELSCRIPT_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
+mark_as_advanced(ANGELSCRIPT_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
 
 # setup HPL2 compile target
 
@@ -216,9 +202,7 @@ set(PLATFORM_LIBS
 
 target_link_libraries(HPL2
     OALWrapper # also pulls in ogg,vorbis,SDL
-    ${NEWTON_LIBRARY}
-    ${DGPHYSICS_LIBRARY}
-    ${DGCORE_LIBRARY}
+    Newton
     ${ANGELSCRIPT_LIBRARY}
     # Modern (GLVND-aware) FindOpenGL only sets OPENGL_opengl_LIBRARY, not the
     # legacy OPENGL_gl_LIBRARY this project originally used - the imported
@@ -238,9 +222,6 @@ FUNCTION(AddTestTarget target_name)
         ${ARGN}
     )
     target_link_libraries(${target_name} HPL2)
-    set_target_properties(${target_name} PROPERTIES
-        INSTALL_RPATH "${DEP_LIB_DIR}"
-    )
 ENDFUNCTION()
 
 enable_testing()

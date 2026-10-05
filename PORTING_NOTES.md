@@ -6096,3 +6096,23 @@ our live entries and events.
   the ref either: a helmet dropped at its centre leaves the world there too. Newton 2 still
   supports a sphere whose centre is past an open mesh edge (ref rests at x=0.45 on the 0.5 plate
   edge, ours rolls off); Newton 3 edge contacts differ. Not a loader bug.
+
+## Newton 2.36 instead of 3.14 (2026-10-05)
+
+- SOMA and Rebirth ship Newton 2.36 (Amnesia 2.00). Our 3.14 convex-vs-polygon contacts were 3-6 mm
+  deeper and more numerous, so `CheckCharacterFits` failed where the ref passes: the 04_03 rock pile
+  (cp-0403rockpile, `walk 4`) was unclimbable. 3.14 also slept one-joint islands on |dv/dt|² where
+  2.36 tests |net force|², so pushed doors stopped after every impulse.
+- Vendored 2.36 from ScummVM (`HPL2/dependencies/newton`, built by CMake; no prebuilt libs).
+  ScummVM fixes kept; ours: static global allocator (ScummVM inits it from engine code), user-joint
+  definitions made to match `Newton.h` (hinge/screw/slider failed to link).
+- Glue is back to the pre-3.14 version (acc95cd) plus later changes: collide-flag check in the AABB
+  overlap callback, contact queries take body0 (2.36 flips sign for body1), collide shape destructor
+  no longer releases compound children twice.
+- Terrain physics like SOMA: one `"Terrain"` heightfield body of (W+1)² edge-clamped 16-bit
+  samples (round(h·65535), vScale MaxHeight/65535, diagonals 1, shape id 6) at (-W·unit/2, 0,
+  -W·unit/2). Zero samples are ground at y=0: HPL3 holes only come from a `terrain_hole.mat` blend
+  layer, which no SOMA map uses. Per-vertex physics materials not yet filled in (attributes 0).
+- Results: rock pile climbs like the ref (feet after 4 s: ours -39.50 94.68 286.73, ref -39.38 94.66
+  286.82); 04_02 bulkhead `PushOpen` reaches 90° at ~430 steps (ref ~470) with no emulation.
+- Test targets are not in `all`: build `PhysicsNewtonTests` etc. explicitly before `ctest`.

@@ -37,7 +37,6 @@ namespace hpl {
 	{
 		mpNewtonJoint = NewtonConstraintCreateBall(mpNewtonWorld,avPivotPoint.v,
 												mpNewtonChildBody, mpNewtonParentBody);
-		NewtonUserJointSetSolverModel(mpNewtonJoint, 2);
 
 		mfMaxConeAngle =0;
 		mfMaxTwistAngle = 0;

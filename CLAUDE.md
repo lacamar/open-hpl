@@ -22,7 +22,8 @@ SOMA work follows `SOMA_PLAN.md`.
 
 ```
 make -C amnesia/src/build -j12 Soma        # targets: Amnesia Amfp Soma Rebirth Bunker
-(cd amnesia/src/build && ctest)
+make -C amnesia/src/build -j12 PhysicsNewtonTests CStringTests PlatformXdgPathTests HpslTranspilerTests  # not in all
+ctest --test-dir amnesia/src/build
 eval "$(scripts/soma-init.sh)"             # build + scratch dir + deploy, exports XDG_*
 scripts/soma-sweep.py --map 00_01_apartment  # one map, ~10 s
 scripts/soma-sweep.py                      # all 29 maps -> soma/conformance/results.json
@@ -130,7 +131,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `stub_report [n=60]` | unimplemented API functions called so far, by count |
 | `script_profile [on=1] [n=30]` | script calls by inclusive time; `on=1` starts/clears collection |
 | `sound_stats` | playing sound entries by file (channel exhaustion) |
-| `body_contacts name=` | bodies overlapping an entity's bodies (stuck props) |
+| `body_contacts name= [x= y= z=]` | contact points (depth, normal) of an entity's bodies; player shape at a feet position |
 | `raycast x= y= z= x2= y2= z2=` | physics hits along a segment |
 | `physics_stats` | static/dynamic/awake bodies, fastest awake |
 | `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |

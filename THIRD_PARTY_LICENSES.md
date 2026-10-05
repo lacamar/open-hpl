@@ -7,12 +7,11 @@ GPL-compatible, so no part of this repository requires anything beyond
 GPLv3 compliance to use or redistribute. Their licenses are reproduced below
 for convenience; the authoritative copies ship alongside the vendored code.
 
-## Newton Dynamics 3.14
+## Newton Dynamics 2.36
 
-`HPL2/dependencies/newton-dynamics/` — vendored from the actively maintained
-[JulioJerez/newton-dynamics](https://github.com/JulioJerez/newton-dynamics)
-repository (the physics engine this port's Newton bindings target). License
-file: `HPL2/dependencies/newton-dynamics/LICENSE`.
+`HPL2/dependencies/newton/` — from [ScummVM](https://github.com/scummvm/scummvm)'s
+`engines/hpl1/engine/libraries/newton`, altered as listed in its `README.md`.
+License text is in each source file's header.
 
 ```
 Newton zlib license

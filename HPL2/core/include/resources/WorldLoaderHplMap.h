@@ -48,7 +48,7 @@ namespace hpl {
 	#define MAP_CACHE_FORMAT_MAGIC_NUMBER		0xF441451F
 #endif
 
-	#define MAP_CACHE_FORMAT_VERSION			12
+	#define MAP_CACHE_FORMAT_VERSION			13
 	
 	//----------------------------------------
 	

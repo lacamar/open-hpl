@@ -102,7 +102,7 @@ namespace hpl {
 	private:
 		
 		static void OnTransformCallback(const NewtonBody* apBody, const dFloat* apMatrix, int alThreadIndex);
-		static void OnUpdateCallback(const NewtonBody* apBody, dFloat afTimestep, int alThreadIndex);
+		static void OnUpdateCallback(NewtonBody* apBody, dFloat afTimestep, int alThreadIndex);
 
 		NewtonBody *mpNewtonBody;
 		NewtonWorld *mpNewtonWorld;
