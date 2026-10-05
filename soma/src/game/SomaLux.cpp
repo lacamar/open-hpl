@@ -1231,6 +1231,15 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cMath_CheckBVIntersection(cBoundingVolume@ aBV1,cBoundingVolume@ aBV2)",
 			  +[](cBoundingVolume *a, cBoundingVolume *b) { return a && b && cMath::CheckBVIntersection(*a, *b); });
 	SOMA_METHOD(e, "cBoundingVolume", "void SetTransform(const cMatrixf&in a_mtxTransform, bool abUpdateSize = true)", +[](cBoundingVolume *b, const cMatrixf &m, bool) { b->SetTransform(m); });
+	// ponytail: NOCOUNT type, never released; scripts only copy BVs into locals
+	e->RegisterObjectBehaviour("cBoundingVolume", asBEHAVE_FACTORY, "cBoundingVolume@ f()", asFUNCTION(+[](asIScriptGeneric *g) {
+		static cBoundingVolume aBV[64];
+		static int lNext = 0;
+		cBoundingVolume *p = &aBV[lNext++ & 63];
+		*p = cBoundingVolume();
+		*(void **)g->GetAddressOfReturnLocation() = p;
+	}), asCALL_GENERIC);
+	SOMA_METHOD(e, "cBoundingVolume", "cBoundingVolume& opAssign(const cBoundingVolume &in)", +[](cBoundingVolume *a, const cBoundingVolume &b) -> cBoundingVolume & { return *a = b; });
 	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCylinderShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",
 				+[](iPhysicsWorld *w, float r, float h, cMatrixf &m) { return w->CreateCylinderShape(r, h, &m); });
 	SOMA_METHOD(e, "iPhysicsWorld", "iCollideShape@ CreateCapsuleShape(float afRadius, float afHeight, cMatrixf&in a_mtxOffsetMtx)",
