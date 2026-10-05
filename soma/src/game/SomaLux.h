@@ -47,6 +47,7 @@ public:
 	double GetTime() { return mfTime; }
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
+	void SetTimerPaused(const tString &asName, bool abX);
 
 	cWorld *GetWorld() { return mpWorld; }
 	asIScriptObject *GetScript() { return mpScript; }

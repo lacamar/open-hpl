@@ -458,11 +458,11 @@ void cSomaLuxMap::AddTimer(const tString &asName, float afTime, const tString &a
 	cSomaLuxTimer timer;
 	timer.msName = asName;
 	timer.msFunction = asFunction;
-	timer.mfTime = afTime;
+	timer.mfTime = afTime > 0 ? afTime : 0.001f;
 	timer.mbPaused = false;
 	timer.mfUserFloat = 0;
 	timer.mlUserInt = 0;
-	timer.mfLength = afTime;
+	timer.mfLength = timer.mfTime;
 	mvTimers.push_back(timer);
 }
 
@@ -481,6 +481,15 @@ void cSomaLuxMap::RemoveTimer(const tString &asName)
 	for (cSomaLuxTimer &t : mvDueTimers)
 		if (&t != mpFiringTimer && t.msName == asName)
 			t.msFunction.clear();
+}
+
+void cSomaLuxMap::SetTimerPaused(const tString &asName, bool abX)
+{
+	if (mpFiringTimer && mpFiringTimer->msName == asName)
+		mpFiringTimer->mbPaused = abX;
+	for (cSomaLuxTimer &t : mvTimers)
+		if (t.msName == asName)
+			t.mbPaused = abX;
 }
 
 cSomaLuxTimer *cSomaLuxMap::GetTimer(const tString &asName)
@@ -1335,7 +1344,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "float GetTimerTime(const tString&in asName)",
 				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mfTime : 0.0f; });
 	SOMA_METHOD(e, M, "void SetTimerPaused(const tString&in asName, bool abX)",
-				+[](cSomaLuxMap &m, const tString &n, bool b) { if (cSomaLuxTimer *t = m.GetTimer(n)) t->mbPaused = b; });
+				+[](cSomaLuxMap &m, const tString &n, bool b) { m.SetTimerPaused(n, b); });
 	SOMA_METHOD(e, M, "void SetTimerUserVarFloat(const tString&in asName, float afX)",
 				+[](cSomaLuxMap &m, const tString &n, float f) { if (cSomaLuxTimer *t = m.GetTimer(n)) t->mfUserFloat = f; });
 	SOMA_METHOD(e, M, "void SetTimerUserVarInt(const tString&in asName, int alX)",
