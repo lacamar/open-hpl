@@ -32,6 +32,7 @@ public:
 	void StopAll();
 	void SkipCurrentLine(const tString &asScene);
 	bool CharacterIsSpeaking(const tString &asName);
+	void GetSpectrumFromSpeakingCharacter(const tString &asName, std::vector<float> &avOut, int alNum);
 	bool SubjectIsPlaying(const tString &asName);
 	bool SceneIsActive(const tString &asScene);
 	bool SceneInvolvingCharacterIsActive(const tString &asName);
@@ -103,7 +104,15 @@ private:
 		tString msSubtitle;
 		bool mbPaused = false;
 		tString msSourceEntity;
+		tString msFile;
 	};
+	struct cPcm
+	{
+		tString msFile;
+		std::vector<float> mvData; // interleaved
+		int mlChannels = 0, mlRate = 0;
+	};
+	bool LoadPcm(const tString &asFile);
 	bool LoadVoiceFile(const tString &asFile, const tString &asSet);
 	void LoadLangFile(const tString &asFile);
 	void StartSound(cPlaying &aP);
@@ -119,6 +128,7 @@ private:
 	std::map<tString, tString> mmapText; // lowercase key -> text
 	std::vector<tString> mvLoadedSets;
 	std::vector<cPlaying> mvPlaying;
+	cPcm mPcm; // ponytail: one decoded voice, two characters visualized at once would re-decode every call
 	struct cSource
 	{
 		tString msEntity;

@@ -6,7 +6,9 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
+#include "impl/scriptarray.h"
 #include <fstream>
+#include <vorbis/vorbisfile.h>
 #include <sstream>
 
 cSomaImGui *SomaHudImGui();
@@ -278,6 +280,7 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	aP.msSubtitle = sText.empty() ? "" : line.msDisplayName + ": " + sText;
 
 	tString sFile = "voices/" + pSubject->msSet + "/" + sKey + ".ogg";
+	aP.msFile = sFile;
 	aP.mpEntry = NULL;
 	aP.msSourceEntity = "";
 	float fVolume = sound.mfVolume * line.mfCharVolume * mmapSceneVolumes[pSubject->msScene].mfVolume;
@@ -522,6 +525,61 @@ bool cSomaLuxVoiceHandler::CharacterIsSpeaking(const tString &asName)
 		if (p.mlLine < p.mvLines.size() && p.mlStep == 1 && p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter == asName)
 			return true;
 	return false;
+}
+
+bool cSomaLuxVoiceHandler::LoadPcm(const tString &asFile)
+{
+	if (mPcm.msFile == asFile)
+		return mPcm.mlChannels > 0;
+	mPcm = cPcm();
+	mPcm.msFile = asFile;
+	OggVorbis_File vf;
+	if (ov_fopen(cString::To8Char(mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile)).c_str(), &vf) != 0)
+		return false;
+	mPcm.mlChannels = ov_info(&vf, -1)->channels;
+	mPcm.mlRate = ov_info(&vf, -1)->rate;
+	int lSection = 0;
+	float **pBuf;
+	for (long n; (n = ov_read_float(&vf, &pBuf, 4096, &lSection)) > 0;)
+		for (long i = 0; i < n; ++i)
+			for (int c = 0; c < mPcm.mlChannels; ++c)
+				mPcm.mvData.push_back(pBuf[c][i]);
+	ov_clear(&vf);
+	return true;
+}
+
+// cLuxVoiceHandler::GetSpectrumFromScene -> FMOD Channel::getSpectrum: |FFT| of the last 2n samples
+// at the 48 kHz mix rate, rect window, averaged over channels
+void cSomaLuxVoiceHandler::GetSpectrumFromSpeakingCharacter(const tString &asName, std::vector<float> &avOut, int alNum)
+{
+	for (cPlaying &p : mvPlaying)
+	{
+		if (p.mlLine >= p.mvLines.size() || p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter != asName)
+			continue;
+		avOut.assign(alNum, 0.0f);
+		if (p.mpEntry == NULL || mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false || LoadPcm(p.msFile) == false)
+			return;
+		int lN = 2 * alNum, lCh = mPcm.mlChannels;
+		double fStep = mPcm.mlRate / 48000.0;
+		long lFrames = (long)mPcm.mvData.size() / lCh;
+		long lEnd = (long)(p.mpEntry->GetChannel()->GetElapsedTime() * mPcm.mlRate);
+		for (int c = 0; c < lCh; ++c)
+			for (int k = 0; k < alNum; ++k)
+			{
+				float fRe = 0, fIm = 0;
+				for (int n = 0; n < lN; ++n)
+				{
+					long i = lEnd - (long)((lN - n) * fStep);
+					if (i < 0 || i >= lFrames)
+						continue;
+					float x = mPcm.mvData[i * lCh + c], a = k2Pif * k * n / lN;
+					fRe += x * cosf(a);
+					fIm -= x * sinf(a);
+				}
+				avOut[k] += sqrtf(fRe * fRe + fIm * fIm) * 2.0f / lN / lCh;
+			}
+		return;
+	}
 }
 
 bool cSomaLuxVoiceHandler::SubjectIsPlaying(const tString &asName)
@@ -831,6 +889,14 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetPaused(const tString&in asScene, bool abX)", +[](void *, S s, bool b) { VH->SetPaused(s, b); });
 	SOMA_METHOD(e, T, "void SetPausedAll(bool abX)", +[](void *, bool b) { VH->SetPausedAll(b); });
 	SOMA_METHOD(e, T, "bool CharacterIsSpeaking(const tString&in asName)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->CharacterIsSpeaking(s); });
+	SOMA_METHOD(e, T, "void GetSpectrumFromSpeakingCharacter(const tString&in asCharacter, array<float>&out aDestArray, int alNumSamples=64)",
+				+[](void *, S s, CScriptArray &arr, int n) {
+					std::vector<float> v;
+					VH->GetSpectrumFromSpeakingCharacter(s, v, n);
+					arr.Resize((asUINT)v.size());
+					for (asUINT i = 0; i < v.size(); ++i)
+						*(float *)arr.At(i) = v[i];
+				});
 	SOMA_METHOD(e, T, "bool SubjectIsPlaying(const tString&in asName)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SubjectIsPlaying(s); });
 	SOMA_METHOD(e, T, "bool SceneIsActive(const tString&in asScene)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SceneIsActive(s); });
 	SOMA_METHOD(e, T, "bool SceneInvolvingCharacterIsActive(const tString&in asCharacter)",
