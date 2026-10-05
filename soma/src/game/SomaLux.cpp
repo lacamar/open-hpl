@@ -293,7 +293,10 @@ void cSomaLuxMap::Update(float afTimeStep)
 		pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
 		pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", afTimeStep);
 		if (pEnt->meType == eSomaLuxEntityType_Critter)
+		{
 			SomaUpdateCritter(pEnt, afTimeStep);
+			SomaUpdateComponents(pEnt, afTimeStep);
+		}
 		else if (pEnt->meType == eSomaLuxEntityType_Agent)
 			SomaUpdateAgent(pEnt, afTimeStep);
 		else if (pEnt->meType == eSomaLuxEntityType_Area)

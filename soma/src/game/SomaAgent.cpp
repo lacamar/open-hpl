@@ -8,6 +8,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 
+#include "impl/scriptarray.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include <deque>
@@ -92,6 +93,7 @@ namespace
 		virtual void Update(float) {}
 		virtual void OnMessage(int) {}
 		virtual void OnSetActive() {}
+		virtual void OnDestroy() {}
 	};
 
 	struct cAgent;
@@ -804,7 +806,7 @@ namespace
 			mpField->SetFreq(2.4f);
 			mpField->FadeOut(0.001f);
 		}
-		~cAgentForceEmitter() { mpEntity->mpMap->GetWorld()->DestroyForceField(mpField); }
+		void OnDestroy() { mpEntity->mpMap->GetWorld()->DestroyForceField(mpField); }
 		void SetActive(bool abX)
 		{
 			mbActive = abX;
@@ -829,6 +831,123 @@ namespace
 			if (mvOffset != 0)
 				vPos += cMath::MatrixMul(cMath::MatrixRotate(cVector3f(mpBody->GetPitch(), mpBody->GetYaw(), 0), eEulerRotationOrder_ZXY), mvOffset);
 			mpField->SetPosition(vPos);
+		}
+	};
+
+	struct cAgentBackboneTail : cAgentComponent
+	{
+		struct cBone
+		{
+			cBoneState *mpBone;
+			float mfDist;
+		};
+		struct cTrail
+		{
+			cQuaternion mqRot;
+			float mfDist;
+		};
+		std::vector<cBone> mvBones;
+		std::vector<cTrail> mvTrail = std::vector<cTrail>(1);
+		size_t mlCount = 0, mlHead = 0;
+		float mfLength = 0, mfTimer = 0, mfInterval = 0.1f, mfStiffness = 1;
+		cVector3f mvLastPos = 0;
+		cQuaternion mqLast;
+		cAgentBackboneTail(E *p) : cAgentComponent(p, eComp_BackboneTail) {}
+
+		cTrail &Get(size_t i) { return mvTrail[(mlHead + mvTrail.size() - 1 - i) % mvTrail.size()]; }
+		void SetMaxTrailSize(int alX)
+		{
+			if (alX <= 0)
+				return;
+			mvTrail.resize(alX);
+			mlCount = mlHead = 0;
+		}
+		cQuaternion Rotation()
+		{
+			cMatrixf m = mpEntity->mpMesh->GetWorldMatrix().GetRotation();
+			cVector3f vR = m.GetRight(), vU = m.GetUp(), vF = m.GetForward();
+			vR.Normalize();
+			vU.Normalize();
+			vF.Normalize();
+			m.SetRight(vR);
+			m.SetUp(vU);
+			m.SetForward(vF);
+			cQuaternion q(m);
+			q.Normalize();
+			return q;
+		}
+		void Setup(const tStringVec &avNames)
+		{
+			mvBones.clear();
+			cMeshEntity *pMesh = mpEntity->mpMesh;
+			if (pMesh == NULL)
+				return;
+			for (const tString &sName : avNames)
+			{
+				cBoneState *pBone = pMesh->GetBoneStateFromName(sName);
+				if (pBone == NULL)
+					Error("Backbone bone '%s' not found in '%s'\n", sName.c_str(), mpEntity->msName.c_str());
+				else
+					mvBones.push_back({pBone, 0});
+			}
+			mvLastPos = pMesh->GetWorldPosition();
+			mqLast = Rotation();
+			mfLength = 0;
+			for (size_t i = 0; i < mvBones.size(); ++i)
+			{
+				mvBones[i].mpBone->SetUsePreTransform(true);
+				if (i > 0)
+					mfLength += cMath::Vector3Dist(mvBones[i - 1].mpBone->GetWorldPosition(), mvBones[i].mpBone->GetWorldPosition());
+				mvBones[i].mfDist = mfLength;
+			}
+		}
+		void Update(float afTimeStep)
+		{
+			cMeshEntity *pMesh = mpEntity->mpMesh;
+			if (pMesh == NULL || mvBones.empty())
+				return;
+			cVector3f vPos = pMesh->GetWorldPosition();
+			cQuaternion qRot = Rotation();
+			if (mlCount > 0)
+			{
+				float fAngle = 2 * std::acos(std::min(std::fabs(cMath::QuaternionDot(mqLast, qRot)), 1.0f));
+				float fAdd = (cMath::Vector3Dist(mvLastPos, vPos) + fAngle / k2Pif * mfLength) * mfStiffness;
+				for (size_t i = 0; i < mlCount; ++i)
+					Get(i).mfDist += fAdd;
+			}
+			mvLastPos = vPos;
+			mqLast = qRot;
+
+			mfTimer += afTimeStep;
+			if (mfTimer >= mfInterval || mlCount == 0)
+			{
+				mfTimer = 0;
+				mvTrail[mlHead] = {qRot, 0};
+				mlCount = std::min(mlCount + 1, mvTrail.size());
+				mlHead = (mlHead + 1) % mvTrail.size();
+			}
+			if (pMesh->IsVisible() == false)
+				return;
+
+			cQuaternion qInv(qRot.w, -qRot.v.x, -qRot.v.y, -qRot.v.z);
+			for (cBone &bone : mvBones)
+			{
+				int lPrev = -1;
+				while (lPrev + 1 < (int)mlCount && Get(lPrev + 1).mfDist < bone.mfDist)
+					++lPrev;
+				cQuaternion qA = lPrev < 0 ? qRot : Get(lPrev).mqRot;
+				float fPrevDist = lPrev < 0 ? 0 : Get(lPrev).mfDist;
+				qA = cMath::QuaternionMul(qInv, qA);
+				cQuaternion qB = qA;
+				if (lPrev + 1 < (int)mlCount)
+				{
+					cTrail &next = Get(lPrev + 1);
+					float fSeg = next.mfDist - fPrevDist;
+					if (fSeg >= 1e-5f)
+						qB = cMath::QuaternionSlerp((bone.mfDist - fPrevDist) / fSeg, qA, cMath::QuaternionMul(qInv, next.mqRot), true);
+				}
+				bone.mpBone->SetPreTransform(cMath::MatrixQuaternion(qB));
+			}
 		}
 	};
 
@@ -1173,11 +1292,26 @@ void SomaDestroyAgent(cSomaLuxEntity *apEnt)
 	cAgent *pAgent = Agent(apEnt);
 	if (pAgent == NULL)
 		return;
-	if (pAgent->mpBody && apEnt->mpMap)
-		apEnt->mpMap->GetWorld()->GetPhysicsWorld()->DestroyCharacterBody(pAgent->mpBody);
+	if (apEnt->mpMap)
+	{
+		for (auto &pComp : pAgent->mvComponents)
+			pComp->OnDestroy();
+		if (pAgent->mpBody)
+			apEnt->mpMap->GetWorld()->GetPhysicsWorld()->DestroyCharacterBody(pAgent->mpBody);
+	}
 	gmapAgents.erase(apEnt);
 	if (gmapAgents.empty())
 		gmapContainers.clear();
+}
+
+void SomaUpdateComponents(cSomaLuxEntity *apEnt, float afTimeStep)
+{
+	cAgent *pAgent = Agent(apEnt);
+	if (pAgent == NULL)
+		return;
+	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
+		if (pAgent->mvComponents[i]->mbActive)
+			pAgent->mvComponents[i]->Update(afTimeStep);
 }
 
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX)
@@ -1313,9 +1447,7 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 	pAgent->UpdateAutoDisable(afTimeStep);
 	if (apEnt->mbActive == false)
 		return;
-	for (size_t i = 0; i < pAgent->mvComponents.size(); ++i)
-		if (pAgent->mvComponents[i]->mbActive)
-			pAgent->mvComponents[i]->Update(afTimeStep);
+	SomaUpdateComponents(apEnt, afTimeStep);
 	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
 		pPF->SendGoal();
 	pAgent->SyncMesh();
@@ -1490,7 +1622,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, 10)); });
 	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentForceEmitter(p)); });
 	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_LightSensor)); });
-	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_BackboneTail)); });
+	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentBackboneTail(p)); });
 	for (const char *pType : {"iLuxEntityComponent", "cLuxStateMachine", "cLuxCharMover", "cLuxPathfinder", "cLuxBarkMachine", "cLuxSoundListener", "cLuxHeadTracker",
 							  "cLuxEdgeGlow", "cLuxForceEmitter", "cLuxLightSensor", "cLuxBackboneTail"})
 	{
@@ -1516,6 +1648,26 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void FadeOut(float afTime)", +[](FE *f, float x) { f->mpField->FadeOut(x); });
 	SOMA_METHOD(e, T, "void SetMinForceSpeed(float afX)", +[](FE *f, float x) { f->mfMinSpeed = x; });
 	SOMA_METHOD(e, T, "void SetMaxForceSpeed(float afX)", +[](FE *f, float x) { f->mfMaxSpeed = x; });
+
+	T = "cLuxBackboneTail";
+	typedef cAgentBackboneTail BT;
+	SOMA_METHOD(e, T, "void Setup(array<tString> &in avBoneNames)", +[](BT *b, const CScriptArray &a) {
+		tStringVec vNames;
+		for (asUINT i = 0; i < a.GetSize(); ++i)
+			vNames.push_back(*(const tString *)a.At(i));
+		b->Setup(vNames);
+	});
+	SOMA_METHOD(e, T, "void LoadFromVariables(cResourceVarsObject@ apVars)", +[](BT *b, cResourceVarsObject *v) {
+		b->mfInterval = 1 / (v->GetVarFloat("Backbone_AddTrailFreq", 10) + 1e-5f);
+		b->mfStiffness = v->GetVarFloat("Backbone_Stiffness", 1);
+		b->SetMaxTrailSize(v->GetVarInt("Backbone_MaxTrailSize", 13));
+		tStringVec vNames;
+		cString::GetStringVec(v->GetVarString("Backbone_Bones", ""), vNames);
+		b->Setup(vNames);
+	});
+	SOMA_METHOD(e, T, "void SetStiffness(float afX)", +[](BT *b, float x) { b->mfStiffness = x; });
+	SOMA_METHOD(e, T, "void SetMaxTrailSize(int alX)", +[](BT *b, int x) { b->SetMaxTrailSize(x); });
+	SOMA_METHOD(e, T, "void SetAddTrailFreq(float afX)", +[](BT *b, float x) { b->mfInterval = 1 / x; });
 
 	T = "cLuxStateMachine";
 	typedef cAgentStateMachine SM;

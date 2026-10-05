@@ -11,6 +11,7 @@ class cSomaLuxEntity;
 void SomaCreateAgent(cSomaLuxEntity *apEnt);
 void SomaDestroyAgent(cSomaLuxEntity *apEnt);
 void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep);
+void SomaUpdateComponents(cSomaLuxEntity *apEnt, float afTimeStep);
 tString SomaAgentDebug(cSomaLuxEntity *apEnt);
 tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo);
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX);
