@@ -429,6 +429,13 @@ namespace hpl {
 		if(mbUpdateBoundingVolume)
 		{
 			UpdateBoundingVolume();
+			if(mbMaskBox)
+			{
+				cVector3f vHalf = mvMaskSize * 0.5f;
+				mBoundingVolume.SetLocalMinMax(cMath::Vector3Max(mBoundingVolume.GetMin(), mvMaskCenter - vHalf),
+											   cMath::Vector3Min(mBoundingVolume.GetMax(), mvMaskCenter + vHalf));
+				mBoundingVolume.SetTransform(cMatrixf::Identity);
+			}
 			mbUpdateBoundingVolume = false;
 		}
 

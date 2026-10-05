@@ -227,7 +227,7 @@ namespace hpl {
 		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
 		bool GetGoboSpecular(){ return mbGoboSpecular;}
 		unsigned int GetMaskID(){ return mlMaskID;}
-		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mbMaskBox = abActive; mvMaskCenter = avCenter; mvMaskSize = avSize;}
+		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mbMaskBox = abActive; mvMaskCenter = avCenter; mvMaskSize = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
 		bool HasMaskBox(){ return mbMaskBox;}
 		const cVector3f& GetMaskCenter(){ return mvMaskCenter;}
 		const cVector3f& GetMaskSize(){ return mvMaskSize;}
