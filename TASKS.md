@@ -19,7 +19,6 @@ Open:
   still ~10% of load.
 - Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
   player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
-- Force fields (`cWorld::CreateForceField`) stubbed.
 - 00_03 server room ~2x brighter than the ref.
 - Official colour space is hardware sRGB (exact curve, sRGB textures); ours is `pow 2.2` in
   shaders, darker in deep shadows.
@@ -155,8 +154,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - Agents: char mover wall/object avoidance, banking and idle extras are no-ops.
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
 - Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
-- `stub_report`: eye tracker, `cForceField::SetPosition`,
-  preload hints.
+- `stub_report`: eye tracker, preload hints, `cLuxEdgeGlow`, `iPhysicsJoint::SetAllowPositionReset`.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
 - Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
 - Physics impact sound burst right after map load.
