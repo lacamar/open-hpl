@@ -153,6 +153,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   by scripts), agents' native state.
 - Agents: char mover wall/object avoidance, banking and idle extras are no-ops.
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
+  Only empty `mvNodes` can do it (index clamped to len-1): `Reset()` clears nodes but keeps the
+  state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
 - Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
 - `stub_report`: eye tracker, preload hints, `cLuxEdgeGlow`, `iPhysicsJoint::SetAllowPositionReset`.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
