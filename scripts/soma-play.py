@@ -149,11 +149,9 @@ def focused(name):
 def aim_entity(name):
     target = ent_pos(name)
     cam, _ = camera_pos()
-    hits = raycast(cam, target, name)
-    if not hits or hits[0][2] == name:
-        aim(target)
-        if focused(name):
-            return
+    aim(target)
+    if focused(name):
+        return
     d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetMainBody() is null) return;'
            'cBoundingVolume@ bv = e.GetMainBody().GetBoundingVolume(); cVector3f a = bv.GetMin(), b = bv.GetMax();'
            '__print("a=" + a.x + " " + a.y + " " + a.z); __print("b=" + b.x + " " + b.y + " " + b.z);')
