@@ -23,12 +23,12 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVC"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVD"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
-	int glPendingVersion = 19;
+	int glPendingVersion = 20;
 	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
@@ -494,6 +494,15 @@ public:
 			o.Pod(a->GetSpeed());
 			o.Pod(a->GetFadeStep());
 		}
+		o.Str(p->msConnectionCallback);
+		o.Pod((uint32_t)p->mvConnections.size());
+		for (auto &c : p->mvConnections)
+		{
+			o.Str(c.msName);
+			o.Str(c.msEntity);
+			o.Pod(c.mbInvert);
+			o.Pod(c.mlStatesUsed);
+		}
 	}
 
 	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
@@ -659,6 +668,21 @@ public:
 			a->SetWeight(fWeight);
 			a->SetSpeed(fSpeed);
 			a->SetFadeStep(fFade);
+		}
+		if (glPendingVersion >= 20)
+		{
+			t->msConnectionCallback = in.Str();
+			t->mvConnections.clear();
+			n = in.Pod<uint32_t>();
+			for (uint32_t i = 0; i < n && in.ok; ++i)
+			{
+				cSomaLuxEntity::cConnection c;
+				c.msName = in.Str();
+				c.msEntity = in.Str();
+				c.mbInvert = in.Pod<bool>();
+				c.mlStatesUsed = in.Pod<int>();
+				t->mvConnections.push_back(c);
+			}
 		}
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
@@ -1250,7 +1274,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 19)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 20)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
