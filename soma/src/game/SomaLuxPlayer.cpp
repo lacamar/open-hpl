@@ -254,6 +254,7 @@ void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 		mpMoveState = mmapMoveStates.count(0) ? mmapMoveStates[0] : NULL;
 		if (mpMoveState)
 			mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
+		mmapCameraPosAdd.clear();
 		if (mpCamera)
 		{
 			SetCamera(mpCamera);
