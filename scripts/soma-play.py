@@ -342,6 +342,11 @@ def cmd_walk(a):
     cmd_state(a)
 
 
+def crouching():
+    return kv('cScript_RunGlobalFunc("MoveState_Normal", "", "_Global_GetCrouching");'
+              '__print("c=" + cScript_GetGlobalReturnBool());').get("c") == "true"
+
+
 def steer(target, tol, deadline, back=False, prev=None):
     best, stuck = 1e9, 0
     while time.time() < deadline:
@@ -373,7 +378,6 @@ def cmd_walkto(a):
         route = [l.split() for l in path.splitlines() if l != "partial"] + [target]
         print(f"nav: {len(route) - 1} nodes" + (" (partial)" if path.startswith("partial") else "") if path else "nav: no path")
     deadline = time.time() + a.max
-    crouched = False
 
     def key(k, down):
         send({"cmd": "input", "type": "key", "key": k, "action": "down" if down else "up"})
@@ -383,18 +387,17 @@ def cmd_walkto(a):
     try:
         for i, p in enumerate(route):
             crouch = len(p) > 3 and p[3] == "c"
-            if crouch != crouched:
+            if crouch != crouching():
                 key("left shift", False)
                 press("key", "left ctrl", 0.1)
-                crouched = crouch
-            key("left shift", a.run and not crouched)
+            key("left shift", a.run and not crouch)
             last = i == len(route) - 1
             if not steer([float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]]):
                 break
     finally:
         key(move, False)
         key("left shift", False)
-        if crouched:
+        if crouching():
             press("key", "left ctrl", 0.1)
     frames(0.2)
     cmd_state(a)
