@@ -464,7 +464,7 @@ namespace hpl {
 
 		////////////////////////////////////
 		//Create Reflection texture
-		mpReflectionTexture = CreateRenderTexture("ReflectionTexture",vRelfectionSize,ePixelFormat_RGBA);
+		mpReflectionTexture = CreateRenderTexture("ReflectionTexture",vRelfectionSize,ePixelFormat_RGBA,eTextureFilter_Bilinear,mGBufferTextureType);
 		
 		////////////////////////////////////
 		//Create Reflection buffer

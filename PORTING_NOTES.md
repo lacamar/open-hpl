@@ -6018,6 +6018,11 @@ our live entries and events.
   (RE: shadow pass at 0x1403f8b79). The ref agent divides every light's `ShadowMapBiasMul` by
   65536 on map enter; floor and plant shadows then match ours. Ref comparisons of shadowed lights
   before this date are suspect.
+- **World reflections.** The ref's water reflection holds only halos/flares, no solid geometry
+  (01_04 LiquidArea_3, every pose tried; raw `aReflectionMap` via `OHPL_REF_OVERRIDE`). Its
+  reflection pass logs the same draws, programs, cull/depth state and oblique projection (far
+  1000) as ours, and the GLSL has no position variance between the Z and G-buffer passes. Taken
+  as a ref-side artifact (2026-10-06); ours keeps the reflected geometry.
 - The official game merges static geometry into `CombinedObjectsN`, split by material and
   shadow-caster flag.
 
