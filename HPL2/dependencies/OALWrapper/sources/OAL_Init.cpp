@@ -193,7 +193,7 @@ void OAL_SetupLogging ( bool abLogSounds, eOAL_LogOutput aeOutput, eOAL_LogVerbo
 	iOAL_LoggerObject::SetLogVerbose( aeVerboseLevel );
 	iOAL_LoggerObject::SetLogFilename( asLogFilename );
 
-	FILE* pTempFile = OpenFileW(iOAL_LoggerObject::GetLogFilename(), L"a");
+	FILE* pTempFile = abLogSounds ? OpenFileW(iOAL_LoggerObject::GetLogFilename(), L"a") : NULL;
 
 	if (pTempFile)
 	{

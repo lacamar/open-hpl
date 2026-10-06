@@ -106,7 +106,10 @@ namespace hpl {
 
 	bool cPlatform::CreateFolder(const tWString& asPath)
 	{
-		return mkdir(cString::To8Char(asPath).c_str(),0755) == 0;
+		tString sPath = cString::To8Char(asPath);
+		for(size_t i = sPath.find('/', 1); i != tString::npos; i = sPath.find('/', i + 1))
+			mkdir(sPath.substr(0, i).c_str(), 0755);
+		return mkdir(sPath.c_str(), 0755) == 0;
 	}
 	
 	//-----------------------------------------------------------------------

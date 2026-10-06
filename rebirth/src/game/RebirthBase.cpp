@@ -64,6 +64,22 @@ cRebirthBase::~cRebirthBase()
 
 bool cRebirthBase::Init(const tString &asCommandline)
 {
+#if defined(__linux__)
+	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
+	tWString sStateDir = sStateRoot + _W("open-hpl/");
+	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
+	sStateDir += _W("rebirth/");
+	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
+
+	// PID suffix: concurrent runs truncate a shared log
+	tWString sLogFile = sStateDir + _W("hpl.log");
+	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
+	{
+		sLogFile = sStateDir + _W("hpl-") + cString::ToStringW((int)getpid()) + _W(".log");
+	}
+	SetLogFile(sLogFile);
+#endif
+
 	if (ParseCommandLine(asCommandline) == false)
 		return false;
 
@@ -137,21 +153,6 @@ bool cRebirthBase::InitEngine()
 	vars.mGraphics.mbFullscreen = false;
 	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
 
-#if defined(__linux__)
-	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
-	tWString sStateDir = sStateRoot + _W("open-hpl/");
-	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-	sStateDir += _W("rebirth/");
-	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-
-	// PID suffix: concurrent runs truncate a shared log
-	tWString sLogFile = sStateDir + _W("hpl.log");
-	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
-	{
-		sLogFile = sStateDir + _W("hpl-") + cString::ToStringW((int)getpid()) + _W(".log");
-	}
-	SetLogFile(sLogFile);
-#endif
 
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 	if (mpEngine == NULL)

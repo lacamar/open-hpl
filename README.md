@@ -6,7 +6,9 @@ open-sourced by [Frictional Games](https://www.frictionalgames.com/) under
 the GPLv3. Unofficial, not affiliated with or endorsed by Frictional Games.
 
 Game data (maps, textures, audio) is not included — you need a legitimate
-copy of the game to actually play.
+copy of the game to actually play. Game installs are only read: the engine
+mounts Steam libraries read-only for itself, and settings, saves, caches and
+logs go to the XDG base directories.
 
 Screenshots
 -----------

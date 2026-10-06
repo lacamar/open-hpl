@@ -375,6 +375,8 @@ int hplMain(const tString &asCommandLine)
 	cQualityChooser* pChooser = hplNew(cQualityChooser,("launcher/launcher_card_database.cfg"));
 
 #if USE_SDL2
+    // FLTK loop never polls SDL_QUIT, so SDL's handler would swallow SIGTERM
+    SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     tString sCardString = SDL2GetRenderer();
 #elif defined WIN32
 	// Temp GLUT retrieval of the card string.

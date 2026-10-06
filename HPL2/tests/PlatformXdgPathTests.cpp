@@ -157,6 +157,12 @@ static void TestUserDirsFallbackWhenFileMissing()
 }
 
 //-----------------------------------------------------------------------
+static void TestCreateFolderMakesParents()
+{
+	tString sDir = MakeTempDir() + "/state/open-hpl/soma";
+	cPlatform::CreateFolder(cString::To16Char(sDir));
+	CHECK(cPlatform::FolderExists(cString::To16Char(sDir)));
+}
 
 int hplMain(const tString&)
 {
@@ -171,6 +177,7 @@ int hplMain(const tString&)
 	TestAllFourBaseDirDefaults();
 	TestUserDirsFileIsParsed();
 	TestUserDirsFallbackWhenFileMissing();
+	TestCreateFolderMakesParents();
 
 	if (!sRealHome.empty()) setenv("HOME", sRealHome.c_str(), 1);
 
