@@ -149,7 +149,7 @@ public:
 	bool OnAABBCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody) override
 	{
 		auto it = mmapIgnored.find(apBody);
-		return it == mmapIgnored.end() || it->second.count(apCollideBody) == 0;
+		return it == mmapIgnored.end() || apBody->GetJointNum() == 0 || it->second.count(apCollideBody) == 0;
 	}
 	void OnBodyCollide(iPhysicsBody *, iPhysicsBody *, cPhysicsContactData *) override {}
 };
@@ -1484,12 +1484,17 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		static cSomaJointFrameFilter gFrameFilter;
 		gFrameFilter.mmapIgnored.clear();
 		std::vector<iPhysicsBody*> vStatic;
+		cVector3f vWorldMin(100), vWorldMax(-100);
 		cPhysicsBodyIterator staticIt = pNewWorld->GetPhysicsWorld()->GetBodyIterator();
 		while (staticIt.HasNext())
 		{
 			iPhysicsBody *pBody = staticIt.Next();
-			if (pBody->GetMass() <= 0 && pBody->GetCollide()) vStatic.push_back(pBody);
+			if (pBody->GetMass() > 0 || !pBody->GetCollide()) continue;
+			vStatic.push_back(pBody);
+			cMath::ExpandAABB(vWorldMin, vWorldMax, pBody->GetBoundingVolume()->GetMin(), pBody->GetBoundingVolume()->GetMax());
 		}
+		// HPL3 sizes the world from static colliders; the renderable bounds include garbage decals (02_03)
+		pNewWorld->GetPhysicsWorld()->SetWorldSize(vWorldMin - 10, vWorldMax + 10);
 		cPhysicsJointIterator frameIt = pNewWorld->GetPhysicsWorld()->GetJointIterator();
 		while (frameIt.HasNext())
 		{
