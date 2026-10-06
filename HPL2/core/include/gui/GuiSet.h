@@ -31,6 +31,7 @@ namespace hpl {
 
 	class cResources;
 	class cGraphics;
+	class iLowLevelGraphics;
 	class cSound;
 	class cScene;
 
@@ -491,6 +492,7 @@ namespace hpl {
 								
 
 		void RenderClipRegion();
+		void SetClipArea(iLowLevelGraphics *apLowLevel, cGuiClipRegion *apRegion);
 
 		void AddWidget(iWidget *apWidget,iWidget *apParent);
 

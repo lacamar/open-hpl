@@ -25,6 +25,7 @@
 
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/GPUProgram.h"
+#include "graphics/FrameBuffer.h"
 #include "graphics/Graphics.h"
 #include "graphics/FontData.h"
 
@@ -1509,44 +1510,35 @@ namespace hpl {
 	
 #define kLogRender (false)
 	
-	static void SetClipArea(iLowLevelGraphics *pLowLevelGraphics, cGuiClipRegion *apRegion)
+	void cGuiSet::SetClipArea(iLowLevelGraphics *apLowLevel, cGuiClipRegion *apRegion)
 	{
-		cRect2f& clipRect =apRegion->mRect;
+		const cRect2f &clipRect = apRegion->mRect;
+		if(clipRect.w <= 0) return;
 
-		//////////////////////////////////
-		// Set up clip area
-		if(apRegion->mRect.w >0)
+		// HPL3: scissor; clip planes need gl_ClipVertex, which shader-drawn sets never write
+		if(mbIs3D == false)
 		{
-			cPlanef plane;
-
-			//Bottom
-			plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
-			pLowLevelGraphics->SetClipPlane(0, plane);
-			pLowLevelGraphics->SetClipPlaneActive(0, true);
-
-			//Top
-			plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
-			pLowLevelGraphics->SetClipPlane(1, plane);
-			pLowLevelGraphics->SetClipPlaneActive(1, true);
-
-			//Right
-			plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
-			pLowLevelGraphics->SetClipPlane(2, plane);
-			pLowLevelGraphics->SetClipPlaneActive(2, true);
-
-			//Left
-			plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
-			pLowLevelGraphics->SetClipPlane(3, plane);
-			pLowLevelGraphics->SetClipPlaneActive(3, true);
-
-			if(kLogRender) Log("-- Clip region: %d Clipping: x %f y %f w %f h %f\n",apRegion,
-				apRegion->mRect.x,apRegion->mRect.y,
-				apRegion->mRect.w,apRegion->mRect.h);
+			iFrameBuffer *pTarget = apLowLevel->GetCurrentFrameBuffer();
+			cVector2l vTarget = pTarget ? pTarget->GetSize() : apLowLevel->GetScreenSizeInt();
+			cVector2f vScale(vTarget.x / mvVirtualSize.x, vTarget.y / mvVirtualSize.y);
+			cVector2l vPos((int)((clipRect.x + mvVirtualSizeOffset.x) * vScale.x), (int)((clipRect.y + mvVirtualSizeOffset.y) * vScale.y));
+			cVector2l vSize((int)(clipRect.w * vScale.x), (int)(clipRect.h * vScale.y));
+			if(mbFlipScreenY) vPos.y = vTarget.y - vPos.y - vSize.y;
+			apLowLevel->SetScissorActive(true);
+			apLowLevel->SetScissorRect(vPos, vSize);
+			return;
 		}
-		else
-		{
-			if(kLogRender)Log("-- Clip region: %d No clipping!\n",apRegion);
-		}
+
+		cPlanef plane;
+		plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
+		apLowLevel->SetClipPlane(0, plane);
+		plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
+		apLowLevel->SetClipPlane(1, plane);
+		plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
+		apLowLevel->SetClipPlane(2, plane);
+		plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
+		apLowLevel->SetClipPlane(3, plane);
+		for(int i=0; i<4; ++i) apLowLevel->SetClipPlaneActive(i, true);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1716,7 +1708,8 @@ namespace hpl {
 			{
 				if(pLastClipRegion->mRect.w >0)
 				{
-					for(int i=0; i<4; ++i) pLowLevelGraphics->SetClipPlaneActive(i, false);
+					if(mbIs3D) for(int i=0; i<4; ++i) pLowLevelGraphics->SetClipPlaneActive(i, false);
+					else pLowLevelGraphics->SetScissorActive(false);
 				}
 			}
 			
