@@ -33,11 +33,12 @@ template <class F> void cSomaLuxGame::ForEach(F aFunc, bool abActiveEffectsOnly)
 {
 	for (cSomaLuxHandler *p : mvHandlers)
 		aFunc(p);
-	for (cSomaLuxModule *p : mvModules)
-		aFunc(p);
+	// cLuxEffectHandler is a built-in global module, registered before user modules
 	for (cSomaLuxEffect *p : mvEffects)
 		if (p->mbActive || !abActiveEffectsOnly)
 			aFunc(p);
+	for (cSomaLuxModule *p : mvModules)
+		aFunc(p);
 }
 
 // Config files: user settings and keys live under $XDG_CONFIG_HOME/open-hpl/soma, seeded from the game's defaults
