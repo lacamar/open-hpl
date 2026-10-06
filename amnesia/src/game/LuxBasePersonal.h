@@ -86,6 +86,20 @@ inline void MigrateLegacyPersonalDir(const tWString &asNewGameParentDir)
 			sOldDir.c_str(), sNewDir.c_str(), strerror(errno));
 	}
 }
+
+inline tWString PersonalXdgDir(eSystemPath aType, const tWString &asMainFolder)
+{
+	tWString sDir = cPlatform::GetSystemSpecialPath(aType) + PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + asMainFolder + _W("/");
+	cPlatform::CreateFolder(sDir);
+	return sDir;
+}
+
+// Up to 1.3.37 config and state lived under XDG_DATA_HOME
+inline void MoveIfMissing(const tWString &asOld, const tWString &asNew)
+{
+	if(cPlatform::FileExists(asOld) && !cPlatform::FileExists(asNew))
+		rename(cString::To8Char(asOld).c_str(), cString::To8Char(asNew).c_str());
+}
 #endif
 inline void SetupBaseDirs(tWStringVec& vDirs, const tWString& asRelativeParent = _W(""), const tWString& asMainFolder = _W(""),
                                         bool userDir = false, const tWString& asCustomStoryPath = _W(""))

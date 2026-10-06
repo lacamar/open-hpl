@@ -255,6 +255,9 @@ public:
 	tWString msDefaultProfileName;
 
 	tWString msBaseSavePath;
+	tWString msBaseConfigPath;
+	tWString msBaseStatePath;
+	tWString msMainProfileConfigPath;
 	tWString msProfileSavePath;
 	tWString msMainProfileSavePath;
 	tWString msProfileName;

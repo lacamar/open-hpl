@@ -122,9 +122,10 @@ wstring BuildLogFilename ( const string& asFilename )
 			return L"";
 		}
 	#else
-		string home = string(getenv("HOME"));
-		wsTemp = String2WString(home);
-		wsTemp.append(L"/").append(wsName);
+		const char* state = getenv("XDG_STATE_HOME");
+		string dir = state && state[0] == '/' ? string(state) : string(getenv("HOME")) + "/.local/state";
+		wsTemp = String2WString(dir + "/open-hpl/");
+		wsTemp.append(wsName);
 	#endif
 
 	FILE* pTempFile = NULL;

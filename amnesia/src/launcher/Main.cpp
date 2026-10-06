@@ -67,6 +67,7 @@ tWString gsDefaultMainConfigPathMedium;
 tWString gsDefaultMainConfigPathHigh;
 tString gsGameName;
 tWString gsBaseSavePath;
+tWString gsBaseConfigPath;
 tWString gsCrashFlagPath;
 
 std::vector<cConfigFile*> gvPresets;
@@ -155,11 +156,20 @@ bool InitPaths(const tWString& asInitConfigFile, const tWString &asDefaultInitCo
 	//Set the base directory from which all saving will take place.
 	gsBaseSavePath = sPersonalDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + gsMainSaveFolder + _W("/");
 
+#if defined(__linux__)
+	gsBaseConfigPath = hpl::PersonalXdgDir(eSystemPath_XDGConfigHome, gsMainSaveFolder);
+	tWString sStatePath = hpl::PersonalXdgDir(eSystemPath_XDGStateHome, gsMainSaveFolder);
+	hpl::MoveIfMissing(gsBaseSavePath + _W("main_settings.cfg"), gsBaseConfigPath + _W("main_settings.cfg"));
+#else
+	gsBaseConfigPath = gsBaseSavePath;
+	tWString sStatePath = gsBaseSavePath;
+#endif
+
 	//Set Crash flag file path
-	gsCrashFlagPath = gsBaseSavePath + _W("crash_flag");
+	gsCrashFlagPath = sStatePath + _W("crash_flag");
 
 	// Store the log file in the users personal directory not in the install directory
-	SetLogFile(gsBaseSavePath + _W("launcher.log"));
+	SetLogFile(sStatePath + _W("launcher.log"));
 	return true;
 }
 
@@ -394,7 +404,7 @@ int hplMain(const tString &asCommandLine)
 	tString sCardString = LinuxGetRenderer();
 #endif
 
-	tWString sConfigFilePath = gsBaseSavePath + _W("main_settings.cfg");
+	tWString sConfigFilePath = gsBaseConfigPath + _W("main_settings.cfg");
 
 	bool bConfigFileExists = cPlatform::FileExists(sConfigFilePath);
 	bool bLastInitCrashed = cPlatform::FileExists(gsCrashFlagPath);

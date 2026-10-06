@@ -1062,18 +1062,19 @@ bool cLuxBase::InitApp()
 	//Set the base directory from which all saving will take place.
 	msBaseSavePath = sPersonalDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + msMainSaveFolder + _W("/");
 
-	//Set Crash flag file path
-	msCrashFlagPath = msBaseSavePath + _W("crash_flag");
-	msFirstStartFlagPath = msBaseSavePath + _W("first_start_flag");
-
-	/////////////////////////
 #if defined(__linux__)
-	tWString sLogDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
-	hpl::CreateBaseDirs(vDirs, sLogDir);
-	tWString msBaseLogPath = sLogDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + msMainSaveFolder + _W("/");
+	msBaseConfigPath = hpl::PersonalXdgDir(eSystemPath_XDGConfigHome, msMainSaveFolder);
+	msBaseStatePath = hpl::PersonalXdgDir(eSystemPath_XDGStateHome, msMainSaveFolder);
+	hpl::MoveIfMissing(msBaseSavePath + _W("main_settings.cfg"), msBaseConfigPath + _W("main_settings.cfg"));
+	hpl::MoveIfMissing(msBaseSavePath + _W("first_start_flag"), msBaseStatePath + _W("first_start_flag"));
 #else
-	const tWString &msBaseLogPath = msBaseSavePath;
+	msBaseConfigPath = msBaseSavePath;
+	msBaseStatePath = msBaseSavePath;
 #endif
+
+	//Set Crash flag file path
+	msCrashFlagPath = msBaseStatePath + _W("crash_flag");
+	msFirstStartFlagPath = msBaseStatePath + _W("first_start_flag");
 
 	// PID suffix: concurrent runs truncate a shared log
 	tWString sLogSuffix = _W("");
@@ -1083,8 +1084,8 @@ bool cLuxBase::InitApp()
 		sLogSuffix = _W("-") + cString::ToStringW((int)getpid());
 	}
 #endif
-	SetLogFile(msBaseLogPath + _W("hpl") + sLogSuffix + _W(".log"));
-	SetUpdateLogFile(msBaseLogPath + _W("hpl_update") + sLogSuffix + _W(".log"));
+	SetLogFile(msBaseStatePath + _W("hpl") + sLogSuffix + _W(".log"));
+	SetUpdateLogFile(msBaseStatePath + _W("hpl_update") + sLogSuffix + _W(".log"));
 
 	return true;
 }
@@ -1174,7 +1175,7 @@ bool cLuxBase::InitMainConfig()
 	
 	/////////////////////////////////////////////////
 	// Load the main settings
-	mpMainConfig = LoadConfigFile(msDefaultMainConfigPath, msBaseSavePath + _W("main_settings.cfg"),false);
+	mpMainConfig = LoadConfigFile(msDefaultMainConfigPath, msBaseConfigPath + _W("main_settings.cfg"),false);
 	if(mpMainConfig==NULL) return false;
 
 	//Load some basic variables
@@ -1262,13 +1263,13 @@ bool cLuxBase::InitUserConfig()
 	
 	/////////////////////////////////////////////////
 	// Load the user settings
-	mpUserConfig = LoadConfigFile(msDefaultUserConfigPath, msMainProfileSavePath +_W("user_settings.cfg") );
+	mpUserConfig = LoadConfigFile(msDefaultUserConfigPath, msMainProfileConfigPath +_W("user_settings.cfg") );
 	if(mpUserConfig==NULL) return false;
 
 	/////////////////////////
 	//Load user key config
 	bool bDidLoadDefault;
-	mpUserKeyConfig = LoadConfigFile(msDefaultUserKeyConfigPath, msMainProfileSavePath +_W("user_keys.cfg") , false, &bDidLoadDefault);
+	mpUserKeyConfig = LoadConfigFile(msDefaultUserKeyConfigPath, msMainProfileConfigPath +_W("user_keys.cfg") , false, &bDidLoadDefault);
 	if(mpUserKeyConfig==NULL) return false;
 
 #ifdef __APPLE__
@@ -1687,12 +1688,19 @@ void cLuxBase::SetProfile(const tWString& asName)
 	if(msProfileName!=_W(""))
 	{
 		msMainProfileSavePath = cString::AddSlashAtEndW(msBaseSavePath + asName,_W('/'));
+		msMainProfileConfigPath = cString::AddSlashAtEndW(msBaseConfigPath + asName,_W('/'));
 		msProfileSavePath = msMainProfileSavePath;
+#if defined(__linux__)
+		cPlatform::CreateFolder(msMainProfileConfigPath);
+		hpl::MoveIfMissing(msMainProfileSavePath + _W("user_settings.cfg"), msMainProfileConfigPath + _W("user_settings.cfg"));
+		hpl::MoveIfMissing(msMainProfileSavePath + _W("user_keys.cfg"), msMainProfileConfigPath + _W("user_keys.cfg"));
+#endif
 		Log(" Setting profile: '%s' Path: '%s'\n",cString::To8Char(asName).c_str(), cString::To8Char(msMainProfileSavePath).c_str());
 	}
 	else
 	{
 		msMainProfileSavePath = _W("");
+		msMainProfileConfigPath = _W("");
 		msProfileSavePath = _W("");
 	}
 }

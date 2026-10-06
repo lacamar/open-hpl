@@ -494,28 +494,18 @@ bool cLuxMainMenu_Profile::PressDeleteProfilePopupClose(iWidget* apWidget, const
 
 	///////////////////////////////////////////////////////////////
 	// Check if profile is in use
-	if(gpBase->mpUserConfig)
+	if(gpBase->mpUserConfig && gpBase->msProfileName==sFolder)
 	{
-		tWString sCurrentProfile = gpBase->mpUserConfig->GetFileLocation();
-		sCurrentProfile = cString::SubW(sCurrentProfile, (int)gpBase->msBaseSavePath.length());
+		// Set a blank profile and config
+		gpBase->SetProfile(_W(""));
 
-		tWString sSeparators = _W("/\\");
-		tWStringVec vCurrentProfilePath;
-		cString::GetStringVecW(sCurrentProfile, vCurrentProfilePath, &sSeparators);
-
-		////////////////////////////////////////////////
-		// If folders are the same, profile is in use!
-		if(vCurrentProfilePath[0]==sFolder)
-		{
-			// Set a blank profile and config
-			gpBase->SetProfile(_W(""));
-	
-			gpBase->InitUserConfig();
-		}
+		gpBase->InitUserConfig();
 	}
 
 	int lNewSelection = mpListProfiles->GetSelectedItem()-1;
 
+	if(gpBase->msBaseConfigPath != gpBase->msBaseSavePath)
+		cPlatform::RemoveFolder(gpBase->msBaseConfigPath+sFolder, true,true);
 	if(cPlatform::RemoveFolder(gpBase->msBaseSavePath+sFolder, true,true)==false)
 	{
 		cGuiPopUpMessageBox* pPopUp =  mpGuiSet->CreatePopUpMessageBox(_W(""),kTranslate("MainMenu","Could not remove profile"), kTranslate("MainMenu", "OK"),_W(""),NULL,NULL);

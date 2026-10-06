@@ -106,7 +106,7 @@ void cLuxProgressLogHandler::CreateAndResetLogFile()
 
 	/////////////////////////////
 	// Open file
-	tWString sPath = gpBase->msBaseSavePath + sFileName;
+	tWString sPath = gpBase->msBaseStatePath + sFileName;
 #ifdef WIN32
 	mpFile = _wfopen(sPath.c_str(),_W("w"));
 #else
