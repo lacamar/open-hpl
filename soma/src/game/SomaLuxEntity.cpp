@@ -283,7 +283,7 @@ cMatrixf cSomaLuxEntity::GetMatrix()
 	if (meType == eSomaLuxEntityType_Player)
 	{
 		iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
-		return pBody ? cMath::MatrixTranslate(pBody->GetFeetPosition()) : m_mtxOnLoad;
+		return pBody ? cMath::MatrixTranslate(pBody->GetPosition()) : m_mtxOnLoad;
 	}
 	cMatrixf mtxAgent;
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentGetMatrix(this, mtxAgent))
@@ -314,7 +314,7 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 	if (meType == eSomaLuxEntityType_Player)
 	{
 		if (iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL)
-			pBody->SetFeetPosition(a_mtx.GetTranslation(), true);
+			pBody->SetPosition(a_mtx.GetTranslation());
 		return;
 	}
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentSetMatrix(this, a_mtx))
