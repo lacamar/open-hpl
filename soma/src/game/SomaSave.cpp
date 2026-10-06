@@ -23,7 +23,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVH"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVI"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -913,6 +913,7 @@ public:
 			o.Str(pChild->msName);
 			o.Str(sFunc);
 		}
+		o.Str(pMap->msDisplayNameEntry);
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1234,6 +1235,9 @@ public:
 			if (pParent && pChild)
 				pMap->msetColliding.emplace(pParent, pChild, sFunc);
 		}
+		// Maps that set it in OnEnter, which a load skips
+		if (glPendingVersion >= 25)
+			pMap->msDisplayNameEntry = in.Str();
 	}
 };
 
@@ -1327,7 +1331,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 24)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 25)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
