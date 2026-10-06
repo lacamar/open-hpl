@@ -19,6 +19,7 @@
 #include <tuple>
 #include "SomaLuxEntity.h"
 #include "SomaLux.h"
+#include "impl/scriptarray.h"
 #include "SomaScriptRuntime.h"
 #include "SomaLuxScriptable.h"
 #include "SomaAgent.h"
@@ -646,6 +647,8 @@ static std::string ScriptValueString(asIScriptEngine *apEngine, int alTypeId, vo
 		snprintf(sBuf, sizeof(sBuf), "(%g %g)", v.x, v.y);
 		return sBuf;
 	}
+	if (sName == "array")
+		return "array[" + std::to_string(((CScriptArray *)apAddr)->GetSize()) + "]";
 	return sName;
 }
 
