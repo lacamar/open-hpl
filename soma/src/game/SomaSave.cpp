@@ -23,7 +23,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVF"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVG"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -474,6 +474,11 @@ public:
 			o.Str(v.second);
 		}
 		o.Pod(p->mbGuiActive);
+		o.Str(p->msOnGuiFunc);
+		o.Pod((uint32_t)(p->mpImGui ? p->mpImGui->mvTimers.size() : 0));
+		if (p->mpImGui)
+			for (auto &tm : p->mpImGui->mvTimers)
+				o.Pod(tm);
 		o.Pod((uint32_t)(p->mpImGui ? p->mpImGui->mmapStates.size() : 0));
 		if (p->mpImGui)
 			for (auto &st : p->mpImGui->mmapStates)
@@ -647,6 +652,17 @@ public:
 		{
 			t->mbGuiActive = in.Pod<bool>();
 			t->mfGuiFade = t->mbGuiActive;
+		}
+		if (glPendingVersion >= 23)
+		{
+			t->msOnGuiFunc = in.Str();
+			n = in.Pod<uint32_t>();
+			for (uint32_t i = 0; i < n && in.ok; ++i)
+			{
+				cSomaImGui::cTimer tm = in.Pod<cSomaImGui::cTimer>();
+				if (t->mpImGui)
+					t->mpImGui->mvTimers.push_back(tm);
+			}
 		}
 		n = glPendingVersion >= 14 ? in.Pod<uint32_t>() : 0;
 		for (uint32_t i = 0; i < n && in.ok; ++i)
@@ -1308,7 +1324,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 22)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 23)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
