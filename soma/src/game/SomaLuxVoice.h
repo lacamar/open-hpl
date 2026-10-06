@@ -162,6 +162,7 @@ public:
 	void AddSubject(const tString &asSubject, const tString &asCallback);
 	void AddPause(float afTime, const tString &asCallback);
 	void AddResponseOption(const tString &asEntry, const tString &asBranch, int alId, const tString &asCallback);
+	void AddBranchEvent(int alType, float afVar, const tString &asVar, const tString &asNewBranch, bool abOnlyEnd);
 	void SetCallbackFunc(const tString &asFunc) { msPendingCallback = asFunc; }
 	void Stop(const tString &asName);
 	void StopAll();
@@ -173,11 +174,20 @@ public:
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
 private:
+	struct cEvent
+	{
+		int mlType;
+		int mlVal;
+		tString msVar;
+		tString msNewBranch;
+		bool mbOnlyEnd;
+	};
 	struct cItem
 	{
 		tString msSubject;
 		float mfPause = -1;
 		tString msCallback;
+		std::vector<cEvent> mvEvents;
 	};
 	struct cOption
 	{
@@ -208,6 +218,9 @@ private:
 	void StartItem(cDialog &aD);
 	void NextItem(cDialog &aD);
 	void EndBranch(cDialog &aD);
+	void Finish(cDialog &aD);
+	bool CheckEvent(cDialog &aD, const cItem &aItem, const cEvent &aE);
+	bool CheckEndEvents(cDialog &aD);
 
 	cDialog mBuilding;
 	tString msPendingCallback;
