@@ -6023,6 +6023,11 @@ our live entries and events.
   reflection pass logs the same draws, programs, cull/depth state and oblique projection (far
   1000) as ours, and the GLSL has no position variance between the Z and G-buffer passes. Taken
   as a ref-side artifact (2026-10-06); ours keeps the reflected geometry.
+- **Sun shadows.** The ref casts no directional shadows on asahi (02_03, 2026-10-06): a debug
+  `deferred_light_frag.hpsl` override shows the shadow term at 1 everywhere, even with a boosted,
+  near-vertical sun; its cascade atlas holds one small patch where ours holds the pod and rocks;
+  zero bias/slope changes nothing. Ref sun-shadow comparisons are invalid. HPL3 draws directional
+  casters with culling off (RE: `SetCullActive(type != Directional)` at 0x1403f8bb9).
 - The official game merges static geometry into `CombinedObjectsN`, split by material and
   shadow-caster flag.
 

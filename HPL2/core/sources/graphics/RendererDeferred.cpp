@@ -3478,7 +3478,7 @@ namespace hpl {
 		SetOcclusionPlanesActive(false);
 		mpLowLevelGraphics->SetPolygonOffsetActive(true);
 		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(true);
-		if(!mbShadowCull) SetCullActive(false);
+		SetCullActive(false);
 		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(),
 											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
 		SetFrameBuffer(mpDirShadowData->mpBuffer, false, false);
@@ -3550,7 +3550,7 @@ namespace hpl {
 		SetOcclusionPlanesActive(true);
 		mpLowLevelGraphics->SetPolygonOffsetActive(false);
 		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(false);
-		if(!mbShadowCull) SetCullActive(true);
+		SetCullActive(true);
 		SetNormalFrustumProjection();
 
 		SetAccumulationBuffer();
