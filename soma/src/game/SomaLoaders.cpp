@@ -149,6 +149,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	{
 		std::vector<iEntity3D *> vChildren(mvLights.begin(), mvLights.end());
 		vChildren.insert(vChildren.end(), mvBillboards.begin(), mvBillboards.end());
+		vChildren.insert(vChildren.end(), mvLensFlares.begin(), mvLensFlares.end());
 		vChildren.insert(vChildren.end(), mvParticleSystems.begin(), mvParticleSystems.end());
 		vChildren.insert(vChildren.end(), mvSoundEntities.begin(), mvSoundEntities.end());
 		// The mesh entity carries the scale there, on top of the loader's scaled offsets
@@ -193,6 +194,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvLights = mvLights;
 		pEnt->mvParticleSystems = mvParticleSystems;
 		pEnt->mvBillboards = mvBillboards;
+		pEnt->mvLensFlares = mvLensFlares;
 		pEnt->mvSoundEntities = mvSoundEntities;
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
 		for (iPhysicsBody *pBody : mvBodies)
@@ -264,6 +266,11 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 	{
 		mvBillboards[i]->SetActive(false);
 		mvBillboards[i]->SetVisible(false);
+	}
+	for (cLensFlare *pFlare : mvLensFlares)
+	{
+		pFlare->SetActive(false);
+		pFlare->SetVisible(false);
 	}
 	for (size_t i = 0; i < mvBeams.size(); ++i)
 	{

@@ -92,6 +92,7 @@ public:
 	std::vector<iLight *> mvLights;
 	std::vector<cParticleSystem *> mvParticleSystems;
 	std::vector<cBillboard *> mvBillboards;
+	std::vector<cLensFlare *> mvLensFlares;
 	std::vector<cSoundEntity *> mvSoundEntities;
 
 	// ent <Socket>s: a bone (or the mesh) plus an offset taken in the bind pose

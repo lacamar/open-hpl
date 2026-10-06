@@ -254,6 +254,8 @@ namespace hpl {
 		iGpuProgram* SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass);
 		void RenderTranslucent(int alDofPass=0);
 		void RenderEnvironmentParticles(bool abBehindFocus);
+		void UpdateLensFlares();
+		void RenderMultiIrisAndGlare();
 		
 		void SetAccumulationBuffer();
 		void SetGBuffer(eGBufferComponents aComponents);
@@ -382,6 +384,9 @@ namespace hpl {
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
 
 		iGpuProgram *mpSkyBoxProgram; 
+		iGpuProgram *mpLensFlareIrisProgram = NULL;
+		iGpuProgram *mpLensFlareGlareProgram = NULL;
+		iVertexBuffer *mpGlareVtxBuffer = NULL;
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
 		iGpuProgram *mpBoxWeightedProgram[3][2];

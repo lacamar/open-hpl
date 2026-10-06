@@ -1145,6 +1145,7 @@ namespace
 		if (asType == "cLightSpot") return dynamic_cast<cLightSpot *>(e);
 		if (asType == "cLightBox") return dynamic_cast<cLightBox *>(e);
 		if (asType == "cBillboard") return dynamic_cast<cBillboard *>(e);
+		if (asType == "cLensFlare") return dynamic_cast<cLensFlare *>(e);
 		if (asType == "cBeam") return dynamic_cast<cBeam *>(e);
 		if (asType == "cParticleSystem") return dynamic_cast<cParticleSystem *>(e);
 		if (asType == "cGuiSetEntity") return dynamic_cast<cGuiSetEntity *>(e);
@@ -2036,6 +2037,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 			if (l->GetName() == n || l->GetName().ends_with(n))
 				return l;
 		return (cBillboard *)NULL;
+	});
+	SOMA_METHOD_NEW(e, T, "cLensFlare@ GetLensFlareFromName(const tString&in asName)", +[](E *p, S n) {
+		for (cLensFlare *l : p->mvLensFlares)
+			if (l->GetName() == n || l->GetName().ends_with(n))
+				return l;
+		return (cLensFlare *)NULL;
 	});
 	SOMA_METHOD_NEW(e, T, "cSoundEntity@ GetSoundEntityFromName(const tString&in asName)", +[](E *p, S n) {
 		for (cSoundEntity *l : p->mvSoundEntities)

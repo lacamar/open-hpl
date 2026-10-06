@@ -139,6 +139,7 @@
 #include "scene/NodeState.h"
 #include "scene/SoundEntity.h"
 #include "scene/BillBoard.h"
+#include "scene/LensFlare.h"
 #include "scene/Beam.h"
 #include "scene/ParticleSystem.h"
 #include "scene/ParticleEmitter_UserData.h"

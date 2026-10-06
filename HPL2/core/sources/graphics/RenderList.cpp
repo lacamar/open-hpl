@@ -29,6 +29,7 @@
 #include "scene/SubMeshEntity.h"
 #include "scene/Light.h"
 #include "scene/FogArea.h"
+#include "scene/LensFlare.h"
 
 #include "math/Math.h"
 #include "math/Frustum.h"
@@ -75,6 +76,18 @@ namespace hpl {
 	void cRenderList::AddObject(iRenderable *apObject)
 	{
 		eRenderableType renderType =apObject->GetRenderType();
+
+		if(renderType == eRenderableType_LensFlare)
+		{
+			cLensFlare *pFlare = static_cast<cLensFlare*>(apObject);
+			if(pFlare->CollidesWithFrustum(mpFrustum)==false) return;
+			mvOcclusionQueryObjects.push_back(pFlare);
+			mvLensFlares.push_back(pFlare);
+			for(int i=0; i<eLensFlareType_MultiIris; ++i)
+				if(pFlare->IsFlareActive((eLensFlareType)i)) AddObject(pFlare->GetTypeRenderable((eLensFlareType)i));
+			if(pFlare->IsFlareActive(eLensFlareType_MultiIris)) mvMultiIrisFlares.push_back(pFlare);
+			return;
+		}
 
 		////////////////////////////////////////
 		//Update material, if not already done this frame
@@ -221,6 +234,8 @@ namespace hpl {
 		mvIllumObjects.resize(0);
 		mvLights.resize(0);
 		mvFogAreas.resize(0);
+		mvLensFlares.resize(0);
+		mvMultiIrisFlares.resize(0);
 
 		for(int i=0; i<eRenderListType_LastEnum; ++i)
 		{

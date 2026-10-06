@@ -340,6 +340,12 @@ namespace hpl {
 		cBillboard* GetBillboardFromUniqueID(int alID);
 		cBillboardIterator GetBillboardIterator();
 
+		cLensFlare* CreateLensFlare(const tString& asName, const cVector2f& avSize, const tString& asMaterial="", bool abStatic=false);
+		void DestroyLensFlare(cLensFlare* apObject);
+		cLensFlare* GetLensFlare(const tString& asName);
+		cLensFlare* GetLensFlareFromUniqueID(int alID);
+		cLensFlareIterator GetLensFlareIterator();
+
 		///// BEAM METHODS ////////////////////
 
 		cBeam* CreateBeam(const tString& asName, bool abStatic=false);
@@ -520,6 +526,7 @@ namespace hpl {
 		tMeshEntityList mlstDynamicMeshEntities;
 		tMeshEntityList mlstStaticMeshEntities;
 		tBillboardList mlstBillboards;
+		tLensFlareList mlstLensFlares;
 		tBeamList mlstBeams;
 		tParticleSystemList mlstParticleSystems;
 		tGuiSetEntityList mlstGuiSetEntities;

@@ -32,6 +32,7 @@ namespace hpl {
 	class iLight;
 	class cFrustum;
 	class cFogArea;
+	class cLensFlare;
 
 	//---------------------------------------------
 
@@ -64,6 +65,9 @@ namespace hpl {
 		cFogArea* GetFogArea(int alIdx){ return mvFogAreas[alIdx];}
 		int GetFogAreaNum(){ return(int)mvFogAreas.size();}
 
+		const std::vector<cLensFlare*>& GetLensFlares(){ return mvLensFlares;}
+		const std::vector<cLensFlare*>& GetMultiIrisFlares(){ return mvMultiIrisFlares;}
+
 		void PrintAllObjects();
 		
 		//Temp:
@@ -88,6 +92,8 @@ namespace hpl {
 		tRenderableVec mvIllumObjects;
 		std::vector<iLight*> mvLights;
 		std::vector<cFogArea*> mvFogAreas;
+		std::vector<cLensFlare*> mvLensFlares;
+		std::vector<cLensFlare*> mvMultiIrisFlares;
 
 		tRenderableVec mvSortedArrays[eRenderListType_LastEnum];
 	};

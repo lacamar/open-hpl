@@ -39,6 +39,7 @@ namespace hpl {
 	class cWorld;
 	class cResources;
 	class cFogArea;
+	class cLensFlare;
 	class cGraphics;
 	class cMesh;
 
@@ -52,6 +53,7 @@ namespace hpl {
 		static cSoundEntity* LoadSound(cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld);
 		static cBillboard* LoadBillboard(	cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic,
 											tEFL_LightBillboardConnectionList *apLightBillboardList=NULL);
+		static cLensFlare* LoadLensFlare(cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic);
 		static iLight* LoadLight(cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic);
 
 		static cMesh* LoadDecalMeshHelper(cXmlElement* apElement, cGraphics* apGraphics, cResources* apResources, const tString& asName, const tString& asMaterial, const cColor& aColor);

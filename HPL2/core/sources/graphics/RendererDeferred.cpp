@@ -58,6 +58,7 @@
 #include "scene/LightDirectional.h"
 #include "scene/FogArea.h"
 #include "scene/EnvironmentParticles.h"
+#include "scene/LensFlare.h"
 #include "scene/MeshEntity.h"
 
 #include <algorithm>
@@ -542,6 +543,37 @@ namespace hpl {
 		else
 		{
 			mpShadowJitterTexture = NULL;
+		}
+
+		if(mbHdr)
+		{
+			cParserVarContainer vars;
+			vars.Add("UseUv");
+			vars.Add("UseColor");
+			mpLensFlareGlareProgram = mpGraphics->CreateGpuProgramFromShaders("FullscreenGlare", "posteffect_quad_vtx.glsl", "deferred_base_frag.glsl", &vars);
+			vars.Add("UseDiffuse");
+			mpLensFlareIrisProgram = mpGraphics->CreateGpuProgramFromShaders("LensFlareMultiIris", "posteffect_quad_vtx.glsl", "deferred_base_frag.glsl", &vars);
+
+			mpGlareVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic, 400, 19*19*6);
+			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
+			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Color0, eVertexBufferElementFormat_Float, 4);
+			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
+			for(int y=0; y<20; ++y)
+			for(int x=0; x<20; ++x)
+			{
+				cVector3f vPos(x/19.0f, y/19.0f, 0);
+				if(x*y*(19-x)*(19-y)) vPos += cMath::RandRectVector3f(cVector3f(-1/76.0f, -1/76.0f, 0), cVector3f(1/76.0f, 1/76.0f, 0));
+				mpGlareVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vPos);
+				mpGlareVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(0,1));
+				mpGlareVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, vPos);
+			}
+			for(int i=21; i<400; i+=20)
+			for(int j=i; j<i+19; ++j)
+			{
+				int vIdx[6] = {j-1, j-21, j, j, j-21, j-20};
+				for(int k : vIdx) mpGlareVtxBuffer->AddIndex(k);
+			}
+			mpGlareVtxBuffer->Compile(0);
 		}
 
 		////////////////////////////////////
@@ -1071,6 +1103,7 @@ namespace hpl {
 		if(mpBatchBuffer) hplDelete(mpBatchBuffer);
 
 		if(mpFullscreenLightQuad) hplDelete(mpFullscreenLightQuad);
+		if(mpGlareVtxBuffer) hplDelete(mpGlareVtxBuffer);
 
 		for(int i=0;i< eDeferredShapeQuality_LastEnum; ++i)
 		{
@@ -1170,6 +1203,8 @@ namespace hpl {
 		/////////////////////////
 		//Gpu programs
 		mpGraphics->DestroyGpuProgram(mpSkyBoxProgram);
+		if(mpLensFlareGlareProgram) mpGraphics->DestroyGpuProgram(mpLensFlareGlareProgram);
+		if(mpLensFlareIrisProgram) mpGraphics->DestroyGpuProgram(mpLensFlareIrisProgram);
 		mpGraphics->DestroyTexture(mpWhiteCubeTexture);
 		if(mpFogNoiseTexture) mpResources->GetTextureManager()->Destroy(mpFogNoiseTexture);
 		mpFogNoiseTexture = NULL;
@@ -1560,6 +1595,7 @@ namespace hpl {
 		#endif
 
 		RunCallback(eRendererMessage_PostSolid);
+		UpdateLensFlares();
 		
 		// HPL3: translucents reaching past the focus end are blurred with the solids
 		bool bDof = DepthOfFieldIsActive();
@@ -1571,6 +1607,7 @@ namespace hpl {
 		if(!(mlDebugSkipPasses & 8)) RenderTranslucent(bDof ? 2 : 0);
 		if(!(mlDebugSkipPasses & 8) && bDof) RenderEnvironmentParticles(false);
 
+		RenderMultiIrisAndGlare();
 		RunCallback(eRendererMessage_PostTranslucent);
 
 		if(mbOcclusionTestLargeLights)
@@ -4195,6 +4232,91 @@ namespace hpl {
 		SetProgram(NULL);
 		SetVertexBuffer(NULL);
 	}
+
+	void cRendererDeferred::UpdateLensFlares()
+	{
+		if(mpCurrentSettings->mbIsReflection) return;
+		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
+		{
+			pFlare->RetrieveOcculsionQuery(this);
+			pFlare->UpdateVisibility(mfCurrentFrameTime, GetRenderFrameCount());
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRendererDeferred::RenderMultiIrisAndGlare()
+	{
+		if(mpLensFlareIrisProgram==NULL || mpLensFlareGlareProgram==NULL || mpCurrentRenderList->GetLensFlares().empty()) return;
+
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetCullActive(false);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetMatrix(NULL);
+
+		cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
+		for(cLensFlare *pFlare : mpCurrentRenderList->GetMultiIrisFlares())
+		{
+			cMaterial *pMat = pFlare->GetTypeMaterial(eLensFlareType_MultiIris);
+			iTexture *pTex = pMat->GetTexture(eMaterialTexture_Diffuse);
+			if(pTex==NULL) continue;
+
+			float fVis = pFlare->GetVisibility();
+			if(WorldFogActive())
+			{
+				// ponytail: material type fog-end scale taken as 1
+				float fDist = cMath::Vector3Dist(vCamPos, pFlare->GetWorldPosition());
+				float fStart = mpCurrentWorld->GetFogStart(), fEnd = mpCurrentWorld->GetFogEnd();
+				float fP = powf(cMath::Clamp((fDist - fStart)/(fEnd - fStart), 0, 1), mpCurrentWorld->GetFogFalloffExp());
+				fVis *= (1 - fP) + (1 - mpCurrentWorld->GetFogColor().a)*fP;
+			}
+			if(fVis <= 0) continue;
+
+			SetBlendMode(pMat->GetBlendMode());
+			SetTexture(0, pTex);
+			SetProgram(mpLensFlareIrisProgram);
+			SetVertexBuffer(pFlare->PrepareMultiIrisVertexBuffer(mpCurrentFrustum, fVis));
+			DrawCurrent();
+		}
+
+		float *pCol = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+		const float *pPos = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+		std::fill(pCol, pCol + 400*4, 0.0f);
+		float fAspect = mvScreenSizeFloat.x / mvScreenSizeFloat.y;
+		float fSum = 0;
+		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
+		{
+			float fVis = pFlare->GetVisibility();
+			if(fVis <= 0 || pFlare->IsAnyTypeActive()==false) continue;
+			cVector3f vGlarePos;
+			cColor cGlare = pFlare->GetGlare(mpCurrentFrustum, vGlarePos, fVis);
+			if(cGlare.r + cGlare.g + cGlare.b <= 0) continue;
+			fSum += cGlare.r + cGlare.g + cGlare.b;
+			for(int i=0; i<400; ++i)
+			{
+				cVector3f vD((pPos[i*4] - vGlarePos.x)*fAspect, (1 - pPos[i*4+1]) - vGlarePos.y, pPos[i*4+2]);
+				float fD2 = cMath::Vector3Dot(vD, vD);
+				float fW = 1.4142135f / (1 + 128*fD2*fD2);
+				for(int c=0; c<4; ++c) pCol[i*4+c] += cGlare.v[c]*fW;
+			}
+		}
+		if(fSum > 1/255.0f)
+		{
+			mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false);
+			SetBlendMode(eMaterialBlendMode_Add);
+			SetTexture(0, NULL);
+			SetProgram(mpLensFlareGlareProgram);
+			SetVertexBuffer(mpGlareVtxBuffer);
+			DrawCurrent();
+		}
+
+		SetDepthTest(true);
+		SetCullActive(true);
+	}
+
+	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderTranslucent(int alDofPass)
 	{

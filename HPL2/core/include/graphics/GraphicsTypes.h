@@ -689,6 +689,8 @@ namespace hpl {
 		eRenderableType_GuiSet,
 		eRenderableType_Rope,
 		eRenderableType_FogArea,
+		eRenderableType_LensFlare,
+		eRenderableType_LensFlareType,
 		eRenderableType_Dummy,
 		eRenderableType_LastEnum
 	};

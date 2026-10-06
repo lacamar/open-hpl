@@ -401,6 +401,11 @@ namespace hpl {
 			if (sTag != "Billboard") return "unsupported_element:" + sTag;
 			return cEngineFileLoading::LoadBillboard(apElement, "", mpCurrentWorld, mpResources, true, &mlstLightBillboardConnections) ? "" : "load_failed";
 		}
+		if (asTrack == "LensFlare")
+		{
+			if (sTag != "LensFlare") return "unsupported_element:" + sTag;
+			return cEngineFileLoading::LoadLensFlare(apElement, "", mpCurrentWorld, mpResources, false) ? "" : "load_failed";
+		}
 		if (asTrack == "ParticleSystem")
 		{
 			if (sTag != "ParticleSystem") return "unsupported_element:" + sTag;

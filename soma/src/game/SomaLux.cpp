@@ -853,6 +853,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterIterator<cForceFieldIterator, cForceField *>(e, "cForceFieldIterator", "cForceField");
 	SomaRegisterIterator<cSoundEntityIterator, cSoundEntity *>(e, "cSoundEntityIterator", "cSoundEntity");
 	SomaRegisterIterator<cBillboardIterator, cBillboard *>(e, "cBillboardIterator", "cBillboard");
+	SomaRegisterIterator<cLensFlareIterator, cLensFlare *>(e, "cLensFlareIterator", "cLensFlare");
 	SomaRegisterIterator<cBeamIterator, cBeam *>(e, "cBeamIterator", "cBeam");
 	SomaRegisterIterator<cFogAreaIterator, cFogArea *>(e, "cFogAreaIterator", "cFogArea");
 	SomaRegisterIterator<cGuiSetEntityIterator, cGuiSetEntity *>(e, "cGuiSetEntityIterator", "cGuiSetEntity");
@@ -892,6 +893,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SOMA_METHOD(e, "cWorld", "cForceFieldIterator@ GetForceFieldIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetForceFieldIterator()); });
 	SOMA_METHOD(e, "cWorld", "cSoundEntityIterator@ GetSoundEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetSoundEntityIterator()); });
 	SOMA_METHOD(e, "cWorld", "cBillboardIterator@ GetBillboardIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBillboardIterator()); });
+	SOMA_METHOD(e, "cWorld", "cLensFlareIterator@ GetLensFlareIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetLensFlareIterator()); });
 	SOMA_METHOD(e, "cWorld", "cBeamIterator@ GetBeamIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetBeamIterator()); });
 	SOMA_METHOD(e, "cWorld", "cFogAreaIterator@ GetFogAreaIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetFogAreaIterator()); });
 	SOMA_METHOD(e, "cWorld", "cGuiSetEntityIterator@ GetGuiSetEntityIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetGuiSetEntityIterator()); });
@@ -907,6 +909,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterChildIterator<cParticleSystem>(e, "cParticleSystem");
 	SomaRegisterChildIterator<cSoundEntity>(e, "cSoundEntity");
 	SomaRegisterChildIterator<cBillboard>(e, "cBillboard");
+	SomaRegisterChildIterator<cLensFlare>(e, "cLensFlare");
 	SomaRegisterChildIterator<cBeam>(e, "cBeam");
 	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
 }
@@ -1352,6 +1355,15 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		while (it.HasNext())
 		{
 			cBillboard *p = it.Next();
+			if (cString::MatchesWildcard(n, p->GetName())) p->SetVisible(b);
+		}
+	});
+	SOMA_FUNC(e, "void LensFlare_SetVisible(const tString &in asLensFlareName, bool abVisible)", +[](S n, bool b) {
+		if (cSomaLuxMap::GetCurrent() == NULL) return;
+		cLensFlareIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLensFlareIterator();
+		while (it.HasNext())
+		{
+			cLensFlare *p = it.Next();
 			if (cString::MatchesWildcard(n, p->GetName())) p->SetVisible(b);
 		}
 	});

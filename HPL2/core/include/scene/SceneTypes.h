@@ -87,6 +87,14 @@ namespace hpl
 		eBillboardType_FixedAxis,
 		eBillboardType_LastEnum
 	};
+
+	enum eLensFlareType
+	{
+		eLensFlareType_AnamorphicFlare,
+		eLensFlareType_Halo,
+		eLensFlareType_MultiIris,
+		eLensFlareType_LastEnum
+	};
 	
     //-----------------------------------------
 	
@@ -189,6 +197,7 @@ namespace hpl
 	class cMeshEntity;
 	class cSubMeshEntity;
 	class cBillboard;
+	class cLensFlare;
 	class cBeam;
 	class cParticleSystem;
     class cSoundEntity;
@@ -214,6 +223,9 @@ namespace hpl
 
 	typedef std::list<cBillboard*> tBillboardList;
 	typedef std::list<cBillboard*>::iterator tBillboardListIt;
+
+	typedef std::list<cLensFlare*> tLensFlareList;
+	typedef std::list<cLensFlare*>::iterator tLensFlareListIt;
 
 	typedef std::list<cBeam*> tBeamList;
 	typedef std::list<cBeam*>::iterator tBeamListIt;
@@ -255,6 +267,7 @@ namespace hpl
 
 	typedef cSTLIterator<cMeshEntity*, tMeshEntityList, tMeshEntityListIt> cMeshEntityIterator;
 	typedef cSTLIterator<cBillboard*, tBillboardList, tBillboardListIt> cBillboardIterator;
+	typedef cSTLIterator<cLensFlare*, tLensFlareList, tLensFlareListIt> cLensFlareIterator;
 	typedef cSTLIterator<iLight*, tLightList, tLightListIt> cLightListIterator;
 	typedef cSTLIterator<cParticleSystem*, tParticleSystemList, tParticleSystemListIt> cParticleSystemIterator;
 	typedef cSTLIterator<cSoundEntity*, tSoundEntityList, tSoundEntityListIt> cSoundEntityIterator;

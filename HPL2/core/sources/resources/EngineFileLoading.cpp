@@ -37,6 +37,7 @@
 #include "scene/ParticleEmitter.h"
 #include "scene/ParticleSystem.h"
 #include "scene/BillBoard.h"
+#include "scene/LensFlare.h"
 #include "scene/Beam.h"
 #include "scene/GuiSetEntity.h"
 #include "scene/RopeEntity.h"
@@ -192,6 +193,52 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	cLensFlare* cEngineFileLoading::LoadLensFlare(cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic)
+	{
+		kBeginWorldEntityLoad();
+
+		cLensFlare *pFlare = apWorld->CreateLensFlare(asNamePrefix+sName, 1, "", abStatic || apElement->GetAttributeBool("Static", false));
+		if(pFlare==NULL) return NULL;
+
+		const char *vPrefix[] = {"Anamorphic", "Flare", "MultiIris"};
+		for(int i=0; i<eLensFlareType_LastEnum; ++i)
+		{
+			eLensFlareType type = (eLensFlareType)i;
+			tString sPrefix = vPrefix[i];
+			pFlare->SetFlareActive(type, apElement->GetAttributeBool("Active"+sPrefix, false));
+			pFlare->SetFlareSize(type, apElement->GetAttributeVector2f("Size"+sPrefix, 0.125f));
+			pFlare->SetFlareColor(type, apElement->GetAttributeColor("Color"+sPrefix, cColor(1,1)));
+			tString sMat = apElement->GetAttributeString("Material"+sPrefix);
+			pFlare->SetMaterial(type, sMat=="" ? NULL : apResources->GetMaterialManager()->CreateMaterial(sMat));
+		}
+		pFlare->SetMultiIrisSeed(apElement->GetAttributeInt("MultiIrisSeed", rand()));
+		pFlare->SetMultiIrisCount(apElement->GetAttributeInt("MultiIrisCount", 16));
+		cVector2f vGrid = apElement->GetAttributeVector2f("MultiIrisTextureAtlasGrid", 1);
+		pFlare->SetMultiIrisTextureAtlasGrid(cVector2l((int)vGrid.x, (int)vGrid.y));
+		pFlare->SetSizeChangeBasedOnDistance(cMath::Clamp(apElement->GetAttributeFloat("SizeChangeBasedOnDistance", 0), 0, 1));
+		pFlare->SetUseParentMeshForOcclusion(apElement->GetAttributeBool("UseParentMeshForOcclusion", true));
+		pFlare->SetShrinkWhenOccluded(apElement->GetAttributeBool("ShrinkWhenOccluded", true));
+		pFlare->SetMultiplyGlareWithMultiIris(apElement->GetAttributeBool("MulGlareWithMultiIris", false));
+		// HPL3 reads Outer before Inner, so OuterFOV never takes effect
+		pFlare->SetOuterFieldOfView(apElement->GetAttributeFloat("OuterFOV", kPif));
+		pFlare->SetInnerFieldOfView(apElement->GetAttributeFloat("InnerFOV", kPif));
+		pFlare->SetGlareBrightness(apElement->GetAttributeFloat("GlareBrightness", 0.5f));
+		pFlare->SetGlareFieldOfView(apElement->GetAttributeFloat("GlareFOV", 0));
+		pFlare->SetGlareStareAt(apElement->GetAttributeFloat("GlareStareAt", 0.5f));
+		cVector2f vRange = apElement->GetAttributeVector2f("GlareRange", 0);
+		pFlare->SetGlareRange(vRange.x, vRange.y);
+		vRange = apElement->GetAttributeVector2f("RangeMax", -1);
+		pFlare->SetRangeMax(vRange.x, vRange.y);
+		vRange = apElement->GetAttributeVector2f("RangeMin", -1);
+		pFlare->SetRangeMin(vRange.x, vRange.y);
+		pFlare->SetFlareSourceSize(apElement->GetAttributeVector3f("SourceSize", 0.5f));
+		pFlare->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
+
+		kEndWorldEntityLoad(pFlare);
+	}
+
+	//-----------------------------------------------------------------------
+
 	static eShadowMapResolution ToShadowMapResolution(const tString& asType)
 	{
 		tString sLowType = cString::ToLowerCase(asType);

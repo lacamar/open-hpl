@@ -53,6 +53,7 @@
 #include "scene/Node3D.h"
 #include "scene/SoundEntity.h"
 #include "scene/BillBoard.h"
+#include "scene/LensFlare.h"
 #include "scene/ParticleSystem.h"
 
 #include "scene/Light.h"
@@ -328,6 +329,7 @@ namespace hpl {
 		
 		mvParticleSystems.clear();
 		mvBillboards.clear();
+		mvLensFlares.clear();
 		mvSoundEntities.clear();
 		mvLights.clear();
 		mvBeams.clear();
@@ -535,6 +537,12 @@ namespace hpl {
 							if(pBillboard)	mvBillboards.push_back(pBillboard);
 							pEntity = pBillboard;
 						}
+					}
+					else if(sEntityType == "LensFlare")
+					{
+						cLensFlare *pFlare = cEngineFileLoading::LoadLensFlare(pEntityElem,asName +"_", apWorld, apWorld->GetResources(), mbLoadAsStatic);
+						if(pFlare) mvLensFlares.push_back(pFlare);
+						pEntity = pFlare;
 					}
 					/////////////////////////
 					// Sound

@@ -41,6 +41,7 @@ namespace hpl {
 	class cMeshEntity;
 	class cParticleSystem;
 	class cBillboard;
+	class cLensFlare;
 	class cBeam;
 	class cSoundEntity;
 	class iLight;
@@ -126,6 +127,7 @@ namespace hpl {
 		std::vector<iLight*> mvLights;
 		std::vector<cParticleSystem*> mvParticleSystems;
 		std::vector<cBillboard*> mvBillboards;
+		std::vector<cLensFlare*> mvLensFlares;
 		std::vector<cBeam*> mvBeams;
 		std::vector<cSoundEntity*> mvSoundEntities;
 		

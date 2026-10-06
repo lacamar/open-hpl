@@ -114,8 +114,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-19. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask; LensFlare (also an
-   unknown `.ent` sub-entity type).
+19. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask.
 
 
 
@@ -958,16 +957,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   Descent's own shipped content never needed it - worth confirming Rebirth's
   actual playable content doesn't need it either before investing in restoring
   FBX support.
-- HPL2/core/sources/resources/EntityLoader_Object.cpp's cEntityLoader_Object::Load()
-  has a fixed, hardcoded set of recognized <Entity>-embedded "WorldEntity"
-  sub-types (Billboard/ParticleSystem/Sound/Beam/Light etc.) that logs
-  "Entity world entity type 'X' is unknown!" for anything else. A real
-  Amnesia: Rebirth map (01_00_intro.hpm) references a 'LensFlare' sub-type
-  this list doesn't have. This is shared HPL2 core code (not rebirth/-local),
-  so flagging as its own task rather than a rebirth/-owned agent editing
-  core/ directly - needs whoever owns HPL2 core changes to add LensFlare
-  (and audit real Dark Descent/AMFP/SOMA/Rebirth data for any other missing
-  sub-types) if lens flare rendering is wanted.
 - HPL2/core/sources/resources/MaterialManager.cpp's material type registry
   (see "Invalid material type 'X'!" at MaterialManager.cpp:348) doesn't
   recognize 'projectedUV', a material type at least one real Amnesia: Rebirth

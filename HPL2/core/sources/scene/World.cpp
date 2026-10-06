@@ -61,6 +61,7 @@
 #include "scene/ParticleEmitter.h"
 #include "scene/ParticleSystem.h"
 #include "scene/BillBoard.h"
+#include "scene/LensFlare.h"
 #include "scene/Beam.h"
 #include "scene/GuiSetEntity.h"
 #include "scene/RopeEntity.h"
@@ -223,6 +224,7 @@ namespace hpl {
 		STLDeleteAll(mlstDynamicMeshEntities);
 		STLDeleteAll(mlstLights);
 		STLDeleteAll(mlstBillboards);
+		STLDeleteAll(mlstLensFlares);
 		STLDeleteAll(mlstBeams);
 		STLDeleteAll(mlstParticleSystems);
 		STLDeleteAll(mlstGuiSetEntities);
@@ -264,6 +266,8 @@ namespace hpl {
 		START_TIMING(Particles);
 		UpdateParticles(afTimeStep);
 		STOP_TIMING(Particles);
+
+		for(cLensFlare *pFlare : mlstLensFlares) pFlare->UpdateLogic(afTimeStep);
 
 		for(tForceFieldListIt it = mlstForceFields.begin(); it != mlstForceFields.end();)
 		{
@@ -748,6 +752,43 @@ namespace hpl {
 	cBillboardIterator cWorld::GetBillboardIterator()
 	{
 		return cBillboardIterator(&mlstBillboards);
+	}
+
+	//-----------------------------------------------------------------------
+
+	cLensFlare* cWorld::CreateLensFlare(const tString& asName, const cVector2f& avSize, const tString& asMaterial, bool abStatic)
+	{
+		cLensFlare* pFlare = hplNew( cLensFlare, (asName, mpResources, mpGraphics) );
+		mlstLensFlares.push_back(pFlare);
+		pFlare->SetFlareSize(eLensFlareType_Halo, avSize);
+		pFlare->SetFlareActive(eLensFlareType_Halo, true);
+		if(asMaterial!="") pFlare->SetMaterial(eLensFlareType_Halo, mpResources->GetMaterialManager()->CreateMaterial(asMaterial));
+		pFlare->SetStatic(abStatic);
+		AddRenderableToContainer(pFlare);
+		return pFlare;
+	}
+
+	void cWorld::DestroyLensFlare(cLensFlare* apObject)
+	{
+		RemoveRenderableFromContainer(apObject);
+		STLFindAndDelete(mlstLensFlares, apObject);
+	}
+
+	cLensFlare* cWorld::GetLensFlare(const tString& asName)
+	{
+		return (cLensFlare*)STLFindByName(mlstLensFlares,asName);
+	}
+
+	cLensFlare* cWorld::GetLensFlareFromUniqueID(int alID)
+	{
+		for(cLensFlare *pFlare : mlstLensFlares)
+			if(pFlare->GetUniqueID() == alID) return pFlare;
+		return NULL;
+	}
+
+	cLensFlareIterator cWorld::GetLensFlareIterator()
+	{
+		return cLensFlareIterator(&mlstLensFlares);
 	}
 
 	//-----------------------------------------------------------------------
