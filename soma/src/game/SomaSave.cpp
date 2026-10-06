@@ -889,6 +889,13 @@ public:
 			o.Str(f->GetName());
 			o.Pod(f->IsVisible());
 		}
+		o.Pod((uint32_t)pMap->msetColliding.size());
+		for (auto &[pParent, pChild, sFunc] : pMap->msetColliding)
+		{
+			o.Str(pParent->msName);
+			o.Str(pChild->msName);
+			o.Str(sFunc);
+		}
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1199,6 +1206,14 @@ public:
 			bool bVisible = in.Pod<bool>();
 			if (cFogArea *f = in.ok ? pMap->GetWorld()->GetFogArea(sName) : NULL)
 				f->SetVisible(bVisible);
+		}
+		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
+		for (uint32_t i = 0; i < n && in.ok; ++i)
+		{
+			tString sParent = in.Str(), sChild = in.Str(), sFunc = in.Str();
+			cSomaLuxEntity *pParent = pMap->GetEntity(sParent), *pChild = pMap->GetEntity(sChild);
+			if (pParent && pChild)
+				pMap->msetColliding.emplace(pParent, pChild, sFunc);
 		}
 	}
 };

@@ -92,11 +92,11 @@ private:
 public:
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;
+	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 private:
 	bool mbUpdatingTimers = false;
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
-	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 };
 
 // Advances the current map's script every frame (cUpdater has no remove, so this persists).
