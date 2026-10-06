@@ -92,6 +92,7 @@ namespace hpl {
 		float mfSwayForceFieldMul = 0, mfSwayForceFieldMax = 0;
 		float mvDetailProperties[4];
 		cVector3f mvDetailWeights;
+		float mfIlluminationBrightness = 1;
 	};
 
 	//---------------------------------------------------

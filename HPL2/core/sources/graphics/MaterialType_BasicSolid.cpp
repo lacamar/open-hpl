@@ -423,6 +423,7 @@ namespace hpl {
 		//Load Illumination programs
 		defaultVars.Clear();
 		defaultVars.Add("UseUv");
+		defaultVars.Add("UseColor");
 		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Illumination,"Illum","deferred_base_vtx.glsl", "deferred_illumination_frag.glsl", 
 													vIllumFeatureVec,kIllumFeatureNum, defaultVars);
 
@@ -746,7 +747,7 @@ namespace hpl {
 		else if(aRenderMode == eMaterialRenderMode_Illumination)
 		{
 			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
-			apProgram->SetColor4f(kVar_avIlluminationMul, apObject->GetIlluminationColor() * apObject->GetIlluminationAmount());
+			apProgram->SetColor4f(kVar_avIlluminationMul, apObject->GetIlluminationColor() * (apObject->GetIlluminationAmount() * pVars->mfIlluminationBrightness));
 		}
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
@@ -795,6 +796,7 @@ namespace hpl {
 		pVars->mvDetailProperties[2] = vDetailUvMul.x;
 		pVars->mvDetailProperties[3] = vDetailUvMul.y;
 		pVars->mvDetailWeights = cVector3f(apVars->GetVarFloat("DetailWeight_Diffuse", 1), apVars->GetVarFloat("DetailWeight_Specular", 1), apVars->GetVarFloat("DetailWeight_Normal", 1));
+		pVars->mfIlluminationBrightness = apVars->GetVarFloat("IlluminationBrightness", 1);
 	}
 
 	//--------------------------------------------------------------------------
