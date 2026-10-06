@@ -972,6 +972,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetNearClipPlane()", +[](cLightSpot *o) -> float { return o->GetNearClipPlane(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpotFalloffPow(float afX)", +[](cLightSpot *o, float a0) { o->SetSpotFalloffPow(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetSpotFalloffPow()", +[](cLightSpot *o) -> float { return o->GetSpotFalloffPow(); });
+	SOMA_METHOD_NEW(e, "cMaterial", "bool GetForceFullScaleTextures()", +[](cMaterial *o) -> bool { return o->GetForceFullScaleTextures(); });
 	SOMA_METHOD_NEW(e, "cMaterial", "const tString& GetName()", +[](cMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ CreateSubMesh(const tString &in asName)", +[](cMesh *o, const tString & a0) -> cSubMesh * { return o->CreateSubMesh(a0); });
 	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ GetSubMesh(uint alIdx)", +[](cMesh *o, unsigned int a0) -> cSubMesh * { return o->GetSubMesh(a0); });
@@ -1784,6 +1785,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddTorque(const cVector3f &in avTorque)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddTorque(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddImpulse(const cVector3f &in avImpulse)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddImpulse(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddImpulseAtPosition(const cVector3f &in avImpulse, const cVector3f &in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddImpulseAtPosition(a0, a1); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void Freeze()", +[](iPhysicsBody *o) { o->Freeze(); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetFrozen()", +[](iPhysicsBody *o) -> bool { return o->GetFrozen(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void Enable()", +[](iPhysicsBody *o) { o->Enable(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetEnabled() const", +[](iPhysicsBody *o) -> bool { return o->GetEnabled(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetAutoDisable(bool abEnabled)", +[](iPhysicsBody *o, bool a0) { o->SetAutoDisable(a0); });

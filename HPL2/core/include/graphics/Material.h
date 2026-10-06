@@ -124,6 +124,8 @@ namespace hpl {
 		inline eMaterialBlendMode GetBlendMode() const { return mBlendMode; }
 		inline eMaterialAlphaMode GetAlphaMode() const { return mAlphaMode; }
 		inline bool GetDepthTest() const { return mbDepthTest; }
+		void SetForceFullScaleTextures(bool abX) { mbForceFullScaleTextures = abX; }
+		bool GetForceFullScaleTextures() const { return mbForceFullScaleTextures; }
 
 		void SetPhysicsMaterial(const tString & asPhysicsMaterial){ msPhysicsMaterial = asPhysicsMaterial;}
 		const tString& GetPhysicsMaterial(){ return msPhysicsMaterial;}
@@ -177,6 +179,7 @@ namespace hpl {
 		eMaterialBlendMode mBlendMode;
 		eMaterialAlphaMode mAlphaMode;
 		bool mbDepthTest;
+		bool mbForceFullScaleTextures = false;
 
 		bool mbHasRefraction;
 		int mlRefractionTextureUnit;

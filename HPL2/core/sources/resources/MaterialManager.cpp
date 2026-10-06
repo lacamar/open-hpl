@@ -351,6 +351,7 @@ namespace hpl {
 		cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, pMatType) );
 		
 		pMat->SetDepthTest(bDepthTest);
+		pMat->SetForceFullScaleTextures(pMain->GetAttributeBool("ForceFullScaleTextures", false));
 		pMat->SetPhysicsMaterial(sPhysicsMatName);
 		cVector2f vSubDivs = pMain->GetAttributeVector2f("UVSubDivs", 1);
 		pMat->SetUVSubDivisions(cVector2l((int)vSubDivs.x, (int)vSubDivs.y));
