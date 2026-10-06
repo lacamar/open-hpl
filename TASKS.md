@@ -152,7 +152,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
 - `stub_report`: eye tracker, preload hints, `cLuxEdgeGlow`, `iPhysicsJoint::SetAllowPositionReset`.
 - Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
-- Hands skeleton: `hands_human.ent` names bones (`Root_Ctrl`) only SOMA's HPL3 `.msh` has.
 - Physics impact sound burst right after map load.
 - Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
   static `.dae` (tinyxml dtor); rerun passed.

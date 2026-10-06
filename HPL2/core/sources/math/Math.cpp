@@ -2778,7 +2778,9 @@ namespace hpl {
 			cVector3f vTex1To3 = vTex3 - vTex1;
 			
 			//Get the direction of the S and T tangents
-			float fR = 1.0f / (vTex1To2.x * vTex1To3.y - vTex1To2.y * vTex1To3.x);
+			float fDet = vTex1To2.x * vTex1To3.y - vTex1To2.y * vTex1To3.x;
+			if(std::fabs(fDet) < 1e-12f) continue;
+			float fR = 1.0f / fDet;
 
 			cVector3f vSDir((vTex1To3.y * vPos1To2.x - vTex1To2.y * vPos1To3.x) * fR, 
 							(vTex1To3.y * vPos1To2.y - vTex1To2.y * vPos1To3.y) * fR,
@@ -2850,7 +2852,8 @@ namespace hpl {
 
             // Gram-Schmidt orthogonalize
 			cVector3f vTan = vTempTan1 - (vNormal * cMath::Vector3Dot(vNormal, vTempTan1));
-			vTan.Normalize();
+			if(vTan.Normalize() < 1e-6f)
+				vTan = Vector3Normalize(Vector3Cross(vNormal, std::fabs(vNormal.x) < 0.9f ? cVector3f(1,0,0) : cVector3f(0,1,0)));
 			
 			//Log("Add tangent %d: ",vtxIdx);
 			//Log(" %.1f, %.1f, %.1f ",vTan.x, vTan.y, vTan.z);
