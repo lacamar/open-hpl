@@ -484,7 +484,12 @@ def cmd_gui(a):
 
 def cmd_shot(a):
     bmp = Path(a.out).resolve().with_suffix(".bmp")
+    hud = not a.no_hud and not send({"cmd": "dev_hud", "value": True})["prev"]
+    if hud:
+        send({"cmd": "wait_frames", "n": 3, "max_ms": 5000})
     send({"cmd": "screenshot", "path": str(bmp)})
+    if hud:
+        send({"cmd": "dev_hud", "value": False})
     for _ in range(50):
         if bmp.exists() and bmp.stat().st_size:
             break
@@ -523,7 +528,7 @@ def main():
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
     s = sub.add_parser("log"); s.add_argument("regex", nargs="?"); s.add_argument("--all", action="store_true")
-    s = sub.add_parser("shot"); s.add_argument("out")
+    s = sub.add_parser("shot"); s.add_argument("out"); s.add_argument("--no-hud", action="store_true")
     s = sub.add_parser("gui"); s.add_argument("text", nargs="?"); s.add_argument("--entity"); s.add_argument("--at", type=float, nargs=2); s.add_argument("--nth", type=int, default=0)
     a = ap.parse_args()
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # run finally blocks: release held keys

@@ -492,6 +492,11 @@ namespace hpl {
 		RegisterHandler("resize", SCmdResizeWindow, this);
 		RegisterHandler("shader_report", SCmdShaderReport, this);
 		RegisterHandler("frame_stats", SCmdFrameStats, this);
+		RegisterHandler("dev_hud", [](void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp) {
+			cEngine *pEngine = ((cHeadlessControlServer*)apUserData)->mpEngine;
+			aResp.Set("prev", pEngine->GetDevHudActive());
+			if(aReq.HasKey("value")) pEngine->SetDevHudActive(aReq.GetBool("value", true));
+		}, this);
 	}
 
 	void cHeadlessControlServer::CmdPing(const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

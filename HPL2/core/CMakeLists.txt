@@ -189,6 +189,11 @@ set(hud_version "${OPENHPL_VERSION}")
 if(NOT hud_version)
     execute_process(COMMAND git describe --tags --dirty WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE hud_version OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    execute_process(COMMAND git rev-parse --absolute-git-dir WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE git_dir OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(EXISTS "${git_dir}/logs/HEAD")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${git_dir}/logs/HEAD")
+    endif()
 endif()
 if(hud_version)
     set_property(SOURCE sources/engine/DevHud.cpp APPEND PROPERTY COMPILE_DEFINITIONS OPENHPL_VERSION="${hud_version}")

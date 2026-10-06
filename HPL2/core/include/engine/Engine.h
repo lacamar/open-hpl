@@ -132,6 +132,7 @@ namespace hpl {
 
 		cHeadlessControlServer* GetHeadlessControl(){ return mpHeadlessControl;}
 		void SetDevHudActive(bool abX);
+		bool GetDevHudActive(){ return mbDevHudActive;}
 
 		void ResetLogicTimer();
 		void SetUpdatesPerSec(int alUpdatesPerSec);
