@@ -886,7 +886,7 @@ namespace
 			{
 				cBoneState *pBone = pMesh->GetBoneStateFromName(sName);
 				if (pBone == NULL)
-					Error("Backbone bone '%s' not found in '%s'\n", sName.c_str(), mpEntity->msName.c_str());
+					Error("Could not find bone '%s' in '%s' to be used as backbone!\n", sName.c_str(), mpEntity->msName.c_str());
 				else
 					mvBones.push_back({pBone, 0});
 			}
@@ -1367,6 +1367,60 @@ void SomaAgentLoadExtra(cSomaLuxEntity *apEnt, float afYaw, bool abSenses, bool 
 	pAgent->mbSensesActive = abSenses;
 	pAgent->mbUpdateDetection = abDetection;
 	pAgent->SyncMesh();
+}
+
+// cLuxPathfinder::Scriptable_SaveToBuffer / SetupAfterLoadingSave
+std::string SomaAgentSavePath(cSomaLuxEntity *apEnt)
+{
+	cAgent *pAgent = Agent(apEnt);
+	cAgentPathfinder *pPF = pAgent ? pAgent->Find<cAgentPathfinder>(eComp_Pathfinder) : NULL;
+	std::string s;
+	if (pPF == NULL)
+		return s;
+	auto pod = [&](const auto &x) { s.append((const char *)&x, sizeof(x)); };
+	auto str = [&](const tString &x) { pod((uint32_t)x.size()); s += x; };
+	pod(pPF->mbMoving), pod(pPF->mvGoal), pod(pPF->mbExact), str(pPF->msResultCallback), pod(pPF->mbCallbackInMap), str(pPF->msEndOfPathCallback);
+	pod((uint32_t)pPF->mvTrack.size());
+	for (const cAgentTrackNode &n : pPF->mvTrack)
+		str(n.msNode), pod(n.mfMinWait), pod(n.mfMaxWait), str(n.msAnim), pod(n.mbLoopAnim);
+	pod(pPF->mlTrackIdx), pod(pPF->mbTrackActive), pod(pPF->mbTrackPaused), pod(pPF->mbTrackLoop), pod(pPF->mbAtTrackNode);
+	pod(pPF->mfTrackWait), pod(pPF->mfTrackFreq), str(pPF->msTrackCallback);
+	return s;
+}
+
+void SomaAgentLoadPath(cSomaLuxEntity *apEnt, const std::string &asData)
+{
+	cAgent *pAgent = Agent(apEnt);
+	cAgentPathfinder *pPF = pAgent ? pAgent->Find<cAgentPathfinder>(eComp_Pathfinder) : NULL;
+	if (pPF == NULL || asData.empty())
+		return;
+	size_t p = 0;
+	auto pod = [&](auto &x) {
+		if (p + sizeof(x) <= asData.size())
+			memcpy(&x, asData.data() + p, sizeof(x));
+		p += sizeof(x);
+	};
+	auto str = [&](tString &x) {
+		uint32_t n = 0;
+		pod(n);
+		x = p + n <= asData.size() ? asData.substr(p, n) : "";
+		p += n;
+	};
+	bool bMoving = false, bExact = false, bInMap = false;
+	cVector3f vGoal = 0;
+	tString sResult;
+	pod(bMoving), pod(vGoal), pod(bExact), str(sResult), pod(bInMap), str(pPF->msEndOfPathCallback);
+	uint32_t n = 0;
+	pod(n);
+	pPF->mvTrack.assign(std::min<uint32_t>(n, 4096), cAgentTrackNode{});
+	for (cAgentTrackNode &t : pPF->mvTrack)
+		str(t.msNode), pod(t.mfMinWait), pod(t.mfMaxWait), str(t.msAnim), pod(t.mbLoopAnim);
+	pod(pPF->mlTrackIdx), pod(pPF->mbTrackActive), pod(pPF->mbTrackPaused), pod(pPF->mbTrackLoop), pod(pPF->mbAtTrackNode);
+	pod(pPF->mfTrackWait), pod(pPF->mfTrackFreq), str(pPF->msTrackCallback);
+	if (bMoving)
+		pPF->MoveTo(vGoal, bExact, sResult, bInMap);
+	else
+		pPF->Stop();
 }
 
 void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState)

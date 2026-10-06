@@ -23,7 +23,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVG"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVH"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -872,6 +872,7 @@ public:
 			o.Pod(fYaw);
 			o.Pod(bSenses);
 			o.Pod(bDetection);
+			o.Str(SomaAgentSavePath(a.first));
 		}
 		o.Pod(pMap->mbIsUnderwater);
 		cWorld *w = pMap->GetWorld();
@@ -1158,11 +1159,13 @@ public:
 			float fYaw = glPendingVersion >= 10 ? in.Pod<float>() : 0;
 			bool bSenses = glPendingVersion >= 10 ? in.Pod<bool>() : true;
 			bool bDetection = glPendingVersion >= 10 ? in.Pod<bool>() : true;
+			std::string sPath = glPendingVersion >= 24 ? in.Str() : "";
 			if (p && SomaAgentSetMatrix(p, m))
 			{
 				if (glPendingVersion >= 10)
 					SomaAgentLoadExtra(p, fYaw, bSenses, bDetection);
 				SomaAgentChangeState(p, lState);
+				SomaAgentLoadPath(p, sPath);
 			}
 		}
 		if (in.p < in.s.size())
@@ -1324,7 +1327,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 23)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 24)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

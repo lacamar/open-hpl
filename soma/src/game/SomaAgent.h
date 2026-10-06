@@ -20,6 +20,8 @@ bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx);
 int SomaAgentGetState(cSomaLuxEntity *apEnt);
 void SomaAgentSaveExtra(cSomaLuxEntity *apEnt, float &afYaw, bool &abSenses, bool &abDetection);
 void SomaAgentLoadExtra(cSomaLuxEntity *apEnt, float afYaw, bool abSenses, bool abDetection);
+std::string SomaAgentSavePath(cSomaLuxEntity *apEnt);
+void SomaAgentLoadPath(cSomaLuxEntity *apEnt, const std::string &asData);
 void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState);
 void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f &avX = 0, int alX = 0);
 void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio);
