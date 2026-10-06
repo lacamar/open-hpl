@@ -234,7 +234,7 @@ static void RegisterConstants(asIScriptEngine *e)
 	for (int i = 0; i < 7; ++i)
 		e->RegisterGlobalProperty(("const cVector2f cVector2f_" + std::string(v2fNames[i])).c_str(), &v2f[i]);
 	static cVector3f v3f[] = {cVector3f(0), cVector3f(1), cVector3f(1, 0, 0), cVector3f(-1, 0, 0), cVector3f(0, 1, 0),
-							  cVector3f(0, -1, 0), cVector3f(0, 0, -1), cVector3f(0, 0, 1), cVector3f(-1)};
+							  cVector3f(0, -1, 0), cVector3f(0, 0, 1), cVector3f(0, 0, -1), cVector3f(-1)};
 	const char *v3fNames[] = {"Zero", "One", "Right", "Left", "Up", "Down", "Forward", "Back", "MinusOne"};
 	for (int i = 0; i < 9; ++i)
 		e->RegisterGlobalProperty(("const cVector3f cVector3f_" + std::string(v3fNames[i])).c_str(), &v3f[i]);
