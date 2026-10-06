@@ -201,6 +201,7 @@ SNIPPETS = {
 def teleport_code(x, y, z, yaw=None, pitch=None):
     code = f"cLuxPlayer@ p = cLux_GetPlayer(); iCharacterBody@ b = p.GetCharacterBody(); b.SetFeetPosition(cVector3f({x}, {y}, {z}), false);"
     if yaw is not None:
+        code += " p.GetCamera().SetYawLimits(0, 0); p.GetCamera().SetPitchLimits(cMath_ToRad(-89), cMath_ToRad(89));"
         code += f" b.SetYaw(cMath_ToRad({yaw})); p.GetCamera().SetYaw(cMath_ToRad({yaw}));"
     if pitch is not None:
         code += f" p.GetCamera().SetPitch(cMath_ToRad({pitch}));"
