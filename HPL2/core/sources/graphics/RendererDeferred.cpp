@@ -3558,6 +3558,7 @@ namespace hpl {
 		SetDepthWrite(false);
 		SetChannelMode(eMaterialChannelMode_RGBA);
 		SetBlendMode(eMaterialBlendMode_Add);
+		SetAlphaMode(eMaterialAlphaMode_Solid);
 	}
 
 	void cRendererDeferred::RenderLights()
