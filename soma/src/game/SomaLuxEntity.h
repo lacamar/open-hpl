@@ -172,7 +172,7 @@ public:
 	void CaptureEffectDefaults();
 	cVector3f GetPosition();
 	cMatrixf GetMatrix();
-	void SetMatrix(const cMatrixf &a_mtx);
+	void SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly = false);
 	iPhysicsBody *GetMainBody() { return mpMainBody ? mpMainBody : mvBodies.empty() ? NULL : mvBodies[0]; }
 	void RemoveCollideCallbacks(const tString &asChild);
 

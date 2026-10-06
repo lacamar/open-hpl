@@ -305,7 +305,7 @@ void cSomaLuxEntity::MakeDynamic()
 		pWorld->MakeRenderableDynamic(pBillboard);
 }
 
-void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
+void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 {
 	if (meType == eSomaLuxEntityType_Player)
 	{
@@ -321,7 +321,7 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx)
 	{
 		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
 		for (iPhysicsBody *b : mvBodies)
-			if (b != pBody)
+			if (b != pBody && abMainBodyOnly == false)
 				b->SetMatrix(cMath::MatrixMul(a_mtx, cMath::MatrixMul(mtxInvMain, b->GetLocalMatrix())));
 		pBody->SetMatrix(a_mtx);
 	}
@@ -499,7 +499,8 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 	}
 	cMatrixf mtxNew = cMath::MatrixMul(mtxStep, mtxRot);
 	mtxNew.SetTranslation(vPivot + cMath::MatrixMul3x3(mtxStep, m.GetTranslation() - vPivot));
-	SetMatrix(mtxNew);
+	// HPL3 movers only move the main body
+	SetMatrix(mtxNew, true);
 	if (bDone)
 	{
 		mlRotateMode = 0;
@@ -524,7 +525,7 @@ void cSomaLuxEntity::UpdateMove(float afTimeStep)
 	float fStep = fSpeed * afTimeStep;
 	bool bDone = fStep >= fDist;
 	m.SetTranslation(bDone ? mvMoveGoal : m.GetTranslation() + vDelta * (fStep / fDist));
-	SetMatrix(m);
+	SetMatrix(m, true);
 	if (bDone == false)
 		return;
 	mbMoving = false;

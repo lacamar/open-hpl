@@ -17,7 +17,7 @@ Open:
 - Slow map loads: 02_05 22 -> 9.5 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), InitEngine
   1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
   still ~10% of load.
-- Liquid areas: surface + fog area done (02_07 underside within 3% of the ref). Left: buoyancy,
+- Liquid areas: surface, fog area, buoyancy done (02_07 underside within 3% of the ref). Left:
   player `IsInLiquid`/`GetLiquidHeight` (stubbed), underwater light-shaft particles.
 - 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the
   logo brighter, glow smaller (sharp step between camera x -13.05 and -13.1, feet y 250.25 z 438.27,
