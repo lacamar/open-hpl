@@ -96,6 +96,11 @@ void cSomaLuxEntity::SetActive(bool abX)
 	}
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->SetActive(abX);
+	for (cLensFlare *pFlare : mvLensFlares)
+	{
+		pFlare->SetActive(abX);
+		pFlare->SetVisible(abX);
+	}
 	float fAlpha = mfEffectsAlpha;
 	SetEffectsActive(abX && mbEffectsActive);
 	if (mbEffectsActive)

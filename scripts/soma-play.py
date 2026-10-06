@@ -300,7 +300,7 @@ def cmd_throw(a):
     frames(0.5)
     print(ex('__print(cLux_GetPlayer().GetCurrentStateName());').strip())
     aim(ent_pos(a.target))
-    frames(a.place or 0.5)
+    frames(a.place or 1.5)
     if not a.place:
         press("mouse", "right", 0.1)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
