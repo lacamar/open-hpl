@@ -929,6 +929,14 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 	else
 		pCam->UnProject(&vStart, &vDir, cVector2f(aReq.GetFloat("x", 0.5f), aReq.GetFloat("y", 0.5f)), 1);
 	std::vector<std::pair<float, tString>> vHits;
+	auto uvString = [](iVertexBuffer *pVtx, const unsigned int *pTri, float u, float w) -> tString {
+		const float *pUV = pVtx->GetFloatArray(eVertexBufferElement_Texture0);
+		if(pUV == NULL) return "";
+		int n = pVtx->GetElementNum(eVertexBufferElement_Texture0);
+		float fU = 0, fV = 0, fW[3] = {1 - u - w, u, w};
+		for(int k = 0; k < 3; ++k) { fU += fW[k]*pUV[pTri[k]*n]; fV += fW[k]*pUV[pTri[k]*n+1]; }
+		return " uv=" + cString::ToString(fU) + "," + cString::ToString(fV);
+	};
 	auto test = [&](cMeshEntity *pEnt) {
 		if(pEnt->IsVisible() == false) return;
 		for(int i = 0; i < pEnt->GetSubMeshEntityNum(); ++i)
@@ -942,7 +950,8 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 			const float *pPos = pVtx->GetFloatArray(eVertexBufferElement_Position);
 			int lStride = pVtx->GetElementNum(eVertexBufferElement_Position);
 			const unsigned int *pIdx = pVtx->GetIndices();
-			float fBest = 1e30f;
+			float fBest = 1e30f, fBu = 0, fBw = 0;
+			int lBestTri = -1;
 			for(int t = 0; t + 2 < pVtx->GetIndexNum(); t += 3)
 			{
 				cVector3f v[3];
@@ -957,7 +966,7 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 				float w = cMath::Vector3Dot(vD, q)/det;
 				if(w < 0 || u + w > 1) continue;
 				float fT = cMath::Vector3Dot(e2, q)/det;
-				if(fT > 0 && fT < fBest) fBest = fT;
+				if(fT > 0 && fT < fBest) { fBest = fT; fBu = u; fBw = w; lBestTri = t; }
 			}
 			if(fBest < 1e30f)
 			{
@@ -965,7 +974,7 @@ static void cSomaBase_HeadlessCmd_PickEntity(void *apUserData, const cHeadlessRe
 				float fDist = cMath::Vector3Dist(vStart, vHit);
 				if(fDist < fMaxT)
 					vHits.push_back(std::make_pair(fDist, pEnt->GetName() + "/" + pSub->GetName() + (pSub->GetMaterial() ? " " + pSub->GetMaterial()->GetName() : "") +
-						(pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster) ? "" : " noshadow")));
+						(pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster) ? "" : " noshadow") + uvString(pVtx, pIdx + lBestTri, fBu, fBw)));
 			}
 		}
 	};
@@ -1129,7 +1138,6 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
 	cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
-	cMeshLoaderCollada::SetLoadVertexColors(true);
 	cMeshLoaderCollada::SetUnscaledSkeleton(true);
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);

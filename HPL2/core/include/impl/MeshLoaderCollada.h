@@ -125,7 +125,6 @@ namespace hpl {
         int mlVtx;
 		int mlNorm;
 		int mlTex;
-		int mlCol = -1;
 	};
 	
 	typedef std::vector<cColladaVtxIndex> tColladaVtxIndexVec;
@@ -136,13 +135,12 @@ namespace hpl {
 	class cColladaExtraVtx
 	{
 	public:
-		cColladaExtraVtx(int alVtx,int alNorm,int alTex,int alNewVtx,int alCol=-1)
+		cColladaExtraVtx(int alVtx,int alNorm,int alTex,int alNewVtx)
 		{
 			mlVtx = alVtx;
 			mlNorm = alNorm;
 			mlTex = alTex;
 			mlNewVtx = alNewVtx;
-			mlCol = alCol;
 		}
 
 		cColladaExtraVtx(){}
@@ -150,13 +148,12 @@ namespace hpl {
 		int mlVtx;
 		int mlNorm;
 		int mlTex;
-		int mlCol = -1;
 
 		int mlNewVtx;
 
 		bool Equals(const cColladaVtxIndex& aData)
 		{
-			if(mlVtx == aData.mlVtx && mlNorm == aData.mlNorm && mlTex == aData.mlTex && mlCol == aData.mlCol)
+			if(mlVtx == aData.mlVtx && mlNorm == aData.mlNorm && mlTex == aData.mlTex)
 			{
 				return true;
 			}
@@ -176,7 +173,7 @@ namespace hpl {
 	{
 	public:
 		cColladaGeometry() : mlPosArrayIdx(-1),mlNormArrayIdx(-1),mlTexArrayIdx(-1),
-						mlPosIdxNum(-1),mlNormIdxNum(-1),mlTexIdxNum(-1),mlColIdxNum(-1),mlColArrayIdx(-1)  {}
+						mlPosIdxNum(-1),mlNormIdxNum(-1),mlTexIdxNum(-1)  {}
 
 		void Clear()
 		{
@@ -209,8 +206,6 @@ namespace hpl {
 		int mlPosIdxNum; //The position in the triangle element
 		int mlNormIdxNum; //for eternal use only
 		int mlTexIdxNum;
-		int mlColIdxNum;
-		int mlColArrayIdx;
 
 		int mlPosArrayIdx; //The index for array containing positions
 		int mlNormArrayIdx; //The index for array containing normals
@@ -480,7 +475,6 @@ namespace hpl {
 		static void SetConvertUnit(bool abX) { mbConvertUnit = abX; }
 		static bool GetConvertUnit() { return mbConvertUnit; }
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
-		static void SetLoadVertexColors(bool abX) { mbLoadVertexColors = abX; }
 		static void SetUnscaledSkeleton(bool abX);
 		static bool GetUnscaledSkeleton() { return mbUnscaledSkeleton; }
 
@@ -493,7 +487,6 @@ namespace hpl {
 		cMatrixf m_mtxZToY;
 		static bool mbConvertUnit;
 		static bool mbConvertUnitFromAnyTool;
-		static bool mbLoadVertexColors;
 		static bool mbUnscaledSkeleton;
 
 		tWorldLoadFlag mFlags;

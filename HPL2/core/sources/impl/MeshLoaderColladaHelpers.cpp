@@ -684,7 +684,7 @@ namespace hpl {
 			pVtxBuff->AddVertexVec3f(eVertexBufferElement_Normal,aGeometry.mvVertexVec[j].norm);
 			pVtxBuff->AddVertexVec3f(eVertexBufferElement_Texture0,aGeometry.mvVertexVec[j].tex);
 		
-			pVtxBuff->AddVertexColor(eVertexBufferElement_Color0,aGeometry.mvVertexVec[j].col);
+			pVtxBuff->AddVertexColor(eVertexBufferElement_Color0,cColor(1,1));
 		}
 		
 		//Add tangents
@@ -1634,11 +1634,6 @@ namespace hpl {
 					Geometry.mlTexIdxNum = lIdx;
 					Geometry.mlTexArrayIdx = lArrayNum;
 				}
-				else if(sSemantic == "COLOR" && Geometry.mlColIdxNum < 0 && mbLoadVertexColors)
-				{
-					Geometry.mlColIdxNum = lIdx;
-					Geometry.mlColArrayIdx = lArrayNum;
-				}
 
 				//Increase element num
 				if(lTriElements < lIdx+1) lTriElements =lIdx+1;
@@ -1737,8 +1732,6 @@ namespace hpl {
 							DataVec[i].mlNorm = vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlNormIdxNum];
 							DataVec[i].mlTex = Geometry.mlTexIdxNum >= 0 ?
 								vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlTexIdxNum] : 0;
-							if(Geometry.mlColArrayIdx >= 0)
-								DataVec[i].mlCol = vIndexArray[lTriangleAdd + i*lTriElements + Geometry.mlColIdxNum];
 						}
 					}
 
@@ -2131,11 +2124,6 @@ namespace hpl {
 		cVertex Vtx;
 
 		Vtx.col = cColor(1,1);
-		if(aGeometry.mlColArrayIdx>=0 && aData.mlCol>=0)
-		{
-			const cVector3f &vC = aGeometry.mvArrayVec[aGeometry.mlColArrayIdx].mvArray[aData.mlCol];
-			Vtx.col = cColor(vC.x, vC.y, vC.z, 1);
-		}
 		Vtx.pos = aGeometry.mvArrayVec[aGeometry.mlPosArrayIdx].mvArray[aData.mlVtx];
 		if(aGeometry.mlNormArrayIdx>=0)
 			Vtx.norm = aGeometry.mvArrayVec[aGeometry.mlNormArrayIdx].mvArray[aData.mlNorm];
@@ -2155,7 +2143,6 @@ namespace hpl {
 		Extra.mlVtx = aData.mlVtx;
 		Extra.mlNorm = aData.mlNorm;
 		Extra.mlTex = aData.mlTex;
-		Extra.mlCol = aData.mlCol;
 		return Extra;
 	}
 

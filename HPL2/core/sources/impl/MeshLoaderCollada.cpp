@@ -64,7 +64,6 @@ namespace hpl {
 
 	bool cMeshLoaderCollada::mbConvertUnit = true; 
 	bool cMeshLoaderCollada::mbConvertUnitFromAnyTool = false;
-	bool cMeshLoaderCollada::mbLoadVertexColors = false;
 	bool cMeshLoaderCollada::mbUnscaledSkeleton = false;
 
 	void cMeshLoaderCollada::SetUnscaledSkeleton(bool abX)
@@ -193,7 +192,7 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v6.msh") : _W(".v4.msh"));
+		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v7.msh") : _W(".v4.msh"));
 	}
 
 	static void UnscaleBone(cBone *apBone, float afUnit, const cMatrixf &a_mtxRootRot, bool abRoot)

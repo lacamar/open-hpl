@@ -5957,11 +5957,11 @@ right and the frame isn't, the inputs differ.
   (Rebirth symbols): `FalloffPow` (0x248) and `SpotFalloffPow` (0x44c) are `addss x,x` before
   packing; box lights are not. Colour is `diffuse^2 x brightness x distance fade` (not pow 2.2).
   Slot alpha: 0 when `CastSpecularLight` is off.
-- **Vertex colours.** HPL3's Collada loader reads the `COLOR` triangle input and the G-buffer
-  multiplies albedo by it (`UseColor`). SOMA's tunnels carry ~0.5 colours (set named
-  "UV_Distortion"), i.e. ~4.6x darker after linearisation. Ours always wrote white. SOMA-only
-  flag `cMeshLoaderCollada::SetLoadVertexColors`; mesh cache key `.v4`. 01_02 start lum 8.0 ->
-  4.0 (ref 3.5), PSNR 26.5 -> 31.7.
+- **No Collada vertex colours** (reverted). The official loads the shipped HPL3 `.msh` next to
+  each `.dae` (4932/4966); every msh whose dae has a `COLOR` input ("UV_Distortion", a
+  distortion encoding) stores all-white colours. Loading them turned the 00_03 scan-helmet
+  cables pure red. The earlier 01_02 brightness gain was coincidental: after later fixes 01_02
+  start is lum 6.0 vs ref 5.0, PSNR 46. Mesh cache key `.v7`.
 - **Illumination follows effects.** `iLuxEntity::UpdateEffectFading`/`SetEffectBaseColor` set
   the mesh illumination colour to IllumColor x EffectBaseColor x EffectsAlpha. Our uniform-path
   HPSL illumination shader multiplied by nothing (`afIlluminationMul` is texture-buffer only);
