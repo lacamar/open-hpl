@@ -342,7 +342,7 @@ int cSomaLuxEntity::PlayAnimation(const tString &asName, float afFadeTime, bool 
 	if (lIdx < 0)
 	{
 		if (asName.empty() == false)
-			Warning("SOMA script: entity '%s' has no animation '%s'\n", msName.c_str(), asName.c_str());
+			Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), msName.c_str());
 		return -1;
 	}
 	mvAnimQueue.clear();
