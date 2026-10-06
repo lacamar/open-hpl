@@ -242,6 +242,9 @@ void cSomaLuxEntity::CaptureEffectDefaults()
 		mvEffectDefaults.push_back(pLight->GetDiffuseColor());
 	for (cBillboard *pBB : mvBillboards)
 		mvEffectDefaults.push_back(pBB->GetColor());
+	for (cLensFlare *pFlare : mvLensFlares)
+		for (int t = 0; t < eLensFlareType_LastEnum; ++t)
+			mvEffectDefaults.push_back(pFlare->GetFlareColor((eLensFlareType)t));
 }
 
 void cSomaLuxEntity::ApplyEffectsAlpha()
@@ -263,6 +266,10 @@ void cSomaLuxEntity::ApplyEffectsAlpha()
 		pBB->SetVisible(bOn);
 		pBB->SetActive(bOn);
 	}
+	for (cLensFlare *pFlare : mvLensFlares)
+		for (int t = 0; t < eLensFlareType_LastEnum; ++t, ++i)
+			if (pFlare->IsFlareActive((eLensFlareType)t))
+				pFlare->SetFlareColor((eLensFlareType)t, mvEffectDefaults[i] * mEffectBaseColor * mfEffectsAlpha);
 	if (mpMesh)
 		mpMesh->SetIlluminationColor(mInstanceVars.GetVarColor("IllumColor", cColor(1, 1)) * mEffectBaseColor * mfEffectsAlpha);
 }
