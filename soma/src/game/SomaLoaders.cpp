@@ -180,6 +180,13 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mpMesh = mpEntity;
 		if (mpEntity)
 			mpEntity->SetCallback(pEnt);
+		if (mpEntity && mpEntity->GetAnimationStateNum() > 0)
+		{
+			cAnimationState *pAnim = mpEntity->GetAnimationState(0);
+			if (pEnt->meType == eSomaLuxEntityType_Prop && GetVarBool("RandomizeAnimationStart", true))
+				pAnim->SetTimePosition(cMath::RandRectf(0, pAnim->GetLength()));
+			pEnt->mlCurrentAnim = 0;
+		}
 		pEnt->mbShowMesh = GetVarBool("ShowMesh", msEntityType != "StaticCollider");
 		pEnt->mvBodies = mvBodies;
 		if (apInstanceVars)

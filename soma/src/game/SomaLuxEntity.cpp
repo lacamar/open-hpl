@@ -182,8 +182,12 @@ void SomaUpdateLightConnections()
 				col = p.mbUseOnColor ? pEnt->mvEffectDefaults[0] * pEnt->mEffectBaseColor * pEnt->mfEffectsAlpha : pEnt->mvLights[0]->GetDiffuseColor();
 			else if (pEnt->mvBillboards.empty() == false)
 				col = pEnt->mvBillboards[0]->GetColor();
-			else
-				col = pEnt->mInstanceVars.GetVarColor("IllumColor", cColor(1, 1)) * pEnt->mfEffectsAlpha;
+			else if (pEnt->mpMesh && pEnt->mpMesh->GetSubMeshEntityNum() > 0)
+			{
+				col = pEnt->mpMesh->GetSubMeshEntity(0)->GetIlluminationColor();
+				float fAmount = pEnt->mpMesh->GetIlluminationAmount();
+				col = cColor(col.r * fAmount, col.g * fAmount, col.b * fAmount, col.a);
+			}
 			if (p.mbUseSpec == false)
 				col.a = 0;
 			add = add + col * p.mfAmount;
