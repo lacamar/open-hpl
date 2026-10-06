@@ -116,7 +116,7 @@ namespace hpl {
 		LoadExposureAreaTrack(asFile);
 		LoadTerrain(asFile);
 
-		for (auto& [key, batch] : m_mapStaticBatches) FlushStaticBatch(std::get<0>(key), batch);
+		for (auto& [key, batch] : m_mapStaticBatches) FlushStaticBatch(key, batch);
 		m_mapStaticBatches.clear();
 		for (auto& [key, batch] : m_mapStaticShapeBatches)
 		{
@@ -1235,7 +1235,7 @@ namespace hpl {
 			cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
 			mtxTransform.SetTranslation(vPosition);
 			if (CreateStaticBodiesFromEnt(sFileName, mtxTransform, vScale, sName) == false)
-				CreateStaticBodyForMesh(pMeshEntity);
+				CreateStaticBodyForMesh(pMeshEntity, mtxTransform, vScale);
 		}
 
 		return "";
@@ -1341,7 +1341,7 @@ namespace hpl {
 		pMeshEntity->SetPosition(vPosition);
 
 		if (bCollides)
-			CreateStaticBodyForMesh(pMeshEntity);
+			CreateStaticBodyForMesh(pMeshEntity, cMatrixf::Identity, 1);
 
 		return "";
 	}
@@ -1368,19 +1368,50 @@ namespace hpl {
 	}
 
 	// HPL3 iHplMapLoader::CombineObjectsAndCreatePhysics: one body per physics material and area, not per submesh
-	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity)
+	// HPL3 iHplMapLoader::CreateSubMeshShapeBodies: submesh colliders and _collider/_charcollider meshes
+	void cWorldLoaderHpm::CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale)
 	{
+		bool bHasColliderMesh = false;
+		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
+			bHasColliderMesh |= cString::Sub(apMeshEntity->GetSubMeshEntity(i)->GetSubMesh()->GetName(), 0, 9) == "_collider";
+
 		for (int i = 0; i < apMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
 			cSubMeshEntity* pSubEnt = apMeshEntity->GetSubMeshEntity(i);
-			iVertexBuffer* pSrcVtx = pSubEnt->GetSubMesh()->GetVertexBuffer();
-			if (pSrcVtx == NULL) continue;
+			cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
+			tString sPhysMat = pSubEnt->GetMaterial() ? pSubEnt->GetMaterial()->GetPhysicsMaterial() : "";
+			bool bCharMesh = cString::Sub(pSubMesh->GetName(), 0, 13) == "_charcollider";
+			bool bColliderMesh = bCharMesh || cString::Sub(pSubMesh->GetName(), 0, 9) == "_collider";
+			bool bTriangles = !bHasColliderMesh;
+
+			std::vector<iCollideShape*> vShapes[2];
+			for (int j = 0; j < pSubMesh->GetColliderNum(); ++j)
+			{
+				cMeshCollider* pCollider = pSubMesh->GetCollider(j);
+				if (pCollider->mbCharCollider == false) bTriangles = false;
+				cMatrixf mtxOffset = pCollider->m_mtxOffset;
+				mtxOffset.SetTranslation(mtxOffset.GetTranslation() * avScale);
+				if (iCollideShape* pShape = cSubMesh::CreateCollideShapeFromCollider(pCollider, mpCurrentPhysicsWorld, avScale, &mtxOffset))
+					vShapes[pCollider->mbCharCollider].push_back(pShape);
+			}
+			for (int j = 0; j < 2; ++j)
+			{
+				if (vShapes[j].empty()) continue;
+				iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("ShapeBody", vShapes[j].size() == 1 ? vShapes[j][0] : mpCurrentPhysicsWorld->CreateCompundShape(vShapes[j]));
+				pBody->SetMass(0);
+				pBody->SetCollide(j == 0);
+				pBody->SetBlocksLight(pSubEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster));
+				if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(sPhysMat)) pBody->SetMaterial(pMat);
+				pBody->SetMatrix(a_mtxTransform);
+			}
+
+			iVertexBuffer* pSrcVtx = pSubMesh->GetVertexBuffer();
+			if (pSrcVtx == NULL || (bTriangles || bColliderMesh) == false) continue;
 
 			cVector3f vCell = pSubEnt->GetBoundingVolume()->GetWorldCenter() / 16.0f;
-			tStaticBatchKey key(pSubEnt->GetMaterial() ? pSubEnt->GetMaterial()->GetPhysicsMaterial() : "",
-								(int)std::floor(vCell.x), (int)std::floor(vCell.y), (int)std::floor(vCell.z));
+			tStaticBatchKey key(sPhysMat, bCharMesh, (int)std::floor(vCell.x), (int)std::floor(vCell.y), (int)std::floor(vCell.z));
 			cStaticBatch& batch = m_mapStaticBatches[key];
-			if (batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000) FlushStaticBatch(std::get<0>(key), batch);
+			if (batch.mvIdx.size() + pSrcVtx->GetIndexNum() > 50000) FlushStaticBatch(key, batch);
 
 			iVertexBuffer* pVtx = pSrcVtx->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static, eVertexElementFlag_Position);
 			pVtx->Transform(pSubEnt->GetWorldMatrix());
@@ -1394,7 +1425,7 @@ namespace hpl {
 		}
 	}
 
-	void cWorldLoaderHpm::FlushStaticBatch(const tString& asPhysicsMaterial, cStaticBatch& aBatch)
+	void cWorldLoaderHpm::FlushStaticBatch(const tStaticBatchKey& aKey, cStaticBatch& aBatch)
 	{
 		if (aBatch.mvIdx.empty()) return;
 		iVertexBuffer* pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Software, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static,
@@ -1411,7 +1442,8 @@ namespace hpl {
 		{
 			iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("CombinedObjects" + cString::ToString(mlCombinedObjects++), pShape);
 			pBody->SetMass(0);
-			if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(asPhysicsMaterial)) pBody->SetMaterial(pMat);
+			pBody->SetCollide(std::get<1>(aKey) == false);
+			if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(std::get<0>(aKey))) pBody->SetMaterial(pMat);
 		}
 		aBatch = cStaticBatch();
 	}

@@ -325,7 +325,13 @@ def cmd_click(a):
 
 
 def cmd_walk(a):
-    if a.jump is None:
+    if a.trace:
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "down"})
+        for i in range(int(a.secs / a.trace)):
+            frames(a.trace)
+            print(f"{(i + 1) * a.trace:.2f}", " ".join(f"{v:.3f}" for v in camera_pos()[1]))
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "up"})
+    elif a.jump is None:
         press("key", a.key, a.secs)
     else:
         send({"cmd": "input", "type": "key", "key": a.key, "action": "down"})
@@ -506,6 +512,7 @@ def main():
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
     s.add_argument("--jump", type=float, help="press space after this many seconds")
+    s.add_argument("--trace", type=float, help="print feet every N seconds")
     s = sub.add_parser("walkto"); s.add_argument("target", nargs="+", help="name or X Y Z [c]")
     s.add_argument("--tol", type=float, default=0.5); s.add_argument("--max", type=float, default=30)
     s.add_argument("--nav", action="store_true", help="follow the agent node graph")

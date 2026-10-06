@@ -61,7 +61,7 @@ namespace hpl {
 		tString CreateMapArea(cXmlElement* apElement);
 		tString CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex);
 
-		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity);
+		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale);
 		bool CreateStaticBodiesFromEnt(const tString& asFile, const cMatrixf& a_mtxTransform, const cVector3f& avScale, const tString& asName);
 
 		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
@@ -73,8 +73,8 @@ namespace hpl {
 			std::vector<float> mvPos;
 			std::vector<unsigned int> mvIdx;
 		};
-		typedef std::tuple<tString, int, int, int> tStaticBatchKey;
-		void FlushStaticBatch(const tString& asPhysicsMaterial, cStaticBatch& aBatch);
+		typedef std::tuple<tString, bool, int, int, int> tStaticBatchKey;
+		void FlushStaticBatch(const tStaticBatchKey& aKey, cStaticBatch& aBatch);
 		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
 		int mlCombinedObjects;
 
