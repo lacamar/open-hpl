@@ -48,6 +48,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool iPhysicsBody::mbHpl3Buoyancy = false;
+
 	iPhysicsBody::iPhysicsBody(const tString &asName,iPhysicsWorld *apWorld,iCollideShape *apShape) 
 		: iEntity3D(asName)
 	{
@@ -106,6 +108,7 @@ namespace hpl {
 
 		mbVolatile = false;
 
+		mlFreezeCount = 0;
 		mbDisableAfterSimulation = false;
 
 		mbHasCollision = false;

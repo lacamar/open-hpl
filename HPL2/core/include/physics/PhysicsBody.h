@@ -65,6 +65,11 @@ namespace hpl {
 		float mfAngularViscosity;
 
 		cPlanef mSurface;
+
+		cVector3f mvPrevLinearVel = 0;
+		cVector3f mvPrevAngularVel = 0;
+		float mfDragDensityMul = 1;
+		bool mbNoPrevVel = true;
 	};
 
 	//------------------------------------------
@@ -121,6 +126,13 @@ namespace hpl {
 
 		virtual void Enable()=0;
 		virtual void Sleep()=0;
+		void Freeze(){ mlFreezeCount = 3;}
+		static void SetHpl3Buoyancy(bool abX){ mbHpl3Buoyancy = abX;}
+		bool GetFrozen(){ return mlFreezeCount > 0;}
+		void SetNoGravityWhenUnderwater(bool abX){ mbNoGravityWhenUnderwater = abX;}
+		bool GetNoGravityWhenUnderwater(){ return mbNoGravityWhenUnderwater;}
+		void SetIsUnderwater(bool abX){ mbIsUnderwater = abX;}
+		bool GetIsUnderwater(){ return mbIsUnderwater;}
 		virtual bool GetEnabled() const=0;
 		virtual void SetAutoDisable(bool abEnabled)=0;
 		virtual bool GetAutoDisable() const=0;
@@ -216,7 +228,15 @@ namespace hpl {
 		void SetPushedByCharacterGravity(bool abX){ mbPushedByCharacterGravity = abX;}
 		bool GetPushedByCharacterGravity(){ return mbPushedByCharacterGravity;}
 
-		void SetBuoyancyActive(bool abX){ mBuoyancy.mbActive = abX;}
+		void SetBuoyancyActive(bool abX)
+		{
+			if(abX != mBuoyancy.mbActive)
+			{
+				mBuoyancy.mvPrevLinearVel = mBuoyancy.mvPrevAngularVel = 0;
+				mBuoyancy.mbNoPrevVel = true;
+			}
+			mBuoyancy.mbActive = abX;
+		}
 		void SetBuoyancyDensity(float afX){ mBuoyancy.mfDensity = afX;}
 		void SetBuoyancyLinearViscosity(float afX){ mBuoyancy.mfLinearViscosity = afX;}
 		void SetBuoyancyAngularViscosity(float afX){ mBuoyancy.mfAngularViscosity = afX;}
@@ -314,6 +334,10 @@ namespace hpl {
 		cPhysicsBody_Buoyancy mBuoyancy;
 
 		bool mbDisableAfterSimulation;
+		int mlFreezeCount;
+		static bool mbHpl3Buoyancy;
+		bool mbNoGravityWhenUnderwater = false;
+		bool mbIsUnderwater = false;
 
 		bool mbHasCollision;
 

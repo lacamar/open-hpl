@@ -1178,6 +1178,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	iLight::SetHpl3Visibility(true);
 	cParticleSystem::SetHpl3Color(true);
 	iCharacterBody::SetHpl3(true);
+	iPhysicsBody::SetHpl3Buoyancy(true);
 	cRendererDeferred::SetHpl3SSAO(true);
 	cWorld::SetHpl3SkyBox(true);
 	cSoundEntityData::SetLazyLoad(true);

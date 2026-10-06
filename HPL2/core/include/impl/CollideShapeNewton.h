@@ -60,12 +60,15 @@ namespace hpl {
 		void CreateHeightField(int alSize, const unsigned short* apElevation, float afUnitSize, float afVerticalScale);
 
 		NewtonCollision* GetNewtonCollision(){ return mpNewtonCollision;}
+		const tVector3fVec& GetBuoyancyPoints(float &afRadius);
 
 	private:
 		NewtonCollision* mpNewtonCollision;
 		NewtonWorld *mpNewtonWorld;
 
 		tCollideShapeVec mvSubShapes;
+		tVector3fVec mvBuoyancyPoints;
+		float mfBuoyancyPointRadius = -1;
 	};
 };
 #endif // HPL_COLLIDE_SHAPE_NEWTON_H

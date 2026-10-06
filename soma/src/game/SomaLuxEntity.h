@@ -220,10 +220,12 @@ public:
 	void UpdateMove(float afTimeStep);
 	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
-	void UpdateLiquid();
+	void UpdateLiquid(float afTimeStep);
 	void CreateLiquidGraphics(cWorld *apWorld);
 	void PlaceLiquidGraphics();
 	bool mbCameraInLiquid = false;
+	float mfLiquidTime = 0;
+	float mfLiquidSurfaceY = 0;
 	cMeshEntity *mpLiquidMesh = NULL;
 	cFogArea *mpLiquidFog = NULL;
 	cMatrixf m_mtxLiquidPlaced = cMatrixf::Identity;

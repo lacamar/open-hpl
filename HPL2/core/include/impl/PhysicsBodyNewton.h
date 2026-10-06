@@ -103,6 +103,7 @@ namespace hpl {
 		
 		static void OnTransformCallback(const NewtonBody* apBody, const dFloat* apMatrix, int alThreadIndex);
 		static void OnUpdateCallback(NewtonBody* apBody, dFloat afTimestep, int alThreadIndex);
+		bool CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep);
 
 		NewtonBody *mpNewtonBody;
 		NewtonWorld *mpNewtonWorld;
@@ -125,6 +126,9 @@ namespace hpl {
 		// Forces that will be set and clear on update callback
 		cVector3f mvTotalForce;
 		cVector3f mvTotalTorque;
+
+		cVector3f mvBuoyancyForce = 0;
+		cVector3f mvBuoyancyTorque = 0;
 	};
 };
 #endif // HPL_PHYSICS_BODY_NEWTON_H

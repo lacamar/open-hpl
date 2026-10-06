@@ -186,6 +186,14 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			pEnt->mbEffectsActive = apInstanceVars->GetVarBool("EffectsActive", true);
 		if (apInstanceVars && apInstanceVars->GetVarBool("StaticPhysics", false))
 			pEnt->SetStaticPhysics(true);
+		// cLuxPropLoader::AfterLoad: gravity-free first steps let Newton put resting props to sleep
+		if (pEnt->meType == eSomaLuxEntityType_Prop && mbActive && !GetVarBool("DisableFreezeAtStart", false) && !(mpEntity && mpEntity->GetSkeletonPhysicsActive()))
+			for (iPhysicsBody *pBody : mvBodies)
+				if (pBody->GetMass() > 0)
+					pBody->Freeze();
+		if (pEnt->meType == eSomaLuxEntityType_Prop && GetVarBool("NoGravityWhenUnderwater", false))
+			for (iPhysicsBody *pBody : mvBodies)
+				pBody->SetNoGravityWhenUnderwater(true);
 		if (apInstanceVars)
 			if (unsigned int lFlags = SomaCollideFlag(apInstanceVars->GetVarString("CollideGroup", "")))
 				for (iPhysicsBody *pBody : mvBodies)

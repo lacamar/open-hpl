@@ -23,6 +23,7 @@
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
+#include "math/Math.h"
 #include <algorithm>
 
 namespace hpl {
@@ -153,6 +154,80 @@ namespace hpl {
 			return (int)mvSubShapes.size();
 		else
 			return 1;
+	}
+
+	//-----------------------------------------------------------------------
+
+	// HPL3 cCollideShapeNewton::GenerateBouyancyData: spheres packed inside the shape
+	static void BuoyancyLine(tVector3fVec &avPoints, float afRadius, float afLength)
+	{
+		int lNum = cMath::Min((int)(afLength / (2 * afRadius) + 0.99f), 10);
+		float fStep = (afLength - 2 * afRadius) / (lNum - 1.0f);
+		float x = -0.5f * afLength + afRadius;
+		for(int i=0; i<lNum; ++i, x += fStep)
+			avPoints.push_back(cVector3f(x, 0, 0));
+	}
+
+	const tVector3fVec& cCollideShapeNewton::GetBuoyancyPoints(float &afRadius)
+	{
+		if(mfBuoyancyPointRadius < 0)
+		{
+			mfBuoyancyPointRadius = 0;
+			if(mType == eCollideShapeType_Box)
+			{
+				float fR = 0.5f * cMath::Min(mvSize.x, cMath::Min(mvSize.y, mvSize.z));
+				mfBuoyancyPointRadius = fR;
+				int vNum[3];
+				float vStep[3];
+				for(int i=0; i<3; ++i)
+				{
+					vNum[i] = cMath::Min((int)(mvSize.v[i] / (2 * fR) + 0.999f), 8);
+					vStep[i] = (mvSize.v[i] - 2 * fR) / (vNum[i] - 1.0f);
+				}
+				float z = -0.5f * mvSize.z + fR;
+				for(int k=0; k<vNum[2]; ++k, z += vStep[2])
+				{
+					float y = -0.5f * mvSize.y + fR;
+					for(int j=0; j<vNum[1]; ++j, y += vStep[1])
+					{
+						float x = -0.5f * mvSize.x + fR;
+						for(int i=0; i<vNum[0]; ++i, x += vStep[0])
+							mvBuoyancyPoints.push_back(cVector3f(x, y, z));
+					}
+				}
+			}
+			else if(mType == eCollideShapeType_Sphere)
+			{
+				mfBuoyancyPointRadius = mvSize.x;
+				mvBuoyancyPoints.push_back(0);
+			}
+			else if(mType == eCollideShapeType_Capsule || (mType == eCollideShapeType_Cylinder && 2 * mvSize.x <= mvSize.y))
+			{
+				mfBuoyancyPointRadius = mvSize.x;
+				BuoyancyLine(mvBuoyancyPoints, mvSize.x, mvSize.y);
+			}
+			else if(mType == eCollideShapeType_Cylinder)
+			{
+				float fR = mvSize.x, fH = mvSize.y, fPr = 0.5f * fH;
+				mfBuoyancyPointRadius = fPr;
+				int lRows = std::clamp((int)(2 * fR / fH + 0.999f), 5, 8) | 1;
+				float fRowStep = (2 * fR - fH) / (lRows - 1.0f);
+				float z = fPr - fR;
+				for(int r=0; r<lRows; ++r, z += fRowStep)
+				{
+					float w = sqrtf(cMath::Max(fR * fR - z * z, 0.0f)) - std::fabs(sinf(z / fR * kPi2f)) * fPr;
+					int lCols = std::clamp((int)(2 * w / fH + 0.999f), 5, 8);
+					float fStep = (2 * w - fH) / (lCols - 1.0f);
+					float y = fPr - w;
+					for(int c=0; c<lCols; ++c, y += fStep)
+						mvBuoyancyPoints.push_back(cVector3f(0, y, z));
+				}
+			}
+			for(cVector3f &vP : mvBuoyancyPoints)
+				vP = cMath::MatrixMul(m_mtxOffset, vP);
+		}
+		afRadius = mfBuoyancyPointRadius;
+		return mvBuoyancyPoints;
 	}
 	
 	//-----------------------------------------------------------------------

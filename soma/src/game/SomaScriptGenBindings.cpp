@@ -1771,6 +1771,10 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMaxAngularSpeed() const", +[](iPhysicsBody *o) -> float { return o->GetMaxAngularSpeed(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetInertiaVector()", +[](iPhysicsBody *o) -> cVector3f { return o->GetInertiaVector(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "cMatrixf GetInertiaMatrix()", +[](iPhysicsBody *o) -> cMatrixf { return o->GetInertiaMatrix(); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetNoGravityWhenUnderwater(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetNoGravityWhenUnderwater(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetNoGravityWhenUnderwater()", +[](iPhysicsBody *o) -> bool { return o->GetNoGravityWhenUnderwater(); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetIsUnderwater(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetIsUnderwater(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetIsUnderwater()", +[](iPhysicsBody *o) -> bool { return o->GetIsUnderwater(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetVelocityAtPosition(const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0) -> cVector3f { return o->GetVelocityAtPosition(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetTorqueFromForceAtPosition(const cVector3f&in avForce, const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) -> cVector3f { return o->GetTorqueFromForceAtPosition(a0, a1); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMass(float afMass)", +[](iPhysicsBody *o, float a0) { o->SetMass(a0); });

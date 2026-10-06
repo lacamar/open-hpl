@@ -341,6 +341,7 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::Enable()
 	{
+		mlFreezeCount = 0;
 		NewtonBodySetFreezeState(mpNewtonBody, 0);
 	}
 	bool cPhysicsBodyNewton::GetEnabled() const
@@ -477,6 +478,101 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	// HPL3 cCollideShapeNewton::CalculateBouyancyForces: lift from spheres packed in the shape, then drag
+	bool cPhysicsBodyNewton::CalcHpl3Buoyancy(const cVector3f &avGravity, float afTimeStep)
+	{
+		cCollideShapeNewton *pShape = static_cast<cCollideShapeNewton*>(mpShape);
+		cPhysicsBody_Buoyancy &b = mBuoyancy;
+		float fDensity = b.mfDensity * mfBuoyancyDensityMul;
+		if (mfMass == 0 || fDensity <= 0)
+			return false;
+
+		const cMatrixf &mtx = GetLocalMatrix();
+		cPlanef surface = cMath::TransformPlane(cMath::MatrixInverse(mtx), b.mSurface);
+		cVector3f vCom = GetMassCentre();
+		cVector3f vForce = 0, vTorque = 0;
+		float fVolume = 0;
+		for (int i = 0; i < pShape->GetSubShapeNum(); ++i)
+		{
+			cCollideShapeNewton *pSub = static_cast<cCollideShapeNewton*>(pShape->GetSubShape(i));
+			float fR;
+			const tVector3fVec &vPoints = pSub->GetBuoyancyPoints(fR);
+			if (vPoints.empty())
+				continue;
+			float fPointVol = 4.18879032f * fR * fR * fR;
+			cVector3f vLift = surface.GetNormal() * (fDensity * avGravity.Length() * pSub->GetVolume());
+			cVector3f vPointLift = vLift / (float)vPoints.size();
+			float fSum = 0;
+			for (const cVector3f &vP : vPoints)
+			{
+				float d = cMath::PlaneToPointDist(surface, vP), v;
+				if (d > fR)
+					continue;
+				if (d < -fR)
+					v = fPointVol;
+				else if (d >= 0)
+					v = (2 * fR + d) * (fR - d) * (fR - d) * (kPif / 3);
+				else
+					v = d * d * (kPif / 3) * (d + 3 * fR) + 0.5f * fPointVol;
+				fSum += v;
+				vTorque += cMath::Vector3Cross(vP - vCom, vPointLift * (v / fPointVol));
+			}
+			float fFrac = fSum / (fPointVol * vPoints.size());
+			vForce += vLift * fFrac;
+			fVolume += fFrac * pSub->GetVolume();
+		}
+		if (fVolume <= 0)
+			return false;
+		vForce = cMath::MatrixMul3x3(mtx, vForce);
+		vTorque = cMath::MatrixMul3x3(mtx, vTorque);
+
+		float fMul = cMath::Min(b.mfDragDensityMul, mfBuoyancyDensityMul);
+		float fDrag = b.mfDensity * fMul;
+		if (fDrag > 0)
+		{
+			float fFrac = fVolume / pShape->GetVolume();
+			cVector3f vLin = GetLinearVelocity(), vAng = GetAngularVelocity();
+			cMatrixf mtxInertia = GetInertiaMatrix();
+			cVector3f vL = 0, vA = 0;
+			float fSpeed = vLin.Length();
+			if (fSpeed > 0)
+			{
+				float c = mfMaxLinearSpeed > 0 ? cMath::Min(fSpeed, mfMaxLinearSpeed * fMul) : fMul * fSpeed;
+				c = cMath::Min(c, 0.5f * c * c);
+				vL = vLin * (-c * b.mfLinearViscosity * fDrag * fFrac * mfMass / fSpeed);
+			}
+			float fAngSpeed = vAng.Length();
+			if (fAngSpeed > 0)
+			{
+				float c = mfMaxAngularSpeed > 0 ? cMath::Min(fAngSpeed, mfMaxAngularSpeed * fMul) : fMul * fAngSpeed;
+				c = cMath::Min(c, 0.5f * c * c);
+				vA = cMath::MatrixMul(mtxInertia, vAng / fAngSpeed) * (-fDrag * c * b.mfAngularViscosity * fFrac);
+			}
+			cVector3f vW = vLin * (-2 * fMul);
+			cVector3f vWa = vAng * (-0.5f * fMul);
+			if (b.mbNoPrevVel == false)
+			{
+				vW += (vLin - b.mvPrevLinearVel) * (-fMul * 0.1f / afTimeStep);
+				vWa += (vAng - b.mvPrevAngularVel) * (-fMul * 0.025f / afTimeStep);
+			}
+			cMath::Vector3ClampToLength(vW, 50);
+			cMath::Vector3ClampToLength(vWa, 50);
+			vL += vW * (mfMass * b.mfLinearViscosity * fMul);
+			vA += cMath::MatrixMul(mtxInertia, vWa) * (b.mfAngularViscosity * fMul);
+			vForce += cVector3f(vL.x * 0.25f, vL.y, vL.z * 0.25f);
+			vTorque += vA * 0.05125f;
+			b.mvPrevLinearVel = vLin;
+			b.mvPrevAngularVel = vAng;
+			b.mbNoPrevVel = false;
+			b.mfDragDensityMul = b.mfDragDensityMul * (1 - afTimeStep) + mfBuoyancyDensityMul * afTimeStep;
+		}
+		mvBuoyancyForce = vForce;
+		mvBuoyancyTorque = vTorque;
+		return true;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cPhysicsBodyNewton::OnUpdateCallback(NewtonBody* apBody, dFloat afTimestep, int alThreadIndex)
 	{
 		
@@ -496,11 +592,13 @@ namespace hpl {
 			{
 				pRigidBody->GetWorld()->AddBodyToUpdateList(pRigidBody);	
 			}
+			if (pRigidBody->mlFreezeCount > 0)
+				--pRigidBody->mlFreezeCount;
 		}
 		
 		////////////////////////////
 		//Create some gravity
-		if (pRigidBody->mbGravity)
+		if (pRigidBody->mbGravity && pRigidBody->mlFreezeCount <= 0)
 		{
 			cVector3f vGravity = pRigidBody->mpWorld->GetGravity();
 
@@ -511,7 +609,15 @@ namespace hpl {
 
 		////////////////////////////
 		// Create Buoyancy
-		if (pRigidBody->mBuoyancy.mbActive && pRigidBody->mfBuoyancyDensityMul>0)
+		if (pRigidBody->mBuoyancy.mbActive && pRigidBody->mfBuoyancyDensityMul>0 && pRigidBody->mlFreezeCount <= 0 && mbHpl3Buoyancy)
+		{
+			if (pRigidBody->GetEnabled() == false || pRigidBody->CalcHpl3Buoyancy(pRigidBody->mpWorld->GetGravity(), afTimestep))
+			{
+				NewtonBodyAddForce(apBody, pRigidBody->mvBuoyancyForce.v);
+				NewtonBodyAddTorque(apBody, pRigidBody->mvBuoyancyTorque.v);
+			}
+		}
+		else if (pRigidBody->mBuoyancy.mbActive && pRigidBody->mfBuoyancyDensityMul>0 && pRigidBody->mlFreezeCount <= 0)
 		{
 			cVector3f vGravity = pRigidBody->mpWorld->GetGravity();
 

@@ -302,7 +302,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 		else if (pEnt->meType == eSomaLuxEntityType_Area)
 			pEnt->UpdateCheckCollision(afTimeStep);
 		else if (pEnt->meType == eSomaLuxEntityType_LiquidArea)
-			pEnt->UpdateLiquid();
+			pEnt->UpdateLiquid(afTimeStep);
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)

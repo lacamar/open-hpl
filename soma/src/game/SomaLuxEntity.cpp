@@ -1517,12 +1517,106 @@ void cSomaLuxEntity::PlaceLiquidGraphics()
 	}
 }
 
-void cSomaLuxEntity::UpdateLiquid()
+static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b);
+
+// cLuxLiquidArea::CheckCollisionCallback + DoBuoyancyOnBody
+static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float afSurfaceY, bool abSurfaceMoved, float afTime, cCamera *apCam)
+{
+	cSomaLuxMap *pMap = apArea->mpMap ? apArea->mpMap : cSomaLuxMap::GetCurrent();
+	iPhysicsWorld *pWorld = pMap ? pMap->GetWorld()->GetPhysicsWorld() : NULL;
+	if (pWorld == NULL)
+		return;
+	cVector3f vExt(0.2f);
+	for (int i = 0; i < 3; ++i)
+		for (int k = 0; k < 3; ++k)
+			vExt.v[k] += std::fabs(aBox.mvAxis[i].v[k]) * aBox.mvHalf.v[i];
+	cBoundingVolume bv;
+	bv.SetLocalMinMax(aBox.mvCenter - vExt, aBox.mvCenter + vExt);
+	std::vector<iPhysicsBody *> vBodies;
+	pWorld->GetBodiesInBV(&bv, &vBodies);
+
+	cResourceVarsObject &vars = apArea->mInstanceVars;
+	cPlanef surface;
+	surface.FromNormalPoint(cVector3f(0, 1, 0), cVector3f(0, afSurfaceY, 0));
+	float fWaveAmp = vars.GetVarFloat("WaveAmp", 0), fWaveFreq = vars.GetVarFloat("WaveFreq", 0);
+	float fMaxWaveDist = vars.GetVarFloat("MaxWaveDistance", 25);
+	bool bWaves = vars.GetVarBool("HasWaves", false);
+	for (iPhysicsBody *pBody : vBodies)
+	{
+		if (pBody->GetCollide() == false || pBody->IsActive() == false || pBody->GetMass() == 0 || pBody->IsCharacter())
+			continue;
+		std::vector<cSomaOBB> vShape;
+		ShapeBoxes(pBody->GetShape(), pBody->GetLocalMatrix(), vShape);
+		bool bInside = false;
+		for (const cSomaOBB &b : vShape)
+			bInside = bInside || OBBOverlap(aBox, b);
+		cSomaLuxEntity *pOwner = NULL;
+		if (pBody->GetNoGravityWhenUnderwater())
+			for (cSomaLuxEntity *p : pMap->GetEntities())
+				if (std::find(p->mvBodies.begin(), p->mvBodies.end(), pBody) != p->mvBodies.end())
+					pOwner = p;
+		if (bInside == false)
+		{
+			pBody->SetBuoyancyActive(false);
+			if (pBody->GetNoGravityWhenUnderwater())
+			{
+				pBody->SetIsUnderwater(false);
+				if (pOwner == NULL || pOwner->mbInteractedWith == false)
+					pBody->SetGravity(true);
+				pBody->SetMaxLinearSpeed(20);
+				pBody->SetMaxAngularSpeed(20);
+			}
+			continue;
+		}
+		if (pBody->GetNoGravityWhenUnderwater())
+		{
+			bool bUnder = pBody->GetBoundingVolume()->GetMax().y <= aBox.mvCenter.y + vExt.y - 0.2f;
+			if (pOwner == NULL || pOwner->mbInteractedWith == false)
+				pBody->SetGravity(!bUnder);
+			pBody->SetIsUnderwater(bUnder);
+			pBody->SetMaxLinearSpeed(bUnder ? 1 : 20);
+			pBody->SetMaxAngularSpeed(bUnder ? 1 : 20);
+		}
+		if (pBody->GetBuoyancyActive() == false)
+		{
+			pBody->SetBuoyancySurface(surface);
+			pBody->SetBuoyancyDensity(vars.GetVarFloat("Density", 0));
+			pBody->SetBuoyancyLinearViscosity(vars.GetVarFloat("LinearViscosity", 0));
+			pBody->SetBuoyancyAngularViscosity(vars.GetVarFloat("AngularViscosity", 0));
+			pBody->SetBuoyancyActive(true);
+			pBody->Enable();
+		}
+		if (bWaves && apCam && cMath::Vector3DistSqr(pBody->GetLocalPosition(), apCam->GetPosition()) < fMaxWaveDist * fMaxWaveDist)
+		{
+			cVector3f c = cMath::MatrixMul(pBody->GetLocalMatrix(), pBody->GetMassCentre());
+			float fT = afTime * fWaveFreq;
+			float fH = afSurfaceY + 0.3f * fWaveAmp * (std::sin(15 * c.x + fT) + std::sin(15 * c.z + fT));
+			cPlanef wave;
+			wave.FromNormalPoint(cVector3f(0, 1, 0), cVector3f(0, fH, 0));
+			pBody->SetBuoyancySurface(wave);
+			pBody->Enable();
+		}
+		else if (abSurfaceMoved)
+		{
+			pBody->SetBuoyancySurface(surface);
+			pBody->Enable();
+		}
+	}
+}
+
+void cSomaLuxEntity::UpdateLiquid(float afTimeStep)
 {
 	PlaceLiquidGraphics();
 	cCamera *pCam = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCamera() : NULL;
 	std::vector<cSomaOBB> v;
 	EntityBoxes(this, v);
+	if (afTimeStep >= gpSomaBase->mpEngine->GetStepSize() * 0.8f)
+	{
+		float fSurfaceY = v[0].mvCenter.y + v[0].mvHalf.y;
+		mfLiquidTime += afTimeStep;
+		LiquidBuoyancy(this, v[0], fSurfaceY, fSurfaceY != mfLiquidSurfaceY, mfLiquidTime, pCam);
+		mfLiquidSurfaceY = fSurfaceY;
+	}
 	// ponytail: camera point, not cLuxPlayer::GetCameraCollideShape vs the area shape
 	bool bInside = pCam && PointInOBB(v[0], pCam->GetPosition());
 	if (bInside == mbCameraInLiquid)
