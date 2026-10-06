@@ -578,10 +578,10 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 			{
-				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
-									  SomaStartYaw(pNew->GetMatrix()) + fYawRel);
 				// iCharacterBody::CopyFromBodySettings: the transferred player stays crouched
 				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
+				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
+									  SomaStartYaw(pNew->GetMatrix()) + fYawRel);
 			}
 			else
 				Warning("SOMA script: transfer area '%s' not found in %s\n", sTransfer.c_str(), sMap.c_str());
