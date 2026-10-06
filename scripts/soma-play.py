@@ -126,12 +126,15 @@ def camera_pos():
 
 
 def aim(target):
-    cam, _ = camera_pos()
-    dx, dy, dz = (target[i] - cam[i] for i in range(3))
-    yaw = -math.atan2(dx, -dz)
-    pitch = math.atan2(dy, math.hypot(dx, dz))
-    ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});"
-       f"p.GetCamera().SetPitch({pitch});")
+    # the camera pivots with pitch: re-aim from the moved position
+    for _ in range(3):
+        cam, _ = camera_pos()
+        dx, dy, dz = (target[i] - cam[i] for i in range(3))
+        yaw = -math.atan2(dx, -dz)
+        pitch = math.atan2(dy, math.hypot(dx, dz))
+        ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});"
+           f"p.GetCamera().SetPitch({pitch});")
+        frames(0.05)
 
 
 def focused(name):
@@ -140,6 +143,11 @@ def focused(name):
     f = kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
            '__print("f=" + cScript_GetGlobalReturnString());').get("f")
     if f == name:
+        return True
+    # an equipped tool picks on its own
+    t = ex('cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
+           'if(h.mbCanInteract) __print(h.mPickBasics.msFocusedEntityName);', "PlayerToolHandler").strip()
+    if t == name:
         return True
     # InteractAux areas forward interaction to their parent
     out = send({"cmd": "script_vars", "name": f}).get("output", "") if f else ""
@@ -186,6 +194,8 @@ def raycast(a, b, keep=None):
         if "char=1" not in l and f"entity={keep} " not in l:
             continue
         f = l.split()
+        if f[1] == "Player":
+            continue
         out.append((float(f[0]), f[1], f[2].split("=", 1)[1]))
     return out
 
