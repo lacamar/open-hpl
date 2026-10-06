@@ -4745,7 +4745,7 @@ public:
 
 		case dgMinkDisjoint: {
 			NEWTON_ASSERT(face);
-			if (CalcFacePlaneSimd(face)) {
+			if (face && CalcFacePlaneSimd(face)) {
 				//                  NEWTON_ASSERT (face->m_w >= dgFloat32 (0.0f));
 				NEWTON_ASSERT((*face) % (*face) > dgFloat32(0.0f));
 				if (face->m_w < m_penetrationPadding) {
@@ -4819,7 +4819,7 @@ public:
 		case dgMinkDisjoint: {
 			NEWTON_ASSERT(face);
 
-			if (CalcFacePlane(face)) {
+			if (face && CalcFacePlane(face)) {
 				//NEWTON_ASSERT (face->m_w >= dgFloat32 (0.0f));
 				NEWTON_ASSERT(face->m_w >= dgFloat32(-1.0e-2f));
 				NEWTON_ASSERT((*face) % (*face) > dgFloat32(0.0f));
@@ -4885,7 +4885,7 @@ public:
 		}
 
 		case dgMinkDisjoint: {
-			if (CalcFacePlaneLarge(face)) {
+			if (face && CalcFacePlaneLarge(face)) {
 
 				//NEWTON_ASSERT (face->m_w >= dgFloat32 (0.0f));
 				NEWTON_ASSERT(face->m_w >= dgFloat32(-1.0e-1f));
