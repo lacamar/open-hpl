@@ -1074,6 +1074,7 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "light_depth_cull") cRendererDeferred::SetDepthCullLights(bValue);
 	else if(sName == "log") pSettings->mbLog = bValue;
 	else if(sName == "shadow_cull") iRenderer::SetShadowCull(bValue);
+	else if(sName == "sun_caster_cull") iRenderer::SetSunCasterCull(bValue);
 	else if(sName == "shadow_depth_clamp") iRenderer::SetShadowDepthClamp(bValue);
 	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent")
 	{

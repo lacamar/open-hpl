@@ -75,6 +75,7 @@ namespace hpl {
 	bool iRenderer::mbRefractionEnabled=true;
 	bool iRenderer::mbShadowDepthClamp=false;
 	bool iRenderer::mbShadowCull=true;
+	bool iRenderer::mbSunCasterCull=true;
 
 	//-----------------------------------------------------------------------
 
@@ -1485,10 +1486,40 @@ namespace hpl {
 
 	static tRenderableVec* gpLightShadowCasterVec=NULL;
 	static cFrustum *gpLightFrustum=NULL;
+	static float gfShadowCasterMinRadius=0;
 	static cFrustum *gpViewFrustum=NULL;
 	static eFrustumPlane gvBeyondLightAndViewPlanes[6]; //Use to check if an caster is not going to affect view.
 	static int glBeyondLightAndViewPlaneNum;
 	static bool gbLightBehindNearPlane;
+	static bool gbShadowCasterViewCheck=false;
+
+	static void SetupBeyondLightAndViewPlanes(cFrustum *apViewFrustum, cFrustum *apLightFrustum)
+	{
+		gpViewFrustum = apViewFrustum;
+
+		/////////////////////////
+		// Get the camera planes that face away from the light
+		glBeyondLightAndViewPlaneNum =0;
+		cVector3f vLightForward = apLightFrustum->GetForward();
+		for(int i=0; i<eFrustumPlane_LastEnum; ++i)
+		{
+			const cPlanef& cameraPlane = gpViewFrustum->GetPlane((eFrustumPlane)i);
+
+			//Check so plane is facing the light
+			// Above 0 because GetForward from frustum is inverted.
+			// Note that this is not optimal, but good enough for now. Should have some other way of choosing to make it better.
+			cVector3f vPlaneNormal = cameraPlane.GetNormal();
+			if(cMath::Vector3Dot(vPlaneNormal, vLightForward) > 0)	
+			{
+				gvBeyondLightAndViewPlanes[glBeyondLightAndViewPlaneNum] = (eFrustumPlane)i;
+				++glBeyondLightAndViewPlaneNum;
+			}
+		}
+		
+		/////////////////////////
+		// See if light is behind near plane
+		gbLightBehindNearPlane = cMath::PlaneToPointDist(gpViewFrustum->GetPlane(eFrustumPlane_Near), apLightFrustum->GetOrigin()) < 0;
+	}
 
 	//-----------------------------------------------------------------------
 	
@@ -1525,7 +1556,7 @@ namespace hpl {
 	bool iRenderer::CheckShadowCasterContributesToView(iRenderable *apObject)
 	{
 		//This should be always true since the shadow map might be saved and will then end up faulty if some objects have been dismissed!
-		return true;
+		if(!gbShadowCasterViewCheck) return true;
 
 
 		cBoundingVolume *pBV = apObject->GetBoundingVolume();
@@ -1689,7 +1720,8 @@ namespace hpl {
 				//Check so visible and shadow caster
 				if(	CheckObjectIsVisible(pObject, eRenderableFlag_ShadowCaster)==false ||
 					pObject->GetMaterial() == NULL ||
-					pObject->GetMaterial()->GetType()->IsTranslucent())
+					pObject->GetMaterial()->GetType()->IsTranslucent() ||
+					pObject->GetBoundingVolume()->GetRadius() < gfShadowCasterMinRadius)
 				{
 					continue;
 				}
@@ -1722,14 +1754,22 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum)
+	void iRenderer::GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum, float afMinRadius, bool abViewCheck)
 	{
 		apContainer->UpdateBeforeRendering();
 
 		gpLightFrustum = apLightFrustum;
+		gfShadowCasterMinRadius = afMinRadius;
 		gpLightShadowCasterVec = &avObjectVec;
+		gbShadowCasterViewCheck = abViewCheck;
+		if(abViewCheck)
+		{
+			SetupBeyondLightAndViewPlanes(mpCurrentFrustum, apLightFrustum);
+			gbLightBehindNearPlane = false; // sun is at infinity
+		}
 
 		GetShadowCastersIterative(apContainer->GetRoot(), eCollision_Outside);
+		gbShadowCasterViewCheck = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1779,37 +1819,7 @@ namespace hpl {
 		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
 
 		//Set the view frustum, needed in some functions cause the current is set for the light during rendering.
-		gpViewFrustum = mpCurrentFrustum;
-		
-		/////////////////////////
-		// Get the camera planes that face away from the light
-		glBeyondLightAndViewPlaneNum =0;
-		cVector3f vLightForward = pLightFrustum->GetForward();
-		for(int i=0; i<eFrustumPlane_LastEnum; ++i)
-		{
-			const cPlanef& cameraPlane = gpViewFrustum->GetPlane((eFrustumPlane)i);
-
-			//Check so plane is facing the light
-			// Above 0 because GetForward from frustum is inverted.
-			// Note that this is not optimal, but good enough for now. Should have some other way of choosing to make it better.
-			cVector3f vPlaneNormal = cameraPlane.GetNormal();
-			if(cMath::Vector3Dot(vPlaneNormal, vLightForward) > 0)	
-			{
-				gvBeyondLightAndViewPlanes[glBeyondLightAndViewPlaneNum] = (eFrustumPlane)i;
-				++glBeyondLightAndViewPlaneNum;
-			}
-		}
-		
-		/////////////////////////
-		// See if light is behind near plane
-		if(cMath::PlaneToPointDist(gpViewFrustum->GetPlane(eFrustumPlane_Near), pLightFrustum->GetOrigin()) < 0)
-		{
-			gbLightBehindNearPlane = true;	
-		}
-		else
-		{
-			gbLightBehindNearPlane = false;
-		}
+		SetupBeyondLightAndViewPlanes(mpCurrentFrustum, pLightFrustum);
 
 		/////////////////////////
 		// If culling by occlusion, skip rest of function

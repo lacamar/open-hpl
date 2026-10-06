@@ -3444,6 +3444,7 @@ namespace hpl {
 		////////////////////////
 		// Practical split scheme
 		float fNear = mpCurrentFrustum->GetNearPlane(), fFar = mpCurrentFrustum->GetFarPlane();
+		if(mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogColor().a >= 0.9) fFar = mpCurrentWorld->GetFogEnd();
 		float fLogTerm = apLight->GetAutoShadowSliceLogTerm();
 		float vSplit[lSlices+1];
 		for(int i=0; i<=lSlices; ++i)
@@ -3523,9 +3524,9 @@ namespace hpl {
 			// Casters
 			mvShadowCasters.resize(0);
 			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Dynamic)
-				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvShadowCasters, pFrustum);
+				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvShadowCasters, pFrustum, mbSunCasterCull ? 4.0f * fTexel : 0, mbSunCasterCull);
 			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Static)
-				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvShadowCasters, pFrustum);
+				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvShadowCasters, pFrustum, mbSunCasterCull ? 4.0f * fTexel : 0, mbSunCasterCull);
 
 			mpLowLevelGraphics->SetCurrentFrameBuffer(mpDirShadowData->mpBuffer, cVector2l((i%2)*lSliceRes, (1-i/2)*lSliceRes), cVector2l(lSliceRes));
 			mpCurrentFrustum = pFrustum;

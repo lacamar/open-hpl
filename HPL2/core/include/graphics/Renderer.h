@@ -312,6 +312,7 @@ namespace hpl {
 		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
 		static void SetShadowDepthClamp(bool abX) { mbShadowDepthClamp = abX;}
 		static void SetShadowCull(bool abX) { mbShadowCull = abX;}
+		static void SetSunCasterCull(bool abX) { mbSunCasterCull = abX;}
 
 		
 		//Debug
@@ -374,7 +375,7 @@ namespace hpl {
 
 		bool CheckShadowCasterContributesToView(iRenderable *apObject);
 		void GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision);
-		void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
+		void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum, float afMinRadius=0, bool abViewCheck=false);
 		bool SetupShadowMapRendering(iLight *apLight);
 
 		static bool RenderShadowCasterCHCStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
@@ -512,6 +513,7 @@ namespace hpl {
 		static bool mbRefractionEnabled;
 		static bool mbShadowDepthClamp;
 		static bool mbShadowCull;
+		static bool mbSunCasterCull;
 	};
 
 	//---------------------------------------------
