@@ -483,7 +483,10 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 		cQuaternion qCur, qGoal;
 		qCur.FromRotationMatrix(mtxRot);
 		qGoal.FromRotationMatrix(m_mtxRotateGoal);
-		float fAngle = 2 * std::acos(cMath::Min(std::fabs(cMath::QuaternionDot(qCur, qGoal)), 1.0f));
+		// cMath::QuaternionSlerp's shortest-path branch is wrong for dot < 0
+		if (cMath::QuaternionDot(qCur, qGoal) < 0)
+			qGoal = qGoal * -1.0f;
+		float fAngle = 2 * std::acos(cMath::Min(cMath::QuaternionDot(qCur, qGoal), 1.0f));
 		mfRotateSpeed = cMath::Min(mfRotateSpeed + mfRotateAcc * afTimeStep, mfRotateMaxSpeed);
 		float fSpeed = mfRotateSpeed;
 		if (mfRotateSlowdown > 0 && fAngle < mfRotateSlowdown)
@@ -491,6 +494,7 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 		float fStep = fSpeed * afTimeStep;
 		bDone = fStep >= fAngle;
 		cQuaternion qNew = bDone ? qGoal : cMath::QuaternionSlerp(fStep / fAngle, qCur, qGoal, true);
+		qNew.Normalize();
 		mtxStep = cMath::MatrixMul(cMath::MatrixQuaternion(qNew), cMath::MatrixInverse(mtxRot));
 	}
 	cMatrixf mtxNew = cMath::MatrixMul(mtxStep, mtxRot);
