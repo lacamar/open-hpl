@@ -77,6 +77,8 @@ namespace hpl {
 
 		bool SetMatrixf(int alVarId, const cMatrixf& aMtx);
 		bool SetMatrixf(int alVarId, eGpuShaderMatrix aType, eGpuShaderMatrixOp aOp);
+
+		tString DumpUniforms();
 		
 	private:
 		void LogProgramInfoLog();

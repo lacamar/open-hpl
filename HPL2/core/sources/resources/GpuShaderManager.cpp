@@ -224,6 +224,16 @@ namespace hpl {
 			if(lPos != tString::npos) asData.insert(lPos, gvHpslSourcePatches[i][2]);
 			else Warning("HPSL patch anchor not found in %s\n", asFile.c_str());
 		}
+		// debug: OPENHPL_HPSL_PATCH="file|old|new"
+		const char *pPatch = getenv("OPENHPL_HPSL_PATCH");
+		tString sPatch = pPatch ? pPatch : "";
+		size_t lA = sPatch.find('|'), lB = sPatch.find('|', lA + 1);
+		if(lB != tString::npos && asFile == sPatch.substr(0, lA))
+		{
+			tString sOld = sPatch.substr(lA + 1, lB - lA - 1);
+			size_t lPos = asData.rfind(sOld);
+			if(lPos != tString::npos) asData.replace(lPos, sOld.size(), sPatch.substr(lB + 1));
+		}
 	}
 
 	static tString GetHpslFallbackName(const tString& asGlslName)

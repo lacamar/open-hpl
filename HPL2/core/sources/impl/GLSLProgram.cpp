@@ -169,6 +169,27 @@ namespace hpl{
 
 	//-----------------------------------------------------------------------
 
+	tString cGLSLProgram::DumpUniforms()
+	{
+		tString sOut;
+		GLint lCount = 0;
+		glGetProgramiv(mlHandle, GL_ACTIVE_UNIFORMS, &lCount);
+		for(GLint i=0; i<lCount; ++i)
+		{
+			char sName[128]; GLint lSize; GLenum type;
+			glGetActiveUniform(mlHandle, i, sizeof(sName), NULL, &lSize, &type, sName);
+			float vVal[16] = {0};
+			glGetUniformfv(mlHandle, glGetUniformLocation(mlHandle, sName), vVal);
+			int lN = type==GL_FLOAT_VEC2 ? 2 : type==GL_FLOAT_VEC3 ? 3 : type==GL_FLOAT_VEC4 ? 4 : type==GL_FLOAT_MAT4 ? 16 : 1;
+			sOut += sName;
+			for(int j=0; j<lN; ++j) sOut += " " + cString::ToString(vVal[j]);
+			sOut += "\n";
+		}
+		return sOut;
+	}
+
+	//-----------------------------------------------------------------------
+
 	bool cGLSLProgram::SetSamplerToUnit(const tString& asSamplerName, int alUnit)
 	{
 		;

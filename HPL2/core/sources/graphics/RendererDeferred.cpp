@@ -1448,6 +1448,8 @@ namespace hpl {
 	{
 		if(alIdx>=20 && alIdx<26) return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<((alIdx-20)/2)),ePixelFormat_RGBA16,alIdx-10)->GetColorBuffer(0)->ToTexture();
 		if(alIdx==13) return mpDirShadowData ? mpDirShadowData->mpTexture : NULL;
+		if(alIdx==14) return mpRefractionTexture;
+		if(alIdx==15) return GetReflectionTexture();
 		if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL;
 		if(alIdx==5) return mpBoxWeightTexture;
 		if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6];

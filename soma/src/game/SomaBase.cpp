@@ -32,6 +32,7 @@
 #include "graphics/Texture.h"
 #include "system/EngineDiagnostics.h"
 #include "impl/MeshLoaderCollada.h"
+#include "impl/GLSLProgram.h"
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsJoint.h"
 #include "physics/PhysicsWorld.h"
@@ -757,6 +758,35 @@ static void cSomaBase_HeadlessCmd_Translucents(void *apUserData, const cHeadless
 	aResp.SetRaw("objects", sOut + "]");
 }
 
+static void cSomaBase_HeadlessCmd_Uniforms(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cSomaBase *pBase = (cSomaBase*)apUserData;
+	cRendererDeferred *pDeferred = static_cast<cRendererDeferred*>(pBase->mpEngine->GetGraphics()->GetRenderer(eRenderer_Main));
+	if(pDeferred == NULL || pDeferred->GetCurrentRenderList() == NULL) { aResp.SetError("no render list"); return; }
+	int lIdx = aReq.GetInt("translucent", 0);
+	cRenderableVecIterator it = pDeferred->GetCurrentRenderList()->GetArrayIterator(eRenderListType_Translucent);
+	for(int i=0; it.HasNext(); ++i)
+	{
+		iRenderable *pObj = it.Next();
+		if(i != lIdx) continue;
+		cMaterial *pMat = pObj->GetMaterial();
+		iGpuProgram *pProg = pMat ? pMat->GetProgram(0, (eMaterialRenderMode)aReq.GetInt("mode", eMaterialRenderMode_Diffuse)) : NULL;
+		if(pProg == NULL) { aResp.SetError("no program"); return; }
+		aResp.Set("program", pProg->GetName());
+		aResp.Set("uniforms", static_cast<cGLSLProgram*>(pProg)->DumpUniforms());
+		tString sUnits;
+		for(int j=0; j<kMaxTextureUnits; ++j)
+		{
+			iTexture *pTex = pMat->GetTextureInUnit((eMaterialRenderMode)aReq.GetInt("mode", eMaterialRenderMode_Diffuse), j);
+			if(pTex) sUnits += cString::ToString(j) + " " + cString::ToString((int)(intptr_t)pTex) + " " + pTex->GetName() + "\n";
+		}
+		sUnits += "refl " + cString::ToString((int)(intptr_t)pDeferred->GetReflectionTexture()) + " refr " + cString::ToString((int)(intptr_t)pDeferred->GetRefractionTexture());
+		aResp.Set("units", sUnits);
+		return;
+	}
+	aResp.SetError("no such translucent");
+}
+
 static void cSomaBase_HeadlessCmd_ReadGbufferStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
@@ -1192,6 +1222,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("read_gbuffer_stats", cSomaBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("dump_target", cSomaBase_HeadlessCmd_DumpTarget, this);
 		pCtrl->RegisterHandler("translucents", cSomaBase_HeadlessCmd_Translucents, this);
+		pCtrl->RegisterHandler("uniforms", cSomaBase_HeadlessCmd_Uniforms, this);
 		pCtrl->RegisterHandler("set_camera", cSomaBase_HeadlessCmd_SetCamera, this);
 		pCtrl->RegisterHandler("start_map", cSomaBase_HeadlessCmd_StartMap, this);
 		pCtrl->RegisterHandler("load_report", cSomaBase_HeadlessCmd_LoadReport, this);
