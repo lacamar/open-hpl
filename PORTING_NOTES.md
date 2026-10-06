@@ -6039,6 +6039,8 @@ our live entries and events.
   shaders now use `pow(px_vColor, 1/2.2)`; wall 17/11/1 vs ref 16/11/1.
 - Ref A/B of a material: `OHPL_REF_OVERRIDE=<dir> scripts/soma-ref.py start ...` copies `<dir>`
   into the mod and adds its top-level dirs to `resources.cfg`; mod files override the game's.
+  Mirror the full game path (`<dir>/static_objects/subway/special/x.mat`): meshes load materials
+  by path, so a bare file name in `<dir>/static_objects` is ignored.
 - Toggling `set_render_setting shadows` 0 -> 1 breaks shadows until restart; use the
   script `iLight.SetCastShadows`.
 
@@ -6156,3 +6158,11 @@ our live entries and events.
 - Gui set fade (Rebirth `cGuiSetEntity::GetFadeColor` 0x1011f70): screen alpha = `1 - fade^2`.
 - HPL3 SSAO is applied (accumulation x0.74 at 00_01, ref final image x0.876). Headless bools
   accept `1`; `ToBool` alone took `value=1` as false.
+
+## SOMA: detail maps never applied (2026-10-06)
+
+- Lit surfaces were ~1.45x brighter than the ref everywhere (00_02 HDR ratio flat across albedo
+  and light type; emissive matched). Ref with `DetailDiffuse` removed from `subway_carriage.mat`
+  brightened by the same pattern. `CompileSolidSpecifics` never flagged detail materials as having
+  diffuse specifics, so `avDetailProperties`/`avDetailWeights` stayed 0 (fade length 0 -> weight
+  0). Now flagged like cubemaps; 00_02 ratio 0.99.

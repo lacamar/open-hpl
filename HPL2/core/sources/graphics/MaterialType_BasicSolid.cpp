@@ -486,8 +486,8 @@ namespace hpl {
 		}
 
 		//////////////////////////////////
-		//Cubemap
-		if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
+		//Cubemap and detail
+		if(apMaterial->GetTexture(eMaterialTexture_CubeMap) || apMaterial->GetTexture(eMaterialTexture_DetailDiffuse) || apMaterial->GetTexture(eMaterialTexture_DetailNMap))
 		{
 			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
 		}
