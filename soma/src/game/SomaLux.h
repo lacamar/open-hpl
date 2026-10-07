@@ -112,6 +112,7 @@ public:
 	void PostUpdate(float afTimeStep);
 	void OnDraw(float afFrameTime);
 	void AppLostInputFocus();
+	void OnQuit();
 
 private:
 	bool mbUpdated = false;

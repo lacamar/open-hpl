@@ -2,6 +2,7 @@
 #include "SomaImGui.h"
 #include "SomaBase.h"
 #include "system/HeadlessControl.h"
+#include <SDL2/SDL.h>
 
 cSomaImGui *SomaHudImGui();
 void SomaRenderImGuis();
@@ -155,6 +156,8 @@ void cSomaSplash::DrawLoadingScreen(bool abBoot)
 	if (lNow - lLastDraw < 1000 / 30)
 		return;
 	lLastDraw = lNow;
+	// Lets the compositor's fullscreen configure through (niri keeps the window tiled until acked)
+	SDL_PumpEvents();
 	iLowLevelGraphics *pLowGfx = mpEngine->GetGraphics()->GetLowLevel();
 	pLowGfx->SetCurrentFrameBuffer(NULL);
 	pLowGfx->SetClearColor(cColor(0, 1));

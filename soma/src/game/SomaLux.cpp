@@ -653,6 +653,8 @@ void SomaSetGamePaused(bool abX)
 	}
 }
 
+void cSomaLuxUpdater::OnQuit() { gpSomaBase->mpEngine->Exit(); }
+
 void cSomaLuxUpdater::AppLostInputFocus()
 {
 	cSomaLuxModule *pMenu = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetModule("MenuHandler") : NULL;
