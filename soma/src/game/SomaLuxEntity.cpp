@@ -1421,22 +1421,6 @@ static bool PointInOBB(const cSomaOBB &b, const cVector3f &avPos)
 	return true;
 }
 
-float SomaLiquidHeightAt(const cVector3f &avPos)
-{
-	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-	if (pMap)
-		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-		{
-			if (pEnt->meType != eSomaLuxEntityType_LiquidArea || pEnt->mbActive == false)
-				continue;
-			std::vector<cSomaOBB> v;
-			EntityBoxes(pEnt, v);
-			if (PointInOBB(v[0], avPos))
-				return v[0].mvCenter.y + v[0].mvHalf.y;
-		}
-	return -10000.0f;
-}
-
 // cMeshCreator::CreateGridPlane: upper submesh faces +y, lower (reversed winding) faces -y
 static cMesh *CreateGridPlane(const tString &asName, const tString &asUpper, const tString &asLower, const cVector2f &avSize, float afGrid, float afTile)
 {
@@ -1527,7 +1511,29 @@ void cSomaLuxEntity::PlaceLiquidGraphics()
 	}
 }
 
+
 static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b);
+
+// cLuxLiquidArea::CheckCollisionCallback (used areas) + cLuxPlayer::GetLiquidHeight
+float SomaPlayerLiquidSurface()
+{
+	float fSurface = -100000.0f;
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	if (pMap == NULL || pBody == NULL)
+		return fSurface;
+	cSomaOBB player = AABBToOBB(pBody->GetPosition() - pBody->GetSize() * 0.5f, pBody->GetPosition() + pBody->GetSize() * 0.5f);
+	for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+	{
+		if (pEnt->meType != eSomaLuxEntityType_LiquidArea || pEnt->mbActive == false)
+			continue;
+		std::vector<cSomaOBB> v;
+		EntityBoxes(pEnt, v);
+		if (OBBOverlap(v[0], player))
+			fSurface = std::max(fSurface, v[0].mvCenter.y + v[0].mvHalf.y);
+	}
+	return fSurface;
+}
 
 // cLuxLiquidArea::CheckCollisionCallback + DoBuoyancyOnBody
 static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float afSurfaceY, bool abSurfaceMoved, float afTime, cCamera *apCam)

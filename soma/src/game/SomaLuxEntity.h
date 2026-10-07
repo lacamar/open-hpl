@@ -289,7 +289,7 @@ void SomaRegisterBodyIDs(const std::vector<cSomaLuxEntity *> &avEnts);
 // Oriented boxes of bodies, areas and the player's character body
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);
 bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax);
-float SomaLiquidHeightAt(const cVector3f &avPos);
+float SomaPlayerLiquidSurface();
 extern int glSomaUnderwaterUsers;
 extern bool gbSomaUnderwaterEffects;
 // Ray against the entity's boxes; afDistOut is the entry distance

@@ -681,8 +681,10 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "cCamera@ GetCamera()", +[](P *p) { return p->GetCamera(); });
 	SOMA_METHOD(e, T, "iCharacterBody@ GetCharacterBody()", +[](P *p) { return p->GetCharacterBody(); });
 	SOMA_METHOD(e, T, "void SetCharacterBody(iCharacterBody@ apBody)", +[](P *p, iCharacterBody *b) { p->SetCharacterBody(b); });
-	SOMA_METHOD(e, T, "bool IsInLiquid()", +[](P *p) { return p->GetCharacterBody() && SomaLiquidHeightAt(p->GetCharacterBody()->GetFeetPosition()) > -10000.0f; });
-	SOMA_METHOD(e, T, "float GetLiquidHeight()", +[](P *p) { return p->GetCharacterBody() ? SomaLiquidHeightAt(p->GetCharacterBody()->GetFeetPosition()) : -10000.0f; });
+	SOMA_METHOD(e, T, "bool IsInLiquid()", +[](P *p) { return SomaPlayerLiquidSurface() > -100000.0f; });
+	SOMA_METHOD(e, T, "float GetLiquidHeight()", +[](P *p) {
+		return p->GetCharacterBody() ? SomaPlayerLiquidSurface() - p->GetCharacterBody()->GetFeetPosition().y : 0.0f;
+	});
 	SOMA_METHOD(e, T, "float GetAverageMoveSpeed()", +[](P *p) { return p->mfAverageMoveSpeed; });
 	SOMA_METHOD(e, T, "const cVector3f& GetAverageMoveDirection()", +[](P *p) -> const cVector3f & { return p->mvAverageMoveDirection; });
 	SOMA_METHOD(e, T, "void ChangeState(int alId)", +[](P *p, int id) { p->ChangeState(id); });
