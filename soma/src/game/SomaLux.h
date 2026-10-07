@@ -120,7 +120,7 @@ private:
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
 tString &SomaPreloadMap();
-cWorld *SomaTakePreloadedWorld(const tString &asMap);
+cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport = NULL);
 void SomaSetGamePaused(bool abX);
 bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc);
 float SomaStartYaw(const cMatrixf &a_mtxArea);

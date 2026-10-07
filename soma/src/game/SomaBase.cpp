@@ -49,6 +49,7 @@
 #endif
 
 cSomaBase *gpSomaBase = NULL;
+static tString gsLoadReport;
 
 static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -910,14 +911,13 @@ static void cSomaBase_HeadlessCmd_StartMap(void *apUserData, const cHeadlessRequ
 		return;
 	}
 
-	aResp.SetRaw("load_report", cWorldLoaderHpm::GetLastLoadReportJson());
+	aResp.SetRaw("load_report", gsLoadReport);
 }
 
 static void cSomaBase_HeadlessCmd_LoadReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
-	const tString &sReport = cWorldLoaderHpm::GetLastLoadReportJson();
-	if(sReport == "") { aResp.SetError("no hpm map loaded yet"); return; }
-	aResp.SetRaw("load_report", sReport);
+	if(gsLoadReport == "") { aResp.SetError("no hpm map loaded yet"); return; }
+	aResp.SetRaw("load_report", gsLoadReport);
 }
 
 static void cSomaBase_HeadlessCmd_WorldStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -1423,9 +1423,12 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 {
 	if (mfGameStartTime < 0)
 		mfGameStartTime = mpEngine->GetGameTime();
-	cWorld *pNewWorld = SomaTakePreloadedWorld(asMapFile);
+	cWorld *pNewWorld = SomaTakePreloadedWorld(asMapFile, &gsLoadReport);
 	if (pNewWorld == NULL)
+	{
 		pNewWorld = mpEngine->GetScene()->LoadWorld(asMapFile, 0);
+		gsLoadReport = cWorldLoaderHpm::GetLastLoadReportJson();
+	}
 	if (pNewWorld == NULL)
 	{
 		asErrorOut = "Could not load map '" + asMapFile + "'";

@@ -32,7 +32,7 @@ static bool gbPendingNewGame = false;
 // HPL3 streams the next map on worker threads; here LoadWorld runs on a main-thread fiber in per-frame slices
 static struct
 {
-	tString msMap;
+	tString msMap, msLoadReport;
 	cWorld *mpWorld = NULL;
 	bool mbRunning = false;
 	unsigned long mlSliceEnd = 0;
@@ -51,6 +51,7 @@ static bool SameMap(const tString &a, const tString &b)
 static void PreloadFiber()
 {
 	gPreload.mpWorld = gpSomaBase->mpEngine->GetScene()->LoadWorld(gPreload.msMap, 0);
+	gPreload.msLoadReport = cWorldLoaderHpm::GetLastLoadReportJson();
 	if (gPreload.mpWorld)
 		gPreload.mpWorld->SetActive(false);
 	gPreload.mbRunning = false;
@@ -105,7 +106,7 @@ static cWorld *PreloadFinish()
 	return pWorld;
 }
 
-cWorld *SomaTakePreloadedWorld(const tString &asMap)
+cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport)
 {
 	if (gPreload.msMap == "")
 		return NULL;
@@ -114,6 +115,8 @@ cWorld *SomaTakePreloadedWorld(const tString &asMap)
 	if (pWorld && bSame)
 	{
 		pWorld->SetActive(true);
+		if (apLoadReport)
+			*apLoadReport = gPreload.msLoadReport;
 		return pWorld;
 	}
 	for (cSomaLuxEntity *pEnt : cSomaLuxEntity::Pending())
