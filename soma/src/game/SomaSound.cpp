@@ -1233,6 +1233,16 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 				+[](cWorld *w, S n, S file, bool remove) {
 					return SomaObjectID((file.empty() ? NULL : w->CreateSoundEntity(n, file, remove)), "cSoundEntity");
 				});
+	SOMA_METHOD(e, "cWorld", "cSoundEntity@ GetSoundEntityFromCreationID(int alID)", +[](cWorld *w, int id) -> cSoundEntity * {
+		cSoundEntityIterator it = w->GetSoundEntityIterator();
+		while (it.HasNext())
+		{
+			cSoundEntity *p = it.Next();
+			if (p->GetCreationID() == id)
+				return p;
+		}
+		return NULL;
+	});
 	SOMA_METHOD(e, "cWorld", "tID CreateSoundEntityExID(const tString &in asName,const tString &in asSoundDataFile, bool abRemoveWhenOver, bool abNonBlockLoad)",
 				+[](cWorld *w, S n, S file, bool remove, bool) {
 					return SomaObjectID((file.empty() ? NULL : w->CreateSoundEntity(n, file, remove)), "cSoundEntity");
