@@ -700,12 +700,27 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		cSomaLuxEntity *pArea = bMap && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
 		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
+		// cLuxMapHandler::MapTransferData: moved props inside the transfer area keep their pose
+		std::vector<std::pair<tString, std::vector<cMatrixf>>> vCarried;
 		if (pArea && pBody)
 		{
 			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
 			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
 			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
 			lActiveSize = pBody->GetActiveSize();
+			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
+			{
+				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty() ||
+					std::none_of(p->mvBodies.begin(), p->mvBodies.end(), [](iPhysicsBody *b) { return b->GetMass() > 0; }))
+					continue;
+				cVector3f v = cMath::MatrixMul(mtxInv, p->mvBodies[0]->GetWorldPosition());
+				if (std::abs(v.x) > pArea->mvSize.x / 2 || std::abs(v.y) > pArea->mvSize.y / 2 || std::abs(v.z) > pArea->mvSize.z / 2)
+					continue;
+				std::vector<cMatrixf> vMtx;
+				for (iPhysicsBody *b : p->mvBodies)
+					vMtx.push_back(cMath::MatrixMul(mtxInv, b->GetWorldMatrix()));
+				vCarried.emplace_back(p->msName, vMtx);
+			}
 		}
 		gsPreloadMap.clear();
 		glPreloadPrio = 2;
@@ -729,6 +744,16 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
 				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
 									  SomaStartYaw(pNew->GetMatrix()) + fYawRel, lActiveSize == 1);
+				for (auto &[sName, vMtx] : vCarried)
+				{
+					cSomaLuxEntity *p = cSomaLuxMap::GetCurrent()->GetEntity(sName);
+					if (p == NULL || p->mvBodies.size() != vMtx.size())
+						continue;
+					if (p->mpMesh && p->mpMesh->IsStatic())
+						p->MakeDynamic();
+					for (size_t i = 0; i < vMtx.size(); ++i)
+						p->mvBodies[i]->SetMatrix(cMath::MatrixMul(pNew->GetMatrix(), vMtx[i]));
+				}
 			}
 			else
 				Warning("SOMA script: transfer area '%s' not found in %s\n", sTransfer.c_str(), sMap.c_str());

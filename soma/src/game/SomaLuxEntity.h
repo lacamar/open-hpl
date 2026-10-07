@@ -166,6 +166,7 @@ public:
 	void SetStaticPhysics(bool abX);
 	void MakeDynamic();
 	bool mbStaticPhysics = false;
+	bool mbAllowMapTransfer = true;
 	std::vector<float> mvDynamicMass;
 	void SetEffectsActive(bool abX, bool abFade = false);
 	float mfEffectsAlpha = 1, mfEffectsFadeSpeed = 0;

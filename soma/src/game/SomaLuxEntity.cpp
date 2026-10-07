@@ -2574,6 +2574,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	if (e->GetTypeInfoByName("cLuxProp"))
 	{
 		SOMA_METHOD(e, "cLuxProp", "void SetStaticPhysics(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetStaticPhysics(b); });
+		SOMA_METHOD(e, "cLuxProp", "void SetAllowMapTransfer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbAllowMapTransfer = b; });
+		SOMA_METHOD(e, "cLuxProp", "bool GetAllowMapTransfer()", +[](cSomaLuxEntity *p) { return p->mbAllowMapTransfer; });
 		SOMA_METHOD(e, "cLuxProp", "bool GetStaticPhysics()", +[](cSomaLuxEntity *p) { return p->mbStaticPhysics; });
 	}
 	SOMA_FUNC(e, "void Prop_SetStaticPhysics(const tString &in asPropName, bool abX)",
@@ -2624,6 +2626,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_WakeUp(const tString&in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); }); });
 	SOMA_FUNC(e, "void Entity_SetAutoSleep(const tString&in asName, bool abX)",
 			  +[](S n, bool x) { ForMatching(n, [x](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); }); });
+	SOMA_FUNC(e, "void Prop_SetAllowMapTransfer(const tString &in asPropName, bool abX)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbAllowMapTransfer = b; }); });
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	// ponytail: no dissolve fade, toggles instantly
 	SOMA_FUNC(e, "void Prop_SetActiveAndFade(const tString &in asPropName, bool abActive, float afFadeTime)", +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
