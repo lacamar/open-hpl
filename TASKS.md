@@ -162,8 +162,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - `"" + float` formats shortest; ref uses `%f` (visible in script-built strings).
 - `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
-  loading-screen hold ~3% brighter, brain icon on a different animation frame. Return doesn't
-  activate the focused menu button (mouse does).
+  loading-screen hold ~3% brighter, brain icon on a different animation frame.
 - Direct light intensity (apartment pose, linear radiance via tone-curve inversion,
   scratchpad `lincmp.py`): ours/ref ~2-3.4 for spots, ~2.1 point, ~1.4 non-SH box, 1.0 SH box.
   Ratio grows on dark albedo; spot cone edge wider than ref. Unresolved (instance-buffer
