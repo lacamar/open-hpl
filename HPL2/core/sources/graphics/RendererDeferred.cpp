@@ -99,6 +99,8 @@ namespace hpl {
 	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
 	float cRendererDeferred::mfToneMapGamma = 2.2f;
 	iTexture *cRendererDeferred::mpColorGradingTexture = NULL;
+	iTexture *cRendererDeferred::mpColorGradingTarget = NULL;
+	float cRendererDeferred::mfColorGradingBlend = 0;
 	bool cRendererDeferred::mbBloom = false;
 	float cRendererDeferred::mfBloomBrightPass = 0.75f;
 	float cRendererDeferred::mfBloomWidth = 128;
@@ -233,6 +235,7 @@ namespace hpl {
 	#define kVar_avLightUp							43
 	#define kVar_avLightRight						44
 	#define kVar_avViewSpaceUp						94
+	#define kVar_afGradingBlendWeight				95
 	#define kVar_avBand0							43
 	#define kVar_afSpotNearClip						52
 	#define kVar_avFocusStartEnd					53
@@ -1036,7 +1039,7 @@ namespace hpl {
 		}
 
 		mpToneMapProgram = NULL;
-		for(int i=0; i<16; ++i) mpToneMapPrograms[i] = NULL;
+		for(int i=0; i<32; ++i) mpToneMapPrograms[i] = NULL;
 		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = NULL;
 		if(mbHdr)
 		{
@@ -1196,7 +1199,7 @@ namespace hpl {
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
-		for(int i=0; i<16; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
+		for(int i=0; i<32; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
 		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1]};
 		for(int i=0; i<3; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
 
@@ -1294,7 +1297,7 @@ namespace hpl {
 			SetFlatProjection();
 
 			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
-						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0);
+						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && mpColorGradingTarget ? 16 : 0);
 			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
@@ -1314,6 +1317,11 @@ namespace hpl {
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
 			if(lCombo & 1) SetTexture(1, mpColorGradingTexture);
+			if(lCombo & 16)
+			{
+				SetTexture(2, mpColorGradingTarget);
+				pToneMap->SetFloat(kVar_afGradingBlendWeight, mfColorGradingBlend);
+			}
 			if(lCombo & 2)
 			{
 				for(int i=0; i<3; ++i)
@@ -1468,6 +1476,7 @@ namespace hpl {
 		if(alCombo & 2) programVars.Add("UseBloom");
 		if(alCombo & 4) programVars.Add("UseFilmGrain");
 		if(alCombo & 8) programVars.Add("UseSRGB");
+		if(alCombo & 16) programVars.Add("UseBlendGrading");
 		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
 		if(pProg==NULL) return NULL;
 		pProg->GetVariableAsId("afKey",kVar_afKey);
@@ -1481,6 +1490,7 @@ namespace hpl {
 		pProg->GetVariableAsId("afIntensity",kVar_afIntensity);
 		pProg->GetVariableAsId("avTransform0",kVar_avTransform0);
 		pProg->GetVariableAsId("avTransform1",kVar_avTransform1);
+		pProg->GetVariableAsId("afGradingBlendWeight",kVar_afGradingBlendWeight);
 		return pProg;
 	}
 

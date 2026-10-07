@@ -42,11 +42,23 @@ namespace
 	}
 }
 
+static iTexture *CreateGrading(const tString &asName)
+{
+	iTexture *pTex = gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create3D(asName, false);
+	if (pTex)
+	{
+		pTex->SetWrapSTR(eTextureWrap_ClampToEdge);
+		pTex->SetFilter(eTextureFilter_Bilinear);
+	}
+	return pTex;
+}
+
 cSomaToneMapping::cSomaToneMapping() : iUpdateable("SomaToneMapping")
 {
 	mpInstance = this;
 	mpWorld = NULL;
-	mpGradingTexture = NULL;
+	mpGradingTexture = mpGradingTarget = NULL;
+	mfGradingBlend = mfGradingFadeTime = 0;
 	mfKey = 0.5f;
 	mfGamma = 2.2f;
 	mfFilmGrainIntensity = 1;
@@ -68,16 +80,9 @@ void cSomaToneMapping::OnMapLoaded(cWorld *apWorld)
 	mpWorld = apWorld;
 	cTextureManager *pTexMgr = gpSomaBase->mpEngine->GetResources()->GetTextureManager();
 	if (mpGradingTexture) pTexMgr->Destroy(mpGradingTexture);
-	mpGradingTexture = NULL;
-	if (apWorld->GetColorGradingTexture() != "")
-	{
-		mpGradingTexture = pTexMgr->Create3D(apWorld->GetColorGradingTexture(), false);
-		if (mpGradingTexture)
-		{
-			mpGradingTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
-			mpGradingTexture->SetFilter(eTextureFilter_Bilinear);
-		}
-	}
+	if (mpGradingTarget) pTexMgr->Destroy(mpGradingTarget);
+	mpGradingTexture = mpGradingTarget = NULL;
+	if (apWorld->GetColorGradingTexture() != "") mpGradingTexture = CreateGrading(apWorld->GetColorGradingTexture());
 	mfKey = apWorld->GetToneMappingKey();
 	mfWorldExposure = mfExposure = apWorld->GetToneMappingExposure();
 	mfWorldWhiteCut = mfWhiteCut = apWorld->GetToneMappingWhiteCut();
@@ -92,6 +97,22 @@ void cSomaToneMapping::OnMapLoaded(cWorld *apWorld)
 	gExposureFade = cFade();
 	gWhiteCutFade = cFade();
 	Update(0);
+}
+
+void cSomaToneMapping::FadeGrading(const tString &asName, float afTime)
+{
+	iTexture *pTex = CreateGrading(asName);
+	if (pTex == NULL) return;
+	cTextureManager *pTexMgr = gpSomaBase->mpEngine->GetResources()->GetTextureManager();
+	if (mpGradingTarget)
+	{
+		if (mpGradingTexture) pTexMgr->Destroy(mpGradingTexture);
+		mpGradingTexture = mpGradingTarget;
+	}
+	if (mpGradingTexture == NULL) mpGradingTexture = CreateGrading("grading_default.dds");
+	mpGradingTarget = pTex;
+	mfGradingBlend = 0;
+	mfGradingFadeTime = afTime;
 }
 
 void cSomaToneMapping::FadeExposure(float afExposure, float afWhiteCut, float afTime)
@@ -119,7 +140,18 @@ void cSomaToneMapping::Update(float afTimeStep)
 		Step(mfWhiteCut, gWhiteCutFade, fGoalWhiteCut, mfTransitionTime, afTimeStep);
 	}
 	cRendererDeferred::SetToneMapping(mfKey, powf(2.0f, mfExposure), mfWhiteCut, mfGamma);
-	cRendererDeferred::SetColorGradingTexture(mbColorGradingActive ? mpGradingTexture : NULL);
+	if (mpGradingTarget)
+	{
+		mfGradingBlend += mfGradingFadeTime > 0 ? afTimeStep / mfGradingFadeTime : 1;
+		if (mfGradingBlend >= 1 || mpGradingTexture == NULL)
+		{
+			if (mpGradingTexture) gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Destroy(mpGradingTexture);
+			mpGradingTexture = mpGradingTarget;
+			mpGradingTarget = NULL;
+		}
+	}
+	cRendererDeferred::SetColorGradingTexture(mbColorGradingActive ? mpGradingTexture : NULL, mbColorGradingActive ? mpGradingTarget : NULL,
+											  mfGradingBlend);
 	cRendererDeferred::SetBloom(mbBloomActive && SomaUserConfig()->GetBool("Graphics", "BloomActive", true), mfBrightPass,
 								mfBloomWidth, mBloomTint);
 	static iTexture *pNoise = NULL;
@@ -178,5 +210,9 @@ void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cWorld", "float GetToneMappingExposure()", +[](cWorld *) -> float { return T::Get()->mfWorldExposure; });
 	SOMA_METHOD(e, "cWorld", "float GetToneMappingKey()", +[](cWorld *) -> float { return T::Get()->mfKey; });
 	SOMA_METHOD(e, "cWorld", "float GetToneMappingWhiteCut()", +[](cWorld *) -> float { return T::Get()->mfWorldWhiteCut; });
+	SOMA_METHOD(e, "cWorld", "void FadeGradingTexture(const tString&in asTexture, float afTime)", +[](cWorld *, const tString &s, float t) { T::Get()->FadeGrading(s, t); });
+	SOMA_METHOD(e, pType, "void FadeGradingTexture(iTexture @apGrading, float afTime)", +[](T *p, iTexture *x, float t) { if (x) p->FadeGrading(x->GetName(), t); });
+	SOMA_FUNC(e, "void cScene_FadeGradingTexture(cWorld@ apWorld, iTexture@ apGrading, float afTime)", +[](cWorld *, iTexture *x, float t) { if (x) T::Get()->FadeGrading(x->GetName(), t); });
+	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture3D(const tString&in asName, bool abUseMipMaps)", +[](const tString &s, bool) { return CreateGrading(s); });
 	SOMA_METHOD(e, "cWorld", "float GetToneMappingFadeTime()", +[](cWorld *) -> float { return T::Get()->mfWorldFadeTime; });
 }

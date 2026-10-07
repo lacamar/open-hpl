@@ -2531,6 +2531,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	e->RegisterGlobalProperty("const tID tID_Invalid", &invalidId);
 
 	typedef const tString &S;
+	// entity matrix is the main body's here
+	SOMA_FUNC(e, "cVector3f Entity_GetBodyOffset(const tString &in asEntityName)", +[](S) { return cVector3f(0); });
 	SOMA_FUNC(e, "bool Entity_Exists(const tString &in asName)", +[](S n) { return Find(n) != NULL; });
 	SOMA_FUNC(e, "iLuxEntity@ Entity_CreateAtEntity(const tString &in asNewEntityName, const tString &in asEntityFile, const tString &in asTargetEntityName, bool abFullGameSave)",
 			  +[](S n, S f, S target, bool) -> cSomaLuxEntity * {

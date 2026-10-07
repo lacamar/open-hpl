@@ -191,7 +191,7 @@ namespace hpl {
 		static void SetShadowDistanceNone(float afX){ mfDefaultShadowDistanceNone = afX;}
 		static bool GetHdr(){ return mbHdr;}
 		static cColor GetFogRenderColor(const cColor& aCol, float afBrightness){ return mbHdr ? cColor(aCol.r*aCol.r*afBrightness, aCol.g*aCol.g*afBrightness, aCol.b*aCol.b*afBrightness, aCol.a) : aCol; }
-		static void SetColorGradingTexture(iTexture *apTex){ mpColorGradingTexture = apTex;}
+		static void SetColorGradingTexture(iTexture *apTex, iTexture *apTarget=NULL, float afBlend=0){ mpColorGradingTexture = apTex; mpColorGradingTarget = apTarget; mfColorGradingBlend = afBlend;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
 		static void SetBloom(bool abActive, float afBrightPass, float afWidth, const cColor& aTint){ mbBloom = abActive; mfBloomBrightPass = afBrightPass; mfBloomWidth = afWidth; mBloomTint = aTint;}
 		static void SetFilmGrain(iTexture *apNoise, float afIntensity){ mpFilmGrainNoise = apNoise; mfFilmGrainIntensity = afIntensity;}
@@ -373,7 +373,7 @@ namespace hpl {
 		iGpuProgram* GetToneMapProgram(int alCombo);
 
 		iGpuProgram *mpToneMapProgram;
-		iGpuProgram *mpToneMapPrograms[16];//1=grading, 2=bloom, 4=film grain, 8=sRGB
+		iGpuProgram *mpToneMapPrograms[32];//1=grading, 2=bloom, 4=film grain, 8=sRGB, 16=blend grading
 		iGpuProgram *mpBloomBrightPassProgram;
 		iGpuProgram *mpBloomBlurProgram[2];//0=vertical, 1=horizontal
 		int mlBloomBlurSamples;
@@ -407,6 +407,8 @@ namespace hpl {
 		static float mfToneMapWhiteCut;
 		static float mfToneMapGamma;
 		static iTexture *mpColorGradingTexture;
+		static iTexture *mpColorGradingTarget;
+		static float mfColorGradingBlend;
 		static bool mbBloom;
 		static float mfBloomBrightPass;
 		static float mfBloomWidth;

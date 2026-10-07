@@ -111,6 +111,14 @@ static void RegisterVectors(asIScriptEngine *e)
 	SOMA_CONSTRUCT(e, "cPlanef", "void f(const cVector3f &in avNormal, const cVector3f &in avPoint)", +[](cPlanef *p, const cVector3f &n, const cVector3f &pt) { new (p) cPlanef(n, pt); });
 	SOMA_CONSTRUCT(e, "cPlanef", "void f(const cVector3f &in avPoint0,const cVector3f &in avPoint1, const cVector3f &in avPoint2)",
 				   +[](cPlanef *p, const cVector3f &a, const cVector3f &b, const cVector3f &c) { new (p) cPlanef(a, b, c); });
+	SOMA_METHOD(e, "cPlanef", "bool opEquals(const cPlanef &in) const", +[](const cPlanef &a, const cPlanef &b) { return a.a == b.a && a.b == b.b && a.c == b.c && a.d == b.d; });
+	SOMA_METHOD(e, "cPlanef", "cPlanef opMul(float) const", +[](const cPlanef &a, float f) { return cPlanef(a.a * f, a.b * f, a.c * f, a.d * f); });
+	SOMA_METHOD(e, "cPlanef", "cPlanef &opMulAssign(float)", +[](cPlanef &a, float f) -> cPlanef & { return a = cPlanef(a.a * f, a.b * f, a.c * f, a.d * f); });
+	SOMA_METHOD(e, "cPlanef", "void FromNormalPoint(const cVector3f &in avNormal, const cVector3f &in avPoint)", +[](cPlanef &p, const cVector3f &n, const cVector3f &pt) { p.FromNormalPoint(n, pt); });
+	SOMA_METHOD(e, "cPlanef", "void FromPoints(const cVector3f &in avPoint0,const cVector3f &in avPoint1, const cVector3f &in avPoint2)",
+				+[](cPlanef &p, const cVector3f &a, const cVector3f &b, const cVector3f &c) { p.FromPoints(a, b, c); });
+	SOMA_METHOD(e, "cPlanef", "void Normalize()", +[](cPlanef &p) { p.Normalize(); });
+	SOMA_METHOD(e, "cPlanef", "cVector3f GetNormal() const", +[](const cPlanef &p) { return p.GetNormal(); });
 	SOMA_CONSTRUCT(e, "cDate", "void f()", +[](cDate *p) { memset((void *)p, 0, sizeof(cDate)); });
 	SOMA_CONSTRUCT(e, "cDate", "void f(const cDate &in)", +[](cDate *p, const cDate &o) { memcpy((void *)p, &o, sizeof(cDate)); });
 	SOMA_CONSTRUCT(e, "cVector2f", "void f(float afX)", +[](cVector2f *p, float x) { new (p) cVector2f(x); });
@@ -312,6 +320,8 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return roundf(x); });
 	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return 1 << n; });
 	SOMA_FUNC(e, "void cMath_SetBitFlag(int&out alFlagNum, int alBit, bool abSet)", +[](int &f, int b, bool s) { if (s) f |= b; else f &= ~b; });
+	SOMA_FUNC(e, "bool cMath_CheckPlaneLineIntersection(const cPlanef&in aPlane, const cVector3f &in avLineStart, const cVector3f &in avLineEnd, cVector3f&out avIntersectionPos, float&out afT)",
+			  +[](const cPlanef &p, const cVector3f &a, const cVector3f &b, cVector3f &v, float &t) { return cMath::CheckPlaneLineIntersection(p, a, b, &v, &t); });
 	SOMA_FUNC(e, "void cMath_GetAngleFromVector(const cVector2f &in avVec, float &out afAngle, float &out afLength)", +[](const cVector2f &v, float &a, float &l) { cMath::GetAngleFromVector(v, &a, &l); });
 	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return (f & b) != 0; });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMin(const cVector3f&in avBaseMin, const cVector3f&in avAddMin)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });

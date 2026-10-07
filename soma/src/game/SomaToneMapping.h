@@ -21,6 +21,7 @@ public:
 	void FadeWorldExposure(float afX, float afTime) { mfWorldExposure = afX; mfWorldFadeTime = afTime; }
 	void FadeWorldWhiteCut(float afX, float afTime) { mfWorldWhiteCut = afX; mfWorldFadeTime = afTime; }
 	void FadeExposure(float afExposure, float afWhiteCut, float afTime);
+	void FadeGrading(const tString &asName, float afTime);
 
 	float mfKey;
 	float mfGamma;
@@ -46,6 +47,9 @@ private:
 
 	cWorld *mpWorld;
 	iTexture *mpGradingTexture;
+	iTexture *mpGradingTarget;
+	float mfGradingBlend;
+	float mfGradingFadeTime;
 	static cSomaToneMapping *mpInstance;
 };
 

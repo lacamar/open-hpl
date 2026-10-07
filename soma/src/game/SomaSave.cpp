@@ -23,7 +23,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVI"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVJ"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -914,6 +914,17 @@ public:
 			o.Str(sFunc);
 		}
 		o.Str(pMap->msDisplayNameEntry);
+		cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
+		o.Pod((uint8_t)(pCam != NULL));
+		if (pCam)
+		{
+			o.Pod((uint8_t)(pBody && pBody->GetCamera() == NULL));
+			o.Pod(pCam->GetPosition());
+			for (float f : {pCam->GetPitchMinLimit(), pCam->GetPitchMaxLimit(), pCam->GetYawMinLimit(), pCam->GetYawMaxLimit()})
+				o.Pod(f);
+			o.Pod(pPlayer->mFOVMul);
+			o.Pod(pPlayer->mAspectMul);
+		}
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1238,6 +1249,25 @@ public:
 		// Maps that set it in OnEnter, which a load skips
 		if (glPendingVersion >= 25)
 			pMap->msDisplayNameEntry = in.Str();
+		// mid-sequence saves: custom-control cameras are detached and limited by the script
+		cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
+		if (glPendingVersion >= 26 && in.Pod<uint8_t>() && pCam)
+		{
+			bool bDetached = in.Pod<uint8_t>() != 0;
+			cVector3f vPos = in.Pod<cVector3f>();
+			float f[4];
+			for (float &x : f)
+				x = in.Pod<float>();
+			pPlayer->mFOVMul = in.Pod<cSomaLuxPlayer::cFadeValue>();
+			pPlayer->mAspectMul = in.Pod<cSomaLuxPlayer::cFadeValue>();
+			pCam->SetPitchLimits(f[0], f[1]);
+			pCam->SetYawLimits(f[2], f[3]);
+			if (bDetached && pPlayer->GetCharacterBody())
+			{
+				pPlayer->GetCharacterBody()->SetCamera(NULL);
+				pCam->SetPosition(vPos);
+			}
+		}
 	}
 };
 
@@ -1331,7 +1361,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 25)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 26)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;

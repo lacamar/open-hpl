@@ -281,7 +281,7 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	tString sKey = SoundKey(pSubject, aP.mvLines[aP.mlLine], aP.mlSound);
 	auto itText = mmapText.find(cString::ToLowerCase(sKey));
 	tString sText = itText != mmapText.end() && itText->second != "" ? itText->second : sound.msText;
-	aP.msSubtitle = sText.empty() ? "" : line.msDisplayName + ": " + sText;
+	aP.msSubtitle = sText.empty() || line.msDisplayName.empty() ? sText : line.msDisplayName + ": " + sText;
 
 	tString sFile = "voices/" + pSubject->msSet + "/" + sKey + ".ogg";
 	aP.msFile = sFile;
