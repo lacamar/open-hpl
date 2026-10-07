@@ -1349,15 +1349,32 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	});
 	SOMA_FUNC(e, "void Light_SetFlickerActive(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetFlickerActive(b); }); });
 	SOMA_FUNC(e, "void Light_SetCastShadows(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetCastShadows(b); }); });
-	SOMA_FUNC(e, "void Billboard_SetVisible(const tString &in asBillboardName, bool abVisible)", +[](S n, bool b) {
+	static auto FadeSet = [](S asProbe, S asSet, float t) {
+		ForLights(asProbe, [&](iLight *l) { if (l->GetLightType() == eLightType_Box) static_cast<cLightBox *>(l)->FadeIrradianceSet(asSet, t); });
+	};
+	SOMA_FUNC(e, "void IrradianceSet_FadeIn(const tString &in asSet, float afTime)", +[](S s, float t) { FadeSet("*", s, t); });
+	SOMA_FUNC(e, "void IrradianceSet_FadeInSingleProbe(const tString &in asProbe, const tString &in asSet, float afTime)", +[](S p, S s, float t) { FadeSet(p, s, t); });
+	SOMA_METHOD(e, "cWorld", "void FadeInIrradianceSet(const tString&in asSetName, float afTime)", +[](cWorld *, S s, float t) { FadeSet("*", s, t); });
+	static auto ForBillboards = [](S n, const std::function<void(cBillboard *)> &f) {
 		if (cSomaLuxMap::GetCurrent() == NULL) return;
 		cBillboardIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetBillboardIterator();
 		while (it.HasNext())
 		{
 			cBillboard *p = it.Next();
+			if (cString::MatchesWildcard(n, p->GetName())) f(p);
+		}
+	};
+	SOMA_FUNC(e, "void Billboard_SetVisible(const tString &in asBillboardName, bool abVisible)", +[](S n, bool b) { ForBillboards(n, [b](cBillboard *p) { p->SetVisible(b); }); });
+	SOMA_FUNC(e, "void FogArea_SetVisible(const tString &in asFogAreaName, bool abVisible)", +[](S n, bool b) {
+		if (cSomaLuxMap::GetCurrent() == NULL) return;
+		cFogAreaIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetFogAreaIterator();
+		while (it.HasNext())
+		{
+			cFogArea *p = it.Next();
 			if (cString::MatchesWildcard(n, p->GetName())) p->SetVisible(b);
 		}
 	});
+	SOMA_FUNC(e, "void Billboard_SetBrightness(const tString &in asBillboardName, float afBrightness)", +[](S n, float b) { ForBillboards(n, [b](cBillboard *p) { p->SetBrightness(b); }); });
 	SOMA_FUNC(e, "void LensFlare_SetVisible(const tString &in asLensFlareName, bool abVisible)", +[](S n, bool b) {
 		if (cSomaLuxMap::GetCurrent() == NULL) return;
 		cLensFlareIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLensFlareIterator();

@@ -22,6 +22,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "scene/Camera.h"
 #include "math/Math.h"
+#include "system/String.h"
 
 #include "scene/World.h"
 #include "scene/Scene.h"
@@ -81,7 +82,7 @@ namespace hpl {
 	void cLightBox::AddIrradianceSet(const tString& asName, const std::vector<cVector3f>& avBands)
 	{
 		bool bFirst = m_mapIrradianceSets.empty();
-		std::vector<cVector3f> &vBands = m_mapIrradianceSets[asName];
+		std::vector<cVector3f> &vBands = m_mapIrradianceSets[cString::ToLowerCase(asName)];
 		vBands = avBands;
 		vBands.resize(9, cVector3f(0));
 		if(bFirst) for(int i=0; i<9; ++i) mvBands[i] = vBands[i];
@@ -89,7 +90,7 @@ namespace hpl {
 
 	void cLightBox::FadeIrradianceSet(const tString& asName, float afTime)
 	{
-		std::map<tString, std::vector<cVector3f> >::iterator it = m_mapIrradianceSets.find(asName);
+		std::map<tString, std::vector<cVector3f> >::iterator it = m_mapIrradianceSets.find(cString::ToLowerCase(asName));
 		if(it == m_mapIrradianceSets.end()) return;
 		mpFadeTarget = &it->second;
 		for(int i=0; i<9; ++i) mvFadeFrom[i] = mvBands[i];

@@ -1148,6 +1148,12 @@ namespace
 	// Saved tIDs of runtime objects must not alias this session's objects
 	int32_t glNextObjectID = (int32_t)(std::random_device{}() & 0x3fffffff) + 1;
 
+	void SetLimitSound(cJointLimitEffect *apLimit, const tString &asSound, float afMinSpeed)
+	{
+		apLimit->msSound = asSound;
+		apLimit->mfMinSpeed = afMinSpeed;
+		if (apLimit->mfMaxSpeed <= afMinSpeed) apLimit->mfMaxSpeed = afMinSpeed + 10.0f;
+	}
 	bool IsEntity3DType(const tString &asType) { return asType != "iPhysicsJoint" && asType.compare(0, 13, "iPhysicsJoint") != 0 && asType != "iCharacterBody"; }
 
 	// Script type -> the object as that HPL2 class, NULL when it is not one
@@ -1985,6 +1991,11 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
 		return i >= 0 && i < (int)p->Joints().size() ? p->Joints()[i] : (iPhysicsJoint *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); });
+	for (const char *pJ : {"iPhysicsJoint", "iPhysicsJointBall", "iPhysicsJointHinge", "iPhysicsJointSlider"})
+	{
+		SOMA_METHOD_NEW(e, pJ, "void SetMinLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMinLimit(), s, m); });
+		SOMA_METHOD_NEW(e, pJ, "void SetMaxLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMaxLimit(), s, m); });
+	}
 	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); });
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
@@ -2486,6 +2497,14 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					  if (lIdx >= 0) p->mpMesh->GetAnimationState(lIdx)->SetPaused(b);
 				  });
 			  });
+	SOMA_FUNC(e, "void Entity_SetAnimationRelativeTimePosition(const tString &in asEntityName, const tString &in asAnimationName, float afTimePos)",
+			  +[](const tString &n, const tString &a, float t) {
+				  ForMatching(n, [&](cSomaLuxEntity *p) {
+					  if (p->mpMesh == NULL) return;
+					  int lIdx = a == "" ? p->mlCurrentAnim : p->mpMesh->GetAnimationStateIndex(a);
+					  if (lIdx >= 0) p->mpMesh->GetAnimationState(lIdx)->SetRelativeTimePosition(t);
+				  });
+			  });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
@@ -2535,6 +2554,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		return bFound;
 	});
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
+	// ponytail: no dissolve fade, toggles instantly
+	SOMA_FUNC(e, "void Prop_SetActiveAndFade(const tString &in asPropName, bool abActive, float afFadeTime)", +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	SOMA_FUNC(e, "void Entity_SetCollideCharacter(const tString &in asEntityName, bool abActive)",
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { for (iPhysicsBody *pBody : p->mvBodies) pBody->SetCollideCharacter(b); }); });
 	SOMA_FUNC(e, "bool Entity_IsActive(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbActive; });
