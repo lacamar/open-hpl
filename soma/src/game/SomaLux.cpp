@@ -553,6 +553,12 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				cSomaLuxVoiceHandler::Get()->msetPlayedLines.clear();
 			if (cSomaLuxGame::Get())
 				cSomaLuxGame::Get()->ResetScriptables();
+			// ponytail: only the save-list cache; full non-global module reset if more stale menu state shows up
+			cSomaLuxModule *pMenu = cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetModule("MenuHandler") : NULL;
+			asIScriptObject *pObj = pMenu ? pMenu->GetScript() : NULL;
+			for (asUINT i = 0; pObj && i < pObj->GetPropertyCount(); ++i)
+				if (tString(pObj->GetPropertyName(i)) == "mbHasSaveFiles")
+					*(bool *)pObj->GetAddressOfProperty(i) = false;
 		}
 		cMatrixf mtxRel;
 		float fYawRel = 0;

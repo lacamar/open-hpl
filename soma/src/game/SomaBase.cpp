@@ -1146,6 +1146,7 @@ cSomaBase::cSomaBase()
 
 void SomaReadUserScreenConfig(cSomaConfig *apCfg);
 void SomaApplyTextureConfig();
+void SomaApplyRenderConfig(cViewport *apViewport);
 void SomaApplyWindowMode(const cSomaConfig *apCfg);
 
 cSomaBase::~cSomaBase()
@@ -1457,7 +1458,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	}
 
 	// Each new viewport's cRenderSettings starts with FXAA off
-	mpDebugViewport->GetRenderSettings()->mbUseFxaa = mConfig.mbAntiAliasing;
+	SomaApplyRenderConfig(mpDebugViewport);
 	// CHC occlusion culling reads queries back synchronously: 0.1 fps and everything culled on AGX
 	mpDebugViewport->GetRenderSettings()->mbUseOcclusionCulling = false;
 	mpDebugViewport->GetRenderSettings()->mbUseDelayedOcclusionCulling = true;

@@ -38,6 +38,7 @@ public:
 
 	void Update(float afTimeStep, bool abPaused = false);
 	void ResetScriptables();
+	void ReloadUserConfig();
 	void UpdateGui(float afTimeStep);
 	void Draw(float afFrameTime);
 	void PreloadData(cSomaLuxMap *apMap);

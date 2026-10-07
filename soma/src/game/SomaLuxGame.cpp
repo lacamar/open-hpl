@@ -96,6 +96,7 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	apCfg->mfGamma = c->GetFloat("Graphics", "Brightness", apCfg->mfGamma);
 	apCfg->mbShowSubtitles = c->GetBool("Sound", "ShowSubtitles", false);
 	apCfg->mbDevHud = c->GetBool("Gameplay", "OpenHplHud", false);
+	apCfg->mbAntiAliasing = c->GetBool("Graphics", "AntiAliasing", apCfg->mbAntiAliasing);
 	c->SetInt("Screen", "Width", apCfg->mlScreenWidth);
 	c->SetInt("Screen", "Height", apCfg->mlScreenHeight);
 	if (sFull != "borderless")
@@ -158,12 +159,26 @@ void SomaApplyTextureConfig()
 }
 
 // cGlobalScriptFuncs::ApplyUserConfig: UpdateGraphicSettings, UpdateSoundSettings, LoadLanguage; never asks for a restart
+void SomaApplyRenderConfig(cViewport *apViewport)
+{
+	cRenderSettings *s = apViewport->GetRenderSettings();
+	s->mbUseFxaa = gpSomaBase->GetConfig()->mbAntiAliasing;
+	s->mbSSAOActive = gpUserConfig->GetBool("Graphics", "SSAOActive", true);
+	s->mbRenderShadows = gpUserConfig->GetBool("Graphics", "ShadowsActive", true);
+}
+
 static bool ApplyUserConfig()
 {
 	cSomaConfig *pCfg = gpSomaBase->GetConfig();
 	SomaReadUserScreenConfig(pCfg);
 	SomaApplyWindowMode(pCfg);
 	SomaApplyTextureConfig();
+	if (gpSomaBase->GetCurrentViewport())
+		SomaApplyRenderConfig(gpSomaBase->GetCurrentViewport());
+	if (cSomaLuxInputHandler::Get())
+		cSomaLuxInputHandler::Get()->LoadUserConfig();
+	if (cSomaLuxGame::Get())
+		cSomaLuxGame::Get()->ReloadUserConfig();
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
@@ -279,10 +294,15 @@ void cSomaLuxGame::Load()
 		cSomaLuxInputHandler::Get()->LoadUserConfig();
 		cSomaLuxInputHandler::Get()->LoadScript();
 	}
-	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
+	ReloadUserConfig();
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void OnStart()"); });
 	// cLuxBase::Reset before a new game
 	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void Reset()"); });
+}
+
+void cSomaLuxGame::ReloadUserConfig()
+{
+	ForEach([](cSomaLuxScriptable *p) { p->OnMessage("void LoadUserConfig()"); });
 }
 
 void cSomaLuxGame::ResetScriptables()
