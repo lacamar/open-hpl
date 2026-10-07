@@ -11,6 +11,8 @@
 
 using namespace hpl;
 
+class cSomaSoundInstance;
+
 class cSomaLuxVoiceHandler : public iUpdateable
 {
 public:
@@ -61,6 +63,8 @@ public:
 		float mfVoiceOffset = 0;
 		float mfEndPadding = 0;
 		float mfVolume = 1;
+		tString msEffect;
+		bool mbEndsAfterEffect = false;
 	};
 	struct cLine
 	{
@@ -105,6 +109,10 @@ private:
 		bool mbPaused = false;
 		tString msSourceEntity;
 		tString msFile;
+		cSomaSoundInstance *mpEffect = NULL; // outlives its sound until the next one with an effect
+		int mlEffectId = -1;
+		std::vector<std::pair<cSoundEntry *, int>> mvOldVoices;
+		std::vector<std::pair<cSomaSoundInstance *, int>> mvOldEffects;
 	};
 	struct cPcm
 	{

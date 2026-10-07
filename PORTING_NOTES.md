@@ -6183,3 +6183,13 @@ our live entries and events.
   top-level bones are in metres, deeper bones in file units (`simon_infected_scanchair_idle`:
   root -0.333 for a -33.3 cm FBX delta, `head (2)` 11.035 for 11.035 cm). The FBX loader scaled
   every track by the unit; now only non-top-level tracks, like the Collada path.
+
+## SOMA: voice sound timing (2026-10-07)
+
+- Rebirth `cLuxVoiceSceneInstance` RE: negative `EndPadding` is a gap after the sound (1064 sounds),
+  positive hands over to the next sound that many seconds before the end and lets it play out (113).
+  The 3976 note's "negative = overlap" was wrong; we had both reversed.
+- `ExtraEffectFile` (205 sounds, datamine foley/ambience) plays as a 2D streamed GUI event from the
+  sound's start; it stays current across later sounds until one has its own effect, and plays out
+  when the subject ends. `EndsAfterExtraEffect` (191) ends the sound on the effect instead.
+- No-audio subtitle time `0.09 * len + 0.5`; stop/skip/replace fade voice and effects at 2/s.

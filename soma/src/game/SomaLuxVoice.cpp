@@ -5,8 +5,10 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
+#include "SomaSound.h"
 
 #include "impl/scriptarray.h"
+#include <algorithm>
 #include <fstream>
 #include <vorbis/vorbisfile.h>
 #include <sstream>
@@ -162,6 +164,8 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 				sound.mfVoiceOffset = pSound->GetAttributeFloat("VoiceOffset", 0);
 				sound.mfEndPadding = pSound->GetAttributeFloat("EndPadding", 0);
 				sound.mfVolume = pSound->GetAttributeFloat("Volume", 1);
+				sound.msEffect = pSound->GetAttributeString("ExtraEffectFile", "");
+				sound.mbEndsAfterEffect = pSound->GetAttributeBool("EndsAfterExtraEffect", false);
 				line.mvSounds.push_back(sound);
 			}
 			pSubject->mvLines.push_back(line);
@@ -302,15 +306,26 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	aP.mlEntryId = aP.mpEntry ? aP.mpEntry->GetId() : -1;
 	Log("SOMA voice: %s%s\n", sKey.c_str(), aP.mpEntry ? "" : " (no audio)");
 	// Missing audio still shows its subtitle for a reading time
-	aP.mfFallback = 1.0f + 0.06f * (float)sText.size();
+	aP.mfFallback = 0.5f + 0.09f * (float)sText.size();
 }
 
+// cLuxVoiceSceneInstance::FadeOutSoundsPlaying, game.cfg Voice*FadeOutSpeed = 2
 void cSomaLuxVoiceHandler::StopSound(cPlaying &aP)
 {
 	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	if (aP.mpEntry && pHandler->IsValid(aP.mpEntry, aP.mlEntryId))
-		aP.mpEntry->Stop();
+	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
+	aP.mvOldVoices.push_back({aP.mpEntry, aP.mlEntryId});
+	aP.mvOldEffects.push_back({aP.mpEffect, aP.mlEffectId});
+	for (auto &v : aP.mvOldVoices)
+		if (v.first && pHandler->IsValid(v.first, v.second))
+			v.first->FadeOut(2);
+	for (auto &e : aP.mvOldEffects)
+		if (e.first && pEvents->IsLive(e.first, e.second))
+			e.first->FadeOut(2);
+	aP.mvOldVoices.clear();
+	aP.mvOldEffects.clear();
 	aP.mpEntry = NULL;
+	aP.mpEffect = NULL;
 }
 
 void cSomaLuxVoiceHandler::Finish(size_t alIdx)
@@ -376,13 +391,24 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 			v.mfVolume = std::max(v.mfVolume - v.mfSpeed * afTimeStep, v.mfGoal);
 	}
 	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
+	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
 	for (cPlaying &p : mvPlaying)
 	{
+		auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
+		float fVol = itVol != mmapSceneVolumes.end() ? itVol->second.mfVolume : 1;
+		p.mvOldVoices.erase(std::remove_if(p.mvOldVoices.begin(), p.mvOldVoices.end(), [pHandler](auto &v) { return pHandler->IsValid(v.first, v.second) == false; }),
+							p.mvOldVoices.end());
+		p.mvOldEffects.erase(std::remove_if(p.mvOldEffects.begin(), p.mvOldEffects.end(), [pEvents](auto &e) { return pEvents->IsLive(e.first, e.second) == false; }),
+							 p.mvOldEffects.end());
+		for (auto &v : p.mvOldVoices)
+			v.first->SetVolumeMul(fVol);
+		for (auto &e : p.mvOldEffects)
+			e.first->SetVolumeMul(fVol);
+		if (p.mpEffect && pEvents->IsLive(p.mpEffect, p.mlEffectId))
+			p.mpEffect->SetVolumeMul(fVol);
 		if (p.mpEntry == NULL || pHandler->IsValid(p.mpEntry, p.mlEntryId) == false)
 			continue;
-		auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
-		if (itVol != mmapSceneVolumes.end())
-			p.mpEntry->SetVolumeMul(itVol->second.mfVolume);
+		p.mpEntry->SetVolumeMul(fVol);
 		cSomaLuxEntity *pSource = p.msSourceEntity != "" && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(p.msSourceEntity) : NULL;
 		if (pSource)
 			p.mpEntry->GetChannel()->SetPosition(pSource->GetPosition());
@@ -413,6 +439,16 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 			continue;
 		}
 		const cSound &sound = line.mvSounds[p.mlSound];
+		// cLuxVoiceSceneInstance::PlaySound: ExtraEffectOffset is 0 throughout the data
+		if (p.mlStep == 0 && p.mfTime == 0 && afTimeStep > 0 && sound.msEffect != "")
+		{
+			p.mvOldEffects.push_back({p.mpEffect, p.mlEffectId});
+			p.mpEffect = pEvents->PlayGui(sound.msEffect, sound.mfVolume, line.mlEntryType, false, true);
+			p.mlEffectId = p.mpEffect ? p.mpEffect->GetId() : -1;
+			auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
+			if (p.mpEffect && itVol != mmapSceneVolumes.end())
+				p.mpEffect->SetVolumeMul(itVol->second.mfVolume);
+		}
 		p.mfTime += afTimeStep;
 		if (p.mlStep == 0 && p.mfTime >= sound.mfVoiceOffset)
 		{
@@ -428,15 +464,25 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		}
 		else if (p.mlStep == 1)
 		{
-			bool bPlaying = p.mpEntry ? pHandler->IsValid(p.mpEntry, p.mlEntryId) : p.mfTime < p.mfFallback;
+			// positive EndPadding hands over early and lets the sound play out; negative is a gap after it
+			bool bPlaying;
+			if (sound.mbEndsAfterEffect)
+				bPlaying = p.mpEffect && pEvents->IsLive(p.mpEffect, p.mlEffectId) && p.mpEffect->IsPlaying() &&
+						   p.mpEffect->GetTotalTime() - p.mpEffect->GetElapsedTime() >= sound.mfEndPadding;
+			else if (p.mpEntry)
+				bPlaying = pHandler->IsValid(p.mpEntry, p.mlEntryId) &&
+						   p.mpEntry->GetChannel()->GetTotalTime() - p.mpEntry->GetChannel()->GetElapsedTime() >= sound.mfEndPadding;
+			else
+				bPlaying = p.mfTime < p.mfFallback;
 			if (bPlaying == false)
 			{
+				p.mvOldVoices.push_back({p.mpEntry, p.mlEntryId});
 				p.mpEntry = NULL;
 				p.mlStep = 2;
 				p.mfTime = 0;
 			}
 		}
-		else if (p.mlStep == 2 && p.mfTime >= std::max(sound.mfEndPadding, 0.0f))
+		else if (p.mlStep == 2 && p.mfTime >= std::max(-sound.mfEndPadding, 0.0f))
 		{
 			p.msSubtitle = "";
 			++p.mlSound;
