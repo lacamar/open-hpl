@@ -119,6 +119,10 @@ namespace hpl {
 
 		float GetFadeStep(){ return mfFadeStep;}
 		void SetFadeStep(float afX){ mfFadeStep = afX;}
+
+		// Applied on top, not part of weight normalization
+		bool IsLayer(){ return mbLayer;}
+		void SetLayer(bool abX){ mbLayer = abX;}
 	
 	private:
 		tString msName;
@@ -143,6 +147,7 @@ namespace hpl {
 		bool mbActive;
 		bool mbLoop;
 		bool mbPaused;
+		bool mbLayer = false;
 
 		//properties for update
 		float mfFadeStep;

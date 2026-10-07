@@ -9,6 +9,7 @@
 
 #include "impl/scriptarray.h"
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <vorbis/vorbisfile.h>
 #include <sstream>
@@ -192,6 +193,7 @@ void cSomaLuxVoiceHandler::Reset()
 {
 	StopAll();
 	mmapSources.clear();
+	msetLipEntities.clear();
 	mmapSceneVolumes.clear();
 }
 
@@ -304,6 +306,8 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	else
 		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume, cVector3f(0, 0, 1), (eSoundEntryType)line.mlEntryType);
 	aP.mlEntryId = aP.mpEntry ? aP.mpEntry->GetId() : -1;
+	aP.msLipEntity = itSource != mmapSources.end() && !line.mbChangeSource ? src.msEntity : line.msSource;
+	aP.mpLipsync = aP.mpEntry && aP.msLipEntity != "" ? LoadLipsync("voices/" + pSubject->msSet + "/lipsync/" + sKey + ".anno") : nullptr;
 	Log("SOMA voice: %s%s\n", sKey.c_str(), aP.mpEntry ? "" : " (no audio)");
 	// Missing audio still shows its subtitle for a reading time
 	aP.mfFallback = 0.5f + 0.09f * (float)sText.size();
@@ -491,6 +495,7 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		}
 		++i;
 	}
+	UpdateLipsync();
 }
 
 void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
@@ -571,6 +576,112 @@ bool cSomaLuxVoiceHandler::CharacterIsSpeaking(const tString &asName)
 		if (p.mlLine < p.mvLines.size() && p.mlStep == 1 && p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter == asName)
 			return true;
 	return false;
+}
+
+// .anno (Annosoft): TEA-ECB over the first ceil8(size/2) bytes, then "ONNA", version, frames of
+// {start ms, end ms, n, n x {char[3] phoneme, f32 weight}}
+std::shared_ptr<std::vector<cSomaLuxVoiceHandler::cLipFrame>> cSomaLuxVoiceHandler::LoadLipsync(const tString &asFile)
+{
+	std::ifstream file(cString::To8Char(mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile)).c_str(), std::ios::binary);
+	if (!file)
+		return nullptr;
+	std::string d((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	static const uint32_t k[4] = {0x8f812a90, 0x71823fad, 0x0317fab7, 0xc3856aa5};
+	size_t lEnc = std::min((d.size() / 2 + 7) / 8 * 8, d.size() / 8 * 8);
+	for (size_t i = 0; i < lEnc; i += 8)
+	{
+		uint32_t v[2];
+		memcpy(v, &d[i], 8);
+		for (uint32_t r = 0, sum = 0xc6ef3720; r < 32; ++r, sum -= 0x9e3779b9)
+		{
+			v[1] -= ((v[0] << 4) + k[2]) ^ (v[0] + sum) ^ ((v[0] >> 5) + k[3]);
+			v[0] -= ((v[1] << 4) + k[0]) ^ (v[1] + sum) ^ ((v[1] >> 5) + k[1]);
+		}
+		memcpy(&d[i], v, 8);
+	}
+	int32_t h[3];
+	if (d.size() < 12 || d.compare(0, 4, "ONNA") != 0)
+		return nullptr;
+	memcpy(h, d.data(), 12);
+	// Soma_NoSteam.exe 0x140568440 + 0x140358170 (17-viseme set)
+	static const std::map<std::string, int> mapViseme = {
+		{"AA", 1}, {"AH", 2}, {"h", 2}, {"AO", 3}, {"AW", 4}, {"OW", 4}, {"OY", 5}, {"UH", 5}, {"UW", 5}, {"AE", 6}, {"EH", 6},
+		{"AY", 7}, {"IH", 7}, {"EY", 8}, {"IY", 9}, {"y", 9}, {"ER", 10}, {"r", 10}, {"l", 11}, {"w", 12}, {"b", 13}, {"m", 13},
+		{"p", 13}, {"DH", 14}, {"NG", 14}, {"TH", 14}, {"ZH", 14}, {"d", 14}, {"g", 14}, {"k", 14}, {"n", 14}, {"s", 14},
+		{"t", 14}, {"z", 14}, {"CH", 15}, {"SH", 15}, {"j", 15}, {"f", 16}, {"v", 16}, {"x", 17}};
+	auto pOut = std::make_shared<std::vector<cLipFrame>>();
+	size_t p = 12;
+	for (int f = 0; f < h[2] && p + 12 <= d.size(); ++f)
+	{
+		cLipFrame fr = {};
+		int32_t n;
+		memcpy(&fr.mlStart, &d[p], 4);
+		memcpy(&fr.mlEnd, &d[p + 4], 4);
+		memcpy(&n, &d[p + 8], 4);
+		p += 12;
+		for (int i = 0; i < n && p + 7 <= d.size(); ++i, p += 7)
+		{
+			float w;
+			memcpy(&w, &d[p + 3], 4);
+			auto it = mapViseme.find(std::string(&d[p], strnlen(&d[p], 3)));
+			if (it != mapViseme.end())
+				fr.mvW[it->second - 1] += w;
+		}
+		pOut->push_back(fr);
+	}
+	return pOut;
+}
+
+// Visemes_17_N anim states as an unnormalized layer, sampled at the voice's playback time
+void cSomaLuxVoiceHandler::UpdateLipsync()
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	std::map<tString, tVisemes> mapWeights;
+	for (cPlaying &p : mvPlaying)
+	{
+		if (p.mpLipsync == NULL || p.mpLipsync->empty() || p.mlStep != 1 || p.mpEntry == NULL ||
+			mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false)
+			continue;
+		const std::vector<cLipFrame> &v = *p.mpLipsync;
+		float fMs = p.mpEntry->GetChannel()->GetElapsedTime() * 1000.0f + 30; // cActorAnimController starts its timer at 0.03
+		auto it = std::upper_bound(v.begin(), v.end(), fMs, [](float t, const cLipFrame &f) { return t < f.mlStart; });
+		const cLipFrame &a = it == v.begin() ? v.front() : *(it - 1);
+		const cLipFrame &b = it == v.end() ? a : *it;
+		float fT = b.mlStart > a.mlStart ? cMath::Clamp((fMs - a.mlStart) / (b.mlStart - a.mlStart), 0.0f, 1.0f) : 0;
+		tVisemes &w = mapWeights[p.msLipEntity];
+		for (size_t i = 0; i < w.size(); ++i)
+			w[i] = cMath::Clamp(a.mvW[i] + (b.mvW[i] - a.mvW[i]) * fT, 0.0f, 2.0f);
+	}
+	std::set<tString> setAll = msetLipEntities;
+	for (auto &it : mapWeights)
+		setAll.insert(it.first);
+	msetLipEntities.clear();
+	for (const tString &sName : setAll)
+	{
+		cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(sName) : NULL;
+		if (pEnt == NULL || pEnt->mpMesh == NULL)
+			continue;
+		auto itW = mapWeights.find(sName);
+		for (int i = 0; i < 17; ++i)
+		{
+			cAnimationState *pState = pEnt->mpMesh->GetAnimationStateFromName("Visemes_17_" + cString::ToString(i + 1));
+			if (pState == NULL)
+				continue;
+			if (itW == mapWeights.end())
+			{
+				pState->FadeOut(0.1f);
+				continue;
+			}
+			pState->SetLayer(true);
+			pState->SetActive(true);
+			pState->SetPaused(true);
+			pState->SetFadeStep(0);
+			pState->SetTimePosition(0);
+			pState->SetWeight(itW->second[i]);
+		}
+		if (itW != mapWeights.end())
+			msetLipEntities.insert(sName);
+	}
 }
 
 bool cSomaLuxVoiceHandler::LoadPcm(const tString &asFile)

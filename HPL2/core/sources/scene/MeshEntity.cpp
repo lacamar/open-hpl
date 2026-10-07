@@ -516,7 +516,7 @@ namespace hpl {
 							//Apply the animation track to node.
 							if(pState && pState->IsActive())
 							{
-								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul, pAnimState->IsLooping());
+								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping());
 							}
 						}
 
@@ -1352,7 +1352,7 @@ namespace hpl {
 		{
 			cAnimationState *pAnimState = mvAnimationStates[i];
 
-			if(pAnimState->IsActive())
+			if(pAnimState->IsActive() && pAnimState->IsLayer()==false)
 			{
 				fAnimNum++;
 				fTotalAnimWeight += pAnimState->GetWeight();

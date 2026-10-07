@@ -4,6 +4,7 @@
 #include "hpl.h"
 
 #include <angelscript.h>
+#include <array>
 #include <functional>
 #include <map>
 #include <memory>
@@ -91,6 +92,12 @@ public:
 	};
 
 private:
+	typedef std::array<float, 17> tVisemes;
+	struct cLipFrame
+	{
+		int mlStart, mlEnd;
+		tVisemes mvW;
+	};
 	struct cPlaying
 	{
 		cSubject *mpSubject;
@@ -109,6 +116,8 @@ private:
 		bool mbPaused = false;
 		tString msSourceEntity;
 		tString msFile;
+		tString msLipEntity;
+		std::shared_ptr<std::vector<cLipFrame>> mpLipsync;
 		cSomaSoundInstance *mpEffect = NULL; // outlives its sound until the next one with an effect
 		int mlEffectId = -1;
 		std::vector<std::pair<cSoundEntry *, int>> mvOldVoices;
@@ -121,6 +130,9 @@ private:
 		int mlChannels = 0, mlRate = 0;
 	};
 	bool LoadPcm(const tString &asFile);
+	std::shared_ptr<std::vector<cLipFrame>> LoadLipsync(const tString &asFile);
+	void UpdateLipsync();
+	std::set<tString> msetLipEntities;
 	bool LoadVoiceFile(const tString &asFile, const tString &asSet);
 	void LoadLangFile(const tString &asFile);
 	void StartSound(cPlaying &aP);
