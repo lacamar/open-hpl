@@ -315,6 +315,14 @@ void cSomaLuxMap::Update(float afTimeStep)
 		mvEntities[i]->UpdateEffectColor(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}
+}
+
+// cLuxMapHandler::PostUpdate: after the world update, so attachments see this step's camera
+void cSomaLuxMap::PostUpdate(float afTimeStep)
+{
+	if (mpScript == NULL)
+		return;
+	float fStep = afTimeStep;
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 		pEnt->UpdateAttachment();
 	SomaUpdateLightConnections();
@@ -606,6 +614,20 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	}
 	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive && gpSomaBase->mbScriptGamePaused == false)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
+	mbUpdated = true;
+}
+
+void cSomaLuxUpdater::PostUpdate(float afTimeStep)
+{
+	if (mbUpdated == false || gpSomaBase->ScriptsHeld())
+		return;
+	mbUpdated = false;
+	if (gpSomaBase->mbScriptGamePaused)
+		return;
+	if (cSomaLuxGame::Get())
+		cSomaLuxGame::Get()->PostUpdate(afTimeStep);
+	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive)
+		cSomaLuxMap::GetCurrent()->PostUpdate(afTimeStep);
 }
 
 static cSomaLuxMap *CurrentMap() { return cSomaLuxMap::GetCurrent(); }

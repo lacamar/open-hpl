@@ -37,6 +37,7 @@ public:
 	void Load();
 
 	void Update(float afTimeStep, bool abPaused = false);
+	void PostUpdate(float afTimeStep);
 	void ResetScriptables();
 	void ReloadUserConfig();
 	void UpdateGui(float afTimeStep);

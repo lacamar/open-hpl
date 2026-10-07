@@ -40,6 +40,7 @@ public:
 	void OnEnter(bool abRunScript, bool abFirstTime);
 	void OnLeave();
 	void Update(float afTimeStep);
+	void PostUpdate(float afTimeStep);
 	void OnAction(int alAction, bool abPressed);
 
 	void AddTimer(const tString &asName, float afTime, const tString &asFunction);
@@ -105,8 +106,12 @@ class cSomaLuxUpdater : public iUpdateable
 public:
 	cSomaLuxUpdater() : iUpdateable("SomaLuxUpdater") {}
 	void Update(float afTimeStep);
+	void PostUpdate(float afTimeStep);
 	void OnDraw(float afFrameTime);
 	void AppLostInputFocus();
+
+private:
+	bool mbUpdated = false;
 };
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);

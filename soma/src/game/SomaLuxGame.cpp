@@ -331,6 +331,10 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
 	cSomaLuxDialogHandler::Get()->Update(afTimeStep);
 	UpdateGui(afTimeStep);
+}
+
+void cSomaLuxGame::PostUpdate(float afTimeStep)
+{
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnPostUpdate(afTimeStep); }, true);
 	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnVariableUpdate(afTimeStep); }, true);
 	SomaUpdateCameraTextures();
