@@ -981,6 +981,9 @@ namespace
 		bool mbSeen = false, mbDetected = false, mbSightRangeAffectedByModifiers = true;
 		cVector3f mvLastKnownPlayerPos = 0;
 		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
+		float mfAlignRayStart = 0.5f, mfAlignRayMax = 0.5f, mfAlignTimer = 0, mfAlignY = 0, mvAlignDist[3] = {};
+		int mlAlignCount = 0, mlAlignIdx = 0;
+		cVector3f mvGroundAlignPos = 0;
 		cBoneState *mpPosBone = NULL;
 		bool mbPosBoneIsFeet = true, mbGlobalSpace = false, mbGravityBeforeGlobal = true, mbCollisionBeforeGlobal = true;
 		float mfPosBoneYOffset = 0;
@@ -1143,11 +1146,8 @@ namespace
 			}
 		}
 
-		// curbs without risers never trigger the body's side-collision step climb
-		void StepUp()
+		float FloorDist(const cVector3f &avStart, const cVector3f &avEnd)
 		{
-			if (mpBody == NULL || mbGlobalSpace || mbStaticCollider || mpBody->GetTestCollision() == false || mpEnt->mpMap == NULL)
-				return;
 			struct cFloor : iPhysicsRayCallback
 			{
 				float mfDist = 1e9f;
@@ -1158,11 +1158,39 @@ namespace
 					return true;
 				}
 			} ray;
+			mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, avEnd, true, false, false);
+			return ray.mfDist;
+		}
+
+		// curbs without risers never trigger the body's side-collision step climb
+		void StepUp()
+		{
+			if (mpBody == NULL || mbGlobalSpace || mbStaticCollider || mpBody->GetTestCollision() == false || mpEnt->mpMap == NULL)
+				return;
 			cVector3f vFeet = mpBody->GetFeetPosition();
 			float fStep = mpBody->GetMaxStepSize();
-			mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, vFeet + cVector3f(0, fStep, 0), vFeet, true, false, false);
-			if (ray.mfDist < fStep - 0.01f)
-				mpBody->SetFeetPosition(vFeet + cVector3f(0, fStep - ray.mfDist, 0));
+			float fDist = FloorDist(vFeet + cVector3f(0, fStep, 0), vFeet);
+			if (fDist < fStep - 0.01f)
+				mpBody->SetFeetPosition(vFeet + cVector3f(0, fStep - fDist, 0));
+		}
+
+		void AlignWithGround(float afTimeStep)
+		{
+			if (mbAlignGround == false || mpBody == NULL || mpEnt->mpMap == NULL || mpBody->IsOnGround() == false || (mfAlignTimer -= afTimeStep) > 0)
+				return;
+			mfAlignTimer = 0.02f;
+			cVector3f vAhead = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw()), cVector3f(0, 0, -1)) * mpBody->GetSize().x * mfAlignRayStart;
+			cVector3f vStart = mpBody->GetFeetPosition() + vAhead + cVector3f(0, 0.05f, 0);
+			float fDist = FloorDist(vStart, vStart - cVector3f(0, mfAlignRayMax, 0));
+			if (fDist > mfAlignRayMax)
+				return;
+			mvAlignDist[mlAlignIdx] = fDist - 0.05f;
+			mlAlignIdx = (mlAlignIdx + 1) % 3;
+			mlAlignCount = std::min(mlAlignCount + 1, 3);
+			mfAlignY = 0;
+			for (int i = 0; i < mlAlignCount; ++i)
+				mfAlignY += mvAlignDist[i] / mlAlignCount;
+			mvGroundAlignPos = mpBody->GetFeetPosition() + vAhead - cVector3f(0, mfAlignY, 0);
 		}
 
 		void SyncMesh()
@@ -1192,7 +1220,9 @@ namespace
 			}
 			cMatrixf mtx = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw() + kPif), cMath::MatrixRotateX(-mpBody->GetPitch() * mpBody->GetEntityPitchAmount()));
 			mtx.SetTranslation(mpBody->GetFeetPosition());
-			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxMeshOffset));
+			cMatrixf mtxOffset = mtxMeshOffset;
+			mtxOffset.m[1][3] -= mfAlignY;
+			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxOffset));
 		}
 	};
 
@@ -1640,6 +1670,7 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
 		pPF->SendGoal();
 	pAgent->StepUp();
+	pAgent->AlignWithGround(afTimeStep);
 	pAgent->SyncMesh();
 }
 
@@ -1799,8 +1830,13 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, A, "bool GetCheckForDoors()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbCheckForDoors; });
 	SOMA_METHOD(e, A, "void SetMaxCheckDoorDistance(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfMaxDoorDist = x; });
 	SOMA_METHOD(e, A, "float GetMaxCheckDoorDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfMaxDoorDist : 0.0f; });
-	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRay(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) a->mbAlignGround = b; });
+	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRay(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) { a->mbAlignGround = b; a->mlAlignCount = a->mlAlignIdx = 0; } });
 	SOMA_METHOD(e, A, "bool GetAlignEntityWithGroundRay()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbAlignGround; });
+	SOMA_METHOD(e, A, "const cVector3f& GetGroundAlignPosition()", +[](E *p) -> const cVector3f & { static cVector3f vZero = 0; cAgent *a = Agent(p); return a ? a->mvGroundAlignPos : vZero; });
+	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRelativeRayStart(float afX)", +[](E *p, float f) { if (cAgent *a = Agent(p)) a->mfAlignRayStart = f; });
+	SOMA_METHOD(e, A, "float GetAlignEntityWithGroundRelativeRayStart()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfAlignRayStart : 0.5f; });
+	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundMaxRayDistance(float afX)", +[](E *p, float f) { if (cAgent *a = Agent(p)) a->mfAlignRayMax = f; });
+	SOMA_METHOD(e, A, "float GetAlignEntityWithGroundMaxRayDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfAlignRayMax : 0.5f; });
 	SOMA_METHOD(e, A, "void BroadcastMessage(int alMessageId, iLuxEntityComponent@ apSource, const cVector3f &in avData, int alData)",
 				+[](E *p, int m, void *, V v, int l) { SomaAgentSendMessage(p, m, v, l); });
 	SOMA_METHOD(e, A, "void SetRecieveMessageCallback(const tString&in asCallbackFunc)", +[](E *p, S f) { if (cAgent *a = Agent(p)) a->msMessageCallback = f; });
