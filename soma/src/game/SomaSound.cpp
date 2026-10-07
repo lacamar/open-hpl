@@ -1167,6 +1167,7 @@ static void RegisterEntryNatives(asIScriptEngine *e)
 				pEntry->SetVolumeMul(vol);
 		}
 	});
+	SOMA_METHOD(e, "cSoundEntity", "void FadeOut(float afSpeed)", +[](cSoundEntity *o, float speed) { o->FadeOut(speed); });
 	SOMA_METHOD(e, "cSoundEntity", "bool IsOneShot()", +[](cSoundEntity *o) {
 		if (Inst *p = EntityEvent(o))
 			return p->IsOneShot();

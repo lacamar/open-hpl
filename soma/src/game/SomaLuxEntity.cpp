@@ -2443,6 +2443,15 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					return p;
 		return NULL;
 	};
+	SOMA_METHOD(e, "cSubMesh", "iVertexBuffer@ GetVertexBuffer()", +[](cSubMesh *o) { return o->GetVertexBuffer(); });
+	SOMA_METHOD(e, "iVertexBuffer", "const cVector3f& GetAABBMin()", +[](iVertexBuffer *o) -> const cVector3f & {
+		static thread_local cVector3f v;
+		v = o->CreateBoundingVolume().GetLocalMin();
+		return v; });
+	SOMA_METHOD(e, "iVertexBuffer", "const cVector3f& GetAABBMax()", +[](iVertexBuffer *o) -> const cVector3f & {
+		static thread_local cVector3f v;
+		v = o->CreateBoundingVolume().GetLocalMax();
+		return v; });
 	SOMA_METHOD(e, "cMeshEntity", "int GetSocketNum()", +[](cMeshEntity *m) { cSomaLuxEntity *p = Owner(m); return p ? (int)p->mvSockets.size() : 0; });
 	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocketFromIndex(int alIdx)", +[](cMeshEntity *m, int i) { cSomaLuxEntity *p = Owner(m); return p ? p->GetSocketNode(i) : (cNode3D *)NULL; });
 	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocket(const tString&in asName)", +[](cMeshEntity *m, const tString &s) -> cNode3D * {
