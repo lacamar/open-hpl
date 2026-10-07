@@ -865,7 +865,7 @@ namespace hpl {
 			tString sAnm = cString::SetFileExt(cString::To8Char(asFile), "anm");
 			if(cMeshLoaderAssimp::IsHpl3Anm(sAnm))
 			{
-				cAnimation *pAnim = cMeshLoaderAssimp::LoadHpl3Anm(sAnm, asFile, 1.0f);
+				cAnimation *pAnim = cMeshLoaderAssimp::LoadHpl3Anm(sAnm, asFile);
 				if(pAnim)
 				{
 					tString sXml;

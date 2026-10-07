@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstring>
 #include <map>
+#include <set>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -267,7 +268,7 @@ namespace hpl {
 		return lRead == 4 && memcmp(vMagic, "iE\x03v", 4) == 0;
 	}
 
-	cAnimation* cMeshLoaderAssimp::LoadHpl3Anm(const tString& sAnm, const tWString& asFile, float fUnitScale)
+	cAnimation* cMeshLoaderAssimp::LoadHpl3Anm(const tString& sAnm, const tWString& asFile)
 	{
 		FILE *pFile = fopen(sAnm.c_str(), "rb");
 		if(pFile == NULL) return NULL;
@@ -322,7 +323,7 @@ namespace hpl {
 				float vKey[8];
 				Read(vKey, sizeof(vKey));
 				cKeyFrame *pKey = pTrack->CreateKeyFrame(vKey[0]);
-				pKey->trans = cVector3f(vKey[1], vKey[2], vKey[3]) * fUnitScale;
+				pKey->trans = cVector3f(vKey[1], vKey[2], vKey[3]);
 				pKey->rotation = cQuaternion(vKey[7], vKey[4], vKey[5], vKey[6]);
 			}
 		}
@@ -338,9 +339,24 @@ namespace hpl {
 	cAnimation* cMeshLoaderAssimp::LoadAnimation(const tWString& asFile)
 	{
 		tString sFile = cString::To8Char(asFile);
+		cAnimation *pAnimation = LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile);
 		Assimp::Importer importer;
-		float fUnitScale = UnitScale(importer.ReadFile(sFile, 0));
-		return LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile, fUnitScale);
+		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+		const aiScene *pScene = importer.ReadFile(sFile, 0);
+		float fUnitScale = UnitScale(pScene);
+		if(pAnimation == NULL || pScene == NULL || pScene->mRootNode == NULL || fUnitScale == 1) return pAnimation;
+
+		// .anm keys of top-level bones are in metres, deeper ones in file units
+		std::set<tString> setTop;
+		for(unsigned int c=0; c<pScene->mRootNode->mNumChildren; ++c) setTop.insert(pScene->mRootNode->mChildren[c]->mName.C_Str());
+		for(int i=0; i<pAnimation->GetTrackNum(); ++i)
+		{
+			cAnimationTrack *pTrack = pAnimation->GetTrack(i);
+			if(setTop.count(pTrack->GetName())) continue;
+			for(int j=0; j<pTrack->GetKeyFrameNum(); ++j)
+				pTrack->GetKeyFrame(j)->trans = pTrack->GetKeyFrame(j)->trans * fUnitScale;
+		}
+		return pAnimation;
 	}
 
 }

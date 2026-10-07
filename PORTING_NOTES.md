@@ -6176,3 +6176,10 @@ our live entries and events.
   brightened by the same pattern. `CompileSolidSpecifics` never flagged detail materials as having
   diffuse specifics, so `avDetailProperties`/`avDetailWeights` stayed 0 (fade length 0 -> weight
   0). Now flagged like cubemaps; 00_02 ratio 0.99.
+
+## SOMA: FBX .anm root translation (2026-10-07)
+
+- Old Simon floated ~0.38 m above the 03_02 scan chair; lying puppets stood. HPL3 `.anm` keys of
+  top-level bones are in metres, deeper bones in file units (`simon_infected_scanchair_idle`:
+  root -0.333 for a -33.3 cm FBX delta, `head (2)` 11.035 for 11.035 cm). The FBX loader scaled
+  every track by the unit; now only non-top-level tracks, like the Collada path.
