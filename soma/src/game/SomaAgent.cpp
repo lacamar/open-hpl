@@ -1432,6 +1432,12 @@ void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX)
 		pComp->OnSetActive();
 }
 
+iCharacterBody *SomaAgentGetBody(cSomaLuxEntity *apEnt)
+{
+	cAgent *pAgent = Agent(apEnt);
+	return pAgent ? pAgent->mpBody : NULL;
+}
+
 bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx)
 {
 	cAgent *pAgent = Agent(apEnt);

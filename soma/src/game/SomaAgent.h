@@ -15,6 +15,7 @@ void SomaUpdateComponents(cSomaLuxEntity *apEnt, float afTimeStep);
 tString SomaAgentDebug(cSomaLuxEntity *apEnt);
 tString SomaNavPath(const cVector3f &avFrom, const cVector3f &avTo);
 void SomaAgentSetActive(cSomaLuxEntity *apEnt, bool abX);
+iCharacterBody *SomaAgentGetBody(cSomaLuxEntity *apEnt);
 bool SomaAgentGetMatrix(cSomaLuxEntity *apEnt, cMatrixf &aMtx);
 bool SomaAgentSetMatrix(cSomaLuxEntity *apEnt, const cMatrixf &aMtx);
 int SomaAgentGetState(cSomaLuxEntity *apEnt);

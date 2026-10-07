@@ -300,7 +300,7 @@ static void cSomaBase_HeadlessCmd_BodyContacts(void *apUserData, const cHeadless
 	}
 	iPhysicsWorld *pWorld = pMap->GetWorld()->GetPhysicsWorld();
 	std::vector<iPhysicsBody *> vBodies = pEnt->mvBodies;
-	iCharacterBody *pChar = pEnt->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	iCharacterBody *pChar = pEnt->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : SomaAgentGetBody(pEnt);
 	if (pChar)
 		vBodies = {pChar->GetCurrentBody()};
 	tString sOut;
