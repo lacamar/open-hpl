@@ -87,6 +87,7 @@ namespace hpl {
 		void RegisterHandler(const tString &asCmd, tHeadlessCommandFunc apFunc, void *apUserData);
 
 		void Update();
+		void LogicStep();
 
 		void UpdateThread();
 
@@ -150,7 +151,7 @@ namespace hpl {
 		};
 		std::vector<cFrameWaiter> mvFrameWaiters;
 		int mlDragFrames = 0, mlDragX = 0, mlDragY = 0;
-		unsigned int mlDragFrame = 0;
+		std::deque<std::pair<int,int> > mdqDragPath;
 		std::map<tString, cHandlerEntry> mmapHandlers;
 
 		std::deque<tString> mlstLogLines;

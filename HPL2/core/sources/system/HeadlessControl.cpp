@@ -349,21 +349,28 @@ namespace hpl {
 		mmapHandlers[asCmd] = entry;
 	}
 
-	void cHeadlessControlServer::Update()
+	void cHeadlessControlServer::LogicStep()
 	{
 #if USE_SDL2
-		if(mlDragFrames > 0 && cEngineDiagnostics::GetRenderedFrameCount() != mlDragFrame)
+		if(!mdqDragPath.empty())
 		{
-			--mlDragFrames;
-			mlDragFrame = cEngineDiagnostics::GetRenderedFrameCount();
-			SDL_Event ev;
-			memset(&ev, 0, sizeof(ev));
-			ev.type = SDL_MOUSEMOTION;
-			ev.motion.xrel = mlDragX;
-			ev.motion.yrel = mlDragY;
-			SDL_PushEvent(&ev);
+			mlDragX = mdqDragPath.front().first;
+			mlDragY = mdqDragPath.front().second;
+			mdqDragPath.pop_front();
 		}
+		else if(mlDragFrames > 0) --mlDragFrames;
+		else return;
+		SDL_Event ev;
+		memset(&ev, 0, sizeof(ev));
+		ev.type = SDL_MOUSEMOTION;
+		ev.motion.xrel = mlDragX;
+		ev.motion.yrel = mlDragY;
+		SDL_PushEvent(&ev);
 #endif
+	}
+
+	void cHeadlessControlServer::Update()
+	{
 		for(size_t i=0; i<mvFrameWaiters.size(); )
 		{
 			bool bTimedOut = cPlatform::GetApplicationTime() >= mvFrameWaiters[i].mlDeadlineMs;
@@ -647,11 +654,16 @@ namespace hpl {
 			ev.motion.y = aReq.GetInt("y", 0);
 			ev.motion.xrel = aReq.GetInt("xrel", 0);
 			ev.motion.yrel = aReq.GetInt("yrel", 0);
-			SDL_PushEvent(&ev);
+			mdqDragPath.clear();
+			// path "dx,dy;dx,dy;...": one step per logic update
+			tString sPath = aReq.GetString("path", "");
+			int lX, lY, lN;
+			for(const char *p = sPath.c_str(); sscanf(p, "%d,%d%n", &lX, &lY, &lN) == 2; p += lN + (p[lN] == ';'))
+				mdqDragPath.push_back(std::make_pair(lX, lY));
+			if(mdqDragPath.empty()) SDL_PushEvent(&ev);
 			mlDragFrames = aReq.GetInt("frames", 1) - 1;
 			mlDragX = ev.motion.xrel;
 			mlDragY = ev.motion.yrel;
-			mlDragFrame = cEngineDiagnostics::GetRenderedFrameCount();
 		}
 		else if(sType == "mouse_button")
 		{

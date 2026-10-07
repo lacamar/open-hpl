@@ -472,6 +472,7 @@ namespace hpl {
 			{
 				cPlatform::Sleep(10);
 				mpInput->Update(1.0f/100.0f);
+				if(mpHeadlessControl) mpHeadlessControl->LogicStep();
 				bIsUpdated = true;
 
 				mpUpdater->RunMessage(eUpdateableMessage_OnPauseUpdate, 1.0f/100.0f);
@@ -489,6 +490,7 @@ namespace hpl {
 					mpUpdater->RunMessage(eUpdateableMessage_PreUpdate, GetStepSize());
 					mpUpdater->RunMessage(eUpdateableMessage_Update, GetStepSize());
 					mpUpdater->RunMessage(eUpdateableMessage_PostUpdate, GetStepSize());
+					if(mpHeadlessControl) mpHeadlessControl->LogicStep();
 					bIsUpdated = true;
 
                     if (mpInput->isQuitMessagePosted()) {

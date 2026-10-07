@@ -289,14 +289,16 @@ def cmd_drag(a):
     a.steps = max(1, min(a.steps, int(path / 10)))
     if a.circles:
         px = py = 0
+        steps = []
         for i in range(1, a.steps + 1):
             t = 2 * math.pi * a.circles * i / a.steps * (1 if a.dy >= 0 else -1)
             x, y = round(a.dx * math.cos(t)) - a.dx, round(a.dx * math.sin(t))
-            send({"cmd": "input", "type": "mouse_move", "xrel": str(x - px), "yrel": str(y - py)})
+            steps.append(f"{x - px},{y - py}")
             px, py = x, y
-            send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+        send({"cmd": "input", "type": "mouse_move", "path": ";".join(steps)})
+        send({"cmd": "wait_frames", "n": a.steps + 5, "max_ms": 30000}, timeout=60)
     else:
-        # same motion every frame: slide/wheel states zero their speed on frames without mouse input
+        # same motion every logic step: slide/wheel states zero their speed on steps without mouse input
         for i in range(a.pump):
             sign = -1 if i % 2 else 1
             send({"cmd": "input", "type": "mouse_move", "xrel": str(sign * round(a.dx / a.steps)), "yrel": str(sign * round(a.dy / a.steps)), "frames": a.steps})
