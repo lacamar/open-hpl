@@ -42,7 +42,12 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	// game.cfg SplashScreenMusic / SplashScreenMusicVol
 	mpEngine->GetSound()->GetMusicHandler()->Play("loadscreen_background.ogg", 0.15f, 0.3f, true, false);
 
+	mlBootStart = cPlatform::GetApplicationTime();
+	static cSomaSplash *pBootSplash;
+	pBootSplash = this;
+	iResourceManager::mpLoadTickCallback = [] { pBootSplash->DrawLoadingScreen(true); };
 	mpBase->LoadScriptMainMenu();
+	iResourceManager::mpLoadTickCallback = NULL;
 	// Draw after the map and HUD viewports
 	SomaHudImGui();
 	mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL, false);
@@ -124,12 +129,12 @@ cVector2f cSomaSplash::VirtualSizeToScreen(const cVector2f &avSize)
 	return cVector2f(avSize.x * mvScreenSize.x / mfVirtualWidth, avSize.y * mvScreenSize.y / 768.0f);
 }
 
-void cSomaSplash::DrawBrainIcon(float afAlpha)
+void cSomaSplash::DrawBrainIcon(float afAlpha, float afTime)
 {
 	if (afAlpha <= 0)
 		return;
 	int lPeriod = 2 * (mlBrainFrameCount - 1);
-	int lStep = ((int)(mfElapsed * kBrainFrameRate)) % lPeriod;
+	int lStep = ((int)(afTime * kBrainFrameRate)) % lPeriod;
 	int lFrame = (lStep <= (mlBrainFrameCount - 1)) ? lStep : (lPeriod - lStep);
 
 	cGuiGfxElement *pFrame = mvBrainFrames[lFrame];
@@ -140,12 +145,25 @@ void cSomaSplash::DrawBrainIcon(float afAlpha)
 	mpGuiSet->DrawGfx(pFrame, vPos, VirtualSizeToScreen(cVector2f(70, 70)), cColor(afAlpha, afAlpha, afAlpha, 1));
 }
 
-void cSomaSplash::DrawLoadingScreen()
+void cSomaSplash::DrawLoadingScreen(bool abBoot)
 {
+	static unsigned long lLastDraw = 0;
+	unsigned long lNow = cPlatform::GetApplicationTime();
+	if (lNow - lLastDraw < 1000 / 30)
+		return;
+	lLastDraw = lNow;
 	iLowLevelGraphics *pLowGfx = mpEngine->GetGraphics()->GetLowLevel();
+	pLowGfx->SetCurrentFrameBuffer(NULL);
 	pLowGfx->SetClearColor(cColor(0, 1));
 	pLowGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
-	DrawBrainIcon(1);
+	if (abBoot)
+	{
+		// Hold before the fade-out until the menu has loaded
+		mfElapsed = cMath::Min((lNow - mlBootStart) / 1000.0f, kBootFadeOutStart);
+		OnDraw(0);
+	}
+	else
+		DrawBrainIcon(1, lNow / 1000.0f);
 	mpGuiSet->Render(NULL);
 	mpGuiSet->ClearRenderObjects();
 	pLowGfx->FlushRendering();
@@ -184,5 +202,5 @@ void cSomaSplash::OnDraw(float afFrameTime)
 		mpGuiSet->SetCurrentClipRegion(pPrevRegion);
 	}
 
-	DrawBrainIcon(cMath::Clamp((t - kBrainStart) / kBrainFadeIn, 0.0f, 1.0f));
+	DrawBrainIcon(cMath::Clamp((t - kBrainStart) / kBrainFadeIn, 0.0f, 1.0f), t);
 }

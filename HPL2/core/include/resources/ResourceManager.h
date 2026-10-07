@@ -59,6 +59,8 @@ namespace hpl {
 		virtual void Unload(iResourceBase* apResource)=0;
 		
 		virtual void Update(float afTimeStep){}
+
+		static void (*mpLoadTickCallback)();
 		
 	protected:
 		tResourceBaseMap m_mapResources;

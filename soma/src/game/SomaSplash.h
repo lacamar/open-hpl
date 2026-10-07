@@ -17,14 +17,14 @@ public:
 	void OnDraw(float afFrameTime);
 
 	bool ScriptsMayRun();
-	void DrawLoadingScreen();
+	void DrawLoadingScreen(bool abBoot = false);
 
 private:
 	void Finish();
 
 	bool AnySkipInputThisFrame();
 
-	void DrawBrainIcon(float afAlpha);
+	void DrawBrainIcon(float afAlpha, float afTime);
 	cVector3f VirtualToScreen(const cVector2f &avPos, float afZ);
 	cVector2f VirtualSizeToScreen(const cVector2f &avSize);
 
@@ -51,6 +51,7 @@ private:
 	cGuiClipRegion *mpBarClipRegion;
 
 	float mfElapsed;
+	unsigned long mlBootStart;
 
 	bool mbFinished;
 	bool mbMouseWasDown;

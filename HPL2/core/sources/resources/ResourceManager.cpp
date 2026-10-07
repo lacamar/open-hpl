@@ -33,6 +33,7 @@
 namespace hpl {
 
 	int iResourceManager::mlTabCount=0;
+	void (*iResourceManager::mpLoadTickCallback)() = NULL;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -184,6 +185,7 @@ namespace hpl {
 	void iResourceManager::EndLoad()
 	{
 		mlTabCount--;
+		if(mlTabCount==0 && mpLoadTickCallback) mpLoadTickCallback();
 	}
 
 	//-----------------------------------------------------------------------

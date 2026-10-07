@@ -580,7 +580,10 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		gsPreloadMap.clear();
 		if (gpSomaBase->GetSplash())
 			gpSomaBase->GetSplash()->DrawLoadingScreen();
-		if (gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart) == false)
+		iResourceManager::mpLoadTickCallback = [] { if (gpSomaBase->GetSplash()) gpSomaBase->GetSplash()->DrawLoadingScreen(); };
+		bool bLoaded = gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart);
+		iResourceManager::mpLoadTickCallback = NULL;
+		if (bLoaded == false)
 			Error("SOMA script: %s\n", sError.c_str());
 		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
 		{
