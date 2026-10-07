@@ -31,6 +31,8 @@ class cSomaLuxMap
 {
 public:
 	cSomaLuxMap(cWorld *apWorld, const tString &asFileName);
+	// World-only stand-in for the streaming map (cLux_GetPreloadMap)
+	explicit cSomaLuxMap(cWorld *apWorld) : mpWorld(apWorld), mpRuntime(NULL), mpScript(NULL) {}
 	~cSomaLuxMap();
 
 	bool CreateScript(cSomaScriptRuntime *apRuntime, const tString &asScriptFile);
@@ -53,6 +55,7 @@ public:
 	void SetTimerPaused(const tString &asName, bool abX);
 
 	cWorld *GetWorld() { return mpWorld; }
+	void SetWorld(cWorld *apWorld) { mpWorld = apWorld; }
 	asIScriptObject *GetScript() { return mpScript; }
 
 	cSomaLuxEntity *GetEntity(const tString &asName);

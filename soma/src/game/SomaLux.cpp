@@ -1143,7 +1143,13 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S) {});
 	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int prio) { glPreloadPrio = prio; });
 	// No streaming: the next map's settings aren't loaded yet, so the copy fades to the current ones
-	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() { return gsPreloadMap.empty() ? NULL : cSomaLuxMap::GetCurrent(); });
+	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() -> cSomaLuxMap * {
+		if (gsPreloadMap.empty())
+			return NULL;
+		static cSomaLuxMap *pProxy = new cSomaLuxMap(NULL);
+		pProxy->SetWorld(PreloadReady(gsPreloadMap) ? gPreload.mpWorld : NULL);
+		return pProxy;
+	});
 
 	for (const char *pType : {"cLuxMap", "iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
 		RegisterSomaScriptCallNatives(e, pType);
