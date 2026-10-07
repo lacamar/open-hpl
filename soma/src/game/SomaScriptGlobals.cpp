@@ -279,7 +279,7 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
 	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
-	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { return false; });
+	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { static bool b = getenv("OPENHPL_SOMA_GODMODE") != NULL; return b; });
 	SOMA_FUNC(e, "bool cLux_GetUnderwaterEffectsActive()", +[]() { return gbSomaUnderwaterEffects; });
 	// ponytail: state only, no underwater audio/voice filters yet
 	SOMA_FUNC(e, "void cLux_SetUnderwaterEffectsActive(bool abX, bool abUseStartAndEndEffects)", +[](bool b, bool) { gbSomaUnderwaterEffects = b; });
