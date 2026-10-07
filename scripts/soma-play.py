@@ -142,15 +142,17 @@ def aim(target):
 
 def focused(name):
     # the game's own pick: range, CanInteract, offset rays
+    tool = 'cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
+    # a tool's offset ray sticks while it hits anything
+    ex(tool + 'h.mPickBasics.mlLastHitRay = -1;', "PlayerToolHandler")
     frames(0.15)
+    # a usable tool target takes the click from the normal state
+    t = ex(tool + 'if(h.mbCanInteract) __print(h.mPickBasics.msFocusedEntityName);', "PlayerToolHandler").strip()
+    if t:
+        return t == name
     f = kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
            '__print("f=" + cScript_GetGlobalReturnString());').get("f")
     if f == name:
-        return True
-    # an equipped tool picks on its own
-    t = ex('cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
-           'if(h.mbCanInteract) __print(h.mPickBasics.msFocusedEntityName);', "PlayerToolHandler").strip()
-    if t == name:
         return True
     # InteractAux areas forward interaction to their parent
     out = send({"cmd": "script_vars", "name": f}).get("output", "") if f else ""
