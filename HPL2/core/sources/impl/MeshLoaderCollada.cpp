@@ -192,7 +192,7 @@ namespace hpl {
 		tWString sFlat = asFile;
 		for(size_t i=0; i<sFlat.size(); ++i)
 			if(sFlat[i] == _W('/') || sFlat[i] == _W('\\') || sFlat[i] == _W(':')) sFlat[i] = _W('_');
-		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v9.msh") : _W(".v4.msh"));
+		return cResources::GetMeshCacheDir() + sFlat + (cMeshLoaderCollada::GetUnscaledSkeleton() ? _W(".v10.msh") : _W(".v4.msh"));
 	}
 
 	static void UnscaleBone(cBone *apBone, float afUnit, const cMatrixf &a_mtxRootRot, bool abRoot)
@@ -385,7 +385,7 @@ namespace hpl {
 					continue;
 				}
 			}
-			tString sNodeName = pGeomNode->msName;
+			tString sNodeName = pGeomNode->msName.empty() ? pGeomNode->msId : pGeomNode->msName;
 			bool bCollideMeshShape = false;
 
 			/////////////////////////////////////////////////////
