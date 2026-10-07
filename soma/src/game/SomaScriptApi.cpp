@@ -358,7 +358,7 @@ static void StubFactory(asIScriptGeneric *apGen)
 	asITypeInfo *pType = apGen->GetEngine()->GetTypeInfoById(apGen->GetFunction()->GetReturnTypeId() & ~asTYPEID_OBJHANDLE);
 	const cSomaStructDefaults *pDefaults = pType ? FindStructDefaults(pType->GetName()) : NULL;
 	// Official factories zero these
-	static const std::set<std::string> setZeroed = {"cLuxClosestEntityData", "cLuxClosestCharCollider", "cLuxSoundExtraData"};
+	static const std::set<std::string> setZeroed = {"cLuxClosestEntityData", "cLuxClosestCharCollider", "cLuxSoundExtraData", "cLuxScreenTextFormatParameters"};
 	if ((pDefaults == NULL && (pType == NULL || setZeroed.count(pType->GetName()) == 0)) || apGen->GetArgCount() > 0)
 		CountStub(apGen);
 	char *pObj = (char *)calloc(1, 4096);
@@ -366,6 +366,10 @@ static void StubFactory(asIScriptGeneric *apGen)
 		ApplyStructDefaults(pDefaults, pObj);
 	else if (pType)
 		ConstructMembers(apGen->GetEngine(), pType, pObj);
+	// Rebirth cLuxScreenTextFormatParameters::Clear: unset line width and icon heights
+	if (pType && strcmp(pType->GetName(), "cLuxScreenTextFormatParameters") == 0)
+		for (int o : {16, 360, 364, 368})
+			*(float *)(pObj + o) = -1;
 	if (pType && (pType->GetFlags() & asOBJ_NOCOUNT) == 0)
 		gmapStructRefs[pObj] = 1;
 	*(void **)apGen->GetAddressOfReturnLocation() = pObj;
