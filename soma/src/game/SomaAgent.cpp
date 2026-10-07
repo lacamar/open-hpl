@@ -1143,6 +1143,28 @@ namespace
 			}
 		}
 
+		// curbs without risers never trigger the body's side-collision step climb
+		void StepUp()
+		{
+			if (mpBody == NULL || mbGlobalSpace || mbStaticCollider || mpBody->GetTestCollision() == false || mpEnt->mpMap == NULL)
+				return;
+			struct cFloor : iPhysicsRayCallback
+			{
+				float mfDist = 1e9f;
+				bool OnIntersect(iPhysicsBody *b, cPhysicsRayParams *p) override
+				{
+					if (b->IsCharacter() == false && b->GetCollideCharacter() && p->mfDist < mfDist)
+						mfDist = p->mfDist;
+					return true;
+				}
+			} ray;
+			cVector3f vFeet = mpBody->GetFeetPosition();
+			float fStep = mpBody->GetMaxStepSize();
+			mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, vFeet + cVector3f(0, fStep, 0), vFeet, true, false, false);
+			if (ray.mfDist < fStep - 0.01f)
+				mpBody->SetFeetPosition(vFeet + cVector3f(0, fStep - ray.mfDist, 0));
+		}
+
 		void SyncMesh()
 		{
 			if (mpBody == NULL || mpEnt->mpMesh == NULL)
@@ -1617,6 +1639,7 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 	SomaUpdateComponents(apEnt, afTimeStep);
 	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
 		pPF->SendGoal();
+	pAgent->StepUp();
 	pAgent->SyncMesh();
 }
 
