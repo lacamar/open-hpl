@@ -6,7 +6,7 @@
   scripts/soma-play.py goto ENTITY [--dist 1.0]       # feet next to an entity, facing it
   scripts/soma-play.py look ENTITY                    # aim the camera at an entity
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
-  scripts/soma-play.py drag ENTITY DX DY [--steps 60]  # hold click, move the mouse by DX,DY over STEPS frames
+  scripts/soma-play.py drag ENTITY DX DY [--steps 60] [--pump N]  # hold click, move the mouse by DX,DY over STEPS frames (N strokes)
   scripts/soma-play.py throw ENTITY TARGET [--place S] # grab ENTITY, aim at TARGET, throw (or hold S s and release)
   scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
@@ -160,8 +160,10 @@ def aim_entity(name):
     aim(target)
     if focused(name):
         return
-    d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetMainBody() is null) return;'
-           'cBoundingVolume@ bv = e.GetMainBody().GetBoundingVolume(); cVector3f a = bv.GetMin(), b = bv.GetMax();'
+    d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetBodyNum() == 0) return;'
+           'cVector3f a = e.GetBody(0).GetBoundingVolume().GetMin(), b = e.GetBody(0).GetBoundingVolume().GetMax();'
+           'for(int i = 1; i < e.GetBodyNum(); ++i) { cBoundingVolume@ bv = e.GetBody(i).GetBoundingVolume();'
+           'a = cMath_Vector3Min(a, bv.GetMin()); b = cMath_Vector3Max(b, bv.GetMax()); }'
            '__print("a=" + a.x + " " + a.y + " " + a.z); __print("b=" + b.x + " " + b.y + " " + b.z);')
     if "a" not in d:
         return aim(target)
@@ -295,8 +297,10 @@ def cmd_drag(a):
             send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
     else:
         # same motion every frame: slide/wheel states zero their speed on frames without mouse input
-        send({"cmd": "input", "type": "mouse_move", "xrel": str(round(a.dx / a.steps)), "yrel": str(round(a.dy / a.steps)), "frames": a.steps})
-        send({"cmd": "wait_frames", "n": a.steps, "max_ms": 30000}, timeout=60)
+        for i in range(a.pump):
+            sign = -1 if i % 2 else 1
+            send({"cmd": "input", "type": "mouse_move", "xrel": str(sign * round(a.dx / a.steps)), "yrel": str(sign * round(a.dy / a.steps)), "frames": a.steps})
+            send({"cmd": "wait_frames", "n": a.steps, "max_ms": 30000}, timeout=60)
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
     frames(0.3)
@@ -378,6 +382,24 @@ def steer(target, tol, deadline, back=False, prev=None):
     return False
 
 
+def open_near_door():
+    doors = ex('array<iLuxEntity@> v; cLux_GetCurrentMap().GetEntityArray("*", eLuxEntityType_LastEnum, "", v);'
+               'cVector3f c = cLux_GetPlayer().GetCamera().GetPosition(); float bd = 3; iLuxEntity@ b = null;'
+               'for(uint i = 0; i < v.length(); ++i) { iLuxEntity@ e = v[i]; float d = cMath_Vector3Dist(e.GetPosition(), c);'
+               'if(e.GetClassName() == "cScrPropSlideDoor" && d < bd && SlideDoor_GetOpenAmount(e.GetName()) < 0.5) { bd = d; @b = e; } }'
+               'if(b is null) return; v.resize(0); cLux_GetCurrentMap().GetEntityArray(b.GetName() + "_panel*", eLuxEntityType_LastEnum, "", v);'
+               'bd = 4; for(uint i = 0; i < v.length(); ++i) { float d = cMath_Vector3Dist(v[i].GetPosition(), c);'
+               'if(d < bd) { bd = d; __print(v[i].GetName()); } }').split()
+    if not doors:
+        return False
+    print(f"opening door via {doors[-1]}")
+    cmd_goto(argparse.Namespace(entity=doors[-1], dist=0.9, keep_height=False))
+    aim_entity(doors[-1])
+    press("mouse", "left", 0.1)
+    frames(4)
+    return True
+
+
 def cmd_walkto(a):
     target = [float(v) for v in a.target[:3]] if len(a.target) > 2 else ent_pos(a.target[0])
     route = [target + a.target[3:]]
@@ -402,8 +424,13 @@ def cmd_walkto(a):
                 press("key", "left ctrl", 0.1)
             key("left shift", a.run and not crouch)
             last = i == len(route) - 1
-            if not steer([float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]]):
-                break
+            args = [float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]]
+            if not steer(*args):
+                key(move, False)
+                opened = open_near_door()
+                key(move, True)
+                if not (opened and steer(*args)):
+                    break
     finally:
         key(move, False)
         key("left shift", False)
@@ -523,6 +550,7 @@ def main():
     s = sub.add_parser("drag"); s.add_argument("entity"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=60)
     s.add_argument("--circles", type=float, default=0, help="circle mouse: radius dx, sign of dy = direction")
+    s.add_argument("--pump", type=int, default=1, help="strokes back and forth while held")
     s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target"); s.add_argument("--place", type=float)
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=30)
