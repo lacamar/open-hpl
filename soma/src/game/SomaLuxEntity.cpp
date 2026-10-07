@@ -78,12 +78,7 @@ void cSomaLuxEntity::SetActive(bool abX)
 	if (mbActive == abX)
 		return;
 	mbActive = abX;
-	if (abX == false && mbCameraInLiquid)
-	{
-		mbCameraInLiquid = false;
-		if (--glSomaUnderwaterUsers <= 0)
-			gbSomaUnderwaterEffects = false;
-	}
+	mbCameraInLiquid = false;
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
