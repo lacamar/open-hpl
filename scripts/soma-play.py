@@ -392,8 +392,14 @@ def open_near_door():
                'cVector3f c = cLux_GetPlayer().GetCamera().GetPosition(); float bd = 3; iLuxEntity@ b = null;'
                'for(uint i = 0; i < v.length(); ++i) { iLuxEntity@ e = v[i]; float d = cMath_Vector3Dist(e.GetPosition(), c);'
                'if(e.GetClassName() == "cScrPropSlideDoor" && d < bd && SlideDoor_GetOpenAmount(e.GetName()) < 0.5) { bd = d; @b = e; } }'
-               'if(b is null) return; v.resize(0); cLux_GetCurrentMap().GetEntityArray(b.GetName() + "_panel*", eLuxEntityType_LastEnum, "", v);'
-               'bd = 4; for(uint i = 0; i < v.length(); ++i) { float d = cMath_Vector3Dist(v[i].GetPosition(), c);'
+               'if(b !is null) __print(b.GetName());').strip()
+    if not doors:
+        return False
+    stem, _, n = doors.rpartition("_")
+    doors = ex('array<iLuxEntity@> v; cVector3f c = cLux_GetPlayer().GetCamera().GetPosition(); float bd = 4;'
+               f'cLux_GetCurrentMap().GetEntityArray("{doors}_panel*", eLuxEntityType_LastEnum, "", v);'
+               f'cLux_GetCurrentMap().GetEntityArray("{stem}Button_*_{n}", eLuxEntityType_LastEnum, "", v);'
+               'for(uint i = 0; i < v.length(); ++i) { float d = cMath_Vector3Dist(v[i].GetPosition(), c);'
                'if(d < bd) { bd = d; __print(v[i].GetName()); } }').split()
     if not doors:
         return False
