@@ -195,6 +195,8 @@ void cSomaLuxVoiceHandler::Reset()
 	mmapSources.clear();
 	msetLipEntities.clear();
 	mmapSceneVolumes.clear();
+	mmapSpeakingCallbacks.clear();
+	msetSpeaking.clear();
 }
 
 tString cSomaLuxVoiceHandler::SoundKey(cSubject *apSubject, size_t alLine, size_t alSound)
@@ -496,6 +498,48 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		++i;
 	}
 	UpdateLipsync();
+	UpdateSpeakingCallbacks();
+}
+
+void cSomaLuxVoiceHandler::SetSpeakingCallback(const tString &asCharacter, const tString &asFunc)
+{
+	if (asFunc == "")
+		mmapSpeakingCallbacks.erase(asCharacter);
+	else
+		mmapSpeakingCallbacks[asCharacter] = asFunc;
+}
+
+void cSomaLuxVoiceHandler::UpdateSpeakingCallbacks()
+{
+	std::set<tString> setNow;
+	for (cPlaying &p : mvPlaying)
+		if (p.mlLine < p.mvLines.size() && p.mlStep == 1)
+			setNow.insert(p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter);
+	std::vector<std::pair<tString, bool>> vChanged;
+	for (const tString &s : setNow)
+		if (msetSpeaking.count(s) == 0)
+			vChanged.push_back({s, true});
+	for (const tString &s : msetSpeaking)
+		if (setNow.count(s) == 0)
+			vChanged.push_back({s, false});
+	msetSpeaking = setNow;
+	for (auto &it : vChanged)
+	{
+		auto itCb = mmapSpeakingCallbacks.find(it.first);
+		if (itCb == mmapSpeakingCallbacks.end())
+			continue;
+		tString sFunc = itCb->second;
+		bool bKeep = true;
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		if (pMap && pMap->GetScript() && cSomaScriptRuntime::Get())
+			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "bool " + sFunc + "(const tString&in, bool)", [&](asIScriptContext *c) {
+				c->SetArgObject(0, &it.first);
+				c->SetArgByte(1, it.second);
+			}, [&](asIScriptContext *c) { bKeep = c->GetReturnByte() != 0; });
+		auto itNow = mmapSpeakingCallbacks.find(it.first);
+		if (bKeep == false && itNow != mmapSpeakingCallbacks.end() && itNow->second == sFunc)
+			mmapSpeakingCallbacks.erase(itNow);
+	}
 }
 
 void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
@@ -1116,6 +1160,7 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetPaused(const tString&in asScene, bool abX)", +[](void *, S s, bool b) { VH->SetPaused(s, b); });
 	SOMA_METHOD(e, T, "void SetPausedAll(bool abX)", +[](void *, bool b) { VH->SetPausedAll(b); });
 	SOMA_METHOD(e, T, "bool CharacterIsSpeaking(const tString&in asName)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->CharacterIsSpeaking(s); });
+	SOMA_METHOD(e, T, "void AddCharacterSpeakingCallback(const tString&in asCharacter, const tString&in asCallback)", +[](void *, S c, S f) { VH->SetSpeakingCallback(c, f); });
 	SOMA_METHOD(e, T, "void GetSpectrumFromSpeakingCharacter(const tString&in asCharacter, array<float>&out aDestArray, int alNumSamples=64)",
 				+[](void *, S s, CScriptArray &arr, int n) {
 					std::vector<float> v;

@@ -47,6 +47,7 @@ public:
 	void SetPausedAll(bool abX);
 	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
+	void SetSpeakingCallback(const tString &asCharacter, const tString &asFunc);
 
 	std::set<tString> msetPlayedLines; // PlayOnce lines, "subject#index"
 
@@ -161,6 +162,9 @@ private:
 		float mfVolume = 1, mfGoal = 1, mfSpeed = 0;
 	};
 	std::map<tString, cSceneVolume> mmapSceneVolumes;
+	std::map<tString, tString> mmapSpeakingCallbacks;
+	std::set<tString> msetSpeaking;
+	void UpdateSpeakingCallbacks();
 
 	float mfFadeAlpha = 0;
 	float mfFadeGoal = 0;
