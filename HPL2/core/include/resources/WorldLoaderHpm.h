@@ -33,6 +33,7 @@ namespace hpl {
 
 		static const tString& GetLastLoadReportJson() { return msLastLoadReportJson; }
 		static cXmlElement* GetCurrentElement() { return mpCurrentElement; }
+		static void (*mpObjectDoneCallback)(cWorld* apWorld);
 
 	private:
 		iXmlDocument* OpenSidecar(const tWString& asBaseFile, const tWString& asSuffix, bool abWarnIfMissing);

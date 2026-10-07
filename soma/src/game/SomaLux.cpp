@@ -19,11 +19,128 @@
 #include "SomaScriptRuntime.h"
 #include "SomaSave.h"
 #include "SomaSoundscape.h"
+#include "resources/WorldLoaderHpm.h"
+#include <sys/mman.h>
+#include <ucontext.h>
 
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
 static bool gbMapChangeIsTransfer = false;
+static int glPreloadPrio = 2;
 
 static bool gbPendingNewGame = false;
+
+// HPL3 streams the next map on worker threads; here LoadWorld runs on a main-thread fiber in per-frame slices
+static struct
+{
+	tString msMap;
+	cWorld *mpWorld = NULL;
+	bool mbRunning = false;
+	unsigned long mlSliceEnd = 0;
+	ucontext_t mMain, mFiber;
+	void *mpStack = NULL;
+	std::vector<cSomaLuxEntity *> mvEntities;
+} gPreload;
+static const size_t kPreloadStackSize = 64 << 20;
+
+static bool SameMap(const tString &a, const tString &b)
+{
+	return cString::ToLowerCase(cString::SetFileExt(cString::GetFileName(a), "")) ==
+		   cString::ToLowerCase(cString::SetFileExt(cString::GetFileName(b), ""));
+}
+
+static void PreloadFiber()
+{
+	gPreload.mpWorld = gpSomaBase->mpEngine->GetScene()->LoadWorld(gPreload.msMap, 0);
+	if (gPreload.mpWorld)
+		gPreload.mpWorld->SetActive(false);
+	gPreload.mbRunning = false;
+}
+
+static void PreloadStep(unsigned long alBudgetMs)
+{
+	gPreload.mlSliceEnd = cPlatform::GetApplicationTime() + alBudgetMs;
+	gPreload.mvEntities.swap(cSomaLuxEntity::Pending());
+	// Yield only between map objects: entity loaders and Pending() are shared with runtime spawns
+	cWorldLoaderHpm::mpObjectDoneCallback = [](cWorld *apWorld) {
+		apWorld->SetActive(false);
+		if (cPlatform::GetApplicationTime() >= gPreload.mlSliceEnd)
+			swapcontext(&gPreload.mFiber, &gPreload.mMain);
+	};
+	swapcontext(&gPreload.mMain, &gPreload.mFiber);
+	cWorldLoaderHpm::mpObjectDoneCallback = NULL;
+	gPreload.mvEntities.swap(cSomaLuxEntity::Pending());
+	if (gPreload.mbRunning == false && gPreload.mpStack)
+	{
+		munmap(gPreload.mpStack, kPreloadStackSize);
+		gPreload.mpStack = NULL;
+	}
+}
+
+static void PreloadStart(const tString &asMap)
+{
+	Log("SOMA: preloading '%s'\n", asMap.c_str());
+	gPreload.msMap = asMap;
+	gPreload.mbRunning = true;
+	gPreload.mpStack = mmap(NULL, kPreloadStackSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_STACK, -1, 0);
+	getcontext(&gPreload.mFiber);
+	gPreload.mFiber.uc_stack.ss_sp = gPreload.mpStack;
+	gPreload.mFiber.uc_stack.ss_size = kPreloadStackSize;
+	gPreload.mFiber.uc_link = &gPreload.mMain;
+	makecontext(&gPreload.mFiber, PreloadFiber, 0);
+}
+
+static cWorld *PreloadFinish()
+{
+	while (gPreload.mbRunning)
+		PreloadStep(1000);
+	cWorld *pWorld = gPreload.mpWorld;
+	gPreload.mpWorld = NULL;
+	gPreload.msMap = "";
+	if (pWorld == NULL)
+		for (cSomaLuxEntity *pEnt : gPreload.mvEntities)
+			delete pEnt;
+	else
+		cSomaLuxEntity::Pending().insert(cSomaLuxEntity::Pending().end(), gPreload.mvEntities.begin(), gPreload.mvEntities.end());
+	gPreload.mvEntities.clear();
+	return pWorld;
+}
+
+cWorld *SomaTakePreloadedWorld(const tString &asMap)
+{
+	if (gPreload.msMap == "")
+		return NULL;
+	bool bSame = SameMap(gPreload.msMap, asMap);
+	cWorld *pWorld = PreloadFinish();
+	if (pWorld && bSame)
+	{
+		pWorld->SetActive(true);
+		return pWorld;
+	}
+	for (cSomaLuxEntity *pEnt : cSomaLuxEntity::Pending())
+		delete pEnt;
+	cSomaLuxEntity::Pending().clear();
+	if (pWorld)
+		gpSomaBase->mpEngine->GetScene()->DestroyWorld(pWorld);
+	return NULL;
+}
+
+static bool PreloadReady(const tString &asMap)
+{
+	return gPreload.msMap != "" && gPreload.mbRunning == false && SameMap(gPreload.msMap, asMap);
+}
+
+static void PreloadUpdate()
+{
+	if (gsPreloadMap != "" && gPreload.msMap != gsPreloadMap)
+	{
+		if (gPreload.msMap != "")
+			SomaTakePreloadedWorld("");
+		PreloadStart(gsPreloadMap);
+	}
+	static const unsigned long vBudgetMs[] = {0, 2, 4, 8, 25};
+	if (gPreload.mbRunning && glPreloadPrio > 0)
+		PreloadStep(vBudgetMs[std::min(glPreloadPrio, 4)]);
+}
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
 
@@ -586,9 +703,13 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			lActiveSize = pBody->GetActiveSize();
 		}
 		gsPreloadMap.clear();
-		if (gpSomaBase->GetSplash())
-			gpSomaBase->GetSplash()->DrawLoadingScreen();
-		iResourceManager::mpLoadTickCallback = [] { if (gpSomaBase->GetSplash()) gpSomaBase->GetSplash()->DrawLoadingScreen(); };
+		glPreloadPrio = 2;
+		if (PreloadReady(sMap) == false)
+		{
+			if (gpSomaBase->GetSplash())
+				gpSomaBase->GetSplash()->DrawLoadingScreen();
+			iResourceManager::mpLoadTickCallback = [] { if (gpSomaBase->GetSplash()) gpSomaBase->GetSplash()->DrawLoadingScreen(); };
+		}
 		bool bLoaded = gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart);
 		iResourceManager::mpLoadTickCallback = NULL;
 		if (gpSomaBase->GetSplash())
@@ -609,6 +730,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		}
 		return;
 	}
+	PreloadUpdate();
 	if (cSomaLuxGame::Get())
 	{
 		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesRealPlayer();
@@ -1014,12 +1136,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });
-	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return true; });
+	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return gsPreloadMap.empty() || PreloadReady(gsPreloadMap); });
 	SOMA_FUNC(e, "bool cLux_IsPlayGoReady(int&out alETA)", +[](int &l) { l = 0; return true; });
 	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false; });
-	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int) { gsPreloadMap = map; });
+	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int prio) { gsPreloadMap = map; glPreloadPrio = prio; });
 	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S) {});
-	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int) {});
+	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int prio) { glPreloadPrio = prio; });
 	// No streaming: the next map's settings aren't loaded yet, so the copy fades to the current ones
 	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() { return gsPreloadMap.empty() ? NULL : cSomaLuxMap::GetCurrent(); });
 

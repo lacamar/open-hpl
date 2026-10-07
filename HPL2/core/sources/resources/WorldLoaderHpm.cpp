@@ -55,6 +55,7 @@ namespace hpl {
 
 	cXmlElement* cWorldLoaderHpm::mpCurrentElement = NULL;
 	tString cWorldLoaderHpm::msLastLoadReportJson = "";
+	void (*cWorldLoaderHpm::mpObjectDoneCallback)(cWorld*) = NULL;
 
 	cWorldLoaderHpm::cWorldLoaderHpm()
 	{
@@ -342,6 +343,7 @@ namespace hpl {
 					tString sReason = CreateTrackObject(asTrack, pObjElem, vFileIndex);
 					if (sReason == "") ++stats.mlCreated;
 					else ++stats.mmapSkipped[sReason];
+					if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
 				}
 			}
 		}

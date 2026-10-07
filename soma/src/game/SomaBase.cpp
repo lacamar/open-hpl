@@ -1423,7 +1423,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 {
 	if (mfGameStartTime < 0)
 		mfGameStartTime = mpEngine->GetGameTime();
-	cWorld *pNewWorld = mpEngine->GetScene()->LoadWorld(asMapFile, 0);
+	cWorld *pNewWorld = SomaTakePreloadedWorld(asMapFile);
+	if (pNewWorld == NULL)
+		pNewWorld = mpEngine->GetScene()->LoadWorld(asMapFile, 0);
 	if (pNewWorld == NULL)
 	{
 		asErrorOut = "Could not load map '" + asMapFile + "'";
