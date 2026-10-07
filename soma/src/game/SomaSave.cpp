@@ -8,6 +8,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptBuilder.h"
 #include "SomaSound.h"
+#include "SomaSplash.h"
 #include "SomaLuxVoice.h"
 
 #include "impl/scriptarray.h"
@@ -32,6 +33,8 @@ namespace
 	int glPendingVersion = 22;
 	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
+	bool gbHoldAfterHeader = false;
+	tString gsHeldMap, gsHeldPos;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
 	cDate gLatestSaveDate;
@@ -1396,7 +1399,10 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	Log("SOMA save: loading %s (%s)\n", cString::To8Char(sPath).c_str(), sMap.c_str());
 	if (abImmediate == false)
 	{
-		SomaRequestMapChange(sMap, sPos);
+		if (gbHoldAfterHeader)
+			gsHeldMap = sMap, gsHeldPos = sPos;
+		else
+			SomaRequestMapChange(sMap, sPos);
 		return true;
 	}
 	tString sError;
@@ -1447,16 +1453,31 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool GetSaveThreadActive()", +[](void *) { return false; });
 	SOMA_METHOD(e, T, "bool HasLoadError(tString&out asError)", +[](void *, tString &) { return false; });
 	SOMA_METHOD(e, T, "void DelayedLoadGameFromFile(const tWString&in asSaveFile, const tString&in asCallbackObject, const tString&in asCallbackFunction, bool abWaitAfterHeader, bool abWaitAfterLoad)",
-				+[](void *, W f, const tString &o, const tString &fn, bool, bool bWait) {
+				+[](void *, W f, const tString &o, const tString &fn, bool bWaitHeader, bool bWait) {
 					gsLoadCallbackObject = o;
 					gsLoadCallbackFunc = fn;
+					gbHoldAfterHeader = bWaitHeader;
 					gbHoldAfterLoad = Load(f) && bWait;
+					gbHoldAfterHeader = false;
 				});
 	SOMA_METHOD(e, T, "void DelayedSaveGameToFile(const tWString&in asSaveFile, bool abSaveAsCheckpoint)", +[](void *, W f, bool) { Save(f); });
 	SOMA_METHOD(e, T, "void DeleteSaveFile(const tWString&in asSaveFile)", +[](void *, W f) { cPlatform::RemoveFile(GetSaveDir() + cString::GetFileNameW(f)); });
 	SOMA_METHOD(e, T, "bool IsDoneLoadingHeader()", +[](void *) { return true; });
-	SOMA_METHOD(e, T, "void ContinueLoading(bool abDisableWaits)", +[](void *, bool b) { gbHoldAfterLoad &= !b; });
-	SOMA_METHOD(e, T, "bool IsDoneLoadingSavedGame()", +[](void *) { return gsPendingState.empty(); });
+	SOMA_METHOD(e, T, "void ContinueLoading(bool abDisableWaits)", +[](void *, bool b) {
+		if (gsHeldMap != "")
+		{
+			if (gpSomaBase->GetSplash())
+				gpSomaBase->GetSplash()->StartLoad();
+			SomaRequestMapChange(gsHeldMap, gsHeldPos);
+			gsHeldMap.clear();
+		}
+		gbHoldAfterLoad &= !b;
+	});
+	SOMA_METHOD(e, T, "bool IsDoneLoadingSavedGame()", +[](void *) { return gsPendingState.empty() && gsHeldMap.empty(); });
+	SOMA_FUNC(e, "void cLux_LoadScreenSetBarPosAndSize(const cVector2f&in avPos, const cVector2f&in avSize)", +[](const cVector2f &p, const cVector2f &sz) {
+		if (gpSomaBase->GetSplash())
+			gpSomaBase->GetSplash()->SetLoadBar(p, sz);
+	});
 	SOMA_METHOD(e, T, "void StartLoadedGame()", +[](void *) {
 		if (gbHoldAfterLoad)
 			SomaSetGamePaused(false);

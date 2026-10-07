@@ -591,6 +591,8 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		iResourceManager::mpLoadTickCallback = [] { if (gpSomaBase->GetSplash()) gpSomaBase->GetSplash()->DrawLoadingScreen(); };
 		bool bLoaded = gpSomaBase->LoadMap(sMap, cVector3f(0), sError, sStart.empty() ? "*" : sStart);
 		iResourceManager::mpLoadTickCallback = NULL;
+		if (gpSomaBase->GetSplash())
+			gpSomaBase->GetSplash()->SetLoadBar(0, 0);
 		if (bLoaded == false)
 			Error("SOMA script: %s\n", sError.c_str());
 		else if (pArea && pBody && cSomaLuxMap::GetCurrent())

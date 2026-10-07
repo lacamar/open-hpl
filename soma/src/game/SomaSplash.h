@@ -18,6 +18,8 @@ public:
 
 	bool ScriptsMayRun();
 	void DrawLoadingScreen(bool abBoot = false);
+	void StartLoad() { mlLoadStart = cPlatform::GetApplicationTime(); }
+	void SetLoadBar(const cVector2f &avPos, const cVector2f &avSize) { mvLoadBarPos = avPos, mvLoadBarSize = avSize; }
 
 private:
 	void Finish();
@@ -40,6 +42,7 @@ private:
 	float mfVirtualWidth;
 
 	cGuiGfxElement *mpBlackBg;
+	cGuiGfxElement *mpWhite;
 	cGuiGfxElement *mpPremenuBg;
 	cGuiGfxElement *mpLoadingBar;
 	cGuiGfxElement *mpLoadingFrame;
@@ -49,6 +52,9 @@ private:
 
 	// CreateChild() regions are only freed with their parent; one region, rect updated per frame
 	cGuiClipRegion *mpBarClipRegion;
+
+	cVector2f mvLoadBarPos = 0, mvLoadBarSize = 0;
+	unsigned long mlLoadStart = 0;
 
 	float mfElapsed;
 	unsigned long mlBootStart;

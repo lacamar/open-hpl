@@ -369,7 +369,7 @@ namespace hpl {
 #endif
 	}
 
-	void cHeadlessControlServer::Update()
+	void cHeadlessControlServer::Update(bool abLoading)
 	{
 		for(size_t i=0; i<mvFrameWaiters.size(); )
 		{
@@ -390,11 +390,15 @@ namespace hpl {
 			bool bHasOne = false;
 
 			mpQueueMutex->Lock();
-			if(!mlstPendingQueue.empty())
+			for(auto it = mlstPendingQueue.begin(); it != mlstPendingQueue.end(); ++it)
 			{
-				pending = mlstPendingQueue.front();
-				mlstPendingQueue.pop_front();
+				// Mid-load: nothing that touches the world
+				if(abLoading && it->mRequest.GetCmd() != "screenshot" && it->mRequest.GetCmd() != "ping")
+					continue;
+				pending = *it;
+				mlstPendingQueue.erase(it);
 				bHasOne = true;
+				break;
 			}
 			mpQueueMutex->Unlock();
 

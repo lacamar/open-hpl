@@ -1451,6 +1451,17 @@ void SomaDrawImGuis()
 		p->mpImGui->DrawAll();
 }
 
+void SomaRenderImGuis()
+{
+	SomaDrawImGuis();
+	for (cGuiSet *pSet : gvHudSets)
+		if (pSet->Is3D() == false)
+		{
+			pSet->Render(NULL);
+			pSet->ClearRenderObjects();
+		}
+}
+
 void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 {
 	SOMA_METHOD(e, "cLuxGuiHandler", "void CreateCameraTexture(const tString&in asName, const cVector2l&in avSize, uint alFrameRate, float afFOV, float afNearPlane, float afFarPlane)",
@@ -1629,7 +1640,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void StopFade(const tString&in asVarName)", +[](I *p, Str n) { p->mmapFades.erase(Id(n)); });
 	SOMA_METHOD(e, T, "bool FadeOver(const tString&in asVarName)", +[](I *p, Str n) {
 		auto it = p->mmapFades.find(Id(n));
-		return it == p->mmapFades.end() || it->second.mfCount >= it->second.mfTime;
+		return it != p->mmapFades.end() && it->second.mfCount >= it->second.mfTime;
 	});
 	SOMA_METHOD(e, T, "bool IsFading(const tString&in asVarName)", +[](I *p, Str n) {
 		auto it = p->mmapFades.find(Id(n));

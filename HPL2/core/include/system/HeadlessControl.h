@@ -86,7 +86,7 @@ namespace hpl {
 
 		void RegisterHandler(const tString &asCmd, tHeadlessCommandFunc apFunc, void *apUserData);
 
-		void Update();
+		void Update(bool abLoading = false);
 		void LogicStep();
 
 		void UpdateThread();

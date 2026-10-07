@@ -1,8 +1,10 @@
 #include "SomaSplash.h"
 #include "SomaImGui.h"
 #include "SomaBase.h"
+#include "system/HeadlessControl.h"
 
 cSomaImGui *SomaHudImGui();
+void SomaRenderImGuis();
 
 // Timings and layout measured from the official game (scripts/soma-compare.py boot): linear fade-in,
 // hold, long fade-out to black, then a cut; the brain icon fades in once and stays lit.
@@ -31,6 +33,7 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 	mpGuiSet = mpGui->CreateSet("Splash", mpGuiSkin);
 
 	mpBlackBg = mpGui->CreateGfxFilledRect(cColor(0, 1), eGuiMaterial_Alpha);
+	mpWhite = mpGui->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
 	mpPremenuBg = mpGui->CreateGfxTexture("Premenu.png", eGuiMaterial_Alpha, eTextureType_2D);
 	mpLoadingBar = mpGui->CreateGfxTexture("loading_bar.dds", eGuiMaterial_Alpha, eTextureType_2D);
 	mpLoadingFrame = mpGui->CreateGfxTexture("loading_frame.dds", eGuiMaterial_Alpha, eTextureType_2D);
@@ -163,10 +166,22 @@ void cSomaSplash::DrawLoadingScreen(bool abBoot)
 		OnDraw(0);
 	}
 	else
+	{
+		// Script loading screen (MenuHandler cLastOnSomaScreen): keep its last frame, bar where it asked
+		if (mvLoadBarSize.x > 0)
+		{
+			SomaRenderImGuis();
+			// ponytail: time-based progress, no resource count known up front
+			float fFrac = 1.0f - expf((lNow - mlLoadStart) / -4000.0f);
+			mpGuiSet->DrawGfx(mpWhite, VirtualToScreen(mvLoadBarPos, 1), VirtualSizeToScreen(cVector2f(mvLoadBarSize.x * fFrac, mvLoadBarSize.y)));
+		}
 		DrawBrainIcon(1, lNow / 1000.0f);
+	}
 	mpGuiSet->Render(NULL);
 	mpGuiSet->ClearRenderObjects();
 	pLowGfx->FlushRendering();
+	if (mpEngine->GetHeadlessControl())
+		mpEngine->GetHeadlessControl()->Update(true);
 	pLowGfx->SwapBuffers();
 }
 
