@@ -1309,7 +1309,8 @@ void cSomaSaveHandler::OnMapEnter(const tString &asMapFile, const tString &asSta
 
 bool cSomaSaveHandler::Save(const tWString &asFile)
 {
-	if (gsMapFile.empty() || cSomaLuxMap::GetCurrent() == NULL)
+	if (gsMapFile.empty() || cSomaLuxMap::GetCurrent() == NULL ||
+		cString::GetFileName(gsMapFile) == cString::GetFileName(gpSomaBase->GetInitConfigString("MainMenu", "File")))
 		return false;
 	cOut o;
 	o.Bytes(kMagic, 8);
