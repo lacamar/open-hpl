@@ -733,6 +733,10 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 	reg("bool ScriptPrepare(const tString&in asMethod)", ScriptPrepare);
 	reg("bool ScriptPrepareFast(const tString&in asMethod, int alId)", ScriptPrepare);
 	reg("bool ScriptExecute()", ScriptExecute);
+	reg("bool ScriptMethodExists(const tString&in asMethod)", +[](asIScriptGeneric *g) {
+		asIScriptObject *pObj = ScriptOf(g);
+		*(bool *)g->GetAddressOfReturnLocation() = pObj && pObj->GetObjectType()->GetMethodByDecl(((tString *)g->GetArgObject(0))->c_str());
+	});
 	reg("void SetArgBool(int alArgNum, bool abVal)", SetArgValue<bool>);
 	reg("void SetArgInt(int alArg, int alX)", SetArgValue<int>);
 	reg("void SetArgFloat(int alArg, float afX)", SetArgValue<float>);

@@ -79,6 +79,9 @@ def cmd_start(a):
     if a.pos:
         ex(f'Entity_PlaceAtEntity("Player", "{a.pos}");')
     if a.save:
+        saves = SCRATCH / ".xdg/data/open-hpl/soma/saves"
+        # the boot map's checkpoint would otherwise win on game-over retry
+        (saves / "CheckPoint.sav").write_bytes((saves / a.save).read_bytes())
         ex(f'cLux_GetSaveHandler().LoadGameFromFile("{a.save}");')
         send({"cmd": "wait_frames", "n": 120, "max_ms": 120000}, timeout=150)
     print(f"pid {out[0]} {m} in {time.time() - t:.0f}s")

@@ -1625,6 +1625,10 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	{
 		SOMA_METHOD(e, pType, "bool GetEntityIsInPlayerFOV()", +[](E *p) { return SomaEntityIsOnScreen(p, false); });
 		SOMA_METHOD(e, pType, "bool GetEntityIsInPlayerLineOfSight(bool abCheckFOV)", +[](E *p, bool b) { return SomaEntityInPlayerLOS(p, b); });
+		SOMA_METHOD(e, pType, "void GetEntityIsInPlayerLineOfSight(const tString&in asCallbackFunc, bool abCheckFOV)", +[](E *p, const tString &f, bool b) {
+			bool bLOS = SomaEntityInPlayerLOS(p, b);
+			p->Call("void " + f + "(bool)", [bLOS](asIScriptContext *c) { c->SetArgByte(0, bLOS); });
+		});
 	}
 	SOMA_FUNC(e, "bool Entity_IsInPlayerFOV(const tString &in asEntity)", +[](S n) {
 		cSomaLuxEntity *p = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(n) : NULL;

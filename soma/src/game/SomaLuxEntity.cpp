@@ -1933,6 +1933,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](E *p, const cMatrixf &m) { p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "void SetPosition(const cVector3f&in avPos)", +[](E *p, const cVector3f &v) { cMatrixf m = p->GetMatrix(); m.SetTranslation(v); p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "cMatrixf GetMatrix()", +[](E *p) { return p->GetMatrix(); });
+	SOMA_METHOD_NEW(e, T, "void SetMatrix(const cMatrixf&in a_mtxTransform)", +[](E *p, const cMatrixf &m) { p->SetMatrix(m); });
 	SOMA_METHOD_NEW(e, T, "cVector3f GetPosition()", +[](E *p) { return p->GetPosition(); });
 	SOMA_METHOD_NEW(e, T, "const cMatrixf& GetOnLoadTransform()", +[](E *p) -> const cMatrixf & { return p->m_mtxOnLoad; });
 	SOMA_METHOD_NEW(e, T, "const cVector3f& GetOnLoadScale()", +[](E *p) -> const cVector3f & { return p->mvScale; });
@@ -2531,6 +2532,17 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 
 	typedef const tString &S;
 	SOMA_FUNC(e, "bool Entity_Exists(const tString &in asName)", +[](S n) { return Find(n) != NULL; });
+	SOMA_FUNC(e, "iLuxEntity@ Entity_CreateAtEntity(const tString &in asNewEntityName, const tString &in asEntityFile, const tString &in asTargetEntityName, bool abFullGameSave)",
+			  +[](S n, S f, S target, bool) -> cSomaLuxEntity * {
+				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				  cSomaLuxEntity *pTarget = pMap ? pMap->GetEntity(target) : NULL;
+				  return pTarget ? pMap->CreateEntity(n, f, pTarget->GetMatrix(), 1) : NULL;
+			  });
+	SOMA_FUNC(e, "void Entity_Destroy(const tString &in asName)", +[](S n) {
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		if (cSomaLuxEntity *p = pMap ? pMap->GetEntity(n) : NULL)
+			pMap->DestroyEntity(p);
+	});
 	SOMA_FUNC(e, "bool Entity_AttachToEntity(const tString &in asName, const tString &in asParentName, const tString &in asParentBodyName, bool abUseRotation, bool abSnapToParent=false, bool abLocked=false)",
 			  +[](S n, S parent, S body, bool r, bool snap, bool l) {
 				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
