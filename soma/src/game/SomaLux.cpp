@@ -512,6 +512,8 @@ void SomaSetGamePaused(bool abX)
 	if (gpSomaBase->mbScriptGamePaused == abX)
 		return;
 	gpSomaBase->mbScriptGamePaused = abX;
+	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+		pMap->GetWorld()->SetActive(pMap->mbActive && abX == false);
 	cSound *pSound = gpSomaBase->mpEngine->GetSound();
 	const tFlag lWorld = 11;
 	if (abX)
