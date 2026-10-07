@@ -18,7 +18,7 @@ Open:
   1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
   still ~10% of load.
 - Liquid areas: surface, fog area, buoyancy, player depth done (02_07 underside within 3% of the ref).
-  Left: underwater light-shaft particles, `SplashEffect` on enter.
+  Left: underwater light-shaft particles.
 - 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the
   logo brighter, glow smaller (sharp step between camera x -13.05 and -13.1, feet y 250.25 z 438.27,
   yaw -90). Not the SpatialGui cache (needs <0.1 m extent at that range), projected size, fog or

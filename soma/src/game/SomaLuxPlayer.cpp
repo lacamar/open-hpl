@@ -685,6 +685,8 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "float GetLiquidHeight()", +[](P *p) {
 		return p->GetCharacterBody() ? SomaPlayerLiquidSurface() - p->GetCharacterBody()->GetFeetPosition().y : 0.0f;
 	});
+	SOMA_METHOD(e, T, "void AddUsedLiquidArea(cLuxLiquidArea@ apArea)", +[](P *p, cSomaLuxEntity *a) { if (a) a->mbPlayerInLiquid = true; });
+	SOMA_METHOD(e, T, "void RemoveUsedLiquidArea(cLuxLiquidArea@ apArea)", +[](P *p, cSomaLuxEntity *a) { if (a) a->mbPlayerInLiquid = false; });
 	SOMA_METHOD(e, T, "float GetAverageMoveSpeed()", +[](P *p) { return p->mfAverageMoveSpeed; });
 	SOMA_METHOD(e, T, "const cVector3f& GetAverageMoveDirection()", +[](P *p) -> const cVector3f & { return p->mvAverageMoveDirection; });
 	SOMA_METHOD(e, T, "void ChangeState(int alId)", +[](P *p, int id) { p->ChangeState(id); });

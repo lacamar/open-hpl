@@ -224,6 +224,7 @@ public:
 	void CreateLiquidGraphics(cWorld *apWorld);
 	void PlaceLiquidGraphics();
 	bool mbCameraInLiquid = false;
+	bool mbPlayerInLiquid = false;
 	float mfLiquidTime = 0;
 	float mfLiquidSurfaceY = 0;
 	cMeshEntity *mpLiquidMesh = NULL;

@@ -79,6 +79,7 @@ void cSomaLuxEntity::SetActive(bool abX)
 		return;
 	mbActive = abX;
 	mbCameraInLiquid = false;
+	mbPlayerInLiquid = false;
 	if (mpMesh)
 	{
 		mpMesh->SetActive(abX);
@@ -1514,25 +1515,54 @@ void cSomaLuxEntity::PlaceLiquidGraphics()
 
 static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b);
 
-// cLuxLiquidArea::CheckCollisionCallback (used areas) + cLuxPlayer::GetLiquidHeight
+// cLuxPlayer::GetLiquidHeight over the used liquid areas
 float SomaPlayerLiquidSurface()
 {
 	float fSurface = -100000.0f;
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-	iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
-	if (pMap == NULL || pBody == NULL)
+	if (pMap == NULL)
 		return fSurface;
-	cSomaOBB player = AABBToOBB(pBody->GetPosition() - pBody->GetSize() * 0.5f, pBody->GetPosition() + pBody->GetSize() * 0.5f);
 	for (cSomaLuxEntity *pEnt : pMap->GetEntities())
 	{
-		if (pEnt->meType != eSomaLuxEntityType_LiquidArea || pEnt->mbActive == false)
+		if (pEnt->meType != eSomaLuxEntityType_LiquidArea || pEnt->mbPlayerInLiquid == false)
 			continue;
 		std::vector<cSomaOBB> v;
 		EntityBoxes(pEnt, v);
-		if (OBBOverlap(v[0], player))
-			fSurface = std::max(fSurface, v[0].mvCenter.y + v[0].mvHalf.y);
+		fSurface = std::max(fSurface, v[0].mvCenter.y + v[0].mvHalf.y);
 	}
 	return fSurface;
+}
+
+// cLuxLiquidArea::SplashEffect
+static void LiquidSplash(cSomaLuxEntity *apArea, iPhysicsBody *apBody, const cVector3f &avVel, float afSurfaceY)
+{
+	cSomaLuxMap *pMap = apArea->mpMap ? apArea->mpMap : cSomaLuxMap::GetCurrent();
+	iPhysicsMaterial *pMat = pMap->GetWorld()->GetPhysicsWorld()->GetMaterialFromName(apArea->mInstanceVars.GetVarString("PhysicsMaterial", "Default"));
+	cSurfaceData *pSurface = pMat ? pMat->GetSurfaceData() : NULL;
+	float fSpeed = avVel.Length();
+	cSurfaceImpactData *pImpact = pSurface ? pSurface->GetImpactDataFromSpeed(fSpeed) : NULL;
+	if (pImpact == NULL)
+		return;
+	cVector3f vPos = cMath::MatrixMul(apBody->GetLocalMatrix(), apBody->GetMassCentre());
+	vPos.y = afSurfaceY + 0.01f;
+	if (pImpact->GetPSName() != "")
+		if (cParticleSystem *pPS = pMap->GetWorld()->CreateParticleSystem("Splash", pImpact->GetPSName(), 1))
+			pPS->SetPosition(vPos);
+	if (pImpact->GetSoundName() != "")
+		if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity("Splash", pImpact->GetSoundName(), true))
+			pSound->SetPosition(vPos);
+}
+
+static void LiquidPlayer(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float afSurfaceY, float afTimeStep)
+{
+	iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	if (pBody == NULL)
+		return;
+	cSomaOBB player = AABBToOBB(pBody->GetPosition() - pBody->GetSize() * 0.5f, pBody->GetPosition() + pBody->GetSize() * 0.5f);
+	bool bInside = OBBOverlap(aBox, player);
+	if (bInside && apArea->mbPlayerInLiquid == false)
+		LiquidSplash(apArea, pBody->GetCurrentBody(), pBody->GetVelocity(afTimeStep), afSurfaceY);
+	apArea->mbPlayerInLiquid = bInside;
 }
 
 // cLuxLiquidArea::CheckCollisionCallback + DoBuoyancyOnBody
@@ -1573,6 +1603,8 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 					pOwner = p;
 		if (bInside == false)
 		{
+			if (pBody->GetBuoyancyActive())
+				apArea->Call("void OnBodyExitLiquid(iPhysicsBody@)", [&](asIScriptContext *c) { c->SetArgAddress(0, pBody); });
 			pBody->SetBuoyancyActive(false);
 			if (pBody->GetNoGravityWhenUnderwater())
 			{
@@ -1599,8 +1631,10 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 			pBody->SetBuoyancyDensity(vars.GetVarFloat("Density", 0));
 			pBody->SetBuoyancyLinearViscosity(vars.GetVarFloat("LinearViscosity", 0));
 			pBody->SetBuoyancyAngularViscosity(vars.GetVarFloat("AngularViscosity", 0));
+			LiquidSplash(apArea, pBody, pBody->GetLinearVelocity(), afSurfaceY);
 			pBody->SetBuoyancyActive(true);
 			pBody->Enable();
+			apArea->Call("void OnBodyEnterLiquid(iPhysicsBody@)", [&](asIScriptContext *c) { c->SetArgAddress(0, pBody); });
 		}
 		if (bWaves && apCam && cMath::Vector3DistSqr(pBody->GetLocalPosition(), apCam->GetPosition()) < fMaxWaveDist * fMaxWaveDist)
 		{
@@ -1631,6 +1665,7 @@ void cSomaLuxEntity::UpdateLiquid(float afTimeStep)
 		float fSurfaceY = v[0].mvCenter.y + v[0].mvHalf.y;
 		mfLiquidTime += afTimeStep;
 		LiquidBuoyancy(this, v[0], fSurfaceY, fSurfaceY != mfLiquidSurfaceY, mfLiquidTime, pCam);
+		LiquidPlayer(this, v[0], fSurfaceY, afTimeStep);
 		mfLiquidSurfaceY = fSurfaceY;
 	}
 	// ponytail: camera point, not cLuxPlayer::GetCameraCollideShape vs the area shape
