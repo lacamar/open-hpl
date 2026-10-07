@@ -115,6 +115,7 @@ void SomaSetGamePaused(bool abX);
 bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc);
 float SomaStartYaw(const cMatrixf &a_mtxArea);
 bool SomaStartPosCrouching(const tString &asName);
+float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd);
 void SomaUpdateLightConnections();
 unsigned int SomaCollideFlag(const tString &asGroups);
 void SomaRequestNewGame(const tString &asMap, const tString &asStart);

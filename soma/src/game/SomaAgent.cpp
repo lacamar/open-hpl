@@ -1,4 +1,5 @@
 #include "SomaAgent.h"
+#include "SomaBase.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
@@ -52,6 +53,7 @@ namespace
 		eComp_BarkMachine,
 		eComp_BackboneTail,
 		eComp_LightSensor,
+		eComp_EdgeGlow,
 	};
 
 	uint64_t Hash64(const tString &s) { return SomaHash64(s); }
@@ -956,6 +958,13 @@ namespace
 		cGenericComponent(E *p, int alType) : cAgentComponent(p, alType) {}
 	};
 
+	struct cAgentEdgeGlow : cAgentComponent
+	{
+		cColor mColor = cColor(0, 0, 1, 1);
+		float mfThickness = 0, mfAlpha = 1, mfLightLimit = 1;
+		cAgentEdgeGlow(E *p) : cAgentComponent(p, eComp_EdgeGlow) {}
+	};
+
 	struct cAgent
 	{
 		cSomaLuxEntity *mpEnt;
@@ -1172,6 +1181,104 @@ namespace
 		auto it = gmapAgents.find(apEnt);
 		return it == gmapAgents.end() ? NULL : it->second.get();
 	}
+
+	// cLuxOutlineEffect::RenderEdgeGlow: additive, after translucents
+	struct cEdgeGlowRenderer : iRendererCallback
+	{
+		cViewport *mpViewport = NULL;
+		iGpuProgram *mpProgram = NULL;
+
+		void Register()
+		{
+			cViewport *pViewport = gpSomaBase->GetCurrentViewport();
+			if (pViewport == NULL || pViewport == mpViewport)
+				return;
+			pViewport->AddRendererCallback(this);
+			mpViewport = pViewport;
+		}
+
+		void OnPostSolidDraw(cRendererCallbackFunctions *) override {}
+		void OnPostTranslucentDraw(cRendererCallbackFunctions *f) override
+		{
+			cFrustum *pFrustum = f->GetFrustum();
+			if (mpViewport == NULL || mpViewport->GetCamera() == NULL || pFrustum != mpViewport->GetCamera()->GetFrustum())
+				return;
+			if (static bool bTried = false; bTried == false)
+			{
+				bTried = true;
+				cParserVarContainer vars;
+				vars.Add("UseUv");
+				vars.Add("UseNormals");
+				vars.Add("UseVertexPosition");
+				mpProgram = gpSomaBase->mpEngine->GetGraphics()->CreateGpuProgramFromShaders("SomaEdgeGlow", "deferred_base_vtx.glsl", "game_edge_glow.glsl", &vars);
+				if (mpProgram)
+				{
+					mpProgram->GetVariableAsId("aColor", 0);
+					mpProgram->GetVariableAsId("afAlpha", 1);
+					mpProgram->GetVariableAsId("afLightLevel", 2);
+					mpProgram->GetVariableAsId("afLightLimit", 3);
+					mpProgram->GetVariableAsId("afEdgeThickness", 4);
+				}
+			}
+			if (mpProgram == NULL)
+				return;
+			iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
+			bool bStarted = false;
+			for (auto &it : gmapAgents)
+			{
+				E *p = it.first;
+				cAgentEdgeGlow *g = it.second->Find<cAgentEdgeGlow>(eComp_EdgeGlow);
+				if (g == NULL || g->mbActive == false || g->mfAlpha <= 0.001f || g->mfLightLimit <= 0.001f || p->mpMesh == NULL || p->mbActive == false ||
+					p->mpMesh->IsVisible() == false || pFrustum->CollideBoundingVolume(p->mpMesh->GetBoundingVolume()) == eCollision_Outside)
+					continue;
+				// ponytail: one light sample per entity, the original samples each submesh BV
+				float fLevel = SomaLightLevelAtPos(p->mpMesh->GetBoundingVolume()->GetWorldCenter(), NULL, 0);
+				if (fLevel >= g->mfLightLimit)
+					continue;
+				if (bStarted == false)
+				{
+					bStarted = true;
+					f->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+					f->SetDepthTest(true);
+					f->SetDepthWrite(false);
+					f->SetBlendMode(eMaterialBlendMode_Add);
+					f->SetAlphaMode(eMaterialAlphaMode_Solid);
+					f->SetChannelMode(eMaterialChannelMode_RGBA);
+					f->SetNormalFrustumProjection();
+					pLowLevel->SetPolygonOffsetActive(true);
+					pLowLevel->SetPolygonOffset(-5, -2);
+					f->SetTextureRange(NULL, 0);
+					f->SetCullActive(true);
+					f->SetCullMode(eCullMode_CounterClockwise);
+					f->SetProgram(mpProgram);
+				}
+				mpProgram->SetVec4f(0, g->mColor.r, g->mColor.g, g->mColor.b, g->mColor.a);
+				mpProgram->SetFloat(1, g->mfAlpha);
+				mpProgram->SetFloat(2, fLevel);
+				mpProgram->SetFloat(3, g->mfLightLimit);
+				mpProgram->SetFloat(4, g->mfThickness);
+				for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
+				{
+					cSubMeshEntity *s = p->mpMesh->GetSubMeshEntity(i);
+					cMaterial *pMat = s->GetMaterial();
+					iTexture *pDiffuse = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
+					if (pDiffuse == NULL || s->IsVisible() == false || pFrustum->CollideBoundingVolume(s->GetBoundingVolume()) == eCollision_Outside)
+						continue;
+					f->SetTexture(0, pDiffuse);
+					f->SetMatrix(s->GetModelMatrixPtr());
+					f->SetVertexBuffer(s->GetVertexBuffer());
+					f->DrawCurrent();
+				}
+			}
+			if (bStarted == false)
+				return;
+			pLowLevel->SetPolygonOffsetActive(false);
+			f->SetProgram(NULL);
+			f->SetTexture(0, NULL);
+			f->SetDepthWrite(true);
+			f->SetBlendMode(eMaterialBlendMode_None);
+		}
+	} gEdgeGlowRenderer;
 
 	cAgentCharMover *cAgentPathfinder::Mover()
 	{
@@ -1677,7 +1784,10 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxSoundListener@ cLux_CreateEntityComponent_SoundListener(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentSoundListener(p)); });
 	SOMA_FUNC(e, "cLuxHeadTracker@ cLux_CreateEntityComponent_HeadTracker(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentHeadTracker(p)); });
 
-	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, 10)); });
+	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) {
+		gEdgeGlowRenderer.Register();
+		return AddComponent(p, new cAgentEdgeGlow(p));
+	});
 	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentForceEmitter(p)); });
 	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_LightSensor)); });
 	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentBackboneTail(p)); });
@@ -1692,6 +1802,18 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		cAgent *a = pEnt ? Agent(pEnt) : NULL;
 		return a ? a->Find<cAgentComponent>(t) : NULL;
 	});
+
+	typedef cAgentEdgeGlow EG;
+	SOMA_METHOD(e, "cLuxEdgeGlow", "void SetColor(const cColor&in aColor)", +[](EG *g, const cColor &c) { g->mColor = c; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "cColor GetColor()", +[](EG *g) { return g->mColor; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "void SetAlpha(float afX)", +[](EG *g, float x) { g->mfAlpha = x; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "float GetAlpha()", +[](EG *g) { return g->mfAlpha; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "void SetEdgeThickness(float afX)", +[](EG *g, float x) { g->mfThickness = x; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "float GetEdgeThickness()", +[](EG *g) { return g->mfThickness; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "void SetLightLimit(float afX)", +[](EG *g, float x) { g->mfLightLimit = x; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "float GetLightLimit()", +[](EG *g) { return g->mfLightLimit; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "void SetActive(bool abX)", +[](EG *g, bool b) { g->mbActive = b; });
+	SOMA_METHOD(e, "cLuxEdgeGlow", "bool IsActive()", +[](EG *g) { return g->mbActive; });
 
 	const char *T = "cLuxForceEmitter";
 	typedef cAgentForceEmitter FE;

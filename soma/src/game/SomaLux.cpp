@@ -918,7 +918,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
 }
 
-static float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
+float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
 {
 	if (cSomaLuxMap::GetCurrent() == NULL) return 0;
 	float fLevel = 0;
