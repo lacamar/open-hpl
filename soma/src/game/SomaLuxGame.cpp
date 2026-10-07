@@ -508,6 +508,13 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	r = e->RegisterGlobalFunction("iScrUserModule_Interface@ cLux_GetUserModuleFromName(const tString&in asName)", asFUNCTION(GetUserModuleFromName), asCALL_GENERIC); assert(r >= 0);
 	r = e->RegisterObjectMethod("cLuxEffectHandler", "iScrEffect_Interface@ GetEffect(int alId)", asFUNCTION(EffectHandlerGetEffect), asCALL_GENERIC); assert(r >= 0);
 	(void)r;
+	SOMA_FUNC(e, "void cLux_GetTextCatAndEntryFromString(const tString&in asData, tString &out asOutCat, tString &out asOutEntry)",
+			  +[](const tString &d, tString &c, tString &n) {
+				  tStringVec v;
+				  cString::GetStringVec(d, v);
+				  c = v.size() > 0 ? v[0] : "";
+				  n = v.size() > 1 ? v[1] : "";
+			  });
 	SOMA_FUNC(e, "cLuxEffectHandler@ cLux_GetEffectHandler()", +[]() { return (void *)&gEffectHandlerTag; });
 	SOMA_FUNC(e, "cLuxInputHandler@ cLux_GetInputHandler()", +[]() { return (void *)HandlerByName<0>(); });
 	SOMA_FUNC(e, "cLuxEventDatabaseHandler@ cLux_GetEventDatabaseHandler()", +[]() { return (void *)HandlerByName<1>(); });

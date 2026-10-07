@@ -1505,10 +1505,10 @@
     "Compound:0/93"
    ],
    "asleep": false,
-   "boot_s": 8.1,
+   "boot_s": 8.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 53.25444,
+    "fps": 55.888287,
     "pitch": 0,
     "pos_x": 1.3023,
     "pos_y": 1.7445,
@@ -1517,33 +1517,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 53.25444,
+   "fps": 55.888287,
    "frame": {
-    "black_frac": 0.000532,
+    "black_frac": 0.000652,
     "height": 2160,
     "lum_hist16": [
-     0.996717,
-     0.002389,
-     0.000759,
-     0.000134,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0,
-     0
+     0.994018,
+     0.002608,
+     0.000923,
+     0.000269,
+     0.000115,
+     0.000103,
+     6e-05,
+     9.7e-05,
+     6.6e-05,
+     7.4e-05,
+     0.000101,
+     0.000117,
+     7.6e-05,
+     8.5e-05,
+     0.00011,
+     0.001177
     ],
-    "lum_max": 69,
-    "lum_mean": 9.160806,
-    "lum_min": 2,
+    "lum_max": 255,
+    "lum_mean": 9.619576,
+    "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0,
+    "white_frac": 0.001062,
     "width": 3840
    },
    "gbuffer": {
@@ -1554,21 +1554,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294374,
      "b_max": 1,
-     "b_mean": 0.258246,
+     "b_mean": 0.258211,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 159459,
+     "b_zero_count": 159348,
      "g_max": 1.275391,
-     "g_mean": 0.289252,
+     "g_mean": 0.289184,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 139195,
+     "g_zero_count": 139138,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.309086,
+     "r_mean": 0.309223,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 143291,
+     "r_zero_count": 143173,
      "sample_a": 0,
      "sample_b": 0,
      "sample_g": 0,
@@ -1582,12 +1582,12 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.361921,
+     "b_mean": 0.361922,
      "b_min": -0.999023,
      "b_nan_count": 0,
      "b_zero_count": 211,
      "g_max": 1,
-     "g_mean": 0.135556,
+     "g_mean": 0.135552,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 8421,
@@ -1596,7 +1596,7 @@
      "r_mean": 0.085862,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 689,
+     "r_zero_count": 690,
      "sample_a": 0.009483,
      "sample_b": 0.999512,
      "sample_g": -0.020187,
@@ -1605,26 +1605,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.481518,
+     "a_mean": 0.481506,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 35448,
+     "a_zero_count": 35577,
      "b_max": 1,
-     "b_mean": 0.36229,
+     "b_mean": 0.362279,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 103583,
+     "b_zero_count": 103718,
      "g_max": 1,
-     "g_mean": 0.366262,
+     "g_mean": 0.366251,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 97727,
+     "g_zero_count": 97861,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.370732,
+     "r_mean": 0.370718,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 102561,
+     "r_zero_count": 102696,
      "sample_a": 0.674316,
      "sample_b": 0.168091,
      "sample_g": 0.170288,
@@ -1635,7 +1635,7 @@
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 6086,
+    "total_ms": 5453,
     "tracks": {
      "Area": {
       "created": 370,
@@ -1647,14 +1647,14 @@
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 39,
+      "ms": 28,
       "skipped": {},
       "xml": 193
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 93
       },
@@ -1663,7 +1663,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 655,
+      "ms": 191,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1672,14 +1672,14 @@
      "DetailMeshes": {
       "created": 504,
       "file_missing": false,
-      "ms": 10,
+      "ms": 9,
       "skipped": {},
       "xml": 504
      },
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 1416,
+      "ms": 1555,
       "skipped": {},
       "xml": 1527
      },
@@ -1693,14 +1693,14 @@
      "FogArea": {
       "created": 8,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 8
      },
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
@@ -1721,21 +1721,21 @@
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 85,
+      "ms": 80,
       "skipped": {},
       "xml": 174
      },
      "Primitive": {
       "created": 513,
       "file_missing": false,
-      "ms": 84,
+      "ms": 79,
       "skipped": {},
       "xml": 513
      },
      "Sound": {
       "created": 128,
       "file_missing": false,
-      "ms": 631,
+      "ms": 591,
       "skipped": {},
       "xml": 128
      },
@@ -1749,7 +1749,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 1449,
+      "ms": 1500,
       "skipped": {},
       "xml": 3483
      },
@@ -1762,7 +1762,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2737224.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2857843.log",
    "log_errors": {
     "ERROR: Could not find any look entities '*' for Tool Area '*'": {
      "count": 2,
@@ -1819,30 +1819,30 @@
     "yaw": -0.157966
    },
    "render": {
-    "draw_calls": 1340,
+    "draw_calls": 1349,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 53,
-    "lights_rendered": 53,
+    "lights_in_list": 57,
+    "lights_rendered": 57,
     "occlusion_queries": 86,
     "per_frame": {
-     "frames": 967,
-     "logic_ms": 7.39747428894043,
-     "logic_steps": 1.0827300548553467,
-     "render_ms": 10.153336524963379,
-     "swap_ms": 0.1525239646434784
+     "frames": 962,
+     "logic_ms": 7.105007171630859,
+     "logic_steps": 1.0374220609664917,
+     "render_ms": 7.951714992523193,
+     "swap_ms": 0.08538598567247391
     },
     "shader_failures": 0,
-    "solid_objects": 530,
-    "trans_objects": 57
+    "solid_objects": 528,
+    "trans_objects": 62
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 16,
-    "stubs": "36 void cLux_PreloadEntity(const tString&in)\n35 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n17 void cLuxProp::SetGuiCacheAtScreenSize(float)\n10 void Material_Preload(const tString&in)\n7 void cLuxArea::SetVariableUpdateRate(float)\n5 cLuxScreenTextFormatParameters@ cLuxScreenTextFormatParameters()\n4 void cLuxProp::SetVariableUpdateRate(float)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void cLuxAgent::SetAlignEntityWithGroundRelativeRayStart(float)\n2 void cLuxAgent::SetAlignEntityWithGroundMaxRayDistance(float)\n1 void iCharacterBody::SetGroundAngleMin(float)\n1 void cLuxUserModule::SetScriptableIsSaved(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void cForceField::SetScriptableIsSaved(bool)\n"
+    "count": 15,
+    "stubs": "36 void cLux_PreloadEntity(const tString&in)\n35 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n17 void cLuxProp::SetGuiCacheAtScreenSize(float)\n10 void Material_Preload(const tString&in)\n7 void cLuxArea::SetVariableUpdateRate(float)\n5 cLuxScreenTextFormatParameters@ cLuxScreenTextFormatParameters()\n4 void cLuxProp::SetVariableUpdateRate(float)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void cLuxAgent::SetAlignEntityWithGroundRelativeRayStart(float)\n2 void cLuxAgent::SetAlignEntityWithGroundMaxRayDistance(float)\n1 void cLuxUserModule::SetScriptableIsSaved(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void cForceField::SetScriptableIsSaved(bool)\n"
    },
-   "wall_s": 27.9,
+   "wall_s": 27.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1870,7 +1870,7 @@
     "name": "01_01_upsilon_awake.hpm",
     "no_material_top": {},
     "oversized_top": [],
-    "particle_systems": 222,
+    "particle_systems": 221,
     "physics_bodies": 2397,
     "physics_bodies_awake": 20,
     "physics_bodies_dynamic": 424,
@@ -3034,10 +3034,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 12.7,
+   "boot_s": 10.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.94109,
+    "fps": 58.940979,
     "pitch": 0,
     "pos_x": -14.350599,
     "pos_y": 34.943035,
@@ -3046,16 +3046,16 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.94109,
+   "fps": 58.940979,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.261449,
-     0.717546,
-     0.019694,
-     0.001188,
-     0.000114,
+     0.260839,
+     0.718161,
+     0.019713,
+     0.001162,
+     0.000118,
      8e-06,
      0,
      0,
@@ -3068,8 +3068,8 @@
      0,
      0
     ],
-    "lum_max": 94,
-    "lum_mean": 18.126431,
+    "lum_max": 93,
+    "lum_mean": 18.145805,
     "lum_min": 6,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3078,82 +3078,82 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.038431,
+     "a_mean": 0.038432,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7975024,
+     "a_zero_count": 7975039,
      "b_max": 1.606445,
-     "b_mean": 0.177064,
-     "b_min": -0.051727,
+     "b_mean": 0.177238,
+     "b_min": -0.061249,
      "b_nan_count": 0,
-     "b_zero_count": 14507,
+     "b_zero_count": 14466,
      "g_max": 1.951172,
-     "g_mean": 0.233476,
-     "g_min": -0.063354,
+     "g_mean": 0.233568,
+     "g_min": -0.069885,
      "g_nan_count": 0,
-     "g_zero_count": 530,
+     "g_zero_count": 535,
      "height": 2160,
      "r_max": 2.394531,
-     "r_mean": 0.276049,
-     "r_min": -0.057922,
+     "r_mean": 0.276028,
+     "r_min": -0.076782,
      "r_nan_count": 0,
      "r_zero_count": 132,
      "sample_a": 0,
-     "sample_b": 0.201904,
-     "sample_g": 0.27832,
-     "sample_r": 0.30957,
+     "sample_b": 0.127808,
+     "sample_g": 0.186646,
+     "sample_r": 0.239502,
      "width": 3840
     },
     "1": {
      "a_max": 0.014099,
-     "a_mean": 0.004778,
-     "a_min": 0.000986,
+     "a_mean": 0.004774,
+     "a_min": 0.001088,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.457166,
+     "b_mean": 0.453308,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.368281,
+     "g_mean": 0.366595,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 39,
+     "g_zero_count": 45,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.077734,
+     "r_mean": 0.082344,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 0,
-     "sample_a": 0.005203,
-     "sample_b": -0.10144,
-     "sample_g": 0.937012,
-     "sample_r": 0.333984,
+     "sample_a": 0.005554,
+     "sample_b": -0.140503,
+     "sample_g": 0.928223,
+     "sample_r": 0.343262,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.42898,
+     "a_mean": 0.427276,
      "a_min": 0.089417,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.046429,
+     "b_mean": 0.046098,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6283071,
+     "b_zero_count": 6298262,
      "g_max": 1,
-     "g_mean": 0.047665,
+     "g_mean": 0.047334,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6208651,
+     "g_zero_count": 6224328,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.04976,
+     "r_mean": 0.049431,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6250109,
+     "r_zero_count": 6265148,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -3164,19 +3164,19 @@
    "load_report": {
     "map": "02_01_ms_curie_outside.hpm",
     "terrain_active": true,
-    "total_ms": 10204,
+    "total_ms": 8243,
     "tracks": {
      "Area": {
       "created": 663,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 663
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 19,
+      "ms": 20,
       "skipped": {
        "connect_light_missing": 20
       },
@@ -3194,7 +3194,7 @@
      "Decal": {
       "created": 455,
       "file_missing": false,
-      "ms": 265,
+      "ms": 242,
       "skipped": {
        "decal_mesh_failed": 8
       },
@@ -3203,21 +3203,21 @@
      "DetailMeshes": {
       "created": 3788,
       "file_missing": false,
-      "ms": 93,
+      "ms": 151,
       "skipped": {},
       "xml": 3788
      },
      "Entity": {
       "created": 1579,
       "file_missing": false,
-      "ms": 2449,
+      "ms": 1967,
       "skipped": {},
       "xml": 1579
      },
      "FogArea": {
       "created": 5,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 5
      },
@@ -3231,7 +3231,7 @@
      "Light": {
       "created": 413,
       "file_missing": false,
-      "ms": 11,
+      "ms": 12,
       "skipped": {},
       "xml": 413
      },
@@ -3245,21 +3245,21 @@
      "ParticleSystem": {
       "created": 116,
       "file_missing": false,
-      "ms": 67,
+      "ms": 64,
       "skipped": {},
       "xml": 116
      },
      "Primitive": {
       "created": 257,
       "file_missing": false,
-      "ms": 88,
+      "ms": 99,
       "skipped": {},
       "xml": 257
      },
      "Sound": {
       "created": 105,
       "file_missing": false,
-      "ms": 530,
+      "ms": 492,
       "skipped": {
        "load_failed": 4
       },
@@ -3275,7 +3275,7 @@
      "StaticObject": {
       "created": 4961,
       "file_missing": false,
-      "ms": 2948,
+      "ms": 1778,
       "skipped": {},
       "xml": 4961
      },
@@ -3288,12 +3288,8 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2747394.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2860250.log",
    "log_errors": {
-    "ERROR: Cannot find submesh '*' in node!": {
-     "count": 75,
-     "example": "ERROR: Cannot find submesh 'Directional_Light' in node!"
-    },
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 1,
      "example": "ERROR: Could not find bone 'Texture Group' in model '/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/character/robot/catherine_worker_lambda/catherine_worker_lambda.ent'"
@@ -3319,7 +3315,7 @@
      "example": "ERROR: Couldn't find file 'posteffect_color_conv_tex_frag.glsl' in resources"
     }
    },
-   "log_warnings": 181,
+   "log_warnings": 29,
    "player": {
     "active": true,
     "feet_x": -14.3506,
@@ -3333,18 +3329,18 @@
     "yaw": -4.6837
    },
    "render": {
-    "draw_calls": 918,
+    "draw_calls": 917,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 27,
     "lights_rendered": 27,
-    "occlusion_queries": 94,
+    "occlusion_queries": 93,
     "per_frame": {
      "frames": 961,
-     "logic_ms": 12.671210289001465,
-     "logic_steps": 1.214359998703003,
-     "render_ms": 7.410081386566162,
-     "swap_ms": 0.13484953343868256
+     "logic_ms": 9.53818130493164,
+     "logic_steps": 1.0509885549545288,
+     "render_ms": 6.46108341217041,
+     "swap_ms": 0.1139206513762474
     },
     "shader_failures": 0,
     "solid_objects": 367,
@@ -3353,10 +3349,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 24,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLux_PreloadEntity(const tString&in)\n19 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n15 void cLuxArea::SetVariableUpdateRate(float)\n8 void cLux_GetTextCatAndEntryFromString(const tString&in, tString&out, tString&out)\n8 void cLuxProp::SetGuiCacheAtScreenSize(float)\n8 void Material_Preload(const tString&in)\n5 cLuxScreenTextFormatParameters@ cLuxScreenTextFormatParameters()\n4 void cLuxProp::SetVariableUpdateRate(float)\n3 void Prop_SetAllowMapTransfer(const tString&in, bool)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadMaterial(const tString&in)\n2 void cLuxProp::SetAllowMapTransfer(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void iCharacterBody::SetGroundAngleMin(float)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxUserModule::SetScriptableIsSaved(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void cForceField::SetScriptableIsSaved(bool)\n1 void FogArea_SetVisibleInReflection(const tString&in, bool)\n1 void Entity_SetAutoSleep(const tString&in, bool)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 22,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLux_PreloadEntity(const tString&in)\n19 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n15 void cLuxArea::SetVariableUpdateRate(float)\n8 void cLuxProp::SetGuiCacheAtScreenSize(float)\n8 void Material_Preload(const tString&in)\n5 cLuxScreenTextFormatParameters@ cLuxScreenTextFormatParameters()\n4 void cLuxProp::SetVariableUpdateRate(float)\n3 void Prop_SetAllowMapTransfer(const tString&in, bool)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadMaterial(const tString&in)\n2 void cLuxProp::SetAllowMapTransfer(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxUserModule::SetScriptableIsSaved(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void cForceField::SetScriptableIsSaved(bool)\n1 void FogArea_SetVisibleInReflection(const tString&in, bool)\n1 void Entity_SetAutoSleep(const tString&in, bool)\n1 cTerrain@ cWorld::GetTerrain()\n"
    },
-   "wall_s": 36.1,
+   "wall_s": 29.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3384,7 +3380,7 @@
     "name": "02_01_ms_curie_outside.hpm",
     "no_material_top": {},
     "oversized_top": [
-     "mscurie_mscurie_1:/home/lm/.local/share/Steam/steamapps/common/SOMA/static_objects/oceanbottom/mscurie/mscurie.dae",
+     "mscurie_mscurie_1:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_oceanbottom_mscurie_mscurie.dae.v10.msh",
      "rocks_ridge_reef01_27:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v10.msh",
      "rocks_ridge_reef01_35:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_ridge_reef01.dae.v10.msh",
      "rocks_rock_rounded_small01_203:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_environment_rocks_rock_rounded_small01.dae.v10.msh",
