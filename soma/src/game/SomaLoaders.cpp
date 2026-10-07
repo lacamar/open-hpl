@@ -133,8 +133,15 @@ void cSomaGenericEntityLoader::LoadPose()
 	for (int i = 0; i < pSkeleton->GetBoneNum(); ++i)
 	{
 		const float *v = &vVals[i * 7];
+		cBone *pBone = pSkeleton->GetBoneByIndex(i);
+		// Unit-scaled root (cm meshes with unit=1): the pose omits its scale/axis frame
+		if (fabsf(pBone->GetLocalTransform().GetRight().Length() - 1.0f) > 0.01f)
+		{
+			vLocal[i] = pBone->GetLocalTransform();
+			continue;
+		}
 		vLocal[i] = cMath::MatrixQuaternion(cQuaternion(v[0], v[1], v[2], v[3]));
-		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pSkeleton->GetBoneByIndex(i)->GetLocalUnitScale());
+		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pBone->GetLocalUnitScale());
 	}
 	mpEntity->SetBoneRestPose(vLocal);
 	mpEntity->AlignBodiesToSkeleton(false);
