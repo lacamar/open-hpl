@@ -347,13 +347,15 @@ void cSomaLuxGame::Draw(float afFrameTime)
 void cSomaLuxGame::UpdateGui(float afTimeStep)
 {
 	cSomaImGui::UpdateFocusHistory();
-	// cLuxGuiHandler::SetImGuiInputFocus: absolute pointer only while an ImGui has input
+	// cLuxGuiHandler::SetImGuiInputFocus: absolute pointer only while a 2D ImGui has input; in-world screens move their own cursor
 	static int lRelative = -1;
-	int lWantRelative = cSomaImGui::GetInputFocus() == NULL;
+	cSomaImGui *pInputFocus = cSomaImGui::GetInputFocus();
+	int lWantRelative = pInputFocus == NULL || pInputFocus->GetSet()->Is3D();
 	if (lWantRelative != lRelative)
 	{
 		lRelative = lWantRelative;
 		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(lRelative);
+		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->LockInput(true);
 	}
 	if (cSomaImGui *pFocus = cSomaImGui::GetInputFocus())
 	{
