@@ -402,7 +402,12 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 	}
 
 	if (mpCharBody->GetCamera() == mpCamera)
+	{
 		mpCamera->SetYaw(mpCharBody->GetYaw());
+		// Body yaw past the camera limit made the limit edge sticky
+		if (mpCamera->GetYaw() != mpCharBody->GetYaw())
+			mpCharBody->SetYaw(mpCamera->GetYaw());
+	}
 }
 
 cSomaLuxInputHandler::cSomaLuxInputHandler()
