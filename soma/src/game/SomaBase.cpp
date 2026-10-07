@@ -1530,7 +1530,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	cVector3f vAreaPos = avStartPos;
 	float fAreaYaw = 0;
 	bool bFoundArea = false;
-	tString sStartName;
+	bool bCrouching = false;
 	if (asStartPosName != "")
 	{
 		// "*" = the map's first PlayerStart area
@@ -1546,7 +1546,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			vAreaPos = pStartPos->GetWorldMatrix().GetTranslation();
 			fAreaYaw = SomaStartYaw(pStartPos->GetWorldMatrix());
 			bFoundArea = true;
-			sStartName = pStartPos->GetName();
+			bCrouching = pStartPos->mbCrouching;
 		}
 	}
 
@@ -1567,7 +1567,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 				mpLuxGame->PreloadData(mpLuxMap);
 				mpLuxGame->EnterMap(mpLuxMap);
 				if (pPlayer && mbUseRealPlayer)
-					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, SomaStartPosCrouching(sStartName));
+					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, bCrouching);
 			}
 			cSomaSaveHandler::OnMapEnter(asMapFile, asStartPosName);
 			bool bLoaded = cSomaSaveHandler::ApplyPendingState();

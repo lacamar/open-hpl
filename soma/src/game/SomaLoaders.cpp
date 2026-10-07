@@ -309,7 +309,9 @@ void cSomaAreaLoader_PlayerStart::Load(const tString &asName, int alID, bool abA
 {
 	cStartPosEntity *pStartPos = apWorld->CreateStartPos(asName);
 	pStartPos->SetMatrix(a_mtxTransform);
-	CreateAreaEntity(asName, GetName(), abActive, avSize, a_mtxTransform);
+	cResourceVarsObject vars;
+	LoadInstanceVars(vars);
+	pStartPos->mbCrouching = vars.GetVarBool("Crouching", false);
 }
 
 cSomaAreaLoader_Noop::cSomaAreaLoader_Noop(const tString &asName) : iAreaLoader(asName)

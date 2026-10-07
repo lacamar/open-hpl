@@ -143,6 +143,7 @@ namespace hpl {
 
 		cMatrixf m_mtxTransform;
 		tString msName;
+		bool mbCrouching = false;
 	};
 	
 	typedef std::list<cStartPosEntity*> tStartPosEntityList;

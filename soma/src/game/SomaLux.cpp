@@ -955,12 +955,6 @@ float SomaStartYaw(const cMatrixf &a_mtxArea)
 	return -cMath::GetAngleFromPoints2D(0, cVector2f(a_mtxArea.m[0][2], a_mtxArea.m[2][2]));
 }
 
-bool SomaStartPosCrouching(const tString &asName)
-{
-	cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(asName) : NULL;
-	return pEnt && pEnt->mInstanceVars.GetVarBool("Crouching", false);
-}
-
 tString &SomaPreloadMap() { return gsPreloadMap; }
 
 void SomaRequestMapChange(const tString &asMap, const tString &asStart)
@@ -1561,7 +1555,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		if (pStart && cSomaLuxPlayer::Get())
 			cSomaLuxPlayer::Get()->PlaceAtStart(pStart->GetWorldMatrix().GetTranslation(),
 												 SomaStartYaw(pStart->GetWorldMatrix()),
-												 SomaStartPosCrouching(pStart->GetName()));
+												 pStart->mbCrouching);
 	});
 	SOMA_METHOD(e, M, "float GetTimerTime(const tString&in asName)",
 				+[](cSomaLuxMap &m, const tString &n) { cSomaLuxTimer *t = m.GetTimer(n); return t ? t->mfTime : 0.0f; });
