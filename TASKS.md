@@ -150,15 +150,13 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
   Not reproduced 2026-10-05 running `IntroSequence` (CamAnim_WakeUp) on 00_01; WakeUp2 untested.
 - Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
-- `stub_report`: eye tracker, preload hints, `cLuxEdgeGlow`, `iPhysicsJoint::SetAllowPositionReset`.
-- Menu LOAD GAME list (`cLuxSaveHandler::GetSaveFiles`).
+- `stub_report`: eye tracker, preload hints, `iPhysicsJoint::SetAllowPositionReset`.
 - Physics impact sound burst right after map load.
 - Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
   static `.dae` (tinyxml dtor); rerun passed.
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
-- `GetEntityArray` includes PlayerStart areas (ref does not).
 - `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
   loading-screen hold ~3% brighter, brain icon on a different animation frame.

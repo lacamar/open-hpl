@@ -747,7 +747,10 @@ namespace hpl {
 		else if(aRenderMode == eMaterialRenderMode_Illumination)
 		{
 			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
-			apProgram->SetColor4f(kVar_avIlluminationMul, apObject->GetIlluminationColor() * (apObject->GetIlluminationAmount() * pVars->mfIlluminationBrightness));
+			cColor illum = apObject->GetIlluminationColor() * (apObject->GetIlluminationAmount() * pVars->mfIlluminationBrightness);
+			// HPL3 illum pass multiplies by ColorMul.rgb * ColorMul.a
+			if(cGpuShaderManager::IsHpsl()) illum = illum * apObject->GetColorMul() * apObject->GetColorMul().a;
+			apProgram->SetColor4f(kVar_avIlluminationMul, illum);
 		}
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{

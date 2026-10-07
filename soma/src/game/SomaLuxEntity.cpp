@@ -1733,8 +1733,8 @@ bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
 		bv.SetLocalMinMax(box.mvCenter - vHalf - cVector3f(0.001f), box.mvCenter + vHalf + cVector3f(0.001f));
 		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
 			continue;
-		if (abRayCast == false || SomaLineOfSight(pCam->GetPosition(), box.mvCenter, apEnt))
-			return true;
+		// from just in front of the entity origin back to the camera, like iLuxEntity::CheckIsOnScreen
+		return abRayCast == false || SomaLineOfSight(apEnt->GetPosition() - pCam->GetForward() * 0.05f, pCam->GetPosition(), apEnt);
 	}
 	return false;
 }
@@ -1863,7 +1863,8 @@ public:
 	bool mbBlocked = false;
 	bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
 	{
-		if (apBody->IsCharacter() || apBody->GetCollide() == false || apBody->GetBlocksLight() == false || msetIgnore.count(apBody))
+		if (apBody->IsCharacter() || apBody->GetCollide() == false || apBody->GetBlocksLight() == false || msetIgnore.count(apBody) ||
+			apParams->mfDist < 0.001f) // ray starting inside a shape
 			return true;
 		mbBlocked = true;
 		return false;
@@ -1880,7 +1881,7 @@ bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxE
 		ray.msetIgnore.insert(apIgnore->mvBodies.begin(), apIgnore->mvBodies.end());
 	// Stop short of the target surface
 	cVector3f vEnd = avEnd - (avEnd - avStart) * (0.05f / std::max((avEnd - avStart).Length(), 0.05f));
-	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, vEnd, false, false, false);
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, vEnd, true, false, false);
 	return ray.mbBlocked == false;
 }
 
@@ -2620,6 +2621,9 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		ForMatching(n, [&](cSomaLuxEntity *p) { p->RemoveAttachment(); bFound = true; });
 		return bFound;
 	});
+	SOMA_FUNC(e, "void Entity_WakeUp(const tString&in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); }); });
+	SOMA_FUNC(e, "void Entity_SetAutoSleep(const tString&in asName, bool abX)",
+			  +[](S n, bool x) { ForMatching(n, [x](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); }); });
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	// ponytail: no dissolve fade, toggles instantly
 	SOMA_FUNC(e, "void Prop_SetActiveAndFade(const tString &in asPropName, bool abActive, float afFadeTime)", +[](S n, bool b, float) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });

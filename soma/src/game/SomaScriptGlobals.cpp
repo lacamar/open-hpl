@@ -6,6 +6,7 @@
 #include "SomaBase.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
+#include "impl/scriptarray.h"
 
 #include <map>
 #include <limits>
@@ -277,6 +278,24 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
 			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
+	SOMA_FUNC(e, "iTexture@ cResources_CreateTextureCubeMap(const tString&in asName, bool abUseMipMaps)",
+			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(n, mip); });
+	SOMA_METHOD(e, "cMeshEntity", "void SetDiffuseColorMul(const cColor&in aColor)", +[](cMeshEntity *m, const cColor &c) { m->SetColorMul(c); });
+	SOMA_METHOD(e, "cWorld", "void GetSubMeshEntityInArea(array<cSubMeshEntity@> &inout avObjects, const cVector3f&in avMin, const cVector3f&in avMax)",
+				+[](cWorld *w, CScriptArray &a, const cVector3f &vMin, const cVector3f &vMax) {
+					for (cMeshEntityIterator it : {w->GetStaticMeshEntityIterator(), w->GetDynamicMeshEntityIterator()})
+						while (it.HasNext())
+						{
+							cMeshEntity *pMesh = it.Next();
+							for (int i = 0; i < pMesh->GetSubMeshEntityNum(); ++i)
+							{
+								cSubMeshEntity *pSub = pMesh->GetSubMeshEntity(i);
+								cBoundingVolume *pBV = pSub->GetBoundingVolume();
+								if (cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), vMin, vMax))
+									a.InsertLast(&pSub);
+							}
+						}
+				});
 	SOMA_FUNC(e, "bool cLux_ScriptDebugOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_DebugModeOn()", +[]() { return false; });
 	SOMA_FUNC(e, "bool cLux_GetGodModeActivated()", +[]() { static bool b = getenv("OPENHPL_SOMA_GODMODE") != NULL; return b; });

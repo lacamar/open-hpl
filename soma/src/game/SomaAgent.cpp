@@ -1237,8 +1237,11 @@ namespace
 	// cLuxOutlineEffect::RenderEdgeGlow: additive, after translucents
 	struct cEdgeGlowRenderer : iRendererCallback
 	{
+		struct cGlow { cSomaID mID; float mfAlpha, mfY; };
 		cViewport *mpViewport = NULL;
 		iGpuProgram *mpProgram = NULL;
+		iGpuProgram *mpOutline = NULL;
+		std::vector<cGlow> mvGlow;
 
 		void Register()
 		{
@@ -1272,21 +1275,25 @@ namespace
 					mpProgram->GetVariableAsId("afEdgeThickness", 4);
 				}
 			}
-			if (mpProgram == NULL)
-				return;
+			// cLuxEffectHandler "OutlineProgram"
+			if (static bool bTriedOutline = false; bTriedOutline == false && mvGlow.empty() == false)
+			{
+				bTriedOutline = true;
+				cParserVarContainer vars;
+				vars.Add("UseUv");
+				vars.Add("UseNormals");
+				mpOutline = gpSomaBase->mpEngine->GetGraphics()->CreateGpuProgramFromShaders("SomaOutline", "deferred_base_vtx.glsl", "game_object_outline.glsl", &vars);
+				if (mpOutline)
+				{
+					mpOutline->GetVariableAsId("avOutlineColor", 0);
+					mpOutline->GetVariableAsId("avScreenSize", 1);
+					mpOutline->GetVariableAsId("afEffectY", 2);
+					mpOutline->GetVariableAsId("avObjectScreenMinAndSize", 3);
+				}
+			}
 			iLowLevelGraphics *pLowLevel = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel();
 			bool bStarted = false;
-			for (auto &it : gmapAgents)
-			{
-				E *p = it.first;
-				cAgentEdgeGlow *g = it.second->Find<cAgentEdgeGlow>(eComp_EdgeGlow);
-				if (g == NULL || g->mbActive == false || g->mfAlpha <= 0.001f || g->mfLightLimit <= 0.001f || p->mpMesh == NULL || p->mbActive == false ||
-					p->mpMesh->IsVisible() == false || pFrustum->CollideBoundingVolume(p->mpMesh->GetBoundingVolume()) == eCollision_Outside)
-					continue;
-				// ponytail: one light sample per entity, the original samples each submesh BV
-				float fLevel = SomaLightLevelAtPos(p->mpMesh->GetBoundingVolume()->GetWorldCenter(), NULL, 0);
-				if (fLevel >= g->mfLightLimit)
-					continue;
+			auto Begin = [&](iGpuProgram *apProgram) {
 				if (bStarted == false)
 				{
 					bStarted = true;
@@ -1302,26 +1309,64 @@ namespace
 					f->SetTextureRange(NULL, 0);
 					f->SetCullActive(true);
 					f->SetCullMode(eCullMode_CounterClockwise);
-					f->SetProgram(mpProgram);
 				}
+				f->SetProgram(apProgram);
+			};
+			auto DrawSub = [&](cSubMeshEntity *s) {
+				cMaterial *pMat = s->GetMaterial();
+				iTexture *pDiffuse = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
+				if (pDiffuse == NULL || s->IsVisible() == false || pFrustum->CollideBoundingVolume(s->GetBoundingVolume()) == eCollision_Outside)
+					return false;
+				f->SetTexture(0, pDiffuse);
+				f->SetMatrix(s->GetModelMatrixPtr());
+				f->SetVertexBuffer(s->GetVertexBuffer());
+				return true;
+			};
+			for (auto it = gmapAgents.begin(); mpProgram && it != gmapAgents.end(); ++it)
+			{
+				E *p = it->first;
+				cAgentEdgeGlow *g = it->second->Find<cAgentEdgeGlow>(eComp_EdgeGlow);
+				if (g == NULL || g->mbActive == false || g->mfAlpha <= 0.001f || g->mfLightLimit <= 0.001f || p->mpMesh == NULL || p->mbActive == false ||
+					p->mpMesh->IsVisible() == false || pFrustum->CollideBoundingVolume(p->mpMesh->GetBoundingVolume()) == eCollision_Outside)
+					continue;
+				// ponytail: one light sample per entity, the original samples each submesh BV
+				float fLevel = SomaLightLevelAtPos(p->mpMesh->GetBoundingVolume()->GetWorldCenter(), NULL, 0);
+				if (fLevel >= g->mfLightLimit)
+					continue;
+				Begin(mpProgram);
 				mpProgram->SetVec4f(0, g->mColor.r, g->mColor.g, g->mColor.b, g->mColor.a);
 				mpProgram->SetFloat(1, g->mfAlpha);
 				mpProgram->SetFloat(2, fLevel);
 				mpProgram->SetFloat(3, g->mfLightLimit);
 				mpProgram->SetFloat(4, g->mfThickness);
 				for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
+					if (DrawSub(p->mpMesh->GetSubMeshEntity(i)))
+						f->DrawCurrent();
+			}
+			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+			const cVector2l &vScreen = pLowLevel->GetScreenSizeInt();
+			float fTanHalfFov = tan(pFrustum->GetFOV() * 0.5f);
+			for (cGlow &glow : mvGlow)
+			{
+				E *p = pMap && mpOutline ? pMap->GetEntity(glow.mID) : NULL;
+				if (p == NULL || p->mpMesh == NULL || p->mbActive == false || p->mpMesh->IsVisible() == false)
+					continue;
+				Begin(mpOutline);
+				mpOutline->SetVec4f(0, 0.2f, 0.2f, 1, glow.mfAlpha);
+				mpOutline->SetVec2f(1, (float)vScreen.x, (float)vScreen.y);
+				mpOutline->SetFloat(2, glow.mfY);
+				for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
 				{
 					cSubMeshEntity *s = p->mpMesh->GetSubMeshEntity(i);
-					cMaterial *pMat = s->GetMaterial();
-					iTexture *pDiffuse = pMat ? pMat->GetTexture(eMaterialTexture_Diffuse) : NULL;
-					if (pDiffuse == NULL || s->IsVisible() == false || pFrustum->CollideBoundingVolume(s->GetBoundingVolume()) == eCollision_Outside)
+					if (DrawSub(s) == false)
 						continue;
-					f->SetTexture(0, pDiffuse);
-					f->SetMatrix(s->GetModelMatrixPtr());
-					f->SetVertexBuffer(s->GetVertexBuffer());
+					cRect2l r;
+					cMath::GetClipRectFromBV(r, *s->GetBoundingVolume(), pFrustum, vScreen, fTanHalfFov);
+					mpOutline->SetVec2f(3, (float)(vScreen.y - (r.y + r.h)), (float)r.h);
 					f->DrawCurrent();
 				}
 			}
+			mvGlow.clear();
 			if (bStarted == false)
 				return;
 			pLowLevel->SetPolygonOffsetActive(false);
@@ -1849,6 +1894,19 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxSoundListener@ cLux_CreateEntityComponent_SoundListener(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentSoundListener(p)); });
 	SOMA_FUNC(e, "cLuxHeadTracker@ cLux_CreateEntityComponent_HeadTracker(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentHeadTracker(p)); });
 
+	SOMA_METHOD(e, "cLuxEffectHandler", "void AddGlowObject(iLuxEntity@ apEntity, float afAlpha, float afY)", +[](void *, E *p, float a, float y) {
+		if (p == NULL)
+			return;
+		gEdgeGlowRenderer.Register();
+		for (auto &g : gEdgeGlowRenderer.mvGlow)
+			if (g.mID == p->mID)
+			{
+				g.mfAlpha = a;
+				g.mfY = y;
+				return;
+			}
+		gEdgeGlowRenderer.mvGlow.push_back({p->mID, a, y});
+	});
 	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) {
 		gEdgeGlowRenderer.Register();
 		return AddComponent(p, new cAgentEdgeGlow(p));
