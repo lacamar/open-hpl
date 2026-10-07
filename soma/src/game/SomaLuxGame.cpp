@@ -426,6 +426,8 @@ void cSomaLuxGame::LeaveMap(cSomaLuxMap *apMap)
 {
 	cSomaLuxDialogHandler::Get()->StopAll();
 	SomaDestroyCameraTextures();
+	// its Reset() keeps the entity id, so every later datamine fails
+	SomaRunGlobalFunc("DatamineHandler", "", "_Global_StopDatamining");
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void OnMapLeave(cLuxMap @apMap)", apMap); });
 	ForEach([apMap](cSomaLuxScriptable *p) { p->OnMapMessage("void DestroyWorldEntities(cLuxMap @apMap)", apMap); });
 }
