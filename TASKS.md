@@ -151,7 +151,9 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   Not reproduced 2026-10-05 running `IntroSequence` (CamAnim_WakeUp) on 00_01; WakeUp2 untested.
 - Image trail mixes tone-mapped LDR (the original mixes HDR before tone mapping).
 - `stub_report`: eye tracker, preload hints, `iPhysicsJoint::SetAllowPositionReset`.
-- Physics impact sound burst right after map load.
+- Physics impact sounds at load: bodies settling (01_02, ~0.03 vol). Rebirth has no extra gating
+  (`OnImpact`, `cPhysicsWorldNewton::Simulate` match ours; `cWorld::PreUpdate` uncalled). 00_01 test
+  start puts the player inside the bed, pushing `pillow_cabin_plain_1` (repeated pillow impacts).
 - Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
   static `.dae` (tinyxml dtor); rerun passed.
 
