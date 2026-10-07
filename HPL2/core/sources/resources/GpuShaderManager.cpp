@@ -188,6 +188,34 @@ namespace hpl {
 		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
 		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		// detail maps applied per blend pass, not to the composited cache
+		{ "cache_terrain_diffuse_frag.hpsl", "uniform cTexture2D aAlphaMap3 : 9;",
+		  "uniform cTexture2D aAlphaMap3 : 9;\n"
+		  "@ifdef UseVertexPosition\n"
+		  "uniform cVector3f avDetailMapScale;\nuniform cVector3f avDetailFade;\nuniform cVector3f avBaseDetailAmount;\n"
+		  "uniform cVector3f avDetailAmount0;\nuniform cVector3f avDetailAmount1;\nuniform cVector3f avDetailAmount2;\nuniform cVector3f avDetailAmount3;\n"
+		  "uniform cTexture2D aDetailMap0 : 10;\nuniform cTexture2D aDetailMap1 : 11;\nuniform cTexture2D aDetailMap2 : 12;\n"
+		  "@endif" },
+		{ "cache_terrain_diffuse_frag.hpsl", "in cVector4f px_vTexCoord0,",
+		  "in cVector4f px_vTexCoord0,\n@ifdef UseVertexPosition\n\t\t  in cVector3f px_vVertexPos,\n@endif" },
+		{ "cache_terrain_diffuse_frag.hpsl", "vDiffuseColor = mix(vDiffuseColor, vTexColor3.xyz, vDissolveBlend.w);",
+		  "vDiffuseColor = mix(vDiffuseColor, vTexColor3.xyz, vDissolveBlend.w);\n"
+		  "\t@ifdef UseVertexPosition\n"
+		  "\t\t@ifdef UseBaseTexture\n\t\t\tcVector3f vDetailAmount = avBaseDetailAmount;\n\t\t@else\n\t\t\tcVector3f vDetailAmount = cVector3f(0);\n\t\t@endif\n"
+		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount0, vDissolveBlend.x);\n"
+		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount1, vDissolveBlend.y);\n"
+		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount2, vDissolveBlend.z);\n"
+		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount3, vDissolveBlend.w);\n"
+		  "\t\t@ifdef UseBaseTexture\n\t\t@else\n\t\t\tvDetailAmount /= max(min(dot(vDissolveBlend, cVector4f(1.0)), 1.0), 0.0001);\n\t\t@endif\n"
+		  "\t\tfloat fDetailMul = 1.0 - clamp((-px_vVertexPos.z - avDetailFade.x) / avDetailFade.y, 0.0, 1.0);\n"
+		  "\t\tfloat fAmountLength = length(vDetailAmount);\n"
+		  "\t\tcVector3f vNormalizedAmount = vDetailAmount / (fAmountLength + 0.0001);\n"
+		  "\t\tcVector2f vWorldXZ = (vTexCoord - cVector2f(0.5)) * avDetailFade.z;\n"
+		  "\t\tcVector3f vDetailColor = sqrt(pow(sample(aDetailMap0, vWorldXZ * avDetailMapScale.x).xyz, cVector3f(2.2)) * vNormalizedAmount.x +\n"
+		  "\t\t\t\t\t\t\t\t\t pow(sample(aDetailMap1, vWorldXZ * avDetailMapScale.y).xyz, cVector3f(2.2)) * vNormalizedAmount.y +\n"
+		  "\t\t\t\t\t\t\t\t\t pow(sample(aDetailMap2, vWorldXZ * avDetailMapScale.z).xyz, cVector3f(2.2)) * vNormalizedAmount.z);\n"
+		  "\t\tvDiffuseColor *= mix(cVector3f(1.0), vDetailColor * 2.0, fDetailMul * fAmountLength);\n"
+		  "\t@endif" },
 		// official squares the sRGB-decoded terrain cache
 		{ "cache_terrain_diffuse_frag.hpsl", "out_vColor.xyz =  vDiffuseColor.xyz;", "out_vColor.xyz = vDiffuseColor.xyz * vDiffuseColor.xyz;" },
 		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },

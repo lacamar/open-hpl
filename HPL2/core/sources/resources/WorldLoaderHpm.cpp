@@ -1145,6 +1145,34 @@ namespace hpl {
 			apDest->SetTexture((eMaterialTexture)alSlot, pTex);
 		};
 
+		cXmlElement* pDetails = apTerrain->GetFirstElement("DetailTextures");
+		std::vector<iTexture*> vDetailTex;
+		cVector3f vDetailScale(0), vDetailFade(0, 1, afSize);
+		if (pDetails)
+		{
+			vDetailFade.x = pDetails->GetAttributeFloat("DetailFadeStart", 10);
+			vDetailFade.y = std::max(pDetails->GetAttributeFloat("DetailFadeEnd", 20) - vDetailFade.x, 0.001f);
+			cXmlNodeListIterator detailIt = pDetails->GetChildIterator();
+			for (int i = 0; i < 3 && detailIt.HasNext(); ++i)
+			{
+				cXmlElement* pDetail = detailIt.Next()->ToElement();
+				vDetailTex.push_back(mpResources->GetTextureManager()->Create2D(pDetail->GetAttributeString("File"), true));
+				vDetailScale.v[i] = pDetail->GetAttributeFloat("Scale", 1);
+			}
+		}
+		auto SetDetail = [&](cMaterial* apMat, cMaterialType_TerrainBlend_Vars* apVars)
+		{
+			if (vDetailTex.empty() || vDetailTex[0] == NULL) return;
+			for (size_t i = 0; i < vDetailTex.size(); ++i)
+			{
+				if (vDetailTex[i] == NULL) continue;
+				vDetailTex[i]->IncUserCount();
+				apMat->SetTexture((eMaterialTexture)(10 + i), vDetailTex[i]);
+			}
+			apVars->mvDetailMapScale = vDetailScale;
+			apVars->mvDetailFade = vDetailFade;
+		};
+
 		cXmlNodeListIterator layerIt = pLayers->GetChildIterator();
 		while (layerIt.HasNext())
 		{
@@ -1162,7 +1190,9 @@ namespace hpl {
 				cMaterial* pBase = pMatMgr->CreateMaterial(apTerrain->GetAttributeString("BaseMaterialFile"));
 				ShareTexture(pMat, 5, pBase, eMaterialTexture_Diffuse);
 				if (pBase) pMatMgr->Destroy(pBase);
+				pVars->mvBaseDetailAmount = apTerrain->GetAttributeVector3f("BaseMaterialDetailTextureAmount", 0);
 			}
+			SetDetail(pMat, pVars);
 			pVars->mfBaseTextureCoordScale = apTerrain->GetAttributeFloat("BaseMaterialTileAmount", 1) * afSize;
 
 			cXmlNodeListIterator matIt = pLayer->GetChildIterator();
@@ -1171,6 +1201,7 @@ namespace hpl {
 				cXmlElement* pLayerMat = matIt.Next()->ToElement();
 				pVars->mvTextureCoordScale[i] = pLayerMat->GetAttributeFloat("TileAmount", 1) * afSize;
 				pVars->mvOneMinusFadeStart[i] = 1 - pLayerMat->GetAttributeFloat("StartFadeValue", 0);
+				pVars->mvDetailAmount[i] = pLayerMat->GetAttributeVector3f("DetailTextureAmount", 0);
 				tString sFile = pLayerMat->GetAttributeString("File");
 				cMaterial* pSrc = sFile != "" ? pMatMgr->CreateMaterial(sFile) : NULL;
 				ShareTexture(pMat, 1 + i, pSrc, eMaterialTexture_Diffuse);
@@ -1183,6 +1214,8 @@ namespace hpl {
 			pMat->Compile();
 			vMats.push_back(pMat);
 		}
+		for (iTexture* pTex : vDetailTex)
+			if (pTex) mpResources->GetTextureManager()->Destroy(pTex);
 		return vMats;
 	}
 

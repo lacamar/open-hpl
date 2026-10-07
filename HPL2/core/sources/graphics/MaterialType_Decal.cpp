@@ -21,6 +21,7 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
+#include "system/String.h"
 
 #include "resources/Resources.h"
 
@@ -255,12 +256,18 @@ namespace hpl {
 	{
 		cParserVarContainer defaultVars;
 		defaultVars.Add("UseUv");
-		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseBaseTexture", kPC_FragmentBit) };
+		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseBaseTexture", kPC_FragmentBit),
+													cProgramComboFeature("UseVertexPosition", kPC_VertexBit | kPC_FragmentBit) };
 		mpProgramManager->SetupGenerateProgramData(eMaterialRenderMode_Diffuse, "Diffuse", "deferred_base_vtx.glsl", "cache_terrain_diffuse_frag.glsl",
-												   vFeatures, 1, defaultVars);
+												   vFeatures, 2, defaultVars);
 		mpProgramManager->AddGenerateProgramVariableId("avTextureCoordScale", 0, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avOneMinusFadeStart", 1, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afBaseTextureCoordScale", 2, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avDetailMapScale", 3, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avDetailFade", 4, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBaseDetailAmount", 5, eMaterialRenderMode_Diffuse);
+		for (int i = 0; i < 4; ++i)
+			mpProgramManager->AddGenerateProgramVariableId("avDetailAmount" + cString::ToString(i), 6 + i, eMaterialRenderMode_Diffuse);
 
 		cBitmap bmp;
 		bmp.CreateData(cVector3l(1,1,1), ePixelFormat_RGBA, 0, 0);
@@ -279,7 +286,7 @@ namespace hpl {
 
 	iTexture* cMaterialType_TerrainBlend::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 9) return NULL;
+		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 12) return NULL;
 		iTexture *pTex = apMaterial->GetTexture((eMaterialTexture)alUnit);
 		return pTex ? pTex : mpWhiteTexture;
 	}
@@ -287,7 +294,8 @@ namespace hpl {
 	iGpuProgram* cMaterialType_TerrainBlend::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
 		if(aRenderMode != eMaterialRenderMode_Diffuse) return NULL;
-		return mpProgramManager->GenerateProgram(aRenderMode, apMaterial->GetTexture(eMaterialTexture_Illumination) ? eFlagBit_0 : 0);
+		return mpProgramManager->GenerateProgram(aRenderMode, (apMaterial->GetTexture(eMaterialTexture_Illumination) ? eFlagBit_0 : 0) |
+															  (apMaterial->GetTexture(eMaterialTexture_DetailNMap) ? eFlagBit_1 : 0));
 	}
 
 	void cMaterialType_TerrainBlend::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
@@ -297,6 +305,10 @@ namespace hpl {
 		apProgram->SetVec4f(0, s[0], s[1], s[2], s[3]);
 		apProgram->SetVec4f(1, f[0], f[1], f[2], f[3]);
 		apProgram->SetFloat(2, pVars->mfBaseTextureCoordScale);
+		apProgram->SetVec3f(3, pVars->mvDetailMapScale);
+		apProgram->SetVec3f(4, pVars->mvDetailFade);
+		apProgram->SetVec3f(5, pVars->mvBaseDetailAmount);
+		for (int i = 0; i < 4; ++i) apProgram->SetVec3f(6 + i, pVars->mvDetailAmount[i]);
 	}
 
 	//--------------------------------------------------------------------------

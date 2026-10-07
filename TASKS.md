@@ -57,7 +57,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-6. Done: `projecteduv`, `terrain`, `terraindecal`. Left: terrain DetailTextures.
+6. Done: `projecteduv`, `terrain`, `terraindecal`, terrain DetailTextures.
 
 
 

@@ -79,6 +79,7 @@ namespace hpl {
 		float mvTextureCoordScale[4] = {1, 1, 1, 1};
 		float mvOneMinusFadeStart[4] = {1, 1, 1, 1};
 		float mfBaseTextureCoordScale = 1;
+		cVector3f mvDetailMapScale = 0, mvDetailFade = 0, mvBaseDetailAmount = 0, mvDetailAmount[4] = {0, 0, 0, 0};
 	};
 
 	// HPL3 terrain blend layers: cache_terrain_diffuse_frag over the base pass, units = eMaterialTexture slots
