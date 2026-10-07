@@ -159,7 +159,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
 - `GetEntityArray` includes PlayerStart areas (ref does not).
-- `"" + float` formats shortest; ref uses `%f` (visible in script-built strings).
 - `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
   loading-screen hold ~3% brighter, brain icon on a different animation frame.

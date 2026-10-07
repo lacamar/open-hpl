@@ -9,6 +9,7 @@
 #include "SomaToneMapping.h"
 #include "SomaLoaders.h"
 #include "SomaFsb.h"
+#include "impl/scriptstring.h"
 #include "SomaSplash.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
@@ -1191,6 +1192,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetHdr(true);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
+
+	gsScriptStringFloatFormat = "%f";
 
 	// occlusion queries wrongly hide near lights on this driver (near-black render)
 	cRendererDeferred::SetOcclusionTestLargeLights(false);

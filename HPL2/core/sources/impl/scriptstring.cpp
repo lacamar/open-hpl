@@ -6,6 +6,8 @@ using namespace std;
 
 BEGIN_AS_NAMESPACE
 
+const char *gsScriptStringFloatFormat = "%g";
+
 //--------------
 // constructors
 //--------------
@@ -193,7 +195,7 @@ static void AssignIntToString_Generic(asIScriptGeneric *gen)
 static CScriptString &AssignFloatToString(float f, CScriptString &dest)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	dest.buffer = buf;
 	return dest;
 }
@@ -209,7 +211,7 @@ static void AssignFloatToString_Generic(asIScriptGeneric *gen)
 static CScriptString &AssignDoubleToString(double f, CScriptString &dest)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	dest.buffer = buf;
 	return dest;
 }
@@ -277,7 +279,7 @@ static void AddAssignIntToString_Generic(asIScriptGeneric *gen)
 static CScriptString &AddAssignFloatToString(float f, CScriptString &dest)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	dest.buffer += buf;
 	return dest;
 }
@@ -293,7 +295,7 @@ static void AddAssignFloatToString_Generic(asIScriptGeneric *gen)
 static CScriptString &AddAssignDoubleToString(double f, CScriptString &dest)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	dest.buffer += buf;
 	return dest;
 }
@@ -359,7 +361,7 @@ static void AddStringInt_Generic(asIScriptGeneric *gen)
 static CScriptString *AddStringFloat(const CScriptString &str, float f)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	return new CScriptString(str.buffer + buf);
 }
 
@@ -374,7 +376,7 @@ static void AddStringFloat_Generic(asIScriptGeneric *gen)
 static CScriptString *AddStringDouble(const CScriptString &str, double f)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	return new CScriptString(str.buffer + buf);
 }
 
@@ -438,7 +440,7 @@ static void AddUIntString_Generic(asIScriptGeneric *gen)
 static CScriptString *AddFloatString(float f, const CScriptString &str)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	return new CScriptString(buf + str.buffer);
 }
 
@@ -453,7 +455,7 @@ static void AddFloatString_Generic(asIScriptGeneric *gen)
 static CScriptString *AddDoubleString(double f, const CScriptString &str)
 {
 	char buf[100];
-	sprintf(buf, "%g", f);
+	sprintf(buf, gsScriptStringFloatFormat, f);
 	return new CScriptString(buf + str.buffer);
 }
 

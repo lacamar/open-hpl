@@ -48,6 +48,8 @@ protected:
 // and use one of the two functions below to register the string type
 void RegisterScriptString(asIScriptEngine *engine);
 
+extern const char *gsScriptStringFloatFormat;
+
 // Call this function to register the string type
 // using native calling conventions
 void RegisterScriptString_Native(asIScriptEngine *engine);
