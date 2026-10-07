@@ -84,6 +84,7 @@ public:
 
 	cMeshEntity *mpMesh = NULL;
 	std::vector<iPhysicsBody *> mvBodies;
+	std::vector<cEntityBodyExtraData> mvBodyExtraData;
 	iPhysicsBody *mpMainBody = NULL;
 	std::vector<iPhysicsJoint *> mvJoints;
 	std::vector<iPhysicsJoint *> &Joints();

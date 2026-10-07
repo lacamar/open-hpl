@@ -2556,6 +2556,9 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 					  if (lIdx >= 0) p->mpMesh->GetAnimationState(lIdx)->SetRelativeTimePosition(t);
 				  });
 			  });
+	e->RegisterObjectProperty("cEntityBodyExtraData", "cMatrixf m_mtxLocalTransform", (int)offsetof(cEntityBodyExtraData, m_mtxLocalTransform));
+	SOMA_METHOD(e, "cLuxProp", "cEntityBodyExtraData@ GetBodyExtraData(int alIdx)",
+				+[](cSomaLuxEntity *p, int i) { return i >= 0 && i < (int)p->mvBodyExtraData.size() ? &p->mvBodyExtraData[i] : (cEntityBodyExtraData *)NULL; });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });

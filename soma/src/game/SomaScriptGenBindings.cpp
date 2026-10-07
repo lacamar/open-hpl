@@ -1546,6 +1546,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetClimbHeightAdd()", +[](iCharacterBody *o) -> float { return o->GetClimbHeightAdd(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool IsClimbing()", +[](iCharacterBody *o) -> bool { return o->IsClimbing(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void ResetClimbing()", +[](iCharacterBody *o) { o->ResetClimbing(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetGroundAngleMin(float afX)", +[](iCharacterBody *o, float a0) { o->SetGroundAngleMin(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetGroundAngleMin()", +[](iCharacterBody *o) -> float { return o->GetGroundAngleMin(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "const cVector3f& GetLastGroundNormal()", +[](iCharacterBody *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetLastGroundNormal(); return r; });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetRotateYawWhenGravityAttached(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetRotateYawWhenGravityAttached(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetRotateYawWhenGravityAttached()", +[](iCharacterBody *o) -> bool { return o->GetRotateYawWhenGravityAttached(); });

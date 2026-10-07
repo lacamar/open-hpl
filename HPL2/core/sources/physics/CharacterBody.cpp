@@ -1867,7 +1867,7 @@ namespace hpl {
 				mvGravityAttachmentVelocity.y =0;
 				
 				//Check if the push back is mostly up and velocity points down, else decrement, ie signal that the player is not on ground.
-				if(mvVelocity.y && cMath::Vector3Normalize(vPushBack).y >= 0.001f)
+				if(mvVelocity.y && cMath::Vector3Normalize(vPushBack).y >= mfGroundAngleMinCos)
 				{
 					mlOnGroundCount = mlMaxOnGroundCount;
 				}

@@ -193,6 +193,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		}
 		pEnt->mbShowMesh = GetVarBool("ShowMesh", msEntityType != "StaticCollider");
 		pEnt->mvBodies = mvBodies;
+		pEnt->mvBodyExtraData = mvBodyExtraData;
 		if (apInstanceVars)
 			pEnt->mbEffectsActive = apInstanceVars->GetVarBool("EffectsActive", true);
 		if (apInstanceVars && apInstanceVars->GetVarBool("StaticPhysics", false))

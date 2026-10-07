@@ -261,6 +261,8 @@ namespace hpl {
 
 		void SetMaxNoSlideSlopeAngle(float afAngle);
 		float GetMaxNoSlideSlopeAngle();
+		void SetGroundAngleMin(float afAngle){ mfGroundAngleMinCos = cos(afAngle); }
+		float GetGroundAngleMin(){ return acos(mfGroundAngleMinCos); }
 
 		void SetStickToSlope(bool abX){ mbStickToSlope = abX;}
 		bool GetStickToSlope(){ return mbStickToSlope;}
@@ -454,6 +456,7 @@ namespace hpl {
 		float mfCheckStepClimbInterval;
 
 		float mfMaxNoSlideSlopeAngleCos;
+		float mfGroundAngleMinCos = 0.001f;
 
 		cVector3f mvForce;
 		cVector3f mvVelocity;
