@@ -151,6 +151,8 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         result["frame"] = hpl.send({"cmd": "frame_stats"})["frame"]
         fade = hpl.send({"cmd": "script_exec", "code": '__print("" + cLux_GetEffectHandler().GetFadeAlpha());'})
         result["fade_alpha"] = float(fade.get("output") or 0)
+        wake = hpl.send({"cmd": "script_vars", "name": "cScrWakeHandler"}).get("output", "")
+        result["asleep"] = bool(re.search(r"\nmWakeState=[01]\n", wake))
         shaders = hpl.send({"cmd": "shader_report"})
         result["shader_failures"] = shaders["shaders"]
         gbuffer = {}
@@ -253,8 +255,8 @@ def judge(name, result, expected, allow):
         # A map with no lights at all (00_00_intro: one plane behind the slideshow GUI) is black by data.
         has_lights = not exp or exp["tracks"]["Light"]["xml"] > 0
         if has_lights and not LUM_MIN <= frame["lum_mean"] <= LUM_MAX:
-            # Script screen fades (02_07 wakes up black for 23.5 s) aren't render faults.
-            (allowed if result.get("fade_alpha", 0) > 0.5 else fails).append(f"lum_mean:{frame['lum_mean']:.1f}")
+            # Script screen fades (02_07 wakes up black for 23.5 s, 04_01 wakes up over 10 s) aren't render faults.
+            (allowed if result.get("fade_alpha", 0) > 0.5 or result.get("asleep") else fails).append(f"lum_mean:{frame['lum_mean']:.1f}")
         if frame["magenta_frac"] > MAGENTA_MAX:
             fails.append(f"magenta:{frame['magenta_frac']:.3f}")
     return fails, allowed
