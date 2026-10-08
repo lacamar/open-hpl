@@ -2150,6 +2150,22 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "cVector3f GetNextGoalPos()", +[](PF *p) { return p->mvPath.empty() ? p->Feet() : p->mvPath[std::min(p->mlPathIdx, p->mvPath.size() - 1)]; });
 	SOMA_METHOD(e, T, "cAINode@ GetNodeFromName(const tString&in asName)", +[](PF *p, S n) { cNodeData *d = p->Nodes(); return d ? d->mpContainer->GetNodeFromName(n) : (cAINode *)NULL; });
 	SOMA_METHOD(e, T, "cAINodeContainer@ GetNodeContainer()", +[](PF *p) { cNodeData *d = p->Nodes(); return d ? d->mpContainer.get() : (cAINodeContainer *)NULL; });
+	// ponytail: NOCOUNT type, never released; a ring of 64 covers per-frame locals
+	SOMA_METHOD(e, "cAINodeContainer", "cAINodeIterator@ GetNodeIterator(const cVector3f &in avPosition, float afRadius)", +[](cAINodeContainer *c, V v, float r) {
+		static std::vector<cAINodeIterator> vRing;
+		static size_t lNext = 0;
+		if (vRing.size() < 64)
+		{
+			vRing.reserve(64);
+			vRing.emplace_back(c, v, r);
+			return &vRing.back();
+		}
+		cAINodeIterator *p = &vRing[lNext++ & 63];
+		*p = cAINodeIterator(c, v, r);
+		return p;
+	});
+	SOMA_METHOD(e, "cAINodeIterator", "bool HasNext()", +[](cAINodeIterator *i) { return i->HasNext(); });
+	SOMA_METHOD(e, "cAINodeIterator", "cAINode@ Next()", +[](cAINodeIterator *i) { return i->Next(); });
 	SOMA_METHOD(e, T, "cAINode@ GetNodeAtPos(const cVector3f &in avPos,float afMinDistance,float afMaxDistance, bool abGetClosest, bool abPosToNodeFreeDirectPathCheck,bool abAgentToNodeFreeDirectPathCheck, cAINode@ apSkipNode, int alFreePathRayNum, uint alFreePathFlags, bool abSkipUsedNodes)",
 				+[](PF *p, V v, float mn, float mx, bool c, bool los, bool, cAINode *skip, int, asUINT, bool) { return p->NodeAtPos(v, mn, mx, c, los, skip); });
 	SOMA_METHOD(e, T, "cAINode@ GetNodeAtPos(const cVector3f &in avPos,float afMinDistance,float afMaxDistance, bool abGetClosest, bool abPosToNodeFreeDirectPathCheck,bool abAgentToNodeFreeDirectPathCheck, cAINode@ apSkipNode)",
