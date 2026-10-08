@@ -368,10 +368,14 @@ def crouching():
               '__print("c=" + cScript_GetGlobalReturnBool());').get("c") == "true"
 
 
-def steer(target, tol, deadline, back=False, prev=None):
+def steer(target, tol, deadline, back=False, prev=None, watch=None):
     best, stuck = 1e9, 0
     while time.time() < deadline:
         _, feet = camera_pos()
+        if watch:
+            print(f"{time.time():.1f} feet={feet[0]:.1f},{feet[1]:.1f},{feet[2]:.1f} " + ex(
+                f'cLuxPlayer@ p = cLux_GetPlayer(); __print("v=" + p.GetAverageMoveSpeed() + " d=" + '
+                f'cMath_Vector3Dist(cLux_GetCurrentMap().GetEntityByName("{watch}").GetPosition(), p.GetCharacterBody().GetFeetPosition()));').strip())
         d = math.hypot(target[0] - feet[0], target[2] - feet[2])
         if d < tol:
             return True
@@ -437,7 +441,7 @@ def cmd_walkto(a):
                 press("key", "left ctrl", 0.1)
             key("left shift", a.run and not crouch)
             last = i == len(route) - 1
-            args = [float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]]
+            args = [float(v) for v in p[:3]], a.tol if last else 0.5, deadline, a.back, None if last or i == 0 else [float(v) for v in route[i - 1][:3]], a.watch
             if not steer(*args):
                 key(move, False)
                 opened = open_near_door()
@@ -578,6 +582,7 @@ def main():
     s.add_argument("--grid", action="store_true", help="player-size grid A* (crouches where needed)")
     s.add_argument("--run", action="store_true", help="hold shift")
     s.add_argument("--back", action="store_true", help="walk backwards, facing away from the target")
+    s.add_argument("--watch", metavar="ENT", help="print avg speed and distance to ENT each step")
     s = sub.add_parser("wait"); s.add_argument("secs", type=float)
     s = sub.add_parser("entities"); s.add_argument("pattern", nargs="?", default="*"); s.add_argument("--near", type=float, default=1e9)
     s = sub.add_parser("exec"); s.add_argument("code"); s.add_argument("--module", default="")
