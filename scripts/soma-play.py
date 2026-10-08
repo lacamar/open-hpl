@@ -54,6 +54,13 @@ def pid():
     return pidfile_pid(PIDFILE)
 
 
+def running(p):
+    try:
+        return bool(Path(f"/proc/{p}/cmdline").read_bytes())  # zombies have none
+    except OSError:
+        return False
+
+
 def frames(secs):
     send({"cmd": "wait_frames", "n": max(1, int(secs * 60)), "max_ms": int(secs * 1000) + 5000}, timeout=secs + 30)
 
@@ -67,6 +74,8 @@ def cmd_start(a):
     cmd_stop(a)
     m = a.map if a.map.endswith(".hpm") else a.map + ".hpm"
     env = dict(os.environ, OPENHPL_SOMA_FREECAM="0")
+    if a.pos:
+        env["OPENHPL_SOMA_MAP_STARTPOS"] = a.pos
     out = subprocess.run([str(HERE / "soma-run.sh"), m, str(SOCK)], env=env, capture_output=True, text=True, check=True).stdout.split()
     PIDFILE.write_text(out[0])
     LOGPOS.write_text("0")
@@ -91,6 +100,8 @@ def cmd_stop(a):
     p = pid()
     if p:
         os.kill(p, signal.SIGKILL)
+        while running(p):
+            time.sleep(0.2)
         print(f"killed {p}")
     PIDFILE.unlink(missing_ok=True)
 
@@ -235,6 +246,11 @@ def stand_spot(target, feet, dist, name):
         los = raycast(eye, target)
         seg = math.dist(eye, target)
         if los and los[0][0] < seg - 0.25 and name not in (los[0][1], los[0][2]):
+            continue
+        # block boxes below eye height: spot would be outside the playable area
+        if any((h := raycast((x, floor + y, z), (target[0], floor + y, target[2])))
+               and h[0][0] < math.dist((x, z), (target[0], target[2])) - 0.4 and name not in h[0][1:]
+               for y in (0.4, 1.0)):
             continue
         score = abs(floor + 1.6 - target[1]) + i * 0.02
         if best is None or score < best[0]:
