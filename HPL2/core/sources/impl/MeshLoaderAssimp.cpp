@@ -134,7 +134,7 @@ namespace hpl {
 		for(unsigned int m=0; m<apNode->mNumMeshes; ++m)
 		{
 			const aiMesh *pSrc = apScene->mMeshes[apNode->mMeshes[m]];
-			if(pSrc->mPrimitiveTypes != aiPrimitiveType_TRIANGLE || pSrc->mNumVertices == 0 || pSrc->mNormals == NULL) continue;
+			if((pSrc->mPrimitiveTypes & ~aiPrimitiveType_NGONEncodingFlag) != aiPrimitiveType_TRIANGLE || pSrc->mNumVertices == 0 || pSrc->mNormals == NULL) continue;
 
 			iVertexBuffer *pVtxBuff = apLowLevelGraphics->CreateVertexBuffer(
 					eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static,

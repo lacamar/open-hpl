@@ -337,7 +337,7 @@ int cSomaLuxEntity::PlayAnimation(const tString &asName, float afFadeTime, bool 
 	int lIdx = mpMesh->GetAnimationStateIndex(asName);
 	if (lIdx < 0)
 	{
-		if (asName.empty() == false)
+		if (asName.empty() == false && mpMesh->GetAnimationStateNum() > 0)
 			Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), msName.c_str());
 		return -1;
 	}
