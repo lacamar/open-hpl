@@ -217,9 +217,12 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvLensFlares = mvLensFlares;
 		pEnt->mvSoundEntities = mvSoundEntities;
 		pEnt->mVars.LoadVariables(apRootElem->GetFirstElement("UserDefinedVariables"));
+		tString sMainBody = pEnt->mVars.GetVarString("MainPhysicsBody", "");
 		for (iPhysicsBody *pBody : mvBodies)
-			if (pBody->GetName() == pEnt->msName + "_" + pEnt->mVars.GetVarString("MainPhysicsBody", ""))
+			if (pBody->GetName() == pEnt->msName + "_" + sMainBody)
 				pEnt->mpMainBody = pBody;
+		if (sMainBody != "" && pEnt->mpMainBody == NULL)
+			Warning("Could not find main physics body '%s'\n", pEnt->msName.c_str());
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
 			LoadSockets(pModel, "", pEnt);
 		if (mpEntity)

@@ -231,6 +231,11 @@ void cSomaLuxEntity::SetEffectsActive(bool abX, bool abFade)
 		else
 			abFade && mfEffectsFadeSpeed != 0 ? pSound->FadeOut(-mfEffectsFadeSpeed) : pSound->Stop(false);
 	}
+	tString sSound = abFade ? mVars.GetVarString(abX ? "EffectsOnSound" : "EffectsOffSound", "") : "";
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (sSound != "" && pMap)
+		if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity(msName + "_EffectsSound", sSound, true))
+			pSound->SetPosition(GetMatrix().GetTranslation());
 	ApplyEffectsAlpha();
 }
 
@@ -509,8 +514,46 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 	}
 }
 
+void cSomaLuxEntity::UpdateStaticMoveSound()
+{
+	bool bMoving = mbMoving || mlRotateMode == 1 || (mlRotateMode == 2 && mfRotateMaxSpeed != 0);
+	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+	if (pMap == NULL)
+		return;
+	cWorld *pWorld = pMap->GetWorld();
+	bool bLoopAlive = mpStaticMoveLoop && pWorld->SoundEntityExists(mpStaticMoveLoop, mlStaticMoveLoopID);
+	cVector3f vPos = GetMatrix().GetTranslation();
+	if (bMoving == mbStaticMoveSound)
+	{
+		if (bLoopAlive)
+			mpStaticMoveLoop->SetPosition(vPos);
+		return;
+	}
+	mbStaticMoveSound = bMoving;
+	bool bFade = mVars.GetVarBool("StaticMoveLoopSoundFade", false);
+	if (bLoopAlive)
+		bFade ? mpStaticMoveLoop->FadeOut(2) : mpStaticMoveLoop->Stop(false);
+	mpStaticMoveLoop = NULL;
+	tString sOneShot = mVars.GetVarString(bMoving ? "StaticMoveStartSound" : "StaticMoveStopSound", "");
+	if (sOneShot != "")
+		if (cSoundEntity *pSound = pWorld->CreateSoundEntity(msName + "_StaticMove", sOneShot, true))
+		{
+			pSound->SetPosition(vPos);
+			pSound->SetIsSaved(false);
+		}
+	tString sLoop = bMoving ? mVars.GetVarString("StaticMoveLoopSound", "") : "";
+	if (sLoop == "" || (mpStaticMoveLoop = pWorld->CreateSoundEntity(msName + "_StaticMoveLoop", sLoop, true)) == NULL)
+		return;
+	mpStaticMoveLoop->SetPosition(vPos);
+	mpStaticMoveLoop->SetIsSaved(false);
+	mlStaticMoveLoopID = mpStaticMoveLoop->GetCreationID();
+	if (bFade)
+		mpStaticMoveLoop->FadeIn(2);
+}
+
 void cSomaLuxEntity::UpdateMove(float afTimeStep)
 {
+	UpdateStaticMoveSound();
 	if (mlRotateMode)
 		UpdateRotate(afTimeStep);
 	if (mbMoving == false)

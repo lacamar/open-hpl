@@ -220,6 +220,10 @@ public:
 	void UpdateAnimation(float afTimeStep);
 	void MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback);
 	void UpdateMove(float afTimeStep);
+	void UpdateStaticMoveSound();
+	cSoundEntity *mpStaticMoveLoop = NULL;
+	int mlStaticMoveLoopID = -1;
+	bool mbStaticMoveSound = false;
 	void UpdateRotate(float afTimeStep);
 	void UpdateCheckCollision(float afTimeStep);
 	void UpdateLiquid(float afTimeStep);
