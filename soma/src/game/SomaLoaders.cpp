@@ -20,6 +20,9 @@ void cSomaGenericEntityLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrix
 	cXmlElement *pAnims = pModel ? pModel->GetFirstElement("Animations") : NULL;
 	if (pAnims && pAnims->GetFirstElement("Animation"))
 		bDynamic = true;
+	cXmlElement *pProcAnims = pModel ? pModel->GetFirstElement("ProcAnimations") : NULL;
+	if (pProcAnims && pProcAnims->GetFirstElement("Animation"))
+		bDynamic = true;
 	cXmlElement *pBodies = pModel ? pModel->GetFirstElement("Bodies") : NULL;
 	if (pBodies)
 	{
@@ -114,6 +117,33 @@ static void LoadSockets(cXmlElement *apElem, const tString &asBone, cSomaLuxEnti
 		}
 		else
 			LoadSockets(pChild, sValue == "Bone" ? pChild->GetAttributeString("Name", "") : asBone, apEnt);
+	}
+}
+
+static void LoadProcAnimations(cXmlElement *apElem, cSomaLuxEntity *apEnt)
+{
+	cXmlNodeListIterator it = apElem->GetChildIterator();
+	while (it.HasNext())
+	{
+		cXmlElement *pAnimElem = it.Next()->ToElement();
+		if (pAnimElem == NULL)
+			continue;
+		cSomaLuxEntity::cProcAnim anim;
+		anim.msName = pAnimElem->GetAttributeString("Name", "");
+		cXmlNodeListIterator trackIt = pAnimElem->GetChildIterator();
+		while (trackIt.HasNext())
+		{
+			cXmlElement *pTrack = trackIt.Next()->ToElement();
+			cSubMeshEntity *pSub = pTrack ? apEnt->mpMesh->GetSubMeshEntityName(pTrack->GetAttributeString("SubMesh", "")) : NULL;
+			if (pSub == NULL)
+				continue;
+			tString sAxes = pTrack->GetAttributeString("Axes", "");
+			cVector3f vAxes(sAxes.find('X') != tString::npos, sAxes.find('Y') != tString::npos, sAxes.find('Z') != tString::npos);
+			anim.mvTracks.push_back({pSub, pSub->GetLocalMatrix(), pTrack->GetAttributeString("Type", "") == "rotate", pTrack->GetAttributeBool("ReverseMotion", false), vAxes,
+									 pTrack->GetAttributeFloat("OffsetMin", 0), pTrack->GetAttributeFloat("OffsetMax", 0), pTrack->GetAttributeInt("Cycles", 1),
+									 pTrack->GetAttributeString("Easing", "")});
+		}
+		apEnt->mvProcAnims.push_back(anim);
 	}
 }
 
@@ -224,7 +254,12 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		if (sMainBody != "" && pEnt->mpMainBody == NULL)
 			Warning("Could not find main physics body '%s'\n", pEnt->msName.c_str());
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
+		{
 			LoadSockets(pModel, "", pEnt);
+			cXmlElement *pProcAnims = pModel->GetFirstElement("ProcAnimations");
+			if (pProcAnims && mpEntity)
+				LoadProcAnimations(pProcAnims, pEnt);
+		}
 		if (mpEntity)
 			for (int i = 0; i < mpEntity->GetBoneStateNum(); ++i)
 			{

@@ -1339,6 +1339,15 @@ void cSomaSoundEvents::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_FUNC(e, "int cSound_FadeGlobalVolume(float afDestVolume, float afSpeed, uint aAffectedTypes, int alId, bool abDestroyIdAtDest)",
 			  +[](float v, float speed, asUINT types, int id, bool destroy) { return Handler()->FadeGlobalVolume(v, speed, types, id, destroy); });
+	SOMA_FUNC(e, "int cSound_SetGlobalSpeed(float afSpeed, uint aAffectedTypes, int alId)", +[](float v, asUINT types, int id) {
+		return Handler()->SetGlobalSpeed(v, types, id);
+	});
+	SOMA_FUNC(e, "float cSound_GetGlobalSpeedFromId(int alId)", +[](int id) {
+		cMultipleSettingsHandler::cGSEntry *pEntry = Handler()->GetGlobalSpeedSettingsHandler()->GetEntry(id, false);
+		return pEntry ? pEntry->GetVal() : 1.0f;
+	});
+	SOMA_FUNC(e, "int cSound_FadeGlobalSpeed(float afDestSpeed, float afSpeed, uint aAffectedTypes, int alId, bool abDestroyIdAtDest)",
+			  +[](float v, float speed, asUINT types, int id, bool destroy) { return Handler()->FadeGlobalSpeed(v, speed, types, id, destroy); });
 	SOMA_FUNC(e, "void cSound_FadeOutAll(uint aTypes, float afFadeSpeed, bool abDisableStop)", +[](asUINT types, float speed, bool) {
 		cSomaSoundEvents::Get()->FadeOutAll(types, speed);
 		Handler()->FadeOutAll(types, speed, false);

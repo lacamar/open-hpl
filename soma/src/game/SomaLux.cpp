@@ -431,7 +431,10 @@ void cSomaLuxMap::Update(float afTimeStep)
 			mvEntities[i]->UpdateAnimation(afTimeStep);
 		mvEntities[i]->UpdateSocketNodes();
 		if (mvEntities[i]->mbActive)
+		{
 			mvEntities[i]->UpdateMove(afTimeStep);
+			mvEntities[i]->UpdateProcAnimations(afTimeStep);
+		}
 		mvEntities[i]->UpdateEffectColor(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}

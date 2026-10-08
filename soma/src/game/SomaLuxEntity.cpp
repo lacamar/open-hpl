@@ -998,6 +998,74 @@ void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 		mfEffectColorTime = 0;
 }
 
+// Negative length plays backwards from wherever the animation is
+void cSomaLuxEntity::PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime)
+{
+	for (cProcAnim &anim : mvProcAnims)
+	{
+		if (anim.msName != asName)
+			continue;
+		float fSpeed = afLength != 0 ? 1 / afLength : 0;
+		if (!anim.mbActive)
+		{
+			anim.mfTime = fSpeed < 0 ? 1 : 0;
+			anim.mfAmount = 0;
+			anim.mfSpeed = 0;
+		}
+		anim.mbActive = true;
+		anim.mbLoop = abLoop;
+		anim.mfAmountStep = afAmountFadeTime > 0 ? 1 / afAmountFadeTime : 0;
+		if (afAmountFadeTime <= 0)
+			anim.mfAmount = 1;
+		anim.mfSpeedTarget = fSpeed;
+		anim.mfSpeedStep = afSpeedFadeTime > 0 ? std::fabs(fSpeed - anim.mfSpeed) / afSpeedFadeTime : 0;
+		if (afSpeedFadeTime <= 0)
+			anim.mfSpeed = fSpeed;
+		mbProcDirty = true;
+	}
+}
+
+void cSomaLuxEntity::UpdateProcAnimations(float afTimeStep)
+{
+	if (!mbProcDirty)
+		return;
+	mbProcDirty = false;
+	std::map<cSubMeshEntity *, cMatrixf> mapMatrices;
+	for (cProcAnim &anim : mvProcAnims)
+	{
+		for (cProcTrack &track : anim.mvTracks)
+			mapMatrices.emplace(track.mpSub, track.m_mtxBase);
+		if (!anim.mbActive)
+			continue;
+		anim.mfAmount = std::min(anim.mfAmount + anim.mfAmountStep * afTimeStep, 1.0f);
+		float fMaxStep = anim.mfSpeedStep * afTimeStep;
+		anim.mfSpeed += cMath::Clamp(anim.mfSpeedTarget - anim.mfSpeed, -fMaxStep, fMaxStep);
+		anim.mfTime += anim.mfSpeed * afTimeStep;
+		anim.mfTime = anim.mbLoop ? anim.mfTime - std::floor(anim.mfTime) : cMath::Clamp(anim.mfTime, 0.0f, 1.0f);
+		mbProcDirty |= anim.mbLoop || anim.mfAmount < 1 || anim.mfSpeed != anim.mfSpeedTarget || (anim.mfTime > 0 && anim.mfTime < 1);
+
+		for (cProcTrack &track : anim.mvTracks)
+		{
+			float f = anim.mfTime * track.mlCycles;
+			f = !anim.mbLoop && anim.mfTime >= 1 ? 1 : f - std::floor(f);
+			if (track.mbReverse)
+				f = f < 0.5f ? f * 2 : 2 - f * 2;
+			if (track.msEasing == "sinein")
+				f = 1 - std::cos(f * kPif / 2);
+			else if (track.msEasing == "sineout")
+				f = std::sin(f * kPif / 2);
+			else if (track.msEasing == "sineinout")
+				f = 0.5f - 0.5f * std::cos(f * kPif);
+			float fValue = (track.mfMin + (track.mfMax - track.mfMin) * f) * anim.mfAmount;
+			cMatrixf mtxOffset = track.mbRotate ? cMath::MatrixRotate(track.mvAxes * cMath::ToRad(fValue), eEulerRotationOrder_XYZ)
+												: cMath::MatrixTranslate(track.mvAxes * fValue);
+			mapMatrices[track.mpSub] = cMath::MatrixMul(mapMatrices[track.mpSub], mtxOffset);
+		}
+	}
+	for (auto &it : mapMatrices)
+		it.first->SetMatrix(it.second);
+}
+
 bool cSomaLuxEntity::CollidesWithPlayer()
 {
 	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
@@ -2496,6 +2564,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		static thread_local cVector3f v;
 		v = o->CreateBoundingVolume().GetLocalMax();
 		return v; });
+	SOMA_METHOD(e, "cMeshEntity", "void ProcPlayFadeToName(const tString &in asName,float afAnimTime,bool abLoop, float afFadeTime)",
+				+[](cMeshEntity *m, const tString &s, float t, bool l, float f) { if (cSomaLuxEntity *p = Owner(m)) p->PlayProcAnimation(s, t, l, f, -1); });
 	SOMA_METHOD(e, "cMeshEntity", "int GetSocketNum()", +[](cMeshEntity *m) { cSomaLuxEntity *p = Owner(m); return p ? (int)p->mvSockets.size() : 0; });
 	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocketFromIndex(int alIdx)", +[](cMeshEntity *m, int i) { cSomaLuxEntity *p = Owner(m); return p ? p->GetSocketNode(i) : (cNode3D *)NULL; });
 	SOMA_METHOD(e, "cMeshEntity", "cNode3D@ GetSocket(const tString&in asName)", +[](cMeshEntity *m, const tString &s) -> cNode3D * {
@@ -2583,6 +2653,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  +[](const tString &n, const cColor &c, float t) { ForMatching(n, [&](cSomaLuxEntity *p) { p->FadeEffectBaseColor(c, t); }); });
 	SOMA_FUNC(e, "void Entity_PlayAnimation(const tString &in asEntityName, const tString &in asAnimation, float afFadeTime=0.1f, bool abLoop=false, bool abPlayTransition=true, const tString &in asCallback = \"\")",
 			  +[](const tString &n, const tString &a, float f, bool l, bool, const tString &cb) { ForMatching(n, [&](cSomaLuxEntity *p) { p->PlayAnimation(a, f, l, cb); }); });
+	SOMA_FUNC(e, "void Entity_PlayProcAnimation(const tString &in asEntityName, const tString &in asAnimation, float afLength, bool abLoop=false, float afAmountFadeTime=0.1, float afSpeedFadeTime = -1.0f)",
+			  +[](const tString &n, const tString &a, float t, bool l, float af, float sf) { ForMatching(n, [&](cSomaLuxEntity *p) { p->PlayProcAnimation(a, t, l, af, sf); }); });
 	SOMA_FUNC(e, "void Entity_StopAnimation(const tString &in asEntityName)", +[](const tString &n) { ForMatching(n, [](cSomaLuxEntity *p) { p->StopAnimations(0); }); });
 	SOMA_FUNC(e, "void Entity_SetAnimationPaused(const tString &in asEntityName, const tString &in asAnimationName, bool abPaused = true)",
 			  +[](const tString &n, const tString &a, bool b) {

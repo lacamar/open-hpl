@@ -218,6 +218,30 @@ public:
 	bool GetAnimationIsPlaying();
 	void StopAnimations(float afFadeTime);
 	void UpdateAnimation(float afTimeStep);
+
+	// cMeshEntity ProcAnimations: eased submesh offsets from the .ent
+	struct cProcTrack
+	{
+		cSubMeshEntity *mpSub;
+		cMatrixf m_mtxBase;
+		bool mbRotate, mbReverse;
+		cVector3f mvAxes;
+		float mfMin, mfMax;
+		int mlCycles;
+		tString msEasing;
+	};
+	struct cProcAnim
+	{
+		tString msName;
+		std::vector<cProcTrack> mvTracks;
+		bool mbActive = false, mbLoop = false;
+		float mfTime = 0, mfSpeed = 0, mfSpeedTarget = 0, mfSpeedStep = 0, mfAmount = 1, mfAmountStep = 0;
+	};
+	std::vector<cProcAnim> mvProcAnims;
+	bool mbProcDirty = false;
+	void PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime);
+	void UpdateProcAnimations(float afTimeStep);
+
 	void MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback);
 	void UpdateMove(float afTimeStep);
 	void UpdateStaticMoveSound();
