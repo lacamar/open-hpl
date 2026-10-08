@@ -228,7 +228,10 @@ void SomaUpdateCritter(cSomaLuxEntity *apEnt, float afTimeStep)
 	if (lAnimState != s.mlPlayingAnimState)
 	{
 		s.mlPlayingAnimState = lAnimState;
-		apEnt->PlayAnimation(Prop<tString>(apEnt, lAnimState == 1 ? "msMoveAnim" : "msIdleAnim"), 0.3f, true, "");
+		const tString &sAnim = Prop<tString>(apEnt, lAnimState == 1 ? "msMoveAnim" : "msIdleAnim");
+		// official skips missing anims silently (most critter .ents lack Move/Idle)
+		if (apEnt->mpMesh && apEnt->mpMesh->GetAnimationStateIndex(sAnim) >= 0)
+			apEnt->PlayAnimation(sAnim, 0.3f, true, "");
 	}
 }
 
