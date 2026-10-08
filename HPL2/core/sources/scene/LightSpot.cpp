@@ -78,7 +78,7 @@ namespace hpl {
 		m_mtxViewProj = cMatrixf::Identity;
 		m_mtxProjection = cMatrixf::Identity;
 
-		static bool bFalloffMissing = false;
+		static bool bFalloffMissing = mbHpl3Visibility;
 		mpSpotFalloffMap = bFalloffMissing ? NULL : mpTextureManager->Create1D("core_falloff_linear",false);
 		bFalloffMissing = mpSpotFalloffMap == NULL;
 		if(mpSpotFalloffMap)

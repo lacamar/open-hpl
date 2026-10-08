@@ -103,7 +103,7 @@ namespace hpl {
 
 		///////////////////////////////
 		//Data init
-		static bool bFalloffMissing = false;
+		static bool bFalloffMissing = mbHpl3Visibility;
 		mpFalloffMap = bFalloffMissing ? NULL : mpTextureManager->Create1D("core_falloff_linear",false);
 		bFalloffMissing = mpFalloffMap == NULL;
 		if(mpFalloffMap)
