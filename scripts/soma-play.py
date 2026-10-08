@@ -365,6 +365,10 @@ def cmd_walk(a):
     if a.trace:
         send({"cmd": "input", "type": "key", "key": a.key, "action": "down"})
         for i in range(int(a.secs / a.trace)):
+            if a.jump is not None and abs(i * a.trace - a.jump) < a.trace / 2:
+                send({"cmd": "input", "type": "key", "key": "space", "action": "down"})
+            if a.jump is not None and abs(i * a.trace - a.jump - 0.2) < a.trace / 2:
+                send({"cmd": "input", "type": "key", "key": "space", "action": "up"})
             frames(a.trace)
             print(f"{(i + 1) * a.trace:.2f}", " ".join(f"{v:.3f}" for v in camera_pos()[1]))
         send({"cmd": "input", "type": "key", "key": a.key, "action": "up"})
