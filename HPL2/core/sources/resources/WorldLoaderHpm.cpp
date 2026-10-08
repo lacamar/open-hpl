@@ -1156,7 +1156,8 @@ namespace hpl {
 			for (int i = 0; i < 3 && detailIt.HasNext(); ++i)
 			{
 				cXmlElement* pDetail = detailIt.Next()->ToElement();
-				vDetailTex.push_back(mpResources->GetTextureManager()->Create2D(pDetail->GetAttributeString("File"), true));
+				tString sFile = pDetail->GetAttributeString("File");
+				vDetailTex.push_back(sFile == "" ? NULL : mpResources->GetTextureManager()->Create2D(sFile, true));
 				vDetailScale.v[i] = pDetail->GetAttributeFloat("Scale", 1);
 			}
 		}
