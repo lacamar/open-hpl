@@ -222,4 +222,7 @@ private:
 	float mfAudibility = 0;
 };
 
+tString SomaSerializeMusic();
+void SomaDeserializeMusic(const tString &asData);
+
 #endif // SOMA_SOUND_H

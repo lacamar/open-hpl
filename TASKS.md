@@ -142,7 +142,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 (`scripts/soma-play.py`; the lab run teleports to `Area_ForceTalk`).
 
 - Saves restore in place (script objects by member name, entity state, timers, player pose).
-  Not saved yet: playing voices/music, handles to engine objects in script members (re-acquired
+  Not saved yet: playing voices, handles to engine objects in script members (re-acquired
   by scripts), agents' native state.
 - Agents: char mover wall/object avoidance, banking and idle extras are no-ops.
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.

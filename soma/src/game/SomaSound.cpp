@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <sstream>
 
 typedef cSomaSoundEvents::cEvent cEvent;
 
@@ -1043,6 +1044,58 @@ void RegisterMusicNatives(asIScriptEngine *e)
 	});
 }
 } // namespace
+
+// cLuxMusicHandler::Scriptable_SaveToBuffer: music slots and dynamic tracks
+tString SomaSerializeMusic()
+{
+	std::ostringstream o;
+	o.precision(9);
+	for (int i = 0; i <= kMaxMusicPrio; ++i)
+		if (gvGameMusic[i].msFile.empty() == false)
+			o << "M " << i << ' ' << gvGameMusic[i].mfVolume << ' ' << gvGameMusic[i].mbLoop << ' ' << gvGameMusic[i].mbResume << ' '
+			  << gvGameMusic[i].msFile << '\n';
+	for (const cDynamicTrack &t : gvDynamicTracks)
+		o << "D " << (int)t.mID.mA << ' ' << t.mID.mB << ' ' << t.mID.mC << ' ' << t.mlTrackPrio << ' ' << t.mlMusicPrio << ' ' << t.mfVolume
+		  << ' ' << t.mfFadeIn << ' ' << t.mfFadeOut << ' ' << t.msFile << '\n';
+	return o.str();
+}
+
+void SomaDeserializeMusic(const tString &asData)
+{
+	for (cGameMusic &m : gvGameMusic)
+		m = cGameMusic();
+	gvDynamicTracks.clear();
+	gCurrentDynamicTrack = cDynamicTrack();
+	std::istringstream in(asData);
+	tString sLine;
+	while (std::getline(in, sLine))
+	{
+		std::istringstream l(sLine);
+		char c = 0;
+		l >> c;
+		if (c == 'M')
+		{
+			int lPrio = -1;
+			cGameMusic m;
+			l >> lPrio >> m.mfVolume >> m.mbLoop >> m.mbResume >> std::ws;
+			std::getline(l, m.msFile);
+			if (lPrio >= 0 && lPrio <= kMaxMusicPrio)
+				gvGameMusic[lPrio] = m;
+		}
+		else if (c == 'D')
+		{
+			cDynamicTrack t;
+			int lA = 0;
+			l >> lA >> t.mID.mB >> t.mID.mC >> t.mlTrackPrio >> t.mlMusicPrio >> t.mfVolume >> t.mfFadeIn >> t.mfFadeOut >> std::ws;
+			t.mID.mA = (uint8_t)lA;
+			std::getline(l, t.msFile);
+			gvDynamicTracks.push_back(t);
+		}
+	}
+	MusicHandler()->Stop(100.0f);
+	glCurrentMusicPrio = -1;
+	PlayHighestMusic();
+}
 
 typedef cSomaSoundInstance Inst;
 

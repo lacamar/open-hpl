@@ -24,7 +24,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVJ"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVK"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -1333,6 +1333,7 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 	for (const tString &sLine : setPlayed)
 		o.Str(sLine);
 	cSomaSaveState::WriteWorld(o);
+	o.Str(SomaSerializeMusic());
 
 	tWString sPath = GetSaveDir() + cString::GetFileNameW(asFile);
 	std::ofstream file(cString::To8Char(sPath).c_str(), std::ios::binary | std::ios::trunc);
@@ -1365,7 +1366,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 26)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 27)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -1423,6 +1424,8 @@ bool cSomaSaveHandler::ApplyPendingState()
 	SomaPreloadMap() = gsPendingPreload;
 	gnSavedUnderwater = -1;
 	cSomaSaveState::ReadWorld(in);
+	if (glPendingVersion >= 27)
+		SomaDeserializeMusic(in.Str());
 	cSomaLuxMap::GetCurrent()->Setup();
 	if (gnSavedUnderwater >= 0)
 		cSomaSaveState::ApplyUnderwater(cSomaLuxMap::GetCurrent(), gnSavedUnderwater != 0);
