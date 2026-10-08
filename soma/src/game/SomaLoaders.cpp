@@ -147,8 +147,8 @@ static void LoadProcAnimations(cXmlElement *apElem, cSomaLuxEntity *apEnt)
 	}
 }
 
-// Map placements carry a bone pose: per bone quaternion (w x y z) + translation in FBX units
-void cSomaGenericEntityLoader::LoadPose()
+// Before joints so they are created in the posed frame. Map placements carry a bone pose: per bone quaternion (w x y z) + translation in FBX units
+void cSomaGenericEntityLoader::BeforeJoints()
 {
 	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
 	cXmlElement *pPose = pElem ? pElem->GetFirstElement("Pose") : NULL;
@@ -176,8 +176,6 @@ void cSomaGenericEntityLoader::LoadPose()
 
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
-	LoadPose();
-
 	// HPL2 only attaches these to bodies; HPL3 parents them to the mesh entity otherwise
 	if (mpEntity && mvBodies.empty())
 	{

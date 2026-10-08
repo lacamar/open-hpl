@@ -14,7 +14,7 @@ public:
 protected:
 	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars);
 	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars);
-	void LoadPose();
+	void BeforeJoints() override;
 };
 
 class cSomaAreaLoader_PlayerStart : public iAreaLoader

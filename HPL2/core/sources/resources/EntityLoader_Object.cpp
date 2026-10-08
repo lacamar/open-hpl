@@ -811,6 +811,8 @@ namespace hpl {
 			}
 		}
 
+		BeforeJoints();
+
 		if(pPhysicsWorld)
 		////////////////////////////////////////	
 		// Load Joints

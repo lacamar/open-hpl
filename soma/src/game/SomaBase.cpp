@@ -409,7 +409,7 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 			return true;
 		}
 	} hits;
-	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&hits, vFrom, vTo, true, false, false);
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&hits, vFrom, vTo, true, false, false, aReq.GetInt("prefilter", 1) != 0);
 	std::sort(hits.mvHits.begin(), hits.mvHits.end());
 	tString sOut;
 	for (auto &h : hits.mvHits)
@@ -417,6 +417,20 @@ static void cSomaBase_HeadlessCmd_Raycast(void *apUserData, const cHeadlessReque
 				cString::ToString(h.second->GetMass()) + " collide=" + cString::ToString(h.second->GetCollide()) +
 				" char=" + cString::ToString(h.second->GetCollideCharacter()) + "\n";
 	aResp.Set("hits", sOut);
+	if (aReq.GetInt("bodies", 0) == 0)
+		return;
+	cVector3f vMin = cMath::Vector3Min(vFrom, vTo), vMax = cMath::Vector3Max(vFrom, vTo);
+	sOut = "";
+	cPhysicsBodyIterator it = pMap->GetWorld()->GetPhysicsWorld()->GetBodyIterator();
+	while (it.HasNext())
+	{
+		iPhysicsBody *pBody = it.Next();
+		cBoundingVolume *pBV = pBody->GetBoundingVolume();
+		if (cMath::CheckAABBIntersection(vMin, vMax, pBV->GetMin(), pBV->GetMax()))
+			sOut += pBody->GetName() + " active=" + cString::ToString(pBody->IsActive()) + " collide=" + cString::ToString(pBody->GetCollide()) +
+					" bv=" + pBV->GetMin().ToString() + ".." + pBV->GetMax().ToString() + "\n";
+	}
+	aResp.Set("bodies", sOut);
 }
 
 // ponytail: player-size grid A* over live physics queries, expansion-capped; bake a navmesh if it gets slow.
