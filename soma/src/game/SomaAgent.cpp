@@ -958,6 +958,20 @@ namespace
 		cGenericComponent(E *p, int alType) : cAgentComponent(p, alType) {}
 	};
 
+	struct cAgentLightSensor : cAgentComponent
+	{
+		float mfSensitivity = 1;
+		cAgentLightSensor(E *p) : cAgentComponent(p, eComp_LightSensor) {}
+	};
+
+	struct cComponentIterator
+	{
+		std::vector<cAgentComponent *> mvComps;
+		size_t mlPos = 0;
+		cAgentComponent *Next() { return mlPos < mvComps.size() ? mvComps[mlPos++] : NULL; }
+		cAgentComponent *PeekNext() { return mlPos < mvComps.size() ? mvComps[mlPos] : NULL; }
+	};
+
 	struct cAgentEdgeGlow : cAgentComponent
 	{
 		cColor mColor = cColor(0, 0, 1, 1);
@@ -1160,6 +1174,37 @@ namespace
 			} ray;
 			mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, avStart, avEnd, true, false, false);
 			return ray.mfDist;
+		}
+
+		float GroundDist(float afMax, bool abDynamic, int alRays, float afRadius, bool abShortest)
+		{
+			struct cGround : iPhysicsRayCallback
+			{
+				bool mbDynamic;
+				float mfDist;
+				bool OnIntersect(iPhysicsBody *b, cPhysicsRayParams *p) override
+				{
+					if (b->IsCharacter() == false && (mbDynamic || b->GetMass() == 0) && p->mfDist < mfDist)
+						mfDist = p->mfDist;
+					return true;
+				}
+			};
+			if (mpBody == NULL || mpEnt->mpMap == NULL)
+				return afMax;
+			cVector3f vFeet = mpBody->GetFeetPosition();
+			float fResult = abShortest ? afMax : 0;
+			int lRays = std::max(alRays, 1);
+			for (int i = 0; i < lRays; ++i)
+			{
+				float fAngle = k2Pif * i / lRays;
+				cVector3f vStart = vFeet + (i == 0 ? cVector3f(0) : cVector3f(std::cos(fAngle), 0, std::sin(fAngle)) * afRadius);
+				cGround ray;
+				ray.mbDynamic = abDynamic;
+				ray.mfDist = afMax;
+				mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, vStart, vStart - cVector3f(0, afMax, 0), true, false, false);
+				fResult = abShortest ? std::min(fResult, ray.mfDist) : fResult + ray.mfDist / lRays;
+			}
+			return fResult;
 		}
 
 		// curbs without risers never trigger the body's side-collision step climb
@@ -1743,6 +1788,15 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 
 	const char *A = "cLuxAgent";
 	SOMA_METHOD(e, A, "iCharacterBody@ GetCharBody()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mpBody : (iCharacterBody *)NULL; });
+	SOMA_METHOD(e, A, "float GetDistanceToGround(float afMaxTestDistance, bool abCheckDynamic, int alNumOfRays=1, float afRadius=0.25, bool abGetShortest=true)", +[](E *p, float d, bool b, int n, float r, bool s) {
+		cAgent *a = Agent(p);
+		return a ? a->GroundDist(d, b, n, r, s) : d;
+	});
+	SOMA_METHOD(e, A, "void GetDistanceToGround(const tString&in asCallbackFunc, float afMaxTestDistance, bool abCheckDynamic, int alNumOfRays=1, float afRadius=0.25, bool abGetClosest=true)", +[](E *p, const tString &f, float d, bool b, int n, float r, bool s) {
+		cAgent *a = Agent(p);
+		float fDist = a ? a->GroundDist(d, b, n, r, s) : d;
+		p->Call("void " + f + "(float)", [fDist](asIScriptContext *c) { c->SetArgFloat(0, fDist); });
+	});
 	SOMA_METHOD(e, A, "float GetDistanceToPlayer()", +[](E *p) { return cMath::Vector3Dist(AgentPos(p), PlayerFeet()); });
 	SOMA_METHOD(e, A, "float GetDistanceToPlayer2D()", +[](E *p) { cVector3f d = AgentPos(p) - PlayerFeet(); d.y = 0; return d.Length(); });
 	SOMA_METHOD(e, A, "float GetDistanceToPos(const cVector3f&in avPos)", +[](E *p, V v) { return cMath::Vector3Dist(AgentPos(p), v); });
@@ -1912,7 +1966,30 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		return AddComponent(p, new cAgentEdgeGlow(p));
 	});
 	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentForceEmitter(p)); });
-	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cGenericComponent(p, eComp_LightSensor)); });
+	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentLightSensor(p)); });
+	SOMA_METHOD(e, "cLuxLightSensor", "void LoadFromInstanceVariables(cResourceVarsObject@ apInstanceVars)", +[](cAgentLightSensor *, void *) {});
+	SOMA_METHOD(e, "cLuxLightSensor", "void SetSensitivityLevel(float afX)", +[](cAgentLightSensor *c, float x) { c->mfSensitivity = x; });
+	SOMA_METHOD(e, "cLuxLightSensor", "float GetSensitivityLevel()", +[](cAgentLightSensor *c) { return c->mfSensitivity; });
+	SOMA_METHOD(e, "cLuxLightSensor", "bool IsSensoring()", +[](cAgentLightSensor *c) {
+		cAgent *a = Agent(c->mpEntity);
+		return c->mpEntity->mbActive && (a == NULL || a->mbSensesActive);
+	});
+	SOMA_METHOD(e, "cLuxMap", "cLuxEntityComponentIterator@ GetEntityComponentIterator(eLuxEntityComponentType aType)", +[](cSomaLuxMap *m, int t) {
+		static cComponentIterator vPool[16];
+		static size_t lNext = 0;
+		cComponentIterator *pIt = &vPool[lNext++ % 16];
+		pIt->mvComps.clear();
+		pIt->mlPos = 0;
+		for (auto &it : gmapAgents)
+			if (it.first->mpMap == m)
+				for (auto &c : it.second->mvComponents)
+					if (c->mlType == t)
+						pIt->mvComps.push_back(c.get());
+		return pIt;
+	});
+	SOMA_METHOD(e, "cLuxEntityComponentIterator", "bool HasNext()", +[](cComponentIterator *p) { return p->mlPos < p->mvComps.size(); });
+	SOMA_METHOD(e, "cLuxEntityComponentIterator", "iLuxEntityComponent@ Next()", +[](cComponentIterator *p) { return p->Next(); });
+	SOMA_METHOD(e, "cLuxEntityComponentIterator", "iLuxEntityComponent@ PeekNext()", +[](cComponentIterator *p) { return p->PeekNext(); });
 	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentBackboneTail(p)); });
 	for (const char *pType : {"iLuxEntityComponent", "cLuxStateMachine", "cLuxCharMover", "cLuxPathfinder", "cLuxBarkMachine", "cLuxSoundListener", "cLuxHeadTracker",
 							  "cLuxEdgeGlow", "cLuxForceEmitter", "cLuxLightSensor", "cLuxBackboneTail"})
