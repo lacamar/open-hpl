@@ -1181,6 +1181,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 
 	cEntityLoader_Object::SetSubMeshScaleIncludesModelScale(true);
 	cEntityLoader_Object::SetSubMeshMaterials(true);
+	cEntityLoader_Object::SetShareBodyShapes(true);
 	iLight::SetHpl3Visibility(true);
 	cParticleSystem::SetHpl3Color(true);
 	iCharacterBody::SetHpl3(true);

@@ -75,6 +75,7 @@ namespace hpl {
 
 		static void SetSubMeshScaleIncludesModelScale(bool abX){ mbSubMeshScaleIncludesModelScale = abX; }
 		static void SetSubMeshMaterials(bool abX){ mbSubMeshMaterials = abX; }
+		static void SetShareBodyShapes(bool abX){ mbShareBodyShapes = abX; }
 
         iEntity3D* Load(const tString &asName, int alID, bool abActive, cXmlElement *apRootElem, 
 						const cMatrixf &a_mtxTransform, const cVector3f &avScale, 
@@ -109,6 +110,7 @@ namespace hpl {
 		cVector3f mvScale;
 		static bool mbSubMeshScaleIncludesModelScale;
 		static bool mbSubMeshMaterials;
+		static bool mbShareBodyShapes;
 
 		bool mbNodeAnimation;
 

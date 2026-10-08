@@ -66,6 +66,7 @@ namespace hpl {
 
 	bool cEntityLoader_Object::mbSubMeshScaleIncludesModelScale = false;
 	bool cEntityLoader_Object::mbSubMeshMaterials = false;
+	bool cEntityLoader_Object::mbShareBodyShapes = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -89,7 +90,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static iCollideShape* GetBodyShape(cXmlElement *apBodyElem,iPhysicsWorld *apPhysicsWorld, tLoaderCollideShapeMap &a_setShapes)
+	static iCollideShape* GetBodyShape(cXmlElement *apBodyElem,iPhysicsWorld *apPhysicsWorld, tLoaderCollideShapeMap &a_setShapes, std::set<iCollideShape*> &a_setUsed, bool abShare)
 	{
 		////////////////////////////////////////
 		// Get shapes for body
@@ -104,7 +105,9 @@ namespace hpl {
 			if(it != a_setShapes.end())
 			{
 				vShapes.push_back(it->second);
-				a_setShapes.erase(it);
+				// HPL3 bodies may share shapes; pinned since compounds don't refcount subshapes
+				if(abShare)	{ if(a_setUsed.insert(it->second).second) it->second->IncUserCount(); }
+				else		a_setShapes.erase(it);
 			}
 		}
 		
@@ -656,6 +659,7 @@ namespace hpl {
 		////////////////////////////////////////	
 		// Load Shapes
 		tLoaderCollideShapeMap setShapes;
+		std::set<iCollideShape*> setUsedShapes;
 
 		if(pPhysicsWorld)
 		{
@@ -699,7 +703,7 @@ namespace hpl {
 
 					/////////////////////
 					// Get shape
-					iCollideShape *pShape = GetBodyShape(pBodyElem,pPhysicsWorld,setShapes);
+					iCollideShape *pShape = GetBodyShape(pBodyElem,pPhysicsWorld,setShapes,setUsedShapes,mbShareBodyShapes);
 					if(pShape==NULL){
 						Error("No shapes found for body '%s'\n", sBodyName.c_str());
 						continue;
@@ -749,7 +753,8 @@ namespace hpl {
 			tLoaderCollideShapeMapIt shapeSetIt = setShapes.begin();
 			for(; shapeSetIt != setShapes.end(); ++shapeSetIt)
 			{
-				pPhysicsWorld->DestroyShape(shapeSetIt->second);
+				if(setUsedShapes.count(shapeSetIt->second)==0)
+					pPhysicsWorld->DestroyShape(shapeSetIt->second);
 			}
 		}
 		
