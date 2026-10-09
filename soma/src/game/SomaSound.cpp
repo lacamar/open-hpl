@@ -806,7 +806,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			float fGain = fLayerGain * snd.mfVolume * def.mfVolume;
 			vGain[l][s] = fGain;
 			cSlot &slot = mvSlots[l][s];
-			bool bInRange = mbStopped == false && (layer.mlParam < 0 || (fX >= snd.mfX0 && (fX < snd.mfX1 || snd.mfX1 >= 0.999f)));
+			bool bInRange = (mbStopped == false || mbStopAtFadeEnd) && (layer.mlParam < 0 || (fX >= snd.mfX0 && (fX < snd.mfX1 || snd.mfX1 >= 0.999f)));
 			if (bInRange && slot.mbInRange == false)
 			{
 				slot.mbTriggered = false;
