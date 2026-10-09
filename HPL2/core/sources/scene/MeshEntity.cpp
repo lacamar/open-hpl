@@ -1466,7 +1466,7 @@ namespace hpl {
 		{
 		case eAnimationEventType_PlaySound:
 			{
-				cSoundEntity *pSound = mpWorld->CreateSoundEntity("AnimEvent",apEvent->msValue,true);
+				cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName+"_AnimEvent",apEvent->msValue,true);
 				if(pSound)
 				{
 					pSound->SetIsSaved(false);
