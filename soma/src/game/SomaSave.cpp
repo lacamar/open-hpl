@@ -731,9 +731,13 @@ public:
 			o.Pod((int)pPlayer->CallBool("int GetCharacterState()", nullptr, false));
 		}
 
-		o.Pod((uint32_t)pMap->GetTimers().size());
+		// a save from inside a timer callback must not keep that expired timer
+		o.Pod((uint32_t)std::count_if(pMap->GetTimers().begin(), pMap->GetTimers().end(),
+									  [&](const cSomaLuxTimer &t) { return pMap->IsTimerLive(t); }));
 		for (const cSomaLuxTimer &t : pMap->GetTimers())
 		{
+			if (pMap->IsTimerLive(t) == false)
+				continue;
 			o.Str(t.msName);
 			o.Str(t.msFunction);
 			o.Pod(t.mfTime);

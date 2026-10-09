@@ -49,6 +49,7 @@ public:
 	// cLuxMap::RestartCurrentTimer, only valid inside a timer callback
 	void RestartCurrentTimer(float afTime);
 	std::list<cSomaLuxTimer> &GetTimers() { return mvTimers; }
+	bool IsTimerLive(const cSomaLuxTimer &t) const { return t.mbRemoved == false && (&t != mpFiringTimer || t.mfTime > 0); }
 	double GetTime() { return mfTime; }
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
