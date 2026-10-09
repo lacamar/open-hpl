@@ -18,6 +18,7 @@
  */
 
 #include "scene/MeshEntity.h"
+#include <cstring>
 
 #include "resources/Resources.h"
 #include "resources/MaterialManager.h"
@@ -85,6 +86,7 @@ namespace hpl {
 
 		mlInvWorldMatrixTransformCount = -1;
 		mlBoneMatricesTransformCount = -1;
+		mlBoneMatricesVersion = 0;
 
 		mbBoneMatricesNeedUpdate = true;
 
@@ -1208,7 +1210,12 @@ namespace hpl {
 				//Bind pose's local space.
 				cMatrixf mtxLocal = cMath::MatrixMul(m_mtxInvWorldMatrix,pState->GetWorldMatrix());
 				
-				mvBoneMatrices[i] = cMath::MatrixMul(mtxLocal,pBone->GetInvBindTransform());
+				cMatrixf mtxBone = cMath::MatrixMul(mtxLocal,pBone->GetInvBindTransform());
+				if(memcmp(&mtxBone, &mvBoneMatrices[i], sizeof(cMatrixf)) != 0)
+				{
+					mvBoneMatrices[i] = mtxBone;
+					++mlBoneMatricesVersion;
+				}
 			}
 		}
 	}

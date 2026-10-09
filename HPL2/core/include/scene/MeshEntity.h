@@ -235,6 +235,7 @@ namespace hpl {
 		
 		bool mbBoneMatricesNeedUpdate;
 		int mlBoneMatricesTransformCount;
+		int mlBoneMatricesVersion;
 
 		cMatrixf m_mtxInvWorldMatrix;
 		int mlInvWorldMatrixTransformCount;

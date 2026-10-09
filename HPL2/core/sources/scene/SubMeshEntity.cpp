@@ -57,6 +57,7 @@ namespace hpl {
 		mpMaterialManager = apMaterialManager;
 
 		mbGraphicsUpdated = false;
+		mlSkinnedBoneMatricesVersion = -1;
 
 		if(mpMeshEntity->GetMesh()->GetSkeleton())
 		{
@@ -193,12 +194,14 @@ namespace hpl {
 		////////////////////////////////////
 		if(mpDynVtxBuffer && mpSubMesh->mpVertexWeights)
 		{
-			if(mpMeshEntity->mbSkeletonPhysicsSleeping && mbGraphicsUpdated)
+			if(mbGraphicsUpdated && (mpMeshEntity->mbSkeletonPhysicsSleeping ||
+				mlSkinnedBoneMatricesVersion == mpMeshEntity->mlBoneMatricesVersion))
 			{
 				return;
 			}
 			
 			mbGraphicsUpdated = true;
+			mlSkinnedBoneMatricesVersion = mpMeshEntity->mlBoneMatricesVersion;
 
 			const float *pBindPos = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Position);
 			const float *pBindNormal = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Normal);
