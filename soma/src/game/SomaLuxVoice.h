@@ -36,6 +36,7 @@ public:
 	void SkipCurrentLine(const tString &asScene);
 	bool CharacterIsSpeaking(const tString &asName);
 	void GetSpectrumFromSpeakingCharacter(const tString &asName, std::vector<float> &avOut, int alNum);
+	void GetSpectrumFromScene(const tString &asScene, std::vector<float> &avOut, int alNum);
 	bool SubjectIsPlaying(const tString &asName);
 	bool SceneIsActive(const tString &asScene);
 	bool SceneInvolvingCharacterIsActive(const tString &asName);
@@ -124,6 +125,7 @@ private:
 		std::vector<std::pair<cSoundEntry *, int>> mvOldVoices;
 		std::vector<std::pair<cSomaSoundInstance *, int>> mvOldEffects;
 	};
+	void GetSpectrum(cPlaying &p, std::vector<float> &avOut, int alNum);
 	struct cPcm
 	{
 		tString msFile;

@@ -751,36 +751,44 @@ bool cSomaLuxVoiceHandler::LoadPcm(const tString &asFile)
 
 // cLuxVoiceHandler::GetSpectrumFromScene -> FMOD Channel::getSpectrum: |FFT| of the last 2n samples
 // at the 48 kHz mix rate, rect window, averaged over channels
+void cSomaLuxVoiceHandler::GetSpectrum(cPlaying &p, std::vector<float> &avOut, int alNum)
+{
+	avOut.assign(alNum, 0.0f);
+	if (p.mpEntry == NULL || mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false || LoadPcm(p.msFile) == false)
+		return;
+	int lN = 2 * alNum, lCh = mPcm.mlChannels;
+	double fStep = mPcm.mlRate / 48000.0;
+	long lFrames = (long)mPcm.mvData.size() / lCh;
+	long lEnd = (long)(p.mpEntry->GetChannel()->GetElapsedTime() * mPcm.mlRate);
+	for (int c = 0; c < lCh; ++c)
+		for (int k = 0; k < alNum; ++k)
+		{
+			float fRe = 0, fIm = 0;
+			for (int n = 0; n < lN; ++n)
+			{
+				long i = lEnd - (long)((lN - n) * fStep);
+				if (i < 0 || i >= lFrames)
+					continue;
+				float x = mPcm.mvData[i * lCh + c], a = k2Pif * k * n / lN;
+				fRe += x * cosf(a);
+				fIm -= x * sinf(a);
+			}
+			avOut[k] += sqrtf(fRe * fRe + fIm * fIm) * 2.0f / lN / lCh;
+		}
+}
+
 void cSomaLuxVoiceHandler::GetSpectrumFromSpeakingCharacter(const tString &asName, std::vector<float> &avOut, int alNum)
 {
 	for (cPlaying &p : mvPlaying)
-	{
-		if (p.mlLine >= p.mvLines.size() || p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter != asName)
-			continue;
-		avOut.assign(alNum, 0.0f);
-		if (p.mpEntry == NULL || mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false || LoadPcm(p.msFile) == false)
-			return;
-		int lN = 2 * alNum, lCh = mPcm.mlChannels;
-		double fStep = mPcm.mlRate / 48000.0;
-		long lFrames = (long)mPcm.mvData.size() / lCh;
-		long lEnd = (long)(p.mpEntry->GetChannel()->GetElapsedTime() * mPcm.mlRate);
-		for (int c = 0; c < lCh; ++c)
-			for (int k = 0; k < alNum; ++k)
-			{
-				float fRe = 0, fIm = 0;
-				for (int n = 0; n < lN; ++n)
-				{
-					long i = lEnd - (long)((lN - n) * fStep);
-					if (i < 0 || i >= lFrames)
-						continue;
-					float x = mPcm.mvData[i * lCh + c], a = k2Pif * k * n / lN;
-					fRe += x * cosf(a);
-					fIm -= x * sinf(a);
-				}
-				avOut[k] += sqrtf(fRe * fRe + fIm * fIm) * 2.0f / lN / lCh;
-			}
-		return;
-	}
+		if (p.mlLine < p.mvLines.size() && p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter == asName)
+			return GetSpectrum(p, avOut, alNum);
+}
+
+void cSomaLuxVoiceHandler::GetSpectrumFromScene(const tString &asScene, std::vector<float> &avOut, int alNum)
+{
+	for (cPlaying &p : mvPlaying)
+		if (p.mpSubject->msScene == asScene)
+			return GetSpectrum(p, avOut, alNum);
 }
 
 bool cSomaLuxVoiceHandler::SubjectIsPlaying(const tString &asName)
@@ -1165,6 +1173,14 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 				+[](void *, S s, CScriptArray &arr, int n) {
 					std::vector<float> v;
 					VH->GetSpectrumFromSpeakingCharacter(s, v, n);
+					arr.Resize((asUINT)v.size());
+					for (asUINT i = 0; i < v.size(); ++i)
+						*(float *)arr.At(i) = v[i];
+				});
+	SOMA_METHOD(e, T, "void GetSpectrumFromScene(const tString&in asScene, array<float>&out aDestArray, int alNumSamples=64)",
+				+[](void *, S s, CScriptArray &arr, int n) {
+					std::vector<float> v;
+					VH->GetSpectrumFromScene(s, v, n);
 					arr.Resize((asUINT)v.size());
 					for (asUINT i = 0; i < v.size(); ++i)
 						*(float *)arr.At(i) = v[i];
