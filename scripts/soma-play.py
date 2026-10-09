@@ -268,8 +268,12 @@ def cmd_goto(a):
     else:
         dx, dz = feet[0] - target[0], feet[2] - target[2]
         n = math.hypot(dx, dz) or 1.0
-        x, y, z = target[0] + dx / n * a.dist, feet[1], target[2] + dz / n * a.dist
-    ex(f'cLux_GetPlayer().GetCharacterBody().SetFeetPosition(cVector3f({x}, {y}, {z}), true);')
+        x, z = target[0] + dx / n * a.dist, target[2] + dz / n * a.dist
+        top = max(target[1], feet[1]) + 3.0
+        hits = raycast((x, top, z), (x, top - 40.0, z))
+        y = top - hits[0][0] + 0.05 if hits else target[1]
+    ex(f'iCharacterBody@ b = cLux_GetPlayer().GetCharacterBody(); b.SetFeetPosition(cVector3f({x}, {y}, {z}), true);'
+       'b.SetForceVelocity(cVector3f_Zero); b.StopMovement();')
     frames(0.3)
     aim(target)
     frames(0.2)
@@ -404,6 +408,8 @@ def steer(target, tol, deadline, back=False, prev=None, watch=None):
             return True
         stuck = 0 if d < best - 0.05 else stuck + 1
         best = min(best, d)
+        if stuck > 20 and prev and d < 1.5:
+            return True
         if stuck > 20:
             print(f"stuck at {d:.2f} m from {target}")
             return False

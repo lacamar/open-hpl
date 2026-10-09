@@ -460,7 +460,7 @@ namespace
 	cNodeData *GetContainer(cSomaLuxMap *apMap, const tString &asName, const cVector3f &avSize, float afMaxHeight, float afMaxEdgeDist = 5, bool abAtCenter = false)
 	{
 		cWorld *pWorld = apMap->GetWorld();
-		auto key = std::make_pair(pWorld, asName);
+		auto key = std::make_pair(pWorld, asName + "|" + cString::ToString(afMaxHeight) + "|" + cString::ToString(afMaxEdgeDist) + "|" + cString::ToString(abAtCenter));
 		auto it = gmapContainers.find(key);
 		if (it != gmapContainers.end())
 			return &it->second;
