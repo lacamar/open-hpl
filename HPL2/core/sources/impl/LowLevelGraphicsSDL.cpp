@@ -338,7 +338,9 @@ namespace hpl {
 #endif //WIN32
 
 		Log(" Init Glew...");
-		if(glewInit() == GLEW_OK)
+		GLenum lGlewErr = glewInit();
+		// Wayland/EGL: no GLX display, but core GL entry points are loaded
+		if(lGlewErr == GLEW_OK || lGlewErr == GLEW_ERROR_NO_GLX_DISPLAY)
 		{
 			Log("OK\n");
 		}
