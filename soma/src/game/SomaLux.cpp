@@ -1455,6 +1455,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cCamera", "float GetExtendedPitch() const", +[](cCamera *c) { return mapCameraExtra[c].fExtPitch; });
 	SOMA_METHOD(e, "cCamera", "float GetExtenededRoll() const", +[](cCamera *c) { return mapCameraExtra[c].fExtRoll; });
 	SOMA_METHOD(e, "iPhysicsBody", "cBoundingVolume@ GetBoundingVolume()", +[](iPhysicsBody *b) { return b->GetBoundingVolume(); });
+	SOMA_METHOD(e, "cMeshEntity", "cBoundingVolume@ GetBoundingVolume()", +[](cMeshEntity *m) { return m->GetBoundingVolume(); });
 	SOMA_METHOD(e, "iPhysicsBody", "cVector3f GetMassCenter() const", +[](iPhysicsBody *b) { return b->GetMassCentre(); });
 	SOMA_FUNC(e, "bool cMath_CheckPointInBVIntersection(const cVector3f&in avPoint, cBoundingVolume@ aBV)",
 			  +[](const cVector3f &v, cBoundingVolume *b) { return b && cMath::CheckPointInBVIntersection(v, *b); });
