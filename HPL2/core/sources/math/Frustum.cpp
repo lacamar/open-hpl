@@ -327,7 +327,8 @@ namespace hpl {
 
 		//////////////////////////////
 		// Near plane points vs Frustum
-		if(cMath::CheckPointsPlanesCollision(mvVertices, 4, &apFrustum->mPlane[0], apFrustum->mbInfFarPlane? 5 : 6)==eCollision_Outside)
+		//Side planes only: light shapes reach the apex, in front of the frustum's near plane
+		if(cMath::CheckPointsPlanesCollision(mvVertices, 4, &apFrustum->mPlane[0], 4)==eCollision_Outside)
 		{
 			return false;
 		}
