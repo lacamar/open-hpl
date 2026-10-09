@@ -311,7 +311,7 @@ def cmd_drag(a):
     frames(0.2)
     # interact states ignore look input under 0.01 screen heights per frame and cap the speed
     path = 2 * math.pi * abs(a.dx) * a.circles if a.circles else math.hypot(a.dx, a.dy)
-    a.steps = max(1, min(a.steps, int(path / 10)))
+    a.steps = max(1, min(a.steps, int(path / 10)), int(40 * a.circles))
     if a.circles:
         px = py = 0
         steps = []
