@@ -1584,6 +1584,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			if (mpLuxGame)
 			{
 				mpLuxGame->PreloadData(mpLuxMap);
+				// FMOD keeps these resident; parsing them on first use stalls a frame.
+				cSomaSoundEvents::Get()->PreloadProject("Player");
+				cSomaSoundEvents::Get()->PreloadProject("Interface");
 				mpLuxGame->EnterMap(mpLuxMap);
 				if (pPlayer && mbUseRealPlayer)
 					pPlayer->PlaceAtStart(vAreaPos, fAreaYaw, bCrouching);

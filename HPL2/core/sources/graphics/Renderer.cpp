@@ -1416,7 +1416,8 @@ namespace hpl {
 
 			///////////////////////////
 			//If node-query list is not empty, check if the first query is ready
-			if(lstNodeOcclusionPairs.empty()==false)
+			// Only once the stack drains: some drivers (Mesa agx) flush and wait on every availability poll.
+			if(lstNodeOcclusionPairs.empty()==false && setNodeStack.empty())
 			{
 				cNodeOcclusionPair& noPair = lstNodeOcclusionPairs.front();
 

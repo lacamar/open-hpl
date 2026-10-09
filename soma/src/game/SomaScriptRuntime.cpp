@@ -146,7 +146,9 @@ bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::string &asW
 
 bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::function<std::string()> &aWhat)
 {
-	auto t0 = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point t0;
+	if (mbProfile)
+		t0 = std::chrono::steady_clock::now();
 	int r = apCtx->Execute();
 	if (mbProfile)
 	{
