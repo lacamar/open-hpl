@@ -447,7 +447,8 @@ namespace hpl {
 
 
 				tString sMaterial = mbSubMeshMaterials ? pSubMeshElem->GetAttributeString("Material") : "";
-				if(sMaterial != "")
+				// Some HPL3 .ent files put a physics material name here
+				if(cString::GetFileExt(sMaterial) != "")
 				{
 					cMaterial *pMaterial = apWorld->GetResources()->GetMaterialManager()->CreateMaterial(sMaterial);
 					if(pMaterial) pSubEntity->SetCustomMaterial(pMaterial);

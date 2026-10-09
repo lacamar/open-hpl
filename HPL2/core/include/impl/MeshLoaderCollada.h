@@ -341,7 +341,7 @@ namespace hpl {
 	class cColladaNode
 	{
 	public:
-		cColladaNode() : mlCount(0), pParent(NULL), mvScale(1,1,1), msInstanceMaterial("") {}
+		cColladaNode() : mbSourceIsLight(false), mlCount(0), pParent(NULL), mvScale(1,1,1), msInstanceMaterial("") {}
 		
 		tString msId;
 		tString msName;
@@ -352,6 +352,7 @@ namespace hpl {
 
 		tString msSource;
 		bool mbSourceIsFile;
+		bool mbSourceIsLight;
 
 		cMatrixf m_mtxTransform;
 		cMatrixf m_mtxWorldTransform;

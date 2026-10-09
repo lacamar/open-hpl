@@ -1259,7 +1259,7 @@ namespace hpl {
 		pNode->SetMatrix(apColladaNode->m_mtxTransform);
 
 		//Set if this node has any geometry source
-		if(apColladaNode->msSource!="")		pNode->SetCustomFlags(1);
+		if(apColladaNode->msSource!="" && !apColladaNode->mbSourceIsLight)	pNode->SetCustomFlags(1);
 		else								pNode->SetCustomFlags(0);
 
 		//Log("Node: %s\n",apColladaNode->msName.c_str());

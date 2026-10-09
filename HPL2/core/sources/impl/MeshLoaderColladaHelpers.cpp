@@ -986,6 +986,7 @@ namespace hpl {
 			GetAdress(sSource);
 
 			pNode->msSource = sSource;
+			pNode->mbSourceIsLight = tString(pInstanceElem->Value()) == "instance_light";
 
 			/////////////////////////////////////////////
 			//Get Material instance, if any
