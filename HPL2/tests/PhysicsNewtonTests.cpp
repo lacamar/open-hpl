@@ -163,6 +163,38 @@ static void TestHeightFieldSupportsBody()
 
 //-----------------------------------------------------------------------
 
+static void TestThinBoxRestsOnMesh()
+{
+	cPhysicsWorldNewton world;
+	world.SetGravity(cVector3f(0, -9.81f, 0));
+	world.SetMaxTimeStep(1.0f / 60.0f);
+	world.SetAccuracyLevel(ePhysicsAccuracy_Medium);
+
+	cCollideShapeNewton* pFloorShape = hplNew(cCollideShapeNewton,
+		(eCollideShapeType_Mesh, 0, NULL, world.GetNewtonWorld(), &world));
+	const unsigned int vIndices[6] = { 0, 1, 2, 0, 2, 3 };
+	const float vVertices[4 * 3] = {
+		-5.0f, 0.0f, -5.0f,
+		 5.0f, 0.0f, -5.0f,
+		 5.0f, 0.0f,  5.0f,
+		-5.0f, 0.0f,  5.0f,
+	};
+	pFloorShape->CreateFromVertices(vIndices, 6, vVertices, 3, 4);
+	world.CreateBody("Floor", pFloorShape)->SetMass(0);
+
+	// SOMA brain_chunk_07_rigid gib
+	cMatrixf mtxOffset = cMath::MatrixRotateY(0.346119f);
+	iPhysicsBody* pChunk = world.CreateBody("Chunk", world.CreateBoxShape(cVector3f(0.0395f, 0.0135f, 0.0251f), &mtxOffset));
+	pChunk->SetMass(0.25f);
+	pChunk->SetContinuousCollision(true);
+	pChunk->SetPosition(cVector3f(0.3f, 0.2f, 0.1f));
+	for (int i = 0; i < 600; ++i) world.Simulate(1.0f / 60.0f);
+
+	CHECK(cMath::Abs(pChunk->GetLocalPosition().y - 0.00675f) < 0.003f);
+}
+
+//-----------------------------------------------------------------------
+
 // HPL2's own LowLevelSystemSDL.cpp provides main() (it wraps SDL's platform
 // entry point) and expects the caller to define this instead - same
 // contract the Amnesia/Launcher executables use.
@@ -173,6 +205,7 @@ int hplMain(const tString&)
 	TestBuoyancyDoesNotCrash();
 	TestMeshCollisionSerializationRoundTrip();
 	TestHeightFieldSupportsBody();
+	TestThinBoxRestsOnMesh();
 
 	if (gFailures > 0)
 	{

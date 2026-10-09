@@ -6464,7 +6464,7 @@ dgInt32 dgWorld::FilterPolygonEdgeContacts(dgInt32 count,
 				dist = distVector % distVector;
 				//              if (dist < dgFloat32 (0.04f)) {
 				//              if ((dist < dgFloat32 (0.001f)) || ((dist < dgFloat32 (0.01f)) && ((contact[i].m_normal % contact[k].m_normal) > dgFloat32 (0.86f)))) {
-				if (dist < dgFloat32(1.e-3f)) {
+				if (dist < DG_PRUNE_CONTACT_TOLERANCE * DG_PRUNE_CONTACT_TOLERANCE) {
 					count--;
 					contact[k] = contact[count];
 					k--;
