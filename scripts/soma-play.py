@@ -172,10 +172,18 @@ def focused(name):
 
 def aim_entity(name):
     target = ent_pos(name)
-    cam, _ = camera_pos()
+    # static main bodies (lever bases) take focus but not the grab
+    d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); iPhysicsBody@ h = null;'
+           'for(int i = 0; i < e.GetBodyNum(); ++i) if(h is null || e.GetBody(i).GetMass() > h.GetMass()) @h = e.GetBody(i);'
+           'if(h !is null && h.GetMass() > 0) { cVector3f c = h.GetBoundingVolume().GetWorldCenter(); __print("c=" + c.x + " " + c.y + " " + c.z); }')
+    if "c" in d:
+        aim([float(v) for v in d["c"].split()])
+        if focused(name):
+            return
     aim(target)
     if focused(name):
         return
+    cam, _ = camera_pos()
     d = kv(f'iLuxEntity@ e = cLux_GetCurrentMap().GetEntityByName("{name}"); if(e.GetBodyNum() == 0) return;'
            'cVector3f a = e.GetBody(0).GetBoundingVolume().GetMin(), b = e.GetBody(0).GetBoundingVolume().GetMax();'
            'for(int i = 1; i < e.GetBodyNum(); ++i) { cBoundingVolume@ bv = e.GetBody(i).GetBoundingVolume();'

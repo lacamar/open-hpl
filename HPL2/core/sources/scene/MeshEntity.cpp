@@ -406,13 +406,16 @@ namespace hpl {
 			////////////////////////
 			//Check if it is animated
 			bool bAnimationActive = false;
+			bool bBaseAnimationActive = false;
 			for(size_t i=0; i< mvAnimationStates.size(); i++)
 			{
 				if(mvAnimationStates[i]->IsActive()){
 					bAnimationActive = true;
-					break;
+					if(!mvAnimationStates[i]->IsLayer()) bBaseAnimationActive = true;
 				}
 			}
+			// Tracks are deltas from the skeleton rest, not from a map pose
+			bool bUseMapPose = !mvBoneRestPose.empty() && !bBaseAnimationActive;
 
 			//////////////////////////////////////
 			// SKELETON
@@ -433,14 +436,14 @@ namespace hpl {
 
 						if(pState->IsActive())
 						{
-							pState->SetMatrix(mvBoneRestPose.empty() ? pBone->GetLocalTransform() : mvBoneRestPose[i],false);
+							pState->SetMatrix(bUseMapPose ? mvBoneRestPose[i] : pBone->GetLocalTransform(),false);
 						}
 						
 						//can optimize this by doing it in the order of the tree
 						//and using recursive. (should be enough as is...)
 						if(mbSkeletonPhysics && mfSkeletonPhysicsWeight!=1.0f)
 						{
-							mvTempBoneStates[i]->SetMatrix(mvBoneRestPose.empty() ? pBone->GetLocalTransform() : mvBoneRestPose[i],false);
+							mvTempBoneStates[i]->SetMatrix(bUseMapPose ? mvBoneRestPose[i] : pBone->GetLocalTransform(),false);
 						}
 					}
 

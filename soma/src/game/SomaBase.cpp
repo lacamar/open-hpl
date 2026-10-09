@@ -1441,6 +1441,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 {
 	if (mfGameStartTime < 0)
 		mfGameStartTime = mpEngine->GetGameTime();
+	unsigned long lStart = cPlatform::GetApplicationTime();
 	cWorld *pNewWorld = SomaTakePreloadedWorld(asMapFile, &gsLoadReport);
 	if (pNewWorld == NULL)
 	{
@@ -1575,7 +1576,10 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		tWString sHpm = mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asMapFile);
 		mpLuxMap = hplNew(cSomaLuxMap, (mpTestWorld, asMapFile));
 		cSomaLuxMap::SetCurrent(mpLuxMap);
-		if (sHpm != _W("") && mpLuxMap->CreateScript(mpScriptRuntime, cString::To8Char(cString::SetFileExtW(sHpm, _W("hps")))))
+		unsigned long lScript = cPlatform::GetApplicationTime();
+		bool bScript = sHpm != _W("") && mpLuxMap->CreateScript(mpScriptRuntime, cString::To8Char(cString::SetFileExtW(sHpm, _W("hps"))));
+		Log("SOMA: map script compiled in %lu ms (world %lu ms)\n", cPlatform::GetApplicationTime() - lScript, lScript - lStart);
+		if (bScript)
 		{
 			if (mpLuxGame)
 			{
@@ -1595,6 +1599,6 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		}
 		mpScriptRuntime->LogStubReport(40);
 	}
-
+	Log("SOMA: map '%s' entered in %lu ms\n", asMapFile.c_str(), cPlatform::GetApplicationTime() - lStart);
 	return true;
 }

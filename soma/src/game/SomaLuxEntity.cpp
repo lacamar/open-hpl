@@ -310,6 +310,14 @@ void cSomaLuxEntity::MakeDynamic()
 		pWorld->MakeRenderableDynamic(pBillboard);
 }
 
+// inv(a_mtxBase)*a_mtx without cancelling large world translations
+static cMatrixf RelativeMatrix(const cMatrixf &a_mtxBase, const cMatrixf &a_mtx)
+{
+	cMatrixf mtx = a_mtx;
+	mtx.SetTranslation(a_mtx.GetTranslation() - a_mtxBase.GetTranslation());
+	return cMath::MatrixMul(cMath::MatrixInverse(a_mtxBase.GetRotation()), mtx);
+}
+
 void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 {
 	if (meType == eSomaLuxEntityType_Player)
@@ -324,10 +332,9 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 		MakeDynamic();
 	if (iPhysicsBody *pBody = GetMainBody())
 	{
-		cMatrixf mtxInvMain = cMath::MatrixInverse(pBody->GetLocalMatrix());
 		for (iPhysicsBody *b : mvBodies)
 			if (b != pBody && abMainBodyOnly == false)
-				b->SetMatrix(cMath::MatrixMul(a_mtx, cMath::MatrixMul(mtxInvMain, b->GetLocalMatrix())));
+				b->SetMatrix(cMath::MatrixMul(a_mtx, RelativeMatrix(pBody->GetLocalMatrix(), b->GetLocalMatrix())));
 		pBody->SetMatrix(a_mtx);
 	}
 	else if (mpMesh)
@@ -2483,7 +2490,7 @@ void cSomaLuxEntity::AttachTo(cSomaLuxEntity *apParent, iPhysicsBody *apBody, co
 		SetMatrix(mtxParent);
 	mpAttachment->m_mtxParentPrev = mtxParent;
 	if (abLocked)
-		mpAttachment->m_mtxOffset = cMath::MatrixMul(cMath::MatrixInverse(mtxParent), GetMatrix());
+		mpAttachment->m_mtxOffset = RelativeMatrix(mtxParent, GetMatrix());
 }
 
 void cSomaLuxEntity::RemoveAttachment()
@@ -2512,7 +2519,7 @@ void cSomaLuxEntity::UpdateAttachment()
 		if (a->mbLocked)
 			SetMatrix(cMath::MatrixMul(mtxParent, a->m_mtxOffset));
 		else
-			SetMatrix(cMath::MatrixMul(cMath::MatrixMul(mtxParent, cMath::MatrixInverse(a->m_mtxParentPrev)), GetMatrix()));
+			SetMatrix(cMath::MatrixMul(mtxParent, RelativeMatrix(a->m_mtxParentPrev, GetMatrix())));
 	}
 	else
 	{

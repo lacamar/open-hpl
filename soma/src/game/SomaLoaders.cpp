@@ -165,9 +165,9 @@ void cSomaGenericEntityLoader::BeforeJoints()
 		const float *v = &vVals[i * 7];
 		cBone *pBone = pSkeleton->GetBoneByIndex(i);
 		vLocal[i] = cMath::MatrixQuaternion(cQuaternion(v[0], v[1], v[2], v[3]));
-		// Top-level pose omits the root's scale/axis frame and is already in metres
-		if (pBone->GetParent() == pSkeleton->GetRootBone())
-			vLocal[i] = cMath::MatrixMul(vLocal[i], pBone->GetLocalTransform().GetRotation());
+		// Unit-scaled roots (subway girls) carry a scale the pose omits
+		const cMatrixf &mtxRest = pBone->GetLocalTransform();
+		vLocal[i] = cMath::MatrixMul(vLocal[i], cMath::MatrixScale(cVector3f(mtxRest.GetRight().Length(), mtxRest.GetUp().Length(), mtxRest.GetForward().Length())));
 		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pBone->GetLocalUnitScale());
 	}
 	mpEntity->SetBoneRestPose(vLocal);
