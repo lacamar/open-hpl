@@ -2218,7 +2218,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 							return;
 						cGui *pGui = gpSomaBase->mpEngine->GetGui();
 						cGuiSet *pSet = pGui->CreateSet(p->msName + "_gui", NULL);
-						pSet->SetVirtualSize(size, -1000, 1000);
+						pSet->SetVirtualSize(size, -1024, 1024);
 						p->mpImGui = new cSomaImGui(p->msName, pSet);
 						p->mpImGui->mScreenClear = clear;
 						p->mpImGui->mScreenOfflineClear = offline;

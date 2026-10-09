@@ -277,7 +277,7 @@ def cmd_goto(a):
         dx, dz = feet[0] - target[0], feet[2] - target[2]
         n = math.hypot(dx, dz) or 1.0
         x, z = target[0] + dx / n * a.dist, target[2] + dz / n * a.dist
-        top = max(target[1], feet[1]) + 3.0
+        top = target[1] + 2.0
         hits = raycast((x, top, z), (x, top - 40.0, z))
         y = top - hits[0][0] + 0.05 if hits else target[1]
     ex(f'iCharacterBody@ b = cLux_GetPlayer().GetCharacterBody(); b.SetFeetPosition(cVector3f({x}, {y}, {z}), true);'
