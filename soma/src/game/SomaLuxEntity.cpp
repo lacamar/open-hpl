@@ -1914,10 +1914,15 @@ void cSomaLuxEntity::UpdateCheckCollision(float afTimeStep)
 			break;
 		if (pEnt == this || pEnt->mbActive == false || pEnt->meType == eSomaLuxEntityType_Area || pEnt->meType == eSomaLuxEntityType_LiquidArea)
 			continue;
-		for (iPhysicsBody *pBody : std::vector<iPhysicsBody *>(pEnt->mvBodies))
+		std::vector<iPhysicsBody *> vBodies(pEnt->mvBodies);
+		iCharacterBody *pChar = mbCheckCharacters || mbCheckStatic ? SomaAgentGetBody(pEnt) : NULL;
+		if (pChar && pChar->GetCurrentBody())
+			vBodies.push_back(pChar->GetCurrentBody());
+		for (iPhysicsBody *pBody : vBodies)
 		{
-			bool bDynamic = pBody->GetMass() > 0;
-			if (pBody->IsActive() == false || (bDynamic ? mbCheckDynamic : mbCheckStatic) == false || BodyInArea(this, pBody, mbCheckCenterInArea) == false)
+			bool bDynamic = pBody->GetMass() > 0 && pBody->IsCharacter() == false;
+			if (pBody->IsActive() == false || (bDynamic ? mbCheckDynamic : mbCheckStatic || pBody->IsCharacter()) == false ||
+				(pBody->IsCharacter() && mbCheckCharacters == false) || BodyInArea(this, pBody, mbCheckCenterInArea) == false)
 				continue;
 			if (CallBool("bool OnCheckCollision(iPhysicsBody@, iLuxEntity@)", [&](asIScriptContext *c) {
 					c->SetArgAddress(0, pBody);
@@ -2598,10 +2603,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, pType, "void SetCheckCollision(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbCheckCollision = b; });
 		SOMA_METHOD(e, pType, "bool GetCheckCollision()", +[](cSomaLuxEntity *p) { return p->mbCheckCollision; });
 		SOMA_METHOD(e, pType, "void SetupCheckCollision(bool abCheckIfCenterInSide, bool abCheckDynamic, bool abCheckStatic, bool abCheckCharacters)",
-					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool) {
+					+[](cSomaLuxEntity *p, bool c, bool d, bool st, bool ch) {
 						p->mbCheckCenterInArea = c;
 						p->mbCheckDynamic = d;
 						p->mbCheckStatic = st;
+						p->mbCheckCharacters = ch;
 					});
 		SOMA_METHOD(e, pType, "void MoveAngularTo(const cMatrixf&in a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, bool abUseOffset, const cVector3f &in avWorldOffset, const cVector3f &in avLocalOffset, const tString&in asCallback=\"\")",
 					+[](cSomaLuxEntity *p, const cMatrixf &m, float a, float s, float d, bool r, bool o, const cVector3f &w, const cVector3f &l, const tString &cb) {

@@ -262,7 +262,7 @@ public:
 	cMeshEntity *mpLiquidMesh = NULL;
 	cFogArea *mpLiquidFog = NULL;
 	cMatrixf m_mtxLiquidPlaced = cMatrixf::Identity;
-	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false;
+	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false, mbCheckCharacters = false;
 	float mfTimeSinceCheck = 0;
 	bool mbMoving = false;
 	cVector3f mvMoveGoal;
