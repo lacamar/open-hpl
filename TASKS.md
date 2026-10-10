@@ -41,7 +41,10 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-5. Residual `no_material:N` (single digits to ~50 per map): use `world_stats.no_material_top`.
+5. Data-side: residual `no_material` (<=7 per map). `televison_small_screen.mat` and
+   `mind_coral_colony_edges_small_solid.mat` don't exist; `communication_table_pplant_GUI.mat` needs the
+   missing `scanlines_standard.dds`, and Rebirth's `cMaterialManager::LoadFromFile` drops a material on
+   any missing texture too.
 
 
 
@@ -64,7 +67,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    crashes.
 
 
-11. Audio vs the ref (`soma-audio.py`): menu 12 dB short at 63 Hz; intro +6..8 dB above 4 kHz;
+11. Audio vs the ref (`soma-audio.py`): menu 6.5 dB short at 63 Hz (title glitch now repeats every
+   ~6 s like the ref; rest is random sample choice); intro +6..8 dB above 4 kHz;
    no reverb/EFX matching. 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
 
 

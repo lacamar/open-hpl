@@ -910,7 +910,8 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		++i;
 	}
 
-	if (mbStopped == false && mpEvent->mbOneShot && bPending == false && mvVoices.empty())
+	// oneshot=No events without parameters still finish (menu_glitch, maxplaybacks 1)
+	if (mbStopped == false && (mpEvent->mbOneShot || mpEvent->mvParams.empty()) && bPending == false && mvVoices.empty())
 		mbStopped = true;
 }
 
