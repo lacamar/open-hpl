@@ -48,9 +48,43 @@
 #if defined(__linux__)
 #include <unistd.h>
 #endif
+#include <sys/stat.h>
+#include <fstream>
+#include "resources/Resources.h"
 
 cSomaBase *gpSomaBase = NULL;
 static tString gsLoadReport;
+
+static bool CachedTranspileHpslToGlsl(const tString &asHpsl, eGpuShaderType aType, tString &asGlsl, tString &asError)
+{
+	auto Fnv = [](const void *apData, size_t alSize, uint64_t alHash) {
+		for (size_t i = 0; i < alSize; ++i)
+			alHash = (alHash ^ ((const unsigned char *)apData)[i]) * 1099511628211ull;
+		return alHash;
+	};
+	// output is only valid for the transpiler in this exact binary
+	static const std::string sStamp = [&] {
+		struct stat st = {};
+		stat("/proc/self/exe", &st);
+		return std::to_string(Fnv(&st.st_size, sizeof(st.st_size), Fnv(&st.st_mtim, sizeof(st.st_mtim), 14695981039346656037ull))) + "\n";
+	}();
+	char vName[17];
+	snprintf(vName, sizeof(vName), "%016llx", (unsigned long long)Fnv(asHpsl.data(), asHpsl.size(), Fnv(&aType, sizeof(aType), 14695981039346656037ull)));
+	std::string sFile = cString::To8Char(cResources::GetCacheFile(_W("hpsl/") + cString::To16Char(vName), _W("glsl")));
+	std::ifstream in(sFile.c_str(), std::ios::binary);
+	std::string sData((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	if (sData.compare(0, sStamp.size(), sStamp) == 0)
+	{
+		asGlsl = sData.substr(sStamp.size());
+		return true;
+	}
+	if (TranspileHpslToGlsl(asHpsl, aType, asGlsl, asError) == false)
+		return false;
+	std::string sTmp = sFile + "." + std::to_string(getpid());
+	if (std::ofstream(sTmp.c_str(), std::ios::binary) << sStamp << asGlsl)
+		rename(sTmp.c_str(), sFile.c_str());
+	return true;
+}
 
 static void cSomaBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
@@ -1180,7 +1214,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		return false;
 
 	// before InitEngine(): engine-init shader lookups cache NULL otherwise
-	cGpuShaderManager::SetHpslTranspileCallback(TranspileHpslToGlsl);
+	cGpuShaderManager::SetHpslTranspileCallback(CachedTranspileHpslToGlsl);
 
 	// SOMA writes raw signed normals; unsigned 32-bit G-buffer clamps them. Before InitEngine()
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
