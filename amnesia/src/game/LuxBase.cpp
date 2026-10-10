@@ -68,6 +68,7 @@
 #include "LuxPlayer.h"
 
 #include "system/HeadlessControl.h"
+#include "system/EngineDiagnostics.h"
 
 #include "LuxStaticProp.h"
 
@@ -539,6 +540,18 @@ static void cLuxBase_HeadlessCmd_State(void *apUserData, const cHeadlessRequest 
 	}
 
 	aResp.Set("fps", pBase->mpEngine->GetFPS());
+
+	cRenderSettings *pSettings = pBase->mpMapHandler->GetViewport()->GetRenderSettings();
+	if(aReq.HasKey("occlusion_culling")) pSettings->mbUseOcclusionCulling = aReq.GetBool("occlusion_culling", true);
+	aResp.Set("occlusion_culling", pSettings->mbUseOcclusionCulling);
+}
+
+static void cLuxBase_HeadlessCmd_RenderStats(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	if(aReq.HasKey("gpu")) cEngineDiagnostics::mbGpuTiming = aReq.GetInt("gpu", 0) != 0;
+	aResp.SetRaw("render", cEngineDiagnostics::GetRenderStatsJson(pBase->mpMapHandler->GetViewport(), pBase->mpEngine->GetGraphics()));
+	aResp.Set("fps", pBase->mpEngine->GetFPS());
 }
 
 static void cLuxBase_HeadlessCmd_Teleport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
@@ -660,6 +673,7 @@ bool cLuxBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("set_debug_gbuffer", cLuxBase_HeadlessCmd_SetDebugGbuffer, this);
 		pCtrl->RegisterHandler("read_gbuffer_stats", cLuxBase_HeadlessCmd_ReadGbufferStats, this);
 		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
+		pCtrl->RegisterHandler("render_stats", cLuxBase_HeadlessCmd_RenderStats, this);
 		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
 		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
 	}

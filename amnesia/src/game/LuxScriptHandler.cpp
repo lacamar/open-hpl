@@ -691,7 +691,7 @@ void cLuxScriptHandler::InitScriptFunctions()
 	AddFunc("void RemoveEntityCollideCallback(const string &in asParentName, const string &in asChildName)", (void *)RemoveEntityCollideCallback);
 
 
-	AddFunc("void InteractConnectPropWithRope(const string &in asName, string& asLeverName, string& asPropName, bool abInteractOnly, float afSpeedMul,float afMinSpeed, float afMaxSpeed, bool abInvert, int alStatesUsed)",(void *)InteractConnectPropWithRope);
+	AddFunc("void InteractConnectPropWithRope(const string &in asName, const string &in asLeverName, const string &in asPropName, bool abInteractOnly, float afSpeedMul,float afMinSpeed, float afMaxSpeed, bool abInvert, int alStatesUsed)",(void *)InteractConnectPropWithRope);
 	AddFunc("void InteractConnectPropWithMoveObject(const string &in asName, const string &in asPropName, const string &in asMoveObjectName, bool abInteractOnly,bool abInvert, int alStatesUsed)",(void *)InteractConnectPropWithMoveObject);
 	AddFunc("void ConnectEntities(const string &in asName, const string &in asMainEntity, const string &in asConnectEntity, bool abInvertStateSent, int alStatesUsed, const string &in asCallbackFunc)",(void *)ConnectEntities); 
 
