@@ -213,7 +213,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
 				{
 					static const std::map<tString, int> mapDsp = {{"Volume", eDsp_Volume}, {"FMOD ParamEQ", eDsp_EqGain}, {"FMOD Lowpass", eDsp_Lowpass},
-						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}};
+						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}};
 					auto dsp = mapDsp.find(Text(pEnv, "dsp_name"));
 					int lParamIdx = (int)Num(pEnv, "dsp_paramindex");
 					if (dsp == mapDsp.end() || lParamIdx != (dsp->second == eDsp_EqGain ? 2 : 0) || Text(pEnv, "mute") == "1")
@@ -823,6 +823,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 	bool bPending = false;
 	std::vector<std::vector<float>> vGain(mpEvent->mvLayers.size());
 	std::vector<cVector2f> vFilter(mpEvent->mvLayers.size(), cVector2f(1));
+	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1);
 	for (size_t l = 0; l < mpEvent->mvLayers.size(); ++l)
 	{
 		const cSomaSoundEvents::cLayer &layer = mpEvent->mvLayers[l];
@@ -840,6 +841,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			case cSomaSoundEvents::eDsp_EqGain: vFilter[l].x *= std::min(0.05f + 2.95f * fY, 1.0f); break;
 			case cSomaSoundEvents::eDsp_Lowpass: vFilter[l].x /= std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)); break;
 			case cSomaSoundEvents::eDsp_Highpass: vFilter[l].y /= std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)); break;
+			case cSomaSoundEvents::eDsp_Pitch: vSpeed[l] *= std::pow(2.0f, (fY - 0.5f) * 8); break;
 			}
 		}
 		vGain[l].resize(layer.mvSounds.size());
@@ -923,7 +925,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		}
 		float fGain = vGain[v.mlLayer][v.mlSound] * v.mfGain;
 		v.mpEntry->SetDefaultVolume(fGain);
-		v.mpEntry->SetDefaultSpeed(v.mfSpeed * fEventSpeed);
+		v.mpEntry->SetDefaultSpeed(v.mfSpeed * fEventSpeed * vSpeed[v.mlLayer]);
 		const cVector2f &vF = vFilter[v.mlLayer];
 		if (std::fabs(vF.x - v.mfGainHF) > 0.01f || std::fabs(vF.y - v.mfGainLF) > 0.01f)
 		{

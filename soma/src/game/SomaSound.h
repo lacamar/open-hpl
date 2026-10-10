@@ -39,7 +39,7 @@ public:
 		tString msBank;
 		tString msSample;
 	};
-	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass };
+	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch };
 	struct cEnvelope
 	{
 		int mlParam = -1;
