@@ -546,6 +546,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 
 	cSomaLuxModule module;
 	e->RegisterObjectProperty("cLuxUserModule", "int mlId", (int)((char *)&module.mlId - (char *)(cSomaLuxScriptable *)&module));
+	SOMA_METHOD(e, "cLuxUserModule", "void SetScriptableIsSaved(bool abX)", +[](cSomaLuxScriptable *s, bool b) { s->mbSaved = b; });
 	cSomaLuxEffect effect;
 	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 

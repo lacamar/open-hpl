@@ -24,6 +24,7 @@ public:
 	asIScriptObject *GetScript() { return mpScript; }
 
 	tString msScriptName;
+	bool mbSaved = true;
 	static const std::vector<cSomaLuxScriptable *> &GetAll() { return mvAll; }
 	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
 	bool CallWithFloat(const std::string &asDecl, float afX);

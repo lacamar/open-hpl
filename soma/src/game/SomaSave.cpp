@@ -769,7 +769,7 @@ public:
 
 		std::vector<cSomaLuxScriptable *> vOther;
 		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
-			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript())
+			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
 				vOther.push_back(p);
 		o.Pod((uint32_t)vOther.size());
 		for (cSomaLuxScriptable *p : vOther)
@@ -1013,7 +1013,7 @@ public:
 
 		std::map<tString, cSomaLuxScriptable *> mapOther;
 		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
-			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript())
+			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
 				mapOther.emplace(ScriptableKey(p), p);
 		n = in.Pod<uint32_t>();
 		for (uint32_t i = 0; i < n && in.ok; ++i)
