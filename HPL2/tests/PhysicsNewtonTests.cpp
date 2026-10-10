@@ -195,6 +195,29 @@ static void TestThinBoxRestsOnMesh()
 
 //-----------------------------------------------------------------------
 
+class cHitCounter : public iPhysicsRayCallback
+{
+public:
+	int mlHits = 0;
+	bool OnIntersect(iPhysicsBody*, cPhysicsRayParams*) { ++mlHits; return true; }
+};
+
+// Amnesia 20_sewer focus ray: start on a cell boundary, near-axis direction
+static void TestNearAxisRayCast()
+{
+	cPhysicsWorldNewton world;
+	world.SetWorldSize(cVector3f(-128), cVector3f(128));
+	iPhysicsBody* pBox = world.CreateBody("Box", world.CreateBoxShape(cVector3f(0.49998f, 0.5f, 0.5f), NULL));
+	pBox->SetMass(0);
+	pBox->SetPosition(cVector3f(-0.25f, 9.745821f, 10.0f));
+
+	cHitCounter hits;
+	world.CastRay(&hits, cVector3f(0, 9.745821f, 25.75f), cVector3f(-0.000044f, 9.745821f, 5.75f), true, false, false, false);
+	CHECK(hits.mlHits == 1);
+}
+
+//-----------------------------------------------------------------------
+
 // HPL2's own LowLevelSystemSDL.cpp provides main() (it wraps SDL's platform
 // entry point) and expects the caller to define this instead - same
 // contract the Amnesia/Launcher executables use.
@@ -206,6 +229,7 @@ int hplMain(const tString&)
 	TestMeshCollisionSerializationRoundTrip();
 	TestHeightFieldSupportsBody();
 	TestThinBoxRestsOnMesh();
+	TestNearAxisRayCast();
 
 	if (gFailures > 0)
 	{

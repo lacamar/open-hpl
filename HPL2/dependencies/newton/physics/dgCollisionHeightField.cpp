@@ -504,6 +504,7 @@ dgFloat32 dgCollisionHeightField::RayCastSimd(const dgVector &q0,
 		dgFastRayTest ray(q0, q1);
 
 		// for each cell touched by the line
+		dgFloat32 tEnter;
 		do {
 			dgFloat32 t = RayCastCellSimd(ray, xIndex0, zIndex0, normalOut);
 			if (t < dgFloat32(1.0f)) {
@@ -524,14 +525,14 @@ dgFloat32 dgCollisionHeightField::RayCastSimd(const dgVector &q0,
 
 			if (txAcc < tzAcc) {
 				xIndex0 += xInc;
-				tx = txAcc;
+				tEnter = txAcc;
 				txAcc += stepX;
 			} else {
 				zIndex0 += zInc;
-				tz = txAcc;
+				tEnter = tzAcc;
 				tzAcc += stepZ;
 			}
-		} while ((tx <= dgFloat32(1.0f)) || (tz <= dgFloat32(1.0f)));
+		} while (tEnter <= dgFloat32(1.0f));
 	}
 
 	// if no cell was hit, return a large value
@@ -618,6 +619,7 @@ dgFloat32 dgCollisionHeightField::RayCast(const dgVector &q0,
 		dgFastRayTest ray(q0, q1);
 
 		// for each cell touched by the line
+		dgFloat32 tEnter;
 		do {
 			dgFloat32 t = RayCastCell(ray, xIndex0, zIndex0, normalOut);
 			if (t < dgFloat32(1.0f)) {
@@ -638,14 +640,14 @@ dgFloat32 dgCollisionHeightField::RayCast(const dgVector &q0,
 
 			if (txAcc < tzAcc) {
 				xIndex0 += xInc;
-				tx = txAcc;
+				tEnter = txAcc;
 				txAcc += stepX;
 			} else {
 				zIndex0 += zInc;
-				tz = txAcc;
+				tEnter = tzAcc;
 				tzAcc += stepZ;
 			}
-		} while ((tx <= dgFloat32(1.0f)) || (tz <= dgFloat32(1.0f)));
+		} while (tEnter <= dgFloat32(1.0f));
 	}
 
 	// if no cell was hit, return a large value

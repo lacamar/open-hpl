@@ -1007,6 +1007,7 @@ void dgBroadPhaseCollision::RayCast(const dgVector &l0, const dgVector &l1,
 					dgInt32 zIndex0 = iz0;
 
 					// for each cell touched by the line
+					dgFloat32 tEnter;
 					do {
 						dgBroadPhaseCell *const cell = layer.Find(xIndex0, zIndex0);
 						if (cell) {
@@ -1022,14 +1023,14 @@ void dgBroadPhaseCollision::RayCast(const dgVector &l0, const dgVector &l1,
 						}
 						if (txAcc < tzAcc) {
 							xIndex0 += xInc;
-							tx = txAcc;
+							tEnter = txAcc;
 							txAcc += stepX;
 						} else {
 							zIndex0 += zInc;
-							tz = tzAcc;
+							tEnter = tzAcc;
 							tzAcc += stepZ;
 						}
-					} while ((tx <= dgFloat32(1.0f)) || (tz <= dgFloat32(1.0f)));
+					} while (tEnter <= dgFloat32(1.0f));
 				}
 			}
 		}

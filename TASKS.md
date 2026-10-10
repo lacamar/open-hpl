@@ -128,7 +128,9 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-23. Measure CHC occlusion culling cost on Dark Descent (SOMA has it disabled).
+23. CHC occlusion culling on Dark Descent, all 33 maps at start poses, 1080p uncapped: sum fps
+   8378 on vs 8902 off; mixed per map (06_distillery 231/164, 25_cell_tunnels 209/382). Left on.
+   20_sewer logic hotspot was Newton broadphase ray DDA (fixed, 85 -> 260 fps) (2026-10-10).
 
 Done 2026-09-20/21: P0-P2 tooling, Decal/Billboard/ParticleSystem/FogArea/DetailMeshes tracks,
 G-buffer sampler-type fix (lights now work), per-light falloff/brightness, CHC culling off,
