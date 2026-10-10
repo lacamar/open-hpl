@@ -49,8 +49,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-7. HDR output chain: exposure as a real multiply (current Mul blend cannot brighten),
-   tonemapping, bloom. Per-map ExposureArea blending instead of first-only.
+7. Done: exposure/white cut, tonemapping, bloom, grading (`SomaToneMapping`); ExposureAreas in data never overlap.
 
 
 
@@ -96,11 +95,11 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-18. Terrain (10 maps): heightmap + blend layers as a plain mesh first.
+18. Done: terrain heightmap + blend layers (`cWorldLoaderHpm::CreateTerrain`).
 
 
 
-19. Compound / StaticObjectBatches / StaticComboArea semantics; LightMask.
+19. Done: Compound, StaticObjectBatches, StaticComboArea, LightMask tracks.
 
 
 
