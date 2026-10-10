@@ -148,7 +148,7 @@ namespace hpl {
 		bool bHasBV = false;
 		cVector3f vMin(0), vMax(0);
 
-		tStringVec vOversized, vNan;
+		tStringVec vOversized, vNan, vUnbounded;
 		for(int lPass=0; lPass<2; ++lPass)
 		{
 			cMeshEntityIterator it = lPass==0 ? apWorld->GetStaticMeshEntityIterator() : apWorld->GetDynamicMeshEntityIterator();
@@ -169,6 +169,7 @@ namespace hpl {
 				{
 					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
 					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { if(lNanBounds++ < 12) vNan.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?"))); continue; }
+					if(vExt.x > 1e6f || vExt.y > 1e6f || vExt.z > 1e6f) { if(vUnbounded.size() < 12) vUnbounded.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?"))); continue; }
 					if((vExt.x > 100 || vExt.y > 100 || vExt.z > 100) && !(pEnt->GetMesh() && pEnt->GetMesh()->GetFullPath().empty()))
 					{
 						if(lOversized < 12) vOversized.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")));
@@ -222,6 +223,9 @@ namespace hpl {
 		sOut += ",\"entities_nan_bounds\":" + cString::ToString(lNanBounds);
 		sOut += ",\"nan_bounds_top\":[";
 		for(size_t i=0; i<vNan.size(); ++i) sOut += (i ? ",\"" : "\"") + JsonEscape(vNan[i]) + "\"";
+		sOut += "]";
+		sOut += ",\"unbounded_top\":[";
+		for(size_t i=0; i<vUnbounded.size(); ++i) sOut += (i ? ",\"" : "\"") + JsonEscape(vUnbounded[i]) + "\"";
 		sOut += "]";
 		sOut += ",\"oversized_top\":[";
 		for(size_t i=0; i<vOversized.size(); ++i) sOut += (i ? ",\"" : "\"") + JsonEscape(vOversized[i]) + "\"";

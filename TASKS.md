@@ -81,8 +81,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-12. Oversized check leftovers after the skinned-mesh fix: `02_03` `02_03_akers_scribble1_1`,
-   `03_03` `exit_flesher_door` (the descent-shaft walls are plausibly real).
+12. Oversized check leftover after the skinned-mesh fix: `03_03` `exit_flesher_door` (the
+   descent-shaft walls are plausibly real).
 
 
 
@@ -90,7 +90,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-14. `_e3_01_02`: 23 particle systems fail to load; `02_04`: `bass_robot_posed.ent` fails.
+14. Data-side: `_e3_01_02` particle systems, `05_03` `space.dds`/`05_03_smoke_pillar_fire.mat` (absolute
+   `D:/`/`E:/` paths, files not shipped); `02_04` `entities/_temp/aaron/bass_robot_posed.ent` (not shipped).
 
 
 
@@ -102,7 +103,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-17. `02_03_delta` garbage world AABB (~1e38): find the entity via `entity_info`.
+17. Data-side: `02_03_delta` world AABB ~1e38 came from decal `02_03_akers_scribble1_1` (hpm
+   `DecalMesh` positions ~1e38). Excluded from the AABB, listed in `world.unbounded_top`.
 
 
 
