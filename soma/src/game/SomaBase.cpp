@@ -1128,6 +1128,8 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "shadow_cull") iRenderer::SetShadowCull(bValue);
 	else if(sName == "sun_caster_cull") iRenderer::SetSunCasterCull(bValue);
 	else if(sName == "shadow_depth_clamp") iRenderer::SetShadowDepthClamp(bValue);
+	else if(sName == "shadow_bias") pSettings->mfShadowMapBias = aReq.GetFloat("value", 4);
+	else if(sName == "shadow_slope_bias") pSettings->mfShadowMapSlopeScaleBias = aReq.GetFloat("value", 2);
 	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent")
 	{
 		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : 8;
