@@ -167,6 +167,7 @@ void SomaApplyRenderConfig(cViewport *apViewport)
 	s->mbUseFxaa = gpSomaBase->GetConfig()->mbAntiAliasing;
 	s->mbSSAOActive = gpUserConfig->GetBool("Graphics", "SSAOActive", true);
 	s->mbRenderShadows = gpUserConfig->GetBool("Graphics", "ShadowsActive", true);
+	s->mbRenderWorldReflection = gpUserConfig->GetBool("Graphics", "WorldReflection", true);
 }
 
 static bool ApplyUserConfig()

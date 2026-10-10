@@ -1595,6 +1595,18 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			if (cString::MatchesWildcard(n, p->GetName())) p->SetVisible(b);
 		}
 	});
+	SOMA_FUNC(e, "void Billboard_SetReflectionVisibility(const tString &in asBillboardName, bool abVisibleInReflection, bool abVisibleInWorld)", +[](S n, bool r, bool w) {
+		ForBillboards(n, [r, w](cBillboard *p) { p->SetRenderFlagBit(eRenderableFlag_VisibleInReflection, r); p->SetRenderFlagBit(eRenderableFlag_VisibleInNonReflection, w); });
+	});
+	SOMA_FUNC(e, "void FogArea_SetVisibleInReflection(const tString &in asFogAreaName, bool abActive)", +[](S n, bool b) {
+		if (cSomaLuxMap::GetCurrent() == NULL) return;
+		cFogAreaIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetFogAreaIterator();
+		while (it.HasNext())
+		{
+			cFogArea *p = it.Next();
+			if (cString::MatchesWildcard(n, p->GetName())) p->SetRenderFlagBit(eRenderableFlag_VisibleInReflection, b);
+		}
+	});
 	SOMA_FUNC(e, "void Billboard_SetBrightness(const tString &in asBillboardName, float afBrightness)", +[](S n, float b) { ForBillboards(n, [b](cBillboard *p) { p->SetBrightness(b); }); });
 	SOMA_FUNC(e, "void LensFlare_SetVisible(const tString &in asLensFlareName, bool abVisible)", +[](S n, bool b) {
 		if (cSomaLuxMap::GetCurrent() == NULL) return;

@@ -2947,6 +2947,13 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_FUNC(e, "void Entity_SetEffectsActive(const tString &in asEntityName, bool abActive, bool abFadeAndPlaySounds)",
 			  +[](S n, bool b, bool f) { ForMatching(n, [b, f](cSomaLuxEntity *p) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); }); });
+	SOMA_FUNC(e, "void Entity_SetReflectionVisibility(const tString &in asEntityName, bool abVisibleInReflection, bool abVisibleInWorld)", +[](S n, bool r, bool w) {
+		ForMatching(n, [r, w](cSomaLuxEntity *p) {
+			auto set = [r, w](auto *o) { o->SetRenderFlagBit(eRenderableFlag_VisibleInReflection, r); o->SetRenderFlagBit(eRenderableFlag_VisibleInNonReflection, w); };
+			if (p->mpMesh) set(p->mpMesh);
+			for (cBillboard *b : p->mvBillboards) set(b);
+		});
+	});
 	SOMA_FUNC(e, "void Entity_Connect(const tString &in asName, const tString &in asMainEntity, const tString &in asConnectEntity, bool abInvertStateSent, int alStatesUsed)",
 			  +[](S n, S m, S c, bool i, int l) { ForMatching(m, [&](cSomaLuxEntity *p) { p->mvConnections.push_back(cSomaLuxEntity::cConnection{n, c, i, l}); }); });
 	SOMA_FUNC(e, "void Entity_RemoveConnection(const tString &in asName, const tString &in asMainEntity)", +[](S n, S m) {
