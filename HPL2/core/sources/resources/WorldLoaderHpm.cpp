@@ -167,10 +167,14 @@ namespace hpl {
 
 				std::vector<int> vLayout;
 				bool bFloat = true;
+				tVertexElementFlag lSeen = 0;
 				for (int e = 0; e < eVertexBufferElement_LastEnum; ++e)
 				{
 					eVertexBufferElement elem = (eVertexBufferElement)e;
-					if ((pVtx->GetVertexElementFlags() & GetVertexElementFlagFromEnum(elem)) == 0) continue;
+					tVertexElementFlag lFlag = GetVertexElementFlagFromEnum(elem);
+					// Texture1Tangent and Texture1 share a flag
+					if ((pVtx->GetVertexElementFlags() & lFlag) == 0 || (lSeen & lFlag)) continue;
+					lSeen |= lFlag;
 					eVertexBufferElementFormat fmt = pVtx->GetElementFormat(elem);
 					if (fmt != eVertexBufferElementFormat_Float && (elem == eVertexBufferElement_Position || elem == eVertexBufferElement_Normal ||
 																	 elem == eVertexBufferElement_Texture1Tangent))
