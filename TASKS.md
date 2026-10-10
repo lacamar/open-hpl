@@ -25,9 +25,8 @@ Open:
 
 Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
-1. Fixed: 04_01 heap corruption. Newton's `CalculateAdjacendy()` made a `dgStack(-1)` for an
-   empty tree collision; the allocator wrote its header past the block. Release recheck (5 runs)
-   pending: the GPU wedged (asahi compute queue timeouts) during an ASan run of this map.
+1. Done: 04_01 heap corruption (Newton `CalculateAdjacendy()` `dgStack(-1)` on an empty tree
+   collision). 5/5 release runs clean (2026-10-10).
 
 2. Done: translucent refraction (SOMA temp frame buffers are `eTextureType_2D`).
 
