@@ -1890,6 +1890,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMoveSound(tString&in asName)", +[](iPhysicsJoint *o, tString & a0) { o->SetMoveSound(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJoint *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJoint *o, float a0) { o->SetMinMoveSpeed(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJoint", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJoint *o, bool a0) { o->SetAllowPositionReset(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJoint", "bool GetAllowPositionReset()", +[](iPhysicsJoint *o) -> bool { return o->GetAllowPositionReset(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "const tString& GetName()", +[](iPhysicsJointBall *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "int GetUniqueID()", +[](iPhysicsJointBall *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJointBall *o) -> iPhysicsBody * { return o->GetParentBody(); });
@@ -1920,6 +1922,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointBall *o, tString & a0) { o->SetMoveSound(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointBall *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointBall *o, float a0) { o->SetMinMoveSpeed(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointBall *o, bool a0) { o->SetAllowPositionReset(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "bool GetAllowPositionReset()", +[](iPhysicsJointBall *o) -> bool { return o->GetAllowPositionReset(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "void SetConeLimits(float afMaxConeAngle, float afMaxTwistAngle)", +[](iPhysicsJointBall *o, float a0, float a1) { o->SetConeLimits(a0, a1); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "cVector3f GetAngles()", +[](iPhysicsJointBall *o) -> cVector3f { return o->GetAngles(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointBall", "float GetMaxConeAngle()", +[](iPhysicsJointBall *o) -> float { return o->GetMaxConeAngle(); });
@@ -1954,6 +1958,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointHinge *o, tString & a0) { o->SetMoveSound(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointHinge *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointHinge *o, float a0) { o->SetMinMoveSpeed(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointHinge *o, bool a0) { o->SetAllowPositionReset(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "bool GetAllowPositionReset()", +[](iPhysicsJointHinge *o) -> bool { return o->GetAllowPositionReset(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMaxAngle(float afAngle)", +[](iPhysicsJointHinge *o, float a0) { o->SetMaxAngle(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "void SetMinAngle(float afAngle)", +[](iPhysicsJointHinge *o, float a0) { o->SetMinAngle(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointHinge", "float GetMaxAngle()", +[](iPhysicsJointHinge *o) -> float { return o->GetMaxAngle(); });
@@ -1988,6 +1994,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMoveSound(tString&in asName)", +[](iPhysicsJointSlider *o, tString & a0) { o->SetMoveSound(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMoveSpeedType(ePhysicsJointSpeed aType)", +[](iPhysicsJointSlider *o, int a0) { o->SetMoveSpeedType((ePhysicsJointSpeed)a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMinMoveSpeed(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMinMoveSpeed(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetAllowPositionReset(bool abX)", +[](iPhysicsJointSlider *o, bool a0) { o->SetAllowPositionReset(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "bool GetAllowPositionReset()", +[](iPhysicsJointSlider *o) -> bool { return o->GetAllowPositionReset(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMaxDistance(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMaxDistance(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "void SetMinDistance(float afX)", +[](iPhysicsJointSlider *o, float a0) { o->SetMinDistance(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJointSlider", "float GetMaxDistance()", +[](iPhysicsJointSlider *o) -> float { return o->GetMaxDistance(); });

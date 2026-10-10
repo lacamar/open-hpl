@@ -172,6 +172,10 @@ namespace hpl {
 		bool GetStickyMinLimit(){ return mbStickyMinLimit;}
 		bool GetStickyMaxLimit(){ return mbStickyMaxLimit;}
 
+		void SetAllowPositionReset(bool abX){ mbAllowPositionReset = abX;}
+		bool GetAllowPositionReset(){ return mbAllowPositionReset;}
+		virtual void ResetPosition(){}
+
 		void Break();
 
 		bool IsBroken(){ return mbBroken;}
@@ -212,6 +216,8 @@ namespace hpl {
 
 		bool mbStickyMinLimit;
 		bool mbStickyMaxLimit;
+		bool mbAllowPositionReset;
+		bool mbPositionResetPending;
 
 		tPhysicsControllerMap m_mapControllers;
 

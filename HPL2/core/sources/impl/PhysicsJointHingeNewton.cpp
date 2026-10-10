@@ -260,7 +260,26 @@ namespace hpl {
 
 			mfPreviousAngle = fAngle;
 		}
-		
+
+		if(mbAllowPositionReset && mpChildBody->IsActive())
+		{
+			float fDistSqr = cMath::Vector3DistSqr(vPinPivot0Pos, vPinPivot1Pos);
+			if(!(fDistSqr <= 0.0025f))
+			{
+				Error("Body %s jumped more than 0.05 units (%f)- restoring!\n", mpChildBody->GetName().c_str(), sqrtf(fDistSqr));
+				mbPositionResetPending = true;
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cPhysicsJointHingeNewton::ResetPosition()
+	{
+		cMatrixf mtxParent = mpParentBody ? mpParentBody->GetLocalMatrix() : cMatrixf::Identity;
+		mpChildBody->SetMatrix(cMath::MatrixMul(cMath::MatrixMul(mtxParent, m_mtxLocalPinPivot1), cMath::MatrixInverse(m_mtxLocalPinPivot0)));
+		mpChildBody->SetLinearVelocity(0);
+		mpChildBody->SetAngularVelocity(0);
 	}
 	
 	//-----------------------------------------------------------------------

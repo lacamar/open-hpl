@@ -113,6 +113,8 @@ namespace hpl {
 		mlSpeedCount =0;
 
 		mbLimitAutoSleep = false;
+		mbAllowPositionReset = false;
+		mbPositionResetPending = false;
 		mfLimitAutoSleepDist = 0.02f;
 		mlLimitAutoSleepNumSteps = 10;
 
@@ -350,6 +352,9 @@ namespace hpl {
 	
 	bool iPhysicsJoint::OnPhysicsUpdate()
 	{
+		if(mbPositionResetPending) ResetPosition();
+		mbPositionResetPending = false;
+
 		bool bFrozen = true;
         if(mpParentBody && mpParentBody->GetEnabled()) 
 			bFrozen = false;
