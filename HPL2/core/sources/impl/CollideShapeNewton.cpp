@@ -23,8 +23,12 @@
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
 #include "resources/BinaryBuffer.h"
+#include "resources/Resources.h"
+#include "system/String.h"
 #include "math/Math.h"
 #include <algorithm>
+#include <cstdio>
+#include <unistd.h>
 
 namespace hpl {
 
@@ -370,6 +374,27 @@ namespace hpl {
 	void cCollideShapeNewton::CreateFromVertices(	const unsigned int* apIndexArray, int alIndexNum,
 													const float *apVertexArray, int alVtxStride, int alVtxNum)
 	{
+		tWString sCacheFile;
+		if(alIndexNum >= 6000)
+		{
+			uint64_t lHash = 0xcbf29ce484222325ULL ^ 1;
+			auto Mix = [&lHash](const void* apData, size_t alSize) {
+				for(size_t i = 0; i < alSize; ++i) lHash = (lHash ^ ((const unsigned char*)apData)[i]) * 0x100000001b3ULL;
+			};
+			Mix(apIndexArray, sizeof(unsigned int) * alIndexNum);
+			Mix(apVertexArray, sizeof(float) * alVtxStride * alVtxNum);
+			char sHash[17];
+			snprintf(sHash, sizeof(sHash), "%016llx", (unsigned long long)lHash);
+			sCacheFile = cResources::GetCacheFile(_W("collision/") + cString::To16Char(sHash), _W("ncol"));
+
+			cBinaryBuffer cacheBuf;
+			if(cPlatform::FileExists(sCacheFile) && cacheBuf.Load(sCacheFile))
+			{
+				CreateFromSerializedData(&cacheBuf);
+				if(mpNewtonCollision) return;
+			}
+		}
+
 		float vTriVec[9];
 
 		bool bOptimize = false;
@@ -455,6 +480,14 @@ namespace hpl {
 		//Set bounding box size
 		mBoundingVolume.AddArrayPoints(apVertexArray, alVtxNum);
 		mBoundingVolume.CreateFromPoints(alVtxStride);
+
+		if(sCacheFile.empty() == false)
+		{
+			cBinaryBuffer cacheBuf;
+			SaveToSerializedData(&cacheBuf);
+			tWString sTmp = sCacheFile + _W(".") + cString::ToStringW((int)getpid());
+			if(cacheBuf.Save(sTmp)) std::rename(cString::To8Char(sTmp).c_str(), cString::To8Char(sCacheFile).c_str());
+		}
 	}
 
 	//-----------------------------------------------------------------------
