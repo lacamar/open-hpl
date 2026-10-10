@@ -40,5 +40,5 @@ offsets on our smaller objects) are invisible to ASan, use a gdb hardware watchp
 
 ## Next
 
-See `TASKS.md` "Script layer": a real playthrough past the laboratory, post effects,
-hands skeleton, LOAD GAME list.
+See `TASKS.md`: light intensity vs the ref, audio levels (item 11), Newton broadphase,
+z-fighting repro (`open-hpl-a4i`).
