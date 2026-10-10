@@ -78,6 +78,9 @@ namespace hpl {
 		void FlushStaticBatch(const tStaticBatchKey& aKey, cStaticBatch& aBatch);
 		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
 		int mlCombinedObjects;
+		void CombineStaticMeshes();
+		std::vector<cMeshEntity*> mvCombineCandidates;
+		int mlCombinedMeshes;
 
 		struct cStaticShapeBatch
 		{

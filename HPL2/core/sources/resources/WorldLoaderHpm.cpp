@@ -38,6 +38,7 @@
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType_Decal.h"
+#include "graphics/MaterialType_BasicSolid.h"
 #include "graphics/Texture.h"
 #include "graphics/DecalCreator.h"
 #include "scene/SubMeshEntity.h"
@@ -49,7 +50,9 @@
 
 #include "math/Math.h"
 
+#include <array>
 #include <cmath>
+#include <cstring>
 
 namespace hpl {
 
@@ -75,6 +78,8 @@ namespace hpl {
 	{
 		Log(" -------- Loading SOMA hpm map '%s' ---------\n", cString::To8Char(cString::GetFileNameW(asFile)).c_str());
 		mlCombinedObjects = 0;
+		mlCombinedMeshes = 0;
+		mvCombineCandidates.clear();
 
 		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
 		mmapTrackStats.clear();
@@ -129,12 +134,128 @@ namespace hpl {
 			if (iPhysicsMaterial* pMat = mpCurrentPhysicsWorld->GetMaterialFromName(std::get<0>(key))) pBody->SetMaterial(pMat);
 		}
 		m_mapStaticShapeBatches.clear();
+		if (getenv("OPENHPL_NO_MESH_COMBINE") == NULL) CombineStaticMeshes();
+		mvCombineCandidates.clear();
 		mpCurrentWorld->Compile(true);
 
 		BuildLoadReport(cString::To8Char(cString::GetFileNameW(asFile)), (int)(cPlatform::GetApplicationTime() - lLoadStartTime));
 		Log(" -------- Loading complete ---------\n");
 
 		return mpCurrentWorld;
+	}
+
+	// HPL3 ships prebaked static batches; build them here like cWorldLoaderHplMap to cut draw calls
+	void cWorldLoaderHpm::CombineStaticMeshes()
+	{
+		typedef std::tuple<int, int, int, cMaterial*, bool, bool, std::vector<int>, std::array<float, 9> > tKey;
+		std::map<tKey, std::vector<std::pair<cMeshEntity*, cSubMeshEntity*> > > mapGroups;
+		for (cMeshEntity* pEnt : mvCombineCandidates)
+		{
+			for (int i = 0; i < pEnt->GetSubMeshEntityNum(); ++i)
+			{
+				cSubMeshEntity* pSub = pEnt->GetSubMeshEntity(i);
+				cMaterial* pMat = pSub->GetMaterial();
+				iVertexBuffer* pVtx = pSub->GetVertexBuffer();
+				if (pMat == NULL || pVtx == NULL || pSub->IsVisible() == false || pMat->HasWorldReflection()) continue;
+				if (dynamic_cast<cMaterialType_SolidDiffuse*>(pMat->GetType()) == NULL) continue;
+				if (pMat->GetVars() && static_cast<cMaterialType_SolidDiffuse_Vars*>(pMat->GetVars())->mbSwayActive) continue;
+				if (pVtx->GetVertexNum() == 0 || pVtx->GetIndexNum() == 0) continue;
+				const cMatrixf& m = pSub->GetWorldMatrix();
+				if (cMath::Vector3Dot(cVector3f(m.m[0][0], m.m[1][0], m.m[2][0]),
+									  cMath::Vector3Cross(cVector3f(m.m[0][1], m.m[1][1], m.m[2][1]), cVector3f(m.m[0][2], m.m[1][2], m.m[2][2]))) < 0)
+					continue;
+
+				std::vector<int> vLayout;
+				bool bFloat = true;
+				for (int e = 0; e < eVertexBufferElement_LastEnum; ++e)
+				{
+					eVertexBufferElement elem = (eVertexBufferElement)e;
+					if ((pVtx->GetVertexElementFlags() & GetVertexElementFlagFromEnum(elem)) == 0) continue;
+					eVertexBufferElementFormat fmt = pVtx->GetElementFormat(elem);
+					if (fmt != eVertexBufferElementFormat_Float && (elem == eVertexBufferElement_Position || elem == eVertexBufferElement_Normal ||
+																	 elem == eVertexBufferElement_Texture1Tangent))
+						bFloat = false;
+					vLayout.insert(vLayout.end(), {e, pVtx->GetElementNum(elem), fmt});
+				}
+				if (bFloat == false) continue;
+
+				cVector3f vC = pSub->GetBoundingVolume()->GetWorldCenter() / 16.0f;
+				const cColor& cm = pSub->GetColorMul();
+				const cColor& ic = pSub->GetIlluminationColor();
+				tKey key((int)floorf(vC.x), (int)floorf(vC.y), (int)floorf(vC.z), pMat, pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster),
+						 pSub->GetIsOneSided(), vLayout, {cm.r, cm.g, cm.b, cm.a, ic.r, ic.g, ic.b, ic.a, pSub->GetIlluminationAmount()});
+				mapGroups[key].push_back({pEnt, pSub});
+			}
+		}
+
+		std::map<cMeshEntity*, int> mapCombinedSubs;
+		for (auto& [key, vSubs] : mapGroups)
+		{
+			if (vSubs.size() < 2) continue;
+			const std::vector<int>& vLayout = std::get<6>(key);
+			int lVtxNum = 0, lIdxNum = 0;
+			for (auto [pEnt, pSub] : vSubs)
+			{
+				lVtxNum += pSub->GetVertexBuffer()->GetVertexNum();
+				lIdxNum += pSub->GetVertexBuffer()->GetIndexNum();
+			}
+
+			iVertexBuffer* pVtx = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																				 eVertexBufferUsageType_Static, lVtxNum, lIdxNum);
+			tVertexElementFlag lFlags = 0;
+			for (size_t e = 0; e < vLayout.size(); e += 3)
+			{
+				eVertexBufferElement elem = (eVertexBufferElement)vLayout[e];
+				lFlags |= GetVertexElementFlagFromEnum(elem);
+				pVtx->CreateElementArray(elem, (eVertexBufferElementFormat)vLayout[e + 2], vLayout[e + 1],
+										 vSubs[0].second->GetVertexBuffer()->GetElementProgramVarIndex(elem));
+				pVtx->ResizeArray(elem, lVtxNum * vLayout[e + 1]);
+			}
+			pVtx->ResizeIndices(lIdxNum);
+
+			int lVtxOffset = 0, lIdxOffset = 0;
+			unsigned int* pIdx = pVtx->GetIndices();
+			for (auto [pEnt, pSub] : vSubs)
+			{
+				iVertexBuffer* pSrc = pSub->GetVertexBuffer()->CreateCopy(eVertexBufferType_Software, eVertexBufferUsageType_Static, lFlags);
+				pSrc->Transform(pSub->GetWorldMatrix());
+				for (size_t e = 0; e < vLayout.size(); e += 3)
+				{
+					eVertexBufferElement elem = (eVertexBufferElement)vLayout[e];
+					size_t lStride = vLayout[e + 1] * (vLayout[e + 2] == eVertexBufferElementFormat_Byte ? 1 : 4);
+					memcpy(pVtx->GetByteArray(elem) + lVtxOffset * lStride, pSrc->GetByteArray(elem), pSrc->GetVertexNum() * lStride);
+				}
+				unsigned int* pSrcIdx = pSrc->GetIndices();
+				for (int i = 0; i < pSrc->GetIndexNum(); ++i) pIdx[lIdxOffset + i] = pSrcIdx[i] + lVtxOffset;
+				lVtxOffset += pSrc->GetVertexNum();
+				lIdxOffset += pSrc->GetIndexNum();
+				hplDelete(pSrc);
+				pSub->SetVisible(false);
+				++mapCombinedSubs[pEnt];
+			}
+			pVtx->Compile(0);
+
+			tString sName = "CombinedMesh" + cString::ToString(mlCombinedMeshes++);
+			cMesh* pMesh = hplNew(cMesh, (sName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
+			cSubMesh* pSubMesh = pMesh->CreateSubMesh("SubMesh");
+			pSubMesh->SetVertexBuffer(pVtx);
+			cMaterial* pMat = std::get<3>(key);
+			pMat->IncUserCount();
+			pSubMesh->SetMaterial(pMat);
+			pSubMesh->SetMaterialName(vSubs[0].second->GetSubMesh()->GetMaterialName());
+			pSubMesh->Compile();
+
+			cMeshEntity* pEnt = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
+			const std::array<float, 9>& v = std::get<7>(key);
+			pEnt->SetRenderFlagBit(eRenderableFlag_ShadowCaster, std::get<4>(key));
+			pEnt->SetColorMul(cColor(v[0], v[1], v[2], v[3]));
+			pEnt->SetIlluminationColor(cColor(v[4], v[5], v[6], v[7]));
+			pEnt->SetIlluminationAmount(v[8]);
+		}
+
+		for (auto& [pEnt, lNum] : mapCombinedSubs)
+			if (lNum == pEnt->GetSubMeshEntityNum()) mpCurrentWorld->DestroyMeshEntity(pEnt);
+		Log("  SOMA hpm combined %d static submeshes into %d meshes\n", (int)[&] { int n = 0; for (auto& p : mapCombinedSubs) n += p.second; return n; }(), mlCombinedMeshes);
 	}
 
 	iXmlDocument* cWorldLoaderHpm::OpenSidecar(const tWString& asBaseFile, const tWString& asSuffix, bool abWarnIfMissing)
@@ -569,6 +690,7 @@ namespace hpl {
 						cMatrixf mtxTransform = cMath::MatrixMul(cMath::MatrixQuaternion(qRot), cMath::MatrixScale(fScale));
 						mtxTransform.SetTranslation(cVector3f(vPositions[i*3], vPositions[i*3+1], vPositions[i*3+2]));
 						pEntity->SetMatrix(mtxTransform);
+						mvCombineCandidates.push_back(pEntity);
 
 						++stats.mlCreated;
 					}
@@ -1265,6 +1387,7 @@ namespace hpl {
 
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);
+		mvCombineCandidates.push_back(pMeshEntity);
 
 		if (bCollides)
 		{
