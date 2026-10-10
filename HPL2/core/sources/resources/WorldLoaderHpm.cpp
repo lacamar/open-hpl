@@ -122,7 +122,11 @@ namespace hpl {
 		LoadExposureAreaTrack(asFile);
 		LoadTerrain(asFile);
 
-		for (auto& [key, batch] : m_mapStaticBatches) FlushStaticBatch(key, batch);
+		for (auto& [key, batch] : m_mapStaticBatches)
+		{
+			FlushStaticBatch(key, batch);
+			if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
+		}
 		m_mapStaticBatches.clear();
 		for (auto& [key, batch] : m_mapStaticShapeBatches)
 		{
@@ -136,6 +140,7 @@ namespace hpl {
 		m_mapStaticShapeBatches.clear();
 		if (getenv("OPENHPL_NO_MESH_COMBINE") == NULL) CombineStaticMeshes();
 		mvCombineCandidates.clear();
+		if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
 		mpCurrentWorld->Compile(true);
 
 		BuildLoadReport(cString::To8Char(cString::GetFileNameW(asFile)), (int)(cPlatform::GetApplicationTime() - lLoadStartTime));
@@ -257,6 +262,7 @@ namespace hpl {
 			pEnt->SetColorMul(cColor(v[0], v[1], v[2], v[3]));
 			pEnt->SetIlluminationColor(cColor(v[4], v[5], v[6], v[7]));
 			pEnt->SetIlluminationAmount(v[8]);
+			if (mpObjectDoneCallback) mpObjectDoneCallback(mpCurrentWorld);
 		}
 
 		std::set<cMeshEntity*> setDestroy;
