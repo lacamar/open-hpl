@@ -86,6 +86,7 @@ namespace hpl {
 		bool IsVisible(){ return mbIsVisible;}
 		void SetVisible(bool abVisible);
 		void SetCulledByDistance(bool abX);
+		void SetCulledByFog(bool abX);
 
 		void UpdateLogic(float afTimeStep);
 

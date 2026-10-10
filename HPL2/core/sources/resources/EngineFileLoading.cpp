@@ -82,6 +82,7 @@ namespace hpl {
 		if(pFog)
 		{
 			pFog->SetColor(apElement->GetAttributeColor("Color",cColor(1,1)));
+			pFog->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 			pFog->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
 			pFog->SetStart(apElement->GetAttributeFloat("Start", 0));
 			pFog->SetEnd(apElement->GetAttributeFloat("End", 0));
@@ -117,6 +118,7 @@ namespace hpl {
 			pPS->SetMaxFadeDistanceStart(apElement->GetAttributeFloat("MaxFadeDistanceStart"));
 			pPS->SetMaxFadeDistanceEnd(apElement->GetAttributeFloat("MaxFadeDistanceEnd"));
 			pPS->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+			pPS->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 		}
 		
 		kEndWorldEntityLoad(pPS);
@@ -178,6 +180,7 @@ namespace hpl {
 		pBillboard->SetIsHalo(apElement->GetAttributeBool("IsHalo",false));
 		pBillboard->SetHaloSourceSize(apElement->GetAttributeVector3f("HaloSourceSize",1));
 		pBillboard->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+		pBillboard->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 
 		tString sConnectLight = apElement->GetAttributeString("ConnectLight");
 		if(apLightBillboardList && sConnectLight!="")
@@ -201,6 +204,7 @@ namespace hpl {
 
 		cLensFlare *pFlare = apWorld->CreateLensFlare(asNamePrefix+sName, 1, "", abStatic || apElement->GetAttributeBool("Static", false));
 		if(pFlare==NULL) return NULL;
+		pFlare->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 
 		const char *vPrefix[] = {"Anamorphic", "Flare", "MultiIris"};
 		for(int i=0; i<eLensFlareType_LastEnum; ++i)
@@ -382,6 +386,7 @@ namespace hpl {
 		//All types
 		pLight->SetCastShadows(apElement->GetAttributeBool("CastShadows", false));
 		pLight->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+		pLight->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 		pLight->SetDiffuseColor(apElement->GetAttributeColor("DiffuseColor", cColor(1)));
 		pLight->SetDefaultDiffuseColor(pLight->GetDiffuseColor());
 		pLight->SetRadius(apElement->GetAttributeFloat("Radius", 1));

@@ -506,6 +506,8 @@ namespace hpl {
 		float mfDistanceCullFadeTime = 1, mfDistanceCullFadeTimeInv = 1, mfDistanceCullMaxRangeSqr = 0;
 		float mfDistanceCullTime = 5;
 		tPlanefVec mvCurrentOcclusionPlanes;
+		cPlanef mFogCullPlane;
+		bool mbFogCullPlaneActive = false;
 
 		cRendererCallbackFunctions *mpCallbackFunctions;
 

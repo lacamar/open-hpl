@@ -241,6 +241,11 @@ namespace hpl {
 	{
 		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByDistance(abX);
 	}
+
+	void cParticleSystem::SetCulledByFog(bool abX)
+	{
+		for(size_t i=0; i< mvEmitters.size(); ++i) mvEmitters[i]->SetCulledByFog(abX);
+	}
 	
 	//-----------------------------------------------------------------------
 

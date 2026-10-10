@@ -42,7 +42,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    16 m cell/material at load (01_03 draws 5608 -> 2689, 48 -> 58 fps; `OPENHPL_NO_MESH_COMBINE=1` to disable);
    texture manager updates only animated textures, RunGlobalFunc name index (02_04 logic/step 5.0 -> 3.2 ms).
    02_04 at 4K is GPU-bound (CPU skinning 3%): SSAO ~10 ms, CopyToFrameBuffer 6-11, DoF 3-7
-   (`render_stats gpu=1`). Left: Newton broadphase.
+   (`render_stats gpu=1`); refraction copy reused across translucents (one per frame). Left: Newton broadphase.
 
 
 
@@ -156,8 +156,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   static `.dae` (tinyxml dtor); rerun passed. Not reproduced in 18 loads (04_01, 04_02, 01_02) under
   `glibc.malloc.perturb=165:tcache_count=0:check=3` (2026-10-10).
 - Distance culling (HPL3 `cWorld` DistanceCull*, per-object `CulledByDistance`, fade-in/out via
-  dissolve and light brightness) ported from Rebirth `iRenderer::CheckObjectDistanceCull`. Per-object
-  `IsCulledByFog` not ported. 02_03 sweep frame is now black: warmup at 60 fps ends before the
+  dissolve and light brightness) ported from Rebirth `iRenderer::CheckObjectDistanceCull`, plus
+  per-object `CulledByFog` against the fog-end plane. 02_03 sweep frame is now black: warmup at 60 fps ends before the
   intro `Effect_Fade_In` (~10 s) (2026-10-10).
 
 ## Differences vs the official game (`scripts/soma-compare.py`)

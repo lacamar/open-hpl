@@ -95,6 +95,8 @@ namespace hpl {
 		virtual void SetCulledByDistance(bool abX){ mbCulledByDistance = abX; mfDistanceCullFade = 1; }
 		bool IsCulledByDistance() const { return mbCulledByDistance;}
 		float& DistanceCullFade(){ return mfDistanceCullFade;}
+		void SetCulledByFog(bool abX){ mbCulledByFog = abX; }
+		bool IsCulledByFog() const { return mbCulledByFog;}
 
 		void SetLargePlaneSurfacePlacement(int alX){ mlLargePlaneSurfacePlacement = alX;};
 		inline int GetLargePlaneSurfacePlacement(){ return mlLargePlaneSurfacePlacement;};
@@ -169,6 +171,7 @@ namespace hpl {
 		cColor mColorMul;
 		float mfCoverageAmount;
 		bool mbCulledByDistance = true;
+		bool mbCulledByFog = true;
 		float mfDistanceCullFade = 1;
 
 		iRenderableContainerNode *mpRenderContainerNode;

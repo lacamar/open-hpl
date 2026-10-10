@@ -609,12 +609,11 @@ namespace hpl {
 			mvCurrentOcclusionPlanes.push_back(apSettings->mvOcclusionPlanes[i]);
 
         //Fog
+		mbFogCullPlaneActive = false;
 		if(mbSetupOcclusionPlaneForFog && WorldFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
 		{
-			cPlanef fogPlane;
-			fogPlane.FromNormalPoint(	apFrustum->GetForward(), 
-										apFrustum->GetOrigin() + apFrustum->GetForward()*-apWorld->GetFogEnd());
-			mvCurrentOcclusionPlanes.push_back(fogPlane);
+			mFogCullPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward()*-apWorld->GetFogEnd());
+			mbFogCullPlaneActive = true;
 		}
 
 		/////////////////////////////////////////////
@@ -2367,6 +2366,9 @@ namespace hpl {
 				if(cMath::CheckPlaneBVCollision(plane, *pBV)==eCollision_Outside) return false;
 			}
 		}
+
+		if(mbFogCullPlaneActive && mbOcclusionPlanesActive && apObject->IsCulledByFog() &&
+		   cMath::CheckPlaneBVCollision(mFogCullPlane, *apObject->GetBoundingVolume())==eCollision_Outside) return false;
 
 		return CheckObjectDistanceCull(apObject)==false;
 	}

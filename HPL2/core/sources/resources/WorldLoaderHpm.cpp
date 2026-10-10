@@ -147,7 +147,7 @@ namespace hpl {
 	// HPL3 ships prebaked static batches; build them here like cWorldLoaderHplMap to cut draw calls
 	void cWorldLoaderHpm::CombineStaticMeshes()
 	{
-		typedef std::tuple<int, int, int, cMaterial*, bool, bool, std::vector<int>, std::array<float, 9>, bool> tKey;
+		typedef std::tuple<int, int, int, cMaterial*, bool, bool, std::vector<int>, std::array<float, 9>, bool, bool> tKey;
 		std::map<tKey, std::vector<std::pair<cMeshEntity*, cSubMeshEntity*> > > mapGroups;
 		for (cMeshEntity* pEnt : mvCombineCandidates)
 		{
@@ -187,7 +187,7 @@ namespace hpl {
 				const cColor& cm = pSub->GetColorMul();
 				const cColor& ic = pSub->GetIlluminationColor();
 				tKey key((int)floorf(vC.x), (int)floorf(vC.y), (int)floorf(vC.z), pMat, pSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster),
-						 pSub->GetIsOneSided(), vLayout, {cm.r, cm.g, cm.b, cm.a, ic.r, ic.g, ic.b, ic.a, pSub->GetIlluminationAmount()}, pSub->IsCulledByDistance());
+						 pSub->GetIsOneSided(), vLayout, {cm.r, cm.g, cm.b, cm.a, ic.r, ic.g, ic.b, ic.a, pSub->GetIlluminationAmount()}, pSub->IsCulledByDistance(), pSub->IsCulledByFog());
 				mapGroups[key].push_back({pEnt, pSub});
 			}
 		}
@@ -253,6 +253,7 @@ namespace hpl {
 			const std::array<float, 9>& v = std::get<7>(key);
 			pEnt->SetRenderFlagBit(eRenderableFlag_ShadowCaster, std::get<4>(key));
 			pEnt->SetCulledByDistance(std::get<8>(key));
+			pEnt->SetCulledByFog(std::get<9>(key));
 			pEnt->SetColorMul(cColor(v[0], v[1], v[2], v[3]));
 			pEnt->SetIlluminationColor(cColor(v[4], v[5], v[6], v[7]));
 			pEnt->SetIlluminationAmount(v[8]);
@@ -1397,6 +1398,7 @@ namespace hpl {
 		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 		pMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, bCastsShadows);
 		pMeshEntity->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+		pMeshEntity->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 		pMeshEntity->SetUniqueID(lID);
 		pMeshEntity->SetColorMul(apElement->GetAttributeColor("ColorMul", cColor(1, 1)));
 		pMeshEntity->SetIlluminationAmount(apElement->GetAttributeFloat("IllumBrightness", 1));
@@ -1511,6 +1513,7 @@ namespace hpl {
 		cMeshEntity* pMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh, true);
 		pMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, bCastsShadows);
 		pMeshEntity->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+		pMeshEntity->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 		pMeshEntity->GetSubMeshEntity(0)->GetSubMesh()->SetMaterialName(sMaterial);
 		pMeshEntity->SetUniqueID(lID);
 
@@ -1661,7 +1664,10 @@ namespace hpl {
 
 		iEntity3D* pEntity = mpCurrentWorld->CreateEntity(sName, mtxTransform, sFilename, lID, bActive, vScale, &userVars, false);
 		if (pEntity && pEntity->GetEntityType() == "MeshEntity")
+		{
 			static_cast<cMeshEntity*>(pEntity)->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
+			static_cast<cMeshEntity*>(pEntity)->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
+		}
 		return pEntity ? "" : "entity_failed:" + sFilename;
 	}
 
