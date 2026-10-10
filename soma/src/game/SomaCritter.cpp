@@ -1,4 +1,5 @@
 #include "SomaCritter.h"
+#include "SomaAgent.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
 #include "SomaLuxPlayer.h"
@@ -78,19 +79,6 @@ namespace
 			return true;
 		}
 	};
-
-	bool Raycast(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avEnd, float &afDist, cVector3f &avNormal)
-	{
-		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		if (pMap == NULL || (avEnd - avStart).SqrLength() < 1e-8f)
-			return false;
-		cFirstHit hit;
-		hit.mpIgnore = apEnt;
-		pMap->GetWorld()->GetPhysicsWorld()->CastRay(&hit, avStart, avEnd, true, true, false);
-		afDist = hit.mfDist;
-		avNormal = hit.mvNormal;
-		return hit.mfDist >= 0;
-	}
 
 	void GroupMembers(cSomaLuxEntity *apEnt, std::vector<cSomaLuxEntity *> &avOut)
 	{
@@ -172,6 +160,19 @@ namespace
 	}
 }
 
+bool SomaRaycast(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avEnd, float &afDist, cVector3f &avNormal)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL || (avEnd - avStart).SqrLength() < 1e-8f)
+		return false;
+	cFirstHit hit;
+	hit.mpIgnore = apEnt;
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&hit, avStart, avEnd, true, true, false);
+	afDist = hit.mfDist;
+	avNormal = hit.mvNormal;
+	return hit.mfDist >= 0;
+}
+
 void SomaUpdateCritter(cSomaLuxEntity *apEnt, float afTimeStep)
 {
 	if (apEnt->mpCritterProps == NULL || afTimeStep <= 0)
@@ -194,13 +195,13 @@ void SomaUpdateCritter(cSomaLuxEntity *apEnt, float afTimeStep)
 	cVector3f vNew = vPos + vVel * afTimeStep;
 	float fDist;
 	cVector3f vNormal;
-	if (s.mbFlying == false && Raycast(apEnt, vNew + cVector3f(0, 0.3f, 0), vNew - cVector3f(0, 0.05f, 0), fDist, vNormal))
+	if (s.mbFlying == false && SomaRaycast(apEnt, vNew + cVector3f(0, 0.3f, 0), vNew - cVector3f(0, 0.05f, 0), fDist, vNormal))
 	{
 		vNew.y = vNew.y + 0.3f - fDist;
 		Prop<cVector3f>(apEnt, "mvGravityVel") = 0;
 		Prop<cVector3f>(apEnt, "mvGroundNormal") = vNormal;
 	}
-	if (s.mbTestCollision && Raycast(apEnt, vPos, vNew, fDist, vNormal))
+	if (s.mbTestCollision && SomaRaycast(apEnt, vPos, vNew, fDist, vNormal))
 	{
 		vNew = vPos;
 		vWanted = 0;
@@ -284,7 +285,7 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "cVector3f Move_GetTowardsGroundAdd(float afMaxHeight, float afTimeStep)", +[](E *p, float h, float t) {
 		cVector3f vPos = p->GetPosition(), vNormal;
 		float fDist;
-		if (Raycast(p, vPos, vPos - cVector3f(0, h, 0), fDist, vNormal))
+		if (SomaRaycast(p, vPos, vPos - cVector3f(0, h, 0), fDist, vNormal))
 			return cVector3f(0, -fDist, 0) * t;
 		return cVector3f(0);
 	});
@@ -296,7 +297,7 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 			return cVector3f(0);
 		cVector3f vPos = p->GetPosition(), vNormal;
 		float fDist;
-		if (Raycast(p, vPos, vPos + vDir * d, fDist, vNormal) == false)
+		if (SomaRaycast(p, vPos, vPos + vDir * d, fDist, vNormal) == false)
 			return cVector3f(0);
 		bDetected = true;
 		Prop<cVector3f>(p, "mvWallAvoidNormal") = vNormal;

@@ -250,6 +250,19 @@ namespace
 		static constexpr float kMaxStuck = 2.0f;
 		cVector3f mvStuckDisp[kStuckFrames];
 		int mlStuckIdx = 0, mlStuckCount = 0;
+		tString msIdleExtra;
+		float mfIdleExtraMin = 0, mfIdleExtraMax = 0, mfIdleExtraWait = 0, mfIdleExtraLeft = 0;
+		int mlIdleExtraCount = 0;
+		bool mbIdleExtraActive = true;
+		struct cWallSample
+		{
+			cVector3f mvDir = 0, mvPush = 0;
+			float mfWeight = 0;
+			bool mbHit = false;
+		};
+		std::vector<cWallSample> mvWallSamples;
+		bool mbWallAvoid = false;
+		float mfWallRadius = 0, mfWallSteer = 0, mfWallTimer = 0;
 
 		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
 
@@ -268,6 +281,97 @@ namespace
 			msWalkAnim = apVars->GetVarString("CharMover_WalkAnim", msWalkAnim);
 			msRunAnim = apVars->GetVarString("CharMover_RunAnim", msRunAnim);
 			msBackwardAnim = apVars->GetVarString("CharMover_BackwardAnim", msBackwardAnim);
+			tString sExtra = apVars->GetVarString("CharMover_IdleExtraAnim", "");
+			if (sExtra != "")
+				SetupIdleExtra(sExtra, apVars->GetVarFloat("CharMover_IdleExtraMinWait", 0), apVars->GetVarFloat("CharMover_IdleExtraMaxWait", 0));
+		}
+
+		void SetupIdleExtra(const tString &asName, float afMin, float afMax)
+		{
+			msIdleExtra = asName;
+			mfIdleExtraMin = afMin;
+			mfIdleExtraMax = afMax;
+			mlIdleExtraCount = 0;
+			while (mpEntity->mpMesh && mpEntity->mpMesh->GetAnimationStateFromName(asName + cString::ToString(mlIdleExtraCount + 1)))
+				++mlIdleExtraCount;
+			if (mlIdleExtraCount > 0)
+				mfIdleExtraWait = cMath::RandRectf(afMin, afMax);
+			else
+				Error("Could not find any animation start with '%s' in entity '%s' to be used for idle extra!\n", asName.c_str(), mpEntity->msName.c_str());
+		}
+
+		void UpdateIdleExtra(float afTimeStep, int alAnim)
+		{
+			if (mlIdleExtraCount <= 0 || alAnim != 0 || mbUseMoveStateAnims == false)
+				return;
+			cMeshEntity *pMesh = mpEntity->mpMesh;
+			if (mfIdleExtraLeft > 0 && (mfIdleExtraLeft -= afTimeStep) <= 0)
+			{
+				int lIdx = mpEntity->PlayAnimation(msIdleAnim, 0.3f, true, "");
+				if (lIdx >= 0)
+					pMesh->GetAnimationState(lIdx)->SetRelativeTimePosition(cMath::RandRectf(0, 1));
+			}
+			if (mbIdleExtraActive == false || (mfIdleExtraWait -= afTimeStep) > 0)
+				return;
+			tString sAnim = msIdleExtra + cString::ToString(cMath::RandRectl(1, mlIdleExtraCount));
+			if (cAnimationState *pAnim = pMesh->GetAnimationStateFromName(sAnim))
+			{
+				mfIdleExtraLeft = pAnim->GetLength() - 0.3f;
+				mfIdleExtraWait = mfIdleExtraLeft + cMath::RandRectf(mfIdleExtraMin, mfIdleExtraMax);
+				mpEntity->PlayAnimation(sAnim, 0.3f, false, "");
+			}
+		}
+
+		cVector3f UpdateWallAvoidance(float afTimeStep)
+		{
+			if (mbWallAvoid == false || mvWallSamples.empty() || mbMoving == false)
+				return 0;
+			cVector3f vPos = mpBody->GetPosition();
+			if ((mfWallTimer += afTimeStep) >= 0.1f)
+			{
+				mfWallTimer = 0;
+				cVector3f vFwd = mpBody->GetForward(), vRight = mpBody->GetRight();
+				if (mb3D == false)
+					vFwd.y = vRight.y = 0;
+				vFwd.Normalize();
+				vRight.Normalize();
+				cVector3f vUp = cMath::Vector3Cross(vRight, vFwd);
+				for (cWallSample &s : mvWallSamples)
+				{
+					if (s.mbHit == false)
+					{
+						cVector3f vDir(cMath::RandRectf(-1, 1), cMath::RandRectf(-1, 1), cMath::RandRectf(0.2f, 1));
+						if (mb3D == false)
+						{
+							if (std::fabs(vDir.x) < std::fabs(vDir.y))
+								std::swap(vDir.x, vDir.y);
+							vDir.y *= 0.15f;
+						}
+						vDir.Normalize();
+						s.mvDir = vRight * vDir.x + vUp * vDir.y + vFwd * vDir.z;
+						s.mfWeight = 0.1f;
+					}
+					float fDist;
+					cVector3f vNormal;
+					s.mbHit = SomaRaycast(mpEntity, vPos, vPos + s.mvDir * mfWallRadius, fDist, vNormal);
+					if (s.mbHit)
+						s.mvPush = s.mvDir * -(1 - fDist / mfWallRadius);
+				}
+			}
+			cVector3f vSum = 0;
+			bool bAny = false;
+			for (cWallSample &s : mvWallSamples)
+				if (s.mbHit)
+				{
+					s.mfWeight = cMath::Min(s.mfWeight + 5 * afTimeStep, 1.0f);
+					vSum += s.mvPush * s.mfWeight;
+					bAny = true;
+				}
+			if (bAny == false)
+				return 0;
+			if (vSum.SqrLength() > 1)
+				vSum.Normalize();
+			return vSum * mfWallSteer;
 		}
 
 		void MoveToPos(const cVector3f &avPos, bool abSlowDown)
@@ -378,9 +482,20 @@ namespace
 			float fGoalYaw = fYaw;
 			bool bRotate = false;
 			float fDist = 0;
+			cVector3f vAvoid = UpdateWallAvoidance(afTimeStep);
 			if (mbMoving)
 			{
 				cVector3f vDelta = mvGoal - mpBody->GetPosition();
+				if (vAvoid != 0)
+				{
+					cVector3f vOffset = vAvoid * cMath::Min(vDelta.Length() / (2 * mpBody->GetSize().x + 2), 1.0f);
+					if (mb3D == false)
+						vOffset.y = 0;
+					cVector3f vAvoidDelta = vDelta + vOffset;
+					vAvoidDelta.y = 0;
+					if (vAvoidDelta.Length() > 0.05f)
+						vDelta = cVector3f(vAvoidDelta.x, vDelta.y + vOffset.y, vAvoidDelta.z);
+				}
 				float fDY = mb3D ? vDelta.y : 0;
 				vDelta.y = 0;
 				float fDistXZ = vDelta.Length();
@@ -447,6 +562,7 @@ namespace
 			else if (lAnim == 1 && fSpeed < mfWalkToStopped)
 				lAnim = 0;
 			PlayMoveAnim(lAnim, fSpeed);
+			UpdateIdleExtra(afTimeStep, lAnim);
 		}
 	};
 
@@ -1742,7 +1858,10 @@ tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 			 " wait=" + cString::ToString(pPF->mfTrackWait);
 	if (cAgentCharMover *pM = pAgent->Find<cAgentCharMover>(eComp_CharMover))
 		s += " cm_moving=" + cString::ToString(pM->mbMoving) + " cm_goal=" + pM->mvGoal.ToString() + " speed_state=" + cString::ToString(pM->mlSpeedState) +
-			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning);
+			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning) +
+			 " anim=" + (apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim)->GetName() : tString("")) +
+			 " idle_extra=" + cString::ToString(pM->mlIdleExtraCount) + "/" + cString::ToString(pM->mfIdleExtraWait) + " wall=" + cString::ToString(pM->mbWallAvoid) + "/" +
+			 cString::ToString((int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; }));
 	return s;
 }
 
@@ -2118,18 +2237,24 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetSpeedState_ForwardDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfForwardDeacc = x; });
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayAcc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayAcc = x; });
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayDeacc = x; });
-	for (const char *pNoop : {"void SetWallAvoidanceActive(bool abX)", "void SetDynamicObjectAvoidanceActive(bool abX)", "void SetBankingActive(bool abX)",
-							  "void SetIdleExtraAnimActive(bool abX)"})
+	SOMA_METHOD(e, T, "void SetWallAvoidanceActive(bool abX)", +[](CM *m, bool b) { m->mbWallAvoid = b; });
+	SOMA_METHOD(e, T, "void SetIdleExtraAnimActive(bool abX)", +[](CM *m, bool b) { m->mbIdleExtraActive = b; });
+	for (const char *pNoop : {"void SetDynamicObjectAvoidanceActive(bool abX)", "void SetBankingActive(bool abX)"})
 		SOMA_METHOD(e, T, pNoop, +[](CM *, bool) {});
 	SOMA_METHOD(e, T, "void SetUse3DMovement(bool abX)", +[](CM *m, bool b) { m->mb3D = b; });
 	for (const char *pNoop : {"void SetTurnStoppedToWalkSpeed(float afX)", "void SetTurnWalkToStoppedSpeed(float afX)", "void SetVerticalMoveSpeedExtraAnimMul(float afX)",
 							  "void SetBankingAngleMul(float afX)", "void SetBankingMaxAngle(float afX)", "void SetBankingSpeedMul(float afX)", "void SetBankingMaxSpeed(float afX)"})
 		SOMA_METHOD(e, T, pNoop, +[](CM *, float) {});
-	SOMA_METHOD(e, T, "void SetIdleExtraAnimName(const tString&in asName)", +[](CM *, S) {});
-	SOMA_METHOD(e, T, "void SetupWallAvoidance(float afRadius, float afSteerAmount, int alSamples)", +[](CM *, float, float, int) {});
+	SOMA_METHOD(e, T, "void SetIdleExtraAnimName(const tString&in asName)", +[](CM *m, S n) { m->SetupIdleExtra(n, m->mfIdleExtraMin, m->mfIdleExtraMax); });
+	SOMA_METHOD(e, T, "void SetupWallAvoidance(float afRadius, float afSteerAmount, int alSamples)", +[](CM *m, float r, float s, int n) {
+		m->mfWallRadius = r;
+		m->mfWallSteer = s;
+		m->mvWallSamples.assign(cMath::Max(n, 0), {});
+	});
 	SOMA_METHOD(e, T, "void SetupDynamicObjectAvoidance(float afMaxDistance, float afMinMass, float afSteerAmount)", +[](CM *, float, float, float) {});
-	SOMA_METHOD(e, T, "void SetupIdleExtra(const tString&in asAnimName, float afMinWait, float afMaxWait, bool abPauseProceduralAnims)", +[](CM *, S, float, float, bool) {});
-	SOMA_METHOD(e, T, "bool GetIdleExtraAnimActive()", +[](CM *) { return false; });
+	SOMA_METHOD(e, T, "void SetupIdleExtra(const tString&in asAnimName, float afMinWait, float afMaxWait, bool abPauseProceduralAnims)",
+				+[](CM *m, S n, float a, float b, bool) { m->SetupIdleExtra(n, a, b); });
+	SOMA_METHOD(e, T, "bool GetIdleExtraAnimActive()", +[](CM *m) { return m->mbIdleExtraActive; });
 
 	T = "cLuxPathfinder";
 	typedef cAgentPathfinder PF;

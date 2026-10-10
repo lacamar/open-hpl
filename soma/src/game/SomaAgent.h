@@ -26,6 +26,7 @@ void SomaAgentLoadPath(cSomaLuxEntity *apEnt, const std::string &asData);
 void SomaAgentChangeState(cSomaLuxEntity *apEnt, int alState);
 void SomaAgentSendMessage(cSomaLuxEntity *apEnt, int alMessage, const cVector3f &avX = 0, int alX = 0);
 void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio);
+bool SomaRaycast(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avEnd, float &afDist, cVector3f &avNormal);
 void SomaRegisterAgentNatives(asIScriptEngine *apEngine);
 
 #endif
