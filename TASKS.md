@@ -38,7 +38,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 4. Frame rate on big maps (`fps:N` in the sweep): static collision is combined like HPL3
    (04_02: 5738 -> 2569 static bodies, 42 -> 48 fps); look-at checks every 0.3 s like
-   `iLuxEntity::UpdatePlayerLookAt` (logic ~-30%). All maps 60 fps but 01_03 (48). Left: render.
+   `iLuxEntity::UpdatePlayerLookAt` (logic ~-30%); critter rays recast on `cLuxCritter` timers,
+   flock groups cached per frame (01_03 logic 6.5 -> 3.8 ms). All maps 60 fps but 01_03 (50). Left: render.
 
 
 

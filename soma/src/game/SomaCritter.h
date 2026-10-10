@@ -7,6 +7,7 @@ class cSomaLuxEntity;
 void SomaUpdateCritter(cSomaLuxEntity *apEnt, float afTimeStep);
 void SomaInitCritterProps(cSomaLuxEntity *apEnt);
 void SomaForgetCritter(cSomaLuxEntity *apEnt);
+void SomaBeginCritterFrame();
 void SomaRegisterCritterNatives(asIScriptEngine *apEngine);
 
 #endif

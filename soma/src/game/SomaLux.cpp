@@ -406,6 +406,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 	mpRuntime->Call(mpScript, "void Update(float afTimeStep)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 	mpRuntime->Call(mpScript, "void VariableUpdate(float afDeltaTime)", [&](asIScriptContext *apCtx) { apCtx->SetArgFloat(0, fStep); });
 
+	SomaBeginCritterFrame();
 	for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(mvEntities))
 	{
 		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)

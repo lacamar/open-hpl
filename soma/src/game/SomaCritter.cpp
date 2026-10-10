@@ -25,6 +25,7 @@ namespace
 		float mfWanderAngle = 0, mfWanderPitch = 0;
 		float mfYaw = 0, mfPitch = 0;
 		int mlPlayingAnimState = -1;
+		float mfGroundTimer = 0, mfGroundDist = -1, mfWallTimer = 0;
 	};
 	std::unordered_map<cSomaLuxEntity *, cCritterState> gmapStates;
 
@@ -80,15 +81,21 @@ namespace
 		}
 	};
 
-	void GroupMembers(cSomaLuxEntity *apEnt, std::vector<cSomaLuxEntity *> &avOut)
+	std::unordered_map<tString, std::vector<cSomaLuxEntity *>> gmapGroups;
+
+	const std::vector<cSomaLuxEntity *> &GroupMembers(cSomaLuxEntity *apEnt)
 	{
 		const tString &sGroup = State(apEnt).msGroup;
+		auto it = gmapGroups.find(sGroup);
+		if (it != gmapGroups.end())
+			return it->second;
+		std::vector<cSomaLuxEntity *> &vOut = gmapGroups[sGroup];
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		if (pMap == NULL || sGroup == "")
-			return;
-		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
-			if (pEnt->meType == eSomaLuxEntityType_Critter && pEnt->mbActive && State(pEnt).msGroup == sGroup)
-				avOut.push_back(pEnt);
+		if (pMap && sGroup != "")
+			for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+				if (pEnt->meType == eSomaLuxEntityType_Critter && pEnt->mbActive && State(pEnt).msGroup == sGroup)
+					vOut.push_back(pEnt);
+		return vOut;
 	}
 
 	float Wrap(float a)
@@ -117,8 +124,7 @@ namespace
 			vToCenter.y *= afCenterYMul;
 			vAdd += vToCenter * afCenterMul;
 		}
-		std::vector<cSomaLuxEntity *> vMembers;
-		GroupMembers(p, vMembers);
+		const std::vector<cSomaLuxEntity *> &vMembers = GroupMembers(p);
 		if (vMembers.empty())
 			return vAdd * afTimeStep;
 		cVector3f vMean = 0, vSep = 0, vVel = 0;
@@ -158,6 +164,20 @@ namespace
 			vAdd.y = 0;
 		return vAdd * afTimeStep;
 	}
+}
+
+// cLuxCritter::Move_GetWallAvoidAdd/TowardsGroundAdd: rays recast at random intervals, longer when far away
+static bool RayTimerElapsed(cSomaLuxEntity *apEnt, float &afTimer, float afTimeStep, float afNearMin, float afNearMax, float afFarMin, float afFarMax)
+{
+	if (afTimer >= 0)
+	{
+		afTimer -= afTimeStep;
+		return false;
+	}
+	float fFar = apEnt->mVars.GetVarFloat("MaxEnabledDistance", 60) * 0.5f;
+	bool bFar = (PlayerPos() - apEnt->GetPosition()).SqrLength() > fFar * fFar;
+	afTimer = bFar ? cMath::RandRectf(afFarMin, afFarMax) : cMath::RandRectf(afNearMin, afNearMax);
+	return true;
 }
 
 bool SomaRaycast(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avEnd, float &afDist, cVector3f &avNormal)
@@ -247,7 +267,8 @@ void SomaInitCritterProps(cSomaLuxEntity *apEnt)
 	Prop<tString>(apEnt, "msIdleAnim") = "Idle";
 }
 
-void SomaForgetCritter(cSomaLuxEntity *apEnt) { gmapStates.erase(apEnt); }
+void SomaForgetCritter(cSomaLuxEntity *apEnt) { gmapStates.erase(apEnt); gmapGroups.clear(); }
+void SomaBeginCritterFrame() { gmapGroups.clear(); }
 
 void SomaRegisterCritterNatives(asIScriptEngine *e)
 {
@@ -283,26 +304,28 @@ void SomaRegisterCritterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "cVector3f Move_GetWanderAdd2D(float afLength, float afRadius, float afTimeStep)", +[](E *p, float l, float r, float t) { return WanderAdd(p, l, r, t, false); });
 	SOMA_METHOD(e, T, "cVector3f Move_GetWanderAdd3D(float afLength, float afRadius, float afTimeStep)", +[](E *p, float l, float r, float t) { return WanderAdd(p, l, r, t, true); });
 	SOMA_METHOD(e, T, "cVector3f Move_GetTowardsGroundAdd(float afMaxHeight, float afTimeStep)", +[](E *p, float h, float t) {
-		cVector3f vPos = p->GetPosition(), vNormal;
-		float fDist;
-		if (SomaRaycast(p, vPos, vPos - cVector3f(0, h, 0), fDist, vNormal))
-			return cVector3f(0, -fDist, 0) * t;
-		return cVector3f(0);
+		cCritterState &s = State(p);
+		if (RayTimerElapsed(p, s.mfGroundTimer, t, 0.2f, 0.3f, 0.4f, 0.5f))
+		{
+			cVector3f vPos = p->GetPosition(), vNormal;
+			float fLength = h + (p->mpMesh ? p->mpMesh->GetBoundingVolume()->GetSize().y * 0.5f : 0), fDist;
+			s.mfGroundDist = SomaRaycast(p, vPos, vPos - cVector3f(0, fLength, 0), fDist, vNormal) ? fDist : -1;
+		}
+		return s.mfGroundDist < 0 ? cVector3f(0) : cVector3f(0, -s.mfGroundDist, 0);
 	});
 	SOMA_METHOD(e, T, "cVector3f Move_GetWallAvoidAdd(float afDistanceForward, float afTimeStep)", +[](E *p, float d, float t) {
+		cVector3f vDir = SafeNormalize(Prop<cVector3f>(p, "mvWantedVel")), vPos = p->GetPosition();
 		bool &bDetected = Prop<bool>(p, "mbWallAvoidDetected");
-		bDetected = false;
-		cVector3f vDir = SafeNormalize(Prop<cVector3f>(p, "mvWantedVel"));
-		if (vDir.SqrLength() == 0 || d <= 0)
+		cVector3f &vNormal = Prop<cVector3f>(p, "mvWallAvoidNormal"), &vHit = Prop<cVector3f>(p, "mvWallAvoidPosition");
+		if (RayTimerElapsed(p, State(p).mfWallTimer, t, 0.05f, 0.075f, 0.1f, 0.15f))
+		{
+			float fDist;
+			bDetected = SomaRaycast(p, vPos, vPos + vDir * d, fDist, vNormal);
+			vHit = vPos + vDir * fDist;
+		}
+		if (bDetected == false)
 			return cVector3f(0);
-		cVector3f vPos = p->GetPosition(), vNormal;
-		float fDist;
-		if (SomaRaycast(p, vPos, vPos + vDir * d, fDist, vNormal) == false)
-			return cVector3f(0);
-		bDetected = true;
-		Prop<cVector3f>(p, "mvWallAvoidNormal") = vNormal;
-		Prop<cVector3f>(p, "mvWallAvoidPosition") = vPos + vDir * fDist;
-		return vNormal * ((1.0f - fDist / d) * t);
+		return cMath::Vector3Reflect(vDir, vNormal) / std::max((vHit - vPos).Length(), 0.05f);
 	});
 	SOMA_METHOD(e, T, "void SetGroup(const tString&in asEntityName)", +[](E *p, const tString &s) { State(p).msGroup = s; });
 	SOMA_METHOD(e, T, "void SetGroup(iLuxEntity @apEntity)", +[](E *p, E *g) { State(p).msGroup = g ? g->msName : tString(); });
