@@ -441,6 +441,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 		if (mvEntities[i]->mbActive)
 		{
 			mvEntities[i]->UpdateMove(afTimeStep);
+			mvEntities[i]->UpdateCharCollision();
 			mvEntities[i]->UpdateProcAnimations(afTimeStep);
 		}
 		mvEntities[i]->UpdateEffectColor(afTimeStep);

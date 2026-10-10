@@ -558,6 +558,69 @@ void cSomaLuxEntity::UpdateStaticMoveSound()
 		mpStaticMoveLoop->FadeIn(2);
 }
 
+void cSomaLuxEntity::SetDisableCollisionUntilOutSidePlayer(bool abX)
+{
+	mbCheckOutsidePlayer = abX;
+	if (abX)
+		for (iPhysicsBody *pBody : mvBodies)
+			pBody->SetCollideCharacter(false);
+}
+
+void cSomaLuxEntity::UpdateCharCollision()
+{
+	if (mbCheckOutsidePlayer)
+	{
+		iCharacterBody *pChar = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+		iPhysicsBody *pPlayerBody = pChar ? pChar->GetCurrentBody() : NULL;
+		if (pPlayerBody == NULL)
+			return;
+		iPhysicsWorld *pPhysics = pPlayerBody->GetWorld();
+		cCollideData data;
+		data.SetMaxSize(1);
+		bool bOutside = true;
+		for (size_t i = 0; i < mvBodies.size(); ++i)
+		{
+			iPhysicsBody *pBody = mvBodies[i];
+			if (pBody->GetCollideCharacter() || mvDefaultCollideCharacter[i] == false)
+				continue;
+			if (pPhysics->CheckShapeCollision(pBody->GetShape(), pBody->GetLocalMatrix(), pPlayerBody->GetShape(), pPlayerBody->GetLocalMatrix(), data, 1, false) == false)
+			{
+				pBody->SetCollideCharacter(true);
+				continue;
+			}
+			bOutside = false;
+			cVector3f vDir = pBody->GetLocalPosition() - pPlayerBody->GetLocalPosition();
+			vDir.y *= 0.1f;
+			vDir.Normalize();
+			if (std::fabs(cMath::Vector3Dot(pBody->GetLinearVelocity(), vDir)) < 0.5f)
+				pBody->AddImpulse(vDir * 0.5f);
+		}
+		mbCheckOutsidePlayer = !bOutside;
+		return;
+	}
+	if (mbCharCollisionUntilStopped == false)
+		return;
+	if (mbCharCollisionUntilStoppedStarted == false)
+	{
+		mbCharCollisionUntilStoppedStarted = true;
+		for (iPhysicsBody *pBody : mvBodies)
+			pBody->SetCollideCharacter(true);
+	}
+	size_t lDone = 0;
+	for (size_t i = 0; i < mvBodies.size(); ++i)
+	{
+		iPhysicsBody *pBody = mvBodies[i];
+		if (pBody->GetCollideCharacter() && mvDefaultCollideCharacter[i] == false &&
+			pBody->GetLinearVelocity().SqrLength() >= 0.01f && pBody->GetAngularVelocity().SqrLength() >= 0.01f)
+			continue;
+		if (pBody->GetCollideCharacter() && mvDefaultCollideCharacter[i] == false)
+			pBody->SetCollideCharacter(false);
+		++lDone;
+	}
+	if (lDone == mvBodies.size())
+		mbCharCollisionUntilStopped = false;
+}
+
 void cSomaLuxEntity::UpdateMove(float afTimeStep)
 {
 	UpdateStaticMoveSound();
@@ -2723,7 +2786,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, "cLuxProp", "void SetAllowMapTransfer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbAllowMapTransfer = b; });
 		SOMA_METHOD(e, "cLuxProp", "bool GetAllowMapTransfer()", +[](cSomaLuxEntity *p) { return p->mbAllowMapTransfer; });
 		SOMA_METHOD(e, "cLuxProp", "bool GetStaticPhysics()", +[](cSomaLuxEntity *p) { return p->mbStaticPhysics; });
+		SOMA_METHOD(e, "cLuxProp", "void SetDisableCollisionUntilOutSidePlayer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetDisableCollisionUntilOutSidePlayer(b); });
+		SOMA_METHOD(e, "cLuxProp", "void EnableCharCollisionUntilStopped()", +[](cSomaLuxEntity *p) { p->mbCharCollisionUntilStopped = true; p->mbCharCollisionUntilStoppedStarted = false; });
 	}
+	SOMA_FUNC(e, "void Prop_DisableCollisionUntilOutsidePlayer(const tString &in asPropName)",
+			  +[](const tString &n) { ForMatching(n, [](cSomaLuxEntity *p) { p->SetDisableCollisionUntilOutSidePlayer(true); }); });
 	SOMA_FUNC(e, "void Prop_SetStaticPhysics(const tString &in asPropName, bool abX)",
 			  +[](const tString &n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetStaticPhysics(b); }); });
 

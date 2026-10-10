@@ -86,6 +86,10 @@ public:
 
 	cMeshEntity *mpMesh = NULL;
 	std::vector<iPhysicsBody *> mvBodies;
+	std::vector<bool> mvDefaultCollideCharacter;
+	bool mbCheckOutsidePlayer = false, mbCharCollisionUntilStopped = false, mbCharCollisionUntilStoppedStarted = false;
+	void SetDisableCollisionUntilOutSidePlayer(bool abX);
+	void UpdateCharCollision();
 	std::vector<cEntityBodyExtraData> mvBodyExtraData;
 	iPhysicsBody *mpMainBody = NULL;
 	std::vector<iPhysicsJoint *> mvJoints;
