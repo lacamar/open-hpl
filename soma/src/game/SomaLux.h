@@ -54,6 +54,7 @@ public:
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
 	void SetTimerPaused(const tString &asName, bool abX);
+	void AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime);
 
 	cWorld *GetWorld() { return mpWorld; }
 	void SetWorld(cWorld *apWorld) { mpWorld = apWorld; }
@@ -102,6 +103,8 @@ private:
 	bool mbUpdatingTimers = false;
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
+	struct cDissolve { cMeshEntity *mpEntity; float mfAlpha, mfSpeed; };
+	std::vector<cDissolve> mvDissolves;
 };
 
 // Advances the current map's script every frame (cUpdater has no remove, so this persists).

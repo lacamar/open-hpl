@@ -203,6 +203,7 @@ public:
 	void SetEffectBaseColor(const cColor &aCol);
 	void FadeEffectBaseColor(const cColor &aCol, float afTime);
 	void UpdateEffectColor(float afTimeStep);
+	float mfMeshFadeAlpha = 1, mfMeshFadeSpeed = 0;
 	bool CollidesWithPlayer();
 
 	float mfHealth = 100;

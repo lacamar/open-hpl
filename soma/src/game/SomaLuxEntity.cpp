@@ -1067,6 +1067,11 @@ void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
 
 void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 {
+	if (mfMeshFadeAlpha < 1 && mpMesh)
+	{
+		mfMeshFadeAlpha = cMath::Min(mfMeshFadeAlpha + mfMeshFadeSpeed * afTimeStep, 1.0f);
+		mpMesh->SetCoverageAmount(mfMeshFadeAlpha);
+	}
 	if (mfEffectsFadeSpeed != 0)
 	{
 		mfEffectsAlpha = cMath::Clamp(mfEffectsAlpha + mfEffectsFadeSpeed * afTimeStep, 0.0f, 1.0f);
@@ -2787,6 +2792,12 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		SOMA_METHOD(e, "cLuxProp", "bool GetAllowMapTransfer()", +[](cSomaLuxEntity *p) { return p->mbAllowMapTransfer; });
 		SOMA_METHOD(e, "cLuxProp", "bool GetStaticPhysics()", +[](cSomaLuxEntity *p) { return p->mbStaticPhysics; });
 		SOMA_METHOD(e, "cLuxProp", "void SetDisableCollisionUntilOutSidePlayer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetDisableCollisionUntilOutSidePlayer(b); });
+		SOMA_METHOD(e, "cLuxProp", "void FadeInMeshEntity(float afTime)", +[](cSomaLuxEntity *p, float t) {
+			p->mfMeshFadeAlpha = 0;
+			p->mfMeshFadeSpeed = t > 0 ? 1 / t : 1000.0f;
+			if (p->mpMesh)
+				p->mpMesh->SetCoverageAmount(0);
+		});
 		SOMA_METHOD(e, "cLuxProp", "void EnableCharCollisionUntilStopped()", +[](cSomaLuxEntity *p) { p->mbCharCollisionUntilStopped = true; p->mbCharCollisionUntilStoppedStarted = false; });
 	}
 	SOMA_FUNC(e, "void Prop_DisableCollisionUntilOutsidePlayer(const tString &in asPropName)",

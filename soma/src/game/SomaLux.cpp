@@ -377,10 +377,47 @@ void cSomaLuxMap::OnLeave()
 
 void SomaScriptTick();
 
+void cSomaLuxMap::AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime)
+{
+	if (apMeshEntity == NULL)
+		return;
+	cMesh *pMesh = apMeshEntity->GetMesh();
+	pMesh->IncUserCount();
+	cMeshEntity *pNew = mpWorld->CreateMeshEntity(apMeshEntity->GetName() + "_Dissolve", pMesh);
+	pNew->SetIlluminationAmount(apMeshEntity->GetIlluminationAmount());
+	pNew->Stop();
+	if (pMesh->GetSkeleton())
+	{
+		pNew->SetMatrix(apMeshEntity->GetWorldMatrix());
+		for (int i = 0; i < pNew->GetBoneStateNum(); ++i)
+		{
+			pNew->GetBoneState(i)->SetActive(false);
+			pNew->GetBoneState(i)->SetMatrix(apMeshEntity->GetBoneState(i)->GetLocalMatrix());
+		}
+	}
+	else
+		for (int i = 0; i < pNew->GetSubMeshEntityNum(); ++i)
+			pNew->GetSubMeshEntity(i)->SetMatrix(apMeshEntity->GetSubMeshEntity(i)->GetWorldMatrix());
+	mvDissolves.push_back({pNew, 1, afTime > 0 ? 1 / afTime : 1000.0f});
+}
+
 void cSomaLuxMap::Update(float afTimeStep)
 {
 	if (mpScript == NULL)
 		return;
+	for (size_t i = 0; i < mvDissolves.size();)
+	{
+		cDissolve &d = mvDissolves[i];
+		d.mfAlpha -= d.mfSpeed * afTimeStep;
+		d.mpEntity->SetCoverageAmount(d.mfAlpha);
+		if (d.mfAlpha > 0)
+		{
+			++i;
+			continue;
+		}
+		mpWorld->DestroyMeshEntity(d.mpEntity);
+		mvDissolves.erase(mvDissolves.begin() + i);
+	}
 
 	for (cSomaLuxTimer &t : mvTimers)
 		if (t.mbPaused == false)
@@ -1414,6 +1451,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 								  "void cResources_PreloadParticleSystem(const tString&in asDataName)"})
 			SOMA_FUNC(e, pDecl, +[](S) {});
 		SOMA_METHOD(e, "cLuxMap", "void PreloadParticleSystem(const tString&in asFile)", +[](cSomaLuxMap *, S) {});
+		SOMA_METHOD(e, "cLuxMap", "void AddDissolveEntity(cMeshEntity @apMeshEntity, float afTime)", +[](cSomaLuxMap *m, cMeshEntity *p, float t) { m->AddDissolveEntity(p, t); });
 	}
 	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, CScriptArray &a) {
 		a.Resize(0);
