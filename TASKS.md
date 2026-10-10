@@ -29,20 +29,11 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    empty tree collision; the allocator wrote its header past the block. Release recheck (5 runs)
    pending: the GPU wedged (asahi compute queue timeouts) during an ASan run of this map.
 
-2. Window glass renders opaque. `plain_glass_livingroom.mat` is `Type="translucent"`,
-   `BlendMode="Mulx2"`, `Refraction=true`. Blend-mode parsing is fine (it lowercases, so
-   "Mulx2" matches) and the translucent objects do reach the render list (49 per frame in the
-   apartment). Confirmed: `cGraphics::GetTempFrameBuffer()` always creates `eTextureType_Rect`,
-   so `mpRefractionTexture` is rect while HPSL samples `sampler2D`. The same blocks the post-effect
-   composite (bloom etc.) for SOMA, which also passes pixel UVs. Needs a per-game temp-buffer
-   texture type plus normalized UVs in `iPostEffect::DrawQuad()`.
+2. Done: translucent refraction (SOMA temp frame buffers are `eTextureType_2D`).
 
 
 
-
-3. Doors and drawers are pinned (mass 0) by `cSomaBase::LoadMap()` because nothing holds them
-   shut without the map scripts. Unpin when a script layer exists; until then they are visible
-   but immovable.
+3. Done: doors/drawers are dynamic; `SetStaticPhysics` only pins script-requested bodies.
 
 
 4. Frame rate on big maps (`fps:N` in the sweep): static collision is combined like HPL3
@@ -63,17 +54,15 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-8. `05_03_space`, `03_02_omicron_inside`, `03_03_omicron_descent` and `02_02_ms_curie_inside`
-   render (near) black at the start pose; the last two lost the
-   fake light of the blue accumulation clear (fixed 2026-09-24). Space also logs a missing `aSkyboxMap` sampler.
-
-
+8. Black start poses in the freecam sweep are script fades / interactive camera animations
+   (e.g. 04_01 elevator descent, 02_07 SequenceWakeup); `--play` frames look right.
 
 10. Newton exit crash (`02_05_theta_inside`; `01_01_upsilon_awake` too when inactive entities'
    bodies reject contacts): `NewtonDestroy` -> `dgDeadBodies::DestroyBodies` ->
    `RemoveContactJoint` on a row whose body was already removed. Reproducible by returning 0 from
    the material AABB-overlap callback for some bodies (`IsActive()`/`GetCollide()` false). Needed
-   before inactive map entities can drop their collision.
+   before inactive map entities can drop their collision. Latent: clean 02_05 exit no longer
+   crashes.
 
 
 11. Audio vs the ref (`soma-audio.py`): menu 12 dB short at 63 Hz; intro +6..8 dB above 4 kHz;
@@ -81,12 +70,11 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-12. Oversized check leftover after the skinned-mesh fix: `03_03` `exit_flesher_door` (the
-   descent-shaft walls are plausibly real).
+12. Done: `03_03` oversized list is only the descent-shaft wall meshes.
 
 
 
-13. FBX skeletons + animations (loader is static bind pose only).
+13. Done: FBX skeletons + `.anm` animations (`MeshLoaderAssimp`).
 
 
 

@@ -274,7 +274,7 @@ void cSomaLuxMap::AddEntity(cSomaLuxEntity *apEnt)
 	apEnt->mpMap = this;
 	apEnt->msScriptName = apEnt->msName;
 	mvEntities.push_back(apEnt);
-	mmapEntities[apEnt->msName] = apEnt;
+	mmapEntities[cString::ToLowerCase(apEnt->msName)] = apEnt;
 	mmapWildcardCache.clear();
 }
 
@@ -311,8 +311,9 @@ void cSomaLuxMap::DestroyEntity(cSomaLuxEntity *apEnt)
 			apEnt->SetActive(false);
 			mvEntities.erase(mvEntities.begin() + i);
 			mmapWildcardCache.clear();
-			if (mmapEntities[apEnt->msName] == apEnt)
-				mmapEntities.erase(apEnt->msName);
+			auto itName = mmapEntities.find(cString::ToLowerCase(apEnt->msName));
+			if (itName != mmapEntities.end() && itName->second == apEnt)
+				mmapEntities.erase(itName);
 			if (mpLatestEntity == apEnt)
 				mpLatestEntity = NULL;
 			// Scripts may still hold the handle this frame
@@ -330,7 +331,7 @@ static bool EntityNameMatch(const tString &asPattern, cSomaLuxEntity *apEnt)
 
 cSomaLuxEntity *cSomaLuxMap::GetEntity(const tString &asName)
 {
-	std::map<tString, cSomaLuxEntity *>::iterator it = mmapEntities.find(cString::ToLowerCase(asName) == "player" ? tString("Player") : asName);
+	std::map<tString, cSomaLuxEntity *>::iterator it = mmapEntities.find(cString::ToLowerCase(asName));
 	if (it != mmapEntities.end())
 		return it->second;
 	if (asName.find('*') != tString::npos)
@@ -525,7 +526,7 @@ void cSomaLuxMap::UpdateCollideCallbacks()
 			std::vector<cSomaLuxEntity *> vChildren;
 			if (cb.msChild.find('*') == tString::npos)
 			{
-				auto it = mmapEntities.find(cb.msChild);
+				auto it = mmapEntities.find(cString::ToLowerCase(cb.msChild));
 				if (it != mmapEntities.end())
 					vChildren.push_back(it->second);
 			}
@@ -1308,7 +1309,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			return pBody ? pBody->GetCurrentBody() : NULL;
 		};
 		static auto CreateAt = [](S n, S f, S ent, bool attach) -> cParticleSystem * {
-			cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(cString::ToLowerCase(ent) == "player" ? tString("Player") : ent) : NULL;
+			cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(ent) : NULL;
 			if (pEnt == NULL || World() == NULL)
 			{
 				Error("Could not find entity '%s' to create particle system '%s' at\n", ent.c_str(), n.c_str());
