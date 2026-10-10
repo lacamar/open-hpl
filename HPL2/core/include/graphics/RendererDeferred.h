@@ -196,6 +196,7 @@ namespace hpl {
 		static void SetBloom(bool abActive, float afBrightPass, float afWidth, const cColor& aTint){ mbBloom = abActive; mfBloomBrightPass = afBrightPass; mfBloomWidth = afWidth; mBloomTint = aTint;}
 		static void SetFilmGrain(iTexture *apNoise, float afIntensity){ mpFilmGrainNoise = apNoise; mfFilmGrainIntensity = afIntensity;}
 		static void SetToneMapSRGB(bool abX){ mbToneMapSRGB = abX;}
+		static void SetImageTrailAlpha(float afX){ mfImageTrailAlpha = afX;}
 
 		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
@@ -210,6 +211,7 @@ namespace hpl {
 		void SetScreenPositionVars(iGpuProgram *apProgram);
 		void CopyToFrameBuffer();
 		void CopyAccumTo(iFrameBuffer *apTarget);
+		void RenderImageTrail();
 		void SetupRenderList();
 		void RenderObjects();
 
@@ -375,6 +377,7 @@ namespace hpl {
 		iGpuProgram *mpToneMapPrograms[32];//1=grading, 2=bloom, 4=film grain, 8=sRGB, 16=blend grading
 		iGpuProgram *mpBloomBrightPassProgram;
 		iGpuProgram *mpBloomBlurProgram[2];//0=vertical, 1=horizontal
+		iGpuProgram *mpImageTrailProgram;
 		int mlBloomBlurSamples;
 		float mfFilmGrainT = -1;
 		float mvFilmGrainTransform[2][4];
@@ -415,6 +418,7 @@ namespace hpl {
 		static iTexture *mpFilmGrainNoise;
 		static float mfFilmGrainIntensity;
 		static bool mbToneMapSRGB;
+		static float mfImageTrailAlpha;
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
 		static bool mbDepthInNormalAlpha;

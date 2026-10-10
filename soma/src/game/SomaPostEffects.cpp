@@ -62,6 +62,14 @@ void cSomaPostEffect::Set(std::initializer_list<float> alParams)
 
 iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 {
+	if (mlType == eImageTrail)
+	{
+		// applied next frame by cRendererDeferred::RenderImageTrail, on the HDR buffer
+		float fFrameTime = mpCurrentComposite->GetCurrentFrameTime();
+		cRendererDeferred::SetImageTrailAlpha(mbClear ? 1 : std::max(0.05f, 1 - powf(1 - expf(mfParams[0] * -60 * 0.015f), fFrameTime * 60)));
+		mbClear = false;
+		return apIn;
+	}
 	const cType &type = gvTypes[mlType];
 	if (type.mpShader && gvProgramTried[mlType] == false)
 	{
@@ -87,29 +95,10 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 	c->SetTextureRange(NULL, 1);
 	c->SetTexture(0, apIn);
 
-	iFrameBuffer *pTarget = apOut;
-	if (mlType == eImageTrail)
-	{
-		// ponytail: trail mixes tone-mapped LDR, the original mixes HDR before tone mapping
-		pTarget = mpGraphics->GetTempFrameBuffer(mpLowLevelGraphics->GetScreenSizeInt(), ePixelFormat_RGBA, 8);
-		c->SetFrameBuffer(pTarget, true);
-		c->SetProgram(pProg);
-		float fAlpha = 1;
-		if (mbClear)
-			c->ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
-		else
-			fAlpha = std::max(0.05f, 1 - powf(1 - expf(p[0] * -60 * 0.015f), fFrameTime * 60));
-		mbClear = false;
-		pProg->SetFloat(U("afAlpha"), fAlpha);
-		c->SetBlendMode(eMaterialBlendMode_Alpha);
-	}
-	else
-	{
-		SetFinalFrameBuffer(apOut);
-		c->SetProgram(pProg);
-		if (mlType != eRadialBlur)
-			apIn->SetFilter(eTextureFilter_Bilinear);
-	}
+	SetFinalFrameBuffer(apOut);
+	c->SetProgram(pProg);
+	if (mlType != eRadialBlur)
+		apIn->SetFilter(eTextureFilter_Bilinear);
 
 	if (mlType == eChromatic)
 	{
@@ -154,7 +143,7 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 	c->SetProgram(NULL);
 	c->SetBlendMode(eMaterialBlendMode_None);
 	c->SetTextureRange(NULL, 0);
-	return pTarget->GetColorBuffer(0)->ToTexture();
+	return apOut->GetColorBuffer(0)->ToTexture();
 }
 
 cPostEffectComposite *cSomaPostEffects::GetViewportComposite()

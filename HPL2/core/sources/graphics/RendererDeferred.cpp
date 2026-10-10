@@ -98,6 +98,7 @@ namespace hpl {
 	float cRendererDeferred::mfToneMapExposure = 1.0f;
 	float cRendererDeferred::mfToneMapWhiteCut = 3.5f;
 	float cRendererDeferred::mfToneMapGamma = 2.2f;
+	float cRendererDeferred::mfImageTrailAlpha = 0;
 	iTexture *cRendererDeferred::mpColorGradingTexture = NULL;
 	iTexture *cRendererDeferred::mpColorGradingTarget = NULL;
 	float cRendererDeferred::mfColorGradingBlend = 0;
@@ -236,6 +237,7 @@ namespace hpl {
 	#define kVar_avLightRight						44
 	#define kVar_avViewSpaceUp						94
 	#define kVar_afGradingBlendWeight				95
+	#define kVar_afAlpha							96
 	#define kVar_avBand0							43
 	#define kVar_afSpotNearClip						52
 	#define kVar_avFocusStartEnd					53
@@ -1040,7 +1042,7 @@ namespace hpl {
 
 		mpToneMapProgram = NULL;
 		for(int i=0; i<32; ++i) mpToneMapPrograms[i] = NULL;
-		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = NULL;
+		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = mpImageTrailProgram = NULL;
 		if(mbHdr)
 		{
 			mpToneMapProgram = GetToneMapProgram(0);
@@ -1053,6 +1055,9 @@ namespace hpl {
 				mpBloomBrightPassProgram->GetVariableAsId("afBrightPass",kVar_afBrightPass);
 				mpBloomBrightPassProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 			}
+			mpImageTrailProgram = mpGraphics->CreateGpuProgramFromShaders("ImageTrailHdr","deferred_base_vtx.glsl", "posteffect_image_trail_frag.glsl",&bloomVars);
+			if(mpImageTrailProgram)
+				mpImageTrailProgram->GetVariableAsId("afAlpha",kVar_afAlpha);
 			mlBloomBlurSamples = cMath::Max(8, mvScreenSize.x/160);
 			bloomVars.Add("kBlurSamples", mlBloomBlurSamples);
 			for(int i=0; i<2; ++i)
@@ -1200,8 +1205,8 @@ namespace hpl {
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
 		for(int i=0; i<32; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
-		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1]};
-		for(int i=0; i<3; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
+		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1], mpImageTrailProgram};
+		for(int i=0; i<4; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
 
 		/////////////////////////
 		//Gpu programs
@@ -1288,6 +1293,8 @@ namespace hpl {
 		SetChannelMode(eMaterialChannelMode_RGBA);
 
 		iTexture *pSource = mpAccumBufferTexture;
+		if(mpToneMapProgram && mfImageTrailAlpha > 0 && mpImageTrailProgram)
+			RenderImageTrail();
 		if(mpToneMapProgram)
 		{
 			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
@@ -1382,6 +1389,30 @@ namespace hpl {
 		SetProgram(NULL);
 
 		END_RENDER_PASS();
+	}
+
+	//-----------------------------------------------------------------------
+
+	// SOMA's image trail runs on the HDR buffer, before cPostEffect_ToneMapping
+	void cRendererDeferred::RenderImageTrail()
+	{
+		iFrameBuffer *pTrail = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,8);
+		SetFrameBuffer(pTrail,false);
+		SetFlatProjection();
+		SetProgram(mpImageTrailProgram);
+		mpImageTrailProgram->SetFloat(kVar_afAlpha, cMath::Min(mfImageTrailAlpha, 1.0f));
+		SetBlendMode(eMaterialBlendMode_Alpha);
+		SetTexture(0,mpAccumBufferTexture);
+		SetTextureRange(NULL, 1);
+		DrawAccumulationQuad();
+
+		SetFrameBuffer(mpAccumBuffer,false);
+		SetFlatProjection();
+		mpImageTrailProgram->SetFloat(kVar_afAlpha, 1.0f);
+		SetBlendMode(eMaterialBlendMode_None);
+		SetTexture(0,pTrail->GetColorBuffer(0)->ToTexture());
+		DrawAccumulationQuad();
+		mfImageTrailAlpha = 0;
 	}
 
 	//-----------------------------------------------------------------------
