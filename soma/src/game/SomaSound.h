@@ -93,6 +93,7 @@ public:
 		float mfPitch = 0;
 		float mfPitchRand = 0;
 		bool mb3D = true;
+		float mfPanLevel = 1;
 		bool mbOneShot = true;
 		float mfMinDist = 1;
 		float mfMaxDist = 20;
@@ -199,6 +200,7 @@ private:
 	float ParamNorm(int alIdx);
 	float DistanceGain(float afDist);
 	cVector3f SourcePos();
+	cVector3f PanPos();
 	float ListenerDistance();
 
 	cEvent *mpEvent;

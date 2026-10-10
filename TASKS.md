@@ -65,7 +65,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 11. Audio vs the ref (`soma-audio.py`): menu 12 dB short at 63 Hz; intro +6..8 dB above 4 kHz;
-   no reverb/EFX matching; near 3D sources pan wider than the ref (apartment L-R +7.0 vs +3.8).
+   no reverb/EFX matching. 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
 
 
 

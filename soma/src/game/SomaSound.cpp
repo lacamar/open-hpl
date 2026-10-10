@@ -151,6 +151,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			ev.mfPitch = Num(pEvent, "pitch");
 			ev.mfPitchRand = Num(pEvent, "pitch_randomization");
 			ev.mb3D = Text(pEvent, "mode") == "x_3d";
+			ev.mfPanLevel = Num(pEvent, "panlevel3d", 1);
 			ev.mbOneShot = Text(pEvent, "oneshot", "Yes") != "No";
 			ev.mfMinDist = Num(pEvent, "mindistance", 1);
 			ev.mfMaxDist = Num(pEvent, "maxdistance", 20);
@@ -643,6 +644,29 @@ cVector3f cSomaSoundInstance::SourcePos()
 	return mpEntity ? mpEntity->GetWorldPosition() : mvPos;
 }
 
+// FMOD Ex stereo pans by constant power on sin(azimuth) with no rear or elevation cue; move the
+// source to where OpenAL Soft's stereo panpot gives the same L/R ratio.
+// ponytail: table measured from OpenAL Soft 1.24 panpot (4 deg steps); HRTF/UHJ output differs.
+cVector3f cSomaSoundInstance::PanPos()
+{
+	static const float vQ[] = {0, .0897f, .175f, .263f, .346f, .429f, .510f, .585f, .656f, .725f, .789f, .846f, .895f, .938f, .973f, 1};
+	iLowLevelSound *pLow = gpSomaBase->mpEngine->GetSound()->GetLowLevel();
+	cVector3f vPos = SourcePos(), vListener = pLow->GetListenerPosition();
+	cVector3f vDir = vPos - vListener;
+	float fDist = vDir.Length();
+	if (fDist < 1e-3f)
+		return vPos;
+	cVector3f vFwd = pLow->GetListenerForward() * -1, vRight = cMath::Vector3Cross(vFwd, pLow->GetListenerUp());
+	float fPan = cMath::Vector3Dot(vDir, vRight) / fDist * mpEvent->mfPanLevel;
+	float fAbs = std::min(std::fabs(fPan), 1.0f);
+	float fL = std::sqrt((1 - fAbs) / 2), fR = std::sqrt((1 + fAbs) / 2), fQ = (fR - fL) / (fR + fL);
+	size_t i = 1;
+	while (i < 15 && vQ[i] < fQ)
+		++i;
+	float fAngle = cMath::ToRad(4 * (i - 1 + (fQ - vQ[i - 1]) / (vQ[i] - vQ[i - 1])));
+	return vListener + (vFwd * std::cos(fAngle) + vRight * (std::sin(fAngle) * (fPan < 0 ? -1 : 1))) * fDist;
+}
+
 float cSomaSoundInstance::ListenerDistance()
 {
 	return cMath::Vector3Dist(gpSomaBase->mpEngine->GetSound()->GetLowLevel()->GetListenerPosition(), SourcePos());
@@ -690,7 +714,7 @@ bool cSomaSoundInstance::StartVoice(int alLayer, int alSound, bool abLoop)
 
 	cSoundEntry *pEntry;
 	if (mb3DPlay)
-		pEntry = Handler()->Play(sFile, abLoop, 0, SourcePos(), 1e5f, 2e5f, mType, false, true, 0, mpEvent->mbStream);
+		pEntry = Handler()->Play(sFile, abLoop, 0, PanPos(), 1e5f, 2e5f, mType, false, true, 0, mpEvent->mbStream);
 	else if (mpEvent->mbStream)
 		pEntry = Handler()->PlayGuiStream(sFile, abLoop, 0, cVector3f(0, 0, 1), mType);
 	else
@@ -868,7 +892,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 	}
 
 	mfAudibility = 0;
-	cVector3f vPos = SourcePos();
+	cVector3f vPos = mb3DPlay ? PanPos() : cVector3f(0);
 	for (size_t i = 0; i < mvVoices.size();)
 	{
 		cVoice &v = mvVoices[i];
