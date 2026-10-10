@@ -79,6 +79,7 @@ namespace hpl {
 	bool cRendererDeferred::mbHpl3SSAO = false;
 	int cRendererDeferred::mlSSAONumOfSamples = 8;
 	int cRendererDeferred::mlSSAOBufferSizeDiv = 2;
+	int cRendererDeferred::mlDepthOfFieldSampleNum = 16;
 	float cRendererDeferred::mfSSAOScatterLengthMul = 0.2f;
 	float cRendererDeferred::mfSSAOScatterLengthMin = 0.015f;
 	float cRendererDeferred::mfSSAOScatterLengthMax = 0.13f;
@@ -915,7 +916,7 @@ namespace hpl {
 
 		if(mGBufferTextureType != eTextureType_Rect)
 		{
-			const int lDofSamples = 16;
+			const int lDofSamples = mlDepthOfFieldSampleNum;
 			cParserVarContainer programVars;
 			programVars.Add("UseUv");
 			mpDofFocusProgram = mpGraphics->CreateGpuProgramFromShaders("DOF - Focus","deferred_base_vtx.glsl", "deferred_dof_focus.glsl",&programVars);
@@ -948,8 +949,7 @@ namespace hpl {
 
 		if(mbHpl3SSAO && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat))
 		{
-			const int lDiv = 2;
-			cVector2l vSize = mvScreenSize / lDiv;
+			cVector2l vSize = mvScreenSize / mlSSAOBufferSizeDiv;
 			const char* vNames[3] = {"SSAO", "SSAOBlur1", "SSAOTemporal"};
 			for(int i=0; i<3; ++i)
 			{
@@ -990,6 +990,7 @@ namespace hpl {
 			vars.Add("SSAO_VERSION_050");
 			mpH3SSAOBlurProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Blur", "deferred_base_vtx.glsl", "deferred_ssao_blur_frag.glsl", &vars);
 			mpH3SSAOTemporalProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Temporal", "deferred_base_vtx.glsl", "deferred_ssao_temporal_frag.glsl", &vars);
+			// the shader's full-size branch reads depth (.x) as AO; the upsample branch handles div 1
 			vars.Add("UseUpsample");
 			vars.Add("UseTemporal");
 			mpH3SSAOUpsampleProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Upsample", "deferred_base_vtx.glsl", "deferred_ssao_upsample_frag.glsl", &vars);
@@ -998,7 +999,7 @@ namespace hpl {
 			vars.Add("SSAO_VERSION_050");
 			vars.Add("kNumSamples", 16);
 			vars.Add("kMaxLod", lMips - 1);
-			vars.Add("UseDownsample");
+			if(mlSSAOBufferSizeDiv != 1) vars.Add("UseDownsample");
 			mpH3SSAORenderProgram = mpGraphics->CreateGpuProgramFromShaders("SSAO Render", "deferred_base_vtx.glsl", "deferred_ssao_render_frag.glsl", &vars);
 
 			if(mpH3SSAODownsampleProgram)
@@ -3823,7 +3824,7 @@ namespace hpl {
 
 		START_RENDER_PASS(SSAO);
 
-		const float fDiv = 2.0f;
+		const float fDiv = (float)mlSSAOBufferSizeDiv;
 		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV() * 0.5f);
 		float fT = fTanHalfFov * mfFarPlane;
 		float fW = mpCurrentFrustum->GetAspect() * fT;
@@ -3934,7 +3935,7 @@ namespace hpl {
 		SetAccumulationBuffer();
 		SetProgram(mpH3SSAOUpsampleProgram);
 		mpH3SSAOUpsampleProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOUpsampleProgram->SetFloat(kVar_afSizeDiv, 0.5f);
+		mpH3SSAOUpsampleProgram->SetFloat(kVar_afSizeDiv, 1.0f / mlSSAOBufferSizeDiv);
 		mpH3SSAOUpsampleProgram->SetFloat(kVar_afPower, 8.0f);
 		SetTexture(0, mpH3SSAOTexture[2]);
 		SetFogDepthTexture(true, 1);

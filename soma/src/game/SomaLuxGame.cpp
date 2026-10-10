@@ -87,6 +87,8 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 {
 	LoadConfigs();
 	cConfigFile *c = gpUserConfig;
+	cRendererDeferred::SetSSAOBufferSizeDiv(c->GetInt("Graphics", "SSAOQuality", 0) == 1 ? 1 : 2);
+	cRendererDeferred::SetDepthOfFieldSampleNum(4 << std::min(std::max(c->GetInt("Graphics", "DepthOfFieldQuality", 2), 0), 2));
 	apCfg->mlScreenWidth = c->GetInt("Screen", "Width", apCfg->mlScreenWidth);
 	apCfg->mlScreenHeight = c->GetInt("Screen", "Height", apCfg->mlScreenHeight);
 	tString sFull = cString::ToLowerCase(c->GetString("Screen", "FullScreen", apCfg->mbFullscreen ? "true" : "false"));

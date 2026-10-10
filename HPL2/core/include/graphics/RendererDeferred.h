@@ -162,6 +162,7 @@ namespace hpl {
 		static void SetHpl3SSAO(bool abX){ mbHpl3SSAO = abX;}
 		static void SetSSAONumOfSamples(int alX){ mlSSAONumOfSamples = alX;}
 		static void SetSSAOBufferSizeDiv(int alX){ mlSSAOBufferSizeDiv = alX;}
+		static void SetDepthOfFieldSampleNum(int alX){ mlDepthOfFieldSampleNum = alX;}
 		static void SetSSAOScatterLengthMul(float afX){ mfSSAOScatterLengthMul = afX;}
 		static void SetSSAOScatterLengthMin(float afX){ mfSSAOScatterLengthMin = afX;}
 		static void SetSSAOScatterLengthMax(float afX){ mfSSAOScatterLengthMax = afX;}
@@ -435,6 +436,7 @@ namespace hpl {
 		static float mfSSAOSkipEdgeLimit;
 		static eDeferredSSAO mSSAOType;
 		static int mlSSAOBufferSizeDiv;
+		static int mlDepthOfFieldSampleNum;
 
 		static bool mbEdgeSmoothLoaded;
 		static bool mbEnableParallax;
