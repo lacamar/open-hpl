@@ -39,7 +39,9 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    (04_02: 5738 -> 2569 static bodies, 42 -> 48 fps); look-at checks every 0.3 s like
    `iLuxEntity::UpdatePlayerLookAt` (logic ~-30%); critter rays recast on `cLuxCritter` timers,
    flock groups cached per frame (01_03 logic 6.5 -> 3.8 ms); static SolidDiffuse submeshes merged per
-   16 m cell/material at load (01_03 draws 5608 -> 2689, 48 -> 58 fps; `OPENHPL_NO_MESH_COMBINE=1` to disable).
+   16 m cell/material at load (01_03 draws 5608 -> 2689, 48 -> 58 fps; `OPENHPL_NO_MESH_COMBINE=1` to disable);
+   texture manager updates only animated textures, RunGlobalFunc name index (02_04 logic/step 5.0 -> 3.2 ms).
+   Left: CPU skinning (`cSubMeshEntity::UpdateGraphicsForFrame`), Newton broadphase.
 
 
 
@@ -143,7 +145,9 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
   Not reproduced on 00_01 with CamAnim_WakeUp (2026-10-05) or CamAnim_WakeUp2 (2026-10-10, exit pose
   at the last node). Needs a repro.
-- `stub_report`: eye tracker, preload hints, `iPhysicsJoint::SetAllowPositionReset`.
+- `stub_report`: preload hints, gamepad colour, rich presence/achievements, `cMeshEntity::SetDisableSleep`
+  (no mesh auto-sleep), `iPhysicsJoint::SetAllowPositionReset` (Rebirth hinge snaps bodies back after
+  a >0.05 unit jump; safety net only).
 - Physics impact sounds at load: bodies settling (01_02, ~0.03 vol). Rebirth has no extra gating
   (`OnImpact`, `cPhysicsWorldNewton::Simulate` match ours; `cWorld::PreUpdate` uncalled). 00_01 test
   start puts the player inside the bed, pushing `pillow_cabin_plain_1` (repeated pillow impacts).
