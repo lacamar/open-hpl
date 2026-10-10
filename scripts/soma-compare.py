@@ -422,7 +422,9 @@ def cmd_boot(a):
     """Record both boots, align them on content, score every reference frame against ours."""
     out = Path(a.out or CACHE / "boot")
     ref_dir = Path(a.ref_dir or CACHE / "boot-ref")
-    if a.record_ref or not any(ref_dir.glob("*.png")):
+    if not a.record_ref and not any(ref_dir.glob("*.png")):
+        sys.exit(f"no reference frames in {ref_dir}; pass --ref-dir or --record-ref")
+    if a.record_ref:
         subprocess.run(["rm", "-rf", str(ref_dir)])
         ref_mod.start(boot=True, size=a.size, record=(ref_dir, a.secs + 15, 4))
         ref_mod.stop()
