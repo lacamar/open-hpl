@@ -50,6 +50,7 @@
 
 #include "math/Math.h"
 
+#include "scene/Terrain.h"
 #include <array>
 #include <cmath>
 #include <cstring>
@@ -945,6 +946,8 @@ namespace hpl {
 		for (cMaterial* pMat : vBlend) pMatMgr->Destroy(pMat);
 		CreateTerrainDecals(apTerrain, vPatches, fMaxHeight);
 		CreateTerrainUndergrowth(apTerrain, vHeight, lSize, fUnit);
+		for (float& h : vHeight) if (std::isnan(h)) h = 0;
+		mpCurrentWorld->SetTerrain(hplNew(cTerrain, (lSize, fUnit, std::move(vHeight))));
 	}
 
 	namespace

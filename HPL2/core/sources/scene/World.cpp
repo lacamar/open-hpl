@@ -18,6 +18,7 @@
  */
 
 #include <algorithm>
+#include "scene/Terrain.h"
 #include "scene/World.h"
 
 #include "impl/tinyXML/tinyxml.h"
@@ -187,6 +188,7 @@ namespace hpl {
 	cWorld::~cWorld()
 	{
 		if(mpDirectionalLight) hplDelete(mpDirectionalLight);
+		if(mpTerrain) hplDelete(mpTerrain);
 		STLDeleteAll(mvEnvParticles);
 		if(mpSkyBoxVtxBuffer) hplDelete(mpSkyBoxVtxBuffer);
 		if(mpSkyBoxTexture && mbAutoDestroySkybox)
@@ -1227,6 +1229,12 @@ namespace hpl {
 			if((*it)->GetUniqueID() == alID) return *it;
 		}
 		return NULL;
+	}
+
+	void cWorld::SetTerrain(cTerrain* apTerrain)
+	{
+		if(mpTerrain) hplDelete(mpTerrain);
+		mpTerrain = apTerrain;
 	}
 
 	bool cWorld::IsValid(cSoundEntity* apEntity)

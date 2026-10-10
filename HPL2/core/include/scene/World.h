@@ -72,6 +72,7 @@ namespace hpl {
 	class iPhysicsRope;
 	class cResourceVarsObject;
 	class cFogArea;
+	class cTerrain;
 	class cForceField;
 	class cEnvironmentParticles;
 	class cXmlElement;
@@ -422,6 +423,9 @@ namespace hpl {
 		bool SoundEntityExists(cSoundEntity* apEntity, int alCreationID);
 		bool IsValid(cSoundEntity* apEntity);
 
+		cTerrain* GetTerrain(){ return mpTerrain; }
+		void SetTerrain(cTerrain* apTerrain);
+
 		cSoundEntityIterator GetSoundEntityIterator(){ return cSoundEntityIterator(&mlstSoundEntities);}
 
 		///// START POS ENTITY METHODS ////////////////
@@ -494,6 +498,7 @@ namespace hpl {
 		iVertexBuffer* mpSkyBoxVtxBuffer;
 		iTexture* mpSkyBoxTexture;
 		bool mbAutoDestroySkybox;
+		cTerrain* mpTerrain = NULL;
 		bool mbSkyBoxActive;
 		cColor mSkyBoxColor;
 		float mfSkyBoxBrightness = 1;

@@ -32,7 +32,7 @@ TYPES = {
     'cBoneState': 'cBoneState', 'iKeyboard': 'iKeyboard', 'iMouse': 'iMouse', 'iGamepad': 'iGamepad', 'cForceField': 'cForceField',
     'iLowLevelGraphics': 'iLowLevelGraphics', 'cPostEffectComposite': 'cPostEffectComposite',
     'iPhysicsRope': 'iPhysicsRope', 'iVerletParticleContainer': 'iVerletParticleContainer', 'cVerletParticle': 'cVerletParticle',
-    'iRopeEntity': 'cRopeEntity',
+    'iRopeEntity': 'cRopeEntity', 'cTerrain': 'cTerrain',
 }
 
 # HPL3 names whose HPL2 spelling differs

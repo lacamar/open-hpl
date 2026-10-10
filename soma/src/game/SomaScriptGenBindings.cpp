@@ -1238,6 +1238,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cSurfaceData", "int GetImpactDataNum()", +[](cSurfaceData *o) -> int { return o->GetImpactDataNum(); });
 	SOMA_METHOD_NEW(e, "cSurfaceData", "int GetHitDataNum()", +[](cSurfaceData *o) -> int { return o->GetHitDataNum(); });
 	SOMA_METHOD_NEW(e, "cSurfaceData", "const tString& GetStepType()", +[](cSurfaceData *o) -> const tString & { static thread_local tString r; r = o->GetStepType(); return r; });
+	SOMA_METHOD_NEW(e, "cTerrain", "bool GetWorldPosHeightAndNormal(const cVector3f&in avPosition, float &out afHeight, cVector3f &out avNormal)", +[](cTerrain *o, const cVector3f & a0, float & a1, cVector3f & a2) -> bool { return o->GetWorldPosHeightAndNormal(a0, a1, a2); });
+	SOMA_METHOD_NEW(e, "cTerrain", "void SetCheapMaterial(const tString&in asCheapMaterial, float afCheapMaterialMul)", +[](cTerrain *o, const tString & a0, float a1) { o->SetCheapMaterial(a0, a1); });
 	SOMA_METHOD_NEW(e, "cVerletParticle", "void SetPosition(const cVector3f&in avPos, bool abSetPrevPos)", +[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->SetPosition(a0, a1); });
 	SOMA_METHOD_NEW(e, "cVerletParticle", "void AddPosition(const cVector3f&in avAdd, bool abSetPrevPos)", +[](cVerletParticle *o, const cVector3f & a0, bool a1) { o->AddPosition(a0, a1); });
 	SOMA_METHOD_NEW(e, "cVerletParticle", "const cVector3f& GetPosition() const", +[](cVerletParticle *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetPosition(); return r; });
@@ -1351,6 +1353,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullFadeSpeed()", +[](cWorld *o) -> float { return o->GetDistanceCullFadeSpeed(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetPhysicsWorld(iPhysicsWorld@ apWorld, bool abAutoDelete)", +[](cWorld *o, iPhysicsWorld * a0, bool a1) { o->SetPhysicsWorld(a0, a1); });
 	SOMA_METHOD_NEW(e, "cWorld", "iPhysicsWorld@ GetPhysicsWorld()", +[](cWorld *o) -> iPhysicsWorld * { return o->GetPhysicsWorld(); });
+	SOMA_METHOD_NEW(e, "cWorld", "cTerrain@ GetTerrain()", +[](cWorld *o) -> cTerrain * { return o->GetTerrain(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBox(iTexture @apTexture, bool abAutoDestroy)", +[](cWorld *o, iTexture * a0, bool a1) { o->SetSkyBox(a0, a1); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxActive(bool abX)", +[](cWorld *o, bool a0) { o->SetSkyBoxActive(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBoxColor(const cColor&in aColor)", +[](cWorld *o, const cColor & a0) { o->SetSkyBoxColor(a0); });
@@ -1468,6 +1471,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCollideCharacter()", +[](iCharacterBody *o) -> bool { return o->GetCollideCharacter(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetTestCollision(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetTestCollision(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetTestCollision()", +[](iCharacterBody *o) -> bool { return o->GetTestCollision(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPhysicsBodyActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPhysicsBodyActive(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPhysicsBodyActive()", +[](iCharacterBody *o) -> bool { return o->GetPhysicsBodyActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMaxPositiveMoveSpeed((eCharDir)a0, a1); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "float GetMaxPositiveMoveSpeed(eCharDir aDir)", +[](iCharacterBody *o, int a0) -> float { return o->GetMaxPositiveMoveSpeed((eCharDir)a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxNegativeMoveSpeed(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMaxNegativeMoveSpeed((eCharDir)a0, a1); });
@@ -1574,8 +1579,6 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetCameraSmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetCameraSmoothPosNum(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUseSmoothing(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUseSmoothing(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUseSmoothing()", +[](iCharacterBody *o) -> bool { return o->GetCameraUseSmoothing(); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPhysicsBodyActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPhysicsBodyActive(a0); });
-	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPhysicsBodyActive()", +[](iCharacterBody *o) -> bool { return o->GetPhysicsBodyActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUpdateActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUpdateActive(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUpdateActive()", +[](iCharacterBody *o) -> bool { return o->GetCameraUpdateActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntity(iEntity3D@ apEntity)", +[](iCharacterBody *o, iEntity3D * a0) { o->SetEntity(a0); });
