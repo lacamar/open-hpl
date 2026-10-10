@@ -43,6 +43,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
    texture manager updates only animated textures, RunGlobalFunc name index (02_04 logic/step 5.0 -> 3.2 ms).
    02_04 at 4K is GPU-bound (CPU skinning 3%): SSAO ~10 ms, CopyToFrameBuffer 6-11, DoF 3-7
    (`render_stats gpu=1`); refraction copy reused across translucents (one per frame). Left: Newton broadphase.
+   Sweep fps is now steady state (120 frames after a counter reset; it used to average the warm-up):
+   all 29 maps 54-60 fps at 4K (2026-10-10).
 
 
 

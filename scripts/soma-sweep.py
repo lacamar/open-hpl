@@ -149,6 +149,8 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
             result["player"] = {k: v for k, v in hpl.send({"cmd": "player_state"}).items() if k != "ok"}
         result["load_report"] = hpl.send({"cmd": "load_report"})["load_report"]
         result["world"] = hpl.send({"cmd": "world_stats"})["world"]
+        hpl.send({"cmd": "render_stats"})
+        hpl.send({"cmd": "wait_frames", "n": 120, "max_ms": 5000})
         render = hpl.send({"cmd": "render_stats"})
         result["render"] = render["render"]
         result["fps"] = render.get("fps")
