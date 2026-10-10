@@ -138,6 +138,11 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
     result["boot_s"] = round(time.time() - start, 1)
     try:
         result["warmup"] = {k: v for k, v in hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 30000}).items() if k != "ok"}
+        fade_code = '__print("" + cLux_GetEffectHandler().GetFadeAlpha());'
+        for _ in range(15):
+            if float(hpl.send({"cmd": "script_exec", "code": fade_code}).get("output") or 0) <= 0.5:
+                break
+            hpl.send({"cmd": "wait_frames", "n": 60, "max_ms": 4000})
         if play:
             hpl.send({"cmd": "wait_frames", "n": int(play * 60), "max_ms": int(play * 4000)})
             result["stubs"] = {k: v for k, v in hpl.send({"cmd": "stub_report", "n": 40}).items() if k != "ok"}
@@ -149,7 +154,7 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         result["fps"] = render.get("fps")
         result["camera"] = {k: v for k, v in hpl.send({"cmd": "camera_state"}).items() if k != "ok"}
         result["frame"] = hpl.send({"cmd": "frame_stats"})["frame"]
-        fade = hpl.send({"cmd": "script_exec", "code": '__print("" + cLux_GetEffectHandler().GetFadeAlpha());'})
+        fade = hpl.send({"cmd": "script_exec", "code": fade_code})
         result["fade_alpha"] = float(fade.get("output") or 0)
         wake = hpl.send({"cmd": "script_vars", "name": "cScrWakeHandler"}).get("output", "")
         result["asleep"] = bool(re.search(r"\nmWakeState=[01]\n", wake))
