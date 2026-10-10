@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include "scene/World.h"
 
 #include "impl/tinyXML/tinyxml.h"
@@ -1226,6 +1227,11 @@ namespace hpl {
 			if((*it)->GetUniqueID() == alID) return *it;
 		}
 		return NULL;
+	}
+
+	bool cWorld::IsValid(cSoundEntity* apEntity)
+	{
+		return std::find(mlstSoundEntities.begin(), mlstSoundEntities.end(), apEntity) != mlstSoundEntities.end();
 	}
 
 	bool cWorld::SoundEntityExists(cSoundEntity* apEntity, int alCreationID)

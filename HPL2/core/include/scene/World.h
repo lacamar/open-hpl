@@ -420,6 +420,7 @@ namespace hpl {
 		cSoundEntity* GetSoundEntityFromUniqueID(int alID);
 		void DestroyAllSoundEntities();
 		bool SoundEntityExists(cSoundEntity* apEntity, int alCreationID);
+		bool IsValid(cSoundEntity* apEntity);
 
 		cSoundEntityIterator GetSoundEntityIterator(){ return cSoundEntityIterator(&mlstSoundEntities);}
 

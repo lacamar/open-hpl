@@ -1431,6 +1431,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "cSoundEntity@ GetSoundEntity(const tString&in asName)", +[](cWorld *o, const tString & a0) -> cSoundEntity * { return o->GetSoundEntity(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void DestroyAllSoundEntities()", +[](cWorld *o) { o->DestroyAllSoundEntities(); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool SoundEntityExists(cSoundEntity@ apEntity, int alCreationID)", +[](cWorld *o, cSoundEntity * a0, int a1) -> bool { return o->SoundEntityExists(a0, a1); });
+	SOMA_METHOD_NEW(e, "cWorld", "bool IsValid(cSoundEntity@ apEntity)", +[](cWorld *o, cSoundEntity * a0) -> bool { return o->IsValid(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDepthOfFieldActive(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusStart(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusStart(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetDepthOfFieldFocusEnd(float afX)", +[](cWorld *o, float a0) { o->SetDepthOfFieldFocusEnd(a0); });
@@ -1573,6 +1574,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetCameraSmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetCameraSmoothPosNum(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUseSmoothing(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUseSmoothing(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUseSmoothing()", +[](iCharacterBody *o) -> bool { return o->GetCameraUseSmoothing(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetPhysicsBodyActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetPhysicsBodyActive(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetPhysicsBodyActive()", +[](iCharacterBody *o) -> bool { return o->GetPhysicsBodyActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUpdateActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUpdateActive(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUpdateActive()", +[](iCharacterBody *o) -> bool { return o->GetCameraUpdateActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntity(iEntity3D@ apEntity)", +[](iCharacterBody *o, iEntity3D * a0) { o->SetEntity(a0); });

@@ -298,6 +298,7 @@ namespace hpl {
 		mbActive = true;
 		mbCollideCharacter = true;
 		mbTestCollision = true;
+		mbPhysicsBodyActive = true;
 
 		mbEntitySmoothYPos = false;
 		mlEntitySmoothYPosNum = 20;
@@ -451,15 +452,7 @@ namespace hpl {
 		if(mbActive == abX) return;
 
 		mbActive = abX;
-		
-		if(mbActive==false) 
-		{
-			mpCurrentBody->SetActive(false);
-		}
-		else if(mbActive && mbTestCollision) 
-		{
-			mpCurrentBody->SetActive(true);
-		}       
+		UpdateBodyActive();
 	}
 
 	//-----------------------------------------------------------------------
@@ -478,16 +471,18 @@ namespace hpl {
 		if(mbTestCollision == abX) return;
 
 		mbTestCollision = abX;
-		
-		if(mbTestCollision==false) 
-		{
-			mpCurrentBody->SetActive(false);
-		}
-		else if(mbTestCollision && mbActive) 
-		{
-			mpCurrentBody->SetActive(true);
-		}
+		UpdateBodyActive();
+	}
 
+	void iCharacterBody::SetPhysicsBodyActive(bool abX)
+	{
+		mbPhysicsBodyActive = abX;
+		UpdateBodyActive();
+	}
+
+	void iCharacterBody::UpdateBodyActive()
+	{
+		mpCurrentBody->SetActive(mbActive && mbTestCollision && mbPhysicsBodyActive);
 	}
 
 	//-----------------------------------------------------------------------
@@ -536,10 +531,7 @@ namespace hpl {
 
 		SetPosition(vFeetPosition + cVector3f(0,mpCurrentShape->GetSize().y/2.0f,0), true);
 				
-		if(mbActive && mbTestCollision)
-			mpCurrentBody->SetActive(true);
-		else
-			mpCurrentBody->SetActive(false);
+		UpdateBodyActive();
 		
 		//Set size of the new shape
 		mvSize.y = mpCurrentShape->GetHeight();

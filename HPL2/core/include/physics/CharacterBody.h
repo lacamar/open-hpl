@@ -156,6 +156,8 @@ namespace hpl {
 		bool GetCollideCharacter(){ return mbCollideCharacter;}
 
 		void SetTestCollision(bool abX);
+		void SetPhysicsBodyActive(bool abX);
+		bool GetPhysicsBodyActive(){ return mbPhysicsBodyActive;}
 		bool GetTestCollision(){return mbTestCollision;}
 
 		void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX);
@@ -388,6 +390,7 @@ namespace hpl {
 		void UpdateForcePushing(float afTimeStep);
 
 		void UpdateCamera();
+		void UpdateBodyActive();
 		void UpdateEntity();
 
 		void UpdateBody();
@@ -408,6 +411,7 @@ namespace hpl {
 		bool mbCollideCharacter;
 
 		bool mbTestCollision;
+		bool mbPhysicsBodyActive;
 
 		bool mbStickToSlope;
 
