@@ -5,14 +5,11 @@
   "mind_coral_colony_edges_small_solid.mat": "not in the game data",
   "televison_small_screen.mat": "not in the game data"
  },
- "terrain": "geometry and collision only; no blend layers or undergrowth (SOMA_PLAN P4.9)",
+ "terrain": "plain mesh with blend layers and undergrowth; no tessellation",
  "tracks": {
-  "Compound": "editor grouping; semantics unverified (SOMA_PLAN P4.6)",
-  "DetailMeshes": "not implemented (SOMA_PLAN P4.8)",
-  "LensFlare": "no engine equivalent yet (SOMA_PLAN P4.7)",
-  "LightMask": "no engine equivalent yet (SOMA_PLAN P4.7)",
+  "Compound": "editor grouping: Component IDs only, no script references a Compound name",
   "Sound": "SoundEntityFile values are FMOD event paths; depot ships zero .snt files. Played game-side by SomaAmbientSfx where a bank sample exists",
-  "StaticComboArea": "semantics unverified (SOMA_PLAN P4.6)",
-  "StaticObjectBatches": "semantics unverified (SOMA_PLAN P4.6)"
+  "StaticComboArea": "every StaticComboArea has no attributes beyond transform; batching is done by the engine",
+  "StaticObjectBatches": "every Combo has empty ObjIds"
  }
 }
