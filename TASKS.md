@@ -9,16 +9,15 @@ static bodies no longer get the parent's velocity, which pushed drawers open), M
 poses; global-space animations move the char body to `CharBodyPosBone`), fog rotating (soft
 particles), "Last on SOMA" save-load screen, lights/particles/sounds/billboards in saves, inspect distance (readables open at half scale: `SetMeshScaleMul`), drapes (meshes with embedded animations load dynamic). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
 applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when behind the focus.
-Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticles>` render (03_03 untested:
-GPU hang there, cause unknown).
+Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticles>` render (03_03 included,
+no hang in sweeps since 2026-10-03). Liquid areas: surface, fog area, buoyancy, player depth
+(02_07 underside within 3% of the ref).
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
 - DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
 - Slow map loads: 02_05 22 -> 9.5 s. Left: LoadWorld 3.9 s (entities 2.6, static 1.3), InitEngine
   1.8 s. Scripts load as cached bytecode (`$XDG_CACHE_HOME/open-hpl/soma/scripts`); LoadByteCode
   still ~10% of load.
-- Liquid areas: surface, fog area, buoyancy, player depth done (02_07 underside within 3% of the ref).
-  Left: underwater light-shaft particles.
 - 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the
   logo brighter, glow smaller (sharp step between camera x -13.05 and -13.1, feet y 250.25 z 438.27,
   yaw -90). Not the SpatialGui cache (needs <0.1 m extent at that range), projected size, fog or
@@ -160,7 +159,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
-- `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake.
+- `cEngine_GetFPS`/`GetAvg*MS`/`GetMinMS`/`GetMaxMS` are fake (no game script calls them).
 - Boot -> main menu (`soma-compare.py boot`): mean 38.6 dB. Left: random smoke/title glitches,
   loading-screen hold ~3% brighter, brain icon on a different animation frame.
 - Direct light intensity (apartment pose, linear radiance via tone-curve inversion,
