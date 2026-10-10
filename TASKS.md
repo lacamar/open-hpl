@@ -174,8 +174,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   loading-screen hold ~3% brighter, brain icon on a different animation frame.
 - Direct light intensity (apartment pose, linear radiance via tone-curve inversion,
   scratchpad `lincmp.py`): ours/ref ~2-3.4 for spots, ~2.1 point, ~1.4 non-SH box, 1.0 SH box.
-  Ratio grows on dark albedo; spot cone edge wider than ref. Unresolved (instance-buffer
-  light colour is CPU-side in the exe).
+  Ratio grows on dark albedo; spot cone edge wider than ref. Light instance data (colour = diffuse^2 x brightness x
+  distance fade, falloff/spot falloff x2, translucency^2 x 0.5) matches the exe (0x1403fbbe0); gap is elsewhere.
 - `bedlight_1` alone at the bed pose: ours 0.83, ref 1.41 (both unshadowed, no SSAO).
 - Window light shaft visible in ours with all lights off; absent in ref. `window_ray_*` are hidden by
   `SetupLights` (start-anchored wildcard, as Rebirth `_Map_GetBillboardArray`); `bathroom_window_ray_*`
