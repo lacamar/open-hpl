@@ -164,6 +164,7 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 				sound.msFile = pSound->GetAttributeString("FileName", "");
 				sound.mfVoiceOffset = pSound->GetAttributeFloat("VoiceOffset", 0);
 				sound.mfEndPadding = pSound->GetAttributeFloat("EndPadding", 0);
+				sound.mfTextOffset = pSound->GetAttributeFloat("TextOffset", 0);
 				sound.mfVolume = pSound->GetAttributeFloat("Volume", 1);
 				sound.msEffect = pSound->GetAttributeString("ExtraEffectFile", "");
 				sound.mbEndsAfterEffect = pSound->GetAttributeBool("EndsAfterExtraEffect", false);
@@ -286,6 +287,7 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	auto itText = mmapText.find(cString::ToLowerCase(sKey));
 	tString sText = itText != mmapText.end() && itText->second != "" ? itText->second : sound.msText;
 	aP.msSubtitle = sText.empty() || line.msDisplayName.empty() ? sText : line.msDisplayName + ": " + sText;
+	aP.mfTextDelay = std::max(sound.mfTextOffset - sound.mfVoiceOffset, 0.0f);
 
 	tString sFile = "voices/" + pSubject->msSet + "/" + sKey + ".ogg";
 	aP.msFile = sFile;
@@ -561,7 +563,7 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 	cVector2f vSize(26 * fScale, 26 * fScale);
 	for (auto it = mvPlaying.rbegin(); it != mvPlaying.rend(); ++it)
 	{
-		if (it->msSubtitle.empty() || it->mlStep == 0)
+		if (it->msSubtitle.empty() || it->mlStep == 0 || (it->mlStep == 1 && it->mfTime < it->mfTextDelay))
 			continue;
 		tWStringVec vRows;
 		mpFont->GetWordWrapRows(860 * fScale, vSize.y, vSize, cString::To16Char(it->msSubtitle), &vRows);

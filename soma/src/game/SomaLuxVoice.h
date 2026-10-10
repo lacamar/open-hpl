@@ -64,6 +64,7 @@ public:
 		tString msText;
 		tString msFile;
 		float mfVoiceOffset = 0;
+		float mfTextOffset = 0;
 		float mfEndPadding = 0;
 		float mfVolume = 1;
 		tString msEffect;
@@ -114,6 +115,7 @@ private:
 		cSoundEntry *mpEntry = NULL;
 		int mlEntryId = -1;
 		float mfFallback = 0;
+		float mfTextDelay = 0;
 		tString msSubtitle;
 		bool mbPaused = false;
 		tString msSourceEntity;

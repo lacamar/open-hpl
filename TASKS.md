@@ -1736,7 +1736,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
     both real fixes kept, all 4 ctest suites green throughout.
 
 ## Unimplemented script/data inputs (dropped write-only fields)
-- AutomoveCharBodyTo afMaxSpeed
-- Voice Sound TextOffset
+- AutomoveCharBodyTo afAcc/afMaxSpeed (unused by game scripts)
 - Modules.cfg Container, IsGlobal
 - Input action abConfigurable/asCat
