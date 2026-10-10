@@ -144,7 +144,6 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - Saves restore in place (script objects by member name, entity state, timers, player pose).
   Not saved yet: playing voices, handles to engine objects in script members (re-acquired
   by scripts), agents' native state.
-- Agents: char mover dynamic object avoidance is a no-op.
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
   Only empty `mvNodes` can do it (index clamped to len-1): `Reset()` clears nodes but keeps the
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).

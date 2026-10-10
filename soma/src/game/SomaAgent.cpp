@@ -265,6 +265,8 @@ namespace
 		std::vector<cWallSample> mvWallSamples;
 		bool mbWallAvoid = false;
 		float mfWallRadius = 0, mfWallSteer = 0, mfWallTimer = 0;
+		bool mbObjectAvoid = false;
+		float mfObjectAvoidDist = 2, mfObjectAvoidMinMass = 4, mfObjectAvoidSteer = 1;
 
 		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
 
@@ -376,6 +378,58 @@ namespace
 			return vSum * mfWallSteer;
 		}
 
+		// ponytail: one sphere per body, official clusters nearby non-character bodies (cMath::RecursiveClustering3D)
+		cVector3f UpdateObjectAvoidance(float afTimeStep)
+		{
+			if (mbObjectAvoid == false || mbMoving == false)
+				return 0;
+			cVector3f vVel = mpBody->GetVelocity(afTimeStep);
+			float fSpeed = vVel.Length();
+			if (fSpeed < 1e-4f)
+				return 0;
+			cVector3f vPos = mpBody->GetPosition();
+			cVector3f vToGoal = mvGoal - vPos;
+			if (mb3D == false)
+				vToGoal.y = 0;
+			vToGoal.Normalize();
+			cVector3f vSide = cMath::MatrixMul(cMath::MatrixRotateY(kPi2f), cVector3f(vVel.x, 0, vVel.z) / fSpeed);
+			vSide.Normalize();
+			cBoundingVolume bv;
+			bv.SetLocalMinMax(vPos - mfObjectAvoidDist, vPos + mfObjectAvoidDist);
+			std::vector<iPhysicsBody *> vBodies;
+			mpEntity->mpMap->GetWorld()->GetPhysicsWorld()->GetBodiesInBV(&bv, &vBodies);
+			iCharacterBody *pPlayer = PlayerBody();
+			iPhysicsBody *pPlayerBody = pPlayer ? pPlayer->GetCurrentBody() : NULL;
+			cVector3f vSum = 0;
+			for (iPhysicsBody *pBody : vBodies)
+			{
+				float fMass = pBody->GetMass();
+				if (pBody->IsActive() == false || pBody->GetCollide() == false || (fMass == 0 && pBody->IsCharacter() == false) || (fMass != 0 && fMass < mfObjectAvoidMinMass) ||
+					pBody == pPlayerBody || pBody == mpBody->GetCurrentBody())
+					continue;
+				cVector3f vCenter = pBody->GetBoundingVolume()->GetWorldCenter();
+				float fRadius = pBody->GetBoundingVolume()->GetRadius() * 0.71f;
+				if ((vCenter - vPos).SqrLength() > (fRadius + mfObjectAvoidDist) * (fRadius + mfObjectAvoidDist) || (mvGoal - vCenter).SqrLength() < fRadius * fRadius)
+					continue;
+				cVector3f vAway = vPos - vCenter;
+				if (mb3D == false)
+					vAway.y = 0;
+				float fDist = vAway.Length() - fRadius;
+				if (fDist > mfObjectAvoidDist)
+					continue;
+				fDist = cMath::Max(fDist, 1e-4f);
+				vAway.Normalize();
+				float fAngle = cMath::Vector3Angle(vAway * -1, vToGoal);
+				if (fAngle < cMath::ToRad(20))
+					fDist *= 0.5f;
+				float fWeight = 1 - fDist / mfObjectAvoidDist;
+				if (fAngle < cMath::ToRad(30))
+					vAway += cMath::Vector3Dot(vSide, vAway) < 0 ? vSide * -1 : vSide;
+				vSum += vAway * (fWeight * fWeight * mfObjectAvoidSteer);
+			}
+			return vSum;
+		}
+
 		void MoveToPos(const cVector3f &avPos, bool abSlowDown)
 		{
 			mvGoal = avPos;
@@ -484,7 +538,7 @@ namespace
 			float fGoalYaw = fYaw;
 			bool bRotate = false;
 			float fDist = 0;
-			cVector3f vAvoid = UpdateWallAvoidance(afTimeStep);
+			cVector3f vAvoid = UpdateWallAvoidance(afTimeStep) + UpdateObjectAvoidance(afTimeStep);
 			if (mbMoving)
 			{
 				cVector3f vDelta = mvGoal - mpBody->GetPosition();
@@ -1872,7 +1926,7 @@ tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning) +
 			 " anim=" + (apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim)->GetName() : tString("")) +
 			 " idle_extra=" + cString::ToString(pM->mlIdleExtraCount) + "/" + cString::ToString(pM->mfIdleExtraWait) + " wall=" + cString::ToString(pM->mbWallAvoid) + "/" +
-			 cString::ToString((int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; })) + " roll=" + cString::ToString(pM->mfRoll);
+			 cString::ToString((int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; })) + " roll=" + cString::ToString(pM->mfRoll) + " doa=" + cString::ToString(pM->mbObjectAvoid);
 	return s;
 }
 
@@ -2250,7 +2304,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayDeacc = x; });
 	SOMA_METHOD(e, T, "void SetWallAvoidanceActive(bool abX)", +[](CM *m, bool b) { m->mbWallAvoid = b; });
 	SOMA_METHOD(e, T, "void SetIdleExtraAnimActive(bool abX)", +[](CM *m, bool b) { m->mbIdleExtraActive = b; });
-	SOMA_METHOD(e, T, "void SetDynamicObjectAvoidanceActive(bool abX)", +[](CM *, bool) {});
+	SOMA_METHOD(e, T, "void SetDynamicObjectAvoidanceActive(bool abX)", +[](CM *m, bool b) { m->mbObjectAvoid = b; });
 	SOMA_METHOD(e, T, "void SetBankingActive(bool abX)", +[](CM *m, bool b) { m->mbBanking = b; });
 	SOMA_METHOD(e, T, "void SetBankingAngleMul(float afX)", +[](CM *m, float x) { m->mfBankAngleMul = x; });
 	SOMA_METHOD(e, T, "void SetBankingMaxAngle(float afX)", +[](CM *m, float x) { m->mfBankMaxAngle = x; });
@@ -2265,7 +2319,11 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		m->mfWallSteer = s;
 		m->mvWallSamples.assign(cMath::Max(n, 0), {});
 	});
-	SOMA_METHOD(e, T, "void SetupDynamicObjectAvoidance(float afMaxDistance, float afMinMass, float afSteerAmount)", +[](CM *, float, float, float) {});
+	SOMA_METHOD(e, T, "void SetupDynamicObjectAvoidance(float afMaxDistance, float afMinMass, float afSteerAmount)", +[](CM *m, float d, float mass, float s) {
+		m->mfObjectAvoidDist = d;
+		m->mfObjectAvoidMinMass = mass;
+		m->mfObjectAvoidSteer = s;
+	});
 	SOMA_METHOD(e, T, "void SetupIdleExtra(const tString&in asAnimName, float afMinWait, float afMaxWait, bool abPauseProceduralAnims)",
 				+[](CM *m, S n, float a, float b, bool) { m->SetupIdleExtra(n, a, b); });
 	SOMA_METHOD(e, T, "bool GetIdleExtraAnimActive()", +[](CM *m) { return m->mbIdleExtraActive; });
