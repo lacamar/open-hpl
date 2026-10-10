@@ -75,6 +75,8 @@ public:
 	bool mbIsDoor = false, mbIsClosedDoor = false;
 	bool mbInteractionDisabled = false;
 	float mfMaxInteractDistance = -1;
+	float mfVariableUpdateRate = 0;
+	float mfVariableUpdateAcc = 0;
 	bool mbInteractedWith = false;
 	cMatrixf m_mtxOnLoad = cMatrixf::Identity;
 	cVector3f mvScale = 1;

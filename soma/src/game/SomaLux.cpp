@@ -412,7 +412,13 @@ void cSomaLuxMap::Update(float afTimeStep)
 			continue;
 		pEnt->UpdateTimers(afTimeStep);
 		pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
-		pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", afTimeStep);
+		// iLuxEntity::OnVariableUpdate: no faster than the rate, with the accumulated step
+		pEnt->mfVariableUpdateAcc += afTimeStep;
+		if (pEnt->mfVariableUpdateAcc > pEnt->mfVariableUpdateRate && pEnt->mfVariableUpdateRate >= 0)
+		{
+			pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mfVariableUpdateAcc);
+			pEnt->mfVariableUpdateAcc = 0;
+		}
 		if (pEnt->meType == eSomaLuxEntityType_Critter)
 		{
 			SomaUpdateCritter(pEnt, afTimeStep);
