@@ -43,7 +43,7 @@ namespace hpl {
 		}
 
 		OAL_Source_SetAttributes ( mlChannel, mfPosition, mfVelocity );
-		OAL_Source_SetFilterType(mlChannel, eOALFilterType_LowPass);
+		OAL_Source_SetFilterType(mlChannel, eOALFilterType_BandPass);
 		OAL_Source_SetSpatialize(mlChannel, false);
 //		SetAffectedByEnv(true);
 //		SetFilterGainHF(0.01f);
@@ -274,6 +274,11 @@ namespace hpl {
 //			return;
         
 		OAL_Source_SetFilterGainHF(mlChannel, afGainHF);
+	}
+
+	void cOpenALSoundChannel::SetFilterGainLF(float afGainLF)
+	{
+		OAL_Source_SetFilterGainLF(mlChannel, afGainLF);
 	}
 
 }

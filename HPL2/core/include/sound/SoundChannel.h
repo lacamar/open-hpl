@@ -100,6 +100,7 @@ namespace hpl {
 		virtual void SetFiltering ( bool abEnabled, int alFlags ) = 0;
 		virtual void SetFilterGain(float afGain) =0;
 		virtual void SetFilterGainHF(float afGainHF)=0;
+		virtual void SetFilterGainLF(float afGainLF)=0;
 		
 	protected:
 		void DestroyData();

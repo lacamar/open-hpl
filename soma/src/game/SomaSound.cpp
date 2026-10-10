@@ -212,9 +212,14 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				}
 				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
 				{
-					if (Text(pEnv, "dsp_name") != "Volume" || Text(pEnv, "mute") == "1")
+					static const std::map<tString, int> mapDsp = {{"Volume", eDsp_Volume}, {"FMOD ParamEQ", eDsp_EqGain}, {"FMOD Lowpass", eDsp_Lowpass},
+						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}};
+					auto dsp = mapDsp.find(Text(pEnv, "dsp_name"));
+					int lParamIdx = (int)Num(pEnv, "dsp_paramindex");
+					if (dsp == mapDsp.end() || lParamIdx != (dsp->second == eDsp_EqGain ? 2 : 0) || Text(pEnv, "mute") == "1")
 						continue;
 					cEnvelope env;
+					env.mlDsp = dsp->second;
 					env.mlParam = paramIdx(Text(pEnv, "controlparameter"));
 					for (TiXmlElement *pPoint : Children(pEnv, "point"))
 					{
@@ -817,13 +822,26 @@ void cSomaSoundInstance::Update(float afTimeStep)
 
 	bool bPending = false;
 	std::vector<std::vector<float>> vGain(mpEvent->mvLayers.size());
+	std::vector<cVector2f> vFilter(mpEvent->mvLayers.size(), cVector2f(1));
 	for (size_t l = 0; l < mpEvent->mvLayers.size(); ++l)
 	{
 		const cSomaSoundEvents::cLayer &layer = mpEvent->mvLayers[l];
 		float fX = layer.mlParam >= 0 ? ParamNorm(layer.mlParam) : 0;
 		float fLayerGain = fBase;
 		for (const cSomaSoundEvents::cEnvelope &env : layer.mvEnvelopes)
-			fLayerGain *= env.Eval(env.mlParam >= 0 ? ParamNorm(env.mlParam) : fX);
+		{
+			float fY = env.Eval(env.mlParam >= 0 ? ParamNorm(env.mlParam) : fX);
+			// EFX only has shelves (HF at 5 kHz, LF at 250 Hz): take each FMOD filter's 12 dB/oct
+			// response at 8 kHz / 100 Hz. ponytail: no EQ boost, centre or bandwidth.
+			float fCutoff = 10 * std::pow(2200.0f, fY);
+			switch (env.mlDsp)
+			{
+			case cSomaSoundEvents::eDsp_Volume: fLayerGain *= fY; break;
+			case cSomaSoundEvents::eDsp_EqGain: vFilter[l].x *= std::min(0.05f + 2.95f * fY, 1.0f); break;
+			case cSomaSoundEvents::eDsp_Lowpass: vFilter[l].x /= std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)); break;
+			case cSomaSoundEvents::eDsp_Highpass: vFilter[l].y /= std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)); break;
+			}
+		}
 		vGain[l].resize(layer.mvSounds.size());
 		for (size_t s = 0; s < layer.mvSounds.size(); ++s)
 		{
@@ -906,6 +924,14 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		float fGain = vGain[v.mlLayer][v.mlSound] * v.mfGain;
 		v.mpEntry->SetDefaultVolume(fGain);
 		v.mpEntry->SetDefaultSpeed(v.mfSpeed * fEventSpeed);
+		const cVector2f &vF = vFilter[v.mlLayer];
+		if (std::fabs(vF.x - v.mfGainHF) > 0.01f || std::fabs(vF.y - v.mfGainLF) > 0.01f)
+		{
+			v.mfGainHF = vF.x;
+			v.mfGainLF = vF.y;
+			v.mpEntry->GetChannel()->SetFilterGainHF(vF.x);
+			v.mpEntry->GetChannel()->SetFilterGainLF(vF.y);
+		}
 		if (mb3DPlay)
 			v.mpEntry->GetChannel()->SetPosition(vPos);
 		mfAudibility += fGain;
@@ -923,6 +949,9 @@ tString cSomaSoundInstance::Describe()
 	snprintf(buf, sizeof(buf), "%s voices=%d aud=%.3f vol=%.2f mul=%.2f fade=%.2f%s%s", msName.c_str(), (int)mvVoices.size(), mfAudibility, mfVolume,
 			 mfVolumeMul, mfFade, mpEntity ? " entity" : "", mbStopped ? " stopped" : "");
 	tString s = buf;
+	for (const cVoice &v : mvVoices)
+		if (v.mfGainHF < 1 || v.mfGainLF < 1)
+			s += " hf=" + cString::ToString(v.mfGainHF) + " lf=" + cString::ToString(v.mfGainLF);
 	for (size_t i = 0; i < mvParamValue.size(); ++i)
 		s += " " + mpEvent->mvParams[i].msName + "=" + cString::ToString(mvParamValue[i]);
 	return s;

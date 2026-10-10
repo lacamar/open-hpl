@@ -369,6 +369,22 @@ void OAL_Source_SetFilterGainHF( int alSourceHandle, float afGainHF)
 	}
 }
 
+void OAL_Source_SetFilterGainLF( int alSourceHandle, float afGainLF)
+{
+	if ((gpDevice == NULL) || !gpDevice->IsEFXActive())
+		return;
+
+	cOAL_Source* pSource = gpDevice->GetSource(alSourceHandle);
+
+	if (pSource)
+	{
+		pSource->Lock();
+		pSource->SetFilterGainLF(afGainLF);
+		pSource->UpdateFiltering();
+		pSource->Unlock();
+	}
+}
+
 
 ///////////////////////////////////////////////////////////////
 /*

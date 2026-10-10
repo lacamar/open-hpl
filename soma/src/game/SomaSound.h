@@ -39,9 +39,11 @@ public:
 		tString msBank;
 		tString msSample;
 	};
+	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass };
 	struct cEnvelope
 	{
 		int mlParam = -1;
+		int mlDsp = eDsp_Volume;
 		std::vector<cVector2f> mvPoints;
 		float Eval(float afX) const;
 	};
@@ -187,6 +189,7 @@ private:
 		float mfGain;
 		float mfSpeed;
 		bool mbLoop;
+		float mfGainHF = 1, mfGainLF = 1;
 	};
 	struct cSlot
 	{

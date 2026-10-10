@@ -68,6 +68,7 @@ namespace hpl {
 		void SetFiltering ( bool abEnabled, int alFlags);
 		void SetFilterGain(float afGain);
 		void SetFilterGainHF(float afGainHF);
+		void SetFilterGainLF(float afGainLF);
 	
 	private:
 		int mlChannel;
