@@ -19,7 +19,9 @@ Open:
 - 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the
   logo brighter, glow smaller (sharp step between camera x -13.05 and -13.1, feet y 250.25 z 438.27,
   yaw -90). Not the SpatialGui cache (needs <0.1 m extent at that range), projected size, fog or
-  script. Ours matches the near look.
+  script. Ours matches the near look. Rebirth `SetupSpatialGuiGeneration`: dynamic res
+  `min(1.5*clip+2, 1024)` (continuous), cache tile only below ~144 px; no step near 512, so SOMA's
+  path differs.
 
 ## SOMA conformance - open items (see SOMA_PLAN.md; status in soma/conformance/results.json)
 
