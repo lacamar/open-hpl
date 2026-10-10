@@ -440,13 +440,15 @@ namespace hpl {
 		return;
 #endif
 #if defined(__linux__)
+		bool bOwnCache = true;
 		tWString sCacheFile = cResources::GetCacheFile(asFile, msCacheFileExt);
 		if(cPlatform::FileExists(sCacheFile) == false)
 		{
 			tWString sLegacyCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
-			if(cPlatform::FileExists(sLegacyCacheFile)) sCacheFile = sLegacyCacheFile;
+			if(cPlatform::FileExists(sLegacyCacheFile)) { sCacheFile = sLegacyCacheFile; bOwnCache = false; }
 		}
 #else
+		bool bOwnCache = false;
 		tWString sCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
 #endif
 
@@ -455,7 +457,7 @@ namespace hpl {
 		cDate currentDate = cPlatform::FileModifiedDate(asFile);
 		cDate cacheDate = cPlatform::FileModifiedDate(sCacheFile);
 		
-		if(cResources::GetForceCacheLoadingAndSkipSaving()==false)
+		if(bOwnCache || cResources::GetForceCacheLoadingAndSkipSaving()==false)
 		{
 			if(cacheDate < currentDate || cPlatform::FileExists(sCacheFile)==false)
 			{
@@ -720,7 +722,9 @@ namespace hpl {
 		return;
 #endif
 		if(mbLoadedCache) return; //No need to save if cache was loaded!
+#if !defined(__linux__)
 		if(cResources::GetForceCacheLoadingAndSkipSaving()) return;
+#endif
 
 		Log("Saving cache file for '%s'\n", cString::To8Char(asFile).c_str());
 
