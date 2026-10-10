@@ -69,7 +69,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 11. Audio vs the ref (`soma-audio.py`): menu 6.5 dB short at 63 Hz (title glitch now repeats every
    ~6 s like the ref; rest is random sample choice); intro +6..8 dB above 4 kHz;
-   no reverb/EFX matching. 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
+   reverb via `cSomaSoundscape` (EFX) not level-matched to the ref. 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
 
 
 
@@ -90,7 +90,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-16. Verify ATI2/BC5U channel order against a reference screenshot.
+16. Done: ATI2/BC5U sampled like SOMA's LATC2 upload (L,L,L,A; no X/Y swap).
 
 
 
@@ -115,7 +115,9 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-22. P6 soak test (movement + RSS/fps sampling).
+22. P6 soak test (movement + RSS/fps sampling): `02_05_theta_inside` 20 min at 60 fps. Heap grew
+   ~16 MB/min from a leaked `cLuxClosestEntityData` per frame (handle args never released by
+   natives); fixed, [heap] now flat.
 
 
 

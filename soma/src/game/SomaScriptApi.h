@@ -61,5 +61,6 @@ const asPWORD kSomaStubUserData = 0x50b0;
 const asPWORD kSomaForwardUserData = 0x50b1;
 bool SomaScriptIsStub(asIScriptFunction *apFunc);
 void SomaScriptStubCall(asIScriptGeneric *apGen);
+void SomaScriptReleaseHandleArgs(asIScriptGeneric *apGen);
 
 #endif // SOMA_SCRIPT_API_H

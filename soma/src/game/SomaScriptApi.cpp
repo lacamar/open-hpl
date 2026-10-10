@@ -212,6 +212,7 @@ static void CountStub(asIScriptGeneric *apGen)
 static void Stub(asIScriptGeneric *apGen)
 {
 	CountStub(apGen);
+	SomaScriptReleaseHandleArgs(apGen);
 
 	asIScriptFunction *pFunc = apGen->GetFunction();
 	asDWORD lFlags = 0;
@@ -331,13 +332,32 @@ static void StructAddRef(asIScriptGeneric *apGen)
 		++it->second;
 }
 
-static void StructRelease(asIScriptGeneric *apGen)
+static void ReleaseStruct(void *apObj)
 {
-	auto it = gmapStructRefs.find(apGen->GetObject());
+	auto it = gmapStructRefs.find(apObj);
 	if (it != gmapStructRefs.end() && --it->second == 0)
 	{
 		free(it->first);
 		gmapStructRefs.erase(it);
+	}
+}
+
+static void StructRelease(asIScriptGeneric *apGen)
+{
+	ReleaseStruct(apGen->GetObject());
+}
+
+// AngelScript hands the callee a reference with each handle argument
+void SomaScriptReleaseHandleArgs(asIScriptGeneric *apGen)
+{
+	asIScriptFunction *pFunc = apGen->GetFunction();
+	for (asUINT i = 0; i < pFunc->GetParamCount(); ++i)
+	{
+		int lTypeId;
+		asDWORD lFlags;
+		pFunc->GetParam(i, &lTypeId, &lFlags);
+		if ((lTypeId & asTYPEID_OBJHANDLE) && lFlags == 0)
+			ReleaseStruct(*(void **)apGen->GetAddressOfArg(i));
 	}
 }
 

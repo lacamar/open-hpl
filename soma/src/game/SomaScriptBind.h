@@ -80,6 +80,8 @@ namespace SomaBind
 			F(Arg<A>::Get(g, I)...);
 		else
 			Ret<R>::Set(g, F(Arg<A>::Get(g, I)...));
+		if constexpr ((std::is_pointer<A>::value || ...))
+			SomaScriptReleaseHandleArgs(g);
 	}
 
 	template <auto F> void GenericFunc(asIScriptGeneric *g)
@@ -94,6 +96,8 @@ namespace SomaBind
 			F(Obj<O>::Get(g), Arg<A>::Get(g, I)...);
 		else
 			Ret<R>::Set(g, F(Obj<O>::Get(g), Arg<A>::Get(g, I)...));
+		if constexpr ((std::is_pointer<A>::value || ...))
+			SomaScriptReleaseHandleArgs(g);
 	}
 
 	template <auto F> void GenericMethod(asIScriptGeneric *g)
