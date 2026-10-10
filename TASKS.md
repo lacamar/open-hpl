@@ -37,7 +37,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 4. Frame rate on big maps (`fps:N` in the sweep): static collision is combined like HPL3
-   (04_02: 5738 -> 2569 static bodies, 42 -> 48 fps). Left: Lux script updates, render.
+   (04_02: 5738 -> 2569 static bodies, 42 -> 48 fps); look-at checks every 0.3 s like
+   `iLuxEntity::UpdatePlayerLookAt` (logic ~-30%). All maps 60 fps but 01_03 (48). Left: render.
 
 
 
@@ -59,13 +60,9 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 8. Black start poses in the freecam sweep are script fades / interactive camera animations
    (e.g. 04_01 elevator descent, 02_07 SequenceWakeup); `--play` frames look right.
 
-10. Newton exit crash (`02_05_theta_inside`; `01_01_upsilon_awake` too when inactive entities'
-   bodies reject contacts): `NewtonDestroy` -> `dgDeadBodies::DestroyBodies` ->
-   `RemoveContactJoint` on a row whose body was already removed. Reproducible by returning 0 from
-   the material AABB-overlap callback for some bodies (`IsActive()`/`GetCollide()` false). Needed
-   before inactive map entities can drop their collision. Latent: clean 02_05 exit no longer
-   crashes.
-
+10. Newton exit crash (`dgBodyMasterListRow` `this=0x8` in `NewtonDestroy`, seen on `02_05` and
+   `01_01_upsilon_awake` when the AABB-overlap callback rejects pairs). Latent: inactive map
+   entities' bodies are inactive since b4c9fcf and both maps exit cleanly (2026-10-10).
 
 11. Audio vs the ref (`soma-audio.py`): menu 6.5 dB short at 63 Hz (title glitch now repeats every
    ~6 s like the ref; rest is random sample choice); intro +6..8 dB above 4 kHz;
@@ -107,7 +104,9 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-20. Slow engine exit in the GPU driver's `close()`; noisy physics-material sound errors.
+20. Slow engine exit in the GPU driver's `close()`. Physics-material `Cannot find sound entity` errors
+   are data-side: 10 `materials.cfg` sound names (`physics/paper|ceramic/*`, `metal/hollow grating/*`,
+   `water/*/roll`) have no event in `physics.fdp`.
 
 
 
@@ -1737,5 +1736,5 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 
 ## Unimplemented script/data inputs (dropped write-only fields)
 - AutomoveCharBodyTo afAcc/afMaxSpeed (unused by game scripts)
-- Modules.cfg Container, IsGlobal
-- Input action abConfigurable/asCat
+- Modules.cfg Container, IsGlobal (all 20 modules use the defaults)
+- Input action abConfigurable/asCat (no script API reads them back)

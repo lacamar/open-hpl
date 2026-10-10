@@ -149,7 +149,8 @@ public:
 	float mfLookAtMaxDistance = -1;
 	float mfLookAtDelay = 0;
 	bool mbForceLookAtCheck = false;
-	float mfLookAtTime = 0;
+	float mfLookAtCheckTimer = 0;
+	float mfLookAtCountdown = -1;
 	bool mbLookedAt = false;
 	// cLuxPropLoader::AfterLoad: callbacks and interaction settings from the map's UserVariables
 	void ApplyInstanceVars(cSomaLuxEntity *apPlayer);

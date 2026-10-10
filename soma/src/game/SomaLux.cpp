@@ -482,20 +482,34 @@ void cSomaLuxMap::UpdateLookAtCallbacks(float afTimeStep)
 		cSomaLuxEntity *pEnt = mvEntities[i];
 		if ((pEnt->msLookAtCallback == "" && pEnt->mbForceLookAtCheck == false) || pEnt->mbActive == false)
 			continue;
-		bool bLooking = SomaPlayerLooksAt(pEnt, pCam);
-		if (bLooking)
-			pEnt->mfLookAtTime += afTimeStep;
-		else
-			pEnt->mfLookAtTime = 0;
-		bool bNow = bLooking && pEnt->mfLookAtTime >= pEnt->mfLookAtDelay;
+		// iLuxEntity::UpdatePlayerLookAt: checks every 0.3 s, delay counts down per check
+		if (pEnt->mfLookAtCheckTimer > 0)
+		{
+			pEnt->mfLookAtCheckTimer -= afTimeStep;
+			continue;
+		}
+		pEnt->mfLookAtCheckTimer = 0.3f;
+		bool bNow = SomaPlayerLooksAt(pEnt, pCam);
 		if (pEnt->msLookAtCallback == "")
-			bNow = bLooking;
-		if (bNow == pEnt->mbLookedAt || pEnt->msLookAtCallback == "")
 		{
 			pEnt->mbLookedAt = bNow;
 			continue;
 		}
-		pEnt->mbLookedAt = bNow;
+		if (bNow != pEnt->mbLookedAt)
+		{
+			pEnt->mbLookedAt = bNow;
+			if (pEnt->mfLookAtCountdown >= 0)
+			{
+				pEnt->mfLookAtCountdown = -1;
+				continue;
+			}
+			pEnt->mfLookAtCountdown = std::max(pEnt->mfLookAtDelay, 0.0f);
+		}
+		if (pEnt->mfLookAtCountdown < 0)
+			continue;
+		pEnt->mfLookAtCountdown -= 0.3f;
+		if (pEnt->mfLookAtCountdown >= 0)
+			continue;
 		tString sFunc = pEnt->msLookAtCallback;
 		if (bNow && pEnt->mbLookAtCallbackAutoRemove)
 			pEnt->msLookAtCallback = "";

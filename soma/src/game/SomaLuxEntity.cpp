@@ -201,7 +201,7 @@ static void SetLookAtCallback(cSomaLuxEntity *p, const tString &f, bool r, bool 
 	p->mbLookAtCheckRay = ray;
 	p->mfLookAtMaxDistance = d;
 	p->mfLookAtDelay = t;
-	p->mfLookAtTime = 0;
+	p->mfLookAtCountdown = -1;
 }
 
 static void ForgetLightConnections(cSomaLuxEntity *apEnt)
@@ -2015,13 +2015,14 @@ bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam)
 	std::vector<cSomaOBB> vBoxes;
 	EntityBoxes(apEnt, vBoxes, false);
 	cVector3f vCam = apCam->GetPosition();
-	float fMax = apEnt->mfLookAtMaxDistance > 0 ? apEnt->mfLookAtMaxDistance : 1000.0f, t;
+	float fMax = std::max(apEnt->mfLookAtMaxDistance, 50.0f), t;
 	for (const cSomaOBB &b : vBoxes)
 	{
 		float fR = b.mvHalf.Length(), fDist = cMath::Vector3Dist(b.mvCenter, vCam);
 		cBoundingVolume bv;
 		bv.SetLocalMinMax(b.mvCenter - fR, b.mvCenter + fR);
-		if (apCam->GetFrustum()->CollideBoundingVolume(&bv) == eCollision_Outside || fDist > fMax)
+		if (apCam->GetFrustum()->CollideBoundingVolume(&bv) == eCollision_Outside || fDist > fMax ||
+			(apEnt->mfLookAtMaxDistance > 0 && fDist > apEnt->mfLookAtMaxDistance))
 			continue;
 		if (apEnt->mbLookAtCheckCenter && RayHitsOBB(b, vCam, apCam->GetForward(), fMax, t) == false)
 			continue;
