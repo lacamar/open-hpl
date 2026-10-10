@@ -140,7 +140,7 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         result["warmup"] = {k: v for k, v in hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 30000}).items() if k != "ok"}
         fade_code = '__print("" + cLux_GetEffectHandler().GetFadeAlpha());'
         for _ in range(15):
-            if float(hpl.send({"cmd": "script_exec", "code": fade_code}).get("output") or 0) <= 0.5:
+            if float(hpl.send({"cmd": "script_exec", "code": fade_code}).get("output") or 0) <= 0.05:
                 break
             hpl.send({"cmd": "wait_frames", "n": 60, "max_ms": 4000})
         if play:
