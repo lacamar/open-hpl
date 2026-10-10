@@ -2100,7 +2100,8 @@ namespace hpl {
 		// General variables
 		apProgram->SetVec3f(kVar_avLightPos, apLightData->m_mtxViewSpaceRender.GetTranslation());
 		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
-		lightColor.r *= pLight->GetBrightness(); lightColor.g *= pLight->GetBrightness(); lightColor.b *= pLight->GetBrightness();
+		float fBrightness = pLight->GetBrightness() * GetDistanceFadeAmount(pLight);
+		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
 		apProgram->SetColor4f(kVar_avLightColor, lightColor);
 		apProgram->SetFloat(kVar_afInvLightRadius, 1.0f / pLight->GetRadius());
 		apProgram->SetFloat(kVar_afFalloffPow, pLight->GetFalloffPow() * 2);
@@ -3168,7 +3169,8 @@ namespace hpl {
 		if(mpLightBoxProgram[lProgramNum])
 		{
 			cColor boxColor = LinearLightColor(pLight->GetDiffuseColor());
-			boxColor.r *= pLight->GetBrightness(); boxColor.g *= pLight->GetBrightness(); boxColor.b *= pLight->GetBrightness();
+			float fBrightness = pLight->GetBrightness() * GetDistanceFadeAmount(pLight);
+			boxColor.r *= fBrightness; boxColor.g *= fBrightness; boxColor.b *= fBrightness;
 			mpLightBoxProgram[lProgramNum]->SetColor4f(kVar_avLightColor,boxColor);
 		}
 
@@ -3367,7 +3369,7 @@ namespace hpl {
 						 lBlend == eLightBoxBlendFunc_Add ? eMaterialBlendMode_ModulateSource : eMaterialBlendMode_Add);
 			SetProgram(pProg);
 
-			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * pBox->GetBrightness();
+			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * (pBox->GetBrightness() * GetDistanceFadeAmount(pBox));
 			if(WorldUnderwaterFog(this) && !pBox->GetUseSphericalHarmonics())
 			{
 				cColor fogCol = UnderwaterFogColor(mpCurrentWorld->GetFogColor());

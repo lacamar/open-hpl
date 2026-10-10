@@ -154,6 +154,10 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
   static `.dae` (tinyxml dtor); rerun passed. Not reproduced in 18 loads (04_01, 04_02, 01_02) under
   `glibc.malloc.perturb=165:tcache_count=0:check=3` (2026-10-10).
+- Distance culling (HPL3 `cWorld` DistanceCull*, per-object `CulledByDistance`, fade-in/out via
+  dissolve and light brightness) ported from Rebirth `iRenderer::CheckObjectDistanceCull`. Per-object
+  `IsCulledByFog` not ported. 02_03 sweep frame is now black: warmup at 60 fps ends before the
+  intro `Effect_Fade_In` (~10 s) (2026-10-10).
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 

@@ -178,6 +178,7 @@ namespace hpl {
 		tString GetEntityType(){ return "MeshEntity";}
 		bool IsVisible(){ return mbIsVisible; }
 		void SetVisible(bool abVisible);
+		void SetCulledByDistance(bool abX){ for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetCulledByDistance(abX); }
 
 		cBoundingVolume* GetBoundingVolume();
 

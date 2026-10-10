@@ -116,6 +116,7 @@ namespace hpl {
 			pPS->SetMinFadeDistanceEnd(apElement->GetAttributeFloat("MinFadeDistanceEnd"));
 			pPS->SetMaxFadeDistanceStart(apElement->GetAttributeFloat("MaxFadeDistanceStart"));
 			pPS->SetMaxFadeDistanceEnd(apElement->GetAttributeFloat("MaxFadeDistanceEnd"));
+			pPS->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
 		}
 		
 		kEndWorldEntityLoad(pPS);
@@ -176,6 +177,7 @@ namespace hpl {
 
 		pBillboard->SetIsHalo(apElement->GetAttributeBool("IsHalo",false));
 		pBillboard->SetHaloSourceSize(apElement->GetAttributeVector3f("HaloSourceSize",1));
+		pBillboard->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
 
 		tString sConnectLight = apElement->GetAttributeString("ConnectLight");
 		if(apLightBillboardList && sConnectLight!="")
@@ -379,6 +381,7 @@ namespace hpl {
 
 		//All types
 		pLight->SetCastShadows(apElement->GetAttributeBool("CastShadows", false));
+		pLight->SetCulledByDistance(apElement->GetAttributeBool("CulledByDistance", true));
 		pLight->SetDiffuseColor(apElement->GetAttributeColor("DiffuseColor", cColor(1)));
 		pLight->SetDefaultDiffuseColor(pLight->GetDiffuseColor());
 		pLight->SetRadius(apElement->GetAttributeFloat("Radius", 1));

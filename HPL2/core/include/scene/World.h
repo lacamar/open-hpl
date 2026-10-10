@@ -229,6 +229,19 @@ namespace hpl {
 		bool GetSkyBoxActive(){ return mbSkyBoxActive;}
 		cColor GetSkyBoxColor(){ return mSkyBoxColor;}
         
+		void SetDistanceCullActive(bool abX){ mbDistanceCullActive = abX;}
+		void SetDistanceCullMinRange(float afX){ mfDistanceCullMinRange = afX;}
+		void SetDistanceCullScreenSize(float afX){ mfDistanceCullScreenSize = afX;}
+		void SetDistanceCullRandomSize(float afX){ mfDistanceCullRandomSize = afX;}
+		void SetDistanceCullMaxRange(float afX){ mfDistanceCullMaxRange = afX;}
+		void SetDistanceCullFadeSpeed(float afX){ mfDistanceCullFadeSpeed = afX;}
+		bool GetDistanceCullActive(){ return mbDistanceCullActive;}
+		float GetDistanceCullMinRange(){ return mfDistanceCullMinRange;}
+		float GetDistanceCullScreenSize(){ return mfDistanceCullScreenSize;}
+		float GetDistanceCullRandomSize(){ return mfDistanceCullRandomSize;}
+		float GetDistanceCullMaxRange(){ return mfDistanceCullMaxRange;}
+		float GetDistanceCullFadeSpeed(){ return mfDistanceCullFadeSpeed;}
+
 		///// FOG ////////////////////////////////
 
 		void SetFogActive(bool abX){ mbFogActive = abX;}
@@ -494,6 +507,9 @@ namespace hpl {
 
 		bool mbFogActive;
 		bool mbFogCulling;
+		bool mbDistanceCullActive = false;
+		float mfDistanceCullMinRange = 0, mfDistanceCullScreenSize = 0.05f, mfDistanceCullRandomSize = 0.25f;
+		float mfDistanceCullMaxRange = 999999, mfDistanceCullFadeSpeed = 0.5f;
 		float mfFogStart;
 		float mfFogEnd;
 		float mfFogFalloffExp;

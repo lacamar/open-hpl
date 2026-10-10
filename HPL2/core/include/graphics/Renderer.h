@@ -158,6 +158,7 @@ namespace hpl {
 		bool mbClipReflectionScreenRect;
 
 		bool mbUseOcclusionCulling;
+		bool mbUseDistanceCulling = true;
 		bool mbUseDelayedOcclusionCulling;
 
 		bool mbUseEdgeSmooth;
@@ -256,6 +257,9 @@ namespace hpl {
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList);
 
 		void Update(float afTimeStep);
+
+		float GetDistanceFadeAmount(iRenderable *apObject);
+		float GetObjectCoverage(iRenderable *apObject);
 
 		inline static int GetRenderFrameCount()  { return mlRenderFrameCount;}
 		inline static void IncRenderFrameCount() { ++mlRenderFrameCount;}
@@ -419,6 +423,7 @@ namespace hpl {
 		* Checks the IsVisible and also clip planes (in setttings), if visible in reflection and other stuff . No frustum check!
 		*/
 		bool CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags);
+		bool CheckObjectDistanceCull(iRenderable *apObject);
 
 		/**
 		 * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
@@ -491,6 +496,12 @@ namespace hpl {
 		float mfTimeCount;
 
 		bool mbOcclusionPlanesActive;
+
+		bool mbDistanceCullActive = false;
+		cVector3f mvDistanceCullOrigin;
+		float mfDistanceCullMinRangeSqr = 0, mfDistanceCullScreenSizeSqr = 0, mfDistanceCullRandomSize = 0;
+		float mfDistanceCullFadeTime = 1, mfDistanceCullFadeTimeInv = 1, mfDistanceCullMaxRangeSqr = 0;
+		float mfDistanceCullTime = 5;
 		tPlanefVec mvCurrentOcclusionPlanes;
 
 		cRendererCallbackFunctions *mpCallbackFunctions;

@@ -1337,6 +1337,18 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "const cVector3f& GetWorldSize()", +[](cWorld *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetWorldSize(); return r; });
 	SOMA_METHOD_NEW(e, "cWorld", "tString GetName()", +[](cWorld *o) -> tString { return o->GetName(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void Compile(bool abCalcPhysicsWorldSize)", +[](cWorld *o, bool a0) { o->Compile(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullActive(bool abX)", +[](cWorld *o, bool a0) { o->SetDistanceCullActive(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullMinRange(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullMinRange(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullScreenSize(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullScreenSize(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullRandomSize(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullRandomSize(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullMaxRange(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullMaxRange(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetDistanceCullFadeSpeed(float afX)", +[](cWorld *o, float a0) { o->SetDistanceCullFadeSpeed(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "bool GetDistanceCullActive()", +[](cWorld *o) -> bool { return o->GetDistanceCullActive(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullMinRange()", +[](cWorld *o) -> float { return o->GetDistanceCullMinRange(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullScreenSize()", +[](cWorld *o) -> float { return o->GetDistanceCullScreenSize(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullRandomSize()", +[](cWorld *o) -> float { return o->GetDistanceCullRandomSize(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullMaxRange()", +[](cWorld *o) -> float { return o->GetDistanceCullMaxRange(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetDistanceCullFadeSpeed()", +[](cWorld *o) -> float { return o->GetDistanceCullFadeSpeed(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetPhysicsWorld(iPhysicsWorld@ apWorld, bool abAutoDelete)", +[](cWorld *o, iPhysicsWorld * a0, bool a1) { o->SetPhysicsWorld(a0, a1); });
 	SOMA_METHOD_NEW(e, "cWorld", "iPhysicsWorld@ GetPhysicsWorld()", +[](cWorld *o) -> iPhysicsWorld * { return o->GetPhysicsWorld(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSkyBox(iTexture @apTexture, bool abAutoDestroy)", +[](cWorld *o, iTexture * a0, bool a1) { o->SetSkyBox(a0, a1); });

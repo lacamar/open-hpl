@@ -572,6 +572,17 @@ namespace hpl {
 
 		mbOcclusionPlanesActive = true;
 
+		mbDistanceCullActive = apWorld->GetDistanceCullActive() && apSettings->mbUseDistanceCulling;
+		mvDistanceCullOrigin = apFrustum->GetOrigin();
+		mfDistanceCullMinRangeSqr = apWorld->GetDistanceCullMinRange() * apWorld->GetDistanceCullMinRange();
+		float fCullScreenSize = apWorld->GetDistanceCullScreenSize() / tan(apFrustum->GetFOV()*0.5f);
+		mfDistanceCullScreenSizeSqr = fCullScreenSize * fCullScreenSize;
+		mfDistanceCullRandomSize = apWorld->GetDistanceCullRandomSize();
+		mfDistanceCullFadeTime = cMath::Max(1e-5f, apWorld->GetDistanceCullFadeSpeed());
+		mfDistanceCullFadeTimeInv = 1.0f / mfDistanceCullFadeTime;
+		mfDistanceCullMaxRangeSqr = apWorld->GetDistanceCullMaxRange() * apWorld->GetDistanceCullMaxRange();
+		mfDistanceCullTime += afFrameTime;
+
 		////////////////////////////////
 		//Initialize render functions
 		InitAndResetRenderFunctions(apFrustum, apRenderTarget, apSettings->mbLog, 
@@ -857,7 +868,7 @@ namespace hpl {
 	{
 		cMaterial *pMaterial = apObject->GetMaterial();
 
-		eMaterialRenderMode renderMode = apObject->GetCoverageAmount()>=1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+		eMaterialRenderMode renderMode = GetObjectCoverage(apObject)>=1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 
 		////////////////////////
 		//Set up render modes
@@ -2356,8 +2367,67 @@ namespace hpl {
 				if(cMath::CheckPlaneBVCollision(plane, *pBV)==eCollision_Outside) return false;
 			}
 		}
-		
-		return true;
+
+		return CheckObjectDistanceCull(apObject)==false;
+	}
+
+	bool iRenderer::CheckObjectDistanceCull(iRenderable *apObject)
+	{
+		if(mbDistanceCullActive==false || apObject->IsCulledByDistance()==false) return false;
+		cBoundingVolume *pBV = apObject->GetBoundingVolume();
+		if(pBV==NULL) return false;
+
+		const cVector3f& vMin = pBV->GetMin();
+		const cVector3f& vMax = pBV->GetMax();
+		cVector3f vClosest(	cMath::Clamp(mvDistanceCullOrigin.x, vMin.x, vMax.x),
+							cMath::Clamp(mvDistanceCullOrigin.y, vMin.y, vMax.y),
+							cMath::Clamp(mvDistanceCullOrigin.z, vMin.z, vMax.z));
+		float fDistSqr = cMath::Vector3DistSqr(vClosest, mvDistanceCullOrigin);
+
+		float fScale = 1 + (cMath::FastRandomFloat((int)(size_t)apObject) + 1) * mfDistanceCullRandomSize;
+		float fScaleSqr = fScale * fScale;
+
+		cVector3f vExt = vMax - vMin;
+		float fA = vExt.x, fB = vExt.y, fC = vExt.z;
+		if(fA < fB) std::swap(fA, fB);
+		if(fB < fC) std::swap(fB, fC);
+		if(fA < fB) std::swap(fA, fB);
+		float fSize = (fA + fB) * 0.5f;
+
+		bool bSmall = fSize*fSize*fScaleSqr < mfDistanceCullScreenSizeSqr*fDistSqr;
+		bool bVisible = !((bSmall || mfDistanceCullMaxRangeSqr*fScaleSqr < fDistSqr) && mfDistanceCullMinRangeSqr*fScaleSqr <= fDistSqr);
+
+		// fade >= 0: visible since time fade; < 0: culled since time -fade
+		float& fFade = apObject->DistanceCullFade();
+		const float fT = mfDistanceCullTime, fFadeTime = mfDistanceCullFadeTime;
+		if(bVisible)
+		{
+			if(fFade < 0)
+			{
+				float fElapsed = fFade + fT;
+				fFade = fFadeTime > fElapsed ? fT - fFadeTime + fElapsed : fT;
+			}
+		}
+		else if(fFade > 0)
+		{
+			float fElapsed = fT - fFade;
+			fFade = fFadeTime > fElapsed ? fFadeTime - fT - fElapsed : -fT;
+		}
+
+		return fFade < 0 && fFade + fT > fFadeTime;
+	}
+
+	float iRenderer::GetObjectCoverage(iRenderable *apObject)
+	{
+		return apObject->GetCoverageAmount() * GetDistanceFadeAmount(apObject);
+	}
+
+	float iRenderer::GetDistanceFadeAmount(iRenderable *apObject)
+	{
+		if(mbDistanceCullActive==false) return 1;
+		float fFade = apObject->DistanceCullFade();
+		if(fFade < 0) return cMath::Clamp(1 - (fFade + mfDistanceCullTime) * mfDistanceCullFadeTimeInv, 0.0f, 1.0f);
+		return cMath::Clamp((mfDistanceCullTime - fFade) * mfDistanceCullFadeTimeInv, 0.0f, 1.0f);
 	}
 
 	//-----------------------------------------------------------------------

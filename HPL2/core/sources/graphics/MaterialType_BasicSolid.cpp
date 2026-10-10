@@ -739,7 +739,7 @@ namespace hpl {
 		//Z Dissolve
 		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
 		{
-			bool bRet = apProgram->SetFloat(kVar_afDissolveAmount, apObject->GetCoverageAmount());
+			bool bRet = apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
 			if(bRet==false)Error("Could not set variable!\n");
 		}
 		////////////////////////////
@@ -935,7 +935,7 @@ namespace hpl {
 	{
 		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
 		{
-			apProgram->SetFloat(kVar_afDissolveAmount, apObject->GetCoverageAmount());
+			apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
 		}
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
