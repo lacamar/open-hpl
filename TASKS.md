@@ -74,7 +74,8 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 11. Audio vs the ref (`soma-audio.py`): menu 6.5 dB short at 63 Hz (title glitch now repeats every
    ~6 s like the ref; rest is random sample choice); intro +6..8 dB above 4 kHz;
-   reverb via `cSomaSoundscape` (EFX) not level-matched to the ref. 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
+   reverb via `cSomaSoundscape` (EFX) not level-matched to the ref (per-event send from `reverblevel_db`/Reverb
+   Level envelopes done). 3D pan matches FMOD Ex constant power (apartment L-R +3.6 vs +3.7).
 
 
 
