@@ -12,7 +12,7 @@ applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when 
 Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticles>` render (03_03 included,
 no hang in sweeps since 2026-10-03). Liquid areas: surface, fog area, buoyancy, player depth
 (02_07 underside within 3% of the ref).
-Untested: subway exterior (wildcard `Entity_AttachToEntity`).
+Subway exterior moves with the train (wildcard `Entity_AttachToEntity`).
 Open:
 - Slow map loads: 02_05 22 -> 5.3 s (sweep boot total 192 -> 123 s). Scripts load as cached bytecode,
   static collision trees and HPSL->GLSL output from `$XDG_CACHE_HOME/open-hpl/files/{collision,hpsl}`.
