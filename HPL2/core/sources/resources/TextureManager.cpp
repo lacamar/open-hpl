@@ -211,6 +211,7 @@ namespace hpl {
 			
 			mlMemoryUsage += pTexture->GetMemorySize();
 			AddResource(pTexture);
+			m_setAnimTextures.insert(pTexture);
 		}
 
 		if(pTexture)pTexture->IncUserCount();
@@ -332,6 +333,7 @@ namespace hpl {
 		if(apResource->HasUsers()==false)
 		{
 			mlMemoryUsage -= static_cast<iTexture*>(apResource)->GetMemorySize();
+			m_setAnimTextures.erase(static_cast<iTexture*>(apResource));
 
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -342,14 +344,8 @@ namespace hpl {
 
 	void cTextureManager::Update(float afTimeStep)
 	{
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(; it != m_mapResources.end(); ++it)
-		{
-			iResourceBase *pBase = it->second;
-			iTexture *pTexture = static_cast<iTexture*>(pBase);
-
+		for(iTexture *pTexture : m_setAnimTextures)
 			pTexture->Update(afTimeStep);
-		}
 	}
 
 	//-----------------------------------------------------------------------

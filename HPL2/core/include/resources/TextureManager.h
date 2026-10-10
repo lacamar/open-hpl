@@ -79,6 +79,7 @@ namespace hpl {
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
+		std::set<iTexture*> m_setAnimTextures;
 		
 		tStringVec mvCubeSideSuffixes;
 
