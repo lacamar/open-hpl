@@ -173,7 +173,8 @@ namespace hpl {
 
 	void CALLBACK OGLDebugOutputCallback(GLenum alSource, GLenum alType, GLuint alID, GLenum alSeverity, GLsizei alLength, const GLchar* apMessage, GLvoid* apUserParam)
 	{
-		Log("Source: %d Type: %d Id: %d Severity: %d '%s'\n", alSource, alType, alID, alSeverity, apMessage);
+		if(alType == GL_DEBUG_TYPE_ERROR || apUserParam)
+			Error("GL: %s\n", apMessage);
 	}
 
 	//-----------------------------------------------------------------------
@@ -386,15 +387,12 @@ namespace hpl {
 		mbInitHasBeenRun = true;
 
 
-		/*if(GLEW_ARB_debug_output)
+		if(getenv("OPENHPL_GL_DEBUG") && glDebugMessageCallback)
 		{
-			glDebugMessageCallbackARB(&OGLDebugOutputCallback, NULL);
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+			glEnable(GL_DEBUG_OUTPUT);
+			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+			glDebugMessageCallback((GLDEBUGPROC)&OGLDebugOutputCallback, strcmp(getenv("OPENHPL_GL_DEBUG"), "all") ? NULL : this);
 		}
-		else
-		{	
-			Warning("OGL debug output not supported!\n");
-		}*/
 
 
 		return true;

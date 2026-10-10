@@ -94,7 +94,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-15. `GL_INVALID_VALUE` (0x0501) on 01_01, 02_05, _e3_01_01 - find the call with a debug context.
+15. Fixed: no `GL_INVALID_VALUE` on 01_01, 02_05, _e3_01_01 (`OPENHPL_GL_DEBUG=1` logs GL errors, `=all` every message).
 
 
 
