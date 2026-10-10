@@ -493,29 +493,20 @@ namespace hpl {
 					if(pAnimState->IsActive())
 					{
 						cAnimation *pAnim = pAnimState->GetAnimation();
+						std::vector<int> &vIdx = pAnimState->mvTrackNodeIndices;
+						if((int)vIdx.size() != pAnim->GetTrackNum())
+						{
+							vIdx.resize(pAnim->GetTrackNum());
+							for(int i=0; i<pAnim->GetTrackNum(); i++)
+								vIdx[i] = mpMesh->GetSkeleton()->GetBoneIndexByName(pAnim->GetTrack(i)->GetName());
+						}
 
 						/////////////////////////////////////
 						//Go through all tracks in animation and apply to nodes
 						for(int i=0; i<pAnim->GetTrackNum(); i++)
 						{
 							cAnimationTrack *pTrack = pAnim->GetTrack(i);
-							
-							///////////////////////////////////
-							//If index not yet set, get it!
-							if(pTrack->GetNodeIndex()==-1)
-							{
-								int lBoneIdx = mpMesh->GetSkeleton()->GetBoneIndexByName(pTrack->GetName());
-								if(lBoneIdx==-1)
-								{
-									// XXX: This line is commented to avoid log clutter 
-									//Error("Track '%s' in '%s' does not have a corresponding bone! Skeleton bone name mismatch?\n", pTrack->GetName().c_str(), mpMesh->GetName().c_str());
-									pTrack->SetNodeIndex(-2);
-								}
-								else
-									pTrack->SetNodeIndex(lBoneIdx);
-							}
-							
-							cNode3D* pState = GetBoneState(pTrack->GetNodeIndex());
+							cNode3D* pState = GetBoneState(vIdx[i]);
 							
 							///////////////////////////////////
 							//Apply the animation track to node.
@@ -610,16 +601,19 @@ namespace hpl {
 						if(pAnimState->IsActive())
 						{
 							cAnimation *pAnim = pAnimState->GetAnimation();
+							std::vector<int> &vIdx = pAnimState->mvTrackNodeIndices;
+							if((int)vIdx.size() != pAnim->GetTrackNum())
+							{
+								vIdx.resize(pAnim->GetTrackNum());
+								for(int i=0; i<pAnim->GetTrackNum(); i++)
+									vIdx[i] = GetNodeStateIndex(pAnim->GetTrack(i)->GetName());
+							}
 
 							for(int i=0; i<pAnim->GetTrackNum(); i++)
 							{
 								cAnimationTrack *pTrack = pAnim->GetTrack(i);
-
-								if(pTrack->GetNodeIndex()<0)
-								{
-									pTrack->SetNodeIndex(GetNodeStateIndex(pTrack->GetName()));
-								}
-								cNode3D* pNodeState = GetNodeState(pTrack->GetNodeIndex());
+								if(vIdx[i] < 0) continue;
+								cNode3D* pNodeState = GetNodeState(vIdx[i]);
 
 								if(pNodeState->IsActive()) 
 									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul);

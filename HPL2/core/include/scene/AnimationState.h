@@ -123,6 +123,9 @@ namespace hpl {
 		// Applied on top, not part of weight normalization
 		bool IsLayer(){ return mbLayer;}
 		void SetLayer(bool abX){ mbLayer = abX;}
+
+		// per entity: cAnimation tracks are shared between meshes with different skeletons
+		std::vector<int> mvTrackNodeIndices;
 	
 	private:
 		tString msName;
