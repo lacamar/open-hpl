@@ -119,6 +119,7 @@ namespace hpl {
 		
 		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mvTextureInUnit[aRenderMode][alUnit];}
 		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mvPrograms[alSkeleton][aRenderMode];}
+		void SetProgram(char alSkeleton,eMaterialRenderMode aRenderMode, iGpuProgram *apProgram){ mvPrograms[alSkeleton][aRenderMode] = apProgram;}
 
 		tFlag mlCompiledWorldFog = 0;
 		inline eMaterialBlendMode GetBlendMode() const { return mBlendMode; }

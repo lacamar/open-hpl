@@ -76,6 +76,7 @@ namespace hpl {
 	#define kVar_avSecondFogStartAndLength			21
 	#define kVar_afSecondFalloffExp					22
 	#define kVar_avFadeColor						23
+	#define kVar_avDepthOfFieldParams				24
 	
 	
 	//------------------------------
@@ -96,8 +97,9 @@ namespace hpl {
 	#define eFeature_Diffuse_FadeColor				eFlagBit_12
 	#define eFeature_Diffuse_SRGBDiffuseMap			eFlagBit_13
 	#define eFeature_Diffuse_AngleFade				eFlagBit_14
+	#define eFeature_Diffuse_DepthOfField			eFlagBit_15
 	
-	#define kDiffuseFeatureNum 15
+	#define kDiffuseFeatureNum 16
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -116,6 +118,7 @@ namespace hpl {
 		cProgramComboFeature("UseFadeColor", kPC_FragmentBit),
 		cProgramComboFeature("UseSRGBDiffuseMap", kPC_FragmentBit),
 		cProgramComboFeature("UseAngleFade", kPC_VertexBit),
+		cProgramComboFeature("UseDepthOfField", kPC_FragmentBit | kPC_VertexBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -126,6 +129,8 @@ namespace hpl {
 	
 	bool cMaterialType_Translucent::mbLightProbes = false;
 	tFlag cMaterialType_Translucent::mlWorldFog = 0;
+	bool cMaterialType_Translucent::mbDepthOfField = false;
+	cColor cMaterialType_Translucent::mvDepthOfFieldParams = cColor(0,0);
 
 	cMaterialType_Translucent::cMaterialType_Translucent(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
@@ -234,6 +239,7 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avSecondFogStartAndLength", kVar_avSecondFogStartAndLength, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFadeColor", kVar_avFadeColor, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avDepthOfFieldParams", kVar_avDepthOfFieldParams, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -320,6 +326,12 @@ namespace hpl {
 			if(pVars->mbSoftParticle)								lFlags |= eFeature_Diffuse_SoftParticle;
 			if(pVars->mbFadeColor)									lFlags |= eFeature_Diffuse_FadeColor;
 			if(pVars->mbAngleFade)									lFlags |= eFeature_Diffuse_AngleFade;
+			// slot 1 holds the lazily made DoF crossfade variant
+			if(alSkeleton)
+			{
+				if(mbDepthOfField==false) return NULL;
+				lFlags |= eFeature_Diffuse_DepthOfField;
+			}
 			
 			return mpBlendProgramManager[lProgramNum]->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags);
 		}
@@ -346,6 +358,17 @@ namespace hpl {
 		}
 
 		return NULL;
+	}
+
+	//--------------------------------------------------------------------------
+
+	iGpuProgram* cMaterialType_Translucent::GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer)
+	{
+		if(mbDepthOfField==false || (aRenderMode != eMaterialRenderMode_Diffuse && aRenderMode != eMaterialRenderMode_DiffuseFog))
+			return apMaterial->GetProgram(0, aRenderMode);
+		if(apMaterial->GetProgram(1, aRenderMode)==NULL)
+			apMaterial->SetProgram(1, aRenderMode, GetGpuProgram(apMaterial, aRenderMode, 1));
+		return apMaterial->GetProgram(1, aRenderMode);
 	}
 
 	//--------------------------------------------------------------------------
@@ -559,6 +582,7 @@ namespace hpl {
 	{
 		cMaterialType_Translucent_Vars *pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
 		if(cRendererDeferred::GetHdr()) apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
+		if(mbDepthOfField) apProgram->SetColor4f(kVar_avDepthOfFieldParams, mvDepthOfFieldParams);
 		if(aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
 			apProgram->SetColor4f(kVar_avFogAreaColor, apRenderer->GetTempFogAreaColor());
 

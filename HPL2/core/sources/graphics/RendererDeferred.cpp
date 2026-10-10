@@ -3923,13 +3923,6 @@ namespace hpl {
 			mpCurrentWorld->IsDepthOfFieldActive() && mpCurrentWorld->GetDepthOfFieldFalloff() > 0;
 	}
 
-	bool cRendererDeferred::IsBehindDepthOfFieldFocus(iRenderable *apObject)
-	{
-		cBoundingVolume *pBV = apObject->GetBoundingVolume();
-		float fZ = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pBV->GetWorldCenter()).z;
-		return -fZ - pBV->GetRadius() > mpCurrentWorld->GetDepthOfFieldFocusEnd();
-	}
-
 	void cRendererDeferred::RenderDepthOfField()
 	{
 		if(DepthOfFieldIsActive()==false) return;
@@ -4363,7 +4356,22 @@ namespace hpl {
 			cMaterial *pMaterial = pObject->GetMaterial();
 			if(++lTransIdx == mlDebugSkipTranslucent) continue;
 			if(pMaterial->mlCompiledWorldFog != lWorldFog) pMaterial->Compile();
-			if(alDofPass && IsBehindDepthOfFieldFocus(pObject) != (alDofPass==1)) continue;
+
+			// objects straddling the focus end draw in both passes, crossfaded per pixel
+			bool bDofBlend = false;
+			cColor vDofParams(0,0);
+			if(alDofPass)
+			{
+				cBoundingVolume *pBV = pObject->GetBoundingVolume();
+				float fDepth = -cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pBV->GetWorldCenter()).z;
+				float fStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+				float fEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+				bool bBehind = fDepth - pBV->GetRadius() > fEnd;
+				bDofBlend = bBehind==false && fDepth + pBV->GetRadius() > fEnd && pMaterial->HasRefraction()==false;
+				if(bDofBlend==false && bBehind != (alDofPass==1)) continue;
+				float fFalloffLen = (fEnd - fStart) * 0.5f / cMath::Max(1e-15f, mpCurrentWorld->GetDepthOfFieldFalloff());
+				vDofParams = cColor(fEnd, -1.0f / cMath::Max(1e-6f, fFalloffLen), alDofPass==1 ? 0.0f : 1.0f, alDofPass==1 ? 1.0f : -1.0f);
+			}
 
 			eMaterialRenderMode renderMode = WorldFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
 			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;
@@ -4499,6 +4507,7 @@ namespace hpl {
 			else							SetBlendMode(pMaterial->GetBlendMode());
 			SetDepthTest(pMaterial->GetDepthTest());
 			
+			cMaterialType_Translucent::SetDepthOfField(bDofBlend, vDofParams);
 			SetMaterialProgram(renderMode,pMaterial);
 			SetMaterialTextures(renderMode, pMaterial);
 			
@@ -4507,11 +4516,12 @@ namespace hpl {
 			SetVertexBuffer(pObject->GetVertexBuffer());
 
 			DrawCurrentMaterial(renderMode, pObject);
+			cMaterialType_Translucent::SetDepthOfField(false);
 
 
 			////////////////////////////////////////
 			// Set up and render Illumination
-			if(pMaterial->HasTranslucentIllumination())
+			if(pMaterial->HasTranslucentIllumination() && (bDofBlend==false || alDofPass==2))
 			{
 				renderMode = renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog;
 

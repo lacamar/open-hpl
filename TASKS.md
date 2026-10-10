@@ -8,13 +8,12 @@ language change duplicating saves (`GetSaveFiles` didn't clear its arrays), draw
 static bodies no longer get the parent's velocity, which pushed drawers open), Munshi (DAE bone
 poses; global-space animations move the char body to `CharBodyPosBone`), fog rotating (soft
 particles), "Last on SOMA" save-load screen, lights/particles/sounds/billboards in saves, inspect distance (readables open at half scale: `SetMeshScaleMul`), drapes (meshes with embedded animations load dynamic). Subtitles: official default is off for English (`ShowSubtitles="false"`); the option
-applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when behind the focus.
+applies live. GUI screens fogged (translucent fog colours) and DoF-blurred when behind the focus; translucents straddling the focus end crossfade per pixel (`UseDepthOfField`).
 Tonemap bloom, film grain, sRGB toggle (`posteffect_tonemapping`). `<EnvParticles>` render (03_03 included,
 no hang in sweeps since 2026-10-03). Liquid areas: surface, fog area, buoyancy, player depth
 (02_07 underside within 3% of the ref).
 Untested: subway exterior (wildcard `Entity_AttachToEntity`).
 Open:
-- DoF: translucents straddling the focus end aren't crossfaded per pixel (HPL3 `UseDepthOfField`).
 - Slow map loads: 02_05 22 -> 5.3 s (sweep boot total 192 -> 123 s). Scripts load as cached bytecode,
   static collision trees and HPSL->GLSL output from `$XDG_CACHE_HOME/open-hpl/files/{collision,hpsl}`.
 - 04_01 TerminalElevatorMain: beyond ~1.3 m from the screen the ref's scanlines get ~1.6x and the

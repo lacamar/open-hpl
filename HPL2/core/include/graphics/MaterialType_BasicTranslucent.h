@@ -72,6 +72,7 @@ namespace hpl {
 		iTexture* GetSpecialTexture(cMaterial *apMaterial, eMaterialRenderMode aRenderMode,iRenderer *apRenderer, int alUnit);
 
 		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+		iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer);
 
 		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer);
 		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer);
@@ -86,10 +87,13 @@ namespace hpl {
 		static void SetLightProbes(bool abX){ mbLightProbes = abX; }
 		static void SetWorldFog(bool abUnderwater, bool abSecondary);
 		static tFlag GetWorldFog(){ return mlWorldFog; }
+		static void SetDepthOfField(bool abX, const cColor &avParams = cColor(0,0)){ mbDepthOfField = abX; mvDepthOfFieldParams = avParams; }
 	
 	private:
 		static bool mbLightProbes;
 		static tFlag mlWorldFog;
+		static bool mbDepthOfField;
+		static cColor mvDepthOfFieldParams;
 		void LoadData();
 		void DestroyData();
 

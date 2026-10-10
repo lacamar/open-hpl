@@ -247,7 +247,6 @@ namespace hpl {
 		void RenderDecals();
 		void SetFogDepthTexture(bool abBind, int alUnit=0);
 		bool DepthOfFieldIsActive();
-		bool IsBehindDepthOfFieldFocus(iRenderable *apObject);
 		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
