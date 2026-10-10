@@ -108,7 +108,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 
 
-20. Slow engine exit in the GPU driver's `close()`. Physics-material `Cannot find sound entity` errors
+20. Done: engine exit (02_05 quit -> process gone in 0.8 s, 2026-10-10). Physics-material `Cannot find sound entity` errors
    are data-side: 10 `materials.cfg` sound names (`physics/paper|ceramic/*`, `metal/hollow grating/*`,
    `water/*/roll`) have no event in `physics.fdp`.
 
@@ -146,6 +146,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
   Not reproduced on 00_01 with CamAnim_WakeUp (2026-10-05) or CamAnim_WakeUp2 (2026-10-10, exit pose
   at the last node). Needs a repro.
+- Theta mirror (02_05 MirrorZoom*): body only in the reflection (`Entity_SetReflectionVisibility`);
+  shared animations keep track->node indices per anim state (PlayerBodyLamp crashed).
 - `stub_report`: preload hints, gamepad colour, rich presence/achievements, `cMeshEntity::SetDisableSleep`
   (no mesh auto-sleep), `iPhysicsJoint::SetAllowPositionReset` (Rebirth hinge snaps bodies back after
   a >0.05 unit jump; safety net only).
