@@ -980,6 +980,7 @@ static void cSomaBase_HeadlessCmd_RenderStats(void *apUserData, const cHeadlessR
 {
 	cSomaBase *pBase = (cSomaBase*)apUserData;
 	if(pBase->GetCurrentViewport() == NULL) { aResp.SetError("no viewport yet"); return; }
+	if(aReq.HasKey("gpu")) cEngineDiagnostics::mbGpuTiming = aReq.GetInt("gpu", 0) != 0;
 	aResp.SetRaw("render", cEngineDiagnostics::GetRenderStatsJson(pBase->GetCurrentViewport(), pBase->mpEngine->GetGraphics()));
 	aResp.Set("fps", pBase->mpEngine->GetFPS());
 }

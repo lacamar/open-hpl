@@ -28,6 +28,10 @@ namespace hpl {
 		static unsigned int GetRenderedFrameCount() { return mlRenderedFrames; }
 		static int GetLastFrameDrawCalls() { return mlLastFrameDrawCalls; }
 
+		static bool mbGpuTiming;
+		static void GpuPassBegin(const char *apName);
+		static void GpuPassEnd();
+
 		static tString PollGLErrorsJson(bool abReset);
 
 		static tString GetWorldStatsJson(cWorld *apWorld);

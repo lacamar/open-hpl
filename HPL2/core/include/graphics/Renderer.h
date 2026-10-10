@@ -25,6 +25,7 @@
 #include "scene/SceneTypes.h"
 
 #include "graphics/RenderFunctions.h"
+#include "system/EngineDiagnostics.h"
 
 namespace hpl {
 
@@ -98,11 +99,13 @@ namespace hpl {
 	//---------------------------------------------
 	
 #define START_RENDER_PASS(asName) \
+			if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(#asName); \
 			if(mbLog){ \
 				Log("----------\n -- Start Rendering %s:\n----------\n",#asName);\
 			}
 
 #define END_RENDER_PASS() \
+			if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassEnd(); \
 			if(mbLog){ \
 			Log("----------\n"); \
 			}

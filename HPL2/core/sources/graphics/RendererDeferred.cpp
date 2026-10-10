@@ -3716,10 +3716,10 @@ namespace hpl {
 	{
 		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)==false) return;
 
-		START_RENDER_PASS(Illumination);
-		
 		cRenderableVecIterator illumIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Illumination);
 		if(illumIt.HasNext()==false) return;
+
+		START_RENDER_PASS(Illumination);
 
 		
 		SetDepthTest(true);

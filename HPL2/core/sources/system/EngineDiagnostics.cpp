@@ -41,6 +41,57 @@ namespace hpl {
 	unsigned int cEngineDiagnostics::mlRenderedFrames = 0;
 	double cEngineDiagnostics::mfTimingMs[3] = {0, 0, 0};
 	int cEngineDiagnostics::mlTimingSteps = 0, cEngineDiagnostics::mlTimingFrames = 0;
+	bool cEngineDiagnostics::mbGpuTiming = false;
+
+	struct cGpuPassQuery { const char *mpName; GLuint mlQuery; };
+	static std::vector<GLuint> gvGpuQueryPool;
+	static std::vector<cGpuPassQuery> gvGpuPassStack, gvGpuPassDone;
+	static std::map<tString, double> gmapGpuPassMs;
+	static int glGpuTimedFrames = 0;
+
+	// GL_TIME_ELAPSED can't nest, so only outermost passes are timed (AGX timestamps are per batch)
+	void cEngineDiagnostics::GpuPassBegin(const char *apName)
+	{
+		cGpuPassQuery pass = { apName, 0 };
+		if(gvGpuPassStack.empty())
+		{
+			if(gvGpuQueryPool.empty()) glGenQueries(1, &pass.mlQuery);
+			else { pass.mlQuery = gvGpuQueryPool.back(); gvGpuQueryPool.pop_back(); }
+			glBeginQuery(GL_TIME_ELAPSED, pass.mlQuery);
+		}
+		gvGpuPassStack.push_back(pass);
+	}
+
+	void cEngineDiagnostics::GpuPassEnd()
+	{
+		if(gvGpuPassStack.empty()) return;
+		cGpuPassQuery pass = gvGpuPassStack.back();
+		gvGpuPassStack.pop_back();
+		if(pass.mlQuery == 0) return;
+		glEndQuery(GL_TIME_ELAPSED);
+		gvGpuPassDone.push_back(pass);
+	}
+
+	static void ResolveGpuPasses()
+	{
+		if(!gvGpuPassStack.empty() && gvGpuPassStack[0].mlQuery)
+		{
+			glEndQuery(GL_TIME_ELAPSED);
+			gvGpuQueryPool.push_back(gvGpuPassStack[0].mlQuery);
+		}
+		gvGpuPassStack.clear();
+		if(gvGpuPassDone.empty()) return;
+		// ponytail: blocking readback stalls the pipeline; fine for a diagnostic
+		for(size_t i=0; i<gvGpuPassDone.size(); ++i)
+		{
+			GLuint64 lNs;
+			glGetQueryObjectui64v(gvGpuPassDone[i].mlQuery, GL_QUERY_RESULT, &lNs);
+			gmapGpuPassMs[gvGpuPassDone[i].mpName] += (double)lNs * 1e-6;
+			gvGpuQueryPool.push_back(gvGpuPassDone[i].mlQuery);
+		}
+		gvGpuPassDone.clear();
+		++glGpuTimedFrames;
+	}
 
 	struct cShaderReportEntry
 	{
@@ -109,6 +160,7 @@ namespace hpl {
 		mlLastFrameDrawCalls = mlDrawCalls;
 		mlDrawCalls = 0;
 		++mlRenderedFrames;
+		if(mbGpuTiming) ResolveGpuPasses();
 	}
 
 	void cEngineDiagnostics::AddFrameTiming(double afLogicMs, int alSteps, double afRenderMs, double afSwapMs)
@@ -275,6 +327,14 @@ namespace hpl {
 				",\"logic_ms\":" + cString::ToString((float)mfTimingMs[0] / fFrames) +
 				",\"render_ms\":" + cString::ToString((float)mfTimingMs[1] / fFrames) +
 				",\"swap_ms\":" + cString::ToString((float)mfTimingMs[2] / fFrames) + "}";
+		if(glGpuTimedFrames > 0)
+		{
+			sOut += ",\"gpu_ms\":{\"frames\":" + cString::ToString(glGpuTimedFrames);
+			for(std::map<tString, double>::iterator it = gmapGpuPassMs.begin(); it != gmapGpuPassMs.end(); ++it)
+				sOut += ",\"" + it->first + "\":" + cString::ToString((float)(it->second / glGpuTimedFrames));
+			sOut += "}";
+		}
+		gmapGpuPassMs.clear(); glGpuTimedFrames = 0;
 		mfTimingMs[0] = mfTimingMs[1] = mfTimingMs[2] = 0; mlTimingSteps = mlTimingFrames = 0;
 		return sOut + "}";
 	}
