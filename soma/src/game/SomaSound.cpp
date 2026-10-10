@@ -4,6 +4,7 @@
 #include "SomaScriptBind.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
+#include "impl/tinyXML/tinyxml.h"
 
 #include <algorithm>
 #include <cmath>
@@ -40,26 +41,22 @@ cSomaSoundEvents *cSomaSoundEvents::Get()
 	return &events;
 }
 
-// Element text is exposed as the "_Text" attribute
-static tString Text(cXmlElement *apElem, const char *apChild, const tString &asDefault = "")
+static tString Text(TiXmlElement *apElem, const char *apChild, const tString &asDefault = "")
 {
-	cXmlElement *pChild = apElem ? apElem->GetFirstElement(apChild) : NULL;
-	return pChild ? pChild->GetAttributeString("_Text", asDefault) : asDefault;
+	TiXmlElement *pChild = apElem ? apElem->FirstChildElement(apChild) : NULL;
+	return pChild && pChild->GetText() ? tString(pChild->GetText()) : asDefault;
 }
 
-static float Num(cXmlElement *apElem, const char *apChild, float afDefault = 0)
+static float Num(TiXmlElement *apElem, const char *apChild, float afDefault = 0)
 {
 	return cString::ToFloat(Text(apElem, apChild).c_str(), afDefault);
 }
 
-static std::vector<cXmlElement *> Children(cXmlElement *apElem, const char *apName)
+static std::vector<TiXmlElement *> Children(TiXmlElement *apElem, const char *apName)
 {
-	std::vector<cXmlElement *> v;
-	cXmlNodeListIterator it = apElem->GetChildIterator();
-	while (it.HasNext())
-		if (cXmlElement *p = it.Next()->ToElement())
-			if (p->GetValue() == apName)
-				v.push_back(p);
+	std::vector<TiXmlElement *> v;
+	for (TiXmlElement *p = apElem->FirstChildElement(apName); p; p = p->NextSiblingElement(apName))
+		v.push_back(p);
 	return v;
 }
 
@@ -94,16 +91,21 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 	if (msetProjects.insert(sKey).second == false)
 		return;
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
-	iXmlDocument *pDoc = pRes->LoadXmlDocument(asProject + ".fdp");
-	if (pDoc == NULL)
+	TiXmlDocument doc;
+	FILE *pFile = cPlatform::OpenFile(pRes->GetFileSearcher()->GetFilePath(asProject + ".fdp"), _W("rb"));
+	bool bLoaded = pFile && doc.LoadFile(pFile);
+	if (pFile)
+		fclose(pFile);
+	TiXmlElement *pDoc = doc.RootElement();
+	if (bLoaded == false || pDoc == NULL)
 	{
 		Warning("SOMA sound: no event project '%s'\n", asProject.c_str());
 		return;
 	}
 
 	std::map<tString, cSoundDef> mapDefs;
-	std::function<void(cXmlElement *)> readDefs = [&](cXmlElement *apFolder) {
-		for (cXmlElement *pDef : Children(apFolder, "sounddef"))
+	std::function<void(TiXmlElement *)> readDefs = [&](TiXmlElement *apFolder) {
+		for (TiXmlElement *pDef : Children(apFolder, "sounddef"))
 		{
 			cSoundDef &d = mapDefs[Text(pDef, "name")];
 			tString sType = Text(pDef, "type");
@@ -117,14 +119,14 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			d.mlSpawnCount = std::max(1, (int)Num(pDef, "spawn_max", 1));
 			d.mfDelayMin = Num(pDef, "trigger_delay_min") / 1000.0f;
 			d.mfDelayMax = Num(pDef, "trigger_delay_max") / 1000.0f;
-			for (cXmlElement *pWave : Children(pDef, "waveform"))
+			for (TiXmlElement *pWave : Children(pDef, "waveform"))
 			{
 				tString sFile = Text(pWave, "filename");
 				if (sFile != "")
 					d.mvWaves.push_back(cWave{Text(pWave, "soundbankname"), cString::SetFileExt(cString::GetFileName(sFile), "")});
 			}
 		}
-		for (cXmlElement *pSub : Children(apFolder, "sounddeffolder"))
+		for (TiXmlElement *pSub : Children(apFolder, "sounddeffolder"))
 			readDefs(pSub);
 	};
 	readDefs(pDoc);
@@ -137,12 +139,12 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 
 	tString sProject = Text(pDoc, "name", asProject);
 	int lCount = 0;
-	std::function<void(cXmlElement *, const tString &)> readGroup = [&](cXmlElement *apGroup, const tString &asPath) {
-		std::vector<cXmlElement *> vEvents = Children(apGroup, "event");
-		for (cXmlElement *pSimple : Children(apGroup, "simpleevent"))
-			for (cXmlElement *pEvent : Children(pSimple, "event"))
+	std::function<void(TiXmlElement *, const tString &)> readGroup = [&](TiXmlElement *apGroup, const tString &asPath) {
+		std::vector<TiXmlElement *> vEvents = Children(apGroup, "event");
+		for (TiXmlElement *pSimple : Children(apGroup, "simpleevent"))
+			for (TiXmlElement *pEvent : Children(pSimple, "event"))
 				vEvents.push_back(pEvent);
-		for (cXmlElement *pEvent : vEvents)
+		for (TiXmlElement *pEvent : vEvents)
 		{
 			cEvent ev;
 			ev.msName = asPath + "/" + Text(pEvent, "name");
@@ -163,7 +165,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			ev.mfFadeIn = Num(pEvent, "fadein_time") / 1000.0f;
 			ev.mfFadeOut = Num(pEvent, "fadeout_time") / 1000.0f;
 
-			for (cXmlElement *pParam : Children(pEvent, "parameter"))
+			for (TiXmlElement *pParam : Children(pEvent, "parameter"))
 			{
 				cParam p;
 				p.msName = Text(pParam, "name");
@@ -183,13 +185,13 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			};
 
 			std::map<tString, int> mapLocalDefs;
-			for (cXmlElement *pLayer : Children(pEvent, "layer"))
+			for (TiXmlElement *pLayer : Children(pEvent, "layer"))
 			{
 				if (Text(pLayer, "mute") == "1")
 					continue;
 				cLayer layer;
 				layer.mlParam = paramIdx(Text(pLayer, "controlparameter"));
-				for (cXmlElement *pSound : Children(pLayer, "sound"))
+				for (TiXmlElement *pSound : Children(pLayer, "sound"))
 				{
 					auto def = mapDefs.find(Text(pSound, "name"));
 					if (def == mapDefs.end())
@@ -208,16 +210,16 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 					s.mfX1 = s.mfX0 + Num(pSound, "width", 1);
 					layer.mvSounds.push_back(s);
 				}
-				for (cXmlElement *pEnv : Children(pLayer, "envelope"))
+				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
 				{
 					if (Text(pEnv, "dsp_name") != "Volume" || Text(pEnv, "mute") == "1")
 						continue;
 					cEnvelope env;
 					env.mlParam = paramIdx(Text(pEnv, "controlparameter"));
-					for (cXmlElement *pPoint : Children(pEnv, "point"))
+					for (TiXmlElement *pPoint : Children(pEnv, "point"))
 					{
 						tStringVec vNums;
-						cString::GetStringVec(pPoint->GetAttributeString("_Text", ""), vNums, NULL);
+						cString::GetStringVec(pPoint->GetText() ? pPoint->GetText() : "", vNums, NULL);
 						if (vNums.size() >= 2)
 							env.mvPoints.push_back(cVector2f(cString::ToFloat(vNums[0].c_str(), 0), cString::ToFloat(vNums[1].c_str(), 1)));
 					}
@@ -229,11 +231,10 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			mmapEvents[cString::ToLowerCase(ev.msName)] = ev;
 			++lCount;
 		}
-		for (cXmlElement *pSub : Children(apGroup, "eventgroup"))
+		for (TiXmlElement *pSub : Children(apGroup, "eventgroup"))
 			readGroup(pSub, asPath + "/" + Text(pSub, "name"));
 	};
 	readGroup(pDoc, sProject);
-	pRes->DestroyXmlDocument(pDoc);
 
 	// One pass per bank: banks are large and read whole
 	tWString sCacheDir = cSomaFsb::GetCacheDir(_W("events-v4"));
@@ -262,8 +263,9 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				}
 			it.second.mbLoaded = true;
 		}
-	// The file searcher indexes a directory when it is added
-	pRes->AddResourceDir(sCacheDir, false);
+	cFileSearcher *pSearcher = pRes->GetFileSearcher();
+	if (std::any_of(mapFiles.begin(), mapFiles.end(), [&](auto &f) { return pSearcher->GetFilePath(f.second) == _W(""); }))
+		pRes->AddResourceDir(sCacheDir, false);
 	Log("SOMA sound: %d events in project '%s', %d samples\n", lCount, sProject.c_str(), (int)mapFiles.size());
 }
 
