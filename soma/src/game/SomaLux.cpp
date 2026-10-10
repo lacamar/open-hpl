@@ -1127,39 +1127,51 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
 }
 
+// cLux_GetLightLevelAtPos: linear falloff, LOS only for shadow-casting spots
 float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
 {
 	if (cSomaLuxMap::GetCurrent() == NULL) return 0;
+	cWorld *pWorld = cSomaLuxMap::GetCurrent()->GetWorld();
+	auto MaxRgb = [](const cColor &c) { return cMath::Max(c.r, cMath::Max(c.g, c.b)); };
 	float fLevel = 0;
-	cLightListIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetLightIterator();
+	if (pWorld->GetDirectionalLightActive())
+		fLevel = MaxRgb(pWorld->GetDirectionalLight()->GetAmbientColorGround()) * pWorld->GetDirectionalLight()->GetBrightness();
+	cLightListIterator it = pWorld->GetLightIterator();
 	while (it.HasNext())
 	{
 		iLight *pLight = it.Next();
 		if (pLight == pSkip || pLight->IsVisible() == false) continue;
-		const cColor &c = pLight->GetDiffuseColor();
-		float fAmount = cMath::Max(c.r, cMath::Max(c.g, c.b)) * pLight->GetBrightness();
+		float fAmount = MaxRgb(pLight->GetDiffuseColor()) * pLight->GetBrightness();
+		float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), p);
 		if (pLight->GetLightType() == eLightType_Box)
 		{
 			if (cMath::CheckPointInAABBIntersection(p, pLight->GetBoundingVolume()->GetMin(), pLight->GetBoundingVolume()->GetMax()))
 			{
 				cLightBox *pBox = static_cast<cLightBox *>(pLight);
 				const cVector3f &vDC = pBox->GetIrradianceBands()[0];
-				// Ref's SH term fits max(DC) within ~15%
-				fLevel += pBox->GetUseSphericalHarmonics() ? cMath::Max(vDC.x, cMath::Max(vDC.y, vDC.z)) * fAmount : fAmount;
+				fLevel += pBox->GetUseSphericalHarmonics() ? (vDC.x + vDC.y + vDC.z) * fAmount * 0.5f : fAmount;
 			}
 			continue;
 		}
-		if (pLight->GetLightType() == eLightType_Spot)
+		if (pLight->GetLightType() == eLightType_Point)
+		{
+			if (fDist > pLight->GetRadius()) continue;
+		}
+		else if (pLight->GetLightType() == eLightType_Spot)
 		{
 			cLightSpot *pSpot = static_cast<cLightSpot *>(pLight);
 			cVector3f vLocal = cMath::MatrixMul(pSpot->GetViewMatrix(), p);
 			float fTan = tanf(pSpot->GetFOV() * 0.5f);
-			if (vLocal.z >= 0 || std::fabs(vLocal.y) > -vLocal.z * fTan || std::fabs(vLocal.x) > -vLocal.z * fTan * pSpot->GetAspect())
+			if (vLocal.z >= 0 || -vLocal.z > pSpot->GetRadius() || std::fabs(vLocal.y) > -vLocal.z * fTan || std::fabs(vLocal.x) > -vLocal.z * fTan * pSpot->GetAspect())
 				continue;
+			if (pSpot->GetCastShadows())
+			{
+				cVector3f vStart = pSpot->GetWorldPosition() - pSpot->GetFrustum()->GetForward() * (pSpot->GetNearClipPlane() * sqrtf(2.0f));
+				if (SomaLineOfSight(vStart, p, NULL) == false) continue;
+			}
 		}
-		float fT = 1 - cMath::Vector3Dist(pLight->GetWorldPosition(), p) / (pLight->GetRadius() + fAdd);
-		if (fT > 0 && (pLight->GetCastShadows() == false || SomaLineOfSight(pLight->GetWorldPosition(), p, NULL)))
-			fLevel += fAmount * fT;
+		else continue;
+		fLevel += fAmount * cMath::Max(1 - fDist / (pLight->GetRadius() + fAdd), 0.0f);
 	}
 	return fLevel;
 }
