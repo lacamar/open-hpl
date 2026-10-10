@@ -159,7 +159,9 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   Ratio grows on dark albedo; spot cone edge wider than ref. Unresolved (instance-buffer
   light colour is CPU-side in the exe).
 - `bedlight_1` alone at the bed pose: ours 0.83, ref 1.41 (both unshadowed, no SSAO).
-- Window light shaft visible in ours with all lights off; absent in ref.
+- Window light shaft visible in ours with all lights off; absent in ref. `window_ray_*` are hidden by
+  `SetupLights` (start-anchored wildcard, as Rebirth `_Map_GetBillboardArray`); `bathroom_window_ray_*`
+  stay visible in both; billboard colour matches Rebirth `cBillboard::SetColor`. Needs a ref pose.
 - `cLux_GetLightLevelAtPos`: spot pyramid gate, physics LOS for shadow casters, SH box =
   max(DC band) x amount (ref's SH term unknown, fits ~15% median over 111 upsilon probes; a
   0.0005 floor in upsilon). Ref also occludes shadow casters by render-only geometry (sun
