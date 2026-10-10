@@ -2518,7 +2518,7 @@ namespace hpl {
 			else if(lightType == eLightType_Spot)
 			{
 				cMath::GetClipRectFromBV(	pLightData->mClipRect, *pLight->GetBoundingVolume(), mpCurrentFrustum,
-											mvScreenSize, mfScissorLastTanHalfFov);
+											mvRenderTargetSize, mfScissorLastTanHalfFov);
 			}
 			pLightData->mlArea = pLightData->mClipRect.w * pLightData->mClipRect.h;
 
