@@ -354,6 +354,7 @@ namespace hpl {
 		mpUserData = NULL;
 
 		mlCameraSmoothPosNum =0;
+		mbCameraUseSmoothing = true;
 		mbCameraUpdateActive = true;
 		mlEntitySmoothPosNum =0;
 
@@ -2041,7 +2042,7 @@ namespace hpl {
 
 		///////////////////////////////
 		//Do NOT do any smoothing
-		if(mlCameraSmoothPosNum <=0)
+		if(mlCameraSmoothPosNum <=0 || !mbCameraUseSmoothing)
 		{
 			cVector3f vPos = mvPosition + cVector3f(0,fMainHeight - mvSize.y/2.0f,0);
 			mpCamera->SetPosition(vPos + vAdd);

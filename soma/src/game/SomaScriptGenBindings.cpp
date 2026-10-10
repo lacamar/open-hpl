@@ -1571,6 +1571,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "cVector3f GetCameraPosAdd()", +[](iCharacterBody *o) -> cVector3f { return o->GetCameraPosAdd(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraSmoothPosNum(int alNum)", +[](iCharacterBody *o, int a0) { o->SetCameraSmoothPosNum(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetCameraSmoothPosNum()", +[](iCharacterBody *o) -> int { return o->GetCameraSmoothPosNum(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUseSmoothing(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUseSmoothing(a0); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUseSmoothing()", +[](iCharacterBody *o) -> bool { return o->GetCameraUseSmoothing(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetCameraUpdateActive(bool abX)", +[](iCharacterBody *o, bool a0) { o->SetCameraUpdateActive(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetCameraUpdateActive()", +[](iCharacterBody *o) -> bool { return o->GetCameraUpdateActive(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntity(iEntity3D@ apEntity)", +[](iCharacterBody *o, iEntity3D * a0) { o->SetEntity(a0); });

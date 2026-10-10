@@ -327,6 +327,8 @@ namespace hpl {
 		cVector3f GetCameraPosAdd();
 		void SetCameraSmoothPosNum(int alNum){ mlCameraSmoothPosNum = alNum;}
 		int GetCameraSmoothPosNum(){ return mlCameraSmoothPosNum;}
+		void SetCameraUseSmoothing(bool abX){ mbCameraUseSmoothing = abX; mlstCameraPos.clear(); UpdateCamera(); }
+		bool GetCameraUseSmoothing(){ return mbCameraUseSmoothing;}
 		void SetCameraUpdateActive(bool abX){ mbCameraUpdateActive = abX;}
 		bool GetCameraUpdateActive(){ return mbCameraUpdateActive;}
 
@@ -476,6 +478,7 @@ namespace hpl {
 		cCamera *mpCamera;
 		cVector3f mvCameraPosAdd;
 		int mlCameraSmoothPosNum;
+		bool mbCameraUseSmoothing;
 		bool mbCameraUpdateActive;
 		tVector3fList mlstCameraPos;
 
