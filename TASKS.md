@@ -152,7 +152,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   (`OnImpact`, `cPhysicsWorldNewton::Simulate` match ours; `cWorld::PreUpdate` uncalled). 00_01 test
   start puts the player inside the bed, pushing `pillow_cabin_plain_1` (repeated pillow impacts).
 - Intermittent heap corruption: `04_01_tau_outside` aborted once in `free` while loading a
-  static `.dae` (tinyxml dtor); rerun passed.
+  static `.dae` (tinyxml dtor); rerun passed. Not reproduced in 18 loads (04_01, 04_02, 01_02) under
+  `glibc.malloc.perturb=165:tcache_count=0:check=3` (2026-10-10).
 
 ## Differences vs the official game (`scripts/soma-compare.py`)
 
