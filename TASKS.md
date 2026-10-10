@@ -141,7 +141,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
   Only empty `mvNodes` can do it (index clamped to len-1): `Reset()` clears nodes but keeps the
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
-  Not reproduced 2026-10-05 running `IntroSequence` (CamAnim_WakeUp) on 00_01; WakeUp2 untested.
+  Not reproduced on 00_01 with CamAnim_WakeUp (2026-10-05) or CamAnim_WakeUp2 (2026-10-10, exit pose
+  at the last node). Needs a repro.
 - `stub_report`: eye tracker, preload hints, `iPhysicsJoint::SetAllowPositionReset`.
 - Physics impact sounds at load: bodies settling (01_02, ~0.03 vol). Rebirth has no extra gating
   (`OnImpact`, `cPhysicsWorldNewton::Simulate` match ours; `cWorld::PreUpdate` uncalled). 00_01 test
