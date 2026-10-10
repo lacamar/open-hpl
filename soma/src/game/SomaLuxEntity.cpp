@@ -816,6 +816,16 @@ cSomaGuiScreenRenderer::cTarget &cSomaGuiScreenRenderer::GetTarget(cSomaLuxEntit
 	return t;
 }
 
+// iRenderer::SetupSpatialGuiGeneration: a far screen keeps its cache tile
+static bool GuiCacheFrozen(cBoundingVolume *apBV, float afCacheAt, cCamera *apCam)
+{
+	cVector3f vMin = apBV->GetMin(), vMax = apBV->GetMax(), vCam = apCam->GetPosition(), vExt = vMax - vMin, vD;
+	for (int i = 0; i < 3; ++i)
+		vD.v[i] = vCam.v[i] - cMath::Clamp(vCam.v[i], vMin.v[i], vMax.v[i]);
+	float fSize = tanf(apCam->GetFOV() * 0.5f) * (vExt.x + vExt.y + vExt.z - std::min({vExt.x, vExt.y, vExt.z})) * 0.5f;
+	return afCacheAt > 0 && vD.SqrLength() * afCacheAt * afCacheAt > fSize * fSize;
+}
+
 void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunctions)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -841,6 +851,10 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 		cTarget &t = GetTarget(p, cVector2l((int)vVirtual.x, (int)vVirtual.y));
 		if (t.mlGuiCalls == p->mlGuiCalls && t.mbGuiActive == p->mbGuiActive)
 			continue;
+		if (t.mbGuiActive == p->mbGuiActive && t.mlGuiCalls != -1 && p->mbGuiCacheForced == false &&
+			GuiCacheFrozen(p->mpGuiSubMesh->GetBoundingVolume(), p->mfGuiCacheAtScreenSize, mpViewport->GetCamera()))
+			continue;
+		p->mbGuiCacheForced = false;
 		t.mlGuiCalls = p->mlGuiCalls;
 		t.mbGuiActive = p->mbGuiActive;
 		vScreens.push_back(std::make_pair(p, &t));
@@ -2245,7 +2259,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetGuiSetUseInput(bool)", +[](E *p, bool b) { p->mbGuiSetUseInput = b; });
 	SOMA_METHOD_NEW(e, T, "bool GetGuiSetUseInput()", +[](E *p) { return p->mbGuiSetUseInput; });
 	SOMA_METHOD_NEW(e, T, "void SetGuiUpdateWhenOutOfView(bool abX)", +[](E *p, bool b) { p->mbGuiUpdateWhenOutOfView = b; });
-	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = true; });
+	SOMA_METHOD_NEW(e, T, "void ForceGuiCacheUpdate()", +[](E *p) { p->mbGuiDirty = p->mbGuiCacheForced = true; });
+	SOMA_METHOD_NEW(e, T, "void SetGuiCacheAtScreenSize(float afX)", +[](E *p, float f) { p->mfGuiCacheAtScreenSize = f; });
 	SOMA_METHOD_NEW(e, T, "bool IsGuiActive()", +[](E *p) { return p->mbGuiActive; });
 	SOMA_METHOD_NEW(e, T, "bool HasActiveGui()", +[](E *p) { return p->mpImGui != NULL; });
 	SOMA_METHOD_NEW(e, T, "bool SetGuiIsFocused(bool abX, bool abShowMouse=true)", +[](E *p, bool b, bool mouse) {
@@ -3019,7 +3034,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { if (p->mpImGui) p->mpImGui->mbShowMouse = b; }); });
 	SOMA_FUNC(e, "void Terminal_SetUpdateWhenOutOfView(const tString& in asName, bool abX)",
 			  +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbGuiUpdateWhenOutOfView = b; }); });
-	SOMA_FUNC(e, "void Terminal_ForceCacheUpdate(const tString& in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbGuiDirty = true; }); });
+	SOMA_FUNC(e, "void Terminal_ForceCacheUpdate(const tString& in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbGuiDirty = p->mbGuiCacheForced = true; }); });
 	SOMA_FUNC(e, "void Terminal_SetFPSWhenIdle(const tString& in asName, float afFPS)", +[](S n, float f) { ForMatching(n, [f](cSomaLuxEntity *p) { p->mfGuiFPS = f; }); });
 	{
 		static auto Gui = [](S n) -> cSomaImGui * { cSomaLuxEntity *p = Find(n); return p ? p->mpImGui : NULL; };

@@ -163,6 +163,9 @@ static void cSomaBase_HeadlessCmd_LuxEntity(void *apUserData, const cHeadlessReq
 		aResp.Set("gui_screen", pEnt->mpGuiSubMesh != NULL);
 		aResp.Set("gui_calls", pEnt->mlGuiCalls);
 		aResp.Set("gui_draws", pEnt->mlGuiDraws);
+		aResp.Set("gui_cache_at", pEnt->mfGuiCacheAtScreenSize);
+		if (pEnt->mpGuiSubMesh)
+			aResp.Set("gui_bv", pEnt->mpGuiSubMesh->GetBoundingVolume()->GetMin().ToString() + " " + pEnt->mpGuiSubMesh->GetBoundingVolume()->GetMax().ToString());
 		aResp.Set("gui_ops", pEnt->mpImGui->DebugOps(12));
 		cGuiSet *pSet = pEnt->mpImGui->GetSet();
 		aResp.Set("gui_mtx", pSet->Get3DTransform().ToString());
