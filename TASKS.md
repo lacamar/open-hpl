@@ -124,7 +124,7 @@ Ordered. Verify each with `scripts/soma-sweep.py --compare`.
 
 22. P6 soak test (movement + RSS/fps sampling): `02_05_theta_inside` 20 min at 60 fps. Heap grew
    ~16 MB/min from a leaked `cLuxClosestEntityData` per frame (handle args never released by
-   natives); fixed, [heap] now flat.
+   natives); fixed, [heap] now flat. `01_03` 10 min: RSS flat at 1217 MB after warm-up (2026-10-10).
 
 
 
