@@ -65,6 +65,7 @@ namespace hpl{
 				glDetachShader(mlHandle,pGLSLShader->GetHandle());
 			}
 		}
+		if(mlCurrentProgram == mlHandle) mlCurrentProgram = 0;
 		glDeleteProgram(mlHandle);
 	}
 	
@@ -136,7 +137,7 @@ namespace hpl{
 				glUniform1i(lVarHandle, lUnit);
 			}
 
-            glUseProgram(0);
+			glUseProgram(mlCurrentProgram);
 		}
 		
 		return true;
