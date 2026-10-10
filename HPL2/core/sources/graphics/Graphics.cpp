@@ -40,6 +40,7 @@
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"
 #include "resources/GpuShaderManager.h"
+#include "resources/FileSearcher.h"
 
 #include "graphics/MaterialType_BasicSolid.h"
 #include "graphics/MaterialType_BasicTranslucent.h"
@@ -218,8 +219,12 @@ namespace hpl {
 			////////////////////////////////////////////////
 			//Add all the post effects
 			Log(" Adding engine post effects\n");
-			AddPostEffectType(hplNew( cPostEffectType_Bloom, (this, apResources)) );
-			AddPostEffectType(hplNew( cPostEffectType_ColorConvTex, (this, apResources)) );
+			// HPL3 data (SOMA) ships no glsl post effects
+			if(apResources->GetFileSearcher()->GetFilePath("posteffect_bloom_blur_vtx.glsl") != _W(""))
+			{
+				AddPostEffectType(hplNew( cPostEffectType_Bloom, (this, apResources)) );
+				AddPostEffectType(hplNew( cPostEffectType_ColorConvTex, (this, apResources)) );
+			}
 			AddPostEffectType(hplNew( cPostEffectType_ImageTrail, (this, apResources)) );
 			AddPostEffectType(hplNew( cPostEffectType_RadialBlur, (this, apResources)) );
 		}

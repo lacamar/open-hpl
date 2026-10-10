@@ -129,7 +129,8 @@ namespace hpl {
 
 		/////////////////////////
 		// Test Feature support
-		if(IsShaderSupported("_test_array_support_frag.glsl", eGpuShaderType_Fragment)==false)
+		if(mpFileSearcher->GetFilePath("_test_array_support_frag.glsl") != _W("") &&
+		   IsShaderSupported("_test_array_support_frag.glsl", eGpuShaderType_Fragment)==false)
 		{
 			Log("ATTENTION: System does not support const arrays in glsl!\n");
 			mpPreprocessParser->GetEnvVarContainer()->Add("FeatureNotSupported_ConstArray");

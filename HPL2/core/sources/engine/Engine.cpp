@@ -603,6 +603,10 @@ namespace hpl {
 				bIsUpdated = false;
 				bBufferSwap = true;
 			}
+			else
+			{
+				cPlatform::Sleep(1);
+			}
 
 			//if(GetGameIsDone()) Log("4\n");
 		}
