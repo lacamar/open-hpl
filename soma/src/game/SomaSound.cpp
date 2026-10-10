@@ -213,7 +213,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
 				{
 					static const std::map<tString, int> mapDsp = {{"Volume", eDsp_Volume}, {"FMOD ParamEQ", eDsp_EqGain}, {"FMOD Lowpass", eDsp_Lowpass},
-						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}};
+						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}, {"3D Pan Level", eDsp_PanLevel}};
 					auto dsp = mapDsp.find(Text(pEnv, "dsp_name"));
 					int lParamIdx = (int)Num(pEnv, "dsp_paramindex");
 					if (dsp == mapDsp.end() || lParamIdx != (dsp->second == eDsp_EqGain ? 2 : 0) || Text(pEnv, "mute") == "1")
@@ -654,7 +654,7 @@ cVector3f cSomaSoundInstance::SourcePos()
 // FMOD Ex stereo pans by constant power on sin(azimuth) with no rear or elevation cue; move the
 // source to where OpenAL Soft's stereo panpot gives the same L/R ratio.
 // ponytail: table measured from OpenAL Soft 1.24 panpot (4 deg steps); HRTF/UHJ output differs.
-cVector3f cSomaSoundInstance::PanPos()
+cVector3f cSomaSoundInstance::PanPos(float afPanMul)
 {
 	static const float vQ[] = {0, .0897f, .175f, .263f, .346f, .429f, .510f, .585f, .656f, .725f, .789f, .846f, .895f, .938f, .973f, 1};
 	iLowLevelSound *pLow = gpSomaBase->mpEngine->GetSound()->GetLowLevel();
@@ -664,7 +664,7 @@ cVector3f cSomaSoundInstance::PanPos()
 	if (fDist < 1e-3f)
 		return vPos;
 	cVector3f vFwd = pLow->GetListenerForward() * -1, vRight = cMath::Vector3Cross(vFwd, pLow->GetListenerUp());
-	float fPan = cMath::Vector3Dot(vDir, vRight) / fDist * mpEvent->mfPanLevel;
+	float fPan = cMath::Vector3Dot(vDir, vRight) / fDist * mpEvent->mfPanLevel * afPanMul;
 	float fAbs = std::min(std::fabs(fPan), 1.0f);
 	float fL = std::sqrt((1 - fAbs) / 2), fR = std::sqrt((1 + fAbs) / 2), fQ = (fR - fL) / (fR + fL);
 	size_t i = 1;
@@ -823,7 +823,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 	bool bPending = false;
 	std::vector<std::vector<float>> vGain(mpEvent->mvLayers.size());
 	std::vector<cVector2f> vFilter(mpEvent->mvLayers.size(), cVector2f(1));
-	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1);
+	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1), vPan(mpEvent->mvLayers.size(), 1);
 	for (size_t l = 0; l < mpEvent->mvLayers.size(); ++l)
 	{
 		const cSomaSoundEvents::cLayer &layer = mpEvent->mvLayers[l];
@@ -842,6 +842,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			case cSomaSoundEvents::eDsp_Lowpass: vFilter[l].x /= std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)); break;
 			case cSomaSoundEvents::eDsp_Highpass: vFilter[l].y /= std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)); break;
 			case cSomaSoundEvents::eDsp_Pitch: vSpeed[l] *= std::pow(2.0f, (fY - 0.5f) * 8); break;
+			case cSomaSoundEvents::eDsp_PanLevel: vPan[l] *= fY; break;
 			}
 		}
 		vGain[l].resize(layer.mvSounds.size());
@@ -914,7 +915,10 @@ void cSomaSoundInstance::Update(float afTimeStep)
 	}
 
 	mfAudibility = 0;
-	cVector3f vPos = mb3DPlay ? PanPos() : cVector3f(0);
+	std::vector<cVector3f> vPos(mpEvent->mvLayers.size());
+	if (mb3DPlay)
+		for (size_t l = 0; l < vPos.size(); ++l)
+			vPos[l] = PanPos(vPan[l]);
 	for (size_t i = 0; i < mvVoices.size();)
 	{
 		cVoice &v = mvVoices[i];
@@ -935,7 +939,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			v.mpEntry->GetChannel()->SetFilterGainLF(vF.y);
 		}
 		if (mb3DPlay)
-			v.mpEntry->GetChannel()->SetPosition(vPos);
+			v.mpEntry->GetChannel()->SetPosition(vPos[v.mlLayer]);
 		mfAudibility += fGain;
 		++i;
 	}

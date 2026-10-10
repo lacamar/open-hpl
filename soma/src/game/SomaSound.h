@@ -39,7 +39,7 @@ public:
 		tString msBank;
 		tString msSample;
 	};
-	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch };
+	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch, eDsp_PanLevel };
 	struct cEnvelope
 	{
 		int mlParam = -1;
@@ -203,7 +203,7 @@ private:
 	float ParamNorm(int alIdx);
 	float DistanceGain(float afDist);
 	cVector3f SourcePos();
-	cVector3f PanPos();
+	cVector3f PanPos(float afPanMul = 1);
 	float ListenerDistance();
 
 	cEvent *mpEvent;
