@@ -4380,6 +4380,11 @@ namespace hpl {
 		cMaterialType_Translucent::SetWorldFog(WorldUnderwaterFog(this), WorldFogActive() && mpCurrentWorld->GetSecondaryFogActive());
 		tFlag lWorldFog = cMaterialType_Translucent::GetWorldFog();
 
+		// each mid-pass copy flushes the whole tiled framebuffer, so one copy is reused until a draw overlaps;
+		// refractive particles ignore each other, like particles within one emitter
+		bool bRefractionValid = false;
+		std::vector<cRect2l> vDrawnSinceCopy;
+
 		///////////////////////////////
 		//Iterate transparent objects
 		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
@@ -4473,6 +4478,7 @@ namespace hpl {
 				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(false);
 				RenderReflection(pReflectSubMeshEnt);
 				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(true);
+				bRefractionValid = false;
 			}
 
 			////////////////////////////////////////
@@ -4526,12 +4532,23 @@ namespace hpl {
 				
 				////////////////////////////////////
 				// Copy frame buffer to texture (an empty rect would mean the whole screen)
-				if(clipRect.w > 0 && clipRect.h > 0)
-				CopyFrameBufferToTexure(mpRefractionTexture, 
-										cVector2l(clipRect.x, clipRect.y), 
-										cVector2l(clipRect.w, clipRect.h), 
-										cVector2l(clipRect.x, clipRect.y),
-										true);
+				if(pMaterial->UseRefractionEdgeCheck())
+				{
+					if(clipRect.w > 0 && clipRect.h > 0)
+					CopyFrameBufferToTexure(mpRefractionTexture, 
+											cVector2l(clipRect.x, clipRect.y), 
+											cVector2l(clipRect.w, clipRect.h), 
+											cVector2l(clipRect.x, clipRect.y),
+											true);
+					bRefractionValid = false;
+				}
+				else if(bRefractionValid==false || std::any_of(vDrawnSinceCopy.begin(), vDrawnSinceCopy.end(),
+							[&](const cRect2l& r){ return cMath::CheckRectIntersection(r, clipRect); }))
+				{
+					CopyFrameBufferToTexure(mpRefractionTexture, 0, mvRenderTargetSize, 0, true);
+					bRefractionValid = true;
+					vDrawnSinceCopy.clear();
+				}
 				
 			}
 			
@@ -4570,6 +4587,15 @@ namespace hpl {
 				SetVertexBuffer(pObject->GetVertexBuffer());
 
 				DrawCurrentMaterial(renderMode, pObject);
+			}
+
+			bool bRefractiveParticle = pMaterial->HasRefraction() && pObject->GetRenderType()==eRenderableType_ParticleEmitter;
+			if(bRefractionValid && bRefractiveParticle==false)
+			{
+				cRect2l drawnRect;
+				if(fHalfFovTan ==0) fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
+				cMath::GetClipRectFromBV(drawnRect, *pObject->GetBoundingVolume(), mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
+				vDrawnSinceCopy.push_back(drawnRect);
 			}
 		}
 
