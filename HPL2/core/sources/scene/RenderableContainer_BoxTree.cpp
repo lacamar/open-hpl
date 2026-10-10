@@ -110,10 +110,23 @@ namespace hpl {
 			RemoveFromNode(pChild, apRenderable);
 	}
 
+	static void RemoveSetFromNode(iRenderableContainerNode *apNode, const std::set<iRenderable*>& aSet)
+	{
+		apNode->GetObjectList()->remove_if([&](iRenderable* pR) { return aSet.count(pR) != 0; });
+		for(iRenderableContainerNode *pChild : *apNode->GetChildNodeList())
+			RemoveSetFromNode(pChild, aSet);
+	}
+
 	void cRenderableContainer_BoxTree::Remove(iRenderable *apRenderable)
 	{
 		STLFindAndRemove(m_mlstTempObjects, apRenderable);
 		if(mpRoot) RemoveFromNode(mpRoot, apRenderable);
+	}
+
+	void cRenderableContainer_BoxTree::RemoveSet(const std::set<iRenderable*>& aSet)
+	{
+		m_mlstTempObjects.remove_if([&](iRenderable* pR) { return aSet.count(pR) != 0; });
+		if(mpRoot) RemoveSetFromNode(mpRoot, aSet);
 	}
 
 	//-----------------------------------------------------------------------

@@ -537,6 +537,16 @@ namespace hpl {
 			STLFindAndDelete(mlstDynamicMeshEntities,apMesh);
 	}
 
+	void cWorld::DestroyStaticMeshEntities(const std::set<cMeshEntity*>& aSet)
+	{
+		std::set<iRenderable*> setSubs;
+		for(cMeshEntity* pMesh : aSet)
+			for(int i=0; i<pMesh->GetSubMeshEntityNum(); ++i) setSubs.insert(pMesh->GetSubMeshEntity(i));
+		mpRenderableContainer[eWorldContainerType_Static]->RemoveSet(setSubs);
+		mlstStaticMeshEntities.remove_if([&](cMeshEntity* pMesh) { return aSet.count(pMesh) != 0; });
+		for(cMeshEntity* pMesh : aSet) hplDelete(pMesh);
+	}
+
 	//-----------------------------------------------------------------------
 
 	// The compiled static tree never updates object positions

@@ -65,6 +65,7 @@ namespace hpl {
 
 		void Add(iRenderable *apRenderable);
 		void Remove(iRenderable *apRenderable);
+		void RemoveSet(const std::set<iRenderable*>& aSet);
 
 		iRenderableContainerNode* GetRoot();
 

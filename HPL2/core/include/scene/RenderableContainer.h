@@ -161,6 +161,7 @@ namespace hpl {
 
 		virtual void Add(iRenderable *apRenderable)=0;
 		virtual void Remove(iRenderable *apRenderable)=0;
+		virtual void RemoveSet(const std::set<iRenderable*>& aSet) { for(iRenderable* pR : aSet) Remove(pR); }
 
 		virtual iRenderableContainerNode* GetRoot()=0;
 

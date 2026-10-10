@@ -257,8 +257,10 @@ namespace hpl {
 			pEnt->SetIlluminationAmount(v[8]);
 		}
 
+		std::set<cMeshEntity*> setDestroy;
 		for (auto& [pEnt, lNum] : mapCombinedSubs)
-			if (lNum == pEnt->GetSubMeshEntityNum()) mpCurrentWorld->DestroyMeshEntity(pEnt);
+			if (lNum == pEnt->GetSubMeshEntityNum()) setDestroy.insert(pEnt);
+		mpCurrentWorld->DestroyStaticMeshEntities(setDestroy);
 		Log("  SOMA hpm combined %d static submeshes into %d meshes\n", (int)[&] { int n = 0; for (auto& p : mapCombinedSubs) n += p.second; return n; }(), mlCombinedMeshes);
 	}
 
