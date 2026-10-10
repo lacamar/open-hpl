@@ -134,6 +134,7 @@ public:
 	void SetAuxSend(int alSendId, cOAL_EffectSlot* apSlot, cOAL_Filter* apFilter);
 	void SetAuxSendSlot(int alSendId, cOAL_EffectSlot* apSlot );
 	void SetAuxSendFilter(int alSendId, cOAL_Filter* apFilter );
+	void SetAuxSendGain(float afGain);
 
 	// Built in filter methods
 	void SetFilterType ( eOALFilterType aeType );
@@ -183,6 +184,9 @@ private:
 	
 	cOAL_Filter*	mpFilter;
 	cOAL_Filter*	mpDirectFilter;
+	float			mfSendGain;
+
+	void ApplyAuxSend(int alSendId);
 
 	void Queue(cOAL_Buffer* apBuffer);
 	cOAL_Buffer* Unqueue();

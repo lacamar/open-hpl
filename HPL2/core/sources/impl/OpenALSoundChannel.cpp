@@ -281,4 +281,9 @@ namespace hpl {
 		OAL_Source_SetFilterGainLF(mlChannel, afGainLF);
 	}
 
+	void cOpenALSoundChannel::SetEnvSendGain(float afGain)
+	{
+		OAL_Source_SetAuxSendGain(mlChannel, afGain);
+	}
+
 }

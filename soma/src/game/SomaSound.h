@@ -39,7 +39,7 @@ public:
 		tString msBank;
 		tString msSample;
 	};
-	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch, eDsp_PanLevel };
+	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch, eDsp_PanLevel, eDsp_ReverbLevel };
 	struct cEnvelope
 	{
 		int mlParam = -1;
@@ -96,6 +96,7 @@ public:
 		float mfPitchRand = 0;
 		bool mb3D = true;
 		float mfPanLevel = 1;
+		float mfReverbGain = 1;
 		bool mbOneShot = true;
 		float mfMinDist = 1;
 		float mfMaxDist = 20;
@@ -189,7 +190,7 @@ private:
 		float mfGain;
 		float mfSpeed;
 		bool mbLoop;
-		float mfGainHF = 1, mfGainLF = 1;
+		float mfGainHF = 1, mfGainLF = 1, mfSendGain = 1;
 	};
 	struct cSlot
 	{

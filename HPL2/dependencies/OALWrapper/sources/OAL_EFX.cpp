@@ -465,3 +465,18 @@ void OAL_UpdateEffectSlots()
 	gpDevice->GetEFXManager()->UpdateSlots();
 
 }
+
+void OAL_Source_SetAuxSendGain( int alSourceHandle, float afGain)
+{
+    if ((gpDevice == NULL) || !gpDevice->IsEFXActive())
+		return;
+
+	cOAL_Source* pSource = gpDevice->GetSource(alSourceHandle);
+
+	if (pSource)
+	{
+		pSource->Lock();
+		pSource->SetAuxSendGain(afGain);
+		pSource->Unlock();
+	}
+}

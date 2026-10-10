@@ -72,5 +72,6 @@ void OAL_Source_SetFilterType( int alSourceHandle, eOALFilterType aeType);
 void OAL_Source_SetFilterGain( int alSourceHandle, float afGain);
 void OAL_Source_SetFilterGainHF( int alSourceHandle, float afGainHF);
 void OAL_Source_SetFilterGainLF( int alSourceHandle, float afGainLF);
+void OAL_Source_SetAuxSendGain( int alSourceHandle, float afGain);
 
 #endif	// _OAL_EFX_H

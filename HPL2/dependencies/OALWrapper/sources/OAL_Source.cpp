@@ -46,7 +46,8 @@ cOAL_Source::cOAL_Source(cOAL_SourceManager *apSourceManager, int alId, int alSe
 																					  mbPaused(false), 
 																					  mbNeedsReset(true),
 																					  mpFilter(NULL),
-																					  mpDirectFilter(NULL)
+																					  mpDirectFilter(NULL),
+																																		  mfSendGain(1)
 {
 	LogMsg("",eOAL_LogVerbose_High, eOAL_LogMsg_Info, "", "cOAL_Source constructor called...\n" );
 	if(apSourceManager)
@@ -499,6 +500,7 @@ void cOAL_Source::Stop ( bool abRemove )
 		SetFilterGainHF(1);
 		SetFilterGainLF(1);
 		SetFilterType(eOALFilterType_Null);
+		mfSendGain = 1;
 		for(int i=0; i<(int)mvSends.size(); ++i)
 			SetAuxSend(i,NULL,NULL);
 	}
@@ -765,7 +767,7 @@ void cOAL_Source::SetAuxSend( int alSendId, cOAL_EffectSlot* apSlot, cOAL_Filter
 	pSend->SetSlot(apSlot);
 	pSend->SetFilter(apFilter);
 
-	RUN_AL_FUNC(alSource3i(mlObjectId, AL_AUXILIARY_SEND_FILTER, pSend->GetSlot(), alSendId, pSend->GetFilter()));
+	ApplyAuxSend(alSendId);
 }
 
 //--------------------------------------------------------------------------------
@@ -785,7 +787,7 @@ void cOAL_Source::SetAuxSendSlot( int alSendId, cOAL_EffectSlot* apSlot )
 
 	pSend->SetSlot(apSlot);
 		
-	RUN_AL_FUNC(alSource3i(mlObjectId, AL_AUXILIARY_SEND_FILTER, pSend->GetSlot(), alSendId, pSend->GetFilter()));
+	ApplyAuxSend(alSendId);
 }
 
 //--------------------------------------------------------------------------------
@@ -805,7 +807,31 @@ void cOAL_Source::SetAuxSendFilter( int alSendId, cOAL_Filter* apFilter )
 
 	pSend->SetFilter(apFilter);
 	
+	ApplyAuxSend(alSendId);
+}
+
+// AL copies filter params on attach, so one filter serves direct and send paths
+void cOAL_Source::ApplyAuxSend(int alSendId)
+{
+	DEF_FUNC_NAME("");
+	FUNC_USES_AL;
+
+	cOAL_SourceSend* pSend = mvSends[alSendId];
+	bool bScale = alSendId == 0 && mpFilter && mfSendGain != 1;
+	float fGain = bScale ? mpFilter->GetGain() : 1;
+	if(bScale)
+		mpFilter->SetGain(fGain * mfSendGain);
 	RUN_AL_FUNC(alSource3i(mlObjectId, AL_AUXILIARY_SEND_FILTER, pSend->GetSlot(), alSendId, pSend->GetFilter()));
+	if(bScale)
+		mpFilter->SetGain(fGain);
+}
+
+void cOAL_Source::SetAuxSendGain(float afGain)
+{
+	if(!gpDevice->IsEFXActive())
+		return;
+	mfSendGain = afGain;
+	SetFilterEnabled(true, 0x2);
 }
 
 //--------------------------------------------------------------------------------
@@ -825,8 +851,7 @@ void cOAL_Source::UpdateFiltering(unsigned int alSends)
 
 	for(int i=0; i<(int)mvSends.size(); ++i)
 	{
-		pSend = mvSends[i];
-		RUN_AL_FUNC(alSource3i(mlObjectId, AL_AUXILIARY_SEND_FILTER, pSend->GetSlot(), i, pSend->GetFilter()));
+		ApplyAuxSend(i);
 	}
 }
 

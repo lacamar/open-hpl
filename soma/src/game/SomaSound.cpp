@@ -154,6 +154,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			ev.mfPitchRand = Num(pEvent, "pitch_randomization");
 			ev.mb3D = Text(pEvent, "mode") == "x_3d";
 			ev.mfPanLevel = Num(pEvent, "panlevel3d", 1);
+			ev.mfReverbGain = std::pow(10.0f, Num(pEvent, "reverblevel_db") / 20);
 			ev.mbOneShot = Text(pEvent, "oneshot", "Yes") != "No";
 			ev.mfMinDist = Num(pEvent, "mindistance", 1);
 			ev.mfMaxDist = Num(pEvent, "maxdistance", 20);
@@ -213,7 +214,7 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
 				{
 					static const std::map<tString, int> mapDsp = {{"Volume", eDsp_Volume}, {"FMOD ParamEQ", eDsp_EqGain}, {"FMOD Lowpass", eDsp_Lowpass},
-						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}, {"3D Pan Level", eDsp_PanLevel}};
+						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}, {"3D Pan Level", eDsp_PanLevel}, {"Reverb Level", eDsp_ReverbLevel}};
 					auto dsp = mapDsp.find(Text(pEnv, "dsp_name"));
 					int lParamIdx = (int)Num(pEnv, "dsp_paramindex");
 					if (dsp == mapDsp.end() || lParamIdx != (dsp->second == eDsp_EqGain ? 2 : 0) || Text(pEnv, "mute") == "1")
@@ -823,7 +824,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 	bool bPending = false;
 	std::vector<std::vector<float>> vGain(mpEvent->mvLayers.size());
 	std::vector<cVector2f> vFilter(mpEvent->mvLayers.size(), cVector2f(1));
-	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1), vPan(mpEvent->mvLayers.size(), 1);
+	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1), vPan(mpEvent->mvLayers.size(), 1), vSend(mpEvent->mvLayers.size(), mpEvent->mfReverbGain);
 	for (size_t l = 0; l < mpEvent->mvLayers.size(); ++l)
 	{
 		const cSomaSoundEvents::cLayer &layer = mpEvent->mvLayers[l];
@@ -843,6 +844,7 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			case cSomaSoundEvents::eDsp_Highpass: vFilter[l].y /= std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)); break;
 			case cSomaSoundEvents::eDsp_Pitch: vSpeed[l] *= std::pow(2.0f, (fY - 0.5f) * 8); break;
 			case cSomaSoundEvents::eDsp_PanLevel: vPan[l] *= fY; break;
+			case cSomaSoundEvents::eDsp_ReverbLevel: vSend[l] *= fY; break;
 			}
 		}
 		vGain[l].resize(layer.mvSounds.size());
@@ -938,6 +940,11 @@ void cSomaSoundInstance::Update(float afTimeStep)
 			v.mpEntry->GetChannel()->SetFilterGainHF(vF.x);
 			v.mpEntry->GetChannel()->SetFilterGainLF(vF.y);
 		}
+		if (std::fabs(vSend[v.mlLayer] - v.mfSendGain) > 0.01f)
+		{
+			v.mfSendGain = vSend[v.mlLayer];
+			v.mpEntry->GetChannel()->SetEnvSendGain(v.mfSendGain);
+		}
 		if (mb3DPlay)
 			v.mpEntry->GetChannel()->SetPosition(vPos[v.mlLayer]);
 		mfAudibility += fGain;
@@ -958,6 +965,9 @@ tString cSomaSoundInstance::Describe()
 	for (const cVoice &v : mvVoices)
 		if (v.mfGainHF < 1 || v.mfGainLF < 1)
 			s += " hf=" + cString::ToString(v.mfGainHF) + " lf=" + cString::ToString(v.mfGainLF);
+	for (const cVoice &v : mvVoices)
+		if (v.mfSendGain < 1)
+			s += " send=" + cString::ToString(v.mfSendGain);
 	for (size_t i = 0; i < mvParamValue.size(); ++i)
 		s += " " + mpEvent->mvParams[i].msName + "=" + cString::ToString(mvParamValue[i]);
 	return s;
