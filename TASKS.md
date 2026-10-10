@@ -139,11 +139,13 @@ four crash fixes, RGTC2 normal maps, FBX loader, mesh cache in `$XDG_CACHE_HOME`
 
 Verified: intro -> apartment (phone, tracer fluid, exit door) -> subway, with autosaves;
 laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awake
-(`scripts/soma-play.py`; the lab run teleports to `Area_ForceTalk`).
+(`scripts/soma-play.py`; the lab run teleports to `Area_ForceTalk`). Story verified through
+05_01 credits -> 05_02 (wake-up, Catherine) -> 05_03 outro.
 
 - Saves restore in place (script objects by member name, entity state, timers, player pose).
-  Not saved yet: playing voices, handles to engine objects in script members (re-acquired
-  by scripts), agents' native state.
+  Not saved yet: handles to engine objects in script members (re-acquired by scripts),
+  agents' native state. Playing voices aren't saved by the official game either (Rebirth
+  `cLuxVoiceHandler` saves settings/history only).
 - `PlayerState_InteractiveCameraAnimation::OnLeaveState` index out of bounds after the wake-up.
   Only empty `mvNodes` can do it (index clamped to len-1): `Reset()` clears nodes but keeps the
   state, or `_Global_Setup` found no `<anim>_N` areas. `ChangeState` order matches Rebirth (0xca5e90).
