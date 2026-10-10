@@ -242,6 +242,8 @@ namespace
 		cVector3f mvGoal = 0;
 		bool mbTurning = false;
 		float mfTurnGoal = 0;
+		bool mbBanking = false;
+		float mfBankAngleMul = 1, mfBankMaxAngle = 0, mfBankMaxSpeed = 1, mfTurnSpeed = 0, mfTurnSign = 1, mfRoll = 0, mfRollGoal = 0;
 		tString msTurnedCallback;
 		int mlAnimState = -1;
 		bool mbAnimPlaying = false;
@@ -522,6 +524,8 @@ namespace
 				float fStep = cMath::Min(std::fabs(fDiff) * fTurnSpeedMul, fTurnMax) * afTimeStep;
 				fStep = cMath::Min(fStep, std::fabs(fDiff));
 				mpBody->SetYaw(fYaw + (fDiff < 0 ? -fStep : fStep));
+				mfTurnSpeed = fStep / afTimeStep;
+				mfTurnSign = fDiff < 0 ? -1.0f : 1.0f;
 				if (mbTurning && std::fabs(fDiff) < cMath::ToRad(2))
 				{
 					mbTurning = false;
@@ -531,6 +535,11 @@ namespace
 						SomaMapScriptCall("void " + msTurnedCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEntity->msName); });
 				}
 			}
+			else
+				mfTurnSpeed = cMath::Max(mfTurnSpeed - 4 * afTimeStep, 0.0f);
+			if (mbBanking)
+				mfRollGoal = cMath::Clamp(mfTurnSign * mfTurnSpeed * mfBankAngleMul, -mfBankMaxAngle, mfBankMaxAngle);
+			mfRoll += cMath::Clamp((mfRollGoal - mfRoll) * mfBankMaxSpeed, -mfBankMaxSpeed, mfBankMaxSpeed) * afTimeStep;
 
 			float fWanted = 0;
 			if (mbMoving)
@@ -1380,6 +1389,8 @@ namespace
 				return;
 			}
 			cMatrixf mtx = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw() + kPif), cMath::MatrixRotateX(-mpBody->GetPitch() * mpBody->GetEntityPitchAmount()));
+			if (cAgentCharMover *pMover = Find<cAgentCharMover>(eComp_CharMover); pMover && pMover->mfRoll != 0)
+				mtx = cMath::MatrixMul(mtx, cMath::MatrixRotateZ(-pMover->mfRoll));
 			mtx.SetTranslation(mpBody->GetFeetPosition());
 			cMatrixf mtxOffset = mtxMeshOffset;
 			mtxOffset.m[1][3] -= mfAlignY;
@@ -1861,7 +1872,7 @@ tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning) +
 			 " anim=" + (apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim)->GetName() : tString("")) +
 			 " idle_extra=" + cString::ToString(pM->mlIdleExtraCount) + "/" + cString::ToString(pM->mfIdleExtraWait) + " wall=" + cString::ToString(pM->mbWallAvoid) + "/" +
-			 cString::ToString((int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; }));
+			 cString::ToString((int)std::count_if(pM->mvWallSamples.begin(), pM->mvWallSamples.end(), [](auto &w) { return w.mbHit; })) + " roll=" + cString::ToString(pM->mfRoll);
 	return s;
 }
 
@@ -2239,11 +2250,14 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetSpeedState_SidewayDeacc(float afX)", +[](CM *m, float x) { if (cAgentSpeedState *s = m->Edit()) s->mfSidewayDeacc = x; });
 	SOMA_METHOD(e, T, "void SetWallAvoidanceActive(bool abX)", +[](CM *m, bool b) { m->mbWallAvoid = b; });
 	SOMA_METHOD(e, T, "void SetIdleExtraAnimActive(bool abX)", +[](CM *m, bool b) { m->mbIdleExtraActive = b; });
-	for (const char *pNoop : {"void SetDynamicObjectAvoidanceActive(bool abX)", "void SetBankingActive(bool abX)"})
-		SOMA_METHOD(e, T, pNoop, +[](CM *, bool) {});
+	SOMA_METHOD(e, T, "void SetDynamicObjectAvoidanceActive(bool abX)", +[](CM *, bool) {});
+	SOMA_METHOD(e, T, "void SetBankingActive(bool abX)", +[](CM *m, bool b) { m->mbBanking = b; });
+	SOMA_METHOD(e, T, "void SetBankingAngleMul(float afX)", +[](CM *m, float x) { m->mfBankAngleMul = x; });
+	SOMA_METHOD(e, T, "void SetBankingMaxAngle(float afX)", +[](CM *m, float x) { m->mfBankMaxAngle = x; });
+	SOMA_METHOD(e, T, "void SetBankingMaxSpeed(float afX)", +[](CM *m, float x) { m->mfBankMaxSpeed = x; });
 	SOMA_METHOD(e, T, "void SetUse3DMovement(bool abX)", +[](CM *m, bool b) { m->mb3D = b; });
 	for (const char *pNoop : {"void SetTurnStoppedToWalkSpeed(float afX)", "void SetTurnWalkToStoppedSpeed(float afX)", "void SetVerticalMoveSpeedExtraAnimMul(float afX)",
-							  "void SetBankingAngleMul(float afX)", "void SetBankingMaxAngle(float afX)", "void SetBankingSpeedMul(float afX)", "void SetBankingMaxSpeed(float afX)"})
+							  "void SetBankingSpeedMul(float afX)"})
 		SOMA_METHOD(e, T, pNoop, +[](CM *, float) {});
 	SOMA_METHOD(e, T, "void SetIdleExtraAnimName(const tString&in asName)", +[](CM *m, S n) { m->SetupIdleExtra(n, m->mfIdleExtraMin, m->mfIdleExtraMax); });
 	SOMA_METHOD(e, T, "void SetupWallAvoidance(float afRadius, float afSteerAmount, int alSamples)", +[](CM *m, float r, float s, int n) {
