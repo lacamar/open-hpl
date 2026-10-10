@@ -26,6 +26,7 @@ public:
 	tString msScriptName;
 	bool mbSaved = true;
 	static const std::vector<cSomaLuxScriptable *> &GetAll() { return mvAll; }
+	static uint64_t GetAllVersion() { return mlAllVersion; }
 	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
 	bool CallWithFloat(const std::string &asDecl, float afX);
 	bool CallWithObject(const std::string &asDecl, void *apObj);
@@ -87,6 +88,7 @@ protected:
 	cFader *GetOrAddFader(uint64_t alId, bool abSkipIfExists);
 
 	static std::vector<cSomaLuxScriptable *> mvAll;
+	static uint64_t mlAllVersion;
 
 	cSomaScriptRuntime *mpRuntime;
 	asIScriptObject *mpScript;

@@ -65,14 +65,17 @@ float SomaEasing(int alType, float t)
 }
 
 std::vector<cSomaLuxScriptable *> cSomaLuxScriptable::mvAll;
+uint64_t cSomaLuxScriptable::mlAllVersion = 0;
 
 cSomaLuxScriptable::cSomaLuxScriptable() : mpRuntime(NULL), mpScript(NULL)
 {
 	mvAll.push_back(this);
+	++mlAllVersion;
 }
 
 cSomaLuxScriptable::~cSomaLuxScriptable()
 {
+	++mlAllVersion;
 	for (size_t i = 0; i < mvAll.size(); ++i)
 		if (mvAll[i] == this)
 		{

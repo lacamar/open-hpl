@@ -9,6 +9,7 @@
 #include "impl/scriptarray.h"
 
 #include <map>
+#include <unordered_map>
 #include <limits>
 #include <sstream>
 
@@ -100,14 +101,50 @@ static bool IsClassOrDerived(asITypeInfo *apType, const tString &asClass)
 	return false;
 }
 
+static std::vector<cSomaLuxScriptable *> FindScriptables(const tString &asObject)
+{
+	std::vector<cSomaLuxScriptable *> vRet;
+	const std::vector<cSomaLuxScriptable *> &vAll = cSomaLuxScriptable::GetAll();
+	if (asObject.find('*') != tString::npos)
+	{
+		for (cSomaLuxScriptable *p : vAll)
+			if (p->msScriptName.empty() == false && cString::MatchesWildcard(asObject, p->msScriptName))
+				vRet.push_back(p);
+		return vRet;
+	}
+	// msScriptName is set after construction, so a miss falls back to a scan and drops the index
+	static std::unordered_multimap<tString, cSomaLuxScriptable *> mapByName;
+	static uint64_t lVersion = ~0ull;
+	if (lVersion != cSomaLuxScriptable::GetAllVersion())
+	{
+		mapByName.clear();
+		for (cSomaLuxScriptable *p : vAll)
+			if (p->msScriptName.empty() == false)
+				mapByName.emplace(p->msScriptName, p);
+		lVersion = cSomaLuxScriptable::GetAllVersion();
+	}
+	auto range = mapByName.equal_range(asObject);
+	for (auto it = range.first; it != range.second; ++it)
+		if (it->second->msScriptName == asObject)
+			vRet.push_back(it->second);
+	if (vRet.empty())
+	{
+		for (cSomaLuxScriptable *p : vAll)
+			if (p->msScriptName == asObject)
+				vRet.push_back(p);
+		if (vRet.empty() == false)
+			lVersion = ~0ull;
+	}
+	return vRet;
+}
+
 bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc)
 {
 	bool bFound = false;
-	std::vector<cSomaLuxScriptable *> vAll = cSomaLuxScriptable::GetAll();
-	for (cSomaLuxScriptable *p : vAll)
+	for (cSomaLuxScriptable *p : FindScriptables(asObject))
 	{
 		asIScriptObject *pScript = p->GetScript();
-		if (pScript == NULL || p->msScriptName.empty() || cString::MatchesWildcard(asObject, p->msScriptName) == false)
+		if (pScript == NULL)
 			continue;
 		if (asClass != "" && IsClassOrDerived(pScript->GetObjectType(), asClass) == false)
 			continue;
