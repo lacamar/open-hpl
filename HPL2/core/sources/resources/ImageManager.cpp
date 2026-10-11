@@ -387,7 +387,10 @@ namespace hpl {
 				//should be changed? Nahh.. 510x510 is a good upper size
 				
 				//pImage = CreateBitmapFrame(mvFrameSize)->AddBitmap(apBmp);
-				cFrameBitmap * pFrame = CreateBitmapFrame(mvFrameSize);
+				cVector2l vSize = mvFrameSize;
+				while(vSize.x < apBmp->GetWidth()+2) vSize.x *= 2;
+				while(vSize.y < apBmp->GetHeight()+2) vSize.y *= 2;
+				cFrameBitmap * pFrame = CreateBitmapFrame(vSize);
 				if(pFrame)
 				{
 					pImage = pFrame->AddBitmap(apBmp, asFullPath, NULL);
