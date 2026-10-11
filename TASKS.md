@@ -176,6 +176,9 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   scratchpad `lincmp.py`): ours/ref ~2-3.4 for spots, ~2.1 point, ~1.4 non-SH box, 1.0 SH box.
   Ratio grows on dark albedo; spot cone edge wider than ref. Light instance data (colour = diffuse^2 x brightness x
   distance fade, falloff/spot falloff x2, translucency^2 x 0.5) matches the exe (0x1403fbbe0); gap is elsewhere.
+  2026-10-11 re-measure (solo, `--only ours` vs cached ref): direct still ~2.5-5x, probes 0.65-1.1x. Colour-space
+  defines, lamp connection, light masks (BoxMask) and instance data match; gap is spatial (ref falls off
+  faster away from the light). Ours ignores per-light `AffectedBySSAO` and multiplies SSAO over all lights.
 - `bedlight_1` alone at the bed pose (2026-10-02, stale): ours 0.83, ref 1.41 (both unshadowed, no SSAO).
 - Scratch `user_settings.cfg` has `ShadowsActive="false"`; the ref runs the default config (shadows on).
   Comparisons need `set_render_setting name=shadows value=1`.
