@@ -1983,6 +1983,16 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, A, "float GetDistanceToPlayer()", +[](E *p) { return cMath::Vector3Dist(AgentPos(p), PlayerFeet()); });
 	SOMA_METHOD(e, A, "float GetDistanceToPlayer2D()", +[](E *p) { cVector3f d = AgentPos(p) - PlayerFeet(); d.y = 0; return d.Length(); });
+	SOMA_METHOD(e, A, "float GetPlayerMovementTowardEntity()", +[](E *p) {
+		iCharacterBody *b = PlayerBody();
+		if (b == NULL)
+			return -1.0f;
+		cVector3f v = b->GetVelocity(gpSomaBase->mpEngine->GetStepSize()), d = AgentPos(p) - b->GetPosition();
+		v.y = d.y = 0;
+		if (v.SqrLength() < 0.01f)
+			return -1.0f;
+		return cMath::Vector3Dot(cMath::Vector3Normalize(v), cMath::Vector3Normalize(d));
+	});
 	SOMA_METHOD(e, A, "float GetDistanceToPos(const cVector3f&in avPos)", +[](E *p, V v) { return cMath::Vector3Dist(AgentPos(p), v); });
 	SOMA_METHOD(e, A, "float GetDistanceToPos2D(const cVector3f&in avPos)", +[](E *p, V v) { cVector3f d = AgentPos(p) - v; d.y = 0; return d.Length(); });
 	SOMA_METHOD(e, A, "const cVector3f& GetPlayerPos()", +[](E *) -> const cVector3f & { static cVector3f v; iCharacterBody *b = PlayerBody(); v = b ? b->GetPosition() : cVector3f(0); return v; });

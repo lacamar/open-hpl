@@ -2206,10 +2206,56 @@ static tString VarGet(cSomaLuxEntity *e, const tString &n)
 	return it == e->mmapScriptVars.end() ? tString() : it->second;
 }
 
+static iPhysicsBody *SomaClosestBody(const cVector3f &st, const cVector3f &dir, float len, float &fDist, cVector3f &vNormal)
+{
+	struct cRay : iPhysicsRayCallback
+	{
+		iPhysicsBody *mpBody = NULL;
+		float mfDist = 0;
+		cVector3f mvNormal;
+		bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
+		{
+			if (apBody->GetCollide() && apBody->IsCharacter() == false && (mpBody == NULL || apParams->mfDist < mfDist))
+			{
+				mpBody = apBody;
+				mfDist = apParams->mfDist;
+				mvNormal = apParams->mvNormal;
+			}
+			return true;
+		}
+	} ray;
+	fDist = 0;
+	vNormal = 0;
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
+		return NULL;
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, st, st + dir * len, true, true, false);
+	fDist = ray.mfDist;
+	vNormal = ray.mvNormal;
+	return ray.mpBody;
+}
+
+// iLuxEntity/cLuxMap::GetClosestBody: the official one defers via CreateDelayedScriptCallback; no caller depends on the delay
+static void SomaClosestBodyCallback(asIScriptObject *apObj, const tString &asFunc, const cVector3f &st, const cVector3f &dir, float len)
+{
+	float fDist;
+	cVector3f vNormal;
+	iPhysicsBody *pBody = SomaClosestBody(st, dir, len, fDist, vNormal);
+	bool bOk = pBody != NULL;
+	cSomaScriptRuntime::Get()->Call(apObj, "void " + asFunc + "(bool, float, const cVector3f&in, iPhysicsBody@)", [&](asIScriptContext *c) {
+		c->SetArgByte(0, bOk);
+		c->SetArgFloat(1, fDist);
+		c->SetArgObject(2, &vNormal);
+		c->SetArgAddress(3, pBody);
+	});
+}
+
 static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 {
 	typedef cSomaLuxEntity E;
 	typedef const tString &S;
+	SOMA_METHOD_NEW(e, T, "void GetClosestBody(const tString&in asCallbackFunc, const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength)",
+					+[](E *p, S f, const cVector3f &st, const cVector3f &dir, float len) { SomaClosestBodyCallback(p->GetScript(), f, st, dir, len); });
 	SOMA_METHOD_NEW(e, T, "const tString& GetName()", +[](E *p) -> const tString & { return p->msName; });
 	SOMA_METHOD_NEW(e, T, "const tID& GetID()", +[](E *p) -> const cSomaID & { return p->mID; });
 	SOMA_METHOD_NEW(e, T, "eLuxEntityType GetEntityType()", +[](E *p) { return p->meType; });
@@ -2934,34 +2980,9 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 				  }
 				  return bFound;
 			  });
-	SOMA_FUNC(e, "iPhysicsBody@ cLux_GetClosestBody(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, float &out afDistance, cVector3f &out avSurfaceNormal)",
-			  +[](const cVector3f &st, const cVector3f &dir, float len, float &fDist, cVector3f &vNormal) -> iPhysicsBody * {
-				  struct cRay : iPhysicsRayCallback
-				  {
-					  iPhysicsBody *mpBody = NULL;
-					  float mfDist = 0;
-					  cVector3f mvNormal;
-					  bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
-					  {
-						  if (apBody->GetCollide() && apBody->IsCharacter() == false && (mpBody == NULL || apParams->mfDist < mfDist))
-						  {
-							  mpBody = apBody;
-							  mfDist = apParams->mfDist;
-							  mvNormal = apParams->mvNormal;
-						  }
-						  return true;
-					  }
-				  } ray;
-				  fDist = 0;
-				  vNormal = 0;
-				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-				  if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
-					  return NULL;
-				  pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, st, st + dir * len, true, true, false);
-				  fDist = ray.mfDist;
-				  vNormal = ray.mvNormal;
-				  return ray.mpBody;
-			  });
+	SOMA_FUNC(e, "iPhysicsBody@ cLux_GetClosestBody(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, float &out afDistance, cVector3f &out avSurfaceNormal)", SomaClosestBody);
+	SOMA_METHOD(e, "cLuxMap", "void GetClosestBody(const tString&in asCallbackFunc, const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength)",
+				+[](cSomaLuxMap *m, const tString &f, const cVector3f &st, const cVector3f &dir, float len) { SomaClosestBodyCallback(m->GetScript(), f, st, dir, len); });
 	SOMA_FUNC(e, "bool cLux_GetClosestCharCollider(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, bool abCheckDynamic, cLuxClosestCharCollider @apOutput)",
 			  +[](const cVector3f &st, const cVector3f &dir, float len, bool dyn, char *out) {
 				  struct cRay : iPhysicsRayCallback

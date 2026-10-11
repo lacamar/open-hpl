@@ -1171,6 +1171,7 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetPausedAll(bool abX)", +[](void *, bool b) { VH->SetPausedAll(b); });
 	SOMA_METHOD(e, T, "bool CharacterIsSpeaking(const tString&in asName)", +[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->CharacterIsSpeaking(s); });
 	SOMA_METHOD(e, T, "void AddCharacterSpeakingCallback(const tString&in asCharacter, const tString&in asCallback)", +[](void *, S c, S f) { VH->SetSpeakingCallback(c, f); });
+	SOMA_METHOD(e, T, "void RemoveCharacterSpeakingCallback(const tString&in asCharacter)", +[](void *, S c) { VH->SetSpeakingCallback(c, ""); });
 	SOMA_METHOD(e, T, "void GetSpectrumFromSpeakingCharacter(const tString&in asCharacter, array<float>&out aDestArray, int alNumSamples=64)",
 				+[](void *, S s, CScriptArray &arr, int n) {
 					std::vector<float> v;
