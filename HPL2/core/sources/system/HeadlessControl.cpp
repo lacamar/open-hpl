@@ -260,7 +260,7 @@ namespace hpl {
 	}
 
 	cHeadlessControlServer::cHeadlessControlServer(cEngine *apEngine, const tString &asSocketPath)
-		: mpEngine(apEngine), msSocketPath(asSocketPath), mbListening(false), mlListenFd(-1), mpThread(NULL)
+		: mpEngine(apEngine), msSocketPath(asSocketPath), mbListening(false), mlListenFd(-1), mlClientFd(-1), mpThread(NULL)
 	{
 		mpQueueMutex = cPlatform::CreateMutEx();
 		mpLogMutex = cPlatform::CreateMutEx();
@@ -326,6 +326,7 @@ namespace hpl {
 			shutdown(lFd, SHUT_RDWR);
 			close(lFd);
 		}
+		if(mlClientFd >= 0) shutdown(mlClientFd, SHUT_RDWR);
 #endif
 		if(mpThread)
 		{
@@ -415,6 +416,7 @@ namespace hpl {
 
 		int lClientFd = accept(mlListenFd, NULL, NULL);
 		if(lClientFd < 0) return;
+		mlClientFd = lClientFd;
 
 		tString sBuffer;
 		char vReadBuf[4096];
@@ -442,6 +444,7 @@ namespace hpl {
 			}
 		}
 
+		mlClientFd = -1;
 		close(lClientFd);
 #endif
 	}

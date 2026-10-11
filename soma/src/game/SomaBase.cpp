@@ -1342,7 +1342,9 @@ void cSomaBase::ProceedPastBoot()
 		const char *pStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS");
 		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, pStartPos ? pStartPos : "*"))
 			return;
-		Log("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s)\n", pTestMap, sError.c_str());
+		Error("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s)\n", pTestMap, sError.c_str());
+		mpEngine->Exit();
+		return;
 	}
 
 	if (cSomaLuxMap::GetCurrent() == NULL)

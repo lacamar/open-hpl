@@ -135,6 +135,7 @@ namespace hpl {
 		bool mbListening;
 
 		int mlListenFd;
+		volatile int mlClientFd;
 		iThread *mpThread;
 		iMutex *mpQueueMutex;
 		iMutex *mpLogMutex;
