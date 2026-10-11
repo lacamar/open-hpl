@@ -1626,6 +1626,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	});
 	SOMA_FUNC(e, "void Light_SetFlickerActive(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetFlickerActive(b); }); });
 	SOMA_FUNC(e, "void Light_SetCastShadows(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetCastShadows(b); }); });
+	// Only picks the derivative gobo AA variant; we always use the backbuffer one
+	SOMA_FUNC(e, "void Light_SetCheapGobo(const tString &in asLightName, bool abX)", +[](S, bool) {});
 	static auto FadeSet = [](S asProbe, S asSet, float t) {
 		ForLights(asProbe, [&](iLight *l) { if (l->GetLightType() == eLightType_Box) static_cast<cLightBox *>(l)->FadeIrradianceSet(asSet, t); });
 	};
