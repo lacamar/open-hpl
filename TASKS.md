@@ -177,6 +177,8 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   Ratio grows on dark albedo; spot cone edge wider than ref. Light instance data (colour = diffuse^2 x brightness x
   distance fade, falloff/spot falloff x2, translucency^2 x 0.5) matches the exe (0x1403fbbe0); gap is elsewhere.
 - `bedlight_1` alone at the bed pose (2026-10-02, stale): ours 0.83, ref 1.41 (both unshadowed, no SSAO).
+- Scratch `user_settings.cfg` has `ShadowsActive="false"`; the ref runs the default config (shadows on).
+  Comparisons need `set_render_setting name=shadows value=1`.
 - Window light shaft visible in ours with all lights off; absent in ref. `window_ray_*` are hidden by
   `SetupLights` (start-anchored wildcard, as Rebirth `_Map_GetBillboardArray`); `bathroom_window_ray_*`
   stay visible in both; billboard colour matches Rebirth `cBillboard::SetColor`. Needs a ref pose.
