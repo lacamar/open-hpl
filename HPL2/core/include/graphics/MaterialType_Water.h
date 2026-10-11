@@ -46,6 +46,10 @@ namespace hpl {
 		float mfWaveFreq;
 		float mfFadeWhenShallowMul = 0;
 		float mfFadeWhenShallowPow = 1;
+		bool mbHasVertexWaves = false;
+		float mfVertexWaveSpeed = 1;
+		float mfVertexWaveAmplitude = 1;
+		float mfVertexWaveFreq = 1;
 	};
 
 	//-----------------------------------------------------

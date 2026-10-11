@@ -38,6 +38,7 @@
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 #include "graphics/RendererDeferred.h"
+#include "resources/FileSearcher.h"
 
 
 
@@ -66,6 +67,10 @@ namespace hpl {
 	#define kVar_afFarPlane							13
 	#define kVar_afReflectionAlpha					14
 	#define kVar_avFadeWhenShallowProps				15
+	#define kVar_a_mtxModel							16
+	#define kVar_afVtxT								17
+	#define kVar_afVtxWaveAmplitude					18
+	#define kVar_afVtxWaveFreq						19
 
 	//------------------------------
 	//Diffuse Features and data
@@ -75,16 +80,18 @@ namespace hpl {
 	#define eFeature_Diffuse_ReflectionFading		eFlagBit_2
 	#define eFeature_Diffuse_Fog					eFlagBit_3
 	#define eFeature_Diffuse_FadeWhenShallow		eFlagBit_4
+	#define eFeature_Diffuse_VertexWaves			eFlagBit_5
 	
-	#define kDiffuseFeatureNum 5
+	#define kDiffuseFeatureNum 6
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
-		cProgramComboFeature("UseReflection", kPC_FragmentBit),
+		cProgramComboFeature("UseReflection", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseCubeMapReflection", kPC_FragmentBit, eFeature_Diffuse_Reflection),
 		cProgramComboFeature("UseReflectionFading", kPC_FragmentBit, eFeature_Diffuse_Reflection),
 		cProgramComboFeature("UseFog", kPC_FragmentBit | kPC_VertexBit),
 		cProgramComboFeature("UseFadeWhenShallow", kPC_FragmentBit),
+		cProgramComboFeature("UseVertexWaves", kPC_VertexBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -148,7 +155,9 @@ namespace hpl {
 		defaultVars.Add("UseNormalMapping");
 		if(iRenderer::GetRefractionEnabled())	defaultVars.Add("UseRefraction");
         				
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "water_surface_frag.glsl", 
+		// SOMA ships a dedicated water vertex shader (vertex waves)
+		const char *pVtx = mpResources->GetFileSearcher()->GetFilePath("water_surface_vtx.hpsl") != _W("") ? "water_surface_vtx.glsl" : "deferred_base_vtx.glsl";
+		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse",pVtx, "water_surface_frag.glsl", 
 											vDiffuseFeatureVec,kDiffuseFeatureNum, defaultVars);
 		
 
@@ -172,6 +181,10 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("afFarPlane",kVar_afFarPlane, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afReflectionAlpha",kVar_afReflectionAlpha, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avFadeWhenShallowProps",kVar_avFadeWhenShallowProps, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxModel",kVar_a_mtxModel, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afVtxT",kVar_afVtxT, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afVtxWaveAmplitude",kVar_afVtxWaveAmplitude, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afVtxWaveFreq",kVar_afVtxWaveFreq, eMaterialRenderMode_Diffuse);
 
 	}
 	void cMaterialType_Water::DestroyData()
@@ -260,6 +273,7 @@ namespace hpl {
 			if(pVars->mfReflectionFadeEnd>0)						lFlags |= eFeature_Diffuse_ReflectionFading;
 			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog;
 			if(pVars->mfFadeWhenShallowMul>0)						lFlags |= eFeature_Diffuse_FadeWhenShallow;
+			if(pVars->mbHasVertexWaves)								lFlags |= eFeature_Diffuse_VertexWaves;
 			
 			return mpProgramManager->GenerateProgram(eMaterialRenderMode_Diffuse,lFlags);
 		}
@@ -295,6 +309,12 @@ namespace hpl {
 			apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x);
 			apProgram->SetFloat(kVar_afWaveAmplitude, pVars->mfWaveAmplitude * 0.04f);
 			apProgram->SetFloat(kVar_afWaveFreq	, pVars->mfWaveFreq * 10.0f);
+			if(pVars->mbHasVertexWaves)
+			{
+				apProgram->SetFloat(kVar_afVtxT, apRenderer->GetTimeCount() * pVars->mfVertexWaveSpeed);
+				apProgram->SetFloat(kVar_afVtxWaveAmplitude, pVars->mfVertexWaveAmplitude);
+				apProgram->SetFloat(kVar_afVtxWaveFreq, pVars->mfVertexWaveFreq);
+			}
 
 			////////////////////////////
 			// Fog
@@ -360,6 +380,8 @@ namespace hpl {
 
 	void cMaterialType_Water::SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer)
 	{
+		cMatrixf *pMtx = apObject->GetModelMatrixPtr();
+		apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
 	}
 
 
@@ -399,6 +421,10 @@ namespace hpl {
 		pVars->mfWaveFreq = apVars->GetVarFloat("WaveFreq", 1.0f);
 		pVars->mfFadeWhenShallowMul = apVars->GetVarFloat("FadeWhenShallowMul", 0);
 		pVars->mfFadeWhenShallowPow = apVars->GetVarFloat("FadeWhenShallowPow", 1);
+		pVars->mbHasVertexWaves = apVars->GetVarBool("HasVertexWaves", false);
+		pVars->mfVertexWaveSpeed = apVars->GetVarFloat("VertexWaveSpeed", 1.0f);
+		pVars->mfVertexWaveAmplitude = apVars->GetVarFloat("VertexWaveAmplitude", 1.0f);
+		pVars->mfVertexWaveFreq = apVars->GetVarFloat("VertexWaveFreq", 1.0f);
 
 		apMaterial->SetWorldReflectionOcclusionTest( apVars->GetVarBool("OcclusionCullWorldReflection", true));
 		apMaterial->SetMaxReflectionDistance( apVars->GetVarFloat("ReflectionFadeEnd", 0.0f));
@@ -422,6 +448,10 @@ namespace hpl {
 		apVars->AddVarFloat("WaveFreq",pVars->mfWaveFreq);
 		apVars->AddVarFloat("FadeWhenShallowMul",pVars->mfFadeWhenShallowMul);
 		apVars->AddVarFloat("FadeWhenShallowPow",pVars->mfFadeWhenShallowPow);
+		apVars->AddVarBool("HasVertexWaves",pVars->mbHasVertexWaves);
+		apVars->AddVarFloat("VertexWaveSpeed",pVars->mfVertexWaveSpeed);
+		apVars->AddVarFloat("VertexWaveAmplitude",pVars->mfVertexWaveAmplitude);
+		apVars->AddVarFloat("VertexWaveFreq",pVars->mfVertexWaveFreq);
 
 		apVars->AddVarBool("OcclusionCullWorldReflection", apMaterial->GetWorldReflectionOcclusionTest());
 		apVars->AddVarBool("LargeSurface", apMaterial->GetLargeTransperantSurface());
@@ -437,6 +467,8 @@ namespace hpl {
 		//Set if has specific variables
 		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
 		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_DiffuseFog, true);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse, pVars->mbHasVertexWaves);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_DiffuseFog, pVars->mbHasVertexWaves);
 		
 		
 		/////////////////////////////////////
