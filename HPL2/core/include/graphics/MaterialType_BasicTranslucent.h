@@ -42,6 +42,7 @@ namespace hpl {
 		bool mbRefractionEdgeCheck;
 		bool mbRefractionNormals;
 		bool mbRefractionAlphaBlend = false;
+		float mfFogWeight = 1;
 		float mfRefractionScale;
 		float mfFrenselBias;
 		float mfFrenselPow;

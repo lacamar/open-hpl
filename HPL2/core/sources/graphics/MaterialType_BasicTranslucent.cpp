@@ -441,15 +441,16 @@ namespace hpl {
 		{
 			cWorld *pWorld = apRenderer->GetCurrentWorld();
 			bool bWorldFog = apRenderer->WorldFogActive();
+			float fFogWeight = cMath::Max(pVars->mfFogWeight, 0.0001f);
 
-			apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()) : cVector2f(0, 1));
+			apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), (pWorld->GetFogEnd() - pWorld->GetFogStart()) / fFogWeight) : cVector2f(0, 1));
 			apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
 			apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
 			apProgram->SetColor4f(kVar_avFogColor, bWorldFog ? cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()) : cColor(0, 0));
 			if(mlWorldFog & eFeature_Diffuse_SecondaryFog)
 			{
 				apProgram->SetColor4f(kVar_avSecondFogColor, cRendererDeferred::GetFogRenderColor(pWorld->GetSecondaryFogColor(), pWorld->GetSecondaryFogBrightness()));
-				apProgram->SetVec2f(kVar_avSecondFogStartAndLength, cVector2f(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart()));
+				apProgram->SetVec2f(kVar_avSecondFogStartAndLength, cVector2f(pWorld->GetSecondaryFogStart(), (pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart()) / fFogWeight));
 				apProgram->SetFloat(kVar_afSecondFalloffExp, pWorld->GetSecondaryFogFalloffExp());
 			}
 		}
@@ -670,6 +671,7 @@ namespace hpl {
 		pVars->mbRefractionEdgeCheck = apVars->GetVarBool("RefractionEdgeCheck", true);
 		pVars->mbRefractionNormals = apVars->GetVarBool("RefractionNormals", true);
 		pVars->mbRefractionAlphaBlend = apVars->GetVarBool("RefractionAlphaBlend", false);
+		pVars->mfFogWeight = cMath::Clamp(apVars->GetVarFloat("FogWeight", 1), 0.0f, 1.0f);
 		apMaterial->SetAffectedByDepthOfField(apVars->GetVarBool("AffectedByDepthOfField", true));
 		pVars->mfRefractionScale  = apVars->GetVarFloat("RefractionScale", 1.0f);
 		pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
@@ -694,6 +696,7 @@ namespace hpl {
 		apVars->AddVarBool("RefractionEdgeCheck", pVars->mbRefractionEdgeCheck);
 		apVars->AddVarBool("RefractionNormals", pVars->mbRefractionNormals);
 		apVars->AddVarBool("RefractionAlphaBlend", pVars->mbRefractionAlphaBlend);
+		apVars->AddVarFloat("FogWeight", pVars->mfFogWeight);
 		apVars->AddVarBool("AffectedByDepthOfField", apMaterial->GetAffectedByDepthOfField());
 		apVars->AddVarFloat("RefractionScale", pVars->mfRefractionScale);
 		apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
