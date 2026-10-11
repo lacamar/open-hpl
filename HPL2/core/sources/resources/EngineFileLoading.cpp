@@ -313,7 +313,8 @@ namespace hpl {
 			//Frustum related
 			pLightSpot->SetFOV(apElement->GetAttributeFloat("FOV", 1.0f));
 			pLightSpot->SetAspect(apElement->GetAttributeFloat("Aspect", 1.0f));
-			pLightSpot->SetNearClipPlane(apElement->GetAttributeFloat("NearClipPlane", 0.1f));
+			cVector3f vScale = apElement->GetAttributeVector3f("Scale", 1);
+			pLightSpot->SetNearClipPlane(cMath::Max(apElement->GetAttributeFloat("NearClipPlane", 0.1f) * (vScale.x+vScale.y+vScale.z)/3.0f, 0.001f));
 
 			//Spot fall off
 			tString sSpotFalloffMap = apElement->GetAttributeString("SpotFalloffMap");
