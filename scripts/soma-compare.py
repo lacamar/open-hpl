@@ -81,8 +81,7 @@ class Ours:
             time.sleep(1)
         self.send({"cmd": "wait_frames", "n": 30, "max_ms": 60000}, timeout=90)
         w, h = map(int, size.split("x"))
-        if (w, h) != (1280, 720):
-            self.send({"cmd": "resize", "width": w, "height": h})
+        self.send({"cmd": "resize", "width": w, "height": h})
         print(f"ours: pid {self.pid()} up in {time.time() - t0:.0f}s")
 
     def record_boot(self, out, secs, fps, size="1280x720", first_launch=False):

@@ -798,6 +798,7 @@ namespace hpl {
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 		if(mpScreen == NULL) return false;
+		SDL_SetWindowFullscreen(mpScreen, 0);
 		SDL_SetWindowSize(mpScreen, alWidth, alHeight);
 		return true;
 #else
