@@ -294,6 +294,10 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	cMusicHandler *pMusic = gpSomaBase->mpEngine->GetSound()->GetMusicHandler();
 	aResp.Set("music", pMusic->GetCurrentSongName());
 	aResp.Set("music_volume", pMusic->GetCurrentSongVolume());
+	if (cMusicEntry *pSong = pMusic->GetCurrentSong())
+		aResp.Set("music_stream", cString::ToString(pSong->mpStream->GetVolume()) + " " + cString::ToString((float)pSong->mpStream->GetElapsedTime()) + "/" +
+									  cString::ToString((float)pSong->mpStream->GetTotalTime()) + (pSong->mpStream->IsPlaying() ? "" : " stopped") +
+									  (pSong->mpStream->GetPaused() ? " paused" : ""));
 }
 
 static void cSomaBase_HeadlessCmd_StubReport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

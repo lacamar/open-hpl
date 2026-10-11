@@ -218,7 +218,7 @@ def identify(wav, cands, n=20):
 def playing(sock, recent=0):
     with HplControl(str(sock), timeout=10) as h:
         r = h.send({"cmd": "sound_stats"})
-    print(f"music {r.get('music') or '-'} vol {r.get('music_volume')}  listener {r.get('listener')}")
+    print(f"music {r.get('music') or '-'} vol {r.get('music_volume')} stream {r.get('music_stream')}  listener {r.get('listener')}")
     rows = [l.split("|") for l in r.get("detail", "").splitlines() if l]
     print(f"{'vol':>6} {'mul':>5} {'dist':>6} {'min':>5} {'max':>5} L 3 {'t':>6}/{'len':<6} entry / file")
     for name, file, typ, vol, mul, loop, d3, dist, mn, mx, el, tot, paused in sorted(rows, key=lambda r: -float(r[3])):
