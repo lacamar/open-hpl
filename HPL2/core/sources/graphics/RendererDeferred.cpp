@@ -1402,7 +1402,8 @@ namespace hpl {
 		SetFlatProjection();
 		SetProgram(mpImageTrailProgram);
 		mpImageTrailProgram->SetFloat(kVar_afAlpha, cMath::Min(mfImageTrailAlpha, 1.0f));
-		SetBlendMode(eMaterialBlendMode_Alpha);
+		// a zero blend factor keeps NaNs from the uninitialised buffer
+		SetBlendMode(mfImageTrailAlpha >= 1 ? eMaterialBlendMode_None : eMaterialBlendMode_Alpha);
 		SetTexture(0,mpAccumBufferTexture);
 		SetTextureRange(NULL, 1);
 		DrawAccumulationQuad();

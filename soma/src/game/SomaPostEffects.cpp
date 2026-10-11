@@ -57,7 +57,10 @@ cSomaPostEffect::~cSomaPostEffect() { gsetEffects.erase(this); }
 void cSomaPostEffect::Set(std::initializer_list<float> alParams)
 {
 	std::copy(alParams.begin(), alParams.end(), mfParams);
-	SetActive(mfParams[gvTypes[mlType].mlKey] > 0);
+	bool bActive = mfParams[gvTypes[mlType].mlKey] > 0;
+	if (bActive && !IsActive())
+		mbClear = true;
+	SetActive(bActive);
 }
 
 iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
