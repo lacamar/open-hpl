@@ -182,6 +182,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cMaterialManager::CompileTextureLookups()
+	{
+		for(tResourceBaseMapIt it = m_mapResources.begin(); it != m_mapResources.end(); ++it)
+		{
+			cMaterial *pMat = static_cast<cMaterial*>(it->second);
+			if(pMat->GetType()) pMat->CompileTextureLookup();
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cMaterialManager::SetTextureFilter(eTextureFilter aFilter)
 	{
 		if(aFilter == mTextureFilter) return;

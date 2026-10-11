@@ -40,6 +40,7 @@ namespace hpl {
 		cMaterial* CreateMaterial(const tString& asName);
 
 		void Update(float afTimeStep);
+		void CompileTextureLookups();
 		
 		void Destroy(iResourceBase* apResource);
 		void Unload(iResourceBase* apResource);

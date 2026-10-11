@@ -193,17 +193,20 @@ namespace hpl {
 			if(pPrevProg) mpType->DestroyProgram(this, (eMaterialRenderMode)i,pPrevProg, j);
 		}
 
+		CompileTextureLookup();
+		
 		///////////////////
-		// Compile texture lookup
+		// Type specifics
+		mpType->CompileMaterialSpecifics(this);
+	}
+
+	void cMaterial::CompileTextureLookup()
+	{
 		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i) 
 			for(int j=0; j<kMaxTextureUnits; ++j)
 			{
 				mvTextureInUnit[i][j] = mpType->GetTextureForUnit(this, (eMaterialRenderMode)i, j);
 			}
-		
-		///////////////////
-		// Type specifics
-		mpType->CompileMaterialSpecifics(this);
 	}
 	
 	//-----------------------------------------------------------------------

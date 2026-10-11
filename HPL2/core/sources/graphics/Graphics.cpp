@@ -40,6 +40,7 @@
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"
 #include "resources/GpuShaderManager.h"
+#include "resources/MaterialManager.h"
 #include "resources/FileSearcher.h"
 
 #include "graphics/MaterialType_BasicSolid.h"
@@ -273,6 +274,8 @@ namespace hpl {
 			pRenderer->DestroyData();
 			pRenderer->LoadData();
 		}
+		// materials cache renderer textures (water refraction/reflection)
+		mpResources->GetMaterialManager()->CompileTextureLookups();
 	}
 
 	//-----------------------------------------------------------------------

@@ -73,6 +73,7 @@ namespace hpl {
 		iMaterialType * GetType(){ return mpType; }
 
 		void Compile();
+		void CompileTextureLookup();
 
 		void SetTexture(eMaterialTexture aType, iTexture *apTexture);
 		iTexture *GetTexture(eMaterialTexture aType);
