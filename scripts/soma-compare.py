@@ -329,7 +329,8 @@ def cmd_view(a, only=None):
         t.wait(a.settle) if t.name == "ours" else None
     time.sleep(a.settle)
     shots = {t.name: t.shot(out / f"{t.name}.png") for t in ts}
-    res = {"shots": {k: str(v) for k, v in shots.items()}}
+    res = {"shots": {k: str(v) for k, v in shots.items()}, "pose": a.pose,
+           "player": {t.name: t.exec(SNIPPETS["player"]) for t in ts}}
     if len(shots) == 2:
         res["metrics"] = image_metrics(shots["ours"], shots["ref"])
         side_by_side(shots["ours"], shots["ref"], out / "side_by_side.png")

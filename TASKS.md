@@ -155,7 +155,7 @@ laboratory keypad terminal; lab greeting, scan chair, scan -> 01_01_upsilon_awak
   at the last node). Needs a repro.
 - Theta mirror (02_05 MirrorZoom*): body only in the reflection (`Entity_SetReflectionVisibility`);
   shared animations keep track->node indices per anim state (PlayerBodyLamp crashed).
-- `stub_report`: preload hints, gamepad colour, rich presence/achievements, `cMeshEntity::SetDisableSleep`
+- `stub_report`: gamepad colour, rich presence/achievements, `cMeshEntity::SetDisableSleep`
   (no mesh auto-sleep).
 - Physics impact sounds at load: bodies settling (01_02, ~0.03 vol). Rebirth has no extra gating
   (`OnImpact`, `cPhysicsWorldNewton::Simulate` match ours; `cWorld::PreUpdate` uncalled). 00_01 test
