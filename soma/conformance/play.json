@@ -6,7 +6,7 @@
    "boot_s": 1.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.336319,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 1.894788,
@@ -15,7 +15,7 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 60.336319,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -133,7 +133,7 @@
    "load_report": {
     "map": "00_00_intro.hpm",
     "terrain_active": false,
-    "total_ms": 231,
+    "total_ms": 240,
     "tracks": {
      "Area": {
       "created": 1,
@@ -249,7 +249,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3893288.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-660070.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -278,10 +278,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 0.2526126503944397,
+     "logic_ms": 0.3219761252403259,
      "logic_steps": 1.0,
-     "render_ms": 1.4389091730117798,
-     "swap_ms": 0.04173259437084198
+     "render_ms": 1.865599513053894,
+     "swap_ms": 0.046854469925165176
     },
     "shader_failures": 0,
     "solid_objects": 1,
@@ -293,7 +293,7 @@
     "count": 5,
     "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 20.4,
+   "wall_s": 20.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -340,7 +340,7 @@
    "boot_s": 2.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 48.22831,
+    "fps": 59.940094,
     "pitch": -0.096954,
     "pos_x": -12.307199,
     "pos_y": 1.520486,
@@ -349,33 +349,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 48.22831,
+   "fps": 59.940094,
    "frame": {
-    "black_frac": 0.001761,
+    "black_frac": 0.00176,
     "height": 2160,
     "lum_hist16": [
-     0.297836,
-     0.3337,
-     0.08088,
-     0.052903,
-     0.044064,
-     0.050357,
-     0.039637,
-     0.018888,
-     0.010104,
-     0.002059,
-     0.003265,
-     0.004739,
-     0.005486,
-     0.005823,
-     0.01168,
-     0.038579
+     0.298099,
+     0.331255,
+     0.079111,
+     0.054262,
+     0.043853,
+     0.050471,
+     0.040382,
+     0.019943,
+     0.010798,
+     0.002151,
+     0.00327,
+     0.004827,
+     0.00548,
+     0.00573,
+     0.010927,
+     0.039441
     ],
     "lum_max": 255,
-    "lum_mean": 47.957535,
+    "lum_mean": 48.255264,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000495,
+    "white_frac": 0.000497,
     "width": 3840
    },
    "gbuffer": {
@@ -386,18 +386,18 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1.277344,
-     "b_mean": 0.40421,
+     "b_mean": 0.404189,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 187094,
      "g_max": 1.329102,
-     "g_mean": 0.470557,
+     "g_mean": 0.470538,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 64512,
      "height": 2160,
      "r_max": 1.329102,
-     "r_mean": 0.442391,
+     "r_mean": 0.442276,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 72817,
@@ -425,7 +425,7 @@
      "g_zero_count": 1,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.265247,
+     "r_mean": 0.265248,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 1,
@@ -442,18 +442,18 @@
      "a_nan_count": 0,
      "a_zero_count": 83121,
      "b_max": 1,
-     "b_mean": 0.456896,
+     "b_mean": 0.456898,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 179118,
      "g_max": 1,
-     "g_mean": 0.488491,
+     "g_mean": 0.488492,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 140580,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.492595,
+     "r_mean": 0.492596,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 101092,
@@ -467,12 +467,12 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 803,
+    "total_ms": 798,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
@@ -486,7 +486,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 13
       },
@@ -509,7 +509,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 530,
+      "ms": 527,
       "skipped": {},
       "xml": 436
      },
@@ -530,14 +530,14 @@
      "LensFlare": {
       "created": 4,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 4
      },
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 70
      },
@@ -558,14 +558,14 @@
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 9,
+      "ms": 7,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 108,
+      "ms": 110,
       "skipped": {},
       "xml": 7
      },
@@ -579,7 +579,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 71,
+      "ms": 69,
       "skipped": {},
       "xml": 145
      },
@@ -592,7 +592,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3894456.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-661151.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -617,30 +617,30 @@
     "yaw": 0.250229
    },
    "render": {
-    "draw_calls": 658,
+    "draw_calls": 663,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 31,
     "lights_rendered": 31,
-    "occlusion_queries": 57,
+    "occlusion_queries": 54,
     "per_frame": {
-     "frames": 122,
-     "logic_ms": 1.8628994226455688,
-     "logic_steps": 1.2295081615447998,
-     "render_ms": 18.417438507080078,
-     "swap_ms": 0.11433574557304382
+     "frames": 120,
+     "logic_ms": 0.9068335294723511,
+     "logic_steps": 1.0,
+     "render_ms": 7.607651233673096,
+     "swap_ms": 0.0370381660759449
     },
     "shader_failures": 0,
     "solid_objects": 239,
-    "trans_objects": 19
+    "trans_objects": 23
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 10,
-    "stubs": "32 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n31 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n12 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n3 void cLuxProp::SetGuiCacheAtScreenSize(float)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n"
+    "count": 8,
+    "stubs": "32 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n31 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n"
    },
-   "wall_s": 24.0,
+   "wall_s": 21.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -684,10 +684,10 @@
     "Compound:0/9"
    ],
    "asleep": false,
-   "boot_s": 2.0,
+   "boot_s": 2.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 54.455433,
+    "fps": 59.880306,
     "pitch": -0.115359,
     "pos_x": -1.48712,
     "pos_y": 1.612055,
@@ -696,33 +696,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 54.455433,
+   "fps": 59.880306,
    "frame": {
     "black_frac": 0.001338,
     "height": 2160,
     "lum_hist16": [
-     0.212167,
-     0.271802,
-     0.16653,
-     0.115165,
-     0.076907,
-     0.053358,
-     0.022236,
-     0.025323,
-     0.029265,
-     0.017627,
-     0.005326,
-     0.000558,
-     0.000166,
-     0.000117,
-     0.000123,
-     0.003329
+     0.22589,
+     0.252061,
+     0.163992,
+     0.120327,
+     0.078869,
+     0.054234,
+     0.022083,
+     0.024164,
+     0.029154,
+     0.018788,
+     0.006105,
+     0.00059,
+     0.000174,
+     0.000116,
+     0.000122,
+     0.003331
     ],
     "lum_max": 255,
-    "lum_mean": 45.250889,
+    "lum_mean": 45.556877,
     "lum_min": 1,
     "magenta_frac": 0,
-    "white_frac": 0.003098,
+    "white_frac": 0.003099,
     "width": 3840
    },
    "gbuffer": {
@@ -733,88 +733,88 @@
      "a_nan_count": 0,
      "a_zero_count": 8294399,
      "b_max": 1,
-     "b_mean": 0.34847,
+     "b_mean": 0.34203,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 4756,
+     "b_zero_count": 4890,
      "g_max": 0.992676,
-     "g_mean": 0.369815,
+     "g_mean": 0.362611,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2896,
+     "g_zero_count": 3025,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.434944,
+     "r_mean": 0.425401,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4380,
+     "r_zero_count": 4508,
      "sample_a": 0,
-     "sample_b": 0.507812,
-     "sample_g": 0.589355,
-     "sample_r": 0.689453,
+     "sample_b": 0.618164,
+     "sample_g": 0.683105,
+     "sample_r": 0.760254,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.003176,
+     "a_mean": 0.003173,
      "a_min": 0.000935,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.494878,
+     "b_mean": 0.496044,
      "b_min": -0.975586,
      "b_nan_count": 0,
      "b_zero_count": 1,
      "g_max": 0.999512,
-     "g_mean": 0.072566,
+     "g_mean": 0.072603,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 2,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.053097,
+     "r_mean": -0.051988,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 96,
      "sample_a": 0.003435,
-     "sample_b": 0.874023,
-     "sample_g": -0.377197,
-     "sample_r": -0.30542,
+     "sample_b": 0.868164,
+     "sample_g": -0.367432,
+     "sample_r": -0.333252,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.493241,
+     "a_mean": 0.490921,
      "a_min": 0.005634,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.380976,
+     "b_mean": 0.375568,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 538014,
+     "b_zero_count": 537816,
      "g_max": 1,
-     "g_mean": 0.391031,
+     "g_mean": 0.385793,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 533359,
+     "g_zero_count": 533162,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.3902,
+     "r_mean": 0.385273,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 534390,
+     "r_zero_count": 534193,
      "sample_a": 0.497803,
-     "sample_b": 0.128418,
-     "sample_g": 0.126465,
-     "sample_r": 0.128418,
+     "sample_b": 0.177856,
+     "sample_g": 0.185669,
+     "sample_r": 0.177856,
      "width": 3840
     }
    },
    "load_report": {
     "map": "00_02_subway.hpm",
     "terrain_active": false,
-    "total_ms": 704,
+    "total_ms": 636,
     "tracks": {
      "Area": {
       "created": 37,
@@ -833,7 +833,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 9
       },
@@ -856,7 +856,7 @@
      "Entity": {
       "created": 215,
       "file_missing": false,
-      "ms": 592,
+      "ms": 520,
       "skipped": {},
       "xml": 215
      },
@@ -891,14 +891,14 @@
      "ParticleSystem": {
       "created": 6,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 6
      },
      "Primitive": {
       "created": 7,
       "file_missing": false,
-      "ms": 5,
+      "ms": 7,
       "skipped": {},
       "xml": 7
      },
@@ -919,7 +919,7 @@
      "StaticObject": {
       "created": 6,
       "file_missing": false,
-      "ms": 61,
+      "ms": 65,
       "skipped": {},
       "xml": 6
      },
@@ -932,7 +932,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3895693.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-662346.log",
    "log_errors": {
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/urban/tech/monitor_large/televison_small_scre": {
      "count": 4,
@@ -953,42 +953,42 @@
     "yaw": -2.473663
    },
    "render": {
-    "draw_calls": 309,
+    "draw_calls": 293,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 28,
-    "lights_rendered": 28,
-    "occlusion_queries": 12,
+    "lights_in_list": 27,
+    "lights_rendered": 27,
+    "occlusion_queries": 8,
     "per_frame": {
-     "frames": 122,
-     "logic_ms": 1.5236234664916992,
-     "logic_steps": 1.073770523071289,
-     "render_ms": 15.205610275268555,
-     "swap_ms": 0.09022777527570724
+     "frames": 120,
+     "logic_ms": 1.527349829673767,
+     "logic_steps": 1.0,
+     "render_ms": 8.25717830657959,
+     "swap_ms": 0.05666496604681015
     },
     "shader_failures": 0,
-    "solid_objects": 79,
+    "solid_objects": 74,
     "trans_objects": 49
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
     "count": 7,
-    "stubs": "61 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadEntity(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n"
+    "stubs": "66 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadEntity(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n"
    },
-   "wall_s": 22.1,
+   "wall_s": 21.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
    },
    "world": {
     "aabb_max": [
-     349.827271,
+     347.624908,
      4.334988,
      4.222199
     ],
     "aabb_min": [
-     -34.784718,
+     -36.987099,
      -10.493881,
      -8.76608
     ],
@@ -1009,7 +1009,7 @@
     "physics_bodies": 287,
     "physics_bodies_awake": 37,
     "physics_bodies_dynamic": 44,
-    "sound_entities": 4,
+    "sound_entities": 6,
     "static_mesh_entities": 150,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -1024,10 +1024,10 @@
     "no_material:televison_small_screen.mat"
    ],
    "asleep": false,
-   "boot_s": 2.5,
+   "boot_s": 2.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217148,
+    "fps": 59.880192,
     "pitch": 0,
     "pos_x": 4.495571,
     "pos_y": 1.905041,
@@ -1036,30 +1036,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.217148,
+   "fps": 59.880192,
    "frame": {
-    "black_frac": 0.082106,
+    "black_frac": 0.082133,
     "height": 2160,
     "lum_hist16": [
-     0.369304,
-     0.238465,
-     0.147165,
-     0.11102,
-     0.034288,
-     0.020632,
-     0.017312,
-     0.011328,
-     0.012175,
-     0.020156,
-     0.009784,
-     0.001813,
-     0.00152,
-     0.002178,
-     0.001563,
-     0.001298
+     0.36926,
+     0.238485,
+     0.147188,
+     0.110996,
+     0.034304,
+     0.020671,
+     0.01728,
+     0.011352,
+     0.012142,
+     0.020182,
+     0.009762,
+     0.001823,
+     0.001524,
+     0.002167,
+     0.001576,
+     0.001288
     ],
     "lum_max": 253,
-    "lum_mean": 35.004894,
+    "lum_mean": 35.005718,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -1073,7 +1073,7 @@
      "a_nan_count": 0,
      "a_zero_count": 7862723,
      "b_max": 1,
-     "b_mean": 0.508199,
+     "b_mean": 0.508196,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 83202,
@@ -1112,7 +1112,7 @@
      "g_zero_count": 188415,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.022697,
+     "r_mean": 0.022698,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 191078,
@@ -1154,7 +1154,7 @@
    "load_report": {
     "map": "00_03_laboratory.hpm",
     "terrain_active": false,
-    "total_ms": 1083,
+    "total_ms": 1015,
     "tracks": {
      "Area": {
       "created": 239,
@@ -1166,7 +1166,7 @@
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {
        "connect_light_missing": 4
       },
@@ -1200,7 +1200,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 632,
+      "ms": 611,
       "skipped": {},
       "xml": 436
      },
@@ -1221,7 +1221,7 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 1
      },
@@ -1249,14 +1249,14 @@
      "Primitive": {
       "created": 47,
       "file_missing": false,
-      "ms": 8,
+      "ms": 9,
       "skipped": {},
       "xml": 47
      },
      "Sound": {
       "created": 31,
       "file_missing": false,
-      "ms": 123,
+      "ms": 113,
       "skipped": {},
       "xml": 31
      },
@@ -1270,7 +1270,7 @@
      "StaticObject": {
       "created": 719,
       "file_missing": false,
-      "ms": 166,
+      "ms": 136,
       "skipped": {},
       "xml": 719
      },
@@ -1283,7 +1283,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3896803.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-663300.log",
    "log_errors": {
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/urban/tech/monitor_large/televison_small_scre": {
      "count": 4,
@@ -1304,28 +1304,28 @@
     "yaw": -3.165159
    },
    "render": {
-    "draw_calls": 765,
+    "draw_calls": 760,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 33,
     "lights_rendered": 33,
-    "occlusion_queries": 109,
+    "occlusion_queries": 106,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.5477687120437622,
+     "logic_ms": 1.4760228395462036,
      "logic_steps": 1.0,
-     "render_ms": 9.18497085571289,
-     "swap_ms": 0.05437813326716423
+     "render_ms": 8.854190826416016,
+     "swap_ms": 0.05238955840468407
     },
     "shader_failures": 0,
-    "solid_objects": 252,
+    "solid_objects": 251,
     "trans_objects": 33
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 10,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLuxProp::SetGuiCacheAtScreenSize(float)\n12 void cLux_PreloadEntity(const tString&in)\n9 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n4 void Material_Preload(const tString&in)\n3 void cMeshEntity::SetDisableSleep(bool)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 8,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n12 void cLux_PreloadEntity(const tString&in)\n4 void Material_Preload(const tString&in)\n3 void cMeshEntity::SetDisableSleep(bool)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
    "wall_s": 23.5,
    "warmup": {
@@ -1389,10 +1389,10 @@
     "Compound:0/93"
    ],
    "asleep": false,
-   "boot_s": 3.5,
+   "boot_s": 4.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.980434,
+    "fps": 60.098446,
     "pitch": 0,
     "pos_x": 1.3023,
     "pos_y": 1.7445,
@@ -1401,33 +1401,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.980434,
+   "fps": 60.098446,
    "frame": {
-    "black_frac": 0.00069,
+    "black_frac": 0.000554,
     "height": 2160,
     "lum_hist16": [
-     0.993327,
-     0.002576,
-     0.001011,
-     0.000322,
-     0.000147,
-     0.000125,
-     8.9e-05,
-     9.9e-05,
-     9.9e-05,
-     9.8e-05,
-     0.000124,
-     0.000124,
-     0.000118,
-     0.000111,
-     0.00015,
-     0.001482
+     0.996718,
+     0.002316,
+     0.000817,
+     0.000149,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
     ],
-    "lum_max": 255,
-    "lum_mean": 9.713965,
-    "lum_min": 0,
+    "lum_max": 69,
+    "lum_mean": 9.123735,
+    "lum_min": 2,
     "magenta_frac": 0,
-    "white_frac": 0.00134,
+    "white_frac": 0,
     "width": 3840
    },
    "gbuffer": {
@@ -1438,21 +1438,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294374,
      "b_max": 1,
-     "b_mean": 0.258387,
+     "b_mean": 0.258386,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 156612,
+     "b_zero_count": 156605,
      "g_max": 1.275391,
-     "g_mean": 0.289372,
+     "g_mean": 0.289373,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 136843,
+     "g_zero_count": 136838,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.309437,
+     "r_mean": 0.30944,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 140526,
+     "r_zero_count": 140520,
      "sample_a": 0,
      "sample_b": 0,
      "sample_g": 0,
@@ -1466,21 +1466,21 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.362027,
-     "b_min": -0.999023,
+     "b_mean": 0.362014,
+     "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 211,
      "g_max": 1,
-     "g_mean": 0.13544,
+     "g_mean": 0.13543,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 8230,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.08553,
+     "r_mean": 0.085519,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 687,
+     "r_zero_count": 688,
      "sample_a": 0.009483,
      "sample_b": 0.999512,
      "sample_g": -0.020187,
@@ -1489,26 +1489,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.481108,
+     "a_mean": 0.481099,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 36843,
+     "a_zero_count": 37050,
      "b_max": 1,
-     "b_mean": 0.362462,
+     "b_mean": 0.362434,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 102574,
+     "b_zero_count": 102779,
      "g_max": 1,
-     "g_mean": 0.366431,
+     "g_mean": 0.366404,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 96879,
+     "g_zero_count": 97084,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.370901,
+     "r_mean": 0.370872,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 101489,
+     "r_zero_count": 101694,
      "sample_a": 0.674316,
      "sample_b": 0.168091,
      "sample_g": 0.170288,
@@ -1519,19 +1519,19 @@
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 2155,
+    "total_ms": 2188,
     "tracks": {
      "Area": {
       "created": 370,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 370
      },
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 26,
+      "ms": 20,
       "skipped": {},
       "xml": 193
      },
@@ -1547,7 +1547,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 155,
+      "ms": 156,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1563,7 +1563,7 @@
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 765,
+      "ms": 772,
       "skipped": {},
       "xml": 1527
      },
@@ -1584,28 +1584,28 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
      "Light": {
       "created": 685,
       "file_missing": false,
-      "ms": 15,
+      "ms": 14,
       "skipped": {},
       "xml": 685
      },
      "LightMask": {
       "created": 13,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 13
      },
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 46,
+      "ms": 47,
       "skipped": {},
       "xml": 174
      },
@@ -1619,7 +1619,7 @@
      "Sound": {
       "created": 128,
       "file_missing": false,
-      "ms": 137,
+      "ms": 142,
       "skipped": {},
       "xml": 128
      },
@@ -1633,7 +1633,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 592,
+      "ms": 616,
       "skipped": {},
       "xml": 3483
      },
@@ -1646,7 +1646,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3897383.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-664248.log",
    "log_errors": {
     "ERROR: Could not find any look entities '*' for Tool Area '*'": {
      "count": 2,
@@ -1671,18 +1671,18 @@
     "yaw": -0.157966
    },
    "render": {
-    "draw_calls": 1030,
+    "draw_calls": 1028,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 58,
     "lights_rendered": 58,
-    "occlusion_queries": 65,
+    "occlusion_queries": 63,
     "per_frame": {
-     "frames": 120,
-     "logic_ms": 3.2871100902557373,
+     "frames": 121,
+     "logic_ms": 3.5788474082946777,
      "logic_steps": 1.0,
-     "render_ms": 9.869555473327637,
-     "swap_ms": 0.04021807387471199
+     "render_ms": 9.06885051727295,
+     "swap_ms": 0.04626860469579697
     },
     "shader_failures": 0,
     "solid_objects": 372,
@@ -1691,10 +1691,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 8,
-    "stubs": "36 void cLux_PreloadEntity(const tString&in)\n35 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n17 void cLuxProp::SetGuiCacheAtScreenSize(float)\n10 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 6,
+    "stubs": "36 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n10 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 26.8,
+   "wall_s": 27.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1727,7 +1727,7 @@
     "physics_bodies": 2399,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 424,
-    "sound_entities": 140,
+    "sound_entities": 141,
     "static_mesh_entities": 3047,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -1740,137 +1740,137 @@
     "no_material:communication_table_pplant_GUI.mat"
    ],
    "asleep": false,
-   "boot_s": 3.6,
+   "boot_s": 4.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59,
     "pitch": 0,
-    "pos_x": 31.999203,
-    "pos_y": 18.398718,
-    "pos_z": -5.35073,
+    "pos_x": 31.998526,
+    "pos_y": 18.397921,
+    "pos_z": -5.348847,
     "yaw": -4.12621
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 59,
    "frame": {
-    "black_frac": 0.003502,
+    "black_frac": 0.003541,
     "height": 2160,
     "lum_hist16": [
-     0.361472,
-     0.248252,
-     0.186931,
-     0.127715,
-     0.048612,
-     0.008112,
-     0.006758,
-     0.006055,
-     0.002684,
-     0.001319,
-     0.000477,
-     0.000233,
-     0.00017,
-     0.000111,
-     0.000118,
-     0.000982
+     0.3593,
+     0.248225,
+     0.186417,
+     0.12845,
+     0.0503,
+     0.008313,
+     0.006823,
+     0.006035,
+     0.002722,
+     0.001315,
+     0.000489,
+     0.000229,
+     0.000165,
+     0.000117,
+     0.000115,
+     0.000984
     ],
     "lum_max": 255,
-    "lum_mean": 29.932697,
+    "lum_mean": 30.080858,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000874,
+    "white_frac": 0.000875,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.000197,
+     "a_mean": 0.000198,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8281102,
+     "a_zero_count": 8281042,
      "b_max": 1,
-     "b_mean": 0.260753,
+     "b_mean": 0.260691,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 3104,
+     "b_zero_count": 3010,
      "g_max": 0.945801,
-     "g_mean": 0.306882,
+     "g_mean": 0.306863,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1761,
+     "g_zero_count": 1755,
      "height": 2160,
      "r_max": 0.958008,
-     "r_mean": 0.331532,
+     "r_mean": 0.331549,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2223,
+     "r_zero_count": 2170,
      "sample_a": 0,
-     "sample_b": 0.261963,
-     "sample_g": 0.313965,
-     "sample_r": 0.328125,
+     "sample_b": 0.251465,
+     "sample_g": 0.304688,
+     "sample_r": 0.314209,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.007337,
-     "a_min": 0.002655,
+     "a_mean": 0.007336,
+     "a_min": 0.002657,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.310517,
-     "b_min": -0.998535,
+     "b_mean": 0.310454,
+     "b_min": -0.999023,
      "b_nan_count": 0,
-     "b_zero_count": 42732,
+     "b_zero_count": 42735,
      "g_max": 1,
-     "g_mean": 0.156719,
+     "g_mean": 0.156795,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 2893,
+     "g_zero_count": 2559,
      "height": 2160,
-     "r_max": 0.999512,
-     "r_mean": -0.077483,
+     "r_max": 1,
+     "r_mean": -0.077506,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 42751,
+     "r_zero_count": 42760,
      "sample_a": 0.013481,
      "sample_b": 0.988281,
-     "sample_g": 0.037994,
-     "sample_r": -0.145386,
+     "sample_g": 0.037018,
+     "sample_r": -0.144897,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.50731,
+     "a_mean": 0.507313,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3650,
+     "a_zero_count": 3676,
      "b_max": 1,
-     "b_mean": 0.430041,
+     "b_mean": 0.430012,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 113771,
+     "b_zero_count": 113656,
      "g_max": 1,
-     "g_mean": 0.431881,
+     "g_mean": 0.431862,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 103539,
+     "g_zero_count": 103371,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.422884,
+     "r_mean": 0.42285,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 110365,
-     "sample_a": 0.192383,
-     "sample_b": 0.370361,
-     "sample_g": 0.381104,
-     "sample_r": 0.370361,
+     "r_zero_count": 110266,
+     "sample_a": 0.213623,
+     "sample_b": 0.376709,
+     "sample_g": 0.386475,
+     "sample_r": 0.376709,
      "width": 3840
     }
    },
    "load_report": {
     "map": "01_02_upsilon_inside.hpm",
     "terrain_active": false,
-    "total_ms": 2221,
+    "total_ms": 2331,
     "tracks": {
      "Area": {
       "created": 979,
@@ -1882,7 +1882,7 @@
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 41,
+      "ms": 34,
       "skipped": {},
       "xml": 359
      },
@@ -1898,21 +1898,21 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 276,
+      "ms": 287,
       "skipped": {},
       "xml": 536
      },
      "DetailMeshes": {
       "created": 1032,
       "file_missing": false,
-      "ms": 9,
+      "ms": 8,
       "skipped": {},
       "xml": 1032
      },
      "Entity": {
       "created": 2232,
       "file_missing": false,
-      "ms": 905,
+      "ms": 953,
       "skipped": {},
       "xml": 2232
      },
@@ -1926,7 +1926,7 @@
      "LensFlare": {
       "created": 3,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 3
      },
@@ -1947,7 +1947,7 @@
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 41,
+      "ms": 46,
       "skipped": {},
       "xml": 148
      },
@@ -1961,7 +1961,7 @@
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 82,
+      "ms": 87,
       "skipped": {},
       "xml": 109
      },
@@ -1975,7 +1975,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 478,
+      "ms": 507,
       "skipped": {},
       "xml": 3381
      },
@@ -1990,7 +1990,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3898452.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-665677.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -2051,30 +2051,30 @@
     "yaw": -4.12621
    },
    "render": {
-    "draw_calls": 1147,
+    "draw_calls": 1177,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 83,
-    "lights_rendered": 83,
-    "occlusion_queries": 128,
+    "lights_in_list": 81,
+    "lights_rendered": 81,
+    "occlusion_queries": 126,
     "per_frame": {
-     "frames": 122,
-     "logic_ms": 3.421234130859375,
-     "logic_steps": 1.0,
-     "render_ms": 12.603816986083984,
-     "swap_ms": 0.09866532683372498
+     "frames": 121,
+     "logic_ms": 3.857907772064209,
+     "logic_steps": 1.008264422416687,
+     "render_ms": 12.169960021972656,
+     "swap_ms": 0.08300507813692093
     },
     "shader_failures": 0,
-    "solid_objects": 322,
-    "trans_objects": 103
+    "solid_objects": 333,
+    "trans_objects": 109
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 11,
-    "stubs": "150 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n33 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n26 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n14 void cLuxProp::SetGuiCacheAtScreenSize(float)\n8 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n"
+    "count": 9,
+    "stubs": "133 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n33 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n8 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n"
    },
-   "wall_s": 23.5,
+   "wall_s": 24.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2122,42 +2122,42 @@
     "no_material:communication_table_pplant_GUI.mat"
    ],
    "asleep": false,
-   "boot_s": 4.2,
+   "boot_s": 4.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.405926,
+    "fps": 60.039326,
     "pitch": 0.900744,
-    "pos_x": 13.078343,
-    "pos_y": 252.589157,
-    "pos_z": -124.931946,
+    "pos_x": 13.078935,
+    "pos_y": 252.589981,
+    "pos_z": -124.932503,
     "yaw": -1.3982
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.405926,
+   "fps": 60.039326,
    "frame": {
     "black_frac": 3.6e-05,
     "height": 2160,
     "lum_hist16": [
-     0.132108,
-     0.295931,
-     0.285484,
-     0.278978,
-     0.003305,
-     0.000285,
+     0.133683,
+     0.296178,
+     0.285388,
+     0.277314,
+     0.003245,
+     0.000284,
      0.000193,
-     0.00018,
+     0.000179,
      0.000183,
      0.000172,
      0.000186,
-     0.000216,
+     0.000215,
      0.000162,
      0.000232,
      0.000201,
      0.002184
     ],
     "lum_max": 255,
-    "lum_mean": 35.816933,
+    "lum_mean": 35.745331,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.001974,
@@ -2170,89 +2170,89 @@
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 8294400,
-     "b_max": 0.82666,
-     "b_mean": 0.308242,
+     "b_max": 0.853027,
+     "b_mean": 0.307828,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 37192,
-     "g_max": 0.857422,
-     "g_mean": 0.378005,
+     "b_zero_count": 38552,
+     "g_max": 0.866699,
+     "g_mean": 0.377379,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 36347,
+     "g_zero_count": 37702,
      "height": 2160,
-     "r_max": 0.916992,
-     "r_mean": 0.415106,
+     "r_max": 0.923828,
+     "r_mean": 0.414377,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 36200,
+     "r_zero_count": 37548,
      "sample_a": 0,
-     "sample_b": 0.110413,
-     "sample_g": 0.307373,
-     "sample_r": 0.343262,
+     "sample_b": 0.2323,
+     "sample_g": 0.481689,
+     "sample_r": 0.517578,
      "width": 3840
     },
     "1": {
-     "a_max": 0.008743,
-     "a_mean": 0.002501,
-     "a_min": 0.000876,
+     "a_max": 0.008774,
+     "a_mean": 0.002512,
+     "a_min": 0.00088,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.590378,
-     "b_min": -0.975586,
+     "b_mean": 0.59036,
+     "b_min": -0.977051,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.493585,
+     "g_mean": 0.491037,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 0,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.015504,
+     "r_mean": -0.016368,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 0,
-     "sample_a": 0.002274,
-     "sample_b": 0.648926,
-     "sample_g": 0.757324,
-     "sample_r": 0.069885,
+     "r_zero_count": 1,
+     "sample_a": 0.002281,
+     "sample_b": 0.646484,
+     "sample_g": 0.759277,
+     "sample_r": 0.068542,
      "width": 3840
     },
     "2": {
-     "a_max": 0.98291,
-     "a_mean": 0.584765,
+     "a_max": 0.983887,
+     "a_mean": 0.584173,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 924,
+     "a_zero_count": 961,
      "b_max": 1,
-     "b_mean": 0.514088,
+     "b_mean": 0.513066,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 56014,
+     "b_zero_count": 57327,
      "g_max": 1,
-     "g_mean": 0.511863,
+     "g_mean": 0.51093,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 54488,
+     "g_zero_count": 55793,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.483246,
+     "r_mean": 0.482706,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 59632,
-     "sample_a": 0.748047,
-     "sample_b": 0.764648,
-     "sample_g": 0.75293,
-     "sample_r": 0.71875,
+     "r_zero_count": 60955,
+     "sample_a": 0.695801,
+     "sample_b": 0.698242,
+     "sample_g": 0.686035,
+     "sample_r": 0.636719,
      "width": 3840
     }
    },
    "load_report": {
     "map": "01_03_upsilon_outside.hpm",
     "terrain_active": true,
-    "total_ms": 2846,
+    "total_ms": 2955,
     "tracks": {
      "Area": {
       "created": 646,
@@ -2264,14 +2264,14 @@
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 56
       },
@@ -2280,7 +2280,7 @@
      "Decal": {
       "created": 333,
       "file_missing": false,
-      "ms": 231,
+      "ms": 256,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -2289,21 +2289,21 @@
      "DetailMeshes": {
       "created": 5076,
       "file_missing": false,
-      "ms": 40,
+      "ms": 41,
       "skipped": {},
       "xml": 5076
      },
      "Entity": {
       "created": 924,
       "file_missing": false,
-      "ms": 637,
+      "ms": 668,
       "skipped": {},
       "xml": 924
      },
      "FogArea": {
       "created": 2,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 2
      },
@@ -2317,7 +2317,7 @@
      "Light": {
       "created": 109,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 109
      },
@@ -2331,14 +2331,14 @@
      "ParticleSystem": {
       "created": 63,
       "file_missing": false,
-      "ms": 26,
+      "ms": 27,
       "skipped": {},
       "xml": 63
      },
      "Primitive": {
       "created": 14,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 14
      },
@@ -2359,7 +2359,7 @@
      "StaticObject": {
       "created": 1273,
       "file_missing": false,
-      "ms": 343,
+      "ms": 358,
       "skipped": {},
       "xml": 1273
      },
@@ -2372,7 +2372,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3899048.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-666965.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 7,
@@ -2405,18 +2405,18 @@
     "yaw": -0.239698
    },
    "render": {
-    "draw_calls": 317,
+    "draw_calls": 314,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 8,
     "lights_rendered": 8,
-    "occlusion_queries": 102,
+    "occlusion_queries": 99,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 4.482733249664307,
-     "logic_steps": 1.008264422416687,
-     "render_ms": 5.710352897644043,
-     "swap_ms": 0.05389532446861267
+     "frames": 120,
+     "logic_ms": 3.82151198387146,
+     "logic_steps": 1.0,
+     "render_ms": 5.399996757507324,
+     "swap_ms": 0.055308692157268524
     },
     "shader_failures": 0,
     "solid_objects": 60,
@@ -2425,10 +2425,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n6 void cLux_PreloadSound(const tString&in)\n4 void cLux_PreloadMaterial(const tString&in)\n4 void Entity_Preload(const tString&in)\n3 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n3 void cMeshEntity::SetDisableSleep(bool)\n3 void cLux_PreloadEntity(const tString&in)\n2 void cLuxProp::SetGuiCacheAtScreenSize(float)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 9,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n6 void cLux_PreloadSound(const tString&in)\n4 void cLux_PreloadMaterial(const tString&in)\n4 void Entity_Preload(const tString&in)\n3 void cMeshEntity::SetDisableSleep(bool)\n3 void cLux_PreloadEntity(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 26.2,
+   "wall_s": 26.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2467,7 +2467,7 @@
     "physics_bodies": 1584,
     "physics_bodies_awake": 1,
     "physics_bodies_dynamic": 43,
-    "sound_entities": 79,
+    "sound_entities": 80,
     "static_mesh_entities": 3780,
     "submeshes_without_material": 1,
     "unbounded_top": []
@@ -2480,10 +2480,10 @@
     "StaticObjectBatches:0/22"
    ],
    "asleep": false,
-   "boot_s": 2.7,
+   "boot_s": 3.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 6.895187,
@@ -2492,30 +2492,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 60.098557,
    "frame": {
-    "black_frac": 0.02884,
+    "black_frac": 0.028794,
     "height": 2160,
     "lum_hist16": [
-     0.836815,
-     0.116785,
-     0.026021,
-     0.012272,
-     0.004725,
-     0.001341,
-     0.000477,
-     0.000183,
-     9.1e-05,
-     4.7e-05,
-     5.3e-05,
-     5.7e-05,
-     0.001086,
+     0.836797,
+     0.116814,
+     0.026034,
+     0.01224,
+     0.00474,
+     0.001332,
+     0.000473,
+     0.000188,
+     8.8e-05,
      4.9e-05,
+     5.3e-05,
+     5.6e-05,
+     0.001088,
+     4.7e-05,
      0,
      0
     ],
-    "lum_max": 226,
-    "lum_mean": 10.817864,
+    "lum_max": 225,
+    "lum_mean": 10.823254,
     "lum_min": 1,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -2529,21 +2529,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294399,
      "b_max": 1,
-     "b_mean": 0.192813,
+     "b_mean": 0.192795,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 87589,
+     "b_zero_count": 87462,
      "g_max": 1,
-     "g_mean": 0.250327,
+     "g_mean": 0.250678,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 70331,
+     "g_zero_count": 70324,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.277827,
+     "r_mean": 0.277899,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 78262,
+     "r_zero_count": 78271,
      "sample_a": 0,
      "sample_b": 0.161743,
      "sample_g": 0.219116,
@@ -2557,18 +2557,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.299977,
+     "b_mean": 0.299951,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 3429,
+     "b_zero_count": 3422,
      "g_max": 1,
-     "g_mean": -0.019029,
+     "g_mean": -0.019052,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 794,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.017743,
+     "r_mean": 0.017471,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 2049,
@@ -2585,18 +2585,18 @@
      "a_nan_count": 0,
      "a_zero_count": 911,
      "b_max": 1,
-     "b_mean": 0.235835,
+     "b_mean": 0.235855,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 216209,
+     "b_zero_count": 216194,
      "g_max": 1,
-     "g_mean": 0.238535,
+     "g_mean": 0.238647,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 161150,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.241831,
+     "r_mean": 0.241868,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 204909,
@@ -2610,19 +2610,19 @@
    "load_report": {
     "map": "01_04_transport_station.hpm",
     "terrain_active": false,
-    "total_ms": 1436,
+    "total_ms": 1526,
     "tracks": {
      "Area": {
       "created": 264,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 264
      },
      "Billboard": {
       "created": 64,
       "file_missing": false,
-      "ms": 17,
+      "ms": 16,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -2640,7 +2640,7 @@
      "Decal": {
       "created": 270,
       "file_missing": false,
-      "ms": 179,
+      "ms": 187,
       "skipped": {},
       "xml": 270
      },
@@ -2654,14 +2654,14 @@
      "Entity": {
       "created": 797,
       "file_missing": false,
-      "ms": 490,
+      "ms": 537,
       "skipped": {},
       "xml": 797
      },
      "FogArea": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
@@ -2675,7 +2675,7 @@
      "Light": {
       "created": 155,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {},
       "xml": 155
      },
@@ -2696,14 +2696,14 @@
      "Primitive": {
       "created": 25,
       "file_missing": false,
-      "ms": 4,
+      "ms": 5,
       "skipped": {},
       "xml": 25
      },
      "Sound": {
       "created": 88,
       "file_missing": false,
-      "ms": 74,
+      "ms": 78,
       "skipped": {
        "load_failed": 10
       },
@@ -2719,7 +2719,7 @@
      "StaticObject": {
       "created": 1052,
       "file_missing": false,
-      "ms": 401,
+      "ms": 430,
       "skipped": {},
       "xml": 1052
      },
@@ -2734,7 +2734,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3899615.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-668252.log",
    "log_errors": {},
    "log_warnings": 21,
    "player": {
@@ -2750,30 +2750,30 @@
     "yaw": -3e-06
    },
    "render": {
-    "draw_calls": 1060,
+    "draw_calls": 989,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 57,
     "lights_rendered": 57,
-    "occlusion_queries": 101,
+    "occlusion_queries": 103,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 1.6289032697677612,
-     "logic_steps": 1.0,
-     "render_ms": 8.127799034118652,
-     "swap_ms": 0.037161052227020264
+     "logic_ms": 2.2927191257476807,
+     "logic_steps": 1.008264422416687,
+     "render_ms": 8.75331974029541,
+     "swap_ms": 0.0494346022605896
     },
     "shader_failures": 0,
-    "solid_objects": 302,
-    "trans_objects": 101
+    "solid_objects": 278,
+    "trans_objects": 98
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n8 void cLux_PreloadEntity(const tString&in)\n6 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n6 void cLuxProp::SetGuiCacheAtScreenSize(float)\n6 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_SetIsOccluder(const tString&in, bool)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 11,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n8 void cLux_PreloadEntity(const tString&in)\n6 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_SetIsOccluder(const tString&in, bool)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 22.1,
+   "wall_s": 22.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2819,10 +2819,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 5.6,
+   "boot_s": 5.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.940979,
+    "fps": 60.157795,
     "pitch": 0,
     "pos_x": -14.350599,
     "pos_y": 34.943035,
@@ -2831,17 +2831,17 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.940979,
+   "fps": 60.157795,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.262806,
-     0.713464,
-     0.02222,
-     0.001371,
-     0.00013,
-     9e-06,
+     0.262728,
+     0.713584,
+     0.022181,
+     0.001367,
+     0.000133,
+     8e-06,
      0,
      0,
      0,
@@ -2853,8 +2853,8 @@
      0,
      0
     ],
-    "lum_max": 95,
-    "lum_mean": 18.151749,
+    "lum_max": 94,
+    "lum_mean": 18.150801,
     "lum_min": 6,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -2866,79 +2866,79 @@
      "a_mean": 0.038428,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7975018,
+     "a_zero_count": 7975016,
      "b_max": 1.606445,
-     "b_mean": 0.177086,
+     "b_mean": 0.177089,
      "b_min": -0.051727,
      "b_nan_count": 0,
-     "b_zero_count": 14498,
+     "b_zero_count": 14483,
      "g_max": 1.951172,
-     "g_mean": 0.233479,
+     "g_mean": 0.233484,
      "g_min": -0.063354,
      "g_nan_count": 0,
-     "g_zero_count": 548,
+     "g_zero_count": 536,
      "height": 2160,
      "r_max": 2.394531,
-     "r_mean": 0.276055,
+     "r_mean": 0.276057,
      "r_min": -0.057922,
      "r_nan_count": 0,
-     "r_zero_count": 138,
+     "r_zero_count": 139,
      "sample_a": 0,
-     "sample_b": 0.117249,
-     "sample_g": 0.175659,
-     "sample_r": 0.227173,
+     "sample_b": 0.116516,
+     "sample_g": 0.174683,
+     "sample_r": 0.225952,
      "width": 3840
     },
     "1": {
      "a_max": 0.014099,
      "a_mean": 0.004775,
-     "a_min": 0.001031,
+     "a_min": 0.001032,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.45676,
+     "b_mean": 0.456738,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.368894,
+     "g_mean": 0.368907,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 43,
+     "g_zero_count": 42,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.076939,
+     "r_mean": 0.076956,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 0,
      "sample_a": 0.005535,
-     "sample_b": -0.115662,
+     "sample_b": -0.115967,
      "sample_g": 0.928223,
      "sample_r": 0.352539,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.428959,
+     "a_mean": 0.428965,
      "a_min": 0.089417,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.046536,
+     "b_mean": 0.046537,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6286777,
+     "b_zero_count": 6286725,
      "g_max": 1,
-     "g_mean": 0.047778,
+     "g_mean": 0.047779,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6210737,
+     "g_zero_count": 6210668,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.049859,
+     "r_mean": 0.04986,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6253762,
+     "r_zero_count": 6253712,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -2949,19 +2949,19 @@
    "load_report": {
     "map": "02_01_ms_curie_outside.hpm",
     "terrain_active": true,
-    "total_ms": 4172,
+    "total_ms": 4027,
     "tracks": {
      "Area": {
       "created": 663,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 663
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 18,
+      "ms": 12,
       "skipped": {
        "connect_light_missing": 20
       },
@@ -2979,7 +2979,7 @@
      "Decal": {
       "created": 455,
       "file_missing": false,
-      "ms": 199,
+      "ms": 196,
       "skipped": {
        "decal_mesh_failed": 8
       },
@@ -2988,14 +2988,14 @@
      "DetailMeshes": {
       "created": 3788,
       "file_missing": false,
-      "ms": 49,
+      "ms": 48,
       "skipped": {},
       "xml": 3788
      },
      "Entity": {
       "created": 1579,
       "file_missing": false,
-      "ms": 961,
+      "ms": 926,
       "skipped": {},
       "xml": 1579
      },
@@ -3009,7 +3009,7 @@
      "LensFlare": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
@@ -3037,14 +3037,14 @@
      "Primitive": {
       "created": 257,
       "file_missing": false,
-      "ms": 53,
+      "ms": 49,
       "skipped": {},
       "xml": 257
      },
      "Sound": {
       "created": 105,
       "file_missing": false,
-      "ms": 112,
+      "ms": 115,
       "skipped": {
        "load_failed": 4
       },
@@ -3060,7 +3060,7 @@
      "StaticObject": {
       "created": 4961,
       "file_missing": false,
-      "ms": 676,
+      "ms": 648,
       "skipped": {},
       "xml": 4961
      },
@@ -3073,7 +3073,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3900081.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-669318.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 1,
@@ -3094,30 +3094,30 @@
     "yaw": -4.6837
    },
    "render": {
-    "draw_calls": 757,
+    "draw_calls": 764,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 28,
     "lights_rendered": 28,
-    "occlusion_queries": 359,
+    "occlusion_queries": 362,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 4.079043865203857,
-     "logic_steps": 1.008264422416687,
-     "render_ms": 3.2854161262512207,
-     "swap_ms": 0.04881920665502548
+     "logic_ms": 5.038594722747803,
+     "logic_steps": 1.0,
+     "render_ms": 4.260193347930908,
+     "swap_ms": 0.05247897654771805
     },
     "shader_failures": 0,
     "solid_objects": 142,
-    "trans_objects": 60
+    "trans_objects": 68
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLux_PreloadEntity(const tString&in)\n19 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n8 void cLuxProp::SetGuiCacheAtScreenSize(float)\n8 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadMaterial(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 9,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLux_PreloadEntity(const tString&in)\n8 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadMaterial(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 25.4,
+   "wall_s": 25.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3169,10 +3169,10 @@
     "StaticComboArea:0/2"
    ],
    "asleep": false,
-   "boot_s": 4.1,
+   "boot_s": 4.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.760975,
+    "fps": 59.980434,
     "pitch": 0,
     "pos_x": 8.5,
     "pos_y": -5.107367,
@@ -3181,18 +3181,18 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.760975,
+   "fps": 59.980434,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.641859,
-     0.330697,
-     0.021808,
-     0.004446,
-     0.000846,
-     0.000285,
-     5.1e-05,
+     0.641936,
+     0.330519,
+     0.021886,
+     0.004461,
+     0.000844,
+     0.00029,
+     5.5e-05,
      8e-06,
      0,
      0,
@@ -3203,8 +3203,8 @@
      0,
      0
     ],
-    "lum_max": 123,
-    "lum_mean": 15.686294,
+    "lum_max": 125,
+    "lum_mean": 15.690502,
     "lum_min": 5,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3212,27 +3212,27 @@
    },
    "gbuffer": {
     "0": {
-     "a_max": 0.519531,
-     "a_mean": 0.002819,
+     "a_max": 0.519043,
+     "a_mean": 0.002703,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8220265,
+     "a_zero_count": 8222825,
      "b_max": 0.962891,
-     "b_mean": 0.151936,
+     "b_mean": 0.151914,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 9605,
+     "b_zero_count": 9578,
      "g_max": 0.994141,
-     "g_mean": 0.210075,
+     "g_mean": 0.209941,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1161,
+     "g_zero_count": 1163,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.246044,
+     "r_mean": 0.245966,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 1274,
+     "r_zero_count": 1278,
      "sample_a": 0,
      "sample_b": 0.124084,
      "sample_g": 0.130127,
@@ -3241,23 +3241,23 @@
     },
     "1": {
      "a_max": 0.008286,
-     "a_mean": 0.004343,
-     "a_min": 0.001414,
+     "a_mean": 0.004344,
+     "a_min": 0.001412,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.486189,
+     "b_mean": 0.486096,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 31,
      "g_max": 1,
-     "g_mean": 0.050952,
+     "g_mean": 0.050829,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 233317,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.02919,
+     "r_mean": -0.029385,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 21,
@@ -3269,26 +3269,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.538379,
+     "a_mean": 0.538406,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 24527,
+     "a_zero_count": 24518,
      "b_max": 1,
-     "b_mean": 0.191575,
+     "b_mean": 0.19162,
      "b_min": -0.15686,
      "b_nan_count": 0,
-     "b_zero_count": 426878,
+     "b_zero_count": 424981,
      "g_max": 1,
-     "g_mean": 0.200342,
+     "g_mean": 0.200388,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 395157,
+     "g_zero_count": 393160,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.205236,
+     "r_mean": 0.20528,
      "r_min": -0.075867,
      "r_nan_count": 0,
-     "r_zero_count": 411226,
+     "r_zero_count": 409274,
      "sample_a": 0.859863,
      "sample_b": 0.516602,
      "sample_g": 0.52002,
@@ -3299,19 +3299,19 @@
    "load_report": {
     "map": "02_02_ms_curie_inside.hpm",
     "terrain_active": false,
-    "total_ms": 2741,
+    "total_ms": 2757,
     "tracks": {
      "Area": {
       "created": 1183,
       "file_missing": false,
-      "ms": 11,
+      "ms": 12,
       "skipped": {},
       "xml": 1183
      },
      "Billboard": {
       "created": 132,
       "file_missing": false,
-      "ms": 14,
+      "ms": 12,
       "skipped": {},
       "xml": 132
      },
@@ -3327,7 +3327,7 @@
      "Decal": {
       "created": 2080,
       "file_missing": false,
-      "ms": 676,
+      "ms": 675,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -3336,14 +3336,14 @@
      "DetailMeshes": {
       "created": 5976,
       "file_missing": false,
-      "ms": 37,
+      "ms": 38,
       "skipped": {},
       "xml": 5976
      },
      "Entity": {
       "created": 2271,
       "file_missing": false,
-      "ms": 824,
+      "ms": 839,
       "skipped": {},
       "xml": 2271
      },
@@ -3385,7 +3385,7 @@
      "Primitive": {
       "created": 303,
       "file_missing": false,
-      "ms": 38,
+      "ms": 39,
       "skipped": {},
       "xml": 303
      },
@@ -3410,7 +3410,7 @@
      "StaticObject": {
       "created": 7380,
       "file_missing": false,
-      "ms": 572,
+      "ms": 577,
       "skipped": {},
       "xml": 7380
      },
@@ -3423,7 +3423,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3900811.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-670441.log",
    "log_errors": {
     "ERROR: CrossHairState '*' does not exist": {
      "count": 1,
@@ -3444,30 +3444,30 @@
     "yaw": -4.712393
    },
    "render": {
-    "draw_calls": 863,
+    "draw_calls": 868,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 54,
     "lights_rendered": 54,
-    "occlusion_queries": 167,
+    "occlusion_queries": 172,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 4.475744724273682,
+     "logic_ms": 5.207169055938721,
      "logic_steps": 1.0,
-     "render_ms": 6.950462341308594,
-     "swap_ms": 0.03855983540415764
+     "render_ms": 7.726044178009033,
+     "swap_ms": 0.043979208916425705
     },
     "shader_failures": 0,
     "solid_objects": 230,
-    "trans_objects": 84
+    "trans_objects": 85
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 10,
-    "stubs": "33 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n33 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void cLuxProp::SetGuiCacheAtScreenSize(float)\n12 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 8,
+    "stubs": "33 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n12 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 23.7,
+   "wall_s": 24.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3513,10 +3513,10 @@
     "no_material:mind_coral_colony_edges_small_solid.mat"
    ],
    "asleep": false,
-   "boot_s": 4.1,
+   "boot_s": 4.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880306,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": 26.799,
     "pos_y": 127.442001,
@@ -3525,19 +3525,19 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.880306,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.002219,
-     0.776693,
-     0.210143,
-     0.010507,
-     0.000366,
-     6e-05,
-     1e-05,
-     1e-06,
+     0.001592,
+     0.816008,
+     0.172266,
+     0.00968,
+     0.000353,
+     8e-05,
+     2.2e-05,
+     0,
      0,
      0,
      0,
@@ -3547,8 +3547,8 @@
      0,
      0
     ],
-    "lum_max": 113,
-    "lum_mean": 27.737242,
+    "lum_max": 111,
+    "lum_mean": 27.42609,
     "lum_min": 14,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3595,7 +3595,7 @@
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.104824,
+     "g_mean": 0.104822,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 56,
@@ -3623,7 +3623,7 @@
      "b_nan_count": 0,
      "b_zero_count": 151654,
      "g_max": 1,
-     "g_mean": 0.362136,
+     "g_mean": 0.362137,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 8914,
@@ -3643,26 +3643,26 @@
    "load_report": {
     "map": "02_03_delta.hpm",
     "terrain_active": true,
-    "total_ms": 2711,
+    "total_ms": 2976,
     "tracks": {
      "Area": {
       "created": 935,
       "file_missing": false,
-      "ms": 8,
+      "ms": 9,
       "skipped": {},
       "xml": 935
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 3,
+      "ms": 6,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 66
       },
@@ -3671,21 +3671,21 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 231,
+      "ms": 256,
       "skipped": {},
       "xml": 375
      },
      "DetailMeshes": {
       "created": 4882,
       "file_missing": false,
-      "ms": 51,
+      "ms": 57,
       "skipped": {},
       "xml": 4882
      },
      "Entity": {
       "created": 1749,
       "file_missing": false,
-      "ms": 630,
+      "ms": 768,
       "skipped": {},
       "xml": 1749
      },
@@ -3699,7 +3699,7 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 1
      },
@@ -3720,7 +3720,7 @@
      "ParticleSystem": {
       "created": 92,
       "file_missing": false,
-      "ms": 27,
+      "ms": 29,
       "skipped": {},
       "xml": 92
      },
@@ -3734,7 +3734,7 @@
      "Sound": {
       "created": 33,
       "file_missing": false,
-      "ms": 152,
+      "ms": 158,
       "skipped": {},
       "xml": 33
      },
@@ -3748,7 +3748,7 @@
      "StaticObject": {
       "created": 1714,
       "file_missing": false,
-      "ms": 568,
+      "ms": 611,
       "skipped": {},
       "xml": 1714
      },
@@ -3761,7 +3761,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3901225.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-671380.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 4,
@@ -3798,18 +3798,18 @@
     "yaw": -2.548398
    },
    "render": {
-    "draw_calls": 98,
+    "draw_calls": 97,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 5,
     "lights_rendered": 5,
-    "occlusion_queries": 10,
+    "occlusion_queries": 9,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 4.204602241516113,
+     "logic_ms": 4.038074016571045,
      "logic_steps": 1.0,
-     "render_ms": 2.758042812347412,
-     "swap_ms": 0.03925025835633278
+     "render_ms": 2.950802803039551,
+     "swap_ms": 0.04202038422226906
     },
     "shader_failures": 0,
     "solid_objects": 23,
@@ -3818,10 +3818,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 12,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n20 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n17 void cLux_PreloadEntity(const tString&in)\n12 void cLuxProp::SetGuiCacheAtScreenSize(float)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 8,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n17 void cLux_PreloadEntity(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 28.5,
+   "wall_s": 29.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3856,7 +3856,7 @@
     "physics_bodies": 2495,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 65,
-    "sound_entities": 53,
+    "sound_entities": 54,
     "static_mesh_entities": 3713,
     "submeshes_without_material": 5,
     "unbounded_top": [
@@ -3870,10 +3870,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 4.1,
+   "boot_s": 4.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 54,
     "pitch": 0,
     "pos_x": -3.75,
     "pos_y": 242.656494,
@@ -3882,30 +3882,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 54,
    "frame": {
     "black_frac": 0.000244,
     "height": 2160,
     "lum_hist16": [
-     0.024042,
-     0.821202,
-     0.133392,
-     0.006245,
-     0.001305,
-     0.000635,
-     0.000597,
-     0.000595,
-     0.000631,
-     0.000586,
-     0.00053,
-     0.000542,
-     0.000668,
-     0.000752,
-     0.000923,
-     0.007356
+     0.022036,
+     0.823807,
+     0.132891,
+     0.006151,
+     0.00128,
+     0.00064,
+     0.000603,
+     0.000602,
+     0.000625,
+     0.000587,
+     0.000533,
+     0.000539,
+     0.000669,
+     0.000758,
+     0.000922,
+     0.007357
     ],
     "lum_max": 255,
-    "lum_mean": 26.644623,
+    "lum_mean": 26.64472,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.006451,
@@ -3914,26 +3914,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.1916,
+     "a_mean": 0.191906,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 6704195,
-     "b_max": 1.055664,
-     "b_mean": 0.336725,
+     "a_zero_count": 6702303,
+     "b_max": 1.158203,
+     "b_mean": 0.336855,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1286,
-     "g_max": 1.366211,
-     "g_mean": 0.187585,
+     "b_zero_count": 1426,
+     "g_max": 1.68457,
+     "g_mean": 0.187358,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1588859,
+     "g_zero_count": 1591801,
      "height": 2160,
-     "r_max": 1.522461,
-     "r_mean": 0.221481,
+     "r_max": 1.952148,
+     "r_mean": 0.221341,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 1588791,
+     "r_zero_count": 1591740,
      "sample_a": 0,
      "sample_b": 0.152222,
      "sample_g": 0.2229,
@@ -3942,26 +3942,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.200629,
-     "a_min": 0.000711,
+     "a_mean": 0.201001,
+     "a_min": 0.000669,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.41888,
+     "b_mean": 0.421026,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 0,
+     "b_zero_count": 1,
      "g_max": 1,
-     "g_mean": 0.450439,
+     "g_mean": 0.447388,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 1588533,
+     "g_zero_count": 1591448,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": 0.065958,
+     "r_mean": 0.066741,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 1588508,
+     "r_zero_count": 1591421,
      "sample_a": 0.025314,
      "sample_b": 0.781738,
      "sample_g": -0.065125,
@@ -3970,26 +3970,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.407976,
+     "a_mean": 0.408137,
      "a_min": 0.105835,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.256112,
+     "b_mean": 0.256593,
      "b_min": -0.562988,
      "b_nan_count": 0,
-     "b_zero_count": 3417428,
+     "b_zero_count": 3408680,
      "g_max": 0.996582,
-     "g_mean": 0.064275,
+     "g_mean": 0.064409,
      "g_min": -0.45166,
      "g_nan_count": 0,
-     "g_zero_count": 4962756,
+     "g_zero_count": 4956722,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.065019,
+     "r_mean": 0.065152,
      "r_min": -0.413818,
      "r_nan_count": 0,
-     "r_zero_count": 5005930,
+     "r_zero_count": 5000030,
      "sample_a": 1,
      "sample_b": 0.11731,
      "sample_g": 0.18335,
@@ -4000,7 +4000,7 @@
    "load_report": {
     "map": "02_04_theta_outside.hpm",
     "terrain_active": true,
-    "total_ms": 2829,
+    "total_ms": 3064,
     "tracks": {
      "Area": {
       "created": 96,
@@ -4012,7 +4012,7 @@
      "Billboard": {
       "created": 29,
       "file_missing": false,
-      "ms": 6,
+      "ms": 7,
       "skipped": {},
       "xml": 29
      },
@@ -4028,21 +4028,21 @@
      "Decal": {
       "created": 194,
       "file_missing": false,
-      "ms": 95,
+      "ms": 100,
       "skipped": {},
       "xml": 194
      },
      "DetailMeshes": {
       "created": 4002,
       "file_missing": false,
-      "ms": 39,
+      "ms": 40,
       "skipped": {},
       "xml": 4002
      },
      "Entity": {
       "created": 1071,
       "file_missing": false,
-      "ms": 689,
+      "ms": 742,
       "skipped": {
        "entity_failed:entities/_temp/aaron/bass_robot_posed.ent": 1
       },
@@ -4065,7 +4065,7 @@
      "Light": {
       "created": 102,
       "file_missing": false,
-      "ms": 4,
+      "ms": 5,
       "skipped": {},
       "xml": 102
      },
@@ -4079,21 +4079,21 @@
      "ParticleSystem": {
       "created": 98,
       "file_missing": false,
-      "ms": 40,
+      "ms": 43,
       "skipped": {},
       "xml": 98
      },
      "Primitive": {
       "created": 8,
       "file_missing": false,
-      "ms": 6,
+      "ms": 9,
       "skipped": {},
       "xml": 8
      },
      "Sound": {
       "created": 28,
       "file_missing": false,
-      "ms": 18,
+      "ms": 20,
       "skipped": {},
       "xml": 28
      },
@@ -4107,7 +4107,7 @@
      "StaticObject": {
       "created": 1493,
       "file_missing": false,
-      "ms": 266,
+      "ms": 321,
       "skipped": {},
       "xml": 1493
      },
@@ -4120,7 +4120,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3902132.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-672797.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 8,
@@ -4145,30 +4145,30 @@
     "yaw": -3.141583
    },
    "render": {
-    "draw_calls": 944,
+    "draw_calls": 946,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 3,
     "lights_rendered": 3,
-    "occlusion_queries": 113,
+    "occlusion_queries": 109,
     "per_frame": {
-     "frames": 120,
-     "logic_ms": 2.3346736431121826,
-     "logic_steps": 1.0,
-     "render_ms": 3.6451570987701416,
-     "swap_ms": 0.04389132559299469
+     "frames": 121,
+     "logic_ms": 4.859443187713623,
+     "logic_steps": 1.0495867729187012,
+     "render_ms": 4.976924896240234,
+     "swap_ms": 0.054037924855947495
     },
     "shader_failures": 0,
-    "solid_objects": 396,
+    "solid_objects": 399,
     "trans_objects": 16
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n13 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n5 void cLux_PreloadEntity(const tString&in)\n3 void cLuxProp::SetGuiCacheAtScreenSize(float)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadSound(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 9,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n5 void cLux_PreloadEntity(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLux_PreloadSound(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 25.8,
+   "wall_s": 27.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4218,10 +4218,10 @@
     "Compound:0/172"
    ],
    "asleep": false,
-   "boot_s": 4.6,
+   "boot_s": 6.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098557,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": -12.75,
     "pos_y": 3.954989,
@@ -4230,33 +4230,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.098557,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.659819,
-     0.284893,
-     0.038644,
-     0.011687,
-     0.003152,
-     0.000689,
-     0.000308,
+     0.665188,
+     0.279769,
+     0.038363,
+     0.011726,
+     0.003161,
+     0.000678,
+     0.000307,
      0.000111,
-     7.3e-05,
-     0.000132,
-     5.6e-05,
+     7.4e-05,
+     0.000138,
+     5e-05,
      4.6e-05,
-     4.6e-05,
-     6.2e-05,
-     0.000133,
-     0.000149
+     4.4e-05,
+     6.1e-05,
+     0.000134,
+     0.000151
     ],
     "lum_max": 255,
-    "lum_mean": 17.617966,
+    "lum_mean": 17.658785,
     "lum_min": 12,
     "magenta_frac": 0,
-    "white_frac": 5e-06,
+    "white_frac": 1e-06,
     "width": 3840
    },
    "gbuffer": {
@@ -4267,21 +4267,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1,
-     "b_mean": 0.140242,
+     "b_mean": 0.14027,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 104515,
+     "b_zero_count": 104407,
      "g_max": 0.995117,
-     "g_mean": 0.170102,
+     "g_mean": 0.170144,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 45606,
+     "g_zero_count": 46219,
      "height": 2160,
      "r_max": 0.994629,
-     "r_mean": 0.189691,
+     "r_mean": 0.189766,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 77865,
+     "r_zero_count": 77391,
      "sample_a": 0,
      "sample_b": 0.177612,
      "sample_g": 0.195801,
@@ -4300,7 +4300,7 @@
      "b_nan_count": 0,
      "b_zero_count": 255,
      "g_max": 1,
-     "g_mean": -0.017373,
+     "g_mean": -0.017368,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 2662,
@@ -4318,23 +4318,23 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.644532,
+     "a_mean": 0.64453,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 229084,
      "b_max": 1,
-     "b_mean": 0.236306,
+     "b_mean": 0.23631,
      "b_min": -0.010742,
      "b_nan_count": 0,
      "b_zero_count": 376174,
      "g_max": 1,
-     "g_mean": 0.259227,
+     "g_mean": 0.259231,
      "g_min": -0.008789,
      "g_nan_count": 0,
      "g_zero_count": 319204,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.268821,
+     "r_mean": 0.268825,
      "r_min": -0.006489,
      "r_nan_count": 0,
      "r_zero_count": 330648,
@@ -4348,12 +4348,12 @@
    "load_report": {
     "map": "02_05_theta_inside.hpm",
     "terrain_active": false,
-    "total_ms": 3097,
+    "total_ms": 3722,
     "tracks": {
      "Area": {
       "created": 672,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 672
      },
@@ -4376,7 +4376,7 @@
      "Decal": {
       "created": 1076,
       "file_missing": false,
-      "ms": 340,
+      "ms": 343,
       "skipped": {},
       "xml": 1076
      },
@@ -4390,7 +4390,7 @@
      "Entity": {
       "created": 2867,
       "file_missing": false,
-      "ms": 1477,
+      "ms": 1750,
       "skipped": {},
       "xml": 2867
      },
@@ -4404,14 +4404,14 @@
      "LensFlare": {
       "created": 5,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 5
      },
      "Light": {
       "created": 820,
       "file_missing": false,
-      "ms": 16,
+      "ms": 17,
       "skipped": {},
       "xml": 820
      },
@@ -4425,21 +4425,21 @@
      "ParticleSystem": {
       "created": 201,
       "file_missing": false,
-      "ms": 49,
+      "ms": 48,
       "skipped": {},
       "xml": 201
      },
      "Primitive": {
       "created": 333,
       "file_missing": false,
-      "ms": 60,
+      "ms": 59,
       "skipped": {},
       "xml": 333
      },
      "Sound": {
       "created": 140,
       "file_missing": false,
-      "ms": 36,
+      "ms": 37,
       "skipped": {},
       "xml": 140
      },
@@ -4453,7 +4453,7 @@
      "StaticObject": {
       "created": 4460,
       "file_missing": false,
-      "ms": 555,
+      "ms": 878,
       "skipped": {},
       "xml": 4460
      },
@@ -4466,7 +4466,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3902656.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-674230.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 8,
@@ -4516,13 +4516,13 @@
     "gl_errors": {},
     "lights_in_list": 128,
     "lights_rendered": 128,
-    "occlusion_queries": 473,
+    "occlusion_queries": 475,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 5.299943447113037,
+     "frames": 120,
+     "logic_ms": 4.916281700134277,
      "logic_steps": 1.0,
-     "render_ms": 3.8163962364196777,
-     "swap_ms": 0.04760948568582535
+     "render_ms": 3.5510175228118896,
+     "swap_ms": 0.04264364391565323
     },
     "shader_failures": 0,
     "solid_objects": 196,
@@ -4531,10 +4531,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 12,
-    "stubs": "84 void cLux_PreloadEntity(const tString&in)\n66 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n23 void cLuxProp::SetGuiCacheAtScreenSize(float)\n4 void cLux_PreloadSound(const tString&in)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void Light_SetCheapGobo(const tString&in, bool)\n"
+    "count": 10,
+    "stubs": "84 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void cLux_PreloadSound(const tString&in)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxProp::DisableSubMeshMerge(tString)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 void Light_SetCheapGobo(const tString&in, bool)\n"
    },
-   "wall_s": 26.0,
+   "wall_s": 27.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4565,11 +4565,11 @@
     "oversized_top": [
      "02_05_beach_sky_1:_home_lm_.local_share_Steam_steamapps_common_SOMA_static_objects_urban_special_skyline.dae.v11.msh"
     ],
-    "particle_systems": 208,
+    "particle_systems": 210,
     "physics_bodies": 4004,
     "physics_bodies_awake": 4,
     "physics_bodies_dynamic": 779,
-    "sound_entities": 228,
+    "sound_entities": 230,
     "static_mesh_entities": 4945,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -4582,7 +4582,7 @@
     "no_material:mind_coral_colony_edges_small_solid.mat"
    ],
    "asleep": false,
-   "boot_s": 3.6,
+   "boot_s": 3.8,
    "camera": {
     "fov_deg": 70.000008,
     "fps": 60.098557,
@@ -4596,31 +4596,31 @@
    "failures": [],
    "fps": 60.098557,
    "frame": {
-    "black_frac": 0.002721,
+    "black_frac": 0.00272,
     "height": 2160,
     "lum_hist16": [
-     0.616566,
-     0.33782,
-     0.032737,
-     0.011906,
-     0.000242,
+     0.614998,
+     0.339918,
+     0.033629,
+     0.010581,
+     0.000148,
      4.9e-05,
-     2.9e-05,
+     2.6e-05,
      2e-05,
-     2.3e-05,
-     1.9e-05,
-     2.1e-05,
-     1.9e-05,
-     2.5e-05,
+     2.4e-05,
+     1.8e-05,
+     2.2e-05,
+     1.7e-05,
+     2.7e-05,
      5.4e-05,
-     4.1e-05,
-     0.000427
+     3.9e-05,
+     0.000428
     ],
     "lum_max": 255,
-    "lum_mean": 15.278895,
+    "lum_mean": 15.237646,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000244,
+    "white_frac": 0.000249,
     "width": 3840
    },
    "gbuffer": {
@@ -4631,21 +4631,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1.381836,
-     "b_mean": 0.370887,
+     "b_mean": 0.370872,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1315907,
+     "b_zero_count": 1316459,
      "g_max": 1.533203,
-     "g_mean": 0.450155,
+     "g_mean": 0.450139,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 22736,
+     "g_zero_count": 23295,
      "height": 2160,
      "r_max": 1.585938,
-     "r_mean": 0.514025,
+     "r_mean": 0.51401,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 23241,
+     "r_zero_count": 23794,
      "sample_a": 0,
      "sample_b": 0.546875,
      "sample_g": 0.555664,
@@ -4659,18 +4659,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.543258,
+     "b_mean": 0.543262,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 4871,
+     "b_zero_count": 4855,
      "g_max": 1,
-     "g_mean": 0.107448,
+     "g_mean": 0.107455,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 394,
+     "g_zero_count": 393,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.030526,
+     "r_mean": 0.030553,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 2668,
@@ -4682,26 +4682,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.528158,
+     "a_mean": 0.528144,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 24037,
+     "a_zero_count": 24651,
      "b_max": 1,
-     "b_mean": 0.52885,
+     "b_mean": 0.528829,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 141086,
+     "b_zero_count": 141732,
      "g_max": 1,
-     "g_mean": 0.52272,
+     "g_mean": 0.522698,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 134808,
+     "g_zero_count": 135435,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.526324,
+     "r_mean": 0.526297,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 137849,
+     "r_zero_count": 138495,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -4712,12 +4712,12 @@
    "load_report": {
     "map": "02_06_theta_tunnels.hpm",
     "terrain_active": false,
-    "total_ms": 2263,
+    "total_ms": 2259,
     "tracks": {
      "Area": {
       "created": 886,
       "file_missing": false,
-      "ms": 9,
+      "ms": 10,
       "skipped": {},
       "xml": 886
      },
@@ -4731,7 +4731,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 55
       },
@@ -4740,7 +4740,7 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 200,
+      "ms": 191,
       "skipped": {
        "decal_mesh_failed": 5
       },
@@ -4756,7 +4756,7 @@
      "Entity": {
       "created": 2220,
       "file_missing": false,
-      "ms": 1070,
+      "ms": 1093,
       "skipped": {},
       "xml": 2220
      },
@@ -4777,7 +4777,7 @@
      "Light": {
       "created": 499,
       "file_missing": false,
-      "ms": 12,
+      "ms": 11,
       "skipped": {},
       "xml": 499
      },
@@ -4791,21 +4791,21 @@
      "ParticleSystem": {
       "created": 60,
       "file_missing": false,
-      "ms": 35,
+      "ms": 34,
       "skipped": {},
       "xml": 60
      },
      "Primitive": {
       "created": 171,
       "file_missing": false,
-      "ms": 38,
+      "ms": 35,
       "skipped": {},
       "xml": 171
      },
      "Sound": {
       "created": 111,
       "file_missing": false,
-      "ms": 28,
+      "ms": 27,
       "skipped": {
        "load_failed": 6
       },
@@ -4821,7 +4821,7 @@
      "StaticObject": {
       "created": 5121,
       "file_missing": false,
-      "ms": 498,
+      "ms": 486,
       "skipped": {},
       "xml": 5121
      },
@@ -4834,7 +4834,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3903252.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-675537.log",
    "log_errors": {
     "ERROR: Could not find headbone '*' in entity '*'": {
      "count": 3,
@@ -4871,30 +4871,30 @@
     "yaw": -3e-06
    },
    "render": {
-    "draw_calls": 1989,
+    "draw_calls": 2045,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 115,
-    "lights_rendered": 115,
-    "occlusion_queries": 233,
+    "lights_in_list": 120,
+    "lights_rendered": 120,
+    "occlusion_queries": 235,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 3.161951780319214,
+     "logic_ms": 3.3024537563323975,
      "logic_steps": 1.0,
-     "render_ms": 11.665739059448242,
-     "swap_ms": 0.03856188431382179
+     "render_ms": 12.20092487335205,
+     "swap_ms": 0.06116877868771553
     },
     "shader_failures": 0,
-    "solid_objects": 665,
-    "trans_objects": 90
+    "solid_objects": 682,
+    "trans_objects": 96
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 10,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n29 void cLuxProp::SetGuiCacheAtScreenSize(float)\n27 void cLux_PreloadEntity(const tString&in)\n21 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 8,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n27 void cLux_PreloadEntity(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 23.5,
+   "wall_s": 23.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4929,7 +4929,7 @@
     "physics_bodies": 2805,
     "physics_bodies_awake": 5,
     "physics_bodies_dynamic": 339,
-    "sound_entities": 148,
+    "sound_entities": 150,
     "static_mesh_entities": 3189,
     "submeshes_without_material": 2,
     "unbounded_top": []
@@ -4940,10 +4940,10 @@
     "Compound:0/144"
    ],
    "asleep": false,
-   "boot_s": 4.7,
+   "boot_s": 4.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.648083,
+    "fps": 57.942089,
     "pitch": 0,
     "pos_x": -10.6851,
     "pos_y": 1.49808,
@@ -4952,33 +4952,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.648083,
+   "fps": 57.942089,
    "frame": {
-    "black_frac": 0.000193,
+    "black_frac": 0.000194,
     "height": 2160,
     "lum_hist16": [
-     0.284679,
-     0.561164,
-     0.05395,
-     0.027332,
-     0.017454,
-     0.006731,
-     0.006002,
-     0.004122,
-     0.003559,
-     0.00319,
-     0.002586,
-     0.00249,
-     0.00282,
-     0.003162,
-     0.002826,
-     0.017935
+     0.284986,
+     0.560807,
+     0.054032,
+     0.027366,
+     0.017568,
+     0.006865,
+     0.005879,
+     0.004097,
+     0.003534,
+     0.003186,
+     0.0026,
+     0.002495,
+     0.0028,
+     0.003172,
+     0.002834,
+     0.017778
     ],
     "lum_max": 255,
-    "lum_mean": 30.08746,
+    "lum_mean": 30.058596,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.015204,
+    "white_frac": 0.015241,
     "width": 3840
    },
    "gbuffer": {
@@ -4989,21 +4989,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1.166992,
-     "b_mean": 0.468812,
+     "b_mean": 0.4687,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 21841,
+     "b_zero_count": 21860,
      "g_max": 1.1875,
-     "g_mean": 0.516071,
+     "g_mean": 0.515952,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 5663,
+     "g_zero_count": 5681,
      "height": 2160,
      "r_max": 1.203125,
-     "r_mean": 0.441383,
+     "r_mean": 0.441272,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6876,
+     "r_zero_count": 6895,
      "sample_a": 0,
      "sample_b": 0.419434,
      "sample_g": 0.51416,
@@ -5017,18 +5017,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.589881,
+     "b_mean": 0.589896,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 14,
      "g_max": 1,
-     "g_mean": 0.022359,
+     "g_mean": 0.02216,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 3399,
+     "g_zero_count": 3400,
      "height": 2160,
-     "r_max": 1,
-     "r_mean": -0.201886,
+     "r_max": 0.999512,
+     "r_mean": -0.201899,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 1,
@@ -5040,26 +5040,26 @@
     },
     "2": {
      "a_max": 0.970703,
-     "a_mean": 0.415662,
+     "a_mean": 0.415673,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 42431,
+     "a_zero_count": 42426,
      "b_max": 1,
-     "b_mean": 0.515473,
+     "b_mean": 0.51549,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 307018,
+     "b_zero_count": 306047,
      "g_max": 1,
-     "g_mean": 0.566599,
+     "g_mean": 0.566617,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 302666,
+     "g_zero_count": 301714,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.568512,
+     "r_mean": 0.568523,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 302965,
+     "r_zero_count": 301993,
      "sample_a": 0.412354,
      "sample_b": 0.623047,
      "sample_g": 0.635254,
@@ -5070,26 +5070,26 @@
    "load_report": {
     "map": "02_07_theta_exit.hpm",
     "terrain_active": false,
-    "total_ms": 3344,
+    "total_ms": 3282,
     "tracks": {
      "Area": {
       "created": 727,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 727
      },
      "Billboard": {
       "created": 43,
       "file_missing": false,
-      "ms": 4,
+      "ms": 6,
       "skipped": {},
       "xml": 43
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 144
       },
@@ -5098,21 +5098,21 @@
      "Decal": {
       "created": 802,
       "file_missing": false,
-      "ms": 349,
+      "ms": 344,
       "skipped": {},
       "xml": 802
      },
      "DetailMeshes": {
       "created": 2147,
       "file_missing": false,
-      "ms": 19,
+      "ms": 20,
       "skipped": {},
       "xml": 2147
      },
      "Entity": {
       "created": 1720,
       "file_missing": false,
-      "ms": 1240,
+      "ms": 1208,
       "skipped": {},
       "xml": 1720
      },
@@ -5140,7 +5140,7 @@
      "LightMask": {
       "created": 10,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 10
      },
@@ -5154,7 +5154,7 @@
      "Primitive": {
       "created": 551,
       "file_missing": false,
-      "ms": 82,
+      "ms": 85,
       "skipped": {},
       "xml": 551
      },
@@ -5175,7 +5175,7 @@
      "StaticObject": {
       "created": 6263,
       "file_missing": false,
-      "ms": 730,
+      "ms": 721,
       "skipped": {},
       "xml": 6263
      },
@@ -5188,7 +5188,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3903836.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-676302.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 1,
@@ -5217,30 +5217,30 @@
     "yaw": -4.712393
    },
    "render": {
-    "draw_calls": 464,
+    "draw_calls": 474,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 22,
     "lights_rendered": 22,
-    "occlusion_queries": 251,
+    "occlusion_queries": 261,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 3.2512292861938477,
-     "logic_steps": 1.008264422416687,
-     "render_ms": 11.469313621520996,
-     "swap_ms": 0.06603387743234634
+     "frames": 122,
+     "logic_ms": 3.7151451110839844,
+     "logic_steps": 1.049180269241333,
+     "render_ms": 13.326187133789062,
+     "swap_ms": 0.070988230407238
     },
     "shader_failures": 0,
     "solid_objects": 70,
-    "trans_objects": 20
+    "trans_objects": 16
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 9,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n25 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n19 void cLux_PreloadEntity(const tString&in)\n19 void cLuxProp::SetGuiCacheAtScreenSize(float)\n18 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 7,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n19 void cLux_PreloadEntity(const tString&in)\n18 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 40.3,
+   "wall_s": 40.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5275,7 +5275,7 @@
     "physics_bodies": 2787,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 192,
-    "sound_entities": 234,
+    "sound_entities": 235,
     "static_mesh_entities": 3793,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -5287,10 +5287,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 3.8,
+   "boot_s": 3.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.157795,
+    "fps": 59.940094,
     "pitch": 1e-06,
     "pos_x": 108.327713,
     "pos_y": 142.214584,
@@ -5299,30 +5299,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.157795,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 4e-06,
     "height": 2160,
     "lum_hist16": [
-     0.012538,
-     0.484851,
-     0.375996,
-     0.102235,
-     0.017304,
-     0.004959,
-     0.001583,
-     0.0003,
-     4.4e-05,
+     0.012533,
+     0.508685,
+     0.365115,
+     0.091256,
+     0.015795,
+     0.004666,
+     0.001459,
+     0.000262,
+     4.1e-05,
+     1.4e-05,
+     1.2e-05,
+     1.4e-05,
+     1.3e-05,
      1.5e-05,
-     1.3e-05,
-     1.3e-05,
-     1.3e-05,
-     1.5e-05,
-     4.2e-05,
+     4.3e-05,
      7.8e-05
     ],
-    "lum_max": 255,
-    "lum_mean": 33.956913,
+    "lum_max": 254,
+    "lum_mean": 33.511505,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 1e-06,
@@ -5331,26 +5331,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.091522,
+     "a_mean": 0.091597,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7420373,
+     "a_zero_count": 7420192,
      "b_max": 1.025391,
-     "b_mean": 0.262012,
+     "b_mean": 0.262067,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 7316,
+     "b_zero_count": 7327,
      "g_max": 1.03125,
-     "g_mean": 0.226504,
+     "g_mean": 0.226462,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 712627,
+     "g_zero_count": 713308,
      "height": 2160,
      "r_max": 1.098633,
-     "r_mean": 0.26517,
+     "r_mean": 0.265134,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 712664,
+     "r_zero_count": 713347,
      "sample_a": 0,
      "sample_b": 0.224121,
      "sample_g": 0.247437,
@@ -5359,26 +5359,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.092715,
-     "a_min": 0.002216,
+     "a_mean": 0.092797,
+     "a_min": 0.002214,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.3269,
+     "b_mean": 0.326936,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.35808,
+     "g_mean": 0.358142,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 711564,
+     "g_zero_count": 712282,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.07655,
+     "r_mean": -0.076693,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 711561,
+     "r_zero_count": 712280,
      "sample_a": 0.018021,
      "sample_b": 0.27124,
      "sample_g": 0.958496,
@@ -5387,26 +5387,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.470348,
+     "a_mean": 0.47036,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 17,
+     "a_zero_count": 18,
      "b_max": 1,
-     "b_mean": 0.231751,
+     "b_mean": 0.231785,
      "b_min": -1.489258,
      "b_nan_count": 0,
-     "b_zero_count": 654489,
+     "b_zero_count": 654858,
      "g_max": 0.996582,
-     "g_mean": 0.1476,
+     "g_mean": 0.147523,
      "g_min": -1.53418,
      "g_nan_count": 0,
-     "g_zero_count": 1294024,
+     "g_zero_count": 1295503,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.145667,
+     "r_mean": 0.145595,
      "r_min": -1.544922,
      "r_nan_count": 0,
-     "r_zero_count": 1395296,
+     "r_zero_count": 1396816,
      "sample_a": 0.259033,
      "sample_b": 0.197266,
      "sample_g": 0.201172,
@@ -5417,12 +5417,12 @@
    "load_report": {
     "map": "03_01_omicron_outside.hpm",
     "terrain_active": true,
-    "total_ms": 2468,
+    "total_ms": 2433,
     "tracks": {
      "Area": {
       "created": 249,
       "file_missing": false,
-      "ms": 6,
+      "ms": 4,
       "skipped": {},
       "xml": 249
      },
@@ -5438,7 +5438,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 63
       },
@@ -5447,21 +5447,21 @@
      "Decal": {
       "created": 246,
       "file_missing": false,
-      "ms": 187,
+      "ms": 186,
       "skipped": {},
       "xml": 246
      },
      "DetailMeshes": {
       "created": 3268,
       "file_missing": false,
-      "ms": 48,
+      "ms": 46,
       "skipped": {},
       "xml": 3268
      },
      "Entity": {
       "created": 1494,
       "file_missing": false,
-      "ms": 917,
+      "ms": 899,
       "skipped": {},
       "xml": 1494
      },
@@ -5482,28 +5482,28 @@
      "Light": {
       "created": 137,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {},
       "xml": 137
      },
      "LightMask": {
       "created": 3,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
      "ParticleSystem": {
       "created": 62,
       "file_missing": false,
-      "ms": 37,
+      "ms": 36,
       "skipped": {},
       "xml": 62
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 13
      },
@@ -5524,7 +5524,7 @@
      "StaticObject": {
       "created": 1078,
       "file_missing": false,
-      "ms": 249,
+      "ms": 244,
       "skipped": {},
       "xml": 1078
      },
@@ -5537,7 +5537,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3905402.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-677214.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -5558,30 +5558,30 @@
     "yaw": 1.736863
    },
    "render": {
-    "draw_calls": 957,
+    "draw_calls": 956,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 16,
     "lights_rendered": 16,
-    "occlusion_queries": 263,
+    "occlusion_queries": 268,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 2.022855520248413,
+     "logic_ms": 2.3071224689483643,
      "logic_steps": 1.0,
-     "render_ms": 3.555600643157959,
-     "swap_ms": 0.03794990852475166
+     "render_ms": 4.090280532836914,
+     "swap_ms": 0.04480338469147682
     },
     "shader_failures": 0,
-    "solid_objects": 288,
+    "solid_objects": 286,
     "trans_objects": 24
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "149 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n17 void cLuxProp::SetGuiCacheAtScreenSize(float)\n13 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n12 void cLux_PreloadEntity(const tString&in)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void iLuxAchievementHandler::UnlockAchievement(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 9,
+    "stubs": "149 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n12 void cLux_PreloadEntity(const tString&in)\n4 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void iLuxAchievementHandler::UnlockAchievement(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n"
    },
-   "wall_s": 22.7,
+   "wall_s": 23.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5626,10 +5626,10 @@
     "Sound:120/121"
    ],
    "asleep": false,
-   "boot_s": 4.9,
+   "boot_s": 5.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098557,
+    "fps": 59.93998,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": -2.038545,
@@ -5638,30 +5638,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.098557,
+   "fps": 59.93998,
    "frame": {
-    "black_frac": 0.171309,
+    "black_frac": 0.171265,
     "height": 2160,
     "lum_hist16": [
-     0.893203,
-     0.095949,
-     0.006948,
-     0.002115,
-     0.000752,
-     0.000314,
-     0.000155,
-     9.2e-05,
-     6.9e-05,
+     0.893132,
+     0.096008,
+     0.00696,
+     0.002113,
+     0.000754,
+     0.000315,
+     0.000153,
+     9.1e-05,
+     7e-05,
      5e-05,
      5.2e-05,
      6.6e-05,
      0.00012,
-     2e-05,
-     2.7e-05,
-     6.9e-05
+     2.1e-05,
+     2.8e-05,
+     6.8e-05
     ],
     "lum_max": 252,
-    "lum_mean": 7.948133,
+    "lum_mean": 7.953401,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -5675,18 +5675,18 @@
      "a_nan_count": 0,
      "a_zero_count": 8291884,
      "b_max": 1,
-     "b_mean": 0.230188,
+     "b_mean": 0.230186,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 63559,
      "g_max": 1,
-     "g_mean": 0.242539,
+     "g_mean": 0.242537,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 47932,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.257437,
+     "r_mean": 0.257434,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 47709,
@@ -5731,18 +5731,18 @@
      "a_nan_count": 0,
      "a_zero_count": 4323,
      "b_max": 1,
-     "b_mean": 0.25044,
+     "b_mean": 0.250439,
      "b_min": -0.119995,
      "b_nan_count": 0,
      "b_zero_count": 138084,
      "g_max": 1,
-     "g_mean": 0.244089,
+     "g_mean": 0.244088,
      "g_min": -0.009422,
      "g_nan_count": 0,
      "g_zero_count": 115627,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.242259,
+     "r_mean": 0.242258,
      "r_min": -0.099304,
      "r_nan_count": 0,
      "r_zero_count": 156546,
@@ -5756,7 +5756,7 @@
    "load_report": {
     "map": "03_02_omicron_inside.hpm",
     "terrain_active": false,
-    "total_ms": 3515,
+    "total_ms": 3561,
     "tracks": {
      "Area": {
       "created": 690,
@@ -5784,7 +5784,7 @@
      "Decal": {
       "created": 628,
       "file_missing": false,
-      "ms": 331,
+      "ms": 332,
       "skipped": {},
       "xml": 628
      },
@@ -5798,7 +5798,7 @@
      "Entity": {
       "created": 3718,
       "file_missing": false,
-      "ms": 2012,
+      "ms": 2054,
       "skipped": {},
       "xml": 3718
      },
@@ -5826,14 +5826,14 @@
      "LightMask": {
       "created": 47,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 47
      },
      "ParticleSystem": {
       "created": 215,
       "file_missing": false,
-      "ms": 45,
+      "ms": 44,
       "skipped": {},
       "xml": 215
      },
@@ -5847,7 +5847,7 @@
      "Sound": {
       "created": 120,
       "file_missing": false,
-      "ms": 65,
+      "ms": 66,
       "skipped": {
        "load_failed": 1
       },
@@ -5863,7 +5863,7 @@
      "StaticObject": {
       "created": 4934,
       "file_missing": false,
-      "ms": 513,
+      "ms": 524,
       "skipped": {},
       "xml": 4934
      },
@@ -5876,7 +5876,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3906438.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-677754.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -5909,30 +5909,30 @@
     "yaw": -3.141583
    },
    "render": {
-    "draw_calls": 1757,
+    "draw_calls": 1759,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 123,
     "lights_rendered": 123,
-    "occlusion_queries": 394,
+    "occlusion_queries": 390,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 6.281618118286133,
+     "frames": 120,
+     "logic_ms": 6.610342025756836,
      "logic_steps": 1.0,
-     "render_ms": 5.103540420532227,
-     "swap_ms": 0.04497351869940758
+     "render_ms": 5.365518569946289,
+     "swap_ms": 0.04659794270992279
     },
     "shader_failures": 0,
-    "solid_objects": 515,
-    "trans_objects": 60
+    "solid_objects": 516,
+    "trans_objects": 62
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 11,
-    "stubs": "69 void cLux_PreloadEntity(const tString&in)\n41 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n36 void cLuxProp::SetGuiCacheAtScreenSize(float)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n5 void Entity_Preload(const tString&in)\n2 void cLuxProp::DisableSubMeshMerge(tString)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 9,
+    "stubs": "69 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n5 void Entity_Preload(const tString&in)\n2 void cLuxProp::DisableSubMeshMerge(tString)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 25.4,
+   "wall_s": 25.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5977,10 +5977,10 @@
     "Sound:5/6"
    ],
    "asleep": false,
-   "boot_s": 2.5,
+   "boot_s": 2.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.760975,
     "pitch": 0,
     "pos_x": 48.75,
     "pos_y": 128.9245,
@@ -5989,16 +5989,16 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 59.760975,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.055353,
-     0.900608,
-     0.033702,
-     0.007726,
-     0.002529,
+     0.045086,
+     0.910797,
+     0.033781,
+     0.007725,
+     0.002528,
      8.2e-05,
      0,
      0,
@@ -6011,9 +6011,9 @@
      0,
      0
     ],
-    "lum_max": 96,
-    "lum_mean": 22.177773,
-    "lum_min": 11,
+    "lum_max": 95,
+    "lum_mean": 22.260994,
+    "lum_min": 12,
     "magenta_frac": 0,
     "white_frac": 0,
     "width": 3840
@@ -6026,18 +6026,18 @@
      "a_nan_count": 0,
      "a_zero_count": 7680562,
      "b_max": 1,
-     "b_mean": 0.25983,
+     "b_mean": 0.259946,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 5942,
+     "b_zero_count": 5980,
      "g_max": 0.995605,
-     "g_mean": 0.2221,
+     "g_mean": 0.222481,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 610891,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.246049,
+     "r_mean": 0.246357,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 610346,
@@ -6085,18 +6085,18 @@
      "b_mean": 0.259842,
      "b_min": -0.355225,
      "b_nan_count": 0,
-     "b_zero_count": 243415,
+     "b_zero_count": 243414,
      "g_max": 1,
      "g_mean": 0.2001,
      "g_min": -0.32666,
      "g_nan_count": 0,
-     "g_zero_count": 783762,
+     "g_zero_count": 783761,
      "height": 2160,
      "r_max": 1,
      "r_mean": 0.205673,
      "r_min": -0.35791,
      "r_nan_count": 0,
-     "r_zero_count": 821736,
+     "r_zero_count": 821735,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -6107,19 +6107,19 @@
    "load_report": {
     "map": "03_03_omicron_descent.hpm",
     "terrain_active": false,
-    "total_ms": 1261,
+    "total_ms": 1262,
     "tracks": {
      "Area": {
       "created": 102,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 102
      },
      "Billboard": {
       "created": 34,
       "file_missing": false,
-      "ms": 3,
+      "ms": 6,
       "skipped": {},
       "xml": 34
      },
@@ -6135,21 +6135,21 @@
      "Decal": {
       "created": 85,
       "file_missing": false,
-      "ms": 38,
+      "ms": 41,
       "skipped": {},
       "xml": 85
      },
      "DetailMeshes": {
       "created": 1550,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 1550
      },
      "Entity": {
       "created": 643,
       "file_missing": false,
-      "ms": 673,
+      "ms": 667,
       "skipped": {},
       "xml": 643
      },
@@ -6163,14 +6163,14 @@
      "LensFlare": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
      "Light": {
       "created": 43,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 43
      },
@@ -6184,7 +6184,7 @@
      "ParticleSystem": {
       "created": 4,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 4
      },
@@ -6207,14 +6207,14 @@
      "StaticComboArea": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
      "StaticObject": {
       "created": 887,
       "file_missing": false,
-      "ms": 187,
+      "ms": 186,
       "skipped": {},
       "xml": 887
      },
@@ -6227,7 +6227,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3907622.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-678440.log",
    "log_errors": {},
    "log_warnings": 36,
    "player": {
@@ -6243,18 +6243,18 @@
     "yaw": -3.141596
    },
    "render": {
-    "draw_calls": 300,
+    "draw_calls": 298,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 22,
     "lights_rendered": 22,
-    "occlusion_queries": 13,
+    "occlusion_queries": 11,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.076697826385498,
+     "logic_ms": 1.4782553911209106,
      "logic_steps": 1.0,
-     "render_ms": 5.846124649047852,
-     "swap_ms": 0.03957980126142502
+     "render_ms": 6.77040958404541,
+     "swap_ms": 0.05552052706480026
     },
     "shader_failures": 0,
     "solid_objects": 94,
@@ -6263,10 +6263,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 9,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n6 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n5 void cLux_PreloadEntity(const tString&in)\n4 void cLuxProp::SetGuiCacheAtScreenSize(float)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 7,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n5 void cLux_PreloadEntity(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 21.4,
+   "wall_s": 21.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6318,42 +6318,42 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 5.2,
+   "boot_s": 5.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880192,
+    "fps": 59.760975,
     "pitch": 0,
-    "pos_x": -13.188599,
-    "pos_y": 639.728027,
-    "pos_z": 436.452911,
+    "pos_x": -13.187986,
+    "pos_y": 639.892578,
+    "pos_z": 436.453064,
     "yaw": -3.128494
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.880192,
+   "fps": 59.760975,
    "frame": {
-    "black_frac": 0.231186,
+    "black_frac": 0.278922,
     "height": 2160,
     "lum_hist16": [
-     0.539552,
-     0.222163,
-     0.181368,
-     0.035337,
-     0.011682,
-     0.00314,
-     0.001479,
-     0.001386,
-     0.000687,
-     0.000581,
-     0.000487,
-     0.000322,
-     0.000281,
-     0.000225,
-     0.000283,
-     0.001026
+     0.724517,
+     0.20037,
+     0.044314,
+     0.014936,
+     0.00734,
+     0.001985,
+     0.001277,
+     0.001181,
+     0.000925,
+     0.000582,
+     0.000456,
+     0.000327,
+     0.000254,
+     0.000216,
+     0.000284,
+     0.001036
     ],
     "lum_max": 255,
-    "lum_mean": 19.130861,
+    "lum_mean": 12.65812,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.000851,
@@ -6362,26 +6362,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.312856,
+     "a_mean": 0.312459,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5699449,
+     "a_zero_count": 5702741,
      "b_max": 1,
-     "b_mean": 0.402206,
+     "b_mean": 0.401941,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 14488,
+     "b_zero_count": 14430,
      "g_max": 0.984375,
-     "g_mean": 0.109283,
+     "g_mean": 0.109408,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2601675,
+     "g_zero_count": 2598418,
      "height": 2160,
-     "r_max": 0.996582,
-     "r_mean": 0.122602,
+     "r_max": 1,
+     "r_mean": 0.122731,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2604450,
+     "r_zero_count": 2601190,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -6390,26 +6390,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.31315,
-     "a_min": 0.001122,
+     "a_mean": 0.312753,
+     "a_min": 0.001121,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.554139,
-     "b_min": -1,
+     "b_mean": 0.553875,
+     "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 43,
+     "b_zero_count": 37,
      "g_max": 1,
-     "g_mean": 0.040445,
+     "g_mean": 0.04053,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 2594987,
+     "g_zero_count": 2591689,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.078911,
+     "r_mean": 0.079004,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 2594957,
+     "r_zero_count": 2591664,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -6418,26 +6418,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.581123,
+     "a_mean": 0.581287,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3,
+     "a_zero_count": 2,
      "b_max": 1,
-     "b_mean": 0.441223,
+     "b_mean": 0.441584,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 21533,
+     "b_zero_count": 21575,
      "g_max": 1,
-     "g_mean": 0.134712,
+     "g_mean": 0.134609,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2608036,
+     "g_zero_count": 2611700,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.131964,
+     "r_mean": 0.131875,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2611890,
+     "r_zero_count": 2615546,
      "sample_a": 1,
      "sample_b": 1,
      "sample_g": 0,
@@ -6448,7 +6448,7 @@
    "load_report": {
     "map": "04_01_tau_outside.hpm",
     "terrain_active": true,
-    "total_ms": 3792,
+    "total_ms": 3977,
     "tracks": {
      "Area": {
       "created": 414,
@@ -6460,7 +6460,7 @@
      "Billboard": {
       "created": 53,
       "file_missing": false,
-      "ms": 5,
+      "ms": 12,
       "skipped": {},
       "xml": 53
      },
@@ -6476,7 +6476,7 @@
      "Decal": {
       "created": 406,
       "file_missing": false,
-      "ms": 227,
+      "ms": 231,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -6485,14 +6485,14 @@
      "DetailMeshes": {
       "created": 673,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 673
      },
      "Entity": {
       "created": 2843,
       "file_missing": false,
-      "ms": 867,
+      "ms": 927,
       "skipped": {},
       "xml": 2843
      },
@@ -6527,7 +6527,7 @@
      "ParticleSystem": {
       "created": 95,
       "file_missing": false,
-      "ms": 18,
+      "ms": 20,
       "skipped": {},
       "xml": 95
      },
@@ -6541,7 +6541,7 @@
      "Sound": {
       "created": 20,
       "file_missing": false,
-      "ms": 30,
+      "ms": 31,
       "skipped": {},
       "xml": 20
      },
@@ -6555,7 +6555,7 @@
      "StaticObject": {
       "created": 3695,
       "file_missing": false,
-      "ms": 487,
+      "ms": 506,
       "skipped": {},
       "xml": 3695
      },
@@ -6568,7 +6568,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3908592.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-679133.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 9,
@@ -6582,9 +6582,9 @@
    "log_warnings": 126,
    "player": {
     "active": true,
-    "feet_x": -13.490238,
-    "feet_y": 657.434937,
-    "feet_z": 437.463074,
+    "feet_x": -13.490335,
+    "feet_y": 657.601624,
+    "feet_z": 437.463013,
     "health": 1,
     "max_fwd_speed": 2,
     "move_state": "MoveState_Normal",
@@ -6601,10 +6601,10 @@
     "occlusion_queries": 2,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 4.624075889587402,
+     "logic_ms": 4.5864667892456055,
      "logic_steps": 1.0,
-     "render_ms": 3.968385696411133,
-     "swap_ms": 0.035914450883865356
+     "render_ms": 3.9261984825134277,
+     "swap_ms": 0.03412078320980072
     },
     "shader_failures": 0,
     "solid_objects": 53,
@@ -6613,10 +6613,10 @@
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 12,
-    "stubs": "879 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n25 void cLux_PreloadEntity(const tString&in)\n14 void cLuxProp::SetGuiCacheAtScreenSize(float)\n4 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 8,
+    "stubs": "867 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n25 void cLux_PreloadEntity(const tString&in)\n4 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n"
    },
-   "wall_s": 25.5,
+   "wall_s": 25.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6665,10 +6665,10 @@
     "Sound:143/144"
    ],
    "asleep": false,
-   "boot_s": 5.2,
+   "boot_s": 5.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098446,
+    "fps": 60.039326,
     "pitch": 0,
     "pos_x": -30.445801,
     "pos_y": 1.938721,
@@ -6677,33 +6677,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.098446,
+   "fps": 60.039326,
    "frame": {
-    "black_frac": 0.362049,
+    "black_frac": 0.361888,
     "height": 2160,
     "lum_hist16": [
-     0.757371,
-     0.186305,
-     0.041573,
-     0.011467,
-     0.001747,
-     0.000358,
-     9.9e-05,
-     5e-05,
-     4.4e-05,
-     3.7e-05,
+     0.757327,
+     0.186301,
+     0.041626,
+     0.011449,
+     0.00176,
+     0.000356,
+     0.000101,
+     4.8e-05,
+     4.6e-05,
+     3.5e-05,
      2.9e-05,
-     2.8e-05,
-     3.8e-05,
+     2.9e-05,
      3.6e-05,
-     4.5e-05,
-     0.000774
+     3.9e-05,
+     4.4e-05,
+     0.000773
     ],
     "lum_max": 255,
-    "lum_mean": 9.961872,
+    "lum_mean": 9.963502,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000617,
+    "white_frac": 0.000615,
     "width": 3840
    },
    "gbuffer": {
@@ -6742,7 +6742,7 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.220639,
+     "b_mean": 0.220638,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 1469,
@@ -6795,26 +6795,26 @@
    "load_report": {
     "map": "04_02_tau_inside.hpm",
     "terrain_active": false,
-    "total_ms": 3725,
+    "total_ms": 3836,
     "tracks": {
      "Area": {
       "created": 662,
       "file_missing": false,
-      "ms": 8,
+      "ms": 7,
       "skipped": {},
       "xml": 662
      },
      "Billboard": {
       "created": 65,
       "file_missing": false,
-      "ms": 6,
+      "ms": 7,
       "skipped": {},
       "xml": 65
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 211
       },
@@ -6823,21 +6823,21 @@
      "Decal": {
       "created": 1335,
       "file_missing": false,
-      "ms": 946,
+      "ms": 1065,
       "skipped": {},
       "xml": 1335
      },
      "DetailMeshes": {
       "created": 739,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 739
      },
      "Entity": {
       "created": 2187,
       "file_missing": false,
-      "ms": 1355,
+      "ms": 1311,
       "skipped": {},
       "xml": 2187
      },
@@ -6851,7 +6851,7 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
@@ -6879,14 +6879,14 @@
      "Primitive": {
       "created": 212,
       "file_missing": false,
-      "ms": 38,
+      "ms": 37,
       "skipped": {},
       "xml": 212
      },
      "Sound": {
       "created": 143,
       "file_missing": false,
-      "ms": 147,
+      "ms": 151,
       "skipped": {
        "load_failed": 1
       },
@@ -6902,7 +6902,7 @@
      "StaticObject": {
       "created": 3432,
       "file_missing": false,
-      "ms": 663,
+      "ms": 698,
       "skipped": {},
       "xml": 3432
      },
@@ -6915,7 +6915,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3909706.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-679728.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -6944,22 +6944,22 @@
     "occlusion_queries": 380,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 2.93599009513855,
+     "logic_ms": 3.403074264526367,
      "logic_steps": 1.0,
-     "render_ms": 10.955572128295898,
-     "swap_ms": 0.036656610667705536
+     "render_ms": 10.032058715820312,
+     "swap_ms": 0.04208669438958168
     },
     "shader_failures": 0,
     "solid_objects": 547,
-    "trans_objects": 88
+    "trans_objects": 87
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 11,
-    "stubs": "65 void cLux_PreloadEntity(const tString&in)\n40 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n37 void cLuxProp::SetGuiCacheAtScreenSize(float)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void cMeshEntity::SetDisableSleep(bool)\n4 void Material_Preload(const tString&in)\n3 void cLuxProp::DisableSubMeshMerge(tString)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 9,
+    "stubs": "65 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void cMeshEntity::SetDisableSleep(bool)\n4 void Material_Preload(const tString&in)\n3 void cLuxProp::DisableSubMeshMerge(tString)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 25.8,
+   "wall_s": 26.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7008,7 +7008,7 @@
    "boot_s": 5.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 50.746216,
+    "fps": 51,
     "pitch": 0,
     "pos_x": -0.104861,
     "pos_y": 94.959793,
@@ -7017,58 +7017,58 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 50.746216,
+   "fps": 51,
    "frame": {
-    "black_frac": 0.128625,
+    "black_frac": 0.128695,
     "height": 2160,
     "lum_hist16": [
-     0.603269,
-     0.250866,
-     0.07378,
-     0.02595,
-     0.013306,
-     0.008298,
-     0.008157,
-     0.008202,
-     0.004755,
-     0.001788,
-     0.000784,
-     0.000188,
-     0.000106,
+     0.603224,
+     0.250543,
+     0.073935,
+     0.026147,
+     0.013288,
+     0.008294,
+     0.008142,
+     0.008204,
+     0.004772,
+     0.001806,
+     0.000792,
+     0.000186,
+     0.000107,
      7e-05,
-     4.8e-05,
-     0.000434
+     4.7e-05,
+     0.000442
     ],
     "lum_max": 255,
-    "lum_mean": 18.794086,
+    "lum_mean": 18.808992,
     "lum_min": 1,
     "magenta_frac": 0,
-    "white_frac": 0.000385,
+    "white_frac": 0.000392,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 3e-06,
+     "a_mean": 2e-06,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8294376,
+     "a_zero_count": 8294382,
      "b_max": 1.313477,
-     "b_mean": 0.258477,
+     "b_mean": 0.258464,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1801,
+     "b_zero_count": 1799,
      "g_max": 1.326172,
-     "g_mean": 0.291851,
+     "g_mean": 0.291842,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1245,
+     "g_zero_count": 1239,
      "height": 2160,
      "r_max": 1.359375,
-     "r_mean": 0.345694,
+     "r_mean": 0.345684,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 1389,
+     "r_zero_count": 1383,
      "sample_a": 0,
      "sample_b": 0.039032,
      "sample_g": 0.050171,
@@ -7077,26 +7077,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.003441,
+     "a_mean": 0.003443,
      "a_min": 0.000916,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.170915,
+     "b_mean": 0.170913,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 551,
      "g_max": 1,
-     "g_mean": -0.090404,
+     "g_mean": -0.090425,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 13772,
+     "g_zero_count": 13769,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.002402,
+     "r_mean": -0.002435,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 309,
+     "r_zero_count": 307,
      "sample_a": 0.013702,
      "sample_b": -0.19812,
      "sample_g": -0.807617,
@@ -7105,26 +7105,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.453104,
+     "a_mean": 0.4531,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 7,
      "b_max": 1,
-     "b_mean": 0.381937,
+     "b_mean": 0.381914,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 82882,
+     "b_zero_count": 82908,
      "g_max": 1,
-     "g_mean": 0.381352,
+     "g_mean": 0.381327,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 77665,
+     "g_zero_count": 77677,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.388246,
+     "r_mean": 0.388218,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 85050,
+     "r_zero_count": 85064,
      "sample_a": 0.447021,
      "sample_b": 0.015213,
      "sample_g": 0.016907,
@@ -7135,19 +7135,19 @@
    "load_report": {
     "map": "04_03_tau_escape.hpm",
     "terrain_active": true,
-    "total_ms": 3728,
+    "total_ms": 3658,
     "tracks": {
      "Area": {
       "created": 465,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 465
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 15,
+      "ms": 12,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -7181,7 +7181,7 @@
      "Entity": {
       "created": 2060,
       "file_missing": false,
-      "ms": 847,
+      "ms": 833,
       "skipped": {},
       "xml": 2060
      },
@@ -7202,14 +7202,14 @@
      "Light": {
       "created": 490,
       "file_missing": false,
-      "ms": 9,
+      "ms": 8,
       "skipped": {},
       "xml": 490
      },
      "LightMask": {
       "created": 1,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 1
      },
@@ -7223,14 +7223,14 @@
      "Primitive": {
       "created": 28,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 28
      },
      "Sound": {
       "created": 76,
       "file_missing": false,
-      "ms": 33,
+      "ms": 34,
       "skipped": {
        "load_failed": 7
       },
@@ -7246,7 +7246,7 @@
      "StaticObject": {
       "created": 4795,
       "file_missing": false,
-      "ms": 759,
+      "ms": 749,
       "skipped": {},
       "xml": 4795
      },
@@ -7259,7 +7259,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3910913.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-680290.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -7284,30 +7284,30 @@
     "yaw": -3e-06
    },
    "render": {
-    "draw_calls": 3473,
+    "draw_calls": 3471,
     "fog_areas_in_list": 5,
     "gl_errors": {},
-    "lights_in_list": 153,
-    "lights_rendered": 153,
-    "occlusion_queries": 1018,
+    "lights_in_list": 154,
+    "lights_rendered": 154,
+    "occlusion_queries": 1030,
     "per_frame": {
-     "frames": 122,
-     "logic_ms": 3.689326047897339,
-     "logic_steps": 1.1967213153839111,
-     "render_ms": 16.06313705444336,
-     "swap_ms": 0.050649236887693405
+     "frames": 121,
+     "logic_ms": 3.7865633964538574,
+     "logic_steps": 1.1818181276321411,
+     "render_ms": 15.953619956970215,
+     "swap_ms": 0.06556309014558792
     },
     "shader_failures": 0,
-    "solid_objects": 934,
-    "trans_objects": 352
+    "solid_objects": 927,
+    "trans_objects": 351
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 12,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n7 void cLuxProp::SetGuiCacheAtScreenSize(float)\n4 void cMeshEntity::SetDisableSleep(bool)\n4 void Entity_Preload(const tString&in)\n3 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n3 void cLux_PreloadEntity(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 8,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void cMeshEntity::SetDisableSleep(bool)\n4 void Entity_Preload(const tString&in)\n3 void cLux_PreloadEntity(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 31.8,
+   "wall_s": 32.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7361,10 +7361,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 3.6,
+   "boot_s": 3.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.880306,
+    "fps": 60.396027,
     "pitch": 0,
     "pos_x": -13.908899,
     "pos_y": 12.644952,
@@ -7373,33 +7373,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.880306,
+   "fps": 60.396027,
    "frame": {
     "black_frac": 2.5e-05,
     "height": 2160,
     "lum_hist16": [
-     0.110981,
-     0.578307,
-     0.138995,
-     0.077285,
-     0.034337,
-     0.021639,
-     0.01645,
-     0.010018,
-     0.004831,
-     0.00161,
-     0.000731,
-     0.000688,
-     0.000479,
-     0.000281,
-     0.000145,
-     0.003223
+     0.110845,
+     0.578412,
+     0.139075,
+     0.077235,
+     0.034327,
+     0.021663,
+     0.016445,
+     0.010017,
+     0.004827,
+     0.001606,
+     0.000732,
+     0.000685,
+     0.000483,
+     0.000279,
+     0.000144,
+     0.003224
     ],
     "lum_max": 255,
-    "lum_mean": 32.552822,
+    "lum_mean": 32.551552,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.002936,
+    "white_frac": 0.002937,
     "width": 3840
    },
    "gbuffer": {
@@ -7491,12 +7491,12 @@
    "load_report": {
     "map": "05_01_phi_inside.hpm",
     "terrain_active": true,
-    "total_ms": 2323,
+    "total_ms": 2328,
     "tracks": {
      "Area": {
       "created": 175,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {},
       "xml": 175
      },
@@ -7512,7 +7512,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 118
       },
@@ -7521,21 +7521,21 @@
      "Decal": {
       "created": 212,
       "file_missing": false,
-      "ms": 60,
+      "ms": 64,
       "skipped": {},
       "xml": 212
      },
      "DetailMeshes": {
       "created": 652,
       "file_missing": false,
-      "ms": 23,
+      "ms": 24,
       "skipped": {},
       "xml": 652
      },
      "Entity": {
       "created": 1440,
       "file_missing": false,
-      "ms": 1135,
+      "ms": 1130,
       "skipped": {},
       "xml": 1440
      },
@@ -7577,14 +7577,14 @@
      "Primitive": {
       "created": 117,
       "file_missing": false,
-      "ms": 16,
+      "ms": 15,
       "skipped": {},
       "xml": 117
      },
      "Sound": {
       "created": 85,
       "file_missing": false,
-      "ms": 113,
+      "ms": 115,
       "skipped": {},
       "xml": 85
      },
@@ -7598,7 +7598,7 @@
      "StaticObject": {
       "created": 2578,
       "file_missing": false,
-      "ms": 543,
+      "ms": 553,
       "skipped": {},
       "xml": 2578
      },
@@ -7611,7 +7611,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3912147.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-681108.log",
    "log_errors": {
     "ERROR: CrossHairState '*' does not exist": {
      "count": 1,
@@ -7632,30 +7632,30 @@
     "yaw": -3.141583
    },
    "render": {
-    "draw_calls": 1569,
+    "draw_calls": 1560,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 107,
     "lights_rendered": 107,
-    "occlusion_queries": 314,
+    "occlusion_queries": 320,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 2.1418168544769287,
+     "logic_ms": 2.311615467071533,
      "logic_steps": 1.0,
-     "render_ms": 8.792299270629883,
-     "swap_ms": 0.03878676891326904
+     "render_ms": 9.476876258850098,
+     "swap_ms": 0.0417950265109539
     },
     "shader_failures": 0,
-    "solid_objects": 412,
-    "trans_objects": 162
+    "solid_objects": 404,
+    "trans_objects": 160
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 13,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n25 void cLuxProp::SetGuiCacheAtScreenSize(float)\n16 void cLux_PreloadEntity(const tString&in)\n8 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n4 void Material_Preload(const tString&in)\n4 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void iLuxAchievementHandler::UnlockAchievement(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 9,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n16 void cLux_PreloadEntity(const tString&in)\n4 void Material_Preload(const tString&in)\n4 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void iLuxAchievementHandler::UnlockAchievement(int)\n1 void cMeshEntity::SetDisableSleep(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 23.3,
+   "wall_s": 23.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7703,7 +7703,7 @@
    "boot_s": 4.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.157795,
+    "fps": 60.217262,
     "pitch": 0,
     "pos_x": -168.082001,
     "pos_y": 30.6985,
@@ -7712,30 +7712,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.157795,
+   "fps": 60.217262,
    "frame": {
-    "black_frac": 0.205052,
+    "black_frac": 0.205029,
     "height": 2160,
     "lum_hist16": [
-     0.785816,
-     0.164598,
-     0.033369,
-     0.007575,
-     0.004168,
-     0.001415,
-     0.000792,
-     0.000586,
-     0.00043,
-     0.00035,
-     0.000323,
-     0.000217,
-     0.00019,
-     0.000123,
+     0.785889,
+     0.164564,
+     0.033337,
+     0.007568,
+     0.004173,
+     0.001404,
+     0.000799,
+     0.000587,
+     0.000429,
+     0.000352,
+     0.000319,
+     0.000221,
+     0.000187,
+     0.000125,
      4.1e-05,
      5e-06
     ],
     "lum_max": 251,
-    "lum_mean": 11.185788,
+    "lum_mean": 11.184676,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -7830,26 +7830,26 @@
    "load_report": {
     "map": "05_02_ARK_inside.hpm",
     "terrain_active": true,
-    "total_ms": 2684,
+    "total_ms": 2654,
     "tracks": {
      "Area": {
       "created": 63,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 63
      },
      "Billboard": {
       "created": 351,
       "file_missing": false,
-      "ms": 40,
+      "ms": 39,
       "skipped": {},
       "xml": 351
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 135
       },
@@ -7874,7 +7874,7 @@
      "Entity": {
       "created": 578,
       "file_missing": false,
-      "ms": 240,
+      "ms": 231,
       "skipped": {},
       "xml": 578
      },
@@ -7895,7 +7895,7 @@
      "Light": {
       "created": 174,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 174
      },
@@ -7909,7 +7909,7 @@
      "ParticleSystem": {
       "created": 163,
       "file_missing": false,
-      "ms": 32,
+      "ms": 31,
       "skipped": {},
       "xml": 163
      },
@@ -7937,7 +7937,7 @@
      "StaticObject": {
       "created": 2818,
       "file_missing": false,
-      "ms": 477,
+      "ms": 466,
       "skipped": {},
       "xml": 2818
      },
@@ -7950,7 +7950,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3912642.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-681614.log",
    "log_errors": {
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/undergrowth/plants/grass/grass.mat'": {
      "count": 2,
@@ -7979,30 +7979,30 @@
     "yaw": -4.434803
    },
    "render": {
-    "draw_calls": 1597,
+    "draw_calls": 1595,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 63,
     "lights_rendered": 63,
-    "occlusion_queries": 1132,
+    "occlusion_queries": 1131,
     "per_frame": {
-     "frames": 120,
-     "logic_ms": 1.0439116954803467,
+     "frames": 122,
+     "logic_ms": 1.0320581197738647,
      "logic_steps": 1.0,
-     "render_ms": 7.773474216461182,
-     "swap_ms": 0.04627912491559982
+     "render_ms": 15.456892013549805,
+     "swap_ms": 0.05523669347167015
     },
     "shader_failures": 0,
-    "solid_objects": 140,
+    "solid_objects": 139,
     "trans_objects": 89
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 9,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n12 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cTerrain::SetCheapMaterial(const tString&in, float)\n1 void cLuxProp::SetGuiCacheAtScreenSize(float)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n1 cTerrain@ cWorld::GetTerrain()\n"
+    "count": 6,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n12 void Material_Preload(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void iLuxRichPresenceHandler::SetCurrentRichPresence(int)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 24.4,
+   "wall_s": 24.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8050,7 +8050,7 @@
    "boot_s": 1.5,
    "camera": {
     "fov_deg": 40,
-    "fps": 59.980324,
+    "fps": 59.921436,
     "pitch": -0.292485,
     "pos_x": 0.226323,
     "pos_y": 2.585068,
@@ -8059,30 +8059,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.980324,
+   "fps": 59.921436,
    "frame": {
-    "black_frac": 0.348528,
+    "black_frac": 0.348505,
     "height": 2160,
     "lum_hist16": [
-     0.509852,
-     0.177948,
-     0.07242,
-     0.045168,
-     0.03446,
-     0.025797,
-     0.021608,
+     0.509884,
+     0.177865,
+     0.072489,
+     0.045119,
+     0.034469,
+     0.025849,
+     0.021612,
      0.018681,
-     0.015678,
-     0.01112,
-     0.009611,
-     0.008867,
-     0.009117,
-     0.01272,
-     0.021066,
-     0.005888
+     0.015633,
+     0.011131,
+     0.009622,
+     0.008869,
+     0.009084,
+     0.012755,
+     0.021056,
+     0.005882
     ],
     "lum_max": 240,
-    "lum_mean": 37.699032,
+    "lum_mean": 37.699471,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -8091,26 +8091,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.410557,
+     "a_mean": 0.409861,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 4889077,
+     "a_zero_count": 4894852,
      "b_max": 1,
-     "b_mean": 0.569484,
+     "b_mean": 0.569364,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6206,
-     "g_max": 0.939941,
-     "g_mean": 0.167812,
+     "b_zero_count": 6012,
+     "g_max": 0.948242,
+     "g_mean": 0.168104,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3407467,
+     "g_zero_count": 3401681,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.167576,
+     "r_mean": 0.167776,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3410383,
+     "r_zero_count": 3404568,
      "sample_a": 0,
      "sample_b": 0.203857,
      "sample_g": 0.137207,
@@ -8147,37 +8147,37 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.704242,
+     "a_mean": 0.703942,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 10492,
+     "a_zero_count": 10427,
      "b_max": 1,
-     "b_mean": 0.64788,
+     "b_mean": 0.647817,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1322440,
+     "b_zero_count": 1322667,
      "g_max": 1,
-     "g_mean": 0.249807,
+     "g_mean": 0.25052,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 4685617,
+     "g_zero_count": 4679465,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.25579,
+     "r_mean": 0.256538,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 4695417,
+     "r_zero_count": 4689239,
      "sample_a": 0.48999,
-     "sample_b": 0.789062,
-     "sample_g": 0.822754,
-     "sample_r": 0.853516,
+     "sample_b": 0.790527,
+     "sample_g": 0.824707,
+     "sample_r": 0.854492,
      "width": 3840
     }
    },
    "load_report": {
     "map": "05_03_space.hpm",
     "terrain_active": false,
-    "total_ms": 360,
+    "total_ms": 366,
     "tracks": {
      "Area": {
       "created": 17,
@@ -8217,7 +8217,7 @@
      "Entity": {
       "created": 9,
       "file_missing": false,
-      "ms": 332,
+      "ms": 336,
       "skipped": {},
       "xml": 9
      },
@@ -8238,7 +8238,7 @@
      "Light": {
       "created": 14,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 14
      },
@@ -8293,7 +8293,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3913227.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-682173.log",
    "log_errors": {
     "ERROR: Couldn'*'D:/depth/redist/core/textures/space.dds'": {
      "count": 1,
@@ -8318,18 +8318,18 @@
     "yaw": -3.888352
    },
    "render": {
-    "draw_calls": 66,
+    "draw_calls": 67,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 30,
     "lights_rendered": 30,
-    "occlusion_queries": 0,
+    "occlusion_queries": 1,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 0.33837074041366577,
+     "logic_ms": 0.38506177067756653,
      "logic_steps": 1.0,
-     "render_ms": 2.0053839683532715,
-     "swap_ms": 0.04381455108523369
+     "render_ms": 2.5862724781036377,
+     "swap_ms": 0.048438191413879395
     },
     "shader_failures": 0,
     "solid_objects": 8,
@@ -8341,7 +8341,7 @@
     "count": 4,
     "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_Preload(const tString&in)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 25.1,
+   "wall_s": 25.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8391,7 +8391,7 @@
    "boot_s": 3.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.940094,
+    "fps": 58.882187,
     "pitch": 0,
     "pos_x": 1.250057,
     "pos_y": 1.892925,
@@ -8400,13 +8400,13 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.940094,
+   "fps": 58.882187,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.998926,
-     0.001062,
+     0.998925,
+     0.001063,
      1e-05,
      2e-06,
      0,
@@ -8423,7 +8423,7 @@
      0
     ],
     "lum_max": 68,
-    "lum_mean": 8.607403,
+    "lum_mean": 8.598409,
     "lum_min": 5,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -8437,21 +8437,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294397,
      "b_max": 1,
-     "b_mean": 0.229316,
+     "b_mean": 0.229313,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 281530,
+     "b_zero_count": 281537,
      "g_max": 1.279297,
-     "g_mean": 0.260619,
+     "g_mean": 0.260617,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 264596,
+     "g_zero_count": 264590,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.285352,
+     "r_mean": 0.285349,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 273247,
+     "r_zero_count": 273254,
      "sample_a": 0,
      "sample_b": 0,
      "sample_g": 0,
@@ -8465,10 +8465,10 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.487288,
+     "b_mean": 0.487285,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 424,
+     "b_zero_count": 423,
      "g_max": 1,
      "g_mean": 0.145425,
      "g_min": -1,
@@ -8488,26 +8488,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.467778,
+     "a_mean": 0.467761,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 78857,
+     "a_zero_count": 79032,
      "b_max": 1,
-     "b_mean": 0.359729,
+     "b_mean": 0.359719,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 159576,
+     "b_zero_count": 159751,
      "g_max": 1,
-     "g_mean": 0.365404,
+     "g_mean": 0.365393,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 152248,
+     "g_zero_count": 152423,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.372436,
+     "r_mean": 0.372425,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 156138,
+     "r_zero_count": 156313,
      "sample_a": 0.674316,
      "sample_b": 0.209961,
      "sample_g": 0.216309,
@@ -8518,7 +8518,7 @@
    "load_report": {
     "map": "_e3_01_01.hpm",
     "terrain_active": false,
-    "total_ms": 2251,
+    "total_ms": 2131,
     "tracks": {
      "Area": {
       "created": 312,
@@ -8530,7 +8530,7 @@
      "Billboard": {
       "created": 134,
       "file_missing": false,
-      "ms": 49,
+      "ms": 60,
       "skipped": {},
       "xml": 134
      },
@@ -8546,7 +8546,7 @@
      "Decal": {
       "created": 562,
       "file_missing": false,
-      "ms": 141,
+      "ms": 136,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -8562,7 +8562,7 @@
      "Entity": {
       "created": 1378,
       "file_missing": false,
-      "ms": 832,
+      "ms": 769,
       "skipped": {},
       "xml": 1378
      },
@@ -8583,7 +8583,7 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
@@ -8597,28 +8597,28 @@
      "LightMask": {
       "created": 12,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 12
      },
      "ParticleSystem": {
       "created": 156,
       "file_missing": false,
-      "ms": 48,
+      "ms": 46,
       "skipped": {},
       "xml": 156
      },
      "Primitive": {
       "created": 464,
       "file_missing": false,
-      "ms": 50,
+      "ms": 46,
       "skipped": {},
       "xml": 464
      },
      "Sound": {
       "created": 108,
       "file_missing": false,
-      "ms": 142,
+      "ms": 140,
       "skipped": {},
       "xml": 108
      },
@@ -8632,7 +8632,7 @@
      "StaticObject": {
       "created": 3177,
       "file_missing": false,
-      "ms": 579,
+      "ms": 547,
       "skipped": {},
       "xml": 3177
      },
@@ -8645,7 +8645,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3913741.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-682888.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -8674,30 +8674,30 @@
     "yaw": -3e-06
    },
    "render": {
-    "draw_calls": 651,
+    "draw_calls": 731,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 36,
-    "lights_rendered": 36,
-    "occlusion_queries": 58,
+    "lights_in_list": 44,
+    "lights_rendered": 44,
+    "occlusion_queries": 52,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.858228087425232,
-     "logic_steps": 1.0,
-     "render_ms": 8.23509693145752,
-     "swap_ms": 0.03636344149708748
+     "logic_ms": 2.3276147842407227,
+     "logic_steps": 1.0083333253860474,
+     "render_ms": 4.966927528381348,
+     "swap_ms": 0.045594435185194016
     },
     "shader_failures": 0,
-    "solid_objects": 219,
+    "solid_objects": 256,
     "trans_objects": 50
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 9,
-    "stubs": "35 void cLux_PreloadEntity(const tString&in)\n34 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n15 void cLuxProp::SetGuiCacheAtScreenSize(float)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n2 void Entity_Preload(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 7,
+    "stubs": "35 void cLux_PreloadEntity(const tString&in)\n31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Material_Preload(const tString&in)\n2 void Entity_Preload(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 22.7,
+   "wall_s": 22.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8744,10 +8744,10 @@
     "lum_mean:0.0"
    ],
    "asleep": false,
-   "boot_s": 3.6,
+   "boot_s": 3.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.013863,
+    "fps": 60,
     "pitch": 0,
     "pos_x": 31.999203,
     "pos_y": 18.398718,
@@ -8756,7 +8756,7 @@
    },
    "fade_alpha": 1.0,
    "failures": [],
-   "fps": 58.013863,
+   "fps": 60,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -8788,23 +8788,23 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.000197,
+     "a_mean": 0.000198,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8281090,
+     "a_zero_count": 8281088,
      "b_max": 1,
-     "b_mean": 0.260685,
+     "b_mean": 0.260747,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 3145,
+     "b_zero_count": 3134,
      "g_max": 0.945801,
-     "g_mean": 0.30684,
+     "g_mean": 0.306863,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 1761,
      "height": 2160,
      "r_max": 0.958008,
-     "r_mean": 0.331493,
+     "r_mean": 0.331522,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 2223,
@@ -8821,12 +8821,12 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.310514,
+     "b_mean": 0.310515,
      "b_min": -0.998535,
      "b_nan_count": 0,
      "b_zero_count": 42733,
      "g_max": 1,
-     "g_mean": 0.156747,
+     "g_mean": 0.156749,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 2893,
@@ -8844,7 +8844,7 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.507314,
+     "a_mean": 0.507313,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 3650,
@@ -8852,18 +8852,18 @@
      "b_mean": 0.430064,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 113765,
+     "b_zero_count": 113767,
      "g_max": 1,
-     "g_mean": 0.431907,
+     "g_mean": 0.431906,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 103529,
+     "g_zero_count": 103531,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.42291,
+     "r_mean": 0.422909,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 110343,
+     "r_zero_count": 110345,
      "sample_a": 0.192383,
      "sample_b": 0.370361,
      "sample_g": 0.381104,
@@ -8874,7 +8874,7 @@
    "load_report": {
     "map": "_e3_01_02.hpm",
     "terrain_active": false,
-    "total_ms": 2250,
+    "total_ms": 2239,
     "tracks": {
      "Area": {
       "created": 971,
@@ -8902,7 +8902,7 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 278,
+      "ms": 280,
       "skipped": {},
       "xml": 536
      },
@@ -8916,7 +8916,7 @@
      "Entity": {
       "created": 2227,
       "file_missing": false,
-      "ms": 922,
+      "ms": 913,
       "skipped": {},
       "xml": 2227
      },
@@ -8930,7 +8930,7 @@
      "LensFlare": {
       "created": 3,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
@@ -8944,7 +8944,7 @@
      "LightMask": {
       "created": 14,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 14
      },
@@ -8960,7 +8960,7 @@
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 18,
+      "ms": 16,
       "skipped": {},
       "xml": 128
      },
@@ -8981,7 +8981,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 481,
+      "ms": 485,
       "skipped": {},
       "xml": 3381
      },
@@ -8996,7 +8996,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3914178.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-683506.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -9065,30 +9065,30 @@
     "yaw": -4.12621
    },
    "render": {
-    "draw_calls": 1106,
+    "draw_calls": 1084,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 88,
-    "lights_rendered": 88,
-    "occlusion_queries": 145,
+    "lights_in_list": 84,
+    "lights_rendered": 84,
+    "occlusion_queries": 132,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 3.6163008213043213,
-     "logic_steps": 1.0165289640426636,
-     "render_ms": 11.657402992248535,
-     "swap_ms": 0.06200973689556122
+     "logic_ms": 3.2856192588806152,
+     "logic_steps": 1.008264422416687,
+     "render_ms": 10.821748733520508,
+     "swap_ms": 0.04974862188100815
     },
     "shader_failures": 0,
-    "solid_objects": 299,
+    "solid_objects": 297,
     "trans_objects": 94
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 11,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n29 void cLux_PreloadEntity(const tString&in)\n26 void iPhysicsJointHinge::SetAllowPositionReset(bool)\n14 void cLuxProp::SetGuiCacheAtScreenSize(float)\n8 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 9,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n29 void cLux_PreloadEntity(const tString&in)\n8 void Material_Preload(const tString&in)\n4 void cLux_PreloadSound(const tString&in)\n3 void Entity_Preload(const tString&in)\n2 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 38.5,
+   "wall_s": 38.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9123,7 +9123,7 @@
     "physics_bodies": 2914,
     "physics_bodies_awake": 18,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 115,
+    "sound_entities": 116,
     "static_mesh_entities": 3302,
     "submeshes_without_material": 1,
     "unbounded_top": []
@@ -9139,39 +9139,39 @@
    "boot_s": 3.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.93998,
+    "fps": 60.336319,
     "pitch": 0.930535,
-    "pos_x": 13.079022,
-    "pos_y": 252.590195,
-    "pos_z": -124.932678,
+    "pos_x": 13.078986,
+    "pos_y": 252.590088,
+    "pos_z": -124.932594,
     "yaw": -1.20508
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.93998,
+   "fps": 60.336319,
    "frame": {
     "black_frac": 3.6e-05,
     "height": 2160,
     "lum_hist16": [
-     0.134336,
-     0.295833,
-     0.286291,
-     0.276328,
-     0.00302,
-     0.000285,
-     0.000194,
-     0.000179,
+     0.134158,
+     0.296244,
+     0.285452,
+     0.276947,
+     0.003007,
+     0.000283,
+     0.000195,
+     0.000178,
      0.000182,
-     0.000172,
-     0.000188,
-     0.000213,
-     0.000163,
+     0.000173,
+     0.000187,
+     0.000214,
+     0.000162,
      0.000233,
      0.000201,
      0.002184
     ],
     "lum_max": 255,
-    "lum_mean": 35.709431,
+    "lum_mean": 35.718102,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.001974,
@@ -9184,89 +9184,89 @@
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 8294400,
-     "b_max": 1.205078,
-     "b_mean": 0.307296,
+     "b_max": 1.269531,
+     "b_mean": 0.307676,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 38857,
-     "g_max": 1.245117,
-     "g_mean": 0.377075,
+     "b_zero_count": 38673,
+     "g_max": 1.304688,
+     "g_mean": 0.377085,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 37986,
+     "g_zero_count": 37773,
      "height": 2160,
-     "r_max": 1.389648,
-     "r_mean": 0.414237,
+     "r_max": 1.416016,
+     "r_mean": 0.414074,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 37847,
+     "r_zero_count": 37614,
      "sample_a": 0,
-     "sample_b": 0.12793,
-     "sample_g": 0.358398,
-     "sample_r": 0.413574,
+     "sample_b": 0.124451,
+     "sample_g": 0.354248,
+     "sample_r": 0.409912,
      "width": 3840
     },
     "1": {
-     "a_max": 0.010246,
-     "a_mean": 0.002516,
+     "a_max": 0.010376,
+     "a_mean": 0.002514,
      "a_min": 0.000876,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 0.999512,
-     "b_mean": 0.590155,
+     "b_mean": 0.590123,
      "b_min": -0.975098,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.489787,
+     "g_mean": 0.490102,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 0,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.016692,
+     "r_mean": -0.016605,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 0,
-     "sample_a": 0.002285,
-     "sample_b": 0.645508,
-     "sample_g": 0.760254,
-     "sample_r": 0.068054,
+     "sample_a": 0.002283,
+     "sample_b": 0.643555,
+     "sample_g": 0.761719,
+     "sample_r": 0.071838,
      "width": 3840
     },
     "2": {
-     "a_max": 0.99707,
-     "a_mean": 0.583845,
+     "a_max": 0.974121,
+     "a_mean": 0.583957,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 984,
+     "a_zero_count": 1017,
      "b_max": 1,
-     "b_mean": 0.512281,
+     "b_mean": 0.512416,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 60653,
+     "b_zero_count": 60305,
      "g_max": 1,
-     "g_mean": 0.510192,
+     "g_mean": 0.510313,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 59137,
+     "g_zero_count": 58783,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.48233,
+     "r_mean": 0.482405,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 64255,
-     "sample_a": 0.707031,
-     "sample_b": 0.694336,
-     "sample_g": 0.696777,
-     "sample_r": 0.630371,
+     "r_zero_count": 63933,
+     "sample_a": 0.687988,
+     "sample_b": 0.687988,
+     "sample_g": 0.681152,
+     "sample_r": 0.612793,
      "width": 3840
     }
    },
    "load_report": {
     "map": "_e3_01_03.hpm",
     "terrain_active": true,
-    "total_ms": 2139,
+    "total_ms": 2120,
     "tracks": {
      "Area": {
       "created": 131,
@@ -9278,14 +9278,14 @@
      "Billboard": {
       "created": 35,
       "file_missing": false,
-      "ms": 4,
+      "ms": 3,
       "skipped": {},
       "xml": 35
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 24
       },
@@ -9294,7 +9294,7 @@
      "Decal": {
       "created": 178,
       "file_missing": false,
-      "ms": 120,
+      "ms": 118,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -9310,7 +9310,7 @@
      "Entity": {
       "created": 465,
       "file_missing": false,
-      "ms": 519,
+      "ms": 526,
       "skipped": {},
       "xml": 465
      },
@@ -9331,7 +9331,7 @@
      "Light": {
       "created": 52,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 52
      },
@@ -9373,7 +9373,7 @@
      "StaticObject": {
       "created": 598,
       "file_missing": false,
-      "ms": 293,
+      "ms": 279,
       "skipped": {},
       "xml": 598
      },
@@ -9386,7 +9386,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3915416.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-684456.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -9424,25 +9424,25 @@
     "gl_errors": {},
     "lights_in_list": 8,
     "lights_rendered": 8,
-    "occlusion_queries": 99,
+    "occlusion_queries": 96,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.4804941415786743,
+     "logic_ms": 1.4897205829620361,
      "logic_steps": 1.0,
-     "render_ms": 4.865571022033691,
-     "swap_ms": 0.04512494057416916
+     "render_ms": 5.703433036804199,
+     "swap_ms": 0.04762014001607895
     },
     "shader_failures": 0,
-    "solid_objects": 60,
+    "solid_objects": 61,
     "trans_objects": 51
    },
    "shader_failures": [],
    "status": "ok",
    "stubs": {
-    "count": 8,
-    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void Entity_Preload(const tString&in)\n3 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxProp::SetGuiCacheAtScreenSize(float)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLux_PreloadEntity(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
+    "count": 7,
+    "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n4 void Entity_Preload(const tString&in)\n3 void cMeshEntity::SetDisableSleep(bool)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n1 void cLux_PreloadEntity(const tString&in)\n1 void cLux_LoadScreenSetForceBackground(bool)\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 22.7,
+   "wall_s": 22.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9489,42 +9489,42 @@
   "_e3_main_menu.hpm": {
    "allowlisted": [],
    "asleep": false,
-   "boot_s": 1.2,
+   "boot_s": 1.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.03944,
+    "fps": 60,
     "pitch": 0,
     "pos_x": 0,
-    "pos_y": -520.629822,
+    "pos_y": -532.629822,
     "pos_z": 0,
     "yaw": -3.141583
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.03944,
+   "fps": 60,
    "frame": {
-    "black_frac": 0.457174,
+    "black_frac": 0.435746,
     "height": 2160,
     "lum_hist16": [
-     0.769219,
-     0.060642,
-     0.022283,
-     0.014535,
-     0.012368,
-     0.0127,
-     0.011991,
-     0.011405,
-     0.010084,
-     0.008554,
-     0.00922,
-     0.007022,
-     0.007559,
-     0.009098,
-     0.009764,
-     0.023557
+     0.743842,
+     0.068609,
+     0.031236,
+     0.021716,
+     0.013151,
+     0.012946,
+     0.011837,
+     0.01142,
+     0.010099,
+     0.008657,
+     0.00927,
+     0.007204,
+     0.007375,
+     0.008874,
+     0.010124,
+     0.023639
     ],
     "lum_max": 255,
-    "lum_mean": 27.062376,
+    "lum_mean": 28.09754,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.013817,
@@ -9735,7 +9735,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3915920.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-684945.log",
    "log_errors": {
     "ERROR: Couldn'*'../../../.local/share/Steam/steamapps/common/SOMA/entities/station/tech/communication_table_pplant/commu": {
      "count": 1,
@@ -9762,7 +9762,7 @@
    "player": {
     "active": false,
     "feet_x": 0,
-    "feet_y": -464.279846,
+    "feet_y": -476.779846,
     "feet_z": 0,
     "health": 1,
     "max_fwd_speed": 1.875,
@@ -9780,10 +9780,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.0531021356582642,
-     "logic_steps": 1.0083333253860474,
-     "render_ms": 2.0511324405670166,
-     "swap_ms": 0.044500306248664856
+     "logic_ms": 0.8931549787521362,
+     "logic_steps": 1.0,
+     "render_ms": 1.9141672849655151,
+     "swap_ms": 0.04485586658120155
     },
     "shader_failures": 0,
     "solid_objects": 0,
@@ -9795,7 +9795,7 @@
     "count": 5,
     "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_Preload(const tString&in)\n2 bool cLux_IsLoadingScreenVisible()\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 21.0,
+   "wall_s": 21.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9840,39 +9840,39 @@
    "boot_s": 1.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": 0,
-    "pos_y": -503.129852,
+    "pos_y": -505.129852,
     "pos_z": 0,
     "yaw": -3.141583
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 60.098557,
    "frame": {
-    "black_frac": 0.415294,
+    "black_frac": 0.418533,
     "height": 2160,
     "lum_hist16": [
-     0.705629,
-     0.083797,
-     0.044269,
-     0.012403,
-     0.013731,
-     0.01398,
-     0.012075,
-     0.022516,
-     0.010199,
-     0.009077,
-     0.009564,
-     0.008522,
-     0.007387,
-     0.00941,
-     0.011757,
-     0.025685
+     0.713121,
+     0.075528,
+     0.043662,
+     0.013709,
+     0.013654,
+     0.014016,
+     0.012116,
+     0.022601,
+     0.010308,
+     0.009009,
+     0.009599,
+     0.00856,
+     0.007348,
+     0.009453,
+     0.011699,
+     0.025617
     ],
     "lum_max": 255,
-    "lum_mean": 31.197588,
+    "lum_mean": 31.090088,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.014777,
@@ -9967,7 +9967,7 @@
    "load_report": {
     "map": "main_menu.hpm",
     "terrain_active": false,
-    "total_ms": 16,
+    "total_ms": 17,
     "tracks": {
      "Area": {
       "created": 1,
@@ -10083,13 +10083,13 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-3916474.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-685513.log",
    "log_errors": {},
    "log_warnings": 11,
    "player": {
     "active": false,
     "feet_x": 0,
-    "feet_y": -447.279846,
+    "feet_y": -449.279846,
     "feet_z": 0,
     "health": 1,
     "max_fwd_speed": 1.875,
@@ -10107,10 +10107,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 0.8151845335960388,
+     "logic_ms": 0.9318053722381592,
      "logic_steps": 1.0,
-     "render_ms": 1.7306185960769653,
-     "swap_ms": 0.04339928179979324
+     "render_ms": 1.8383740186691284,
+     "swap_ms": 0.04158954322338104
     },
     "shader_failures": 0,
     "solid_objects": 0,
@@ -10122,7 +10122,7 @@
     "count": 5,
     "stubs": "31 void cLuxMap::PreloadGuiGfx(const tString&in, eImGuiGfx)\n2 void cLuxMap::PreloadMaterial(const tString&in)\n2 void Entity_Preload(const tString&in)\n2 bool cLux_IsLoadingScreenVisible()\n1 void cLuxInputHandler::SetGamepadColor(int, const cColor&in)\n"
    },
-   "wall_s": 19.9,
+   "wall_s": 19.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
