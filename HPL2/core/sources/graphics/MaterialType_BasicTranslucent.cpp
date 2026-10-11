@@ -98,8 +98,9 @@ namespace hpl {
 	#define eFeature_Diffuse_SRGBDiffuseMap			eFlagBit_13
 	#define eFeature_Diffuse_AngleFade				eFlagBit_14
 	#define eFeature_Diffuse_DepthOfField			eFlagBit_15
+	#define eFeature_Diffuse_AlphaBlendRefraction	0x00010000
 	
-	#define kDiffuseFeatureNum 16
+	#define kDiffuseFeatureNum 17
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -119,6 +120,7 @@ namespace hpl {
 		cProgramComboFeature("UseSRGBDiffuseMap", kPC_FragmentBit),
 		cProgramComboFeature("UseAngleFade", kPC_VertexBit),
 		cProgramComboFeature("UseDepthOfField", kPC_FragmentBit | kPC_VertexBit),
+		cProgramComboFeature("UseAlphaBlendRefraction", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -322,6 +324,7 @@ namespace hpl {
 			}
 			if(bRefractionEnabled)									lFlags |= eFeature_Diffuse_UseRefraction;
 			if(pVars->mbRefractionNormals && bRefractionEnabled)	lFlags |= eFeature_Diffuse_UseScreenNormal;
+			if(pVars->mbRefractionAlphaBlend && bRefractionEnabled)	lFlags |= eFeature_Diffuse_AlphaBlendRefraction;
 			if(mbLightProbes && pVars->mbAffectedByLightLevel)		lFlags |= eFeature_Diffuse_Lit;
 			if(pVars->mbSoftParticle)								lFlags |= eFeature_Diffuse_SoftParticle;
 			if(pVars->mbFadeColor)									lFlags |= eFeature_Diffuse_FadeColor;
@@ -666,6 +669,8 @@ namespace hpl {
 		pVars->mbRefraction = apVars->GetVarBool("Refraction", false);
 		pVars->mbRefractionEdgeCheck = apVars->GetVarBool("RefractionEdgeCheck", true);
 		pVars->mbRefractionNormals = apVars->GetVarBool("RefractionNormals", true);
+		pVars->mbRefractionAlphaBlend = apVars->GetVarBool("RefractionAlphaBlend", false);
+		apMaterial->SetAffectedByDepthOfField(apVars->GetVarBool("AffectedByDepthOfField", true));
 		pVars->mfRefractionScale  = apVars->GetVarFloat("RefractionScale", 1.0f);
 		pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
 		pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0);
@@ -688,6 +693,8 @@ namespace hpl {
 		apVars->AddVarBool("Refraction", pVars->mbRefraction);
 		apVars->AddVarBool("RefractionEdgeCheck", pVars->mbRefractionEdgeCheck);
 		apVars->AddVarBool("RefractionNormals", pVars->mbRefractionNormals);
+		apVars->AddVarBool("RefractionAlphaBlend", pVars->mbRefractionAlphaBlend);
+		apVars->AddVarBool("AffectedByDepthOfField", apMaterial->GetAffectedByDepthOfField());
 		apVars->AddVarFloat("RefractionScale", pVars->mfRefractionScale);
 		apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
 		apVars->AddVarFloat("FrenselPow",pVars->mfFrenselPow);

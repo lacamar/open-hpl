@@ -4399,7 +4399,11 @@ namespace hpl {
 			// objects straddling the focus end draw in both passes, crossfaded per pixel
 			bool bDofBlend = false;
 			cColor vDofParams(0,0);
-			if(alDofPass)
+			if(alDofPass && pMaterial->GetAffectedByDepthOfField()==false)
+			{
+				if(alDofPass==1) continue;
+			}
+			else if(alDofPass)
 			{
 				cBoundingVolume *pBV = pObject->GetBoundingVolume();
 				float fDepth = -cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pBV->GetWorldCenter()).z;

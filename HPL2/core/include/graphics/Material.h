@@ -105,6 +105,8 @@ namespace hpl {
 
 		void SetLargeTransperantSurface(bool abX){ mbLargeTransperantSurface = abX;}
 		bool GetLargeTransperantSurface(){ return mbLargeTransperantSurface;}
+		void SetAffectedByDepthOfField(bool abX){ mbAffectedByDepthOfField = abX;}
+		bool GetAffectedByDepthOfField(){ return mbAffectedByDepthOfField;}
 
 		bool GetUseAlphaDissolveFilter(){ return mbUseAlphaDissolveFilter;}
 		void SetUseAlphaDissolveFilter(bool abX){ mbUseAlphaDissolveFilter = abX;}
@@ -194,6 +196,7 @@ namespace hpl {
 		bool mbHasTranslucentIllumination;
 
 		bool mbLargeTransperantSurface;
+		bool mbAffectedByDepthOfField = true;
 
 		bool mbAffectedByFog;
 		int mlDecalSortOrder = 0;
