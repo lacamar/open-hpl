@@ -2076,6 +2076,51 @@ public:
 	}
 };
 
+// cLuxLineOfSightCallback::BeforeIntersect: only solid sub-meshes block, shadow casters only if asked
+class cSomaScriptLosRay : public cSomaLosRay
+{
+public:
+	bool mbShadowCasters = false, mbStatic = false;
+	static bool SubMeshBlocks(cSubMeshEntity *apSub, bool abShadow)
+	{
+		cMaterial *pMat = apSub->GetMaterial();
+		return pMat && pMat->GetType()->IsTranslucent() == false && (abShadow == false || apSub->GetRenderFlagBit(eRenderableFlag_ShadowCaster));
+	}
+	bool Blocks(iPhysicsBody *apBody)
+	{
+		if (mbStatic && apBody->GetMass() != 0)
+			return false;
+		bool bAttached = false;
+		cEntity3DIterator it = apBody->GetChildIterator();
+		while (it.HasNext())
+			if (cSubMeshEntity *pSub = dynamic_cast<cSubMeshEntity *>(it.Next()))
+			{
+				if (SubMeshBlocks(pSub, mbShadowCasters))
+					return true;
+				bAttached = true;
+			}
+		if (bAttached || mbShadowCasters == false)
+			return bAttached == false;
+		for (cSomaLuxEntity *pEnt : cSomaLuxMap::GetCurrent()->GetEntities())
+			if (std::find(pEnt->mvBodies.begin(), pEnt->mvBodies.end(), apBody) != pEnt->mvBodies.end())
+			{
+				if (pEnt->mpMesh == NULL)
+					return true;
+				for (int i = 0; i < pEnt->mpMesh->GetSubMeshEntityNum(); ++i)
+					if (SubMeshBlocks(pEnt->mpMesh->GetSubMeshEntity(i), true))
+						return true;
+				return false;
+			}
+		return true;
+	}
+	bool OnIntersect(iPhysicsBody *apBody, cPhysicsRayParams *apParams) override
+	{
+		if (Blocks(apBody) == false)
+			return true;
+		return cSomaLosRay::OnIntersect(apBody, apParams);
+	}
+};
+
 bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxEntity *apIgnore)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -2862,6 +2907,19 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_SetMaxInteractionDistance(const tString &in asEntityName, float afDistance)",
 			  +[](S n, float f) { ForMatching(n, [f](cSomaLuxEntity *p) { p->mfMaxInteractDistance = f; }); });
 	SOMA_FUNC(e, "bool Entity_IsInteractedWith(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbInteractedWith; });
+	SOMA_FUNC(e, "bool cLux_CheckLineOfSight(const cVector3f&in avStart, const cVector3f&in avEnd, bool abCheckOnlyShadowCasters, bool abCheckOnlyStatic, iLuxEntity@ apSkipEntity=null)",
+			  +[](const cVector3f &a, const cVector3f &b, bool bShadow, bool bStatic, cSomaLuxEntity *pSkip) {
+				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				  if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
+					  return false;
+				  cSomaScriptLosRay ray;
+				  ray.mbShadowCasters = bShadow;
+				  ray.mbStatic = bStatic;
+				  if (pSkip)
+					  ray.msetIgnore.insert(pSkip->mvBodies.begin(), pSkip->mvBodies.end());
+				  pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, a, b, true, false, false);
+				  return ray.mbBlocked == false;
+			  });
 	SOMA_FUNC(e, "bool cLux_GetClosestEntity(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, int alIteractType, bool abCheckLineOfSight, cLuxClosestEntityData @apOutput)",
 			  +[](const cVector3f &st, const cVector3f &dir, float len, int type, bool, char *out) {
 				  cSomaLuxEntity *pEnt = NULL;
