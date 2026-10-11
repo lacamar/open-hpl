@@ -247,6 +247,8 @@ namespace hpl {
 										iCollideShape* apShapeB, const cMatrixf& a_mtxB,
 										cCollideData & aCollideData, int alMaxPoints,
 										bool abCorrectNormalDirection)=0;
+		virtual float CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
+									cVector3f& avOutNormal, bool abLocalRayPositions)=0;
 
 		bool CheckShapeWorldCollision(	cVector3f *apPushVector,
 										iCollideShape* apShape, const cMatrixf& a_mtxTransform,

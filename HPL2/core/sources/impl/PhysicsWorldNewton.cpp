@@ -573,6 +573,20 @@ namespace hpl {
 		}
 	}
 
+	float cPhysicsWorldNewton::CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
+											cVector3f& avOutNormal, bool abLocalRayPositions)
+	{
+		cVector3f vStart = avOrigin, vEnd = avEnd;
+		if(abLocalRayPositions==false)
+		{
+			cMatrixf mtxInv = cMath::MatrixInverse(a_mtxTransform);
+			vStart = cMath::MatrixMul(mtxInv, avOrigin);
+			vEnd = cMath::MatrixMul(mtxInv, avEnd);
+		}
+		int lAttribute;
+		return NewtonCollisionRayCast(static_cast<cCollideShapeNewton*>(apShape)->GetNewtonCollision(), vStart.v, vEnd.v, avOutNormal.v, &lAttribute);
+	}
+
 	bool cPhysicsWorldNewton::CheckShapeCollision(	iCollideShape* apShapeA, const cMatrixf& a_mtxA,
 										iCollideShape* apShapeB, const cMatrixf& a_mtxB,
 										cCollideData & aCollideData, int alMaxPoints,

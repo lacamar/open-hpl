@@ -3273,19 +3273,22 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 							  b->AddForce(w);
 				  });
 			  });
+	static auto PushFromEntity = [](S n, S from, float f, bool bMain, bool bImpulse) {
+		cSomaLuxEntity *pFrom = Find(from);
+		if (!pFrom) return;
+		ForMatching(n, [&](cSomaLuxEntity *p) {
+			cVector3f v = p->GetPosition() - pFrom->GetPosition();
+			float l = v.Length();
+			if (l > 0.0001f) v = v / l;
+			for (iPhysicsBody *b : p->mvBodies)
+				if (!bMain || b == p->GetMainBody())
+					bImpulse ? b->AddImpulse(v * f) : b->AddForce(v * f);
+		});
+	};
 	SOMA_FUNC(e, "void Entity_AddForceFromEntity(const tString &in asEntityName, const tString &in asForceEntityName, float afForce, bool abOnlyMainBody)",
-			  +[](S n, S from, float f, bool bMain) {
-				  cSomaLuxEntity *pFrom = Find(from);
-				  if (!pFrom) return;
-				  ForMatching(n, [&](cSomaLuxEntity *p) {
-					  cVector3f v = p->GetPosition() - pFrom->GetPosition();
-					  float l = v.Length();
-					  if (l > 0.0001f) v = v / l;
-					  for (iPhysicsBody *b : p->mvBodies)
-						  if (!bMain || b == p->GetMainBody())
-							  b->AddForce(v * f);
-				  });
-			  });
+			  +[](S n, S from, float f, bool bMain) { PushFromEntity(n, from, f, bMain, false); });
+	SOMA_FUNC(e, "void Entity_AddImpulseFromEntity(const tString &in asEntityName, const tString &in asImpulseEntityName, float afImpulse, bool abOnlyMainBody)",
+			  +[](S n, S from, float f, bool bMain) { PushFromEntity(n, from, f, bMain, true); });
 	SOMA_FUNC(e, "void Entity_SetCollide(const tString &in asEntityName, bool abActive)", +[](S n, bool c) {
 		ForMatching(n, [c](cSomaLuxEntity *p) {
 			for (iPhysicsBody *b : p->mvBodies)

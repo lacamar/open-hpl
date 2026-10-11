@@ -100,6 +100,8 @@ namespace hpl {
 						iCollideShape* apShapeB, const cMatrixf& a_mtxB,
 						cCollideData & aCollideData, int alMaxPoints,
 						bool abCorrectNormalDirection);
+		float CastRayOnShape(iCollideShape* apShape, const cMatrixf& a_mtxTransform, const cVector3f& avOrigin, const cVector3f& avEnd,
+							cVector3f& avOutNormal, bool abLocalRayPositions);
 		
 		void RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform, 
 										iLowLevelGraphics *apLowLevel, const cColor& aColor);

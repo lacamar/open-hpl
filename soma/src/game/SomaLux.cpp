@@ -1570,6 +1570,11 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 						d.SetMaxSize(n);
 					return a && b && w->CheckShapeCollision(a, ma, b, mb, d, n, bCorrect);
 				});
+	SOMA_METHOD(e, "iPhysicsWorld", "float CastRayOnShape(iCollideShape @apShape, const cMatrixf&in a_mtxTransform, const cVector3f &in avOrigin, const cVector3f&in avEnd,cVector3f&out avOutNormal, bool abLocalRayPositions)",
+				+[](iPhysicsWorld *w, iCollideShape *s, const cMatrixf &m, const cVector3f &a, const cVector3f &b, cVector3f &n, bool bLocal) {
+					n = 0;
+					return s ? w->CastRayOnShape(s, m, a, b, n, bLocal) : -1.0f;
+				});
 	SOMA_METHOD(e, "iPhysicsWorld", "bool CheckShapeWorldCollision(cVector3f&out avPushVector, iCollideShape@ apShape, const cMatrixf&in a_mtxTransform, iPhysicsBody@ apSkipBody, bool abSkipStatic, bool abIsCharacter, bool abCollideCharacter)",
 				+[](iPhysicsWorld *w, cVector3f &push, iCollideShape *pShape, const cMatrixf &m, iPhysicsBody *pSkip, bool bSkipStatic, bool bChar, bool bCollideChar) {
 					push = 0;
