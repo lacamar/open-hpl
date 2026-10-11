@@ -14,6 +14,7 @@
 #include "SomaLuxPlayer.h"
 #include "SomaLuxVoice.h"
 #include "SomaLuxEntity.h"
+#include "SomaImGui.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
@@ -179,6 +180,47 @@ cSomaLuxMap::~cSomaLuxMap()
 		mpCurrent = NULL;
 	if (mpScript)
 		mpScript->Release();
+	cResources *pRes = gpSomaBase->mpEngine->GetResources();
+	for (cMesh *p : mvPreloadedMeshes)
+		pRes->GetMeshManager()->Destroy(p);
+	for (cMaterial *p : mvPreloadedMaterials)
+		pRes->GetMaterialManager()->Destroy(p);
+}
+
+bool cSomaLuxMap::FirstPreload(const tString &asFile, const char *asKind)
+{
+	return asFile.empty() == false && msetPreloaded.insert(asFile + asKind).second;
+}
+
+void cSomaLuxMap::PreloadParticleSystem(const tString &asFile)
+{
+	if (FirstPreload(asFile, "#ps"))
+		gpSomaBase->mpEngine->GetResources()->GetParticleManager()->Preload(asFile);
+}
+
+void cSomaLuxMap::PreloadEntity(const tString &asFile)
+{
+	if (FirstPreload(asFile, "") == false)
+		return;
+	tString sFile = cString::SetFileExt(asFile, "ent");
+	cResources *pRes = gpSomaBase->mpEngine->GetResources();
+	iXmlDocument *pDoc = pRes->LoadXmlDocument(sFile);
+	if (pDoc == NULL)
+		return;
+	cXmlElement *pModel = pDoc->GetFirstElement("ModelData");
+	cXmlElement *pMesh = pModel ? pModel->GetFirstElement("Mesh") : NULL;
+	if (pMesh)
+		if (cMesh *p = pRes->GetMeshManager()->CreateMesh(pMesh->GetAttributeString("Filename", "")))
+			mvPreloadedMeshes.push_back(p);
+	pRes->DestroyXmlDocument(pDoc);
+}
+
+void cSomaLuxMap::PreloadMaterial(const tString &asFile)
+{
+	if (FirstPreload(asFile, "#mat") == false)
+		return;
+	if (cMaterial *p = gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(asFile))
+		mvPreloadedMaterials.push_back(p);
 }
 
 bool cSomaLuxMap::CreateScript(cSomaScriptRuntime *apRuntime, const tString &asScriptFile)
@@ -1449,8 +1491,15 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 					+[](cWorld *w, S n, S t, const cVector3f &size, bool remove, bool) { return w->CreateParticleSystem(n, t, size, remove); });
 		for (const char *pDecl : {"void ParticleSystem_Preload(const tString &in asFile)", "void cLux_PreloadParticleSystem(const tString &in asFile)",
 								  "void cResources_PreloadParticleSystem(const tString&in asDataName)"})
-			SOMA_FUNC(e, pDecl, +[](S) {});
-		SOMA_METHOD(e, "cLuxMap", "void PreloadParticleSystem(const tString&in asFile)", +[](cSomaLuxMap *, S) {});
+			SOMA_FUNC(e, pDecl, +[](S f) { if (cSomaLuxMap *m = cSomaLuxMap::GetCurrent()) m->PreloadParticleSystem(f); });
+		SOMA_METHOD(e, "cLuxMap", "void PreloadParticleSystem(const tString&in asFile)", +[](cSomaLuxMap *m, S f) { m->PreloadParticleSystem(f); });
+		for (const char *pDecl : {"void cLux_PreloadEntity(const tString &in asFile)", "void Entity_Preload(const tString &in asEntityFile)"})
+			SOMA_FUNC(e, pDecl, +[](S f) { if (cSomaLuxMap *m = cSomaLuxMap::GetCurrent()) m->PreloadEntity(f); });
+		for (const char *pDecl : {"void cLux_PreloadMaterial(const tString &in asFile)", "void Material_Preload(const tString &in asFile)"})
+			SOMA_FUNC(e, pDecl, +[](S f) { if (cSomaLuxMap *m = cSomaLuxMap::GetCurrent()) m->PreloadMaterial(f); });
+		SOMA_METHOD(e, "cLuxMap", "void PreloadEntity(const tString&in asFile)", +[](cSomaLuxMap *m, S f) { m->PreloadEntity(f); });
+		SOMA_METHOD(e, "cLuxMap", "void PreloadMaterial(const tString&in asFile)", +[](cSomaLuxMap *m, S f) { m->PreloadMaterial(f); });
+		SOMA_METHOD(e, "cLuxMap", "void PreloadGuiGfx(const tString&in asFile, eImGuiGfx aType)", +[](cSomaLuxMap *, S f, int t) { SomaPreloadGuiGfx(f, t); });
 		SOMA_METHOD(e, "cLuxMap", "void AddDissolveEntity(cMeshEntity @apMeshEntity, float afTime)", +[](cSomaLuxMap *m, cMeshEntity *p, float t) { m->AddDissolveEntity(p, t); });
 	}
 	SOMA_FUNC(e, "bool Map_GetLightArray(const tString &in asName, array<iLight@> &inout avOutLights)", +[](S n, CScriptArray &a) {

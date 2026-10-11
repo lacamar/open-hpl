@@ -403,6 +403,8 @@ void SomaRestoreCameraTexture(const cSomaCameraTextureState &s)
 		p->mAttached = pEnt->mID;
 }
 
+static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial, const cVector2f &vUVMin, const cVector2f &vUVMax);
+
 static cGuiGfxElement *GfxElement(const void *apGfx)
 {
 	const tString &sFile = StrAt(apGfx, kGfxFile);
@@ -419,7 +421,6 @@ static cGuiGfxElement *GfxElement(const void *apGfx)
 		p->mlLastUsed = cPlatform::GetApplicationTime();
 		return p->mpGfx;
 	}
-	static std::map<tString, cGuiGfxElement *> mapCache;
 	if (sFile.empty())
 	{
 		static cGuiGfxElement *pWhite = NULL;
@@ -427,8 +428,18 @@ static cGuiGfxElement *GfxElement(const void *apGfx)
 			pWhite = gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
 		return pWhite;
 	}
-	const cVector2f &vUVMin = F<cVector2f>(apGfx, kGfxUVMin);
-	const cVector2f &vUVMax = F<cVector2f>(apGfx, kGfxUVMax);
+	return GfxElement(sFile, lType, lMaterial, F<cVector2f>(apGfx, kGfxUVMin), F<cVector2f>(apGfx, kGfxUVMax));
+}
+
+void SomaPreloadGuiGfx(const tString &asFile, int alType)
+{
+	if (asFile.empty() == false && alType != 4)
+		GfxElement(asFile, alType, eGuiMaterial_Alpha, cVector2f(0), cVector2f(1));
+}
+
+static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial, const cVector2f &vUVMin, const cVector2f &vUVMax)
+{
+	static std::map<tString, cGuiGfxElement *> mapCache;
 	bool bSubRect = vUVMin != cVector2f(0) || vUVMax != cVector2f(1);
 	tString sKey = sFile + "#" + cString::ToString(lType);
 	if (bSubRect)
@@ -1560,7 +1571,7 @@ void cSomaImGui::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_FUNC(e, "cImGui@ cLux_GetInputFocusImGui()", +[]() { return cSomaImGui::GetScriptInputFocus(); });
 	SOMA_FUNC(e, "cImGui@ cLux_GetPrevInputFocusImGui()", +[]() { return cSomaImGui::GetPrevInputFocus(); });
-	SOMA_FUNC(e, "void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)", +[](Str, int) {});
+	SOMA_FUNC(e, "void cLux_PreloadGuiGfx(const tString &in asFile, eImGuiGfx aType)", +[](Str f, int t) { SomaPreloadGuiGfx(f, t); });
 	SOMA_FUNC(e, "cLuxScriptImGui@ cLux_CreateScriptImGui(const tString &in asName, bool abRegisterForDrawing, bool abSkipResetOnRegistration=true)",
 			  +[](Str n, bool bDraw, bool) {
 				  cGui *pGui = gpSomaBase->mpEngine->GetGui();

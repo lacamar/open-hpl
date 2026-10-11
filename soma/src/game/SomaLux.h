@@ -55,6 +55,10 @@ public:
 	cSomaLuxTimer *GetTimer(const tString &asName);
 	void SetTimerPaused(const tString &asName, bool abX);
 	void AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime);
+	// cLuxPreloadCache: held until the map goes
+	void PreloadEntity(const tString &asFile);
+	void PreloadParticleSystem(const tString &asFile);
+	void PreloadMaterial(const tString &asFile);
 
 	cWorld *GetWorld() { return mpWorld; }
 	void SetWorld(cWorld *apWorld) { mpWorld = apWorld; }
@@ -105,6 +109,10 @@ private:
 	double mfTime = 0;
 	struct cDissolve { cMeshEntity *mpEntity; float mfAlpha, mfSpeed; };
 	std::vector<cDissolve> mvDissolves;
+	std::set<tString> msetPreloaded;
+	bool FirstPreload(const tString &asFile, const char *asKind);
+	std::vector<cMesh *> mvPreloadedMeshes;
+	std::vector<cMaterial *> mvPreloadedMaterials;
 };
 
 // Advances the current map's script every frame (cUpdater has no remove, so this persists).

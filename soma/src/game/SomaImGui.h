@@ -20,6 +20,7 @@ struct cSomaCameraTextureState
 std::vector<cSomaCameraTextureState> SomaGetCameraTextures();
 iTexture *SomaGetCameraTexture(const tString &asName);
 void SomaRestoreCameraTexture(const cSomaCameraTextureState &aState);
+void SomaPreloadGuiGfx(const tString &asFile, int alType);
 
 class cSomaImGui
 {
