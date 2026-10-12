@@ -6286,3 +6286,32 @@ this tree, so AMFP game code can be ported instead of reversed.
   TDD's 8-arg `AddEffectVoice` and the flashback voices pass -1, which only queues, as before.
 - New save fields are looked up by name and zero-initialised, so older saves still load.
 - `amnesia/src/game` headers hold non-UTF8 bytes: `grep -a`.
+
+## Rebirth: vertexblend material (2026-10-12)
+
+Rocks in 01_01 (`*_blocky_projected`) were black: the `vertexblend` material type was missing.
+Recovered from `hpl::cMaterialType_VertexBlend` in the Linux binary (ctor 10bc570, LoadData
+10be6b0, GetDefaultGpuProgramFlags 10c0b20, SetupMaterialBufferData 10c12e0, LoadVariables
+10c1a40).
+
+- Shaders: `deferred_projected_uv_vtx.hpsl` + `deferred_projected_blendweight_frag.hpsl`, define
+  `MaterialType_BlendWeight`.
+- Samplers 0-11: per vertex-colour channel R,G,B x (Diffuse, Specular, NMap, Height); `.mat`
+  units `Diffuse_R` ... `Height_B`.
+- Variables: `TextureUVScaleR/G/B` (1), `BlendSmoothness` (0.5), `ColorBlendSmoothness`
+  (= BlendSmoothness), `HeightMapScaleR/G/B` (0.1), `AutoUvR/G/B` (true),
+  `DirectionalWeightR/G/B` ((0,0,0,1)), `AlphaMask` (true), `OverlayNormal` (false).
+- Hardness = clamp(1 - smoothness, 0, 0.99). Diffuse/specular/normal masks = texture present.
+  `avBlendVecX/Y/Z` = view3x3 x axis; `a_mtxBlendBand` rows = (view3x3 x Dir.xyz, Dir.w).
+- Flags: `UseDiffuse_X/UseSpecular_X/UseNormalMap_X` = texture present; `UseParallax_X` = height
+  texture and scale > 0; `UseNormalUv_X` = not all auto and (!AutoUvX or no texture on X).
+- The projection is in world space: the vertex patch feeds `a_mtxModel * pos` as texcoord.
+- Not compared against a reference frame yet (vertex colour / tangent streams, parallax).
+
+Material loader (official `cMaterialManager::LoadFromFile` eedba0): a texture unit whose file
+is missing fails the whole material there too, yet `tasi_body_upgrade_v2_hands.mat` (first-person
+arms) names `tasi_body_hands_veins_illum.dds`, which is not shipped. How the official game still
+shows hands is unknown; we skip a missing Illumination unit instead.
+
+Data-side material misses (the official `.msh` names the same absent files): `Project.mat`
+(salim_ring), `panicum_and_grass.mat`, `hanks_dossier.mat`.

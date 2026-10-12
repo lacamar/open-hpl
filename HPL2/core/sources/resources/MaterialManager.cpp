@@ -451,6 +451,8 @@ namespace hpl {
 
 			if(pTex==NULL)
 			{
+				//Rebirth ships materials naming absent illumination maps
+				if(pUsedTexture->mType == eMaterialTexture_Illumination) continue;
 				mpResources->DestroyXmlDocument(pDoc);
 				hplDelete(pMat);
 				return NULL;
@@ -521,6 +523,13 @@ namespace hpl {
 	
 	tString cMaterialManager::GetTextureString(eMaterialTexture aType)
 	{
+		if(aType >= eMaterialTexture_Diffuse_R && aType <= eMaterialTexture_Height_B)
+		{
+			static const char* const vKinds[] = { "Diffuse_", "Specular_", "NMap_", "Height_" };
+			int lIdx = aType - eMaterialTexture_Diffuse_R;
+			return tString(vKinds[lIdx % 4]) + "RGB"[lIdx / 4];
+		}
+
 		switch(aType)
 		{
 			case eMaterialTexture_Diffuse: return "Diffuse";

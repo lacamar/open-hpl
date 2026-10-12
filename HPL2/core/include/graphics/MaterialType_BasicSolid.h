@@ -161,5 +161,42 @@ namespace hpl {
 
 	//---------------------------------------------------
 
+	class cMaterialType_VertexBlend_Vars : public iMaterialVars
+	{
+	public:
+		float mfNormalBlendHardness;
+		float mfColorBlendHardness;
+		cVector3f mvTextureScale;
+		cVector3f mvHeightMapScale;
+		cColor mvDirectionalWeight[3];
+		bool mvAutoUv[3];
+		bool mbAlphaMask;
+		bool mbOverlayNormal;
+	};
+
+	class cMaterialType_VertexBlend : public iMaterialType_SolidBase
+	{
+	public:
+		cMaterialType_VertexBlend(cGraphics *apGraphics, cResources *apResources);
+
+		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit);
+		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+
+		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer);
+		void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
+										iRenderer *apRenderer);
+		void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
+										iRenderer *apRenderer);
+
+		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialType_VertexBlend_Vars,()); }
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
+
+	private:
+		void CompileSolidSpecifics(cMaterial *apMaterial);
+		void LoadSpecificData();
+	};
+
+	//---------------------------------------------------
+
 };
 #endif // HPL_MATERIAL_TYPE_BASIC_SURFACES_H

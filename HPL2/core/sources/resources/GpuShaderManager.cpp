@@ -266,6 +266,28 @@ namespace hpl {
 			}
 			asData = sHead + std::regex_replace(asData, rxIn, "");
 		}
+		// newer games read per-instance matrices from a texture buffer; use the fixed-function ones
+		size_t lInstBegin = asData.find("\t@ifdef UseInstanceOffset\n\t\tint lBaseOffset");
+		tString sInstEnd = "int lBoneOffset = lBaseOffset;\n\t@endif\n";
+		size_t lInstEnd = asData.find(sInstEnd);
+		if(asFile == "deferred_projected_uv_vtx.hpsl" && lInstBegin != tString::npos && lInstEnd != tString::npos)
+		{
+			asData.erase(lInstBegin, lInstEnd + sInstEnd.size() - lInstBegin);
+			static const std::regex rxWorldPos("mul\\(mtxModel, (cVector4f\\(vtx_vPosition\\.xyz, 1\\.0\\))\\)");
+			static const std::regex rxView("\\ba_mtxView(Projection)?\\b");
+			asData = "uniform cVector4f avColorMul;\nuniform cMatrixf a_mtxModelViewProjection;\nuniform cMatrixf a_mtxModelView;\nuniform cMatrixf a_mtxNormal;\nuniform cMatrixf a_mtxModel;\n"
+					 + std::regex_replace(std::regex_replace(asData, rxWorldPos, "$1"), rxView, "a_mtxModelView$1");
+			//vertex blend projects in world space
+			asData = cString::ReplaceStringTo(asData, "px_vTexCoord0 = vLocalVertexPos;", "px_vTexCoord0 = mul(a_mtxModel, vLocalVertexPos);");
+		}
+		if(asFile == "deferred_projected_uv_frag.hpsl" && asData.find("avBlendVecX") != tString::npos)
+		{
+			static const char* const vAxes[] = { "X", "1, 0, 0", "Y", "0, 1, 0", "Z", "0, 0, 1" };
+			for(int i=0; i<6; i+=2)
+				asData = std::regex_replace(asData, std::regex(tString("\\bavBlendVec") + vAxes[i] + "\\b"),
+											tString("mul(cMatrix3f(a_mtxNormalFrag), cVector3f(") + vAxes[i+1] + "))");
+			asData = "uniform cMatrixf a_mtxNormalFrag;\n" + asData;
+		}
 		// newer games mix with a previous-frame texture; keep the blend-based trail
 		if(asFile == "posteffect_image_trail_frag.hpsl")
 		{

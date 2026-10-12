@@ -76,6 +76,16 @@ namespace hpl {
 	#define kVar_afNormalMapBlendImpact			22
 	#define kVar_avTextureScale					23
 	#define kVar_avForceFieldPos0				24
+	#define kVar_avHeightmapScale				40
+	#define kVar_afNormalBlendHardness			41
+	#define kVar_afColorBlendHardness			42
+	#define kVar_avBlendVecX					43
+	#define kVar_avBlendMask					46
+	#define kVar_avDiffuseMask					47
+	#define kVar_avSpecularMask					48
+	#define kVar_avNormalMask					49
+	#define kVar_a_mtxBlendBand					50
+	#define kVar_a_mtxInvView					51
 
 
 	//------------------------------
@@ -176,6 +186,40 @@ namespace hpl {
 		cProgramComboFeature("UseBottomTexture", kPC_FragmentBit),
 		cProgramComboFeature("UseDiffuseMap", kPC_FragmentBit),
 		cProgramComboFeature("UseNormalMapBlendWeight", kPC_FragmentBit, eFeature_PUV_NormalMaps),
+	};
+
+	//------------------------------
+	//VertexBlend Features and data
+	//------------------------------
+	//Bits 0-11: texture kind (Diffuse, Specular, NMap, Height) * 3 + channel
+	#define eFeature_VB_NormalUv_R			eFlagBit_12
+	#define eFeature_VB_AlphaMask			eFlagBit_15
+	#define eFeature_VB_OverlayNormal		(1u << 16)
+	#define eFeature_VB_Tangents			(1u << 17)
+
+	#define kVertexBlendFeatureNum 18
+
+	static cProgramComboFeature vVertexBlendFeatureVec[] =
+	{
+		cProgramComboFeature("UseDiffuse_R", kPC_FragmentBit),
+		cProgramComboFeature("UseDiffuse_G", kPC_FragmentBit),
+		cProgramComboFeature("UseDiffuse_B", kPC_FragmentBit),
+		cProgramComboFeature("UseSpecular_R", kPC_FragmentBit),
+		cProgramComboFeature("UseSpecular_G", kPC_FragmentBit),
+		cProgramComboFeature("UseSpecular_B", kPC_FragmentBit),
+		cProgramComboFeature("UseNormalMap_R", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseNormalMap_G", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseNormalMap_B", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseParallax_R", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseParallax_G", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseParallax_B", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseNormalUv_R", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseNormalUv_G", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseNormalUv_B", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("UseAlphaMask", kPC_FragmentBit),
+		cProgramComboFeature("OverlayNormal", kPC_FragmentBit),
+		//the vertex shader only declares the tangent input with this
+		cProgramComboFeature("UseNormalMapping", kPC_VertexBit),
 	};
 
 	//------------------------------
@@ -969,6 +1013,208 @@ namespace hpl {
 											1.0f / apVars->GetVarFloat("TextureUVScaleTop", 1),
 											1.0f / apVars->GetVarFloat("TextureUVScaleBottom", 1));
 		pVars->mbDynamicObjectSupport = apVars->GetVarBool("DynamicObjectSupport", false);
+	}
+
+	//--------------------------------------------------------------------------
+
+	//////////////////////////////////////////////////////////////////////////
+	// VERTEX BLEND
+	//////////////////////////////////////////////////////////////////////////
+
+	//--------------------------------------------------------------------------
+
+	cMaterialType_VertexBlend::cMaterialType_VertexBlend(cGraphics *apGraphics, cResources *apResources) : iMaterialType_SolidBase(apGraphics, apResources)
+	{
+		for(int i=eMaterialTexture_Diffuse_R; i<=eMaterialTexture_Height_B; ++i)
+			AddUsedTexture((eMaterialTexture)i);
+
+		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::LoadSpecificData()
+	{
+		cParserVarContainer defaultVars;
+		defaultVars.Add("UseUv");
+		defaultVars.Add("UseNormals");
+		defaultVars.Add("UseDepth");
+		defaultVars.Add("UseColor");
+		defaultVars.Add("UseColorMul");
+		defaultVars.Add("MaterialType_BlendWeight");
+		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_projected_uv_vtx.glsl", "deferred_projected_blendweight_frag.glsl",
+													vVertexBlendFeatureVec,kVertexBlendFeatureNum, defaultVars);
+
+		mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane",kVar_afInvFarPlane,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxModel",kVar_a_mtxModel,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView",kVar_a_mtxInvView,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avHeightmapScale", kVar_avHeightmapScale,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afNormalBlendHardness", kVar_afNormalBlendHardness,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afColorBlendHardness", kVar_afColorBlendHardness,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avTextureScale", kVar_avTextureScale,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBlendVecX", kVar_avBlendVecX,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBlendVecY", kVar_avBlendVecX+1,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBlendVecZ", kVar_avBlendVecX+2,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBlendMask", kVar_avBlendMask,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avDiffuseMask", kVar_avDiffuseMask,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avSpecularMask", kVar_avSpecularMask,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avNormalMask", kVar_avNormalMask,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("a_mtxBlendBand", kVar_a_mtxBlendBand,eMaterialRenderMode_Diffuse);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::CompileSolidSpecifics(cMaterial *apMaterial)
+	{
+		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
+		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
+	}
+
+	//--------------------------------------------------------------------------
+
+	//alKind: 0 Diffuse, 1 Specular, 2 NMap, 3 Height
+	static cVector3f GetVertexBlendMask(cMaterial *apMaterial, int alKind)
+	{
+		cVector3f vMask;
+		for(int i=0; i<3; ++i)
+			vMask.v[i] = apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + i*4 + alKind)) ? 1.0f : 0.0f;
+		return vMask;
+	}
+
+	static cVector3f GetVertexBlendMask(cMaterial *apMaterial)
+	{
+		return cMath::Vector3Max(GetVertexBlendMask(apMaterial, 0), cMath::Vector3Max(GetVertexBlendMask(apMaterial, 1), GetVertexBlendMask(apMaterial, 2)));
+	}
+
+	iTexture* cMaterialType_VertexBlend::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z || aRenderMode == eMaterialRenderMode_Z_Dissolve)
+			return alUnit == 1 ? mpDissolveTexture : NULL;
+
+		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 11) return NULL;
+
+		return apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + alUnit));
+	}
+
+	//--------------------------------------------------------------------------
+
+	iGpuProgram* cMaterialType_VertexBlend::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z)			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, 0);
+		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)	return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, eFeature_Z_Dissolve);
+		if(aRenderMode != eMaterialRenderMode_Diffuse)		return NULL;
+
+		cMaterialType_VertexBlend_Vars *pVars = (cMaterialType_VertexBlend_Vars*)apMaterial->GetVars();
+		cVector3f vBlendMask = GetVertexBlendMask(apMaterial);
+		bool bAllAuto = pVars->mvAutoUv[0] && pVars->mvAutoUv[1] && pVars->mvAutoUv[2];
+
+		tFlag lFlags = 0;
+		for(int i=0; i<3; ++i)
+		{
+			for(int lKind=0; lKind<4; ++lKind)
+			{
+				if(apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + i*4 + lKind)) == NULL) continue;
+				if(lKind == 3 && pVars->mvHeightMapScale.v[i] <= 0) continue;
+				lFlags |= eFlagBit_0 << (lKind*3 + i);
+			}
+			if(bAllAuto == false && (pVars->mvAutoUv[i] == false || vBlendMask.v[i] == 0))
+				lFlags |= eFeature_VB_NormalUv_R << i;
+		}
+		if(pVars->mbAlphaMask)		lFlags |= eFeature_VB_AlphaMask;
+		if(pVars->mbOverlayNormal)	lFlags |= eFeature_VB_OverlayNormal;
+		if((lFlags & (eFeature_VB_NormalUv_R*7)) && (lFlags & (eFlagBit_6*63))) lFlags |= eFeature_VB_Tangents;
+
+		return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
+
+		apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/apRenderer->GetCurrentFrustum()->GetFarPlane());
+		apProgram->SetMatrixf(kVar_a_mtxInvView, cMath::MatrixInverse(apRenderer->GetCurrentFrustum()->GetViewMatrix()));
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
+																iRenderer *apRenderer)
+	{
+		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
+
+		cMaterialType_VertexBlend_Vars *pVars = (cMaterialType_VertexBlend_Vars*)apMaterial->GetVars();
+		apProgram->SetVec3f(kVar_avHeightmapScale, pVars->mvHeightMapScale);
+		apProgram->SetFloat(kVar_afNormalBlendHardness, pVars->mfNormalBlendHardness);
+		apProgram->SetFloat(kVar_afColorBlendHardness, pVars->mfColorBlendHardness);
+		apProgram->SetVec3f(kVar_avTextureScale, pVars->mvTextureScale);
+		apProgram->SetVec3f(kVar_avBlendMask, GetVertexBlendMask(apMaterial));
+		apProgram->SetVec3f(kVar_avDiffuseMask, GetVertexBlendMask(apMaterial, 0));
+		apProgram->SetVec3f(kVar_avSpecularMask, GetVertexBlendMask(apMaterial, 1));
+		apProgram->SetVec3f(kVar_avNormalMask, GetVertexBlendMask(apMaterial, 2));
+
+		//World axes and directional weights in view space, like the normal
+		const cMatrixf &mtxView = apRenderer->GetCurrentFrustum()->GetViewMatrix();
+		cMatrixf mtxBlendBand = cMatrixf::Identity;
+		for(int i=0; i<3; ++i)
+		{
+			cVector3f vAxis(0);
+			vAxis.v[i] = 1;
+			apProgram->SetVec3f(kVar_avBlendVecX + i, cMath::MatrixMul3x3(mtxView, vAxis));
+
+			const cColor &dir = pVars->mvDirectionalWeight[i];
+			cVector3f vDir = cMath::MatrixMul3x3(mtxView, cVector3f(dir.r, dir.g, dir.b));
+			mtxBlendBand.m[i][0] = vDir.x; mtxBlendBand.m[i][1] = vDir.y; mtxBlendBand.m[i][2] = vDir.z; mtxBlendBand.m[i][3] = dir.a;
+		}
+		apProgram->SetMatrixf(kVar_a_mtxBlendBand, mtxBlendBand);
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
+																iRenderer *apRenderer)
+	{
+		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
+		{
+			apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
+		}
+		else if(aRenderMode == eMaterialRenderMode_Diffuse)
+		{
+			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
+			apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
+			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
+		}
+	}
+
+	//--------------------------------------------------------------------------
+
+	void cMaterialType_VertexBlend::LoadVariables(cMaterial* apMaterial, cResourceVarsObject *apVars)
+	{
+		cMaterialType_VertexBlend_Vars *pVars = (cMaterialType_VertexBlend_Vars*)apMaterial->GetVars();
+		if(pVars==NULL)
+		{
+			pVars = (cMaterialType_VertexBlend_Vars*)CreateSpecificVariables();
+			apMaterial->SetVars(pVars);
+		}
+
+		float fSmoothness = apVars->GetVarFloat("BlendSmoothness", 0.5f);
+		pVars->mfNormalBlendHardness = cMath::Clamp(1 - fSmoothness, 0.0f, 0.99f);
+		pVars->mfColorBlendHardness = cMath::Clamp(1 - apVars->GetVarFloat("ColorBlendSmoothness", fSmoothness), 0.0f, 0.99f);
+
+		static const char* const vChannels[] = { "R", "G", "B" };
+		for(int i=0; i<3; ++i)
+		{
+			tString sChannel = vChannels[i];
+			pVars->mvTextureScale.v[i] = apVars->GetVarFloat("TextureUVScale" + sChannel, 1);
+			pVars->mvHeightMapScale.v[i] = apVars->GetVarFloat("HeightMapScale" + sChannel, 0.1f);
+			pVars->mvAutoUv[i] = apVars->GetVarBool("AutoUv" + sChannel, true);
+			pVars->mvDirectionalWeight[i] = apVars->GetVarColor("DirectionalWeight" + sChannel, cColor(0,0,0,1));
+		}
+		pVars->mbAlphaMask = apVars->GetVarBool("AlphaMask", true);
+		pVars->mbOverlayNormal = apVars->GetVarBool("OverlayNormal", false);
 	}
 
 	//--------------------------------------------------------------------------
