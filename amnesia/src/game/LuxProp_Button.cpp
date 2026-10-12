@@ -88,6 +88,20 @@ cLuxProp_Button::~cLuxProp_Button()
 
 //-----------------------------------------------------------------------
 
+void cLuxProp_Button::SetCanBeSwitchedOn(bool abX)
+{
+	mbCanBeSwitchedOn = abX;
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_Button::SetCanBeSwitchedOff(bool abX)
+{
+	mbCanBeSwitchedOff = abX;
+}
+
+//-----------------------------------------------------------------------
+
 bool cLuxProp_Button::CanInteract(iPhysicsBody *apBody)
 {
 	if(mbCanBeSwitchedOff && mbSwitchedOn) return true;

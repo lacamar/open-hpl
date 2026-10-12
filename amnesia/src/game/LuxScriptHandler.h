@@ -130,11 +130,53 @@ private:
 	static void __stdcall AmfpStub_ShowScreenImage(string &asFile, float afX, float afY, float afZ, bool abFadeIn, float afA, float afB, float afC);
 	static void __stdcall AmfpStub_StartPhoneRinging(string &asName);
 	static void __stdcall AmfpStub_StopPhoneRinging(string &asName);
-	// only the first caption is shown
-	static void __stdcall AmfpStub_AddEffectVoice4(string &asVoiceFile, string &asEffectFile, string &asTextCat,
-		string &asTextEntry1, float afTime1, string &asTextEntry2, float afTime2,
-		string &asTextEntry3, float afTime3, string &asTextEntry4, float afTime4,
-		bool abUsePosition, string &asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoice2(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoice3(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoice5(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoice6(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, string& asText6Entry, float afText6Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoice7(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, string& asText5Entry, float afText5Delay, string& asText6Entry, float afText6Delay, string& asText7Entry, float afText7Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AmfpStub_AddPlayerInfection(float afInfection);
+	static void __stdcall AttachAreaToProp(string& asAreaName, string& asProp, int alBody);
+	static void __stdcall AttachPropToBone(string& asChildEntityName, string& asParentEntityName, string& asParentBoneName, float fPosX, float fPosY, float fPosZ, float fRotX, float fRotY, float fRotZ);
+	static void __stdcall AmfpStub_ChangeEnemyPose(string& asName, string& asPoseType);
+	static void __stdcall DestroyParticleSystemInstantly(string& asName);
+	static void __stdcall DetachPropFromBone(string& asChildEntityName);
+	static void __stdcall FadeLampTo(string& asName, float afR, float afG, float afB, float afA, float afRadius, float afTime);
+	static void __stdcall FadePlayerPitchTo(float afX, float afSpeedMul, float afMaxSpeed);
+	static void __stdcall ForceEnemyWaitState(string& asName);
+	static float __stdcall GetEnemyPlayerDistance(string & asEnemyName);
+	static int __stdcall GetEnemyState(string& asName);
+	static bool __stdcall AmfpStub_GetJournalDisabled();
+	static bool __stdcall GetPlayerCanSeeEnemy(string & asEnemyName);
+	static float __stdcall AmfpStub_GetPlayerInfection();
+	static void __stdcall AmfpStub_GiveInfectionDamage(float afAmount, bool abUseEffect);
+	static void __stdcall AmfpStub_HangUpPhone(string & asName);
+	static void __stdcall AmfpStub_HideScreenImageImmediately();
+	static void __stdcall AmfpStub_HideScreenImageWithFade(float afFadeOut);
+	static void __stdcall PauseCurrentAnimation(string& asProp, float afFadeTime);
+	static void __stdcall PlayCurrentAnimation(string& asProp, float afFadeTime, bool abLoop);
+	static void __stdcall PlayEnemyAnimation(string & asName, string & asAnimName, bool abLoop, float afFadeTime);
+	static void __stdcall PlayScriptedAnimation(string& asName, string& asAnimationName, bool abLoopAnimation);
+	static void __stdcall PlaySoundAtPosition(string& asSoundName, string& asSoundFile, float afX, float afY, float afZ, float afFadeTime, bool abSaveSound);
+	static void __stdcall AmfpStub_ReleasePlayerFromLimbo();
+	static void __stdcall AmfpStub_RemoveAllHints();
+	static void __stdcall SendEnemyTimeOut(string& asName, float afTimeOut);
+	static void __stdcall SetButtonCanBeSwitchedOff(string& asName, bool abCanBeSwitchedOff);
+	static void __stdcall SetButtonCanBeSwitchedOn(string& asName, bool abCanBeSwitchedOn);
+	static void __stdcall SetEnemyActivationDistance(string& asName, float afX);
+	static void __stdcall SetEnemyBlind(string& asName, bool abX);
+	static void __stdcall SetEnemyDeaf(string& asName, bool abX);
+	static void __stdcall AmfpStub_SetInfectionFauxMode(bool abFauxMode);
+	static void __stdcall SetLampCanBeLitByPlayer(string& asName, bool abLit);
+	static void __stdcall SetPlayerUsesDragFootsteps(bool abX);
+	static void __stdcall SetPropAnimationPosition(string& asProp, float afPos);
+	static void __stdcall SetPropAnimationSpeed(string& asProp, float afSpeed);
+	static void __stdcall SetSwingDoorOpenAmount(string& asName, float afOpenAmount, float afDuration, bool abOpenTowardsMaxAngle);
+	static void __stdcall StopAnimationAndContinue(string& asName, float afTimeOut);
+	static void __stdcall StopPropAnimation(string& asProp);
+	static void __stdcall CreateEntityAtAreaExt(string& asEntityName, string& asEntityFile, string& asAreaName, bool abFullGameSave, float afPosX, float afPosY, float afPosZ, float afRotX, float afRotY, float afRotZ);
+	static void __stdcall AddEffectVoice4(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, float afTextDelay, string& asText2Entry, float afText2Delay, string& asText3Entry, float afText3Delay, string& asText4Entry, float afText4Delay, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance);
+	static void __stdcall AddEffectVoiceExt(string& asVoiceFile, string& asEffectFile, string& asTextCat, string& asTextEntry, bool abUsePostion, string& asPosEntity, float afMinDistance, float afMaxDistance, int alPriority, bool abStopInterrupted);
 
 	// Map
 	static void __stdcall ChangeMap(string& asMapName, string& asStartPos, string& asStartSound, string& asEndSound);

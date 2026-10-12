@@ -831,6 +831,7 @@ void cLuxMoveState_Normal::FootSound(eLuxFootSound aType)
 		tString sMoveType = "walk";
 		if(mbRunning) sMoveType = "run";
 		if(mbCrouching) sMoveType = "sneak";
+		if(mpPlayer->UsesDragFootsteps()) sMoveType = "drag";
 
 		sSoundDataName = "step_"+sMoveType+"_"+sMaterialStep;
 	}

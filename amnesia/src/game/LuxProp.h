@@ -155,6 +155,16 @@ public:
 	int mlCurrentNonLoopAnimIndex;
 	tString msAnimCallback;
 
+    cMatrixf mpParentBoneOffsetMatrix;
+    tString msParentEntityName;
+	tString msParentBoneName;
+
+    float mfBodyMassBackup;
+    bool mbBodyCollideBackup;
+    bool mbBodyCollideCharacterBackup;
+    bool mbBodyActiveBackup;
+    cMatrixf mBodyMatrixBackup;
+
 	cContainerVec<cLuxProp_AttachedProp> mvAttachedProps;
 
 	cContainerVec<cLuxPropConnectedProp> mvConnectedProps;
@@ -268,6 +278,13 @@ public:
 	 */
 	void PlayAnimation(const tString& asName, float afFadeTime, bool abLoop, const tString& asCallback);
 
+	void StopAnimation();
+
+	void PlayCurrentAnimation(float afFadeTime, bool abLoop);
+	void PauseCurrentAnimation(float afFadeTime);
+	void SetAnimationSpeed(float afSpeed);
+	void SetAnimationPosition(float afPos);
+
 	//////////////////////
 	//Properties
 	eLuxPropType GetPropType(){ return mPropType;}
@@ -339,7 +356,11 @@ public:
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
+    void SetParentBone(cBoneState * apParentBone, const cMatrixf & apParentBoneOffsetMatrix, tString asParentName, tString asParentBoneName);
+    void DetachFromParentBone();
 protected:
+    void UpdateParentBone(float afTimeStep);
+
 	void OnSetActive(bool abX);
 
 	virtual void OnHealthChange(){}
@@ -379,6 +400,17 @@ protected:
 	//////////////
 	//Variables
 	float mfHealth;
+
+    cBoneState * mpParentBone;
+    cMatrixf mpParentBoneOffsetMatrix;
+    tString msParentEntityName;
+	tString msParentBoneName;
+
+    float mfBodyMassBackup;
+    bool mbBodyCollideBackup;
+    bool mbBodyCollideCharacterBackup;
+    bool mbBodyActiveBackup;
+    cMatrixf mBodyMatrixBackup;
 
 	bool mbCheckOutsidePlayer;
 

@@ -6265,3 +6265,24 @@ our live entries and events.
   through `cLuxProp::SetCustomMaterial`, now bound.
 - `pick_entity` tests bind-pose triangles: it does not hit skinned meshes where they are drawn.
   Hiding submeshes one at a time and counting black G-buffer pixels found the culprit.
+
+## AMFP: script API from the GPLv3 source (2026-10-12)
+
+Reference: github.com/FrictionalGames/AmnesiaAMachineForPigs (`Game/src/game`), same licence as
+this tree, so AMFP game code can be ported instead of reversed.
+
+- Maps 02-16 died at script compile (`crash 3.6s` in the sweep): 45 script functions plus the
+  10-arg `CreateEntityAtArea` / `AddEffectVoice` overloads were unregistered. All registered now;
+  16/16 maps load.
+- Ported with engine support: multi-subtitle voices with priority (`AddEffectVoice2..7`), area
+  attached to a prop body, prop attached to a bone, prop animation controls, swing door open
+  amount, lamp fade, button/lamp setters, pitch fade, drag footsteps, enemy blind/deaf, scripted
+  enemy animation.
+- Warning stubs (`AMFP stub: ...`): infection, phone box, screen image, hints, limbo, enemy pose,
+  journal disabled.
+- `PlayCurrentPropAnimation` / `PauseCurrentPropAnimation` ignore the fade time: core has no
+  `cMeshEntity::FadeInCurrent/FadeOutCurrent`.
+- Voice priority: the reference interrupts the current voice when the new priority is >= its own.
+  TDD's 8-arg `AddEffectVoice` and the flashback voices pass -1, which only queues, as before.
+- New save fields are looked up by name and zero-initialised, so older saves still load.
+- `amnesia/src/game` headers hold non-UTF8 bytes: `grep -a`.

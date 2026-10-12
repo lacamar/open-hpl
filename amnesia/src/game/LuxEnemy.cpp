@@ -363,6 +363,8 @@ void iLuxEnemyLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTr
 		pEnemy->mbDisableTriggers = apInstanceVars->GetVarBool("DisableTriggers", false);
 		pEnemy->mbHallucination =  apInstanceVars->GetVarBool("Hallucination", false);
 		pEnemy->mfHallucinationEndDist = apInstanceVars->GetVarFloat("HallucinationEndDist", false);
+		pEnemy->mbBlind = apInstanceVars->GetVarBool("Blind", false);
+		pEnemy->mbDeaf = apInstanceVars->GetVarBool("Deaf", false);
 
 		pEnemy->mCurrentPose = ToPoseType(apInstanceVars->GetVarString("Pose", "biped"));
 
@@ -489,6 +491,9 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mbDisabled = false;
 
 	mbDisableTriggers = false;
+
+	mbBlind = false;
+	mbDeaf = false;
 
 	mbHallucination = false;
 	mfHallucinationEndDist = 3.0f;
@@ -877,6 +882,13 @@ void iLuxEnemy::SendMessage(eLuxEnemyMessage aType, float afTime, bool abLocalSc
 	message.mlCustomValue = alX;
 
 	mlstMessages.push_back(message);
+}
+
+//-----------------------------------------------------------------------
+
+void iLuxEnemy::PlayScriptedAnimation(const tString &asName, bool abLoop)
+{
+	PlayAnim(asName, abLoop, 0.5f);
 }
 
 //-----------------------------------------------------------------------
@@ -1383,7 +1395,13 @@ void iLuxEnemy::UpdateCanSeePlayer(float afTimeStep)
 	{
 		mbCanSeePlayer = false;
 	}
-		
+
+	if(mbBlind)
+	{
+		mvLastKnownPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
+		mbCanSeePlayer = false;
+		return;
+	}
 
 	////////////////////////////////
 	//Check if it is time to check for player
@@ -2311,6 +2329,8 @@ kSerializeVar(mvOnLoadScale, eSerializeType_Vector3f)
 
 kSerializeVar(mbDisabled, eSerializeType_Bool)
 kSerializeVar(mbDisableTriggers, eSerializeType_Bool)
+kSerializeVar(mbBlind, eSerializeType_Bool)
+kSerializeVar(mbDeaf, eSerializeType_Bool)
 
 kSerializeVar(mfHealth, eSerializeType_Float32)
 kSerializeVar(mbCausesSanityDecrease, eSerializeType_Bool)
@@ -2425,6 +2445,8 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	kCopyToVar(pData, mbDisabled);
 	kCopyToVar(pData, mbDisableTriggers);
+	kCopyToVar(pData, mbBlind);
+	kCopyToVar(pData, mbDeaf);
 
 	kCopyToVar(pData, mfHealth);
 	kCopyToVar(pData, mbCausesSanityDecrease);
@@ -2579,6 +2601,8 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	kCopyFromVar(pData, mbDisabled);
 	kCopyFromVar(pData, mbDisableTriggers);
+	kCopyFromVar(pData, mbBlind);
+	kCopyFromVar(pData, mbDeaf);
 
 	kCopyFromVar(pData, mfHealth);
 	kCopyFromVar(pData, mbCausesSanityDecrease);

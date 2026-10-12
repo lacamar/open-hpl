@@ -217,6 +217,8 @@ enum eLuxEnemyMessage
 	eLuxEnemyMessage_TimeOut_3,
 	eLuxEnemyMessage_TimeOut_4,
 
+	eLuxEnemyMessage_StopPatrolAnimation,
+
 	eLuxEnemyMessage_AnimationOver,
 	eLuxEnemyMessage_AnimationSpecialEvent,
 	eLuxEnemyMessage_EndOfPath,
@@ -825,17 +827,44 @@ typedef tLuxScriptVarMap::iterator tLuxScriptVarMapIt;
 
 //----------------------------------------
 
+struct cTextQueueEntry
+{
+	tWString msTextEntry;
+	float mfDelay;
+};
+
+//---------------------------------------------------
+
 class cLuxVoiceData : public iSerializable
 {
 	kSerializableClassInit(cLuxVoiceData)
 public:
+	cLuxVoiceData() : mfTextDelay(0), mfText2Delay(0), mfText3Delay(0), mfText4Delay(0), mfText5Delay(0), mfText6Delay(0), mfText7Delay(0),
+					mlPriority(0), mfCurrentTime(0), mfInterruptedAt(-1) {}
+
 	tWString msText;
+	float mfTextDelay;
+	tWString msText2;
+	float mfText2Delay;
+	tWString msText3;
+	float mfText3Delay;
+	tWString msText4;
+	float mfText4Delay;
+	tWString msText5;
+	float mfText5Delay;
+	tWString msText6;
+	float mfText6Delay;
+	tWString msText7;
+	float mfText7Delay;
 	tString msVoiceFile;
 	tString msEffectFile;
 	bool mbUsePosition;
 	cVector3f mvPosition;
 	float mfMinDistance;
 	float mfMaxDistance;
+	int mlPriority;
+	double mfCurrentTime;
+	double mfInterruptedAt;
 };
 
 //----------------------------------------------

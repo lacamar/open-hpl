@@ -109,6 +109,8 @@ public:
 	bool GetLit(){ return mbLit; }
 
 	bool CanBeIgnitByPlayer();
+	void FadeTo(float afR, float afG, float afB, float afA, float afRadius, float afTime);
+	void SetCanBeLitByPlayer(bool abX){ mbCanBeLitByPlayer = abX; }
 
 	//////////////////////
 	//Connection callbacks

@@ -120,6 +120,12 @@ cLuxProp_SwingDoor::cLuxProp_SwingDoor(const tString &asName, int alID, cLuxMap 
 		mpDamageMeshEntity[i] =NULL;
 
 	mfInteractSoundCount =0;
+
+    mfGoalOpenAmount = 0;
+    mbOpeningTowardsMaxAngle = true;
+    mfCurrentOpenAmount = 0;
+    mfOpenSpeed = 0;
+    mbIsUpdatingOpenAmount = false;
 }
 
 //-----------------------------------------------------------------------
@@ -155,6 +161,8 @@ bool cLuxProp_SwingDoor::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_SwingDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
+    if ( mbIsUpdatingOpenAmount ) return true;
+
 	///////////////////////////////
 	//If body mass is 0, get a dynamic body
 	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody)
@@ -226,6 +234,7 @@ void cLuxProp_SwingDoor::OnSetupAfterLoad(cWorld *apWorld)
 		mvJointData[lNum].mpChildBody = pChildBody;
 
 		mvJointData[lNum].mfMaxAngle = pHingeJoint->GetMaxAngle();
+		mvJointData[lNum].mfMinAngle = pHingeJoint->GetMinAngle();
 
 		++lNum;
 	}
@@ -348,6 +357,7 @@ void cLuxProp_SwingDoor::OnResetProperties()
 
 void cLuxProp_SwingDoor::UpdatePropSpecific(float afTimeStep)
 {
+    UpdateOpening( afTimeStep );
 	if(mfInteractSoundCount >0)
 		mfInteractSoundCount-=afTimeStep;
 
@@ -687,17 +697,89 @@ void cLuxProp_SwingDoor::OnConnectionStateChange(iLuxEntity *apEntity, int alSta
 //-----------------------------------------------------------------------
 
 
-void cLuxProp_SwingDoor::SetupDoorPhysics(float afOpenAmount)
+void cLuxProp_SwingDoor::SetOpenAmount(float afOpenAmount, float afDuration, bool abGoTowardsMaxAngle)
+{
+    if ( mvJointData.size() <= 0 ) return;
+
+    iPhysicsJointHinge *pHingeJoint = mvJointData[0].mpHingeJoint;
+
+    mvJointData[0].mpChildBody->SetAngularVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
+    mvJointData[0].mpChildBody->SetLinearVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
+
+    if ( !pHingeJoint
+        || abGoTowardsMaxAngle && pHingeJoint->GetMaxAngle() == 0.0f
+        || !abGoTowardsMaxAngle && pHingeJoint->GetMinAngle() == 0.0f)
+    {
+        return;
+    }
+
+    mfGoalOpenAmount = afOpenAmount;
+    mbOpeningTowardsMaxAngle = abGoTowardsMaxAngle;
+
+    if ( abGoTowardsMaxAngle )
+    {
+        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMaxAngle();
+    }
+    else
+    {
+        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMinAngle();
+    }
+
+    if ( mfGoalOpenAmount == mfCurrentOpenAmount ) return;
+
+    if ( afDuration <= 0.0f )
+    {
+        SetupDoorPhysics(afOpenAmount, abGoTowardsMaxAngle, true);
+        return;
+    }
+
+    mfOpenSpeed = ( mfGoalOpenAmount - mfCurrentOpenAmount ) / afDuration;
+    mbIsUpdatingOpenAmount = true;
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::UpdateOpening(float afTimeStep)
+{
+    if ( !mbIsUpdatingOpenAmount ) return;
+
+    float newOpenAmount = mfCurrentOpenAmount + afTimeStep * mfOpenSpeed;
+
+    if ( ( mfOpenSpeed > 0 && newOpenAmount >= mfGoalOpenAmount )
+        || ( mfOpenSpeed < 0 && newOpenAmount <= mfGoalOpenAmount ) )
+    {
+        SetupDoorPhysics( mfGoalOpenAmount - mfCurrentOpenAmount, mbOpeningTowardsMaxAngle, true );
+        mbIsUpdatingOpenAmount = false;
+        return;
+    }
+
+    SetupDoorPhysics( afTimeStep * mfOpenSpeed, mbOpeningTowardsMaxAngle, true );
+
+    iPhysicsJointHinge *pHingeJoint = mvJointData[0].mpHingeJoint;
+
+    if ( mbOpeningTowardsMaxAngle )
+    {
+        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMaxAngle();
+    }
+    else
+    {
+        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMinAngle();
+    }
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::SetupDoorPhysics(float afOpenAmount, bool abOpenTowardsMaxAngle, bool abApplyAlways)
 {
 	////////////////////////////////////
 	// Set open amount
-	if(afOpenAmount>0)
+	if(abApplyAlways || afOpenAmount>0)
 	{
 		for(size_t i=0; i<mvJointData.size(); ++i)
 		{
 			iPhysicsJointHinge *pHingeJoint = mvJointData[i].mpHingeJoint;
 			iPhysicsBody *pChildBody = mvJointData[i].mpChildBody;
-			float fWantedAngle = mvJointData[i].mfMaxAngle * afOpenAmount;
+			float fWantedAngle = (abOpenTowardsMaxAngle ? mvJointData[i].mfMaxAngle : mvJointData[i].mfMinAngle) * afOpenAmount;
 
 			cQuaternion qRotation; qRotation.FromAngleAxis(-fWantedAngle, pHingeJoint->GetPinDir());
 			cMatrixf mtxRotation = cMath::MatrixQuaternion(qRotation);
@@ -771,6 +853,12 @@ kSerializeVar(mbDisableAutoClose, eSerializeType_Bool)
 kSerializeVar(mDamageMesh1, eSerializeType_Class)
 kSerializeVar(mDamageMesh2, eSerializeType_Class)
 
+kSerializeVar(mfGoalOpenAmount, eSerializeType_Float32)
+kSerializeVar(mbOpeningTowardsMaxAngle, eSerializeType_Bool)
+kSerializeVar(mfCurrentOpenAmount, eSerializeType_Float32)
+kSerializeVar(mfOpenSpeed, eSerializeType_Float32)
+kSerializeVar(mbIsUpdatingOpenAmount, eSerializeType_Bool)
+
 kEndSerialize()
 
 //-----------------------------------------------------------------------
@@ -798,6 +886,11 @@ void cLuxProp_SwingDoor::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyToVar(pData, mlCurrentMeshEntity);
 	kCopyToVar(pData, mbDisableBreakable);
 	kCopyToVar(pData, mbDisableAutoClose);
+	kCopyToVar(pData, mfGoalOpenAmount);
+	kCopyToVar(pData, mbOpeningTowardsMaxAngle);
+	kCopyToVar(pData, mfCurrentOpenAmount);
+	kCopyToVar(pData, mfOpenSpeed);
+	kCopyToVar(pData, mbIsUpdatingOpenAmount);
 
 	if(mpDamageMeshEntity[1])
 		pData->mDamageMesh1.FromMeshEntity(mpDamageMeshEntity[1]);
@@ -823,6 +916,11 @@ void cLuxProp_SwingDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	kCopyFromVar(pData, mlCurrentMeshEntity);
 	kCopyFromVar(pData, mbDisableBreakable);
 	kCopyFromVar(pData, mbDisableAutoClose);
+	kCopyFromVar(pData, mfGoalOpenAmount);
+	kCopyFromVar(pData, mbOpeningTowardsMaxAngle);
+	kCopyFromVar(pData, mfCurrentOpenAmount);
+	kCopyFromVar(pData, mfOpenSpeed);
+	kCopyFromVar(pData, mbIsUpdatingOpenAmount);
 
 	if(mpDamageMeshEntity[1])
 		pData->mDamageMesh1.ToMeshEntity(mpDamageMeshEntity[1]);

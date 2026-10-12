@@ -107,6 +107,8 @@ cLuxPlayer::cLuxPlayer() : iLuxUpdateable("LuxPlayer"), iLuxCollideCallbackConta
 	//////////////////////////////////
 	// Init some other variables
 	mbUsePermaDeath = gpBase->mbPTestActivated;
+	mbUsesDragFootsteps = false;
+	mbFadingPitch = false;
 	
 	//////////////////////////////////
 	// Create states
@@ -308,6 +310,12 @@ void cLuxPlayer::Reset()
 	mfRollSpeedMul=0;
 	mfRollMaxSpeed=0;
 
+	mbFadingPitch = false;
+	mfPitchGoal=0;
+	mfPitchSpeedMul=0;
+	mfPitchMaxSpeed=0;
+	mbUsesDragFootsteps = false;
+
 	mbNoFallDamage = false;
 
 	mbScriptShowFocusIconAndCrossHair = true;
@@ -504,6 +512,10 @@ void cLuxPlayer::OnMapLeave(cLuxMap *apMap)
 	mfFOVMul = 1.0f;
 	mfRollGoal=0;
 	mfRoll=0;
+	mbFadingPitch = false;
+	mfPitchGoal=0;
+	mfPitchSpeedMul=0;
+	mfPitchMaxSpeed=0;
 
 	mfLeanRoll=0;
 	mfLeanRollGoal=0;
@@ -1023,6 +1035,23 @@ void cLuxPlayer::FadeRollTo(float afX, float afSpeedMul, float afMaxSpeed)
 	mfRollMaxSpeed = afMaxSpeed;
 }
 
+void cLuxPlayer::FadePitchTo(float afX, float afSpeedMul, float afMaxSpeed)
+{
+	float fPitchLimitMin = mpCamera->GetPitchMinLimit();
+	float fPitchLimitMax = mpCamera->GetPitchMaxLimit();
+
+	if(fPitchLimitMin!=0 || fPitchLimitMax!=0)
+	{
+		if(afX > fPitchLimitMax) afX = fPitchLimitMax;
+		if(afX < fPitchLimitMin) afX = fPitchLimitMin;
+	}
+
+	mfPitchGoal = afX;
+	mfPitchSpeedMul = afSpeedMul;
+	mfPitchMaxSpeed = afMaxSpeed;
+	mbFadingPitch = true;
+}
+
 void cLuxPlayer::FadeLeanRollTo(float afX, float afSpeedMul, float afMaxSpeed)
 {
 	mfLeanRollGoal = afX;
@@ -1279,6 +1308,23 @@ void cLuxPlayer::UpdateCamera(float afTimeStep)
 		if(cMath::Abs(mfRollGoal - mfRoll) < 0.004f) mfRoll = mfRollGoal;
 
 		bUpdatedRoll = true;
+	}
+
+	////////////////
+	// Pitch
+	if(mbFadingPitch)
+	{
+		float fSpeed = (mfPitchGoal - mpCamera->GetPitch()) * mfPitchSpeedMul;
+		if(fSpeed > mfPitchMaxSpeed) fSpeed = mfPitchMaxSpeed;
+		if(fSpeed < -mfPitchMaxSpeed) fSpeed = -mfPitchMaxSpeed;
+
+		mpCamera->SetPitch(mpCamera->GetPitch() + afTimeStep * fSpeed);
+
+		if(cMath::Abs(mfPitchGoal - mpCamera->GetPitch()) < 0.004f)
+		{
+			mpCamera->SetPitch(mfPitchGoal);
+			mbFadingPitch = false;
+		}
 	}
 
 	////////////////

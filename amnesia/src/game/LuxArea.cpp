@@ -20,6 +20,8 @@
 #include "LuxArea.h"
 
 #include "LuxMap.h"
+#include "LuxMapHandler.h"
+#include "LuxProp.h"
 
 //////////////////////////////////////////////////////////////////////////
 // LOADER
@@ -83,6 +85,9 @@ iLuxArea::iLuxArea(const tString &asName, int alID, cLuxMap *apMap, eLuxAreaType
 	mAreaType = aAreaType;
 
 	mpBody = NULL;
+
+	mpParentBody = NULL;
+	mvRelativeOffset = 0;
 }
 
 //-----------------------------------------------------------------------
@@ -142,6 +147,43 @@ iEntity3D* iLuxArea::GetAttachEntity()
 
 //-----------------------------------------------------------------------
 
+void iLuxArea::AttachToBody(const tString& asPropName, int alBodyId)
+{ 
+	iLuxEntity *apEntity = mpMap->GetEntityByName(asPropName);
+
+	if(apEntity && apEntity->GetEntityType() == eLuxEntityType_Prop)
+	{
+		iLuxProp* pProp = static_cast<iLuxProp*>(apEntity);
+
+		if( pProp->GetBodyNum() > 0 )
+		{
+			iPhysicsBody* pPropBody = pProp->GetBody(alBodyId);
+
+			if(pPropBody)
+			{
+				msPropName = asPropName; 
+				mlBodyId = alBodyId;
+				mpParentBody = pPropBody;
+				mvRelativeOffset = mpBody->GetWorldPosition() - mpParentBody->GetWorldPosition();
+
+				return;
+			}
+		}
+	}
+
+	/////////////
+	// Failed
+	DetachBody();
+}
+
+void iLuxArea::DetachBody()
+{
+	msPropName = "";
+	mpParentBody = NULL;
+}
+
+//-----------------------------------------------------------------------
+
 
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
@@ -159,7 +201,10 @@ void iLuxArea::OnSetActive(bool abX)
 
 void iLuxArea::OnUpdate(float afTimeStep)
 {
-	
+	if(mpParentBody)
+	{
+		mpBody->StaticLinearMove(mvRelativeOffset + mpParentBody->GetWorldPosition() - mpBody->GetWorldPosition());
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -173,6 +218,9 @@ void iLuxArea::OnUpdate(float afTimeStep)
 kBeginSerializeVirtual(iLuxArea_SaveData, iLuxEntity_SaveData)
 kSerializeVar(mvSize,eSerializeType_Vector3f)
 kSerializeVar(m_mtxTransform,eSerializeType_Matrixf)
+kSerializeVar(mvRelativeOffset, eSerializeType_Vector3f)
+kSerializeVar(msPropName, eSerializeType_String)
+kSerializeVar(mlBodyId, eSerializeType_Int32)
 kEndSerialize()
 
 
@@ -195,6 +243,10 @@ void iLuxArea::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
     kCopyToVar(pData, mvSize);
 	kCopyToVar(pData, m_mtxTransform);
+
+	kCopyToVar(pData, mvRelativeOffset);
+	kCopyToVar(pData, msPropName);
+	kCopyToVar(pData, mlBodyId);
 }
 
 //-----------------------------------------------------------------------
@@ -206,6 +258,10 @@ void iLuxArea::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 	kCopyFromVar(pData, mvSize);
 	kCopyFromVar(pData, m_mtxTransform);
+
+	kCopyFromVar(pData, mvRelativeOffset);
+	kCopyFromVar(pData, msPropName);
+	kCopyFromVar(pData, mlBodyId);
 
 	//////////////////////////////
 	// Create and set body
@@ -232,6 +288,13 @@ void iLuxArea::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 {
 	super_class::SetupSaveData(apSaveData);
 	iLuxArea_SaveData *pData = static_cast<iLuxArea_SaveData*>(apSaveData);
+
+	if(msPropName != "")
+	{
+		cVector3f vOffset = mvRelativeOffset;
+		AttachToBody(msPropName, mlBodyId);
+		mvRelativeOffset = vOffset;
+	}
 }
 
 //-----------------------------------------------------------------------

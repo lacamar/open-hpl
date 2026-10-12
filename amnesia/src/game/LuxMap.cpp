@@ -703,6 +703,7 @@ void cLuxMap::BroadcastEnemySoundMessage(const cVector3f& avPos, float afVolume 
 	{
 		iLuxEnemy *pEnemy = it.Next();
 		if(pEnemy->IsActive()==false) continue;
+		if(pEnemy->GetDeaf()) continue;
 
 		/////////////////////////
 		//Check intersection

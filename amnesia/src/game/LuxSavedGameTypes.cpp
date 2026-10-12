@@ -1033,6 +1033,8 @@ void cLuxPlayer_SaveData::FromPlayer(cLuxPlayer *apPlayer)
 	///Variables
 	mbActive = apPlayer->mbActive;
 
+    mbUsesDragFootsteps = apPlayer->mbUsesDragFootsteps;
+
 	mfHealth = apPlayer->mfHealth;
 	mfSanity = apPlayer->mfSanity;
 	mfLampOil = apPlayer->mfLampOil;
@@ -1138,6 +1140,11 @@ void cLuxPlayer_SaveData::FromPlayer(cLuxPlayer *apPlayer)
 	kCopyFromVar(apPlayer, mfRollSpeedMul);
 	kCopyFromVar(apPlayer, mfRollMaxSpeed);
 
+    kCopyFromVar( apPlayer, mbFadingPitch );
+    kCopyFromVar( apPlayer, mfPitchGoal );
+    kCopyFromVar( apPlayer, mfPitchSpeedMul );
+    kCopyFromVar( apPlayer, mfPitchMaxSpeed );
+
 	kCopyFromVar(apPlayer, mvCamAnimPos);
 	kCopyFromVar(apPlayer, mvCamAnimPosGoal);
 	kCopyFromVar(apPlayer, mfCamAnimPosSpeedMul);
@@ -1208,6 +1215,8 @@ void cLuxPlayer_SaveData::ToPlayer(cLuxMap *apMap,cLuxPlayer *apPlayer)
 	//////////////////////
 	///Variables
 	apPlayer->mbActive = mbActive;
+
+    apPlayer->mbUsesDragFootsteps = mbUsesDragFootsteps;
 
 	apPlayer->mfHealth = mfHealth;
 	apPlayer->mfSanity = mfSanity;
@@ -1316,6 +1325,11 @@ void cLuxPlayer_SaveData::ToPlayer(cLuxMap *apMap,cLuxPlayer *apPlayer)
 	kCopyToVar(apPlayer, mfRollSpeedMul);
 	kCopyToVar(apPlayer, mfRollMaxSpeed);
 
+    kCopyToVar( apPlayer, mbFadingPitch );
+    kCopyToVar( apPlayer, mfPitchGoal );
+    kCopyToVar( apPlayer, mfPitchSpeedMul );
+    kCopyToVar( apPlayer, mfPitchMaxSpeed );
+
 	kCopyToVar(apPlayer, mvCamAnimPos);
 	kCopyToVar(apPlayer, mvCamAnimPosGoal);
 	kCopyToVar(apPlayer, mfCamAnimPosSpeedMul);
@@ -1399,6 +1413,8 @@ kSerializeVar(mpStateData, eSerializeType_ClassPointer)
 
 kSerializeVar(mbActive, eSerializeType_Bool)
 
+kSerializeVar( mbUsesDragFootsteps, eSerializeType_Bool )
+
 kSerializeVar(mfHealth, eSerializeType_Float32)
 kSerializeVar(mfSanity, eSerializeType_Float32)
 kSerializeVar(mfLampOil, eSerializeType_Float32)
@@ -1438,6 +1454,11 @@ kSerializeVar(mfRoll, eSerializeType_Float32)
 kSerializeVar(mfRollGoal, eSerializeType_Float32)
 kSerializeVar(mfRollSpeedMul, eSerializeType_Float32)
 kSerializeVar(mfRollMaxSpeed, eSerializeType_Float32)
+
+kSerializeVar(mbFadingPitch, eSerializeType_Bool )
+kSerializeVar(mfPitchGoal, eSerializeType_Float32 )
+kSerializeVar(mfPitchSpeedMul, eSerializeType_Float32 )
+kSerializeVar(mfPitchMaxSpeed, eSerializeType_Float32 )
 
 kSerializeVar(mvCamAnimPos, eSerializeType_Vector3f)
 kSerializeVar(mvCamAnimPosGoal, eSerializeType_Vector3f)

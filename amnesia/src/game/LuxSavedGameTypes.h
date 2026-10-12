@@ -339,6 +339,8 @@ public:
 
 	bool mbActive;
 
+    bool mbUsesDragFootsteps;
+
 	float mfHealth;
 	float mfTerror;
 	float mfSanity;
@@ -379,6 +381,11 @@ public:
 	float mfRollGoal;
 	float mfRollSpeedMul;
 	float mfRollMaxSpeed;
+
+    bool mbFadingPitch;
+    float mfPitchGoal;
+    float mfPitchSpeedMul;
+    float mfPitchMaxSpeed;
 
 	cVector3f mvCamAnimPos;
 	cVector3f mvCamAnimPosGoal;

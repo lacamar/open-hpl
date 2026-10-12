@@ -279,6 +279,29 @@ void cLuxProp_Lamp::UpdatePropSpecific(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
+void cLuxProp_Lamp::FadeTo(float afR, float afG, float afB, float afA, float afRadius, float afTime)
+{
+	for(size_t i=0; i<mvLights.size(); ++i)
+	{
+		iLight *pLight = mvLights[i];
+
+		cColor newColor(
+			afR >=0 ? afR : pLight->GetDiffuseColor().r,
+			afG >=0 ? afG : pLight->GetDiffuseColor().g,
+			afB >=0 ? afB : pLight->GetDiffuseColor().b,
+			afA >=0 ? afA : pLight->GetDiffuseColor().a
+			);
+
+		float fNewRadius = afRadius >=0 ? afRadius : pLight->GetRadius();
+
+		pLight->SetFlickerActive(false);
+		pLight->SetVisible(true);
+		pLight->FadeTo(newColor, fNewRadius, afTime);
+	}
+}
+
+//-----------------------------------------------------------------------
+
 void cLuxProp_Lamp::BeforePropDestruction()
 {
 }

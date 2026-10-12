@@ -32,10 +32,16 @@ class iLuxArea_SaveData : public iLuxEntity_SaveData
 {
 	kSerializableClassInit(iLuxArea_SaveData)
 public:
+	virtual ~iLuxArea_SaveData() {}
+
 	////////////////
 	//Properties
 	cVector3f mvSize;
 	cMatrixf m_mtxTransform;
+	
+	cVector3f mvRelativeOffset; 
+	tString msPropName;
+	int mlBodyId;
 
 	////////////////
 	//Methods
@@ -68,6 +74,9 @@ public:
 
 	//////////////////////
 	//Properties
+	void AttachToBody( const tString& asPropName, int alBodyId);
+	void DetachBody();
+
 	eLuxAreaType GetAreaType(){ return mAreaType;}
 
 	iPhysicsBody* GetBody() { return mpBody;}
@@ -95,6 +104,11 @@ protected:
 	iPhysicsBody *mpBody;
 	cVector3f mvSize;
 	cMatrixf m_mtxTransform;
+
+	iPhysicsBody *mpParentBody;
+	cVector3f mvRelativeOffset; 
+	tString msPropName;
+	int mlBodyId;
 };
 
 //----------------------------------------------

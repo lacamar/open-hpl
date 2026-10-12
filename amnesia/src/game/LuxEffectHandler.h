@@ -22,6 +22,7 @@
 
 //----------------------------------------------
 
+#include <deque>
 #include "LuxBase.h"
 
 //----------------------------------------------
@@ -313,7 +314,19 @@ public:
 	void StopVoices(float afFadeOutSpeed);
 	void AddVoice(	const tString& asVoiceFile, const tString& asEffectFile,
 					const tString& asTextCat, const tString& asTextEntry, bool abUsePostion, 
-					const cVector3f& avPosition, float afMinDistance, float afMaxDistance);
+					const cVector3f& avPosition, float afMinDistance, float afMaxDistance, int alPriority = -1, bool abRemoveInterrupted = true);
+
+	void AddMultiSubbedVoice(
+		const tString& asVoiceFile, const tString& asEffectFile, const tString& asTextCat,
+		const tString& asTextEntry, float afTextDelay,
+		const tString& asText2Entry, float afText2Delay,
+		const tString& asText3Entry, float afText3Delay,
+		const tString& asText4Entry, float afText4Delay,
+		const tString& asText5Entry, float afText5Delay,
+		const tString& asText6Entry, float afText6Delay,
+		const tString& asText7Entry, float afText7Delay,
+		bool abUsePostion, 
+		const cVector3f& avPosition, float afMinDistance, float afMaxDistance, int alPriority = -1, bool abRemoveInterrupted = true);
 
 	void PauseCurrentVoices();
 	void UnpauseCurrentVoices();
@@ -349,6 +362,7 @@ private:
 	cSoundEntry *mpEffectEntry;
 	int mlEffectEntryID;
 	std::vector<tWString> mvCurrentTextRows;
+	std::deque<cTextQueueEntry> mvTextEntryQueue;
 
 	float mfVolumeMul;
 };

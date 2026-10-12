@@ -41,6 +41,12 @@ public:
 
 	int mlCurrentMeshEntity;
 
+    float mfGoalOpenAmount;
+    bool mbOpeningTowardsMaxAngle;
+    float mfCurrentOpenAmount;
+	float mfOpenSpeed;
+	bool mbIsUpdatingOpenAmount;
+
 
     cEngineMeshEntity_SaveData mDamageMesh1;	
 	cEngineMeshEntity_SaveData mDamageMesh2;
@@ -55,6 +61,7 @@ public:
 	iPhysicsBody *mpChildBody;
 
     float mfMaxAngle;
+    float mfMinAngle;
 };
 
 
@@ -125,8 +132,11 @@ public:
 	void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
+    void SetOpenAmount(float afOpenAmount, float afDuration, bool abGoTowardsMaxAngle);
+
 private:
-	void SetupDoorPhysics(float afOpenAmount);
+	void SetupDoorPhysics(float afOpenAmount, bool abOpenTowardsMaxAngle=true, bool abApplyAlways=false);
+    void UpdateOpening(float afTimeStep);
 
 	cLuxSwingDoorJointData* GetJointDataFromBody(iPhysicsBody *apBody);
 	cLuxSwingDoorJointData* GetJointDataFromJoint(iPhysicsJoint *apJoint);
@@ -175,7 +185,11 @@ private:
 
 	float mfInteractSoundCount;
 
-
+    float mfGoalOpenAmount;
+    bool mbOpeningTowardsMaxAngle;
+    float mfCurrentOpenAmount;
+	float mfOpenSpeed;
+	bool mbIsUpdatingOpenAmount;
 };
 
 //----------------------------------------------

@@ -987,7 +987,34 @@ void cLuxEffect_PlayVoice::StopVoices(float afFadeOutSpeed)
 
 void cLuxEffect_PlayVoice::AddVoice(const tString& asVoiceFile, const tString& asEffectFile,
 									const tString& asTextCat, const tString& asTextEntry, bool abUsePostion, 
-									const cVector3f& avPosition, float afMinDistance, float afMaxDistance)
+									const cVector3f& avPosition, float afMinDistance, float afMaxDistance, int alPriority, bool abRemoveInterrupted)
+{
+	AddMultiSubbedVoice(
+		asVoiceFile, asEffectFile, asTextCat,
+		asTextEntry, 0.0f,
+		"", 0.0f,
+		"", 0.0f,
+		"", 0.0f,
+		"", 0.0f,
+		"", 0.0f,
+		"", 0.0f,
+		abUsePostion, avPosition, afMinDistance, afMaxDistance, alPriority, abRemoveInterrupted );
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxEffect_PlayVoice::AddMultiSubbedVoice(
+	const tString& asVoiceFile, const tString& asEffectFile, const tString& asTextCat,
+	const tString& asTextEntry, float afTextDelay,
+	const tString& asText2Entry, float afText2Delay,
+	const tString& asText3Entry, float afText3Delay,
+	const tString& asText4Entry, float afText4Delay,
+	const tString& asText5Entry, float afText5Delay,
+	const tString& asText6Entry, float afText6Delay,
+	const tString& asText7Entry, float afText7Delay,
+	bool abUsePostion, 
+	const cVector3f& avPosition, float afMinDistance, float afMaxDistance, int alPriority, bool abRemoveInterrupted
+	)
 {
 	cLuxVoiceData voiceData;
 
@@ -995,16 +1022,135 @@ void cLuxEffect_PlayVoice::AddVoice(const tString& asVoiceFile, const tString& a
 	
     voiceData.msVoiceFile = asVoiceFile;
 	voiceData.msEffectFile = asEffectFile;
+	
 	if(asTextCat != "" && asTextEntry != "")
+	{
 		voiceData.msText = kTranslate(asTextCat, asTextEntry);
+		voiceData.mfTextDelay = afTextDelay;
+	}
 	else
+	{
 		voiceData.msText = _W("");
+		voiceData.mfTextDelay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText2Entry != "")
+	{
+		voiceData.msText2 = kTranslate(asTextCat, asText2Entry);
+		voiceData.mfText2Delay = afText2Delay;
+	}
+	else
+	{
+		voiceData.msText2 = _W("");
+		voiceData.mfText2Delay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText3Entry != "")
+	{
+		voiceData.msText3 = kTranslate(asTextCat, asText3Entry);
+		voiceData.mfText3Delay = afText3Delay;
+	}
+	else
+	{
+		voiceData.msText3 = _W("");
+		voiceData.mfText3Delay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText4Entry != "")
+	{
+		voiceData.msText4 = kTranslate(asTextCat, asText4Entry);
+		voiceData.mfText4Delay = afText4Delay;
+	}
+	else
+	{
+		voiceData.msText4 = _W("");
+		voiceData.mfText4Delay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText5Entry != "")
+	{
+		voiceData.msText5 = kTranslate(asTextCat, asText5Entry);
+		voiceData.mfText5Delay = afText5Delay;
+	}
+	else
+	{
+		voiceData.msText5 = _W("");
+		voiceData.mfText5Delay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText6Entry != "")
+	{
+		voiceData.msText6 = kTranslate(asTextCat, asText6Entry);
+		voiceData.mfText6Delay = afText6Delay;
+	}
+	else
+	{
+		voiceData.msText6 = _W("");
+		voiceData.mfText6Delay = 0.0f;
+	}
+
+	if(asTextCat != "" && asText7Entry != "")
+	{
+		voiceData.msText7 = kTranslate(asTextCat, asText7Entry);
+		voiceData.mfText7Delay = afText7Delay;
+	}
+	else
+	{
+		voiceData.msText7 = _W("");
+		voiceData.mfText7Delay = 0.0f;
+	}
+
 	voiceData.mbUsePosition = abUsePostion;
 	voiceData.mvPosition = avPosition;
 	voiceData.mfMinDistance = afMinDistance;
 	voiceData.mfMaxDistance = afMaxDistance;
+	voiceData.mlPriority = alPriority;
+	voiceData.mfCurrentTime = 0;
+	voiceData.mfInterruptedAt = -1;
 
-	mlstVoices.push_back(voiceData);
+	if(mbActive && mlstVoices.empty() == false)
+	{
+		cLuxVoiceData& currentVoiceData = mlstVoices.front();
+
+		// negative priority: TDD-style call, queue without interrupting
+		if(alPriority >= 0 && currentVoiceData.mlPriority <= alPriority)
+		{
+			/////////////////
+			// Replace the current voice
+			if(mpSoundHandler->IsValid(mpVoiceEntry,mlVoiceEntryID))
+			{
+				mpVoiceEntry->FadeOut(0.5f);
+				currentVoiceData.mfCurrentTime = mpVoiceEntry->GetChannel()->GetElapsedTime();
+				voiceData.mfInterruptedAt = gpBase->mpEngine->GetGameTime();
+			}
+			
+			mpVoiceEntry = NULL;
+
+			if(mpSoundHandler->IsValid(mpEffectEntry,mlEffectEntryID)) mpEffectEntry->FadeOut(0.5f);
+			mpEffectEntry = NULL;
+			
+			/////////////
+			// Remove the old one and place this first
+			if(abRemoveInterrupted)
+			{
+				mlstVoices.pop_front();
+			}
+
+			mlstVoices.push_front(voiceData);
+		}
+		else
+		{
+			/////////////
+		// Add to the back
+			mlstVoices.push_back(voiceData);
+		}
+	}
+	else
+	{
+		/////////////
+		// Add to the back
+		mlstVoices.push_back(voiceData);
+	}
 
 	mbActive = true;
 }
@@ -1054,10 +1200,27 @@ void cLuxEffect_PlayVoice::UnpauseCurrentVoices()
 //-----------------------------------------------------------------------
 
 
+static bool SortVoiceData(const cLuxVoiceData& aLhs, const cLuxVoiceData& aRhs)
+{
+	return aLhs.mlPriority > aRhs.mlPriority;
+}
+
 void cLuxEffect_PlayVoice::Update(float afTimeStep)
 {
 	//do not want to have like this, because then loading save when playing last voice + callback will not work and callback will not be called.
 	//if(mpVoiceEntry==NULL && mpEffectEntry==NULL && mlstVoices.empty()) return; 
+
+	for(size_t i=0; i<mvTextEntryQueue.size(); ++i)
+	{
+		mvTextEntryQueue[i].mfDelay -= afTimeStep;
+	}
+
+	while ( !mvTextEntryQueue.empty() && mvTextEntryQueue.front().mfDelay <= 0.0f )
+	{
+		mvCurrentTextRows.clear();
+		gpBase->mpDefaultFont->GetWordWrapRows(mfRowWidth,mvFontSize.y+2,mvFontSize, mvTextEntryQueue.front().msTextEntry, &mvCurrentTextRows);
+		mvTextEntryQueue.pop_front();
+	}
 
 	if(mfVolumeMul <1.0f)
 	{
@@ -1088,19 +1251,40 @@ void cLuxEffect_PlayVoice::Update(float afTimeStep)
 		return;
 	}
 
+	////////////
+	// Sort the priorities
+	mlstVoices.sort(SortVoiceData);
+
     cLuxVoiceData& voiceData = mlstVoices.front();
 	
+	double fStartTime = voiceData.mfCurrentTime;
+
+	if(voiceData.mfInterruptedAt != -1.0)
+	{
+		////////////////
+		// Add the elapsed time since interrupting it
+		fStartTime += gpBase->mpEngine->GetGameTime() - voiceData.mfInterruptedAt;
+	}
+
 	//////////////////////
 	//GUI sound
-	if(voiceData.mbUsePosition==false)
+	if(voiceData.mbUsePosition==false)	
 	{
 		mpVoiceEntry = mpSoundHandler->PlayGuiStream(voiceData.msVoiceFile,false, 1.0f);
-		if(mpVoiceEntry) mlVoiceEntryID = mpVoiceEntry->GetId();
-		
+		if(mpVoiceEntry)
+		{
+			mlVoiceEntryID = mpVoiceEntry->GetId();
+			if(fStartTime > 0) mpVoiceEntry->GetChannel()->SetElapsedTime(fStartTime);
+		}
+
 		if(voiceData.msEffectFile!="")
 		{
 			mpEffectEntry = mpSoundHandler->PlayGuiStream(voiceData.msEffectFile,false, 1.0f);
-			if(mpEffectEntry) mlEffectEntryID = mpEffectEntry->GetId();
+			if(mpEffectEntry) 
+			{
+				mlEffectEntryID = mpEffectEntry->GetId();
+				if(fStartTime > 0) mpEffectEntry->GetChannel()->SetElapsedTime(fStartTime);
+			}
 		}
 	}
 	//////////////////////
@@ -1109,21 +1293,91 @@ void cLuxEffect_PlayVoice::Update(float afTimeStep)
 	{
 		mpVoiceEntry = mpSoundHandler->Play(voiceData.msVoiceFile,false, 1.0f, voiceData.mvPosition,voiceData.mfMinDistance, voiceData.mfMaxDistance,
 											eSoundEntryType_Gui,false,true,0, true);
-		if(mpVoiceEntry) mlVoiceEntryID = mpVoiceEntry->GetId();
+		if(mpVoiceEntry)
+		{
+			mlVoiceEntryID = mpVoiceEntry->GetId();
+			if(fStartTime > 0) mpVoiceEntry->GetChannel()->SetElapsedTime(fStartTime);
+		}
 		
 		if(voiceData.msEffectFile!="")
 		{
 			mpEffectEntry = mpSoundHandler->Play(	voiceData.msEffectFile,false, 1.0f, voiceData.mvPosition,voiceData.mfMinDistance, voiceData.mfMaxDistance,
 													eSoundEntryType_Gui,false,true,0, true);
-			if(mpEffectEntry) mlEffectEntryID = mpEffectEntry->GetId();
+			if(mpEffectEntry) 
+			{
+				mlEffectEntryID = mpEffectEntry->GetId();
+				if(fStartTime > 0) mpEffectEntry->GetChannel()->SetElapsedTime(fStartTime);
+			}
 		}
 	}
 
 	//////////////////////
 	//Text
 	mvCurrentTextRows.clear();
+	mvTextEntryQueue.clear();
+
 	if(voiceData.msText != _W(""))
-		gpBase->mpDefaultFont->GetWordWrapRows(mfRowWidth,mvFontSize.y+2,mvFontSize, voiceData.msText, &mvCurrentTextRows);
+	{
+		if ( voiceData.mfTextDelay <= 0.0f )
+		{
+			gpBase->mpDefaultFont->GetWordWrapRows(mfRowWidth,mvFontSize.y+2,mvFontSize, voiceData.msText, &mvCurrentTextRows);
+		}
+		else
+		{
+			cTextQueueEntry entry;
+			entry.mfDelay = voiceData.mfTextDelay;
+			entry.msTextEntry = voiceData.msText;
+			mvTextEntryQueue.push_back( entry );
+		}
+	}
+
+	if(voiceData.msText2 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText2Delay;
+		entry.msTextEntry = voiceData.msText2;
+		mvTextEntryQueue.push_back( entry );
+	}
+
+	if(voiceData.msText3 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText3Delay;
+		entry.msTextEntry = voiceData.msText3;
+		mvTextEntryQueue.push_back( entry );
+	}
+
+	if(voiceData.msText4 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText4Delay;
+		entry.msTextEntry = voiceData.msText4;
+		mvTextEntryQueue.push_back( entry );
+	}
+
+	if(voiceData.msText5 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText5Delay;
+		entry.msTextEntry = voiceData.msText5;
+		mvTextEntryQueue.push_back( entry );
+	}
+
+	if(voiceData.msText6 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText6Delay;
+		entry.msTextEntry = voiceData.msText6;
+		mvTextEntryQueue.push_back( entry );
+	}
+
+	if(voiceData.msText7 != _W(""))
+	{
+		cTextQueueEntry entry;
+		entry.mfDelay = voiceData.mfText7Delay;
+		entry.msTextEntry = voiceData.msText7;
+		mvTextEntryQueue.push_back( entry );
+	}
 
 	//////////////////////
 	//Pop!
@@ -1168,6 +1422,7 @@ void cLuxEffect_PlayVoice::Reset()
 	mpEffectEntry = NULL;
 	
 	mvCurrentTextRows.clear();
+	mvTextEntryQueue.clear();
 
 	mlstVoices.clear();
 	

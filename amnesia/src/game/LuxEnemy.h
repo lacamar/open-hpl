@@ -127,6 +127,9 @@ public:
 	bool mbDisabled;
 	bool mbDisableTriggers;
 
+	bool mbBlind;
+	bool mbDeaf;
+
 	float mfHealth;
 	bool mbCausesSanityDecrease;
 
@@ -398,6 +401,7 @@ public:
 
 	void SendMessage(eLuxEnemyMessage aType, float afTime=0, bool abLocalScope=false, const cVector3f& avX=0,float afX=0, int alX=0);
 
+	void PlayScriptedAnimation(const tString &asName, bool abLoop);
 	void PlayAnim(	const tString &asName, bool abLoop, float afFadeTime, 
 					bool abDependsOnSpeed=false, float afSpeedMul=1.0f,
 					bool abSyncWithPrevFrame=false,
@@ -472,6 +476,11 @@ public:
 	int GetMusicPrio(eLuxEnemyMusic aType) { return mlMusicPrio[aType]; }
 
 	float GetActivationDistance() { return mfActivationDistance;}
+	void SetActivationDistance(float afX) { mfActivationDistance = afX;}
+
+	bool GetDeaf(){ return mbDeaf; }
+	void SetBlind(bool abX){ mbBlind = abX;}
+	void SetDeaf(bool abX){ mbDeaf = abX;}
 
 	const tString& GetHitSound(eLuxWeaponHitType aType){ return msHitSound[aType];}	
 	const tString& GetHitPS(eLuxWeaponHitType aType){ return msHitPS[aType];}
@@ -481,6 +490,7 @@ public:
 
 	void SetIsSeenByPlayer(bool abX){ mbIsSeenByPlayer = abX;}
 	bool GetIsSeenByPlayer(){ return mbIsSeenByPlayer;}
+	float GetPlayerDistance(){ return DistToPlayer();}
 
 	bool CausesSanityDecrease(){ return mbCausesSanityDecrease;}
 	void SetSanityDecreaseActive(bool abX){ mbCausesSanityDecrease = abX;}
@@ -608,6 +618,9 @@ protected:
 	bool mbDisabled;
 
 	bool mbDisableTriggers;
+
+	bool mbBlind;
+	bool mbDeaf;
 
 	bool mbHallucination;
 	float mfHallucinationEndDist;
