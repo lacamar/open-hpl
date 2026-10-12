@@ -873,6 +873,43 @@ namespace hpl {
 		cMaterialManager* pMatMgr = mpResources->GetMaterialManager();
 		std::vector<cMaterial*> vBlend = CreateTerrainBlendMaterials(asBaseFile, apTerrain, lSize * fUnit);
 
+		// Rebirth: the blend channel painted with terrain_hole.mat is a hole mask
+		std::vector<unsigned char> vHole;
+		int lHoleScale = 0, lHoleChannel = 0;
+		cXmlElement* pLayers = apTerrain->GetFirstElement("BlendLayers");
+		tXmlNodeList lstNoLayers;
+		cXmlNodeListIterator layerIt = pLayers ? pLayers->GetChildIterator() : cXmlNodeListIterator(&lstNoLayers);
+		while (layerIt.HasNext() && vHole.empty())
+		{
+			cXmlElement* pLayer = layerIt.Next()->ToElement();
+			cXmlNodeListIterator matIt = pLayer->GetChildIterator();
+			for (int i = 0; i < 4 && matIt.HasNext(); ++i)
+			{
+				if (cString::ToLowerCase(cString::GetFileName(matIt.Next()->ToElement()->GetAttributeString("File"))) != "terrain_hole.mat") continue;
+				tWString sHole = asBaseFile + _W("_Terrain_blendlayer_") + cString::To16Char(pLayer->GetAttributeString("ID", "0")) + _W(".dds");
+				std::vector<unsigned char> vFile(cPlatform::GetFileSize(sHole));
+				if (vFile.size() < 128 || !cPlatform::CopyFileToBuffer(sHole, vFile.data(), vFile.size())) break;
+				const int lW = vFile[16] | (vFile[17] << 8) | (vFile[18] << 16);
+				const bool bRaw32 = vFile[84] == 0 && vFile[88] == 32 && vFile[92] == 0xFF;
+				if (!bRaw32 || lW < lSize || vFile.size() < 128 + (size_t)lW * lW * 4) break;
+				lHoleScale = lW / lSize;
+				lHoleChannel = i;
+				vHole = std::move(vFile);
+				break;
+			}
+		}
+		// ponytail: holes cut per cell (official discards per pixel); move to the shader if edges show
+		auto Hole = [&](int x, int z)
+		{
+			if (vHole.empty()) return false;
+			const int lW = lHoleScale * lSize;
+			int lSum = 0;
+			for (int tz = z * lHoleScale; tz < (z + 1) * lHoleScale; ++tz)
+			for (int tx = x * lHoleScale; tx < (x + 1) * lHoleScale; ++tx)
+				lSum += vHole[128 + ((size_t)tz * lW + tx) * 4 + lHoleChannel];
+			return lSum * 2 > 255 * lHoleScale * lHoleScale;
+		};
+
 		std::vector<cSubMeshEntity*> vPatches;
 		const float fOffset = lSize * fUnit * 0.5f;
 		for (int z0 = 0; z0 < lSize - 1; z0 += lPatch)
@@ -915,7 +952,7 @@ namespace hpl {
 			for (int x = 0; x < lW - 1; ++x)
 			{
 				if (std::isnan(Height(x0 + x, z0 + z)) || std::isnan(Height(x0 + x + 1, z0 + z)) ||
-					std::isnan(Height(x0 + x, z0 + z + 1)) || std::isnan(Height(x0 + x + 1, z0 + z + 1))) continue;
+					std::isnan(Height(x0 + x, z0 + z + 1)) || std::isnan(Height(x0 + x + 1, z0 + z + 1)) || Hole(x0 + x, z0 + z)) continue;
 				int i = z * lW + x;
 				for (int lIdx : {i, i + 1, i + lW, i + 1, i + lW + 1, i + lW})
 				{

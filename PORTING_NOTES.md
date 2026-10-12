@@ -6193,3 +6193,42 @@ our live entries and events.
   sound's start; it stays current across later sounds until one has its own effect, and plays out
   when the subject ends. `EndsAfterExtraEffect` (191) ends the sound on the effect instead.
 - No-audio subtitle time `0.09 * len + 0.5`; stop/skip/replace fade voice and effects at 2/s.
+
+## Rebirth: fog model (2026-10-12)
+
+- 01_01 was washed out (sweep lum 193): `SetupFogProgram` only set SOMA's uniforms, so Rebirth's
+  `deferred_fog_frag.hpsl` ran with `avFogSettings`/`alFogType`/`avCameraPos` at 0 and no
+  `afNegFarPlane`. Now lum 97, scene visible.
+- Official packing (`Amnesia2_NoSteam.bin.x86_64`: SetupFog d71dc0, SetupFogInstance d72790,
+  RenderFog d709b0, RenderFullScreenFog d70c30):
+  - `avFogSettings` = (start, end, falloff, 0); exponential or height: z = density / 32,
+    w = heightDensity. `avSecondFogSettings` likewise but z = density * 32.
+  - `avCameraPos` xyz = camera y; exp/height: x -= heightHorizon; height area: xyz -= bbox min y;
+    secondary: y -= secondary horizon.
+  - `alFogType`: exponential 1, height 2, both 3.
+  - Secondary end > primary end swaps colour, settings and camera heights.
+  - `afSkyboxMipNum` = log2(max dim) of the fog skybox; `UseSeparateFogSkybox` when that texture
+    differs from the skybox. `a_mtxSkybox` = world skybox rotation (identity here: not loaded).
+  - Colours rgb^2 * brightness. Blend: underwater pass Mul, `Lighten` blends in the shader against
+    a scene copy (blend None), else Alpha.
+  - Defaults (cFogArea ctor): density .25, heightDensity .25, heightHorizon 1.
+- Unknown: world skybox rotation source, `f1` 0.25 translation scale in `a_mtxInvView`,
+  r+0x451 area distance fade.
+- Rebirth/Bunker DDS use the DX10 header (BC4/BC5/BC6H/BC7, uncompressed DXGI 28/29/87/91).
+
+## Rebirth: terrain holes (2026-10-12)
+
+- Observed: sand terrain filled the plane interior in 01_01 (`pick_entity` hit `Terrain_15_16`
+  before the cabin floor).
+- A blend layer painted with `core/textures/terrain_hole.mat` is a hole mask, not a texture layer.
+  Official `deferred_terrain_gbuffer_frag.hpsl`/`deferred_terrain_z_frag.hpsl` (`TerrainHoles`):
+  `sample(aTerrainHoleMap, worldPos.xz * scale + offset)[alHoleChannel] > 0.5` discards.
+- Ours: `CreateTerrain` drops cells whose mean mask value is > 0.5 (per cell, not per pixel).
+  The blend-layer DDS is raw 32-bit RGBA (2048 for a 1024 heightmap).
+- Not done: physics heightfield has no holes (raycast at the 01_01 start hits `Terrain` at
+  y 16.04, above the player's feet at 15.8); the hole channel's blend decal still draws
+  `terrain_hole_base.dds` at hole borders.
+- Window stipple at 34 s is the dune (`plane_wreckage_sanddune.dds`): its alpha is binary with a
+  noisy fringe along the top edge (17 % transparent). Inferred authored, not an engine dither bug.
+  Engine never sets `afAlphaCutoffThreshold`/`afDissolveLayer` or binds the 3D `aDissolveMap`
+  (unit 14); harmless while the G-buffer pass runs without `UseAlpha`/`UseDissolve`.

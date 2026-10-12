@@ -60,6 +60,8 @@ namespace hpl {
 			case 83: format = ePixelFormat_RGTC2; lBytesPerPixel = 1; break;
 			case 95: format = ePixelFormat_BC6H; break;
 			case 98: case 99: format = ePixelFormat_BC7; break;
+			case 28: case 29: format = ePixelFormat_RGBA; lBlockSize = 0; break;
+			case 87: case 91: format = ePixelFormat_BGRA; lBlockSize = 0; break;
 			}
 		}
 		bool bCube = (lCaps2 & 0x200) != 0;
@@ -80,7 +82,7 @@ namespace hpl {
 		if (lImages > 1 || lMipMaps > 1) pBitmap->SetUpData(lImages, (int)lMipMaps);
 		pBitmap->SetSize(cVector3l((int)lWidth, (int)lHeight, 1));
 		pBitmap->SetBytesPerPixel(lBytesPerPixel);
-		pBitmap->SetIsCompressed(true);
+		pBitmap->SetIsCompressed(lBlockSize != 0);
 		pBitmap->SetPixelFormat(format);
 
 		for (int image = 0; image < lImages; ++image)
@@ -88,7 +90,7 @@ namespace hpl {
 			unsigned int lW = lWidth, lH = lHeight;
 			for (unsigned int mip = 0; mip < lMipMaps; ++mip)
 			{
-				int lSize = (int)(((lW + 3) / 4) * ((lH + 3) / 4) * lBlockSize);
+				int lSize = lBlockSize ? (int)(((lW + 3) / 4) * ((lH + 3) / 4) * lBlockSize) : (int)(lW * lH * 4);
 				cBitmapData* pImage = pBitmap->GetData(image, (int)mip);
 				pImage->mlSize = lSize;
 				pImage->mpData = hplNewArray(unsigned char, lSize);
