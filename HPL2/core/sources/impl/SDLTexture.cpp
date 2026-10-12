@@ -864,6 +864,10 @@ namespace hpl {
 		//Mark that the texture got some data now.
 		mbContainsData = true;
 
+		// DDS chains may stop above 1x1
+		if(abGenerateMipMaps && alNumOfMipMaps > 1)
+			glTexParameteri(GLTarget, GL_TEXTURE_MAX_LEVEL, lMipMapCount - lStartMipMapLevel - 1);
+
 		//////////////////////////////////
 		//Generate mipmaps
 		if(abGenerateMipMaps && alNumOfMipMaps <= 1)

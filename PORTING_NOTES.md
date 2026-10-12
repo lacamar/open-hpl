@@ -6249,3 +6249,19 @@ our live entries and events.
   regenerates the header. Checked: 150 random extracted oggs across all rates decode clean in
   ffmpeg; Rebirth 01_01 log errors 467 -> 135, Sound 31/31.
 
+
+## Rebirth: player body (2026-10-12)
+
+- Observed: 01_01 first-person body drew as a black silhouette; one arm missing, the other
+  untextured.
+- Black body: `tasi_body_upgrade_v2.dds` (2048², DXT1) ships 11 mips, i.e. stops at 2x2. GL treats
+  a chain that doesn't reach 1x1 as incomplete and samples black. `cSDLTexture` now sets
+  `GL_TEXTURE_MAX_LEVEL` to the last level the file provides.
+- Missing arm: `cMeshEntity::GetSubMeshEntityIndex` was unbound, and the auto-stub returns 0, so
+  `PlayerBodyHandler::SetBodyModelReflectionVisibility` hid submesh 0 (right arm) instead of
+  `_m_Tasi_Head`. Official (f80c90) compares against the submesh *entity* name and returns -1.
+- Arm material: the base `tasi_body_upgrade_v2_hands.mat` fails to load in the official game too
+  (missing `tasi_body_hands_veins_illum.dds`); scripts assign `Tasi_Body_Upgrade_hands_ghoul_N.mat`
+  through `cLuxProp::SetCustomMaterial`, now bound.
+- `pick_entity` tests bind-pose triangles: it does not hit skinned meshes where they are drawn.
+  Hiding submeshes one at a time and counting black G-buffer pixels found the culprit.

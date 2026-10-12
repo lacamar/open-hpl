@@ -2870,6 +2870,17 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	e->RegisterObjectProperty("cEntityBodyExtraData", "cMatrixf m_mtxLocalTransform", (int)offsetof(cEntityBodyExtraData, m_mtxLocalTransform));
 	SOMA_METHOD(e, "cLuxProp", "cEntityBodyExtraData@ GetBodyExtraData(int alIdx)",
 				+[](cSomaLuxEntity *p, int i) { return i >= 0 && i < (int)p->mvBodyExtraData.size() ? &p->mvBodyExtraData[i] : (cEntityBodyExtraData *)NULL; });
+	SOMA_METHOD(e, "cLuxProp", "void SetCustomMaterial(const tString&in asMaterial, const tString&in asSubmesh, bool abPreload=true)",
+				+[](cSomaLuxEntity *p, const tString &asMat, const tString &asSub, bool) {
+					if (p->mpMesh == NULL) return;
+					for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
+					{
+						cSubMeshEntity *pSub = p->mpMesh->GetSubMeshEntity(i);
+						if (asSub != "" && pSub->GetSubMesh()->GetName() != asSub) continue;
+						cMaterial *pMat = asMat == "" ? NULL : gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(asMat);
+						if (pMat || asMat == "") pSub->SetCustomMaterial(pMat, true);
+					}
+				});
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
