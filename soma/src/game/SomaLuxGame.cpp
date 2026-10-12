@@ -236,10 +236,29 @@ void cSomaLuxGame::Load()
 																			   : new cSomaLuxHandler();
 		pHandler->msName = def.mpAttr;
 		pHandler->msScriptName = strcmp(def.mpAttr, "Player") == 0 ? "LuxPlayer" : def.mpAttr;
-		if (pHandler->LoadScript(mpRuntime, sFile, def.mpClass, def.mpBase))
+		// Rebirth's player Init reads the camera
+		if (strcmp(def.mpAttr, "Player") == 0)
+			static_cast<cSomaLuxPlayer *>(pHandler)->SetCamera(gpSomaBase->mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
+		if (pHandler->LoadScript(mpRuntime, sFile, pGame->GetString("ScriptFiles", tString(def.mpAttr) + "Class", def.mpClass), def.mpBase))
 			mvHandlers.push_back(pHandler);
 		else
 			delete pHandler;
+	}
+	// SOMA's player script adds its states itself
+	if (cSomaLuxPlayer::Get() && pRes->GetFileSearcher()->GetFilePath("config/PlayerStates.cfg") != _W(""))
+	{
+		iXmlDocument *pStates = pRes->LoadXmlDocument("config/PlayerStates.cfg");
+		for (cXmlElement *pGroup : ChildElements(pStates))
+			for (cXmlElement *pElem : ChildElements(pGroup))
+			{
+				tString sName = pElem->GetAttributeString("Name", ""), sFile = pElem->GetAttributeString("ScriptFile", ""), sClass = pElem->GetAttributeString("ScriptClass", "");
+				if (pGroup->GetValue() == "MoveStates")
+					cSomaLuxPlayer::Get()->AddMoveState(sName, pElem->GetAttributeInt("ID", -1), sFile, sClass);
+				else
+					cSomaLuxPlayer::Get()->AddState(sName, pElem->GetAttributeInt("ID", -1), sFile, sClass);
+			}
+		if (pStates)
+			pRes->DestroyXmlDocument(pStates);
 	}
 	mfPropInteractDistance = pGame->GetFloat("Prop", "DefaultMaxInteractDistance", 2);
 	mfCritterInteractDistance = pGame->GetFloat("Critter", "DefaultMaxInteractDistance", 2);

@@ -381,8 +381,10 @@ static void TestLoadBecomesTexelFetch()
 		"{\n"
 		"	cVector2l vMapCoords = cVector2l(gl_FragCoord.xy);\n"
 		"	out_vColor = load(aNormalDepthMap, vMapCoords, 0);\n"
+		"	out_vColor += load(aNormalDepthMap, vMapCoords + cVector2l(1, 0));\n"
 		"}";
 	CHECK(TranspileHpslToGlsl(psSrc, eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "texelFetch(aNormalDepthMap, vMapCoords + ivec2(1, 0), 0)");
 	CHECK_CONTAINS(sGlsl, "#version 130");
 	CHECK_NOT_CONTAINS(sGlsl, "#version 120");
 	CHECK_CONTAINS(sGlsl, "ivec2 vMapCoords = ivec2(gl_FragCoord.xy);");
@@ -489,8 +491,29 @@ static void TestParameterListTrailingCommentWithComma()
 	CHECK_CONTAINS(sGlsl, "gl_FragData[2] = gl_FragCoord");
 }
 
+static void TestRebirthIntrinsics()
+{
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(
+		"uniform cTexture2D aShadowMap : 3;\nuniform cTextureBuffer aInstanceBuffer : 15;\n"
+		"void main(in cVector4f px_vPosition, out cVector4f out_vColor : 0)\n{\n"
+		"\tout_vColor = sampleGather(aShadowMap, px_vPosition.xy, cVector2l(1, 0)) + sampleGatherAlpha(aShadowMap, px_vPosition.xy);\n}\n",
+		eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_NOT_CONTAINS(sGlsl, "aInstanceBuffer");
+	CHECK_CONTAINS(sGlsl, "textureGather(aShadowMap, gl_FragCoord.xy + vec2(ivec2(1, 0)) / vec2(textureSize(aShadowMap, 0)))");
+	CHECK_CONTAINS(sGlsl, "textureGather(aShadowMap, gl_FragCoord.xy, 3)");
+	CHECK_CONTAINS(sGlsl, "#extension GL_ARB_texture_gather");
+
+	CHECK(TranspileHpslToGlsl(
+		"uniform cMatrixf a_mtxNormal;\nvoid main(out cVector4f px_vPosition)\n{\n"
+		"\tcMatrix3f mtxNormal = ToMatrix3f(a_mtxNormal);\n\tpx_vPosition = cVector4f(mtxNormal[0], 1.0);\n}\n",
+		eGpuShaderType_Vertex, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "mat3 mtxNormal = gl_NormalMatrix;");
+}
+
 int main()
 {
+	TestRebirthIntrinsics();
 	TestClearPair();
 	TestNullPair();
 	TestFragPositionUsed();

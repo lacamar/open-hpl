@@ -156,6 +156,15 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBillboard", "float GetHaloAlpha()", +[](cBillboard *o) -> float { return o->GetHaloAlpha(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetBrightness(float afX)", +[](cBillboard *o, float a0) { o->SetBrightness(a0); });
 	SOMA_METHOD_NEW(e, "cBillboard", "float GetBrightness()", +[](cBillboard *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void SetMaterial(cMaterial@ apMaterial)", +[](cBillboard *o, cMaterial * a0) { o->SetMaterial(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void SetSize(const cVector2f&in avSize)", +[](cBillboard *o, const cVector2f & a0) { o->SetSize(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "cVector2f GetSize()", +[](cBillboard *o) -> cVector2f { return o->GetSize(); });
+	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetLocalTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetLocalTransform(); return r; });
+	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetWorldTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetWorldTransform(); return r; });
+	SOMA_METHOD_NEW(e, "cBone", "const cMatrixf& GetInvWorldTransform()", +[](cBone *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetInvWorldTransform(); return r; });
+	SOMA_METHOD_NEW(e, "cBone", "const tString& GetName()", +[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
+	SOMA_METHOD_NEW(e, "cBone", "const tString& GetSid()", +[](cBone *o) -> const tString & { static thread_local tString r; r = o->GetSid(); return r; });
+	SOMA_METHOD_NEW(e, "cBone", "cBone@ GetParent()", +[](cBone *o) -> cBone * { return o->GetParent(); });
 	SOMA_METHOD_NEW(e, "cBoneState", "bool AddEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
 	SOMA_METHOD_NEW(e, "cBoneState", "bool RemoveEntity(iEntity3D@ apEntity)", +[](cBoneState *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); });
 	SOMA_METHOD_NEW(e, "cBoneState", "void ClearEntities()", +[](cBoneState *o) { o->ClearEntities(); });
@@ -656,6 +665,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetProbeOffset(const cVector3f&in avPosition)", +[](cLightBox *o, const cVector3f & a0) { o->SetProbeOffset(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetProbeOffset()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetProbeOffset(); return r; });
 	SOMA_METHOD_NEW(e, "cLightBox", "void FadeIrradianceSet(const tString&in asSetName, float afTime)", +[](cLightBox *o, const tString & a0, float a1) { o->FadeIrradianceSet(a0, a1); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetSpecularColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetSpecularColor(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetUniqueID()", +[](cLightDirectional *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void UpdateLogic(float afTimeStep)", +[](cLightDirectional *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetName()const", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -765,6 +775,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightDirectional", "bool GetAutoShadowSliceSettings()", +[](cLightDirectional *o) -> bool { return o->GetAutoShadowSliceSettings(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAutoShadowSliceLogTerm(float afX)", +[](cLightDirectional *o, float a0) { o->SetAutoShadowSliceLogTerm(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetAutoShadowSliceLogTerm()", +[](cLightDirectional *o) -> float { return o->GetAutoShadowSliceLogTerm(); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetSpecularColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetSpecularColor(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetUniqueID()", +[](cLightPoint *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void UpdateLogic(float afTimeStep)", +[](cLightPoint *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetName()const", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -862,6 +873,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "float GetBrightness()", +[](cLightPoint *o) -> float { return o->GetBrightness(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "float GetTranslucency()", +[](cLightPoint *o) -> float { return o->GetTranslucency(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetTranslucency(float afX)", +[](cLightPoint *o, float a0) { o->SetTranslucency(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSpecularColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetSpecularColor(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetUniqueID()", +[](cLightSpot *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void UpdateLogic(float afTimeStep)", +[](cLightSpot *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetName()const", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -972,8 +984,10 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetNearClipPlane()", +[](cLightSpot *o) -> float { return o->GetNearClipPlane(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpotFalloffPow(float afX)", +[](cLightSpot *o, float a0) { o->SetSpotFalloffPow(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetSpotFalloffPow()", +[](cLightSpot *o) -> float { return o->GetSpotFalloffPow(); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpecularColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetSpecularColor(a0); });
 	SOMA_METHOD_NEW(e, "cMaterial", "bool GetForceFullScaleTextures()", +[](cMaterial *o) -> bool { return o->GetForceFullScaleTextures(); });
 	SOMA_METHOD_NEW(e, "cMaterial", "const tString& GetName()", +[](cMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
+	SOMA_METHOD_NEW(e, "cMaterial", "int GetUvAnimationNum()", +[](cMaterial *o) -> int { return o->GetUvAnimationNum(); });
 	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ CreateSubMesh(const tString &in asName)", +[](cMesh *o, const tString & a0) -> cSubMesh * { return o->CreateSubMesh(a0); });
 	SOMA_METHOD_NEW(e, "cMesh", "cSubMesh@ GetSubMesh(uint alIdx)", +[](cMesh *o, unsigned int a0) -> cSubMesh * { return o->GetSubMesh(a0); });
 	SOMA_METHOD_NEW(e, "cMesh", "int GetSubMeshIndex(const tString &in asName)", +[](cMesh *o, const tString & a0) -> int { return o->GetSubMeshIndex(a0); });
@@ -1132,6 +1146,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceStart()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceStart(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetMaxFadeDistanceEnd()", +[](cParticleSystem *o) -> float { return o->GetMaxFadeDistanceEnd(); });
 	SOMA_METHOD_NEW(e, "cParticleSystem", "float GetBrightness()", +[](cParticleSystem *o) -> float { return o->GetBrightness(); });
+	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsDead()", +[](cParticleSystem *o) -> bool { return o->IsDead(); });
+	SOMA_METHOD_NEW(e, "cParticleSystem", "bool IsDying()", +[](cParticleSystem *o) -> bool { return o->IsDying(); });
 	SOMA_METHOD_NEW(e, "cPostEffectComposite", "int GetPostEffectNum()", +[](cPostEffectComposite *o) -> int { return o->GetPostEffectNum(); });
 	SOMA_METHOD_NEW(e, "cPostEffectComposite", "bool HasActiveEffects()", +[](cPostEffectComposite *o) -> bool { return o->HasActiveEffects(); });
 	SOMA_METHOD_NEW(e, "cResourceVarsObject", "void AddVarBool(const tString&in asName, bool abDefault)", +[](cResourceVarsObject *o, const tString & a0, bool a1) { o->AddVarBool(a0, a1); });
@@ -1746,11 +1762,13 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "float GetBrightness()", +[](iLight *o) -> float { return o->GetBrightness(); });
 	SOMA_METHOD_NEW(e, "iLight", "float GetTranslucency()", +[](iLight *o) -> float { return o->GetTranslucency(); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetTranslucency(float afX)", +[](iLight *o, float a0) { o->SetTranslucency(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void SetSpecularColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetSpecularColor(a0); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "cVector2f GetScreenSizeFloat()", +[](iLowLevelGraphics *o) -> cVector2f { return o->GetScreenSizeFloat(); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "const cVector2l& GetScreenSizeInt()", +[](iLowLevelGraphics *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetScreenSizeInt(); return r; });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLine(const cVector3f&in avBegin, const cVector3f&in avEnd, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawLine(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawBoxMinMax(const cVector3f&in avMin, const cVector3f&in avMax, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawBoxMinMax(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLineQuad(const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector2f & a1, const cColor & a2) { o->DrawLineQuad(a0, a1, a2); });
+	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void SetGammaCorrection(float afX)", +[](iLowLevelGraphics *o, float a0) { o->SetGammaCorrection(a0); });
 	SOMA_METHOD_NEW(e, "iMouse", "bool ButtonIsDown(eMouseButton)", +[](iMouse *o, int a0) -> bool { return o->ButtonIsDown((eMouseButton)a0); });
 	SOMA_METHOD_NEW(e, "iMouse", "void Update()", +[](iMouse *o) { o->Update(); });
 	SOMA_METHOD_NEW(e, "iMouse", "cVector2l GetAbsPosition()", +[](iMouse *o) -> cVector2l { return o->GetAbsPosition(); });
@@ -1868,6 +1886,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravityAttachmentRotation()", +[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentRotation(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "bool GetGravityAttachmentVelocity()", +[](iPhysicsBody *o) -> bool { return o->GetGravityAttachmentVelocity(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "eVelocityAxes GetGravityAttachmentVelocityAxes()", +[](iPhysicsBody *o) -> int { return (int)o->GetGravityAttachmentVelocityAxes(); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMaterial(iPhysicsMaterial@ aMat)", +[](iPhysicsBody *o, iPhysicsMaterial * a0) { o->SetMaterial(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetIsCharacter(bool abX)", +[](iPhysicsBody *o, bool a0) { o->SetIsCharacter(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "const tString& GetName()", +[](iPhysicsJoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "int GetUniqueID()", +[](iPhysicsJoint *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "iPhysicsJoint", "iPhysicsBody@ GetParentBody()", +[](iPhysicsJoint *o) -> iPhysicsBody * { return o->GetParentBody(); });
@@ -2119,6 +2139,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsWorld", "iPhysicsRope@ GetRopeFromUniqueID(int alID)", +[](iPhysicsWorld *o, int a0) -> iPhysicsRope * { return o->GetRopeFromUniqueID(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void DestroyRope(iPhysicsRope@ apRope)", +[](iPhysicsWorld *o, iPhysicsRope * a0) { o->DestroyRope(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void FadeoutAllLoopSounds(float afFadeSpeed)", +[](iPhysicsWorld *o, float a0) { o->FadeoutAllLoopSounds(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsWorld", "float CastRayOnShape(iCollideShape @apShape, const cMatrixf&in a_mtxTransform, const cVector3f &in avOrigin, const cVector3f&in avEnd,cVector3f&out avOutNormal, bool abLocalRayPositions)", +[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, const cVector3f & a2, const cVector3f & a3, cVector3f & a4, bool a5) -> float { return o->CastRayOnShape(a0, a1, a2, a3, a4, a5); });
 	SOMA_METHOD_NEW(e, "iPhysicsWorld", "void RenderShapeDebugGeometry( iCollideShape @apShape, const cMatrixf&in a_mtxTransform, iLowLevelGraphics @apLowLevel, const cColor&in aColor)", +[](iPhysicsWorld *o, iCollideShape * a0, const cMatrixf & a1, iLowLevelGraphics * a2, const cColor & a3) { o->RenderShapeDebugGeometry(a0, a1, a2, a3); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetUniqueID()", +[](cRopeEntity *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "void UpdateLogic(float afTimeStep)", +[](cRopeEntity *o, float a0) { o->UpdateLogic(a0); });
@@ -2488,6 +2509,11 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_FUNC_NEW(e, "tWString cString_AddSlashAtEndW(const tWString&in asPath)", +[](const tWString & a0) -> tWString { return cString::AddSlashAtEndW(a0); });
 	SOMA_FUNC_NEW(e, "tString cString_RemoveSlashAtEnd(const tString&in asPath)", +[](const tString & a0) -> tString { return cString::RemoveSlashAtEnd(a0); });
 	SOMA_FUNC_NEW(e, "tWString cString_RemoveSlashAtEndW(const tWString&in asPath)", +[](const tWString & a0) -> tWString { return cString::RemoveSlashAtEndW(a0); });
+	SOMA_FUNC_NEW(e, "bool cMath_IsValid(float afX)", +[](float a0) -> bool { return cMath::IsValid(a0); });
+	SOMA_FUNC_NEW(e, "int cMath_CeilToInt(float afVal)", +[](float a0) -> int { return cMath::CeilToInt(a0); });
+	SOMA_FUNC_NEW(e, "int cMath_FloorToInt(float afVal)", +[](float a0) -> int { return cMath::FloorToInt(a0); });
+	SOMA_FUNC_NEW(e, "float cMath_Ceil(float afVal)", +[](float a0) -> float { return cMath::Ceil(a0); });
+	SOMA_FUNC_NEW(e, "float cMath_Floor(float afVal)", +[](float a0) -> float { return cMath::Floor(a0); });
 	SOMA_METHOD_NEW(e, "cBeam", "iEntity3D@ opImplCast()", +[](cBeam *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });
 	SOMA_METHOD_NEW(e, "iEntity3D", "cBeam@ opCast()", +[](iEntity3D *o) -> cBeam * { return dynamic_cast<cBeam *>(o); });
 	SOMA_METHOD_NEW(e, "cBillboard", "iEntity3D@ opImplCast()", +[](cBillboard *o) -> iEntity3D * { return static_cast<iEntity3D *>(o); });

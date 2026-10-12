@@ -148,6 +148,12 @@ static void PreloadUpdate()
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
 
+struct cCameraNode : iEntity3D
+{
+	cCameraNode() : iEntity3D("Camera") {}
+	tString GetEntityType() { return "CameraNode"; }
+};
+
 cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	: mpWorld(apWorld), msFileName(asFileName), mpRuntime(NULL), mpScript(NULL)
 {
@@ -160,7 +166,7 @@ cSomaLuxMap::cSomaLuxMap(cWorld *apWorld, const tString &asFileName)
 	mvEntities.push_back(pPlayer);
 	cSomaLuxEntity *pCamera = new cSomaLuxEntity();
 	pCamera->msName = "Camera";
-	pCamera->mbCameraProxy = true;
+	pCamera->mpCameraNode = new cCameraNode();
 	mvEntities.push_back(pCamera);
 	std::vector<cSomaLuxEntity *> vLoaded;
 	vLoaded.swap(mvEntities);
@@ -1327,12 +1333,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int t, const tString &c) {
 					cSomaLuxEntity *p = m.GetEntity(n);
-					return p && (t == 7 || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
+					return p && (t >= eSomaLuxEntityType_LastEnum || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
 				});
 	SOMA_METHOD(e, M, "iLuxEntity @GetEntityByID(tID alID, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, cSomaID id, int t, const tString &c) {
 					cSomaLuxEntity *p = m.GetEntity(id);
-					return p && (t == 7 || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
+					return p && (t >= eSomaLuxEntityType_LastEnum || p->meType == t) && SomaEntityIsClass(p, c) ? p : (cSomaLuxEntity *)NULL;
 				});
 	SOMA_METHOD(e, M, "tID GetEntityIDByName(const tString&in asName, eLuxEntityType aType=eLuxEntityType_LastEnum, const tString&in asClassName=\"\")",
 				+[](cSomaLuxMap &m, const tString &n, int, const tString &) { cSomaLuxEntity *p = m.GetEntity(n); return p ? p->mID : cSomaID(); });
@@ -1379,7 +1385,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t == 7 || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
+						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
 							a.InsertLast(&p);
 							bAny = true;
@@ -1396,7 +1402,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				+[](cSomaLuxMap &m, S n, int t, S c, CScriptArray &a) {
 					bool bAny = false;
 					for (cSomaLuxEntity *p : m.GetEntities())
-						if ((t == 7 || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
+						if ((t >= eSomaLuxEntityType_LastEnum || p->meType == t) && EntityNameMatch(n, p) && SomaEntityIsClass(p, c))
 						{
 							a.InsertLast(&p->mID);
 							bAny = true;
@@ -1517,6 +1523,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)", SomaLightLevelAtPos);
 	cEnvironmentParticles::mpLightLevelFunc = +[](const cVector3f &p) { return SomaLightLevelAtPos(p, NULL, 0); };
 	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
+	SOMA_FUNC_NEW(e, "ePlatform cSystem_GetPlatform()", +[]() -> int { return ePlatform_Linux; });
 	SOMA_FUNC(e, "void cSystem_GetAvailableVideoModes(array<cVector2l> &inout avScreenSizes, array<int> &inout avBpps, array<int> &inout avMinRefreshRates, int alMinBpp, int alMinRefreshRate, bool abRemoveDuplicates)",
 			  +[](CScriptArray &sizes, CScriptArray &bpps, CScriptArray &rates, int minBpp, int minRate, bool unique) {
 				  std::vector<std::pair<cVector2l, int>> vModes;

@@ -25,6 +25,7 @@ enum eSomaLuxEntityType
 	eSomaLuxEntityType_Critter,
 	eSomaLuxEntityType_Agent,
 	eSomaLuxEntityType_Player,
+	eSomaLuxEntityType_LastEnum,
 };
 
 class cSomaLuxEntity;
@@ -62,7 +63,7 @@ public:
 	tString msName;
 	tString msClassName; // EntityType / AreaType
 	tString msScriptClassName;
-	bool mbCameraProxy = false;
+	iEntity3D *mpCameraNode = nullptr;
 	bool mbSpawned = false;
 	tString msFileName;
 	int meType = eSomaLuxEntityType_Prop;

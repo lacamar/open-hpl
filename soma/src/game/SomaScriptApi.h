@@ -23,6 +23,7 @@ class cSomaScriptApi
 {
 public:
 	bool Load(const std::string &asFile);
+	void RebaseEnums(const cSomaScriptApi &aBase);
 
 	void RegisterTypes(asIScriptEngine *apEngine);
 	int Register(asIScriptEngine *apEngine);

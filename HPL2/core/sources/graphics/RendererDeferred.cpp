@@ -73,6 +73,7 @@ namespace hpl {
 	eTextureType cRendererDeferred::mGBufferTextureType = eTextureType_Rect;
 	bool cRendererDeferred::mbDepthInNormalAlpha = false;
 	int cRendererDeferred::mlNumOfGBufferTextures = 4;
+	int cRendererDeferred::mlLinearDepthTextureIdx = 2;
 	bool cRendererDeferred::mbDepthCullLights = true;
 
 	bool cRendererDeferred::mbSSAOLoaded = false;
@@ -279,6 +280,7 @@ namespace hpl {
 	#define kVar_avSplitsNear						91
 	#define kVar_avSplitsFar						92
 	#define kVar_avSplitOffsetMul					93
+	#define kVar_avLightPosScale					94
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -430,7 +432,7 @@ namespace hpl {
 			/////////////////////////
 			//Frame buffer with only linear depth
 			mpGBuffer[type][eGBufferComponents_LinearDepth] = mpGraphics->CreateFrameBuffer("Deferred_GBuffer_LinearDepth");
-			mpGBuffer[type][eGBufferComponents_LinearDepth]->SetTexture2D(0,mpGBufferTexture[type][2]);
+			mpGBuffer[type][eGBufferComponents_LinearDepth]->SetTexture2D(0,mpGBufferTexture[type][mlLinearDepthTextureIdx]);
 			if(mpGBuffer[type][eGBufferComponents_LinearDepth]->CompileAndValidate()==false)
 			{
 				Error("Could not create frame buffer with only linear depth for Deferred renderer type: %d!\n", type);
@@ -769,6 +771,18 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorSky", kVar_avAmbientColorSky, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avAmbientColorGround", kVar_avAmbientColorGround, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avViewSpaceUp", kVar_avViewSpaceUp, eDefferredProgramMode_Lights);
+
+				// per-light inputs of the newer light shader; a program only has one name of each pair
+				static const struct { const char *msName; int mlId; } vAliases[] = {
+					{"px_vLightColor", kVar_avLightColor}, {"px_fFalloff", kVar_afFalloffPow}, {"px_fSpotFalloffPow", kVar_afSpotFalloffPow},
+					{"px_fTranslucenyMul", kVar_afTranslucencyScale}, {"px_fLightSourceRadius", kVar_afLightSourceRadius},
+					{"px_mtxLightViewProj", kVar_a_mtxLightViewProj}, {"px_vLightForward", kVar_avLightForward},
+					{"px_vLightUp", kVar_avLightUp}, {"px_vLightRight", kVar_avLightRight},
+					{"px_vMaskCenter", kVar_avMaskCenter}, {"px_vMaskExtent", kVar_avMaskExtent},
+					{"px_vLightPosScale", kVar_avLightPosScale}, {"afFarPlane", kVar_afFarPlane},
+				};
+				for(size_t i=0; i<sizeof(vAliases)/sizeof(vAliases[0]); ++i)
+					mpProgramManager->AddGenerateProgramVariableId(vAliases[i].msName, vAliases[i].mlId, eDefferredProgramMode_Lights);
 			}
 
 			//////////////////////////////
@@ -1686,6 +1700,14 @@ namespace hpl {
 		{
 			mpLowLevelGraphics->SetClearColor(cColor(0,0,1,1));
 			ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
+			// lights discard depth 1
+			if(mlLinearDepthTextureIdx != 2)
+			{
+				SetGBuffer(eGBufferComponents_LinearDepth);
+				mpLowLevelGraphics->SetClearColor(cColor(1,1));
+				ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
+				SetGBuffer(eGBufferComponents_Full);
+			}
 			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
 		}
 		else
@@ -1838,7 +1860,7 @@ namespace hpl {
 		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
 		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
 
-		iTexture *pGBufferDepthTexture = GetBufferTexture(2);
+		iTexture *pGBufferDepthTexture = GetBufferTexture(mlLinearDepthTextureIdx);
 		
 		cVector2f vGBufferDepthSize = cVector2f((float)pGBufferDepthTexture->GetWidth(), (float)pGBufferDepthTexture->GetHeight());
 		cVector2f vSSAOSize = cVector2f((float)mpSSAOTexture->GetWidth(), (float)mpSSAOTexture->GetHeight());
@@ -1977,7 +1999,7 @@ namespace hpl {
 		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
 		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
 
-		iTexture *pGBufferDepthTexture = GetBufferTexture(2);
+		iTexture *pGBufferDepthTexture = GetBufferTexture(mlLinearDepthTextureIdx);
 		iTexture *pGBufferNormalTexture = GetBufferTexture(1);
 		
 		//////////////////////////////
@@ -2101,6 +2123,8 @@ namespace hpl {
 		///////////////////////
 		// General variables
 		apProgram->SetVec3f(kVar_avLightPos, apLightData->m_mtxViewSpaceRender.GetTranslation());
+		cVector3f vViewPos = apLightData->m_mtxViewSpaceRender.GetTranslation();
+		apProgram->SetVec4f(kVar_avLightPosScale, vViewPos.x, vViewPos.y, vViewPos.z, 1.0f / pLight->GetRadius());
 		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
 		float fBrightness = pLight->GetBrightness() * GetDistanceFadeAmount(pLight);
 		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
@@ -2222,11 +2246,12 @@ namespace hpl {
 		if(pProgram)
 		{
 			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+			pProgram->SetFloat(kVar_afFarPlane, mpCurrentFrustum->GetFarPlane());
 
 			SetScreenPositionVars(pProgram);
+			pProgram->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
 			if(pLight->HasMaskBox())
 			{
-				pProgram->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
 				pProgram->SetVec3f(kVar_avMaskCenter, pLight->GetMaskCenter());
 				pProgram->SetVec3f(kVar_avMaskExtent, pLight->GetMaskSize());
 			}
@@ -3809,7 +3834,7 @@ namespace hpl {
 	{
 		if(mbDepthInNormalAlpha == false)
 		{
-			if(abBind) SetTexture(alUnit, GetGbufferTexture(2));
+			if(abBind) SetTexture(alUnit, GetGbufferTexture(mlLinearDepthTextureIdx));
 			return;
 		}
 		GetGbufferTexture(1)->SetRedFromAlpha(abBind);

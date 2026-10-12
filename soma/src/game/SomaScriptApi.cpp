@@ -230,6 +230,33 @@ static int NativeOffset(const std::string &asType, const std::string &asDecl, in
 	return bType ? -1 : alOffset;
 }
 
+// native code uses SOMA's enum values; later games insert names in the middle
+void cSomaScriptApi::RebaseEnums(const cSomaScriptApi &aBase)
+{
+	auto IsLast = [](const std::string &s) { return s.size() > 9 && s.compare(s.size() - 9, 9, "_LastEnum") == 0; };
+	for (auto &e : mvEnums)
+		for (auto &b : aBase.mvEnums)
+		{
+			if (b.first != e.first)
+				continue;
+			std::map<std::string, int> mapBase(b.second.begin(), b.second.end());
+			bool bChanged = false;
+			for (auto &v : e.second)
+				bChanged |= mapBase.count(v.first) && mapBase[v.first] != v.second;
+			if (bChanged == false)
+				continue;
+			int lNext = 0;
+			for (auto &v : b.second)
+				lNext = std::max(lNext, v.second + (IsLast(v.first) ? 0 : 1));
+			for (auto &v : e.second)
+				if (IsLast(v.first) == false)
+					v.second = mapBase.count(v.first) ? mapBase[v.first] : lNext++;
+			for (auto &v : e.second)
+				if (IsLast(v.first))
+					v.second = lNext;
+		}
+}
+
 bool cSomaScriptApi::Load(const std::string &asFile)
 {
 	std::ifstream f(asFile.c_str());

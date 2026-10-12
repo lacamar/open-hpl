@@ -27,10 +27,11 @@ static void MessageCallback(const asSMessageInfo *apMsg, void *)
 		Log("SOMA script warning: %s:%d: %s\n", apMsg->section, apMsg->row, apMsg->message);
 }
 
-static std::string FindApiFile()
+static std::string FindApiFile(const std::string &asGame)
 {
 	std::vector<std::string> vCandidates;
-	if (const char *pEnv = getenv("OPENHPL_SOMA_SCRIPT_API"))
+	const char *pEnv = getenv("OPENHPL_SOMA_SCRIPT_API");
+	if (pEnv && asGame == SomaGameId())
 		vCandidates.push_back(pEnv);
 	char sExe[4096];
 	ssize_t lLen = readlink("/proc/self/exe", sExe, sizeof(sExe) - 1);
@@ -39,12 +40,13 @@ static std::string FindApiFile()
 		sExe[lLen] = 0;
 		std::string sDir(sExe);
 		sDir = sDir.substr(0, sDir.find_last_of('/') + 1);
-		vCandidates.push_back(sDir + "script_api.txt");
-		vCandidates.push_back(sDir + "../share/open-hpl/" + SomaGameId() + "/script_api.txt");
+		if (asGame == SomaGameId())
+			vCandidates.push_back(sDir + "script_api.txt");
+		vCandidates.push_back(sDir + "../share/open-hpl/" + asGame + "/script_api.txt");
 	}
-	vCandidates.push_back("/usr/share/open-hpl/" + SomaGameId() + "/script_api.txt");
+	vCandidates.push_back("/usr/share/open-hpl/" + asGame + "/script_api.txt");
 #ifdef OPENHPL_SOURCE_DIR
-	vCandidates.push_back(std::string(OPENHPL_SOURCE_DIR) + "/" + SomaGameId() + "/data/script_api.txt");
+	vCandidates.push_back(std::string(OPENHPL_SOURCE_DIR) + "/" + asGame + "/data/script_api.txt");
 #endif
 	for (size_t i = 0; i < vCandidates.size(); ++i)
 		if (std::ifstream(vCandidates[i].c_str()).is_open())
@@ -67,7 +69,7 @@ cSomaScriptRuntime::~cSomaScriptRuntime()
 
 bool cSomaScriptRuntime::Init(const std::string &asGameDir)
 {
-	std::string sApi = FindApiFile();
+	std::string sApi = FindApiFile(SomaGameId());
 	if (sApi.empty())
 	{
 		Error("SOMA script: script_api.txt not found - game scripts disabled\n");
@@ -84,6 +86,9 @@ bool cSomaScriptRuntime::Init(const std::string &asGameDir)
 	cSomaScriptApi api;
 	if (api.Load(sApi) == false)
 		return false;
+	cSomaScriptApi base;
+	if (SomaGameId() != "soma" && base.Load(FindApiFile("soma")))
+		api.RebaseEnums(base);
 	api.RegisterTypes(mpEngine);
 	RegisterSomaScriptNatives(mpEngine);
 	int lErrors = api.Register(mpEngine);

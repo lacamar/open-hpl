@@ -58,16 +58,13 @@ VALUE = {'tString': 'tString', 'tWString': 'tWString', 'cVector2f': 'cVector2f',
          'cQuaternion': 'cQuaternion', 'cPlanef': 'cPlanef', 'cRect2f': 'cRect2f', 'cRect2l': 'cRect2l'}
 
 
-def enums():
-    e = set()
-    for line in open(os.path.join(ROOT, 'soma/data/script_api.txt')):
-        f = line.rstrip('\n').split('\t')
-        if f[0] == 'E':
-            e.add(f[1])
-    return e
+def rows():
+    for game in ('soma', 'rebirth', 'bunker'):
+        for line in open(os.path.join(ROOT, game, 'data/script_api.txt')):
+            yield line.rstrip('\n').split('\t')
 
 
-ENUMS = enums()
+ENUMS = {f[1] for f in rows() if f[0] == 'E'}
 
 
 def split_params(s):
@@ -144,8 +141,7 @@ def parse(decl):
 def gen():
     api = {}
     cur = None
-    for line in open(os.path.join(ROOT, 'soma/data/script_api.txt')):
-        f = line.rstrip('\n').split('\t')
+    for f in rows():
         if f[0] == 'O':
             cur = f[1]
         elif f[0] == 'M' and cur in TYPES:
@@ -191,10 +187,11 @@ def gen():
                 rdecl = f' -> {rt}'
             esc = decl.replace('\\', '\\\\').replace('"', '\\"')
             lines.append(f'\tSOMA_METHOD_NEW(e, "{st}", "{esc}", +[]({params}){rdecl} {body});')
-    for line in open(os.path.join(ROOT, 'soma/data/script_api.txt')):
-        f = line.rstrip('\n').split('\t')
-        if f[0] != 'G':
+    seen = set()
+    for f in rows():
+        if f[0] != 'G' or f[1] in seen:
             continue
+        seen.add(f[1])
         p = parse(f[1])
         if not p:
             continue
@@ -223,11 +220,11 @@ def gen():
         lines.append(f'\tSOMA_FUNC_NEW(e, "{esc}", +[]({params}){rdecl} {body});')
     # Casts between mapped types: implicit up (static_cast), explicit down (dynamic_cast)
     cur = None
-    for line in open(os.path.join(ROOT, 'soma/data/script_api.txt')):
-        f = line.rstrip('\n').split('\t')
+    for f in rows():
         if f[0] == 'O':
             cur = f[1]
-        elif f[0] == 'C' and cur in TYPES and f[1] in TYPES:
+        elif f[0] == 'C' and cur in TYPES and f[1] in TYPES and (cur, f[1]) not in seen:
+            seen.add((cur, f[1]))
             a, b = TYPES[cur], TYPES[f[1]]
             lines.append(f'\tSOMA_METHOD_NEW(e, "{cur}", "{f[1]}@ opImplCast()", +[]({a} *o) -> {b} * {{ return static_cast<{b} *>(o); }});')
             lines.append(f'\tSOMA_METHOD_NEW(e, "{f[1]}", "{cur}@ opCast()", +[]({b} *o) -> {a} * {{ return dynamic_cast<{a} *>(o); }});')

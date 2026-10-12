@@ -27,7 +27,7 @@ namespace
 		{"cMatrixf", "mat4"}, {"cMatrix4f", "mat4"}, {"cMatrix3f", "mat3"}, {"cMatrix3x3f", "mat3"}, {"cMatrix2x2f", "mat2"}, {"cMatrix2x4f", "mat2x4"},
 		{"cTexture2D", "sampler2D"}, {"cTextureCube", "samplerCube"},
 		{"cTextureRect", "sampler2DRect"}, {"cTexture3D", "sampler3D"},
-		{"cTexture2DCmp", "sampler2DShadow"},
+		{"cTexture2DCmp", "sampler2DShadow"}, {"cTexture2DArray", "sampler2DArray"},
 	};
 
 	// unbound generic attributes read (0,0,0,1); tangent is on texture unit 1, shared with UV1
@@ -140,8 +140,10 @@ namespace
 
 	tString StripUniformBindingIndices(const tString& asSrc)
 	{
+		// instance buffers are only read under defines we never set
+		tString sSrc = std::regex_replace(asSrc, std::regex("uniform\\s+cTextureBuffer\\s+\\w+\\s*(:\\s*\\d+\\s*)?;"), "");
 		std::regex bindRe("(uniform\\s+\\S+\\s+\\w+)\\s*:\\s*\\d+(\\s*;)");
-		return std::regex_replace(asSrc, bindRe, "$1$2");
+		return std::regex_replace(sSrc, bindRe, "$1$2");
 	}
 
 	tString FlattenBufferBody(const tString& asBody)
@@ -360,7 +362,8 @@ namespace
 			sOut = std::regex_replace(sOut, declRe, "");
 			sOut = ReplaceIdentifier(sOut, sName, sBuiltin);
 		}
-		return sOut;
+		// Rebirth's helper only takes a mat4
+		return cString::ReplaceStringTo(sOut, "ToMatrix3f(gl_NormalMatrix)", "gl_NormalMatrix");
 	}
 
 	bool RewriteMulIntrinsic(const tString& asSrc, tString& asOut, tString& asErrorOut)
@@ -446,6 +449,25 @@ namespace
 		return RewriteCallIntrinsic(asSrc, asName, formatter, asOut, asErrorOut);
 	}
 
+	bool RewriteSampleGatherIntrinsic(const tString& asSrc, const char* asName, const char* asComp,
+									  tString& asOut, bool& abFired, tString& asErrorOut)
+	{
+		auto formatter = [&](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
+		{
+			if (aArgs.size() != 2 && aArgs.size() != 3)
+			{
+				asErr = tString(asName) + "() with " + cString::ToString((int)aArgs.size()) + " argument(s) is not supported";
+				return false;
+			}
+			// textureGatherOffset wants a constant offset
+			tString sOffset = aArgs.size() == 3 ? " + vec2(" + aArgs[2] + ") / vec2(textureSize(" + aArgs[0] + ", 0))" : "";
+			asRepl = "textureGather(" + aArgs[0] + ", " + aArgs[1] + sOffset + asComp + ")";
+			abFired = true;
+			return true;
+		};
+		return RewriteCallIntrinsic(asSrc, asName, formatter, asOut, asErrorOut);
+	}
+
 	// texelFetch needs GLSL 130; abFired bumps #version
 	bool RewriteLoadIntrinsic(const tString& asSrc, tString& asOut, bool& abFired, tString& asErrorOut)
 	{
@@ -453,10 +475,10 @@ namespace
 
 		auto formatter = [&mapSamplers, &abFired](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
 		{
-			if (aArgs.size() != 3)
+			if (aArgs.size() != 2 && aArgs.size() != 3)
 			{
 				asErr = "load() with " + cString::ToString((int)aArgs.size()) +
-						" argument(s) is not supported (only the 3-argument texture/coords/mipLevel form is)";
+						" argument(s) is not supported (only texture/coords[/mipLevel] is)";
 				return false;
 			}
 			std::map<tString, tString>::const_iterator it = mapSamplers.find(aArgs[0]);
@@ -466,7 +488,7 @@ namespace
 						"(load() is only supported on sampler2D - see HpslTranspiler.cpp)";
 				return false;
 			}
-			asRepl = "texelFetch(" + aArgs[0] + ", " + aArgs[1] + ", " + aArgs[2] + ")";
+			asRepl = "texelFetch(" + aArgs[0] + ", " + aArgs[1] + ", " + (aArgs.size() == 3 ? aArgs[2] : "0") + ")";
 			abFired = true;
 			return true;
 		};
@@ -509,7 +531,11 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	bool bNeedsGrad = false;
 	if (RewriteSampleLodGradIntrinsic(sSrc, "sampleGrad", "textureGrad", 4, sSrc, bNeedsGrad, asErrorOut) == false) return false;
 	if (RewriteSampleLodGradIntrinsic(sSrc, "sampleLod", "textureLod", 3, sSrc, bNeedsGrad, asErrorOut) == false) return false;
-	bNeedsTexelFetch |= bNeedsGrad;
+	bool bNeedsGather = false;
+	if (RewriteSampleGatherIntrinsic(sSrc, "sampleGatherAlpha", ", 3", sSrc, bNeedsGather, asErrorOut) == false) return false;
+	if (RewriteSampleGatherIntrinsic(sSrc, "sampleGatherGreen", ", 1", sSrc, bNeedsGather, asErrorOut) == false) return false;
+	if (RewriteSampleGatherIntrinsic(sSrc, "sampleGather", "", sSrc, bNeedsGather, asErrorOut) == false) return false;
+	bNeedsTexelFetch |= bNeedsGrad || bNeedsGather;
 
 	size_t lMainPos = sSrc.find("main");
 	if (lMainPos == tString::npos)
@@ -622,6 +648,8 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	// #version 130 only when load() is used
 	bool bNeedsIntOps = std::regex_search(sBody, std::regex("%|>>|<<|\\bisnan\\("));
 	tString sVersionBlock = bNeedsTexelFetch || bNeedsIntOps ? "#version 130\n" : "#version 120\n";
+	if (bNeedsGather)
+		sVersionBlock += "#extension GL_ARB_texture_gather : enable\n#extension GL_ARB_gpu_shader5 : enable\n";
 	if (aType == eGpuShaderType_Fragment && bNeedsFragData)
 		sVersionBlock += "#extension GL_ARB_draw_buffers : enable\n";
 

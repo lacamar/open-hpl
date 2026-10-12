@@ -101,8 +101,9 @@ namespace hpl {
 		cParserVarContainer defaultVars;
 		defaultVars.Add("UseUv");
 		defaultVars.Add("UseColor");
-		
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "deferred_decal_frag.glsl", 
+		defaultVars.Add("MaterialType_Decal");
+
+		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "deferred_decal_frag.glsl",
 											vDiffuseFeatureVec,kDiffuseFeatureNum, defaultVars);
 
 		////////////////////////////////

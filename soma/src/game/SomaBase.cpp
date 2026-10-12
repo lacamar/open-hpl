@@ -1230,7 +1230,10 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
-	cRendererDeferred::SetDepthInNormalAlpha(true);
+	if(SomaGameId() == "rebirth")
+		cRendererDeferred::SetLinearDepthTextureIdx(3);
+	else
+		cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 	cMeshLoaderCollada::SetUnscaledSkeleton(true);
 
@@ -1546,9 +1549,6 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 			mpDebugCameraController = hplNew(cDebugFreeCamera, (mpDebugCamera, mpEngine->GetInput()));
 			mpEngine->GetUpdater()->AddGlobalUpdate(mpDebugCameraController);
 		}
-		// The player script still needs a camera; this one is never rendered
-		if (pPlayer && pPlayer->GetCamera() == NULL)
-			pPlayer->SetCamera(mpEngine->GetScene()->CreateCamera(eCameraMoveMode_Fly));
 	}
 
 	if (pNewWorld->GetPhysicsWorld())

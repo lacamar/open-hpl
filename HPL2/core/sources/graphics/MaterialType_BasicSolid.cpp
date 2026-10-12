@@ -389,6 +389,8 @@ namespace hpl {
 		defaultVars.Add("UseNormals");
 		defaultVars.Add("UseDepth");
 		defaultVars.Add("VirtualPositionAddScale",mfVirtualPositionAddScale);
+		// selects the constant buffers of shaders that dropped the plain-uniform path
+		defaultVars.Add("MaterialType_SolidDiffuse");
 		
 		//Get the G-buffer type
 		if(cRendererDeferred::GetGBufferType() == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit");
@@ -841,6 +843,7 @@ namespace hpl {
 		defaultVars.Add("UseDepth");
 		defaultVars.Add("UseColor");
 		defaultVars.Add("UseColorMul");
+		defaultVars.Add("MaterialType_ProjectedUV");
 		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_projected_uv_vtx.glsl", "deferred_projected_uv_frag.glsl",
 													vProjectedUVFeatureVec,kProjectedUVFeatureNum, defaultVars);
 

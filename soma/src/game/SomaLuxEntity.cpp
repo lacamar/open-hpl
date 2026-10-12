@@ -289,7 +289,7 @@ cMatrixf cSomaLuxEntity::GetMatrix()
 	cMatrixf mtxAgent;
 	if (meType == eSomaLuxEntityType_Agent && SomaAgentGetMatrix(this, mtxAgent))
 		return mtxAgent;
-	if (mbCameraProxy && cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCamera())
+	if (mpCameraNode && cSomaLuxPlayer::Get() && cSomaLuxPlayer::Get()->GetCamera())
 		return cMath::MatrixInverse(cSomaLuxPlayer::Get()->GetCamera()->GetViewMatrix());
 	if (iPhysicsBody *pBody = GetMainBody())
 		return pBody->GetLocalMatrix();
@@ -2340,6 +2340,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
 	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) -> iEntity3D * {
+		if (p->mpCameraNode)
+			return p->mpCameraNode;
 		if (p->mpMesh)
 			return p->mpMesh;
 		if (p->GetMainBody())
@@ -2684,6 +2686,8 @@ void cSomaLuxEntity::RemoveAttachment()
 // iLuxEntity::UpdateEntityAttachment: locked children are posed rigidly, unlocked ones get the parent's motion
 void cSomaLuxEntity::UpdateAttachment()
 {
+	if (mpCameraNode)
+		mpCameraNode->SetMatrix(GetMatrix());
 	if (mpAttachment == NULL)
 		return;
 	cMatrixf mtxParent;
@@ -2723,6 +2727,7 @@ cSomaLuxEntity::~cSomaLuxEntity()
 {
 	ForgetLightConnections(this);
 	delete mpAttachment;
+	delete mpCameraNode;
 	for (cSocket &sock : mvSockets)
 		delete sock.mpNode;
 	cSomaGuiScreenRenderer::Get()->Forget(this);

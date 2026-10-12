@@ -286,6 +286,12 @@ namespace hpl {
 			return (int)floor(afVal + 0.5);
 		}
 
+		static float Floor(float afVal) { return floorf(afVal); }
+		static float Ceil(float afVal) { return ceilf(afVal); }
+		static int FloorToInt(float afVal) { return (int)floorf(afVal); }
+		static int CeilToInt(float afVal) { return (int)ceilf(afVal); }
+		static bool IsValid(float afX) { return std::isfinite(afX); }
+
 		static cVector2l RoundToInt(const cVector2f& avX)
 		{
 			return cVector2l(RoundToInt(avX.x), RoundToInt(avX.y));

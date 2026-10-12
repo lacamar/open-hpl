@@ -143,7 +143,7 @@ namespace hpl {
 		iFrameBuffer *GetAccumBuffer(){ return mpAccumBuffer;}
 
 		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
-		iTexture* GetSceneDepthTexture(){ return GetGbufferTexture(mbDepthInNormalAlpha ? 1 : 2);}
+		iTexture* GetSceneDepthTexture(){ return GetGbufferTexture(mbDepthInNormalAlpha ? 1 : mlLinearDepthTextureIdx);}
 		iTexture* GetReflectionTexture(){ return mpReflectionTexture;}
 
 		//Static properties. Must be set before renderer data load.
@@ -153,6 +153,7 @@ namespace hpl {
 		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
 
 		static void SetNumOfGBufferTextures(int alNum){ mlNumOfGBufferTextures = alNum;}
+		static void SetLinearDepthTextureIdx(int alIdx){ mlLinearDepthTextureIdx = alIdx;}
 		static int GetNumOfGBufferTextures(){ return mlNumOfGBufferTextures;}
 
 		static void SetDepthCullLights(bool abX){ mbDepthCullLights = abX;}
@@ -423,6 +424,7 @@ namespace hpl {
 		static eDeferredGBuffer mGBufferType;
 		static eTextureType mGBufferTextureType;
 		static bool mbDepthInNormalAlpha;
+		static int mlLinearDepthTextureIdx;
 		static int mlNumOfGBufferTextures;
 		static bool mbDepthCullLights;
 
