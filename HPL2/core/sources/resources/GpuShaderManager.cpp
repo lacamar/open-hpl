@@ -254,16 +254,23 @@ namespace hpl {
 			else Warning("HPSL patch anchor not found in %s\n", asFile.c_str());
 		}
 		// newer games feed per-light data through an instanced vertex shader; take it as uniforms
-		if(asFile == "deferred_light_frag.hpsl" && asData.find("UseTextureBuffer") == tString::npos)
+		bool bLightFrag = asFile == "deferred_light_frag.hpsl";
+		if((bLightFrag || asFile == "deferred_light_box_frag.hpsl") && asData.find("UseTextureBuffer") == tString::npos)
 		{
-			static const std::regex rxIn("\\n[ \\t]*in[ \\t]+(\\w+)[ \\t]+(px_(?!vPosition)\\w+),[ \\t]*(?=\\n)");
-			tString sHead = "@ifdef LightType_Spot || LightType_Directional\n@else\n@define LightType_Point 1\n@endif\n";
+			static const std::regex rxIn("\\n[ \\t]*in[ \\t]+(\\w+)[ \\t]+(px_(?!vPosition)\\w+(?:\\[\\d+\\])?),[ \\t]*(?=\\n)");
+			tString sHead = bLightFrag ? "@ifdef LightType_Spot || LightType_Directional\n@else\n@define LightType_Point 1\n@endif\n" : "";
 			for(std::sregex_iterator it(asData.begin(), asData.end(), rxIn), itEnd; it != itEnd; ++it)
 			{
 				tString sDecl = "uniform " + (*it)[1].str() + " " + (*it)[2].str() + ";\n";
 				if(sHead.find(sDecl) == tString::npos) sHead += sDecl;
 			}
 			asData = sHead + std::regex_replace(asData, rxIn, "");
+		}
+		// newer games mix with a previous-frame texture; keep the blend-based trail
+		if(asFile == "posteffect_image_trail_frag.hpsl")
+		{
+			static const std::regex rxMix("mix\\(vPrevDiffuseColor\\.rgb, vDiffuseColor\\.rgb, afAlpha\\), 1\\.0\\)");
+			asData = std::regex_replace(asData, rxMix, "vDiffuseColor.rgb, afAlpha)");
 		}
 		// debug: OPENHPL_HPSL_PATCH="file|old|new"
 		const char *pPatch = getenv("OPENHPL_HPSL_PATCH");

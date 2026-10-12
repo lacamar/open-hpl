@@ -2603,6 +2603,9 @@ namespace hpl {
 		case ePixelFormat_DXT3:				return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 		case ePixelFormat_DXT5:				return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		case ePixelFormat_RGTC2:			return GL_COMPRESSED_RG_RGTC2;
+		case ePixelFormat_RGTC1:			return GL_COMPRESSED_RED_RGTC1;
+		case ePixelFormat_BC6H:				return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+		case ePixelFormat_BC7:				return GL_COMPRESSED_RGBA_BPTC_UNORM;
 		}
 		return 0;
 	}

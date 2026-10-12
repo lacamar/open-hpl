@@ -522,6 +522,9 @@ namespace hpl {
 			ePixelFormat_LuminanceAlpha32,
 			ePixelFormat_RGB32,
 			ePixelFormat_RGBA32,
+			ePixelFormat_RGTC1,
+			ePixelFormat_BC6H,
+			ePixelFormat_BC7,
 			ePixelFormat_LastEnum,
 	};
 

@@ -72,6 +72,18 @@ namespace hpl {
 		float GetNoiseStrength(){ return mfNoiseStrength; }
 		float GetNoiseSize(){ return mfNoiseSize; }
 		const cVector3f& GetNoiseTurbulence(){ return mvNoiseTurbulence; }
+		void SetLighten(bool abX){ mbLighten = abX; }
+		bool GetLighten(){ return mbLighten; }
+		void SetHeightBased(bool abX){ mbHeightBased = abX; }
+		bool GetHeightBased(){ return mbHeightBased; }
+		void SetExponential(bool abX){ mbExponential = abX; }
+		bool GetExponential(){ return mbExponential; }
+		void SetDensity(float afX){ mfDensity = afX; }
+		float GetDensity(){ return mfDensity; }
+		void SetHeightDensity(float afX){ mfHeightDensity = afX; }
+		float GetHeightDensity(){ return mfHeightDensity; }
+		void SetHeightHorizon(float afX){ mfHeightHorizon = afX; }
+		float GetHeightHorizon(){ return mfHeightHorizon; }
 
 		//////////////////////////////
 		//iEntity implementation
@@ -102,6 +114,12 @@ namespace hpl {
 		float mfNoiseStrength = 0;
 		float mfNoiseSize = 1;
 		cVector3f mvNoiseTurbulence = 0;
+		bool mbLighten = false;
+		bool mbHeightBased = false;
+		bool mbExponential = false;
+		float mfDensity = 0.25f;
+		float mfHeightDensity = 0.25f;
+		float mfHeightHorizon = 1;
 
 		cMatrixf m_mtxModelOutput;
 	};

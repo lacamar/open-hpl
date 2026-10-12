@@ -91,6 +91,12 @@ namespace hpl {
 			pFog->SetShowBacksideWhenOutside(apElement->GetAttributeBool("ShownBacksideWhenOutside", true));
 			pFog->SetUnderwater(apElement->GetAttributeBool("Underwater", false));
 			pFog->SetSkybox(apElement->GetAttributeBool("Skybox", false));
+			pFog->SetLighten(apElement->GetAttributeBool("Lighten", false));
+			pFog->SetHeightBased(apElement->GetAttributeBool("HeightBased", false));
+			pFog->SetExponential(apElement->GetAttributeBool("Exponential", false));
+			pFog->SetDensity(apElement->GetAttributeFloat("Density", 0.25f));
+			pFog->SetHeightDensity(apElement->GetAttributeFloat("HeightDensity", 0.25f));
+			pFog->SetHeightHorizon(apElement->GetAttributeFloat("HeightHorizon", 1));
 			pFog->SetNoise(apElement->GetAttributeFloat("NoiseStrength", 0), apElement->GetAttributeFloat("NoiseSize", 1),
 							apElement->GetAttributeVector3f("NoiseTurbulence", 0));
 		}

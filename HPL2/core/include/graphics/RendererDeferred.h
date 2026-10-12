@@ -394,6 +394,7 @@ namespace hpl {
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
 		iGpuProgram *mpBoxWeightedProgram[3][2];
+		bool mbBoxInstanceInputs;
 		iGpuProgram *mpBoxResolveProgram;
 		iTexture *mpBoxWeightTexture;
 		iFrameBuffer *mpBoxWeightBuffer;

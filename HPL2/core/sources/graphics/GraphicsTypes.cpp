@@ -101,6 +101,9 @@ namespace hpl {
 		case ePixelFormat_DXT4:				return 4;
 		case ePixelFormat_DXT5:				return 4;
 		case ePixelFormat_RGTC2:			return 4;
+		case ePixelFormat_RGTC1:			return 1;
+		case ePixelFormat_BC6H:			return 3;
+		case ePixelFormat_BC7:			return 4;
 		case ePixelFormat_Depth16:			return 1;
 		case ePixelFormat_Depth24:			return 1;
 		case ePixelFormat_Depth32:			return 1;
@@ -137,6 +140,9 @@ namespace hpl {
 		case ePixelFormat_DXT4:				return 1;
 		case ePixelFormat_DXT5:				return 1;
 		case ePixelFormat_RGTC2:			return 1;
+		case ePixelFormat_RGTC1:			return 1;
+		case ePixelFormat_BC6H:			return 1;
+		case ePixelFormat_BC7:			return 1;
 		case ePixelFormat_Depth16:			return 2;
 		case ePixelFormat_Depth24:			return 3;
 		case ePixelFormat_Depth32:			return 4;
@@ -165,6 +171,9 @@ namespace hpl {
 		case ePixelFormat_DXT4:				return true;
 		case ePixelFormat_DXT5:				return true;
 		case ePixelFormat_RGTC2:			return true;
+		case ePixelFormat_RGTC1:			return true;
+		case ePixelFormat_BC6H:			return true;
+		case ePixelFormat_BC7:			return true;
 		}
 		return false;
 	}

@@ -174,8 +174,10 @@ namespace hpl {
 	#define eFeature_FogArea_Skybox			eFlagBit_4
 	#define eFeature_FogArea_Secondary		eFlagBit_5
 	#define eFeature_FogArea_FogArea		eFlagBit_6
+	#define eFeature_FogArea_Lighten		eFlagBit_7
+	#define eFeature_FogArea_SeparateSkybox	eFlagBit_8
 	
-	#define kFogAreaFeatureNum 7
+	#define kFogAreaFeatureNum 9
 
 	cProgramComboFeature gvFogAreaFeatureVec[] =
 	{
@@ -186,6 +188,8 @@ namespace hpl {
 		cProgramComboFeature("UseSkybox", kPC_FragmentBit),
 		cProgramComboFeature("UseSecondaryFog", kPC_FragmentBit),
 		cProgramComboFeature("FogArea", kPC_FragmentBit),
+		cProgramComboFeature("Lighten", kPC_FragmentBit),
+		cProgramComboFeature("UseSeparateFogSkybox", kPC_FragmentBit),
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -281,6 +285,12 @@ namespace hpl {
 	#define kVar_avSplitsFar						92
 	#define kVar_avSplitOffsetMul					93
 	#define kVar_avLightPosScale					94
+	#define kVar_avFogSettings						95
+	#define kVar_avSecondFogSettings				96
+	#define kVar_avCameraPos						97
+	#define kVar_alFogType							98
+	#define kVar_a_mtxSkybox						99
+	#define kVar_afSkyboxMipNum						100
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -331,6 +341,7 @@ namespace hpl {
 		mpBoxWeightTexture = NULL;
 		mpBoxWeightBuffer = NULL;
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) mpBoxWeightedProgram[i][j] = NULL;
+		mbBoxInstanceInputs = false;
 
 		mbReflectionTextureCleared = false;
 	}
@@ -622,8 +633,13 @@ namespace hpl {
 
 			mpFogProgramManager->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
 
-			if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
-					mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avFogSettings", kVar_avFogSettings,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avSecondFogSettings", kVar_avSecondFogSettings,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("avCameraPos", kVar_avCameraPos,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("alFogType", kVar_alFogType,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxSkybox", kVar_a_mtxSkybox,0);
+			mpFogProgramManager->AddGenerateProgramVariableId("afSkyboxMipNum", kVar_afSkyboxMipNum,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
 			mpFogProgramManager->AddGenerateProgramVariableId("avRayCastStart", kVar_avRayCastStart,0);
@@ -700,6 +716,18 @@ namespace hpl {
 						pProg->GetVariableAsId("afWeight",kVar_afWeight);
 						pProg->GetVariableAsId("avViewSpaceUp",kVar_avViewSpaceUp);
 						for(int k=0; k<9; ++k) pProg->GetVariableAsId("avBand["+cString::ToString(k)+"]",kVar_avBand0+k);
+						if(pProg->GetVariableAsId("px_vBoxCenter",kVar_avBoxCenter))
+						{
+							mbBoxInstanceInputs = true;
+							pProg->GetVariableAsId("afFarPlane",kVar_afFarPlane);
+							pProg->GetVariableAsId("px_vSkyColor",kVar_avAmbientColorSky);
+							pProg->GetVariableAsId("px_vGroundColor",kVar_avAmbientColorGround);
+							pProg->GetVariableAsId("px_vBoxExtent",kVar_avBoxExtent);
+							pProg->GetVariableAsId("px_fFalloff",kVar_afFalloff);
+							pProg->GetVariableAsId("px_fBevel",kVar_afBevel);
+							pProg->GetVariableAsId("px_fWeight",kVar_afWeight);
+							for(int k=0; k<7; ++k) pProg->GetVariableAsId("px_vBands["+cString::ToString(k)+"]",kVar_avBand0+k);
+						}
 					}
 					cParserVarContainer resolveVars;
 					resolveVars.Add("UseUv");
@@ -942,7 +970,10 @@ namespace hpl {
 				mpDofFocusProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
 			}
 			if(mpDofBlurProgram)
+			{
 				mpDofBlurProgram->GetVariableAsId("avOffsetMul",kVar_avOffsetMul);
+				if(mpDofBlurProgram->GetVariableAsId("afStrength",kVar_afWeight)) mpDofBlurProgram->SetFloat(kVar_afWeight, 1.0f);
+			}
 
 			int lRows = cMath::Max(1, lDofSamples/8);
 			float fScale = lDofSamples==4 ? 256.0f : lDofSamples * 1.41421356f * mvScreenSizeFloat.x / 1280.0f;
@@ -3407,16 +3438,39 @@ namespace hpl {
 			pProg->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 			SetScreenPositionVars(pProg);
 			pProg->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
-			pProg->SetVec3f(kVar_avAmbientColorSky, sky.r*diffuse.r, sky.g*diffuse.g, sky.b*diffuse.b);
-			pProg->SetVec3f(kVar_avAmbientColorGround, ground.r*diffuse.r, ground.g*diffuse.g, ground.b*diffuse.b);
 			pProg->SetVec3f(kVar_avBoxCenter, pBox->GetWorldPosition() + pBox->GetProbeOffset() - vCamPos);
 			pProg->SetVec3f(kVar_avBoxExtent, pBox->GetSize() * 0.5f);
 			pProg->SetFloat(kVar_afFalloff, pBox->GetFalloffPow());
-			pProg->SetFloat(kVar_afBevel, pBox->GetBevel());
-			pProg->SetFloat(kVar_afWeight, pBox->GetWeight());
 			pProg->SetVec3f(kVar_avViewSpaceUp, vViewUp);
 			const cVector3f *pBands = pBox->GetIrradianceBands();
-			for(int k=0; k<9; ++k) pProg->SetVec3f(kVar_avBand0+k, pBands[k]);
+			if(mbBoxInstanceInputs)
+			{
+				cColor skyCol = diffuse * LinearLightColor(sky), groundCol = diffuse * LinearLightColor(ground);
+				pProg->SetFloat(kVar_afFarPlane, mpCurrentFrustum->GetFarPlane());
+				pProg->SetFloat(kVar_afBevel, sqrtf(3.0f - 2.0f*pBox->GetBevel()));
+				pProg->SetFloat(kVar_afWeight, pBox->GetWeight() * GetDistanceFadeAmount(pBox));
+				pProg->SetColor4f(kVar_avAmbientColorSky, skyCol);
+				pProg->SetColor4f(kVar_avAmbientColorGround, groundCol);
+				cColor mul = (skyCol + groundCol) * 0.5f;
+				const float vMul[3] = {mul.r, mul.g, mul.b};
+				const cVector3f *b = pBands;
+				// the official renderer writes the blue quadratic row past the light's data, so it stays zero
+				for(int c=0; c<3; ++c)
+				{
+					pProg->SetVec4f(kVar_avBand0+c, b[3].v[c]*vMul[c], b[1].v[c]*vMul[c], b[2].v[c]*vMul[c], (b[0].v[c]-b[6].v[c])*vMul[c]);
+					if(c<2) pProg->SetVec4f(kVar_avBand0+3+c, b[4].v[c]*vMul[c], b[5].v[c]*vMul[c], 3.0f*b[6].v[c]*vMul[c], b[7].v[c]*vMul[c]);
+				}
+				pProg->SetVec4f(kVar_avBand0+5, 0,0,0,0);
+				pProg->SetVec4f(kVar_avBand0+6, b[8].x*mul.r, b[8].y*mul.g, b[8].z*mul.b, fabsf(mul.a));
+			}
+			else
+			{
+				pProg->SetVec3f(kVar_avAmbientColorSky, sky.r*diffuse.r, sky.g*diffuse.g, sky.b*diffuse.b);
+				pProg->SetVec3f(kVar_avAmbientColorGround, ground.r*diffuse.r, ground.g*diffuse.g, ground.b*diffuse.b);
+				pProg->SetFloat(kVar_afBevel, pBox->GetBevel());
+				pProg->SetFloat(kVar_afWeight, pBox->GetWeight());
+				for(int k=0; k<9; ++k) pProg->SetVec3f(kVar_avBand0+k, pBands[k]);
+			}
 
 			SetModelViewMatrix(vLights[i]->m_mtxViewSpaceRender);
 			DrawCurrent();
@@ -4076,7 +4130,9 @@ namespace hpl {
 		{
 			bSkybox = (apFogArea ? apFogArea->GetSkybox() : pWorld->GetFogUseSkybox()) && pWorld->GetFogSkyboxTexture() && pWorld->GetSkyBoxActive();
 			if(bSkybox) alFlags |= eFeature_FogArea_Skybox;
+			if(bSkybox && pWorld->GetFogSkyboxTexture() != pWorld->GetSkyBoxTexture()) alFlags |= eFeature_FogArea_SeparateSkybox;
 			if(apFogArea) alFlags |= eFeature_FogArea_FogArea;
+			if(apFogArea ? apFogArea->GetLighten() : pWorld->GetFogLighten()) alFlags |= eFeature_FogArea_Lighten;
 		}
 		if(bSecondary) alFlags |= eFeature_FogArea_Secondary;
 
@@ -4086,6 +4142,39 @@ namespace hpl {
 
 		cVector2f vStartAndLength(fStart, fEnd - fStart);
 		cColor fogColor = abUnderwaterPass ? UnderwaterFogColor(color) : GetFogRenderColor(color, fBrightness);
+
+		bool bExp = apFogArea ? apFogArea->GetExponential() : pWorld->GetFogExponential();
+		bool bHeight = apFogArea ? apFogArea->GetHeightBased() : pWorld->GetFogHeightBased();
+		cColor settings(fStart, fEnd, fFalloff, 0), secSettings(0, 0);
+		cVector3f vCamHeight(mpCurrentFrustum->GetOrigin().y);
+		if(bExp || bHeight)
+		{
+			settings.b = (apFogArea ? apFogArea->GetDensity() : pWorld->GetFogDensity()) * 0.03125f;
+			settings.a = apFogArea ? apFogArea->GetHeightDensity() : pWorld->GetFogHeightDensity();
+			vCamHeight.x -= apFogArea ? apFogArea->GetHeightHorizon() : pWorld->GetFogHeightHorizon();
+		}
+		if(apFogArea && bHeight) vCamHeight -= cVector3f(apFogArea->GetBoundingVolume()->GetMin().y);
+		if(bSecondary && abUnderwaterPass==false)
+		{
+			vCamHeight.y -= pWorld->GetSecondaryFogHeightHorizon();
+			secSettings = cColor(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd(), pWorld->GetSecondaryFogFalloffExp(), 0);
+			if(bExp || bHeight)
+			{
+				// x32 vs x1/32 for the primary: as in the official renderer
+				secSettings.b = pWorld->GetSecondaryFogDensity() * 32.0f;
+				secSettings.a = pWorld->GetSecondaryFogHeightDensity();
+			}
+			if(pWorld->GetSecondaryFogEnd() > fEnd)
+			{
+				std::swap(settings, secSettings);
+				std::swap(vCamHeight.x, vCamHeight.y);
+			}
+		}
+		pProgram->SetColor4f(kVar_avFogSettings, settings);
+		pProgram->SetColor4f(kVar_avSecondFogSettings, secSettings);
+		pProgram->SetVec3f(kVar_avCameraPos, vCamHeight);
+		pProgram->SetInt(kVar_alFogType, (bExp ? 1 : 0) | (bHeight ? 2 : 0));
+
 		if(bSecondary)
 		{
 			cVector2f vSecStartAndLength(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart());
@@ -4102,8 +4191,7 @@ namespace hpl {
 			pProgram->SetFloat(kVar_afSecondFalloffExp, fSecFalloff);
 		}
 
-		if(GetGBufferType() == eDeferredGBuffer_32Bit || mbDepthInNormalAlpha)
-			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
 		pProgram->SetVec2f(kVar_avFogStartAndLength, vStartAndLength);
 		pProgram->SetColor4f(kVar_avFogColor, fogColor);
 		pProgram->SetFloat(kVar_afFalloffExp, fFalloff);
@@ -4119,6 +4207,15 @@ namespace hpl {
 		{
 			pProgram->SetColor4f(kVar_avSkyboxColor, GetFogRenderColor(pWorld->GetSkyBoxColor(), pWorld->GetSkyBoxBrightness()));
 			SetTexture(2, pWorld->GetFogSkyboxTexture());
+			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMatrixf::Identity);
+			const cVector3l& vSkySize = pWorld->GetFogSkyboxTexture()->GetSize();
+			pProgram->SetFloat(kVar_afSkyboxMipNum, log2f((float)cMath::Max(vSkySize.x, vSkySize.y)));
+		}
+		if(alFlags & eFeature_FogArea_Lighten)
+		{
+			CopyFrameBufferToTexure(mpRefractionTexture, 0, mvRenderTargetSize, 0, true);
+			SetTexture(3, mpRefractionTexture);
+			SetBlendMode(eMaterialBlendMode_None);
 		}
 		return pProgram;
 	}

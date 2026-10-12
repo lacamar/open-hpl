@@ -34,8 +34,8 @@ namespace hpl {
 		FILE* pFile = cPlatform::OpenFile(asFile, _W("rb"));
 		if (pFile == NULL) return false;
 
-		unsigned char vHeader[128] = {};
-		bool bOk = fread(vHeader, 1, sizeof(vHeader), pFile) == sizeof(vHeader) && memcmp(vHeader, "DDS ", 4) == 0;
+		unsigned char vHeader[148] = {};
+		bool bOk = fread(vHeader, 1, 128, pFile) == 128 && memcmp(vHeader, "DDS ", 4) == 0;
 		const unsigned char* pFourCC = vHeader + 84;
 		unsigned int lCaps2 = 0;
 		memcpy(&lCaps2, vHeader + 112, 4);
@@ -46,6 +46,22 @@ namespace hpl {
 		else if (bDxt && memcmp(pFourCC, "DXT1", 4) == 0) { format = ePixelFormat_DXT1; lBlockSize = 8; }
 		else if (bDxt && memcmp(pFourCC, "DXT3", 4) == 0) format = ePixelFormat_DXT3;
 		else if (bDxt && memcmp(pFourCC, "DXT5", 4) == 0) format = ePixelFormat_DXT5;
+		else if (memcmp(pFourCC, "BC4U", 4) == 0 || memcmp(pFourCC, "ATI1", 4) == 0) { format = ePixelFormat_RGTC1; lBlockSize = 8; lBytesPerPixel = 1; }
+		else if (memcmp(pFourCC, "DX10", 4) == 0 && bOk && fread(vHeader + 128, 1, 20, pFile) == 20)
+		{
+			unsigned int lDxgi = 0;
+			memcpy(&lDxgi, vHeader + 128, 4);
+			switch (lDxgi)
+			{
+			case 71: case 72: if (bDxt) { format = ePixelFormat_DXT1; lBlockSize = 8; } break;
+			case 74: case 75: if (bDxt) format = ePixelFormat_DXT3; break;
+			case 77: case 78: if (bDxt) format = ePixelFormat_DXT5; break;
+			case 80: format = ePixelFormat_RGTC1; lBlockSize = 8; lBytesPerPixel = 1; break;
+			case 83: format = ePixelFormat_RGTC2; lBytesPerPixel = 1; break;
+			case 95: format = ePixelFormat_BC6H; break;
+			case 98: case 99: format = ePixelFormat_BC7; break;
+			}
+		}
 		bool bCube = (lCaps2 & 0x200) != 0;
 		if (bOk == false || format == ePixelFormat_Unknown || (bCube && (lCaps2 & 0xFE00) != 0xFE00))
 		{

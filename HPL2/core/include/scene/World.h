@@ -284,6 +284,24 @@ namespace hpl {
 		float GetSecondaryFogEnd(){ return mfSecondaryFogEnd; }
 		float GetSecondaryFogFalloffExp(){ return mfSecondaryFogFalloffExp; }
 		const cColor& GetSecondaryFogColor(){ return mSecondaryFogColor; }
+		void SetFogLighten(bool abX){ mbFogLighten = abX; }
+		bool GetFogLighten(){ return mbFogLighten; }
+		void SetFogHeightBased(bool abX){ mbFogHeightBased = abX; }
+		bool GetFogHeightBased(){ return mbFogHeightBased; }
+		void SetFogExponential(bool abX){ mbFogExponential = abX; }
+		bool GetFogExponential(){ return mbFogExponential; }
+		void SetFogDensity(float afX){ mfFogDensity = afX; }
+		float GetFogDensity(){ return mfFogDensity; }
+		void SetFogHeightDensity(float afX){ mfFogHeightDensity = afX; }
+		float GetFogHeightDensity(){ return mfFogHeightDensity; }
+		void SetFogHeightHorizon(float afX){ mfFogHeightHorizon = afX; }
+		float GetFogHeightHorizon(){ return mfFogHeightHorizon; }
+		void SetSecondaryFogDensity(float afX){ mfSecondaryFogDensity = afX; }
+		float GetSecondaryFogDensity(){ return mfSecondaryFogDensity; }
+		void SetSecondaryFogHeightDensity(float afX){ mfSecondaryFogHeightDensity = afX; }
+		float GetSecondaryFogHeightDensity(){ return mfSecondaryFogHeightDensity; }
+		void SetSecondaryFogHeightHorizon(float afX){ mfSecondaryFogHeightHorizon = afX; }
+		float GetSecondaryFogHeightHorizon(){ return mfSecondaryFogHeightHorizon; }
 
 		cLightDirectional* GetDirectionalLight();
 		void SetDirectionalLightActive(bool abX){ mbDirectionalLightActive = abX; }
@@ -534,6 +552,15 @@ namespace hpl {
 		float mfSecondaryFogEnd = 0;
 		float mfSecondaryFogFalloffExp = 1;
 		cColor mSecondaryFogColor = cColor(0, 0);
+		bool mbFogLighten = false;
+		bool mbFogHeightBased = false;
+		bool mbFogExponential = false;
+		float mfFogDensity = 0.25f;
+		float mfFogHeightDensity = 0.25f;
+		float mfFogHeightHorizon = 1;
+		float mfSecondaryFogDensity = 0.25f;
+		float mfSecondaryFogHeightDensity = 0.25f;
+		float mfSecondaryFogHeightHorizon = 1;
 
 		bool mbDepthOfFieldActive = false;
 		float mfDepthOfFieldFocusStart = 0;

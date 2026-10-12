@@ -359,6 +359,15 @@ namespace hpl {
 					mpCurrentWorld->SetSecondaryFogStart(pFog->GetAttributeFloat("SecondaryFadeStart", 0));
 					mpCurrentWorld->SetSecondaryFogEnd(pFog->GetAttributeFloat("SecondaryFadeEnd", 0));
 					mpCurrentWorld->SetSecondaryFogFalloffExp(pFog->GetAttributeFloat("SecondaryFalloffExp", 1));
+					mpCurrentWorld->SetFogLighten(pFog->GetAttributeBool("Lighten", false));
+					mpCurrentWorld->SetFogHeightBased(pFog->GetAttributeBool("HeightBased", false));
+					mpCurrentWorld->SetFogExponential(pFog->GetAttributeBool("Exponential", false));
+					mpCurrentWorld->SetFogDensity(pFog->GetAttributeFloat("Density", 0.25f));
+					mpCurrentWorld->SetFogHeightDensity(pFog->GetAttributeFloat("HeightDensity", 0.25f));
+					mpCurrentWorld->SetFogHeightHorizon(pFog->GetAttributeFloat("HeightHorizon", 1));
+					mpCurrentWorld->SetSecondaryFogDensity(pFog->GetAttributeFloat("SecondaryDensity", 0.25f));
+					mpCurrentWorld->SetSecondaryFogHeightDensity(pFog->GetAttributeFloat("SecondaryHeightDensity", 0.25f));
+					mpCurrentWorld->SetSecondaryFogHeightHorizon(pFog->GetAttributeFloat("SecondaryHeightHorizon", 1));
 				}
 
 				cXmlElement* pCull = pGlobal->GetFirstElement("DistanceCulling");

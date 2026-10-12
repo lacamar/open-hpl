@@ -1144,6 +1144,7 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 		cRendererDeferred::mlDebugSkipPasses = bValue ? (cRendererDeferred::mlDebugSkipPasses & ~lBit) : (cRendererDeferred::mlDebugSkipPasses | lBit);
 	}
 	else if(sName == "fog" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetFogActive(bValue);
+	else if(sName == "dof" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetDepthOfFieldActive(bValue);
 	else aResp.SetError("unknown setting '" + sName + "'");
 }
 
