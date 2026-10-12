@@ -557,6 +557,7 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 	if (mpFont == NULL || (gpSomaBase && gpSomaBase->GetConfig()->mbShowSubtitles == false))
 		return;
 	cVector2f vScreen = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	mpGuiSet->SetVirtualSize(vScreen, -1000, 1000, cVector2f(0));
 	// game.cfg <Voice FontSize="26" TextY="700" MaxTextWidth="860"> on a 768 line canvas
 	float fScale = vScreen.y / 768.0f;
 	float fY = 700 * fScale;

@@ -1691,7 +1691,9 @@ namespace hpl {
 				pTexture = it->mpGfx->mvTextures[0];
 				pClipRegion = it->mpClipRegion;
 			} 
-			while(	pTexture == pLastTexture &&
+			//cLowLevelGraphicsSDL batch arrays hold 20000 vertices
+			while(	lIdxAdd + 4 <= 20000 &&
+					pTexture == pLastTexture &&
 					pMaterial == pLastMaterial &&
 					pClipRegion == pLastClipRegion);
 

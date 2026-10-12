@@ -6315,3 +6315,21 @@ shows hands is unknown; we skip a missing Illumination unit instead.
 
 Data-side material misses (the official `.msh` names the same absent files): `Project.mat`
 (salim_ring), `panicum_and_grass.mat`, `hanks_dossier.mat`.
+
+## SOMA: hurt overlay, inspect text crash, subtitles, z-fight probe (2026-10-13)
+
+- Hurt overlay (translucent with refraction): `deferred_transparent_frag.hpsl`
+  tests `UseNormalMapping || UseNormalMap` but reads the normal under `UseNormalMap` and refracts
+  under `RefractNormals`; our material sets `UseNormalMapping` / `UseScreenNormal`. Aliased in
+  `gvHpslSourceReplacements`; the overlay was a flat red quad without it.
+- Inspect text crash: `cGuiSet::Render` batched same-texture quads without a bound;
+  `cLowLevelGraphicsSDL` batch arrays hold 20000 vertices. A long note in one font texture ran
+  past them. The batch now flushes at the cap. Overflow itself not reproduced headlessly.
+- Subtitles: the voice GUI set kept the default 800x600 virtual size while positions are
+  computed in screen pixels, so text sat left of centre at 16:9. Virtual size = screen size.
+- Z-fighting (`open-hpl-a4i`): not reproduced on `01_02_upsilon_inside` with
+  `scripts/ohpl-zfight.py`. The speckled gel/oil decals are official: `soliddiffuse` decals are
+  alpha-tested at 0.5 in `deferred_gbuffer_solid_frag.hpsl` and their DDS alpha is 1-bit.
+  Whole-region lit differences are scripted flicker lights (hence frames A, B, A). Near plane
+  0.03 matches `game.cfg`; depth is D24.
+- `lights` control command reports `pos`.

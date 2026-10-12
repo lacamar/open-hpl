@@ -362,6 +362,8 @@ namespace hpl {
 			if(lCount>0) sOut += ",";
 			sOut += "{\"name\":\"" + JsonEscape(pLight->GetName()) + "\",\"type\":\"" + vTypeNames[pLight->GetLightType()] + "\"";
 			sOut += ",\"dist\":" + Num(mIt->first) + ",\"radius\":" + Num(pLight->GetRadius());
+			const cVector3f vPos = pLight->GetWorldPosition();
+			sOut += ",\"pos\":[" + Num(vPos.x) + "," + Num(vPos.y) + "," + Num(vPos.z) + "]";
 			sOut += ",\"color\":[" + Num(col.r) + "," + Num(col.g) + "," + Num(col.b) + "," + Num(col.a) + "]";
 			sOut += ",\"visible\":" + tString(pLight->IsVisible() ? "true" : "false");
 			if(apRenderList) sOut += ",\"in_list\":" + tString(setInList.count(pLight) ? "true" : "false");

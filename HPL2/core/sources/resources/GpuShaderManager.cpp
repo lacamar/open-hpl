@@ -228,6 +228,9 @@ namespace hpl {
 		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);",
 		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t@ifdef UseSRGBDiffuseMap\n\t\t@else\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);\n\t\t@endif" },
 		{ "deferred_transparent_frag.hpsl",
+		  "@ifdef UseNormalMapping || UseNormalMap\n",
+		  "@ifdef UseNormalMapping\n@define UseNormalMap 1\n@endif\n@ifdef UseScreenNormal\n@define RefractNormals 1\n@endif\n@ifdef UseNormalMap\n" },
+		{ "deferred_transparent_frag.hpsl",
 		  "\t@endif\n\n\tcVector4f vFinalColor;",
 		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },
 	};

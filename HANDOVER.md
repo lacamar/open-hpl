@@ -38,6 +38,11 @@ Script exceptions are logged with file:line. Memory bugs: build with ASan
 (`-fsanitize=address`) into the scratchpad; writes through wrongly typed pointers (recovered
 offsets on our smaller objects) are invisible to ASan, use a gdb hardware watchpoint.
 
+One-shot sessions (a game started by one shell call dies with it): `scripts/ohpl-session.sh`
+(script player), `scripts/ohpl-freecam.sh` (freecam + `hpl_control.py` commands),
+`scripts/ohpl-zfight.py --map M [--pos x,y,z]` (0.4 mm camera nudge, flags pixels that flip in
+albedo / accumulation / final frame; thin hits along silhouettes and alpha-test edges are noise).
+
 ## Next
 
 See `TASKS.md`: light intensity vs the ref, audio levels (item 11), Newton broadphase,
