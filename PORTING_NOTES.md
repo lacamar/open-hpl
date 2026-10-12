@@ -6225,10 +6225,27 @@ our live entries and events.
   `sample(aTerrainHoleMap, worldPos.xz * scale + offset)[alHoleChannel] > 0.5` discards.
 - Ours: `CreateTerrain` drops cells whose mean mask value is > 0.5 (per cell, not per pixel).
   The blend-layer DDS is raw 32-bit RGBA (2048 for a 1024 heightmap).
-- Not done: physics heightfield has no holes (raycast at the 01_01 start hits `Terrain` at
-  y 16.04, above the player's feet at 15.8); the hole channel's blend decal still draws
-  `terrain_hole_base.dds` at hole borders.
+- Physics: Newton 2.x heightfields have no holes (the attribute map is only a per-cell id), so
+  vertices whose four cells are all holes sink to elevation 0. Raycast down at the 01_01 start
+  now hits the cabin floor (`CombinedObjects122`) and `Terrain` 12.8 m below; before, `Terrain`
+  sat at y 16.04, above the player's feet at 15.8. Holes under 2 cells wide stay solid.
+- Not done: the hole channel's blend decal still draws `terrain_hole_base.dds` at hole borders.
 - Window stipple at 34 s is the dune (`plane_wreckage_sanddune.dds`): its alpha is binary with a
   noisy fringe along the top edge (17 % transparent). Inferred authored, not an engine dither bug.
   Engine never sets `afAlphaCutoffThreshold`/`afDissolveLayer` or binds the 3D `aDissolveMap`
   (unit 14); harmless while the G-buffer pass runs without `UseAlpha`/`UseDissolve`.
+
+## FSB5 Vorbis setups for Rebirth/Bunker (2026-10-12)
+
+- Observed: Rebirth 01_01 logged 250x `Cannot find sound entity 'physics/.../..._roll'` and 83
+  `has no playable samples`; `physics.fdp` and the samples' names in `physics.fsb` were fine.
+- Cause: FSB5 Vorbis samples carry only the crc32 of their setup packet. `SomaVorbisSetups.h` had
+  the 6 presets SOMA's main banks use; Rebirth and Bunker banks use 22 (e.g. `2ba1a444` mono
+  48 kHz: 3766 Rebirth, 3149 Bunker samples). SOMA itself had 7 samples on missing presets.
+- High-rate presets reproduce with system libvorbisenc (`vorbis_encode_init_vbr`, quality
+  0.40-0.90); the 8-24 kHz ones do not (FMOD's have 18 codebooks), so all come from python-fsb5's
+  table. Block sizes are 256/2048 for every preset.
+- `scripts/soma-gen-vorbis-setups.py <vorbis_headers.py>` scans the installed games' banks and
+  regenerates the header. Checked: 150 random extracted oggs across all rates decode clean in
+  ffmpeg; Rebirth 01_01 log errors 467 -> 135, Sound 31/31.
+

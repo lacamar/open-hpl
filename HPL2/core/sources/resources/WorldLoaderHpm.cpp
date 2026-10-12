@@ -986,6 +986,11 @@ namespace hpl {
 			pEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
 			vPatches.push_back(pEntity->GetSubMeshEntity(0));
 		}
+		// ponytail: Newton heightfields have no holes, so sink vertices inside one; holes under 2 cells wide stay solid
+		if (!vHole.empty())
+			for (int z = 1; z < lSize; ++z)
+			for (int x = 1; x < lSize; ++x)
+				if (Hole(x - 1, z - 1) && Hole(x, z - 1) && Hole(x - 1, z) && Hole(x, z)) vElev[(size_t)z * (lSize + 1) + x] = 0;
 		iPhysicsBody* pBody = mpCurrentPhysicsWorld->CreateBody("Terrain", mpCurrentPhysicsWorld->CreateHeightFieldShape(lSize + 1, vElev.data(), fUnit, fMaxHeight / 65535.0f));
 		pBody->SetMass(0);
 		pBody->SetMatrix(cMath::MatrixTranslate(cVector3f(-fOffset, 0, -fOffset)));
