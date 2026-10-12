@@ -1,0 +1,3599 @@
+{
+ "maps": {
+  "01_00_intro.hpm": {
+   "path": "maps/chapter_01/01_00_intro/01_00_intro.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 15
+     },
+     "xml": 15
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 10
+     },
+     "xml": 10
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 5
+     },
+     "xml": 5
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 2
+     },
+     "xml": 2
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 86
+     },
+     "xml": 86
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "PointLight": 36,
+      "SpotLight": 12
+     },
+     "xml": 48
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 2
+     },
+     "xml": 2
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 15
+     },
+     "xml": 15
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 64
+     },
+     "xml": 64
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "01_01_plane_wreckage.hpm": {
+   "path": "maps/chapter_01/01_01_plane_wreckage/01_01_plane_wreckage.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 66
+     },
+     "xml": 66
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 29
+     },
+     "xml": 29
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 47
+     },
+     "xml": 47
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 1151
+     },
+     "xml": 1151
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 924
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 334
+     },
+     "xml": 334
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 3
+     },
+     "xml": 3
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 21,
+      "PointLight": 22,
+      "SpotLight": 9
+     },
+     "xml": 52
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 40
+     },
+     "xml": 40
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 6
+     },
+     "xml": 6
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 31
+     },
+     "xml": 31
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 451
+     },
+     "xml": 451
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "01_02_caves.hpm": {
+   "path": "maps/chapter_01/01_02_caves/01_02_caves.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 216
+     },
+     "xml": 216
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 39
+     },
+     "xml": 39
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 66
+     },
+     "xml": 66
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 1018
+     },
+     "xml": 1018
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 910
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 816
+     },
+     "xml": 816
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 17
+     },
+     "xml": 17
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 5
+     },
+     "xml": 5
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 65,
+      "PointLight": 118,
+      "SpotLight": 25
+     },
+     "xml": 208
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 52
+     },
+     "xml": 52
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 8
+     },
+     "xml": 8
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 64
+     },
+     "xml": 64
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1461
+     },
+     "xml": 1461
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "01_02_caves_b.hpm": {
+   "path": "maps/chapter_01/01_02_caves_b/01_02_caves_b.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 138
+     },
+     "xml": 138
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 36
+     },
+     "xml": 36
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 20
+     },
+     "xml": 20
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 533
+     },
+     "xml": 533
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 526
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 433
+     },
+     "xml": 433
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 13
+     },
+     "xml": 13
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 55,
+      "PointLight": 80,
+      "SpotLight": 20
+     },
+     "xml": 155
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 1
+     },
+     "xml": 1
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 52
+     },
+     "xml": 52
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 11
+     },
+     "xml": 11
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 42
+     },
+     "xml": 42
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1201
+     },
+     "xml": 1201
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "01_04_dark_world_ledge.hpm": {
+   "path": "maps/chapter_01/01_04_dark_world_ledge/01_04_dark_world_ledge.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 278
+     },
+     "xml": 278
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 326
+     },
+     "xml": 326
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 155
+     },
+     "xml": 155
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 118
+     },
+     "xml": 118
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 750
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1197
+     },
+     "xml": 1197
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 10
+     },
+     "xml": 10
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 57,
+      "PointLight": 240,
+      "SpotLight": 45
+     },
+     "xml": 342
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 4
+     },
+     "xml": 4
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 175
+     },
+     "xml": 175
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 1
+     },
+     "xml": 1
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 8
+     },
+     "xml": 8
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 4210
+     },
+     "xml": 4210
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "01_04_dark_world_ledge_dream.hpm": {
+   "path": "maps/chapter_01/01_04_dark_world_ledge_dream/01_04_dark_world_ledge_dream.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 55
+     },
+     "xml": 55
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 14
+     },
+     "xml": 14
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 11
+     },
+     "xml": 11
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 253
+     },
+     "xml": 253
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 1
+     },
+     "xml": 1
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 1,
+      "PointLight": 28,
+      "SpotLight": 6
+     },
+     "xml": 35
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 21
+     },
+     "xml": 21
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 19
+     },
+     "xml": 19
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 112
+     },
+     "xml": 112
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_01_path_to_outpost.hpm": {
+   "path": "maps/chapter_02/02_01_path_to_outpost/02_01_path_to_outpost.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 77
+     },
+     "xml": 77
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 60
+     },
+     "xml": 60
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 18
+     },
+     "xml": 18
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 374
+     },
+     "xml": 374
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 119
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 414
+     },
+     "xml": 414
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 5
+     },
+     "xml": 5
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 119,
+      "PointLight": 32,
+      "SpotLight": 18
+     },
+     "xml": 169
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 3
+     },
+     "xml": 3
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 26
+     },
+     "xml": 26
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 48
+     },
+     "xml": 48
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 11
+     },
+     "xml": 11
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1074
+     },
+     "xml": 1074
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_02_courtyard.hpm": {
+   "path": "maps/chapter_02/02_02_courtyard/02_02_courtyard.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 90
+     },
+     "xml": 90
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 1
+     },
+     "xml": 1
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 10
+     },
+     "xml": 10
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 570
+     },
+     "xml": 570
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 174
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 468
+     },
+     "xml": 468
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 11
+     },
+     "xml": 11
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 280,
+      "PointLight": 73,
+      "SpotLight": 16
+     },
+     "xml": 369
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 6
+     },
+     "xml": 6
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 56
+     },
+     "xml": 56
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 417
+     },
+     "xml": 417
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 23
+     },
+     "xml": 23
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3580
+     },
+     "xml": 3580
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_03_arsenal.hpm": {
+   "path": "maps/chapter_02/02_03_arsenal/02_03_arsenal.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 176
+     },
+     "xml": 176
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 67
+     },
+     "xml": 67
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 100
+     },
+     "xml": 100
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 666
+     },
+     "xml": 666
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 438
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 553
+     },
+     "xml": 553
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 1
+     },
+     "xml": 1
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 62,
+      "PointLight": 74,
+      "SpotLight": 30
+     },
+     "xml": 166
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 7
+     },
+     "xml": 7
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 36
+     },
+     "xml": 36
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 47
+     },
+     "xml": 47
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 9
+     },
+     "xml": 9
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 2490
+     },
+     "xml": 2490
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_04_living_quarters.hpm": {
+   "path": "maps/chapter_02/02_04_living_quarters/02_04_living_quarters.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 659
+     },
+     "xml": 659
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 285
+     },
+     "xml": 285
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 114
+     },
+     "xml": 114
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 983
+     },
+     "xml": 983
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 2413
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1835
+     },
+     "xml": 1835
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 1
+     },
+     "xml": 1
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 3
+     },
+     "xml": 3
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 308,
+      "PointLight": 318,
+      "SpotLight": 67
+     },
+     "xml": 693
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 14
+     },
+     "xml": 14
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 73
+     },
+     "xml": 73
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 434
+     },
+     "xml": 434
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 22
+     },
+     "xml": 22
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 4633
+     },
+     "xml": 4633
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_05_cistern.hpm": {
+   "path": "maps/chapter_02/02_05_cistern/02_05_cistern.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 748
+     },
+     "xml": 748
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 30
+     },
+     "xml": 30
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 106
+     },
+     "xml": 106
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 1397
+     },
+     "xml": 1397
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1376
+     },
+     "xml": 1376
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 21
+     },
+     "xml": 21
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 340,
+      "PointLight": 165,
+      "SpotLight": 77
+     },
+     "xml": 582
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 18
+     },
+     "xml": 18
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 30
+     },
+     "xml": 30
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 860
+     },
+     "xml": 860
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 43
+     },
+     "xml": 43
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3836
+     },
+     "xml": 3836
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_06_oasis.hpm": {
+   "path": "maps/chapter_02/02_06_oasis/02_06_oasis.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 162
+     },
+     "xml": 162
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 39
+     },
+     "xml": 39
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 104
+     },
+     "xml": 104
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 468
+     },
+     "xml": 468
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 933
+     },
+     "xml": 933
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 7
+     },
+     "xml": 7
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 443,
+      "PointLight": 58,
+      "SpotLight": 10
+     },
+     "xml": 511
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 190
+     },
+     "xml": 190
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 35
+     },
+     "xml": 35
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 110
+     },
+     "xml": 110
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1556
+     },
+     "xml": 1556
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_07_alchemists_lab.hpm": {
+   "path": "maps/chapter_02/02_07_alchemists_lab/02_07_alchemists_lab.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 171
+     },
+     "xml": 171
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 97
+     },
+     "xml": 97
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 341
+     },
+     "xml": 341
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 403
+     },
+     "xml": 403
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 250
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1652
+     },
+     "xml": 1652
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 2
+     },
+     "xml": 2
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 25,
+      "PointLight": 283,
+      "SpotLight": 54
+     },
+     "xml": 362
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 17
+     },
+     "xml": 17
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 61
+     },
+     "xml": 61
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 16
+     },
+     "xml": 16
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 2
+     },
+     "xml": 2
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3445
+     },
+     "xml": 3445
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "02_07_alchemists_lab_dream.hpm": {
+   "path": "maps/chapter_02/02_07_alchemists_lab_dream/02_07_alchemists_lab_dream.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 27
+     },
+     "xml": 27
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 3
+     },
+     "xml": 3
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 4
+     },
+     "xml": 4
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 68
+     },
+     "xml": 68
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 479
+     },
+     "xml": 479
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 5,
+      "PointLight": 34,
+      "SpotLight": 2
+     },
+     "xml": 41
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 28
+     },
+     "xml": 28
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 1
+     },
+     "xml": 1
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 91
+     },
+     "xml": 91
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_03_herberts_hq_a.hpm": {
+   "path": "maps/chapter_03/03_03_herberts_hq_a/03_03_herberts_hq_a.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 289
+     },
+     "xml": 289
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 55
+     },
+     "xml": 55
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 103
+     },
+     "xml": 103
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 979
+     },
+     "xml": 979
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 1900
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1780
+     },
+     "xml": 1780
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 8
+     },
+     "xml": 8
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 89,
+      "PointLight": 283,
+      "SpotLight": 38
+     },
+     "xml": 410
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 6
+     },
+     "xml": 6
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 84
+     },
+     "xml": 84
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 150
+     },
+     "xml": 150
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 3
+     },
+     "xml": 3
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1943
+     },
+     "xml": 1943
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_03_herberts_hq_b.hpm": {
+   "path": "maps/chapter_03/03_03_herberts_hq_b/03_03_herberts_hq_b.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 256
+     },
+     "xml": 256
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 21
+     },
+     "xml": 21
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 32
+     },
+     "xml": 32
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 1205
+     },
+     "xml": 1205
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 864
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1740
+     },
+     "xml": 1740
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 12
+     },
+     "xml": 12
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 179,
+      "PointLight": 214,
+      "SpotLight": 42
+     },
+     "xml": 435
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 18
+     },
+     "xml": 18
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 30
+     },
+     "xml": 30
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 416
+     },
+     "xml": 416
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 13
+     },
+     "xml": 13
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 2643
+     },
+     "xml": 2643
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_04_pillar_room.hpm": {
+   "path": "maps/chapter_03/03_04_pillar_room/03_04_pillar_room.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 222
+     },
+     "xml": 222
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 63
+     },
+     "xml": 63
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 170
+     },
+     "xml": 170
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 549
+     },
+     "xml": 549
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 1076
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 580
+     },
+     "xml": 580
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 15
+     },
+     "xml": 15
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 22,
+      "PointLight": 61,
+      "SpotLight": 25
+     },
+     "xml": 108
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 40
+     },
+     "xml": 40
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 6
+     },
+     "xml": 6
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 8
+     },
+     "xml": 8
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3803
+     },
+     "xml": 3803
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_05_vitae_station.hpm": {
+   "path": "maps/chapter_03/03_05_vitae_station/03_05_vitae_station.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 1534
+     },
+     "xml": 1534
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 67
+     },
+     "xml": 67
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 666
+     },
+     "xml": 666
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 789
+     },
+     "xml": 789
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 209
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 4976
+     },
+     "xml": 4976
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 38
+     },
+     "xml": 38
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 45,
+      "PointLight": 177,
+      "SpotLight": 173
+     },
+     "xml": 395
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 7
+     },
+     "xml": 7
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 166
+     },
+     "xml": 166
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 75
+     },
+     "xml": 75
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 21
+     },
+     "xml": 21
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 8014
+     },
+     "xml": 8014
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_06_ghouls_nest.hpm": {
+   "path": "maps/chapter_03/03_06_ghouls_nest/03_06_ghouls_nest.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 1401
+     },
+     "xml": 1401
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 17
+     },
+     "xml": 17
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 131
+     },
+     "xml": 131
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 984
+     },
+     "xml": 984
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 1554
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1163
+     },
+     "xml": 1163
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 23
+     },
+     "xml": 23
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 238,
+      "PointLight": 266,
+      "SpotLight": 42
+     },
+     "xml": 546
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 22
+     },
+     "xml": 22
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 89
+     },
+     "xml": 89
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 641
+     },
+     "xml": 641
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 23
+     },
+     "xml": 23
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 4040
+     },
+     "xml": 4040
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_07_dw_factory_dream.hpm": {
+   "path": "maps/chapter_03/03_07_dw_factory_dream/03_07_dw_factory_dream.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 49
+     },
+     "xml": 49
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 13
+     },
+     "xml": 13
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 20
+     },
+     "xml": 20
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 27
+     },
+     "xml": 27
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 346
+     },
+     "xml": 346
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 4
+     },
+     "xml": 4
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 6,
+      "PointLight": 17,
+      "SpotLight": 5
+     },
+     "xml": 28
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 1
+     },
+     "xml": 1
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 61
+     },
+     "xml": 61
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 10
+     },
+     "xml": 10
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 106
+     },
+     "xml": 106
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_07_dwf_a_theatre.hpm": {
+   "path": "maps/chapter_03/03_07_dwf_a_theatre/03_07_dwf_a_theatre.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 190
+     },
+     "xml": 190
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 407
+     },
+     "xml": 407
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 184
+     },
+     "xml": 184
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 206
+     },
+     "xml": 206
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1199
+     },
+     "xml": 1199
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 2
+     },
+     "xml": 2
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 111,
+      "PointLight": 281,
+      "SpotLight": 70
+     },
+     "xml": 462
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 2
+     },
+     "xml": 2
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 77
+     },
+     "xml": 77
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 61
+     },
+     "xml": 61
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 16
+     },
+     "xml": 16
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 5021
+     },
+     "xml": 5021
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_07_dwf_b_rnd.hpm": {
+   "path": "maps/chapter_03/03_07_dwf_b_rnd/03_07_dwf_b_rnd.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 509
+     },
+     "xml": 509
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 325
+     },
+     "xml": 325
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 154
+     },
+     "xml": 154
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 305
+     },
+     "xml": 305
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 670
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1505
+     },
+     "xml": 1505
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 4
+     },
+     "xml": 4
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 2
+     },
+     "xml": 2
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 191,
+      "PointLight": 253,
+      "SpotLight": 41
+     },
+     "xml": 485
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 9
+     },
+     "xml": 9
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 33
+     },
+     "xml": 33
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 186
+     },
+     "xml": 186
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 14
+     },
+     "xml": 14
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 4350
+     },
+     "xml": 4350
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_07_dwf_c_factory.hpm": {
+   "path": "maps/chapter_03/03_07_dwf_c_factory/03_07_dwf_c_factory.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 351
+     },
+     "xml": 351
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 272
+     },
+     "xml": 272
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 178
+     },
+     "xml": 178
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 192
+     },
+     "xml": 192
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 588
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1317
+     },
+     "xml": 1317
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 3
+     },
+     "xml": 3
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 8
+     },
+     "xml": 8
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 47,
+      "PointLight": 137,
+      "SpotLight": 24
+     },
+     "xml": 208
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 3
+     },
+     "xml": 3
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 49
+     },
+     "xml": 49
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 47
+     },
+     "xml": 47
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 12
+     },
+     "xml": 12
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3543
+     },
+     "xml": 3543
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "03_07_dwf_d_factory.hpm": {
+   "path": "maps/chapter_03/03_07_dwf_d_factory/03_07_dwf_d_factory.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 550
+     },
+     "xml": 550
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 261
+     },
+     "xml": 261
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 96
+     },
+     "xml": 96
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 245
+     },
+     "xml": 245
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 731
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1027
+     },
+     "xml": 1027
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 3
+     },
+     "xml": 3
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 2
+     },
+     "xml": 2
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 49,
+      "PointLight": 193,
+      "SpotLight": 14
+     },
+     "xml": 256
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 7
+     },
+     "xml": 7
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 64
+     },
+     "xml": 64
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 59
+     },
+     "xml": 59
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 7
+     },
+     "xml": 7
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 3336
+     },
+     "xml": 3336
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_01_town.hpm": {
+   "path": "maps/chapter_04/04_01_town/04_01_town.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 224
+     },
+     "xml": 224
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 20
+     },
+     "xml": 20
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 34
+     },
+     "xml": 34
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 705
+     },
+     "xml": 705
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 507
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 477
+     },
+     "xml": 477
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {
+      "ExposureArea": 1
+     },
+     "xml": 1
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 6
+     },
+     "xml": 6
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 112,
+      "PointLight": 29,
+      "SpotLight": 26
+     },
+     "xml": 167
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 67
+     },
+     "xml": 67
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 91
+     },
+     "xml": 91
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 42
+     },
+     "xml": 42
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 2032
+     },
+     "xml": 2032
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_02_sandstorm.hpm": {
+   "path": "maps/chapter_04/04_02_sandstorm/04_02_sandstorm.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 457
+     },
+     "xml": 457
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 72
+     },
+     "xml": 72
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 66
+     },
+     "xml": 66
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 271
+     },
+     "xml": 271
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 609
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 597
+     },
+     "xml": 597
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 9
+     },
+     "xml": 9
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 27,
+      "PointLight": 49,
+      "SpotLight": 13
+     },
+     "xml": 89
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 1
+     },
+     "xml": 1
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 71
+     },
+     "xml": 71
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 12
+     },
+     "xml": 12
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 9
+     },
+     "xml": 9
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1283
+     },
+     "xml": 1283
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_03_undercity.hpm": {
+   "path": "maps/chapter_04/04_03_undercity/04_03_undercity.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 273
+     },
+     "xml": 273
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 207
+     },
+     "xml": 207
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 253
+     },
+     "xml": 253
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 179
+     },
+     "xml": 179
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 18
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 1429
+     },
+     "xml": 1429
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 13
+     },
+     "xml": 13
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 80,
+      "PointLight": 252,
+      "SpotLight": 100
+     },
+     "xml": 432
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 12
+     },
+     "xml": 12
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 21
+     },
+     "xml": 21
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 259
+     },
+     "xml": 259
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 15
+     },
+     "xml": 15
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 6307
+     },
+     "xml": 6307
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_03_undercity_b.hpm": {
+   "path": "maps/chapter_04/04_03_undercity_b/04_03_undercity_b.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 350
+     },
+     "xml": 350
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 271
+     },
+     "xml": 271
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 40
+     },
+     "xml": 40
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 1069
+     },
+     "xml": 1069
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 49
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 2113
+     },
+     "xml": 2113
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 13
+     },
+     "xml": 13
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 89,
+      "PointLight": 251,
+      "SpotLight": 94
+     },
+     "xml": 434
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {
+      "LightMaskBox": 4
+     },
+     "xml": 4
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 46
+     },
+     "xml": 46
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 158
+     },
+     "xml": 158
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 27
+     },
+     "xml": 27
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 5761
+     },
+     "xml": 5761
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_04_paris.hpm": {
+   "path": "maps/chapter_04/04_04_paris/04_04_paris.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 10
+     },
+     "xml": 10
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 30
+     },
+     "xml": 30
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 11
+     },
+     "xml": 11
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 36
+     },
+     "xml": 36
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 72
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 290
+     },
+     "xml": 290
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 2
+     },
+     "xml": 2
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "BoxLight": 27,
+      "PointLight": 17,
+      "SpotLight": 9
+     },
+     "xml": 53
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 13
+     },
+     "xml": 13
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 35
+     },
+     "xml": 35
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 7
+     },
+     "xml": 7
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 248
+     },
+     "xml": 248
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "04_05_darkworld.hpm": {
+   "path": "maps/chapter_04/04_05_darkworld/04_05_darkworld.hpm",
+   "terrain_active": true,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 8
+     },
+     "xml": 8
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {
+      "Billboard": 15
+     },
+     "xml": 15
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {
+      "Compound": 57
+     },
+     "xml": 57
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {
+      "Decal": 13
+     },
+     "xml": 13
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {
+      "Entity": 506
+     },
+     "xml": 506
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {
+      "FogArea": 2
+     },
+     "xml": 2
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {
+      "LensFlare": 1
+     },
+     "xml": 1
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {
+      "PointLight": 20,
+      "SpotLight": 9
+     },
+     "xml": 29
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {
+      "ParticleSystem": 26
+     },
+     "xml": 26
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {
+      "Plane": 11
+     },
+     "xml": 11
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {
+      "Sound": 12
+     },
+     "xml": 12
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {
+      "StaticObject": 1903
+     },
+     "xml": 1903
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  },
+  "main_menu.hpm": {
+   "path": "maps/main_menu/main_menu.hpm",
+   "terrain_active": false,
+   "tracks": {
+    "Area": {
+     "file_missing": false,
+     "tags": {
+      "Area": 1
+     },
+     "xml": 1
+    },
+    "Billboard": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Compound": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Decal": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "DetailMeshes": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Entity": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ExposureArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "FogArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "LensFlare": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Light": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "LightMask": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "ParticleSystem": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Primitive": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "Sound": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticComboArea": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObject": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    },
+    "StaticObjectBatches": {
+     "file_missing": false,
+     "tags": {},
+     "xml": 0
+    }
+   }
+  }
+ }
+}

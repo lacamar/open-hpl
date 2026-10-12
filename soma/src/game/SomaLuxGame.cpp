@@ -72,7 +72,7 @@ static void LoadConfigs()
 	tWString sGame = cPlatform::GetWorkingDir();
 	tWString sUserDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome) + _W("open-hpl/");
 	cPlatform::CreateFolder(sUserDir);
-	sUserDir += _W("soma/");
+	sUserDir += SomaGameIdW();
 	cPlatform::CreateFolder(sUserDir);
 	gpUserConfig = OpenConfig(sUserDir + _W("user_settings.cfg"), sGame + _W("/config/default_user_settings.cfg"));
 	gpKeyConfig = OpenConfig(sUserDir + _W("user_keys.cfg"), sGame + _W("/config/default_user_keys.cfg"));
@@ -507,9 +507,9 @@ template <int N> static cSomaLuxScriptable *HandlerByName()
 void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 {
 	int r;
-	r = e->RegisterGlobalFunction("iScrUserModule_Interface@ cLux_GetUserModuleFromID(int alID)", asFUNCTION(GetUserModuleFromID), asCALL_GENERIC); assert(r >= 0);
-	r = e->RegisterGlobalFunction("iScrUserModule_Interface@ cLux_GetUserModuleFromName(const tString&in asName)", asFUNCTION(GetUserModuleFromName), asCALL_GENERIC); assert(r >= 0);
-	r = e->RegisterObjectMethod("cLuxEffectHandler", "iScrEffect_Interface@ GetEffect(int alId)", asFUNCTION(EffectHandlerGetEffect), asCALL_GENERIC); assert(r >= 0);
+	r = e->RegisterGlobalFunction(cSomaScriptApi::NativeDecl(NULL, "iScrUserModule_Interface@ cLux_GetUserModuleFromID(int alID)").c_str(), asFUNCTION(GetUserModuleFromID), asCALL_GENERIC); assert(r >= 0);
+	r = e->RegisterGlobalFunction(cSomaScriptApi::NativeDecl(NULL, "iScrUserModule_Interface@ cLux_GetUserModuleFromName(const tString&in asName)").c_str(), asFUNCTION(GetUserModuleFromName), asCALL_GENERIC); assert(r >= 0);
+	r = e->RegisterObjectMethod("cLuxEffectHandler", cSomaScriptApi::NativeDecl("cLuxEffectHandler", "iScrEffect_Interface@ GetEffect(int alId)").c_str(), asFUNCTION(EffectHandlerGetEffect), asCALL_GENERIC); assert(r >= 0);
 	(void)r;
 	SOMA_FUNC(e, "void cLux_GetTextCatAndEntryFromString(const tString&in asData, tString &out asOutCat, tString &out asOutEntry)",
 			  +[](const tString &d, tString &c, tString &n) {

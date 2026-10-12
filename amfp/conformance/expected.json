@@ -1,0 +1,84 @@
+{
+ "maps": {
+  "01_mansion_01.map": {
+   "path": "maps/01_mansion_01.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "02_mansion_02.map": {
+   "path": "maps/02_mansion_02.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "03_cellar.map": {
+   "path": "maps/03_cellar.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "04_alley.map": {
+   "path": "maps/04_alley.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "05_church.map": {
+   "path": "maps/05_church.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "06_factory.map": {
+   "path": "maps/06_factory.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "07_tunnels.map": {
+   "path": "maps/07_tunnels.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "08_sewers.map": {
+   "path": "maps/08_sewers.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "09_bilge.map": {
+   "path": "maps/09_bilge.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "10_reactor.map": {
+   "path": "maps/10_reactor.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "11_engine_room.map": {
+   "path": "maps/11_engine_room.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "12_streets.map": {
+   "path": "maps/12_streets.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "13_pigline.map": {
+   "path": "maps/13_pigline.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "14_tesla_01.map": {
+   "path": "maps/14_tesla_01.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "15_tesla_02.map": {
+   "path": "maps/15_tesla_02.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "16_temple.map": {
+   "path": "maps/16_temple.map",
+   "terrain_active": false,
+   "tracks": {}
+  }
+ }
+}

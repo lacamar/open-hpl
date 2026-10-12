@@ -12,8 +12,7 @@ die() { echo "error: $*" >&2; exit 1; }
 [ -d "$REAL_ROOT" ] || die "'$REAL_ROOT' is not a directory"
 REAL_ROOT="$(cd "$REAL_ROOT" && pwd)"
 case "$REAL_ROOT" in */steamapps/common/*) ;; *) die "'$REAL_ROOT' is not under steamapps/common - argument order swapped?" ;; esac
-find "$REAL_ROOT" -maxdepth 1 \( -name "*.bin.x86_64" -o -name "*.bin.aarch64" \) | grep -q . ||
-	die "'$REAL_ROOT' has no top-level *.bin.x86_64/*.bin.aarch64"
+[ -f "$REAL_ROOT/config/main_init.cfg" ] || die "'$REAL_ROOT' has no config/main_init.cfg"
 
 # checked before mkdir too, so an unsafe argument never creates a directory
 case "$SCRATCH_DIR" in */steamapps/common/*) die "refusing scratch dir '$SCRATCH_DIR' under steamapps/common" ;; esac

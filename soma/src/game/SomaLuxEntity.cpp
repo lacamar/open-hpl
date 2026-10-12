@@ -3037,9 +3037,9 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 							  "cExposureArea@ cLux_ID_ExposureArea(tID aID)", "cForceField@ cLux_ID_ForceField(tID aID)",
 							  "cSoundEntity@ cLux_ID_SoundEntity(tID aID)", "iPhysicsBody@ cLux_ID_Body(tID aID)", "iPhysicsJoint@ cLux_ID_Joint(tID aID)",
 							  "iCharacterBody@ cLux_ID_CharacterBody(tID aID)"};
-	for (const char *pDecl : vIdFuncs)
-		if (e->GetGlobalFunctionByDecl(pDecl) == NULL)
-			e->RegisterGlobalFunction(pDecl, asFUNCTION(+[](asIScriptGeneric *g) {
+	for (const char *pNativeDecl : vIdFuncs)
+		if (std::string sDecl = cSomaScriptApi::NativeDecl(NULL, pNativeDecl); e->GetGlobalFunctionByDecl(sDecl.c_str()) == NULL)
+			e->RegisterGlobalFunction(sDecl.c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
 				asITypeInfo *pRet = g->GetEngine()->GetTypeInfoById(g->GetFunction()->GetReturnTypeId());
 				*(void **)g->GetAddressOfReturnLocation() = SomaObjectFromID(*(cSomaID *)g->GetArgObject(0), pRet ? pRet->GetName() : "");
 			}), asCALL_GENERIC);

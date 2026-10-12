@@ -232,9 +232,10 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	for (int i = 0; i < glSomaGlobalFuncsNum; ++i)
 	{
 		const cSomaGlobalFunc &f = gvSomaGlobalFuncs[i];
-		if (e->GetGlobalFunctionByDecl(f.mpDecl))
+		std::string sDecl = cSomaScriptApi::NativeDecl(NULL, f.mpDecl);
+		if (e->GetGlobalFunctionByDecl(sDecl.c_str()))
 			continue;
-		int r = e->RegisterGlobalFunction(f.mpDecl, asFUNCTION(ForwardToEntityScript), asCALL_GENERIC);
+		int r = e->RegisterGlobalFunction(sDecl.c_str(), asFUNCTION(ForwardToEntityScript), asCALL_GENERIC);
 		if (r >= 0)
 			e->GetFunctionById(r)->SetUserData((void *)&f, kSomaForwardUserData);
 		else

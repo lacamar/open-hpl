@@ -1,11 +1,32 @@
 #include "SomaConfig.h"
 
+#include <fstream>
+#include <iterator>
+
+const std::string &SomaGameId()
+{
+	static std::string sId;
+	if (sId.empty())
+	{
+		const char *pDir = getenv("OPENHPL_SOMA_GAME_DIR");
+		std::ifstream f((pDir ? std::string(pDir) + "/" : std::string()) + "config/main_init.cfg");
+		std::string s((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+		sId = s.find("Rebirth") != std::string::npos ? "rebirth" : s.find("Bunker") != std::string::npos ? "bunker" : "soma";
+	}
+	return sId;
+}
+
+tWString SomaGameIdW()
+{
+	return cString::To16Char(SomaGameId()) + _W("/");
+}
+
 tWString cSomaConfig::GetConfigFilePath()
 {
 	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome) + _W("open-hpl/");
 	if (cPlatform::FolderExists(sDir) == false)
 		cPlatform::CreateFolder(sDir);
-	sDir += _W("soma/");
+	sDir += SomaGameIdW();
 	if (cPlatform::FolderExists(sDir) == false)
 		cPlatform::CreateFolder(sDir);
 

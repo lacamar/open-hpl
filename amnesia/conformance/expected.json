@@ -1,0 +1,189 @@
+{
+ "maps": {
+  "00_rainy_hall.map": {
+   "path": "maps/main/ch01/00_rainy_hall.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "01_cells.map": {
+   "path": "maps/ptest/01_cells.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "01_old_archives.map": {
+   "path": "maps/main/ch01/01_old_archives.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "02_entrance_hall.map": {
+   "path": "maps/main/ch01/02_entrance_hall.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "02_library.map": {
+   "path": "maps/ptest/02_library.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "03_archives.map": {
+   "path": "maps/main/ch01/03_archives.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "03_dungeon.map": {
+   "path": "maps/ptest/03_dungeon.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "04_final.map": {
+   "path": "maps/ptest/04_final.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "04_wine_cellar_lab.map": {
+   "path": "maps/main/ch01/04_wine_cellar_lab.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "05_wine_cellar.map": {
+   "path": "maps/main/ch01/05_wine_cellar.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "06_distillery.map": {
+   "path": "maps/main/ch01/06_distillery.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "07_archives_cellar.map": {
+   "path": "maps/main/ch01/07_archives_cellar.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "08_cellar_maze.map": {
+   "path": "maps/main/ch01/08_cellar_maze.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "09_back_hall.map": {
+   "path": "maps/main/ch01/09_back_hall.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "10_daniels_room.map": {
+   "path": "maps/main/ch01/10_daniels_room.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "11_study.map": {
+   "path": "maps/main/ch01/11_study.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "12_storage.map": {
+   "path": "maps/main/ch01/12_storage.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "13_machine_room.map": {
+   "path": "maps/main/ch01/13_machine_room.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "14_elevator.map": {
+   "path": "maps/main/ch01/14_elevator.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "15_prison_north.map": {
+   "path": "maps/main/ch02/15_prison_north.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "15_prison_south.map": {
+   "path": "maps/main/ch02/15_prison_south.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "16_cistern_entrance.map": {
+   "path": "maps/main/ch02/16_cistern_entrance.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "17_control_room.map": {
+   "path": "maps/main/ch02/17_control_room.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "18_cistern.map": {
+   "path": "maps/main/ch02/18_cistern.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "19_morgue.map": {
+   "path": "maps/main/ch02/19_morgue.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "20_sewer.map": {
+   "path": "maps/main/ch02/20_sewer.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "21_torture_nave.map": {
+   "path": "maps/main/ch02/21_torture_nave.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "22_torture_chancel.map": {
+   "path": "maps/main/ch02/22_torture_chancel.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "23_torture_transept.map": {
+   "path": "maps/main/ch02/23_torture_transept.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "24_torture_choir_east.map": {
+   "path": "maps/main/ch02/24_torture_choir_east.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "24_torture_choir_west.map": {
+   "path": "maps/main/ch02/24_torture_choir_west.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "25_cell_tunnels.map": {
+   "path": "maps/main/ch03/25_cell_tunnels.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "26_torture_nave_redux.map": {
+   "path": "maps/main/ch03/26_torture_nave_redux.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "26_zimmerman_vision.map": {
+   "path": "maps/main/ch03/26_zimmerman_vision.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "27_torture_chancel_redux.map": {
+   "path": "maps/main/ch03/27_torture_chancel_redux.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "28_inner_sanctum.map": {
+   "path": "maps/main/ch03/28_inner_sanctum.map",
+   "terrain_active": false,
+   "tracks": {}
+  },
+  "29_orb_chamber.map": {
+   "path": "maps/main/ch03/29_orb_chamber.map",
+   "terrain_active": false,
+   "tracks": {}
+  }
+ }
+}

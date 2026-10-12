@@ -191,6 +191,8 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion"};
 	for (const char *pType : vTypes)
 	{
+		if (e->GetTypeInfoByName(pType) == NULL)
+			continue;
 		SOMA_METHOD(e, pType, "void SetDisabled(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->SetDisabled(b); });
 		SOMA_METHOD(e, pType, "bool IsDisabled()", +[](void *p) { cSomaPostEffect *x = Effect(p); return x && x->IsDisabled(); });
 		SOMA_METHOD(e, pType, "void SetActive(bool abX)", +[](void *p, bool b) { if (cSomaPostEffect *x = Effect(p)) x->SetActive(b); });
@@ -205,7 +207,6 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cPostEffect_ImageFadeFX@ cGraphics_CreatePostEffect_ImageFadeFX()", +[]() { return new P("ImageFadeFX"); });
 	SOMA_FUNC(e, "cPostEffect_ImageTrail@ cGraphics_CreatePostEffect_ImageTrail()", +[]() { return new P("ImageTrail"); });
 	SOMA_FUNC(e, "cPostEffect_RadialBlur@ cGraphics_CreatePostEffect_RadialBlur()", +[]() { return new P("RadialBlur"); });
-	SOMA_FUNC(e, "cPostEffect_VideoDistortion@ cGraphics_CreatePostEffect_VideoDistortion()", +[]() { return new P("VideoDistortion"); });
 
 	SOMA_METHOD(e, "cPostEffect_ChromaticAberration", "void SetParams(float afAmount, float afRotation, float afHue, const cVector2f&in avOffset)",
 				+[](P *p, float a, float r, float h, const cVector2f &o) { p->Set({a, r, h, o.x, o.y}); });
@@ -220,6 +221,9 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 				+[](P *p, float s, float a, float d) { p->Set({s, a, d}); });
 	SOMA_METHOD(e, "cPostEffect_RadialBlur", "void GetParams(float &out afSize, float &out afAlpha, float &out afBlurStartDist)",
 				+[](P *p, float &s, float &a, float &d) { s = p->mfParams[0]; a = p->mfParams[1]; d = p->mfParams[2]; });
+	if (e->GetTypeInfoByName("cPostEffect_VideoDistortion") == NULL) // not in Bunker
+		return;
+	SOMA_FUNC(e, "cPostEffect_VideoDistortion@ cGraphics_CreatePostEffect_VideoDistortion()", +[]() { return new P("VideoDistortion"); });
 	SOMA_METHOD(e, "cPostEffect_VideoDistortion",
 				"void SetParams(float afAmount, float afRandomSeed, float afLineDensity, float afOffsetMul, const cVector2f&in avScreenOffset, const cVector2f&in avScreenBendAmount)",
 				+[](P *p, float a, float s, float l, float m, const cVector2f &o, const cVector2f &b) { p->Set({a, s, l, m, o.x, o.y, b.x, b.y}); });

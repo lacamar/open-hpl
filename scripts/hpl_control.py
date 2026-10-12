@@ -36,11 +36,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ohpl_game import game  # noqa: E402
+
 
 OURS_SINK = "ohpl-ours"
 RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
 XDG_CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-SCRATCH = Path(os.environ.get("OPENHPL_SOMA_SCRATCH", XDG_CACHE / "open-hpl/soma-scratch"))
+GAME = game()
+SCRATCH = Path(GAME.scratch)
 
 
 def pidfile_pid(path):

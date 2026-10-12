@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Compile every SOMA game script against the recovered API (no engine start).
+# Compile every game script of $OHPL_GAME (soma, rebirth, bunker) against its recovered API (no engine start).
 # Usage: scripts/soma-script-check.sh [report.json]
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPORT="${1:-$ROOT/soma/conformance/script_check.json}"
-GAME="${OPENHPL_SOMA_SCRATCH:-${XDG_CACHE_HOME:-$HOME/.cache}/open-hpl/soma-scratch}"
-env OPENHPL_SOMA_GAME_DIR="$GAME" OPENHPL_SOMA_SCRIPT_CHECK="$REPORT" \
-	OPENHPL_SOMA_SCRIPT_API="$ROOT/soma/data/script_api.txt" "$ROOT/amnesia/src/build/Soma.bin.aarch64"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+eval "$("$REPO/scripts/ohpl_game.py")"
+REPORT="${1:-$CONF/script_check.json}"
+mkdir -p "$(dirname "$REPORT")"
+env OPENHPL_SOMA_GAME_DIR="$SCRATCH" OPENHPL_SOMA_SCRIPT_CHECK="$REPORT" \
+	OPENHPL_SOMA_SCRIPT_API="$REPO/$GAME/data/script_api.txt" "$REPO/amnesia/src/build/Soma.bin.aarch64"

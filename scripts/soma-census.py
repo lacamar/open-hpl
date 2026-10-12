@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline census of SOMA's .hpm sidecar tracks -> soma/conformance/expected.json.
+"""Offline census of a game's maps -> <game>/conformance/expected.json (.hpm sidecar tracks; HPL2 .map: names only).
 
 Independent of the engine loader on purpose: it is the oracle the sweep
 compares load_report against.
@@ -11,18 +11,21 @@ import sys
 import xml.etree.ElementTree as ET
 from collections import Counter
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ohpl_game import game  # noqa: E402
+
 SECTION_TRACKS = [
     "Area", "Billboard", "Compound", "Decal", "Entity", "ExposureArea", "FogArea", "LensFlare",
     "Light", "LightMask", "ParticleSystem", "Primitive", "Sound", "StaticComboArea", "StaticObject",
 ]
 
 
-def find_maps(root):
+def find_maps(root, ext):
     maps = {}
     for dirpath, dirnames, filenames in os.walk(os.path.join(root, "maps"), followlinks=False):
         dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
         for f in filenames:
-            if f.endswith(".hpm"):
+            if f.endswith(ext):
                 maps.setdefault(f, os.path.join(dirpath, f))
     return dict(sorted(maps.items()))
 
@@ -79,20 +82,24 @@ def census_map(path, files):
 
 
 def main():
-    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--soma-root", default=os.environ.get("OPENHPL_SOMA_ROOT", os.path.expanduser("~/.local/share/Steam/steamapps/common/SOMA")))
-    ap.add_argument("--out", default=os.path.join(repo, "soma/conformance/expected.json"))
+    ap.add_argument("--game", help="soma, rebirth, bunker, amnesia, amfp (default $OHPL_GAME or soma)")
+    ap.add_argument("--root")
+    ap.add_argument("--out")
     args = ap.parse_args()
+    g = game(args.game)
+    args.soma_root = args.root or g.root
+    args.out = args.out or os.path.join(g.conf, "expected.json")
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
-    maps = find_maps(args.soma_root)
+    maps = find_maps(args.soma_root, g.map_ext)
     if not maps:
-        sys.exit(f"no .hpm maps under {args.soma_root}/maps")
+        sys.exit(f"no {g.map_ext} maps under {args.soma_root}/maps")
 
     files = {f.lower() for _, _, fs in os.walk(args.soma_root) for f in fs}
     out = {"maps": {}}
     for name, path in maps.items():
-        entry = census_map(path, files)
+        entry = census_map(path, files) if g.hpl3 else {"terrain_active": False, "tracks": {}}
         entry["path"] = os.path.relpath(path, args.soma_root)
         out["maps"][name] = entry
         total = sum(t["xml"] for t in entry["tracks"].values())

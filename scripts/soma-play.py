@@ -23,7 +23,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, HplControlError, RUNTIME, SCRATCH, pidfile_pid  # noqa: E402
+from hpl_control import HplControl, HplControlError, GAME, RUNTIME, SCRATCH, pidfile_pid  # noqa: E402
 
 NAME = os.environ.get("OHPL_PLAY_NAME", "ohpl-play")
 SOCK = RUNTIME / f"{NAME}.sock"
@@ -67,12 +67,12 @@ def frames(secs):
 
 def log_path():
     p = pid()
-    return SCRATCH / f".xdg/state/open-hpl/soma/hpl-{p}.log" if p else None
+    return SCRATCH / f".xdg/state/{GAME.user}/hpl-{p}.log" if p else None
 
 
 def cmd_start(a):
     cmd_stop(a)
-    m = a.map if a.map.endswith(".hpm") else a.map + ".hpm"
+    m = a.map if a.map.endswith(GAME.map_ext) else a.map + GAME.map_ext
     env = dict(os.environ, OPENHPL_SOMA_FREECAM="0")
     if a.pos:
         env["OPENHPL_SOMA_MAP_STARTPOS"] = a.pos
@@ -84,11 +84,20 @@ def cmd_start(a):
         if pid() is None:
             raise SystemExit("instance exited during load")
         time.sleep(0.5)
+    if not GAME.hpl3:
+        while True:
+            try:
+                with HplControl(str(SOCK), timeout=5) as h:
+                    h.send({"cmd": "ping"})
+                break
+            except (HplControlError, OSError):
+                time.sleep(0.5)
+        send(dict({"cmd": "start_map", "map": m}, **({"start_pos": a.pos} if a.pos else {})), timeout=300)
     send({"cmd": "wait_frames", "n": 60, "max_ms": 120000}, timeout=150)
-    if a.pos:
+    if a.pos and GAME.hpl3:
         ex(f'Entity_PlaceAtEntity("Player", "{a.pos}");')
     if a.save:
-        saves = SCRATCH / ".xdg/data/open-hpl/soma/saves"
+        saves = SCRATCH / f".xdg/data/{GAME.user}/saves"
         # the boot map's checkpoint would otherwise win on game-over retry
         (saves / "CheckPoint.sav").write_bytes((saves / a.save).read_bytes())
         ex(f'cLux_GetSaveHandler().LoadGameFromFile("{a.save}");')
@@ -117,6 +126,8 @@ STATE = (
 
 
 def cmd_state(a):
+    if not GAME.hpl3:
+        return print("\n".join(f"{k}={v}" for k, v in send({"cmd": "state"}).items()))
     out = ex(STATE)
     print(out.rstrip())
     r = send({"cmd": "player_state"})
@@ -575,7 +586,7 @@ def cmd_gui(a):
 
 def cmd_shot(a):
     bmp = Path(a.out).resolve().with_suffix(".bmp")
-    hud = not a.no_hud and not send({"cmd": "dev_hud", "value": True})["prev"]
+    hud = GAME.hpl3 and not a.no_hud and not send({"cmd": "dev_hud", "value": True})["prev"]
     if hud:
         send({"cmd": "wait_frames", "n": 3, "max_ms": 5000})
     send({"cmd": "screenshot", "path": str(bmp)})

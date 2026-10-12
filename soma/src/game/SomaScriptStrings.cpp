@@ -214,6 +214,8 @@ static void ArrPopFront(CScriptArray *apArr) { if (apArr->GetSize()) apArr->Remo
 static asUINT ArrSize(const CScriptArray *apArr) { return apArr->GetSize(); }
 static bool ArrEmpty(const CScriptArray *apArr) { return apArr->IsEmpty(); }
 static void ArrInsertBack(void *apValue, CScriptArray *apArr) { apArr->InsertLast(apValue); }
+static void ArrInsert(asUINT alIdx, void *apValue, CScriptArray *apArr) { apArr->InsertAt(alIdx, apValue); }
+static void ArrErase(asUINT alIdx, CScriptArray *apArr) { apArr->RemoveAt(alIdx); }
 
 void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 {
@@ -223,6 +225,8 @@ void RegisterSomaScriptArrayExtras(asIScriptEngine *apEngine)
 	r = apEngine->RegisterObjectMethod("array<T>", "void insertBack(const T&in)", asFUNCTION(ArrInsertBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("array<T>", "void pop_back()", asFUNCTION(ArrPopBack), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("array<T>", "void pop_front()", asFUNCTION(ArrPopFront), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = apEngine->RegisterObjectMethod("array<T>", "void insert(uint, const T&in)", asFUNCTION(ArrInsert), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = apEngine->RegisterObjectMethod("array<T>", "void erase(uint)", asFUNCTION(ArrErase), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("array<T>", "uint size() const", asFUNCTION(ArrSize), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("array<T>", "bool empty() const", asFUNCTION(ArrEmpty), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	(void)r;

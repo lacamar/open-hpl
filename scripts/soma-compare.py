@@ -21,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, RUNTIME, XDG_CACHE, SCRATCH, muted_env, pidfile_pid  # noqa: E402
+from hpl_control import HplControl, RUNTIME, XDG_CACHE, SCRATCH, GAME, muted_env, pidfile_pid  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("soma_ref", HERE / "soma-ref.py")
 ref_mod = importlib.util.module_from_spec(_spec)
@@ -30,7 +30,7 @@ _spec.loader.exec_module(ref_mod)
 NAME = os.environ.get("OHPL_CMP_NAME", "ohpl-cmp")
 SOCK = RUNTIME / f"{NAME}.sock"
 PIDFILE = RUNTIME / f"{NAME}.pid"
-CACHE = XDG_CACHE / "open-hpl/soma-compare"
+CACHE = XDG_CACHE / f"open-hpl/{GAME.name}-compare"
 
 SNIPPETS = dict(ref_mod.SNIPPETS)
 SNIPPETS["entities"] = (
@@ -92,20 +92,20 @@ class Ours:
         xdg = CACHE / "boot-xdg"
         for k in ("config", "data", "state"):
             subprocess.run(["rm", "-rf", str(xdg / k)])
-        (xdg / "config/open-hpl/soma").mkdir(parents=True)
-        (xdg / "state/open-hpl/soma").mkdir(parents=True)
+        (xdg / f"config/{GAME.user}").mkdir(parents=True)
+        (xdg / f"state/{GAME.user}").mkdir(parents=True)
         w, h = size.split("x")
-        (xdg / "config/open-hpl/soma/main_settings.cfg").write_text(
+        (xdg / f"config/{GAME.user}/main_settings.cfg").write_text(
             f'<Screen Vsync="false" FullScreen="{str(first_launch).lower()}" Width="{w}" Height="{h}" />\n')
         if not first_launch:
-            (xdg / "state/open-hpl/soma/gamma_screen_seen").write_text("1\n")
-            (xdg / "config/open-hpl/soma/user_settings.cfg").write_text(
-                (ref_mod.SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
+            (xdg / f"state/{GAME.user}/gamma_screen_seen").write_text("1\n")
+            (xdg / f"config/{GAME.user}/user_settings.cfg").write_text(
+                (Path(GAME.root) / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
                 + f'\n<Main FirstGameStart="false" />\n<Screen Vsync="false" FullScreen="false" Width="{w}" Height="{h}" />\n')
         env = dict(muted_env(), OPENHPL_HEADLESS_SOCKET=str(SOCK), XDG_CACHE_HOME=str(scratch / ".xdg/cache"),
                    **{f"XDG_{k}_HOME": str(xdg / k.lower()) for k in ("CONFIG", "DATA", "STATE")})
         t0 = time.time()
-        p = subprocess.Popen(["./Soma.bin.aarch64"], cwd=scratch, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        p = subprocess.Popen(["./" + GAME.bin], cwd=scratch, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              stdin=subprocess.DEVNULL, start_new_session=True)
         PIDFILE.write_text(str(p.pid))
         out = Path(out)

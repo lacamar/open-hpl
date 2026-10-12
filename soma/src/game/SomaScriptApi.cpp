@@ -55,6 +55,149 @@ static std::string NoAutoHandles(std::string s)
 	return s;
 }
 
+struct cDeclSig
+{
+	std::string msName, msTail;
+	std::vector<std::string> mvTypes; // return type first
+	std::vector<bool> mvDefault;
+};
+
+static std::string DeclType(std::string s, bool abParam)
+{
+	s = s.substr(0, s.find('='));
+	std::vector<std::string> vTok;
+	std::string sTok;
+	for (size_t i = 0; i <= s.size(); ++i)
+	{
+		char c = i < s.size() ? s[i] : ' ';
+		if (c == '&' || c == '@')
+		{
+			if (sTok.empty() && !vTok.empty())
+			{
+				sTok = vTok.back();
+				vTok.pop_back();
+			}
+			sTok += c;
+			while (c == '&' && i + 1 < s.size() && s[i + 1] == ' ')
+				++i;
+		}
+		else if (c != ' ')
+			sTok += c;
+		else if (!sTok.empty())
+		{
+			vTok.push_back(sTok);
+			sTok.clear();
+		}
+	}
+	if (abParam && vTok.size() >= 2 && !(vTok.size() == 2 && vTok[0] == "const"))
+		vTok.pop_back();
+	std::string sOut;
+	for (const std::string &t : vTok)
+		sOut += (sOut.empty() ? "" : " ") + t;
+	return sOut;
+}
+
+static cDeclSig ParseDecl(const std::string &s)
+{
+	cDeclSig sig;
+	size_t lParen = s.find('(');
+	size_t lNameStart = s.find_last_of(" &@", lParen) + 1;
+	sig.msName = s.substr(lNameStart, lParen - lNameStart);
+	sig.mvTypes.push_back(DeclType(s.substr(0, lNameStart), false));
+	sig.mvDefault.push_back(false);
+	int lDepth = 0;
+	size_t lStart = lParen + 1, i = lStart;
+	for (; i < s.size(); ++i)
+	{
+		if (s[i] == '(' || s[i] == '<')
+			++lDepth;
+		else if ((s[i] == ')' || s[i] == '>') && lDepth > 0)
+			--lDepth;
+		else if (s[i] == ',' || s[i] == ')')
+		{
+			if (s.find_first_not_of(' ', lStart) < i)
+			{
+				sig.mvTypes.push_back(DeclType(s.substr(lStart, i - lStart), true));
+				sig.mvDefault.push_back(s.find('=', lStart) < i);
+			}
+			lStart = i + 1;
+			if (s[i] == ')')
+				break;
+		}
+	}
+	sig.msTail = DeclType(i < s.size() ? s.substr(i + 1) : "", false);
+	return sig;
+}
+
+static cSomaScriptApi *gpActiveApi = NULL;
+
+// The generic wrappers read enums and ints the same way and ignore trailing arguments, so a native bound
+// to an older game's declaration can serve one that swapped an enum for an int or appended defaulted params
+std::string cSomaScriptApi::NativeDecl(const char *apType, const char *apDecl)
+{
+	cSomaScriptApi *pApi = gpActiveApi;
+	if (pApi == NULL)
+		return apDecl;
+	if (pApi->mmapSigs.empty())
+	{
+		for (const cSomaScriptApiType &t : pApi->mvTypes)
+			for (const std::string &m : t.mvMethods)
+				pApi->mmapSigs[t.msName + "::" + ParseDecl(m).msName].push_back(m);
+		for (const std::string &g : pApi->mvGlobals)
+			pApi->mmapSigs["::" + ParseDecl(g).msName].push_back(g);
+		for (auto &e : pApi->mvEnums)
+			pApi->msetEnumNames.insert(e.first);
+	}
+	cDeclSig sig = ParseDecl(apDecl);
+	auto it = pApi->mmapSigs.find(std::string(apType ? apType : "") + "::" + sig.msName);
+	if (it == pApi->mmapSigs.end())
+		return apDecl;
+	auto IsInt = [](const std::string &s) { return s == "int" || s == "uint"; };
+	const std::string *pMatch = NULL, *pLonger = NULL;
+	int lLonger = 0;
+	for (const std::string &sCand : it->second)
+	{
+		cDeclSig cand = ParseDecl(sCand);
+		if (cand.mvTypes.size() < sig.mvTypes.size() || cand.msTail != sig.msTail)
+			continue;
+		bool bLonger = cand.mvTypes.size() > sig.mvTypes.size();
+		if (bLonger && cand.mvDefault[sig.mvTypes.size()] == false)
+			continue;
+		bool bSame = true, bCompatible = true;
+		for (size_t i = 0; i < sig.mvTypes.size(); ++i)
+		{
+			const std::string &a = sig.mvTypes[i], &b = cand.mvTypes[i];
+			if (a == b)
+				continue;
+			bSame = false;
+			// a primitive result written to a void function's return slot is ignored
+			if (i == 0 && b == "void" && (a == "bool" || a == "float" || IsInt(a)))
+				continue;
+			if (!(IsInt(a) && pApi->msetEnumNames.count(b)) && !(IsInt(b) && pApi->msetEnumNames.count(a)))
+				bCompatible = false;
+		}
+		if (bSame && bLonger == false)
+			return apDecl;
+		if (bCompatible && bLonger)
+		{
+			pLonger = &sCand;
+			++lLonger;
+		}
+		else if (bCompatible)
+		{
+			if (pMatch)
+				return apDecl;
+			pMatch = &sCand;
+		}
+	}
+	if (pMatch == NULL && lLonger == 1)
+		pMatch = pLonger;
+	if (pMatch == NULL)
+		return apDecl;
+	pApi->mvRemaps.push_back(std::string(apType ? apType : "") + "::" + apDecl + " -> " + *pMatch);
+	return *pMatch;
+}
+
 static std::set<std::string> gsetNativeValueTypes = {"tString", "tWString"};
 
 bool cSomaScriptApi::IsValueTypeNative(const std::string &asName)
@@ -66,6 +209,25 @@ std::map<std::string, int> &cSomaScriptApi::GetStubCallCounts()
 {
 	static std::map<std::string, int> counts;
 	return counts;
+}
+
+// Native code and the recovered defaults use SOMA's layout for these structs in every game
+static int NativeOffset(const std::string &asType, const std::string &asDecl, int alOffset)
+{
+	static const struct { const char *mpType, *mpName; int mlOffset; } vLayout[] = {
+#include "SomaImGuiLayout.inc"
+	};
+	std::string sName = asDecl.substr(asDecl.find_last_of(' ') + 1);
+	bool bType = false;
+	for (auto &e : vLayout)
+	{
+		if (asType != e.mpType)
+			continue;
+		if (sName == e.mpName)
+			return e.mlOffset;
+		bType = true;
+	}
+	return bType ? -1 : alOffset;
 }
 
 bool cSomaScriptApi::Load(const std::string &asFile)
@@ -113,6 +275,9 @@ bool cSomaScriptApi::Load(const std::string &asFile)
 		else if (tag == "GP")
 			mvGlobalProps.push_back(v[1]);
 	}
+	for (auto &t : mvTypes)
+		for (auto &prop : t.mvProps)
+			prop.second = NativeOffset(t.msName, prop.first, prop.second);
 	return true;
 }
 
@@ -546,6 +711,7 @@ void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const 
 
 void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
 {
+	gpActiveApi = this;
 	if (mbTypesRegistered)
 		return;
 	mbTypesRegistered = true;

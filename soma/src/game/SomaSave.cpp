@@ -1281,9 +1281,9 @@ public:
 tWString cSomaSaveHandler::GetSaveDir()
 {
 	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGDataHome);
-	for (const wchar_t *pPart : {L"open-hpl/", L"soma/", L"saves/"})
+	for (const tWString &sPart : {tWString(_W("open-hpl/")), SomaGameIdW(), tWString(_W("saves/"))})
 	{
-		sDir += pPart;
+		sDir += sPart;
 		if (cPlatform::FolderExists(sDir) == false)
 			cPlatform::CreateFolder(sDir);
 	}

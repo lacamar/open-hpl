@@ -40,11 +40,11 @@ static std::string FindApiFile()
 		std::string sDir(sExe);
 		sDir = sDir.substr(0, sDir.find_last_of('/') + 1);
 		vCandidates.push_back(sDir + "script_api.txt");
-		vCandidates.push_back(sDir + "../share/open-hpl/soma/script_api.txt");
+		vCandidates.push_back(sDir + "../share/open-hpl/" + SomaGameId() + "/script_api.txt");
 	}
-	vCandidates.push_back("/usr/share/open-hpl/soma/script_api.txt");
+	vCandidates.push_back("/usr/share/open-hpl/" + SomaGameId() + "/script_api.txt");
 #ifdef OPENHPL_SOURCE_DIR
-	vCandidates.push_back(std::string(OPENHPL_SOURCE_DIR) + "/soma/data/script_api.txt");
+	vCandidates.push_back(std::string(OPENHPL_SOURCE_DIR) + "/" + SomaGameId() + "/data/script_api.txt");
 #endif
 	for (size_t i = 0; i < vCandidates.size(); ++i)
 		if (std::ifstream(vCandidates[i].c_str()).is_open())

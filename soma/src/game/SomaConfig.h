@@ -5,6 +5,10 @@
 
 using namespace hpl;
 
+// "soma", "rebirth" or "bunker", from the game's main_init.cfg
+const std::string &SomaGameId();
+tWString SomaGameIdW();
+
 class cSomaConfig
 {
 public:

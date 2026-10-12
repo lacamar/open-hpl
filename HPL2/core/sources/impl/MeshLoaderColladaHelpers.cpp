@@ -1707,6 +1707,11 @@ namespace hpl {
 				tIntVec vIndexArray;
 				cString::GetIntVec(pText->Value(),vIndexArray);
 
+				// modo writes indices for sources it declares no input for
+				if(lTriCount > 0 && pPElem->NextSiblingElement("p")==NULL && vIndexArray.size() % (3*lTriCount) == 0 &&
+					(int)vIndexArray.size() / (3*lTriCount) > lTriElements)
+					lTriElements = (int)vIndexArray.size() / (3*lTriCount);
+
 				int lTriangleNum = (int)vIndexArray.size()/ (3*lTriElements);
                 for(int triangle=0; triangle< lTriangleNum; triangle++)
 				{

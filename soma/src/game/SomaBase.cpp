@@ -1402,7 +1402,7 @@ void cSomaBase::SetupLogFile()
 	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
 	tWString sStateDir = sStateRoot + _W("open-hpl/");
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-	sStateDir += _W("soma/");
+	sStateDir += SomaGameIdW();
 	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
 
 	// per-PID: concurrent headless runs would truncate each other

@@ -19,12 +19,12 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from hpl_control import HplControl, OURS_SINK, XDG_CACHE, SCRATCH, muted_env  # noqa: E402
+from hpl_control import HplControl, OURS_SINK, XDG_CACHE, SCRATCH, GAME, muted_env  # noqa: E402
 
 REF_SINK = "claude-test"
 RATE = 48000
-SAMPLES = SCRATCH / ".xdg/cache/open-hpl/soma/events-v4"
-OUT = XDG_CACHE / "open-hpl/soma-audio"
+SAMPLES = SCRATCH / f".xdg/cache/{GAME.user}/events-v4"
+OUT = XDG_CACHE / f"open-hpl/{GAME.name}-audio"
 DECODED = OUT / "decoded"
 BANDS = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 

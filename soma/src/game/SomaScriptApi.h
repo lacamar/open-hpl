@@ -4,6 +4,7 @@
 #include <angelscript.h>
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,9 @@ public:
 
 	const std::vector<std::string> &GetErrors() const { return mvErrors; }
 	const std::vector<std::string> &GetWarnings() const { return mvWarnings; }
+	const std::vector<std::string> &GetRemaps() const { return mvRemaps; }
+
+	static std::string NativeDecl(const char *apType, const char *apDecl);
 
 	static std::map<std::string, int> &GetStubCallCounts();
 	static bool IsValueTypeNative(const std::string &asName);
@@ -42,6 +46,9 @@ private:
 	std::vector<std::string> mvGlobalProps;
 	std::vector<std::string> mvErrors;
 	std::vector<std::string> mvWarnings;
+	std::vector<std::string> mvRemaps;
+	std::map<std::string, std::vector<std::string>> mmapSigs;
+	std::set<std::string> msetEnumNames;
 	bool mbTypesRegistered = false;
 };
 

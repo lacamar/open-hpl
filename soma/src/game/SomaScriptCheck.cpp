@@ -157,6 +157,8 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 	api.Register(pEngine);
 	for (size_t i = 0; i < api.GetWarnings().size(); ++i)
 		fprintf(stderr, "warning: %s\n", api.GetWarnings()[i].c_str());
+	for (const std::string &sRemap : api.GetRemaps())
+		fprintf(stderr, "remap: %s\n", sRemap.c_str());
 	std::vector<std::string> vApiErrors = api.GetErrors();
 	vApiErrors.insert(vApiErrors.end(), msgs.mvErrors.begin(), msgs.mvErrors.end());
 	msgs.mvErrors.clear();

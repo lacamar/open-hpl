@@ -91,7 +91,7 @@ cSomaGammaScreen::~cSomaGammaScreen()
 bool cSomaGammaScreen::ShouldShowAndMarkSeen()
 {
 	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
-	tWString sStateDir = sStateRoot + _W("open-hpl/soma/");
+	tWString sStateDir = sStateRoot + _W("open-hpl/") + SomaGameIdW();
 	if (cPlatform::FolderExists(sStateDir) == false)
 		cPlatform::CreateFolder(sStateDir);
 

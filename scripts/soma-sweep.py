@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Boot every SOMA map headless, collect text diagnostics, judge them
-against soma/conformance/expected.json. One process per map.
+"""Boot every map of a game headless, collect text diagnostics, judge them
+against <game>/conformance/expected.json. One process per map.
+OHPL_GAME / --game: soma (default), rebirth, bunker, amnesia, amfp.
 
   eval "$(scripts/soma-init.sh)"
   scripts/soma-sweep.py                       # all maps
@@ -18,9 +19,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hpl_control import HplControl, HplControlError, muted_env  # noqa: E402
+from ohpl_game import game  # noqa: E402
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONF = os.path.join(REPO, "soma/conformance")
+G = game()
 
 LUM_MIN, LUM_MAX = 3.0, 245.0
 MAGENTA_MAX = 0.001
@@ -57,7 +58,7 @@ def backtrace_core(pid):
 
 
 def log_errors(scratch, pid):
-    state = os.path.join(scratch, ".xdg/state/open-hpl/soma")
+    state = os.path.join(scratch, ".xdg/state", G.user)
     path = os.path.join(state, f"hpl-{pid}.log")
     if not os.path.exists(path):
         path = os.path.join(state, "hpl.log")
@@ -95,7 +96,7 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
     })
     start = time.time()
     with open(os.path.join(scratch, "sweep-run.out"), "w") as out:
-        proc = subprocess.Popen(["./Soma.bin.aarch64"], cwd=scratch, env=env, stdout=out, stderr=subprocess.STDOUT,
+        proc = subprocess.Popen(["./" + G.bin], cwd=scratch, env=env, stdout=out, stderr=subprocess.STDOUT,
                                 stdin=subprocess.DEVNULL, start_new_session=True)
 
     def finish(status, **extra):
@@ -137,29 +138,41 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
 
     result["boot_s"] = round(time.time() - start, 1)
     try:
+        if not G.hpl3:
+            hpl.send({"cmd": "start_map", "map": name})
+            result["boot_s"] = round(time.time() - start, 1)
         result["warmup"] = {k: v for k, v in hpl.send({"cmd": "wait_frames", "n": frames, "max_ms": 30000}).items() if k != "ok"}
         fade_code = '__print("" + cLux_GetEffectHandler().GetFadeAlpha());'
-        for _ in range(15):
+        for _ in range(15 if G.hpl3 else 0):
             if float(hpl.send({"cmd": "script_exec", "code": fade_code}).get("output") or 0) <= 0.05:
                 break
             hpl.send({"cmd": "wait_frames", "n": 60, "max_ms": 4000})
+        for _ in range(0 if G.hpl3 else 15):  # no fade query on HPL2: wait out the intro fade by luminance
+            if hpl.send({"cmd": "frame_stats"})["frame"]["lum_mean"] >= LUM_MIN:
+                break
+            hpl.send({"cmd": "wait_frames", "n": 120, "max_ms": 4000})
         if play:
             hpl.send({"cmd": "wait_frames", "n": int(play * 60), "max_ms": int(play * 4000)})
             result["stubs"] = {k: v for k, v in hpl.send({"cmd": "stub_report", "n": 40}).items() if k != "ok"}
             result["player"] = {k: v for k, v in hpl.send({"cmd": "player_state"}).items() if k != "ok"}
-        result["load_report"] = hpl.send({"cmd": "load_report"})["load_report"]
-        result["world"] = hpl.send({"cmd": "world_stats"})["world"]
+        if G.hpl3:
+            result["load_report"] = hpl.send({"cmd": "load_report"})["load_report"]
+            result["world"] = hpl.send({"cmd": "world_stats"})["world"]
+        else:
+            result["state"] = {k: v for k, v in hpl.send({"cmd": "state"}).items() if k != "ok"}
         hpl.send({"cmd": "render_stats"})
         hpl.send({"cmd": "wait_frames", "n": 120, "max_ms": 5000})
         render = hpl.send({"cmd": "render_stats"})
         result["render"] = render["render"]
         result["fps"] = render.get("fps")
-        result["camera"] = {k: v for k, v in hpl.send({"cmd": "camera_state"}).items() if k != "ok"}
         result["frame"] = hpl.send({"cmd": "frame_stats"})["frame"]
-        fade = hpl.send({"cmd": "script_exec", "code": fade_code})
-        result["fade_alpha"] = float(fade.get("output") or 0)
-        wake = hpl.send({"cmd": "script_vars", "name": "cScrWakeHandler"}).get("output", "")
-        result["asleep"] = bool(re.search(r"\nmWakeState=[01]\n", wake))
+        if G.hpl3:
+            result["camera"] = {k: v for k, v in hpl.send({"cmd": "camera_state"}).items() if k != "ok"}
+            fade = hpl.send({"cmd": "script_exec", "code": fade_code})
+            result["fade_alpha"] = float(fade.get("output") or 0)
+        if G.name == "soma":
+            wake = hpl.send({"cmd": "script_vars", "name": "cScrWakeHandler"}).get("output", "")
+            result["asleep"] = bool(re.search(r"\nmWakeState=[01]\n", wake))
         shaders = hpl.send({"cmd": "shader_report"})
         result["shader_failures"] = shaders["shaders"]
         gbuffer = {}
@@ -175,9 +188,12 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         except (OSError, HplControlError):
             pass
     except (OSError, HplControlError) as e:
-        if proc.poll() is not None:
+        # A closed socket means the process is dying; its core takes a while to write.
+        try:
+            proc.wait(timeout=120 if isinstance(e, OSError) or "closed" in str(e) else 0)
             return finish("crash", exit_code=proc.returncode, error=str(e), backtrace=backtrace_core(proc.pid))
-        return finish("hang", error=str(e), backtrace=backtrace_live(proc.pid))
+        except subprocess.TimeoutExpired:
+            return finish("hang", error=str(e), backtrace=backtrace_live(proc.pid))
     finally:
         hpl.close()
 
@@ -198,11 +214,13 @@ def judge(name, result, expected, allow):
     fails, allowed = [], []
     if result["status"] != "ok":
         fails.append("status:" + result["status"])
-    if "load_report" not in result:
+    if "render" not in result:
         return fails, allowed
+    if result.get("state", {}).get("map_loaded") is False:
+        fails.append("map_not_loaded")
 
     exp = expected["maps"].get(name)
-    tracks = result["load_report"]["tracks"]
+    tracks = result.get("load_report", {}).get("tracks", {})
     if exp:
         for track, e in sorted(exp["tracks"].items()):
             got = tracks.get(track, {"created": 0, "skipped": {}})
@@ -240,7 +258,7 @@ def judge(name, result, expected, allow):
         fails.append(f"no_material:{missing}")
 
     # Maps with no geometry never write the G-buffer; nothing to judge.
-    renderables = sum(exp["tracks"][t]["xml"] for t in ("StaticObject", "Entity", "Primitive")) if exp else 1
+    renderables = sum(exp["tracks"][t]["xml"] for t in ("StaticObject", "Entity", "Primitive")) if exp and exp["tracks"] else 1
     if renderables == 0:
         return fails, allowed
 
@@ -260,7 +278,7 @@ def judge(name, result, expected, allow):
     frame = result.get("frame")
     if frame:
         # A map with no lights at all (00_00_intro: one plane behind the slideshow GUI) is black by data.
-        has_lights = not exp or exp["tracks"]["Light"]["xml"] > 0
+        has_lights = not exp or not exp["tracks"] or exp["tracks"]["Light"]["xml"] > 0
         if has_lights and not LUM_MIN <= frame["lum_mean"] <= LUM_MAX:
             # Script screen fades (02_07 wakes up black for 23.5 s, 04_01 wakes up over 10 s) aren't render faults.
             (allowed if result.get("fade_alpha", 0) > 0.5 or result.get("asleep") else fails).append(f"lum_mean:{frame['lum_mean']:.1f}")
@@ -277,24 +295,31 @@ def main():
     ap.add_argument("--play", type=float, default=0, metavar="SECS",
                     help="script player instead of freecam; run SECS more, record stub_report/player (default --out play.json)")
     ap.add_argument("--boot-timeout", type=float, default=900)
-    ap.add_argument("--out", default=os.path.join(CONF, "results.json"))
+    ap.add_argument("--game", help="default $OHPL_GAME or soma")
+    ap.add_argument("--out")
     ap.add_argument("--compare", help="older results.json to diff verdicts against")
     ap.add_argument("--rejudge", action="store_true", help="re-run the checks over an existing --out, booting nothing")
-    ap.add_argument("--scratch", default=os.environ.get("OPENHPL_SOMA_SCRATCH") or os.path.join(
-        os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "open-hpl/soma-scratch"))
+    ap.add_argument("--scratch")
     args = ap.parse_args()
-    if args.play and args.out == os.path.join(CONF, "results.json"):
-        args.out = os.path.join(CONF, "play.json")
+    global G
+    G = game(args.game)
+    CONF = G.conf
+    args.scratch = args.scratch or G.scratch
+    args.out = args.out or os.path.join(CONF, "play.json" if args.play else "results.json")
 
-    if not args.scratch or not os.path.exists(os.path.join(args.scratch, "Soma.bin.aarch64")):
-        sys.exit('no scratch dir - run: eval "$(scripts/soma-init.sh)"')
+    if not os.path.exists(os.path.join(args.scratch, G.bin)):
+        sys.exit(f'no scratch dir - run: eval "$(scripts/soma-init.sh {G.name})"')
     if "steamapps/common" in os.path.realpath(args.scratch):
         sys.exit("refusing to run inside a Steam install")
 
+    if not os.path.exists(os.path.join(CONF, "expected.json")):
+        sys.exit(f"no {CONF}/expected.json - run: scripts/soma-census.py --game {G.name}")
     with open(os.path.join(CONF, "expected.json")) as f:
         expected = json.load(f)
-    with open(os.path.join(CONF, "allowlist.json")) as f:
-        allow = json.load(f)
+    allow = {"tracks": {}}
+    if os.path.exists(os.path.join(CONF, "allowlist.json")):
+        with open(os.path.join(CONF, "allowlist.json")) as f:
+            allow = json.load(f)
 
     results = {"maps": {}}
     if os.path.exists(args.out):
@@ -308,7 +333,7 @@ def main():
         names = [n for n in names if results["maps"].get(n, {}).get("failures", ["never run"])]
 
     # Per-pid logs pile up; keep only those of the last day.
-    state = os.path.join(args.scratch, ".xdg/state/open-hpl/soma")
+    state = os.path.join(args.scratch, ".xdg/state", G.user)
     if os.path.isdir(state):
         for f in os.listdir(state):
             path = os.path.join(state, f)

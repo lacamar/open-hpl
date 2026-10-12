@@ -1022,8 +1022,9 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 {
 	auto reg = [&](const char *apDecl, asGENFUNC_t apFunc) {
 		asITypeInfo *pType = e->GetTypeInfoByName(apType);
-		if (pType && pType->GetMethodByDecl(apDecl) == NULL)
-			e->RegisterObjectMethod(apType, apDecl, asFUNCTION(apFunc), asCALL_GENERIC);
+		std::string sDecl = cSomaScriptApi::NativeDecl(apType, apDecl);
+		if (pType && pType->GetMethodByDecl(sDecl.c_str()) == NULL)
+			e->RegisterObjectMethod(apType, sDecl.c_str(), asFUNCTION(apFunc), asCALL_GENERIC);
 	};
 	reg("bool ScriptPrepare(const tString&in asMethod)", ScriptPrepare);
 	reg("bool ScriptPrepareFast(const tString&in asMethod, int alId)", ScriptPrepare);

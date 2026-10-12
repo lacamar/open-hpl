@@ -1,4 +1,5 @@
 #include "SomaFsb.h"
+#include "SomaConfig.h"
 #include "SomaVorbisSetups.h"
 #include <vorbis/vorbisfile.h>
 
@@ -592,7 +593,7 @@ static bool WriteWholeFile(const tWString &asPath, const std::vector<unsigned ch
 tWString cSomaFsb::GetCacheDir(const tWString &asSubDir)
 {
 	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome);
-	const tWString vParts[] = {_W("open-hpl/"), _W("soma/"), asSubDir + _W("/")};
+	const tWString vParts[] = {_W("open-hpl/"), SomaGameIdW(), asSubDir + _W("/")};
 	for (size_t i = 0; i < sizeof(vParts) / sizeof(vParts[0]); ++i)
 	{
 		sDir += vParts[i];
