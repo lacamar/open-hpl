@@ -6333,3 +6333,17 @@ Data-side material misses (the official `.msh` names the same absent files): `Pr
   Whole-region lit differences are scripted flicker lights (hence frames A, B, A). Near plane
   0.03 matches `game.cfg`; depth is D24.
 - `lights` control command reports `pos`.
+
+## SOMA: duplicate player states (2026-10-13)
+
+- SOMA ships `config/PlayerStates.cfg` and `Player.hps::Init` also calls `AddState` for the same
+  24 states, so every state existed twice under one script name. `cScript_RunGlobalFunc` ran
+  `SetupGrab` / `SetupReading` on both objects.
+- Thrown props floaty: the second `SetupGrab` saved the already modified body (gravity off,
+  mass x0.1, max speed 2) and `ResetPropVars` restored that. Held mass was 0.005 for a 0.5 can.
+- Blur after reading: the phantom `State_Interact_Read` started a DoF instance in `SetupCamera`
+  and never left, so nothing faded it out.
+- `AddState` / `AddMoveState` keep the first registration per id.
+- `PhysicsBodyNewton` max-speed clamp compares length against max squared (as upstream HPL2);
+  left alone for TDD parity.
+- `soma-play.py throw --track N` prints the body state while held and after release.

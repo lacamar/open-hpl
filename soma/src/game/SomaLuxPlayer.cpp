@@ -83,6 +83,9 @@ void cSomaLuxPlayer::SetCharacterBody(iCharacterBody *apBody)
 
 void cSomaLuxPlayer::AddState(const tString &asName, int alId, const tString &asFile, const tString &asClass)
 {
+	// SOMA registers its states from Player.hps and ships PlayerStates.cfg as well
+	if (mmapStates.count(alId))
+		return;
 	cSomaLuxPlayerState *pState = new cSomaLuxPlayerState();
 	pState->msName = asName;
 	pState->msScriptName = asName;
@@ -104,6 +107,8 @@ void cSomaLuxPlayer::AddState(const tString &asName, int alId, const tString &as
 
 void cSomaLuxPlayer::AddMoveState(const tString &asName, int alId, const tString &asFile, const tString &asClass)
 {
+	if (mmapMoveStates.count(alId))
+		return;
 	cSomaLuxMoveState *pState = new cSomaLuxMoveState();
 	pState->msName = asName;
 	pState->msScriptName = asName;

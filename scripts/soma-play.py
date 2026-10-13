@@ -354,16 +354,26 @@ def cmd_drag(a):
 
 
 def cmd_throw(a):
+    def track():
+        print(ex('iPhysicsBody@ b = cast<cLuxProp>(cLux_GetCurrentMap().GetEntityByName("%s")).GetMainBody();'
+                 'cVector3f p = b.GetWorldPosition(), v = b.GetLinearVelocity();'
+                 '__print("t=" + cLux_GetGameTime() + " pos=" + p.x + "," + p.y + "," + p.z + " vel=" + v.x + "," + v.y + "," + v.z'
+                 ' + " grav=" + b.GetGravity() + " mass=" + b.GetMass() + " max=" + b.GetMaxLinearSpeed());' % a.entity).strip())
     aim_entity(a.entity)
     frames(0.3)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "down"})
     frames(0.5)
     print(ex('__print(cLux_GetPlayer().GetCurrentStateName());').strip())
+    if a.track:
+        track()
     aim(ent_pos(a.target))
     frames(a.place or 1.5)
     if not a.place:
         press("mouse", "right", 0.1)
     send({"cmd": "input", "type": "mouse_button", "button": "left", "action": "up"})
+    for _ in range(a.track):
+        track()
+        frames(0.1)
     frames(1.0)
     cmd_log(argparse.Namespace(regex=None, all=False))
 
@@ -614,6 +624,7 @@ def main():
     s.add_argument("--circles", type=float, default=0, help="circle mouse: radius dx, sign of dy = direction")
     s.add_argument("--pump", type=int, default=1, help="strokes back and forth while held")
     s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target"); s.add_argument("--place", type=float)
+    s.add_argument("--track", type=int, default=0, help="print the body state this many times after release")
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
     s.add_argument("--steps", type=int, default=30)
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)
