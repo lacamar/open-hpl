@@ -298,6 +298,10 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 		float z = s.x * 2 - 1, a = s.y * k2Pif, w = sqrtf(1 - z * z);
 		return cVector3f(z, sinf(a) * w, cosf(a) * w) * r;
 	});
+	SOMA_FUNC(e, "cVector3f cMath_RandomSphereSurfacePoint(float afRadius)", +[](float r) {
+		float z = cMath::RandRectf(0, 1) * 2 - 1, a = cMath::RandRectf(0, 1) * k2Pif, w = sqrtf(1 - z * z);
+		return cVector3f(z, sinf(a) * w, cosf(a) * w) * r;
+	});
 	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return a.x * b.x + a.y * b.y; });
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
 			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });

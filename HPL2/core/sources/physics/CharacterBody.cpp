@@ -321,6 +321,7 @@ namespace hpl {
 			mfMaxPosMoveSpeed[i]=10;
 			mfMaxNegMoveSpeed[i]=-10;
 			mfMoveSpeed[i]=0;
+			mfMoveSpeedMul[i]=1;
 			mfMoveAcc[i]=20;
 			mfMoveDeacc[i]=20;
 			mbMoving[i]=false;
@@ -1448,8 +1449,8 @@ namespace hpl {
 			{
 				mbMovedLastUpdate = true;
 
-				float fMaxPosSpeed = mfMaxPosMoveSpeed[i] * fDiagMul;
-				float fMaxNegSpeed = mfMaxNegMoveSpeed[i] * fDiagMul;
+				float fMaxPosSpeed = mfMaxPosMoveSpeed[i] * mfMoveSpeedMul[i] * fDiagMul;
+				float fMaxNegSpeed = mfMaxNegMoveSpeed[i] * mfMoveSpeedMul[i] * fDiagMul;
 
 				//see if we want to lower speed
 				if(IsOnGround() || mbDeaccelerateMoveSpeedInAir)
@@ -1476,8 +1477,8 @@ namespace hpl {
 		//Update speed
 		for(int i=0; i < eCharDir_LastEnum; i++)
 		{
-			float fMaxPosSpeed = mfMaxPosMoveSpeed[i] * fDiagMul;
-			float fMaxNegSpeed = mfMaxNegMoveSpeed[i] * fDiagMul;
+			float fMaxPosSpeed = mfMaxPosMoveSpeed[i] * mfMoveSpeedMul[i] * fDiagMul;
+			float fMaxNegSpeed = mfMaxNegMoveSpeed[i] * mfMoveSpeedMul[i] * fDiagMul;
 
 			//If on ground and moving in opposite direction of the current speed, add a acc multiplier.
 			float fAccMul=1.0f;

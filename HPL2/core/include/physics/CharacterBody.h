@@ -167,6 +167,8 @@ namespace hpl {
 
 		void SetMoveSpeed(eCharDir aDir, float afX);
 		float GetMoveSpeed(eCharDir aDir);
+		void SetMoveSpeedMul(eCharDir aDir, float afX){ mfMoveSpeedMul[aDir] = afX;}
+		float GetMoveSpeedMul(eCharDir aDir){ return mfMoveSpeedMul[aDir];}
 		void SetMoveAcc(eCharDir aDir, float afX);
 		float GetMoveAcc(eCharDir aDir);
 		void SetMoveDeacc(eCharDir aDir, float afX);
@@ -434,6 +436,7 @@ namespace hpl {
 		float mfMoveAcc[2];
 		float mfMoveDeacc[2];
 		float mfMoveSpeed[2];
+		float mfMoveSpeedMul[2];
 		float mfMoveOppositeDirAccMul[2];
 		bool mbMoving[2];
 		bool mbDeaccelerateMoveSpeedInAir;
