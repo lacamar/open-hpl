@@ -318,7 +318,18 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cResources_DestroyMaterial(cMaterial @apMaterial)",
 			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
 	SOMA_FUNC(e, "cMesh@ cResources_CreateMesh(const tString&in asName)",
-			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMeshManager()->CreateMesh(n); });
+			  +[](S n) {
+				  cResources *pRes = gpSomaBase->mpEngine->GetResources();
+				  tString sName = n;
+				  // shipped .msh is the official binary format; load its source model
+				  if (cString::GetFileExt(n) == "msh")
+					  for (const char *sExt : {"dae", "fbx"})
+						  if (pRes->GetFileSearcher()->GetFilePath(cString::SetFileExt(n, sExt)) != _W("")) {
+							  sName = cString::SetFileExt(n, sExt);
+							  break;
+						  }
+				  return pRes->GetMeshManager()->CreateMesh(sName);
+			  });
 	SOMA_FUNC(e, "void cResources_DestroyMesh(cMesh@ apMesh)",
 			  +[](cMesh *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMeshManager()->Destroy(m); });
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
