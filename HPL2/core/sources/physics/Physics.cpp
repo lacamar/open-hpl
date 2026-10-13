@@ -175,6 +175,7 @@ namespace hpl {
 			pData->SetStaticFriction(cString::ToFloat(pChildElem->Attribute("StaticFriction"),0.3f));
 
 			pData->SetPriority(cString::ToInt(pChildElem->Attribute("Priority"),0));
+			pData->SetUserVar(cString::ToString(pChildElem->Attribute("UserVar"),""));
 
 			pData->SetElasticityCombMode(GetCombMode(pChildElem->Attribute("ElasticityMode")));
 			pData->SetFrictionCombMode(GetCombMode(pChildElem->Attribute("FrictionMode")));

@@ -72,6 +72,8 @@ namespace hpl {
 		~cSurfaceData();
 
 		const tString& GetName() const{ return msName;}
+		const tString& GetUserVar() const{ return msUserVar;}
+		void SetUserVar(const tString& asX){ msUserVar = asX;}
 
 		void OnImpact(float afSpeed,const cVector3f &avPos,int alContacts,  iPhysicsBody *apBody);
 		void OnSlide(float afSpeed,const cVector3f &avPos,int alContacts, iPhysicsBody *apBody,
@@ -157,6 +159,7 @@ namespace hpl {
 		cResources *mpResources;
 		cPhysics *mpPhysics;
 		tString msName;
+		tString msUserVar;
 		
 		//Properties
 		ePhysicsMaterialCombMode mFrictionMode;

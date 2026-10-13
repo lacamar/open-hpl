@@ -89,11 +89,12 @@ namespace hpl {
 
 		void Draw(iLowLevelGraphics *apLowLevelGraphics, const cColor &aColor);
 
-	private:
 		eCollision CollideFustrumSphere(const cVector3f& avCenter, float afRadius);
 
 		eCollision CollideSphere(const cVector3f& avCenter, float afRadius, int alMaxPlanes=6);
 		eCollision CollideAABB(const cVector3f& avMin,const cVector3f& avMax, int alMaxPlanes=6);
+
+	private:
 		
 
 		void Setup(	const cMatrixf& a_mtxProj, const cMatrixf& a_mtxView,

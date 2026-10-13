@@ -1589,6 +1589,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		float fExtYaw = 0, fExtPitch = 0, fExtRoll = 0;
 	};
 	static std::map<cCamera *, cCameraExtra> mapCameraExtra;
+	SOMA_METHOD(e, "cCamera", "cFrustum@ GetFrustum()", +[](cCamera *c) { return c->GetFrustum(); });
+	SOMA_METHOD(e, "cFrustum", "eCollision CollideAABB(const cVector3f&in avMin, const cVector3f&in avMax, int alMaxPlanes)",
+		+[](cFrustum *f, const cVector3f &a, const cVector3f &b, int n) { return (int)f->CollideAABB(a, b, n); });
+	SOMA_METHOD(e, "cFrustum", "eCollision CollideSphere(const cVector3f&in avCenter, float afRadius, int alMaxPlanes)",
+		+[](cFrustum *f, const cVector3f &c, float r, int n) { return (int)f->CollideSphere(c, r, n); });
+	SOMA_METHOD(e, "cFrustum", "eCollision CollideBoundingVolume(cBoundingVolume@ apBV)", +[](cFrustum *f, cBoundingVolume *b) { return (int)f->CollideBoundingVolume(b); });
 	SOMA_METHOD(e, "cCamera", "const cMatrixf& GetMatrix()", +[](cCamera *c) -> const cMatrixf & {
 		cMatrixf &m = mapCameraExtra[c].mtxWorld;
 		m = cMath::MatrixInverse(c->GetViewMatrix());
