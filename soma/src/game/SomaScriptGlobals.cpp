@@ -301,6 +301,9 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "iEyeTracker@ cInput_GetEyeTracker()", +[]() -> void * { return NULL; });
 	SOMA_FUNC(e, "const tWString& cLux_Translate(const tString &in asCat, const tString &in asEntry)",
 			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
+	// cLanguageFile::TranslatePlatformSpecific: entry + platform suffix, else the plain entry
+	SOMA_FUNC(e, "const tWString& cLux_TranslatePlatformSpecific(const tString &in asCat, const tString &in asEntry)",
+			  +[](S c, S n) -> const tWString & { return gpSomaBase->mpEngine->GetResources()->Translate(c, n); });
 	SOMA_FUNC(e, "bool cLux_HasTranslation(const tString &in asCat, const tString &in asEntry)",
 			  +[](S c, S n) {
 				  cLanguageFile *pLang = gpSomaBase->mpEngine->GetResources()->GetLanguageFile();

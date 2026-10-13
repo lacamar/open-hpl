@@ -130,10 +130,11 @@ namespace hpl {
 			memcpy(&lRgbBitCount, vHeader + 88, 4);
 		}
 
-		const unsigned int klDdpfAlpha = 0x2;
+		// Rebirth font pages: DDPF_ALPHAPIXELS alone
+		const unsigned int klDdpfAlphaPixels = 0x1, klDdpfAlpha = 0x2;
 		const unsigned int klDdsdPitch = 0x8;
 
-		if (bOk == false || lPixelFormatFlags != klDdpfAlpha || lRgbBitCount != 8 ||
+		if (bOk == false || (lPixelFormatFlags != klDdpfAlpha && lPixelFormatFlags != klDdpfAlphaPixels) || lRgbBitCount != 8 ||
 			lWidth == 0 || lHeight == 0)
 		{
 			fclose(pFile);

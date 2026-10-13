@@ -6420,3 +6420,13 @@ active set; `SetAutoSleep(false)` wakes; `cLuxArea::OnSetMatrix/OnSetPosition` w
 Ours (`SomaLux.cpp` entity loop): only areas auto-sleep (no check-collision, no timers/faders,
 script hook true), and sleep only skips script `OnUpdate`/`OnVariableUpdate`. Props sleep only via
 explicit `Sleep()`. Bound `Sleep/IsSleeping/GetAutoSleep` and `Entity_*` equivalents.
+
+## Rebirth: hints (2026-10-13)
+
+- No hints: `cLux_TranslatePlatformSpecific` was an auto-stub returning "". Official
+  `cLanguageFile::TranslatePlatformSpecific` (0xeebef0) tries entry + platform suffix, then the plain
+  entry; English has only `_PS4`/`_PC` variants, so it is bound as plain `Translate`.
+- Black text: Rebirth's 8-bit font pages (55 of them, e.g. `fonts/work_56_0.dds`) set only
+  `DDPF_ALPHAPIXELS` (0x1) where SOMA's use `DDPF_ALPHA` (0x2); they fell through to DevIL and came out
+  with black RGB. `TryLoadUncompressedAlphaDDS` takes both.
+- `imgui_ops name=hud` dumps the game HUD draw ops (colours, z) when no ImGui has input focus.

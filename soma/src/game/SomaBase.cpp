@@ -216,6 +216,8 @@ static cSomaImGui *HeadlessImGui(const cHeadlessRequest &aReq)
 	tString sName = aReq.GetString("name", "");
 	if (sName.empty())
 		return cSomaImGui::GetInputFocus();
+	if (sName == "hud")
+		return SomaHudImGui();
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 	cSomaLuxEntity *pEnt = pMap ? pMap->GetEntity(sName) : NULL;
 	return pEnt ? pEnt->mpImGui : NULL;
