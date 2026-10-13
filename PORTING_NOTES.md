@@ -6404,3 +6404,19 @@ ends in `State_Normal` standing in the cabin.
 
 Open: no "look around"/"move" hints seen, `[FearArea] RegisterFearArea` logged every frame, a magenta
 line on one cabin window after standing up.
+
+## HPL3 entity sleep (2026-10-13)
+
+Symptom: Rebirth `Area_Fear` logged `[FearArea] RegisterFearArea` every frame. Its `OnUpdate`
+re-registers and relies on the entity going to sleep.
+
+Official (Rebirth binary): `iLuxEntity` ctor 0x9e5aa0 sets `mbAutoSleep` (0x419) = 1. The map only
+updates its active set; `iLuxEntity::UpdateAutoSleep` 0xa1a150 lets an entity sleep after 3 idle
+frames unless a component's `OnUpdateAutoSleep` objects. `cLuxUserComponent` 0x9dbab0: no script
+timers, no faders, script `bool OnUpdateAutoSleep()` if present. `cLuxArea` 0x8f5cb0: not while
+check-collision is on. `cLuxProp` 0xc8ca00: bodies/connections. `WakeUp` 0x9e57a0 re-adds to the
+active set; `SetAutoSleep(false)` wakes; `cLuxArea::OnSetMatrix/OnSetPosition` wake.
+
+Ours (`SomaLux.cpp` entity loop): only areas auto-sleep (no check-collision, no timers/faders,
+script hook true), and sleep only skips script `OnUpdate`/`OnVariableUpdate`. Props sleep only via
+explicit `Sleep()`. Bound `Sleep/IsSleeping/GetAutoSleep` and `Entity_*` equivalents.

@@ -497,13 +497,22 @@ void cSomaLuxMap::Update(float afTimeStep)
 		if (pEnt->GetScript() == NULL || pEnt->mbActive == false)
 			continue;
 		pEnt->UpdateTimers(afTimeStep);
-		pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
-		// iLuxEntity::OnVariableUpdate: no faster than the rate, with the accumulated step
-		pEnt->mfVariableUpdateAcc += afTimeStep;
-		if (pEnt->mfVariableUpdateAcc > pEnt->mfVariableUpdateRate && pEnt->mfVariableUpdateRate >= 0)
+		// ponytail: only areas auto-sleep (cLuxArea::OnUpdateAutoSleep); props need the engine's body/animation wake-ups
+		bool bAreaIdle = pEnt->meType == eSomaLuxEntityType_Area && pEnt->mbCheckCollision == false && pEnt->TimersIdle();
+		if (pEnt->meType == eSomaLuxEntityType_Area && bAreaIdle == false)
+			pEnt->mbSleeping = false;
+		if (pEnt->mbSleeping == false)
 		{
-			pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mfVariableUpdateAcc);
-			pEnt->mfVariableUpdateAcc = 0;
+			pEnt->CallWithFloat("void OnUpdate(float afTimeStep)", afTimeStep);
+			// iLuxEntity::OnVariableUpdate: no faster than the rate, with the accumulated step
+			pEnt->mfVariableUpdateAcc += afTimeStep;
+			if (pEnt->mfVariableUpdateAcc > pEnt->mfVariableUpdateRate && pEnt->mfVariableUpdateRate >= 0)
+			{
+				pEnt->CallWithFloat("void OnVariableUpdate(float afTimeStep)", pEnt->mfVariableUpdateAcc);
+				pEnt->mfVariableUpdateAcc = 0;
+			}
+			if (bAreaIdle && pEnt->mbAutoSleep && pEnt->CallBool("bool OnUpdateAutoSleep()", {}, true))
+				pEnt->mbSleeping = true;
 		}
 		if (pEnt->meType == eSomaLuxEntityType_Critter)
 		{

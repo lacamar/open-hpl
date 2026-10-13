@@ -73,6 +73,22 @@ void cSomaLuxEntity::SetStaticPhysics(bool abX)
 	}
 }
 
+void cSomaLuxEntity::WakeUp()
+{
+	mbSleeping = false;
+	for (iPhysicsBody *b : mvBodies)
+		b->Enable();
+}
+
+void cSomaLuxEntity::SetAutoSleep(bool abX)
+{
+	mbAutoSleep = abX;
+	for (iPhysicsBody *b : mvBodies)
+		b->SetAutoDisable(abX);
+	if (abX == false)
+		mbSleeping = false;
+}
+
 void cSomaLuxEntity::SetActive(bool abX)
 {
 	if (mbActive == abX)
@@ -320,6 +336,7 @@ static cMatrixf RelativeMatrix(const cMatrixf &a_mtxBase, const cMatrixf &a_mtx)
 
 void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 {
+	mbSleeping = false;
 	if (meType == eSomaLuxEntityType_Player)
 	{
 		if (iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL)
@@ -2341,13 +2358,16 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "int GetJointNum()", +[](E *p) { return (int)p->Joints().size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsJoint@ GetJoint(int alIdx)", +[](E *p, int i) {
 		return i >= 0 && i < (int)p->Joints().size() ? p->Joints()[i] : (iPhysicsJoint *)NULL; });
-	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); });
+	SOMA_METHOD_NEW(e, T, "void WakeUp()", +[](E *p) { p->WakeUp(); });
+	SOMA_METHOD_NEW(e, T, "void Sleep()", +[](E *p) { p->mbSleeping = true; });
+	SOMA_METHOD_NEW(e, T, "bool IsSleeping()", +[](E *p) { return p->mbSleeping; });
+	SOMA_METHOD_NEW(e, T, "bool GetAutoSleep()", +[](E *p) { return p->mbAutoSleep; });
 	for (const char *pJ : {"iPhysicsJoint", "iPhysicsJointBall", "iPhysicsJointHinge", "iPhysicsJointSlider"})
 	{
 		SOMA_METHOD_NEW(e, pJ, "void SetMinLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMinLimit(), s, m); });
 		SOMA_METHOD_NEW(e, pJ, "void SetMaxLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMaxLimit(), s, m); });
 	}
-	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); });
+	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { p->SetAutoSleep(x); });
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
 	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) -> iEntity3D * {
@@ -2965,9 +2985,11 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		ForMatching(n, [&](cSomaLuxEntity *p) { p->RemoveAttachment(); bFound = true; });
 		return bFound;
 	});
-	SOMA_FUNC(e, "void Entity_WakeUp(const tString&in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->Enable(); }); });
-	SOMA_FUNC(e, "void Entity_SetAutoSleep(const tString&in asName, bool abX)",
-			  +[](S n, bool x) { ForMatching(n, [x](cSomaLuxEntity *p) { for (iPhysicsBody *b : p->mvBodies) b->SetAutoDisable(x); }); });
+	SOMA_FUNC(e, "void Entity_WakeUp(const tString&in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->WakeUp(); }); });
+	SOMA_FUNC(e, "void Entity_SetAutoSleep(const tString&in asName, bool abX)", +[](S n, bool x) { ForMatching(n, [x](cSomaLuxEntity *p) { p->SetAutoSleep(x); }); });
+	SOMA_FUNC(e, "void Entity_Sleep(const tString &in asName)", +[](S n) { ForMatching(n, [](cSomaLuxEntity *p) { p->mbSleeping = true; }); });
+	SOMA_FUNC(e, "bool Entity_IsSleeping(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbSleeping; });
+	SOMA_FUNC(e, "bool Entity_GetAutoSleep(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbAutoSleep; });
 	SOMA_FUNC(e, "void Prop_SetAllowMapTransfer(const tString &in asPropName, bool abX)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->mbAllowMapTransfer = b; }); });
 	SOMA_FUNC(e, "void Entity_SetActive(const tString &in asName, bool abActive)", +[](S n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetActive(b); }); });
 	// ponytail: no dissolve fade, toggles instantly

@@ -72,6 +72,9 @@ public:
 	cSomaID mParentID;
 	tString msParentName;
 	bool mbActive = true;
+	bool mbSleeping = false, mbAutoSleep = true;
+	void WakeUp();
+	void SetAutoSleep(bool abX);
 	bool mbShowMesh = true;
 	bool mbIsDoor = false, mbIsClosedDoor = false;
 	bool mbInteractionDisabled = false;
