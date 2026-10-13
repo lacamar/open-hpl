@@ -188,8 +188,6 @@ namespace hpl {
 		  "vSubColor = max(vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5, cVector3f(1e-4));" },
 		// and multiplies linear albedo by the vertex/ColorMul colour
 		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
 		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
@@ -245,10 +243,8 @@ namespace hpl {
 		for(size_t i=0; i<sizeof(gvHpslSourceReplacements)/sizeof(gvHpslSourceReplacements[0]); ++i)
 		{
 			if(asFile != gvHpslSourceReplacements[i][0]) continue;
-			tString sOld = gvHpslSourceReplacements[i][1];
-			size_t lPos = asData.rfind(sOld);
-			if(lPos != tString::npos) asData.replace(lPos, sOld.size(), gvHpslSourceReplacements[i][2]);
-			else Warning("HPSL replacement anchor not found in %s\n", asFile.c_str());
+			// anchors differ per game: scripts/hpsl-anchor-check.py
+			asData = cString::ReplaceStringTo(asData, gvHpslSourceReplacements[i][1], gvHpslSourceReplacements[i][2]);
 		}
 		// official hardware sRGB mode decodes cube maps with GammaCorrectCubeMaps (pow 2.2)
 		static const std::regex rxCubeGamma("@ifdef UseLinearColorSpaceCorrection\\s*\\n[^\\n]*GammaToLinearCorrection[^\\n]*\\n\\s*@elseif GammaCorrectCubeMaps");
@@ -258,7 +254,6 @@ namespace hpl {
 			if(asFile != gvHpslSourcePatches[i][0]) continue;
 			size_t lPos = asData.rfind(gvHpslSourcePatches[i][1]);
 			if(lPos != tString::npos) asData.insert(lPos, gvHpslSourcePatches[i][2]);
-			else Warning("HPSL patch anchor not found in %s\n", asFile.c_str());
 		}
 		// newer games feed per-light data through an instanced vertex shader; take it as uniforms
 		bool bLightFrag = asFile == "deferred_light_frag.hpsl";
