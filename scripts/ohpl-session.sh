@@ -4,7 +4,7 @@
 #   cmd    soma-play.py subcommand            goto 1 2 3
 #   !cmd   hpl_control.py command             !world_stats
 #   @file  soma-play.py exec of a script file @snippet.as  (OHPL_MODULE=<module>)
-set -uo pipefail
+set -fuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 export OHPL_GAME=$1 OHPL_PLAY_NAME=${OHPL_PLAY_NAME:-ohpl-s$1}
 P="timeout 250 scripts/soma-play.py"

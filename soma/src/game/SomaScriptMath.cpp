@@ -305,6 +305,17 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return a.x * b.x + a.y * b.y; });
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
 			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });
+	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixSetScale(const cMatrixf &in a_mtx, const cVector3f&in avScale)", +[](const cMatrixf &m, const cVector3f &s) {
+		cMatrixf r = m;
+		for (int i = 0; i < 3; ++i)
+		{
+			cVector3f v(m.m[i][0], m.m[i][1], m.m[i][2]);
+			v.Normalize();
+			for (int j = 0; j < 3; ++j)
+				r.m[i][j] = v.v[j] * s.v[i];
+		}
+		return r;
+	});
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXYZ(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XYZ); });
 	SOMA_FUNC(e, "cVector3f cMath_MatrixToEulerAngles(const cMatrixf &in a_mtxA)", +[](const cMatrixf &m) { return cMath::MatrixToEulerAngles(m, eEulerRotationOrder_XYZ); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateXZY(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_XZY); });

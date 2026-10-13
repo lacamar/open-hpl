@@ -99,6 +99,7 @@ private:
 	bool SetupEntityScript(cSomaLuxEntity *apEnt);
 	void AddEntity(cSomaLuxEntity *apEnt);
 	std::vector<cSomaLuxEntity *> mvDestroyed;
+	size_t mlDestroyedFlushed = 0;
 public:
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;

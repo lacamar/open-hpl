@@ -394,6 +394,10 @@ cSomaLuxEntity *cSomaLuxMap::GetEntity(const cSomaID &aID)
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		if (pEnt->mID == aID)
 			return pEnt;
+	// cLuxMap::DestroyEntity only queues: the ID resolves until the flush
+	for (size_t i = mlDestroyedFlushed; i < mvDestroyed.size(); ++i)
+		if (mvDestroyed[i]->mID == aID)
+			return mvDestroyed[i];
 	return NULL;
 }
 
@@ -565,6 +569,7 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	vBreaks.swap(mvPendingBreaks);
 	for (cSomaLuxEntity *pEnt : vBreaks)
 		pEnt->DoBreak();
+	mlDestroyedFlushed = mvDestroyed.size();
 	SomaScriptTick();
 }
 

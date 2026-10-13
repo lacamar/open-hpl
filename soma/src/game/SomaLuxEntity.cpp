@@ -2554,6 +2554,9 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool f) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); });
 	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsAlpha()", +[](E *p) { return p->mfEffectsAlpha; });
+	SOMA_METHOD_NEW(e, T, "bool IsEffectsFading()", +[](E *p) { return p->mfEffectsFadeSpeed != 0; });
+	SOMA_METHOD_NEW(e, T, "int GetBillboardNum()", +[](E *p) { return (int)p->mvBillboards.size(); });
+	SOMA_METHOD_NEW(e, T, "cBillboard@ GetBillboard(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBillboards.size() ? p->mvBillboards[i] : (cBillboard *)NULL; });
 	SOMA_METHOD_NEW(e, T, "void SetCustomEffectsOffAlpha(float afAlpha)", +[](E *p, float a) { p->mfEffectsOffAlpha = a; });
 	SOMA_METHOD_NEW(e, T, "void SetIlluminationBaseColor(const cColor&in aColor)", +[](E *p, const cColor &c) { p->mIllumBaseColor = c; p->mbIllumBaseSet = true; p->ApplyEffectsAlpha(); });
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });

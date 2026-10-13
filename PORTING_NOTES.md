@@ -6509,3 +6509,18 @@ was blended like a material wherever the mask was below the cut threshold. The R
 - `cLuxPlayer::SetCanDie` is a plain flag (+0x200); `Player_Custom.hps` clears it and sets health 0
   on every map enter, `OnPlayerDead` checks it.
 - 'IK' animation events are ignored (86 load errors in `01_02_caves`); foot IK is not implemented.
+
+## Rebirth: bloom blur gain, deferred destroy (2026-10-14)
+- Lit match/candle blew out to a white blob with a red fringe. HDR accumulation was sane (max 15
+  at the hand); the bloom buffers grew 25 -> 488 -> 6080 across the three levels.
+- Official `cPostEffect_ToneMapping::RenderBlur` (0xd07740, REA ev_032a03e0): `w[0]=1`,
+  `w[i]=exp(-x²/s)+exp(-(x+1)²/s)` with `x=2i-1`, all divided by `1+2Σw[i]`;
+  `s=min(40, width/1280*bloomWidth/{4,8,16})`. `kBlurSamples` is a fixed 10
+  (`cPostEffectType_ToneMapping::CreateData` 0xd0143c). `RenderBloom()` skipped the division and
+  used `width/160` samples, so each 1D pass multiplied energy by ~sqrt(pi*s). SOMA shares the code.
+- Bright pass (0xd075e0, REA ev_97c8ab97): threshold `whiteCut*8*brightPass`, already matching.
+- `cLuxMap::DestroyEntity` (0xae6870) only flags the entity and queues it, so its ID still
+  resolves until the flush; `PlayerState_Normal.hps:206` relies on that for the spent match.
+- `iLuxEntity::GetBillboard(int)`/`GetBillboardNum` (0xc8e8c0/0xc8e8f0) index the billboard
+  vector; `IsEffectsFading` (0x8ab920); `cMath_MatrixSetScale` (0xe68a30) normalises rows then
+  scales.

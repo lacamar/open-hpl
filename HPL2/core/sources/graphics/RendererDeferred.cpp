@@ -1126,7 +1126,7 @@ namespace hpl {
 			mpImageTrailProgram = mpGraphics->CreateGpuProgramFromShaders("ImageTrailHdr","deferred_base_vtx.glsl", "posteffect_image_trail_frag.glsl",&bloomVars);
 			if(mpImageTrailProgram)
 				mpImageTrailProgram->GetVariableAsId("afAlpha",kVar_afAlpha);
-			mlBloomBlurSamples = cMath::Max(8, mvScreenSize.x/160);
+			mlBloomBlurSamples = 10;
 			bloomVars.Add("kBlurSamples", mlBloomBlurSamples);
 			for(int i=0; i<2; ++i)
 			{
@@ -1540,10 +1540,11 @@ namespace hpl {
 				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
 			}
 
-			float fS = cMath::Min((float)lN*4, mvScreenSizeFloat.x/1280.0f * mfBloomWidth / (float)(4<<lLevel));
+			float fS = cMath::Min(40.0f, mvScreenSizeFloat.x/1280.0f * mfBloomWidth / (float)(4<<lLevel));
 			cVector2f vInvSize = cVector2f(1.0f) / cVector2f((float)vTex[2*lLevel]->GetWidth(), (float)vTex[2*lLevel]->GetHeight());
 			vWeights[0] = 1;
 			vOffsets[0][0] = vOffsets[1][0] = 0;
+			float fSum = 1;
 			for(int i=1; i<lN; ++i)
 			{
 				float fX = 2.0f*i - 1;
@@ -1552,7 +1553,9 @@ namespace hpl {
 				float fOffset = fB/(fA+fB) + fX;
 				vOffsets[0][i] = fOffset * vInvSize.y;
 				vOffsets[1][i] = fOffset * vInvSize.x;
+				fSum += 2*vWeights[i];
 			}
+			for(int i=0; i<lN; ++i) vWeights[i] /= fSum;
 
 			for(int lDir=0; lDir<2; ++lDir)
 			{
