@@ -1223,6 +1223,8 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SomaRegisterChildIterator<cFogArea>(e, "cFogArea");
 }
 
+static std::vector<iLight *> gvIgnoredLights;
+
 // cLux_GetLightLevelAtPos: linear falloff, LOS only for shadow-casting spots
 float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
 {
@@ -1237,6 +1239,7 @@ float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd)
 	{
 		iLight *pLight = it.Next();
 		if (pLight == pSkip || pLight->IsVisible() == false) continue;
+		if (std::find(gvIgnoredLights.begin(), gvIgnoredLights.end(), pLight) != gvIgnoredLights.end()) continue;
 		float fAmount = MaxRgb(pLight->GetDiffuseColor()) * pLight->GetBrightness();
 		float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), p);
 		if (pLight->GetLightType() == eLightType_Box)
@@ -1530,6 +1533,12 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		return a.GetSize() > 0;
 	});
 	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)", SomaLightLevelAtPos);
+	SOMA_FUNC(e, "void cLux_ClearIgnoredLights()", +[]() { gvIgnoredLights.clear(); });
+	SOMA_FUNC(e, "void cLux_AddIgnoredLight(tID aLightID)", +[](cSomaID id) {
+		if (void *p = SomaObjectFromID(id, "iLight")) gvIgnoredLights.push_back((iLight *)p);
+	});
+	SOMA_FUNC(e, "float cLux_GetLightLeveAtPosWithoutIgnoredLights(const cVector3f&in avPos, float afRadiusAdd)",
+			  +[](const cVector3f &p, float fAdd) { return SomaLightLevelAtPos(p, NULL, fAdd); });
 	cEnvironmentParticles::mpLightLevelFunc = +[](const cVector3f &p) { return SomaLightLevelAtPos(p, NULL, 0); };
 	SOMA_FUNC(e, "const tString& cSystem_GetPlatformName()", +[]() -> const tString & { static tString s = "Linux"; return s; });
 	SOMA_FUNC_NEW(e, "ePlatform cSystem_GetPlatform()", +[]() -> int { return ePlatform_Linux; });

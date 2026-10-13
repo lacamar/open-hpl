@@ -362,7 +362,9 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 
 	FadeTowards(mFOV, afTimeStep);
 	FadeTowards(mFOVMul, afTimeStep);
-	mpCamera->SetFOV(cMath::ToRad(mFOV.mfValue) * mFOVMul.mfValue);
+	for (auto &it : mmapFOVMul)
+		FadeTowards(it.second, afTimeStep);
+	mpCamera->SetFOV(cMath::ToRad(mFOV.mfValue) * GetFOVMul());
 	FadeTowards(mAspectMul, afTimeStep);
 
 	if (mpCharBody == NULL)
@@ -753,6 +755,17 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool IsCameraRotateActive()", +[](P *p) { return p->mbCameraRotateActive; });
 	SOMA_METHOD(e, T, "void StopCameraRotate(float afDeacc)", +[](P *p, float) { p->mbCameraRotateActive = false; p->mfCameraRotateSpeed = 0; });
 	SOMA_METHOD(e, T, "void FadeCameraFOVMulTo(float afX, float afSpeed)", +[](P *p, float x, float s) { p->mFOVMul.mfGoal = x; p->mFOVMul.mfSpeed = s; p->mFOVMul.mfSpeedMul = 0; });
+	SOMA_METHOD(e, T, "void FadeCameraFOVMulTo(int alId, float afX, float afSpeed)", +[](P *p, int id, float x, float s) {
+		cSomaLuxPlayer::cFadeValue &f = p->FOVMul(id);
+		f.mfGoal = x;
+		f.mfSpeed = s;
+	});
+	SOMA_METHOD(e, T, "void SetCameraFOVMul(int alId, float afFOVMul)", +[](P *p, int id, float x) {
+		cSomaLuxPlayer::cFadeValue &f = p->FOVMul(id);
+		f.mfValue = f.mfGoal = x;
+	});
+	SOMA_METHOD(e, T, "float GetCameraFOVMul(int alId)", +[](P *p, int id) { return p->FOVMul(id).mfValue; });
+	SOMA_METHOD(e, T, "float GetCameraFOVMul()", +[](P *p) { return p->GetFOVMul(); });
 	SOMA_METHOD(e, T, "void FadeCameraAspectMulTo(float afX, float afSpeed)", +[](P *p, float x, float s) { p->mAspectMul.mfGoal = x; p->mAspectMul.mfSpeed = s; p->mAspectMul.mfSpeedMul = 0; });
 	SOMA_METHOD(e, T, "void FadeCameraRollTo(int alId, float afX, float afSpeedMul, float afMaxSpeed)", +[](P *p, int id, float x, float mul, float max) {
 		cSomaLuxPlayer::cFadeValue &f = p->mmapCameraRoll[id];

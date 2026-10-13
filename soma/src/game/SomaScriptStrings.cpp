@@ -64,6 +64,14 @@ static uint8_t &CharAt(unsigned int alIdx, std::string &s)
 	return *(uint8_t *)&s[alIdx];
 }
 
+static uint16_t &WCharAt(unsigned int alIdx, std::wstring &s)
+{
+	static uint16_t lDummy = 0;
+	if (alIdx >= s.size())
+		return lDummy;
+	return *(uint16_t *)&s[alIdx];
+}
+
 static std::string ToStr(float f)
 {
 	char sBuf[64];
@@ -196,6 +204,8 @@ void RegisterSomaScriptStrings(asIScriptEngine *apEngine)
 	r = apEngine->RegisterObjectMethod("tWString", "int opCmp(const tWString &in) const", asFUNCTION(Cmp<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "tWString opAdd(const tWString &in) const", asFUNCTION(Add<std::wstring>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "uint64 length() const", asFUNCTION(Length<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = apEngine->RegisterObjectMethod("tWString", "uint16 &opIndex(uint)", asFUNCTION(WCharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
+	r = apEngine->RegisterObjectMethod("tWString", "const uint16 &opIndex(uint) const", asFUNCTION(WCharAt), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	r = apEngine->RegisterObjectMethod("tWString", "void resize(uint64)", asFUNCTION(Resize<std::wstring>), asCALL_CDECL_OBJLAST); assert(r >= 0);
 	RegisterWConcat<std::string>(apEngine, "tString");
 	RegisterConcat<float>(apEngine, "float");

@@ -1463,7 +1463,7 @@ namespace
 	// cLuxOutlineEffect::RenderEdgeGlow: additive, after translucents
 	struct cEdgeGlowRenderer : iRendererCallback
 	{
-		struct cGlow { cSomaID mID; float mfAlpha, mfY; };
+		struct cGlow { cSomaID mID; cColor mColor; float mfY; };
 		cViewport *mpViewport = NULL;
 		iGpuProgram *mpProgram = NULL;
 		iGpuProgram *mpOutline = NULL;
@@ -1578,7 +1578,7 @@ namespace
 				if (p == NULL || p->mpMesh == NULL || p->mbActive == false || p->mpMesh->IsVisible() == false)
 					continue;
 				Begin(mpOutline);
-				mpOutline->SetVec4f(0, 0.2f, 0.2f, 1, glow.mfAlpha);
+				mpOutline->SetVec4f(0, glow.mColor.r, glow.mColor.g, glow.mColor.b, glow.mColor.a);
 				mpOutline->SetVec2f(1, (float)vScreen.x, (float)vScreen.y);
 				mpOutline->SetFloat(2, glow.mfY);
 				for (int i = 0; i < p->mpMesh->GetSubMeshEntityNum(); ++i)
@@ -2142,19 +2142,21 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxSoundListener@ cLux_CreateEntityComponent_SoundListener(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentSoundListener(p)); });
 	SOMA_FUNC(e, "cLuxHeadTracker@ cLux_CreateEntityComponent_HeadTracker(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentHeadTracker(p)); });
 
-	SOMA_METHOD(e, "cLuxEffectHandler", "void AddGlowObject(iLuxEntity@ apEntity, float afAlpha, float afY)", +[](void *, E *p, float a, float y) {
+	static auto AddGlow = +[](E *p, const cColor &col, float y) {
 		if (p == NULL)
 			return;
 		gEdgeGlowRenderer.Register();
 		for (auto &g : gEdgeGlowRenderer.mvGlow)
 			if (g.mID == p->mID)
 			{
-				g.mfAlpha = a;
+				g.mColor = col;
 				g.mfY = y;
 				return;
 			}
-		gEdgeGlowRenderer.mvGlow.push_back({p->mID, a, y});
-	});
+		gEdgeGlowRenderer.mvGlow.push_back({p->mID, col, y});
+	};
+	SOMA_METHOD(e, "cLuxEffectHandler", "void AddGlowObject(iLuxEntity@ apEntity, float afAlpha, float afY)", +[](void *, E *p, float a, float y) { AddGlow(p, cColor(0.2f, 0.2f, 1, a), y); });
+	SOMA_METHOD(e, "cLuxEffectHandler", "void AddGlowObject(iLuxEntity@ apEntity, const cColor&in aColor, float afY)", +[](void *, E *p, const cColor &col, float y) { AddGlow(p, col, y); });
 	SOMA_FUNC(e, "cLuxEdgeGlow@ cLux_CreateEntityComponent_EdgeGlow(iLuxEntity @apEntity)", +[](E *p) {
 		gEdgeGlowRenderer.Register();
 		return AddComponent(p, new cAgentEdgeGlow(p));

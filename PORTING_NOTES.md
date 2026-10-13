@@ -6439,3 +6439,16 @@ was blended like a material wherever the mask was below the cut threshold. The R
 `cache_terrain_diffuse_frag.hpsl` has `UseBlendMul`/`avBlendMul`; the hole channel now gets 0 there
 (`cMaterialType_TerrainBlend_Vars::mvBlendMul`). SOMA's shader has no such define and no hole material.
 
+
+## Rebirth: interact connections, FOV muls, ignored lights (2026-10-13)
+
+- `cLuxProp` interact connections follow the Rebirth binary (c768f0-c76e9a):
+  `UpdateInteractConnectionLeader` makes the driven prop leader of itself and its neighbours (their
+  other neighbours lead themselves); `ChangeInteractConnectionState(t)` eases `invert ? 1-t : t` and
+  calls `OnInteractConnectionStateChange` only on props this one leads.
+- `cLuxPlayer::SetCameraFOVMul/FadeCameraFOVMulTo(id, ...)` are per-id multipliers on top of the SOMA
+  one; the camera FOV is the product. Not saved: the scripts set them every frame.
+- `cLux_AddIgnoredLight` list is skipped by the light-level query (`Player.hps`
+  `GetLightLevelAtPosWithoutIgnoredLights` excludes the player's own lights).
+- `AddGlowObject(entity, colour, y)`: Rebirth passes the outline colour; SOMA's alpha form keeps blue.
+- `tWString::opIndex`.

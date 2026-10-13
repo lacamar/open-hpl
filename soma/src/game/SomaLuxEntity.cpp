@@ -1313,6 +1313,47 @@ void cSomaLuxEntity::ChangeConnectionState(int alState)
 	}
 }
 
+// cLuxProp interact connections as in the Rebirth binary: the prop being driven leads its neighbours
+void cSomaLuxEntity::UpdateInteractConnectionLeader()
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	mInteractLeaderID = mID;
+	for (const cInteractConnection &conn : mvInteractConnections)
+	{
+		cSomaLuxEntity *pProp = pMap ? pMap->GetEntity(conn.mPropID) : NULL;
+		if (pProp == NULL)
+			continue;
+		pProp->mInteractLeaderID = mID;
+		for (const cInteractConnection &conn2 : pProp->mvInteractConnections)
+		{
+			cSomaLuxEntity *pProp2 = pMap->GetEntity(conn2.mPropID);
+			if (pProp2 && pProp2 != this)
+				pProp2->mInteractLeaderID = pProp->mID;
+		}
+	}
+}
+
+void cSomaLuxEntity::ChangeInteractConnectionState(float afT)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	std::vector<cInteractConnection> vConnections = mvInteractConnections;
+	for (const cInteractConnection &conn : vConnections)
+	{
+		float fT = SomaEasing(conn.mlEasing, cMath::Clamp(conn.mbInvert ? 1 - afT : afT, 0.0f, 1.0f));
+		cSomaLuxEntity *pProp = pMap ? pMap->GetEntity(conn.mPropID) : NULL;
+		if (pProp == NULL)
+			continue;
+		pProp->mfInteractConnectionState = fT;
+		if (pProp->mInteractLeaderID == cSomaID())
+			pProp->mInteractLeaderID = mID;
+		if (pProp->mInteractLeaderID == mID)
+			pProp->Call("void OnInteractConnectionStateChange(cLuxProp@ apProp, float afT)", [&](asIScriptContext *c) {
+				c->SetArgAddress(0, this);
+				c->SetArgFloat(1, fT);
+			});
+	}
+}
+
 // iLuxEntity::OnInteract: the map's player interact callback first, then the entity script
 bool cSomaLuxEntity::OnInteract(int alType, iPhysicsBody *apBody, const cVector3f &avFocusPos, const tString &asData)
 {
@@ -2925,6 +2966,18 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	}
 	if (e->GetTypeInfoByName("cLuxProp"))
 	{
+		SOMA_METHOD(e, "cLuxProp", "void AddInteractConnection(const tString&in asName, cLuxProp@ apProp, bool abInvert, eEasing aEasing=eEasing_Linear)",
+					+[](cSomaLuxEntity *p, const tString &n, cSomaLuxEntity *pProp, bool bInvert, int lEasing) {
+						if (pProp) p->mvInteractConnections.push_back({n, pProp->mID, bInvert, lEasing});
+					});
+		SOMA_METHOD(e, "cLuxProp", "int GetInteractConnectionNum()", +[](cSomaLuxEntity *p) { return (int)p->mvInteractConnections.size(); });
+		SOMA_METHOD(e, "cLuxProp", "void RemoveInteractConnection(const tString&in asName)", +[](cSomaLuxEntity *p, const tString &n) {
+			std::erase_if(p->mvInteractConnections, [&](const cSomaLuxEntity::cInteractConnection &c) { return c.msName == n; });
+		});
+		SOMA_METHOD(e, "cLuxProp", "void RemoveAllInteractConnections()", +[](cSomaLuxEntity *p) { p->mvInteractConnections.clear(); });
+		SOMA_METHOD(e, "cLuxProp", "void UpdateInteractConnectionLeader()", +[](cSomaLuxEntity *p) { p->UpdateInteractConnectionLeader(); });
+		SOMA_METHOD(e, "cLuxProp", "float GetLastInteractConnectionState()", +[](cSomaLuxEntity *p) { return p->mfInteractConnectionState; });
+		SOMA_METHOD(e, "cLuxProp", "void ChangeInteractConnectionState(float afT)", +[](cSomaLuxEntity *p, float t) { p->ChangeInteractConnectionState(t); });
 		SOMA_METHOD(e, "cLuxProp", "void SetStaticPhysics(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->SetStaticPhysics(b); });
 		SOMA_METHOD(e, "cLuxProp", "void SetAllowMapTransfer(bool abX)", +[](cSomaLuxEntity *p, bool b) { p->mbAllowMapTransfer = b; });
 		SOMA_METHOD(e, "cLuxProp", "bool GetAllowMapTransfer()", +[](cSomaLuxEntity *p) { return p->mbAllowMapTransfer; });

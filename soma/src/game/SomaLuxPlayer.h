@@ -103,6 +103,24 @@ public:
 	cVector3f mvBaseCameraPosAdd = 0;
 	std::map<int, cMoveVector> mmapCameraPosAdd;
 	std::map<int, cFadeValue> mmapCameraRoll;
+	std::map<int, cFadeValue> mmapFOVMul;
+	cFadeValue &FOVMul(int alId)
+	{
+		auto it = mmapFOVMul.find(alId);
+		if (it == mmapFOVMul.end())
+		{
+			it = mmapFOVMul.emplace(alId, cFadeValue()).first;
+			it->second.mfValue = it->second.mfGoal = 1;
+		}
+		return it->second;
+	}
+	float GetFOVMul()
+	{
+		float f = mFOVMul.mfValue;
+		for (auto &it : mmapFOVMul)
+			f *= it.second.mfValue;
+		return f;
+	}
 	cFadeValue mFOVMul, mAspectMul, mFOV;
 
 	void SetHealth(float afX);

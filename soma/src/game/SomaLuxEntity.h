@@ -197,6 +197,18 @@ public:
 		int mlStatesUsed;
 	};
 	std::vector<cConnection> mvConnections;
+	struct cInteractConnection
+	{
+		tString msName;
+		cSomaID mPropID;
+		bool mbInvert;
+		int mlEasing;
+	};
+	std::vector<cInteractConnection> mvInteractConnections;
+	cSomaID mInteractLeaderID;
+	float mfInteractConnectionState = 0;
+	void UpdateInteractConnectionLeader();
+	void ChangeInteractConnectionState(float afT);
 	tString msConnectionCallback;
 	void ChangeConnectionState(int alState);
 
