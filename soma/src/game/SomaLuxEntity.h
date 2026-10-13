@@ -225,6 +225,7 @@ public:
 	// iLuxEntity animation controller on the mesh's animation states
 	int PlayAnimation(const tString &asName, float afFadeTime, bool abLoop, const tString &asCallback);
 	bool GetAnimationIsPlaying();
+	void StopAnimation(int alIdx, float afFadeTime);
 	void StopAnimations(float afFadeTime);
 	void UpdateAnimation(float afTimeStep);
 

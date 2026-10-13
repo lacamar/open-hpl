@@ -6347,3 +6347,18 @@ Data-side material misses (the official `.msh` names the same absent files): `Pr
 - `PhysicsBodyNewton` max-speed clamp compares length against max squared (as upstream HPL2);
   left alone for TDD parity.
 - `soma-play.py throw --track N` prints the body state while held and after release.
+
+## Rebirth: StopAnimation per state (2026-10-13)
+
+- 01_01 wake-up camera sat 3.1 m under the plane floor: seven body animations were active at
+  weight 1 (`idle_stand*`, `player_struggle_wake_up_*`, `player_wake_up_seq_crawl`) and their
+  `j_Root` offsets summed.
+- `PlayerBodyHandler.hps` runs with `SetNormalizeAnimationWeights(false)`, starts states with
+  `cMeshEntity.PlayName` + `FadeIn` and relies on `iLuxEntity::StopAnimation(name|idx, fade)` to
+  end them. Ours only acted when the state was `mlCurrentAnim`.
+- Official (`Amnesia2_NoSteam` 0x9fa0a0): bounds check, `GetAnimationState(idx)->FadeOut(fade)`
+  for any state; `StopAllAnimations` 0x9f9fb0 loops it. `cSomaLuxEntity::StopAnimation(int, float)`
+  now does the same.
+- Official `cAnimationState::FadeOut` 0xf60190 fades at `-weight / time` and stops at once for
+  time <= 0; shared HPL2 `FadeOut` still uses `-1 / time`.
+- After: only `player_wake_up_seq_crawl` active, camera socket at y 15.97 (floor 15.75).

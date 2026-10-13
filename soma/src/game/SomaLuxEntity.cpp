@@ -372,21 +372,32 @@ bool cSomaLuxEntity::GetAnimationIsPlaying()
 	return pState->IsActive() && (pState->IsLooping() || pState->IsOver() == false);
 }
 
+void cSomaLuxEntity::StopAnimation(int alIdx, float afFadeTime)
+{
+	if (mpMesh == NULL || alIdx < 0 || alIdx >= mpMesh->GetAnimationStateNum())
+		return;
+	if (alIdx == mlCurrentAnim)
+	{
+		mvAnimQueue.clear();
+		mlCurrentAnim = -1;
+		msAnimCallback = "";
+	}
+	cAnimationState *pState = mpMesh->GetAnimationState(alIdx);
+	if (pState->IsActive() == false)
+		return;
+	if (afFadeTime > 0)
+		pState->FadeOut(afFadeTime);
+	else
+		pState->SetActive(false);
+}
+
 void cSomaLuxEntity::StopAnimations(float afFadeTime)
 {
 	mvAnimQueue.clear();
 	mlCurrentAnim = -1;
 	msAnimCallback = "";
-	if (mpMesh == NULL)
-		return;
-	for (int i = 0; i < mpMesh->GetAnimationStateNum(); ++i)
-		if (mpMesh->GetAnimationState(i)->IsActive())
-		{
-			if (afFadeTime > 0)
-				mpMesh->GetAnimationState(i)->FadeOut(afFadeTime);
-			else
-				mpMesh->GetAnimationState(i)->SetActive(false);
-		}
+	for (int i = 0; mpMesh && i < mpMesh->GetAnimationStateNum(); ++i)
+		StopAnimation(i, afFadeTime);
 }
 
 void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
@@ -2381,10 +2392,10 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "bool GetAnimationIsPlaying()", +[](E *p) { return p->GetAnimationIsPlaying(); });
 	SOMA_METHOD_NEW(e, T, "void StopAllAnimations(float afFadeTime)", +[](E *p, float f) { p->StopAnimations(f); });
 	SOMA_METHOD_NEW(e, T, "void StopAnimation(const tString&in asName, float afFadeTime)", +[](E *p, S n, float f) {
-		if (p->mpMesh && p->mpMesh->GetAnimationStateIndex(n) == p->mlCurrentAnim)
-			p->StopAnimations(f);
+		if (p->mpMesh)
+			p->StopAnimation(p->mpMesh->GetAnimationStateIndex(n), f);
 	});
-	SOMA_METHOD_NEW(e, T, "void StopAnimation(int alIdx, float afFadeTime)", +[](E *p, int i, float f) { if (i == p->mlCurrentAnim) p->StopAnimations(f); });
+	SOMA_METHOD_NEW(e, T, "void StopAnimation(int alIdx, float afFadeTime)", +[](E *p, int i, float f) { p->StopAnimation(i, f); });
 	SOMA_METHOD_NEW(e, T, "void SetNormalizeAnimationWeights(bool abX)", +[](E *p, bool b) { if (p->mpMesh) p->mpMesh->SetNormalizeAnimationWeights(b); });
 	SOMA_METHOD_NEW(e, T, "int GetCurrentAnimationIndex()", +[](E *p) { return p->mlCurrentAnim; });
 	SOMA_METHOD_NEW(e, T, "cAnimationState@ GetCurrentAnimationState()",
