@@ -43,6 +43,7 @@
 #include "graphics/Bitmap.h"
 
 #include "resources/Resources.h"
+#include "resources/FileSearcher.h"
 #include "resources/TextureManager.h"
 #include "resources/GpuShaderManager.h"
 #include "resources/MeshManager.h"
@@ -957,7 +958,10 @@ namespace hpl {
 		{
 			cParserVarContainer programVars;
 			programVars.Add("UseUv");
-			mpFxaaProgram = mpGraphics->CreateGpuProgramFromShaders("Fxaa","deferred_base_vtx.glsl", "posteffect_fxaa_frag.glsl",&programVars);
+			// HPL3.5 ships FXAA 3.11; official cPostEffectParams_FXAA::mQuality defaults to 1
+			programVars.Add("Quality_Medium");
+			bool bFxaa311 = mpResources->GetFileSearcher()->GetFilePath("posteffect_fxaa_3_11_frag.hpsl") != _W("");
+			mpFxaaProgram = mpGraphics->CreateGpuProgramFromShaders("Fxaa","deferred_base_vtx.glsl", bFxaa311 ? "posteffect_fxaa_3_11_frag.glsl" : "posteffect_fxaa_frag.glsl",&programVars);
 			if(mpFxaaProgram)
 				mpFxaaProgram->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		}

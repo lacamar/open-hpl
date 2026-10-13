@@ -435,12 +435,13 @@ namespace
 	{
 		auto formatter = [&](const std::vector<tString>& aArgs, tString& asRepl, tString& asErr) -> bool
 		{
-			if (aArgs.size() != alArgs)
+			bool bOffset = tString(asName) == "sampleLod" && aArgs.size() == alArgs + 1;
+			if (aArgs.size() != alArgs && bOffset == false)
 			{
 				asErr = tString(asName) + "() with " + cString::ToString((int)aArgs.size()) + " argument(s) is not supported";
 				return false;
 			}
-			asRepl = tString(asGlslName) + "(";
+			asRepl = tString(asGlslName) + (bOffset ? "Offset(" : "(");
 			for (size_t i = 0; i < aArgs.size(); ++i) asRepl += (i ? ", " : "") + aArgs[i];
 			asRepl += ")";
 			abFired = true;
