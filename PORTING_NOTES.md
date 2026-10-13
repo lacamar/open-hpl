@@ -6381,3 +6381,26 @@ Three separate NaN/garbage sources behind the black blocky specks in the wake-up
 
 Finding it: `dump_target target=4` + numpy `isfinite`, then `set_render_setting name=image_trail
 value=0` (specks vanish, return when re-enabled) showed the trail was only the carrier.
+
+## Rebirth: 01_01 wake-up to player control (2026-10-13)
+
+Headless route: `wait 82;walk 20;click` (laudanum) `;wait 82;interact Sketchbook;wait 3;key escape;wait 12`
+ends in `State_Normal` standing in the cabin.
+
+- Memory flashback (`Sketchbook_UnlockMemory`): the sketch is drawn with `eGuiMaterial_Custom0`, which
+  the game registers as `cGuiMaterial_MemorySketch` (`game_gui_memorysketch_{vtx,frag}.hpsl`, blend
+  DestColor/Zero, uniforms `avAlphaLimit`, `afTime`). `cSomaGuiMaterial_MemorySketch` in
+  `soma/src/game/SomaImGui.cpp`; `cImGuiGfx::mvAlphaLimit` lives in spare bytes of the SOMA struct
+  (layout offset 160). `cGui::GetMaterial` falls back to Alpha for ids past our enum.
+- `cGuiSet::GetDisplayScale` / `cLux_GetHudDisplayScale` return 1 (console safe-area scale); as zero
+  stubs the whole sketchbook UI was scaled to nothing.
+- `cLuxVoiceHandler::Play` has a 5th `abPlayWhilePaused` argument in Rebirth. Unbound it was a stub
+  returning false: no voices, and the flashback waited forever on its voice end callback.
+- Registering a declaration that SOMA already binds gives `asALREADY_REGISTERED`; every script then
+  fails with "Invalid configuration" and the game dies at boot. Grep before adding a Rebirth binding.
+- `State_InteractiveCutsceneAnimation` owns the camera (head bone plus clamped cutscene yaw/pitch), so
+  scripted `SetYaw/SetPitch` does nothing there. `soma-play.py` now falls back to closed-loop mouse
+  look when the camera forward misses the target, and checks focus with `pick_entity` outside SOMA.
+
+Open: no "look around"/"move" hints seen, `[FearArea] RegisterFearArea` logged every frame, a magenta
+line on one cabin window after standing up.

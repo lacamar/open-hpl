@@ -160,9 +160,42 @@ def aim(target):
         ex(f"cLuxPlayer@ p = cLux_GetPlayer(); p.GetCharacterBody().SetYaw({yaw}); p.GetCamera().SetYaw({yaw});"
            f"p.GetCamera().SetPitch({pitch});")
         frames(0.05)
+    if max(map(abs, aim_error(target))) > 2:
+        mouse_aim(target)
+
+
+def aim_error(target):
+    d = kv('cCamera@ c = cLux_GetPlayer().GetCamera(); cVector3f p = c.GetPosition(), f = c.GetForward();'
+           '__print("p=" + p.x + " " + p.y + " " + p.z); __print("f=" + f.x + " " + f.y + " " + f.z);')
+    p, f = ([float(v) for v in d[k].split()] for k in "pf")
+    t = [target[i] - p[i] for i in range(3)]
+    ang = lambda v: (math.atan2(v[0], v[2]), math.atan2(v[1], math.hypot(v[0], v[2])))
+    (ty, tp), (fy, fp) = ang(t), ang(f)
+    return (math.degrees(ty - fy) + 180) % 360 - 180, math.degrees(tp - fp)
+
+
+def mouse_aim(target):
+    # cutscene states own the camera: closed-loop mouse look, speed-capped by the state
+    gain = [0.03, 0.03]
+    e = aim_error(target)
+    for _ in range(40):
+        if max(map(abs, e)) < 0.5:
+            break
+        d = [max(-40, min(40, round(-e[k] / gain[k] * 0.7))) for k in (0, 1)]
+        send({"cmd": "input", "type": "mouse_move", "xrel": str(d[0]), "yrel": str(d[1])})
+        frames(0.1)
+        e2 = aim_error(target)
+        if max(abs(e2[k] - e[k]) for k in (0, 1)) < 0.02:
+            break
+        for k in (0, 1):
+            if abs(d[k]) >= 5 and (e2[k] - e[k]) / d[k] > 0.003:
+                gain[k] = (e2[k] - e[k]) / d[k]
+        e = e2
 
 
 def focused(name):
+    if GAME.name != "soma":
+        return send({"cmd": "pick_entity"}).get("hits", "").split("/")[0].split(" ")[-1] == name
     # the game's own pick: range, CanInteract, offset rays
     tool = 'cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
     # a tool's offset ray sticks while it hits anything

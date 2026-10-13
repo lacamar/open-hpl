@@ -216,6 +216,7 @@ static int NativeOffset(const std::string &asType, const std::string &asDecl, in
 {
 	static const struct { const char *mpType, *mpName; int mlOffset; } vLayout[] = {
 #include "SomaImGuiLayout.inc"
+		{"cImGuiGfx", "mvAlphaLimit", 160}, // Rebirth only, spare bytes of the SOMA struct
 	};
 	std::string sName = asDecl.substr(asDecl.find_last_of(' ') + 1);
 	bool bType = false;

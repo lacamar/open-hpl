@@ -576,6 +576,9 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cLux_GetStringDuration(const tWString&in asStr)", SomaStringDuration);
 	SOMA_METHOD(e, "iLowLevelGraphics", "void SetBrightness(float afX)", +[](iLowLevelGraphics *g, float x) { g->SetGammaCorrection(x); });
 	SOMA_FUNC(e, "iFontData@ cResources_CreateFontData(const tString&in asName)", +[](const tString &s) { return gpSomaBase->mpEngine->GetResources()->GetFontManager()->CreateFontData(s); });
+	// Rebirth display safe area
+	SOMA_METHOD(e, "cGuiSet", "float GetDisplayScale()", +[](cGuiSet *) { return 1.0f; });
+	SOMA_FUNC(e, "float cLux_GetHudDisplayScale()", +[]() { return 1.0f; });
 	SOMA_METHOD(e, "cGuiSet", "void DrawFontEx(const tWString &in asText, iFontData @apFont, const cVector3f &in avPos,const cVector2f &in avSize, const cColor&in aColor, eFontAlign aAlign, eGuiMaterial aMaterial)",
 				+[](cGuiSet *g, const tWString &t, iFontData *f, const cVector3f &p, const cVector2f &v, const cColor &c, eFontAlign al, eGuiMaterial m) { g->DrawFont(t, f, p, v, c, al, m); });
 	SOMA_METHOD(e, "iFontData", "void GetWordWrapRows(float afLength,const cVector2f&in avSize,const tWString&in asString, array<tWString> &inout avRows)",

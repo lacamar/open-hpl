@@ -188,7 +188,7 @@ namespace hpl {
 
 	iGuiMaterial* cGui::GetMaterial(eGuiMaterial aType)
 	{
-		return mvMaterials[aType];
+		return mvMaterials[aType < eGuiMaterial_LastEnum ? aType : eGuiMaterial_Alpha];
 	}
 
 	//-----------------------------------------------------------------------

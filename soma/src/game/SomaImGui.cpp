@@ -30,7 +30,7 @@ namespace
 {
 	enum
 	{
-		kGfxMaterial = 16, kGfxType = 20, kGfxColor = 40, kGfxUVMin = 64, kGfxUVMax = 72, kGfxFile = 152, kGfxSize = 168,
+		kGfxMaterial = 16, kGfxType = 20, kGfxColor = 40, kGfxUVMin = 64, kGfxUVMax = 72, kGfxFile = 152, kGfxAlphaLimit = 160, kGfxSize = 168,
 		kFontMaterial = 16, kFontColor = 20, kFontSize = 36, kFontFile = 48,
 		kWColorBase = 16, kWColorText = 32, kWColorDisabled = 48, kWUseDisabledColor = 312, kWDefaultSize = 64, kWUseBg = 72, kWGfxBg = 80, kWFont = 248, kWFontAlign = 316,
 		kBUseFrame = 320, kBFrame = 328, kBUseInFocusGfx = 1920, kBGfxInFocus = 1928, kBUseInFocusColor = 2096, kBColorInFocus = 2100,
@@ -405,6 +405,39 @@ void SomaRestoreCameraTexture(const cSomaCameraTextureState &s)
 
 static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial, const cVector2f &vUVMin, const cVector2f &vUVMax);
 
+// Rebirth eGuiMaterial_Custom0 (cGuiMaterial_MemorySketch)
+class cSomaGuiMaterial_MemorySketch : public iGuiMaterial
+{
+public:
+	cSomaGuiMaterial_MemorySketch(iLowLevelGraphics *apLowLevelGraphics) : iGuiMaterial("MemorySketch", apLowLevelGraphics), mvAlphaLimit(1, 0)
+	{
+		static iGpuProgram *pProgram = gpSomaBase->mpEngine->GetGraphics()->CreateGpuProgramFromShaders(
+			"MemorySketch", "game_gui_memorysketch_vtx.glsl", "game_gui_memorysketch_frag.glsl", NULL);
+		mpProgram = pProgram;
+	}
+
+	void BeforeRender()
+	{
+		mpLowLevelGraphics->SetBlendActive(true);
+		mpLowLevelGraphics->SetBlendFunc(eBlendFunc_DestColor, eBlendFunc_Zero);
+		if (mpProgram == NULL)
+			return;
+		mpProgram->Bind();
+		mpProgram->SetVec2f(mpProgram->GetVariableId("avAlphaLimit"), mvAlphaLimit);
+		mpProgram->SetFloat(mpProgram->GetVariableId("afTime"), fmodf(cPlatform::GetApplicationTime() / 1000.0f, 3000.0f));
+	}
+
+	void AfterRender()
+	{
+		if (mpProgram)
+			mpProgram->UnBind();
+	}
+
+	cVector2f mvAlphaLimit;
+	iGpuProgram *mpProgram;
+};
+static std::map<cGuiGfxElement *, cSomaGuiMaterial_MemorySketch *> gmapSketchMaterials;
+
 static cGuiGfxElement *GfxElement(const void *apGfx)
 {
 	const tString &sFile = StrAt(apGfx, kGfxFile);
@@ -428,7 +461,11 @@ static cGuiGfxElement *GfxElement(const void *apGfx)
 			pWhite = gpSomaBase->mpEngine->GetGui()->CreateGfxFilledRect(cColor(1, 1), eGuiMaterial_Alpha);
 		return pWhite;
 	}
-	return GfxElement(sFile, lType, lMaterial, F<cVector2f>(apGfx, kGfxUVMin), F<cVector2f>(apGfx, kGfxUVMax));
+	cGuiGfxElement *pGfx = GfxElement(sFile, lType, lMaterial, F<cVector2f>(apGfx, kGfxUVMin), F<cVector2f>(apGfx, kGfxUVMax));
+	// ponytail: one limit per image and material, the last draw of a frame wins
+	if (pGfx && lMaterial >= eGuiMaterial_LastEnum)
+		gmapSketchMaterials[pGfx]->mvAlphaLimit = F<cVector2f>(apGfx, kGfxAlphaLimit);
+	return pGfx;
 }
 
 void SomaPreloadGuiGfx(const tString &asFile, int alType)
@@ -441,7 +478,8 @@ static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial
 {
 	static std::map<tString, cGuiGfxElement *> mapCache;
 	bool bSubRect = vUVMin != cVector2f(0) || vUVMax != cVector2f(1);
-	tString sKey = sFile + "#" + cString::ToString(lType);
+	bool bSketch = lMaterial >= eGuiMaterial_LastEnum;
+	tString sKey = sFile + "#" + cString::ToString(lType) + (bSketch ? "#sketch" : "");
 	if (bSubRect)
 		sKey += "#" + vUVMin.ToString() + vUVMax.ToString();
 	auto it = mapCache.find(sKey);
@@ -458,6 +496,8 @@ static cGuiGfxElement *GfxElement(const tString &sFile, int lType, int lMaterial
 		pGfx = pGui->CreateGfxTexture(sFile, (eGuiMaterial)lMaterial, eTextureType_2D, cColor(1, 1), true);
 	else
 		pGfx = pGui->CreateGfxImage(sFile, (eGuiMaterial)lMaterial);
+	if (pGfx && bSketch)
+		pGfx->SetMaterial(gmapSketchMaterials[pGfx] = new cSomaGuiMaterial_MemorySketch(gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()));
 	mapCache[sKey] = pGfx;
 	return pGfx;
 }
