@@ -6362,3 +6362,22 @@ Data-side material misses (the official `.msh` names the same absent files): `Pr
 - Official `cAnimationState::FadeOut` 0xf60190 fades at `-weight / time` and stops at once for
   time <= 0; shared HPL2 `FadeOut` still uses `-1 / time`.
 - After: only `player_wake_up_seq_crawl` active, camera socket at y 15.97 (floor 15.75).
+
+## Rebirth: black specks in 01_01 (2026-10-13)
+
+Three separate NaN/garbage sources behind the black blocky specks in the wake-up view:
+
+- BC5 normal maps: Rebirth's shaders read `avNormalValue.yxx` (RG); `cSDLTexture` swizzles BC5 to
+  SOMA's LATC2 layout, so the parsed HPSL is rewritten to `.wyx` (`GpuShaderManager.cpp`).
+- Tangent overflow: `cMath::CreateTriTangentVectors` sums tangents over duplicate vertices; with
+  near-degenerate UV triangles the sums reach 1e19-1e20, `Normalize()` overflows the squared
+  length and returns a zero tangent, giving a zero-length G-buffer normal and NaN lighting. The
+  sums are now scaled by their largest component first. Mesh cache bumped to `.v12.msh`/`.v5.msh`.
+- `deferred_light_frag.hpsl` (Rebirth and Bunker) translucency: `vSubColor * vSubColor /
+  dot(vSubColor, vSubColor)` is 0/0 for black albedo with G-buffer translucency alpha in
+  (0, 0.5]. One or two pixels go NaN for a single frame in the directional light pass, and the
+  image trail (alpha blend into a persistent RGBA16 buffer) keeps them for as long as the trail is
+  on. `vSubColor` is clamped to 1e-4 by a source replacement.
+
+Finding it: `dump_target target=4` + numpy `isfinite`, then `set_render_setting name=image_trail
+value=0` (specks vanish, return when re-enabled) showed the trail was only the carrier.

@@ -1339,7 +1339,7 @@ namespace hpl {
 		SetChannelMode(eMaterialChannelMode_RGBA);
 
 		iTexture *pSource = mpAccumBufferTexture;
-		if(mpToneMapProgram && mfImageTrailAlpha > 0 && mpImageTrailProgram)
+		if(mpToneMapProgram && mfImageTrailAlpha > 0 && mpImageTrailProgram && (mlDebugSkipPasses & 16) == 0)
 			RenderImageTrail();
 		if(mpToneMapProgram)
 		{

@@ -2847,12 +2847,15 @@ namespace hpl {
 		{
 			
 			cVector3f vNormal = GetVector3(apNormalArray,vtxIdx,3);
-			cVector3f &vTempTan1 = vTempTangents1[vtxIdx];
-			cVector3f &vTempTan2 = vTempTangents2[vtxIdx];
+			// duplicate smoothing grows the sums exponentially; keep squared lengths finite
+			cVector3f vTempTan1 = vTempTangents1[vtxIdx];
+			cVector3f vTempTan2 = vTempTangents2[vtxIdx];
+			vTempTan1 = vTempTan1 / Max(1.0f, Max(std::fabs(vTempTan1.x), Max(std::fabs(vTempTan1.y), std::fabs(vTempTan1.z))));
+			vTempTan2 = vTempTan2 / Max(1.0f, Max(std::fabs(vTempTan2.x), Max(std::fabs(vTempTan2.y), std::fabs(vTempTan2.z))));
 
             // Gram-Schmidt orthogonalize
 			cVector3f vTan = vTempTan1 - (vNormal * cMath::Vector3Dot(vNormal, vTempTan1));
-			if(vTan.Normalize() < 1e-6f)
+			if(!(vTan.Normalize() >= 1e-6f))
 				vTan = Vector3Normalize(Vector3Cross(vNormal, std::fabs(vNormal.x) < 0.9f ? cVector3f(1,0,0) : cVector3f(0,1,0)));
 			
 			//Log("Add tangent %d: ",vtxIdx);

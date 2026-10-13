@@ -182,6 +182,10 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl",
 		  "vColorVal.rgba = GammaToLinearCorrection(vColorVal.rgba);",
 		  "vColorVal.rgb = GammaToLinearCorrection(vColorVal.rgb);" },
+		// black albedo: 0/0 in the subsurface colour
+		{ "deferred_light_frag.hpsl",
+		  "vSubColor = vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5;",
+		  "vSubColor = max(vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5, cVector3f(1e-4));" },
 		// and multiplies linear albedo by the vertex/ColorMul colour
 		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
 		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
@@ -376,6 +380,9 @@ namespace hpl {
 			if(bIsHpslFallback)
 			{
 				tString sGlsl, sTranspileError;
+				// Rebirth reads BC5 as RG; cSDLTexture swizzles it to SOMA's LATC2 layout
+				size_t lBC5 = sParsedOutput.find("avNormalValue.yxx");
+				if(lBC5 != tString::npos) sParsedOutput.replace(lBC5, 17, "avNormalValue.wyx");
 				sHpslPreTranspile = sParsedOutput;
 				if(mpHpslTranspileCallback(sParsedOutput, aType, sGlsl, sTranspileError)==false)
 				{

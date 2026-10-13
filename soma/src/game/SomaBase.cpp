@@ -1138,9 +1138,9 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "shadow_depth_clamp") iRenderer::SetShadowDepthClamp(bValue);
 	else if(sName == "shadow_bias") pSettings->mfShadowMapBias = aReq.GetFloat("value", 4);
 	else if(sName == "shadow_slope_bias") pSettings->mfShadowMapSlopeScaleBias = aReq.GetFloat("value", 2);
-	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent")
+	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent" || sName == "image_trail")
 	{
-		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : 8;
+		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : sName == "translucent" ? 8 : 16;
 		cRendererDeferred::mlDebugSkipPasses = bValue ? (cRendererDeferred::mlDebugSkipPasses & ~lBit) : (cRendererDeferred::mlDebugSkipPasses | lBit);
 	}
 	else if(sName == "fog" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetFogActive(bValue);
