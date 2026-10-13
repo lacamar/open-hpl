@@ -53,7 +53,12 @@ namespace
 		eComp_BarkMachine,
 		eComp_BackboneTail,
 		eComp_LightSensor,
-		eComp_EdgeGlow,
+		// Rebirth values as left by cSomaScriptApi::RebaseEnums; script user ids follow
+		eComp_ProximitySensor,
+		eComp_AttackDamage,
+		eComp_FootPlacement,
+		eComp_HandPlacement,
+		eComp_EdgeGlow = 1000,
 	};
 
 	uint64_t Hash64(const tString &s) { return SomaHash64(s); }
@@ -1661,6 +1666,38 @@ namespace
 		return apComp;
 	}
 
+	// cLuxUserComponent: scripts hold the cSomaLuxScriptable base
+	struct cAgentUserComponent : cSomaLuxScriptable, cAgentComponent
+	{
+		// ponytail: component timers are not saved
+		cAgentUserComponent(E *apEnt, int alID) : cAgentComponent(apEnt, alID) { mbSaved = false; }
+		void Update(float afTimeStep) override
+		{
+			OnUpdate(afTimeStep);
+			OnVariableUpdate(afTimeStep);
+		}
+		void OnMessage(int alMessage) override
+		{
+			Call("void OnRecieveMessage(int alMessageId, cLuxEntityMessageData @apData)", [&](asIScriptContext *c) {
+				c->SetArgDWord(0, alMessage);
+				c->SetArgAddress(1, Agent(mpEntity)->mMessage.mBlock);
+			});
+		}
+		void OnSetActive() override
+		{
+			Call("void OnSetActive(bool abX)", [&](asIScriptContext *c) { c->SetArgByte(0, mpEntity->mbActive); });
+		}
+	};
+
+	asIScriptObject *UserScript(cAgentComponent *apComp)
+	{
+		cAgentUserComponent *pUser = dynamic_cast<cAgentUserComponent *>(apComp);
+		asIScriptObject *pObj = pUser ? pUser->GetScript() : NULL;
+		if (pObj)
+			pObj->AddRef();
+		return pObj;
+	}
+
 	cVector3f PlayerFeet()
 	{
 		iCharacterBody *p = PlayerBody();
@@ -2186,12 +2223,59 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cLuxEntityComponentIterator", "bool HasNext()", +[](cComponentIterator *p) { return p->mlPos < p->mvComps.size(); });
 	SOMA_METHOD(e, "cLuxEntityComponentIterator", "iLuxEntityComponent@ Next()", +[](cComponentIterator *p) { return p->Next(); });
 	SOMA_METHOD(e, "cLuxEntityComponentIterator", "iLuxEntityComponent@ PeekNext()", +[](cComponentIterator *p) { return p->PeekNext(); });
+	if (e->GetTypeInfoByName("cLuxFootPlacement"))
+	{
+		// ponytail: no IK, only the active flag
+		SOMA_FUNC(e, "cLuxFootPlacement@ cLux_CreateEntityComponent_FootPlacement(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentComponent(p, eComp_FootPlacement)); });
+		SOMA_FUNC(e, "cLuxHandPlacement@ cLux_CreateEntityComponent_HandPlacement(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentComponent(p, eComp_HandPlacement)); });
+		for (const char *pType : {"cLuxFootPlacement", "cLuxHandPlacement"})
+		{
+			SOMA_METHOD(e, pType, "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
+			SOMA_METHOD(e, pType, "eLuxEntityComponentType GetType()", +[](cAgentComponent *c) { return c->mlType; });
+			SOMA_METHOD(e, pType, "void SetActive(bool abX)", +[](cAgentComponent *c, bool b) { c->mbActive = b; });
+			SOMA_METHOD(e, pType, "bool IsActive()", +[](cAgentComponent *c) { return c->mbActive; });
+			SOMA_METHOD(e, pType, "void FadeIn(float afTime)", +[](cAgentComponent *c, float) { c->mbActive = true; });
+			SOMA_METHOD(e, pType, "void FadeOut(float afTime)", +[](cAgentComponent *c, float) { c->mbActive = false; });
+		}
+		for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
+			SOMA_METHOD(e, pType, "iLuxEntityComponent@ GetComponentByType(eLuxEntityComponentType aType) const", +[](E *p, int t) {
+				cAgent *a = Agent(p);
+				return a ? a->Find<cAgentComponent>(t) : NULL;
+			});
+	}
 	SOMA_FUNC(e, "cLuxBackboneTail@ cLux_CreateEntityComponent_BackboneTail(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentBackboneTail(p)); });
 	for (const char *pType : {"iLuxEntityComponent", "cLuxStateMachine", "cLuxCharMover", "cLuxPathfinder", "cLuxBarkMachine", "cLuxSoundListener", "cLuxHeadTracker",
 							  "cLuxEdgeGlow", "cLuxForceEmitter", "cLuxLightSensor", "cLuxBackboneTail"})
 	{
 		SOMA_METHOD(e, pType, "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
 		SOMA_METHOD(e, pType, "eLuxEntityComponentType GetType()", +[](cAgentComponent *c) { return c->mlType; });
+	}
+	if (e->GetTypeInfoByName("cLuxUserComponent"))
+	{
+		typedef cSomaLuxScriptable US;
+		SOMA_FUNC(e, "iScrUserComponent_Interface@ cLux_CreateUserComponent(iLuxEntity@ apEntity, const tString&in asComponentName, const tString&in asScriptFile, const tString&in asScriptClass, int alID)",
+				  +[](E *p, S sName, S sFile, S sClass, int lID) -> asIScriptObject * {
+			if (p == NULL)
+				return NULL;
+			cAgentUserComponent *pComp = new cAgentUserComponent(p, lID);
+			pComp->msName = sName;
+			if (pComp->LoadScript(cSomaScriptRuntime::Get(), sFile, sClass, "cLuxUserComponent") == false)
+			{
+				Error("Could not load user component script for '%s' '%s' of class '%s'\n", sName.c_str(), sFile.c_str(), sClass.c_str());
+				delete pComp;
+				return NULL;
+			}
+			return UserScript(AddComponent(p, pComp));
+		});
+		SOMA_FUNC(e, "iScrUserComponent_Interface@ cLux_GetUserComponent(iLuxEntity@ apEntity, int alID)", +[](E *p, int lID) {
+			cAgent *a = p ? Agent(p) : NULL;
+			return UserScript(a ? a->Find<cAgentComponent>(lID) : NULL);
+		});
+		SOMA_FUNC(e, "iScrUserComponent_Interface@ cLux_GetUserComponentScriptInterface(iLuxEntityComponent@ apComponent)", +[](cAgentComponent *c) { return UserScript(c); });
+		SOMA_METHOD(e, "cLuxUserComponent", "iLuxEntity@ GetEntity()", +[](US *s) { return static_cast<cAgentUserComponent *>(s)->mpEntity; });
+		SOMA_METHOD(e, "cLuxUserComponent", "int GetType()", +[](US *s) { return static_cast<cAgentUserComponent *>(s)->mlType; });
+		SOMA_METHOD(e, "cLuxUserComponent", "const tString& GetComponentName()", +[](US *s) -> const tString & { return static_cast<cAgentUserComponent *>(s)->msName; });
+		cSomaLuxScriptable::RegisterTimerNatives(e, "cLuxUserComponent");
 	}
 	SOMA_METHOD(e, "cLuxMap", "iLuxEntityComponent@ GetEntityComponent(eLuxEntityComponentType aType, const tString&in asName)", +[](cSomaLuxMap *m, int t, S n) -> cAgentComponent * {
 		cSomaLuxEntity *pEnt = m->GetEntity(n);

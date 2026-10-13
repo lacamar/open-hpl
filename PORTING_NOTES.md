@@ -6468,3 +6468,19 @@ was blended like a material wherever the mask was below the cut threshold. The R
   bindings `blurMap1` read whatever 2D texture was last on unit 2: the refraction copy of a heat-haze
   particle, NaN outside its clip rect. `CopyAccumTo`/`GetToneMapProgram` now pick the layout from
   `mbDepthInNormalAlpha`. Bunker's shader differs only by a NaN guard on the blur colour.
+
+## Rebirth: script user components (2026-10-13)
+
+- `cLux_CreateUserComponent(entity, id, name, file, class)` was an auto-stub returning the dummy
+  handle, so every `cScrAreaFearScaryObject`/`cScrPropRift` `SetupAfterLoad` in `01_02_caves` threw
+  'Null pointer access'. Now `cAgentUserComponent : cSomaLuxScriptable, cAgentComponent` in
+  `SomaAgent.cpp`: scripts see `cLuxUserComponent` as the `cSomaLuxScriptable` base and
+  `iLuxEntityComponent` as the `cAgentComponent` base. Script casts between registered ref types are
+  unchecked self-casts, so a native must hand back the right base pointer.
+- Components now update on props and areas too (`SomaLux.cpp`), not only agents and critters.
+- Component type ids: `cSomaScriptApi::RebaseEnums` already moves Rebirth/Bunker enum values onto
+  SOMA's (Pathfinder 1), appending new names from 10 (ProximitySensor 10, AttackDamage 11,
+  FootPlacement 12, HandPlacement 13, LastEnum 14 = first user id). The shipped API text says
+  Pathfinder 0; that is not what scripts see. `eComp_*` follows the rebased values.
+- Foot/hand placement components hold only the active flag (no IK); enough for
+  `FootPlacement_FadeIn/Out` on `PlayerBody_0`.

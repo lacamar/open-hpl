@@ -525,6 +525,8 @@ void cSomaLuxMap::Update(float afTimeStep)
 			pEnt->UpdateCheckCollision(afTimeStep);
 		else if (pEnt->meType == eSomaLuxEntityType_LiquidArea)
 			pEnt->UpdateLiquid(afTimeStep);
+		if (pEnt->meType != eSomaLuxEntityType_Critter && pEnt->meType != eSomaLuxEntityType_Agent && pEnt->mbSleeping == false)
+			SomaUpdateComponents(pEnt, afTimeStep);
 	}
 
 	for (size_t i = 0; i < mvEntities.size(); ++i)
