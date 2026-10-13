@@ -257,6 +257,7 @@ namespace hpl {
 	{
 		cParserVarContainer defaultVars;
 		defaultVars.Add("UseUv");
+		defaultVars.Add("UseBlendMul");
 		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseBaseTexture", kPC_FragmentBit),
 													cProgramComboFeature("UseVertexPosition", kPC_VertexBit | kPC_FragmentBit) };
 		mpProgramManager->SetupGenerateProgramData(eMaterialRenderMode_Diffuse, "Diffuse", "deferred_base_vtx.glsl", "cache_terrain_diffuse_frag.glsl",
@@ -269,6 +270,7 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("avBaseDetailAmount", 5, eMaterialRenderMode_Diffuse);
 		for (int i = 0; i < 4; ++i)
 			mpProgramManager->AddGenerateProgramVariableId("avDetailAmount" + cString::ToString(i), 6 + i, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avBlendMul", 10, eMaterialRenderMode_Diffuse);
 
 		cBitmap bmp;
 		bmp.CreateData(cVector3l(1,1,1), ePixelFormat_RGBA, 0, 0);
@@ -310,6 +312,7 @@ namespace hpl {
 		apProgram->SetVec3f(4, pVars->mvDetailFade);
 		apProgram->SetVec3f(5, pVars->mvBaseDetailAmount);
 		for (int i = 0; i < 4; ++i) apProgram->SetVec3f(6 + i, pVars->mvDetailAmount[i]);
+		apProgram->SetVec4f(10, pVars->mvBlendMul[0], pVars->mvBlendMul[1], pVars->mvBlendMul[2], pVars->mvBlendMul[3]);
 	}
 
 	//--------------------------------------------------------------------------

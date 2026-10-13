@@ -1403,6 +1403,8 @@ namespace hpl {
 				pVars->mvOneMinusFadeStart[i] = 1 - pLayerMat->GetAttributeFloat("StartFadeValue", 0);
 				pVars->mvDetailAmount[i] = pLayerMat->GetAttributeVector3f("DetailTextureAmount", 0);
 				tString sFile = pLayerMat->GetAttributeString("File");
+				// hole mask channel, not a material
+				if (cString::ToLowerCase(cString::GetFileName(sFile)) == "terrain_hole.mat") pVars->mvBlendMul[i] = 0;
 				cMaterial* pSrc = sFile != "" ? pMatMgr->CreateMaterial(sFile) : NULL;
 				ShareTexture(pMat, 1 + i, pSrc, eMaterialTexture_Diffuse);
 				ShareTexture(pMat, 6 + i, pSrc, eMaterialTexture_Alpha);

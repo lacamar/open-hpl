@@ -6430,3 +6430,12 @@ explicit `Sleep()`. Bound `Sleep/IsSleeping/GetAutoSleep` and `Entity_*` equival
   `DDPF_ALPHAPIXELS` (0x1) where SOMA's use `DDPF_ALPHA` (0x2); they fell through to DevIL and came out
   with black RGB. `TryLoadUncompressedAlphaDDS` takes both.
 - `imgui_ops name=hud` dumps the game HUD draw ops (colours, z) when no ImGui has input focus.
+## Rebirth: magenta terrain-hole edges (2026-10-13)
+
+Magenta sliver on the 01_01 cabin window sand. `pick_entity` named the nearest hit (a normal-only
+sandstorm decal), but the colour came from the terrain blend layer behind it: the channel painted with
+`core/textures/terrain_hole.mat` is the hole mask, and its diffuse (`terrain_hole_base.dds`, 255,22,249)
+was blended like a material wherever the mask was below the cut threshold. The Rebirth/Bunker
+`cache_terrain_diffuse_frag.hpsl` has `UseBlendMul`/`avBlendMul`; the hole channel now gets 0 there
+(`cMaterialType_TerrainBlend_Vars::mvBlendMul`). SOMA's shader has no such define and no hole material.
+
