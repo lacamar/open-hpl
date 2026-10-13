@@ -125,6 +125,7 @@ public:
 
 	void SetHealth(float afX);
 	float mfHealth = 1;
+	bool mbCanDie = true;
 	float mfMaxHealth = 1;
 
 	bool mbCameraRotateActive = false;

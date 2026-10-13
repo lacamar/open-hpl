@@ -6499,3 +6499,13 @@ was blended like a material wherever the mask was below the cut threshold. The R
   registered after the natives.
 - `iLight::mfDefaultBrightness` is the load-time brightness (`GetDefaultBrightness`,
   `Light_GetDefaultBrightness`); the stub returned 0 and blacked out lights faded "to default".
+
+## Rebirth: effects off alpha, illumination base colour (2026-10-13)
+- Official `iLuxEntity::UpdateEffectFading` (0xa160d0): fade-on adds `dt/onTime` up to 1; fade-off
+  subtracts `dt/offTime` and stops at the custom off alpha (+0x324, `SetCustomEffectsOffAlpha`),
+  not 0. `Prop_Lamp.hps` flicker uses it so lamps dim instead of going dark.
+- `SetIlluminationBaseColor` (0x9fd320) overrides the `IllumColor` instance var (flag +0x2e3,
+  colour +0x328); result is still multiplied by the effects alpha.
+- `cLuxPlayer::SetCanDie` is a plain flag (+0x200); `Player_Custom.hps` clears it and sets health 0
+  on every map enter, `OnPlayerDead` checks it.
+- 'IK' animation events are ignored (86 load errors in `01_02_caves`); foot IK is not implemented.

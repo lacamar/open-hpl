@@ -797,6 +797,8 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void StopAutomoveCharBody()", +[](P *p) { p->mbAutomoveActive = false; });
 	SOMA_METHOD(e, T, "void SetHealth(float afX)", +[](P *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, T, "float GetHealth()", +[](P *p) { return p->mfHealth; });
+	SOMA_METHOD_NEW(e, T, "bool SetCanDie(bool abX)", +[](P *p, bool b) { p->mbCanDie = b; return b; });
+	SOMA_METHOD_NEW(e, T, "bool GetCanDie()", +[](P *p) { return p->mbCanDie; });
 	SOMA_METHOD(e, T, "void SetMaxHealth(float afX)", +[](P *p, float x) { p->mfMaxHealth = x; });
 	SOMA_METHOD(e, T, "float GetMaxHealth()", +[](P *p) { return p->mfMaxHealth; });
 	SOMA_METHOD(e, T, "void AddHealth(float afX, float afMinHealth)", +[](P *p, float x, float fMin) {

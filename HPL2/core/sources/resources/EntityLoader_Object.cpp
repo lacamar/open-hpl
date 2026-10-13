@@ -308,7 +308,7 @@ namespace hpl {
 		if(sLowType == "message")	return eAnimationEventType_Message;
 		if(sLowType == "playloopsound") return eAnimationEventType_PlayLoopSound;
 		if(sLowType == "stoploopsound") return eAnimationEventType_StopLoopSound;
-		if(sLowType == "") return eAnimationEventType_LastEnum;
+		if(sLowType == "" || sLowType == "ik") return eAnimationEventType_LastEnum;
 
 		Error("No animation event named '%s'\n", asType.c_str());
 		return eAnimationEventType_LastEnum;

@@ -1540,6 +1540,17 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		}
 		return a.GetSize() > 0;
 	});
+	SOMA_FUNC_NEW(e, "bool Map_GetBillboardArray(const tString &in asName, array<cBillboard@> &inout avOutBillboards)", +[](S n, CScriptArray &a) {
+		a.Resize(0);
+		if (cSomaLuxMap::GetCurrent() == NULL) return false;
+		cBillboardIterator it = cSomaLuxMap::GetCurrent()->GetWorld()->GetBillboardIterator();
+		while (it.HasNext())
+		{
+			cBillboard *pBB = it.Next();
+			if (cString::MatchesWildcard(n, pBB->GetName())) a.InsertLast(&pBB);
+		}
+		return a.GetSize() > 0;
+	});
 	SOMA_FUNC(e, "float cLux_GetLightLevelAtPos(const cVector3f&in avPos, iLight @apSkipLight, float afRadiusAdd)", SomaLightLevelAtPos);
 	SOMA_FUNC(e, "void cLux_ClearIgnoredLights()", +[]() { gvIgnoredLights.clear(); });
 	SOMA_FUNC(e, "void cLux_AddIgnoredLight(tID aLightID)", +[](cSomaID id) {

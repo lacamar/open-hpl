@@ -180,7 +180,9 @@ public:
 	bool mbAllowMapTransfer = true;
 	std::vector<float> mvDynamicMass;
 	void SetEffectsActive(bool abX, bool abFade = false);
-	float mfEffectsAlpha = 1, mfEffectsFadeSpeed = 0;
+	float mfEffectsAlpha = 1, mfEffectsFadeSpeed = 0, mfEffectsOffAlpha = 0;
+	cColor mIllumBaseColor = cColor(1, 1);
+	bool mbIllumBaseSet = false;
 	void ApplyEffectsAlpha();
 	void CaptureEffectDefaults();
 	cVector3f GetPosition();

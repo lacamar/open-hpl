@@ -233,7 +233,7 @@ void cSomaLuxEntity::SetEffectsActive(bool abX, bool abFade)
 	float fTime = abFade ? mVars.GetVarFloat(abX ? "EffectsOnTime" : "EffectsOffTime", 1) : 0;
 	mfEffectsFadeSpeed = fTime > 0 ? (abX ? 1 : -1) / fTime : 0;
 	if (mfEffectsFadeSpeed == 0)
-		mfEffectsAlpha = abX ? 1.0f : 0.0f;
+		mfEffectsAlpha = abX ? 1.0f : mfEffectsOffAlpha;
 	for (cParticleSystem *pPS : mvParticleSystems)
 		if (pPS)
 		{
@@ -292,7 +292,7 @@ void cSomaLuxEntity::ApplyEffectsAlpha()
 			if (pFlare->IsFlareActive((eLensFlareType)t))
 				pFlare->SetFlareColor((eLensFlareType)t, mvEffectDefaults[i] * mEffectBaseColor * mfEffectsAlpha);
 	if (mpMesh)
-		mpMesh->SetIlluminationColor(mInstanceVars.GetVarColor("IllumColor", cColor(1, 1)) * mEffectBaseColor * mfEffectsAlpha);
+		mpMesh->SetIlluminationColor((mbIllumBaseSet ? mIllumBaseColor : mInstanceVars.GetVarColor("IllumColor", cColor(1, 1))) * mEffectBaseColor * mfEffectsAlpha);
 }
 
 cMatrixf cSomaLuxEntity::GetMatrix()
@@ -1102,8 +1102,9 @@ void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 	}
 	if (mfEffectsFadeSpeed != 0)
 	{
-		mfEffectsAlpha = cMath::Clamp(mfEffectsAlpha + mfEffectsFadeSpeed * afTimeStep, 0.0f, 1.0f);
-		if (mfEffectsAlpha == 0 || mfEffectsAlpha == 1)
+		float fMin = mfEffectsFadeSpeed < 0 ? mfEffectsOffAlpha : 0;
+		mfEffectsAlpha = cMath::Clamp(mfEffectsAlpha + mfEffectsFadeSpeed * afTimeStep, fMin, 1.0f);
+		if (mfEffectsAlpha == fMin || mfEffectsAlpha == 1)
 			mfEffectsFadeSpeed = 0;
 		ApplyEffectsAlpha();
 	}
@@ -2553,6 +2554,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool f) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); });
 	SOMA_METHOD_NEW(e, T, "bool GetEffectsActive()", +[](E *p) { return p->mbEffectsActive; });
 	SOMA_METHOD_NEW(e, T, "float GetEffectsAlpha()", +[](E *p) { return p->mfEffectsAlpha; });
+	SOMA_METHOD_NEW(e, T, "void SetCustomEffectsOffAlpha(float afAlpha)", +[](E *p, float a) { p->mfEffectsOffAlpha = a; });
+	SOMA_METHOD_NEW(e, T, "void SetIlluminationBaseColor(const cColor&in aColor)", +[](E *p, const cColor &c) { p->mIllumBaseColor = c; p->mbIllumBaseSet = true; p->ApplyEffectsAlpha(); });
 	SOMA_METHOD_NEW(e, T, "bool HasCollideCallbacks()", +[](E *p) { return !p->mvCollideCallbacks.empty(); });
 	SOMA_METHOD_NEW(e, T, "void AddCollideCallback(iLuxEntity @apEntity, const tString&in asCallbackFunc)",
 					+[](E *p, E *c, S f) { if (c) p->mvCollideCallbacks.push_back(E::cCollideCallback{c->msName, f}); });
@@ -2993,6 +2996,15 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	}
 	SOMA_FUNC(e, "void Prop_DisableCollisionUntilOutsidePlayer(const tString &in asPropName)",
 			  +[](const tString &n) { ForMatching(n, [](cSomaLuxEntity *p) { p->SetDisableCollisionUntilOutSidePlayer(true); }); });
+	SOMA_FUNC_NEW(e, "void Prop_ClearVelocity(const tString &in asPropName)", +[](const tString &n) {
+		ForMatching(n, [](cSomaLuxEntity *p) {
+			for (iPhysicsBody *pBody : p->mvBodies)
+			{
+				pBody->SetLinearVelocity(0);
+				pBody->SetAngularVelocity(0);
+			}
+		});
+	});
 	SOMA_FUNC(e, "void Prop_SetStaticPhysics(const tString &in asPropName, bool abX)",
 			  +[](const tString &n, bool b) { ForMatching(n, [b](cSomaLuxEntity *p) { p->SetStaticPhysics(b); }); });
 
