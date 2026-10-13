@@ -288,6 +288,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			pLight->SetDiffuseColor(col);
 			pLight->SetDefaultDiffuseColor(col);
 			pLight->SetBrightness(pLight->GetBrightness() * fBrightnessMul);
+			pLight->SetDefaultBrightness(pLight->GetBrightness());
 		}
 		for (cBillboard *pBB : mvBillboards)
 			pBB->SetColor(pBB->GetColor() * effectMul);

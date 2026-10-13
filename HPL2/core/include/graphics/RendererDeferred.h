@@ -194,6 +194,7 @@ namespace hpl {
 		static bool GetHdr(){ return mbHdr;}
 		static cColor GetFogRenderColor(const cColor& aCol, float afBrightness){ return mbHdr ? cColor(aCol.r*aCol.r*afBrightness, aCol.g*aCol.g*afBrightness, aCol.b*aCol.b*afBrightness, aCol.a) : aCol; }
 		static void SetColorGradingTexture(iTexture *apTex, iTexture *apTarget=NULL, float afBlend=0){ mpColorGradingTexture = apTex; mpColorGradingTarget = apTarget; mfColorGradingBlend = afBlend;}
+		static void SetColorGradingLayers(const std::vector<std::pair<iTexture*,float> >& avLayers){ mvColorGradingLayers = avLayers;}
 		static void SetToneMapping(float afKey, float afExposure, float afWhiteCut, float afGamma){ mfToneMapKey = afKey; mfToneMapExposure = afExposure; mfToneMapWhiteCut = afWhiteCut; mfToneMapGamma = afGamma;}
 		static void SetBloom(bool abActive, float afBrightPass, float afWidth, const cColor& aTint){ mbBloom = abActive; mfBloomBrightPass = afBrightPass; mfBloomWidth = afWidth; mBloomTint = aTint;}
 		static void SetFilmGrain(iTexture *apNoise, float afIntensity){ mpFilmGrainNoise = apNoise; mfFilmGrainIntensity = afIntensity;}
@@ -416,6 +417,7 @@ namespace hpl {
 		static iTexture *mpColorGradingTexture;
 		static iTexture *mpColorGradingTarget;
 		static float mfColorGradingBlend;
+		static std::vector<std::pair<iTexture*,float> > mvColorGradingLayers;
 		static bool mbBloom;
 		static float mfBloomBrightPass;
 		static float mfBloomWidth;

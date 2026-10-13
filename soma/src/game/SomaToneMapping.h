@@ -22,6 +22,8 @@ public:
 	void FadeWorldWhiteCut(float afX, float afTime) { mfWorldWhiteCut = afX; mfWorldFadeTime = afTime; }
 	void FadeExposure(float afExposure, float afWhiteCut, float afTime);
 	void FadeGrading(const tString &asName, float afTime);
+	void SetGradingLayer(int alPrio, const tString &asName, float afAlpha);
+	void RemoveGradingLayer(const tString &asName);
 
 	float mfKey;
 	float mfGamma;
@@ -50,6 +52,14 @@ private:
 	iTexture *mpGradingTarget;
 	float mfGradingBlend;
 	float mfGradingFadeTime;
+	struct cGradingLayer
+	{
+		int mlPrio;
+		tString msName;
+		iTexture *mpTexture;
+		float mfAlpha;
+	};
+	std::vector<cGradingLayer> mvGradingLayers;
 	static cSomaToneMapping *mpInstance;
 };
 

@@ -223,6 +223,8 @@ namespace hpl {
 		float GetTranslucency(){ return mfTranslucency;}
 		void SetBrightness(float afX);
 		float GetBrightness(){ return mfBrightness;}
+		void SetDefaultBrightness(float afX){ mfDefaultBrightness = afX;}
+		float GetDefaultBrightness(){ return mfDefaultBrightness;}
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
 		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
 		bool GetGoboSpecular(){ return mbGoboSpecular;}
@@ -278,6 +280,7 @@ namespace hpl {
 		float mfSpotFalloffPow;
 		float mfTranslucency = 1;
 		float mfBrightness;
+		float mfDefaultBrightness = 1;
 		static bool mbHpl3Visibility;
 		bool IsLit();
 		unsigned int mlMaskID;

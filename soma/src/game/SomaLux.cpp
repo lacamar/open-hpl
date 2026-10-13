@@ -1190,6 +1190,7 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 		SOMA_METHOD(e, pType, "float GetAttributeFloat(const tString&in asName, float afDefault)", +[](cXmlElement *p, const tString &n, float d) { return p->GetAttributeFloat(n, d); });
 		SOMA_METHOD(e, pType, "int GetAttributeInt(const tString&in asName, int alDefault)", +[](cXmlElement *p, const tString &n, int d) { return p->GetAttributeInt(n, d); });
 		SOMA_METHOD(e, pType, "bool GetAttributeBool(const tString&in asName, bool abDefault)", +[](cXmlElement *p, const tString &n, bool d) { return p->GetAttributeBool(n, d); });
+		SOMA_METHOD_NEW(e, pType, "cVector2f GetAttributeVector2f(const tString&in asName, const cVector2f&in avDefault)", +[](cXmlElement *p, const tString &n, const cVector2f &d) { return p->GetAttributeVector2f(n, d); });
 	}
 	SOMA_FUNC(e, "iXmlDocument@ cResources_LoadXmlDocument(const tString&in asFile)", +[](const tString &f) { return gpSomaBase->mpEngine->GetResources()->LoadXmlDocument(f); });
 	SOMA_FUNC(e, "void cResources_DestroyXmlDocument(iXmlDocument@ apDoc)", +[](iXmlDocument *d) { if (d) gpSomaBase->mpEngine->GetResources()->DestroyXmlDocument(d); });
@@ -1481,6 +1482,11 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD_NEW(e, "cLightPoint", "void SetScriptableIsSaved(bool abX)", +[](cLightPoint *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cLightSpot", "void SetScriptableIsSaved(bool abX)", +[](cLightSpot *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cLightBox", "void SetScriptableIsSaved(bool abX)", +[](cLightBox *o, bool b) { o->SetIsSaved(b); });
+		for (const char *pType : {"iLight", "cLightPoint", "cLightSpot", "cLightBox", "cLightDirectional"})
+		{
+			SOMA_METHOD_NEW(e, pType, "float GetDefaultBrightness()", +[](iLight *o) { return o->GetDefaultBrightness(); });
+			SOMA_METHOD_NEW(e, pType, "void SetDefaultBrightness(float afX)", +[](iLight *o, float f) { o->SetDefaultBrightness(f); });
+		}
 		SOMA_METHOD_NEW(e, "cParticleSystem", "void SetScriptableIsSaved(bool abX)", +[](cParticleSystem *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cSoundEntity", "void SetScriptableIsSaved(bool abX)", +[](cSoundEntity *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cBillboard", "void SetScriptableIsSaved(bool abX)", +[](cBillboard *o, bool b) { o->SetIsSaved(b); });
@@ -1707,6 +1713,11 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "float Light_GetBrightness(const tString &in asLightName)", +[](S n) {
 		float f = 0;
 		ForLights(n, [&f](iLight *l) { f = l->GetBrightness(); });
+		return f;
+	});
+	SOMA_FUNC_NEW(e, "float Light_GetDefaultBrightness(const tString &in asLightName)", +[](S n) {
+		float f = 0;
+		ForLights(n, [&f](iLight *l) { f = l->GetDefaultBrightness(); });
 		return f;
 	});
 	SOMA_FUNC(e, "void Light_SetFlickerActive(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetFlickerActive(b); }); });

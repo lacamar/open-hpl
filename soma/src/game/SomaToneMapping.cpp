@@ -115,6 +115,32 @@ void cSomaToneMapping::FadeGrading(const tString &asName, float afTime)
 	mfGradingFadeTime = afTime;
 }
 
+void cSomaToneMapping::SetGradingLayer(int alPrio, const tString &asName, float afAlpha)
+{
+	for (cGradingLayer &layer : mvGradingLayers)
+		if (layer.msName == asName)
+		{
+			layer.mfAlpha = afAlpha;
+			return;
+		}
+	iTexture *pTex = CreateGrading(asName);
+	if (pTex == NULL) return;
+	auto it = mvGradingLayers.begin();
+	while (it != mvGradingLayers.end() && it->mlPrio <= alPrio) ++it;
+	mvGradingLayers.insert(it, {alPrio, asName, pTex, afAlpha});
+}
+
+void cSomaToneMapping::RemoveGradingLayer(const tString &asName)
+{
+	for (size_t i = 0; i < mvGradingLayers.size(); ++i)
+		if (mvGradingLayers[i].msName == asName)
+		{
+			gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Destroy(mvGradingLayers[i].mpTexture);
+			mvGradingLayers.erase(mvGradingLayers.begin() + i);
+			return;
+		}
+}
+
 void cSomaToneMapping::FadeExposure(float afExposure, float afWhiteCut, float afTime)
 {
 	mfWorldExposure = afExposure;
@@ -150,6 +176,10 @@ void cSomaToneMapping::Update(float afTimeStep)
 			mpGradingTarget = NULL;
 		}
 	}
+	if (mvGradingLayers.empty() == false && mpGradingTexture == NULL) mpGradingTexture = CreateGrading("grading_default.dds");
+	std::vector<std::pair<iTexture *, float>> vLayers;
+	for (cGradingLayer &layer : mvGradingLayers) vLayers.push_back({layer.mpTexture, layer.mfAlpha});
+	cRendererDeferred::SetColorGradingLayers(vLayers);
 	cRendererDeferred::SetColorGradingTexture(mbColorGradingActive ? mpGradingTexture : NULL, mbColorGradingActive ? mpGradingTarget : NULL,
 											  mfGradingBlend);
 	cRendererDeferred::SetBloom(mbBloomActive && SomaUserConfig()->GetBool("Graphics", "BloomActive", true), mfBrightPass,
@@ -214,5 +244,7 @@ void cSomaToneMapping::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, pType, "void FadeGradingTexture(iTexture @apGrading, float afTime)", +[](T *p, iTexture *x, float t) { if (x) p->FadeGrading(x->GetName(), t); });
 	SOMA_FUNC(e, "void cScene_FadeGradingTexture(cWorld@ apWorld, iTexture@ apGrading, float afTime)", +[](cWorld *, iTexture *x, float t) { if (x) T::Get()->FadeGrading(x->GetName(), t); });
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture3D(const tString&in asName, bool abUseMipMaps)", +[](const tString &s, bool) { return CreateGrading(s); });
+	SOMA_METHOD(e, pType, "void SetGradingTexture(int alPrio, const tString&in asTexture, float afAlpha)", +[](T *p, int n, const tString &s, float a) { p->SetGradingLayer(n, s, a); });
+	SOMA_METHOD(e, pType, "void RemoveGradingTexture(const tString&in asTexture)", +[](T *p, const tString &s) { p->RemoveGradingLayer(s); });
 	SOMA_METHOD(e, "cWorld", "float GetToneMappingFadeTime()", +[](cWorld *) -> float { return T::Get()->mfWorldFadeTime; });
 }

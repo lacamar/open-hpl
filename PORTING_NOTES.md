@@ -6484,3 +6484,18 @@ was blended like a material wherever the mask was below the cut threshold. The R
   Pathfinder 0; that is not what scripts see. `eComp_*` follows the rebased values.
 - Foot/hand placement components hold only the active flag (no IK); enough for
   `FootPlacement_FadeIn/Out` on `PlayerBody_0`.
+
+## Rebirth: layered colour grading (2026-10-13)
+
+- `posteffect_tonemapping_frag.hpsl` blends `gradingMap0..7` (units 4..11) in order with
+  `afGradingMapAlpha[n]`; layers past 0 need `LayeredColorGrading` (tone-map combo bit 16).
+- Slot order: world grading (alpha 1), world fade target (blend weight), then script layers from
+  `cPostEffect_ToneMapping::SetGradingTexture(prio, name, alpha)` sorted by prio
+  (`cRendererDeferred::SetColorGradingLayers`). Without a world grading the base is
+  `grading_default.dds`.
+- Uniform ids: `afGradingMapAlpha[1]` reuses `kVar_afGradingBlendWeight`, `[2..7]` are 104..109.
+- FearHandler calls `SetGradingTexture` every frame with the alpha; layers survive map changes.
+- A `GetMethodByName` guard inside `RegisterNatives` never sees API-only methods: auto-stubs are
+  registered after the natives.
+- `iLight::mfDefaultBrightness` is the load-time brightness (`GetDefaultBrightness`,
+  `Light_GetDefaultBrightness`); the stub returned 0 and blacked out lights faded "to default".

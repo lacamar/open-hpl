@@ -104,6 +104,7 @@ namespace hpl {
 	iTexture *cRendererDeferred::mpColorGradingTexture = NULL;
 	iTexture *cRendererDeferred::mpColorGradingTarget = NULL;
 	float cRendererDeferred::mfColorGradingBlend = 0;
+	std::vector<std::pair<iTexture*,float> > cRendererDeferred::mvColorGradingLayers;
 	bool cRendererDeferred::mbBloom = false;
 	float cRendererDeferred::mfBloomBrightPass = 0.75f;
 	float cRendererDeferred::mfBloomWidth = 128;
@@ -294,6 +295,7 @@ namespace hpl {
 	#define kVar_afMaxDistance						101
 	#define kVar_afGradingMapAlpha0					102
 	#define kVar_alGradingMapNum					103
+	#define kVar_afGradingMapAlpha2					104 // ..109
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -1370,8 +1372,10 @@ namespace hpl {
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
 
+			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
+			int lLayers = bHpl35 ? (int)mvColorGradingLayers.size() : 0;
 			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
-						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && mpColorGradingTarget ? 16 : 0);
+						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0);
 			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
@@ -1383,7 +1387,6 @@ namespace hpl {
 				SetFlatProjection();
 			}
 
-			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
 			int lGradingUnit = bHpl35 ? 4 : 1, lBloomUnit = bHpl35 ? 1 : 4;
 			SetProgram(pToneMap);
 			pToneMap->SetFloat(kVar_afKey, mfToneMapKey);
@@ -1396,12 +1399,18 @@ namespace hpl {
 			{
 				SetTexture(lGradingUnit, mpColorGradingTexture);
 				pToneMap->SetFloat(kVar_afGradingMapAlpha0, 1);
-				pToneMap->SetInt(kVar_alGradingMapNum, lCombo & 16 ? 2 : 1);
-			}
-			if(lCombo & 16)
-			{
-				SetTexture(lGradingUnit+1, mpColorGradingTarget);
-				pToneMap->SetFloat(kVar_afGradingBlendWeight, mfColorGradingBlend);
+				int lNum = 1;
+				if((lCombo & 16) && mpColorGradingTarget)
+				{
+					SetTexture(lGradingUnit+lNum++, mpColorGradingTarget);
+					pToneMap->SetFloat(kVar_afGradingBlendWeight, mfColorGradingBlend);
+				}
+				for(int i=0; (lCombo & 16) && i<lLayers && lNum<8; ++i, ++lNum)
+				{
+					SetTexture(lGradingUnit+lNum, mvColorGradingLayers[i].first);
+					pToneMap->SetFloat(lNum==1 ? kVar_afGradingBlendWeight : kVar_afGradingMapAlpha2+lNum-2, mvColorGradingLayers[i].second);
+				}
+				pToneMap->SetInt(kVar_alGradingMapNum, lNum);
 			}
 			if(lCombo & 2)
 			{
@@ -1600,6 +1609,8 @@ namespace hpl {
 		pProg->GetVariableAsId(bHpl35 ? "afGradingMapAlpha[1]" : "afGradingBlendWeight",kVar_afGradingBlendWeight);
 		pProg->GetVariableAsId("afGradingMapAlpha[0]",kVar_afGradingMapAlpha0);
 		pProg->GetVariableAsId("alGradingMapNum",kVar_alGradingMapNum);
+		if(bHpl35 && (alCombo & 16))
+			for(int i=2; i<8; ++i) pProg->GetVariableAsId("afGradingMapAlpha["+cString::ToString(i)+"]",kVar_afGradingMapAlpha2+i-2);
 		return pProg;
 	}
 

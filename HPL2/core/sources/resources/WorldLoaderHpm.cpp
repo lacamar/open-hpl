@@ -386,6 +386,7 @@ namespace hpl {
 					mpCurrentWorld->SetDirectionalLightActive(pDir->GetAttributeBool("Active", false));
 					pLight->SetDiffuseColor(pDir->GetAttributeColor("DiffuseColor", cColor(1, 1)));
 					pLight->SetBrightness(pDir->GetAttributeFloat("Brightness", 1));
+					pLight->SetDefaultBrightness(pLight->GetBrightness());
 					pLight->SetDirection(pDir->GetAttributeVector3f("Direction", cVector3f(0, -1, 0)));
 					pLight->SetAmbientColorSky(pDir->GetAttributeColor("SkyCol", cColor(0, 0)));
 					pLight->SetAmbientColorGround(pDir->GetAttributeColor("GroundCol", cColor(0, 0)));

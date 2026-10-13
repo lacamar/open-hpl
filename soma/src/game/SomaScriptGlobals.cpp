@@ -326,6 +326,10 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTextureCubeMap(const tString&in asName, bool abUseMipMaps)",
 			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(n, mip); });
 	SOMA_METHOD(e, "cMeshEntity", "void SetDiffuseColorMul(const cColor&in aColor)", +[](cMeshEntity *m, const cColor &c) { m->SetColorMul(c); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "const cColor& GetDiffuseColorMul()", +[](cMeshEntity *m) -> const cColor & {
+		static const cColor gWhite(1, 1);
+		return m->GetSubMeshEntityNum() > 0 ? m->GetSubMeshEntity(0)->GetColorMul() : gWhite;
+	});
 	SOMA_METHOD(e, "cMeshEntity", "int GetSubMeshEntityIndex(const tString &in asName)", +[](cMeshEntity *m, const tString &asName) -> int {
 		for (int i = 0; i < m->GetSubMeshEntityNum(); ++i)
 			if (m->GetSubMeshEntity(i)->GetName() == asName) return i;
