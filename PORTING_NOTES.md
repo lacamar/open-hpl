@@ -6452,3 +6452,19 @@ was blended like a material wherever the mask was below the cut threshold. The R
   `GetLightLevelAtPosWithoutIgnoredLights` excludes the player's own lights).
 - `AddGlowObject(entity, colour, y)`: Rebirth passes the outline colour; SOMA's alpha form keeps blue.
 - `tWString::opIndex`.
+
+## Rebirth: night vision, caves load, tone-map layout (2026-10-13)
+
+- Night vision: `Player_Custom.hps` calls `Map_SetNightVision` every frame in darkness ->
+  `cWorld::SetNightVision*`; `cRendererDeferred::RenderNightVision()` adds a full-screen
+  `deferred_nightvision_frag.hpsl` quad to the accumulation buffer after the lights, before SSAO
+  (avLightColor = colour^2 * brightness, afFalloffPow, afMaxDistance = radius max).
+- `01_02_caves` crashed at load: `cResources_CreateMesh` was an auto-stub. Handle-returning auto-stubs
+  return a non-null dummy object, so script null checks pass and engine code gets garbage. Bound
+  `cResources_CreateMesh/DestroyMesh`; `cWorld::CreateMeshEntity` rejects NULL.
+- `01_02_caves` rendered black except one rectangle: Rebirth/Bunker `posteffect_tonemapping_frag.hpsl`
+  has bloom on units 1-3 and grading 3D maps on 4+ (`alGradingMapNum`, `afGradingMapAlpha[]`,
+  `LayeredColorGrading`, `UseNoise`/`afTime`), SOMA has grading 1-2, noise 3, bloom 4-6. With SOMA's
+  bindings `blurMap1` read whatever 2D texture was last on unit 2: the refraction copy of a heat-haze
+  particle, NaN outside its clip rect. `CopyAccumTo`/`GetToneMapProgram` now pick the layout from
+  `mbDepthInNormalAlpha`. Bunker's shader differs only by a NaN guard on the blur colour.

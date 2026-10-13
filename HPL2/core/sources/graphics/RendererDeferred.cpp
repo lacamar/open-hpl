@@ -291,6 +291,9 @@ namespace hpl {
 	#define kVar_alFogType							98
 	#define kVar_a_mtxSkybox						99
 	#define kVar_afSkyboxMipNum						100
+	#define kVar_afMaxDistance						101
+	#define kVar_afGradingMapAlpha0					102
+	#define kVar_alGradingMapNum					103
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -328,6 +331,7 @@ namespace hpl {
 		mpH3SSAOMipTexture = NULL;
 		mpH3SSAODownsampleProgram = NULL;
 		mpH3SSAORenderProgram = NULL;
+		mpNightVisionProgram = NULL;
 		mpH3SSAOBlurProgram = NULL;
 		mpH3SSAOTemporalProgram = NULL;
 		mpH3SSAOUpsampleProgram = NULL;
@@ -1086,6 +1090,22 @@ namespace hpl {
 			}
 		}
 
+		if(mbHpl3SSAO && mbDepthInNormalAlpha==false)
+		{
+			cParserVarContainer vars;
+			mpNightVisionProgram = mpGraphics->CreateGpuProgramFromShaders("NightVision", "deferred_base_vtx.glsl", "deferred_nightvision_frag.glsl", &vars);
+			if(mpNightVisionProgram)
+			{
+				iGpuProgram *p = mpNightVisionProgram;
+				p->GetVariableAsId("afFarPlane", kVar_afFarPlane);
+				p->GetVariableAsId("avLightColor", kVar_avLightColor);
+				p->GetVariableAsId("avScreenToFarPlane", kVar_avScreenToFarPlane);
+				p->GetVariableAsId("avInvScreenSize", kVar_avInvScreenSize);
+				p->GetVariableAsId("afFalloffPow", kVar_afFalloffPow);
+				p->GetVariableAsId("afMaxDistance", kVar_afMaxDistance);
+			}
+		}
+
 		mpToneMapProgram = NULL;
 		for(int i=0; i<32; ++i) mpToneMapPrograms[i] = NULL;
 		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = mpImageTrailProgram = NULL;
@@ -1246,6 +1266,7 @@ namespace hpl {
 		if(mpH3SSAOMipTexture) mpGraphics->DestroyTexture(mpH3SSAOMipTexture);
 		iGpuProgram *vH3SSAOPrograms[] = {mpH3SSAODownsampleProgram, mpH3SSAORenderProgram, mpH3SSAOBlurProgram, mpH3SSAOTemporalProgram, mpH3SSAOUpsampleProgram};
 		for(int i=0; i<5; ++i) if(vH3SSAOPrograms[i]) mpGraphics->DestroyGpuProgram(vH3SSAOPrograms[i]);
+		if(mpNightVisionProgram) mpGraphics->DestroyGpuProgram(mpNightVisionProgram);
 		if(mpDofBlurProgram) mpGraphics->DestroyGpuProgram(mpDofBlurProgram);
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
@@ -1362,6 +1383,8 @@ namespace hpl {
 				SetFlatProjection();
 			}
 
+			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
+			int lGradingUnit = bHpl35 ? 4 : 1, lBloomUnit = bHpl35 ? 1 : 4;
 			SetProgram(pToneMap);
 			pToneMap->SetFloat(kVar_afKey, mfToneMapKey);
 			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
@@ -1369,16 +1392,21 @@ namespace hpl {
 			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
-			if(lCombo & 1) SetTexture(1, mpColorGradingTexture);
+			if(lCombo & 1)
+			{
+				SetTexture(lGradingUnit, mpColorGradingTexture);
+				pToneMap->SetFloat(kVar_afGradingMapAlpha0, 1);
+				pToneMap->SetInt(kVar_alGradingMapNum, lCombo & 16 ? 2 : 1);
+			}
 			if(lCombo & 16)
 			{
-				SetTexture(2, mpColorGradingTarget);
+				SetTexture(lGradingUnit+1, mpColorGradingTarget);
 				pToneMap->SetFloat(kVar_afGradingBlendWeight, mfColorGradingBlend);
 			}
 			if(lCombo & 2)
 			{
 				for(int i=0; i<3; ++i)
-					SetTexture(4+i, mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<i),ePixelFormat_RGBA16,11+2*i)->GetColorBuffer(0)->ToTexture());
+					SetTexture(lBloomUnit+i, mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<i),ePixelFormat_RGBA16,11+2*i)->GetColorBuffer(0)->ToTexture());
 				pToneMap->SetVec4f(kVar_avBloomTint, mBloomTint.r*mBloomTint.r, mBloomTint.g*mBloomTint.g, mBloomTint.b*mBloomTint.b, mBloomTint.a);
 				cVector3f vSizeWeight;
 				for(int i=0; i<3; ++i)
@@ -1400,7 +1428,7 @@ namespace hpl {
 				if((int)fT != (int)mfFilmGrainT) RandomizeFilmGrain();
 				mfFilmGrainT = fmodf(fT, 128);
 				float fI = mfFilmGrainIntensity;
-				SetTexture(3, mpFilmGrainNoise);
+				if(bHpl35==false) SetTexture(3, mpFilmGrainNoise);
 				pToneMap->SetFloat(kVar_afT, fmodf(fT, 1));
 				pToneMap->SetFloat(kVar_afIntensity, cMath::Max(-1.0f, 3.51f*fI + (1.13f*fI - 3.51f*fI) * sqrtf(mfToneMapExposure*0.125f + 0.375f)));
 				const float *t0 = mvFilmGrainTransform[0], *t1 = mvFilmGrainTransform[1];
@@ -1552,9 +1580,10 @@ namespace hpl {
 		programVars.Add("UseUv");
 		if(alCombo & 1) programVars.Add("UseColorGrading");
 		if(alCombo & 2) programVars.Add("UseBloom");
-		if(alCombo & 4) programVars.Add("UseFilmGrain");
+		bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
+		if(alCombo & 4) programVars.Add(bHpl35 ? "UseNoise" : "UseFilmGrain");
 		if(alCombo & 8) programVars.Add("UseSRGB");
-		if(alCombo & 16) programVars.Add("UseBlendGrading");
+		if(alCombo & 16) programVars.Add(bHpl35 ? "LayeredColorGrading" : "UseBlendGrading");
 		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
 		if(pProg==NULL) return NULL;
 		pProg->GetVariableAsId("afKey",kVar_afKey);
@@ -1564,11 +1593,13 @@ namespace hpl {
 		pProg->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		pProg->GetVariableAsId("avBloomTint",kVar_avBloomTint);
 		pProg->GetVariableAsId("avSizeWeight",kVar_avSizeWeight);
-		pProg->GetVariableAsId("afT",kVar_afT);
+		pProg->GetVariableAsId(bHpl35 ? "afTime" : "afT",kVar_afT);
 		pProg->GetVariableAsId("afIntensity",kVar_afIntensity);
 		pProg->GetVariableAsId("avTransform0",kVar_avTransform0);
 		pProg->GetVariableAsId("avTransform1",kVar_avTransform1);
-		pProg->GetVariableAsId("afGradingBlendWeight",kVar_afGradingBlendWeight);
+		pProg->GetVariableAsId(bHpl35 ? "afGradingMapAlpha[1]" : "afGradingBlendWeight",kVar_afGradingBlendWeight);
+		pProg->GetVariableAsId("afGradingMapAlpha[0]",kVar_afGradingMapAlpha0);
+		pProg->GetVariableAsId("alGradingMapNum",kVar_alGradingMapNum);
 		return pProg;
 	}
 
@@ -3753,6 +3784,7 @@ namespace hpl {
 		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
 		SetCullMode(eCullMode_CounterClockwise);
 
+		RenderNightVision();
 		ApplyHpl3SSAO();
 
 		////////////////////////////
@@ -3999,6 +4031,38 @@ namespace hpl {
 		mbH3SSAORendered = true;
 
 		END_RENDER_PASS();
+	}
+
+	void cRendererDeferred::RenderNightVision()
+	{
+		if(mpNightVisionProgram==NULL || mpCurrentWorld->GetNightVisionVisible()==false) return;
+
+		cColor col = mpCurrentWorld->GetNightVisionColor();
+		float fBrightness = mpCurrentWorld->GetNightVisionBrightness();
+
+		SetDepthTest(false);
+		SetDepthWrite(false);
+		SetStencilActive(false);
+		SetChannelMode(eMaterialChannelMode_RGBA);
+		SetBlendMode(eMaterialBlendMode_Add);
+		SetFlatProjection();
+
+		SetAccumulationBuffer();
+		SetProgram(mpNightVisionProgram);
+		mpNightVisionProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
+		mpNightVisionProgram->SetColor4f(kVar_avLightColor, cColor(col.r*col.r*fBrightness, col.g*col.g*fBrightness, col.b*col.b*fBrightness, col.a));
+		mpNightVisionProgram->SetFloat(kVar_afFalloffPow, mpCurrentWorld->GetNightVisionFalloff());
+		mpNightVisionProgram->SetFloat(kVar_afMaxDistance, mpCurrentWorld->GetNightVisionRadiusMax());
+		SetScreenPositionVars(mpNightVisionProgram);
+		for(int i=0; i<3; ++i) SetTexture(i, GetGbufferTexture(i));
+		SetFogDepthTexture(true, 3);
+		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+		SetFogDepthTexture(false, 3);
+		SetTextureRange(NULL, 0);
+		SetProgram(NULL);
+
+		SetNormalFrustumProjection();
+		SetDepthTest(true);
 	}
 
 	void cRendererDeferred::ApplyHpl3SSAO()

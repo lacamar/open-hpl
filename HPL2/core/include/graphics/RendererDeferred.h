@@ -227,6 +227,7 @@ namespace hpl {
 		void RenderSSAO();
 		void RenderHpl3SSAO();
 		void ApplyHpl3SSAO();
+		void RenderNightVision();
 		void RenderEdgeSmooth();
 		void RenderDeferredSkyBox();
 		
@@ -364,6 +365,7 @@ namespace hpl {
 		iGpuProgram *mpH3SSAOBlurProgram;
 		iGpuProgram *mpH3SSAOTemporalProgram;
 		iGpuProgram *mpH3SSAOUpsampleProgram;
+		iGpuProgram *mpNightVisionProgram;
 		float mfH3SSAOTime;
 		bool mbH3SSAOFirstFrame;
 		bool mbH3SSAORendered;

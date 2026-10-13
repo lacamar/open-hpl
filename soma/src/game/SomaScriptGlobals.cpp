@@ -317,6 +317,10 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->CreateMaterial(cString::SetFileExt(n, "mat")); });
 	SOMA_FUNC(e, "void cResources_DestroyMaterial(cMaterial @apMaterial)",
 			  +[](cMaterial *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMaterialManager()->Destroy(m); });
+	SOMA_FUNC(e, "cMesh@ cResources_CreateMesh(const tString&in asName)",
+			  +[](S n) { return gpSomaBase->mpEngine->GetResources()->GetMeshManager()->CreateMesh(n); });
+	SOMA_FUNC(e, "void cResources_DestroyMesh(cMesh@ apMesh)",
+			  +[](cMesh *m) { if (m) gpSomaBase->mpEngine->GetResources()->GetMeshManager()->Destroy(m); });
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTexture2D(const tString&in asName, bool abUseMipMaps)",
 			  +[](S n, bool mip) { return gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Create2D(n, mip); });
 	SOMA_FUNC(e, "iTexture@ cResources_CreateTextureCubeMap(const tString&in asName, bool abUseMipMaps)",

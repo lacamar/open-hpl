@@ -424,6 +424,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cFrustum", "const cPlanef& GetPlane(eFrustumPlane aType)", +[](cFrustum *o, int a0) -> const cPlanef & { static thread_local cPlanef r; r = o->GetPlane((eFrustumPlane)a0); return r; });
 	SOMA_METHOD_NEW(e, "cFrustum", "const cVector3f& GetVertex(int alIdx)", +[](cFrustum *o, int a0) -> const cVector3f & { static thread_local cVector3f r; r = o->GetVertex(a0); return r; });
 	SOMA_METHOD_NEW(e, "cFrustum", "bool CollidePoint(const cVector3f&in avPoint)", +[](cFrustum *o, const cVector3f & a0) -> bool { return o->CollidePoint(a0); });
+	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideFustrumSphere(const cVector3f&in avCenter, float afRadius)", +[](cFrustum *o, const cVector3f & a0, float a1) -> int { return (int)o->CollideFustrumSphere(a0, a1); });
+	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideSphere(const cVector3f&in avCenter, float afRadius, int alMaxPlanes)", +[](cFrustum *o, const cVector3f & a0, float a1, int a2) -> int { return (int)o->CollideSphere(a0, a1, a2); });
+	SOMA_METHOD_NEW(e, "cFrustum", "eCollision CollideAABB(const cVector3f&in avMin,const cVector3f&in avMax, int alMaxPlanes)", +[](cFrustum *o, const cVector3f & a0, const cVector3f & a1, int a2) -> int { return (int)o->CollideAABB(a0, a1, a2); });
 	SOMA_METHOD_NEW(e, "cFrustum", "const cMatrixf& GetProjectionMatrix()", +[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetProjectionMatrix(); return r; });
 	SOMA_METHOD_NEW(e, "cFrustum", "const cMatrixf& GetViewMatrix()const", +[](cFrustum *o) -> const cMatrixf & { static thread_local cMatrixf r; r = o->GetViewMatrix(); return r; });
 	SOMA_METHOD_NEW(e, "cFrustum", "float GetFarPlane()const", +[](cFrustum *o) -> float { return o->GetFarPlane(); });
@@ -1507,6 +1510,17 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cWorld", "cLensFlare@ CreateLensFlare(const tString &in asName, const cVector2f &in avSize,const tString &in asMaterial,bool abStatic)", +[](cWorld *o, const tString & a0, const cVector2f & a1, const tString & a2, bool a3) -> cLensFlare * { return o->CreateLensFlare(a0, a1, a2, a3); });
 	SOMA_METHOD_NEW(e, "cWorld", "void DestroyLensFlare(cLensFlare@ apObject)", +[](cWorld *o, cLensFlare * a0) { o->DestroyLensFlare(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "cLensFlare@ GetLensFlare(const tString &in asName)", +[](cWorld *o, const tString & a0) -> cLensFlare * { return o->GetLensFlare(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionColor(const cColor&in aColor)", +[](cWorld *o, const cColor & a0) { o->SetNightVisionColor(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionBrightness(float afBrightness)", +[](cWorld *o, float a0) { o->SetNightVisionBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionRadiusMin(float afRadius)", +[](cWorld *o, float a0) { o->SetNightVisionRadiusMin(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionRadiusMax(float afRadius)", +[](cWorld *o, float a0) { o->SetNightVisionRadiusMax(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "void SetNightVisionFalloff(float afFalloff)", +[](cWorld *o, float a0) { o->SetNightVisionFalloff(a0); });
+	SOMA_METHOD_NEW(e, "cWorld", "bool GetNightVisionVisible()", +[](cWorld *o) -> bool { return o->GetNightVisionVisible(); });
+	SOMA_METHOD_NEW(e, "cWorld", "const cColor& GetNightVisionColor()", +[](cWorld *o) -> const cColor & { static thread_local cColor r; r = o->GetNightVisionColor(); return r; });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionBrightness()", +[](cWorld *o) -> float { return o->GetNightVisionBrightness(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionRadiusMin()", +[](cWorld *o) -> float { return o->GetNightVisionRadiusMin(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionRadiusMax()", +[](cWorld *o) -> float { return o->GetNightVisionRadiusMax(); });
+	SOMA_METHOD_NEW(e, "cWorld", "float GetNightVisionFalloff()", +[](cWorld *o) -> float { return o->GetNightVisionFalloff(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetFogLighten(bool abX)", +[](cWorld *o, bool a0) { o->SetFogLighten(a0); });
 	SOMA_METHOD_NEW(e, "cWorld", "bool GetFogLighten()", +[](cWorld *o) -> bool { return o->GetFogLighten(); });
 	SOMA_METHOD_NEW(e, "cWorld", "void SetSecondaryFogDensity(float afX)", +[](cWorld *o, float a0) { o->SetSecondaryFogDensity(a0); });
@@ -1671,6 +1685,7 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetEntitySmoothYPosNum(int alX)", +[](iCharacterBody *o, int a0) { o->SetEntitySmoothYPosNum(a0); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "bool GetUseEntitySmoothYPos()", +[](iCharacterBody *o) -> bool { return o->GetUseEntitySmoothYPos(); });
 	SOMA_METHOD_NEW(e, "iCharacterBody", "int GetEntitySmoothYPosNum()", +[](iCharacterBody *o) -> int { return o->GetEntitySmoothYPosNum(); });
+	SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMoveSpeedMul(eCharDir aDir, float afX)", +[](iCharacterBody *o, int a0, float a1) { o->SetMoveSpeedMul((eCharDir)a0, a1); });
 	SOMA_METHOD_NEW(e, "iCollideShape", "iCollideShape@ GetSubShape(int alIdx)", +[](iCollideShape *o, int a0) -> iCollideShape * { return o->GetSubShape(a0); });
 	SOMA_METHOD_NEW(e, "iCollideShape", "int GetSubShapeNum()", +[](iCollideShape *o) -> int { return o->GetSubShapeNum(); });
 	SOMA_METHOD_NEW(e, "iCollideShape", "const cVector3f& GetSize()", +[](iCollideShape *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });

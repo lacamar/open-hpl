@@ -323,6 +323,18 @@ namespace hpl {
 		float GetDepthOfFieldFocusEnd(){ return mfDepthOfFieldFocusEnd;}
 		float GetDepthOfFieldFalloff(){ return mfDepthOfFieldFalloff;}
 
+		void SetNightVisionColor(const cColor& aCol){ mNightVisionColor = aCol;}
+		void SetNightVisionBrightness(float afX){ mfNightVisionBrightness = afX;}
+		void SetNightVisionRadiusMin(float afX){ mfNightVisionRadiusMin = afX;}
+		void SetNightVisionRadiusMax(float afX){ mfNightVisionRadiusMax = afX;}
+		void SetNightVisionFalloff(float afX){ mfNightVisionFalloff = afX;}
+		const cColor& GetNightVisionColor(){ return mNightVisionColor;}
+		float GetNightVisionBrightness(){ return mfNightVisionBrightness;}
+		float GetNightVisionRadiusMin(){ return mfNightVisionRadiusMin;}
+		float GetNightVisionRadiusMax(){ return mfNightVisionRadiusMax;}
+		float GetNightVisionFalloff(){ return mfNightVisionFalloff;}
+		bool GetNightVisionVisible(){ return mfNightVisionRadiusMax > 0 && mfNightVisionBrightness > 0 && mNightVisionColor.r + mNightVisionColor.g + mNightVisionColor.b > 0;}
+
 		void SetToneMapping(float afKey, float afExposure, float afWhiteCut){ mfToneMappingKey = afKey; mfToneMappingExposure = afExposure; mfToneMappingWhiteCut = afWhiteCut; }
 		float GetToneMappingKey(){ return mfToneMappingKey; }
 		float GetToneMappingExposure(){ return mfToneMappingExposure; }
@@ -566,6 +578,12 @@ namespace hpl {
 		float mfDepthOfFieldFocusStart = 0;
 		float mfDepthOfFieldFocusEnd = 0;
 		float mfDepthOfFieldFalloff = 0;
+
+		cColor mNightVisionColor = cColor(0,0);
+		float mfNightVisionBrightness = 0;
+		float mfNightVisionRadiusMin = 0;
+		float mfNightVisionRadiusMax = 0;
+		float mfNightVisionFalloff = 1;
 
 		float mfToneMappingKey;
 		float mfToneMappingExposure;

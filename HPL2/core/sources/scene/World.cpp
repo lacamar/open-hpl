@@ -495,6 +495,7 @@ namespace hpl {
 
 	cMeshEntity* cWorld::CreateMeshEntity(const tString &asName,cMesh *apMesh, bool abStatic)
 	{
+		if(apMesh==NULL) return NULL;
 		cMeshEntity* pMeshEntity = hplNew( cMeshEntity, (asName,apMesh,mpResources->GetMaterialManager(),
 														mpResources->GetMeshManager(), 
 														mpResources->GetAnimationManager()) );
