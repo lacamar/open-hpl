@@ -706,6 +706,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "const cVector3f& GetProbeOffset()", +[](cLightBox *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetProbeOffset(); return r; });
 	SOMA_METHOD_NEW(e, "cLightBox", "void FadeIrradianceSet(const tString&in asSetName, float afTime)", +[](cLightBox *o, const tString & a0, float a1) { o->FadeIrradianceSet(a0, a1); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetSpecularColor(const cColor&in aColor)", +[](cLightBox *o, const cColor & a0) { o->SetSpecularColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetDefaultBrightness(float afX)", +[](cLightBox *o, float a0) { o->SetDefaultBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "float GetDefaultBrightness()", +[](cLightBox *o) -> float { return o->GetDefaultBrightness(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetUniqueID()", +[](cLightDirectional *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void UpdateLogic(float afTimeStep)", +[](cLightDirectional *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "const tString& GetName()const", +[](cLightDirectional *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -817,6 +819,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetAutoShadowSliceLogTerm(float afX)", +[](cLightDirectional *o, float a0) { o->SetAutoShadowSliceLogTerm(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetAutoShadowSliceLogTerm()", +[](cLightDirectional *o) -> float { return o->GetAutoShadowSliceLogTerm(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetSpecularColor(const cColor&in aColor)", +[](cLightDirectional *o, const cColor & a0) { o->SetSpecularColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetDefaultBrightness(float afX)", +[](cLightDirectional *o, float a0) { o->SetDefaultBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetDefaultBrightness()", +[](cLightDirectional *o) -> float { return o->GetDefaultBrightness(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetUniqueID()", +[](cLightPoint *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void UpdateLogic(float afTimeStep)", +[](cLightPoint *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "const tString& GetName()const", +[](cLightPoint *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -916,6 +920,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "float GetTranslucency()", +[](cLightPoint *o) -> float { return o->GetTranslucency(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetTranslucency(float afX)", +[](cLightPoint *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetSpecularColor(const cColor&in aColor)", +[](cLightPoint *o, const cColor & a0) { o->SetSpecularColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void SetDefaultBrightness(float afX)", +[](cLightPoint *o, float a0) { o->SetDefaultBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "float GetDefaultBrightness()", +[](cLightPoint *o) -> float { return o->GetDefaultBrightness(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetUniqueID()", +[](cLightSpot *o) -> int { return o->GetUniqueID(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void UpdateLogic(float afTimeStep)", +[](cLightSpot *o, float a0) { o->UpdateLogic(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "const tString& GetName()const", +[](cLightSpot *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
@@ -1028,6 +1034,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpotFalloffPow(float afX)", +[](cLightSpot *o, float a0) { o->SetSpotFalloffPow(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "float GetSpotFalloffPow()", +[](cLightSpot *o) -> float { return o->GetSpotFalloffPow(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetSpecularColor(const cColor&in aColor)", +[](cLightSpot *o, const cColor & a0) { o->SetSpecularColor(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void SetDefaultBrightness(float afX)", +[](cLightSpot *o, float a0) { o->SetDefaultBrightness(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "float GetDefaultBrightness()", +[](cLightSpot *o) -> float { return o->GetDefaultBrightness(); });
 	SOMA_METHOD_NEW(e, "cMaterial", "bool GetForceFullScaleTextures()", +[](cMaterial *o) -> bool { return o->GetForceFullScaleTextures(); });
 	SOMA_METHOD_NEW(e, "cMaterial", "const tString& GetName()", +[](cMaterial *o) -> const tString & { static thread_local tString r; r = o->GetName(); return r; });
 	SOMA_METHOD_NEW(e, "cMaterial", "int GetUvAnimationNum()", +[](cMaterial *o) -> int { return o->GetUvAnimationNum(); });
@@ -1839,6 +1847,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "float GetTranslucency()", +[](iLight *o) -> float { return o->GetTranslucency(); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetTranslucency(float afX)", +[](iLight *o, float a0) { o->SetTranslucency(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetSpecularColor(const cColor&in aColor)", +[](iLight *o, const cColor & a0) { o->SetSpecularColor(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void SetDefaultBrightness(float afX)", +[](iLight *o, float a0) { o->SetDefaultBrightness(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "float GetDefaultBrightness()", +[](iLight *o) -> float { return o->GetDefaultBrightness(); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "cVector2f GetScreenSizeFloat()", +[](iLowLevelGraphics *o) -> cVector2f { return o->GetScreenSizeFloat(); });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "const cVector2l& GetScreenSizeInt()", +[](iLowLevelGraphics *o) -> const cVector2l & { static thread_local cVector2l r; r = o->GetScreenSizeInt(); return r; });
 	SOMA_METHOD_NEW(e, "iLowLevelGraphics", "void DrawLine(const cVector3f&in avBegin, const cVector3f&in avEnd, const cColor&in aCol)", +[](iLowLevelGraphics *o, const cVector3f & a0, const cVector3f & a1, const cColor & a2) { o->DrawLine(a0, a1, a2); });
@@ -1896,6 +1906,8 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "cVector3f GetTorqueFromForceAtPosition(const cVector3f&in avForce, const cVector3f&in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) -> cVector3f { return o->GetTorqueFromForceAtPosition(a0, a1); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMass(float afMass)", +[](iPhysicsBody *o, float a0) { o->SetMass(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMass() const", +[](iPhysicsBody *o) -> float { return o->GetMass(); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "void SetMassMulApplied(float afMul)", +[](iPhysicsBody *o, float a0) { o->SetMassMulApplied(a0); });
+	SOMA_METHOD_NEW(e, "iPhysicsBody", "float GetMassMulApplied()", +[](iPhysicsBody *o) -> float { return o->GetMassMulApplied(); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddForce(const cVector3f &in avForce)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddForce(a0); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddForceAtPosition(const cVector3f &in avForce, const cVector3f &in avPos)", +[](iPhysicsBody *o, const cVector3f & a0, const cVector3f & a1) { o->AddForceAtPosition(a0, a1); });
 	SOMA_METHOD_NEW(e, "iPhysicsBody", "void AddTorque(const cVector3f &in avTorque)", +[](iPhysicsBody *o, const cVector3f & a0) { o->AddTorque(a0); });

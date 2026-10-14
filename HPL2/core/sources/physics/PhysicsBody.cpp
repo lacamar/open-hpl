@@ -79,6 +79,7 @@ namespace hpl {
 		mbHasSlide = false;
 
 		mfBuoyancyDensityMul = 1.0f;
+		mfMassMulApplied = 1.0f;
 
 		mlSlideCount = 0;
 		mlImpactCount = 0;

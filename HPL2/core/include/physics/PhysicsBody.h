@@ -250,6 +250,8 @@ namespace hpl {
 
 		float GetBuoyancyDensityMul(){ return mfBuoyancyDensityMul;}
 		void SetBuoyancyDensityMul(float afX){ mfBuoyancyDensityMul = afX;}
+		float GetMassMulApplied(){ return mfMassMulApplied;}
+		void SetMassMulApplied(float afX){ mfMassMulApplied = afX;}
 
 		void SetGravityCanAttachCharacter(bool abX){ mbGravityCanAttachCharacter = abX;}
 		void SetGravityAttachmentRotation(bool abX){ mbGravityAttachmentRotation = abX;}
@@ -306,6 +308,7 @@ namespace hpl {
 		bool mbInUpdateList;
 
 		float mfBuoyancyDensityMul;
+		float mfMassMulApplied;
 
 		bool mbStaticMovement;
 		cVector3f mvTotalStaticLinearVel;
