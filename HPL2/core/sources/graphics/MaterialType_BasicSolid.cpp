@@ -86,6 +86,10 @@ namespace hpl {
 	#define kVar_avNormalMask					49
 	#define kVar_a_mtxBlendBand					50
 	#define kVar_a_mtxInvView					51
+	#define kVar_avLiquidColor					52
+	#define kVar_avLiquidSpecular				53
+	#define kVar_afLiquidInvTextureSize			54
+	#define kVar_avLiquidFade					55
 
 
 	//------------------------------
@@ -105,8 +109,11 @@ namespace hpl {
 	#define eFeature_Diffuse_DetailNormal	eFlagBit_11
 	#define eFeature_Diffuse_Translucency	eFlagBit_12
 	#define eFeature_Diffuse_ForceFields	eFlagBit_13
+	#define eFeature_Diffuse_Liquid			eFlagBit_14
+	#define eFeature_Diffuse_LiquidAlpha	eFlagBit_15
+	#define eFeature_Diffuse_LiquidMul		eFlagBit_16
 		
-	#define kDiffuseFeatureNum 14
+	#define kDiffuseFeatureNum 17
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -124,6 +131,9 @@ namespace hpl {
 		cProgramComboFeature("UseDetailNormal", kPC_FragmentBit, eFeature_Diffuse_NormalMaps),
 		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
 		cProgramComboFeature("UseFourForceFields", kPC_VertexBit),
+		cProgramComboFeature("UseLiquid", kPC_VertexBit | kPC_FragmentBit),
+		cProgramComboFeature("LiquidBlendMode_Alpha", kPC_FragmentBit),
+		cProgramComboFeature("LiquidBlendMode_Mul", kPC_FragmentBit),
 	};
 
 	//------------------------------
@@ -405,6 +415,7 @@ namespace hpl {
 		AddUsedTexture(eMaterialTexture_DetailDiffuse);
 		AddUsedTexture(eMaterialTexture_DetailNMap);
 		AddUsedTexture(eMaterialTexture_Translucency);
+		AddUsedTexture(eMaterialTexture_Liquid);
 
 		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
 
@@ -486,6 +497,12 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("afFarPlane", kVar_afFarPlane,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avDetailProperties", kVar_avDetailProperties,eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("avDetailWeights", kVar_avDetailWeights,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avLiquidColor", kVar_avLiquidColor,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avLiquidSpecular", kVar_avLiquidSpecular,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afLiquidInvTextureSize", kVar_afLiquidInvTextureSize,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("afInvTextureSize", kVar_afLiquidInvTextureSize,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("px_vLiquidFade", kVar_avLiquidFade,eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avLiquidFade", kVar_avLiquidFade,eMaterialRenderMode_Diffuse);
 		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Diffuse);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
@@ -502,7 +519,8 @@ namespace hpl {
 		//////////////////////////////////
 		//Z specifics
 		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
-		if(cRendererDeferred::GetHdr()) apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
+		if(cRendererDeferred::GetHdr() || apMaterial->GetTexture(eMaterialTexture_Liquid)) apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
+		if(apMaterial->GetTexture(eMaterialTexture_Liquid)) apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
 		apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
 		if(pVars->mbSwayActive)
 		{
@@ -590,6 +608,7 @@ namespace hpl {
 				case 8: return apMaterial->GetTexture(eMaterialTexture_DetailDiffuse);
 				case 9: return apMaterial->GetTexture(eMaterialTexture_NMap) ? apMaterial->GetTexture(eMaterialTexture_DetailNMap) : NULL;
 				case 10: return apMaterial->GetTexture(eMaterialTexture_Translucency);
+				case 11: return apMaterial->GetTexture(eMaterialTexture_Liquid);
 				}
 				return NULL;
 			}
@@ -672,6 +691,12 @@ namespace hpl {
 			if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse))	lFlags |= eFeature_Diffuse_DetailDiffuse;
 			if(apMaterial->GetTexture(eMaterialTexture_DetailNMap))		lFlags |= eFeature_Diffuse_DetailNormal;
 			if(apMaterial->GetTexture(eMaterialTexture_Translucency))	lFlags |= eFeature_Diffuse_Translucency;
+			if(apMaterial->GetTexture(eMaterialTexture_Liquid) && cGpuShaderManager::IsHpsl())
+			{
+				lFlags |= eFeature_Diffuse_Liquid;
+				if(pVars->msLiquidBlendMode == "Alpha")	lFlags |= eFeature_Diffuse_LiquidAlpha;
+				else if(pVars->msLiquidBlendMode == "Mul")	lFlags |= eFeature_Diffuse_LiquidMul;
+			}
 			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap, eFeature_Diffuse_ForceFields);
 
 			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
@@ -758,6 +783,13 @@ namespace hpl {
 					apProgram->SetVec4f(kVar_avDetailProperties, p[0], p[1], p[2], p[3]);
 					apProgram->SetVec3f(kVar_avDetailWeights, pVars->mvDetailWeights);
 				}
+
+				if(iTexture *pLiquid = apMaterial->GetTexture(eMaterialTexture_Liquid))
+				{
+					apProgram->SetColor4f(kVar_avLiquidColor, pVars->mLiquidColor);
+					apProgram->SetColor4f(kVar_avLiquidSpecular, pVars->mLiquidSpecular);
+					apProgram->SetFloat(kVar_afLiquidInvTextureSize, 1.0f / (float)cMath::Max(pLiquid->GetWidth(), pLiquid->GetHeight()));
+				}
 			}
 		}
 	}
@@ -801,6 +833,16 @@ namespace hpl {
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
 			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
+			if(apObject->GetMaterial()->GetTexture(eMaterialTexture_Liquid))
+			{
+				// official SetupObjectInstanceData 0xdbd050
+				float fT = apObject->GetLiquidAmount();
+				if(fT <= -1) fT += 1 + apRenderer->GetTimeCount();
+				float fIn = pVars->mvLiquidFadeSpeed.x, fOut = pVars->mvLiquidFadeSpeed.y;
+				if(pVars->mbLiquidLoopFade) fT = std::fmod(fT, (fIn + fOut) * 1.1f);
+				if(fOut <= 0) fOut = fT + 1e6f;
+				apProgram->SetVec4f(kVar_avLiquidFade, fT / fIn - 1, (fOut - fT) / fIn, 1 / (pVars->mfLiquidEdgeSize + 0.01f), 2 * pVars->mfLiquidDryness);
+			}
 		}
 	}
 
@@ -846,6 +888,13 @@ namespace hpl {
 		pVars->mvDetailProperties[3] = vDetailUvMul.y;
 		pVars->mvDetailWeights = cVector3f(apVars->GetVarFloat("DetailWeight_Diffuse", 1), apVars->GetVarFloat("DetailWeight_Specular", 1), apVars->GetVarFloat("DetailWeight_Normal", 1));
 		pVars->mfIlluminationBrightness = apVars->GetVarFloat("IlluminationBrightness", 1);
+		pVars->mLiquidColor = apVars->GetVarColor("LiquidTrickleColor", cColor(0,0,0,1));
+		pVars->mLiquidSpecular = apVars->GetVarColor("LiquidTrickleSpecular", cColor(0,0,0,0));
+		pVars->mbLiquidLoopFade = apVars->GetVarBool("LiquidTrickleLoopFade", false);
+		pVars->mvLiquidFadeSpeed = apVars->GetVarVector2f("LiquidTrickleFadeSpeed", cVector2f(0.5f, 0.5f));
+		pVars->mfLiquidEdgeSize = apVars->GetVarFloat("LiquidTrickleEdgeSize", 0.5f);
+		pVars->mfLiquidDryness = apVars->GetVarFloat("LiquidTrickleDryness", 0.5f);
+		pVars->msLiquidBlendMode = apVars->GetVarString("LiquidTrickleBlendMode", "Alpha");
 	}
 
 	//--------------------------------------------------------------------------

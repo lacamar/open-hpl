@@ -198,6 +198,10 @@ namespace hpl {
 		void SetCoverageAmount(float afX);
 		float GetCoverageAmount(){ return mfCoverageAmount;}
 
+		void SetLiquidAmount(float afX);
+		void UseAutomaticLiquidAmount();
+		float GetLiquidAmount(){ return mfMeshLiquidAmount;}
+
 		void UpdateLogic(float afTimeStep);
 
 		void UpdateGraphicsForFrame(float afFrameTime);
@@ -233,6 +237,7 @@ namespace hpl {
 		bool mbIsVisible;
 		float mfIlluminationAmount;
 		float mfCoverageAmount;
+		float mfMeshLiquidAmount = -1;
 		tRenderableFlag mlRenderFlags;
 		
 		bool mbBoneMatricesNeedUpdate;

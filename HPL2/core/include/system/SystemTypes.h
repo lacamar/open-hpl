@@ -55,6 +55,7 @@ namespace hpl {
 	#define eFlagBit_13		(0x00002000)
 	#define eFlagBit_14		(0x00004000)
 	#define eFlagBit_15		(0x00008000)
+	#define eFlagBit_16		(0x00010000)
 
 	#define _W(t) L ## t
 

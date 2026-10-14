@@ -161,6 +161,9 @@ namespace hpl {
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {
+		// liquid fade comes from the instance buffer in newer games
+		{ "deferred_gbuffer_solid_frag.hpsl", "@ifdef UseLiquid\n\t\t  in cVector4f px_vLiquidFade,\n@endif\n", "" },
+		{ "deferred_gbuffer_solid_frag.hpsl", "\tuniform cTexture2D aLiquidMap : 11;\n", "\tuniform cTexture2D aLiquidMap : 11;\n\tuniform cVector4f px_vLiquidFade;\n" },
 		{ "water_surface_frag.hpsl",
 		  "\t@else\n\t\tfloat fWaveT = afT;\n\t@endif",
 		  "\t@else\n\t\tfloat fWaveT = afT;\n\t\tfloat fFadeNear = mfFadeWhenNear;\n\t\tcVector4f vReflectionMul = avReflectionMul;\n\t@endif" },

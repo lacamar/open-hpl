@@ -222,7 +222,11 @@ namespace hpl {
 					cVector3f vExt = pBV->GetMax() - pBV->GetMin();
 					if(vExt.x != vExt.x || vExt.y != vExt.y || vExt.z != vExt.z) { if(lNanBounds++ < 12) vNan.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?"))); continue; }
 					if(vExt.x > 1e6f || vExt.y > 1e6f || vExt.z > 1e6f) { if(vUnbounded.size() < 12) vUnbounded.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?"))); continue; }
-					if((vExt.x > 100 || vExt.y > 100 || vExt.z > 100) && !(pEnt->GetMesh() && pEnt->GetMesh()->GetFullPath().empty()))
+					// map-scaled vistas are data; unit bugs show unscaled
+					const cMatrixf &m = pEnt->GetWorldMatrix();
+					float fScale = cMath::Max(cMath::Max(m.GetRight().Length(), m.GetUp().Length()), m.GetForward().Length());
+					cVector3f vLocal = vExt / cMath::Max(fScale, 1.0f);
+					if((vLocal.x > 100 || vLocal.y > 100 || vLocal.z > 100) && !(pEnt->GetMesh() && pEnt->GetMesh()->GetFullPath().empty()))
 					{
 						if(lOversized < 12) vOversized.push_back(pEnt->GetName() + ":" + (pEnt->GetMesh() ? pEnt->GetMesh()->GetName() : tString("?")));
 						++lOversized;

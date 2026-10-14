@@ -1116,6 +1116,34 @@ void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 }
 
 // Negative length plays backwards from wherever the animation is
+// official cLuxProp::SetLiquidAmount 0xc766d0, FadeLiquidAmountTo 0xc76700, UpdateLiquidAmount 0xc8ade0
+void cSomaLuxEntity::SetLiquidAmount(float afX)
+{
+	mfLiquidAmount = mfLiquidTarget = afX;
+	mfLiquidSpeed = 0;
+	if (mpMesh) mpMesh->SetLiquidAmount(afX);
+}
+
+void cSomaLuxEntity::FadeLiquidAmountTo(float afTarget, float afTime)
+{
+	if (afTime <= 0) { SetLiquidAmount(afTarget); return; }
+	mfLiquidTarget = afTarget;
+	mfLiquidSpeed = std::fabs(afTarget - mfLiquidAmount) / afTime;
+}
+
+void cSomaLuxEntity::UpdateLiquidAmount(float afTimeStep)
+{
+	if (mfLiquidSpeed == 0) return;
+	float fStep = mfLiquidSpeed * afTimeStep;
+	if (std::fabs(mfLiquidTarget - mfLiquidAmount) <= fStep)
+	{
+		SetLiquidAmount(mfLiquidTarget);
+		return;
+	}
+	mfLiquidAmount += mfLiquidTarget > mfLiquidAmount ? fStep : -fStep;
+	if (mpMesh) mpMesh->SetLiquidAmount(mfLiquidAmount);
+}
+
 void cSomaLuxEntity::PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime)
 {
 	for (cProcAnim &anim : mvProcAnims)
@@ -3036,6 +3064,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
+	SOMA_METHOD(e, "cLuxProp", "void SetLiquidAmount(float afAmount)", +[](cSomaLuxEntity *p, float x) { p->SetLiquidAmount(x); });
+	SOMA_METHOD(e, "cLuxProp", "void FadeLiquidAmountTo(float afTargetAmount, float afTime)", +[](cSomaLuxEntity *p, float x, float t) { p->FadeLiquidAmountTo(x, t); });
 	SOMA_FUNC(e, "void Prop_SetHealth(const tString &in asPropName, float afHealth)", +[](const tString &n, float x) { ForMatching(n, [x](cSomaLuxEntity *p) { p->SetHealth(x); }); });
 	SOMA_FUNC(e, "void Prop_AddHealth(const tString &in asPropName, float afHealth)", +[](const tString &n, float x) { ForMatching(n, [x](cSomaLuxEntity *p) { p->SetHealth(p->mfHealth + x); }); });
 	SOMA_FUNC(e, "float Prop_GetHealth(const tString &in asPropName)", +[](const tString &n) { cSomaLuxEntity *p = Find(n); return p ? p->mfHealth : 0.0f; });

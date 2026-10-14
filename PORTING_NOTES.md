@@ -6803,3 +6803,27 @@ Empty `SoundEntityFile` map sounds:
 - Done: hpm Entity track adds `Static`; prop loader ORs it with `StaticPhysics`. SOMA maps have no `Static="true"`.
 - Also cleared `nan_bounds` on 02_07_alchemists_lab and `gbuffer1:nan` on 04_03_undercity_b.
 - Unknown: `cEntityLoader_Object::Load` also reads `Static` for the mesh entity static flag (render only); not ported.
+
+## Rebirth: liquid trickle (2026-10-14)
+
+Solid materials with a `LiquidMap` (match burn, wet hands, blood) rendered dry; script `SetLiquidAmount` was a stub.
+- Observed: ev_8f554165… `cLuxProp::SetLiquidAmount` 0xc766d0 / `FadeLiquidAmountTo` 0xc76700 / update 0xc8ade0 step a
+  per-prop amount towards a target and push it to every mesh entity; `cMeshEntity`/`iRenderable` keep the amount,
+  -1 = automatic (ev_94675b5b…: automatic adds a random phase).
+- Observed: ev_7a1ae0ea… `SetupObjectInstanceData` 0xdbd050 builds `px_vLiquidFade` = (t/in − 1, (out − t)/in,
+  1/(edge + 0.01), 2·dryness), t wrapped by `(in + out)·1.1` when looping; ev_b5af465d… material var defaults.
+- Done: `eMaterialTexture_Liquid` (unit 11), solid diffuse vars and `UseLiquid`/`LiquidBlendMode_*` features,
+  instance fade uniform; HPSL patch turns the `px_vLiquidFade` instance input into a uniform.
+- Done: script bindings on `iRenderable` subclasses and `cLuxProp`; PlayerBody arm liquid is script-defined on top.
+- Unknown: not compared against an official frame (no Rebirth reference captures).
+
+## Rebirth: shipped .msh preferred, pose scale, material triage (2026-10-14)
+
+- Observed: ev_1cd23287… official `cMeshManager::CreateMesh` 0xef52b0 loads the sibling `.msh` first under force-cache.
+  Done: `cMeshLoaderHandler::LoadMesh` does the same; cleared 03_05 vitae_station_tube_canister `no_material`.
+- That exposed `pool_root_long_rigged` (03_05): two skeleton roots with a 0.01 scale, map `<Pose>` translations in cm.
+  Observed: ev_df0cd1ee… `cEntityLoader_Object::Load` 0xec01c0 scales pose rotation and translation by the min row
+  length of the bone's local matrix. Done in `BeforeJoints`; we kept per-axis rest scale and unit scale only.
+- Observed: ev_1e970460… `GetAABBFromBones` 0xf862e0 seeds ±10000 and skips bones with radius ≤ 0. Done.
+- Allowlisted: `static_block.mat` (texture under `editor/`, not in resources.cfg; ev_2a451fd8… `LoadFromFile`
+  0xeedba0 returns NULL on a missing texture), `ghoul.mat` (ghoul_nrm.dds, ghoul_spec.dds not shipped).

@@ -100,6 +100,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBeam", "int GetMatrixUpdateCount()", +[](cBeam *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cBeam", "int GetRenderFrameCount() const", +[](cBeam *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cBeam", "void SetRenderFrameCount(int alCount)", +[](cBeam *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cBeam", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cBeam *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cBeam", "void SetLiquidAmount(float afX)", +[](cBeam *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cBeam", "float GetLiquidAmount()const", +[](cBeam *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cBeam", "void SetSize(const cVector2f&in avSize)", +[](cBeam *o, const cVector2f & a0) { o->SetSize(a0); });
 	SOMA_METHOD_NEW(e, "cBeam", "cVector2f GetSize()", +[](cBeam *o) -> cVector2f { return o->GetSize(); });
 	SOMA_METHOD_NEW(e, "cBeam", "void SetColor(const cColor &in aColor)", +[](cBeam *o, const cColor & a0) { o->SetColor(a0); });
@@ -147,6 +150,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cBillboard", "int GetMatrixUpdateCount()", +[](cBillboard *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "int GetRenderFrameCount() const", +[](cBillboard *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetRenderFrameCount(int alCount)", +[](cBillboard *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cBillboard *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "void SetLiquidAmount(float afX)", +[](cBillboard *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cBillboard", "float GetLiquidAmount()const", +[](cBillboard *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "eBillboardType GetType()", +[](cBillboard *o) -> int { return (int)o->GetType(); });
 	SOMA_METHOD_NEW(e, "cBillboard", "void SetAxis(const cVector3f&in avAxis)", +[](cBillboard *o, const cVector3f & a0) { o->SetAxis(a0); });
 	SOMA_METHOD_NEW(e, "cBillboard", "const cVector3f& GetAxis()", +[](cBillboard *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetAxis(); return r; });
@@ -341,6 +347,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cFogArea", "int GetMatrixUpdateCount()", +[](cFogArea *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cFogArea", "int GetRenderFrameCount() const", +[](cFogArea *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cFogArea", "void SetRenderFrameCount(int alCount)", +[](cFogArea *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cFogArea", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cFogArea *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cFogArea", "void SetLiquidAmount(float afX)", +[](cFogArea *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cFogArea", "float GetLiquidAmount()const", +[](cFogArea *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cFogArea", "const cColor& GetColor()", +[](cFogArea *o) -> const cColor & { static thread_local cColor r; r = o->GetColor(); return r; });
 	SOMA_METHOD_NEW(e, "cFogArea", "void SetColor(const cColor&in aCol)", +[](cFogArea *o, const cColor & a0) { o->SetColor(a0); });
 	SOMA_METHOD_NEW(e, "cFogArea", "const cVector3f& GetSize()", +[](cFogArea *o) -> const cVector3f & { static thread_local cVector3f r; r = o->GetSize(); return r; });
@@ -402,6 +411,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cForceField", "int GetMatrixUpdateCount()", +[](cForceField *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cForceField", "int GetRenderFrameCount() const", +[](cForceField *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cForceField", "void SetRenderFrameCount(int alCount)", +[](cForceField *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cForceField", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cForceField *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cForceField", "void SetLiquidAmount(float afX)", +[](cForceField *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cForceField", "float GetLiquidAmount()const", +[](cForceField *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cForceField", "void FadeTo(float afAmount, float afTime)", +[](cForceField *o, float a0, float a1) { o->FadeTo(a0, a1); });
 	SOMA_METHOD_NEW(e, "cForceField", "void FadeOut(float afTime)", +[](cForceField *o, float a0) { o->FadeOut(a0); });
 	SOMA_METHOD_NEW(e, "cForceField", "void SetRadius(float afX)", +[](cForceField *o, float a0) { o->SetRadius(a0); });
@@ -542,6 +554,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLensFlare", "int GetMatrixUpdateCount()", +[](cLensFlare *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cLensFlare", "int GetRenderFrameCount() const", +[](cLensFlare *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cLensFlare", "void SetRenderFrameCount(int alCount)", +[](cLensFlare *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cLensFlare", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLensFlare *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLensFlare", "void SetLiquidAmount(float afX)", +[](cLensFlare *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLensFlare", "float GetLiquidAmount()const", +[](cLensFlare *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cLensFlare", "void FadeIn(float afTime)", +[](cLensFlare *o, float a0) { o->FadeIn(a0); });
 	SOMA_METHOD_NEW(e, "cLensFlare", "void FadeOut(float afTime)", +[](cLensFlare *o, float a0) { o->FadeOut(a0); });
 	SOMA_METHOD_NEW(e, "cLensFlare", "void SetFlareSourceSize(cVector3f avSize)", +[](cLensFlare *o, cVector3f a0) { o->SetFlareSourceSize(a0); });
@@ -627,6 +642,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightBox", "int GetMatrixUpdateCount()", +[](cLightBox *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "int GetRenderFrameCount() const", +[](cLightBox *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetRenderFrameCount(int alCount)", +[](cLightBox *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightBox *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "void SetLiquidAmount(float afX)", +[](cLightBox *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightBox", "float GetLiquidAmount()const", +[](cLightBox *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "eLightType GetLightType()", +[](cLightBox *o) -> int { return (int)o->GetLightType(); });
 	SOMA_METHOD_NEW(e, "cLightBox", "void SetGoboTexture(iTexture @apTexture)", +[](cLightBox *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightBox", "iTexture@ GetGoboTexture()", +[](cLightBox *o) -> iTexture * { return o->GetGoboTexture(); });
@@ -745,6 +763,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetMatrixUpdateCount()", +[](cLightDirectional *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "int GetRenderFrameCount() const", +[](cLightDirectional *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetRenderFrameCount(int alCount)", +[](cLightDirectional *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightDirectional *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetLiquidAmount(float afX)", +[](cLightDirectional *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightDirectional", "float GetLiquidAmount()const", +[](cLightDirectional *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "eLightType GetLightType()", +[](cLightDirectional *o) -> int { return (int)o->GetLightType(); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "void SetGoboTexture(iTexture @apTexture)", +[](cLightDirectional *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightDirectional", "iTexture@ GetGoboTexture()", +[](cLightDirectional *o) -> iTexture * { return o->GetGoboTexture(); });
@@ -858,6 +879,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetMatrixUpdateCount()", +[](cLightPoint *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "int GetRenderFrameCount() const", +[](cLightPoint *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetRenderFrameCount(int alCount)", +[](cLightPoint *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightPoint *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "void SetLiquidAmount(float afX)", +[](cLightPoint *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightPoint", "float GetLiquidAmount()const", +[](cLightPoint *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "eLightType GetLightType()", +[](cLightPoint *o) -> int { return (int)o->GetLightType(); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "void SetGoboTexture(iTexture @apTexture)", +[](cLightPoint *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightPoint", "iTexture@ GetGoboTexture()", +[](cLightPoint *o) -> iTexture * { return o->GetGoboTexture(); });
@@ -959,6 +983,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetMatrixUpdateCount()", +[](cLightSpot *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "int GetRenderFrameCount() const", +[](cLightSpot *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetRenderFrameCount(int alCount)", +[](cLightSpot *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cLightSpot *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "void SetLiquidAmount(float afX)", +[](cLightSpot *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cLightSpot", "float GetLiquidAmount()const", +[](cLightSpot *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "eLightType GetLightType()", +[](cLightSpot *o) -> int { return (int)o->GetLightType(); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "void SetGoboTexture(iTexture @apTexture)", +[](cLightSpot *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "cLightSpot", "iTexture@ GetGoboTexture()", +[](cLightSpot *o) -> iTexture * { return o->GetGoboTexture(); });
@@ -1120,6 +1147,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetIlluminationColor(const cColor&in aColor)", +[](cMeshEntity *o, const cColor & a0) { o->SetIlluminationColor(a0); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetCoverageAmount(float afX)", +[](cMeshEntity *o, float a0) { o->SetCoverageAmount(a0); });
 	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetCoverageAmount()", +[](cMeshEntity *o) -> float { return o->GetCoverageAmount(); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "void SetLiquidAmount(float afX)", +[](cMeshEntity *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "float GetLiquidAmount()", +[](cMeshEntity *o) -> float { return o->GetLiquidAmount(); });
+	SOMA_METHOD_NEW(e, "cMeshEntity", "void UseAutomaticLiquidAmount()", +[](cMeshEntity *o) { o->UseAutomaticLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cNode3D", "bool AddEntity(iEntity3D@ apEntity)", +[](cNode3D *o, iEntity3D * a0) -> bool { return o->AddEntity(a0); });
 	SOMA_METHOD_NEW(e, "cNode3D", "bool RemoveEntity(iEntity3D@ apEntity)", +[](cNode3D *o, iEntity3D * a0) -> bool { return o->RemoveEntity(a0); });
 	SOMA_METHOD_NEW(e, "cNode3D", "void ClearEntities()", +[](cNode3D *o) { o->ClearEntities(); });
@@ -1296,6 +1326,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetMatrixUpdateCount()", +[](cSubMeshEntity *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "int GetRenderFrameCount() const", +[](cSubMeshEntity *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetRenderFrameCount(int alCount)", +[](cSubMeshEntity *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cSubMeshEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetLiquidAmount(float afX)", +[](cSubMeshEntity *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "cSubMeshEntity", "float GetLiquidAmount()const", +[](cSubMeshEntity *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cSubMesh@ GetSubMesh() const", +[](cSubMeshEntity *o) -> cSubMesh * { return o->GetSubMesh(); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "void SetLocalNode(cNode3D @apNode)", +[](cSubMeshEntity *o, cNode3D * a0) { o->SetLocalNode(a0); });
 	SOMA_METHOD_NEW(e, "cSubMeshEntity", "cNode3D@ GetLocalNode()", +[](cSubMeshEntity *o) -> cNode3D * { return o->GetLocalNode(); });
@@ -1785,6 +1818,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iLight", "int GetMatrixUpdateCount()", +[](iLight *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "iLight", "int GetRenderFrameCount() const", +[](iLight *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetRenderFrameCount(int alCount)", +[](iLight *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](iLight *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "void SetLiquidAmount(float afX)", +[](iLight *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "iLight", "float GetLiquidAmount()const", +[](iLight *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "iLight", "eLightType GetLightType()", +[](iLight *o) -> int { return (int)o->GetLightType(); });
 	SOMA_METHOD_NEW(e, "iLight", "void SetGoboTexture(iTexture @apTexture)", +[](iLight *o, iTexture * a0) { o->SetGoboTexture(a0); });
 	SOMA_METHOD_NEW(e, "iLight", "iTexture@ GetGoboTexture()", +[](iLight *o) -> iTexture * { return o->GetGoboTexture(); });
@@ -2266,6 +2302,9 @@ void RegisterSomaScriptGenBindings(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetMatrixUpdateCount()", +[](cRopeEntity *o) -> int { return o->GetMatrixUpdateCount(); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "int GetRenderFrameCount() const", +[](cRopeEntity *o) -> int { return o->GetRenderFrameCount(); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetRenderFrameCount(int alCount)", +[](cRopeEntity *o, int a0) { o->SetRenderFrameCount(a0); });
+	SOMA_METHOD_NEW(e, "iRopeEntity", "void UseAutomaticLiquidAmount(float afTime = 0)", +[](cRopeEntity *o, float a0) { o->UseAutomaticLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetLiquidAmount(float afX)", +[](cRopeEntity *o, float a0) { o->SetLiquidAmount(a0); });
+	SOMA_METHOD_NEW(e, "iRopeEntity", "float GetLiquidAmount()const", +[](cRopeEntity *o) -> float { return o->GetLiquidAmount(); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "iPhysicsRope @GetPhysicsRope()", +[](cRopeEntity *o) -> iPhysicsRope * { return o->GetPhysicsRope(); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetMaterial(cMaterial@ apMaterial)", +[](cRopeEntity *o, cMaterial * a0) { o->SetMaterial(a0); });
 	SOMA_METHOD_NEW(e, "iRopeEntity", "void SetColor(const cColor &in aColor)", +[](cRopeEntity *o, const cColor & a0) { o->SetColor(a0); });

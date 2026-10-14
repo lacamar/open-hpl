@@ -92,6 +92,10 @@ namespace hpl {
 		void SetCoverageAmount(float afX);
 		inline float GetCoverageAmount()const { return mfCoverageAmount;}
 
+		void SetLiquidAmount(float afX){ mfLiquidAmount = afX > 0 ? afX : 0; }
+		void UseAutomaticLiquidAmount(float afTime=0){ mfLiquidAmount = -1 - std::fabs(afTime); }
+		inline float GetLiquidAmount()const { return mfLiquidAmount;}
+
 		virtual void SetCulledByDistance(bool abX){ mbCulledByDistance = abX; mfDistanceCullFade = 1; }
 		bool IsCulledByDistance() const { return mbCulledByDistance;}
 		float& DistanceCullFade(){ return mfDistanceCullFade;}
@@ -170,6 +174,7 @@ namespace hpl {
 		cColor mIlluminationColor = cColor(1,1);
 		cColor mColorMul;
 		float mfCoverageAmount;
+		float mfLiquidAmount;
 		bool mbCulledByDistance = true;
 		bool mbCulledByFog = true;
 		float mfDistanceCullFade = 1;

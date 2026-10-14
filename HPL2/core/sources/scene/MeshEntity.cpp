@@ -1336,6 +1336,18 @@ namespace hpl {
 		}
 	}
 
+	void cMeshEntity::SetLiquidAmount(float afX)
+	{
+		mfMeshLiquidAmount = afX > 0 ? afX : 0;
+		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->SetLiquidAmount(mfMeshLiquidAmount);
+	}
+
+	void cMeshEntity::UseAutomaticLiquidAmount()
+	{
+		mfMeshLiquidAmount = -1;
+		for(size_t i=0; i<mvSubMeshes.size(); ++i) mvSubMeshes[i]->UseAutomaticLiquidAmount();
+	}
+
 	
 	
 	//-----------------------------------------------------------------------
@@ -1530,13 +1542,15 @@ namespace hpl {
 
 	void cMeshEntity::GetAABBFromBones(cVector3f &avMin, cVector3f &avMax)
 	{
-		avMin = mvBoneStates[0]->GetWorldPosition();
-		avMax = avMin;
+		avMin = cVector3f(10000);
+		avMax = cVector3f(-10000);
 
-		for(size_t i=1; i< mvBoneStates.size(); ++i)
+		// HPL3 0xf862e0: unweighted bones don't count
+		for(size_t i=0; i< mvBoneStates.size(); ++i)
 		{
 			cBoneState *pState = mvBoneStates[i];
 			float fBoundingRadius = mpMesh->GetBoneBoundingRadius((int)i);
+			if(fBoundingRadius <= 0) continue;
 			cVector3f vMaxPos = pState->GetWorldPosition() + cVector3f(fBoundingRadius);
 			cVector3f vMinPos = pState->GetWorldPosition() - cVector3f(fBoundingRadius);
 
@@ -1548,6 +1562,7 @@ namespace hpl {
 			if(avMin.y > vMinPos.y) avMin.y = vMinPos.y;
 			if(avMin.z > vMinPos.z) avMin.z = vMinPos.z;
 		}
+		if(avMin.x > avMax.x) avMin = avMax = mvBoneStates[0]->GetWorldPosition();
 	}
 	
 	//-----------------------------------------------------------------------

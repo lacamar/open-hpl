@@ -567,6 +567,7 @@ namespace hpl {
 			case eMaterialTexture_DetailDiffuse: return "DetailDiffuse";
 			case eMaterialTexture_DetailNMap: return "DetailNMap";
 			case eMaterialTexture_Translucency: return "Translucency";
+			case eMaterialTexture_Liquid: return "Liquid";
 			case eMaterialTexture_DiffuseSide: return "DiffuseSide";
 			case eMaterialTexture_DiffuseTop: return "DiffuseTop";
 			case eMaterialTexture_DiffuseBottom: return "DiffuseBottom";

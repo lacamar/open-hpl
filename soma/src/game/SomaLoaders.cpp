@@ -165,10 +165,12 @@ bool cSomaGenericEntityLoader::BeforeJoints()
 		const float *v = &vVals[i * 7];
 		cBone *pBone = pSkeleton->GetBoneByIndex(i);
 		vLocal[i] = cMath::MatrixQuaternion(cQuaternion(v[0], v[1], v[2], v[3]));
-		// Unit-scaled roots (subway girls) carry a scale the pose omits
-		const cMatrixf &mtxRest = pBone->GetLocalTransform();
-		vLocal[i] = cMath::MatrixMul(vLocal[i], cMath::MatrixScale(cVector3f(mtxRest.GetRight().Length(), mtxRest.GetUp().Length(), mtxRest.GetForward().Length())));
-		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * pBone->GetLocalUnitScale());
+		// Official 0xec01c0: uniform min axis scale of the rest bone, applied to translation too
+		const cMatrixf &m = pBone->GetLocalTransform();
+		float fS = cMath::Min(cMath::Min(cVector3f(m.m[0][0], m.m[0][1], m.m[0][2]).Length(), cVector3f(m.m[1][0], m.m[1][1], m.m[1][2]).Length()),
+							  cVector3f(m.m[2][0], m.m[2][1], m.m[2][2]).Length());
+		vLocal[i] = cMath::MatrixMul(vLocal[i], cMath::MatrixScale(cVector3f(fS)));
+		vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * fS * pBone->GetLocalUnitScale());
 	}
 	mpEntity->SetBoneRestPose(vLocal);
 	mpEntity->AlignBodiesToSkeleton(false);

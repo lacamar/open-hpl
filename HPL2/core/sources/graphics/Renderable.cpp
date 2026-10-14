@@ -42,6 +42,7 @@ namespace hpl {
 		mfIlluminationAmount = 1.0f;
 		mColorMul = cColor(1,1);
 		mfCoverageAmount = 1.0f;
+		mfLiquidAmount = -cMath::RandRectf(1.1f, 300.0f);
 
 		mlRenderFrameCount = -1;
 		

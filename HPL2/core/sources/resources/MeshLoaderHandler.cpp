@@ -58,18 +58,20 @@ namespace hpl {
 	
 	cMesh* cMeshLoaderHandler::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
-		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
-		cMesh *pMesh = pMeshLoader ? pMeshLoader->LoadMesh(asFile,aFlags) : NULL;
-
-		// HPL3 ships a compiled .msh next to sources assimp can't read (FBX < 7000)
+		// HPL3 loads the shipped .msh instead of the source under force-cache (cMeshManager::CreateMesh)
 		tWString sMsh = cString::SetFileExtW(asFile, _W("msh"));
-		if(pMesh == NULL && sMsh != asFile && cPlatform::FileExists(sMsh))
+		if(sMsh != asFile && cResources::GetForceCacheLoadingAndSkipSaving() && cPlatform::FileExists(sMsh))
 		{
-			Log("Loading '%s' from its .msh\n", cString::To8Char(asFile).c_str());
-			pMesh = LoadMesh(sMsh, aFlags);
-			if(pMesh) pMesh->SetFullPath(asFile);
+			cMesh *pMesh = LoadMesh(sMsh, aFlags);
+			if(pMesh)
+			{
+				pMesh->SetFullPath(asFile);
+				return pMesh;
+			}
 		}
-		return pMesh;
+
+		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
+		return pMeshLoader ? pMeshLoader->LoadMesh(asFile,aFlags) : NULL;
 	}
 
 	//-----------------------------------------------------------------------

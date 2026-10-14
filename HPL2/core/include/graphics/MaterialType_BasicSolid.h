@@ -93,6 +93,11 @@ namespace hpl {
 		float mvDetailProperties[4];
 		cVector3f mvDetailWeights;
 		float mfIlluminationBrightness = 1;
+		cColor mLiquidColor, mLiquidSpecular;
+		bool mbLiquidLoopFade = false;
+		cVector2f mvLiquidFadeSpeed;
+		float mfLiquidEdgeSize = 0.5f, mfLiquidDryness = 0.5f;
+		tString msLiquidBlendMode;
 	};
 
 	//---------------------------------------------------

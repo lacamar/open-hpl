@@ -224,6 +224,10 @@ public:
 	void FadeEffectBaseColor(const cColor &aCol, float afTime);
 	void UpdateEffectColor(float afTimeStep);
 	float mfMeshFadeAlpha = 1, mfMeshFadeSpeed = 0;
+	float mfLiquidAmount = 0, mfLiquidTarget = 0, mfLiquidSpeed = 0;
+	void SetLiquidAmount(float afX);
+	void FadeLiquidAmountTo(float afTarget, float afTime);
+	void UpdateLiquidAmount(float afTimeStep);
 	bool CollidesWithPlayer();
 
 	float mfHealth = 100;

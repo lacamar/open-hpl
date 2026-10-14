@@ -584,6 +584,7 @@ namespace hpl {
 		eMaterialTexture_Specular_B,
 		eMaterialTexture_NMap_B,
 		eMaterialTexture_Height_B,
+		eMaterialTexture_Liquid,
 		eMaterialTexture_Special,	//This means that the texture is not data in the material, but retrieved else where. Such as a reflection texture.
 		eMaterialTexture_LastEnum
 	};

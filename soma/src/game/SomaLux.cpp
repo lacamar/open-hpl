@@ -547,6 +547,7 @@ void cSomaLuxMap::Update(float afTimeStep)
 			mvEntities[i]->UpdateProcAnimations(afTimeStep);
 		}
 		mvEntities[i]->UpdateEffectColor(afTimeStep);
+		mvEntities[i]->UpdateLiquidAmount(afTimeStep);
 		mvEntities[i]->UpdateGui(afTimeStep);
 	}
 }
