@@ -25,7 +25,7 @@ public:
 	static void ExtractBank(cResources *apResources, const char *apBankPath, const tWString &asCacheDir,
 							const cSomaFsbWanted *apWanted, size_t alCount);
 
-	static void ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
+	static void ExtractSamples(const tWString &asBankFile, const tWString &asCacheDir, const tString &asPrefix,
 							   const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut);
 };
 

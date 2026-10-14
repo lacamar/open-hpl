@@ -647,7 +647,7 @@ void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, cons
 	}
 }
 
-void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath, const tWString &asCacheDir, const tString &asPrefix,
+void cSomaFsb::ExtractSamples(const tWString &asBankFile, const tWString &asCacheDir, const tString &asPrefix,
 							  const std::vector<tString> &avSamples, std::map<tString, tString> &amapOut)
 {
 	std::vector<tString> vMissing;
@@ -663,11 +663,10 @@ void cSomaFsb::ExtractSamples(cResources *apResources, const tString &asBankPath
 	}
 	if (vMissing.empty())
 		return;
-	const tWString &sPath = apResources->GetFileSearcher()->GetFilePath(asBankPath);
 	std::vector<unsigned char> vFile;
 	unsigned int lMode = 0;
 	std::vector<cFsbSample> vSamples;
-	if (sPath == _W("") || ReadWholeFile(sPath, vFile) == false || ParseFsb5(vFile, lMode, vSamples) == false)
+	if (asBankFile == _W("") || ReadWholeFile(asBankFile, vFile) == false || ParseFsb5(vFile, lMode, vSamples) == false)
 		return;
 	if (FsbModeSupported(lMode) == false)
 		return;

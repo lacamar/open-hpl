@@ -178,7 +178,7 @@ def candidates(banks, files):
     out = [Path(f) for f in files or []]
     if banks:
         for f in sorted(SAMPLES.iterdir()):
-            if any(fnmatch.fnmatch(f.name.split("__")[0].lower(), b.lower()) for b in banks):
+            if any(fnmatch.fnmatch(p.lower(), b.lower()) for b in banks for p in f.name.split("__")[:2]):
                 out.append(f)
     return out
 

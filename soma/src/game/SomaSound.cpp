@@ -92,7 +92,8 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 		return;
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
 	TiXmlDocument doc;
-	FILE *pFile = cPlatform::OpenFile(pRes->GetFileSearcher()->GetFilePath(asProject + ".fdp"), _W("rb"));
+	tWString sFdp = pRes->GetFileSearcher()->GetFilePath(asProject + ".fdp");
+	FILE *pFile = cPlatform::OpenFile(sFdp, _W("rb"));
 	bool bLoaded = pFile && doc.LoadFile(pFile);
 	if (pFile)
 		fclose(pFile);
@@ -254,7 +255,16 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 	for (auto &bank : mapByBank)
 	{
 		std::map<tString, tString> mapBankFiles;
-		cSomaFsb::ExtractSamples(pRes, bank.first + ".fsb", sCacheDir, bank.first + "__", std::vector<tString>(bank.second.begin(), bank.second.end()), mapBankFiles);
+		// Banks in different dirs can share a name: prefer the one next to the project
+		tWString sBank = pRes->GetFileSearcher()->GetFilePath(bank.first + ".fsb");
+		tWString sLocal = cString::GetFilePathW(sFdp) + cString::To16Char(bank.first + ".fsb");
+		tString sPrefix = bank.first + "__";
+		if (sLocal != sBank && cPlatform::FileExists(sLocal))
+		{
+			sBank = sLocal;
+			sPrefix = sKey + "__" + sPrefix;
+		}
+		cSomaFsb::ExtractSamples(sBank, sCacheDir, sPrefix, std::vector<tString>(bank.second.begin(), bank.second.end()), mapBankFiles);
 		for (auto &f : mapBankFiles)
 			mapFiles[bank.first + "__" + f.first] = f.second;
 	}
