@@ -6589,6 +6589,17 @@ Rift white-out (`Rift_Cave_2`, screen mean luma 0.92 at 3 m with the rift open) 
 - Observed (`RiftComponent.hps` UpdateShakingLights/UpdateRimLights): open rift drives `Light_Rift_*_Point_*` to radius 12-24,
   brightness 30-60 and keeps rim lights at their default 300-500.
 - A/B at 3 m: all on 0.92, rim+open lights hidden 0.90, shaking lights hidden 0.76, all rift lights hidden 0.31.
+- Observed (REA ev_b13b15b6…, ev_78f8ccd4…): no eye adaptation. `cPostEffect_ToneMapping::UpdateTransitions` 0xd03ed0
+  = sigmoid world/area exposure fade + window offset; shader gets exp2(exposure), 1/gamma, white cut. `cScene::UpdateExposure`
+  0x100fd40 picks the highest-priority area and adds a linked window area's offset scaled by its screen size; no shipped area
+  sets priority or a window. Bloom level weights clamp((w-4n)/4n)^2 as ours.
+
+## Rebirth: wildcard entity names are case-sensitive
+
+- 01_04 logs `Could not find sound entity sound_creature_* in Sound_Play` (data: `Sound_Creature_1/3`). The text is the
+  game's own helper_audio.hps. Observed (REA ev_7a3b7c86…, ev_45bdb796…): `cLuxMap::GetEntityArray` 0xaf4c90 lowercases
+  only exact names; `*` patterns go through `cString::CheckWildcardStrings` 0x102e210 with a byte compare on msName
+  (+0xc0). Official logs the same error; ours matches.
 Unknown: the official picture at that spot (no reference image).
 
 ## HPL3: looping events and max playbacks (2026-10-14)
