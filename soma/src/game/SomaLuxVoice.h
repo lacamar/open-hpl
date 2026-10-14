@@ -43,6 +43,7 @@ public:
 	bool SubjectInvolvesCharacter(const tString &asSubject, const tString &asName);
 	bool AnySceneIsActive() { return mvPlaying.empty() == false; }
 	int GetSubjectLineNumber(const tString &asSubject);
+	float GetTimeLeftOnLastLineOfPlayingSubject(const tString &asSubject);
 	const tString &GetSubjectSceneName(const tString &asSubject);
 	void SetPaused(const tString &asScene, bool abX);
 	void SetPausedAll(bool abX);

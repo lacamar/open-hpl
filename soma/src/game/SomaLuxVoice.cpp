@@ -802,6 +802,22 @@ bool cSomaLuxVoiceHandler::SubjectIsPlaying(const tString &asName)
 	return false;
 }
 
+float cSomaLuxVoiceHandler::GetTimeLeftOnLastLineOfPlayingSubject(const tString &asSubject)
+{
+	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
+	for (cPlaying &p : mvPlaying)
+	{
+		if (p.mpSubject->msName != asSubject || p.mlLine >= p.mvLines.size())
+			continue;
+		int lLine = p.mvLines[p.mlLine];
+		if (lLine + 1 != (int)p.mpSubject->mvLines.size() || p.mlSound + 1 != p.mpSubject->mvLines[lLine].mvSounds.size() ||
+			p.mpEntry == NULL || pHandler->IsValid(p.mpEntry, p.mlEntryId) == false)
+			return -1;
+		return (float)(p.mpEntry->GetChannel()->GetTotalTime() - p.mpEntry->GetChannel()->GetElapsedTime());
+	}
+	return -1;
+}
+
 bool cSomaLuxVoiceHandler::SceneIsActive(const tString &asScene)
 {
 	for (cPlaying &p : mvPlaying)
@@ -1161,6 +1177,8 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool Play(const tString &in asSubject, int alSpecificLine, const tString &in asCallback, int alPrio, bool abPlayWhilePaused)",
 				+[](void *, S s, int l, S cb, int prio, bool) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(s, l, cb, prio); });
 	SOMA_METHOD(e, T, "void AdvanceFromCurrentSound(const tString&in asScene)", +[](void *, S s) { VH->SkipCurrentLine(s); });
+	SOMA_METHOD(e, T, "float GetTimeLeftOnLastLineOfPlayingSubject(const tString&in asName)",
+				+[](void *, S s) { return cSomaLuxVoiceHandler::Get() ? cSomaLuxVoiceHandler::Get()->GetTimeLeftOnLastLineOfPlayingSubject(s) : -1.0f; });
 	SOMA_METHOD(e, T, "int GetSubjectLineNumber(const tString &in asSubject)",
 				+[](void *, S s) { return cSomaLuxVoiceHandler::Get() ? cSomaLuxVoiceHandler::Get()->GetSubjectLineNumber(s) : 0; });
 	SOMA_METHOD(e, T, "const tString& GetSubjectSceneName(const tString &in asSubject)", +[](void *, S s) -> const tString & {
