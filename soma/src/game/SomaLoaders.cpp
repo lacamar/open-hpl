@@ -367,7 +367,7 @@ void RegisterSomaLoaders(cResources *apResources)
 {
 	// types the level editor writes that EntityTypes.cfg doesn't list
 	std::set<tString> setEntities = {"StaticCollider", "StaticProp"};
-	std::set<tString> setAreas = {"PathNode", "Soundscape", "VisibilityArea", "VisibilityPortal"};
+	std::set<tString> setAreas = {"PathNode", "PathNodeExcluder", "PathNodeGenerator", "PathNodeInterestPoint", "PathNodePatrol", "Soundscape", "VisibilityArea", "VisibilityPortal"};
 	iXmlDocument *pTypes = apResources->LoadXmlDocument("config/EntityTypes.cfg");
 	if (pTypes)
 	{

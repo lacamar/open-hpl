@@ -155,9 +155,15 @@ namespace hpl {
 		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
 		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n\t\tfloat afInvFarPlane;\n" },
+		{ "water_surface_frag.hpsl", "\t};\n@endif\n\n////////////////////////////////\n// samplers",
+		  "\t\tint mlBlendMode;\n\t\tfloat mfFadeWhenNear;\n\t\tcVector3f avFogCameraPos;\n\t\tcVector4f avFogSettings;\n"
+		  "\t\tcVector4f avSecondFogSettings;\n\t\tint alFogType;\n\t\tcVector4f avReflectionMul;\n" },
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {
+		{ "water_surface_frag.hpsl",
+		  "\t@else\n\t\tfloat fWaveT = afT;\n\t@endif",
+		  "\t@else\n\t\tfloat fWaveT = afT;\n\t\tfloat fFadeNear = mfFadeWhenNear;\n\t\tcVector4f vReflectionMul = avReflectionMul;\n\t@endif" },
 		{ "deferred_illumination_solid_frag.hpsl",
 		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@endif",
 		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@else\n\t\tvIllumination.rgb *= avIlluminationMul.rgb;\n\t@endif" },

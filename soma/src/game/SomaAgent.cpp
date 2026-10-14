@@ -672,7 +672,7 @@ namespace
 		pCont->SetNodeIsAtCenter(abAtCenter);
 		int lNextId = 1 << 30;
 		for (cSomaLuxEntity *pEnt : apMap->GetEntities())
-			if (pEnt->msClassName == "PathNode")
+			if (pEnt->msClassName == "PathNode" || pEnt->msClassName == "PathNodePatrol" || pEnt->msClassName == "PathNodeInterestPoint")
 			{
 				auto idIt = mapIds.find(pEnt->msName);
 				pCont->AddNode(pEnt->msName, idIt != mapIds.end() ? idIt->second : lNextId++, pEnt->GetPosition(), NULL);

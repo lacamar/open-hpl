@@ -71,6 +71,12 @@ namespace hpl {
 	#define kVar_afVtxT								17
 	#define kVar_afVtxWaveAmplitude					18
 	#define kVar_afVtxWaveFreq						19
+	#define kVar_mlBlendMode						20
+	#define kVar_mfFadeWhenNear						21
+	#define kVar_avFogCameraPos						22
+	#define kVar_avFogSettings						23
+	#define kVar_alFogType							24
+	#define kVar_avReflectionMul					25
 
 	//------------------------------
 	//Diffuse Features and data
@@ -185,6 +191,12 @@ namespace hpl {
 		mpProgramManager->AddGenerateProgramVariableId("afVtxT",kVar_afVtxT, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afVtxWaveAmplitude",kVar_afVtxWaveAmplitude, eMaterialRenderMode_Diffuse);
 		mpProgramManager->AddGenerateProgramVariableId("afVtxWaveFreq",kVar_afVtxWaveFreq, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("mlBlendMode",kVar_mlBlendMode, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("mfFadeWhenNear",kVar_mfFadeWhenNear, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avFogCameraPos",kVar_avFogCameraPos, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avFogSettings",kVar_avFogSettings, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("alFogType",kVar_alFogType, eMaterialRenderMode_Diffuse);
+		mpProgramManager->AddGenerateProgramVariableId("avReflectionMul",kVar_avReflectionMul, eMaterialRenderMode_Diffuse);
 
 	}
 	void cMaterialType_Water::DestroyData()
@@ -328,19 +340,38 @@ namespace hpl {
 				apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(-1, 1));
 				apProgram->SetColor4f(kVar_avFogColor, fogAreaCol);
 				apProgram->SetFloat(kVar_afFalloffExp, 1);
+				apProgram->SetColor4f(kVar_avFogSettings, cColor(-1, 1, 1, 0));
+				apProgram->SetInt(kVar_alFogType, 0);
 			}
 			else
 			{
 				apProgram->SetVec2f(kVar_avFogStartAndLength, bWorldFog ? cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()) : cVector2f(0, 1));
 				apProgram->SetColor4f(kVar_avFogColor, bWorldFog ? cRendererDeferred::GetFogRenderColor(pWorld->GetFogColor(), pWorld->GetFogBrightness()) : cColor(0, 0));
 				apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
+
+				bool bExp = bWorldFog && pWorld->GetFogExponential();
+				bool bHeight = bWorldFog && pWorld->GetFogHeightBased();
+				cColor settings = bWorldFog ? cColor(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart(), pWorld->GetFogFalloffExp(), 0) : cColor(0, 1, 1, 0);
+				cVector3f vCamHeight(apRenderer->GetCurrentFrustum()->GetOrigin().y);
+				if(bExp || bHeight)
+				{
+					settings.b = pWorld->GetFogDensity() * 0.03125f;
+					settings.a = pWorld->GetFogHeightDensity();
+					vCamHeight.x -= pWorld->GetFogHeightHorizon();
+				}
+				apProgram->SetColor4f(kVar_avFogSettings, settings);
+				apProgram->SetVec3f(kVar_avFogCameraPos, vCamHeight);
+				apProgram->SetInt(kVar_alFogType, (bExp ? 1 : 0) | (bHeight ? 2 : 0));
 			}
+			apProgram->SetInt(kVar_mlBlendMode, apMaterial->GetBlendMode());
+			apProgram->SetColor4f(kVar_avReflectionMul, cColor(1, 1));
 
 			cVector2l vScreenSize = apRenderer->GetRenderTargetSize();
 			apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f/vScreenSize.x, 1.0f/vScreenSize.y);
 			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
 			apProgram->SetFloat(kVar_afNearPlane, pFrustum->GetNearPlane());
 			apProgram->SetFloat(kVar_afFarPlane, pFrustum->GetFarPlane());
+			apProgram->SetFloat(kVar_mfFadeWhenNear, pFrustum->GetNearPlane() * 2);
 			apProgram->SetFloat(kVar_afReflectionAlpha, 1);
 			if(pVars->mfFadeWhenShallowMul>0)
 				apProgram->SetVec2f(kVar_avFadeWhenShallowProps, cVector2f(1.0f/pVars->mfFadeWhenShallowMul, pVars->mfFadeWhenShallowPow));

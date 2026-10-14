@@ -1,6 +1,12 @@
 {
+ "no_material": {
+  "Tasi_clean.mat": "player_intro.ent SubMesh 3 m_Tasi_Clean_Head has Material=\"\" and Tasi_clean.mat is not in the game data",
+  "texturesrock_medium_pillar01_blocky_projected.mat": "rock_medium_pillar01_blocky_projected .dae image and shipped .msh both name it; not in the game data"
+ },
  "oversized": {
-  "01_01_plane_wreckage": "21 canyon_ridge01_blocky_projected instances: 20.1x9.5x14.4 m mesh at scale up to 7.3, rotated bounds 101-151 m"
+  "01_01_plane_wreckage": "21 canyon_ridge01_blocky_projected instances: 20.1x9.5x14.4 m mesh at scale up to 7.3, rotated bounds 101-151 m",
+  "01_04_dark_world_ledge": "blackstone_ruins_large_01_lowpoly vista: 5.7x7.8x2 m mesh at scale up to 100x200x100",
+  "04_02_sandstorm": "64 block_box Tile ground slabs at scale 128x29x128; darkworld walls, metal bars and block_box_static scaled up to 196; dwf vista clouds"
  },
  "tracks": {
   "Compound": "editor grouping: 3296 Compounds hold only Component IDs; no map script references its own Compound names"
