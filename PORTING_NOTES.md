@@ -6590,3 +6590,65 @@ Rift white-out (`Rift_Cave_2`, screen mean luma 0.92 at 3 m with the rift open) 
   brightness 30-60 and keeps rim lights at their default 300-500.
 - A/B at 3 m: all on 0.92, rim+open lights hidden 0.90, shaking lights hidden 0.76, all rift lights hidden 0.31.
 Unknown: the official picture at that spot (no reference image).
+
+## HPL3: looping events and max playbacks (2026-10-14)
+
+Symptom: `RiftComponent` open/close aborted with "sound entity ... does not exist"; the looping rift event failed to start
+(max playbacks, `Just_fail`) and the entity removed itself.
+
+Observed (Rebirth binary):
+- `cSoundEntity::StartPlayingSound` 0xfa5dd0 (REA ev_df61e2d247db…).
+- `cSoundEntity::UpdateLogic` 0xfa5530 (objdump): not stopped and no entry -> `StartPlayingSound` every update (0xfa59c8);
+  looping with flag +0x1d9 retries, otherwise the entity is stopped (0xfa58d2).
+- `cSoundEntity::PlaySoundEvent` 0xfa9540 (objdump): NULL from `cSoundHandler::PlayEvent` with code 3 retries up to 201 times;
+  code 2 on a non-oneshot sets +0x1e8 and returns without stopping; anything else stops.
+
+Inferred: a looping event whose start fails stays alive and retries. `cSomaSoundInstance::Start/Update` now do that.
+Unknown: meaning of codes 2/3 and flags +0x1d9/+0x1e8; the official out-of-range start gate (`CheckIsOutOfRange` 0xfa5ce0) is
+not implemented.
+
+## Rebirth: hardware sRGB textures (2026-10-14)
+
+Symptom: washed-out image (01_04 start mean luma 0.257), square gobo edges visible on spot lights.
+
+Observed (Rebirth binary):
+- `cTextureManager::Create2D` 0xf056c0 -> `CreateSimpleTexture` 0xf05040 passes a bool to texture vtable slot 0x88 =
+  `cSDLTexture::SetsRGB` 0x148f060 (byte +0xbf). `CopyTextureDataToGL` 0x148e870 and mip generation hand it to
+  `PixelFormatToGLInternalFormat(ePixelFormat,bool)` 0x11774d0 / `GetGLCompressionFormatFromPixelFormat` 0x1177580.
+- Signatures: `Create2D(name, mip, type, usage, downscale, sRGB)`, `CreateCubeMap(name, mip, usage, downscale, sRGB)`,
+  `CreateAnim(..., sRGB)`.
+- `cMaterialManager::GetTypeIsSRGB` 0xef3750 (REA ev_28f4245d90ee…): `type < 0x23 ? (0x66638e365 >> type) & 1 : 0`.
+  Its only resolved caller is `cWorldStreamerSplit::ParseMaterial` (ev_985066cee3ae…); `cMaterialManager::LoadFromFile`
+  0xeedba0 has the mask inlined at 0xeeef7d and feeds `Create2D` 0xeee9bc / `CreateCubeMap` 0xeee9fa; fallback texture is 0.
+- Type order from the `GetTextureString` 0xef2cf0 jump table: sRGB = Diffuse, Specular, Illumination, CubeMap, CubeMapAlpha,
+  DetailDiffuse, Diffuse/Specular Side/Top/Bottom, Diffuse/Specular _R/_G/_B (_G/_B names past 29 inferred from the pattern).
+- Call-site flags (objdump; callers via REA ev_8965296fb064…, ev_00cd6c532847…, ev_04c2f2f54ed3…):
+  sRGB: `cEngineFileLoading::LoadLight` gobos, `cWorld::CreateLightSpot/Point` gobos, skybox `Texture`, environment
+  particles, undergrowth first texture, `LoadCubeMapHelper`.
+  linear: fog `SkyBoxTexture`, dir light `Gobo`, `cGui::CreateGfxTexture`, script `CreateTexture2D`, film grain, undergrowth
+  second texture.
+- Name search `srgb|gammato|tolinear|linearto|colorspace` (ev_937790b1abdb…) finds only `GetTypeIsSRGB`,
+  `cPostEffect_ToneMapping::SetSRGBGamma`, `cColor::ToLinearSpace`, `cColor::ToSRGB`, `cSDLTexture::SetsRGB`.
+- `cPostEffect_ToneMapping::RenderEffect` 0xd06e30 (ev_2da3057c96e8…): exposure = `exp2f(mfExposure)`, inverse gamma, no
+  auto exposure. Same as `SomaToneMapping.cpp`.
+- Night vision: `RenderNightVision` 0xd82820 (ev_6893d3417ee6…), `SetupNightVision` 0xd813a0 (objdump): colour^2 * brightness.
+  Same as `RendererDeferred.cpp`.
+
+Observed (data): Rebirth/Bunker shaders have no in-shader decode; SOMA decodes under `UseLinearColorSpaceCorrection`.
+
+Done: `cTextureManager::SetHardwareSRGB` (on for non-SOMA), `SetSRGB` around the sRGB call sites, sRGB GL internal formats in
+`cSDLTexture`; the five albedo `pow(…, 1/2.2)` shader patches moved to `gvHpslGammaAlbedoReplacements`, applied only without
+hardware sRGB.
+
+Result: 01_04 start mean luma 0.257 -> 0.115, saturated; gobo squares gone; 01_02 start 0.078; 01_01 plane interior 0.115-0.142.
+Bunker `officer_hub` still boots.
+
+Not a regression: caves exit door view is black (mean 0.003). No light reaches it and `Player_Custom.hps` UpdateNightVision
+only runs when `FearHandler_IsInDarknessArea()`; `Fear_PostPermafail` is `NoFear=true DarknessFear=false`.
+
+Unknown / accepted:
+- Terrain textures (`CreateTerrainData` 0xd103b0, `LoadTerrainMaterial` 0x1133130), `PreloadEntity`, `cWorld::Compile`
+  flags not read; terrain left linear.
+- `cColor::ToLinearSpace`/`ToSRGB` have no resolved callers (ev_a2ff8184156a…, ev_d6de000cdacf…).
+- Texture cache is keyed by file: first user decides sRGB when a file is used both ways.
+- Next to an open rift the picture is still near white; no reference image for any Rebirth scene.
