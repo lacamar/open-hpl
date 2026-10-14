@@ -8,7 +8,7 @@
   scripts/soma-play.py interact ENTITY [--hold 0.1]   # look at it and click
   scripts/soma-play.py drag ENTITY DX DY [--steps 60] [--pump N]  # hold click, move the mouse by DX,DY over STEPS frames (N strokes)
   scripts/soma-play.py throw ENTITY TARGET [--place S] # grab ENTITY, aim at TARGET, throw (or hold S s and release)
-  scripts/soma-play.py mouse DX DY [--steps 30]       # relative mouse look
+  scripts/soma-play.py mouse DX DY [--steps 30] [--key K]  # relative mouse look, K held meanwhile
   scripts/soma-play.py key KEY [--hold 0.1] | click [--hold 0.1] | wait SECS
   scripts/soma-play.py walk SECS [--key w] [--jump T] # hold a movement key, jump T s in
   scripts/soma-play.py walkto ENTITY|X Y Z [--tol 0.5] [--nav|--grid] [--run] # steer with w until within TOL m (stops when stuck)
@@ -412,9 +412,13 @@ def cmd_throw(a):
 
 
 def cmd_mouse(a):
+    if a.key:
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "down"})
     for _ in range(a.steps):
         send({"cmd": "input", "type": "mouse_move", "xrel": str(int(a.dx / a.steps)), "yrel": str(int(a.dy / a.steps))})
         send({"cmd": "wait_frames", "n": 1, "max_ms": 1000})
+    if a.key:
+        send({"cmd": "input", "type": "key", "key": a.key, "action": "up"})
     frames(0.2)
     cmd_state(a)
 
@@ -659,7 +663,7 @@ def main():
     s = sub.add_parser("throw"); s.add_argument("entity"); s.add_argument("target"); s.add_argument("--place", type=float)
     s.add_argument("--track", type=int, default=0, help="print the body state this many times after release")
     s = sub.add_parser("mouse"); s.add_argument("dx", type=int); s.add_argument("dy", type=int)
-    s.add_argument("--steps", type=int, default=30)
+    s.add_argument("--steps", type=int, default=30); s.add_argument("--key", help="hold this key meanwhile")
     s = sub.add_parser("key"); s.add_argument("key"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("click"); s.add_argument("--button", default="left"); s.add_argument("--hold", type=float, default=0.1)
     s = sub.add_parser("walk"); s.add_argument("secs", type=float); s.add_argument("--key", default="w")
