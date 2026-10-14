@@ -506,8 +506,8 @@ void cSomaSoundInstance::Start()
 			}
 			if (pSteal == NULL)
 			{
-				mbStarted = true;
-				mbStopped = true;
+				// official cSoundEntity::PlaySoundEvent stops only oneshots here, loops retry
+				mbStarted = mbStopped = mpEvent->mbOneShot || mpEntity == NULL;
 				return;
 			}
 			pSteal->StopNow();
@@ -758,6 +758,8 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		if (mpEntity == NULL || mbStopped)
 			return;
 		Start();
+		if (mbStarted == false)
+			return;
 	}
 	if (mbPaused || (gpSomaBase->mbScriptGamePaused && (mType & 11)))
 		return;
