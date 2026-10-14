@@ -2228,6 +2228,21 @@ public:
 	}
 };
 
+static bool ScriptLineOfSight(const cVector3f &a, const cVector3f &b, bool bShadow, bool bStatic, cSomaLuxEntity *pSkip)
+{
+	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
+		return false;
+	cSomaScriptLosRay ray;
+	ray.mbShadowCasters = bShadow;
+	ray.mbStatic = bStatic;
+	if (pSkip)
+		ray.msetIgnore.insert(pSkip->mvBodies.begin(), pSkip->mvBodies.end());
+	pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, a, b, true, false, false);
+	return ray.mbBlocked == false;
+}
+
+
 bool SomaLineOfSight(const cVector3f &avStart, const cVector3f &avEnd, cSomaLuxEntity *apIgnore)
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
@@ -3129,19 +3144,16 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Entity_SetMaxInteractionDistance(const tString &in asEntityName, float afDistance)",
 			  +[](S n, float f) { ForMatching(n, [f](cSomaLuxEntity *p) { p->mfMaxInteractDistance = f; }); });
 	SOMA_FUNC(e, "bool Entity_IsInteractedWith(const tString &in asName)", +[](S n) { cSomaLuxEntity *p = Find(n); return p && p->mbInteractedWith; });
-	SOMA_FUNC(e, "bool cLux_CheckLineOfSight(const cVector3f&in avStart, const cVector3f&in avEnd, bool abCheckOnlyShadowCasters, bool abCheckOnlyStatic, iLuxEntity@ apSkipEntity=null)",
-			  +[](const cVector3f &a, const cVector3f &b, bool bShadow, bool bStatic, cSomaLuxEntity *pSkip) {
-				  cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-				  if (pMap == NULL || pMap->GetWorld()->GetPhysicsWorld() == NULL)
-					  return false;
-				  cSomaScriptLosRay ray;
-				  ray.mbShadowCasters = bShadow;
-				  ray.mbStatic = bStatic;
-				  if (pSkip)
-					  ray.msetIgnore.insert(pSkip->mvBodies.begin(), pSkip->mvBodies.end());
-				  pMap->GetWorld()->GetPhysicsWorld()->CastRay(&ray, a, b, true, false, false);
-				  return ray.mbBlocked == false;
-			  });
+	SOMA_FUNC(e, "bool cLux_CheckLineOfSight(const cVector3f&in avStart, const cVector3f&in avEnd, bool abCheckOnlyShadowCasters, bool abCheckOnlyStatic, iLuxEntity@ apSkipEntity=null)", ScriptLineOfSight);
+	// ponytail: official queues the ray and calls back later; answered synchronously
+	SOMA_METHOD_NEW(e, "cLuxUserModule", "void CheckLineOfSight(const tString&in asCallbackFunc, const cVector3f&in avStart, const cVector3f&in avEnd, bool abCheckOnlyShadowCasters, bool abCheckStaticOnly, int alUserValue = 0, iLuxEntity@ apSkipEntity = null)",
+					+[](cSomaLuxScriptable *m, S f, const cVector3f &a, const cVector3f &b, bool bShadow, bool bStatic, int lUser, cSomaLuxEntity *pSkip) {
+						bool bLOS = ScriptLineOfSight(a, b, bShadow, bStatic, pSkip);
+						m->Call("void " + f + "(bool, int)", [bLOS, lUser](asIScriptContext *c) {
+							c->SetArgByte(0, bLOS);
+							c->SetArgDWord(1, lUser);
+						});
+					});
 	SOMA_FUNC(e, "bool cLux_GetClosestEntity(const cVector3f&in avStart,const cVector3f&in avDir, float afRayLength, int alIteractType, bool abCheckLineOfSight, cLuxClosestEntityData @apOutput)",
 			  +[](const cVector3f &st, const cVector3f &dir, float len, int type, bool, char *out) {
 				  cSomaLuxEntity *pEnt = NULL;

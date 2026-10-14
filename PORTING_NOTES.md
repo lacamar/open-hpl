@@ -6713,3 +6713,6 @@ synchronously.
 Result (03_06_ghouls_nest): two AttackDamage starts -> two `OnDamageTaken`; same damage id twice -> true, false.
 
 Unknown / accepted: props/agents not hit by AttackDamage; socket shapes untested (test prop had no sockets).
+
+Also: `cLuxUserModule::CheckLineOfSight(callback, ...)` (FearHandler fear objects) answered synchronously like
+`cLux_CheckLineOfSight`; official queues it.
