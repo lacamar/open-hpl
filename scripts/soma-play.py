@@ -194,17 +194,19 @@ def mouse_aim(target):
 
 
 def focused(name):
-    if GAME.name != "soma":
+    # cutscene states pick in their own scripts: fall back to the render ray
+    if ex('__print(cLux_GetPlayer().GetCurrentStateName());').strip() != "State_Normal":
         return send({"cmd": "pick_entity"}).get("hits", "").split("/")[0].split(" ")[-1] == name
     # the game's own pick: range, CanInteract, offset rays
-    tool = 'cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
-    # a tool's offset ray sticks while it hits anything
-    ex(tool + 'h.mPickBasics.mlLastHitRay = -1;', "PlayerToolHandler")
-    frames(0.15)
-    # a usable tool target takes the click from the normal state
-    t = ex(tool + 'if(h.mbCanInteract) __print(h.mPickBasics.msFocusedEntityName);', "PlayerToolHandler").strip()
-    if t:
-        return t == name
+    if GAME.name == "soma":
+        tool = 'cScrPlayerToolHandler@ h = cast<cScrPlayerToolHandler>(cLux_GetUserModuleFromName("PlayerToolHandler"));'
+        # a tool's offset ray sticks while it hits anything
+        ex(tool + 'h.mPickBasics.mlLastHitRay = -1;', "PlayerToolHandler")
+        frames(0.15)
+        # a usable tool target takes the click from the normal state
+        t = ex(tool + 'if(h.mbCanInteract) __print(h.mPickBasics.msFocusedEntityName);', "PlayerToolHandler").strip()
+        if t:
+            return t == name
     f = kv('cScript_RunGlobalFunc("State_Normal", "", "_Global_GetFocusEntityName");'
            '__print("f=" + cScript_GetGlobalReturnString());').get("f")
     if f == name:
