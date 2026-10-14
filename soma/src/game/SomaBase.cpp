@@ -1255,6 +1255,8 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cSoundEntityData::SetLazyLoad(true);
 	cMaterialType_Translucent::SetLightProbes(true);
 	cRendererDeferred::SetHdr(true);
+	// newer shaders have no in-shader decode
+	cTextureManager::SetHardwareSRGB(SomaGameId() != "soma");
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
 

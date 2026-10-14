@@ -889,11 +889,28 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static GLenum ToSRGBFormat(GLenum aFormat)
+	{
+		switch(aFormat)
+		{
+		case GL_RGB:							return GL_SRGB8;
+		case GL_RGBA:							return GL_SRGB8_ALPHA8;
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		case GL_COMPRESSED_RGBA_BPTC_UNORM:		return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
+		}
+		return aFormat;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cSDLTexture::GenerateMipMaps(	GLenum aGLTarget, ePixelFormat aPixelFormat,const cVector3l avSize, 
 										unsigned char *apData,int alDataSize, int alFaceNum)
 	{
 		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
 		GLenum GLInternalFormat = PixelFormatToGLInternalFormat(aPixelFormat);
+		if(mbsRGB) GLInternalFormat = ToSRGBFormat(GLInternalFormat);
 		int lBytesPerPixel = GetBytesPerPixel(aPixelFormat);
 
 		////////////////////////////////
@@ -968,6 +985,7 @@ namespace hpl {
 		if(PixelFormatIsCompressed(aPixelFormat))
 		{
 			GLenum GLCompressionFormat = GetGLCompressionFormatFromPixelFormat(aPixelFormat);
+			if(mbsRGB) GLCompressionFormat = ToSRGBFormat(GLCompressionFormat);
 
 			if(mType == eTextureType_1D)
 			{
@@ -1005,7 +1023,7 @@ namespace hpl {
 		else
 		{
 			GLenum glType = PixelFormatIsFloatingPoint(aPixelFormat) ? GL_FLOAT : GL_UNSIGNED_BYTE;
-			if(mbsRGB && GLInternalFormat == GL_RGBA) GLInternalFormat = GL_SRGB8_ALPHA8;
+			if(mbsRGB) GLInternalFormat = ToSRGBFormat(GLInternalFormat);
 
 			if(mType == eTextureType_1D)
 			{

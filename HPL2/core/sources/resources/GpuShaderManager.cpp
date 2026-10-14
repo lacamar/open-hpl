@@ -29,6 +29,7 @@
 #include "graphics/GPUShader.h"
 
 #include "resources/FileSearcher.h"
+#include "resources/TextureManager.h"
 
 #include <regex>
 #include <cstdlib>
@@ -186,11 +187,6 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl",
 		  "vSubColor = vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5;",
 		  "vSubColor = max(vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5, cVector3f(1e-4));" },
-		// and multiplies linear albedo by the vertex/ColorMul colour
-		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
-		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		// detail maps applied per blend pass, not to the composited cache
 		{ "cache_terrain_diffuse_frag.hpsl", "uniform cTexture2D aAlphaMap3 : 9;",
 		  "uniform cTexture2D aAlphaMap3 : 9;\n"
@@ -221,7 +217,6 @@ namespace hpl {
 		  "\t@endif" },
 		// official squares the sRGB-decoded terrain cache
 		{ "cache_terrain_diffuse_frag.hpsl", "out_vColor.xyz =  vDiffuseColor.xyz;", "out_vColor.xyz = vDiffuseColor.xyz * vDiffuseColor.xyz;" },
-		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
 		{ "deferred_light_frag.hpsl",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
 		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
@@ -237,6 +232,15 @@ namespace hpl {
 		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },
 	};
 
+	// albedo stays gamma-encoded without hardware sRGB textures: encode the linear vertex/ColorMul colour
+	static const char* const gvHpslGammaAlbedoReplacements[][3] = {
+		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
+		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
+		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
+	};
+
 	static void PatchHpslSource(const tString& asFile, tString& asData)
 	{
 		asData.erase(std::remove(asData.begin(), asData.end(), '\r'), asData.end());
@@ -245,6 +249,11 @@ namespace hpl {
 			if(asFile != gvHpslSourceReplacements[i][0]) continue;
 			// anchors differ per game: scripts/hpsl-anchor-check.py
 			asData = cString::ReplaceStringTo(asData, gvHpslSourceReplacements[i][1], gvHpslSourceReplacements[i][2]);
+		}
+		for(size_t i=0; cTextureManager::GetHardwareSRGB()==false && i<sizeof(gvHpslGammaAlbedoReplacements)/sizeof(gvHpslGammaAlbedoReplacements[0]); ++i)
+		{
+			if(asFile != gvHpslGammaAlbedoReplacements[i][0]) continue;
+			asData = cString::ReplaceStringTo(asData, gvHpslGammaAlbedoReplacements[i][1], gvHpslGammaAlbedoReplacements[i][2]);
 		}
 		// official hardware sRGB mode decodes cube maps with GammaCorrectCubeMaps (pow 2.2)
 		static const std::regex rxCubeGamma("@ifdef UseLinearColorSpaceCorrection\\s*\\n[^\\n]*GammaToLinearCorrection[^\\n]*\\n\\s*@elseif GammaCorrectCubeMaps");

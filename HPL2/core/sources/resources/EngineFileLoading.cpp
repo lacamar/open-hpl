@@ -367,6 +367,7 @@ namespace hpl {
 				float fAnimFrameTime = apElement->GetAttributeFloat("GoboAnimFrameTime", 1);
 
 				iTexture *pGoboTex=NULL;
+				apResources->GetTextureManager()->SetSRGB(true);
 				if(lightType  == eLightType_Spot)
 				{
 					if(animMode == eTextureAnimMode_None)
@@ -381,6 +382,7 @@ namespace hpl {
 					else
 						pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap);
 				}
+				apResources->GetTextureManager()->SetSRGB(false);
 	
 				if(pGoboTex)
 				{

@@ -403,7 +403,9 @@ namespace hpl {
 				if (pEnv)
 				{
 					tString sTex = pEnv->GetAttributeString("Texture", "");
+					mpResources->GetTextureManager()->SetSRGB(true);
 					iTexture* pTex = sTex == "" ? NULL : mpResources->GetTextureManager()->Create2D(sTex, true);
+					mpResources->GetTextureManager()->SetSRGB(false);
 					cVector2f vSubDiv = pEnv->GetAttributeVector2f("SubDivUV", 1);
 					cEnvironmentParticles* pParticles = mpCurrentWorld->CreateEnvironmentParticles("WorldEnvParticles");
 					pParticles->Setup(pEnv->GetAttributeFloat("BoxSize", 1), pEnv->GetAttributeInt("NumParticles", 100),
@@ -447,7 +449,9 @@ namespace hpl {
 					tString sSkyTex = pSky->GetAttributeString("Texture", "");
 					if (sSkyTex != "")
 					{
+						mpResources->GetTextureManager()->SetSRGB(true);
 						iTexture* pSkyTexture = mpResources->GetTextureManager()->CreateCubeMap(sSkyTex, false);
+						mpResources->GetTextureManager()->SetSRGB(false);
 						if (pSkyTexture) mpCurrentWorld->SetSkyBox(pSkyTexture, true);
 						else Warning("SOMA hpm: could not load skybox texture '%s'\n", sSkyTex.c_str());
 					}
@@ -1066,7 +1070,9 @@ namespace hpl {
 			iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
 			if (sPath == _W("") || !pDoc->CreateFromFile(sPath)) { hplDelete(pDoc); return -1; }
 			cMesh* pMesh = mpResources->GetMeshManager()->CreateMesh(pDoc->GetAttributeString("BaseMesh"));
+			mpResources->GetTextureManager()->SetSRGB(true);
 			iTexture* pTex = mpResources->GetTextureManager()->Create2D(pDoc->GetAttributeString("DiffuseTex"), true);
+			mpResources->GetTextureManager()->SetSRGB(false);
 			if (pMesh == NULL || pTex == NULL)
 			{
 				if (pMesh) mpResources->GetMeshManager()->Destroy(pMesh);

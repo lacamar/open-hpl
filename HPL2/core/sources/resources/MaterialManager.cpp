@@ -305,6 +305,26 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
+	static bool TextureTypeIsSRGB(eMaterialTexture aType)
+	{
+		switch(aType)
+		{
+		case eMaterialTexture_Diffuse:		case eMaterialTexture_Specular:
+		case eMaterialTexture_Illumination:	case eMaterialTexture_DetailDiffuse:
+		case eMaterialTexture_CubeMap:		case eMaterialTexture_CubeMapAlpha:
+		case eMaterialTexture_DiffuseSide:	case eMaterialTexture_DiffuseTop:	case eMaterialTexture_DiffuseBottom:
+		case eMaterialTexture_SpecularSide:	case eMaterialTexture_SpecularTop:	case eMaterialTexture_SpecularBottom:
+		case eMaterialTexture_Diffuse_R:	case eMaterialTexture_Specular_R:
+		case eMaterialTexture_Diffuse_G:	case eMaterialTexture_Specular_G:
+		case eMaterialTexture_Diffuse_B:	case eMaterialTexture_Specular_B:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
 	cMaterial* cMaterialManager::LoadFromFile(const tString& asName,const tWString& asPath)
 	{
 		//Log("Load material: %s\n", asName.c_str());
@@ -415,6 +435,7 @@ namespace hpl {
 			//Log("Texture: '%s'\n",sFile.c_str());
 			//Log(" Loading!\n");
 
+			mpResources->GetTextureManager()->SetSRGB(TextureTypeIsSRGB(pUsedTexture->mType));
 			if(animMode != eTextureAnimMode_None)
 			{
 				pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
@@ -448,6 +469,8 @@ namespace hpl {
 																			mlTextureSizeDownScaleLevel);
 				}
 			}
+
+			mpResources->GetTextureManager()->SetSRGB(false);
 
 			if(pTex==NULL)
 			{

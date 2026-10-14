@@ -71,12 +71,19 @@ namespace hpl {
 
 		int GetMemoryUsage(){ return mlMemoryUsage;}
 
+		void SetSRGB(bool abX){ mbSRGB = abX && mbHardwareSRGB; }
+		static void SetHardwareSRGB(bool abX){ mbHardwareSRGB = abX; }
+		static bool GetHardwareSRGB(){ return mbHardwareSRGB; }
+
 	private:
 		iTexture* CreateSimpleTexture(const tString& asName,bool abUseMipMaps, 
 									eTextureUsage aUsage, eTextureType aType, 
 									unsigned int alTextureSizeLevel);
 
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
+
+		bool mbSRGB = false;
+		static bool mbHardwareSRGB;
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
 		std::set<iTexture*> m_setAnimTextures;

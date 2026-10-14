@@ -38,6 +38,8 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cTextureManager::mbHardwareSRGB = false;
+
 	cTextureManager::cTextureManager(cGraphics* apGraphics,cResources *apResources)
 		: iResourceManager(apResources->GetFileSearcher(), apResources->GetLowLevel(),
 							apResources->GetLowLevelSystem())
@@ -198,6 +200,7 @@ namespace hpl {
 			
 			//Create the animated texture
 			pTexture = mpGraphics->GetLowLevel()->CreateTexture(sBaseName, aType, aUsage);
+			pTexture->SetsRGB(mbSRGB);
 			pTexture->SetFullPath(sFakeFullPath);
 			
 			pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
@@ -294,6 +297,7 @@ namespace hpl {
 
 				//Create the cubemap
 				pTexture = mpGraphics->GetLowLevel()->CreateTexture(sName,eTextureType_CubeMap, aUsage);
+				pTexture->SetsRGB(mbSRGB);
 				pTexture->SetFullPath(sFakeFullPath);
 				
 				pTexture->SetUseMipMaps(abUseMipMaps);
@@ -387,6 +391,7 @@ namespace hpl {
 
 			//Create the texture and load from bitmap
 			pTexture = mpGraphics->GetLowLevel()->CreateTexture(asName,aType,aUsage);
+			pTexture->SetsRGB(mbSRGB);
 			pTexture->SetFullPath(sPath);
 			
 			pTexture->SetUseMipMaps(abUseMipMaps);

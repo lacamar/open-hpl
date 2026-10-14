@@ -624,7 +624,9 @@ namespace hpl {
 
 		if(asGobo != "")
 		{
+			mpResources->GetTextureManager()->SetSRGB(true);
 			iTexture *pTexture = mpResources->GetTextureManager()->CreateCubeMap(asGobo,true);
+			mpResources->GetTextureManager()->SetSRGB(false);
 			if(pTexture!=NULL)
 				pLight->SetGoboTexture(pTexture);
 			else
@@ -649,7 +651,9 @@ namespace hpl {
 
 		if(asGobo != "")
 		{
+			mpResources->GetTextureManager()->SetSRGB(true);
 			iTexture *pTexture = mpResources->GetTextureManager()->Create2D(asGobo,true);
+			mpResources->GetTextureManager()->SetSRGB(false);
 			if(pTexture!=NULL)
 				pLight->SetGoboTexture(pTexture);
 			else

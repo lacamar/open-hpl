@@ -6,7 +6,7 @@ from ohpl_game import GAMES, REPO
 
 games = {g: os.path.expanduser(GAMES[g][1]) for g in ("soma", "rebirth", "bunker")}
 src = open(os.path.join(REPO, "HPL2/core/sources/resources/GpuShaderManager.cpp"), encoding="latin-1").read()
-for tab in ("gvHpslSourcePatches", "gvHpslSourceReplacements"):
+for tab in ("gvHpslSourcePatches", "gvHpslSourceReplacements", "gvHpslGammaAlbedoReplacements"):
     a = src.index(tab + "[][3] = {")
     body = "\n".join(l for l in src[a:src.index("\n\t};", a)].split("= {", 1)[1].split("\n") if not l.strip().startswith("//"))
     depth, cur, i = 0, [[]], 0
