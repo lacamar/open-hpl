@@ -6568,3 +6568,25 @@ Not done: component broadcast (message 0xd), event `Direction`.
 
 Route: nest struggle, `goto PosArea_Shimmy --dist 0.3`, `walk 4` (forward input advances the interactive animation) ->
 scare -> `State_CutsceneAnimation` -> `State_PermaFail`.
+
+## Rebirth: level door map change, light brightness fades, rift lights (2026-10-14)
+
+Map change, observed (REA `cLuxMapHandler::ChangeMap` 0xb09d20, ev_f26b06b2f0ca…): level door exit loads the next map; implemented.
+Unknown: `abShowLoadingScreen` semantics. Route: caves `interact wooden_door_rickety_1` -> `01_04_dark_world_ledge`.
+
+Light fades, observed:
+- `Light_FadeBrightnessTo` 0xaadcc0 (ev_ef4b6b0cc1ab…): per light `SetFlickerActive(false)`, `SetVisible(true)`, `iLight::FadeBrightnessTo`.
+- `Light_FadeBrightnessToDefault` 0xaade60 (ev_577a936b6737…): same, dest = default brightness (+0x20c).
+- `iLight::FadeBrightnessTo` 0xfc8390 (ev_b96308f748f6…): elapsed 0, time = t > 0 ? t : 1e-4, start = brightness (+0x208).
+- `iLight::UpdateLight` 0xfc75b0 (objdump): eased lerp, `OnSetBrightness()`, time zeroed when done.
+
+Rift white-out (`Rift_Cave_2`, screen mean luma 0.92 at 3 m with the rift open) is the game's own data, not an engine fault:
+- Observed (`iLight::OnSetBrightness` 0xfc7160 ev_71877dede016…, `OnSetDiffuse` 0xfc6f60 ev_730e4d0e400a…): brightness and colour are
+  separate fields, only forwarded to attached billboards/particles.
+- Observed (objdump `cRendererDeferred::GetLightInstanceData` 0xd7e7a0): colour = diffuse.rgb^2 * brightness * distance fade,
+  w = specular (0 without, negated when diffuse is off); pos.w = 1/radius; falloff = FalloffPow * 2. Same as `RendererDeferred.cpp`.
+- Observed (data): map tone mapping is default (key 0.5, exposure 0, white cut 3.5), no exposure areas.
+- Observed (`RiftComponent.hps` UpdateShakingLights/UpdateRimLights): open rift drives `Light_Rift_*_Point_*` to radius 12-24,
+  brightness 30-60 and keeps rim lights at their default 300-500.
+- A/B at 3 m: all on 0.92, rim+open lights hidden 0.90, shaking lights hidden 0.76, all rift lights hidden 0.31.
+Unknown: the official picture at that spot (no reference image).

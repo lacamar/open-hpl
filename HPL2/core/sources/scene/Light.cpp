@@ -191,8 +191,26 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void iLight::FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing)
+	{
+		mfBrightFadeTime = afTime > 0 ? afTime : 0.0001f;
+		mfBrightFadeCount = 0;
+		mfBrightFadeStart = mfBrightness;
+		mfBrightFadeDest = afBrightness;
+		mBrightFadeEasing = aEasing;
+	}
+
 	void iLight::UpdateLight(float afTimeStep)
 	{	
+		if(mfBrightFadeTime>0)
+		{
+			mfBrightFadeCount = cMath::Min(mfBrightFadeCount + afTimeStep, mfBrightFadeTime);
+			float fT = mfBrightFadeCount / mfBrightFadeTime;
+			if(mBrightFadeEasing) fT = mBrightFadeEasing(fT);
+			SetBrightness(mfBrightFadeStart + (mfBrightFadeDest - mfBrightFadeStart) * fT);
+			if(mfBrightFadeCount >= mfBrightFadeTime) mfBrightFadeTime = 0;
+		}
+
 		/////////////////////////////////////////////
 		// Fade
 		if(mfFadeTime>0)

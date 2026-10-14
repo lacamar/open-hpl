@@ -23,6 +23,7 @@
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
+#include <functional>
 
 class TiXmlElement;
 
@@ -225,6 +226,7 @@ namespace hpl {
 		float GetBrightness(){ return mfBrightness;}
 		void SetDefaultBrightness(float afX){ mfDefaultBrightness = afX;}
 		float GetDefaultBrightness(){ return mfDefaultBrightness;}
+		void FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing = nullptr);
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
 		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
 		bool GetGoboSpecular(){ return mbGoboSpecular;}
@@ -281,6 +283,8 @@ namespace hpl {
 		float mfTranslucency = 1;
 		float mfBrightness;
 		float mfDefaultBrightness = 1;
+		float mfBrightFadeTime = 0, mfBrightFadeCount = 0, mfBrightFadeStart = 0, mfBrightFadeDest = 0;
+		std::function<float(float)> mBrightFadeEasing;
 		static bool mbHpl3Visibility;
 		bool IsLit();
 		unsigned int mlMaskID;

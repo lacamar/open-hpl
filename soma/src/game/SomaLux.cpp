@@ -14,6 +14,7 @@
 #include "SomaLuxPlayer.h"
 #include "SomaLuxVoice.h"
 #include "SomaLuxEntity.h"
+#include "SomaLuxScriptable.h"
 #include "SomaImGui.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptNatives.h"
@@ -1503,6 +1504,10 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		{
 			SOMA_METHOD_NEW(e, pType, "float GetDefaultBrightness()", +[](iLight *o) { return o->GetDefaultBrightness(); });
 			SOMA_METHOD_NEW(e, pType, "void SetDefaultBrightness(float afX)", +[](iLight *o, float f) { o->SetDefaultBrightness(f); });
+			SOMA_METHOD_NEW(e, pType, "void FadeBrightnessTo(float afBrightness, float afTime, eEasing aEasing = eEasing_Linear)",
+				+[](iLight *o, float f, float t, int ease) { o->FadeBrightnessTo(f, t, [ease](float x) { return SomaEasing(ease, x); }); });
+			SOMA_METHOD_NEW(e, pType, "void FadeBrightnessToDefault(float afTime, eEasing aEasing = eEasing_Linear)",
+				+[](iLight *o, float t, int ease) { o->FadeBrightnessTo(o->GetDefaultBrightness(), t, [ease](float x) { return SomaEasing(ease, x); }); });
 		}
 		SOMA_METHOD_NEW(e, "cParticleSystem", "void SetScriptableIsSaved(bool abX)", +[](cParticleSystem *o, bool b) { o->SetIsSaved(b); });
 		SOMA_METHOD_NEW(e, "cSoundEntity", "void SetScriptableIsSaved(bool abX)", +[](cSoundEntity *o, bool b) { o->SetIsSaved(b); });
@@ -1748,6 +1753,15 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		ForLights(n, [&f](iLight *l) { f = l->GetDefaultBrightness(); });
 		return f;
 	});
+	static auto FadeBrightness = [](iLight *l, float f, float t, int ease) {
+		l->SetFlickerActive(false);
+		l->SetVisible(true);
+		l->FadeBrightnessTo(f, t, [ease](float x) { return SomaEasing(ease, x); });
+	};
+	SOMA_FUNC_NEW(e, "void Light_FadeBrightnessTo(const tString &in asLightName, float afBrightness, float afTime, eEasing aEasing = eEasing_Linear)",
+		+[](S n, float f, float t, int ease) { ForLights(n, [=](iLight *l) { FadeBrightness(l, f, t, ease); }); });
+	SOMA_FUNC_NEW(e, "void Light_FadeBrightnessToDefault(const tString &in asLightName, float afTime, eEasing aEasing = eEasing_Linear)",
+		+[](S n, float t, int ease) { ForLights(n, [=](iLight *l) { FadeBrightness(l, l->GetDefaultBrightness(), t, ease); }); });
 	SOMA_FUNC(e, "void Light_SetFlickerActive(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetFlickerActive(b); }); });
 	SOMA_FUNC(e, "void Light_SetCastShadows(const tString &in asLightName, bool abX)", +[](S n, bool b) { ForLights(n, [b](iLight *l) { l->SetCastShadows(b); }); });
 	// Only picks the derivative gobo AA variant; we always use the backbuffer one
