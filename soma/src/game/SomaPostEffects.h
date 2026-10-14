@@ -19,10 +19,10 @@ public:
 	void Set(std::initializer_list<float> alParams);
 
 	tString msType;
-	float mfParams[8] = {};
+	float mfParams[9] = {};
 	std::array<iTexture *, 3> mvTextures = {};
 
-private:
+protected:
 	void OnSetActive(bool abX) override { if (abX == false) Reset(); }
 	void OnSetParams() override {}
 	iPostEffectParams *GetTypeSpecificParams() override { return NULL; }

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <set>
+#include <vector>
 
 namespace
 {
@@ -23,6 +24,7 @@ namespace
 		{"ImageFadeFX", "image_fade_fx", 0, {1}},
 		{"VideoDistortion", "video_distortion", 0, {1, 0, 0.15f, 1}},
 		{"FXAA", NULL, -1, {}},
+		{"FearTentacles", NULL, -1, {}},
 	};
 	enum { eChromatic, eRadialBlur, eImageTrail, eImageFade, eVideoDistortion };
 	iGpuProgram *gvPrograms[std::size(gvTypes)] = {};
@@ -149,6 +151,314 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 	return apOut->GetColorBuffer(0)->ToTexture();
 }
 
+namespace
+{
+	const char *gpTentacleVtx = R"(#version 120
+uniform mat4 a_mtxModel;
+uniform vec3 avPos;
+uniform float afTentacleScale, afIntensity, afTime, afMaterialAlpha, afInstance;
+uniform sampler2D aDispA, aDispB;
+void main()
+{
+	vec2 uv = gl_MultiTexCoord0.xy;
+	vec4 d = texture2DLod(aDispA, uv, 0.0);
+	if (afMaterialAlpha > 0.00001) d = mix(d, texture2DLod(aDispB, uv, 0.0), afMaterialAlpha);
+	vec3 p = gl_Vertex.xyz;
+	p.xy += d.xy * afIntensity * 0.2 * sin(afTime + d.b * 2.0 + afInstance);
+	gl_Position = vec4((a_mtxModel * vec4(p * afTentacleScale, 0.0)).xyz + avPos, 1.0);
+	gl_TexCoord[0].xy = uv;
+})";
+	const char *gpTentacleFrag = R"(#version 120
+uniform sampler2D aTexA, aTexB;
+uniform float afIntensity, afAlpha, afMaterialAlpha;
+void main()
+{
+	vec4 c = texture2D(aTexA, gl_TexCoord[0].xy);
+	if (afMaterialAlpha > 0.00001) c = mix(c, texture2D(aTexB, gl_TexCoord[0].xy), afMaterialAlpha);
+	gl_FragColor = mix(vec4(0.5, 0.5, 0.5, 0.0), c, c.a * afIntensity * afAlpha);
+})";
+	iGpuProgram *gpTentacleProg = NULL, *gpTentacleMergeProg = NULL;
+	bool gbTentacleProgTried = false;
+
+	class cSomaFearTentacles : public cSomaPostEffect
+	{
+	public:
+		struct cAnim { tString msName; int mlIdx; float mfSpeed = 1, mfWeight = 1; };
+		struct cFade { int mlMat; float mfT, mfSpeed; };
+		struct cTentacle { cVector3f mvPos = 0, mvRot = 0; };
+
+		cSomaFearTentacles() : cSomaPostEffect("FearTentacles") {}
+		~cSomaFearTentacles()
+		{
+			ClearEntities();
+			for (cMaterial *pMat : mvMaterials)
+				if (pMat) mpResources->GetMaterialManager()->Destroy(pMat);
+			DestroyTarget();
+		}
+
+		void SetupEntity(const tString &asFile, int alNum, int alGroups)
+		{
+			ClearEntities();
+			iXmlDocument *pDoc = mpResources->LoadXmlDocument(asFile);
+			cXmlElement *pModel = pDoc ? pDoc->GetFirstElement("ModelData") : NULL;
+			cXmlElement *pMeshElem = pModel ? pModel->GetFirstElement("Mesh") : NULL;
+			cXmlElement *pAnims = pModel ? pModel->GetFirstElement("Animations") : NULL;
+			alGroups = std::max(1, std::min(alGroups, alNum));
+			for (int i = 0; pMeshElem && i < alGroups; ++i)
+			{
+				cMesh *pMesh = mpResources->GetMeshManager()->CreateMesh(pMeshElem->GetAttributeString("Filename", ""));
+				if (pMesh == NULL)
+					break;
+				cMeshEntity *pEnt = hplNew(cMeshEntity, ("FearTentacle", pMesh, mpResources->GetMaterialManager(), mpResources->GetMeshManager(),
+														 mpResources->GetAnimationManager()));
+				if (pAnims)
+				{
+					cXmlNodeListIterator it = pAnims->GetChildIterator();
+					while (it.HasNext())
+					{
+						cXmlElement *pAnimElem = it.Next()->ToElement();
+						if (cAnimation *pAnim = mpResources->GetAnimationManager()->CreateAnimation(pAnimElem->GetAttributeString("File", "")))
+							pEnt->AddAnimation(pAnim, pAnimElem->GetAttributeString("Name", ""), pAnimElem->GetAttributeFloat("Speed", 1));
+					}
+				}
+				pEnt->Play(0, true, true);
+				mvGroups.push_back(pEnt);
+			}
+			if (pDoc)
+				mpResources->DestroyXmlDocument(pDoc);
+			if (mvGroups.empty() == false)
+				mvTentacles.resize(std::max(0, alNum));
+		}
+
+		void SetupMaterial(int alIdx, const tString &asFile)
+		{
+			if (alIdx < 0 || alIdx > 64)
+				return;
+			if (alIdx >= (int)mvMaterials.size())
+				mvMaterials.resize(alIdx + 1);
+			if (mvMaterials[alIdx])
+				mpResources->GetMaterialManager()->Destroy(mvMaterials[alIdx]);
+			mvMaterials[alIdx] = mpResources->GetMaterialManager()->CreateMaterial(asFile);
+		}
+
+		void SetupAnimation(const tString &asName, float afMin, float afMax)
+		{
+			if (mvGroups.empty() || Anim(asName))
+				return;
+			int lIdx = mvGroups[0]->GetAnimationStateIndex(asName);
+			if (lIdx < 0)
+				return;
+			mvAnims.push_back({asName, lIdx});
+			float fStep = (afMax - afMin) / mvGroups.size(), fSpeed = afMin + cMath::RandRectf(0, fStep);
+			for (cMeshEntity *pEnt : mvGroups)
+			{
+				pEnt->Play(lIdx, true, false);
+				fSpeed += fStep;
+				pEnt->GetAnimationState(lIdx)->SetBaseSpeed(fSpeed);
+			}
+		}
+
+		void SetMaterial(int alIdx, float afTime)
+		{
+			if (mvTentacles.empty() || alIdx < 0 || alIdx >= (int)mvMaterials.size())
+				return;
+			if (afTime <= 0)
+			{
+				mlMat = alIdx;
+				mvFades.clear();
+			}
+			else if (alIdx == mlMat)
+				for (cFade &fade : mvFades) fade.mfSpeed = -1 / afTime;
+			else if (mvFades.empty() == false && mvFades.back().mlMat == alIdx)
+				mvFades.back().mfSpeed = 1 / afTime;
+			else
+				mvFades.push_back({alIdx, 0, 1 / afTime});
+		}
+
+		cAnim *Anim(const tString &asName)
+		{
+			for (cAnim &anim : mvAnims)
+				if (anim.msName == asName) return &anim;
+			return NULL;
+		}
+
+		std::vector<cMeshEntity *> mvGroups;
+		std::vector<cTentacle> mvTentacles;
+
+	private:
+		void ClearEntities()
+		{
+			for (cMeshEntity *pEnt : mvGroups) hplDelete(pEnt);
+			mvGroups.clear();
+			mvTentacles.clear();
+			mvAnims.clear();
+			mvFades.clear();
+		}
+
+		void DestroyTarget()
+		{
+			if (mpBuffer) mpGraphics->DestroyFrameBuffer(mpBuffer);
+			if (mpTarget) mpGraphics->DestroyTexture(mpTarget);
+			mpBuffer = NULL;
+			mpTarget = NULL;
+		}
+
+		bool LoadPrograms()
+		{
+			if (gbTentacleProgTried == false)
+			{
+				gbTentacleProgTried = true;
+				iGpuShader *pVtx = mpLowLevelGraphics->CreateGpuShader("SomaFearTentacles_vtx", eGpuShaderType_Vertex);
+				iGpuShader *pFrag = mpLowLevelGraphics->CreateGpuShader("SomaFearTentacles_frag", eGpuShaderType_Fragment);
+				if (pVtx->CreateFromString(gpTentacleVtx) && pFrag->CreateFromString(gpTentacleFrag))
+				{
+					pFrag->AddSamplerUnit("aTexA", 0);
+					pFrag->AddSamplerUnit("aTexB", 1);
+					pVtx->AddSamplerUnit("aDispA", 2);
+					pVtx->AddSamplerUnit("aDispB", 3);
+					iGpuProgram *pProg = mpGraphics->CreateGpuProgram("SomaFearTentacles");
+					pProg->SetShader(eGpuShaderType_Vertex, pVtx);
+					pProg->SetShader(eGpuShaderType_Fragment, pFrag);
+					if (pProg->Link())
+						gpTentacleProg = pProg;
+				}
+				cParserVarContainer vars;
+				vars.Add("UseUv");
+				gpTentacleMergeProg = mpGraphics->CreateGpuProgramFromShaders("SomaFearTentaclesMerge", "posteffect_quad_vtx.glsl",
+																			  "posteffect_fear_tentacles_merge_frag.glsl", &vars);
+			}
+			return gpTentacleProg && gpTentacleMergeProg;
+		}
+
+		iTexture *RenderEffect(iTexture *apIn, iFrameBuffer *apOut) override
+		{
+			cMaterial *pMatA = mlMat < (int)mvMaterials.size() ? mvMaterials[mlMat] : NULL;
+			if (mvTentacles.empty() || mvAnims.empty() || pMatA == NULL || LoadPrograms() == false)
+				return apIn;
+
+			cPostEffectComposite *c = mpCurrentComposite;
+			float fDt = c->GetCurrentFrameTime();
+			mfTime += fDt * mvAnims[0].mfSpeed;
+			if (mfTime > 10000)
+				mfTime = 0;
+
+			for (auto it = mvFades.begin(); it != mvFades.end();)
+			{
+				it->mfT += fDt * it->mfSpeed;
+				if (it->mfSpeed > 0 && it->mfT >= 1)
+				{
+					mlMat = it->mlMat;
+					it = mvFades.erase(it);
+				}
+				else if (it->mfSpeed < 0 && it->mfT <= 0)
+					it = mvFades.erase(it);
+				else
+					++it;
+			}
+			pMatA = mvMaterials[mlMat];
+			cMaterial *pMatB = mvFades.empty() ? NULL : mvMaterials[mvFades.front().mlMat];
+			if (pMatA == NULL)
+				return apIn;
+			if (pMatB == NULL)
+				pMatB = pMatA;
+			float fMatAlpha = mvFades.empty() ? 0 : mvFades.front().mfT;
+
+			for (cMeshEntity *pEnt : mvGroups)
+			{
+				for (const cAnim &anim : mvAnims)
+				{
+					cAnimationState *pState = pEnt->GetAnimationState(anim.mlIdx);
+					pState->SetSpeed(anim.mfSpeed);
+					pState->SetWeight(anim.mfWeight);
+				}
+				pEnt->UpdateLogic(fDt);
+				pEnt->GetSubMeshEntity(0)->UpdateGraphicsForFrame(fDt);
+			}
+
+			cVector2l vSize(apIn->GetWidth(), apIn->GetHeight());
+			if (vSize.x > 1920)
+				vSize = cVector2l(1920, vSize.y * 1920 / vSize.x);
+			if (mpTarget == NULL || mpTarget->GetWidth() != vSize.x || mpTarget->GetHeight() != vSize.y)
+			{
+				DestroyTarget();
+				mpTarget = mpGraphics->CreateTexture("SomaFearTentacles", eTextureType_2D, eTextureUsage_RenderTarget);
+				mpTarget->CreateFromRawData(cVector3l(vSize.x, vSize.y, 0), ePixelFormat_RGBA, NULL);
+				mpTarget->SetWrapSTR(eTextureWrap_ClampToEdge);
+				mpTarget->SetFilter(eTextureFilter_Bilinear);
+				mpBuffer = mpGraphics->CreateFrameBuffer("SomaFearTentacles");
+				mpBuffer->SetTexture2D(0, mpTarget);
+				mpBuffer->CompileAndValidate();
+			}
+
+			const float *p = mfParams;
+			iGpuProgram *pProg = gpTentacleProg;
+			auto U = [&](const char *n) { return pProg->GetVariableId(n); };
+			c->SetFrameBuffer(mpBuffer, false, false);
+			mpLowLevelGraphics->SetClearColor(cColor(1, 1));
+			c->ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
+			mpLowLevelGraphics->SetClearColor(cColor(0, 0));
+			c->SetDepthTest(false);
+			c->SetDepthWrite(false);
+			c->SetCullActive(false);
+			c->SetBlendMode(eMaterialBlendMode_MulX2);
+			c->SetChannelMode(eMaterialChannelMode_RGBA);
+			c->SetTexture(0, pMatA->GetTexture(eMaterialTexture_Diffuse));
+			c->SetTexture(1, pMatB->GetTexture(eMaterialTexture_Diffuse));
+			c->SetTexture(2, pMatA->GetTexture(eMaterialTexture_NMap));
+			c->SetTexture(3, pMatB->GetTexture(eMaterialTexture_NMap));
+			c->SetTextureRange(NULL, 4);
+			c->SetMatrix(NULL);
+			c->SetProgram(pProg);
+			pProg->SetFloat(U("afIntensity"), p[0]);
+			pProg->SetFloat(U("afTentacleScale"), p[1]);
+			pProg->SetFloat(U("afAlpha"), p[5]);
+			pProg->SetFloat(U("afTime"), mfTime);
+			pProg->SetFloat(U("afMaterialAlpha"), fMatAlpha);
+			int lModel = U("a_mtxModel"), lPos = U("avPos"), lInstance = U("afInstance");
+			cMatrixf mtxAspect = cMath::MatrixScale(cVector3f((float)vSize.y / vSize.x, 1, 1));
+			for (size_t i = 0; i < mvTentacles.size(); ++i)
+			{
+				// ponytail: displaced after CPU skinning, tentacles of a group share a pose; GPU dual-quat instancing if it shows
+				pProg->SetMatrixf(lModel, cMath::MatrixMul(mtxAspect, cMath::MatrixRotate(mvTentacles[i].mvRot, eEulerRotationOrder_YZX)));
+				pProg->SetVec3f(lPos, mvTentacles[i].mvPos * (1 - p[2]));
+				pProg->SetFloat(lInstance, (float)i);
+				c->SetVertexBuffer(mvGroups[i % mvGroups.size()]->GetSubMeshEntity(0)->GetVertexBuffer());
+				c->DrawCurrent();
+			}
+			c->SetVertexBuffer(NULL);
+			c->SetCullActive(true);
+
+			pProg = gpTentacleMergeProg;
+			c->SetFlatProjection();
+			c->SetBlendMode(eMaterialBlendMode_None);
+			c->SetTextureRange(NULL, 2);
+			c->SetTexture(0, apIn);
+			c->SetTexture(1, mpTarget);
+			SetFinalFrameBuffer(apOut);
+			c->SetProgram(pProg);
+			pProg->SetFloat(U("afIntensity"), p[4]);
+			pProg->SetFloat(U("afAlpha"), p[5]);
+			pProg->SetVec2f(U("avTentacleUvMul"), cVector2f(1, 1));
+			pProg->SetFloat(U("afAspect"), (float)vSize.x / vSize.y);
+			pProg->SetFloat(U("afCircleRadius"), p[6]);
+			pProg->SetFloat(U("afCircleAlpha"), p[7]);
+			pProg->SetFloat(U("afCircleSoftness"), p[8]);
+			DrawQuad(0, 1, apIn, true);
+			c->SetProgram(NULL);
+			c->SetTextureRange(NULL, 0);
+			return apOut->GetColorBuffer(0)->ToTexture();
+		}
+
+		std::vector<cAnim> mvAnims;
+		std::vector<cMaterial *> mvMaterials;
+		std::vector<cFade> mvFades;
+		int mlMat = 0;
+		float mfTime = 0;
+		iTexture *mpTarget = NULL;
+		iFrameBuffer *mpBuffer = NULL;
+	};
+}
+
 cPostEffectComposite *cSomaPostEffects::GetViewportComposite()
 {
 	if (gpViewportComposite == NULL)
@@ -188,7 +498,7 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 	});
 
 	const char *vTypes[] = {"iPostEffect", "cPostEffect_ChromaticAberration", "cPostEffect_FXAA", "cPostEffect_ImageFadeFX",
-							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion"};
+							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion", "cPostEffect_FearTentacles"};
 	for (const char *pType : vTypes)
 	{
 		if (e->GetTypeInfoByName(pType) == NULL)
@@ -221,6 +531,44 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 				+[](P *p, float s, float a, float d) { p->Set({s, a, d}); });
 	SOMA_METHOD(e, "cPostEffect_RadialBlur", "void GetParams(float &out afSize, float &out afAlpha, float &out afBlurStartDist)",
 				+[](P *p, float &s, float &a, float &d) { s = p->mfParams[0]; a = p->mfParams[1]; d = p->mfParams[2]; });
+	if (e->GetTypeInfoByName("cPostEffect_FearTentacles"))
+	{
+		typedef cSomaFearTentacles T;
+		const char *pT = "cPostEffect_FearTentacles";
+		SOMA_FUNC(e, "cPostEffect_FearTentacles@ cGraphics_CreatePostEffect_FearTentacles()", +[]() -> P * { return new T(); });
+		SOMA_METHOD(e, pT, "void SetParams(float afIntensity, float afTentacleScale, float afSpreadDist, float afRefraction, float afVingette, float afAlpha, float afCircleRadius, float afCircleAlpha, float afCircleSoftness)",
+					+[](P *p, float a, float b, float c, float d, float f, float g, float h, float i, float j) {
+						const float v[9] = {a, b, c, d, f, g, h, i, j};
+						std::copy(v, v + 9, p->mfParams);
+					});
+		SOMA_METHOD(e, pT, "void GetParams(float&out afIntensity, float&out afTentacleScale, float&out afSpreadDist, float&out afRefraction, float&out afVingette, float&out afAlpha, float&out afCircleRadius, float&out afCircleAlpha, float&out afCircleSoftness)",
+					+[](P *p, float &a, float &b, float &c, float &d, float &f, float &g, float &h, float &i, float &j) {
+						float *v[9] = {&a, &b, &c, &d, &f, &g, &h, &i, &j};
+						for (int n = 0; n < 9; ++n) *v[n] = p->mfParams[n];
+					});
+		SOMA_METHOD(e, pT, "void SetupTentacleEntity(const tString&in asEntFile, int alNum, int alAnimGroupNum)",
+					+[](P *p, const tString &s, int n, int g) { static_cast<T *>(p)->SetupEntity(s, n, g); });
+		SOMA_METHOD(e, pT, "void SetupTentacleMaterial(int alMatIndex, const tString&in asMat)",
+					+[](P *p, int i, const tString &s) { static_cast<T *>(p)->SetupMaterial(i, s); });
+		SOMA_METHOD(e, pT, "int GetTentacleEntityNum()", +[](P *p) { return (int)static_cast<T *>(p)->mvTentacles.size(); });
+		SOMA_METHOD(e, pT, "void SetTentacleTransform(int alIndex, const cVector3f&in avPos, const cVector3f&in avRot)",
+					+[](P *p, int i, const cVector3f &vPos, const cVector3f &vRot) {
+						T *t = static_cast<T *>(p);
+						if (i >= 0 && i < (int)t->mvTentacles.size()) t->mvTentacles[i] = {vPos, vRot};
+					});
+		SOMA_METHOD(e, pT, "void SetupTentacleAnimation(const tString&in asAnim, float afSpeedMin, float afSpeedMax)",
+					+[](P *p, const tString &s, float a, float b) { static_cast<T *>(p)->SetupAnimation(s, a, b); });
+		SOMA_METHOD(e, pT, "void SetTentacleAnimationSpeed(const tString&in asAnim, float afSpeed)",
+					+[](P *p, const tString &s, float f) { if (T::cAnim *a = static_cast<T *>(p)->Anim(s)) a->mfSpeed = f; });
+		SOMA_METHOD(e, pT, "void SetTentacleAnimationWeight(const tString&in asAnim, float afWeight)",
+					+[](P *p, const tString &s, float f) { if (T::cAnim *a = static_cast<T *>(p)->Anim(s)) a->mfWeight = f; });
+		SOMA_METHOD(e, pT, "void SetTentacleMaterial(int alMatIndex, float afFadeTime)",
+					+[](P *p, int i, float f) { static_cast<T *>(p)->SetMaterial(i, f); });
+		SOMA_METHOD(e, pT, "cMeshEntity@ GetTentacleEntity(int alIndex)", +[](P *p, int i) -> cMeshEntity * {
+			T *t = static_cast<T *>(p);
+			return i >= 0 && i < (int)t->mvTentacles.size() ? t->mvGroups[i % t->mvGroups.size()] : NULL;
+		});
+	}
 	if (e->GetTypeInfoByName("cPostEffect_VideoDistortion") == NULL) // not in Bunker
 		return;
 	SOMA_FUNC(e, "cPostEffect_VideoDistortion@ cGraphics_CreatePostEffect_VideoDistortion()", +[]() { return new P("VideoDistortion"); });

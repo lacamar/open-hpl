@@ -6524,3 +6524,30 @@ was blended like a material wherever the mask was below the cut threshold. The R
 - `iLuxEntity::GetBillboard(int)`/`GetBillboardNum` (0xc8e8c0/0xc8e8f0) index the billboard
   vector; `IsEffectsFading` (0x8ab920); `cMath_MatrixSetScale` (0xe68a30) normalises rows then
   scales.
+
+## Rebirth: fear tentacles (2026-10-14)
+
+`cPostEffect_FearTentacles` was an auto-stub; `cSomaFearTentacles` in
+`soma/src/game/SomaPostEffects.cpp` follows the official binary (REA, sha256 891de675…).
+
+- Observed `RenderEffect` (0x10d3a40, ev_59f6fa958071): needs tentacles, animations, materials and
+  both programs. `time += dt * anims[0].speed`. Tentacle pass into an own RGBA target (screen size
+  capped at 1920 wide, `LoadData` 0x10cfd00), cleared white, blend MulX2, textures 0/1 = diffuse of
+  material A/B, 2/3 = their second texture (displacement), instanced draw. Merge pass
+  (`posteffect_fear_tentacles_merge_frag.hpsl`): `afIntensity` = vignette param, `afAlpha`,
+  circle radius/alpha/softness; output `(scene + red vignette) * tentacles`.
+- Observed `SetupTentacleEntity` (0x10cfed0, ev_4364281f974e): N mesh entities, groups =
+  `min(max(1, groupNum), N)`, dealt round-robin; `cTentacleJob::DoWork` (0x10d4550, ev_a52ab73c)
+  animates only each group's first entity.
+- Observed `SetupTentacleAnimation` (0x10d1fe0, ev_3012b640): per group base speed
+  `min + rand(0, step) + g*step`, `step = (max-min)/groups`.
+- Observed `UpdateMaterials` (0x10d43d0, ev_adda2853fd6f): fade list of {material, t, speed};
+  shader `afMaterialAlpha` = front `t`.
+- Observed (objdump): model 3x3 = `Scale(H/W,1,1) * Rotate(rot, YZX)` (`MatrixMul3x3` 0xe663d0
+  multiplies b*a), clip = `M * (skinned * scale) + pos * (1 - spreadDist)`.
+- Inference: `SetupTentacleMaterial` (0x10d1e70, unread) loads a material by index.
+- Ours: CPU-skinned group leader drawn once per tentacle, displacement applied after skinning.
+- Test: FearHandler rewrites alpha/coverage every frame, so force it with
+  `FearHandler_SetActive(true); FearHandler_SetPermaFailEnabled(false); FearHandler_SetLevelTo(0.9f);`
+  and wait 6 s. At alpha 0.675 a single vein only darkens to ~0.47: it is faint on dark rock.
+- Unknown: official on-screen extent at the same parameters (no reference capture).
