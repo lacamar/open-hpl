@@ -227,7 +227,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mvBodyExtraData = mvBodyExtraData;
 		if (apInstanceVars)
 			pEnt->mbEffectsActive = apInstanceVars->GetVarBool("EffectsActive", true);
-		if (apInstanceVars && apInstanceVars->GetVarBool("StaticPhysics", false))
+		if (apInstanceVars && (apInstanceVars->GetVarBool("Static", false) || apInstanceVars->GetVarBool("StaticPhysics", false)))
 			pEnt->SetStaticPhysics(true);
 		// cLuxPropLoader::AfterLoad: gravity-free first steps let Newton put resting props to sleep
 		if (pEnt->meType == eSomaLuxEntityType_Prop && mbActive && !GetVarBool("DisableFreezeAtStart", false) && !(mpEntity && mpEntity->GetSkeletonPhysicsActive()))

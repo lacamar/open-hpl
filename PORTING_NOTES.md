@@ -6792,3 +6792,14 @@ Floating `lq_corpse_drag` (02_03_arsenal) once animated:
 Empty `SoundEntityFile` map sounds:
 - Observed: ev_f3cb0b0b… `cWorld::CreateSoundEntityEx` 0xff60d0 treats an empty name as an event, the lookup of "" fails and
   returns NULL; ev_93167fa2… `LoadSound` 0x1117309 skips NULL. Our Sound track reports `empty_file`, the sweep allowlists it.
+
+## Rebirth: map `Static` attribute forces static physics (2026-10-14)
+
+02_07_alchemists_lab_dream scatter rocks exploded at load (`nan_bounds:5`, bodies at 129 m/s, `*_broken` props).
+- Observed: all 29 rocks carry `Static="true"` on the map entry; their entity files say `StaticPhysics=false`.
+- Observed: ev_e5c93321… `iHplMapLoader::LoadEntity` 0x1148d70 adds `CulledByDistance`, `CulledByFog` and `Static`
+  attributes to the instance vars. ev_8ba70887… `cLuxPropLoader::AfterLoad` 0xc50a20 forces static physics when
+  `Static` is set, else reads `StaticPhysics`.
+- Done: hpm Entity track adds `Static`; prop loader ORs it with `StaticPhysics`. SOMA maps have no `Static="true"`.
+- Also cleared `nan_bounds` on 02_07_alchemists_lab and `gbuffer1:nan` on 04_03_undercity_b.
+- Unknown: `cEntityLoader_Object::Load` also reads `Static` for the mesh entity static flag (render only); not ported.

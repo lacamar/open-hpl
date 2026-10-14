@@ -1728,6 +1728,7 @@ namespace hpl {
 		cResourceVarsObject userVars;
 		cXmlElement* pUserVarsElem = apElement->GetFirstElement("UserVariables");
 		if (pUserVarsElem) userVars.LoadVariables(pUserVarsElem);
+		userVars.AddVarBool("Static", apElement->GetAttributeBool("Static", false));
 
 		cMatrixf mtxTransform = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
 		mtxTransform.SetTranslation(vPosition);
