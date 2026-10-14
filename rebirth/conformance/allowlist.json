@@ -1,0 +1,8 @@
+{
+ "oversized": {
+  "01_01_plane_wreckage": "21 canyon_ridge01_blocky_projected instances: 20.1x9.5x14.4 m mesh at scale up to 7.3, rotated bounds 101-151 m"
+ },
+ "tracks": {
+  "Compound": "editor grouping: 3296 Compounds hold only Component IDs; no map script references its own Compound names"
+ }
+}

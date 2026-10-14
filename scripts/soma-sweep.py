@@ -248,7 +248,10 @@ def judge(name, result, expected, allow):
     # A handful of 100 m+ meshes is normal outdoors (sky domes, sea floor, block volumes);
     # a whole map of them means the mesh scale is wrong.
     if w.get("entities_oversized", 0) > 20:
-        fails.append(f"oversized:{w['entities_oversized']}")
+        if name.removesuffix(".hpm") in allow.get("oversized", {}):
+            allowed.append(f"oversized:{w['entities_oversized']}")
+        else:
+            fails.append(f"oversized:{w['entities_oversized']}")
     missing = w.get("submeshes_without_material", 0)
     for key, n in (w.get("no_material_top") or {}).items():
         if any(key.endswith(m) for m in allow.get("no_material", {})):
