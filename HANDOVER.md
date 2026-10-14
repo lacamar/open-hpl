@@ -23,7 +23,8 @@ Read with `CLAUDE.md` (commands, hard rules) and `SOMA_PLAN.md`. `TASKS.md` is t
 - Runs on the SOMA module (`--game rebirth`). 01_01 passes (oversized allowlist), 01_02_caves playable to the exit,
   01_04 through the rift fall and crack squeeze. Recent work: PORTING_NOTES.md `Rebirth:` sections.
 - Remaining stubs in 01_02 are save/achievement/gamepad no-ops; triage in PORTING_NOTES.md (voice time left section).
-- Known gaps: rift white-out, dark caves exit area, `SetLiquidAmount`, no Rebirth reference images.
+- Oasis/theatre/pillar-room load crashes fixed (Newton deep tree, FBX bone ids): PORTING_NOTES.md water/path node section.
+- Known gaps: rift white-out, dark caves exit area, `SetLiquidAmount`, no Rebirth reference images, PathNodeGenerator node generation.
 
 ## How the scripting layer is built
 

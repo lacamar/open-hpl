@@ -304,6 +304,7 @@ namespace hpl {
 		for(size_t i=0; i < mvVtxBonePairs.size(); i++)
 		{
 			cVertexBonePair &Pair = mvVtxBonePairs[i];
+			if(Pair.vtxIdx >= (unsigned int)mpVtxBuffer->GetVertexNum()) continue;
 
 			float *pWeight = &mpVertexWeights[Pair.vtxIdx*4];
 			unsigned char *pBoneIdx = &mpVertexBones[Pair.vtxIdx*4];

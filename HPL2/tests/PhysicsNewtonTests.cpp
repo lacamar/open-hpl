@@ -142,6 +142,28 @@ static void TestMeshCollisionSerializationRoundTrip()
 
 //-----------------------------------------------------------------------
 
+static void TestMeshCollisionSameBoxCentres()
+{
+	cPhysicsWorldNewton world;
+	const int lTris = 2000;
+	std::vector<unsigned int> vIndices(lTris * 3);
+	std::vector<float> vVertices(lTris * 9);
+	for (int i = 0; i < lTris; ++i)
+	{
+		float fA = i * 0.0015f, fS = 1.0f + i * 0.001f, fC = cosf(fA) * fS, fN = sinf(fA) * fS;
+		const float v[9] = { -fC, -1.0f, -fN, fC, -1.0f, fN, 0.0f, 1.0f, 0.0f };
+		for (int j = 0; j < 9; ++j) vVertices[i * 9 + j] = v[j];
+		for (int j = 0; j < 3; ++j) vIndices[i * 3 + j] = i * 3 + j;
+	}
+	cCollideShapeNewton* pMeshShape = hplNew(cCollideShapeNewton,
+		(eCollideShapeType_Mesh, 0, NULL, world.GetNewtonWorld(), &world));
+	pMeshShape->CreateFromVertices(vIndices.data(), (int)vIndices.size(), vVertices.data(), 3, lTris * 3);
+	CHECK(pMeshShape->GetNewtonCollision() != NULL);
+	hplDelete(pMeshShape);
+}
+
+//-----------------------------------------------------------------------
+
 static void TestHeightFieldSupportsBody()
 {
 	cPhysicsWorldNewton world;
@@ -227,6 +249,7 @@ int hplMain(const tString&)
 	TestBodySimulationStep();
 	TestBuoyancyDoesNotCrash();
 	TestMeshCollisionSerializationRoundTrip();
+	TestMeshCollisionSameBoxCentres();
 	TestHeightFieldSupportsBody();
 	TestThinBoxRestsOnMesh();
 	TestNearAxisRayCast();

@@ -257,6 +257,9 @@ public:
 			if (node->m_boxIndex == -1) {
 				NEWTON_ASSERT(node->m_back);
 				NEWTON_ASSERT(node->m_front);
+				if (stack + 2 > 128) {
+					return 128;
+				}
 
 				depth++;
 				depthPool[stack] = depth;
@@ -696,14 +699,12 @@ public:
 							}
 						} while (i0 <= i1);
 
-						if (i0 > 0) {
-							i0--;
-						}
-						if ((i0 + 1) >= boxCount) {
-							i0 = boxCount - 2;
+						if ((i0 <= 1) || (i0 >= boxCount)) {
+							// equal box centres: split evenly or the tree degenerates into a chain
+							i0 = boxCount / 2;
 						}
 
-						m_axis = i0 + 1;
+						m_axis = i0;
 					}
 
 					NEWTON_ASSERT(maxP.m_x - minP.m_x >= dgFloat32(0.0f));
@@ -750,6 +751,11 @@ public:
 		optimizedBuild = true;
 		if (optimizedBuild) {
 			tree = ImproveTotalFitness(tree, &boxCopy[0], allocator);
+			if (CalculateMaximunDepth(tree) >= DG_STACK_DEPTH) {
+				// fitness rotations chained equal boxes deeper than the query stacks
+				delete tree;
+				tree = BuildTree(allocator, 0, boxCount - 1, &boxCopy[0], vertexArrayOut, NULL);
+			}
 		}
 
 		dgInt32 count = BuildTree(tree, boxArray, &boxCopy[0], vertexArrayOut,

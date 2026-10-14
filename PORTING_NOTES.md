@@ -6745,3 +6745,29 @@ calls are no-ops on NoSteam.
 Also: `ssao`/`dof` runtime toggles verified (DoF needs falloff > 0); `01_01_plane_wreckage` oversized AABBs are 21 scaled
 `canyon_ridge01_blocky_projected` (rotated AABB 101–151 m), allowlisted in `rebirth/conformance/allowlist.json`;
 soma-play picks focus via the State_Normal focus path for Rebirth/Bunker (no PlayerToolHandler).
+
+## Rebirth: water shader fallback, path node areas, three map-load crashes (2026-10-14)
+Water (02_05_cistern, 04_03_undercity):
+- Observed: ev_c454ce16… official water `SetupMaterialSpecificData` is empty, only the uniform-buffer path exists;
+  ev_1aede86d… `SetupObjectInstanceData` 0xddbd80 fields. Our non-buffer `water_surface_frag` lacked fog/blend/reflection
+  uniforms and `mat2`, so it failed to compile.
+- Done: `cMatrix2f`→`mat2` in the transpiler, non-buffer cbuffer patch in `GpuShaderManager.cpp`, vars 20–25 set in
+  `MaterialType_Water.cpp` (fog, blend mode, reflection mul 1, fade-near 2×near plane).
+- Inferred: fog/fade-near mapping from the buffer layout; not compared against official images.
+
+Path node areas: ev_6598c27b…/ev_07cdc7d1… `PathNodePatrol` and ev_fb24c7d5… `PathNodeInterestPoint` use
+`cLuxAreaNodeLoader_PathNode` (AddAINode, "Default", pos+0.05y). ev_968d7a4a… `PathNodeGenerator` 0x9137f0 →
+`cLuxMap::AddPathNodeGeneratorArea(MaxSlopeAmount, Density)`, `PathNodeExcluder` → `AddPathNodeExcluderArea`.
+Done: first two are AI nodes; generator/excluder load as plain areas (no node generation yet, bead filed).
+
+Crashes:
+- 02_06_oasis, 03_07_dwf_a_theatre: Newton `dgAABBPolygonSoup` BuildTree split degenerated into a chain when box centres
+  coincide; query stacks (DG_STACK_DEPTH 63) overflowed. Split evenly on degenerate partitions; rebuild unimproved when
+  fitness rotations exceed the stack depth. Test: `TestMeshCollisionSameBoxCentres`.
+- 03_04_pillar_room: assimp gives bone weights with vertex ids 72–100+ for the 32-vertex submesh `low` in
+  `configuration_device_iris.fbx`; `cSubMesh::CompileBonePairs` wrote past the weight arrays (heap corruption, later crash
+  in XML parsing). Out-of-range pairs are dropped. Unknown: why assimp's ids are out of range; iris skinning may be wrong.
+
+Allowlist: `Tasi_clean.mat` (player_intro.ent SubMesh 3 Material=""), `texturesrock_medium_pillar01_blocky_projected.mat`
+(named by .dae and shipped .msh, absent; ev_f1609294… CreateMaterial 0xeed750 has no fallback), oversized
+`01_04_dark_world_ledge` vista (scale up to 100×200×100).
