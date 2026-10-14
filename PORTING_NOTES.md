@@ -6652,3 +6652,24 @@ Unknown / accepted:
 - `cColor::ToLinearSpace`/`ToSRGB` have no resolved callers (ev_a2ff8184156a…, ev_d6de000cdacf…).
 - Texture cache is keyed by file: first user decides sRGB when a file is used both ways.
 - Next to an open rift the picture is still near white; no reference image for any Rebirth scene.
+
+## Rebirth: script blur post effect (2026-10-14)
+
+Symptom: `cGraphics_CreatePostEffect_Blur`, `cPostEffect_Blur::SetParams/GetParams` stubbed; `Effect_Blur.hps` and
+`PlayerState_Struggle.hps` blur did nothing.
+
+Observed (REA, Rebirth binary):
+- `cPostEffectType_Blur::CreateData` 0x10c4d10 (ev_f6842bb72fa5…): four `posteffect_blur_frag` programs: +0x50 no defines,
+  +0x58 `CombineMip`, +0x48 `Blur` + `kTotalBlurSamples`=7, +0x60 `Blur` + `CombineMip`.
+- `cPostEffect_Blur::LoadData` 0x10c6c80 (ev_f299b3e56bfc…): mip chain, level 0 at screen size, halved while w > 8.
+- `CalculateWeights` 0x10c7820 (ev_ce6d3522ff33…): bilinear-paired gaussian, 6 taps + centre, normalised by 1+2*sum.
+- objdump: `SetParams_Script` 0x10c6f50 stores amount, `SetActive(amount > 0)`; `RenderEffect` 0x10c72a0 picks the first
+  level with d = screenH*amount*0.25/div < 14, cross-fades with the previous level (cutoff 0.125), returns input if no
+  level fits; level-0 combine uses the coarser level's offsets/weights.
+
+Done: `cSomaBlur` in `SomaPostEffects.cpp`, private RGBA8 targets per level.
+
+Result: 01_02_caves, amounts 0.03/0.08/0.2/1 blur progressively, 0 restores the image; blur gone from the stub report.
+
+Unknown / accepted: target clear flags skipped (each pass covers the viewport); official pixel format 0x1b not mapped; official
+temp FBs replaced by private ones; no Rebirth reference image to compare.

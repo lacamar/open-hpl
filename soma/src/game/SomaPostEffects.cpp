@@ -25,6 +25,7 @@ namespace
 		{"VideoDistortion", "video_distortion", 0, {1, 0, 0.15f, 1}},
 		{"FXAA", NULL, -1, {}},
 		{"FearTentacles", NULL, -1, {}},
+		{"Blur", NULL, 0, {0}},
 	};
 	enum { eChromatic, eRadialBlur, eImageTrail, eImageFade, eVideoDistortion };
 	iGpuProgram *gvPrograms[std::size(gvTypes)] = {};
@@ -457,6 +458,224 @@ void main()
 		iTexture *mpTarget = NULL;
 		iFrameBuffer *mpBuffer = NULL;
 	};
+
+	iGpuProgram *gpBlurProgs[4] = {};
+	bool gbBlurProgTried = false;
+	enum { eBlurProg, eBlurPlain, eBlurCombineMip, eBlurBlurCombine };
+
+	class cSomaBlur : public cSomaPostEffect
+	{
+	public:
+		cSomaBlur() : cSomaPostEffect("Blur") {}
+		~cSomaBlur() { DestroyLevels(); }
+
+	private:
+		struct cLevel
+		{
+			int w, h, lDiv;
+			float fD, fT, vWeights[7];
+			cVector2f vOffH[7], vOffV[7];
+			iTexture *pTexA = NULL, *pTexB = NULL;
+			iFrameBuffer *pFbA = NULL, *pFbB = NULL;
+		};
+
+		bool LoadPrograms()
+		{
+			if (gbBlurProgTried == false)
+			{
+				gbBlurProgTried = true;
+				const char *vNames[4] = {"SomaBlur", "SomaBlurPlain", "SomaBlurCombineMip", "SomaBlurCombine"};
+				for (int i = 0; i < 4; ++i)
+				{
+					cParserVarContainer vars;
+					vars.Add("UseUv");
+					if (i == eBlurProg || i == eBlurBlurCombine)
+					{
+						vars.Add("Blur");
+						vars.Add("kTotalBlurSamples", 7);
+					}
+					if (i >= eBlurCombineMip)
+						vars.Add("CombineMip");
+					gpBlurProgs[i] = mpGraphics->CreateGpuProgramFromShaders(vNames[i], "posteffect_quad_vtx.glsl", "posteffect_blur_frag.glsl", &vars);
+				}
+			}
+			return std::all_of(std::begin(gpBlurProgs), std::end(gpBlurProgs), [](iGpuProgram *p) { return p != NULL; });
+		}
+
+		void Target(iTexture *&apTex, iFrameBuffer *&apFb, int w, int h)
+		{
+			apTex = mpGraphics->CreateTexture("SomaBlur", eTextureType_2D, eTextureUsage_RenderTarget);
+			apTex->CreateFromRawData(cVector3l(w, h, 0), ePixelFormat_RGBA, NULL);
+			apTex->SetWrapSTR(eTextureWrap_ClampToEdge);
+			apTex->SetFilter(eTextureFilter_Bilinear);
+			apFb = mpGraphics->CreateFrameBuffer("SomaBlur");
+			apFb->SetTexture2D(0, apTex);
+			apFb->CompileAndValidate();
+		}
+
+		void DestroyLevels()
+		{
+			for (size_t i = 0; i < mvLevels.size(); ++i)
+			{
+				cLevel &l = mvLevels[i];
+				for (iFrameBuffer *pFb : {l.pFbA, l.pFbB})
+					if (pFb) mpGraphics->DestroyFrameBuffer(pFb);
+				if (l.pTexB) mpGraphics->DestroyTexture(l.pTexB);
+				if (l.pTexA && i > 0) mpGraphics->DestroyTexture(l.pTexA);
+			}
+			mvLevels.clear();
+		}
+
+		void CreateLevels(const cVector2l &avScreen)
+		{
+			DestroyLevels();
+			cLevel l0 = {avScreen.x, avScreen.y, 1};
+			Target(l0.pTexB, l0.pFbB, l0.w, l0.h);
+			mvLevels.push_back(l0);
+			for (cLevel l = l0; l.w > 8;)
+			{
+				l.lDiv <<= 1;
+				l.w = (l.w + 1) / 2;
+				l.h = (l.h + 1) / 2;
+				Target(l.pTexA, l.pFbA, l.w, l.h);
+				Target(l.pTexB, l.pFbB, l.w, l.h);
+				mvLevels.push_back(l);
+			}
+		}
+
+		static void Weights(cLevel &l)
+		{
+			float fSum = 0;
+			l.vWeights[0] = 1;
+			l.vOffH[0] = l.vOffV[0] = cVector2f(0);
+			for (int i = 1; i < 7; ++i)
+			{
+				float x = 2.0f * i - 1, w0 = expf(-x * x / l.fD), w1 = expf(-(x + 1) * (x + 1) / l.fD), w = w0 + w1;
+				float fOff = w > 0 ? x + w1 / w : x;
+				l.vWeights[i] = w;
+				fSum += w;
+				l.vOffH[i] = cVector2f(fOff / l.w, 0);
+				l.vOffV[i] = cVector2f(0, fOff / l.h);
+			}
+			for (float &w : l.vWeights) w /= 1 + 2 * fSum;
+		}
+
+		iGpuProgram *Program(int alProg, const cLevel *apUniforms, bool abVertical)
+		{
+			iGpuProgram *p = gpBlurProgs[alProg];
+			mpCurrentComposite->SetProgram(p);
+			if (apUniforms)
+			{
+				p->SetFloatArray(p->GetVariableId("avWeights"), apUniforms->vWeights, 7);
+				for (int i = 0; i < 7; ++i)
+					p->SetVec2f(p->GetVariableId("avOffsets[" + std::to_string(i) + "]"), abVertical ? apUniforms->vOffV[i] : apUniforms->vOffH[i]);
+			}
+			return p;
+		}
+
+		void Pass(iFrameBuffer *apFb, iTexture *apTex)
+		{
+			SetFrameBuffer(apFb);
+			mpCurrentComposite->SetTexture(0, apTex);
+			DrawQuad(0, 1, apTex, false);
+		}
+
+		void Blur(cLevel *apL, bool abVertical)
+		{
+			if (apL == NULL || (abVertical && apL->pFbA == NULL))
+				return;
+			Program(eBlurProg, apL, abVertical);
+			Pass(abVertical ? apL->pFbA : apL->pFbB, abVertical ? apL->pTexB : apL->pTexA);
+		}
+
+		// official cPostEffect_Blur::RenderEffect 0x10c72a0
+		iTexture *RenderEffect(iTexture *apIn, iFrameBuffer *apOut) override
+		{
+			if (mfParams[0] <= 0 || LoadPrograms() == false)
+				return apIn;
+			cVector2l vScreen = mpLowLevelGraphics->GetScreenSizeInt();
+			if (mvLevels.empty() || mvLevels[0].w != vScreen.x || mvLevels[0].h != vScreen.y)
+				CreateLevels(vScreen);
+
+			cPostEffectComposite *c = mpCurrentComposite;
+			mvLevels[0].pTexA = apIn;
+			c->SetFlatProjection();
+			c->SetBlendMode(eMaterialBlendMode_None);
+			c->SetChannelMode(eMaterialChannelMode_RGBA);
+			c->SetTextureRange(NULL, 1);
+
+			float fSize = vScreen.y * mfParams[0] * 0.25f;
+			cLevel *pCur = NULL, *pPrev = NULL;
+			for (cLevel &l : mvLevels)
+			{
+				l.fD = fSize / l.lDiv;
+				l.fT = cMath::Clamp(l.fD / 14, 0, 1) * 2 - 1;
+				if (pPrev)
+				{
+					Program(eBlurPlain, NULL, false);
+					Pass(l.pFbA, pPrev->pTexA);
+				}
+				if (l.fT < 1)
+				{
+					pCur = &l;
+					break;
+				}
+				pPrev = &l;
+			}
+			iTexture *pResult = apIn;
+			if (pCur)
+			{
+				const float fCutoff = 0.125f; // cPostEffectParams_Blur::mfWeightCutoffThreshold
+				pCur->fT = (pCur->fT - fCutoff) / (1 - fCutoff);
+				cLevel *pSecond = pPrev;
+				if (pPrev && pCur->fT <= 0)
+				{
+					pCur = pPrev;
+					pSecond = NULL;
+				}
+				if (pCur->fT == 1)
+					pSecond = NULL;
+				Weights(*pCur);
+				if (pSecond)
+					Weights(*pSecond);
+				Blur(pCur, false);
+				Blur(pSecond, false);
+				Blur(pCur, true);
+				Blur(pSecond, true);
+
+				iTexture *pTex;
+				if (pSecond)
+				{
+					// level 0 combine uses cur's offsets and weights, as official
+					iGpuProgram *p = pSecond == &mvLevels[0] ? Program(eBlurBlurCombine, pCur, true) : Program(eBlurCombineMip, NULL, false);
+					p->SetFloat(p->GetVariableId("afAlpha"), 1 - pCur->fT);
+					pTex = pSecond == &mvLevels[0] ? pSecond->pTexB : pSecond->pTexA;
+					c->SetTextureRange(NULL, 2);
+					c->SetTexture(1, pCur->pTexA);
+				}
+				else if (pCur == &mvLevels[0])
+				{
+					Program(eBlurProg, pCur, true);
+					pTex = pCur->pTexB;
+				}
+				else
+				{
+					Program(eBlurPlain, NULL, false);
+					pTex = pCur->pTexA;
+				}
+				c->SetTexture(0, pTex);
+				SetFinalFrameBuffer(apOut);
+				DrawQuad(0, 1, pTex, true);
+				pResult = apOut->GetColorBuffer(0)->ToTexture();
+			}
+			c->SetProgram(NULL);
+			c->SetTextureRange(NULL, 0);
+			mvLevels[0].pTexA = NULL;
+			return pResult;
+		}
+
+		std::vector<cLevel> mvLevels;
+	};
 }
 
 cPostEffectComposite *cSomaPostEffects::GetViewportComposite()
@@ -498,7 +717,7 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 	});
 
 	const char *vTypes[] = {"iPostEffect", "cPostEffect_ChromaticAberration", "cPostEffect_FXAA", "cPostEffect_ImageFadeFX",
-							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion", "cPostEffect_FearTentacles"};
+							"cPostEffect_ImageTrail", "cPostEffect_RadialBlur", "cPostEffect_VideoDistortion", "cPostEffect_FearTentacles", "cPostEffect_Blur"};
 	for (const char *pType : vTypes)
 	{
 		if (e->GetTypeInfoByName(pType) == NULL)
@@ -568,6 +787,12 @@ void cSomaPostEffects::RegisterNatives(asIScriptEngine *e)
 			T *t = static_cast<T *>(p);
 			return i >= 0 && i < (int)t->mvTentacles.size() ? t->mvGroups[i % t->mvGroups.size()] : NULL;
 		});
+	}
+	if (e->GetTypeInfoByName("cPostEffect_Blur"))
+	{
+		SOMA_FUNC(e, "cPostEffect_Blur@ cGraphics_CreatePostEffect_Blur()", +[]() -> P * { return new cSomaBlur(); });
+		SOMA_METHOD(e, "cPostEffect_Blur", "void SetParams(float afAmount)", +[](P *p, float a) { p->Set({a}); });
+		SOMA_METHOD(e, "cPostEffect_Blur", "void GetParams(float &out afAmount)", +[](P *p, float &a) { a = p->mfParams[0]; });
 	}
 	if (e->GetTypeInfoByName("cPostEffect_VideoDistortion") == NULL) // not in Bunker
 		return;
