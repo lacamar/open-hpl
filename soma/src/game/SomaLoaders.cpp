@@ -148,16 +148,16 @@ static void LoadProcAnimations(cXmlElement *apElem, cSomaLuxEntity *apEnt)
 }
 
 // Before joints so they are created in the posed frame. Map placements carry a bone pose: per bone quaternion (w x y z) + translation in FBX units
-void cSomaGenericEntityLoader::BeforeJoints()
+bool cSomaGenericEntityLoader::BeforeJoints()
 {
 	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
 	cXmlElement *pPose = pElem ? pElem->GetFirstElement("Pose") : NULL;
 	cSkeleton *pSkeleton = mpEntity && mpEntity->GetMesh() ? mpEntity->GetMesh()->GetSkeleton() : NULL;
-	if (pPose == NULL || pSkeleton == NULL) return;
+	if (pPose == NULL || pSkeleton == NULL) return false;
 
 	tFloatVec vVals;
 	cString::GetFloatVec(pPose->GetAttributeString("_Text"), vVals, NULL);
-	if ((int)vVals.size() != pSkeleton->GetBoneNum() * 7) return;
+	if ((int)vVals.size() != pSkeleton->GetBoneNum() * 7) return true;
 
 	std::vector<cMatrixf> vLocal(pSkeleton->GetBoneNum());
 	for (int i = 0; i < pSkeleton->GetBoneNum(); ++i)
@@ -172,6 +172,7 @@ void cSomaGenericEntityLoader::BeforeJoints()
 	}
 	mpEntity->SetBoneRestPose(vLocal);
 	mpEntity->AlignBodiesToSkeleton(false);
+	return true;
 }
 
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
@@ -212,7 +213,7 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		pEnt->mpMesh = mpEntity;
 		if (mpEntity)
 			mpEntity->SetCallback(pEnt);
-		if (mpEntity && mpEntity->GetAnimationStateNum() > 0)
+		if (mpEntity && mpEntity->GetAnimationStateNum() > 0 && mpEntity->GetAnimationState(0)->IsActive())
 		{
 			cAnimationState *pAnim = mpEntity->GetAnimationState(0);
 			if (pEnt->meType == eSomaLuxEntityType_Prop && GetVarBool("RandomizeAnimationStart", true))

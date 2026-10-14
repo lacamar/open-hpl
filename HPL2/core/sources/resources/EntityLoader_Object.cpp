@@ -812,7 +812,7 @@ namespace hpl {
 			}
 		}
 
-		BeforeJoints();
+		bool bPosed = BeforeJoints();
 
 		if(pPhysicsWorld)
 		////////////////////////////////////////	
@@ -850,7 +850,7 @@ namespace hpl {
 
 		////////////////////////////////////////	
 		// Final setup, start animation or go to ragdoll mode is possible
-		if(mpEntity->GetAnimationStateNum() >0)
+		if(mpEntity->GetAnimationStateNum() >0 && !bPosed)
 		{
 			mpEntity->Play(0, true, true);
 		}

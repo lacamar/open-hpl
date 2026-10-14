@@ -64,7 +64,7 @@ namespace hpl {
 		void GetNodeFromBuffer(cNode3D *apParentNode, cMesh *apMesh, cBinaryBuffer* apBuffer, int alLevel);
 
 		void AddBoneToBuffer(cBone *apBone, cBinaryBuffer* apBuffer, int alLevel);
-		void GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel);
+		void GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel, bool abUnitScale);
 
 		void* GetVertexBufferWithFormat(iVertexBuffer *apVtxBuffer, eVertexBufferElement aElement, eVertexBufferElementFormat aFormat);
 		void AddBinaryBufferDataWithFormat(cBinaryBuffer* apBuffer, void *apSrcData, size_t alSize, eVertexBufferElementFormat aFormat);

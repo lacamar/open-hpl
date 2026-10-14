@@ -6771,3 +6771,24 @@ Crashes:
 Allowlist: `Tasi_clean.mat` (player_intro.ent SubMesh 3 Material=""), `texturesrock_medium_pillar01_blocky_projected.mat`
 (named by .dae and shipped .msh, absent; ev_f1609294… CreateMaterial 0xeed750 has no fallback), oversized
 `01_04_dark_world_ledge` vista (scale up to 100×200×100).
+
+## Rebirth: HPL3 v8 .msh fallback for old FBX, posed props skip autoplay (2026-10-14)
+
+FBX 6100 assets (assimp can't read them): `cMeshLoaderAssimp` returns NULL for binary FBX < 7.0 and
+`cMeshLoaderHandler` loads the sibling `.msh`.
+- Observed: ev_dfd821a2…, ev_8746dce8… official `cMeshLoaderMSH` v8 layout: extra flags int, bones without unit-scale
+  float, element 7 = Texture0, LOD loop. ev_87862af1…/ev_4fdcf5aa… `cAnimationManager::CreateAnimation` 0xeaff90 swaps to
+  `.anm` under `mbForceCacheLoadingAndSkipSaving`, so the official reads the same `.msh`/`.anm`.
+
+Floating `lq_corpse_drag` (02_03_arsenal) once animated:
+- Observed: ev_51d465ee…, ev_9a93bf32… `ApplyToNode` / `cNode3D::UpdateMatrix` compose like ours. ev_2ddf6485… root motion
+  only for agents.
+- Observed: ev_df0cd1ee… `cEntityLoader_Object::Load` 0xec01c0 plays animation 0 only when `animNum >= 1 && poseHash == 0`;
+  with a pose hash matching ev_4599e5f4… `GetSkeletonHash` (legacy hash of concatenated bone names) it sets each bone from
+  7 floats (quat, pos × local scale). The map entry carries `<Pose Hash=…>`.
+- Done: `BeforeJoints` returns true when a `<Pose>` exists; core skips `Play(0)` then.
+- Unknown: hash check not implemented (bone-count check instead).
+
+Empty `SoundEntityFile` map sounds:
+- Observed: ev_f3cb0b0b… `cWorld::CreateSoundEntityEx` 0xff60d0 treats an empty name as an event, the lookup of "" fails and
+  returns NULL; ev_93167fa2… `LoadSound` 0x1117309 skips NULL. Our Sound track reports `empty_file`, the sweep allowlists it.

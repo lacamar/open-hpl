@@ -217,8 +217,25 @@ namespace hpl {
 			AddNodeMeshes(apScene, apNode->mChildren[c], mtxWorld, apMesh, apLowLevelGraphics, apMaterialManager, asFallbackMaterial, apSkeleton);
 	}
 
+	static bool IsOldBinaryFbx(const tString& asFile)
+	{
+		FILE *pFile = fopen(asFile.c_str(), "rb");
+		if(pFile == NULL) return false;
+		char vHeader[27] = {};
+		size_t lRead = fread(vHeader, 1, sizeof(vHeader), pFile);
+		fclose(pFile);
+		unsigned int lVersion;
+		memcpy(&lVersion, vHeader + 23, 4);
+		return lRead == sizeof(vHeader) && memcmp(vHeader, "Kaydara FBX Binary", 18) == 0 && lVersion < 7000;
+	}
+
 	cMesh* cMeshLoaderAssimp::LoadMesh(const tWString& asFile, tMeshLoadFlag aFlags)
 	{
+		if(IsOldBinaryFbx(cString::To8Char(asFile)))
+		{
+			Log("'%s' is binary FBX older than 7.0\n", cString::To8Char(asFile).c_str());
+			return NULL;
+		}
 		Assimp::Importer importer;
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 		const aiScene *pScene = importer.ReadFile(cString::To8Char(asFile),

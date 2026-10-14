@@ -110,7 +110,8 @@ namespace hpl {
 		}
 
 		//Check so file has he right version
-		if(lVersion != MSH_FORMAT_VERSION)
+		bool bHpl3 = lVersion == 8;
+		if(lVersion != MSH_FORMAT_VERSION && !bHpl3)
 		{
 			Error("File '%s' does not have right MSH version!\n", cString::To8Char(asFile).c_str());
 			return NULL;
@@ -118,6 +119,7 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// General properties
+		if(bHpl3) binBuff.GetInt32();
 		int lSubMeshNum = binBuff.GetInt32();
 		int lAnimationNum = binBuff.GetInt32();
 		bool bSkeleton = binBuff.GetBool();
@@ -137,7 +139,7 @@ namespace hpl {
 			int lRootChildNum = binBuff.GetInt32();
 			for(int i=0; i<lRootChildNum; ++i)
 			{
-				GetBoneFromBuffer(pSkeleton->GetRootBone(), &binBuff, 0);
+				GetBoneFromBuffer(pSkeleton->GetRootBone(), &binBuff, 0, mbBoneUnitScale && !bHpl3);
 			}
 
 			pMesh->SetSkeleton(pSkeleton);
@@ -256,6 +258,18 @@ namespace hpl {
 					int lProgramVarIndex = binBuff.GetInt32();
 					int lElementNum = binBuff.GetInt32();
 
+					if(bHpl3)
+					{
+						// HPL3 element 7 is the uv set; 5/6 have no HPL2 equivalent
+						if(arrayType == 7) arrayType = eVertexBufferElement_Texture0;
+						else if(arrayType > eVertexBufferElement_Texture1Tangent)
+						{
+							Warning("Skipping HPL3 vertex array %d in '%s'\n", arrayType, cString::To8Char(asFile).c_str());
+							binBuff.AddPos((size_t)lVtxNum * lElementNum * (elementFormat == eVertexBufferElementFormat_Byte ? 1 : 4));
+							continue;
+						}
+					}
+
 					if(gbLogMSHLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
 
 					//Create the array
@@ -271,12 +285,18 @@ namespace hpl {
 			////////////////////
 			//Get Indices
 			{
-				int lIdxNum =  binBuff.GetInt32();
+				int lLodNum = bHpl3 ? binBuff.GetInt32() : 1;
+				for(int lod=0; lod<lLodNum; ++lod)
+				{
+					int lIdxNum =  binBuff.GetInt32();
+					if(bHpl3) binBuff.GetFloat32();
 
-				if(gbLogMSHLoad) Log("Indices: %d\n", lIdxNum);
+					if(gbLogMSHLoad) Log("Indices: %d\n", lIdxNum);
 
-				pVtxBuff->ResizeIndices(lIdxNum);
-				binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+					if(lod>0) continue;
+					pVtxBuff->ResizeIndices(lIdxNum);
+					binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+				}
 			}
 
 			
@@ -299,10 +319,10 @@ namespace hpl {
             int lAnimationNum = binBuff.GetInt32();
 			if(gbLogMSHLoad) Log(" Animation num: %d\n",lAnimationNum);
 
-			for(int i=0; i<lAnimationNum; ++i)
+			// HPL3 discards embedded animations
+			for(int i=0; i<lAnimationNum && !bHpl3; ++i)
 			{
-				cAnimation *pAnim = GetAnimation(&binBuff, asFile);
-				pMesh->AddAnimation(pAnim);
+				pMesh->AddAnimation(GetAnimation(&binBuff, asFile));
 			}
 		}
 	
@@ -735,7 +755,7 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	void cMeshLoaderMSH::GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel)
+	void cMeshLoaderMSH::GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel, bool abUnitScale)
 	{
 		tString sName, sSid;
 		cMatrixf mtxTransform;
@@ -743,7 +763,7 @@ namespace hpl {
 		apBuffer->GetString(&sName);
 		apBuffer->GetString(&sSid);
 		apBuffer->GetMatrixf(&mtxTransform);
-		float fUnitScale = mbBoneUnitScale ? apBuffer->GetFloat32() : 1.0f;
+		float fUnitScale = abUnitScale ? apBuffer->GetFloat32() : 1.0f;
 		int lChildNum = apBuffer->GetInt32();
 
 		cBone *pBone = apParentBone->CreateChildBone(sName, sSid);
@@ -755,7 +775,7 @@ namespace hpl {
 
         for(int i=0; i<lChildNum; ++i)
 		{
-			GetBoneFromBuffer(pBone, apBuffer, alLevel+1);
+			GetBoneFromBuffer(pBone, apBuffer, alLevel+1, abUnitScale);
 		}
 	}
 

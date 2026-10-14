@@ -22,6 +22,8 @@
 #include "resources/MeshLoader.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
+#include "system/Platform.h"
+#include "graphics/Mesh.h"
 #include "resources/Resources.h"
 #include "scene/Scene.h"
 
@@ -57,12 +59,17 @@ namespace hpl {
 	cMesh* cMeshLoaderHandler::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
 		iMeshLoader *pMeshLoader = static_cast<iMeshLoader*>(GetLoaderForFile(asFile));
+		cMesh *pMesh = pMeshLoader ? pMeshLoader->LoadMesh(asFile,aFlags) : NULL;
 
-		if(pMeshLoader)
+		// HPL3 ships a compiled .msh next to sources assimp can't read (FBX < 7000)
+		tWString sMsh = cString::SetFileExtW(asFile, _W("msh"));
+		if(pMesh == NULL && sMsh != asFile && cPlatform::FileExists(sMsh))
 		{
-				return pMeshLoader->LoadMesh(asFile,aFlags);
+			Log("Loading '%s' from its .msh\n", cString::To8Char(asFile).c_str());
+			pMesh = LoadMesh(sMsh, aFlags);
+			if(pMesh) pMesh->SetFullPath(asFile);
 		}
-		return NULL;
+		return pMesh;
 	}
 
 	//-----------------------------------------------------------------------
