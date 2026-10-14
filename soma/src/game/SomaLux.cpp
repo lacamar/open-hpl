@@ -26,6 +26,7 @@
 
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
 static bool gbMapChangeIsTransfer = false;
+static float gfPendingFadeIn = -1;
 static int glPreloadPrio = 2;
 
 static bool gbPendingNewGame = false;
@@ -862,6 +863,10 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		iResourceManager::mpLoadTickCallback = NULL;
 		if (gpSomaBase->GetSplash())
 			gpSomaBase->GetSplash()->SetLoadBar(0, 0);
+		// cLuxMapHandler::SetCurrentMap
+		if (gfPendingFadeIn >= 0 && cSomaLuxVoiceHandler::Get())
+			cSomaLuxVoiceHandler::Get()->FadeTo(0, gfPendingFadeIn);
+		gfPendingFadeIn = -1;
 		if (bLoaded == false)
 			Error("SOMA script: %s\n", sError.c_str());
 		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
@@ -1291,6 +1296,13 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			  +[](S map, S start, S transfer, S, S) {
 				  SomaRequestMapChange(map, start);
 				  gsPendingTransfer = transfer;
+				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
+			  });
+	SOMA_FUNC(e, "void cLux_ChangeMap(const tString&in asMapName, const tString&in asStartPos, const tString&in asTransferArea, const tString&in asStartSound, const tString&in asEndSound, bool abShowLoadingScreen, float afFadeInTime=-1.0f)",
+			  +[](S map, S start, S transfer, S, S, bool, float fFadeIn) {
+				  SomaRequestMapChange(map, start);
+				  gsPendingTransfer = transfer;
+				  gfPendingFadeIn = fFadeIn;
 				  Log("SOMA script: change map to %s (%s)\n", gsPendingMap.c_str(), start.c_str());
 			  });
 	SOMA_FUNC(e, "void cLux_StartNewGame()", +[]() {

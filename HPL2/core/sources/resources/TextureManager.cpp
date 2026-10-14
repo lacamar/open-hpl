@@ -96,9 +96,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture* cTextureManager::CreateAnim(const tString& asFirstFrameName,bool abUseMipMaps,eTextureType aType,
+	iTexture* cTextureManager::CreateAnim(const tString& asName,bool abUseMipMaps,eTextureType aType,
 											eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
+		tString asFirstFrameName = asName;
+		if(cString::GetFileExt(asName)=="")
+			for(const tString &sExt : *mpBitmapLoaderHandler->GetSupportedTypes())
+				if(mpFileSearcher->GetFilePath(asName+"."+sExt)!=_W("")) { asFirstFrameName = asName+"."+sExt; break; }
+
 		BeginLoad(asFirstFrameName);
 		
 		///////////////////////////
