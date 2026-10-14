@@ -103,6 +103,8 @@ private:
 public:
 	int mlNextId = 1;
 	std::vector<cSomaLuxEntity *> mvPendingBreaks;
+	struct cPendingCollision { cSomaLuxEntity *mpEntity; iPhysicsBody *mpBody, *mpCollideBody; cPhysicsContactData mData; };
+	std::vector<cPendingCollision> mvPendingCollisions;
 	std::set<std::tuple<cSomaLuxEntity *, cSomaLuxEntity *, tString>> msetColliding;
 private:
 	bool mbUpdatingTimers = false;

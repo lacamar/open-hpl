@@ -6673,3 +6673,21 @@ Result: 01_02_caves, amounts 0.03/0.08/0.2/1 blur progressively, 0 restores the 
 
 Unknown / accepted: target clear flags skipped (each pass covers the viewport); official pixel format 0x1b not mapped; official
 temp FBs replaced by private ones; no Rebirth reference image to compare.
+
+## Rebirth: player/prop script stubs (2026-10-14)
+
+Observed (REA, Rebirth binary):
+- ev_447bb0c9…: `cLux_GetHideCrosshair` = debug handler +0x339, loaded from user config `Debug/HideCrosshair` (ev_7221f9b5…);
+  `GetUsedLiquidAreaNum` = vector at player+0x3c0; `GetSmoothingRotAmount` = player+0x480, ctor zeroes it, only the script
+  binding sets it (ev_42214cb2…).
+- ev_88252506…: achievements go through a platform backend; NoSteam unlocked set stays empty.
+- ev_fb3e4e2e…: `cLuxProp_BodyCallback::OnBodyCollide` 0xc5d3e0 runs the break check, then, if prop+0x62d
+  (`SetScriptCollisionCallbackActive`), calls `OnPhysicsCollision(body, collideBody, contactData)` synchronously.
+- ev_532cdb26…: `SetRenderLayer` writes mesh/submesh render layer; scripts only pass 0, left stubbed.
+
+Done: liquid/smoothing getters, crosshair from config, achievements false, prop collision callback queued per contact and
+dispatched after the Newton step (scripts touching physics inside the Newton contact callback is unsafe here).
+
+Result: 01_02_caves dropped pottery delivers contacts with sane normal speeds; stubs gone from the report.
+
+Unknown / accepted: one-frame delay vs official; `cPhysicsContactData` passed as an official-layout script object.

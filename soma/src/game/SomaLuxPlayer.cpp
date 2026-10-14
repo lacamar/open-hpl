@@ -657,6 +657,16 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 		pGame->BroadcastAnalog(0, cVector3f(v.x, v.y, 0));
 }
 
+static std::vector<cSomaLuxEntity *> UsedLiquidAreas()
+{
+	std::vector<cSomaLuxEntity *> v;
+	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
+			if (pEnt->meType == eSomaLuxEntityType_LiquidArea && pEnt->mbPlayerInLiquid)
+				v.push_back(pEnt);
+	return v;
+}
+
 // cLuxPlayer::SetHealth / CallPlayerDeadCallback (Rebirth binary)
 void cSomaLuxPlayer::SetHealth(float afX)
 {
@@ -694,6 +704,14 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, T, "void AddUsedLiquidArea(cLuxLiquidArea@ apArea)", +[](P *p, cSomaLuxEntity *a) { if (a) a->mbPlayerInLiquid = true; });
 	SOMA_METHOD(e, T, "void RemoveUsedLiquidArea(cLuxLiquidArea@ apArea)", +[](P *p, cSomaLuxEntity *a) { if (a) a->mbPlayerInLiquid = false; });
+	SOMA_METHOD(e, T, "bool GetIsLiquidAreaUsed(cLuxLiquidArea@ apArea)", +[](P *p, cSomaLuxEntity *a) { return a && a->mbPlayerInLiquid; });
+	SOMA_METHOD(e, T, "int GetUsedLiquidAreaNum()", +[](P *p) { return (int)UsedLiquidAreas().size(); });
+	SOMA_METHOD(e, T, "tID GetUsedLiquidAreaID(int alId)", +[](P *p, int i) {
+		std::vector<cSomaLuxEntity *> v = UsedLiquidAreas();
+		return i >= 0 && i < (int)v.size() ? v[i]->mID : cSomaID();
+	});
+	SOMA_METHOD(e, T, "float GetSmoothingRotAmount()", +[](P *p) { return p->mfSmoothingRotAmount; });
+	SOMA_METHOD(e, T, "void SetSmoothingRotAmount(float afX)", +[](P *p, float f) { p->mfSmoothingRotAmount = f; });
 	SOMA_METHOD(e, T, "float GetAverageMoveSpeed()", +[](P *p) { return p->mfAverageMoveSpeed; });
 	SOMA_METHOD(e, T, "const cVector3f& GetAverageMoveDirection()", +[](P *p) -> const cVector3f & { return p->mvAverageMoveDirection; });
 	SOMA_METHOD(e, T, "void ChangeState(int alId)", +[](P *p, int id) { p->ChangeState(id); });

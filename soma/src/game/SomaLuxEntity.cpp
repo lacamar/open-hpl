@@ -1,6 +1,7 @@
 #include "SomaLuxEntity.h"
 #include "SomaScriptApi.h"
 #include "scene/GuiSetEntity.h"
+#include <cstring>
 #include "graphics/MaterialType_BasicTranslucent.h"
 #include "SomaLuxPlayer.h"
 #include "SomaImGui.h"
@@ -714,10 +715,8 @@ void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 	mfHealth = mVars.GetVarFloat("Health", 100);
 	if (mVars.GetVarBool("BreakActive", false) && v.GetVarBool("DisableBreakable", false) == false)
 	{
-		mBreakCallback.mpEntity = this;
-		mBreakCallback.mfStartTime = mpMap ? mpMap->GetTime() : 0;
-		for (iPhysicsBody *pBody : mvBodies)
-			pBody->AddBodyCallback(&mBreakCallback);
+		mbBreakable = true;
+		AddBodyCallback();
 	}
 	if (v.GetVarFloat("MaxInteractDistance", 0) > 0)
 		mfMaxInteractDistance = v.GetVarFloat("MaxInteractDistance", 0);
@@ -1273,12 +1272,50 @@ void cSomaLuxEntity::DoBreak()
 	pMap->DestroyEntity(this);
 }
 
-// cLuxProp_Object_BodyCallback::OnBodyCollide
+void cSomaLuxEntity::AddBodyCallback()
+{
+	if (mBreakCallback.mpEntity)
+		return;
+	mBreakCallback.mpEntity = this;
+	mBreakCallback.mfStartTime = mpMap ? mpMap->GetTime() : 0;
+	for (iPhysicsBody *pBody : mvBodies)
+		pBody->AddBodyCallback(&mBreakCallback);
+}
+
+void cSomaLuxEntity::OnPhysicsCollision(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, const cPhysicsContactData &aData)
+{
+	asIScriptEngine *pEngine = cSomaScriptRuntime::Get()->GetEngine();
+	asITypeInfo *pType = pEngine->GetTypeInfoByName("cPhysicsContactData");
+	if (mbScriptCollision == false || mbActive == false || GetScript() == NULL || pType == NULL)
+		return;
+	char *pData = (char *)pEngine->CreateScriptObject(pType);
+	for (asUINT i = 0; i < pType->GetPropertyCount(); ++i)
+	{
+		const char *pName;
+		int lOffset;
+		pType->GetProperty(i, &pName, NULL, NULL, NULL, &lOffset);
+		tString sName = pName;
+		if (sName == "mfMaxContactNormalSpeed") memcpy(pData + lOffset, &aData.mfMaxContactNormalSpeed, 4);
+		else if (sName == "mfMaxContactTangentSpeed") memcpy(pData + lOffset, &aData.mfMaxContactTangentSpeed, 4);
+		else if (sName == "mvContactNormal") memcpy(pData + lOffset, &aData.mvContactNormal, 12);
+		else if (sName == "mvContactPosition") memcpy(pData + lOffset, &aData.mvContactPosition, 12);
+	}
+	Call("void OnPhysicsCollision(iPhysicsBody @apBody, iPhysicsBody @apCollideBody, cPhysicsContactData&in apContactData)", [&](asIScriptContext *c) {
+		c->SetArgAddress(0, apBody);
+		c->SetArgAddress(1, apCollideBody);
+		c->SetArgAddress(2, pData);
+	});
+	pEngine->ReleaseScriptObject(pData, pType);
+}
+
+// cLuxProp_BodyCallback::OnBodyCollide (Rebirth 0xc5d3e0); script calls wait until after the Newton step
 void cSomaLuxEntity::cBreakBodyCallback::OnBodyCollide(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, cPhysicsContactData *apContactData)
 {
 	cSomaLuxMap *pMap = mpEntity->mpMap ? mpEntity->mpMap : cSomaLuxMap::GetCurrent();
+	if (mpEntity->mbScriptCollision && pMap)
+		pMap->mvPendingCollisions.push_back({mpEntity, apBody, apCollideBody, *apContactData});
 	float fSpeed = apContactData->mfMaxContactNormalSpeed;
-	if (mpEntity->mbBroken || mpEntity->mbActive == false || fSpeed <= 0 || pMap == NULL || pMap->GetTime() - mfStartTime <= 0.5)
+	if (mpEntity->mbBreakable == false || mpEntity->mbBroken || mpEntity->mbActive == false || fSpeed <= 0 || pMap == NULL || pMap->GetTime() - mfStartTime <= 0.5)
 		return;
 	float fMass2 = apCollideBody->GetMass() > 0 ? apCollideBody->GetMass() : 1e6f;
 	float fV1 = apBody->GetVelocityAtPosition(apContactData->mvContactPosition).Length();
@@ -2410,6 +2447,12 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		SOMA_METHOD_NEW(e, pJ, "void SetMaxLimitSound(const tString&in asSound, float afMinSpeed)", +[](iPhysicsJoint *j, const tString &s, float m) { SetLimitSound(j->GetMaxLimit(), s, m); });
 	}
 	SOMA_METHOD_NEW(e, T, "void SetAutoSleep(bool abX)", +[](E *p, bool x) { p->SetAutoSleep(x); });
+	if (strcmp(T, "cLuxProp") == 0)
+		SOMA_METHOD_NEW(e, T, "void SetScriptCollisionCallbackActive(bool abX)", +[](E *p, bool x) {
+			p->mbScriptCollision = x;
+			if (x)
+				p->AddBodyCallback();
+		});
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
 	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) -> iEntity3D * {

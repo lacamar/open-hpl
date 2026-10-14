@@ -567,6 +567,10 @@ void cSomaLuxMap::PostUpdate(float afTimeStep)
 	for (cSomaLuxEntity *pEnt : mvEntities)
 		if (pEnt->GetScript() && pEnt->mbActive)
 			pEnt->CallWithFloat("void OnPostUpdate(float afTimeStep)", afTimeStep);
+	std::vector<cPendingCollision> vCollisions;
+	vCollisions.swap(mvPendingCollisions);
+	for (cPendingCollision &col : vCollisions)
+		col.mpEntity->OnPhysicsCollision(col.mpBody, col.mpCollideBody, col.mData);
 	std::vector<cSomaLuxEntity *> vBreaks;
 	vBreaks.swap(mvPendingBreaks);
 	for (cSomaLuxEntity *pEnt : vBreaks)
@@ -1318,6 +1322,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_Exit()", +[]() { gpSomaBase->mpEngine->Exit(); });
 	SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
+	SOMA_FUNC(e, "bool cLux_GetHideCrosshair()", +[]() { return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false); });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
 	SOMA_FUNC(e, "bool cLux_MapChangeIsTransfer()", +[]() { return gbMapChangeIsTransfer; });
 	SOMA_FUNC(e, "bool cLux_IsReadyToChangeMap()", +[]() { return gsPreloadMap.empty() || PreloadReady(gsPreloadMap); });

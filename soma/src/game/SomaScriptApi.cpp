@@ -571,7 +571,7 @@ static void StubFactory(asIScriptGeneric *apGen)
 	asITypeInfo *pType = apGen->GetEngine()->GetTypeInfoById(apGen->GetFunction()->GetReturnTypeId() & ~asTYPEID_OBJHANDLE);
 	const cSomaStructDefaults *pDefaults = pType ? FindStructDefaults(pType->GetName()) : NULL;
 	// Official factories zero these
-	static const std::set<std::string> setZeroed = {"cLuxClosestEntityData", "cLuxClosestCharCollider", "cLuxSoundExtraData", "cLuxScreenTextFormatParameters"};
+	static const std::set<std::string> setZeroed = {"cLuxClosestEntityData", "cLuxClosestCharCollider", "cLuxSoundExtraData", "cLuxScreenTextFormatParameters", "cPhysicsContactData"};
 	if ((pDefaults == NULL && (pType == NULL || setZeroed.count(pType->GetName()) == 0)) || apGen->GetArgCount() > 0)
 		CountStub(apGen);
 	char *pObj = (char *)calloc(1, 4096);

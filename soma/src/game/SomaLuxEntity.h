@@ -232,6 +232,9 @@ public:
 	void GiveDamage(float afAmount, int alStrength, const tString &asType, const tString &asSource);
 	void Break();
 	void DoBreak();
+	bool mbBreakable = false, mbScriptCollision = false;
+	void AddBodyCallback();
+	void OnPhysicsCollision(iPhysicsBody *apBody, iPhysicsBody *apCollideBody, const cPhysicsContactData &aData);
 	class cBreakBodyCallback : public iPhysicsBodyCallback
 	{
 	public:

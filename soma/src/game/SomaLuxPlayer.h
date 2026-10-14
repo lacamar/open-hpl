@@ -157,6 +157,7 @@ public:
 
 	float mfTimeSincePhysicsInteraction = 0;
 	float mfAverageMoveSpeed = 0;
+	float mfSmoothingRotAmount = 0;
 	cVector3f mvAverageMoveDirection = 0;
 	cVector2f mvCameraTrackingAvg = 0;
 

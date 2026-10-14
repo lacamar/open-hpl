@@ -547,6 +547,8 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	});
 	SOMA_METHOD(e, "cLuxGuiHandler", "bool GetGameHudInputFocus()", +[](void *) { return cSomaImGui::mbGameHudFocus; });
 	SOMA_FUNC(e, "iLuxAchievementHandler@ cLux_GetAchievementHandler()", +[]() { return (void *)HandlerByName<3>(); });
+	// Unlocked set is filled by the platform backend; empty without Steam
+	SOMA_METHOD(e, "iLuxAchievementHandler", "bool GetAchievementUnlocked(int alID)", +[](void *, int) { return false; });
 	SOMA_FUNC(e, "iLuxHeroStatsHandler@ cLux_GetHeroStatsHandler()", +[]() { return (void *)HandlerByName<4>(); });
 	SOMA_FUNC(e, "iLuxRichPresenceHandler@ cLux_GetRichPresenceHandler()", +[]() { return (void *)HandlerByName<5>(); });
 	SOMA_FUNC(e, "cLuxPlayer@ cLux_GetPlayer()", +[]() { return (void *)HandlerByName<6>(); });
