@@ -6551,3 +6551,20 @@ was blended like a material wherever the mask was below the cut threshold. The R
   `FearHandler_SetActive(true); FearHandler_SetPermaFailEnabled(false); FearHandler_SetLevelTo(0.9f);`
   and wait 6 s. At alpha 0.675 a single vein only darkens to ~0.47: it is faint on dark rock.
 - Unknown: official on-screen extent at the same parameters (no reference capture).
+
+## Rebirth: animation message event callback (2026-10-14)
+
+Symptom: caves shimmy (`PosArea_Shimmy`) played through with no ghoul scare; `Entity_SetAnimationMessageEventCallback` was an auto-stub.
+
+Observed (REA, `iLuxEntity::OnAnimationEvent` 0xa16e80, ev_1a5492cf5a69…; objdump 0x9fa2e0, 0xa17081–0xa170d0):
+- `SetAnimationMessageEventCallback(func, autoRemove)`: string at +0x3e0, bool at +0x3e8.
+- Event type 3 (Message): `BroadcastMessage(0xd, NULL, (0,0,0), event+0x18)` to components, then if the callback is set the map runs
+  `void F(const tString &in asEntityName, const tString &in asAnimName, int alMessageEventID)` (string at 0x1faeab6) with the entity name,
+  the name of `GetAnimationState(this+0x478)` and the int at event+0x18; callback cleared afterwards when autoRemove.
+- Data: `player.ent` `<Event Type="Message" Value="852"/>`; empty Value is ID 0.
+
+Inferred: +0x478 is the current animation index; event+0x18 is the Value attribute parsed as int.
+Not done: component broadcast (message 0xd), event `Direction`.
+
+Route: nest struggle, `goto PosArea_Shimmy --dist 0.3`, `walk 4` (forward input advances the interactive animation) ->
+scare -> `State_CutsceneAnimation` -> `State_PermaFail`.

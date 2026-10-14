@@ -150,6 +150,8 @@ public:
 
 	tString msInteractCallback;
 	bool mbInteractCallbackAutoRemove = false;
+	tString msAnimMessageCallback;
+	bool mbAnimMessageCallbackAutoRemove = false;
 	tString msLookAtCallback;
 	bool mbLookAtCallbackAutoRemove = true;
 	bool mbLookAtCheckCenter = true;

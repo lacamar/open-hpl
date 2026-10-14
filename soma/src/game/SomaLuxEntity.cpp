@@ -2522,6 +2522,8 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 					+[](E *p, S f, bool r) { p->msInteractCallback = f; p->mbInteractCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "void SetPlayerLookAtCallback(const tString &in asCallbackFunc, bool abRemoveWhenLookedAt, bool abCheckCenterOfScreen, bool abCheckRayIntersection, float afMaxDistance, float afCallbackDelay)",
 					+[](E *p, S f, bool r, bool c, bool ray, float d, float t) { SetLookAtCallback(p, f, r, c, ray, d, t); });
+	SOMA_METHOD_NEW(e, T, "void SetAnimationMessageEventCallback(const tString&in asFunc, bool abAutoRemove)",
+					+[](E *p, S f, bool r) { p->msAnimMessageCallback = f; p->mbAnimMessageCallbackAutoRemove = r; });
 	SOMA_METHOD_NEW(e, T, "bool HasPlayerInteractCallback()", +[](E *p) { return p->msInteractCallback != ""; });
 	SOMA_METHOD_NEW(e, T, "void ChangeConnectionState(int alState)", +[](E *p, int l) { p->ChangeConnectionState(l); });
 	SOMA_METHOD_NEW(e, T, "void SetConnectionStateChangeCallback(const tString &in asCallbackFunc)", +[](E *p, S f) { p->msConnectionCallback = f; });
@@ -2660,6 +2662,20 @@ bool cSomaLuxEntity::OnAnimationEvent(cMeshEntity *apMesh, cAnimationEvent *apEv
 		mpAnimLoopSound->FadeIn(3);
 		mlAnimLoopSoundID = mpAnimLoopSound->GetCreationID();
 		pCreated = mpAnimLoopSound;
+	}
+	else if (apEvent->mType == eAnimationEventType_Message && msAnimMessageCallback != "")
+	{
+		cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
+		tString sAnim = mlCurrentAnim >= 0 ? apMesh->GetAnimationState(mlCurrentAnim)->GetName() : "";
+		if (pMap && pMap->GetScript())
+			cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msAnimMessageCallback + "(const tString &in, const tString &in, int)",
+											[&](asIScriptContext *c) {
+												c->SetArgObject(0, &msName);
+												c->SetArgObject(1, &sAnim);
+												c->SetArgDWord(2, cString::ToInt(apEvent->msValue.c_str(), 0));
+											});
+		if (mbAnimMessageCallbackAutoRemove)
+			msAnimMessageCallback = "";
 	}
 	if (pCreated)
 	{
@@ -3249,6 +3265,8 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 		ForMatching(m, [&](cSomaLuxEntity *p) { std::erase_if(p->mvConnections, [&](const cSomaLuxEntity::cConnection &c) { return c.msName == n; }); });
 	});
 	SOMA_FUNC(e, "void Entity_RemoveAllConnections(const tString &in asMainEntity)", +[](S m) { ForMatching(m, [](cSomaLuxEntity *p) { p->mvConnections.clear(); }); });
+	SOMA_FUNC(e, "void Entity_SetAnimationMessageEventCallback(const tString &in asEntityName, const tString &in asCallbackFunc, bool abAutoRemove)",
+			  +[](S n, S f, bool r) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msAnimMessageCallback = f; p->mbAnimMessageCallbackAutoRemove = r; }); });
 	SOMA_FUNC(e, "void Entity_SetConnectionStateChangeCallback(const tString &in asEntityName, const tString &in asCallback)",
 			  +[](S n, S f) { ForMatching(n, [&](cSomaLuxEntity *p) { p->msConnectionCallback = f; }); });
 	SOMA_FUNC(e, "void Entity_SetPlayerInteractCallback(const tString &in asEntityName, const tString &in asCallback, bool abRemoveWhenInteracted)",
