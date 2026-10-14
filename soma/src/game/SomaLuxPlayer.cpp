@@ -8,6 +8,7 @@
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
 #include "impl/scriptarray.h"
+#include <algorithm>
 
 #include <cmath>
 #include <cstring>
@@ -667,12 +668,12 @@ static std::vector<cSomaLuxEntity *> UsedLiquidAreas()
 	return v;
 }
 
-// cLuxPlayer::SetHealth / CallPlayerDeadCallback (Rebirth binary)
+// cLuxPlayer::SetHealth 0xca7940 / IsDead 0xcbb000: health <= 0 is only death with CanDie
 void cSomaLuxPlayer::SetHealth(float afX)
 {
-	bool bWasAlive = mfHealth > 0;
+	bool bWasDead = IsDead();
 	mfHealth = std::min(afX, mfMaxHealth);
-	if (bWasAlive == false || mfHealth > 0)
+	if (bWasDead || IsDead() == false)
 		return;
 	tString sSource;
 	auto args = [&](asIScriptContext *c) {
@@ -684,6 +685,29 @@ void cSomaLuxPlayer::SetHealth(float afX)
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		for (cSomaLuxEntity *pEnt : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
 			SomaAgentSendMessage(pEnt, 10);
+}
+
+// cLuxPlayer::GiveDamage 0xca6090: an attack instance hurts once
+bool cSomaLuxPlayer::GiveDamage(float afAmount, int alType, float afMinHealth, const cSomaID &aSource, int alDamageID)
+{
+	if (IsDead())
+		return false;
+	if (alDamageID != -1)
+	{
+		if (std::find(mvDamageIDs.begin(), mvDamageIDs.end(), alDamageID) != mvDamageIDs.end())
+			return false;
+		if (mvDamageIDs.size() > 7)
+			mvDamageIDs.erase(mvDamageIDs.begin());
+		mvDamageIDs.push_back(alDamageID);
+	}
+	cSomaID src = aSource;
+	Call("void OnDamageTaken(float, int, tID)", [&](asIScriptContext *c) {
+		c->SetArgFloat(0, afAmount);
+		c->SetArgDWord(1, alType);
+		c->SetArgObject(2, &src);
+	});
+	SetHealth(std::max(mfHealth - afAmount, afMinHealth));
+	return true;
 }
 
 void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
@@ -728,6 +752,8 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 				+[](P *p, S n, int id, S f, S c) { p->AddMoveState(n, id, f, c); });
 	SOMA_METHOD(e, T, "void GiveDamage(float afAmount, int alStrength, int aType, float afMinHealth, const tString&in asSource)",
 				+[](P *p, float a, int, int, float fMin, S) { p->SetHealth(std::max(std::min(p->mfHealth, std::max(p->mfHealth - a, fMin)), 0.0f)); });
+	SOMA_METHOD(e, T, "bool GiveDamage(float afAmount, int alStrength, int aType, float afMinHealth, tID a_idSource, int alDamageID)",
+				+[](P *p, float a, int, int t, float fMin, cSomaID src, int id) { return p->GiveDamage(a, t, fMin, src, id); });
 	SOMA_METHOD(e, T, "void SetBaseCameraPosAdd(const cVector3f&in avVec)", +[](P *p, V v) { p->mvBaseCameraPosAdd = v; });
 	SOMA_METHOD(e, T, "const cVector3f& GetBaseCameraPosAdd()", +[](P *p) -> const cVector3f & { return p->mvBaseCameraPosAdd; });
 	SOMA_METHOD(e, T, "void SetCameraPosAdd(int alType, const cVector3f&in avVector)", +[](P *p, int t, V v) {
@@ -822,7 +848,7 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void AddHealth(float afX, float afMinHealth)", +[](P *p, float x, float fMin) {
 		p->SetHealth(std::max(p->mfHealth + x, fMin));
 	});
-	SOMA_METHOD(e, T, "bool IsDead()", +[](P *p) { return p->mfHealth <= 0; });
+	SOMA_METHOD(e, T, "bool IsDead()", +[](P *p) { return p->IsDead(); });
 	SOMA_METHOD(e, T, "bool HasCollideCallbacks()", +[](P *) {
 		cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(tString("Player")) : NULL;
 		return pEnt && pEnt->mvCollideCallbacks.empty() == false;

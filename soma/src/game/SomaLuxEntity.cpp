@@ -2050,7 +2050,7 @@ bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
 bool SomaEntityInPlayerLOS(cSomaLuxEntity *apEnt, bool abCheckFOV)
 {
 	cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-	if (pPlayer == NULL || apEnt == NULL || apEnt->mbActive == false || pPlayer->mfHealth <= 0)
+	if (pPlayer == NULL || apEnt == NULL || apEnt->mbActive == false || pPlayer->IsDead())
 		return false;
 	if (abCheckFOV && SomaEntityIsOnScreen(apEnt, false) == false)
 		return false;

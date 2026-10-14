@@ -6691,3 +6691,25 @@ dispatched after the Newton step (scripts touching physics inside the Newton con
 Result: 01_02_caves dropped pottery delivers contacts with sane normal speeds; stubs gone from the report.
 
 Unknown / accepted: one-frame delay vs official; `cPhysicsContactData` passed as an official-layout script object.
+
+## Rebirth: proximity sensor, attack damage, player damage and death (2026-10-14)
+Observed (REA, Rebirth binary):
+- ev_8656ebf3…: `cLuxProximitySensor` component.
+- ev_b85c4aa3…, ev_65bd6755…, ev_d1ecb44e…: `cLuxAttackDamage` types, timers, `ShapeDamage` (mesh/socket matrix,
+  shape AABB query, LOS from agent body), damage `RandRectf(min,max)`, force capped by max impulse.
+- ev_fde00ff6…: `cLuxPlayer::GiveDamage` 0xca6090 drops repeated damage ids (last 8), calls `OnDamageTaken`, then
+  `SetHealth(max(h-a, min))`.
+- ev_16a79a36…: `SetHealth` 0xca7940 calls the dead callback only on the alive->dead edge with CanDie (player+0x200).
+- ev_a8c4c54f…: `IsDead` 0xcbb000 = health <= 0 && CanDie.
+- ev_60522d2c…: `GetPlayerIsInLineOfSight(callback)` 0x8b0780 queues a delayed LOS callback.
+
+Root cause: Rebirth `Player_Custom` OnMapEnter does `SetCanDie(false); SetHealth(0)` (health is a fear shield), and we
+read health <= 0 as dead: `Player_IsDead()` was always true (no pain vocalisations), agent LOS/hunt checks saw a dead
+player, and map entry fired OnPlayerDead.
+
+Done: both components (player target only), GiveDamage, IsDead/SetHealth match official, LOS callback answered
+synchronously.
+
+Result (03_06_ghouls_nest): two AttackDamage starts -> two `OnDamageTaken`; same damage id twice -> true, false.
+
+Unknown / accepted: props/agents not hit by AttackDamage; socket shapes untested (test prop had no sockets).

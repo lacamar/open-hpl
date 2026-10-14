@@ -1272,7 +1272,7 @@ namespace
 			cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 			if (mbSensesActive == false || pPlayer == NULL || pPlayer->GetCharacterBody() == NULL)
 				return;
-			if (pPlayer->mfHealth <= 0)
+			if (pPlayer->IsDead())
 			{
 				SetUndetected();
 				mbSeen = false;
@@ -1306,7 +1306,7 @@ namespace
 			mfAutoDisableTimer = 0.3f;
 			if (PlayerDist() < mfAutoDisableMinDist)
 				return;
-			if (SomaEntityInPlayerLOS(mpEnt, true) || cSomaLuxPlayer::Get()->mfHealth <= 0)
+			if (SomaEntityInPlayerLOS(mpEnt, true) || cSomaLuxPlayer::Get()->IsDead())
 			{
 				mfAutoDisableCount = 0;
 				return;
@@ -1709,6 +1709,125 @@ namespace
 		cAgent *pAgent = Agent(p);
 		return pAgent && pAgent->mpBody ? pAgent->mpBody->GetFeetPosition() : p->GetPosition();
 	}
+
+	// cLuxProximitySensor::OnVariableUpdate 0x9c9d00
+	struct cAgentProximitySensor : cAgentComponent
+	{
+		struct cState { bool mbExists = false, mbActive = false, mbInside = false, mbLOS = false, mbDetectedCheck = false; float mfEnter = 0, mfLeave = 0; };
+		std::vector<cState> mvStates;
+		float mfTimer = 0;
+		cAgentProximitySensor(E *p) : cAgentComponent(p, eComp_ProximitySensor) {}
+
+		cState *Get(int alId)
+		{
+			if (alId >= 0 && alId < (int)mvStates.size() && mvStates[alId].mbExists)
+				return &mvStates[alId];
+			Error("BarkMachine state %d called by entity %s does not exist.\n", alId, mpEntity->msName.c_str());
+			return NULL;
+		}
+
+		void Update(float afTimeStep) override
+		{
+			mfTimer += afTimeStep;
+			iCharacterBody *pPlayer = PlayerBody();
+			if (mfTimer < 0.15f || pPlayer == NULL)
+				return;
+			mfTimer = 0;
+			cAgent *pAgent = Agent(mpEntity);
+			bool bAI = pAgent && pAgent->mpBody;
+			auto sees = [&] { return SomaLineOfSight(pAgent->Eye(), pPlayer->GetPosition(), mpEntity); };
+			for (size_t i = 0; i < mvStates.size(); ++i)
+			{
+				cState &s = mvStates[i];
+				if (s.mbExists == false || s.mbActive == false)
+					continue;
+				float fDist = cMath::Vector3Dist(AgentPos(mpEntity), pPlayer->GetPosition());
+				bool bQualifies = bAI == false || ((s.mbDetectedCheck == false || pAgent->mbDetected) && (s.mbLOS == false || sees()));
+				bool bInside = s.mbInside ? fDist <= s.mfLeave && bQualifies : fDist <= s.mfEnter && bQualifies;
+				if (bInside == s.mbInside)
+					continue;
+				s.mbInside = bInside;
+				SomaAgentSendMessage(mpEntity, bInside ? 0x15 : 0x16, 0, (int)i);
+			}
+		}
+	};
+
+	// cLuxAttackDamage::OnVariableUpdate / ShapeDamage, cLuxAttackShapeCallback::OnAABBResult 0xb17d90
+	// ponytail: player only, sphere vs body capsule; props/agents are not hit
+	struct cAgentAttackDamage : cAgentComponent
+	{
+		struct cShape { int mlSocket; cVector3f mvOffset; float mfRadius; };
+		struct cType
+		{
+			bool mbExists = false, mbActive = false;
+			float mfDuration = 0, mfFreq = 0, mfTimer = 0;
+			int mlInstance = -1;
+			float mfForce = 100, mfMaxImpulse = 10, mfMin = 1, mfMax = 1;
+			int mlDamageType = 0;
+			bool mbPlayer = true, mbLethal = true;
+			std::vector<cShape> mvShapes;
+		};
+		std::vector<cType> mvTypes;
+		int mlCur = -1;
+		static inline int glInstanceCount = 0;
+		cAgentAttackDamage(E *p) : cAgentComponent(p, eComp_AttackDamage) {}
+
+		cType *Get(int alId)
+		{
+			if (alId >= 0 && alId < (int)mvTypes.size() && mvTypes[alId].mbExists)
+				return &mvTypes[alId];
+			Error("AttackDamage type %d called by entity %s does not exist.\n", alId, mpEntity->msName.c_str());
+			return NULL;
+		}
+		cType *Cur() { return mlCur >= 0 && mlCur < (int)mvTypes.size() ? &mvTypes[mlCur] : NULL; }
+
+		void Update(float afTimeStep) override
+		{
+			for (cType &t : mvTypes)
+			{
+				if (t.mbExists == false || t.mbActive == false)
+					continue;
+				if (t.mfDuration > 0)
+				{
+					t.mfDuration -= afTimeStep;
+					if (t.mfDuration <= 0)
+						t.mbActive = false;
+				}
+				t.mfTimer -= afTimeStep;
+				if (t.mfTimer > 0)
+					continue;
+				t.mfTimer = t.mfFreq > 0.0001f ? 1 / t.mfFreq : 10000;
+				for (cShape &s : t.mvShapes)
+					ShapeDamage(t, s);
+			}
+		}
+
+		void ShapeDamage(cType &t, const cShape &s)
+		{
+			iCharacterBody *pBody = PlayerBody();
+			cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+			if (t.mbPlayer == false || pBody == NULL || pPlayer == NULL)
+				return;
+			cMatrixf mtx = mpEntity->mpMesh ? mpEntity->mpMesh->GetWorldMatrix() : mpEntity->GetMatrix();
+			if (s.mlSocket >= 0 && s.mlSocket < (int)mpEntity->mvSockets.size())
+				mpEntity->GetSocketMatrix(mpEntity->mvSockets[s.mlSocket].msName, mtx);
+			cVector3f vPos = cMath::MatrixMul(mtx, s.mvOffset);
+			cVector3f vBody = pBody->GetPosition(), vSize = pBody->GetSize();
+			cVector3f vClosest(vBody.x, cMath::Clamp(vPos.y, vBody.y - vSize.y * 0.5f, vBody.y + vSize.y * 0.5f), vBody.z);
+			if (cMath::Vector3Dist(vPos, vClosest) > s.mfRadius + vSize.x * 0.5f)
+				return;
+			cAgent *pAgent = Agent(mpEntity);
+			cVector3f vOrigin = pAgent && pAgent->mpBody ? pAgent->mpBody->GetPosition() : mpEntity->GetPosition();
+			if (SomaLineOfSight(vOrigin, vClosest, mpEntity) == false)
+				return;
+			if (pPlayer->GiveDamage(cMath::RandRectf(t.mfMin, t.mfMax), t.mlDamageType, t.mbLethal ? 0 : 0.01f, mpEntity->mID, t.mlInstance) == false)
+				return;
+			cVector3f vDir = vClosest - vOrigin;
+			vDir.y = 0;
+			if (vDir.SqrLength() > 0.0001f)
+				pBody->AddForceVelocity(cMath::Vector3Normalize(vDir) * std::min(t.mfForce / pBody->GetMass(), t.mfMaxImpulse));
+		}
+	};
 }
 
 void SomaCreateAgent(cSomaLuxEntity *apEnt)
@@ -2061,6 +2180,22 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 			return false;
 		return SomaLineOfSight(a->Eye(), b->GetPosition(), p);
 	});
+	// ponytail: official 0x8b0780 defers the callback via a LOS query; answered synchronously
+	SOMA_METHOD_NEW(e, A, "void GetPlayerIsInLineOfSight(const tString&in asCallbackFunc)", +[](E *p, S f) {
+		cAgent *a = Agent(p);
+		iCharacterBody *b = PlayerBody();
+		bool bLOS = a && b && cSomaLuxPlayer::Get()->IsDead() == false && SomaLineOfSight(a->Eye(), b->GetPosition(), p);
+		p->Call("void " + f + "(bool)", [bLOS](asIScriptContext *c) { c->SetArgByte(0, bLOS); });
+	});
+	SOMA_METHOD_NEW(e, A, "void GetPlayerIsInLineOfSight(const tString&in asCallbackFunc, float afFOV, const cVector3f &in avForward, bool abCheckFOV)", +[](E *p, S f, float fov, V fwd, bool bFov) {
+		cAgent *a = Agent(p);
+		iCharacterBody *b = PlayerBody();
+		bool bLOS = a && b && cSomaLuxPlayer::Get()->IsDead() == false;
+		if (bLOS && bFov && cMath::Vector3Angle(cMath::Vector3Normalize(b->GetPosition() - a->Eye()), cMath::Vector3Normalize(fwd)) > fov * 0.5f)
+			bLOS = false;
+		bLOS = bLOS && SomaLineOfSight(a->Eye(), b->GetPosition(), p);
+		p->Call("void " + f + "(bool)", [bLOS](asIScriptContext *c) { c->SetArgByte(0, bLOS); });
+	});
 	SOMA_METHOD(e, A, "float GetAngleToPos2D(const cVector3f&in avPos)", +[](E *p, V v) {
 		cAgent *a = Agent(p);
 		cVector3f d = v - AgentPos(p);
@@ -2199,6 +2334,97 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		return AddComponent(p, new cAgentEdgeGlow(p));
 	});
 	SOMA_FUNC(e, "cLuxForceEmitter@ cLux_CreateEntityComponent_ForceEmitter(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentForceEmitter(p)); });
+	if (e->GetTypeInfoByName("cLuxProximitySensor"))
+	{
+		typedef cAgentProximitySensor PS;
+		SOMA_FUNC(e, "cLuxProximitySensor@ cLux_CreateEntityComponent_ProximitySensor(iLuxEntity@ apEntity)", +[](E *p) { return p ? AddComponent(p, new PS(p)) : NULL; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "void AddState(int alId, float afEnterDistance, float afLeaveDistance, bool abLineOfSightCheck, bool abPlayerDetectedCheck)",
+					+[](PS *c, int id, float fEnter, float fLeave, bool bLOS, bool bDet) {
+			if (id < 0)
+				return;
+			if ((int)c->mvStates.size() <= id)
+				c->mvStates.resize(id + 1);
+			c->mvStates[id] = {true, true, false, bLOS, bDet, fEnter, fLeave};
+		});
+		SOMA_METHOD(e, "cLuxProximitySensor", "bool GetPlayerInsideState(int alId)", +[](PS *c, int id) { auto *s = c->Get(id); return s && s->mbInside; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "void SetStateActive(int alId, bool abX)", +[](PS *c, int id, bool b) { if (auto *s = c->Get(id)) s->mbActive = b; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "bool GetStateActive(int alId)", +[](PS *c, int id) { auto *s = c->Get(id); return s && s->mbActive; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "void ResetState(int alId)", +[](PS *c, int id) { if (auto *s = c->Get(id)) s->mbInside = false; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "void ResetAllStates()", +[](PS *c) { for (auto &s : c->mvStates) s.mbInside = false; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
+		SOMA_METHOD(e, "cLuxProximitySensor", "int GetType()", +[](cAgentComponent *c) { return c->mlType; });
+	}
+	if (e->GetTypeInfoByName("cLuxAttackDamage"))
+	{
+		typedef cAgentAttackDamage AD;
+		const char *T = "cLuxAttackDamage";
+		SOMA_FUNC(e, "cLuxAttackDamage@ cLux_CreateEntityComponent_AttackDamage(iLuxEntity @apEntity)", +[](E *p) { return p ? AddComponent(p, new AD(p)) : NULL; });
+		SOMA_METHOD(e, T, "void AddType(int alId, const tString&in asName)", +[](AD *c, int id, S) {
+			if (id < 0)
+				return;
+			if ((int)c->mvTypes.size() <= id)
+				c->mvTypes.resize(id + 1);
+			c->mvTypes[id] = {};
+			c->mvTypes[id].mbExists = true;
+			c->mlCur = id;
+		});
+		SOMA_METHOD(e, T, "void SetType_Damage(float afMinDamage, float afMaxDamage=-1, bool abLethal=true)", +[](AD *c, float fMin, float fMax, bool bLethal) {
+			if (auto *t = c->Cur())
+			{
+				t->mfMin = fMin;
+				t->mfMax = fMax <= 0 ? fMin : fMax;
+				t->mbLethal = bLethal;
+			}
+		});
+		SOMA_METHOD(e, T, "void SetType_HitSpeed(float afX)", +[](AD *, float) {});
+		SOMA_METHOD(e, T, "void SetType_DamageType(int alX)", +[](AD *c, int x) { if (auto *t = c->Cur()) t->mlDamageType = x; });
+		SOMA_METHOD(e, T, "void SetType_Strength(int alX)", +[](AD *, int) {});
+		// official ignores afMaxImpulse and always stores 10
+		SOMA_METHOD(e, T, "void SetType_Force(float afForce, float afMaxImpulse)", +[](AD *c, float f, float) { if (auto *t = c->Cur()) { t->mfForce = f; t->mfMaxImpulse = 10; } });
+		SOMA_METHOD(e, T, "void SetType_Affects(bool abProps, bool abAgents, bool abPlayer)", +[](AD *c, bool, bool, bool b) { if (auto *t = c->Cur()) t->mbPlayer = b; });
+		SOMA_METHOD(e, T, "void SetType_AddShapeFromCenter(const cVector3f&in avOffset, float afRadius)", +[](AD *c, V v, float r) { if (auto *t = c->Cur()) t->mvShapes.push_back({-1, v, r}); });
+		SOMA_METHOD(e, T, "void SetType_AddShapeAtSocket(const tString&in asSocket, const cVector3f&in avOffset, float afRadius)", +[](AD *c, S n, V v, float r) {
+			auto *t = c->Cur();
+			if (t == NULL)
+				return;
+			auto &sk = c->mpEntity->mvSockets;
+			if (sk.empty())
+			{
+				Error("Couldn't add shape to attack damage component for entity '%s' because mesh or sockets are missing.\n", c->mpEntity->msName.c_str());
+				return;
+			}
+			for (size_t i = 0; i < sk.size(); ++i)
+				if (sk[i].msName == n)
+				{
+					t->mvShapes.push_back({(int)i, v, r});
+					return;
+				}
+			Error("Shape attack damage component for entity '%s' failed because socket '%s' doesn't exist\n", c->mpEntity->msName.c_str(), n.c_str());
+		});
+		SOMA_METHOD(e, T, "void Start(int alId, float afDuration, float afCheckFreq=8.0f)", +[](AD *c, int id, float d, float f) {
+			if (auto *t = c->Get(id))
+			{
+				t->mbActive = true;
+				t->mfDuration = d;
+				t->mfFreq = f;
+				t->mfTimer = 0;
+				t->mlInstance = AD::glInstanceCount++;
+			}
+		});
+		SOMA_METHOD(e, T, "void Stop(int alId)", +[](AD *c, int id) { if (auto *t = c->Get(id)) t->mbActive = false; });
+		SOMA_METHOD(e, T, "void StopAll()", +[](AD *c) { for (auto &t : c->mvTypes) t.mbActive = false; });
+		SOMA_METHOD(e, T, "int GetTypeInstanceID(int alId)", +[](AD *c, int id) { auto *t = c->Get(id); return t && t->mbActive ? t->mlInstance : -1; });
+		SOMA_METHOD(e, T, "void SetDamage(int alId, float afMinDamage, float afMaxDamage, bool abLethal)", +[](AD *c, int id, float fMin, float fMax, bool bLethal) {
+			if (auto *t = c->Get(id))
+			{
+				t->mfMin = fMin;
+				t->mfMax = fMax <= 0 ? fMin : fMax;
+				t->mbLethal = bLethal;
+			}
+		});
+		SOMA_METHOD(e, T, "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
+		SOMA_METHOD(e, T, "int GetType()", +[](cAgentComponent *c) { return c->mlType; });
+	}
 	SOMA_FUNC(e, "cLuxLightSensor@ cLux_CreateEntityComponent_LightSensor(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentLightSensor(p)); });
 	SOMA_METHOD(e, "cLuxLightSensor", "void LoadFromInstanceVariables(cResourceVarsObject@ apInstanceVars)", +[](cAgentLightSensor *, void *) {});
 	SOMA_METHOD(e, "cLuxLightSensor", "void SetSensitivityLevel(float afX)", +[](cAgentLightSensor *c, float x) { c->mfSensitivity = x; });

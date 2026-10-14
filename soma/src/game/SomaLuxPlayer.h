@@ -8,6 +8,7 @@
 
 class cSomaLuxPlayer;
 class cSomaLuxEntity;
+struct cSomaID;
 
 class cSomaLuxPlayerState : public cSomaLuxScriptable
 {
@@ -124,6 +125,9 @@ public:
 	cFadeValue mFOVMul, mAspectMul, mFOV;
 
 	void SetHealth(float afX);
+	bool GiveDamage(float afAmount, int alType, float afMinHealth, const cSomaID &aSource, int alDamageID);
+	std::vector<int> mvDamageIDs;
+	bool IsDead() const { return mfHealth <= 0 && mbCanDie; }
 	float mfHealth = 1;
 	bool mbCanDie = true;
 	float mfMaxHealth = 1;
