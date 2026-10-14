@@ -1,4 +1,4 @@
-# SOMA handover (2026-09-26)
+# SOMA handover (2026-09-26, Rebirth notes 2026-10-14)
 
 Read with `CLAUDE.md` (commands, hard rules) and `SOMA_PLAN.md`. `TASKS.md` is the backlog.
 
@@ -17,6 +17,13 @@ Read with `CLAUDE.md` (commands, hard rules) and `SOMA_PLAN.md`. `TASKS.md` is t
   hand-ported intro/phone call).
 - `scripts/soma-script-check.sh`: 190/190 scripts compile; `stub_calls` in
   `soma/conformance/script_check.json` ranks the unimplemented API by how many scripts use it.
+
+## Rebirth (2026-10-14)
+
+- Runs on the SOMA module (`--game rebirth`). 01_01 passes (oversized allowlist), 01_02_caves playable to the exit,
+  01_04 through the rift fall and crack squeeze. Recent work: PORTING_NOTES.md `Rebirth:` sections.
+- Remaining stubs in 01_02 are save/achievement/gamepad no-ops; triage in PORTING_NOTES.md (voice time left section).
+- Known gaps: rift white-out, dark caves exit area, `SetLiquidAmount`, no Rebirth reference images.
 
 ## How the scripting layer is built
 

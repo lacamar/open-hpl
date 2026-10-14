@@ -6727,3 +6727,21 @@ Unknown / accepted: props/agents not hit by AttackDamage; socket shapes untested
 
 Also: `cLuxUserModule::CheckLineOfSight(callback, ...)` (FearHandler fear objects) answered synchronously like
 `cLux_CheckLineOfSight`; official queues it.
+
+## Rebirth: voice time left, caves stub triage, 01_01 oversized allowlist (2026-10-14)
+Observed (REA, Rebirth binary):
+- ev_35a024b2…: `cLuxVoiceHandler::GetTimeLeftOnLastLineOfPlayingSubject` 0xc3e390: first playing subject with that name;
+  -1 unless on the last line and its last sound with a live sound entity, else `cSoundEntity::GetTimeLeft`.
+- Only caller in data: `SketchbookUIHandler` microflash fade starts at <= 3 s left; the 0 stub faded it at once.
+
+Done: implemented; 01_02_caves `Dialogue_Worry_Grave`: 1.55 s left at 0.5 s, then -1 in end padding.
+
+Unknown: whether official keeps the sound entity through end padding.
+
+Caves stub triage (left stubbed): `TeleportToSafePosition` has no map caller (only `_Global_SetFreeFallTeleportionHeightLimit`,
+never called), so `SetupSafePositions` is moot; `GetStepDecal` only on `footstep_sand_test.mat`; save/achievement/gamepad
+calls are no-ops on NoSteam.
+
+Also: `ssao`/`dof` runtime toggles verified (DoF needs falloff > 0); `01_01_plane_wreckage` oversized AABBs are 21 scaled
+`canyon_ridge01_blocky_projected` (rotated AABB 101–151 m), allowlisted in `rebirth/conformance/allowlist.json`;
+soma-play picks focus via the State_Normal focus path for Rebirth/Bunker (no PlayerToolHandler).
