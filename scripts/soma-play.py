@@ -120,7 +120,7 @@ STATE = (
     'cLuxPlayer@ p = cLux_GetPlayer(); iCharacterBody@ b = p.GetCharacterBody(); cVector3f f = b.GetFeetPosition();'
     '__print("feet=" + f.x + " " + f.y + " " + f.z);'
     '__print("yaw=" + cMath_ToDeg(p.GetCamera().GetYaw()) + " pitch=" + cMath_ToDeg(p.GetCamera().GetPitch()));'
-    '__print("state=" + p.GetCurrentStateName() + " active=" + p.IsActive());'
+    '__print("state=" + p.GetCurrentStateName() + " active=" + p.IsActive() + " paused=" + cLux_GetGamePaused());'
     '__print("voice=" + cLux_GetVoiceHandler().AnySceneIsActive());'
 )
 

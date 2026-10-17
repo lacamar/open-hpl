@@ -277,7 +277,7 @@ def judge(name, result, expected, allow):
             continue
         nans = sum(int(v) for k, v in stats.items() if k.endswith("nan") or k.endswith("nan_count"))
         if nans:
-            fails.append(f"gbuffer{target}:nan={nans}")
+            (allowed if name.removesuffix(".hpm") in allow.get("gbuffer_nan", {}) else fails).append(f"gbuffer{target}:nan={nans}")
 
     frame = result.get("frame")
     if frame:
@@ -285,7 +285,7 @@ def judge(name, result, expected, allow):
         has_lights = not exp or not exp["tracks"] or exp["tracks"]["Light"]["xml"] > 0
         if has_lights and not LUM_MIN <= frame["lum_mean"] <= LUM_MAX:
             # Script screen fades (02_07 wakes up black for 23.5 s, 04_01 wakes up over 10 s) aren't render faults.
-            (allowed if result.get("fade_alpha", 0) > 0.5 or result.get("asleep") else fails).append(f"lum_mean:{frame['lum_mean']:.1f}")
+            (allowed if result.get("fade_alpha", 0) > 0.5 or result.get("asleep") or name.removesuffix(".hpm") in allow.get("lum", {}) else fails).append(f"lum_mean:{frame['lum_mean']:.1f}")
         if frame["magenta_frac"] > MAGENTA_MAX:
             fails.append(f"magenta:{frame['magenta_frac']:.3f}")
     return fails, allowed

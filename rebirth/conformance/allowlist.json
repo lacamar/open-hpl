@@ -1,9 +1,11 @@
 {
  "no_material": {
-  "Tasi_clean.mat": "player_intro.ent SubMesh 3 m_Tasi_Clean_Head has Material=\"\" and Tasi_clean.mat is not in the game data",
   "texturesrock_medium_pillar01_blocky_projected.mat": "rock_medium_pillar01_blocky_projected .dae image and shipped .msh both name it; not in the game data",
   "static_block.mat": "static_block.mat names editor/textures/static_block.dds; editor/ is not in resources.cfg, official LoadFromFile 0xeedba0 returns NULL on a missing texture",
-  "ghoul.mat": "ghoul.mat names ghoul_nrm.dds and ghoul_spec.dds; neither is in the game data"
+  "ghoul.mat": "ghoul.mat names ghoul_nrm.dds and ghoul_spec.dds; neither is in the game data",
+  "Sankraman.mat": "player_intro.ent SubMesh 3 m_Tasi_Clean_Head has Material=\"\" and the shipped Tasi_clean.msh names Sankraman.mat, not in the game data",
+  "Ghoul_body.mat": "ghoul.msh names it; its Ghoul_body/_nrm/_spec .dds are not in the game data, official Create2D 0xf05040 returns NULL and LoadFromFile 0xeedba0 drops the material",
+  "Ghoul_head.mat": "ghoul.msh names it; its Ghoul_head/_nrm/_spec/_illum .dds are not in the game data, official Create2D 0xf05040 returns NULL and LoadFromFile 0xeedba0 drops the material"
  },
  "oversized": {
   "02_07_alchemists_lab": "dwf_vista clouds 1240 m, vista floor 577 m, power lines 742 m, dwf_factory_* modules 310x49x70 m (dae unit cm)",
@@ -17,5 +19,11 @@
  },
  "tracks": {
   "Compound": "editor grouping: 3296 Compounds hold only Component IDs; no map script references its own Compound names"
+ },
+ "gbuffer_nan": {
+  "04_03_undercity_b": "undercity_fancy_stairs*.msh ship zero tangents on riser/underside faces (10 of 30 verts in _01); official cMeshLoaderMSH::GetMesh 0x1084fc0 keeps them and deferred_base_vtx normalize(0) is NaN; slivers show at tread edges"
+ },
+ "lum": {
+  "02_07_alchemists_lab_dream": "script Setup: Lighting_Stage_0 has DirLight off, skybox brightness 0, black fog 3-15; Stage_1 (DirLight 0.05) fades in only 2+6+10 s after start; ours reaches lum 4.4 then"
  }
 }

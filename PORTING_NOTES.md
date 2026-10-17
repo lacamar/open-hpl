@@ -6827,3 +6827,19 @@ Solid materials with a `LiquidMap` (match burn, wet hands, blood) rendered dry; 
 - Observed: ev_1e970460… `GetAABBFromBones` 0xf862e0 seeds ±10000 and skips bones with radius ≤ 0. Done.
 - Allowlisted: `static_block.mat` (texture under `editor/`, not in resources.cfg; ev_2a451fd8… `LoadFromFile`
   0xeedba0 returns NULL on a missing texture), `ghoul.mat` (ghoul_nrm.dds, ghoul_spec.dds not shipped).
+
+## Rebirth: conformance 31/31, judge allowlists for data faults (2026-10-17)
+
+- `Tasi_clean.msh` names `Sankraman.mat`; `ghoul.msh` names `Ghoul_body.mat`/`Ghoul_head.mat` whose textures
+  aren't shipped. Observed: official `Create2D` 0xf05040 returns NULL, `LoadFromFile` 0xeedba0 drops the
+  material. Allowlisted (`no_material`).
+- 04_03_undercity_b G-buffer NaN: `undercity_fancy_stairs*.msh` ship tangents of exactly (0,0,0,-1) on riser and
+  underside faces (10/30 verts in `_01`, 51/77 `turn_left`, 28/54 `turn_right`); `deferred_base_vtx`
+  normalize(0) is NaN. Observed: official `cMeshLoaderMSH::GetMesh` 0x1084fc0 does no tangent fixup.
+  Visible only as slivers at tread edges. New judge category `gbuffer_nan`.
+- 02_07_alchemists_lab_dream lum 2.4: map script `Lighting_Stage_0` has DirLight off, skybox brightness 0,
+  black fog 3-15 m; Stage_1 arrives 2+6+10 s in, after the sweep samples; ours reaches 4.4 then.
+  New judge category `lum`.
+- Kept deviation: `MaterialManager` still loads materials with a missing Illumination texture (tasi hands).
+- Freecam sweeps leave the player body at the origin; on maps with `Player_SetAutoTeleportWhenBelowAltitude` it
+  falls forever and hammers the stubbed `TeleportToSafePosition` (open-hpl-4m0).
