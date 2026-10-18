@@ -41,14 +41,15 @@ template <class S> static int FindStr(const S &s, const S &sub, bool abLast)
 	return p == S::npos ? -1 : (int)p;
 }
 
-static void SplitInto(const tString &asData, const tString &asSep, std::vector<tString> &aOut)
+template <class S> static void SplitInto(const S &asData, const S &asSep, std::vector<S> &aOut)
 {
 	// Empty separators: cString::GetStringVec's defaults
-	const tString &sSep = asSep.empty() ? tString(" \n\r\t,") : asSep;
-	tString sCur;
-	for (char c : asData)
+	static const S sDefault = {' ', '\n', '\r', '\t', ','};
+	const S &sSep = asSep.empty() ? sDefault : asSep;
+	S sCur;
+	for (auto c : asData)
 	{
-		if (sSep.find(c) != tString::npos)
+		if (sSep.find(c) != S::npos)
 		{
 			if (!sCur.empty())
 				aOut.push_back(sCur);
@@ -59,6 +60,12 @@ static void SplitInto(const tString &asData, const tString &asSep, std::vector<t
 	}
 	if (!sCur.empty())
 		aOut.push_back(sCur);
+}
+
+template <class S> static S NumericSuffix(const S &s)
+{
+	size_t p = s.find_last_not_of(S{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'});
+	return p == S::npos ? s : s.substr(p + 1);
 }
 
 void RegisterSomaScriptStringNatives(asIScriptEngine *e)
@@ -93,9 +100,19 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 			  +[](const tString &s, const tString &c) { int n = 0; for (size_t p = s.find(c); !c.empty() && p != tString::npos; p = s.find(c, p + c.size())) ++n; return n; });
 	SOMA_FUNC(e, "tWString cString_GetDecodedString(const tString&in asStr)", +[](const tString &s) { return GetDecodedString(s); });
 	SOMA_FUNC(e, "uint cString_GetHash(const tString&in asStr)", +[](const tString &s) { unsigned int h = 5381; for (char c : s) h = h * 33 + (unsigned char)c; return h; });
-	SOMA_FUNC(e, "tString cString_GetNumericSuffix(const tString&in asStr)", +[](const tString &s) { size_t p = s.find_last_not_of("0123456789"); return p == tString::npos ? s : s.substr(p + 1); });
+	SOMA_FUNC(e, "tString cString_GetNumericSuffix(const tString&in asStr)", +[](const tString &s) { return NumericSuffix(s); });
+	SOMA_FUNC(e, "tWString cString_GetNumericSuffixW(const tWString&in asStr)", +[](const tWString &s) { return NumericSuffix(s); });
 	SOMA_FUNC(e, "int cString_GetNumericSuffixInt(const tString&in aString, int alDefault=0)",
-			  +[](const tString &s, int d) { size_t p = s.find_last_not_of("0123456789"); tString n = p == tString::npos ? s : s.substr(p + 1); return n.empty() ? d : atoi(n.c_str()); });
+			  +[](const tString &s, int d) { tString n = NumericSuffix(s); return n.empty() ? d : atoi(n.c_str()); });
+	SOMA_FUNC(e, "int cString_GetNumericSuffixIntW(const tWString&in aString, int alDefault=0)",
+			  +[](const tWString &s, int d) { tWString n = NumericSuffix(s); return n.empty() ? d : (int)wcstol(n.c_str(), NULL, 10); });
+	SOMA_FUNC(e, "void cString_GetStringVecW(const tWString&in asData, array<tWString> &inout avOutStrings, const tWString&in asSepp)",
+			  +[](const tWString &asData, CScriptArray &aOut, const tWString &asSep) {
+				  std::vector<tWString> v;
+				  SplitInto(asData, asSep, v);
+				  for (tWString &s : v)
+					  aOut.InsertLast(&s);
+			  });
 	SOMA_FUNC(e, "void cString_GetStringVec(const tString&in asData, array<tString> &inout avOutStrings, const tString&in asSepp)",
 			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
 				  std::vector<tString> v;

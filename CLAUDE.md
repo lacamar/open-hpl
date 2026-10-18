@@ -22,10 +22,11 @@ SOMA work follows `SOMA_PLAN.md`.
 ## Build / test
 
 ```
-make -C amnesia/src/build -j12 Soma        # targets: Amnesia Amfp Soma Rebirth Bunker
+make -C amnesia/src/build -j12 Soma        # targets: Amnesia Amfp Soma (Rebirth and Bunker run on Soma)
 make -C amnesia/src/build -j12 PhysicsNewtonTests CStringTests PlatformXdgPathTests HpslTranspilerTests  # not in all
 ctest --test-dir amnesia/src/build
 eval "$(scripts/soma-init.sh)"             # build + scratch dir + deploy, exports XDG_*
+export OHPL_GAME=rebirth; eval "$(scripts/soma-init.sh rebirth)"  # tools below, per game: soma rebirth bunker amnesia amfp
 scripts/soma-sweep.py --map 00_01_apartment  # one map, ~10 s
 scripts/soma-sweep.py                      # all 29 maps -> soma/conformance/results.json
 scripts/soma-sweep.py --only-failed --compare old.json

@@ -166,6 +166,9 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 			ev.mlMaxBehavior = behavior != mapBehavior.end() ? behavior->second : eMaxBehavior_StealOldest;
 			ev.mfFadeIn = Num(pEvent, "fadein_time") / 1000.0f;
 			ev.mfFadeOut = Num(pEvent, "fadeout_time") / 1000.0f;
+			tString sCat = cString::ToLowerCase(Text(pEvent, "category"));
+			sCat = sCat.substr(0, sCat.find('/'));
+			ev.mlCategoryType = sCat == "world" ? 1 : sCat == "worldclean" ? 2 : sCat == "gui" ? 4 : sCat == "guiworld" ? 8 : -1;
 
 			for (TiXmlElement *pParam : Children(pEvent, "parameter"))
 			{
@@ -176,6 +179,8 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 				p.mfVelocity = Num(pParam, "velocity");
 				p.mfSeek = Num(pParam, "seekspeed");
 				p.mlLoopMode = (int)Num(pParam, "loopmode");
+				if (TiXmlElement *pSustain = pParam->FirstChildElement("sustainpoint"); pSustain && Num(pSustain, "enabled"))
+					p.mfSustain = Num(pSustain, "value");
 				p.mlBuiltin = p.msName == "(distance)" ? 1 : p.msName == "(listener angle)" ? 2 : p.msName == "(event angle)" ? 3 : 0;
 				ev.mvParams.push_back(p);
 			}
@@ -445,7 +450,7 @@ bool cSomaSoundEvents::IsLive(cSomaSoundInstance *apInstance, int alId)
 }
 
 cSomaSoundInstance::cSomaSoundInstance(cEvent *apEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType)
-	: mpEvent(apEvent), msName(asName), mpEntity(apEntity), mType(aType)
+	: mpEvent(apEvent), msName(asName), mpEntity(apEntity), mType(apEvent->mlCategoryType >= 0 ? (eSoundEntryType)apEvent->mlCategoryType : aType)
 {
 	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
 	mlId = pEvents->mlNextId++;
@@ -753,6 +758,8 @@ bool cSomaSoundInstance::StartVoice(int alLayer, int alSound, bool abLoop)
 
 void cSomaSoundInstance::Update(float afTimeStep)
 {
+	if (mbPaused)
+		return;
 	if (mbStarted == false)
 	{
 		if (mpEntity == NULL || mbStopped)
@@ -761,8 +768,6 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		if (mbStarted == false)
 			return;
 	}
-	if (mbPaused || (gpSomaBase->mbScriptGamePaused && (mType & 11)))
-		return;
 	if (mbStopped && mvVoices.empty())
 		return;
 	mfTime += afTimeStep;
@@ -802,7 +807,10 @@ void cSomaSoundInstance::Update(float afTimeStep)
 		else if (p.mfVelocity != 0 && mbStopped == false)
 		{
 			float fRange = p.mfMax - p.mfMin;
-			float fX = mvParamValue[i] + p.mfVelocity * afTimeStep;
+			float fX = mvParamValue[i] + p.mfVelocity * fRange * afTimeStep;
+			float fSustain = p.mfMin + p.mfSustain * fRange;
+			if (p.mfSustain >= 0 && mvParamValue[i] <= fSustain && fX > fSustain)
+				fX = fSustain;
 			if (fX > p.mfMax)
 			{
 				if (p.mlLoopMode == 0 && fRange > 0)

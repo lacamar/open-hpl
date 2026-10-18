@@ -15,6 +15,8 @@
 
 #include "resources/MaterialManager.h"
 #include "resources/MeshManager.h"
+#include "resources/Resources.h"
+#include "system/Platform.h"
 
 #include <cstdio>
 #include <cstring>
@@ -357,11 +359,13 @@ namespace hpl {
 	{
 		tString sFile = cString::To8Char(asFile);
 		cAnimation *pAnimation = LoadHpl3Anm(cString::SetFileExt(sFile, "anm"), asFile);
+		// .msh skeletons already carry the unit scale
+		if(pAnimation == NULL || (cResources::GetForceCacheLoadingAndSkipSaving() && cPlatform::FileExists(cString::SetFileExtW(asFile, _W("msh"))))) return pAnimation;
 		Assimp::Importer importer;
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 		const aiScene *pScene = importer.ReadFile(sFile, 0);
 		float fUnitScale = UnitScale(pScene);
-		if(pAnimation == NULL || pScene == NULL || pScene->mRootNode == NULL || fUnitScale == 1) return pAnimation;
+		if(pScene == NULL || pScene->mRootNode == NULL || fUnitScale == 1) return pAnimation;
 
 		// .anm keys of top-level bones are in metres, deeper ones in file units
 		std::set<tString> setTop;

@@ -11,7 +11,6 @@ class cSomaSaveHandler
 {
 public:
 	static tWString GetSaveDir();
-	static tWString GetLatestSave();
 
 	static void OnMapEnter(const tString &asMapFile, const tString &asStartPos);
 	static bool ApplyPendingState();

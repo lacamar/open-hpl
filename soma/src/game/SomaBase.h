@@ -56,6 +56,7 @@ public:
 	cSomaConfig* GetConfig(){ return &mConfig; }
 
 	bool mbScriptGamePaused = false;
+	bool mbResetOnMapLeave = false;
 	tString GetInitConfigString(const tString &asLevel, const tString &asName);
 	void LoadScriptMainMenu();
 	bool ScriptsHeld() { return mpSplash && mpSplash->ScriptsMayRun() == false; }

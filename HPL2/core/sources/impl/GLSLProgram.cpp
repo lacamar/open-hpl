@@ -22,6 +22,7 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "system/Platform.h"
 
 #include "impl/SDLTexture.h"
 #include "impl/GLSLShader.h"
@@ -94,7 +95,9 @@ namespace hpl{
 
 		///////////////////////////////////////
 		//Link 
+		unsigned long lLinkStart = cPlatform::GetApplicationTime();
 		glLinkProgram(mlHandle);
+		cEngineDiagnostics::AddLinkTime((double)(cPlatform::GetApplicationTime() - lLinkStart));
 
 		///////////////////////////////////////
 		//Check for errors

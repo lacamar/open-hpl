@@ -21,6 +21,7 @@
 
 #include "system/String.h"
 #include "system/Platform.h"
+#include "system/EngineDiagnostics.h"
 
 #include "resources/LowLevelResources.h"
 #include "resources/FileSearcher.h"
@@ -33,6 +34,8 @@
 namespace hpl {
 
 	int iResourceManager::mlTabCount=0;
+	static unsigned long glOuterStart=0;
+	static tString gsOuterName;
 	void (*iResourceManager::mpLoadTickCallback)() = NULL;
 
 	//////////////////////////////////////////////////////////////////////////
@@ -177,6 +180,7 @@ namespace hpl {
 		
 		//Log("Begin resource: %s\n",asFile.c_str());
 
+		if(mlTabCount==0) { glOuterStart = mlTimeStart; gsOuterName = asFile; }
 		mlTabCount++;
 	}
 	
@@ -185,6 +189,7 @@ namespace hpl {
 	void iResourceManager::EndLoad()
 	{
 		mlTabCount--;
+		if(mlTabCount==0) cEngineDiagnostics::AddLoadTime(gsOuterName, (double)(cPlatform::GetApplicationTime() - glOuterStart));
 		if(mlTabCount==0 && mpLoadTickCallback) mpLoadTickCallback();
 	}
 

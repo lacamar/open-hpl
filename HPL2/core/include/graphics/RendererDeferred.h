@@ -319,7 +319,7 @@ namespace hpl {
 		iFrameBuffer *mpAccumBuffer;
 		iFrameBuffer *mpReflectionBuffer;
 		
-		iTexture *mpGBufferTexture[2][4];	//[2] = reflection or not
+		iTexture *mpGBufferTexture[2][5];	//[2] = reflection or not
 		iTexture *mpAccumBufferTexture;
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;

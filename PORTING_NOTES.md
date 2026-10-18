@@ -6843,3 +6843,25 @@ Solid materials with a `LiquidMap` (match burn, wet hands, blood) rendered dry; 
 - Kept deviation: `MaterialManager` still loads materials with a missing Illumination texture (tasi hands).
 - Freecam sweeps leave the player body at the origin; on maps with `Player_SetAutoTeleportWhenBelowAltitude` it
   falls forever and hammers the stubbed `TeleportToSafePosition` (open-hpl-4m0).
+
+## Rebirth/Bunker: real launchers, black squares, timestamps, pause (2026-10-18)
+
+- Installed 1.3.54 launchers ran the scaffold `OpenHplRebirth`/`OpenHplBunker` binaries: no splash, no menu,
+  freecam movement. Scaffolds dropped; launchers run `Soma.bin.aarch64` with `OHPL_GAME`.
+- Black squares (01_01 crawl, Bunker): zero tangents on uv-degenerate triangles in shipped HPL3 `.msh`;
+  `normalize(0)` is NaN here, DoF and the image trail smear and keep it. The official loader does no fixup, but shows
+  no squares. Kept deviation: `MeshLoaderMSH` swaps degenerate tangents for one orthogonal to the normal.
+  Cleared the 04_03 `gbuffer_nan` allowlist entry. The residual G-buffer 1 alpha NaN is an unwritten channel
+  (`deferred_gbuffer_solid_frag` writes only `out_vNormal.xyz`); the sweep ignores it for Rebirth/Bunker.
+- PLAYTIME ran ~17x fast: `cLuxMap::GetTimeStamp` 0xaefce0 is an update counter (+0x280, bumped in `Update`
+  0xaecebf), `GetElapsedTime` 0xaefcf0 divides by `cEngine::GetUpdatesPerSec` 0xd02840. Ours returned ms.
+  `cLogicTimer::GetUpdatesPerSec` truncated to 59; now rounds.
+- Pause: `cLuxMap::PauseSoundsAndMusic` 0xb19280 pauses every entry; `ResumeSoundsAndMusic` 0xb147a0 resumes all.
+  Verified on 01_01: menu up -> all entries paused, resume -> none.
+- Spot shadows were off for Rebirth/Bunker: `avShadowParams`/`avShadowMapSize` stayed 0, so `ShadowOcclusion`'s
+  transition scale was 0. Now set as in `SetupLightTypeData` 0xd7e4d0: near, far (radius),
+  `(w+128)*80/1152*sqrt(far-near)/near`. HPL3 shadow maps have no compare mode (`CreateShadowMapData` 0xd51790
+  calls only CreateFromRawData, SetFilter(0), SetWrapSTR(2)); the PCF gathers raw depth.
+  `iRenderer::SetShadowMapCompare(false)` for those games.
+- Lum allowlists: Rebirth 02_05 `spot_cistern_4` lit the start through the ceiling before shadows worked;
+  Bunker main_menu lamp waits for the pre-menu logos/gamma, soldier_quarters starts with the generator off.

@@ -65,7 +65,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
 | `set_entity name= visible=` | show/hide mesh entities by glob (restart to undo: hidden-by-design ones get shown) |
-| `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
+| `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `image_trail`, `dof_pass`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
 | `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10-12 shadow maps, 13 sun cascade atlas, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
 | `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel (ints) or screen point (0-1 with a dot) |
@@ -97,5 +97,8 @@ Screenshots carry the framebuffer's alpha; when converting an older `.bmp`, use
 Localising a render bug: G-buffer targets 0-2 -> accumulation (4) -> `frame_stats`; the first
 stage whose numbers go wrong is where the bug is. Prefer these over screenshots. Screenshots only for comparing against reference images.
 Toggling `occlusion_culling` off and on leaves objects culled; restart before measuring.
+NaN pixels: `read_gbuffer_stats` counts them, `dump_target ... channel=C` + numpy finds them, `pick x= y=` polled over
+frames shows whether they are transient. The image trail keeps any NaN pixel forever: A/B with `image_trail=0`.
+Rebirth/Bunker never write G-buffer 1 alpha; NaN there is noise.
 GL call traces: `apitrace trace -o f.trace ./Soma.bin.aarch64` (no replay: context calls aren't captured).
 Hangs: `gdb -p <pid> -batch -ex bt`. Crashes: `coredumpctl debug <pid>`.

@@ -616,14 +616,15 @@ void cSomaImGui::DrawText(const tWString &asText, const void *apFont, const cCol
 	DrawFont(asText, apFont, cVector3f(fX, fY, avPos.z + 0.2f), alAlign, cVector2f(afSizeMul), aColor);
 }
 
-void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize)
+void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize, bool abAlign)
 {
 	if (avSize.x < 0)
 		avSize.x = avDefaultSize.x;
 	if (avSize.y < 0)
 		avSize.y = avDefaultSize.y;
 	avPos += mvLayouts.empty() ? GroupPos() : mvLayouts.back().mvCursor;
-	avPos = Align(avPos, avSize, mlAlign);
+	if (abAlign)
+		avPos = Align(avPos, avSize, mlAlign);
 }
 
 // The position names the given corner/centre of the widget
@@ -920,7 +921,8 @@ void cSomaImGui::DoLabel(const tWString &asText, const void *apData, cVector3f a
 		vDefault.y = FontSize(pFont, afSizeMul).y;
 	Layout(avPos, avSize, vDefault);
 	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
-	DrawText(asText, pFont, F<cColor>(apData, kWColorText), F<int>(apData, kWFontAlign), avPos, avSize, afSizeMul);
+	// cImGui::DoLabel tints the text with mColorBase; mColorText is unused
+	DrawText(asText, pFont, F<cColor>(apData, kWColorBase), F<int>(apData, kWFontAlign), avPos, avSize, afSizeMul);
 	mPrev.mbMouseOver = MouseOver(avPos, avSize);
 	Advance(avPos, avSize);
 }
@@ -940,7 +942,8 @@ void cSomaImGui::DoImage(const void *apGfx, cVector3f avPos, cVector2f avSize)
 float cSomaImGui::DoTextFrame(const tWString &asText, const cVector2f &avEdge, float afRowSpace, float afStartRow, const void *apData, cVector3f avPos,
 							  cVector2f avSize)
 {
-	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
+	// official DoTextFrame skips SetupWidgetRect, so ignores SetAlignment
+	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize), false);
 	DrawWidgetBase(apData, avPos, avSize, false, false, -1, -1);
 	const void *pFont = (char *)apData + kWFont;
 	iFontData *pFontData = GetFont(pFont);

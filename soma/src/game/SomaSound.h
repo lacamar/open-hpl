@@ -82,6 +82,7 @@ public:
 		float mfMin = 0, mfMax = 1;
 		float mfVelocity = 0;
 		float mfSeek = 0;
+		float mfSustain = -1;
 		int mlLoopMode = 0;
 		int mlBuiltin = 0;
 	};
@@ -106,6 +107,7 @@ public:
 		float mfFadeIn = 0;
 		float mfFadeOut = 0;
 		bool mbStream = false;
+		int mlCategoryType = -1;
 		std::vector<cParam> mvParams;
 		std::vector<cLayer> mvLayers;
 		std::vector<cSoundDef> mvDefs;

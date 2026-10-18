@@ -1,6 +1,8 @@
 #include "system/EngineDiagnostics.h"
 
 #include "system/String.h"
+#include "system/LowLevelSystem.h"
+#include "system/Platform.h"
 
 #include <set>
 
@@ -41,6 +43,9 @@ namespace hpl {
 	unsigned int cEngineDiagnostics::mlRenderedFrames = 0;
 	double cEngineDiagnostics::mfTimingMs[3] = {0, 0, 0};
 	int cEngineDiagnostics::mlTimingSteps = 0, cEngineDiagnostics::mlTimingFrames = 0;
+	int cEngineDiagnostics::mlLoads = 0, cEngineDiagnostics::mlLinks = 0;
+	double cEngineDiagnostics::mfLoadMs = 0, cEngineDiagnostics::mfSlowLoadMs = 0, cEngineDiagnostics::mfLinkMs = 0;
+	tString cEngineDiagnostics::msSlowLoad;
 	bool cEngineDiagnostics::mbGpuTiming = false;
 
 	struct cGpuPassQuery { const char *mpName; GLuint mlQuery; };
@@ -167,6 +172,17 @@ namespace hpl {
 	{
 		mfTimingMs[0] += afLogicMs; mfTimingMs[1] += afRenderMs; mfTimingMs[2] += afSwapMs;
 		mlTimingSteps += alSteps; ++mlTimingFrames;
+		double fTotal = afLogicMs + afRenderMs + afSwapMs;
+		if(fTotal > 50)
+			Log("Hitch %d ms: logic %.1f (%d steps), render %.1f, swap %.1f; %d loads %.1f ms (slowest '%s' %.1f), %d links %.1f ms\n",
+				(int)fTotal, afLogicMs, alSteps, afRenderMs, afSwapMs, mlLoads, mfLoadMs, msSlowLoad.c_str(), mfSlowLoadMs, mlLinks, mfLinkMs);
+		mlLoads = mlLinks = 0; mfLoadMs = mfSlowLoadMs = mfLinkMs = 0; msSlowLoad.clear();
+	}
+
+	void cEngineDiagnostics::AddLoadTime(const tString &asName, double afMs)
+	{
+		++mlLoads; mfLoadMs += afMs;
+		if(afMs > mfSlowLoadMs) { mfSlowLoadMs = afMs; msSlowLoad = asName; }
 	}
 
 	tString cEngineDiagnostics::PollGLErrorsJson(bool abReset)

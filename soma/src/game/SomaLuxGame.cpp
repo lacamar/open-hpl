@@ -343,15 +343,13 @@ void cSomaLuxGame::Update(float afTimeStep, bool abPaused)
 		cSomaLuxInputHandler::Get()->LatchActions();
 	if (cSomaLuxInputHandler::Get())
 		cSomaLuxInputHandler::Get()->UpdateInput(afTimeStep, mbGameInput);
-	if (abPaused)
-	{
-		UpdateGui(afTimeStep);
-		return;
-	}
-	ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); }, true);
+	if (abPaused == false)
+		ForEach([afTimeStep](cSomaLuxScriptable *p) { p->OnUpdate(afTimeStep); }, true);
+	// cLuxVoiceSceneInstance::Update gates itself: PlayWhilePaused scenes run while paused
 	if (cSomaLuxVoiceHandler::Get())
 		cSomaLuxVoiceHandler::Get()->UpdateVoices(afTimeStep);
-	cSomaLuxDialogHandler::Get()->Update(afTimeStep);
+	if (abPaused == false)
+		cSomaLuxDialogHandler::Get()->Update(afTimeStep);
 	UpdateGui(afTimeStep);
 }
 

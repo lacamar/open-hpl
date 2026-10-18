@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive the official Windows SOMA (Soma_NoSteam.exe) under wine-arm64ec as a reference.
+"""Drive the official Windows SOMA/Rebirth/Bunker (OHPL_GAME) under wine-arm64ec as a reference.
 
 The game runs in the `soma-test-claude` prefix inside the headless `gt` sway session, inside bwrap
 with the install dir read-only, loaded as a StandAlone mod (soma/ref/mod) that adds an agent
@@ -18,21 +18,32 @@ import argparse, glob, json, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SOMA = Path(os.environ.get("OHPL_SOMA_WIN_DIR", Path.home() / ".steam/steam/steamapps/common/SOMA"))
-PREFIX = Path(os.environ.get("OHPL_REF_PREFIX", Path.home() / ".local/share/wine-prefixes/soma-test-claude"))
-SLUG = "soma"
+# OHPL_GAME: install dir, exe, gt slug, My Games dir, window title prefix, default map and start
+REF_GAMES = {
+    "soma": ("SOMA", "Soma_NoSteam.exe", "soma", "Soma", "SOMA", "00_01_apartment.hpm", "PlayerStartArea_1"),
+    "rebirth": ("Amnesia Rebirth", "AmnesiaRebirth_NoSteam.exe", "amnesia-rebirth", "Amnesia Rebirth", "Amnesia",
+                "01_01_plane_wreckage.hpm", "PlayerStartArea_1"),
+    "bunker": ("Amnesia The Bunker", "AmnesiaTheBunker_NoSteam.exe", "amnesia-the-bunker", "Amnesia The Bunker", "Amnesia",
+               "trenches.hpm", "Start_Begin"),
+}
+GAME_NAME = os.environ.get("OHPL_GAME") or "soma"
+_DIR, EXE, SLUG, DOCS, TITLE, DEFAULT_MAP, DEFAULT_POS = REF_GAMES[GAME_NAME]
+SOMA = Path(os.environ.get("OHPL_SOMA_WIN_DIR", Path.home() / ".steam/steam/steamapps/common" / _DIR))
+PREFIX = Path(os.environ.get("OHPL_REF_PREFIX", Path.home() / f".local/share/wine-prefixes/{SLUG}-test-claude"))
 OHPL = PREFIX / "drive_c/ohpl"
 MOD, IO = OHPL / "mod", OHPL / "io"
 SAVE_FOLDER = "OhplRef"
+# Bunker crashes on any -mod (null mod table, 0x14008ef04); -cfg with absolute paths works
+CFG_LAUNCH = GAME_NAME == "bunker"
 SLOTS = 500
-GT = shutil.which("gt") or str(Path.home() / ".local/src/wine-arm64ec-rpm/tools/gametest/gt")
+GT = shutil.which("gt") or str(Path.home() / ".local/src/wine-arm64ec-tools/gametest/gt")
 
 
 def docs_dir():
-    for d in sorted(glob.glob(str(PREFIX / "drive_c/users/*/Documents/My Games/Soma"))):
+    for d in sorted(glob.glob(str(PREFIX / f"drive_c/users/*/Documents/My Games/{DOCS}"))):
         if "/Public/" not in d:
-            return Path(d) / "Mods" / SAVE_FOLDER
-    return PREFIX / "drive_c/users/steamuser/Documents/My Games/Soma/Mods" / SAVE_FOLDER
+            return Path(d) / ("" if CFG_LAUNCH else "Mods") / SAVE_FOLDER
+    return PREFIX / f"drive_c/users/steamuser/Documents/My Games/{DOCS}" / ("" if CFG_LAUNCH else "Mods") / SAVE_FOLDER
 
 
 def log_path():
@@ -54,7 +65,7 @@ def game_pid():
             env = Path(f"/proc/{pid}/environ").read_bytes()
         except OSError:
             continue
-        if cmd.replace("\\", "/").endswith("Soma_NoSteam.exe") and f"WINEPREFIX={PREFIX}".encode() in env:
+        if cmd.replace("\\", "/").endswith(EXE) and f"WINEPREFIX={PREFIX}".encode() in env:
             return int(pid)
     return None
 
@@ -65,6 +76,9 @@ def write_mod(map_file, pos, size, boot=False):
     (MOD / "config").mkdir(parents=True)
     IO.mkdir(parents=True, exist_ok=True)
     shutil.copytree(ROOT / "soma/ref/mod/script", MOD / "script")
+    if GAME_NAME != "soma":
+        agent = MOD / "script/ohpl/OhplAgent.hps"
+        agent.write_text(agent.read_text().replace("cEngine_SetWaitIfAppOutOfFocus(false);", ""))
     (MOD / "script/ohpl/exec").mkdir()
     for n in range(1, SLOTS + 1):
         (MOD / f"script/ohpl/exec/ohpl_exec_{n}.hps").write_text("")
@@ -78,13 +92,19 @@ def write_mod(map_file, pos, size, boot=False):
     if over:
         shutil.copytree(over, MOD, dirs_exist_ok=True)
     dirs = ["config", "script"] + ([d.name for d in over.iterdir() if d.is_dir()] if over else [])
-    (MOD / "resources.cfg").write_text("<Resources>\n" + "".join(
-        f'\t<Directory Path="/{d}" AddSubDirs="true"/>\n' for d in dirs) + "</Resources>\n")
+    base = (SOMA / "resources.cfg").read_text().replace("</Resources>", "") if CFG_LAUNCH else "<Resources>\n"
+    root = "C:/ohpl/mod/" if CFG_LAUNCH else "/"
+    (MOD / "resources.cfg").write_text(base + "".join(
+        f'\t<Directory Path="{root}{d}" AddSubDirs="true"/>\n' for d in dirs) + "</Resources>\n")
     init = (SOMA / "config/main_init.cfg").read_text()
     init = init.replace('"config/Modules.cfg"', '"config/ohpl_modules.cfg"')
+    if CFG_LAUNCH:
+        init = re.sub(r'Resources\s*=\s*"resources.cfg"', 'Resources = "C:/ohpl/mod/resources.cfg"', init)
+        init = init.replace('"config/ohpl_modules.cfg"', '"C:/ohpl/mod/config/ohpl_modules.cfg"')
     init = re.sub(r'MainSaveFolder\s*=\s*"[^"]*"', f'MainSaveFolder = "{SAVE_FOLDER}"', init)
     if not boot:
-        init = re.sub(r'<StartMap[^>]*/>', f'<StartMap File="{map_file}" Folder="maps/" Pos="{pos}"/>', init, flags=re.S)
+        label = "Main:" if re.search(r'<StartMap[^>]*File\s*=\s*"Main:', init) else ""
+        init = re.sub(r'<StartMap[^>]*/>', f'<StartMap File="{label}{map_file}" Folder="maps/" Pos="{pos}"/>', init, flags=re.S)
     (MOD / "config/ohpl_init.cfg").write_text(init)
     mods = (SOMA / "config/Modules.cfg").read_text().replace(
         "</Modules>", '\t<Module Name="OhplAgent" ScriptFile="ohpl/OhplAgent.hps" ScriptClass="cScrOhplAgent" '
@@ -94,6 +114,7 @@ def write_mod(map_file, pos, size, boot=False):
     d.mkdir(parents=True, exist_ok=True)
     w, h = size.split("x")
     settings = (SOMA / "config/default_user_settings.cfg").read_text().replace("<Game />", '<Game MenuPhase="1" />')
+    settings = re.sub(r'<Screen\b[^>]*/>', '', settings)
     settings += (f'\n<Screen Width="{w}" Height="{h}" FullScreen="false" Vsync="false" />\n'
                  '<Main FirstGameStart="false" SleepWhenOutOfFocus="false"' +
                  ('' if boot else ' ShowMenu="false" ShowPreMenu="false"') + ' />\n')
@@ -269,7 +290,7 @@ def stop():
             time.sleep(0.2)
 
 
-def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x720", timeout=300, hud=False, boot=False,
+def start(map_file=DEFAULT_MAP, pos=DEFAULT_POS, size="1280x720", timeout=300, hud=False, boot=False,
           record=None):
     if not map_file.endswith(".hpm"):
         map_file += ".hpm"
@@ -284,16 +305,16 @@ def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x72
     if log_path().exists():
         log_path().unlink()
     args = ["run", SLUG, "--wine", str(ROOT / "soma/ref/wine-ro.sh")] + ([] if hud else ["--no-hud"])
-    gt(*args, "--", "-mod", r"C:\ohpl\mod\entry.hpc")
+    gt(*args, "--", *(["-cfg", "C:/ohpl/mod/config/ohpl_init.cfg"] if CFG_LAUNCH else ["-mod", r"C:\ohpl\mod\entry.hpc"]))
     t0 = time.time()
-    while not any((w.get("name") or "").startswith("SOMA") for w in walk_windows(swaymsg("-t", "get_tree"))):
+    while not any((w.get("name") or "").startswith(TITLE) for w in walk_windows(swaymsg("-t", "get_tree"))):
         if time.time() - t0 > 60:
-            raise SystemExit("no SOMA window after 60 s: " + gt("log", SLUG, "-n", "5", check=False))
+            raise SystemExit(f"no {TITLE} window after 60 s: " + gt("log", SLUG, "-n", "5", check=False))
         time.sleep(0.5)
-    swaymsg('[title="^SOMA"]', "move", "container", "to", "output", out)
-    swaymsg('[title="^SOMA"]', "fullscreen", "enable")
+    swaymsg(f'[title="^{TITLE}"]', "move", "container", "to", "output", out)
+    swaymsg(f'[title="^{TITLE}"]', "fullscreen", "enable")
     # The engine idles until its window has had focus once; give focus back after the map loads.
-    swaymsg('[title="^SOMA"]', "focus")
+    swaymsg(f'[title="^{TITLE}"]', "focus")
     if record:
         frames = record_frames(*record, t0=t0)
         if prev:
@@ -306,6 +327,14 @@ def start(map_file="00_01_apartment.hpm", pos="PlayerStartArea_1", size="1280x72
     r = Ref()
     try:
         line = r.wait_for(r"^OHPL\|map\|", timeout)
+        if CFG_LAUNCH and not boot and map_file != "main_menu.hpm":
+            # ShowMenu="false" is ignored; start the map the way MenuHandler.StartNewGame does
+            n = r.size()
+            try:
+                r.exec(f'cLux_StartNewGame("{map_file}", "{pos}");')
+            except ExecError:
+                pass
+            line = r.wait_for(rf"^OHPL\|map\|{map_file[:-4]}\|", timeout, n)
     finally:
         if prev:
             swaymsg("focus", "output", prev)
@@ -317,8 +346,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("start")
-    s.add_argument("--map", default="00_01_apartment.hpm")
-    s.add_argument("--pos", default="PlayerStartArea_1")
+    s.add_argument("--map", default=DEFAULT_MAP)
+    s.add_argument("--pos", default=DEFAULT_POS)
     s.add_argument("--size", default="1280x720")
     s.add_argument("--hud", action="store_true")
     s.add_argument("--timeout", type=float, default=300)
@@ -347,7 +376,7 @@ def main():
     elif a.cmd == "stop":
         stop()
     elif a.cmd == "setup":
-        write_mod("00_01_apartment.hpm", "PlayerStartArea_1", "1280x720")
+        write_mod(DEFAULT_MAP, DEFAULT_POS, "1280x720")
     elif a.cmd == "log":
         ls = log_path().read_text(errors="replace").splitlines()
         ls = [l for l in ls if not a.regex or re.search(a.regex, l)]

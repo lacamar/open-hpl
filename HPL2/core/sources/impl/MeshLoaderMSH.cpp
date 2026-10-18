@@ -300,6 +300,25 @@ namespace hpl {
 			}
 
 			
+			// shipped HPL3 meshes have zero tangents on uv-degenerate triangles; normalize() in the vertex shader makes them NaN
+			if(pVtxBuff->GetElementFormat(eVertexBufferElement_Texture1Tangent) == eVertexBufferElementFormat_Float &&
+			   pVtxBuff->GetElementFormat(eVertexBufferElement_Normal) == eVertexBufferElementFormat_Float)
+			{
+				float *pTan = pVtxBuff->GetFloatArray(eVertexBufferElement_Texture1Tangent);
+				float *pNrm = pVtxBuff->GetFloatArray(eVertexBufferElement_Normal);
+				int lTS = pVtxBuff->GetElementNum(eVertexBufferElement_Texture1Tangent), lNS = pVtxBuff->GetElementNum(eVertexBufferElement_Normal);
+				for(int i=0; i<pVtxBuff->GetVertexNum(); ++i)
+				{
+					cVector3f vTan(pTan[i*lTS], pTan[i*lTS+1], pTan[i*lTS+2]), vNrm(pNrm[i*lNS], pNrm[i*lNS+1], pNrm[i*lNS+2]);
+					if(!(cMath::Vector3Cross(vTan, vNrm).SqrLength() > 1e-12f))
+					{
+						vTan = cMath::Vector3Normalize(cMath::Vector3Cross(vNrm, std::fabs(vNrm.x) < 0.9f ? cVector3f(1,0,0) : cVector3f(0,1,0)));
+						pTan[i*lTS] = vTan.x; pTan[i*lTS+1] = vTan.y; pTan[i*lTS+2] = vTan.z;
+					}
+					if(lTS > 3 && !(pTan[i*lTS+3] != 0)) pTan[i*lTS+3] = 1;
+				}
+			}
+
 			///////////////////
 			//Compile vertex buffer and set to submesh
 			pVtxBuff->Compile(0);

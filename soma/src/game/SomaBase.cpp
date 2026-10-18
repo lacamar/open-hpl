@@ -1140,9 +1140,9 @@ static void cSomaBase_HeadlessCmd_SetRenderSetting(void *apUserData, const cHead
 	else if(sName == "shadow_depth_clamp") iRenderer::SetShadowDepthClamp(bValue);
 	else if(sName == "shadow_bias") pSettings->mfShadowMapBias = aReq.GetFloat("value", 4);
 	else if(sName == "shadow_slope_bias") pSettings->mfShadowMapSlopeScaleBias = aReq.GetFloat("value", 2);
-	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent" || sName == "image_trail")
+	else if(sName == "decals" || sName == "illumination" || sName == "skybox" || sName == "translucent" || sName == "image_trail" || sName == "dof_pass")
 	{
-		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : sName == "translucent" ? 8 : 16;
+		int lBit = sName == "decals" ? 1 : sName == "illumination" ? 2 : sName == "skybox" ? 4 : sName == "translucent" ? 8 : sName == "image_trail" ? 16 : 32;
 		cRendererDeferred::mlDebugSkipPasses = bValue ? (cRendererDeferred::mlDebugSkipPasses & ~lBit) : (cRendererDeferred::mlDebugSkipPasses | lBit);
 	}
 	else if(sName == "fog" && pBase->GetCurrentWorld()) pBase->GetCurrentWorld()->SetFogActive(bValue);
@@ -1233,8 +1233,17 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_64Bit);
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
+	// HPL3 gathers raw shadow depth (official iRenderer::CreateShadowMapData 0xd51790 sets no compare mode)
+	if(SomaGameId() == "rebirth" || SomaGameId() == "bunker")
+		iRenderer::SetShadowMapCompare(false);
 	if(SomaGameId() == "rebirth")
 		cRendererDeferred::SetLinearDepthTextureIdx(3);
+	else if(SomaGameId() == "bunker")
+	{
+		// specular split into RG and B+power targets
+		cRendererDeferred::SetNumOfGBufferTextures(5);
+		cRendererDeferred::SetLinearDepthTextureIdx(4);
+	}
 	else
 		cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
@@ -1516,6 +1525,9 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		hplDelete(mpLuxMap);
 		mpLuxMap = NULL;
 	}
+	if (mbResetOnMapLeave && mpLuxGame)
+		mpLuxGame->ResetScriptables();
+	mbResetOnMapLeave = false;
 
 	if (mpTestWorld) mpEngine->GetScene()->DestroyWorld(mpTestWorld);
 	mpTestWorld = pNewWorld;

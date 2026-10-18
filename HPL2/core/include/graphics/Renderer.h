@@ -320,6 +320,7 @@ namespace hpl {
 		static void SetShadowDepthClamp(bool abX) { mbShadowDepthClamp = abX;}
 		static void SetShadowCull(bool abX) { mbShadowCull = abX;}
 		static void SetSunCasterCull(bool abX) { mbSunCasterCull = abX;}
+		static void SetShadowMapCompare(bool abX) { mbShadowMapCompare = abX;}
 
 		
 		//Debug
@@ -530,6 +531,7 @@ namespace hpl {
 		static bool mbShadowDepthClamp;
 		static bool mbShadowCull;
 		static bool mbSunCasterCull;
+		static bool mbShadowMapCompare;
 	};
 
 	//---------------------------------------------

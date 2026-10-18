@@ -53,6 +53,8 @@ namespace hpl {
 		float mfSoftPartThickness;
 		float mfSoftPartAlphaBasedThickness;
 		float mfSoftPartDepthBias;
+		float mfFadeInStart = 0;
+		float mfFadeInEnd = 0;
 		bool mbFadeColor = false;
 		bool mbAngleFade = false;
 		cColor mFadeColor = cColor(0, 0);

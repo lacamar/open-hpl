@@ -34,7 +34,7 @@ namespace hpl {
 	#define kMaxTextureUnits (16)
 	#define kMaxNumOfLights (30)
 	#define kMaxClipPlanes (6)
-	#define kMaxDrawColorBuffers (4)
+	#define kMaxDrawColorBuffers (5)
 
 	//-----------------------------------------
 

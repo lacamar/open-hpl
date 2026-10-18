@@ -77,6 +77,7 @@ namespace hpl {
 	#define kVar_afSecondFalloffExp					22
 	#define kVar_avFadeColor						23
 	#define kVar_avDepthOfFieldParams				24
+	#define kVar_avFadeProp							25
 	
 	
 	//------------------------------
@@ -203,6 +204,7 @@ namespace hpl {
 			defaultVars.Add("UseUv");
 			defaultVars.Add("UseNormals");
 			defaultVars.Add("UseColor");
+			defaultVars.Add("UseVertexPosition");
 			if(cRendererDeferred::GetHdr()) defaultVars.Add("UseColorMul");
 			
 			if(i==0) defaultVars.Add("BlendMode_Add");
@@ -242,6 +244,7 @@ namespace hpl {
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("afSecondFalloffExp", kVar_afSecondFalloffExp, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFadeColor", kVar_avFadeColor, eMaterialRenderMode_Diffuse);
 			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avDepthOfFieldParams", kVar_avDepthOfFieldParams, eMaterialRenderMode_Diffuse);
+			mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFadeProp", kVar_avFadeProp, eMaterialRenderMode_Diffuse);
 
 		}
 	}
@@ -427,6 +430,8 @@ namespace hpl {
 
 		if(pVars->mbFadeColor && bIlluminationPass==false)
 			apProgram->SetColor4f(kVar_avFadeColor, pVars->mFadeColor);
+
+		apProgram->SetColor4f(kVar_avFadeProp, cColor(pVars->mfFadeInStart, pVars->mfFadeInEnd, 0, 0));
 
 		if(pVars->mbSoftParticle && bIlluminationPass==false)
 		{
@@ -684,6 +689,8 @@ namespace hpl {
 		pVars->mfSoftPartThickness = apVars->GetVarFloat("SoftPartThickness", 1.0f);
 		pVars->mfSoftPartAlphaBasedThickness = apVars->GetVarFloat("SoftPartAlphaBasedThickness", 0.0f);
 		pVars->mfSoftPartDepthBias = apVars->GetVarFloat("SoftPartDepthBias", 0.0f);
+		pVars->mfFadeInStart = apVars->GetVarFloat("FadeInStart", 0.0f);
+		pVars->mfFadeInEnd = apVars->GetVarFloat("FadeInEnd", 0.0f);
 	}
 
 	//--------------------------------------------------------------------------

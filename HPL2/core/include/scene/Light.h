@@ -230,6 +230,10 @@ namespace hpl {
 		void SetMaskID(unsigned int alX){ mlMaskID = alX;}
 		void SetGoboSpecular(bool abX){ mbGoboSpecular = abX;}
 		bool GetGoboSpecular(){ return mbGoboSpecular;}
+		void SetCastDiffuseLight(bool abX){ mbCastDiffuseLight = abX;}
+		bool GetCastDiffuseLight(){ return mbCastDiffuseLight;}
+		void SetCastSpecularLight(bool abX){ mbCastSpecularLight = abX;}
+		bool GetCastSpecularLight(){ return mbCastSpecularLight;}
 		unsigned int GetMaskID(){ return mlMaskID;}
 		void SetMaskBox(bool abActive, const cVector3f& avCenter=0, const cVector3f& avSize=0){ mbMaskBox = abActive; mvMaskCenter = avCenter; mvMaskSize = avSize; mbUpdateBoundingVolume = true; SetTransformUpdated();}
 		bool HasMaskBox(){ return mbMaskBox;}
@@ -289,6 +293,8 @@ namespace hpl {
 		bool IsLit();
 		unsigned int mlMaskID;
 		bool mbGoboSpecular;
+		bool mbCastDiffuseLight = true;
+		bool mbCastSpecularLight = true;
 		bool mbMaskBox;
 		cVector3f mvMaskCenter;
 		cVector3f mvMaskSize;

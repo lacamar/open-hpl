@@ -76,6 +76,7 @@ namespace hpl {
 	bool iRenderer::mbShadowDepthClamp=false;
 	bool iRenderer::mbShadowCull=true;
 	bool iRenderer::mbSunCasterCull=true;
+	bool iRenderer::mbShadowMapCompare=true;
 
 	//-----------------------------------------------------------------------
 
@@ -610,9 +611,16 @@ namespace hpl {
 
         //Fog
 		mbFogCullPlaneActive = false;
-		if(mbSetupOcclusionPlaneForFog && WorldFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
+		float fFogCullEnd = apWorld->GetFogEnd();
+		float fFogCullAlpha = apWorld->GetFogColor().a;
+		if(apWorld->GetSecondaryFogActive() && apWorld->GetSecondaryFogEnd() > fFogCullEnd)
 		{
-			mFogCullPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward()*-apWorld->GetFogEnd());
+			fFogCullEnd = apWorld->GetSecondaryFogEnd();
+			fFogCullAlpha = apWorld->GetSecondaryFogColor().a;
+		}
+		if(mbSetupOcclusionPlaneForFog && WorldFogActive() && fFogCullAlpha >= 1.0f && apWorld->GetFogCulling())
+		{
+			mFogCullPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward()*-fFogCullEnd);
 			mbFogCullPlaneActive = true;
 		}
 
@@ -735,8 +743,11 @@ namespace hpl {
 
 		pData->mpTexture = mpGraphics->CreateTexture(sName+"_Texture",eTextureType_2D, eTextureUsage_RenderTarget);
 		pData->mpTexture->CreateFromRawData(avSize, aFormat, NULL);
-		pData->mpTexture->SetCompareMode(eTextureCompareMode_RToTexture);
-		pData->mpTexture->SetCompareFunc(eTextureCompareFunc_LessOrEqual);
+		if(mbShadowMapCompare)
+		{
+			pData->mpTexture->SetCompareMode(eTextureCompareMode_RToTexture);
+			pData->mpTexture->SetCompareFunc(eTextureCompareFunc_LessOrEqual);
+		}
 		pData->mpTexture->SetFilter(eTextureFilter_Nearest);	
 		pData->mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 

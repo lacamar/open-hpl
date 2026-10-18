@@ -79,7 +79,20 @@ void cSomaLuxPlayer::SetCharacterBody(iCharacterBody *apBody)
 	{
 		mpCharBody->SetCamera(mpCamera);
 		mpCharBody->SetCollideFlags(SomaCollideFlag("+player"));
+		mCharBodyCallback.mpPlayer = this;
+		mpCharBody->SetCallback(&mCharBodyCallback);
 	}
+}
+
+void cSomaLuxPlayer::cCharBodyCallback::OnHitGround(iCharacterBody *apBody, const cVector3f &avVel)
+{
+	const char *sDecl = "void CharBody_HitGround(iCharacterBody@ apCharBody, const cVector3f &in avVel)";
+	auto args = [&](asIScriptContext *c) { c->SetArgAddress(0, apBody); c->SetArgAddress(1, (void *)&avVel); };
+	mpPlayer->Call(sDecl, args);
+	if (mpPlayer->mpState)
+		mpPlayer->mpState->Call(sDecl, args);
+	if (mpPlayer->mpMoveState)
+		mpPlayer->mpMoveState->Call(sDecl, args);
 }
 
 void cSomaLuxPlayer::AddState(const tString &asName, int alId, const tString &asFile, const tString &asClass)
@@ -765,7 +778,7 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "const cVector3f& GetCameraPosAddGoal(int alType)", +[](P *p, int t) -> const cVector3f & { return p->mmapCameraPosAdd[t].mvGoal; });
 	SOMA_METHOD(e, T, "const cVector3f& GetCameraPosAddSum()", +[](P *p) -> const cVector3f & {
 		static cVector3f vSum;
-		vSum = p->mvBaseCameraPosAdd;
+		vSum = 0;
 		for (auto &it : p->mmapCameraPosAdd)
 			vSum += it.second.mvValue;
 		return vSum;

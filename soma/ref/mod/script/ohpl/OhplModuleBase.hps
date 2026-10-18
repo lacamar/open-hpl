@@ -5,6 +5,7 @@ shared interface iOhplAgent { void AddTicker(iOhplTick@ apTick); }
 
 class cOhplModuleBase : iScrUserModule, iScrUserModule_Interface
 {
+	void Init(){}
 	void Update(float afTimeStep){}
 	void PostUpdate(float afTimeStep){}
 	void VariableUpdate(float afDeltaTime){}

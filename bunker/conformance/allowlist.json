@@ -1,0 +1,17 @@
+{
+ "tracks": {
+  "Compound": "editor grouping: 918 Compounds hold only Component IDs; none of the 272 Compound names is referenced by a script"
+ },
+ "no_material": {
+  "revolver_bunker_diffuse.mat": "revolver_pickup_*.ent SubMeshes with Material=\"\" fall back to the shipped revolver_bunker.msh material revolver_bunker_diffuse.mat, not in the game data",
+  "clay_bricks.mat": "broken_wall_bricks.msh names entities/paris_ending/walls/clay_bricks.mat; not in the game data",
+  "broken_wall_rubble.mat": "wall_plaster_brick_single_damage_05.msh names static_objects/roman/walls/broken_wall_rubble.mat; not in the game data",
+  "roman_window_large_doublesided_glass.mat": "its CubeMap textures/environment/environment_caves.dds is not in the game data; HPL3 LoadFromFile (Rebirth 0xeedba0) drops a material whose texture fails",
+  "cave_puddle_01.mat": "its CubeMap textures/environment/environment_caves.dds is not in the game data; HPL3 LoadFromFile (Rebirth 0xeedba0) drops a material whose texture fails",
+  "darkworld_plants_fibers_18.mat": "names darkworld_plants_fibers_18_alpha.tga, only a .dds of it ships; HPL3 FindTexture2D (Rebirth 0xf06210) swaps extensions only when none is given"
+ },
+ "lum": {
+  "main_menu": "Light_PowerSwitch_3_10_* Active=false; main_menu.hps VariableUpdate lights Lamp_PowerSwitch_3_10 only once MainMenu_GetMainMenuVisible, after the LOGO/FMOD LOGO/GAMMA pre-menu (lum 16.6 then)",
+  "soldier_quarters": "start is the generator room; SetupGenerator puts Lamp_Generator_*/Lamp_GeneratorBackup_* on the generator, GeneratorModule mState starts eGeneratorState_Off"
+ }
+}

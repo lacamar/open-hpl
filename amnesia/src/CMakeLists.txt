@@ -45,8 +45,6 @@ add_subdirectory(../../amfp/src/game amfp_game)
 # this project's Steam library, so unlike SOMA there is no existing native
 # build to compare against - these boot straight off each game's own real
 # data files.
-add_subdirectory(../../rebirth/src/game rebirth_game)
-add_subdirectory(../../bunker/src/game bunker_game)
 
 add_subdirectory(launcher launcher)
 

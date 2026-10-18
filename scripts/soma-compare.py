@@ -171,7 +171,7 @@ class Ref:
         return ref_mod.game_pid()
 
     def start(self, map_file, pos, size):
-        r = ref_mod.start(map_file, pos or "PlayerStartArea_1", size)
+        r = ref_mod.start(map_file, pos or ref_mod.DEFAULT_POS, size)
         t0 = time.time()
         while time.time() - t0 < 120:
             try:
@@ -500,7 +500,7 @@ def cmd_ui(a):
                 o.send({"cmd": "input", "type": "key", "key": k, "action": "tap"})
                 o.send({"cmd": "wait_frames", "n": 2, "max_ms": 500})
             if only != "ours" and ref_mod.game_pid():
-                ref_mod.swaymsg('[title="^SOMA"]', "focus")
+                ref_mod.swaymsg(f'[title="^{ref_mod.TITLE}"]', "focus")
                 ref_mod.gt("key", k)
     if a.action != "start":
         time.sleep(a.settle)
@@ -540,8 +540,8 @@ def main():
     sp = p.add_subparsers(dest="cmd", required=True)
     for name in ("start", "report"):
         s = sp.add_parser(name)
-        s.add_argument("--map", default="00_01_apartment.hpm")
-        s.add_argument("--pos", default="PlayerStartArea_1")
+        s.add_argument("--map", default=ref_mod.DEFAULT_MAP)
+        s.add_argument("--pos", default=ref_mod.DEFAULT_POS)
         s.add_argument("--size", default="1280x720")
         s.add_argument("--settle", type=float, default=2)
         s.add_argument("--out")

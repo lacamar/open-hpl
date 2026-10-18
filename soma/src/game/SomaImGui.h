@@ -219,7 +219,7 @@ public:
 	void *GetDefault(const char *apType);
 	void SetDefault(const char *apType, const void *apData);
 
-	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize);
+	void Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize, bool abAlign = true);
 	cVector3f Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign);
 	void Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated = false);
 	bool MouseOver(const cVector3f &avPos, const cVector2f &avSize);

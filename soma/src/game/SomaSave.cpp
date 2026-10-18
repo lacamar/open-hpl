@@ -37,6 +37,7 @@ namespace
 	tString gsHeldMap, gsHeldPos;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
 	int glSaveNameCount = 0;
+	tWString gsSaveSuffix;
 	cDate gLatestSaveDate;
 	const int kMaxAutoSaves = 20; // game.cfg Saving/MaxAutoSaves
 
@@ -61,28 +62,17 @@ namespace
 		if (++glSaveNameCount >= 100 || d != gLatestSaveDate)
 			glSaveNameCount = 0;
 		gLatestSaveDate = d;
-		return sName + _W(".sav");
+		return sName + (gsSaveSuffix.empty() ? _W("") : _W("_") + gsSaveSuffix) + _W(".sav");
 	}
 
-	void DeleteOldestSaveFiles(const tWString &asDir, int alMax)
-	{
-		tWStringList lstFiles;
-		cPlatform::FindFilesInDir(lstFiles, asDir, _W("*.sav"));
-		std::vector<std::pair<cDate, tWString>> vFiles;
-		for (const tWString &sFile : lstFiles)
-			vFiles.push_back({cPlatform::FileModifiedDate(asDir + sFile), sFile});
-		std::sort(vFiles.begin(), vFiles.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
-		for (size_t i = 0; (int)(vFiles.size() - i) >= alMax; ++i)
-			cPlatform::RemoveFile(asDir + vFiles[i].second);
-	}
-
-	// HPL3 lists "Prefix_map_Y_M_D_h_m_s_n" saves as "Prefix - <level> - ", "D/M-Y hh:mm:ss"
-	void GetProperSaveName(const tWString &asFile, tWString &asName, tString &asDate)
+	// HPL3 lists "Prefix_map_Y_M_D_h_m_s_n[_suffix]" saves as "Prefix - <level> - ", "D/M-Y hh:mm:ss"
+	void GetProperSaveName(const tWString &asFile, tWString &asName, tString &asDate, tWString &asSuffix)
 	{
 		tWStringVec vParts;
 		tWString sSep = _W("_");
 		cString::GetStringVecW(cString::SetFileExtW(asFile, _W("")), vParts, &sSep);
-		if (vParts.size() != 9)
+		asSuffix = vParts.size() == 10 ? vParts[9] : _W("");
+		if (vParts.size() != 9 && vParts.size() != 10)
 		{
 			asName = cString::SetFileExtW(asFile, _W(""));
 			struct stat st = {};
@@ -99,6 +89,38 @@ namespace
 			if (vParts[i].size() == 1)
 				vParts[i] = _W("0") + vParts[i];
 		asDate = cString::To8Char(vParts[4] + _W("/") + vParts[3] + _W("-") + vParts[2] + _W(" ") + vParts[5] + _W(":") + vParts[6] + _W(":") + vParts[7]);
+	}
+
+	struct cSaveInfo
+	{
+		cDate mDate;
+		tWString msFile, msName, msSuffix;
+		tString msDate;
+	};
+
+	std::vector<cSaveInfo> ListSaves()
+	{
+		tWStringList lstFiles;
+		cPlatform::FindFilesInDir(lstFiles, cSomaSaveHandler::GetSaveDir(), _W("*.sav"));
+		std::vector<cSaveInfo> vSaves;
+		for (const tWString &sFile : lstFiles)
+		{
+			cSaveInfo i;
+			i.mDate = cPlatform::FileModifiedDate(cSomaSaveHandler::GetSaveDir() + sFile);
+			i.msFile = sFile;
+			GetProperSaveName(sFile, i.msName, i.msDate, i.msSuffix);
+			vSaves.push_back(i);
+		}
+		std::sort(vSaves.begin(), vSaves.end(), [](const cSaveInfo &a, const cSaveInfo &b) { return b.mDate < a.mDate; });
+		return vSaves;
+	}
+
+	void DeleteOldestSaveFiles(int alMax)
+	{
+		int lCount = 0;
+		for (const cSaveInfo &i : ListSaves())
+			if (i.msSuffix == gsSaveSuffix && ++lCount >= alMax)
+				cPlatform::RemoveFile(cSomaSaveHandler::GetSaveDir() + i.msFile);
 	}
 
 	struct cOut
@@ -1290,24 +1312,6 @@ tWString cSomaSaveHandler::GetSaveDir()
 	return sDir;
 }
 
-tWString cSomaSaveHandler::GetLatestSave()
-{
-	tWStringList lstFiles;
-	cPlatform::FindFilesInDir(lstFiles, GetSaveDir(), _W("*.sav"));
-	tWString sBest;
-	cDate bestDate;
-	for (const tWString &sFile : lstFiles)
-	{
-		cDate date = cPlatform::FileModifiedDate(GetSaveDir() + sFile);
-		if (sBest.empty() || date > bestDate)
-		{
-			sBest = sFile;
-			bestDate = date;
-		}
-	}
-	return sBest;
-}
-
 void cSomaSaveHandler::OnMapEnter(const tString &asMapFile, const tString &asStartPos)
 {
 	gsMapFile = asMapFile;
@@ -1352,7 +1356,7 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 
 bool cSomaSaveHandler::AutoSave(bool abCheckpoint)
 {
-	DeleteOldestSaveFiles(GetSaveDir(), kMaxAutoSaves);
+	DeleteOldestSaveFiles(kMaxAutoSaves);
 	bool bOk = Save(GetSaveName(_W("AutoSave")));
 	if (abCheckpoint)
 		bOk = Save(_W("CheckPoint.sav")) && bOk;
@@ -1491,27 +1495,39 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 		gbHoldAfterLoad = false;
 		RunLoadCallback();
 	});
-	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
-				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {
-					names.Resize(0);
-					dates.Resize(0);
-					files.Resize(0);
-					tWStringList lstFiles;
-					cPlatform::FindFilesInDir(lstFiles, GetSaveDir(), _W("*.sav"));
-					std::vector<std::pair<cDate, tWString>> vSaves;
-					for (const tWString &sFile : lstFiles)
-						vSaves.push_back({cPlatform::FileModifiedDate(GetSaveDir() + sFile), sFile});
-					std::sort(vSaves.begin(), vSaves.end(), [](const auto &a, const auto &b) { return b.first < a.first; });
-					for (auto &it : vSaves)
+	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles, array<tWString> &inout avSuffixes)",
+				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files, CScriptArray &suffixes) {
+					for (CScriptArray *a : {&names, &dates, &files, &suffixes})
+						a->Resize(0);
+					for (cSaveInfo &i : ListSaves())
 					{
-						tWString sName;
-						tString sDate;
-						GetProperSaveName(it.second, sName, sDate);
-						names.InsertLast(&sName);
-						dates.InsertLast(&sDate);
-						files.InsertLast(&it.second);
+						names.InsertLast(&i.msName);
+						dates.InsertLast(&i.msDate);
+						files.InsertLast(&i.msFile);
+						suffixes.InsertLast(&i.msSuffix);
 					}
 					return true;
 				});
+	SOMA_METHOD(e, T, "bool GetSaveFiles(array<tWString> &inout avNames, array<tString> &inout avDates, array<tWString> &inout avFiles)",
+				+[](void *, CScriptArray &names, CScriptArray &dates, CScriptArray &files) {
+					for (CScriptArray *a : {&names, &dates, &files})
+						a->Resize(0);
+					for (cSaveInfo &i : ListSaves())
+					{
+						names.InsertLast(&i.msName);
+						dates.InsertLast(&i.msDate);
+						files.InsertLast(&i.msFile);
+					}
+					return true;
+				});
+	SOMA_METHOD(e, T, "void SetSaveSuffix(const tWString&in asSaveSuffix)", +[](void *, W s) { gsSaveSuffix = s; });
+	SOMA_METHOD(e, T, "const tWString& GetSaveSuffix()", +[](void *) -> const tWString & { return gsSaveSuffix; });
+	SOMA_METHOD(e, T, "tWString GetSaveName(const tWString&in asPrefix)", +[](void *, W s) { return GetSaveName(s); });
+	SOMA_METHOD(e, T, "bool LoadLastSave(bool abDelayed=true)", +[](void *, bool) {
+		for (const cSaveInfo &i : ListSaves())
+			if (i.msSuffix == gsSaveSuffix)
+				return Load(i.msFile);
+		return false;
+	});
 	SOMA_FUNC(e, "bool cLux_HasConfigLoadError(tString&out asError)", +[](tString &) { return false; });
 }

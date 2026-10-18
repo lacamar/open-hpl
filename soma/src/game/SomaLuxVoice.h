@@ -29,7 +29,7 @@ public:
 	void OnDraw(float afFrameTime) override;
 
 	bool Play(const tString &asSubject, int alLine, const tString &asCallback, int alPrio,
-			  const std::function<void()> &aOnDone = std::function<void()>());
+			  const std::function<void()> &aOnDone = std::function<void()>(), bool abPlayWhilePaused = false);
 	bool SubjectExists(const tString &asSubject);
 	void Stop(const tString &asScene);
 	void StopAll();
@@ -47,6 +47,7 @@ public:
 	const tString &GetSubjectSceneName(const tString &asSubject);
 	void SetPaused(const tString &asScene, bool abX);
 	void SetPausedAll(bool abX);
+	void ReapplyPauses();
 	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
 	void SetSpeakingCallback(const tString &asCharacter, const tString &asFunc);
@@ -119,6 +120,7 @@ private:
 		float mfTextDelay = 0;
 		tString msSubtitle;
 		bool mbPaused = false;
+		bool mbPlayWhilePaused = false;
 		tString msSourceEntity;
 		tString msFile;
 		tString msLipEntity;
@@ -143,6 +145,7 @@ private:
 	void LoadLangFile(const tString &asFile);
 	void StartSound(cPlaying &aP);
 	void StopSound(cPlaying &aP);
+	void ApplyPause(cPlaying &aP);
 	void Finish(size_t alIdx);
 	void LineCallback(cSubject *apSubject, int alLine, bool abStart);
 	tString SoundKey(cSubject *apSubject, size_t alLine, size_t alSound);

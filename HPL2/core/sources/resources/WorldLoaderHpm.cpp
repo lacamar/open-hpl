@@ -1633,6 +1633,7 @@ namespace hpl {
 			bool bCharMesh = cString::Sub(pSubMesh->GetName(), 0, 13) == "_charcollider";
 			bool bColliderMesh = bCharMesh || cString::Sub(pSubMesh->GetName(), 0, 9) == "_collider";
 			bool bTriangles = !bHasColliderMesh;
+			if (bColliderMesh || cString::Sub(pSubMesh->GetName(), 0, 16) == "_noncharcollider") pSubEnt->SetVisible(false);
 
 			std::vector<iCollideShape*> vShapes[2];
 			for (int j = 0; j < pSubMesh->GetColliderNum(); ++j)

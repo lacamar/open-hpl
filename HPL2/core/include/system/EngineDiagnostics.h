@@ -25,6 +25,8 @@ namespace hpl {
 		static void CountDrawCall() { ++mlDrawCalls; }
 		static void EndFrame();
 		static void AddFrameTiming(double afLogicMs, int alSteps, double afRenderMs, double afSwapMs);
+		static void AddLoadTime(const tString &asName, double afMs);
+		static void AddLinkTime(double afMs) { ++mlLinks; mfLinkMs += afMs; }
 		static unsigned int GetRenderedFrameCount() { return mlRenderedFrames; }
 		static int GetLastFrameDrawCalls() { return mlLastFrameDrawCalls; }
 
@@ -49,6 +51,9 @@ namespace hpl {
 		static unsigned int mlRenderedFrames;
 		static double mfTimingMs[3];
 		static int mlTimingSteps, mlTimingFrames;
+		static int mlLoads, mlLinks;
+		static double mfLoadMs, mfSlowLoadMs, mfLinkMs;
+		static tString msSlowLoad;
 	};
 
 }

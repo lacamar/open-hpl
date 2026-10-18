@@ -341,6 +341,42 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return (f & b) != 0; });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMin(const cVector3f&in avBaseMin, const cVector3f&in avAddMin)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMax(const cVector3f&in avBaseMax, const cVector3f&in avAddMax)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
+	SOMA_FUNC(e, "float cMath_InterpolateCubic(float afX0, float afX1, float afX2, float afX3, float afT)", +[](float x0, float x1, float x2, float x3, float t) {
+		float a0 = x3 - x2 - x0 + x1, a1 = x0 - x1 - a0, a2 = x2 - x0;
+		return ((a0 * t + a1) * t + a2) * t + x1;
+	});
+	SOMA_FUNC(e, "cVector2f cMath_Vector2Rotate(const cVector2f &in avVec, float afAngle)", +[](const cVector2f &v, float a) {
+		float c = cosf(a), s = sinf(a);
+		return cVector2f(c * v.x - s * v.y, c * v.y + s * v.x);
+	});
+	SOMA_FUNC(e, "cVector3f cMath_Vector3IncreaseTo(const cVector3f&in avX, const cVector3f&in avAdd, const cVector3f&in avDest)", +[](const cVector3f &x, const cVector3f &a, const cVector3f &d) {
+		return cVector3f(cMath::IncreaseTo(x.x, a.x, d.x), cMath::IncreaseTo(x.y, a.y, d.y), cMath::IncreaseTo(x.z, a.z, d.z));
+	});
+	SOMA_FUNC(e, "cQuaternion cMath_QuaternionNlerp(float afT,const cQuaternion&in aqA, const cQuaternion&in aqB)", +[](float t, const cQuaternion &a, const cQuaternion &b) {
+		cQuaternion q = a * (1 - t) + b * t;
+		q.Normalize();
+		return q;
+	});
+	SOMA_FUNC(e, "cQuaternion cMath_QuaternionMatrix(const cMatrixf &in a_mtxA)", +[](const cMatrixf &m) { return cQuaternion(m); });
+	SOMA_FUNC(e, "cQuaternion cMath_QuaternionConjugate(const cQuaternion&in aqA)", +[](const cQuaternion &q) { return cQuaternion(q.w, -q.v.x, -q.v.y, -q.v.z); });
+	SOMA_FUNC(e, "cMatrixf cMath_MatrixNormal(const cMatrixf &in a_mtxA, bool abTranspose)", +[](const cMatrixf &m, bool t) {
+		cMatrixf r = cMatrixf::Identity;
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j) r.m[i][j] = m.m[i][j];
+		r = cMath::MatrixInverse(r);
+		return t ? r.GetTranspose() : r;
+	});
+	SOMA_FUNC(e, "tString cMath_RGBToHex(const cColor &in aRGB)", +[](const cColor &c) {
+		char s[8];
+		snprintf(s, sizeof(s), "%02X%02X%02X", (unsigned char)(int)(c.r * 255 + 0.5f), (unsigned char)(int)(c.g * 255 + 0.5f), (unsigned char)(int)(c.b * 255 + 0.5f));
+		return tString(s);
+	});
+	// official 0xe670b0; script wrapper returns != eCollision_Outside
+	SOMA_FUNC(e, "bool cMath_CheckAABBSphereCollision(const cVector3f&in avMin,const cVector3f&in avMax, const cVector3f&in avCenter, float afRadius)", +[](const cVector3f &mn, const cVector3f &mx, const cVector3f &c, float r) {
+		for (int i = 0; i < 8; ++i)
+			if (cMath::Vector3DistSqr(cVector3f(i & 1 ? mx.x : mn.x, i & 2 ? mx.y : mn.y, i & 4 ? mx.z : mn.z), c) <= r * r) return true;
+		return !(mx.x - c.x < -r || c.x - mn.x < -r || mx.y - c.y < -r || c.y - mn.y < -r || mx.z - c.z < -r || c.z - mn.z < -r);
+	});
 }
 
 // cPidController<T> in the script struct block: p, i, d at 16/20/24 (recovered), then the history

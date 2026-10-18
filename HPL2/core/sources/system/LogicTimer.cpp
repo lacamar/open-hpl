@@ -21,6 +21,7 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
+#include <cmath>
 
 namespace hpl {
 
@@ -105,7 +106,7 @@ namespace hpl {
 
 	int cLogicTimer::GetUpdatesPerSec()
 	{
-		return (int)(1000.0 / ((double)mlLocalTimeAdd));
+		return (int)std::lround(1000.0 / mlLocalTimeAdd);
 	}
 	
 	//-----------------------------------------------------------------------

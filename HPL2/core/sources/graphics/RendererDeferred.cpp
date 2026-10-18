@@ -297,6 +297,8 @@ namespace hpl {
 	#define kVar_afGradingMapAlpha0					102
 	#define kVar_alGradingMapNum					103
 	#define kVar_afGradingMapAlpha2					104 // ..109
+	#define kVar_avShadowParams						110
+	#define kVar_avShadowMapSize					111
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -781,6 +783,8 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avShadowParams", kVar_avShadowParams, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("avShadowMapSize", kVar_avShadowMapSize, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avScreenToFarPlane", kVar_avScreenToFarPlane, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avInvScreenSize", kVar_avInvScreenSize, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
@@ -1741,7 +1745,7 @@ namespace hpl {
 		if(!(mlDebugSkipPasses & 8)) RenderEnvironmentParticles(true);
 		if(!(mlDebugSkipPasses & 8) && bDof) RenderTranslucent(1);
 
-		RenderDepthOfField();
+		if(!(mlDebugSkipPasses & 32)) RenderDepthOfField();
 
 		if(!(mlDebugSkipPasses & 8)) RenderTranslucent(bDof ? 2 : 0);
 		if(!(mlDebugSkipPasses & 8) && bDof) RenderEnvironmentParticles(false);
@@ -2183,6 +2187,15 @@ namespace hpl {
 		return cColor(aCol.r * aCol.r, aCol.g * aCol.g, aCol.b * aCol.b, aCol.a);
 	}
 
+	// official cRendererDeferred::GetLightInstanceData 0xd7ee68: shader reads w<0 as no diffuse
+	static cColor LightShaderColor(iLight *apLight)
+	{
+		cColor col = LinearLightColor(apLight->GetDiffuseColor());
+		if(!apLight->GetCastSpecularLight()) col.a = 0;
+		if(!apLight->GetCastDiffuseLight()) col.a = -col.a;
+		return col;
+	}
+
 	static cColor UnderwaterFogColor(const cColor& aCol)
 	{
 		float fInvLen2 = 1.0f / (aCol.r*aCol.r + aCol.g*aCol.g + aCol.b*aCol.b + 1e-13f);
@@ -2205,7 +2218,7 @@ namespace hpl {
 		apProgram->SetVec3f(kVar_avLightPos, apLightData->m_mtxViewSpaceRender.GetTranslation());
 		cVector3f vViewPos = apLightData->m_mtxViewSpaceRender.GetTranslation();
 		apProgram->SetVec4f(kVar_avLightPosScale, vViewPos.x, vViewPos.y, vViewPos.z, 1.0f / pLight->GetRadius());
-		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
+		cColor lightColor = LightShaderColor(pLight);
 		float fBrightness = pLight->GetBrightness() * GetDistanceFadeAmount(pLight);
 		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
 		apProgram->SetColor4f(kVar_avLightColor, lightColor);
@@ -2254,6 +2267,12 @@ namespace hpl {
 				if(mpShadowJitterTexture)
 					apProgram->SetVec2f(kVar_avShadowMapOffsetMul, vInvShadowMapSize * pLight->GetShadowMapBlurAmount());
 
+				// official cRendererDeferred::SetupLightTypeData (Rebirth 0xd7e4d0)
+				float fW = (float)apLightData->mpShadowTexture->GetWidth();
+				float fNear = pLightSpot->GetNearClipPlane(), fFar = pLight->GetRadius();
+				apProgram->SetVec4f(kVar_avShadowParams, fNear, fFar, (fW + 128.0f) * 80.0f / 1152.0f * sqrtf(cMath::Max(fFar - fNear, 0.0f)) / fNear, 0);
+				apProgram->SetVec2f(kVar_avShadowMapSize, cVector2f(fW, (float)apLightData->mpShadowTexture->GetHeight()));
+
 				apLightData->mpShadowTexture = NULL;
 			}
 			
@@ -2299,7 +2318,7 @@ namespace hpl {
 		/////////////////////////
 		//Flag setup
 		tFlag lFlags = alExtraFlags;
-		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
+		if(pLight->GetDiffuseColor().a > 0 && pLight->GetCastSpecularLight())	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetGoboTexture())		lFlags |= eFeature_Light_Gobo;
 		if(pLight->HasMaskBox())			lFlags |= eFeature_Light_BoxMask;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
@@ -2340,7 +2359,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Textures
-		SetTexture(4,pLight->GetFalloffMap());
+		if(mlLinearDepthTextureIdx != 4) SetTexture(4,pLight->GetFalloffMap());
 		
 		if(pLight->GetGoboTexture())		SetTexture(5, pLight->GetGoboTexture());
 		
@@ -3550,7 +3569,7 @@ namespace hpl {
 		if(pLight->GetBrightness() <= 0) return;
 
 		tFlag lFlags = eFeature_Light_Directional;
-		if(pLight->GetDiffuseColor().a > 0)	lFlags |= eFeature_Light_Specular;
+		if(pLight->GetDiffuseColor().a > 0 && pLight->GetCastSpecularLight())	lFlags |= eFeature_Light_Specular;
 		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
 		if(WorldUnderwaterFog(this))	lFlags |= eFeature_Light_UnderwaterFog;
 		cMatrixf vShadowMtx[4];
@@ -3569,7 +3588,7 @@ namespace hpl {
 		SetScreenPositionVars(pProgram);
 
 		float fBrightness = pLight->GetBrightness();
-		cColor lightColor = LinearLightColor(pLight->GetDiffuseColor());
+		cColor lightColor = LightShaderColor(pLight);
 		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
 		pProgram->SetColor4f(kVar_avLightColor, lightColor);
 		cColor sky = LinearLightColor(pLight->GetAmbientColorSky()) * fBrightness;

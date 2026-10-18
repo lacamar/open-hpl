@@ -275,7 +275,9 @@ def judge(name, result, expected, allow):
         if "error" in stats:
             fails.append(f"gbuffer{target}:unreadable")
             continue
-        nans = sum(int(v) for k, v in stats.items() if k.endswith("nan") or k.endswith("nan_count"))
+        # Rebirth/Bunker deferred_gbuffer_solid_frag leaves out_vNormal.w unwritten (depth has its own target).
+        skip_a = target == "1" and G.name in ("rebirth", "bunker")
+        nans = sum(int(v) for k, v in stats.items() if (k.endswith("nan") or k.endswith("nan_count")) and not (skip_a and k.startswith("a_")))
         if nans:
             (allowed if name.removesuffix(".hpm") in allow.get("gbuffer_nan", {}) else fails).append(f"gbuffer{target}:nan={nans}")
 

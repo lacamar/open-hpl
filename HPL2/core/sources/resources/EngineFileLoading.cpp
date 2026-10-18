@@ -398,6 +398,8 @@ namespace hpl {
 		pLight->SetCulledByFog(apElement->GetAttributeBool("CulledByFog", true));
 		pLight->SetDiffuseColor(apElement->GetAttributeColor("DiffuseColor", cColor(1)));
 		pLight->SetDefaultDiffuseColor(pLight->GetDiffuseColor());
+		pLight->SetCastDiffuseLight(apElement->GetAttributeBool("CastDiffuseLight", true));
+		pLight->SetCastSpecularLight(apElement->GetAttributeBool("CastSpecularLight", true));
 		pLight->SetRadius(apElement->GetAttributeFloat("Radius", 1));
 		pLight->SetFalloffPow(apElement->GetAttributeFloat("FalloffPow", 1));
 		pLight->SetSpotFalloffPow(apElement->GetAttributeFloat("SpotFalloffPow", 1));

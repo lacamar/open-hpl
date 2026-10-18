@@ -51,6 +51,7 @@ public:
 	std::list<cSomaLuxTimer> &GetTimers() { return mvTimers; }
 	bool IsTimerLive(const cSomaLuxTimer &t) const { return t.mbRemoved == false && (&t != mpFiringTimer || t.mfTime > 0); }
 	double GetTime() { return mfTime; }
+	int GetTimeStamp() { return mlTimeStamp; }
 	void RemoveTimer(const tString &asName);
 	cSomaLuxTimer *GetTimer(const tString &asName);
 	void SetTimerPaused(const tString &asName, bool abX);
@@ -110,6 +111,7 @@ private:
 	bool mbUpdatingTimers = false;
 	cSomaLuxTimer *mpFiringTimer = NULL;
 	double mfTime = 0;
+	int mlTimeStamp = 0;
 	struct cDissolve { cMeshEntity *mpEntity; float mfAlpha, mfSpeed; };
 	std::vector<cDissolve> mvDissolves;
 	std::set<tString> msetPreloaded;
@@ -136,7 +138,7 @@ private:
 void SomaRequestMapChange(const tString &asMap, const tString &asStart);
 tString &SomaPreloadMap();
 cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport = NULL);
-void SomaSetGamePaused(bool abX);
+void SomaSetGamePaused(bool abX, bool abMusic = true, bool abSounds = true, bool abAmbience = true, tFlag alTypes = eSoundEntryType_All);
 bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tString &asFunc);
 float SomaStartYaw(const cMatrixf &a_mtxArea);
 float SomaLightLevelAtPos(const cVector3f &p, iLight *pSkip, float fAdd);

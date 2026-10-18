@@ -154,7 +154,7 @@ namespace hpl {
 		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
 		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
 		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
-		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n\t\tfloat afInvFarPlane;\n" },
+		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n\t\tfloat afInvFarPlane;\n\t\tcVector4f avFadeProp;\n" },
 		{ "water_surface_frag.hpsl", "\t};\n@endif\n\n////////////////////////////////\n// samplers",
 		  "\t\tint mlBlendMode;\n\t\tfloat mfFadeWhenNear;\n\t\tcVector3f avFogCameraPos;\n\t\tcVector4f avFogSettings;\n"
 		  "\t\tcVector4f avSecondFogSettings;\n\t\tint alFogType;\n\t\tcVector4f avReflectionMul;\n" },

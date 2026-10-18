@@ -599,6 +599,7 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	tString sGlobals = aType == eGpuShaderType_Vertex ? "invariant gl_Position;\n" : "";
 	std::vector<std::pair<tString, tString> > vBodySubs;
 	bool bNeedsFragData = false;
+	tString sFragDataPad;
 
 	for (size_t i = 0; i < vRawParams.size(); ++i)
 	{
@@ -631,7 +632,19 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 		else if (aType == eGpuShaderType_Fragment && param.mlSemantic >= 0 && param.msQualifier == "out")
 		{
 			tString sFragData = "gl_FragData[" + cString::ToString(param.mlSemantic) + "]";
-			vBodySubs.push_back(std::make_pair(param.msName, sFragData));
+			// Bunker writes vec2/float targets
+			static const std::map<tString, tString> mapPad = {
+				{"float", ", 0.0, 0.0, 0.0"}, {"vec2", ", 0.0, 0.0"}, {"vec3", ", 0.0"}};
+			std::map<tString, tString>::const_iterator itType = gmapTypeNames.find(param.msType);
+			tString sType = itType != gmapTypeNames.end() ? itType->second : param.msType;
+			std::map<tString, tString>::const_iterator itPad = mapPad.find(sType);
+			if (itPad != mapPad.end())
+			{
+				sGlobals += sType + " " + param.msName + ";\n";
+				sFragDataPad += "\t" + sFragData + " = vec4(" + param.msName + itPad->second + ");\n";
+			}
+			else
+				vBodySubs.push_back(std::make_pair(param.msName, sFragData));
 			bNeedsFragData = true;
 		}
 		else
@@ -654,8 +667,11 @@ bool TranspileHpslToGlsl(const tString& asPreprocessedHpsl, eGpuShaderType aType
 	if (aType == eGpuShaderType_Fragment && bNeedsFragData)
 		sVersionBlock += "#extension GL_ARB_draw_buffers : enable\n";
 
-	asGlslOut = sVersionBlock + sHeaderPrefix + sGlobals +
-				"void main()\n{" + sBody + "}\n";
+	if (sFragDataPad.empty())
+		asGlslOut = sVersionBlock + sHeaderPrefix + sGlobals + "void main()\n{" + sBody + "}\n";
+	else
+		asGlslOut = sVersionBlock + sHeaderPrefix + sGlobals + "void ohpl_main()\n{" + sBody + "}\n" +
+					"void main()\n{\n\tohpl_main();\n" + sFragDataPad + "}\n";
 
 	return true;
 }

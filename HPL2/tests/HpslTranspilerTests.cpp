@@ -191,6 +191,24 @@ static void TestDebugOverdrawFrag()
 	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = vec4(1.0f / 48.0f)");
 }
 
+static void TestNarrowFragOutputPadded()
+{
+	tString sGlsl, sErr;
+	CHECK(TranspileHpslToGlsl(
+		"void main(in cVector4f px_vPosition,\n"
+		"		  out cVector4f out_vColor : 0,\n"
+		"		  out cVector2f out_vSpec : 2)\n"
+		"{\n"
+		"	out_vColor = cVector4f(1.0);\n"
+		"	if(out_vColor.x > 0.5) { out_vSpec = cVector2f(0.25); return; }\n"
+		"	out_vSpec.x = 0.5;\n"
+		"}", eGpuShaderType_Fragment, sGlsl, sErr));
+	CHECK_CONTAINS(sGlsl, "vec2 out_vSpec;");
+	CHECK_CONTAINS(sGlsl, "gl_FragData[0] = vec4(1.0)");
+	CHECK_CONTAINS(sGlsl, "ohpl_main();");
+	CHECK_CONTAINS(sGlsl, "gl_FragData[2] = vec4(out_vSpec, 0.0, 0.0);");
+}
+
 static void TestMulRejectsWrongArgCount()
 {
 	tString sGlsl, sErr;
@@ -521,6 +539,7 @@ int main()
 	TestPosteffectQuadVtx();
 	TestVertexTexCoord1Builtin();
 	TestDebugOverdrawFrag();
+	TestNarrowFragOutputPadded();
 	TestMulRejectsWrongArgCount();
 	TestSampleRejectsUnknownTexture();
 	TestConstantBufferFlattening();

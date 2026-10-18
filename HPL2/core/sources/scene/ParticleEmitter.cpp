@@ -402,6 +402,15 @@ namespace hpl {
 		//////////////////////////////
 		// RENDERING
 
+		cVector2f vDrawSize = mvDrawSize;
+		if(bLinear)
+		{
+			// official iParticleEmitter::UpdateGraphicsForViewport (Rebirth 0x1150dde)
+			const cMatrixf &mtxWorld = GetWorldMatrix();
+			vDrawSize.x *= cVector3f(mtxWorld.m[0][0], mtxWorld.m[1][0], mtxWorld.m[2][0]).Length();
+			vDrawSize.y *= cVector3f(mtxWorld.m[0][1], mtxWorld.m[1][1], mtxWorld.m[2][1]).Length();
+		}
+
 		if ( mPEType == ePEType_Beam)
 		{
 			//				for (int i=0; i<(int)mlNumOfParticles; i++)
@@ -446,10 +455,10 @@ namespace hpl {
 			if(mDrawType == eParticleEmitterType_FixedPoint)
 			{
 				cVector3f vAdd[4] = {
-					cVector3f( mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x, mvDrawSize.y,0),
-						cVector3f( mvDrawSize.x, mvDrawSize.y,0)
+					cVector3f( vDrawSize.x,-vDrawSize.y,0),
+						cVector3f(-vDrawSize.x,-vDrawSize.y,0),
+						cVector3f(-vDrawSize.x, vDrawSize.y,0),
+						cVector3f( vDrawSize.x, vDrawSize.y,0)
 				};
 				
 				//If this is a reflection, need to invert the ordering.
@@ -498,10 +507,10 @@ namespace hpl {
 			else if(mDrawType == eParticleEmitterType_DynamicPoint)
 			{
 				cVector3f vAdd[4] = {
-						cVector3f( mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x, mvDrawSize.y,0),
-						cVector3f( mvDrawSize.x, mvDrawSize.y,0)
+						cVector3f( vDrawSize.x,-vDrawSize.y,0),
+						cVector3f(-vDrawSize.x,-vDrawSize.y,0),
+						cVector3f(-vDrawSize.x, vDrawSize.y,0),
+						cVector3f( vDrawSize.x, vDrawSize.y,0)
 				};
 
 				//If this is a reflection, need to invert the ordering.
@@ -610,8 +619,8 @@ namespace hpl {
 						vDirX.Normalize();
 					}
 
-					vDirX = vDirX * mvDrawSize.x * pParticle->mvSize.x;
-					vDirY = vDirY * mvDrawSize.y * pParticle->mvSize.y;
+					vDirX = vDirX * vDrawSize.x * pParticle->mvSize.x;
+					vDirY = vDirY * vDrawSize.y * pParticle->mvSize.y;
 
 					if(apFrustum->GetInvertsCullMode()) vDirY = vDirY*-1;
 

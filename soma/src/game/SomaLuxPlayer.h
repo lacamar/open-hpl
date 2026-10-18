@@ -168,6 +168,13 @@ public:
 private:
 	void UpdateCamera(float afTimeStep);
 
+	struct cCharBodyCallback : public iCharacterBodyCallback
+	{
+		cSomaLuxPlayer *mpPlayer = NULL;
+		void OnGravityCollide(iCharacterBody *, iPhysicsBody *, cCollideData *) override {}
+		void OnHitGround(iCharacterBody *apBody, const cVector3f &avVel) override;
+	} mCharBodyCallback;
+
 	static cSomaLuxPlayer *mpInstance;
 
 	cCamera *mpCamera = NULL;
