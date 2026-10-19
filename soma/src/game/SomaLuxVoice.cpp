@@ -155,7 +155,7 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 				line.msSource = pLine->GetAttributeString("EntitySource", "");
 				line.mfMinDist = pLine->GetAttributeFloat("MinDist", 0);
 				line.mfMaxDist = pLine->GetAttributeFloat("MaxDist", 0);
-				line.mbWorldSpace = line.mbChangeSource = true;
+				line.mbChangeSource = true;
 			}
 			for (cXmlElement *pSound : Children(pLine, "Sound"))
 			{
@@ -299,7 +299,10 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 	cSource src = {line.msSource, line.mfMinDist, line.mfMaxDist, line.mbWorldSpace && line.msSource != ""};
 	auto itSource = mmapSources.find(line.msCharacter);
 	if (itSource != mmapSources.end() && !line.mbChangeSource)
+	{
 		src = itSource->second;
+		src.mbUse3D = src.mbUse3D && line.mbWorldSpace;
+	}
 	cSomaLuxEntity *pSource = src.mbUse3D && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(src.msEntity) : NULL;
 	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) == _W(""))
 		;
