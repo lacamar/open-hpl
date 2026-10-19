@@ -20,16 +20,17 @@ OPENHPL_HEADLESS_SOCKET="$SOCK" \
 XDG_CONFIG_HOME="$S/config" XDG_CACHE_HOME="$S/cache" XDG_DATA_HOME="$S/data" XDG_STATE_HOME="$S/state" \
 	nohup "$L" >"$S/run.out" 2>&1 </dev/null &
 PID=$!
-trap 'kill -9 $PID 2>/dev/null; wait $PID 2>/dev/null; rm -f "$SOCK"' EXIT
+RC=1
+trap 'kill -9 $PID 2>/dev/null; wait $PID 2>/dev/null || true; rm -f "$SOCK"; [ $RC = 0 ] && rm -rf "$S"; exit $RC' EXIT
 C=(timeout 60 "$H/hpl_control.py" --socket "$SOCK")
 case $G in
-	amnesia|machine-for-pigs) Q=(frame_stats) WANT=lum_mean ;;
+	amnesia|machine-for-pigs) Q=(frame_stats) WANT='"lum_mean": [1-9]' ;;
 	*) Q=(script_exec 'code=__print(cLux_GetCurrentMap().GetFileName());') WANT=main_menu.hpm ;;
 esac
 for _ in $(seq 180); do
 	kill -0 $PID 2>/dev/null || { echo "FAIL $G: exited" >&2; tail -20 "$S/run.out" >&2; exit 1; }
 	OUT=$("${C[@]}" "${Q[@]}" 2>/dev/null) || OUT=
-	grep -q "$WANT" <<<"$OUT" && { echo "OK $G"; rm -rf "$S"; exit 0; }
+	grep -q "$WANT" <<<"$OUT" && { echo "OK $G"; RC=0; exit 0; }
 	sleep 1
 done
 echo "FAIL $G: no $WANT after 180 s (log: $S/run.out)" >&2
