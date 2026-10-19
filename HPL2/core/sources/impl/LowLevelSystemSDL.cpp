@@ -98,21 +98,46 @@ static bool WriteProcFile(const char *apPath, const std::string &asData)
 	return fclose(pFile) == 0 && bOk;
 }
 
-// Game data is read-only to the engine: every steamapps/common reachable from the game dir gets a private read-only bind mount.
-static void ProtectSteamLibraries()
+static void AddSteamRoot(std::set<std::string> &aSet, const std::string &asPath)
+{
+	char vReal[PATH_MAX];
+	if(realpath(asPath.c_str(), vReal) == NULL) return;
+	std::string sReal = std::string(vReal) + "/";
+	size_t lPos = sReal.find("/steamapps/common/");
+	if(lPos != std::string::npos) aSet.insert(sReal.substr(0, lPos + 17));
+}
+
+static void AddSteamLibraryFolders(std::set<std::string> &aSet, const std::string &asVdf)
+{
+	std::ifstream file(asVdf);
+	for(std::string sLine; std::getline(file, sLine);)
+	{
+		size_t lKey = sLine.find("\"path\"");
+		if(lKey == std::string::npos) continue;
+		size_t lStart = sLine.find('"', lKey + 6);
+		size_t lEnd = lStart == std::string::npos ? lStart : sLine.find('"', lStart + 1);
+		if(lEnd != std::string::npos) AddSteamRoot(aSet, sLine.substr(lStart + 1, lEnd - lStart - 1) + "/steamapps/common");
+	}
+}
+
+// Game data is read-only to the engine: every Steam library and every steamapps/common reachable from the game dir
+// gets a private read-only bind mount. Fails closed: a root that stays writable stops the engine.
+static bool ProtectSteamLibraries()
 {
 	std::set<std::string> setRoots;
 	DIR *pDir = opendir(".");
 	for(dirent *pEnt = pDir ? readdir(pDir) : NULL; pEnt; pEnt = readdir(pDir))
-	{
-		char vReal[PATH_MAX];
-		if(realpath(pEnt->d_name, vReal) == NULL) continue;
-		std::string sReal = std::string(vReal) + "/";
-		size_t lPos = sReal.find("/steamapps/common/");
-		if(lPos != std::string::npos) setRoots.insert(sReal.substr(0, lPos + 17));
-	}
+		AddSteamRoot(setRoots, pEnt->d_name);
 	if(pDir) closedir(pDir);
-	if(setRoots.empty()) return;
+	const char *pHome = getenv("HOME");
+	const char *pData = getenv("XDG_DATA_HOME");
+	if(pHome)
+	{
+		AddSteamLibraryFolders(setRoots, std::string(pHome) + "/.steam/steam/steamapps/libraryfolders.vdf");
+		AddSteamLibraryFolders(setRoots, std::string(pHome) + "/.local/share/Steam/steamapps/libraryfolders.vdf");
+	}
+	if(pData && *pData) AddSteamLibraryFolders(setRoots, std::string(pData) + "/Steam/steamapps/libraryfolders.vdf");
+	if(setRoots.empty()) return true;
 
 	char vCwd[PATH_MAX];
 	uid_t lUid = getuid();
@@ -124,23 +149,34 @@ static void ProtectSteamLibraries()
 	   mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
 	{
 		fprintf(stderr, "open-hpl: could not make Steam libraries read-only: %s\n", strerror(errno));
-		return;
+	}
+	else
+	{
+		static const unsigned long vFlags[][2] = { {ST_NOSUID, MS_NOSUID}, {ST_NODEV, MS_NODEV}, {ST_NOEXEC, MS_NOEXEC},
+			{ST_NOATIME, MS_NOATIME}, {ST_NODIRATIME, MS_NODIRATIME}, {ST_RELATIME, MS_RELATIME} };
+		for(const std::string &sRoot : setRoots)
+		{
+			struct statvfs st;
+			unsigned long lFlags = MS_BIND | MS_REMOUNT | MS_RDONLY;
+			bool bOk = mount(sRoot.c_str(), sRoot.c_str(), NULL, MS_BIND | MS_REC, NULL) == 0 && statvfs(sRoot.c_str(), &st) == 0;
+			for(size_t i = 0; bOk && i < sizeof(vFlags) / sizeof(vFlags[0]); ++i)
+				if(st.f_flag & vFlags[i][0]) lFlags |= vFlags[i][1];
+			if(!bOk || mount(NULL, sRoot.c_str(), NULL, lFlags, NULL) != 0)
+				fprintf(stderr, "open-hpl: could not make '%s' read-only: %s\n", sRoot.c_str(), strerror(errno));
+		}
+		// the old cwd still points into the writable mount
+		if(chdir(vCwd) != 0) fprintf(stderr, "open-hpl: chdir '%s': %s\n", vCwd, strerror(errno));
 	}
 
-	static const unsigned long vFlags[][2] = { {ST_NOSUID, MS_NOSUID}, {ST_NODEV, MS_NODEV}, {ST_NOEXEC, MS_NOEXEC},
-		{ST_NOATIME, MS_NOATIME}, {ST_NODIRATIME, MS_NODIRATIME}, {ST_RELATIME, MS_RELATIME} };
+	// an already read-only root (bwrap, flatpak) passes even when unshare failed
+	bool bAllReadOnly = true;
 	for(const std::string &sRoot : setRoots)
-	{
-		struct statvfs st;
-		unsigned long lFlags = MS_BIND | MS_REMOUNT | MS_RDONLY;
-		bool bOk = mount(sRoot.c_str(), sRoot.c_str(), NULL, MS_BIND | MS_REC, NULL) == 0 && statvfs(sRoot.c_str(), &st) == 0;
-		for(size_t i = 0; bOk && i < sizeof(vFlags) / sizeof(vFlags[0]); ++i)
-			if(st.f_flag & vFlags[i][0]) lFlags |= vFlags[i][1];
-		if(!bOk || mount(NULL, sRoot.c_str(), NULL, lFlags, NULL) != 0)
-			fprintf(stderr, "open-hpl: could not make '%s' read-only: %s\n", sRoot.c_str(), strerror(errno));
-	}
-	// the old cwd still points into the writable mount
-	if(chdir(vCwd) != 0) fprintf(stderr, "open-hpl: chdir '%s': %s\n", vCwd, strerror(errno));
+		if(access(sRoot.c_str(), W_OK) == 0)
+		{
+			fprintf(stderr, "open-hpl: refusing to run: '%s' is writable\n", sRoot.c_str());
+			bAllReadOnly = false;
+		}
+	return bAllReadOnly;
 }
 #endif
 
@@ -197,7 +233,7 @@ int main(int argc, char *argv[])
         chdir(dataDir.c_str());
 	}
 #ifdef __linux__
-	ProtectSteamLibraries();
+	if(!ProtectSteamLibraries()) return 1;
 #endif
 
 	return hplMain(cmdline);

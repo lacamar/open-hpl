@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(//home/lm/.local/share/Steam/steamapps/common/**)"
+    ]
+  }
+}
