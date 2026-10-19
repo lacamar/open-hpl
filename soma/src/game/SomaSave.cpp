@@ -82,7 +82,7 @@ namespace
 			struct tm t = {};
 			localtime_r(&st.st_mtime, &t);
 			char vBuf[64];
-			snprintf(vBuf, sizeof(vBuf), "%d/%d-%d %d:%02d:%d", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900, t.tm_hour, t.tm_min, t.tm_sec);
+			snprintf(vBuf, sizeof(vBuf), "%d/%d/%d %d:%02d:%02d", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900, t.tm_hour, t.tm_min, t.tm_sec);
 			asDate = vBuf;
 			return;
 		}
