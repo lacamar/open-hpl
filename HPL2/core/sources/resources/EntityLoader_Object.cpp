@@ -192,7 +192,8 @@ namespace hpl {
 										cXmlElement *apJointElem, iPhysicsWorld *apPhysicsWorld,
 										tLoaderPhysicsBodyMap &a_setBodies,
 										const cMatrixf& a_mtxTransform,
-										const cVector3f& avScale)
+										const cVector3f& avScale,
+										const std::map<iPhysicsBody*, cMatrixf>& a_mapRestMatrix)
 	{
 		
 		/////////////////////////////
@@ -232,6 +233,15 @@ namespace hpl {
 		{
 			Error("Could not find child body with ID %d for joint '%s'\n", lChildID, sJointName.c_str());
 			return NULL;
+		}
+
+		// Bodies were moved to a pose: the joint follows its child body
+		auto restIt = a_mapRestMatrix.find(pChildBody);
+		if(restIt != a_mapRestMatrix.end())
+		{
+			cMatrixf mtxDelta = cMath::MatrixMul(pChildBody->GetWorldMatrix(), cMath::MatrixInverse(restIt->second));
+			vPivot = cMath::MatrixMul(mtxDelta, vPivot);
+			vPinDir = cMath::MatrixMul3x3(mtxDelta, vPinDir);
 		}
 		
 		///////////////////////////
@@ -812,7 +822,12 @@ namespace hpl {
 			}
 		}
 
+		std::map<iPhysicsBody*, cMatrixf> mapRestMatrix;
+		for(iPhysicsBody *pBody : mvBodies)
+			mapRestMatrix[pBody] = pBody->GetWorldMatrix();
 		bool bPosed = BeforeJoints();
+		if(!bPosed)
+			mapRestMatrix.clear();
 
 		if(pPhysicsWorld)
 		////////////////////////////////////////	
@@ -827,7 +842,7 @@ namespace hpl {
 					cXmlElement *pJointElem = jointIt.Next()->ToElement();
 
 
-					iPhysicsJoint *pJoint = CreateJoint(asName,pJointElem,pPhysicsWorld,setBodies, a_mtxTransform, mvScale);
+					iPhysicsJoint *pJoint = CreateJoint(asName,pJointElem,pPhysicsWorld,setBodies, a_mtxTransform, mvScale, mapRestMatrix);
 					if(pJoint)
 					{
 						SetJointProperties(pJoint,pJointElem, apWorld);
