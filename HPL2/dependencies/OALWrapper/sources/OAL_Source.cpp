@@ -282,6 +282,8 @@ void cOAL_Source::LowLevelStop()
 
 	//LowLevelSetMuted(true);
 	RUN_AL_FUNC(alSourceStop(mlObjectId));
+	// STOPPED counts every queued buffer as processed; INITIAL counts none
+	RUN_AL_FUNC(alSourceRewind(mlObjectId));
 }
 
 //--------------------------------------------------------------------------------
