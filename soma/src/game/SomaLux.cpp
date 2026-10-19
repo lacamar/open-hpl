@@ -882,7 +882,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		cSomaLuxEntity *pArea = bMap && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
 		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
-		// cLuxMapHandler::MapTransferData: moved props inside the transfer area keep their pose
+		// cLuxMapHandler::MapTransferData: props inside the transfer area keep their pose, static ones too (moving platforms)
 		std::vector<std::pair<tString, std::vector<cMatrixf>>> vCarried;
 		if (pArea && pBody)
 		{
@@ -893,8 +893,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			fPitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0;
 			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
 			{
-				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty() ||
-					std::none_of(p->mvBodies.begin(), p->mvBodies.end(), [](iPhysicsBody *b) { return b->GetMass() > 0; }))
+				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty())
 					continue;
 				cVector3f v = cMath::MatrixMul(mtxInv, p->mvBodies[0]->GetWorldPosition());
 				if (std::abs(v.x) > pArea->mvSize.x / 2 || std::abs(v.y) > pArea->mvSize.y / 2 || std::abs(v.z) > pArea->mvSize.z / 2)
