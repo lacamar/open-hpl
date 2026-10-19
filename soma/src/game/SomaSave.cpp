@@ -24,13 +24,15 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVK"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVL"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
 	int gnSavedUnderwater = -1;
 	int glPendingVersion = 22;
+	int glSavedGravityActive = -1;
+	cVector3f gvSavedGravity(0);
 	tString gsPendingPreload;
 	bool gbHoldAfterLoad = false;
 	bool gbHoldAfterHeader = false;
@@ -751,6 +753,8 @@ public:
 			o.Pod(pPlayer->GetMoveState() ? pPlayer->GetMoveState()->mlId : -1);
 			// int return read as its low byte: 0/1 crouching
 			o.Pod((int)pPlayer->CallBool("int GetCharacterState()", nullptr, false));
+			o.Pod((uint8_t)pBody->GetCustomGravityActive());
+			o.Pod(pBody->GetCustomGravity());
 		}
 
 		// a save from inside a timer callback must not keep that expired timer
@@ -994,6 +998,11 @@ public:
 			lMoveState = in.Pod<int>();
 			if (glPendingVersion >= 15)
 				lCharState = in.Pod<int>();
+			if (glPendingVersion >= 28)
+			{
+				glSavedGravityActive = in.Pod<uint8_t>();
+				gvSavedGravity = in.Pod<cVector3f>();
+			}
 		}
 
 		pMap->GetTimers().clear();
@@ -1374,7 +1383,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 27)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 28)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
@@ -1431,12 +1440,20 @@ bool cSomaSaveHandler::ApplyPendingState()
 	cIn in(sState);
 	SomaPreloadMap() = gsPendingPreload;
 	gnSavedUnderwater = -1;
+	glSavedGravityActive = -1;
 	cSomaSaveState::ReadWorld(in);
 	if (glPendingVersion >= 27)
 		SomaDeserializeMusic(in.Str());
 	cSomaLuxMap::GetCurrent()->Setup();
 	if (gnSavedUnderwater >= 0)
 		cSomaSaveState::ApplyUnderwater(cSomaLuxMap::GetCurrent(), gnSavedUnderwater != 0);
+	// the body took the pre-load session's gravity when the map created it
+	iCharacterBody *pBody = cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	if (glSavedGravityActive >= 0 && pBody)
+	{
+		pBody->SetCustomGravityActive(glSavedGravityActive != 0);
+		pBody->SetCustomGravity(gvSavedGravity);
+	}
 	if (in.ok == false)
 		Warning("SOMA save: saved state is truncated\n");
 	if (cSomaLuxPlayer::Get())
