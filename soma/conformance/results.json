@@ -3,10 +3,10 @@
   "00_00_intro.hpm": {
    "allowlisted": [],
    "asleep": false,
-   "boot_s": 1.7,
+   "boot_s": 1.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 55.22683,
+    "fps": 59.880249,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 1.75,
@@ -15,7 +15,7 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 55.22683,
+   "fps": 59.880249,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -133,7 +133,7 @@
    "load_report": {
     "map": "00_00_intro.hpm",
     "terrain_active": false,
-    "total_ms": 269,
+    "total_ms": 273,
     "tracks": {
      "Area": {
       "created": 1,
@@ -145,7 +145,7 @@
      "Billboard": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -215,7 +215,7 @@
      "Primitive": {
       "created": 1,
       "file_missing": false,
-      "ms": 13,
+      "ms": 14,
       "skipped": {},
       "xml": 1
      },
@@ -236,7 +236,7 @@
      "StaticObject": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 0
      },
@@ -249,14 +249,14 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2218826.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2281421.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
      "example": "ERROR: Could not find bone '00_01_tap_(Conflict_Present)' in model '/home/lm/.local/share/Steam/steamapps/common/SOMA/entities/organic/water/pouring/00_01_tap_pouring/00_01_tap_pouring.ent'"
     }
    },
-   "log_warnings": 21,
+   "log_warnings": 24,
    "render": {
     "draw_calls": 3,
     "fog_areas_in_list": 0,
@@ -266,10 +266,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 5.162034034729004,
-     "logic_steps": 1.100000023841858,
-     "render_ms": 3.2879204750061035,
-     "swap_ms": 0.09048358350992203
+     "logic_ms": 0.48499763011932373,
+     "logic_steps": 1.0,
+     "render_ms": 2.57306170463562,
+     "swap_ms": 0.06298130005598068
     },
     "shader_failures": 0,
     "solid_objects": 1,
@@ -277,7 +277,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 11.5,
+   "wall_s": 12.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -324,7 +324,7 @@
    "boot_s": 2.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.940094,
+    "fps": 59.803951,
     "pitch": 0,
     "pos_x": -10.75,
     "pos_y": 1.51415,
@@ -333,33 +333,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.940094,
+   "fps": 59.803951,
    "frame": {
-    "black_frac": 0.008734,
+    "black_frac": 0.008757,
     "height": 2160,
     "lum_hist16": [
-     0.356027,
-     0.394224,
-     0.102133,
-     0.044141,
-     0.025641,
-     0.017039,
-     0.011811,
-     0.008643,
-     0.007446,
-     0.007365,
-     0.006734,
-     0.001599,
-     0.001875,
-     0.001925,
-     0.006641,
-     0.006757
+     0.356052,
+     0.394226,
+     0.102098,
+     0.044177,
+     0.025605,
+     0.017055,
+     0.011812,
+     0.008656,
+     0.007428,
+     0.007346,
+     0.006755,
+     0.001588,
+     0.001882,
+     0.001915,
+     0.00666,
+     0.006745
     ],
     "lum_max": 255,
-    "lum_mean": 31.373951,
+    "lum_mean": 31.370682,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 4e-05,
+    "white_frac": 3.9e-05,
     "width": 3840
    },
    "gbuffer": {
@@ -370,7 +370,7 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1.291016,
-     "b_mean": 0.418703,
+     "b_mean": 0.418701,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 102781,
@@ -381,7 +381,7 @@
      "g_zero_count": 56815,
      "height": 2160,
      "r_max": 1.345703,
-     "r_mean": 0.464313,
+     "r_mean": 0.46427,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 23752,
@@ -451,19 +451,19 @@
    "load_report": {
     "map": "00_01_apartment.hpm",
     "terrain_active": false,
-    "total_ms": 917,
+    "total_ms": 912,
     "tracks": {
      "Area": {
       "created": 80,
       "file_missing": false,
-      "ms": 2,
+      "ms": 1,
       "skipped": {},
       "xml": 80
      },
      "Billboard": {
       "created": 20,
       "file_missing": false,
-      "ms": 8,
+      "ms": 6,
       "skipped": {},
       "xml": 20
      },
@@ -479,21 +479,21 @@
      "Decal": {
       "created": 106,
       "file_missing": false,
-      "ms": 40,
+      "ms": 30,
       "skipped": {},
       "xml": 106
      },
      "DetailMeshes": {
       "created": 39,
       "file_missing": false,
-      "ms": 8,
+      "ms": 4,
       "skipped": {},
       "xml": 39
      },
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 587,
+      "ms": 594,
       "skipped": {},
       "xml": 436
      },
@@ -521,35 +521,35 @@
      "Light": {
       "created": 70,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 70
      },
      "LightMask": {
       "created": 10,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 10
      },
      "ParticleSystem": {
       "created": 9,
       "file_missing": false,
-      "ms": 10,
+      "ms": 9,
       "skipped": {},
       "xml": 9
      },
      "Primitive": {
       "created": 11,
       "file_missing": false,
-      "ms": 9,
+      "ms": 10,
       "skipped": {},
       "xml": 11
      },
      "Sound": {
       "created": 7,
       "file_missing": false,
-      "ms": 125,
+      "ms": 130,
       "skipped": {},
       "xml": 7
      },
@@ -563,7 +563,7 @@
      "StaticObject": {
       "created": 145,
       "file_missing": false,
-      "ms": 81,
+      "ms": 85,
       "skipped": {},
       "xml": 145
      },
@@ -576,7 +576,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2219500.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2282384.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 4,
@@ -589,18 +589,18 @@
    },
    "log_warnings": 24,
    "render": {
-    "draw_calls": 530,
+    "draw_calls": 533,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 28,
     "lights_rendered": 28,
-    "occlusion_queries": 39,
+    "occlusion_queries": 42,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.0964425802230835,
+     "logic_ms": 0.9178451299667358,
      "logic_steps": 1.0,
-     "render_ms": 8.424559593200684,
-     "swap_ms": 0.050716955214738846
+     "render_ms": 7.976099967956543,
+     "swap_ms": 0.05718820169568062
     },
     "shader_failures": 0,
     "solid_objects": 195,
@@ -608,7 +608,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 12.1,
+   "wall_s": 12.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -652,10 +652,10 @@
     "Compound:0/9"
    ],
    "asleep": false,
-   "boot_s": 2.2,
+   "boot_s": 2.3,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.358078,
+    "fps": 58.706463,
     "pitch": 0,
     "pos_x": -18.4849,
     "pos_y": 1,
@@ -664,130 +664,130 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.358078,
+   "fps": 58.706463,
    "frame": {
-    "black_frac": 0.088354,
+    "black_frac": 0.080109,
     "height": 2160,
     "lum_hist16": [
-     0.201834,
-     0.369689,
-     0.130589,
-     0.057924,
-     0.039153,
-     0.0474,
-     0.051049,
-     0.038873,
-     0.022242,
-     0.019118,
-     0.017088,
-     0.002378,
-     0.001063,
-     0.000531,
-     0.00032,
-     0.000751
+     0.199016,
+     0.370225,
+     0.129239,
+     0.058248,
+     0.03996,
+     0.048237,
+     0.051642,
+     0.039311,
+     0.022554,
+     0.019116,
+     0.017044,
+     0.002544,
+     0.001117,
+     0.000546,
+     0.000383,
+     0.00082
     ],
     "lum_max": 255,
-    "lum_mean": 44.478668,
+    "lum_mean": 44.856228,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000599,
+    "white_frac": 0.00058,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.008469,
+     "a_mean": 0.008782,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8224158,
+     "a_zero_count": 8221562,
      "b_max": 1,
-     "b_mean": 0.264485,
+     "b_mean": 0.263746,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 23908,
-     "g_max": 0.827148,
-     "g_mean": 0.271667,
+     "b_zero_count": 24034,
+     "g_max": 0.921387,
+     "g_mean": 0.270686,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 86290,
+     "g_zero_count": 89301,
      "height": 2160,
-     "r_max": 0.807617,
-     "r_mean": 0.385013,
+     "r_max": 1,
+     "r_mean": 0.38435,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 88623,
+     "r_zero_count": 91355,
      "sample_a": 0,
-     "sample_b": 0.082458,
-     "sample_g": 0.096375,
-     "sample_r": 0.304932,
+     "sample_b": 0.088074,
+     "sample_g": 0.097168,
+     "sample_r": 0.307129,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.017393,
-     "a_min": 0.003195,
+     "a_mean": 0.017692,
+     "a_min": 0.003199,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.673856,
-     "b_min": -0.975098,
+     "b_mean": 0.679364,
+     "b_min": -0.974121,
      "b_nan_count": 0,
-     "b_zero_count": 87,
+     "b_zero_count": 90,
      "g_max": 1,
-     "g_mean": 0.135484,
+     "g_mean": 0.134212,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 70244,
+     "g_zero_count": 72840,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.272455,
+     "r_mean": -0.259249,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 70339,
+     "r_zero_count": 72937,
      "sample_a": 0.009445,
-     "sample_b": 0.931152,
-     "sample_g": 0.325439,
-     "sample_r": -0.164185,
+     "sample_b": 0.936523,
+     "sample_g": 0.312012,
+     "sample_r": -0.157349,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.417259,
+     "a_mean": 0.418642,
      "a_min": 0.113708,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.319318,
+     "b_mean": 0.320867,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 28507,
-     "g_max": 1,
-     "g_mean": 0.322922,
+     "b_zero_count": 27699,
+     "g_max": 0.998535,
+     "g_mean": 0.324236,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 75784,
+     "g_zero_count": 77935,
      "height": 2160,
-     "r_max": 1,
-     "r_mean": 0.321075,
+     "r_max": 0.998047,
+     "r_mean": 0.322347,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 84179,
-     "sample_a": 0.4021,
-     "sample_b": 0.30542,
-     "sample_g": 0.310791,
-     "sample_r": 0.303467,
+     "r_zero_count": 85808,
+     "sample_a": 0.387695,
+     "sample_b": 0.289062,
+     "sample_g": 0.294922,
+     "sample_r": 0.2771,
      "width": 3840
     }
    },
    "load_report": {
     "map": "00_02_subway.hpm",
     "terrain_active": false,
-    "total_ms": 665,
+    "total_ms": 797,
     "tracks": {
      "Area": {
       "created": 37,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 37
      },
@@ -824,7 +824,7 @@
      "Entity": {
       "created": 215,
       "file_missing": false,
-      "ms": 530,
+      "ms": 661,
       "skipped": {},
       "xml": 215
      },
@@ -866,7 +866,7 @@
      "Primitive": {
       "created": 7,
       "file_missing": false,
-      "ms": 9,
+      "ms": 7,
       "skipped": {},
       "xml": 7
      },
@@ -887,7 +887,7 @@
      "StaticObject": {
       "created": 6,
       "file_missing": false,
-      "ms": 77,
+      "ms": 81,
       "skipped": {},
       "xml": 6
      },
@@ -900,14 +900,14 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2220184.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2283069.log",
    "log_errors": {
     "ERROR: Couldn'*'entities/urban/tech/monitor_large/televison_small_screen.mat'": {
      "count": 4,
      "example": "ERROR: Couldn't create material 'entities/urban/tech/monitor_large/televison_small_screen.mat'"
     }
    },
-   "log_warnings": 42,
+   "log_warnings": 44,
    "render": {
     "draw_calls": 33,
     "fog_areas_in_list": 0,
@@ -917,10 +917,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 3.6933178901672363,
+     "logic_ms": 2.476752519607544,
      "logic_steps": 1.0333333015441895,
-     "render_ms": 6.575314521789551,
-     "swap_ms": 0.06710664927959442
+     "render_ms": 6.156260967254639,
+     "swap_ms": 0.06529036164283752
     },
     "shader_failures": 0,
     "solid_objects": 5,
@@ -928,19 +928,19 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 12.1,
+   "wall_s": 11.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
    },
    "world": {
     "aabb_max": [
-     139.178391,
+     138.445053,
      4.334988,
      4.222199
     ],
     "aabb_min": [
-     -245.433716,
+     -246.167053,
      -10.493881,
      -8.76608
     ],
@@ -959,9 +959,9 @@
     "oversized_top": [],
     "particle_systems": 6,
     "physics_bodies": 287,
-    "physics_bodies_awake": 37,
+    "physics_bodies_awake": 35,
     "physics_bodies_dynamic": 44,
-    "sound_entities": 6,
+    "sound_entities": 5,
     "static_mesh_entities": 150,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -976,10 +976,10 @@
     "no_material:televison_small_screen.mat"
    ],
    "asleep": false,
-   "boot_s": 3.1,
+   "boot_s": 3.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": 4.49557,
     "pos_y": 1.402786,
@@ -988,30 +988,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 59.940094,
    "frame": {
-    "black_frac": 0.080673,
+    "black_frac": 0.080689,
     "height": 2160,
     "lum_hist16": [
-     0.387601,
-     0.21648,
-     0.125605,
-     0.110542,
-     0.039553,
-     0.030457,
-     0.021915,
-     0.011394,
-     0.011464,
-     0.020406,
-     0.009375,
-     0.002805,
-     0.002982,
-     0.00328,
-     0.002082,
-     0.00406
+     0.387592,
+     0.216512,
+     0.125585,
+     0.110502,
+     0.039573,
+     0.030471,
+     0.021921,
+     0.011399,
+     0.011462,
+     0.020378,
+     0.009389,
+     0.002819,
+     0.002962,
+     0.003303,
+     0.002076,
+     0.004056
     ],
     "lum_max": 255,
-    "lum_mean": 36.828171,
+    "lum_mean": 36.83049,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.003289,
@@ -1025,7 +1025,7 @@
      "a_nan_count": 0,
      "a_zero_count": 7869322,
      "b_max": 1,
-     "b_mean": 0.474684,
+     "b_mean": 0.474682,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 88540,
@@ -1106,12 +1106,12 @@
    "load_report": {
     "map": "00_03_laboratory.hpm",
     "terrain_active": false,
-    "total_ms": 1374,
+    "total_ms": 1249,
     "tracks": {
      "Area": {
       "created": 239,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 239
      },
@@ -1136,7 +1136,7 @@
      "Decal": {
       "created": 117,
       "file_missing": false,
-      "ms": 29,
+      "ms": 33,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1152,7 +1152,7 @@
      "Entity": {
       "created": 436,
       "file_missing": false,
-      "ms": 869,
+      "ms": 753,
       "skipped": {},
       "xml": 436
      },
@@ -1194,21 +1194,21 @@
      "ParticleSystem": {
       "created": 15,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 15
      },
      "Primitive": {
       "created": 47,
       "file_missing": false,
-      "ms": 12,
+      "ms": 13,
       "skipped": {},
       "xml": 47
      },
      "Sound": {
       "created": 31,
       "file_missing": false,
-      "ms": 138,
+      "ms": 134,
       "skipped": {},
       "xml": 31
      },
@@ -1235,7 +1235,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2220776.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2283799.log",
    "log_errors": {
     "ERROR: Couldn'*'entities/urban/tech/monitor_large/televison_small_screen.mat'": {
      "count": 4,
@@ -1244,18 +1244,18 @@
    },
    "log_warnings": 24,
    "render": {
-    "draw_calls": 706,
+    "draw_calls": 703,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 31,
     "lights_rendered": 31,
-    "occlusion_queries": 113,
+    "occlusion_queries": 110,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 1.4478532075881958,
+     "frames": 120,
+     "logic_ms": 1.4193321466445923,
      "logic_steps": 1.0,
-     "render_ms": 10.131382942199707,
-     "swap_ms": 0.04920249804854393
+     "render_ms": 10.864750862121582,
+     "swap_ms": 0.04357424005866051
     },
     "shader_failures": 0,
     "solid_objects": 226,
@@ -1263,7 +1263,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.6,
+   "wall_s": 13.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1325,10 +1325,10 @@
     "Compound:0/93"
    ],
    "asleep": false,
-   "boot_s": 5.0,
+   "boot_s": 4.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 59.880192,
     "pitch": 0,
     "pos_x": 3,
     "pos_y": 2.25,
@@ -1337,15 +1337,15 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 59.880192,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.985011,
-     0.013983,
-     0.000967,
-     3.8e-05,
+     0.984856,
+     0.014136,
+     0.000971,
+     3.7e-05,
      0,
      0,
      0,
@@ -1360,7 +1360,7 @@
      0
     ],
     "lum_max": 52,
-    "lum_mean": 8.905197,
+    "lum_mean": 8.86857,
     "lum_min": 5,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -1374,18 +1374,18 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 0.911133,
-     "b_mean": 0.229913,
+     "b_mean": 0.230038,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 140329,
      "g_max": 0.914062,
-     "g_mean": 0.265545,
+     "g_mean": 0.265674,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 115063,
      "height": 2160,
      "r_max": 0.931152,
-     "r_mean": 0.292535,
+     "r_mean": 0.292652,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 113106,
@@ -1402,18 +1402,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.402095,
+     "b_mean": 0.402072,
      "b_min": -0.993164,
      "b_nan_count": 0,
      "b_zero_count": 2436,
      "g_max": 1,
-     "g_mean": 0.021953,
+     "g_mean": 0.021966,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 7995,
+     "g_zero_count": 7992,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.018607,
+     "r_mean": -0.018588,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 522,
@@ -1425,26 +1425,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.449586,
+     "a_mean": 0.449559,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 29443,
+     "a_zero_count": 30351,
      "b_max": 1,
-     "b_mean": 0.359139,
+     "b_mean": 0.359051,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 195560,
+     "b_zero_count": 196481,
      "g_max": 1,
-     "g_mean": 0.370715,
+     "g_mean": 0.370626,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 162949,
+     "g_zero_count": 163864,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.381675,
+     "r_mean": 0.381594,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 165700,
+     "r_zero_count": 166620,
      "sample_a": 0.269043,
      "sample_b": 0.352783,
      "sample_g": 0.362061,
@@ -1455,26 +1455,26 @@
    "load_report": {
     "map": "01_01_upsilon_awake.hpm",
     "terrain_active": false,
-    "total_ms": 2829,
+    "total_ms": 2702,
     "tracks": {
      "Area": {
       "created": 370,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 370
      },
      "Billboard": {
       "created": 193,
       "file_missing": false,
-      "ms": 23,
+      "ms": 32,
       "skipped": {},
       "xml": 193
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 93
       },
@@ -1483,7 +1483,7 @@
      "Decal": {
       "created": 583,
       "file_missing": false,
-      "ms": 175,
+      "ms": 179,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -1492,14 +1492,14 @@
      "DetailMeshes": {
       "created": 504,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 504
      },
      "Entity": {
       "created": 1527,
       "file_missing": false,
-      "ms": 1056,
+      "ms": 981,
       "skipped": {},
       "xml": 1527
      },
@@ -1520,14 +1520,14 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
      "Light": {
       "created": 685,
       "file_missing": false,
-      "ms": 15,
+      "ms": 17,
       "skipped": {},
       "xml": 685
      },
@@ -1541,14 +1541,14 @@
      "ParticleSystem": {
       "created": 174,
       "file_missing": false,
-      "ms": 55,
+      "ms": 56,
       "skipped": {},
       "xml": 174
      },
      "Primitive": {
       "created": 513,
       "file_missing": false,
-      "ms": 68,
+      "ms": 65,
       "skipped": {},
       "xml": 513
      },
@@ -1569,7 +1569,7 @@
      "StaticObject": {
       "created": 3483,
       "file_missing": false,
-      "ms": 854,
+      "ms": 794,
       "skipped": {},
       "xml": 3483
      },
@@ -1582,7 +1582,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2221530.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2284755.log",
    "log_errors": {
     "ERROR: Could not find any look entities '*' for Tool Area '*'": {
      "count": 2,
@@ -1595,26 +1595,26 @@
    },
    "log_warnings": 55,
    "render": {
-    "draw_calls": 770,
+    "draw_calls": 778,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 16,
     "lights_rendered": 16,
-    "occlusion_queries": 267,
+    "occlusion_queries": 269,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 3.632300853729248,
+     "logic_ms": 3.822547435760498,
      "logic_steps": 1.0,
-     "render_ms": 9.182527542114258,
-     "swap_ms": 0.06004105880856514
+     "render_ms": 9.563666343688965,
+     "swap_ms": 0.06624186038970947
     },
     "shader_failures": 0,
-    "solid_objects": 195,
-    "trans_objects": 49
+    "solid_objects": 196,
+    "trans_objects": 60
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 19.9,
+   "wall_s": 18.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -1643,11 +1643,11 @@
     "nan_bounds_top": [],
     "no_material_top": {},
     "oversized_top": [],
-    "particle_systems": 221,
+    "particle_systems": 220,
     "physics_bodies": 2399,
     "physics_bodies_awake": 0,
     "physics_bodies_dynamic": 424,
-    "sound_entities": 140,
+    "sound_entities": 141,
     "static_mesh_entities": 3047,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -1663,7 +1663,7 @@
    "boot_s": 5.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.047188,
+    "fps": 50.246288,
     "pitch": 0,
     "pos_x": 31.999201,
     "pos_y": 18,
@@ -1672,33 +1672,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 56.047188,
+   "fps": 50.246288,
    "frame": {
-    "black_frac": 0.003454,
+    "black_frac": 0.003459,
     "height": 2160,
     "lum_hist16": [
-     0.348317,
-     0.239885,
-     0.190448,
-     0.146079,
-     0.054753,
-     0.006655,
-     0.004969,
-     0.003957,
-     0.002056,
-     0.001036,
-     0.000347,
+     0.348596,
+     0.232182,
+     0.187542,
+     0.149134,
+     0.061111,
+     0.007283,
+     0.004927,
+     0.004117,
+     0.002134,
+     0.001094,
+     0.000379,
      0.00018,
-     0.000142,
-     0.000102,
-     0.000109,
-     0.000964
+     0.000143,
+     0.000105,
+     0.000108,
+     0.000965
     ],
     "lum_max": 255,
-    "lum_mean": 30.504375,
+    "lum_mean": 30.876945,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000847,
+    "white_frac": 0.000846,
     "width": 3840
    },
    "gbuffer": {
@@ -1707,23 +1707,23 @@
      "a_mean": 0.000228,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8278919,
+     "a_zero_count": 8279004,
      "b_max": 1,
-     "b_mean": 0.263775,
+     "b_mean": 0.263828,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2930,
+     "b_zero_count": 2949,
      "g_max": 0.945801,
-     "g_mean": 0.315858,
+     "g_mean": 0.315697,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1676,
+     "g_zero_count": 1677,
      "height": 2160,
      "r_max": 0.958008,
-     "r_mean": 0.343364,
+     "r_mean": 0.343,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2110,
+     "r_zero_count": 2111,
      "sample_a": 0,
      "sample_b": 0.223511,
      "sample_g": 0.262695,
@@ -1737,15 +1737,15 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.294878,
+     "b_mean": 0.294881,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 52967,
      "g_max": 1,
-     "g_mean": 0.207863,
+     "g_mean": 0.207869,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 2916,
+     "g_zero_count": 2919,
      "height": 2160,
      "r_max": 1,
      "r_mean": -0.072775,
@@ -1760,26 +1760,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.515518,
+     "a_mean": 0.515516,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3574,
+     "a_zero_count": 3573,
      "b_max": 1,
-     "b_mean": 0.448245,
+     "b_mean": 0.448232,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 105305,
+     "b_zero_count": 105329,
      "g_max": 1,
-     "g_mean": 0.449701,
+     "g_mean": 0.449688,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 96784,
+     "g_zero_count": 96813,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.43612,
+     "r_mean": 0.436108,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 104834,
+     "r_zero_count": 104868,
      "sample_a": 0.26001,
      "sample_b": 0.380371,
      "sample_g": 0.388184,
@@ -1790,7 +1790,7 @@
    "load_report": {
     "map": "01_02_upsilon_inside.hpm",
     "terrain_active": false,
-    "total_ms": 2906,
+    "total_ms": 2945,
     "tracks": {
      "Area": {
       "created": 979,
@@ -1802,7 +1802,7 @@
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 39,
+      "ms": 41,
       "skipped": {},
       "xml": 359
      },
@@ -1818,7 +1818,7 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 296,
+      "ms": 306,
       "skipped": {},
       "xml": 536
      },
@@ -1832,7 +1832,7 @@
      "Entity": {
       "created": 2232,
       "file_missing": false,
-      "ms": 1338,
+      "ms": 1272,
       "skipped": {},
       "xml": 2232
      },
@@ -1853,7 +1853,7 @@
      "Light": {
       "created": 524,
       "file_missing": false,
-      "ms": 11,
+      "ms": 13,
       "skipped": {},
       "xml": 524
      },
@@ -1867,21 +1867,21 @@
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 53,
+      "ms": 55,
       "skipped": {},
       "xml": 148
      },
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 22,
+      "ms": 25,
       "skipped": {},
       "xml": 128
      },
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 88,
+      "ms": 94,
       "skipped": {},
       "xml": 109
      },
@@ -1895,7 +1895,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 622,
+      "ms": 685,
       "skipped": {},
       "xml": 3381
      },
@@ -1910,7 +1910,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2222626.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2285850.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -1959,26 +1959,26 @@
    },
    "log_warnings": 83,
    "render": {
-    "draw_calls": 1192,
+    "draw_calls": 1148,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 92,
     "lights_rendered": 92,
-    "occlusion_queries": 142,
+    "occlusion_queries": 147,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 5.482035160064697,
-     "logic_steps": 1.0413223505020142,
-     "render_ms": 11.535669326782227,
-     "swap_ms": 0.09441769868135452
+     "logic_ms": 5.543907165527344,
+     "logic_steps": 1.1983470916748047,
+     "render_ms": 13.79917049407959,
+     "swap_ms": 0.15545696020126343
     },
     "shader_failures": 0,
-    "solid_objects": 329,
-    "trans_objects": 100
+    "solid_objects": 309,
+    "trans_objects": 103
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 16.3,
+   "wall_s": 18.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2013,7 +2013,7 @@
     "physics_bodies": 2920,
     "physics_bodies_awake": 19,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 117,
+    "sound_entities": 116,
     "static_mesh_entities": 3307,
     "submeshes_without_material": 1,
     "unbounded_top": []
@@ -2026,10 +2026,10 @@
     "no_material:communication_table_pplant_GUI.mat"
    ],
    "asleep": false,
-   "boot_s": 5.2,
+   "boot_s": 5.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.324055,
+    "fps": 50.495037,
     "pitch": 0,
     "pos_x": 22.004,
     "pos_y": 256.018005,
@@ -2038,30 +2038,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 51.792843,
+   "fps": 50.495037,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.051788,
-     0.724494,
-     0.163319,
-     0.043978,
-     0.011208,
-     0.003199,
-     0.001137,
-     0.00044,
-     0.000155,
-     8e-05,
-     5e-05,
-     4.3e-05,
+     0.050272,
+     0.725967,
+     0.163743,
+     0.043611,
+     0.011192,
+     0.003207,
+     0.001134,
+     0.000439,
+     0.000157,
+     7.7e-05,
+     5.1e-05,
+     4.4e-05,
      6.4e-05,
-     4.3e-05,
+     4e-05,
      3e-06,
      0
     ],
     "lum_max": 229,
-    "lum_mean": 26.852867,
+    "lum_mean": 26.867876,
     "lum_min": 7,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -2070,26 +2070,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.01114,
+     "a_mean": 0.011134,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8187761,
+     "a_zero_count": 8186609,
      "b_max": 2.236328,
-     "b_mean": 0.198124,
+     "b_mean": 0.198149,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 5476,
+     "b_zero_count": 5431,
      "g_max": 2.318359,
-     "g_mean": 0.247817,
+     "g_mean": 0.248071,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 87533,
+     "g_zero_count": 86650,
      "height": 2160,
      "r_max": 2.402344,
-     "r_mean": 0.271589,
+     "r_mean": 0.271832,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 91235,
+     "r_zero_count": 90305,
      "sample_a": 0,
      "sample_b": 0.233887,
      "sample_g": 0.277832,
@@ -2098,26 +2098,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.062928,
-     "a_min": 0.006561,
+     "a_mean": 0.062818,
+     "a_min": 0.00663,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.32839,
+     "b_mean": 0.327579,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 1,
+     "b_zero_count": 2,
      "g_max": 0.999512,
-     "g_mean": 0.372458,
+     "g_mean": 0.372344,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 87726,
+     "g_zero_count": 86891,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.041071,
+     "r_mean": -0.04086,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 87111,
+     "r_zero_count": 86278,
      "sample_a": 0.052521,
      "sample_b": 0.467773,
      "sample_g": 0.680176,
@@ -2126,26 +2126,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.310947,
+     "a_mean": 0.310941,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 136,
      "b_max": 1,
-     "b_mean": 0.103841,
+     "b_mean": 0.104061,
      "b_min": -0.240234,
      "b_nan_count": 0,
-     "b_zero_count": 3444782,
+     "b_zero_count": 3444458,
      "g_max": 1,
-     "g_mean": 0.093892,
+     "g_mean": 0.094098,
      "g_min": -0.231567,
      "g_nan_count": 0,
-     "g_zero_count": 3448077,
+     "g_zero_count": 3447601,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.093472,
+     "r_mean": 0.093718,
      "r_min": -0.213379,
      "r_nan_count": 0,
-     "r_zero_count": 3530328,
+     "r_zero_count": 3529471,
      "sample_a": 0.208374,
      "sample_b": 0.080505,
      "sample_g": 0.079163,
@@ -2156,26 +2156,26 @@
    "load_report": {
     "map": "01_03_upsilon_outside.hpm",
     "terrain_active": true,
-    "total_ms": 3440,
+    "total_ms": 3606,
     "tracks": {
      "Area": {
       "created": 646,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 646
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 39
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 56
       },
@@ -2184,7 +2184,7 @@
      "Decal": {
       "created": 333,
       "file_missing": false,
-      "ms": 242,
+      "ms": 250,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -2193,14 +2193,14 @@
      "DetailMeshes": {
       "created": 5076,
       "file_missing": false,
-      "ms": 48,
+      "ms": 49,
       "skipped": {},
       "xml": 5076
      },
      "Entity": {
       "created": 924,
       "file_missing": false,
-      "ms": 890,
+      "ms": 909,
       "skipped": {},
       "xml": 924
      },
@@ -2214,14 +2214,14 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
      "Light": {
       "created": 109,
       "file_missing": false,
-      "ms": 3,
+      "ms": 2,
       "skipped": {},
       "xml": 109
      },
@@ -2235,7 +2235,7 @@
      "ParticleSystem": {
       "created": 63,
       "file_missing": false,
-      "ms": 31,
+      "ms": 33,
       "skipped": {},
       "xml": 63
      },
@@ -2249,7 +2249,7 @@
      "Sound": {
       "created": 54,
       "file_missing": false,
-      "ms": 6,
+      "ms": 5,
       "skipped": {},
       "xml": 54
      },
@@ -2263,7 +2263,7 @@
      "StaticObject": {
       "created": 1273,
       "file_missing": false,
-      "ms": 518,
+      "ms": 545,
       "skipped": {},
       "xml": 1273
      },
@@ -2276,7 +2276,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2223450.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2286728.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 7,
@@ -2293,26 +2293,26 @@
    },
    "log_warnings": 36,
    "render": {
-    "draw_calls": 2640,
+    "draw_calls": 2641,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 33,
     "lights_rendered": 33,
-    "occlusion_queries": 153,
+    "occlusion_queries": 149,
     "per_frame": {
      "frames": 122,
-     "logic_ms": 5.493324279785156,
-     "logic_steps": 1.1147540807724,
-     "render_ms": 12.924455642700195,
-     "swap_ms": 0.07980896532535553
+     "logic_ms": 7.060252666473389,
+     "logic_steps": 1.2295081615447998,
+     "render_ms": 13.180883407592773,
+     "swap_ms": 0.11915066838264465
     },
     "shader_failures": 0,
-    "solid_objects": 1097,
+    "solid_objects": 1099,
     "trans_objects": 93
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 19.0,
+   "wall_s": 18.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2360,10 +2360,10 @@
     "StaticObjectBatches:0/22"
    ],
    "asleep": false,
-   "boot_s": 4.0,
+   "boot_s": 3.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.708397,
+    "fps": 59.921436,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 6.5,
@@ -2372,30 +2372,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.708397,
+   "fps": 59.921436,
    "frame": {
-    "black_frac": 0.033159,
+    "black_frac": 0.033191,
     "height": 2160,
     "lum_hist16": [
-     0.834867,
-     0.123256,
-     0.025278,
-     0.010066,
-     0.00353,
-     0.001078,
-     0.000438,
-     0.00016,
-     8.4e-05,
-     4.5e-05,
-     5e-05,
-     5.4e-05,
-     0.001052,
-     4.3e-05,
+     0.835044,
+     0.123153,
+     0.025206,
+     0.01007,
+     0.003516,
+     0.001084,
+     0.000439,
+     0.000162,
+     8.3e-05,
+     4.6e-05,
+     5.1e-05,
+     5.1e-05,
+     0.001049,
+     4.7e-05,
      0,
      0
     ],
-    "lum_max": 212,
-    "lum_mean": 10.695699,
+    "lum_max": 208,
+    "lum_mean": 10.694674,
     "lum_min": 1,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -2409,21 +2409,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294396,
      "b_max": 1,
-     "b_mean": 0.200451,
+     "b_mean": 0.200484,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 69990,
+     "b_zero_count": 70007,
      "g_max": 1,
-     "g_mean": 0.264975,
+     "g_mean": 0.264897,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 55782,
+     "g_zero_count": 55795,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.293466,
+     "r_mean": 0.293398,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 61217,
+     "r_zero_count": 61231,
      "sample_a": 0,
      "sample_b": 0.167358,
      "sample_g": 0.220825,
@@ -2432,26 +2432,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.018968,
+     "a_mean": 0.018891,
      "a_min": 0.007034,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.259736,
+     "b_mean": 0.26095,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 5786,
+     "b_zero_count": 5784,
      "g_max": 1,
-     "g_mean": 0.008436,
+     "g_mean": 0.008718,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 792,
+     "g_zero_count": 796,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.00016,
+     "r_mean": 0.000246,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 3571,
+     "r_zero_count": 3567,
      "sample_a": 0.080139,
      "sample_b": 0.251953,
      "sample_g": -0.726074,
@@ -2460,26 +2460,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.575381,
+     "a_mean": 0.575335,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 807,
      "b_max": 1,
-     "b_mean": 0.244672,
+     "b_mean": 0.244728,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 179032,
+     "b_zero_count": 178980,
      "g_max": 1,
-     "g_mean": 0.249323,
+     "g_mean": 0.249368,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 136406,
+     "g_zero_count": 136211,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.25102,
+     "r_mean": 0.251069,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 179669,
+     "r_zero_count": 179589,
      "sample_a": 0.686035,
      "sample_b": 0.15686,
      "sample_g": 0.160767,
@@ -2490,7 +2490,7 @@
    "load_report": {
     "map": "01_04_transport_station.hpm",
     "terrain_active": false,
-    "total_ms": 1866,
+    "total_ms": 1778,
     "tracks": {
      "Area": {
       "created": 264,
@@ -2520,21 +2520,21 @@
      "Decal": {
       "created": 270,
       "file_missing": false,
-      "ms": 207,
+      "ms": 196,
       "skipped": {},
       "xml": 270
      },
      "DetailMeshes": {
       "created": 1285,
       "file_missing": false,
-      "ms": 42,
+      "ms": 40,
       "skipped": {},
       "xml": 1285
      },
      "Entity": {
       "created": 797,
       "file_missing": false,
-      "ms": 720,
+      "ms": 624,
       "skipped": {},
       "xml": 797
      },
@@ -2569,7 +2569,7 @@
      "ParticleSystem": {
       "created": 245,
       "file_missing": false,
-      "ms": 56,
+      "ms": 55,
       "skipped": {},
       "xml": 245
      },
@@ -2583,7 +2583,7 @@
      "Sound": {
       "created": 88,
       "file_missing": false,
-      "ms": 80,
+      "ms": 81,
       "skipped": {
        "empty_file": 10
       },
@@ -2599,7 +2599,7 @@
      "StaticObject": {
       "created": 1052,
       "file_missing": false,
-      "ms": 502,
+      "ms": 552,
       "skipped": {},
       "xml": 1052
      },
@@ -2614,30 +2614,30 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2224561.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2287715.log",
    "log_errors": {},
    "log_warnings": 24,
    "render": {
-    "draw_calls": 1003,
+    "draw_calls": 1004,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 56,
     "lights_rendered": 56,
-    "occlusion_queries": 51,
+    "occlusion_queries": 40,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 2.0225071907043457,
-     "logic_steps": 1.0083333253860474,
-     "render_ms": 10.114439010620117,
-     "swap_ms": 0.05429104343056679
+     "logic_ms": 2.463564395904541,
+     "logic_steps": 1.0,
+     "render_ms": 11.493501663208008,
+     "swap_ms": 0.06381182372570038
     },
     "shader_failures": 0,
     "solid_objects": 307,
-    "trans_objects": 99
+    "trans_objects": 111
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.5,
+   "wall_s": 13.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -2683,10 +2683,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 6.6,
+   "boot_s": 6.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.943089,
+    "fps": 58.94109,
     "pitch": 0,
     "pos_x": -14.3506,
     "pos_y": 34.540401,
@@ -2695,17 +2695,17 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 56.943089,
+   "fps": 58.94109,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.243995,
-     0.727208,
-     0.027295,
-     0.001379,
-     0.000117,
-     6e-06,
+     0.244831,
+     0.726413,
+     0.027257,
+     0.001377,
+     0.000116,
+     5e-06,
      0,
      0,
      0,
@@ -2717,8 +2717,8 @@
      0,
      0
     ],
-    "lum_max": 94,
-    "lum_mean": 18.445303,
+    "lum_max": 101,
+    "lum_mean": 18.437777,
     "lum_min": 6,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -2730,79 +2730,79 @@
      "a_mean": 0.037222,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7984928,
+     "a_zero_count": 7984940,
      "b_max": 1.621094,
-     "b_mean": 0.168988,
+     "b_mean": 0.168946,
      "b_min": -0.047028,
      "b_nan_count": 0,
-     "b_zero_count": 14067,
+     "b_zero_count": 14098,
      "g_max": 1.948242,
-     "g_mean": 0.224628,
+     "g_mean": 0.224579,
      "g_min": -0.05304,
      "g_nan_count": 0,
      "g_zero_count": 659,
      "height": 2160,
      "r_max": 2.414062,
-     "r_mean": 0.269419,
+     "r_mean": 0.269354,
      "r_min": -0.0513,
      "r_nan_count": 0,
      "r_zero_count": 142,
      "sample_a": 0,
-     "sample_b": 0.213379,
-     "sample_g": 0.321777,
-     "sample_r": 0.399658,
+     "sample_b": 0.25415,
+     "sample_g": 0.367432,
+     "sample_r": 0.452148,
      "width": 3840
     },
     "1": {
      "a_max": 0.070435,
-     "a_mean": 0.02167,
-     "a_min": 0.004013,
+     "a_mean": 0.021672,
+     "a_min": 0.004017,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.439206,
+     "b_mean": 0.439369,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.407055,
+     "g_mean": 0.406652,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 37,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.080827,
+     "r_mean": 0.081028,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 0,
      "sample_a": 0.022507,
-     "sample_b": 0.28125,
-     "sample_g": 0.916504,
-     "sample_r": 0.283447,
+     "sample_b": 0.281494,
+     "sample_g": 0.916992,
+     "sample_r": 0.281494,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.444653,
+     "a_mean": 0.444789,
      "a_min": 0.053894,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.051898,
+     "b_mean": 0.051869,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 6229337,
+     "b_zero_count": 6228522,
      "g_max": 1,
-     "g_mean": 0.053108,
+     "g_mean": 0.053082,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 6151057,
+     "g_zero_count": 6150601,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.054965,
+     "r_mean": 0.054937,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 6201076,
+     "r_zero_count": 6200274,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -2813,19 +2813,19 @@
    "load_report": {
     "map": "02_01_ms_curie_outside.hpm",
     "terrain_active": true,
-    "total_ms": 4497,
+    "total_ms": 4696,
     "tracks": {
      "Area": {
       "created": 663,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 663
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 16,
+      "ms": 14,
       "skipped": {
        "connect_light_missing": 20
       },
@@ -2834,7 +2834,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 185
       },
@@ -2843,7 +2843,7 @@
      "Decal": {
       "created": 455,
       "file_missing": false,
-      "ms": 210,
+      "ms": 216,
       "skipped": {
        "decal_mesh_failed": 8
       },
@@ -2852,14 +2852,14 @@
      "DetailMeshes": {
       "created": 3788,
       "file_missing": false,
-      "ms": 52,
+      "ms": 57,
       "skipped": {},
       "xml": 3788
      },
      "Entity": {
       "created": 1579,
       "file_missing": false,
-      "ms": 1109,
+      "ms": 1116,
       "skipped": {},
       "xml": 1579
      },
@@ -2873,7 +2873,7 @@
      "LensFlare": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 2
      },
@@ -2894,21 +2894,21 @@
      "ParticleSystem": {
       "created": 116,
       "file_missing": false,
-      "ms": 46,
+      "ms": 42,
       "skipped": {},
       "xml": 116
      },
      "Primitive": {
       "created": 257,
       "file_missing": false,
-      "ms": 70,
+      "ms": 73,
       "skipped": {},
       "xml": 257
      },
      "Sound": {
       "created": 105,
       "file_missing": false,
-      "ms": 124,
+      "ms": 127,
       "skipped": {
        "empty_file": 4
       },
@@ -2924,7 +2924,7 @@
      "StaticObject": {
       "created": 4961,
       "file_missing": false,
-      "ms": 764,
+      "ms": 940,
       "skipped": {},
       "xml": 4961
      },
@@ -2937,7 +2937,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2225193.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2288486.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 1,
@@ -2946,26 +2946,26 @@
    },
    "log_warnings": 32,
    "render": {
-    "draw_calls": 511,
+    "draw_calls": 517,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 25,
     "lights_rendered": 25,
-    "occlusion_queries": 139,
+    "occlusion_queries": 145,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 6.0501389503479,
-     "logic_steps": 1.0247933864593506,
-     "render_ms": 4.7383599281311035,
-     "swap_ms": 0.0650799497961998
+     "logic_ms": 5.357274055480957,
+     "logic_steps": 1.008264422416687,
+     "render_ms": 4.835135459899902,
+     "swap_ms": 0.06502001732587814
     },
     "shader_failures": 0,
     "solid_objects": 130,
-    "trans_objects": 68
+    "trans_objects": 67
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.4,
+   "wall_s": 16.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3014,7 +3014,7 @@
    "boot_s": 4.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.980324,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": 8.5,
     "pos_y": -5.5,
@@ -3023,19 +3023,19 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.980324,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.633994,
-     0.341557,
-     0.019423,
-     0.00381,
-     0.000861,
+     0.633863,
+     0.34167,
+     0.019438,
+     0.003811,
+     0.000865,
      0.000298,
-     5.1e-05,
-     6e-06,
+     5e-05,
+     5e-06,
      0,
      0,
      0,
@@ -3046,7 +3046,7 @@
      0
     ],
     "lum_max": 125,
-    "lum_mean": 15.675604,
+    "lum_mean": 15.678067,
     "lum_min": 6,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3054,24 +3054,24 @@
    },
    "gbuffer": {
     "0": {
-     "a_max": 0.518555,
-     "a_mean": 0.001124,
+     "a_max": 0.519531,
+     "a_mean": 0.001118,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8255472,
+     "a_zero_count": 8255548,
      "b_max": 0.967285,
-     "b_mean": 0.148014,
+     "b_mean": 0.148028,
      "b_min": -0.012978,
      "b_nan_count": 0,
-     "b_zero_count": 9974,
+     "b_zero_count": 9978,
      "g_max": 0.994629,
-     "g_mean": 0.199128,
+     "g_mean": 0.199137,
      "g_min": -0.015472,
      "g_nan_count": 0,
      "g_zero_count": 1401,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.231831,
+     "r_mean": 0.231842,
      "r_min": -0.017609,
      "r_nan_count": 0,
      "r_zero_count": 1336,
@@ -3084,22 +3084,22 @@
     "1": {
      "a_max": 0.041443,
      "a_mean": 0.020662,
-     "a_min": 0.007782,
+     "a_min": 0.007774,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.467978,
+     "b_mean": 0.467958,
      "b_min": -0.998047,
      "b_nan_count": 0,
      "b_zero_count": 42,
      "g_max": 1,
-     "g_mean": 0.134997,
+     "g_mean": 0.135001,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 233256,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.033181,
+     "r_mean": -0.033186,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 14,
@@ -3111,26 +3111,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.531163,
+     "a_mean": 0.531169,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 29743,
+     "a_zero_count": 29747,
      "b_max": 1,
-     "b_mean": 0.194907,
+     "b_mean": 0.194911,
      "b_min": -0.119934,
      "b_nan_count": 0,
-     "b_zero_count": 384315,
+     "b_zero_count": 383993,
      "g_max": 1,
-     "g_mean": 0.203052,
+     "g_mean": 0.203054,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 354338,
+     "g_zero_count": 353992,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.206668,
+     "r_mean": 0.206671,
      "r_min": -0.063171,
      "r_nan_count": 0,
-     "r_zero_count": 371798,
+     "r_zero_count": 371473,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -3141,26 +3141,26 @@
    "load_report": {
     "map": "02_02_ms_curie_inside.hpm",
     "terrain_active": false,
-    "total_ms": 2876,
+    "total_ms": 2882,
     "tracks": {
      "Area": {
       "created": 1183,
       "file_missing": false,
-      "ms": 11,
+      "ms": 12,
       "skipped": {},
       "xml": 1183
      },
      "Billboard": {
       "created": 132,
       "file_missing": false,
-      "ms": 13,
+      "ms": 14,
       "skipped": {},
       "xml": 132
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 311
       },
@@ -3169,7 +3169,7 @@
      "Decal": {
       "created": 2080,
       "file_missing": false,
-      "ms": 684,
+      "ms": 692,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -3185,7 +3185,7 @@
      "Entity": {
       "created": 2271,
       "file_missing": false,
-      "ms": 894,
+      "ms": 897,
       "skipped": {},
       "xml": 2271
      },
@@ -3206,7 +3206,7 @@
      "Light": {
       "created": 309,
       "file_missing": false,
-      "ms": 11,
+      "ms": 9,
       "skipped": {},
       "xml": 309
      },
@@ -3252,7 +3252,7 @@
      "StaticObject": {
       "created": 7380,
       "file_missing": false,
-      "ms": 634,
+      "ms": 630,
       "skipped": {},
       "xml": 7380
      },
@@ -3265,7 +3265,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2226189.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2289388.log",
    "log_errors": {
     "ERROR: CrossHairState '*' does not exist": {
      "count": 1,
@@ -3274,18 +3274,18 @@
    },
    "log_warnings": 44,
    "render": {
-    "draw_calls": 879,
+    "draw_calls": 883,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 51,
     "lights_rendered": 51,
-    "occlusion_queries": 170,
+    "occlusion_queries": 174,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 6.211809158325195,
-     "logic_steps": 1.0,
-     "render_ms": 8.339373588562012,
-     "swap_ms": 0.06086437404155731
+     "frames": 122,
+     "logic_ms": 7.643090724945068,
+     "logic_steps": 1.0081967115402222,
+     "render_ms": 8.920775413513184,
+     "swap_ms": 0.1138777881860733
     },
     "shader_failures": 0,
     "solid_objects": 239,
@@ -3293,7 +3293,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.2,
+   "wall_s": 15.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3324,9 +3324,9 @@
     "oversized_top": [],
     "particle_systems": 135,
     "physics_bodies": 3196,
-    "physics_bodies_awake": 39,
+    "physics_bodies_awake": 40,
     "physics_bodies_dynamic": 652,
-    "sound_entities": 93,
+    "sound_entities": 92,
     "static_mesh_entities": 7377,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -3339,10 +3339,10 @@
     "no_material:mind_coral_colony_edges_small_solid.mat"
    ],
    "asleep": false,
-   "boot_s": 5.3,
+   "boot_s": 5.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 49.212563,
+    "fps": 51.485138,
     "pitch": 0,
     "pos_x": 28.593,
     "pos_y": 129.826004,
@@ -3351,30 +3351,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 49.212563,
+   "fps": 51.485138,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
      0,
-     0.207691,
-     0.591111,
-     0.129513,
-     0.045497,
-     0.016307,
-     0.006138,
-     0.002401,
-     0.000893,
-     0.000318,
-     9.5e-05,
-     2.8e-05,
-     6e-06,
-     1e-06,
+     0.205898,
+     0.590948,
+     0.132437,
+     0.0459,
+     0.015855,
+     0.005706,
+     0.002144,
+     0.000765,
+     0.000254,
+     7e-05,
+     1.8e-05,
+     4e-06,
+     0,
      0,
      0
     ],
-    "lum_max": 215,
-    "lum_mean": 41.435772,
+    "lum_max": 211,
+    "lum_mean": 41.433327,
     "lum_min": 18,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3383,26 +3383,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.373363,
+     "a_mean": 0.373049,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5192939,
+     "a_zero_count": 5195584,
      "b_max": 1.541016,
-     "b_mean": 0.51477,
+     "b_mean": 0.514516,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 313,
+     "b_zero_count": 319,
      "g_max": 1.688477,
-     "g_mean": 0.171547,
+     "g_mean": 0.171651,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3088577,
+     "g_zero_count": 3085943,
      "height": 2160,
      "r_max": 1.81543,
-     "r_mean": 0.19857,
+     "r_mean": 0.198674,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3088590,
+     "r_zero_count": 3085952,
      "sample_a": 0,
      "sample_b": 0.074951,
      "sample_g": 0.076904,
@@ -3411,26 +3411,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.404447,
+     "a_mean": 0.404166,
      "a_min": 0.014236,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.443367,
+     "b_mean": 0.443421,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 1,
-     "g_max": 1,
-     "g_mean": 0.453266,
+     "g_max": 0.999512,
+     "g_mean": 0.452788,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 3088407,
+     "g_zero_count": 3085920,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.037013,
+     "r_mean": -0.037137,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 3088401,
+     "r_zero_count": 3085914,
      "sample_a": 0.174438,
      "sample_b": 0.745117,
      "sample_g": 0.463623,
@@ -3439,26 +3439,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.546756,
+     "a_mean": 0.54656,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7,
+     "a_zero_count": 8,
      "b_max": 1,
-     "b_mean": 0.473389,
+     "b_mean": 0.473134,
      "b_min": -0.173828,
      "b_nan_count": 0,
-     "b_zero_count": 1810156,
+     "b_zero_count": 1812543,
      "g_max": 1,
-     "g_mean": 0.101628,
+     "g_mean": 0.101606,
      "g_min": -0.209229,
      "g_nan_count": 0,
-     "g_zero_count": 4823762,
+     "g_zero_count": 4824264,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.101501,
+     "r_mean": 0.101473,
      "r_min": -0.143799,
      "r_nan_count": 0,
-     "r_zero_count": 4897904,
+     "r_zero_count": 4898398,
      "sample_a": 0.580566,
      "sample_b": 0.941406,
      "sample_g": 0.844238,
@@ -3469,19 +3469,19 @@
    "load_report": {
     "map": "02_03_delta.hpm",
     "terrain_active": true,
-    "total_ms": 3372,
+    "total_ms": 3573,
     "tracks": {
      "Area": {
       "created": 935,
       "file_missing": false,
-      "ms": 9,
+      "ms": 8,
       "skipped": {},
       "xml": 935
      },
      "Billboard": {
       "created": 39,
       "file_missing": false,
-      "ms": 4,
+      "ms": 5,
       "skipped": {},
       "xml": 39
      },
@@ -3497,28 +3497,28 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 272,
+      "ms": 284,
       "skipped": {},
       "xml": 375
      },
      "DetailMeshes": {
       "created": 4882,
       "file_missing": false,
-      "ms": 60,
+      "ms": 71,
       "skipped": {},
       "xml": 4882
      },
      "Entity": {
       "created": 1749,
       "file_missing": false,
-      "ms": 959,
+      "ms": 1035,
       "skipped": {},
       "xml": 1749
      },
      "FogArea": {
       "created": 7,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 7
      },
@@ -3532,7 +3532,7 @@
      "Light": {
       "created": 217,
       "file_missing": false,
-      "ms": 9,
+      "ms": 10,
       "skipped": {},
       "xml": 217
      },
@@ -3546,21 +3546,21 @@
      "ParticleSystem": {
       "created": 92,
       "file_missing": false,
-      "ms": 32,
+      "ms": 36,
       "skipped": {},
       "xml": 92
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 7,
+      "ms": 9,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 33,
       "file_missing": false,
-      "ms": 164,
+      "ms": 172,
       "skipped": {},
       "xml": 33
      },
@@ -3574,7 +3574,7 @@
      "StaticObject": {
       "created": 1714,
       "file_missing": false,
-      "ms": 758,
+      "ms": 783,
       "skipped": {},
       "xml": 1714
      },
@@ -3587,7 +3587,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2226978.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2290263.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 4,
@@ -3612,26 +3612,26 @@
    },
    "log_warnings": 51,
    "render": {
-    "draw_calls": 1429,
+    "draw_calls": 1436,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 51,
     "lights_rendered": 51,
-    "occlusion_queries": 203,
+    "occlusion_queries": 208,
     "per_frame": {
      "frames": 122,
-     "logic_ms": 6.736278533935547,
-     "logic_steps": 1.2049180269241333,
-     "render_ms": 13.26944351196289,
-     "swap_ms": 0.10038556903600693
+     "logic_ms": 6.115522384643555,
+     "logic_steps": 1.1803278923034668,
+     "render_ms": 13.396541595458984,
+     "swap_ms": 0.07931026071310043
     },
     "shader_failures": 0,
-    "solid_objects": 510,
+    "solid_objects": 511,
     "trans_objects": 132
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 20.3,
+   "wall_s": 21.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -3680,10 +3680,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 4.9,
+   "boot_s": 5.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.882244,
+    "fps": 59.940037,
     "pitch": 0,
     "pos_x": -3.75,
     "pos_y": 244.296005,
@@ -3692,16 +3692,16 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.882244,
+   "fps": 59.940037,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.200822,
-     0.669011,
-     0.129182,
-     0.000885,
-     8.2e-05,
+     0.20059,
+     0.669528,
+     0.128893,
+     0.00089,
+     8.1e-05,
      1.6e-05,
      2e-06,
      0,
@@ -3714,8 +3714,8 @@
      0,
      0
     ],
-    "lum_max": 118,
-    "lum_mean": 22.503323,
+    "lum_max": 116,
+    "lum_mean": 22.505892,
     "lum_min": 11,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -3724,26 +3724,26 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.28924,
+     "a_mean": 0.289269,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 5895038,
+     "a_zero_count": 5894473,
      "b_max": 1.34375,
-     "b_mean": 0.425276,
+     "b_mean": 0.425287,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1149,
+     "b_zero_count": 1146,
      "g_max": 1.609375,
-     "g_mean": 0.17422,
+     "g_mean": 0.174218,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2399229,
+     "g_zero_count": 2399240,
      "height": 2160,
      "r_max": 1.743164,
-     "r_mean": 0.201672,
+     "r_mean": 0.201665,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2399176,
+     "r_zero_count": 2399193,
      "sample_a": 0,
      "sample_b": 0.084961,
      "sample_g": 0.143799,
@@ -3752,26 +3752,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.345464,
+     "a_mean": 0.34546,
      "a_min": 0.00882,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.515275,
+     "b_mean": 0.515524,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 2041,
+     "b_zero_count": 2036,
      "g_max": 1,
-     "g_mean": 0.349544,
+     "g_mean": 0.349421,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 2398908,
+     "g_zero_count": 2398922,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.038072,
+     "r_mean": 0.038065,
      "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 2400935,
+     "r_zero_count": 2400943,
      "sample_a": 0.129272,
      "sample_b": 0.827637,
      "sample_g": -0.472656,
@@ -3780,26 +3780,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.484015,
+     "a_mean": 0.484348,
      "a_min": 0.105835,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.348956,
+     "b_mean": 0.349302,
      "b_min": -0.474365,
      "b_nan_count": 0,
-     "b_zero_count": 2610345,
-     "g_max": 0.995117,
-     "g_mean": 0.060889,
+     "b_zero_count": 2605342,
+     "g_max": 0.999512,
+     "g_mean": 0.060943,
      "g_min": -0.384766,
      "g_nan_count": 0,
-     "g_zero_count": 4980443,
+     "g_zero_count": 4977890,
      "height": 2160,
-     "r_max": 0.995117,
-     "r_mean": 0.061864,
+     "r_max": 1,
+     "r_mean": 0.061925,
      "r_min": -0.367676,
      "r_nan_count": 0,
-     "r_zero_count": 5006406,
+     "r_zero_count": 5003831,
      "sample_a": 1,
      "sample_b": -0.100708,
      "sample_g": -0.079163,
@@ -3810,7 +3810,7 @@
    "load_report": {
     "map": "02_04_theta_outside.hpm",
     "terrain_active": true,
-    "total_ms": 3266,
+    "total_ms": 3279,
     "tracks": {
      "Area": {
       "created": 96,
@@ -3829,7 +3829,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {
        "unsupported_track": 72
       },
@@ -3838,21 +3838,21 @@
      "Decal": {
       "created": 194,
       "file_missing": false,
-      "ms": 106,
+      "ms": 102,
       "skipped": {},
       "xml": 194
      },
      "DetailMeshes": {
       "created": 4002,
       "file_missing": false,
-      "ms": 44,
+      "ms": 46,
       "skipped": {},
       "xml": 4002
      },
      "Entity": {
       "created": 1071,
       "file_missing": false,
-      "ms": 819,
+      "ms": 825,
       "skipped": {
        "entity_failed:entities/_temp/aaron/bass_robot_posed.ent": 1
       },
@@ -3882,28 +3882,28 @@
      "LightMask": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
      "ParticleSystem": {
       "created": 98,
       "file_missing": false,
-      "ms": 47,
+      "ms": 48,
       "skipped": {},
       "xml": 98
      },
      "Primitive": {
       "created": 8,
       "file_missing": false,
-      "ms": 8,
+      "ms": 9,
       "skipped": {},
       "xml": 8
      },
      "Sound": {
       "created": 28,
       "file_missing": false,
-      "ms": 20,
+      "ms": 19,
       "skipped": {},
       "xml": 28
      },
@@ -3917,7 +3917,7 @@
      "StaticObject": {
       "created": 1493,
       "file_missing": false,
-      "ms": 436,
+      "ms": 412,
       "skipped": {},
       "xml": 1493
      },
@@ -3930,7 +3930,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2227962.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2291412.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 8,
@@ -3943,18 +3943,18 @@
    },
    "log_warnings": 57,
    "render": {
-    "draw_calls": 503,
+    "draw_calls": 510,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 0,
     "lights_rendered": 0,
-    "occlusion_queries": 69,
+    "occlusion_queries": 76,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 4.920069217681885,
-     "logic_steps": 1.0247933864593506,
-     "render_ms": 5.232472896575928,
-     "swap_ms": 0.06769914925098419
+     "frames": 120,
+     "logic_ms": 3.9958877563476562,
+     "logic_steps": 1.0,
+     "render_ms": 4.535210132598877,
+     "swap_ms": 0.06433794647455215
     },
     "shader_failures": 0,
     "solid_objects": 208,
@@ -3962,7 +3962,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 14.9,
+   "wall_s": 14.6,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4008,10 +4008,10 @@
     "Compound:0/172"
    ],
    "asleep": false,
-   "boot_s": 6.3,
+   "boot_s": 7.0,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 56.491531,
+    "fps": 51.844452,
     "pitch": 0,
     "pos_x": -12.75,
     "pos_y": 3.7502,
@@ -4020,33 +4020,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 56.491531,
+   "fps": 51.844452,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.650013,
-     0.288782,
-     0.041872,
-     0.014635,
-     0.002809,
-     0.000621,
-     0.000325,
-     0.000137,
+     0.650909,
+     0.287691,
+     0.042087,
+     0.014623,
+     0.0028,
+     0.000615,
+     0.000335,
+     0.000135,
      0.000108,
-     0.000128,
-     5.7e-05,
-     4.6e-05,
+     0.000133,
      5.2e-05,
-     6.5e-05,
+     4.9e-05,
+     5.1e-05,
+     6.7e-05,
      0.000156,
-     0.000191
+     0.00019
     ],
     "lum_max": 255,
-    "lum_mean": 17.922653,
-    "lum_min": 12,
+    "lum_mean": 17.938997,
+    "lum_min": 13,
     "magenta_frac": 0,
-    "white_frac": 2e-06,
+    "white_frac": 1e-06,
     "width": 3840
    },
    "gbuffer": {
@@ -4057,21 +4057,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1,
-     "b_mean": 0.140013,
+     "b_mean": 0.140043,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 103780,
+     "b_zero_count": 103590,
      "g_max": 0.995117,
-     "g_mean": 0.170149,
+     "g_mean": 0.170197,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 43763,
+     "g_zero_count": 44358,
      "height": 2160,
      "r_max": 0.994629,
-     "r_mean": 0.190176,
+     "r_mean": 0.190261,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 74539,
+     "r_zero_count": 73993,
      "sample_a": 0,
      "sample_b": 0.068604,
      "sample_g": 0.126709,
@@ -4085,18 +4085,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.405154,
+     "b_mean": 0.40515,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 284,
      "g_max": 1,
-     "g_mean": -0.002147,
+     "g_mean": -0.002142,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 3053,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.163289,
+     "r_mean": 0.163288,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 492,
@@ -4108,26 +4108,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.639283,
+     "a_mean": 0.639281,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 233416,
+     "a_zero_count": 233410,
      "b_max": 1,
-     "b_mean": 0.235136,
+     "b_mean": 0.235138,
      "b_min": -0.011238,
      "b_nan_count": 0,
-     "b_zero_count": 379297,
+     "b_zero_count": 379292,
      "g_max": 1,
-     "g_mean": 0.25811,
+     "g_mean": 0.258111,
      "g_min": -0.009087,
      "g_nan_count": 0,
-     "g_zero_count": 320478,
+     "g_zero_count": 320473,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.268166,
+     "r_mean": 0.268167,
      "r_min": -0.006767,
      "r_nan_count": 0,
-     "r_zero_count": 331529,
+     "r_zero_count": 331524,
      "sample_a": 1,
      "sample_b": 0.108521,
      "sample_g": 0.129395,
@@ -4138,7 +4138,7 @@
    "load_report": {
     "map": "02_05_theta_inside.hpm",
     "terrain_active": false,
-    "total_ms": 4082,
+    "total_ms": 4859,
     "tracks": {
      "Area": {
       "created": 672,
@@ -4166,28 +4166,28 @@
      "Decal": {
       "created": 1076,
       "file_missing": false,
-      "ms": 360,
+      "ms": 377,
       "skipped": {},
       "xml": 1076
      },
      "DetailMeshes": {
       "created": 2071,
       "file_missing": false,
-      "ms": 14,
+      "ms": 13,
       "skipped": {},
       "xml": 2071
      },
      "Entity": {
       "created": 2867,
       "file_missing": false,
-      "ms": 2179,
+      "ms": 2833,
       "skipped": {},
       "xml": 2867
      },
      "FogArea": {
       "created": 10,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 10
      },
@@ -4201,7 +4201,7 @@
      "Light": {
       "created": 820,
       "file_missing": false,
-      "ms": 18,
+      "ms": 22,
       "skipped": {},
       "xml": 820
      },
@@ -4215,21 +4215,21 @@
      "ParticleSystem": {
       "created": 201,
       "file_missing": false,
-      "ms": 57,
+      "ms": 59,
       "skipped": {},
       "xml": 201
      },
      "Primitive": {
       "created": 333,
       "file_missing": false,
-      "ms": 70,
+      "ms": 81,
       "skipped": {},
       "xml": 333
      },
      "Sound": {
       "created": 140,
       "file_missing": false,
-      "ms": 38,
+      "ms": 39,
       "skipped": {},
       "xml": 140
      },
@@ -4243,7 +4243,7 @@
      "StaticObject": {
       "created": 4460,
       "file_missing": false,
-      "ms": 704,
+      "ms": 753,
       "skipped": {},
       "xml": 4460
      },
@@ -4256,7 +4256,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2228695.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2292202.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 8,
@@ -4293,26 +4293,26 @@
    },
    "log_warnings": 207,
    "render": {
-    "draw_calls": 1177,
+    "draw_calls": 1144,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 131,
-    "lights_rendered": 131,
-    "occlusion_queries": 479,
+    "lights_in_list": 130,
+    "lights_rendered": 130,
+    "occlusion_queries": 477,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 13.20580768585205,
+     "logic_ms": 12.649308204650879,
      "logic_steps": 1.1983470916748047,
-     "render_ms": 5.686284065246582,
-     "swap_ms": 0.1462688446044922
+     "render_ms": 6.133602619171143,
+     "swap_ms": 0.17813275754451752
     },
     "shader_failures": 0,
-    "solid_objects": 202,
-    "trans_objects": 54
+    "solid_objects": 190,
+    "trans_objects": 41
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 19.2,
+   "wall_s": 20.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4343,11 +4343,11 @@
     "oversized_top": [
      "02_05_beach_sky_1:skyline.msh"
     ],
-    "particle_systems": 207,
+    "particle_systems": 208,
     "physics_bodies": 4004,
     "physics_bodies_awake": 4,
     "physics_bodies_dynamic": 779,
-    "sound_entities": 227,
+    "sound_entities": 228,
     "static_mesh_entities": 4945,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -4363,7 +4363,7 @@
    "boot_s": 4.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 55.500504,
+    "fps": 50.79678,
     "pitch": 0,
     "pos_x": 2.75,
     "pos_y": 4.75,
@@ -4372,33 +4372,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 55.500504,
+   "fps": 50.79678,
    "frame": {
     "black_frac": 0.002079,
     "height": 2160,
     "lum_hist16": [
-     0.616257,
-     0.355217,
-     0.018404,
-     0.009179,
-     0.00025,
-     6e-05,
-     2.7e-05,
+     0.615427,
+     0.356295,
+     0.019136,
+     0.008268,
+     0.000185,
+     5.8e-05,
+     2.5e-05,
      2e-05,
      2.1e-05,
-     1.6e-05,
+     1.5e-05,
      2.2e-05,
-     2e-05,
-     3.1e-05,
-     4.8e-05,
+     1.9e-05,
+     3e-05,
+     4.9e-05,
      4.6e-05,
      0.000382
     ],
     "lum_max": 255,
-    "lum_mean": 14.776949,
+    "lum_mean": 14.753125,
     "lum_min": 1,
     "magenta_frac": 0,
-    "white_frac": 0.000221,
+    "white_frac": 0.000223,
     "width": 3840
    },
    "gbuffer": {
@@ -4409,21 +4409,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1.381836,
-     "b_mean": 0.377364,
+     "b_mean": 0.37737,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1313862,
+     "b_zero_count": 1313695,
      "g_max": 1.532227,
-     "g_mean": 0.459777,
+     "g_mean": 0.459784,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 24163,
+     "g_zero_count": 23981,
      "height": 2160,
      "r_max": 1.586914,
-     "r_mean": 0.521335,
+     "r_mean": 0.521341,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 24554,
+     "r_zero_count": 24387,
      "sample_a": 0,
      "sample_b": 0.53125,
      "sample_g": 0.550293,
@@ -4437,18 +4437,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.614981,
+     "b_mean": 0.614962,
      "b_min": -0.999023,
      "b_nan_count": 0,
      "b_zero_count": 3155,
      "g_max": 1,
-     "g_mean": 0.050442,
+     "g_mean": 0.050425,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 386,
+     "g_zero_count": 385,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.026082,
+     "r_mean": 0.02603,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 1379,
@@ -4460,26 +4460,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.5423,
+     "a_mean": 0.542301,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 22487,
+     "a_zero_count": 22492,
      "b_max": 1,
-     "b_mean": 0.525959,
+     "b_mean": 0.52596,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 123873,
+     "b_zero_count": 123868,
      "g_max": 1,
-     "g_mean": 0.517721,
+     "g_mean": 0.517723,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 118606,
+     "g_zero_count": 118613,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.520897,
+     "r_mean": 0.520899,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 122583,
+     "r_zero_count": 122578,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -4490,19 +4490,19 @@
    "load_report": {
     "map": "02_06_theta_tunnels.hpm",
     "terrain_active": false,
-    "total_ms": 2522,
+    "total_ms": 2542,
     "tracks": {
      "Area": {
       "created": 886,
       "file_missing": false,
-      "ms": 9,
+      "ms": 10,
       "skipped": {},
       "xml": 886
      },
      "Billboard": {
       "created": 127,
       "file_missing": false,
-      "ms": 15,
+      "ms": 26,
       "skipped": {},
       "xml": 127
      },
@@ -4518,7 +4518,7 @@
      "Decal": {
       "created": 375,
       "file_missing": false,
-      "ms": 213,
+      "ms": 214,
       "skipped": {
        "decal_mesh_failed": 5
       },
@@ -4527,14 +4527,14 @@
      "DetailMeshes": {
       "created": 639,
       "file_missing": false,
-      "ms": 28,
+      "ms": 32,
       "skipped": {},
       "xml": 639
      },
      "Entity": {
       "created": 2220,
       "file_missing": false,
-      "ms": 1217,
+      "ms": 1204,
       "skipped": {},
       "xml": 2220
      },
@@ -4555,7 +4555,7 @@
      "Light": {
       "created": 499,
       "file_missing": false,
-      "ms": 13,
+      "ms": 14,
       "skipped": {},
       "xml": 499
      },
@@ -4569,21 +4569,21 @@
      "ParticleSystem": {
       "created": 60,
       "file_missing": false,
-      "ms": 38,
+      "ms": 39,
       "skipped": {},
       "xml": 60
      },
      "Primitive": {
       "created": 171,
       "file_missing": false,
-      "ms": 42,
+      "ms": 45,
       "skipped": {},
       "xml": 171
      },
      "Sound": {
       "created": 111,
       "file_missing": false,
-      "ms": 29,
+      "ms": 31,
       "skipped": {
        "empty_file": 6
       },
@@ -4599,7 +4599,7 @@
      "StaticObject": {
       "created": 5121,
       "file_missing": false,
-      "ms": 575,
+      "ms": 576,
       "skipped": {},
       "xml": 5121
      },
@@ -4612,7 +4612,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2229815.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2293227.log",
    "log_errors": {
     "ERROR: Could not find headbone '*' in entity '*'": {
      "count": 3,
@@ -4637,26 +4637,26 @@
    },
    "log_warnings": 72,
    "render": {
-    "draw_calls": 2038,
+    "draw_calls": 1997,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 97,
-    "lights_rendered": 97,
+    "lights_in_list": 117,
+    "lights_rendered": 117,
     "occlusion_queries": 232,
     "per_frame": {
      "frames": 122,
-     "logic_ms": 4.423042297363281,
-     "logic_steps": 1.1065573692321777,
-     "render_ms": 13.719376564025879,
-     "swap_ms": 0.17575007677078247
+     "logic_ms": 5.150125503540039,
+     "logic_steps": 1.2131147384643555,
+     "render_ms": 14.747663497924805,
+     "swap_ms": 0.19657772779464722
     },
     "shader_failures": 0,
-    "solid_objects": 698,
-    "trans_objects": 91
+    "solid_objects": 662,
+    "trans_objects": 107
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.0,
+   "wall_s": 17.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -4691,7 +4691,7 @@
     "physics_bodies": 2805,
     "physics_bodies_awake": 5,
     "physics_bodies_dynamic": 339,
-    "sound_entities": 150,
+    "sound_entities": 149,
     "static_mesh_entities": 3189,
     "submeshes_without_material": 2,
     "unbounded_top": []
@@ -4703,10 +4703,10 @@
     "lum_mean:0.0"
    ],
    "asleep": true,
-   "boot_s": 5.5,
+   "boot_s": 5.7,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217148,
+    "fps": 59.980324,
     "pitch": 0,
     "pos_x": -41.3974,
     "pos_y": 1.75,
@@ -4715,7 +4715,7 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.217148,
+   "fps": 59.980324,
    "frame": {
     "black_frac": 1,
     "height": 2160,
@@ -4833,7 +4833,7 @@
    "load_report": {
     "map": "02_07_theta_exit.hpm",
     "terrain_active": false,
-    "total_ms": 3656,
+    "total_ms": 3774,
     "tracks": {
      "Area": {
       "created": 727,
@@ -4861,21 +4861,21 @@
      "Decal": {
       "created": 802,
       "file_missing": false,
-      "ms": 363,
+      "ms": 371,
       "skipped": {},
       "xml": 802
      },
      "DetailMeshes": {
       "created": 2147,
       "file_missing": false,
-      "ms": 24,
+      "ms": 26,
       "skipped": {},
       "xml": 2147
      },
      "Entity": {
       "created": 1720,
       "file_missing": false,
-      "ms": 1399,
+      "ms": 1384,
       "skipped": {},
       "xml": 1720
      },
@@ -4896,7 +4896,7 @@
      "Light": {
       "created": 566,
       "file_missing": false,
-      "ms": 18,
+      "ms": 21,
       "skipped": {},
       "xml": 566
      },
@@ -4910,21 +4910,21 @@
      "ParticleSystem": {
       "created": 206,
       "file_missing": false,
-      "ms": 71,
+      "ms": 75,
       "skipped": {},
       "xml": 206
      },
      "Primitive": {
       "created": 551,
       "file_missing": false,
-      "ms": 100,
+      "ms": 108,
       "skipped": {},
       "xml": 551
      },
      "Sound": {
       "created": 224,
       "file_missing": false,
-      "ms": 22,
+      "ms": 25,
       "skipped": {},
       "xml": 224
      },
@@ -4938,7 +4938,7 @@
      "StaticObject": {
       "created": 6263,
       "file_missing": false,
-      "ms": 827,
+      "ms": 922,
       "skipped": {},
       "xml": 6263
      },
@@ -4951,7 +4951,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2230844.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2294125.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in model '*'": {
      "count": 1,
@@ -4968,26 +4968,26 @@
    },
    "log_warnings": 44,
    "render": {
-    "draw_calls": 678,
+    "draw_calls": 691,
     "fog_areas_in_list": 1,
     "gl_errors": {},
-    "lights_in_list": 43,
-    "lights_rendered": 43,
-    "occlusion_queries": 143,
+    "lights_in_list": 44,
+    "lights_rendered": 44,
+    "occlusion_queries": 141,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 4.326648235321045,
+     "logic_ms": 3.9990155696868896,
      "logic_steps": 1.0,
-     "render_ms": 6.488977432250977,
-     "swap_ms": 0.055987272411584854
+     "render_ms": 6.005429267883301,
+     "swap_ms": 0.0671113133430481
     },
     "shader_failures": 0,
-    "solid_objects": 184,
+    "solid_objects": 190,
     "trans_objects": 73
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 30.5,
+   "wall_s": 31.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5035,7 +5035,7 @@
    "boot_s": 4.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60,
+    "fps": 60.098557,
     "pitch": 0,
     "pos_x": 151.880997,
     "pos_y": 151.479996,
@@ -5044,14 +5044,14 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60,
+   "fps": 60.098557,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.196219,
-     0.626097,
-     0.177447,
+     0.195991,
+     0.627796,
+     0.175975,
      0.000234,
      3e-06,
      0,
@@ -5066,8 +5066,8 @@
      0,
      0
     ],
-    "lum_max": 72,
-    "lum_mean": 23.247406,
+    "lum_max": 71,
+    "lum_mean": 23.251539,
     "lum_min": 3,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -5162,19 +5162,19 @@
    "load_report": {
     "map": "03_01_omicron_outside.hpm",
     "terrain_active": true,
-    "total_ms": 2845,
+    "total_ms": 2854,
     "tracks": {
      "Area": {
       "created": 249,
       "file_missing": false,
-      "ms": 4,
+      "ms": 6,
       "skipped": {},
       "xml": 249
      },
      "Billboard": {
       "created": 87,
       "file_missing": false,
-      "ms": 9,
+      "ms": 10,
       "skipped": {
        "connect_light_missing": 2
       },
@@ -5183,7 +5183,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 63
       },
@@ -5192,28 +5192,28 @@
      "Decal": {
       "created": 246,
       "file_missing": false,
-      "ms": 192,
+      "ms": 195,
       "skipped": {},
       "xml": 246
      },
      "DetailMeshes": {
       "created": 3268,
       "file_missing": false,
-      "ms": 56,
+      "ms": 55,
       "skipped": {},
       "xml": 3268
      },
      "Entity": {
       "created": 1494,
       "file_missing": false,
-      "ms": 1127,
+      "ms": 1113,
       "skipped": {},
       "xml": 1494
      },
      "FogArea": {
       "created": 3,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
@@ -5241,21 +5241,21 @@
      "ParticleSystem": {
       "created": 62,
       "file_missing": false,
-      "ms": 40,
+      "ms": 42,
       "skipped": {},
       "xml": 62
      },
      "Primitive": {
       "created": 13,
       "file_missing": false,
-      "ms": 5,
+      "ms": 7,
       "skipped": {},
       "xml": 13
      },
      "Sound": {
       "created": 16,
       "file_missing": false,
-      "ms": 80,
+      "ms": 79,
       "skipped": {},
       "xml": 16
      },
@@ -5269,7 +5269,7 @@
      "StaticObject": {
       "created": 1078,
       "file_missing": false,
-      "ms": 312,
+      "ms": 345,
       "skipped": {},
       "xml": 1078
      },
@@ -5282,7 +5282,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2232449.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2295751.log",
    "log_errors": {
     "ERROR: Cannot find sound entity '*'": {
      "count": 1,
@@ -5291,26 +5291,26 @@
    },
    "log_warnings": 63,
    "render": {
-    "draw_calls": 459,
+    "draw_calls": 460,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 0,
     "lights_rendered": 0,
-    "occlusion_queries": 395,
+    "occlusion_queries": 397,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 3.9420573711395264,
+     "logic_ms": 4.042145252227783,
      "logic_steps": 1.0,
-     "render_ms": 4.397218704223633,
-     "swap_ms": 0.07634831219911575
+     "render_ms": 4.645660877227783,
+     "swap_ms": 0.0794360414147377
     },
     "shader_failures": 0,
     "solid_objects": 10,
-    "trans_objects": 27
+    "trans_objects": 26
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.0,
+   "wall_s": 14.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5355,10 +5355,10 @@
     "Sound:120/121"
    ],
    "asleep": false,
-   "boot_s": 6.1,
+   "boot_s": 6.4,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.230038,
+    "fps": 59.820522,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": -2.25,
@@ -5367,30 +5367,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.230038,
+   "fps": 59.820522,
    "frame": {
-    "black_frac": 0.171295,
+    "black_frac": 0.171186,
     "height": 2160,
     "lum_hist16": [
-     0.884748,
-     0.103875,
-     0.007194,
-     0.002246,
-     0.000771,
-     0.000326,
-     0.000173,
-     0.000112,
-     8.6e-05,
-     6.6e-05,
-     6.1e-05,
+     0.883279,
+     0.105071,
+     0.007383,
+     0.002255,
+     0.000813,
+     0.000342,
+     0.000182,
+     0.000113,
+     8.8e-05,
+     7e-05,
+     6.4e-05,
      7.7e-05,
-     0.000147,
-     1.9e-05,
-     2.8e-05,
-     7.1e-05
+     0.000145,
+     2e-05,
+     2.9e-05,
+     7e-05
     ],
     "lum_max": 255,
-    "lum_mean": 8.046431,
+    "lum_mean": 8.085282,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -5404,18 +5404,18 @@
      "a_nan_count": 0,
      "a_zero_count": 8292564,
      "b_max": 1,
-     "b_mean": 0.22867,
+     "b_mean": 0.228668,
      "b_min": 0,
      "b_nan_count": 0,
      "b_zero_count": 64114,
      "g_max": 1,
-     "g_mean": 0.240737,
+     "g_mean": 0.240735,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 47153,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.255269,
+     "r_mean": 0.255267,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 50336,
@@ -5485,26 +5485,26 @@
    "load_report": {
     "map": "03_02_omicron_inside.hpm",
     "terrain_active": false,
-    "total_ms": 3747,
+    "total_ms": 3968,
     "tracks": {
      "Area": {
       "created": 690,
       "file_missing": false,
-      "ms": 8,
+      "ms": 9,
       "skipped": {},
       "xml": 690
      },
      "Billboard": {
       "created": 238,
       "file_missing": false,
-      "ms": 36,
+      "ms": 38,
       "skipped": {},
       "xml": 238
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 242
       },
@@ -5513,7 +5513,7 @@
      "Decal": {
       "created": 628,
       "file_missing": false,
-      "ms": 343,
+      "ms": 355,
       "skipped": {},
       "xml": 628
      },
@@ -5527,7 +5527,7 @@
      "Entity": {
       "created": 3718,
       "file_missing": false,
-      "ms": 2129,
+      "ms": 2252,
       "skipped": {},
       "xml": 3718
      },
@@ -5548,7 +5548,7 @@
      "Light": {
       "created": 749,
       "file_missing": false,
-      "ms": 14,
+      "ms": 15,
       "skipped": {},
       "xml": 749
      },
@@ -5562,21 +5562,21 @@
      "ParticleSystem": {
       "created": 215,
       "file_missing": false,
-      "ms": 48,
+      "ms": 54,
       "skipped": {},
       "xml": 215
      },
      "Primitive": {
       "created": 371,
       "file_missing": false,
-      "ms": 48,
+      "ms": 53,
       "skipped": {},
       "xml": 371
      },
      "Sound": {
       "created": 120,
       "file_missing": false,
-      "ms": 72,
+      "ms": 73,
       "skipped": {
        "empty_file": 1
       },
@@ -5592,7 +5592,7 @@
      "StaticObject": {
       "created": 4934,
       "file_missing": false,
-      "ms": 577,
+      "ms": 627,
       "skipped": {},
       "xml": 4934
      },
@@ -5605,7 +5605,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2233293.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2296559.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -5642,26 +5642,26 @@
    },
    "log_warnings": 96,
    "render": {
-    "draw_calls": 1671,
+    "draw_calls": 1673,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 119,
-    "lights_rendered": 119,
-    "occlusion_queries": 377,
+    "lights_in_list": 117,
+    "lights_rendered": 117,
+    "occlusion_queries": 389,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 7.744241714477539,
-     "logic_steps": 1.0330578088760376,
-     "render_ms": 7.478644371032715,
-     "swap_ms": 0.14821818470954895
+     "logic_ms": 6.846390247344971,
+     "logic_steps": 1.0,
+     "render_ms": 7.116549015045166,
+     "swap_ms": 0.060812339186668396
     },
     "shader_failures": 0,
-    "solid_objects": 488,
-    "trans_objects": 52
+    "solid_objects": 485,
+    "trans_objects": 51
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.4,
+   "wall_s": 17.9,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -5694,7 +5694,7 @@
     "physics_bodies": 4076,
     "physics_bodies_awake": 14,
     "physics_bodies_dynamic": 511,
-    "sound_entities": 169,
+    "sound_entities": 177,
     "static_mesh_entities": 4906,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -5706,10 +5706,10 @@
     "Sound:5/6"
    ],
    "asleep": false,
-   "boot_s": 3.0,
+   "boot_s": 3.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58,
+    "fps": 59,
     "pitch": 0,
     "pos_x": 48.75,
     "pos_y": 128.5,
@@ -5718,15 +5718,15 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58,
+   "fps": 59,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.167685,
-     0.828807,
-     0.003233,
-     0.000267,
+     0.167905,
+     0.828604,
+     0.003215,
+     0.000268,
      8e-06,
      0,
      0,
@@ -5740,8 +5740,8 @@
      0,
      0
     ],
-    "lum_max": 75,
-    "lum_mean": 17.40774,
+    "lum_max": 74,
+    "lum_mean": 17.397018,
     "lum_min": 12,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -5755,18 +5755,18 @@
      "a_nan_count": 0,
      "a_zero_count": 7563266,
      "b_max": 1,
-     "b_mean": 0.267896,
+     "b_mean": 0.267795,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 8290,
+     "b_zero_count": 8278,
      "g_max": 0.99707,
-     "g_mean": 0.217423,
+     "g_mean": 0.217078,
      "g_min": 0,
      "g_nan_count": 0,
      "g_zero_count": 728313,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.241156,
+     "r_mean": 0.240867,
      "r_min": 0,
      "r_nan_count": 0,
      "r_zero_count": 727793,
@@ -5836,7 +5836,7 @@
    "load_report": {
     "map": "03_03_omicron_descent.hpm",
     "terrain_active": false,
-    "total_ms": 1456,
+    "total_ms": 1491,
     "tracks": {
      "Area": {
       "created": 102,
@@ -5848,7 +5848,7 @@
      "Billboard": {
       "created": 34,
       "file_missing": false,
-      "ms": 4,
+      "ms": 5,
       "skipped": {},
       "xml": 34
      },
@@ -5864,21 +5864,21 @@
      "Decal": {
       "created": 85,
       "file_missing": false,
-      "ms": 39,
+      "ms": 40,
       "skipped": {},
       "xml": 85
      },
      "DetailMeshes": {
       "created": 1550,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 1550
      },
      "Entity": {
       "created": 643,
       "file_missing": false,
-      "ms": 805,
+      "ms": 810,
       "skipped": {},
       "xml": 643
      },
@@ -5892,7 +5892,7 @@
      "LensFlare": {
       "created": 2,
       "file_missing": false,
-      "ms": 1,
+      "ms": 3,
       "skipped": {},
       "xml": 2
      },
@@ -5913,7 +5913,7 @@
      "ParticleSystem": {
       "created": 4,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 4
      },
@@ -5927,7 +5927,7 @@
      "Sound": {
       "created": 5,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {
        "empty_file": 1
       },
@@ -5943,7 +5943,7 @@
      "StaticObject": {
       "created": 887,
       "file_missing": false,
-      "ms": 239,
+      "ms": 259,
       "skipped": {},
       "xml": 887
      },
@@ -5956,30 +5956,30 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2234300.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2297410.log",
    "log_errors": {},
    "log_warnings": 43,
    "render": {
-    "draw_calls": 304,
+    "draw_calls": 305,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 20,
     "lights_rendered": 20,
-    "occlusion_queries": 13,
+    "occlusion_queries": 14,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 2.1170926094055176,
-     "logic_steps": 1.0165289640426636,
-     "render_ms": 7.462451934814453,
-     "swap_ms": 0.05744628235697746
+     "frames": 120,
+     "logic_ms": 1.8387128114700317,
+     "logic_steps": 1.0083333253860474,
+     "render_ms": 6.4714035987854,
+     "swap_ms": 0.05200207605957985
     },
     "shader_failures": 0,
     "solid_objects": 97,
-    "trans_objects": 25
+    "trans_objects": 33
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 12.5,
+   "wall_s": 12.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6031,13 +6031,13 @@
    "allowlisted": [
     "Compound:0/310",
     "terrain",
-    "lum_mean:0.2"
+    "lum_mean:0.3"
    ],
    "asleep": true,
-   "boot_s": 6.8,
+   "boot_s": 7.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59,
+    "fps": 58.82357,
     "pitch": 0,
     "pos_x": -13.4867,
     "pos_y": 817.039001,
@@ -6046,9 +6046,9 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59,
+   "fps": 58.82357,
    "frame": {
-    "black_frac": 0.999556,
+    "black_frac": 0.999348,
     "height": 2160,
     "lum_hist16": [
      1,
@@ -6069,7 +6069,7 @@
      0
     ],
     "lum_max": 16,
-    "lum_mean": 0.197309,
+    "lum_mean": 0.254231,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -6164,26 +6164,26 @@
    "load_report": {
     "map": "04_01_tau_outside.hpm",
     "terrain_active": true,
-    "total_ms": 4524,
+    "total_ms": 4820,
     "tracks": {
      "Area": {
       "created": 414,
       "file_missing": false,
-      "ms": 5,
+      "ms": 6,
       "skipped": {},
       "xml": 414
      },
      "Billboard": {
       "created": 53,
       "file_missing": false,
-      "ms": 13,
+      "ms": 7,
       "skipped": {},
       "xml": 53
      },
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {
        "unsupported_track": 310
       },
@@ -6192,7 +6192,7 @@
      "Decal": {
       "created": 406,
       "file_missing": false,
-      "ms": 238,
+      "ms": 244,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -6201,21 +6201,21 @@
      "DetailMeshes": {
       "created": 673,
       "file_missing": false,
-      "ms": 9,
+      "ms": 11,
       "skipped": {},
       "xml": 673
      },
      "Entity": {
       "created": 2843,
       "file_missing": false,
-      "ms": 1185,
+      "ms": 1340,
       "skipped": {},
       "xml": 2843
      },
      "FogArea": {
       "created": 1,
       "file_missing": false,
-      "ms": 1,
+      "ms": 0,
       "skipped": {},
       "xml": 1
      },
@@ -6243,7 +6243,7 @@
      "ParticleSystem": {
       "created": 95,
       "file_missing": false,
-      "ms": 21,
+      "ms": 26,
       "skipped": {},
       "xml": 95
      },
@@ -6257,7 +6257,7 @@
      "Sound": {
       "created": 20,
       "file_missing": false,
-      "ms": 32,
+      "ms": 33,
       "skipped": {},
       "xml": 20
      },
@@ -6271,7 +6271,7 @@
      "StaticObject": {
       "created": 3695,
       "file_missing": false,
-      "ms": 609,
+      "ms": 690,
       "skipped": {},
       "xml": 3695
      },
@@ -6284,7 +6284,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2234904.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2298027.log",
    "log_errors": {
     "ERROR: Could not find bone '*' in '*' to be used as backbone!": {
      "count": 9,
@@ -6325,18 +6325,18 @@
    },
    "log_warnings": 129,
    "render": {
-    "draw_calls": 43,
+    "draw_calls": 42,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 1,
     "lights_rendered": 1,
-    "occlusion_queries": 1,
+    "occlusion_queries": 0,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 7.663227081298828,
+     "logic_ms": 8.058574676513672,
      "logic_steps": 1.008264422416687,
-     "render_ms": 3.782477855682373,
-     "swap_ms": 0.05195726454257965
+     "render_ms": 4.576530933380127,
+     "swap_ms": 0.07860216498374939
     },
     "shader_failures": 0,
     "solid_objects": 2,
@@ -6344,7 +6344,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.2,
+   "wall_s": 18.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6352,7 +6352,7 @@
    "world": {
     "aabb_max": [
      511,
-     976.488892,
+     975.988831,
      679.969543
     ],
     "aabb_min": [
@@ -6397,7 +6397,7 @@
    "boot_s": 6.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217148,
+    "fps": 59,
     "pitch": 0,
     "pos_x": -30.445801,
     "pos_y": 1.5,
@@ -6406,33 +6406,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.217148,
+   "fps": 59,
    "frame": {
-    "black_frac": 0.348723,
+    "black_frac": 0.348818,
     "height": 2160,
     "lum_hist16": [
-     0.735673,
-     0.194224,
-     0.055486,
-     0.010913,
-     0.002232,
-     0.000312,
+     0.735639,
+     0.194206,
+     0.055549,
+     0.010912,
+     0.002222,
+     0.000313,
      6.3e-05,
-     1.7e-05,
-     1.5e-05,
+     1.6e-05,
+     1.6e-05,
      1.7e-05,
      2.3e-05,
      2.7e-05,
      3.5e-05,
-     4.6e-05,
+     4.7e-05,
      4.8e-05,
      0.000868
     ],
     "lum_max": 255,
-    "lum_mean": 10.661997,
+    "lum_mean": 10.660874,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.0007,
+    "white_frac": 0.000701,
     "width": 3840
    },
    "gbuffer": {
@@ -6443,53 +6443,53 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1,
-     "b_mean": 0.29531,
+     "b_mean": 0.295308,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 602908,
+     "b_zero_count": 602924,
      "g_max": 1,
-     "g_mean": 0.34591,
+     "g_mean": 0.345906,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 601430,
+     "g_zero_count": 601428,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.401124,
+     "r_mean": 0.401123,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 601334,
+     "r_zero_count": 601333,
      "sample_a": 0,
-     "sample_b": 0.428467,
-     "sample_g": 0.504883,
-     "sample_r": 0.75,
+     "sample_b": 0.426514,
+     "sample_g": 0.503906,
+     "sample_r": 0.748535,
      "width": 3840
     },
     "1": {
-     "a_max": 0.035248,
-     "a_mean": 0.020188,
+     "a_max": 0.035278,
+     "a_mean": 0.020189,
      "a_min": 0.006603,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.21186,
+     "b_mean": 0.211851,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 2288,
      "g_max": 1,
-     "g_mean": 0.076447,
+     "g_mean": 0.076446,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 12438,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.02317,
+     "r_mean": 0.02316,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 1969,
+     "r_zero_count": 1970,
      "sample_a": 0.03476,
      "sample_b": 0.998047,
-     "sample_g": 0.056396,
-     "sample_r": 0.008957,
+     "sample_g": 0.055908,
+     "sample_r": 0.003483,
      "width": 3840
     },
     "2": {
@@ -6499,44 +6499,44 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.525598,
+     "b_mean": 0.525587,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1450,
+     "b_zero_count": 1446,
      "g_max": 1,
-     "g_mean": 0.520153,
+     "g_mean": 0.520143,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 723,
+     "g_zero_count": 720,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.521589,
+     "r_mean": 0.521585,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 891,
+     "r_zero_count": 887,
      "sample_a": 0.509766,
-     "sample_b": 0.740723,
-     "sample_g": 0.650879,
-     "sample_r": 0.611328,
+     "sample_b": 0.741699,
+     "sample_g": 0.651367,
+     "sample_r": 0.612305,
      "width": 3840
     }
    },
    "load_report": {
     "map": "04_02_tau_inside.hpm",
     "terrain_active": false,
-    "total_ms": 4158,
+    "total_ms": 4230,
     "tracks": {
      "Area": {
       "created": 662,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 662
      },
      "Billboard": {
       "created": 65,
       "file_missing": false,
-      "ms": 7,
+      "ms": 8,
       "skipped": {},
       "xml": 65
      },
@@ -6552,21 +6552,21 @@
      "Decal": {
       "created": 1335,
       "file_missing": false,
-      "ms": 968,
+      "ms": 973,
       "skipped": {},
       "xml": 1335
      },
      "DetailMeshes": {
       "created": 739,
       "file_missing": false,
-      "ms": 5,
+      "ms": 4,
       "skipped": {},
       "xml": 739
      },
      "Entity": {
       "created": 2187,
       "file_missing": false,
-      "ms": 1629,
+      "ms": 1662,
       "skipped": {},
       "xml": 2187
      },
@@ -6580,14 +6580,14 @@
      "LensFlare": {
       "created": 1,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 1
      },
      "Light": {
       "created": 531,
       "file_missing": false,
-      "ms": 11,
+      "ms": 14,
       "skipped": {},
       "xml": 531
      },
@@ -6601,21 +6601,21 @@
      "ParticleSystem": {
       "created": 44,
       "file_missing": false,
-      "ms": 28,
+      "ms": 32,
       "skipped": {},
       "xml": 44
      },
      "Primitive": {
       "created": 212,
       "file_missing": false,
-      "ms": 43,
+      "ms": 46,
       "skipped": {},
       "xml": 212
      },
      "Sound": {
       "created": 143,
       "file_missing": false,
-      "ms": 159,
+      "ms": 166,
       "skipped": {
        "empty_file": 1
       },
@@ -6631,7 +6631,7 @@
      "StaticObject": {
       "created": 3432,
       "file_missing": false,
-      "ms": 798,
+      "ms": 820,
       "skipped": {},
       "xml": 3432
      },
@@ -6644,7 +6644,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2235875.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2299177.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -6657,18 +6657,18 @@
    },
    "log_warnings": 111,
    "render": {
-    "draw_calls": 643,
+    "draw_calls": 645,
     "fog_areas_in_list": 2,
     "gl_errors": {},
     "lights_in_list": 15,
     "lights_rendered": 15,
-    "occlusion_queries": 437,
+    "occlusion_queries": 439,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 5.272719860076904,
-     "logic_steps": 1.0,
-     "render_ms": 9.726444244384766,
-     "swap_ms": 0.09600651264190674
+     "logic_ms": 6.178120136260986,
+     "logic_steps": 1.0165289640426636,
+     "render_ms": 9.306937217712402,
+     "swap_ms": 0.10282430797815323
     },
     "shader_failures": 0,
     "solid_objects": 75,
@@ -6676,7 +6676,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 18.5,
+   "wall_s": 18.2,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -6725,7 +6725,7 @@
    "boot_s": 6.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.055187,
+    "fps": 58.013756,
     "pitch": 0,
     "pos_x": -0.045191,
     "pos_y": 94.445801,
@@ -6734,33 +6734,33 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.055187,
+   "fps": 58.013756,
    "frame": {
-    "black_frac": 0.224472,
+    "black_frac": 0.224478,
     "height": 2160,
     "lum_hist16": [
-     0.658851,
-     0.199286,
-     0.07279,
-     0.029526,
-     0.013882,
-     0.008633,
-     0.007223,
-     0.004941,
-     0.001561,
-     0.000863,
-     0.000503,
-     0.000206,
-     0.000228,
-     0.000116,
-     0.000203,
-     0.001187
+     0.65842,
+     0.200599,
+     0.075214,
+     0.027396,
+     0.013316,
+     0.008532,
+     0.007105,
+     0.004747,
+     0.001446,
+     0.000821,
+     0.000477,
+     0.000202,
+     0.000225,
+     0.00012,
+     0.00021,
+     0.00117
     ],
     "lum_max": 255,
-    "lum_mean": 16.853428,
+    "lum_mean": 16.720032,
     "lum_min": 1,
     "magenta_frac": 0,
-    "white_frac": 0.000945,
+    "white_frac": 0.000931,
     "width": 3840
    },
    "gbuffer": {
@@ -6771,21 +6771,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294392,
      "b_max": 1.327148,
-     "b_mean": 0.26855,
+     "b_mean": 0.268587,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 1637,
+     "b_zero_count": 1609,
      "g_max": 1.349609,
-     "g_mean": 0.301824,
+     "g_mean": 0.3019,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 261,
+     "g_zero_count": 263,
      "height": 2160,
      "r_max": 1.385742,
-     "r_mean": 0.356477,
+     "r_mean": 0.35658,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 379,
+     "r_zero_count": 382,
      "sample_a": 0,
      "sample_b": 0.304688,
      "sample_g": 0.309814,
@@ -6794,26 +6794,26 @@
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.014826,
+     "a_mean": 0.014937,
      "a_min": 0.005306,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.203758,
+     "b_mean": 0.202582,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 50,
+     "b_zero_count": 110,
      "g_max": 1,
-     "g_mean": -0.122002,
+     "g_mean": -0.121734,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 19154,
+     "g_zero_count": 19223,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.013179,
+     "r_mean": -0.013296,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 52,
+     "r_zero_count": 60,
      "sample_a": 0.306885,
      "sample_b": 0.521973,
      "sample_g": 0.844238,
@@ -6822,26 +6822,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.451215,
-     "a_min": 0.001471,
+     "a_mean": 0.451124,
+     "a_min": 0.007351,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.399913,
+     "b_mean": 0.399867,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 32452,
+     "b_zero_count": 31877,
      "g_max": 1,
-     "g_mean": 0.400411,
+     "g_mean": 0.40038,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 24144,
+     "g_zero_count": 23938,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.408605,
+     "r_mean": 0.408557,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 32471,
+     "r_zero_count": 31880,
      "sample_a": 0.447021,
      "sample_b": 0.05838,
      "sample_g": 0.06604,
@@ -6852,19 +6852,19 @@
    "load_report": {
     "map": "04_03_tau_escape.hpm",
     "terrain_active": true,
-    "total_ms": 4177,
+    "total_ms": 4288,
     "tracks": {
      "Area": {
       "created": 465,
       "file_missing": false,
-      "ms": 7,
+      "ms": 6,
       "skipped": {},
       "xml": 465
      },
      "Billboard": {
       "created": 95,
       "file_missing": false,
-      "ms": 13,
+      "ms": 15,
       "skipped": {
        "connect_light_missing": 1
       },
@@ -6882,7 +6882,7 @@
      "Decal": {
       "created": 957,
       "file_missing": false,
-      "ms": 326,
+      "ms": 339,
       "skipped": {
        "decal_mesh_failed": 4
       },
@@ -6898,7 +6898,7 @@
      "Entity": {
       "created": 2060,
       "file_missing": false,
-      "ms": 1007,
+      "ms": 1084,
       "skipped": {},
       "xml": 2060
      },
@@ -6933,21 +6933,21 @@
      "ParticleSystem": {
       "created": 213,
       "file_missing": false,
-      "ms": 66,
+      "ms": 64,
       "skipped": {},
       "xml": 213
      },
      "Primitive": {
       "created": 28,
       "file_missing": false,
-      "ms": 5,
+      "ms": 7,
       "skipped": {},
       "xml": 28
      },
      "Sound": {
       "created": 76,
       "file_missing": false,
-      "ms": 31,
+      "ms": 33,
       "skipped": {
        "empty_file": 7
       },
@@ -6963,7 +6963,7 @@
      "StaticObject": {
       "created": 4795,
       "file_missing": false,
-      "ms": 913,
+      "ms": 925,
       "skipped": {},
       "xml": 4795
      },
@@ -6976,7 +6976,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2236768.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2300494.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -6989,26 +6989,26 @@
    },
    "log_warnings": 51,
    "render": {
-    "draw_calls": 1644,
+    "draw_calls": 2231,
     "fog_areas_in_list": 4,
     "gl_errors": {},
     "lights_in_list": 102,
     "lights_rendered": 102,
-    "occlusion_queries": 25,
+    "occlusion_queries": 355,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 5.236926078796387,
-     "logic_steps": 1.0247933864593506,
-     "render_ms": 7.2808637619018555,
-     "swap_ms": 0.07534727454185486
+     "frames": 122,
+     "logic_ms": 6.273030757904053,
+     "logic_steps": 1.073770523071289,
+     "render_ms": 10.701481819152832,
+     "swap_ms": 0.2686362862586975
     },
     "shader_failures": 0,
-    "solid_objects": 633,
-    "trans_objects": 141
+    "solid_objects": 711,
+    "trans_objects": 234
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 21.4,
+   "wall_s": 22.5,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7060,10 +7060,10 @@
     "terrain"
    ],
    "asleep": false,
-   "boot_s": 4.6,
+   "boot_s": 4.9,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.098503,
+    "fps": 59.940094,
     "pitch": 0,
     "pos_x": -13.9089,
     "pos_y": 12.5737,
@@ -7072,30 +7072,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.098503,
+   "fps": 59.940094,
    "frame": {
     "black_frac": 1.9e-05,
     "height": 2160,
     "lum_hist16": [
-     0.119384,
-     0.585628,
-     0.134628,
-     0.072755,
-     0.031989,
-     0.020988,
-     0.015621,
-     0.00869,
-     0.004291,
-     0.001578,
-     0.000631,
-     0.000555,
-     0.000383,
+     0.120077,
+     0.584974,
+     0.134571,
+     0.072774,
+     0.032035,
+     0.020933,
+     0.015624,
+     0.00867,
+     0.004316,
+     0.001577,
+     0.000634,
+     0.00055,
+     0.000384,
      0.000246,
      0.000119,
-     0.002514
+     0.002516
     ],
     "lum_max": 255,
-    "lum_mean": 31.550819,
+    "lum_mean": 31.550207,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0.002286,
@@ -7109,88 +7109,88 @@
      "a_nan_count": 0,
      "a_zero_count": 8294208,
      "b_max": 1,
-     "b_mean": 0.312627,
+     "b_mean": 0.312645,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 3116,
+     "b_zero_count": 3099,
      "g_max": 1.045898,
-     "g_mean": 0.367153,
+     "g_mean": 0.367161,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 2076,
+     "g_zero_count": 2071,
      "height": 2160,
      "r_max": 1.004883,
-     "r_mean": 0.43842,
+     "r_mean": 0.438355,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2024,
+     "r_zero_count": 2033,
      "sample_a": 0,
-     "sample_b": 0.290283,
-     "sample_g": 0.317383,
-     "sample_r": 0.289551,
+     "sample_b": 0.284668,
+     "sample_g": 0.297607,
+     "sample_r": 0.261719,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.020307,
+     "a_mean": 0.020316,
      "a_min": 0.006798,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.217361,
+     "b_mean": 0.21709,
      "b_min": -1,
      "b_nan_count": 0,
      "b_zero_count": 845,
      "g_max": 1,
-     "g_mean": 0.017069,
+     "g_mean": 0.017032,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 13701,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.089526,
+     "r_mean": 0.089285,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 997,
-     "sample_a": 0.038666,
-     "sample_b": 0.795898,
-     "sample_g": 0.368164,
-     "sample_r": -0.479736,
+     "sample_a": 0.038818,
+     "sample_b": 0.768555,
+     "sample_g": 0.378906,
+     "sample_r": -0.515137,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.367611,
+     "a_mean": 0.36761,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 166,
+     "a_zero_count": 192,
      "b_max": 1,
-     "b_mean": 0.532007,
+     "b_mean": 0.531908,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 13988,
+     "b_zero_count": 13990,
      "g_max": 1,
-     "g_mean": 0.528555,
+     "g_mean": 0.52848,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 13691,
+     "g_zero_count": 13694,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.532219,
+     "r_mean": 0.532145,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 14053,
+     "r_zero_count": 14055,
      "sample_a": 0.509766,
-     "sample_b": 0.743164,
-     "sample_g": 0.731445,
-     "sample_r": 0.743164,
+     "sample_b": 0.685059,
+     "sample_g": 0.67334,
+     "sample_r": 0.685059,
      "width": 3840
     }
    },
    "load_report": {
     "map": "05_01_phi_inside.hpm",
     "terrain_active": true,
-    "total_ms": 2633,
+    "total_ms": 2896,
     "tracks": {
      "Area": {
       "created": 175,
@@ -7202,7 +7202,7 @@
      "Billboard": {
       "created": 235,
       "file_missing": false,
-      "ms": 25,
+      "ms": 27,
       "skipped": {
        "connect_light_missing": 2
       },
@@ -7220,21 +7220,21 @@
      "Decal": {
       "created": 212,
       "file_missing": false,
-      "ms": 78,
+      "ms": 76,
       "skipped": {},
       "xml": 212
      },
      "DetailMeshes": {
       "created": 652,
       "file_missing": false,
-      "ms": 33,
+      "ms": 34,
       "skipped": {},
       "xml": 652
      },
      "Entity": {
       "created": 1440,
       "file_missing": false,
-      "ms": 1268,
+      "ms": 1464,
       "skipped": {},
       "xml": 1440
      },
@@ -7269,14 +7269,14 @@
      "ParticleSystem": {
       "created": 80,
       "file_missing": false,
-      "ms": 39,
+      "ms": 40,
       "skipped": {},
       "xml": 80
      },
      "Primitive": {
       "created": 117,
       "file_missing": false,
-      "ms": 18,
+      "ms": 20,
       "skipped": {},
       "xml": 117
      },
@@ -7297,7 +7297,7 @@
      "StaticObject": {
       "created": 2578,
       "file_missing": false,
-      "ms": 656,
+      "ms": 708,
       "skipped": {},
       "xml": 2578
      },
@@ -7310,7 +7310,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2237887.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2301736.log",
    "log_errors": {
     "ERROR: CrossHairState '*' does not exist": {
      "count": 1,
@@ -7319,26 +7319,26 @@
    },
    "log_warnings": 38,
    "render": {
-    "draw_calls": 1020,
+    "draw_calls": 1024,
     "fog_areas_in_list": 1,
     "gl_errors": {},
     "lights_in_list": 64,
     "lights_rendered": 64,
-    "occlusion_queries": 341,
+    "occlusion_queries": 335,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 3.384016990661621,
-     "logic_steps": 1.0,
-     "render_ms": 6.358434677124023,
-     "swap_ms": 0.051634032279253006
+     "logic_ms": 3.3172600269317627,
+     "logic_steps": 1.0083333253860474,
+     "render_ms": 5.933279037475586,
+     "swap_ms": 0.05133742466568947
     },
     "shader_failures": 0,
-    "solid_objects": 209,
+    "solid_objects": 214,
     "trans_objects": 113
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.2,
+   "wall_s": 15.3,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7369,11 +7369,11 @@
     "oversized_top": [
      "SpaceGun:05_01_phi_gun.msh"
     ],
-    "particle_systems": 81,
+    "particle_systems": 80,
     "physics_bodies": 1882,
     "physics_bodies_awake": 2,
     "physics_bodies_dynamic": 49,
-    "sound_entities": 95,
+    "sound_entities": 94,
     "static_mesh_entities": 2326,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -7388,7 +7388,7 @@
    "boot_s": 4.6,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 53.306984,
+    "fps": 58,
     "pitch": 0,
     "pos_x": -165.690994,
     "pos_y": 30.8976,
@@ -7397,30 +7397,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 53.306984,
+   "fps": 58,
    "frame": {
-    "black_frac": 0.143387,
+    "black_frac": 0.143583,
     "height": 2160,
     "lum_hist16": [
-     0.79716,
-     0.145661,
-     0.032874,
-     0.012035,
-     0.006699,
-     0.001688,
-     0.001124,
-     0.000808,
-     0.000598,
-     0.000424,
-     0.000394,
-     0.000235,
-     0.000194,
-     7.7e-05,
+     0.797167,
+     0.145643,
+     0.032879,
+     0.01205,
+     0.006681,
+     0.001698,
+     0.001116,
+     0.000816,
+     0.000596,
+     0.000421,
+     0.000398,
+     0.000233,
+     0.000193,
+     7.9e-05,
      2.8e-05,
      2e-06
     ],
     "lum_max": 248,
-    "lum_mean": 10.948011,
+    "lum_mean": 10.948729,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -7434,18 +7434,18 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 0.895996,
-     "b_mean": 0.165534,
+     "b_mean": 0.165546,
      "b_min": -0.03418,
      "b_nan_count": 0,
-     "b_zero_count": 77851,
+     "b_zero_count": 77723,
      "g_max": 0.902832,
-     "g_mean": 0.179839,
+     "g_mean": 0.179847,
      "g_min": -0.04187,
      "g_nan_count": 0,
-     "g_zero_count": 19766,
+     "g_zero_count": 19724,
      "height": 2160,
      "r_max": 0.895508,
-     "r_mean": 0.18931,
+     "r_mean": 0.189311,
      "r_min": -0.036041,
      "r_nan_count": 0,
      "r_zero_count": 2301,
@@ -7462,18 +7462,18 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.45965,
+     "b_mean": 0.459661,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 3,
      "g_max": 1,
-     "g_mean": 0.133182,
+     "g_mean": 0.133206,
      "g_min": -0.999512,
      "g_nan_count": 0,
      "g_zero_count": 1,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.086456,
+     "r_mean": -0.086446,
      "r_min": -0.999512,
      "r_nan_count": 0,
      "r_zero_count": 0,
@@ -7485,26 +7485,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.336918,
+     "a_mean": 0.336926,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 2,
-     "b_max": 0.973145,
-     "b_mean": 0.118331,
+     "a_zero_count": 1,
+     "b_max": 0.974121,
+     "b_mean": 0.118349,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 3680030,
-     "g_max": 0.928223,
-     "g_mean": 0.113843,
+     "b_zero_count": 3679888,
+     "g_max": 0.928711,
+     "g_mean": 0.113863,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3678193,
+     "g_zero_count": 3678051,
      "height": 2160,
      "r_max": 0.937012,
-     "r_mean": 0.114325,
+     "r_mean": 0.114345,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3680345,
+     "r_zero_count": 3680203,
      "sample_a": 0.399902,
      "sample_b": 0.1073,
      "sample_g": 0.091736,
@@ -7515,7 +7515,7 @@
    "load_report": {
     "map": "05_02_ARK_inside.hpm",
     "terrain_active": true,
-    "total_ms": 2642,
+    "total_ms": 2713,
     "tracks": {
      "Area": {
       "created": 63,
@@ -7534,7 +7534,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {
        "unsupported_track": 135
       },
@@ -7552,14 +7552,14 @@
      "DetailMeshes": {
       "created": 1576,
       "file_missing": false,
-      "ms": 11,
+      "ms": 12,
       "skipped": {},
       "xml": 1576
      },
      "Entity": {
       "created": 578,
       "file_missing": false,
-      "ms": 254,
+      "ms": 289,
       "skipped": {},
       "xml": 578
      },
@@ -7573,14 +7573,14 @@
      "LensFlare": {
       "created": 3,
       "file_missing": false,
-      "ms": 3,
+      "ms": 0,
       "skipped": {},
       "xml": 3
      },
      "Light": {
       "created": 174,
       "file_missing": false,
-      "ms": 6,
+      "ms": 9,
       "skipped": {},
       "xml": 174
      },
@@ -7594,21 +7594,21 @@
      "ParticleSystem": {
       "created": 163,
       "file_missing": false,
-      "ms": 33,
+      "ms": 38,
       "skipped": {},
       "xml": 163
      },
      "Primitive": {
       "created": 1,
       "file_missing": false,
-      "ms": 2,
+      "ms": 3,
       "skipped": {},
       "xml": 1
      },
      "Sound": {
       "created": 52,
       "file_missing": false,
-      "ms": 4,
+      "ms": 5,
       "skipped": {},
       "xml": 52
      },
@@ -7622,7 +7622,7 @@
      "StaticObject": {
       "created": 2818,
       "file_missing": false,
-      "ms": 490,
+      "ms": 512,
       "skipped": {},
       "xml": 2818
      },
@@ -7635,7 +7635,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2238746.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2302643.log",
    "log_errors": {
     "ERROR: Couldn'*'D:/depth/redist/core/textures/space.dds'": {
      "count": 1,
@@ -7652,26 +7652,26 @@
    },
    "log_warnings": 21,
    "render": {
-    "draw_calls": 396,
+    "draw_calls": 395,
     "fog_areas_in_list": 2,
     "gl_errors": {},
     "lights_in_list": 40,
     "lights_rendered": 40,
-    "occlusion_queries": 88,
+    "occlusion_queries": 89,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 4.3732452392578125,
-     "logic_steps": 1.125,
-     "render_ms": 5.5357584953308105,
-     "swap_ms": 0.07342825829982758
+     "logic_ms": 3.6020588874816895,
+     "logic_steps": 1.0916666984558105,
+     "render_ms": 4.62224006652832,
+     "swap_ms": 0.06921608000993729
     },
     "shader_failures": 0,
     "solid_objects": 104,
-    "trans_objects": 36
+    "trans_objects": 34
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 15.0,
+   "wall_s": 15.4,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -7719,7 +7719,7 @@
    "boot_s": 1.8,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 59.980377,
+    "fps": 60,
     "pitch": 0,
     "pos_x": -0.331771,
     "pos_y": 1.77696,
@@ -7728,30 +7728,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 59.980377,
+   "fps": 60,
    "frame": {
-    "black_frac": 0.484302,
+    "black_frac": 0.48368,
     "height": 2160,
     "lum_hist16": [
-     0.501198,
-     0.023704,
-     0.013554,
-     0.014528,
-     0.015012,
-     0.016668,
-     0.039233,
-     0.106639,
-     0.103531,
-     0.068894,
-     0.029251,
-     0.020696,
-     0.019903,
-     0.01258,
-     0.013227,
-     0.001385
+     0.500575,
+     0.023716,
+     0.013523,
+     0.014566,
+     0.014919,
+     0.016639,
+     0.039347,
+     0.107444,
+     0.103931,
+     0.068911,
+     0.029025,
+     0.020553,
+     0.019916,
+     0.012425,
+     0.013086,
+     0.001423
     ],
     "lum_max": 240,
-    "lum_mean": 64.471451,
+    "lum_mean": 64.505081,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -7760,93 +7760,93 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.472037,
+     "a_mean": 0.472729,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 4379138,
+     "a_zero_count": 4373398,
      "b_max": 1,
-     "b_mean": 0.701892,
+     "b_mean": 0.702159,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 10178,
-     "g_max": 0.949219,
-     "g_mean": 0.220854,
+     "b_zero_count": 10289,
+     "g_max": 0.949707,
+     "g_mean": 0.220499,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3920380,
+     "g_zero_count": 3926207,
      "height": 2160,
-     "r_max": 0.966797,
-     "r_mean": 0.205653,
+     "r_max": 0.979004,
+     "r_mean": 0.205347,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3926007,
+     "r_zero_count": 3931798,
      "sample_a": 0,
-     "sample_b": 0.377686,
-     "sample_g": 0.329834,
-     "sample_r": 0.279541,
+     "sample_b": 0.376465,
+     "sample_g": 0.329346,
+     "sample_r": 0.27832,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.474001,
-     "a_min": 0.000883,
+     "a_mean": 0.474725,
+     "a_min": 0.000887,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.813451,
-     "b_min": -0.975098,
+     "b_mean": 0.813953,
+     "b_min": -0.958008,
      "b_nan_count": 0,
      "b_zero_count": 0,
      "g_max": 0.999512,
-     "g_mean": 0.25197,
+     "g_mean": 0.246319,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 3915262,
+     "g_zero_count": 3921002,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.084074,
-     "r_min": -0.999512,
+     "r_mean": -0.083627,
+     "r_min": -0.999023,
      "r_nan_count": 0,
-     "r_zero_count": 3915262,
-     "sample_a": 0.002094,
-     "sample_b": 0.632324,
-     "sample_g": 0.71875,
-     "sample_r": -0.287842,
+     "r_zero_count": 3921002,
+     "sample_a": 0.0021,
+     "sample_b": 0.633301,
+     "sample_g": 0.718262,
+     "sample_r": -0.286865,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.706304,
+     "a_mean": 0.706717,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 13349,
+     "a_zero_count": 13284,
      "b_max": 1,
-     "b_mean": 0.751627,
+     "b_mean": 0.751797,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 85011,
+     "b_zero_count": 85724,
      "g_max": 1,
-     "g_mean": 0.282635,
+     "g_mean": 0.282131,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 3946325,
+     "g_zero_count": 3953055,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.284461,
+     "r_mean": 0.283964,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 3960001,
-     "sample_a": 0.43042,
-     "sample_b": 0.338135,
-     "sample_g": 0.318848,
-     "sample_r": 0.338135,
+     "r_zero_count": 3966746,
+     "sample_a": 0.424561,
+     "sample_b": 0.352783,
+     "sample_g": 0.337158,
+     "sample_r": 0.352783,
      "width": 3840
     }
    },
    "load_report": {
     "map": "05_03_space.hpm",
     "terrain_active": false,
-    "total_ms": 425,
+    "total_ms": 454,
     "tracks": {
      "Area": {
       "created": 17,
@@ -7858,7 +7858,7 @@
      "Billboard": {
       "created": 30,
       "file_missing": false,
-      "ms": 11,
+      "ms": 13,
       "skipped": {},
       "xml": 30
      },
@@ -7886,7 +7886,7 @@
      "Entity": {
       "created": 9,
       "file_missing": false,
-      "ms": 395,
+      "ms": 420,
       "skipped": {},
       "xml": 9
      },
@@ -7907,7 +7907,7 @@
      "Light": {
       "created": 14,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 14
      },
@@ -7962,7 +7962,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2239614.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2303503.log",
    "log_errors": {
     "ERROR: Couldn'*'D:/depth/redist/core/textures/space.dds'": {
      "count": 1,
@@ -7975,18 +7975,18 @@
    },
    "log_warnings": 13,
    "render": {
-    "draw_calls": 71,
+    "draw_calls": 70,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 32,
     "lights_rendered": 32,
-    "occlusion_queries": 1,
+    "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 0.9696100354194641,
+     "logic_ms": 0.4709308445453644,
      "logic_steps": 1.0,
-     "render_ms": 4.872347354888916,
-     "swap_ms": 0.10368221253156662
+     "render_ms": 3.677319288253784,
+     "swap_ms": 0.08682938665151596
     },
     "shader_failures": 0,
     "solid_objects": 8,
@@ -7994,7 +7994,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 17.0,
+   "wall_s": 16.8,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8044,7 +8044,7 @@
    "boot_s": 4.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.217205,
+    "fps": 59.880249,
     "pitch": 0,
     "pos_x": 1.25,
     "pos_y": 2.25,
@@ -8053,13 +8053,13 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.217205,
+   "fps": 59.880249,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.99902,
-     0.000972,
+     0.999014,
+     0.000978,
      7e-06,
      1e-06,
      0,
@@ -8075,8 +8075,8 @@
      0,
      0
     ],
-    "lum_max": 54,
-    "lum_mean": 8.798867,
+    "lum_max": 55,
+    "lum_mean": 8.760109,
     "lum_min": 5,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -8090,21 +8090,21 @@
      "a_nan_count": 0,
      "a_zero_count": 8294400,
      "b_max": 1,
-     "b_mean": 0.243996,
+     "b_mean": 0.243998,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 266855,
+     "b_zero_count": 266859,
      "g_max": 1.554688,
-     "g_mean": 0.279895,
+     "g_mean": 0.279907,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 244434,
+     "g_zero_count": 244428,
      "height": 2160,
      "r_max": 1.004883,
-     "r_mean": 0.303397,
+     "r_mean": 0.3034,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 257740,
+     "r_zero_count": 257713,
      "sample_a": 0,
      "sample_b": 0,
      "sample_g": 0,
@@ -8113,23 +8113,23 @@
     },
     "1": {
      "a_max": 0.040649,
-     "a_mean": 0.023645,
+     "a_mean": 0.023644,
      "a_min": 0.009163,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.488179,
+     "b_mean": 0.488203,
      "b_min": -0.999512,
      "b_nan_count": 0,
      "b_zero_count": 727,
      "g_max": 1,
-     "g_mean": 0.118819,
+     "g_mean": 0.118721,
      "g_min": -1,
      "g_nan_count": 0,
      "g_zero_count": 9137,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.134371,
+     "r_mean": 0.134375,
      "r_min": -1,
      "r_nan_count": 0,
      "r_zero_count": 788,
@@ -8141,26 +8141,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.457143,
+     "a_mean": 0.457224,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 62667,
+     "a_zero_count": 62678,
      "b_max": 1,
-     "b_mean": 0.356285,
+     "b_mean": 0.356234,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 395683,
+     "b_zero_count": 395710,
      "g_max": 1,
-     "g_mean": 0.362192,
+     "g_mean": 0.362144,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 389683,
+     "g_zero_count": 389692,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.369019,
+     "r_mean": 0.368972,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 393134,
+     "r_zero_count": 393161,
      "sample_a": 0.674316,
      "sample_b": 0.186646,
      "sample_g": 0.191162,
@@ -8171,7 +8171,7 @@
    "load_report": {
     "map": "_e3_01_01.hpm",
     "terrain_active": false,
-    "total_ms": 2511,
+    "total_ms": 2598,
     "tracks": {
      "Area": {
       "created": 312,
@@ -8183,7 +8183,7 @@
      "Billboard": {
       "created": 134,
       "file_missing": false,
-      "ms": 50,
+      "ms": 60,
       "skipped": {},
       "xml": 134
      },
@@ -8199,7 +8199,7 @@
      "Decal": {
       "created": 562,
       "file_missing": false,
-      "ms": 146,
+      "ms": 150,
       "skipped": {
        "decal_mesh_failed": 2
       },
@@ -8215,7 +8215,7 @@
      "Entity": {
       "created": 1378,
       "file_missing": false,
-      "ms": 984,
+      "ms": 1015,
       "skipped": {},
       "xml": 1378
      },
@@ -8243,7 +8243,7 @@
      "Light": {
       "created": 569,
       "file_missing": false,
-      "ms": 15,
+      "ms": 17,
       "skipped": {},
       "xml": 569
      },
@@ -8257,21 +8257,21 @@
      "ParticleSystem": {
       "created": 156,
       "file_missing": false,
-      "ms": 54,
+      "ms": 53,
       "skipped": {},
       "xml": 156
      },
      "Primitive": {
       "created": 464,
       "file_missing": false,
-      "ms": 58,
+      "ms": 57,
       "skipped": {},
       "xml": 464
      },
      "Sound": {
       "created": 108,
       "file_missing": false,
-      "ms": 144,
+      "ms": 146,
       "skipped": {},
       "xml": 108
      },
@@ -8285,7 +8285,7 @@
      "StaticObject": {
       "created": 3177,
       "file_missing": false,
-      "ms": 689,
+      "ms": 696,
       "skipped": {},
       "xml": 3177
      },
@@ -8298,7 +8298,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2240530.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2304297.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 1,
@@ -8315,18 +8315,18 @@
    },
    "log_warnings": 46,
    "render": {
-    "draw_calls": 769,
+    "draw_calls": 768,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 52,
     "lights_rendered": 52,
-    "occlusion_queries": 60,
+    "occlusion_queries": 59,
     "per_frame": {
      "frames": 121,
-     "logic_ms": 3.878743886947632,
+     "logic_ms": 5.156475067138672,
      "logic_steps": 1.0,
-     "render_ms": 9.572808265686035,
-     "swap_ms": 0.04759400710463524
+     "render_ms": 8.856729507446289,
+     "swap_ms": 0.08616726100444794
     },
     "shader_failures": 0,
     "solid_objects": 265,
@@ -8334,7 +8334,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.8,
+   "wall_s": 14.0,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8367,7 +8367,7 @@
     "physics_bodies": 2149,
     "physics_bodies_awake": 4,
     "physics_bodies_dynamic": 443,
-    "sound_entities": 121,
+    "sound_entities": 120,
     "static_mesh_entities": 2772,
     "submeshes_without_material": 0,
     "unbounded_top": []
@@ -8380,10 +8380,10 @@
     "no_material:communication_table_pplant_GUI.mat"
    ],
    "asleep": false,
-   "boot_s": 4.6,
+   "boot_s": 5.2,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 58.53178,
+    "fps": 53.921543,
     "pitch": 0,
     "pos_x": 31.999201,
     "pos_y": 18,
@@ -8392,58 +8392,58 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 58.53178,
+   "fps": 53.921543,
    "frame": {
-    "black_frac": 0.003458,
+    "black_frac": 0.003459,
     "height": 2160,
     "lum_hist16": [
-     0.348234,
-     0.231598,
-     0.187289,
-     0.150295,
-     0.061156,
-     0.007262,
-     0.004948,
-     0.004112,
-     0.002127,
-     0.001095,
-     0.000383,
-     0.000182,
-     0.00014,
-     0.000103,
-     0.000111,
+     0.348398,
+     0.239853,
+     0.19048,
+     0.146171,
+     0.054573,
+     0.006665,
+     0.004976,
+     0.003946,
+     0.002052,
+     0.001039,
+     0.000352,
+     0.00018,
+     0.000138,
+     0.000105,
+     0.00011,
      0.000963
     ],
     "lum_max": 255,
-    "lum_mean": 30.915295,
+    "lum_mean": 30.499142,
     "lum_min": 0,
     "magenta_frac": 0,
-    "white_frac": 0.000848,
+    "white_frac": 0.000847,
     "width": 3840
    },
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.000231,
+     "a_mean": 0.00023,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 8278911,
+     "a_zero_count": 8278855,
      "b_max": 1,
-     "b_mean": 0.2642,
+     "b_mean": 0.263776,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 2917,
+     "b_zero_count": 2925,
      "g_max": 0.945801,
-     "g_mean": 0.31608,
+     "g_mean": 0.315848,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 1675,
+     "g_zero_count": 1671,
      "height": 2160,
      "r_max": 0.958008,
-     "r_mean": 0.343498,
+     "r_mean": 0.343355,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 2108,
+     "r_zero_count": 2106,
      "sample_a": 0,
      "sample_b": 0.223511,
      "sample_g": 0.262695,
@@ -8457,21 +8457,21 @@
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.294892,
+     "b_mean": 0.294887,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 52963,
+     "b_zero_count": 52969,
      "g_max": 1,
-     "g_mean": 0.207845,
+     "g_mean": 0.20785,
      "g_min": -1,
      "g_nan_count": 0,
-     "g_zero_count": 2914,
+     "g_zero_count": 2917,
      "height": 2160,
      "r_max": 1,
-     "r_mean": -0.072783,
+     "r_mean": -0.072805,
      "r_min": -1,
      "r_nan_count": 0,
-     "r_zero_count": 52982,
+     "r_zero_count": 52988,
      "sample_a": 0.067322,
      "sample_b": 0.987793,
      "sample_g": 0.036987,
@@ -8480,26 +8480,26 @@
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.515514,
+     "a_mean": 0.515512,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 3573,
+     "a_zero_count": 3574,
      "b_max": 1,
-     "b_mean": 0.448233,
+     "b_mean": 0.44823,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 105326,
+     "b_zero_count": 105315,
      "g_max": 1,
-     "g_mean": 0.449689,
+     "g_mean": 0.449686,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 96808,
+     "g_zero_count": 96798,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.436107,
+     "r_mean": 0.436105,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 104859,
+     "r_zero_count": 104855,
      "sample_a": 0.26001,
      "sample_b": 0.380371,
      "sample_g": 0.388184,
@@ -8510,19 +8510,19 @@
    "load_report": {
     "map": "_e3_01_02.hpm",
     "terrain_active": false,
-    "total_ms": 2556,
+    "total_ms": 3045,
     "tracks": {
      "Area": {
       "created": 971,
       "file_missing": false,
-      "ms": 10,
+      "ms": 11,
       "skipped": {},
       "xml": 971
      },
      "Billboard": {
       "created": 359,
       "file_missing": false,
-      "ms": 39,
+      "ms": 42,
       "skipped": {},
       "xml": 359
      },
@@ -8538,7 +8538,7 @@
      "Decal": {
       "created": 536,
       "file_missing": false,
-      "ms": 302,
+      "ms": 319,
       "skipped": {},
       "xml": 536
      },
@@ -8552,7 +8552,7 @@
      "Entity": {
       "created": 2227,
       "file_missing": false,
-      "ms": 1065,
+      "ms": 1411,
       "skipped": {},
       "xml": 2227
      },
@@ -8573,7 +8573,7 @@
      "Light": {
       "created": 524,
       "file_missing": false,
-      "ms": 11,
+      "ms": 13,
       "skipped": {},
       "xml": 524
      },
@@ -8587,7 +8587,7 @@
      "ParticleSystem": {
       "created": 148,
       "file_missing": false,
-      "ms": 47,
+      "ms": 53,
       "skipped": {
        "load_failed": 23
       },
@@ -8596,14 +8596,14 @@
      "Primitive": {
       "created": 128,
       "file_missing": false,
-      "ms": 19,
+      "ms": 22,
       "skipped": {},
       "xml": 128
      },
      "Sound": {
       "created": 109,
       "file_missing": false,
-      "ms": 89,
+      "ms": 92,
       "skipped": {},
       "xml": 109
      },
@@ -8617,7 +8617,7 @@
      "StaticObject": {
       "created": 3381,
       "file_missing": false,
-      "ms": 595,
+      "ms": 651,
       "skipped": {},
       "xml": 3381
      },
@@ -8632,7 +8632,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2241203.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2305170.log",
    "log_errors": {
     "ERROR: Cannot find sound '*' and play at entity RobotArmPSArea_N": {
      "count": 1,
@@ -8689,26 +8689,26 @@
    },
    "log_warnings": 83,
    "render": {
-    "draw_calls": 1123,
+    "draw_calls": 1257,
     "fog_areas_in_list": 0,
     "gl_errors": {},
-    "lights_in_list": 90,
-    "lights_rendered": 90,
-    "occlusion_queries": 142,
+    "lights_in_list": 92,
+    "lights_rendered": 92,
+    "occlusion_queries": 135,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 4.278960227966309,
-     "logic_steps": 1.0330578088760376,
-     "render_ms": 12.726058006286621,
-     "swap_ms": 0.10052194446325302
+     "frames": 122,
+     "logic_ms": 5.534471035003662,
+     "logic_steps": 1.0983606576919556,
+     "render_ms": 12.39963150024414,
+     "swap_ms": 0.14410920441150665
     },
     "shader_failures": 0,
-    "solid_objects": 297,
-    "trans_objects": 116
+    "solid_objects": 356,
+    "trans_objects": 123
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 49.4,
+   "wall_s": 50.7,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -8743,7 +8743,7 @@
     "physics_bodies": 2914,
     "physics_bodies_awake": 18,
     "physics_bodies_dynamic": 340,
-    "sound_entities": 116,
+    "sound_entities": 117,
     "static_mesh_entities": 3302,
     "submeshes_without_material": 1,
     "unbounded_top": []
@@ -8756,10 +8756,10 @@
     "no_material:communication_table_pplant_GUI.mat"
    ],
    "asleep": false,
-   "boot_s": 4.0,
+   "boot_s": 4.1,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 60.039383,
+    "fps": 56.603775,
     "pitch": 0,
     "pos_x": 24.75,
     "pos_y": 255.852005,
@@ -8768,30 +8768,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 60.039383,
+   "fps": 56.603775,
    "frame": {
     "black_frac": 0,
     "height": 2160,
     "lum_hist16": [
-     0.025617,
-     0.582565,
-     0.22631,
-     0.1036,
-     0.037665,
-     0.014085,
-     0.005518,
-     0.002104,
-     0.001211,
-     0.000576,
-     0.000207,
-     0.000111,
-     9.2e-05,
-     0.000135,
-     0.000204,
+     0.025362,
+     0.59716,
+     0.219435,
+     0.099096,
+     0.035834,
+     0.013441,
+     0.00522,
+     0.001981,
+     0.001194,
+     0.000532,
+     0.000208,
+     0.000108,
+     9.4e-05,
+     0.000137,
+     0.000198,
      0
     ],
     "lum_max": 242,
-    "lum_mean": 33.111809,
+    "lum_mean": 32.761692,
     "lum_min": 7,
     "magenta_frac": 0,
     "white_frac": 0,
@@ -8800,82 +8800,82 @@
    "gbuffer": {
     "0": {
      "a_max": 1,
-     "a_mean": 0.042708,
+     "a_mean": 0.042627,
      "a_min": 0,
      "a_nan_count": 0,
-     "a_zero_count": 7924278,
+     "a_zero_count": 7925607,
      "b_max": 2.214844,
-     "b_mean": 0.237459,
+     "b_mean": 0.237221,
      "b_min": 0,
      "b_nan_count": 0,
-     "b_zero_count": 9006,
+     "b_zero_count": 9063,
      "g_max": 2.216797,
-     "g_mean": 0.244657,
+     "g_mean": 0.244384,
      "g_min": 0,
      "g_nan_count": 0,
-     "g_zero_count": 348213,
+     "g_zero_count": 348242,
      "height": 2160,
      "r_max": 2.335938,
-     "r_mean": 0.268869,
+     "r_mean": 0.268661,
      "r_min": 0,
      "r_nan_count": 0,
-     "r_zero_count": 350381,
+     "r_zero_count": 350408,
      "sample_a": 0,
-     "sample_b": 0.191895,
-     "sample_g": 0.244751,
-     "sample_r": 0.287842,
+     "sample_b": 0.187744,
+     "sample_g": 0.242554,
+     "sample_r": 0.285889,
      "width": 3840
     },
     "1": {
      "a_max": 1,
-     "a_mean": 0.095567,
+     "a_mean": 0.095604,
      "a_min": 0.008385,
      "a_nan_count": 0,
      "a_zero_count": 0,
      "b_max": 1,
-     "b_mean": 0.331524,
+     "b_mean": 0.330894,
      "b_min": -0.999512,
      "b_nan_count": 0,
-     "b_zero_count": 1,
+     "b_zero_count": 4,
      "g_max": 1,
-     "g_mean": 0.385716,
+     "g_mean": 0.385463,
      "g_min": -0.999512,
      "g_nan_count": 0,
-     "g_zero_count": 347941,
+     "g_zero_count": 347948,
      "height": 2160,
      "r_max": 0.999512,
-     "r_mean": -0.027395,
-     "r_min": -1,
+     "r_mean": -0.028463,
+     "r_min": -0.999512,
      "r_nan_count": 0,
-     "r_zero_count": 347386,
-     "sample_a": 0.081909,
-     "sample_b": 0.222534,
-     "sample_g": 0.974609,
-     "sample_r": 0.015266,
+     "r_zero_count": 347427,
+     "sample_a": 0.092041,
+     "sample_b": 0.167603,
+     "sample_g": 0.98584,
+     "sample_r": -0.001993,
      "width": 3840
     },
     "2": {
      "a_max": 1,
-     "a_mean": 0.309802,
+     "a_mean": 0.309503,
      "a_min": 0,
      "a_nan_count": 0,
      "a_zero_count": 149,
      "b_max": 1,
-     "b_mean": 0.146794,
+     "b_mean": 0.146555,
      "b_min": -0.203735,
      "b_nan_count": 0,
-     "b_zero_count": 2267288,
+     "b_zero_count": 2275832,
      "g_max": 1,
-     "g_mean": 0.105199,
-     "g_min": -0.214478,
+     "g_mean": 0.105022,
+     "g_min": -0.215332,
      "g_nan_count": 0,
-     "g_zero_count": 2515903,
+     "g_zero_count": 2524497,
      "height": 2160,
      "r_max": 1,
-     "r_mean": 0.104778,
+     "r_mean": 0.10456,
      "r_min": -0.25415,
      "r_nan_count": 0,
-     "r_zero_count": 2612455,
+     "r_zero_count": 2621206,
      "sample_a": 0.299805,
      "sample_b": 0,
      "sample_g": 0,
@@ -8886,7 +8886,7 @@
    "load_report": {
     "map": "_e3_01_03.hpm",
     "terrain_active": true,
-    "total_ms": 2460,
+    "total_ms": 2522,
     "tracks": {
      "Area": {
       "created": 131,
@@ -8905,7 +8905,7 @@
      "Compound": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {
        "unsupported_track": 24
       },
@@ -8914,7 +8914,7 @@
      "Decal": {
       "created": 178,
       "file_missing": false,
-      "ms": 126,
+      "ms": 124,
       "skipped": {
        "decal_mesh_failed": 1
       },
@@ -8923,14 +8923,14 @@
      "DetailMeshes": {
       "created": 2145,
       "file_missing": false,
-      "ms": 46,
+      "ms": 41,
       "skipped": {},
       "xml": 2145
      },
      "Entity": {
       "created": 465,
       "file_missing": false,
-      "ms": 643,
+      "ms": 644,
       "skipped": {},
       "xml": 465
      },
@@ -8951,7 +8951,7 @@
      "Light": {
       "created": 52,
       "file_missing": false,
-      "ms": 1,
+      "ms": 2,
       "skipped": {},
       "xml": 52
      },
@@ -8993,7 +8993,7 @@
      "StaticObject": {
       "created": 598,
       "file_missing": false,
-      "ms": 405,
+      "ms": 434,
       "skipped": {},
       "xml": 598
      },
@@ -9006,7 +9006,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2243725.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2307905.log",
    "log_errors": {
     "ERROR: Cannot find entity '*' and play sound '*' at it": {
      "count": 2,
@@ -9027,18 +9027,18 @@
    },
    "log_warnings": 24,
    "render": {
-    "draw_calls": 2164,
+    "draw_calls": 2162,
     "fog_areas_in_list": 0,
     "gl_errors": {},
     "lights_in_list": 36,
     "lights_rendered": 36,
-    "occlusion_queries": 128,
+    "occlusion_queries": 126,
     "per_frame": {
-     "frames": 121,
-     "logic_ms": 2.0582447052001953,
-     "logic_steps": 1.0,
-     "render_ms": 11.942383766174316,
-     "swap_ms": 0.05408509075641632
+     "frames": 122,
+     "logic_ms": 2.2140355110168457,
+     "logic_steps": 1.0573770999908447,
+     "render_ms": 15.077027320861816,
+     "swap_ms": 0.07946402579545975
     },
     "shader_failures": 0,
     "solid_objects": 856,
@@ -9046,7 +9046,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 13.4,
+   "wall_s": 14.1,
    "warmup": {
     "frames": 360,
     "timed_out": false
@@ -9093,7 +9093,7 @@
    "boot_s": 1.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 54.740921,
+    "fps": 53.784878,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 0.5,
@@ -9102,30 +9102,30 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 54.740921,
+   "fps": 53.784878,
    "frame": {
-    "black_frac": 0.456566,
+    "black_frac": 0.457456,
     "height": 2160,
     "lum_hist16": [
-     0.759889,
-     0.071758,
-     0.030924,
-     0.016199,
-     0.015409,
-     0.014936,
-     0.011997,
-     0.01058,
-     0.010285,
-     0.009417,
-     0.01057,
-     0.01026,
-     0.004392,
-     0.023237,
-     4.4e-05,
+     0.763272,
+     0.073055,
+     0.029371,
+     0.016899,
+     0.016529,
+     0.014935,
+     0.011801,
+     0.011309,
+     0.01035,
+     0.01016,
+     0.011834,
+     0.005475,
+     0.005055,
+     0.019838,
+     1.6e-05,
      0.000102
     ],
     "lum_max": 255,
-    "lum_mean": 23.253542,
+    "lum_mean": 22.128139,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 7.4e-05,
@@ -9220,7 +9220,7 @@
    "load_report": {
     "map": "_e3_main_menu.hpm",
     "terrain_active": false,
-    "total_ms": 17,
+    "total_ms": 18,
     "tracks": {
      "Area": {
       "created": 1,
@@ -9260,7 +9260,7 @@
      "Entity": {
       "created": 0,
       "file_missing": false,
-      "ms": 0,
+      "ms": 1,
       "skipped": {},
       "xml": 0
      },
@@ -9336,7 +9336,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2244518.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2308536.log",
    "log_errors": {
     "ERROR: Couldn'*'entities/station/tech/communication_table_pplant/communication_table_pplant_GUI.mat'": {
      "count": 1,
@@ -9347,7 +9347,7 @@
      "example": "ERROR: Couldn't texture 'graphics/imgui/station/Scanlines/scanlines_standard.dds'"
     }
    },
-   "log_warnings": 30,
+   "log_warnings": 69,
    "render": {
     "draw_calls": 0,
     "fog_areas_in_list": 0,
@@ -9357,10 +9357,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 5.11475133895874,
-     "logic_steps": 1.0833333730697632,
-     "render_ms": 2.6955227851867676,
-     "swap_ms": 0.06911294907331467
+     "logic_ms": 4.891833782196045,
+     "logic_steps": 1.0916666984558105,
+     "render_ms": 2.43157958984375,
+     "swap_ms": 0.06458277255296707
     },
     "shader_failures": 0,
     "solid_objects": 0,
@@ -9413,7 +9413,7 @@
    "boot_s": 1.5,
    "camera": {
     "fov_deg": 70.000008,
-    "fps": 57.884186,
+    "fps": 60.336262,
     "pitch": 0,
     "pos_x": 0,
     "pos_y": 0.5,
@@ -9422,21 +9422,21 @@
    },
    "fade_alpha": 0.0,
    "failures": [],
-   "fps": 57.884186,
+   "fps": 60.336262,
    "frame": {
-    "black_frac": 0.465263,
+    "black_frac": 0.465656,
     "height": 2160,
     "lum_hist16": [
-     0.795004,
-     0.065598,
-     0.043387,
-     0.026821,
-     0.030532,
-     0.009085,
-     0.001482,
-     0.002601,
-     0.025327,
-     1.1e-05,
+     0.79598,
+     0.06649,
+     0.04354,
+     0.027014,
+     0.030134,
+     0.007379,
+     0.001564,
+     0.003065,
+     0.024671,
+     9e-06,
      8e-06,
      1e-05,
      9e-06,
@@ -9445,7 +9445,7 @@
      0.000102
     ],
     "lum_max": 255,
-    "lum_mean": 13.919387,
+    "lum_mean": 13.689776,
     "lum_min": 0,
     "magenta_frac": 0,
     "white_frac": 7.4e-05,
@@ -9656,7 +9656,7 @@
      }
     }
    },
-   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2245304.log",
+   "log": "/home/lm/.cache/open-hpl/soma-scratch/.xdg/state/open-hpl/soma/hpl-2309151.log",
    "log_errors": {},
    "log_warnings": 11,
    "render": {
@@ -9668,10 +9668,10 @@
     "occlusion_queries": 0,
     "per_frame": {
      "frames": 120,
-     "logic_ms": 1.5000555515289307,
+     "logic_ms": 1.4191174507141113,
      "logic_steps": 1.0166666507720947,
-     "render_ms": 2.7661898136138916,
-     "swap_ms": 0.07713600248098373
+     "render_ms": 2.4887616634368896,
+     "swap_ms": 0.07080084830522537
     },
     "shader_failures": 0,
     "solid_objects": 0,
@@ -9679,7 +9679,7 @@
    },
    "shader_failures": [],
    "status": "ok",
-   "wall_s": 10.3,
+   "wall_s": 10.1,
    "warmup": {
     "frames": 360,
     "timed_out": false

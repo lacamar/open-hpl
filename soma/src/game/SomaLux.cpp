@@ -1554,12 +1554,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 			}
 			for (cParticleSystem *p : v) f(p);
 		};
-		static auto AttachTarget = [](cSomaLuxEntity *p) -> iEntity3D * {
-			if (p->mpMesh) return p->mpMesh;
-			if (p->GetMainBody()) return p->GetMainBody();
-			iCharacterBody *pBody = p->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
-			return pBody ? pBody->GetCurrentBody() : NULL;
-		};
+		static auto AttachTarget = [](cSomaLuxEntity *p) { return p->GetAttachEntity(); };
 		static auto CreateAt = [](S n, S f, S ent, bool attach) -> cParticleSystem * {
 			cSomaLuxEntity *pEnt = cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(ent) : NULL;
 			if (pEnt == NULL || World() == NULL)

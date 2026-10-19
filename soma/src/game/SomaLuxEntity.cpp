@@ -2498,16 +2498,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 		});
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
-	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) -> iEntity3D * {
-		if (p->mpCameraNode)
-			return p->mpCameraNode;
-		if (p->mpMesh)
-			return p->mpMesh;
-		if (p->GetMainBody())
-			return p->GetMainBody();
-		iCharacterBody *pBody = p->meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
-		return pBody ? pBody->GetCurrentBody() : NULL;
-	});
+	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) { return p->GetAttachEntity(); });
 	SOMA_METHOD_NEW(e, T, "cMaterial@ GetBaseMaterial()", +[](E *p) {
 		return p->mpMesh && p->mpMesh->GetSubMeshEntityNum() > 0 ? p->mpMesh->GetSubMeshEntity(0)->GetMaterial() : (cMaterial *)NULL;
 	});
@@ -2630,13 +2621,11 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 						cSoundEntity *pSound = pMap && file != "" ? pMap->GetWorld()->CreateSoundEntity(p->msName + "_" + n, file, remove) : NULL;
 						if (pSound == NULL)
 							return NULL;
-						pSound->SetPosition(p->GetPosition());
-						iEntity3D *pParent = p->mpMesh ? (iEntity3D *)p->mpMesh : (iEntity3D *)p->GetMainBody();
+						iEntity3D *pParent = p->GetAttachEntity();
 						if (attach && pParent)
-						{
-							pSound->SetPosition(0);
 							pParent->AddChild(pSound);
-						}
+						else
+							pSound->SetPosition(pParent ? pParent->GetWorldPosition() : p->GetPosition());
 						return pSound;
 					});
 	SOMA_METHOD_NEW(e, T, "void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)", +[](E *p, bool b, bool f) { p->mbEffectsActive = b; p->SetEffectsActive(b && p->mbActive, f); });
@@ -2714,10 +2703,23 @@ void cSomaLuxEntity::AttachAnimationEventEntity(const tString &asSocket, iEntity
 			if (sock.mpBone)
 				sock.mpBone->AddEntity(apEntity);
 			else
-				mpMesh->AddChild(apEntity);
+				GetAttachEntity()->AddChild(apEntity);
 			return;
 		}
-	mpMesh->AddChild(apEntity);
+	GetAttachEntity()->AddChild(apEntity);
+}
+
+// iLuxProp::GetAttachEntity: bodies own the transform, the mesh entity stays at its load matrix
+iEntity3D *cSomaLuxEntity::GetAttachEntity()
+{
+	if (mpCameraNode)
+		return mpCameraNode;
+	if (meType != eSomaLuxEntityType_Agent && GetMainBody())
+		return GetMainBody();
+	if (mpMesh)
+		return mpMesh;
+	iCharacterBody *pBody = meType == eSomaLuxEntityType_Player && cSomaLuxPlayer::Get() ? cSomaLuxPlayer::Get()->GetCharacterBody() : NULL;
+	return pBody ? pBody->GetCurrentBody() : NULL;
 }
 
 // cMeshEntity::HandleAnimationEvent + iLuxEntity::OnAnimationEvent

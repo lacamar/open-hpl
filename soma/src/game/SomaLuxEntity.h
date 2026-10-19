@@ -138,6 +138,7 @@ public:
 	void AfterAnimationUpdate(cMeshEntity *, float) override {}
 	bool OnAnimationEvent(cMeshEntity *apMesh, cAnimationEvent *apEvent) override;
 	void AttachAnimationEventEntity(const tString &asSocket, iEntity3D *apEntity);
+	iEntity3D *GetAttachEntity();
 	cSoundEntity *mpAnimLoopSound = NULL;
 	int mlAnimLoopSoundID = -1;
 	tString msAnimLoopSound;
