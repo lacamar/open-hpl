@@ -94,6 +94,7 @@ def run_map(name, scratch, frames, boot_timeout, sock, play=0):
         "XDG_DATA_HOME": os.path.join(scratch, ".xdg/data"),
         "XDG_STATE_HOME": os.path.join(scratch, ".xdg/state"),
     })
+    subprocess.run([os.path.join(os.path.dirname(os.path.abspath(__file__)), "headless-lock-holders.sh")])
     start = time.time()
     with open(os.path.join(scratch, "sweep-run.out"), "w") as out:
         proc = subprocess.Popen(["./" + G.bin], cwd=scratch, env=env, stdout=out, stderr=subprocess.STDOUT,

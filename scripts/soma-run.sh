@@ -13,6 +13,7 @@ pactl list short sinks | grep -q $'\tohpl-ours\t' ||
 python3 -c 'import socket,sys; socket.socket(socket.AF_UNIX).connect(sys.argv[1])' "$SOCK" 2>/dev/null &&
 	{ echo "$SOCK is in use by a live instance" >&2; exit 1; }
 rm -f "$SOCK"
+"$(dirname "${BASH_SOURCE[0]}")/headless-lock-holders.sh"
 cd "$SCRATCH"
 BOOT=(OPENHPL_SOMA_MAP="$MAP" OPENHPL_SOMA_SKIP_BOOT=1)
 [ "$MAP" = boot ] || [ -z "$HPL3" ] && BOOT=()

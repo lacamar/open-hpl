@@ -27,6 +27,8 @@ make -C amnesia/src/build -j12 PhysicsNewtonTests CStringTests PlatformXdgPathTe
 ctest --test-dir amnesia/src/build
 eval "$(scripts/soma-init.sh)"             # build + scratch dir + deploy, exports XDG_*
 export OHPL_GAME=rebirth; eval "$(scripts/soma-init.sh rebirth)"  # tools below, per game: soma rebirth bunker amnesia amfp
+export OHPL_GAME=rebirth                   # later calls: tools set the scratch XDG_* per launch themselves
+eval "$(scripts/soma-init.sh --env-only rebirth)"  # re-export XDG_* without rebuilding
 scripts/soma-sweep.py --map 00_01_apartment  # one map, ~10 s
 scripts/soma-sweep.py                      # all 29 maps -> soma/conformance/results.json
 scripts/soma-sweep.py --only-failed --compare old.json
@@ -39,6 +41,8 @@ scripts/soma-shader-check.py <dump-dir>    # glslang over OPENHPL_DUMP_HPSL_SHAD
 scripts/soma-gen-bindings.py               # regenerate SomaScriptGenBindings.cpp (compiler-verified)
 scripts/soma-re-struct-defaults.py         # recover script struct defaults from the official binary
 scripts/soma-script-check.sh               # compile all game .hps against the recovered API (~2 s)
+scripts/launcher-smoke.sh <game>           # installed open-hpl-<game> reaches the menu; run after every RPM install
+git config core.hooksPath .githooks        # pre-push: build, ctest, script checks
 scripts/soma-re-script-api.py <Soma_NoSteam.bin.x86_64> re.json api.json soma/data/script_api.txt
 ```
 
