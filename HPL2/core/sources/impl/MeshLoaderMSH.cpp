@@ -49,6 +49,7 @@ namespace hpl {
 	
 	bool gbLogMSHLoad = false;
 	bool cMeshLoaderMSH::mbBoneUnitScale = false;
+	bool cMeshLoaderMSH::mbKeepHpl3Animations = false;
 	
 	//-----------------------------------------------------------------------
 
@@ -338,10 +339,10 @@ namespace hpl {
             int lAnimationNum = binBuff.GetInt32();
 			if(gbLogMSHLoad) Log(" Animation num: %d\n",lAnimationNum);
 
-			// HPL3 discards embedded animations
-			for(int i=0; i<lAnimationNum && !bHpl3; ++i)
+			// Rebirth discards embedded animations (cMeshLoaderMSH::GetMesh 0x1084fc0), SOMA keeps them (0x1403c68c4)
+			for(int i=0; i<lAnimationNum && (!bHpl3 || mbKeepHpl3Animations); ++i)
 			{
-				pMesh->AddAnimation(GetAnimation(&binBuff, asFile));
+				pMesh->AddAnimation(GetAnimation(&binBuff, asFile, bHpl3));
 			}
 		}
 	
@@ -643,7 +644,7 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	cAnimation* cMeshLoaderMSH::GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath)
+	cAnimation* cMeshLoaderMSH::GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath, bool abHpl3)
 	{
 		/////////////////////////
 		// General Properties
@@ -651,6 +652,7 @@ namespace hpl {
 		apBuffer->GetString(&sAnimName);
 		float fLength = apBuffer->GetFloat32();
 		int lTrackNum = apBuffer->GetInt32();
+		int lHpl3ExtraNum = abHpl3 ? apBuffer->GetInt32() : 0;
 		
 		cAnimation *pAnimation = hplNew(cAnimation, (cString::To8Char(asFullPath), asFullPath, cString::GetFileName(cString::To8Char(asFullPath))));
 		pAnimation->SetLength(fLength);
@@ -686,6 +688,15 @@ namespace hpl {
 				//														pFrame->rotation.v.ToString().c_str(), pFrame->rotation.w, pFrame->time);
 
 			}
+		}
+
+		// SOMA 0x1403c5dc3: float + 2 vec3 each, kept at cAnimation+0x118; unused here
+		for(int i=0; i<lHpl3ExtraNum; ++i)
+		{
+			cVector3f vTemp;
+			apBuffer->GetFloat32();
+			apBuffer->GetVector3f(&vTemp);
+			apBuffer->GetVector3f(&vTemp);
 		}
 
 		return pAnimation;

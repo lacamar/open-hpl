@@ -34,6 +34,7 @@
 #include "graphics/Texture.h"
 #include "system/EngineDiagnostics.h"
 #include "impl/MeshLoaderCollada.h"
+#include "impl/MeshLoaderMSH.h"
 #include "impl/GLSLProgram.h"
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsJoint.h"
@@ -1248,6 +1249,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 		cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 	cMeshLoaderCollada::SetUnscaledSkeleton(true);
+	cMeshLoaderMSH::mbKeepHpl3Animations = SomaGameId() == "soma";
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));

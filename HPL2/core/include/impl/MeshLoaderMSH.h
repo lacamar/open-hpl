@@ -55,10 +55,11 @@ namespace hpl {
 		bool SaveAnimation(cAnimation* apAnimation, const tWString& asFile);
 
 		static bool mbBoneUnitScale;
+		static bool mbKeepHpl3Animations;
 
 	private:
 		void AddAnimation(cAnimation *apAnimation, cBinaryBuffer* apBuffer);
-		cAnimation* GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath);
+		cAnimation* GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath, bool abHpl3=false);
 
 		void AddNodeToBuffer(cNode3D *apNode, cBinaryBuffer* apBuffer, int alLevel);
 		void GetNodeFromBuffer(cNode3D *apParentNode, cMesh *apMesh, cBinaryBuffer* apBuffer, int alLevel);
