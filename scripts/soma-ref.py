@@ -36,6 +36,7 @@ SAVE_FOLDER = "OhplRef"
 # Bunker crashes on any -mod (null mod table, 0x14008ef04); -cfg with absolute paths works
 CFG_LAUNCH = GAME_NAME == "bunker"
 SLOTS = 500
+os.environ.setdefault("GT_INSTANCE", "ohpl-ref")
 GT = shutil.which("gt") or str(Path.home() / ".local/src/wine-arm64ec-tools/gametest/gt")
 
 
@@ -230,7 +231,7 @@ def teleport_code(x, y, z, yaw=None, pitch=None):
 
 
 def sway_env():
-    st = json.loads((Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/state.json").read_text())
+    st = json.loads((Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"{os.environ['GT_INSTANCE']}/state.json").read_text())
     return dict(os.environ, WAYLAND_DISPLAY=st["wayland"], SWAYSOCK=st["swaysock"], DISPLAY="")
 
 
@@ -239,21 +240,16 @@ def swaymsg(*a):
 
 
 def ref_output(size):
-    """A dedicated scale-1 output at the game resolution, so screenshots are the game's pixels 1:1."""
-    marker = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/ohpl-ref-output"
-    names = [o["name"] for o in swaymsg("-t", "get_outputs")]
-    name = marker.read_text().strip() if marker.exists() else ""
-    if name not in names:
-        swaymsg("create_output")
-        name = next(n for n in (o["name"] for o in swaymsg("-t", "get_outputs")) if n not in names)
-        marker.write_text(name)
+    """The private session's only output, sized to the game so Wine's desktop and screenshots are the game's pixels 1:1."""
+    name = swaymsg("-t", "get_outputs")[0]["name"]
+    (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"{os.environ['GT_INSTANCE']}/ohpl-ref-output").write_text(name)
     w, h = size.split("x")
-    swaymsg("output", name, "resolution", f"{w}x{h}", "scale", "1", "position", "8000", "0")
+    swaymsg("output", name, "resolution", f"{w}x{h}", "scale", "1", "position", "0", "0")
     return name
 
 
 def screenshot(out):
-    name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/ohpl-ref-output").read_text().strip()
+    name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"{os.environ['GT_INSTANCE']}/ohpl-ref-output").read_text().strip()
     subprocess.run(["grim", "-o", name, str(out)], env=sway_env(), check=True)
     return out
 
@@ -263,7 +259,7 @@ def record_frames(out, secs, fps, t0=None):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = t0 or time.time()
-    name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "gt/ohpl-ref-output").read_text().strip()
+    name = (Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / f"{os.environ['GT_INSTANCE']}/ohpl-ref-output").read_text().strip()
     env, end, frames = sway_env(), time.time() + secs, []
     while time.time() < end and game_pid():
         tick = time.time()
@@ -295,7 +291,7 @@ def start(map_file=DEFAULT_MAP, pos=DEFAULT_POS, size="1280x720", timeout=300, h
     if not map_file.endswith(".hpm"):
         map_file += ".hpm"
     stop()
-    gt("up")
+    gt("up", "--single")
     out = ref_output(size)
     prev = next((o["name"] for o in swaymsg("-t", "get_outputs") if o.get("focused")), None)
     swaymsg("focus", "output", out)
@@ -304,7 +300,7 @@ def start(map_file=DEFAULT_MAP, pos=DEFAULT_POS, size="1280x720", timeout=300, h
         f.unlink()
     if log_path().exists():
         log_path().unlink()
-    args = ["run", SLUG, "--wine", str(ROOT / "soma/ref/wine-ro.sh")] + ([] if hud else ["--no-hud"])
+    args = ["run", SLUG, "--wine", str(ROOT / "soma/ref/wine-ro.sh")] + ([] if hud else ["--no-hud"]) + ([f"--debug={os.environ['OHPL_REF_DEBUG']}"] if os.environ.get("OHPL_REF_DEBUG") else [])
     gt(*args, "--", *(["-cfg", "C:/ohpl/mod/config/ohpl_init.cfg"] if CFG_LAUNCH else ["-mod", r"C:\ohpl\mod\entry.hpc"]))
     t0 = time.time()
     while not any((w.get("name") or "").startswith(TITLE) for w in walk_windows(swaymsg("-t", "get_tree"))):
