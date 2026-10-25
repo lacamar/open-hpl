@@ -974,6 +974,57 @@ void cSomaLuxUpdater::PostUpdate(float afTimeStep)
 
 static cSomaLuxMap *CurrentMap() { return cSomaLuxMap::GetCurrent(); }
 
+// cWorld::Deload 0xfeb5a0: map-placed objects outside the transfer area go away; entity-owned ones stay.
+// ponytail: hidden instead of freed, so nothing dangles
+static void SomaDeloadMap(const tString &asArea)
+{
+	cSomaLuxMap *pMap = CurrentMap();
+	cSomaLuxEntity *pArea = pMap ? pMap->GetEntity(asArea) : NULL;
+	if (pArea == NULL)
+	{
+		Error("SOMA script: deload area '%s' not found\n", asArea.c_str());
+		return;
+	}
+	cVector3f vMin(1e9f), vMax(-1e9f);
+	for (int i = 0; i < 8; ++i)
+	{
+		cVector3f v((i & 1 ? 0.5f : -0.5f) * pArea->mvSize.x, (i & 2 ? 0.5f : -0.5f) * pArea->mvSize.y, (i & 4 ? 0.5f : -0.5f) * pArea->mvSize.z);
+		v = cMath::MatrixMul(pArea->GetMatrix(), v);
+		vMin = cMath::Vector3Min(vMin, v);
+		vMax = cMath::Vector3Max(vMax, v);
+	}
+	std::set<iEntity3D *> setOwned;
+	for (cSomaLuxEntity *p : pMap->GetEntities())
+	{
+		setOwned.insert(p->mpMesh);
+		setOwned.insert(p->mvLights.begin(), p->mvLights.end());
+		setOwned.insert(p->mvParticleSystems.begin(), p->mvParticleSystems.end());
+		setOwned.insert(p->mvBillboards.begin(), p->mvBillboards.end());
+		setOwned.insert(p->mvLensFlares.begin(), p->mvLensFlares.end());
+	}
+	int lHidden = 0;
+	auto Deload = [&](auto it) {
+		while (it.HasNext())
+		{
+			auto *p = it.Next();
+			cBoundingVolume *pBV = p->GetBoundingVolume();
+			if (setOwned.count(p) || cMath::CheckAABBIntersection(vMin, vMax, pBV->GetMin(), pBV->GetMax()))
+				continue;
+			p->SetVisible(false);
+			++lHidden;
+		}
+	};
+	cWorld *pWorld = pMap->GetWorld();
+	Deload(pWorld->GetStaticMeshEntityIterator());
+	Deload(pWorld->GetLightIterator());
+	Deload(pWorld->GetParticleSystemIterator());
+	Deload(pWorld->GetBillboardIterator());
+	Deload(pWorld->GetBeamIterator());
+	Deload(pWorld->GetLensFlareIterator());
+	Deload(pWorld->GetFogAreaIterator());
+	Log("SOMA deload outside '%s': %d hidden\n", asArea.c_str(), lHidden);
+}
+
 // Class filters name the script class (cScrAreaCameraAnimationNode) or the entity type
 static bool SomaEntityIsClass(cSomaLuxEntity *apEnt, const tString &asClass)
 {
@@ -1422,7 +1473,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	// Bunker's binding is a constant false (0x14004d810)
 	SOMA_FUNC(e, "bool cLux_IsStreamingMap()", +[]() { return gsPreloadMap.empty() == false && SomaGameId() != "bunker"; });
 	SOMA_FUNC(e, "void cLux_PreloadMap(const tString&in asMapName, eWorldStreamPriority aPrio = eWorldStreamPriority_Normal)", +[](S map, int prio) { gsPreloadMap = map; glPreloadPrio = prio; });
-	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S) {});
+	SOMA_FUNC(e, "void cLux_DeloadMap(const tString&in asTransferArea)", +[](S area) { SomaDeloadMap(area); });
 	SOMA_FUNC(e, "void cLux_SetMapPreloadPriority(eWorldStreamPriority aPrio)", +[](int prio) { glPreloadPrio = prio; });
 	// No streaming: the next map's settings aren't loaded yet, so the copy fades to the current ones
 	SOMA_FUNC(e, "cLuxMap@ cLux_GetPreloadMap()", +[]() -> cSomaLuxMap * {
