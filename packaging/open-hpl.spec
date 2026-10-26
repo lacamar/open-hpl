@@ -1,6 +1,6 @@
 Name:           open-hpl
-Version:        1.3.61
-Release:        2%{?dist}
+Version:        1.3.62
+Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
 License:        GPL-3.0-or-later
@@ -143,6 +143,10 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Oct 26 2026 lacamar <lchlnm@pm.me> - 1.3.62-1
+- Implement cLux_DeloadMap
+- Run tests in %check
+
 * Mon Oct 26 2026 Lachlan Marie <lchlnm@pm.me> - 1.3.61-2
 - Spec moved into repo
 - Run ctest in %%check
