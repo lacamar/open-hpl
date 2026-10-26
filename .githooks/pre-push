@@ -1,13 +1,3 @@
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
-B=amnesia/src/build
-make -C $B -j"$(nproc)" Soma PhysicsNewtonTests CStringTests PlatformXdgPathTests HpslTranspilerTests >/dev/null
-ctest --test-dir $B --output-on-failure -Q
-R=$(mktemp)
-trap 'rm -f "$R"' EXIT
-for g in soma rebirth bunker; do
-	eval "$(scripts/ohpl_game.py $g)"
-	[ -d "$SCRATCH" ] || continue
-	OHPL_GAME=$g scripts/soma-script-check.sh "$R" 2>&1 | tail -1
-done
+#!/bin/sh
+[ -x .beads/hooks/pre-push ] && { .beads/hooks/pre-push "$@" || exit; }
+just test && exec just script-check
