@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.63
+Version:        1.3.64
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -143,6 +143,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Fri Oct 30 2026 lacamar <lchlnm@pm.me> - 1.3.64-1
+- Fix oversized HPL3 .msh props (giant plants in Theta)
+
 * Fri Oct 30 2026 lacamar <lchlnm@pm.me> - 1.3.63-1
 - Add F9 in-game bug report
 
