@@ -180,7 +180,8 @@ namespace hpl {
 			cSubMesh *pSubMesh = pMesh->CreateSubMesh(sName);
 
 			pSubMesh->SetLocalTransform(mtxTransform);
-			pSubMesh->SetModelScale(vModelScale);
+			// HPL3 .msh vertices are unscaled; only Collada (and our cache of it) bakes the node scale in
+			pSubMesh->SetModelScale(bHpl3 ? cVector3f(1) : vModelScale);
 			pSubMesh->SetIsCollideShape(bCollideShape);
 
 			//////////////////
