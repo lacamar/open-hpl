@@ -38,6 +38,7 @@ namespace hpl {
 		void Clear();
 
 		void SetFileName(const tWString& asFile);
+		const tWString& GetFileName(){ return msFileName; }
 		
 	private:
 		void ReopenFile();

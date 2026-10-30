@@ -30,7 +30,10 @@
 #include "system/Platform.h"
 #include "system/Mutex.h"
 #include "system/String.h"
+#include "input/Input.h"
+#include "impl/LowLevelInputSDL.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <cerrno>
@@ -671,6 +674,20 @@ namespace hpl {
 			mlDragFrames = aReq.GetInt("frames", 1) - 1;
 			mlDragX = ev.motion.xrel;
 			mlDragY = ev.motion.yrel;
+		}
+		else if(sType == "text")
+		{
+			ev.type = SDL_TEXTINPUT;
+			tString sText = aReq.GetString("text", "");
+			for(size_t lPos = 0; lPos < sText.size();)
+			{
+				size_t lLen = std::min(sText.size() - lPos, sizeof(ev.text.text) - 1);
+				while(lPos + lLen < sText.size() && (sText[lPos + lLen] & 0xc0) == 0x80) --lLen;
+				memset(ev.text.text, 0, sizeof(ev.text.text));
+				memcpy(ev.text.text, sText.data() + lPos, lLen);
+				static_cast<cLowLevelInputSDL*>(mpEngine->GetInput()->GetLowLevel())->mlstInjected.push_back(ev);
+				lPos += lLen;
+			}
 		}
 		else if(sType == "mouse_button")
 		{

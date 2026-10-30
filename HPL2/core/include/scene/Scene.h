@@ -91,6 +91,7 @@ namespace hpl {
 		bool ViewportExists(cViewport* apViewPort);
 
 		void SetCurrentListener(cViewport* apViewPort);
+		tViewportList& GetViewportList(){ return mlstViewports; }
 		
 		///// CAMERA METHODS ////////////////////
 

@@ -86,7 +86,11 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `body_contacts name= [x= y= z=]` | contact points (depth, normal) of an entity's bodies; player shape at a feet position |
 | `raycast x= y= z= x2= y2= z2=` | physics hits along a segment |
 | `physics_stats` | static/dynamic/awake bodies, fastest awake |
-| `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic |
+| `input`, `screenshot`, `quit`, `resize`, `log_tail` | generic; `input type=text text=` types into the bug report box |
+
+Bug reports: F9 in any game pauses it and opens a text box (Enter save, Shift+Enter newline, Esc cancel).
+Each report lands in `$XDG_DATA_HOME/open-hpl/bugs/<time>/` (`report.json`, `screenshot.png`, `hpl.log`),
+one line per report in `bugs/index.jsonl`.
 
 When a test run produces a good-looking frame (new feature rendering right, a nice vista), save it:
 `scripts/ohpl-album.sh <shot> <map>-<desc>` (alpha stripped, into `~/Pictures/Screenshots/openhpl-screenshots`).

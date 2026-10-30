@@ -358,6 +358,11 @@ namespace hpl {
 		gLogWriter.SetFileName(asFile);
 	}
 
+	tWString GetLogFile()
+	{
+		return gLogWriter.GetFileName();
+	}
+
 	//-----------------------------------------------------------------------
 
 	void FatalError(const char* fmt,... )

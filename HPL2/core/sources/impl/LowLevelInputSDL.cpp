@@ -147,9 +147,13 @@ namespace hpl {
             if (sdlEvent.type==SDL_QUIT)
             {
                 mbQuitMessagePosted = true;
-            } else
+            } else if(!mEventFilter || !mEventFilter(sdlEvent))
 				mlstEvents.push_back(sdlEvent);
 		}
+		// sdl2-compat can't SDL_PushEvent text input
+		for(const SDL_Event &ev : mlstInjected)
+			if(!mEventFilter || !mEventFilter(ev)) mlstEvents.push_back(ev);
+		mlstInjected.clear();
 	}
 	
 	//-----------------------------------------------------------------------

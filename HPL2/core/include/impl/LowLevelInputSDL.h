@@ -21,6 +21,7 @@
 #define HPL_LOWLEVELINPUT_SDL_H
 
 #include <list>
+#include <functional>
 #include "input/LowLevelInput.h"
 
 #if USE_SDL2
@@ -60,6 +61,8 @@ namespace hpl {
 		void resetQuitMessagePosted();
 	public:
 		std::list<SDL_Event> mlstEvents;
+		std::function<bool(const SDL_Event&)> mEventFilter;
+		std::list<SDL_Event> mlstInjected;
 
 	private: 
 		iLowLevelGraphics *mpLowLevelGraphics;

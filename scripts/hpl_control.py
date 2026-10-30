@@ -101,7 +101,7 @@ class HplControl:
         if self._sock is None:
             raise HplControlError("not connected - use as a context manager or call connect() first")
 
-        line = json.dumps(request) + "\n"
+        line = json.dumps(request, ensure_ascii=False) + "\n"
         self._sock.sendall(line.encode("utf-8"))
 
         while b"\n" not in self._buf:

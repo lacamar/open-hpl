@@ -10,6 +10,9 @@ copy of the game to actually play. Game installs are only read: the engine
 mounts Steam libraries read-only for itself, and settings, saves, caches and
 logs go to the XDG base directories.
 
+Press F9 in game to file a bug report (text, screenshot, log, state) to
+`$XDG_DATA_HOME/open-hpl/bugs/`.
+
 Screenshots
 -----------
 Dev HUD on (`OPENHPL_DEV_HUD=1`).

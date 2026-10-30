@@ -585,7 +585,7 @@ namespace hpl {
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
 
-				if(mbDevHudActive) mpDevHud->Render();
+				mpDevHud->Render(mbDevHudActive);
 
 				START_TIMING(FlushRender)
 				mpGraphics->GetLowLevel()->FlushRendering();

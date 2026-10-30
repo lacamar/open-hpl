@@ -56,6 +56,7 @@ namespace hpl {
 	//--------------------------------------------------------
 
 	extern void SetLogFile(const tWString &asFile);
+	extern tWString GetLogFile();
 	extern void FatalError(const char* fmt,... ) NORETURN;
 	extern void Error(const char* fmt, ...);
 	extern void Warning(const char* fmt, ...);
