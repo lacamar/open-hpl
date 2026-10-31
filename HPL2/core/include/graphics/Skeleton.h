@@ -53,6 +53,8 @@ namespace hpl {
 		int GetBoneIndexBySid(const tString &asName);
 		int GetBoneIndexByName(const tString &asName);
 		int GetBoneNum();
+
+		bool mbFileUnits = false;
 	
 	private:
 		cBone* mpRootBone;

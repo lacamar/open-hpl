@@ -512,7 +512,8 @@ namespace hpl {
 							//Apply the animation track to node.
 							if(pState && pState->IsActive())
 							{
-								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping());
+								float fTransScale = mpMesh->GetSkeleton()->mbFileUnits ? 1.0f : pTrack->GetUnitScale();
+								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping(), fTransScale);
 							}
 						}
 
