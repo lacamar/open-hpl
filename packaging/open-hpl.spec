@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.64
+Version:        1.3.65
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -147,6 +147,10 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sat Oct 31 2026 lacamar <lchlnm@pm.me> - 1.3.65-1
+- Add Vulkan renderer (OPENHPL_RENDERER=vulkan)
+- Add HDR10/scRGB/P3 output (OPENHPL_HDR)
+
 * Fri Oct 30 2026 lacamar <lchlnm@pm.me> - 1.3.64-1
 - Fix oversized HPL3 .msh props (giant plants in Theta)
 
