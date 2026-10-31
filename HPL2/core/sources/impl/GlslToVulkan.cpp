@@ -97,6 +97,13 @@ namespace hpl {
 			for(size_t i=0; i<body.size(); ++i)
 			{
 				char c = body[i];
+				// Preprocessor lines end statements without a ';'
+				if(c=='#' && depth==0 && (i==0 || body[i-1]=='\n'))
+				{
+					while(i<body.size() && body[i]!='\n') ++i;
+					start = i+1;
+					continue;
+				}
 				if(c=='{') ++depth;
 				else if(c=='}') { --depth; if(depth==0) start = i+1; }
 				else if(c==';' && depth==0)

@@ -1,6 +1,7 @@
 #include "impl/GlslToVulkan.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
 			bool bFrag = n.size()>5 && n.compare(n.size()-5, 5, ".frag")==0;
 			if(!bVtx && !bFrag) continue;
 			std::string src = ReadFile(std::string(argv[a]) + "/" + n);
-			Check(n.c_str(), bVtx ? src : "", bFrag ? src : "", true);
+			Check(n.c_str(), bVtx ? src : "", bFrag ? src : "", getenv("GLSLVK_VERBOSE") == NULL);
 			++lCount;
 		}
 		closedir(pDir);

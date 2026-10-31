@@ -1097,6 +1097,7 @@ static void cSomaBase_HeadlessCmd_SetLight(void *apUserData, const cHeadlessRequ
 	iLight *pLight = pBase->GetCurrentWorld()->GetLight(aReq.GetString("name", ""));
 	if(pLight == NULL) { aResp.SetError("no light with that name"); return; }
 	pLight->SetVisible(aReq.GetBool("visible", true));
+	if(aReq.HasKey("shadows")) pLight->SetCastShadows(aReq.GetBool("shadows", true));
 }
 
 static void cSomaBase_HeadlessCmd_SetEntity(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)

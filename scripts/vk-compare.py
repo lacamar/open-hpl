@@ -33,7 +33,7 @@ def game_env():
     return env
 
 
-def render(map_name, renderer, path, frames, extra):
+def render(map_name, renderer, path, frames, extra, targets=(), dumps=()):
     sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), f"ohpl-vkc-{renderer}.sock")
     env = dict(os.environ, **extra)
     env.pop("OPENHPL_RENDERER", None)
@@ -70,6 +70,15 @@ def render(map_name, renderer, path, frames, extra):
         hpl.send({"cmd": "render_stats"})
         hpl.send({"cmd": "wait_frames", "n": 30, "max_ms": 5000})
         stats["render"] = {k: v for k, v in hpl.send({"cmd": "render_stats"}).items() if k != "ok"}
+        for t in dumps:
+            hpl.send({"cmd": "dump_target", "target": t, "path": f"{path[:-4]}_t{t}.pfm"})
+        if targets:
+            stats["targets"] = {}
+            for t in targets:
+                try:
+                    stats["targets"][t] = {k: v for k, v in hpl.send({"cmd": "read_gbuffer_stats", "target": t}).items() if k != "ok"}
+                except HplControlError as e:
+                    stats["targets"][t] = str(e)
         try:
             hpl.send({"cmd": "quit"})
         except (OSError, HplControlError):
@@ -93,6 +102,8 @@ def main():
     ap.add_argument("--frames", type=int, default=300)
     ap.add_argument("--env", action="append", default=[], help="extra K=V for both runs")
     ap.add_argument("--only", choices=["gl", "vulkan"])
+    ap.add_argument("--dump", type=int, nargs="*", default=[], help="dump_target targets as <renderer>_t<N>.pfm (HPL3)")
+    ap.add_argument("--stats", type=int, nargs="*", default=[], help="read_gbuffer_stats targets to compare (HPL3)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     extra = dict(kv.split("=", 1) for kv in a.env)
@@ -101,7 +112,7 @@ def main():
     for r in ("gl", "vulkan"):
         if a.only and a.only != r:
             continue
-        stats[r] = render(a.map, r, os.path.join(a.out, f"{r}.png"), a.frames, extra)
+        stats[r] = render(a.map, r, os.path.join(a.out, f"{r}.png"), a.frames, extra, a.stats, a.dump)
     if a.only:
         print(json.dumps(stats, indent=1))
         return
@@ -118,6 +129,7 @@ def main():
         "max_abs_diff": int(d.max()),
         "pixels_over_16": round(float((d.max(axis=2) > 16).mean()), 4),
         "lum": {r: s.get("lum_mean") for r, s in stats.items()},
+        "targets": {r: s.get("targets") for r, s in stats.items() if s.get("targets")},
         "out": a.out,
     }, indent=1))
 

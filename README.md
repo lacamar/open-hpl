@@ -10,6 +10,10 @@ copy of the game to actually play. Game installs are only read: the engine
 mounts Steam libraries read-only for itself, and settings, saves, caches and
 logs go to the XDG base directories.
 
+Vulkan renderer: `OPENHPL_RENDERER=vulkan`. HDR/wide colour output with it:
+`OPENHPL_HDR=hdr10|scrgb|p3`, `OPENHPL_HDR_PAPER_WHITE` (nits, default 203),
+`OPENHPL_HDR_PEAK` (default 1000).
+
 Press F9 in game to file a bug report (text, screenshot, log, state) to
 `$XDG_DATA_HOME/open-hpl/bugs/`.
 

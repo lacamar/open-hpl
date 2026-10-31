@@ -51,7 +51,8 @@ install directory writable.
 
 Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 `OPENHPL_SOMA_MAP=<file.hpm>`, `OPENHPL_SOMA_SKIP_BOOT=1`, `OPENHPL_SOMA_FREECAM=1`,
-`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`. Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
+`OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`, `OPENHPL_DUMP_SHADERS_DIR=<dir>` (final GLSL, GL backend), `OPENHPL_RENDERER=vulkan`,
+`OPENHPL_VK_VALIDATION=1` (validation layer, output in run.out), `OPENHPL_VK_SHADER_LOG=1` (rewritten source on build failure). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 
 `scripts/hpl_control.py --socket <sock> <cmd> [k=v ...]`:
 
@@ -66,7 +67,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `set_light name= visible=` | show/hide one light (per-light attribution) |
 | `set_entity name= visible=` | show/hide mesh entities by glob (restart to undo: hidden-by-design ones get shown) |
 | `set_render_setting name= value=` | A/B `occlusion_culling`, `delayed_occlusion`, `ssao`, `shadows`, `edge_smooth`, `fxaa`, `fog`, `decals`, `illumination`, `skybox`, `translucent`, `image_trail`, `dof_pass`, `light_depth_cull`, `shadow_cull`, `shadow_depth_clamp`; `log` = renderer log to hpl log |
-| `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10-12 shadow maps, 13 sun cascade atlas, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
+| `dump_target target=N path= [channel=C] [screen=ENT] [light=L]` | PFM of 100+16r+i shadow map i of resolution r, 0-2 G-buffer, 4 accumulation, 5 box-light weights, 6-8 SSAO (raw, blur, final), 9 SSAO depth mips, 10-12 shadow maps, 13 sun cascade atlas, a light's shadow map, or a prop's GUI screen render target; `channel` picks one (3 = alpha) |
 | `translucents [skip=N]` | translucent render list; `skip` hides one entry |
 | `pick x= y=` | raw targets 0, 1, 2, 4 (accumulation) under a pixel (ints) or screen point (0-1 with a dot) |
 | `pick_entity x= y= [x2= y2= z2=]` | submeshes under a screen point (0-1), or along a world segment x,y,z -> x2,y2,z2; nearest first (skinned included) |
@@ -104,5 +105,8 @@ Toggling `occlusion_culling` off and on leaves objects culled; restart before me
 NaN pixels: `read_gbuffer_stats` counts them, `dump_target ... channel=C` + numpy finds them, `pick x= y=` polled over
 frames shows whether they are transient. The image trail keeps any NaN pixel forever: A/B with `image_trail=0`.
 Rebirth/Bunker never write G-buffer 1 alpha; NaN there is noise.
+Vulkan vs GL: `scripts/vk-compare.py <map> [--stats N..] [--dump N..]` renders both and diffs (out dir under the
+scratch `$XDG_CACHE_HOME`); GL run-to-run noise on SOMA is ~0.7 mean abs diff. Rewriter corpus check:
+`GlslToVulkanTests.bin.aarch64 <dump dirs>` on `OPENHPL_DUMP_SHADERS_DIR` output.
 GL call traces: `apitrace trace -o f.trace ./Soma.bin.aarch64` (no replay: context calls aren't captured).
 Hangs: `gdb -p <pid> -batch -ex bt`. Crashes: `coredumpctl debug <pid>`.

@@ -20,6 +20,10 @@ BuildRequires:  pkgconfig(glu)
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  DevIL-devel
 BuildRequires:  glew-devel
+BuildRequires:  pkgconfig(vulkan)
+BuildRequires:  glslang-devel
+BuildRequires:  spirv-tools-devel
+BuildRequires:  VulkanMemoryAllocator-devel
 BuildRequires:  assimp-devel
 BuildRequires:  libtheora-devel
 BuildRequires:  libvorbis-devel
@@ -54,7 +58,7 @@ cd amnesia/src
     -DUSE_GAMEPAD=ON \
     -DAMNESIA_WITH_SERIAL=OFF
 %cmake_build --target Amnesia --target Launcher --target Soma \
-    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests
+    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests --target GlslToVulkanTests
 cd -
 
 magick 'amnesia/src/game/Lux.ico[0]' %{name}.png

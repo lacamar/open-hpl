@@ -1242,7 +1242,7 @@ namespace hpl {
 			if(pImg && pImg->mView && SamplerMatches(smp.msType, pTex, pVkTex))
 			{
 				info.imageView = pImg->mView;
-				info.sampler = pVkTex->GetSampler();
+				info.sampler = pVkTex->GetSampler(smp.msType == "sampler2DShadow");
 			}
 			else
 			{

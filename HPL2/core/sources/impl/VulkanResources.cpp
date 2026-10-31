@@ -142,11 +142,7 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	cVulkanTexture::cVulkanTexture(const tString &asName, eTextureType aType, eTextureUsage aUsage, cLowLevelGraphicsVulkan* apGfx)
-		: iTexture(asName, _W(""), aType, aUsage, apGfx), mpGfx(apGfx)
-	{
-		mbUseMipMaps = aType != eTextureType_Rect;
-		if(aUsage == eTextureUsage_RenderTarget) mbUseMipMaps = false;
-	}
+		: iTexture(asName, _W(""), aType, aUsage, apGfx), mpGfx(apGfx) {}
 
 	cVulkanTexture::~cVulkanTexture()
 	{
@@ -538,7 +534,7 @@ namespace hpl {
 		return view;
 	}
 
-	VkSampler cVulkanTexture::GetSampler()
+	VkSampler cVulkanTexture::GetSampler(bool abShadow)
 	{
 		VkSamplerCreateInfo sci{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
 		sci.magFilter = mMagFilter;
@@ -550,7 +546,7 @@ namespace hpl {
 		sci.maxLod = mbMipFilter ? VK_LOD_CLAMP_NONE : 0.0f;
 		sci.anisotropyEnable = mfAnisotropyDegree > 1.0f && mbMipFilter;
 		sci.maxAnisotropy = mfAnisotropyDegree;
-		sci.compareEnable = mCompareMode != eTextureCompareMode_None && IsDepth();
+		sci.compareEnable = abShadow || (mCompareMode != eTextureCompareMode_None && IsDepth());
 		sci.compareOp = mCompareFunc == eTextureCompareFunc_GreaterOrEqual ? VK_COMPARE_OP_GREATER_OR_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
 		sci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		return mpGfx->GetSampler(sci);
@@ -885,7 +881,7 @@ namespace hpl {
 		}
 
 		mvSamplers = prog.mvSamplers;
-		mvSamplerUnit.assign(mvSamplers.size(), -1);
+		mvSamplerUnit.assign(mvSamplers.size(), 0); // GL sampler uniforms default to unit 0
 		mlAttribMask = prog.mlAttribMask;
 		mlFragOutputs = prog.mlFragOutputs;
 
@@ -908,7 +904,8 @@ namespace hpl {
 				pShaders[s]->parse(GetDefaultResources(), 450, false, msgs);
 				program.addShader(pShaders[s]);
 			}
-			if(program.link(msgs) && program.buildReflection(EShReflectionAllBlockVariables))
+			// Live uniforms only, like GL active uniforms: the renderer binds alternative names to one id
+			if(program.link(msgs) && program.buildReflection(EShReflectionDefault))
 			{
 				for(int b=0; b<program.getNumUniformBlocks(); ++b)
 					if(program.getUniformBlock(b).name == "hpl_Uniforms") lBlockSize = std::max<size_t>(lBlockSize, program.getUniformBlock(b).size);
@@ -927,6 +924,9 @@ namespace hpl {
 					int lType = u.glDefineType;
 					vu.mlMatrixColumns = lType == 0x8B5B ? 3 : lType == 0x8B5C ? 4 : 0;
 					vu.mbInt = lType == 0x1404 || lType == 0x1405 || (lType >= 0x8B53 && lType <= 0x8B59);
+					vu.mbBool = lType >= 0x8B56 && lType <= 0x8B59;
+					vu.mlComponents = lType == 0x8B50 || lType == 0x8B53 || lType == 0x8B57 ? 2 : lType == 0x8B51 || lType == 0x8B54 || lType == 0x8B58 ? 3 :
+									  lType == 0x8B52 || lType == 0x8B55 || lType == 0x8B59 ? 4 : vu.mlMatrixColumns ? vu.mlMatrixColumns * vu.mlMatrixColumns : 1;
 					mvUniforms.push_back(vu);
 				}
 			}
@@ -957,18 +957,30 @@ namespace hpl {
 		return false;
 	}
 
-	int cVulkanProgram::FindUniform(const tString& asName)
+	// "name" or "name[i]"
+	int cVulkanProgram::FindUniform(const tString& asName, int* apElement)
 	{
-		for(size_t i=0; i<mvUniforms.size(); ++i) if(mvUniforms[i].msName == asName) return (int)i;
+		tString sBase = asName;
+		int lElement = 0;
+		size_t lBracket = asName.find('[');
+		if(lBracket != tString::npos)
+		{
+			sBase = asName.substr(0, lBracket);
+			lElement = atoi(asName.c_str() + lBracket + 1);
+		}
+		if(apElement) *apElement = lElement;
+		for(size_t i=0; i<mvUniforms.size(); ++i)
+			if(mvUniforms[i].msName == sBase) return lElement < mvUniforms[i].mlCount ? (int)i : -1;
 		return -1;
 	}
 
 	int cVulkanProgram::GetVariableId(const tString& asName)
 	{
 		for(size_t i=0; i<mvParameters.size(); ++i) if(mvParameters[i].msName == asName) return (int)i;
-		int lUniform = FindUniform(asName);
+		int lElement;
+		int lUniform = FindUniform(asName, &lElement);
 		if(lUniform < 0) return -1;
-		mvParameters.push_back({asName, lUniform});
+		mvParameters.push_back({asName, lUniform, lElement});
 		return (int)mvParameters.size() - 1;
 	}
 
@@ -977,15 +989,16 @@ namespace hpl {
 		if(alId < 0) return false;
 		for(size_t i=0; i<mvParameters.size(); ++i)
 			if(mvParameters[i].msName == asName) return (int)i == alId;
-		int lUniform = FindUniform(asName);
+		int lElement;
+		int lUniform = FindUniform(asName, &lElement);
 		if(lUniform < 0) return false;
 		if(alId < (int)mvParameters.size())
 		{
-			if(mvParameters[alId].mlUniform >= 0) return mvParameters[alId].mlUniform == lUniform;
+			if(mvParameters[alId].mlUniform >= 0) return mvParameters[alId].mlUniform == lUniform && mvParameters[alId].mlElement == lElement;
 		}
 		else
 			mvParameters.resize(alId + 1);
-		mvParameters[alId] = {asName, lUniform};
+		mvParameters[alId] = {asName, lUniform, lElement};
 		return true;
 	}
 
@@ -993,10 +1006,13 @@ namespace hpl {
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
 		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
-		int lCount = std::min(alCount, u.mlCount);
+		// GL rejects setters whose size or base type don't match the declaration (GL_INVALID_OPERATION)
+		if(alComponents != u.mlComponents || (u.mbInt && !u.mbBool)) return false;
+		int lFirst = mvParameters[alVarId].mlElement;
+		int lCount = std::min(alCount, u.mlCount - lFirst);
 		for(int e=0; e<lCount; ++e)
 		{
-			unsigned char *pDst = mvUniformData.data() + u.mlOffset + e * u.mlArrayStride;
+			unsigned char *pDst = mvUniformData.data() + u.mlOffset + (lFirst + e) * u.mlArrayStride;
 			if(pDst + alComponents * 4 > mvUniformData.data() + mvUniformData.size()) return false;
 			for(int c=0; c<alComponents; ++c)
 			{
@@ -1011,9 +1027,9 @@ namespace hpl {
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
 		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
-		if(u.mbInt) { memcpy(mvUniformData.data() + u.mlOffset, &alX, 4); return true; }
-		float f = (float)alX;
-		return Write(alVarId, &f, 1, 1);
+		if(!u.mbInt || u.mlComponents != 1) return false;
+		memcpy(mvUniformData.data() + u.mlOffset + mvParameters[alVarId].mlElement * u.mlArrayStride, &alX, 4);
+		return true;
 	}
 
 	bool cVulkanProgram::SetFloat(int alVarId, float afX){ return Write(alVarId, &afX, 1, 1); }
@@ -1026,9 +1042,11 @@ namespace hpl {
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
 		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
-		int lCols = u.mlMatrixColumns ? u.mlMatrixColumns : 4;
-		if(u.mlOffset + lCols * 16 > (int)mvUniformData.size()) return false;
-		float *pDst = (float*)(mvUniformData.data() + u.mlOffset);
+		if(u.mlMatrixColumns != 4) return false;
+		int lCols = 4;
+		int lOffset = u.mlOffset + mvParameters[alVarId].mlElement * u.mlArrayStride;
+		if(lOffset + lCols * 16 > (int)mvUniformData.size()) return false;
+		float *pDst = (float*)(mvUniformData.data() + lOffset);
 		for(int c=0; c<lCols; ++c)
 			for(int r=0; r<4; ++r)
 				pDst[c*4 + r] = r < lCols ? aMtx.m[r][c] : 0.0f;

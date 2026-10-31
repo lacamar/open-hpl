@@ -81,7 +81,7 @@ namespace hpl {
 
 		cVulkanImage* GetImage();
 		VkImageView GetAttachView(int alLevel, int alLayer);
-		VkSampler GetSampler();
+		VkSampler GetSampler(bool abShadow=false);
 		bool IsDepth(){ return PixelFormatIsDepth(mPixelFormat); }
 
 	private:
@@ -193,6 +193,8 @@ namespace hpl {
 		int mlMatrixColumns; // 0 = not a matrix, 3 or 4
 		int mlCount;
 		bool mbInt;
+		bool mbBool;
+		int mlComponents;
 	};
 
 	class cVulkanProgram : public iGpuProgram
@@ -230,8 +232,8 @@ namespace hpl {
 		bool mbUniformsDirty = true;
 
 	private:
-		struct cParam { tString msName; int mlUniform = -1; };
-		int FindUniform(const tString& asName);
+		struct cParam { tString msName; int mlUniform = -1; int mlElement = 0; };
+		int FindUniform(const tString& asName, int* apElement=nullptr);
 		bool Write(int alVarId, const float *apData, int alComponents, int alCount, bool abInt=false);
 
 		cLowLevelGraphicsVulkan* mpGfx;

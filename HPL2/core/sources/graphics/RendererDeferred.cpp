@@ -1580,6 +1580,7 @@ namespace hpl {
 
 	iTexture* cRendererDeferred::GetDebugGBufferTexture(int alIdx)
 	{
+		if(alIdx>=100) { int r = (alIdx-100)/16, i = (alIdx-100)%16; return r < eShadowMapResolution_LastEnum && i < (int)mvShadowMapData[r].size() ? mvShadowMapData[r][i]->mpTexture : NULL; }
 		if(alIdx>=20 && alIdx<26) return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<((alIdx-20)/2)),ePixelFormat_RGBA16,alIdx-10)->GetColorBuffer(0)->ToTexture();
 		if(alIdx==13) return mpDirShadowData ? mpDirShadowData->mpTexture : NULL;
 		if(alIdx==14) return mpRefractionTexture;
