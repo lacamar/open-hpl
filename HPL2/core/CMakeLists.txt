@@ -166,6 +166,14 @@ find_package(OpenGL)
 find_package(assimp REQUIRED)
 mark_as_advanced(ANGELSCRIPT_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
 
+OPTION(OPENHPL_VULKAN "Build the Vulkan renderer (OPENHPL_RENDERER=vulkan)" ON)
+if(OPENHPL_VULKAN)
+    find_package(Vulkan REQUIRED)
+    find_package(glslang REQUIRED)
+    file(GLOB vulkan_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} sources/impl/*Vulkan*.cpp)
+    LIST(APPEND impl_sources ${vulkan_sources})
+endif()
+
 # setup HPL2 compile target
 
 add_library(HPL2 STATIC
@@ -220,6 +228,10 @@ target_link_libraries(HPL2
     z
     ${PLATFORM_LIBS}
 )
+if(OPENHPL_VULKAN)
+    target_compile_definitions(HPL2 PUBLIC HPL_VULKAN)
+    target_link_libraries(HPL2 Vulkan::Vulkan glslang::glslang glslang::SPIRV glslang::glslang-default-resource-limits)
+endif()
 
 
 FUNCTION(AddTestTarget target_name)

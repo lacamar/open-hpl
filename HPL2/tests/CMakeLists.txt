@@ -39,3 +39,9 @@ AddTestTarget(HpslTranspilerTests
 )
 add_test(NAME HpslTranspilerTests COMMAND HpslTranspilerTests)
 set_tests_properties(HpslTranspilerTests PROPERTIES TIMEOUT 30)
+
+if(OPENHPL_VULKAN)
+    AddTestTarget(GlslToVulkanTests GlslToVulkanTests.cpp)
+    add_test(NAME GlslToVulkanTests COMMAND GlslToVulkanTests)
+    set_tests_properties(GlslToVulkanTests PROPERTIES TIMEOUT 30)
+endif()

@@ -23,7 +23,6 @@
 #include "resources/Resources.h"
 #include "system/String.h"
 
-#include <GL/gl.h>
 #include <SDL2/SDL.h>
 #include <ctime>
 #include <filesystem>
@@ -116,8 +115,7 @@ namespace hpl {
 			cString::ToString((int)std::thread::hardware_concurrency()) + " cores, " +
 			cString::ToString((int)lMemGb) + " GB");
 		mvSystem.push_back(OsName() + "  |  Linux " + uts.release);
-		mvSystem.push_back(tString((const char*)glGetString(GL_RENDERER)) +
-			"  |  OpenGL " + (const char*)glGetString(GL_VERSION));
+		mvSystem.push_back(mpEngine->GetGraphics()->GetLowLevel()->GetRendererDescription());
 		return true;
 	}
 

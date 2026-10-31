@@ -35,6 +35,9 @@
 #include "impl/KeyboardSDL.h"
 #include "impl/MouseSDL.h"
 #include "impl/LowLevelGraphicsSDL.h"
+#ifdef HPL_VULKAN
+#include "impl/LowLevelGraphicsVulkan.h"
+#endif
 #include "impl/LowLevelResourcesSDL.h"
 #include "impl/LowLevelSystemSDL.h"
 #include "impl/LowLevelInputSDL.h"
@@ -133,7 +136,15 @@ namespace hpl {
 		
 		//////////////////////////
 		// Graphics
-		mpLowLevelGraphics = hplNew( cLowLevelGraphicsSDL,() );
+		const char *pRenderer = getenv("OPENHPL_RENDERER");
+#ifdef HPL_VULKAN
+		if(pRenderer && strcasecmp(pRenderer, "vulkan") == 0)
+			mpLowLevelGraphics = hplNew( cLowLevelGraphicsVulkan,() );
+		else
+#endif
+			mpLowLevelGraphics = hplNew( cLowLevelGraphicsSDL,() );
+		if(pRenderer && strcasecmp(pRenderer, "vulkan") == 0 && dynamic_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics))
+			Warning("OPENHPL_RENDERER=vulkan: built without Vulkan, using OpenGL\n");
 		
 		//////////////////////////
 		// Input

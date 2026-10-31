@@ -836,7 +836,7 @@ static void cSomaBase_HeadlessCmd_Uniforms(void *apUserData, const cHeadlessRequ
 		iGpuProgram *pProg = pMat ? pMat->GetProgram(0, (eMaterialRenderMode)aReq.GetInt("mode", eMaterialRenderMode_Diffuse)) : NULL;
 		if(pProg == NULL) { aResp.SetError("no program"); return; }
 		aResp.Set("program", pProg->GetName());
-		aResp.Set("uniforms", static_cast<cGLSLProgram*>(pProg)->DumpUniforms());
+		aResp.Set("uniforms", pProg->DumpUniforms());
 		tString sUnits;
 		for(int j=0; j<kMaxTextureUnits; ++j)
 		{

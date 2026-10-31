@@ -60,6 +60,9 @@ namespace hpl {
 		 * \return 
 		 */
 		virtual int GetCaps(eGraphicCaps aType)=0;
+
+		virtual tString GetRendererDescription(){ return ""; }
+		virtual void* GetWindowHandle(){ return NULL; } // SDL_Window*
 		
 		/**
 		 * Show the cursor or not. Default is false

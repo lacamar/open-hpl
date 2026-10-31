@@ -112,6 +112,8 @@ namespace hpl {
 		eGpuProgramFormat GetGpuProgramFormat(){ return mGpuProgramFormat;}
 
 		int GetCaps(eGraphicCaps aType);
+		tString GetRendererDescription();
+		void* GetWindowHandle(){ return mpScreen; }
 
 		void ShowCursor(bool abX);
 

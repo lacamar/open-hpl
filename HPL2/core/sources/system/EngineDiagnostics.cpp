@@ -30,6 +30,7 @@
 #include "physics/PhysicsBody.h"
 
 #include <GL/glew.h>
+#include <SDL2/SDL.h>
 
 #include <cmath>
 #include <map>
@@ -58,7 +59,7 @@ namespace hpl {
 	void cEngineDiagnostics::GpuPassBegin(const char *apName)
 	{
 		cGpuPassQuery pass = { apName, 0 };
-		if(gvGpuPassStack.empty())
+		if(gvGpuPassStack.empty() && glBeginQuery)
 		{
 			if(gvGpuQueryPool.empty()) glGenQueries(1, &pass.mlQuery);
 			else { pass.mlQuery = gvGpuQueryPool.back(); gvGpuQueryPool.pop_back(); }
@@ -187,7 +188,7 @@ namespace hpl {
 
 	tString cEngineDiagnostics::PollGLErrorsJson(bool abReset)
 	{
-		for(int i=0; i<64; ++i)
+		for(int i=0; i<64 && SDL_GL_GetCurrentContext(); ++i)
 		{
 			GLenum lErr = glGetError();
 			if(lErr == GL_NO_ERROR) break;

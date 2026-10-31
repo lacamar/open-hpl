@@ -111,6 +111,14 @@ namespace hpl{
 
 		//const char *pConstBuffer = apStringData;
 		//glShaderSource(mlHandle, 1, &pConstBuffer, NULL);
+		if(const char *pDumpDir = getenv("OPENHPL_DUMP_SHADERS_DIR"))
+		{
+			static int lDumpCount = 0;
+			tString sName = msName;
+			for(char &c : sName) if(c == '/' || c == '\\') c = '_';
+			tString sPath = tString(pDumpDir) + "/" + cString::ToString(lDumpCount++) + "_" + sName + (mShaderType == eGpuShaderType_Vertex ? ".vert" : ".frag");
+			if(FILE *pFile = fopen(sPath.c_str(), "wb")) { fputs(apStringData, pFile); fclose(pFile); }
+		}
 		glShaderSource(mlHandle, 1, &apStringData, NULL);
 
 		glCompileShader(mlHandle);

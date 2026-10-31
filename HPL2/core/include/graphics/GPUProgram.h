@@ -50,6 +50,7 @@ namespace hpl {
 		void SetResources(cResources *apResources){ mpResources = apResources;}
 
 		virtual bool Link()=0;
+		virtual tString DumpUniforms(){ return ""; }
 
 		virtual void Bind()=0;
 		virtual void UnBind()=0;

@@ -123,7 +123,7 @@ static void LoadLanguage()
 // FullScreen "true" is exclusive at Width x Height (emulated by SDL on Wayland), "borderless" the desktop
 void SomaApplyWindowMode(const cSomaConfig *apCfg)
 {
-	SDL_Window *pWindow = SDL_GL_GetCurrentWindow();
+	SDL_Window *pWindow = (SDL_Window*)gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetWindowHandle();
 	if (pWindow == NULL || getenv("OPENHPL_HEADLESS_SOCKET"))
 		return;
 	tString sFull = cString::ToLowerCase(gpUserConfig->GetString("Screen", "FullScreen", apCfg->mbFullscreen ? "true" : "false"));

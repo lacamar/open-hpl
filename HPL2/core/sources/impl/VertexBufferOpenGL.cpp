@@ -551,15 +551,8 @@ namespace hpl {
 	{
 		if(alVtxToCopy == eFlagBit_All) alVtxToCopy = mVertexFlags;
 
-		iVertexBufferOpenGL *pVtxBuff;
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_VertexBufferObject) && aType == eVertexBufferType_Hardware)
-		{
-			pVtxBuff = hplNew( cVertexBufferOGL_VBO, (mpLowLevelGraphics, mDrawType,aUsageType,GetIndexNum(),GetVertexNum()) );
-		}
-		else
-		{
-			pVtxBuff = hplNew( cVertexBufferOGL_Array, (mpLowLevelGraphics, mDrawType,aUsageType,GetIndexNum(),GetVertexNum()) );
-		}
+		iVertexBufferOpenGL *pVtxBuff = static_cast<iVertexBufferOpenGL*>(
+			mpLowLevelGraphics->CreateVertexBuffer(aType, mDrawType, aUsageType, GetIndexNum(), GetVertexNum()));
 
 		//Copy the vertices to the new buffer.
 		for(size_t i=0; i<mvElementArrays.size(); ++i)
