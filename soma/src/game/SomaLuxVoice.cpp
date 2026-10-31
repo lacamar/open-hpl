@@ -134,7 +134,10 @@ bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &a
 	}
 	std::map<int, tString> mapScenes;
 	for (cXmlElement *p : Children(pDoc->GetFirstElement("Scenes"), "Scene"))
+	{
 		mapScenes[p->GetAttributeInt("ID", -1)] = p->GetAttributeString("Name", "");
+		mmapSceneFocusPrio[p->GetAttributeString("Name", "")] = p->GetAttributeInt("FocusPrio", 0);
+	}
 
 	int lCount = 0;
 	for (cXmlElement *pSubj : Children(pDoc->GetFirstElement("Subjects"), "Subject"))
@@ -196,6 +199,9 @@ void cSomaLuxVoiceHandler::Reset()
 	mmapSources.clear();
 	msetLipEntities.clear();
 	mmapSceneVolumes.clear();
+	msFocusScene.clear();
+	msForcedFocusScene.clear();
+	mfFocusTimer = 0;
 	mmapSpeakingCallbacks.clear();
 	msetSpeaking.clear();
 }
@@ -277,6 +283,13 @@ bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tStr
 	if (vLines[p.mvLines[0]].mbPlayOnce && msetPlayedLines.insert(Key(p.mvLines[0])).second == false)
 		return false;
 	mvPlaying.push_back(p);
+	// cLuxVoiceSceneInstance::Play 0xc28470: takes focus unless the focused scene has >= FocusPrio
+	auto itCur = mmapSceneFocusPrio.find(msFocusScene);
+	if (itCur == mmapSceneFocusPrio.end() || itCur->second < mmapSceneFocusPrio[pSubject->msScene])
+	{
+		msFocusScene = pSubject->msScene;
+		mmapSceneVolumes[msFocusScene].mfFocus = 1;
+	}
 	return true;
 }
 
@@ -371,6 +384,56 @@ void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &
 	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D};
 }
 
+void cSomaLuxVoiceHandler::SetFocusScene(const tString &asScene)
+{
+	msForcedFocusScene = asScene;
+	if (asScene.empty() == false && mmapSceneFocusPrio.count(asScene))
+		msFocusScene = asScene;
+	else if (asScene.empty())
+		msFocusScene.clear();
+	else
+		Error("Could not find voice scene '%s'\n", asScene.c_str());
+}
+
+// cLuxVoiceHandler::Update 0xc461f0, game.cfg Voice ChangeFocusDelay/OutOfFocusVolumeMul/SceneFocusFadeInSpeed
+void cSomaLuxVoiceHandler::UpdateFocus(float afTimeStep)
+{
+	const float fDelay = 2, fOutMul = 0.5f, fSpeed = 0.5f;
+	auto Active = [this](const tString &s) {
+		for (const cPlaying &p : mvPlaying)
+			if (p.mpSubject->msScene == s)
+				return true;
+		return false;
+	};
+	if (mvPlaying.empty() || msForcedFocusScene.empty() == false)
+		mfFocusTimer = 0;
+	else if (Active(msFocusScene) == false)
+	{
+		if (mfFocusTimer < fDelay)
+			mfFocusTimer += afTimeStep;
+		else
+		{
+			mfFocusTimer = 0;
+			int lBest = -100000;
+			for (const cPlaying &p : mvPlaying)
+			{
+				int lPrio = mmapSceneFocusPrio[p.mpSubject->msScene];
+				if (lPrio > lBest)
+				{
+					lBest = lPrio;
+					msFocusScene = p.mpSubject->msScene;
+				}
+			}
+		}
+	}
+	for (auto &it : mmapSceneVolumes)
+	{
+		float &f = it.second.mfFocus;
+		const float fGoal = it.first == msFocusScene ? 1.0f : fOutMul;
+		f = f < fGoal ? std::min(f + fSpeed * afTimeStep, fGoal) : std::max(f - fSpeed * afTimeStep, fGoal);
+	}
+}
+
 void cSomaLuxVoiceHandler::FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime)
 {
 	cSceneVolume &v = mmapSceneVolumes[asScene];
@@ -406,6 +469,7 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		else if (v.mfVolume > v.mfGoal)
 			v.mfVolume = std::max(v.mfVolume - v.mfSpeed * fStep, v.mfGoal);
 	}
+	UpdateFocus(fStep);
 	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
 	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
 	for (cPlaying &p : mvPlaying)
@@ -413,7 +477,7 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		if (Frozen(p))
 			continue;
 		auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
-		float fVol = itVol != mmapSceneVolumes.end() ? itVol->second.mfVolume : 1;
+		float fVol = itVol != mmapSceneVolumes.end() ? itVol->second.mfVolume * itVol->second.mfFocus : 1;
 		p.mvOldVoices.erase(std::remove_if(p.mvOldVoices.begin(), p.mvOldVoices.end(), [pHandler](auto &v) { return pHandler->IsValid(v.first, v.second) == false; }),
 							p.mvOldVoices.end());
 		p.mvOldEffects.erase(std::remove_if(p.mvOldEffects.begin(), p.mvOldEffects.end(), [pEvents](auto &e) { return pEvents->IsLive(e.first, e.second) == false; }),
@@ -1261,7 +1325,7 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "bool SceneInvolvingCharacterIsActive(const tString&in asCharacter)",
 				+[](void *, S s) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->SceneInvolvingCharacterIsActive(s); });
 	SOMA_METHOD(e, T, "void FadeSceneVolumeTo(const tString&in asScene, float afVolume, float afTime)", +[](void *, S s, float v, float t) { VH->FadeSceneVolumeTo(s, v, t); });
-	SOMA_METHOD(e, T, "void SetFocusScene(const tString&in asScene)", +[](void *, S) {});
+	SOMA_METHOD(e, T, "void SetFocusScene(const tString&in asScene)", +[](void *, S s) { VH->SetFocusScene(s); });
 	SOMA_METHOD(e, "cLuxMap",
 				"void SetVoiceSource(const tString &in asCharacter, const tString &in asEntityName, float afMinDistance, float afMaxDistance, bool abUse3D, float afMaxPlayerListeningRange, float afMinFreq = 22000, float afMaxFreq = 22000, uint aFrequencyFlags = 0)",
 				+[](void *, S c, S ent, float fMin, float fMax, bool b3D, float, float, float, asUINT) { VH->SetSource(c, ent, fMin, fMax, b3D); });
