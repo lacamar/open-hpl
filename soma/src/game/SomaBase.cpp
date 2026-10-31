@@ -1452,6 +1452,10 @@ bool cSomaBase::InitEngine()
 	vars.mGraphics.mbFullscreen = mConfig.mbFullscreen;
 
 	vars.mGraphics.mvScreenSize = cVector2l(mConfig.mlScreenWidth, mConfig.mlScreenHeight);
+	vars.mGraphics.msRenderer = mConfig.msRenderer;
+	vars.mGraphics.msColorOutput = mConfig.msColorOutput;
+	vars.mGraphics.mfPaperWhite = mConfig.mfHdrPaperWhite;
+	vars.mGraphics.mfPeakNits = mConfig.mfHdrPeak;
 
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 	if (mpEngine == NULL)

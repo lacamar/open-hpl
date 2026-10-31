@@ -25,6 +25,10 @@ public:
 	bool mbAntiAliasing = true;
 	bool mbShowSubtitles = true;
 	bool mbDevHud = false;
+	tString msRenderer = "OpenGL";
+	tString msColorOutput = "SDR";
+	float mfHdrPaperWhite = 203;
+	float mfHdrPeak = 1000;
 
 private:
 	tWString GetConfigFilePath();

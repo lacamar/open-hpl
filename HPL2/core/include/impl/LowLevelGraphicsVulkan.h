@@ -276,6 +276,8 @@ namespace hpl {
 		int GetCaps(eGraphicCaps aType);
 		tString GetRendererDescription();
 		void* GetWindowHandle(){ return mpWindow; }
+		bool SetColorOutput(const tString& asMode, float afPaperWhite, float afPeakNits);
+		tString GetColorOutput();
 
 		void ShowCursor(bool abX);
 		void SetWindowGrab(bool abX);
@@ -478,6 +480,7 @@ namespace hpl {
 		void ApplyState(int alColorTargets);
 		void Present();
 		cVulkanProgram* GetFixedFunctionProgram();
+		static int OutputModeFromName(const tString& asName);
 		cVulkanImage* GetDummyImage(const std::string& asSamplerType);
 		void ImmediateFlush();
 

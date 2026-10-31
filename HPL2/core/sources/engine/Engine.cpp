@@ -173,7 +173,7 @@ namespace hpl {
 
 		switch(aApi)
 		{
-			case eHplAPI_OpenGL: pGameSetup = hplNew(cSDLEngineSetup, (alHplModuleFlags) ); break;
+			case eHplAPI_OpenGL: pGameSetup = hplNew(cSDLEngineSetup, (alHplModuleFlags, apVars) ); break;
 		}
 
 		return hplNew( cEngine,  (pGameSetup,alHplModuleFlags, apVars) ); 

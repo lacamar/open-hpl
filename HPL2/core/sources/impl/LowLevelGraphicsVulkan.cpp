@@ -162,11 +162,7 @@ namespace hpl {
 		mbFullscreen = abFullscreen;
 		mbHeadless = getenv("OPENHPL_HEADLESS_SOCKET") != NULL;
 
-		if(const char *pHdr = getenv("OPENHPL_HDR"))
-		{
-			tString s = cString::ToLowerCase(pHdr);
-			mlOutputMode = s == "hdr10" || s == "pq" || s == "1" ? 1 : s == "scrgb" ? 2 : s == "p3" || s == "wcg" ? 3 : 0;
-		}
+		if(const char *pHdr = getenv("OPENHPL_HDR")) mlOutputMode = OutputModeFromName(pHdr);
 		if(const char *p = getenv("OPENHPL_HDR_PAPER_WHITE")) mfPaperWhite = (float)atof(p);
 		if(const char *p = getenv("OPENHPL_HDR_PEAK")) mfPeakNits = (float)atof(p);
 
@@ -522,6 +518,35 @@ namespace hpl {
 		mvSwapchainImages.clear();
 		vkDestroySwapchainKHR(mDevice, mSwapchain, NULL);
 		mSwapchain = VK_NULL_HANDLE;
+	}
+
+	static const char *gvOutputModeNames[] = {"sdr", "hdr10", "scrgb", "p3"};
+
+	int cLowLevelGraphicsVulkan::OutputModeFromName(const tString& asName)
+	{
+		tString s = cString::ToLowerCase(asName);
+		return s == "hdr10" || s == "pq" || s == "1" ? 1 : s == "scrgb" ? 2 : s == "p3" || s == "wcg" ? 3 : 0;
+	}
+
+	tString cLowLevelGraphicsVulkan::GetColorOutput(){ return gvOutputModeNames[mlOutputMode]; }
+
+	bool cLowLevelGraphicsVulkan::SetColorOutput(const tString& asMode, float afPaperWhite, float afPeakNits)
+	{
+		int lMode = OutputModeFromName(asMode);
+		if(afPaperWhite > 0) mfPaperWhite = afPaperWhite;
+		if(afPeakNits > 0) mfPeakNits = afPeakNits;
+		if(mDevice == VK_NULL_HANDLE) { mlOutputMode = lMode; return true; } // before Init
+		bool bFormatChange = (lMode != 0) != (mlOutputMode != 0);
+		SubmitAndWait();
+		vkDeviceWaitIdle(mDevice);
+		mlOutputMode = lMode;
+		if(bFormatChange)
+		{
+			CreateScreenTargets();
+			if(mpFrameBuffer == NULL) SetCurrentFrameBuffer(NULL);
+		}
+		if(mSwapchain != VK_NULL_HANDLE) CreateSwapchain(); // may fall back to SDR
+		return mlOutputMode == lMode;
 	}
 
 	tString cLowLevelGraphicsVulkan::GetRendererDescription()

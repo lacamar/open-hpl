@@ -57,7 +57,9 @@ namespace hpl {
 				mlMultisampling(0),
 				msWindowCaption(""),
 				mvWindowPosition(-1),
-				mGpuProgramFormat(eGpuProgramFormat_LastEnum)
+				mGpuProgramFormat(eGpuProgramFormat_LastEnum),
+				mfPaperWhite(203),
+				mfPeakNits(1000)
 			{}
 		
 			cVector2l mvScreenSize;
@@ -68,6 +70,10 @@ namespace hpl {
 			tString msWindowCaption;
 			cVector2l mvWindowPosition;
 			eGpuProgramFormat mGpuProgramFormat;
+			tString msRenderer;		// "opengl" (default) or "vulkan"; OPENHPL_RENDERER overrides
+			tString msColorOutput;	// "sdr", "hdr10", "scrgb", "p3" (Vulkan only); OPENHPL_HDR overrides
+			float mfPaperWhite;
+			float mfPeakNits;
 		};
 		cGraphicsVars mGraphics;
 		

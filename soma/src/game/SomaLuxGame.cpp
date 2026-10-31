@@ -99,6 +99,10 @@ void SomaReadUserScreenConfig(cSomaConfig *apCfg)
 	apCfg->mbShowSubtitles = c->GetBool("Sound", "ShowSubtitles", false);
 	apCfg->mbDevHud = c->GetBool("Gameplay", "OpenHplHud", false);
 	apCfg->mbAntiAliasing = c->GetBool("Graphics", "AntiAliasing", apCfg->mbAntiAliasing);
+	apCfg->msRenderer = c->GetString("Graphics", "Renderer", apCfg->msRenderer);
+	apCfg->msColorOutput = c->GetString("Graphics", "ColorOutput", apCfg->msColorOutput);
+	apCfg->mfHdrPaperWhite = c->GetFloat("Graphics", "HdrPaperWhite", apCfg->mfHdrPaperWhite);
+	apCfg->mfHdrPeak = c->GetFloat("Graphics", "HdrPeak", apCfg->mfHdrPeak);
 	c->SetInt("Screen", "Width", apCfg->mlScreenWidth);
 	c->SetInt("Screen", "Height", apCfg->mlScreenHeight);
 	if (sFull != "borderless")
@@ -118,6 +122,15 @@ static void LoadLanguage()
 	if (pMenu == NULL)
 		pMenu = new cLanguageCategory();
 	pMenu->m_mapEntries["OpenHplHud"] = new cLanguageEntry{_W("OPEN-HPL HUD")};
+	static const wchar_t *vEntries[][2] = {
+		{L"Renderer", L"RENDERER (RESTART)"}, {L"ColorOutput", L"COLOR OUTPUT"},
+		{L"HdrPaperWhite", L"HDR PAPER WHITE"}, {L"HdrPeak", L"HDR PEAK BRIGHTNESS"},
+		{L"OpenGL", L"OpenGL"}, {L"Vulkan", L"Vulkan"}, {L"SDR", L"SDR"}, {L"HDR10", L"HDR10"},
+		{L"scRGB", L"scRGB HDR"}, {L"P3", L"Wide color (P3)"},
+	};
+	for (auto &e : vEntries)
+		if (pMenu->m_mapEntries.find(cString::To8Char(e[0])) == pMenu->m_mapEntries.end())
+			pMenu->m_mapEntries[cString::To8Char(e[0])] = new cLanguageEntry{e[1]};
 }
 
 // FullScreen "true" is exclusive at Width x Height (emulated by SDL on Wayland), "borderless" the desktop
@@ -185,6 +198,7 @@ static bool ApplyUserConfig()
 	tString sVsync = cString::ToLowerCase(gpUserConfig->GetString("Screen", "Vsync", "true"));
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(pCfg->mbVSync, sVsync == "adaptive");
 	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(pCfg->mfGamma);
+	gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->SetColorOutput(pCfg->msColorOutput, pCfg->mfHdrPaperWhite, pCfg->mfHdrPeak);
 	gpSomaBase->mpEngine->SetDevHudActive(pCfg->mbDevHud);
 	pCfg->mfMasterVolume = gpUserConfig->GetFloat("Sound", "Volume", pCfg->mfMasterVolume);
 	gpSomaBase->mpEngine->GetSound()->GetLowLevel()->SetVolume(pCfg->mfMasterVolume);

@@ -63,6 +63,9 @@ namespace hpl {
 
 		virtual tString GetRendererDescription(){ return ""; }
 		virtual void* GetWindowHandle(){ return NULL; } // SDL_Window*
+		// "sdr", "hdr10", "scrgb", "p3"; applies live where supported. False if the backend can't.
+		virtual bool SetColorOutput(const tString& asMode, float afPaperWhite, float afPeakNits){ return false; }
+		virtual tString GetColorOutput(){ return "sdr"; }
 		
 		/**
 		 * Show the cursor or not. Default is false

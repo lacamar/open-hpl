@@ -41,6 +41,32 @@ static const char *gvCompatPatches[][3] = {
 	 " bool bNewValue = OptionMenu_ButtonOptionsToggle(\"OpenHplHud\", kMainMenuButtonPos, lY++, msSelectedGameplayButton, bValue, mlActionHorizontal);"
 	 " if(bValue != bNewValue) { mpConfig.SetBool(\"Gameplay\", \"OpenHplHud\", bNewValue); ApplySettings(); }"
 	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
+	{"modules/menuhandler.hps", "kOptionsVideoDisplayBgSize = cVector2f(680, 335)", "kOptionsVideoDisplayBgSize = cVector2f(680, 487)"},
+	{"modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"FOV\", false);",
+	 "OptionMenu_UpdateExtraWidth(\"FOV\", false); OptionMenu_UpdateExtraWidth(\"Renderer\", false); OptionMenu_UpdateExtraWidth(\"ColorOutput\", false);"
+	 " OptionMenu_UpdateExtraWidth(\"HdrPaperWhite\", false); OptionMenu_UpdateExtraWidth(\"HdrPeak\", false);"},
+	// open-hpl renderer and colour output rows after AA; colour applies live, renderer on restart
+	{"modules/menuhandler.hps", "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton);",
+	 "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton); } {"
+	 " array<tString> vRenderers = { \"OpenGL\", \"Vulkan\" }; lY++;"
+	 " int lValue = mpConfig.GetString(\"Graphics\", \"Renderer\", \"OpenGL\") == \"Vulkan\" ? 1 : 0;"
+	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(\"Renderer\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, vRenderers, lValue, false, mlActionHorizontal);"
+	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"Renderer\", vRenderers[lNewValue]); }"
+	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"Renderer\", msSelectedVideoDisplayButton); } {"
+	 " array<tString> vOutputs = { \"SDR\", \"HDR10\", \"scRGB\", \"P3\" }; lY++;"
+	 " tString sOutput = mpConfig.GetString(\"Graphics\", \"ColorOutput\", \"SDR\"); int lValue = 0;"
+	 " for(uint i=0; i<vOutputs.length(); ++i) if(vOutputs[i] == sOutput) lValue = i;"
+	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(\"ColorOutput\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, vOutputs, lValue, false, mlActionHorizontal);"
+	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"ColorOutput\", vOutputs[lNewValue]); }"
+	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"ColorOutput\", msSelectedVideoDisplayButton); } {"
+	 " lY++; float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPaperWhite\", 203); float fValue = (fNits - 80) / 320.0f;"
+	 " float fNewValue = OptionMenu_ButtonOptionsSlider(\"HdrPaperWhite\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits));"
+	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPaperWhite\", fNewValue * 320.0f + 80); }"
+	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"HdrPaperWhite\", msSelectedVideoDisplayButton); } {"
+	 " lY++; float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPeak\", 1000); float fValue = (fNits - 400) / 1600.0f;"
+	 " float fNewValue = OptionMenu_ButtonOptionsSlider(\"HdrPeak\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits));"
+	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPeak\", fNewValue * 1600.0f + 400); }"
+	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"HdrPeak\", msSelectedVideoDisplayButton);"},
 };
 
 struct cByteStream : asIBinaryStream

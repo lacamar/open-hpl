@@ -22,6 +22,7 @@
 
 #include "system/SystemTypes.h"
 #include "engine/LowLevelEngineSetup.h"
+#include "engine/EngineInitVars.h"
 
 namespace hpl {
 
@@ -36,7 +37,7 @@ namespace hpl {
 	class cSDLEngineSetup : public iLowLevelEngineSetup
 	{
 	public:
-		cSDLEngineSetup(tFlag alHplSetupFlags);
+		cSDLEngineSetup(tFlag alHplSetupFlags, const cEngineInitVars *apVars);
 		~cSDLEngineSetup();
 		
 		cInput* CreateInput(cGraphics* apGraphics);

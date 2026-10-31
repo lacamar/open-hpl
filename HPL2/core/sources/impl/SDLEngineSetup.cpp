@@ -68,7 +68,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSDLEngineSetup::cSDLEngineSetup(tFlag alHplSetupFlags)
+	cSDLEngineSetup::cSDLEngineSetup(tFlag alHplSetupFlags, const cEngineInitVars *apVars)
 	{
 #if SDL_VERSION_ATLEAST(2,0,0)
 		SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
@@ -137,9 +137,14 @@ namespace hpl {
 		//////////////////////////
 		// Graphics
 		const char *pRenderer = getenv("OPENHPL_RENDERER");
+		if(pRenderer == NULL && apVars) pRenderer = apVars->mGraphics.msRenderer.c_str();
 #ifdef HPL_VULKAN
 		if(pRenderer && strcasecmp(pRenderer, "vulkan") == 0)
-			mpLowLevelGraphics = hplNew( cLowLevelGraphicsVulkan,() );
+		{
+			cLowLevelGraphicsVulkan *pVulkan = hplNew( cLowLevelGraphicsVulkan,() );
+			if(apVars) pVulkan->SetColorOutput(apVars->mGraphics.msColorOutput, apVars->mGraphics.mfPaperWhite, apVars->mGraphics.mfPeakNits);
+			mpLowLevelGraphics = pVulkan;
+		}
 		else
 #endif
 			mpLowLevelGraphics = hplNew( cLowLevelGraphicsSDL,() );
