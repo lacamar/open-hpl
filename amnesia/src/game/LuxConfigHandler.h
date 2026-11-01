@@ -62,6 +62,11 @@ public:
 
 	int mlGuiScale;
 
+	tString msRenderer;
+	tString msColorOutput;
+	float mfPaperWhite;
+	float mfPeakNits;
+
 	bool mbSSAOActive;
 	int mlSSAOSamples;
 	int mlSSAOResolution; //0= medium(div2), 1=high (same as screen resolution)

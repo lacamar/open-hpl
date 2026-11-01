@@ -1,4 +1,6 @@
 #include "SomaScriptBuilder.h"
+#include "SomaConfig.h"
+#include "system/LowLevelSystem.h"
 
 #include <algorithm>
 #include <cstring>
@@ -33,20 +35,20 @@ static const char *gvCompatPatches[][3] = {
 	{"modules/playerbodyhandler.hps", "[ePlayerBodyAnimationState_Custom]", "[ePlayerBodyAnimationState::ePlayerBodyAnimationState_Custom]"},
 	{"modules/playerbodyhandler.hps", "abX ? ePlayerBodyAnimationState_Custom :", "abX ? ePlayerBodyAnimationState::ePlayerBodyAnimationState_Custom :"},
 	{"03_07_dwf_d_factory.hps", "\"PLAYER MUL \" = ", "\"PLAYER MUL \" + "},
-	{"modules/menuhandler.hps", "kOptionsGameplayBgSize = cVector2f(680, 255)", "kOptionsGameplayBgSize = cVector2f(680, 293)"},
-	{"modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true);", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true); OptionMenu_UpdateExtraWidth(\"OpenHplHud\", true);"},
-	{"modules/menuhandler.hps", "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton);",
+	{"soma:modules/menuhandler.hps", "kOptionsGameplayBgSize = cVector2f(680, 255)", "kOptionsGameplayBgSize = cVector2f(680, 293)"},
+	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true);", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true); OptionMenu_UpdateExtraWidth(\"OpenHplHud\", true);"},
+	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton);",
 	 "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton); } {"
 	 " bool bValue = mpConfig.GetBool(\"Gameplay\", \"OpenHplHud\", false);"
 	 " bool bNewValue = OptionMenu_ButtonOptionsToggle(\"OpenHplHud\", kMainMenuButtonPos, lY++, msSelectedGameplayButton, bValue, mlActionHorizontal);"
 	 " if(bValue != bNewValue) { mpConfig.SetBool(\"Gameplay\", \"OpenHplHud\", bNewValue); ApplySettings(); }"
 	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
-	{"modules/menuhandler.hps", "kOptionsVideoDisplayBgSize = cVector2f(680, 335)", "kOptionsVideoDisplayBgSize = cVector2f(680, 487)"},
-	{"modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"FOV\", false);",
+	{"soma:modules/menuhandler.hps", "kOptionsVideoDisplayBgSize = cVector2f(680, 335)", "kOptionsVideoDisplayBgSize = cVector2f(680, 487)"},
+	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"FOV\", false);",
 	 "OptionMenu_UpdateExtraWidth(\"FOV\", false); OptionMenu_UpdateExtraWidth(\"Renderer\", false); OptionMenu_UpdateExtraWidth(\"ColorOutput\", false);"
 	 " OptionMenu_UpdateExtraWidth(\"HdrPaperWhite\", false); OptionMenu_UpdateExtraWidth(\"HdrPeak\", false);"},
 	// open-hpl renderer and colour output rows after AA; colour applies live, renderer on restart
-	{"modules/menuhandler.hps", "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton);",
+	{"soma:modules/menuhandler.hps", "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton);",
 	 "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton); } {"
 	 " array<tString> vRenderers = { \"OpenGL\", \"Vulkan\" }; lY++;"
 	 " int lValue = mpConfig.GetString(\"Graphics\", \"Renderer\", \"OpenGL\") == \"Vulkan\" ? 1 : 0;"
@@ -67,7 +69,41 @@ static const char *gvCompatPatches[][3] = {
 	 " float fNewValue = OptionMenu_ButtonOptionsSlider(\"HdrPeak\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits));"
 	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPeak\", fNewValue * 1600.0f + 400); }"
 	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"HdrPeak\", msSelectedVideoDisplayButton);"},
+	// Rebirth/Bunker Display rows before FOV; the first row reuses FOV's own if. $MS/$SL: Bunker's extra call args
+	{"!soma:modules/menuhandler.hps", "\"AllowSlowdowns\", \"FOV\"", "\"AllowSlowdowns\", \"Renderer\", \"ColorOutput\", \"HdrPaperWhite\", \"HdrPeak\", \"FOV\""},
+	{"!soma:modules/menuhandler.hps", "OptionMenu_UpdateMultiSelectionExtraWidth(vVSyncValues);",
+	 "OptionMenu_UpdateMultiSelectionExtraWidth(vVSyncValues); array<tString> vRenderers = { \"OpenGL\", \"Vulkan\" };"
+	 " array<tString> vOutputs = { \"SDR\", \"HDR10\", \"scRGB\", \"P3\" };"
+	 " OptionMenu_UpdateMultiSelectionExtraWidth(vRenderers); OptionMenu_UpdateMultiSelectionExtraWidth(vOutputs);"},
+	{"!soma:modules/menuhandler.hps", "float fFOVMin = 50;",
+	 "int lValue = mpConfig.GetString(\"Graphics\", \"Renderer\", \"OpenGL\") == \"Vulkan\" ? 1 : 0;"
+	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, vRenderers, lValue, false, mlActionHorizontal, \"Menu\", 0, vRightAnchor, vInfoBoxPos, mfTransitionAlpha$MS);"
+	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"Renderer\", vRenderers[lNewValue]); }"
+	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
+	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
+	 " tString sOutput = mpConfig.GetString(\"Graphics\", \"ColorOutput\", \"SDR\"); int lValue = 0;"
+	 " for(uint i=0; i<vOutputs.length(); ++i) if(vOutputs[i] == sOutput) lValue = i;"
+	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, vOutputs, lValue, false, mlActionHorizontal, \"Menu\", 0, vRightAnchor, vInfoBoxPos, mfTransitionAlpha$MS);"
+	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"ColorOutput\", vOutputs[lNewValue]); }"
+	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
+	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
+	 " float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPaperWhite\", 203); float fValue = (fNits - 80) / 320.0f;"
+	 " float fNewValue = OptionMenu_ButtonOptionsSlider(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits), \"\", vRightAnchor, vInfoBoxPos, mfTransitionAlpha$SL);"
+	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPaperWhite\", fNewValue * 320.0f + 80); }"
+	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
+	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
+	 " float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPeak\", 1000); float fValue = (fNits - 400) / 1600.0f;"
+	 " float fNewValue = OptionMenu_ButtonOptionsSlider(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits), \"\", vRightAnchor, vInfoBoxPos, mfTransitionAlpha$SL);"
+	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPeak\", fNewValue * 1600.0f + 400); }"
+	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
+	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) { float fFOVMin = 50;"},
 };
+
+static void ReplaceAll(std::string &asText, const std::string &asFrom, const std::string &asTo)
+{
+	for (size_t p = asText.find(asFrom); p != std::string::npos; p = asText.find(asFrom, p + asTo.size()))
+		asText.replace(p, asFrom.size(), asTo);
+}
 
 struct cByteStream : asIBinaryStream
 {
@@ -176,11 +212,23 @@ bool cSomaScriptBuilder::AddFile(std::vector<std::pair<std::string, std::string>
 	std::string sLowerFile = Lower(asFile);
 	for (auto &patch : gvCompatPatches)
 	{
-		size_t lSuffix = strlen(patch[0]);
-		if (sLowerFile.size() < lSuffix || sLowerFile.compare(sLowerFile.size() - lSuffix, lSuffix, patch[0]) != 0)
+		// "soma:" / "!soma:" prefix limits a patch to SOMA or to the other HPL3 games
+		const char *pFile = patch[0];
+		bool bSoma = SomaGameId() == "soma";
+		if (strncmp(pFile, "soma:", 5) == 0) { if (!bSoma) continue; pFile += 5; }
+		else if (strncmp(pFile, "!soma:", 6) == 0) { if (bSoma) continue; pFile += 6; }
+		size_t lSuffix = strlen(pFile);
+		if (sLowerFile.size() < lSuffix || sLowerFile.compare(sLowerFile.size() - lSuffix, lSuffix, pFile) != 0)
 			continue;
-		for (size_t p = sCode.find(patch[1]); p != std::string::npos; p = sCode.find(patch[1], p + 1))
-			sCode.replace(p, strlen(patch[1]), patch[2]);
+		std::string sTo = patch[2];
+		bool bBunker = SomaGameId() == "bunker";
+		ReplaceAll(sTo, "$MS", bBunker ? ", false, false, true, \"\", cString_To16Char(\"\"), true" : "");
+		ReplaceAll(sTo, "$SL", bBunker ? ", false, true, true" : "");
+		int lHits = 0;
+		for (size_t p = sCode.find(patch[1]); p != std::string::npos; p = sCode.find(patch[1], p + sTo.size()), ++lHits)
+			sCode.replace(p, strlen(patch[1]), sTo);
+		if (lHits == 0)
+			Warning("Script compat patch for '%s' found no '%.60s'\n", pFile, patch[1]);
 	}
 
 	// Blank out #include lines (keeping line numbers) and add each include as its own section.

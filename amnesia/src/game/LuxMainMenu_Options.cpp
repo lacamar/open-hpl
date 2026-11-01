@@ -501,7 +501,21 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		mpCBGuiScale = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(70, 25), _W(""), pGroup);
 		SetUpInput(pLabel, mpCBGuiScale, true, kTranslate("OptionsMenu","GuiScaleTip"));
 
+		float fRightX = vPosInGroup.x;
+		pLabel = mpGuiSet->CreateWidgetLabel(cVector3f(fRightX, vPosGuiScale.y, 0.1f), -1, TranslateOrFallback("OptionsMenu","Renderer", _W("Renderer")), pGroup);
+		mpCBRenderer = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(110, 25), _W(""), pGroup);
+		SetUpInput(pLabel, mpCBRenderer, true, TranslateOrFallback("OptionsMenu","RendererTip", _W("Graphics API. OpenGL is the default; Vulkan is experimental.")));
+		mpCBRenderer->AddItem(_W("OpenGL"));
+		mpCBRenderer->AddItem(_W("Vulkan"));
+
 		cVector3f vPosShowFPS(fBorderSize, vPosGuiScale.y + mpCBGuiScale->GetSize().y + 10, 0.1f);
+		pLabel = mpGuiSet->CreateWidgetLabel(cVector3f(fRightX, vPosShowFPS.y, 0.1f), -1, TranslateOrFallback("OptionsMenu","ColorOutput", _W("Color output")), pGroup);
+		mpCBColorOutput = mpGuiSet->CreateWidgetComboBox(pLabel->GetLocalPosition() + cVector3f(pLabel->GetSize().x+10,0,0), cVector2f(130, 25), _W(""), pGroup);
+		SetUpInput(pLabel, mpCBColorOutput, false, TranslateOrFallback("OptionsMenu","ColorOutputTip", _W("SDR is standard. HDR10 and scRGB need an HDR display, P3 a wide-gamut one. Vulkan only.")));
+		mpCBColorOutput->AddItem(_W("SDR"));
+		mpCBColorOutput->AddItem(_W("HDR10"));
+		mpCBColorOutput->AddItem(_W("scRGB HDR"));
+		mpCBColorOutput->AddItem(_W("Wide color (P3)"));
 		mpChBShowFPS = mpGuiSet->CreateWidgetCheckBox(vPosShowFPS, 0, TranslateOrFallback("OptionsMenu","ShowFPS", _W("Show FPS")), pGroup);
 		SetUpInput(NULL, mpChBShowFPS, false, TranslateOrFallback("OptionsMenu","ShowFPSTip", _W("Show a frames-per-second counter during gameplay.")));
 	}
@@ -553,6 +567,34 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		//pLInstr->SetWordWrap(true);
 		//pLInstr->SetDefaultFontSize(12);
 	}
+
+	{
+		cVector3f vSliderPos = mpCBTextureSizeLevel->GetLocalPosition() + cVector3f(0, mpCBTextureSizeLevel->GetSize().y + 15, 0);
+		pLabel = mpGuiSet->CreateWidgetLabel(vSliderPos, -1, TranslateOrFallback("OptionsMenu","HdrPaperWhite", _W("HDR white (nits)")), apDummy);
+		mpSPaperWhite = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, cVector3f(0, pLabel->GetSize().y+5, 0), cVector2f(120, 20), 0, pLabel);
+		SetUpInput(pLabel, mpSPaperWhite, false, TranslateOrFallback("OptionsMenu","HdrPaperWhiteTip", _W("Brightness of white in nits when an HDR output is active.")));
+		SetUpSlider(mpSPaperWhite, 80, 400, 5, kGuiCallback(HdrSlider_OnMove), &mpLPaperWhite);
+
+		pLabel = mpGuiSet->CreateWidgetLabel(vSliderPos + cVector3f(0, 55, 0), -1, TranslateOrFallback("OptionsMenu","HdrPeak", _W("HDR peak (nits)")), apDummy);
+		mpSPeak = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, cVector3f(0, pLabel->GetSize().y+5, 0), cVector2f(120, 20), 0, pLabel);
+		SetUpInput(pLabel, mpSPeak, false, TranslateOrFallback("OptionsMenu","HdrPeakTip", _W("Peak brightness of your HDR display in nits.")));
+		SetUpSlider(mpSPeak, 400, 2000, 50, kGuiCallback(HdrSlider_OnMove), &mpLPeak);
+	}
+
+	mpCBRenderer->SetFocusNavigation(eUIArrow_Left, mpCBGuiScale);
+	mpCBRenderer->SetFocusNavigation(eUIArrow_Up, mpChBVSync);
+	mpCBRenderer->SetFocusNavigation(eUIArrow_Down, mpCBColorOutput);
+	mpCBColorOutput->SetFocusNavigation(eUIArrow_Left, mpChBShowFPS);
+	mpCBColorOutput->SetFocusNavigation(eUIArrow_Up, mpCBRenderer);
+	mpSPaperWhite->SetFocusNavigation(eUIArrow_Up, mpCBTextureSizeLevel);
+	mpSPaperWhite->SetFocusNavigation(eUIArrow_Right, mpSGamma);
+	mpSPaperWhite->SetFocusNavigation(eUIArrow_Down, mpSPeak);
+	mpSPeak->SetFocusNavigation(eUIArrow_Up, mpSPaperWhite);
+	mpSPeak->SetFocusNavigation(eUIArrow_Right, mpSGamma);
+	mpSGamma->SetFocusNavigation(eUIArrow_Left, mpSPaperWhite);
+	mpCBGuiScale->SetFocusNavigation(eUIArrow_Right, mpCBRenderer);
+	mpChBShowFPS->SetFocusNavigation(eUIArrow_Right, mpCBColorOutput);
+	mpChBVSync->SetFocusNavigation(eUIArrow_Right, mpCBRenderer);
 
 	mpCBResolution->SetFocusNavigation(eUIArrow_Down, mpCBTextureSizeLevel);
 	mpCBResolution->SetFocusNavigation(eUIArrow_Right, mpChBFullScreen);
@@ -1195,6 +1237,15 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 
 		mpChBShowFPS->SetChecked(aObj.GetVarBool("ShowFPS"), false);
 
+		mpCBRenderer->SetSelectedItem(cString::ToLowerCase(aObj.GetVarString("Renderer"))=="vulkan" ? 1 : 0, true, false);
+		{
+			tString sOut = cString::ToLowerCase(aObj.GetVarString("ColorOutput"));
+			mpCBColorOutput->SetSelectedItem(sOut=="hdr10" ? 1 : sOut=="scrgb" ? 2 : sOut=="p3" ? 3 : 0, true, false);
+			SetSliderValue(mpSPaperWhite, aObj.GetVarFloat("PaperWhite"), false, 80, 400);
+			SetSliderValue(mpSPeak, aObj.GetVarFloat("PeakNits"), false, 400, 2000);
+			HdrSlider_OnMove(NULL, cGuiMessageData());
+		}
+
 		{
 			mpCBGuiScale->ClearItems();
 			mpCBGuiScale->AddItem(_W("1x"));
@@ -1485,6 +1536,15 @@ void cLuxMainMenu_Options::ApplyChanges()
 		pGfx->GetLowLevel()->SetGammaCorrection(GetGamma());
 
 		gpBase->mpDebugHandler->SetShowFPS(mpChBShowFPS->IsChecked());
+
+		{
+			static const char* vOutputs[] = {"SDR","HDR10","scRGB","P3"};
+			pCfgHdr->msRenderer = mpCBRenderer->GetSelectedItem()==1 ? "Vulkan" : "OpenGL";
+			pCfgHdr->msColorOutput = vOutputs[std::min(std::max(mpCBColorOutput->GetSelectedItem(),0),3)];
+			pCfgHdr->mfPaperWhite = GetPaperWhite();
+			pCfgHdr->mfPeakNits = GetPeakNits();
+			pGfx->GetLowLevel()->SetColorOutput(pCfgHdr->msColorOutput, pCfgHdr->mfPaperWhite, pCfgHdr->mfPeakNits);
+		}
 
 		pCfgHdr->mlGuiScale = mpCBGuiScale->GetSelectedItem()+1;
 
@@ -1798,6 +1858,10 @@ void cLuxMainMenu_Options::DumpInitialValues(cResourceVarsObject &aObj)
 		aObj.AddVarBool("AdaptiveVsync", gpBase->mpConfigHandler->mbAdaptiveVSync);
 
 		aObj.AddVarBool("ShowFPS", gpBase->mpDebugHandler->GetShowFPS());
+		aObj.AddVarString("Renderer", gpBase->mpConfigHandler->msRenderer);
+		aObj.AddVarString("ColorOutput", gpBase->mpConfigHandler->msColorOutput);
+		aObj.AddVarFloat("PaperWhite", gpBase->mpConfigHandler->mfPaperWhite);
+		aObj.AddVarFloat("PeakNits", gpBase->mpConfigHandler->mfPeakNits);
 
 		aObj.AddVarInt("GuiScale", gpBase->mpConfigHandler->mlGuiScale);
 
@@ -1897,6 +1961,13 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 		aObj.AddVarBool("VSync",		mpChBVSync->IsChecked());
 
 		aObj.AddVarBool("ShowFPS",		mpChBShowFPS->IsChecked());
+		{
+			static const char* vOutputs[] = {"SDR","HDR10","scRGB","P3"};
+			aObj.AddVarString("Renderer", mpCBRenderer->GetSelectedItem()==1 ? "Vulkan" : "OpenGL");
+			aObj.AddVarString("ColorOutput", vOutputs[std::min(std::max(mpCBColorOutput->GetSelectedItem(),0),3)]);
+			aObj.AddVarFloat("PaperWhite", GetPaperWhite());
+			aObj.AddVarFloat("PeakNits", GetPeakNits());
+		}
 
 		aObj.AddVarInt("GuiScale", mpCBGuiScale->GetSelectedItem()+1);
 
@@ -2090,6 +2161,16 @@ bool cLuxMainMenu_Options::Option_OnChangeValue(iWidget* apWidget, const cGuiMes
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, Option_OnChangeValue);
+
+//-----------------------------------------------------------------------
+
+bool cLuxMainMenu_Options::HdrSlider_OnMove(iWidget* apWidget, const cGuiMessageData& aData)
+{
+	mpLPaperWhite->SetText(cString::ToStringW(cMath::RoundToInt(GetPaperWhite())));
+	mpLPeak->SetText(cString::ToStringW(cMath::RoundToInt(GetPeakNits())));
+	return true;
+}
+kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, HdrSlider_OnMove);
 
 //-----------------------------------------------------------------------
 

@@ -71,6 +71,8 @@ private:
 
 	void ApplyChanges();
 
+	float GetPaperWhite() { return GetSliderValue(mpSPaperWhite, 80, 400); }
+	float GetPeakNits() { return GetSliderValue(mpSPeak, 400, 2000); }
 	float GetGamma() { return GetSliderValue(mpSGamma, mfGammaMin, mfGammaMax); }
 	float GetSensitivity() { return GetSliderValue(mpSMouseSensitivity, mfMouseSensitivityMin, mfMouseSensitivityMax); }
 #ifdef USE_GAMEPAD
@@ -153,6 +155,12 @@ private:
 	cWidgetCheckBox *mpChBVSync;
 	cWidgetComboBox *mpCBGuiScale;
 	cWidgetCheckBox *mpChBShowFPS;
+	cWidgetComboBox *mpCBRenderer;
+	cWidgetComboBox *mpCBColorOutput;
+	cWidgetLabel	*mpLPaperWhite;
+	cWidgetSlider	*mpSPaperWhite;
+	cWidgetLabel	*mpLPeak;
+	cWidgetSlider	*mpSPeak;
 //	cWidgetCheckBox *mpChBAdaptiveVSync;
 
 	cWidgetComboBox *mpCBTextureSizeLevel;
@@ -267,6 +275,8 @@ private:
 
 	bool GammaSlider_OnMove(iWidget* apWidget, const cGuiMessageData& aData);
 	kGuiCallbackDeclarationEnd(GammaSlider_OnMove);
+	bool HdrSlider_OnMove(iWidget* apWidget, const cGuiMessageData& aData);
+	kGuiCallbackDeclarationEnd(HdrSlider_OnMove);
 
 	bool MouseSensitivitySlider_OnMove(iWidget* apWidget, const cGuiMessageData& aData);
 	kGuiCallbackDeclarationEnd(MouseSensitivitySlider_OnMove);

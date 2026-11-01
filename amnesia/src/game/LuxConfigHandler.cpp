@@ -99,6 +99,11 @@ void cLuxConfigHandler::LoadMainConfig()
 
 	mlGuiScale =		gpBase->mpMainConfig->GetInt("Graphics", "GuiScale", 1);
 
+	msRenderer =		gpBase->mpMainConfig->GetString("Graphics", "Renderer", "OpenGL");
+	msColorOutput =		gpBase->mpMainConfig->GetString("Graphics", "ColorOutput", "SDR");
+	mfPaperWhite =		gpBase->mpMainConfig->GetFloat("Graphics", "HdrPaperWhite", 203);
+	mfPeakNits =		gpBase->mpMainConfig->GetFloat("Graphics", "HdrPeak", 1000);
+
 	// Misc
 	mbWorldReflection = gpBase->mpMainConfig->GetBool("Graphics", "WorldReflection", true);
 	mbRefraction =		gpBase->mpMainConfig->GetBool("Graphics", "Refraction", true);
@@ -161,6 +166,10 @@ void cLuxConfigHandler::SaveMainConfig()
 	cMaterialManager* pMatMgr = gpBase->mpEngine->GetResources()->GetMaterialManager();
 	cRenderSettings* pRenderSettings = gpBase->mpMapHandler->GetViewport()->GetRenderSettings();
 
+	gpBase->mpMainConfig->SetString("Graphics","Renderer", msRenderer);
+	gpBase->mpMainConfig->SetString("Graphics","ColorOutput", msColorOutput);
+	gpBase->mpMainConfig->SetFloat("Graphics","HdrPaperWhite", mfPaperWhite);
+	gpBase->mpMainConfig->SetFloat("Graphics","HdrPeak", mfPeakNits);
 	gpBase->mpMainConfig->SetFloat("Graphics","Gamma",gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
 	gpBase->mpMainConfig->SetInt("Graphics","GBufferType", cRendererDeferred::GetGBufferType());
 	gpBase->mpMainConfig->SetInt("Graphics","NumOfGBufferTextures", cRendererDeferred::GetNumOfGBufferTextures());

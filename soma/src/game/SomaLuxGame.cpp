@@ -127,6 +127,10 @@ static void LoadLanguage()
 		{L"HdrPaperWhite", L"HDR PAPER WHITE"}, {L"HdrPeak", L"HDR PEAK BRIGHTNESS"},
 		{L"OpenGL", L"OpenGL"}, {L"Vulkan", L"Vulkan"}, {L"SDR", L"SDR"}, {L"HDR10", L"HDR10"},
 		{L"scRGB", L"scRGB HDR"}, {L"P3", L"Wide color (P3)"},
+		{L"Renderer_Info", L"Graphics API. OpenGL is the default; Vulkan is experimental. Takes effect after a restart."},
+		{L"ColorOutput_Info", L"SDR is standard. HDR10 and scRGB need an HDR display, P3 a wide-gamut one. Vulkan only."},
+		{L"HdrPaperWhite_Info", L"Brightness of white UI and paper in nits when an HDR output is active."},
+		{L"HdrPeak_Info", L"Peak brightness of your HDR display in nits."},
 	};
 	for (auto &e : vEntries)
 		if (pMenu->m_mapEntries.find(cString::To8Char(e[0])) == pMenu->m_mapEntries.end())
