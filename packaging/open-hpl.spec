@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.65
+Version:        1.3.66
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -105,6 +105,7 @@ launcher() {
 #!/bin/sh
 . %{_libexecdir}/%{name}/steam-common.sh
 oh_gamedir $2 "$3" open-hpl-$1
+export SDL_APP_ID=open-hpl-$1
 exec \$PKGDIR/$4 "\$gamedir" "\$@"
 EOF
     install -Dpm0644 /dev/stdin %{buildroot}%{_datadir}/applications/open-hpl-$1.desktop <<EOF
@@ -147,6 +148,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sun Nov 01 2026 lacamar <lchlnm@pm.me> - 1.3.66-1
+- Set SDL_APP_ID so taskbar matches window to desktop icon
+
 * Sat Oct 31 2026 lacamar <lchlnm@pm.me> - 1.3.65-1
 - Add Vulkan renderer (OPENHPL_RENDERER=vulkan)
 - Add HDR10/scRGB/P3 output (OPENHPL_HDR)
