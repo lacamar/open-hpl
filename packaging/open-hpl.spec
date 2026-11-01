@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.66
+Version:        1.3.67
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.67-1
+- Add renderer and colour output settings to all game menus
+
 * Sun Nov 01 2026 lacamar <lchlnm@pm.me> - 1.3.66-1
 - Set SDL_APP_ID so taskbar matches window to desktop icon
 
