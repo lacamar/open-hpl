@@ -1053,6 +1053,7 @@ struct cSomaPreparedCall
 	std::vector<std::function<void(asIScriptContext *)>> mvArgs;
 	std::vector<tString> mvStrings;
 	std::vector<cVector3f> mvVecs;
+	std::vector<cVector2f> mvVecs2;
 	asQWORD mlRet = 0;
 	float mfRet = 0;
 	tString msRet;
@@ -1073,6 +1074,7 @@ static void ScriptPrepare(asIScriptGeneric *g)
 	call = cSomaPreparedCall();
 	call.mvStrings.reserve(16);
 	call.mvVecs.reserve(16);
+	call.mvVecs2.reserve(16);
 	call.mpObj = ScriptOf(g);
 	const tString &sDecl = *(tString *)g->GetArgObject(0);
 	size_t lGlobal = sDecl.find('$');
@@ -1160,6 +1162,15 @@ static void SetArgVector3f(asIScriptGeneric *g)
 	call.mvArgs.push_back([lArg, pVec](asIScriptContext *c) { c->SetArgObject(lArg, pVec); });
 }
 
+static void SetArgVector2f(asIScriptGeneric *g)
+{
+	cSomaPreparedCall &call = gmapPrepared[g->GetObject()];
+	int lArg = *(int *)g->GetAddressOfArg(0);
+	call.mvVecs2.push_back(*(cVector2f *)g->GetArgObject(1));
+	cVector2f *pVec = &call.mvVecs2.back();
+	call.mvArgs.push_back([lArg, pVec](asIScriptContext *c) { c->SetArgObject(lArg, pVec); });
+}
+
 void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 {
 	auto reg = [&](const char *apDecl, asGENFUNC_t apFunc) {
@@ -1180,6 +1191,7 @@ void RegisterSomaScriptCallNatives(asIScriptEngine *e, const char *apType)
 	reg("void SetArgFloat(int alArg, float afX)", SetArgValue<float>);
 	reg("void SetArgString(int alArg, const tString &in asStr)", SetArgString);
 	reg("void SetArgVector3f(int alArg, const cVector3f &in avX)", SetArgVector3f);
+	reg("void SetArgVector2f(int alArg, const cVector2f &in avX)", SetArgVector2f);
 	reg("bool GetReturnBool()", +[](asIScriptGeneric *g) { *(bool *)g->GetAddressOfReturnLocation() = gmapPrepared[g->GetObject()].mlRet != 0; });
 	reg("int GetReturnInt()", +[](asIScriptGeneric *g) { *(int *)g->GetAddressOfReturnLocation() = (int)gmapPrepared[g->GetObject()].mlRet; });
 	reg("float GetReturnFloat()", +[](asIScriptGeneric *g) { *(float *)g->GetAddressOfReturnLocation() = gmapPrepared[g->GetObject()].mfRet; });

@@ -316,7 +316,7 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 		src = itSource->second;
 		src.mbUse3D = src.mbUse3D && line.mbWorldSpace;
 	}
-	cSomaLuxEntity *pSource = src.mbUse3D && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(src.msEntity) : NULL;
+	cSomaLuxEntity *pSource = src.mbUse3D && src.mfMaxDist > 0 && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(src.msEntity) : NULL;
 	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) == _W(""))
 		;
 	else if (pSource)
