@@ -299,6 +299,10 @@ namespace hpl {
 	#define kVar_afGradingMapAlpha2					104 // ..109
 	#define kVar_avShadowParams						110
 	#define kVar_avShadowMapSize					111
+	#define kVar_afShadowDistance					112
+	#define kVar_alSliceNum							113
+	#define kVar_afSliceDiv							114
+	#define kVar_a_mtxLightViewProjSlice0			115 // ..118
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -790,6 +794,11 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
 				for(int i=0; i<4; ++i)
 					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj"+cString::ToString(i), kVar_a_mtxLightViewProj0+i, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afShadowDistance", kVar_afShadowDistance, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("alSliceNum", kVar_alSliceNum, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afSliceDiv", kVar_afSliceDiv, eDefferredProgramMode_Lights);
+				for(int i=0; i<4; ++i)
+					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj["+cString::ToString(i)+"]", kVar_a_mtxLightViewProjSlice0+i, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitsNear", kVar_avSplitsNear, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitsFar", kVar_avSplitsFar, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitOffsetMul", kVar_avSplitOffsetMul, eDefferredProgramMode_Lights);
@@ -3605,6 +3614,14 @@ namespace hpl {
 		if(lFlags & eFeature_Light_ShadowMap)
 		{
 			for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProj0+i, vShadowMtx[i]);
+			if(pProgram->SetInt(kVar_alSliceNum, 4))
+			{
+				for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProjSlice0+i, mvDirShadowMtxSlice[i]);
+				pProgram->SetFloat(kVar_afSliceDiv, 0.25f);
+				pProgram->SetFloat(kVar_afShadowDistance, mfDirShadowDistance);
+				pProgram->SetVec4f(kVar_avShadowParams, 0, mfDirShadowDepth0, 24.0f * mfDirShadowDepth0, 0);
+				pProgram->SetVec2f(kVar_avShadowMapSize, cVector2f((float)mpDirShadowData->mpTexture->GetWidth(), (float)mpDirShadowData->mpTexture->GetHeight()));
+			}
 			pProgram->SetVec4f(kVar_avSplitsNear, vSplitsNear[0], vSplitsNear[1], vSplitsNear[2], vSplitsNear[3]);
 			pProgram->SetVec4f(kVar_avSplitsFar, vSplitsFar[0], vSplitsFar[1], vSplitsFar[2], vSplitsFar[3]);
 			pProgram->SetVec4f(kVar_avSplitOffsetMul, vSplitOffsetMul[0], vSplitOffsetMul[1], vSplitOffsetMul[2], vSplitOffsetMul[3]);
@@ -3638,6 +3655,9 @@ namespace hpl {
 		// Practical split scheme
 		float fNear = mpCurrentFrustum->GetNearPlane(), fFar = mpCurrentFrustum->GetFarPlane();
 		if(mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogColor().a >= 0.9) fFar = mpCurrentWorld->GetFogEnd();
+		const float fLightShadowDistance = apLight->GetShadowDistance();
+		if(fLightShadowDistance != -1.0f) fFar = cMath::Min(fFar, fLightShadowDistance);
+		mfDirShadowDistance = fLightShadowDistance == -1.0f ? fFar : fLightShadowDistance;
 		float fLogTerm = apLight->GetAutoShadowSliceLogTerm();
 		float vSplit[lSlices+1];
 		for(int i=0; i<=lSlices; ++i)
@@ -3734,6 +3754,12 @@ namespace hpl {
 								0, 0, 0.5f, 0.5f,
 								0, 0, 0, 1);
 			apMtx[i] = cMath::MatrixMul(cMath::MatrixMul(mtxAtlas, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
+			cMatrixf mtxBias(	0.5f, 0, 0, 0.5f,
+								0, 0.5f, 0, 0.5f,
+								0, 0, 0.5f, 0.5f,
+								0, 0, 0, 1);
+			mvDirShadowMtxSlice[i] = cMath::MatrixMul(cMath::MatrixMul(mtxBias, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
+			if(i == 0) mfDirShadowDepth0 = fDepth;
 			apNear[i] = -vSplit[i];
 			apFar[i] = i == lSlices-1 ? -1e6f : -vSplit[i+1];
 			apOffsetMul[i] = (vSplit[1]-vSplit[0]) / (vSplit[i+1]-vSplit[i]);

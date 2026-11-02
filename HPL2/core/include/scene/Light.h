@@ -211,6 +211,8 @@ namespace hpl {
 		float GetShadowMapBiasMul(){ return mfShadowMapBiasMul;}
 		float GetShadowMapSlopeScaleBiasMul(){ return mfShadowMapSlopeScaleBiasMul;}
 		void SetShadowMapBiasMul(float afX){ mfShadowMapBiasMul = afX;}
+		float GetShadowDistance(){ return mfShadowDistance;}
+		void SetShadowDistance(float afX){ mfShadowDistance = afX;}
 		void SetShadowMapSlopeScaleBiasMul(float afX){ mfShadowMapSlopeScaleBiasMul = afX;}
 		
 		virtual void SetRadius(float afX);
@@ -305,6 +307,7 @@ namespace hpl {
 		tShadowCasterCacheMap m_mapShadowCasterCache;
 
 		float mfShadowMapBiasMul;
+		float mfShadowDistance;
 		float mfShadowMapSlopeScaleBiasMul;
 
 		///////////////////////////

@@ -1661,6 +1661,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD_NEW(e, "cLightBox", "void SetScriptableIsSaved(bool abX)", +[](cLightBox *o, bool b) { o->SetIsSaved(b); });
 		for (const char *pType : {"iLight", "cLightPoint", "cLightSpot", "cLightBox", "cLightDirectional"})
 		{
+			SOMA_METHOD_NEW(e, pType, "float GetShadowDistance()", +[](iLight *o) { return o->GetShadowDistance(); });
+			SOMA_METHOD_NEW(e, pType, "void SetShadowDistance(float afX)", +[](iLight *o, float f) { o->SetShadowDistance(f); });
 			SOMA_METHOD_NEW(e, pType, "float GetDefaultBrightness()", +[](iLight *o) { return o->GetDefaultBrightness(); });
 			SOMA_METHOD_NEW(e, pType, "void SetDefaultBrightness(float afX)", +[](iLight *o, float f) { o->SetDefaultBrightness(f); });
 			SOMA_METHOD_NEW(e, pType, "void FadeBrightnessTo(float afBrightness, float afTime, eEasing aEasing = eEasing_Linear)",
