@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.68
+Version:        1.3.69
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,16 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.69-1
+- Load generated AI path nodes
+- Fix HPL3 submesh scale order
+- Add Rebirth/Bunker sun shadow cascades
+- Add character safe positions
+- Implement more Rebirth/Bunker script API
+- Extended-range tonemap for HDR output
+- Voice source distance filtering
+- Save entity light and tone mapping state
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.68-1
 - Freeze world animation while paused
 - Keep broken entities destroyed after save load
