@@ -72,6 +72,14 @@ namespace hpl {
 
 		if(flock(lFd, LOCK_EX | LOCK_NB) == 0) return;
 
+		const char *pSlots = getenv("OPENHPL_HEADLESS_SLOTS");
+		for(int i=1; pSlots && i<atoi(pSlots); ++i)
+		{
+			int lSlotFd = open((sLockPath + "." + std::to_string(i)).c_str(), O_CREAT | O_RDWR, 0600);
+			if(lSlotFd >= 0 && flock(lSlotFd, LOCK_EX | LOCK_NB) == 0) { close(lFd); return; }
+			if(lSlotFd >= 0) close(lSlotFd);
+		}
+
 		Log("Another headless instance already holds '%s' - waiting for it to exit "
 			"(this is expected, not a hang - see AcquireHeadlessSingleInstanceLock())\n",
 			sLockPath.c_str());
