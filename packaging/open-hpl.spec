@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.67
+Version:        1.3.68
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,13 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.68-1
+- Freeze world animation while paused
+- Keep broken entities destroyed after save load
+- Fix bright in-world screens on Vulkan
+- Add physics impact, scrape and roll sound params
+- Duck unfocused voice scenes
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.67-1
 - Add renderer and colour output settings to all game menus
 
