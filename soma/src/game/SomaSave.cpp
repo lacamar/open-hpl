@@ -1432,6 +1432,17 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 	return true;
 }
 
+static int glDelayedAutoSave = 0;
+
+void cSomaSaveHandler::RunDelayedAutoSave()
+{
+	if (glDelayedAutoSave == 0 || cSomaLuxMap::GetCurrent() == NULL)
+		return;
+	bool bCheckpoint = glDelayedAutoSave == 2;
+	glDelayedAutoSave = 0;
+	AutoSave(bCheckpoint);
+}
+
 bool cSomaSaveHandler::AutoSave(bool abCheckpoint)
 {
 	DeleteOldestSaveFiles(kMaxAutoSaves);
@@ -1546,7 +1557,12 @@ void cSomaSaveHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cLuxSaveHandler@ cLux_GetSaveHandler()", +[]() { return (void *)&gHandler; });
 	SOMA_METHOD(e, T, "void SaveGameToFile(const tWString&in asSaveFile)", +[](void *, W f) { Save(f); });
 	SOMA_METHOD(e, T, "void LoadGameFromFile(const tWString&in asSaveFile)", +[](void *, W f) { Load(f); });
-	SOMA_METHOD(e, T, "bool AutoSave(bool abSaveCheckpoint, bool abDelayed=true)", +[](void *, bool c, bool) { return AutoSave(c); });
+	SOMA_METHOD(e, T, "bool AutoSave(bool abSaveCheckpoint, bool abDelayed=true)", +[](void *, bool c, bool d) {
+		if (d == false)
+			return AutoSave(c);
+		glDelayedAutoSave = std::max(glDelayedAutoSave, c ? 2 : 1);
+		return true;
+	});
 	SOMA_METHOD(e, T, "bool GetSaveThreadActive()", +[](void *) { return false; });
 	SOMA_METHOD(e, T, "bool HasLoadError(tString&out asError)", +[](void *, tString &) { return false; });
 	SOMA_METHOD(e, T, "void DelayedLoadGameFromFile(const tWString&in asSaveFile, const tString&in asCallbackObject, const tString&in asCallbackFunction, bool abWaitAfterHeader, bool abWaitAfterLoad)",

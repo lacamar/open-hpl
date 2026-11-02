@@ -16,6 +16,7 @@ public:
 	static bool ApplyPendingState();
 	static bool Save(const tWString &asFile);
 	static bool AutoSave(bool abCheckpoint);
+	static void RunDelayedAutoSave();
 	// Immediate from native code (menu); scripts change map on the next update
 	static bool Load(const tWString &asFile, bool abImmediate = false);
 
