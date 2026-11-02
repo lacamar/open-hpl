@@ -1190,8 +1190,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cString::MatchesWildcard(const tString& asPattern, const tString& asName)
+	bool cString::MatchesWildcard(const tString& asPatternIn, const tString& asNameIn)
 	{
+		// official entity names are case-insensitive
+		const tString asPattern = ToLowerCase(asPatternIn), asName = ToLowerCase(asNameIn);
 		if(asPattern.find('*') == tString::npos)
 			return asPattern == asName;
 		long lPrev = -1;
