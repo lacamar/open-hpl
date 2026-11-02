@@ -901,6 +901,26 @@ namespace hpl {
 		return (int)mvBoneStates.size();
 	}
 
+	bool cMeshEntity::SetBoneRestPoseFromMapValues(const tFloatVec &avVals)
+	{
+		cSkeleton *pSkeleton = mpMesh->GetSkeleton();
+		if(pSkeleton == NULL || (int)avVals.size() != pSkeleton->GetBoneNum() * 7) return false;
+
+		std::vector<cMatrixf> vLocal(pSkeleton->GetBoneNum());
+		for(int i=0; i<pSkeleton->GetBoneNum(); ++i)
+		{
+			const float *v = &avVals[i * 7];
+			cBone *pBone = pSkeleton->GetBoneByIndex(i);
+			const cMatrixf &m = pBone->GetLocalTransform();
+			float fS = cMath::Min(cMath::Min(cVector3f(m.m[0][0], m.m[0][1], m.m[0][2]).Length(), cVector3f(m.m[1][0], m.m[1][1], m.m[1][2]).Length()),
+								  cVector3f(m.m[2][0], m.m[2][1], m.m[2][2]).Length());
+			vLocal[i] = cMath::MatrixMul(cMath::MatrixQuaternion(cQuaternion(v[0], v[1], v[2], v[3])), cMath::MatrixScale(cVector3f(fS)));
+			vLocal[i].SetTranslation(cVector3f(v[4], v[5], v[6]) * fS * pBone->GetLocalUnitScale());
+		}
+		SetBoneRestPose(vLocal);
+		return true;
+	}
+
 	void cMeshEntity::SetBoneRestPose(const std::vector<cMatrixf> &avLocal)
 	{
 		if(avLocal.size() != mvBoneStates.size()) return;
