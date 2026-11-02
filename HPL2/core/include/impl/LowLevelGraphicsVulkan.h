@@ -40,6 +40,7 @@ namespace hpl {
 	};
 
 	size_t VulkanFormatSize(VkFormat aFormat);
+	VkFormat UnormOfSrgb(VkFormat aFormat);
 	bool VulkanReadPixelsFloat(cLowLevelGraphicsVulkan *apGfx, cVulkanImage& aImg, int alLevel, int alLayer, const cVector2l& avPos,
 							   const cVector2l& avSize, std::vector<float>& avOut);
 
