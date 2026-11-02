@@ -3075,6 +3075,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 						if (pMat || asMat == "") pSub->SetCustomMaterial(pMat, true);
 					}
 				});
+	SOMA_METHOD(e, "cLuxProp", "bool IsMoving()", +[](cSomaLuxEntity *p) { return p->mbMoving; });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });

@@ -1352,6 +1352,8 @@ static void RegisterSomaScriptIterators(asIScriptEngine *e)
 	SOMA_FUNC(e, "iXmlDocument@ cResources_LoadXmlDocument(const tString&in asFile)", +[](const tString &f) { return gpSomaBase->mpEngine->GetResources()->LoadXmlDocument(f); });
 	SOMA_FUNC(e, "void cResources_DestroyXmlDocument(iXmlDocument@ apDoc)", +[](iXmlDocument *d) { if (d) gpSomaBase->mpEngine->GetResources()->DestroyXmlDocument(d); });
 
+	SOMA_METHOD(e, "cWorld", "iLight@ GetLightFromID(tID aID)", +[](cWorld *, cSomaID id) { return (iLight *)SomaObjectFromID(id, "iLight"); });
+	SOMA_METHOD(e, "iCharacterBody", "float GetRoll()", +[](iCharacterBody *) { return 0.0f; });
 	SOMA_METHOD(e, "cWorld", "cLightListIterator@ GetLightIterator()", +[](cWorld *w) { return SomaPooledIterator(w->GetLightIterator()); });
 	// ponytail: HPL2 rope is a camera-facing strip, no eRopeType_3D tube with ring segments
 	SOMA_METHOD(e, "cWorld", "iRopeEntity@ CreateRopeEntity(const tString&in asName, eRopeType aRopeType, iPhysicsRope @apRope, int alMaxSegments, int alRingSegments = 3)",
