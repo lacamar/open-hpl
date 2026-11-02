@@ -796,6 +796,8 @@ static void PauseSoundInstances(tFlag alTypes, bool abX)
 
 // cLuxMap::PauseSoundsAndMusic 0xb19280 / ResumeSoundsAndMusic 0xb147a0 (Rebirth)
 static std::set<cMeshEntity *> gsetUpdateWhenPaused;
+static bool gbSavingEnabled = true;
+static float gfSavingDisabledTime = 0;
 
 void SomaSetGamePaused(bool abX, bool abMusic, bool abSounds, bool abAmbience, tFlag alTypes)
 {
@@ -960,6 +962,8 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	}
 	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive && gpSomaBase->mbScriptGamePaused == false)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
+	if (gbSavingEnabled == false && gfSavingDisabledTime > 0 && (gfSavingDisabledTime -= afTimeStep) <= 0)
+		gbSavingEnabled = true;
 	if (gpSomaBase->mbScriptGamePaused)
 		for (cMeshEntity *pMesh : gsetUpdateWhenPaused)
 			pMesh->UpdateLogic(afTimeStep);
@@ -1473,11 +1477,22 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
 	SOMA_FUNC(e, "void cLux_AddUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { if (m) gsetUpdateWhenPaused.insert(m); });
 	SOMA_FUNC(e, "void cLux_RemoveUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { gsetUpdateWhenPaused.erase(m); });
+	SOMA_FUNC(e, "void cLux_DisableSaving(float afDuration)", +[](float d) { gbSavingEnabled = false; gfSavingDisabledTime = d; });
+	SOMA_FUNC(e, "void cLux_EnableSaving()", +[]() { gbSavingEnabled = true; });
+	SOMA_FUNC(e, "bool cLux_GetSavingEnabled()", +[]() { return gbSavingEnabled; });
+	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFile3D(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetUse3D(b); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileStream(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetStream(b); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFilePriority(int alX)", +[](cSoundEntity *o, int p) { if (o->GetData()) o->GetData()->SetPriority(p); });
+	for (const char *pType : {"cMeshEntity", "cSubMeshEntity", "cLuxProp"})
+		SOMA_METHOD_NEW(e, pType, "void SetRenderLayer(int alX)", +[](void *, int) {});
 	SOMA_FUNC(e, "bool cLux_GetFootageModeActive()", +[]() { return false; });
 	SOMA_FUNC(e, "void cSound_PreloadSoundEvent(const tString&in asInternalPath)", +[](const tString &) {});
 	SOMA_METHOD(e, "cLuxInputHandler", "void SetGamepadColor(int alId, const cColor&in aColor)", +[](void *, int, const cColor &) {});
 	SOMA_FUNC(e, "void cSystem_ProfileStart(const tString&in asName)", +[](const tString &) {});
 	SOMA_FUNC(e, "void cSystem_ProfileEnd(const tString&in asName)", +[](const tString &) {});
+	SOMA_METHOD(e, "iCharacterBody", "void SetupSafePositions(float afSafePositionSaveInterval, float afSafePositionBufferTime)", +[](iCharacterBody *c, float i, float b) { c->SetupSafePositions(i, b); });
+	SOMA_METHOD(e, "iCharacterBody", "void TeleportToSafePosition(float afElapsedTime, bool abSmooth = false)", +[](iCharacterBody *c, float t, bool s) { c->TeleportToSafePosition(t, s); });
 	SOMA_METHOD(e, "iCharacterBody", "cVector3f GetLastVelocity()", +[](iCharacterBody *c) { return c->GetVelocity(gpSomaBase->mpEngine->GetStepSize()); });
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_GetHideCrosshair()", +[]() { return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false); });
