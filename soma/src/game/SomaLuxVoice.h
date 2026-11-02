@@ -49,6 +49,7 @@ public:
 	void SetPausedAll(bool abX);
 	void ReapplyPauses();
 	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
+	void SetFocusScene(const tString &asScene);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
 	void SetSpeakingCallback(const tString &asCharacter, const tString &asFunc);
 
@@ -168,8 +169,13 @@ private:
 	struct cSceneVolume
 	{
 		float mfVolume = 1, mfGoal = 1, mfSpeed = 0;
+		float mfFocus = 1;
 	};
 	std::map<tString, cSceneVolume> mmapSceneVolumes;
+	std::map<tString, int> mmapSceneFocusPrio;
+	tString msFocusScene, msForcedFocusScene;
+	float mfFocusTimer = 0;
+	void UpdateFocus(float afTimeStep);
 	std::map<tString, tString> mmapSpeakingCallbacks;
 	std::set<tString> msetSpeaking;
 	void UpdateSpeakingCallbacks();

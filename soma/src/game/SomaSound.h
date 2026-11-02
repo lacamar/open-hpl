@@ -155,7 +155,7 @@ public:
 	float GetSpeedMul() { return mfSpeedMul; }
 	void SetVolume(float afX) { mfVolume = afX; }
 	float GetVolume() { return mfVolume; }
-	void SetParam(int alIdx, float afValue);
+	void SetParam(int alIdx, float afValue) override;
 	void SetParam(const tString &asName, float afValue) override { SetParam(ParamIndex(asName), afValue); }
 	int ParamIndex(const tString &asName);
 	float GetParamValue(int alIdx);
