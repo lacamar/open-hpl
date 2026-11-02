@@ -24,7 +24,6 @@ public:
 private:
 	void Finish();
 
-	bool AnySkipInputThisFrame();
 
 	void DrawBrainIcon(float afAlpha, float afTime);
 	cVector3f VirtualToScreen(const cVector2f &avPos, float afZ);
@@ -60,7 +59,6 @@ private:
 	unsigned long mlBootStart;
 
 	bool mbFinished;
-	bool mbMouseWasDown;
 };
 
 #endif // SOMA_SPLASH_H

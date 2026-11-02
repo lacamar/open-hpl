@@ -473,6 +473,8 @@ template <class T> static void RegisterPid(asIScriptEngine *e, const char *apTyp
 // Keyed by struct block; a reused block address is cleared by the factory
 static std::map<void *, std::multiset<tString>> gmapStringSets;
 
+std::multiset<std::string> &SomaStringSetOf(void *apSet) { return gmapStringSets[apSet]; }
+
 static void RegisterStringSet(asIScriptEngine *e)
 {
 	e->RegisterObjectBehaviour("cScriptStringSet", asBEHAVE_FACTORY, "cScriptStringSet@ f()", asFUNCTION(+[](asIScriptGeneric *g) {

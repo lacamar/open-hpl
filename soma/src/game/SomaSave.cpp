@@ -7,6 +7,7 @@
 #include "SomaLuxPlayer.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptBuilder.h"
+#include "SomaScriptNatives.h"
 #include "SomaSound.h"
 #include "SomaSplash.h"
 #include "SomaLuxVoice.h"
@@ -25,7 +26,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVN"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVO"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -235,6 +236,13 @@ namespace
 			for (asUINT i = 0; i < pArr->GetSize(); ++i)
 				WriteValue(o, e, pArr->GetElementTypeId(), pArr->At(i), aVisited);
 		}
+		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
+		{
+			auto &set = SomaStringSetOf((void *)apAddr);
+			o.Pod((uint32_t)set.size());
+			for (const tString &s : set)
+				o.Str(s);
+		}
 		else if (IsRawValue(t))
 			o.Bytes(apAddr, t->GetSize());
 	}
@@ -295,6 +303,14 @@ namespace
 			pArr->Resize(n);
 			for (asUINT i = 0; i < n && in.ok; ++i)
 				ReadValue(in, e, pArr->GetElementTypeId(), pArr->At(i));
+		}
+		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
+		{
+			uint32_t n = glPendingVersion >= 31 ? in.Pod<uint32_t>() : 0;
+			auto &set = SomaStringSetOf(apAddr);
+			set.clear();
+			for (uint32_t i = 0; i < n && in.ok; ++i)
+				set.insert(in.Str());
 		}
 		else if (IsRawValue(t))
 			in.Bytes(apAddr, t->GetSize());
@@ -1436,7 +1452,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 30)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 31)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
