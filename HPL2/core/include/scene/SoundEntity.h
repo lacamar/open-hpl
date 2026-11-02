@@ -61,6 +61,7 @@ namespace hpl {
 		virtual void FadeOut(float afSpeed)=0;
 		virtual bool IsStopped()=0;
 		virtual void Update(float afTimeStep)=0;
+		virtual void SetParam(const tString &asName, float afValue){}
 	};
 	typedef iSoundEntityEvent* (*tSoundEntityEventFactory)(cSoundEntity *apEntity);
 
@@ -124,6 +125,7 @@ namespace hpl {
 
 		static void SetEventFactory(tSoundEntityEventFactory apFactory){ mpEventFactory = apFactory; }
 		iSoundEntityEvent* GetEvent(){ return mpEvent; }
+		void SetParam(const tString &asName, float afValue){ if(mpEvent) mpEvent->SetParam(asName, afValue); }
 
 
 	private:

@@ -124,6 +124,8 @@ namespace hpl {
 				pEntity->SetIsSaved(false);
 				//TODO: Offset the sound a bit so that it is not played inside a static object.
 				pEntity->SetPosition(avPos);
+				pEntity->SetParam("mass",apBody->GetMass());
+				pEntity->SetParam("speed",afSpeed);
 			}
 		}
 	}

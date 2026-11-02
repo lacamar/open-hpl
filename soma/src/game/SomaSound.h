@@ -156,7 +156,7 @@ public:
 	void SetVolume(float afX) { mfVolume = afX; }
 	float GetVolume() { return mfVolume; }
 	void SetParam(int alIdx, float afValue);
-	void SetParam(const tString &asName, float afValue) { SetParam(ParamIndex(asName), afValue); }
+	void SetParam(const tString &asName, float afValue) override { SetParam(ParamIndex(asName), afValue); }
 	int ParamIndex(const tString &asName);
 	float GetParamValue(int alIdx);
 	int GetParamNum() { return (int)mvParamValue.size(); }
