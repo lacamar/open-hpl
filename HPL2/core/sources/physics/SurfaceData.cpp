@@ -124,6 +124,8 @@ namespace hpl {
 				pEntity->SetIsSaved(false);
 				//TODO: Offset the sound a bit so that it is not played inside a static object.
 				pEntity->SetPosition(avPos);
+				pEntity->SetParam("mass",apBody->GetMass());
+				pEntity->SetParam("speed",afSpeed);
 			}
 		}
 	}
@@ -226,6 +228,7 @@ namespace hpl {
 				}
 
 				//Log("Speed: %f Freq: %f\n",fAbsSpeed,fFreq);
+				apBody->GetScrapeSoundEntity()->SetParam(0,afSpeed);
 				cSoundEntry *pEntry = apBody->GetScrapeSoundEntity()->GetSoundEntry(eSoundEntityType_Main, true);
 				if(pEntry)
 				{
@@ -247,6 +250,7 @@ namespace hpl {
 				{
 					pEntity->FadeIn(3.3f);
 					pEntity->SetPosition(avPos);
+					pEntity->SetParam(0,afSpeed);
 
 					pEntity->SetIsSaved(false);
 
@@ -443,6 +447,7 @@ namespace hpl {
 
 				//Log("Speed: %f Freq: %f\n",fAbsSpeed,fFreq);
 				cSoundEntity *pSound = apBody->GetRollSoundEntity();
+				pSound->SetParam(0,fRollingSpeed);
 				cSoundEntry *pEntry = pSound->GetSoundEntry(eSoundEntityType_Main, true);
 				if(pEntry)
 				{
@@ -469,6 +474,7 @@ namespace hpl {
 				{
 					pEntity->FadeIn(3.3f);
 					pEntity->SetPosition(apBody->GetWorldPosition());
+					pEntity->SetParam(0,fRollingSpeed);
 					pEntity->SetIsSaved(false);
 
 					apBody->SetRollSoundEntity(pEntity);

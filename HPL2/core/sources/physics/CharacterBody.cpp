@@ -335,6 +335,7 @@ namespace hpl {
 		
 		mvForce = cVector3f(0,0,0);
 		mvVelocity = cVector3f(0,0,0);
+		mfSafePosTimer = mfSafePosInterval = mfSafePosBuffer = 0;
 
 		mvLastGroundNormal = cVector3f(0,0,0);
 		
@@ -598,6 +599,40 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+	void iCharacterBody::SetupSafePositions(float afSaveInterval, float afBufferTime)
+	{
+		if(afBufferTime <= 0) return;
+		mfSafePosTimer = 0;
+		mfSafePosInterval = afSaveInterval;
+		mfSafePosBuffer = afBufferTime;
+		for(int i=0; i<4; ++i) mvSafePosHistory[i] = cVector3f(-1000000.0f);
+		mvSafePositions.clear();
+		mvSafePositions.reserve((size_t)ceilf(afBufferTime / afSaveInterval) + 2);
+	}
+
+	// cCharacterBodyNewton::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
+	void iCharacterBody::UpdateSafePositions(float afTimeStep)
+	{
+		if(mfSafePosInterval <= 0) return;
+		for(int i=0; i<3; ++i) mvSafePosHistory[i] = mvSafePosHistory[i+1];
+		mvSafePosHistory[3] = mvPosition;
+		mfSafePosTimer -= afTimeStep;
+		if(mfSafePosTimer > 0) return;
+		mfSafePosTimer = mfSafePosInterval;
+		if(mvSafePosHistory[0] == cVector3f(-1000000.0f)) return;
+		mvSafePositions.push_back(mvSafePosHistory[0]);
+		if((float)mvSafePositions.size() > mfSafePosBuffer / mfSafePosInterval) mvSafePositions.pop_back();
+	}
+
+	void iCharacterBody::TeleportToSafePosition(float afElapsedTime, bool abSmooth)
+	{
+		if(mvSafePositions.empty()) return;
+		int lIdx = (int)floorf(afElapsedTime / mfSafePosInterval + 0.5f);
+		lIdx = cMath::Min(lIdx, (int)mvSafePositions.size() - 1);
+		SetPosition(mvSafePositions[lIdx], abSmooth);
+		mvVelocity = cVector3f(0, 0.1f, 0);
+	}
 
 	void iCharacterBody::SetPosition(const cVector3f& avPos, bool abSmooth)
 	{
@@ -1024,6 +1059,7 @@ namespace hpl {
 		UpdateEntity();
 
 		PostUpdateConnection(afTimeStep);
+		UpdateSafePositions(afTimeStep);
 	}
 	
 	//-----------------------------------------------------------------------

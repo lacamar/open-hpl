@@ -229,6 +229,7 @@ namespace hpl {
 	#define kVar_afKey								28
 	#define kVar_afExposure							29
 	#define kVar_afWhiteCut							30
+	#define kVar_afHdrHeadroom						119
 	#define kVar_afInvGammaCorrection				31
 	#define kVar_a_mtxInvView						32
 	#define kVar_avMaskCenter						33
@@ -299,6 +300,10 @@ namespace hpl {
 	#define kVar_afGradingMapAlpha2					104 // ..109
 	#define kVar_avShadowParams						110
 	#define kVar_avShadowMapSize					111
+	#define kVar_afShadowDistance					112
+	#define kVar_alSliceNum							113
+	#define kVar_afSliceDiv							114
+	#define kVar_a_mtxLightViewProjSlice0			115 // ..118
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -790,6 +795,11 @@ namespace hpl {
 				mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj", kVar_a_mtxLightViewProj, eDefferredProgramMode_Lights);
 				for(int i=0; i<4; ++i)
 					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj"+cString::ToString(i), kVar_a_mtxLightViewProj0+i, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afShadowDistance", kVar_afShadowDistance, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("alSliceNum", kVar_alSliceNum, eDefferredProgramMode_Lights);
+				mpProgramManager->AddGenerateProgramVariableId("afSliceDiv", kVar_afSliceDiv, eDefferredProgramMode_Lights);
+				for(int i=0; i<4; ++i)
+					mpProgramManager->AddGenerateProgramVariableId("a_mtxLightViewProj["+cString::ToString(i)+"]", kVar_a_mtxLightViewProjSlice0+i, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitsNear", kVar_avSplitsNear, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitsFar", kVar_avSplitsFar, eDefferredProgramMode_Lights);
 				mpProgramManager->AddGenerateProgramVariableId("avSplitOffsetMul", kVar_avSplitOffsetMul, eDefferredProgramMode_Lights);
@@ -1117,7 +1127,7 @@ namespace hpl {
 		}
 
 		mpToneMapProgram = NULL;
-		for(int i=0; i<32; ++i) mpToneMapPrograms[i] = NULL;
+		for(int i=0; i<64; ++i) mpToneMapPrograms[i] = NULL;
 		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = mpImageTrailProgram = NULL;
 		if(mbHdr)
 		{
@@ -1281,7 +1291,7 @@ namespace hpl {
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
-		for(int i=0; i<32; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
+		for(int i=0; i<64; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
 		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1], mpImageTrailProgram};
 		for(int i=0; i<4; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
 
@@ -1375,7 +1385,8 @@ namespace hpl {
 		if(mpToneMapProgram)
 		{
 			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
-			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,5) : apTarget;
+			const float fHdrHeadroom = mpLowLevelGraphics->GetHdrHeadroom();
+			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,fHdrHeadroom > 1.0f ? ePixelFormat_RGBA16 : ePixelFormat_RGBA,5) : apTarget;
 			if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
@@ -1383,7 +1394,7 @@ namespace hpl {
 			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
 			int lLayers = bHpl35 ? (int)mvColorGradingLayers.size() : 0;
 			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
-						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0);
+						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0) | (fHdrHeadroom > 1.0f ? 32 : 0);
 			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
@@ -1401,6 +1412,7 @@ namespace hpl {
 			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
 			pToneMap->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
 			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
+			if(lCombo & 32) pToneMap->SetFloat(kVar_afHdrHeadroom, fHdrHeadroom);
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
 			if(lCombo & 1)
@@ -1605,11 +1617,13 @@ namespace hpl {
 		if(alCombo & 4) programVars.Add(bHpl35 ? "UseNoise" : "UseFilmGrain");
 		if(alCombo & 8) programVars.Add("UseSRGB");
 		if(alCombo & 16) programVars.Add(bHpl35 ? "LayeredColorGrading" : "UseBlendGrading");
+		if(alCombo & 32) programVars.Add("UseHdrOutput");
 		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
 		if(pProg==NULL) return NULL;
 		pProg->GetVariableAsId("afKey",kVar_afKey);
 		pProg->GetVariableAsId("afExposure",kVar_afExposure);
 		pProg->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
+		pProg->GetVariableAsId("afHdrHeadroom",kVar_afHdrHeadroom);
 		pProg->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
 		pProg->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		pProg->GetVariableAsId("avBloomTint",kVar_avBloomTint);
@@ -3605,6 +3619,14 @@ namespace hpl {
 		if(lFlags & eFeature_Light_ShadowMap)
 		{
 			for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProj0+i, vShadowMtx[i]);
+			if(pProgram->SetInt(kVar_alSliceNum, 4))
+			{
+				for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProjSlice0+i, mvDirShadowMtxSlice[i]);
+				pProgram->SetFloat(kVar_afSliceDiv, 0.25f);
+				pProgram->SetFloat(kVar_afShadowDistance, mfDirShadowDistance);
+				pProgram->SetVec4f(kVar_avShadowParams, 0, mfDirShadowDepth0, 24.0f * mfDirShadowDepth0, 0);
+				pProgram->SetVec2f(kVar_avShadowMapSize, cVector2f((float)mpDirShadowData->mpTexture->GetWidth(), (float)mpDirShadowData->mpTexture->GetHeight()));
+			}
 			pProgram->SetVec4f(kVar_avSplitsNear, vSplitsNear[0], vSplitsNear[1], vSplitsNear[2], vSplitsNear[3]);
 			pProgram->SetVec4f(kVar_avSplitsFar, vSplitsFar[0], vSplitsFar[1], vSplitsFar[2], vSplitsFar[3]);
 			pProgram->SetVec4f(kVar_avSplitOffsetMul, vSplitOffsetMul[0], vSplitOffsetMul[1], vSplitOffsetMul[2], vSplitOffsetMul[3]);
@@ -3638,6 +3660,9 @@ namespace hpl {
 		// Practical split scheme
 		float fNear = mpCurrentFrustum->GetNearPlane(), fFar = mpCurrentFrustum->GetFarPlane();
 		if(mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogColor().a >= 0.9) fFar = mpCurrentWorld->GetFogEnd();
+		const float fLightShadowDistance = apLight->GetShadowDistance();
+		if(fLightShadowDistance != -1.0f) fFar = cMath::Min(fFar, fLightShadowDistance);
+		mfDirShadowDistance = fLightShadowDistance == -1.0f ? fFar : fLightShadowDistance;
 		float fLogTerm = apLight->GetAutoShadowSliceLogTerm();
 		float vSplit[lSlices+1];
 		for(int i=0; i<=lSlices; ++i)
@@ -3734,6 +3759,12 @@ namespace hpl {
 								0, 0, 0.5f, 0.5f,
 								0, 0, 0, 1);
 			apMtx[i] = cMath::MatrixMul(cMath::MatrixMul(mtxAtlas, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
+			cMatrixf mtxBias(	0.5f, 0, 0, 0.5f,
+								0, 0.5f, 0, 0.5f,
+								0, 0, 0.5f, 0.5f,
+								0, 0, 0, 1);
+			mvDirShadowMtxSlice[i] = cMath::MatrixMul(cMath::MatrixMul(mtxBias, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
+			if(i == 0) mfDirShadowDepth0 = fDepth;
 			apNear[i] = -vSplit[i];
 			apFar[i] = i == lSlices-1 ? -1e6f : -vSplit[i+1];
 			apOffsetMul[i] = (vSplit[1]-vSplit[0]) / (vSplit[i+1]-vSplit[i]);
@@ -4309,7 +4340,7 @@ namespace hpl {
 		{
 			pProgram->SetColor4f(kVar_avSkyboxColor, GetFogRenderColor(pWorld->GetSkyBoxColor(), pWorld->GetSkyBoxBrightness()));
 			SetTexture(2, pWorld->GetFogSkyboxTexture());
-			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMatrixf::Identity);
+			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMath::MatrixRotate(pWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ).GetTranspose());
 			const cVector3l& vSkySize = pWorld->GetFogSkyboxTexture()->GetSize();
 			pProgram->SetFloat(kVar_afSkyboxMipNum, log2f((float)cMath::Max(vSkySize.x, vSkySize.y)));
 		}
@@ -5198,14 +5229,11 @@ namespace hpl {
 
 		/////////////////////////
 		//Calculate and set matrix
-		m_mtxSkyBox = cMatrixf::Identity;
-
 		float fFarClip = mpCurrentFrustum->GetFarPlane();
-
 		float fSide = sqrt((fFarClip*fFarClip) / 3) *0.95f;
-		m_mtxSkyBox.m[0][0] = fSide;
-		m_mtxSkyBox.m[1][1] = fSide;
-		m_mtxSkyBox.m[2][2] = fSide;
+
+		m_mtxSkyBox = cMath::MatrixRotate(mpCurrentWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ);
+		for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) m_mtxSkyBox.m[i][j] *= fSide;
 
 		m_mtxSkyBox.SetTranslation(mpCurrentFrustum->GetOrigin());
 

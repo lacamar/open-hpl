@@ -75,6 +75,7 @@ namespace hpl {
 		float GetWeight();
 
         void SetSpeed(float afSpeed);
+		void FadeSpeed(float afDest, float afTime);
 		float GetSpeed();
 
 		void SetBaseSpeed(float afSpeed);
@@ -140,6 +141,8 @@ namespace hpl {
 		float mfLength;
 		float mfWeight;
 		float mfSpeed;
+		float mfSpeedDest;
+		float mfSpeedFadeRate;
 		float mfTimePos;
 		float mfPrevTimePos;
 

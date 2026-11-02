@@ -677,6 +677,21 @@ namespace
 				auto idIt = mapIds.find(pEnt->msName);
 				pCont->AddNode(pEnt->msName, idIt != mapIds.end() ? idIt->second : lNextId++, pEnt->GetPosition(), NULL);
 			}
+		// official cLuxMap::AddPathNodeGeneratorArea output, cached next to the map
+		if (FILE *pGen = cPlatform::OpenFile(cString::SetFileExtW(pWorld->GetFilePath(), _W("gen_node_cache")), _W("rb")))
+		{
+			TiXmlDocument genDoc;
+			bool bGen = genDoc.LoadFile(pGen);
+			fclose(pGen);
+			if (bGen && genDoc.RootElement())
+				for (TiXmlElement *p = genDoc.RootElement()->FirstChildElement("Node"); p; p = p->NextSiblingElement("Node"))
+				{
+					tString sName = cString::ToString(p->Attribute("Name"), "");
+					auto idIt = mapIds.find(sName);
+					if (idIt != mapIds.end())
+						pCont->AddNode(sName, idIt->second, cString::ToVector3f(p->Attribute("Pos"), 0), NULL);
+				}
+		}
 		if (bHasFile)
 			pCont->LoadFromFile(sFile);
 		else
@@ -2564,6 +2579,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "int GetNextState()", +[](SM *s) { return s->mlNext; });
 	SOMA_METHOD(e, T, "int GetPrevState()", +[](SM *s) { return s->mlPrev; });
 	SOMA_METHOD(e, T, "int GetCurrentState()", +[](SM *s) { return s->mlCur; });
+	SOMA_METHOD(e, T, "tString GetCurrentStateName()", +[](SM *s) { auto it = s->mapStates.find(s->mlCur); return it == s->mapStates.end() ? tString() : it->second; });
 	SOMA_METHOD(e, T, "int GetNextSubState()", +[](SM *s) { return s->mlSubNext; });
 	SOMA_METHOD(e, T, "int GetPrevSubState()", +[](SM *s) { return s->mlSubPrev; });
 	SOMA_METHOD(e, T, "int GetCurrentSubState()", +[](SM *s) { return s->mlSubCur; });

@@ -76,6 +76,7 @@ namespace hpl {
 		mbOcclusionCullShadowCasters = false;
 
 		mfShadowMapBiasMul = 1;
+		mfShadowDistance = -1;
 		mfShadowMapSlopeScaleBiasMul = 1;
 			
 		///////////////////////////////

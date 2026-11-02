@@ -48,7 +48,10 @@ public:
 	void SetPaused(const tString &asScene, bool abX);
 	void SetPausedAll(bool abX);
 	void ReapplyPauses();
-	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
+	void AddSubtitle(const std::vector<tString> &avRows, const tString &asName, const cColor &aColor, int alDrawnChars);
+	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D,
+				   float afListenRange = -1, float afMinFreq = 22000, float afMaxFreq = 22000, int alFreqFlags = 0);
+	void SetFocusScene(const tString &asScene);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
 	void SetSpeakingCallback(const tString &asCharacter, const tString &asFunc);
 
@@ -122,6 +125,8 @@ private:
 		bool mbPaused = false;
 		bool mbPlayWhilePaused = false;
 		tString msSourceEntity;
+		float mfSourceMin = 0, mfSourceMax = 0, mfListenRange = -1, mfMinFreq = 22000, mfMaxFreq = 22000, mfSourceDist = 0;
+		int mlFreqFlags = 0;
 		tString msFile;
 		tString msLipEntity;
 		std::shared_ptr<std::vector<cLipFrame>> mpLipsync;
@@ -163,13 +168,28 @@ private:
 		tString msEntity;
 		float mfMinDist, mfMaxDist;
 		bool mbUse3D;
+		float mfListenRange = -1, mfMinFreq = 22000, mfMaxFreq = 22000;
+		int mlFreqFlags = 0;
 	};
 	std::map<tString, cSource> mmapSources;
 	struct cSceneVolume
 	{
 		float mfVolume = 1, mfGoal = 1, mfSpeed = 0;
+		float mfFocus = 1;
 	};
 	std::map<tString, cSceneVolume> mmapSceneVolumes;
+	std::map<tString, int> mmapSceneFocusPrio;
+	tString msFocusScene, msForcedFocusScene;
+	float mfFocusTimer = 0;
+	void UpdateFocus(float afTimeStep);
+	struct cImmediateSubtitle
+	{
+		std::vector<tString> mvRows;
+		tString msName;
+		cColor mColor;
+		int mlDrawnChars;
+	};
+	std::vector<cImmediateSubtitle> mvImmediate;
 	std::map<tString, tString> mmapSpeakingCallbacks;
 	std::set<tString> msetSpeaking;
 	void UpdateSpeakingCallbacks();

@@ -541,6 +541,10 @@ namespace hpl {
 		// HDR / wide colour output
 		int mlOutputMode = 0; // 0 SDR, 1 HDR10 PQ, 2 scRGB linear, 3 Display-P3 SDR
 		float mfPaperWhite = 203, mfPeakNits = 1000;
+	public:
+		bool GetScreenFloatStats(float &afMax, float &afMean, float &afFracOver1) override;
+		float GetHdrHeadroom() override { return mlOutputMode == 0 ? 1.0f : powf(std::max(1.0f, mfPeakNits / mfPaperWhite), 1.0f / 2.2f); }
+	private:
 
 		bool mbRendering = false;
 		VkImageView mvRenderColor[kMaxDrawColorBuffers];

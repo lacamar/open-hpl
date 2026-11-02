@@ -161,6 +161,20 @@ namespace hpl {
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {
+		// HDR output keeps the tone-mapped range above SDR white, rolled off into the display headroom
+		{ "posteffect_tonemapping_frag.hpsl", "uniform float afKey;\n", "uniform float afKey;\n@ifdef UseHdrOutput\nuniform float afHdrHeadroom;\n@endif\n" },
+		{ "posteffect_tonemapping_frag.hpsl", "\tvSourceColor = clamp(vSourceColor, cVector4f(0.0, 0.0, 0.0, 0.0), cVector4f(1.0, 1.0, 1.0, 1.0));\n",
+		  "@ifdef UseHdrOutput\n\tcVector3f vHdrExcess = max(vSourceColor.rgb - 1.0, 0.0);\n@endif\n\tvSourceColor = clamp(vSourceColor, cVector4f(0.0, 0.0, 0.0, 0.0), cVector4f(1.0, 1.0, 1.0, 1.0));\n" },
+		{ "posteffect_tonemapping_frag.hpsl", "vSourceColor = pow(vSourceColor, cVector4f(afInvGammaCorrection));\n\t@endif\n",
+		  "vSourceColor = pow(vSourceColor, cVector4f(afInvGammaCorrection));\n\t@endif\n@ifdef UseHdrOutput\n\tcVector3f vHdrExcess = max(vSourceColor.rgb - 1.0, 0.0);\n@endif\n" },
+		{ "posteffect_tonemapping_frag.hpsl", "\tout_vColor0 = vSourceColor;", "@ifdef UseHdrOutput\n\tvSourceColor.rgb = min(vSourceColor.rgb, 1.0) + (afHdrHeadroom - 1.0) * (1.0 - 2.0 / (exp(2.0 * vHdrExcess / (afHdrHeadroom - 1.0)) + 1.0));\n@endif\n\tout_vColor0 = vSourceColor;" },
+		{ "posteffect_tonemapping_frag.hpsl", "\tout_vColor0 = cVector4f(vSourceColor.rgb, dot(", "@ifdef UseHdrOutput\n\tvSourceColor.rgb = min(vSourceColor.rgb, 1.0) + (afHdrHeadroom - 1.0) * (1.0 - 2.0 / (exp(2.0 * vHdrExcess / (afHdrHeadroom - 1.0)) + 1.0));\n@endif\n\tout_vColor0 = cVector4f(vSourceColor.rgb, dot(" },
+		// sun cascades sit in a 2x2 atlas
+		{ "deferred_light_frag.hpsl", "cVector4f(afSliceDiv, 1.0, 1.0, 1.0)", "cVector4f(0.5, 0.5, 1.0, 1.0)" },
+		{ "deferred_light_frag.hpsl", "cVector4f(lSlice * afSliceDiv, 0.0, 0.0, 0.0)",
+		  "cVector4f(mod(float(lSlice), 2.0) * 0.5, floor(float(lSlice) * 0.5) * 0.5, 0.0, 0.0)" },
+		{ "deferred_light_frag.hpsl", "cVector4f((lSlice + 1) * afSliceDiv, 0.0, 0.0, 0.0)",
+		  "cVector4f(mod(float(lSlice + 1), 2.0) * 0.5, floor(float(lSlice + 1) * 0.5) * 0.5, 0.0, 0.0)" },
 		// liquid fade comes from the instance buffer in newer games
 		{ "deferred_gbuffer_solid_frag.hpsl", "@ifdef UseLiquid\n\t\t  in cVector4f px_vLiquidFade,\n@endif\n", "" },
 		{ "deferred_gbuffer_solid_frag.hpsl", "\tuniform cTexture2D aLiquidMap : 11;\n", "\tuniform cTexture2D aLiquidMap : 11;\n\tuniform cVector4f px_vLiquidFade;\n" },

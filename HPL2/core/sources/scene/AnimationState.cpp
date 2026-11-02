@@ -49,6 +49,8 @@ namespace hpl {
 		mfTimePos = 0;
 		mfWeight = 1;
 		mfSpeed = 1.0f;
+		mfSpeedDest = 1.0f;
+		mfSpeedFadeRate = 0;
 		mfBaseSpeed = 1.0f;
 		mfTimePos = 0;
 		mfPrevTimePos=0;
@@ -84,6 +86,8 @@ namespace hpl {
 
 	void cAnimationState::Update(float afTimeStep)
 	{
+		if(mfSpeed != mfSpeedDest) mfSpeed = cMath::IncreaseTo(mfSpeed, mfSpeedFadeRate*afTimeStep, mfSpeedDest);
+
 		//Update animation
 		AddTimePosition(afTimeStep);
 
@@ -164,6 +168,13 @@ namespace hpl {
 	void cAnimationState::SetSpeed(float afSpeed)
 	{
 		mfSpeed = afSpeed;
+		mfSpeedDest = afSpeed;
+	}
+	// Rebirth cAnimationState::FadeSpeed 0xf60240
+	void cAnimationState::FadeSpeed(float afDest, float afTime)
+	{
+		mfSpeedDest = afDest;
+		mfSpeedFadeRate = std::abs(afDest - mfSpeed) / cMath::Max(afTime, 0.0001f);
 	}
 	float cAnimationState::GetSpeed()
 	{

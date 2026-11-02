@@ -795,12 +795,18 @@ static void PauseSoundInstances(tFlag alTypes, bool abX)
 }
 
 // cLuxMap::PauseSoundsAndMusic 0xb19280 / ResumeSoundsAndMusic 0xb147a0 (Rebirth)
+static std::set<cMeshEntity *> gsetUpdateWhenPaused;
+static bool gbSavingEnabled = true;
+static float gfSavingDisabledTime = 0;
+
 void SomaSetGamePaused(bool abX, bool abMusic, bool abSounds, bool abAmbience, tFlag alTypes)
 {
 	static bool bMusicP = false, bSoundsP = false, bAmbP = false;
 	if (abX == false && gpSomaBase->mbScriptGamePaused == false)
 		return;
 	gpSomaBase->mbScriptGamePaused = abX;
+	if (abX == false)
+		gsetUpdateWhenPaused.clear();
 	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 		pMap->GetWorld()->SetActive(pMap->mbActive && abX == false);
 	cSound *pSound = gpSomaBase->mpEngine->GetSound();
@@ -956,6 +962,11 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 	}
 	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive && gpSomaBase->mbScriptGamePaused == false)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
+	if (gbSavingEnabled == false && gfSavingDisabledTime > 0 && (gfSavingDisabledTime -= afTimeStep) <= 0)
+		gbSavingEnabled = true;
+	if (gpSomaBase->mbScriptGamePaused)
+		for (cMeshEntity *pMesh : gsetUpdateWhenPaused)
+			pMesh->UpdateLogic(afTimeStep);
 	mbUpdated = true;
 }
 
@@ -1464,6 +1475,28 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 				  +[](bool b, bool m, bool s, bool a) { SomaSetGamePaused(b, m, s, a); });
 	else
 		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
+	SOMA_FUNC(e, "void cLux_AddUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { if (m) gsetUpdateWhenPaused.insert(m); });
+	SOMA_FUNC(e, "void cLux_RemoveUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { gsetUpdateWhenPaused.erase(m); });
+	SOMA_FUNC(e, "void cLux_DisableSaving(float afDuration)", +[](float d) { gbSavingEnabled = false; gfSavingDisabledTime = d; });
+	SOMA_FUNC(e, "void cLux_EnableSaving()", +[]() { gbSavingEnabled = true; });
+	SOMA_FUNC(e, "bool cLux_GetSavingEnabled()", +[]() { return gbSavingEnabled; });
+	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
+	// official binds cSoundEntity::SetReverbAmount to SetVolume
+	SOMA_METHOD(e, "cSoundEntity", "void SetReverbAmount(float afX)", +[](cSoundEntity *o, float f) { o->SetVolume(f); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFile3D(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetUse3D(b); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileStream(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetStream(b); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFilePriority(int alX)", +[](cSoundEntity *o, int p) { if (o->GetData()) o->GetData()->SetPriority(p); });
+	for (const char *pType : {"cMeshEntity", "cSubMeshEntity", "cLuxProp"})
+		SOMA_METHOD_NEW(e, pType, "void SetRenderLayer(int alX)", +[](void *, int) {});
+	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeSpeed(float afDest, float afTime)", +[](cAnimationState *o, float d, float t) { o->FadeSpeed(d, t); });
+	SOMA_FUNC(e, "bool cLux_GetFootageModeActive()", +[]() { return false; });
+	SOMA_FUNC(e, "void cSound_PreloadSoundEvent(const tString&in asInternalPath)", +[](const tString &) {});
+	SOMA_METHOD(e, "cLuxInputHandler", "void SetGamepadColor(int alId, const cColor&in aColor)", +[](void *, int, const cColor &) {});
+	SOMA_FUNC(e, "void cSystem_ProfileStart(const tString&in asName)", +[](const tString &) {});
+	SOMA_FUNC(e, "void cSystem_ProfileEnd(const tString&in asName)", +[](const tString &) {});
+	SOMA_METHOD(e, "iCharacterBody", "void SetupSafePositions(float afSafePositionSaveInterval, float afSafePositionBufferTime)", +[](iCharacterBody *c, float i, float b) { c->SetupSafePositions(i, b); });
+	SOMA_METHOD(e, "iCharacterBody", "void TeleportToSafePosition(float afElapsedTime, bool abSmooth = false)", +[](iCharacterBody *c, float t, bool s) { c->TeleportToSafePosition(t, s); });
+	SOMA_METHOD(e, "iCharacterBody", "cVector3f GetLastVelocity()", +[](iCharacterBody *c) { return c->GetVelocity(gpSomaBase->mpEngine->GetStepSize()); });
 	SOMA_FUNC(e, "bool cLux_GetGamePaused()", +[]() { return gpSomaBase->mbScriptGamePaused; });
 	SOMA_FUNC(e, "bool cLux_GetHideCrosshair()", +[]() { return SomaUserConfig() && SomaUserConfig()->GetBool("Debug", "HideCrosshair", false); });
 	SOMA_FUNC(e, "bool cLux_IsChangingMap()", +[]() { return gsPendingMap.empty() == false; });
@@ -1646,6 +1679,8 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_METHOD_NEW(e, "cLightBox", "void SetScriptableIsSaved(bool abX)", +[](cLightBox *o, bool b) { o->SetIsSaved(b); });
 		for (const char *pType : {"iLight", "cLightPoint", "cLightSpot", "cLightBox", "cLightDirectional"})
 		{
+			SOMA_METHOD_NEW(e, pType, "float GetShadowDistance()", +[](iLight *o) { return o->GetShadowDistance(); });
+			SOMA_METHOD_NEW(e, pType, "void SetShadowDistance(float afX)", +[](iLight *o, float f) { o->SetShadowDistance(f); });
 			SOMA_METHOD_NEW(e, pType, "float GetDefaultBrightness()", +[](iLight *o) { return o->GetDefaultBrightness(); });
 			SOMA_METHOD_NEW(e, pType, "void SetDefaultBrightness(float afX)", +[](iLight *o, float f) { o->SetDefaultBrightness(f); });
 			SOMA_METHOD_NEW(e, pType, "void FadeBrightnessTo(float afBrightness, float afTime, eEasing aEasing = eEasing_Linear)",
@@ -1887,6 +1922,16 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 					std::vector<iPhysicsBody *> vBodies;
 					w->GetBodiesInBV(&bv, &vBodies);
 					for (iPhysicsBody *pBody : vBodies) a.InsertLast(&pBody);
+				});
+	SOMA_METHOD(e, "iPhysicsWorld", "void GetBodiesInAABB(const cVector3f&in avMin, const cVector3f&in avMax, bool abSkipStatic, bool abSkipDynamic, array<iPhysicsBody@> &inout apBodyVec)",
+				+[](iPhysicsWorld *w, const cVector3f &vMin, const cVector3f &vMax, bool bSkipStatic, bool bSkipDynamic, CScriptArray &a) {
+					cBoundingVolume bv;
+					bv.SetLocalMinMax(vMin, vMax);
+					std::vector<iPhysicsBody *> vBodies;
+					w->GetBodiesInBV(&bv, &vBodies);
+					for (iPhysicsBody *pBody : vBodies)
+						if ((pBody->GetMass() == 0 ? bSkipStatic : bSkipDynamic) == false)
+							a.InsertLast(&pBody);
 				});
 	SOMA_FUNC(e, "void Light_FadeTo(const tString &in asLightName, const cColor &in acColor, float afRadius, float afTime)",
 			  +[](S n, const cColor &c, float r, float t) {

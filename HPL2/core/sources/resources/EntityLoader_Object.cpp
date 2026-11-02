@@ -65,6 +65,7 @@
 namespace hpl {
 
 	bool cEntityLoader_Object::mbSubMeshScaleIncludesModelScale = false;
+	bool cEntityLoader_Object::mbSubMeshInstanceScaleAfterRotation = false;
 	bool cEntityLoader_Object::mbSubMeshMaterials = false;
 	bool cEntityLoader_Object::mbShareBodyShapes = false;
 
@@ -439,9 +440,13 @@ namespace hpl {
 						cVector3f vModelScale = pSubEntity->GetSubMesh()->GetModelScale();
 						for(int i=0; i<3; ++i) if(vModelScale.v[i] != 0) vSubScale.v[i] /= vModelScale.v[i];
 					}
-					cMatrixf mtxLocalTransform = GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
-																		pSubMeshElem->GetAttributeVector3f("Rotation"),
-																		vSubScale*mvScale);
+					cMatrixf mtxLocalTransform = mbSubMeshInstanceScaleAfterRotation ?
+						cMath::MatrixMul(cMath::MatrixScale(mvScale), GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos"),
+																							pSubMeshElem->GetAttributeVector3f("Rotation"),
+																							vSubScale)) :
+						GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
+												pSubMeshElem->GetAttributeVector3f("Rotation"),
+												vSubScale*mvScale);
 					
 					//mtxLocalTransform = cMath::MatrixMul(mtxLocalTransform, cMath::MatrixScale(mvScale));
 
