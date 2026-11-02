@@ -367,15 +367,14 @@ namespace hpl {
 		float fUnitScale = UnitScale(pScene);
 		if(pScene == NULL || pScene->mRootNode == NULL || fUnitScale == 1) return pAnimation;
 
-		// .anm keys of top-level bones are in metres, deeper ones in file units
+		// .anm keys of top-level bones are in metres, deeper ones in file units; applied per skeleton (.msh bones are already in file units)
 		std::set<tString> setTop;
 		for(unsigned int c=0; c<pScene->mRootNode->mNumChildren; ++c) setTop.insert(pScene->mRootNode->mChildren[c]->mName.C_Str());
 		for(int i=0; i<pAnimation->GetTrackNum(); ++i)
 		{
 			cAnimationTrack *pTrack = pAnimation->GetTrack(i);
 			if(setTop.count(pTrack->GetName())) continue;
-			for(int j=0; j<pTrack->GetKeyFrameNum(); ++j)
-				pTrack->GetKeyFrame(j)->trans = pTrack->GetKeyFrame(j)->trans * fUnitScale;
+			pTrack->SetUnitScale(fUnitScale);
 		}
 		return pAnimation;
 	}

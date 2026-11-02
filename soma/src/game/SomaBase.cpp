@@ -755,6 +755,24 @@ static void cSomaBase_HeadlessCmd_ScriptVars(void *apUserData, const cHeadlessRe
 		}
 		if (pObj == NULL)
 			continue;
+		if (aReq.HasKey("set"))
+		{
+			tString sVar = aReq.GetString("var", "");
+			for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)
+			{
+				if (sVar != pObj->GetPropertyName(i))
+					continue;
+				void *pAddr = pObj->GetAddressOfProperty(i);
+				int lType = pObj->GetPropertyTypeId(i);
+				tString sVal = aReq.GetString("set", "");
+				if (lType == asTYPEID_BOOL)
+					*(bool *)pAddr = sVal == "1" || sVal == "true";
+				else if (lType == asTYPEID_INT32)
+					*(int *)pAddr = atoi(sVal.c_str());
+				else if (lType == asTYPEID_FLOAT)
+					*(float *)pAddr = (float)atof(sVal.c_str());
+			}
+		}
 		sClass = pObj->GetObjectType()->GetName();
 		sOut += "[" + sObjName + " " + sClass + "]\n";
 		for (asUINT i = 0; i < pObj->GetPropertyCount(); ++i)

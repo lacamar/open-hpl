@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.69
+Version:        1.3.70
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.70-1
+- Fix SOMA hatch and vent animations
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.69-1
 - Load generated AI path nodes
 - Fix HPL3 submesh scale order

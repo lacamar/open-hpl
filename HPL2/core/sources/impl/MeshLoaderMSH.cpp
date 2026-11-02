@@ -143,6 +143,7 @@ namespace hpl {
 				GetBoneFromBuffer(pSkeleton->GetRootBone(), &binBuff, 0, mbBoneUnitScale && !bHpl3);
 			}
 
+			pSkeleton->mbFileUnits = bHpl3;
 			pMesh->SetSkeleton(pSkeleton);
 		}
 

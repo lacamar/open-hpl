@@ -48,6 +48,8 @@ namespace hpl {
 		inline int GetKeyFrameNum(){ return (int) mvKeyFrames.size();}
 
 		inline tAnimTransformFlag GetTransformFlags(){ return mTransformFlags;}
+		inline float GetUnitScale(){ return mfUnitScale;}
+		inline void SetUnitScale(float afX){ mfUnitScale = afX;}
 		
 		/**
 		 * Apply the animation to a node. The method uses Node->AddXXX() so Update matrix must be called
@@ -56,7 +58,7 @@ namespace hpl {
 		 * \param afTime The time at which to apply the animation
 		 * \param afWeight The weight of the animation, a value from 0 to 1.
 		 */
-		void ApplyToNode(cNode3D* apNode, float afTime, float afWeight,bool bLoop=true);
+		void ApplyToNode(cNode3D* apNode, float afTime, float afWeight,bool bLoop=true, float afTransScale=1.0f);
 
 		/**
 		 * Get a KeyFrame that contains an interpolated value.
@@ -87,6 +89,7 @@ namespace hpl {
 
 		tKeyFramePtrVec mvKeyFrames;
 		tAnimTransformFlag mTransformFlags;
+		float mfUnitScale = 1.0f;
 
 		float mfMaxFrameTime;
 		

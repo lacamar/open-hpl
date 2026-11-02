@@ -103,7 +103,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cAnimationTrack::ApplyToNode(cNode3D* apNode, float afTime, float afWeight, bool bLoop)
+	void cAnimationTrack::ApplyToNode(cNode3D* apNode, float afTime, float afWeight, bool bLoop, float afTransScale)
 	{
 		if(mvKeyFrames.empty()) return;
 
@@ -120,7 +120,7 @@ namespace hpl {
 		apNode->AddRotation(qRot);
 		
 		//Translation
-		cVector3f vTrans = Frame.trans * afWeight;
+		cVector3f vTrans = Frame.trans * (afWeight * afTransScale);
 		apNode->AddTranslation(vTrans);
 	}
 

@@ -512,7 +512,8 @@ namespace hpl {
 							//Apply the animation track to node.
 							if(pState && pState->IsActive())
 							{
-								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping());
+								float fTransScale = mpMesh->GetSkeleton()->mbFileUnits ? 1.0f : pTrack->GetUnitScale();
+								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping(), fTransScale);
 							}
 						}
 
@@ -616,7 +617,7 @@ namespace hpl {
 								cNode3D* pNodeState = GetNodeState(vIdx[i]);
 
 								if(pNodeState->IsActive()) 
-									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul);
+									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul, true, pTrack->GetUnitScale());
 							}
 
 							pAnimState->Update(afTimeStep);
