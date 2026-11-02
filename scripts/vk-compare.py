@@ -43,7 +43,7 @@ def render(map_name, renderer, path, frames, extra, targets=(), dumps=()):
                                capture_output=True, text=True, check=True).stdout.split()
     pid = int(pid)
     try:
-        deadline = time.time() + 180
+        deadline = time.time() + 900
         hpl = None
         while time.time() < deadline:
             try:
