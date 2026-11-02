@@ -224,6 +224,7 @@ private:
 	float mfSpeedMul = 1, mfSpeedMulDest = 1, mfSpeedMulSpeed = 0;
 	float mfFade = 1, mfFadeDest = 1, mfFadeSpeed = 0;
 	bool mbStopAtFadeEnd = false;
+	int mlStartFails = 0;
 	bool mbStarted = false, mbStopped = false, mbPaused = false, mbStopDisabled = false;
 	bool mb3DPlay = false;
 	float mfTime = 0;

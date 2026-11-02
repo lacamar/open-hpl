@@ -287,6 +287,20 @@ static void cSomaBase_HeadlessCmd_SoundStats(void *apUserData, const cHeadlessRe
 	for (const tString &sLine : gpSomaBase->mpEngine->GetSound()->GetSoundHandler()->GetRecentStarts())
 		sRecent += sLine + "\n";
 	aResp.Set("recent", sRecent);
+	if (cWorld *pWorld = gpSomaBase->GetCurrentWorld())
+	{
+		std::map<tString, int> mapEnt;
+		cSoundEntityIterator it = pWorld->GetSoundEntityIterator();
+		while (it.HasNext())
+		{
+			cSoundEntity *p = it.Next();
+			mapEnt[p->GetName() + (p->IsStopped() ? " stopped" : " live") + (p->GetRemoveWhenOver() ? " rm" : " keep")]++;
+		}
+		tString sEnt;
+		for (auto &e : mapEnt)
+			sEnt += cString::ToString(e.second) + " " + e.first + "\n";
+		aResp.Set("entities", sEnt);
+	}
 	aResp.Set("now", (int)cPlatform::GetApplicationTime());
 	aResp.Set("listener", vListener.ToString());
 	aResp.Set("soundscape", cSomaSoundscape::Get()->Describe());
