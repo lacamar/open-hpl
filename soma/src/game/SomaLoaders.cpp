@@ -241,6 +241,9 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 				pEnt->mpMainBody = pBody;
 		if (sMainBody != "" && pEnt->mpMainBody == NULL)
 			Warning("Could not find main physics body '%s'\n", pEnt->msName.c_str());
+		for (size_t i = 0; i < mvBodies.size() && i < mvBodyExtraData.size(); ++i)
+			if (pEnt->GetMainBody() == mvBodies[i])
+				pEnt->mvBodyOffset = mvBodyExtraData[i].m_mtxLocalTransform.GetTranslation();
 		if (cXmlElement *pModel = apRootElem->GetFirstElement("ModelData"))
 		{
 			LoadSockets(pModel, "", pEnt);
