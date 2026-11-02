@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.72
+Version:        1.3.73
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,10 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.73-1
+- Fix silent faded-in ambience (04_01 storm)
+- Bind GetLightFromID, GetRoll, IsMoving
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.72-1
 - Fix sprite sheet particles (UVSubDivs)
 - Fix silent audio recordings
