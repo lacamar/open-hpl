@@ -48,6 +48,7 @@ public:
 	void SetPaused(const tString &asScene, bool abX);
 	void SetPausedAll(bool abX);
 	void ReapplyPauses();
+	void AddSubtitle(const std::vector<tString> &avRows, const tString &asName, const cColor &aColor, int alDrawnChars);
 	void SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D);
 	void SetFocusScene(const tString &asScene);
 	void FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime);
@@ -176,6 +177,14 @@ private:
 	tString msFocusScene, msForcedFocusScene;
 	float mfFocusTimer = 0;
 	void UpdateFocus(float afTimeStep);
+	struct cImmediateSubtitle
+	{
+		std::vector<tString> mvRows;
+		tString msName;
+		cColor mColor;
+		int mlDrawnChars;
+	};
+	std::vector<cImmediateSubtitle> mvImmediate;
 	std::map<tString, tString> mmapSpeakingCallbacks;
 	std::set<tString> msetSpeaking;
 	void UpdateSpeakingCallbacks();

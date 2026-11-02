@@ -52,7 +52,7 @@ static cConfigFile *OpenConfig(const tWString &asUserFile, const tWString &asDef
 	return pCfg;
 }
 
-static cConfigFile *gpUserConfig = NULL, *gpKeyConfig = NULL, *gpGameConfig = NULL;
+static cConfigFile *gpUserConfig = NULL, *gpKeyConfig = NULL, *gpGameConfig = NULL, *gpStatsConfig = NULL;
 
 cConfigFile *SomaUserConfig() { return gpUserConfig; }
 cConfigFile *SomaKeyConfig() { return gpKeyConfig; }
@@ -77,6 +77,7 @@ static void LoadConfigs()
 	gpUserConfig = OpenConfig(sUserDir + _W("user_settings.cfg"), sGame + _W("/config/default_user_settings.cfg"));
 	gpKeyConfig = OpenConfig(sUserDir + _W("user_keys.cfg"), sGame + _W("/config/default_user_keys.cfg"));
 	gpGameConfig = OpenConfig(_W(""), sGame + _W("/config/game.cfg"));
+	gpStatsConfig = OpenConfig(sUserDir + _W("user_stats.cfg"), _W(""));
 }
 
 static tString gsLanguage = "english";
@@ -591,6 +592,7 @@ void cSomaLuxGame::RegisterNatives(asIScriptEngine *e)
 	e->RegisterObjectProperty("cLuxEffect", "int mlId", (int)((char *)&effect.mlId - (char *)(cSomaLuxScriptable *)&effect));
 
 	SOMA_FUNC(e, "cConfigFile@ cLux_GetUserConfig()", +[]() { return gpUserConfig; });
+	SOMA_FUNC(e, "cConfigFile@ cLux_GetStatsConfig()", +[]() { return gpStatsConfig; });
 	SOMA_FUNC(e, "float cLux_GetStringDuration(const tWString&in asStr)", SomaStringDuration);
 	SOMA_METHOD(e, "iLowLevelGraphics", "void SetBrightness(float afX)", +[](iLowLevelGraphics *g, float x) { g->SetGammaCorrection(x); });
 	SOMA_FUNC(e, "iFontData@ cResources_CreateFontData(const tString&in asName)", +[](const tString &s) { return gpSomaBase->mpEngine->GetResources()->GetFontManager()->CreateFontData(s); });
