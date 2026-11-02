@@ -512,7 +512,7 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 	{
 		float fDiff = mfRotateMaxSpeed - mfRotateSpeed;
 		mfRotateSpeed += cMath::Clamp(fDiff, -mfRotateAcc * afTimeStep, mfRotateAcc * afTimeStep);
-		cVector3f vAxis = cMath::MatrixMul3x3(mtxRot, mvRotateAxis);
+		cVector3f vAxis = mvRotateAxis;
 		if (vAxis.SqrLength() < 1e-8f || mfRotateSpeed == 0)
 			return;
 		cQuaternion q;
