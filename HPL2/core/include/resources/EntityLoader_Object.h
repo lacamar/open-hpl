@@ -74,6 +74,7 @@ namespace hpl {
 		virtual ~cEntityLoader_Object(){}
 
 		static void SetSubMeshScaleIncludesModelScale(bool abX){ mbSubMeshScaleIncludesModelScale = abX; }
+		static void SetSubMeshInstanceScaleAfterRotation(bool abX){ mbSubMeshInstanceScaleAfterRotation = abX; }
 		static void SetSubMeshMaterials(bool abX){ mbSubMeshMaterials = abX; }
 		static void SetShareBodyShapes(bool abX){ mbShareBodyShapes = abX; }
 
@@ -110,6 +111,7 @@ namespace hpl {
 		bool mbActive;
 		cVector3f mvScale;
 		static bool mbSubMeshScaleIncludesModelScale;
+		static bool mbSubMeshInstanceScaleAfterRotation;
 		static bool mbSubMeshMaterials;
 		static bool mbShareBodyShapes;
 
