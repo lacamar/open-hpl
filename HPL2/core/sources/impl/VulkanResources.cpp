@@ -526,7 +526,7 @@ namespace hpl {
 		VkImageViewCreateInfo vci{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
 		vci.image = pImg->mImage;
 		vci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		vci.format = pImg->mFormat;
+		vci.format = UnormOfSrgb(pImg->mFormat); // GL leaves FRAMEBUFFER_SRGB off: sRGB targets store raw values
 		vci.subresourceRange = { pImg->mAspect, (uint32_t)alLevel, 1, (uint32_t)alLayer, 1 };
 		VkImageView view;
 		vkCreateImageView(mpGfx->mDevice, &vci, NULL, &view);

@@ -667,6 +667,13 @@ namespace hpl {
 		if(apMapped) *apMapped = info.pMappedData;
 	}
 
+	VkFormat UnormOfSrgb(VkFormat aFormat)
+	{
+		if(aFormat == VK_FORMAT_R8G8B8A8_SRGB) return VK_FORMAT_R8G8B8A8_UNORM;
+		if(aFormat == VK_FORMAT_B8G8R8A8_SRGB) return VK_FORMAT_B8G8R8A8_UNORM;
+		return aFormat;
+	}
+
 	void cLowLevelGraphicsVulkan::CreateImage(cVulkanImage& aImg, VkImageType aType, VkImageViewType aViewType, VkFormat aFormat, const cVector3l& avSize,
 											  int alLevels, int alLayers, VkImageUsageFlags aUsage, const VkComponentMapping* apSwizzle)
 	{
@@ -682,6 +689,7 @@ namespace hpl {
 		VkImageCreateInfo ici{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
 		ici.flags = aViewType == VK_IMAGE_VIEW_TYPE_CUBE ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 		if(aType == VK_IMAGE_TYPE_3D) ici.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+		if(UnormOfSrgb(aFormat) != aFormat) ici.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		ici.imageType = aType;
 		ici.format = aFormat;
 		ici.extent = { (uint32_t)std::max(1, avSize.x), (uint32_t)std::max(1, avSize.y), (uint32_t)std::max(1, avSize.z) };
