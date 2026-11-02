@@ -1301,7 +1301,14 @@ static void RegisterEntryNatives(asIScriptEngine *e)
 		if (Inst *p = EntityEvent(o))
 		{
 			o->FadeIn(speed);
-			p->FadeInTo(vol, speed);
+			p->FadeInTo(1, speed);
+			if (speed > 0)
+			{
+				p->SetVolumeMul(0);
+				p->FadeVolumeMulTo(vol, speed);
+			}
+			else
+				p->SetVolumeMul(vol);
 			return;
 		}
 		o->Play(false);
