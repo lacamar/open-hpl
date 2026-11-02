@@ -24,7 +24,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVL"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVM"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -959,6 +959,19 @@ public:
 			o.Pod(pPlayer->mFOVMul);
 			o.Pod(pPlayer->mAspectMul);
 		}
+		std::vector<iLight *> vOwnedLights;
+		cLightListIterator ownedIt = pMap->GetWorld()->GetLightIterator();
+		while (ownedIt.HasNext())
+			if (iLight *l = ownedIt.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() && l->GetFlickerActive() == false)
+				vOwnedLights.push_back(l);
+		o.Pod((uint32_t)vOwnedLights.size());
+		for (iLight *l : vOwnedLights)
+		{
+			o.Str(l->GetName());
+			o.Pod(l->GetVisibleVar());
+			o.Pod(l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
+			o.Pod(l->IsFading() ? l->GetDestRadius() : l->GetRadius());
+		}
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1313,6 +1326,22 @@ public:
 				pCam->SetPosition(vPos);
 			}
 		}
+		if (glPendingVersion >= 29)
+		{
+			uint32_t nOwned = in.Pod<uint32_t>();
+			for (uint32_t i = 0; i < nOwned && in.ok; ++i)
+			{
+				iLight *l = pMap->GetWorld()->GetLight(in.Str());
+				bool bVisible = in.Pod<bool>();
+				cColor col = in.Pod<cColor>();
+				float fRadius = in.Pod<float>();
+				if (l == NULL || in.ok == false)
+					continue;
+				l->SetVisible(bVisible);
+				l->SetDiffuseColor(col);
+				l->SetRadius(fRadius);
+			}
+		}
 	}
 };
 
@@ -1390,7 +1419,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 28)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 29)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
