@@ -2497,6 +2497,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 				p->AddBodyCallback();
 		});
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
+	SOMA_METHOD_NEW(e, T, "void SetScriptableIsSaved(bool abX)", +[](E *p, bool b) { p->mbSaved = b; });
 	SOMA_METHOD_NEW(e, T, "void SetFullGameSave(bool abX)", +[](E *, bool) {});
 	SOMA_METHOD_NEW(e, T, "void SetIgnoreDynamicAvoidance(bool abX)", +[](E *, bool) {});
 	if (strcmp(T, "cLuxProp") == 0)
