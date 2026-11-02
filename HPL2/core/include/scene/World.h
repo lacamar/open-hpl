@@ -223,6 +223,8 @@ namespace hpl {
 		void SetSkyBoxColor(const cColor& aColor);
 		void SetSkyBoxBrightness(float afX);
 		float GetSkyBoxBrightness(){ return mfSkyBoxBrightness;}
+		void SetSkyBoxRotation(const cVector3f& avRot){ mvSkyBoxRotation = avRot;}
+		const cVector3f& GetSkyBoxRotation(){ return mvSkyBoxRotation;}
 		static void SetHpl3SkyBox(bool abX){ mbHpl3SkyBox = abX;}
 
 		iTexture* GetSkyBoxTexture(){return mpSkyBoxTexture;}
@@ -532,6 +534,7 @@ namespace hpl {
 		bool mbSkyBoxActive;
 		cColor mSkyBoxColor;
 		float mfSkyBoxBrightness = 1;
+		cVector3f mvSkyBoxRotation = cVector3f(0,0,0);
 		static bool mbHpl3SkyBox;
 		void UpdateSkyBoxVBColor();
 

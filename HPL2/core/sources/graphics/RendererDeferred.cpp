@@ -4335,7 +4335,7 @@ namespace hpl {
 		{
 			pProgram->SetColor4f(kVar_avSkyboxColor, GetFogRenderColor(pWorld->GetSkyBoxColor(), pWorld->GetSkyBoxBrightness()));
 			SetTexture(2, pWorld->GetFogSkyboxTexture());
-			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMatrixf::Identity);
+			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMath::MatrixRotate(pWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ).GetTranspose());
 			const cVector3l& vSkySize = pWorld->GetFogSkyboxTexture()->GetSize();
 			pProgram->SetFloat(kVar_afSkyboxMipNum, log2f((float)cMath::Max(vSkySize.x, vSkySize.y)));
 		}
@@ -5224,14 +5224,11 @@ namespace hpl {
 
 		/////////////////////////
 		//Calculate and set matrix
-		m_mtxSkyBox = cMatrixf::Identity;
-
 		float fFarClip = mpCurrentFrustum->GetFarPlane();
-
 		float fSide = sqrt((fFarClip*fFarClip) / 3) *0.95f;
-		m_mtxSkyBox.m[0][0] = fSide;
-		m_mtxSkyBox.m[1][1] = fSide;
-		m_mtxSkyBox.m[2][2] = fSide;
+
+		m_mtxSkyBox = cMath::MatrixRotate(mpCurrentWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ);
+		for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) m_mtxSkyBox.m[i][j] *= fSide;
 
 		m_mtxSkyBox.SetTranslation(mpCurrentFrustum->GetOrigin());
 

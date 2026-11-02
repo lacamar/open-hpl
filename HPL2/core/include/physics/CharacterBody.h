@@ -184,6 +184,8 @@ namespace hpl {
 		cVector3f GetVelocity(float afFrameTime);
 
 		void SetPosition(const cVector3f& avPos, bool abSmooth=false);
+		void SetupSafePositions(float afSaveInterval, float afBufferTime);
+		void TeleportToSafePosition(float afElapsedTime, bool abSmooth=false);
 		const cVector3f& GetPosition();
 		const cVector3f& GetLastPosition();
 		void SetFeetPosition(const cVector3f& avPos, bool abSmooth=false);
@@ -370,6 +372,7 @@ namespace hpl {
 
 		void PreUpdateConnection(float afTimeStep);
 		void PostUpdateConnection(float afTimeStep);
+		void UpdateSafePositions(float afTimeStep);
 		void UpdateBodyConnection(float afTimeStep);
 		void UpdateCharacterConnection(float afTimeStep);
 		
@@ -469,6 +472,9 @@ namespace hpl {
 
 		cVector3f mvForce;
 		cVector3f mvVelocity;
+		std::vector<cVector3f> mvSafePositions;
+		cVector3f mvSafePosHistory[4];
+		float mfSafePosTimer, mfSafePosInterval, mfSafePosBuffer;
 		cVector3f mvLastGroundNormal;
 		
 		cVector3f mvSize;
