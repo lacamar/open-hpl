@@ -2447,7 +2447,7 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 	});
 	SOMA_METHOD_NEW(e, T, "int GetBodyNum()", +[](E *p) { return (int)p->mvBodies.size(); });
 	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetBody(int alIdx)", +[](E *p, int i) { return i >= 0 && i < (int)p->mvBodies.size() ? p->mvBodies[i] : (iPhysicsBody *)NULL; });
-	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetMainBody()", +[](E *p) { return p->GetMainBody(); });
+	SOMA_METHOD_NEW(e, T, "iPhysicsBody@ GetMainBody()", +[](E *p) { iPhysicsBody *b = p->GetMainBody(); return b ? b : SomaAgentBody(p); });
 	SOMA_METHOD_NEW(e, T, "void AttachToEntity(iLuxEntity@ apEntity, iPhysicsBody@ apTargetBody, bool abUseRotation, bool abSnapToParent, bool abLocked=false)",
 					+[](E *p, E *pParent, iPhysicsBody *pBody, bool r, bool snap, bool l) { p->AttachTo(pParent, pBody, "", r, snap, l); });
 	SOMA_METHOD_NEW(e, T, "void AttachToSocket(iLuxEntity@ apEntity, const tString&in asSocket, bool abUseRotation, bool abSnapToParent, bool abLocked=false)",
