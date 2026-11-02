@@ -66,6 +66,10 @@ namespace hpl {
 		// "sdr", "hdr10", "scrgb", "p3"; applies live where supported. False if the backend can't.
 		virtual bool SetColorOutput(const tString& asMode, float afPaperWhite, float afPeakNits){ return false; }
 		virtual tString GetColorOutput(){ return "sdr"; }
+		// Peak over paper white as an encoded (display-referred) value; 1 for SDR
+		virtual float GetHdrHeadroom(){ return 1; }
+		// max / mean of rgb and fraction of pixels with a channel above 1.0 in the unclamped screen target
+		virtual bool GetScreenFloatStats(float &afMax, float &afMean, float &afFracOver1){ return false; }
 		
 		/**
 		 * Show the cursor or not. Default is false

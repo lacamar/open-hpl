@@ -381,7 +381,7 @@ namespace hpl {
 		iGpuProgram* GetToneMapProgram(int alCombo);
 
 		iGpuProgram *mpToneMapProgram;
-		iGpuProgram *mpToneMapPrograms[32];//1=grading, 2=bloom, 4=film grain, 8=sRGB, 16=blend grading
+		iGpuProgram *mpToneMapPrograms[64];//1=grading, 2=bloom, 4=film grain, 8=sRGB, 16=blend grading, 32=HDR output
 		iGpuProgram *mpBloomBrightPassProgram;
 		iGpuProgram *mpBloomBlurProgram[2];//0=vertical, 1=horizontal
 		iGpuProgram *mpImageTrailProgram;
