@@ -26,7 +26,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVN"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVO"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -306,7 +306,7 @@ namespace
 		}
 		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
 		{
-			uint32_t n = in.Pod<uint32_t>();
+			uint32_t n = glPendingVersion >= 31 ? in.Pod<uint32_t>() : 0;
 			auto &set = SomaStringSetOf(apAddr);
 			set.clear();
 			for (uint32_t i = 0; i < n && in.ok; ++i)
@@ -1452,7 +1452,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 30)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 31)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
