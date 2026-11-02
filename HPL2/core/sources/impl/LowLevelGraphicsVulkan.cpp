@@ -31,6 +31,7 @@ namespace hpl {
 	static PFN_vkCmdSetColorBlendEquationEXT vkCmdSetColorBlendEquationEXT_;
 	static PFN_vkCmdSetColorWriteMaskEXT vkCmdSetColorWriteMaskEXT_;
 	static PFN_vkCmdSetDepthClampEnableEXT vkCmdSetDepthClampEnableEXT_;
+	static PFN_vkCmdSetDepthClipEnableEXT vkCmdSetDepthClipEnableEXT_;
 	static PFN_vkSetHdrMetadataEXT vkSetHdrMetadataEXT_;
 
 	static const int kSamplerBindings = 24;
@@ -271,6 +272,8 @@ namespace hpl {
 		for(const char *pExt : vDeviceExt)
 			if(!HasExt(pExt)) { Error("Vulkan device lacks %s\n", pExt); return false; }
 		if(mSurface) vDeviceExt.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		bool bDepthClip = HasExt(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
+		if(bDepthClip) vDeviceExt.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
 		bool bHdrMetadata = mSurface && HasExt(VK_EXT_HDR_METADATA_EXTENSION_NAME);
 		if(bHdrMetadata) vDeviceExt.push_back(VK_EXT_HDR_METADATA_EXTENSION_NAME);
 
@@ -283,6 +286,10 @@ namespace hpl {
 		eds3.extendedDynamicState3ColorBlendEquation = VK_TRUE;
 		eds3.extendedDynamicState3ColorWriteMask = VK_TRUE;
 		eds3.extendedDynamicState3DepthClampEnable = VK_TRUE;
+		eds3.extendedDynamicState3DepthClipEnable = bDepthClip;
+		VkPhysicalDeviceDepthClipEnableFeaturesEXT depthClip{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT};
+		depthClip.depthClipEnable = bDepthClip;
+		eds3.pNext = &depthClip;
 		VkPhysicalDeviceVertexInputDynamicStateFeaturesEXT vtxInput{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_INPUT_DYNAMIC_STATE_FEATURES_EXT};
 		vtxInput.pNext = &eds3;
 		vtxInput.vertexInputDynamicState = VK_TRUE;
@@ -325,7 +332,7 @@ namespace hpl {
 		LOAD(vkCmdSetVertexInputEXT); LOAD(vkCmdBindShadersEXT); LOAD(vkCmdPushDescriptorSetKHR);
 		LOAD(vkCmdSetPolygonModeEXT); LOAD(vkCmdSetRasterizationSamplesEXT); LOAD(vkCmdSetSampleMaskEXT);
 		LOAD(vkCmdSetAlphaToCoverageEnableEXT); LOAD(vkCmdSetColorBlendEnableEXT); LOAD(vkCmdSetColorBlendEquationEXT);
-		LOAD(vkCmdSetColorWriteMaskEXT); LOAD(vkCmdSetDepthClampEnableEXT);
+		LOAD(vkCmdSetColorWriteMaskEXT); LOAD(vkCmdSetDepthClampEnableEXT); LOAD(vkCmdSetDepthClipEnableEXT);
 		LOAD(vkCreateShadersEXT); LOAD(vkDestroyShaderEXT);
 		if(bHdrMetadata) LOAD(vkSetHdrMetadataEXT);
 		#undef LOAD
@@ -1161,6 +1168,7 @@ namespace hpl {
 		vkCmdSetDepthBiasEnable(cmd, mState.mbDepthBias);
 		vkCmdSetDepthBias(cmd, mState.mfDepthBias, 0.0f, mState.mfDepthSlope);
 		vkCmdSetDepthClampEnableEXT_(cmd, mState.mbDepthClamp);
+		if(vkCmdSetDepthClipEnableEXT_) vkCmdSetDepthClipEnableEXT_(cmd, !mState.mbDepthClamp);
 		bool bStencil = mbRenderStencil && mState.mbStencil;
 		vkCmdSetStencilTestEnable(cmd, bStencil);
 		const VkStencilOpState& f = mState.mStencilFront;
