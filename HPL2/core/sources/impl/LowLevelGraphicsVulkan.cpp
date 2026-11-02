@@ -332,7 +332,8 @@ namespace hpl {
 		LOAD(vkCmdSetVertexInputEXT); LOAD(vkCmdBindShadersEXT); LOAD(vkCmdPushDescriptorSetKHR);
 		LOAD(vkCmdSetPolygonModeEXT); LOAD(vkCmdSetRasterizationSamplesEXT); LOAD(vkCmdSetSampleMaskEXT);
 		LOAD(vkCmdSetAlphaToCoverageEnableEXT); LOAD(vkCmdSetColorBlendEnableEXT); LOAD(vkCmdSetColorBlendEquationEXT);
-		LOAD(vkCmdSetColorWriteMaskEXT); LOAD(vkCmdSetDepthClampEnableEXT); LOAD(vkCmdSetDepthClipEnableEXT);
+		LOAD(vkCmdSetColorWriteMaskEXT); LOAD(vkCmdSetDepthClampEnableEXT);
+		if(bDepthClip) LOAD(vkCmdSetDepthClipEnableEXT);
 		LOAD(vkCreateShadersEXT); LOAD(vkDestroyShaderEXT);
 		if(bHdrMetadata) LOAD(vkSetHdrMetadataEXT);
 		#undef LOAD
