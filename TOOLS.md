@@ -22,6 +22,7 @@ scripts/soma-compare.py boot [--record-ref] [--first-launch]  # boot splash -> m
 scripts/soma-compare.py ui start|click FX FY|key K..|shot   # both main menus, driven in lockstep
 scripts/soma-audio.py menu | map --map M [--out DIR] [--keep]  # record both games' audio (null sinks), levels/bands/spectrograms
 scripts/soma-audio.py identify X.wav --bank 'Player*'  # which extracted event samples are in a recording
+scripts/soma-save-roundtrip.py MAP [TIMER_FUNC] [--gaps]  # script state changes -> autosave -> reload -> diff entity/light/PS/var/player dumps; --gaps: sound, music, tone mapping, hands, flashlight, spawned entity
 scripts/soma-audio.py playing                     # ours: live sound entries, FMOD events, recent starts
 OPENHPL_SOMA_SCRIPT_CHECK_FILE=f.hps scripts/soma-script-check.sh   # compile one file, print errors
 ```

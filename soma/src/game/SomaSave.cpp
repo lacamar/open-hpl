@@ -10,6 +10,7 @@
 #include "SomaSound.h"
 #include "SomaSplash.h"
 #include "SomaLuxVoice.h"
+#include "SomaToneMapping.h"
 
 #include "impl/scriptarray.h"
 
@@ -24,7 +25,7 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVM"; // version char is '0' + n
+	const char kMagic[] = "OHPLSAVN"; // version char is '0' + n
 
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
@@ -972,6 +973,13 @@ public:
 			o.Pod(l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
 			o.Pod(l->IsFading() ? l->GetDestRadius() : l->GetRadius());
 		}
+		cSomaToneMapping *pTone = cSomaToneMapping::Get();
+		o.Pod((uint8_t)(pTone != NULL));
+		if (pTone)
+		{
+			o.Pod(pTone->mfWorldExposure);
+			o.Pod(pTone->mfWorldWhiteCut);
+		}
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1342,6 +1350,15 @@ public:
 				l->SetRadius(fRadius);
 			}
 		}
+		if (glPendingVersion >= 30)
+		{
+			if (in.Pod<uint8_t>())
+			{
+				float fExposure = in.Pod<float>(), fWhiteCut = in.Pod<float>();
+				if (cSomaToneMapping *pTone = cSomaToneMapping::Get(); pTone && in.ok)
+					pTone->FadeExposure(fExposure, fWhiteCut, 0);
+			}
+		}
 	}
 };
 
@@ -1419,7 +1436,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	char vMagic[8] = {};
 	in.Bytes(vMagic, 8);
 	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 29)
+	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 30)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
