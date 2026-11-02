@@ -617,7 +617,7 @@ namespace hpl {
 								cNode3D* pNodeState = GetNodeState(vIdx[i]);
 
 								if(pNodeState->IsActive()) 
-									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul);
+									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul, true, pTrack->GetUnitScale());
 							}
 
 							pAnimState->Update(afTimeStep);
