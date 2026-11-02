@@ -127,6 +127,7 @@ namespace hpl {
 		cBoneState* GetBoneStateFromName(const tString &asName);
 		int GetBoneStateNum();
 		void SetBoneRestPose(const std::vector<cMatrixf> &avLocal);
+		bool SetBoneRestPoseFromMapValues(const tFloatVec &avVals);
 
 		//Skeleton physics
 		void SetSkeletonPhysicsActive(bool abX);

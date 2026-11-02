@@ -1476,7 +1476,10 @@ namespace hpl {
 
 		pMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ), cMath::MatrixScale(vScale)));
 		pMeshEntity->SetPosition(vPosition);
-		mvCombineCandidates.push_back(pMeshEntity);
+		cXmlElement* pPose = apElement->GetFirstElement("Pose");
+		tFloatVec vPose;
+		if (pPose) cString::GetFloatVec(pPose->GetAttributeString("_Text"), vPose, NULL);
+		if (pPose == NULL || pMeshEntity->SetBoneRestPoseFromMapValues(vPose) == false) mvCombineCandidates.push_back(pMeshEntity);
 
 		if (bCollides)
 		{
