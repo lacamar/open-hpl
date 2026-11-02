@@ -1695,6 +1695,25 @@ namespace hpl {
 		return true;
 	}
 
+	bool cLowLevelGraphicsVulkan::GetScreenFloatStats(float &afMax, float &afMean, float &afFracOver1)
+	{
+		std::vector<float> vPixels;
+		VulkanReadPixelsFloat(this, mScreenColor, 0, 0, cVector2l(0), cVector2l(mScreenColor.mvSize.x, mScreenColor.mvSize.y), vPixels);
+		size_t lCount = vPixels.size() / 4, lOver = 0;
+		double dSum = 0;
+		afMax = 0;
+		for(size_t i=0; i<lCount; ++i)
+		{
+			float fM = std::max(vPixels[i*4], std::max(vPixels[i*4+1], vPixels[i*4+2]));
+			afMax = std::max(afMax, fM);
+			dSum += (vPixels[i*4] + vPixels[i*4+1] + vPixels[i*4+2]) / 3.0;
+			lOver += fM > 1.0f;
+		}
+		afMean = lCount ? (float)(dSum / lCount) : 0;
+		afFracOver1 = lCount ? (float)lOver / lCount : 0;
+		return lCount > 0;
+	}
+
 	cBitmap* cLowLevelGraphicsVulkan::CopyFrameBufferToBitmap(const cVector2l &avScreenPos, const cVector2l &avScreenSize)
 	{
 		cVector2l vSize = avScreenSize;

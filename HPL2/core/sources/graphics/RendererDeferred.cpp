@@ -229,6 +229,7 @@ namespace hpl {
 	#define kVar_afKey								28
 	#define kVar_afExposure							29
 	#define kVar_afWhiteCut							30
+	#define kVar_afHdrHeadroom						119
 	#define kVar_afInvGammaCorrection				31
 	#define kVar_a_mtxInvView						32
 	#define kVar_avMaskCenter						33
@@ -1126,7 +1127,7 @@ namespace hpl {
 		}
 
 		mpToneMapProgram = NULL;
-		for(int i=0; i<32; ++i) mpToneMapPrograms[i] = NULL;
+		for(int i=0; i<64; ++i) mpToneMapPrograms[i] = NULL;
 		mpBloomBrightPassProgram = mpBloomBlurProgram[0] = mpBloomBlurProgram[1] = mpImageTrailProgram = NULL;
 		if(mbHdr)
 		{
@@ -1290,7 +1291,7 @@ namespace hpl {
 		if(mpDofGaussTexture) mpGraphics->DestroyTexture(mpDofGaussTexture);
 		for(int i=0; i<3; ++i) for(int j=0; j<2; ++j) if(mpBoxWeightedProgram[i][j]) mpGraphics->DestroyGpuProgram(mpBoxWeightedProgram[i][j]);
 		if(mpBoxResolveProgram) mpGraphics->DestroyGpuProgram(mpBoxResolveProgram);
-		for(int i=0; i<32; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
+		for(int i=0; i<64; ++i) if(mpToneMapPrograms[i]) mpGraphics->DestroyGpuProgram(mpToneMapPrograms[i]);
 		iGpuProgram *vBloomPrograms[] = {mpBloomBrightPassProgram, mpBloomBlurProgram[0], mpBloomBlurProgram[1], mpImageTrailProgram};
 		for(int i=0; i<4; ++i) if(vBloomPrograms[i]) mpGraphics->DestroyGpuProgram(vBloomPrograms[i]);
 
@@ -1384,7 +1385,8 @@ namespace hpl {
 		if(mpToneMapProgram)
 		{
 			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
-			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,5) : apTarget;
+			const float fHdrHeadroom = mpLowLevelGraphics->GetHdrHeadroom();
+			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,fHdrHeadroom > 1.0f ? ePixelFormat_RGBA16 : ePixelFormat_RGBA,5) : apTarget;
 			if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
 			else		SetFrameBuffer(pToneMapTarget,true);
 			SetFlatProjection();
@@ -1392,7 +1394,7 @@ namespace hpl {
 			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
 			int lLayers = bHpl35 ? (int)mvColorGradingLayers.size() : 0;
 			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
-						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0);
+						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0) | (fHdrHeadroom > 1.0f ? 32 : 0);
 			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
 			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
@@ -1410,6 +1412,7 @@ namespace hpl {
 			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
 			pToneMap->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
 			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
+			if(lCombo & 32) pToneMap->SetFloat(kVar_afHdrHeadroom, fHdrHeadroom);
 			SetTexture(0,mpAccumBufferTexture);
 			SetTextureRange(NULL, 1);
 			if(lCombo & 1)
@@ -1614,11 +1617,13 @@ namespace hpl {
 		if(alCombo & 4) programVars.Add(bHpl35 ? "UseNoise" : "UseFilmGrain");
 		if(alCombo & 8) programVars.Add("UseSRGB");
 		if(alCombo & 16) programVars.Add(bHpl35 ? "LayeredColorGrading" : "UseBlendGrading");
+		if(alCombo & 32) programVars.Add("UseHdrOutput");
 		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
 		if(pProg==NULL) return NULL;
 		pProg->GetVariableAsId("afKey",kVar_afKey);
 		pProg->GetVariableAsId("afExposure",kVar_afExposure);
 		pProg->GetVariableAsId("afWhiteCut",kVar_afWhiteCut);
+		pProg->GetVariableAsId("afHdrHeadroom",kVar_afHdrHeadroom);
 		pProg->GetVariableAsId("afInvGammaCorrection",kVar_afInvGammaCorrection);
 		pProg->GetVariableAsId("avInvScreenSize",kVar_avInvScreenSize);
 		pProg->GetVariableAsId("avBloomTint",kVar_avBloomTint);

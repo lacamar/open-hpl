@@ -517,6 +517,17 @@ namespace hpl {
 		RegisterHandler("resize", SCmdResizeWindow, this);
 		RegisterHandler("shader_report", SCmdShaderReport, this);
 		RegisterHandler("frame_stats", SCmdFrameStats, this);
+		RegisterHandler("screen_stats", [](void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp) {
+			float fMax, fMean, fOver;
+			if(((cHeadlessControlServer*)apUserData)->mpEngine->GetGraphics()->GetLowLevel()->GetScreenFloatStats(fMax, fMean, fOver) == false)
+			{
+				aResp.SetError("no float screen target");
+				return;
+			}
+			aResp.Set("max", fMax);
+			aResp.Set("mean", fMean);
+			aResp.Set("over1", fOver);
+		}, this);
 		RegisterHandler("dev_hud", [](void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp) {
 			cEngine *pEngine = ((cHeadlessControlServer*)apUserData)->mpEngine;
 			aResp.Set("prev", pEngine->GetDevHudActive());
