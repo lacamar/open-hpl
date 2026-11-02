@@ -97,12 +97,12 @@ bool cSomaLuxScriptable::LoadScript(cSomaScriptRuntime *apRuntime, const tString
 	return true;
 }
 
-bool cSomaLuxScriptable::HasMethod(const std::string &asDecl)
+bool cSomaLuxScriptable::HasMethod(std::string_view asDecl)
 {
-	return mpScript && mpScript->GetObjectType()->GetMethodByDecl(asDecl.c_str()) != NULL;
+	return mpScript && mpScript->GetObjectType()->GetMethodByDecl(std::string(asDecl).c_str()) != NULL;
 }
 
-bool cSomaLuxScriptable::CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault)
+bool cSomaLuxScriptable::CallBool(std::string_view asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault)
 {
 	bool bRet = abDefault;
 	if (mpScript)
@@ -145,17 +145,17 @@ void cSomaLuxScriptable::OnAnalogInput(int alAnalogId, const cVector3f &avAmount
 		Call("bool OnAnalogInput(int alAnalogId, const cVector3f &in avAmount)", args);
 }
 
-bool cSomaLuxScriptable::Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs)
+bool cSomaLuxScriptable::Call(std::string_view asDecl, const std::function<void(asIScriptContext *)> &aSetArgs)
 {
 	return mpScript ? mpRuntime->Call(mpScript, asDecl, aSetArgs) : false;
 }
 
-bool cSomaLuxScriptable::CallWithFloat(const std::string &asDecl, float afX)
+bool cSomaLuxScriptable::CallWithFloat(std::string_view asDecl, float afX)
 {
 	return Call(asDecl, [afX](asIScriptContext *c) { c->SetArgFloat(0, afX); });
 }
 
-bool cSomaLuxScriptable::CallWithObject(const std::string &asDecl, void *apObj)
+bool cSomaLuxScriptable::CallWithObject(std::string_view asDecl, void *apObj)
 {
 	return Call(asDecl, [apObj](asIScriptContext *c) { c->SetArgAddress(0, apObj); });
 }

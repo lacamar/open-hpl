@@ -7,6 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include <string>
+#include <string_view>
 
 class cSomaScriptBuilder;
 
@@ -24,7 +25,7 @@ public:
 
 	asIScriptObject *CreateObject(asIScriptModule *apModule, const std::string &asClass);
 
-	bool Call(asIScriptObject *apObj, const std::string &asDecl,
+	bool Call(asIScriptObject *apObj, std::string_view asDecl,
 			  const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>(),
 			  const std::function<void(asIScriptContext *)> &aGetResult = std::function<void(asIScriptContext *)>());
 
@@ -49,7 +50,8 @@ private:
 	asIScriptEngine *mpEngine;
 	cSomaScriptBuilder *mpBuilder;
 	std::map<std::string, asIScriptModule *> mmapModules;
-	std::unordered_map<asITypeInfo *, std::unordered_map<std::string, asIScriptFunction *>> mmapMethods;
+	struct StringHash { using is_transparent = void; size_t operator()(std::string_view s) const { return std::hash<std::string_view>()(s); } };
+	std::unordered_map<asITypeInfo *, std::unordered_map<std::string, asIScriptFunction *, StringHash, std::equal_to<>>> mmapMethods;
 	int mlModuleCount;
 };
 

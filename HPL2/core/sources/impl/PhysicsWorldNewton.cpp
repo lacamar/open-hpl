@@ -116,12 +116,9 @@ namespace hpl {
 		//lUpdate++;
 		//cPhysicsBodyNewton::SetUseCallback(true);
         			
-		tPhysicsBodyListIt it = mlstBodies.begin();
-		for(;it != mlstBodies.end(); ++it)
-		{
-			cPhysicsBodyNewton* pBody = static_cast<cPhysicsBodyNewton*>(*it);
+		for(cPhysicsBodyNewton* pBody : mvForcedBodies)
 			pBody->ClearForces();
-		}
+		mvForcedBodies.clear();
 	}
 	
 	//-----------------------------------------------------------------------

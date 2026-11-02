@@ -27,11 +27,11 @@ public:
 	bool mbSaved = true;
 	static const std::vector<cSomaLuxScriptable *> &GetAll() { return mvAll; }
 	static uint64_t GetAllVersion() { return mlAllVersion; }
-	bool Call(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
-	bool CallWithFloat(const std::string &asDecl, float afX);
-	bool CallWithObject(const std::string &asDecl, void *apObj);
-	bool CallBool(const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault);
-	bool HasMethod(const std::string &asDecl);
+	bool Call(std::string_view asDecl, const std::function<void(asIScriptContext *)> &aSetArgs = std::function<void(asIScriptContext *)>());
+	bool CallWithFloat(std::string_view asDecl, float afX);
+	bool CallWithObject(std::string_view asDecl, void *apObj);
+	bool CallBool(std::string_view asDecl, const std::function<void(asIScriptContext *)> &aSetArgs, bool abDefault);
+	bool HasMethod(std::string_view asDecl);
 
 	// iLuxUpdateable callbacks as the engine dispatches them; overridden where the engine object adds behaviour
 	virtual void OnMessage(const char *apDecl) { Call(apDecl); }

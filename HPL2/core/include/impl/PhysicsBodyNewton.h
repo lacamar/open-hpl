@@ -126,6 +126,8 @@ namespace hpl {
 		// Forces that will be set and clear on update callback
 		cVector3f mvTotalForce;
 		cVector3f mvTotalTorque;
+		bool mbForced = false;
+		void MarkForced();
 
 		cVector3f mvBuoyancyForce = 0;
 		cVector3f mvBuoyancyTorque = 0;

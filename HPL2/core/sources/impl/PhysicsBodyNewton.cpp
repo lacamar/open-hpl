@@ -26,6 +26,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "math/Math.h"
 #include "scene/Node3D.h"
+#include <algorithm>
 
 namespace hpl {
 
@@ -81,7 +82,11 @@ namespace hpl {
 
 	cPhysicsBodyNewton::~cPhysicsBodyNewton()
 	{
-		//Log(" Destroying newton body '%s' %d\n",msName.c_str(),(size_t)this);
+		if(mbForced)
+		{
+			std::vector<cPhysicsBodyNewton*> &vForced = static_cast<cPhysicsWorldNewton*>(mpWorld)->mvForcedBodies;
+			vForced.erase(std::remove(vForced.begin(), vForced.end(), this), vForced.end());
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -273,8 +278,16 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 	
+	void cPhysicsBodyNewton::MarkForced()
+	{
+		if(mbForced) return;
+		mbForced = true;
+		static_cast<cPhysicsWorldNewton*>(mpWorld)->mvForcedBodies.push_back(this);
+	}
+
 	void cPhysicsBodyNewton::AddForce(const cVector3f &avForce)
 	{
+		MarkForced();
 		mvTotalForce += avForce;
 		Enable();
 
@@ -283,6 +296,7 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddForceAtPosition(const cVector3f &avForce, const cVector3f &avPos)
 	{
+		MarkForced();
 		mvTotalForce += avForce;
 
 		cVector3f vLocalPos = avPos - GetLocalPosition();
@@ -305,6 +319,7 @@ namespace hpl {
 
 	void cPhysicsBodyNewton::AddTorque(const cVector3f &avTorque)
 	{
+		MarkForced();
 		mvTotalTorque += avTorque;
 		Enable();
 	}
@@ -439,6 +454,7 @@ namespace hpl {
 	{
 		mvTotalForce = cVector3f(0,0,0);
 		mvTotalTorque = cVector3f(0,0,0);
+		mbForced = false;
 	}
 
 	//-----------------------------------------------------------------------
