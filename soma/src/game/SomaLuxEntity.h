@@ -360,6 +360,7 @@ void SomaRegisterBodyIDs(const std::vector<cSomaLuxEntity *> &avEnts);
 bool SomaEntitiesCollide(cSomaLuxEntity *apA, cSomaLuxEntity *apB);
 bool SomaEntityCollidesAABB(cSomaLuxEntity *apEnt, const cVector3f &avMin, const cVector3f &avMax);
 float SomaPlayerLiquidSurface();
+iPhysicsBody *SomaAgentBody(cSomaLuxEntity *apEnt);
 extern int glSomaUnderwaterUsers;
 extern bool gbSomaUnderwaterEffects;
 // Ray against the entity's boxes; afDistOut is the entry distance

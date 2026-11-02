@@ -1845,6 +1845,12 @@ namespace
 	};
 }
 
+iPhysicsBody *SomaAgentBody(cSomaLuxEntity *apEnt)
+{
+	cAgent *a = Agent(apEnt);
+	return a && a->mpBody ? a->mpBody->GetCurrentBody() : NULL;
+}
+
 void SomaCreateAgent(cSomaLuxEntity *apEnt)
 {
 	cSomaLuxMap *pMap = apEnt->mpMap;
