@@ -7,6 +7,7 @@
 #include "SomaLuxPlayer.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptBuilder.h"
+#include "SomaScriptNatives.h"
 #include "SomaSound.h"
 #include "SomaSplash.h"
 #include "SomaLuxVoice.h"
@@ -235,6 +236,13 @@ namespace
 			for (asUINT i = 0; i < pArr->GetSize(); ++i)
 				WriteValue(o, e, pArr->GetElementTypeId(), pArr->At(i), aVisited);
 		}
+		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
+		{
+			auto &set = SomaStringSetOf((void *)apAddr);
+			o.Pod((uint32_t)set.size());
+			for (const tString &s : set)
+				o.Str(s);
+		}
 		else if (IsRawValue(t))
 			o.Bytes(apAddr, t->GetSize());
 	}
@@ -295,6 +303,14 @@ namespace
 			pArr->Resize(n);
 			for (asUINT i = 0; i < n && in.ok; ++i)
 				ReadValue(in, e, pArr->GetElementTypeId(), pArr->At(i));
+		}
+		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
+		{
+			uint32_t n = in.Pod<uint32_t>();
+			auto &set = SomaStringSetOf(apAddr);
+			set.clear();
+			for (uint32_t i = 0; i < n && in.ok; ++i)
+				set.insert(in.Str());
 		}
 		else if (IsRawValue(t))
 			in.Bytes(apAddr, t->GetSize());

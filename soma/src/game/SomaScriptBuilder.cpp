@@ -45,7 +45,8 @@ static const char *gvCompatPatches[][3] = {
 	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
 	{"soma:modules/menuhandler.hps", "kOptionsVideoDisplayBgSize = cVector2f(680, 335)", "kOptionsVideoDisplayBgSize = cVector2f(680, 487)"},
 	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"FOV\", false);",
-	 "OptionMenu_UpdateExtraWidth(\"FOV\", false); OptionMenu_UpdateExtraWidth(\"Renderer\", false); OptionMenu_UpdateExtraWidth(\"ColorOutput\", false);"
+	 "const cVector2f kOptionsBgPos = cVector2f(100, 190); const cVector2f kMainMenuButtonPos = cVector2f(136, 205);"
+	 " OptionMenu_UpdateExtraWidth(\"FOV\", false); OptionMenu_UpdateExtraWidth(\"Renderer\", false); OptionMenu_UpdateExtraWidth(\"ColorOutput\", false);"
 	 " OptionMenu_UpdateExtraWidth(\"HdrPaperWhite\", false); OptionMenu_UpdateExtraWidth(\"HdrPeak\", false);"},
 	// open-hpl renderer and colour output rows after AA; colour applies live, renderer on restart
 	{"soma:modules/menuhandler.hps", "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton);",

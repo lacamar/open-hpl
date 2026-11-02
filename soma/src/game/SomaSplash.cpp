@@ -23,7 +23,6 @@ cSomaSplash::cSomaSplash(cEngine *apEngine, cSomaBase *apBase) : iUpdateable("So
 
 	mfElapsed = 0;
 	mbFinished = false;
-	mbMouseWasDown = false;
 
 	mpGui = mpEngine->GetGui();
 	mvScreenSize = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
@@ -79,33 +78,13 @@ void cSomaSplash::Finish()
 	mpBase->OnSplashFinished();
 }
 
-bool cSomaSplash::AnySkipInputThisFrame()
-{
-	cInput *pInput = mpEngine->GetInput();
-
-	iKeyboard *pKeyboard = pInput->GetKeyboard();
-	if (pKeyboard->KeyIsPressed())
-	{
-		// KeyIsPressed() doesn't drain the queue; a stray event would latch
-		pKeyboard->GetKey();
-		return true;
-	}
-
-	iMouse *pMouse = pInput->GetMouse();
-	bool bDown = pMouse->ButtonIsDown(eMouseButton_Left) || pMouse->ButtonIsDown(eMouseButton_Right) ||
-				 pMouse->ButtonIsDown(eMouseButton_Middle);
-	bool bClick = bDown && mbMouseWasDown == false;
-	mbMouseWasDown = bDown;
-	return bClick;
-}
-
 void cSomaSplash::Update(float afTimeStep)
 {
 	if (mbFinished)
 		return;
 
 	mfElapsed += afTimeStep;
-	if (AnySkipInputThisFrame() || mfElapsed >= kBootDuration)
+	if (mfElapsed >= kBootDuration)
 		Finish();
 }
 
