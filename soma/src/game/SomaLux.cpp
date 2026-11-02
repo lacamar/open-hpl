@@ -861,6 +861,7 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		return;
 	bool bMap = cSomaLuxMap::GetCurrent() != NULL;
 	tString sMap, sStart, sError;
+	cSomaSaveHandler::RunDelayedAutoSave();
 	if (SomaTakePendingMapChange(sMap, sStart))
 	{
 		if (gbPendingNewGame)
