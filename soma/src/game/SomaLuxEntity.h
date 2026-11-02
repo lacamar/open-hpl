@@ -96,6 +96,7 @@ public:
 	void UpdateCharCollision();
 	std::vector<cEntityBodyExtraData> mvBodyExtraData;
 	iPhysicsBody *mpMainBody = NULL;
+	cVector3f mvBodyOffset = cVector3f(0);
 	std::vector<iPhysicsJoint *> mvJoints;
 	std::vector<iPhysicsJoint *> &Joints();
 	// cLuxCritter members at the official offsets, see SomaNewPropBlock
