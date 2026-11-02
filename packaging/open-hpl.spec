@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.71
+Version:        1.3.72
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,19 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.72-1
+- Fix sprite sheet particles (UVSubDivs)
+- Fix silent audio recordings
+- Fix crane look controls (SetArgVector2f)
+- Fix FPS drop from leaked looping sounds
+- Fix rotating warning lights
+- Apply bone poses to posed static objects (WAU tubes)
+- Case-insensitive entity name matching
+- Fix flashlight script errors
+- Keep given hints in saves
+- Fit display options on screen
+- Boot splash not skippable
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.71-1
 - Fix Vulkan near-plane depth clipping (dark spot shadows)
 
