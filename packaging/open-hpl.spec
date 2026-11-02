@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.70
+Version:        1.3.71
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.71-1
+- Fix Vulkan near-plane depth clipping (dark spot shadows)
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.70-1
 - Fix SOMA hatch and vent animations
 
