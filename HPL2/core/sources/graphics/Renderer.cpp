@@ -491,7 +491,7 @@ namespace hpl {
 
 	void iRenderer::Update(float afTimeStep)
 	{
-		mfTimeCount += afTimeStep;
+		if(mbWorldPaused==false) mfTimeCount += afTimeStep;
 	}
 
 	//-----------------------------------------------------------------------
@@ -563,6 +563,8 @@ namespace hpl {
 
 		//////////////////////////////////////////
 		//Set up variables
+		mbWorldPaused = apWorld->IsActive()==false;
+		if(mbWorldPaused) afFrameTime = 0;
 		mfCurrentFrameTime = afFrameTime;
 		mpCurrentWorld = apWorld;
 		mpCurrentSettings = apSettings;
