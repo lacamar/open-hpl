@@ -538,7 +538,7 @@ public:
 		}
 	}
 
-	static void ReadEntity(cIn &in, cSomaLuxMap *apMap)
+	static tString ReadEntity(cIn &in, cSomaLuxMap *apMap)
 	{
 		tString sName = in.Str();
 		cSomaLuxEntity *p = apMap->GetEntity(sName);
@@ -736,6 +736,7 @@ public:
 		t->mbEffectsActive = bEffects;
 		if (p && p->mbActive != bActive)
 			p->SetActive(bActive);
+		return sName;
 	}
 
 	static void WriteWorld(cOut &o)
@@ -1039,8 +1040,14 @@ public:
 		}
 
 		n = in.Pod<uint32_t>();
+		std::set<tString> setSaved;
 		for (uint32_t i = 0; i < n && in.ok; ++i)
-			ReadEntity(in, pMap);
+			setSaved.insert(cString::ToLowerCase(ReadEntity(in, pMap)));
+		// entities destroyed before the save (broken windows) come back with the fresh map load
+		if (in.ok)
+			for (cSomaLuxEntity *p : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
+				if (setSaved.count(cString::ToLowerCase(p->msName)) == 0)
+					pMap->DestroyEntity(p);
 
 		std::map<tString, cSomaLuxScriptable *> mapOther;
 		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
