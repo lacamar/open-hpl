@@ -253,6 +253,9 @@ namespace hpl {
 			}
 		}
 
+		if(apElement->GetAttribute("SubDiv")==NULL && mvMaterials.empty()==false)
+			mvSubDiv = mvMaterials[0]->GetUVSubDivisions();
+
 		mfFrameStep = 1/(fAnimationLength/(float)mvMaterials.size());
 		mfMaxFrameTime = ((float)mvMaterials.size())-0.0001f;
 		
