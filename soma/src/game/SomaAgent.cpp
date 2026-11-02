@@ -2564,6 +2564,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "int GetNextState()", +[](SM *s) { return s->mlNext; });
 	SOMA_METHOD(e, T, "int GetPrevState()", +[](SM *s) { return s->mlPrev; });
 	SOMA_METHOD(e, T, "int GetCurrentState()", +[](SM *s) { return s->mlCur; });
+	SOMA_METHOD(e, T, "tString GetCurrentStateName()", +[](SM *s) { auto it = s->mapStates.find(s->mlCur); return it == s->mapStates.end() ? tString() : it->second; });
 	SOMA_METHOD(e, T, "int GetNextSubState()", +[](SM *s) { return s->mlSubNext; });
 	SOMA_METHOD(e, T, "int GetPrevSubState()", +[](SM *s) { return s->mlSubPrev; });
 	SOMA_METHOD(e, T, "int GetCurrentSubState()", +[](SM *s) { return s->mlSubCur; });

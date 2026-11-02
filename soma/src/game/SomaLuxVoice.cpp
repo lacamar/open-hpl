@@ -620,8 +620,15 @@ void cSomaLuxVoiceHandler::UpdateSpeakingCallbacks()
 	}
 }
 
+void cSomaLuxVoiceHandler::AddSubtitle(const std::vector<tString> &avRows, const tString &asName, const cColor &aColor, int alDrawnChars)
+{
+	mvImmediate.push_back({avRows, asName, aColor, alDrawnChars});
+}
+
 void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 {
+	std::vector<cImmediateSubtitle> vImmediate;
+	vImmediate.swap(mvImmediate);
 	// cLuxFadeEffect::OnDraw: on the HUD set at z 0.9, so HUD ImGui (credits) draws over it
 	if (mfFadeAlpha > 0 && cSomaLuxMap::GetCurrent())
 	{
@@ -652,6 +659,24 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 			cVector3f vPos(vScreen.x * 0.5f, fY + vSize.y * (float)r, 5);
 			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, 1), eFontAlign_Center);
 			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, cColor(1, 1), eFontAlign_Center);
+		}
+		fY -= vSize.y * 1.3f;
+	}
+	for (const cImmediateSubtitle &sub : vImmediate)
+	{
+		tString sText = sub.msName.empty() ? "" : sub.msName + ": ";
+		for (size_t i = 0; i < sub.mvRows.size(); ++i)
+			sText += (i ? " " : "") + sub.mvRows[i];
+		if (sub.mlDrawnChars >= 0 && (size_t)sub.mlDrawnChars < sText.size())
+			sText.resize(sub.mlDrawnChars);
+		tWStringVec vRows;
+		mpFont->GetWordWrapRows(860 * fScale, vSize.y, vSize, cString::To16Char(sText), &vRows);
+		fY -= vSize.y * (float)(vRows.size() - 1);
+		for (size_t r = 0; r < vRows.size(); ++r)
+		{
+			cVector3f vPos(vScreen.x * 0.5f, fY + vSize.y * (float)r, 5);
+			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, sub.mColor.a), eFontAlign_Center);
+			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, sub.mColor, eFontAlign_Center);
 		}
 		fY -= vSize.y * 1.3f;
 	}
@@ -1285,6 +1310,13 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	// Rebirth
 	SOMA_METHOD(e, T, "bool Play(const tString &in asSubject, int alSpecificLine, const tString &in asCallback, int alPrio, bool abPlayWhilePaused)",
 				+[](void *, S s, int l, S cb, int prio, bool pwp) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->Play(s, l, cb, prio, {}, pwp); });
+	SOMA_METHOD(e, T, "void AddSubtitle(const array<tWString> &in avText, const tWString &in asCharacterName, const cColor &in aColor, int alDrawnChars, bool abVoiceSoundMissing, bool abIsPlayer = false, bool abPlayWhilePaused = false, bool abPositional = false, const cVector3f &in avPosition = 0)",
+				+[](void *, CScriptArray &rows, const tWString &name, const cColor &c, int drawn, bool, bool, bool, bool, const cVector3f &) {
+					std::vector<tString> v;
+					for (asUINT i = 0; i < rows.GetSize(); ++i)
+						v.push_back(cString::To8Char(*(const tWString *)rows.At(i)));
+					VH->AddSubtitle(v, cString::To8Char(name), c, drawn);
+				});
 	SOMA_METHOD(e, T, "void AdvanceFromCurrentSound(const tString&in asScene)", +[](void *, S s) { VH->SkipCurrentLine(s); });
 	SOMA_METHOD(e, T, "float GetTimeLeftOnLastLineOfPlayingSubject(const tString&in asName)",
 				+[](void *, S s) { return cSomaLuxVoiceHandler::Get() ? cSomaLuxVoiceHandler::Get()->GetTimeLeftOnLastLineOfPlayingSubject(s) : -1.0f; });

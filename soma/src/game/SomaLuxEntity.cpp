@@ -2497,6 +2497,15 @@ static void RegisterEntityMethods(asIScriptEngine *e, const char *T)
 				p->AddBodyCallback();
 		});
 	SOMA_METHOD_NEW(e, T, "void SetSaveDataIsUpdated(bool abX)", +[](E *, bool) {});
+	SOMA_METHOD_NEW(e, T, "void SetFullGameSave(bool abX)", +[](E *, bool) {});
+	SOMA_METHOD_NEW(e, T, "void SetIgnoreDynamicAvoidance(bool abX)", +[](E *, bool) {});
+	if (strcmp(T, "cLuxProp") == 0)
+	{
+		SOMA_METHOD_NEW(e, T, "void SetIsBreakable(bool abX)", +[](E *p, bool x) { p->mbBreakable = x; });
+		SOMA_METHOD_NEW(e, T, "bool GetIsBreakable()", +[](E *p) { return p->mbBreakable; });
+		SOMA_METHOD_NEW(e, T, "void SetDisableBreakable(bool abX)", +[](E *p, bool x) { if (x) p->mbBreakable = false; });
+		SOMA_METHOD_NEW(e, T, "void SetUseCustomBreakBehaviour(bool abX)", +[](E *, bool) {});
+	}
 	SOMA_METHOD_NEW(e, T, "void EnableBodyCollisionCallback()", +[](E *) {});
 	SOMA_METHOD_NEW(e, T, "iEntity3D@ GetAttachEntity()", +[](E *p) { return p->GetAttachEntity(); });
 	SOMA_METHOD_NEW(e, T, "cMaterial@ GetBaseMaterial()", +[](E *p) {
