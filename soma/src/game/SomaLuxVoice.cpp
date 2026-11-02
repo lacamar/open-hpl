@@ -324,6 +324,12 @@ void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
 		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), src.mfMinDist, src.mfMaxDist,
 																	  (eSoundEntryType)(aP.mbPlayWhilePaused ? 4 : line.mlEntryType), false, 0, true);
 		aP.msSourceEntity = src.msEntity;
+		aP.mfSourceMin = src.mfMinDist;
+		aP.mfSourceMax = src.mfMaxDist;
+		aP.mfListenRange = src.mfListenRange;
+		aP.mfMinFreq = src.mfMinFreq;
+		aP.mfMaxFreq = src.mfMaxFreq;
+		aP.mlFreqFlags = src.mlFreqFlags;
 	}
 	else
 		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume, cVector3f(0, 0, 1), (eSoundEntryType)(aP.mbPlayWhilePaused ? 4 : line.mlEntryType));
@@ -379,9 +385,10 @@ void cSomaLuxVoiceHandler::LineCallback(cSubject *apSubject, int alLine, bool ab
 		});
 }
 
-void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D)
+void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D,
+									 float afListenRange, float afMinFreq, float afMaxFreq, int alFreqFlags)
 {
-	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D};
+	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D, afListenRange, afMinFreq, afMaxFreq, alFreqFlags};
 }
 
 void cSomaLuxVoiceHandler::SetFocusScene(const tString &asScene)
@@ -493,7 +500,21 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 		p.mpEntry->SetVolumeMul(fVol);
 		cSomaLuxEntity *pSource = p.msSourceEntity != "" && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(p.msSourceEntity) : NULL;
 		if (pSource)
+		{
 			p.mpEntry->GetChannel()->SetPosition(pSource->GetPosition());
+			// cLuxVoiceHandler::Update: cutoff follows distance between the source's min and max
+			float fDist = cMath::Vector3Dist(mpEngine->GetSound()->GetLowLevel()->GetListenerPosition(), pSource->GetPosition());
+			p.mfSourceDist = fDist;
+			if (p.mlFreqFlags)
+			{
+				float fT = cMath::Clamp((fDist - p.mfSourceMin) / (p.mfSourceMax - p.mfSourceMin + 0.01f), 0.0f, 1.0f);
+				float fCutoff = cMath::Max(p.mfMinFreq + (p.mfMaxFreq - p.mfMinFreq) * fT, 1.0f);
+				if (p.mlFreqFlags & 1)
+					p.mpEntry->GetChannel()->SetFilterGainHF(1.0f / std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)));
+				if (p.mlFreqFlags & 2)
+					p.mpEntry->GetChannel()->SetFilterGainLF(1.0f / std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)));
+			}
+		}
 	}
 	for (size_t i = 0; i < mvPlaying.size();)
 	{
@@ -651,14 +672,17 @@ void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 		if (it->msSubtitle.empty() || it->mlStep == 0 || (it->mlStep == 1 && it->mfTime < it->mfTextDelay) || it->mbPaused ||
 			(gpSomaBase->mbScriptGamePaused && it->mbPlayWhilePaused == false))
 			continue;
+		if (it->mfListenRange >= 0 && it->msSourceEntity != "" && it->mfSourceDist > it->mfListenRange)
+			continue;
+		float fAlpha = it->msSourceEntity != "" && it->mfListenRange >= 0 ? cMath::Clamp(1.0f - 6.0f * (it->mfSourceDist - it->mfSourceMin) / std::max(it->mfSourceMax, 0.01f), 0.2f, 1.0f) : 1.0f;
 		tWStringVec vRows;
 		mpFont->GetWordWrapRows(860 * fScale, vSize.y, vSize, cString::To16Char(it->msSubtitle), &vRows);
 		fY -= vSize.y * (float)(vRows.size() - 1);
 		for (size_t r = 0; r < vRows.size(); ++r)
 		{
 			cVector3f vPos(vScreen.x * 0.5f, fY + vSize.y * (float)r, 5);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, 1), eFontAlign_Center);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, cColor(1, 1), eFontAlign_Center);
+			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, fAlpha), eFontAlign_Center);
+			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, cColor(1, fAlpha), eFontAlign_Center);
 		}
 		fY -= vSize.y * 1.3f;
 	}
@@ -1360,7 +1384,7 @@ void cSomaLuxVoiceHandler::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetFocusScene(const tString&in asScene)", +[](void *, S s) { VH->SetFocusScene(s); });
 	SOMA_METHOD(e, "cLuxMap",
 				"void SetVoiceSource(const tString &in asCharacter, const tString &in asEntityName, float afMinDistance, float afMaxDistance, bool abUse3D, float afMaxPlayerListeningRange, float afMinFreq = 22000, float afMaxFreq = 22000, uint aFrequencyFlags = 0)",
-				+[](void *, S c, S ent, float fMin, float fMax, bool b3D, float, float, float, asUINT) { VH->SetSource(c, ent, fMin, fMax, b3D); });
+				+[](void *, S c, S ent, float fMin, float fMax, bool b3D, float fRange, float fMinF, float fMaxF, asUINT lFlags) { VH->SetSource(c, ent, fMin, fMax, b3D, fRange, fMinF, fMaxF, (int)lFlags); });
 	SOMA_METHOD(e, T, "bool AnySceneIsActive()", +[](void *) { return cSomaLuxVoiceHandler::Get() && cSomaLuxVoiceHandler::Get()->AnySceneIsActive(); });
 #undef VH
 }

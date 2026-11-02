@@ -1481,11 +1481,14 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_EnableSaving()", +[]() { gbSavingEnabled = true; });
 	SOMA_FUNC(e, "bool cLux_GetSavingEnabled()", +[]() { return gbSavingEnabled; });
 	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
+	// official binds cSoundEntity::SetReverbAmount to SetVolume
+	SOMA_METHOD(e, "cSoundEntity", "void SetReverbAmount(float afX)", +[](cSoundEntity *o, float f) { o->SetVolume(f); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFile3D(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetUse3D(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileStream(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetStream(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFilePriority(int alX)", +[](cSoundEntity *o, int p) { if (o->GetData()) o->GetData()->SetPriority(p); });
 	for (const char *pType : {"cMeshEntity", "cSubMeshEntity", "cLuxProp"})
 		SOMA_METHOD_NEW(e, pType, "void SetRenderLayer(int alX)", +[](void *, int) {});
+	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeSpeed(float afDest, float afTime)", +[](cAnimationState *o, float d, float t) { o->FadeSpeed(d, t); });
 	SOMA_FUNC(e, "bool cLux_GetFootageModeActive()", +[]() { return false; });
 	SOMA_FUNC(e, "void cSound_PreloadSoundEvent(const tString&in asInternalPath)", +[](const tString &) {});
 	SOMA_METHOD(e, "cLuxInputHandler", "void SetGamepadColor(int alId, const cColor&in aColor)", +[](void *, int, const cColor &) {});
