@@ -161,6 +161,12 @@ namespace hpl {
 	};
 
 	static const char* const gvHpslSourceReplacements[][3] = {
+		// sun cascades sit in a 2x2 atlas
+		{ "deferred_light_frag.hpsl", "cVector4f(afSliceDiv, 1.0, 1.0, 1.0)", "cVector4f(0.5, 0.5, 1.0, 1.0)" },
+		{ "deferred_light_frag.hpsl", "cVector4f(lSlice * afSliceDiv, 0.0, 0.0, 0.0)",
+		  "cVector4f(mod(float(lSlice), 2.0) * 0.5, floor(float(lSlice) * 0.5) * 0.5, 0.0, 0.0)" },
+		{ "deferred_light_frag.hpsl", "cVector4f((lSlice + 1) * afSliceDiv, 0.0, 0.0, 0.0)",
+		  "cVector4f(mod(float(lSlice + 1), 2.0) * 0.5, floor(float(lSlice + 1) * 0.5) * 0.5, 0.0, 0.0)" },
 		// liquid fade comes from the instance buffer in newer games
 		{ "deferred_gbuffer_solid_frag.hpsl", "@ifdef UseLiquid\n\t\t  in cVector4f px_vLiquidFade,\n@endif\n", "" },
 		{ "deferred_gbuffer_solid_frag.hpsl", "\tuniform cTexture2D aLiquidMap : 11;\n", "\tuniform cTexture2D aLiquidMap : 11;\n\tuniform cVector4f px_vLiquidFade;\n" },

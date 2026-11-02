@@ -334,6 +334,8 @@ namespace hpl {
 		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
 		cShadowMapData *mpDirShadowData;
+		cMatrixf mvDirShadowMtxSlice[4];
+		float mfDirShadowDistance, mfDirShadowDepth0;
 		cFrustum mDirShadowFrustum[4];
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
