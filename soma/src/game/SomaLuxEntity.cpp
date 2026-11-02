@@ -553,6 +553,8 @@ void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 void cSomaLuxEntity::UpdateStaticMoveSound()
 {
 	bool bMoving = mbMoving || mlRotateMode == 1 || (mlRotateMode == 2 && mfRotateMaxSpeed != 0);
+	if (bMoving == mbStaticMoveSound && mpStaticMoveLoop == NULL)
+		return;
 	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
 		return;

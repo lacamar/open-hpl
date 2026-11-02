@@ -24,10 +24,12 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
+#include <vector>
 #endif
 #include <Newton.h>
 
 namespace hpl {
+	class cPhysicsBodyNewton;
 	class cPhysicsWorldNewton : public iPhysicsWorld
 	{
 	public:
@@ -108,6 +110,7 @@ namespace hpl {
 		void RenderDebugGeometry(iLowLevelGraphics *apLowLevel, const cColor& aColor);
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
+		std::vector<cPhysicsBodyNewton*> mvForcedBodies;
 	private:
 		NewtonWorld *mpNewtonWorld;
 

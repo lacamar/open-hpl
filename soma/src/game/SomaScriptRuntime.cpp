@@ -177,7 +177,7 @@ bool cSomaScriptRuntime::Execute(asIScriptContext *apCtx, const std::function<st
 	return false;
 }
 
-bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl, const std::function<void(asIScriptContext *)> &aSetArgs,
+bool cSomaScriptRuntime::Call(asIScriptObject *apObj, std::string_view asDecl, const std::function<void(asIScriptContext *)> &aSetArgs,
 							  const std::function<void(asIScriptContext *)> &aGetResult)
 {
 	if (apObj == NULL)
@@ -188,10 +188,11 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 	if (it == mapType.end())
 	{
 		// "$Func": a global function of the object's module, like iScriptUserClassInterface::ScriptPrepare
-		size_t lGlobal = asDecl.find('$');
-		asIScriptFunction *pFound = lGlobal == std::string::npos ? pType->GetMethodByDecl(asDecl.c_str())
-									: pType->GetModule() ? pType->GetModule()->GetFunctionByDecl(std::string(asDecl).erase(lGlobal, 1).c_str()) : NULL;
-		it = mapType.emplace(asDecl, pFound).first;
+		std::string sDecl(asDecl);
+		size_t lGlobal = sDecl.find('$');
+		asIScriptFunction *pFound = lGlobal == std::string::npos ? pType->GetMethodByDecl(sDecl.c_str())
+									: pType->GetModule() ? pType->GetModule()->GetFunctionByDecl(std::string(sDecl).erase(lGlobal, 1).c_str()) : NULL;
+		it = mapType.emplace(std::move(sDecl), pFound).first;
 	}
 	asIScriptFunction *pFunc = it->second;
 	if (pFunc == NULL)
@@ -203,7 +204,7 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, const std::string &asDecl,
 		pCtx->SetObject(apObj);
 	if (aSetArgs)
 		aSetArgs(pCtx);
-	bool bOk = Execute(pCtx, [&] { return std::string(pType->GetName()) + "::" + asDecl; });
+	bool bOk = Execute(pCtx, [&] { return std::string(pType->GetName()) + "::" + std::string(asDecl); });
 	// an exception reads as 0/false, like iScriptUserClassInterface::GetReturn*
 	if (aGetResult)
 		aGetResult(pCtx);
