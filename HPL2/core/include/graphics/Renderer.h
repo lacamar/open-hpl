@@ -498,6 +498,7 @@ namespace hpl {
 
 		static int mlRenderFrameCount;
 		float mfTimeCount;
+		bool mbWorldPaused = false;
 
 		bool mbOcclusionPlanesActive;
 
