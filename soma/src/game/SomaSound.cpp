@@ -512,7 +512,8 @@ void cSomaSoundInstance::Start()
 			if (pSteal == NULL)
 			{
 				// official cSoundEntity::PlaySoundEvent stops only oneshots here, loops retry
-				mbStarted = mbStopped = mpEvent->mbOneShot || mpEntity == NULL;
+				// official PlaySoundEvent gives up after 201 failed starts
+				mbStarted = mbStopped = mpEvent->mbOneShot || mpEntity == NULL || ++mlStartFails > 201;
 				return;
 			}
 			pSteal->StopNow();
