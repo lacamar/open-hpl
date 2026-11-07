@@ -717,7 +717,10 @@ void cSomaLuxVoiceHandler::Stop(const tString &asScene)
 		if (mvPlaying[i].mpSubject->msScene == asScene)
 		{
 			StopSound(mvPlaying[i]);
+			auto onDone = mvPlaying[i].mOnDone;
 			mvPlaying.erase(mvPlaying.begin() + i);
+			if (onDone)
+				onDone();
 		}
 		else
 			++i;
