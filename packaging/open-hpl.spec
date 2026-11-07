@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.74
+Version:        1.3.75
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sun Nov 08 2026 lacamar <lchlnm@pm.me> - 1.3.75-1
+- Stopped voice ends its dialog item (02_01 story blocker)
+
 * Mon Nov 02 2026 lacamar <lchlnm@pm.me> - 1.3.74-1
 - Implement Entity_GetBodyOffset (05_01 crane capsule)
 - Run delayed autosaves on the next update
