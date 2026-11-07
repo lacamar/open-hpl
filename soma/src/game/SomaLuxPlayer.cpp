@@ -254,6 +254,9 @@ void cSomaLuxPlayer::OnGui(float afTimeStep)
 
 void cSomaLuxPlayer::OnMessage(const char *apDecl)
 {
+	// the map is gone, so states that cleared their data on map leave must not run OnLeaveState
+	if (strcmp(apDecl, "void Reset()") == 0 && mpState && mpState->mlId != 0)
+		mpState = NULL;
 	cSomaLuxScriptable::OnMessage(apDecl);
 	for (auto &it : mmapStates)
 		it.second->OnMessage(apDecl);
