@@ -963,7 +963,8 @@ float cSomaImGui::DoTextFrame(const tWString &asText, const cVector2f &avEdge, f
 	Advance(avPos, avSize);
 	if (fRowH <= 0)
 		return 0;
-	return cMath::Max((float)vRows.size() - (avSize.y - avEdge.y * 2 + afRowSpace) / fRowH, 0.0f);
+	float fRows = (float)vRows.size();
+	return cMath::Max((afRowSpace * fRows + vFont.y * fRows - (avSize.y - avEdge.y)) / fRowH, 0.0f);
 }
 
 void cSomaImGui::DoFrame(const void *apData, cVector3f avPos, cVector2f avSize)
