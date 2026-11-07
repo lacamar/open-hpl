@@ -264,6 +264,8 @@ void cSomaLuxPlayer::OnMessage(const char *apDecl)
 		it.second->OnMessage(apDecl);
 }
 
+extern bool gbMapChangeIsTransfer;
+
 void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 {
 	bool bDestroy = strcmp(apDecl, "void DestroyWorldEntities(cLuxMap @apMap)") == 0;
@@ -276,7 +278,8 @@ void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 		mpMoveState = mmapMoveStates.count(0) ? mmapMoveStates[0] : NULL;
 		if (mpMoveState)
 			mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
-		mmapCameraPosAdd.clear();
+		if (gbMapChangeIsTransfer == false)
+			mmapCameraPosAdd.clear();
 		if (mpCamera)
 		{
 			SetCamera(mpCamera);

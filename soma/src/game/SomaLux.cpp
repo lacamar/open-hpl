@@ -29,7 +29,7 @@
 #include <ucontext.h>
 
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
-static bool gbMapChangeIsTransfer = false;
+bool gbMapChangeIsTransfer = false;
 static float gfPendingFadeIn = -1;
 static int glPreloadPrio = 2;
 
