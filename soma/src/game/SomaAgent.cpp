@@ -95,6 +95,7 @@ namespace
 		int mlType;
 		tString msName;
 		bool mbActive = true;
+		bool mbFootActive[4] = {true, true, true, true};
 		cAgentComponent(E *apEnt, int alType) : mpEntity(apEnt), mlType(alType) {}
 		virtual ~cAgentComponent() {}
 		virtual void Update(float) {}
@@ -2475,6 +2476,8 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 		// ponytail: no IK, only the active flag
 		SOMA_FUNC(e, "cLuxFootPlacement@ cLux_CreateEntityComponent_FootPlacement(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentComponent(p, eComp_FootPlacement)); });
 		SOMA_FUNC(e, "cLuxHandPlacement@ cLux_CreateEntityComponent_HandPlacement(iLuxEntity @apEntity)", +[](E *p) { return AddComponent(p, new cAgentComponent(p, eComp_HandPlacement)); });
+		SOMA_METHOD(e, "cLuxFootPlacement", "void SetFootActive(bool abX, bool abRight, float afInactiveLength = -1.f, bool abFront = false)", +[](cAgentComponent *c, bool b, bool r, float, bool f) { c->mbFootActive[r + 2 * f] = b; });
+		SOMA_METHOD(e, "cLuxFootPlacement", "bool GetFootActive(bool abRight, bool abFront = false)", +[](cAgentComponent *c, bool r, bool f) { return c->mbFootActive[r + 2 * f]; });
 		for (const char *pType : {"cLuxFootPlacement", "cLuxHandPlacement"})
 		{
 			SOMA_METHOD(e, pType, "iLuxEntity@ GetEntity()", +[](cAgentComponent *c) { return c->mpEntity; });
