@@ -1038,6 +1038,7 @@ namespace hpl {
 			cBoneState *pState = GetBoneState(bone);
 			if(pState->GetBody()) vMatrices[bone] = cMath::MatrixMul(pState->GetWorldMatrix(), pState->GetBodyMatrix());
 		}
+		const cMatrixf mtxEntityWorld = GetWorldMatrix();
 		// A body carrying several bones follows the first
 		std::set<iPhysicsBody*> setDone;
 		for(int bone =0; bone< GetBoneStateNum(); ++bone)
@@ -1045,6 +1046,8 @@ namespace hpl {
 			iPhysicsBody *pBody = GetBoneState(bone)->GetBody();
 			if(pBody && setDone.insert(pBody).second) pBody->SetMatrix(vMatrices[bone]);
 		}
+		// Keep the mesh where it was when it hangs off a body that just moved
+		if(GetEntityParent()) SetMatrix(cMath::MatrixMul(cMath::MatrixInverse(GetEntityParent()->GetWorldMatrix()), mtxEntityWorld));
 	}
 
 	//----------------------------------------------------------------------
