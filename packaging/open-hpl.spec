@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.75
+Version:        1.3.76
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -148,6 +148,13 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Sun Nov 08 2026 lacamar <lchlnm@pm.me> - 1.3.76-1
+- Map transfers arrive at the start area like official
+- Keep crawl camera offset across transfers
+- Fix player state reset after map teardown
+- Fix flickering terminal status text (DoTextFrame overflow)
+- Implement more Rebirth/Bunker script API
+
 * Sun Nov 08 2026 lacamar <lchlnm@pm.me> - 1.3.75-1
 - Stopped voice ends its dialog item (02_01 story blocker)
 
