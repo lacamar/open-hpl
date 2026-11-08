@@ -1498,6 +1498,9 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
 	// official binds cSoundEntity::SetReverbAmount to SetVolume
 	SOMA_METHOD(e, "cSoundEntity", "void SetReverbAmount(float afX)", +[](cSoundEntity *o, float f) { o->SetVolume(f); });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileEntryType(eSoundEntryType aType)", +[](cSoundEntity *o, int t) { o->SetForcePlayAsGUISound((t & 12) != 0); });
+	SOMA_METHOD(e, "cSoundEntity", "eSoundEntryType GetSoundFileEntryType()", +[](cSoundEntity *o) { return o->GetForcePlayAsGUISound() ? 4 : 1; });
+	SOMA_METHOD(e, "cSoundEntity", "void SetSpeakerSpread(float afX)", +[](cSoundEntity *, float) {});
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFile3D(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetUse3D(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFileStream(bool abX)", +[](cSoundEntity *o, bool b) { if (o->GetData()) o->GetData()->SetStream(b); });
 	SOMA_METHOD(e, "cSoundEntity", "void SetSoundFilePriority(int alX)", +[](cSoundEntity *o, int p) { if (o->GetData()) o->GetData()->SetPriority(p); });
@@ -1506,6 +1509,31 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 	SOMA_METHOD_NEW(e, "cAnimationState", "void FadeSpeed(float afDest, float afTime)", +[](cAnimationState *o, float d, float t) { o->FadeSpeed(d, t); });
 	SOMA_FUNC(e, "bool cLux_GetFootageModeActive()", +[]() { return false; });
 	SOMA_FUNC(e, "void cSound_PreloadSoundEvent(const tString&in asInternalPath)", +[](const tString &) {});
+	if (SomaGameId() != "soma")
+	{
+		for (const char *pType : {"cLuxFootPlacement", "cLuxHandPlacement"})
+			SOMA_METHOD_NEW(e, pType, "void LoadFromVariables(cResourceVarsObject@ apVars)", +[](void *, void *) {});
+		SOMA_METHOD_NEW(e, "cMeshEntity", "void SetUpdateBonesWhenCulled(bool abX)", +[](void *, bool) {});
+		SOMA_METHOD_NEW(e, "cMeshEntity", "void SetDisableSleep(bool abX)", +[](void *, bool) {});
+		SOMA_METHOD_NEW(e, "cLuxProp", "void DisableSubMeshMerge(tString asX)", +[](void *, tString) {});
+		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetClimbWalls(bool abX)", +[](void *, bool) {});
+		SOMA_METHOD_NEW(e, "cLuxCharMover", "void SetDynamicObjectPlayerAvoidanceActive(bool abX)", +[](void *, bool) {});
+		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "void UnlockAchievement(int alID)", +[](void *, int) {});
+		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "bool GetAllAchievementsUnlocked()", +[](void *) { return false; });
+		SOMA_METHOD_NEW(e, "iLuxAchievementHandler", "tString GetAchievementName(int alID)", +[](void *, int) { return tString(); });
+		SOMA_METHOD_NEW(e, "cLuxAgent", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
+		SOMA_METHOD_NEW(e, "cLuxAgent", "bool GetRagdollActive()", +[](void *) { return false; });
+		for (const char *pType : {"iLuxEntity", "cLuxProp", "cLuxArea", "cLuxAgent", "cLuxCritter", "cLuxLiquidArea"})
+			SOMA_METHOD_NEW(e, pType, "cMatrixf GetBaseMatrix()", +[](cSomaLuxEntity *p) { return p->GetMatrix(); });
+		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void AddPathBlockerBody(tID alBodyID)", +[](void *, cSomaID) {});
+		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void RemovePathBlockerBody(tID alBodyID)", +[](void *, cSomaID) {});
+		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetMaxGoalsPerIsland(int alX)", +[](void *, int) {});
+		SOMA_METHOD_NEW(e, "cLuxPathfinder", "void SetDirectPathMaxDistanceMul(float afX)", +[](void *, float) {});
+		SOMA_METHOD_NEW(e, "iCharacterBody", "void SetSeparateMoveAndForceCollision(bool abX)", +[](void *, bool) {});
+		SOMA_METHOD_NEW(e, "iCharacterBody", "void SetMaxCollisionPoints(int alX)", +[](void *, int) {});
+	}
+	SOMA_FUNC(e, "void cLux_SetComputeAverageFrameColor(bool abX)", +[](bool) {});
+	SOMA_FUNC(e, "void cLux_LoadScreenSetForceBackground(bool abX)", +[](bool) {});
 	SOMA_METHOD(e, "cLuxInputHandler", "void SetGamepadColor(int alId, const cColor&in aColor)", +[](void *, int, const cColor &) {});
 	SOMA_FUNC(e, "void cSystem_ProfileStart(const tString&in asName)", +[](const tString &) {});
 	SOMA_FUNC(e, "void cSystem_ProfileEnd(const tString&in asName)", +[](const tString &) {});
