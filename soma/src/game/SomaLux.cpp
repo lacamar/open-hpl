@@ -881,9 +881,6 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				if (tString(pObj->GetPropertyName(i)) == "mbHasSaveFiles")
 					*(bool *)pObj->GetAddressOfProperty(i) = false;
 		}
-		cMatrixf mtxRel;
-		float fYawRel = 0, fPitch = 0;
-		int lActiveSize = 0;
 		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
 		gbMapChangeIsTransfer = sTransfer != "";
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
@@ -894,10 +891,6 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		if (pArea && pBody)
 		{
 			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
-			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
-			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
-			lActiveSize = pBody->GetActiveSize();
-			fPitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0;
 			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
 			{
 				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty())
@@ -933,12 +926,6 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 			{
-				// iCharacterBody::CopyFromBodySettings: the transferred player stays crouched, camera included
-				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
-				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
-									  SomaStartYaw(pNew->GetMatrix()) + fYawRel, lActiveSize == 1);
-				if (pPlayer->GetCamera())
-					pPlayer->GetCamera()->SetPitch(fPitch);
 				for (auto &[sName, vMtx] : vCarried)
 				{
 					cSomaLuxEntity *p = cSomaLuxMap::GetCurrent()->GetEntity(sName);
@@ -2068,7 +2055,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		}
 	});
 	SOMA_METHOD(e, M, "void PlacePlayerAtStartPos(const tString&in asName)", +[](cSomaLuxMap &m, S n) {
-		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntity() : m.GetWorld()->GetStartPosEntity(n);
+		cStartPosEntity *pStart = n == "" ? m.GetWorld()->GetFirstStartPosEntityByName() : m.GetWorld()->GetStartPosEntity(n);
 		if (pStart && cSomaLuxPlayer::Get())
 			cSomaLuxPlayer::Get()->PlaceAtStart(pStart->GetWorldMatrix().GetTranslation(),
 												 SomaStartYaw(pStart->GetWorldMatrix()),

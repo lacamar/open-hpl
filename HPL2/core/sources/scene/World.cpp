@@ -1280,6 +1280,14 @@ namespace hpl {
 		return (cStartPosEntity*)STLFindByName(mlstStartPosEntities,asName);
 	}
 
+	cStartPosEntity* cWorld::GetFirstStartPosEntityByName()
+	{
+		cStartPosEntity *pFirst = NULL;
+		for(cStartPosEntity *pStart : mlstStartPosEntities)
+			if(pFirst==NULL || pStart->GetName() < pFirst->GetName()) pFirst = pStart;
+		return pFirst;
+	}
+
 	cStartPosEntity* cWorld::GetFirstStartPosEntity()
 	{
 		if(mlstStartPosEntities.empty()) return NULL;

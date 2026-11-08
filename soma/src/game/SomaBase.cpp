@@ -1658,7 +1658,7 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 		{
 			if (asStartPosName != "*")
 				Log("SOMA: map '%s' has no PlayerStart Area named '%s', using the first\n", asMapFile.c_str(), asStartPosName.c_str());
-			pStartPos = pNewWorld->GetFirstStartPosEntity();
+			pStartPos = pNewWorld->GetFirstStartPosEntityByName();
 		}
 		if (pStartPos)
 		{

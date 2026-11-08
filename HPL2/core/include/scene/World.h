@@ -465,6 +465,7 @@ namespace hpl {
 		cStartPosEntity* CreateStartPos(const tString &asName);
 		cStartPosEntity* GetStartPosEntity(const tString &asName);
 		cStartPosEntity* GetFirstStartPosEntity();
+		cStartPosEntity* GetFirstStartPosEntityByName();
 
 		///// AI NODE METHODS ////////////////
 
