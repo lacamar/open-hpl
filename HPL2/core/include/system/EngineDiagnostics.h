@@ -42,6 +42,7 @@ namespace hpl {
 		static tString GetEntityInfoJson(cWorld *apWorld, const tString &asName);
 
 		static tString GetPixelStatsJson(const float *apPixels, int alWidth, int alHeight);
+		static void ApplyDisplayGamma(class cBitmap *apBitmap, float afGamma);
 		static tString GetFrameStatsJson(const unsigned char *apPixels, int alWidth, int alHeight, int alBytesPerPixel);
 
 	private:

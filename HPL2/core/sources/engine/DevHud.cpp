@@ -136,6 +136,7 @@ namespace hpl {
 				cBitmapData *pData = mpBugShot->GetData(0,0);
 				for(size_t i = 3; i < (size_t)pData->mlSize; i += 4) pData->mpData[i] = 255;
 			}
+			if(mpBugShot) cEngineDiagnostics::ApplyDisplayGamma(mpBugShot, pLowGfx->GetGammaCorrection());
 		}
 
 		const cVector2l &vScreen = pLowGfx->GetScreenSizeInt();

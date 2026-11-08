@@ -16,7 +16,9 @@
 #include "scene/ParticleSystem.h"
 #include "scene/SoundEntity.h"
 
+#include "graphics/Bitmap.h"
 #include "graphics/Graphics.h"
+#include "graphics/LowLevelGraphics.h"
 #include "graphics/Renderer.h"
 #include "graphics/RenderList.h"
 #include "graphics/Material.h"
@@ -466,6 +468,17 @@ namespace hpl {
 					",\"nan\":" + cString::ToString(lNan) + ",\"zero\":" + cString::ToString(lZero) + "}";
 		}
 		return sOut + "}";
+	}
+
+	void cEngineDiagnostics::ApplyDisplayGamma(cBitmap *apBitmap, float afGamma)
+	{
+		int lBpp = apBitmap->GetBytesPerPixel();
+		if(afGamma <= 0 || fabsf(afGamma - 1.0f) < 0.001f || lBpp < 3) return;
+		unsigned char vLut[256];
+		for(int i=0; i<256; ++i) vLut[i] = (unsigned char)(powf(i / 255.0f, 1.0f / afGamma) * 255.0f + 0.5f);
+		cBitmapData *pData = apBitmap->GetData(0,0);
+		for(size_t i=0; i+2 < (size_t)pData->mlSize; i += lBpp)
+			for(int c=0; c<3; ++c) pData->mpData[i+c] = vLut[pData->mpData[i+c]];
 	}
 
 	tString cEngineDiagnostics::GetFrameStatsJson(const unsigned char *apPixels, int alWidth, int alHeight, int alBytesPerPixel)
