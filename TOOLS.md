@@ -53,7 +53,7 @@ install directory writable.
 Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 `OPENHPL_SOMA_MAP=<file.hpm>`, `OPENHPL_SOMA_SKIP_BOOT=1`, `OPENHPL_SOMA_FREECAM=1`,
 `OPENHPL_DUMP_HPSL_SHADERS_DIR=<dir>`, `OPENHPL_DUMP_SHADERS_DIR=<dir>` (final GLSL, GL backend), `OPENHPL_RENDERER=vulkan`,
-`OPENHPL_VK_VALIDATION=1` (validation layer, output in run.out), `OPENHPL_VK_SHADER_LOG=1` (rewritten source on build failure). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
+`OPENHPL_HEADLESS_SLOTS=N` (N parallel headless instances, default 1), `OPENHPL_VK_VALIDATION=1` (validation layer, output in run.out), `OPENHPL_VK_SHADER_LOG=1` (rewritten source on build failure). Log: `$XDG_STATE_HOME/open-hpl/soma/hpl-<pid>.log`.
 
 `scripts/hpl_control.py --socket <sock> <cmd> [k=v ...]`:
 
@@ -62,6 +62,7 @@ Launch with `OPENHPL_HEADLESS_SOCKET=<sock>` (hidden window). Useful env:
 | `load_report` | per-track xml/created/skipped(reason) counts of the last `.hpm` load |
 | `world_stats` | live counts by object type, world AABB, submeshes without material |
 | `render_stats` | draw calls, render-list sizes, lights rendered, GL errors, fps |
+| `screen_stats` | Vulkan unclamped screen target max/mean/fraction >1 (HDR checks) |
 | `frame_stats` | final-frame luminance mean/histogram, black/white/magenta fractions |
 | `read_gbuffer_stats target=N` | per-channel min/max/mean/NaN/zero; 0-2 G-buffer, 4 light accumulation (HDR), 10-12 shadow maps high/med/low |
 | `lights [n=8]` | nearest lights: type, distance, radius, colour, visible, shadows |
