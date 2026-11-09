@@ -17,4 +17,5 @@ pub mod shader;
 pub mod string;
 mod string_ffi;
 pub mod types;
+pub mod world_hpm;
 pub mod xml;
