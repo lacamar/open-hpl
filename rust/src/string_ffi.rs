@@ -4,11 +4,11 @@
 use crate::string;
 use std::ffi::{c_char, c_void};
 
-type Sink<T> = unsafe extern "C" fn(*mut c_void, *const T, usize);
+pub(crate) type Sink<T> = unsafe extern "C" fn(*mut c_void, *const T, usize);
 
 /// # Safety
 /// `p` points to `n` readable units, or `n` is 0.
-unsafe fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
+pub(crate) unsafe fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
     if n == 0 {
         &[]
     } else {
@@ -19,7 +19,7 @@ unsafe fn units<'a, T>(p: *const T, n: usize) -> &'a [T] {
 
 /// # Safety
 /// `sink` accepts `ctx` and a slice.
-unsafe fn emit<T>(sink: Sink<T>, ctx: *mut c_void, v: &[T]) {
+pub(crate) unsafe fn emit<T>(sink: Sink<T>, ctx: *mut c_void, v: &[T]) {
     // SAFETY: caller contract.
     unsafe { sink(ctx, v.as_ptr(), v.len()) }
 }

@@ -3,6 +3,8 @@
 pub mod binary_buffer;
 pub mod crc;
 mod ffi;
+pub mod fsb5;
+mod fsb5_ffi;
 pub mod hpsl;
 pub mod platform;
 mod platform_ffi;
