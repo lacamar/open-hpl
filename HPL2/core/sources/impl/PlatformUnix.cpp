@@ -20,6 +20,8 @@
 #include "system/Platform.h"
 #include "system/RustPlatform.h"
 
+#include <stdexcept>
+
 #include "system/String.h"
 
 #include "system/LowLevelSystem.h"
@@ -475,7 +477,12 @@ namespace hpl {
 	tWString cPlatform::GetSystemSpecialPath(eSystemPath aPathType)
 	{
 		tString sPath;
-		if(!ohpl_platform_special_path(aPathType, PathSink, &sPath)) return _W("");
+		if(!ohpl_platform_special_path(aPathType, PathSink, &sPath))
+		{
+			// Known kinds fail only with HOME unset, where the C++ original threw from tString(nullptr).
+			if(aPathType <= eSystemPath_XDGPictures) throw std::logic_error("GetSystemSpecialPath: HOME is not set");
+			return _W("");
+		}
 		return cString::To16Char(sPath);
 	}
 
