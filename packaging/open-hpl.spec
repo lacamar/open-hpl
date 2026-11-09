@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.78
+Version:        1.3.79
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,9 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 09 2026 lacamar <lchlnm@pm.me> - 1.3.79-1
+- Fix crash in Bunker trenches (empty random range)
+
 * Mon Nov 09 2026 lacamar <lchlnm@pm.me> - 1.3.78-1
 - Port CRC, cString, XDG paths, BinaryBuffer to Rust
 - Port math, XML/config/language files to Rust
