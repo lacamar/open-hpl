@@ -6,6 +6,7 @@ mod ffi;
 pub mod fsb5;
 mod fsb5_ffi;
 pub mod hpsl;
+pub mod math;
 pub mod platform;
 mod platform_ffi;
 pub mod preprocess;
