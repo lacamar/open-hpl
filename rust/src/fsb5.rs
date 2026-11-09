@@ -212,7 +212,9 @@ fn decode_ima(s: &Sample, data: &[u8]) -> Vec<i16> {
         29794, 32767,
     ];
     const INDEX: [i32; 16] = [-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8];
-    let ch = s.channels as usize;
+    let Ok(ch @ 1..) = usize::try_from(s.channels) else {
+        return Vec::new();
+    };
     let block_len = 36 * ch;
     let want = s.num_pcm_samples as usize * ch;
     let mut out: Vec<i16> = Vec::new();

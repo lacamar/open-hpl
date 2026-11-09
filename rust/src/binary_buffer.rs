@@ -201,6 +201,9 @@ impl BinaryBuffer {
 
     /// Per-element reads: elements still available are filled, the rest are zeroed.
     pub fn get_array(&mut self, out: &mut [u8], elem: usize) {
+        if elem == 0 {
+            return;
+        }
         for chunk in out.chunks_exact_mut(elem) {
             if !self.get_data(chunk) {
                 chunk.fill(0);
@@ -1000,5 +1003,13 @@ mod tests {
     #[test]
     fn zstream_matches_c_layout() {
         assert_eq!(size_of::<super::ZStream>(), 112);
+    }
+
+    #[test]
+    fn get_array_zero_elem_is_noop() {
+        let mut b = BinaryBuffer::default();
+        let mut out = [7u8; 4];
+        b.get_array(&mut out, 0);
+        assert_eq!(out, [7; 4]);
     }
 }
