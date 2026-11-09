@@ -1,14 +1,4 @@
 //! The MapData walk of `cWorldLoaderHplMap`.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::{
     Builder, Decal, Entity, FLAG_FAST_STATIC_LOAD, FLAG_NO_ENTITIES, FLAG_NO_GAME_ENTITIES,
@@ -36,7 +26,8 @@ fn c_float(x: f32) -> String {
             f64::from(x),
         )
     };
-    String::from_utf8_lossy(&buf[..usize::try_from(n).unwrap_or(0).min(buf.len() - 1)]).into_owned()
+    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
+    String::from_utf8_lossy(buf.get(..len).unwrap_or_default()).into_owned()
 }
 
 /// A message as the C++ parser formats it: truncated to its 4096-byte buffer.
