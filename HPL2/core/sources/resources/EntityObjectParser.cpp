@@ -1,705 +1,187 @@
 #include "resources/EntityObjectBuilder.h"
+#include "resources/RustEntityLoader.h"
 
-#include "system/String.h"
-#include "math/Math.h"
+#include "system/RustXml.h"
 #include "resources/XmlDocument.h"
-#include "graphics/GraphicsTypes.h"
 
-#include <cstdarg>
-#include <cstdio>
-#include <list>
-#include <map>
-#include <set>
+#include <cstring>
 
 namespace hpl {
 
 	namespace {
 
-	tString Fmt(const char *asFmt, ...)
+	struct cCtx
 	{
-		char buf[2048];
-		va_list ap;
-		va_start(ap, asFmt);
-		vsnprintf(buf, sizeof(buf), asFmt, ap);
-		va_end(ap);
-		return buf;
-	}
-
-	typedef std::multimap<int,tEob> tShapeMap;
-	typedef std::multimap<int,tEob> tBodyMap;
-
-	tEob GetBodyShape(iEntityObjectBuilder &b, cXmlElement *apBodyElem, tShapeMap &a_mapShapes, std::set<tEob> &a_setUsed, bool abShare)
-	{
-		std::vector<tEob> vShapes;
-		cXmlNodeListIterator boundShapeIt = apBodyElem->GetChildIterator();
-		while(boundShapeIt.HasNext())
-		{
-			cXmlElement *pShapeElem = boundShapeIt.Next()->ToElement();
-			int lShapeID = pShapeElem->GetAttributeInt("ID");
-
-			tShapeMap::iterator it = a_mapShapes.find(lShapeID);
-			if(it != a_mapShapes.end())
-			{
-				vShapes.push_back(it->second);
-				if(abShare)	{ if(a_setUsed.insert(it->second).second) b.IncShapeUserCount(it->second); }
-				else		a_mapShapes.erase(it);
-			}
-		}
-
-		if(vShapes.empty()) return 0;
-		if(vShapes.size()==1) return vShapes[0];
-
-		return b.CreateCompoundShape(vShapes);
-	}
-
-	tEob CreateShape(iEntityObjectBuilder &b, cXmlElement *apShapeElem, const cVector3f &avScale)
-	{
-		tString sType = apShapeElem->GetAttributeString("ShapeType");
-		tString sLowType = cString::ToLowerCase(sType);
-		int type = -1;
-		if(sLowType == "box") type = 0;
-		else if(sLowType == "cylinder") type = 1;
-		else if(sLowType == "sphere") type = 2;
-		else if(sLowType == "capsule") type = 3;
-		else b.Error(Fmt("CollideShape '%s' does not exist!\n", sType.c_str()));
-
-		cVector3f vSize = apShapeElem->GetAttributeVector3f("Scale") * avScale;
-		cVector3f vPos = apShapeElem->GetAttributeVector3f("RelativeTranslation") * avScale;
-		cVector3f vRot = apShapeElem->GetAttributeVector3f("RelativeRotation");
-
-		cMatrixf mtxOffset = cMath::MatrixRotate(vRot,eEulerRotationOrder_XYZ);
-		mtxOffset.SetTranslation(vPos);
-		mtxOffset = cMath::MatrixMul(cMatrixf::Identity, mtxOffset);
-
-		switch(type)
-		{
-		case 0: return b.CreateBoxShape(vSize,mtxOffset);
-		case 2: return b.CreateSphereShape(vSize,mtxOffset);
-		case 1:
-			mtxOffset = cMath::MatrixMul(mtxOffset, cMath::MatrixRotateZ(kPi2f));
-			return b.CreateCylinderShape(vSize.x,vSize.y,mtxOffset);
-		case 3:
-			mtxOffset = cMath::MatrixMul(mtxOffset, cMath::MatrixRotateZ(kPi2f));
-			return b.CreateCapsuleShape(vSize.x,vSize.y,mtxOffset);
-		}
-		return 0;
-	}
-
-	cMatrixf GetMatrixFromVectors(const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale)
-	{
-		cMatrixf mtxOut = cMath::MatrixScale(avScale);
-		mtxOut = cMath::MatrixMul(cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ), mtxOut);
-		mtxOut.SetTranslation(avPos);
-		return mtxOut;
-	}
-
-	int ToAnimEventType(iEntityObjectBuilder &b, const tString& asType)
-	{
-		tString sLowType = cString::ToLowerCase(asType);
-
-		if(sLowType == "playsound")	return eAnimationEventType_PlaySound;
-		if(sLowType == "createparticle") return eAnimationEventType_CreateParticle;
-		if(sLowType == "step")		return eAnimationEventType_Step;
-		if(sLowType == "message")	return eAnimationEventType_Message;
-		if(sLowType == "playloopsound") return eAnimationEventType_PlayLoopSound;
-		if(sLowType == "stoploopsound") return eAnimationEventType_StopLoopSound;
-		if(sLowType == "" || sLowType == "ik") return eAnimationEventType_LastEnum;
-
-		b.Error(Fmt("No animation event named '%s'\n", asType.c_str()));
-		return eAnimationEventType_LastEnum;
-	}
-
-	struct cParse
-	{
-		iEntityObjectBuilder &b;
-		const cEobParams &p;
-		cEobFlags f;
-		bool mbSkeleton;
-		int mlAnimNum;
-		tEob mEnt;
-		bool mbNodeAnimation;
-
-		cParse(iEntityObjectBuilder &aB, const cEobParams &aP) : b(aB), p(aP), mbNodeAnimation(false) {}
-
-		void AttachChildren(cXmlElement *apMainElem, tEob aParent, tEob aBone,
-							std::list<tEob>& a_lstChildList, std::map<int,tEob> &a_mapBoneStates, bool abRemoveAttachedChild, bool abIsBody)
-		{
-			cXmlElement *pChildrenElem = apMainElem->GetFirstElement("Children");
-			if(pChildrenElem==NULL) return;
-
-			cMatrixf mtxInvParent;
-			if(aParent)
-				mtxInvParent = cMath::MatrixInverse(b.GetLocalMatrix(aParent));
-			else
-				mtxInvParent = cMath::MatrixInverse(b.GetBoneWorldMatrix(aBone));
-
-			cXmlNodeListIterator childIt = pChildrenElem->GetChildIterator();
-			while(childIt.HasNext())
-			{
-				cXmlElement *pChildElem = childIt.Next()->ToElement();
-
-				int lID = pChildElem->GetAttributeInt("ID");
-
-				bool bFound = false;
-				for(std::list<tEob>::iterator it = a_lstChildList.begin(); it != a_lstChildList.end(); ++it)
-				{
-					tEob pEntity = *it;
-					if(b.GetUniqueID(pEntity) != lID) continue;
-
-					if(aParent)
-					{
-						if(b.IsSubMesh(pEntity) && mbSkeleton == false && mlAnimNum > 0)
-						{
-							mbNodeAnimation = true;
-							b.SetNodeAnimation();
-							continue;
-						}
-						else
-						{
-							b.AttachEntityChild(aParent, mtxInvParent, pEntity);
-						}
-					}
-					else
-						b.AttachBoneChild(aBone, mtxInvParent, pEntity);
-
-					if(abRemoveAttachedChild) a_lstChildList.erase(it);
-					bFound = true;
-					break;
-				}
-
-				if(abIsBody && bFound==false)
-				{
-					std::map<int,tEob>::iterator it = a_mapBoneStates.find(lID);
-					if(it != a_mapBoneStates.end())
-					{
-						b.AttachBoneToBody(aParent, mtxInvParent, it->second);
-						bFound = true;
-
-						a_mapBoneStates.erase(it);
-					}
-				}
-
-				if(bFound == false)
-				{
-					if(aParent)
-						b.Warning(Fmt("Could not find child with unique ID %d to attach to entity '%s' in '%s'\n", lID, b.GetEntityName(aParent).c_str(), p.msFileName.c_str()));
-					else
-						b.Warning(Fmt("Could not find child with unique ID %d to attach to bone '%s' in '%s'\n", lID, b.GetBoneName(aBone).c_str(), p.msFileName.c_str()));
-				}
-			}
-		}
-
-		tEob CreateJoint(cXmlElement *apJointElem, tBodyMap &a_mapBodies, const std::map<tEob, cMatrixf>& a_mapRestMatrix)
-		{
-			cVector3f vPivot = apJointElem->GetAttributeVector3f("WorldPos") * p.mvScale;
-
-			cVector3f vPinDir;
-			if(apJointElem->GetAttributeString("PinDir","") != "")
-			{
-				vPinDir = apJointElem->GetAttributeVector3f("PinDir");
-			}
-			else
-			{
-				vPinDir = cMath::MatrixMul3x3(cMath::MatrixRotate(apJointElem->GetAttributeVector3f("Rotation"),
-																	eEulerRotationOrder_XYZ), cVector3f(0,1,0));
-			}
-
-			vPivot = cMath::MatrixMul(p.m_mtxTransform, vPivot);
-			vPinDir = cMath::MatrixMul3x3(p.m_mtxTransform, vPinDir);
-
-			tString sJointName = p.msName + "_" + apJointElem->GetAttributeString("Name");
-
-			tString sType = apJointElem->GetValue();
-			tString sLowType = cString::ToLowerCase(sType);
-			int jointType = 1;
-			if(sLowType == "jointhinge")	jointType = 0;
-			else if(sLowType == "jointball")		jointType = 1;
-			else if(sLowType == "jointslider")	jointType = 2;
-			else if(sLowType == "joinscrew")		jointType = 3;
-			else b.Error(Fmt("Joint type '%s' does not exist!\n", sType.c_str()));
-
-			int lParentID = apJointElem->GetAttributeInt("ConnectedParentBodyID");
-			int lChildID = apJointElem->GetAttributeInt("ConnectedChildBodyID");
-
-			tBodyMap::iterator parentIt = a_mapBodies.find(lParentID);
-			tEob pParentBody = (lParentID > 0 && parentIt != a_mapBodies.end()) ? parentIt->second : 0;
-			tBodyMap::iterator childIt = a_mapBodies.find(lChildID);
-			tEob pChildBody = childIt != a_mapBodies.end() ? childIt->second : 0;
-
-			if(pChildBody==0)
-			{
-				b.Error(Fmt("Could not find child body with ID %d for joint '%s'\n", lChildID, sJointName.c_str()));
-				return 0;
-			}
-
-			std::map<tEob, cMatrixf>::const_iterator restIt = a_mapRestMatrix.find(pChildBody);
-			if(restIt != a_mapRestMatrix.end())
-			{
-				cMatrixf mtxDelta = cMath::MatrixMul(b.GetWorldMatrix(pChildBody), cMath::MatrixInverse(restIt->second));
-				vPivot = cMath::MatrixMul(mtxDelta, vPivot);
-				vPinDir = cMath::MatrixMul3x3(mtxDelta, vPinDir);
-			}
-
-			if(jointType == 0)
-			{
-				tEob pJoint = b.CreateJointHinge(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-				float fMin = cMath::ToRad(apJointElem->GetAttributeFloat("MinAngle"));
-				float fMax = cMath::ToRad(apJointElem->GetAttributeFloat("MaxAngle"));
-				b.SetHingeLimits(pJoint, fMin, fMax);
-				return pJoint;
-			}
-			else if(jointType == 1)
-			{
-				tEob pJoint = b.CreateJointBall(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-				float fCone = cMath::ToRad(apJointElem->GetAttributeFloat("MaxConeAngle"));
-				float fTwist = cMath::ToRad(apJointElem->GetAttributeFloat("MaxTwistAngle"));
-				b.SetBallLimits(pJoint, fCone, fTwist);
-				return pJoint;
-			}
-			else if(jointType == 2)
-			{
-				tEob pJoint = b.CreateJointSlider(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-				float fMin = apJointElem->GetAttributeFloat("MinDistance");
-				float fMax = apJointElem->GetAttributeFloat("MaxDistance");
-				b.SetSliderLimits(pJoint, fMin, fMax);
-				return pJoint;
-			}
-			else
-			{
-				tEob pJoint = b.CreateJointScrew(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-				float fMin = apJointElem->GetAttributeFloat("MinDistance");
-				float fMax = apJointElem->GetAttributeFloat("MaxDistance");
-				b.SetScrewLimits(pJoint, fMin, fMax);
-				return pJoint;
-			}
-		}
-
-		void JointProperties(tEob aJoint, cXmlElement *e)
-		{
-			cEobJointProps j;
-			j.msMoveSound = e->GetAttributeString("MoveSound","");
-			j.mfMinMoveSpeed = e->GetAttributeFloat("MinMoveSpeed",0.5f);
-			j.mfMinMoveFreq = e->GetAttributeFloat("MinMoveFreq",0.9f);
-			j.mfMinMoveVolume = e->GetAttributeFloat("MinMoveVolume",0.3f);
-			j.mfMinMoveFreqSpeed = e->GetAttributeFloat("MinMoveFreqSpeed",0.9f);
-			j.mfMaxMoveFreq = e->GetAttributeFloat("MaxMoveFreq",1.1f);
-			j.mfMaxMoveVolume = e->GetAttributeFloat("MaxMoveVolume",1.0f);
-			j.mfMaxMoveFreqSpeed = e->GetAttributeFloat("MaxMoveFreqSpeed",1.1f);
-			j.mfMiddleMoveSpeed = e->GetAttributeFloat("MiddleMoveSpeed",1.0f);
-			j.mfMiddleMoveVolume = e->GetAttributeFloat("MiddleMoveVolume",1.0f);
-			j.mbAngularMove = cString::ToLowerCase(e->GetAttributeString("MoveType","Linear")) == "angular";
-
-			j.mbStickyMinLimit = e->GetAttributeBool("StickyMinLimit",false);
-			j.mbStickyMaxLimit = e->GetAttributeBool("StickyMaxLimit",false);
-
-			j.mbBreakable = e->GetAttributeBool("Breakable",false);
-			j.mfBreakForce = e->GetAttributeFloat("BreakForce",1000);
-			j.msBreakSound = e->GetAttributeString("BreakSound","");
-
-			j.mbLimitAutoSleep = e->GetAttributeBool("LimitAutoSleep",false);
-			j.mfLimitAutoSleepDist = e->GetAttributeFloat("LimitAutoSleepDist",0.02f);
-			j.mlLimitAutoSleepNumSteps = e->GetAttributeInt("LimitAutoSleepNumSteps",10);
-
-			j.mbCollideBodies = e->GetAttributeBool("CollideBodies",true);
-
-			j.msMaxLimitSound = e->GetAttributeString("MaxLimitSound","");
-			j.mfMaxLimitMaxSpeed = e->GetAttributeFloat("MaxLimitMaxSpeed",10.0f);
-			j.mfMaxLimitMinSpeed = e->GetAttributeFloat("MaxLimit_MinSpeed",20.0f);
-			if(j.mfMaxLimitMaxSpeed <=0) j.mfMaxLimitMaxSpeed = 0.01f;
-
-			j.msMinLimitSound = e->GetAttributeString("MinLimitSound","");
-			j.mfMinLimitMaxSpeed = e->GetAttributeFloat("MinLimitMaxSpeed",10.0f);
-			j.mfMinLimitMinSpeed = e->GetAttributeFloat("MinLimitMinSpeed",20.0f);
-			if(j.mfMinLimitMaxSpeed <=0) j.mfMaxLimitMaxSpeed = 0.01f;
-
-			j.mlID = e->GetAttributeInt("ID",-1);
-
-			b.SetJointProperties(aJoint, j);
-		}
-
-		void BodyProperties(tEob aBody, cXmlElement *e)
-		{
-			cEobBodyProps p2;
-			p2.m_mtxMatrix = GetMatrixFromVectors(e->GetAttributeVector3f("WorldPos") * p.mvScale,
-													e->GetAttributeVector3f("Rotation"),
-													1.0f);
-			p2.mfMass = e->GetAttributeFloat("Mass",1.0f);
-			p2.mfAngularDamping = e->GetAttributeFloat("AngularDamping");
-			p2.mfLinearDamping = e->GetAttributeFloat("LinearDamping");
-			p2.mbBlocksSound = e->GetAttributeBool("BlocksSound",false);
-			p2.mbCollideCharacter = e->GetAttributeBool("CollideCharacter",true);
-			p2.mbCollide = e->GetAttributeBool("CollideNonCharacter",true);
-			p2.mbGravity = e->GetAttributeBool("HasGravity",true);
-			p2.mfBuoyancyDensityMul = e->GetAttributeFloat("BuoyancyDensityMul",1.0);
-			p2.mfMaxAngularSpeed = e->GetAttributeFloat("MaxAngularSpeed",0);
-			p2.mfMaxLinearSpeed = e->GetAttributeFloat("MaxLinearSpeed",0);
-			p2.mbContinuousCollision = e->GetAttributeBool("ContinuousCollision",true);
-			p2.mbPushedByCharacterGravity = e->GetAttributeBool("PushedByCharacterGravity",false);
-			p2.mbVolatile = e->GetAttributeBool("Volatile",false);
-			p2.mbUseSurfaceEffects = e->GetAttributeBool("UseSurfaceEffects",true);
-			p2.mbCanAttachCharacter = e->GetAttributeBool("CanAttachCharacter",false);
-			p2.mlID = e->GetAttributeInt("ID",-1);
-			b.SetBodyProperties(aBody, p2);
-		}
-
-		bool Run(cXmlElement *apRootElem)
-		{
-			const cVector3f &mvScale = p.mvScale;
-			std::list<tEob> lstEntities;
-
-			cXmlElement* pModelDataElem = apRootElem->GetFirstElement("ModelData");
-			if(pModelDataElem==NULL){
-				b.Error("Couldn't load element ModelData"); return false;
-			}
-
-			b.BeforeLoad();
-			f = b.Flags();
-
-			cXmlElement *pMeshElem = pModelDataElem->GetFirstElement("Mesh");
-			if(pMeshElem==NULL){
-				b.Error("Couldn't load element Mesh"); return false;
-			}
-
-			{
-				tString sMeshFile = pMeshElem->GetAttributeString("Filename");
-				if(cString::GetFilePath(sMeshFile).size() < 1)
-				{
-					sMeshFile = cString::SetFilePath(sMeshFile, p.msFullPathDir);
-				}
-				if(b.CreateMesh(sMeshFile, mbSkeleton, mlAnimNum)==false) return false;
-
-				mEnt = b.CreateMeshEntity(p.msName);
-
-				if(mbSkeleton)
-					b.SetMatrix(mEnt, cMath::MatrixScale(mvScale));
-
-				b.SetShadowCaster(mEnt);
-			}
-
-			{
-				bool bHasSkeleton = mbSkeleton;
-				cXmlNodeListIterator submeshIt = pMeshElem->GetChildIterator();
-				while(submeshIt.HasNext())
-				{
-					cXmlElement *pSubMeshElem = submeshIt.Next()->ToElement();
-
-					tString sName = pSubMeshElem->GetAttributeString("Name");
-
-					tEob pSubEntity = b.GetSubMeshEntity(sName);
-					if(pSubEntity==0)
-					{
-						b.WarnMissingSubMesh(sName);
-						continue;
-					}
-					if(bHasSkeleton==false)
-						lstEntities.push_back(pSubEntity);
-
-					if(bHasSkeleton==false)
-					{
-						cVector3f vSubScale = pSubMeshElem->GetAttributeVector3f("Scale");
-						if(f.mbSubMeshScaleIncludesModelScale)
-						{
-							cVector3f vModelScale = b.GetSubMeshModelScale(pSubEntity);
-							for(int i=0; i<3; ++i) if(vModelScale.v[i] != 0) vSubScale.v[i] /= vModelScale.v[i];
-						}
-						cMatrixf mtxLocalTransform = f.mbSubMeshInstanceScaleAfterRotation ?
-							cMath::MatrixMul(cMath::MatrixScale(mvScale), GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos"),
-																								pSubMeshElem->GetAttributeVector3f("Rotation"),
-																								vSubScale)) :
-							GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
-													pSubMeshElem->GetAttributeVector3f("Rotation"),
-													vSubScale*mvScale);
-
-						b.SetWorldMatrix(pSubEntity, mtxLocalTransform);
-					}
-
-					int lID = pSubMeshElem->GetAttributeInt("ID",-1);
-					if(lID < 0) lID = pSubMeshElem->GetAttributeInt("SubMeshID");
-
-					b.SetUniqueID(pSubEntity, lID);
-
-					tString sMaterial = f.mbSubMeshMaterials ? pSubMeshElem->GetAttributeString("Material") : "";
-					if(cString::GetFileExt(sMaterial) != "")
-						b.SetSubMeshMaterial(pSubEntity, sMaterial);
-				}
-			}
-
-			cXmlElement *pAnimationsElem = pModelDataElem->GetFirstElement("Animations");
-			if(f.mbAnimations && mEnt && pAnimationsElem)
-			{
-				cXmlNodeListIterator animElemIt = pAnimationsElem->GetChildIterator();
-				while(animElemIt.HasNext())
-				{
-					cXmlElement *pAnimElem = animElemIt.Next()->ToElement();
-
-					tString sFile = pAnimElem->GetAttributeString("File");
-					tString sName = pAnimElem->GetAttributeString("Name");
-					float fSpeed = pAnimElem->GetAttributeFloat("Speed",1.0f);
-					float fSpecialEventTime = pAnimElem->GetAttributeFloat("SpecialEventTime",0.0f);
-
-					if(cString::GetFilePath(sFile).length() <= 1)
-						sFile = cString::SetFilePath(sFile, p.msFullPathDir);
-
-					tEob pState = b.AddAnimation(sFile, sName, fSpeed);
-
-					if(pState)
-					{
-						b.SetSpecialEventTime(pState, fSpecialEventTime);
-
-						cXmlNodeListIterator eventElemIt = pAnimElem->GetChildIterator();
-						while(eventElemIt.HasNext())
-						{
-							cXmlElement *pEventElem = eventElemIt.Next()->ToElement();
-
-							float fTime = pEventElem->GetAttributeFloat("Time");
-							int lType = ToAnimEventType(b, pEventElem->GetAttributeString("Type"));
-							b.AddAnimationEvent(pState, fTime, lType, pEventElem->GetAttributeString("Value"),
-												pEventElem->GetAttributeString("Name"), pEventElem->GetAttributeString("DestSocket"));
-						}
-					}
-				}
-			}
-
-			{
-				cXmlElement *pEntitiesElem = pModelDataElem->GetFirstElement("Entities");
-				if(pEntitiesElem)
-				{
-					tString sPrefix = p.msName + "_";
-					cXmlNodeListIterator entityIt = pEntitiesElem->GetChildIterator();
-					while(entityIt.HasNext())
-					{
-						cXmlElement *pEntityElem = entityIt.Next()->ToElement();
-						const tString& sEntityType = pEntityElem->GetValue();
-						tEob pEntity = 0;
-
-						if(sEntityType == "ParticleSystem")
-						{
-							if(f.mbParticleSystems) pEntity = b.LoadWorldEntity(eEobWorldEntity_ParticleSystem, pEntityElem, sPrefix);
-						}
-						else if(sEntityType == "Billboard")
-						{
-							if(f.mbBillboards) pEntity = b.LoadWorldEntity(eEobWorldEntity_Billboard, pEntityElem, sPrefix);
-						}
-						else if(sEntityType == "LensFlare")
-						{
-							pEntity = b.LoadWorldEntity(eEobWorldEntity_LensFlare, pEntityElem, sPrefix);
-						}
-						else if(sEntityType == "Sound")
-						{
-							if(f.mbSounds) pEntity = b.LoadWorldEntity(eEobWorldEntity_Sound, pEntityElem, sPrefix);
-						}
-						else if(cString::GetLastStringPos(sEntityType,"Light")>0)
-						{
-							if(f.mbLights) pEntity = b.LoadWorldEntity(eEobWorldEntity_Light, pEntityElem, sPrefix);
-						}
-						else
-						{
-							b.Error(Fmt("Entity world entity type '%s' is unknown!\n", sEntityType.c_str()));
-						}
-
-						if(pEntity)
-						{
-							cVector3f vPos = b.GetLocalPosition(pEntity);
-							b.SetPosition(pEntity, vPos * mvScale);
-
-							lstEntities.push_back(pEntity);
-						}
-					}
-				}
-
-				b.LinkLightBillboards();
-			}
-
-			std::list<tEob> lstTempEntities = lstEntities;
-
-			std::map<int,tEob> mapBoneStates;
-			if(mbSkeleton)
-			{
-				cXmlElement *pBonesElem = pModelDataElem->GetFirstElement("Bones");
-				if(pBonesElem)
-				{
-					cXmlNodeListIterator boneIt = pBonesElem->GetChildIterator();
-					while(boneIt.HasNext())
-					{
-						cXmlElement *pBoneElem = boneIt.Next()->ToElement();
-
-						int lID = pBoneElem->GetAttributeInt("ID");
-						tString sName = pBoneElem->GetAttributeString("Name");
-
-						tEob pBoneState = b.GetBoneState(sName);
-						if(pBoneState==0){
-							b.Error(Fmt("Could not find bone '%s' in model '%s'\n", sName.c_str(), p.msFullPath.c_str()));
-							continue;
-						}
-
-						mapBoneStates.insert(std::map<int,tEob>::value_type(lID, pBoneState));
-
-						AttachChildren(pBoneElem, 0, pBoneState, lstTempEntities, mapBoneStates, true, false);
-					}
-				}
-			}
-
-			tShapeMap mapShapes;
-			std::set<tEob> setUsedShapes;
-
-			if(p.mbPhysicsWorld)
-			{
-				cXmlElement *pShapesElem = pModelDataElem->GetFirstElement("Shapes");
-				if(pShapesElem)
-				{
-					cXmlNodeListIterator shapeIt = pShapesElem->GetChildIterator();
-					while(shapeIt.HasNext())
-					{
-						cXmlElement *pBodyShapeElem = shapeIt.Next()->ToElement();
-
-						tEob pCollideShape = CreateShape(b, pBodyShapeElem, mvScale);
-						if(pCollideShape == 0) continue;
-						int lID = pBodyShapeElem->GetAttributeInt("ID");
-
-						mapShapes.insert(tShapeMap::value_type(lID, pCollideShape));
-					}
-				}
-			}
-
-			tBodyMap mapBodies;
-			std::vector<tEob> vBodies;
-
-			if(p.mbPhysicsWorld)
-			{
-				cXmlElement *pBodiesElem = pModelDataElem->GetFirstElement("Bodies");
-				if(pBodiesElem)
-				{
-					cXmlNodeListIterator bodyIt = pBodiesElem->GetChildIterator();
-					while(bodyIt.HasNext())
-					{
-						cXmlElement *pBodyElem = bodyIt.Next()->ToElement();
-						int lID = pBodyElem->GetAttributeInt("ID");
-						tString sBodyName = pBodyElem->GetAttributeString("Name");
-
-						tEob pShape = GetBodyShape(b, pBodyElem, mapShapes, setUsedShapes, f.mbShareBodyShapes);
-						if(pShape==0){
-							b.Error(Fmt("No shapes found for body '%s'\n", sBodyName.c_str()));
-							continue;
-						}
-
-						tEob pBody = b.CreateBody(p.msName +"_"+ sBodyName, pShape);
-						BodyProperties(pBody, pBodyElem);
-
-						b.SetBodyMaterial(pBody, pBodyElem->GetAttributeString("Material"));
-
-						mapBodies.insert(tBodyMap::value_type(lID, pBody));
-						vBodies.push_back(pBody);
-						b.RegisterBody(pBody);
-
-						AttachChildren(pBodyElem, pBody, 0, lstTempEntities, mapBoneStates, true, true);
-					}
-				}
-
-				if(mbSkeleton)
-				{
-					if(mapBoneStates.size() != (size_t)b.GetBoneStateNum())
-						b.WarnSkeletonMismatch();
-					lstTempEntities.push_back(mEnt);
-				}
-
-				for(tShapeMap::iterator shapeSetIt = mapShapes.begin(); shapeSetIt != mapShapes.end(); ++shapeSetIt)
-				{
-					if(setUsedShapes.count(shapeSetIt->second)==0)
-						b.DestroyShape(shapeSetIt->second);
-				}
-			}
-
-			if(vBodies.empty()==false)
-			{
-				tEob pMainBody = vBodies[0];
-				cMatrixf mtxInvParent = cMath::MatrixInverse(b.GetLocalMatrix(pMainBody));
-
-				for(std::list<tEob>::iterator it = lstTempEntities.begin(); it != lstTempEntities.end(); ++it)
-				{
-					tEob pEntity = *it;
-
-					if(b.IsSubMesh(pEntity) && mbSkeleton == false && mlAnimNum > 0)
-					{
-						mbNodeAnimation = true;
-						b.SetNodeAnimation();
-						continue;
-					}
-					else
-					{
-						b.AttachEntityChild(pMainBody, mtxInvParent, pEntity);
-					}
-				}
-
-				if(mbNodeAnimation)
-					b.AttachEntityChild(pMainBody, mtxInvParent, mEnt);
-			}
-
-			if(vBodies.size()<=0)
-			{
-				if(mbSkeleton)
-					b.SetMatrix(mEnt, cMath::MatrixMul(p.m_mtxTransform, cMath::MatrixScale(mvScale)) );
-				else
-					b.SetMatrix(mEnt, p.m_mtxTransform);
-
-				b.UpdateLogic(mEnt);
-			}
-			else
-			{
-				for(size_t i=0;i<vBodies.size(); ++i)
-				{
-					tEob pBody = vBodies[i];
-					b.SetMatrix(pBody, cMath::MatrixMul(p.m_mtxTransform, b.GetLocalMatrix(pBody)));
-				}
-			}
-
-			std::map<tEob, cMatrixf> mapRestMatrix;
-			for(size_t i=0; i<vBodies.size(); ++i)
-				mapRestMatrix[vBodies[i]] = b.GetWorldMatrix(vBodies[i]);
-			bool bPosed = b.BeforeJoints();
-			if(!bPosed)
-				mapRestMatrix.clear();
-
-			if(p.mbPhysicsWorld)
-			{
-				cXmlElement *JointsElem = pModelDataElem->GetFirstElement("Joints");
-				if(JointsElem)
-				{
-					cXmlNodeListIterator jointIt = JointsElem->GetChildIterator();
-					while(jointIt.HasNext())
-					{
-						cXmlElement *pJointElem = jointIt.Next()->ToElement();
-
-						tEob pJoint = CreateJoint(pJointElem, mapBodies, mapRestMatrix);
-						if(pJoint)
-						{
-							JointProperties(pJoint, pJointElem);
-							b.RegisterJoint(pJoint);
-						}
-					}
-				}
-			}
-
-			for(std::list<tEob>::iterator it = lstEntities.begin(); it != lstEntities.end(); ++it)
-				b.SetUniqueID(*it, -1);
-
-			if(b.GetAnimationStateNum() >0 && !bPosed)
-				b.PlayFirstAnimation();
-			else if(mbSkeleton && vBodies.size() >0)
-				b.SetSkeletonPhysicsActive();
-
-			b.LoadUserVariables();
-			b.AfterLoad();
-
-			return true;
-		}
+		iEntityObjectBuilder *mpB;
+		std::vector<cXmlElement*> mvElems;
+		tString msTmp;
 	};
+
+	cCtx& C(void *apCtx){ return *static_cast<cCtx*>(apCtx); }
+	iEntityObjectBuilder& B(void *apCtx){ return *C(apCtx).mpB; }
+
+	OhplEntStr S(const tString &asStr){ OhplEntStr s = { asStr.data(), asStr.size() }; return s; }
+	tString T(OhplEntStr aStr){ return tString(aStr.p, aStr.n); }
+	const cMatrixf& M(const OhplEntMat *apMat){ return *reinterpret_cast<const cMatrixf*>(apMat); }
+	void Out(const cMatrixf &a_mtx, OhplEntMat *apOut){ memcpy(apOut, &a_mtx, sizeof(cMatrixf)); }
+	cVector3f V(OhplEntVec3 aVec){ return cVector3f(aVec.x, aVec.y, aVec.z); }
+	OhplEntVec3 V(const cVector3f &avVec){ OhplEntVec3 v = { avVec.x, avVec.y, avVec.z }; return v; }
+
+	static_assert(sizeof(cMatrixf) == sizeof(OhplEntMat), "cMatrixf layout");
+
+	void CopyElement(OhplXmlDoc *apDoc, unsigned alId, cXmlElement *apElem, std::vector<cXmlElement*> &avElems)
+	{
+		if(avElems.size() <= alId) avElems.resize(alId + 1, NULL);
+		avElems[alId] = apElem;
+
+		tAttributeMap *pAttributeMap = apElem->GetAttributeMap();
+		for(tAttributeMapIt it = pAttributeMap->begin(); it != pAttributeMap->end(); ++it)
+			ohpl_xml_doc_set_attr(apDoc, alId, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+
+		cXmlNodeListIterator it = apElem->GetChildIterator();
+		while(it.HasNext())
+		{
+			cXmlElement *pChild = it.Next()->ToElement();
+			const tString &sName = pChild->GetValue();
+			CopyElement(apDoc, ohpl_xml_doc_add_element(apDoc, alId, sName.c_str(), sName.size()), pChild, avElems);
+		}
+	}
+
+	OhplEntVt MakeVt(cCtx *apCtx)
+	{
+		OhplEntVt vt;
+		vt.ctx = apCtx;
+		vt.error = [](void *c, OhplEntStr s) noexcept { B(c).Error(T(s)); };
+		vt.warning = [](void *c, OhplEntStr s) noexcept { B(c).Warning(T(s)); };
+		vt.before_load = [](void *c) noexcept { B(c).BeforeLoad(); };
+		vt.after_load = [](void *c) noexcept { B(c).AfterLoad(); };
+		vt.before_joints = [](void *c) noexcept { return B(c).BeforeJoints(); };
+		vt.flags = [](void *c, OhplEntFlags *o) noexcept {
+			cEobFlags f = B(c).Flags();
+			o->animations = f.mbAnimations; o->particle_systems = f.mbParticleSystems; o->billboards = f.mbBillboards;
+			o->sounds = f.mbSounds; o->lights = f.mbLights;
+			o->sub_mesh_scale_includes_model_scale = f.mbSubMeshScaleIncludesModelScale;
+			o->sub_mesh_instance_scale_after_rotation = f.mbSubMeshInstanceScaleAfterRotation;
+			o->sub_mesh_materials = f.mbSubMeshMaterials;
+			o->share_body_shapes = f.mbShareBodyShapes;
+		};
+		vt.create_mesh = [](void *c, OhplEntStr s, bool *skel, int *anim) noexcept { return B(c).CreateMesh(T(s), *skel, *anim); };
+		vt.create_mesh_entity = [](void *c, OhplEntStr s) noexcept { return (OhplEntRaw)B(c).CreateMeshEntity(T(s)); };
+		vt.set_matrix = [](void *c, OhplEntRaw e, const OhplEntMat *m) noexcept { B(c).SetMatrix(e, M(m)); };
+		vt.set_shadow_caster = [](void *c, OhplEntRaw e) noexcept { B(c).SetShadowCaster(e); };
+		vt.update_logic = [](void *c, OhplEntRaw e) noexcept { B(c).UpdateLogic(e); };
+		vt.get_sub_mesh_entity = [](void *c, OhplEntStr s) noexcept { return (OhplEntRaw)B(c).GetSubMeshEntity(T(s)); };
+		vt.warn_missing_sub_mesh = [](void *c, OhplEntStr s) noexcept { B(c).WarnMissingSubMesh(T(s)); };
+		vt.get_sub_mesh_model_scale = [](void *c, OhplEntRaw e) noexcept { return V(B(c).GetSubMeshModelScale(e)); };
+		vt.set_world_matrix = [](void *c, OhplEntRaw e, const OhplEntMat *m) noexcept { B(c).SetWorldMatrix(e, M(m)); };
+		vt.set_unique_id = [](void *c, OhplEntRaw e, int id) noexcept { B(c).SetUniqueID(e, id); };
+		vt.set_sub_mesh_material = [](void *c, OhplEntRaw e, OhplEntStr s) noexcept { B(c).SetSubMeshMaterial(e, T(s)); };
+		vt.add_animation = [](void *c, OhplEntStr f, OhplEntStr n, float speed) noexcept { return (OhplEntRaw)B(c).AddAnimation(T(f), T(n), speed); };
+		vt.set_special_event_time = [](void *c, OhplEntRaw st, float t) noexcept { B(c).SetSpecialEventTime(st, t); };
+		vt.add_animation_event = [](void *c, OhplEntRaw st, float t, int ty, OhplEntStr v, OhplEntStr n, OhplEntStr d) noexcept {
+			B(c).AddAnimationEvent(st, t, ty, T(v), T(n), T(d));
+		};
+		vt.load_world_entity = [](void *c, int kind, unsigned node, OhplEntStr prefix) noexcept {
+			return (OhplEntRaw)B(c).LoadWorldEntity((eEobWorldEntity)kind, C(c).mvElems[node], T(prefix));
+		};
+		vt.get_local_position = [](void *c, OhplEntRaw e) noexcept { return V(B(c).GetLocalPosition(e)); };
+		vt.set_position = [](void *c, OhplEntRaw e, OhplEntVec3 p) noexcept { B(c).SetPosition(e, V(p)); };
+		vt.link_light_billboards = [](void *c) noexcept { B(c).LinkLightBillboards(); };
+		vt.get_bone_state = [](void *c, OhplEntStr s) noexcept { return (OhplEntRaw)B(c).GetBoneState(T(s)); };
+		vt.get_bone_state_num = [](void *c) noexcept { return B(c).GetBoneStateNum(); };
+		vt.warn_skeleton_mismatch = [](void *c) noexcept { B(c).WarnSkeletonMismatch(); };
+		vt.get_bone_world_matrix = [](void *c, OhplEntRaw b, OhplEntMat *o) noexcept { Out(B(c).GetBoneWorldMatrix(b), o); };
+		vt.get_bone_name = [](void *c, OhplEntRaw b) noexcept { C(c).msTmp = B(c).GetBoneName(b); return S(C(c).msTmp); };
+		vt.get_unique_id = [](void *c, OhplEntRaw e) noexcept { return B(c).GetUniqueID(e); };
+		vt.is_sub_mesh = [](void *c, OhplEntRaw e) noexcept { return B(c).IsSubMesh(e); };
+		vt.get_local_matrix = [](void *c, OhplEntRaw e, OhplEntMat *o) noexcept { Out(B(c).GetLocalMatrix(e), o); };
+		vt.get_world_matrix = [](void *c, OhplEntRaw e, OhplEntMat *o) noexcept { Out(B(c).GetWorldMatrix(e), o); };
+		vt.get_entity_name = [](void *c, OhplEntRaw e) noexcept { C(c).msTmp = B(c).GetEntityName(e); return S(C(c).msTmp); };
+		vt.set_node_animation = [](void *c) noexcept { B(c).SetNodeAnimation(); };
+		vt.attach_entity_child = [](void *c, OhplEntRaw p, const OhplEntMat *m, OhplEntRaw ch) noexcept { B(c).AttachEntityChild(p, M(m), ch); };
+		vt.attach_bone_child = [](void *c, OhplEntRaw p, const OhplEntMat *m, OhplEntRaw ch) noexcept { B(c).AttachBoneChild(p, M(m), ch); };
+		vt.attach_bone_to_body = [](void *c, OhplEntRaw p, const OhplEntMat *m, OhplEntRaw ch) noexcept { B(c).AttachBoneToBody(p, M(m), ch); };
+		vt.create_box_shape = [](void *c, OhplEntVec3 s, const OhplEntMat *m) noexcept { return (OhplEntRaw)B(c).CreateBoxShape(V(s), M(m)); };
+		vt.create_sphere_shape = [](void *c, OhplEntVec3 s, const OhplEntMat *m) noexcept { return (OhplEntRaw)B(c).CreateSphereShape(V(s), M(m)); };
+		vt.create_cylinder_shape = [](void *c, float r, float h, const OhplEntMat *m) noexcept { return (OhplEntRaw)B(c).CreateCylinderShape(r, h, M(m)); };
+		vt.create_capsule_shape = [](void *c, float r, float h, const OhplEntMat *m) noexcept { return (OhplEntRaw)B(c).CreateCapsuleShape(r, h, M(m)); };
+		vt.create_compound_shape = [](void *c, const OhplEntRaw *s, size_t n) noexcept {
+			return (OhplEntRaw)B(c).CreateCompoundShape(std::vector<tEob>(s, s + n));
+		};
+		vt.inc_shape_user_count = [](void *c, OhplEntRaw s) noexcept { B(c).IncShapeUserCount(s); };
+		vt.destroy_shape = [](void *c, OhplEntRaw s) noexcept { B(c).DestroyShape(s); };
+		vt.create_body = [](void *c, OhplEntStr n, OhplEntRaw s) noexcept { return (OhplEntRaw)B(c).CreateBody(T(n), s); };
+		vt.set_body_properties = [](void *c, OhplEntRaw b, const OhplEntBodyProps *p) noexcept {
+			cEobBodyProps o;
+			memcpy(&o.m_mtxMatrix, &p->matrix, sizeof(cMatrixf));
+			o.mfMass = p->mass; o.mfAngularDamping = p->angular_damping; o.mfLinearDamping = p->linear_damping;
+			o.mfBuoyancyDensityMul = p->buoyancy_density_mul; o.mfMaxAngularSpeed = p->max_angular_speed; o.mfMaxLinearSpeed = p->max_linear_speed;
+			o.mbBlocksSound = p->blocks_sound; o.mbCollideCharacter = p->collide_character; o.mbCollide = p->collide;
+			o.mbGravity = p->gravity; o.mbContinuousCollision = p->continuous_collision;
+			o.mbPushedByCharacterGravity = p->pushed_by_character_gravity; o.mbVolatile = p->volatile_;
+			o.mbUseSurfaceEffects = p->use_surface_effects; o.mbCanAttachCharacter = p->can_attach_character;
+			o.mlID = p->id;
+			B(c).SetBodyProperties(b, o);
+		};
+		vt.set_body_material = [](void *c, OhplEntRaw b, OhplEntStr n) noexcept { B(c).SetBodyMaterial(b, T(n)); };
+		vt.register_body = [](void *c, OhplEntRaw b) noexcept { B(c).RegisterBody(b); };
+		vt.create_joint_hinge = [](void *c, OhplEntStr n, OhplEntVec3 pv, OhplEntVec3 pn, OhplEntRaw p, OhplEntRaw ch) noexcept {
+			return (OhplEntRaw)B(c).CreateJointHinge(T(n), V(pv), V(pn), p, ch); };
+		vt.create_joint_ball = [](void *c, OhplEntStr n, OhplEntVec3 pv, OhplEntVec3 pn, OhplEntRaw p, OhplEntRaw ch) noexcept {
+			return (OhplEntRaw)B(c).CreateJointBall(T(n), V(pv), V(pn), p, ch); };
+		vt.create_joint_slider = [](void *c, OhplEntStr n, OhplEntVec3 pv, OhplEntVec3 pn, OhplEntRaw p, OhplEntRaw ch) noexcept {
+			return (OhplEntRaw)B(c).CreateJointSlider(T(n), V(pv), V(pn), p, ch); };
+		vt.create_joint_screw = [](void *c, OhplEntStr n, OhplEntVec3 pv, OhplEntVec3 pn, OhplEntRaw p, OhplEntRaw ch) noexcept {
+			return (OhplEntRaw)B(c).CreateJointScrew(T(n), V(pv), V(pn), p, ch); };
+		vt.set_hinge_limits = [](void *c, OhplEntRaw j, float a, float b) noexcept { B(c).SetHingeLimits(j, a, b); };
+		vt.set_ball_limits = [](void *c, OhplEntRaw j, float a, float b) noexcept { B(c).SetBallLimits(j, a, b); };
+		vt.set_slider_limits = [](void *c, OhplEntRaw j, float a, float b) noexcept { B(c).SetSliderLimits(j, a, b); };
+		vt.set_screw_limits = [](void *c, OhplEntRaw j, float a, float b) noexcept { B(c).SetScrewLimits(j, a, b); };
+		vt.set_joint_properties = [](void *c, OhplEntRaw j, const OhplEntJointProps *p) noexcept {
+			cEobJointProps o;
+			o.msMoveSound = T(p->move_sound); o.msBreakSound = T(p->break_sound);
+			o.msMaxLimitSound = T(p->max_limit_sound); o.msMinLimitSound = T(p->min_limit_sound);
+			const float *f = p->floats;
+			o.mfMinMoveSpeed = f[0]; o.mfMinMoveFreq = f[1]; o.mfMinMoveVolume = f[2]; o.mfMinMoveFreqSpeed = f[3];
+			o.mfMaxMoveFreq = f[4]; o.mfMaxMoveVolume = f[5]; o.mfMaxMoveFreqSpeed = f[6]; o.mfMiddleMoveSpeed = f[7];
+			o.mfMiddleMoveVolume = f[8]; o.mfBreakForce = f[9]; o.mfLimitAutoSleepDist = f[10];
+			o.mfMaxLimitMaxSpeed = f[11]; o.mfMaxLimitMinSpeed = f[12]; o.mfMinLimitMaxSpeed = f[13]; o.mfMinLimitMinSpeed = f[14];
+			o.mbAngularMove = p->bools[0]; o.mbStickyMinLimit = p->bools[1]; o.mbStickyMaxLimit = p->bools[2];
+			o.mbBreakable = p->bools[3]; o.mbLimitAutoSleep = p->bools[4]; o.mbCollideBodies = p->bools[5];
+			o.mlLimitAutoSleepNumSteps = p->ints[0]; o.mlID = p->ints[1];
+			B(c).SetJointProperties(j, o);
+		};
+		vt.register_joint = [](void *c, OhplEntRaw j) noexcept { B(c).RegisterJoint(j); };
+		vt.get_animation_state_num = [](void *c) noexcept { return B(c).GetAnimationStateNum(); };
+		vt.play_first_animation = [](void *c) noexcept { B(c).PlayFirstAnimation(); };
+		vt.set_skeleton_physics_active = [](void *c) noexcept { B(c).SetSkeletonPhysicsActive(); };
+		vt.load_user_variables = [](void *c) noexcept { B(c).LoadUserVariables(); };
+		return vt;
+	}
 
 	}
 
 	bool ParseEntityObject(iEntityObjectBuilder &aBuilder, const cEobParams &aParams, cXmlElement *apRootElem)
 	{
-		cParse parse(aBuilder, aParams);
-		return parse.Run(apRootElem);
+		cCtx ctx;
+		ctx.mpB = &aBuilder;
+
+		OhplXmlDocPtr doc;
+		const tString &sRoot = apRootElem->GetValue();
+		unsigned lRoot = ohpl_xml_doc_add_element(doc.p, 0, sRoot.c_str(), sRoot.size());
+		CopyElement(doc.p, lRoot, apRootElem, ctx.mvElems);
+
+		OhplEntParams params;
+		params.name = S(aParams.msName);
+		params.file_name = S(aParams.msFileName);
+		params.full_path = S(aParams.msFullPath);
+		params.full_path_dir = S(aParams.msFullPathDir);
+		memcpy(&params.transform, &aParams.m_mtxTransform, sizeof(cMatrixf));
+		params.scale = V(aParams.mvScale);
+		params.physics_world = aParams.mbPhysicsWorld;
+
+		OhplEntVt vt = MakeVt(&ctx);
+		return ohpl_ent_parse(doc.p, lRoot, &params, &vt);
 	}
 
 };

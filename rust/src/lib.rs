@@ -2,6 +2,7 @@
 
 pub mod binary_buffer;
 pub mod crc;
+pub mod entity_loader;
 mod ffi;
 pub mod fsb5;
 mod fsb5_ffi;
