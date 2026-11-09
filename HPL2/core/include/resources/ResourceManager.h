@@ -22,6 +22,8 @@
 
 #include <map>
 #include "system/SystemTypes.h"
+#include "resources/RustResources.h"
+#include "resources/RustResources.h"
 
 namespace hpl {
 
@@ -30,7 +32,7 @@ namespace hpl {
 	class cFileSearcher;
 	class iResourceBase;
 
-	typedef std::multimap<unsigned int, iResourceBase*> tResourceBaseMap;
+	typedef cResourceMap tResourceBaseMap;
 	typedef tResourceBaseMap::iterator tResourceBaseMapIt;
 
 	typedef std::list<iResourceBase*> tResourceBaseList;

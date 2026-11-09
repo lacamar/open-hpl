@@ -31,9 +31,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
+	iResourceLoaderHandler::iResourceLoaderHandler() : mpLoaders(ohpl_loaders_new())
+	{
+	}
+
 	iResourceLoaderHandler::~iResourceLoaderHandler()
 	{
-		STLDeleteAll(mlstLoaders);
+		for(size_t i=0; i<ohpl_loaders_len(mpLoaders); ++i)
+		{
+			iResourceLoader *pLoader = static_cast<iResourceLoader*>(ohpl_loaders_at(mpLoaders, i));
+			hplDelete(pLoader);
+		}
+		ohpl_loaders_free(mpLoaders);
 	}
 	//-----------------------------------------------------------------------
 
@@ -45,16 +54,17 @@ namespace hpl {
 	
 	void iResourceLoaderHandler::AddLoader(iResourceLoader *apLoader)
 	{
-		mlstLoaders.push_back(apLoader);
+		ohpl_loaders_add(mpLoaders, apLoader, apLoader->mpExtensions);
 
 		//call implemented method to set it up.
 		SetupLoader(apLoader);
 
 		//Add all supported types from the loader
-		tStringListIt it = apLoader->mlstExtensions.begin();
-		for(; it != apLoader->mlstExtensions.end(); ++it)
+		for(size_t i=0; i<ohpl_exts_len(apLoader->mpExtensions); ++i)
 		{
-			mvSupportedTypes.push_back(*it);
+			size_t lLen;
+			const char *pExt = ohpl_exts_at(apLoader->mpExtensions, i, &lLen);
+			mvSupportedTypes.push_back(tString(pExt, lLen));
 		}
 	}
 
@@ -78,16 +88,9 @@ namespace hpl {
 	{
 		tString sLowExt = cString::ToLowerCase(cString::GetFileExt(asFileName));
 
-		tResourceLoaderListIt it = mlstLoaders.begin();
-		for(;it != mlstLoaders.end();it++)
-		{
-			iResourceLoader *pLoader = *it;
+		iResourceLoader *pLoader = static_cast<iResourceLoader*>(ohpl_loaders_find(mpLoaders, sLowExt.data(), sLowExt.size()));
+		if(pLoader) return pLoader;
 
-			if(pLoader->IsSupported(sLowExt))
-			{
-				return pLoader;
-			}
-		}
 		Error("No loader for file extension '%s' found!\n",sLowExt.c_str());
 		return NULL;
 	}

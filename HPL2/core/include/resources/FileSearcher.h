@@ -20,9 +20,11 @@
 #ifndef HPL_FILESEARCHER_H
 #define HPL_FILESEARCHER_H
 
+#include <deque>
 #include <map>
 #include "resources/ResourcesTypes.h"
 #include "system/SystemTypes.h"
+#include "resources/RustResources.h"
 
 namespace hpl {
 
@@ -30,27 +32,13 @@ namespace hpl {
 
 	//----------------------------------
 
-	class cFileSearcherEntry
-	{
-	public:
-		cFileSearcherEntry(const tWString& asPath);
-			
-		tWString msPath;
-		tWStringVec mvPathDirs;
-	};
-
-	//----------------------------------
-
-	typedef std::multimap<tString, cFileSearcherEntry> tFilePathMap;
-	typedef tFilePathMap::iterator tFilePathMapIt;
-
-	//----------------------------------
-	
 	class cFileSearcher
 	{
 	public:
 		cFileSearcher();
 		~cFileSearcher();
+		cFileSearcher(const cFileSearcher&) = delete;
+		cFileSearcher& operator=(const cFileSearcher&) = delete;
 
 		/**
 		 * Adds a directory that will be searched when looking for files.
@@ -72,8 +60,8 @@ namespace hpl {
         const tWString& GetFilePath(const tString& asFileNameAndPath, int *apEqualCount=NULL);
 	
 	private:
-		tFilePathMap m_mapFiles;
-		tWStringSet m_setLoadedDirs;
+		OhplFileSearcher *mpFiles;
+		std::deque<tWString> mvPaths;
 
 		tWString msNull;
 	};
