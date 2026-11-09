@@ -86,6 +86,7 @@
 #include "graphics/PostEffect_RadialBlur.h"
 
 #include "math/MathTypes.h"
+#include "math/RustTypes.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 #include "math/Frustum.h"
