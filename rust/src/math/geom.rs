@@ -1,14 +1,4 @@
 //! Intersections, planes, clip rects and 3D vector helpers.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::libm::{acos, atan, atan2, cos, sin, tan};
 use super::matrix::{matrix_inverse, matrix_mul_divide_w, matrix_mul_vec, rotate_y, transpose};
@@ -247,6 +237,10 @@ const BV_CONNECTIONS: [[usize; 3]; 8] = [
     [3, 5, 6],
 ];
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "corner indices are below 8 and at most 24 points are emitted (3 per corner)"
+)]
 pub(crate) fn normalized_clip_rect_from_bv(
     min: Vector3f,
     max: Vector3f,
@@ -652,19 +646,19 @@ pub(crate) fn separating_axis_intersection(
     for set in planes {
         for p in set {
             let normal = v3(p.a, p.b, p.c);
-            for (k, vs) in verts.iter().enumerate() {
-                if vs.is_empty() {
+            for ((vs, mn), mx) in verts.iter().zip(&mut vmin).zip(&mut vmax) {
+                let Some((&v0, rest)) = vs.split_first() else {
                     continue;
-                }
-                let first = dot3(vs[0], normal);
-                vmin[k] = first;
-                vmax[k] = first;
-                for v in &vs[1..] {
+                };
+                let first = dot3(v0, normal);
+                *mn = first;
+                *mx = first;
+                for v in rest {
                     let d = dot3(*v, normal);
-                    if vmin[k] > d {
-                        vmin[k] = d;
-                    } else if vmax[k] < d {
-                        vmax[k] = d;
+                    if *mn > d {
+                        *mn = d;
+                    } else if *mx < d {
+                        *mx = d;
                     }
                 }
             }

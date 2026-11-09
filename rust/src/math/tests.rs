@@ -183,6 +183,30 @@ fn tangents_match_cpp() {
 }
 
 #[test]
+fn tangents_skip_out_of_range_triangles() {
+    let vtx = [0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+    let tex = [0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+    let nor = [0.0f32, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+    for idx in [[0u32, 1, 3], [0, 1, u32::MAX], [0, 1, 0x8000_0000]] {
+        let mut dst = [7.0f32; 12];
+        // SAFETY: arrays cover 3 vertices; bad indices are skipped before any read.
+        unsafe {
+            create_tri_tangent_vectors(
+                dst.as_mut_ptr(),
+                idx.as_ptr(),
+                3,
+                vtx.as_ptr(),
+                3,
+                tex.as_ptr(),
+                nor.as_ptr(),
+                3,
+            );
+        }
+        assert!(dst.iter().all(|f| f.is_finite()), "{idx:?}");
+    }
+}
+
+#[test]
 fn rect_fit_wraps_like_cpp() {
     let a = Rect2l {
         x: 0,

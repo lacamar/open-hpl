@@ -1,15 +1,5 @@
 //! C ABI for `fsb5.rs`. Inputs are (pointer, length) pairs owned by the caller; outputs go through
 //! a sink callback. Setup-packet lookup, file I/O and libvorbis stay in C++.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use crate::fsb5::{self, Sample};
 use crate::string_ffi::{Sink, emit, units};
@@ -31,7 +21,7 @@ pub struct FsbSample {
 
 impl FsbSample {
     fn from_core(file: &[u8], s: &Sample) -> Self {
-        let name = &file[s.name.clone()];
+        let name = file.get(s.name.clone()).unwrap_or_default();
         Self {
             name: name.as_ptr(),
             name_len: name.len(),
