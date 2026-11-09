@@ -41,6 +41,9 @@ GT = shutil.which("gt") or str(Path.home() / ".local/src/wine-arm64ec-tools/game
 
 
 def docs_dir():
+    own = PREFIX / f"drive_c/users/{os.environ.get('USER', '')}/Documents/My Games/{DOCS}"
+    if own.is_dir():
+        return own / ("" if CFG_LAUNCH else "Mods") / SAVE_FOLDER
     for d in sorted(glob.glob(str(PREFIX / f"drive_c/users/*/Documents/My Games/{DOCS}"))):
         if "/Public/" not in d:
             return Path(d) / ("" if CFG_LAUNCH else "Mods") / SAVE_FOLDER

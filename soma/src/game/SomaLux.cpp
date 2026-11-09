@@ -884,13 +884,22 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
 		gbMapChangeIsTransfer = sTransfer != "";
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-		cSomaLuxEntity *pArea = bMap && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
+		// cLuxMapHandler::PerformMapChange: MapTransferData runs only for the preloaded map; otherwise the player gets the start area
+		bool bPreloaded = gsPreloadMap != "" && SameMap(gsPreloadMap, sMap);
+		cSomaLuxEntity *pArea = bMap && bPreloaded && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
 		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
-		// cLuxMapHandler::MapTransferData: props inside the transfer area keep their pose, static ones too (moving platforms)
+		// cLuxMapHandler::MapTransferData: player and props inside the transfer area keep their pose, static ones too (moving platforms)
 		std::vector<std::pair<tString, std::vector<cMatrixf>>> vCarried;
+		cMatrixf mtxRel;
+		float fYawRel = 0, fPitch = 0;
+		int lActiveSize = 0;
 		if (pArea && pBody)
 		{
 			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
+			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
+			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
+			lActiveSize = pBody->GetActiveSize();
+			fPitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0;
 			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
 			{
 				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty())
@@ -926,6 +935,12 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 			{
+				// iCharacterBody::CopyFromBodySettings after PlacePlayerAtStartPos: the transferred player keeps crouch and camera
+				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
+				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
+									  SomaStartYaw(pNew->GetMatrix()) + fYawRel, lActiveSize == 1);
+				if (pPlayer->GetCamera())
+					pPlayer->GetCamera()->SetPitch(fPitch);
 				for (auto &[sName, vMtx] : vCarried)
 				{
 					cSomaLuxEntity *p = cSomaLuxMap::GetCurrent()->GetEntity(sName);
