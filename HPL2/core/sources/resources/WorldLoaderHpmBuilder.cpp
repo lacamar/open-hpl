@@ -177,7 +177,7 @@ namespace hpl {
 		for (auto& [pEnt, lNum] : mapCombinedSubs)
 			if (lNum == pEnt->GetSubMeshEntityNum()) setDestroy.insert(pEnt);
 		mpCurrentWorld->DestroyStaticMeshEntities(setDestroy);
-		Log("  SOMA hpm combined %d static submeshes into %d meshes\n", (int)[&] { int n = 0; for (auto& p : mapCombinedSubs) n += p.second; return n; }(), mlCombinedMeshes);
+		::hpl::Log("  SOMA hpm combined %d static submeshes into %d meshes\n", (int)[&] { int n = 0; for (auto& p : mapCombinedSubs) n += p.second; return n; }(), mlCombinedMeshes);
 	}
 
 	namespace
@@ -411,15 +411,26 @@ namespace hpl {
 		Warning("%s", asMessage);
 	}
 
-	iXmlDocument* cHpmWorldBuilder::OpenXml(const tWString& asPath)
+	void cHpmWorldBuilder::Log(const char* asMessage)
 	{
-		iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
-		if (pDoc->CreateFromFile(asPath) == false)
+		::hpl::Log("%s", asMessage);
+	}
+
+	int cHpmWorldBuilder::ReadFile(const tWString& asPath, std::vector<char>& avData)
+	{
+		FILE* pFile = cPlatform::OpenFile(asPath, _W("rb"));
+		if (pFile == NULL) return 0;
+		fseek(pFile, 0, SEEK_END);
+		long lLength = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		bool bRead = true;
+		if (lLength > 0)
 		{
-			hplDelete(pDoc);
-			return NULL;
+			avData.resize(lLength);
+			bRead = fread(avData.data(), lLength, 1, pFile) == 1;
 		}
-		return pDoc;
+		fclose(pFile);
+		return bRead ? 1 : 2;
 	}
 
 	void cHpmWorldBuilder::GlobalFog(const OhplHpmFog& f)

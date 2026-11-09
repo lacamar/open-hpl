@@ -48,7 +48,8 @@ namespace hpl {
 		uint64_t NowMs();
 		void ObjectDone();
 		void Warn(const char* asMessage);
-		iXmlDocument* OpenXml(const tWString& asPath);
+		void Log(const char* asMessage);
+		int ReadFile(const tWString& asPath, std::vector<char>& avData);
 
 		void GlobalFog(const OhplHpmFog& aFog);
 		void DistanceCull(const OhplHpmDistanceCull& aCull);

@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "system/SystemTypes.h"
 
@@ -228,7 +229,6 @@ struct OhplHpmSkip
 namespace hpl {
 
 	class cXmlElement;
-	class iXmlDocument;
 
 	// Every create method returns true when the object was made.
 	class iHpmBuilder
@@ -239,7 +239,9 @@ namespace hpl {
 		virtual uint64_t NowMs() = 0;
 		virtual void ObjectDone() = 0;
 		virtual void Warn(const char* asMessage) = 0;
-		virtual iXmlDocument* OpenXml(const tWString& asPath) = 0;
+		virtual void Log(const char* asMessage) = 0;
+		// 0: not opened, 1: read (possibly empty), 2: opened but the read came up short.
+		virtual int ReadFile(const tWString& asPath, std::vector<char>& avData) = 0;
 
 		virtual void GlobalFog(const OhplHpmFog& aFog) = 0;
 		virtual void DistanceCull(const OhplHpmDistanceCull& aCull) = 0;
