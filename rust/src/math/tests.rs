@@ -207,3 +207,12 @@ fn constants_equal_the_c_literals() {
         [0x40490fdb, 0x3fc90fdb, 0x40c90fdb]
     );
 }
+
+#[test]
+fn rand_rectl_empty_range_matches_aarch64_c() {
+    // Values from g++ -O2 on aarch64: rand()%0 yields rand().
+    super::libm::c_srand(7);
+    let r = super::libm::c_rand();
+    super::libm::c_srand(7);
+    assert_eq!(super::scalar::rand_rectl(5, 4), r.wrapping_add(5));
+}

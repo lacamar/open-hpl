@@ -4,9 +4,12 @@ use super::libm::{atan, c_rand, c_srand, c_time, cos, ln, pow_f64, sin};
 use super::{PI, PI2, TWO_PI, Vector2f, fma};
 
 pub(crate) fn rand_rectl(min: i32, max: i32) -> i32 {
-    c_rand()
-        .wrapping_rem(max.wrapping_sub(min).wrapping_add(1))
-        .wrapping_add(min)
+    aarch64_rem(c_rand(), max.wrapping_sub(min).wrapping_add(1)).wrapping_add(min)
+}
+
+/// C `%` as gcc emits it on aarch64 (sdiv + msub): a zero divisor yields the dividend.
+fn aarch64_rem(a: i32, b: i32) -> i32 {
+    if b == 0 { a } else { a.wrapping_rem(b) }
 }
 
 pub(crate) fn rand_rectf(min: f32, max: f32) -> f32 {
