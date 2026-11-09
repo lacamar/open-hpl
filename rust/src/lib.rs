@@ -3,6 +3,8 @@
 pub mod crc;
 mod ffi;
 pub mod hpsl;
+pub mod platform;
+mod platform_ffi;
 pub mod string;
 mod string_ffi;
 pub mod types;
