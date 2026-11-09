@@ -1,29 +1,18 @@
 //! tinyXML's two writers: `TiXmlDocument::Print(FILE*)` (4-space indent, newlines) and the
 //! `operator<<` stream printer (no whitespace at all).
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::dom::*;
 
 /// `TiXmlBase::EncodeString`.
 pub fn encode_string(s: &[u8], out: &mut Vec<u8>) {
-    let len = s.len() as isize;
-    let mut i = 0isize;
-    while i < len {
-        let c = s[i as usize];
-        if c == b'&' && i < len - 2 && s[i as usize + 1] == b'#' && s[i as usize + 2] == b'x' {
-            while i < len - 1 {
-                out.push(s[i as usize]);
+    let len = s.len();
+    let mut i = 0;
+    while let Some(&c) = s.get(i) {
+        if c == b'&' && s.get(i + 1..i + 3) == Some(b"#x") {
+            while i + 1 < len {
+                out.push(s.get(i).copied().unwrap_or(0));
                 i += 1;
-                if s[i as usize] == b';' {
+                if s.get(i) == Some(&b';') {
                     break;
                 }
             }

@@ -1,15 +1,5 @@
 //! Language-file reader: walks a parsed `.lang` document and reports resource directories,
 //! categories and decoded entries in document order. Name-keyed merging stays with the caller.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::dom::*;
 use crate::string::{to_bool, token_to_int};
@@ -26,8 +16,7 @@ pub fn decode_string(s: &[u8]) -> Vec<i32> {
     let at = |i: usize| s.get(i).copied().unwrap_or(0);
     let mut out = Vec::new();
     let mut i = 0;
-    while i < s.len() {
-        let c = s[i];
+    while let Some(&c) = s.get(i) {
         if c == b'[' {
             let mut cmd = Vec::new();
             let mut count = 1;
@@ -38,8 +27,8 @@ pub fn decode_string(s: &[u8]) -> Vec<i32> {
             let found = if cmd == b"br" {
                 out.push(i32::from(b'\n'));
                 true
-            } else if cmd.first() == Some(&b'u') {
-                out.push(token_to_int(&cmd[1..]));
+            } else if let Some(num) = cmd.strip_prefix(b"u") {
+                out.push(token_to_int(num));
                 true
             } else {
                 false
@@ -71,10 +60,9 @@ pub fn read(doc: &Doc, add_dirs: bool, sink: &mut dyn LangSink) -> Option<()> {
                     let path = doc.attribute(d, b"Path").unwrap_or_default();
                     if !path.is_empty() {
                         let add_sub = doc.attribute(d, b"AddSubDirs").is_none_or(to_bool);
-                        let path = if matches!(path[0], b'/' | b'\\') {
-                            &path[1..]
-                        } else {
-                            path
+                        let path = match path.split_first() {
+                            Some((b'/' | b'\\', rest)) => rest,
+                            _ => path,
                         };
                         sink.directory(path, add_sub);
                     }
