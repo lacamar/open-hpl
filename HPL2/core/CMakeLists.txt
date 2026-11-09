@@ -74,7 +74,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 
     # tinyXML
     sources/impl/tinyXml/*
-    sources/impl/XmlDocumentTiny.cpp
     # scripting
     sources/impl/SqScript.cpp
     sources/impl/scriptarray.cpp
@@ -213,7 +212,31 @@ set(PLATFORM_LIBS
     dl
 )
 
+find_program(CARGO cargo REQUIRED)
+set(OHPL_RUST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../rust)
+set(OHPL_RUST_TARGET ${CMAKE_BINARY_DIR}/cargo)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(OHPL_RUST_PROFILE dev)
+    set(OHPL_RUST_OUT debug)
+else()
+    set(OHPL_RUST_PROFILE release)
+    set(OHPL_RUST_OUT release)
+endif()
+set(OHPL_RUST_LIB ${OHPL_RUST_TARGET}/${OHPL_RUST_OUT}/libohpl.a)
+file(GLOB_RECURSE ohpl_rust_sources CONFIGURE_DEPENDS ${OHPL_RUST_DIR}/src/*.rs)
+add_custom_command(OUTPUT ${OHPL_RUST_LIB}
+    COMMAND ${CARGO} build --offline --locked --profile ${OHPL_RUST_PROFILE} --target-dir ${OHPL_RUST_TARGET}
+    WORKING_DIRECTORY ${OHPL_RUST_DIR}
+    DEPENDS ${ohpl_rust_sources} ${OHPL_RUST_DIR}/Cargo.toml ${OHPL_RUST_DIR}/Cargo.lock
+    USES_TERMINAL)
+add_custom_target(ohpl_rust_build DEPENDS ${OHPL_RUST_LIB})
+add_library(ohpl_rust STATIC IMPORTED GLOBAL)
+set_target_properties(ohpl_rust PROPERTIES IMPORTED_LOCATION ${OHPL_RUST_LIB})
+add_dependencies(ohpl_rust ohpl_rust_build)
+add_test(NAME RustTests COMMAND ${CARGO} test --offline --locked --target-dir ${OHPL_RUST_TARGET} WORKING_DIRECTORY ${OHPL_RUST_DIR})
+
 target_link_libraries(HPL2
+    ohpl_rust
     OALWrapper # also pulls in ogg,vorbis,SDL
     Newton
     ${ANGELSCRIPT_LIBRARY}

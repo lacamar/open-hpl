@@ -35,7 +35,6 @@ set_tests_properties(PlatformXdgPathTests PROPERTIES TIMEOUT 30)
 
 AddTestTarget(HpslTranspilerTests
     HpslTranspilerTests.cpp
-    ../../soma/src/game/HpslTranspiler.cpp
 )
 add_test(NAME HpslTranspilerTests COMMAND HpslTranspilerTests)
 set_tests_properties(HpslTranspilerTests PROPERTIES TIMEOUT 30)

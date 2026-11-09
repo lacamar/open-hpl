@@ -32,7 +32,6 @@
 #include "system/Thread.h"
 #include "system/Mutex.h"
 #include "system/Platform.h"
-#include "system/SHA1.h"
 
 #include "input/Input.h"
 #include "input/InputDevice.h"
@@ -87,6 +86,7 @@
 #include "graphics/PostEffect_RadialBlur.h"
 
 #include "math/MathTypes.h"
+#include "math/RustTypes.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 #include "math/Frustum.h"

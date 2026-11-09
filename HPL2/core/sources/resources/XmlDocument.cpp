@@ -21,6 +21,9 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "system/Platform.h"
+#include "system/RustXml.h"
+#include "impl/XmlDocumentTiny.h"
 
 namespace hpl {
 
@@ -261,7 +264,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iXmlDocument::iXmlDocument(const tString& asName) : cXmlElement(asName, NULL)
+	iXmlDocument::iXmlDocument(const tString& asName) : cXmlElement(asName, NULL), mlErrorRow(0), mlErrorCol(0)
 	{
 		msFile = _W("");
 	}
@@ -313,5 +316,123 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	
+	//-----------------------------------------------------------------------
+
+	//////////////////////////////////////////////////////////////////////////
+	// RUST-BACKED DOCUMENT
+	//////////////////////////////////////////////////////////////////////////
+
+	struct cXmlLoadCtx
+	{
+		cXmlElement *mpRoot;
+		std::vector<cXmlElement*> mvStack;
+	};
+
+	static void XmlLoadBegin(void *apCtx, const char *asName, size_t alLen)
+	{
+		cXmlLoadCtx *pCtx = static_cast<cXmlLoadCtx*>(apCtx);
+		cXmlElement *pElem;
+		if(pCtx->mvStack.empty()) pElem = pCtx->mpRoot;
+		else pElem = pCtx->mvStack.back()->CreateChildElement();
+		pElem->SetValue(tString(asName, alLen));
+		pCtx->mvStack.push_back(pElem);
+	}
+
+	static void XmlLoadAttr(void *apCtx, const char *asName, size_t alNameLen, const char *asVal, size_t alValLen)
+	{
+		cXmlLoadCtx *pCtx = static_cast<cXmlLoadCtx*>(apCtx);
+		pCtx->mvStack.back()->SetAttribute(tString(asName, alNameLen), tString(asVal, alValLen).c_str());
+	}
+
+	static void XmlLoadEnd(void *apCtx)
+	{
+		static_cast<cXmlLoadCtx*>(apCtx)->mvStack.pop_back();
+	}
+
+	static void XmlSaveElement(OhplXmlDoc *apDoc, unsigned alId, cXmlElement *apElem)
+	{
+		tAttributeMap *pAttributeMap = apElem->GetAttributeMap();
+		for(tAttributeMapIt it = pAttributeMap->begin(); it != pAttributeMap->end(); ++it)
+		{
+			ohpl_xml_doc_set_attr(apDoc, alId, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+		}
+		cXmlNodeListIterator it = apElem->GetChildIterator();
+		while(it.HasNext())
+		{
+			cXmlElement *pChild = it.Next()->ToElement();
+			const tString &sName = pChild->GetValue();
+			unsigned lChild = ohpl_xml_doc_add_element(apDoc, alId, sName.c_str(), sName.size());
+			XmlSaveElement(apDoc, lChild, pChild);
+		}
+	}
+
+	static void XmlBuildRust(OhplXmlDoc *apDoc, cXmlElement *apRoot)
+	{
+		const tString &sName = apRoot->GetValue();
+		unsigned lRoot = ohpl_xml_doc_add_element(apDoc, 0, sName.c_str(), sName.size());
+		XmlSaveElement(apDoc, lRoot, apRoot);
+	}
+
+	bool cXmlDocumentTiny::LoadDataFromRust(OhplXmlDoc *apDoc, bool abLoaded)
+	{
+		if(abLoaded == false)
+		{
+			int lRow, lCol;
+			tString sDesc;
+			ohpl_xml_doc_error_info(apDoc, &lRow, &lCol, OhplXmlAssign, &sDesc);
+			SaveErrorInfo(sDesc, lRow, lCol);
+			return false;
+		}
+		DestroyChildren();
+		cXmlLoadCtx ctx;
+		ctx.mpRoot = this;
+		OhplXmlTreeSink sink = { &ctx, XmlLoadBegin, XmlLoadAttr, XmlLoadEnd };
+		if(ohpl_xml_doc_walk(apDoc, &sink) == false)
+		{
+			SaveErrorInfo("No root element", 0, 0);
+			return false;
+		}
+		return true;
+	}
+
+	void cXmlDocumentTiny::SaveToString(tString *apDestData)
+	{
+		OhplXmlDocPtr doc;
+		XmlBuildRust(doc.p, this);
+		ohpl_xml_doc_print_stream(doc.p, OhplXmlAssign, apDestData);
+	}
+
+	bool cXmlDocumentTiny::CreateFromString(const tString& asData)
+	{
+		OhplXmlDocPtr doc;
+		bool bOk = ohpl_xml_doc_parse(doc.p, asData.c_str());
+		return LoadDataFromRust(doc.p, bOk);
+	}
+
+	bool cXmlDocumentTiny::LoadDataFromFile(const tWString& asPath)
+	{
+		FILE *pFile = cPlatform::OpenFile(asPath, _W("rb"));
+		OhplXmlDocPtr doc;
+		bool bOk = false;
+		if(pFile)
+		{
+			bOk = OhplXmlLoadFile(doc.p, pFile);
+			fclose(pFile);
+		}
+		return LoadDataFromRust(doc.p, bOk);
+	}
+
+	bool cXmlDocumentTiny::SaveDataToFile(const tWString& asPath)
+	{
+		OhplXmlDocPtr doc;
+		XmlBuildRust(doc.p, this);
+		if(asPath == _W("")) return false;
+		FILE *pFile = cPlatform::OpenFile(asPath, _W("w+"));
+		if(!pFile) return false;
+		bool bRet = OhplXmlSaveFile(doc.p, pFile);
+		fclose(pFile);
+		return bRet;
+	}
+
 	//-----------------------------------------------------------------------
 }
