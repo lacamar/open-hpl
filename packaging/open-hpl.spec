@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.77
+Version:        1.3.78
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,12 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Mon Nov 09 2026 lacamar <lchlnm@pm.me> - 1.3.78-1
+- Port CRC, cString, XDG paths, BinaryBuffer to Rust
+- Port math, XML/config/language files to Rust
+- Port HPSL transpiler, PreprocessParser, FSB5 parser to Rust
+- Drop unused SHA1
+
 * Sun Nov 08 2026 lacamar <lchlnm@pm.me> - 1.3.77-1
 - Fix posed corpses transformed twice
 - Apply display gamma to screenshots and bug reports
