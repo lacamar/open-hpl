@@ -2,6 +2,8 @@
 
 pub mod crc;
 mod ffi;
+pub mod fsb5;
+mod fsb5_ffi;
 pub mod hpsl;
 pub mod string;
 mod string_ffi;
