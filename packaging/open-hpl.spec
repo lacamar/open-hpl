@@ -11,6 +11,8 @@ ExclusiveArch:  aarch64
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  cargo
+BuildRequires:  rust
 BuildRequires:  perl-interpreter
 BuildRequires:  ImageMagick
 BuildRequires:  desktop-file-utils
