@@ -1,14 +1,4 @@
 //! Per-vertex tangent generation.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::{Vector3f, cross3, div3, dot3, fma, normalize3, sub3, v3};
 
@@ -20,6 +10,10 @@ fn fmax(a: f32, b: f32) -> f32 {
 /// # Safety
 /// `dest` has `vertex_count * 4` writable floats; `indices` has `index_count` entries; `vertices`,
 /// `tex` (stride 3) and `normals` (stride 3) cover every referenced index and `vertex_count`.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "t1/t2 have max(vertex_count, 0) entries; every index is range-checked against it"
+)]
 pub(crate) unsafe fn create_tri_tangent_vectors(
     dest: *mut f32,
     indices: *const u32,
@@ -70,6 +64,10 @@ pub(crate) unsafe fn create_tri_tangent_vectors(
             )
         };
         tri = tri.wrapping_add(3);
+        // C++ wrote out of bounds here (UB); skip the triangle instead
+        if [i1, i2, i3].iter().any(|i| !(0..vertex_count).contains(i)) {
+            continue;
+        }
         let p1 = at(vertices, i1, stride);
         let p12 = sub3(at(vertices, i2, stride), p1);
         let p13 = sub3(at(vertices, i3, stride), p1);

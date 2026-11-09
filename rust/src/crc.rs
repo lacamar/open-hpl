@@ -1,14 +1,4 @@
 //! Table-driven MSB-first CRC-32 with a caller-chosen polynomial (`hpl::cCRC`).
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 pub struct Crc {
     table: [u32; 256],
@@ -29,6 +19,7 @@ impl Crc {
         Self { table, register: 0 }
     }
 
+    #[expect(clippy::indexing_slicing, reason = "256-entry table indexed by a u8")]
     pub fn put_byte(&mut self, byte: u8) {
         let top = (self.register >> 24) as u8 ^ byte;
         self.register = (self.register << 8) ^ self.table[usize::from(top)];
