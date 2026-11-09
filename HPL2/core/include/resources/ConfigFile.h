@@ -24,7 +24,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 
-class TiXmlDocument;
+struct OhplXmlDoc;
 
 namespace hpl {
 	class cFileSearcher;
@@ -82,7 +82,8 @@ namespace hpl {
 		tWString msFile;
 		cFileSearcher *mpFileSearcher;
 
-		TiXmlDocument *mpXmlDoc;
+		OhplXmlDoc *mpXmlDoc;
+		tString msTempValue;
 
 		bool mbUseCRC;
 

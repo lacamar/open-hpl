@@ -74,7 +74,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 
     # tinyXML
     sources/impl/tinyXml/*
-    sources/impl/XmlDocumentTiny.cpp
     # scripting
     sources/impl/SqScript.cpp
     sources/impl/scriptarray.cpp
