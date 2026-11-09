@@ -240,3 +240,29 @@ fn rand_rectl_empty_range_matches_aarch64_c() {
     super::libm::c_srand(7);
     assert_eq!(super::scalar::rand_rectl(5, 4), r.wrapping_add(5));
 }
+
+#[test]
+fn tangents_ignore_partial_triangle() {
+    let vtx = [0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+    let tex = [0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+    let nor = [0.0f32, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+    let run = |count: i32| {
+        let idx = [0u32, 1, 2, 0];
+        let mut dst = [0.0f32; 12];
+        // SAFETY: `idx` holds `count` <= 4 entries; arrays cover 3 vertices.
+        unsafe {
+            create_tri_tangent_vectors(
+                dst.as_mut_ptr(),
+                idx.as_ptr(),
+                count,
+                vtx.as_ptr(),
+                3,
+                tex.as_ptr(),
+                nor.as_ptr(),
+                3,
+            );
+        }
+        dst
+    };
+    assert_eq!(run(4).map(f32::to_bits), run(3).map(f32::to_bits));
+}

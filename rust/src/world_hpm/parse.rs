@@ -618,9 +618,9 @@ impl<B: Builder> Parser<'_, B> {
                 let positions = list(b"DetailMeshEntityPositions");
                 let rotations = list(b"DetailMeshEntityRotations");
                 let radii = list(b"DetailMeshEntityRadii");
-                // C++ int arithmetic; overflow is undefined there and wraps here
-                if (positions.len() as i32) < num.wrapping_mul(3)
-                    || (rotations.len() as i32) < num.wrapping_mul(4)
+                // Wide arithmetic: the C++ int overflow let huge counts past this check and read past the arrays.
+                if (positions.len() as i64) < i64::from(num) * 3
+                    || (rotations.len() as i64) < i64::from(num) * 4
                 {
                     let n = self
                         .stat(b"DetailMeshes")

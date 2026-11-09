@@ -249,18 +249,12 @@ fn lang_walk() {
 
 #[test]
 fn deep_nesting_is_capped() {
-    std::thread::Builder::new()
-        .stack_size(64 << 20)
-        .spawn(|| {
-            let ok = |n: usize| {
-                !parse(format!("<a>{}{}</a>", "<b>".repeat(n), "</b>".repeat(n)).as_bytes()).error()
-            };
-            assert!(ok(9000));
-            assert!(!ok(10001));
-        })
-        .unwrap()
-        .join()
-        .unwrap();
+    // Runs on the default 2 MB test-thread stack, well under the engine's 8 MB main stack.
+    let ok = |n: usize| {
+        !parse(format!("<a>{}{}</a>", "<b>".repeat(n), "</b>".repeat(n)).as_bytes()).error()
+    };
+    assert!(ok(500));
+    assert!(!ok(513));
 }
 
 #[test]

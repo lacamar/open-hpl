@@ -484,3 +484,34 @@ fn fast_float_conversions_round_like_the_original() {
     assert_eq!(cache::fast_pos_and_neg(-63.5), -64);
     assert_eq!(cache::fast_positive(254.9), 255);
 }
+
+#[test]
+fn cache_rejects_compressed_non_float_arrays() {
+    let (mut buffer, _) = written();
+    // SAFETY: the pointer and size describe the buffer's live contents.
+    let mut bytes =
+        unsafe { std::slice::from_raw_parts(buffer.data_ptr(), buffer.size()) }.to_vec();
+    // Normals: kind 0, format 0, prog var, elem_num 3, compression 2.
+    let at = bytes
+        .windows(12)
+        .position(|w| w == [255, 255, 255, 255, 3, 0, 0, 0, 2, 0, 0, 0])
+        .expect("normals array header");
+    bytes[at - 2] = 2;
+    buffer.assign(&bytes);
+    let mut rec = Recorder::default();
+    let options = Options {
+        flags: 0,
+        log_cache: false,
+        file: b"f.map",
+    };
+    // SAFETY: `buffer` is live and not otherwise borrowed.
+    unsafe { read_cache(&raw mut buffer, &mut rec, &options) };
+    assert!(rec.cache_meshes.is_empty());
+    assert!(
+        rec.events
+            .iter()
+            .any(|e| e.contains("Compressed vertex array is not float")),
+        "{:?}",
+        rec.events
+    );
+}

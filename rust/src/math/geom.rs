@@ -741,7 +741,7 @@ pub(crate) unsafe fn line_tri_mesh_intersection(
         }
     };
     let mut idx = 0i32;
-    while idx < index_count {
+    while i64::from(idx) + 2 < i64::from(index_count) {
         let (p0, p1, p2) = (vtx(idx), vtx(idx + 1), vtx(idx + 2));
         if let Some(t) =
             line_triangle_intersection(local_start, local_end, p0, p1, p2, skip_backfacing)

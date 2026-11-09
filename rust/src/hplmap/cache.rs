@@ -13,6 +13,7 @@ const MAGIC: u32 = 0xF441_451F;
 const VERSION: i32 = 13;
 const ELEMENT_KINDS: i32 = 14;
 const FORMAT_KINDS: i32 = 3;
+const FORMAT_FLOAT: i32 = 0;
 const FORMAT_BYTE: i32 = 2;
 const KIND_NORMAL: i32 = 0;
 const KIND_COLOR0: i32 = 2;
@@ -339,6 +340,11 @@ fn read_mesh<N: Copy>(
                 b"Vertex buffer has incorrect format when getting vertexbuffer data during loading of MSH file!\n",
             );
             continue;
+        }
+        // The C++ copies compressed arrays as floats; any other format overflows the element array.
+        if array.compression != 0 && array.format != FORMAT_FLOAT {
+            builder.error(b"Compressed vertex array is not float in map cache!\n");
+            return false;
         }
         decode(shared, &mut array);
         arrays.push(array);

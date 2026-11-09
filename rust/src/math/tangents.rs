@@ -54,7 +54,7 @@ pub(crate) unsafe fn create_tri_tangent_vectors(
     };
 
     let mut tri = 0i32;
-    while tri < index_count {
+    while i64::from(tri) + 2 < i64::from(index_count) {
         // SAFETY: caller contract.
         let (i1, i2, i3) = unsafe {
             (

@@ -8,7 +8,7 @@ const UTF_LEAD_1: u8 = 0xbb;
 const UTF_LEAD_2: u8 = 0xbf;
 const TAB_SIZE: i32 = 4;
 // ponytail: tinyXML recurses until the C stack dies; this errors out at a depth no game file reaches.
-const MAX_DEPTH: u32 = 10000;
+const MAX_DEPTH: u32 = 512;
 
 const ENTITIES: [(&[u8], u8); 5] = [
     (b"&amp;", b'&'),

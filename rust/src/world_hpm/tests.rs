@@ -435,3 +435,18 @@ fn element_text_is_the_text_attribute_and_text_overrides_attribute() {
     assert_eq!(el.map(|e| e.string(b"_Text")), Some(b"body".to_vec()));
     assert_eq!(el.map(|e| e.children.len()), Some(1));
 }
+
+#[test]
+fn detail_meshes_huge_count_is_short() {
+    let xml = r#"<HPLMapTrack_DetailMeshes><DetailMeshes><Sections><Section>
+<Mesh File="big.msh" NumOfInstances="1000000000"><DetailMeshEntityPositions>1 2 3</DetailMeshEntityPositions>
+<DetailMeshEntityRotations>0 0 0 1</DetailMeshEntityRotations></Mesh>
+</Section></Sections></DetailMeshes></HPLMapTrack_DetailMeshes>"#;
+    let mut r = Rec::with(&[("map.hpm_DetailMeshes", xml)]);
+    r.run();
+    assert!(!r.has("detail big.msh"));
+    assert!(
+        r.report("DetailMeshes")
+            .contains("instance_data_short:big.msh")
+    );
+}
