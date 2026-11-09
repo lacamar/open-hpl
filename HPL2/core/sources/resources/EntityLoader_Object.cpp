@@ -62,64 +62,14 @@
 #include "haptic/LowLevelHaptic.h"
 #include "haptic/HapticShape.h"
 
+#include "resources/EntityObjectBuilder.h"
+
 namespace hpl {
 
 	bool cEntityLoader_Object::mbSubMeshScaleIncludesModelScale = false;
 	bool cEntityLoader_Object::mbSubMeshInstanceScaleAfterRotation = false;
 	bool cEntityLoader_Object::mbSubMeshMaterials = false;
 	bool cEntityLoader_Object::mbShareBodyShapes = false;
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	typedef std::multimap<int,iCollideShape*> tLoaderCollideShapeMap;
-	typedef tLoaderCollideShapeMap::iterator tLoaderCollideShapeMapIt;
-
-	typedef std::multimap<int,iPhysicsBody*> tLoaderPhysicsBodyMap;
-	typedef tLoaderPhysicsBodyMap::iterator tLoaderPhysicsBodyMapIt;
-
-	//-----------------------------------------------------------------------
-
-	static iCollideShape* GetBodyShape(cXmlElement *apBodyElem,iPhysicsWorld *apPhysicsWorld, tLoaderCollideShapeMap &a_setShapes, std::set<iCollideShape*> &a_setUsed, bool abShare)
-	{
-		////////////////////////////////////////
-		// Get shapes for body
-		tCollideShapeVec vShapes;
-		cXmlNodeListIterator boundShapeIt = apBodyElem->GetChildIterator();
-		while(boundShapeIt.HasNext())
-		{
-			cXmlElement *pShapeElem = boundShapeIt.Next()->ToElement();
-			int lShapeID = pShapeElem->GetAttributeInt("ID");
-
-			tLoaderCollideShapeMapIt it = a_setShapes.find(lShapeID);
-			if(it != a_setShapes.end())
-			{
-				vShapes.push_back(it->second);
-				// HPL3 bodies may share shapes; pinned since compounds don't refcount subshapes
-				if(abShare)	{ if(a_setUsed.insert(it->second).second) it->second->IncUserCount(); }
-				else		a_setShapes.erase(it);
-			}
-		}
-		
-		////////////////////////////////////////
-		// Create final shape
-		if(vShapes.empty()) return NULL;
-        if(vShapes.size()==1) return vShapes[0];
-
-		iCollideShape *pCompound = apPhysicsWorld->CreateCompundShape(vShapes);
-		return pCompound;
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -165,464 +115,163 @@ namespace hpl {
 		return NULL;
 	}
 
-	//-----------------------------------------------------------------------
-	
-	static iPhysicsBody * FindBody(int alID, tLoaderPhysicsBodyMap &a_setBodies)
-	{
-		tLoaderPhysicsBodyMapIt it = a_setBodies.find(alID);
-		if(it == a_setBodies.end()) return NULL;
-        
-		return it->second;
-	}
-
-	static ePhysicsJointType ToJointType(const tString& asType)
-	{
-		tString sLowType = cString::ToLowerCase(asType);
-
-        if(sLowType == "jointhinge")	return ePhysicsJointType_Hinge;
-		if(sLowType == "jointball")		return ePhysicsJointType_Ball;
-		if(sLowType == "jointslider")	return ePhysicsJointType_Slider;
-		if(sLowType == "joinscrew")		return ePhysicsJointType_Screw;
-
-		Error("Joint type '%s' does not exist!\n", asType.c_str());
-
-		return ePhysicsJointType_Ball;
-	}
-
-	static iPhysicsJoint* CreateJoint(	const tString& asEntityName, 
-										cXmlElement *apJointElem, iPhysicsWorld *apPhysicsWorld,
-										tLoaderPhysicsBodyMap &a_setBodies,
-										const cMatrixf& a_mtxTransform,
-										const cVector3f& avScale,
-										const std::map<iPhysicsBody*, cMatrixf>& a_mapRestMatrix)
-	{
-		
-		/////////////////////////////
-		//Get pin direction and pivot and transform according to entity
-		cVector3f vPivot = apJointElem->GetAttributeVector3f("WorldPos") * avScale;
-
-		cVector3f vPinDir;
-		if(apJointElem->GetAttributeString("PinDir","") != "")
-		{
-			vPinDir = apJointElem->GetAttributeVector3f("PinDir");
-		}
-		else
-		{
-			vPinDir = cMath::MatrixMul3x3(cMath::MatrixRotate(apJointElem->GetAttributeVector3f("Rotation"),
-																eEulerRotationOrder_XYZ), cVector3f(0,1,0));
-		}
-
-		vPivot = cMath::MatrixMul(a_mtxTransform, vPivot);
-		vPinDir = cMath::MatrixMul3x3(a_mtxTransform, vPinDir);
-		
-		/////////////////////////////
-		//Name and type
-		tString sJointName = asEntityName + "_" + apJointElem->GetAttributeString("Name");
-
-		ePhysicsJointType jointType = ToJointType(apJointElem->GetValue());
-
-
-		/////////////////////////////
-		//Get the bodies
-		int lParentID = apJointElem->GetAttributeInt("ConnectedParentBodyID");
-		int lChildID = apJointElem->GetAttributeInt("ConnectedChildBodyID");
-
-		iPhysicsBody *pParentBody = lParentID > 0 ? FindBody(lParentID,a_setBodies) : NULL;
-		iPhysicsBody *pChildBody = FindBody(lChildID,a_setBodies);
-		
-		if(pChildBody==NULL)
-		{
-			Error("Could not find child body with ID %d for joint '%s'\n", lChildID, sJointName.c_str());
-			return NULL;
-		}
-
-		// Bodies were moved to a pose: the joint follows its child body
-		auto restIt = a_mapRestMatrix.find(pChildBody);
-		if(restIt != a_mapRestMatrix.end())
-		{
-			cMatrixf mtxDelta = cMath::MatrixMul(pChildBody->GetWorldMatrix(), cMath::MatrixInverse(restIt->second));
-			vPivot = cMath::MatrixMul(mtxDelta, vPivot);
-			vPinDir = cMath::MatrixMul3x3(mtxDelta, vPinDir);
-		}
-		
-		///////////////////////////
-		// Hinge
-		if(jointType == ePhysicsJointType_Hinge)
-		{
-			iPhysicsJointHinge *pJoint = apPhysicsWorld->CreateJointHinge(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-
-			pJoint->SetMinAngle(cMath::ToRad(apJointElem->GetAttributeFloat("MinAngle")));
-			pJoint->SetMaxAngle(cMath::ToRad(apJointElem->GetAttributeFloat("MaxAngle")));
-
-			return pJoint;
-		}
-		///////////////////////////
-		// Ball
-		else if(jointType == ePhysicsJointType_Ball)
-		{
-			iPhysicsJointBall *pJoint = apPhysicsWorld->CreateJointBall(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-
-			pJoint->SetConeLimits(	cMath::ToRad(apJointElem->GetAttributeFloat("MaxConeAngle")),
-									cMath::ToRad(apJointElem->GetAttributeFloat("MaxTwistAngle")));
-
-			return pJoint;
-		}
-		///////////////////////////
-		// Slider
-		else if(jointType == ePhysicsJointType_Slider)
-		{
-			iPhysicsJointSlider *pJoint = apPhysicsWorld->CreateJointSlider(sJointName, vPivot,vPinDir,pParentBody,pChildBody);
-
-			pJoint->SetMinDistance(apJointElem->GetAttributeFloat("MinDistance"));
-			pJoint->SetMaxDistance(apJointElem->GetAttributeFloat("MaxDistance"));
-
-			return pJoint;
-		}
-		///////////////////////////
-		// Screw
-		else if(jointType == ePhysicsJointType_Screw)
-		{
-			iPhysicsJointScrew *pJoint = apPhysicsWorld->CreateJointScrew(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
-
-			pJoint->SetMinDistance(apJointElem->GetAttributeFloat("MinDistance"));
-			pJoint->SetMaxDistance(apJointElem->GetAttributeFloat("MaxDistance"));
-
-			return pJoint;
-		}
-
-
-		return NULL;	
-	}
-
-	
-	//-----------------------------------------------------------------------
-
-	static cMatrixf GetMatrixFromVectors(const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale)
-	{
-		cMatrixf mtxOut = cMath::MatrixScale(avScale);
-		mtxOut = cMath::MatrixMul(cMath::MatrixRotate(avRot, eEulerRotationOrder_XYZ), mtxOut);
-		mtxOut.SetTranslation(avPos);
-
-		return mtxOut;
-	}
-
 
 	//-----------------------------------------------------------------------
 
-	eAnimationEventType ToAnimEventType(const tString& asType)
+	class cEobImpl : public iEntityObjectBuilder
 	{
-		tString sLowType = cString::ToLowerCase(asType);
+	public:
+		cEobImpl(cEntityLoader_Object *apLoader, const tString &asName, cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld,
+				cResourceVarsObject *apInstanceVars)
+			: mpL(apLoader), msName(asName), mpRoot(apRootElem), m_mtxTransform(a_mtxTransform), mpWorld(apWorld), mpVars(apInstanceVars) {}
 
-        if(sLowType == "playsound")	return eAnimationEventType_PlaySound;
-		if(sLowType == "createparticle") return eAnimationEventType_CreateParticle;
-		if(sLowType == "step")		return eAnimationEventType_Step;
-		if(sLowType == "message")	return eAnimationEventType_Message;
-		if(sLowType == "playloopsound") return eAnimationEventType_PlayLoopSound;
-		if(sLowType == "stoploopsound") return eAnimationEventType_StopLoopSound;
-		if(sLowType == "" || sLowType == "ik") return eAnimationEventType_LastEnum;
+		static tEob H(iEntity3D *apEnt){ return (tEob)apEnt; }
+		static iEntity3D* E(tEob aH){ return (iEntity3D*)aH; }
+		static iPhysicsBody* B(tEob aH){ return static_cast<iPhysicsBody*>((iEntity3D*)aH); }
+		static iPhysicsJoint* J(tEob aH){ return (iPhysicsJoint*)aH; }
+		static cBoneState* S(tEob aH){ return (cBoneState*)aH; }
 
-		Error("No animation event named '%s'\n", asType.c_str());
-		return eAnimationEventType_LastEnum;
-	}
-	
-	//-----------------------------------------------------------------------
+		void Error(const tString& asMsg){ hpl::Error("%s", asMsg.c_str()); }
+		void Warning(const tString& asMsg){ hpl::Warning("%s", asMsg.c_str()); }
 
+		void BeforeLoad(){ mpL->BeforeLoad(mpRoot, m_mtxTransform, mpWorld, mpVars); }
+		void AfterLoad(){ mpL->AfterLoad(mpRoot, m_mtxTransform, mpWorld, mpVars); }
+		bool BeforeJoints(){ return mpL->BeforeJoints(); }
 
-	iEntity3D* cEntityLoader_Object::Load(	const tString &asName, int alID, bool abActive, cXmlElement *apRootElem, 
-											const cMatrixf &a_mtxTransform, const cVector3f &avScale, 
-											cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars)
-	{
-		////////////////////////////////////////	
-		// Init
-		mvBodies.clear();
-		mvJoints.clear();
-
-		mvBodyExtraData.clear();
-
-		mvHapticShapes.clear();
-		
-		mvParticleSystems.clear();
-		mvBillboards.clear();
-		mvLensFlares.clear();
-		mvSoundEntities.clear();
-		mvLights.clear();
-		mvBeams.clear();
-
-		tEntity3DList lstEntities;
-		
-		mpEntity = NULL;
-		mpMesh = NULL;
-
-		msFileName = asFileName; 
-		mlID = alID;
-		mbActive = abActive;
-		mvScale = avScale;
-
-		mbNodeAnimation = false;
-
-		iPhysicsWorld *pPhysicsWorld = apWorld->GetPhysicsWorld();
-
-		////////////////////////////////////////	
-		// Load ModelData
-		cXmlElement* pModelDataElem = apRootElem->GetFirstElement("ModelData");
-		if(pModelDataElem==NULL){
-			Error("Couldn't load element ModelData"); return NULL;
+		cEobFlags Flags()
+		{
+			cEobFlags f;
+			f.mbAnimations = mpL->mbLoadAnimations;
+			f.mbParticleSystems = mpL->mbLoadParticleSystems;
+			f.mbBillboards = mpL->mbLoadBillboards;
+			f.mbSounds = mpL->mbLoadSounds;
+			f.mbLights = mpL->mbLoadLights;
+			f.mbSubMeshScaleIncludesModelScale = cEntityLoader_Object::mbSubMeshScaleIncludesModelScale;
+			f.mbSubMeshInstanceScaleAfterRotation = cEntityLoader_Object::mbSubMeshInstanceScaleAfterRotation;
+			f.mbSubMeshMaterials = cEntityLoader_Object::mbSubMeshMaterials;
+			f.mbShareBodyShapes = cEntityLoader_Object::mbShareBodyShapes;
+			return f;
 		}
 
-		//msName = cString::ToString(pModelDataElem->Attribute("Name"),"");
-		//msSubType = cString::ToString(pModelDataElem->Attribute("Subtype"),"");
-
-		//////////////////////////////
-		// Before load virtual call.
-		BeforeLoad(apRootElem,a_mtxTransform,apWorld,apInstanceVars);
-
-
-		////////////////////////////////////////	
-		// Load Mesh and create entity
-		cXmlElement *pMeshElem =NULL;
+		bool CreateMesh(const tString& asFile, bool &abSkeleton, int &alAnimNum)
 		{
-			pMeshElem  = pModelDataElem->GetFirstElement("Mesh");
-			if(pMeshElem==NULL){
-				Error("Couldn't load element Mesh"); return NULL;
-			}
-
-			// Create mesh
-			tString sMeshFile = pMeshElem->GetAttributeString("Filename");
-			if(cString::GetFilePath(sMeshFile).size() < 1)
-			{
-				sMeshFile = cString::SetFilePath(sMeshFile, cString::To8Char(cString::GetFilePathW(asFullPath) ) );
-			}
-			//Log("Mesh: '%s'\n",sMeshFile.c_str());
-			mpMesh = apWorld->GetResources()->GetMeshManager()->CreateMesh(sMeshFile);
-			if(mpMesh==NULL) return NULL;
-
-			//Create entity
-			mpEntity = apWorld->CreateMeshEntity(asName, mpMesh, mbLoadAsStatic && mpMesh->GetAnimationNum() == 0);
-			
-			if(mpMesh->GetSkeleton()!=NULL)
-				mpEntity->SetMatrix(cMath::MatrixScale(mvScale));
-
-			//Set entity properties
-			//TODO...
-			mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster,true); //<- Temp
+			mpL->mpMesh = mpWorld->GetResources()->GetMeshManager()->CreateMesh(asFile);
+			if(mpL->mpMesh==NULL) return false;
+			abSkeleton = mpL->mpMesh->GetSkeleton()!=NULL;
+			alAnimNum = mpL->mpMesh->GetAnimationNum();
+			return true;
 		}
 
-		////////////////////////////////////////	
-		// Load sub meshes
+		tEob CreateMeshEntity(const tString& asName)
 		{
-			bool bHasSkeleton = mpMesh->GetSkeleton()!=NULL;
-			cXmlNodeListIterator submeshIt = pMeshElem->GetChildIterator();
-			while(submeshIt.HasNext())
-			{
-				cXmlElement *pSubMeshElem = submeshIt.Next()->ToElement();
-
-				//////////////////////////
-				// Load the sub entity
-				tString sName = pSubMeshElem->GetAttributeString("Name");
-
-				cSubMeshEntity *pSubEntity = mpEntity->GetSubMeshEntityName(sName);
-				if(pSubEntity==NULL)
-				{
-					Warning("Sub mesh '%s' does not exist in mesh '%s'!\n",sName.c_str(), mpMesh->GetName().c_str());
-					continue;
-				}
-				if(bHasSkeleton==false)
-					lstEntities.push_back(pSubEntity);
-
-				
-				//////////////////////////
-				// Get transform matrix
-				if(bHasSkeleton==false)
-				{
-					cVector3f vSubScale = pSubMeshElem->GetAttributeVector3f("Scale");
-					if(mbSubMeshScaleIncludesModelScale)
-					{
-						cVector3f vModelScale = pSubEntity->GetSubMesh()->GetModelScale();
-						for(int i=0; i<3; ++i) if(vModelScale.v[i] != 0) vSubScale.v[i] /= vModelScale.v[i];
-					}
-					cMatrixf mtxLocalTransform = mbSubMeshInstanceScaleAfterRotation ?
-						cMath::MatrixMul(cMath::MatrixScale(mvScale), GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos"),
-																							pSubMeshElem->GetAttributeVector3f("Rotation"),
-																							vSubScale)) :
-						GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
-												pSubMeshElem->GetAttributeVector3f("Rotation"),
-												vSubScale*mvScale);
-					
-					//mtxLocalTransform = cMath::MatrixMul(mtxLocalTransform, cMath::MatrixScale(mvScale));
-
-					pSubEntity->SetWorldMatrix(mtxLocalTransform);
-				}
-				
-				//////////////////////////
-				// Set the variables
-				int lID = pSubMeshElem->GetAttributeInt("ID",-1);
-				if(lID < 0) lID = pSubMeshElem->GetAttributeInt("SubMeshID"); //To support older files!
-				
-				pSubEntity->SetUniqueID(lID);
-
-
-				tString sMaterial = mbSubMeshMaterials ? pSubMeshElem->GetAttributeString("Material") : "";
-				// Some HPL3 .ent files put a physics material name here
-				if(cString::GetFileExt(sMaterial) != "")
-				{
-					cMaterial *pMaterial = apWorld->GetResources()->GetMaterialManager()->CreateMaterial(sMaterial);
-					if(pMaterial) pSubEntity->SetCustomMaterial(pMaterial);
-				}
-			}
+			mpL->mpEntity = mpWorld->CreateMeshEntity(asName, mpL->mpMesh, mpL->mbLoadAsStatic && mpL->mpMesh->GetAnimationNum() == 0);
+			return H(mpL->mpEntity);
 		}
 
-		////////////////////////////////////////	
-		// Animations
-		cXmlElement *pAnimationsElem  = pModelDataElem->GetFirstElement("Animations");
-		if(mbLoadAnimations && mpEntity && pAnimationsElem)
+		void SetMatrix(tEob aEnt, const cMatrixf& a_mtx){ E(aEnt)->SetMatrix(a_mtx); }
+		void SetShadowCaster(tEob aEnt){ mpL->mpEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster,true); }
+		void UpdateLogic(tEob aEnt){ E(aEnt)->UpdateLogic(0); }
+
+		tEob GetSubMeshEntity(const tString& asName)
 		{
-			cXmlNodeListIterator animElemIt = pAnimationsElem->GetChildIterator();
-			while(animElemIt.HasNext())
-			{
-				cXmlElement *pAnimElem = animElemIt.Next()->ToElement();
-				
-				tString sFile = pAnimElem->GetAttributeString("File");
-				tString sName = pAnimElem->GetAttributeString("Name");
-				float fSpeed = pAnimElem->GetAttributeFloat("Speed",1.0f);
-				float fSpecialEventTime = pAnimElem->GetAttributeFloat("SpecialEventTime",0.0f);
-				
-				if(cString::GetFilePath(sFile).length() <= 1)
-					sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asFullPath) ) );
-
-				cAnimation *pAnim = apWorld->GetResources()->GetAnimationManager()->CreateAnimation(sFile);
-				
-				if(pAnim)
-				{
-					cAnimationState *pState = mpEntity->AddAnimation(pAnim, sName,fSpeed);
-					pState->SetSpecialEventTime(fSpecialEventTime);
-
-					///////////////////////////////
-					// Load events
-					cXmlNodeListIterator eventElemIt = pAnimElem->GetChildIterator();
-					while(eventElemIt.HasNext())
-					{
-						cXmlElement *pEventElem = eventElemIt.Next()->ToElement();
-
-                        cAnimationEvent *pEvent = pState->CreateEvent();
-						pEvent->mfTime = pEventElem->GetAttributeFloat("Time");
-						pEvent->mType = ToAnimEventType(pEventElem->GetAttributeString("Type"));
-						pEvent->msValue = pEventElem->GetAttributeString("Value");
-						pEvent->msName = pEventElem->GetAttributeString("Name");
-						pEvent->msDestSocket = pEventElem->GetAttributeString("DestSocket");
-					}
-
-				}
-			}
+			return H(mpL->mpEntity->GetSubMeshEntityName(asName));
 		}
 
-
-		////////////////////////////////////////	
-		// Load World entities
+		void WarnMissingSubMesh(const tString& asName)
 		{
-			//List that contain light and billboard connections
-			tEFL_LightBillboardConnectionList lstLightBillboardListConnections;
+			hpl::Warning("Sub mesh '%s' does not exist in mesh '%s'!\n",asName.c_str(), mpL->mpMesh->GetName().c_str());
+		}
 
-            cXmlElement *pEntitiesElem  = pModelDataElem->GetFirstElement("Entities");
-			if(pEntitiesElem)
+		cVector3f GetSubMeshModelScale(tEob aSub){ return static_cast<cSubMeshEntity*>(E(aSub))->GetSubMesh()->GetModelScale(); }
+		void SetWorldMatrix(tEob aEnt, const cMatrixf& a_mtx){ E(aEnt)->SetWorldMatrix(a_mtx); }
+		void SetUniqueID(tEob aEnt, int alID){ E(aEnt)->SetUniqueID(alID); }
+
+		void SetSubMeshMaterial(tEob aSub, const tString& asFile)
+		{
+			cMaterial *pMaterial = mpWorld->GetResources()->GetMaterialManager()->CreateMaterial(asFile);
+			if(pMaterial) static_cast<cSubMeshEntity*>(E(aSub))->SetCustomMaterial(pMaterial);
+		}
+
+		tEob AddAnimation(const tString& asFile, const tString& asName, float afSpeed)
+		{
+			cAnimation *pAnim = mpWorld->GetResources()->GetAnimationManager()->CreateAnimation(asFile);
+			if(pAnim==NULL) return 0;
+			return (tEob)mpL->mpEntity->AddAnimation(pAnim, asName, afSpeed);
+		}
+
+		void SetSpecialEventTime(tEob aState, float afTime){ ((cAnimationState*)aState)->SetSpecialEventTime(afTime); }
+
+		void AddAnimationEvent(tEob aState, float afTime, int alType, const tString& asValue, const tString& asName, const tString& asDestSocket)
+		{
+			cAnimationEvent *pEvent = ((cAnimationState*)aState)->CreateEvent();
+			pEvent->mfTime = afTime;
+			pEvent->mType = (eAnimationEventType)alType;
+			pEvent->msValue = asValue;
+			pEvent->msName = asName;
+			pEvent->msDestSocket = asDestSocket;
+		}
+
+		tEob LoadWorldEntity(eEobWorldEntity aKind, cXmlElement *apElem, const tString& asPrefix)
+		{
+			cEntityLoader_Object &l = *mpL;
+			switch(aKind)
 			{
-				////////////////////////
-				//Iterate entities
-				cXmlNodeListIterator entityIt = pEntitiesElem->GetChildIterator();
-				while(entityIt.HasNext())
-				{
-					cXmlElement *pEntityElem = entityIt.Next()->ToElement();
-					const tString& sEntityType = pEntityElem->GetValue();
-					iEntity3D *pEntity = NULL;
-
-					/////////////////////////
-					// Particle System
-					if(sEntityType == "ParticleSystem")
-					{
-						if(mbLoadParticleSystems)
-						{
-							cParticleSystem *pPS = cEngineFileLoading::LoadParticleSystem(pEntityElem,asName +"_", apWorld);
-							if(pPS)	mvParticleSystems.push_back(pPS);
-							pEntity = pPS;
-						}
-					}
-					/////////////////////////
-					// Billboard
-					else if(sEntityType == "Billboard")
-					{
-						if(mbLoadBillboards)
-						{
-							cBillboard *pBillboard = cEngineFileLoading::LoadBillboard(pEntityElem,asName +"_", apWorld, apWorld->GetResources(), mbLoadAsStatic,
-																						&lstLightBillboardListConnections);
-							if(pBillboard)	mvBillboards.push_back(pBillboard);
-							pEntity = pBillboard;
-						}
-					}
-					else if(sEntityType == "LensFlare")
-					{
-						cLensFlare *pFlare = cEngineFileLoading::LoadLensFlare(pEntityElem,asName +"_", apWorld, apWorld->GetResources(), mbLoadAsStatic);
-						if(pFlare) mvLensFlares.push_back(pFlare);
-						pEntity = pFlare;
-					}
-					/////////////////////////
-					// Sound
-					else if(sEntityType == "Sound")
-					{
-						if(mbLoadSounds)
-						{
-							cSoundEntity *pSound = cEngineFileLoading::LoadSound(pEntityElem,asName +"_", apWorld);
-							if(pSound)	mvSoundEntities.push_back(pSound);
-							pEntity = pSound;
-						}
-					}
-                    /////////////////////////
-					// Light
-					else if(cString::GetLastStringPos(sEntityType,"Light")>0)
-					{
-						if(mbLoadLights)
-						{
-							iLight *pLight = cEngineFileLoading::LoadLight(pEntityElem,asName +"_", apWorld, apWorld->GetResources(),mbLoadAsStatic);
-							if(pLight)	mvLights.push_back(pLight);
-							pEntity = pLight;
-						}
-					}
-					/////////////////////////
-					// Unknown
-					else
-					{
-						Error("Entity world entity type '%s' is unknown!\n", sEntityType.c_str());
-					}
-
-					/////////////////////////
-					// Add to list and scale!
-					if(pEntity)
-					{
-						//Scale the local position accoringly!
-						cVector3f vPos = pEntity->GetLocalPosition();
-						pEntity->SetPosition(vPos * mvScale);
-						
-						lstEntities.push_back(pEntity);
-					}
-				}
+			case eEobWorldEntity_ParticleSystem:
+			{
+				cParticleSystem *pPS = cEngineFileLoading::LoadParticleSystem(apElem,asPrefix, mpWorld);
+				if(pPS)	l.mvParticleSystems.push_back(pPS);
+				return H(pPS);
 			}
+			case eEobWorldEntity_Billboard:
+			{
+				cBillboard *pBillboard = cEngineFileLoading::LoadBillboard(apElem,asPrefix, mpWorld, mpWorld->GetResources(), l.mbLoadAsStatic,
+																			&mlstConnections);
+				if(pBillboard)	l.mvBillboards.push_back(pBillboard);
+				return H(pBillboard);
+			}
+			case eEobWorldEntity_LensFlare:
+			{
+				cLensFlare *pFlare = cEngineFileLoading::LoadLensFlare(apElem,asPrefix, mpWorld, mpWorld->GetResources(), l.mbLoadAsStatic);
+				if(pFlare) l.mvLensFlares.push_back(pFlare);
+				return H(pFlare);
+			}
+			case eEobWorldEntity_Sound:
+			{
+				cSoundEntity *pSound = cEngineFileLoading::LoadSound(apElem,asPrefix, mpWorld);
+				if(pSound)	l.mvSoundEntities.push_back(pSound);
+				return H(pSound);
+			}
+			case eEobWorldEntity_Light:
+			{
+				iLight *pLight = cEngineFileLoading::LoadLight(apElem,asPrefix, mpWorld, mpWorld->GetResources(), l.mbLoadAsStatic);
+				if(pLight)	l.mvLights.push_back(pLight);
+				return H(pLight);
+			}
+			}
+			return 0;
+		}
 
-			/////////////////////////////////////
-			//Set up light and billboard connections
-			tEFL_LightBillboardConnectionListIt connIt = lstLightBillboardListConnections.begin();
-			for(; connIt != lstLightBillboardListConnections.end(); ++connIt)
+		cVector3f GetLocalPosition(tEob aEnt){ return E(aEnt)->GetLocalPosition(); }
+		void SetPosition(tEob aEnt, const cVector3f& avPos){ E(aEnt)->SetPosition(avPos); }
+
+		void LinkLightBillboards()
+		{
+			tEFL_LightBillboardConnectionListIt connIt = mlstConnections.begin();
+			for(; connIt != mlstConnections.end(); ++connIt)
 			{
 				cEFL_LightBillboardConnection& lightConnect = *connIt;
 
-				cBillboard *pBB = GetBillboardFromID(lightConnect.msBillboardID);
-				iLight *pLight = GetLightFromName(lightConnect.msLightName);
+				cBillboard *pBB = mpL->GetBillboardFromID(lightConnect.msBillboardID);
+				iLight *pLight = mpL->GetLightFromName(lightConnect.msLightName);
 
 				if(pLight==NULL)
 				{
-					Warning("Light with name '%s' does not exist!",lightConnect.msLightName.c_str());
+					hpl::Warning("Light with name '%s' does not exist!",lightConnect.msLightName.c_str());
 					continue;
 				}
 				if(pBB==NULL)
 				{
-					Warning("Billboard with id '%d' does not exist!",lightConnect.msBillboardID);
+					hpl::Warning("Billboard with id '%d' does not exist!",lightConnect.msBillboardID);
 					continue;
 				}
 
@@ -630,273 +279,263 @@ namespace hpl {
 			}
 		}
 
-		////////////////////////////////////////	
-		// Copy entity list to other list
-		tEntity3DList lstTempEntities = lstEntities;
+		tEob GetBoneState(const tString& asName){ return (tEob)mpL->mpEntity->GetBoneStateFromName(asName); }
+		int GetBoneStateNum(){ return mpL->mpEntity->GetBoneStateNum(); }
 
-
-		////////////////////////////////////////	
-		// Load Bones
-		tNodeStateMap mapBoneStates;
-		if(mpMesh->GetSkeleton())
+		void WarnSkeletonMismatch()
 		{
-			cXmlElement *pBonesElem  = pModelDataElem->GetFirstElement("Bones");
-			if(pBonesElem)
-			{
-				//////////////////////////
-				// Iterate bones
-				cXmlNodeListIterator boneIt = pBonesElem->GetChildIterator();
-				while(boneIt.HasNext())
-				{
-					cXmlElement *pBoneElem = boneIt.Next()->ToElement();
-
-					int lID = pBoneElem->GetAttributeInt("ID");
-					tString sName = pBoneElem->GetAttributeString("Name");
-
-					cBoneState *pBoneState = mpEntity->GetBoneStateFromName(sName);
-					if(pBoneState==NULL){
-						Error("Could not find bone '%s' in model '%s'\n", sName.c_str(), cString::To8Char(asFullPath).c_str());
-						continue;
-					}
-
-					/////////////////////////////
-					//Add bones to list
-                    mapBoneStates.insert(tNodeStateMap::value_type(lID, pBoneState));
-					
-					/////////////////////////////
-					//Add children to bone
-					LoadAndAttachChildren(pBoneElem, NULL, pBoneState, lstTempEntities, mapBoneStates, true, false);
-				}
-			}
-		}
-		
-
-
-		////////////////////////////////////////	
-		// Load Shapes
-		tLoaderCollideShapeMap setShapes;
-		std::set<iCollideShape*> setUsedShapes;
-
-		if(pPhysicsWorld)
-		{
-			cXmlElement *pShapesElem  = pModelDataElem->GetFirstElement("Shapes");
-			if(pShapesElem)
-			{
-				cXmlNodeListIterator shapeIt = pShapesElem->GetChildIterator();
-				while(shapeIt.HasNext())
-				{
-					cXmlElement *pBodyShapeElem = shapeIt.Next()->ToElement();
-
-					iCollideShape *pCollideShape = CreateCollideShape(pBodyShapeElem, pPhysicsWorld, mvScale);
-					if(pCollideShape == NULL) continue;
-					int lID = pBodyShapeElem->GetAttributeInt("ID");
-
-					setShapes.insert(tLoaderCollideShapeMap::value_type(lID, pCollideShape));
-				}
-			}
-		}
-			
-
-		////////////////////////////////////////	
-		// Load Bodies
-		tLoaderPhysicsBodyMap setBodies;
-
-		if(pPhysicsWorld)
-		{
-			////////////////////////
-			//Iterate the bodies elements
-			cXmlElement *pBodiesElem  = pModelDataElem->GetFirstElement("Bodies");
-			if(pBodiesElem)
-			{
-				cXmlNodeListIterator bodyIt = pBodiesElem->GetChildIterator();
-				while(bodyIt.HasNext())
-				{
-					/////////////////////
-					// Init
-					cXmlElement *pBodyElem = bodyIt.Next()->ToElement();
-					int lID = pBodyElem->GetAttributeInt("ID");
-					tString sBodyName = pBodyElem->GetAttributeString("Name");
-
-					/////////////////////
-					// Get shape
-					iCollideShape *pShape = GetBodyShape(pBodyElem,pPhysicsWorld,setShapes,setUsedShapes,mbShareBodyShapes);
-					if(pShape==NULL){
-						Error("No shapes found for body '%s'\n", sBodyName.c_str());
-						continue;
-					}
-
-					/////////////////////
-					// Create body and set up properties
-					iPhysicsBody *pBody = pPhysicsWorld->CreateBody(asName +"_"+ sBodyName,pShape);
-					SetBodyProperties(pBody, pBodyElem);
-
-					//Material
-					iPhysicsMaterial *pPhysicsMat = pPhysicsWorld->GetMaterialFromName(pBodyElem->GetAttributeString("Material"));
-					if(pPhysicsMat) pBody->SetMaterial(pPhysicsMat);
-
-					setBodies.insert(tLoaderPhysicsBodyMap::value_type(lID, pBody));
-					mvBodies.push_back(pBody);
-
-					/////////////////////
-					// Add extra properties
-					size_t lIdx = mvBodies.size() -1;
-					mvBodyExtraData.push_back(cEntityBodyExtraData());
-
-					mvBodyExtraData[lIdx].m_mtxLocalTransform = pBody->GetLocalMatrix();
-
-					/////////////////////
-					// Attach children
-					LoadAndAttachChildren(pBodyElem, pBody, NULL, lstTempEntities, mapBoneStates, true, true);
-				}
-			}
-
-			////////////////////////
-			//If no bones got attached to bodies, then add the entire entity to be attached. (Luis: this comment does not make much sense given the code below, not sure what the point is)
-			if(mpMesh->GetSkeleton())
-			{
-				if(mapBoneStates.size() != mpEntity->GetBoneStateNum())
-				{
-					Warning("Loading entity %s: Skeletons in mesh file (%ls) and .ent file (%ls) differ\n", 
-						asName.c_str(), 
-						mpMesh->GetFullPath().c_str(), 
-						static_cast<iXmlDocument*>(apRootElem)->GetPath().c_str());
-				}
-				lstTempEntities.push_back(mpEntity);
-			}
-
-			////////////////////////
-			//Destroy any left over shapes
-			tLoaderCollideShapeMapIt shapeSetIt = setShapes.begin();
-			for(; shapeSetIt != setShapes.end(); ++shapeSetIt)
-			{
-				if(setUsedShapes.count(shapeSetIt->second)==0)
-					pPhysicsWorld->DestroyShape(shapeSetIt->second);
-			}
-		}
-		
-		////////////////////////////////////////	
-		// Add all remaining entities directly to first body
-		if(mvBodies.empty()==false)
-		{
-			iPhysicsBody *pMainBody = mvBodies[0];
-			cMatrixf mtxInvParent = cMath::MatrixInverse(pMainBody->GetLocalMatrix());
-
-			for(tEntity3DListIt it = lstTempEntities.begin(); it != lstTempEntities.end(); ++it)
-			{
-				iEntity3D *pEntity = *it;
-
-				if(pEntity->GetEntityType() == "SubMesh" && mpMesh->GetSkeleton() == NULL && mpMesh->GetAnimationNum() > 0)
-				{
-					mbNodeAnimation = true;
-					continue;
-				}
-				else
-				{
-					AttachEntityChild(pMainBody, mtxInvParent, pEntity);
-				}
-			}
-
-			if(mbNodeAnimation)
-			{
-				/////////////
-				// Attach the whole entity to the body
-				AttachEntityChild(pMainBody, mtxInvParent, mpEntity);
-			}
+			hpl::Warning("Loading entity %s: Skeletons in mesh file (%ls) and .ent file (%ls) differ\n",
+				msName.c_str(),
+				mpL->mpMesh->GetFullPath().c_str(),
+				static_cast<iXmlDocument*>(mpRoot)->GetPath().c_str());
 		}
 
+		cMatrixf GetBoneWorldMatrix(tEob aBone){ return S(aBone)->GetWorldMatrix(); }
+		tString GetBoneName(tEob aBone){ return S(aBone)->GetName(); }
 
-		////////////////////////////////////////	
-		// Set matrix on entity if there are no bodies.
-		if(mvBodies.size()<=0)
+		int GetUniqueID(tEob aEnt){ return E(aEnt)->GetUniqueID(); }
+		bool IsSubMesh(tEob aEnt){ return E(aEnt)->GetEntityType() == "SubMesh"; }
+		cMatrixf GetLocalMatrix(tEob aEnt){ return E(aEnt)->GetLocalMatrix(); }
+		cMatrixf GetWorldMatrix(tEob aEnt){ return E(aEnt)->GetWorldMatrix(); }
+		tString GetEntityName(tEob aEnt){ return E(aEnt)->GetName(); }
+		void SetNodeAnimation(){ mpL->mbNodeAnimation = true; }
+		void AttachEntityChild(tEob aParent, const cMatrixf& a_mtxInvParent, tEob aChild){ mpL->AttachEntityChild(E(aParent), a_mtxInvParent, E(aChild)); }
+		void AttachBoneChild(tEob aBone, const cMatrixf& a_mtxInvParent, tEob aChild){ mpL->AttachBoneChild(S(aBone), a_mtxInvParent, E(aChild)); }
+		void AttachBoneToBody(tEob aBody, const cMatrixf& a_mtxInvParent, tEob aBone){ mpL->AttachBoneToBody(B(aBody), a_mtxInvParent, S(aBone)); }
+
+		tEob CreateBoxShape(const cVector3f& avSize, const cMatrixf& a_mtxOffset)
 		{
-			if(mpMesh->GetSkeleton())
-				mpEntity->SetMatrix(cMath::MatrixMul(a_mtxTransform, cMath::MatrixScale(avScale)) );
-			else
-				mpEntity->SetMatrix(a_mtxTransform);
-			
-			//to make sure everything is in place.
-			mpEntity->UpdateLogic(0);
+			cMatrixf m = a_mtxOffset;
+			return (tEob)mpWorld->GetPhysicsWorld()->CreateBoxShape(avSize,&m);
 		}
-		else
+		tEob CreateSphereShape(const cVector3f& avSize, const cMatrixf& a_mtxOffset)
 		{
-			for(size_t i=0;i<mvBodies.size(); ++i)
-			{
-				iPhysicsBody *pBody = mvBodies[i];
-				
-				pBody->SetMatrix(cMath::MatrixMul(a_mtxTransform,pBody->GetLocalMatrix()));
-			}
+			cMatrixf m = a_mtxOffset;
+			return (tEob)mpWorld->GetPhysicsWorld()->CreateSphereShape(avSize,&m);
 		}
-
-		std::map<iPhysicsBody*, cMatrixf> mapRestMatrix;
-		for(iPhysicsBody *pBody : mvBodies)
-			mapRestMatrix[pBody] = pBody->GetWorldMatrix();
-		bool bPosed = BeforeJoints();
-		if(!bPosed)
-			mapRestMatrix.clear();
-
-		if(pPhysicsWorld)
-		////////////////////////////////////////	
-		// Load Joints
+		tEob CreateCylinderShape(float afRadius, float afHeight, const cMatrixf& a_mtxOffset)
 		{
-			cXmlElement *JointsElem  = pModelDataElem->GetFirstElement("Joints");
-			if(JointsElem)
-			{
-				cXmlNodeListIterator jointIt = JointsElem->GetChildIterator();
-				while(jointIt.HasNext())
-				{
-					cXmlElement *pJointElem = jointIt.Next()->ToElement();
+			cMatrixf m = a_mtxOffset;
+			return (tEob)mpWorld->GetPhysicsWorld()->CreateCylinderShape(afRadius,afHeight,&m);
+		}
+		tEob CreateCapsuleShape(float afRadius, float afHeight, const cMatrixf& a_mtxOffset)
+		{
+			cMatrixf m = a_mtxOffset;
+			return (tEob)mpWorld->GetPhysicsWorld()->CreateCapsuleShape(afRadius,afHeight,&m);
+		}
+		tEob CreateCompoundShape(const std::vector<tEob>& avShapes)
+		{
+			tCollideShapeVec vShapes;
+			for(size_t i=0; i<avShapes.size(); ++i) vShapes.push_back((iCollideShape*)avShapes[i]);
+			return (tEob)mpWorld->GetPhysicsWorld()->CreateCompundShape(vShapes);
+		}
+		void IncShapeUserCount(tEob aShape){ ((iCollideShape*)aShape)->IncUserCount(); }
+		void DestroyShape(tEob aShape){ mpWorld->GetPhysicsWorld()->DestroyShape((iCollideShape*)aShape); }
 
-
-					iPhysicsJoint *pJoint = CreateJoint(asName,pJointElem,pPhysicsWorld,setBodies, a_mtxTransform, mvScale, mapRestMatrix);
-					if(pJoint)
-					{
-						SetJointProperties(pJoint,pJointElem, apWorld);
-
-						mvJoints.push_back(pJoint);
-					}
-				}
-			}
+		tEob CreateBody(const tString& asName, tEob aShape)
+		{
+			return H(mpWorld->GetPhysicsWorld()->CreateBody(asName,(iCollideShape*)aShape));
 		}
 
-		////////////////////////////////////////	
-		// Reset the unique ID (will mess with other entities otherwise)
-		// Do not want to do this with bodies!
-		for(tEntity3DListIt it = lstEntities.begin(); it != lstEntities.end(); ++it)
+		void SetBodyProperties(tEob aBody, const cEobBodyProps& p)
 		{
-			iEntity3D *pEntity = *it;
-			pEntity->SetUniqueID(-1);
+			iPhysicsBody *apBody = B(aBody);
+			apBody->SetMatrix(p.m_mtxMatrix);
+			apBody->SetMass(p.mfMass);
+			apBody->SetAngularDamping(p.mfAngularDamping);
+			apBody->SetLinearDamping(p.mfLinearDamping);
+			apBody->SetBlocksSound(p.mbBlocksSound);
+			apBody->SetCollideCharacter(p.mbCollideCharacter);
+			apBody->SetCollide(p.mbCollide);
+			apBody->SetGravity(p.mbGravity);
+			apBody->SetBuoyancyDensityMul(p.mfBuoyancyDensityMul);
+			apBody->SetMaxAngularSpeed(p.mfMaxAngularSpeed);
+			apBody->SetMaxLinearSpeed(p.mfMaxLinearSpeed);
+			apBody->SetContinuousCollision(p.mbContinuousCollision);
+			apBody->SetPushedByCharacterGravity(p.mbPushedByCharacterGravity);
+			apBody->SetVolatile(p.mbVolatile);
+			apBody->SetUseSurfaceEffects(p.mbUseSurfaceEffects);
+			apBody->SetGravityCanAttachCharacter(p.mbCanAttachCharacter);
+			apBody->SetUniqueID(p.mlID);
 		}
 
-
-		////////////////////////////////////////	
-		// Final setup, start animation or go to ragdoll mode is possible
-		if(mpEntity->GetAnimationStateNum() >0 && !bPosed)
+		void SetBodyMaterial(tEob aBody, const tString& asName)
 		{
-			mpEntity->Play(0, true, true);
+			iPhysicsMaterial *pPhysicsMat = mpWorld->GetPhysicsWorld()->GetMaterialFromName(asName);
+			if(pPhysicsMat) B(aBody)->SetMaterial(pPhysicsMat);
 		}
-		else if(mpEntity->GetMesh()->GetSkeleton() && mvBodies.size() >0)
-		{
-			mpEntity->SetSkeletonPhysicsActive(true);
-		}
-		
-		////////////////////////////////////////	
-		// Load user variables();
-		LoadUserVariables(apRootElem);
-		
-		// After load virtual call.
-		// This is where the user adds extra stuff.
-		AfterLoad(apRootElem,a_mtxTransform,apWorld,apInstanceVars);
 
+		void RegisterBody(tEob aBody)
+		{
+			iPhysicsBody *pBody = B(aBody);
+			mpL->mvBodies.push_back(pBody);
+			mpL->mvBodyExtraData.push_back(cEntityBodyExtraData());
+			mpL->mvBodyExtraData[mpL->mvBodies.size() -1].m_mtxLocalTransform = pBody->GetLocalMatrix();
+		}
+
+		tEob CreateJointHinge(const tString& asName, const cVector3f& avPivot, const cVector3f& avPin, tEob aParent, tEob aChild)
+		{
+			return (tEob)(iPhysicsJoint*)mpWorld->GetPhysicsWorld()->CreateJointHinge(asName,avPivot,avPin,aParent ? B(aParent) : NULL,B(aChild));
+		}
+		tEob CreateJointBall(const tString& asName, const cVector3f& avPivot, const cVector3f& avPin, tEob aParent, tEob aChild)
+		{
+			return (tEob)(iPhysicsJoint*)mpWorld->GetPhysicsWorld()->CreateJointBall(asName,avPivot,avPin,aParent ? B(aParent) : NULL,B(aChild));
+		}
+		tEob CreateJointSlider(const tString& asName, const cVector3f& avPivot, const cVector3f& avPin, tEob aParent, tEob aChild)
+		{
+			return (tEob)(iPhysicsJoint*)mpWorld->GetPhysicsWorld()->CreateJointSlider(asName,avPivot,avPin,aParent ? B(aParent) : NULL,B(aChild));
+		}
+		tEob CreateJointScrew(const tString& asName, const cVector3f& avPivot, const cVector3f& avPin, tEob aParent, tEob aChild)
+		{
+			return (tEob)(iPhysicsJoint*)mpWorld->GetPhysicsWorld()->CreateJointScrew(asName,avPivot,avPin,aParent ? B(aParent) : NULL,B(aChild));
+		}
+
+		void SetHingeLimits(tEob aJoint, float afMin, float afMax)
+		{
+			iPhysicsJointHinge *pJoint = static_cast<iPhysicsJointHinge*>(J(aJoint));
+			pJoint->SetMinAngle(afMin);
+			pJoint->SetMaxAngle(afMax);
+		}
+		void SetBallLimits(tEob aJoint, float afCone, float afTwist){ static_cast<iPhysicsJointBall*>(J(aJoint))->SetConeLimits(afCone, afTwist); }
+		void SetSliderLimits(tEob aJoint, float afMin, float afMax)
+		{
+			iPhysicsJointSlider *pJoint = static_cast<iPhysicsJointSlider*>(J(aJoint));
+			pJoint->SetMinDistance(afMin);
+			pJoint->SetMaxDistance(afMax);
+		}
+		void SetScrewLimits(tEob aJoint, float afMin, float afMax)
+		{
+			iPhysicsJointScrew *pJoint = static_cast<iPhysicsJointScrew*>(J(aJoint));
+			pJoint->SetMinDistance(afMin);
+			pJoint->SetMaxDistance(afMax);
+		}
+
+		void SetJointProperties(tEob aJoint, const cEobJointProps& p)
+		{
+			iPhysicsJoint *pJoint = J(aJoint);
+			tString sMoveSound = p.msMoveSound;
+			pJoint->SetMoveSound(sMoveSound);
+			pJoint->SetMinMoveSpeed(p.mfMinMoveSpeed);
+			pJoint->SetMinMoveFreq(p.mfMinMoveFreq);
+			pJoint->SetMinMoveVolume(p.mfMinMoveVolume);
+			pJoint->SetMinMoveFreqSpeed(p.mfMinMoveFreqSpeed);
+			pJoint->SetMaxMoveFreq(p.mfMaxMoveFreq);
+			pJoint->SetMaxMoveVolume(p.mfMaxMoveVolume);
+			pJoint->SetMaxMoveFreqSpeed(p.mfMaxMoveFreqSpeed);
+			pJoint->SetMiddleMoveSpeed(p.mfMiddleMoveSpeed);
+			pJoint->SetMiddleMoveVolume(p.mfMiddleMoveVolume);
+			pJoint->SetMoveSpeedType(p.mbAngularMove ? ePhysicsJointSpeed_Angular : ePhysicsJointSpeed_Linear);
+
+			pJoint->SetStickyMinLimit(p.mbStickyMinLimit);
+			pJoint->SetStickyMaxLimit(p.mbStickyMaxLimit);
+
+			pJoint->SetBreakable(p.mbBreakable);
+			pJoint->SetBreakForce(p.mfBreakForce);
+			pJoint->SetBreakSound(p.msBreakSound);
+
+			pJoint->SetLimitAutoSleep(p.mbLimitAutoSleep);
+			pJoint->SetLimitAutoSleepDist(p.mfLimitAutoSleepDist);
+			pJoint->SetLimitAutoSleepNumSteps(p.mlLimitAutoSleepNumSteps);
+
+			pJoint->SetCollideBodies(p.mbCollideBodies);
+
+			pJoint->GetMaxLimit()->msSound = p.msMaxLimitSound;
+			pJoint->GetMaxLimit()->mfMaxSpeed = p.mfMaxLimitMaxSpeed;
+			pJoint->GetMaxLimit()->mfMinSpeed = p.mfMaxLimitMinSpeed;
+
+			pJoint->GetMinLimit()->msSound = p.msMinLimitSound;
+			pJoint->GetMinLimit()->mfMaxSpeed = p.mfMinLimitMaxSpeed;
+			pJoint->GetMinLimit()->mfMinSpeed = p.mfMinLimitMinSpeed;
+
+			pJoint->SetUniqueID(p.mlID);
+		}
+
+		void RegisterJoint(tEob aJoint){ mpL->mvJoints.push_back(J(aJoint)); }
+
+		int GetAnimationStateNum(){ return mpL->mpEntity->GetAnimationStateNum(); }
+		void PlayFirstAnimation(){ mpL->mpEntity->Play(0, true, true); }
+		void SetSkeletonPhysicsActive(){ mpL->mpEntity->SetSkeletonPhysicsActive(true); }
+		void LoadUserVariables(){ mpL->LoadUserVariables(mpRoot); }
+
+	private:
+		cEntityLoader_Object *mpL;
+		tString msName;
+		cXmlElement *mpRoot;
+		cMatrixf m_mtxTransform;
+		cWorld *mpWorld;
+		cResourceVarsObject *mpVars;
+		tEFL_LightBillboardConnectionList mlstConnections;
+	};
+
+	//-----------------------------------------------------------------------
+
+	iEntity3D* cEntityLoader_Object::Load(	const tString &asName, int alID, bool abActive, cXmlElement *apRootElem,
+											const cMatrixf &a_mtxTransform, const cVector3f &avScale,
+											cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars)
+	{
+		mvBodies.clear();
+		mvJoints.clear();
+
+		mvBodyExtraData.clear();
+
+		mvHapticShapes.clear();
+
+		mvParticleSystems.clear();
+		mvBillboards.clear();
+		mvLensFlares.clear();
+		mvSoundEntities.clear();
+		mvLights.clear();
+		mvBeams.clear();
+
+		mpEntity = NULL;
+		mpMesh = NULL;
+
+		msFileName = asFileName;
+		mlID = alID;
+		mbActive = abActive;
+		mvScale = avScale;
+
+		mbNodeAnimation = false;
+
+		cEobParams params;
+		params.msName = asName;
+		params.msFileName = asFileName;
+		params.msFullPath = cString::To8Char(asFullPath);
+		params.msFullPathDir = cString::To8Char(cString::GetFilePathW(asFullPath));
+		params.m_mtxTransform = a_mtxTransform;
+		params.mvScale = avScale;
+		params.mbPhysicsWorld = apWorld->GetPhysicsWorld() != NULL;
+
+		cEobImpl builder(this, asName, apRootElem, a_mtxTransform, apWorld, apInstanceVars);
+
+		if(ParseEntityObject(builder, params, apRootElem) == false) return NULL;
 		return mpEntity;
 	}
-	
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
+
+	cBillboard* cEntityLoader_Object::GetBillboardFromID(int alID)
+	{
+		for(size_t i=0; i<mvBillboards.size(); ++i)
+		{
+			cBillboard *pBB = mvBillboards[i];
+			if(pBB->GetUniqueID() == alID) return pBB;
+		}
+		return NULL;
+	}
+
+	iLight* cEntityLoader_Object::GetLightFromName(const tString& asName)
+	{
+		for(size_t i=0; i<mvLights.size(); ++i)
+		{
+			iLight *pLight = mvLights[i];
+			if(pLight->GetName() == asName) return pLight;
+		}
+		return NULL;
+	}
+
+	//-----------------------------------------------------------------------
+
 	
 	void cEntityLoader_Object::AttachEntityChild(iEntity3D *apParent, const cMatrixf& a_mtxInvParent, iEntity3D *apChild)
 	{
@@ -953,203 +592,7 @@ namespace hpl {
 	}
 	
 	//-----------------------------------------------------------------------
-	
-	void cEntityLoader_Object::LoadAndAttachChildren(	cXmlElement *apMainElem, iEntity3D *apEntityParent, cBoneState *apBoneStateParent, 
-														tEntity3DList& a_lstChildList, tNodeStateMap &a_mapBoneStates,
-														bool abRemoveAttachedChild, bool abIsBody)
-	{
-		cXmlElement *pChildrenElem  = apMainElem->GetFirstElement("Children");
-		if(pChildrenElem==NULL) return;
 
-		cMatrixf mtxInvParent;
-		if(apEntityParent)
-			mtxInvParent = cMath::MatrixInverse(apEntityParent->GetLocalMatrix());
-		else
-			mtxInvParent = cMath::MatrixInverse(apBoneStateParent->GetWorldMatrix());
-
-		///////////////////////////////
-		//Iterate the children elements
-		cXmlNodeListIterator childIt = pChildrenElem->GetChildIterator();
-		while(childIt.HasNext())
-		{
-			cXmlElement *pChildElem = childIt.Next()->ToElement();
-
-			int lID = pChildElem->GetAttributeInt("ID");
-			
-			//////////////////////////////////
-			// Search for child entity
-			bool bFound = false;
-			for(tEntity3DListIt it = a_lstChildList.begin(); it != a_lstChildList.end(); ++it)
-			{
-				//////////////////////////
-				//If found attach and remove from list if set
-				iEntity3D *pEntity = *it;
-				if(pEntity->GetUniqueID() != lID) continue;
-
-				//Attach
-				if(apEntityParent)
-				{
-					if(pEntity->GetEntityType() == "SubMesh" && mpMesh->GetSkeleton() == NULL && mpMesh->GetAnimationNum() > 0)
-					{
-						mbNodeAnimation = true;
-						continue;
-					}
-					else
-					{
-						AttachEntityChild(apEntityParent, mtxInvParent, pEntity);
-					}
-				}
-				else
-					AttachBoneChild(apBoneStateParent, mtxInvParent, pEntity);
-								
-				//Final stuff				
-				if(abRemoveAttachedChild) a_lstChildList.erase(it);
-				bFound = true;
-				break;
-			}
-
-			//////////////////////////////////
-			// Search for child bone
-			if(abIsBody && bFound==false)
-			{
-				tNodeStateMapIt it = a_mapBoneStates.find(lID);
-				if(it != a_mapBoneStates.end())
-				{
-					iPhysicsBody *pParentBody = static_cast<iPhysicsBody*>(apEntityParent);
-
-					cBoneState *pBoneState = it->second;
-					AttachBoneToBody(pParentBody, mtxInvParent, pBoneState);
-					bFound = true;
-
-					a_mapBoneStates.erase(it);
-				}
-			}
-
-
-			if(bFound == false)
-			{
-				if(apEntityParent)
-					Warning("Could not find child with unique ID %d to attach to entity '%s' in '%s'\n", lID, apEntityParent->GetName().c_str(), msFileName.c_str());
-				else
-					Warning("Could not find child with unique ID %d to attach to bone '%s' in '%s'\n", lID, apBoneStateParent->GetName().c_str(), msFileName.c_str());
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	cBillboard* cEntityLoader_Object::GetBillboardFromID(int alID)
-	{
-        for(size_t i=0; i<mvBillboards.size(); ++i)
-		{
-			cBillboard *pBB = mvBillboards[i];
-			if(pBB->GetUniqueID() == alID) return pBB;
-		}
-		return NULL;
-	}
-	
-	iLight* cEntityLoader_Object::GetLightFromName(const tString& asName)
-	{
-		for(size_t i=0; i<mvLights.size(); ++i)
-		{
-			iLight *pLight = mvLights[i];
-			if(pLight->GetName() == asName) return pLight;
-		}
-		return NULL;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cEntityLoader_Object::SetBodyProperties(iPhysicsBody *apBody, cXmlElement *apElem)
-	{
-		apBody->SetMatrix(GetMatrixFromVectors(	apElem->GetAttributeVector3f("WorldPos") * mvScale,
-												apElem->GetAttributeVector3f("Rotation"), 
-												1.0f) 
-												);
-
-		apBody->SetMass(apElem->GetAttributeFloat("Mass",1.0f));
-		
-		apBody->SetAngularDamping(apElem->GetAttributeFloat("AngularDamping"));
-		apBody->SetLinearDamping(apElem->GetAttributeFloat("LinearDamping"));
-
-		apBody->SetBlocksSound(apElem->GetAttributeBool("BlocksSound",false));
-		apBody->SetCollideCharacter(apElem->GetAttributeBool("CollideCharacter",true));
-		apBody->SetCollide(apElem->GetAttributeBool("CollideNonCharacter",true));
-
-		apBody->SetGravity(apElem->GetAttributeBool("HasGravity",true));
-		apBody->SetBuoyancyDensityMul(apElem->GetAttributeFloat("BuoyancyDensityMul",1.0));
-
-		apBody->SetMaxAngularSpeed(apElem->GetAttributeFloat("MaxAngularSpeed",0));
-		apBody->SetMaxLinearSpeed(apElem->GetAttributeFloat("MaxLinearSpeed",0));
-
-		apBody->SetContinuousCollision(apElem->GetAttributeBool("ContinuousCollision",true));
-
-		apBody->SetPushedByCharacterGravity(apElem->GetAttributeBool("PushedByCharacterGravity",false));
-
-		apBody->SetVolatile(apElem->GetAttributeBool("Volatile",false));
-
-		apBody->SetUseSurfaceEffects(apElem->GetAttributeBool("UseSurfaceEffects",true));
-	
-		apBody->SetGravityCanAttachCharacter(apElem->GetAttributeBool("CanAttachCharacter",false));
-
-		apBody->SetUniqueID(apElem->GetAttributeInt("ID",-1));
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cEntityLoader_Object::SetJointProperties(iPhysicsJoint *pJoint, cXmlElement *apJointElem, cWorld *apWorld)
-	{
-		tString t = apJointElem->GetAttributeString("MoveSound","");
-		pJoint->SetMoveSound(t);
-		pJoint->SetMinMoveSpeed(apJointElem->GetAttributeFloat("MinMoveSpeed",0.5f));
-		pJoint->SetMinMoveFreq(apJointElem->GetAttributeFloat("MinMoveFreq",0.9f));
-		pJoint->SetMinMoveVolume(apJointElem->GetAttributeFloat("MinMoveVolume",0.3f));
-		pJoint->SetMinMoveFreqSpeed(apJointElem->GetAttributeFloat("MinMoveFreqSpeed",0.9f));
-		pJoint->SetMaxMoveFreq(apJointElem->GetAttributeFloat("MaxMoveFreq",1.1f));
-		pJoint->SetMaxMoveVolume(apJointElem->GetAttributeFloat("MaxMoveVolume",1.0f));
-		pJoint->SetMaxMoveFreqSpeed(apJointElem->GetAttributeFloat("MaxMoveFreqSpeed",1.1f));
-		pJoint->SetMiddleMoveSpeed(apJointElem->GetAttributeFloat("MiddleMoveSpeed",1.0f));
-		pJoint->SetMiddleMoveVolume(apJointElem->GetAttributeFloat("MiddleMoveVolume",1.0f));
-		pJoint->SetMoveSpeedType(cString::ToLowerCase(apJointElem->GetAttributeString("MoveType","Linear")) == "angular" ? 
-									ePhysicsJointSpeed_Angular : 	ePhysicsJointSpeed_Linear);
-		
-		pJoint->SetStickyMinLimit(apJointElem->GetAttributeBool("StickyMinLimit",false));
-		pJoint->SetStickyMaxLimit(apJointElem->GetAttributeBool("StickyMaxLimit",false));
-
-		pJoint->SetBreakable(apJointElem->GetAttributeBool("Breakable",false));
-		pJoint->SetBreakForce(apJointElem->GetAttributeFloat("BreakForce",1000));
-		pJoint->SetBreakSound(apJointElem->GetAttributeString("BreakSound",""));
-
-		pJoint->SetLimitAutoSleep(apJointElem->GetAttributeBool("LimitAutoSleep",false));
-		pJoint->SetLimitAutoSleepDist(apJointElem->GetAttributeFloat("LimitAutoSleepDist",0.02f));
-		pJoint->SetLimitAutoSleepNumSteps(apJointElem->GetAttributeInt("LimitAutoSleepNumSteps",10));
-		
-		pJoint->SetCollideBodies(apJointElem->GetAttributeBool("CollideBodies",true));
-		
-		pJoint->GetMaxLimit()->msSound = apJointElem->GetAttributeString("MaxLimitSound","");
-		pJoint->GetMaxLimit()->mfMaxSpeed = apJointElem->GetAttributeFloat("MaxLimitMaxSpeed",10.0f);
-		pJoint->GetMaxLimit()->mfMinSpeed = apJointElem->GetAttributeFloat("MaxLimit_MinSpeed",20.0f);
-		if(pJoint->GetMaxLimit()->mfMaxSpeed <=0) pJoint->GetMaxLimit()->mfMaxSpeed = 0.01f;
-
-		pJoint->GetMinLimit()->msSound = apJointElem->GetAttributeString("MinLimitSound","");
-		pJoint->GetMinLimit()->mfMaxSpeed = apJointElem->GetAttributeFloat("MinLimitMaxSpeed",10.0f);
-		pJoint->GetMinLimit()->mfMinSpeed = apJointElem->GetAttributeFloat("MinLimitMinSpeed",20.0f);
-		if(pJoint->GetMinLimit()->mfMaxSpeed <=0) pJoint->GetMaxLimit()->mfMaxSpeed = 0.01f;
-
-		pJoint->SetUniqueID(apJointElem->GetAttributeInt("ID",-1));
-
-
-		/////////////////////////////
-		//Load all controllers
-		//TODO!
-		/*TiXmlElement *pControllerElem = pJointElem->FirstChildElement("Controller");
-		for(; pControllerElem != NULL; pControllerElem = pControllerElem->NextSiblingElement("Controller"))
-		{
-			LoadController(pJoint,apWorld->GetPhysicsWorld(),pControllerElem);
-		}*/
-	}
-
-	//-----------------------------------------------------------------------
 	
 	ePhysicsControllerType GetControllerType(const char* apString)
 	{
