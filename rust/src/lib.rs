@@ -2,4 +2,6 @@
 
 pub mod crc;
 mod ffi;
+pub mod string;
+mod string_ffi;
 pub mod types;
