@@ -9,6 +9,8 @@ use std::num::NonZeroUsize;
 pub struct Handle(NonZeroUsize);
 
 impl Handle {
+    pub const FIRST: Self = Self(NonZeroUsize::MIN);
+
     pub fn new(raw: usize) -> Option<Self> {
         NonZeroUsize::new(raw).map(Self)
     }

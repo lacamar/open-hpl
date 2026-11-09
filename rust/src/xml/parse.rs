@@ -44,7 +44,6 @@ fn lower(c: u8) -> u8 {
 }
 
 fn utf32_to_utf8(mut input: u64) -> Vec<u8> {
-    const FIRST: [u8; 5] = [0, 0, 0xC0, 0xE0, 0xF0];
     let len = match input {
         0..0x80 => 1,
         0x80..0x800 => 2,
@@ -52,12 +51,19 @@ fn utf32_to_utf8(mut input: u64) -> Vec<u8> {
         0x10000..0x200000 => 4,
         _ => return Vec::new(),
     };
-    let mut out = vec![0u8; len];
-    for i in (1..len).rev() {
-        out[i] = ((input | 0x80) & 0xBF) as u8;
+    let mut out = Vec::with_capacity(len);
+    for _ in 1..len {
+        out.push(((input | 0x80) & 0xBF) as u8);
         input >>= 6;
     }
-    out[0] = (input | u64::from(FIRST[len])) as u8;
+    let first: u64 = match len {
+        2 => 0xC0,
+        3 => 0xE0,
+        4 => 0xF0,
+        _ => 0,
+    };
+    out.push((input | first) as u8);
+    out.reverse();
     out
 }
 
@@ -105,7 +111,7 @@ impl Parser<'_> {
                 }
                 b'\t' => {
                     p += 1;
-                    col = (col / TAB_SIZE + 1) * TAB_SIZE;
+                    col = (col.wrapping_div(TAB_SIZE) + 1) * TAB_SIZE;
                 }
                 UTF_LEAD_0 if enc == Enc::Utf8 => {
                     if self.at(p + 1) != 0 && self.at(p + 2) != 0 {
@@ -192,7 +198,7 @@ impl Parser<'_> {
                 {
                     q += 1;
                 }
-                (Some(q), self.s[start..q].to_vec())
+                (Some(q), self.s.get(start..q).unwrap_or_default().to_vec())
             }
             _ => (None, Vec::new()),
         }
@@ -210,7 +216,7 @@ impl Parser<'_> {
             if self.at(start) == 0 {
                 return (None, Vec::new());
             }
-            let Some(semi) = (start..self.s.len()).find(|&i| self.s[i] == b';') else {
+            let Some(semi) = (start..self.s.len()).find(|&i| self.at(i) == b';') else {
                 return (None, Vec::new());
             };
             let (mut ucs, mut mult, mut q) = (0u64, 1u32, semi - 1);
@@ -234,7 +240,7 @@ impl Parser<'_> {
             return (Some(semi + 1), bytes);
         }
         for (s, c) in ENTITIES {
-            if self.s[p..].starts_with(s) {
+            if self.s.get(p..).is_some_and(|t| t.starts_with(s)) {
                 return (Some(p + s.len()), vec![c]);
             }
         }
@@ -357,7 +363,7 @@ impl Parser<'_> {
     fn parse_text(&mut self, id: NodeId, p: usize, enc: Enc) -> Pos {
         self.stamp(p, enc);
         const START: &[u8] = b"<![CDATA[";
-        if self.doc.nodes[id as usize].kind == (Kind::Text { cdata: true }) {
+        if self.doc.node(id).kind == (Kind::Text { cdata: true }) {
             if !self.string_equal(Some(p), START, false) {
                 self.fail(ERR_PARSING_CDATA, Some(p), enc);
                 return None;
@@ -368,11 +374,11 @@ impl Parser<'_> {
                 value.push(self.at(q));
                 q += 1;
             }
-            self.doc.nodes[id as usize].value = value;
+            self.doc.set_raw_value(id, value);
             return self.read_text(Some(q), false, b"]]>", enc).0;
         }
         let (np, value) = self.read_text(Some(p), true, b"<", enc);
-        self.doc.nodes[id as usize].value = value;
+        self.doc.set_raw_value(id, value);
         np.map(|q| q.wrapping_sub(1))
     }
 
@@ -391,7 +397,7 @@ impl Parser<'_> {
             value.push(self.at(q));
             q += 1;
         }
-        self.doc.nodes[id as usize].value = value;
+        self.doc.set_raw_value(id, value);
         Some(if self.at(q) != 0 { q + 3 } else { q })
     }
 
@@ -410,7 +416,7 @@ impl Parser<'_> {
             value.push(self.at(q));
             q += 1;
         }
-        self.doc.nodes[id as usize].value = value;
+        self.doc.set_raw_value(id, value);
         Some(if self.at(q) == b'>' { q + 1 } else { q })
     }
 
@@ -427,11 +433,14 @@ impl Parser<'_> {
         while let Some(q) = self.live(p) {
             if self.at(q) == b'>' {
                 p = Some(q + 1);
-                self.doc.nodes[id as usize].kind = Kind::Declaration {
-                    version,
-                    encoding,
-                    standalone,
-                };
+                self.doc.set_kind(
+                    id,
+                    Kind::Declaration {
+                        version,
+                        encoding,
+                        standalone,
+                    },
+                );
                 return p;
             }
             p = self.skip_white(Some(q), enc);
@@ -456,11 +465,14 @@ impl Parser<'_> {
                 }
             }
         }
-        self.doc.nodes[id as usize].kind = Kind::Declaration {
-            version,
-            encoding,
-            standalone,
-        };
+        self.doc.set_kind(
+            id,
+            Kind::Declaration {
+                version,
+                encoding,
+                standalone,
+            },
+        );
         None
     }
 
@@ -480,7 +492,7 @@ impl Parser<'_> {
         let (np, name) = self.read_name(p);
         let mut end_tag = b"</".to_vec();
         end_tag.extend_from_slice(&name);
-        self.doc.nodes[id as usize].value = name;
+        self.doc.set_raw_value(id, name);
         let Some(np) = self.live(np) else {
             self.fail(ERR_FAILED_TO_READ_ELEMENT_NAME, err_pos, enc);
             return None;
@@ -523,15 +535,11 @@ impl Parser<'_> {
                         self.fail(ERR_PARSING_ELEMENT, Some(q), enc);
                         return None;
                     }
-                    if self.doc.nodes[id as usize]
-                        .attrs
-                        .iter()
-                        .any(|a| a.name == attr.name)
-                    {
+                    if self.doc.node(id).attrs.iter().any(|a| a.name == attr.name) {
                         self.fail(ERR_PARSING_ELEMENT, Some(q), enc);
                         return None;
                     }
-                    self.doc.nodes[id as usize].attrs.push(attr);
+                    self.doc.push_attr(id, attr);
                     p = np;
                 }
             }
@@ -544,13 +552,9 @@ impl Parser<'_> {
         while let Some(q) = self.live(p) {
             if self.at(q) != b'<' {
                 let text = self.doc.alloc(Kind::Text { cdata: false }, Vec::new());
-                self.doc.nodes[text as usize].parent = Some(parent);
+                self.doc.set_parent(text, parent);
                 p = self.parse_text(text, q, enc);
-                if self.doc.nodes[text as usize]
-                    .value
-                    .iter()
-                    .any(|&c| !is_white(c))
-                {
+                if self.doc.node(text).value.iter().any(|&c| !is_white(c)) {
                     self.doc.link_end_child(parent, text);
                 }
                 // tinyXML re-reads the same tail forever when text runs into end of input
@@ -573,7 +577,7 @@ impl Parser<'_> {
     }
 
     fn parse_node(&mut self, id: NodeId, p: Pos, enc: Enc) -> Pos {
-        match self.doc.nodes[id as usize].kind {
+        match self.doc.node(id).kind {
             Kind::Element => {
                 if self.depth >= MAX_DEPTH {
                     self.fail(ERR_PARSING_ELEMENT, p, enc);
@@ -618,7 +622,7 @@ impl Parser<'_> {
             Kind::Unknown
         };
         let id = self.doc.alloc(kind, Vec::new());
-        self.doc.nodes[id as usize].parent = Some(parent);
+        self.doc.set_parent(id, parent);
         Some(id)
     }
 }
@@ -657,7 +661,7 @@ impl Doc {
             p = parser.parse_node(node, Some(q), enc);
             parser.doc.link_end_child(DOC, node);
             if enc == Enc::Unknown
-                && let Kind::Declaration { encoding, .. } = &parser.doc.nodes[node as usize].kind
+                && let Kind::Declaration { encoding, .. } = &parser.doc.node(node).kind
             {
                 let e = c_str(encoding);
                 enc = if e.is_empty()
@@ -671,7 +675,7 @@ impl Doc {
             }
             p = parser.skip_white(p, enc);
         }
-        if parser.doc.nodes[DOC as usize].first.is_none() {
+        if parser.doc.node(DOC).first.is_none() {
             parser.doc.set_error(ERR_DOCUMENT_EMPTY, None);
         }
     }

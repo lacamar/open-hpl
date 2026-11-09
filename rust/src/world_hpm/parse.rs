@@ -127,7 +127,8 @@ fn vec3_to_string(v: Vector3f) -> Vec<u8> {
             f64::from(v.z),
         )
     };
-    buf[..usize::try_from(n).unwrap_or(0).min(buf.len() - 1)].to_vec()
+    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
+    buf.get(..len).unwrap_or_default().to_vec()
 }
 
 fn strtoul_u32(s: &[u8]) -> u32 {
@@ -727,8 +728,8 @@ impl<B: Builder> Parser<'_, B> {
                     detail_amount: [0.0; 3],
                 }; 4],
             };
-            for m in layer.children.iter().take(4) {
-                out.mats[out.num_mats as usize] = abi::TerrainMat {
+            for (slot, m) in out.mats.iter_mut().zip(&layer.children) {
+                *slot = abi::TerrainMat {
                     file: keep(&m.string(b"File")),
                     tile_amount: m.float(b"TileAmount", 1.0),
                     start_fade_value: m.float(b"StartFadeValue", 0.0),
@@ -745,8 +746,11 @@ impl<B: Builder> Parser<'_, B> {
             scale: 0.0,
         }; 3];
         let mut num_details = 0;
-        for d in details_el.iter().flat_map(|d| &d.children).take(3) {
-            details[num_details] = abi::TerrainDetail {
+        for (slot, d) in details
+            .iter_mut()
+            .zip(details_el.iter().flat_map(|d| &d.children))
+        {
+            *slot = abi::TerrainDetail {
                 file: keep(&d.string(b"File")),
                 scale: d.float(b"Scale", 1.0),
             };
@@ -818,7 +822,7 @@ impl<B: Builder> Parser<'_, B> {
                 center: arr2(a.vec2(b"Center", splat2(0.0))),
                 radius: a.float(b"Radius", 0.5),
                 points: points.as_ptr(),
-                num_points: points.len() / 2,
+                num_points: points.len() >> 1,
             })
             .collect();
 
@@ -845,7 +849,7 @@ impl<B: Builder> Parser<'_, B> {
             detail_fade_start: details_fade.0,
             detail_fade_end: details_fade.1,
             details,
-            num_details: num_details as i32,
+            num_details,
             has_sections: sections.is_some(),
             decals: decals.as_ptr(),
             num_decals: decals.len(),

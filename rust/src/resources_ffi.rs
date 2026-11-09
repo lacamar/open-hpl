@@ -207,11 +207,11 @@ pub unsafe extern "C" fn ohpl_exts_len(e: *const ExtList) -> usize {
 /// Extension `i` as (pointer, length), valid until the list changes.
 ///
 /// # Safety
-/// `e` live and `i < ohpl_exts_len(e)`.
+/// `e` live; `n` writable. Out-of-range `i` yields length 0.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ohpl_exts_at(e: *const ExtList, i: usize, n: *mut usize) -> *const u8 {
     // SAFETY: caller contract.
-    let s = &unsafe { &*e }.0[i];
+    let s = unsafe { &*e }.0.get(i).map_or(&[][..], Vec::as_slice);
     // SAFETY: caller contract.
     unsafe { *n = s.len() };
     s.as_ptr()
@@ -294,4 +294,24 @@ pub unsafe extern "C" fn ohpl_resmeta_inc_user(m: *mut ResMeta, now: u64) {
 pub unsafe extern "C" fn ohpl_resmeta_dec_user(m: *mut ResMeta) {
     // SAFETY: caller contract.
     unsafe { &mut *m }.dec_user();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exts_at_out_of_range_is_empty() {
+        let e = ohpl_exts_new();
+        let mut n = 7;
+        // SAFETY: `e` is live and `n` is a local.
+        unsafe {
+            ohpl_exts_add(e, b"png".as_ptr(), 3);
+            assert!(!ohpl_exts_at(e, 0, &mut n).is_null());
+            assert_eq!(n, 3);
+            ohpl_exts_at(e, 1, &mut n);
+            assert_eq!(n, 0);
+            ohpl_exts_free(e);
+        }
+    }
 }

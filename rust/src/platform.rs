@@ -77,11 +77,11 @@ fn user_dir(env: &dyn Env, key: &str, default: &str) -> Option<Vec<u8>> {
         let Some(k) = find(line, &wanted) else {
             continue;
         };
-        let start = k + wanted.len();
-        let Some(end) = line[start..].iter().position(|&b| b == b'"') else {
+        let rest = line.get(k + wanted.len()..).unwrap_or_default();
+        let Some(end) = rest.iter().position(|&b| b == b'"') else {
             continue;
         };
-        let mut val = line[start..start + end].to_vec();
+        let mut val = rest.get(..end).unwrap_or_default().to_vec();
         if let Some(h) = find(&val, b"$HOME") {
             val.splice(h..h + 5, home.iter().copied());
         }

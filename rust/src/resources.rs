@@ -35,14 +35,14 @@ fn dirs_of(path: &[u32]) -> Vec<Vec<u32>> {
 /// Wanted dirs matched while scanning the entry's dirs from the back.
 fn common_suffix(wanted: &[Vec<u32>], entry: &[Vec<u32>]) -> i32 {
     let mut count = 0;
-    let mut i = wanted.len();
+    let mut remaining = wanted.iter().rev().peekable();
     for dir in entry.iter().rev() {
-        if i == 0 {
+        let Some(want) = remaining.peek() else {
             break;
-        }
-        if wanted[i - 1] == *dir {
+        };
+        if *want == dir {
             count += 1;
-            i -= 1;
+            remaining.next();
         }
     }
     count
@@ -79,7 +79,7 @@ impl FileSearcher {
     pub fn get(&self, name_and_path: &[u8], want_count: bool) -> Option<Found> {
         let low = string::to_lower(string::file_name(name_and_path));
         let list = self.files.get(&low)?;
-        let first = list[0].id;
+        let first = list.first()?.id;
         if list.len() == 1 && !want_count {
             return Some(Found {
                 id: first,
@@ -157,7 +157,9 @@ impl ResMap {
     }
 
     pub fn find(&self, hash: u32, mut matches: impl FnMut(*mut c_void) -> bool) -> *mut c_void {
-        self.v[self.range(hash)]
+        self.v
+            .get(self.range(hash))
+            .unwrap_or_default()
             .iter()
             .map(|e| e.second)
             .find(|&r| matches(r))
@@ -167,7 +169,13 @@ impl ResMap {
     /// Erases the first entry under `hash` holding `res`.
     pub fn remove(&mut self, hash: u32, res: *mut c_void) -> bool {
         let r = self.range(hash);
-        match self.v[r.clone()].iter().position(|e| e.second == res) {
+        let found = self
+            .v
+            .get(r.clone())
+            .unwrap_or_default()
+            .iter()
+            .position(|e| e.second == res);
+        match found {
             Some(p) => {
                 self.v.remove(r.start + p);
                 true
@@ -183,7 +191,7 @@ impl ResMap {
 
 /// libstdc++ `std::sort` (introsort + insertion sort), which leaves equal elements in an
 /// order DestroyUnused depends on.
-pub fn std_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
+fn std_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
     let n = v.len();
     if n < 2 {
         return;
@@ -209,11 +217,13 @@ fn introsort_loop<T: Copy>(
 ) {
     while last - first > 16 {
         if depth == 0 {
-            heap_sort(&mut v[first..last], less);
+            if let Some(part) = v.get_mut(first..last) {
+                heap_sort(part, less);
+            }
             return;
         }
         depth -= 1;
-        let mid = first + (last - first) / 2;
+        let mid = first + ((last - first) >> 1);
         move_median_to_first(v, first, first + 1, mid, last - 1, less);
         let cut = unguarded_partition(v, first + 1, last, first, less);
         introsort_loop(v, cut, last, depth, less);
@@ -221,6 +231,10 @@ fn introsort_loop<T: Copy>(
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn move_median_to_first<T: Copy>(
     v: &mut [T],
     result: usize,
@@ -247,6 +261,10 @@ fn move_median_to_first<T: Copy>(
     v.swap(result, pick);
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn unguarded_partition<T: Copy>(
     v: &mut [T],
     mut first: usize,
@@ -270,6 +288,10 @@ fn unguarded_partition<T: Copy>(
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn insertion_sort<T: Copy>(
     v: &mut [T],
     first: usize,
@@ -287,6 +309,10 @@ fn insertion_sort<T: Copy>(
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn unguarded_linear_insert<T: Copy>(
     v: &mut [T],
     mut last: usize,
@@ -300,10 +326,14 @@ fn unguarded_linear_insert<T: Copy>(
     v[last] = val;
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn heap_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
     let len = v.len();
     if len >= 2 {
-        let mut parent = (len - 2) / 2;
+        let mut parent = (len - 2) >> 1;
         loop {
             let value = v[parent];
             adjust_heap(v, parent, len, value, less);
@@ -321,6 +351,10 @@ fn heap_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "std_sort's comparator is a strict weak order, so the partition and insertion sentinels bound every index"
+)]
 fn adjust_heap<T: Copy>(
     v: &mut [T],
     mut hole: usize,
@@ -330,7 +364,7 @@ fn adjust_heap<T: Copy>(
 ) {
     let top = hole;
     let mut child = hole;
-    while child < len.saturating_sub(1) / 2 {
+    while child < len.saturating_sub(1) >> 1 {
         child = 2 * (child + 1);
         if less(v[child], v[child - 1]) {
             child -= 1;
@@ -338,16 +372,16 @@ fn adjust_heap<T: Copy>(
         v[hole] = v[child];
         hole = child;
     }
-    if len & 1 == 0 && child == (len - 2) / 2 {
+    if len & 1 == 0 && child == (len - 2) >> 1 {
         child = 2 * (child + 1);
         v[hole] = v[child - 1];
         hole = child - 1;
     }
-    let mut parent = hole.wrapping_sub(1) / 2;
+    let mut parent = hole.wrapping_sub(1) >> 1;
     while hole > top && less(v[parent], value) {
         v[hole] = v[parent];
         hole = parent;
-        parent = hole.wrapping_sub(1) / 2;
+        parent = hole.wrapping_sub(1) >> 1;
     }
     v[hole] = value;
 }
@@ -361,10 +395,15 @@ pub fn eviction_order(
     let keys: Vec<(u32, u64)> = ptrs.iter().map(|&r| key(r)).collect();
     let mut order: Vec<usize> = (0..ptrs.len()).collect();
     std_sort(&mut order, &mut |a, b| {
-        let (x, y) = (keys[a], keys[b]);
+        let (Some(&x), Some(&y)) = (keys.get(a), keys.get(b)) else {
+            return false;
+        };
         if x.0 != y.0 { x.0 > y.0 } else { x.1 > y.1 }
     });
-    order.into_iter().map(|i| ptrs[i]).collect()
+    order
+        .into_iter()
+        .filter_map(|i| ptrs.get(i).copied())
+        .collect()
 }
 
 /// Extensions a loader supports, in the order they were added.

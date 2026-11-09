@@ -26,7 +26,8 @@ fn c_float(x: f32) -> String {
             f64::from(x),
         )
     };
-    String::from_utf8_lossy(&buf[..usize::try_from(n).unwrap_or(0).min(buf.len() - 1)]).into_owned()
+    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
+    String::from_utf8_lossy(buf.get(..len).unwrap_or_default()).into_owned()
 }
 
 /// A message as the C++ parser formats it: truncated to its 4096-byte buffer.

@@ -3,6 +3,7 @@
 HPL2 engine port (aarch64 Linux) running Amnesia TDD, AMFP, SOMA, Rebirth, Bunker data.
 SOMA work follows `SOMA_PLAN.md`.
 Rust port: crate `rust/` (staticlib linked into HPL2, C ABI in `rust/src/ffi.rs`), plan and parity contract in bd epic `open-hpl-smj`; use the port-to-rust and port-from-cpp skills.
+Before merging a Rust port step run `scripts/rust-port-check.sh` (full sweeps; Rebirth 03_06_ghouls_nest fails since 1.3.77).
 
 ## Hard rules
 

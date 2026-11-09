@@ -42,7 +42,7 @@ fn frequency_enum(i: u64) -> u32 {
 }
 
 pub fn parse(file: &[u8]) -> Option<Parsed> {
-    if file.len() < HEADER_LEN || &file[..4] != b"FSB5" {
+    if file.len() < HEADER_LEN || !file.starts_with(b"FSB5") {
         return None;
     }
     let field = |o| u32le(file, o);
@@ -64,7 +64,10 @@ pub fn parse(file: &[u8]) -> Option<Parsed> {
         pos += 8;
         let mut s = Sample {
             frequency: frequency_enum((raw >> 1) & 0xF),
-            channels: CHANNELS[((raw >> 5) & 0x3) as usize],
+            channels: CHANNELS
+                .get(((raw >> 5) & 0x3) as usize)
+                .copied()
+                .unwrap_or(1),
             data_offset: ((raw >> 7) & 0x7FF_FFFF) as usize * 32,
             num_pcm_samples: ((raw >> 34) & 0x3FFF_FFFF) as u32,
             ..Sample::default()
@@ -82,7 +85,7 @@ pub fn parse(file: &[u8]) -> Option<Parsed> {
             if kind == CHUNK_VORBIS_DATA && size >= 4 {
                 s.vorbis_crc = u32le(file, pos);
             } else if kind == CHUNK_CHANNELS && size >= 1 {
-                s.channels = i32::from(file[pos]);
+                s.channels = i32::from(*file.get(pos)?);
             } else if kind == CHUNK_FREQUENCY && size >= 4 {
                 s.frequency = u32le(file, pos)?;
             }
@@ -103,7 +106,9 @@ pub fn parse(file: &[u8]) -> Option<Parsed> {
             if start >= file.len() {
                 continue;
             }
-            let len = file[start.min(limit)..limit]
+            let len = file
+                .get(start.min(limit)..limit)
+                .unwrap_or_default()
                 .iter()
                 .take_while(|&&b| b != 0)
                 .count();
@@ -143,11 +148,15 @@ pub fn write_pcm16_wav(frequency: u32, channels: i32, num_pcm_samples: u32, pcm:
     out.extend_from_slice(&[block_align as u8, 0, 16, 0]);
     out.extend_from_slice(b"data");
     push_u32(&mut out, data_bytes);
-    out.extend_from_slice(&pcm[..data_bytes as usize]);
+    out.extend_from_slice(pcm.get(..data_bytes as usize).unwrap_or_default());
     out
 }
 
 /// Vorbis channel order FL C FR SL SR [BL BR] LFE; LFE dropped. Meant for `channels >= 3`.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "indices 0..=2 need channels >= 3; the loop keeps c + 1 < channels - 1"
+)]
 pub fn downmix_matrix(channels: usize) -> (Vec<f32>, Vec<f32>) {
     let mut l = vec![0.5f32; channels];
     let mut r = vec![0.5f32; channels];
@@ -189,6 +198,10 @@ fn wav_stereo(s: &Sample, pcm: &[i16]) -> Vec<u8> {
 }
 
 /// FMOD's Xbox IMA layout: per block 4-byte channel headers, then 4-byte words interleaved per channel.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "block is 36 * ch bytes, out has 64 * ch new entries, idx is clamped to 0..=88, n < 16"
+)]
 fn decode_ima(s: &Sample, data: &[u8]) -> Vec<i16> {
     const STEP: [i32; 89] = [
         7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60,
@@ -199,13 +212,17 @@ fn decode_ima(s: &Sample, data: &[u8]) -> Vec<i16> {
         29794, 32767,
     ];
     const INDEX: [i32; 16] = [-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8];
-    let ch = s.channels as usize;
+    let Ok(ch @ 1..) = usize::try_from(s.channels) else {
+        return Vec::new();
+    };
     let block_len = 36 * ch;
     let want = s.num_pcm_samples as usize * ch;
     let mut out: Vec<i16> = Vec::new();
     let mut off = 0;
     while off + block_len <= s.data_size && out.len() < want {
-        let block = &data[off..off + block_len];
+        let Some(block) = data.get(off..off + block_len) else {
+            break;
+        };
         let base = out.len();
         out.resize(base + 64 * ch, 0);
         for c in 0..ch {
@@ -213,7 +230,7 @@ fn decode_ima(s: &Sample, data: &[u8]) -> Vec<i16> {
             let mut idx = i32::from(block[c * 4 + 2]).min(88);
             for w in 0..8 {
                 for b in 0..8 {
-                    let byte = block[4 * ch + (w * ch + c) * 4 + b / 2];
+                    let byte = block[4 * ch + (w * ch + c) * 4 + (b >> 1)];
                     let n = usize::from(if b & 1 != 0 { byte >> 4 } else { byte & 0xF });
                     let step = STEP[idx as usize];
                     let mut diff = step >> 3;
@@ -243,7 +260,7 @@ pub fn encode_pcm(mode: u32, s: &Sample, file: &[u8]) -> Option<Vec<u8>> {
     if mode == MODE_PCM16 {
         let pcm: Vec<i16> = data
             .chunks_exact(2)
-            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .filter_map(|b| Some(i16::from_le_bytes(b.try_into().ok()?)))
             .collect();
         Some(wav_stereo(s, &pcm))
     } else if mode == MODE_IMA_ADPCM {
@@ -253,6 +270,10 @@ pub fn encode_pcm(mode: u32, s: &Sample, file: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "loop index is below 256 / table indexed by a u8"
+)]
 const fn ogg_crc_table() -> [u32; 256] {
     let mut t = [0u32; 256];
     let mut i = 0;
@@ -273,6 +294,10 @@ const fn ogg_crc_table() -> [u32; 256] {
     t
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "loop index is below 256 / table indexed by a u8"
+)]
 // libogg's CRC: MSB-first, no reflection - not zlib's
 fn ogg_crc(data: &[u8]) -> u32 {
     const TABLE: [u32; 256] = ogg_crc_table();
@@ -313,8 +338,9 @@ impl OggMuxer {
                 self.continued = true;
             }
             self.segments.push(lacing as u8);
-            self.body.extend_from_slice(&rest[..lacing]);
-            rest = &rest[lacing..];
+            let (head, tail) = rest.split_at(lacing);
+            self.body.extend_from_slice(head);
+            rest = tail;
             if rest.is_empty() {
                 break;
             }
@@ -341,7 +367,9 @@ impl OggMuxer {
         page.extend_from_slice(&self.segments);
         page.extend_from_slice(&self.body);
         let crc = ogg_crc(&page);
-        page[crc_pos..crc_pos + 4].copy_from_slice(&crc.to_le_bytes());
+        if let Some(slot) = page.get_mut(crc_pos..crc_pos + 4) {
+            slot.copy_from_slice(&crc.to_le_bytes());
+        }
         self.out.extend_from_slice(&page);
         self.wrote_any_page = true;
         self.continued = false;
@@ -377,15 +405,15 @@ pub fn mux_vorbis(s: &Sample, file: &[u8], setup: &[u8]) -> Option<Vec<u8>> {
     m.add_packet(&vorbis_comment_header());
     m.add_packet(setup);
     m.flush(false, -1);
-    let mut off = 0;
-    while off + 2 <= data.len() {
-        let len = usize::from(u16::from_le_bytes([data[off], data[off + 1]]));
-        off += 2;
-        if len == 0 || off + len > data.len() {
+    let mut rest = data;
+    while let Some((&len, tail)) = rest.split_first_chunk() {
+        let len = usize::from(u16::from_le_bytes(len));
+        if len == 0 || len > tail.len() {
             break;
         }
-        m.add_packet(&data[off..off + len]);
-        off += len;
+        let (packet, next) = tail.split_at(len);
+        m.add_packet(packet);
+        rest = next;
     }
     m.flush(true, i64::from(s.num_pcm_samples));
     Some(m.out)

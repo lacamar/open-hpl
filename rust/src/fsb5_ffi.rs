@@ -21,7 +21,7 @@ pub struct FsbSample {
 
 impl FsbSample {
     fn from_core(file: &[u8], s: &Sample) -> Self {
-        let name = &file[s.name.clone()];
+        let name = file.get(s.name.clone()).unwrap_or_default();
         Self {
             name: name.as_ptr(),
             name_len: name.len(),

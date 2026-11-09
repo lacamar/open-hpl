@@ -92,11 +92,23 @@ fn is_trim(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\r' | b'\n')
 }
 
+fn sl(d: &[u8], r: std::ops::Range<usize>) -> &[u8] {
+    d.get(r).unwrap_or_default()
+}
+
+fn tail(d: &[u8], from: usize) -> &[u8] {
+    d.get(from..).unwrap_or_default()
+}
+
+fn has_at(d: &[u8], at: usize, pat: &[u8]) -> bool {
+    d.get(at..).is_some_and(|t| t.starts_with(pat))
+}
+
 fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
     if from > hay.len() || hay.len() - from < needle.len() {
         return None;
     }
-    (from..=hay.len() - needle.len()).find(|&i| &hay[i..i + needle.len()] == needle)
+    (from..=hay.len() - needle.len()).find(|&i| sl(hay, i..i + needle.len()) == needle)
 }
 
 fn find_byte(hay: &[u8], b: u8, from: usize) -> Option<usize> {
@@ -113,13 +125,13 @@ fn rfind(hay: &[u8], needle: &[u8], max_start: usize) -> Option<usize> {
     let top = max_start.min(hay.len() - needle.len());
     (0..=top)
         .rev()
-        .find(|&i| &hay[i..i + needle.len()] == needle)
+        .find(|&i| sl(hay, i..i + needle.len()) == needle)
 }
 
 // std::string::substr with the count clamped; pos never exceeds len at the call sites
 fn substr(s: &[u8], pos: usize, len: usize) -> &[u8] {
-    let pos = pos.min(s.len());
-    &s[pos..pos + len.min(s.len() - pos)]
+    let rest = tail(s, pos);
+    rest.get(..len).unwrap_or(rest)
 }
 
 fn trim(s: &[u8]) -> &[u8] {
@@ -127,18 +139,18 @@ fn trim(s: &[u8]) -> &[u8] {
         return &[];
     };
     let e = s.iter().rposition(|&c| !is_trim(c)).unwrap_or(b);
-    &s[b..=e]
+    s.get(b..=e).unwrap_or_default()
 }
 
 fn replace_all(src: &[u8], from: &[u8], to: &[u8]) -> Bytes {
     let mut out = Vec::with_capacity(src.len());
     let mut i = 0;
-    while i < src.len() {
-        if src[i..].starts_with(from) {
+    while let Some(&c) = src.get(i) {
+        if has_at(src, i, from) {
             out.extend_from_slice(to);
             i += from.len();
         } else {
-            out.push(src[i]);
+            out.push(c);
             i += 1;
         }
     }
@@ -148,19 +160,16 @@ fn replace_all(src: &[u8], from: &[u8], to: &[u8]) -> Bytes {
 fn replace_identifiers<'a>(src: &[u8], map: impl Fn(&[u8]) -> Option<&'a str>) -> Bytes {
     let mut out = Vec::with_capacity(src.len());
     let mut i = 0;
-    while i < src.len() {
-        let mut j = i;
-        while j < src.len() && is_word(src[j]) {
-            j += 1;
-        }
+    while let Some(&c) = src.get(i) {
+        let j = skip_while(src, i, is_word);
         if j == i {
-            out.push(src[i]);
+            out.push(c);
             i += 1;
             continue;
         }
-        match map(&src[i..j]) {
+        match map(sl(src, i..j)) {
             Some(to) => out.extend_from_slice(to.as_bytes()),
-            None => out.extend_from_slice(&src[i..j]),
+            None => out.extend_from_slice(sl(src, i..j)),
         }
         i = j;
     }
@@ -170,17 +179,15 @@ fn replace_identifiers<'a>(src: &[u8], map: impl Fn(&[u8]) -> Option<&'a str>) -
 fn replace_identifier(src: &[u8], from: &[u8], to: &[u8]) -> Bytes {
     let mut out = Vec::with_capacity(src.len());
     let mut i = 0;
-    while i < src.len() {
-        let mut j = i;
-        while j < src.len() && is_word(src[j]) {
-            j += 1;
-        }
+    while let Some(&c) = src.get(i) {
+        let j = skip_while(src, i, is_word);
         if j == i {
-            out.push(src[i]);
+            out.push(c);
             i += 1;
             continue;
         }
-        out.extend_from_slice(if &src[i..j] == from { to } else { &src[i..j] });
+        let word = sl(src, i..j);
+        out.extend_from_slice(if word == from { to } else { word });
         i = j;
     }
     out
@@ -190,8 +197,7 @@ fn strip_line_comments(src: &[u8]) -> Bytes {
     let mut out = Vec::with_capacity(src.len());
     let mut in_comment = false;
     let mut i = 0;
-    while i < src.len() {
-        let c = src[i];
+    while let Some(&c) = src.get(i) {
         if in_comment {
             if c == b'\n' {
                 in_comment = false;
@@ -219,10 +225,7 @@ fn split_params(list: &[u8]) -> Vec<&[u8]> {
 // glibc atoi: strtol saturating at 64 bits, then truncated to int; stops at NUL like c_str()
 fn atoi(s: &[u8]) -> i32 {
     let s = s.split(|&c| c == 0).next().unwrap_or(&[]);
-    let mut i = 0;
-    while i < s.len() && is_space(s[i]) {
-        i += 1;
-    }
+    let mut i = skip_ws(s, 0);
     let neg = match s.get(i) {
         Some(b'-') => {
             i += 1;
@@ -255,7 +258,9 @@ fn atoi(s: &[u8]) -> i32 {
 }
 
 fn skip_while(s: &[u8], mut p: usize, f: impl Fn(u8) -> bool) -> usize {
-    while p < s.len() && f(s[p]) {
+    while let Some(&c) = s.get(p)
+        && f(c)
+    {
         p += 1;
     }
     p
@@ -294,7 +299,7 @@ fn match_decl(s: &[u8]) -> Option<(&[u8], &[u8], &[u8])> {
             continue;
         };
         if t2 == s.len() {
-            return Some((qual, &s[p..t1], &s[p2..t2]));
+            return Some((qual, sl(s, p..t1), sl(s, p2..t2)));
         }
     }
     None
@@ -304,8 +309,8 @@ fn parse_param(raw: &[u8]) -> Res<Param> {
     let mut param = trim(raw);
     let mut semantic = -1;
     if let Some(colon) = param.iter().position(|&c| c == b':') {
-        semantic = atoi(trim(&param[colon + 1..]));
-        param = trim(&param[..colon]);
+        semantic = atoi(trim(tail(param, colon + 1)));
+        param = trim(sl(param, 0..colon));
     }
     match match_decl(param) {
         Some((q, t, n)) => Ok(Param {
@@ -360,26 +365,26 @@ fn match_binding(s: &[u8], i: usize) -> Option<(usize, usize, usize)> {
 fn strip_uniform_binding_indices(src: &[u8]) -> Bytes {
     let mut mid = Vec::with_capacity(src.len());
     let mut i = 0;
-    while i < src.len() {
+    while let Some(&c) = src.get(i) {
         match match_texture_buffer(src, i) {
             Some(end) => i = end,
             None => {
-                mid.push(src[i]);
+                mid.push(c);
                 i += 1;
             }
         }
     }
     let mut out = Vec::with_capacity(mid.len());
     let mut i = 0;
-    while i < mid.len() {
+    while let Some(&c) = mid.get(i) {
         match match_binding(&mid, i) {
             Some((g1, g2, end)) => {
-                out.extend_from_slice(&mid[i..g1]);
-                out.extend_from_slice(&mid[g2..end]);
+                out.extend_from_slice(sl(&mid, i..g1));
+                out.extend_from_slice(sl(&mid, g2..end));
                 i = end;
             }
             None => {
-                out.push(mid[i]);
+                out.push(c);
                 i += 1;
             }
         }
@@ -394,16 +399,16 @@ fn flatten_buffer_body(body: &[u8]) -> Bytes {
             out.push(b'\n');
         }
         let t = trim(line);
-        if t.is_empty() || t.starts_with(b"//") || t[0] == b'#' {
+        if t.is_empty() || t.starts_with(b"//") || t.first() == Some(&b'#') {
             out.extend_from_slice(line);
         } else {
             let indent = line
                 .iter()
                 .position(|&c| c != b' ' && c != b'\t')
                 .unwrap_or(0);
-            out.extend_from_slice(&line[..indent]);
+            out.extend_from_slice(sl(line, 0..indent));
             out.extend_from_slice(b"uniform ");
-            out.extend_from_slice(&line[indent..]);
+            out.extend_from_slice(tail(line, indent));
         }
     }
     out
@@ -417,8 +422,11 @@ fn flatten_constant_buffers(src: &[u8]) -> Res<Bytes> {
         let mut from = cursor;
         while let Some(cand) = find(src, b"cBuffer", from) {
             let after = cand + 7;
-            let ok = (cand == 0 || !is_word(src[cand - 1]))
-                && (after >= src.len() || !is_word(src[after]));
+            let ok = !cand
+                .checked_sub(1)
+                .and_then(|q| src.get(q))
+                .is_some_and(|&c| is_word(c))
+                && !src.get(after).is_some_and(|&c| is_word(c));
             if ok {
                 found = Some(cand);
                 break;
@@ -426,18 +434,20 @@ fn flatten_constant_buffers(src: &[u8]) -> Res<Bytes> {
             from = after;
         }
         let Some(found) = found else {
-            result.extend_from_slice(&src[cursor.min(src.len())..]);
+            result.extend_from_slice(tail(src, cursor));
             return Ok(result);
         };
-        result.extend_from_slice(&src[cursor..found]);
+        result.extend_from_slice(sl(src, cursor..found));
 
         let Some(open) = find_byte(src, b'{', found) else {
             return Err(b"Found 'cBuffer' with no following '{'".to_vec());
         };
         let mut depth = 1;
         let mut i = open + 1;
-        while i < src.len() && depth > 0 {
-            match src[i] {
+        while depth > 0
+            && let Some(&c) = src.get(i)
+        {
+            match c {
                 b'{' => depth += 1,
                 b'}' => depth -= 1,
                 _ => {}
@@ -454,7 +464,7 @@ fn flatten_constant_buffers(src: &[u8]) -> Res<Bytes> {
                 b"'cBuffer { ... }' block not terminated with ';' after the closing brace".to_vec(),
             );
         }
-        result.extend_from_slice(&flatten_buffer_body(&src[open + 1..close]));
+        result.extend_from_slice(&flatten_buffer_body(sl(src, open + 1..close)));
         cursor = semi + 1;
     }
 }
@@ -470,11 +480,11 @@ fn split_top_level_args(list: &[u8]) -> Vec<Bytes> {
             _ => {}
         }
         if c == b',' && depth == 0 {
-            out.push(trim(&list[start..i]).to_vec());
+            out.push(trim(sl(list, start..i)).to_vec());
             start = i + 1;
         }
     }
-    let last = trim(&list[start..]);
+    let last = trim(tail(list, start));
     if !last.is_empty() {
         out.push(last.to_vec());
     }
@@ -491,7 +501,11 @@ fn rewrite_call(src: &[u8], name: &str, mut fmt: impl FnMut(&[Bytes]) -> Res<Byt
             let Some(f) = rfind(&s, &pat, from - 1) else {
                 break;
             };
-            if f == 0 || !is_word(s[f - 1]) {
+            if !f
+                .checked_sub(1)
+                .and_then(|q| s.get(q))
+                .is_some_and(|&c| is_word(c))
+            {
                 pos = Some(f);
                 break;
             }
@@ -502,8 +516,10 @@ fn rewrite_call(src: &[u8], name: &str, mut fmt: impl FnMut(&[Bytes]) -> Res<Byt
         let args_start = pos + pat.len();
         let mut depth = 1;
         let mut end = args_start;
-        while end < s.len() && depth > 0 {
-            match s[end] {
+        while depth > 0
+            && let Some(&c) = s.get(end)
+        {
+            match c {
                 b'(' => depth += 1,
                 b')' => depth -= 1,
                 _ => {}
@@ -519,9 +535,9 @@ fn rewrite_call(src: &[u8], name: &str, mut fmt: impl FnMut(&[Bytes]) -> Res<Byt
         }
         end -= 1;
 
-        let args = split_top_level_args(&s[args_start..end]);
+        let args = split_top_level_args(sl(&s, args_start..end));
         let repl = fmt(&args)?;
-        s = cat!(&s[..pos], repl, &s[end + 1..]);
+        s = cat!(sl(&s, 0..pos), repl, tail(&s, end + 1));
     }
 }
 
@@ -562,7 +578,7 @@ fn collect_sampler_types(src: &[u8]) -> Samplers {
     while i < src.len() {
         match match_sampler_decl(src, i) {
             Some((func, n0, n1)) => {
-                out.insert(src[n0..n1].to_vec(), func);
+                out.insert(sl(src, n0..n1).to_vec(), func);
                 i = n1;
             }
             None => i += 1,
@@ -585,14 +601,14 @@ fn remove_matrix_decls(src: &[u8], name: &str) -> Option<Bytes> {
     let mut out = Vec::with_capacity(src.len());
     let mut found = false;
     let mut i = 0;
-    while i < src.len() {
+    while let Some(&c) = src.get(i) {
         match m(i) {
             Some(end) => {
                 found = true;
                 i = end;
             }
             None => {
-                out.push(src[i]);
+                out.push(c);
                 i += 1;
             }
         }
@@ -618,68 +634,52 @@ fn substitute_fixed_function_matrix_uniforms(src: &[u8]) -> Bytes {
 
 fn rewrite_mul(src: &[u8]) -> Res<Bytes> {
     rewrite_call(src, "mul", |args| {
-        if args.len() != 2 {
+        let [a0, a1] = args else {
             return Err(cat!(
                 b"mul() with ",
                 args.len().to_string(),
                 b" argument(s) is not supported (only the 2-argument matrix/vector form is)"
             ));
-        }
-        Ok(cat!(b"(", args[0], b" * ", args[1], b")"))
+        };
+        Ok(cat!(b"(", a0, b" * ", a1, b")"))
     })
 }
 
 fn rewrite_sample(src: &[u8], needs_offset: &mut bool) -> Res<Bytes> {
     let samplers = collect_sampler_types(src);
     rewrite_call(src, "sample", |args| {
-        if args.len() == 3 {
+        if let [a0, a1, a2] = args {
             *needs_offset = true;
-            return Ok(cat!(
-                b"textureOffset(",
-                args[0],
-                b", ",
-                args[1],
-                b", ",
-                args[2],
-                b")"
-            ));
+            return Ok(cat!(b"textureOffset(", a0, b", ", a1, b", ", a2, b")"));
         }
-        if args.len() != 2 {
+        let [a0, a1] = args else {
             return Err(cat!(
                 b"sample() with ",
                 args.len().to_string(),
                 b" argument(s) is not supported (only the 2-argument texture/uv form is)"
             ));
-        }
-        let Some(func) = samplers.get(&args[0]) else {
+        };
+        let Some(func) = samplers.get(a0) else {
             return Err(cat!(
                 b"sample() references '",
-                args[0],
+                a0,
                 b"', which isn't a declared uniform texture (or is a texture type this transpiler doesn't map - see gmapTypeNames)"
             ));
         };
-        Ok(cat!(func, b"(", args[0], b", ", args[1], b")"))
+        Ok(cat!(func, b"(", a0, b", ", a1, b")"))
     })
 }
 
 fn rewrite_sample_cmp(src: &[u8]) -> Res<Bytes> {
     rewrite_call(src, "sampleCmp", |args| {
-        if args.len() != 3 {
+        let [a0, a1, a2] = args else {
             return Err(cat!(
                 b"sampleCmp() with ",
                 args.len().to_string(),
                 b" argument(s) is not supported (only the 3-argument texture/uv/refZ form is)"
             ));
-        }
-        Ok(cat!(
-            b"shadow2D(",
-            args[0],
-            b", vec3(",
-            args[1],
-            b", ",
-            args[2],
-            b")).x"
-        ))
+        };
+        Ok(cat!(b"shadow2D(", a0, b", vec3(", a1, b", ", a2, b")).x"))
     })
 }
 
@@ -715,75 +715,64 @@ fn rewrite_lod_grad(
 
 fn rewrite_gather(src: &[u8], name: &str, comp: &str, fired: &mut bool) -> Res<Bytes> {
     rewrite_call(src, name, |args| {
-        if args.len() != 2 && args.len() != 3 {
-            return Err(cat!(
-                name,
-                b"() with ",
-                args.len().to_string(),
-                b" argument(s) is not supported"
-            ));
-        }
-        let offset = if args.len() == 3 {
-            cat!(
-                b" + vec2(",
-                args[2],
-                b") / vec2(textureSize(",
-                args[0],
-                b", 0))"
-            )
-        } else {
-            Vec::new()
+        let (a0, a1, a2) = match args {
+            [a0, a1] => (a0, a1, None),
+            [a0, a1, a2] => (a0, a1, Some(a2)),
+            _ => {
+                return Err(cat!(
+                    name,
+                    b"() with ",
+                    args.len().to_string(),
+                    b" argument(s) is not supported"
+                ));
+            }
+        };
+        let offset = match a2 {
+            Some(a2) => cat!(b" + vec2(", a2, b") / vec2(textureSize(", a0, b", 0))"),
+            None => Vec::new(),
         };
         *fired = true;
-        Ok(cat!(
-            b"textureGather(",
-            args[0],
-            b", ",
-            args[1],
-            offset,
-            comp,
-            b")"
-        ))
+        Ok(cat!(b"textureGather(", a0, b", ", a1, offset, comp, b")"))
     })
 }
 
 fn rewrite_load(src: &[u8], fired: &mut bool) -> Res<Bytes> {
     let samplers = collect_sampler_types(src);
     rewrite_call(src, "load", |args| {
-        if args.len() != 2 && args.len() != 3 {
-            return Err(cat!(
-                b"load() with ",
-                args.len().to_string(),
-                b" argument(s) is not supported (only texture/coords[/mipLevel] is)"
-            ));
-        }
-        if samplers.get(&args[0]) != Some(&"texture2D") {
+        let (a0, a1, a2) = match args {
+            [a0, a1] => (a0, a1, None),
+            [a0, a1, a2] => (a0, a1, Some(a2)),
+            _ => {
+                return Err(cat!(
+                    b"load() with ",
+                    args.len().to_string(),
+                    b" argument(s) is not supported (only texture/coords[/mipLevel] is)"
+                ));
+            }
+        };
+        if samplers.get(a0) != Some(&"texture2D") {
             return Err(cat!(
                 b"load() references '",
-                args[0],
+                a0,
                 b"', which isn't a declared uniform sampler2D (load() is only supported on sampler2D - see HpslTranspiler.cpp)"
             ));
         }
         *fired = true;
-        let mip: &[u8] = if args.len() == 3 { &args[2] } else { b"0" };
-        Ok(cat!(
-            b"texelFetch(",
-            args[0],
-            b", ",
-            args[1],
-            b", ",
-            mip,
-            b")"
-        ))
+        let mip: &[u8] = a2.map_or(b"0", |m| m);
+        Ok(cat!(b"texelFetch(", a0, b", ", a1, b", ", mip, b")"))
     })
 }
 
 fn needs_int_ops(body: &[u8]) -> bool {
     (0..body.len()).any(|i| {
-        body[i] == b'%'
-            || body[i..].starts_with(b">>")
-            || body[i..].starts_with(b"<<")
-            || (body[i..].starts_with(b"isnan(") && (i == 0 || !is_word(body[i - 1])))
+        has_at(body, i, b"%")
+            || has_at(body, i, b">>")
+            || has_at(body, i, b"<<")
+            || (has_at(body, i, b"isnan(")
+                && !i
+                    .checked_sub(1)
+                    .and_then(|q| body.get(q))
+                    .is_some_and(|&c| is_word(c)))
     })
 }
 
@@ -858,8 +847,10 @@ pub fn transpile(hpsl: &[u8], ty: ShaderType) -> Res<Bytes> {
 
     let mut depth = 1;
     let mut params_end = params_start + 1;
-    while params_end < src.len() && depth > 0 {
-        match src[params_end] {
+    while depth > 0
+        && let Some(&c) = src.get(params_end)
+    {
+        match c {
             b'(' => depth += 1,
             b')' => depth -= 1,
             _ => {}
@@ -877,8 +868,10 @@ pub fn transpile(hpsl: &[u8], ty: ShaderType) -> Res<Bytes> {
     };
     depth = 1;
     let mut body_end = body_start + 1;
-    while body_end < src.len() && depth > 0 {
-        match src[body_end] {
+    while depth > 0
+        && let Some(&c) = src.get(body_end)
+    {
+        match c {
             b'{' => depth += 1,
             b'}' => depth -= 1,
             _ => {}
@@ -889,12 +882,13 @@ pub fn transpile(hpsl: &[u8], ty: ShaderType) -> Res<Bytes> {
     let body_len = body_end.wrapping_sub(body_start).wrapping_sub(1);
     let mut body = substr(&src, body_start + 1, body_len).to_vec();
 
-    let mut header = src[..main_pos].to_vec();
+    let mut header = sl(&src, 0..main_pos).to_vec();
     if let Some(t) = header.iter().rposition(|&c| !is_trim(c)) {
-        let trimmed = &header[..=t];
-        let n = trimmed.len();
-        if n >= 4 && trimmed.ends_with(b"void") && (n == 4 || !is_alnum(trimmed[n - 5])) {
-            header = trimmed[..n - 4].to_vec();
+        let trimmed = sl(&header, 0..t + 1);
+        if let Some(stem) = trimmed.strip_suffix(b"void")
+            && !stem.last().is_some_and(|&c| is_alnum(c))
+        {
+            header = stem.to_vec();
         }
     }
 

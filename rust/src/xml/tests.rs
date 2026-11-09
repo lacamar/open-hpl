@@ -262,3 +262,30 @@ fn deep_nesting_is_capped() {
         .join()
         .unwrap();
 }
+
+#[test]
+fn unknown_node_ids_are_inert() {
+    let mut d = Doc::new();
+    let bad: NodeId = 99;
+    d.set_value(bad, b"x");
+    d.set_attribute(bad, b"a", b"b");
+    let orphan = d.add_element(bad, b"e");
+    assert!(d.node(bad).first.is_none());
+    assert!(d.node(orphan).parent.is_none());
+    assert!(d.node(DOC).first.is_none());
+    assert_eq!(d.first_child_element(bad, None), None);
+}
+
+#[test]
+fn encode_string_truncated_hex_entity() {
+    for (inp, want) in [
+        (&b"&#x"[..], &b"&#x"[..]),
+        (b"&#x41", b"&#x41"),
+        (b"&#x41;<", b"&#x41;&lt;"),
+        (b"&#", b"&amp;#"),
+    ] {
+        let mut out = Vec::new();
+        encode_string(inp, &mut out);
+        assert_eq!(out, want, "input: {inp:?}");
+    }
+}

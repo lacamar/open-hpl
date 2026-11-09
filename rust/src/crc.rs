@@ -19,6 +19,7 @@ impl Crc {
         Self { table, register: 0 }
     }
 
+    #[expect(clippy::indexing_slicing, reason = "256-entry table indexed by a u8")]
     pub fn put_byte(&mut self, byte: u8) {
         let top = (self.register >> 24) as u8 ^ byte;
         self.register = (self.register << 8) ^ self.table[usize::from(top)];

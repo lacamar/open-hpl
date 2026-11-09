@@ -15,6 +15,10 @@ pub(crate) const IDENTITY: Matrixf = mat([
     [0.0, 0.0, 0.0, 1.0],
 ]);
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn transpose(a: &Matrixf) -> Matrixf {
     let mut c = [[0.0f32; 4]; 4];
     for (i, row) in c.iter_mut().enumerate() {
@@ -25,6 +29,10 @@ pub(crate) fn transpose(a: &Matrixf) -> Matrixf {
     mat(c)
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn matrix_mul(a: &Matrixf, b: &Matrixf) -> Matrixf {
     let (a, b) = (&a.m, &b.m);
     let mut c = [[0.0f32; 4]; 4];
@@ -40,18 +48,30 @@ pub(crate) fn matrix_mul(a: &Matrixf, b: &Matrixf) -> Matrixf {
     mat(c)
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn matrix_mul_vec(a: &Matrixf, b: Vector3f) -> Vector3f {
     let m = &a.m;
     let row = |r: usize| fma(m[r][2], b.z, fma(m[r][0], b.x, m[r][1] * b.y)) + m[r][3];
     v3(row(0), row(1), row(2))
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn matrix_mul_3x3(a: &Matrixf, b: Vector3f) -> Vector3f {
     let m = &a.m;
     let row = |r: usize| fma(m[r][2], b.z, fma(m[r][0], b.x, m[r][1] * b.y));
     v3(row(0), row(1), row(2))
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn matrix_mul_divide_w(a: &Matrixf, b: Vector3f) -> Vector3f {
     let m = &a.m;
     let inv_w = 1.0f32 / (fma(m[3][2], b.z, fma(m[3][0], b.x, m[3][1] * b.y)) + m[3][3]);
@@ -164,6 +184,10 @@ const fn pair(a: usize, b: usize) -> usize {
 struct Det2([[f32; 6]; 6]);
 
 impl Det2 {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+    )]
     fn new(a: &Matrixf) -> Self {
         let m = &a.m;
         let mut d = [[0.0f32; 6]; 6];
@@ -175,6 +199,10 @@ impl Det2 {
         Self(d)
     }
 
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+    )]
     #[inline(always)]
     fn minor_parts(&self, a: &Matrixf, r: [usize; 3], c: [usize; 3]) -> (f32, f32, f32) {
         let m = &a.m;
@@ -268,6 +296,10 @@ fn normalize2(v: &mut Vector2f) {
     }
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn matrix_euler_angle_distance(a: &Matrixf, b: &Matrixf) -> Vector3f {
     let local_a = matrix_mul(&transpose(b), a);
     let local_t = transpose(&local_a);
@@ -428,6 +460,10 @@ pub(crate) fn quat_to_rotation_matrix(q: &Quaternion, m: &mut Matrixf) {
     m.m[2][2] = 1.0f32 - fma(tx, x, tyy);
 }
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "row/column indices are loop or literal values below 4, or NEXT/PAIRS entries"
+)]
 pub(crate) fn quat_from_rotation_matrix(q: &mut Quaternion, a: &Matrixf) {
     let m = &a.m;
     let trace = m[0][0] + m[1][1] + m[2][2];

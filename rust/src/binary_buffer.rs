@@ -154,6 +154,10 @@ impl BinaryBuffer {
 
     /// Writes at the position, then grows `size` by `data.len()` even when overwriting.
     pub fn add_data(&mut self, data: &[u8]) {
+        // C++ wrote past its allocation when the position ran far beyond the end (see decompress_from)
+        if self.pos.saturating_sub(self.size) > i32::MAX as usize {
+            self.pos = self.size;
+        }
         let end = self.pos + data.len();
         if end > self.reserved {
             self.reserved = self.size * 2 + data.len();
@@ -162,24 +166,24 @@ impl BinaryBuffer {
         if need > self.buf.len() {
             self.buf.resize(need, 0);
         }
-        self.buf[self.pos..end].copy_from_slice(data);
+        if let Some(dst) = self.buf.get_mut(self.pos..end) {
+            dst.copy_from_slice(data);
+        }
         self.pos = end;
         self.size += data.len();
     }
 
     /// Fails without copying when fewer than `out.len()` bytes remain, moving to EOF.
     pub fn get_data(&mut self, out: &mut [u8]) -> bool {
-        match self.pos.checked_add(out.len()) {
-            Some(end) if end <= self.size => {
-                out.copy_from_slice(&self.buf[self.pos..end]);
-                self.pos = end;
-                true
-            }
-            _ => {
-                self.pos = self.size;
-                false
-            }
+        if let Some(end) = self.pos.checked_add(out.len()).filter(|&e| e <= self.size)
+            && let Some(src) = self.buf.get(self.pos..end)
+        {
+            out.copy_from_slice(src);
+            self.pos = end;
+            return true;
         }
+        self.pos = self.size;
+        false
     }
 
     /// `per_elem` adds element by element, which sets the growth points; otherwise one add.
@@ -197,6 +201,9 @@ impl BinaryBuffer {
 
     /// Per-element reads: elements still available are filled, the rest are zeroed.
     pub fn get_array(&mut self, out: &mut [u8], elem: usize) {
+        if elem == 0 {
+            return;
+        }
         for chunk in out.chunks_exact_mut(elem) {
             if !self.get_data(chunk) {
                 chunk.fill(0);
@@ -238,8 +245,9 @@ impl BinaryBuffer {
     pub fn set_i32(&mut self, v: i32, pos: usize) {
         if let Some(end) = pos.checked_add(4)
             && end < self.size
+            && let Some(dst) = self.buf.get_mut(pos..end)
         {
-            self.buf[pos..end].copy_from_slice(&v.to_le_bytes());
+            dst.copy_from_slice(&v.to_le_bytes());
         }
     }
 
@@ -248,7 +256,9 @@ impl BinaryBuffer {
             return;
         }
         let size = self.size;
-        self.buf[..size]
+        self.buf
+            .get_mut(..size)
+            .unwrap_or_default()
             .iter_mut()
             .zip(key.iter().cycle())
             .for_each(|(b, k)| *b ^= k);
@@ -266,8 +276,10 @@ impl BinaryBuffer {
             start.wrapping_add(4) as i32,
             self.size.wrapping_sub(start).wrapping_sub(4) as i32,
         );
-        if let Some(end) = start.checked_add(4).filter(|&e| e <= self.reserved) {
-            self.buf[start..end].copy_from_slice(&crc.to_le_bytes());
+        if let Some(end) = start.checked_add(4).filter(|&e| e <= self.reserved)
+            && let Some(dst) = self.buf.get_mut(start..end)
+        {
+            dst.copy_from_slice(&crc.to_le_bytes());
         }
         self.crc_start = 0;
         crc
@@ -289,7 +301,7 @@ impl BinaryBuffer {
         let start = pos.min(self.size);
         let end = pos.saturating_add(count).min(self.size);
         let mut crc = Crc::new(key);
-        crc.put_data(&self.buf[start..end]);
+        crc.put_data(self.buf.get(start..end).unwrap_or_default());
         crc.done()
     }
 
@@ -339,7 +351,7 @@ impl BinaryBuffer {
                 unsafe { deflateEnd(&mut z) };
                 return false;
             }
-            self.add_data(&out[..CHUNK - z.avail_out as usize]);
+            self.add_data(out.get(..CHUNK - z.avail_out as usize).unwrap_or_default());
             if z.avail_out != 0 {
                 break;
             }
@@ -348,7 +360,9 @@ impl BinaryBuffer {
         unsafe { deflateEnd(&mut z) };
         if write_size {
             let total = (self.pos - start - 4) as i32;
-            self.buf[start..start + 4].copy_from_slice(&total.to_le_bytes());
+            if let Some(dst) = self.buf.get_mut(start..start + 4) {
+                dst.copy_from_slice(&total.to_le_bytes());
+            }
         }
         true
     }
@@ -375,7 +389,7 @@ impl BinaryBuffer {
                 unsafe { inflateEnd(&mut z) };
                 return false;
             }
-            self.add_data(&out[..CHUNK - z.avail_out as usize]);
+            self.add_data(out.get(..CHUNK - z.avail_out as usize).unwrap_or_default());
             if z.avail_out != 0 {
                 break;
             }
@@ -395,7 +409,7 @@ impl BinaryBuffer {
         };
         let from = src.pos.min(src.size);
         let to = from.saturating_add(n).min(src.size);
-        let ok = self.decompress_and_add(&src.buf[from..to]);
+        let ok = self.decompress_and_add(src.buf.get(from..to).unwrap_or_default());
         src.pos = src.pos.wrapping_add(n);
         ok
     }
@@ -918,6 +932,26 @@ mod tests {
     }
 
     #[test]
+    fn add_data_with_position_far_past_end_appends() {
+        let mut b = BinaryBuffer::new();
+        b.add_data(b"abcd");
+        b.pos = usize::MAX - 1;
+        b.add_data(b"xy");
+        assert_eq!((b.pos(), b.size()), (6, 6));
+        assert_eq!(b.buf[..6], *b"abcdxy");
+    }
+
+    #[test]
+    fn add_data_with_position_past_end_zero_fills() {
+        let mut b = BinaryBuffer::new();
+        b.add_data(b"ab");
+        b.pos = 5;
+        b.add_data(b"c");
+        assert_eq!((b.pos(), b.size()), (6, 3));
+        assert_eq!(b.buf[..6], *b"ab\0\0\0c");
+    }
+
+    #[test]
     fn crc_section_roundtrip() {
         let key = 0x16AF_2C1D;
         let mut b = BinaryBuffer::new();
@@ -969,5 +1003,13 @@ mod tests {
     #[test]
     fn zstream_matches_c_layout() {
         assert_eq!(size_of::<super::ZStream>(), 112);
+    }
+
+    #[test]
+    fn get_array_zero_elem_is_noop() {
+        let mut b = BinaryBuffer::default();
+        let mut out = [7u8; 4];
+        b.get_array(&mut out, 0);
+        assert_eq!(out, [7; 4]);
     }
 }

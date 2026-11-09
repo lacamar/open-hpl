@@ -93,8 +93,7 @@ fn ohpl_math_check_point_in_aabb(p: *const Vector3f, min: *const Vector3f, max: 
     geom::point_in_aabb(*p, *min, *max)
 }
 fn ohpl_math_check_point_inside_triangle_2d(p: *const Vector2f, tri: *const Vector3f) -> bool {
-    let t = slice::from_raw_parts(tri, 3);
-    geom::point_inside_triangle_2d(*p, &[t[0], t[1], t[2]])
+    geom::point_inside_triangle_2d(*p, &*tri.cast::<[Vector3f; 3]>())
 }
 fn ohpl_math_check_point_same_side_of_edge_2d(p1: *const Vector3f, p2: *const Vector3f, a: *const Vector3f, b: *const Vector3f) -> bool {
     geom::point_same_side_of_edge_2d(*p1, *p2, *a, *b)
