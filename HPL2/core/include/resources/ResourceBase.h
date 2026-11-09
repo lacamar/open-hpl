@@ -23,6 +23,7 @@
 #include <time.h>
 #include "system/SystemTypes.h"
 #include "system/LowLevelSystem.h"
+#include "resources/RustResources.h"
 
 namespace hpl {
 
@@ -51,22 +52,22 @@ namespace hpl {
         virtual void Destroy()=0;
 
 		const tString& GetName(){return msName;}
-		unsigned long GetHandle(){return mlHandle;}
-		void SetHandle(unsigned long alHandle){mlHandle=alHandle;}
+		unsigned long GetHandle(){return mMeta.handle;}
+		void SetHandle(unsigned long alHandle){mMeta.handle=alHandle;}
 		
 		void SetFullPath(const tWString& asPath);
 		const tWString& GetFullPath(){return msFullPath;}
 		
-		unsigned long GetTime(){return mlTime;}
-		unsigned long GetPrio(){return mlPrio;}
-		unsigned long GetSize(){return mlSize;}
+		unsigned long GetTime(){return mMeta.time;}
+		unsigned long GetPrio(){return mMeta.prio;}
+		unsigned long GetSize(){return mMeta.size;}
 
-		void SetLogDestruction(bool abX){ mbLogDestruction = abX;}
+		void SetLogDestruction(bool abX){ mMeta.log_destruction = abX;}
 		
-		unsigned int GetUserCount(){return mlUserCount;}
+		unsigned int GetUserCount(){return mMeta.user_count;}
 		void IncUserCount();
-		void DecUserCount(){if(mlUserCount>0)mlUserCount--;}
-		bool HasUsers(){ return mlUserCount>0;}
+		void DecUserCount(){ohpl_resmeta_dec_user(&mMeta);}
+		bool HasUsers(){ return mMeta.user_count>0;}
 
 		static bool GetLogCreateAndDelete(){ return mbLogCreateAndDelete;}
 		static void SetLogCreateAndDelete(bool abX){ mbLogCreateAndDelete = abX;}
@@ -76,13 +77,7 @@ namespace hpl {
 		
 		tString msName;
 		
-		unsigned int mlPrio; //dunno if this will be of any use.
-		unsigned long mlTime; //Time for creation.
-		unsigned long mlSize; //for completion. Not used yet.
-		
-		unsigned int mlUserCount;
-        unsigned long mlHandle;
-		bool mbLogDestruction;
+		OhplResMeta mMeta;
 	
 	private:
 		tWString msFullPath;

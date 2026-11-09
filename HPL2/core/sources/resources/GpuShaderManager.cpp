@@ -30,8 +30,8 @@
 
 #include "resources/FileSearcher.h"
 #include "resources/TextureManager.h"
+#include "resources/RustShader.h"
 
-#include <regex>
 #include <cstdlib>
 
 #ifdef WIN32
@@ -40,15 +40,25 @@
 
 namespace hpl {
 
-	static void ApplyHpslTextureBindings(iGpuShader* apShader, const tString& asHpslText)
-	{
-		static const std::regex bindRe("uniform\\s+cTexture\\w*\\s+(\\w+)\\s*:\\s*(\\d+)\\s*;");
-		auto begin = std::sregex_iterator(asHpslText.begin(), asHpslText.end(), bindRe);
-		for(auto it = begin; it != std::sregex_iterator(); ++it)
+
+	namespace {
+
+		void AppendSink(void* apCtx, const char* apData, size_t alLen) noexcept
 		{
-			apShader->AddSamplerUnit((*it)[1].str(), cString::ToInt((*it)[2].str().c_str(), 0));
+			static_cast<tString*>(apCtx)->append(apData, alLen);
+		}
+
+		void SamplerCallback(void* apCtx, const char* apName, size_t alLen, int alUnit) noexcept
+		{
+			static_cast<iGpuShader*>(apCtx)->AddSamplerUnit(tString(apName, alLen), alUnit);
 		}
 	}
+
+	static void ApplyHpslTextureBindings(iGpuShader* apShader, const tString& asHpslText)
+	{
+		ohpl_shader_texture_bindings(asHpslText.data(), asHpslText.size(), SamplerCallback, apShader);
+	}
+
 
 	static int gnHpslDumpCounter = 0;
 
@@ -139,214 +149,21 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-
-	static const char* const gvHpslFilenameAliases[][2] = {
-		{ "deferred_illumination_frag.glsl",	"deferred_illumination_solid_frag.hpsl" },
-		{ "deferred_gbuffer_skybox_frag.glsl",	"deferred_skybox_frag.hpsl" },
-		{ "deferred_decal_frag.glsl",			"deferred_gbuffer_decal_frag.hpsl" },
-		{ "gui_vtx.glsl",						"base_vtx.hpsl" },
-		{ "gui_frag.glsl",						"base_frag.hpsl" },
-	};
-
-	static const char* const gvHpslSourcePatches[][3] = {
-		{ "deferred_light_frag.hpsl", "//Translucency\nuniform float afTranslucencyScale;",
-		  "@ifdef BoxMask\n\tuniform cMatrixf a_mtxInvView;\n\tuniform cVector3f avMaskCenter;\n\tuniform cVector3f avMaskExtent;\n@endif\nuniform float afSpotNearClip;\n" },
-		{ "deferred_light_frag.hpsl", "\tvDiffuse *= fAttenuatuion;",
-		  "\t@ifdef BoxMask\n\t\tcVector3f vMaskDelta = abs((mul(a_mtxInvView, cVector4f(vPos, 1)).xyz - avMaskCenter) * 2.0 / avMaskExtent);\n"
-		  "\t\tvDiffuse *= step(max(max(vMaskDelta.x, vMaskDelta.y), vMaskDelta.z), 1.0);\n\t@endif\n" },
-		{ "deferred_transparent_frag.hpsl", "\t\tcVector2f avInvScreenSize;\n\t}", "\t\tcMatrixf px_mtxLightProbe;\n\t\tfloat afInvFarPlane;\n\t\tcVector4f avFadeProp;\n" },
-		{ "water_surface_frag.hpsl", "\t};\n@endif\n\n////////////////////////////////\n// samplers",
-		  "\t\tint mlBlendMode;\n\t\tfloat mfFadeWhenNear;\n\t\tcVector3f avFogCameraPos;\n\t\tcVector4f avFogSettings;\n"
-		  "\t\tcVector4f avSecondFogSettings;\n\t\tint alFogType;\n\t\tcVector4f avReflectionMul;\n" },
-	};
-
-	static const char* const gvHpslSourceReplacements[][3] = {
-		// HDR output keeps the tone-mapped range above SDR white, rolled off into the display headroom
-		{ "posteffect_tonemapping_frag.hpsl", "uniform float afKey;\n", "uniform float afKey;\n@ifdef UseHdrOutput\nuniform float afHdrHeadroom;\n@endif\n" },
-		{ "posteffect_tonemapping_frag.hpsl", "\tvSourceColor = clamp(vSourceColor, cVector4f(0.0, 0.0, 0.0, 0.0), cVector4f(1.0, 1.0, 1.0, 1.0));\n",
-		  "@ifdef UseHdrOutput\n\tcVector3f vHdrExcess = max(vSourceColor.rgb - 1.0, 0.0);\n@endif\n\tvSourceColor = clamp(vSourceColor, cVector4f(0.0, 0.0, 0.0, 0.0), cVector4f(1.0, 1.0, 1.0, 1.0));\n" },
-		{ "posteffect_tonemapping_frag.hpsl", "vSourceColor = pow(vSourceColor, cVector4f(afInvGammaCorrection));\n\t@endif\n",
-		  "vSourceColor = pow(vSourceColor, cVector4f(afInvGammaCorrection));\n\t@endif\n@ifdef UseHdrOutput\n\tcVector3f vHdrExcess = max(vSourceColor.rgb - 1.0, 0.0);\n@endif\n" },
-		{ "posteffect_tonemapping_frag.hpsl", "\tout_vColor0 = vSourceColor;", "@ifdef UseHdrOutput\n\tvSourceColor.rgb = min(vSourceColor.rgb, 1.0) + (afHdrHeadroom - 1.0) * (1.0 - 2.0 / (exp(2.0 * vHdrExcess / (afHdrHeadroom - 1.0)) + 1.0));\n@endif\n\tout_vColor0 = vSourceColor;" },
-		{ "posteffect_tonemapping_frag.hpsl", "\tout_vColor0 = cVector4f(vSourceColor.rgb, dot(", "@ifdef UseHdrOutput\n\tvSourceColor.rgb = min(vSourceColor.rgb, 1.0) + (afHdrHeadroom - 1.0) * (1.0 - 2.0 / (exp(2.0 * vHdrExcess / (afHdrHeadroom - 1.0)) + 1.0));\n@endif\n\tout_vColor0 = cVector4f(vSourceColor.rgb, dot(" },
-		// sun cascades sit in a 2x2 atlas
-		{ "deferred_light_frag.hpsl", "cVector4f(afSliceDiv, 1.0, 1.0, 1.0)", "cVector4f(0.5, 0.5, 1.0, 1.0)" },
-		{ "deferred_light_frag.hpsl", "cVector4f(lSlice * afSliceDiv, 0.0, 0.0, 0.0)",
-		  "cVector4f(mod(float(lSlice), 2.0) * 0.5, floor(float(lSlice) * 0.5) * 0.5, 0.0, 0.0)" },
-		{ "deferred_light_frag.hpsl", "cVector4f((lSlice + 1) * afSliceDiv, 0.0, 0.0, 0.0)",
-		  "cVector4f(mod(float(lSlice + 1), 2.0) * 0.5, floor(float(lSlice + 1) * 0.5) * 0.5, 0.0, 0.0)" },
-		// liquid fade comes from the instance buffer in newer games
-		{ "deferred_gbuffer_solid_frag.hpsl", "@ifdef UseLiquid\n\t\t  in cVector4f px_vLiquidFade,\n@endif\n", "" },
-		{ "deferred_gbuffer_solid_frag.hpsl", "\tuniform cTexture2D aLiquidMap : 11;\n", "\tuniform cTexture2D aLiquidMap : 11;\n\tuniform cVector4f px_vLiquidFade;\n" },
-		{ "water_surface_frag.hpsl",
-		  "\t@else\n\t\tfloat fWaveT = afT;\n\t@endif",
-		  "\t@else\n\t\tfloat fWaveT = afT;\n\t\tfloat fFadeNear = mfFadeWhenNear;\n\t\tcVector4f vReflectionMul = avReflectionMul;\n\t@endif" },
-		{ "deferred_illumination_solid_frag.hpsl",
-		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@endif",
-		  "\t\tvIllumination.rgb *= afIlluminationMul;\n\t@else\n\t\tvIllumination.rgb *= avIlluminationMul.rgb;\n\t@endif" },
-		{ "deferred_light_frag.hpsl",
-		  "\t\t\tfloat fOneMinusCos = max(0.0, 1.0 - dot( vLightDir,  avLightForward));\n"
-		  "\t\t\tfAttenuatuion *= pow(1.0 - sqrt(min(fOneMinusCos / afOneMinusCosHalfSpotFOV,1)), afSpotFalloffPow);",
-		  "\t\t\tfAttenuatuion *= pow(max(0.0, 1.0 - distance(vProjectedUv.xy, cVector2f(0.5)) * 2.0), afSpotFalloffPow);" },
-		{ "deferred_light_frag.hpsl",
-		  "\t\tfAttenuatuion *= max(0, vProjectedUv.z);\n",
-		  "\t\tfloat fSpotZ = (1.0 - afSpotNearClip / max(fDistance * dot(vLightDir, avLightForward), 1e-4)) / (1.0 - afSpotNearClip * afInvLightRadius);\n"
-		  "\t\tfAttenuatuion *= max(0, fSpotZ) * clamp((1.0 - fSpotZ) * 128.0, 0.0, 1.0);\n" },
-		{ "deferred_light_frag.hpsl",
-		  "\t@ifdef GoboType_Specular\n\t\tvDiffuse = cVector3f(fGradLen / 8.0f);\n\t@endif\n",
-		  "" },
-		// official path: pow(neg, 16.0) is NaN and min(2.0, NaN) is 2
-		{ "deferred_light_frag.hpsl",
-		  "\t\tfLightTransport = fLightTransport * fLightTransport; // pow(fLightTransport, 8.0)\n"
-		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n"
-		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n"
-		  "\t\tfLightTransport = fLightTransport * fLightTransport;\n",
-		  "\t\tfLightTransport = fLightTransport < 0.0 ? 0.125 : 0.0;\n" },
-		// official uses hardware sRGB, which leaves translucency alpha linear
-		{ "deferred_light_frag.hpsl",
-		  "vColorVal.rgba = GammaToLinearCorrection(vColorVal.rgba);",
-		  "vColorVal.rgb = GammaToLinearCorrection(vColorVal.rgb);" },
-		// black albedo: 0/0 in the subsurface colour
-		{ "deferred_light_frag.hpsl",
-		  "vSubColor = vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5;",
-		  "vSubColor = max(vColorVal.rgb - min(vColorVal.r, min(vColorVal.g, vColorVal.b)) * 0.5, cVector3f(1e-4));" },
-		// detail maps applied per blend pass, not to the composited cache
-		{ "cache_terrain_diffuse_frag.hpsl", "uniform cTexture2D aAlphaMap3 : 9;",
-		  "uniform cTexture2D aAlphaMap3 : 9;\n"
-		  "@ifdef UseVertexPosition\n"
-		  "uniform cVector3f avDetailMapScale;\nuniform cVector3f avDetailFade;\nuniform cVector3f avBaseDetailAmount;\n"
-		  "uniform cVector3f avDetailAmount0;\nuniform cVector3f avDetailAmount1;\nuniform cVector3f avDetailAmount2;\nuniform cVector3f avDetailAmount3;\n"
-		  "uniform cTexture2D aDetailMap0 : 10;\nuniform cTexture2D aDetailMap1 : 11;\nuniform cTexture2D aDetailMap2 : 12;\n"
-		  "@endif" },
-		{ "cache_terrain_diffuse_frag.hpsl", "in cVector4f px_vTexCoord0,",
-		  "in cVector4f px_vTexCoord0,\n@ifdef UseVertexPosition\n\t\t  in cVector3f px_vVertexPos,\n@endif" },
-		{ "cache_terrain_diffuse_frag.hpsl", "vDiffuseColor = mix(vDiffuseColor, vTexColor3.xyz, vDissolveBlend.w);",
-		  "vDiffuseColor = mix(vDiffuseColor, vTexColor3.xyz, vDissolveBlend.w);\n"
-		  "\t@ifdef UseVertexPosition\n"
-		  "\t\t@ifdef UseBaseTexture\n\t\t\tcVector3f vDetailAmount = avBaseDetailAmount;\n\t\t@else\n\t\t\tcVector3f vDetailAmount = cVector3f(0);\n\t\t@endif\n"
-		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount0, vDissolveBlend.x);\n"
-		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount1, vDissolveBlend.y);\n"
-		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount2, vDissolveBlend.z);\n"
-		  "\t\tvDetailAmount = mix(vDetailAmount, avDetailAmount3, vDissolveBlend.w);\n"
-		  "\t\t@ifdef UseBaseTexture\n\t\t@else\n\t\t\tvDetailAmount /= max(min(dot(vDissolveBlend, cVector4f(1.0)), 1.0), 0.0001);\n\t\t@endif\n"
-		  "\t\tfloat fDetailMul = 1.0 - clamp((-px_vVertexPos.z - avDetailFade.x) / avDetailFade.y, 0.0, 1.0);\n"
-		  "\t\tfloat fAmountLength = length(vDetailAmount);\n"
-		  "\t\tcVector3f vNormalizedAmount = vDetailAmount / (fAmountLength + 0.0001);\n"
-		  "\t\tcVector2f vWorldXZ = (vTexCoord - cVector2f(0.5)) * avDetailFade.z;\n"
-		  "\t\tcVector3f vDetailColor = sqrt(pow(sample(aDetailMap0, vWorldXZ * avDetailMapScale.x).xyz, cVector3f(2.2)) * vNormalizedAmount.x +\n"
-		  "\t\t\t\t\t\t\t\t\t pow(sample(aDetailMap1, vWorldXZ * avDetailMapScale.y).xyz, cVector3f(2.2)) * vNormalizedAmount.y +\n"
-		  "\t\t\t\t\t\t\t\t\t pow(sample(aDetailMap2, vWorldXZ * avDetailMapScale.z).xyz, cVector3f(2.2)) * vNormalizedAmount.z);\n"
-		  "\t\tvDiffuseColor *= mix(cVector3f(1.0), vDetailColor * 2.0, fDetailMul * fAmountLength);\n"
-		  "\t@endif" },
-		// official squares the sRGB-decoded terrain cache
-		{ "cache_terrain_diffuse_frag.hpsl", "out_vColor.xyz =  vDiffuseColor.xyz;", "out_vColor.xyz = vDiffuseColor.xyz * vDiffuseColor.xyz;" },
-		{ "deferred_light_frag.hpsl",
-		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;",
-		  "(vSourceUV[2] - vSourceUV[0]) * fGradient).xyz;\n"
-		  "\t\t\t\tvSpecular *= clamp((0.6 - max(abs(vSourceUV[0].x - 0.5), abs(vSourceUV[0].y - 0.5))) * 10.0, 0.0, 1.0);" },
-		{ "deferred_transparent_frag.hpsl",
-		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);",
-		  "\t\t@ifdef UseLinearColorSpaceCorrection\n\t\t@ifdef UseSRGBDiffuseMap\n\t\t@else\n\t\t\tvFinalColor.rgb = GammaToLinearCorrection(vFinalColor.rgb);\n\t\t@endif" },
-		{ "deferred_transparent_frag.hpsl",
-		  "@ifdef UseNormalMapping || UseNormalMap\n",
-		  "@ifdef UseNormalMapping\n@define UseNormalMap 1\n@endif\n@ifdef UseScreenNormal\n@define RefractNormals 1\n@endif\n@ifdef UseNormalMap\n" },
-		{ "deferred_transparent_frag.hpsl",
-		  "\t@endif\n\n\tcVector4f vFinalColor;",
-		  "\t@else\n\t\tfloat afLightLevel = afLightLevel;\n\t@endif\n\n\tcVector4f vFinalColor;" },
-	};
-
-	// albedo stays gamma-encoded without hardware sRGB textures: encode the linear vertex/ColorMul colour
-	static const char* const gvHpslGammaAlbedoReplacements[][3] = {
-		{ "deferred_gbuffer_solid_frag.hpsl", "vDiffuseColor *= px_vColor.xyz;", "vDiffuseColor *= pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_gbuffer_decal_frag.hpsl", "vDiffuse * px_vColor;", "vDiffuse * cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
-		{ "deferred_projected_uv_frag.hpsl", "vDiffuseColor.xyz * px_vColor.xyz;", "vDiffuseColor.xyz * pow(px_vColor.xyz, cVector3f(1.0 / 2.2));" },
-		{ "deferred_undergrowth_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
-		{ "deferred_terrain_gbuffer_frag.hpsl", "vDiffuseColor *= px_vColor;", "vDiffuseColor *= cVector4f(pow(px_vColor.xyz, cVector3f(1.0 / 2.2)), px_vColor.w);" },
-	};
-
 	static void PatchHpslSource(const tString& asFile, tString& asData)
 	{
-		asData.erase(std::remove(asData.begin(), asData.end(), '\r'), asData.end());
-		for(size_t i=0; i<sizeof(gvHpslSourceReplacements)/sizeof(gvHpslSourceReplacements[0]); ++i)
-		{
-			if(asFile != gvHpslSourceReplacements[i][0]) continue;
-			// anchors differ per game: scripts/hpsl-anchor-check.py
-			asData = cString::ReplaceStringTo(asData, gvHpslSourceReplacements[i][1], gvHpslSourceReplacements[i][2]);
-		}
-		for(size_t i=0; cTextureManager::GetHardwareSRGB()==false && i<sizeof(gvHpslGammaAlbedoReplacements)/sizeof(gvHpslGammaAlbedoReplacements[0]); ++i)
-		{
-			if(asFile != gvHpslGammaAlbedoReplacements[i][0]) continue;
-			asData = cString::ReplaceStringTo(asData, gvHpslGammaAlbedoReplacements[i][1], gvHpslGammaAlbedoReplacements[i][2]);
-		}
-		// official hardware sRGB mode decodes cube maps with GammaCorrectCubeMaps (pow 2.2)
-		static const std::regex rxCubeGamma("@ifdef UseLinearColorSpaceCorrection\\s*\\n[^\\n]*GammaToLinearCorrection[^\\n]*\\n\\s*@elseif GammaCorrectCubeMaps");
-		asData = std::regex_replace(asData, rxCubeGamma, "@ifdef UseLinearColorSpaceCorrection");
-		for(size_t i=0; i<sizeof(gvHpslSourcePatches)/sizeof(gvHpslSourcePatches[0]); ++i)
-		{
-			if(asFile != gvHpslSourcePatches[i][0]) continue;
-			size_t lPos = asData.rfind(gvHpslSourcePatches[i][1]);
-			if(lPos != tString::npos) asData.insert(lPos, gvHpslSourcePatches[i][2]);
-		}
-		// newer games feed per-light data through an instanced vertex shader; take it as uniforms
-		bool bLightFrag = asFile == "deferred_light_frag.hpsl";
-		if((bLightFrag || asFile == "deferred_light_box_frag.hpsl") && asData.find("UseTextureBuffer") == tString::npos)
-		{
-			static const std::regex rxIn("\\n[ \\t]*in[ \\t]+(\\w+)[ \\t]+(px_(?!vPosition)\\w+(?:\\[\\d+\\])?),[ \\t]*(?=\\n)");
-			tString sHead = bLightFrag ? "@ifdef LightType_Spot || LightType_Directional\n@else\n@define LightType_Point 1\n@endif\n" : "";
-			for(std::sregex_iterator it(asData.begin(), asData.end(), rxIn), itEnd; it != itEnd; ++it)
-			{
-				tString sDecl = "uniform " + (*it)[1].str() + " " + (*it)[2].str() + ";\n";
-				if(sHead.find(sDecl) == tString::npos) sHead += sDecl;
-			}
-			asData = sHead + std::regex_replace(asData, rxIn, "");
-		}
-		// newer games read per-instance matrices from a texture buffer; use the fixed-function ones
-		size_t lInstBegin = asData.find("\t@ifdef UseInstanceOffset\n\t\tint lBaseOffset");
-		tString sInstEnd = "int lBoneOffset = lBaseOffset;\n\t@endif\n";
-		size_t lInstEnd = asData.find(sInstEnd);
-		if(asFile == "deferred_projected_uv_vtx.hpsl" && lInstBegin != tString::npos && lInstEnd != tString::npos)
-		{
-			asData.erase(lInstBegin, lInstEnd + sInstEnd.size() - lInstBegin);
-			static const std::regex rxWorldPos("mul\\(mtxModel, (cVector4f\\(vtx_vPosition\\.xyz, 1\\.0\\))\\)");
-			static const std::regex rxView("\\ba_mtxView(Projection)?\\b");
-			asData = "uniform cVector4f avColorMul;\nuniform cMatrixf a_mtxModelViewProjection;\nuniform cMatrixf a_mtxModelView;\nuniform cMatrixf a_mtxNormal;\nuniform cMatrixf a_mtxModel;\n"
-					 + std::regex_replace(std::regex_replace(asData, rxWorldPos, "$1"), rxView, "a_mtxModelView$1");
-			//vertex blend projects in world space
-			asData = cString::ReplaceStringTo(asData, "px_vTexCoord0 = vLocalVertexPos;", "px_vTexCoord0 = mul(a_mtxModel, vLocalVertexPos);");
-		}
-		if(asFile == "deferred_projected_uv_frag.hpsl" && asData.find("avBlendVecX") != tString::npos)
-		{
-			static const char* const vAxes[] = { "X", "1, 0, 0", "Y", "0, 1, 0", "Z", "0, 0, 1" };
-			for(int i=0; i<6; i+=2)
-				asData = std::regex_replace(asData, std::regex(tString("\\bavBlendVec") + vAxes[i] + "\\b"),
-											tString("mul(cMatrix3f(a_mtxNormalFrag), cVector3f(") + vAxes[i+1] + "))");
-			asData = "uniform cMatrixf a_mtxNormalFrag;\n" + asData;
-		}
-		// newer games mix with a previous-frame texture; keep the blend-based trail
-		if(asFile == "posteffect_image_trail_frag.hpsl")
-		{
-			static const std::regex rxMix("mix\\(vPrevDiffuseColor\\.rgb, vDiffuseColor\\.rgb, afAlpha\\), 1\\.0\\)");
-			asData = std::regex_replace(asData, rxMix, "vDiffuseColor.rgb, afAlpha)");
-		}
-		// debug: OPENHPL_HPSL_PATCH="file|old|new"
 		const char *pPatch = getenv("OPENHPL_HPSL_PATCH");
 		tString sPatch = pPatch ? pPatch : "";
-		size_t lA = sPatch.find('|'), lB = sPatch.find('|', lA + 1);
-		if(lB != tString::npos && asFile == sPatch.substr(0, lA))
-		{
-			tString sOld = sPatch.substr(lA + 1, lB - lA - 1);
-			size_t lPos = asData.rfind(sOld);
-			if(lPos != tString::npos) asData.replace(lPos, sOld.size(), sPatch.substr(lB + 1));
-		}
+		tString sOut;
+		ohpl_shader_patch_hpsl(asFile.data(), asFile.size(), asData.data(), asData.size(), cTextureManager::GetHardwareSRGB(),
+							   sPatch.data(), sPatch.size(), AppendSink, &sOut);
+		asData = sOut;
 	}
 
 	static tString GetHpslFallbackName(const tString& asGlslName)
 	{
-		for(size_t i=0; i<sizeof(gvHpslFilenameAliases)/sizeof(gvHpslFilenameAliases[0]); ++i)
-		{
-			if(asGlslName == gvHpslFilenameAliases[i][0]) return gvHpslFilenameAliases[i][1];
-		}
-		return cString::SetFileExt(asGlslName, "hpsl");
+		tString sOut;
+		ohpl_shader_fallback_name(asGlslName.data(), asGlslName.size(), AppendSink, &sOut);
+		return sOut;
 	}
 
 	iGpuShader* cGpuShaderManager::CreateShader(const tString& asName, eGpuShaderType aType,
@@ -440,25 +257,13 @@ namespace hpl {
 			if(bIsHpslFallback && pShader->SamplerNeedsTextureUnitSetup()) ApplyHpslTextureBindings(pShader, sHpslPreTranspile);
 			if(aType == eGpuShaderType_Fragment && pShader->SamplerNeedsTextureUnitSetup())
 			{
-				tParseVarMap *pVarMap = mpPreprocessParser->GetParsingVarContainer()->GetMapPtr();
-				tParseVarMapIt varIt = pVarMap->begin();
-				for(; varIt != pVarMap->end(); ++varIt)
+				std::vector<ohpl_shader_kv> vVars;
+				for(auto& kv : *mpPreprocessParser->GetParsingVarContainer()->GetMapPtr())
 				{
-					const tString& sVarName = varIt->first;
-					const tString& sVarVal = varIt->second;
-					if(sVarName == "") continue;
-
-					tStringVec vStrings;
-					tString sSepp = "_";
-					cString::GetStringVec(sVarName,vStrings,&sSepp);
-					if(vStrings.size()>=2 && vStrings[0]=="sampler")
-					{
-						int lUnit = cString::ToInt(sVarVal.c_str(), 0);
-
-						pShader->AddSamplerUnit(vStrings[1], lUnit);
-					}
-
+					ohpl_shader_kv e = { kv.first.data(), kv.first.size(), kv.second.data(), kv.second.size() };
+					vVars.push_back(e);
 				}
+				ohpl_shader_sampler_units(vVars.data(), vVars.size(), SamplerCallback, pShader);
 			}
 		}
 		/////////////////////////////////////////

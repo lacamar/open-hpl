@@ -47,6 +47,7 @@ namespace hpl {
 	class iLight;
 	class iHapticShape;
 	class cBoneState;
+	class cEobImpl;
 
 	//--------------------------------------------
 
@@ -83,6 +84,8 @@ namespace hpl {
 						cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars);		
 
 	protected:
+		friend class cEobImpl;
+
 		virtual void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
 		virtual void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
 		virtual bool BeforeJoints(){ return false; }
@@ -90,15 +93,9 @@ namespace hpl {
 		void AttachEntityChild(iEntity3D *apParent, const cMatrixf& a_mtxInvParent, iEntity3D *apChild);
 		void AttachBoneChild(cBoneState *apBoneState, const cMatrixf& a_mtxInvParent, iEntity3D *apChild);
 		void AttachBoneToBody(iPhysicsBody *apParentBody, const cMatrixf& a_mtxInvParent, cBoneState *apBoneState);
-		void LoadAndAttachChildren(cXmlElement *apMainElem, iEntity3D *apEntityParent, cBoneState *apBoneStateParent, 
-            						std::list<iEntity3D*>& a_lstChildList, tNodeStateMap &a_mapBoneStates,
-									bool abRemoveAttachedChild, bool abIsBody);
 
 		cBillboard* GetBillboardFromID(int alID);
 		iLight* GetLightFromName(const tString& asName);
-
-		void SetBodyProperties(iPhysicsBody *apBody, cXmlElement *apPhysicsElem);
-		void SetJointProperties(iPhysicsJoint *apJoint, cXmlElement *apJointElem,cWorld *apWorld);
 
 		void LoadController(iPhysicsJoint *apJoint,iPhysicsWorld *apPhysicsWorld, TiXmlElement *apElem);
 

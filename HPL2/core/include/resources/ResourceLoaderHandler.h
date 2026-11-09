@@ -21,20 +21,22 @@
 #define HPL_RESOURCE_LOADER_HANDLER_H
 
 #include "system/SystemTypes.h"
+#include "resources/RustResources.h"
 
 namespace hpl {
 
 	class iResourceLoader;
 
-	typedef std::list<iResourceLoader*> tResourceLoaderList;
-	typedef tResourceLoaderList::iterator tResourceLoaderListIt;
 	
 	//------------------------------------
 
 	class iResourceLoaderHandler
 	{
 	public:
+		iResourceLoaderHandler();
 		virtual ~iResourceLoaderHandler();
+		iResourceLoaderHandler(const iResourceLoaderHandler&) = delete;
+		iResourceLoaderHandler& operator=(const iResourceLoaderHandler&) = delete;
 
 		void AddLoader(iResourceLoader *apLoader);
 
@@ -48,7 +50,7 @@ namespace hpl {
 
 		tStringVec mvSupportedTypes;
 
-		tResourceLoaderList mlstLoaders;
+		OhplLoaderTable *mpLoaders;
 	};
 
 };

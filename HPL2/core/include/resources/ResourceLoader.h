@@ -22,6 +22,7 @@
 
 #include "system/SystemTypes.h"
 #include "resources/ResourcesTypes.h"
+#include "resources/RustResources.h"
 
 namespace hpl {
 
@@ -29,14 +30,17 @@ namespace hpl {
 	{
 	friend class iResourceLoaderHandler;
 	public:
-		virtual ~iResourceLoader() {}
+		iResourceLoader();
+		virtual ~iResourceLoader();
+		iResourceLoader(const iResourceLoader&) = delete;
+		iResourceLoader& operator=(const iResourceLoader&) = delete;
 
 		bool IsSupported(const tString& asFileExt);
 
 		void AddSupportedExtension(const tString& asExt);
 
 	protected:
-		tStringList mlstExtensions;
+		OhplExtList *mpExtensions;
 	};
 
 };
