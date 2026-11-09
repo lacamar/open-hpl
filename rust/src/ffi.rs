@@ -35,3 +35,53 @@ pub unsafe extern "C" fn ohpl_crc_done(crc: *mut Crc) -> u32 {
     // SAFETY: caller contract above.
     unsafe { &mut *crc }.done()
 }
+
+/// Heap bytes owned by Rust; free with `ohpl_bytes_free`.
+#[repr(C)]
+pub struct OhplBytes {
+    ptr: *mut u8,
+    len: usize,
+}
+
+impl From<Vec<u8>> for OhplBytes {
+    fn from(v: Vec<u8>) -> Self {
+        let b = v.into_boxed_slice();
+        let len = b.len();
+        Self {
+            ptr: Box::into_raw(b).cast(),
+            len,
+        }
+    }
+}
+
+/// Writes the GLSL (returns true) or the error message (returns false) to `out`.
+///
+/// # Safety
+/// `src` points to `len` readable bytes (or `len` is 0); `out` is writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_hpsl_transpile(
+    src: *const u8,
+    len: usize,
+    shader_type: i32,
+    out: *mut OhplBytes,
+) -> bool {
+    let src: &[u8] = if len == 0 {
+        &[]
+    } else {
+        // SAFETY: caller contract above.
+        unsafe { std::slice::from_raw_parts(src, len) }
+    };
+    let result = crate::hpsl::transpile(src, crate::hpsl::ShaderType::from_raw(shader_type));
+    let ok = result.is_ok();
+    // SAFETY: caller contract above.
+    unsafe { out.write(result.unwrap_or_else(|e| e).into()) };
+    ok
+}
+
+/// # Safety
+/// `bytes` was filled by `ohpl_hpsl_transpile` and is not used afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_bytes_free(bytes: OhplBytes) {
+    // SAFETY: ptr/len come from the boxed slice leaked in `From<Vec<u8>>`.
+    drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(bytes.ptr, bytes.len)) });
+}

@@ -2,4 +2,5 @@
 
 pub mod crc;
 mod ffi;
+pub mod hpsl;
 pub mod types;
