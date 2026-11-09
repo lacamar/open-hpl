@@ -1,14 +1,4 @@
 //! Pure parts of `hpl::cString`. Narrow strings are `u8` units, wide strings `u32` (Linux `wchar_t`).
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use std::ffi::{c_char, c_int, c_long, c_ulong};
 
@@ -59,7 +49,8 @@ fn is_slash<T: Unit>(c: T) -> bool {
 }
 
 fn window_is<T: Unit>(s: &[T], needle: &[T], i: usize) -> bool {
-    s[i..(i + needle.len()).min(s.len())] == *needle
+    s.get(i..(i + needle.len()).min(s.len()))
+        .is_some_and(|w| w == needle)
 }
 
 pub fn first_pos<T: Unit>(s: &[T], needle: &[T]) -> i32 {
@@ -94,15 +85,16 @@ pub fn sub<T: Unit>(s: &[T], start: i32, count: i32, wide: bool) -> Option<&[T]>
         return None;
     }
     let start = start as usize;
+    let rest = s.get(start..).unwrap_or_default();
     Some(if count < 0 {
-        &s[start..]
+        rest
     } else {
-        &s[start..(start + count as usize).min(s.len())]
+        rest.get(..count as usize).unwrap_or(rest)
     })
 }
 
 fn tail<T: Unit>(s: &[T], from: usize) -> &[T] {
-    &s[from.min(s.len())..]
+    s.get(from..).unwrap_or_default()
 }
 
 fn name_start<T: Unit>(s: &[T]) -> usize {
@@ -111,14 +103,14 @@ fn name_start<T: Unit>(s: &[T]) -> usize {
 }
 
 pub fn file_name<T: Unit>(s: &[T]) -> &[T] {
-    &s[name_start(s)..]
+    s.get(name_start(s)..).unwrap_or_default()
 }
 
 pub fn file_ext<T: Unit>(s: &[T]) -> &[T] {
     let name = file_name(s);
     match last_pos_ch(name, b'.') {
         -1 => &[],
-        p => &name[p as usize + 1..],
+        p => name.get(p as usize + 1..).unwrap_or_default(),
     }
 }
 
@@ -126,7 +118,7 @@ pub fn file_path<T: Unit>(s: &[T]) -> &[T] {
     if last_pos_ch(s, b'.') < 0 {
         return s;
     }
-    &s[..name_start(s)]
+    s.get(..name_start(s)).unwrap_or_default()
 }
 
 pub fn set_file_ext<T: Unit>(s: &[T], ext: &[T]) -> Vec<T> {
@@ -134,7 +126,9 @@ pub fn set_file_ext<T: Unit>(s: &[T], ext: &[T]) -> Vec<T> {
     let mut out = if file_ext(s).is_empty() {
         s.to_vec()
     } else {
-        s[..last_pos_ch(s, b'.') as usize].to_vec()
+        s.get(..last_pos_ch(s, b'.') as usize)
+            .unwrap_or_default()
+            .to_vec()
     };
     if !ext.is_empty() {
         out.push(a(b'.'));
@@ -161,8 +155,8 @@ pub fn add_slash_at_end<T: Unit>(s: &[T], slash: T) -> Vec<T> {
 }
 
 pub fn remove_slash_at_end<T: Unit>(s: &[T]) -> &[T] {
-    match s.last() {
-        Some(&c) if is_slash(c) => &s[..s.len() - 1],
+    match s.split_last() {
+        Some((&c, rest)) if is_slash(c) => rest,
         _ => s,
     }
 }
@@ -201,12 +195,12 @@ pub fn replace_string_to(s: &[u8], old: &[u8], new: &[u8]) -> Vec<u8> {
     }
     let mut out = Vec::with_capacity(s.len());
     let mut i = 0;
-    while i < s.len() {
-        if s[i..].starts_with(old) {
+    while let Some(&c) = s.get(i) {
+        if s.get(i..).is_some_and(|rest| rest.starts_with(old)) {
             out.extend_from_slice(new);
             i += old.len();
         } else {
-            out.push(s[i]);
+            out.push(c);
             i += 1;
         }
     }
@@ -249,7 +243,7 @@ pub fn relative_path<T: Unit>(path: &[T], relative_to: &[T]) -> Vec<T> {
     for _ in common..r.len() {
         out.extend_from_slice(&[a(b'.'), a(b'.'), a(b'/')]);
     }
-    for seg in &p[common..] {
+    for seg in p.get(common..).unwrap_or_default() {
         out.extend_from_slice(seg);
         out.push(a(b'/'));
     }
@@ -259,7 +253,7 @@ pub fn relative_path<T: Unit>(path: &[T], relative_to: &[T]) -> Vec<T> {
 pub fn numeric_suffix<T: Unit>(s: &[T]) -> (&[T], i32) {
     let digit = |c: T| c.code() >= i32::from(b'0') && c.code() <= i32::from(b'9');
     match s.iter().rposition(|&c| !digit(c)) {
-        Some(i) if i + 1 < s.len() => (&s[i + 1..], (i + 1) as i32),
+        Some(i) if i + 1 < s.len() => (s.get(i + 1..).unwrap_or_default(), (i + 1) as i32),
         _ => (&[], -1),
     }
 }
@@ -275,7 +269,7 @@ pub fn matches_wildcard(pattern: &[u8], name: &[u8]) -> bool {
         let Some(pos) = name.windows(seg.len()).position(|w| w == seg) else {
             return false;
         };
-        if pos as i64 <= prev || (prev < 0 && pattern[0] != b'*' && pos != 0) {
+        if pos as i64 <= prev || (prev < 0 && pattern.first() != Some(&b'*') && pos != 0) {
             return false;
         }
         prev = pos as i64;
@@ -337,7 +331,8 @@ pub fn ints_exact(s: &[u8], out: &mut [i32]) -> bool {
 fn format_with(f: impl FnOnce(*mut c_char, usize) -> c_int) -> Vec<u8> {
     let mut buf = [0u8; 256];
     let n = f(buf.as_mut_ptr().cast(), buf.len());
-    buf[..usize::try_from(n).unwrap_or(0).min(buf.len() - 1)].to_vec()
+    let len = usize::try_from(n).unwrap_or(0).min(buf.len() - 1);
+    buf.get(..len).unwrap_or_default().to_vec()
 }
 
 pub fn int_to_string(x: i32, pad: i32) -> Vec<u8> {
@@ -459,8 +454,9 @@ pub fn hash_wide(s: &[u32]) -> u32 {
     let mut h = s.len() as u32;
     let mut pairs = s.chunks_exact(2);
     for p in &mut pairs {
-        h = h.wrapping_add(p[0]);
-        let t = (p[1] << 11) ^ h;
+        let &[p0, p1] = p else { continue };
+        h = h.wrapping_add(p0);
+        let t = (p1 << 11) ^ h;
         h = (h << 16) ^ t;
         h = h.wrapping_add(h >> 11);
     }
@@ -478,9 +474,15 @@ pub fn hash_wide(s: &[u32]) -> u32 {
 }
 
 fn encode_chunk(c: [u8; 4]) -> [u8; 6] {
-    let mut v = [c[0], c[1], c[2], c[3], 0, 0];
-    v[4] = (c[2] >> 2) & 0x30 | (c[0] >> 4) & 0x0c;
-    v[5] = (c[3] >> 2) & 0x30 | (c[1] >> 4) & 0x0c;
+    let [c0, c1, c2, c3] = c;
+    let v = [
+        c0,
+        c1,
+        c2,
+        c3,
+        (c2 >> 2) & 0x30 | (c0 >> 4) & 0x0c,
+        (c3 >> 2) & 0x30 | (c1 >> 4) & 0x0c,
+    ];
     v.map(|x| {
         let x = x & 63;
         if x == 63 { x } else { x + 64 }
@@ -494,19 +496,23 @@ pub fn encode_data(data: &[u8]) -> Option<Vec<u8>> {
     }
     Some(
         data.chunks_exact(4)
-            .flat_map(|c| encode_chunk([c[0], c[1], c[2], c[3]]))
+            .filter_map(|c| <[u8; 4]>::try_from(c).ok())
+            .flat_map(encode_chunk)
             .collect(),
     )
 }
 
 /// `false` unless `dest.len()` is a multiple of 4 and `s` holds 6 chars per 4 bytes.
 pub fn decode_data(s: &[u8], dest: &mut [u8]) -> bool {
-    if !dest.len().is_multiple_of(4) || s.len() < dest.len() / 4 * 6 {
+    if !dest.len().is_multiple_of(4) || s.len() < (dest.len() >> 2) * 6 {
         return false;
     }
     for (chunk, out) in s.chunks_exact(6).zip(dest.chunks_exact_mut(4)) {
-        let front = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-        let back = i32::from(i16::from_le_bytes([chunk[4], chunk[5]]));
+        let &[c0, c1, c2, c3, c4, c5] = chunk else {
+            continue;
+        };
+        let front = u32::from_le_bytes([c0, c1, c2, c3]);
+        let back = i32::from(i16::from_le_bytes([c4, c5]));
         let hi = ((back << 18) | (back << 4)) as u32 & 0xc0c0_c0c0;
         out.copy_from_slice(&((front & 0x3f3f_3f3f) | hi).to_le_bytes());
     }

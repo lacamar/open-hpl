@@ -1,14 +1,4 @@
 //! Shader-source preprocessor (`@define`, `@ifdef`/`@elseif`/`@else`/`@endif`, `@include`, `$var$`).
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use std::collections::BTreeMap;
 
@@ -161,7 +151,9 @@ impl<'s, 'h> Parser<'s, 'h> {
         let mut s = Vec::new();
         self.cur_row = self.row_count;
         loop {
-            let c = self.input[self.pos];
+            let Some(&c) = self.input.get(self.pos) else {
+                return s;
+            };
             if c == b'\n' || c == b'\r' {
                 self.row_count += 1;
             }
@@ -216,7 +208,7 @@ impl<'s, 'h> Parser<'s, 'h> {
             self.syms.push((Sym::Text(s), row));
             return;
         }
-        if s.is_empty() || s[0] == b' ' || s[0] == b'\t' {
+        if matches!(s.first(), None | Some(b' ' | b'\t')) {
             return;
         }
         if process == Process::Line {
@@ -262,8 +254,11 @@ impl<'s, 'h> Parser<'s, 'h> {
     }
 
     fn parse_symbol(&mut self) -> bool {
-        let row = self.syms[self.idx].1;
-        match &self.syms[self.idx].0 {
+        let Some((sym, row)) = self.syms.get(self.idx) else {
+            return true;
+        };
+        let row = *row;
+        match sym {
             Sym::Text(t) => {
                 self.out.extend_from_slice(t);
                 self.advance();

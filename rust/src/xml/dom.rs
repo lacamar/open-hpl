@@ -1,15 +1,5 @@
 //! tinyXML-shaped DOM: documents hold elements, text, comments, declarations and unknown nodes in
 //! document order, and elements keep attributes in insertion order.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 pub type NodeId = u32;
 pub const DOC: NodeId = 0;
@@ -55,7 +45,7 @@ pub struct Node {
 }
 
 impl Node {
-    fn new(kind: Kind, value: Vec<u8>) -> Self {
+    const fn new(kind: Kind, value: Vec<u8>) -> Self {
         Self {
             kind,
             value,
@@ -67,6 +57,8 @@ impl Node {
         }
     }
 }
+
+static MISSING: Node = Node::new(Kind::Unknown, Vec::new());
 
 pub const ERR_OPENING_FILE: i32 = 2;
 pub const ERR_PARSING_ELEMENT: i32 = 3;
@@ -136,7 +128,7 @@ impl Default for Doc {
 
 /// Bytes up to the first NUL: what a `const char*` consumer sees.
 pub fn c_str(s: &[u8]) -> &[u8] {
-    &s[..s.iter().position(|&b| b == 0).unwrap_or(s.len())]
+    s.split(|&b| b == 0).next().unwrap_or(s)
 }
 
 impl Doc {
@@ -151,8 +143,10 @@ impl Doc {
 
     pub fn clear(&mut self) {
         self.nodes.truncate(1);
-        self.nodes[0].first = None;
-        self.nodes[0].last = None;
+        if let Some(root) = self.nodes.first_mut() {
+            root.first = None;
+            root.last = None;
+        }
     }
 
     pub fn error(&self) -> bool {
@@ -178,14 +172,47 @@ impl Doc {
         let (row, col) = at.unwrap_or((-1, -1));
         self.err = ErrorInfo {
             id,
-            desc: ERROR_STRINGS[id as usize].to_owned(),
+            desc: ERROR_STRINGS
+                .get(id as usize)
+                .copied()
+                .unwrap_or_default()
+                .to_owned(),
             row: row + 1,
             col: col + 1,
         };
     }
 
+    /// An id that names no node reads as a detached, empty one.
     pub fn node(&self, id: NodeId) -> &Node {
-        &self.nodes[id as usize]
+        self.nodes.get(id as usize).unwrap_or(&MISSING)
+    }
+
+    pub(super) fn node_mut(&mut self, id: NodeId) -> Option<&mut Node> {
+        self.nodes.get_mut(id as usize)
+    }
+
+    pub(super) fn set_raw_value(&mut self, id: NodeId, value: Vec<u8>) {
+        if let Some(n) = self.node_mut(id) {
+            n.value = value;
+        }
+    }
+
+    pub(super) fn set_kind(&mut self, id: NodeId, kind: Kind) {
+        if let Some(n) = self.node_mut(id) {
+            n.kind = kind;
+        }
+    }
+
+    pub(super) fn set_parent(&mut self, id: NodeId, parent: NodeId) {
+        if let Some(n) = self.node_mut(id) {
+            n.parent = Some(parent);
+        }
+    }
+
+    pub(super) fn push_attr(&mut self, id: NodeId, attr: Attr) {
+        if let Some(n) = self.node_mut(id) {
+            n.attrs.push(attr);
+        }
     }
 
     pub(super) fn alloc(&mut self, kind: Kind, value: Vec<u8>) -> NodeId {
@@ -194,14 +221,29 @@ impl Doc {
     }
 
     pub(super) fn link_end_child(&mut self, parent: NodeId, child: NodeId) {
-        let last = self.nodes[parent as usize].last;
-        self.nodes[child as usize].parent = Some(parent);
-        self.nodes[child as usize].next = None;
+        let Some(last) = self.nodes.get(parent as usize).map(|p| p.last) else {
+            return;
+        };
+        let Some(c) = self.node_mut(child) else {
+            return;
+        };
+        c.parent = Some(parent);
+        c.next = None;
         match last {
-            Some(l) => self.nodes[l as usize].next = Some(child),
-            None => self.nodes[parent as usize].first = Some(child),
+            Some(l) => {
+                if let Some(n) = self.node_mut(l) {
+                    n.next = Some(child);
+                }
+            }
+            None => {
+                if let Some(p) = self.node_mut(parent) {
+                    p.first = Some(child);
+                }
+            }
         }
-        self.nodes[parent as usize].last = Some(child);
+        if let Some(p) = self.node_mut(parent) {
+            p.last = Some(child);
+        }
     }
 
     pub fn add_element(&mut self, parent: NodeId, name: &[u8]) -> NodeId {
@@ -211,7 +253,9 @@ impl Doc {
     }
 
     pub fn set_value(&mut self, id: NodeId, value: &[u8]) {
-        self.nodes[id as usize].value = c_str(value).to_vec();
+        if let Some(n) = self.node_mut(id) {
+            n.value = c_str(value).to_vec();
+        }
     }
 
     pub fn children(&self, id: NodeId) -> impl Iterator<Item = NodeId> + '_ {
@@ -248,7 +292,7 @@ impl Doc {
             .skip(1)
             .position(|x| x.name.is_empty() && x.value.is_empty())
             .map_or(a.len(), |p| p + 1);
-        a[..end].iter()
+        a.get(..end).unwrap_or_default().iter()
     }
 
     pub fn attribute(&self, id: NodeId, name: &[u8]) -> Option<&[u8]> {
@@ -261,7 +305,10 @@ impl Doc {
 
     pub fn set_attribute(&mut self, id: NodeId, name: &[u8], value: &[u8]) {
         let (name, value) = (c_str(name), c_str(value));
-        let attrs = &mut self.nodes[id as usize].attrs;
+        let Some(node) = self.node_mut(id) else {
+            return;
+        };
+        let attrs = &mut node.attrs;
         match attrs.iter_mut().find(|a| c_str(&a.name) == name) {
             Some(a) => a.value = value.to_vec(),
             None => attrs.push(Attr {

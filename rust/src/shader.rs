@@ -1,16 +1,6 @@
 //! Pure parts of `hpl::cGpuShaderManager`: HPSL file aliases, source patches and sampler bindings.
 //! The patch passes mirror the `std::regex` ECMAScript patterns of the C++ with hand-written
 //! matchers (no regex crate); every pattern is deterministic, so no backtracking is needed.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use crate::string::{replace_string_to, set_file_ext, split, token_to_int};
 
@@ -262,11 +252,23 @@ const GAMMA_ALBEDO: [[&str; 3]; 5] = [
     ],
 ];
 
+fn sl(d: &[u8], r: std::ops::Range<usize>) -> &[u8] {
+    d.get(r).unwrap_or_default()
+}
+
+fn tail(d: &[u8], from: usize) -> &[u8] {
+    d.get(from..).unwrap_or_default()
+}
+
+fn has_at(d: &[u8], at: usize, pat: &[u8]) -> bool {
+    d.get(at..).is_some_and(|t| t.starts_with(pat))
+}
+
 fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
     if needle.len() > hay.len() {
         return None;
     }
-    (0..=hay.len() - needle.len()).find(|&i| &hay[i..i + needle.len()] == needle)
+    (0..=hay.len() - needle.len()).find(|&i| sl(hay, i..i + needle.len()) == needle)
 }
 
 fn rfind(hay: &[u8], needle: &[u8]) -> Option<usize> {
@@ -275,7 +277,7 @@ fn rfind(hay: &[u8], needle: &[u8]) -> Option<usize> {
     }
     (0..=hay.len() - needle.len())
         .rev()
-        .find(|&i| &hay[i..i + needle.len()] == needle)
+        .find(|&i| sl(hay, i..i + needle.len()) == needle)
 }
 
 fn is_space(c: u8) -> bool {
@@ -291,15 +293,20 @@ fn is_blank(c: u8) -> bool {
 }
 
 fn skip(d: &[u8], mut p: usize, pred: fn(u8) -> bool) -> usize {
-    while p < d.len() && pred(d[p]) {
+    while let Some(&c) = d.get(p)
+        && pred(c)
+    {
         p += 1;
     }
     p
 }
 
 fn word_boundary(d: &[u8], p: usize) -> bool {
-    let before = p > 0 && is_word(d[p - 1]);
-    let after = p < d.len() && is_word(d[p]);
+    let before = p
+        .checked_sub(1)
+        .and_then(|q| d.get(q))
+        .is_some_and(|&c| is_word(c));
+    let after = d.get(p).is_some_and(|&c| is_word(c));
     before != after
 }
 
@@ -326,29 +333,28 @@ fn collapse_cube_gamma(data: &mut Bytes) {
     const TAIL: &[u8] = b"@elseif GammaCorrectCubeMaps";
     let mut out = Bytes::with_capacity(data.len());
     let mut i = 0;
-    while i < data.len() {
-        let end = data[i..]
-            .starts_with(HEAD)
+    while let Some(&c) = data.get(i) {
+        let end = has_at(data, i, HEAD)
             .then(|| cube_gamma_end(data, i + HEAD.len(), TAIL))
             .flatten();
         if let Some(end) = end {
             out.extend_from_slice(HEAD);
             i = end;
         } else {
-            out.push(data[i]);
+            out.push(c);
             i += 1;
         }
     }
     *data = out;
 }
 
-fn cube_gamma_end(d: &[u8], from: usize, tail: &[u8]) -> Option<usize> {
+fn cube_gamma_end(d: &[u8], from: usize, end_tag: &[u8]) -> Option<usize> {
     let ws_end = skip(d, from, is_space);
-    let nl = from + d[from..ws_end].iter().rposition(|&c| c == b'\n')?;
-    let line_end = nl + 1 + d[nl + 1..].iter().position(|&c| c == b'\n')?;
-    find(&d[nl + 1..line_end], b"GammaToLinearCorrection")?;
+    let nl = from + d.get(from..ws_end)?.iter().rposition(|&c| c == b'\n')?;
+    let line_end = nl + 1 + d.get(nl + 1..)?.iter().position(|&c| c == b'\n')?;
+    find(d.get(nl + 1..line_end)?, b"GammaToLinearCorrection")?;
     let t = skip(d, line_end + 1, is_space);
-    d[t..].starts_with(tail).then_some(t + tail.len())
+    has_at(d, t, end_tag).then_some(t + end_tag.len())
 }
 
 struct InputDecl {
@@ -360,7 +366,7 @@ struct InputDecl {
 /// `\n[ \t]*in[ \t]+(\w+)[ \t]+(px_(?!vPosition)\w+(?:\[\d+\])?),[ \t]*(?=\n)` anchored at `d[at] == '\n'`.
 fn match_input(d: &[u8], at: usize) -> Option<InputDecl> {
     let mut p = skip(d, at + 1, is_blank);
-    if !d[p..].starts_with(b"in") {
+    if !has_at(d, p, b"in") {
         return None;
     }
     p += 2;
@@ -374,8 +380,8 @@ fn match_input(d: &[u8], at: usize) -> Option<InputDecl> {
     }
     let name_start = skip(d, ty_end, is_blank);
     if name_start == ty_end
-        || !d[name_start..].starts_with(b"px_")
-        || d[name_start + 3..].starts_with(b"vPosition")
+        || !has_at(d, name_start, b"px_")
+        || has_at(d, name_start + 3, b"vPosition")
     {
         return None;
     }
@@ -411,25 +417,25 @@ fn lift_inputs_to_uniforms(data: &mut Bytes, light: bool) {
     };
     let mut body = Bytes::with_capacity(data.len());
     let (mut last, mut i) = (0, 0);
-    while i < data.len() {
-        match (data[i] == b'\n').then(|| match_input(data, i)).flatten() {
+    while let Some(&c) = data.get(i) {
+        match (c == b'\n').then(|| match_input(data, i)).flatten() {
             Some(m) => {
                 let mut decl = b"uniform ".to_vec();
-                decl.extend_from_slice(&data[m.ty.0..m.ty.1]);
+                decl.extend_from_slice(sl(data, m.ty.0..m.ty.1));
                 decl.push(b' ');
-                decl.extend_from_slice(&data[m.name.0..m.name.1]);
+                decl.extend_from_slice(sl(data, m.name.0..m.name.1));
                 decl.extend_from_slice(b";\n");
                 if find(&head, &decl).is_none() {
                     head.extend_from_slice(&decl);
                 }
-                body.extend_from_slice(&data[last..i]);
+                body.extend_from_slice(sl(data, last..i));
                 last = m.end;
                 i = m.end;
             }
             None => i += 1,
         }
     }
-    body.extend_from_slice(&data[last..]);
+    body.extend_from_slice(tail(data, last));
     head.extend_from_slice(&body);
     *data = head;
 }
@@ -440,10 +446,10 @@ fn rename_view_matrices(d: &[u8]) -> Bytes {
     const PROJ: &[u8] = b"Projection";
     let mut out = Bytes::with_capacity(d.len());
     let mut i = 0;
-    while i < d.len() {
-        if d[i..].starts_with(NAME) && word_boundary(d, i) {
+    while let Some(&c) = d.get(i) {
+        if has_at(d, i, NAME) && word_boundary(d, i) {
             let p = i + NAME.len();
-            let with_proj = d[p..].starts_with(PROJ) && word_boundary(d, p + PROJ.len());
+            let with_proj = has_at(d, p, PROJ) && word_boundary(d, p + PROJ.len());
             if with_proj || word_boundary(d, p) {
                 out.extend_from_slice(b"a_mtxModelView");
                 if with_proj {
@@ -455,7 +461,7 @@ fn rename_view_matrices(d: &[u8]) -> Bytes {
                 continue;
             }
         }
-        out.push(d[i]);
+        out.push(c);
         i += 1;
     }
     out
@@ -467,12 +473,12 @@ fn replace_blend_vec(d: &[u8], axis: u8, vec: &str) -> Bytes {
     let to = format!("mul(cMatrix3f(a_mtxNormalFrag), cVector3f({vec}))");
     let mut out = Bytes::with_capacity(d.len());
     let mut i = 0;
-    while i < d.len() {
-        if d[i..].starts_with(&name) && word_boundary(d, i) && word_boundary(d, i + name.len()) {
+    while let Some(&c) = d.get(i) {
+        if has_at(d, i, &name) && word_boundary(d, i) && word_boundary(d, i + name.len()) {
             out.extend_from_slice(to.as_bytes());
             i += name.len();
         } else {
-            out.push(d[i]);
+            out.push(c);
             i += 1;
         }
     }
@@ -549,19 +555,19 @@ fn apply_debug_patch(file: &[u8], data: &mut Bytes, debug: &[u8]) {
     let Some(a) = debug.iter().position(|&c| c == b'|') else {
         return;
     };
-    let Some(b) = debug[a + 1..]
+    let Some(b) = tail(debug, a + 1)
         .iter()
         .position(|&c| c == b'|')
         .map(|i| i + a + 1)
     else {
         return;
     };
-    if file != &debug[..a] {
+    if file != sl(debug, 0..a) {
         return;
     }
-    let old = &debug[a + 1..b];
+    let old = sl(debug, a + 1..b);
     if let Some(p) = rfind(data, old) {
-        data.splice(p..p + old.len(), debug[b + 1..].iter().copied());
+        data.splice(p..p + old.len(), tail(debug, b + 1).iter().copied());
     }
 }
 
@@ -578,7 +584,7 @@ pub fn texture_bindings(d: &[u8]) -> Vec<(&[u8], i32)> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < d.len() {
-        if d[i..].starts_with(KW)
+        if has_at(d, i, KW)
             && let Some((end, name, unit)) = match_binding(d, i + KW.len())
         {
             out.push((name, unit));
@@ -592,7 +598,7 @@ pub fn texture_bindings(d: &[u8]) -> Vec<(&[u8], i32)> {
 
 fn match_binding(d: &[u8], at: usize) -> Option<(usize, &[u8], i32)> {
     let p = skip(d, at, is_space);
-    if p == at || !d[p..].starts_with(b"cTexture") {
+    if p == at || !has_at(d, p, b"cTexture") {
         return None;
     }
     let p = skip(d, p + 8, is_word);
@@ -617,8 +623,8 @@ fn match_binding(d: &[u8], at: usize) -> Option<(usize, &[u8], i32)> {
     (d.get(semi) == Some(&b';')).then(|| {
         (
             semi + 1,
-            &d[name_start..name_end],
-            token_to_int(&d[digits..digits_end]),
+            sl(d, name_start..name_end),
+            token_to_int(sl(d, digits..digits_end)),
         )
     })
 }
