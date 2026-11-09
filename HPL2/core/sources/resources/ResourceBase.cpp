@@ -34,26 +34,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	iResourceBase::iResourceBase(const tString& asName, const tWString& asFullPath,unsigned long alPrio){
-		mlTime = (unsigned long)time(NULL);
-		mlPrio = alPrio;
-		mlHandle = 0;
-		mlUserCount =0;
+		ohpl_resmeta_init(&mMeta, (unsigned int)alPrio, (unsigned long)time(NULL));
 		msName = asName;
-		mbLogDestruction = false;
 		msFullPath = asFullPath;
 	}
 
 	iResourceBase::~iResourceBase()
 	{
-		if(mbLogDestruction && mbLogCreateAndDelete)
+		if(mMeta.log_destruction && mbLogCreateAndDelete)
 			Log("  Destroyed resource '%s'\n",msName.c_str());
 	}
 	//-----------------------------------------------------------------------
 
 	void iResourceBase::IncUserCount()
 	{
-		mlUserCount++;
-		mlTime = (unsigned long)time(NULL);
+		ohpl_resmeta_inc_user(&mMeta, (unsigned long)time(NULL));
 	}
 	
 	//-----------------------------------------------------------------------

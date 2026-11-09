@@ -35,23 +35,22 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	bool iResourceLoader::IsSupported(const tString& asFileExt)
+	iResourceLoader::iResourceLoader() : mpExtensions(ohpl_exts_new())
 	{
-		tStringListIt it = mlstExtensions.begin();
-		for(; it != mlstExtensions.end(); ++it)
-		{
-			if(asFileExt == *it) return true;
-		}
-
-		return false;
 	}
 
-	//-----------------------------------------------------------------------
+	iResourceLoader::~iResourceLoader()
+	{
+		ohpl_exts_free(mpExtensions);
+	}
+
+	bool iResourceLoader::IsSupported(const tString& asFileExt)
+	{
+		return ohpl_exts_supports(mpExtensions, asFileExt.data(), asFileExt.size());
+	}
 
 	void iResourceLoader::AddSupportedExtension(const tString& asExt)
 	{
-		mlstExtensions.push_back(asExt);
+		ohpl_exts_add(mpExtensions, asExt.data(), asExt.size());
 	}
-	
-	//-----------------------------------------------------------------------
 }

@@ -64,19 +64,7 @@ namespace hpl {
 	iResourceBase* iResourceManager::GetResource(const tWString& asFullPath)
 	{
 		unsigned int lHash = cString::GetHashW(asFullPath);
-
-		tResourceBaseMapIt it = m_mapResources.find(lHash);
-		if(it == m_mapResources.end())return NULL;
-
-        size_t lCount = m_mapResources.count(lHash);
-		for(size_t i=0; i<lCount; ++i, ++it)
-		{
-			iResourceBase *pResource = it->second;
-
-			if(pResource->GetFullPath() == asFullPath) return pResource;
-		}
-
-		return NULL;
+		return m_mapResources.find_if(lHash, [&](iResourceBase *pResource){ return pResource->GetFullPath() == asFullPath; });
 	}
 
 	//-----------------------------------------------------------------------
@@ -88,48 +76,30 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	class cSortResources
+	static void ResourceUseKey(void*, void *apRes, unsigned int *apUsers, unsigned long *apTime)
 	{
-	public:
-		bool operator()(iResourceBase* apResourceA, iResourceBase* apResourceB)
-		{
-			if(apResourceA->GetUserCount() != apResourceB->GetUserCount())
-			{
-				return apResourceA->GetUserCount() > apResourceB->GetUserCount();
-			}
-			
-			return apResourceA->GetTime() > apResourceB->GetTime();
-		}
-	};
+		iResourceBase *pRes = static_cast<iResourceBase*>(apRes);
+		*apUsers = pRes->GetUserCount();
+		*apTime = pRes->GetTime();
+	}
 
-	//-----------------------------------------------------------------------
+	static void CollectResources(void *apCtx, void *const *apRes, size_t alCount)
+	{
+		iResourceBase *const *ppFirst = reinterpret_cast<iResourceBase *const *>(apRes);
+		static_cast<std::vector<iResourceBase*>*>(apCtx)->assign(ppFirst, ppFirst + alCount);
+	}
 
     void iResourceManager::DestroyUnused(int alMaxToKeep)
 	{
-		//Log("Start Num Of: %d\n",m_mapHandleResources.size());
-		//Check if there are too many resources.
 		if((int)m_mapResources.size() <= alMaxToKeep) return;
 
-		//Add resources to a vector
+		//Sorted according to num of users and then time.
 		std::vector<iResourceBase*> vResources;
-		vResources.reserve(m_mapResources.size());
-		
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(;it != m_mapResources.end();++it)
-		{
-			vResources.push_back(it->second);
-		}
+		ohpl_resmap_eviction_order(m_mapResources.raw(), ResourceUseKey, NULL, CollectResources, &vResources);
 
-		//Sort the sounds according to num of users and then time.
-		std::sort(vResources.begin(), vResources.end(), cSortResources());
-		
-		//Log("-------------Num: %d-----------------\n",vResources.size());
 		for(size_t i=alMaxToKeep; i<vResources.size(); ++i)
 		{
 			iResourceBase *pRes = vResources[i];
-			//Log("%s count:%d time:%d\n",pRes->GetName().c_str(), 
-			//							pRes->GetUserCount(), 
-			//							pRes->GetTime());
 
 			if(pRes->HasUsers()==false)
 			{
@@ -137,13 +107,10 @@ namespace hpl {
 				hplDelete(pRes);
 			}
 		}
-		//Log("--------------------------------------\n");
-		//Log("End Num Of: %d\n",m_mapHandleResources.size());
-
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	void iResourceManager::DestroyAll()
 	{
 		tResourceBaseMapIt it = m_mapResources.begin();
@@ -223,7 +190,7 @@ namespace hpl {
 		if(abAddToSet)
 		{
 			int lHash = cString::GetHashW(apResource->GetFullPath());
-			m_mapResources.insert(tResourceBaseMap::value_type(lHash, apResource));
+			m_mapResources.insert(lHash, apResource);
 		}
 
 		//Log("Adding %d, '%s' hash: %u\n",apResource,cString::To8Char(apResource->GetFullPath()).c_str(), lHash);
@@ -246,27 +213,7 @@ namespace hpl {
 
 		unsigned int lHash = cString::GetHashW(apResource->GetFullPath());
 
-		tResourceBaseMapIt it = m_mapResources.find(lHash);
-		if(it == m_mapResources.end())
-		{
-			//Log("%d was not removed! '%s' Hash: %u\n", apResource, cString::To8Char(apResource->GetFullPath()).c_str(),lHash);
-
-			//Log("...not found!\n");
-			return;
-		}
-
-		size_t lCount = m_mapResources.count(lHash);
-		for(size_t i=0; i<lCount; ++i, ++it)
-		{
-			iResourceBase *pResource = it->second;
-
-			if(pResource == apResource)
-			{
-				//Log("...done!\n");
-				m_mapResources.erase(it);
-				return;
-			}
-		}
+		m_mapResources.erase(lHash, apResource);
  	}
 
 	//-----------------------------------------------------------------------
