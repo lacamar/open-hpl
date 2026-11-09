@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.81
+Version:        1.3.82
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Tue Nov 10 2026 lacamar <lchlnm@pm.me> - 1.3.82-1
+- Fix possible crash after map transfer
+- Harden map, cache and XML loading against corrupt data
+- Remove panic paths from Rust code
+
 * Mon Nov 09 2026 lacamar <lchlnm@pm.me> - 1.3.81-1
 - Fix falling off the zeppelin at Theta
 
