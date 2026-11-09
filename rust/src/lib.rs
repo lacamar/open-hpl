@@ -12,3 +12,4 @@ pub mod preprocess;
 pub mod string;
 mod string_ffi;
 pub mod types;
+pub mod xml;

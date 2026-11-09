@@ -22,8 +22,7 @@
 
 #include "resources/XmlDocument.h"
 
-class TiXmlDocument;
-class TiXmlElement;
+struct OhplXmlDoc;
 
 namespace hpl {
 
@@ -38,12 +37,7 @@ namespace hpl {
 	private:
 		bool LoadDataFromFile(const tWString& asPath);
 		bool SaveDataToFile(const tWString& asPath);
-
-		void LoadFromTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apDestElem);
-		void SaveToTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apSrcElem);
-
-		bool CreateTinyXMLFromFile(TiXmlDocument* pDoc,const tWString& asPath);
-		bool SaveTinyXMLToFile(TiXmlDocument* pDoc,const tWString& asPath);
+		bool LoadDataFromRust(OhplXmlDoc* apDoc, bool abLoaded);
 	};
 
 };

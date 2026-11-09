@@ -21,7 +21,7 @@
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "resources/FileSearcher.h"
-#include "impl/tinyXML/tinyxml.h"
+#include "system/RustXml.h"
 
 #include "resources/BinaryBuffer.h"
 #include "system/Platform.h"
@@ -45,7 +45,7 @@ namespace hpl {
 		} else {
 			msFile = asFile;
 		}
-		mpXmlDoc = hplNew( TiXmlDocument,() );
+		mpXmlDoc = ohpl_xml_doc_new();
 		//mpFileSearcher = apFileSearcher;
 
 		mbUseCRC = false;
@@ -53,7 +53,7 @@ namespace hpl {
 
 	cConfigFile::~cConfigFile()
 	{
-		hplDelete(mpXmlDoc);
+		ohpl_xml_doc_free(mpXmlDoc);
 	}
 
 	//-----------------------------------------------------------------------
@@ -89,9 +89,9 @@ namespace hpl {
 
 			/////////////////////////////////
 			// Get XML
-			mpXmlDoc->Parse(buff.GetDataPointerAtCurrentPos());
+			bool bParsed = ohpl_xml_doc_parse(mpXmlDoc, buff.GetDataPointerAtCurrentPos());
 
-			if(mpXmlDoc->Error())
+			if(bParsed==false)
 			{
 				Error("Parsing binary config file '%s' failed!\n", cString::To8Char(msFile).c_str());
 				return false;
@@ -111,7 +111,7 @@ namespace hpl {
 				return false;
 			}
 		
-			bool bRet = mpXmlDoc->LoadFile(pFile);
+			bool bRet = OhplXmlLoadFile(mpXmlDoc, pFile);
 
 			if(pFile) fclose(pFile);
 			return bRet;
@@ -129,7 +129,7 @@ namespace hpl {
 			/////////////////////////////
 			// Get the data
 			tString sData;
-			sData << *mpXmlDoc;
+			ohpl_xml_doc_print_stream(mpXmlDoc, OhplXmlAssign, &sData);
 
 			/////////////////////////////
 			// Compress the data
@@ -168,7 +168,7 @@ namespace hpl {
 				return false;
 			}
 
-			bool bRet = mpXmlDoc->SaveFile(pFile);
+			bool bRet = OhplXmlSaveFile(mpXmlDoc, pFile);
 
 			if(pFile) fclose(pFile);
 
@@ -181,15 +181,7 @@ namespace hpl {
 
 	void cConfigFile::SetString(const tString& asLevel, const tString& asName, const tString& asVal)
 	{
-		TiXmlElement *pLevelElem = mpXmlDoc->FirstChildElement(asLevel.c_str());
-		
-		if(pLevelElem==NULL){
-			TiXmlElement *pNodeChild = hplNew( TiXmlElement, (asLevel.c_str()) );
-			pLevelElem = static_cast<TiXmlElement*>(mpXmlDoc->InsertEndChild(*pNodeChild));
-			hplDelete(pNodeChild);
-		}
-		
-		pLevelElem->SetAttribute(asName.c_str(),asVal.c_str());
+		ohpl_xml_config_set(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), asVal.c_str(), asVal.size());
 	}
 	//-----------------------------------------------------------------------
 
@@ -330,12 +322,8 @@ namespace hpl {
 
 	const char* cConfigFile::GetCharArray(tString asLevel, tString asName)
 	{
-		TiXmlElement *pLevelElem = mpXmlDoc->FirstChildElement(asLevel.c_str());
-		if(pLevelElem==NULL){
-			return NULL;
-		}
-		
-		return pLevelElem->Attribute(asName.c_str());
+		bool bFound = ohpl_xml_config_get(mpXmlDoc, asLevel.c_str(), asLevel.size(), asName.c_str(), asName.size(), OhplXmlAssign, &msTempValue);
+		return bFound ? msTempValue.c_str() : NULL;
 	}
 
     //-----------------------------------------------------------------------
