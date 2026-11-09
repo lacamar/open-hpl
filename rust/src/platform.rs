@@ -1,4 +1,14 @@
 //! XDG Base Directory / xdg-user-dirs resolution (byte paths, as `getenv` returns them).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use std::ffi::OsStr;
 use std::os::unix::ffi::{OsStrExt, OsStringExt};

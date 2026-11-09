@@ -4,6 +4,16 @@
 //! a user-provided copy constructor, so the C++ ABI would pass it by hidden reference anyway.
 //! Unless noted, every pointer is non-null, valid and aligned for the duration of the call, and
 //! output pointers do not alias inputs.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use std::slice;
 

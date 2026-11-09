@@ -1,5 +1,15 @@
 //! Literal port of tinyXML 2.5's parser, quirks included. Positions are byte offsets into the
 //! NUL-terminated input; `None` is tinyXML's null pointer and reads past the end see NUL.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::dom::*;
 

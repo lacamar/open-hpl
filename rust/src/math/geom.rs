@@ -1,4 +1,14 @@
 //! Intersections, planes, clip rects and 3D vector helpers.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::libm::{acos, atan, atan2, cos, sin, tan};
 use super::matrix::{matrix_inverse, matrix_mul_divide_w, matrix_mul_vec, rotate_y, transpose};

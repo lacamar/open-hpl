@@ -1,4 +1,14 @@
 //! Pure parts of `hpl::cString`. Narrow strings are `u8` units, wide strings `u32` (Linux `wchar_t`).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use std::ffi::{c_char, c_int, c_long, c_ulong};
 

@@ -1,4 +1,14 @@
 //! The MapData walk of `cWorldLoaderHplMap`.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::{
     Builder, Decal, Entity, FLAG_FAST_STATIC_LOAD, FLAG_NO_ENTITIES, FLAG_NO_GAME_ENTITIES,

@@ -1,4 +1,14 @@
 //! FSB5 container parsing and the pure sample encoders (WAV, Ogg muxing, IMA ADPCM).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use std::ops::Range;
 

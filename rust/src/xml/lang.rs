@@ -1,5 +1,15 @@
 //! Language-file reader: walks a parsed `.lang` document and reports resource directories,
 //! categories and decoded entries in document order. Name-keyed merging stays with the caller.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::dom::*;
 use crate::string::{to_bool, token_to_int};

@@ -1,5 +1,15 @@
 //! tinyXML-shaped DOM: documents hold elements, text, comments, declarations and unknown nodes in
 //! document order, and elements keep attributes in insertion order.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 pub type NodeId = u32;
 pub const DOC: NodeId = 0;

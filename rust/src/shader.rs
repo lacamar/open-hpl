@@ -1,6 +1,16 @@
 //! Pure parts of `hpl::cGpuShaderManager`: HPSL file aliases, source patches and sampler bindings.
 //! The patch passes mirror the `std::regex` ECMAScript patterns of the C++ with hand-written
 //! matchers (no regex crate); every pattern is deterministic, so no backtracking is needed.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use crate::string::{replace_string_to, set_file_ext, split, token_to_int};
 

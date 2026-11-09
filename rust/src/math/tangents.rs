@@ -1,4 +1,14 @@
 //! Per-vertex tangent generation.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::{Vector3f, cross3, div3, dot3, fma, normalize3, sub3, v3};
 

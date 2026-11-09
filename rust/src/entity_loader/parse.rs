@@ -1,5 +1,15 @@
 //! `.ent` object parse, driving a [`Builder`]. Port of `cEntityLoader_Object::Load`; behaviour
 //! and quirks follow the C++ (including the min-limit speed fix-up that writes the max limit).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::builder::{
     AnimEventType, BodyProps, Builder, Flags, Handle, JointKind, JointProps, Params, WorldEntity,

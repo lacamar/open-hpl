@@ -1,5 +1,15 @@
 //! C ABI for `resources.rs`, mirrored in `HPL2/core/include/resources/RustResources.h`.
 //! Handles are owned by the C++ object that created them; resource and loader pointers are opaque.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use crate::resources::{
     ExtList, FileSearcher, LoaderTable, MapEntry, ResMap, ResMeta, eviction_order,

@@ -1,4 +1,14 @@
 //! Growable little-endian byte buffer with zlib and CRC sections (`hpl::cBinaryBuffer`).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use crate::crc::Crc;
 use std::ffi::{CStr, c_char, c_int, c_uint, c_ulong, c_void};

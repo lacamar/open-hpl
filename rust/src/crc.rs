@@ -1,4 +1,14 @@
 //! Table-driven MSB-first CRC-32 with a caller-chosen polynomial (`hpl::cCRC`).
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 pub struct Crc {
     table: [u32; 256],

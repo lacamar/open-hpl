@@ -1,5 +1,15 @@
 //! `cWorldLoaderHpm`'s parse half: reads the `.hpm` file and its per-type sidecars and drives a
 //! [`Builder`]. Every engine object, log line and file read stays behind the builder.
+#![allow(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unreachable,
+    clippy::integer_division_remainder_used,
+    clippy::string_slice,
+    reason = "panic audit pending (open-hpl-smj.23)"
+)]
 
 use super::abi::{self, Cstr};
 use super::el::El;
