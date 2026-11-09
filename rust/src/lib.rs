@@ -5,6 +5,7 @@ pub mod crc;
 mod ffi;
 pub mod fsb5;
 mod fsb5_ffi;
+pub mod hplmap;
 pub mod hpsl;
 pub mod math;
 pub mod platform;

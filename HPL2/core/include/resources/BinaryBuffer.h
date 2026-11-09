@@ -119,6 +119,7 @@ namespace hpl {
 		size_t GetSize(){ return ohpl_bb_size(mpImpl); }
 		size_t GetReservedSize(){ return ohpl_bb_reserved(mpImpl); }
 
+		OhplBinaryBuffer* GetImpl(){ return mpImpl; }
 		char* GetDataPointer(){ return (char*)ohpl_bb_data(mpImpl); }
 		char* GetDataPointerAtPos(size_t alPos){ return (char*)ohpl_bb_data(mpImpl) + alPos; }
 		char* GetDataPointerAtCurrentPos(){ return (char*)ohpl_bb_data(mpImpl) + ohpl_bb_pos(mpImpl); }
