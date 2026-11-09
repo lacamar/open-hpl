@@ -5,23 +5,11 @@
 #include "resources/WorldLoader.h"
 
 #include "resources/ResourcesTypes.h"
-#include "resources/EngineFileLoading.h"
-#include "scene/SceneTypes.h"
-#include "graphics/GraphicsTypes.h"
-#include "physics/PhysicsTypes.h"
-
-#include <map>
-#include <tuple>
 
 namespace hpl {
 
-	class iEntity3D;
 	class cXmlElement;
-	class iXmlDocument;
-	class iPhysicsWorld;
-	class cMeshEntity;
-	class cParticleSystem;
-	class iCollideShape;
+	class cHpmWorldBuilder;
 
 	class cWorldLoaderHpm : public iWorldLoader
 	{
@@ -36,74 +24,7 @@ namespace hpl {
 		static void (*mpObjectDoneCallback)(cWorld* apWorld);
 
 	private:
-		iXmlDocument* OpenSidecar(const tWString& asBaseFile, const tWString& asSuffix, bool abWarnIfMissing);
-		cXmlElement* GetTrackRoot(iXmlDocument* apDoc, const tString& asExpectedRootValue);
-		void LoadLocalFileIndex(cXmlElement* apSection, const tString& asIndexElement, tStringVec& avIndexOut);
-
-		void LoadGlobalSettings(const tWString& asBaseFile);
-
-		void LoadTrack(const tWString& asBaseFile, const tString& asTrack, const tString& asFileIndexElement);
-		tString CreateTrackObject(const tString& asTrack, cXmlElement* apElement, const tStringVec& avFileIndex);
-		void ConnectLightBillboards();
-		void ConnectLightMasks();
-		void CountUnsupportedFlatTracks(const tWString& asBaseFile);
-		void LoadDetailMeshesTrack(const tWString& asBaseFile);
-		void BuildLoadReport(const tString& asMap, int alTotalTimeMs);
-		void LoadExposureAreaTrack(const tWString& asBaseFile);
-		void LoadTerrain(const tWString& asBaseFile);
-		void CreateTerrain(const tWString& asBaseFile, cXmlElement* apTerrain);
-		void CreateTerrainDecals(cXmlElement* apTerrain, const std::vector<cSubMeshEntity*>& avPatches, float afMaxHeight);
-		void CreateTerrainUndergrowth(cXmlElement* apTerrain, const std::vector<float>& avHeight, int alSize, float afUnit);
-		std::vector<cMaterial*> CreateTerrainBlendMaterials(const tWString& asBaseFile, cXmlElement* apTerrain, float afSize);
-
-		tString CreateStaticObject(cXmlElement* apElement, const tStringVec& avFileIndex);
-		tString CreatePlanePrimitive(cXmlElement* apElement);
-		tString CreateMapEntity(cXmlElement* apElement, const tStringVec& avFileIndex);
-		tString CreateMapArea(cXmlElement* apElement);
-		tString CreateDecal(cXmlElement* apElement, const tStringVec& avFileIndex);
-
-		void CreateStaticBodyForMesh(cMeshEntity* apMeshEntity, const cMatrixf& a_mtxTransform, const cVector3f& avScale);
-		bool CreateStaticBodiesFromEnt(const tString& asFile, const cMatrixf& a_mtxTransform, const cVector3f& avScale, const tString& asName);
-
-		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
-
-		cWorld* mpCurrentWorld;
-		iPhysicsWorld* mpCurrentPhysicsWorld;
-		struct cStaticBatch
-		{
-			std::vector<float> mvPos;
-			std::vector<unsigned int> mvIdx;
-		};
-		typedef std::tuple<tString, bool, int, int, int> tStaticBatchKey;
-		void FlushStaticBatch(const tStaticBatchKey& aKey, cStaticBatch& aBatch);
-		std::map<tStaticBatchKey, cStaticBatch> m_mapStaticBatches;
-		int mlCombinedObjects;
-		void CombineStaticMeshes();
-		std::vector<cMeshEntity*> mvCombineCandidates;
-		int mlCombinedMeshes;
-
-		struct cStaticShapeBatch
-		{
-			tString msName;
-			std::vector<iCollideShape*> mvShapes;
-		};
-		typedef std::tuple<tString, bool, bool, bool, int, int, int> tStaticShapeBatchKey;
-		std::map<tStaticShapeBatchKey, cStaticShapeBatch> m_mapStaticShapeBatches;
-
-		struct cHpmTrackStats
-		{
-			cHpmTrackStats() : mlInXml(0), mlCreated(0), mlTimeMs(0), mbFileMissing(false) {}
-			int mlInXml;
-			int mlCreated;
-			int mlTimeMs;
-			bool mbFileMissing;
-			std::map<tString, int> mmapSkipped;
-		};
-		std::map<tString, cHpmTrackStats> mmapTrackStats;
-		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
-		std::vector<std::pair<cParticleSystem*, tString> > mvLightParticleConnections;
-		std::map<unsigned int, std::pair<cVector3f, cVector3f> > mmapLightMasks;
-		bool mbTerrainActive;
+		void BuildLoadReport(const tString& asMap, int alTotalTimeMs, cHpmWorldBuilder& aBuilder);
 
 		static tString msLastLoadReportJson;
 		static cXmlElement* mpCurrentElement;
