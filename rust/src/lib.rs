@@ -3,6 +3,7 @@
 pub mod crc;
 mod ffi;
 pub mod hpsl;
+pub mod preprocess;
 pub mod string;
 mod string_ffi;
 pub mod types;
