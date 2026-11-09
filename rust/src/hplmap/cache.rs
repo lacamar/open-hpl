@@ -1,14 +1,4 @@
 //! The `.map_cache` binary: header, static bodies, shape bodies and combined meshes.
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::parse::{message, note};
 use super::{
@@ -66,8 +56,8 @@ impl Shared {
     fn floats(&self, out: &mut [f32]) {
         let mut raw = vec![0u8; out.len() * 4];
         self.with(|b| b.get_array(&mut raw, 4));
-        for (f, c) in out.iter_mut().zip(raw.chunks_exact(4)) {
-            *f = f32::from_ne_bytes([c[0], c[1], c[2], c[3]]);
+        for (f, c) in out.iter_mut().zip(raw.as_chunks::<4>().0) {
+            *f = f32::from_ne_bytes(*c);
         }
     }
 
@@ -138,10 +128,8 @@ fn decode(shared: &Shared, array: &mut CacheArrayBuf) {
         _ => {
             let mut raw = vec![0; count * 2];
             shared.with(|b| b.get_array(&mut raw, 2));
-            raw.chunks_exact(2).for_each(|c| {
-                data.extend_from_slice(
-                    &short_neg_pos(u16::from_ne_bytes([c[0], c[1]])).to_ne_bytes(),
-                );
+            raw.as_chunks::<2>().0.iter().for_each(|&c| {
+                data.extend_from_slice(&short_neg_pos(u16::from_ne_bytes(c)).to_ne_bytes());
             });
         }
     }
@@ -305,7 +293,7 @@ fn read_mesh<N: Copy>(
         ));
     }
 
-    if !(0..=remaining(shared) / 20).contains(&i64::from(type_num)) {
+    if type_num < 0 || i64::from(type_num) * 20 > remaining(shared) {
         builder.error(&message(
             format!("Vertex type count {type_num} is out of range in map cache!\n").into_bytes(),
         ));
@@ -360,7 +348,7 @@ fn read_mesh<N: Copy>(
     if options.log_cache {
         builder.log(&message(format!("Indices: {index_num}\n").into_bytes()));
     }
-    if !(0..=remaining(shared) / 4).contains(&i64::from(index_num)) {
+    if index_num < 0 || i64::from(index_num) * 4 > remaining(shared) {
         builder.error(&message(
             format!("Index count {index_num} is out of range in map cache!\n").into_bytes(),
         ));
@@ -369,8 +357,10 @@ fn read_mesh<N: Copy>(
     let mut raw = vec![0u8; index_num as usize * 4];
     shared.with(|b| b.get_array(&mut raw, 4));
     let indices: Vec<u32> = raw
-        .chunks_exact(4)
-        .map(|c| u32::from_ne_bytes([c[0], c[1], c[2], c[3]]))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|&c| u32::from_ne_bytes(c))
         .collect();
 
     let views: Vec<CacheArray> = arrays
@@ -534,8 +524,8 @@ fn write_compressed(shared: &Shared, data: &[u8], count: usize, compression: i32
     let Some(data) = data.get(..count * 4) else {
         return;
     };
-    for c in data.chunks_exact(4) {
-        let x = f32::from_ne_bytes([c[0], c[1], c[2], c[3]]);
+    for &c in data.as_chunks::<4>().0 {
+        let x = f32::from_ne_bytes(c);
         let byte = if compression == 1 {
             fast_positive(x * 255.0) as u8
         } else {

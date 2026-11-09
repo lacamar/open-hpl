@@ -1,15 +1,5 @@
 //! `.ent` object parse, driving a [`Builder`]. Port of `cEntityLoader_Object::Load`; behaviour
 //! and quirks follow the C++ (including the min-limit speed fix-up that writes the max limit).
-#![allow(
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unreachable,
-    clippy::integer_division_remainder_used,
-    clippy::string_slice,
-    reason = "panic audit pending (open-hpl-smj.23)"
-)]
 
 use super::builder::{
     AnimEventType, BodyProps, Builder, Flags, Handle, JointKind, JointProps, Params, WorldEntity,
@@ -146,9 +136,9 @@ impl MultiMap {
         self.0.insert(at, (key, h));
     }
 
-    fn find(&self, key: i32) -> Option<usize> {
+    fn find(&self, key: i32) -> Option<(usize, Handle)> {
         let at = self.0.partition_point(|&(k, _)| k < key);
-        (self.0.get(at)?.0 == key).then_some(at)
+        self.0.get(at).filter(|e| e.0 == key).map(|e| (at, e.1))
     }
 }
 
@@ -196,8 +186,7 @@ fn body_shape<B: Builder>(
     let mut found = Vec::new();
     for s in body.children() {
         let id = s.int(b"ID", 0);
-        if let Some(at) = shapes.find(id) {
-            let h = shapes.0[at].1;
+        if let Some((at, h)) = shapes.find(id) {
             found.push(h);
             if share {
                 if !used.contains(&h) {
@@ -322,8 +311,7 @@ impl<B: Builder> Parse<'_, B> {
 
             let mut found = false;
             let mut i = 0;
-            while i < list.len() {
-                let ent = list[i];
+            while let Some(&ent) = list.get(i) {
                 i += 1;
                 if self.b.get_unique_id(ent) != id {
                     continue;
@@ -430,11 +418,11 @@ impl<B: Builder> Parse<'_, B> {
         let child_id = e.int(b"ConnectedChildBodyID", 0);
 
         let parent = if parent_id > 0 {
-            bodies.find(parent_id).map(|at| bodies.0[at].1)
+            bodies.find(parent_id).map(|e| e.1)
         } else {
             None
         };
-        let Some(child) = bodies.find(child_id).map(|at| bodies.0[at].1) else {
+        let Some(child) = bodies.find(child_id).map(|e| e.1) else {
             self.b.error(&msg(&[
                 b"Could not find child body with ID ",
                 &num(child_id),
@@ -799,7 +787,7 @@ pub fn parse<B: Builder>(b: &mut B, doc: &Doc, root: NodeId, p: &Params) -> bool
         p,
         skeleton: false,
         anim_num: 0,
-        ent: Handle::new(1).expect("nonzero"),
+        ent: Handle::FIRST,
         node_animation: false,
     };
     parse.run(El { doc, id: root })
