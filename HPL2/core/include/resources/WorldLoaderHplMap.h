@@ -26,6 +26,7 @@
 #include "scene/SceneTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
+#include "resources/HplMapBuilder.h"
 
 namespace hpl {
 
@@ -37,6 +38,7 @@ namespace hpl {
 	class iPhysicsMaterial;
 	class cResourceVarsObject;
 	class iPhysicsBody;
+	class cBinaryBuffer;
 
 	//----------------------------------------
 
@@ -125,42 +127,45 @@ namespace hpl {
 		void LoadCacheFile(const tWString& asFile);
 		void SaveCacheFile(const tWString& asFile);
 
-		void LoadFileIndicies(cXmlElement* apXmlContents);
-			
-		void LoadStaticObjects(cXmlElement* apXmlContents);		
+		void FillBuilder(OhplMapBuilder *apBuilder);
+		void OnPhase(int alPhase, bool abBegin);
+
+		void StaticBegin();
+		void StaticCompile();
 		void BuildCombinedStaticMeshes(cRenderableContainer_BoxTree *apContainer);
-		void CreateStaticObjectEntity(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
-										cRenderableContainer_BoxTree *apContainer);
-		void CreatePrimitive(cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
-							cRenderableContainer_BoxTree *apContainer);
-		void CreateDecal(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+		void CreateStaticObjectEntity(	const tString& asName, const tString& asFileName, const cVector3f& avPosition,
+										const cVector3f& avRotation, const cVector3f& avScale, bool abCollides,
+										bool abCastsShadows, int alID,
+										tMeshEntityList& alstMeshEntities, cRenderableContainer_BoxTree *apContainer);
+		void CreatePlane(	const tString& asName, const tString& asMaterial, bool abCastsShadows, bool abCollides, int alID,
+							const cVector3f& avPosition, const cVector3f& avScale, const cVector3f& avRotation,
+							const cVector3f& avStartCorner, const cVector3f& avEndCorner, const cVector2f *apUV,
+							tMeshEntityList& alstMeshEntities, cRenderableContainer_BoxTree *apContainer);
+		void CreateDecal(	const tString& asName, const cColor& aDecalColor, int alID, const tString& asMaterial,
+							cXmlElement* apDecalMeshElem, tMeshEntityList& alstMeshEntities,
 							cRenderableContainer_BoxTree *apDecalContainer);
-		void CreateStaticObjectCombo(cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
-									cRenderableContainer_BoxTree *apDecalContainer);
+		void CreateStaticObjectCombo(	int alGroupID, const int *apObjIds, size_t alObjIdNum, tMeshEntityList& alstMeshEntities,
+										cRenderableContainer_BoxTree *apContainer);
 
 		void IterateLeafNodesAndBuildMeshes(iRenderableContainerNode *apNode);
 		void CombineAndCreateMeshesAndPhysics(tRenderableList *apObjectList);
 		void CombineObjectsAndCreateMeshEntity(tRenderableVec &avObjects, int alFirstIdx, int alLastIdx);
 		void CombineObjectsAndCreatePhysics(std::vector<cHplMapPhysicsObject> &avObjects, int alFirstIdx, int alLastIdx);
 
-		void LoadEntities(cXmlElement* apXmlContents);
-		void CreateLoadedEntity(cXmlElement* apElement, tEFL_LightBillboardConnectionList *apLightBillboardList);
+		void EntitiesBegin();
+		void EntitiesEnd();
 		void CreateSubMeshShapeBodies(cSubMeshEntity *apSubEnt, const cMatrixf &a_mtxTransform, const cVector3f& avScale);
 		void CreateShapeBody(cHplMapShapeBody* apShapeBody);
 
-		void LoadEntity(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, cXmlElement* apElement);
-		void LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, cXmlElement* apElement);
+		void LoadEntity(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, const tString& asFilename, cXmlElement* apUserVars);
+		void LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, const tString& asType, cXmlElement* apUserVars);
 
-		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
-		
 		int mlCombinedMeshNameCount;
 		int mlCombinedBodyNameCount;
 
 		bool mbLoadedCache;
 
-		tStringVec mvFileIndices_StaticObjects;
-		tStringVec mvFileIndices_Entities;
-		tStringVec mvFileIndices_Decals;
+		unsigned long mlPhaseStart[6];
 
 		int mlSortingTimeTotal;
 		int mlCombineMeshTimeTotal;
@@ -168,6 +173,11 @@ namespace hpl {
 
 		cWorld* mpCurrentWorld;
 		iPhysicsWorld *mpCurrentPhysicsWorld;
+		cBinaryBuffer *mpCacheBuffer;
+
+		cRenderableContainer_BoxTree *mpStaticContainer;
+		tMeshEntityList mlstStaticTempEntities;
+		tEFL_LightBillboardConnectionList mlstLightBillboardConnections;
 
 		std::list<iPhysicsBody*> mlstStaticMeshBodies;
 		tHplMapShapeBodyList mlstStaticShapeBodies;
@@ -176,11 +186,8 @@ namespace hpl {
 		int mlStaticMeshBodiesCreated;
 		int mlStaticMeshEntitiesCreated;
 
-		float *mpShortNegPosFloatTable;
-		float *mpByteNegPosFloatTable;
-		float *mpBytePosFloatTable;
-
 		tWString msCacheFileExt;
+		tWString msCurrentFile;
 
 		tWorldLoadFlag mlCurrentFlags;
 		tHplMapStaticUserDataList mlstTempStaticUserData;
