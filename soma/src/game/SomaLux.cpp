@@ -936,7 +936,8 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 			{
 				// iCharacterBody::CopyFromBodySettings after PlacePlayerAtStartPos: the transferred player keeps crouch and camera
-				pPlayer->GetCharacterBody()->SetActiveSize(lActiveSize);
+				if (iCharacterBody *pNewBody = pPlayer->GetCharacterBody())
+					pNewBody->SetActiveSize(lActiveSize);
 				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
 									  SomaStartYaw(pNew->GetMatrix()) + fYawRel, lActiveSize == 1);
 				if (pPlayer->GetCamera())

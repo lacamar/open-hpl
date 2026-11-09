@@ -521,7 +521,7 @@ namespace hpl {
 
 	void iCharacterBody::SetActiveSize(int alNum)
 	{
-		if(alNum == mlCurrentShapeIdx) return;
+		if(alNum == mlCurrentShapeIdx || alNum < 0 || alNum >= (int)mvShapes.size()) return;
 
 		cVector3f vFeetPosition = GetFeetPosition();
 		mpCurrentBody->SetActive(false);
