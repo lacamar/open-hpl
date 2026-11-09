@@ -1,5 +1,6 @@
 //! Rust half of open-hpl, linked into the HPL2 static library through a C ABI.
 
+pub mod binary_buffer;
 pub mod crc;
 mod ffi;
 pub mod hpsl;
