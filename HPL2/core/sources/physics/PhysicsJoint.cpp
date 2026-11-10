@@ -38,6 +38,7 @@
 #include "math/Math.h"
 
 #include "engine/ScriptFuncs.h"
+#include "physics/RustPhysics.h"
 
 namespace hpl {
 
@@ -235,118 +236,21 @@ namespace hpl {
 
 	void iPhysicsJoint::OnMaxLimit()
 	{
-		if(mbHasCollided==false && mpCallback)
-		{
-			mpCallback->OnMaxLimit(this);
-		}
-		
-		//////////////////////////////////////////////////
-		// Check if any of the controllers has a OnMax end.
-		if(mbHasCollided==false)
-		{
-			//Log("OnMax!\n");
-			tPhysicsControllerMapIt it = m_mapControllers.begin();
-			for(; it != m_mapControllers.end(); ++it)
-			{
-				iPhysicsController *pCtrl = it->second;
-
-				//Log("Ctrl %s: %d\n",pCtrl->GetName().c_str(),(int)pCtrl->GetEndType());
-				
-				if(pCtrl->IsActive() && pCtrl->GetEndType() == ePhysicsControllerEnd_OnMax)
-				{
-					pCtrl->SetActive(false);
-					iPhysicsController *pNextCtrl = GetController(pCtrl->GetNextController());
-					if(pNextCtrl) pNextCtrl->SetActive(true);
-					else Warning("Controller '%s' does not exist in joint '%s'\n",pCtrl->GetNextController().c_str(),msName.c_str());
-				}
-			}
-		}
-
-		LimitEffect(&mMaxLimit);
+		OhplLimitEffect effect = { OhplS(mMaxLimit.msSound), mMaxLimit.mfMinSpeed, mMaxLimit.mfMaxSpeed };
+		ohpl_phys_joint_on_limit(OhplPhysHost(), reinterpret_cast<size_t>(this), true, &effect);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsJoint::OnMinLimit()
 	{
-		if(mbHasCollided==false && mpCallback)
-		{
-			mpCallback->OnMinLimit(this);
-
-			
-		}
-		//////////////////////////////////////////////////
-		// Check if any of the controllers has a OnMin end.
-		if(mbHasCollided==false)
-		{
-			//Log("OnMin!\n");
-
-			tPhysicsControllerMapIt it = m_mapControllers.begin();
-			for(; it != m_mapControllers.end(); ++it)
-			{
-				iPhysicsController *pCtrl = it->second;
-
-				if(pCtrl->IsActive() && pCtrl->GetEndType() == ePhysicsControllerEnd_OnMin)
-				{
-					pCtrl->SetActive(false);
-					iPhysicsController *pNextCtrl = GetController(pCtrl->GetNextController());
-					if(pNextCtrl) pNextCtrl->SetActive(true);
-					else Warning("Controller '%s' does not exist in joint '%s'\n",pCtrl->GetNextController().c_str(),msName.c_str());
-				}
-			}
-		}
-
-		LimitEffect(&mMinLimit);
+		OhplLimitEffect effect = { OhplS(mMinLimit.msSound), mMinLimit.mfMinSpeed, mMinLimit.mfMaxSpeed };
+		ohpl_phys_joint_on_limit(OhplPhysHost(), reinterpret_cast<size_t>(this), false, &effect);
 	}
 	
 	//-----------------------------------------------------------------------
 
-	void iPhysicsJoint::CalcSoundFreq(float afSpeed,float *apFreq, float *apVol)
-	{
-		float fAbsSpeed = std::abs(afSpeed);
-		float fFreq = 1;
-		float fVolume = 1;
 
-		//Higher than middle
-		if(fAbsSpeed >= mfMiddleMoveSpeed)
-		{
-			if(fAbsSpeed >= mfMaxMoveFreqSpeed)
-			{
-				fFreq = mfMaxMoveFreq;
-				fVolume = mfMaxMoveVolume;
-			}
-			else
-			{
-				//Calculate how close the speed is to max.
-				float fT = (fAbsSpeed-mfMiddleMoveSpeed) / 
-					(mfMaxMoveFreqSpeed-mfMiddleMoveSpeed);
-
-				fFreq = (1 - fT) + fT * mfMaxMoveFreq;
-				fVolume = mfMiddleMoveVolume*(1 - fT) + fT * mfMaxMoveVolume;
-			}
-		}
-		//Below middle
-		else
-		{
-			if(fAbsSpeed <= mfMinMoveFreqSpeed)
-			{
-				fFreq = mfMinMoveFreq;
-				fVolume = mfMinMoveVolume;
-			}
-			else
-			{
-				//Calculate how close the speed is to max.
-				float fT = (mfMiddleMoveSpeed - fAbsSpeed) / 
-					(mfMiddleMoveSpeed - mfMinMoveFreqSpeed);
-
-				fFreq = (1 - fT) + fT * mfMinMoveFreq;
-				fVolume = mfMiddleMoveVolume*(1 - fT) + fT * mfMinMoveVolume;
-			}
-		}
-
-		*apFreq = fFreq;
-		*apVol = fVolume;
-	}
 
 	//-----------------------------------------------------------------------
 	
@@ -355,152 +259,29 @@ namespace hpl {
 		if(mbPositionResetPending) ResetPosition();
 		mbPositionResetPending = false;
 
-		bool bFrozen = true;
-        if(mpParentBody && mpParentBody->GetEnabled()) 
-			bFrozen = false;
-		else if(mpChildBody->GetEnabled()) 
-			bFrozen = false;
-		
-		if(bFrozen && mpSound==NULL) return false;
+		OhplMoveParams params = {
+			mfMinMoveSpeed, mfMinMoveFreq, mfMinMoveFreqSpeed, mfMinMoveVolume,
+			mfMaxMoveFreq, mfMaxMoveFreqSpeed, mfMaxMoveVolume, mfMiddleMoveSpeed, mfMiddleMoveVolume,
+			(int32_t)mMoveSpeedType, OhplS(msMoveSound)
+		};
+		OhplJointState state = {
+			reinterpret_cast<size_t>(mpParentBody), reinterpret_cast<size_t>(mpChildBody), reinterpret_cast<size_t>(mpWorld),
+			mvPivotPoint, mvPinDir, mvLocalPivot, mvLocalPinDir,
+			m_mtxPrevChild, m_mtxPrevParent,
+			reinterpret_cast<size_t>(mpSound), mlSoundID, mlSpeedCount
+		};
 
-		//Get the pivot point, if there is no parent, it is stuck.
-		if(mpParentBody)
-		{
-			mvPivotPoint = cMath::MatrixMul(mpParentBody->GetLocalMatrix(),mvLocalPivot);
-			mvPinDir = cMath::MatrixMul3x3(mpParentBody->GetLocalMatrix(),mvLocalPinDir);
-		}
-				
-		cWorld *pWorld = mpWorld->GetWorld();
-		if(pWorld == NULL) return true;
-		if(msMoveSound == "") return true;
+		bool bUpdated = ohpl_phys_joint_update(OhplPhysHost(), &params, &state);
 
-		if(mpWorld->GetWorld()->GetSound()->GetSoundHandler()->GetSilent()) return true;
+		mvPivotPoint = state.pivot;
+		mvPinDir = state.pinDir;
+		m_mtxPrevChild = state.prevChild;
+		m_mtxPrevParent = state.prevParent;
+		mpSound = reinterpret_cast<cSoundEntity*>(state.sound);
+		mlSoundID = state.soundId;
+		mlSpeedCount = state.speedCount;
 
-		//////////////////////////////////////
-		//Get the speed
-		cVector3f vVel(0,0,0);
-		//Linear
-		if(mMoveSpeedType== ePhysicsJointSpeed_Linear)
-		{
-			if(mpParentBody)
-			{
-				vVel = mpChildBody->GetLinearVelocity() - mpParentBody->GetLinearVelocity();
-			}
-			else
-			{
-				vVel = mpChildBody->GetLinearVelocity();
-			}
-		}
-		//Angular
-		else
-		{
-			if(mpParentBody)
-			{
-				vVel = mpChildBody->GetAngularVelocity() - mpParentBody->GetAngularVelocity();
-			}
-			else
-			{
-				vVel = mpChildBody->GetAngularVelocity();	
-			}
-		}
-
-		//Check so the body is not still
-		if(mpParentBody)
-		{
-			if(	m_mtxPrevChild == mpChildBody->GetLocalMatrix() &&
-				m_mtxPrevParent == mpParentBody->GetLocalMatrix())
-			{
-				vVel =0;
-			}
-			m_mtxPrevChild = mpChildBody->GetLocalMatrix();
-			m_mtxPrevParent = mpParentBody->GetLocalMatrix();
-		}
-		else
-		{
-			if(m_mtxPrevChild == mpChildBody->GetLocalMatrix())
-			{
-				vVel =0;
-			}
-			m_mtxPrevChild = mpChildBody->GetLocalMatrix();
-		}
-
-		float fSpeed = vVel.Length();
-
-		if(pWorld->SoundEntityExists(mpSound, mlSoundID)==false)
-		{
-			mpSound = NULL;
-		}
-		
-		//////////////////////////////////////
-		// Create and update sound if speed is high enough
-		// Joint has sound
-		if(mpSound)
-		{
-			//Log("Updating %s\n",mpSound->GetName().c_str());
-			float fMin = cMath::Max(mfMinMoveSpeed-0.2f, 0.1f);
-			if(fSpeed <= fMin)
-			{
-				mpSound->FadeOut(4.3f);
-				mpSound	= NULL;
-			}
-			else 
-			{
-				//Log("Getting entry!\n");
-				cSoundEntry *pEntry = mpSound->GetSoundEntry(eSoundEntityType_Main, true);
-				if(pEntry)
-				{
-					//Log("Update entry!\n");
-					float fFreq, fVolume;
-					CalcSoundFreq(fSpeed, &fFreq,&fVolume);
-					
-					pEntry->SetSpeedMul(fFreq);
-					pEntry->SetVolumeMul(fVolume);
-
-					//Log("Speed: %f Vol: %f Freq: %f\n",fSpeed,fVolume,fFreq);
-				}
-				else
-				{
-					//Log("Null entry!\n");
-				}
-
-
-				mpSound->SetPosition(mvPivotPoint);
-			}
-		}
-		//////////////////////
-		// Joint has no sound
-		else 
-		{
-			/////////////////////////////
-			// Speed is over limit
-			if(fSpeed > mfMinMoveSpeed)
-			{
-				if(mlSpeedCount >= 3)
-				{
-					mlSpeedCount =0;
-					mpSound = pWorld->CreateSoundEntity("MoveSound",msMoveSound, true);
-					if(mpSound)	{
-						mlSoundID = mpSound->GetCreationID();
-						mpSound->SetIsSaved(false);
-						mpSound->FadeIn(3.3f);
-						mpSound->SetPosition(mvPivotPoint);
-					}
-					//Log("Starting!\n");
-				}
-				else
-				{
-					mlSpeedCount++;
-				}
-			}
-			/////////////////////////////
-			// Speed is under limit
-			else
-			{
-				mlSpeedCount =0;
-			}
-		}
-		
-		return true;
+		return bUpdated;
 	}
 
 	//-----------------------------------------------------------------------
@@ -516,39 +297,7 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 	
-	void iPhysicsJoint::LimitEffect(cJointLimitEffect *pEffect)
-	{
-		cWorld *pWorld = mpWorld->GetWorld();
 
-		if(pWorld && pEffect->msSound!="")
-		{
-			cVector3f vVel(0,0,0);
-			if(mpParentBody)
-				vVel = mpChildBody->GetLinearVelocity() - mpParentBody->GetLinearVelocity();
-			else
-				vVel = mpChildBody->GetLinearVelocity();
-
-			float fSpeed = vVel.Length();
-			if(fSpeed > pEffect->mfMaxSpeed) fSpeed = pEffect->mfMaxSpeed;
-
-			//Log("Speed: %f\n",fSpeed);
-
-			if(fSpeed >= pEffect->mfMinSpeed && mbHasCollided==false && pEffect->msSound != "")
-			{
-				float fVolume = (fSpeed - pEffect->mfMinSpeed) / (pEffect->mfMaxSpeed - pEffect->mfMinSpeed);
-                
-				cSoundEntity *pSound = pWorld->CreateSoundEntity("LimitSound", pEffect->msSound,true);
-				if(pSound)
-				{
-					pSound->SetIsSaved(false);
-					pSound->SetVolume(fVolume);
-					pSound->SetPosition(mpChildBody->GetLocalPosition());
-				}
-			}
-		}
-
-		mbHasCollided = true;
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -569,51 +318,20 @@ namespace hpl {
 
 	bool iPhysicsJoint::CheckBreakage()
 	{
-		if(mbBreakable==false) return false;
-
-		float fForcesSize = GetForceSize();
-		
-		if(fForcesSize >= mfBreakForce || mbBroken)
-		{
-			if(msBreakSound != "")
-			{
-				cWorld *pWorld = mpWorld->GetWorld();
-				cSoundEntity *pSound = pWorld->CreateSoundEntity("BreakSound", msBreakSound,true);
-				if(pSound)
-				{
-					pSound->SetIsSaved(false);
-					pSound->SetPosition(mvPivotPoint);
-				}
-			}
-			return true;
-		}
-
-		return false;
+		return ohpl_phys_joint_check_breakage(OhplPhysHost(), reinterpret_cast<size_t>(this), mbBreakable, mbBroken, mfBreakForce, OhplS(msBreakSound));
 	}
 	
 	//-----------------------------------------------------------------------
 
-	void iPhysicsJoint::CheckLimitAutoSleep(iPhysicsJoint *apJoint, 
+	void iPhysicsJoint::CheckLimitAutoSleep(iPhysicsJoint *apJoint,
 											const float afMin, const float afMax,
 											const float afDist)
 	{
-		if(apJoint->mbLimitAutoSleep)
+		if(ohpl_phys_joint_limit_auto_sleep(apJoint->mbLimitAutoSleep, apJoint->mfLimitAutoSleepDist,
+											apJoint->mlLimitAutoSleepNumSteps, &apJoint->mlLimitStepCount,
+											afMin, afMax, afDist))
 		{
-			float fMinDiff = std::abs(afMin - afDist);
-			float fMaxDiff = std::abs(afMax - afDist);
-
-			if(	fMaxDiff < apJoint->mfLimitAutoSleepDist || 
-				fMinDiff < apJoint->mfLimitAutoSleepDist)
-			{
-				if(apJoint->mlLimitStepCount >= apJoint->mlLimitAutoSleepNumSteps)
-					apJoint->mpChildBody->DisableAfterSimulation();
-				else
-					apJoint->mlLimitStepCount++;
-			}
-			else
-			{
-				apJoint->mlLimitStepCount =0;
-			}
+			apJoint->mpChildBody->DisableAfterSimulation();
 		}
 	}
 

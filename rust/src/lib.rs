@@ -31,6 +31,7 @@ mod input_ffi;
 mod input_tables;
 pub mod math;
 pub mod meshload;
+pub mod physics;
 pub mod platform;
 mod platform_ffi;
 pub mod preprocess;

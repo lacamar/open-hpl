@@ -26,6 +26,7 @@
 #include "system/String.h"
 
 #include "haptic/Haptic.h"
+#include "physics/RustPhysics.h"
 #include "haptic/HapticSurface.h"
 #include "haptic/LowLevelHaptic.h"
 
@@ -47,6 +48,7 @@ namespace hpl {
 		mfImpactDuration = 0.4f;
 
 		mbLog = false;
+		mpImpactCounts = ohpl_phys_impacts_new();
 	}
 
 	//-----------------------------------------------------------------------
@@ -57,6 +59,7 @@ namespace hpl {
 		Log("--------------------------------------------------------\n");
 
 		STLDeleteAll(mlstWorlds);
+		ohpl_phys_impacts_free(mpImpactCounts);
 		STLMapDeleteAll(m_mapSurfaceData);
 
 		Log("--------------------------------------------------------\n\n");
@@ -113,13 +116,17 @@ namespace hpl {
 
 	bool cPhysics::CanPlayImpact()
 	{
-		if((int)mlstImpactCounts.size() >= mlMaxImpacts) return false;
-		else return true;
+		return ohpl_phys_impacts_can_play(mpImpactCounts, mlMaxImpacts);
 	}
 
 	void cPhysics::AddImpact()
 	{
-		mlstImpactCounts.push_back(cPhysicsImpactCount());
+		ohpl_phys_impacts_add(mpImpactCounts);
+	}
+
+	int cPhysics::GetNumOfImpacts()
+	{
+		return (int)ohpl_phys_impacts_len(mpImpactCounts);
 	}
 
 	//-----------------------------------------------------------------------
@@ -145,161 +152,86 @@ namespace hpl {
 
 	bool cPhysics::LoadSurfaceData(const tString& asFile, cHaptic *apHaptic)
 	{
-		//////////////////////////////////
-		//Open document
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument, (asFile.c_str()) );
-		if(pXmlDoc->LoadFile()==false)
+		std::vector<char> vData;
+		bool bReadOk = false;
+		FILE *pFile = fopen(asFile.c_str(), "rb");
+		if(pFile == NULL)
 		{
 			Error("Couldn't load XML file '%s'!\n",asFile.c_str());
-			hplDelete(pXmlDoc);
 			return false;
 		}
-
-		/////////////////////////
-		//Get the root.
-		TiXmlElement* pRootElem = pXmlDoc->RootElement();
-
-		//////////////////////////
-		//Iterate children
-		TiXmlElement* pChildElem = pRootElem->FirstChildElement("Material");
-		for(; pChildElem != NULL; pChildElem = pChildElem->NextSiblingElement("Material"))
+		fseek(pFile, 0, SEEK_END);
+		long lLength = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		if(lLength <= 0)
 		{
-			tString sName = cString::ToString(pChildElem->Attribute("Name"),"");
-			if(sName=="") continue;
-
-			cSurfaceData *pData = CreateSurfaceData(sName);
-
-			//Get properties
-			pData->SetElasticity(cString::ToFloat(pChildElem->Attribute("Elasticity"),0.5f));
-			pData->SetKineticFriction(cString::ToFloat(pChildElem->Attribute("KineticFriction"),0.3f));
-			pData->SetStaticFriction(cString::ToFloat(pChildElem->Attribute("StaticFriction"),0.3f));
-
-			pData->SetPriority(cString::ToInt(pChildElem->Attribute("Priority"),0));
-			pData->SetUserVar(cString::ToString(pChildElem->Attribute("UserVar"),""));
-
-			pData->SetElasticityCombMode(GetCombMode(pChildElem->Attribute("ElasticityMode")));
-			pData->SetFrictionCombMode(GetCombMode(pChildElem->Attribute("FrictionMode")));
-
-			pData->GetStepType(cString::ToString(pChildElem->Attribute("StepType"),""));
-
-			pData->SetMinScrapeSpeed(cString::ToFloat(pChildElem->Attribute("MinScrapeSpeed"),0.7f));
-			pData->SetMinScrapeFreq(cString::ToFloat(pChildElem->Attribute("MinScrapeFreq"),0.7f));
-			pData->SetMinScrapeFreqSpeed(cString::ToFloat(pChildElem->Attribute("MinScrapeFreqSpeed"),0.7f));
-			pData->SetMiddleScrapeSpeed(cString::ToFloat(pChildElem->Attribute("MiddleScrapeSpeed"),1.2f));
-			pData->SetMaxScrapeFreqSpeed(cString::ToFloat(pChildElem->Attribute("MaxScrapeFreqSpeed"),3));
-			pData->SetMaxScrapeFreq(cString::ToFloat(pChildElem->Attribute("MaxScrapeFreq"),2));
-			pData->SetMinScrapeContacts(cString::ToInt(pChildElem->Attribute("MinScrapeContacts"),4));
-			pData->SetScrapeSoundName(cString::ToString(pChildElem->Attribute("ScrapeSoundName"),""));
-
-			pData->SetMinRollSpeed(cString::ToFloat(pChildElem->Attribute("MinRollSpeed"),0.7f));
-			pData->SetMinRollFreq(cString::ToFloat(pChildElem->Attribute("MinRollFreq"),0.7f));
-			pData->SetMinRollVolume(cString::ToFloat(pChildElem->Attribute("MinRollVolume"),0.7f));
-			pData->SetMinRollFreqSpeed(cString::ToFloat(pChildElem->Attribute("MinRollFreqSpeed"),0.7f));
-			pData->SetMiddleRollSpeed(cString::ToFloat(pChildElem->Attribute("MiddleRollSpeed"),1.2f));
-			pData->SetMaxRollFreqSpeed(cString::ToFloat(pChildElem->Attribute("MaxRollFreqSpeed"),3));
-			pData->SetMaxRollFreq(cString::ToFloat(pChildElem->Attribute("MaxRollFreq"),2));
-			pData->SetMaxRollVolume(cString::ToFloat(pChildElem->Attribute("MaxRollVolume"),2));
-			pData->SetRollSoundName(cString::ToString(pChildElem->Attribute("RollSoundName"),""));
-			
-			//Axes
-			tString sAxisVec = cString::ToString(pChildElem->Attribute("RollAxis"),"");
-			tStringVec vAxes;
-			tFlag axisFlags=0;
-			cString::GetStringVec(sAxisVec,vAxes);
-			for(size_t i=0; i<vAxes.size(); ++i)
-			{
-				tString sAxis = cString::ToLowerCase(vAxes[i]);
-				if(sAxis == "x")		axisFlags |= eRollAxisFlag_X;
-				else if(sAxis == "y")	axisFlags |= eRollAxisFlag_Y;
-				else if(sAxis == "z")	axisFlags |= eRollAxisFlag_Z;
-			}
-			pData->SetRollAxisFlags(axisFlags);
-
-			/////////////////////////
-			//Get Impact data
-			TiXmlElement* pImpactElem = pChildElem->FirstChildElement("Impact");
-			for(; pImpactElem != NULL; pImpactElem = pImpactElem->NextSiblingElement("Impact"))
-			{
-				float fMinSpeed = cString::ToFloat(pImpactElem->Attribute("MinSpeed"),1);
-
-				cSurfaceImpactData *pImpactData = pData->CreateImpactData(fMinSpeed);
-
-				pImpactData->SetSoundName(cString::ToString(pImpactElem->Attribute("SoundName"),""));
-				pImpactData->SetPSName(cString::ToString(pImpactElem->Attribute("PSName"),""));
-				pImpactData->SetPSPrio(cString::ToInt(pImpactElem->Attribute("PSPrio"),10));
-			}
-
-			/////////////////////////
-			//Get Hit data
-			TiXmlElement* pHitElem = pChildElem->FirstChildElement("Hit");
-			for(; pHitElem != NULL; pHitElem = pHitElem->NextSiblingElement("Hit"))
-			{
-				float fMinSpeed = cString::ToFloat(pHitElem->Attribute("MinSpeed"),1);
-
-				cSurfaceImpactData *pHitData = pData->CreateHitData(fMinSpeed);
-
-				pHitData->SetSoundName(cString::ToString(pHitElem->Attribute("SoundName"),""));
-				pHitData->SetPSName(cString::ToString(pHitElem->Attribute("PSName"),""));
-				pHitData->SetPSPrio(cString::ToInt(pHitElem->Attribute("PSPrio"),10));
-			}
-
-			/////////////////////////
-			//Get Haptic Data
-			if(cHaptic::GetIsUsed() && apHaptic)
-			{
-				eHapticSurfaceType surfaceType = GetHapticSurface(pChildElem->Attribute("HapticType"));
-                
-				float fDeadHeight= cString::ToFloat(pChildElem->Attribute("HapticDeadHeight"), 0.004f);
-				float fStickyStiffness= cString::ToFloat(pChildElem->Attribute("HapticStickyStiffness"), 0.6f);
-				float fDeviation= cString::ToFloat(pChildElem->Attribute("HapticDeviation"), 0.1f);
-				float fMean= cString::ToFloat(pChildElem->Attribute("HapticMean"), 0.5f);
-				float fDamping= cString::ToFloat(pChildElem->Attribute("HapticDamping"), 0.0f);
-				float fStiffness= cString::ToFloat(pChildElem->Attribute("HapticStiffness"), 0.9f);
-				float fDynamicFriction= cString::ToFloat(pChildElem->Attribute("HapticDynamicFriction"), 0.2f);
-				float fStartingFriction= cString::ToFloat(pChildElem->Attribute("HapticStartingFriction"), 0.3f);
-				float fTangentStiffness= cString::ToFloat(pChildElem->Attribute("HapticTangentStiffness"), 0.7f); 
-				float fStoppingFriction= cString::ToFloat(pChildElem->Attribute("HapticStoppingFriction"), 0.1f);
-
-				iHapticSurface *pSurface = NULL;
-
-				if(surfaceType == eHapticSurfaceType_Simple)
-				{
-					pSurface = apHaptic->GetLowLevel()->CreateSimpleSurface(sName,fDamping,fStiffness);
-				}
-				else if(surfaceType == eHapticSurfaceType_Frictional)
-				{
-					pSurface = apHaptic->GetLowLevel()->CreateFrictionalSurface(sName,fDamping,fStiffness,
-																				fDynamicFriction,fStartingFriction,
-																				fTangentStiffness,fStoppingFriction);
-				}
-				else if(surfaceType == eHapticSurfaceType_Rough)
-				{
-					pSurface = apHaptic->GetLowLevel()->CreateRoughSurface(sName,fStickyStiffness,fMean,
-																				fDamping,fStiffness,
-																				fDynamicFriction,fStartingFriction,
-																				fTangentStiffness,fStoppingFriction);
-				}
-				else if(surfaceType == eHapticSurfaceType_Sticky)
-				{
-					pSurface = apHaptic->GetLowLevel()->CreateStickySurface(sName,fDeadHeight,fStickyStiffness,
-																			fDamping,fStiffness,
-																			fDynamicFriction,fStartingFriction,
-																			fTangentStiffness,fStoppingFriction);
-				}
-
-				pData->SetHapticSurface(pSurface);
-
-			}
-
-
-
-			/*Log("Added %s e: %f sf: %f kf: %f emode: %d fmode: %d\n", pData->GetName().c_str(),
-					pData->GetElasticity(), pData->GetStaticFriction(), pData->GetKineticFriction(),
-					pData->GetElasticityCombMode(), pData->GetFrictionCombMode());*/
+			bReadOk = true;
 		}
+		else
+		{
+			vData.resize(lLength);
+			bReadOk = fread(vData.data(), lLength, 1, pFile) == 1;
+		}
+		fclose(pFile);
 
-		hplDelete(pXmlDoc);
+		bool bLoaded = ohpl_phys_surface_parse(vData.data(), vData.size(), bReadOk,
+			[](void *apContext, const OhplSurfaceDef *apDef)
+			{
+				cPhysics *pPhysics = static_cast<cPhysics*>(apContext);
+				cSurfaceData *pData = pPhysics->CreateSurfaceData(tString(apDef->name.p, apDef->name.n));
 
+				pData->SetElasticity(apDef->elasticity);
+				pData->SetKineticFriction(apDef->kineticFriction);
+				pData->SetStaticFriction(apDef->staticFriction);
+				pData->SetPriority(apDef->priority);
+				pData->SetUserVar(tString(apDef->userVar.p, apDef->userVar.n));
+				pData->SetElasticityCombMode((ePhysicsMaterialCombMode)apDef->elasticityMode);
+				pData->SetFrictionCombMode((ePhysicsMaterialCombMode)apDef->frictionMode);
+				pData->GetStepType(tString(apDef->stepType.p, apDef->stepType.n));
+
+				pData->SetMinScrapeSpeed(apDef->minScrapeSpeed);
+				pData->SetMinScrapeFreq(apDef->minScrapeFreq);
+				pData->SetMinScrapeFreqSpeed(apDef->minScrapeFreqSpeed);
+				pData->SetMiddleScrapeSpeed(apDef->middleScrapeSpeed);
+				pData->SetMaxScrapeFreqSpeed(apDef->maxScrapeFreqSpeed);
+				pData->SetMaxScrapeFreq(apDef->maxScrapeFreq);
+				pData->SetMinScrapeContacts(apDef->minScrapeContacts);
+				pData->SetScrapeSoundName(tString(apDef->scrapeSound.p, apDef->scrapeSound.n));
+
+				pData->SetMinRollSpeed(apDef->minRollSpeed);
+				pData->SetMinRollFreq(apDef->minRollFreq);
+				pData->SetMinRollVolume(apDef->minRollVolume);
+				pData->SetMinRollFreqSpeed(apDef->minRollFreqSpeed);
+				pData->SetMiddleRollSpeed(apDef->middleRollSpeed);
+				pData->SetMaxRollFreqSpeed(apDef->maxRollFreqSpeed);
+				pData->SetMaxRollFreq(apDef->maxRollFreq);
+				pData->SetMaxRollVolume(apDef->maxRollVolume);
+				pData->SetRollSoundName(tString(apDef->rollSound.p, apDef->rollSound.n));
+				pData->SetRollAxisFlags(apDef->rollAxisFlags);
+
+				for(size_t i=0; i<apDef->nImpacts; ++i)
+				{
+					const OhplImpactDef &def = apDef->impacts[i];
+					cSurfaceImpactData *pImpactData = pData->CreateImpactData(def.minSpeed);
+					pImpactData->SetSoundName(tString(def.sound.p, def.sound.n));
+					pImpactData->SetPSName(tString(def.ps.p, def.ps.n));
+					pImpactData->SetPSPrio(def.psPrio);
+				}
+				for(size_t i=0; i<apDef->nHits; ++i)
+				{
+					const OhplImpactDef &def = apDef->hits[i];
+					cSurfaceImpactData *pHitData = pData->CreateHitData(def.minSpeed);
+					pHitData->SetSoundName(tString(def.sound.p, def.sound.n));
+					pHitData->SetPSName(tString(def.ps.p, def.ps.n));
+					pHitData->SetPSPrio(def.psPrio);
+				}
+			}, this);
+
+		if(bLoaded == false)
+		{
+			Error("Couldn't load XML file '%s'!\n",asFile.c_str());
+			return false;
+		}
 		return true;
 	}
 	//-----------------------------------------------------------------------
@@ -345,19 +277,7 @@ namespace hpl {
 
 	void cPhysics::UpdateImpactCounts(float afTimeStep)
 	{
-		tPhysicsImpactCountListIt it = mlstImpactCounts.begin();
-		while(it != mlstImpactCounts.end())
-		{
-			it->mfCount += afTimeStep;
-			if(it->mfCount > mfImpactDuration)
-			{
-				it = mlstImpactCounts.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
+		ohpl_phys_impacts_update(mpImpactCounts, afTimeStep, mfImpactDuration);
 	}
 
 	//-----------------------------------------------------------------------

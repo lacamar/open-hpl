@@ -37,6 +37,7 @@
 #include "sound/SoundChannel.h"
 
 #include "math/Math.h"
+#include "physics/RustPhysics.h"
 
 namespace hpl {
 
@@ -215,30 +216,18 @@ namespace hpl {
 
 	cVector3f iPhysicsBody::GetVelocityAtPosition(const cVector3f& avPos)
 	{
-		cVector3f vLocalPos = avPos - GetLocalPosition();
-		cVector3f vMassCentre = GetMassCentre();
-		if(vMassCentre != cVector3f(0,0,0))
-		{
-			vMassCentre = cMath::MatrixMul(GetLocalMatrix().GetRotation(),vMassCentre);
-			vLocalPos -= vMassCentre;
-		}
-
-		return GetLinearVelocity() + cMath::Vector3Cross(GetAngularVelocity(), vLocalPos);
+		cVector3f vVel;
+		ohpl_phys_body_velocity_at_position(OhplPhysHost(), reinterpret_cast<size_t>(this), &avPos, &vVel);
+		return vVel;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cVector3f iPhysicsBody::GetTorqueFromForceAtPosition(const cVector3f& avForce, const cVector3f& avPos)
 	{
-		cVector3f vLocalPos = avPos - GetLocalPosition();
-		cVector3f vMassCentre = GetMassCentre();
-		if(vMassCentre != cVector3f(0,0,0))
-		{
-			vMassCentre = cMath::MatrixMul(GetLocalMatrix().GetRotation(),vMassCentre);
-			vLocalPos -= vMassCentre;
-		}
-
-		return cMath::Vector3Cross(vLocalPos, avForce);
+		cVector3f vTorque;
+		ohpl_phys_body_torque_from_force(OhplPhysHost(), reinterpret_cast<size_t>(this), &avForce, &avPos, &vTorque);
+		return vTorque;
 	}
 
 	//-----------------------------------------------------------------------
@@ -274,154 +263,26 @@ namespace hpl {
 
 	bool iPhysicsBody::UpdateBeforeSimulate(float afTimeStep)
 	{
-		/////////////////////
-		//See if the body should still be in update list. 
-		bool bNeedsUpdate = false;
-
-		int lTemp=0;
-		if(HasSlide() || GetScrapeSoundEntity()){ bNeedsUpdate = true; lTemp=0;}
-		if(GetMass() > 0) {
-			if(GetEnabled()){ bNeedsUpdate = true; lTemp=1;}
-		}
-		else {
-			if(mbStaticMovement){ bNeedsUpdate=true; lTemp=2;}
-		}
-
-		/////////////////////
-		//Reset variables
-		SetHasSlide(false);
-		mbHasCollision = false;
-
-		/////////////////////
-		//Check if update is needed, else return
-		if(bNeedsUpdate==false)
-		{
-			//Log(" (removed %s from list %d)", lTemp);
-			return false;
-		}
-
-		//////////////////////////////////
-		//Static velocity update
-		if(mbStaticMovement)
-		{
-			if(	mvTotalStaticLinearVel == cVector3f(0) &&
-				mvTotalStaticAngularVel == cVector3f(0))
-			{
-				mbStaticMovement = false;
-			}
-
-			SetLinearVelocity(mvTotalStaticLinearVel);
-			SetAngularVelocity(mvTotalStaticAngularVel);
-
-			cBoundingVolume tempBV;
-			tempBV.SetSize(GetBoundingVolume()->GetSize() * 1.2f);
-			tempBV.SetPosition(GetBoundingVolume()->GetWorldCenter());
-			mpWorld->EnableBodiesInBV(&tempBV, true);
-		}
-		
-		return true;
+		return ohpl_phys_body_update_before(OhplPhysHost(), reinterpret_cast<size_t>(this));
 	}
 
 	//-----------------------------------------------------------------------
 	
 	void iPhysicsBody::UpdateAfterSimulate(float afTimeStep)
 	{
-		//////////////////////////////////
-		//Static velocity update
-        if(mbStaticMovement)
-		{
-			cVector3f vPos = GetLocalPosition();
-			
-			if(mvTotalStaticLinearVel != 0)
-			{
-				vPos += mvTotalStaticLinearVel * afTimeStep;
-			}
-			if(mvTotalStaticAngularVel != 0)
-			{
-				cMatrixf mtxRot = GetLocalMatrix().GetRotation();
-				
-				mtxRot = cMath::MatrixMul( cMath::MatrixRotate(mvTotalStaticAngularVel * afTimeStep, eEulerRotationOrder_XYZ), mtxRot );
-
-				SetMatrix(mtxRot);
-			}
-			SetPosition(vPos);
-
-			mvTotalStaticLinearVel = 0;
-			mvTotalStaticAngularVel = 0;
-		}
-
-		//////////////////////////////////
-		//Check disabling from callback
-		if(mbDisableAfterSimulation)
-		{
-			mbDisableAfterSimulation = false;
-			SetAngularVelocity(0);
-			SetLinearVelocity(0);
-		}
-		
-		//////////////////////////////////
-		//Check slide sound
-		//Log("Slide: %d\n", HasSlide());
-		if(HasSlide()==false)
-		{
-			if(GetScrapeSoundEntity())
-			{
-				//Log("Checking stop sound (%d), body (%d): Count: %d \n", GetScrapeSoundEntity(), this, mlSlideCount);
-				if(mlSlideCount<=0)
-				{
-					//Log("Stopped scrape %d on body '%s' IN BODY!\n", (size_t)GetScrapeSoundEntity(),
-					//												 GetName().c_str());
-					
-					if(mpWorld->GetWorld())
-					{
-						if(mpWorld->GetWorld()->SoundEntityExists(GetScrapeSoundEntity(), mlScrapeSoundEntityID))
-						{
-							GetScrapeSoundEntity()->FadeOut(5.2f);
-						}
-					}
-					
-					SetScrapeSoundEntity(NULL);
-					SetScrapeBody(NULL);
-				}
-				else if(mlSlideCount>0)
-				{
-					mlSlideCount--;
-				}
-			}
-		}
-		else
-		{
-			mlSlideCount = 8;
-		}
-
-		//////////////////////////////////
-		//Update rolling sound
-		if(GetEnabled() && mpMaterial && mpMaterial->GetSurfaceData())
-		{
-			mpMaterial->GetSurfaceData()->UpdateRollEffect(this);
-		}
+		ohpl_phys_body_update_after(OhplPhysHost(), reinterpret_cast<size_t>(this), afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPhysicsBody::StaticLinearMove(const cVector3f& avVelocity)
 	{
-		if(GetMass()!=0) return;
-
-		mvTotalStaticLinearVel += avVelocity;
-		mbStaticMovement = true;
-
-		mpWorld->AddBodyToUpdateList(this);
+		ohpl_phys_body_static_linear_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity);
 	}
 
 	void iPhysicsBody::StaticAngularMove(const cVector3f& avVelocity)
 	{
-		if(GetMass()!=0) return;
-
-		mvTotalStaticAngularVel += avVelocity;
-		mbStaticMovement = true;
-
-		mpWorld->AddBodyToUpdateList(this);
+		ohpl_phys_body_static_angular_move(OhplPhysHost(), reinterpret_cast<size_t>(this), &avVelocity);
 	}
 
 	//-----------------------------------------------------------------------

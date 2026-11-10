@@ -22,23 +22,14 @@
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
 #include "physics/PhysicsJoint.h"
-
-#include "math/Math.h"
-
-#include "system/LowLevelSystem.h"
+#include "physics/RustPhysics.h"
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	iPhysicsController::iPhysicsController(const tString &asName, iPhysicsWorld *apWorld)
 	{
 		msName = asName;
-		
+
 		mpWorld = apWorld;
 
 		mpBody = NULL;
@@ -46,7 +37,8 @@ namespace hpl {
 
 		mbActive = false;
 
-		mPidController.SetErrorNum(10);
+		mpPid = ohpl_phys_pid_new();
+		ohpl_phys_pid_set_error_num(mpPid, 10);
 
 		mbMulMassWithOutput = false;
 
@@ -56,158 +48,35 @@ namespace hpl {
 
 		mbPaused = false;
 	}
-	
-	//-----------------------------------------------------------------------
 
 	iPhysicsController::~iPhysicsController()
 	{
-
+		ohpl_phys_pid_free(mpPid);
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iPhysicsController::SetPidIntegralSize(int alSize)
 	{
-		mPidController.SetErrorNum(alSize);
+		ohpl_phys_pid_set_error_num(mpPid, alSize);
 	}
 
-	//-----------------------------------------------------------------------
-
-	
 	void iPhysicsController::Update(float afTimeStep)
 	{
-		if(mbActive==false || mbPaused) return;
-		if(mpBody==NULL) return;
-
-		cVector3f vInput = GetInputValue(mInputType);
-		//Get the local input.
-		vInput = cMath::MatrixMul(cMath::MatrixInverse(mpBody->GetLocalMatrix().GetRotation()),vInput);
-
-		float fValue = GetAxisValue(mInputAxis, vInput);
-		float fError = mfDestValue - fValue;
-
-		float fOutput = GetOutputValue(fError,fValue,afTimeStep);
-
-		if(mfMaxOutput>0){
-			if(fOutput>0)
-				fOutput = cMath::Min(fOutput, mfMaxOutput);
-			else
-				fOutput = cMath::Max(fOutput, -mfMaxOutput);
-		}
-		
-		if(mbLogInfo)
-			Log("%s | Input: %f Dest: %f Error: %f OutPut: %f\n",msName.c_str(),fValue,mfDestValue,fError,fOutput);
-
-		AddOutputValue(mOutputType,mOutputAxis,fOutput);
-		
-		////////////////////////////////////////
-		//Check if dest vale is reached
-		if(mEndType == ePhysicsControllerEnd_OnDest && mpJoint)
-		{
-			if(std::abs(fValue - mfDestValue) < kEpsilonf)
-			{
-				mbActive = false;
-				iPhysicsController *pNext = mpJoint->GetController(msNextController);
-				if(pNext) pNext->SetActive(true);
-			}
-		}
+		OhplCtrlParams params = {
+			reinterpret_cast<size_t>(this), reinterpret_cast<size_t>(mpBody), reinterpret_cast<size_t>(mpJoint),
+			mbActive, mbPaused, mbLogInfo, mbMulMassWithOutput,
+			(int32_t)mType, (int32_t)mInputType, (int32_t)mInputAxis, (int32_t)mOutputType, (int32_t)mOutputAxis, (int32_t)mEndType,
+			mfA, mfB, mfC, mfDestValue, mfMaxOutput,
+			OhplS(msNextController)
+		};
+		ohpl_phys_ctrl_update(OhplPhysHost(), &params, mpPid, afTimeStep);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iPhysicsController::SetActive(bool abX)
-	{	
+	{
 		if(abX == mbActive) return;
 
-        mPidController.Reset();
+		ohpl_phys_pid_reset(mpPid);
 
 		mbActive = abX;
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// PROTECTED METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cVector3f iPhysicsController::GetInputValue(ePhysicsControllerInput aInput)
-	{
-		switch(aInput)
-		{
-		case ePhysicsControllerInput_AngularSpeed: return mpBody ? mpBody->GetAngularVelocity() : 0;
-		case ePhysicsControllerInput_LinearSpeed: return mpBody ? mpBody->GetLinearVelocity() : 0;
-		case ePhysicsControllerInput_JointAngle: return mpJoint ? mpJoint->GetAngle() : 0;
-		case ePhysicsControllerInput_JointDist: return mpJoint ? mpJoint->GetDistance() : 0;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	float iPhysicsController::GetOutputValue(float afError,float afInput, float afTimeStep)
-	{
-		if(mType == ePhysicsControllerType_Pid)
-		{
-			mPidController.p = mfA;
-			mPidController.i = mfB;
-			mPidController.d = mfC;
-
-			return mPidController.Output(afError, afTimeStep);
-		}
-		else
-		{
-			return afError *mfA - afInput *mfB;
-		}
-
-		return 0;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	void iPhysicsController::AddOutputValue(ePhysicsControllerOutput aOutput,
-									ePhysicsControllerAxis aAxis,
-									float afVal)
-	{
-		cVector3f vVec(0,0,0);
-		
-		switch(aAxis)
-		{
-		case ePhysicsControllerAxis_X: vVec.x = afVal; break;
-		case ePhysicsControllerAxis_Y: vVec.y = afVal; break;
-		case ePhysicsControllerAxis_Z: vVec.z = afVal; break;
-		}
-
-		if(mbMulMassWithOutput) vVec = vVec * mpBody->GetMass();
-
-		//Set the output to body space
-		vVec = cMath::MatrixMul(mpBody->GetLocalMatrix().GetRotation(), vVec);
-
-
-		switch(aOutput)
-		{
-		case ePhysicsControllerOutput_Torque: mpBody->AddTorque(vVec); break;
-		case ePhysicsControllerOutput_Force: mpBody->AddForce(vVec); break;
-		}
-	}
-	
-	//-----------------------------------------------------------------------
-
-	float iPhysicsController::GetAxisValue(ePhysicsControllerAxis aAxis, const cVector3f &avVec)
-	{
-		switch(aAxis)
-		{
-		case ePhysicsControllerAxis_X: return avVec.x;
-		case ePhysicsControllerAxis_Y: return avVec.y;
-		case ePhysicsControllerAxis_Z: return avVec.z;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
 }
