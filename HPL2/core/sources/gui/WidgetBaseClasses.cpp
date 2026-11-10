@@ -29,6 +29,7 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 
 namespace hpl {
@@ -291,34 +292,17 @@ namespace hpl {
 		unsigned long lAvailableDrives = cPlatform::GetSystemAvailableDrives();
 		tWString sDrive = _W("<Disk Drive> A:");
 
-		while(lAvailableDrives)
+		wchar_t vDriveLetters[64];
+		size_t lDrives = ohpl_wd_drive_letters(lAvailableDrives, vDriveLetters, 64);
+		for(size_t i=0; i<lDrives; ++i)
 		{
-			if(lAvailableDrives & 1)
-				mvSystemRootFolders.push_back(sDrive);
-			sDrive[13]+=1;
-			lAvailableDrives >>= 1;
+			sDrive[13] = vDriveLetters[i];
+			mvSystemRootFolders.push_back(sDrive);
 		}
 
 		msStartPath = cString::GetFilePathW(asStartPath);
 
 		mbAddHiddenFiles = abAddHiddenFiles;
-
-		////////////////////////////////////////////////////////////////////
-		// TEMP Initialization
-		mvFileTypeExtensions.resize(eFileBrowserFileType_Other);
-		mvFileTypeExtensions[eFileBrowserFileType_Graphics].push_back(_W("bmp"));
-		mvFileTypeExtensions[eFileBrowserFileType_Graphics].push_back(_W("tga"));
-		mvFileTypeExtensions[eFileBrowserFileType_Graphics].push_back(_W("jpg"));
-
-		mvFileTypeExtensions[eFileBrowserFileType_Models].push_back(_W("dae"));
-		mvFileTypeExtensions[eFileBrowserFileType_Models].push_back(_W("ent"));
-
-		mvFileTypeExtensions[eFileBrowserFileType_Sounds].push_back(_W("ogg"));
-		mvFileTypeExtensions[eFileBrowserFileType_Sounds].push_back(_W("wav"));
-
-		mvFileTypeExtensions[eFileBrowserFileType_Text].push_back(_W("txt"));
-		mvFileTypeExtensions[eFileBrowserFileType_Text].push_back(_W("hps"));
-		mvFileTypeExtensions[eFileBrowserFileType_Text].push_back(_W("log"));
 	}
 
 	//-----------------------------------------------------------------------
@@ -426,18 +410,8 @@ namespace hpl {
 		tWString sExt = cString::GetFileExtW(asFilename);
 		sExt = cString::ToLowerCaseW(sExt);
 
-		for(int i=0;i<(int)mvFileTypeExtensions.size();++i)
-		{
-			tWStringVec& vFileExtensions = mvFileTypeExtensions[i];
-
-			for(int j=0;j<(int)vFileExtensions.size();++j)
-			{
-				if(sExt == vFileExtensions[j])
-					return (eFileBrowserFileType)i;
-			}
-		}
-
-		return eFileBrowserFileType_Other;		
+		int lType = ohpl_wd_file_type(sExt.data(), sExt.size());
+		return lType < 0 ? eFileBrowserFileType_Other : (eFileBrowserFileType)lType;
 	}
 
 	//-------------------------------------------------------------------------
@@ -453,29 +427,30 @@ namespace hpl {
 	 */
 	bool iFileBrowser::NavigateTo(const tWString& asPath)
 	{
-		if(asPath==_W("<System Root>"))
+		int lTarget = ohpl_wd_navigate_target(asPath.data(), asPath.size());
+		if(lTarget==0)
 		{
             mvCurrentDirFullPath.clear();
 		}
-        else if(asPath==_W("<Game Folder>"))
+        else if(lTarget==1)
         {
             SetPathFromString(iFileBrowser::msGameDir);
         }
-		else if(asPath==_W("<Personal Folder>"))
+		else if(lTarget==2)
 		{
 			SetPathFromString(cPlatform::GetSystemSpecialPath(eSystemPath_Personal) + iFileBrowser::msPersonalDir);
 		}
-		else if(cString::SubW(asPath,0,12) == _W("<Disk Drive>"))
+		else if(lTarget==3)
 		{
 			return NavigateTo(cString::SubW(asPath,13));
 		}
-		else if(asPath==_W(".."))
+		else if(lTarget==4)
 		{
             if (!mvCurrentDirFullPath.empty()) {
                 mvCurrentDirFullPath.pop_back();
             }
 		}
-		else if(asPath==_W("."))
+		else if(lTarget==5)
 		{
 		}
 		else
@@ -543,11 +518,10 @@ namespace hpl {
 			{
 				const tWString& sPathPiece = vInputPath[i];
 
-				if(sPathPiece==_W(".") || sPathPiece==_W(""))
-					;
-				else if(sPathPiece==_W(".."))
+				int lPiece = ohpl_wd_path_piece(sPathPiece.data(), sPathPiece.size(), mvCurrentDirFullPath.size());
+				if(lPiece==1)
 					mvCurrentDirFullPath.pop_back();
-				else
+				else if(lPiece==2)
 					mvCurrentDirFullPath.push_back(sPathPiece);
 			}
 		}
@@ -562,16 +536,10 @@ namespace hpl {
 	 */
 	tWString iFileBrowser::GetHumanReadableSize(unsigned long alSize)
 	{
-		int i=0;
-		for(; i<4; ++i)
-		{
-			if(alSize > 1024)
-				alSize >>= 10;
-			else
-				break;
-		}
+		size_t lUnit;
+		unsigned long lSize = ohpl_wd_human_size(alSize, &lUnit);
 
-		return cString::ToStringW(alSize) + _W(" ") + mvSizeStrings[i];
+		return cString::ToStringW(lSize) + _W(" ") + mvSizeStrings[lUnit];
 	}
 
 	//-------------------------------------------------------------------------

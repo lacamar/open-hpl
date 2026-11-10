@@ -30,6 +30,7 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 namespace hpl {
 
@@ -117,69 +118,46 @@ namespace hpl {
 
 	void cWidgetLabel::DrawText(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		////////////////////////////////
-		// Texts
-		cVector3f vOffset = 0;
-		if(mTextAlign == eFontAlign_Center)		vOffset.x += mvSize.x/2;
-		else if(mTextAlign == eFontAlign_Right)	vOffset.x += mvSize.x;
-		
+		OhplWdLabelDraw d;
+		d.global = GetGlobalPosition();
+		d.size = mvSize;
+		d.align = mTextAlign;
+		d.word_wrap = mbWordWrap;
+		d.max_chars = mlMaxCharacters;
+		d.enabled = IsEnabled();
+		d.has_default_font = mpDefaultFontType != NULL;
+		d.font_size = mvDefaultFontSize;
+		d.font_color = mDefaultFontColor;
+		d.color_mul = mColorMul;
+		d.wrap_offset = mfWordWrapOffset;
+		d.text_len = (int)msText.length();
+
+		tWStringVec vRows;
+		std::vector<int> vRowLengths;
 		if(mbWordWrap)
 		{
-			int lChars =0;
-			bool bEnabled = IsEnabled();
 			float fHeight = mvDefaultFontSize.y+2;
-			tWStringVec vRows;
 			mpDefaultFontType->GetWordWrapRows(mvSize.x,fHeight,
 												mvDefaultFontSize, msText,
 												&vRows);
-
-			mfWordWrapRowsHeight = (fHeight-1) * (int)vRows.size();
-
-			for(size_t i=0; i< vRows.size(); ++i)
-			{
-				bool bBreak = false;
-				if(mlMaxCharacters>=0)
-				{
-					if(lChars + (int)vRows[i].length() > mlMaxCharacters)
-					{
-						vRows[i] = cString::SubW(vRows[i],0, mlMaxCharacters - lChars);
-						bBreak = true;
-					}
-					lChars += (int)vRows[i].length();
-				}
-
-				if(bEnabled)
-					DrawDefaultText(vRows[i], GetGlobalPosition()+vOffset-cVector3f(0,mfWordWrapOffset,0),mTextAlign);
-				else {
-					DrawDefaultText(vRows[i], GetGlobalPosition()+vOffset-cVector3f(0,mfWordWrapOffset,0),mTextAlign, cColor(0.5f, mDefaultFontColor.a));
-					//DrawSkinText(vRows[i],eGuiSkinFont_Disabled,GetGlobalPosition()+vOffset,mTextAlign);
-				}
-				vOffset.y += fHeight;
-
-				if(bBreak) break;
-			}
+			for(size_t i=0; i<vRows.size(); ++i)
+				vRowLengths.push_back((int)vRows[i].length());
 		}
-		else
-		{
-			if(mlMaxCharacters>=0 && (int)msText.length() > mlMaxCharacters)
-			{
-				if(IsEnabled())
-					DrawDefaultText(cString::SubW(msText,0,mlMaxCharacters), GetGlobalPosition()+vOffset,mTextAlign);
-				else {
-					DrawDefaultText(cString::SubW(msText,0,mlMaxCharacters), GetGlobalPosition()+vOffset,mTextAlign, cColor(0.5f, mDefaultFontColor.a));
-					//DrawSkinText(cString::SubW(msText,0,mlMaxCharacters),eGuiSkinFont_Disabled,GetGlobalPosition()+vOffset,mTextAlign);
-				}
-			}
-			else
-			{
-				if(IsEnabled())
-					DrawDefaultText(msText, GetGlobalPosition()+vOffset,mTextAlign);
-				else {
-					DrawDefaultText(msText, GetGlobalPosition()+vOffset, mTextAlign, cColor(0.5f, mDefaultFontColor.a));
-					//DrawSkinText(msText,eGuiSkinFont_Disabled,GetGlobalPosition()+vOffset,mTextAlign);
-				}
-			}
-		}
+
+		std::vector<OhplWdOp> vOps(vRows.size() + 1);
+		float fRowsHeight = 0;
+		bool bRowsHeightSet = false;
+		size_t lCount = ohpl_wd_label_draw_text(&vOps[0], vOps.size(), &d, vRowLengths.empty() ? NULL : &vRowLengths[0], vRowLengths.size(),
+												&fRowsHeight, &bRowsHeightSet);
+		if(bRowsHeightSet)
+			mfWordWrapRowsHeight = fRowsHeight;
+
+		std::vector<const tWString*> vTexts;
+		vTexts.push_back(&msText);
+		for(size_t i=0; i<vRows.size(); ++i)
+			vTexts.push_back(&vRows[i]);
+		iFontData* fonts[1] = { mpDefaultFontType };
+		OhplWdRun(mpSet, &vOps[0], lCount, OhplWdGfxTable(), &vTexts[0], fonts);
 	}
 
 	//-----------------------------------------------------------------------
@@ -196,30 +174,15 @@ namespace hpl {
 		if(mbWordWrap==false)
 			return;
 
-		////////////////////////////////////
-		// Do a little wait before starting to scroll
-		mfScrollTimer -= afTimeStep;
-		if(mfScrollTimer >= 0)
-			return;
-
-		float fAdvance = afTimeStep * mfScrollSpeedMul;
-
-		// Scroll down
-		if(mbScrollingDown)
-		{
-			if(mfWordWrapOffset+mvSize.y+fAdvance > mfWordWrapRowsHeight)
-				mbScrollingDown = false;
-			else
-				mfWordWrapOffset += fAdvance;
-		}
-		// Scroll up
-		else
-		{
-			if(mfWordWrapOffset-fAdvance < 0)
-				mbScrollingDown = true;
-			else
-				mfWordWrapOffset -= fAdvance;
-		}
+		OhplWdLabelScroll scroll;
+		scroll.timer = mfScrollTimer;
+		scroll.offset = mfWordWrapOffset;
+		scroll.down = mbScrollingDown;
+		OhplWdLabelScroll next;
+		ohpl_wd_label_update(&scroll, afTimeStep, mfScrollSpeedMul, mvSize.y, mfWordWrapRowsHeight, &next);
+		mfScrollTimer = next.timer;
+		mfWordWrapOffset = next.offset;
+		mbScrollingDown = next.down;
 	}
 
 	//-----------------------------------------------------------------------
@@ -245,8 +208,12 @@ namespace hpl {
 		// Background
 		if(mbDrawBackGround)
 		{
-			mpSet->DrawGfx(	mpGfxBackground,GetGlobalPosition() - cVector3f(2,2,0.001f),
-				mvSize+4,mBackGroundColor);
+			cVector3f vGlobal = GetGlobalPosition();
+			cVector3f vBackPos;
+			cVector2f vBackSize;
+			ohpl_wd_label_background(&vGlobal, &mvSize, &vBackPos, &vBackSize);
+			mpSet->DrawGfx(	mpGfxBackground,vBackPos,
+				vBackSize,mBackGroundColor);
 		}
 
 		if(mbClipsGraphics)

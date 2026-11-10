@@ -27,6 +27,7 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 namespace hpl {
 
@@ -104,20 +105,14 @@ namespace hpl {
 
 	bool cWidgetImage::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if(aData.mlVal==eGuiMouseButton_WheelUp || aData.mlVal==eGuiMouseButton_WheelDown)
-			return false;
-
-		return true;
+		return ohpl_wd_image_mouse(aData.mlVal);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cWidgetImage::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(aData.mlVal==eGuiMouseButton_WheelUp || aData.mlVal==eGuiMouseButton_WheelDown)
-			return false;
-
-		return true;
+		return ohpl_wd_image_mouse(aData.mlVal);
 	}
 
 	//-----------------------------------------------------------------------

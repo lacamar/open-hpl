@@ -29,6 +29,7 @@ namespace hpl {
 
 	class cGuiSkinFont;
 	class cWidgetButton;
+	struct OhplWdWindowLook;
 
 
 	class cWidgetWindow : public iWidget
@@ -49,6 +50,7 @@ namespace hpl {
 		bool GetEscapeKeyClosesWindow() { return mbCloseOnEscapeKey; }
 		
 	protected:
+		OhplWdWindowLook GetRustLook();
 
 		/////////////////////////
 		// Window Button Callbacks

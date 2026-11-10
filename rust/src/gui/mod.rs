@@ -4,9 +4,14 @@
 
 pub mod draw;
 mod ffi;
+mod ffi_widget;
 pub mod layout;
 pub mod list;
 mod sort;
+pub mod widget;
+pub mod widgets_base;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_widget;

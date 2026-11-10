@@ -18,6 +18,7 @@
  */
 
 #include "gui/WidgetDummy.h"
+#include "gui/RustWidget.h"
 
 
 namespace hpl {
@@ -61,27 +62,20 @@ namespace hpl {
 		if(mbEncloseChildren==false)
 			return;
 
-		cVector3f vMinPos = cVector3f(9999.9f);
-		cVector3f vMaxPos = cVector3f(-9999.9f);
-
+		std::vector<OhplWdDummyChild> vChildren;
 		tWidgetListIt it = mlstChildren.begin();
-
 		for(;it!=mlstChildren.end();++it)
 		{
 			iWidget* pWidget = *it;
-			const cVector3f& vWidgetUpperLeftCorner = pWidget->GetLocalPosition();
-			cVector3f vWidgetLowerRightCorner = vWidgetUpperLeftCorner + pWidget->GetSize();
 
-			if(vWidgetUpperLeftCorner.x<vMinPos.x)
-				vMinPos.x = vWidgetUpperLeftCorner.x;
-			if(vWidgetUpperLeftCorner.y<vMinPos.y)
-				vMinPos.y = vWidgetUpperLeftCorner.y;
-			if(vWidgetLowerRightCorner.x>vMaxPos.x)
-				vMaxPos.x = vWidgetLowerRightCorner.x;
-			if(vWidgetLowerRightCorner.y>vMaxPos.y)
-				vMaxPos.y = vWidgetLowerRightCorner.y;
+			OhplWdDummyChild child;
+			child.pos = pWidget->GetLocalPosition();
+			child.size = pWidget->GetSize();
+			vChildren.push_back(child);
 		}
-		cVector2f vNewSize = cVector2f(vMaxPos.x-vMinPos.x, vMaxPos.y-vMinPos.y);
+
+		cVector2f vNewSize;
+		ohpl_wd_dummy_enclose(vChildren.empty() ? NULL : &vChildren[0], vChildren.size(), &vNewSize);
 		SetSize(vNewSize);
 	}
 }

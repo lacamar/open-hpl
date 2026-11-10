@@ -28,6 +28,7 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
 #include "gui/WidgetSlider.h"
+#include "gui/RustWidget.h"
 
 namespace hpl {
 
@@ -164,21 +165,18 @@ namespace hpl {
 
 	void cWidgetFrame::OnChangeSize()
 	{
+		OhplWdSliderLayout layout;
+		ohpl_wd_frame_slider_layout(&mvSize, mpHSlider && mpHSlider->IsVisible(), mpVSlider && mpVSlider->IsVisible(), &layout);
+
 		if(mpHSlider)
 		{
-			float fSliderSize = mvSize.x;
-			if(mpVSlider&&mpVSlider->IsVisible())
-				fSliderSize-=18;
-			mpHSlider->SetSize(cVector2f(fSliderSize,18));
-			mpHSlider->SetPosition(cVector3f(0,mvSize.y-18,0.7f));
+			mpHSlider->SetSize(layout.h_size);
+			mpHSlider->SetPosition(layout.h_pos);
 		}
 		if(mpVSlider)
 		{
-			float fSliderSize = mvSize.y;
-			if(mpHSlider&&mpHSlider->IsVisible())
-				fSliderSize-=18;
-			mpVSlider->SetSize(cVector2f(18,fSliderSize));
-			mpVSlider->SetPosition(cVector3f(mvSize.x-18,0,0.7f));
+			mpVSlider->SetSize(layout.v_size);
+			mpVSlider->SetPosition(layout.v_pos);
 		}
 
 		mbScrollBarsNeedUpdate = true;
@@ -195,125 +193,70 @@ namespace hpl {
 
 	void cWidgetFrame::OnUpdate(float afTimeStep)
 	{
-		bool bHoriActive = false;
-		bool bVertActive = false;
 		cVector3f vOffset = GetScrollAmount();
 
 		if(mbScrollBarsNeedUpdate && (mpHSlider || mpVSlider) && IsVisible())
 		{
 			mbScrollBarsNeedUpdate=false;
 
-			cVector2f vSafeFrame = cVector2f(vOffset.x,vOffset.y) + mvSize-mvAutoScrollMargin;
+			std::vector<OhplWdChildBox> vBoxes;
 			tWidgetListIt it = mlstChildren.begin();
-
-			cVector3f vMaxCoord = -999999;
-
-			//////////////////////////////////////////////////////
-			// Iterate children
 			for(;it!=mlstChildren.end();++it)
 			{
 				iWidget* pChild = *it;
 				if(pChild==mpHSlider || pChild==mpVSlider)
 					continue;
 
-				if(pChild->IsVisible())
-				{
-					cVector3f vPos = pChild->GetLocalPosition();
-					cVector3f vLowerRightCorner = vPos + cVector3f(pChild->GetSize());
-
-					if(vPos.x<vOffset.x || vLowerRightCorner.x>vSafeFrame.x)
-						bHoriActive = true;
-					if(vPos.y<vOffset.y || vLowerRightCorner.y>vSafeFrame.y)
-					{
-						bVertActive = true;
-					}
-
-					if(vMaxCoord.x<vLowerRightCorner.x)
-						vMaxCoord.x = vLowerRightCorner.x;
-					if(vMaxCoord.y<vLowerRightCorner.y)
-					{
-						vMaxCoord.y = vLowerRightCorner.y;
-					}
-				}
+				OhplWdChildBox box;
+				box.pos = pChild->GetLocalPosition();
+				box.size = pChild->GetSize();
+				box.visible = pChild->IsVisible();
+				vBoxes.push_back(box);
 			}
 
-			if(vMaxCoord.x!=mvMaxWidgetCoord.x)
-				mvMaxWidgetCoord.x = vMaxCoord.x;
-			if(vMaxCoord.y!=mvMaxWidgetCoord.y)
-				mvMaxWidgetCoord.y = vMaxCoord.y;
+			OhplWdScrollIn in;
+			in.size = mvSize;
+			in.margin = mvAutoScrollMargin;
+			in.offset = vOffset;
+			in.max_coord = mvMaxWidgetCoord;
+			in.h_size = mpHSlider ? mpHSlider->GetSize() : cVector2f(0);
+			in.v_size = mpVSlider ? mpVSlider->GetSize() : cVector2f(0);
+			in.has_h = mpHSlider != NULL;
+			in.has_v = mpVSlider != NULL;
 
-			cVector3f vLimitOffset = vOffset;
+			OhplWdScrollPlan plan;
+			ohpl_wd_frame_scroll_plan(&in, vBoxes.empty() ? NULL : &vBoxes[0], vBoxes.size(), &plan);
+			mvMaxWidgetCoord = plan.max_coord;
+
 			if(mpHSlider)
 			{
-				float fEndCoord = mvMaxWidgetCoord.x-mvSize.x;
-				float fBarSize = mvSize.y*fEndCoord/mvMaxWidgetCoord.y;
-				if(bVertActive && mpVSlider)
-					fEndCoord += mpVSlider->GetSize().x;
-
-				mpHSlider->SetMaxValue(cMath::RoundToInt(fEndCoord)+1);
-				mpHSlider->SetBarValueSize(cMath::RoundToInt(fBarSize));
-
-				mpHSlider->SetButtonValueAdd(cMath::RoundToInt(mvSize.x*0.1f));
+				mpHSlider->SetMaxValue(plan.h.max_value);
+				mpHSlider->SetBarValueSize(plan.h.bar_value_size);
+				mpHSlider->SetButtonValueAdd(plan.h.button_add);
 				mpHSlider->SetBarClickValueAdd(mpHSlider->GetBarValueSize());
-
-				if(fEndCoord>0 && vLimitOffset.x>fEndCoord)
-					vLimitOffset.x = fEndCoord;
-
-				if(bHoriActive==false)
-					mpHSlider->SetValue(0);
-				else
-				{
-					int lOffset = cMath::RoundToInt(vOffset.x);
-					int lLimitOffset = cMath::RoundToInt(vLimitOffset.x);
-					if(lOffset>lLimitOffset)
-						mpHSlider->SetValue(lLimitOffset);
-				}
-
-				mpHSlider->SetEnabled(bHoriActive);
-				mpHSlider->SetVisible(bHoriActive);
+				if(plan.h.set_value)
+					mpHSlider->SetValue(plan.h.value);
+				mpHSlider->SetEnabled(plan.h.active);
+				mpHSlider->SetVisible(plan.h.active);
 			}
+
 			if(mpVSlider)
 			{
-				float fEndCoord = mvMaxWidgetCoord.y-mvSize.y;
-				float fBarSize = mvSize.y*fEndCoord/mvMaxWidgetCoord.y;
-				if(bHoriActive && mpHSlider)
-					fEndCoord += mpHSlider->GetSize().y;
-
-				mpVSlider->SetMaxValue(cMath::RoundToInt(fEndCoord)+1);
-				mpVSlider->SetBarValueSize(cMath::RoundToInt(fBarSize));
-
-				mpVSlider->SetButtonValueAdd(cMath::RoundToInt(mvSize.y*0.1f));
+				mpVSlider->SetMaxValue(plan.v.max_value);
+				mpVSlider->SetBarValueSize(plan.v.bar_value_size);
+				mpVSlider->SetButtonValueAdd(plan.v.button_add);
 				mpVSlider->SetBarClickValueAdd(mpVSlider->GetBarValueSize());
-
-				if(fEndCoord>0)
-				{
-					if(vLimitOffset.y>fEndCoord) vLimitOffset.y = fEndCoord;
-				}
-				else
-				{
-					bVertActive = false;
-				}
-
-				if(bVertActive==false)
-					mpVSlider->SetValue(0);
-				else
-				{
-					int lOffset = cMath::RoundToInt(vOffset.y);
-					int lLimitOffset = cMath::RoundToInt(vLimitOffset.y);
-					if(lOffset>lLimitOffset)
-						mpVSlider->SetValue(lLimitOffset);
-				}
-
-				mpVSlider->SetEnabled(bVertActive);
-				mpVSlider->SetVisible(bVertActive);
+				if(plan.v.set_value)
+					mpVSlider->SetValue(plan.v.value);
+				mpVSlider->SetEnabled(plan.v.active);
+				mpVSlider->SetVisible(plan.v.active);
 			}
-
-			//OnChangeSize();
 		}
 
 		if(mbScrollUpdated)
 		{
 			mbScrollUpdated = false;
+
 			if(mpHSlider) vOffset.x = (float)mpHSlider->GetValue();
 			if(mpVSlider) vOffset.y = (float)mpVSlider->GetValue();
 		}
@@ -325,31 +268,40 @@ namespace hpl {
 
 	void cWidgetFrame::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		////////////////////////////////
-		// Borders
-		if(mbDrawFrame)
-		{
-			//Background must be drawn first!
-			DrawBordersAndCorners(	NULL, mvGfxBorders, mvGfxCorners, 
-									GetGlobalPosition() - 
-										cVector3f(	mvGfxCorners[0]->GetActiveSize().x,
-													mvGfxCorners[0]->GetActiveSize().y,0), 
-									mvSize +	mvGfxCorners[0]->GetActiveSize() + 
-												mvGfxCorners[2]->GetActiveSize());
-		}
+		OhplWdFrameDraw d;
+		d.global = GetGlobalPosition();
+		d.size = mvSize;
+		d.draw_frame = mbDrawFrame;
+		d.draw_background = mbDrawBackground;
+		d.background_z = mfBackgroundZ;
+		d.background_color = mBackGroundColor;
+
+		OhplWdGfxTable table;
+		table.SetFrame(NULL, mvGfxBorders, mvGfxCorners);
+
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_frame_draw(ops, kOhplWdMaxOps, &d, table.m);
+		OhplWdRun(mpSet, ops, lCount, table, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetFrame::OnDrawAfterClip(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		////////////////////////////////
-		// Background
-		if(mbDrawBackground)
-		{
-			mpSet->DrawGfx(	mpGfxBackground,GetGlobalPosition() +cVector3f(0,0,mfBackgroundZ),
-				mvSize,mBackGroundColor);
-		}
+		OhplWdFrameDraw d;
+		d.global = GetGlobalPosition();
+		d.size = mvSize;
+		d.draw_frame = mbDrawFrame;
+		d.draw_background = mbDrawBackground;
+		d.background_z = mfBackgroundZ;
+		d.background_color = mBackGroundColor;
+
+		OhplWdGfxTable table;
+		table.Set(0, mpGfxBackground);
+
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_frame_draw_background(ops, kOhplWdMaxOps, &d, table.m);
+		OhplWdRun(mpSet, ops, lCount, table, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -370,15 +322,8 @@ namespace hpl {
 		if(mpVSlider==NULL || mpVSlider->IsVisible()==false)
 			return false;
 
-		int lValue = mpVSlider->GetValue();
-		int lAdd = mpVSlider->GetButtonValueAdd()*3;
-
-		if(aData.mlVal & eGuiMouseButton_WheelUp)
-			lValue-=lAdd;
-		else if(aData.mlVal & eGuiMouseButton_WheelDown)
-			lValue+=lAdd;
-
-		if(lValue!=mpVSlider->GetValue())
+		int lValue;
+		if(ohpl_wd_frame_wheel(aData.mlVal, mpVSlider->GetValue(), mpVSlider->GetButtonValueAdd(), &lValue))
 			mpVSlider->SetValue(lValue);
 
 		return true;

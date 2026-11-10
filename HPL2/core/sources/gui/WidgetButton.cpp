@@ -29,6 +29,7 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 #include "graphics/FontData.h"
 
@@ -80,7 +81,7 @@ namespace hpl {
 
 	void cWidgetButton::SetRepeatFreq(float afFreq)
 	{
-		mfRepeatPeriod = 1/afFreq;
+		mfRepeatPeriod = ohpl_wd_button_repeat_period(afFreq);
 	}
 
 	void cWidgetButton::SetPressed(bool abX, bool abGenCallback)
@@ -137,74 +138,42 @@ namespace hpl {
 
 	void cWidgetButton::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		cVector3f vOffset = 0;
-		if(mbPressed) vOffset = mpSkin->GetAttribute(eGuiSkinAttribute_ButtonPressedContentOffset);
+		OhplWdButtonDraw d;
+		d.global = GetGlobalPosition();
+		d.size = mvSize;
+		d.pressed = mbPressed;
+		d.enabled = IsEnabled();
+		d.has_image = mpImage != NULL;
+		d.has_default_font = mpDefaultFontType != NULL;
+		d.pressed_offset = mbPressed ? mpSkin->GetAttribute(eGuiSkinAttribute_ButtonPressedContentOffset) : cVector3f(0);
+		d.font_size = mvDefaultFontSize;
+		d.font_color = mDefaultFontColor;
+		d.color_mul = mColorMul;
+		d.has_background = (mbPressed ? mpGfxBackgroundDown : mpGfxBackgroundUp) != NULL;
 
-		////////////////////////////////
-		// Image
-		if(mpImage)
-		{
-			cColor color = IsEnabled()?cColor(1):cColor(1,0.2f);
-			mpSet->DrawGfx( mpImage,GetGlobalPosition()+
-							cVector3f(	mvSize.x/2 - mpImage->GetImageSize().x/2, 
-										mvSize.y/2 - mpImage->GetImageSize().y/2,0.2f) + vOffset,
-							-1,
-							color
-							);
-		}
+		OhplWdGfxTable table;
+		if(mbPressed)	table.SetFrame(mpGfxBackgroundDown, mvGfxBordersDown, mvGfxCornersDown);
+		else			table.SetFrame(mpGfxBackgroundUp, mvGfxBordersUp, mvGfxCornersUp);
+		table.Set(kOhplWdGfxImage, mpImage);
 
-		////////////////////////////////
-		// Text
-		if(IsEnabled())
-		{
-			//cColor col = this->HasFocus()?cColor(1,0,0,1):cColor(0,1);
-			//cColor col = cColor(0,1);
-			DrawDefaultText( msText,GetGlobalPosition()+
-							cVector3f(mvSize.x/2, mvSize.y/2 - mvDefaultFontSize.y/2,0.5f)+vOffset,
-							eFontAlign_Center, mDefaultFontColor);
-		}
-		else
-		{
-			DrawDefaultText( msText,GetGlobalPosition()+
-							cVector3f(mvSize.x/2, mvSize.y/2 - mvDefaultFontSize.y/2,0.5f)+vOffset,
-							eFontAlign_Center, cColor(0.5f,1));
-			/*DrawSkinText( msText,eGuiSkinFont_Disabled, GetGlobalPosition()+
-						cVector3f(mvSize.x/2, mvSize.y/2 - mvDefaultFontSize.y/2,0.5f)+vOffset,
-						eFontAlign_Center);*/
-		}
-		
-
-		////////////////////////////////
-		// Borders and background
-		if(mbPressed)
-		{
-			DrawBordersAndCorners(	mpGfxBackgroundDown, mvGfxBordersDown, mvGfxCornersDown, 
-									GetGlobalPosition(), mvSize);
-		}
-		else
-		{
-			DrawBordersAndCorners(	mpGfxBackgroundUp, mvGfxBordersUp, mvGfxCornersUp, 
-									GetGlobalPosition(), mvSize);
-		}
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_button_draw(ops, kOhplWdMaxOps, &d, table.m);
+		const tWString* texts[1] = { &msText };
+		iFontData* fonts[1] = { mpDefaultFontType };
+		OhplWdRun(mpSet, ops, lCount, table, texts, fonts);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetButton::OnUpdate(float afTimeStep)
 	{
-		if(mbPressed && mbRepeatActive)
-		{
-			mfTimer+=afTimeStep;
-
-			if(mfTimer>mfRepeatPeriod)
-			{
-				mfTimer=0;
-				mlRepeatTimes++;
-
-				ProcessMessage(eGuiMessage_ButtonPressed, mPressedData);
-			}
-
-		}
+		OhplWdButtonAction act;
+		OhplWdButtonState state = GetRustState();
+		ohpl_wd_button_update(&state, afTimeStep, &act);
+		mfTimer = act.state.timer;
+		mlRepeatTimes = act.state.repeat_times;
+		if(act.fire)
+			ProcessMessage(eGuiMessage_ButtonPressed, mPressedData);
 	}
 
 	//-----------------------------------------------------------------------
@@ -216,44 +185,47 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	OhplWdButtonState cWidgetButton::GetRustState()
+	{
+		OhplWdButtonState state;
+		state.toggleable = mbToggleable;
+		state.pressed = mbPressed;
+		state.repeat_active = mbRepeatActive;
+		state.repeat_times = mlRepeatTimes;
+		state.timer = mfTimer;
+		state.repeat_period = mfRepeatPeriod;
+		return state;
+	}
+
+	//-----------------------------------------------------------------------
+
 	bool cWidgetButton::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if(IsEnabled() && aData.mlVal==eGuiMouseButton_Left)
-		{
-			if(mbToggleable)
-			{
-				mbPressed = !mbPressed;
-				ProcessMessage(eGuiMessage_ButtonPressed,aData);
-			}
-			else
-				mbPressed = true;
+		OhplWdButtonAction act;
+		OhplWdButtonState state = GetRustState();
+		ohpl_wd_button_mouse_down(&state, IsEnabled(), aData.mlVal, &act);
+		if(act.ret==false) return false;
 
+		mbPressed = act.state.pressed;
+		if(act.fire)
+			ProcessMessage(eGuiMessage_ButtonPressed,aData);
+		if(act.store_data)
 			mPressedData = aData;
-
-			return true;
-		}
-		return false;
+		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cWidgetButton::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(IsEnabled() && aData.mlVal==eGuiMouseButton_Left)
-		{
-			if(GetMouseIsOver()==false) return false;
-
-			if(mbToggleable==false)
-			{
-				if(mbPressed && mlRepeatTimes==0) ProcessMessage(eGuiMessage_ButtonPressed,aData);
-				mbPressed = false;
-				mlRepeatTimes = 0;
-			}
-
-			return true;
-		}
-
-		return false;
+		OhplWdButtonAction act;
+		OhplWdButtonState state = GetRustState();
+		ohpl_wd_button_mouse_up(&state, IsEnabled(), aData.mlVal, GetMouseIsOver(), &act);
+		if(act.fire)
+			ProcessMessage(eGuiMessage_ButtonPressed,aData);
+		mbPressed = act.state.pressed;
+		mlRepeatTimes = act.state.repeat_times;
+		return act.ret;
 	}
 
 	//-----------------------------------------------------------------------
@@ -289,7 +261,7 @@ namespace hpl {
 	{
 		if(HasFocus())
 		{
-			if(aData.mlVal==eUIButton_Primary)
+			if(ohpl_wd_ui_primary(aData.mlVal))
 				return OnMouseDown(cGuiMessageData(eGuiMouseButton_Left));
 		}
 		
@@ -300,7 +272,7 @@ namespace hpl {
 	{
 		if(HasFocus())
 		{
-			if(aData.mlVal==eUIButton_Primary)
+			if(ohpl_wd_ui_primary(aData.mlVal))
 			{
 				// Lil hack: make widget think mouse is over.
 				bool bPrevMouseOver = mbMouseIsOver;

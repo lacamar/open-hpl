@@ -32,6 +32,7 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
 #include "gui/WidgetLabel.h"
+#include "gui/RustWidget.h"
 
 namespace hpl {
 
@@ -119,12 +120,11 @@ namespace hpl {
 
 	bool cWidgetCheckBox::Label_MouseDown(iWidget *apWidget, const cGuiMessageData& aData)
 	{
-		if((aData.mlVal&eGuiMouseButton_Left)==0 && (aData.mlVal&eGuiMouseButton_Right)==0)
-			return false;
-
-		if(mbEnabled)
+		bool bForward;
+		bool bRet = ohpl_wd_check_label_forward(aData.mlVal, mbEnabled, &bForward);
+		if(bForward)
 			ProcessMessage(eGuiMessage_MouseDown,aData);
-		return true;
+		return bRet;
 	}
 	kGuiCallbackDeclaredFuncEnd(cWidgetCheckBox, Label_MouseDown);
 
@@ -132,12 +132,11 @@ namespace hpl {
 
 	bool cWidgetCheckBox::Label_MouseUp(iWidget *apWidget, const cGuiMessageData& aData)
 	{
-		if((aData.mlVal&eGuiMouseButton_Left)==0 && (aData.mlVal&eGuiMouseButton_Right)==0)
-			return false;
-
-		if(mbEnabled)
+		bool bForward;
+		bool bRet = ohpl_wd_check_label_forward(aData.mlVal, mbEnabled, &bForward);
+		if(bForward)
 			ProcessMessage(eGuiMessage_MouseUp,aData);
-		return true;
+		return bRet;
 	}
 	kGuiCallbackDeclaredFuncEnd(cWidgetCheckBox, Label_MouseUp);
 
@@ -153,7 +152,9 @@ namespace hpl {
 
 	void cWidgetCheckBox::OnInit()
 	{
-		mpLabel->SetPosition( cVector3f(mvGfxBox[0][0]->GetActiveSize().x + 3, mvBoxSize.y/2 - mvDefaultFontSize.y/2,0));
+		cVector3f vLabelPos;
+		ohpl_wd_check_label_pos(mvGfxBox[0][0]->GetActiveSize().x, mvBoxSize.y, mvDefaultFontSize.y, &vLabelPos);
+		mpLabel->SetPosition(vLabelPos);
 		mpLabel->AddCallback(eGuiMessage_MouseDown,this,kGuiCallback(Label_MouseDown));
 		mpLabel->AddCallback(eGuiMessage_MouseUp,this,kGuiCallback(Label_MouseUp));
 	}
@@ -174,11 +175,11 @@ namespace hpl {
 	{
 		//if(mvSize.y < mvDefaultFontSize.y) mvSize.y = mvDefaultFontSize.y;
 		//if(mvSize.x < mvGfxBox[0][0]->GetActiveSize().x) mvSize.x = mvGfxBox[0][0]->GetActiveSize().x;
-		mvBoxSize.x = mvGfxBox[0][0]->GetActiveSize().x;
-		mvBoxSize.y = mvDefaultFontSize.y;
-
-		mvSize.x = mvBoxSize.x + 3 + mpLabel->GetLocalPosition().x+mpLabel->GetSize().x;
-		mvSize.y = mpLabel->GetSize().y;
+		cVector2f vLabelSize = mpLabel->GetSize();
+		OhplWdCheckLayout layout;
+		ohpl_wd_check_layout(mvGfxBox[0][0]->GetActiveSize().x, mvDefaultFontSize.y, mpLabel->GetLocalPosition().x, &vLabelSize, &layout);
+		mvBoxSize = layout.box_size;
+		mvSize = layout.size;
 	}
 
 	//-----------------------------------------------------------------------
@@ -195,8 +196,10 @@ namespace hpl {
 		//Log("cWidgetCheckBox::OnDraw - text = %s - address:0x%x - Before DrawGfx ... ", cString::To8Char(msText).c_str(), this);
 		////////////////////////////////
 		// Box
-		mpSet->DrawGfx( mvGfxBox[IsEnabled()][mbChecked], GetGlobalPosition() +
-						cVector3f(0,mvBoxSize.y/2 - mvGfxBox[0][0]->GetActiveSize().y/2,0));
+		cVector3f vGlobal = GetGlobalPosition();
+		cVector3f vBoxPos;
+		ohpl_wd_check_box_pos(&vGlobal, mvBoxSize.y, mvGfxBox[0][0]->GetActiveSize().y, &vBoxPos);
+		mpSet->DrawGfx( mvGfxBox[IsEnabled()][mbChecked], vBoxPos);
 
 		//Log("After DrawGfx\n");
 		/*
@@ -220,7 +223,7 @@ namespace hpl {
 
 	bool cWidgetCheckBox::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if((aData.mlVal&eGuiMouseButton_Left)==0)
+		if(ohpl_wd_check_mouse_down(aData.mlVal)==false)
 			return false;
 
 		mbPressed = true;
@@ -258,7 +261,7 @@ namespace hpl {
 	{
 		if(HasFocus())
 		{
-			if(aData.mlVal==eUIButton_Primary)
+			if(ohpl_wd_ui_primary(aData.mlVal))
 				return OnMouseDown(cGuiMessageData(eGuiMouseButton_Left));
 		}
 		
@@ -269,7 +272,7 @@ namespace hpl {
 	{
 		if(HasFocus())
 		{
-			if(aData.mlVal==eUIButton_Primary)
+			if(ohpl_wd_ui_primary(aData.mlVal))
 			return OnMouseUp(cGuiMessageData(eGuiMouseButton_Left));
 		}
 
