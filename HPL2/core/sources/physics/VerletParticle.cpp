@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <cstddef>
 #include "physics/VerletParticle.h"
 
 #include "physics/PhysicsWorld.h"
@@ -84,6 +85,8 @@ namespace hpl {
 
 	cVerletParticle::cVerletParticle(iVerletParticleContainer *apContainer)
 	{
+		static_assert(sizeof(cVerletParticle) == 64 && offsetof(cVerletParticle, mvPosition) == 8 && offsetof(cVerletParticle, mvPrevPosition) == 20 &&
+			offsetof(cVerletParticle, mvSmoothPosition) == 32 && offsetof(cVerletParticle, mvForce) == 44 && offsetof(cVerletParticle, mfInvMass) == 56, "particle layout");
 		mpContainer = apContainer;
 
 		mvPosition = 0;
@@ -117,16 +120,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cVerletParticle::UpdateMovement(float afTimeStep)
-	{
-		cVector3f vAcc = mfInvMass == 0 ? 0 : mvForce*mfInvMass + mpContainer->mvGravityForce;
-		mvForce = 0;
-
-		cVector3f vTemp = mvPosition;
-		mvPosition += (mvPosition*mpContainer->mfDampingMul - mvPrevPosition*mpContainer->mfDampingMul) + vAcc * afTimeStep*afTimeStep;
-
-		mvPrevPosition = vTemp;
-	}
 
 
 	//-----------------------------------------------------------------------
@@ -147,24 +140,24 @@ namespace hpl {
 
 		mpRayParticleCallback = hplNew( cVerletParticleRayCallback, (this));
 
-		mvGravityForce = mpWorld->GetGravity();
+		mS.gravityForce = mpWorld->GetGravity();
 
-		mbCollide = true;
+		mS.collide = true;
 
 		mfDamping = 0.001f;
-		mfDampingMul = 1 - mfDamping;
+		mS.dampingMul = 1 - mfDamping;
 
-		mfSlideAmount = 0.3f;
-		mfParticleRadius = 0.05f;
+		mS.slideAmount = 0.3f;
+		mS.particleRadius = 0.05f;
 
-		mbSleeping = false;
-		mfSleepCheckCount =0;
-		mfSleepCheckTime = 1.0f / 3.0f;
-		mlSleepCount =0;
-		mlSleepMaxCount = 3;
-		mfSleepCheckSqrLimit = 0.0015f * 0.0015f;
+		mS.sleeping = false;
+		mS.sleepCheckCount =0;
+		mS.sleepCheckTime = 1.0f / 3.0f;
+		mS.sleepCount =0;
+		mS.sleepMaxCount = 3;
+		mS.sleepCheckSqrLimit = 0.0015f * 0.0015f;
 
-		mlUpdateCount =0;
+		mS.updateCount =0;
 	}
 
 	iVerletParticleContainer::~iVerletParticleContainer()
@@ -179,7 +172,7 @@ namespace hpl {
 		afX = cMath::Clamp(afX,0,1);
 
 		mfDamping = afX;
-		mfDampingMul = 1 - mfDamping;
+		mS.dampingMul = 1 - mfDamping;
 	}
 
 	
@@ -187,9 +180,9 @@ namespace hpl {
 	
 	void iVerletParticleContainer::SetParticleRadius(float afX)
 	{
-		if(mfParticleRadius == afX) return;
+		if(mS.particleRadius == afX) return;
 
-		mfParticleRadius = afX;
+		mS.particleRadius = afX;
 
 		SetSleeping(false);
 	}
@@ -198,78 +191,64 @@ namespace hpl {
 
 	void iVerletParticleContainer::SetSleeping(bool abX)
 	{
-		if(mbSleeping == abX) return;
+		if(mS.sleeping == abX) return;
 
-		mbSleeping = abX;
-		mlSleepCount = 0;
-        mfSleepCheckCount = 0;
+		mS.sleeping = abX;
+		mS.sleepCount = 0;
+        mS.sleepCheckCount = 0;
 
 		SetSpecificDataSleeping(abX);
 	}
 	
 	//-----------------------------------------------------------------------
 
-	void iVerletParticleContainer::PreUpdate(float afTimeStep)
-	{
-		///////////////////////////
-		//Sleeping
-		if(mbSleeping)
-		{
-			if(CheckSpecificDataAwake())
-			{
-				SetSleeping(false);
-			}
-		}
-		///////////////////////////
-		//NOT Sleeping
-		if(mbSleeping==false)
-		{
-			mlUpdateCount++;
-
-			//////////////////////////
-			//Update counter and see if time for check
-			mfSleepCheckCount+= afTimeStep;
-			if(mfSleepCheckCount < mfSleepCheckTime) return;
-			
-			//////////////////////////
-			//Iterate particles and see if all are sleeping
-			bool bAllSleeping=true;
-			for(tVerletParticleListIt it = mlstParticles.begin(); it != mlstParticles.end(); ++it)
-			{
-				cVerletParticle *pPart = *it;
-				
-				float fSqrSpeed = cMath::Vector3DistSqr(pPart->GetPosition(), pPart->GetPrevPosition());
-				if(fSqrSpeed > mfSleepCheckSqrLimit) 
-				{
-					bAllSleeping= false;
-					break;
-				}
-			}
-
-			//////////////////////////
-			//Check implementation specific sleeping.
-			if(bAllSleeping)
-			{
-				bAllSleeping = CheckSpecificDataSleeping();
-			}
-			
-			//////////////////////////
-			//Update counter and see if sleeping should start
-            if(bAllSleeping)
-			{
-				mlSleepCount++;
-				if(mlSleepMaxCount <= mlSleepCount)
-				{
-					SetSleeping(true);
-				}
-			}
-			else
-			{
-				mlSleepCount =0;
-			}
-		}
-	}
 	
+	//-----------------------------------------------------------------------
+
+	void cVerletParticle::UpdateMovement(float afTimeStep)
+	{
+		ohpl_verlet_update_movement(this, mpContainer->mS.dampingMul, OhplV3{mpContainer->mS.gravityForce.x, mpContainer->mS.gravityForce.y, mpContainer->mS.gravityForce.z}, afTimeStep);
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
+	{
+		ohpl_verlet_length_constraint(apP1, apP2, afLength, afStiffness);
+	}
+
+	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afMinLength, float afMaxLength, float afStiffness)
+	{
+		ohpl_verlet_length_constraint_range(apP1, apP2, afMinLength, afMaxLength, afStiffness);
+	}
+
+	void iVerletParticleContainer::UpdateLengthConstraintStretch(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
+	{
+		ohpl_verlet_length_constraint_stretch(apP1, apP2, afLength, afStiffness);
+	}
+
+	//-----------------------------------------------------------------------
+
+	bool iVerletParticleContainer::CastParticleRay(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apPos, cVector3f *apNormal)
+	{
+		mpRayParticleCallback->Reset();
+		mpWorld->CastRay(mpRayParticleCallback, avStart, avEnd, true,true,true, true);
+		*apPos = mpRayParticleCallback->mvIntersectPos;
+		*apNormal = mpRayParticleCallback->mvIntersectNormal;
+		return mpRayParticleCallback->mbIntersected;
+	}
+
+	void iVerletParticleContainer::UpdateParticleCollisionConstraint(cVerletParticle *apPart, const cVector3f &avPrevPos, float afRadius)
+	{
+		ohpl_verlet_collision_constraint(
+			[](void *c, OhplV3 aStart, OhplV3 aEnd, OhplV3 *apPos, OhplV3 *apNormal)
+			{
+				return static_cast<iVerletParticleContainer*>(c)->CastParticleRay(cVector3f(aStart.x, aStart.y, aStart.z), cVector3f(aEnd.x, aEnd.y, aEnd.z),
+					reinterpret_cast<cVector3f*>(apPos), reinterpret_cast<cVector3f*>(apNormal));
+			},
+			this, &mS, apPart, OhplV3{avPrevPos.x, avPrevPos.y, avPrevPos.z}, afRadius);
+	}
+
 	//-----------------------------------------------------------------------
 
 	cVerletParticle* iVerletParticleContainer::GetParticle(int alIdx)
@@ -279,59 +258,11 @@ namespace hpl {
 		return *std::next(mlstParticles.begin(), alIdx);
 	}
 
-	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
-	{
-		cVector3f vDelta =  apP2->mvPosition - apP1->mvPosition;
-		float fDist = vDelta.Length();
 
-		float fDiff = afStiffness*(fDist- afLength)/(fDist*cMath::Max(0.0001f, apP1->mfInvMass + apP2->mfInvMass));
 
-		apP1->mvPosition += vDelta * fDiff * apP1->mfInvMass;
-		apP2->mvPosition -= vDelta * fDiff * apP2->mfInvMass;
-	}
-
-	void iVerletParticleContainer::UpdateLengthConstraint(cVerletParticle *apP1, cVerletParticle *apP2, float afMinLength, float afMaxLength, float afStiffness)
-	{
-		float fDist = cMath::Vector3Dist(apP1->mvPosition, apP2->mvPosition);
-		if(fDist < afMinLength)		UpdateLengthConstraint(apP1, apP2, afMinLength, afStiffness);
-		else if(fDist > afMaxLength)	UpdateLengthConstraint(apP1, apP2, afMaxLength, afStiffness);
-	}
-
-	void iVerletParticleContainer::UpdateLengthConstraintStretch(cVerletParticle *apP1, cVerletParticle *apP2, float afLength, float afStiffness)
-	{
-		cVector3f vDelta = apP1->mvPosition - apP2->mvPosition;
-		float fDist = vDelta.Length();
-
-		float fDiff = (fDist- afLength)/(fDist*cMath::Max(0.0001f, apP2->mfInvMass));
-
-		apP2->mvPosition += vDelta * fDiff * apP2->mfInvMass * afStiffness;
-	}
 
 	//-----------------------------------------------------------------------
 
-	void iVerletParticleContainer::UpdateParticleCollisionConstraint(cVerletParticle *apPart, const cVector3f &avPrevPos, float afRadius)
-	{
-		if(mbCollide==false) return;
-
-		cVector3f vDiff = apPart->mvPosition - avPrevPos;
-		if(vDiff == cVector3f(0,0,0)) return;
-
-		float fLength = vDiff.Length();
-		cVector3f vDir = vDiff / fLength;
-
-		mpRayParticleCallback->Reset();
-
-		cVector3f vStart = avPrevPos - vDir*afRadius;
-		cVector3f vEnd = apPart->mvPosition + vDir*afRadius;
-
-		mpWorld->CastRay(mpRayParticleCallback, vStart, vEnd, true,true,true, true);
-
-		if(mpRayParticleCallback->mbIntersected)
-		{
-			apPart->mvPosition = mpRayParticleCallback->mvIntersectPos - vDir*afRadius;
-			apPart->mvPrevPosition = apPart->mvPosition + mpRayParticleCallback->mvIntersectNormal * (fLength * mfSlideAmount);
-		}
-	}
 	
 	//-----------------------------------------------------------------------
 
