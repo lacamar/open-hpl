@@ -554,6 +554,30 @@ static void cLuxBase_HeadlessCmd_RenderStats(void *apUserData, const cHeadlessRe
 	aResp.Set("fps", pBase->mpEngine->GetFPS());
 }
 
+static void cLuxBase_HeadlessCmd_SaveGame(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	tString sFile = aReq.GetString("file","");
+	if(pBase->mpMapHandler->MapIsLoaded()==false || sFile == "")
+	{
+		aResp.SetError("need a loaded map and file=");
+		return;
+	}
+	pBase->mpSaveHandler->SaveGameToFile(cString::To16Char(sFile), false);
+}
+
+static void cLuxBase_HeadlessCmd_LoadGame(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cLuxBase *pBase = (cLuxBase*)apUserData;
+	tString sFile = aReq.GetString("file","");
+	if(sFile == "" || cPlatform::FileExists(cString::To16Char(sFile))==false)
+	{
+		aResp.SetError("file= must name an existing save");
+		return;
+	}
+	pBase->mpSaveHandler->LoadGameFromFile(cString::To16Char(sFile));
+}
+
 static void cLuxBase_HeadlessCmd_Teleport(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
 	cLuxBase *pBase = (cLuxBase*)apUserData;
@@ -675,6 +699,8 @@ bool cLuxBase::Init(const tString &asCommandline)
 		pCtrl->RegisterHandler("state", cLuxBase_HeadlessCmd_State, this);
 		pCtrl->RegisterHandler("render_stats", cLuxBase_HeadlessCmd_RenderStats, this);
 		pCtrl->RegisterHandler("teleport", cLuxBase_HeadlessCmd_Teleport, this);
+		pCtrl->RegisterHandler("save_game", cLuxBase_HeadlessCmd_SaveGame, this);
+		pCtrl->RegisterHandler("load_game", cLuxBase_HeadlessCmd_LoadGame, this);
 		pCtrl->RegisterHandler("start_map", cLuxBase_HeadlessCmd_StartMap, this);
 	}
 
