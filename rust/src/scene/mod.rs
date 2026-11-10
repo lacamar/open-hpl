@@ -7,14 +7,19 @@ use crate::math::{EPSILON, fma, len3, sub3, v3};
 use crate::types::Vector3f;
 use std::mem::take;
 
+mod billboard;
 mod camera;
 mod ffi;
 mod ffi_node;
+mod ffi_particles;
 mod node;
+mod particles;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod tests_node;
+#[cfg(test)]
+mod tests_particles;
 
 const BIG: f32 = 100_000.0;
 
