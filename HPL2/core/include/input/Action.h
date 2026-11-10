@@ -22,6 +22,7 @@
 
 #include "system/SystemTypes.h"
 #include "input/InputTypes.h"
+#include "input/RustInput.h"
 
 namespace hpl {
 
@@ -129,15 +130,9 @@ namespace hpl {
 		int mlId;
 		cInput *mpInput;
 
-		bool mbBecameTriggerd;
-		bool mbIsTriggerd;
+		OhplActionState mState;
 
-		bool mbDoubleTrigger_Down;
-		bool mbDoubleTrigger_Triggered;
-
-		bool mbIsDown;
-
-		double mfTimeCount;
+		bool AnySubActionTriggerd();
 
 		tSubActionVec mvSubActions;
 		

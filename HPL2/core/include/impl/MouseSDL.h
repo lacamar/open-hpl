@@ -22,6 +22,7 @@
 
 #include <vector>
 #include "input/Mouse.h"
+#include "input/RustInput.h"
 
 
 namespace hpl {
@@ -33,6 +34,7 @@ namespace hpl {
 	{
 	public:
 		cMouseSDL(cLowLevelInputSDL *apLowLevelInputSDL);
+		~cMouseSDL();
 
 		bool ButtonIsDown(eMouseButton);
 		
@@ -53,17 +55,9 @@ namespace hpl {
 		void Reset();
 		
 	private:
-		bool mbFirstTime;
-
-		cVector2l mvMouseAbsPos;
-		cVector2l mvMouseRelPos;
-
-		std::vector<bool> mvMButtonArray;
-
+		OhplMouse *mpRust;
+		std::vector<OhplInputEvent> mvEvents;
 		cLowLevelInputSDL *mpLowLevelInputSDL;
-		
-		bool mbWheelUpMoved;
-		bool mbWheelDownMoved;
 	};
 
 };
