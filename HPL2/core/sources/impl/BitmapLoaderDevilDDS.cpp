@@ -18,6 +18,7 @@
  */
 
 #include "impl/BitmapLoaderDevilDDS.h"
+#include "impl/RustImpl.h"
 
 #include "graphics/Bitmap.h"
 #include "system/LowLevelSystem.h"
@@ -35,63 +36,29 @@ namespace hpl {
 		if (pFile == NULL) return false;
 
 		unsigned char vHeader[148] = {};
-		bool bOk = fread(vHeader, 1, 128, pFile) == 128 && memcmp(vHeader, "DDS ", 4) == 0;
-		const unsigned char* pFourCC = vHeader + 84;
-		unsigned int lCaps2 = 0;
-		memcpy(&lCaps2, vHeader + 112, 4);
-		bool bDxt = (aFlags & eBitmapLoadFlag_ForceNoCompression) == 0 && (lCaps2 & 0x200000) == 0;
-		ePixelFormat format = ePixelFormat_Unknown;
-		int lBlockSize = 16, lBytesPerPixel = 4;
-		if (memcmp(pFourCC, "BC5U", 4) == 0 || memcmp(pFourCC, "ATI2", 4) == 0) { format = ePixelFormat_RGTC2; lBytesPerPixel = 1; }
-		else if (bDxt && memcmp(pFourCC, "DXT1", 4) == 0) { format = ePixelFormat_DXT1; lBlockSize = 8; }
-		else if (bDxt && memcmp(pFourCC, "DXT3", 4) == 0) format = ePixelFormat_DXT3;
-		else if (bDxt && memcmp(pFourCC, "DXT5", 4) == 0) format = ePixelFormat_DXT5;
-		else if (memcmp(pFourCC, "BC4U", 4) == 0 || memcmp(pFourCC, "ATI1", 4) == 0) { format = ePixelFormat_RGTC1; lBlockSize = 8; lBytesPerPixel = 1; }
-		else if (memcmp(pFourCC, "DX10", 4) == 0 && bOk && fread(vHeader + 128, 1, 20, pFile) == 20)
-		{
-			unsigned int lDxgi = 0;
-			memcpy(&lDxgi, vHeader + 128, 4);
-			switch (lDxgi)
-			{
-			case 71: case 72: if (bDxt) { format = ePixelFormat_DXT1; lBlockSize = 8; } break;
-			case 74: case 75: if (bDxt) format = ePixelFormat_DXT3; break;
-			case 77: case 78: if (bDxt) format = ePixelFormat_DXT5; break;
-			case 80: format = ePixelFormat_RGTC1; lBlockSize = 8; lBytesPerPixel = 1; break;
-			case 83: format = ePixelFormat_RGTC2; lBytesPerPixel = 1; break;
-			case 95: format = ePixelFormat_BC6H; break;
-			case 98: case 99: format = ePixelFormat_BC7; break;
-			case 28: case 29: format = ePixelFormat_RGBA; lBlockSize = 0; break;
-			case 87: case 91: format = ePixelFormat_BGRA; lBlockSize = 0; break;
-			}
-		}
-		bool bCube = (lCaps2 & 0x200) != 0;
-		if (bOk == false || format == ePixelFormat_Unknown || (bCube && (lCaps2 & 0xFE00) != 0xFE00))
+		size_t lRead = fread(vHeader, 1, sizeof(vHeader), pFile);
+		long lFileSize = fseek(pFile, 0, SEEK_END) == 0 ? ftell(pFile) : -1;
+		OhplDdsBlockPlan plan;
+		if (lFileSize < 0 || !ohpl_dds_plan_block(vHeader, lRead, (uint64_t)lFileSize, (aFlags & eBitmapLoadFlag_ForceNoCompression) != 0, &plan) ||
+			fseek(pFile, (long)plan.data_offset, SEEK_SET) != 0)
 		{
 			fclose(pFile);
 			return false;
 		}
 
-		unsigned int lHeight = 0, lWidth = 0, lMipMaps = 0;
-		memcpy(&lHeight, vHeader + 12, 4);
-		memcpy(&lWidth, vHeader + 16, 4);
-		memcpy(&lMipMaps, vHeader + 28, 4);
-		if (lMipMaps == 0) lMipMaps = 1;
-		int lImages = bCube ? 6 : 1;
-
 		cBitmap* pBitmap = hplNew(cBitmap, ());
-		if (lImages > 1 || lMipMaps > 1) pBitmap->SetUpData(lImages, (int)lMipMaps);
-		pBitmap->SetSize(cVector3l((int)lWidth, (int)lHeight, 1));
-		pBitmap->SetBytesPerPixel(lBytesPerPixel);
-		pBitmap->SetIsCompressed(lBlockSize != 0);
-		pBitmap->SetPixelFormat(format);
+		if (plan.images > 1 || plan.mips > 1) pBitmap->SetUpData((int)plan.images, (int)plan.mips);
+		pBitmap->SetSize(cVector3l((int)plan.width, (int)plan.height, 1));
+		pBitmap->SetBytesPerPixel(plan.bytes_per_pixel);
+		pBitmap->SetIsCompressed(plan.block_size != 0);
+		pBitmap->SetPixelFormat((ePixelFormat)plan.format);
 
-		for (int image = 0; image < lImages; ++image)
+		for (unsigned image = 0; image < plan.images; ++image)
 		{
-			unsigned int lW = lWidth, lH = lHeight;
-			for (unsigned int mip = 0; mip < lMipMaps; ++mip)
+			for (unsigned mip = 0; mip < plan.mips; ++mip)
 			{
-				int lSize = lBlockSize ? (int)(((lW + 3) / 4) * ((lH + 3) / 4) * lBlockSize) : (int)(lW * lH * 4);
-				cBitmapData* pImage = pBitmap->GetData(image, (int)mip);
+				int lSize = ohpl_dds_mip_size(&plan, mip);
+				cBitmapData* pImage = pBitmap->GetData((int)image, (int)mip);
 				pImage->mlSize = lSize;
 				pImage->mpData = hplNewArray(unsigned char, lSize);
 				if (fread(pImage->mpData, 1, (size_t)lSize, pFile) != (size_t)lSize)
@@ -100,8 +67,6 @@ namespace hpl {
 					hplDelete(pBitmap);
 					return false;
 				}
-				lW = lW > 1 ? lW / 2 : 1;
-				lH = lH > 1 ? lH / 2 : 1;
 			}
 		}
 		fclose(pFile);
@@ -116,32 +81,15 @@ namespace hpl {
 
 		unsigned char vHeader[128];
 		bool bOk = fread(vHeader, 1, sizeof(vHeader), pFile) == sizeof(vHeader);
-		if (bOk && memcmp(vHeader, "DDS ", 4) != 0) bOk = false;
-
-		unsigned int lHeaderFlags = 0, lHeight = 0, lWidth = 0, lPitch = 0;
-		unsigned int lPixelFormatFlags = 0, lRgbBitCount = 0;
-		if (bOk)
-		{
-			memcpy(&lHeaderFlags, vHeader + 8, 4);
-			memcpy(&lHeight, vHeader + 12, 4);
-			memcpy(&lWidth, vHeader + 16, 4);
-			memcpy(&lPitch, vHeader + 20, 4);
-			memcpy(&lPixelFormatFlags, vHeader + 80, 4);
-			memcpy(&lRgbBitCount, vHeader + 88, 4);
-		}
-
+		long lFileSize = bOk && fseek(pFile, 0, SEEK_END) == 0 ? ftell(pFile) : -1;
+		OhplDdsAlphaPlan plan;
 		// Rebirth font pages: DDPF_ALPHAPIXELS alone
-		const unsigned int klDdpfAlphaPixels = 0x1, klDdpfAlpha = 0x2;
-		const unsigned int klDdsdPitch = 0x8;
-
-		if (bOk == false || (lPixelFormatFlags != klDdpfAlpha && lPixelFormatFlags != klDdpfAlphaPixels) || lRgbBitCount != 8 ||
-			lWidth == 0 || lHeight == 0)
+		if (lFileSize < 0 || !ohpl_dds_plan_alpha(vHeader, sizeof(vHeader), (uint64_t)lFileSize, &plan))
 		{
 			fclose(pFile);
 			return false;
 		}
-
-		unsigned int lRowBytes = ((lHeaderFlags & klDdsdPitch) != 0 && lPitch > 0) ? lPitch : lWidth;
+		unsigned int lWidth = plan.width, lHeight = plan.height, lRowBytes = plan.row_bytes;
 
 		unsigned char* pPixels = hplNewArray(unsigned char, (size_t)lWidth * lHeight);
 		bool bReadOk = true;
@@ -235,14 +183,15 @@ namespace hpl {
 
 		////////////////////////////////////////
 		//Get main image properties
-		int lNumOfImages = ilGetInteger(IL_NUM_IMAGES) + 1; //Returns number of images - 1, so need to add 1
-		int lNumOfMipMaps = ilGetInteger(IL_NUM_MIPMAPS) + 1; //We count first image as mimap too, so add 1
+		//IL counts are one less than the number of images / mipmaps
 		int lCubeFlags = ilGetInteger(IL_IMAGE_CUBEFLAGS);
-
-		if(lCubeFlags != 0) lNumOfImages = 6;
+		OhplDdsLayout layout;
+		ohpl_devil_dds_layout(ilGetInteger(IL_NUM_IMAGES), ilGetInteger(IL_NUM_MIPMAPS), lCubeFlags, &layout);
+		int lNumOfImages = layout.images;
+		int lNumOfMipMaps = layout.mips;
 
 		//No need to setup if only one image and mipmap, data is already setup for that.
-		if(lNumOfImages > 1 || lNumOfMipMaps > 1)
+		if(layout.setup_data)
 		{
 			pBitmap->SetUpData(lNumOfImages, lNumOfMipMaps);
 		}
@@ -342,14 +291,7 @@ namespace hpl {
 
 	ePixelFormat cBitmapLoaderDevilDDS::GetPixelFormatFromILDXT(int alDxtFormat)
 	{
-		switch(alDxtFormat)
-		{
-		case IL_DXT1:	return ePixelFormat_DXT1;
-		case IL_DXT3:	return ePixelFormat_DXT3;
-		case IL_DXT5:	return ePixelFormat_DXT5;
-		}
-
-		return ePixelFormat_Unknown;
+		return (ePixelFormat)ohpl_devil_dxt_to_hpl((unsigned)alDxtFormat);
 	}
 
 	//-----------------------------------------------------------------------

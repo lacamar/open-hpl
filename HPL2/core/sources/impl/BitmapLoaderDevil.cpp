@@ -24,10 +24,20 @@
 
 #include "system/String.h"
 #include "system/Platform.h"
+#include "impl/RustImpl.h"
 
 #ifdef WIN32
 #include <io.h>
 #endif
+
+static_assert(IL_RGB == 0x1907 && IL_RGBA == 0x1908 && IL_BGR == 0x80E0 && IL_BGRA == 0x80E1 && IL_LUMINANCE == 0x1909, "IL pixel formats cross the ABI");
+static_assert(IL_BMP == 0x0420 && IL_JPG == 0x0425 && IL_PCX == 0x0428 && IL_PNG == 0x042A && IL_SGI == 0x042C &&
+	IL_TGA == 0x042D && IL_TIF == 0x042E && IL_DDS == 0x0437 && IL_PSD == 0x0439, "IL file types cross the ABI");
+static_assert(IL_DXT1 == 0x0706 && IL_DXT3 == 0x0708 && IL_DXT5 == 0x070A && IL_DXT_NO_COMP == 0x070B, "IL DXT formats cross the ABI");
+static_assert(hpl::ePixelFormat_Alpha == 1 && hpl::ePixelFormat_Luminance == 2 && hpl::ePixelFormat_RGB == 4 &&
+	hpl::ePixelFormat_RGBA == 5 && hpl::ePixelFormat_BGR == 6 && hpl::ePixelFormat_BGRA == 7 && hpl::ePixelFormat_DXT1 == 8 &&
+	hpl::ePixelFormat_DXT3 == 10 && hpl::ePixelFormat_DXT5 == 12 && hpl::ePixelFormat_RGTC2 == 13 &&
+	hpl::ePixelFormat_RGTC1 == 27 && hpl::ePixelFormat_BC6H == 28 && hpl::ePixelFormat_BC7 == 29, "ePixelFormat crosses the ABI");
 
 namespace hpl {
 
@@ -230,32 +240,14 @@ namespace hpl {
 
 	ePixelFormat iBitmapLoaderDevil::DevilPixelFormatToHPL(int alFormat)
 	{
-		switch(alFormat)
-		{
-		case IL_RGB:		return ePixelFormat_RGB;
-		case IL_RGBA:		return ePixelFormat_RGBA;
-		case IL_BGR:		return ePixelFormat_BGR;
-		case IL_BGRA:		return ePixelFormat_BGRA;
-		case IL_LUMINANCE:	return ePixelFormat_Alpha;	//Not sure this is good.
-		}
-
-		return ePixelFormat_Unknown;
+		return (ePixelFormat)ohpl_devil_pixel_format_to_hpl((unsigned)alFormat);
 	}
 
 	//-----------------------------------------------------------------------
 
 	ILenum iBitmapLoaderDevil::HPLPixelFormatToDevil(ePixelFormat aFormat)
 	{
-		switch(aFormat)
-		{
-		case ePixelFormat_RGB:			return IL_RGB;
-		case ePixelFormat_RGBA:			return IL_RGBA;
-		case ePixelFormat_BGR:			return IL_BGR;
-		case ePixelFormat_BGRA:			return IL_BGRA;
-		case ePixelFormat_Luminance:	return IL_LUMINANCE;
-		}
-
-		return 0;
+		return ohpl_devil_pixel_format_from_hpl((unsigned)aFormat);
 	}
 
 	//-----------------------------------------------------------------------
@@ -263,20 +255,8 @@ namespace hpl {
 	ILenum iBitmapLoaderDevil::FileNameToDevilTypeW(const tWString& asFile)
 	{
 		tWString sExt = cString::ToLowerCaseW(cString::GetFileExtW(asFile));
-        if(sExt==_W("")) return 0;
-		
-		if(sExt == _W("bmp"))	return IL_BMP;
-		if(sExt == _W("jpeg"))	return IL_JPG;
-		if(sExt == _W("jpg"))	return IL_JPG;
-		if(sExt == _W("pcx"))	return IL_PCX;
-		if(sExt == _W("png"))	return IL_PNG;
-		if(sExt == _W("tga"))	return IL_TGA;
-		if(sExt == _W("tif"))	return IL_TIF;
-		if(sExt == _W("dds"))	return IL_DDS;
-		if(sExt == _W("psd"))	return IL_PSD;
-		if(sExt == _W("sgi"))	return IL_SGI;
-		
-		return 0;
+		static_assert(sizeof(wchar_t) == sizeof(unsigned), "wide text crosses the ABI as u32");
+		return ohpl_devil_type_from_extension((const unsigned*)sExt.c_str(), sExt.size());
 	}
 
 	//-----------------------------------------------------------------------

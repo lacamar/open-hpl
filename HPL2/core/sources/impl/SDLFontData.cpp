@@ -33,6 +33,7 @@
 
 #include "system/String.h"
 #include "system/Platform.h"
+#include "impl/RustImpl.h"
 
 namespace hpl {
 
@@ -82,15 +83,25 @@ namespace hpl {
 
 		////////////////////////////////////////////
 		// Load Common info
-		TiXmlElement *pCommonElem = pRootElem->FirstChildElement("common");
+		TiXmlElement *pCommonElem = pRootElem ? pRootElem->FirstChildElement("common") : NULL;
+		TiXmlElement *pInfoElem = pRootElem ? pRootElem->FirstChildElement("info") : NULL;
+		if(pCommonElem==NULL || pInfoElem==NULL || pRootElem->FirstChildElement("chars")==NULL || pRootElem->FirstChildElement("pages")==NULL)
+		{
+			Error("Font file '%s' lacks info, common, chars or pages\n", cString::To8Char(asFileName).c_str());
+			fclose(pFile);
+			hplDelete(pXmlDoc);
+			return false;
+		}
 
-		int lOutline = cString::ToInt(pRootElem->FirstChildElement("info")->Attribute("outline"),0);
-		int lLineHeight = cString::ToInt(pCommonElem->Attribute("lineHeight"),0) + 2*lOutline;
-		int lBase = cString::ToInt(pCommonElem->Attribute("base"),0) + 2*lOutline;
+		int lOutline = cString::ToInt(pInfoElem->Attribute("outline"),0);
+		OhplFontHeader header = ohpl_font_header(lOutline, cString::ToInt(pCommonElem->Attribute("lineHeight"),0),
+												cString::ToInt(pCommonElem->Attribute("base"),0));
+		int lLineHeight = header.line_height;
+		int lBase = header.base;
 
-		mfHeight = (float)lLineHeight;
+		mfHeight = header.height;
 
-		mvSizeRatio.x = (float)lBase / (float)lLineHeight;//I think this is a not correct. Not sure what is done here :S
+		mvSizeRatio.x = header.size_ratio_x;//I think this is a not correct. Not sure what is done here :S
 		mvSizeRatio.y = 1;
 
 		int lLargestGlyphId=-1;
@@ -105,9 +116,17 @@ namespace hpl {
 			if(lId >lLargestGlyphId) lLargestGlyphId = lId;
 		}
 
+		long long llGlyphCount = ohpl_font_glyph_count(lLargestGlyphId);
+		if(llGlyphCount < 0)
+		{
+			Error("Font file '%s' has an unreasonable glyph id %d\n", cString::To8Char(asFileName).c_str(), lLargestGlyphId);
+			fclose(pFile);
+			hplDelete(pXmlDoc);
+			return false;
+		}
 		mlFirstChar =0;
 		mlLastChar = lLargestGlyphId;
-		mvGlyphs.resize(lLargestGlyphId+1, NULL);
+		mvGlyphs.resize((size_t)llGlyphCount, NULL);
 
 		////////////////////////////////////////////
 		// Load bitmaps
@@ -180,13 +199,19 @@ namespace hpl {
 			int lXOffset = cString::ToInt(pCharElem->Attribute("xoffset"),0);
 			int lYOffset = cString::ToInt(pCharElem->Attribute("yoffset"),0);
 
-			int lAdvance = cString::ToInt(pCharElem->Attribute("xadvance"),0) + lOutline;
+			int lAdvance = ohpl_font_glyph_advance(cString::ToInt(pCharElem->Attribute("xadvance"),0), lOutline);
 
 			int lPage = cString::ToInt(pCharElem->Attribute("page"),0);
 
-			if(lId<0 || lId>=(int)mvGlyphs.size())
+			if(!ohpl_font_glyph_id_valid(lId, mvGlyphs.size()))
 			{
 				Warning("Font '%s' contain glyph with invalid id: %d. Skipping loading of it!\n", cString::To8Char(asFileName).c_str(), lId);
+				continue;
+			}
+
+			if(!ohpl_font_page_valid(lPage, vFrameTextures.size()))
+			{
+				Warning("Font '%s' glyph %d uses invalid page %d. Skipping loading of it!\n", cString::To8Char(asFileName).c_str(), lId, lPage);
 				continue;
 			}
 

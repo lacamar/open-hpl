@@ -22,6 +22,7 @@
 #include "graphics/Bitmap.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "impl/RustImpl.h"
 
 namespace hpl {
 
@@ -100,7 +101,7 @@ namespace hpl {
 		////////////////////////////////////////
 		//Loop through and copy image data
 		// If 0 number of images, there is still one image to get, so set up accordingly.
-		int lCount = lNumOfImages > 0 ? lNumOfImages : 1;
+		int lCount = ohpl_devil_misc_image_count(lNumOfImages);
 		for(int image=0; image < lCount; ++image)
 		{
 			//When 1 image only, no need to set up active image.
