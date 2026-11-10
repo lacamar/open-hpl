@@ -5,14 +5,19 @@
 pub mod draw;
 mod ffi;
 mod ffi_skin;
+mod ffi_widget;
 pub mod gfx;
 pub mod guicore;
 pub mod layout;
 pub mod list;
 pub mod skin;
 mod sort;
+pub mod widget;
+pub mod widgets_base;
 
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod tests_skin;
+#[cfg(test)]
+mod tests_widget;

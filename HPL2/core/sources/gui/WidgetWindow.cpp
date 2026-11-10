@@ -27,6 +27,7 @@
 #include "gui/GuiSkin.h"
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 #include "gui/WidgetButton.h"
 
@@ -132,6 +133,19 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	OhplWdWindowLook cWidgetWindow::GetRustLook()
+	{
+		OhplWdWindowLook look;
+		look.size = mvSize;
+		look.corner_lu = mvGfxCorners[0]->GetActiveSize();
+		look.corner_ru = mvGfxCorners[1]->GetActiveSize();
+		look.label_font_height = mpLabelFont->mvSize.y;
+		look.label_offset = mvLabelTextOffset;
+		return look;
+	}
+
+	//-----------------------------------------------------------------------
+
 	void cWidgetWindow::OnInit()
 	{
 		if(mlFlags & eWidgetWindowButtonFlag_ButtonClose)
@@ -180,13 +194,10 @@ namespace hpl {
 	{
 		if(apChild->GetType()==eWidgetType_MainMenu)
 		{
-			////////////////////////////////
-			// Calc label size
-			cVector2f vLabelSize;
-			vLabelSize.x = mvSize.x - (mvGfxCorners[0]->GetActiveSize().x + mvGfxCorners[1]->GetActiveSize().x);
-			vLabelSize.y = mpLabelFont->mvSize.y + mvLabelTextOffset.y*2;
-
-			apChild->SetPosition(cVector3f(0,vLabelSize.y+3,0.1f));
+			OhplWdWindowLook look = GetRustLook();
+			cVector3f vPos;
+			ohpl_wd_window_menu_pos(&look, &vPos);
+			apChild->SetPosition(vPos);
 		}
 	}
 
@@ -196,7 +207,9 @@ namespace hpl {
 	{
 		if(mvButtons[0])
 		{
-			mvButtons[0]->SetPosition(cVector3f(mvSize.x - mfButtonSize - 5 ,5,0.2f));
+			cVector3f vPos;
+			ohpl_wd_window_button_pos(mvSize.x, mfButtonSize, &vPos);
+			mvButtons[0]->SetPosition(vPos);
 		}
 	}
 
@@ -204,38 +217,41 @@ namespace hpl {
 
 	void cWidgetWindow::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		////////////////////////////////
-		// Calc label size
-		cVector2f vLabelSize;
-		vLabelSize.x = mvSize.x - (mvGfxCorners[0]->GetActiveSize().x + mvGfxCorners[1]->GetActiveSize().x);
-		vLabelSize.y = mpLabelFont->mvSize.y + mvLabelTextOffset.y*2;
+		cGuiSkinFont *pFont = mpSkin->GetFont(eGuiSkinFont_WindowLabel);
 
-		////////////////////////////////
-		// Label
-		if(mbDrawLabel)
-		{
-			cColor col = mbFocused? cColor(1,1) : cColor(0.6f,0.3f);
-			mpSet->DrawGfx(	mpGfxLabel,GetGlobalPosition() + 
-							cVector3f(mvGfxCorners[0]->GetActiveSize().x,mvGfxCorners[0]->GetActiveSize().y,0.2f),
-							vLabelSize, col);
-		}
+		OhplWdWindowDraw d;
+		d.look = GetRustLook();
+		d.global = GetGlobalPosition();
+		d.draw_label = mbDrawLabel;
+		d.focused = mbFocused;
+		d.has_background = mpGfxBackground != NULL;
+		d.borders_outside = mbDrawBordersOutside;
+		d.font_size = pFont->mvSize;
+		d.font_color = pFont->mColor;
+		d.color_mul = mColorMul;
 
-		////////////////////////////////
-		// Label text
-		DrawSkinText(	msText,eGuiSkinFont_WindowLabel,GetGlobalPosition()+
-						cVector3f(	mvGfxCorners[0]->GetActiveSize().x+mvLabelTextOffset.x,
-									mvGfxCorners[0]->GetActiveSize().y+mvLabelTextOffset.y,0.4f));
+		OhplWdGfxTable table;
+		table.SetFrame(mpGfxBackground, mvGfxBorders, mvGfxCorners);
+		table.Set(kOhplWdGfxLabel, mpGfxLabel);
 
-		////////////////////////////////
-		// Borders and background
-		DrawBordersAndCorners(	mpGfxBackground, mvGfxBorders, mvGfxCorners, GetGlobalPosition(), mvSize, mbDrawBordersOutside);
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_window_draw(ops, kOhplWdMaxOps, &d, table.m);
+		const tWString* texts[1] = { &msText };
+		iFontData* fonts[2] = { NULL, pFont->mpFont };
+		OhplWdRun(mpSet, ops, lCount, table, texts, fonts);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	bool cWidgetWindow::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(mbMoving) SetGlobalPosition(mvRelMousePos + cVector3f(aData.mvPos.x, aData.mvPos.y,0));
+		if(mbMoving)
+		{
+			cVector3f vPos;
+			ohpl_wd_window_drag_pos(&mvRelMousePos, &aData.mvPos, &vPos);
+			SetGlobalPosition(vPos);
+		}
+
 		return true;
 	}
 
@@ -245,25 +261,19 @@ namespace hpl {
 	{
 		if(mbStatic) return false;
 
-		////////////////////////////////
-		// Calculate label rectangle
-		cRect2f labelRect;
-		labelRect.w = mvSize.x - (mvGfxCorners[0]->GetActiveSize().x + mvGfxCorners[1]->GetActiveSize().x);
-		labelRect.h = mpLabelFont->mvSize.y + mvLabelTextOffset.y*2;
-		labelRect.x = GetGlobalPosition().x + mvGfxCorners[0]->GetActiveSize().x;
-		labelRect.y = GetGlobalPosition().y + mvGfxCorners[0]->GetActiveSize().y;
-		
-		////////////////////////////////
-		// Check for collision
-		if(cMath::CheckPointInRectIntersection(aData.mvPos,labelRect) && aData.mlVal & eGuiMouseButton_Left)
+		OhplWdWindowLook look = GetRustLook();
+		cVector3f vGlobal = GetGlobalPosition();
+		if(ohpl_wd_window_mouse_down(&look, &vGlobal, &aData.mvPos, aData.mlVal))
 		{
 			mbMoving = true;
+
 			mpPrevAttention = mpSet->GetAttentionWidget();
 			mpSet->SetAttentionWidget(this);
+
 			mvRelMousePos = GetPosRelativeToMouse(aData);
 			mvRelMousePos.z = GetGlobalPosition().z;
 		}
-		
+
 		return true;
 	}
 
@@ -299,7 +309,9 @@ namespace hpl {
 		
 		if(mbMoving)
 		{
-			SetGlobalPosition(mvRelMousePos + cVector3f(aData.mvPos.x, aData.mvPos.y,0));
+			cVector3f vPos;
+			ohpl_wd_window_drag_pos(&mvRelMousePos, &aData.mvPos, &vPos);
+			SetGlobalPosition(vPos);
 
 			//Check so that mouse is not outside of clip area.
 			if(PointIsInside(aData.mvPos, false)==false)
@@ -316,10 +328,7 @@ namespace hpl {
 
 	bool cWidgetWindow::OnKeyPress(const cGuiMessageData& aData)
 	{
-		if(mbFocused==false || mbCloseOnEscapeKey==false)
-			return false;
-
-		if(aData.mKeyPress.mKey==eKey_Escape && aData.mKeyPress.mlModifier==eKeyModifier_None)
+		if(ohpl_wd_window_key_closes(mbFocused, mbCloseOnEscapeKey, aData.mKeyPress.mKey, aData.mKeyPress.mlModifier))
 			return ProcessMessage(eGuiMessage_WindowClose, aData);
 
 		return false;
@@ -359,7 +368,11 @@ namespace hpl {
 	void cWidgetWindow::OnChildLostFocus(iWidget* apChild, const cGuiMessageData& aData)
 	{
 		iWidget* pWidget = mpSet->GetFocusedWidget();
-		if(pWidget==NULL || IsConnectedTo(pWidget,false)==false && pWidget->IsConnectedTo(this, false)==false)
+		bool bNone = pWidget==NULL;
+		bool bDown = bNone ? false : IsConnectedTo(pWidget,false);
+		bool bUp = (bNone || bDown) ? false : pWidget->IsConnectedTo(this,false);
+
+		if(ohpl_wd_window_focus_lost(bNone, bDown, bUp))
 			mbFocused = false;
 	}
 

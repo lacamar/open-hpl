@@ -28,10 +28,20 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 #include "math/Math.h"
 
 namespace hpl {
+
+	static OhplWdParentPos ParentPosOf(iWidget* apParent)
+	{
+		OhplWdParentPos pos;
+		pos.global = apParent->GetGlobalPosition();
+		pos.children_offset = apParent->GetChildrenOffset();
+		pos.scroll = apParent->GetScrollAmount();
+		return pos;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -254,22 +264,11 @@ namespace hpl {
 
 	bool iWidget::PointIsInside(const cVector2f& avPoint, bool abOnlyClipped)
 	{
-		if(CheckPointInsideClippingParent(avPoint)==false)
-			return false;
-
-		if(abOnlyClipped && mbClipsGraphics==false) return true;
+		int lStage = ohpl_wd_point_stage(CheckPointInsideClippingParent(avPoint), abOnlyClipped, mbClipsGraphics);
+		if(lStage != 2) return lStage == 1;
 
 		cVector3f vGlobalPos = GetGlobalPosition();
-
-		if(	avPoint.x < vGlobalPos.x || avPoint.x > vGlobalPos.x + mvSize.x || 
-			avPoint.y < vGlobalPos.y || avPoint.y > vGlobalPos.y + mvSize.y)
-		{
-			return false;
-		}
-		else
-		{
-			return true;	
-		}
+		return ohpl_wd_point_in_box(&avPoint, &vGlobalPos, &mvSize);
 	}
 
 	//-----------------------------------------------------------------------
@@ -280,7 +279,10 @@ namespace hpl {
 		{
 			iWidget *pParent = apChild->mpParent;
 			pParent->RemoveChild(apChild);
-			apChild->SetPosition(apChild->mvPosition - GetGlobalPosition());
+			cVector3f vGlobal = GetGlobalPosition();
+			cVector3f vLocal;
+			ohpl_wd_rebase(&apChild->mvPosition, &vGlobal, false, &vLocal);
+			apChild->SetPosition(vLocal);
 		}
 		apChild->mpParent = this;
 		apChild->SetPositionUpdated();
@@ -303,7 +305,10 @@ namespace hpl {
 				
 				pChild->mpParent = NULL;
 				pChild->SetPositionUpdated();
-				pChild->SetPosition(pChild->mvPosition + GetGlobalPosition());
+				cVector3f vGlobal = GetGlobalPosition();
+				cVector3f vLocal;
+				ohpl_wd_rebase(&pChild->mvPosition, &vGlobal, true, &vLocal);
+				pChild->SetPosition(vLocal);
 
 				OnRemoveChild(pChild);
 
@@ -399,10 +404,11 @@ namespace hpl {
 
 	void iWidget::SetGlobalPosition(const cVector3f &avPos)
 	{
-		if(mpParent)
-			SetPosition(avPos - mpParent->GetGlobalPosition() - mpParent->GetChildrenOffset());
-		else
-			SetPosition(avPos);
+		OhplWdParentPos parent;
+		if(mpParent) parent = ParentPosOf(mpParent);
+		cVector3f vLocal;
+		ohpl_wd_global_to_local(&avPos, mpParent ? &parent : NULL, &vLocal);
+		SetPosition(vLocal);
 	}
 	
 	const cVector3f& iWidget::GetLocalPosition()
@@ -417,7 +423,8 @@ namespace hpl {
 			if(mbPositionIsUpdated)
 			{
 				mbPositionIsUpdated = false;
-				mvGlobalPosition = mpParent->GetGlobalPosition() + mpParent->GetChildrenOffset() - (mbAffectedByScroll? mpParent->GetScrollAmount() : cVector3f(0)) + mvPosition;
+				OhplWdParentPos parent = ParentPosOf(mpParent);
+				ohpl_wd_global_position(&parent, mbAffectedByScroll, &mvPosition, &mvGlobalPosition);
 			}
 			return mvGlobalPosition;
 		}
@@ -465,12 +472,9 @@ namespace hpl {
 		cVector2f vSetSize = mpSet->GetVirtualSize();
 		float fGlobalZ = GetGlobalPosition().z;
 
-		float fX = vSetSize.x/2.0f - mvSize.x/2.0f;
-		float fY = vSetSize.y/2.0f - mvSize.y/2.0f;
-		if(fX < 0) fX = 0;
-		if(fY < 0) fY = 0;
-
-		SetGlobalPosition(cVector3f(fX, fY, fGlobalZ));
+		cVector3f vCentered;
+		ohpl_wd_center_in_set(&vSetSize, &mvSize, fGlobalZ, &vCentered);
+		SetGlobalPosition(vCentered);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -520,12 +524,16 @@ namespace hpl {
 
 	void iWidget::SetFocusNavigation(eUIArrow aDir, iWidget* apWidget)
 	{
-		mvFocusNavWidgets[UIArrowToArrayPos(aDir)] = apWidget;
+		int lSlot = UIArrowToArrayPos(aDir);
+		if(lSlot < 0) return;
+		mvFocusNavWidgets[lSlot] = apWidget;
 	}
 
 	iWidget* iWidget::GetFocusNavigation(eUIArrow aDir)
 	{
-		return mvFocusNavWidgets[UIArrowToArrayPos(aDir)];
+		int lSlot = UIArrowToArrayPos(aDir);
+		if(lSlot < 0) return NULL;
+		return mvFocusNavWidgets[lSlot];
 	}
 
 	//-----------------------------------------------------------------------
@@ -623,15 +631,20 @@ namespace hpl {
 
 	cVector3f iWidget::WorldToLocalPosition(const cVector3f &avPos)
 	{
-		return avPos - GetGlobalPosition();
+		cVector3f vGlobal = GetGlobalPosition();
+		cVector3f vLocal;
+		ohpl_wd_rebase(&avPos, &vGlobal, false, &vLocal);
+		return vLocal;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cVector2f iWidget::GetPosRelativeToMouse(const cGuiMessageData& aData)
 	{
-		cVector3f vTemp = GetGlobalPosition() - aData.mvPos;
-		return cVector2f(vTemp.x, vTemp.y);
+		cVector3f vGlobal = GetGlobalPosition();
+		cVector2f vRel;
+		ohpl_wd_rel_to_mouse(&vGlobal, &aData.mvPos, &vRel);
+		return vRel;
 	}
 
 	//-----------------------------------------------------------------------
@@ -640,135 +653,12 @@ namespace hpl {
 										cGuiGfxElement **apBorderVec,cGuiGfxElement **apCornerVec,
 										const cVector3f &avPosition, const cVector2f &avSize, bool abBordersOutside)
 	{
-		mpSet->SetDrawOffset(avPosition);
+		OhplWdGfxTable table;
+		table.SetFrame(apBackground, apBorderVec, apCornerVec);
 
-		cVector3f vPos;
-		cVector2f vSize;
-
-		vPos.z = 0;
-
-		///////////////////////
-		// Background
-		if(apBackground)
-		{
-			if(abBordersOutside)
-			{
-				vPos.x = 0;
-				vPos.y = 0;
-
-				vSize = avSize;
-			}
-			else
-			{
-				vPos.x = apCornerVec[0]->GetActiveSize().x;
-				vPos.y = apCornerVec[0]->GetActiveSize().y;
-
-				vSize = avSize - apCornerVec[2]->GetActiveSize()-apCornerVec[0]->GetActiveSize();
-			}
-			
-			mpSet->DrawGfx(apBackground,vPos,
-							vSize,
-							cColor(1,1));
-
-			//mpSet->DrawGfx(apBackground,cVector3f(	apCornerVec[0]->GetActiveSize().x,
-			//									apCornerVec[0]->GetActiveSize().y,0 ),
-			//				avSize - apCornerVec[2]->GetActiveSize()-apCornerVec[0]->GetActiveSize(),
-			//				cColor(1,1));
-		}
-
-
-		if(abBordersOutside)
-		{
-			///////////////////////
-			// Borders
-			//Right
-			mpSet->DrawGfx(	apBorderVec[0],
-				cVector3f(	avSize.x,0,0),
-				cVector2f(	apBorderVec[0]->GetImageSize().x, 
-				avSize.y));
-			//Left
-			mpSet->DrawGfx(	apBorderVec[1],
-				cVector3f(	-apCornerVec[0]->GetActiveSize().x,
-				0,0),
-				cVector2f(	apBorderVec[1]->GetImageSize().x, 
-				avSize.y));
-
-			//Up
-			mpSet->DrawGfx(	apBorderVec[2],
-				cVector3f(	0,-apCornerVec[0]->GetActiveSize().y,0),
-				cVector2f(	avSize.x, 
-				apBorderVec[2]->GetImageSize().y));
-
-			//Down
-			mpSet->DrawGfx(	apBorderVec[3],
-				cVector3f(	0, avSize.y ,0),
-				cVector2f(	avSize.x, 
-				apBorderVec[3]->GetImageSize().y));
-
-
-			///////////////////////
-			// Corners
-			//Left Up
-			mpSet->DrawGfx(apCornerVec[0], cVector3f(-apCornerVec[0]->GetActiveSize().x,-apCornerVec[0]->GetActiveSize().y,0));
-			//Right Up
-			mpSet->DrawGfx(apCornerVec[1], cVector3f( avSize.x, -apCornerVec[1]->GetActiveSize().y,0));
-
-			//Right Down
-			mpSet->DrawGfx(apCornerVec[2], cVector3f(	avSize.x,
-				avSize.y,0));
-			//Left Down
-			mpSet->DrawGfx(apCornerVec[3], cVector3f( -apCornerVec[3]->GetActiveSize().x,avSize.y, 0));
-		}
-		else
-		{
-			///////////////////////
-			// Borders
-			//Right
-			mpSet->DrawGfx(	apBorderVec[0],
-				cVector3f(	avSize.x - apBorderVec[0]->GetActiveSize().x,
-				apCornerVec[1]->GetActiveSize().y,0),
-				cVector2f(	apBorderVec[0]->GetImageSize().x, 
-				avSize.y - (apCornerVec[2]->GetActiveSize().y +
-				apCornerVec[1]->GetActiveSize().y)));
-			//Left
-			mpSet->DrawGfx(	apBorderVec[1],
-				cVector3f(	0,apCornerVec[0]->GetActiveSize().y,0),
-				cVector2f(	apBorderVec[1]->GetImageSize().x, 
-				avSize.y - (apCornerVec[3]->GetActiveSize().y + 
-				apCornerVec[0]->GetActiveSize().y)));
-
-			//Up
-			mpSet->DrawGfx(	apBorderVec[2],
-				cVector3f(	apCornerVec[0]->GetActiveSize().x,0,0),
-				cVector2f(	avSize.x - (apCornerVec[0]->GetActiveSize().x+
-				apCornerVec[1]->GetActiveSize().x), 
-				apBorderVec[2]->GetImageSize().y));
-
-			//Down
-			mpSet->DrawGfx(	apBorderVec[3],
-				cVector3f(	apCornerVec[3]->GetActiveSize().x, 
-				avSize.y - apBorderVec[3]->GetActiveSize().y,0),
-				cVector2f(	avSize.x - (apCornerVec[2]->GetActiveSize().x+
-				apCornerVec[3]->GetActiveSize().x), 
-				apBorderVec[3]->GetImageSize().y));
-
-
-			///////////////////////
-			// Corners
-			//Left Up
-			mpSet->DrawGfx(apCornerVec[0], cVector3f(0,0,0));
-			//Right Up
-			mpSet->DrawGfx(apCornerVec[1], cVector3f(	avSize.x - apCornerVec[1]->GetActiveSize().x,0,0));
-
-			//Right Down
-			mpSet->DrawGfx(apCornerVec[2], cVector3f(	avSize.x -  apCornerVec[2]->GetActiveSize().x,
-				avSize.y -  apCornerVec[2]->GetActiveSize().y,0));
-			//Left Down
-			mpSet->DrawGfx(apCornerVec[3], cVector3f(	0,avSize.y - apCornerVec[3]->GetActiveSize().y,0));
-		}
-
-
-		mpSet->SetDrawOffset(0);
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_borders(ops, kOhplWdMaxOps, apBackground!=NULL, abBordersOutside, &avPosition, &avSize, table.m);
+		OhplWdRun(mpSet, ops, lCount, table, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -851,7 +741,7 @@ namespace hpl {
 
 	int iWidget::UIArrowToArrayPos(eUIArrow aDir)
 	{
-		return cMath::Log2ToInt(aDir);
+		return ohpl_wd_ui_arrow_slot(aDir);
 	}
 
 	//-----------------------------------------------------------------------
