@@ -19,6 +19,7 @@
 
 #include "system/HeadlessControl.h"
 #include "system/EngineDiagnostics.h"
+#include "system/RustSystem.h"
 
 #include "engine/Engine.h"
 #include "engine/Updater.h"
@@ -92,104 +93,24 @@ namespace hpl {
 #endif
 	}
 
+	static void AssignString(void *apCtx, const char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(apData, alLen);
+	}
+
 	static tString JsonEscape(const tString &asIn)
 	{
 		tString sOut;
-		sOut.reserve(asIn.size());
-		for(size_t i=0; i<asIn.size(); ++i)
-		{
-			char c = asIn[i];
-			switch(c)
-			{
-			case '"': sOut += "\\\""; break;
-			case '\\': sOut += "\\\\"; break;
-			case '\n': sOut += "\\n"; break;
-			case '\r': sOut += "\\r"; break;
-			case '\t': sOut += "\\t"; break;
-			default:
-				if((unsigned char)c >= 0x20) sOut += c;
-			}
-		}
+		ohpl_hc_json_escape(asIn.data(), asIn.size(), AssignString, &sOut);
 		return sOut;
-	}
-
-	static void SkipWhitespace(const tString &asLine, size_t &alPos)
-	{
-		while(alPos < asLine.size() && isspace((unsigned char)asLine[alPos])) ++alPos;
-	}
-
-	static tString ParseJsonString(const tString &asLine, size_t &alPos)
-	{
-		tString sOut;
-		if(alPos >= asLine.size() || asLine[alPos] != '"') return sOut;
-		++alPos;
-		while(alPos < asLine.size() && asLine[alPos] != '"')
-		{
-			char c = asLine[alPos];
-			if(c == '\\' && alPos+1 < asLine.size())
-			{
-				char cNext = asLine[alPos+1];
-				switch(cNext)
-				{
-				case 'n': sOut += '\n'; break;
-				case 'r': sOut += '\r'; break;
-				case 't': sOut += '\t'; break;
-				default: sOut += cNext; break;
-				}
-				alPos += 2;
-			}
-			else
-			{
-				sOut += c;
-				++alPos;
-			}
-		}
-		if(alPos < asLine.size()) ++alPos;
-		return sOut;
-	}
-
-	static tString ParseJsonBareToken(const tString &asLine, size_t &alPos)
-	{
-		size_t lStart = alPos;
-		while(alPos < asLine.size())
-		{
-			char c = asLine[alPos];
-			if(c == ',' || c == '}' || isspace((unsigned char)c)) break;
-			++alPos;
-		}
-		return asLine.substr(lStart, alPos - lStart);
 	}
 
 	static void ParseFlatJsonObject(const tString &asLine, std::map<tString,tString> &aOutFields)
 	{
-		size_t lPos = 0;
-		SkipWhitespace(asLine, lPos);
-		if(lPos >= asLine.size() || asLine[lPos] != '{') return;
-		++lPos;
-
-		while(true)
-		{
-			SkipWhitespace(asLine, lPos);
-			if(lPos >= asLine.size() || asLine[lPos] == '}') break;
-			if(asLine[lPos] != '"') break;
-
-			tString sKey = ParseJsonString(asLine, lPos);
-
-			SkipWhitespace(asLine, lPos);
-			if(lPos >= asLine.size() || asLine[lPos] != ':') break;
-			++lPos;
-			SkipWhitespace(asLine, lPos);
-
-			tString sVal;
-			if(lPos < asLine.size() && asLine[lPos] == '"') sVal = ParseJsonString(asLine, lPos);
-			else sVal = ParseJsonBareToken(asLine, lPos);
-
-			aOutFields[sKey] = sVal;
-
-			SkipWhitespace(asLine, lPos);
-			if(lPos < asLine.size() && asLine[lPos] == ',') { ++lPos; continue; }
-			break;
-		}
+		ohpl_hc_parse(asLine.data(), asLine.size(),
+			[](void *apCtx, const char *apKey, size_t alKeyLen, const char *apVal, size_t alValLen) {
+				(*static_cast<std::map<tString,tString>*>(apCtx))[tString(apKey, alKeyLen)] = tString(apVal, alValLen);
+			}, &aOutFields);
 	}
 
 	tString cHeadlessRequest::GetString(const tString &asKey, const tString &asDefault) const
@@ -231,7 +152,9 @@ namespace hpl {
 	}
 	void cHeadlessResponse::Set(const tString &asKey, float afVal)
 	{
-		mvExtraFields.push_back(std::make_pair(asKey, (afVal != afVal || afVal - afVal != 0) ? tString("null") : cString::ToString(afVal, 6, true)));
+		tString sNum;
+		ohpl_diag_num(afVal, AssignString, &sNum);
+		mvExtraFields.push_back(std::make_pair(asKey, sNum));
 	}
 	void cHeadlessResponse::Set(const tString &asKey, int alVal)
 	{
@@ -249,17 +172,15 @@ namespace hpl {
 
 	tString cHeadlessResponse::ToJson() const
 	{
-		tString sOut = "{\"ok\":";
-		sOut += mbOk ? "true" : "false";
-		if(!mbOk && !msError.empty())
-		{
-			sOut += ",\"error\":\"" + JsonEscape(msError) + "\"";
-		}
+		std::vector<OhplHcField> vFields;
 		for(size_t i=0; i<mvExtraFields.size(); ++i)
 		{
-			sOut += ",\"" + mvExtraFields[i].first + "\":" + mvExtraFields[i].second;
+			OhplHcField field = { (const uint8_t*)mvExtraFields[i].first.data(), mvExtraFields[i].first.size(),
+								  (const uint8_t*)mvExtraFields[i].second.data(), mvExtraFields[i].second.size() };
+			vFields.push_back(field);
 		}
-		sOut += "}";
+		tString sOut;
+		ohpl_hc_response_json(mbOk, msError.data(), msError.size(), vFields.data(), vFields.size(), AssignString, &sOut);
 		return sOut;
 	}
 
@@ -429,31 +350,27 @@ namespace hpl {
 		if(lClientFd < 0) return;
 		mlClientFd = lClientFd;
 
-		tString sBuffer;
+		OhplHcSplitter *pSplitter = ohpl_hc_splitter_new();
 		char vReadBuf[4096];
 		while(true)
 		{
 			ssize_t lRead = recv(lClientFd, vReadBuf, sizeof(vReadBuf), 0);
 			if(lRead <= 0) break;
 
-			sBuffer.append(vReadBuf, (size_t)lRead);
+			struct cLineSink { cHeadlessControlServer *mpServer; int mlClientFd; } sink = { this, lClientFd };
+			ohpl_hc_splitter_push(pSplitter, vReadBuf, (size_t)lRead,
+				[](void *apCtx, const char *apLine, size_t alLen) {
+					cLineSink *pSink = static_cast<cLineSink*>(apCtx);
+					cPendingRequest pending;
+					pending.mlClientFd = pSink->mlClientFd;
+					ParseFlatJsonObject(tString(apLine, alLen), pending.mRequest.mmapFields);
 
-			size_t lNewlinePos;
-			while((lNewlinePos = sBuffer.find('\n')) != tString::npos)
-			{
-				tString sLine = sBuffer.substr(0, lNewlinePos);
-				sBuffer.erase(0, lNewlinePos+1);
-				if(sLine.empty()) continue;
-
-				cPendingRequest pending;
-				pending.mlClientFd = lClientFd;
-				ParseFlatJsonObject(sLine, pending.mRequest.mmapFields);
-
-				mpQueueMutex->Lock();
-				mlstPendingQueue.push_back(pending);
-				mpQueueMutex->Unlock();
-			}
+					pSink->mpServer->mpQueueMutex->Lock();
+					pSink->mpServer->mlstPendingQueue.push_back(pending);
+					pSink->mpServer->mpQueueMutex->Unlock();
+				}, &sink);
 		}
+		ohpl_hc_splitter_free(pSplitter);
 
 		mlClientFd = -1;
 		close(lClientFd);

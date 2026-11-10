@@ -16,6 +16,7 @@
 #include "scene/ParticleSystem.h"
 #include "scene/SoundEntity.h"
 
+#include "system/RustSystem.h"
 #include "graphics/Bitmap.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
@@ -111,24 +112,23 @@ namespace hpl {
 	static std::vector<cShaderReportEntry> gvShaderReport;
 	static std::map<int, int> gmapGLErrors;
 
+	static void AssignString(void *apCtx, const char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(apData, alLen);
+	}
+
 	tString cEngineDiagnostics::JsonEscape(const tString &asIn)
 	{
 		tString sOut;
-		for(size_t i=0; i<asIn.size(); ++i)
-		{
-			char c = asIn[i];
-			if(c == '"' || c == '\\') { sOut += '\\'; sOut += c; }
-			else if(c == '\n') sOut += "\\n";
-			else if((unsigned char)c < 0x20) sOut += ' ';
-			else sOut += c;
-		}
+		ohpl_diag_json_escape(asIn.data(), asIn.size(), AssignString, &sOut);
 		return sOut;
 	}
 
 	static tString Num(float afX)
 	{
-		if(std::isnan(afX) || std::isinf(afX)) return "null";
-		return cString::ToString(afX, 6, true);
+		tString sOut;
+		ohpl_diag_num(afX, AssignString, &sOut);
+		return sOut;
 	}
 
 	static tString Vec3(const cVector3f &avX)
@@ -444,30 +444,9 @@ namespace hpl {
 
 	tString cEngineDiagnostics::GetPixelStatsJson(const float *apPixels, int alWidth, int alHeight)
 	{
-		static const char* vChannelNames[4] = {"r","g","b","a"};
-		size_t lNumPixels = (size_t)alWidth * (size_t)alHeight;
-
-		tString sOut = "{\"width\":" + cString::ToString(alWidth) + ",\"height\":" + cString::ToString(alHeight);
-		for(int c=0; c<4; ++c)
-		{
-			float fMin = 1e30f, fMax = -1e30f;
-			double fSum = 0;
-			int lNan = 0, lZero = 0;
-			for(size_t i=0; i<lNumPixels; ++i)
-			{
-				float fVal = apPixels[i*4 + c];
-				if(std::isnan(fVal)) { ++lNan; continue; }
-				if(fVal == 0.0f) ++lZero;
-				if(fVal < fMin) fMin = fVal;
-				if(fVal > fMax) fMax = fVal;
-				fSum += fVal;
-			}
-			size_t lValid = lNumPixels - lNan;
-			sOut += tString(",\"") + vChannelNames[c] + "\":{\"min\":" + Num(lValid ? fMin : 0) + ",\"max\":" + Num(lValid ? fMax : 0) +
-					",\"mean\":" + Num(lValid ? (float)(fSum / (double)lValid) : 0) +
-					",\"nan\":" + cString::ToString(lNan) + ",\"zero\":" + cString::ToString(lZero) + "}";
-		}
-		return sOut + "}";
+		tString sOut;
+		ohpl_diag_pixel_stats(apPixels, alWidth, alHeight, AssignString, &sOut);
+		return sOut;
 	}
 
 	void cEngineDiagnostics::ApplyDisplayGamma(cBitmap *apBitmap, float afGamma)
@@ -475,7 +454,7 @@ namespace hpl {
 		int lBpp = apBitmap->GetBytesPerPixel();
 		if(afGamma <= 0 || fabsf(afGamma - 1.0f) < 0.001f || lBpp < 3) return;
 		unsigned char vLut[256];
-		for(int i=0; i<256; ++i) vLut[i] = (unsigned char)(powf(i / 255.0f, 1.0f / afGamma) * 255.0f + 0.5f);
+		ohpl_diag_gamma_lut(afGamma, vLut);
 		cBitmapData *pData = apBitmap->GetData(0,0);
 		for(size_t i=0; i+2 < (size_t)pData->mlSize; i += lBpp)
 			for(int c=0; c<3; ++c) pData->mpData[i+c] = vLut[pData->mpData[i+c]];
@@ -483,42 +462,9 @@ namespace hpl {
 
 	tString cEngineDiagnostics::GetFrameStatsJson(const unsigned char *apPixels, int alWidth, int alHeight, int alBytesPerPixel)
 	{
-		size_t lNumPixels = (size_t)alWidth * (size_t)alHeight;
-		int vHist[16] = {0};
-		size_t lBlack=0, lWhite=0, lMagenta=0;
-		double fLumSum = 0;
-		int lLumMin = 255, lLumMax = 0;
-
-		for(size_t i=0; i<lNumPixels; ++i)
-		{
-			const unsigned char *pPix = apPixels + i*alBytesPerPixel;
-			int r = pPix[0], g = pPix[1], b = pPix[2];
-			int lLum = (r*54 + g*183 + b*19) >> 8;
-
-			fLumSum += lLum;
-			if(lLum < lLumMin) lLumMin = lLum;
-			if(lLum > lLumMax) lLumMax = lLum;
-			++vHist[lLum >> 4];
-
-			if(r < 4 && g < 4 && b < 4) ++lBlack;
-			if(r > 250 && g > 250 && b > 250) ++lWhite;
-			if(r > 200 && b > 200 && g < 60) ++lMagenta;
-		}
-
-		double fInv = lNumPixels ? 1.0 / (double)lNumPixels : 0;
-		tString sOut = "{\"width\":" + cString::ToString(alWidth) + ",\"height\":" + cString::ToString(alHeight);
-		sOut += ",\"lum_mean\":" + Num((float)(fLumSum * fInv));
-		sOut += ",\"lum_min\":" + cString::ToString(lLumMin) + ",\"lum_max\":" + cString::ToString(lLumMax);
-		sOut += ",\"black_frac\":" + Num((float)(lBlack * fInv));
-		sOut += ",\"white_frac\":" + Num((float)(lWhite * fInv));
-		sOut += ",\"magenta_frac\":" + Num((float)(lMagenta * fInv));
-		sOut += ",\"lum_hist16\":[";
-		for(int i=0; i<16; ++i)
-		{
-			if(i>0) sOut += ",";
-			sOut += Num((float)(vHist[i] * fInv));
-		}
-		return sOut + "]}";
+		tString sOut;
+		ohpl_diag_frame_stats(apPixels, alWidth, alHeight, alBytesPerPixel, AssignString, &sOut);
+		return sOut;
 	}
 
 }
