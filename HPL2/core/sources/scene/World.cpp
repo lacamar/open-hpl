@@ -74,6 +74,7 @@
 #include "scene/RenderableContainer_BoxTree.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
 #include "scene/DummyRenderable.h"
+#include "scene/RustWorld.h"
 
 #include "system/System.h"
 #include "system/Platform.h"
@@ -179,8 +180,7 @@ namespace hpl {
 
 	cEnvironmentParticles* cWorld::GetEnvironmentParticles(const tString& asName)
 	{
-		for(size_t i=0; i<mvEnvParticles.size(); ++i) if(mvEnvParticles[i]->GetName() == asName) return mvEnvParticles[i];
-		return NULL;
+		return OhplFindByName(mvEnvParticles, asName);
 	}
 
 	//-----------------------------------------------------------------------
@@ -221,7 +221,8 @@ namespace hpl {
 
 	void cWorld::DestroyAllEntities(tWorldDestroyAllFlag aFlags)
 	{
-		if( (aFlags & eWorldDestroyAllFlag_SkipStaticEntities)==0)
+		const uint32_t lPlan = ohpl_world_destroy_plan(aFlags);
+		if(lPlan & kOhplDestroyStatic)
 			STLDeleteAll(mlstStaticMeshEntities);
 		
 		STLDeleteAll(mlstDynamicMeshEntities);
@@ -242,7 +243,7 @@ namespace hpl {
 		STLDeleteAll(mlstAStarHandlers);
 		STLMapDeleteAll(m_mapTempNodes);
 
-		if( (aFlags & eWorldDestroyAllFlag_SkipPhysics)==0)
+		if(lPlan & kOhplDestroyPhysics)
 		{
 			if(mpPhysicsWorld && mbAutoDeletePhysicsWorld)
 				mpPhysics->DestroyWorld(mpPhysicsWorld);
@@ -301,12 +302,10 @@ namespace hpl {
 	{
 		mpSound->GetSoundHandler()->SetSilent(true);
 
-		while(afTotalTime>0)
+		for(uint32_t lStep = ohpl_world_pre_update_steps(afTotalTime, afTimeStep); lStep > 0; --lStep)
 		{
 			if(mpPhysicsWorld) mpPhysicsWorld->Update(afTimeStep);
 			UpdateParticles(afTimeStep);
-
-			afTotalTime -= afTimeStep;
 		}
 
 		mpSound->GetSoundHandler()->SetSilent(false);
@@ -361,8 +360,8 @@ namespace hpl {
 			iRenderableContainerNode *pStaticRoot = mpRenderableContainer[eWorldContainerType_Static]->GetRoot();
 
 			//Create a 10 m border around the world too
-			cVector3f vMin = pStaticRoot->GetMin() - cVector3f(10,10,10);
-			cVector3f vMax = pStaticRoot->GetMax() + cVector3f(10,10,10);
+			cVector3f vMin, vMax;
+			ohpl_world_physics_bounds(&pStaticRoot->GetMin(), &pStaticRoot->GetMax(), &vMin, &vMax);
 
 			mpPhysicsWorld->SetWorldSize(vMin, vMax);
 		}
@@ -409,9 +408,8 @@ namespace hpl {
 
 	void cWorld::UpdateSkyBoxVBColor()
 	{
-		cColor col = mSkyBoxColor;
-		if(mbHpl3SkyBox) col = col * cColor(col.r, col.g, col.b, 1);
-		col = cColor(col.r * mfSkyBoxBrightness, col.g * mfSkyBoxBrightness, col.b * mfSkyBoxBrightness, col.a);
+		cColor col;
+		ohpl_world_skybox_color(&mSkyBoxColor, mbHpl3SkyBox, mfSkyBoxBrightness, &col);
 
 		float *pColors = mpSkyBoxVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 		int lNum = mpSkyBoxVtxBuffer->GetVertexNum();
@@ -583,7 +581,7 @@ namespace hpl {
 
 	cMeshEntity* cWorld::GetDynamicMeshEntity(const tString& asName)
 	{
-		 return (cMeshEntity*)STLFindByName(mlstDynamicMeshEntities, asName);
+		 return OhplFindByName(mlstDynamicMeshEntities, asName);
 	}
 
 	//-----------------------------------------------------------------------
@@ -696,26 +694,12 @@ namespace hpl {
 
 	iLight* cWorld::GetLight(const tString& asName)
 	{
-		tLightListIt LightIt=mlstLights.begin();
-		for(;LightIt !=mlstLights.end();++LightIt)
-		{
-			if((*LightIt)->GetName() == asName){
-				return *LightIt;
-			}
-		}
-		return NULL;
+		return OhplFindByName(mlstLights, asName);
 	}
 
 	iLight* cWorld::GetLightFromUniqueID(int alID)
 	{
-		tLightListIt LightIt=mlstLights.begin();
-		for(;LightIt !=mlstLights.end();++LightIt)
-		{
-			if((*LightIt)->GetUniqueID() == alID){
-				return *LightIt;
-			}
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstLights, alID);
 	}
 
 	//-----------------------------------------------------------------------
@@ -750,19 +734,12 @@ namespace hpl {
 
 	cBillboard* cWorld::GetBillboard(const tString& asName)
 	{
-		return (cBillboard*)STLFindByName(mlstBillboards,asName);
+		return OhplFindByName(mlstBillboards, asName);
 	}
 
 	cBillboard* cWorld::GetBillboardFromUniqueID(int alID)
 	{
-		tBillboardListIt BillboardIt=mlstBillboards.begin();
-		for(;BillboardIt !=mlstBillboards.end();++BillboardIt)
-		{
-			if((*BillboardIt)->GetUniqueID() == alID){
-				return *BillboardIt;
-			}
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstBillboards, alID);
 	}
 
 	//-----------------------------------------------------------------------
@@ -794,14 +771,12 @@ namespace hpl {
 
 	cLensFlare* cWorld::GetLensFlare(const tString& asName)
 	{
-		return (cLensFlare*)STLFindByName(mlstLensFlares,asName);
+		return OhplFindByName(mlstLensFlares, asName);
 	}
 
 	cLensFlare* cWorld::GetLensFlareFromUniqueID(int alID)
 	{
-		for(cLensFlare *pFlare : mlstLensFlares)
-			if(pFlare->GetUniqueID() == alID) return pFlare;
-		return NULL;
+		return OhplFindByUniqueID(mlstLensFlares, alID);
 	}
 
 	cLensFlareIterator cWorld::GetLensFlareIterator()
@@ -836,16 +811,12 @@ namespace hpl {
 
 	cBeam* cWorld::GetBeam(const tString& asName)
 	{
-		return (cBeam*)STLFindByName(mlstBeams,asName);
+		return OhplFindByName(mlstBeams, asName);
 	}
 
 	cBeam* cWorld::GetBeamFromUniqueID(int alID)
 	{
-		for(tBeamListIt BeamIt=mlstBeams.begin();BeamIt !=mlstBeams.end();++BeamIt)
-		{
-			if((*BeamIt)->GetUniqueID() == alID) return *BeamIt;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstBeams, alID);
 	}
 
 	//-----------------------------------------------------------------------
@@ -946,16 +917,12 @@ namespace hpl {
 
 	cParticleSystem* cWorld::GetParticleSystem(const tString& asName)
 	{
-		return (cParticleSystem*)STLFindByName(mlstParticleSystems,asName);
+		return OhplFindByName(mlstParticleSystems, asName);
 	}
 
 	cParticleSystem* cWorld::GetParticleSystemFromUniqueID(int alID)
 	{
-		for(tParticleSystemListIt PSIt=mlstParticleSystems.begin();PSIt !=mlstParticleSystems.end();++PSIt)
-		{
-			if((*PSIt)->GetUniqueID() == alID) return *PSIt;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstParticleSystems, alID);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1010,16 +977,12 @@ namespace hpl {
 	
 	cGuiSetEntity* cWorld::GetGuiSetEntity(const tString& asName)
 	{
-		return static_cast<cGuiSetEntity*>(STLFindByName(mlstGuiSetEntities, asName));
+		return OhplFindByName(mlstGuiSetEntities, asName);
 	}
 
 	cGuiSetEntity* cWorld::GetGuiSetEntityFromUniqueID(int alID)
 	{
-		for(tGuiSetEntityListIt it=mlstGuiSetEntities.begin();it !=mlstGuiSetEntities.end();++it)
-		{
-			if((*it)->GetUniqueID() == alID) return *it;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstGuiSetEntities, alID);
 	}
 	
 	cGuiSetEntityIterator cWorld::GetGuiSetEntityIterator()
@@ -1048,16 +1011,12 @@ namespace hpl {
 
 	cRopeEntity* cWorld::GetRopeEntity(const tString& asName)
 	{
-		return static_cast<cRopeEntity*>(STLFindByName(mlstRopeEntities, asName));
+		return OhplFindByName(mlstRopeEntities, asName);
 	}
 
 	cRopeEntity* cWorld::GetRopeEntityFromUniqueID(int alID)
 	{
-		for(tRopeEntityListIt it=mlstRopeEntities.begin();it !=mlstRopeEntities.end();++it)
-		{
-			if((*it)->GetUniqueID() == alID) return *it;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstRopeEntities, alID);
 	}
 
 	cRopeEntityIterator cWorld::GetRopeEntityIterator()
@@ -1088,16 +1047,12 @@ namespace hpl {
 
 	cFogArea* cWorld::GetFogArea(const tString& asName)
 	{
-		return static_cast<cFogArea*>(STLFindByName(mlstFogAreas, asName));
+		return OhplFindByName(mlstFogAreas, asName);
 	}
 
 	cFogArea* cWorld::GetFogAreaFromUniqueID(int alID)
 	{
-		for(tFogAreaListIt it=mlstFogAreas.begin();it !=mlstFogAreas.end();++it)
-		{
-			if((*it)->GetUniqueID() == alID) return *it;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstFogAreas, alID);
 	}
 
 	cFogAreaIterator cWorld::GetFogAreaIterator()
@@ -1122,24 +1077,29 @@ namespace hpl {
 
 	cForceField* cWorld::GetForceField(const tString& asName)
 	{
-		return static_cast<cForceField*>(STLFindByName(mlstForceFields, asName));
+		return OhplFindByName(mlstForceFields, asName);
 	}
 
 	// Visible fields touching the box, biggest radius first, at most 4
 	int cWorld::GetForceFields(const cVector3f& avMin, const cVector3f& avMax, cForceField **apOut)
 	{
-		int lNum = 0;
+		std::vector<OhplFieldIn> vFields;
+		std::vector<cForceField*> vCandidates;
 		for(cForceField *pField : mlstForceFields)
 		{
 			if(pField->IsActive() == false || pField->IsVisible() == false) continue;
 			cBoundingVolume *pBV = pField->GetBoundingVolume();
-			if(cMath::CheckAABBIntersection(pBV->GetMin(), pBV->GetMax(), avMin, avMax) == false) continue;
-
-			int i = lNum < 4 ? lNum++ : 4;
-			for(; i > 0 && apOut[i-1]->GetFinalRadius() < pField->GetFinalRadius(); --i)
-				if(i < 4) apOut[i] = apOut[i-1];
-			if(i < 4) apOut[i] = pField;
+			OhplFieldIn field;
+			field.min = pBV->GetMin();
+			field.max = pBV->GetMax();
+			field.radius = pField->GetFinalRadius();
+			vFields.push_back(field);
+			vCandidates.push_back(pField);
 		}
+
+		uint32_t vOrder[4];
+		const int lNum = ohpl_world_force_fields(vFields.data(), (int32_t)vFields.size(), &avMin, &avMax, vOrder);
+		for(int i=0; i<lNum; ++i) apOut[i] = vCandidates[vOrder[i]];
 		return lNum;
 	}
 
@@ -1181,17 +1141,14 @@ namespace hpl {
 		//STLFindAndDelete(mlstSoundEntities,apEntity);
 		
 		//Only delete if found! (as it is possible that the sound entity is not longer a valid pointer!
-		tSoundEntityListIt it= mlstSoundEntities.begin();
-		for(; it != mlstSoundEntities.end(); ++it)
+		const int lIdx = OhplPtrIndex(mlstSoundEntities, apEntity);
+		if(lIdx >= 0)
 		{
+			tSoundEntityListIt it = mlstSoundEntities.begin();
+			std::advance(it, lIdx);
 			cSoundEntity *pSound = *it;
-			if(pSound == apEntity)
-			{
-				mlstSoundEntities.erase(it);
-				hplDelete(pSound);
-				//mlstSoundEntityPool.push_back(apEntity);
-				break;
-			}
+			mlstSoundEntities.erase(it);
+			hplDelete(pSound);
 		}
 	}
 
@@ -1224,16 +1181,12 @@ namespace hpl {
 
 	cSoundEntity* cWorld::GetSoundEntity(const tString& asName)
 	{
-		return (cSoundEntity*)STLFindByName(mlstSoundEntities,asName);
+		return OhplFindByName(mlstSoundEntities, asName);
 	}
 
 	cSoundEntity* cWorld::GetSoundEntityFromUniqueID(int alID)
 	{
-		for(tSoundEntityListIt it=mlstSoundEntities.begin();it !=mlstSoundEntities.end();++it)
-		{
-			if((*it)->GetUniqueID() == alID) return *it;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstSoundEntities, alID);
 	}
 
 	void cWorld::SetTerrain(cTerrain* apTerrain)
@@ -1244,24 +1197,17 @@ namespace hpl {
 
 	bool cWorld::IsValid(cSoundEntity* apEntity)
 	{
-		return std::find(mlstSoundEntities.begin(), mlstSoundEntities.end(), apEntity) != mlstSoundEntities.end();
+		return OhplPtrIndex(mlstSoundEntities, apEntity) >= 0;
 	}
 
 	bool cWorld::SoundEntityExists(cSoundEntity* apEntity, int alCreationID)
 	{
-		tSoundEntityListIt it= mlstSoundEntities.begin();
-		tSoundEntityListIt end = mlstSoundEntities.end();
-		for(; it != end; ++it)
-		{
-			cSoundEntity *pTestSound = *it;
-			if(*it == apEntity)
-			{
-				if(alCreationID==pTestSound->GetCreationID())	return true;
-				else											return false;
-			}
-		}
+		const int lIdx = OhplPtrIndex(mlstSoundEntities, apEntity);
+		if(lIdx < 0) return false;
 
-		return false;
+		tSoundEntityListIt it = mlstSoundEntities.begin();
+		std::advance(it, lIdx);
+		return alCreationID == (*it)->GetCreationID();
 	}
 
 	//-----------------------------------------------------------------------
@@ -1277,15 +1223,22 @@ namespace hpl {
 
 	cStartPosEntity* cWorld::GetStartPosEntity(const tString &asName)
 	{
-		return (cStartPosEntity*)STLFindByName(mlstStartPosEntities,asName);
+		return OhplFindByName(mlstStartPosEntities, asName);
 	}
 
 	cStartPosEntity* cWorld::GetFirstStartPosEntityByName()
 	{
-		cStartPosEntity *pFirst = NULL;
+		std::vector<OhplName> vNames;
 		for(cStartPosEntity *pStart : mlstStartPosEntities)
-			if(pFirst==NULL || pStart->GetName() < pFirst->GetName()) pFirst = pStart;
-		return pFirst;
+		{
+			const tString& sName = pStart->GetName();
+			vNames.push_back(OhplName{sName.data(), sName.size()});
+		}
+		const int lIdx = ohpl_world_first_by_name(vNames.data(), (int32_t)vNames.size());
+		if(lIdx < 0) return NULL;
+		tStartPosEntityListIt it = mlstStartPosEntities.begin();
+		std::advance(it, lIdx);
+		return *it;
 	}
 
 	cStartPosEntity* cWorld::GetFirstStartPosEntity()
@@ -1317,15 +1270,7 @@ namespace hpl {
 
 		//////////////////////////////////
 		//See if the container is allready loaded.
-		tAINodeContainerListIt it = mlstAINodeContainers.begin();
-		for(; it != mlstAINodeContainers.end(); ++it)
-		{
-			cAINodeContainer* pCont = *it;
-			if(pCont->GetName() == asName)
-			{
-				pContainer = pCont;
-			}
-		}
+		pContainer = OhplFindByName(mlstAINodeContainers, asName, true);
 		
 
 		//////////////////////////////////
@@ -1487,16 +1432,12 @@ namespace hpl {
 
 	cDummyRenderable* cWorld::GetDummyRenderable(const tString& asName)
 	{
-		return static_cast<cDummyRenderable*>(STLFindByName(mlstDummyRenderables, asName));
+		return OhplFindByName(mlstDummyRenderables, asName);
 	}
 
 	cDummyRenderable* cWorld::GetDummyRenderableFromUniqueID(int alID)
 	{
-		for(tDummyRenderableListIt it=mlstDummyRenderables.begin();it !=mlstDummyRenderables.end();++it)
-		{
-			if((*it)->GetUniqueID() == alID) return *it;
-		}
-		return NULL;
+		return OhplFindByUniqueID(mlstDummyRenderables, alID);
 	}
 
 	cDummyRenderableIterator cWorld::GetDummyRenderableIterator()

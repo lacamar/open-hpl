@@ -16,13 +16,16 @@ mod ffi_light;
 mod ffi_meshentity;
 mod ffi_node;
 mod ffi_particles;
+mod ffi_world;
 mod lensflare;
 mod light;
 mod meshentity;
 mod node;
 mod particles;
 mod rope;
+mod scenemgr;
 mod skinning;
+mod soundentity;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -33,6 +36,9 @@ mod tests_meshentity;
 mod tests_node;
 #[cfg(test)]
 mod tests_particles;
+#[cfg(test)]
+mod tests_world;
+mod world;
 
 const BIG: f32 = 100_000.0;
 

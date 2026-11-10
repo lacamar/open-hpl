@@ -22,6 +22,7 @@
 #include "scene/Viewport.h"
 #include "scene/Camera.h"
 #include "scene/World.h"
+#include "scene/RustWorld.h"
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -124,12 +125,7 @@ namespace hpl {
 
 	bool cScene::ViewportExists(cViewport* apViewPort)
 	{
-		for(tViewportListIt it = mlstViewports.begin(); it != mlstViewports.end(); ++it)
-		{
-			if(apViewPort == *it) return true;
-		}
-
-		return false;
+		return OhplPtrIndex(mlstViewports, apViewPort) >= 0;
 	}
 
 	//-----------------------------------------------------------------------
@@ -189,28 +185,38 @@ namespace hpl {
 		for(; viewIt != mlstViewports.end(); ++viewIt)
 		{
 			cViewport *pViewPort = *viewIt;
-			if(pViewPort->IsVisible()==false) continue;
 
 			//////////////////////////////////////////////
 			//Init vars
 			cPostEffectComposite *pPostEffectComposite = pViewPort->GetPostEffectComposite();
-			bool bPostEffects = false;
 			iRenderer *pRenderer = pViewPort->GetRenderer();
 			cCamera *pCamera = pViewPort->GetCamera();
 			cFrustum *pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
 
+			OhplViewportIn view = {};
+			view.visible = pViewPort->IsVisible();
+			view.has_composite = pPostEffectComposite != NULL;
+			view.has_renderer = pRenderer != NULL;
+			view.has_frustum = pFrustum != NULL;
+
+			uint32_t lPlan = ohpl_scene_plan_viewport(alFlags, &view);
+			if(lPlan & kOhplStepSkip) continue;
+
 			//////////////////////////////////////////////
 			//Render world and call callbacks
-			if(alFlags & tSceneRenderFlag_World)
-			{
+			if(lPlan & kOhplStepPreCallback)
 				pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
-				
-				if(pPostEffectComposite && (alFlags & tSceneRenderFlag_PostEffects)) 
-				{
-					bPostEffects = pPostEffectComposite->HasActiveEffects();
-				}
-				
-				if(pRenderer && pViewPort->GetWorld() && pFrustum)
+
+			//The callback may change the world and the effects, so ask again after it
+			view.has_world = pViewPort->GetWorld() != NULL;
+			if(ohpl_scene_wants_post_effects(alFlags, view.has_composite))
+				view.post_effects_active = pPostEffectComposite->HasActiveEffects();
+			lPlan = ohpl_scene_plan_viewport(alFlags, &view);
+			const bool bPostEffects = (lPlan & kOhplStepPostFlag) != 0;
+
+			if(lPlan & kOhplStepPostCallback)
+			{
+				if(lPlan & kOhplStepRenderWorld)
 				{
 					START_TIMING(RenderWorld)
 					pRenderer->Render(	afFrameTime,pFrustum,
@@ -240,7 +246,7 @@ namespace hpl {
 
 			//////////////////////////////////////////////
 			//Render Post effects
-			if(bPostEffects)
+			if(lPlan & kOhplStepPostEffects)
 			{
 				//TODO: If renderer is null get texture from frame buffer and if frame buffer is NULL, then copy to a texture.
 				//		Or this is solved?
@@ -253,7 +259,7 @@ namespace hpl {
 			
 			//////////////////////////////////////////////
 			//Render Screen GUI
-			if(alFlags & tSceneRenderFlag_Gui)
+			if(lPlan & kOhplStepGuiScreen)
 			{
 				START_TIMING(RenderGUI)
 				RenderScreenGui(pViewPort, afFrameTime);
@@ -343,12 +349,7 @@ namespace hpl {
 
 	bool cScene::WorldExists(cWorld* apWorld)
 	{
-		for(tWorldListIt it = mlstWorlds.begin(); it != mlstWorlds.end(); ++it)
-		{
-			if(apWorld == *it) return true;
-		}
-
-		return false;
+		return OhplPtrIndex(mlstWorlds, apWorld) >= 0;
 	}
 	
 	//-----------------------------------------------------------------------
@@ -377,26 +378,29 @@ namespace hpl {
 	void cScene::RenderScreenGui(cViewport *apViewPort,float afTimeStep)
 	{
 		///////////////////////////////////////
-		//Put all of the non 3D sets in to a sorted map
-		typedef std::multimap<int, cGuiSet*> tPrioMap;
-		tPrioMap mapSortedSets;
-
-        cGuiSetListIterator it = apViewPort->GetGuiSetIterator();	
+		//Put all of the non 3D sets in draw priority order (stable)
+		std::vector<cGuiSet*> vSets;
+		std::vector<int32_t> vPrios;
+		cGuiSetListIterator it = apViewPort->GetGuiSetIterator();
 		while(it.HasNext())
 		{
 			cGuiSet *pSet = it.Next();
 			
 			if(pSet->Is3D()==false)
-				mapSortedSets.insert(tPrioMap::value_type(pSet->GetDrawPriority(),pSet));
+			{
+				vSets.push_back(pSet);
+				vPrios.push_back(pSet->GetDrawPriority());
+			}
 		}
 
 		///////////////////////////////////////
 		//Iterate and render all sets
-		if(mapSortedSets.empty()) return;
-		tPrioMap::iterator SortIt = mapSortedSets.begin();
-		for(; SortIt != mapSortedSets.end(); ++SortIt)
+		if(vSets.empty()) return;
+		std::vector<uint32_t> vOrder(vSets.size());
+		const int lNum = ohpl_scene_gui_order(vPrios.data(), (int32_t)vSets.size(), vOrder.data());
+		for(int i=0; i<lNum; ++i)
 		{
-			cGuiSet *pSet = SortIt->second;
+			cGuiSet *pSet = vSets[vOrder[i]];
 
 			//Log("Rendering gui '%s'\n", pSet->GetName().c_str());
 
