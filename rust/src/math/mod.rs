@@ -34,6 +34,7 @@ pub(crate) use matrix::{matrix_mul_divide_w, perspective_projection};
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
+pub(crate) use scalar::{increase_to, wrap};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

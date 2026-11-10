@@ -25,6 +25,7 @@
 #include "graphics/GraphicsTypes.h"
 
 #include "engine/SaveGame.h"
+#include "scene/RustMeshEntity.h"
 
 namespace hpl {
 
@@ -58,7 +59,7 @@ namespace hpl {
 
 		bool DataIsInMeshFile(){return mpAnimationManager==NULL;}
 
-		bool IsFading();
+		bool IsFading(){ return mCore.fade_step != 0;}
 
 		/**
 		 * If the animation has reached the end.
@@ -68,22 +69,22 @@ namespace hpl {
 		void FadeIn(float afTime);
 		void FadeOut(float afTime);
 
-		void SetLength(float afLength);
-		float GetLength();
+		void SetLength(float afLength){ mCore.length = afLength;}
+		float GetLength(){ return mCore.length;}
 
-		void SetWeight(float afWeight);
-		float GetWeight();
+		void SetWeight(float afWeight){ mCore.weight = afWeight;}
+		float GetWeight(){ return mCore.weight;}
 
-        void SetSpeed(float afSpeed);
+        void SetSpeed(float afSpeed){ mCore.speed = afSpeed; mCore.speed_dest = afSpeed;}
 		void FadeSpeed(float afDest, float afTime);
-		float GetSpeed();
+		float GetSpeed(){ return mCore.speed;}
 
-		void SetBaseSpeed(float afSpeed);
-		float GetBaseSpeed();
+		void SetBaseSpeed(float afSpeed){ mCore.base_speed = afSpeed;}
+		float GetBaseSpeed(){ return mCore.base_speed;}
 
 		void SetTimePosition(float afPosition);
-        float GetTimePosition();
-		float GetPreviousTimePosition();
+        float GetTimePosition(){ return mCore.time_pos;}
+		float GetPreviousTimePosition(){ return mCore.prev_time_pos;}
 
 		/**
 		 * Set the relative postion. 0 = start, 1 = end
@@ -96,19 +97,19 @@ namespace hpl {
 		*/
 		float GetRelativeTimePosition();
 
-		bool IsActive();
+		bool IsActive(){ return mCore.active;}
 		void SetActive(bool abActive);
 
-		bool IsLooping();
-		void SetLoop(bool abLoop);
+		bool IsLooping(){ return mCore.looping;}
+		void SetLoop(bool abLoop){ mCore.looping = abLoop;}
 
-		bool IsPaused();
-		void SetPaused(bool abPaused);
+		bool IsPaused(){ return mCore.paused;}
+		void SetPaused(bool abPaused){ mCore.paused = abPaused;}
 
-		void SetSpecialEventTime(float afT){ mfSpecialEventTime = afT;}
-		float GetSpecialEventTime(){ return mfSpecialEventTime;}
-		bool IsAfterSpecialEvent();
-		bool IsBeforeSpecialEvent();
+		void SetSpecialEventTime(float afT){ mCore.special_event_time = afT;}
+		float GetSpecialEventTime(){ return mCore.special_event_time;}
+		bool IsAfterSpecialEvent(){ return mCore.time_pos > mCore.special_event_time;}
+		bool IsBeforeSpecialEvent(){ return mCore.time_pos < mCore.special_event_time;}
 
 		void AddTimePosition(float afAdd);
 
@@ -118,12 +119,14 @@ namespace hpl {
 		cAnimationEvent *GetEvent(int alIdx);
 		int GetEventNum();
 
-		float GetFadeStep(){ return mfFadeStep;}
-		void SetFadeStep(float afX){ mfFadeStep = afX;}
+		float GetFadeStep(){ return mCore.fade_step;}
+		void SetFadeStep(float afX){ mCore.fade_step = afX;}
 
 		// Applied on top, not part of weight normalization
-		bool IsLayer(){ return mbLayer;}
-		void SetLayer(bool abX){ mbLayer = abX;}
+		bool IsLayer(){ return mCore.layer;}
+		void SetLayer(bool abX){ mCore.layer = abX;}
+
+		OhplAnimCore* GetCore(){ return &mCore;}
 
 		// per entity: cAnimation tracks are shared between meshes with different skeletons
 		std::vector<int> mvTrackNodeIndices;
@@ -137,26 +140,7 @@ namespace hpl {
 
 		std::vector<cAnimationEvent*> mvEvents;
 
-		//Properties of the animation
-		float mfLength;
-		float mfWeight;
-		float mfSpeed;
-		float mfSpeedDest;
-		float mfSpeedFadeRate;
-		float mfTimePos;
-		float mfPrevTimePos;
-
-		float mfBaseSpeed;
-
-		float mfSpecialEventTime;
-
-		bool mbActive;
-		bool mbLoop;
-		bool mbPaused;
-		bool mbLayer = false;
-
-		//properties for update
-		float mfFadeStep;
+		OhplAnimCore mCore;
 	};
 
 };
