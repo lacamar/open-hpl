@@ -107,6 +107,40 @@ static void TestBuoyancyDoesNotCrash()
 
 //-----------------------------------------------------------------------
 
+static void TestHpl3BuoyancyLiftsEachShape()
+{
+	iPhysicsBody::SetHpl3Buoyancy(true);
+	for (int type = 0; type < 4; ++type)
+	{
+		cPhysicsWorldNewton world;
+		world.SetGravity(cVector3f(0, -9.81f, 0));
+		world.SetMaxTimeStep(1.0f / 60.0f);
+
+		iCollideShape* pShape = NULL;
+		if (type == 0) pShape = world.CreateBoxShape(cVector3f(1, 1, 1), NULL);
+		else if (type == 1) pShape = world.CreateSphereShape(cVector3f(0.5f, 0, 0), NULL);
+		else if (type == 2) pShape = world.CreateCapsuleShape(0.3f, 1.2f, NULL);
+		else pShape = world.CreateCylinderShape(0.5f, 0.4f, NULL);
+		iPhysicsBody* pBody = world.CreateBody("Buoyant", pShape);
+		pBody->SetMass(1.0f);
+		pBody->SetPosition(cVector3f(0, -5, 0));
+		pBody->SetBuoyancyActive(true);
+		pBody->SetBuoyancyDensity(1000.0f);
+		pBody->SetBuoyancyLinearViscosity(0.5f);
+		pBody->SetBuoyancyAngularViscosity(0.5f);
+		pBody->SetBuoyancySurface(cPlanef(0, 1, 0, 0));
+		pBody->SetBuoyancyDensityMul(1.0f);
+
+		for (int i = 0; i < 10; ++i)
+			world.Simulate(1.0f / 60.0f);
+
+		CHECK(pBody->GetLinearVelocity().y > 0);
+	}
+	iPhysicsBody::SetHpl3Buoyancy(false);
+}
+
+//-----------------------------------------------------------------------
+
 static void TestMeshCollisionSerializationRoundTrip()
 {
 	cPhysicsWorldNewton world;
@@ -248,6 +282,7 @@ int hplMain(const tString&)
 	TestShapeCreation();
 	TestBodySimulationStep();
 	TestBuoyancyDoesNotCrash();
+	TestHpl3BuoyancyLiftsEachShape();
 	TestMeshCollisionSerializationRoundTrip();
 	TestMeshCollisionSameBoxCentres();
 	TestHeightFieldSupportsBody();

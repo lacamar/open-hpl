@@ -22,9 +22,11 @@
 #include "impl/PhysicsWorldNewton.h"
 #include "impl/PhysicsBodyNewton.h"
 #include "physics/SurfaceData.h"
+#include "impl/RustNewton.h"
 
 #include "system/LowLevelSystem.h"
 #include <algorithm>
+#include <vector>
 
 namespace hpl {
 
@@ -162,24 +164,16 @@ namespace hpl {
 		{
 			cPhysicsMaterialNewton* pMat = static_cast<cPhysicsMaterialNewton*>(MatIt.Next());
 
-			ePhysicsMaterialCombMode frictionMode =   (ePhysicsMaterialCombMode) std::max(mFrictionMode,
-				pMat->mFrictionMode);
-			ePhysicsMaterialCombMode elasticityMode = (ePhysicsMaterialCombMode) std::max(mElasticityMode,
-				pMat->mElasticityMode);
+			OhplNewtonMatProps propsA{mFrictionMode, mElasticityMode, mfElasticity, mfStaticFriction, mfKineticFriction};
+			OhplNewtonMatProps propsB{pMat->mFrictionMode, pMat->mElasticityMode, pMat->mfElasticity,
+										pMat->mfStaticFriction, pMat->mfKineticFriction};
+			OhplNewtonPairParams pair;
+			ohpl_newton_pair_params(&propsA, &propsB, pMat == this, &pair);
 
-			//If the material is the same do not blend.
-			if(pMat == this){
-				frictionMode = 	ePhysicsMaterialCombMode_Average;
-				elasticityMode = ePhysicsMaterialCombMode_Average;
-			}
-
-
-			NewtonMaterialSetDefaultElasticity(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-				Combine(elasticityMode,mfElasticity, pMat->mfElasticity));
+			NewtonMaterialSetDefaultElasticity(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId, pair.elasticity);
 
 			NewtonMaterialSetDefaultFriction(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
-				Combine(frictionMode,mfStaticFriction, pMat->mfStaticFriction),
-				Combine(frictionMode,mfKineticFriction, pMat->mfKineticFriction));
+				pair.staticFriction, pair.kineticFriction);
 
 			NewtonMaterialSetContinuousCollisionMode(mpNewtonWorld,mlMaterialId,pMat->mlMaterialId,
 													1);
@@ -190,19 +184,6 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-
-	float cPhysicsMaterialNewton::Combine(ePhysicsMaterialCombMode aMode, float afX, float afY)
-	{
-		switch(aMode)
-		{
-		case ePhysicsMaterialCombMode_Average: return (afX + afY)/2;
-		case ePhysicsMaterialCombMode_Min: return std::min(afX, afY);
-		case ePhysicsMaterialCombMode_Max: return std::max(afX, afY);
-		case ePhysicsMaterialCombMode_Multiply: return afX * afY;
-		}
-
-		return (afX + afY) /2;
-	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// NEWTON LOCK CLASS
@@ -238,19 +219,12 @@ namespace hpl {
 		cPhysicsBodyNewton* pContactBody1 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody1);
 		cPhysicsBodyNewton* pContactBody2 = (cPhysicsBodyNewton*) NewtonBodyGetUserData(apBody2);
 
-		if(iPhysicsBody::CollideFlagsMatch(pContactBody1->GetCollideFlags(), pContactBody2->GetCollideFlags())==false) return 0;
-
-		if(pContactBody1->GetCollide()==false) return 0;
-		if(pContactBody2->GetCollide()==false) return 0;
-
-		if(pContactBody1->IsActive()==false) return 0;
-		if(pContactBody2->IsActive()==false) return 0;
-
-		if(pContactBody1->IsRagDoll() && pContactBody2->GetCollideRagDoll()==false) return 0;
-		if(pContactBody2->IsRagDoll() && pContactBody1->GetCollideRagDoll()==false) return 0;
-
-		if(pContactBody1->IsCharacter() && pContactBody2->GetCollideCharacter()==false) return 0;
-		if(pContactBody2->IsCharacter() && pContactBody1->GetCollideCharacter()==false) return 0;
+		OhplNewtonGateBody gate1{pContactBody1->GetCollide(), pContactBody1->IsActive(), pContactBody1->IsRagDoll(),
+								pContactBody1->GetCollideRagDoll(), pContactBody1->IsCharacter(), pContactBody1->GetCollideCharacter()};
+		OhplNewtonGateBody gate2{pContactBody2->GetCollide(), pContactBody2->IsActive(), pContactBody2->IsRagDoll(),
+								pContactBody2->GetCollideRagDoll(), pContactBody2->IsCharacter(), pContactBody2->GetCollideCharacter()};
+		if(ohpl_newton_aabb_gate(iPhysicsBody::CollideFlagsMatch(pContactBody1->GetCollideFlags(), pContactBody2->GetCollideFlags()),
+								&gate1, &gate2)==false) return 0;
 		
 		//TODO: Not using this in character body any more!
 		//if(pContactBody1->IsCharacter() || pContactBody2->IsCharacter()) return 0;
@@ -290,41 +264,26 @@ namespace hpl {
 
 		////////////////////////////////
 		//Iterate all contacts
+		OhplNewtonContact stackContacts[64];
+		std::vector<OhplNewtonContact> heapContacts;
 		void* pContact = NewtonContactJointGetFirstContact (apContactJoint);
 		for(; pContact != NULL; pContact = NewtonContactJointGetNextContact (apContactJoint, pContact)) 
 		{
 			NewtonMaterial* pMaterial =  NewtonContactGetMaterial (pContact);
-			
-			//Log(" Process contact between body '%s' and '%s'.\n",mpContactBody1->GetName().c_str(),
-			//													mpContactBody2->GetName().c_str());
 
-			//Normal speed
-			float fNormSpeed = NewtonMaterialGetContactNormalSpeed(pMaterial);
-			if(contactData.mfMaxContactNormalSpeed < fNormSpeed) contactData.mfMaxContactNormalSpeed = fNormSpeed;
+			OhplNewtonContact contact;
+			contact.normalSpeed = NewtonMaterialGetContactNormalSpeed(pMaterial);
+			contact.tangentSpeed0 = NewtonMaterialGetContactTangentSpeed(pMaterial,0);
+			contact.tangentSpeed1 = NewtonMaterialGetContactTangentSpeed(pMaterial,1);
+			NewtonMaterialGetContactForce(pMaterial,(NewtonBody*)pBody0,contact.force.v);
+			NewtonMaterialGetContactPositionAndNormal(pMaterial,(NewtonBody*)pBody0,contact.position.v, contact.normal.v);
 
-			//Tangent speed
-			float fTanSpeed0 = NewtonMaterialGetContactTangentSpeed(pMaterial,0);
-			float fTanSpeed1 = NewtonMaterialGetContactTangentSpeed(pMaterial,1);
-			if(std::abs(contactData.mfMaxContactTangentSpeed) < std::abs(fTanSpeed0)) contactData.mfMaxContactTangentSpeed = fTanSpeed0;
-			if(std::abs(contactData.mfMaxContactTangentSpeed) < std::abs(fTanSpeed1)) contactData.mfMaxContactTangentSpeed = fTanSpeed1;
-
-			//Force
-			cVector3f vForce;
-			NewtonMaterialGetContactForce(pMaterial,(NewtonBody*)pBody0,vForce.v);
-			contactData.mvForce += vForce;
-
-			//Position and normal
-			cVector3f vPos, vNormal;
-			NewtonMaterialGetContactPositionAndNormal(pMaterial,(NewtonBody*)pBody0,vPos.v, vNormal.v);
-
-			contactData.mvContactNormal += vNormal;
-			contactData.mvContactPosition += vPos;
-
-			//cVector3f vForce;
-			//NewtonMaterialGetContactForce(apMaterial,vForce.v);
-
-			//Log(" Norm: %f Tan0: %f Tan1: %f\n",fNormSpeed, fTanSpeed0, fTanSpeed1);
-			//Log("Force: %s\n",vForce.ToString().c_str());
+			if(lContactNum < 64) stackContacts[lContactNum] = contact;
+			else
+			{
+				if(lContactNum == 64) heapContacts.assign(stackContacts, stackContacts + 64);
+				heapContacts.push_back(contact);
+			}
 
 			if(pContactBody1->GetWorld()->GetSaveContactPoints())
 			{
@@ -333,7 +292,8 @@ namespace hpl {
 
 				cCollidePoint collidePoint;
 				collidePoint.mfDepth = 1;
-				NewtonMaterialGetContactPositionAndNormal (pMaterial, (NewtonBody*)pBody0, collidePoint.mvPoint.v, collidePoint.mvNormal.v);
+				collidePoint.mvPoint = contact.position;
+				collidePoint.mvNormal = contact.normal;
 
 				pContactBody1->GetWorld()->GetContactPoints()->push_back(collidePoint);
 
@@ -344,13 +304,18 @@ namespace hpl {
 			lContactNum++;
 		}
 
+		OhplNewtonContactAgg agg;
+		ohpl_newton_aggregate_contacts(lContactNum > 64 ? heapContacts.data() : stackContacts, lContactNum, &agg);
+		contactData.mfMaxContactNormalSpeed = agg.maxNormalSpeed;
+		contactData.mfMaxContactTangentSpeed = agg.maxTangentSpeed;
+		contactData.mvForce = agg.force;
+		contactData.mvContactNormal = agg.normal;
+		contactData.mvContactPosition = agg.position;
+
 		////////////////////////////////
 		//End contact process
 		iPhysicsMaterial *pMaterial1 = pContactBody1->GetMaterial();
 		iPhysicsMaterial *pMaterial2 = pContactBody2->GetMaterial();
-
-		contactData.mvContactNormal = contactData.mvContactNormal / (float)lContactNum;
-		contactData.mvContactPosition = contactData.mvContactPosition / (float)lContactNum;
 
 		//Thread lock
 		NewtonWorldCriticalSectionLock (NewtonBodyGetWorld (pBody0));
@@ -368,32 +333,27 @@ namespace hpl {
 																lContactNum,pMaterial2->GetSurfaceData(),
 																pContactBody1->GetWorld());
 
-			int lPrio1 = pMaterial1->GetSurfaceData()->GetPriority();
-			int lPrio2 = pMaterial2->GetSurfaceData()->GetPriority();
+			OhplNewtonSurfaceCalls calls;
+			ohpl_newton_surface_calls(pMaterial1->GetSurfaceData()->GetPriority(), pMaterial2->GetSurfaceData()->GetPriority(),
+										pMaterial2 == pMaterial1, contactData.mfMaxContactNormalSpeed,
+										contactData.mfMaxContactTangentSpeed, &calls);
 
-			if(lPrio1 >= lPrio2)
-			{
-				if(std::abs(contactData.mfMaxContactNormalSpeed) > 0)
-					pMaterial1->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-															contactData.mvContactPosition,
-															lContactNum,pContactBody1);
-				if(std::abs(contactData.mfMaxContactTangentSpeed) > 0)
-					pMaterial1->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-															contactData.mvContactPosition,
-															lContactNum,pContactBody1,pContactBody2);
-			}
-			
-			if(lPrio2 >= lPrio1 && pMaterial2 != pMaterial1)
-			{
-				if(std::abs(contactData.mfMaxContactNormalSpeed) > 0)
-					pMaterial2->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
-															contactData.mvContactPosition,
-															lContactNum,pContactBody2);
-				if(std::abs(contactData.mfMaxContactTangentSpeed) > 0)
-					pMaterial2->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
-															contactData.mvContactPosition,
-															lContactNum,pContactBody2,pContactBody1);
-			}
+			if(calls.impact1)
+				pMaterial1->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody1);
+			if(calls.slide1)
+				pMaterial1->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody1,pContactBody2);
+			if(calls.impact2)
+				pMaterial2->GetSurfaceData()->OnImpact(contactData.mfMaxContactNormalSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody2);
+			if(calls.slide2)
+				pMaterial2->GetSurfaceData()->OnSlide(contactData.mfMaxContactTangentSpeed,
+														contactData.mvContactPosition,
+														lContactNum,pContactBody2,pContactBody1);
 		}
 
 		pContactBody1->OnCollide(pContactBody2,&contactData);
