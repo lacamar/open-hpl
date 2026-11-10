@@ -5,7 +5,7 @@ default:
 
 test:
     [ -d {{build}} ] || cmake -S amnesia/src -B {{build}} -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    make -C {{build}} -j$(nproc) Soma PhysicsNewtonTests CStringTests PlatformXdgPathTests HpslTranspilerTests GlslToVulkanTests >/dev/null
+    make -C {{build}} -j$(nproc) Soma PhysicsNewtonTests CStringTests PlatformXdgPathTests HpslTranspilerTests GlslToVulkanTests TraceRecorderTests >/dev/null
     ctest --test-dir {{build}} --output-on-failure -Q
 
 script-check:

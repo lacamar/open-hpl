@@ -60,7 +60,7 @@ cd amnesia/src
     -DUSE_GAMEPAD=ON \
     -DAMNESIA_WITH_SERIAL=OFF
 %cmake_build --target Amnesia --target Launcher --target Soma \
-    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests --target GlslToVulkanTests
+    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests --target GlslToVulkanTests --target TraceRecorderTests
 cd -
 
 magick 'amnesia/src/game/Lux.ico[0]' %{name}.png
