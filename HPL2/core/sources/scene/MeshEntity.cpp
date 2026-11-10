@@ -516,12 +516,11 @@ namespace hpl {
 								pTrack->ApplyToNode(pState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * (pAnimState->IsLayer() ? 1.0f : fAnimationWeightMul), pAnimState->IsLooping(), fTransScale);
 							}
 						}
-
-					
-						pAnimState->Update(afTimeStep);
 					}
 				}
 				
+				ohpl_meshentity_update_anims(mvAnimCores.data(), (int)mvAnimCores.size(), afTimeStep);
+
 				//////////////////////////////////
 				//Go through all states and update the matrices (and thereby adding the animations together).
 				if(bAnimationActive)
@@ -620,9 +619,10 @@ namespace hpl {
 									pTrack->ApplyToNode(pNodeState,pAnimState->GetTimePosition(),pAnimState->GetWeight() * fAnimationWeightMul, true, pTrack->GetUnitScale());
 							}
 
-							pAnimState->Update(afTimeStep);
 						}
 					}
+
+					ohpl_meshentity_update_anims(mvAnimCores.data(), (int)mvAnimCores.size(), afTimeStep);
 
 					//////////////////////
 					//Go through all states and update the matrices (and thereby adding the animations together).
@@ -716,8 +716,16 @@ namespace hpl {
 		return pAnimState;
 	}
 
+	void cMeshEntity::SyncAnimCores()
+	{
+		if(mvAnimCores.size() == mvAnimationStates.size()) return;
+		mvAnimCores.clear();
+		for(cAnimationState *pState : mvAnimationStates) mvAnimCores.push_back(pState->GetCore());
+	}
+
 	void cMeshEntity::ClearAnimations()
 	{
+		mvAnimCores.clear();
 		STLDeleteAll(mvAnimationStates);
 	}
 
@@ -1219,22 +1227,16 @@ namespace hpl {
 				m_mtxInvWorldMatrix = cMath::MatrixInverse(GetWorldMatrix());
 			}
 			
-			for(int i=0; i< pSkeleton->GetBoneNum(); i++)
+			const int lBoneNum = pSkeleton->GetBoneNum();
+			mvScratchWorld.resize(lBoneNum);
+			mvScratchInvBind.resize(lBoneNum);
+			for(int i=0; i< lBoneNum; i++)
 			{
-				cBone *pBone = pSkeleton->GetBoneByIndex(i);
-				cNode3D* pState = mvBoneStates[i];
-                
-				//Transform the movement of the bone into the
-				//Bind pose's local space.
-				cMatrixf mtxLocal = cMath::MatrixMul(m_mtxInvWorldMatrix,pState->GetWorldMatrix());
-				
-				cMatrixf mtxBone = cMath::MatrixMul(mtxLocal,pBone->GetInvBindTransform());
-				if(memcmp(&mtxBone, &mvBoneMatrices[i], sizeof(cMatrixf)) != 0)
-				{
-					mvBoneMatrices[i] = mtxBone;
-					++mlBoneMatricesVersion;
-				}
+				mvScratchWorld[i] = &mvBoneStates[i]->GetWorldMatrix();
+				mvScratchInvBind[i] = &pSkeleton->GetBoneByIndex(i)->GetInvBindTransform();
 			}
+			mlBoneMatricesVersion += (int)ohpl_meshentity_bone_matrices(&m_mtxInvWorldMatrix, mvScratchWorld.data(),
+									mvScratchInvBind.data(), mvBoneMatrices.data(), lBoneNum);
 		}
 	}
 
@@ -1384,28 +1386,8 @@ namespace hpl {
 	
 	float cMeshEntity::GetAnimationWeightMul()
 	{
-		if(mbNormalizeAnimationWeights==false) return 1.0f;
-		
-		float fAnimNum =0;
-		float fTotalAnimWeight =0;
-		for(size_t i=0; i< mvAnimationStates.size(); i++)
-		{
-			cAnimationState *pAnimState = mvAnimationStates[i];
-
-			if(pAnimState->IsActive() && pAnimState->IsLayer()==false)
-			{
-				fAnimNum++;
-				fTotalAnimWeight += pAnimState->GetWeight();
-			}
-		}
-
-		//Calculate the mul
-		if(fAnimNum >0 && fTotalAnimWeight >0)
-		{
-			return 1.0f / fTotalAnimWeight;
-		}
-		
-		return 1.0f;
+		SyncAnimCores();
+		return ohpl_meshentity_weight_mul(mvAnimCores.data(), (int)mvAnimCores.size(), mbNormalizeAnimationWeights);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1566,27 +1548,16 @@ namespace hpl {
 
 	void cMeshEntity::GetAABBFromBones(cVector3f &avMin, cVector3f &avMax)
 	{
-		avMin = cVector3f(10000);
-		avMax = cVector3f(-10000);
-
 		// HPL3 0xf862e0: unweighted bones don't count
-		for(size_t i=0; i< mvBoneStates.size(); ++i)
+		const int lNum = (int)mvBoneStates.size();
+		mvScratchWorld.resize(lNum);
+		mvScratchRadii.resize(lNum);
+		for(int i=0; i< lNum; ++i)
 		{
-			cBoneState *pState = mvBoneStates[i];
-			float fBoundingRadius = mpMesh->GetBoneBoundingRadius((int)i);
-			if(fBoundingRadius <= 0) continue;
-			cVector3f vMaxPos = pState->GetWorldPosition() + cVector3f(fBoundingRadius);
-			cVector3f vMinPos = pState->GetWorldPosition() - cVector3f(fBoundingRadius);
-
-			if(avMax.x < vMaxPos.x) avMax.x = vMaxPos.x;
-			if(avMax.y < vMaxPos.y) avMax.y = vMaxPos.y;
-			if(avMax.z < vMaxPos.z) avMax.z = vMaxPos.z;
-
-			if(avMin.x > vMinPos.x) avMin.x = vMinPos.x;
-			if(avMin.y > vMinPos.y) avMin.y = vMinPos.y;
-			if(avMin.z > vMinPos.z) avMin.z = vMinPos.z;
+			mvScratchWorld[i] = &mvBoneStates[i]->GetWorldMatrix();
+			mvScratchRadii[i] = mpMesh->GetBoneBoundingRadius(i);
 		}
-		if(avMin.x > avMax.x) avMin = avMax = mvBoneStates[0]->GetWorldPosition();
+		ohpl_meshentity_aabb_from_bones(mvScratchWorld.data(), mvScratchRadii.data(), lNum, &avMin, &avMax);
 	}
 	
 	//-----------------------------------------------------------------------

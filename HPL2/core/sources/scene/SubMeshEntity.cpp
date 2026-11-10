@@ -151,40 +151,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	// Set Src as private variable to give this a little boost! Or?
-	static inline void MatrixFloatTransformSet(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] = ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] + a_mtxA.m[0][3] ) * fWeight;
-		pDest[1] = ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] + a_mtxA.m[1][3] ) * fWeight;
-		pDest[2] = ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] + a_mtxA.m[2][3] ) * fWeight;
-	}
-
-	static inline void MatrixFloatRotateSet(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] = ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] ) * fWeight;
-		pDest[1] = ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] ) * fWeight;
-		pDest[2] = ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] ) * fWeight;
-	}
-
-	//-----------------------------------------------------------------------
-
-	// Set Src as private variable to give this a little boost!Or?
-	static inline void MatrixFloatTransformAdd(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] += ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] + a_mtxA.m[0][3] ) * fWeight;
-		pDest[1] += ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] + a_mtxA.m[1][3] ) * fWeight;
-		pDest[2] += ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] + a_mtxA.m[2][3] ) * fWeight;
-	}
-
-	static inline void MatrixFloatRotateAdd(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] += ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] ) * fWeight;
-		pDest[1] += ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] ) * fWeight;
-		pDest[2] += ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] ) * fWeight;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cSubMeshEntity::UpdateGraphicsForFrame(float afFrameTime)
 	{
 		////////////////////////////////////
@@ -214,58 +180,9 @@ namespace hpl {
 			const int lVtxStride = mpDynVtxBuffer->GetElementNum(eVertexBufferElement_Position);
 			const int lVtxNum = mpDynVtxBuffer->GetVertexNum();
 
-			for(int vtx=0; vtx < lVtxNum; vtx++)
-			{
-				//To count the bone bindings
-				int lCount = 0;
-				//Get pointer to weights and bone index.
-				const float *pWeight = &mpSubMesh->mpVertexWeights[vtx*4];
-				if(*pWeight==0)
-				{
-					pBindPos += lVtxStride; pSkinPos += lVtxStride;
-					pBindNormal += 3; pSkinNormal += 3;
-					pBindTangent += 4; pSkinTangent += 4;
-					continue;
-				}
-
-				const unsigned char *pBoneIdx = &mpSubMesh->mpVertexBones[vtx*4];
-
-				const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];
-				
-				
-				MatrixFloatTransformSet(pSkinPos,mtxTransform, pBindPos, *pWeight);
-
-				MatrixFloatRotateSet(pSkinNormal,mtxTransform, pBindNormal, *pWeight);
-
-				MatrixFloatRotateSet(pSkinTangent,mtxTransform, pBindTangent, *pWeight);
-
-				++pWeight; ++pBoneIdx; ++lCount;
-
-				//Iterate weights until 0 is found or count < 4
-				while(lCount < 4 && *pWeight != 0)
-				{
-					//Log("Boneidx: %d Count %d Weight: %f\n",(int)*pBoneIdx,lCount, *pWeight);				
-					const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];
-
-					//Transform with the local movement of the bone.
-					MatrixFloatTransformAdd(pSkinPos,mtxTransform, pBindPos, *pWeight);
-
-					MatrixFloatRotateAdd(pSkinNormal,mtxTransform, pBindNormal, *pWeight);
-
-					MatrixFloatRotateAdd(pSkinTangent,mtxTransform, pBindTangent, *pWeight);
-
-					++pWeight; ++pBoneIdx; ++lCount;
-				}
-
-				pBindPos += lVtxStride;
-				pSkinPos += lVtxStride;
-
-				pBindNormal += 3;
-				pSkinNormal += 3;
-
-				pBindTangent += 4;
-				pSkinTangent += 4;
-			}
+			ohpl_submesh_skin(pBindPos, pBindNormal, pBindTangent, pSkinPos, pSkinNormal, pSkinTangent,
+							  mpSubMesh->mpVertexWeights, mpSubMesh->mpVertexBones,
+							  mpMeshEntity->mvBoneMatrices.data(), lVtxNum, lVtxStride, (int)mpMeshEntity->mvBoneMatrices.size());
 
 			//No stencil shadows:
 			/*float *pSkinPosArray = mpDynVtxBuffer->GetArray(eVertexElementFlag_Position);

@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -28,42 +28,14 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
 	cAnimationState::cAnimationState(cAnimation* apAnimation, const tString &asName,
 									cAnimationManager *apAnimationManager)
 	{
 		mpAnimation = apAnimation;
-
 		mpAnimationManager = apAnimationManager;
-
-		mfLength = mpAnimation->GetLength();
 		msName = asName;
-
-		mbActive = false;
-
-		mfTimePos = 0;
-		mfWeight = 1;
-		mfSpeed = 1.0f;
-		mfSpeedDest = 1.0f;
-		mfSpeedFadeRate = 0;
-		mfBaseSpeed = 1.0f;
-		mfTimePos = 0;
-		mfPrevTimePos=0;
-
-		mbLoop =false;
-		mbPaused = false;
-
-		mfSpecialEventTime =0;
-
-		mfFadeStep=0;
+		ohpl_anim_core_init(&mCore, mpAnimation->GetLength());
 	}
-	
-	//-----------------------------------------------------------------------
 
 	cAnimationState::~cAnimationState()
 	{
@@ -76,231 +48,29 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
+	void cAnimationState::Update(float afTimeStep) { ohpl_anim_update(&mCore, afTimeStep); }
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+	bool cAnimationState::IsOver() { return ohpl_anim_is_over(&mCore); }
 
-	//-----------------------------------------------------------------------
+	void cAnimationState::FadeIn(float afTime) { ohpl_anim_fade_in(&mCore, afTime); }
+	void cAnimationState::FadeOut(float afTime) { ohpl_anim_fade_out(&mCore, afTime); }
 
-	void cAnimationState::Update(float afTimeStep)
-	{
-		if(mfSpeed != mfSpeedDest) mfSpeed = cMath::IncreaseTo(mfSpeed, mfSpeedFadeRate*afTimeStep, mfSpeedDest);
-
-		//Update animation
-		AddTimePosition(afTimeStep);
-
-		//Fading
-		if(mfFadeStep!=0)
-		{
-			mfWeight += mfFadeStep*afTimeStep;
-			
-			if(mfFadeStep<0 && mfWeight<=0)
-			{
-				mfWeight =0;
-				mbActive = false;
-				mfFadeStep =0;
-			}
-			else if(mfFadeStep>0 && mfWeight>=1)
-			{
-				mfWeight =1;
-				mfFadeStep =0;
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cAnimationState::IsFading()
-	{
-		return mfFadeStep!=0;
-	}
-
-	
-	//-----------------------------------------------------------------------
-	
-	bool cAnimationState::IsOver()
-	{
-		if(mbLoop) return false;
-
-		return mfTimePos >= mfLength;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAnimationState::FadeIn(float afTime)
-	{
-		mfFadeStep = 1.0f / std::abs(afTime);
-	}
-
-	void cAnimationState::FadeOut(float afTime)
-	{
-		mfFadeStep = -1.0f / std::abs(afTime);
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	void cAnimationState::SetLength(float afLength)
-	{
-		mfLength = afLength;
-	}
-	
-	float cAnimationState::GetLength()
-	{
-		return mfLength;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	void cAnimationState::SetWeight(float afWeight)
-	{
-		mfWeight = afWeight;
-	}
-	float cAnimationState::GetWeight()
-	{
-		return mfWeight;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAnimationState::SetSpeed(float afSpeed)
-	{
-		mfSpeed = afSpeed;
-		mfSpeedDest = afSpeed;
-	}
 	// Rebirth cAnimationState::FadeSpeed 0xf60240
-	void cAnimationState::FadeSpeed(float afDest, float afTime)
-	{
-		mfSpeedDest = afDest;
-		mfSpeedFadeRate = std::abs(afDest - mfSpeed) / cMath::Max(afTime, 0.0001f);
-	}
-	float cAnimationState::GetSpeed()
-	{
-		return mfSpeed;
-	}
-	
-	//-----------------------------------------------------------------------
+	void cAnimationState::FadeSpeed(float afDest, float afTime) { ohpl_anim_fade_speed(&mCore, afDest, afTime); }
 
-	void cAnimationState::SetBaseSpeed(float afSpeed)
-	{
-		mfBaseSpeed = afSpeed;
-	}
-	float cAnimationState::GetBaseSpeed()
-	{
-		return mfBaseSpeed;
-	}
+	void cAnimationState::SetTimePosition(float afPosition) { ohpl_anim_set_time(&mCore, afPosition); }
 
-	//-----------------------------------------------------------------------
+	void cAnimationState::SetRelativeTimePosition(float afPosition) { ohpl_anim_set_relative_time(&mCore, afPosition); }
+	float cAnimationState::GetRelativeTimePosition() { return ohpl_anim_relative_time(&mCore); }
 
-	void cAnimationState::SetTimePosition(float afPosition)
-	{
-		if(mbLoop)
-		{
-			mfTimePos = cMath::Wrap(afPosition,0,mfLength);
-		}
-		else
-		{
-			mfTimePos = cMath::Clamp(afPosition, 0, mfLength);
-		}
-	}
+	void cAnimationState::SetActive(bool abActive) { ohpl_anim_set_active(&mCore, abActive); }
 
-	float cAnimationState::GetTimePosition()
-	{
-		return mfTimePos;
-	}
-
-	float cAnimationState::GetPreviousTimePosition()
-	{
-		return mfPrevTimePos;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAnimationState::SetRelativeTimePosition(float afPosition)
-	{
-		SetTimePosition(afPosition * mfLength);
-	}
-
-	float cAnimationState::GetRelativeTimePosition()
-	{
-		return mfTimePos / mfLength;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	bool cAnimationState::IsActive()
-	{
-		return mbActive;
-	}
-	void cAnimationState::SetActive(bool abActive)
-	{
-		if(mbActive == abActive) return;
-		
-		mbActive = abActive;
-
-		//Should this really be here?
-		mbPaused = false;
-		mfFadeStep =0;
-	}
-
-	//-----------------------------------------------------------------------
-	
-	bool cAnimationState::IsLooping()
-	{
-		return mbLoop;
-	}
-	void cAnimationState::SetLoop(bool abLoop)
-	{
-		mbLoop = abLoop;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cAnimationState::IsPaused()
-	{	
-		return mbPaused;
-	}
-	
-	void cAnimationState::SetPaused(bool abPaused)
-	{
-		mbPaused = abPaused;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cAnimationState::IsAfterSpecialEvent()
-	{
-		return mfTimePos > mfSpecialEventTime;
-	}
-	
-	bool cAnimationState::IsBeforeSpecialEvent()
-	{
-		return mfTimePos < mfSpecialEventTime;	
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cAnimationState::AddTimePosition(float afAdd)
-	{
-		if(mbPaused) return;
-		
-		mfPrevTimePos = mfTimePos;
-
-		mfTimePos += afAdd*mfSpeed*mfBaseSpeed;
-
-		SetTimePosition(mfTimePos);
-	}
-	
-	//-----------------------------------------------------------------------
+	void cAnimationState::AddTimePosition(float afAdd) { ohpl_anim_add_time(&mCore, afAdd); }
 
 	cAnimation* cAnimationState::GetAnimation()
 	{
 		return mpAnimation;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cAnimationEvent *cAnimationState::CreateEvent()
 	{
@@ -317,11 +87,9 @@ namespace hpl {
 	{
 		return mvEvents[alIdx];
 	}
-	
+
 	int cAnimationState::GetEventNum()
 	{
 		return (int)mvEvents.size();
 	}
-	
-	//-----------------------------------------------------------------------
 }
