@@ -85,14 +85,7 @@ namespace hpl {
 	private:
 		void ComputeBasis();
 
-		bool AddPolygon(int alVertexCount, const cVector3f* apVertices, const cVector3f* apNormals, iVertexBuffer* apDecalVB, 
-						const cMatrixf& amtxWorldMatrix,const cMatrixf& amtxWorldNormalRot);
 		void ClipMesh(cSubMeshEntity* apMesh, iVertexBuffer* apDecalVB);
-		int ClipPolygon(int alVertexCount, const cVector3f* apVertices, const cVector3f* apNormals, 
-						cVector3f* apNewVertices, cVector3f* apNewNormals, const std::vector<cPlanef>& avPlanes);
-		int ClipPolygonAgainstPlane(const cPlanef& aPlane, int alVertexCount, 
-									const cVector3f* apVertices, const cVector3f* apNormals, 
-									cVector3f* apNewVertices, cVector3f* apNewNormals);
 
 
 		iLowLevelGraphics *mpLowLevelGraphics;

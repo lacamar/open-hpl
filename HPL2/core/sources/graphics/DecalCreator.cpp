@@ -32,6 +32,7 @@
 #include "resources/AnimationManager.h"
 #include "scene/MeshEntity.h"
 #include "math/Math.h"
+#include "graphics/RustDecal.h"
 
 namespace hpl {
 
@@ -336,31 +337,15 @@ namespace hpl {
 				ClipMesh(pAffectedMesh, mpDecalVB);
 			}
 
-			//////////////////////////////////////////////////////////
-			// Set up texture coordinates
-			float fInvW = 1.0f/mvDecalSize.x;
-			float fInvH = 1.0f/mvDecalSize.z;
-			float *pVertexPositions = mpDecalVB->GetFloatArray(eVertexBufferElement_Position);
+			const int lVtxNum = mpDecalVB->GetVertexNum();
+			const int lPosStride = mpDecalVB->GetElementNum(eVertexBufferElement_Position);
+			const float *pVertexPositions = mpDecalVB->GetFloatArray(eVertexBufferElement_Position);
 
-			//////////////////////////////////////////////////////////
-			// Set up subdivisions
-			cVector2f vInvSubDivSize = cVector2f(1.0f/mvSubDiv.x,1.0f/mvSubDiv.y);
-			float fStartU = (float)(mlCurrentSubDiv%mvSubDiv.x);
-			float fStartV = (float)(mlCurrentSubDiv/mvSubDiv.x);
-			
-			for(int i=0;i<mpDecalVB->GetVertexNum();++i)
-			{
-				int lBaseIdx = i*mpDecalVB->GetElementNum(eVertexBufferElement_Position);
-				cVector3f vPointRelToCenter = cVector3f(pVertexPositions[lBaseIdx],
-														pVertexPositions[lBaseIdx+1],
-														pVertexPositions[lBaseIdx+2])-mvDecalPosition;
-
-				float u = vInvSubDivSize.x*(fStartU+cMath::Vector3Dot(vPointRelToCenter, mvDecalRight)*fInvW+0.5f);
-				float v = vInvSubDivSize.y*(fStartV+cMath::Vector3Dot(vPointRelToCenter, mvDecalForward)*fInvH+0.5f);
-				u = cMath::Clamp(u, 0.0f, 1.0f);
-				v = 1.0f-cMath::Clamp(v, 0.0f, 1.0f);
-				mpDecalVB->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(u,v,0));
-			}
+			OhplDecalUv uvParams = { mvDecalPosition, mvDecalRight, mvDecalForward, mvDecalSize.x, mvDecalSize.z, mvSubDiv, mlCurrentSubDiv };
+			tVector3fVec vUvs(lVtxNum);
+			ohpl_decal_uvs(pVertexPositions, (size_t)lVtxNum*lPosStride, lPosStride, lVtxNum, &uvParams, vUvs.data());
+			for(int i=0;i<lVtxNum;++i)
+				mpDecalVB->AddVertexVec3f(eVertexBufferElement_Texture0, vUvs[i]);
 			mbCompiled = mpDecalVB->Compile(eVertexCompileFlag_CreateTangents);
 		}
 
@@ -508,62 +493,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cDecalCreator::AddPolygon(	int alVertexCount, const cVector3f* apVertices, const cVector3f* apNormals, iVertexBuffer* apDecalVB, 
-									const cMatrixf& amtxWorldMatrix, const cMatrixf& amtxWorldNormalRot)
-	{
-		int lCount = mlDecalVertexCount;
-		int lPolyTriCount = alVertexCount-2;
-
-		if(mlDecalTriangleCount + lPolyTriCount > mlMaxDecalTriangleCount)
-			return false;
-
-		mlDecalTriangleCount += lPolyTriCount;
-
-		for(int i=0;i<lPolyTriCount;++i)
-		{
-			apDecalVB->AddIndex(lCount);
-			apDecalVB->AddIndex(lCount+i+1);
-			apDecalVB->AddIndex(lCount+i+2);
-		}
-
-		//float f = 1.0f / (1.0f - kEpsilonf);
-
-		//////////////////////////////////////////////////////
-		// Add the polys multiplied by the mesh world matrix
-		for(int i=0;i<alVertexCount;++i)
-		{
-			//float fAlpha = (cMath::Vector3Dot(mvDecalUp, vNormal) / vNormal.Length()-kEpsilonf)*f;
-			//fAlpha = cMath::Clamp(fAlpha, 0.0f, 1.0f);
-
-			cVector3f vPos = cMath::MatrixMul(amtxWorldMatrix, apVertices[i]+apNormals[i]*mfDecalOffset);
-			cVector3f vNormal = cMath::MatrixMul3x3(amtxWorldNormalRot, apNormals[i]);
-			vNormal.Normalize();
-
-			//Log("Local Vertex Pos: (%s)\n", (apVertices[i]+apNormals[i]*mfDecalOffset).ToFileString().c_str());
-			//Log("World Vertex Pos: (%s)\n", vPos.ToFileString().c_str());
-
-			apDecalVB->AddVertexVec3f(eVertexBufferElement_Position, vPos);
-			apDecalVB->AddVertexVec3f(eVertexBufferElement_Normal, vNormal);
-			apDecalVB->AddVertexColor(eVertexBufferElement_Color0, cColor(mColor.r,mColor.g,mColor.b,mColor.a));
-
-			++lCount;
-		}
-
-		mlDecalVertexCount = lCount;
-
-		return true;
-
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cDecalCreator::ClipMesh(cSubMeshEntity* apSubMesh,iVertexBuffer* apDecalVB)
 	{
 		//Log("Clipping mesh %s\n", apSubMesh->GetName().c_str());
-
-		cVector3f vNewVertices[9];
-		cVector3f vNewNormals[9];
-		float fInvThree = 1.0f/3.0f;
 
 		cMatrixf mtxSubMeshWorldMatrix = apSubMesh->GetWorldMatrix();
 		cMatrixf mtxInvSubMeshWorldMatrix = cMath::MatrixInverse(mtxSubMeshWorldMatrix);
@@ -578,184 +510,39 @@ namespace hpl {
 			vTransformedPlanes.push_back(cMath::TransformPlane(mtxInvSubMeshWorldMatrix, mvClipPlanes[i]));
 			//Log("Plane %d transformed normal:(%s) d:%f\n", i, vTransformedPlanes.back().GetNormal().ToFileString().c_str(), vTransformedPlanes.back().d);
 		}
-		cVector3f vTransformedUp = vTransformedPlanes[2].GetNormal();
+		OhplDecalClip clip;
+		for(int i=0;i<6;++i)
+			clip.planes[i] = vTransformedPlanes[i];
+		clip.world = mtxSubMeshWorldMatrix;
+		clip.normalRot = mtxSubMeshWorldNormalRot;
+		clip.offset = mfDecalOffset;
+		clip.maxTris = mlMaxDecalTriangleCount;
 
 		iVertexBuffer* pSubMeshVB = apSubMesh->GetVertexBuffer();
+		const int lVtxNum = pSubMeshVB->GetVertexNum();
+		const int lPosStride = pSubMeshVB->GetElementNum(eVertexBufferElement_Position);
+		const int lNrmStride = pSubMeshVB->GetElementNum(eVertexBufferElement_Normal);
 
-		float* pVertices = pSubMeshVB->GetFloatArray(eVertexBufferElement_Position);
-		float* pNormals = pSubMeshVB->GetFloatArray(eVertexBufferElement_Normal);
-		unsigned int* pIndices = pSubMeshVB->GetIndices();
-		int lPosStride = pSubMeshVB->GetElementNum(eVertexBufferElement_Position);
-		int lNrmStride = pSubMeshVB->GetElementNum(eVertexBufferElement_Normal);
+		OhplDecalMesh mesh = { pSubMeshVB->GetFloatArray(eVertexBufferElement_Position), (size_t)lVtxNum*lPosStride, (uint32_t)lPosStride,
+								pSubMeshVB->GetFloatArray(eVertexBufferElement_Normal), (size_t)lVtxNum*lNrmStride, (uint32_t)lNrmStride,
+								pSubMeshVB->GetIndices(), (uint32_t)pSubMeshVB->GetIndexNum() };
+		OhplDecalCounts counts = { mlDecalVertexCount, mlDecalTriangleCount };
+		OhplDecalOut* pOut = ohpl_decal_clip_mesh(&clip, &mesh, &counts);
+		mlDecalVertexCount = counts.vertices;
+		mlDecalTriangleCount = counts.triangles;
 
-		// Clip every triangle in submesh
-		for(int j=0;j<pSubMeshVB->GetIndexNum();j+=3)
+		for(uint32_t i=0;i<pOut->indexCount;++i)
+			apDecalVB->AddIndex(pOut->indices[i]);
+		for(uint32_t i=0;i<pOut->vertexCount;++i)
 		{
-			cVector3f vTriangle[3];
-			cVector3f vNormal[3];
-			
-			for(int k=0;k<3;++k)
-			{
-				int lPosBaseIdx = pIndices[j+k]*lPosStride;
-				int lNrmBaseIdx = pIndices[j+k]*lNrmStride;
-
-				vTriangle[k] = cVector3f(pVertices[lPosBaseIdx],
-										pVertices[lPosBaseIdx+1],
-										pVertices[lPosBaseIdx+2]);
-				vNormal[k] = cVector3f(pNormals[lNrmBaseIdx],
-										pNormals[lNrmBaseIdx+1],
-										pNormals[lNrmBaseIdx+2]);
-
-			}
-
-			// Skip if backfacing
-			cVector3f vTriNormal = cMath::Vector3Cross(vTriangle[2]-vTriangle[0], vTriangle[1]-vTriangle[0]);
-			vTriNormal.Normalize();
-
-			if(cMath::Vector3Dot(vTransformedUp, vTriNormal)<=kEpsilonf)
-				continue;
-
-			vNewVertices[0] = vTriangle[0];
-			vNewVertices[1] = vTriangle[1];
-			vNewVertices[2] = vTriangle[2];
-
-			vNewNormals[0] = vNormal[0];
-			vNewNormals[1] = vNormal[1];
-			vNewNormals[2] = vNormal[2];
-
-			// Clip triangle against planes
-			int lCount = ClipPolygon(3, vNewVertices, vNewNormals, vNewVertices, vNewNormals, vTransformedPlanes);
-			if((lCount!=0) && (AddPolygon(lCount, vNewVertices, vNewNormals, apDecalVB, mtxSubMeshWorldMatrix,mtxSubMeshWorldNormalRot)==false)) break;
-		}		
+			apDecalVB->AddVertexVec3f(eVertexBufferElement_Position, pOut->positions[i]);
+			apDecalVB->AddVertexVec3f(eVertexBufferElement_Normal, pOut->normals[i]);
+			apDecalVB->AddVertexColor(eVertexBufferElement_Color0, cColor(mColor.r,mColor.g,mColor.b,mColor.a));
+		}
+		ohpl_decal_out_free(pOut);
 	}
 
 	//-----------------------------------------------------------------------
-
-	int cDecalCreator::ClipPolygon(int alVertexCount, const cVector3f* apVertices, const cVector3f* apNormals,
-									cVector3f* apNewVertices, cVector3f* apNewNormals, const std::vector<cPlanef>& avPlanes)
-	{
-		/*Log("Clipping triangle with vertices (%s) (%s) (%s)\n", apVertices[0].ToString().c_str(),
-														  apVertices[1].ToString().c_str(),
-														  apVertices[2].ToString().c_str());*/
-		cVector3f vTempVertices[9];
-		cVector3f vTempNormals[9];
-
-		int lCount = ClipPolygonAgainstPlane(avPlanes[0], alVertexCount, apVertices, apNormals, vTempVertices, vTempNormals);
-		if(lCount!=0)
-		{
-			lCount = ClipPolygonAgainstPlane(avPlanes[1], lCount, vTempVertices, vTempNormals, apNewVertices, apNewNormals);
-			if(lCount!=0)
-			{
-				lCount = ClipPolygonAgainstPlane(avPlanes[2], lCount, apNewVertices, apNewNormals, vTempVertices, vTempNormals);
-				if(lCount!=0)
-				{
-					lCount = ClipPolygonAgainstPlane(avPlanes[3], lCount, vTempVertices, vTempNormals, apNewVertices, apNewNormals);
-					if(lCount!=0)
-					{
-						lCount = ClipPolygonAgainstPlane(avPlanes[4], lCount, apNewVertices, apNewNormals, vTempVertices, vTempNormals);
-						if(lCount!=0)
-						{
-							lCount = ClipPolygonAgainstPlane(avPlanes[5], lCount, vTempVertices, vTempNormals, apNewVertices, apNewNormals);
-						}
-					}
-				}
-			}
-		}
-		
-		return lCount;
-	}
-
-	//-----------------------------------------------------------------------
-
-	int cDecalCreator::ClipPolygonAgainstPlane(const cPlanef& aPlane, int alVertexCount, 
-											   const cVector3f* apVertices, const cVector3f* apNormals, 
-											   cVector3f* apNewVertices, cVector3f* apNewNormals)
-	{
-		//Log("\nClipping poly against plane %s %f\n", aPlane.GetNormal().ToFileString().c_str(), aPlane.d);
-		bool bNegative[10];
-		cVector3f vPlaneNormal = aPlane.GetNormal();
-
-		//Log("Classifying vertices\n");
-		int lNegativeCount = 0;
-		for(int i=0;i<alVertexCount;++i)
-		{
-			bool bNeg = (cMath::PlaneToPointDist(aPlane, apVertices[i]) < kEpsilonf);
-			bNegative[i] = bNeg;
-			lNegativeCount += bNeg ? 1 :0;
-
-			//Log("Vertex %s is %s the plane\n", apVertices[i].ToFileString().c_str(), bNeg?"behind":"in front of");
-		}
-		//Log("\n");
-
-		if(lNegativeCount==alVertexCount)
-			return 0;
-
-		int lCount = 0;
-		for(int i=0;i<alVertexCount;++i)
-		{
-			int j = (i!=0)? i-1 : alVertexCount-1;
-
-			//Log("Testing edge (%s)->(%s)\n", apVertices[i].ToFileString().c_str(), apVertices[j].ToFileString().c_str());
-
-			if(bNegative[i])
-			{
-				if(bNegative[j]==false)
-				{
-					//Log("\tEdge intersects plane\n");
-					const cVector3f& v1 = apVertices[j];
-					const cVector3f& v2 = apVertices[i];
-					cVector3f vEdge = v1-v2;
-					float t = cMath::PlaneToPointDist(aPlane, v1)/cMath::Vector3Dot(vPlaneNormal, vEdge);
-					apNewVertices[lCount] = v1*(1.0f-t) + v2*t;
-
-					//Log("\tIntersection pos: (%s) (t: %f)\n", apNewVertices[lCount].ToFileString().c_str(), t); 
-					
-					const cVector3f& n1 = apNormals[j];
-					const cVector3f& n2 = apNormals[i];
-					apNewNormals[lCount] = n1*(1.0f-t) + n2*t;
-					apNewNormals[lCount].Normalize();
-
-					++lCount;
-				}
-				//else
-					//Log("\tEdge is behind plane\n");
-			}
-			else
-			{
-				if(bNegative[j])
-				{
-					//Log("\tEdge intersects plane\n");
-
-					const cVector3f& v1 = apVertices[i];
-					const cVector3f& v2 = apVertices[j];
-					cVector3f vEdge = v1-v2;
-					float t = cMath::PlaneToPointDist(aPlane, v1)/cMath::Vector3Dot(vPlaneNormal, vEdge);
-					apNewVertices[lCount] = v1*(1.0f-t) + v2*t;
-
-					//Log("\tIntersection pos: (%s) (t: %f)\n", apNewVertices[lCount].ToFileString().c_str(), t); 
-					
-					const cVector3f& n1 = apNormals[i];
-					const cVector3f& n2 = apNormals[j];
-					apNewNormals[lCount] = n1*(1.0f-t) + n2*t;
-					apNewNormals[lCount].Normalize();
-					
-					++lCount;
-				}
-				//else
-					//Log("\tEdge is in front of plane\n");
-
-				apNewVertices[lCount] = apVertices[i];
-				apNewNormals[lCount] = apNormals[i];
-
-				//Log("\tAdding Vertex (%s)\n", apNewVertices[lCount].ToFileString().c_str()); 
-
-				++lCount;
-			}
-		}
-
-		return lCount;
-	}
-
 
 	//-----------------------------------------------------------------------
 
