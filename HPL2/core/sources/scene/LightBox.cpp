@@ -18,6 +18,7 @@
  */
 
 #include "scene/LightBox.h"
+#include "scene/RustLight.h"
 
 #include "graphics/LowLevelGraphics.h"
 #include "scene/Camera.h"
@@ -95,7 +96,7 @@ namespace hpl {
 		mpFadeTarget = &it->second;
 		for(int i=0; i<9; ++i) mvFadeFrom[i] = mvBands[i];
 		mfFadeT = 0;
-		mfFadeSpeed = afTime > 0 ? 1.0f / afTime : 1e9f;
+		mfFadeSpeed = ohpl_light_box_fade_speed(afTime);
 		UpdateLogic(0);
 	}
 
@@ -103,10 +104,7 @@ namespace hpl {
 	{
 		iLight::UpdateLogic(afTimeStep);
 		if(mpFadeTarget==NULL) return;
-		mfFadeT = cMath::Min(mfFadeT + mfFadeSpeed * afTimeStep, 1.0f);
-		if(mfFadeSpeed >= 1e9f) mfFadeT = 1;
-		for(int i=0; i<9; ++i) mvBands[i] = mvFadeFrom[i] + ((*mpFadeTarget)[i] - mvFadeFrom[i]) * mfFadeT;
-		if(mfFadeT >= 1) mpFadeTarget = NULL;
+		if(ohpl_light_box_fade_step(mvBands, mvFadeFrom, mpFadeTarget->data(), &mfFadeT, mfFadeSpeed, afTimeStep)) mpFadeTarget = NULL;
 	}
 
 	bool cLightBox::IsVisible()
