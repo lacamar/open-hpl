@@ -49,15 +49,6 @@ namespace hpl {
 	
 	//-------------------------------------
 
-	typedef std::map<tString, eGuiSkinGfx> tGuiSkinGfxMap;
-	typedef tGuiSkinGfxMap::iterator tGuiSkinGfxMapIt;
-
-	typedef std::map<tString, eGuiSkinFont> tGuiSkinFontMap;
-	typedef tGuiSkinFontMap::iterator tGuiSkinFontMapIt;
-
-	typedef std::map<tString, eGuiSkinAttribute> tGuiSkinAttributeMap;
-	typedef tGuiSkinAttributeMap::iterator tGuiSkinAttributeMapIt;
-
 
 	//------------------------------------------------
 
@@ -160,8 +151,6 @@ namespace hpl {
 		static cGuiGfxElement* mpGfxRect;
 
 	private:
-		void GenerateSkinTypeStrings();
-
 		cResources *mpResources;
 		cGraphics *mpGraphics;
 		cSound *mpSound;
@@ -178,9 +167,6 @@ namespace hpl {
 		tGuiGfxElementList mlstGfxElements;
 		tGuiGfxElementList mlstToBeDestroyedGfxElements;
 
-		tGuiSkinGfxMap m_mapSkinGfxStrings;
-		tGuiSkinFontMap m_mapSkinFontStrings;
-		tGuiSkinAttributeMap m_mapSkinAttributeStrings;
 
 		unsigned long mlLastRenderTime;
 	};

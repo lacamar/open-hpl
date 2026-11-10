@@ -4,9 +4,15 @@
 
 pub mod draw;
 mod ffi;
+mod ffi_skin;
+pub mod gfx;
+pub mod guicore;
 pub mod layout;
 pub mod list;
+pub mod skin;
 mod sort;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_skin;
