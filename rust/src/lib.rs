@@ -35,6 +35,7 @@ pub mod physics;
 pub mod platform;
 mod platform_ffi;
 pub mod preprocess;
+pub mod render;
 pub mod resources;
 mod resources_ffi;
 pub mod scene;

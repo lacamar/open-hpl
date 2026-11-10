@@ -35,6 +35,7 @@
 #include "math/Frustum.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace hpl {
 
@@ -206,20 +207,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRenderList::Compile(tRenderListCompileFlag aFlags)
-	{
-		if(aFlags & eRenderListCompileFlag_Z) CompileArray(eRenderListType_Z);
-		if(aFlags & eRenderListCompileFlag_Diffuse) CompileArray(eRenderListType_Diffuse);
-		if(aFlags & eRenderListCompileFlag_Decal) CompileArray(eRenderListType_Decal);
-		if(aFlags & eRenderListCompileFlag_Illumination) CompileArray(eRenderListType_Illumination);
-		if(aFlags & eRenderListCompileFlag_Translucent)
-		{
-			FindNearestLargeSurfacePlane();
-			CompileArray(eRenderListType_Translucent);
-		}
-
-	}
-
 	//-----------------------------------------------------------------------
 
 	void cRenderList::Clear()
@@ -304,276 +291,159 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static bool SortFunc_Z(iRenderable* apObjectA, iRenderable *apObjectB)
+	static inline uintptr_t PtrId(const void *apPtr){ return (uintptr_t)apPtr; }
+
+	static_assert(sizeof(OhplSolidKey) == 184 && sizeof(OhplTransKey) == 116 && sizeof(OhplDecalKey) == 48 &&
+				  sizeof(OhplIllumKey) == 32 && sizeof(OhplCompileIn) == 80 && sizeof(OhplCompileOut) == 40, "Render list key layout");
+
+	void cRenderList::Compile(tRenderListCompileFlag aFlags)
 	{
-		cMaterial *pMatA = apObjectA->GetMaterial();
-		cMaterial *pMatB = apObjectB->GetMaterial();
+		const bool bZ = (aFlags & eRenderListCompileFlag_Z) != 0;
+		const bool bDiffuse = (aFlags & eRenderListCompileFlag_Diffuse) != 0;
+		const bool bDecal = (aFlags & eRenderListCompileFlag_Decal) != 0;
+		const bool bIllum = (aFlags & eRenderListCompileFlag_Illumination) != 0;
+		const bool bTrans = (aFlags & eRenderListCompileFlag_Translucent) != 0;
+		if(!(bZ || bDiffuse || bDecal || bIllum || bTrans)) return;
 
-		//////////////////////////
-		//Alpha mode
-		if(pMatA->GetAlphaMode() != pMatB->GetAlphaMode())
-		{
-			return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
-		}
-
-		//////////////////////////
-		//If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
-		if(	pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans )
-		{
-			if(pMatA->GetProgram(0,eMaterialRenderMode_Z) != pMatB->GetProgram(0,eMaterialRenderMode_Z))
-			{
-				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
-			}
-
-			if(pMatA->GetTexture(eMaterialTexture_Diffuse) != pMatB->GetTexture(eMaterialTexture_Diffuse))
-			{
-				return pMatA->GetTexture(eMaterialTexture_Diffuse) < pMatB->GetTexture(eMaterialTexture_Diffuse);
-			}
-		}
-
-		//////////////////////////
-		//View space depth, no need to test further since Z should almost never be the same for two objects.
-		// use ">" since we want to render things closest to the screen first.
-		return apObjectA->GetViewSpaceZ() > apObjectB->GetViewSpaceZ();
-		//return apObjectA < apObjectB;
-	}
-
-	//-----------------------------------------------------------------------
-
-	static bool SortFunc_Diffuse(iRenderable* apObjectA, iRenderable *apObjectB)
-	{
-		cMaterial *pMatA = apObjectA->GetMaterial();
-		cMaterial *pMatB = apObjectB->GetMaterial();
-
-		//////////////////////////
-		//Program
-		if(pMatA->GetProgram(0,eMaterialRenderMode_Diffuse) != pMatB->GetProgram(0,eMaterialRenderMode_Diffuse))
-		{
-			return pMatA->GetProgram(0,eMaterialRenderMode_Diffuse) < pMatB->GetProgram(0,eMaterialRenderMode_Diffuse);
-		}
-
-		//////////////////////////
-		//Texture
-		for(int i=0;i<kMaxTextureUnits; ++i)
-		{
-			iTexture *pTexA = pMatA->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
-			iTexture *pTexB = pMatB->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
-			if(pTexA != pTexB) return pTexA < pTexB;
-		}
-
-		//////////////////////////
-		//Vertex buffer
-        if(apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer())
-		{
-			return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-		}
-
-		//////////////////////////
-		//Matrix
-		if(apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr())
-		{
-			return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
-		}
-		
-		//////////////////////////
-		//Object
-        return apObjectA < apObjectB;
-	}
-
-	//-----------------------------------------------------------------------
-
-	static bool SortFunc_Translucent(iRenderable* apObjectA, iRenderable *apObjectB)
-	{
-		////////////////////////
-		//If there is a large plane, then need to sort objects according to this first!
-		if(apObjectA->GetLargePlaneSurfacePlacement() != apObjectB->GetLargePlaneSurfacePlacement())
-		{
-			return apObjectA->GetLargePlaneSurfacePlacement() < apObjectB->GetLargePlaneSurfacePlacement();
-		}
-
-		//////////////////////////
-		//View space depth, no need to test further since Z should almost never be the same for two objects.
-		return apObjectA->GetViewSpaceZ() < apObjectB->GetViewSpaceZ();		
-	}
-	
-	//-----------------------------------------------------------------------
-
-	static bool SortFunc_Decal(iRenderable* apObjectA, iRenderable *apObjectB)
-	{
-		cMaterial *pMatA = apObjectA->GetMaterial();
-		cMaterial *pMatB = apObjectB->GetMaterial();
-
-		if(pMatA->GetDecalSortOrder() != pMatB->GetDecalSortOrder())
-			return pMatA->GetDecalSortOrder() < pMatB->GetDecalSortOrder();
-		
-		//////////////////////////
-		//Texture
-		if(pMatA->GetTexture(eMaterialTexture_Illumination) != pMatB->GetTexture(eMaterialTexture_Illumination))
-		{
-			return pMatA->GetTexture(eMaterialTexture_Illumination) < pMatB->GetTexture(eMaterialTexture_Illumination);
-		}
-
-		//////////////////////////
-		//Vertex buffer
-		if(apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer())
-		{
-			return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-		}
-
-		//////////////////////////
-		//Matrix
-		if(apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr())
-		{
-			return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
-		}
-		
-		//////////////////////////
-		//Vector (just so that order stays the same
-        return apObjectA->GetWorldPosition()  < apObjectB->GetWorldPosition();
-	}
-
-	//-----------------------------------------------------------------------
-
-	static bool SortFunc_Illumination(iRenderable* apObjectA, iRenderable *apObjectB)
-	{
-		cMaterial *pMatA = apObjectA->GetMaterial();
-		cMaterial *pMatB = apObjectB->GetMaterial();
-
-		//////////////////////////
-		//Texture
-		if(pMatA->GetTexture(eMaterialTexture_Illumination) != pMatB->GetTexture(eMaterialTexture_Illumination))
-		{
-			return pMatA->GetTexture(eMaterialTexture_Illumination) < pMatB->GetTexture(eMaterialTexture_Illumination);
-		}
-
-		//////////////////////////
-		//Vertex buffer
-		if(apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer())
-		{
-			return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-		}
-
-		//////////////////////////
-		//Matrix
-		if(apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr())
-		{
-			return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
-		}
-
-		//////////////////////////
-		//Illumination amount
-		return apObjectA->GetIlluminationAmount() < apObjectB->GetIlluminationAmount();
-	}
-
-	//-----------------------------------------------------------------------
-
-	typedef bool (*tSortRenderableFunc)(iRenderable*,iRenderable*); 
-
-	static tSortRenderableFunc vSortFunctions[eRenderListType_LastEnum] = {SortFunc_Z,SortFunc_Diffuse,SortFunc_Translucent,SortFunc_Decal,SortFunc_Illumination};
-
-	//-----------------------------------------------------------------------
-
-	
-	void cRenderList::CompileArray(eRenderListType aType)
-	{
-		tRenderableVec *pSourceVec = NULL;
-		if(aType == eRenderListType_Translucent)		pSourceVec = &mvTransObjects;
-		else if(aType == eRenderListType_Decal)			pSourceVec = &mvDecalObjects;
-		else if(aType == eRenderListType_Illumination)	pSourceVec = &mvIllumObjects;
-		else											pSourceVec = &mvSolidObjects;
-
-		mvSortedArrays[aType] = *pSourceVec;	//Should be fastest way to copy right, or use memcopy?
-		
-		std::sort(mvSortedArrays[aType].begin(), mvSortedArrays[aType].end(), vSortFunctions[aType]);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cRenderList::FindNearestLargeSurfacePlane()
-	{
 		////////////////////////////////////
-		// Setup variables
-		cPlanef nearestSurfacePlane;
-		bool bHasLargeSurfacePlane = false;
-		float fClosestDist =0;
-		iRenderable *pLargeSurfaceObject = NULL;
-		
-		////////////////////////////////////
-		// Find the neareest surface plane
-		for(size_t i=0; i<mvTransObjects.size(); ++i)
+		// Gather the sort keys
+		const size_t lSolid = (bZ || bDiffuse) ? mvSolidObjects.size() : 0;
+		mvSolidKeys.resize(lSolid);
+		for(size_t i=0; i<lSolid; ++i)
 		{
-			/////////////////////////////////
-			// Check so object is of right type
-			iRenderable *pObject = mvTransObjects[i];
-			if(pObject->GetRenderType() != eRenderableType_SubMesh) continue;
-
+			iRenderable *pObject = mvSolidObjects[i];
 			cMaterial *pMat = pObject->GetMaterial();
-            if(pMat->GetLargeTransperantSurface()==false) continue;
-			
-			/////////////////////////////////
-			// Check so sub mesh is one sided
+			OhplSolidKey &key = mvSolidKeys[i];
+			key.alphaMode = pMat->GetAlphaMode();
+			key.viewZ = pObject->GetViewSpaceZ();
+			if(bZ)
+			{
+				key.progZ = PtrId(pMat->GetProgram(0,eMaterialRenderMode_Z));
+				key.texDiffuse = PtrId(pMat->GetTexture(eMaterialTexture_Diffuse));
+			}
+			if(bDiffuse)
+			{
+				key.progDiffuse = PtrId(pMat->GetProgram(0,eMaterialRenderMode_Diffuse));
+				for(int u=0; u<kMaxTextureUnits; ++u)
+					key.texUnits[u] = PtrId(pMat->GetTextureInUnit(eMaterialRenderMode_Diffuse,u));
+				key.vtx = PtrId(pObject->GetVertexBuffer());
+				key.mtx = PtrId(pObject->GetModelMatrixPtr());
+				key.obj = PtrId(pObject);
+			}
+		}
+
+		const size_t lTrans = bTrans ? mvTransObjects.size() : 0;
+		mvTransKeys.resize(lTrans);
+		for(size_t i=0; i<lTrans; ++i)
+		{
+			iRenderable *pObject = mvTransObjects[i];
+			OhplTransKey &key = mvTransKeys[i];
+			key.viewZ = pObject->GetViewSpaceZ();
+			key.placement = 0;
+			key.planeCandidate = 0;
+			key.pad = 0;
+			cVector3f vCenter = pObject->GetBoundingVolume()->GetWorldCenter();
+			key.center.x = vCenter.x; key.center.y = vCenter.y; key.center.z = vCenter.z;
+
+			if(pObject->GetRenderType() != eRenderableType_SubMesh) continue;
+			if(pObject->GetMaterial()->GetLargeTransperantSurface()==false) continue;
 			cSubMeshEntity *pSubEnt = static_cast<cSubMeshEntity*>(pObject);
 			cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
 			if(pSubMesh->GetIsOneSided()==false) continue;
 
-			cVector3f vSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(pSubEnt->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-			cVector3f vSurfacePos = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
+			key.planeCandidate = 1;
+			const cVector3f &vNormal = pSubMesh->GetOneSidedNormal();
+			const cVector3f &vPoint = pSubMesh->GetOneSidedPoint();
+			key.normal.x = vNormal.x; key.normal.y = vNormal.y; key.normal.z = vNormal.z;
+			key.point.x = vPoint.x; key.point.y = vPoint.y; key.point.z = vPoint.z;
+			memcpy(&key.world, &pSubEnt->GetWorldMatrix(), sizeof(OhplMat4));
+		}
 
-			/////////////////////////////////
-			// Make sure it does not face away from frustum.
-			float fDot = cMath::Vector3Dot(vSurfacePos - mpFrustum->GetOrigin(), vSurfaceNormal);
-			if(fDot >= 0) continue;
+		const size_t lDecal = bDecal ? mvDecalObjects.size() : 0;
+		mvDecalKeys.resize(lDecal);
+		for(size_t i=0; i<lDecal; ++i)
+		{
+			iRenderable *pObject = mvDecalObjects[i];
+			cMaterial *pMat = pObject->GetMaterial();
+			OhplDecalKey &key = mvDecalKeys[i];
+			key.sortOrder = pMat->GetDecalSortOrder();
+			key.pad = 0;
+			key.texIllum = PtrId(pMat->GetTexture(eMaterialTexture_Illumination));
+			key.vtx = PtrId(pObject->GetVertexBuffer());
+			key.mtx = PtrId(pObject->GetModelMatrixPtr());
+			cVector3f vPos = pObject->GetWorldPosition();
+			key.pos.x = vPos.x; key.pos.y = vPos.y; key.pos.z = vPos.z;
+			key.pad2 = 0;
+		}
 
-			/////////////////////////////////
-			// Create surface normal and check if nearest.
-			cPlanef surfacePlane;
-			surfacePlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
-			
-			float fDist = cMath::PlaneToPointDist(surfacePlane, mpFrustum->GetOrigin());
-			if(fDist < fClosestDist || bHasLargeSurfacePlane==false)
-			{
-				bHasLargeSurfacePlane = true;
-				fClosestDist = fDist;
-				nearestSurfacePlane = surfacePlane;
-				pLargeSurfaceObject = pObject;
-			}
+		const size_t lIllum = bIllum ? mvIllumObjects.size() : 0;
+		mvIllumKeys.resize(lIllum);
+		for(size_t i=0; i<lIllum; ++i)
+		{
+			iRenderable *pObject = mvIllumObjects[i];
+			OhplIllumKey &key = mvIllumKeys[i];
+			key.illumAmount = pObject->GetIlluminationAmount();
+			key.pad = 0;
+			key.texIllum = PtrId(pObject->GetMaterial()->GetTexture(eMaterialTexture_Illumination));
+			key.vtx = PtrId(pObject->GetVertexBuffer());
+			key.mtx = PtrId(pObject->GetModelMatrixPtr());
 		}
 
 		////////////////////////////////////
-		// Check if objects are above or below surface plane
-		if(bHasLargeSurfacePlane)
-		{
-			//Log(" LargePlaneObject: '%s' Mat:'%s'\n", pLargeSurfaceObject->GetName().c_str(),  pLargeSurfaceObject->GetMaterial()->GetName().c_str());
-			for(size_t i=0; i<mvTransObjects.size(); ++i)
-			{
-				iRenderable *pObject = mvTransObjects[i];
-				
-				//If this is large plane, then set value to 0
-				if(pObject == pLargeSurfaceObject)
-				{
-					pObject->SetLargePlaneSurfacePlacement(0);
-					continue;
-				}
-				
-				float fDist = cMath::PlaneToPointDist(nearestSurfacePlane, pObject->GetBoundingVolume()->GetWorldCenter());
-				pObject->SetLargePlaneSurfacePlacement(fDist < 0 ? -1 : 1);
+		// Sort in Rust
+		for(int i=0; i<5; ++i) mvOrder[i].resize(0);
+		if(bZ)			mvOrder[eRenderListType_Z].resize(lSolid);
+		if(bDiffuse)	mvOrder[eRenderListType_Diffuse].resize(lSolid);
+		if(bTrans)		mvOrder[eRenderListType_Translucent].resize(lTrans);
+		if(bDecal)		mvOrder[eRenderListType_Decal].resize(lDecal);
+		if(bIllum)		mvOrder[eRenderListType_Illumination].resize(lIllum);
 
-				//Log(" %d Object: '%s' %d  Mat:'%s'\n",i, pObject->GetName().c_str(), pObject->GetLargePlaneSurfacePlacement(),  pLargeSurfaceObject->GetMaterial()->GetName().c_str());
-			}	
+		OhplCompileIn in;
+		in.flags = aFlags;
+		in.origin.x = in.origin.y = in.origin.z = 0;
+		if(bTrans)
+		{
+			const cVector3f &vOrigin = mpFrustum->GetOrigin();
+			in.origin.x = vOrigin.x; in.origin.y = vOrigin.y; in.origin.z = vOrigin.z;
 		}
+		in.solid = mvSolidKeys.data();		in.solidLen = lSolid;
+		in.trans = mvTransKeys.data();		in.transLen = lTrans;
+		in.decal = mvDecalKeys.data();		in.decalLen = lDecal;
+		in.illum = mvIllumKeys.data();		in.illumLen = lIllum;
+
+		OhplCompileOut out;
+		out.z = mvOrder[eRenderListType_Z].data();
+		out.diffuse = mvOrder[eRenderListType_Diffuse].data();
+		out.trans = mvOrder[eRenderListType_Translucent].data();
+		out.decal = mvOrder[eRenderListType_Decal].data();
+		out.illum = mvOrder[eRenderListType_Illumination].data();
+
+		ohpl_renderlist_compile(&in, &out);
+
 		////////////////////////////////////
-		// Set all to same value.
-		else
+		// Apply
+		if(bTrans)
 		{
-			for(size_t i=0; i<mvTransObjects.size(); ++i)
-			{
-				iRenderable *pObject = mvTransObjects[i];
-				pObject->SetLargePlaneSurfacePlacement(0);
-			}
+			for(size_t i=0; i<lTrans; ++i) mvTransObjects[i]->SetLargePlaneSurfacePlacement(mvTransKeys[i].placement);
 		}
 
+		if(bZ)			ApplyOrder(eRenderListType_Z, mvSolidObjects);
+		if(bDiffuse)	ApplyOrder(eRenderListType_Diffuse, mvSolidObjects);
+		if(bDecal)		ApplyOrder(eRenderListType_Decal, mvDecalObjects);
+		if(bIllum)		ApplyOrder(eRenderListType_Illumination, mvIllumObjects);
+		if(bTrans)		ApplyOrder(eRenderListType_Translucent, mvTransObjects);
 	}
-	
+
+	//-----------------------------------------------------------------------
+
+	void cRenderList::ApplyOrder(eRenderListType aType, const tRenderableVec& avSource)
+	{
+		const std::vector<unsigned>& vOrder = mvOrder[aType];
+		tRenderableVec& vDest = mvSortedArrays[aType];
+		vDest.resize(vOrder.size());
+		for(size_t i=0; i<vOrder.size(); ++i) vDest[i] = avSource[vOrder[i]];
+	}
+
 	//-----------------------------------------------------------------------
 
 }
