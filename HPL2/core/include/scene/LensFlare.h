@@ -5,6 +5,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "scene/SceneTypes.h"
 #include "graphics/Renderable.h"
+#include "scene/RustLight.h"
 #include "math/Math.h"
 
 namespace hpl {
@@ -105,7 +106,7 @@ namespace hpl {
 		cLensFlareType* GetTypeRenderable(eLensFlareType aType){ return mpTypes[aType];}
 
 		bool IsAnyTypeActive();
-		float GetVisibility(){ return mfVis;}
+		float GetVisibility(){ return mVis.vis;}
 		void UpdateVisibility(float afTimeStep, int alFrame);
 
 		cColor GetFlareColorAndBrightness(eLensFlareType aType, cFrustum *apFrustum, float afVis);
@@ -129,8 +130,7 @@ namespace hpl {
 
 	private:
 		cMatrixf* GetSizeAndRotation(eLensFlareType aType, cFrustum *apFrustum, float afVis);
-		float ScaleFromDistance(float afDist){ return cMath::Max(0.0f, 1.5f * ((1 - mfSizeByDist) * (afDist - 1) + 1.5f));}
-		float FovFactor(cFrustum *apFrustum);
+		OhplFlareIn MakeIn();
 		void UpdateBV();
 
 		cMaterialManager* mpMaterialManager;
@@ -164,10 +164,7 @@ namespace hpl {
 		float mfBrightness;
 		cVector3f mvSourceSize;
 
-		float mfVisTarget;
-		float mfVis;
-		float mfVisVel;
-		int mlVisFrame;
+		OhplFlareVis mVis;
 
 		cBoundingVolume mOcclusionBV;
 		cMatrixf m_mtxOccluder;

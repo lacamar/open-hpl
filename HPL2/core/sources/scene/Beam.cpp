@@ -18,6 +18,7 @@
  */
 
 #include "scene/Beam.h"
+#include "scene/RustLight.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -67,6 +68,9 @@ namespace hpl {
 		mpMaterial = NULL;
 
 		mlLastRenderCount = -1;
+		mlStartTransformCount = -1;
+		mlEndTransformCount = -1;
+		mbMultiplyAlphaWithColor = false;
 		
 
 		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(
@@ -164,29 +168,7 @@ namespace hpl {
 
 		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 
-		//Change "lower colors"
-		if(mbMultiplyAlphaWithColor)
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-		else
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
+		ohpl_beam_set_edge_colors(&mColor, mbMultiplyAlphaWithColor, pColors);
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
@@ -203,20 +185,10 @@ namespace hpl {
 	{
 		if(mbUpdateBoundingVolume)
 		{
-			cVector3f vMax = GetWorldPosition();
-			cVector3f vMin = vMax;
+			cVector3f vStart = GetWorldPosition();
 			cVector3f vEnd = mpEnd->GetWorldPosition();
-
-			if(vMax.x < vEnd.x) vMax.x = vEnd.x;
-			if(vMax.y < vEnd.y) vMax.y = vEnd.y;
-			if(vMax.z < vEnd.z) vMax.z = vEnd.z;
-
-			if(vMin.x > vEnd.x) vMin.x = vEnd.x;
-			if(vMin.y > vEnd.y) vMin.y = vEnd.y;
-			if(vMin.z > vEnd.z) vMin.z = vEnd.z;
-
-			vMin -= cVector3f(mvSize.x);
-			vMax += cVector3f(mvSize.x);
+			cVector3f vMin, vMax;
+			ohpl_beam_bounds(&vStart, &vEnd, mvSize.x, &vMin, &vMax);
 
 			mBoundingVolume.SetLocalMinMax(vMin,vMax);
 
@@ -236,66 +208,13 @@ namespace hpl {
 			return;
 		}
 
-		////////////////////////////////
-		//Get Axis
-		mvAxis = mpEnd->GetWorldPosition() - GetWorldPosition();
-        
-		mvMidPosition =GetWorldPosition() + mvAxis*0.5f;
-		float fDist = mvAxis.Length();
-
-		mvAxis.Normalize();
-
-		////////////////////////////////
-		//Update vertex buffer
-		cVector2f vBeamSize = cVector2f(mvSize.x, fDist);
-
+		cVector3f vStart = GetWorldPosition();
+		cVector3f vEnd = mpEnd->GetWorldPosition();
 		float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 		float *pTex = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
+		ohpl_beam_geometry(&vStart, &vEnd, mvSize.x, mvSize.y, mbTileHeight, pPos, pTex, &mvAxis, &mvMidPosition);
 
-		cVector3f vCoords[4] = {cVector3f((vBeamSize.x/2),-(vBeamSize.y/2),0),
-								cVector3f(-(vBeamSize.x/2),-(vBeamSize.y/2),0),
-								cVector3f(-(vBeamSize.x/2),(vBeamSize.y/2),0),
-								cVector3f((vBeamSize.x/2),(vBeamSize.y/2),0)};
-
-		cVector3f vTexCoords[4];
-		if(mbTileHeight)
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,-fDist/mvSize.y,0);	//Top left
-			vTexCoords[3] = cVector3f(1,-fDist/mvSize.y,0);	//Top right
-		}
-		else
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,0,0);	//Top left
-			vTexCoords[3] = cVector3f(1,0,0);	//Top right
-		}
-
-		for(int i=0; i<4;++i)
-		{
-			pPos[0] = vCoords[i].x;
-			pPos[1] = vCoords[i].y;
-			pPos[2] = vCoords[i].z;
-			pPos+=4;
-
-			pTex[0] = vTexCoords[i].x;
-			pTex[1] = vTexCoords[i].y;
-			pTex+=3;
-		}
-
-		if(mpMaterial->GetType()->IsTranslucent())
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-		else
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-		
-		
-
+		mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
 	}
 
 	//-----------------------------------------------------------------------
@@ -304,42 +223,9 @@ namespace hpl {
 	{
 		if(apFrustum==NULL)return &GetWorldMatrix();
 
-		m_mtxTempTransform = GetWorldMatrix();
-		cVector3f vForward, vRight, vUp;
-
-		cVector3f vCameraForward = apFrustum->GetOrigin() - GetWorldPosition();
-		vCameraForward.Normalize();
-
-		vUp = mvAxis;//cMath::MatrixMul(GetWorldMatrix().GetRotation(),mvAxis);
-		//vUp.Normalize();
-			
-		if(vUp == vForward)
-		{
-			vRight = cMath::Vector3Cross(vUp, vCameraForward);
-			Warning("Beam Right vector is not correct! Contact programmer!\n");
-		}
-		else
-			vRight = cMath::Vector3Cross(vUp, vCameraForward);
-
-		vRight.Normalize();
-		vForward = cMath::Vector3Cross(vRight, vUp);
-
-		//Set right vector
-		m_mtxTempTransform.m[0][0] = vRight.x;
-		m_mtxTempTransform.m[1][0] = vRight.y;
-		m_mtxTempTransform.m[2][0] = vRight.z;
-
-		//Set up vector
-		m_mtxTempTransform.m[0][1] = vUp.x;
-		m_mtxTempTransform.m[1][1] = vUp.y;
-		m_mtxTempTransform.m[2][1] = vUp.z;
-
-		//Set forward vector
-		m_mtxTempTransform.m[0][2] = vForward.x;
-		m_mtxTempTransform.m[1][2] = vForward.y;
-		m_mtxTempTransform.m[2][2] = vForward.z;
-
-		m_mtxTempTransform.SetTranslation(mvMidPosition);
+		cVector3f vWorldPos = GetWorldPosition();
+		cVector3f vCamera = apFrustum->GetOrigin();
+		ohpl_beam_model_matrix(&GetWorldMatrix(), &vWorldPos, &vCamera, &mvAxis, &mvMidPosition, &m_mtxTempTransform);
 
 		return &m_mtxTempTransform;
 	}
@@ -462,31 +348,9 @@ namespace hpl {
 		mColor = aColor;
 
 		float *pColors = mpBeam->mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-		
+
 		//Change "upper colors"
-		pColors+= 4*2;
-		if(mpBeam->mbMultiplyAlphaWithColor)
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-		else
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
+		ohpl_beam_set_edge_colors(&mColor, mpBeam->mbMultiplyAlphaWithColor, pColors + 4*2);
 
 		mpBeam->mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}

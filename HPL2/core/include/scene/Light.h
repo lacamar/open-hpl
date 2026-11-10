@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
 #include <functional>
+#include "scene/RustLight.h"
 
 class TiXmlElement;
 
@@ -146,14 +147,14 @@ namespace hpl {
 		void FadeTo(const cColor& aCol, float afRadius, float afTime);
 		void StopFading();
 		bool IsFading();
-		cColor GetDestColor(){ return mDestCol;}
-		float GetDestRadius(){ return mfDestRadius;}
+		cColor GetDestColor(){ return mAnim.dest_col;}
+		float GetDestRadius(){ return mAnim.dest_radius;}
 
 
 		//////////////////////////
 		//FLickering
 		void SetFlickerActive(bool abX);
-		bool GetFlickerActive(){return mbFlickering;}
+		bool GetFlickerActive(){return mAnim.flickering;}
 
 		void SetFlicker(const cColor& aOffCol, float afOffRadius,
 			float afOnMinLength, float afOnMaxLength,const tString &asOnSound,const tString &asOnPS,
@@ -165,20 +166,20 @@ namespace hpl {
 		tString GetFlickerOnSound(){ return msFlickerOnSound;}
 		tString GetFlickerOffPS(){ return msFlickerOffPS;}
 		tString GetFlickerOnPS(){ return msFlickerOnPS;}
-		float GetFlickerOnMinLength(){ return mfFlickerOnMinLength;}
-		float GetFlickerOffMinLength(){ return mfFlickerOffMinLength;}
-		float GetFlickerOnMaxLength(){ return mfFlickerOnMaxLength;}
-		float GetFlickerOffMaxLength(){ return mfFlickerOffMaxLength;}
-		cColor GetFlickerOffColor(){ return mFlickerOffColor;}
-		float GetFlickerOffRadius(){ return mfFlickerOffRadius;}
-		bool GetFlickerFade(){ return mbFlickerFade;}
-		float GetFlickerOnFadeMinLength(){ return mfFlickerOnFadeMinLength;}
-		float GetFlickerOnFadeMaxLength(){ return mfFlickerOnFadeMaxLength;}
-		float GetFlickerOffFadeMinLength(){ return mfFlickerOffFadeMinLength;}
-		float GetFlickerOffFadeMaxLength(){ return mfFlickerOnFadeMaxLength;}
+		float GetFlickerOnMinLength(){ return mAnim.flicker_on_min_length;}
+		float GetFlickerOffMinLength(){ return mAnim.flicker_off_min_length;}
+		float GetFlickerOnMaxLength(){ return mAnim.flicker_on_max_length;}
+		float GetFlickerOffMaxLength(){ return mAnim.flicker_off_max_length;}
+		cColor GetFlickerOffColor(){ return mAnim.flicker_off_color;}
+		float GetFlickerOffRadius(){ return mAnim.flicker_off_radius;}
+		bool GetFlickerFade(){ return mAnim.flicker_fade;}
+		float GetFlickerOnFadeMinLength(){ return mAnim.flicker_on_fade_min_length;}
+		float GetFlickerOnFadeMaxLength(){ return mAnim.flicker_on_fade_max_length;}
+		float GetFlickerOffFadeMinLength(){ return mAnim.flicker_off_fade_min_length;}
+		float GetFlickerOffFadeMaxLength(){ return mAnim.flicker_on_fade_max_length;}
 
-		cColor GetFlickerOnColor(){ return mFlickerOnColor;}
-		float GetFlickerOnRadius(){ return mfFlickerOnRadius;}
+		cColor GetFlickerOnColor(){ return mAnim.flicker_on_color;}
+		float GetFlickerOnRadius(){ return mAnim.flicker_on_radius;}
 
 		//////////////////////////
 		//Properties
@@ -255,6 +256,7 @@ namespace hpl {
 		void OnFlickerOff();
 		void OnFlickerOn();
 		void OnSetDiffuse();
+		OhplLightLive LiveState() const;
 
         virtual void ExtraXMLProperties(TiXmlElement *apMainElem){}
 		virtual void UpdateBoundingVolume()=0;
@@ -289,7 +291,6 @@ namespace hpl {
 		float mfTranslucency = 1;
 		float mfBrightness;
 		float mfDefaultBrightness = 1;
-		float mfBrightFadeTime = 0, mfBrightFadeCount = 0, mfBrightFadeStart = 0, mfBrightFadeDest = 0;
 		std::function<float(float)> mBrightFadeEasing;
 		static bool mbHpl3Visibility;
 		bool IsLit();
@@ -310,39 +311,12 @@ namespace hpl {
 		float mfShadowDistance;
 		float mfShadowMapSlopeScaleBiasMul;
 
-		///////////////////////////
-		//Fading.
-		cColor mColAdd;
-		float mfRadiusAdd;
-		cColor mDestCol;
-		float mfDestRadius;
-		float mfFadeTime;
+		OhplLightAnim mAnim;
 
-		///////////////////////////
-		//Flicker
-		bool mbFlickering;
 		tString msFlickerOffSound;
 		tString msFlickerOnSound;
 		tString msFlickerOffPS;
 		tString msFlickerOnPS;
-		float mfFlickerOnMinLength;
-		float mfFlickerOffMinLength;
-		float mfFlickerOnMaxLength;
-		float mfFlickerOffMaxLength;
-		cColor mFlickerOffColor;
-		float mfFlickerOffRadius;
-		bool mbFlickerFade;
-		float mfFlickerOnFadeMinLength;
-		float mfFlickerOnFadeMaxLength;
-		float mfFlickerOffFadeMinLength;
-		float mfFlickerOffFadeMaxLength;
-
-		cColor mFlickerOnColor;
-		float mfFlickerOnRadius;
-
-		bool mbFlickerOn;
-		float mfFlickerTime;
-		float mfFlickerStateLength;
 	};
 
 	typedef std::list<iLight*> tLightList;
