@@ -32,6 +32,7 @@
 #include "graphics/Texture.h"
 
 #include "gui/Gui.h"
+#include "gui/RustGuiSkin.h"
 
 namespace hpl {
 
@@ -163,79 +164,26 @@ namespace hpl {
 
 	void cGuiGfxElement::Update(float afTimeStep)
 	{
-
-		//////////////////////////////////////
-		//Update image animations
-		if(mvAnimations.empty() || mbAnimationPaused) return;
-        if(mlCurrentAnimation >= (int)mvAnimations.size()) return;
-
-		cGuiGfxAnimation* pAnim = mvAnimations[mlCurrentAnimation];
-
-		int lFrame = 0;
-		//////////////////////////////////
-		// Non random animation update
-		if(pAnim->mType != eGuiGfxAnimationType_Random)
+		OhplGuiAnimState state = {mfCurrentFrame, mlActiveImage, mbForwardAnim};
+		OhplGuiAnimInput input = {};
+		input.animationCount = mvAnimations.size();
+		input.bufferLen = mvImageBufferVec.size();
+		input.currentAnimation = mlCurrentAnimation;
+		input.paused = mbAnimationPaused;
+		input.timeStep = afTimeStep;
+		if(mlCurrentAnimation >= 0 && (size_t)mlCurrentAnimation < mvAnimations.size())
 		{
-			mfCurrentFrame += afTimeStep * (1.0f/pAnim->mfFrameLength);
-			lFrame = (int) mfCurrentFrame;
-			if(lFrame >= (int)mvImageBufferVec.size())
-			{
-				//Log("Over max!\n");
-				//Stop at end
-				if(pAnim->mType == eGuiGfxAnimationType_StopAtEnd) 
-				{
-					lFrame = (int)mvImageBufferVec.size()-1;
-					mfCurrentFrame = (float)lFrame;
-				}
-				//Loop
-				else if(pAnim->mType == eGuiGfxAnimationType_Loop)
-				{
-					lFrame =0;
-					mfCurrentFrame = 0;
-				}
-				//Oscillate
-				else if(pAnim->mType == eGuiGfxAnimationType_Oscillate)
-				{
-					lFrame =1;
-					mfCurrentFrame = 1;
-					mbForwardAnim = !mbForwardAnim;
-				}
-			}
-			//Log("Frame %d %f actual_frame: %d size: %d\n",lFrame,mfCurrentFrame,((int)mvImageBufferVec.size()-1) - lFrame,mvImageBufferVec.size());
-			
-			//Oscillate fix
-			if(mbForwardAnim== false && pAnim->mType == eGuiGfxAnimationType_Oscillate)
-			{
-				lFrame = ((int)mvImageBufferVec.size()-1) - lFrame;
-			}
-		}
-		//////////////////////////////////
-		// Random animation update
-		else if(mvImageBufferVec.size() > 1)
-		{
-			float fPrev = mfCurrentFrame;
-			mfCurrentFrame += afTimeStep * (1.0f/pAnim->mfFrameLength);
-			lFrame = (int) mfCurrentFrame;
-			if((int)mfCurrentFrame != (int)fPrev)
-			{
-				int lPrev = (int)fPrev;
-				do
-				{
-					lFrame = cMath::RandRectl(0, (int)mvImageBufferVec.size()-1);
-				}
-				while(lFrame == lPrev);
-
-				mfCurrentFrame = (float)lFrame;
-			}
+			input.type = mvAnimations[mlCurrentAnimation]->mType;
+			input.frameLength = mvAnimations[mlCurrentAnimation]->mfFrameLength;
 		}
 
-		//////////////////////////////////
-		// Set new image
-		if(lFrame != mlActiveImage)
-		{
-			mlActiveImage = lFrame;
-			SetImage(mvImageBufferVec[mlActiveImage],0);
-		}
+		int64_t lImage = ohpl_gui_gfx_update(&state, &input);
+
+		mfCurrentFrame = state.currentFrame;
+		mlActiveImage = state.activeImage;
+		mbForwardAnim = state.forward;
+
+		if(lImage >= 0) SetImage(mvImageBufferVec[lImage],0);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -257,41 +205,17 @@ namespace hpl {
 
 		if(mlTextureNum==0)
 		{
-			cVector2f vSize = cVector2f((float)apTexture->GetWidth(), (float)apTexture->GetHeight());
+			float vTex[8];
+			float vSize[2];
+			ohpl_gui_gfx_texture_uv(vTex, (float)apTexture->GetWidth(), (float)apTexture->GetHeight(),
+									apTexture->GetType() == eTextureType_Rect, avStartUV.x, avStartUV.y, avEndUV.x, avEndUV.y, vSize);
 
-			mvImageSize.x = vSize.x * (avEndUV.x - avStartUV.x);
-			mvImageSize.y = vSize.y * (avEndUV.y - avStartUV.y);
-
-			if(apTexture->GetType() == eTextureType_Rect)
+			mvImageSize.x = vSize[0];
+			mvImageSize.y = vSize[1];
+			for(int i=0; i<4; ++i)
 			{
-				//If a rect, give new texture coordinates
-				
-				mvVtx[0].tex.x = avStartUV.x * vSize.x;
-				mvVtx[0].tex.y = avStartUV.y * vSize.y;
-
-				mvVtx[1].tex.x = avEndUV.x * vSize.x;
-				mvVtx[1].tex.y = avStartUV.y * vSize.y;
-
-				mvVtx[2].tex.x = avEndUV.x * vSize.x;
-				mvVtx[2].tex.y = avEndUV.y * vSize.y;
-				
-				mvVtx[3].tex.x = avStartUV.x * vSize.x;
-				mvVtx[3].tex.y = avEndUV.y * vSize.y;
-			}
-			else
-			{
-				mvVtx[0].tex.x = avStartUV.x;
-				mvVtx[0].tex.y = avStartUV.y;
-
-				mvVtx[1].tex.x = avEndUV.x;
-				mvVtx[1].tex.y = avStartUV.y;
-
-				mvVtx[2].tex.x = avEndUV.x;
-				mvVtx[2].tex.y = avEndUV.y;
-				
-				mvVtx[3].tex.x = avStartUV.x;
-				mvVtx[3].tex.y = avEndUV.y;
-
+				mvVtx[i].tex.x = vTex[i*2];
+				mvVtx[i].tex.y = vTex[i*2+1];
 			}
 
 			if(mbFlipUvYAxis) SetFlipUvYAxis(mbFlipUvYAxis);
@@ -334,18 +258,21 @@ namespace hpl {
 
 		mlCurrentAnimation = alNum;
 
-		mfCurrentFrame =0;
-		mbForwardAnim = true;
-		mlActiveImage =0;
-		SetImage(mvImageBufferVec[mlActiveImage],0);
+		OhplGuiAnimState state = {mfCurrentFrame, mlActiveImage, mbForwardAnim};
+		ohpl_gui_gfx_restart(&state);
+		mfCurrentFrame = state.currentFrame;
+		mlActiveImage = state.activeImage;
+		mbForwardAnim = state.forward;
+
+		if(mvImageBufferVec.empty()==false) SetImage(mvImageBufferVec[mlActiveImage],0);
 	}
 
 	void cGuiGfxElement::SetAnimationTime(float afTime)
 	{
-        if(mlCurrentAnimation>=0)
-			mfCurrentFrame = afTime / mvAnimations[mlCurrentAnimation]->mfFrameLength;
-		else
-			mfCurrentFrame = afTime;
+		bool bHasAnim = mlCurrentAnimation>=0 && (size_t)mlCurrentAnimation < mvAnimations.size();
+		if(mlCurrentAnimation>=0 && bHasAnim==false) return;
+
+		mfCurrentFrame = ohpl_gui_gfx_animation_time(afTime, bHasAnim, bHasAnim ? mvAnimations[mlCurrentAnimation]->mfFrameLength : 0);
 	}
 
 	//---------------------------------------------------
@@ -368,49 +295,33 @@ namespace hpl {
 	{
 		mbFlipUvYAxis = abX;
 
-		////////////////////////////////////
-		//Image
-        if(mvImages[0])
+		float vTex[8], vImageTex[8];
+		for(int i=0; i<4; ++i)
 		{
+			vTex[i*2] = mvVtx[i].tex.x;
+			vTex[i*2+1] = mvVtx[i].tex.y;
+		}
+
+		int lSource = 2;
+		if(mvImages[0])
+		{
+			lSource = 0;
 			const tVertexVec& vImageVtx = mvImages[0]->GetVertexVec();
-			for(int i=0; i<4; ++i) mvVtx[i].tex = vImageVtx[i].tex;
-			if(mbFlipUvYAxis)
+			for(int i=0; i<4; ++i)
 			{
-				mvVtx[0].tex.y = mvVtx[2].tex.y;
-				mvVtx[1].tex.y = mvVtx[3].tex.y;
-				mvVtx[2].tex.y = mvVtx[0].tex.y;
-				mvVtx[3].tex.y = mvVtx[1].tex.y;
+				vImageTex[i*2] = vImageVtx[i].tex.x;
+				vImageTex[i*2+1] = vImageVtx[i].tex.y;
 			}
 		}
-		////////////////////////////////////
-		//Texture
-		else if(mvTextures[0])
+		else if(mvTextures[0]) lSource = 1;
+
+		ohpl_gui_gfx_flip_uv(vTex, abX, lSource, vImageTex);
+
+		for(int i=0; i<4; ++i)
 		{
-			if(mbFlipUvYAxis)
-			{
-				float fOldY2 = mvVtx[2].tex.y;
-				float fOldY3 = mvVtx[3].tex.y;
-
-				mvVtx[2].tex.y = mvVtx[1].tex.y;
-				mvVtx[3].tex.y = mvVtx[0].tex.y;
-				
-				mvVtx[0].tex.y = fOldY3;
-				mvVtx[1].tex.y = fOldY2;
-			}
-			else
-			{
-				float fOldY0 = mvVtx[0].tex.y;
-				float fOldY1 = mvVtx[1].tex.y;
-				
-				mvVtx[0].tex.y = mvVtx[3].tex.y;
-				mvVtx[1].tex.y = mvVtx[2].tex.y;
-				
-				mvVtx[2].tex.y = fOldY1;
-				mvVtx[3].tex.y = fOldY0;
-			}
-		
+			mvVtx[i].tex.x = vTex[i*2];
+			mvVtx[i].tex.y = vTex[i*2+1];
 		}
-
 	}
 
 	//-----------------------------------------------------------------------
@@ -437,13 +348,11 @@ namespace hpl {
 		}
 		
 		//Check if the image has been changed, if so update UV.
-		if(mlImageUpdateCount != pMainImage->GetUpdateCount())
+		if(ohpl_gui_gfx_flush_changed(&mlImageUpdateCount, pMainImage->GetUpdateCount()))
 		{
 			const tVertexVec& vImageVtx = pMainImage->GetVertexVec();
 			for(int i=0; i<4; ++i) mvVtx[i].tex = vImageVtx[i].tex;	
 			if(mbFlipUvYAxis) SetFlipUvYAxis(mbFlipUvYAxis);
-
-			mlImageUpdateCount = pMainImage->GetUpdateCount();
 		}
 	}
 

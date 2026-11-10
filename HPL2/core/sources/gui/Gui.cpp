@@ -41,6 +41,7 @@
 
 
 #include "gui/GuiMaterialBasicTypes.h"
+#include "gui/RustGuiSkin.h"
 
 namespace hpl {
 
@@ -120,11 +121,6 @@ namespace hpl {
 
 
 		//////////////////////////////
-		// Skin setup
-		GenerateSkinTypeStrings();
-
-
-		//////////////////////////////
 		// Set up global gfx
 		if(mpGfxRect==NULL)
 			mpGfxRect = CreateGfxFilledRect(cColor(1,1), eGuiMaterial_Alpha);
@@ -188,7 +184,7 @@ namespace hpl {
 
 	iGuiMaterial* cGui::GetMaterial(eGuiMaterial aType)
 	{
-		return mvMaterials[aType < eGuiMaterial_LastEnum ? aType : eGuiMaterial_Alpha];
+		return mvMaterials[ohpl_gui_material_slot(aType)];
 	}
 
 	//-----------------------------------------------------------------------
@@ -222,73 +218,50 @@ namespace hpl {
 
 	eGuiSkinGfx cGui::GetSkinGfxFromString(const tString& asType)
 	{
-		tGuiSkinGfxMapIt it = m_mapSkinGfxStrings.find(asType);
-		if(it == m_mapSkinGfxStrings.end())
-		{
-			Warning("Skin gfx type '%s' does not exist!\n",asType.c_str());
-			return eGuiSkinGfx_LastEnum;
-		}
+		eGuiSkinGfx type = (eGuiSkinGfx)ohpl_gui_skin_from_name(kOhplSkinGfx, asType.data(), asType.size());
+		if(type == eGuiSkinGfx_LastEnum) Warning("Skin gfx type '%s' does not exist!\n",asType.c_str());
 
-		return it->second;
+		return type;
 	}
 
 	eGuiSkinFont cGui::GetSkinFontFromString(const tString& asType)
 	{
-		tGuiSkinFontMapIt it = m_mapSkinFontStrings.find(asType);
-		if(it == m_mapSkinFontStrings.end())
-		{
-			Warning("Skin Font type '%s' does not exist!\n",asType.c_str());
-			return eGuiSkinFont_LastEnum;
-		}
+		eGuiSkinFont type = (eGuiSkinFont)ohpl_gui_skin_from_name(kOhplSkinFont, asType.data(), asType.size());
+		if(type == eGuiSkinFont_LastEnum) Warning("Skin Font type '%s' does not exist!\n",asType.c_str());
 
-		return it->second;
+		return type;
 	}
 
 	eGuiSkinAttribute cGui::GetSkinAttributeFromString(const tString& asType)
 	{
-		tGuiSkinAttributeMapIt it = m_mapSkinAttributeStrings.find(asType);
-		if(it == m_mapSkinAttributeStrings.end())
-		{
-			Warning("Skin Attribute type '%s' does not exist!\n",asType.c_str());
-			return eGuiSkinAttribute_LastEnum;
-		}
+		eGuiSkinAttribute type = (eGuiSkinAttribute)ohpl_gui_skin_from_name(kOhplSkinAttribute, asType.data(), asType.size());
+		if(type == eGuiSkinAttribute_LastEnum) Warning("Skin Attribute type '%s' does not exist!\n",asType.c_str());
 
-		return it->second;
+		return type;
 	}
 
 	//-----------------------------------------------------------------------
 
+	static tString SkinTypeString(int alKind, unsigned int alType)
+	{
+		tString sName;
+		ohpl_gui_skin_name(alKind, alType, [](void* c, const char* p, size_t n){ static_cast<tString*>(c)->assign(p, n); }, &sName);
+		return sName;
+	}
+
 	tString cGui::GetSkinGfxString(eGuiSkinGfx aType)
 	{
-		tGuiSkinGfxMapIt it = m_mapSkinGfxStrings.begin();
-		for(; it != m_mapSkinGfxStrings.end(); ++it)
-		{
-			if(it->second == aType) return it->first;
-		}
-
-		return "Unknown";
+		return SkinTypeString(kOhplSkinGfx, aType);
 	}
 	
 	tString cGui::GetSkinFontString(eGuiSkinFont aType)
 	{
-		tGuiSkinFontMapIt it = m_mapSkinFontStrings.begin();
-		for(; it != m_mapSkinFontStrings.end(); ++it)
-		{
-			if(it->second == aType) return it->first;
-		}
-
-		return "Unknown";
+		return SkinTypeString(kOhplSkinFont, aType);
 	}
 	
 	tString cGui::GetSkinAttributeString(eGuiSkinAttribute aType)
 	{
-		tGuiSkinAttributeMapIt it = m_mapSkinAttributeStrings.begin();
-		for(; it != m_mapSkinAttributeStrings.end(); ++it)
-		{
-			if(it->second == aType) return it->first;
-		}
-
-		return "Unknown";
+		return SkinTypeString(kOhplSkinAttribute, aType);
 	}
 
 	//-----------------------------------------------------------------------
@@ -634,304 +607,16 @@ namespace hpl {
 	
 	eMouseButton cGui::TranslateGuiMouseToMouse(eGuiMouseButton aButton)
 	{
-		switch(aButton)
-		{
-		case eGuiMouseButton_Left:
-			return eMouseButton_Left;
-		case eGuiMouseButton_Middle:
-			return eMouseButton_Middle;
-		case eGuiMouseButton_Right:
-			return eMouseButton_Right;
-		case eGuiMouseButton_WheelUp:
-			return eMouseButton_WheelUp;
-		case eGuiMouseButton_WheelDown:
-			return eMouseButton_WheelDown;
-		case eGuiMouseButton_Button6:
-			return eMouseButton_Button6;
-		case eGuiMouseButton_Button7:
-			return eMouseButton_Button7;
-		case eGuiMouseButton_Button8:
-			return eMouseButton_Button8;
-		case eGuiMouseButton_Button9:
-			return eMouseButton_Button9;
-		}
-		return eMouseButton_LastEnum;
+		return (eMouseButton)ohpl_gui_mouse_to_mouse(aButton);
 	}
 
 	//-----------------------------------------------------------------------
 
 	eGuiMouseButton cGui::TranslateMouseToGuiMouse(eMouseButton aButton)
 	{
-		switch(aButton)
-		{
-		case eMouseButton_Left:
-			return eGuiMouseButton_Left;
-		case eMouseButton_Middle:
-			return eGuiMouseButton_Middle;
-		case eMouseButton_Right:
-			return eGuiMouseButton_Right;
-		case eMouseButton_WheelUp:
-			return eGuiMouseButton_WheelUp;
-		case eMouseButton_WheelDown:
-			return eGuiMouseButton_WheelDown;
-		case eMouseButton_Button6:
-			return eGuiMouseButton_Button6;
-		case eMouseButton_Button7:
-			return eGuiMouseButton_Button7;
-		case eMouseButton_Button8:
-			return eGuiMouseButton_Button8;
-		case eMouseButton_Button9:
-			return eGuiMouseButton_Button9;
-		}
-		return eGuiMouseButton_LastEnum;
+		return (eGuiMouseButton)ohpl_gui_mouse_to_gui(aButton);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-#define AddFont(name) m_mapSkinFontStrings.insert(tGuiSkinFontMap::value_type(#name,eGuiSkinFont_##name))
-#define AddAttribute(name) m_mapSkinAttributeStrings.insert(tGuiSkinAttributeMap::value_type(#name,eGuiSkinAttribute_##name))
-#define AddGfx(name) m_mapSkinGfxStrings.insert(tGuiSkinGfxMap::value_type(#name,eGuiSkinGfx_##name))
-	void cGui::GenerateSkinTypeStrings()
-	{
-		///////////////////////
-		// Fonts
-        AddFont(Default);
-		AddFont(Disabled);
-		AddFont(WindowLabel);
-
-		///////////////////////
-		// Attributes
-		AddAttribute(WindowLabelTextOffset);
-		AddAttribute(WindowButtonSize);
-		AddAttribute(WindowBordersOutside);
-
-		AddAttribute(ButtonPressedContentOffset);
-
-		AddAttribute(SliderButtonSize);
-
-		AddAttribute(ListBoxSliderWidth);
-
-		AddAttribute(ComboBoxButtonWidth);
-		AddAttribute(ComboBoxSliderWidth);
-
-		AddAttribute(ContextMenuItemArrowSize);
-		AddAttribute(ContextMenuItemCheckSize);
-		AddAttribute(ContextMenuItemHPadding);
-		AddAttribute(ContextMenuItemVPadding);
-		AddAttribute(ContextMenuItemSeparation);
-		AddAttribute(ContextMenuItemTextLeftPadding);
-		AddAttribute(ContextMenuItemTextRightPadding);
-		AddAttribute(ContextMenuSeparatorPadding);
-		
-		AddAttribute(MainMenuItemTextPadding);
-		AddAttribute(MainMenuItemVPadding);
-		AddAttribute(MainMenuItemSeparation);
-
-		AddAttribute(MenuSeparatorPadding);
-		AddAttribute(MenuSeparatorHeight);
-
-		AddAttribute(TabFrameButtonSize);
-		AddAttribute(TabFrameIconPadding);
-		AddAttribute(TabFrameTextLeftPadding);
-		AddAttribute(TabFrameTextRightPadding);
-		AddAttribute(TabFrameLabelInactiveOffset);
-		AddAttribute(TabFrameLabelActiveOffset);
-		AddAttribute(FirstTabOffset);
-		AddAttribute(TabSeparation);
-
-		AddAttribute(GroupHeaderOffset);
-		AddAttribute(GroupHeaderOverUpperBorder);
-
-		AddAttribute(DefaultFontHighlightColor);
-
-		AddAttribute(TabFrameButtonSize);
-
-		///////////////////////
-		// Pointer Graphics
-		AddGfx(PointerNormal);
-		AddGfx(PointerText);
-		
-		///////////////////////
-		// Window Graphics
-		AddGfx(WindowBorderRight);
-		AddGfx(WindowBorderLeft);
-		AddGfx(WindowBorderUp);
-		AddGfx(WindowBorderDown);
-
-		AddGfx(WindowCornerLU);
-		AddGfx(WindowCornerRU);
-		AddGfx(WindowCornerRD);
-		AddGfx(WindowCornerLD);
-
-		AddGfx(WindowLabel);
-		AddGfx(WindowBackground);
-
-		AddGfx(WindowButtonCross);
-
-		///////////////////////////////////
-		// Frame Graphics
-		AddGfx(FrameBorderRight);
-		AddGfx(FrameBorderLeft);
-		AddGfx(FrameBorderUp);
-		AddGfx(FrameBorderDown);
-
-		AddGfx(FrameCornerLU);
-		AddGfx(FrameCornerRU);
-		AddGfx(FrameCornerRD);
-		AddGfx(FrameCornerLD);
-
-		AddGfx(FrameBackground);
-
-		///////////////////////////////////
-		// Check box Graphics
-		AddGfx(CheckBoxEnabledUnchecked);
-		AddGfx(CheckBoxEnabledChecked);
-		AddGfx(CheckBoxDisabledUnchecked);
-		AddGfx(CheckBoxDisabledChecked);
-
-
-		///////////////////////////////////
-		// Text box Graphics
-		AddGfx(TextBoxBackground);
-		AddGfx(TextBoxSelectedTextBack);
-		AddGfx(TextBoxMarker);
-		
-		///////////////////////////////////
-		// List box Graphics
-		AddGfx(ListBoxBackground);
-
-		///////////////////////////////////
-		// List box Graphics
-		AddGfx(ComboBoxButtonIcon);
-
-		AddGfx(ComboBoxBorderRight);
-		AddGfx(ComboBoxBorderLeft);
-		AddGfx(ComboBoxBorderUp);
-		AddGfx(ComboBoxBorderDown);
-
-		AddGfx(ComboBoxCornerLU);
-		AddGfx(ComboBoxCornerRU);
-		AddGfx(ComboBoxCornerRD);
-		AddGfx(ComboBoxCornerLD);
-
-		AddGfx(ComboBoxBackground);
-
-		///////////////////////////////////
-		// Slider Graphics
-		AddGfx(SliderHandleBorderRight);
-		AddGfx(SliderHandleBorderLeft);
-		AddGfx(SliderHandleBorderUp);
-		AddGfx(SliderHandleBorderDown);
-
-		AddGfx(SliderHandleCornerLU);
-		AddGfx(SliderHandleCornerRU);
-		AddGfx(SliderHandleCornerRD);
-		AddGfx(SliderHandleCornerLD);
-
-		AddGfx(SliderHandleBackground);
-
-		AddGfx(SliderVertArrowUp);
-		AddGfx(SliderVertArrowDown);
-		AddGfx(SliderVertBackground);
-
-		AddGfx(SliderHoriArrowUp);
-		AddGfx(SliderHoriArrowDown);
-		AddGfx(SliderHoriBackground);
-
-
-		///////////////////////
-		//Button Graphics
-		AddGfx(ButtonUpBorderRight);
-		AddGfx(ButtonUpBorderLeft);
-		AddGfx(ButtonUpBorderUp);
-		AddGfx(ButtonUpBorderDown);
-
-		AddGfx(ButtonUpCornerLU);
-		AddGfx(ButtonUpCornerRU);
-		AddGfx(ButtonUpCornerRD);
-		AddGfx(ButtonUpCornerLD);
-
-		AddGfx(ButtonUpBackground);
-
-		AddGfx(ButtonDownBorderRight);
-		AddGfx(ButtonDownBorderLeft);
-		AddGfx(ButtonDownBorderUp);
-		AddGfx(ButtonDownBorderDown);
-
-		AddGfx(ButtonDownCornerLU);
-		AddGfx(ButtonDownCornerRU);
-		AddGfx(ButtonDownCornerRD);
-		AddGfx(ButtonDownCornerLD);
-
-		AddGfx(ButtonDownBackground);
-
-		//////////////////////////
-		//Menu Graphics
-		AddGfx(MenuEnabledChecked);
-		AddGfx(MenuDisabledChecked);
-		AddGfx(MenuSeparatorLine);
-		AddGfx(MenuItemArrow);
-
-		//////////////////////////
-		//Tab Graphics
-		AddGfx(TabLabelBorderRight);
-		AddGfx(TabLabelBorderLeft);
-		AddGfx(TabLabelBorderUp);
-		AddGfx(TabLabelBorderDown);
-
-		AddGfx(TabLabelCornerLU);
-		AddGfx(TabLabelCornerRU);
-		AddGfx(TabLabelCornerRD);
-		AddGfx(TabLabelCornerLD);
-
-		AddGfx(TabBorderRight);
-		AddGfx(TabBorderLeft);
-		AddGfx(TabBorderUp);
-		AddGfx(TabBorderDown);
-
-		AddGfx(TabCornerLU);
-		AddGfx(TabCornerRU);
-		AddGfx(TabCornerRD);
-		AddGfx(TabCornerLD);
-
-		AddGfx(TabLabelBackground);
-		AddGfx(TabLabelBackgroundActive);
-		AddGfx(TabBackground);
-
-		AddGfx(TabFrameArrowLeft);
-		AddGfx(TabFrameArrowRight);
-
-		//////////////////////////
-		//Group Graphics
-		AddGfx(GroupBorderLeft);
-		AddGfx(GroupBorderRight);
-		AddGfx(GroupBorderUp);
-		AddGfx(GroupBorderDown);
-
-		AddGfx(GroupCornerLU);
-		AddGfx(GroupCornerRU);
-		AddGfx(GroupCornerRD);
-		AddGfx(GroupCornerLD);
-
-		AddGfx(GroupBackground);
-
-		//////////////////////////
-		//File Picker Graphics
-		AddGfx(FilePickerUpButton);
-
-		AddGfx(FilePickerIconGraphics);
-		AddGfx(FilePickerIconModels);
-		AddGfx(FilePickerIconSounds);
-		AddGfx(FilePickerIconText);
-		AddGfx(FilePickerIconOther);
-		AddGfx(FilePickerIconFolder);		
-	}
 	//-----------------------------------------------------------------------
 
 }
