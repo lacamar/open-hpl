@@ -21,6 +21,8 @@
 #define HPL_LOGICTIMER_H
 
 
+#include "system/RustSystem.h"
+
 namespace hpl {
 
 	class iLowLevelSystem;
@@ -73,22 +75,13 @@ namespace hpl {
 		 */
 		float GetStepSize();
 
-		double GetLocalTime(){ return mlLocalTime;}
-		double GetLocalTimeAdd(){ return mlLocalTimeAdd;}
+		double GetLocalTime(){ return mTimer.localTime;}
+		double GetLocalTimeAdd(){ return mTimer.localTimeAdd;}
 
-		void SetSpeedMul(float afX){ mfSpeedMul = afX;}
+		void SetSpeedMul(float afX){ mTimer.speedMul = afX;}
 		
 	private:
-		void Update();
-
-		double mlLocalTime;
-		double mlLocalTimeAdd;
-
-		double mfSpeedMul;
-
-		int mlMaxUpdates;
-		int mlUpdateCount;
-
+		OhplLogicTimer mTimer;
 		iLowLevelSystem *mpLowLevelSystem;
 	};
 
