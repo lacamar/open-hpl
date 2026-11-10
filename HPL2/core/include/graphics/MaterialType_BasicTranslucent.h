@@ -22,6 +22,7 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include "graphics/RustMaterial.h"
 
 namespace hpl {
 
@@ -31,33 +32,11 @@ namespace hpl {
 
 	//--------------------------------------------------
 
-	class cMaterialType_Translucent_Vars : public iMaterialVars
+	class cMaterialType_Translucent_Vars : public iMaterialVars, public OhplTranslucentVars
 	{
 	public:
-		cMaterialType_Translucent_Vars() :	mbRefraction(false), mbRefractionEdgeCheck(true), mbRefractionNormals(false), mfRefractionScale(0.1f), 
-											mfFrenselBias(0.2f), mfFrenselPow(8.0f), mbSoftParticle(false) {}
+		cMaterialType_Translucent_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Translucent, static_cast<OhplTranslucentVars*>(this)); }
 		~cMaterialType_Translucent_Vars(){}
-
-		bool mbRefraction;
-		bool mbRefractionEdgeCheck;
-		bool mbRefractionNormals;
-		bool mbRefractionAlphaBlend = false;
-		float mfFogWeight = 1;
-		float mfRefractionScale;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		float mfRimLightMul;
-		float mfRimLightPow;
-		bool mbAffectedByLightLevel;
-		bool mbSoftParticle;
-		float mfSoftPartThickness;
-		float mfSoftPartAlphaBasedThickness;
-		float mfSoftPartDepthBias;
-		float mfFadeInStart = 0;
-		float mfFadeInEnd = 0;
-		bool mbFadeColor = false;
-		bool mbAngleFade = false;
-		cColor mFadeColor = cColor(0, 0);
 	};
 
 	//--------------------------------------------------
@@ -92,6 +71,9 @@ namespace hpl {
 		static void SetWorldFog(bool abUnderwater, bool abSecondary);
 		static tFlag GetWorldFog(){ return mlWorldFog; }
 		static void SetDepthOfField(bool abX, const cColor &avParams = cColor(0,0)){ mbDepthOfField = abX; mvDepthOfFieldParams = avParams; }
+		static bool GetLightProbes(){ return mbLightProbes; }
+		static bool GetDepthOfField(){ return mbDepthOfField; }
+		static const cColor& GetDepthOfFieldParams(){ return mvDepthOfFieldParams; }
 	
 	private:
 		static bool mbLightProbes;

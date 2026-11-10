@@ -28,7 +28,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Material.h"
-#include "scene/ForceField.h"
+#include "graphics/RustMaterial.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -199,36 +199,24 @@ namespace hpl {
 		return apMaterial->GetProgram(0, aRenderMode);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iMaterialType::AddForceFieldVariableIds(cProgramComboManager *apManager, int alFirstId, int alMode)
+	void iMaterialType::InitFromRust(int alKind)
 	{
-		const char *vNames[] = {"avForceFieldPos0", "avForceFieldPos1", "avForceFieldPos2", "avForceFieldPos3", "avForceFieldFadeStarts",
-								"avForceFieldFadeLengths", "avForceFieldForces", "avForceFieldTs", "afForceFieldMaxForce"};
-		for(int i=0; i<9; ++i) apManager->AddGenerateProgramVariableId(vNames[i], alFirstId + i, alMode);
-	}
+		uint32_t lFlags = ohpl_mat_type_flags(alKind);
+		mbIsTranslucent = (lFlags & 1) != 0;
+		mbIsDecal = (lFlags & 2) != 0;
+		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
+			if(lFlags & (1u << (8 + i))) mbHasTypeSpecifics[i] = true;
 
-	void iMaterialType::SetForceFieldVars(iGpuProgram *apProgram, int alFirstId, cForceField **apFields, int alNum, float afForceMul, float afMaxForce)
-	{
-		float vStart[4] = {0,0,0,0}, vLength[4] = {1,1,1,1}, vForce[4] = {0,0,0,0}, vT[4] = {0,0,0,0};
-		for(int i=0; i<4; ++i)
+		int vTextures[eMaterialTexture_LastEnum];
+		size_t lNum = ohpl_mat_used_textures(alKind, vTextures, eMaterialTexture_LastEnum);
+		for(size_t i=0; i<lNum && i<(size_t)eMaterialTexture_LastEnum; ++i) AddUsedTexture((eMaterialTexture)vTextures[i]);
+
+		OhplVarDef def;
+		for(size_t i=0; ohpl_mat_user_var(alKind, i, &def); ++i)
 		{
-			cVector3f vPos = 0;
-			if(i < alNum)
-			{
-				vPos = apFields[i]->GetWorldPosition();
-				vStart[i] = apFields[i]->GetFinalFalloffStartRadius();
-				vLength[i] = apFields[i]->GetFinalRadius() - vStart[i];
-				vForce[i] = apFields[i]->GetFinalForce() * afForceMul;
-				vT[i] = apFields[i]->GetT();
-			}
-			apProgram->SetVec3f(alFirstId + i, vPos);
+			if(def.isFloat)	AddVarFloat(tString(def.name, def.nameLen), def.floatValue, tString(def.desc, def.descLen));
+			else			AddVarBool(tString(def.name, def.nameLen), def.boolValue, tString(def.desc, def.descLen));
 		}
-		apProgram->SetVec4f(alFirstId + 4, vStart[0], vStart[1], vStart[2], vStart[3]);
-		apProgram->SetVec4f(alFirstId + 5, vLength[0], vLength[1], vLength[2], vLength[3]);
-		apProgram->SetVec4f(alFirstId + 6, vForce[0], vForce[1], vForce[2], vForce[3]);
-		apProgram->SetVec4f(alFirstId + 7, vT[0], vT[1], vT[2], vT[3]);
-		apProgram->SetFloat(alFirstId + 8, afMaxForce);
 	}
 
 	//-----------------------------------------------------------------------

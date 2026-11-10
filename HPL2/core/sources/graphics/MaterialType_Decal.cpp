@@ -19,186 +19,76 @@
 
 #include "graphics/MaterialType_Decal.h"
 
-#include "system/LowLevelSystem.h"
-#include "system/PreprocessParser.h"
-#include "system/String.h"
-
-#include "resources/Resources.h"
-
-#include "math/Math.h"
-#include "math/Frustum.h"
-
-#include "graphics/Graphics.h"
 #include "graphics/Bitmap.h"
-#include "graphics/Texture.h"
-#include "graphics/Material.h"
-#include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/ProgramComboManager.h"
-#include "graphics/Renderable.h"
-#include "graphics/Renderer.h"
-#include "scene/World.h"
-#include "scene/ForceField.h"
-
-
+#include "graphics/RustMaterialShim.h"
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// DEFINES
-	//////////////////////////////////////////////////////////////////////////
-	
-	//------------------------------
-	// Variables
-	//------------------------------
-	#define kVar_a_mtxUV						0	
-	
-	//------------------------------
-	//Diffuse Features and data
-	//------------------------------
-	#define eFeature_Diffuse_UvAnimation	eFlagBit_0
+	using namespace rustmat;
 
-	#define kDiffuseFeatureNum 1
-	
-	static cProgramComboFeature vDiffuseFeatureVec[] =
-	{
-		cProgramComboFeature("UseUvAnimation", kPC_VertexBit),							
-	};
+	static const OhplTerrainBlendVars* TerrainVars(cMaterial *apMaterial){ return static_cast<cMaterialType_TerrainBlend_Vars*>(apMaterial->GetVars()); }
+	static const OhplUndergrowthVars* UndergrowthVars(cMaterial *apMaterial){ return static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars()); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// DECAL
 	//////////////////////////////////////////////////////////////////////////
-	
-	//--------------------------------------------------------------------------
-	
+
 	cMaterialType_Decal::cMaterialType_Decal(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
-		mbIsTranslucent = true;
-		mbIsDecal = true;
-
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
-
-		AddUsedTexture(eMaterialTexture_Diffuse);
+		InitFromRust(eOhplMatKind_Decal);
 	}
 
 	cMaterialType_Decal::~cMaterialType_Decal()
 	{
 	}
 
-	//--------------------------------------------------------------------------
-
 	void cMaterialType_Decal::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
 	{
-		mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
+		rustmat::DestroyProgram(eOhplMatKind_Decal, aRenderMode, 0, apProgram, mpProgramManager, NULL, NULL);
 	}
-
-	//--------------------------------------------------------------------------
-
 
 	void cMaterialType_Decal::LoadData()
 	{
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseColor");
-		defaultVars.Add("MaterialType_Decal");
-
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "deferred_decal_frag.glsl",
-											vDiffuseFeatureVec,kDiffuseFeatureNum, defaultVars);
-
-		////////////////////////////////
-		//Set up variable ids
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
+		RunSetup(eOhplMatKind_Decal, false, MakeGlobals(), mpProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::DestroyData()
 	{
 		mpProgramManager->DestroyShadersAndPrograms();
 	}
 
-	//--------------------------------------------------------------------------
-
 	iTexture* cMaterialType_Decal::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		////////////////////////////
-		//Diffuse
-		if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			switch(alUnit)
-			{
-			case 0: return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-			}
-		}
-
-		return NULL;
+		return TextureForUnit(eOhplMatKind_Decal, NULL, apMaterial, mpGraphics, aRenderMode, alUnit, NULL, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	iTexture* cMaterialType_Decal::GetSpecialTexture(cMaterial *apMaterial, eMaterialRenderMode aRenderMode,iRenderer *apRenderer, int alUnit)
 	{
 		return NULL;
 	}
-	
-	//--------------------------------------------------------------------------
-	
+
 	iGpuProgram* cMaterialType_Decal::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		////////////////////////////
-		//Diffuse
-		if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			tFlag lFlags =0;
-			if(apMaterial->HasUvAnimation())						lFlags |= eFeature_Diffuse_UvAnimation;
-
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
-		}
-
-		return NULL;
+		return PickProgram(SelectProgram(eOhplMatKind_Decal, NULL, apMaterial, aRenderMode, alSkeleton), mpProgramManager, NULL, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer)
 	{
 	}
-	
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
 	{
-		////////////////////////////
-		//Diffuse
-		if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			cMaterialType_Decal_Vars *pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
-
-			/////////////////////////
-			//UV Animation
-			if(apMaterial->HasUvAnimation())
-			{
-				apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
-			}
-		}
+		SetupMaterial(eOhplMatKind_Decal, NULL, aRenderMode, apProgram, apMaterial, apRenderer);
 	}
-	
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer)
 	{
 	}
 
-
-	//--------------------------------------------------------------------------
-
 	iMaterialVars* cMaterialType_Decal::CreateSpecificVariables()
 	{
 		return hplNew(cMaterialType_Decal_Vars,());
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars)
 	{
@@ -210,67 +100,32 @@ namespace hpl {
 		}
 	}
 
-	//--------------------------------------------------------------------------
-
 	void cMaterialType_Decal::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
 	{
-		cMaterialType_Decal_Vars* pVars = (cMaterialType_Decal_Vars*)apMaterial->GetVars();
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_Decal::CompileMaterialSpecifics(cMaterial *apMaterial)
 	{
-		cMaterialType_Decal_Vars *pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
-
-		//////////////////////////////////
-		//UV animation specifics
-		if(apMaterial->HasUvAnimation())
-		{
-			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-		}
-		
-		/////////////////////////////////////
-		//Set up the blend mode
-		//apMaterial->SetBlendMode(eMaterialBlendMode_Alpha);
+		CompileMaterial(eOhplMatKind_Decal, NULL, apMaterial);
 	}
-	
-	//--------------------------------------------------------------------------
 
-
-
-	//--------------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////////
+	// TERRAIN BLEND
+	//////////////////////////////////////////////////////////////////////////
 
 	cMaterialType_TerrainBlend::cMaterialType_TerrainBlend(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
-		mbIsTranslucent = true;
-		mbIsDecal = true;
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+		InitFromRust(eOhplMatKind_TerrainBlend);
 	}
 
 	void cMaterialType_TerrainBlend::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
 	{
-		mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
+		rustmat::DestroyProgram(eOhplMatKind_TerrainBlend, aRenderMode, 0, apProgram, mpProgramManager, NULL, NULL);
 	}
 
 	void cMaterialType_TerrainBlend::LoadData()
 	{
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseBlendMul");
-		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseBaseTexture", kPC_FragmentBit),
-													cProgramComboFeature("UseVertexPosition", kPC_VertexBit | kPC_FragmentBit) };
-		mpProgramManager->SetupGenerateProgramData(eMaterialRenderMode_Diffuse, "Diffuse", "deferred_base_vtx.glsl", "cache_terrain_diffuse_frag.glsl",
-												   vFeatures, 2, defaultVars);
-		mpProgramManager->AddGenerateProgramVariableId("avTextureCoordScale", 0, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avOneMinusFadeStart", 1, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afBaseTextureCoordScale", 2, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avDetailMapScale", 3, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avDetailFade", 4, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBaseDetailAmount", 5, eMaterialRenderMode_Diffuse);
-		for (int i = 0; i < 4; ++i)
-			mpProgramManager->AddGenerateProgramVariableId("avDetailAmount" + cString::ToString(i), 6 + i, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBlendMul", 10, eMaterialRenderMode_Diffuse);
+		RunSetup(eOhplMatKind_TerrainBlend, false, MakeGlobals(), mpProgramManager, NULL);
 
 		cBitmap bmp;
 		bmp.CreateData(cVector3l(1,1,1), ePixelFormat_RGBA, 0, 0);
@@ -289,65 +144,41 @@ namespace hpl {
 
 	iTexture* cMaterialType_TerrainBlend::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 12) return NULL;
-		iTexture *pTex = apMaterial->GetTexture((eMaterialTexture)alUnit);
-		return pTex ? pTex : mpWhiteTexture;
+		return TextureForUnit(eOhplMatKind_TerrainBlend, TerrainVars(apMaterial), apMaterial, mpGraphics, aRenderMode, alUnit, NULL, mpWhiteTexture);
 	}
 
 	iGpuProgram* cMaterialType_TerrainBlend::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse) return NULL;
-		return mpProgramManager->GenerateProgram(aRenderMode, (apMaterial->GetTexture(eMaterialTexture_Illumination) ? eFlagBit_0 : 0) |
-															  (apMaterial->GetTexture(eMaterialTexture_DetailNMap) ? eFlagBit_1 : 0));
+		return PickProgram(SelectProgram(eOhplMatKind_TerrainBlend, TerrainVars(apMaterial), apMaterial, aRenderMode, alSkeleton), mpProgramManager, NULL, NULL);
 	}
 
 	void cMaterialType_TerrainBlend::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
 	{
-		cMaterialType_TerrainBlend_Vars *pVars = static_cast<cMaterialType_TerrainBlend_Vars*>(apMaterial->GetVars());
-		const float *s = pVars->mvTextureCoordScale, *f = pVars->mvOneMinusFadeStart;
-		apProgram->SetVec4f(0, s[0], s[1], s[2], s[3]);
-		apProgram->SetVec4f(1, f[0], f[1], f[2], f[3]);
-		apProgram->SetFloat(2, pVars->mfBaseTextureCoordScale);
-		apProgram->SetVec3f(3, pVars->mvDetailMapScale);
-		apProgram->SetVec3f(4, pVars->mvDetailFade);
-		apProgram->SetVec3f(5, pVars->mvBaseDetailAmount);
-		for (int i = 0; i < 4; ++i) apProgram->SetVec3f(6 + i, pVars->mvDetailAmount[i]);
-		apProgram->SetVec4f(10, pVars->mvBlendMul[0], pVars->mvBlendMul[1], pVars->mvBlendMul[2], pVars->mvBlendMul[3]);
+		SetupMaterial(eOhplMatKind_TerrainBlend, TerrainVars(apMaterial), aRenderMode, apProgram, apMaterial, apRenderer);
 	}
 
-	//--------------------------------------------------------------------------
+	void cMaterialType_TerrainBlend::CompileMaterialSpecifics(cMaterial *apMaterial)
+	{
+		CompileMaterial(eOhplMatKind_TerrainBlend, TerrainVars(apMaterial), apMaterial);
+	}
 
-	static bool UndergrowthMode(eMaterialRenderMode aMode){ return aMode == eMaterialRenderMode_Z || aMode == eMaterialRenderMode_Diffuse; }
+	//////////////////////////////////////////////////////////////////////////
+	// UNDERGROWTH
+	//////////////////////////////////////////////////////////////////////////
 
 	cMaterialType_Undergrowth::cMaterialType_Undergrowth(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
-		mbHasTypeSpecifics[eMaterialRenderMode_Z] = true;
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+		InitFromRust(eOhplMatKind_Undergrowth);
 	}
 
 	void cMaterialType_Undergrowth::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
 	{
-		mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
+		rustmat::DestroyProgram(eOhplMatKind_Undergrowth, aRenderMode, 0, apProgram, mpProgramManager, NULL, NULL);
 	}
 
 	void cMaterialType_Undergrowth::LoadData()
 	{
-		static cProgramComboFeature vFeatures[] = { cProgramComboFeature("UseWind", kPC_VertexBit), cProgramComboFeature("UseSingleForceField", kPC_VertexBit),
-													cProgramComboFeature("UseFourForceFields", kPC_VertexBit) };
-		cParserVarContainer vars;
-		for (eMaterialRenderMode mode : {eMaterialRenderMode_Z, eMaterialRenderMode_Diffuse})
-		{
-			mpProgramManager->SetupGenerateProgramData(mode, mode == eMaterialRenderMode_Z ? "Z" : "Diffuse", "deferred_undergrowth_gbuffer_vtx.glsl",
-													   "deferred_undergrowth_gbuffer_frag.glsl", vFeatures, 3, vars);
-			mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane", 0, mode);
-			mpProgramManager->AddGenerateProgramVariableId("afT", 1, mode);
-			mpProgramManager->AddGenerateProgramVariableId("avDissolveStartSizeDepth", 2, mode);
-			mpProgramManager->AddGenerateProgramVariableId("avWindProperties", 3, mode);
-			mpProgramManager->AddGenerateProgramVariableId("avWindOctavesMul", 4, mode);
-			AddForceFieldVariableIds(mpProgramManager, 5, mode);
-			mpProgramManager->AddGenerateProgramVariableId("avForceFieldPos", 14, mode);
-			mpProgramManager->AddGenerateProgramVariableId("avForceFieldProp", 15, mode);
-		}
+		RunSetup(eOhplMatKind_Undergrowth, false, MakeGlobals(), mpProgramManager, NULL);
 	}
 
 	void cMaterialType_Undergrowth::DestroyData()
@@ -358,60 +189,44 @@ namespace hpl {
 
 	iTexture* cMaterialType_Undergrowth::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		return UndergrowthMode(aRenderMode) && alUnit == 0 ? apMaterial->GetTexture(eMaterialTexture_Diffuse) : NULL;
+		return TextureForUnit(eOhplMatKind_Undergrowth, UndergrowthVars(apMaterial), apMaterial, mpGraphics, aRenderMode, alUnit, NULL, NULL);
 	}
 
 	iGpuProgram* cMaterialType_Undergrowth::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		if(!UndergrowthMode(aRenderMode)) return NULL;
-		return mpProgramManager->GenerateProgram(aRenderMode, static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars())->mbWind ? eFlagBit_0 : 0);
+		return PickProgram(SelectProgram(eOhplMatKind_Undergrowth, UndergrowthVars(apMaterial), apMaterial, aRenderMode, alSkeleton), mpProgramManager, NULL, NULL);
 	}
 
 	void cMaterialType_Undergrowth::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer)
 	{
-		apProgram->SetFloat(0, 1.0f / apRenderer->GetCurrentFrustum()->GetFarPlane());
-		apProgram->SetFloat(1, apRenderer->GetTimeCount());
+		SetupType(eOhplMatKind_Undergrowth, aRenderMode, apProgram, apRenderer);
 	}
 
 	void cMaterialType_Undergrowth::SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer)
 	{
-		cMaterialType_Undergrowth_Vars *pVars = static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars());
-		apProgram->SetVec2f(2, pVars->mvDissolve);
-		apProgram->SetVec3f(3, pVars->mvWind);
-		apProgram->SetVec3f(4, pVars->mvWindOctaves);
-		if(mlFieldNum == 1)
-		{
-			cForceField *pField = mvFields[0];
-			float fStart = pField->GetFinalFalloffStartRadius();
-			apProgram->SetVec4f(14, pField->GetWorldPosition().x, pField->GetWorldPosition().y, pField->GetWorldPosition().z, pField->GetT());
-			apProgram->SetVec4f(15, fStart, pField->GetFinalRadius() - fStart, pField->GetFinalForce() * pVars->mfForceFieldMul, pVars->mfForceFieldMul);
-		}
-		else if(mlFieldNum > 1)
-			SetForceFieldVars(apProgram, 5, mvFields, mlFieldNum, pVars->mfForceFieldMul, pVars->mfMaxForceFieldForce);
+		SetupMaterial(eOhplMatKind_Undergrowth, UndergrowthVars(apMaterial), aRenderMode, apProgram, apMaterial, apRenderer, mvFields, &mlFieldNum);
 	}
 
 	// Rebirth's SetupUndergrowth: single/four field variant from the fields within fade range of the camera
 	iGpuProgram* cMaterialType_Undergrowth::GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer)
 	{
-		if(!UndergrowthMode(aRenderMode)) return NULL;
-		cMaterialType_Undergrowth_Vars *pVars = static_cast<cMaterialType_Undergrowth_Vars*>(apMaterial->GetVars());
-		mlFieldNum = 0;
-		if(pVars->mfForceFieldMul > 0)
-		{
-			cVector3f vCam = apRenderer->GetCurrentFrustum()->GetOrigin();
-			float fRange = pVars->mvDissolve.x + pVars->mvDissolve.y;
-			mlFieldNum = apRenderer->GetCurrentWorld()->GetForceFields(vCam - fRange, vCam + fRange, mvFields);
-		}
-		int lFlags = (pVars->mbWind ? eFlagBit_0 : 0) | (mlFieldNum == 1 ? eFlagBit_1 : mlFieldNum > 1 ? eFlagBit_2 : 0);
-		iGpuProgram*& pProg = mvPrograms[aRenderMode][lFlags];
-		if(pProg == NULL) pProg = mpProgramManager->GenerateProgram(aRenderMode, lFlags);
+		OhplRenderView r = MakeRenderView(apRenderer);
+		HostCtx ctx = { apRenderer, NULL, mvFields, &mlFieldNum };
+		OhplHostVt host = MakeHost(&ctx);
+		OhplProgSel sel;
+		size_t lFields;
+		ohpl_mat_undergrowth_render_program(UndergrowthVars(apMaterial), aRenderMode, &r, &host, &sel, &lFields);
+		if(sel.manager == kOhplMgrNone) return NULL;
+
+		mlFieldNum = (int)lFields;
+		iGpuProgram*& pProg = mvPrograms[aRenderMode][sel.flags];
+		if(pProg == NULL) pProg = mpProgramManager->GenerateProgram(sel.mode, sel.flags);
 		return pProg;
 	}
 
 	void cMaterialType_Undergrowth::CompileMaterialSpecifics(cMaterial *apMaterial)
 	{
-		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Z, true);
-		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+		CompileMaterial(eOhplMatKind_Undergrowth, UndergrowthVars(apMaterial), apMaterial);
 	}
 
 }

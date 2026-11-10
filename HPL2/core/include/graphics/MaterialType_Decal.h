@@ -21,6 +21,7 @@
 #define HPL_MATERIAL_DECAL_H
 
 #include "graphics/MaterialType.h"
+#include "graphics/RustMaterial.h"
 #include "graphics/Material.h"
 
 namespace hpl {
@@ -73,14 +74,10 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	class cMaterialType_TerrainBlend_Vars : public iMaterialVars
+	class cMaterialType_TerrainBlend_Vars : public iMaterialVars, public OhplTerrainBlendVars
 	{
 	public:
-		float mvTextureCoordScale[4] = {1, 1, 1, 1};
-		float mvOneMinusFadeStart[4] = {1, 1, 1, 1};
-		float mvBlendMul[4] = {1, 1, 1, 1};
-		float mfBaseTextureCoordScale = 1;
-		cVector3f mvDetailMapScale = 0, mvDetailFade = 0, mvBaseDetailAmount = 0, mvDetailAmount[4] = {0, 0, 0, 0};
+		cMaterialType_TerrainBlend_Vars(){ ohpl_mat_default_vars(eOhplMatKind_TerrainBlend, static_cast<OhplTerrainBlendVars*>(this)); }
 	};
 
 	// HPL3 terrain blend layers: cache_terrain_diffuse_frag over the base pass, units = eMaterialTexture slots
@@ -99,7 +96,7 @@ namespace hpl {
 		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialType_TerrainBlend_Vars,()); }
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){}
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars){}
-		void CompileMaterialSpecifics(cMaterial *apMaterial){ apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true); }
+		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
 	private:
 		void LoadData();
@@ -115,13 +112,10 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial){ cMaterialType_Decal::CompileMaterialSpecifics(apMaterial); apMaterial->SetBlendMode(eMaterialBlendMode_Alpha); }
 	};
 
-	class cMaterialType_Undergrowth_Vars : public iMaterialVars
+	class cMaterialType_Undergrowth_Vars : public iMaterialVars, public OhplUndergrowthVars
 	{
 	public:
-		bool mbWind = false;
-		cVector3f mvWind = 0, mvWindOctaves = 0;
-		cVector2f mvDissolve = 0;
-		float mfForceFieldMul = 0, mfMaxForceFieldForce = 0;
+		cMaterialType_Undergrowth_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Undergrowth, static_cast<OhplUndergrowthVars*>(this)); }
 	};
 
 	// HPL3 terrain undergrowth on CPU-baked plants: the shader's non-instanced path

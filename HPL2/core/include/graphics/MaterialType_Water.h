@@ -21,6 +21,7 @@
 #define HPL_MATERIAL_WATER_H
 
 #include "graphics/MaterialType.h"
+#include "graphics/RustMaterial.h"
 #include "graphics/Material.h"
 
 namespace hpl {
@@ -29,27 +30,11 @@ namespace hpl {
 	// WATER
 	//---------------------------------------------------
 
-	class cMaterialType_Water_Vars : public iMaterialVars
+	class cMaterialType_Water_Vars : public iMaterialVars, public OhplWaterVars
 	{
 	public:
-		cMaterialType_Water_Vars() : mbHasReflection(true), mfRefractionScale(0.1f), mfFrenselBias(0.2f), mfFrenselPow(8.0f){}
+		cMaterialType_Water_Vars(){ ohpl_mat_default_vars(eOhplMatKind_Water, static_cast<OhplWaterVars*>(this)); }
 		~cMaterialType_Water_Vars(){}
-
-        bool mbHasReflection;
-		float mfRefractionScale;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		float mfReflectionFadeStart;
-		float mfReflectionFadeEnd;
-		float mfWaveSpeed;
-		float mfWaveAmplitude;
-		float mfWaveFreq;
-		float mfFadeWhenShallowMul = 0;
-		float mfFadeWhenShallowPow = 1;
-		bool mbHasVertexWaves = false;
-		float mfVertexWaveSpeed = 1;
-		float mfVertexWaveAmplitude = 1;
-		float mfVertexWaveFreq = 1;
 	};
 
 	//-----------------------------------------------------

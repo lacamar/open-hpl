@@ -33,6 +33,7 @@
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "math/Math.h"
+#include "graphics/RustMaterial.h"
 
 
 namespace hpl {
@@ -298,55 +299,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static cVector3f GetAxisVector(eMaterialAnimationAxis aAxis)
-	{
-		switch(aAxis)
-		{
-		case eMaterialAnimationAxis_X: return cVector3f(1,0,0);
-		case eMaterialAnimationAxis_Y: return cVector3f(0,1,0);
-		case eMaterialAnimationAxis_Z: return cVector3f(0,0,1);
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-	
 	void cMaterial::UpdateAnimations(float afTimeStep)
 	{
-		m_mtxUV = cMatrixf::Identity;
-
-        for(size_t i=0; i<mvUvAnimations.size(); ++i)
-		{
-			cMaterialUvAnimation *pAnim = &mvUvAnimations[i];
-
-			///////////////////////////
-			// Translate
-			if(pAnim->mType == eMaterialUvAnimation_Translate)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
-				cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * pAnim->mfSpeed * mfAnimTime);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
-			}
-			///////////////////////////
-			// Sin
-			else if(pAnim->mType == eMaterialUvAnimation_Sin)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-				
-				cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * sin(mfAnimTime * pAnim->mfSpeed) * pAnim->mfAmp);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
-			}
-			///////////////////////////
-			// Rotate
-			else if(pAnim->mType == eMaterialUvAnimation_Rotate)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
-				cMatrixf mtxRot = cMath::MatrixRotate(vDir * pAnim->mfSpeed * mfAnimTime,eEulerRotationOrder_XYZ);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxRot);
-			}
-		}
+		static_assert(sizeof(cMaterialUvAnimation) == sizeof(OhplUvAnim) && offsetof(cMaterialUvAnimation, mfSpeed) == 4 &&
+					  offsetof(cMaterialUvAnimation, mfAmp) == 8 && offsetof(cMaterialUvAnimation, mAxis) == 12, "cMaterialUvAnimation layout");
+		ohpl_mat_uv_matrix((const OhplUvAnim*)mvUvAnimations.data(), mvUvAnimations.size(), mfAnimTime, &m_mtxUV);
 
 		mfAnimTime += afTimeStep;
 	}

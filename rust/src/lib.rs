@@ -30,6 +30,7 @@ pub mod imageload;
 pub mod input;
 mod input_ffi;
 mod input_tables;
+pub mod material;
 pub mod math;
 pub mod meshload;
 pub mod physics;
