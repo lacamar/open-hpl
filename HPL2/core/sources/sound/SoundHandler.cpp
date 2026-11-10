@@ -73,7 +73,54 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	const bool gbLogEntry = false;
+
+	static iSoundChannel* Ch(void *ap){ return static_cast<iSoundChannel*>(ap); }
+	static cSoundHandler* Handler(void *ap){ return static_cast<cSoundHandler*>(ap); }
+
+	static const OhplSoundChannelOps gChannelOps = {
+		[](void *c){ Ch(c)->Play(); },
+		[](void *c){ Ch(c)->Stop(); },
+		[](void *c, bool x){ Ch(c)->SetPaused(x); },
+		[](void *c){ return Ch(c)->GetPaused(); },
+		[](void *c){ return Ch(c)->IsPlaying(); },
+		[](void *c){ return Ch(c)->GetStopUsed(); },
+		[](void *c){ return Ch(c)->GetSpeed(); },
+		[](void *c, float x){ Ch(c)->SetSpeed(x); },
+		[](void *c){ return Ch(c)->GetVolume(); },
+		[](void *c, float x){ Ch(c)->SetVolume(x); },
+		[](void *c){ return Ch(c)->GetLooping(); },
+		[](void *c, bool x){ Ch(c)->SetLooping(x); },
+		[](void *c, bool x){ Ch(c)->Set3D(x); },
+		[](void *c, int x){ Ch(c)->SetPriority(x); },
+		[](void *c, int x){ Ch(c)->SetPriorityModifier(x); },
+		[](void *c, bool x){ Ch(c)->SetAffectedByEnv(x); },
+		[](void *c){ return Ch(c)->GetPositionIsRelative(); },
+		[](void *c, bool x){ Ch(c)->SetPositionIsRelative(x); },
+		[](void *c, cVector3f *o){ *o = Ch(c)->GetPosition(); },
+		[](void *c, const cVector3f *v){ Ch(c)->SetPosition(*v); },
+		[](void *c, cVector3f *o){ *o = Ch(c)->GetRelPosition(); },
+		[](void *c, const cVector3f *v){ Ch(c)->SetRelPosition(*v); },
+		[](void *c){ return Ch(c)->GetMinDistance(); },
+		[](void *c, float x){ Ch(c)->SetMinDistance(x); },
+		[](void *c){ return Ch(c)->GetMaxDistance(); },
+		[](void *c, float x){ Ch(c)->SetMaxDistance(x); },
+		[](void *c){ return Ch(c)->GetBlockVolumeMul(); },
+		[](void *c){ return Ch(c)->GetElapsedTime(); },
+		[](void *c){ return Ch(c)->GetTotalTime(); },
+		[](void *c, double x){ Ch(c)->SetElapsedTime(x); },
+	};
+
+	static const OhplSoundHostOps gHostOps = {
+		[](void *h, uint32_t t){ return Handler(h)->GetGlobalSpeed((eSoundEntryType)t); },
+		[](void *h, uint32_t t){ return Handler(h)->GetGlobalVolume((eSoundEntryType)t); },
+		[](void *h){ return Handler(h)->GetSilent(); },
+		[](void *h, const cVector3f *p){ return Handler(h)->CheckSoundIsBlocked(*p); },
+		[](void *h, cVector3f *o){ *o = Handler(h)->GetLowLevelSound()->GetListenerPosition(); },
+		[](void *h, cMatrixf *o){ *o = Handler(h)->GetLowLevelSound()->GetListenerMatrix(); },
+	};
+
+	const OhplSoundChannelOps* SoundChannelOps(){ return &gChannelOps; }
+
 	//-----------------------------------------------------------------------
 
 	cSoundEntry::cSoundEntry(	const tString& asName, iSoundChannel* apSound, float afVolume, 
@@ -83,80 +130,16 @@ namespace hpl {
 	{
 		msName = cString::ToLowerCase(asName);
 		mpSound = apSound;
-		mfNormalVolume = afVolume;
-		mType = aType;
-		mbStream = abStream;
 		mlId = alId;
 		mpSoundHandler = apSoundHandler;
-		mb3D = ab3D;
-		
-		////////////////////////
-		// Set up defaults
-		mfVolumeMul = 1;
-		mfVolumeFadeDest = 1;
-		mfVolumeFadeSpeed =0;
-		mbStopAfterFadeOut = false;
-		
-		mbStopDisabled = false;
-
-		mfNormalSpeed = 1;
-
-		mfSpeedMul = 1;
-		mfSpeedFadeDest = 1;
-		mfSpeedFadeSpeed = 0;
-
-		mbFirstTime = true;
-
-		mfBlockMul = 1;
-		mfBlockFadeDest = 1;
-		mfBlockFadeSpeed = 0;
-
 		mpCallback = NULL;
-
-		if(gbLogEntry)Log("Creating sound entry %d id: %d\n", this, mlId);
+		ohpl_snd_entry_init(&mS, afVolume, (uint32_t)aType, ab3D, abStream);
 	}
-
-	///////////////////////////////////////
-	//DEBUG when using pooling test
-	/*void cSoundEntry::Setup(const tString& asName, iSoundChannel* apSound, float afVolume,
-		eSoundEntryType aType, bool ab3D,
-		bool abStream,int alId)
-	{
-		msName = cString::ToLowerCase(asName);
-		mpSound = apSound;
-		mfNormalVolume = afVolume;
-		mType = aType;
-		mbStream = abStream;
-		mlId = alId;
-		mb3D = ab3D;
-
-		////////////////////////
-		// Set up defaults
-		mfVolumeMul = 1;
-		mfVolumeFadeDest = 1;
-		mfVolumeFadeSpeed =0;
-		mbStopAfterFadeOut = false;
-
-		mfNormalSpeed = 1;
-
-		mfSpeedMul = 1;
-		mfSpeedFadeDest = 1;
-		mfSpeedFadeSpeed = 0;
-
-		mbFirstTime = true;
-
-		mfBlockMul = 1;
-		mfBlockFadeDest = 1;
-		mfBlockFadeSpeed = 0;
-
-		mpCallback = NULL;
-	}*/
 
 	//-----------------------------------------------------------------------
 
 	cSoundEntry::~cSoundEntry()
 	{
-		if(gbLogEntry)Log("Destroying sound entry %d id: %d\n", this, mlId);
 		if(mpSound)
 		{
 			mpSound->Stop();
@@ -168,227 +151,20 @@ namespace hpl {
 	
 	bool cSoundEntry::Update(float afTimeStep)
 	{
-		////////////////////////////////////////////
-		// Update Fading
-		UpdateVolumeMulFade(afTimeStep);
-		UpdateSpeedMulFade(afTimeStep);
+		int lState = ohpl_snd_entry_update(&mS, afTimeStep, &gChannelOps, mpSound, &gHostOps, mpSoundHandler);
+		if(lState == 1) return true;
 
-		////////////////////////////////////////////
-		// Set final speed 
-		float fFinalSpeed = mfNormalSpeed * mfSpeedMul * mpSoundHandler->GetGlobalSpeed(mType);
-		if(mpSound->GetSpeed() != fFinalSpeed)
-		{
-			mpSound->SetSpeed(fFinalSpeed);
-		}
-	
-		//////////////////////////////
-		// Update block volume mul fade
-		if(mfBlockMul != mfBlockFadeDest)
-		{
-			mfBlockMul += mfBlockFadeSpeed*afTimeStep;
-			if(mfBlockFadeSpeed<0)
-			{
-				if(mfBlockMul < mfBlockFadeDest)	mfBlockMul = mfBlockFadeDest;
-			}
-			else
-			{
-				if(mfBlockMul > mfBlockFadeDest)	mfBlockMul = mfBlockFadeDest;
-			}
-		}
+		if(lState == 2 && mpCallback) mpCallback->OnPriorityRelease();
 
-		//////////////////////////////
-		//If relative, update position according to listener
-		if(mpSound->GetPositionIsRelative())
-		{
-			cVector3f vPos = cMath::MatrixMul(	mpSoundHandler->mpLowLevelSound->GetListenerMatrix(),mpSound->GetRelPosition() );
-			mpSound->SetPosition(vPos);
-		}
-		
-		/////////////////////////////
-		// Update 3D Specifics
-		if(mb3D)
-		{
-			Update3DSpecifics(afTimeStep);
-
-		}
-		/////////////////////////////
-		// Update Non-3D Specifics
-		else
-		{
-			float fFinalVolume = mfNormalVolume * mfVolumeMul * mpSoundHandler->GetGlobalVolume(mType);
-			if(mpSound->GetVolume() != fFinalVolume)
-			{
-				mpSound->SetVolume(fFinalVolume);
-			}
-		}
-
-		/////////////////////////////
-		// If first time and not silent. Start sound!
-		if(mbFirstTime && mpSoundHandler->GetSilent()==false)
-		{
-			mpSound->Play();
-			mbFirstTime = false;
-		}
-
-		////////////////////////////////////////////
-		// Check if sound is done playing
-		// Put this last so sounds has a chance to be played! (updating volume of finished sound should not matter)
-		if(mpSound->IsPlaying()==false && mpSound->GetPaused()==false)
-		{
-			//Check if sound has been stopped because of priority override
-			if(	mpCallback &&
-				mpSound->GetStopUsed()==false && 
-				mpSound->GetLooping() &&
-				mfVolumeFadeDest !=0)
-			{
-				if(gbLogEntry)Log("PriorityRelease sound entry %d id: %d\n", this, mlId);
-				mpCallback->OnPriorityRelease();
-			}
-
-			mpSound->Stop();
-
-			return false;
-		}
-		
-
-		return true;
-	}
-
-	//----------------------------------------------------------------------
-
-	void cSoundEntry::UpdateVolumeMulFade(float afTimeStep)
-	{
-		if(mfVolumeMul != mfVolumeFadeDest)
-		{
-			mfVolumeMul += mfVolumeFadeSpeed * afTimeStep;
-
-			if(mfVolumeFadeSpeed<0 && mfVolumeMul <= mfVolumeFadeDest)
-			{
-				mfVolumeMul = mfVolumeFadeDest;
-			}
-			else if( mfVolumeFadeSpeed>=0 && mfVolumeMul >= mfVolumeFadeDest)
-			{
-				mfVolumeMul = mfVolumeFadeDest;
-			}
-		}
-		
-		// Stop sound after fade out is set to do so.
-		if( mbStopAfterFadeOut && cMath::Abs(mfVolumeMul) < 0.001f)
-		{
-			mpSound->Stop();
-			mbStopAfterFadeOut = false;
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cSoundEntry::UpdateSpeedMulFade(float afTimeStep)
-	{
-		if(mfSpeedMul != mfSpeedFadeDest)
-		{
-			mfSpeedMul += mfSpeedFadeSpeed * afTimeStep;
-
-			if(mfSpeedFadeSpeed<0 && mfSpeedMul <= mfSpeedFadeDest)
-			{
-				mfSpeedMul = mfSpeedFadeDest;
-			}
-			else if( mfSpeedFadeSpeed>=0 && mfSpeedMul >= mfSpeedFadeDest)
-			{
-				mfSpeedMul = mfSpeedFadeDest;
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cSoundEntry::Update3DSpecifics(float afTimeStep)
-	{
-		cVector3f vListnerPos = mpSoundHandler->mpLowLevelSound->GetListenerPosition();
-		bool bBlocked = false;
-		float fDistVolumeMul = 1.0f;
-	
-		////////////////////////////////////////
-		// If outside of max distance just set volume and priority to 0
-		float fSqrDist = cMath::Vector3DistSqr(mpSound->GetPosition(),vListnerPos);
-		if(fSqrDist >= mpSound->GetMaxDistance() * mpSound->GetMaxDistance())
-		{
-			mpSound->SetVolume(0);
-			mpSound->SetPriority(0);
-			return;
-		}
-
-		////////////////////////////////////////
-		// Check if sound is blocked
-		if(mpSoundHandler->CheckSoundIsBlocked(mpSound->GetPosition()))
-		{
-			mfBlockFadeDest = 0.0f;
-			mfBlockFadeSpeed = -1.0f / 0.55f;
-
-			if(mbFirstTime)	mfBlockMul = 0.0f;
-		
-			//pSound->SetFiltering(true, 0xF); TODO
-			bBlocked = true;
-		}
-		else
-		{
-			mfBlockFadeDest = 1;
-			mfBlockFadeSpeed = 1.0f / 0.2f;
-
-			if(mbFirstTime) mfBlockMul = 1.0f;
-
-			//pSound->SetFiltering(false, 0xF); TODO
-		}
-
-		///////////////////////////////////////
-		// Update volume based on listener distance
-		if(fSqrDist< mpSound->GetMinDistance() * mpSound->GetMinDistance())
-		{
-			//Set high priority
-			mpSound->SetPriority(100);
-			fDistVolumeMul = 1.0f; 
-		}
-		else
-		{
-			//Set medium priority
-			mpSound->SetPriority(10);
-
-			float fDist = cMath::Vector3Dist(mpSound->GetPosition(),vListnerPos);
-			float fDelta = fDist - mpSound->GetMinDistance();
-			float fMaxDelta = mpSound->GetMaxDistance() - mpSound->GetMinDistance();
-
-			fDistVolumeMul = 1 - (fDelta/fMaxDelta);
-			
-			//TODO: What is this code needed for?
-			//fade between normal and square
-			//float fSqr = fVolume * fVolume;
-			//fVolume *= mfBlockMul + (1.0f - mfBlockMul)*fSqr;
-		}
-		
-		///////////////////////////////////////
-		// Set final volume
-		
-		// Calculate the amount of block.
-		float fBlock = mpSound->GetBlockVolumeMul() + mfBlockMul * (1 - mpSound->GetBlockVolumeMul());
-		
-		//Multiply all factors to get the final volume.
-		mpSound->SetVolume(	mfNormalVolume * mfVolumeMul * fBlock * fDistVolumeMul  * 
-							mpSoundHandler->GetGlobalVolume(mType));
+		mpSound->Stop();
+		return false;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundEntry::Stop()
 	{
-		if(mbStopDisabled) return;
-
-		if(mbFirstTime)
-		{
-			mpSound->Play();
-			mbFirstTime = false;
-		}
-		
-		mpSound->SetPaused(false);
-		mpSound->Stop();
+		ohpl_snd_entry_stop(&mS, &gChannelOps, mpSound);
 	}
 
 	//-----------------------------------------------------------------------
@@ -400,61 +176,24 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSoundEntry::SetDefaultVolume(float afVolume)
-	{
-		mfNormalVolume = afVolume;
-	}
-	
-	void cSoundEntry::SetDefaultSpeed(float afSpeed)
-	{
-		mfNormalSpeed = afSpeed;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cSoundEntry::SetVolumeMul(float afMul)
-	{
-		mfVolumeMul = afMul;
-		mfVolumeFadeDest = mfVolumeMul;
-	}
-	void cSoundEntry::SetSpeedMul(float afMul)
-	{
-		mfSpeedMul = afMul;
-		mfSpeedFadeDest = mfSpeedMul;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cSoundEntry::FadeVolumeMulTo(float afDestMul, float afSpeed)
 	{
-		if(gbLogEntry)Log("Fade vol sound entry %d id: %d to %f\n", this, mlId, afDestMul);
-
-		mfVolumeFadeDest = afDestMul;
-		mfVolumeFadeSpeed = cMath::GetCorrectSignOfSpeed(mfVolumeMul,mfVolumeFadeDest,afSpeed);
+		ohpl_snd_entry_fade_volume(&mS, afDestMul, afSpeed);
 	}
 
 	void cSoundEntry::FadeSpeedMulTo(float afDestMul, float afSpeed)
 	{
-		mfSpeedFadeDest = afDestMul;
-		mfSpeedFadeSpeed = cMath::GetCorrectSignOfSpeed(mfSpeedMul,mfSpeedFadeDest,afSpeed);
+		ohpl_snd_entry_fade_speed(&mS, afDestMul, afSpeed);
 	}
 
 	void cSoundEntry::FadeOut(float afSpeed)
 	{
-		if(gbLogEntry)Log("Fade out sound entry %d id: %d\n", this, mlId);
-
-		mfVolumeFadeDest = 0;
-		mfVolumeFadeSpeed = cMath::GetCorrectSignOfSpeed(mfVolumeMul,0,afSpeed);
-		mbStopAfterFadeOut = true;
+		ohpl_snd_entry_fade_out(&mS, afSpeed);
 	}
 
 	void cSoundEntry::FadeIn(float afVolumeMul,float afSpeed)
 	{
-		if(gbLogEntry)Log("Fade in sound entry %d id: %d\n", this, mlId);
-
-		mfVolumeFadeDest = afVolumeMul;
-		mfVolumeMul = 0;
-		mfVolumeFadeSpeed = cMath::GetCorrectSignOfSpeed(0,mfVolumeFadeDest,afSpeed);
+		ohpl_snd_entry_fade_in(&mS, afVolumeMul, afSpeed);
 	}
 
 	//-----------------------------------------------------------------------
@@ -545,19 +284,7 @@ namespace hpl {
 	{
 		if(asName == "") return NULL;
 
-		/////////////////////////////////
-		//Calculate priority
-		int lDistPrio = 0;
-		if(ab3D && abRelative==false)
-		{
-			float fDist = cMath::Vector3Dist(avPos, mpLowLevelSound->GetListenerPosition());
-			if(fDist >= afMaxDist)
-				lDistPrio = 0;
-			else if(fDist >= afMinDist)
-				lDistPrio = 10;
-			else
-				lDistPrio = 100;
-		}
+		int lDistPrio = ohpl_snd_play_priority(&avPos, &mpLowLevelSound->GetListenerPosition(), afMinDist, afMaxDist, ab3D, abRelative);
 			
 		///////////////////////////////
 		//Create sound channel
@@ -576,64 +303,8 @@ namespace hpl {
 			return NULL;
 		}
 
-		/////////////////////////////////
-		//Set up channel		
-		pSound->SetLooping(abLoop);
-		pSound->SetMinDistance(afMinDist);
-		pSound->SetMaxDistance(afMaxDist);
-		pSound->Set3D(ab3D);
-		if(ab3D && abRelative==false)
-		{
-			pSound->SetPriority(lDistPrio);
-			pSound->SetPriorityModifier(alPriorityModifier);
-		}
-		else
-		{
-			pSound->SetPriority(alPriorityModifier);
-		}
-		
-
-		///////////////////////////////////
-		//Set sound to use Environment if its a world sound
-		if (aEntryType == eSoundEntryType_World)
-		{
-			pSound->SetAffectedByEnv(true);
-		}
-
-		//////////////////////////////////////////////////////////////////
-		// Setup Position
-		pSound->SetPositionIsRelative(abRelative);
-		if(abRelative)
-		{
-			pSound->SetRelPosition(avPos);
-			cVector3f vPos = cMath::MatrixMul(mpLowLevelSound->GetListenerMatrix(), avPos);
-			pSound->SetPosition(vPos);
-		}
-		else
-		{
-			pSound->SetPosition(avPos);							
-		}
-					
-		////////////////////////
-		// Set start volume
-		//3D
-		if(ab3D)
-		{
-			pSound->SetVolume(0);		
-		}
-		//Non-3D
-		else
-		{
-			pSound->SetVolume(0);//afVolume);
-		}
-
-		///////////////////////
-		// If it is silent do everything as normal except stop the sound at start.
-		if(mbSilent)
-		{
-			pSound->SetLooping(false);
-			pSound->Stop();
-		}
+		OhplSoundPlayParams Params = { avPos, afMinDist, afMaxDist, alPriorityModifier, (uint32_t)aEntryType, abLoop, abRelative, ab3D, mbSilent };
+		ohpl_snd_play_setup(&Params, lDistPrio, &mpLowLevelSound->GetListenerMatrix(), &gChannelOps, pSound);
 
 		////////////////////////
 		// Create entry
