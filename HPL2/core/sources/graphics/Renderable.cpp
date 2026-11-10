@@ -21,6 +21,7 @@
 
 #include "math/Math.h"
 #include "math/Frustum.h"
+#include "scene/RustNode.h"
 #include "system/LowLevelSystem.h"
 
 namespace hpl {
@@ -107,7 +108,7 @@ namespace hpl {
 		{
 			mlLastMatrixCount = GetMatrixUpdateCount();
 						
-			m_mtxInvModel = cMath::MatrixInverse(*pModelMatrix);
+			ohpl_scene_inverse(pModelMatrix, &m_mtxInvModel);
 		}
 		
 		return &m_mtxInvModel;
@@ -134,9 +135,7 @@ namespace hpl {
 		if(pModelMatrix != NULL && mlCalcScaleMatrixCount != GetMatrixUpdateCount())
 		{
 			mlCalcScaleMatrixCount = GetMatrixUpdateCount();
-			mvCalcScale.x = pModelMatrix->GetRight().Length();
-			mvCalcScale.y = pModelMatrix->GetUp().Length();
-			mvCalcScale.z = pModelMatrix->GetForward().Length();
+			ohpl_scene_calc_scale(pModelMatrix, &mvCalcScale);
 		}
 
 		return mvCalcScale;

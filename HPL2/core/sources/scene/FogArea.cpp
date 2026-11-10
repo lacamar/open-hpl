@@ -20,6 +20,7 @@
 #include "scene/FogArea.h"
 
 #include "math/Math.h"
+#include "scene/RustNode.h"
 
 #include "resources/Resources.h"
 
@@ -77,7 +78,7 @@ namespace hpl {
 
 	cMatrixf* cFogArea::GetModelMatrix(cFrustum* apFrustum)
 	{
-		m_mtxModelOutput = cMath::MatrixMul(GetWorldMatrix(), cMath::MatrixScale(mvSize));
+		ohpl_scene_scaled_world(&GetWorldMatrix(), &mvSize, &m_mtxModelOutput);
 
 		return &m_mtxModelOutput;
 	}
