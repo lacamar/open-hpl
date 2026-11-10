@@ -24,6 +24,7 @@
 #include "math/Math.h"
 #include "graphics/Texture.h"
 #include "system/String.h"
+#include "impl/RustImpl.h"
 
 #include <cstdio>
 #include <cstring>
@@ -56,50 +57,7 @@ namespace hpl {
 		mpYuv_G_UV = hplNewArray( unsigned short,256*256);
 		mpYuv_G_Y_UV = hplNewArray( unsigned char,256*1024);
 
-		//////////////////////////////
-		//Values for R and B
-		float fY, fI,fJ,fUV;
-		for(int i=0; i<256; ++i)
-		for(int y=0; y<256; ++y)
-		{
-			fY = 1.164f * ((float)y -16);
-			fI = (float)i;
-			
-			//I = V
-			mpYuvToR[y + i*256] = (unsigned char)cMath::Clamp(fY + 1.596f*(fI - 128),0,255);
-
-			//I = U
-			mpYuvToB[y + i*256] = (unsigned char)cMath::Clamp(fY + 2.018f * (fI - 128),0,255);
-		}
-
-		///////////////////////////////////////////////////
-		//Split the Green computation into two buffer
-		float fMinVal = 0.813f * (-128.0f) - 0.391f * 127;
-		float fMaxVal = 0.813f * (127.0f) + 0.391f * 128;
-
-		//Green UV part
-		for(int i=0; i<256; ++i)
-		for(int j=0; j<256; ++j)
-		{
-			//I= U J = V
-			fJ = (float)j;
-			fI = (float)i;
-
-			float fUV = 0.813f*(fJ - 128) - 0.391f * (fI - 128);
-			mpYuv_G_UV[i*256 + j] = (unsigned short)cMath::Clamp(((fUV - fMinVal) / (fMaxVal - fMinVal)) * 1023.0f,0,1023.0f);
-		}
-
-		//Green Y * UV part
-		for(int i=0; i<1024; ++i)
-		for(int y=0; y<256; ++y)
-		{
-			fY = 1.164f * ((float)y -16);
-			fUV = (float)i;
-			fUV = (fUV / 1023.0f) * (fMaxVal - fMinVal) + fMinVal;
-
-			mpYuv_G_Y_UV[i*256 + y] = (unsigned char)cMath::Clamp(fY - fUV, 0, 255);
-		}
-
+		ohpl_theora_fill_tables(mpYuvToR, mpYuvToB, mpYuv_G_UV, mpYuv_G_Y_UV);
 	}
 
 	cVideoStreamTheora_Loader::~cVideoStreamTheora_Loader()
@@ -155,6 +113,9 @@ namespace hpl {
 		mlBufferSize = 4096;
 
 		mbVideoFrameReady = false;
+		mbVideoLoaded = false;
+		memset(&mTheoraStreamState, 0, sizeof(mTheoraStreamState));
+		memset(&mTheoraState, 0, sizeof(mTheoraState));
 
 		mpFrameBuffer = NULL;
 
@@ -321,7 +282,7 @@ namespace hpl {
 
 	void cVideoStreamTheora::CopyToTexture(iTexture *apTexture)
 	{
-		if(mbVideoLoaded==false || mpFrameBuffer ==NULL) return;
+		if(mbVideoLoaded==false || mpFrameBuffer ==NULL || ohpl_theora_frame_len(mvSize.x, mvSize.y) == 0) return;
 
 		if(mbVideoFrameReady)
 		{
@@ -346,117 +307,14 @@ namespace hpl {
 		yuv_buffer yuvBuffer;
 		theora_decode_YUVout(&mTheoraState,&yuvBuffer);
 		
-		/////////////////////////////
-		// Set up variables
-
-		//This is offsets in the SOURCE DATA
-		size_t lCropOffsetY = mTheoraInfo.offset_x + yuvBuffer.y_stride * mTheoraInfo.offset_y;
-		size_t lCropOffsetUV = mTheoraInfo.offset_x/2 + yuvBuffer.uv_stride * (mTheoraInfo.offset_y/2);
-
-		//Pointers to conversion buffers.
-		unsigned char* pYuvToR = mpLoader->mpYuvToR;
-		unsigned char* pYuvToB = mpLoader->mpYuvToB;
-
-		unsigned short* pYuv_G_UV = mpLoader->mpYuv_G_UV;
-		unsigned char*  pYuv_G_Y_UV = mpLoader->mpYuv_G_Y_UV;
-
-		/////////////////////////////////
-		//Write Y to R
-
-		//Get start of buffers
-		unsigned char *pSrcBuffer = mpFrameBuffer;
-		unsigned char *pYBuffer = yuvBuffer.y + lCropOffsetY;
-		
-		//Set up counters
-		int lXCount = mvSize.x;
-		int lYCount = mvSize.y;
-		
-		//Precalculate some values
-		const int lYBufferAdd = yuvBuffer.y_stride - mvSize.x;
-
-		//Go through Y surface of copy to R in frame buffer
-		while(lYCount)
-		{
-			*pSrcBuffer = *pYBuffer;
-
-			pSrcBuffer+=3;
-			pYBuffer++;
-
-			--lXCount;
-			if(!lXCount)
-			{
-				pYBuffer += lYBufferAdd;
-				lXCount = mvSize.x;
-				--lYCount;
-			}
-		}
-
-		/////////////////////////////////
-		//Write UV and use R as Y
-
-		//Get start of buffers
-		pSrcBuffer = mpFrameBuffer;
-		unsigned char *pUBuffer = yuvBuffer.u + lCropOffsetUV;
-		unsigned char *pVBuffer = yuvBuffer.v + lCropOffsetUV;
-		
-		//Setup counters
-		lXCount = mvSize.x/2;
-		lYCount = mvSize.y/2;
-		
-		//Precalculate some values
-		const int lXRowAdd = mvSize.x/2;
-		const int lSourceRowSize = mvSize.x*3;
-		const int lUVBufferAdd = yuvBuffer.uv_stride - mvSize.x/2;
-		unsigned char y;
-		
-		//Go through UV surfaces and convert to RGB in frame buffer
-		while(lYCount)
-		{
-			const unsigned short u_add = (*pUBuffer) <<8;
-			const unsigned short v_add = (*pVBuffer) <<8;
-			const unsigned int g_uv_add = (pYuv_G_UV[u_add + (*pVBuffer)])<<8;
-
-			//Here we draw to a 2x2 large piece of source.
-			y = *pSrcBuffer;
-			pSrcBuffer[0] = pYuvToR[y + v_add];
-			pSrcBuffer[1] = pYuv_G_Y_UV[y +(g_uv_add)];
-			pSrcBuffer[2] = pYuvToB[y + u_add];	
-
-			pSrcBuffer+= 3;
-			y = *pSrcBuffer;
-			pSrcBuffer[0] = pYuvToR[y + v_add];
-			pSrcBuffer[1] = pYuv_G_Y_UV[y +(g_uv_add)];
-			pSrcBuffer[2] = pYuvToB[y + u_add];			
-
-			pSrcBuffer += lSourceRowSize - 3;
-			y = *pSrcBuffer;
-			pSrcBuffer[0] = pYuvToR[y + v_add];
-			pSrcBuffer[1] = pYuv_G_Y_UV[y +(g_uv_add)];
-			pSrcBuffer[2] = pYuvToB[y + u_add];			
-
-			pSrcBuffer += 3;
-			y = *pSrcBuffer;
-			pSrcBuffer[0] = pYuvToR[y + v_add];
-			pSrcBuffer[1] = pYuv_G_Y_UV[y +(g_uv_add)];
-			pSrcBuffer[2] = pYuvToB[y + u_add];			
-
-			pSrcBuffer-= lSourceRowSize;
-
-			pSrcBuffer+=3;
-
-			pUBuffer++;
-			pVBuffer++;
-
-			--lXCount;
-			if(!lXCount)
-			{
-				pSrcBuffer+= lSourceRowSize;
-				pVBuffer += lUVBufferAdd;
-				pUBuffer += lUVBufferAdd;
-				lXCount = lXRowAdd;
-				--lYCount;
-			}
-		}
+		OhplYuvPlanes planes = {
+			yuvBuffer.y, (size_t)yuvBuffer.y_stride * yuvBuffer.y_height,
+			yuvBuffer.u, (size_t)yuvBuffer.uv_stride * yuvBuffer.uv_height,
+			yuvBuffer.v, (size_t)yuvBuffer.uv_stride * yuvBuffer.uv_height,
+			yuvBuffer.y_stride, yuvBuffer.uv_stride,
+			(unsigned)mTheoraInfo.offset_x, (unsigned)mTheoraInfo.offset_y };
+		OhplYuvTables tables = { mpLoader->mpYuvToR, mpLoader->mpYuvToB, mpLoader->mpYuv_G_UV, mpLoader->mpYuv_G_Y_UV };
+		ohpl_theora_draw_frame(mpFrameBuffer, ohpl_theora_frame_len(mvSize.x, mvSize.y), &planes, &tables, mvSize.x, mvSize.y);
 	}
 
 	//-----------------------------------------------------------------------
@@ -518,7 +376,7 @@ namespace hpl {
 
 			mvSize = cVector2l(mTheoraInfo.frame_width, mTheoraInfo.frame_height);
 
-			mpFrameBuffer = hplNewArray(unsigned char,mvSize.x * mvSize.y *3);
+			mpFrameBuffer = hplNewArray(unsigned char,ohpl_theora_frame_len(mvSize.x, mvSize.y));
 		}
 		else
 		{

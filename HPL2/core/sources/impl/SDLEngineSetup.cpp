@@ -31,6 +31,7 @@
 #include "ai/AI.h"
 #include "haptic/Haptic.h"
 #include "system/HeadlessControl.h"
+#include "impl/RustImpl.h"
 
 #include "impl/KeyboardSDL.h"
 #include "impl/MouseSDL.h"
@@ -75,15 +76,16 @@ namespace hpl {
 #endif
 		AcquireHeadlessSingleInstanceLock();
 
-		if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL && getenv("ALSOFT_DRIVERS") == NULL)
+		bool bVideoSetup = (alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video)) != 0;
+		unsigned lEnvPlan = ohpl_sys_engine_env(getenv("OPENHPL_HEADLESS_SOCKET") != NULL, getenv("ALSOFT_DRIVERS") != NULL,
+			bVideoSetup, getenv("SDL_VIDEODRIVER") != NULL, getenv("DISPLAY") != NULL);
+		if(lEnvPlan & kOhplEnvAlsoftNull)
 		{
 			setenv("ALSOFT_DRIVERS", "null", 1);
 		}
-		if(alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video))
+		if(bVideoSetup)
 		{
-			if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL &&
-			   getenv("SDL_VIDEODRIVER") == NULL &&
-			   getenv("DISPLAY") != NULL)
+			if(lEnvPlan & kOhplEnvVideoDriverX11)
 			{
 				setenv("SDL_VIDEODRIVER", "x11", 1);
 			}
@@ -93,7 +95,7 @@ namespace hpl {
 				exit(1);
 			}
 #if SDL_VERSION_ATLEAST(2,0,0)
-            if(getenv("OPENHPL_HEADLESS_SOCKET") == NULL)
+            if(lEnvPlan & kOhplEnvDisableScreenSaver)
             {
                 SDL_DisableScreenSaver();
             }
@@ -139,7 +141,7 @@ namespace hpl {
 		const char *pRenderer = getenv("OPENHPL_RENDERER");
 		if(pRenderer == NULL && apVars) pRenderer = apVars->mGraphics.msRenderer.c_str();
 #ifdef HPL_VULKAN
-		if(pRenderer && strcasecmp(pRenderer, "vulkan") == 0)
+		if(pRenderer && ohpl_sys_renderer_is_vulkan(pRenderer))
 		{
 			cLowLevelGraphicsVulkan *pVulkan = hplNew( cLowLevelGraphicsVulkan,() );
 			if(apVars) pVulkan->SetColorOutput(apVars->mGraphics.msColorOutput, apVars->mGraphics.mfPaperWhite, apVars->mGraphics.mfPeakNits);
@@ -148,7 +150,7 @@ namespace hpl {
 		else
 #endif
 			mpLowLevelGraphics = hplNew( cLowLevelGraphicsSDL,() );
-		if(pRenderer && strcasecmp(pRenderer, "vulkan") == 0 && dynamic_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics))
+		if(pRenderer && ohpl_sys_renderer_is_vulkan(pRenderer) && dynamic_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics))
 			Warning("OPENHPL_RENDERER=vulkan: built without Vulkan, using OpenGL\n");
 		
 		//////////////////////////
