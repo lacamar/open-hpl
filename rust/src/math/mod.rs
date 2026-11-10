@@ -24,7 +24,7 @@ pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_z,
 };
-pub(crate) use scalar::to_rad;
+pub(crate) use scalar::{clamp, to_rad};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

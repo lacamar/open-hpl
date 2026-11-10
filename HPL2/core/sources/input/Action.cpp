@@ -55,15 +55,7 @@ namespace hpl {
 		mlId = alId;
 		mpInput = apInput;
 
-		mbBecameTriggerd= false;
-		mbIsTriggerd = false;
-
-		mfTimeCount = -1.0;
-
-		mbDoubleTrigger_Down = false;
-		mbDoubleTrigger_Triggered = false;
-
-		mbIsDown = false;
+		mState = ohpl_input_action_new();
 	}
 
 	//-----------------------------------------------------------------------
@@ -124,104 +116,54 @@ namespace hpl {
 
 	bool cAction::IsTriggerd()
 	{
-		return mbIsDown;
+		return ohpl_input_action_is_down(&mState);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cAction::WasTriggerd()
 	{
-		if(mbBecameTriggerd && mbIsDown==false)
-		{
-			mbBecameTriggerd=false;
-			return true;
-		}
-
-		return false;
+		return ohpl_input_action_was_triggered(&mState);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	bool cAction::BecameTriggerd()
 	{
-		if(mbIsTriggerd==false && mbIsDown)
-		{
-			mbIsTriggerd=true;
-			return true;
-		}
-
-		return false;
+		return ohpl_input_action_became_triggered(&mState);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cAction::DoubleTriggerd(float afLimit)
 	{
-		if(!mbDoubleTrigger_Down && mbIsDown)
-		{
-			mbDoubleTrigger_Down=true;
-
-			if(mbDoubleTrigger_Triggered ||
-				mfTimeCount <0 || mfTimeCount > afLimit)
-			{
-				mbDoubleTrigger_Triggered=false;
-				mfTimeCount =0;
-				return false;
-			}
-			else
-			{
-				mfTimeCount =0;
-				mbIsTriggerd=true;
-				mbDoubleTrigger_Triggered=true;
-				return true;
-			}
-		}
-
-		return false;
+		return ohpl_input_action_double_triggered(&mState, afLimit);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAction::ResetToCurrentState()
 	{
-		Update(0.01f);
-
-		if(mbIsDown)
-		{
-			mbIsTriggerd = true;
-			mbDoubleTrigger_Down = true;
-		}
-		else
-		{
-			mbBecameTriggerd=false;
-		}
+		ohpl_input_action_reset(&mState, AnySubActionTriggerd());
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAction::Update(float afTimeStep)
 	{
-		mbIsDown = false;
-		
+		ohpl_input_action_update(&mState, AnySubActionTriggerd(), afTimeStep);
+	}
+
+	//-----------------------------------------------------------------------
+
+	bool cAction::AnySubActionTriggerd()
+	{
+		bool bAny = false;
 		for(size_t i=0; i< mvSubActions.size(); ++i)
 		{
-			iSubAction *pSubAction = mvSubActions[i];
-			if(pSubAction->IsTriggerd()) mbIsDown = true;
+			if(mvSubActions[i]->IsTriggerd()) bAny = true;
 		}
-
-		if(mbIsDown)
-		{
-			mbBecameTriggerd=true;
-		}
-		else
-		{
-			mbIsTriggerd=false;
-			mbDoubleTrigger_Down = false;
-
-			if(mfTimeCount >= 0) mfTimeCount += afTimeStep;
-		}
-		
-		
+		return bAny;
 	}
 
 	//-----------------------------------------------------------------------

@@ -24,6 +24,7 @@
 #include <list>
 #include "system/SystemTypes.h"
 #include "input/Keyboard.h"
+#include "input/RustInput.h"
 
 namespace hpl {
 
@@ -35,6 +36,7 @@ namespace hpl {
 	{
 	public:
 		cKeyboardSDL(cLowLevelInputSDL *apLowLevelInputSDL);
+		~cKeyboardSDL();
 
 		void Update();
 
@@ -47,19 +49,8 @@ namespace hpl {
 		cKeyPress GetReleasedKey();
 
 	private:
-		eKey SDLToKey(int alKey);
-        void ClearKeyList();
-		eKey AsciiToKey(int alChar);
-
-		void AddKeyToList(int alSDLMod, eKey aKey, int alUnicode, std::list<cKeyPress>& alstKeys);
-
-		std::vector<bool> mvKeyArray;
-		std::vector<eKey> mvDeferredReleases;
-#if !USE_SDL2 && defined __APPLE__
-		std::vector<eKey> mvWorldKeyMap;
-#endif
-		std::list<cKeyPress> mlstKeysPressed;
-		std::list<cKeyPress> mlstKeysReleased;
+		OhplKeyboard *mpRust;
+		std::vector<OhplInputEvent> mvEvents;
 
 		cLowLevelInputSDL *mpLowLevelInputSDL;
 	};
