@@ -22,6 +22,7 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include "graphics/RustMaterial.h"
 
 namespace hpl {
 
@@ -73,31 +74,11 @@ namespace hpl {
 	// SOLID DIFFUSE 
 	//---------------------------------------------------
 
-	class cMaterialType_SolidDiffuse_Vars : public iMaterialVars
+	class cMaterialType_SolidDiffuse_Vars : public iMaterialVars, public OhplSolidDiffuseVars
 	{
 	public:
-		cMaterialType_SolidDiffuse_Vars() : mfHeightMapScale(0.05f), mfHeightMapBias(0.0f), mbAlphaDissolveFilter(false) {}
+		cMaterialType_SolidDiffuse_Vars(){ ohpl_mat_default_vars(eOhplMatKind_SolidDiffuse, static_cast<OhplSolidDiffuseVars*>(this)); }
 		~cMaterialType_SolidDiffuse_Vars(){}
-
-		float mfHeightMapScale;
-		float mfHeightMapBias;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		bool mbAlphaDissolveFilter;
-		bool mbSwayActive = false;
-		bool mbSwaySingleDir = false;
-		cVector3f mvSwayProperties, mvSwayOctaveMuls, mvSwaySingleDir, mvSwaySingleSampleDir;
-		float mfSwayYFreqMul = 0;
-		bool mbSwayForceFieldAffected = false;
-		float mfSwayForceFieldMul = 0, mfSwayForceFieldMax = 0;
-		float mvDetailProperties[4];
-		cVector3f mvDetailWeights;
-		float mfIlluminationBrightness = 1;
-		cColor mLiquidColor, mLiquidSpecular;
-		bool mbLiquidLoopFade = false;
-		cVector2f mvLiquidFadeSpeed;
-		float mfLiquidEdgeSize = 0.5f, mfLiquidDryness = 0.5f;
-		tString msLiquidBlendMode;
 	};
 
 	//---------------------------------------------------
@@ -133,13 +114,10 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	class cMaterialType_ProjectedUV_Vars : public iMaterialVars
+	class cMaterialType_ProjectedUV_Vars : public iMaterialVars, public OhplProjectedUvVars
 	{
 	public:
-		float mfBlendHardness;
-		float mfNormalMapBlendImpact;
-		cVector3f mvTextureScale;
-		bool mbDynamicObjectSupport;
+		cMaterialType_ProjectedUV_Vars(){ ohpl_mat_default_vars(eOhplMatKind_ProjectedUv, static_cast<OhplProjectedUvVars*>(this)); }
 	};
 
 	class cMaterialType_ProjectedUV : public iMaterialType_SolidBase
@@ -166,17 +144,10 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	class cMaterialType_VertexBlend_Vars : public iMaterialVars
+	class cMaterialType_VertexBlend_Vars : public iMaterialVars, public OhplVertexBlendVars
 	{
 	public:
-		float mfNormalBlendHardness;
-		float mfColorBlendHardness;
-		cVector3f mvTextureScale;
-		cVector3f mvHeightMapScale;
-		cColor mvDirectionalWeight[3];
-		bool mvAutoUv[3];
-		bool mbAlphaMask;
-		bool mbOverlayNormal;
+		cMaterialType_VertexBlend_Vars(){ ohpl_mat_default_vars(eOhplMatKind_VertexBlend, static_cast<OhplVertexBlendVars*>(this)); }
 	};
 
 	class cMaterialType_VertexBlend : public iMaterialType_SolidBase
