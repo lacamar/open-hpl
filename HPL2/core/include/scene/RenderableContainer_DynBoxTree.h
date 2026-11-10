@@ -21,6 +21,7 @@
 #define HPL_RENDERABLE_CONTAINER_DYNBOXTREE_H
 
 #include "scene/RenderableContainer.h"
+#include "scene/RustRenderableContainer.h"
 
 namespace hpl {
 

@@ -12,7 +12,7 @@ pub mod formats;
 pub mod meshgen;
 pub mod packer;
 pub mod scatter;
-mod stdsort;
+pub(crate) mod stdsort;
 pub mod submesh;
 pub mod uv;
 
