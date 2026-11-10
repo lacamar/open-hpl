@@ -20,8 +20,10 @@
 #ifndef HPL_FRAMEBITMAP_H
 #define HPL_FRAMEBITMAP_H
 
+#include <list>
+#include <vector>
+
 #include "graphics/FrameBase.h"
-#include "system/BinTree.h"
 #include "math/MathTypes.h"
 
 namespace hpl {
@@ -30,22 +32,6 @@ namespace hpl {
 	class cFrameSubImage;
 	class cBitmap;
 	
-	//The frames bitmap + rect class
-	class cFBitmapRect
-	{
-	public:
-		cFBitmapRect(){mlHandle=-1;}
-		cFBitmapRect(int x,int y,int w,int h, int alHandle){
-			mRect = cRect2l(x,y,w,h);
-			mlHandle = alHandle;
-		}
-				
-		cRect2l mRect;
-		int mlHandle;
-	};
-
-	//----------------------------------------
-
 	class cFBitmapImage
 	{
 	public:
@@ -57,12 +43,6 @@ namespace hpl {
 
 	//----------------------------------------
 	
-    typedef BinTree<cFBitmapRect> tRectTree;
-	typedef BinTreeNode<cFBitmapRect> tRectTreeNode;
-	typedef std::vector<tRectTreeNode*> tRectTreeNodeVec;
-	typedef tRectTreeNodeVec::iterator tRectTreeNodeVecIt;
-	typedef tRectTreeNodeVec::const_iterator tRectTreeNodeVecConstIt;
-
 	typedef std::list<cFBitmapImage*> cFBitmapImageList;
 	typedef cFBitmapImageList::iterator cFBitmapImageListIt;
 		
@@ -98,7 +78,7 @@ namespace hpl {
 		cBitmap* mpBitmap;
 		cFrameTexture* mpFrameTexture;
 		
-		tRectTree mRects;
+		void* mpPacker;
 
 		cFBitmapImageList mlstImages;
 		

@@ -18,6 +18,7 @@
  */
 
 #include "graphics/FrameSubImage.h"
+#include "graphics/RustGraphics.h"
 #include "graphics/FrameTexture.h"
 #include "graphics/FrameBitmap.h"
 #include "graphics/Texture.h"
@@ -30,8 +31,6 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-
-#define kContractSize (0.001f)
 
 	cFrameSubImage::cFrameSubImage(	const tString& asName,const tWString& asFullPath, cFrameTexture *apFrameTex, 
 									cFrameBitmap *apFrameBmp, cRect2l aRect,
@@ -47,25 +46,13 @@ namespace hpl {
 		mlUpdateCount =0;
 		mbNeedUvUpdate = false;
 
-		cVector2f vTexSize = cVector2f((float)mRect.w,(float)mRect.h ) / 
-								cVector2f((float)mvSourceSize.x,(float)mvSourceSize.y);
-		cVector2f vTexPos = cVector2f((float)mRect.x,(float)mRect.y ) / 
-								cVector2f((float)mvSourceSize.x,(float)mvSourceSize.y);
+		cVector2f vUv[4];
+		ohpl_subimage_uvs(&mRect, &mvSourceSize, vUv);
 
-		mvVtx.push_back(cVertex(cVector3f(0,0,0),
-						cVector3f(vTexPos.x+kContractSize, vTexPos.y+kContractSize,0), cColor(1)));
-		
-		mvVtx.push_back(cVertex(cVector3f((float)mRect.w,0,0),
-						cVector3f(vTexPos.x+vTexSize.x-kContractSize, vTexPos.y+kContractSize,0), 
-						cColor(1)));
-		
-		mvVtx.push_back(cVertex(cVector3f((float)mRect.w,(float)mRect.h,0),
-						cVector3f(vTexPos.x+vTexSize.x-kContractSize, vTexPos.y+vTexSize.y-kContractSize,0),
-						cColor(1)));
-		
-		mvVtx.push_back(cVertex(cVector3f(0,(float)mRect.h,0),
-						cVector3f(vTexPos.x+kContractSize, vTexPos.y+vTexSize.y-kContractSize,0), 
-						cColor(1)));
+		mvVtx.push_back(cVertex(cVector3f(0,0,0), cVector3f(vUv[0].x, vUv[0].y,0), cColor(1)));
+		mvVtx.push_back(cVertex(cVector3f((float)mRect.w,0,0), cVector3f(vUv[1].x, vUv[1].y,0), cColor(1)));
+		mvVtx.push_back(cVertex(cVector3f((float)mRect.w,(float)mRect.h,0), cVector3f(vUv[2].x, vUv[2].y,0), cColor(1)));
+		mvVtx.push_back(cVertex(cVector3f(0,(float)mRect.h,0), cVector3f(vUv[3].x, vUv[3].y,0), cColor(1)));
 	}
 
 	//-----------------------------------------------------------------------
@@ -172,19 +159,10 @@ namespace hpl {
 
 		++mlUpdateCount;
 		
-		cRect2l& mRect = mpFrameBitmapImage->mRect;
+		cVector2f vUv[4];
+		ohpl_subimage_uvs(&mpFrameBitmapImage->mRect, &mvSourceSize, vUv);
 
-		cVector2f vTexSize = cVector2f((float)mRect.w,(float)mRect.h ) / 
-							 cVector2f((float)mvSourceSize.x,(float)mvSourceSize.y);
-
-		cVector2f vTexPos = cVector2f((float)mRect.x,(float)mRect.y ) / 
-							cVector2f((float)mvSourceSize.x,(float)mvSourceSize.y);
-
-
-		mvVtx[0].tex = cVector3f(vTexPos.x+kContractSize, vTexPos.y+kContractSize,0);
-		mvVtx[1].tex = cVector3f(vTexPos.x+vTexSize.x-kContractSize, vTexPos.y+kContractSize,0);
-		mvVtx[2].tex = cVector3f(vTexPos.x+vTexSize.x-kContractSize, vTexPos.y+vTexSize.y-kContractSize,0);
-		mvVtx[3].tex = cVector3f(vTexPos.x+kContractSize, vTexPos.y+vTexSize.y-kContractSize,0);
+		for(int i=0; i<4; ++i) mvVtx[i].tex = cVector3f(vUv[i].x, vUv[i].y, 0);
 	}
 	
 	//-----------------------------------------------------------------------
