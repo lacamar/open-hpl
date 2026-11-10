@@ -18,6 +18,7 @@
  */
 
 #include "graphics/RendererDeferred.h"
+#include "graphics/RustRendererDeferred.h"
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "math/Math.h"
@@ -63,6 +64,7 @@
 #include "scene/MeshEntity.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace hpl {
 
@@ -305,6 +307,18 @@ namespace hpl {
 	#define kVar_afSliceDiv							114
 	#define kVar_a_mtxLightViewProjSlice0			115 // ..118
 
+	static_assert(kVar_afKey == kOhplDrVar_afKey && kVar_afExposure == kOhplDrVar_afExposure && kVar_afWhiteCut == kOhplDrVar_afWhiteCut &&
+				  kVar_afInvGammaCorrection == kOhplDrVar_afInvGammaCorrection && kVar_avInvScreenSize == kOhplDrVar_avInvScreenSize &&
+				  kVar_avScreenToFarPlane == kOhplDrVar_avScreenToFarPlane && kVar_afT == kOhplDrVar_afT &&
+				  kVar_afBrightPass == kOhplDrVar_afBrightPass && kVar_avWeights == kOhplDrVar_avWeights &&
+				  kVar_avOffsets == kOhplDrVar_avOffsets && kVar_afIntensity == kOhplDrVar_afIntensity &&
+				  kVar_avTransform0 == kOhplDrVar_avTransform0 && kVar_avTransform1 == kOhplDrVar_avTransform1 &&
+				  kVar_avBloomTint == kOhplDrVar_avBloomTint && kVar_avSizeWeight == kOhplDrVar_avSizeWeight &&
+				  kVar_afGradingBlendWeight == kOhplDrVar_afGradingBlendWeight && kVar_afAlpha == kOhplDrVar_afAlpha &&
+				  kVar_afGradingMapAlpha0 == kOhplDrVar_afGradingMapAlpha0 && kVar_alGradingMapNum == kOhplDrVar_alGradingMapNum &&
+				  kVar_afGradingMapAlpha2 == kOhplDrVar_afGradingMapAlpha2 && kVar_afHdrHeadroom == kOhplDrVar_afHdrHeadroom,
+				  "kVar ids out of step with rust/src/render/deferred.rs");
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -358,6 +372,11 @@ namespace hpl {
 		mbBoxInstanceInputs = false;
 
 		mbReflectionTextureCleared = false;
+
+		OhplDrFilmGrain grain;
+		ohpl_dr_film_grain_init(&grain);
+		mfFilmGrainT = grain.t;
+		memcpy(mvFilmGrainTransform, grain.transform, sizeof(mvFilmGrainTransform));
 	}
 
 	//-----------------------------------------------------------------------
@@ -509,65 +528,19 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Create Shadow Textures
-		cVector3l vShadowSize[] = {
-									cVector3l(128, 128,1),
-									cVector3l(256, 256,1),
-									cVector3l(256, 256,1),
-									cVector3l(512, 512,1),
-									cVector3l(1024, 1024,1)
-		};
-		int lStartSize = 2;
-		if(mShadowMapResolution == eShadowMapResolution_Medium)		lStartSize = 1;
-		else if(mShadowMapResolution == eShadowMapResolution_Low)	lStartSize = 0;
+		OhplDrShadowCfg shadowCfg;
+		ohpl_dr_shadow_cfg((int)mShadowMapResolution, (int)mShadowMapQuality, mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_4) != 0, &shadowCfg);
 
 		// Depth16 shadow maps are never written on Mesa (asahi)
-        for(int i=0; i<1; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_High, vShadowSize[lStartSize + eShadowMapResolution_High],ePixelFormat_Depth24);
+		CreateAndAddShadowMap(eShadowMapResolution_High, cVector3l(shadowCfg.high.x, shadowCfg.high.y, 1),ePixelFormat_Depth24);
 		for(int i=0; i<4; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_Medium, vShadowSize[lStartSize + eShadowMapResolution_Medium],ePixelFormat_Depth24);
+			CreateAndAddShadowMap(eShadowMapResolution_Medium, cVector3l(shadowCfg.medium.x, shadowCfg.medium.y, 1),ePixelFormat_Depth24);
 		for(int i=0; i<6; ++i)
-			CreateAndAddShadowMap(eShadowMapResolution_Low, vShadowSize[lStartSize + eShadowMapResolution_Low],ePixelFormat_Depth24);
-		
-		
-		// Select samples depending quality and shader model (if dynamic branching is supported)
-        if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_4))
-		{
-			//High
-			if(mShadowMapQuality == eShadowMapQuality_High)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 32;	//64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-			}
-			//Medium
-			else if(mShadowMapQuality == eShadowMapQuality_Medium) {
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 16;
-			}
-			//Low
-			else {
-				mlShadowJitterSize = 0;
-				mlShadowJitterSamples = 0;
-			}
-		}
-		//No dynamic branching
-		else
-		{
-			//High
-			if(mShadowMapQuality == eShadowMapQuality_High)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 16;
-			}
-			//Medium
-			else if(mShadowMapQuality == eShadowMapQuality_Medium)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 4;
-			}
-			//Low
-			else {
-				mlShadowJitterSize = 0;
-				mlShadowJitterSamples = 0;
-			}
-		}
-		
+			CreateAndAddShadowMap(eShadowMapResolution_Low, cVector3l(shadowCfg.low.x, shadowCfg.low.y, 1),ePixelFormat_Depth24);
+
+		mlShadowJitterSize = shadowCfg.jitterSize;
+		mlShadowJitterSamples = shadowCfg.jitterSamples;
+
 		if(mShadowMapQuality != eShadowMapQuality_Low)
 		{
 			mpShadowJitterTexture = mpGraphics->CreateTexture("ShadowOffset", eTextureType_2D, eTextureUsage_Normal);
@@ -591,21 +564,18 @@ namespace hpl {
 			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);
 			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Color0, eVertexBufferElementFormat_Float, 4);
 			mpGlareVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
-			for(int y=0; y<20; ++y)
-			for(int x=0; x<20; ++x)
+			std::vector<float> vGlarePos(kOhplDrGlareVerts*3);
+			ohpl_dr_glare_positions(&vGlarePos[0], vGlarePos.size());
+			for(int i=0; i<kOhplDrGlareVerts; ++i)
 			{
-				cVector3f vPos(x/19.0f, y/19.0f, 0);
-				if(x*y*(19-x)*(19-y)) vPos += cMath::RandRectVector3f(cVector3f(-1/76.0f, -1/76.0f, 0), cVector3f(1/76.0f, 1/76.0f, 0));
+				cVector3f vPos(vGlarePos[i*3], vGlarePos[i*3+1], vGlarePos[i*3+2]);
 				mpGlareVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vPos);
 				mpGlareVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(0,1));
 				mpGlareVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, vPos);
 			}
-			for(int i=21; i<400; i+=20)
-			for(int j=i; j<i+19; ++j)
-			{
-				int vIdx[6] = {j-1, j-21, j, j, j-21, j-20};
-				for(int k : vIdx) mpGlareVtxBuffer->AddIndex(k);
-			}
+			std::vector<uint32_t> vGlareIdx(kOhplDrGlareIndices);
+			ohpl_dr_glare_indices(&vGlareIdx[0], vGlareIdx.size());
+			for(uint32_t lIdx : vGlareIdx) mpGlareVtxBuffer->AddIndex(lIdx);
 			mpGlareVtxBuffer->Compile(0);
 		}
 
@@ -999,16 +969,9 @@ namespace hpl {
 				if(mpDofBlurProgram->GetVariableAsId("afStrength",kVar_afWeight)) mpDofBlurProgram->SetFloat(kVar_afWeight, 1.0f);
 			}
 
-			int lRows = cMath::Max(1, lDofSamples/8);
-			float fScale = lDofSamples==4 ? 256.0f : lDofSamples * 1.41421356f * mvScreenSizeFloat.x / 1280.0f;
-			std::vector<float> vTable(64*lRows*4, 0.0f);
-			for(int j=0; j<lRows; ++j)
-			for(int x=1; x<64; ++x)
-			for(int c=0; c<4; ++c)
-			{
-				float k = (float)(4*j+1+c);
-				vTable[(j*64+x)*4+c] = expf(k*k*-64.0f*64.0f / ((float)(x*x)*fScale));
-			}
+			int lRows = ohpl_dr_dof_rows(lDofSamples);
+			std::vector<float> vTable((size_t)64*lRows*4, 0.0f);
+			ohpl_dr_dof_table(lDofSamples, mvScreenSizeFloat.x, &vTable[0], vTable.size());
 			mpDofGaussTexture = mpGraphics->CreateTexture("Guassian Lookup", eTextureType_2D, eTextureUsage_Normal);
 			mpDofGaussTexture->SetUseMipMaps(false);
 			mpDofGaussTexture->CreateFromRawData(cVector3l(64,lRows,1), ePixelFormat_RGBA16, (unsigned char*)&vTable[0]);
@@ -1032,14 +995,16 @@ namespace hpl {
 				mpH3SSAOBuffer[i]->CompileAndValidate();
 			}
 
-			cVector2l vMipSize(1 << (int)floorf(log2f((float)vSize.x) + 0.5f), 1 << (int)floorf(log2f((float)vSize.y) + 0.5f));
-			int lMips = cMath::Max(1, (int)log2f((float)cMath::Max(vMipSize.x, vMipSize.y)) - 4);
+			OhplDrSsaoMips ssaoMips;
+			ohpl_dr_ssao_mips(OhplVec2l{vSize.x, vSize.y}, &ssaoMips);
+			cVector2l vMipSize(ssaoMips.mipSize.x, ssaoMips.mipSize.y);
+			int lMips = ssaoMips.mips;
 			mpH3SSAOMipTexture = mpGraphics->CreateTexture("SSAOMip", eTextureType_2D, eTextureUsage_RenderTarget);
 			mpH3SSAOMipTexture->SetUseMipMaps(true);
 			mpH3SSAOMipTexture->CreateFromRawData(cVector3l(vMipSize.x, vMipSize.y, 1), ePixelFormat_RGB16, NULL);
 			mpH3SSAOMipTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 			mpH3SSAOMipTexture->SetFilter(eTextureFilter_Nearest);
-			int lMipLevels = (int)log2f((float)cMath::Max(vMipSize.x, vMipSize.y)) + 1;
+			int lMipLevels = ssaoMips.levels;
 			for(int i=0; i<lMipLevels; ++i)
 			{
 				iFrameBuffer *pFB = mpGraphics->CreateFrameBuffer("SSAOMip" + cString::ToString(i));
@@ -1171,8 +1136,8 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Batch vertex buffer
-		mlMaxBatchVertices = mpShapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * mlMaxBatchLights;
-		mlMaxBatchIndices = mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
+		ohpl_dr_batch_sizes(mpShapeSphere[eDeferredShapeQuality_Low]->GetVertexNum(), mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum(),
+							mlMaxBatchLights, &mlMaxBatchVertices, &mlMaxBatchIndices);
 		mpBatchBuffer = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Software,
 																eVertexBufferDrawType_Quad, eVertexBufferUsageType_Stream,
 																mlMaxBatchVertices,mlMaxBatchIndices);
@@ -1341,26 +1306,22 @@ namespace hpl {
 
 	void cRendererDeferred::DrawAccumulationQuad()
 	{
-		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
-		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
-		cVector2f vUvMin(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y );
-		cVector2f vUvMax(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y);
-		if(mGBufferTextureType != eTextureType_Rect)
-		{
-			vUvMin = vUvMin / mvScreenSizeFloat;
-			vUvMax = vUvMax / mvScreenSizeFloat;
-		}
-		DrawQuad(cVector2f(0,0),1, vUvMin, vUvMax, true);
+		OhplVec2f vUvMin, vUvMax;
+		ohpl_dr_accum_quad_uv(OhplVec2l{mpCurrentRenderTarget->mvPos.x, mpCurrentRenderTarget->mvPos.y}, OhplVec2l{mvRenderTargetSize.x, mvRenderTargetSize.y},
+							  OhplVec2f{mvScreenSizeFloat.x, mvScreenSizeFloat.y}, mGBufferTextureType == eTextureType_Rect, &vUvMin, &vUvMax);
+		DrawQuad(cVector2f(0,0),1, cVector2f(vUvMin.x, vUvMin.y), cVector2f(vUvMax.x, vUvMax.y), true);
 	}
 
 	// px_vPosition is gl_FragCoord in the whole G-buffer; a smaller target sits at its top left
 	void cRendererDeferred::SetScreenPositionVars(iGpuProgram *apProgram)
 	{
 		iTexture *pGBuffer = GetGbufferTexture(0);
-		cVector2f vScale((mfFarRight-mfFarLeft) / (float)mvRenderTargetSize.x, (mfFarBottom-mfFarTop) / (float)mvRenderTargetSize.y);
-		cVector2f vOrigin((float)mpCurrentRenderTarget->mvPos.x, (float)(pGBuffer->GetHeight() - mvRenderTargetSize.y - mpCurrentRenderTarget->mvPos.y));
-		apProgram->SetVec4f(kVar_avScreenToFarPlane, vScale.x, vScale.y, mfFarLeft - vOrigin.x*vScale.x, mfFarTop - vOrigin.y*vScale.y);
-		apProgram->SetVec2f(kVar_avInvScreenSize, 1.0f / (float)pGBuffer->GetWidth(), 1.0f / (float)pGBuffer->GetHeight());
+		OhplDrFarPlane far = {mfFarPlane, mfFarTop, mfFarBottom, mfFarRight, mfFarLeft};
+		float vToFar[4], vInvSize[2];
+		ohpl_dr_screen_position_vars(&far, OhplVec2l{mvRenderTargetSize.x, mvRenderTargetSize.y}, OhplVec2l{mpCurrentRenderTarget->mvPos.x, mpCurrentRenderTarget->mvPos.y},
+									 OhplVec2l{pGBuffer->GetWidth(), pGBuffer->GetHeight()}, vToFar, vInvSize);
+		apProgram->SetVec4f(kVar_avScreenToFarPlane, vToFar[0], vToFar[1], vToFar[2], vToFar[3]);
+		apProgram->SetVec2f(kVar_avInvScreenSize, vInvSize[0], vInvSize[1]);
 	}
 
 	void cRendererDeferred::CopyToFrameBuffer()
@@ -1373,235 +1334,104 @@ namespace hpl {
 	{
 		START_RENDER_PASS(CopyToFrameBuffer);
 
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+		iFrameBuffer *vFbs[kOhplDrFbCount] = {};
+		iTexture *vTexs[kOhplDrTexCount] = {};
+		iGpuProgram *vProgs[kOhplDrProgCount] = {};
+		vFbs[kOhplDrFbTarget] = apTarget;
+		vFbs[kOhplDrFbAccum] = mpAccumBuffer;
+		vTexs[kOhplDrTexAccum] = mpAccumBufferTexture;
+		vTexs[kOhplDrTexGrading] = mpColorGradingTexture;
+		vTexs[kOhplDrTexGradingTarget] = mpColorGradingTarget;
+		vTexs[kOhplDrTexNoise] = mpFilmGrainNoise;
+		vProgs[kOhplDrProgFxaa] = mpFxaaProgram;
+		vProgs[kOhplDrProgTrail] = mpImageTrailProgram;
+		vProgs[kOhplDrProgBright] = mpBloomBrightPassProgram;
+		vProgs[kOhplDrProgBlur0] = mpBloomBlurProgram[0];
+		vProgs[kOhplDrProgBlur1] = mpBloomBlurProgram[1];
 
-		iTexture *pSource = mpAccumBufferTexture;
-		if(mpToneMapProgram && mfImageTrailAlpha > 0 && mpImageTrailProgram && (mlDebugSkipPasses & 16) == 0)
-			RenderImageTrail();
-		if(mpToneMapProgram)
+		std::vector<float> vLayerWeights;
+		for(size_t i=0; i<mvColorGradingLayers.size(); ++i)
 		{
-			bool bFxaa = mpCurrentSettings->mbUseFxaa && mpFxaaProgram;
-			const float fHdrHeadroom = mpLowLevelGraphics->GetHdrHeadroom();
-			iFrameBuffer *pToneMapTarget = bFxaa ? mpGraphics->GetTempFrameBuffer(mvScreenSize,fHdrHeadroom > 1.0f ? ePixelFormat_RGBA16 : ePixelFormat_RGBA,5) : apTarget;
-			if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
-			else		SetFrameBuffer(pToneMapTarget,true);
-			SetFlatProjection();
-
-			bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
-			int lLayers = bHpl35 ? (int)mvColorGradingLayers.size() : 0;
-			int lCombo = (mpColorGradingTexture ? 1 : 0) | (mbBloom && mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1] ? 2 : 0) |
-						 (mpFilmGrainNoise ? 4 : 0) | (mbToneMapSRGB ? 8 : 0) | (mpColorGradingTexture && (mpColorGradingTarget || lLayers) ? 16 : 0) | (fHdrHeadroom > 1.0f ? 32 : 0);
-			iGpuProgram *pToneMap = GetToneMapProgram(lCombo);
-			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo &= 1);
-			if(pToneMap==NULL) pToneMap = GetToneMapProgram(lCombo = 0);
-			if(lCombo & 2)
-			{
-				RenderBloom();
-				if(bFxaa)	SetFrameBuffer(pToneMapTarget,false);
-				else		SetFrameBuffer(pToneMapTarget,true);
-				SetFlatProjection();
-			}
-
-			int lGradingUnit = bHpl35 ? 4 : 1, lBloomUnit = bHpl35 ? 1 : 4;
-			SetProgram(pToneMap);
-			pToneMap->SetFloat(kVar_afKey, mfToneMapKey);
-			pToneMap->SetFloat(kVar_afExposure, mfToneMapExposure);
-			pToneMap->SetFloat(kVar_afWhiteCut, mfToneMapWhiteCut);
-			pToneMap->SetFloat(kVar_afInvGammaCorrection, 1.0f / mfToneMapGamma);
-			if(lCombo & 32) pToneMap->SetFloat(kVar_afHdrHeadroom, fHdrHeadroom);
-			SetTexture(0,mpAccumBufferTexture);
-			SetTextureRange(NULL, 1);
-			if(lCombo & 1)
-			{
-				SetTexture(lGradingUnit, mpColorGradingTexture);
-				pToneMap->SetFloat(kVar_afGradingMapAlpha0, 1);
-				int lNum = 1;
-				if((lCombo & 16) && mpColorGradingTarget)
-				{
-					SetTexture(lGradingUnit+lNum++, mpColorGradingTarget);
-					pToneMap->SetFloat(kVar_afGradingBlendWeight, mfColorGradingBlend);
-				}
-				for(int i=0; (lCombo & 16) && i<lLayers && lNum<8; ++i, ++lNum)
-				{
-					SetTexture(lGradingUnit+lNum, mvColorGradingLayers[i].first);
-					pToneMap->SetFloat(lNum==1 ? kVar_afGradingBlendWeight : kVar_afGradingMapAlpha2+lNum-2, mvColorGradingLayers[i].second);
-				}
-				pToneMap->SetInt(kVar_alGradingMapNum, lNum);
-			}
-			if(lCombo & 2)
-			{
-				for(int i=0; i<3; ++i)
-					SetTexture(lBloomUnit+i, mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<i),ePixelFormat_RGBA16,11+2*i)->GetColorBuffer(0)->ToTexture());
-				pToneMap->SetVec4f(kVar_avBloomTint, mBloomTint.r*mBloomTint.r, mBloomTint.g*mBloomTint.g, mBloomTint.b*mBloomTint.b, mBloomTint.a);
-				cVector3f vSizeWeight;
-				for(int i=0; i<3; ++i)
-				{
-					float fW = cMath::Clamp((mfBloomWidth - (4<<i)) / (4<<i), 0.0f, 1.0f);
-					vSizeWeight.v[i] = fW*fW;
-				}
-				pToneMap->SetVec3f(kVar_avSizeWeight, vSizeWeight);
-			}
-			if(lCombo & 4)
-			{
-				if(mfFilmGrainT == -1)
-				{
-					RandomizeFilmGrain();
-					RandomizeFilmGrain();
-					mfFilmGrainT = 0;
-				}
-				float fT = mfFilmGrainT + mfCurrentFrameTime * 49.0f / kPif;
-				if((int)fT != (int)mfFilmGrainT) RandomizeFilmGrain();
-				mfFilmGrainT = fmodf(fT, 128);
-				float fI = mfFilmGrainIntensity;
-				if(bHpl35==false) SetTexture(3, mpFilmGrainNoise);
-				pToneMap->SetFloat(kVar_afT, fmodf(fT, 1));
-				pToneMap->SetFloat(kVar_afIntensity, cMath::Max(-1.0f, 3.51f*fI + (1.13f*fI - 3.51f*fI) * sqrtf(mfToneMapExposure*0.125f + 0.375f)));
-				const float *t0 = mvFilmGrainTransform[0], *t1 = mvFilmGrainTransform[1];
-				pToneMap->SetVec4f(kVar_avTransform0, t0[0], t0[1], t0[2], t0[3]);
-				pToneMap->SetVec4f(kVar_avTransform1, t1[0], t1[1], t1[2], t1[3]);
-				pToneMap->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
-			}
-			if(bFxaa)
-			{
-				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-				pSource = pToneMapTarget->GetColorBuffer(0)->ToTexture();
-			}
-			else
-			{
-				DrawAccumulationQuad();
-				pSource = NULL;
-			}
+			vLayerWeights.push_back(mvColorGradingLayers[i].second);
+			if(i < 8) vTexs[kOhplDrTexLayer0 + i] = mvColorGradingLayers[i].first;
 		}
 
-		if(pSource)
-		{
-			SetFrameBuffer(apTarget,true);
-			SetFlatProjection();
-			iGpuProgram *pCopyProgram = mpCurrentSettings->mbUseFxaa ? mpFxaaProgram : NULL;
-			SetProgram(pCopyProgram);
-			if(pCopyProgram)
-				pCopyProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
-			SetTexture(0,pSource);
-			SetTextureRange(NULL, 1);
-			DrawAccumulationQuad();
-		}
-		SetProgram(NULL);
+		OhplDrCopyIn in = {};
+		in.screen = OhplVec2l{mvScreenSize.x, mvScreenSize.y};
+		in.screenF = OhplVec2f{mvScreenSizeFloat.x, mvScreenSizeFloat.y};
+		in.rtPos = OhplVec2l{mpCurrentRenderTarget->mvPos.x, mpCurrentRenderTarget->mvPos.y};
+		in.rtSize = OhplVec2l{mvRenderTargetSize.x, mvRenderTargetSize.y};
+		in.rectType = mGBufferTextureType == eTextureType_Rect;
+		in.useFxaa = mpCurrentSettings->mbUseFxaa;
+		in.fxaaOk = mpFxaaProgram != NULL;
+		in.tonemapOk = mpToneMapProgram != NULL;
+		in.trailOk = mpImageTrailProgram != NULL;
+		in.hpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
+		in.grading = mpColorGradingTexture != NULL;
+		in.gradingTarget = mpColorGradingTarget != NULL;
+		in.noise = mpFilmGrainNoise != NULL;
+		in.bloom = mbBloom;
+		in.bloomProgramsOk = mpBloomBrightPassProgram && mpBloomBlurProgram[0] && mpBloomBlurProgram[1];
+		in.srgb = mbToneMapSRGB;
+		in.trailAlpha = mfImageTrailAlpha;
+		in.skipPasses = mlDebugSkipPasses;
+		in.noiseWidth = mpFilmGrainNoise ? mpFilmGrainNoise->GetWidth() : 0;
+		in.key = mfToneMapKey;
+		in.exposure = mfToneMapExposure;
+		in.whiteCut = mfToneMapWhiteCut;
+		in.gamma = mfToneMapGamma;
+		in.bloomBright = mfBloomBrightPass;
+		in.bloomWidth = mfBloomWidth;
+		in.bloomTint[0] = mBloomTint.r; in.bloomTint[1] = mBloomTint.g; in.bloomTint[2] = mBloomTint.b; in.bloomTint[3] = mBloomTint.a;
+		in.gradingBlend = mfColorGradingBlend;
+		in.filmIntensity = mfFilmGrainIntensity;
+		in.frameTime = mfCurrentFrameTime;
+		in.blurSamples = mlBloomBlurSamples;
+		in.layerWeights = vLayerWeights.empty() ? NULL : &vLayerWeights[0];
+		in.layerCount = vLayerWeights.size();
+
+		OhplDrFilmGrain grain;
+		grain.t = mfFilmGrainT;
+		memcpy(grain.transform, mvFilmGrainTransform, sizeof(grain.transform));
+		OhplDrPlan *pPlan = ohpl_dr_plan_copy_accum(&in, &grain);
+
+		RunPlan(pPlan, vFbs, vTexs, vProgs, false);
+
+		ohpl_dr_plan_film_grain(pPlan, &grain);
+		mfFilmGrainT = grain.t;
+		memcpy(mvFilmGrainTransform, grain.transform, sizeof(mvFilmGrainTransform));
+		if(ohpl_dr_plan_trail_consumed(pPlan)) mfImageTrailAlpha = 0;
+		ohpl_dr_plan_free(pPlan);
 
 		END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------
 
-	// SOMA's image trail runs on the HDR buffer, before cPostEffect_ToneMapping
-	void cRendererDeferred::RenderImageTrail()
-	{
-		iFrameBuffer *pTrail = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,8);
-		SetFrameBuffer(pTrail,false);
-		SetFlatProjection();
-		SetProgram(mpImageTrailProgram);
-		mpImageTrailProgram->SetFloat(kVar_afAlpha, cMath::Min(mfImageTrailAlpha, 1.0f));
-		// a zero blend factor keeps NaNs from the uninitialised buffer
-		SetBlendMode(mfImageTrailAlpha >= 1 ? eMaterialBlendMode_None : eMaterialBlendMode_Alpha);
-		SetTexture(0,mpAccumBufferTexture);
-		SetTextureRange(NULL, 1);
-		DrawAccumulationQuad();
-
-		SetFrameBuffer(mpAccumBuffer,false);
-		SetFlatProjection();
-		mpImageTrailProgram->SetFloat(kVar_afAlpha, 1.0f);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetTexture(0,pTrail->GetColorBuffer(0)->ToTexture());
-		DrawAccumulationQuad();
-		mfImageTrailAlpha = 0;
-	}
 
 	//-----------------------------------------------------------------------
 
-	// cPostEffect_ToneMapping::RenderBrightPass/RenderBlur: buffers 1/4,1/4,1/8,1/8,1/16,1/16, result in odd ones
-	void cRendererDeferred::RenderBloom()
-	{
-		iTexture *vTex[6];
-		iFrameBuffer *vFB[6];
-		for(int i=0; i<6; ++i)
-		{
-			vFB[i] = mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<(i/2)),ePixelFormat_RGBA16,10+i);
-			vTex[i] = vFB[i]->GetColorBuffer(0)->ToTexture();
-		}
-
-		SetFrameBuffer(vFB[1],false);
-		SetFlatProjection();
-		SetProgram(mpBloomBrightPassProgram);
-		mpBloomBrightPassProgram->SetFloat(kVar_afBrightPass, mfToneMapWhiteCut * 8 * mfBloomBrightPass);
-		mpBloomBrightPassProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f) / mvScreenSizeFloat);
-		SetTexture(0,mpAccumBufferTexture);
-		SetTextureRange(NULL, 1);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-
-		int lN = mlBloomBlurSamples;
-		std::vector<float> vWeights(lN), vOffsets[2] = {std::vector<float>(lN), std::vector<float>(lN)};
-		for(int lLevel=0; lLevel<3; ++lLevel)
-		{
-			if(lLevel>0)
-			{
-				// blur with only the centre tap = plain copy (fixed function doesn't texture here)
-				SetFrameBuffer(vFB[2*lLevel+1],false);
-				SetFlatProjection();
-				SetProgram(mpBloomBlurProgram[0]);
-				vWeights[0] = 1;
-				for(int i=1; i<lN; ++i) vWeights[i] = 0;
-				for(int i=0; i<lN; ++i) vOffsets[0][i] = 0;
-				mpBloomBlurProgram[0]->SetFloatArray(kVar_avWeights, &vWeights[0], lN);
-				mpBloomBlurProgram[0]->SetFloatArray(kVar_avOffsets, &vOffsets[0][0], lN);
-				SetTexture(0,vTex[2*lLevel-1]);
-				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-			}
-
-			float fS = cMath::Min(40.0f, mvScreenSizeFloat.x/1280.0f * mfBloomWidth / (float)(4<<lLevel));
-			cVector2f vInvSize = cVector2f(1.0f) / cVector2f((float)vTex[2*lLevel]->GetWidth(), (float)vTex[2*lLevel]->GetHeight());
-			vWeights[0] = 1;
-			vOffsets[0][0] = vOffsets[1][0] = 0;
-			float fSum = 1;
-			for(int i=1; i<lN; ++i)
-			{
-				float fX = 2.0f*i - 1;
-				float fA = expf(-fX*fX/fS), fB = expf(-(fX+1)*(fX+1)/fS);
-				vWeights[i] = fA + fB;
-				float fOffset = fB/(fA+fB) + fX;
-				vOffsets[0][i] = fOffset * vInvSize.y;
-				vOffsets[1][i] = fOffset * vInvSize.x;
-				fSum += 2*vWeights[i];
-			}
-			for(int i=0; i<lN; ++i) vWeights[i] /= fSum;
-
-			for(int lDir=0; lDir<2; ++lDir)
-			{
-				SetFrameBuffer(vFB[2*lLevel + lDir],false);
-				SetFlatProjection();
-				SetProgram(mpBloomBlurProgram[lDir]);
-				mpBloomBlurProgram[lDir]->SetFloatArray(kVar_avWeights, &vWeights[0], lN);
-				mpBloomBlurProgram[lDir]->SetFloatArray(kVar_avOffsets, &vOffsets[lDir][0], lN);
-				SetTexture(0,vTex[2*lLevel + 1 - lDir]);
-				DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-			}
-		}
-	}
 
 	iTexture* cRendererDeferred::GetDebugGBufferTexture(int alIdx)
 	{
-		if(alIdx>=100) { int r = (alIdx-100)/16, i = (alIdx-100)%16; return r < eShadowMapResolution_LastEnum && i < (int)mvShadowMapData[r].size() ? mvShadowMapData[r][i]->mpTexture : NULL; }
-		if(alIdx>=20 && alIdx<26) return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<((alIdx-20)/2)),ePixelFormat_RGBA16,alIdx-10)->GetColorBuffer(0)->ToTexture();
-		if(alIdx==13) return mpDirShadowData ? mpDirShadowData->mpTexture : NULL;
-		if(alIdx==14) return mpRefractionTexture;
-		if(alIdx==15) return GetReflectionTexture();
-		if(alIdx>=10) return alIdx-10 < eShadowMapResolution_LastEnum && !mvShadowMapData[alIdx-10].empty() ? mvShadowMapData[alIdx-10][0]->mpTexture : NULL;
-		if(alIdx==5) return mpBoxWeightTexture;
-		if(alIdx>=6 && alIdx<=8) return mpH3SSAOTexture[alIdx-6];
-		if(alIdx==9) return mpH3SSAOMipTexture;
-		return alIdx==4 ? mpAccumBufferTexture : GetBufferTexture(alIdx);
+		int vShadowCounts[3];
+		for(int r=0; r<3; ++r) vShadowCounts[r] = (int)mvShadowMapData[r].size();
+		OhplDrDebugTex tex;
+		ohpl_dr_debug_gbuffer_texture(alIdx, vShadowCounts, &tex);
+		switch(tex.kind)
+		{
+		case kOhplDrDebugShadow:		return mvShadowMapData[tex.a][tex.b]->mpTexture;
+		case kOhplDrDebugTemp:			return mpGraphics->GetTempFrameBuffer(mvScreenSize/(4<<tex.a),ePixelFormat_RGBA16,tex.b)->GetColorBuffer(0)->ToTexture();
+		case kOhplDrDebugDirShadow:		return mpDirShadowData ? mpDirShadowData->mpTexture : NULL;
+		case kOhplDrDebugRefraction:	return mpRefractionTexture;
+		case kOhplDrDebugReflection:	return GetReflectionTexture();
+		case kOhplDrDebugBoxWeight:		return mpBoxWeightTexture;
+		case kOhplDrDebugH3Ssao:		return mpH3SSAOTexture[tex.a];
+		case kOhplDrDebugH3Mip:			return mpH3SSAOMipTexture;
+		case kOhplDrDebugAccum:			return mpAccumBufferTexture;
+		case kOhplDrDebugBuffer:		return tex.a >= 0 && tex.a < 5 ? GetBufferTexture(tex.a) : NULL;
+		}
+		return NULL;
 	}
 
 	iGpuProgram* cRendererDeferred::GetToneMapProgram(int alCombo)
@@ -1610,14 +1440,12 @@ namespace hpl {
 		if(pProg) return pProg;
 
 		cParserVarContainer programVars;
-		programVars.Add("UseUv");
-		if(alCombo & 1) programVars.Add("UseColorGrading");
-		if(alCombo & 2) programVars.Add("UseBloom");
 		bool bHpl35 = mbHpl3SSAO && mbDepthInNormalAlpha==false;
-		if(alCombo & 4) programVars.Add(bHpl35 ? "UseNoise" : "UseFilmGrain");
-		if(alCombo & 8) programVars.Add("UseSRGB");
-		if(alCombo & 16) programVars.Add(bHpl35 ? "LayeredColorGrading" : "UseBlendGrading");
-		if(alCombo & 32) programVars.Add("UseHdrOutput");
+		static const char *vDefineNames[] = {"UseUv", "UseColorGrading", "UseBloom", "UseNoise", "UseFilmGrain", "UseSRGB",
+											 "LayeredColorGrading", "UseBlendGrading", "UseHdrOutput"};
+		int vDefines[16];
+		size_t lDefineNum = ohpl_dr_tonemap_defines(alCombo, bHpl35, vDefines, 16);
+		for(size_t i=0; i<lDefineNum && i<16; ++i) programVars.Add(vDefineNames[vDefines[i]]);
 		pProg = mpGraphics->CreateGpuProgramFromShaders("ToneMapping"+cString::ToString(alCombo),"deferred_base_vtx.glsl", "posteffect_tonemapping_frag.glsl",&programVars);
 		if(pProg==NULL) return NULL;
 		pProg->GetVariableAsId("afKey",kVar_afKey);
@@ -1640,17 +1468,6 @@ namespace hpl {
 		return pProg;
 	}
 
-	void cRendererDeferred::RandomizeFilmGrain()
-	{
-		float *t0 = mvFilmGrainTransform[0], *t1 = mvFilmGrainTransform[1];
-		float fOldX = t0[0], fOldY = t0[1];
-		for(int i=0; i<4; ++i) t0[i] = t1[i];
-		float fScale = mvScreenSizeFloat.x / (float)mpFilmGrainNoise->GetWidth();
-		t1[2] = (cMath::RandRectf(0,1) >= 0.5f ? 1 : -1) * fScale;
-		t1[3] = (cMath::RandRectf(0,1) >= 0.5f ? 1 : -1) * fScale;
-		t1[0] = fmodf(fOldX + cMath::RandRectf(0.25f,0.75f), 1);
-		t1[1] = fmodf(fOldY + cMath::RandRectf(0.25f,0.75f), 1);
-	}
 
 	//-----------------------------------------------------------------------
 	
@@ -1663,123 +1480,138 @@ namespace hpl {
 	
 	void cRendererDeferred::RenderObjects()
 	{
-		//Set up variables used in rendering later on.
-		SetupRenderVariables();
-		
-		//Set up the frame buffers needed for G-buffer
-		SetupGBuffer();
+		OhplDrObjectsIn in = {};
+		in.useOcclusionCulling = mpCurrentSettings->mbUseOcclusionCulling;
+		in.useDelayedOcclusion = mpCurrentSettings->mbUseDelayedOcclusionCulling;
+		in.debugRenderBuffers = mbDebugRenderFrameBuffers;
+		in.occlusionTestLargeLights = mbOcclusionTestLargeLights;
+		in.sendToPostEffects = mbSendFrameBufferToPostEffects;
+		in.tonemapOk = mpToneMapProgram != NULL;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.skipPasses = mlDebugSkipPasses;
+		RunPlan(ohpl_dr_plan_objects(in), NULL, NULL, NULL);
+	}
 
-		tRenderableFlag lVisibleFlags=0;
-		if(mpCurrentSettings->mbIsReflection)	lVisibleFlags |= eRenderableFlag_VisibleInReflection;
-		else									lVisibleFlags |= eRenderableFlag_VisibleInNonReflection;
-		
-		///////////////////////////
-		//Occlusion testing
-		if(mpCurrentSettings->mbUseOcclusionCulling)
+	void cRendererDeferred::RunStep(int alStep, int alArg)
+	{
+		tRenderableFlag lVisibleFlags = mpCurrentSettings->mbIsReflection ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
+
+		switch(alStep)
 		{
-			CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags, 
-														true, NULL);
-
-			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
-
-			SetupLightsAndRenderQueries();
-
+		case eOhplDrStep_SetupRenderVariables:		SetupRenderVariables(); break;
+		case eOhplDrStep_SetupGBuffer:				SetupGBuffer(); break;
+		case eOhplDrStep_CheckVisibleZ:				CheckForVisibleObjectsAddToListAndRenderZ(mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags, true, NULL); break;
+		case eOhplDrStep_CheckVisibleStatic:		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags); break;
+		case eOhplDrStep_CheckVisibleDynamic:		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags); break;
+		case eOhplDrStep_FetchDelayedOcclusion:		FetchDelayedOcclusionResults(); break;
+		case eOhplDrStep_AssignOcclusionQueries:	AssignAndRenderOcclusionQueryObjects(false, NULL, true); break;
+		case eOhplDrStep_SetupLights:				SetupLightsAndRenderQueries(); break;
+		case eOhplDrStep_CompileOcclusion:
 			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
 											eRenderListCompileFlag_Translucent |
 											eRenderListCompileFlag_Decal |
 											eRenderListCompileFlag_Illumination);
 			if(mbLog)mpCurrentRenderList->PrintAllObjects();
-			//RenderDynamicZTemp();
-
-		}
-		///////////////////////////
-		//Brute force
-		else
-		{
-			if(mpCurrentSettings->mbUseDelayedOcclusionCulling) FetchDelayedOcclusionResults();
-			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
-			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
-			
+			break;
+		case eOhplDrStep_CompileBruteForce:
 			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
 											eRenderListCompileFlag_Diffuse |
 											eRenderListCompileFlag_Translucent |
 											eRenderListCompileFlag_Decal |
 											eRenderListCompileFlag_Illumination);
 			if(mbLog)mpCurrentRenderList->PrintAllObjects();
-			RenderZ(); 
-			if(mpCurrentSettings->mbUseDelayedOcclusionCulling) RenderDelayedOcclusionQueries();
-
-			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
-
-			SetupLightsAndRenderQueries();
+			break;
+		case eOhplDrStep_RenderZ:					RenderZ(); break;
+		case eOhplDrStep_RenderDelayedOcclusionQueries:	RenderDelayedOcclusionQueries(); break;
+		case eOhplDrStep_RenderGbuffer:				RenderGbuffer(); break;
+		case eOhplDrStep_RenderGbufferContent:		RenderGbufferContent(); break;
+		case eOhplDrStep_RenderDecals:				RenderDecals(); break;
+		case eOhplDrStep_CallbackPostGBuffer:		RunCallback(eRendererMessage_PostGBuffer); break;
+		case eOhplDrStep_RenderLights:				RenderLights(); break;
+		case eOhplDrStep_RenderIllumination:		RenderIllumination(); break;
+		case eOhplDrStep_RenderFog:					RenderFog(); break;
+		case eOhplDrStep_RenderFullScreenFog:		RenderFullScreenFog(); break;
+		case eOhplDrStep_RenderEdgeSmooth:			RenderEdgeSmooth(); break;
+		case eOhplDrStep_RenderBasicSkyBox:			RenderBasicSkyBox(); break;
+		case eOhplDrStep_CallbackPostSolid:			RunCallback(eRendererMessage_PostSolid); break;
+		case eOhplDrStep_UpdateLensFlares:			UpdateLensFlares(); break;
+		case eOhplDrStep_RenderEnvironmentParticles:	RenderEnvironmentParticles(alArg != 0); break;
+		case eOhplDrStep_RenderTranslucent:			RenderTranslucent(alArg); break;
+		case eOhplDrStep_RenderDepthOfField:		RenderDepthOfField(); break;
+		case eOhplDrStep_RenderMultiIrisAndGlare:	RenderMultiIrisAndGlare(); break;
+		case eOhplDrStep_CallbackPostTranslucent:	RunCallback(eRendererMessage_PostTranslucent); break;
+		case eOhplDrStep_RetrieveLightOcclusion:	RetrieveAllLightOcclusionPair(false); break;
+		case eOhplDrStep_CopyAccumToPostEffects:	CopyAccumTo(mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,6)); break;
 		}
-		
-		RenderGbuffer();
-		if(mbDebugRenderFrameBuffers)
+	}
+
+	void cRendererDeferred::RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree)
+	{
+		auto Fb = [&](int i) { return i >= 0 ? apFbs[i] : (iFrameBuffer*)NULL; };
+		auto Tex = [&](int i) { return i >= 0 ? apTexs[i] : (iTexture*)NULL; };
+		auto Prog = [&](int i) { return i >= 0 ? apProgs[i] : (iGpuProgram*)NULL; };
+		OhplDrOp op;
+		while(ohpl_dr_plan_next(apPlan, &op))
 		{
-			RenderGbufferContent();
-			return;
+			switch(op.kind)
+			{
+			case eOhplDrOp_State:
+				switch(op.a)
+				{
+				case eOhplDrState_DepthTest:	SetDepthTest(op.b != 0); break;
+				case eOhplDrState_DepthWrite:	SetDepthWrite(op.b != 0); break;
+				case eOhplDrState_DepthFunc:	SetDepthTestFunc(op.b == kOhplDrFuncEqual ? eDepthTestFunc_Equal : eDepthTestFunc_LessOrEqual); break;
+				case eOhplDrState_Blend:		SetBlendMode(op.b == kOhplDrBlendAlpha ? eMaterialBlendMode_Alpha : eMaterialBlendMode_None); break;
+				case eOhplDrState_Alpha:		SetAlphaMode(eMaterialAlphaMode_Solid); break;
+				case eOhplDrState_Channel:		SetChannelMode(op.b == kOhplDrChannelNone ? eMaterialChannelMode_None : eMaterialChannelMode_RGBA); break;
+				}
+				break;
+			case eOhplDrOp_FlatProjection:		SetFlatProjection(); break;
+			case eOhplDrOp_SetFb:				SetFrameBuffer(Fb(op.a), op.b != 0); break;
+			case eOhplDrOp_TexRangeNull:		SetTextureRange(NULL, op.a); break;
+			case eOhplDrOp_Program:				SetProgram(Prog(op.a)); break;
+			case eOhplDrOp_Tex:					SetTexture(op.a, Tex(op.b)); break;
+			case eOhplDrOp_AcquireTemp:
+			{
+				iFrameBuffer *pFb = mpGraphics->GetTempFrameBuffer(cVector2l(op.c, op.d), (op.e & 0xff) == kOhplDrFormatRgba16 ? ePixelFormat_RGBA16 : ePixelFormat_RGBA, op.e >> 8);
+				apFbs[op.a] = pFb;
+				apTexs[op.b] = pFb ? pFb->GetColorBuffer(0)->ToTexture() : NULL;
+				break;
+			}
+			case eOhplDrOp_Float:				Prog(op.a)->SetFloat(op.b, op.f[0]); break;
+			case eOhplDrOp_Int:					Prog(op.a)->SetInt(op.b, op.c); break;
+			case eOhplDrOp_Vec2:				Prog(op.a)->SetVec2f(op.b, cVector2f(op.f[0], op.f[1])); break;
+			case eOhplDrOp_Vec3:				Prog(op.a)->SetVec3f(op.b, cVector3f(op.f[0], op.f[1], op.f[2])); break;
+			case eOhplDrOp_Vec4:				Prog(op.a)->SetVec4f(op.b, op.f[0], op.f[1], op.f[2], op.f[3]); break;
+			case eOhplDrOp_FloatArr:			Prog(op.a)->SetFloatArray(op.b, ohpl_dr_plan_array(apPlan, op.c), op.d); break;
+			case eOhplDrOp_Quad:				DrawQuad(cVector2f(0,0),1, cVector2f(op.f[0], op.f[1]), cVector2f(op.f[2], op.f[3]), true); break;
+			case eOhplDrOp_SetGBuffer:			SetGBuffer((eGBufferComponents)op.a); break;
+			case eOhplDrOp_ClearDepthValue:		mpLowLevelGraphics->SetClearDepth(op.f[0]); break;
+			case eOhplDrOp_ClearColorValue:		mpLowLevelGraphics->SetClearColor(cColor(op.f[0], op.f[1], op.f[2], op.f[3])); break;
+			case eOhplDrOp_ClearColorSettings:	mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor); break;
+			case eOhplDrOp_ClearFb:
+				ClearFrameBuffer(((op.a & kOhplDrClearDepth) ? eClearFrameBufferFlag_Depth : 0) | ((op.a & kOhplDrClearColor) ? eClearFrameBufferFlag_Color : 0), op.b != 0);
+				break;
+			case eOhplDrOp_Ask:
+				switch(op.a)
+				{
+				case eOhplDrQuery_Headroom:		ohpl_dr_plan_feed_float(apPlan, mpLowLevelGraphics->GetHdrHeadroom()); break;
+				case eOhplDrQuery_FogAfterAreas:	ohpl_dr_plan_feed_bool(apPlan, mpCurrentWorld->GetFogApplyAfterFogAreas()); break;
+				case eOhplDrQuery_FogIsSkybox:
+					ohpl_dr_plan_feed_bool(apPlan, WorldFogActive() && mpCurrentWorld->GetFogUseSkybox() &&
+												   mpCurrentWorld->GetFogSkyboxTexture() == mpCurrentWorld->GetSkyBoxTexture());
+					break;
+				case eOhplDrQuery_DepthOfField:	ohpl_dr_plan_feed_bool(apPlan, DepthOfFieldIsActive()); break;
+				}
+				break;
+			case eOhplDrOp_TryToneMap:
+				apProgs[kOhplDrProgTonemap] = GetToneMapProgram(op.a);
+				ohpl_dr_plan_feed_bool(apPlan, apProgs[kOhplDrProgTonemap] != NULL);
+				break;
+			case eOhplDrOp_Step:				RunStep(op.a, op.b); break;
+			}
 		}
-		
-		if(!(mlDebugSkipPasses & 1)) RenderDecals();
-
-		RunCallback(eRendererMessage_PostGBuffer);
-
-		//RenderDeferredSkyBox();
-
-		/*if(mpCurrentSettings->mbIsReflection)
-		{
-			RenderGbufferContent(); //Debug, used to see what gbuffers contain
-			return;
-		}*/
-		RenderLights();
-		
-		//Debug:
-		//RenderSSAO();
-		//return;
-
-
-		if(!(mlDebugSkipPasses & 2)) RenderIllumination();
-
-		if(mpCurrentWorld->GetFogApplyAfterFogAreas())	{ RenderFog(); RenderFullScreenFog(); }
-		else											{ RenderFullScreenFog(); RenderFog(); }
-
-		RenderEdgeSmooth();
-
-		#ifndef kDebug_RenderLightData
-		bool bFogIsSkybox = WorldFogActive() && mpCurrentWorld->GetFogUseSkybox() &&
-							mpCurrentWorld->GetFogSkyboxTexture() == mpCurrentWorld->GetSkyBoxTexture();
-		if(!(mlDebugSkipPasses & 4) && !bFogIsSkybox) RenderBasicSkyBox();
-		#endif
-
-		RunCallback(eRendererMessage_PostSolid);
-		UpdateLensFlares();
-		
-		// HPL3: translucents reaching past the focus end are blurred with the solids
-		bool bDof = DepthOfFieldIsActive();
-		if(!(mlDebugSkipPasses & 8)) RenderEnvironmentParticles(true);
-		if(!(mlDebugSkipPasses & 8) && bDof) RenderTranslucent(1);
-
-		if(!(mlDebugSkipPasses & 32)) RenderDepthOfField();
-
-		if(!(mlDebugSkipPasses & 8)) RenderTranslucent(bDof ? 2 : 0);
-		if(!(mlDebugSkipPasses & 8) && bDof) RenderEnvironmentParticles(false);
-
-		RenderMultiIrisAndGlare();
-		RunCallback(eRendererMessage_PostTranslucent);
-
-		if(mbOcclusionTestLargeLights)
-			RetrieveAllLightOcclusionPair(false); //false = we do not stop and wait.
-
-		if(mbSendFrameBufferToPostEffects && mpToneMapProgram && mpCurrentSettings->mbIsReflection==false)
-			CopyAccumTo(mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,6));
-
-		//Debug for testing reflection!
-		/*if(mpCurrentSettings->mbIsReflection==false)
-		{
-			RenderReflectionContent();
-			return;
-		}*/
+		if(abFree) ohpl_dr_plan_free(apPlan);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1787,32 +1619,7 @@ namespace hpl {
 	void cRendererDeferred::SetupGBuffer()
 	{
 		START_RENDER_PASS(GBufferSetup);
-		/////////////////////////////
-		// Set G-Buffer as frame buffer (need to set something with color else textures will not be used and alpha will not work!)
-		SetGBuffer(eGBufferComponents_Full);
-
-		/////////////////////////////
-		// Clear depth (no need to clear any of the textures!)
-		
-		mpLowLevelGraphics->SetClearDepth(1);
-		if(mGBufferType == eDeferredGBuffer_64Bit)
-		{
-			mpLowLevelGraphics->SetClearColor(cColor(0,0,1,1));
-			ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
-			// lights discard depth 1
-			if(mlLinearDepthTextureIdx != 2)
-			{
-				SetGBuffer(eGBufferComponents_LinearDepth);
-				mpLowLevelGraphics->SetClearColor(cColor(1,1));
-				ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
-				SetGBuffer(eGBufferComponents_Full);
-			}
-			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
-		}
-		else
-		{
-			ClearFrameBuffer(eClearFrameBufferFlag_Depth, true);
-		}
+		RunPlan(ohpl_dr_plan_setup_gbuffer(mGBufferType == eDeferredGBuffer_64Bit, mlLinearDepthTextureIdx), NULL, NULL, NULL);
 		END_RENDER_PASS();
 	}
 
@@ -1820,13 +1627,13 @@ namespace hpl {
 
 	void cRendererDeferred::SetupRenderVariables()
 	{
-		//////////////////////////////
-		//Setup far plane coordinates
-		mfFarPlane = mpCurrentFrustum->GetFarPlane();
-		mfFarTop = -tan(mpCurrentFrustum->GetFOV()*0.5f) * mfFarPlane;
-		mfFarBottom = -mfFarTop;
-		mfFarRight = mfFarBottom * mpCurrentFrustum->GetAspect(); 
-		mfFarLeft = -mfFarRight;
+		OhplDrFarPlane far;
+		ohpl_dr_far_plane(mpCurrentFrustum->GetFOV(), mpCurrentFrustum->GetAspect(), mpCurrentFrustum->GetFarPlane(), &far);
+		mfFarPlane = far.plane;
+		mfFarTop = far.top;
+		mfFarBottom = far.bottom;
+		mfFarRight = far.right;
+		mfFarLeft = far.left;
 	}
 	
 	//-----------------------------------------------------------------------
@@ -1835,13 +1642,7 @@ namespace hpl {
 	{
 		START_RENDER_PASS(EarlyZ);
 
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
+		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_ZBegin), NULL, NULL, NULL);
 
 		cRenderableVecIterator zIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Z);
 		while(zIt.HasNext())
@@ -1903,12 +1704,7 @@ namespace hpl {
 	{
 		START_RENDER_PASS(GBuffer);
 
-		SetDepthTestFunc(eDepthTestFunc_Equal);
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_GbufferBegin), NULL, NULL, NULL);
 
 		
 		////////////////////////////////////
@@ -1930,7 +1726,7 @@ namespace hpl {
 			DrawCurrentMaterial(eMaterialRenderMode_Diffuse, pObject);
 		}
 		
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_GbufferEnd), NULL, NULL, NULL);
 
 		END_RENDER_PASS();
 	}

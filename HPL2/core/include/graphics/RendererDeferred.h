@@ -21,6 +21,7 @@
 #define HPL_RENDERER_DEFERRED_H
 
 #include "graphics/Renderer.h"
+#include "graphics/RustRendererDeferred.h"
 #include "math/Frustum.h"
 
 namespace hpl {
@@ -214,7 +215,6 @@ namespace hpl {
 		void SetScreenPositionVars(iGpuProgram *apProgram);
 		void CopyToFrameBuffer();
 		void CopyAccumTo(iFrameBuffer *apTarget);
-		void RenderImageTrail();
 		void SetupRenderList();
 		void RenderObjects();
 
@@ -376,8 +376,8 @@ namespace hpl {
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
-		void RenderBloom();
-		void RandomizeFilmGrain();
+		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true);
+		void RunStep(int alStep, int alArg);
 		iGpuProgram* GetToneMapProgram(int alCombo);
 
 		iGpuProgram *mpToneMapProgram;
