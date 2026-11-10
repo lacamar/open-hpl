@@ -7,7 +7,7 @@ pub mod font;
 pub mod formats;
 pub mod packer;
 pub mod scatter;
-mod stdsort;
+pub(crate) mod stdsort;
 pub mod uv;
 
 #[cfg(test)]
