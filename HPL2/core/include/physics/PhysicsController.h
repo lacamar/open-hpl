@@ -26,6 +26,8 @@
 
 #include "engine/SaveGame.h"
 
+struct OhplPid;
+
 namespace hpl {
 
 	//-------------------------------------------
@@ -86,6 +88,7 @@ namespace hpl {
 
 	class iPhysicsController
 	{
+	friend struct cRustPhysicsAccess;
 	public:
 		iPhysicsController(const tString &asName, iPhysicsWorld *apWorld);
 		virtual ~iPhysicsController();
@@ -141,13 +144,8 @@ namespace hpl {
 
 		void SetPaused(bool abX){mbPaused = abX;}
 
-	protected:
-		cVector3f GetInputValue(ePhysicsControllerInput aInput);
-		float GetOutputValue(float afError,float afInput, float afTimeStep);
-		void AddOutputValue(ePhysicsControllerOutput aOutput, ePhysicsControllerAxis aAxis,
-							float afVal);
-		float GetAxisValue(ePhysicsControllerAxis aAxis, const cVector3f &avVec);
 
+	protected:
 		iPhysicsWorld *mpWorld;
 		tString msName;
 
@@ -173,7 +171,7 @@ namespace hpl {
 
 		tString msNextController;
 
-		cPidControllerf mPidController;
+		OhplPid *mpPid;
 
 		bool mbActive;
 		bool mbPaused;

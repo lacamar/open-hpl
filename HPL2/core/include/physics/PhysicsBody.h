@@ -76,6 +76,7 @@ namespace hpl {
 
 	class iPhysicsBody : public iEntity3D
 	{
+	friend struct cRustPhysicsAccess;
 	#ifdef __GNUC__
 		typedef iEntity3D __super;
 	#endif
