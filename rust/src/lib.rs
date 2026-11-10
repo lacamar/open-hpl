@@ -15,6 +15,7 @@
     )
 )]
 
+pub mod ai;
 pub mod binary_buffer;
 pub mod crc;
 pub mod entity_loader;

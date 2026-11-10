@@ -42,6 +42,10 @@ namespace hpl {
 	
 	cAINode::cAINode()
 	{
+		mlID = 0;
+		mlIdx = -1;
+		mpGraph = NULL;
+		mpUserData = NULL;
 	}
 
 	//-----------------------------------------------------------------------
@@ -61,6 +65,8 @@ namespace hpl {
 		Edge.mfSqrDistance = cMath::Vector3DistSqr(mvPosition, pNode->mvPosition);
 		
 		mvEdges.push_back(Edge);
+
+		if(mpGraph && pNode->mlIdx >= 0) ohpl_ai_graph_connect(mpGraph, (uint32_t)mlIdx, (uint32_t)pNode->mlIdx);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -133,102 +139,33 @@ namespace hpl {
 
 	cAINodeIterator::cAINodeIterator(cAINodeContainer *apContainer, const cVector3f &avPos, float afRadius)
 	{
-		mpContainer = apContainer;
-		mvPosition = avPos;
-		mfRadius = afRadius;
-		
-		//Calculate local position
-		cVector2f vLocalPos(mvPosition.x, mvPosition.z);
-		vLocalPos -= mpContainer->mvMinGridPos;
-		
-		cVector2f vLocalStart = vLocalPos - cVector2f(afRadius);
-		cVector2f vLocalEnd = vLocalPos + cVector2f(afRadius);
+		mlPos = 0;
 
-		mvStartGridPos = mpContainer->GetGridPosFromLocal(vLocalStart);
-		mvEndGridPos =  mpContainer->GetGridPosFromLocal(vLocalEnd);
-		mvGridPos = mvStartGridPos;
+		size_t lCount = ohpl_ai_graph_query(apContainer->mpGraph, &avPos, afRadius);
+		std::vector<uint32_t> vIdx(lCount);
+		ohpl_ai_graph_result(apContainer->mpGraph, vIdx.data(), lCount);
 
-		mpNodeList = &mpContainer->GetGrid(mvGridPos)->mlstNodes;
-		while(mpNodeList->empty())
+		mvNodes.reserve(lCount);
+		for(size_t i=0; i<lCount; ++i)
 		{
-			if(IncGridPos())
-			{
-				mpNodeList = &mpContainer->GetGrid(mvGridPos)->mlstNodes;
-			}
-			else
-			{
-				mpNodeList = NULL;
-				break;
-			}
+			mvNodes.push_back(apContainer->mvNodes[vIdx[i]]);
 		}
-
-		if(mpNodeList){
-			mNodeIt = mpNodeList->begin();
-		}
-		
-		//Log("--------------------------------------\n");
-		//Log("Iterating (%d %d) -> (%d %d)\n",	mvStartGridPos.x,mvStartGridPos.y,
-		//										mvEndGridPos.x,mvEndGridPos.y);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cAINodeIterator::HasNext()
 	{
-		if(mpNodeList==NULL || mpNodeList->empty()) return false;
-
-		return true;
+		return mlPos < mvNodes.size();
 	}
 
 	//-----------------------------------------------------------------------
 
 	cAINode *cAINodeIterator::Next()
 	{
-		cAINode* pNode = *mNodeIt;
+		if(mlPos >= mvNodes.size()) return NULL;
 
-		++mNodeIt;
-		if(mNodeIt == mpNodeList->end())
-		{
-			if(IncGridPos())
-			{
-				mpNodeList = &mpContainer->GetGrid(mvGridPos)->mlstNodes;
-				while(mpNodeList->empty())
-				{
-					if(IncGridPos()){
-						mpNodeList = &mpContainer->GetGrid(mvGridPos)->mlstNodes;
-					}
-					else{
-                        mpNodeList = NULL;
-						break;
-					}
-				}
-			}
-			else
-			{
-				mpNodeList = NULL;
-			}
-			
-			if(mpNodeList) mNodeIt = mpNodeList->begin();
-		}
-		
-		return pNode;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cAINodeIterator::IncGridPos()
-	{
-		mvGridPos.x++;
-		if(mvGridPos.x > mvEndGridPos.x)
-		{
-			mvGridPos.x = mvStartGridPos.x;
-			mvGridPos.y++;
-			if(mvGridPos.y > mvEndGridPos.y){
-				return false;
-			}
-		}
-
-		return true;
+		return mvNodes[mlPos++];
 	}
 
 	//-----------------------------------------------------------------------
@@ -248,15 +185,17 @@ namespace hpl {
 		msNodeName = asNodeName;
 
 		mpRayCallback = hplNew( cAINodeRayCallback, () );
+		mpFreePathCallback = NULL;
+		mpGraph = ohpl_ai_graph_new(CastRay, this, &mvSize);
 
 		mlMaxNodeEnds = 5;
 		mlMinNodeEnds = 2;
 		mfMaxEndDistance = 3.0f;
 		mfMaxHeight = 0.1f;
 
-		mlNodesPerGrid = 6;
-
 		mbNodeIsAtCenter = true;
+
+		SyncParams();
 	}
 
 	//-----------------------------------------------------------------------
@@ -264,6 +203,7 @@ namespace hpl {
 	cAINodeContainer::~cAINodeContainer()
 	{
 		hplDelete(mpRayCallback);
+		ohpl_ai_graph_free(mpGraph);
 
 		STLDeleteAll(mvNodes);
 	}	
@@ -290,6 +230,9 @@ namespace hpl {
 		pNode->mlID = alID;
 		pNode->mvPosition = avPosition;
 		pNode->mpUserData = apUserData;
+		pNode->mlIdx = (int)mvNodes.size();
+		pNode->mpGraph = mpGraph;
+		ohpl_ai_graph_add_node(mpGraph, &avPosition, (uint64_t)(uintptr_t)pNode);
 
 		mvNodes.push_back(pNode);
 		m_mapNodesByName.insert(tAINodeNameMap::value_type(asName,pNode));
@@ -329,167 +272,31 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	class cSortEndNodes
-	{
-	public:
-		bool operator()(const cAINodeEdge &aEndA, const cAINodeEdge &aEndB)
-		{
-			return aEndA.mfDistance < aEndB.mfDistance;
-		}
-	};
-
 	void cAINodeContainer::Compile()
 	{
-		BuildNodeGridMap();
+		ohpl_ai_graph_compile(mpGraph);
 
-		tAINodeVecIt CurrentNodeIt = mvNodes.begin();
-		for(; CurrentNodeIt != mvNodes.end(); ++CurrentNodeIt)
+		for(size_t i=0; i<mvNodes.size(); ++i)
 		{
-			cAINode *pNode = *CurrentNodeIt;
-			
-			////////////////////////////////////////
-			//Add the ends that are connected to the node.
-			/*Log("Node %s checks: ",pNode->GetName().c_str());
-			tAINodeVecIt EndNodeIt = mvNodes.begin();
-			for(; EndNodeIt != mvNodes.end(); ++EndNodeIt)
+			cAINode *pNode = mvNodes[i];
+			uint32_t lCount = ohpl_ai_graph_edge_count(mpGraph, (uint32_t)i);
+			pNode->mvEdges.clear();
+			for(uint32_t e=0; e<lCount; ++e)
 			{
-				cAINode *pEndNode = *EndNodeIt;
-
-				if(pEndNode == pNode) continue;				
-				float fDist = cMath::Vector3Dist(pNode->mvPosition, pEndNode->mvPosition);
-				if(fDist > mfMaxEndDistance*2) continue;
-				Log("'%s'(%f) ",pEndNode->GetName().c_str(),fDist);
-
-				float fHeight = fabs(pNode->mvPosition.y - pEndNode->mvPosition.y);
-
-				if(	fHeight <= mfMaxHeight &&
-				FreePath(pNode->mvPosition, pEndNode->mvPosition,-1,eAIFreePathFlag_SkipDynamic))
-				{
-				pNode->AddEdge(pEndNode);	
-				Log("Added!");
-				}
-				Log(", ");
+				uint32_t lTo;
+				cAINodeEdge Edge;
+				ohpl_ai_graph_edge(mpGraph, (uint32_t)i, e, &lTo, &Edge.mfDistance, &Edge.mfSqrDistance);
+				Edge.mpNode = mvNodes[lTo];
+				pNode->mvEdges.push_back(Edge);
 			}
-			Log("\n");*/
-			//Log("Node %s checks: ",pNode->GetName().c_str());
-			cAINodeIterator nodeIt = GetNodeIterator(pNode->mvPosition,mfMaxEndDistance*1.5f);
-			while(nodeIt.HasNext())
-			{
-				cAINode *pEndNode = nodeIt.Next();
-
-                if(pEndNode == pNode) continue;				
-				float fDist = cMath::Vector3Dist(pNode->mvPosition, pEndNode->mvPosition);
-				if(fDist > mfMaxEndDistance*2) continue;
-				//Log("'%s'(%f) ",pEndNode->GetName().c_str(),fDist);
-                				
-				float fHeight = fabs(pNode->mvPosition.y - pEndNode->mvPosition.y);
-				
-				tAIFreePathFlag flag = eAIFreePathFlag_SkipDynamic | eAIFreePathFlag_SkipVolatile;
-				if(	fHeight <= mfMaxHeight &&
-					FreePath(pNode->mvPosition, pEndNode->mvPosition,-1,flag))
-				{
-					pNode->AddEdge(pEndNode);	
-					//Log("Added!");
-				}
-				//Log(", ");
-			}
-			//Log("\n");
-
-			
-			///////////////////////////////////////
-			//Sort nodes and remove unwanted ones.
-			std::sort(pNode->mvEdges.begin(), pNode->mvEdges.end(), cSortEndNodes());
-
-			//Resize if to too large
-			if(mlMaxNodeEnds > 0 && (int)pNode->mvEdges.size() > mlMaxNodeEnds) 
-			{
-				pNode->mvEdges.resize(mlMaxNodeEnds);
-			}
-
-			//Remove ends to far, but skip if min nodes is not met
-			for(size_t i=0; i< pNode->mvEdges.size(); ++i)
-			{
-				if( pNode->mvEdges[i].mfDistance > mfMaxEndDistance && (int)i >= mlMinNodeEnds)
-				{
-					pNode->mvEdges.resize(i);
-					break;
-				}
-			}
-
-			//Log("  Final edge count: %d\n",pNode->mvEdges.size());
-		}	
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cAINodeContainer::BuildNodeGridMap()
 	{
-		bool bLog=false;
-
-		if(bLog)Log("Nodes: %d\n",mvNodes.size());
-
-		////////////////////////////////////
-		// Calculate min and max
-		cVector2f vMin(mvNodes[0]->GetPosition().x,mvNodes[0]->GetPosition().z);
-		cVector2f vMax(mvNodes[0]->GetPosition().x,mvNodes[0]->GetPosition().z);
-
-		for(size_t i=1; i< mvNodes.size(); ++i)
-		{
-			cAINode *pNode = mvNodes[i];
-
-			if(vMin.x > pNode->GetPosition().x) vMin.x = pNode->GetPosition().x;
-			if(vMin.y > pNode->GetPosition().z) vMin.y = pNode->GetPosition().z;
-
-			if(vMax.x < pNode->GetPosition().x) vMax.x = pNode->GetPosition().x;
-			if(vMax.y < pNode->GetPosition().z) vMax.y = pNode->GetPosition().z;
-		}
-
-		mvMinGridPos = vMin;
-		mvMaxGridPos = vMax;
-
-		////////////////////////////////////
-		// Determine size of grids 
-		int lGridNum = (int)(sqrt((float)mvNodes.size() / (float)mlNodesPerGrid)+0.5f)+1;
-
-		if(bLog)Log("Grid Num: %d\n",lGridNum);
-
-		mvGridMapSize.x = lGridNum;
-		mvGridMapSize.y = lGridNum;
-		
-		//+1 to fix so that nodes on the border has a grid)
-		mvGrids.resize((lGridNum+1) * (lGridNum+1));
-
-		mvGridSize = (mvMaxGridPos - mvMinGridPos);
-		mvGridSize.x /= (float)mvGridMapSize.x;
-		mvGridSize.y /= (float)mvGridMapSize.y;
-
-		if(bLog)Log("GridSize: %f : %f\n",mvGridSize.x,mvGridSize.y);
-		if(bLog)Log("MinPos: %s\n",mvMinGridPos.ToString().c_str());
-		if(bLog)Log("MaxPos: %s\n",mvMaxGridPos.ToString().c_str());
-		
-		////////////////////////////////////
-		// Add nodes to grid
-		for(size_t i=0; i< mvNodes.size(); ++i)
-		{
-			cAINode *pNode = mvNodes[i];
-
-			cVector2f vLocalPos(pNode->GetPosition().x, pNode->GetPosition().z);
-			vLocalPos -= mvMinGridPos;
-            
-            cVector2l vGridPos(0);
-			//Have checks so we are sure there is no division by zero.
-			if(mvGridSize.x >0)
-				vGridPos.x = (int)(vLocalPos.x / mvGridSize.x);
-			if(mvGridSize.y >0)
-				vGridPos.y = (int)(vLocalPos.y / mvGridSize.y);
-
-			if(false)Log("Adding node %d, world: (%s) local (%s), at %d : %d\n",i,
-												pNode->GetPosition().ToString().c_str(),
-												vLocalPos.ToString().c_str(),
-												vGridPos.x,vGridPos.y);
-
-			mvGrids[vGridPos.y * (mvGridMapSize.x+1) + vGridPos.x].mlstNodes.push_back(pNode);
-		}
+		ohpl_ai_graph_build_grid(mpGraph);
 	}
 
 	//-----------------------------------------------------------------------
@@ -501,55 +308,40 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static const cVector2f gvPosAdds[] = {cVector2f(0,0),
-										cVector2f(1,0),
-										cVector2f(-1,0),
-										cVector2f(0,1),
-										cVector2f(0,-1)
-	};	
-	
-	bool cAINodeContainer::FreePath(const cVector3f &avStart, const cVector3f &avEnd, int alRayNum, 
+	bool cAINodeContainer::CastRay(void *apContainer, unsigned int alFlags, const cVector3f *apStart, const cVector3f *apEnd)
+	{
+		cAINodeContainer *pContainer = (cAINodeContainer*)apContainer;
+		iPhysicsWorld *pPhysicsWorld = pContainer->mpWorld->GetPhysicsWorld();
+		if(pPhysicsWorld==NULL) return false;
+
+		cAINodeRayCallback *pRayCallback = pContainer->mpRayCallback;
+		pRayCallback->SetFlags(alFlags);
+		pRayCallback->Reset();
+		pRayCallback->mpCallback = pContainer->mpFreePathCallback;
+
+		pPhysicsWorld->CastRay(pRayCallback,*apStart,*apEnd,false,false,false,true);
+
+		return pRayCallback->Intersected();
+	}
+
+	//-----------------------------------------------------------------------
+
+	bool cAINodeContainer::FreePath(const cVector3f &avStart, const cVector3f &avEnd, int alRayNum,
 									tAIFreePathFlag aFlags,iAIFreePathCallback *apCallback)
 	{
-		iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
-		if(pPhysicsWorld==NULL) return true;
+		iAIFreePathCallback *pPrevCallback = mpFreePathCallback;
+		mpFreePathCallback = apCallback;
+		bool bFree = ohpl_ai_graph_free_path(mpGraph, &avStart, &avEnd, alRayNum, aFlags);
+		mpFreePathCallback = pPrevCallback;
 
-		
-		if(alRayNum<0 || alRayNum>5) alRayNum =5;
-		
-		/////////////////////////////
-		//Calculate the right vector
-		const cVector3f vForward = cMath::Vector3Normalize(avEnd - avStart);
-		const cVector3f vUp = cVector3f(0,1.0f,0);
-		const cVector3f vRight = cMath::Vector3Cross(vForward, vUp);
-		
-		//Get the center
-		const cVector3f vStartCenter = mbNodeIsAtCenter ? avStart : avStart + cVector3f(0,mvSize.y/2,0);
-		const cVector3f vEndCenter  = mbNodeIsAtCenter ? avEnd : avEnd + cVector3f(0,mvSize.y/2,0);
-		
-		//Get the half with and height. Make them a little smaller so that player can slide over funk on floor.
-		const float fHalfWidth = mvSize.x * 0.4f;
-		const float fHalfHeight = mvSize.y * 0.4f;
-		
-		//Setup ray callback
-		mpRayCallback->SetFlags(aFlags);
+		return bFree;
+	}
 
-		//Iterate through all the rays.
-		for(int i=0; i< alRayNum; ++i)
-		{
-			cVector3f vAdd = vRight * (gvPosAdds[i].x*fHalfWidth) + vUp * (gvPosAdds[i].y*fHalfHeight);
-			cVector3f vStart = vStartCenter + vAdd;
-			cVector3f vEnd = vEndCenter + vAdd;
+	//-----------------------------------------------------------------------
 
-			mpRayCallback->Reset(); 
-			mpRayCallback->mpCallback = apCallback;
-
-			pPhysicsWorld->CastRay(mpRayCallback,vStart,vEnd,false,false,false,true);
-			
-			if(mpRayCallback->Intersected()) return false;
-		}
-
-		return true;
+	void cAINodeContainer::SyncParams()
+	{
+		ohpl_ai_graph_set_params(mpGraph, mlMaxNodeEnds, mlMinNodeEnds, mfMaxEndDistance, mfMaxHeight, mbNodeIsAtCenter);
 	}
 
 	//-----------------------------------------------------------------------
@@ -633,6 +425,7 @@ namespace hpl {
 				Edge.mfSqrDistance = Edge.mfDistance*Edge.mfDistance;
 
 				pNode->mvEdges.push_back(Edge);
+				ohpl_ai_graph_add_edge(mpGraph, (uint32_t)pNode->mlIdx, (uint32_t)pEdgeNode->mlIdx, Edge.mfDistance, Edge.mfSqrDistance);
 			}
 		}
 
@@ -640,35 +433,4 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 	
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	cVector2l cAINodeContainer::GetGridPosFromLocal(const cVector2f &avLocalPos)
-	{
-		cVector2l vGridPos;
-		vGridPos.x = (int)(avLocalPos.x / mvGridSize.x);
-		vGridPos.y = (int)(avLocalPos.y / mvGridSize.y);
-
-		if(vGridPos.x <0)vGridPos.x =0;
-		if(vGridPos.y <0)vGridPos.y =0;
-		if(vGridPos.x > mvGridMapSize.x) vGridPos.x = mvGridMapSize.x;
-		if(vGridPos.y > mvGridMapSize.y) vGridPos.y = mvGridMapSize.y;
-
-		return vGridPos;
-	}
-
-	//-----------------------------------------------------------------------
-	
-	cAIGridNode* cAINodeContainer::GetGrid(const cVector2l& avPos)
-	{
-		int lIndex = avPos.y * (mvGridMapSize.x+1) + avPos.x;
-		//Log(" index: %d Max: %d\n",lIndex,(int)mvGrids.size());
-
-		return &mvGrids[lIndex];
-	}
-
-	//-----------------------------------------------------------------------
 }

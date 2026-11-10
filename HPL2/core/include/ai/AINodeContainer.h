@@ -24,6 +24,7 @@
 #include "math/MathTypes.h"
 
 #include "physics/PhysicsWorld.h"
+#include "ai/RustAI.h"
 
 namespace hpl {
 
@@ -62,6 +63,7 @@ namespace hpl {
 		~cAINode();
 
 		void AddEdge(cAINode *pNode);
+		int GetIdx() const { return mlIdx;}
 
 		int GetEdgeNum() const { return (int)mvEdges.size();}
 		inline cAINodeEdge* GetEdge(int alIdx) { return &mvEdges[alIdx];}
@@ -74,6 +76,8 @@ namespace hpl {
 	private:
 		tString msName;
 		int mlID;
+		int mlIdx;
+		OhplAiGraph *mpGraph;
 		cVector3f mvPosition;
 		void *mpUserData;
 
@@ -125,12 +129,6 @@ namespace hpl {
 
 	//--------------------------------
 	
-	class cAIGridNode
-	{
-	public:
-		tAINodeList mlstNodes;
-	};
-
 	//--------------------------------
 	class cAINodeContainer;
 
@@ -143,17 +141,8 @@ namespace hpl {
 		cAINode *Next();
 
 	private:
-		bool IncGridPos();
-
-		cAINodeContainer *mpContainer;
-		cVector3f mvPosition;
-		float mfRadius;
-		cVector2l mvStartGridPos;
-		cVector2l mvEndGridPos;
-		cVector2l mvGridPos;
-
-		tAINodeList *mpNodeList;
-		tAINodeListIt mNodeIt;
+		std::vector<cAINode*> mvNodes;
+		size_t mlPos;
 	};
 
 	//--------------------------------
@@ -161,6 +150,7 @@ namespace hpl {
 	class cAINodeContainer
 	{
 	friend class cAINodeIterator;
+	friend class cAStarHandler;
 	public:
 		cAINodeContainer(	const tString& asName,const tString &asNodeName,
 							cWorld *apWorld, const cVector3f &avCollideSize);
@@ -239,29 +229,29 @@ namespace hpl {
 		 * Sets the max number of end node added to a node.
 		 * \param alX The max number, -1 = unlimited
 		 */
-		void SetMaxEdges(int alX){ mlMaxNodeEnds = alX;}
+		void SetMaxEdges(int alX){ mlMaxNodeEnds = alX; SyncParams();}
 
 		/**
 		* Sets the min number of end node added to a node. This overrides max distance when needed.
 		*/
-		void SetMinEdges(int alX){ mlMinNodeEnds = alX;}
+		void SetMinEdges(int alX){ mlMinNodeEnds = alX; SyncParams();}
 		
 		/**
 		 * Sets the max distance for an end node.
 		 * \param afX 
 		 */
-		void SetMaxEdgeDistance(float afX){ mfMaxEndDistance = afX;}
+		void SetMaxEdgeDistance(float afX){ mfMaxEndDistance = afX; SyncParams();}
 
 		float GetMaxEdgeDistance() const { return mfMaxEndDistance;}
 
-		void SetMaxHeight(float afX){ mfMaxHeight = afX;}
+		void SetMaxHeight(float afX){ mfMaxHeight = afX; SyncParams();}
 		float GetMaxHeight()const{ return mfMaxHeight;}
 
 		/**
 		 * When calculating if there is a free path between two nodes. Is the node postion the center of the collider.
 		 * If not the position is the feet postion.
 		 */
-		void SetNodeIsAtCenter(bool abX){ mbNodeIsAtCenter = abX;}
+		void SetNodeIsAtCenter(bool abX){ mbNodeIsAtCenter = abX; SyncParams();}
 		bool GetNodeIsAtCenter(){ return mbNodeIsAtCenter;}
 
 
@@ -275,8 +265,8 @@ namespace hpl {
 		void LoadFromFile(const tWString &asFile);
 
 	private:
-		cVector2l GetGridPosFromLocal(const cVector2f &avLocalPos);
-		cAIGridNode* GetGrid(const cVector2l& avPos);
+		void SyncParams();
+		static bool CastRay(void *apContainer, unsigned int alFlags, const cVector3f *apStart, const cVector3f *apEnd);
 
 		tString msName;
 		tString msNodeName;
@@ -291,13 +281,8 @@ namespace hpl {
 
 		bool mbNodeIsAtCenter;
 
-		cVector2l mvGridMapSize;
-		cVector2f mvGridSize;
-		cVector2f mvMinGridPos;
-		cVector2f mvMaxGridPos;
-		int mlNodesPerGrid;
-
-		std::vector<cAIGridNode> mvGrids;
+		OhplAiGraph *mpGraph;
+		iAIFreePathCallback *mpFreePathCallback;
 
 		//properties
 		int mlMaxNodeEnds;

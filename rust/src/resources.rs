@@ -191,7 +191,7 @@ impl ResMap {
 
 /// libstdc++ `std::sort` (introsort + insertion sort), which leaves equal elements in an
 /// order DestroyUnused depends on.
-fn std_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
+pub(crate) fn std_sort<T: Copy>(v: &mut [T], less: &mut impl FnMut(T, T) -> bool) {
     let n = v.len();
     if n < 2 {
         return;
