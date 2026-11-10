@@ -22,6 +22,7 @@
 #include "system/LowLevelSystem.h"
 #include "resources/Resources.h"
 #include "system/String.h"
+#include "system/Platform.h"
 #include "math/Math.h"
 
 #include "sound/Sound.h"
@@ -31,9 +32,7 @@
 #include "resources/Resources.h"
 #include "resources/SoundManager.h"
 #include "resources/LowLevelResources.h"
-#include "resources/XmlDocument.h"
-
-#include "impl/tinyXML/tinyxml.h"
+#include "sound/RustSound.h"
 
 
 namespace hpl {
@@ -90,29 +89,16 @@ namespace hpl {
 
 	const tString& cSoundEntityData::GetSoundName(eSoundEntityType aType, int alIdx)
 	{
-		if((int)mvSoundNameVecs[aType].size() <= alIdx) return gsEmptyString;
+		int lIdx = ohpl_snd_name_index((int)mvSoundNameVecs[aType].size(), alIdx);
+		if(lIdx < 0) return gsEmptyString;
 
-		return mvSoundNameVecs[aType][alIdx];
+		return mvSoundNameVecs[aType][lIdx];
 	}
 
 	const tString& cSoundEntityData::GetRandomSoundName(eSoundEntityType aType, bool abSkipPrevious)
 	{
-		if(mvSoundNameVecs[aType].empty()) return gsEmptyString;
-		int lSize = (int)mvSoundNameVecs[aType].size();
-		if(lSize==1) return mvSoundNameVecs[aType][0];
-		
-		int lStart = -1;
-		int lSizeAdd = -1;
-		if(abSkipPrevious && lSize > 2 && mlPrevious[aType] < lSize && mlPrevious[aType] > 0)
-		{
-			lStart = mlPrevious[aType];
-			lSizeAdd = lStart-1;
-		}
-		
-		int lRand = cMath::RandRectl(lStart+1, lSize + lSizeAdd);
-		if(lRand >= lSize) lRand = lRand - lSize;
-		
-		mlPrevious[aType] = lRand;
+		int lRand = ohpl_snd_random_index((int)mvSoundNameVecs[aType].size(), &mlPrevious[aType], abSkipPrevious);
+		if(lRand < 0) return gsEmptyString;
 
 		return mvSoundNameVecs[aType][lRand];
 	}
@@ -128,9 +114,10 @@ namespace hpl {
 
 	void cSoundEntityData::SetSoundName(const tString& asName, eSoundEntityType aType, int alIdx)
 	{
-		if((int)mvSoundNameVecs[aType].size() <= alIdx) return;
+		int lIdx = ohpl_snd_name_index((int)mvSoundNameVecs[aType].size(), alIdx);
+		if(lIdx < 0) return;
 
-		mvSoundNameVecs[aType][alIdx] = asName;			
+		mvSoundNameVecs[aType][lIdx] = asName;
 	}
 
 	void cSoundEntityData::AddSoundName(const tString& asName, eSoundEntityType aType)
@@ -161,74 +148,62 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSoundEntityData::LoadSoundsInElement(cXmlElement *apElement, tStringVec *apStringVec)
+	static void AddSoundNameCallback(void *apCtx, uint32_t alType, const unsigned char *asName, size_t alLen)
 	{
-		if(apElement == NULL) return;	
-
-		cXmlNodeListIterator it = apElement->GetChildIterator();
-		while(it.HasNext())
-		{
-			cXmlElement *pChild = it.Next()->ToElement();
-
-            apStringVec->push_back(pChild->GetAttributeString("File"));
-		}
+		static_cast<tStringVec*>(apCtx)[alType].push_back(tString((const char*)asName, alLen));
 	}
 
 	bool cSoundEntityData::CreateFromFile(const tWString &asFile)
 	{
 		SetFullPath(asFile);
 
-		iXmlDocument *pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
-		if(pDoc->CreateFromFile(asFile.c_str())==false)
+		FILE *pFile = cPlatform::OpenFile(asFile, _W("rb"));
+		OhplXmlDocPtr doc;
+		bool bLoaded = false;
+		if(pFile)
 		{
+			bLoaded = OhplXmlLoadFile(doc.p, pFile);
+			fclose(pFile);
+		}
+
+		OhplSntSink sink = { mvSoundNameVecs, AddSoundNameCallback };
+		OhplSoundProps props;
+		int lResult = ohpl_snt_load(doc.p, bLoaded, &sink, &props);
+
+		if(lResult == 1 || lResult == 2)
+		{
+			int lRow=0, lCol=0;
+			tString sDesc;
+			if(lResult == 1) ohpl_xml_doc_error_info(doc.p, &lRow, &lCol, OhplXmlAssign, &sDesc);
+			else sDesc = "No root element";
+			Log("Failed parsing of XML document %s in line %d, column %d: %s\n", cString::To8Char(asFile).c_str(), lRow, lCol, sDesc.c_str());
 			Error("Couldn't load sound entity data '%s'!\n",cString::To8Char(asFile).c_str());
-			hplDelete( pDoc );
 			return false;
 		}
-		
-		////////////////////////////////////////////////
-		// SOUNDS
-		cXmlElement *pSoundsElem = pDoc->GetFirstElement("SOUNDS");
-		if(pSoundsElem==NULL){
+		if(lResult == 3)
+		{
 			Error("Couldn't find SOUNDS element in '%s'!\n",asFile.c_str());
-			hplDelete( pDoc );
 			return false;
 		}
-		
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Main"), &mvSoundNameVecs[eSoundEntityType_Main]);
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Start"), &mvSoundNameVecs[eSoundEntityType_Start]);
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Stop"), &mvSoundNameVecs[eSoundEntityType_Stop]);
-
-
-		////////////////////////////////////////////////
-		// PROPERTIES
-		cXmlElement *pPropElem = pDoc->GetFirstElement("PROPERTIES");
-		if(pPropElem==NULL){
+		if(lResult == 4)
+		{
 			Error("Couldn't find PROPERTIES element in '%s'!\n",asFile.c_str());
-			hplDelete( pDoc );
 			return false;
 		}
 
-		mbUse3D = pPropElem->GetAttributeBool("Use3D",true);
-		mbLoop = pPropElem->GetAttributeBool("Loop",true);
-		mbStream = pPropElem->GetAttributeBool("Stream",true);
-		
-		mbBlockable = pPropElem->GetAttributeBool("Blockable",false);
-		mfBlockVolumeMul = pPropElem->GetAttributeFloat("BlockVolumeMul",0.6f);
-
-		mfVolume = pPropElem->GetAttributeFloat("Volume",1);
-		mfMaxDistance = pPropElem->GetAttributeFloat("MaxDistance",1);
-		mfMinDistance = pPropElem->GetAttributeFloat("MinDistance",1);
-
-		mbFadeStart = pPropElem->GetAttributeBool("FadeStart",true);
-		mbFadeStop = pPropElem->GetAttributeBool("FadeStop",true);
-		
-		mfRandom = pPropElem->GetAttributeFloat("Random",1);
-		mfInterval = pPropElem->GetAttributeFloat("Interval",0);
-
-		mlPriority = pPropElem->GetAttributeInt("Priority",0);
-
-		hplDelete( pDoc );
+		mbUse3D = props.use_3d;
+		mbLoop = props.looping;
+		mbStream = props.stream;
+		mbBlockable = props.blockable;
+		mfBlockVolumeMul = props.block_volume_mul;
+		mfVolume = props.volume;
+		mfMaxDistance = props.max_distance;
+		mfMinDistance = props.min_distance;
+		mbFadeStart = props.fade_start;
+		mbFadeStop = props.fade_stop;
+		mfRandom = props.random;
+		mfInterval = props.interval;
+		mlPriority = props.priority;
 
         return true;
 	}

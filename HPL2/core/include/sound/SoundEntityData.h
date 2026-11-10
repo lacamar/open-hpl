@@ -88,7 +88,6 @@ namespace hpl {
 		void Destroy(){}
 	
 	protected:
-		void LoadSoundsInElement(cXmlElement *apElement, tStringVec *apStringVec);
 		void PreloadSoundsOfType(eSoundEntityType aType);
 
 		cResources *mpResources;

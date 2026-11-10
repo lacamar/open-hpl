@@ -36,6 +36,7 @@ pub mod resources;
 mod resources_ffi;
 pub mod scene;
 pub mod shader;
+pub mod sound;
 pub mod string;
 mod string_ffi;
 pub mod system;
