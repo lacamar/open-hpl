@@ -42,13 +42,7 @@ namespace hpl {
 	
 	//------------------------------------------
 	
-	class cPhysicsRopeAttachment
-	{
-	public:
-		iPhysicsBody *mpBody;
-		cVerletParticle *mpParticle;
-		cVector3f mvBodyLocalPos;
-	};
+	typedef OhplRopeAttachment cPhysicsRopeAttachment;
 
 	//------------------------------------------
 
@@ -68,21 +62,21 @@ namespace hpl {
         
 		/////////////////////////////
 		// Motor
-		void SetPhysicsActive(bool abX){ mbPhysicsActive = abX; }
-		bool GetPhysicsActive(){ return mbPhysicsActive; }
+		void SetPhysicsActive(bool abX){ mS.physicsActive = abX; }
+		bool GetPhysicsActive(){ return mS.physicsActive; }
 
         void SetMotorActive(bool abX);
-		bool GetMotorActive(){ return mbMotorActive; }
+		bool GetMotorActive(){ return mS.motorActive; }
 
-		void SetMotorWantedLength(float afX){ mfMotorWantedLength = afX; }
-		void SetMotorSpeedMul(float afX){ mfMotorSpeedMul = afX; }
-		void SetMotorMaxSpeed(float afX){ mfMotorMaxSpeed = afX; }
-		void SetMotorMinSpeed(float afX){ mfMotorMinSpeed = afX; }
+		void SetMotorWantedLength(float afX){ mS.motorWantedLength = afX; }
+		void SetMotorSpeedMul(float afX){ mS.motorSpeedMul = afX; }
+		void SetMotorMaxSpeed(float afX){ mS.motorMaxSpeed = afX; }
+		void SetMotorMinSpeed(float afX){ mS.motorMinSpeed = afX; }
 
-		float GetMotorWantedLength(){ return mfMotorWantedLength;}
-		float GetMotorSpeedMul(){ return mfMotorSpeedMul;}
-		float GetMotorMaxSpeed(){ return mfMotorMaxSpeed;}
-		float GetMotorMinSpeed(){ return mfMotorMinSpeed;}
+		float GetMotorWantedLength(){ return mS.motorWantedLength;}
+		float GetMotorSpeedMul(){ return mS.motorSpeedMul;}
+		float GetMotorMaxSpeed(){ return mS.motorMaxSpeed;}
+		float GetMotorMinSpeed(){ return mS.motorMinSpeed;}
 
 		void SetMotorSound(const tString& asSound) { msMotorSound = asSound; }
 		void SetMotorSoundStartSpeed(float afX) { mfMotorSoundStartSpeed = afX; }
@@ -96,14 +90,14 @@ namespace hpl {
 		/////////////////////////////
 		// Auto Move
 		void SetAutoMoveActive(bool abX);
-		void SetAutoMoveAcc(float afX){ mfAutoMoveAcc = afX;}
-		void SetAutoMoveMaxSpeed(float afX){ mfAutoMoveMaxSpeed = afX;}
-		void SetAutoMoveSpeed(float afX){ mfAutoMoveSpeed = afX;}
+		void SetAutoMoveAcc(float afX){ mS.autoMoveAcc = afX;}
+		void SetAutoMoveMaxSpeed(float afX){ mS.autoMoveMaxSpeed = afX;}
+		void SetAutoMoveSpeed(float afX){ mS.autoMoveSpeed = afX;}
 
 		bool GetAutoMoveActive();
-		float GetAutoMoveAcc(){ return mfAutoMoveAcc;}
-		float GetAutoMoveMaxSpeed(){ return mfAutoMoveMaxSpeed;}
-		float GetAutoMoveSpeed(){ return mfAutoMoveSpeed;}
+		float GetAutoMoveAcc(){ return mS.autoMoveAcc;}
+		float GetAutoMoveMaxSpeed(){ return mS.autoMoveMaxSpeed;}
+		float GetAutoMoveSpeed(){ return mS.autoMoveSpeed;}
         
 		/////////////////////////////
 		// Properties
@@ -113,34 +107,34 @@ namespace hpl {
 		void SetAttachedStartBody(iPhysicsBody *apBody);
 		void SetAttachedEndBody(iPhysicsBody *apBody);
 
-		iPhysicsBody* GetAttachedStartBody(){ return mvAttachedBody[0].mpBody;}
-		iPhysicsBody* GetAttachedEndBody(){ return mvAttachedBody[1].mpBody;}
+		iPhysicsBody* GetAttachedStartBody(){ return mS.attached[0].mpBody;}
+		iPhysicsBody* GetAttachedEndBody(){ return mS.attached[1].mpBody;}
 
-		cPhysicsRopeAttachment* GetAttachment(int alIdx){ return &mvAttachedBody[alIdx]; }
+		cPhysicsRopeAttachment* GetAttachment(int alIdx){ return &mS.attached[alIdx]; }
 		
 		void SetTotalLength(float afX);
-		float GetTotalLength(){ return mfTotalLength;}
+		float GetTotalLength(){ return mS.totalLength;}
 
 		void SetMinTotalLength(float afX);
 		void SetMaxTotalLength(float afX);
-		float GetMinTotalLength(){ return mfMinTotalLength;}
-		float GetMaxTotalLength(){ return mfMaxTotalLength;}
+		float GetMinTotalLength(){ return mS.minTotalLength;}
+		float GetMaxTotalLength(){ return mS.maxTotalLength;}
 
 		void SetSegmentLength(float afX);
-		float GetSegmentLength(){ return mfSegmentLength;}
-		float GetFirstSegmentLength(){ return mfFirstSegmentLength;}
+		float GetSegmentLength(){ return mS.segmentLength;}
+		float GetFirstSegmentLength(){ return mS.firstSegmentLength;}
 
-		void SetMaxIterations(int alX){ mlMaxIterations = alX;}
-		int GetMaxIterations(){ return mlMaxIterations;}
+		void SetMaxIterations(int alX){ mS.maxIterations = alX;}
+		int GetMaxIterations(){ return mS.maxIterations;}
 
-		void SetStrength(float afX){ mfStrength  = afX;}
-		float GetStrength(){ return mfStrength;}
+		void SetStrength(float afX){ mS.strength  = afX;}
+		float GetStrength(){ return mS.strength;}
 
-		void SetStiffness(float afX){ mfStiffness  = afX;}
-		float GetStiffness(){ return mfStiffness;}
+		void SetStiffness(float afX){ mS.stiffness  = afX;}
+		float GetStiffness(){ return mS.stiffness;}
 
-		void SetCollideAttachments(bool abX){ mbCollideAttachments  = abX;}
-		bool GetCollideAttachments(){ return mbCollideAttachments;}
+		void SetCollideAttachments(bool abX){ mS.collideAttachments  = abX;}
+		bool GetCollideAttachments(){ return mS.collideAttachments;}
 
 		/////////////////////////////
 		// Debug
@@ -154,14 +148,12 @@ namespace hpl {
 		bool CheckSpecificDataAwake();
 		void SetSpecificDataSleeping(bool abSleeping);
 		
-		void UpdateMovement(float afTimeStep);
 		void UpdateMotor(float afTimeStep);
-		void UpdateMotorAndAutoMove(float afTimeStep);
 		
-		void UpdateAttachedParticlePositions(float afTimeStep);
-		void UpdateAttachedBodies(float afTimeStep);
-		void CalculateSmoothPositions(float afTimeStep);
 		
+		void UpdateMotorSound(float afVel);
+		OhplRopeVt MakeVt();
+
 		void BuildRopeParticles();
 
 		void SetAttachedBody(int alIdx, cVerletParticle *apParticle, iPhysicsBody *apBody);
@@ -170,18 +162,10 @@ namespace hpl {
 
 		cPidControllerVec3 mForcePid[2];
 
-		cPhysicsRopeAttachment mvAttachedBody[2];
 
-		bool mbCollideAttachments;
 
 		int mlUniqueID;
 
-		bool mbPhysicsActive = true;
-		bool mbMotorActive;
-		float mfMotorWantedLength;
-		float mfMotorSpeedMul;
-		float mfMotorMinSpeed;
-		float mfMotorMaxSpeed;
 
 		tString msMotorSound;
 		float mfMotorSoundStartSpeed;
@@ -189,24 +173,11 @@ namespace hpl {
 		cSoundEntity *mpMotorSoundEntity;
 		int mlMotorSoundEntityID;
 
-		bool mbAutoMoveActive;
-		float mfAutoMoveAcc;
-		float mfAutoMoveMaxSpeed;
-		float mfAutoMoveSpeed;
 
-		float mfTotalLength;
-		float mfMinTotalLength;
-		float mfMaxTotalLength;
-		float mfSegmentLength;
 
-		float mfFirstSegmentLength;
 
-		int mlMaxIterations;
 
-		float mfStrength;
-		float mfStiffness;
 		
-		bool mbHasUpdated;
 	};
 };
 #endif // HPL_PHYSICS_ROPE_H

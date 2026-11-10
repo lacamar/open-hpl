@@ -23,6 +23,8 @@
 #include "physics/PhysicsTypes.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
+#include "physics/RustCharacter.h"
+#include <vector>
 
 namespace hpl {
 
@@ -118,25 +120,25 @@ namespace hpl {
 
 		virtual void RemoveAttachedBody(iPhysicsBody *apBody, bool abRemoveContainerFromBody=true)=0;
 
-		void SetGravityForce(const cVector3f& avX){ mvGravityForce = avX;}
-		const cVector3f& GetGravityForce(){ return mvGravityForce;}
+		void SetGravityForce(const cVector3f& avX){ mS.gravityForce = avX;}
+		const cVector3f& GetGravityForce(){ return mS.gravityForce;}
 
 		void SetDamping(float afX);
 		float GetDamping(){ return mfDamping;}
 		
 		void SetParticleRadius(float afX);
-		float GetParticleRadius(){ return mfParticleRadius;}
+		float GetParticleRadius(){ return mS.particleRadius;}
 
-		void SetSlideAmount(float afX){ mfSlideAmount = afX; }
-		float GetSlideAmount(){ return mfSlideAmount;}
+		void SetSlideAmount(float afX){ mS.slideAmount = afX; }
+		float GetSlideAmount(){ return mS.slideAmount;}
 
-		void SetCollide(bool abX){ mbCollide  = abX;}
-		bool GetCollide(){ return mbCollide;}
+		void SetCollide(bool abX){ mS.collide  = abX;}
+		bool GetCollide(){ return mS.collide;}
 
 		void SetSleeping(bool abX);
 
-		inline int GetUpdateCount() const { return mlUpdateCount; }
-		void IncUpdateCount(){ ++mlUpdateCount; }
+		inline int GetUpdateCount() const { return mS.updateCount; }
+		void IncUpdateCount(){ ++mS.updateCount; }
 
 		void SetActive(bool abX){ mbActive = abX; }
 		bool GetActive(){ return mbActive; }
@@ -157,8 +159,12 @@ namespace hpl {
 		virtual bool CheckSpecificDataAwake()=0;		//Tested when container IS sleeping
 		virtual void SetSpecificDataSleeping(bool abSleeping)=0;
 		
-		void PreUpdate(float afTimeStep);
 
+
+		OhplRopeState mS;
+		std::vector<cVerletParticle*> mvParticleCache;
+		void RefreshParticleCache(){ mvParticleCache.assign(mlstParticles.begin(), mlstParticles.end()); }
+		bool CastParticleRay(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apPos, cVector3f *apNormal);
 
 		tString msName;
 		iPhysicsWorld *mpWorld;
@@ -170,24 +176,12 @@ namespace hpl {
 		tVerletParticleList mlstParticles;
 
 		bool mbActive = true;
-		bool mbCollide;
 
-		bool mbSleeping;
-		float mfSleepCheckCount;
-		float mfSleepCheckTime;
-		float mfSleepCheckSqrLimit;
-		int mlSleepCount;
-		int mlSleepMaxCount;
                 
-		cVector3f mvGravityForce;
 		float mfDamping;
-		float mfDampingMul;
 		
-		float mfParticleRadius;
 
-		float mfSlideAmount;
 
-		int mlUpdateCount;
 	};
 
 
