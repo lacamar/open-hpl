@@ -87,6 +87,7 @@ namespace hpl {
 		 */
 		inline cGlyph* GetGlyph(int alNum)const { if(alNum<0 || alNum>=(int)mvGlyphs.size()) return NULL; return mvGlyphs[alNum];}
 
+		inline const tGlyphVec& GetGlyphs()const{ return mvGlyphs;}
 		inline unsigned short GetFirstChar(){ return mlFirstChar;}
 		inline unsigned short GetLastChar(){ return mlLastChar;}
 

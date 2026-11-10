@@ -66,7 +66,6 @@ namespace hpl {
 	class cGuiGfxElement
 	{
 		friend class cGuiSet;
-		friend class cGuiRenderObjectCompare;
 	public:
 		cGuiGfxElement(cGui* apGui);
 		~cGuiGfxElement();

@@ -48,6 +48,7 @@
 #include "gui/GuiMaterial.h"
 #include "gui/GuiGfxElement.h"
 #include "gui/GuiPopUp.h"
+#include "gui/RustGui.h"
 
 #include "gui/GuiPopUpMessageBox.h"
 #include "gui/GuiPopUpFilePicker.h"
@@ -98,52 +99,6 @@ namespace hpl {
 	
 
 	//////////////////////////////////////////////////////////////////////////
-	// RENDER OBJECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	
-	bool cGuiRenderObjectCompare::operator()(	const cGuiRenderObject& aObjectA,
-												const cGuiRenderObject& aObjectB) const
-	{
-		//Z
-		float fZA = aObjectA.mvPos.z;
-		float fZB = aObjectB.mvPos.z;
-		if(fZA != fZB)
-		{
-			return fZA < fZB;
-		}
-
-		//Clip Region
-		cGuiClipRegion *pClipA = aObjectA.mpClipRegion;
-		cGuiClipRegion *pClipB = aObjectB.mpClipRegion;
-		if(pClipA != pClipB)
-		{
-			return pClipA > pClipB;
-		}
-		
-		//Material
-		iGuiMaterial *pMaterialA = aObjectA.mpCustomMaterial ? aObjectA.mpCustomMaterial : aObjectA.mpGfx->mpMaterial;
-		iGuiMaterial *pMaterialB = aObjectB.mpCustomMaterial ? aObjectB.mpCustomMaterial : aObjectB.mpGfx->mpMaterial;
-		if(pMaterialA != pMaterialB)
-		{
-			return pMaterialA > pMaterialB;
-		}
-		
-		//Texture
-		iTexture *pTextureA = aObjectA.mpGfx->mvTextures[0];
-		iTexture *pTextureB = aObjectB.mpGfx->mvTextures[0];
-		if(pTextureA != pTextureB)
-		{
-			return pTextureA > pTextureB;
-		}
-		
-		//Equal
-		return false;
-
-	}
-
-	//////////////////////////////////////////////////////////////////////////
 	// CLIP REGION
 	//////////////////////////////////////////////////////////////////////////
 	
@@ -162,19 +117,7 @@ namespace hpl {
 	cGuiClipRegion* cGuiClipRegion::CreateChild(const cVector3f &avPos, const cVector2f &avSize)
 	{
 		cGuiClipRegion *pRegion = hplNew( cGuiClipRegion, () );
-		
-		if(mRect.w <0)
-		{
-			pRegion->mRect = cRect2f(cVector2f(avPos.x, avPos.y),avSize);	
-		}
-		else
-		{
-			cRect2f t = cRect2f(cVector2f(avPos.x, avPos.y),avSize);
-			pRegion->mRect = cMath::GetClipRect(t, mRect);
-			if(pRegion->mRect.w < 0 ) pRegion->mRect.w = 0;
-			if(pRegion->mRect.h < 0 ) pRegion->mRect.h = 0;
-		}
-			
+		ohpl_gui_clip_child_rect(&mRect, &avPos, &avSize, &pRegion->mRect);
 
 		mlstChildren.push_back(pRegion);
 
@@ -264,6 +207,8 @@ namespace hpl {
 						cResources *apResources, cGraphics* apGraphics,
 						cSound *apSound, cScene *apScene)
 	{
+		mpRustRenderList = ohpl_gui_list_new();
+
 		mpGui = apGui;
 		mpSkin = NULL;
 		
@@ -357,6 +302,8 @@ namespace hpl {
 		mbDestroyingSet = false;
 
 		ClearGlobalShortcuts();
+
+		ohpl_gui_list_free(mpRustRenderList);
 	}
 
 	//-----------------------------------------------------------------------
@@ -577,7 +524,7 @@ namespace hpl {
 
 	void cGuiSet::ClearRenderObjects()
 	{
-		m_setRenderObjects.clear();
+		ohpl_gui_list_clear(mpRustRenderList);
 	}
 
 	//-----------------------------------------------------------------------
@@ -587,72 +534,11 @@ namespace hpl {
 							float afRotationAngle, 
 							bool abUseCustomPivot, const cVector3f& avCustomPivot)
 	{
-		if(mpCurrentClipRegion==NULL) return;
-		if(mpCurrentClipRegion->mRect.w ==0 || mpCurrentClipRegion->mRect.h==0) return;
+		OhplGuiHost host = { this, HostGfxInfo, HostGfxFlush, HostMaterial };
+		OhplGuiFrame frame = { mpCurrentClipRegion, mpCurrentClipRegion ? mpCurrentClipRegion->mRect : cRect2f(), mvDrawOffset };
 
-		//Log("Bug:Drawing gfx: %p\n", apGfx);
-
-		cVector3f vAbsPos =  avPos + apGfx->GetOffset() + mvDrawOffset;
-		if(mpCurrentClipRegion->mRect.w >0)
-		{
-			cRect2f gfxRect;
-			gfxRect.x = vAbsPos.x;
-			gfxRect.y = vAbsPos.y;
-			if(avSize.x < 0)
-			{
-				gfxRect.w = apGfx->GetImageSize().x;
-				gfxRect.h = apGfx->GetImageSize().y;
-			}
-			else
-			{
-				gfxRect.w = avSize.x;
-				gfxRect.h = avSize.y;
-			}
-			
-			if(cMath::CheckRectIntersection(mpCurrentClipRegion->mRect,gfxRect)==false) return;
-		}
-		
-		apGfx->Flush();
-
-		cGuiRenderObject object;
-
-		//Log("Clip: %f %f\n",mpCurrentClipRegion->mRect.w,mpCurrentClipRegion->mRect.h);
-
-		//////////////////////////
-		//Set Graphics
-		object.mpGfx = apGfx;
-		object.mpClipRegion = mpCurrentClipRegion;
-
-		///////////////////////////
-		//Position, size and color
-		object.mvPos = vAbsPos;
-		if(avSize.x < 0)	object.mvSize = apGfx->GetImageSize();
-		else				object.mvSize = avSize;
-		object.mColor = aColor;
-		
-		///////////////////////////
-		//Material
-		if(aMaterial != eGuiMaterial_LastEnum)	object.mpCustomMaterial = mpGui->GetMaterial(aMaterial);
-		else									object.mpCustomMaterial = NULL;	
-
-		///////////////////////////
-		//Rotation
-		if(afRotationAngle !=0)
-		{
-			object.mbRotated = true;
-			object.mfAngle = afRotationAngle;
-			
-			if(abUseCustomPivot)
-				object.mvPivot = avCustomPivot;
-			else
-				object.mvPivot = object.mvSize*0.5f;
-		}
-		else
-		{
-			object.mbRotated = false;
-		}
-
-		m_setRenderObjects.insert(object);
+		ohpl_gui_draw_gfx(mpRustRenderList, &host, &frame, apGfx, &avPos, &avSize, &aColor, aMaterial, afRotationAngle,
+							abUseCustomPivot ? &avCustomPivot : NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1276,7 +1162,7 @@ namespace hpl {
 		mfVirtualMinZ = afMinZ;
 		mfVirtualMaxZ = afMaxZ;
 
-		mvVirtualSize = (mfGlobalGuiScale != 1.0f && abIgnoreGlobalScale==false) ? avSize / mfGlobalGuiScale : avSize;
+		ohpl_gui_virtual_size(&avSize, mfGlobalGuiScale, abIgnoreGlobalScale, &mvVirtualSize);
 		mvVirtualSizeOffset = avOffset;
 	}
 
@@ -1412,13 +1298,7 @@ namespace hpl {
 		const cVector2f& vSize = apWidget->GetSize();
 		const cVector2f& vSetSize = GetVirtualSize();
 
-		for(int i=0; i<2; ++i)
-		{
-			if(vPos.v[i] < 0)
-				vPos.v[i]=0;
-			if(vPos.v[i]+vSize.v[i] > vSetSize.v[i])
-				vPos.v[i] = vSetSize.v[i]-vSize.v[i];
-		}
+		ohpl_gui_position_inside_bounds(&vPos, &vSize, &vSetSize, &vPos);
 
 		apWidget->SetGlobalPosition(vPos);
 	}
@@ -1444,9 +1324,7 @@ namespace hpl {
 
 	void cGuiSet::IncPopUpZ()
 	{
-		mfLastPopUpZ += 5.0f; 
-		if(mfLastPopUpZ>=500)
-			mfLastPopUpZ = 20;
+		mfLastPopUpZ = ohpl_gui_next_popup_z(mfLastPopUpZ);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1462,53 +1340,36 @@ namespace hpl {
 										const cColor& aColor, eGuiMaterial aMaterial,
 										eFontAlign aAlign)
 	{
-		int lCount =0;
-		cVector3f vPos = avPosition;
+		const tGlyphVec &vGlyphs = apFont->GetGlyphs();
+		OhplGuiGlyphTable table = {	(const void* const*)vGlyphs.data(), vGlyphs.size(), apFont->GetFirstChar(), apFont->GetLastChar(),
+									offsetof(cGlyph, mpGuiGfx), offsetof(cGlyph, mvOffset), offsetof(cGlyph, mvSize), offsetof(cGlyph, mfAdvance) };
+		OhplGuiHost host = { this, HostGfxInfo, HostGfxFlush, HostMaterial };
+		OhplGuiFrame frame = { mpCurrentClipRegion, mpCurrentClipRegion ? mpCurrentClipRegion->mRect : cRect2f(), mvDrawOffset };
 
-		//////////////////////////////////////////////////////
-		// Change position depending on the alignment
-		if(aAlign == eFontAlign_Center){
-			vPos.x -= apFont->GetLength(avSize, apString)/2;
-		}
-		else if(aAlign == eFontAlign_Right)
-		{
-			vPos.x -= apFont->GetLength(avSize, apString);
-		}
+		ohpl_gui_draw_text(mpRustRenderList, &host, &frame, &table, apString, wcslen(apString), &avSize, &avPosition, &aColor, aMaterial, aAlign);
+	}
 
-		//////////////////////////////////////////////////////
-		// Iterate the characters in string until NULL is found
-		while(apString[lCount] != 0)
-		{
-			wchar_t lGlyphNum = ((wchar_t)apString[lCount]);
-			
-			//Check if the glyph is valid (in range)
-			if(	lGlyphNum < apFont->GetFirstChar() || 
-				lGlyphNum > apFont->GetLastChar())
-			{
-				lCount++;
-				continue;
-			}
-			//Get actual number of the glyph in the font.
-			lGlyphNum -= apFont->GetFirstChar();
-			
-			//Get glyph data and draw.
-			cGlyph *pGlyph = apFont->GetGlyph(lGlyphNum);
-			if(pGlyph)
-			{
-				cVector2f vOffset(pGlyph->mvOffset * avSize);
-				cVector2f vSize(pGlyph->mvSize * avSize);// *apFont->GetSizeRatio());
+	void cGuiSet::HostGfxInfo(void *apCtx, void *apGfx, OhplGuiGfxInfo *apOut)
+	{
+		cGuiGfxElement *pGfx = (cGuiGfxElement*)apGfx;
+		apOut->offset = pGfx->GetOffset();
+		apOut->image_size = pGfx->GetImageSize();
+		apOut->material = (const void* const*)&pGfx->mpMaterial;
+		apOut->texture0 = (const void* const*)&pGfx->mvTextures[0];
+		apOut->vtx = &pGfx->mvVtx[0];
+	}
 
-				DrawGfx(pGlyph->mpGuiGfx,vPos + vOffset,vSize,aColor,aMaterial);
+	void cGuiSet::HostGfxFlush(void *apCtx, void *apGfx)
+	{
+		((cGuiGfxElement*)apGfx)->Flush();
+	}
 
-				vPos.x += pGlyph->mfAdvance*avSize.x; 
-			}
-			lCount++;
-		}
+	void* cGuiSet::HostMaterial(void *apCtx, int alMaterial)
+	{
+		return ((cGuiSet*)apCtx)->mpGui->GetMaterial((eGuiMaterial)alMaterial);
 	}
 
 	//--------------------------------------------------------------
-	
-#define kLogRender (false)
 	
 	void cGuiSet::SetClipArea(iLowLevelGraphics *apLowLevel, cGuiClipRegion *apRegion)
 	{
@@ -1520,10 +1381,8 @@ namespace hpl {
 		{
 			iFrameBuffer *pTarget = apLowLevel->GetCurrentFrameBuffer();
 			cVector2l vTarget = pTarget ? pTarget->GetSize() : apLowLevel->GetScreenSizeInt();
-			cVector2f vScale(vTarget.x / mvVirtualSize.x, vTarget.y / mvVirtualSize.y);
-			cVector2l vPos((int)((clipRect.x + mvVirtualSizeOffset.x) * vScale.x), (int)((clipRect.y + mvVirtualSizeOffset.y) * vScale.y));
-			cVector2l vSize((int)(clipRect.w * vScale.x), (int)(clipRect.h * vScale.y));
-			if(mbFlipScreenY) vPos.y = vTarget.y - vPos.y - vSize.y;
+			cVector2l vPos, vSize;
+			ohpl_gui_scissor(&clipRect, &vTarget, &mvVirtualSize, &mvVirtualSizeOffset, mbFlipScreenY, &vPos, &vSize);
 			apLowLevel->SetScissorActive(true);
 			apLowLevel->SetScissorRect(vPos, vSize);
 			return;
@@ -1547,186 +1406,48 @@ namespace hpl {
 	{
 		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
 
-		if(kLogRender)Log("-------------------\n");
+		OhplGuiBatches batches;
+		ohpl_gui_build(mpRustRenderList, &batches);
+		if(batches.batch_count == 0) return;
 
-		///////////////////////////////////////
-		//See if there is anything to draw
-		tGuiRenderObjectSet &setRenderObjects = m_setRenderObjects;
-		if(setRenderObjects.empty())
-		{
-			if(kLogRender) Log("------------------------\n");
-			return;
-		}
-		
-		//////////////////////////////////
-		// Graphics setup
 		pLowLevelGraphics->SetTexture(0,NULL);
 
-		//////////////////////////////////
-		// Set up variables
-		
-		tGuiRenderObjectSetIt it = setRenderObjects.begin();
-		
-		iGuiMaterial *pLastMaterial = NULL;
-		iTexture *pLastTexture = NULL;
-		cGuiClipRegion *pLastClipRegion = NULL;
-
-		cGuiGfxElement *pGfx = it->mpGfx;
-		iGuiMaterial *pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
-		iTexture *pTexture = pGfx->mvTextures[0];
-		cGuiClipRegion *pClipRegion = it->mpClipRegion;
-
-		int lIdxAdd=0;
-
-		//Log("bug:Rendering objects!\n");
-
-		///////////////////////////////////
-		// Iterate objects
-		while(it != setRenderObjects.end())
+		for(size_t b=0; b<batches.batch_count; ++b)
 		{
-			///////////////////////////////
-			//Start rendering
-			if(pLastMaterial != pMaterial){
-				pMaterial->BeforeRender();
-				if(kLogRender)Log("Material %s before\n",pMaterial->GetName().c_str());
-			}
+			const OhplGuiBatch &batch = batches.batches[b];
+			iGuiMaterial *pMaterial = (iGuiMaterial*)batch.material;
+			iTexture *pTexture = (iTexture*)batch.texture;
+			cGuiClipRegion *pClipRegion = (cGuiClipRegion*)batch.clip;
 
-			////////////////////////////
-			// SetClip area
-			if(pLastClipRegion != pClipRegion)
-			{
-				SetClipArea(pLowLevelGraphics,pClipRegion);
-			}
-			
+			if(batch.flags & kOhplGuiBeginMaterial) pMaterial->BeforeRender();
+			if(batch.flags & kOhplGuiSetClip) SetClipArea(pLowLevelGraphics,pClipRegion);
+
 			pLowLevelGraphics->SetTexture(0,pTexture);
 			if(mpPrograms[0] && mpPrograms[1]) mpPrograms[pTexture ? 0 : 1]->Bind();
-			if(kLogRender)Log("Texture %d\n",pTexture);
 
-			//////////////////////////
-			//Iterate for all with same texture and material
-			do 
+			const OhplGuiVertex *pVtx = batches.vertices + batch.first;
+			for(size_t i=0; i<batch.count; i+=4)
 			{
-				const cGuiRenderObject &object = *it;
-				cGuiGfxElement *pGfx = object.mpGfx;
+				for(size_t j=0; j<4; ++j)
+					pLowLevelGraphics->AddVertexToBatch_Raw(pVtx[i+j].pos, pVtx[i+j].col, pVtx[i+j].tex);
+				for(size_t j=0; j<4; ++j)
+					pLowLevelGraphics->AddIndexToBatch((int)(i+j));
+			}
 
-				//Log("bug: gfx: %p\n",pGfx);
-
-				if(kLogRender)
-				{
-					if(pGfx->mvImages[0])
-						Log(" gfx: %d '%s'\n",pGfx,pGfx->mvImages[0]->GetName().c_str());
-					else
-						Log(" gfx: %d 'null'\n");
-				}
-
-				//DEBUG!
-				/*if(pGfx->GetImage(0) && pGfx->GetImage(0)->GetName()=="_temp_hand.tga")
-				{
-					Log("Drawing: %d (%s):(%s) %d (%s)\n", object.mpGfx, object.mvPos.ToString().c_str(), object.mvSize.ToString().c_str(),
-															object.mpClipRegion, object.mColor.ToString().c_str());
-				}*/
-
-				///////////////////////////
-				// Add object to batch
-				if(object.mbRotated)
-				{
-					for(int i=0; i<4; ++i)
-					{
-						cVertex &vtx = pGfx->mvVtx[i];
-						cVector3f vVtxPos = vtx.pos;
-						const cVector3f& vPos = object.mvPos;
-
-						//Scale
-						vVtxPos.x *= object.mvSize.x;
-						vVtxPos.y *= object.mvSize.y;
-
-						//Rotate
-						vVtxPos.x -= object.mvPivot.x;
-						vVtxPos.y -= object.mvPivot.y;
-						vVtxPos = cMath::MatrixMul(cMath::MatrixRotateZ(object.mfAngle), vVtxPos); 
-						vVtxPos.x += object.mvPivot.x;
-						vVtxPos.y += object.mvPivot.y;
-						
-						pLowLevelGraphics->AddVertexToBatch_Raw(
-							cVector3f(	vVtxPos.x + vPos.x,
-										vVtxPos.y + vPos.y,
-										vPos.z),
-							vtx.col * object.mColor,
-							vtx.tex);
-					}
-				}
-				else
-				{
-					for(int i=0; i<4; ++i)
-					{
-						cVertex &vtx = pGfx->mvVtx[i];
-						cVector3f& vVtxPos = vtx.pos;
-						const cVector3f& vPos = object.mvPos;
-						pLowLevelGraphics->AddVertexToBatch_Raw(
-							cVector3f(	vVtxPos.x * object.mvSize.x + vPos.x,
-										vVtxPos.y * object.mvSize.y + vPos.y,
-										vPos.z),
-							vtx.col * object.mColor,
-							vtx.tex);
-					}
-				}
-
-				for(int i=0;i<4;i++)
-					pLowLevelGraphics->AddIndexToBatch(lIdxAdd + i);
-
-				lIdxAdd += 4;
-
-				///////////////////////////
-				//Set last texture
-				pLastMaterial =  pMaterial;
-				pLastTexture =   pTexture;
-				pLastClipRegion = pClipRegion;
-
-				/////////////////////////////
-				//Get next object
-				++it; if(it == setRenderObjects.end()) break;
-
-				pGfx = it->mpGfx;
-				pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
-				pTexture = it->mpGfx->mvTextures[0];
-				pClipRegion = it->mpClipRegion;
-			} 
-			//cLowLevelGraphicsSDL batch arrays hold 20000 vertices
-			while(	lIdxAdd + 4 <= 20000 &&
-					pTexture == pLastTexture &&
-					pMaterial == pLastMaterial &&
-					pClipRegion == pLastClipRegion);
-
-			//////////////////////////////
-			// Render batch
 			pLowLevelGraphics->FlushQuadBatch(	eVtxBatchFlag_Position | eVtxBatchFlag_Texture0 | 
 												eVtxBatchFlag_Color0,false);
 			pLowLevelGraphics->ClearBatch();
-			lIdxAdd=0;
 
-			/////////////////////////////////
-			//Clip region end
-			if(pLastClipRegion  != pClipRegion  || it == setRenderObjects.end())
+			if((batch.flags & kOhplGuiEndClip) && pClipRegion->mRect.w >0)
 			{
-				if(pLastClipRegion->mRect.w >0)
-				{
-					if(mbIs3D) for(int i=0; i<4; ++i) pLowLevelGraphics->SetClipPlaneActive(i, false);
-					else pLowLevelGraphics->SetScissorActive(false);
-				}
+				if(mbIs3D) for(int i=0; i<4; ++i) pLowLevelGraphics->SetClipPlaneActive(i, false);
+				else pLowLevelGraphics->SetScissorActive(false);
 			}
-			
-			/////////////////////////////////
-			//Material end
-			if(pLastMaterial != pMaterial || it == setRenderObjects.end())
-			{
-				pLastMaterial->AfterRender();
-				if(kLogRender)Log("Material %d '%s' after. new: %d '%s'\n",	pLastMaterial,pLastMaterial->GetName().c_str(),
-																		pMaterial,pMaterial->GetName().c_str());
-			}
+
+			if(batch.flags & kOhplGuiEndMaterial) pMaterial->AfterRender();
 		}
-		
+
 		if(mpPrograms[0]) mpPrograms[0]->UnBind();
-		if(kLogRender)Log("---------- END %d -----------\n");
 	}
 	//-----------------------------------------------------------------------
 
@@ -2512,33 +2233,25 @@ namespace hpl {
 					const tWString& sTipText = mpCurrentToolTipWidget->GetToolTip().c_str();
 					const cVector2f& mvFontSize = mpLabelToolTip->GetDefaultFontSize();
 
-					float fTextLength = mpLabelToolTip->GetDefaultFontType()->GetLength(mvFontSize, 
-																						sTipText.c_str()) + 3 + 3;
-					float fMaxTextLength = GetVirtualSize().x*0.4f;
 					iFontData* pFont = mpLabelToolTip->GetDefaultFontType();
+					float fTextLength = pFont->GetLength(mvFontSize, sTipText.c_str());
+					float fMaxTextLength = GetVirtualSize().x*0.4f;
 
 					tWStringVec vRows;
 					pFont->GetWordWrapRows(fMaxTextLength, mvFontSize.y+2, mvFontSize, sTipText, &vRows);
 					int lRows = (int)vRows.size();
 
-					cVector3f vPos = mvMousePos + mpGfxCurrentPointer->GetImageSize();
-					vPos.z = mfMouseZ - 2;
-
-					cVector2f vToolTipSize = cVector2f( cMath::Min(fTextLength, fMaxTextLength), 
-														lRows*(mvFontSize.y+2) -2 +3 +3);
+					cVector2f vPointerSize = mpGfxCurrentPointer->GetImageSize();
+					OhplGuiTooltip tip;
+					ohpl_gui_tooltip(&mvMousePos, mfMouseZ, &vPointerSize, &mvVirtualSize, fTextLength, mvFontSize.y, lRows, &tip);
 
 					mpLabelToolTip->SetText(sTipText);
-					mpLabelToolTip->SetSize(vToolTipSize);
+					mpLabelToolTip->SetSize(tip.size);
 
-					if(vPos.x + vToolTipSize.x > mvVirtualSize.x)
-						vPos.x = mvVirtualSize.x-vToolTipSize.x;
-					if(vPos.y + vToolTipSize.y > mvVirtualSize.y)
-						vPos.y = mvVirtualSize.y-vToolTipSize.y;
+					mpFrameToolTip->SetGlobalPosition(tip.pos);
+					mpFrameToolTip->SetSize(tip.size);
 
-					mpFrameToolTip->SetGlobalPosition(vPos);
-					mpFrameToolTip->SetSize(vToolTipSize);
-
-					mpFrameBGToolTip->SetSize(vToolTipSize-2);
+					mpFrameBGToolTip->SetSize(tip.background_size);
 
 					mpFrameToolTip->SetEnabled(true);
 					mpFrameToolTip->SetVisible(true);
