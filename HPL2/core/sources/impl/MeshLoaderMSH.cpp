@@ -18,6 +18,10 @@
  */
 
 #include "impl/MeshLoaderMSH.h"
+#include "impl/RustMeshLoadMsh.h"
+
+#include <cstring>
+#include <vector>
 
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -86,11 +90,44 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	static tString MshStr(const OhplMshStr& aStr)
+	{
+		return tString((const char*)aStr.p, aStr.n);
+	}
+
+	static cAnimation* BuildAnimation(const OhplMshAnim& aAnim, const tWString& asFullPath)
+	{
+		cAnimation *pAnimation = hplNew(cAnimation, (cString::To8Char(asFullPath), asFullPath, cString::GetFileName(cString::To8Char(asFullPath))));
+		pAnimation->SetLength(aAnim.length);
+
+		pAnimation->ReserveTrackNum((int)aAnim.trackNum);
+		for(size_t track=0; track<aAnim.trackNum; ++track)
+		{
+			const OhplMshTrack& src = aAnim.tracks[track];
+			cAnimationTrack *pTrack = pAnimation->CreateTrack(MshStr(src.name), (tAnimTransformFlag)src.flags);
+
+			for(size_t frame=0; frame<src.keyNum; ++frame)
+			{
+				const OhplMshKey& key = src.keys[frame];
+				cKeyFrame *pFrame = pTrack->CreateKeyFrame(key.time);
+				pFrame->trans = cVector3f(key.trans[0], key.trans[1], key.trans[2]);
+				pFrame->rotation.v = cVector3f(key.rot[0], key.rot[1], key.rot[2]);
+				pFrame->rotation.w = key.rot[3];
+			}
+		}
+
+		return pAnimation;
+	}
+
+	static void MshMatrix(cMatrixf& aMtx, const float* apSrc)
+	{
+		memcpy(aMtx.v, apSrc, sizeof(float) * 16);
+	}
+
+	//-----------------------------------------------------------------------
+
 	cMesh* cMeshLoaderMSH::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
-		if(gbLogMSHLoad) Log("------ Loading ---------\n");
-		/////////////////////////////////////////////////
-		// Load file
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{
@@ -98,49 +135,47 @@ namespace hpl {
 			return NULL;
 		}
 
-		/////////////////////////////////////////////////
-		// Header
-		int lMagicNum = binBuff.GetInt32();
-		int lVersion = binBuff.GetInt32();
-		
-		//Check magic number
-		if(lMagicNum != MSH_FORMAT_MAGIC_NUMBER)
+		OhplMshMesh *pData = NULL;
+		int lResult = ohpl_msh_parse((const uint8_t*)binBuff.GetDataPointer(), binBuff.GetSize(), mbBoneUnitScale, mbKeepHpl3Animations, &pData);
+		if(lResult == 1)
 		{
 			Error("File '%s' does not have right MSH magic number! Invalid header!\n", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
-
-		//Check so file has he right version
-		bool bHpl3 = lVersion == 8;
-		if(lVersion != MSH_FORMAT_VERSION && !bHpl3)
+		if(lResult == 2)
 		{
 			Error("File '%s' does not have right MSH version!\n", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
+		if(lResult != 0)
+		{
+			Error("File '%s' has MSH data that cannot be loaded: %s\n", cString::To8Char(asFile).c_str(), ohpl_msh_reason(lResult));
+			return NULL;
+		}
 
-		/////////////////////////////////////////////////
-		// General properties
-		if(bHpl3) binBuff.GetInt32();
-		int lSubMeshNum = binBuff.GetInt32();
-		int lAnimationNum = binBuff.GetInt32();
-		bool bSkeleton = binBuff.GetBool();
+		bool bHpl3 = pData->hpl3 != 0;
 
-		if(gbLogMSHLoad) Log("General: %d %d %d\n", lSubMeshNum, lAnimationNum, bSkeleton);
-		
-		// Create the mesh
 		tString sMeshName = cString::GetFileName(cString::To8Char(asFile));
 		cMesh* pMesh = hplNew( cMesh, (sMeshName, asFile,mpMaterialManager,mpAnimationManager) );
 
 		////////////////////////////
 		// Skeleton
-		if(bSkeleton)
+		if(pData->hasSkeleton)
 		{
 			cSkeleton* pSkeleton = hplNew( cSkeleton, () );
-            
-			int lRootChildNum = binBuff.GetInt32();
-			for(int i=0; i<lRootChildNum; ++i)
+
+			std::vector<cBone*> vBones;
+			vBones.reserve(pData->boneNum);
+			for(size_t i=0; i<pData->boneNum; ++i)
 			{
-				GetBoneFromBuffer(pSkeleton->GetRootBone(), &binBuff, 0, mbBoneUnitScale && !bHpl3);
+				const OhplMshBone& src = pData->bones[i];
+				cBone *pParent = src.parent < 0 ? pSkeleton->GetRootBone() : vBones[src.parent];
+				cBone *pBone = pParent->CreateChildBone(MshStr(src.name), MshStr(src.sid));
+				cMatrixf mtxTransform;
+				MshMatrix(mtxTransform, src.m);
+				pBone->SetTransform(mtxTransform);
+				pBone->SetLocalUnitScale(src.unitScale);
+				vBones.push_back(pBone);
 			}
 
 			pSkeleton->mbFileUnits = bHpl3;
@@ -150,40 +185,38 @@ namespace hpl {
 		////////////////////////////
 		// Nodes
 		{
-			cNode3D *pRootNode = pMesh->GetRootNode();
-			
-			int lRootChildNum = binBuff.GetInt32();
-			if(gbLogMSHLoad) Log("Nodes num: %d\n", lRootChildNum);
-
-			for(int i=0; i<lRootChildNum; ++i)
+			std::vector<cNode3D*> vNodes;
+			vNodes.reserve(pData->nodeNum);
+			for(size_t i=0; i<pData->nodeNum; ++i)
 			{
-				GetNodeFromBuffer(pRootNode, pMesh, &binBuff, 0);
+				const OhplMshNode& src = pData->nodes[i];
+				cNode3D *pParent = src.parent < 0 ? pMesh->GetRootNode() : vNodes[src.parent];
+				cNode3D *pNode = pParent->CreateChild(MshStr(src.name));
+				pMesh->AddNode(pNode);
+				cMatrixf mtxTransform;
+				MshMatrix(mtxTransform, src.m);
+				pNode->SetMatrix(mtxTransform);
+				pNode->SetCustomFlags(src.flags);
+				vNodes.push_back(pNode);
 			}
 		}
-		
+
 		/////////////////////////////////////////////////
 		// Sub Meshes
-		for(int sub=0; sub<lSubMeshNum; ++sub)
+		for(size_t sub=0; sub<pData->subNum; ++sub)
 		{
+			const OhplMshSub& src = pData->subs[sub];
 
-			/////////////////////////
-			// General Data
-			tString sName, sMaterial;
-			binBuff.GetString(&sName);
-			binBuff.GetString(&sMaterial);
+			tString sName = MshStr(src.name), sMaterial = MshStr(src.material);
+			cMatrixf mtxTransform;
+			MshMatrix(mtxTransform, src.m);
 
-			cMatrixf mtxTransform; cVector3f vModelScale;
-            binBuff.GetMatrixf(&mtxTransform);
-			binBuff.GetVector3f(&vModelScale);
-			bool bCollideShape = binBuff.GetBool();
-						
-			//Create sub mesh and set up data
 			cSubMesh *pSubMesh = pMesh->CreateSubMesh(sName);
 
 			pSubMesh->SetLocalTransform(mtxTransform);
 			// HPL3 .msh vertices are unscaled; only Collada (and our cache of it) bakes the node scale in
-			pSubMesh->SetModelScale(bHpl3 ? cVector3f(1) : vModelScale);
-			pSubMesh->SetIsCollideShape(bCollideShape);
+			pSubMesh->SetModelScale(bHpl3 ? cVector3f(1) : cVector3f(src.scale[0], src.scale[1], src.scale[2]));
+			pSubMesh->SetIsCollideShape(src.collideShape != 0);
 
 			//////////////////
 			//Set material
@@ -200,127 +233,57 @@ namespace hpl {
 				pSubMesh->SetMaterial(pMaterial);
 			}
 
-			if(gbLogMSHLoad) Log("Submesh %d: '%s' '%s'\n", sub, sName.c_str(), sMaterial.c_str());
-
 			////////////////////
 			// Colliders
+			for(size_t i=0; i<src.colliderNum; ++i)
 			{
-				int lColliderNum = binBuff.GetInt32();
-
-				if(gbLogMSHLoad) Log(" Colliders: %d\n",lColliderNum);
-				
-				for(int i=0; i<lColliderNum; ++i)
-				{
-					eCollideShapeType type = (eCollideShapeType)binBuff.GetShort16();
-
-					cMeshCollider *pCollider = pSubMesh->CreateCollider(type);
-					binBuff.GetMatrixf(&pCollider->m_mtxOffset);
-					binBuff.GetVector3f(&pCollider->mvSize);
-					pCollider->mbCharCollider = binBuff.GetBool();
-
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i,	type, pCollider->m_mtxOffset.ToString().c_str(), 
-																			pCollider->mvSize.ToString().c_str(), pCollider->mbCharCollider);
-				}
+				const OhplMshCollider& coll = src.colliders[i];
+				cMeshCollider *pCollider = pSubMesh->CreateCollider((eCollideShapeType)coll.kind);
+				MshMatrix(pCollider->m_mtxOffset, coll.m);
+				pCollider->mvSize = cVector3f(coll.size[0], coll.size[1], coll.size[2]);
+				pCollider->mbCharCollider = coll.charCollider != 0;
 			}
 
 			////////////////////
 			// Vertex Bone Pairs
+			pSubMesh->ResizeVertexBonePairs((int)src.pairNum);
+			for(size_t i=0; i<src.pairNum; ++i)
 			{
-				int lVtxBonePairNum = binBuff.GetInt32();
-				pSubMesh->ResizeVertexBonePairs(lVtxBonePairNum);
-
-				if(gbLogMSHLoad) Log(" VertexBonePairs: %d\n",pSubMesh->GetVertexBonePairNum(), lVtxBonePairNum);
-
-				for(int i=0; i<pSubMesh->GetVertexBonePairNum(); ++i)
-				{
-					cVertexBonePair& vtxBonePair = pSubMesh->GetVertexBonePair(i);
-					vtxBonePair.vtxIdx = binBuff.GetInt32();
-					vtxBonePair.boneIdx = binBuff.GetInt32();
-					vtxBonePair.weight = binBuff.GetFloat32();
-				}
+				cVertexBonePair& vtxBonePair = pSubMesh->GetVertexBonePair((int)i);
+				vtxBonePair.vtxIdx = src.pairs[i].vtx;
+				vtxBonePair.boneIdx = src.pairs[i].bone;
+				vtxBonePair.weight = src.pairs[i].weight;
 			}
 
-						
 			////////////////////
 			// Vertex data
 			iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																				eVertexBufferUsageType_Static, 0, 0);
+			for(size_t i=0; i<src.skippedNum; ++i)
 			{
-				int lVtxNum = binBuff.GetInt32();
-				int lVtxTypeNum = binBuff.GetInt32();
-				
-				if(gbLogMSHLoad) Log(" VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
-				
-				////////////////////
-				// Get vertex arrays
-				for(int i=0; i< lVtxTypeNum; ++i)
+				Warning("Skipping HPL3 vertex array %d in '%s'\n", src.skipped[i], cString::To8Char(asFile).c_str());
+			}
+			for(size_t i=0; i<src.arrayNum; ++i)
+			{
+				const OhplMshArray& arr = src.arrays[i];
+				eVertexBufferElement arrayType = (eVertexBufferElement)arr.kind;
+				eVertexBufferElementFormat elementFormat = (eVertexBufferElementFormat)arr.format;
+
+				pVtxBuff->CreateElementArray(arrayType, elementFormat, arr.elemNum, arr.progVar);
+				for(int rep=0; rep<arr.repeats; ++rep) Error("Vertex element of type %d already present in buffer %d!\n", arrayType, (int)(size_t)pVtxBuff);
+				pVtxBuff->ResizeArray(arrayType, (int)arr.count);
+
+				if(arr.bytes > 0)
 				{
-					//Get the settings
-					eVertexBufferElement arrayType = (eVertexBufferElement)binBuff.GetShort16();
-					eVertexBufferElementFormat elementFormat = (eVertexBufferElementFormat)binBuff.GetShort16();
-					int lProgramVarIndex = binBuff.GetInt32();
-					int lElementNum = binBuff.GetInt32();
-
-					if(bHpl3)
-					{
-						// HPL3 element 7 is the uv set; 5/6 have no HPL2 equivalent
-						if(arrayType == 7) arrayType = eVertexBufferElement_Texture0;
-						else if(arrayType > eVertexBufferElement_Texture1Tangent)
-						{
-							Warning("Skipping HPL3 vertex array %d in '%s'\n", arrayType, cString::To8Char(asFile).c_str());
-							binBuff.AddPos((size_t)lVtxNum * lElementNum * (elementFormat == eVertexBufferElementFormat_Byte ? 1 : 4));
-							continue;
-						}
-					}
-
-					if(gbLogMSHLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
-
-					//Create the array
-					pVtxBuff->CreateElementArray(arrayType, elementFormat, lElementNum, lProgramVarIndex);
-					pVtxBuff->ResizeArray(arrayType, lVtxNum * lElementNum);
-					
-					//Get and fill the array data
-					void *pData = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
-					GetBinaryBufferDataWithFormat(&binBuff, pData, (size_t)(lVtxNum * lElementNum), elementFormat);
+					void *pDst = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
+					memcpy(pDst, arr.data, arr.bytes);
 				}
 			}
 
 			////////////////////
 			//Get Indices
-			{
-				int lLodNum = bHpl3 ? binBuff.GetInt32() : 1;
-				for(int lod=0; lod<lLodNum; ++lod)
-				{
-					int lIdxNum =  binBuff.GetInt32();
-					if(bHpl3) binBuff.GetFloat32();
-
-					if(gbLogMSHLoad) Log("Indices: %d\n", lIdxNum);
-
-					if(lod>0) continue;
-					pVtxBuff->ResizeIndices(lIdxNum);
-					binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
-				}
-			}
-
-			
-			// shipped HPL3 meshes have zero tangents on uv-degenerate triangles; normalize() in the vertex shader makes them NaN
-			if(pVtxBuff->GetElementFormat(eVertexBufferElement_Texture1Tangent) == eVertexBufferElementFormat_Float &&
-			   pVtxBuff->GetElementFormat(eVertexBufferElement_Normal) == eVertexBufferElementFormat_Float)
-			{
-				float *pTan = pVtxBuff->GetFloatArray(eVertexBufferElement_Texture1Tangent);
-				float *pNrm = pVtxBuff->GetFloatArray(eVertexBufferElement_Normal);
-				int lTS = pVtxBuff->GetElementNum(eVertexBufferElement_Texture1Tangent), lNS = pVtxBuff->GetElementNum(eVertexBufferElement_Normal);
-				for(int i=0; i<pVtxBuff->GetVertexNum(); ++i)
-				{
-					cVector3f vTan(pTan[i*lTS], pTan[i*lTS+1], pTan[i*lTS+2]), vNrm(pNrm[i*lNS], pNrm[i*lNS+1], pNrm[i*lNS+2]);
-					if(!(cMath::Vector3Cross(vTan, vNrm).SqrLength() > 1e-12f))
-					{
-						vTan = cMath::Vector3Normalize(cMath::Vector3Cross(vNrm, std::fabs(vNrm.x) < 0.9f ? cVector3f(1,0,0) : cVector3f(0,1,0)));
-						pTan[i*lTS] = vTan.x; pTan[i*lTS+1] = vTan.y; pTan[i*lTS+2] = vTan.z;
-					}
-					if(lTS > 3 && !(pTan[i*lTS+3] != 0)) pTan[i*lTS+3] = 1;
-				}
-			}
+			pVtxBuff->ResizeIndices((int)src.indexNum);
+			if(src.indexNum > 0) memcpy(pVtxBuff->GetIndices(), src.indices, src.indexNum * sizeof(unsigned int));
 
 			///////////////////
 			//Compile vertex buffer and set to submesh
@@ -334,20 +297,14 @@ namespace hpl {
 		// Compile Mesh
 		pMesh->CompileBonesAndSubMeshes();
 
-
 		////////////////////////////
 		// Animations
+		for(size_t i=0; i<pData->animNum; ++i)
 		{
-            int lAnimationNum = binBuff.GetInt32();
-			if(gbLogMSHLoad) Log(" Animation num: %d\n",lAnimationNum);
-
-			// Rebirth discards embedded animations (cMeshLoaderMSH::GetMesh 0x1084fc0), SOMA keeps them (0x1403c68c4)
-			for(int i=0; i<lAnimationNum && (!bHpl3 || mbKeepHpl3Animations); ++i)
-			{
-				pMesh->AddAnimation(GetAnimation(&binBuff, asFile, bHpl3));
-			}
+			pMesh->AddAnimation(BuildAnimation(pData->anims[i], asFile));
 		}
-	
+
+		ohpl_msh_free(pData);
 
 		return pMesh;
 	}
@@ -535,9 +492,6 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderMSH::LoadAnimation(const tWString& asFile)
 	{
-		if(gbLogMSHLoad) Log("------ Loading Anim ---------\n");
-		/////////////////////////////////////////////////
-		// Load file
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{
@@ -545,32 +499,29 @@ namespace hpl {
 			return NULL;
 		}
 
-		/////////////////////////////////////////////////
-		// Header
-		int lMagicNum = binBuff.GetInt32();
-		int lVersion = binBuff.GetInt32();
-
-		//Check magic number
-		if(lMagicNum != MSH_FORMAT_MAGIC_NUMBER)
+		OhplMshAnim *pData = NULL;
+		int lResult = ohpl_msh_parse_anim((const uint8_t*)binBuff.GetDataPointer(), binBuff.GetSize(), &pData);
+		if(lResult == 1)
 		{
 			Error("File '%s' does not have right MSH magic number! Invalid header!\n", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
-
-		//Check so file has he right version
-		if(lVersion != MSH_FORMAT_VERSION)
+		if(lResult == 2)
 		{
 			Warning("File '%s' does not have right MSH version!\n", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
+		if(lResult != 0)
+		{
+			Error("File '%s' has MSH data that cannot be loaded: %s\n", cString::To8Char(asFile).c_str(), ohpl_msh_reason(lResult));
+			return NULL;
+		}
 
-		/////////////////////////////////////////////////
-		// Animation
-		cAnimation *pAnimation = GetAnimation(&binBuff, asFile);
-		
+		cAnimation *pAnimation = BuildAnimation(*pData, asFile);
+		ohpl_msh_anim_free(pData);
 		return pAnimation;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	bool cMeshLoaderMSH::SaveAnimation(cAnimation* apAnimation, const tWString& asFile)
@@ -646,66 +597,6 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	cAnimation* cMeshLoaderMSH::GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath, bool abHpl3)
-	{
-		/////////////////////////
-		// General Properties
-		tString sAnimName;
-		apBuffer->GetString(&sAnimName);
-		float fLength = apBuffer->GetFloat32();
-		int lTrackNum = apBuffer->GetInt32();
-		int lHpl3ExtraNum = abHpl3 ? apBuffer->GetInt32() : 0;
-		
-		cAnimation *pAnimation = hplNew(cAnimation, (cString::To8Char(asFullPath), asFullPath, cString::GetFileName(cString::To8Char(asFullPath))));
-		pAnimation->SetLength(fLength);
-
-		if(gbLogMSHLoad) Log(" Animation %s: %f %d\n", pAnimation->GetName().c_str(), pAnimation->GetLength(), lTrackNum);
-
-		////////////////////////
-		// Tracks
-		pAnimation->ReserveTrackNum(lTrackNum);
-		for(int track=0;track<lTrackNum; ++track)
-		{
-			/////////////////////////
-			// General Properties
-			tString sTrackName;
-			apBuffer->GetString(&sTrackName);
-			tAnimTransformFlag transFlag = apBuffer->GetShort16();
-			int lFrameNum = apBuffer->GetInt32();
-
-			cAnimationTrack *pTrack = pAnimation->CreateTrack(sTrackName,transFlag);
-			
-			if(gbLogMSHLoad) Log("  Track %d %s: %d %d\n", track, pTrack->GetName().c_str(), pTrack->GetTransformFlags(), lFrameNum);
-
-			/////////////////////////
-			// Key Frames
-			for(int frame=0; frame<lFrameNum; ++frame)
-			{
-				cKeyFrame *pFrame = pTrack->CreateKeyFrame(apBuffer->GetFloat32());
-
-				apBuffer->GetVector3f(&pFrame->trans);
-				apBuffer->GetQuaternion(&pFrame->rotation);
-				
-				//if(gbLogMSHLoad) Log("   Frame%d (%s) (%s, %f) %f\n",	frame, pFrame->trans.ToString().c_str(), 
-				//														pFrame->rotation.v.ToString().c_str(), pFrame->rotation.w, pFrame->time);
-
-			}
-		}
-
-		// SOMA 0x1403c5dc3: float + 2 vec3 each, kept at cAnimation+0x118; unused here
-		for(int i=0; i<lHpl3ExtraNum; ++i)
-		{
-			cVector3f vTemp;
-			apBuffer->GetFloat32();
-			apBuffer->GetVector3f(&vTemp);
-			apBuffer->GetVector3f(&vTemp);
-		}
-
-		return pAnimation;
-	}
-
-	//-----------------------------------------------------------------------
-	
 	static tString gsLevelTemp = "";
 	const char* GetLevelSpaces(int alLevel)
 	{
@@ -736,37 +627,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cMeshLoaderMSH::GetNodeFromBuffer(cNode3D *apParentNode, cMesh *apMesh, cBinaryBuffer* apBuffer, int alLevel)
-	{
-		///////////////////////////////
-		// Get properties
-		tString sName;
-		cMatrixf mtxTransform;
-
-		apBuffer->GetString(&sName);
-		apBuffer->GetMatrixf(&mtxTransform);
-		int lCustomFlags = apBuffer->GetInt32();
-		int lChildNum = apBuffer->GetInt32();
-
-		///////////////////////////////
-		// Create node
-		cNode3D *pNode = apParentNode->CreateChild(sName);
-		apMesh->AddNode(pNode);
-		pNode->SetMatrix(mtxTransform);
-		pNode->SetCustomFlags(lCustomFlags);
-
-		if(gbLogMSHLoad) Log("%s Node '%s' %d %d (%s)\n",	GetLevelSpaces(alLevel), pNode->GetName().c_str(), pNode->GetCustomFlags(), 
-															lChildNum, pNode->GetLocalMatrix().ToString().c_str());
-
-		///////////////////////////////
-		// Iterate children
-		for(int i=0; i<lChildNum; ++i)
-		{
-			GetNodeFromBuffer(pNode,apMesh, apBuffer, alLevel+1);
-		}
-	}
-	//-----------------------------------------------------------------------
-
 	void cMeshLoaderMSH::AddBoneToBuffer(cBone *apBone, cBinaryBuffer* apBuffer, int alLevel)
 	{
 		apBuffer->AddString(apBone->GetName());
@@ -785,32 +645,6 @@ namespace hpl {
 		}
 	}
 	
-	//-----------------------------------------------------------------------
-
-	void cMeshLoaderMSH::GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel, bool abUnitScale)
-	{
-		tString sName, sSid;
-		cMatrixf mtxTransform;
-
-		apBuffer->GetString(&sName);
-		apBuffer->GetString(&sSid);
-		apBuffer->GetMatrixf(&mtxTransform);
-		float fUnitScale = abUnitScale ? apBuffer->GetFloat32() : 1.0f;
-		int lChildNum = apBuffer->GetInt32();
-
-		cBone *pBone = apParentBone->CreateChildBone(sName, sSid);
-		pBone->SetTransform(mtxTransform);
-		pBone->SetLocalUnitScale(fUnitScale);
-		
-		if(gbLogMSHLoad) Log("%s Bone '%s' '%s' %d (%s)\n",	GetLevelSpaces(alLevel), pBone->GetName().c_str(), pBone->GetSid().c_str(), 
-															lChildNum, pBone->GetLocalTransform().ToString().c_str());
-
-        for(int i=0; i<lChildNum; ++i)
-		{
-			GetBoneFromBuffer(pBone, apBuffer, alLevel+1, abUnitScale);
-		}
-	}
-
 	//-----------------------------------------------------------------------
 
 	void* cMeshLoaderMSH::GetVertexBufferWithFormat(iVertexBuffer *apVtxBuffer, eVertexBufferElement aElement, eVertexBufferElementFormat aFormat)
@@ -847,27 +681,6 @@ namespace hpl {
 		}
 	}
 	
-	//-----------------------------------------------------------------------
-
-	void cMeshLoaderMSH::GetBinaryBufferDataWithFormat(cBinaryBuffer* apBuffer, void *apDestData, size_t alSize, eVertexBufferElementFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case eVertexBufferElementFormat_Int:
-			apBuffer->GetInt32Array((int*)apDestData, alSize);
-			break;
-		case eVertexBufferElementFormat_Float:
-			apBuffer->GetFloat32Array((float*)apDestData, alSize);
-			break;
-		case eVertexBufferElementFormat_Byte:		
-			apBuffer->GetCharArray((char*)apDestData, alSize);
-			break;
-		default:
-			Error("Vertex buffer has incorrect format when getting binary data during loading of MSH file!\n");
-			break;
-		}
-	}
-
 	//-----------------------------------------------------------------------
 
 
