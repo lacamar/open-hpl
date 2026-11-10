@@ -32,7 +32,7 @@ namespace hpl {
 
 	//------------------------------------------
 
-	typedef std::multimap<int, iPostEffect*, std::greater<int> > tPostEffectMap;
+	typedef std::vector<std::pair<int, iPostEffect*> > tPostEffectMap; //Highest priority first, insertion order among equals
 	typedef tPostEffectMap::iterator tPostEffectMapIt;
 	
 	//------------------------------------------

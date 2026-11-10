@@ -73,8 +73,6 @@ namespace hpl {
 		
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
-		void RenderBlur(iTexture *apInputTex);
-
 		iFrameBuffer *mpBlurBuffer[2];
 		iTexture *mpBlurTexture[2];
 		

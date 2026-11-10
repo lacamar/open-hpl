@@ -131,38 +131,11 @@ namespace hpl {
 
 	iTexture* cPostEffect_ColorConvTex::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
+		iTexture *vTextures[3] = {apInputTexture, mpColorConvTex, apFinalTempBuffer->GetColorBuffer(0)->ToTexture()};
+		iGpuProgram *vPrograms[2] = {mpSpecificType->mpProgram[0], mpSpecificType->mpProgram[1]};
 
-		/////////////////////////
-		// Render the to final buffer
-		// This function sets to frame buffer is post effect is last!
-        SetFinalFrameBuffer(apFinalTempBuffer);
-
-		mpCurrentComposite->SetTexture(0, apInputTexture);
-		mpCurrentComposite->SetTexture(1, mpColorConvTex);
-		
-		if(mParams.mfFadeAlpha >= 1)
-		{
-			mpCurrentComposite->SetProgram(mpSpecificType->mpProgram[0]);
-		}
-		else
-		{
-			float fAlpha = cMath::Max(mParams.mfFadeAlpha,0.0f);
-			mpCurrentComposite->SetProgram(mpSpecificType->mpProgram[1]);
-			if(mpSpecificType->mpProgram[1])
-			{
-				mpSpecificType->mpProgram[1]->SetFloat(kVar_afFadeAlpha,fAlpha);
-			}
-		}
-		
-		
-		DrawQuad(0,1,apInputTexture, true);
-		
-		return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
+		OhplPePlan *pPlan = ohpl_pe_plan_color_conv(mParams.mfFadeAlpha, vPrograms[0] != NULL, vPrograms[1] != NULL);
+		return RunPlan(pPlan, vTextures, NULL, vPrograms, apFinalTempBuffer);
 	}
 
 	//-----------------------------------------------------------------------

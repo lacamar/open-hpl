@@ -25,6 +25,7 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Texture.h"
+#include "graphics/GPUProgram.h"
 
 namespace hpl {
 
@@ -96,15 +97,9 @@ namespace hpl {
 		// If last effect and final frame buffer has not been called, copy o rendertarget
 		if(mbIsLastEffect && mbFinalFrameBufferUsed == false)
 		{
-			mpCurrentComposite->SetProgram(NULL);
-			mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-
-			cRenderTarget *pRenderTarget = mpCurrentComposite->GetCurrentRenderTarget();
-			mpCurrentComposite->SetFrameBuffer(pRenderTarget->mpFrameBuffer, true);
-
-			mpCurrentComposite->SetTexture(0, pOutputTex);
-
-			DrawQuad(0, 1, pOutputTex, true);
+			iTexture *vTextures[1] = {pOutputTex};
+			iFrameBuffer *vFrameBuffers[1] = {mpCurrentComposite->GetCurrentRenderTarget()->mpFrameBuffer};
+			RunPlan(ohpl_pe_plan_final_copy(), vTextures, vFrameBuffers, NULL, NULL);
 		}
 
 		return pOutputTex;
@@ -170,14 +165,13 @@ namespace hpl {
 		cVector2f vScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
 		cRenderTarget *pRenderTarget = mpCurrentComposite->GetCurrentRenderTarget();
 		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
-		cVector2f vViewportSize((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
-		cVector2f vViewportPos((float)pRenderTarget->mvPos.x, (float)pRenderTarget->mvPos.y);
 
-		cVector2f vRelPos = vViewportPos / vScreenSizeFloat;
-		cVector2f vRelSize = vViewportSize / vScreenSizeFloat;
-
-		avUvPos = vRelPos * avTexSize;
-		avUvSize = vRelSize * avTexSize;
+		OhplVec2f vPos, vSize;
+		ohpl_pe_uv_pos_size(OhplVec2f{avTexSize.x, avTexSize.y}, OhplVec2f{vScreenSizeFloat.x, vScreenSizeFloat.y},
+							OhplVec2l{pRenderTarget->mvPos.x, pRenderTarget->mvPos.y},
+							OhplVec2l{vRenderTargetSize.x, vRenderTargetSize.y}, &vPos, &vSize);
+		avUvPos = cVector2f(vPos.x, vPos.y);
+		avUvSize = cVector2f(vSize.x, vSize.y);
 	}
 
 	//-----------------------------------------------------------------------
@@ -200,46 +194,87 @@ namespace hpl {
 			cVector2f vUvPos, vUvSize;
 			GetTextureUvPosAndSize(vTexSize,vUvPos, vUvSize);
 
-			cVector2l vTargetPos((int)(vUvPos.x+0.5f), (int)(vUvPos.y+0.5f));		
-			cVector2l vTargetSize((int)(vUvSize.x+0.5f), (int)(vUvSize.y+0.5f));
+			OhplVec2l vTargetPos, vTargetSize;
+			ohpl_pe_round_target(OhplVec2f{vUvPos.x, vUvPos.y}, OhplVec2f{vUvSize.x, vUvSize.y}, &vTargetPos, &vTargetSize);
 
-			mpLowLevelGraphics->SetCurrentFrameBuffer(apFrameBuffer, vTargetPos, vTargetSize);
+			mpLowLevelGraphics->SetCurrentFrameBuffer(apFrameBuffer, cVector2l(vTargetPos.x, vTargetPos.y),
+													  cVector2l(vTargetSize.x, vTargetSize.y));
 		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iPostEffect::QuadUv(iTexture *apTexture, cVector2f& avMin, cVector2f& avMax)
+	{
+		cVector2f vTexSize = apTexture->GetSizeFloat2D();
+		cVector2f vUvPos, vUvSize;
+		GetTextureUvPosAndSize(vTexSize,vUvPos,vUvSize);
+
+		OhplVec2f vMin, vMax;
+		ohpl_pe_quad_uv(OhplVec2f{vTexSize.x, vTexSize.y}, apTexture->GetType() == eTextureType_Rect,
+						OhplVec2f{vUvPos.x, vUvPos.y}, OhplVec2f{vUvSize.x, vUvSize.y}, &vMin, &vMax);
+		avMin = cVector2f(vMin.x, vMin.y);
+		avMax = cVector2f(vMax.x, vMax.y);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iPostEffect::DrawQuad(const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture, bool abFlipY)
 	{
-		cVector2f vTexSize = apTexture->GetSizeFloat2D();
-		cVector2f vUvPos, vUvSize;
-		GetTextureUvPosAndSize(vTexSize,vUvPos,vUvSize);
-		cVector2f vUvScale = apTexture->GetType() == eTextureType_Rect ? cVector2f(1) : cVector2f(1) / vTexSize;
-
-		mpCurrentComposite->DrawQuad(avPos,avSize,
-									cVector2f(vUvPos.x, (vTexSize.y - vUvSize.y)-vUvPos.y) * vUvScale, 
-									cVector2f(vUvPos.x + vUvSize.x,vTexSize.y - vUvPos.y) * vUvScale,
-									abFlipY);
+		cVector2f vMin, vMax;
+		QuadUv(apTexture, vMin, vMax);
+		mpCurrentComposite->DrawQuad(avPos,avSize,vMin,vMax,abFlipY);
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iPostEffect::DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture0, iTexture *apTexture1, 
+	void iPostEffect::DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture0, iTexture *apTexture1,
 								bool abFlipY0,bool abFlipY1)
 	{
-		cVector2f vTexSize[2] = {apTexture0->GetSizeFloat2D(), apTexture1->GetSizeFloat2D()};
 		cVector2f vTexMin[2], vTexMax[2];
-		
-		for(int i=0; i<2; ++i)
-		{
-			cVector2f vUvPos, vUvSize;
-			GetTextureUvPosAndSize(vTexSize[i],vUvPos,vUvSize);
-			cVector2f vUvScale = (i ? apTexture1 : apTexture0)->GetType() == eTextureType_Rect ? cVector2f(1) : cVector2f(1) / vTexSize[i];
-			vTexMin[i] = cVector2f(vUvPos.x, (vTexSize[i].y - vUvSize.y)-vUvPos.y) * vUvScale; 
-			vTexMax[i] = cVector2f(vUvPos.x + vUvSize.x,vTexSize[i].y - vUvPos.y) * vUvScale;
-		}
+		QuadUv(apTexture0, vTexMin[0], vTexMax[0]);
+		QuadUv(apTexture1, vTexMin[1], vTexMax[1]);
 
 		mpCurrentComposite->DrawQuad(cVector2f(0,0),1,vTexMin[0],vTexMax[0],vTexMin[1],vTexMax[1],abFlipY0,abFlipY1);
+	}
+
+	//-----------------------------------------------------------------------
+
+	iTexture* iPostEffect::RunPlan(OhplPePlan *apPlan, iTexture **apTextures, iFrameBuffer **apFrameBuffers,
+								   iGpuProgram **apPrograms, iFrameBuffer *apFinalTempBuffer)
+	{
+		cPostEffectComposite *c = mpCurrentComposite;
+		auto Tex = [&](int i) { return i >= 0 ? apTextures[i] : (iTexture*)NULL; };
+		auto Fb = [&](int i) { return i >= 0 ? apFrameBuffers[i] : (iFrameBuffer*)NULL; };
+		auto Prog = [&](int i) { return i >= 0 ? apPrograms[i] : (iGpuProgram*)NULL; };
+		OhplPeOp op;
+		while(ohpl_pe_plan_next(apPlan, &op))
+		{
+			switch(op.kind)
+			{
+			case eOhplPeOp_FlatProjection:		c->SetFlatProjection(); break;
+			case eOhplPeOp_BlendNone:			c->SetBlendMode(eMaterialBlendMode_None); break;
+			case eOhplPeOp_BlendAlpha:			c->SetBlendMode(eMaterialBlendMode_Alpha); break;
+			case eOhplPeOp_ChannelRgba:			c->SetChannelMode(eMaterialChannelMode_RGBA); break;
+			case eOhplPeOp_TextureRangeNull:	c->SetTextureRange(NULL, op.a); break;
+			case eOhplPeOp_CompFb:				c->SetFrameBuffer(Fb(op.a)); break;
+			case eOhplPeOp_CompFbPos:			c->SetFrameBuffer(Fb(op.a), true); break;
+			case eOhplPeOp_FinalFb:				SetFinalFrameBuffer(apFinalTempBuffer); break;
+			case eOhplPeOp_BaseFb:				SetFrameBuffer(Fb(op.a)); break;
+			case eOhplPeOp_Program:				c->SetProgram(Prog(op.a)); break;
+			case eOhplPeOp_ClearColor:			c->ClearFrameBuffer(eClearFrameBufferFlag_Color, true); break;
+			case eOhplPeOp_Tex:					c->SetTexture(op.a, Tex(op.b)); break;
+			case eOhplPeOp_Float:				Prog(op.a)->SetFloat(op.b, op.f[0]); break;
+			case eOhplPeOp_Vec2:				Prog(op.a)->SetVec2f(op.b, cVector2f(op.f[0], op.f[1])); break;
+			case eOhplPeOp_Vec3:				Prog(op.a)->SetVec3f(op.b, cVector3f(op.f[0], op.f[1], op.f[2])); break;
+			case eOhplPeOp_Quad1:				DrawQuad(0, 1, Tex(op.a), op.b != 0); break;
+			case eOhplPeOp_Quad2:				DrawQuad(0, 1, Tex(op.a), Tex(op.b), (op.c & 1) != 0, (op.c & 2) != 0); break;
+			}
+		}
+		int lResult = ohpl_pe_plan_result(apPlan);
+		iTexture *pResult = lResult >= 0 ? apTextures[lResult] : NULL;
+		ohpl_pe_plan_free(apPlan);
+		return pResult;
 	}
 
 	//-----------------------------------------------------------------------
