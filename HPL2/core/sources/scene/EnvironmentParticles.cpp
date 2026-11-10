@@ -1,4 +1,5 @@
 #include "scene/EnvironmentParticles.h"
+#include "scene/RustParticles.h"
 
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
@@ -77,21 +78,19 @@ namespace hpl {
 		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0, eVertexBufferElementFormat_Float, 3);
 		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture1, eVertexBufferElementFormat_Float, 3);
 
-		cVector2l vSubDiv(cMath::Max(avSubDivUV.x, 1), cMath::Max(avSubDivUV.y, 1));
-		cVector2f vCellSize(1.0f / vSubDiv.x, 1.0f / vSubDiv.y);
-		const cVector2f vCorners[4] = {cVector2f(1,1), cVector2f(0,1), cVector2f(0,0), cVector2f(1,0)};
-		const cVector2f vOffsets[4] = {cVector2f(0.5f,-0.5f), cVector2f(-0.5f,-0.5f), cVector2f(-0.5f,0.5f), cVector2f(0.5f,0.5f)};
+		std::vector<float> vPosData(alNum > 0 ? alNum*16 : 0), vUv0Data(alNum > 0 ? alNum*12 : 0), vUv1Data(alNum > 0 ? alNum*12 : 0);
+		ohpl_env_setup(afBoxSize, alNum, &avParticleSize, &avSubDivUV, vPosData.data(), vUv0Data.data(), vUv1Data.data());
 		for(int i=0; i<alNum; ++i)
 		{
-			cVector3f vPos = cMath::RandRectVector3f(0, afBoxSize);
-			cVector2f vCell(cMath::RandRectl(0, vSubDiv.x-1) * vCellSize.x, cMath::RandRectl(0, vSubDiv.y-1) * vCellSize.y);
 			for(int j=0; j<4; ++j)
 			{
-				mpVtxBuffer->AddVertexVec4f(eVertexBufferElement_Position, vPos, 1);
+				const float *p = &vPosData[i*16 + j*4];
+				mpVtxBuffer->AddVertexVec4f(eVertexBufferElement_Position, cVector3f(p[0], p[1], p[2]), p[3]);
 				mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1, 1));
-				cVector2f vUv = vCell + vCorners[j] * vCellSize;
-				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(vUv.x, vUv.y, 0));
-				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture1, cVector3f(vOffsets[j].x * avParticleSize.x, vOffsets[j].y * avParticleSize.y, 0));
+				const float *u0 = &vUv0Data[i*12 + j*3];
+				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(u0[0], u0[1], u0[2]));
+				const float *u1 = &vUv1Data[i*12 + j*3];
+				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture1, cVector3f(u1[0], u1[1], u1[2]));
 			}
 			int lIdx[6] = {0, 1, 2, 2, 3, 0};
 			for(int j=0; j<6; ++j) mpVtxBuffer->AddIndex(i*4 + lIdx[j]);
@@ -113,39 +112,22 @@ namespace hpl {
 		if(mbVelDirty == false) return;
 		mbVelDirty = false;
 
-		mvIterGravityVel[0] = mvGravityVel;
-		mvIterWindVel[0] = mvWindVel;
-		mvIterRotateVel[0] = mvRotateVel;
-		for(int i=1; i<kMaxEnvParticleIterations; ++i)
-		{
-			int s = 22 + 13*(i-1);
-			mvIterGravityVel[i] = mvGravityVel + mvGravityVel * mfGravitySpeedRand * cMath::FastRandomFloat(s-9);
-			mvIterWindVel[i] = mvWindVel + mvWindVel * mfWindSpeedRand * cMath::FastRandomFloat(s-8);
-			mvIterRotateVel[i] = mvRotateVel + mvRotateVel * mfRotateSpeedRand * cMath::FastRandomFloat(s-7);
-			if(mbRotateBothDirs)
-				for(int k=0; k<3; ++k) if(cMath::FastRandomFloat(s-6+k) > 0) mvIterRotateVel[i].v[k] = -mvIterRotateVel[i].v[k];
-			if(mfWindDirRand > 0)
-			{
-				cVector3f vAxis = cMath::Vector3Normalize(cVector3f(cMath::FastRandomFloat(s-3), cMath::FastRandomFloat(s-2), cMath::FastRandomFloat(s-1)));
-				cMatrixf mtxRot = cMath::MatrixRotate(vAxis * (mfWindDirRand * kPif * cMath::FastRandomFloat(s)), eEulerRotationOrder_XYZ);
-				mvIterWindVel[i] = cMath::MatrixMul(mtxRot, mvIterWindVel[i]);
-			}
-		}
+		OhplEnvVelIn in;
+		in.mvGravityVel = mvGravityVel;
+		in.mvWindVel = mvWindVel;
+		in.mvRotateVel = mvRotateVel;
+		in.mfGravitySpeedRand = mfGravitySpeedRand;
+		in.mfWindSpeedRand = mfWindSpeedRand;
+		in.mfWindDirRand = mfWindDirRand;
+		in.mfRotateSpeedRand = mfRotateSpeedRand;
+		in.mbRotateBothDirs = mbRotateBothDirs;
+		ohpl_env_velocity_vectors(&in, mvIterGravityVel, mvIterWindVel, mvIterRotateVel);
 	}
 
 	void cEnvironmentParticles::Update(float afTimeStep)
 	{
 		UpdateVelocityVectors();
-		for(int i=0; i<mlIterationNum; ++i)
-		{
-			mvIterOffset[i] += (mvIterGravityVel[i] + mvIterWindVel[i]) * afTimeStep;
-			mvIterRotation[i] += mvIterRotateVel[i] * afTimeStep;
-			for(int k=0; k<3; ++k)
-			{
-				if(std::fabs(mvIterOffset[i].v[k]) > 10000) mvIterOffset[i].v[k] = cMath::Modulus(mvIterOffset[i].v[k], 10000);
-				if(std::fabs(mvIterRotation[i].v[k]) > 10000) mvIterRotation[i].v[k] = cMath::Modulus(mvIterRotation[i].v[k], 10000);
-			}
-		}
+		ohpl_env_update(mlIterationNum, afTimeStep, mvIterGravityVel, mvIterWindVel, mvIterRotateVel, mvIterOffset, mvIterRotation);
 
 		float fShrink = mvParticleSize.Length() * 0.5f;
 		for(size_t i=0; i<mvClipAreas.size(); ++i)

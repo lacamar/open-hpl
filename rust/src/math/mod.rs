@@ -30,6 +30,7 @@ pub(crate) use matrix::{
 };
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
+pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
