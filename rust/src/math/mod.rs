@@ -20,11 +20,13 @@ mod scalar;
 mod tangents;
 
 pub use crate::types::{Matrixf, Quaternion, Vector2f, Vector2l, Vector3f};
+pub(crate) use libm::{asin, cos, sin};
 pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_z,
 };
-pub(crate) use scalar::to_rad;
+pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
+pub(crate) use scalar::{clamp, round_float_to_decimals, to_rad};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

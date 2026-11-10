@@ -28,6 +28,7 @@
 #include "graphics/Skeleton.h"
 #include "graphics/Bone.h"
 #include "math/Math.h"
+#include "graphics/RustMesh.h"
 
 #include "physics/PhysicsWorld.h"
 
@@ -239,54 +240,14 @@ namespace hpl {
 
 		unsigned int* pIndices = mpVtxBuffer->GetIndices();
 		float *pPositions = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		
-		bool bFirst = true;
-		cVector3f vNormalSum;
-		cVector3f vFirstNormal;
-		cVector3f vPosSum=0;
-		int vTri[3];
 		const int lVtxStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-		float fCount=0;
 
-		for(int i=0; i< lIdxNum; i+=3)
-		{
-			//Log("%d \n",i);
-
-			vTri[0] = pIndices[i+0];
-			vTri[1] = pIndices[i+1];
-			vTri[2] = pIndices[i+2];
-
-			const float *pVtx0 = &pPositions[vTri[0]*	lVtxStride];
-			const float *pVtx1 = &pPositions[vTri[1]*	lVtxStride];
-			const float *pVtx2 = &pPositions[vTri[2]*	lVtxStride];
-
-			cVector3f vEdge1( pVtx1[0] - pVtx0[0], pVtx1[1] - pVtx0[1], pVtx1[2] - pVtx0[2]);
-			cVector3f vEdge2( pVtx2[0] - pVtx0[0], pVtx2[1] - pVtx0[1], pVtx2[2] - pVtx0[2]);
-			
-			cVector3f vNormal = cMath::Vector3Normalize(cMath::Vector3Cross(vEdge2, vEdge1));
-
-			//Log(" normal: %s\n",vNormal.ToString().c_str());
-			
-			vPosSum += cVector3f(pVtx0[0], pVtx0[1], pVtx0[2]);
-
-			if(bFirst)
-			{
-				bFirst = false;
-				vFirstNormal = vNormal;
-				vNormalSum = vNormal;
-			}
-			else
-			{
-				if(cMath::Vector3Dot(vFirstNormal, vNormal) < 0.9f) return;
-				vNormalSum += vNormal;
-			}
-
-			fCount += 1;
-		}
+		cVector3f vNormal, vPoint;
+		if(ohpl_submesh_one_sided(pIndices, (size_t)lIdxNum, pPositions, (size_t)mpVtxBuffer->GetVertexNum() * (size_t)lVtxStride, lVtxStride, &vNormal, &vPoint) == false) return;
 
 		mbIsOneSided = true;
-		mvOneSidedNormal = cMath::Vector3Normalize(vNormalSum / fCount);
-		mvOneSidedPoint = vPosSum / fCount;
+		mvOneSidedNormal = vNormal;
+		mvOneSidedPoint = vPoint;
 	}
 
 	//-----------------------------------------------------------------------
@@ -298,70 +259,13 @@ namespace hpl {
 		mpVertexWeights = hplNewArray( float, 4 * mpVtxBuffer->GetVertexNum());
 		mpVertexBones = hplNewArray( unsigned char, 4 * mpVtxBuffer->GetVertexNum()) ;
 		memset(mpVertexWeights,0,4 * mpVtxBuffer->GetVertexNum()*sizeof(float));
-		bool bWarn = true;
-		///////////////////////////////////
-		// Iterate pairs and fill arrays
-		for(size_t i=0; i < mvVtxBonePairs.size(); i++)
-		{
-			cVertexBonePair &Pair = mvVtxBonePairs[i];
-			if(Pair.vtxIdx >= (unsigned int)mpVtxBuffer->GetVertexNum()) continue;
+		memset(mpVertexBones,0,4 * mpVtxBuffer->GetVertexNum()*sizeof(unsigned char));
 
-			float *pWeight = &mpVertexWeights[Pair.vtxIdx*4];
-			unsigned char *pBoneIdx = &mpVertexBones[Pair.vtxIdx*4];
-			int lPos=-1;
-			//Find out where to add the next weight.
-			for(int j=0; j<4;j++)
-			{
-				if(pWeight[j]==0){
-					lPos = j;
-					break;
-				}
-			}
-			//If no place was found there are too many bones on the vertex.
-			if(lPos==-1){
-				if (bWarn) Warning("More than 4 bones on a vertex in submesh '%s' in mesh '%s' !\n",GetName().c_str(), mpParent->GetName().c_str());
-				bWarn = false;
-				continue;
-			}
+		unsigned int lFlags = ohpl_submesh_compile_bone_pairs(mvVtxBonePairs.data(), mvVtxBonePairs.size(), (size_t)mpVtxBuffer->GetVertexNum(), mpVertexWeights, mpVertexBones);
 
-			pWeight[lPos] = Pair.weight;
-			pBoneIdx[lPos] = Pair.boneIdx;
-		}
+		if(lFlags & 1) Warning("More than 4 bones on a vertex in submesh '%s' in mesh '%s' !\n",GetName().c_str(), mpParent->GetName().c_str());
 
-		bool bUnconnectedVertexes=false;
-
-		/////////////////////////////////
-		//Normalize the weights
-		for(int vtx =0; vtx < mpVtxBuffer->GetVertexNum(); ++vtx)
-		{
-			float *pWeight = &mpVertexWeights[vtx*4];
-
-			//check if the vertex is missing bone connection
-			if(pWeight[0] == 0)
-			{
-				bUnconnectedVertexes=true;
-				continue;
-			}
-
-			float fTotal=0;
-			int lNum=0;
-			while(lNum<4 && pWeight[lNum]!=0)
-			{
-				fTotal += pWeight[lNum];
-				lNum++;
-			}
-			for(int i=0; i<lNum; ++i)
-			{
-				pWeight[i] = pWeight[i] / fTotal;
-			}
-		}
-
-		/////////////////////////////////
-		// Check if any unconnected vertices
-		if(bUnconnectedVertexes)
-		{
-			Warning("Some vertices in sub mesh '%s' in mesh '%s' are not connected to a bone!\n",GetName().c_str(), mpParent->GetName().c_str());
-		}
+		if(lFlags & 2) Warning("Some vertices in sub mesh '%s' in mesh '%s' are not connected to a bone!\n",GetName().c_str(), mpParent->GetName().c_str());
 	}
 
 	//-----------------------------------------------------------------------
