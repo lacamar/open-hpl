@@ -116,39 +116,15 @@ namespace hpl {
 
 	iTexture* cPostEffect_RadialBlur::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-		mpCurrentComposite->SetTextureRange(NULL,1);
-
 		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
-		cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
 
-		/////////////////////////
-		// Render to accum buffer
-		// This function sets to frame buffer is post effect is last!
-		SetFinalFrameBuffer(apFinalTempBuffer);
+		iTexture *vTextures[2] = {apInputTexture, apFinalTempBuffer->GetColorBuffer(0)->ToTexture()};
+		iGpuProgram *vPrograms[1] = {mpRadialBlurType->mpProgram};
 
-		mpCurrentComposite->SetProgram(mpRadialBlurType->mpProgram);
-		
-		if(mpRadialBlurType->mpProgram)
-		{
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afSize, mParams.mfSize*vRenderTargetSizeFloat.x);
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afBlurStartDist, mParams.mfBlurStartDist);
-			mpRadialBlurType->mpProgram->SetVec2f(kVar_avHalfScreenSize,  vRenderTargetSizeFloat*0.5f);
-		}
-				
-		mpCurrentComposite->SetTexture(0, apInputTexture);
-					
-				
-		DrawQuad(0, 1, apInputTexture, true);
-
-		mpCurrentComposite->SetProgram(NULL);
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		
-		return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
+		OhplPePlan *pPlan = ohpl_pe_plan_radial_blur(mParams.mfSize, mParams.mfBlurStartDist,
+													 OhplVec2l{vRenderTargetSize.x, vRenderTargetSize.y},
+													 mpRadialBlurType->mpProgram != NULL);
+		return RunPlan(pPlan, vTextures, NULL, vPrograms, apFinalTempBuffer);
 	}
 
 	//-----------------------------------------------------------------------

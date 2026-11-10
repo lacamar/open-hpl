@@ -22,6 +22,7 @@
 
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustPostEffect.h"
 
 namespace hpl {
 
@@ -126,9 +127,17 @@ namespace hpl {
 		void GetTextureUvPosAndSize(const cVector2f& avTexSize,cVector2f& avUvPos,  cVector2f& avUvSize);
 
 		void SetFrameBuffer(iFrameBuffer *apFrameBuffer);
+		void QuadUv(iTexture *apTexture, cVector2f& avMin, cVector2f& avMax);
 		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture, bool abFlipY);
 		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture0, iTexture *apTexture1, 
 						bool abFlipY0,bool abFlipY1);
+
+		/**
+		 * Replays and frees a Rust effect plan; slots index the given arrays (negative is NULL).
+		 * Returns the texture the plan's result slot names.
+		 */
+		iTexture *RunPlan(OhplPePlan *apPlan, iTexture **apTextures, iFrameBuffer **apFrameBuffers,
+						  iGpuProgram **apPrograms, iFrameBuffer *apFinalTempBuffer);
 		
 		cGraphics *mpGraphics;
 		cResources *mpResources;
