@@ -26,6 +26,7 @@ pub mod graphics;
 pub mod hplmap;
 pub mod hpsl;
 pub mod math;
+pub mod meshload;
 pub mod platform;
 mod platform_ffi;
 pub mod preprocess;
