@@ -44,3 +44,14 @@ if(OPENHPL_VULKAN)
     add_test(NAME GlslToVulkanTests COMMAND GlslToVulkanTests)
     set_tests_properties(GlslToVulkanTests PROPERTIES TIMEOUT 30)
 endif()
+
+add_library(HPL2TraceRecorder STATIC EXCLUDE_FROM_ALL
+    trace/RecordingLowLevelGraphics.cpp
+)
+target_link_libraries(HPL2TraceRecorder PUBLIC HPL2)
+target_include_directories(HPL2TraceRecorder PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+AddTestTarget(TraceRecorderTests TraceRecorderTests.cpp)
+target_link_libraries(TraceRecorderTests HPL2TraceRecorder)
+add_test(NAME TraceRecorderTests COMMAND TraceRecorderTests)
+set_tests_properties(TraceRecorderTests PROPERTIES TIMEOUT 30)
