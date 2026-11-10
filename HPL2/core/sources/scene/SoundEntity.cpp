@@ -31,6 +31,7 @@
 #include "engine/Engine.h"
 #include "scene/Scene.h"
 #include "scene/World.h"
+#include "scene/RustWorld.h"
 
 namespace hpl {
 
@@ -49,7 +50,6 @@ namespace hpl {
 								cSoundHandler *apSoundHandler, bool abRemoveWhenOver, int alCreationID)
 		:iEntity3D(asName)
 	{
-		mbRemoveWhenOver = abRemoveWhenOver;
 		mlCreationID = alCreationID;
 
 		//Log("Created sound entity '%s'\n",msName.c_str());
@@ -67,8 +67,6 @@ namespace hpl {
 			mvSoundEntryID[i]=-1;
 		}
 
-		mfIntervalCount = mpData->GetInterval();
-
 		mfVolume = mpData->GetVolume();
 
 		mfMinDistance = mpData->GetMinDistance();
@@ -76,34 +74,17 @@ namespace hpl {
 
 		mBoundingVolume.SetSize(mfMaxDistance*2);
 
-		mbStopped = false; //If the sound should be stopped
-		mbStarted = false; //If the sound started playing-
-
-		mbSkipStartEnd = false; //If the end and start sounds should be skipped.
-		
-        mbPrioRemove = false; //If the sounds was removed because too many where playing
-
-		mbFadingOut = false; //If the sound is fading out.
-
-		mbOutOfRange = false; //If the sound is out of range.
-
 		mbLog = false;
 		
-		mfSleepCount = 0;
-
 		mbForcePlayAsGUISound = false;
 
 		mpSoundCallback = hplNew( cSoundEntityChannelCallback, () );
 		mpSoundCallback->mpEntity = this;
 
-		if(mpSoundHandler->GetSilent())
-		{
-			mbStarted = true;
-			mbStopped = true;
-			mfVolume =0;
-			mbSkipStartEnd = true;
-			mbRemoveWhenOver = true;
-		}
+		const bool bSilent = mpSoundHandler->GetSilent();
+		const OhplSoundCfg cfg = GetCfg();
+		ohpl_snd_init(&cfg, abRemoveWhenOver, bSilent, &mState);
+		if(bSilent) mfVolume = 0;
 
 		//if( mpData->GetName() == "scrape_wood.snt") mbLog = true;
 		if(mbLog)Log("Created %d\n", this);
@@ -225,9 +206,7 @@ namespace hpl {
 
 	void cSoundEntityChannelCallback::OnPriorityRelease()
 	{
-		if(mpEntity->mbStopped || mpEntity->mbFadingOut) return;
-
-		mpEntity->mbPrioRemove = true;
+		ohpl_snd_priority_release(&mpEntity->mState);
 	}
 
 	//-----------------------------------------------------------------------
@@ -254,309 +233,74 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void cSoundEntity::Play(bool abPlayStart)
 	{
-		if(mpEvent){ mbStopped = false; mpEvent->Play(); return; }
-		if(mpSoundHandler->GetSilent())	return;
+		if(mpEvent){ mState.stopped = false; mpEvent->Play(); return; }
 
-		if(mbLog)Log("Playing %d\n", this);
-		mbStopped =false;
-		mbOutOfRange = false;
-		mbFadingOut = false;
-		
-		//Play start sound if settings allow
-		if(abPlayStart && mbSkipStartEnd==false)
-		{
-			if(mpData->GetLoop() && mpData->HasSound(eSoundEntityType_Start))
-			{
-				PlaySound(eSoundEntityType_Start,false);
-				mbStarted = false;
-			}
-		}
-		
-		//If start is not playing, play main sound directly.
-		if(	mvSoundEntries[eSoundEntityType_Main]==NULL && 
-			mvSoundEntries[eSoundEntityType_Start]==NULL && 
-			(mpData->GetLoop()== false || mpData->GetInterval()==0))
-		{
-			PlaySound(eSoundEntityType_Main,mpData->GetLoop());
-			mbStarted = true;
-		}
-	
+		OhplSoundVt vt = GetVt();
+		const OhplSoundCfg cfg = GetCfg();
+		ohpl_snd_play(&mState, &vt, &cfg, abPlayStart);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundEntity::Stop(bool abPlayEnd)
 	{
-		if(mpEvent){ mbStopped = true; mpEvent->Stop(abPlayEnd); return; }
-		if(mbStopped) return;
+		if(mpEvent){ mState.stopped = true; mpEvent->Stop(abPlayEnd); return; }
 
-		mbStopped = true;
-		mbOutOfRange = false;
-		
-		if(mvSoundEntries[eSoundEntityType_Main]==NULL) return;
-
-		if(mbLog)Log("Stopping %d\n", this);
-
-		if(mpData->GetLoop())
-		{
-			if(abPlayEnd  && mbSkipStartEnd==false)
-			{
-				PlaySound(eSoundEntityType_Stop, false);
-			}
-			
-			if(mpSoundHandler->IsValid(mvSoundEntries[eSoundEntityType_Main], mvSoundEntryID[eSoundEntityType_Main]))
-			{
-				mvSoundEntries[eSoundEntityType_Main]->Stop();
-			}
-		}
-		else
-		{
-			if(mpSoundHandler->IsValid(mvSoundEntries[eSoundEntityType_Main], mvSoundEntryID[eSoundEntityType_Main]))
-			{
-				mvSoundEntries[eSoundEntityType_Main]->Stop();
-			}
-		}
-
-		mvSoundEntries[eSoundEntityType_Main] = NULL;
+		OhplSoundVt vt = GetVt();
+		const OhplSoundCfg cfg = GetCfg();
+		ohpl_snd_stop(&mState, &vt, &cfg, abPlayEnd);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cSoundEntity::FadeIn(float afSpeed)
 	{
-		if(mpEvent){ mbStopped = false; mbFadingOut = false; mpEvent->FadeIn(afSpeed); return; }
-		if(mpSoundHandler->GetSilent())	return;
+		if(mpEvent){ mState.stopped = false; mState.fading_out = false; mpEvent->FadeIn(afSpeed); return; }
 
-        if(mbLog)Log("Fade in %d\n", this);
-
-		Play(false);
-		cSoundEntry* pEntry = GetSoundEntry(eSoundEntityType_Main, false);
-		if(pEntry)
-		{
-			pEntry->FadeIn(1, afSpeed);
-		}
+		OhplSoundVt vt = GetVt();
+		const OhplSoundCfg cfg = GetCfg();
+		ohpl_snd_fade_in(&mState, &vt, &cfg, afSpeed);
 	}
 
 	//-----------------------------------------------------------------------
 
-	
 	void cSoundEntity::FadeOut(float afSpeed)
 	{
-		if(mpEvent){ mbFadingOut = true; mpEvent->FadeOut(afSpeed); return; }
-		mbFadingOut = true;
-	
-		if(mpSoundHandler->GetSilent())	return;
+		if(mpEvent){ mState.fading_out = true; mpEvent->FadeOut(afSpeed); return; }
 
-		if(mbLog)Log("Fading out %d\n", this);
-
-		if(mvSoundEntries[eSoundEntityType_Main]==NULL)
-		{
-			mbStopped = true;
-			return;
-		}
-
-		cSoundEntry* pEntry = GetSoundEntry(eSoundEntityType_Main, true);
-		if(pEntry)
-		{
-			pEntry->FadeOut(afSpeed);
-		}
-		else
-		{
-			mvSoundEntries[eSoundEntityType_Main] = NULL;
-			mbStopped = true;
-		}
+		OhplSoundVt vt = GetVt();
+		ohpl_snd_fade_out(&mState, &vt, afSpeed);
 	}
 
 	//-----------------------------------------------------------------------
-
 
 	bool cSoundEntity::IsStopped()
 	{
 		if(mpEvent) return mpEvent->IsStopped();
-		if(mbStopped && mvSoundEntries[eSoundEntityType_Stop]==NULL)
-		{
-			return true;
-		}
-
-		return false;
+		return ohpl_snd_is_stopped(&mState, mvSoundEntries[eSoundEntityType_Stop] != NULL);
 	}
 
 	bool cSoundEntity::IsFadingOut()
 	{
-		return mbFadingOut;
+		return mState.fading_out;
 	}
 
 	//-----------------------------------------------------------------------
 
-	
 	bool cSoundEntity::GetRemoveWhenOver()
 	{
-		return mbRemoveWhenOver;
+		return mState.remove_when_over;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cSoundEntity::UpdateLogic(float afTimeStep)
 	{
 		if(mpEvent){ mpEvent->Update(afTimeStep); return; }
-		if(mpSoundHandler->GetSilent())
-		{
-			return;
-		}
 
-		if(mfSleepCount >0){
-			mfSleepCount -= afTimeStep;
-			return;
-		}
-
-		//////////////////////////////////////////////
-		//If out of range check if it is inside range.
-		if(mbOutOfRange && mbStopped==false)
-		{
-			if(CheckIsOutOfRange()==false)
-			{
-				if(mbLog)Log("%d Inside range stop!\n", this);
-				Play(false);
-				mbOutOfRange = false;
-			}
-			else
-			{
-				return;
-			}
-		}
-
-		
-		/////////////////////////////////////////////////
-		//Go through all sounds and check if they are playing, 
-		//if so update their positions else remove.
-		for(int i=0; i<3; i++)
-		{
-			if(mvSoundEntries[i])
-			{
-				if(mpSoundHandler->IsValid(mvSoundEntries[i], mvSoundEntryID[i])==false)
-				{
-					mvSoundEntries[i] = NULL;
-					
-					//if the sound has stopped due to priority try starting again
-					if(mbPrioRemove && i == (int)eSoundEntityType_Main)
-					{
-						if(mbStopped==false)
-						{
-							mbStarted = false;
-							mfSleepCount = 0.3f;
-						}
-					}
-					//If the sound has already started, stop it.
-					else if((mpData->GetInterval()==0 || mpData->GetLoop()==false) && 
-							mbStarted)
-					{
-						mbStopped = true;
-					}
-				}
-				else
-				{
-					if(mbPrioRemove)
-					{
-						//Might wanna do some ouput here since it is not good..
-					}
-					
-					if(mvSoundEntries[i] && !mvSoundEntries[i]->GetChannel()->GetPositionIsRelative())
-					{
-						mvSoundEntries[i]->GetChannel()->SetPosition(GetWorldPosition());
-					}
-				}
-			}
-		}
-
-		//////////////////////////////////////////////
-		//Check if sound is playing, and if so update it.
-		if(mbStopped==false)
-		{
-			/////////////////////////////////////////////////////////////////////////
-			//Sound is not playing, start it and since it has not been invoked by Play 
-			//no need to play start sound. Only do this if interval is 0 or non looping else it might
-			//be a deliberate pause.
-			if(	mvSoundEntries[eSoundEntityType_Main]==NULL && 
-				mvSoundEntries[eSoundEntityType_Start]==NULL && 
-				(mpData->GetLoop()== false || mpData->GetInterval()==0))
-			{
-
-				if(PlaySound(eSoundEntityType_Main, mpData->GetLoop()))
-				{
-					mbStarted = true;
-					mbPrioRemove = false;
-
-					//Call the callbacks that the sound has started.
-					tSoundEntityGlobalCallbackListIt it = mlstGobalCallbacks.begin();
-					for(; it != mlstGobalCallbacks.end(); ++it)
-					{
-						iSoundEntityGlobalCallback *pCallback = *it;
-						pCallback->OnStart(this);
-					}
-				}
-				//If sound is not started because of priority. Sleep before trying to start it again.
-				else if(mbPrioRemove)
-				{
-					mfSleepCount = 0.3f;
-				}
-				
-			}
-
-			///////////////////////////////////////////////////////////
-			//Check if looping and interval is not 0.
-			//then there needs to be some updating.
-			if(	mpData->GetLoop() && 
-				mpData->GetInterval()>0 && 
-				mvSoundEntries[eSoundEntityType_Start]==NULL && 
-				mvSoundEntries[eSoundEntityType_Main]==NULL)
-			{
-				mfIntervalCount += afTimeStep;
-				
-				//if the interval time has elapsed the sound might be played again.
-				if(mfIntervalCount >= mpData->GetInterval())
-				{
-					//Check random and if rand is right play the sound.
-					if(cMath::RandRectf(0,1) <= mpData->GetRandom() || 
-						mpData->GetRandom()==0)
-					{
-						PlaySound(eSoundEntityType_Main,false);
-					}
-					mfIntervalCount =0;
-				}
-			}
-
-			//////////////////////////////////////////////
-			// If the sound is looped and out of range, stop it
-			if(	mvSoundEntries[eSoundEntityType_Start]==NULL && mpData->GetLoop() && mpData->GetUse3D())
-			{
-				if(CheckIsOutOfRange())
-				{
-					//////////////////////
-					//If fading out, then just stop the sound directly
-					if(mbFadingOut)
-					{
-						Stop(false);
-					}
-					//////////////////////
-					//If not fading, stop the sound and then set out of range as true. This will check if in range every update.
-					else
-					{
-						if(mvSoundEntries[eSoundEntityType_Main])
-						{
-							if(mpSoundHandler->IsValid(mvSoundEntries[eSoundEntityType_Main], mvSoundEntryID[eSoundEntityType_Main]))
-							{
-								if(mbLog)Log("%d Out of range stop!\n", this);
-								mvSoundEntries[eSoundEntityType_Main]->Stop();
-							}
-							
-							mvSoundEntries[eSoundEntityType_Main] = NULL;
-						}
-
-						mbOutOfRange = true;
-					}
-				}
-			}
-		}
+		OhplSoundVt vt = GetVt();
+		const OhplSoundCfg cfg = GetCfg();
+		ohpl_snd_update(&mState, &vt, &cfg, afTimeStep, mfMaxDistance);
 	}
 
 	//-----------------------------------------------------------------------
@@ -589,22 +333,81 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	bool cSoundEntity::CheckIsOutOfRange()
+	OhplSoundCfg cSoundEntity::GetCfg()
 	{
-		if(mpWorld->IsSoundEmitter()==false) return true;
-
-		float fRange = GetListenerSqrLength();
-		float fMaxRange = mfMaxDistance * mfMaxDistance;
-		
-		return fRange >= fMaxRange;
+		OhplSoundCfg cfg;
+		cfg.interval = mpData->GetInterval();
+		cfg.random = mpData->GetRandom();
+		cfg.looping = mpData->GetLoop();
+		cfg.use_3d = mpData->GetUse3D();
+		cfg.has_start = mpData->HasSound(eSoundEntityType_Start);
+		return cfg;
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool cSoundEntity::PlaySound(eSoundEntityType aType,bool abLoop)
+	struct cSoundEntityHost
+	{
+		static cSoundEntity* E(void *apCtx){ return static_cast<cSoundEntity*>(apCtx); }
+
+		static bool Silent(void *c){ return E(c)->mpSoundHandler->GetSilent(); }
+		static bool HasEntry(void *c, int32_t t){ return E(c)->mvSoundEntries[t] != NULL; }
+		static bool IsValid(void *c, int32_t t)
+		{
+			cSoundEntity *e = E(c);
+			return e->mpSoundHandler->IsValid(e->mvSoundEntries[t], e->mvSoundEntryID[t]);
+		}
+		static void Clear(void *c, int32_t t){ E(c)->mvSoundEntries[t] = NULL; }
+		static void StopEntry(void *c, int32_t t){ E(c)->mvSoundEntries[t]->Stop(); }
+		static void FadeIn(void *c, int32_t t, float afSpeed){ E(c)->mvSoundEntries[t]->FadeIn(1, afSpeed); }
+		static void FadeOut(void *c, int32_t t, float afSpeed){ E(c)->mvSoundEntries[t]->FadeOut(afSpeed); }
+		static void UpdatePosition(void *c, int32_t t)
+		{
+			cSoundEntity *e = E(c);
+			cSoundEntry *pEntry = e->mvSoundEntries[t];
+			if(!pEntry->GetChannel()->GetPositionIsRelative())
+				pEntry->GetChannel()->SetPosition(e->GetWorldPosition());
+		}
+		static int32_t PlaySound(void *c, int32_t t, bool abLoop){ return E(c)->PlaySound((eSoundEntityType)t, abLoop); }
+		static void OnStart(void *c)
+		{
+			tSoundEntityGlobalCallbackListIt it = cSoundEntity::mlstGobalCallbacks.begin();
+			for(; it != cSoundEntity::mlstGobalCallbacks.end(); ++it)
+			{
+				iSoundEntityGlobalCallback *pCallback = *it;
+				pCallback->OnStart(E(c));
+			}
+		}
+		static bool Emitter(void *c){ return E(c)->mpWorld->IsSoundEmitter(); }
+		static float ListenerSqrDist(void *c){ return E(c)->GetListenerSqrLength(); }
+	};
+
+	OhplSoundVt cSoundEntity::GetVt()
+	{
+		OhplSoundVt vt;
+		vt.ctx = this;
+		vt.silent = cSoundEntityHost::Silent;
+		vt.has_entry = cSoundEntityHost::HasEntry;
+		vt.is_valid = cSoundEntityHost::IsValid;
+		vt.clear_entry = cSoundEntityHost::Clear;
+		vt.stop_entry = cSoundEntityHost::StopEntry;
+		vt.fade_in = cSoundEntityHost::FadeIn;
+		vt.fade_out = cSoundEntityHost::FadeOut;
+		vt.update_position = cSoundEntityHost::UpdatePosition;
+		vt.play_sound = cSoundEntityHost::PlaySound;
+		vt.on_start = cSoundEntityHost::OnStart;
+		vt.emitter = cSoundEntityHost::Emitter;
+		vt.listener_sqr_dist = cSoundEntityHost::ListenerSqrDist;
+		return vt;
+	}
+
+	//-----------------------------------------------------------------------
+
+	// 0 played, 1 no sound name, 2 failed, 3 failed for lack of channels
+	int cSoundEntity::PlaySound(eSoundEntityType aType,bool abLoop)
 	{
 		tString sSoundName = mpData->GetRandomSoundName(aType,true); //TODO: Add a var instead of null!
-		if(sSoundName == "") return false;
+		if(sSoundName == "") return 1;
 
 		bool bNotEnoughChannels = false;
 
@@ -639,49 +442,27 @@ namespace hpl {
 			}
 		}
 
-		/////////////////////////////////
-		// Sound entry Not created!
 		if(mvSoundEntries[aType]==NULL)
 		{
-			// Sound entry could not be loaded
 			if(bNotEnoughChannels==false)
 				Error("Couldn't play sound '%s' for sound entity %s\n",sSoundName.c_str(),msName.c_str());
-			
-			//If could not be loaded and main or not enough channels and non loop: Stop the entity!
-			if(	(aType == eSoundEntityType_Main && bNotEnoughChannels==false) ||
-				(bNotEnoughChannels && abLoop==false))
-			{
-				mbStopped = true;
 
-				//Keep the sound, as a sound that is not removed when over should always be available!
-				//if(bNotEnoughChannels==false)
-				//	mbRemoveWhenOver = true;
-			}
-		
-			return false;
+			return bNotEnoughChannels ? 3 : 2;
 		}
-		/////////////////////////////////
-		// Sound entry Successfully created
-		else
+
+		mvSoundEntryID[aType] = mvSoundEntries[aType]->GetId();
+
+		iSoundChannel *pChannel = mvSoundEntries[aType]->GetChannel();
+		pChannel->SetBlockable(mpData->GetBlockable());
+		pChannel->SetBlockVolumeMul(mpData->GetBlockVolumeMul());
+		pChannel->SetPriorityModifier(mpData->GetPriority());
+
+		if(aType==eSoundEntityType_Main)
 		{
-			//if(mbLog) Log("	-Setting up sound\n");
-
-			mvSoundEntryID[aType] = mvSoundEntries[aType]->GetId();
-
-			iSoundChannel *pChannel = mvSoundEntries[aType]->GetChannel();
-			pChannel->SetBlockable(mpData->GetBlockable());
-			pChannel->SetBlockVolumeMul(mpData->GetBlockVolumeMul());
-			pChannel->SetPriorityModifier(mpData->GetPriority());
-
-			if(aType==eSoundEntityType_Main)
-			{
-				mvSoundEntries[aType]->SetCallBack(mpSoundCallback);
-			}
+			mvSoundEntries[aType]->SetCallBack(mpSoundCallback);
 		}
 
-		return true;
-
-		//for(int i=0; i<3; ++i) mvSoundEntries[i] = NULL;
+		return 0;
 	}
 
 	//-----------------------------------------------------------------------

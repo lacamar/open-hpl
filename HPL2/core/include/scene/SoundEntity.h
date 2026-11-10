@@ -22,6 +22,7 @@
 
 #include "scene/Entity3D.h"
 #include "sound/SoundTypes.h"
+#include "scene/RustWorld.h"
 
 namespace hpl {
 
@@ -77,6 +78,7 @@ namespace hpl {
 		typedef iEntity3D __super;
 	#endif
 	friend class cSoundEntityChannelCallback;
+	friend struct cSoundEntityHost;
 	public:
 		cSoundEntity(const tString& asName,cSoundEntityData *apData,
 						cSoundEntityManager *apSoundEntityManager,
@@ -131,9 +133,9 @@ namespace hpl {
 
 
 	private:
-		bool CheckIsOutOfRange();
-
-		bool PlaySound(eSoundEntityType aType,bool abLoop);
+		int PlaySound(eSoundEntityType aType,bool abLoop);
+		OhplSoundCfg GetCfg();
+		OhplSoundVt GetVt();
 
 		float GetListenerSqrLength();
 
@@ -152,28 +154,13 @@ namespace hpl {
 		float mfMinDistance;
 		float mfMaxDistance;
 		
-		bool mbStopped;
-		bool mbRemoveWhenOver;
-
-		bool mbOutOfRange;
-
-		float mfIntervalCount;
+		OhplSoundState mState;
 
 		cSoundEntityChannelCallback *mpSoundCallback;
-
-		bool mbStarted;
-
-		bool mbFadingOut;
 
 		bool mbLog;
 	
 		float mfVolume;
-
-		bool mbPrioRemove;
-
-		bool mbSkipStartEnd;
-
-		float mfSleepCount;
 
 		static tSoundEntityGlobalCallbackList mlstGobalCallbacks;
 		static tSoundEntityEventFactory mpEventFactory;
