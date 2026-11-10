@@ -28,6 +28,7 @@
 #include "graphics/Animation.h"
 #include "graphics/Bone.h"
 #include "graphics/BoneState.h"
+#include "graphics/RustMesh.h"
 
 #include "math/Math.h"
 
@@ -254,20 +255,9 @@ namespace hpl {
 
 			////////////////////////////
 			//Iterate pairs and update the radii
-			for(size_t i=0; i < pSubMesh->mvVtxBonePairs.size(); i++)
-			{
-				cVertexBonePair &Pair = pSubMesh->mvVtxBonePairs[i];
-
-				float *pPos = &pPosArray[Pair.vtxIdx * lVtxStride];
-				cVector3f vPos(pPos[0], pPos[1],pPos[2]);
-
-				float fDistSqr = cMath::Vector3DistSqr(vPos, vBindPos[Pair.boneIdx]);
-				float fRadius = mvBoneBoundingRadii[Pair.boneIdx];
-				if(fDistSqr > fRadius*fRadius)
-				{
-					mvBoneBoundingRadii[Pair.boneIdx] = sqrtf(fDistSqr);
-				}
-			}
+			ohpl_mesh_bone_radii(vBindPos.data(), mvBoneBoundingRadii.data(), vBindPos.size(),
+								pSubMesh->mvVtxBonePairs.data(), pSubMesh->mvVtxBonePairs.size(),
+								pPosArray, (size_t)pVtxBuffer->GetVertexNum() * (size_t)lVtxStride, lVtxStride);
 		}
 	}
 

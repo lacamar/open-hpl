@@ -21,6 +21,7 @@
 
 #include "math/Math.h"
 #include "graphics/Animation.h"
+#include "graphics/RustMesh.h"
 #include "system/LowLevelSystem.h"
 #include "scene/Node3D.h"
 
@@ -71,24 +72,10 @@ namespace hpl {
 		cKeyFrame* pFrame = hplNew( cKeyFrame,());
 		pFrame->time = afTime;
 
-		//Check so that this is the first
-        if(afTime > mfMaxFrameTime || mvKeyFrames.empty())
-		{
-			mvKeyFrames.push_back(pFrame);
-			mfMaxFrameTime = afTime;
-		}
-		else
-		{
-			tKeyFramePtrVecIt it = mvKeyFrames.begin();
-			for(; it != mvKeyFrames.end(); it++)
-			{
-				if(afTime < (*it)->time)
-				{
-					break;
-				}
-			}
-			mvKeyFrames.insert(it,pFrame);
-		}
+		bool bUpdateMax = false;
+		size_t lPos = ohpl_anim_insert_position(mvKeyFrames.data(), mvKeyFrames.size(), mfMaxFrameTime, afTime, &bUpdateMax);
+		mvKeyFrames.insert(mvKeyFrames.begin() + lPos, pFrame);
+		if(bUpdateMax) mfMaxFrameTime = afTime;
 		
         return pFrame;
 	}
@@ -129,72 +116,7 @@ namespace hpl {
 	cKeyFrame cAnimationTrack::GetInterpolatedKeyFrame(float afTime, bool bLoop)
 	{
 		cKeyFrame ResultKeyFrame;
-		ResultKeyFrame.time = afTime;
-
-		if(mvKeyFrames.empty())
-		{
-			ResultKeyFrame.rotation = cQuaternion(1,0,0,0);
-			ResultKeyFrame.trans = 0;
-			return ResultKeyFrame;
-		}
-
-		cKeyFrame *pKeyFrameA = NULL;
-		cKeyFrame *pKeyFrameB = NULL;
-		
-		float fT = GetKeyFramesAtTime(afTime, &pKeyFrameA, &pKeyFrameB, bLoop);
-
-		
-        if(fT == 0.0f)
-		{
-			ResultKeyFrame.rotation = pKeyFrameA->rotation;
-			ResultKeyFrame.trans = pKeyFrameA->trans;
-		}
-		else
-		{	
-			//Do a linear interpolation
-			//This should include spline stuff later on.
-
-            
-			cQuaternion rotA = pKeyFrameA->rotation;
-			cQuaternion rotB = pKeyFrameB->rotation;
-            /*
-            if ( rotA.v.x == -1 * rotB.v.x
-                && rotA.v.y == -1 * rotB.v.y 
-                && rotA.v.z == -1 * rotB.v.z
-                && rotA.w == -1 * rotB.w )
-            {
-                ResultKeyFrame.rotation = rotB;
-            }
-            else
-            {
-                ResultKeyFrame.rotation = cMath::QuaternionSlerp(fT, rotA, 
-													rotB, true);
-            }*/
-
-            rotA.Normalize();
-            rotB.Normalize();
-
-			if ( rotA.w < 0 )
-            {
-                rotA = rotA * -1.0f;
-            }
-			
-            if ( rotB.w < 0 )
-            {
-                rotB = rotB * -1.0f;
-            }
-
-
-            ResultKeyFrame.rotation = cMath::QuaternionSlerp(fT, rotA, 
-													rotB, true);
-
-            /*
-
-            ResultKeyFrame.rotation = cMath::QuaternionSlerp(fT, pKeyFrameA->rotation, 
-													pKeyFrameB->rotation, true);
-                                                    */
-			ResultKeyFrame.trans = pKeyFrameA->trans * (1 - fT) + pKeyFrameB->trans * fT;
-		}
+		ohpl_anim_interpolate(mvKeyFrames.data(), mvKeyFrames.size(), mpParent->GetLength(), mfMaxFrameTime, afTime, &ResultKeyFrame);
 
 		return ResultKeyFrame;
 	}
@@ -203,59 +125,19 @@ namespace hpl {
 	
 	float cAnimationTrack::GetKeyFramesAtTime(float afTime, cKeyFrame** apKeyFrameA,cKeyFrame** apKeyFrameB, bool bLoop)
 	{
-		float fTotalAnimLength = mpParent->GetLength();
+		size_t lIdxA = 0, lIdxB = 0;
+		float fT = ohpl_anim_frames_at_time(mvKeyFrames.data(), mvKeyFrames.size(), mpParent->GetLength(), mfMaxFrameTime, afTime, &lIdxA, &lIdxB);
 
-		// Wrap time 
-		//Not sure it is a good idea to clamp the length.
-		//But wrapping screws loop mode up. 
-		//Wrap(..., totalLength + kEpislon), migh work though.
-		afTime = cMath::Clamp(afTime, 0, fTotalAnimLength);
-
-		//If longer than max time return last frame and first
-		if(afTime >= mfMaxFrameTime)
+		if(mvKeyFrames.empty())
 		{
-			*apKeyFrameA = mvKeyFrames[mvKeyFrames.size()-1];
-			*apKeyFrameB = mvKeyFrames[0];
-			
-			//Get T between end to start again. (the last frame doesn't mean the anim is over. 
-			// In that case wrap to the first frame).
-			float fDeltaT = fTotalAnimLength - (*apKeyFrameA)->time;
-			
-			//If animation time is >= max time might as well just return the last frame.
-			//Not sure if this is good for some looping anims, in that case check the code.
-			return 0.0f;//(afTime - (*apKeyFrameA)->time) / fDeltaT;
+			*apKeyFrameA = NULL;
+			*apKeyFrameB = NULL;
+			return fT;
 		}
 
-		//Get the number of frames
-		const int lSize = (int)mvKeyFrames.size();
-
-		//Find the second frame.
-		int lIdxB=-1;
-		for(int i=0; i< lSize; i++)
-		{
-			if(afTime <= mvKeyFrames[i]->time)
-			{
-				lIdxB = i;
-				break;
-			}
-		}
-		
-		//If first frame was found, the lowest time is not 0. 
-		//If so return the first frame only.
-		if(lIdxB == 0)
-		{
-			*apKeyFrameA = mvKeyFrames[0];
-			*apKeyFrameB = mvKeyFrames[0];
-			return 0.0f;
-		}
-		
-		//Get the frames
-		*apKeyFrameA = mvKeyFrames[lIdxB-1];
+		*apKeyFrameA = mvKeyFrames[lIdxA];
 		*apKeyFrameB = mvKeyFrames[lIdxB];
-        
-		float fDeltaT = (*apKeyFrameB)->time - (*apKeyFrameA)->time;
-        
-		return (afTime - (*apKeyFrameA)->time) / fDeltaT;
+		return fT;
 	}
 
 	//-----------------------------------------------------------------------

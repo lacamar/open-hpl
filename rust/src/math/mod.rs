@@ -21,14 +21,15 @@ mod tangents;
 
 pub use crate::types::{Matrixf, Quaternion, Vector2f, Vector2l, Vector3f};
 pub(crate) use geom::rect_fit_l;
+pub(crate) use libm::{asin, cos, sin};
 #[cfg(test)]
 pub(crate) use libm::{c_rand, c_srand};
-pub(crate) use libm::{cos, sin};
 pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_z,
 };
-pub(crate) use scalar::{rand_rectf, to_rad};
+pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
+pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
