@@ -37,6 +37,7 @@ pub mod luxmap;
 pub mod luxplayer;
 pub mod luxsave;
 pub mod luxscript;
+pub mod luxui;
 pub mod material;
 pub mod math;
 pub mod meshload;

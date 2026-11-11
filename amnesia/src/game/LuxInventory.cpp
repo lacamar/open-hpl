@@ -33,6 +33,8 @@
 #include "LuxGlobalDataHandler.h"
 #include "LuxAchievementHandler.h"
 
+static_assert(eUIButton_Primary == 1 && eUIButton_Secondary == 2 && eUIButton_PrevPage == 4 && eUIButton_NextPage == 8, "ohpl_ga8_inv_nav button bits");
+
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -52,6 +54,8 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 	//Setup GUI stuff
 	mpGuiSkin = mpGui->CreateSkin("gui_main_menu.skin");
 	mpGuiSet = mpGui->CreateSet("Inventory",mpGuiSkin);
+	memset(&mS, 0, sizeof(mS));
+	mbDisabled = false;
 	mpGuiSet->SetFocusDrawCallback(this, kGuiCallback(InventoryDrawFocus));
 	AppDeviceWasPlugged(); // Sets up focus draw
 
@@ -68,8 +72,8 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 	//Load settings
 	mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 
-	mfFadeInTime = gpBase->mpMenuCfg->GetFloat("Inventory","FadeInTime", 10);
-	mfFadeOutTime = gpBase->mpMenuCfg->GetFloat("Inventory","FadeOutTime",10);
+	mS.fade_in_time = gpBase->mpMenuCfg->GetFloat("Inventory","FadeInTime", 10);
+	mS.fade_out_time = gpBase->mpMenuCfg->GetFloat("Inventory","FadeOutTime",10);
 
 	///////////////////////////////
 	//Create Viewport
@@ -94,8 +98,8 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 	mvItemTypes[eLuxItemType_LampOil] = hplNew( cLuxItemType_LampOil, ());
 	mvItemTypes[eLuxItemType_Tinderbox] = hplNew( cLuxItemType_Tinderbox, ());
 
-	mfPickedUpAt = -1;
-	mbPickedObjectMoved = false;
+	mS.picked_at = -1;
+	mS.picked_moved = false;
 
 	
 	///////////////////////////////
@@ -164,7 +168,7 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 
 	CreateGui();
 
-	mfTimer = 0;
+	mS.timer = 0;
 }
 
 //-----------------------------------------------------------------------
@@ -298,14 +302,15 @@ bool cLuxInventory_Slot::OnMouseDown(iWidget* apWidget, const cGuiMessageData& a
 {
 	if(GetItem())
 	{
-		const cVector2f &vSize = apWidget->GetSize();
-		cVector3f vItemPos = apWidget->GetGlobalPosition() + cVector3f((vSize - GetItem()->GetImage()->GetImageSize()))*0.5f;
-
-		cVector3f vPos = apWidget->GetGlobalPosition();
-		cVector2f vOffset = cVector2f(vItemPos.x, vItemPos.y) - mpInventory->mpGuiSet->GetMousePos();
-		mpInventory->SetPickedItem(GetItem(), vOffset);
+		cVector2f vSize = apWidget->GetSize();
+		cVector3f vGlobalPos = apWidget->GetGlobalPosition();
+		cVector2f vImageSize = GetItem()->GetImage()->GetImageSize();
+		cVector2f vMouse = mpInventory->mpGuiSet->GetMousePos();
+		float vOffset[2];
+		ohpl_ga8_inv_pick_offset(1, &vGlobalPos.x, &vSize.x, &vImageSize.x, &vMouse.x, vOffset);
+		mpInventory->SetPickedItem(GetItem(), cVector2f(vOffset[0], vOffset[1]));
 	}
-	
+
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInventory_Slot, OnMouseDown);
@@ -317,7 +322,7 @@ bool cLuxInventory_Slot::OnMouseUp(iWidget* apWidget, const cGuiMessageData& aDa
 	cLuxInventory_Item *pPickedItem = mpInventory->GetPickedItem();
 	cLuxInventory_Item *pItem = GetItem();
 
-	if(pItem && pPickedItem && pPickedItem != pItem)
+	if(ohpl_ga8_inv_slot_up(pItem!=NULL, pPickedItem!=NULL, pPickedItem==pItem)==eOhplGa8Up_Combine)
 	{
 		if(mpInventory->CheckSpecialCombineAction(pItem, pPickedItem, mlIdx)==false)
 		{
@@ -326,7 +331,9 @@ bool cLuxInventory_Slot::OnMouseUp(iWidget* apWidget, const cGuiMessageData& aDa
 			{
 				bool bAutoDestroy = pComb->mbAutoDestroy;
 				tString sCombName = pComb->msName;
-				mpInventory->RunScript(pComb->msFunction+ "(\"" + pComb->msItemA + "\", \"" + pComb->msItemB + "\")" );
+				tString sCommand;
+				ohpl_ga8_inv_script_cmd(OhplGa8S(pComb->msFunction), OhplGa8S(pComb->msItemA), OhplGa8S(pComb->msItemB), OhplGa8StrSink, &sCommand);
+				mpInventory->RunScript(sCommand);
 				
 				if(bAutoDestroy) 
 				{
@@ -396,26 +403,25 @@ bool cLuxInventory_Slot::OnMouseEnter(iWidget* apWidget, const cGuiMessageData& 
 
 	mpInventory->SetCurrentWidget(apWidget);
 
-	if(pItem && mpInventory->mbMessageActive==false)
+	switch(ohpl_ga8_inv_slot_enter(pItem!=NULL, mpInventory->mS.message_active!=0, pPickedItem!=NULL, pPickedItem==pItem))
 	{
-		///////////////////////////
-		//Display combine info
-		if(pPickedItem && pPickedItem != pItem)
+	///////////////////////////
+	//Display combine info
+	case eOhplGa8Enter_Combine:
 		{
 			tWString sCombine = kTranslate("Inventory", "Combine") + _W(" ") + kTranslate("Inventory",pPickedItem->GetGameNameEntry())  + _W(" ") +
 								kTranslate("Inventory", "with") + _W(" ") + kTranslate("Inventory",pItem->GetGameNameEntry()) + _W(".");
 			mpInventory->SetDescText(_W(""), sCombine);
 		}
-		///////////////////////////
-		//Display item info
-		else
-		{
-			mpInventory->SetDescTextFromItem(pItem);
-		}
-	}
-	else if(pPickedItem==NULL)
-	{
+		break;
+	///////////////////////////
+	//Display item info
+	case eOhplGa8Enter_Item:
+		mpInventory->SetDescTextFromItem(pItem);
+		break;
+	case eOhplGa8Enter_Clear:
 		mpInventory->SetDescText(_W(""), _W(""));
+		break;
 	}
 	return true;
 }
@@ -429,9 +435,7 @@ bool cLuxInventory_Slot::OnMouseLeave(iWidget* apWidget, const cGuiMessageData& 
 		mpInventory->SetCurrentWidget(NULL);
 
 	cLuxInventory_Item *pItem = GetItem();
-	if(pItem==NULL) return true;
-
-	if(mpInventory->GetCurrentWidget() == NULL)
+	if(ohpl_ga8_inv_slot_leave(pItem!=NULL, mpInventory->GetCurrentWidget() == NULL))
 	{
 		mpInventory->SetDescText(_W(""), _W(""));
 	}
@@ -466,13 +470,12 @@ bool cLuxInventory_Slot::OnUIButtonPress(iWidget* apWidget, const cGuiMessageDat
 
 	if(GetItem())
 	{
-		const cVector2f &vSize = apWidget->GetSize();
-		cVector3f vItemPos = apWidget->GetGlobalPosition() + cVector3f((vSize - GetItem()->GetImage()->GetImageSize()))*0.5f;
-
-		cVector3f vPos = apWidget->GetGlobalPosition();
-		cVector3f vTargetPos = vPos + cVector3f(37, 50, 0);
-		cVector2f vOffset = cVector2f(vItemPos.x, vItemPos.y) - cVector2f(vTargetPos.x, vTargetPos.y);
-		mpInventory->SetPickedItem(GetItem(), vOffset);
+		cVector2f vSize = apWidget->GetSize();
+		cVector3f vGlobalPos = apWidget->GetGlobalPosition();
+		cVector2f vImageSize = GetItem()->GetImage()->GetImageSize();
+		float vOffset[2];
+		ohpl_ga8_inv_pick_offset(0, &vGlobalPos.x, &vSize.x, &vImageSize.x, NULL, vOffset);
+		mpInventory->SetPickedItem(GetItem(), cVector2f(vOffset[0], vOffset[1]));
 	}
 
 	return true;
@@ -491,18 +494,15 @@ kGuiCallbackDeclaredFuncEnd(cLuxInventory_Slot, OnUIButtonDoublePress);
 
 bool cLuxInventory_Slot::OnUIButtonRelease(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if((aData.mlVal & eUIButton_Primary)==0)
-		return true;
-
 	cLuxInventory_Item *pPickedItem = mpInventory->GetPickedItem();
 	cLuxInventory_Item *pItem = GetItem();
 
-	if(pPickedItem && pItem && pItem == pPickedItem)
+	switch(ohpl_ga8_inv_slot_release(&mpInventory->mS, aData.mlVal, pPickedItem && pItem && pItem == pPickedItem, gpBase->mpEngine->GetGameTime()))
 	{
-		if(mpInventory->GetItemPickedAt() + 0.5f > gpBase->mpEngine->GetGameTime() && mpInventory->GetPickedItemMoved() == false)
-		{
-			return OnMouseDoubleClick(apWidget, aData);
-		}
+	case eOhplGa8Release_Ignore:
+		return true;
+	case eOhplGa8Release_DoubleClick:
+		return OnMouseDoubleClick(apWidget, aData);
 	}
 	return OnMouseUp(apWidget, aData);
 }
@@ -514,17 +514,7 @@ bool cLuxInventory_Slot::OnUpdate(iWidget* apWidget, const cGuiMessageData& aDat
 {
 	float fTimeStep = aData.mfVal;
 
-	if(mpInventory->GetCurrentWidget()==mpImage && mpInventory->mbMessageActive==false)
-	{
-		mfGlowAlpha += fTimeStep * 2.0f;
-		if(mfGlowAlpha > 1.0f) mfGlowAlpha = 1.0f;
-	}
-	else
-	{
-		mfGlowAlpha -= fTimeStep * 1.5f;
-		if(mfGlowAlpha < 0.0f) mfGlowAlpha = 0.0f;
-	}
-
+	mfGlowAlpha = ohpl_ga8_inv_slot_glow(mfGlowAlpha, mpInventory->GetCurrentWidget()==mpImage && mpInventory->mS.message_active==0, fTimeStep);
 
 	return true;
 }
@@ -536,38 +526,28 @@ bool cLuxInventory_Slot::OnDraw(iWidget* apWidget, const cGuiMessageData& aData)
 {
 	float fTimeStep = aData.mfVal;
 
-	const cVector2f &vSize = apWidget->GetSize();
-
-	///////////////////////////////////
-	//Glow
-	/*if(mfGlowAlpha >0)
-	{
-		mpInventory->mpGuiSet->DrawGfx(	mpGlowGfx, apWidget->GetGlobalPosition()+mpInventory->mvLayout_SlotMouseOverOffset,
-										mpGlowGfx->GetActiveSize(),	cColor(mfGlowAlpha * mpInventory->mfAlpha,1) );
-	}*/
+	cVector2f vSize = apWidget->GetSize();
 
 	//////////////////////////////////
 	//Item
 	cLuxInventory_Item *pItem = GetItem();
 	if(pItem && pItem != mpInventory->GetPickedItem())
 	{
-		cVector3f vItemPos = apWidget->GetGlobalPosition() + cVector3f((vSize-pItem->GetImage()->GetImageSize()))*0.5f;
-		vItemPos.z += 0.1f;
+		cVector3f vGlobalPos = apWidget->GetGlobalPosition();
+		cVector2f vImageSize = pItem->GetImage()->GetImageSize();
+		float vPulse[3] = { mpInventory->mfLayout_SlotPulsatingMin, mpInventory->mfLayout_SlotPulsatingAmp, mpInventory->mfLayout_SlotPulsatingFreq };
+		OhplGa8SlotDraw draw;
+		ohpl_ga8_inv_slot_draw(&mpInventory->mS, &vGlobalPos.x, &vSize.x, &vImageSize.x, mfGlowAlpha, vPulse, &mpInventory->mvLayout_ItemCountOffset.x, &draw);
 
-		mpInventory->mpGuiSet->DrawGfx(	pItem->GetImage(), vItemPos,-1,cColor(1,mpInventory->mfAlpha) );
+		cVector3f vItemPos(draw.pos[0], draw.pos[1], draw.pos[2]);
+		mpInventory->mpGuiSet->DrawGfx(	pItem->GetImage(), vItemPos,-1,cColor(1,mpInventory->mS.alpha) );
 
 		/////////////////////////////////////////////////////
 		// Draw "outline" - TODO: this looks really bad right now
-		if(mfGlowAlpha > 0)
+		if(draw.glow)
 		{
-			float fMin = mpInventory->mfLayout_SlotPulsatingMin;
-			float fAmp = mpInventory->mfLayout_SlotPulsatingAmp;
-			float fFreq = mpInventory->mfLayout_SlotPulsatingFreq;
-
-			float fPulseAlpha = fMin + (1.0f-fMin)*(cos(mpInventory->mfTimer*fFreq)*0.5+0.5f);
-			
 			for(int i=0; i<2; ++i)
-				mpInventory->mpGuiSet->DrawGfx(pItem->GetImage(), vItemPos+cVector3f(0,0,0.1f),-1, cColor(fPulseAlpha*mfGlowAlpha*mpInventory->mfAlpha, 1), eGuiMaterial_Additive);
+				mpInventory->mpGuiSet->DrawGfx(pItem->GetImage(), cVector3f(draw.glow_pos[0], draw.glow_pos[1], draw.glow_pos[2]),-1, cColor(draw.glow_alpha, 1), eGuiMaterial_Additive);
 		}
 
 		///////////////
@@ -575,14 +555,12 @@ bool cLuxInventory_Slot::OnDraw(iWidget* apWidget, const cGuiMessageData& aData)
 		iLuxItemType *pType = mpInventory->mvItemTypes[pItem->GetType()];
 		if(pType->HasCount())
 		{
-			cVector3f vPos = apWidget->GetGlobalPosition() + cVector3f(vSize.x,0,0) + mpInventory->mvLayout_ItemCountOffset;
-
-			mpInventory->mpGuiSet->DrawFont(mpInventory->mpFontDefault, vPos,mpInventory->mvLayout_FontSize_ItemCount,
-											cColor(1,mpInventory->mfAlpha),eFontAlign_Center, eGuiMaterial_FontNormal,
+			mpInventory->mpGuiSet->DrawFont(mpInventory->mpFontDefault, cVector3f(draw.count_pos[0], draw.count_pos[1], draw.count_pos[2]),mpInventory->mvLayout_FontSize_ItemCount,
+											cColor(1,mpInventory->mS.alpha),eFontAlign_Center, eGuiMaterial_FontNormal,
 											_W("x%d"), pItem->GetCount());
 		}
 	}
-	
+
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInventory_Slot, OnDraw);
@@ -620,15 +598,8 @@ void cLuxInventory::Reset()
 {
 	///////////////////////////////
 	//Reset variables
-	mfAlpha =0;	
-
-	mbActive = false;
+	ohpl_ga8_inv_reset(&mS);
 	mbDisabled = false;
-
-	mbExitToJournal = false;
-	mbEnterFromJournal = false;
-
-	mbMessageActive = false;
 
 	mpEquippedItem = NULL;
 	
@@ -659,43 +630,25 @@ void cLuxInventory::Update(float afTimeStep)
 	/////////////////////////////
 	// Update Picked item
 	// Simple way to make sure the picked item is dropped.
-	if(gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_LeftClick)==false && 
-		gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_UIPrimary)==false)
+	bool bLeftClick = gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_LeftClick);
+	bool bUIPrimary = gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_UIPrimary);
+	if(ohpl_ga8_inv_should_drop(bLeftClick, bUIPrimary))
 	{
 		mpPickedItem = NULL;
 	}
 
 	/////////////////////////////
 	/// Update main alpha
-	if(mbActive)
+	switch(ohpl_ga8_inv_update_alpha(&mS, afTimeStep))
 	{
-		if(mfAlpha < 1)
-		{
-			mfAlpha += (1.0f/mfFadeInTime) * afTimeStep;			
-			if(mfAlpha > 1)
-			{
-				mfAlpha =1;
-				mbEnterFromJournal = false;
-			}
-		}
-	}
-	else
-	{
-		mfAlpha -= (1.0f/mfFadeOutTime) * afTimeStep;
-		if(mfAlpha < 0)
-		{
-			mfAlpha =0;
-			if(mbExitToJournal)
-			{
-				gpBase->mpJournal->SetOpenedFromInventory(true);
-				gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
-			}
-			else
-			{
-				gpBase->mpEngine->GetUpdater()->SetContainer("Default");
-				gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
-			}
-		}
+	case eOhplGa8Exit_ToJournal:
+		gpBase->mpJournal->SetOpenedFromInventory(true);
+		gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
+		break;
+	case eOhplGa8Exit_ToDefault:
+		gpBase->mpEngine->GetUpdater()->SetContainer("Default");
+		gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
+		break;
 	}
 
 	/////////////////////////////
@@ -705,42 +658,16 @@ void cLuxInventory::Update(float afTimeStep)
 		mvAlphaFader[i].Update(afTimeStep);
 	}
 
-	mfTimer += afTimeStep;
-
 	/////////////////////////////
-	/// Update old desc text alpha
-	if(mfOldDescTextAlpha > 0)
-	{
-		mfOldDescTextAlpha -= afTimeStep * 2.2f;
-		if(mfOldDescTextAlpha < 0)
-		{
-			mfOldDescTextAlpha =0;
-		}
-	}
-
-	/////////////////////////////
-	/// Update message text life and alpha
-	if(mbMessageActive) // mfMessageTextLife>0
-	{
-		mfMessageTextAlpha += afTimeStep * 3.5f;
-		if(mfMessageTextAlpha > 1) mfMessageTextAlpha =1;
-
-		//mfMessageTextLife -= afTimeStep;
-	}
-	if(mbMessageActive==false && mfMessageTextAlpha > 0) // mfMessageTextLife <=0
-	{
-		mfMessageTextAlpha -= afTimeStep * 1.5f;
-		if(mfMessageTextAlpha < 0) mfMessageTextAlpha =0;
-	}
-	
-
+	/// Update timers, old desc text alpha and message text alpha
+	ohpl_ga8_inv_update_texts(&mS, afTimeStep);
 
 	/////////////////////////////
 	/// Update image widget alpha
 	for(size_t i=0; i<mvImageWidgets.size(); ++i)
 	{
 		cColor col = mvImageWidgets[i]->GetColorMul();
-		col.a = mfAlpha;
+		col.a = mS.alpha;
         mvImageWidgets[i]->SetColorMul(col);
 	}
 
@@ -769,7 +696,7 @@ void cLuxInventory::OnEnterContainer(const tString& asOldContainer)
 	
 	////////////////////////////
 	//Set up states and viewport
-	mbActive = true;
+	mS.active = true;
 
 	gpBase->mpInputHandler->ChangeState(eLuxInputState_Inventory);
 	
@@ -810,7 +737,7 @@ void cLuxInventory::OnEnterContainer(const tString& asOldContainer)
 
 	///////////////////////////
 	//Pause voices and turn down volume on world sounds
-	if(mbEnterFromJournal == false)
+	if(ohpl_ga8_inv_pauses_voices(&mS))
 	{
 		gpBase->mpEffectHandler->GetPlayVoice()->PauseCurrentVoices();
 
@@ -843,7 +770,7 @@ void cLuxInventory::OnLeaveContainer(const tString& asNewContainer)
 {
 	///////////////////////////
 	//Pause voices and turn down volume on world sounds
-	if(mbExitToJournal == false)
+	if(ohpl_ga8_inv_leave(&mS))
 	{
 		gpBase->mpEffectHandler->GetPlayVoice()->UnpauseCurrentVoices();
 
@@ -857,9 +784,6 @@ void cLuxInventory::OnLeaveContainer(const tString& asNewContainer)
 	mpViewport->SetVisible(false);
 	mpGuiSet->SetActive(false);
 
-	mbExitToJournal = false;
-	mbEnterFromJournal = false;
-
 	mpLastCurrentWidget = mpCurrentWidget;
 
 	DestroyBackground();
@@ -869,84 +793,67 @@ void cLuxInventory::OnLeaveContainer(const tString& asNewContainer)
 
 static int StatusToIndex(float afX)
 {
-	if(afX < 25.0f) return 0;
-	if(afX < 50.0f) return 1;
-	if(afX < 75.0f) return 2;
-	return 3;
+	return ohpl_ga8_inv_status_index(afX);
 }
 
 void cLuxInventory::OnDraw(float afFrameTime)
 {
 	////////////////////////
 	//Draw background
-	if(mpScreenGfx && mfAlpha<1) 
+	if(mpScreenGfx && mS.alpha<1)
 		mpGuiSet->DrawGfx(mpScreenGfx,mvGuiSetStartPos+cVector3f(0,0,0),mvGuiSetSize);
 
 	if(mpScreenBgGfx)
-		mpGuiSet->DrawGfx(mpScreenBgGfx,mvGuiSetStartPos+cVector3f(0,0,0.2f),mvGuiSetSize,cColor(1, mfAlpha));
+		mpGuiSet->DrawGfx(mpScreenBgGfx,mvGuiSetStartPos+cVector3f(0,0,0.2f),mvGuiSetSize,cColor(1, mS.alpha));
 
 	//////////////////////////////////
 	//Fade
-	if(mbExitToJournal || mbEnterFromJournal)
+	if(mS.exit_to_journal || mS.enter_from_journal)
 	{
-		mpGuiSet->DrawGfx(mpWhiteGfx,mvGuiSetStartPos+cVector3f(0,0,20),mvGuiSetSize,cColor(0, 1.0f - mfAlpha*mfAlpha));
+		mpGuiSet->DrawGfx(mpWhiteGfx,mvGuiSetStartPos+cVector3f(0,0,20),mvGuiSetSize,cColor(0, ohpl_ga8_jrn_fade_alpha(mS.alpha)));
 	}
 
 	////////////////////////
 	//Picked item
 	if(mpPickedItem)
 	{
-		cVector3f vPickedItemPos = mvPickedItemOffset;
-		if(gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_LeftClick))
-			vPickedItemPos += mpGuiSet->GetMousePos();
-		else
-			vPickedItemPos += mpCurrentWidget->GetGlobalPosition() + mpCurrentWidget->GetSize()*0.5f;
-
-		vPickedItemPos.z = 40.0f;		
-		mpGuiSet->DrawGfx(mpPickedItem->GetImage(),vPickedItemPos,-1,cColor(1, mfAlpha*0.8f));
+		bool bLeftClick = gpBase->mpEngine->GetInput()->IsTriggerd(eLuxAction_LeftClick);
+		cVector2f vMouse = mpGuiSet->GetMousePos();
+		cVector3f vWidgetPos(0);
+		cVector2f vWidgetSize(0);
+		if(bLeftClick==false && mpCurrentWidget)
+		{
+			vWidgetPos = mpCurrentWidget->GetGlobalPosition();
+			vWidgetSize = mpCurrentWidget->GetSize();
+		}
+		float vPos[3];
+		ohpl_ga8_inv_picked_pos(&mvPickedItemOffset.x, bLeftClick, &vMouse.x, &vWidgetPos.x, &vWidgetSize.x, vPos);
+		mpGuiSet->DrawGfx(mpPickedItem->GetImage(),cVector3f(vPos[0],vPos[1],vPos[2]),-1,cColor(1, mS.alpha*0.8f));
 	}
 
 	////////////////////////
-	//Player properties
-	/*
-	cVector3f vPlayerDataStart = cVector3f(10,300,1);
-	float fPlayerDataXAdd = 140;
-    
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart,20,cColor(1,mfAlpha),_W("%ls"), kTranslate("Inventory", "LampOil:").c_str());
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart+cVector3f(fPlayerDataXAdd,0,0),20,cColor(1,mfAlpha),_W("%.0f%%"), gpBase->mpPlayer->GetLampOil());
-	vPlayerDataStart.y+= 22;
-
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart,20,cColor(1,mfAlpha),_W("%ls"), kTranslate("Inventory", "Thalers:").c_str());
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart+cVector3f(fPlayerDataXAdd,0,0),20,cColor(1,mfAlpha),_W("%d"), gpBase->mpPlayer->GetCoins());
-	vPlayerDataStart.y+= 22;
-
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart,20,cColor(1,mfAlpha),_W("%ls"), kTranslate("Inventory", "Tinderboxes:").c_str());
-	mpGuiSet->DrawFont(	mpFontDefault, vPlayerDataStart+cVector3f(fPlayerDataXAdd,0,0),20,cColor(1,mfAlpha),_W("%d"), gpBase->mpPlayer->GetTinderboxes());
-	vPlayerDataStart.y+= 22;
-	*/
-
-		
-	////////////////////////
 	//Draw Message text
-	if(mfMessageTextAlpha > 0)
+	if(mS.message_alpha > 0)
 	{
 		if(msMessageText != _W(""))
 		{
-			float fAlpha = mfMessageTextAlpha*mfAlpha;
-			mpGuiSet->DrawFont(msMessageText, mpFontDefault, mvLayout_PopUpMessageCenter,mvLayout_FontSize_Message, 
+			float fAlpha = ohpl_ga8_inv_message_alpha(&mS);
+			mpGuiSet->DrawFont(msMessageText, mpFontDefault, mvLayout_PopUpMessageCenter,mvLayout_FontSize_Message,
 								cColor(1,fAlpha),eFontAlign_Center);
-			
-			mpGuiSet->DrawGfx(	mpWhiteGfx, cVector3f(mvGuiSetStartPos.x, mvLayout_PopUpMessageCenter.y - 20, mvLayout_PopUpMessageCenter.z-0.1f),
-								cVector2f(mvGuiSetSize.x, mvLayout_FontSize_Message.y+20*2),cColor(1.0f - fAlpha*0.8f), eGuiMaterial_Modulative );
+
+			float vBarPos[3], vBarSize[2];
+			ohpl_ga8_inv_message_bar(mvGuiSetStartPos.x, mvGuiSetSize.x, &mvLayout_PopUpMessageCenter.x, mvLayout_FontSize_Message.y, vBarPos, vBarSize);
+			mpGuiSet->DrawGfx(	mpWhiteGfx, cVector3f(vBarPos[0], vBarPos[1], vBarPos[2]),
+								cVector2f(vBarSize[0], vBarSize[1]),cColor(1.0f - fAlpha*0.8f), eGuiMaterial_Modulative );
 		}
-	}				
+	}
 
 	////////////////////////
 	//Draw text
 	const cVector3f& vHeaderCenter = mvLayout_ItemHeaderCenter;
     if(msHeaderText != _W(""))
-		mpGuiSet->DrawFont(msHeaderText, mpFontHeader, vHeaderCenter,mvLayout_FontSize_Header,cColor(1,mfAlpha),eFontAlign_Center);
-	
+		mpGuiSet->DrawFont(msHeaderText, mpFontHeader, vHeaderCenter,mvLayout_FontSize_Header,cColor(1,mS.alpha),eFontAlign_Center);
+
 	if(msNormalText != _W(""))
 		DrawDescTextRow(msNormalText, cColor(1,1));
 
@@ -954,28 +861,27 @@ void cLuxInventory::OnDraw(float afFrameTime)
 	//Draw frame around text
 	{
 		// Set frame start pos using corner size, padding and frame size
-		cVector3f vTextFramePos = vHeaderCenter - 
-			cVector3f(mvLayout_ItemTextFrameSize.x, 0, 0)*0.5f - 
-			cVector3f(mpFrameGenericCorners[0]->GetActiveSize()) -
-			cVector3f(mvLayout_ItemTextFrameHPadding.x, mvLayout_ItemTextFrameVPadding.y, 0) + 
-			mvLayout_ItemTextFrameOffset;
+		cVector2f vCornerSize = mpFrameGenericCorners[0]->GetActiveSize();
+		float vFramePos[3];
+		ohpl_ga8_inv_text_frame_pos(&vHeaderCenter.x, mvLayout_ItemTextFrameSize.x, &vCornerSize.x, mvLayout_ItemTextFrameHPadding.x,
+									mvLayout_ItemTextFrameVPadding.y, &mvLayout_ItemTextFrameOffset.x, vFramePos);
 
-		DrawFrame(mpFrameGenericCorners, mpFrameGenericBorders, 
-					vTextFramePos, mvLayout_ItemTextFrameSize);
+		DrawFrame(mpFrameGenericCorners, mpFrameGenericBorders,
+					cVector3f(vFramePos[0], vFramePos[1], vFramePos[2]), mvLayout_ItemTextFrameSize);
 	}
 
-    
+
 	////////////////////////
 	//Draw old text
-	if(mfOldDescTextAlpha > 0)
+	if(mS.old_desc_alpha > 0)
 	{
 		if(msOldHeaderText != _W(""))
-			mpGuiSet->DrawFont(msOldHeaderText, mpFontHeader, vHeaderCenter,mvLayout_FontSize_Header,cColor(1,mfAlpha*mfOldDescTextAlpha),eFontAlign_Center);
+			mpGuiSet->DrawFont(msOldHeaderText, mpFontHeader, vHeaderCenter,mvLayout_FontSize_Header,cColor(1,mS.alpha*mS.old_desc_alpha),eFontAlign_Center);
 
 		if(msOldNormalText != _W(""))
-			DrawDescTextRow(msOldNormalText, cColor(1,mfOldDescTextAlpha));
-	}	
-	
+			DrawDescTextRow(msOldNormalText, cColor(1,mS.old_desc_alpha));
+	}
+
 	////////////////////////
 	//Draw extra effects and hints
 	gpBase->mpHintHandler->DrawHintText(afFrameTime, mpGuiSet);
@@ -986,26 +892,17 @@ void cLuxInventory::OnDraw(float afFrameTime)
 
 void cLuxInventory::ExitPressed()
 {
-	if(mbActive==false) return;
-
 	//////////////////////////////////
 	// Message is active, remove it
-	if(mbMessageActive)
-	{
-		mbMessageActive = false;
-	}
 	///////////////////////////
 	// Exit the inventory
-	else
+	if(ohpl_ga8_inv_exit_pressed(&mS) == eOhplGa8Press_Exit)
 	{
 		gpBase->mpInputHandler->ChangeState(eLuxInputState_Null);
 
 		mpGuiSet->SetDrawMouse(false);
 
 		mpGui->SetFocus(NULL);
-		
-		mbActive = false;
-		mbEnterFromJournal = false;
 	}
 }
 
@@ -1053,73 +950,55 @@ cLuxInventory_Item * cLuxInventory::AddItem(const tString& asName, eLuxItemType 
 		if (pVar == NULL)
 		{
 			Error("Couldn't find Global var '%s'\n", asName.c_str());
-			//return;
 		}
-		tString sVal = pVar->msVal;
-		int intVal = 0;
-		if (sVal != "")
+		else
 		{
-			intVal = cString::ToInt(sVal.c_str(), 0);
-			intVal += 1;
-		}
+			int lUnlock = 0;
+			tString sNew;
+			ohpl_ga8_inv_tinderbox((const unsigned char*)pVar->msVal.data(), pVar->msVal.size(), &lUnlock, OhplGa8StrSink, &sNew);
+			pVar->msVal = sNew;
 
-		pVar->msVal = cString::ToString(intVal);
-
-		if (intVal >= 150)
-		{
-			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Illuminatus);
+			if (lUnlock)
+			{
+				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Illuminatus);
+			}
 		}
 	}
 
 	////////////
-	// Check if has max amount
-	if(pItemType->GetHasMaxAmount())
+	// Check if has max amount, or if an item with count has too many
+	cLuxInventory_Item *pExisting = (pItemType->GetHasMaxAmount()==false && pItemType->HasCount()) ? GetItemFromSubType(asSubTypeName) : NULL;
+	switch(ohpl_ga8_inv_add_plan(aType, (const unsigned char*)asSubTypeName.data(), asSubTypeName.size(), pExisting!=NULL, pExisting ? pExisting->GetCount() : 0))
 	{
-		gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory", "TooManyItemsOfSort"),0); 
+	case eOhplGa8Add_Reject:
+		gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory", "TooManyItemsOfSort"),0);
 		return NULL;
+	case eOhplGa8Add_Count:
+		pExisting->AddCount(1);
+
+		if(apRemoveItemProp) *apRemoveItemProp = true;
+		return pExisting;
 	}
 
-	////////////
-	// If item type has count then check for 
-	if(pItemType->HasCount())
-	{
-		cLuxInventory_Item *pItem = GetItemFromSubType(asSubTypeName);
-		if(pItem)
-		{
-			/////////////////////////////////
-			//Check if there are too many
-			if(pItem->GetCount() >= pItemType->GetMaxCount())
-			{
-				gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory", "TooManyItemsOfSort"),0); 
-				return NULL;
-			}
-			else
-			{
-				pItem->AddCount(1);
-				
-				if(apRemoveItemProp) *apRemoveItemProp = true;
-				return pItem;
-			}
-		}
-	}
-	
 	////////////
 	// Create item and its data
 	cLuxInventory_Item *pItem = hplNew( cLuxInventory_Item, (asName,aType, asSubTypeName,this) );
-	
-	pItem->SetGameNameEntry("ItemName_"+asSubTypeName);
-	pItem->SetGameDescEntry("ItemDesc_"+asSubTypeName);
+
+	tString sNameEntry, sDescEntry, sFullImageName;
+	ohpl_ga8_inv_item_strings((const unsigned char*)asSubTypeName.data(), asSubTypeName.size(), (const unsigned char*)asImageName.data(), asImageName.size(),
+								OhplGa8StrSink, &sNameEntry, &sDescEntry, &sFullImageName);
+	pItem->SetGameNameEntry(sNameEntry);
+	pItem->SetGameDescEntry(sDescEntry);
 	pItem->SetAmount(afAmount);
 
-	tString sFullImageName = "graphics/item/"+asImageName;
 	pItem->SetImageName(sFullImageName);
 	pItem->SetStringVal(asVal);
 	pItem->SetExtraStringVal(asExtraVal);
 
-	if (asVal == "L02_Shipment")
+	if (ohpl_ga8_inv_still_alive((const unsigned char*)asVal.data(), asVal.size()))
 	{
 		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_StillAlive);
-	}	
+	}
 
 	//Log("Loaded image %d for '%s'\n", pImage, asSubTypeName.c_str());
 	//Log("  Image: %d Offset: (%s) Size: (%s)\n", pImage->GetImage(0), pImage->GetOffset().ToString().c_str(), 
@@ -1181,7 +1060,7 @@ void cLuxInventory::RemoveItem(cLuxInventory_Item *apItem)
     if(pType->HasCount())
 	{
 		apItem->AddCount(-1);
-		if(apItem->GetCount()>0) return;
+		if(ohpl_ga8_inv_remove_one(true, apItem->GetCount())==0) return;
 	}
 
 	if(mpPickedItem == apItem) mpPickedItem = NULL;
@@ -1306,8 +1185,7 @@ cLuxCombineItemsCallback*  cLuxInventory::GetCombineCallback(const tString& asIt
 	{
 		cLuxCombineItemsCallback *pCombCallback = *it;
 		
-		if( (pCombCallback->msItemA == asItemA && pCombCallback->msItemB == asItemB) ||
-			(pCombCallback->msItemA == asItemB && pCombCallback->msItemB == asItemA))
+		if(ohpl_ga8_inv_combine_matches(OhplGa8S(pCombCallback->msItemA), OhplGa8S(pCombCallback->msItemB), OhplGa8S(asItemA), OhplGa8S(asItemB)))
 		{
 			return pCombCallback;
 		}
@@ -1357,15 +1235,10 @@ void cLuxInventory::SetDescTextFromItem(cLuxInventory_Item *apItem)
 
 void cLuxInventory::SetDescText(const tWString &asHeader, const tWString &asNormal)
 {
-	if(asHeader == _W("") && asNormal == _W(""))
+	if(ohpl_ga8_inv_set_desc(&mS, asHeader == _W(""), asNormal == _W("")))
 	{
 		msOldHeaderText = msHeaderText;
 		msOldNormalText = msNormalText;
-		mfOldDescTextAlpha = 1.0f;
-	}
-	else
-	{
-		mfOldDescTextAlpha = 0.0f;
 	}
 #ifdef USE_GAMEPAD
 	msHeaderText = ParseStringForGamepadIconsRemoval(gpBase->mpHelpFuncs->ParseString(asHeader));
@@ -1378,10 +1251,16 @@ void cLuxInventory::SetDescText(const tWString &asHeader, const tWString &asNorm
 
 void cLuxInventory::OpenJournal()
 {
-	if(mbActive==false) return;
+	switch(ohpl_ga8_inv_open_journal(&mS))
+	{
+	case eOhplGa8Press_Exit:
+		gpBase->mpInputHandler->ChangeState(eLuxInputState_Null);
 
-	ExitPressed();
-	mbExitToJournal = true;
+		mpGuiSet->SetDrawMouse(false);
+
+		mpGui->SetFocus(NULL);
+		break;
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -1389,17 +1268,14 @@ void cLuxInventory::OpenJournal()
 void cLuxInventory::SetMessageText(const tWString &asText, float afLifeTime)
 {
 	msMessageText = gpBase->mpHelpFuncs->ParseString(asText);
-	mfMessageTextLife = afLifeTime <=0 ? gpBase->mpHelpFuncs->GetStringDuration(msMessageText) : afLifeTime;
-	mfMessageTextAlpha = 0.0f;
-	mbMessageActive = true;
+	ohpl_ga8_inv_set_message(&mS, afLifeTime, afLifeTime <=0 ? gpBase->mpHelpFuncs->GetStringDuration(msMessageText) : 0);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxInventory::SetPickedItem(cLuxInventory_Item *apItem, const cVector2f& avOffset)
 { 
-	mfPickedUpAt = gpBase->mpEngine->GetGameTime();
-	mbPickedObjectMoved = false;
+	ohpl_ga8_inv_set_picked(&mS, gpBase->mpEngine->GetGameTime());
 	mpPickedItem = apItem;
 	mvPickedItemOffset = avOffset;
 }
@@ -1408,10 +1284,7 @@ void cLuxInventory::SetPickedItem(cLuxInventory_Item *apItem, const cVector2f& a
 
 void cLuxInventory::SetCurrentWidget(iWidget *apWidget)
 { 
-	if(mfPickedUpAt + 1.0f/60.0f < gpBase->mpEngine->GetGameTime())
-	{
-		mbPickedObjectMoved = true;
-	}
+	ohpl_ga8_inv_note_current(&mS, gpBase->mpEngine->GetGameTime());
 
 	mpCurrentWidget = apWidget;
 	mpGuiSet->SetFocusedWidget(apWidget);
@@ -1430,16 +1303,8 @@ void cLuxInventory::SetEquippedHandItem(cLuxInventory_Item *apItem)
 
 eLuxItemType cLuxInventory::GetItemTypeFromString(const tString& asType)
 {
-	tString sLowType = cString::ToLowerCase(asType);
-
-	for(size_t i=0; i<mvItemTypes.size(); ++i)
-	{
-		iLuxItemType *pItemType = mvItemTypes[i];
-        if(cString::ToLowerCase(pItemType->GetName()) == sLowType)
-		{
-			return pItemType->GetType();
-		}
-	}
+	int lType = ohpl_ga8_it_from_string((const unsigned char*)asType.data(), asType.size());
+	if(lType >= 0) return (eLuxItemType)lType;
 
 	Error("Item type '%s' does not exist!\n", asType.c_str());
 
@@ -1470,20 +1335,18 @@ void cLuxInventory::AppDeviceWasRemoved()
 
 void cLuxInventory::DrawDescTextRow(const tWString& asText, const cColor& aCol)
 {
-	cColor finalCol = aCol;
-	finalCol.a *= mfAlpha;
-
 	const cVector3f& vMessageBodyCenter = mvLayout_ItemDescCenter;
 	tWStringVec vRows;
-	float fStartY = vMessageBodyCenter.y+30;
-	float fHalfWidth = mfLayout_ItemDescTextWidth*0.5f;
 	cVector2f vFontSize = mvLayout_FontSize_Description;
-	mpFontDefault->GetWordWrapRows(mfLayout_ItemDescTextWidth,vFontSize.y+1,vFontSize.y,asText, &vRows);
-	for(size_t i=0; i<vRows.size(); ++i)
+	mpFontDefault->GetWordWrapRows(mfLayout_ItemDescTextWidth,ohpl_ga8_inv_wrap_line(vFontSize.y),vFontSize.y,asText, &vRows);
+
+	OhplGa8Buf buf;
+	float vColor[4] = { aCol.r, aCol.g, aCol.b, aCol.a };
+	std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw, ohpl_ga8_inv_desc_rows(&vMessageBodyCenter.x, mfLayout_ItemDescTextWidth, &vFontSize.x, vRows.size(), vColor, mS.alpha, buf.mvRaw, OHPL_GA8_EVMAX));
+	for(size_t i=0; i<vEvents.size(); ++i)
 	{
-		float fY = fStartY + (float)i * (vFontSize.y+1);
-		//mpGuiSet->DrawFont(vRows[i], mpFontDefault, cVector3f(vMessageBodyCenter.x,fY ,1),vFontSize.y,finalCol,eFontAlign_Center);
-		mpGuiSet->DrawFont(vRows[i], mpFontDefault, cVector3f(vMessageBodyCenter.x-fHalfWidth, fY, 1), vFontSize.y, finalCol, eFontAlign_Left);
+		const OhplGa8Event &e = vEvents[i];
+		mpGuiSet->DrawFont(vRows[e.a], mpFontDefault, cVector3f(e.v[0], e.v[1], e.v[2]), vFontSize.y, cColor(e.v[5], e.v[6], e.v[7], e.v[8]), eFontAlign_Left);
 	}
 }
 
@@ -1491,11 +1354,7 @@ void cLuxInventory::DrawDescTextRow(const tWString& asText, const cColor& aCol)
 
 void cLuxInventory::ResetSessionVars()
 {
-	mfOldDescTextAlpha =0;
-
-	mbMessageActive = false;
-
-	mfOilMovementT =0;
+	ohpl_ga8_inv_reset_session(&mS);
 
 	msHeaderText = _W("");
 	msNormalText = _W("");
@@ -1504,24 +1363,17 @@ void cLuxInventory::ResetSessionVars()
 	mpCurrentWidget = NULL;
 
 	msMessageText = _W("");
-	mfMessageTextLife =0;
-	mfMessageTextAlpha =0;
-}
-
-static bool CheckItemTypeCombo(cLuxInventory_Item *apItemA, cLuxInventory_Item *apItemB, eLuxItemType aTypeA, eLuxItemType aTypeB)
-{
-	return	(apItemA->GetType() == aTypeA && apItemB->GetType() == aTypeB) ||
-			(apItemA->GetType() == aTypeB && apItemB->GetType() == aTypeA);
 }
 
 bool cLuxInventory::CheckSpecialCombineAction(cLuxInventory_Item *apItemA, cLuxInventory_Item *apItemB, int alSlotIndex)
 {
 	/////////////////////////////
 	//Combine lantern and oil
-	if(CheckItemTypeCombo(apItemA, apItemB, eLuxItemType_Lantern, eLuxItemType_LampOil))
+	int lOil = ohpl_ga8_inv_special_combine(apItemA->GetType(), apItemB->GetType());
+	if(lOil)
 	{
-		cLuxInventory_Item *pOilItem = apItemA->GetType()==eLuxItemType_LampOil ? apItemA : apItemB;
-        
+		cLuxInventory_Item *pOilItem = lOil==1 ? apItemA : apItemB;
+
 		GetItemTypeData(eLuxItemType_LampOil)->OnUse(pOilItem, alSlotIndex);
 		return true;
 	}
@@ -1716,12 +1568,16 @@ void cLuxInventory::CreateGui()
 	mvLayout_OilFrameVPadding = pMenuCfg->GetVector2f("Inventory", "OilFrameVPadding", 0);
 	mvLayout_OilFrameOffset = pMenuCfg->GetVector3f("Inventory", "OilFrameOffset", 0);
 
+	float vBubbles[9];
 	for(int i=0; i<3; ++i)
 	{
-		mvOilBubbleSpeed[i] = 40.0f;
-		mvOilBubblePos[i] = pMenuCfg->GetVector3f("Inventory", "OilCenter", 0) +	cVector3f(0,0,0.7f) + 
+		cVector3f vBubble = pMenuCfg->GetVector3f("Inventory", "OilCenter", 0) +	cVector3f(0,0,0.7f) +
 																					cMath::RandRectVector3f(cVector3f(-10,-10, 0), cVector3f(10,10, 0));
+		vBubbles[i*3+0] = vBubble.x;
+		vBubbles[i*3+1] = vBubble.y;
+		vBubbles[i*3+2] = vBubble.z;
 	}
+	ohpl_ga8_inv_init(&mS, mS.fade_in_time, mS.fade_out_time, vBubbles);
 
 	// Item text
 	mvLayout_ItemHeaderCenter = pMenuCfg->GetVector3f("Inventory", "ItemHeaderCenter", 0);
@@ -1734,7 +1590,11 @@ void cLuxInventory::CreateGui()
 	mfLayout_ItemDescTextWidth = pMenuCfg->GetFloat("Inventory", "ItemDescTextWidth", 400);
 
 	if(mvLayout_ItemTextFrameSize==cVector2f(-1))
-		mvLayout_ItemTextFrameSize = cVector2f(mfLayout_ItemDescTextWidth, mfLayout_ItemDescTextWidth*0.25f);
+	{
+		float vDefault[2];
+		ohpl_ga8_inv_text_frame_default(mfLayout_ItemDescTextWidth, vDefault);
+		mvLayout_ItemTextFrameSize = cVector2f(vDefault[0], vDefault[1]);
+	}
 
 	mvLayout_ItemCountOffset = pMenuCfg->GetVector3f("Inventory", "ItemCountOffset", 0);
 
@@ -1749,8 +1609,6 @@ void cLuxInventory::CreateGui()
 	/////////////////////////////////
 	// Create Sanity and Health status
 	tString sStatusSuffix[4] = {"25", "50", "75", "100"};
-	float fGlowPulseMiddle[4] = { 0.5f, 0.55f, 0.65f, 0.7f };
-	float fGlowPulseFreq[4] = { 1.5f, 1.4f, 1.2f, 1.0f };
 
     for(int i=0; i<4; ++i)
 	{
@@ -1759,9 +1617,6 @@ void cLuxInventory::CreateGui()
 
 		mpHealthStatus[i] = pGui->CreateGfxImage("inventory/inventory_health_"+sStatusSuffix[i]+".tga", eGuiMaterial_Alpha);
 		mpHealthGlow[i] = pGui->CreateGfxImage("inventory/inventory_health_glow_"+sStatusSuffix[i]+".tga", eGuiMaterial_Alpha);
-
-		mvPulseMiddle.push_back(fGlowPulseMiddle[i]);
-		mvPulseFreq.push_back(fGlowPulseFreq[i]);
 	}
 
 	/////////////////////////////////
@@ -1945,12 +1800,11 @@ void cLuxInventory::CreateGui()
 
 void cLuxInventory::DrawElementAtCenter(const cVector3f& avCenter, cGuiGfxElement* apGfx, float afAlpha, const cVector2f& avSize, bool abMulColWithAlpha)
 {
-	cVector2f vSize = avSize;
-	if(vSize==-1)
-		vSize = apGfx->GetImageSize();
+	cVector2f vImageSize = apGfx->GetImageSize();
+	float vPos[3], vSize[2], vColor[4];
+	ohpl_ga8_inv_element_at_center(&avCenter.x, &vImageSize.x, &avSize.x, afAlpha, abMulColWithAlpha, vPos, vSize, vColor);
 
-	cColor col = abMulColWithAlpha ? cColor(afAlpha, afAlpha) : cColor(1, afAlpha);
-	mpGuiSet->DrawGfx(apGfx, avCenter-vSize*0.5f, vSize,  col);
+	mpGuiSet->DrawGfx(apGfx, cVector3f(vPos[0], vPos[1], vPos[2]), cVector2f(vSize[0], vSize[1]), cColor(vColor[0], vColor[1], vColor[2], vColor[3]));
 }
 
 //-----------------------------------------------------------------------
@@ -1965,7 +1819,7 @@ bool cLuxInventory::SanityOnDraw(iWidget* apWidget, const cGuiMessageData& aData
 	StatusWidgetDraw(vSanityPos, lSanityStatus, mpSanityGlow); 
 	
 	//mpGuiSet->DrawFont(	mpFontDefault, mvLayout_SanityLabelCenter,
-	//					mvLayout_FontSize_Label, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal, 
+	//					mvLayout_FontSize_Label, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 	//					_W("%ls"), kTranslate("Inventory", "Sanity").c_str());
 
 	/////////////////////////////////////////
@@ -2004,7 +1858,7 @@ bool cLuxInventory::HealthOnDraw(iWidget* apWidget, const cGuiMessageData& aData
 	StatusWidgetDraw(vHealthPos, lHealthStatus, mpHealthGlow); 
 	
 	//mpGuiSet->DrawFont(	mpFontDefault, mvLayout_HealthLabelCenter,
-	//					mvLayout_FontSize_Label, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal, 
+	//					mvLayout_FontSize_Label, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 	//					_W("%ls"), kTranslate("Inventory", "Health").c_str());
 
 	/////////////////////////////////////////
@@ -2039,49 +1893,58 @@ bool cLuxInventory::OilOnDraw(iWidget* apWidget, const cGuiMessageData& aData)
 
 	////////////////////////
 	//Oil container with remaining oil
-	const cVector2f& vFullOilSize = apWidget->GetSize();
-	float fRemainingOilHeight = gpBase->mpPlayer->GetLampOil()*0.01f * vFullOilSize.y;
-
-	cVector3f vOilStart = vOilCenter-cVector3f(vFullOilSize)*0.5f;
-	cVector2f vSize = cVector2f(vFullOilSize.x, fRemainingOilHeight);
-
-	////////////////////////////////////
-	// Set clip region so nothing is drawn outside the oil height
-	cGuiClipRegion* pOldClipRegion = mpGuiSet->GetCurrentClipRegion();
-	cGuiClipRegion* pChildClipRegion = pOldClipRegion->CreateChild(vOilStart + cVector3f(0,vFullOilSize.y-fRemainingOilHeight, 0.6f),
-																	cVector2f(vFullOilSize.x,fRemainingOilHeight));
-	
-	mpGuiSet->SetCurrentClipRegion(pChildClipRegion);
-
-	//////////////////////////////
-	// Draw oil liquid
-	cVector2f vLiguidSize = apWidget->GetSize()*2;
-	cVector3f vLiquidPos = apWidget->GetGlobalPosition() - cVector3f(vLiguidSize.x*0.25f, vLiguidSize.y*0.25f, 0);
-
-	cVector3f vLiquidPosAdd1 = cVector3f(	sin(mfOilMovementT*0.3f) * apWidget->GetSize().x*0.5, 
-											cos(mfOilMovementT*0.2f) * apWidget->GetSize().y*0.2, 0.6f);
-	cVector3f vLiquidPosAdd2 = cVector3f(  cos(mfOilMovementT*0.2f) * apWidget->GetSize().x*0.3, 
-											sin(mfOilMovementT*0.15f) * apWidget->GetSize().y*0.15, 0.6f);
-	
-	mpGuiSet->DrawGfx(mpOilLiquid, vLiquidPos + vLiquidPosAdd1, vLiguidSize, cColor(1,0.75f*mfAlpha));
-	mpGuiSet->DrawGfx(mpOilLiquid, vLiquidPos + vLiquidPosAdd2, vLiguidSize, cColor(1,0.25f*mfAlpha));
-
-	//////////////////////////////
-	// Draw bubbles
+	cVector2f vWidgetSize = apWidget->GetSize();
+	cVector3f vWidgetPos = apWidget->GetGlobalPosition();
+	float vBubbleSizes[6];
 	for(int i=0; i<3; ++i)
-		mpGuiSet->DrawGfx(mpOilBubble[i], mvOilBubblePos[i], mpOilBubble[i]->GetActiveSize(), cColor(1, mfAlpha));
+	{
+		cVector2f vBubbleSize = mpOilBubble[i]->GetActiveSize();
+		vBubbleSizes[i*2] = vBubbleSize.x;
+		vBubbleSizes[i*2+1] = vBubbleSize.y;
+	}
 
+	OhplGa8Buf buf;
+	std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw, ohpl_ga8_inv_draw_oil(&mS, &vOilCenter.x, &vWidgetPos.x, &vWidgetSize.x,
+													gpBase->mpPlayer->GetLampOil(), vBubbleSizes, buf.mvRaw, OHPL_GA8_EVMAX));
 
-	///////////////////////////////
-	// Return to normal
-	mpGuiSet->SetCurrentClipRegion(pOldClipRegion);
-	
+	cGuiClipRegion* pOldClipRegion = NULL;
+	for(size_t i=0; i<vEvents.size(); ++i)
+	{
+		const OhplGa8Event &e = vEvents[i];
+		cVector3f vPos(e.v[0], e.v[1], e.v[2]);
+		cVector2f vSize(e.v[3], e.v[4]);
+		switch(e.kind)
+		{
+		////////////////////////////////////
+		// Set clip region so nothing is drawn outside the oil height
+		case eOhplGa8Draw_ClipPush:
+			pOldClipRegion = mpGuiSet->GetCurrentClipRegion();
+			mpGuiSet->SetCurrentClipRegion(pOldClipRegion->CreateChild(vPos, vSize));
+			break;
+		//////////////////////////////
+		// Draw oil liquid
+		case eOhplGa8Draw_OilLiquid:
+			mpGuiSet->DrawGfx(mpOilLiquid, vPos, vSize, cColor(e.v[5], e.v[8]));
+			break;
+		//////////////////////////////
+		// Draw bubbles
+		case eOhplGa8Draw_OilBubble:
+			mpGuiSet->DrawGfx(mpOilBubble[e.a], vPos, vSize, cColor(e.v[5], e.v[8]));
+			break;
+		///////////////////////////////
+		// Return to normal
+		case eOhplGa8Draw_ClipPop:
+			mpGuiSet->SetCurrentClipRegion(pOldClipRegion);
+			break;
+		}
+	}
+
 	///////////////////////////////
 	// Draw frame
-	DrawElementAtCenter(vOilCenter+cVector3f(0,0,1), mpRemainingOilFG, mfAlpha);
+	DrawElementAtCenter(vOilCenter+cVector3f(0,0,1), mpRemainingOilFG, mS.alpha);
 	
 	//mpGuiSet->DrawFont(	mpFontDefault, mvLayout_OilLabelCenter,
-	//					mvLayout_FontSize_Label, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal, 
+	//					mvLayout_FontSize_Label, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 	//					_W("%ls"), kTranslate("Inventory", "LampOil").c_str());
 
 	DrawFrameAroundWidget(mpFrameGenericCorners, mpFrameGenericBorders, apWidget, 
@@ -2099,44 +1962,10 @@ bool cLuxInventory::OilOnUpdate(iWidget* apWidget, const cGuiMessageData& aData)
 {
 	MouseOverWidgetUpdate(apWidget, kTranslate("Inventory", "LampOil"), kTranslate("Inventory", "LampOilDesc"));
 
-	const cVector2f& vFullOilSize = apWidget->GetSize();
-	float fRemainingOilHeight = gpBase->mpPlayer->GetLampOil()*0.01f * vFullOilSize.y;
+	cVector2f vFullOilSize = apWidget->GetSize();
+	cVector3f vOilPos = apWidget->GetGlobalPosition();
+	ohpl_ga8_inv_oil_update(&mS, &vOilPos.x, &vFullOilSize.x, gpBase->mpPlayer->GetLampOil(), aData.mfVal);
 
-	if(fRemainingOilHeight<kEpsilonf)
-		return true;
-
-
-	///////////////////////////////////
-	// Update a var used to move oil
-	mfOilMovementT += aData.mfVal;
-
-	///////////////////////////////////
-	// Update bubble position
-	int lOutsideCount = 0; //The number of bubbles that reached the top
-	const cVector3f& vOilPos=  apWidget->GetGlobalPosition();
-	for(int i=0; i<3; ++i)
-	{
-		if(mvOilBubblePos[i].y < vOilPos.y-30) 
-		{
-			lOutsideCount++;
-			continue;
-		}
-		
-		mvOilBubblePos[i].y -= aData.mfVal*mvOilBubbleSpeed[i];
-	}
-	
-	//If all outside, start over.
-	if(lOutsideCount==3)
-	{
-		for(int i=0; i<3; ++i)
-		{
-			mvOilBubbleSpeed[i] = vFullOilSize.y*0.5f * cMath::RandRectf(0.5f, 1.25f);
-
-			mvOilBubblePos[i].y = vOilPos.y+vFullOilSize.y;
-			mvOilBubblePos[i].x = cMath::RandRectf(vOilPos.x, vOilPos.x+vFullOilSize.x);
-		}
-	}
-	
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInventory, OilOnUpdate);
@@ -2162,11 +1991,11 @@ bool cLuxInventory::TinderboxOnDraw(iWidget* apWidget, const cGuiMessageData& aD
 
 	const cVector3f& vTinderboxCenter = mvLayout_TinderboxesCenter;
 	mpGuiSet->DrawFont( mpFontDefault, vTinderboxCenter+cVector3f(0,-vCountFontSize.y*0.5f,1), 
-						vCountFontSize, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal, 
+						vCountFontSize, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 						_W("x %d"), gpBase->mpPlayer->GetTinderboxes());
 
 	//mpGuiSet->DrawFont(	mpFontDefault, mvLayout_TinderboxesLabelCenter,
-	//					mvLayout_FontSize_Label, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal,
+	//					mvLayout_FontSize_Label, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 	//					_W("%ls"),kTranslate("Inventory", "Tinderboxes").c_str());
 
 	DrawFrameAroundWidget(mpFrameGenericCorners, mpFrameGenericBorders, apWidget, 
@@ -2192,14 +2021,14 @@ kGuiCallbackDeclaredFuncEnd(cLuxInventory, TinderboxOnUpdate);
 
 bool cLuxInventory::JournalOnDraw(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	float fAlpha = mvAlphaFader[eLuxInventoryFader_Journal].mfAlpha * mfAlpha;
+	float fAlpha = mvAlphaFader[eLuxInventoryFader_Journal].mfAlpha * mS.alpha;
 
 	cVector2f vSizeAdd = (mpJournalMouseOverGfx->GetActiveSize() - apWidget->GetSize()) * 0.5f;
 
 	mpGuiSet->DrawGfx(mpJournalMouseOverGfx, apWidget->GetGlobalPosition()+cVector3f(vSizeAdd.x,vSizeAdd.y,0.5f),-1, cColor(1, fAlpha));
 
 	//mpGuiSet->DrawFont(	mpFontDefault, mvLayout_JournalLabelCenter,
-	//							mvLayout_FontSize_Label, cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal,
+	//							mvLayout_FontSize_Label, cColor(1,mS.alpha), eFontAlign_Center, eGuiMaterial_FontNormal,
 	//							_W("%ls"),kTranslate("Inventory", "Journal").c_str());
 
 	/////////////////////////////////////////
@@ -2252,38 +2081,40 @@ bool cLuxInventory::ItemSlotsOnDraw(iWidget* apWidget, const cGuiMessageData& aD
 {
 	if(mbLayout_DrawSlotsFrame)
 	{
-		DrawFrameAroundWidget(mpFrameGenericCorners, mpFrameGenericBorders, apWidget, 
-								mvLayout_SlotFrameHPadding, mvLayout_SlotFrameVPadding, 
+		DrawFrameAroundWidget(mpFrameGenericCorners, mpFrameGenericBorders, apWidget,
+								mvLayout_SlotFrameHPadding, mvLayout_SlotFrameVPadding,
 								mvLayout_SlotFrameOffset, mvLayout_SlotFrameSize);
 	}
 
 	if(mbLayout_DrawSlotsGrid)
 	{
-		// Get grid lines size
-		cVector2f vHoriSize = cVector2f(apWidget->GetSize().x + mvLayout_SlotGridHExtension.x + mvLayout_SlotGridHExtension.y, 
-										mvLayout_SlotsSeparation.y);
-		cVector2f vVertSize = cVector2f(mvLayout_SlotsSeparation.x, 
-										apWidget->GetSize().y + mvLayout_SlotGridVExtension.x + mvLayout_SlotGridVExtension.y);
+		OhplGa8GridIn grid;
+		cVector2f vWidgetSize = apWidget->GetSize();
+		memcpy(grid.widget_size, &vWidgetSize.x, sizeof(float)*2);
+		memcpy(grid.h_ext, &mvLayout_SlotGridHExtension.x, sizeof(float)*2);
+		memcpy(grid.v_ext, &mvLayout_SlotGridVExtension.x, sizeof(float)*2);
+		memcpy(grid.separation, &mvLayout_SlotsSeparation.x, sizeof(float)*3);
+		memcpy(grid.slot_size, &mvLayout_SlotSize.x, sizeof(float)*2);
+		memcpy(grid.start, &mvLayout_SlotsStart.x, sizeof(float)*3);
+		memcpy(grid.frame_hpad, &mvLayout_SlotFrameHPadding.x, sizeof(float)*2);
+		memcpy(grid.frame_vpad, &mvLayout_SlotFrameVPadding.x, sizeof(float)*2);
+		memcpy(grid.frame_offset, &mvLayout_SlotFrameOffset.x, sizeof(float)*3);
+		memcpy(grid.grid_offset, &mvLayout_SlotsGridOffset.x, sizeof(float)*3);
+		grid.color[0] = mLayout_SlotsGridColor.r;
+		grid.color[1] = mLayout_SlotsGridColor.g;
+		grid.color[2] = mLayout_SlotsGridColor.b;
+		grid.color[3] = mLayout_SlotsGridColor.a;
+		grid.rows = mlLayout_SlotsRows;
+		grid.cols = mlLayout_SlotsColumns;
+		grid.alpha = mS.alpha;
 
-		// Get grid lines separation
-		cVector2f vLineSeparation = mvLayout_SlotSize + 
-									cVector2f(mvLayout_SlotsSeparation.x, mvLayout_SlotsSeparation.y);
-
-		// Get grid start point
-		cVector3f vPos = mvLayout_SlotsStart - 
-							cVector3f(mvLayout_SlotFrameHPadding.x, mvLayout_SlotFrameVPadding.x, 0) +
-							mvLayout_SlotFrameOffset + mvLayout_SlotsGridOffset;
-
-		// Get line color
-		cColor lineColor = mLayout_SlotsGridColor;
-		lineColor.a *= mfAlpha;
-
-		// Draw crossed lines
-		for(int i=1;i<mlLayout_SlotsRows;++i)
-			mpGuiSet->DrawGfx(mpWhiteGfx, vPos + cVector3f(-mvLayout_SlotGridHExtension.x,vLineSeparation.y*i,0), vHoriSize, lineColor);
-
-		for(int i=1;i<mlLayout_SlotsColumns;++i)
-			mpGuiSet->DrawGfx(mpWhiteGfx, vPos + cVector3f(vLineSeparation.x*i,-mvLayout_SlotGridVExtension.x,0), vVertSize, lineColor);
+		OhplGa8Buf buf;
+		std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw, ohpl_ga8_inv_grid(&grid, buf.mvRaw, OHPL_GA8_EVMAX));
+		for(size_t i=0; i<vEvents.size(); ++i)
+		{
+			const OhplGa8Event &e = vEvents[i];
+			mpGuiSet->DrawGfx(mpWhiteGfx, cVector3f(e.v[0], e.v[1], e.v[2]), cVector2f(e.v[3], e.v[4]), cColor(e.v[5], e.v[6], e.v[7], e.v[8]));
+		}
 	}
 
 	return true;
@@ -2310,30 +2141,13 @@ bool cLuxInventory::UIButtonPress(iWidget* apWidget, const cGuiMessageData& aDat
 	// Switch category based on which category we are in
 	int lUserValue = pWidget == NULL ? 0 : pWidget->GetUserValue();
 
-	if(lUserValue == 0) return false;
-
-	switch(aData.mlVal)
+	switch(ohpl_ga8_inv_nav(aData.mlVal, lUserValue))
 	{
-	case eUIButton_NextPage:
-		switch(lUserValue)
-		{
-		case 1:
-		case 2: SetCurrentWidget(mpTinderboxWidget); return true;
-		case 3: SetCurrentWidget(mpOilWidget); return true;
-		case 4: SetCurrentWidget(mpJournalWidget); return true;
-		default: SetCurrentWidget(mpTinderboxWidget); return true;
-		}
-		break;
-	case eUIButton_PrevPage:
-		switch(lUserValue)
-		{
-		case 2: SetCurrentWidget(mpSanityWidget); return true;
-		case 3: 
-		case 4: 
-		case 5: SetCurrentWidget(mpHealthWidget); return true;
-		default: SetCurrentWidget(mpHealthWidget); return true;
-		}
-		break;
+	case eOhplGa8Nav_Tinderbox: SetCurrentWidget(mpTinderboxWidget); return true;
+	case eOhplGa8Nav_Oil: SetCurrentWidget(mpOilWidget); return true;
+	case eOhplGa8Nav_Journal: SetCurrentWidget(mpJournalWidget); return true;
+	case eOhplGa8Nav_Sanity: SetCurrentWidget(mpSanityWidget); return true;
+	case eOhplGa8Nav_Health: SetCurrentWidget(mpHealthWidget); return true;
 	}
 
 	return false;
@@ -2354,7 +2168,10 @@ void cLuxInventory::StatusWidgetUpdate(iWidget* apWidget, int alStatusIdx, cGuiG
 	if(pNewGfx!=pOldGfx)
 	{
 		pImage->SetImage(pNewGfx);
-		pImage->SetPosition(avPos-cVector3f(pNewGfx->GetImageSize())*0.5f);
+		cVector2f vImageSize = pNewGfx->GetImageSize();
+		float vPos[3];
+		ohpl_ga8_inv_status_pos(&avPos.x, &vImageSize.x, vPos);
+		pImage->SetPosition(cVector3f(vPos[0], vPos[1], vPos[2]));
 		pImage->SetSize(pNewGfx->GetImageSize());
 	}
 }
@@ -2364,14 +2181,10 @@ void cLuxInventory::StatusWidgetDraw(const cVector3f& avPos, int alStatusIdx, cG
 	cGuiGfxElement* pGlow = apStatusGlowGfx[alStatusIdx];
 
 	//////////////////////////////////////////////////////////////////////////////////////
-	// Get an alpha value oscillating between fPulseMid-fPulseAmp and fPulseMid+fPulseAmp, 
+	// Get an alpha value oscillating between fPulseMid-fPulseAmp and fPulseMid+fPulseAmp,
 	// with fPulseAmp being the distance between fPulseMid and 1
 
-	float fPulseMid = mvPulseMiddle[alStatusIdx];
-	float fPulseAmp = 1.0f - fPulseMid;
-	float fGlowAlpha = fPulseMid + fPulseAmp*(cos(mfTimer*mvPulseFreq[alStatusIdx]));
-
-	DrawElementAtCenter(avPos+cVector3f(0,0,0.1f), pGlow, mfAlpha*fGlowAlpha, pGlow->GetActiveSize(), false);
+	DrawElementAtCenter(avPos+cVector3f(0,0,0.1f), pGlow, ohpl_ga8_inv_glow_alpha(&mS, alStatusIdx), pGlow->GetActiveSize(), false);
 }
 
 //-----------------------------------------------------------------------
@@ -2379,21 +2192,24 @@ void cLuxInventory::StatusWidgetDraw(const cVector3f& avPos, int alStatusIdx, cG
 void cLuxInventory::MouseOverWidgetUpdate(iWidget* apWidget, const tWString& asDescHeader, const tWString& asDescMsg)
 {
 	int lFaderID = apWidget->GetUserValue();
-	if (lFaderID >= eLuxInventoryFader_LastEnum) {
-		Warning("Invalid InventoryFader %d\n", lFaderID);
-		return;
-	}
-	if(mbMessageActive==false && apWidget==mpCurrentWidget && mvAlphaFader[lFaderID].mbActive==false)
+	bool bFaderActive = lFaderID >= 0 && lFaderID < eLuxInventoryFader_LastEnum ? mvAlphaFader[lFaderID].mbActive : false;
+
+	switch(ohpl_ga8_inv_mouse_over(lFaderID, mS.message_active!=0, apWidget==mpCurrentWidget, bFaderActive, msHeaderText==asDescHeader && msNormalText==asDescMsg))
 	{
+	case eOhplGa8MouseOver_Invalid:
+		Warning("Invalid InventoryFader %d\n", lFaderID);
+		break;
+	case eOhplGa8MouseOver_Show:
 		mvAlphaFader[lFaderID].mbActive=true;
 		SetDescText(asDescHeader, asDescMsg);
-	}
-	
-	if( (apWidget!=mpCurrentWidget || mbMessageActive) && mvAlphaFader[lFaderID].mbActive)
-	{
+		break;
+	case eOhplGa8MouseOver_Hide:
 		mvAlphaFader[lFaderID].mbActive=false;
-		if(msHeaderText==asDescHeader && msNormalText==asDescMsg)
-			SetDescText(_W(""), _W(""));
+		break;
+	case eOhplGa8MouseOver_HideAndClear:
+		mvAlphaFader[lFaderID].mbActive=false;
+		SetDescText(_W(""), _W(""));
+		break;
 	}
 }
 
@@ -2441,7 +2257,7 @@ bool cLuxInventory::InventoryDrawFocus(iWidget* apWidget, const cGuiMessageData&
 	{
 		cVector3f vCursorPos = mpCurrentWidget->GetGlobalPosition() + mpCurrentWidget->GetSize()*0.5f;
 		vCursorPos.z = mpGuiSet->GetMouseZ()-1.0f;
-		mpGuiSet->DrawGfx(mpGuiSet->GetCurrentPointer(), vCursorPos, -1, cColor(1.0f, mfAlpha));
+		mpGuiSet->DrawGfx(mpGuiSet->GetCurrentPointer(), vCursorPos, -1, cColor(1.0f, mS.alpha));
 	}
 
 	return true;
@@ -2451,20 +2267,29 @@ kGuiCallbackDeclaredFuncEnd(cLuxInventory, InventoryDrawFocus);
 //-----------------------------------------------------------------------
 
 void cLuxInventory::DrawFrameAroundWidget(cGuiGfxElement** apGfxCorners, cGuiGfxElement** apGfxBorders,
-										  iWidget* apWidget, 
-										  const cVector2f& avHPadding, const cVector2f& avVPadding, 
+										  iWidget* apWidget,
+										  const cVector2f& avHPadding, const cVector2f& avVPadding,
 										  const cVector3f& avOffset, const cVector2f& avSize)
 {
-	// Get Base Rectangle
-	const cVector3f& vPosition = apWidget->GetGlobalPosition();
+	OhplGa8FrameIn frame;
+	cVector3f vPosition = apWidget->GetGlobalPosition();
 	cVector2f vWidgetSize = apWidget->GetSize();
-	cVector2f vSize = cVector2f( avSize.x==-1? vWidgetSize.x : avSize.x, 
-								 avSize.y==-1? vWidgetSize.y : avSize.y);
+	cVector2f vC0 = apGfxCorners[0]->GetActiveSize();
+	cVector2f vC1 = apGfxCorners[1]->GetActiveSize();
+	cVector2f vC3 = apGfxCorners[3]->GetActiveSize();
+	memcpy(frame.widget_pos, &vPosition.x, sizeof(float)*3);
+	memcpy(frame.widget_size, &vWidgetSize.x, sizeof(float)*2);
+	memcpy(frame.hpad, &avHPadding.x, sizeof(float)*2);
+	memcpy(frame.vpad, &avVPadding.x, sizeof(float)*2);
+	memcpy(frame.offset, &avOffset.x, sizeof(float)*3);
+	memcpy(frame.size, &avSize.x, sizeof(float)*2);
+	memcpy(frame.c0, &vC0.x, sizeof(float)*2);
+	memcpy(frame.c1, &vC1.x, sizeof(float)*2);
+	memcpy(frame.c3, &vC3.x, sizeof(float)*2);
+	frame.alpha = mS.alpha;
 
-	// Wrap frame around rectangle with added padding 
-	DrawFrame(apGfxCorners, apGfxBorders, 
-				vPosition-cVector3f(apGfxCorners[0]->GetActiveSize().x+avHPadding.x, apGfxCorners[0]->GetActiveSize().y+avVPadding.x, 0) + avOffset, 
-				vSize + cVector2f(avHPadding.x+avHPadding.y, avVPadding.x+avVPadding.y));
+	OhplGa8Buf buf;
+	RunDrawEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_inv_frame_around(&frame, buf.mvRaw, OHPL_GA8_EVMAX)), apGfxCorners, apGfxBorders);
 }
 
 
@@ -2473,72 +2298,28 @@ void cLuxInventory::DrawFrameAroundWidget(cGuiGfxElement** apGfxCorners, cGuiGfx
 void cLuxInventory::DrawFrame(cGuiGfxElement** apGfxCorners, cGuiGfxElement** apGfxBorders,
 								const cVector3f& avPosition, const cVector2f& avSize)
 {
-	/////////////////////////////////////////
-	// Draw frame
-	cVector3f vPos = avPosition;
+	cVector2f vC0 = apGfxCorners[0]->GetActiveSize();
+	cVector2f vC1 = apGfxCorners[1]->GetActiveSize();
+	cVector2f vC3 = apGfxCorners[3]->GetActiveSize();
 
-	// Left part
-	{
-		// Draw Upper left corner
-		mpGuiSet->DrawGfx(apGfxCorners[0], 
-							vPos, -1, cColor(1,mfAlpha));
-
-		// Draw Left border
-		mpGuiSet->DrawGfx(apGfxBorders[3], 
-							vPos + cVector3f(0, apGfxCorners[0]->GetActiveSize().y, 0), 
-							cVector2f( apGfxCorners[0]->GetActiveSize().x, avSize.y),
-							cColor(1,mfAlpha));
-
-		// Draw Lower left corner
-		mpGuiSet->DrawGfx(apGfxCorners[3],
-							vPos + cVector3f(0, apGfxCorners[0]->GetActiveSize().y+ avSize.y, 0),
-							-1, cColor(1,mfAlpha));
-
-	}
-
-	// Move vPos to the right
-	vPos.x += apGfxCorners[0]->GetActiveSize().x;
-
-	// Middle part
-	{
-		// Draw Upper border
-		mpGuiSet->DrawGfx(apGfxBorders[0], 
-							vPos, 
-							cVector2f(avSize.x, 
-										apGfxCorners[0]->GetActiveSize().y),
-							cColor(1,mfAlpha));
-
-		// Draw Lower border
-		mpGuiSet->DrawGfx(apGfxBorders[2], 
-							vPos+cVector3f(0, apGfxCorners[0]->GetActiveSize().y + avSize.y,0), 
-							cVector2f(avSize.x, apGfxCorners[3]->GetActiveSize().y),
-							cColor(1,mfAlpha));
-	}
-
-	// Move vPos to the right
-	vPos.x += avSize.x;
-
-	// Right part
-	{
-		// Draw Upper right corner
-		mpGuiSet->DrawGfx(apGfxCorners[1],
-							vPos,
-							-1,cColor(1,mfAlpha));
-
-		// Draw Right border
-		mpGuiSet->DrawGfx(apGfxBorders[1], 
-							vPos + cVector3f(0, apGfxCorners[1]->GetActiveSize().y, 0), 
-							cVector2f( apGfxCorners[1]->GetActiveSize().x, avSize.y),
-							cColor(1,mfAlpha));
-
-		// Draw Lower right corner
-		mpGuiSet->DrawGfx(apGfxCorners[2],
-							vPos + cVector3f(0, apGfxCorners[1]->GetActiveSize().y + avSize.y, 0),
-							-1, cColor(1,mfAlpha));
-	}
-
+	OhplGa8Buf buf;
+	RunDrawEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_inv_draw_frame(&avPosition.x, &avSize.x, &vC0.x, &vC1.x, &vC3.x, mS.alpha, buf.mvRaw, OHPL_GA8_EVMAX)), apGfxCorners, apGfxBorders);
 }
 
+//-----------------------------------------------------------------------
+
+void cLuxInventory::RunDrawEvents(const std::vector<OhplGa8Event> &avEvents, cGuiGfxElement** apGfxCorners, cGuiGfxElement** apGfxBorders)
+{
+	for(size_t i=0; i<avEvents.size(); ++i)
+	{
+		const OhplGa8Event &e = avEvents[i];
+		cVector3f vPos(e.v[0], e.v[1], e.v[2]);
+		if(e.kind == eOhplGa8Draw_Corner)
+			mpGuiSet->DrawGfx(apGfxCorners[e.a], vPos, -1, cColor(e.v[5], e.v[8]));
+		else
+			mpGuiSet->DrawGfx(apGfxBorders[e.a], vPos, cVector2f(e.v[3], e.v[4]), cColor(e.v[5], e.v[8]));
+	}
+}
 
 //-----------------------------------------------------------------------
 

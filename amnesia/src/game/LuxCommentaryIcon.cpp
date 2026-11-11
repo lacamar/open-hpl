@@ -18,6 +18,7 @@
  */
 
 #include "LuxCommentaryIcon.h"
+#include "RustLuxUi.h"
 
 #include "LuxMap.h"
 #include "LuxEffectHandler.h"
@@ -172,19 +173,7 @@ void cLuxCommentaryIcon::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxCommentaryIcon::OnUpdate(float afTimeStep)
 {
-	if(mbPlayingSound)
-	{
-		mvRotAngle.y += afTimeStep*2.5f;
-	}
-	else
-	{
-		if(mvRotAngle.y != 0)
-		{
-			mvRotAngle.y = cMath::Wrap(mvRotAngle.y, 0, kPif);
-			mvRotAngle.y += afTimeStep*2.5f;
-			if(mvRotAngle.y>kPif) mvRotAngle.y =0;
-		}
-	}
+	mvRotAngle.y = ohpl_ga8_comm_spin(mvRotAngle.y, mbPlayingSound, afTimeStep);
 
 	for(int i=0; i<mpMeshEntity->GetSubMeshEntityNum(); ++i)
 	{
@@ -218,18 +207,21 @@ bool cLuxCommentaryIcon::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 tWString cLuxCommentaryIcon::GetFocusText()
 {
-	return cString::To16Char(msTalker + "\n\""+msTopic+"\"");
+	tString sText;
+	ohpl_ga8_comm_focus_text((const unsigned char*)msTalker.data(), msTalker.size(), (const unsigned char*)msTopic.data(), msTopic.size(), OhplGa8StrSink, &sText);
+	return cString::To16Char(sText);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxCommentaryIcon::SetPlayingSound(bool abX)
 {
-	if(mbPlayingSound ==abX) return;
+	int lPs = ohpl_ga8_comm_set_playing(mbPlayingSound, abX);
+	if(lPs == eOhplGa8Ps_None) return;
 
 	mbPlayingSound = abX;
 
-    if(mbPlayingSound)
+    if(lPs == eOhplGa8Ps_Create)
 	{
 		cParticleSystem *pPS = mpMap->GetWorld()->CreateParticleSystem("_commentary_icon_ps","ps_commentary_icon.ps",1);
 		if(pPS)
@@ -308,7 +300,8 @@ void cLuxCommentaryIcon::OnSetActive(bool abX)
 
 void cLuxCommentaryIcon::LoadCommentaryFile(const tString& asFile)
 {
-	tString sFile = cString::SetFileExt(asFile,"comment");
+	tString sFile;
+	ohpl_ga8_comm_file((const unsigned char*)asFile.data(), asFile.size(), OhplGa8StrSink, &sFile);
 	cResources *pResources = gpBase->mpEngine->GetResources();
 
 	iXmlDocument *pXmlDoc = pResources->LoadXmlDocument(sFile);

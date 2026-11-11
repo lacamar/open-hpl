@@ -32,6 +32,36 @@
 
 #include "LuxAchievementHandler.h"
 
+static_assert(eUIButton_Primary == 1 && eUIButton_Secondary == 2, "ohpl_ga8_jrn button bits");
+static_assert(eUIArrow_Up == 1 && eUIArrow_Right == 2 && eUIArrow_Down == 4 && eUIArrow_Left == 8, "ohpl_ga8_jrn arrow bits");
+
+static tString BackgroundImage(int alState)
+{
+	OhplGa8Str s = ohpl_ga8_jrn_background(alState);
+	return tString((const char*)s.p, s.n);
+}
+
+static void OhplGa8Entries(const tString &asName, int alKind, int alNum, tString &asNameEntry, tString &asTextEntry)
+{
+	ohpl_ga8_jrn_entries(alKind, OhplGa8S(asName), alNum, OhplGa8StrSink, &asNameEntry, &asTextEntry);
+}
+
+static void OhplGa8ImageFiles(const tString &asImage, tString &asLarge, tString &asIcon)
+{
+	ohpl_ga8_jrn_image_files(OhplGa8S(asImage), OhplGa8StrSink, &asLarge, &asIcon);
+}
+
+struct cOhplGa8NarrationErrors
+{
+	size_t mlCount;
+};
+
+static void OhplGa8NarrationError(void *apCtx, const unsigned char *apRow, size_t alLen)
+{
+	cOhplGa8NarrationErrors *pErrors = (cOhplGa8NarrationErrors*)apCtx;
+	Error("Voice lines '%s' has bad syntax! Found %d arguments!\n", std::string((const char*)apRow, alLen).c_str(), (int)pErrors->mlCount);
+}
+
 //-----------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
@@ -39,28 +69,6 @@
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
-
-static eLuxJournalState gvPressExitState[eLuxJournalState_LastEnum] =
-{
-	eLuxJournalState_LastEnum,	//Main,
-	eLuxJournalState_Main,		//Notes,
-	eLuxJournalState_Main,		//Diaries,
-	eLuxJournalState_Main,		//QuestLog,
-	eLuxJournalState_Notes,		//OpenNote
-	eLuxJournalState_Diaries,	//OpenDiary
-	eLuxJournalState_Diaries	//OpenNarratedDiary
-};
-
-static tString gsBackgroundImage[eLuxJournalState_LastEnum] =
-{
-		"journal/bg_main.tga",	//Main,
-		"journal/bg_notes.tga",		//Notes,
-		"journal/bg_diaries.tga",		//Diaries,
-		"journal/bg_questlog.tga",		//QuestLog,
-		"",		//OpenNote
-		"",		//OpenDiary
-		""		//OpenNarratedDiary
-};
 
 //-----------------------------------------------------------------------
 
@@ -72,16 +80,7 @@ static tString gsBackgroundImage[eLuxJournalState_LastEnum] =
 
 void cLuxJournalTextData::Update(float afTimeStep)
 {
-    if(mpWidget->GetMouseIsOver() || mpWidget->HasFocus())
-	{
-		mfEffectfAlpha += afTimeStep * 4.0f;
-		if(mfEffectfAlpha > 1) mfEffectfAlpha = 1;
-	}
-	else
-	{
-		mfEffectfAlpha -= afTimeStep * 2.0f;
-		if(mfEffectfAlpha < 0) mfEffectfAlpha = 0;
-	}
+	mfEffectfAlpha = ohpl_ga8_jrn_hover_alpha(mfEffectfAlpha, mpWidget->GetMouseIsOver() || mpWidget->HasFocus(), afTimeStep);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -172,16 +171,7 @@ void cLuxJournalStateData::Update(float afTimeStep)
 {
 	/////////////////////
 	//Alpha
-	if(mState == mpJournal->mCurrentState)
-	{
-		mfAlpha += afTimeStep * 2.0f;
-		if(mfAlpha>1) mfAlpha = 1;
-	}
-	else
-	{
-		mfAlpha -= afTimeStep * 5.0f;
-		if(mfAlpha<0) mfAlpha = 0;
-	}
+	mfAlpha = ohpl_ga8_jrn_state_alpha(mfAlpha, mState == mpJournal->mCurrentState, afTimeStep);
 
 	/////////////////////
 	//Session widgets
@@ -206,7 +196,8 @@ void cLuxJournalStateData::OnDraw(float afFrameTime)
 		mState == eLuxJournalState_OpenDiary  || 
 		mState == eLuxJournalState_OpenNarratedDiary)
 	{
-		if(mpJournal->mvPages.empty()) return;
+		size_t lPageNum = ohpl_ga8_jrn_page_count(mpJournal->mpPages);
+		if(lPageNum==0) return;
 
 		/////////////////////////
 		// Header
@@ -216,20 +207,22 @@ void cLuxJournalStateData::OnDraw(float afFrameTime)
 
 		/////////////////////////
 		// Text
-		cLuxNotePage *pPage = &mpJournal->mvPages[mpJournal->mlCurrentNotePage];
+		if((size_t)mpJournal->mlCurrentNotePage < lPageNum)
+		{
+			size_t lPage = (size_t)mpJournal->mlCurrentNotePage;
+			size_t lRowNum = ohpl_ga8_jrn_row_count(mpJournal->mpPages, lPage);
 
-		cVector3f vPos(400 - mpJournal->mfNoteTextWidth/2, mpJournal->mfNoteTextStartY, 3);
-		
-		//if(	mpJournal->mlCurrentNotePage == 0 && mpJournal->mvPages.size()==1) //Should be good to center all pages!
-		{
-			float fHalfRowNum = ((float)pPage->mvRows.size())*0.5f;
-			vPos.y = 300 - (mpJournal->mfNoteRowDist * fHalfRowNum);	
-		}
-		
-		for(size_t i=0; i<pPage->mvRows.size(); ++i)
-		{
-			mpJournal->mpGuiSet->DrawFont(pPage->mvRows[i], mpJournal->mpFontDefault, vPos, mpJournal->mvNoteFontSize, cColor(1,fAlpha));
-			vPos.y += mpJournal->mfNoteRowDist;
+			cVector3f vPos(400 - mpJournal->mfNoteTextWidth/2, mpJournal->mfNoteTextStartY, 3);
+
+			vPos.y = ohpl_ga8_jrn_page_start_y(lRowNum, mpJournal->mfNoteRowDist);
+
+			for(size_t i=0; i<lRowNum; ++i)
+			{
+				size_t lLen;
+				const unsigned *pRow = ohpl_ga8_jrn_row(mpJournal->mpPages, lPage, i, &lLen);
+				mpJournal->mpGuiSet->DrawFont(tWString((const wchar_t*)pRow, lLen), mpJournal->mpFontDefault, vPos, mpJournal->mvNoteFontSize, cColor(1,fAlpha));
+				vPos.y += mpJournal->mfNoteRowDist;
+			}
 		}
 	}
 
@@ -332,6 +325,8 @@ cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
 
 	mpFontDefault = NULL;
 	mpFontMenu = NULL;
+
+	mpPages = ohpl_ga8_jrn_pages_new();
 }
 
 //-----------------------------------------------------------------------
@@ -342,6 +337,8 @@ cLuxJournal::~cLuxJournal()
 	STLDeleteAll(mvQuestNotes);
 	STLDeleteAll(mvDiaryContainers);
 	STLDeleteAll(mvStateData);
+
+	ohpl_ga8_jrn_pages_free(mpPages);
 }
 
 //-----------------------------------------------------------------------
@@ -423,29 +420,16 @@ void cLuxJournal::Update(float afTimeStep)
 {
 	/////////////////////////
 	// Update alpha
-	if(mbActive)
+	switch(ohpl_ga8_jrn_update_alpha(&mfAlpha, mbActive, mbOpenedFromInventory, afTimeStep))
 	{
-		mfAlpha += afTimeStep*2;
-		if(mfAlpha >1) mfAlpha =1;
-	}
-	else
-	{
-		mfAlpha -= afTimeStep*3;
-		if(mfAlpha<0)
-		{
-			mfAlpha =0;
-			
-			if(mbOpenedFromInventory)
-			{
-				gpBase->mpInventory->SetEnterFromJournal(true);
-				gpBase->mpEngine->GetUpdater()->SetContainer("Inventory");
-			}
-			else
-			{
-				gpBase->mpEngine->GetUpdater()->SetContainer("Default");
-				gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
-			}
-		}
+	case eOhplGa8Exit_ToJournal:
+		gpBase->mpInventory->SetEnterFromJournal(true);
+		gpBase->mpEngine->GetUpdater()->SetContainer("Inventory");
+		break;
+	case eOhplGa8Exit_ToDefault:
+		gpBase->mpEngine->GetUpdater()->SetContainer("Default");
+		gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
+		break;
 	}
 
 	/////////////////////////
@@ -474,7 +458,8 @@ void cLuxJournal::Update(float afTimeStep)
 	if(mCurrentState == eLuxJournalState_OpenNarratedDiary && mbActive)
 	{
 		cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-		if(mpVoiceEntry==NULL || pSoundHandler->IsValid(mpVoiceEntry,mlVoiceEntryID)==false)
+		bool bVoiceValid = mpVoiceEntry!=NULL && pSoundHandler->IsValid(mpVoiceEntry,mlVoiceEntryID);
+		if(ohpl_ga8_jrn_narration_done(mCurrentState, mbActive, bVoiceValid))
 		{
 			mpVoiceEntry = NULL;
 		
@@ -550,8 +535,8 @@ void cLuxJournal::OnEnterContainer(const tString& asOldContainer)
 
 	/////////////////////
 	//Load main background
-	if(gsBackgroundImage[mCurrentState]!="")
-		SetStateBackgroundGfx(gsBackgroundImage[mCurrentState]);
+	if(BackgroundImage(mCurrentState)!="")
+		SetStateBackgroundGfx(BackgroundImage(mCurrentState));
 }
 
 //-----------------------------------------------------------------------
@@ -605,7 +590,7 @@ void cLuxJournal::OnDraw(float afFrameTime)
 	//Fade
 	if(mbOpenedFromInventory)
 	{
-		mpGuiSet->DrawGfx(mpWhiteGfx,mvGuiSetStartPos+cVector3f(0,0,20),mvGuiSetSize,cColor(0, 1.0f - mfAlpha*mfAlpha));
+		mpGuiSet->DrawGfx(mpWhiteGfx,mvGuiSetStartPos+cVector3f(0,0,20),mvGuiSetSize,cColor(0, ohpl_ga8_jrn_fade_alpha(mfAlpha)));
 	}
 
 	////////////////////////
@@ -617,39 +602,31 @@ void cLuxJournal::OnDraw(float afFrameTime)
 
 void cLuxJournal::ExitPressed(bool abInstantExit)
 {
-	if(mbActive==false) return;
-
+	int lNewState;
+	switch(ohpl_ga8_jrn_exit_pressed(mbActive, abInstantExit, mbForceInstantExit, mCurrentState, mlCurrentNotePage, ohpl_ga8_jrn_page_count(mpPages), &lNewState))
+	{
 	////////////////////
 	//Narrated diary open
-	if(	mCurrentState == eLuxJournalState_OpenNarratedDiary && 
-		mlCurrentNotePage < (int)mvPages.size()-1)
-	{
-		SetNotePage(mlCurrentNotePage+1);	
-	}
+	case eOhplGa8JPress_NextPage:
+		SetNotePage(lNewState);
+		break;
 	////////////////////
 	//Exit the journal directly
-	else if(abInstantExit || mbForceInstantExit)
-	{
+	case eOhplGa8JPress_ExitHint:
 		Exit();
 		gpBase->mpHelpFuncs->PlayGuiSoundData("journal_close", eSoundEntryType_Gui);
 
 		gpBase->mpHintHandler->Add("RecentlyReadText", kTranslate("Hints", "RecentlyReadText"), -1);
-	}
+		break;
+	case eOhplGa8JPress_Exit:
+		Exit();
+		gpBase->mpHelpFuncs->PlayGuiSoundData("journal_close", eSoundEntryType_Gui);
+		break;
 	////////////////////
 	//Go to state above.
-	else
-	{
-		eLuxJournalState newState = gvPressExitState[mCurrentState];
-	    
-		if(newState == eLuxJournalState_LastEnum)
-		{
-			Exit();
-			gpBase->mpHelpFuncs->PlayGuiSoundData("journal_close", eSoundEntryType_Gui);
-		}
-		else
-		{
-			ChangeState(newState);
-		}
+	case eOhplGa8JPress_ChangeState:
+		ChangeState((eLuxJournalState)lNewState);
+		break;
 	}
 }
 
@@ -686,43 +663,34 @@ cLuxNote* cLuxJournal::AddNote(const tString& asNameAndTextEntry, const tString&
 {
 	cLuxNote *pNote = hplNew( cLuxNote, () );
 
-	pNote->msNameEntry = "Note_"+asNameAndTextEntry+"_Name";
-	pNote->msTextEntry = "Note_"+asNameAndTextEntry+"_Text";
-	
-	tString sExt = cString::GetFileExt(asImage);
-	pNote->msImageFile = cString::SetFileExt( cString::SetFileExt(asImage,"")+"_large",sExt);
-	pNote->msIconFile = cString::SetFileExt( cString::SetFileExt(asImage,"")+"_icon",sExt);
-	
+	OhplGa8Entries(asNameAndTextEntry, 0, 0, pNote->msNameEntry, pNote->msTextEntry);
+	OhplGa8ImageFiles(asImage, pNote->msImageFile, pNote->msIconFile);
+
     mvNotes.push_back(pNote);
 
-	if(gpBase->msGameName == "Amnesia - The Dark Descent -")
+	switch(ohpl_ga8_jrn_archivist(OhplGa8S(gpBase->msGameName), mvNotes.size()))
 	{
-		if(mvNotes.size() == 21)
+	case eOhplGa8Archivist_Tdd:
+		if(gpBase->mpMainConfig->GetBool("Main", "MasterArchivis_Justine", false))
 		{
-			if(gpBase->mpMainConfig->GetBool("Main", "MasterArchivis_Justine", false))
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_MasterArchivist);
-			}
-			
-			gpBase->mpMainConfig->SetBool("Main", "MasterArchivis_TDD", true);
-			gpBase->mpMainConfig->Save();
+			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_MasterArchivist);
 		}
-	}
-	if(gpBase->msGameName == "Amnesia - Justine -")
-	{
-		if(mvNotes.size() == 9)
+
+		gpBase->mpMainConfig->SetBool("Main", "MasterArchivis_TDD", true);
+		gpBase->mpMainConfig->Save();
+		break;
+	case eOhplGa8Archivist_Justine:
+		if(gpBase->mpMainConfig->GetBool("Main", "MasterArchivis_TDD", false))
 		{
-			if(gpBase->mpMainConfig->GetBool("Main", "MasterArchivis_TDD", false))
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_MasterArchivist);
-			}
-			
-			gpBase->mpMainConfig->SetBool("Main", "MasterArchivis_Justine", true);
-			gpBase->mpMainConfig->Save();
+			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_MasterArchivist);
 		}
+
+		gpBase->mpMainConfig->SetBool("Main", "MasterArchivis_Justine", true);
+		gpBase->mpMainConfig->Save();
+		break;
 	}
 
-	return pNote;
+		return pNote;
 }
 
 //-----------------------------------------------------------------------
@@ -736,12 +704,8 @@ cLuxDiary* cLuxJournal::AddDiary(const tString& asNameAndTextEntry, const tStrin
 
 	alCurrentEntryIdx = lNum;
 
-	pDiary->msNameEntry = "Diary_"+asNameAndTextEntry+"_Name"+cString::ToString(lNum);
-	pDiary->msTextEntry = "Diary_"+asNameAndTextEntry+"_Text"+cString::ToString(lNum);
-
-	tString sExt = cString::GetFileExt(asImage);
-	pDiary->msImageFile = cString::SetFileExt( cString::SetFileExt(asImage,"")+"_large",sExt);
-	pDiary->msIconFile = cString::SetFileExt( cString::SetFileExt(asImage,"")+"_icon",sExt);
+	OhplGa8Entries(asNameAndTextEntry, 1, lNum, pDiary->msNameEntry, pDiary->msTextEntry);
+	OhplGa8ImageFiles(asImage, pDiary->msImageFile, pDiary->msIconFile);
 
 	pContainer->mvDiaries.push_back(pDiary);
 
@@ -760,8 +724,7 @@ bool cLuxJournal::AddQuestNote(const tString& asName, const tString& asNameAndTe
 	cLuxQuestNote *pQuestNote = hplNew( cLuxQuestNote, () );
 
 	pQuestNote->msName = asName;
-	pQuestNote->msNameEntry = "Quest_"+asNameAndTextEntry+"_Name";
-	pQuestNote->msTextEntry = "Quest_"+asNameAndTextEntry+"_Text";
+	OhplGa8Entries(asNameAndTextEntry, 2, 0, pQuestNote->msNameEntry, pQuestNote->msTextEntry);
 	pQuestNote->mbActive = true;
 
 	mvQuestNotes.push_back(pQuestNote);
@@ -773,27 +736,20 @@ bool cLuxJournal::AddQuestNote(const tString& asName, const tString& asNameAndTe
 
 bool cLuxJournal::DisableQuestNote(const tString& asName)
 {
-	for(size_t i=0; i<mvQuestNotes.size(); ++i)
+	cLuxQuestNote *pQuest = GetQuestNote(asName);
+	switch(ohpl_ga8_jrn_disable_quest(pQuest!=NULL, pQuest ? pQuest->mbActive : false))
 	{
-		if(mvQuestNotes[i]->msName == asName)
-		{
-			if(mvQuestNotes[i]->mbActive)
-			{
-				mvQuestNotes[i]->mbActive = false;
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-			
-		}
+	case eOhplGa8Quest_Disabled:
+		pQuest->mbActive = false;
+		return true;
+	case eOhplGa8Quest_AlreadyOff:
+		return false;
 	}
 
 	Error("Quest '%s' does not exist!\n", asName.c_str());
 	return false;
-    
-	/*std::vector<cLuxQuestNote*>::iterator it = mvQuestNotes.begin(); 
+
+		/*std::vector<cLuxQuestNote*>::iterator it = mvQuestNotes.begin();
 	for(; it != mvQuestNotes.end(); ++it)
 	{
 		cLuxQuestNote* pQuest = *it;
@@ -826,8 +782,8 @@ void cLuxJournal::ChangeState(eLuxJournalState aState)
 {
 	mCurrentState = aState;
 	
-	if(gsBackgroundImage[aState] != "")
-		SetStateBackgroundGfx(gsBackgroundImage[aState]);
+	if(BackgroundImage(aState) != "")
+		SetStateBackgroundGfx(BackgroundImage(aState));
 
 	for(size_t i=0; i<mvStateData.size(); ++i)
 	{
@@ -847,15 +803,9 @@ void cLuxJournal::OpenNote(cLuxNote *apNote, bool abNarration)
 	// Get the entry number of the diary
 	mlLastReadTextType =0;
 	mlLastReadTextCat =-1;
-	mlLastReadTextEntry =-1;
-	for(size_t i=0; i<mvNotes.size(); ++i)
-	{
-		if(mvNotes[i] == apNote)
-		{
-			mlLastReadTextEntry = i;
-			break;
-		}
-	}
+	std::vector<size_t> vNotePtrs(mvNotes.size());
+	for(size_t i=0; i<mvNotes.size(); ++i) vNotePtrs[i] = (size_t)mvNotes[i];
+	mlLastReadTextEntry = ohpl_ga8_jrn_find_index(vNotePtrs.data(), vNotePtrs.size(), (size_t)apNote);
 
 	///////////////////////////
 	// Open the diary
@@ -902,51 +852,40 @@ void cLuxJournal::SetDiaryAsLastRead(cLuxDiary *apDiary)
 	///////////////////////////
 	// Get the cat and entry of the diary
 	mlLastReadTextType = 1;
-	mlLastReadTextCat = -1;
-	mlLastReadTextEntry = -1;
+	std::vector<size_t> vCounts(mvDiaryContainers.size());
+	std::vector<size_t> vDiaryPtrs;
 	for(size_t cat=0; cat<mvDiaryContainers.size(); ++cat)
 	{
 		cLuxDiaryContainer* pCont = mvDiaryContainers[cat];
-		for(size_t entry=0; entry<pCont->mvDiaries.size(); ++entry)
-		{
-			if(apDiary == pCont->mvDiaries[entry])
-			{
-				mlLastReadTextCat = cat;
-				mlLastReadTextEntry = entry;
-				break;
-			}
-		}
-		if(mlLastReadTextCat >=0) break;
+		vCounts[cat] = pCont->mvDiaries.size();
+		for(size_t entry=0; entry<pCont->mvDiaries.size(); ++entry) vDiaryPtrs.push_back((size_t)pCont->mvDiaries[entry]);
 	}
+	ohpl_ga8_jrn_find_diary(vCounts.data(), vCounts.size(), vDiaryPtrs.data(), vDiaryPtrs.size(), (size_t)apDiary, &mlLastReadTextCat, &mlLastReadTextEntry);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxJournal::OpenLastReadText()
 {
-	if(mlLastReadTextEntry<0 || mlLastReadTextType<0) return;
+	std::vector<size_t> vCounts(mvDiaryContainers.size());
+	for(size_t cat=0; cat<mvDiaryContainers.size(); ++cat) vCounts[cat] = mvDiaryContainers[cat]->mvDiaries.size();
 
+	switch(ohpl_ga8_jrn_last_read(mlLastReadTextType, mlLastReadTextCat, mlLastReadTextEntry, mvNotes.size(), vCounts.data(), vCounts.size()))
+	{
 	///////////////////
 	//Note
-	if(mlLastReadTextType ==0)
-	{
-		if(mlLastReadTextEntry >= (int)mvNotes.size()) return;
-
+	case 1:
 		SetForceInstantExit(true);
 		gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
 		OpenNote(mvNotes[mlLastReadTextEntry], false);
-	}
+		break;
 	///////////////////
 	//Diary
-	else
-	{
-		if(mlLastReadTextCat<0) return;
-		if(mlLastReadTextCat >= (int)mvDiaryContainers.size()) return;
-		if(mlLastReadTextEntry >= (int)mvDiaryContainers[mlLastReadTextCat]->mvDiaries.size())return;
-		
+	case 2:
 		SetForceInstantExit(true);
 		gpBase->mpEngine->GetUpdater()->SetContainer("Journal");
 		OpenDiary(mvDiaryContainers[mlLastReadTextCat]->mvDiaries[mlLastReadTextEntry], false);
+		break;
 	}
 }
 
@@ -1007,7 +946,9 @@ void cLuxJournal::SetupImage(cWidgetImage *apImage, int alIdx, eLuxJournalState 
 void cLuxJournal::SetupNavigationWidgets(eLuxJournalState aState, int alListIndex, int alForwardIndex, int alBackwardIndex, cWidgetDummy *apRoot)
 {
 	cVector2f vSize(65,46);
-	cVector3f vPos = cVector3f(400 + mfNoteTextWidth/2 - vSize.x-80, mfNoteTextStartY + ((float)mlNoteMaxPageRows+1) * mfNoteRowDist  , 3);
+	float vNavPos[3], fBackX;
+	ohpl_ga8_jrn_nav_positions(mfNoteTextWidth, mfNoteTextStartY, mlNoteMaxPageRows, mfNoteRowDist, vNavPos, &fBackX);
+	cVector3f vPos = cVector3f(vNavPos[0], vNavPos[1], vNavPos[2]);
 
 	iWidget* pFwd = NULL;
 	iWidget* pRet = NULL;
@@ -1057,7 +998,7 @@ void cLuxJournal::SetupNavigationWidgets(eLuxJournalState aState, int alListInde
 
 
 	//Backward
-	vPos.x = 400 - mfNoteTextWidth/2 + 80;
+	vPos.x = fBackX;
 	mpImageBackward[aState] = mpGuiSet->CreateWidgetImage("journal/note_backward.tga",vPos,vSize,eGuiMaterial_Alpha,false,apRoot);
 	mpImageBackward[aState]->AddCallback(eGuiMessage_OnDraw,this, kGuiCallback(ImageButtonOnDraw));
 	mpImageBackward[aState]->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(NoteArrowClick));
@@ -1138,38 +1079,17 @@ void cLuxJournal::LoadText(const tWString &asName, const tWString &asText)
 {
 	msHeader = asName;
 
-	mvPages.clear();
-	
 	tWStringVec sTempRows;
 	mpFontDefault->GetWordWrapRows(mfNoteTextWidth, 20, 20,asText, &sTempRows);
 
-	int lRowCount =0;
-	///////////////////////////////
-	// Iterate rows
+	std::vector<const unsigned*> vRows(sTempRows.size());
+	std::vector<size_t> vLens(sTempRows.size());
 	for(size_t i=0; i<sTempRows.size(); ++i)
 	{
-		//Insert empty row for voice tags
-		if(cString::SubW(sTempRows[i],0,6)  == _W("[voice"))
-		{
-			if(mvPages.empty()==false)
-			{
-				mvPages.back().mvRows.push_back(_W(""));
-				lRowCount++;
-			}
-			continue;
-		}
-		///////////////////////////////
-		// If first row, max row num is reach or a new page tag found, then make new page and push all coming rows there.
-		if(mvPages.empty() || lRowCount >= mlNoteMaxPageRows || sTempRows[i] == _W("[new_page]") )
-		{
-			mvPages.push_back(cLuxNotePage());
-			lRowCount =0;
-			if(sTempRows[i] == _W("[new_page]")) continue;
-		}
-		
-		mvPages.back().mvRows.push_back(sTempRows[i]);
-        lRowCount++;
+		vRows[i] = (const unsigned*)sTempRows[i].data();
+		vLens[i] = sTempRows[i].size();
 	}
+	ohpl_ga8_jrn_load_text(mpPages, vRows.data(), vLens.data(), vRows.size(), mlNoteMaxPageRows);
 
 	SetNotePage(0);
 }
@@ -1180,88 +1100,20 @@ void cLuxJournal::LoadNarrationText(const tWString &asName ,const tWString &asTe
 {
 	msHeader = asName;
 
-	mvPages.clear();
-
 	tWStringVec sDraftRows;
 	mpFontDefault->GetWordWrapRows(mfNoteTextWidth, 20, 20,asText, &sDraftRows);
 
-    tWStringVec sTempRows;
-	/////////////////////////////////
-	//Make sure command rows (begining with [ is on the same line!)
+	std::vector<const unsigned*> vRows(sDraftRows.size());
+	std::vector<size_t> vLens(sDraftRows.size());
 	for(size_t i=0; i<sDraftRows.size(); ++i)
 	{
-		if(sDraftRows[i].length()==0)
-		{
-			sTempRows.push_back(sDraftRows[i]);
-		}
-		else if(sDraftRows[i][0] == _W('[') && sDraftRows[i][sDraftRows[i].length()-1] != _W(']') )
-		{
-			sTempRows.push_back(sDraftRows[i]);
-			++i;
-			if(i<sDraftRows.size()) sTempRows.back() += sDraftRows[i];
-		}
-		else
-		{
-			sTempRows.push_back(sDraftRows[i]);
-		}
+		vRows[i] = (const unsigned*)sDraftRows[i].data();
+		vLens[i] = sDraftRows[i].size();
 	}
+	cOhplGa8NarrationErrors errors;
+	errors.mlCount = 0;
+	ohpl_ga8_jrn_load_narration(mpPages, vRows.data(), vLens.data(), vRows.size(), &errors.mlCount, OhplGa8NarrationError, &errors);
 
-
-	int lRowCount =0;
-	///////////////////////////////
-	// Iterate rows
-	for(size_t i=0; i<sTempRows.size(); ++i)
-	{
-		bool bIsVoiceRow = false;
-		if(sTempRows[i].length()>6 && cString::SubW(sTempRows[i],0,6)  == _W("[voice"))
-		{
-			bIsVoiceRow = true;
-		}
-		
-		//Skip new page
-		if(sTempRows[i] == _W("[new_page]")) continue;
-		
-		////////////////////////////////////////
-		// If first page or a voice row, add all coming lines to new page.
-		if(	mvPages.empty() || bIsVoiceRow)
-		{
-			mvPages.push_back(cLuxNotePage());
-			lRowCount =0;
-			
-			////////////////////////////////////////
-			// Get the filename and add to page.
-			if(bIsVoiceRow)
-			{
-				tWString sSep = _W(" []");//Get voice and filename as seperate strings.
-				tWStringVec vArgs;
-				cString::GetStringVecW(sTempRows[i],vArgs, &sSep);
-				
-                if(vArgs.size()!=2)
-				{
-					Error("Voice lines '%s' has bad syntax! Found %d arguments!\n",cString::To8Char(sTempRows[i]).c_str(),vArgs.size());
-				}
-				else
-				{
-					mvPages.back().msVoice = cString::To8Char(vArgs[1]);
-				}
-
-				continue;
-			}
-		}
-
-		mvPages.back().mvRows.push_back(sTempRows[i]);
-		lRowCount++;
-	}
-
-	/*for(size_t i=0; i<mvPages.size(); ++i)
-	{
-		Log("Page %d: '%s'\n", i, mvPages[i].msVoice.c_str());
-		for(size_t j=0; j<mvPages[i].mvRows.size(); ++j)
-		{
-			Log(" '%s'\n", cString::To8Char(mvPages[i].mvRows[j]).c_str());
-		}
-	}*/
-	
 	SetNotePage(0);
 }
 
@@ -1276,7 +1128,7 @@ void cLuxJournal::SetNotePage(int alPageNum)
 	//Play voice instead!
 	if(mCurrentState == eLuxJournalState_OpenNarratedDiary)
 	{
-		if(alPageNum >=0)
+		if(ohpl_ga8_jrn_narrated_plays(alPageNum, ohpl_ga8_jrn_page_count(mpPages)))
 		{
 			cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
 			if(mpVoiceEntry && pSoundHandler->IsValid(mpVoiceEntry, mlVoiceEntryID))
@@ -1284,7 +1136,8 @@ void cLuxJournal::SetNotePage(int alPageNum)
 				mpVoiceEntry->FadeOut(3.0f);
 			}
 
-			mpVoiceEntry = pSoundHandler->PlayGuiStream(mvPages[alPageNum].msVoice,false, 1.0f);
+			OhplGa8Str sVoice = ohpl_ga8_jrn_voice(mpPages, alPageNum);
+			mpVoiceEntry = pSoundHandler->PlayGuiStream(tString((const char*)sVoice.p, sVoice.n),false, 1.0f);
 			if(mpVoiceEntry)
 				mlVoiceEntryID = mpVoiceEntry->GetId();
 		}
@@ -1295,32 +1148,20 @@ void cLuxJournal::SetNotePage(int alPageNum)
 	///////////////////////////////
 	//Set up arrows
 	int lX =  mCurrentState;
-	if(mlCurrentNotePage == 0){
-		mpImageBackward[lX]->SetEnabled(false);
-		mpImageBackward[lX]->SetVisible(false);
-	}
-	else {
-		mpImageBackward[lX]->SetEnabled(true);
-		mpImageBackward[lX]->SetVisible(true);
-	}
+	int lBack, lFwd;
+	ohpl_ga8_jrn_note_arrows(mlCurrentNotePage, ohpl_ga8_jrn_page_count(mpPages), &lBack, &lFwd);
+	mpImageBackward[lX]->SetEnabled(lBack != 0);
+	mpImageBackward[lX]->SetVisible(lBack != 0);
 
-	if(mlCurrentNotePage >= (int)mvPages.size()-1){
-		mpImageForward[lX]->SetEnabled(false);
-		mpImageForward[lX]->SetVisible(false);
-	}
-	else {
-		mpImageForward[lX]->SetEnabled(true);
-		mpImageForward[lX]->SetVisible(true);
-	}
+	mpImageForward[lX]->SetEnabled(lFwd != 0);
+	mpImageForward[lX]->SetVisible(lFwd != 0);
 }
 
 //-----------------------------------------------------------------------
 
 int cLuxJournal::GetNoteListIndex(eLuxJournalState aState)
 {
-	if(aState == eLuxJournalState_Notes)		return 0;
-	else if(aState == eLuxJournalState_Diaries)	return 1;
-	else										return 2;
+	return ohpl_ga8_jrn_list_index(aState);
 }
 
 //-----------------------------------------------------------------------
@@ -1333,7 +1174,9 @@ void cLuxJournal::SetNoteListPage(int alPageNum, eLuxJournalState aState)
 
 
 	std::vector<cLuxJournal_ListPage> &vPages = mvNoteListPages[lIdx];
-	if(mlCurrentNoteListPage[lIdx] >= vPages.size())
+	int lNoPages, lBack, lFwd, lDefaultReturn;
+	ohpl_ga8_jrn_list_page(mlCurrentNoteListPage[lIdx], vPages.size(), aState, &lNoPages, &lBack, &lFwd, &lDefaultReturn);
+	if(lNoPages)
 	{
 		//No pages, disable both arrows.
 		mpImageBackward[aState]->SetEnabled(false);
@@ -1343,7 +1186,7 @@ void cLuxJournal::SetNoteListPage(int alPageNum, eLuxJournalState aState)
 		mpImageForward[aState]->SetVisible(false);
 
 		mpWidgetDefaultNav[aState] = mpWidgetReturn[aState];
-		
+
 		return;
 	}
 
@@ -1360,7 +1203,7 @@ void cLuxJournal::SetNoteListPage(int alPageNum, eLuxJournalState aState)
 	iWidget* pFirstNote = vPages[mlCurrentNoteListPage[lIdx]].mvEntries.front().mlstWidgets.front();
 	iWidget* pLastNote = vPages[mlCurrentNoteListPage[lIdx]].mvEntries.back().mlstWidgets.front();
 
-	if(aState != eLuxJournalState_QuestLog)
+	if(lDefaultReturn==0)
 		mpWidgetDefaultNav[aState] = pFirstNote;
 	else
 		mpWidgetDefaultNav[aState] = mpWidgetReturn[aState];
@@ -1374,23 +1217,11 @@ void cLuxJournal::SetNoteListPage(int alPageNum, eLuxJournalState aState)
 	
 	///////////////////////////////
 	//Set up arrows
-	if(mlCurrentNoteListPage[lIdx] == 0){
-		mpImageBackward[aState]->SetEnabled(false);
-		mpImageBackward[aState]->SetVisible(false);
-	}
-	else {
-		mpImageBackward[aState]->SetEnabled(true);
-		mpImageBackward[aState]->SetVisible(true);
-	}
+	mpImageBackward[aState]->SetEnabled(lBack != 0);
+	mpImageBackward[aState]->SetVisible(lBack != 0);
 
-	if(mlCurrentNoteListPage[lIdx] >= (int)vPages.size()-1){
-		mpImageForward[aState]->SetEnabled(false);
-		mpImageForward[aState]->SetVisible(false);
-	}
-	else {
-		mpImageForward[aState]->SetEnabled(true);
-		mpImageForward[aState]->SetVisible(true);
-	}
+	mpImageForward[aState]->SetEnabled(lFwd != 0);
+	mpImageForward[aState]->SetVisible(lFwd != 0);
 }
 
 
@@ -1529,21 +1360,19 @@ void cLuxJournal::CreateNotesGui()
 	// Has notes
 	else
 	{
-		mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-		cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx].back();
+		std::vector<size_t> vEntryPage(mvNotes.size());
+		std::vector<float> vEntryY(mvNotes.size());
+		size_t lPageNum = ohpl_ga8_jrn_layout_list(mvNotes.size(), vEntryPage.data(), vEntryY.data());
+		for(size_t p=0; p<lPageNum; ++p) mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
 
 		for(size_t i=0; i<mvNotes.size(); ++i)
 		{
 			cLuxNote *pNote = mvNotes[i];
 
 			//Check if new page is needed!
-			if(vStartPos.y > mfMaxNoteListY)
-			{
-				vStartPos.y = 100;
-				mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-				pListPage = &mvNoteListPages[lListIdx].back();
-			}
-			
+			cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx][vEntryPage[i]];
+			vStartPos.y = vEntryY[i];
+
 			//Add label
 			pLabel = mpGuiSet->CreateWidgetLabel(vStartPos,cVector2f(300, 24),kTranslate("Journal",pNote->msNameEntry), pRoot);
 			SetupLabel(pLabel,24, (int)i, eLuxJournalState_Notes, mpFontDefault, eFontAlign_Left);
@@ -1560,8 +1389,6 @@ void cLuxJournal::CreateNotesGui()
 			pListPage->mvEntries.push_back(cLuxJournal_ListEntry());
 			pListPage->mvEntries.back().AddWidget(pLabel);
 			pListPage->mvEntries.back().AddWidget(pImage);
-			
-			vStartPos.y += 30;
 		}
 	}
 
@@ -1590,7 +1417,7 @@ void cLuxJournal::CreateNotesGui()
 
 	////////////////////////
 	// Set start page
-	mlCurrentNoteListPage[lListIdx] = mvNoteListPages[lListIdx].size()-1;
+	mlCurrentNoteListPage[lListIdx] = ohpl_ga8_jrn_start_page(mvNoteListPages[lListIdx].size());
 }
 
 //-----------------------------------------------------------------------
@@ -1627,8 +1454,13 @@ void cLuxJournal::CreateDiariesGui()
 	// Has Diaries
 	else
 	{
-		mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-		cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx].back();
+		size_t lDiaryNum = 0;
+		for(size_t cont=0; cont<mvDiaryContainers.size(); ++cont) lDiaryNum += mvDiaryContainers[cont]->mvDiaries.size();
+		std::vector<size_t> vEntryPage(lDiaryNum);
+		std::vector<float> vEntryY(lDiaryNum);
+		size_t lPageNum = ohpl_ga8_jrn_layout_list(lDiaryNum, vEntryPage.data(), vEntryY.data());
+		for(size_t p=0; p<lPageNum; ++p) mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
+		size_t lFlatIdx = 0;
 
 		for(size_t cont=0; cont<mvDiaryContainers.size(); ++cont)
 		{
@@ -1639,12 +1471,9 @@ void cLuxJournal::CreateDiariesGui()
 				cLuxDiary *pDiary = pCont->mvDiaries[i];
 
 				//Check if new page is needed!
-				if(vStartPos.y > mfMaxNoteListY)
-				{
-					vStartPos.y = 100;
-					mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-					pListPage = &mvNoteListPages[lListIdx].back();
-				}
+				cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx][vEntryPage[lFlatIdx]];
+				vStartPos.y = vEntryY[lFlatIdx];
+				++lFlatIdx;
 
 				pLabel = mpGuiSet->CreateWidgetLabel(vStartPos,cVector2f(300, 24),kTranslate("Journal",pDiary->msNameEntry), pRoot);
 				SetupLabel(pLabel,24, (int)i, eLuxJournalState_Diaries, mpFontDefault, eFontAlign_Left);
@@ -1664,8 +1493,6 @@ void cLuxJournal::CreateDiariesGui()
 				pListPage->mvEntries.push_back(cLuxJournal_ListEntry());
 				pListPage->mvEntries.back().AddWidget(pLabel);
 				pListPage->mvEntries.back().AddWidget(pImage);
-
-				vStartPos.y += 30;
 			}
 		}
 	}
@@ -1695,7 +1522,7 @@ void cLuxJournal::CreateDiariesGui()
 
 	////////////////////////
 	// Set start page
-	mlCurrentNoteListPage[lListIdx] = mvNoteListPages[lListIdx].size()-1;
+	mlCurrentNoteListPage[lListIdx] = ohpl_ga8_jrn_start_page(mvNoteListPages[lListIdx].size());
 }
 
 //-----------------------------------------------------------------------
@@ -1744,9 +1571,9 @@ void cLuxJournal::CreateQuestNotesGui()
 	// Has Quests
 	else
 	{
-		mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-		cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx].back();
-
+		std::vector<int> vShown;
+		std::vector<tWStringVec> vAllRows;
+		std::vector<size_t> vRowNums;
 		for(int i=(int)mvQuestNotes.size()-1; i>=0; --i)
 		{
 			cLuxQuestNote *pQuest = mvQuestNotes[i];
@@ -1754,18 +1581,26 @@ void cLuxJournal::CreateQuestNotesGui()
 
 			tWStringVec vRows;
 			mpFontDefault->GetWordWrapRows(500, 21, 19, kTranslate("Journal",pQuest->msTextEntry),&vRows);
+			vShown.push_back(i);
+			vRowNums.push_back(vRows.size());
+			vAllRows.push_back(vRows);
+		}
 
-			//Check if new page is needed! make sure to check so all rows fit
-			if(vStartPos.y > 200 && (vStartPos.y + (vRows.size()-1)*21 ) > mfMaxNoteListY)
-			{
-				vStartPos.y = 100;
-				mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
-				pListPage = &mvNoteListPages[lListIdx].back();
-			}
+		std::vector<size_t> vEntryPage(vShown.size());
+		std::vector<float> vEntryY(vShown.size());
+		size_t lPageNum = ohpl_ga8_jrn_layout_quests(vRowNums.data(), vRowNums.size(), vEntryPage.data(), vEntryY.data());
+		for(size_t p=0; p<lPageNum; ++p) mvNoteListPages[lListIdx].push_back(cLuxJournal_ListPage());
+
+		for(size_t q=0; q<vShown.size(); ++q)
+		{
+			int i = vShown[q];
+			const tWStringVec &vRows = vAllRows[q];
+			cLuxJournal_ListPage *pListPage = &mvNoteListPages[lListIdx][vEntryPage[q]];
+			vStartPos.y = vEntryY[q];
 
 			//Add list entry
 			pListPage->mvEntries.push_back(cLuxJournal_ListEntry());
-			
+
 			//Start sign ("-")
 			pLabel = mpGuiSet->CreateWidgetLabel(vStartPos - cVector3f(15,0,1),cVector2f(12, 24),_W("-"), pRoot);
 			SetupLabel(pLabel,19, (int)i, eLuxJournalState_QuestLog, mpFontDefault, eFontAlign_Left);
@@ -1779,9 +1614,6 @@ void cLuxJournal::CreateQuestNotesGui()
 				pListPage->mvEntries.back().AddWidget(pLabel);
 				vStartPos.y += 21;
 			}
-
-									
-			vStartPos.y += 30;
 		}
 	}
 
@@ -1792,7 +1624,7 @@ void cLuxJournal::CreateQuestNotesGui()
 
 	////////////////////////
 	// Set start page
-	mlCurrentNoteListPage[lListIdx] = mvNoteListPages[lListIdx].size()-1;
+	mlCurrentNoteListPage[lListIdx] = ohpl_ga8_jrn_start_page(mvNoteListPages[lListIdx].size());
 }
 
 //-----------------------------------------------------------------------
