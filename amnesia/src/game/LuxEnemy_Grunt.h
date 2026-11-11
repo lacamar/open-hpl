@@ -54,6 +54,8 @@ public:
 	//////////////////////
 	//Actions
 	bool StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage);
+	bool Ga3RustStateMachine(){ return true;}
+	const tString* Ga3SoundName(int alKind);
 
 
 	//////////////////////
@@ -77,10 +79,6 @@ private:
 
 	float GetDamageMul(float afAmount, int alStrength);
 
-	//////////////////////
-	// State stuff
-	void PatrolUpdateGoal();
-	void PatrolEndOfPath();
 	
 	//////////////
 	//Data

@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxEnemy.h"
 
 //----------------------------------------------
 
@@ -34,6 +35,7 @@ class cLuxEnemyMover;
 class cLuxEnemyPathfinder
 {
 friend class cLuxEnemyPathfinder_SaveData;
+friend class iLuxEnemy;
 public:	
 	cLuxEnemyPathfinder(iLuxEnemy *apEnemy, cLuxEnemyMover *apMover);
 	virtual ~cLuxEnemyPathfinder();
@@ -90,7 +92,10 @@ private:
 	cVector3f mvMoveGoalPos;
 
 	tAINodeList mlstPathNodes;
-	std::list<float> mlstPathNodeDistances;
+	OhplGa3PfWin mWin;
+	std::vector<cAINode*> mvGa3Nodes;
+	cAINode *mpGa3ExplicitSkip;
+	int mlGa3SkipMode;
 };
 
 //----------------------------------------------

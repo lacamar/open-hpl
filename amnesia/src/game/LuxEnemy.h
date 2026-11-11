@@ -24,6 +24,7 @@
 
 #include "LuxEntity.h"
 #include "LuxSavedEngineTypes.h"
+#include "RustLuxEnemy.h"
 
 //----------------------------------------------
 
@@ -401,6 +402,15 @@ public:
 
 	void SendMessage(eLuxEnemyMessage aType, float afTime=0, bool abLocalScope=false, const cVector3f& avX=0,float afX=0, int alX=0);
 
+	//////////////////////
+	// Rust enemy core (rust/src/luxenemy)
+	OhplGa3Host Ga3Host();
+	void Ga3MoverParams(OhplGa3MoverParams &aParams);
+	static int Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
+	static bool Ga3StateCb(void *apEnemy, int alState, int alEvent, const OhplGa3Msg *apMessage);
+	static bool Ga3DetectedCb(void *apEnemy);
+	cLuxEnemyPatrolNode* Ga3PatrolNode(int alIdx){ return (alIdx >= 0 && alIdx < (int)mvPatrolNodes.size()) ? &mvPatrolNodes[alIdx] : NULL;}
+
 	void PlayScriptedAnimation(const tString &asName, bool abLoop);
 	void PlayAnim(	const tString &asName, bool abLoop, float afFadeTime, 
 					bool abDependsOnSpeed=false, float afSpeedMul=1.0f,
@@ -408,6 +418,11 @@ public:
 					bool abOverideMoveState=true,
 					bool abUseMoveAnimWhenCurrentIsOver=true);
 	void FadeOutCurrentAnim(float afFadeTime);
+	bool PlayAnimImpl(	const tString &asName, bool abLoop, float afFadeTime,
+						bool abDependsOnSpeed, float afSpeedMul,
+						bool abSyncWithPrevFrame,
+						bool abUseMoveAnimWhenCurrentIsOver);
+	bool FadeOutCurrentAnimImpl(float afFadeTime);
 	float ConvertAnimToAbsoluteTime(float afRelativeTimePostion);
     
 	cSoundEntity* PlaySound(const tString &asName);
@@ -532,9 +547,10 @@ protected:
 
 	bool StateEvent(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage);
 	virtual bool StateEventImplement(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMessage *apMessage)=0;
+	virtual bool Ga3RustStateMachine(){ return false;}
+	virtual const tString* Ga3SoundName(int alKind){ return NULL;}
 
 	void UpdateStateMachine(float afTimeStep);
-	void CheckStateChange();
 
 	void ChangeSoundState(eLuxEnemySoundState aState);
 
@@ -667,7 +683,9 @@ protected:
 	float mfAnimationSpeedMul;
 	bool mbUseMoveAnimWhenCurrentIsOver;
 
-	tLuxStateMessageList mlstMessages;
+	OhplGa3Queue *mpGa3Queue;
+	OhplGa3Ctx mGa3Ctx;
+	std::vector<std::pair<iLuxProp*, iPhysicsBody*> > mvGa3Doors;
 
 	cVector3f mvStartPosition;
 
