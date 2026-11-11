@@ -1,4 +1,5 @@
 #include "SomaScriptApi.h"
+#include "RustSomaScript.h"
 #include "SomaImGuiDefaults.h"
 #include "SomaImGui.h"
 #include "SomaScriptNatives.h"
@@ -9,124 +10,13 @@
 #include <fstream>
 #include <new>
 #include <set>
+#include <iterator>
 #include <sstream>
 #include <unordered_map>
 
-static std::vector<std::string> SplitTabs(const std::string &asLine)
+static std::string DeclName(const std::string &asDecl)
 {
-	std::vector<std::string> v;
-	std::stringstream ss(asLine);
-	std::string s;
-	while (std::getline(ss, s, '\t'))
-		v.push_back(s);
-	return v;
-}
-
-// AngelScript 2.28 accepted defaults on &out parameters; 2.38 spells "discard" as = void.
-static std::string OutDefaultsToVoid(std::string s)
-{
-	for (size_t p = s.find("&out"); p != std::string::npos; p = s.find("&out", p + 4))
-	{
-		size_t lEq = s.find('=', p);
-		size_t lComma = s.find_first_of(",)", p);
-		if (lEq == std::string::npos || lEq > lComma)
-			continue;
-		int lDepth = 0;
-		size_t e = lEq + 1;
-		for (; e < s.size(); ++e)
-		{
-			if (s[e] == '(' || s[e] == '<')
-				++lDepth;
-			else if ((s[e] == ')' || s[e] == '>') && lDepth > 0)
-				--lDepth;
-			else if ((s[e] == ',' || s[e] == ')') && lDepth == 0)
-				break;
-		}
-		s.replace(lEq, e - lEq, "= void");
-	}
-	return s;
-}
-
-// Engine objects are registered NOCOUNT, where auto handles are meaningless and rejected.
-static std::string NoAutoHandles(std::string s)
-{
-	for (size_t p; (p = s.find("@+")) != std::string::npos;)
-		s.erase(p + 1, 1);
-	return s;
-}
-
-struct cDeclSig
-{
-	std::string msName, msTail;
-	std::vector<std::string> mvTypes; // return type first
-	std::vector<bool> mvDefault;
-};
-
-static std::string DeclType(std::string s, bool abParam)
-{
-	s = s.substr(0, s.find('='));
-	std::vector<std::string> vTok;
-	std::string sTok;
-	for (size_t i = 0; i <= s.size(); ++i)
-	{
-		char c = i < s.size() ? s[i] : ' ';
-		if (c == '&' || c == '@')
-		{
-			if (sTok.empty() && !vTok.empty())
-			{
-				sTok = vTok.back();
-				vTok.pop_back();
-			}
-			sTok += c;
-			while (c == '&' && i + 1 < s.size() && s[i + 1] == ' ')
-				++i;
-		}
-		else if (c != ' ')
-			sTok += c;
-		else if (!sTok.empty())
-		{
-			vTok.push_back(sTok);
-			sTok.clear();
-		}
-	}
-	if (abParam && vTok.size() >= 2 && !(vTok.size() == 2 && vTok[0] == "const"))
-		vTok.pop_back();
-	std::string sOut;
-	for (const std::string &t : vTok)
-		sOut += (sOut.empty() ? "" : " ") + t;
-	return sOut;
-}
-
-static cDeclSig ParseDecl(const std::string &s)
-{
-	cDeclSig sig;
-	size_t lParen = s.find('(');
-	size_t lNameStart = s.find_last_of(" &@", lParen) + 1;
-	sig.msName = s.substr(lNameStart, lParen - lNameStart);
-	sig.mvTypes.push_back(DeclType(s.substr(0, lNameStart), false));
-	sig.mvDefault.push_back(false);
-	int lDepth = 0;
-	size_t lStart = lParen + 1, i = lStart;
-	for (; i < s.size(); ++i)
-	{
-		if (s[i] == '(' || s[i] == '<')
-			++lDepth;
-		else if ((s[i] == ')' || s[i] == '>') && lDepth > 0)
-			--lDepth;
-		else if (s[i] == ',' || s[i] == ')')
-		{
-			if (s.find_first_not_of(' ', lStart) < i)
-			{
-				sig.mvTypes.push_back(DeclType(s.substr(lStart, i - lStart), true));
-				sig.mvDefault.push_back(s.find('=', lStart) < i);
-			}
-			lStart = i + 1;
-			if (s[i] == ')')
-				break;
-		}
-	}
-	sig.msTail = DeclType(i < s.size() ? s.substr(i + 1) : "", false);
-	return sig;
+	return OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_decl_name(OhplGs6::U(asDecl), asDecl.size(), k, c); });
 }
 
 static cSomaScriptApi *gpActiveApi = NULL;
@@ -142,60 +32,27 @@ std::string cSomaScriptApi::NativeDecl(const char *apType, const char *apDecl)
 	{
 		for (const cSomaScriptApiType &t : pApi->mvTypes)
 			for (const std::string &m : t.mvMethods)
-				pApi->mmapSigs[t.msName + "::" + ParseDecl(m).msName].push_back(m);
+				pApi->mmapSigs[t.msName + "::" + DeclName(m)].push_back(m);
 		for (const std::string &g : pApi->mvGlobals)
-			pApi->mmapSigs["::" + ParseDecl(g).msName].push_back(g);
+			pApi->mmapSigs["::" + DeclName(g)].push_back(g);
 		for (auto &e : pApi->mvEnums)
 			pApi->msetEnumNames.insert(e.first);
 	}
-	cDeclSig sig = ParseDecl(apDecl);
-	auto it = pApi->mmapSigs.find(std::string(apType ? apType : "") + "::" + sig.msName);
+	std::string sDecl = apDecl;
+	auto it = pApi->mmapSigs.find(std::string(apType ? apType : "") + "::" + DeclName(sDecl));
 	if (it == pApi->mmapSigs.end())
 		return apDecl;
-	auto IsInt = [](const std::string &s) { return s == "int" || s == "uint"; };
-	const std::string *pMatch = NULL, *pLonger = NULL;
-	int lLonger = 0;
-	for (const std::string &sCand : it->second)
-	{
-		cDeclSig cand = ParseDecl(sCand);
-		if (cand.mvTypes.size() < sig.mvTypes.size() || cand.msTail != sig.msTail)
-			continue;
-		bool bLonger = cand.mvTypes.size() > sig.mvTypes.size();
-		if (bLonger && cand.mvDefault[sig.mvTypes.size()] == false)
-			continue;
-		bool bSame = true, bCompatible = true;
-		for (size_t i = 0; i < sig.mvTypes.size(); ++i)
-		{
-			const std::string &a = sig.mvTypes[i], &b = cand.mvTypes[i];
-			if (a == b)
-				continue;
-			bSame = false;
-			// a primitive result written to a void function's return slot is ignored
-			if (i == 0 && b == "void" && (a == "bool" || a == "float" || IsInt(a)))
-				continue;
-			if (!(IsInt(a) && pApi->msetEnumNames.count(b)) && !(IsInt(b) && pApi->msetEnumNames.count(a)))
-				bCompatible = false;
-		}
-		if (bSame && bLonger == false)
-			return apDecl;
-		if (bCompatible && bLonger)
-		{
-			pLonger = &sCand;
-			++lLonger;
-		}
-		else if (bCompatible)
-		{
-			if (pMatch)
-				return apDecl;
-			pMatch = &sCand;
-		}
-	}
-	if (pMatch == NULL && lLonger == 1)
-		pMatch = pLonger;
-	if (pMatch == NULL)
+	std::vector<OhplGs6Str> vCands, vEnums;
+	for (const std::string &s : it->second)
+		vCands.push_back(OhplGs6::Str(s));
+	for (const std::string &s : pApi->msetEnumNames)
+		vEnums.push_back(OhplGs6::Str(s));
+	ptrdiff_t lPick = ohpl_gs6_native_decl_pick(vCands.data(), vCands.size(), vEnums.data(), vEnums.size(), OhplGs6::U(sDecl), sDecl.size());
+	if (lPick < 0)
 		return apDecl;
-	pApi->mvRemaps.push_back(std::string(apType ? apType : "") + "::" + apDecl + " -> " + *pMatch);
-	return *pMatch;
+	const std::string &sMatch = it->second[lPick];
+	pApi->mvRemaps.push_back(std::string(apType ? apType : "") + "::" + apDecl + " -> " + sMatch);
+	return sMatch;
 }
 
 static std::set<std::string> gsetNativeValueTypes = {"tString", "tWString"};
@@ -231,31 +88,31 @@ static int NativeOffset(const std::string &asType, const std::string &asDecl, in
 	return bType ? -1 : alOffset;
 }
 
+static OhplGs6Enums *ToRustEnums(const std::vector<std::pair<std::string, std::vector<std::pair<std::string, int>>>> &avEnums)
+{
+	OhplGs6Enums *pEnums = ohpl_gs6_enums_new();
+	for (const auto &e : avEnums)
+	{
+		ohpl_gs6_enums_add(pEnums, OhplGs6::U(e.first), e.first.size());
+		for (const auto &v : e.second)
+			ohpl_gs6_enums_add_value(pEnums, OhplGs6::U(v.first), v.first.size(), v.second);
+	}
+	return pEnums;
+}
+
 // native code uses SOMA's enum values; later games insert names in the middle
 void cSomaScriptApi::RebaseEnums(const cSomaScriptApi &aBase)
 {
-	auto IsLast = [](const std::string &s) { return s.size() > 9 && s.compare(s.size() - 9, 9, "_LastEnum") == 0; };
+	OhplGs6Enums *pEnums = ToRustEnums(mvEnums), *pBase = ToRustEnums(aBase.mvEnums);
+	ohpl_gs6_enums_rebase(pEnums, pBase);
+	std::vector<int> vValues;
+	ohpl_gs6_enums_values(pEnums, OhplGs6::ToInts, &vValues);
+	size_t lNext = 0;
 	for (auto &e : mvEnums)
-		for (auto &b : aBase.mvEnums)
-		{
-			if (b.first != e.first)
-				continue;
-			std::map<std::string, int> mapBase(b.second.begin(), b.second.end());
-			bool bChanged = false;
-			for (auto &v : e.second)
-				bChanged |= mapBase.count(v.first) && mapBase[v.first] != v.second;
-			if (bChanged == false)
-				continue;
-			int lNext = 0;
-			for (auto &v : b.second)
-				lNext = std::max(lNext, v.second + (IsLast(v.first) ? 0 : 1));
-			for (auto &v : e.second)
-				if (IsLast(v.first) == false)
-					v.second = mapBase.count(v.first) ? mapBase[v.first] : lNext++;
-			for (auto &v : e.second)
-				if (IsLast(v.first))
-					v.second = lNext;
-		}
+		for (auto &v : e.second)
+			v.second = vValues[lNext++];
+	ohpl_gs6_enums_free(pEnums);
+	ohpl_gs6_enums_free(pBase);
 }
 
 bool cSomaScriptApi::Load(const std::string &asFile)
@@ -263,46 +120,55 @@ bool cSomaScriptApi::Load(const std::string &asFile)
 	std::ifstream f(asFile.c_str());
 	if (f.is_open() == false)
 		return false;
+	std::string sText((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 
-	std::string sLine;
-	std::map<std::string, size_t> mapTypeIdx;
-	cSomaScriptApiType *pCur = NULL;
-	while (std::getline(f, sLine))
-	{
-		if (sLine.empty() || sLine[0] == '#')
-			continue;
-		std::vector<std::string> v = SplitTabs(sLine);
-		const std::string &tag = v[0];
-		if (tag == "E")
-			mvEnums.push_back(std::make_pair(v[1], std::vector<std::pair<std::string, int>>()));
-		else if (tag == "V")
-			mvEnums.back().second.push_back(std::make_pair(v[1], atoi(v[2].c_str())));
-		else if (tag == "T")
-		{
-			cSomaScriptApiType t;
-			t.msName = v[1];
-			t.msKind = v[2];
-			t.mlSize = atoi(v[3].c_str());
-			if (t.msName == "cVector2f" && t.mlSize == 0)
-				t.mlSize = 8; // its RegisterType call is not recovered
-			mapTypeIdx[t.msName] = mvTypes.size();
-			mvTypes.push_back(t);
-		}
-		else if (tag == "O")
-			pCur = &mvTypes[mapTypeIdx[v[1]]];
-		else if (tag == "B" && pCur)
-			pCur->mvBehaviours.push_back(std::make_pair(v[1], v.size() > 2 ? v[2] : ""));
-		else if (tag == "M" && pCur)
-			pCur->mvMethods.push_back(OutDefaultsToVoid(NoAutoHandles(v[1])));
-		else if (tag == "P" && pCur)
-			pCur->mvProps.push_back(std::make_pair(v[1], atoi(v[2].c_str())));
-		else if (tag == "C" && pCur)
-			pCur->mvCasts.push_back(v[1]);
-		else if (tag == "G")
-			mvGlobals.push_back(OutDefaultsToVoid(NoAutoHandles(v[1])));
-		else if (tag == "GP")
-			mvGlobalProps.push_back(v[1]);
-	}
+	ohpl_gs6_api_load(OhplGs6::U(sText), sText.size(),
+		+[](void *c, unsigned int alKind, size_t alType, const unsigned char *apA, size_t alA, const unsigned char *apB, size_t alB, int alNum) {
+			cSomaScriptApi *self = (cSomaScriptApi *)c;
+			std::string sA((const char *)apA, alA), sB((const char *)apB, alB);
+			cSomaScriptApiType *pCur = alType < self->mvTypes.size() ? &self->mvTypes[alType] : NULL;
+			switch (alKind)
+			{
+			case kOhplGs6RecEnum:
+				self->mvEnums.push_back(std::make_pair(sA, std::vector<std::pair<std::string, int>>()));
+				break;
+			case kOhplGs6RecEnumValue:
+				self->mvEnums.back().second.push_back(std::make_pair(sA, alNum));
+				break;
+			case kOhplGs6RecType:
+			{
+				cSomaScriptApiType t;
+				t.msName = sA;
+				t.msKind = sB;
+				t.mlSize = alNum;
+				self->mvTypes.push_back(t);
+				break;
+			}
+			case kOhplGs6RecBehaviour:
+				if (pCur)
+					pCur->mvBehaviours.push_back(std::make_pair(sA, sB));
+				break;
+			case kOhplGs6RecMethod:
+				if (pCur)
+					pCur->mvMethods.push_back(sA);
+				break;
+			case kOhplGs6RecProp:
+				if (pCur)
+					pCur->mvProps.push_back(std::make_pair(sA, alNum));
+				break;
+			case kOhplGs6RecCast:
+				if (pCur)
+					pCur->mvCasts.push_back(sA);
+				break;
+			case kOhplGs6RecGlobal:
+				self->mvGlobals.push_back(sA);
+				break;
+			case kOhplGs6RecGlobalProp:
+				self->mvGlobalProps.push_back(sA);
+				break;
+			}
+		},
+		this);
 	for (auto &t : mvTypes)
 		for (auto &prop : t.mvProps)
 			prop.second = NativeOffset(t.msName, prop.first, prop.second);
@@ -368,8 +234,7 @@ static void *DummyForReturn(asIScriptEngine *apEngine, asIScriptFunction *apFunc
 		return NULL;
 	// Lookups: null means "not found"
 	std::string sName = apFunc->GetName();
-	if (sName.find("By") != std::string::npos || sName.compare(0, 4, "Find") == 0 || sName.find("Latest") != std::string::npos ||
-		sName.find("FromName") != std::string::npos || sName.find("FromID") != std::string::npos)
+	if (ohpl_gs6_is_lookup_name(OhplGs6::U(sName), sName.size()))
 		return NULL;
 	static std::map<int, void *> mapDummies;
 	void *&pDummy = mapDummies[pType->GetTypeId()];
@@ -410,19 +275,19 @@ static void Stub(asIScriptGeneric *apGen)
 	asIScriptFunction *pFunc = apGen->GetFunction();
 	asDWORD lFlags = 0;
 	int lTypeId = pFunc->GetReturnTypeId(&lFlags);
-	if (lTypeId == asTYPEID_VOID)
-		return;
-	if (lFlags & asTM_INOUTREF)
+	switch (ohpl_gs6_stub_return_kind(lTypeId == asTYPEID_VOID, (lFlags & asTM_INOUTREF) != 0, (lTypeId & asTYPEID_OBJHANDLE) != 0))
 	{
+	case kOhplGs6StubVoid:
+		return;
+	case kOhplGs6StubDefaultInstance:
 		apGen->SetReturnAddress(DefaultInstance(apGen->GetEngine(), lTypeId & ~asTYPEID_OBJHANDLE));
 		return;
-	}
-	if (lTypeId & asTYPEID_OBJHANDLE)
-	{
+	case kOhplGs6StubHandle:
 		apGen->SetReturnAddress(DummyForReturn(apGen->GetEngine(), pFunc, lTypeId));
 		return;
+	default:
+		ConstructDefaultAt(apGen->GetEngine(), lTypeId, apGen->GetAddressOfReturnLocation());
 	}
-	ConstructDefaultAt(apGen->GetEngine(), lTypeId, apGen->GetAddressOfReturnLocation());
 }
 
 void SomaScriptStubCall(asIScriptGeneric *apGen)
@@ -556,14 +421,11 @@ void SomaScriptReleaseHandleArgs(asIScriptGeneric *apGen)
 
 static bool IsScriptStruct(const cSomaScriptApiType &aType)
 {
-	// Backed by HPL2 objects
-	static const std::set<std::string> setEngine = {"cBoundingVolume", "cCollideData", "cFrustum", "cAINodeIterator", "cBinaryBuffer"};
-	if (aType.msKind != "ref" || setEngine.count(aType.msName))
-		return false;
+	bool bFactory = false;
 	for (const auto &b : aType.mvBehaviours)
 		if (b.first == "factory" || b.first == "FactoryDefault")
-			return true;
-	return false;
+			bFactory = true;
+	return ohpl_gs6_is_script_struct(OhplGs6::U(aType.msKind), aType.msKind.size(), OhplGs6::U(aType.msName), aType.msName.size(), bFactory);
 }
 
 static void StubFactory(asIScriptGeneric *apGen)
@@ -636,9 +498,7 @@ static void StubCastSelf(asIScriptGeneric *apGen)
 
 static bool HasProperty(asITypeInfo *apType, const std::string &asDecl)
 {
-	size_t lEnd = asDecl.find_last_not_of(" ;");
-	size_t lStart = asDecl.find_last_of(" @&", lEnd);
-	std::string sName = asDecl.substr(lStart + 1, lEnd - lStart);
+	std::string sName = OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_prop_name(OhplGs6::U(asDecl), asDecl.size(), k, c); });
 	for (asUINT i = 0; i < apType->GetPropertyCount(); ++i)
 	{
 		const char *pName;
@@ -695,46 +555,25 @@ void SomaFreePropBlock(const std::string &asType, char *apBlock)
 	free(apBlock);
 }
 
-static bool IsPrimitiveTypeName(const std::string &asType, const std::set<std::string> &aEnums)
-{
-	static const std::set<std::string> setPrim = {"bool", "int", "uint", "int8", "int16", "int64", "uint8", "uint16",
-												   "uint64", "float", "double"};
-	return setPrim.count(asType) || aEnums.count(asType);
-}
-
 void cSomaScriptApi::RegisterPropertyAccessors(asIScriptEngine *apEngine, const cSomaScriptApiType &aType, const std::string &asDecl)
 {
-	std::string sDecl = asDecl;
-	while (!sDecl.empty() && (sDecl.back() == ' ' || sDecl.back() == ';'))
-		sDecl.pop_back();
-	size_t lNamePos = sDecl.find_last_of(" \t@&");
-	if (lNamePos == std::string::npos)
-		return;
-	std::string sName = sDecl.substr(lNamePos + 1);
-	std::string sType = sDecl.substr(0, lNamePos + 1);
-	while (!sType.empty() && sType.back() == ' ')
-		sType.pop_back();
-
-	bool bConst = sType.compare(0, 6, "const ") == 0;
-	std::string sBare = bConst ? sType.substr(6) : sType;
-	bool bHandle = !sBare.empty() && sBare.back() == '@';
-
-	std::set<std::string> setEnums;
+	std::vector<OhplGs6Str> vEnums;
 	for (size_t i = 0; i < mvEnums.size(); ++i)
-		setEnums.insert(mvEnums[i].first);
-
-	std::string sGet = sBare + " get_" + sName + "() const property";
-	int r = apEngine->RegisterObjectMethod(aType.msName.c_str(), sGet.c_str(), asFUNCTION(Stub), asCALL_GENERIC);
-	if (r < 0 && r != asALREADY_REGISTERED)
-		Fail(aType.msName + "::" + sGet, r);
-	if (bConst)
+		vEnums.push_back(OhplGs6::Str(mvEnums[i].first));
+	std::string vDecls[2];
+	if (ohpl_gs6_property_accessors(OhplGs6::U(asDecl), asDecl.size(), vEnums.data(), vEnums.size(),
+									+[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)[0].assign((const char *)p, n); },
+									+[](void *c, const unsigned char *p, size_t n) { ((std::string *)c)[1].assign((const char *)p, n); }, vDecls) == false)
 		return;
 
-	std::string sArg = (bHandle || IsPrimitiveTypeName(sBare, setEnums)) ? sBare : "const " + sBare + " &in";
-	std::string sSet = "void set_" + sName + "(" + sArg + ") property";
-	r = apEngine->RegisterObjectMethod(aType.msName.c_str(), sSet.c_str(), asFUNCTION(Stub), asCALL_GENERIC);
+	int r = apEngine->RegisterObjectMethod(aType.msName.c_str(), vDecls[0].c_str(), asFUNCTION(Stub), asCALL_GENERIC);
 	if (r < 0 && r != asALREADY_REGISTERED)
-		Fail(aType.msName + "::" + sSet, r);
+		Fail(aType.msName + "::" + vDecls[0], r);
+	if (vDecls[1].empty())
+		return;
+	r = apEngine->RegisterObjectMethod(aType.msName.c_str(), vDecls[1].c_str(), asFUNCTION(Stub), asCALL_GENERIC);
+	if (r < 0 && r != asALREADY_REGISTERED)
+		Fail(aType.msName + "::" + vDecls[1], r);
 }
 
 void cSomaScriptApi::RegisterTypes(asIScriptEngine *apEngine)
@@ -814,7 +653,7 @@ int cSomaScriptApi::Register(asIScriptEngine *apEngine)
 			if (sKind == "construct" && t.msKind == "value")
 			{
 				std::string sDecl = "void f(" + sParams + ")";
-				bool bCopy = sParams == "const " + t.msName + " &in" || sParams == "const " + t.msName + "&in";
+				bool bCopy = ohpl_gs6_is_copy_ctor(OhplGs6::U(sParams), sParams.size(), OhplGs6::U(t.msName), t.msName.size());
 				r = apEngine->RegisterObjectBehaviour(pName, asBEHAVE_CONSTRUCT, sDecl.c_str(), bCopy ? asFUNCTION(CopyConstructPod) : asFUNCTION(StubConstruct),
 													  asCALL_GENERIC);
 			}

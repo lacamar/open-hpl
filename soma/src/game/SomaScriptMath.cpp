@@ -1,5 +1,6 @@
 #include "SomaScriptNatives.h"
 #include "SomaScriptBind.h"
+#include "RustSomaScript.h"
 #include "SomaLuxScriptable.h"
 
 #include "graphics/Color.h"
@@ -53,10 +54,18 @@ bool SomaScriptHasNativeBehaviours(const char *apType)
 
 template <class V> static V &Elem(V &v, asQWORD i) { return v; }
 
-template <class V> static V SomaCatmullRom(const V &p0, const V &p1, const V &p2, const V &p3, float t)
+static cVector3f CatmullRom3(const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t)
 {
-	float t2 = t * t, t3 = t2 * t;
-	return ((p1 * 2) + (p2 - p0) * t + (p0 * 2 - p1 * 5 + p2 * 4 - p3) * t2 + (p1 * 3 - p0 - p2 * 3 + p3) * t3) * 0.5f;
+	cVector3f r;
+	ohpl_gs6_catmull_rom3(a.v, b.v, c.v, d.v, t, r.v);
+	return r;
+}
+
+static cVector2f CatmullRom2(const cVector2f &a, const cVector2f &b, const cVector2f &c, const cVector2f &d, float t)
+{
+	cVector2f r;
+	ohpl_gs6_catmull_rom2(a.v, b.v, c.v, d.v, t, r.v);
+	return r;
 }
 
 template <class V, class S> static S GetElem(const V &v, asQWORD i) { return ((const S *)&v)[i]; }
@@ -262,8 +271,8 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Sin(float afX)", +[](float x) { return sinf(x); });
 	SOMA_FUNC(e, "float cMath_Cos(float afX)", +[](float x) { return cosf(x); });
 	SOMA_FUNC(e, "float cMath_Tan(float afX)", +[](float x) { return tanf(x); });
-	SOMA_FUNC(e, "float cMath_SigmoidCurve(float afX)", +[](float x) { return x * x * (3 - 2 * x); });
-	SOMA_FUNC(e, "float cMath_InterpolateSigmoid(float afA,float afB,float afT)", +[](float a, float b, float t) { return a + (b - a) * t * t * (3 - 2 * t); });
+	SOMA_FUNC(e, "float cMath_SigmoidCurve(float afX)", +[](float x) { return ohpl_gs6_sigmoid_curve(x); });
+	SOMA_FUNC(e, "float cMath_InterpolateSigmoid(float afA,float afB,float afT)", +[](float a, float b, float t) { return ohpl_gs6_interpolate_sigmoid(a, b, t); });
 	SOMA_FUNC(e, "float cMath_ASin(float afX)", +[](float x) { return asinf(x); });
 	SOMA_FUNC(e, "float cMath_ACos(float afX)", +[](float x) { return acosf(x); });
 	SOMA_FUNC(e, "float cMath_ATan(float afX)", +[](float x) { return atanf(x); });
@@ -273,38 +282,45 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "float cMath_Sqrt(float afX)", +[](float x) { return sqrtf(x); });
 	SOMA_FUNC(e, "void cMath_Randomize(int alSeed)", +[](int s) { cMath::Randomize(s); });
 	SOMA_FUNC(e, "cVector2f cMath_RandomCircleEdgePoint(float afRadius)", +[](float r) {
-		float a = cMath::RandRectf(0, k2Pif);
-		return cVector2f(cos(a), sin(a)) * r;
+		cVector2f v;
+		ohpl_gs6_random_circle_edge_point(r, v.v);
+		return v;
 	});
 	SOMA_FUNC(e, "float cMath_Easing(eEasing aType, float afT, float afMin = 0, float afMax = 1)",
 			  +[](int t, float x, float a, float b) { return a + (b - a) * SomaEasing(t, cMath::Clamp(x, 0.0f, 1.0f)); });
-	SOMA_FUNC(e, "float cMath_Vector3MaxElement(const cVector3f &in avVec)", +[](const cVector3f &v) { return std::max(v.x, std::max(v.y, v.z)); });
+	SOMA_FUNC(e, "float cMath_Vector3MaxElement(const cVector3f &in avVec)", +[](const cVector3f &v) { return ohpl_gs6_vector3_max_element(v.v); });
 	SOMA_FUNC(e, "cQuaternion cMath_QuaternionEuler(const cVector3f&in avEuler, eEulerRotationOrder aOrder)", +[](const cVector3f &v, int o) {
 		cQuaternion q;
 		q.FromRotationMatrix(cMath::MatrixRotate(v, (eEulerRotationOrder)o));
 		return q;
 	});
 	SOMA_FUNC(e, "cVector3f cMath_Vector3CatmullRom(const cVector3f&in avP0, const cVector3f&in avP1, const cVector3f&in avP2, const cVector3f&in avP3, float afFract)",
-			  +[](const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { return SomaCatmullRom(a, b, c, d, t); });
+			  +[](const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { return CatmullRom3(a, b, c, d, t); });
 	SOMA_FUNC(e, "cVector2f cMath_Vector2CatmullRom(const cVector2f &in avP0, const cVector2f &in avP1, const cVector2f &in avP2, const cVector2f &in avP3, float afFract)",
-			  +[](const cVector2f &a, const cVector2f &b, const cVector2f &c, const cVector2f &d, float t) { return SomaCatmullRom(a, b, c, d, t); });
+			  +[](const cVector2f &a, const cVector2f &b, const cVector2f &c, const cVector2f &d, float t) { return CatmullRom2(a, b, c, d, t); });
 	SOMA_FUNC(e, "void Math_CatmullRom(cVector3f &out avResult, const cVector3f &in avP0, const cVector3f &in avP1, const cVector3f &in avP2, const cVector3f &in avP3, float afFract)",
-			  +[](cVector3f &r, const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { r = SomaCatmullRom(a, b, c, d, t); });
+			  +[](cVector3f &r, const cVector3f &a, const cVector3f &b, const cVector3f &c, const cVector3f &d, float t) { r = CatmullRom3(a, b, c, d, t); });
 	SOMA_METHOD(e, "cQuaternion", "void FromAngleAxis(float afAngle, const cVector3f &in)", +[](cQuaternion &q, float a, const cVector3f &v) { q.FromAngleAxis(a, v); });
 	SOMA_FUNC(e, "cVector3f cMath_GetAngleDistanceVector3fRad(const cVector3f&in avAngles1, const cVector3f&in avAngles2)", +[](const cVector3f &a, const cVector3f &b) {
 		return cVector3f(cMath::GetAngleDistanceRad(a.x, b.x), cMath::GetAngleDistanceRad(a.y, b.y), cMath::GetAngleDistanceRad(a.z, b.z));
 	});
 	SOMA_FUNC(e, "cVector3f cMath_Vector3SphereSurfacePoint(const cVector2f&in avSeed, float afRadius)", +[](const cVector2f &s, float r) {
-		float z = s.x * 2 - 1, a = s.y * k2Pif, w = sqrtf(1 - z * z);
-		return cVector3f(z, sinf(a) * w, cosf(a) * w) * r;
+		cVector3f v;
+		ohpl_gs6_sphere_surface_point(s.v, r, v.v);
+		return v;
 	});
 	SOMA_FUNC(e, "cVector3f cMath_RandomSphereSurfacePoint(float afRadius)", +[](float r) {
-		float z = cMath::RandRectf(0, 1) * 2 - 1, a = cMath::RandRectf(0, 1) * k2Pif, w = sqrtf(1 - z * z);
-		return cVector3f(z, sinf(a) * w, cosf(a) * w) * r;
+		cVector3f v;
+		ohpl_gs6_random_sphere_surface_point(r, v.v);
+		return v;
 	});
-	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return a.x * b.x + a.y * b.y; });
+	SOMA_FUNC(e, "float cMath_Vector2Dot(const cVector2f &in avVecA, const cVector2f &in avVecB)", +[](const cVector2f &a, const cVector2f &b) { return ohpl_gs6_vector2_dot(a.v, b.v); });
 	SOMA_FUNC(e, "cVector3f cMath_Vector3ProjectOnPlane(const cVector3f &in avPlaneNormal, const cVector3f &in avVec)",
-			  +[](const cVector3f &n, const cVector3f &v) { return v - n * cMath::Vector3Dot(v, n); });
+			  +[](const cVector3f &n, const cVector3f &v) {
+					  cVector3f r;
+					  ohpl_gs6_project_on_plane(n.v, v.v, r.v);
+					  return r;
+				  });
 	SOMA_FUNC_NEW(e, "cMatrixf cMath_MatrixSetScale(const cMatrixf &in a_mtx, const cVector3f&in avScale)", +[](const cMatrixf &m, const cVector3f &s) {
 		cMatrixf r = m;
 		for (int i = 0; i < 3; ++i)
@@ -323,31 +339,26 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateYZX(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_YZX); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateZXY(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_ZXY); });
 	SOMA_FUNC(e, "cMatrixf cMath_MatrixRotateZYX(const cVector3f &in avRot)", +[](const cVector3f &r) { return cMath::MatrixRotate(r, eEulerRotationOrder_ZYX); });
-	SOMA_FUNC(e, "float cMath_InterpolateLinear(float afA, float afB, float afT)", +[](float a, float b, float t) { return a + (b - a) * t; });
+	SOMA_FUNC(e, "float cMath_InterpolateLinear(float afA, float afB, float afT)", +[](float a, float b, float t) { return ohpl_gs6_interpolate_linear(a, b, t); });
 	SOMA_FUNC(e, "float cMath_InterpolateCosine(float afA, float afB, float afT)",
-			  +[](float a, float b, float t) { float f = (1 - cosf(t * kPif)) * 0.5f; return a * (1 - f) + b * f; });
+			  +[](float a, float b, float t) { return ohpl_gs6_interpolate_cosine(a, b, t); });
 	SOMA_FUNC(e, "float cMath_FastRandomFloat(int alSeed)", +[](int s) { return cMath::FastRandomFloat(s); });
 	// The engine's GetNoisePerlin1D wrapper calls the cosine noise
-	SOMA_FUNC(e, "float cGenerate_GetNoisePerlin1D(float afX)", +[](float x) {
-		float fFloor = floorf(x), f = (1 - cosf((x - fFloor) * kPif)) * 0.5f;
-		return cMath::FastRandomFloat((int)fFloor) * (1 - f) + cMath::FastRandomFloat((int)fFloor + 1) * f;
-	});
-	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return roundf(x); });
-	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return 1 << n; });
-	SOMA_FUNC(e, "void cMath_SetBitFlag(int&out alFlagNum, int alBit, bool abSet)", +[](int &f, int b, bool s) { if (s) f |= b; else f &= ~b; });
+	SOMA_FUNC(e, "float cGenerate_GetNoisePerlin1D(float afX)", +[](float x) { return ohpl_gs6_noise_perlin_1d(x); });
+	SOMA_FUNC(e, "float cMath_Round(float afX)", +[](float x) { return ohpl_gs6_round(x); });
+	SOMA_FUNC(e, "int cMath_GetBit(int alBitNum)", +[](int n) { return ohpl_gs6_get_bit(n); });
+	SOMA_FUNC(e, "void cMath_SetBitFlag(int&out alFlagNum, int alBit, bool abSet)", +[](int &f, int b, bool s) { f = ohpl_gs6_set_bit_flag(f, b, s); });
 	SOMA_FUNC(e, "bool cMath_CheckPlaneLineIntersection(const cPlanef&in aPlane, const cVector3f &in avLineStart, const cVector3f &in avLineEnd, cVector3f&out avIntersectionPos, float&out afT)",
 			  +[](const cPlanef &p, const cVector3f &a, const cVector3f &b, cVector3f &v, float &t) { return cMath::CheckPlaneLineIntersection(p, a, b, &v, &t); });
 	SOMA_FUNC(e, "void cMath_GetAngleFromVector(const cVector2f &in avVec, float &out afAngle, float &out afLength)", +[](const cVector2f &v, float &a, float &l) { cMath::GetAngleFromVector(v, &a, &l); });
-	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return (f & b) != 0; });
+	SOMA_FUNC(e, "bool cMath_GetBitFlag(int alFlagNum, int alBit)", +[](int f, int b) { return ohpl_gs6_get_bit_flag(f, b); });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMin(const cVector3f&in avBaseMin, const cVector3f&in avAddMin)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Min(a, b); });
 	SOMA_FUNC(e, "cVector3f cMath_ExpandAABBMax(const cVector3f&in avBaseMax, const cVector3f&in avAddMax)", +[](const cVector3f &a, const cVector3f &b) { return cMath::Vector3Max(a, b); });
-	SOMA_FUNC(e, "float cMath_InterpolateCubic(float afX0, float afX1, float afX2, float afX3, float afT)", +[](float x0, float x1, float x2, float x3, float t) {
-		float a0 = x3 - x2 - x0 + x1, a1 = x0 - x1 - a0, a2 = x2 - x0;
-		return ((a0 * t + a1) * t + a2) * t + x1;
-	});
+	SOMA_FUNC(e, "float cMath_InterpolateCubic(float afX0, float afX1, float afX2, float afX3, float afT)", +[](float x0, float x1, float x2, float x3, float t) { return ohpl_gs6_interpolate_cubic(x0, x1, x2, x3, t); });
 	SOMA_FUNC(e, "cVector2f cMath_Vector2Rotate(const cVector2f &in avVec, float afAngle)", +[](const cVector2f &v, float a) {
-		float c = cosf(a), s = sinf(a);
-		return cVector2f(c * v.x - s * v.y, c * v.y + s * v.x);
+		cVector2f r;
+		ohpl_gs6_vector2_rotate(v.v, a, r.v);
+		return r;
 	});
 	SOMA_FUNC(e, "cVector3f cMath_Vector3IncreaseTo(const cVector3f&in avX, const cVector3f&in avAdd, const cVector3f&in avDest)", +[](const cVector3f &x, const cVector3f &a, const cVector3f &d) {
 		return cVector3f(cMath::IncreaseTo(x.x, a.x, d.x), cMath::IncreaseTo(x.y, a.y, d.y), cMath::IncreaseTo(x.z, a.z, d.z));
@@ -367,65 +378,46 @@ static void RegisterMathFunctions(asIScriptEngine *e)
 		return t ? r.GetTranspose() : r;
 	});
 	SOMA_FUNC(e, "tString cMath_RGBToHex(const cColor &in aRGB)", +[](const cColor &c) {
-		char s[8];
-		snprintf(s, sizeof(s), "%02X%02X%02X", (unsigned char)(int)(c.r * 255 + 0.5f), (unsigned char)(int)(c.g * 255 + 0.5f), (unsigned char)(int)(c.b * 255 + 0.5f));
-		return tString(s);
+		unsigned char s[6];
+		ohpl_gs6_rgb_to_hex(c.v, s);
+		return tString((const char *)s, 6);
 	});
 	// official 0xe670b0; script wrapper returns != eCollision_Outside
-	SOMA_FUNC(e, "bool cMath_CheckAABBSphereCollision(const cVector3f&in avMin,const cVector3f&in avMax, const cVector3f&in avCenter, float afRadius)", +[](const cVector3f &mn, const cVector3f &mx, const cVector3f &c, float r) {
-		for (int i = 0; i < 8; ++i)
-			if (cMath::Vector3DistSqr(cVector3f(i & 1 ? mx.x : mn.x, i & 2 ? mx.y : mn.y, i & 4 ? mx.z : mn.z), c) <= r * r) return true;
-		return !(mx.x - c.x < -r || c.x - mn.x < -r || mx.y - c.y < -r || c.y - mn.y < -r || mx.z - c.z < -r || c.z - mn.z < -r);
-	});
+	SOMA_FUNC(e, "bool cMath_CheckAABBSphereCollision(const cVector3f&in avMin,const cVector3f&in avMax, const cVector3f&in avCenter, float afRadius)", +[](const cVector3f &mn, const cVector3f &mx, const cVector3f &c, float r) { return ohpl_gs6_aabb_sphere_collision(mn.v, mx.v, c.v, r); });
 }
 
 // cPidController<T> in the script struct block: p, i, d at 16/20/24 (recovered), then the history
 
-template <class T> struct cSomaPid
+template <class T> struct cSomaPid;
+template <> struct cSomaPid<float> : OhplGs6Pid<1>
 {
-	static const int kMaxErrors = 64;
-	float p, i, d;
-	int mlErrorNum, mlCur, mlLastPlusOne;
-	T mLastError, mLastDerivative, mLastIntegral;
-	T mvErrors[kMaxErrors];
-	float mvTimeSteps[kMaxErrors];
-
 	static cSomaPid *At(void *apObj) { return (cSomaPid *)((char *)apObj + 16); }
-
-	void SetErrorNum(int alNum)
+	void SetErrorNum(int alNum) { ohpl_gs6_pid1_set_error_num((char *)this - 16, alNum); }
+	void Reset() { ohpl_gs6_pid1_reset((char *)this - 16); }
+	float Output(const float &aError, float afTimeStep)
 	{
-		mlErrorNum = std::clamp(alNum, 1, kMaxErrors);
-		Reset();
+		float r;
+		ohpl_gs6_pid1_output((char *)this - 16, &aError, afTimeStep, &r);
+		return r;
 	}
-	void Reset()
+	float LastError() const { return last_error[0]; }
+	float LastDerivative() const { return last_derivative[0]; }
+	float LastIntegral() const { return last_integral[0]; }
+};
+template <> struct cSomaPid<cVector3f> : OhplGs6Pid<3>
+{
+	static cSomaPid *At(void *apObj) { return (cSomaPid *)((char *)apObj + 16); }
+	void SetErrorNum(int alNum) { ohpl_gs6_pid3_set_error_num((char *)this - 16, alNum); }
+	void Reset() { ohpl_gs6_pid3_reset((char *)this - 16); }
+	cVector3f Output(const cVector3f &aError, float afTimeStep)
 	{
-		mlCur = 0;
-		mlLastPlusOne = 0;
-		for (int k = 0; k < kMaxErrors; ++k)
-		{
-			mvErrors[k] = T(0);
-			mvTimeSteps[k] = 0;
-		}
+		cVector3f r;
+		ohpl_gs6_pid3_output((char *)this - 16, aError.v, afTimeStep, r.v);
+		return r;
 	}
-	T Output(const T &aError, float afTimeStep)
-	{
-		if (mlErrorNum <= 0)
-			SetErrorNum(10);
-		mvErrors[mlCur] = aError;
-		mvTimeSteps[mlCur] = afTimeStep;
-		T integral = T(0);
-		for (int k = 0; k < mlErrorNum; ++k)
-			integral += mvErrors[k] * mvTimeSteps[k];
-		T derivative = T(0);
-		if (mlLastPlusOne > 0 && afTimeStep > 0)
-			derivative = (mvErrors[mlCur] - mvErrors[mlLastPlusOne - 1]) / afTimeStep;
-		mlLastPlusOne = mlCur + 1;
-		mlCur = (mlCur + 1) % mlErrorNum;
-		mLastError = aError;
-		mLastDerivative = derivative;
-		mLastIntegral = integral;
-		return aError * p + integral * i + derivative * d;
-	}
+	cVector3f LastError() const { return cVector3f(last_error[0], last_error[1], last_error[2]); }
+	cVector3f LastDerivative() const { return cVector3f(last_derivative[0], last_derivative[1], last_derivative[2]); }
+	cVector3f LastIntegral() const { return cVector3f(last_integral[0], last_integral[1], last_integral[2]); }
 };
 static_assert(sizeof(cSomaPid<cVector3f>) + 16 <= 4096, "pid state exceeds the struct block");
 
@@ -457,15 +449,15 @@ template <class T> static void RegisterPid(asIScriptEngine *e, const char *apTyp
 	e->RegisterObjectMethod(apType, "void SetErrorNum(int alErrorNum)", asFUNCTION(+[](asIScriptGeneric *g) { P::At(g->GetObject())->SetErrorNum((int)g->GetArgDWord(0)); }), asCALL_GENERIC);
 	e->RegisterObjectMethod(apType, "void Reset()", asFUNCTION(+[](asIScriptGeneric *g) { P::At(g->GetObject())->Reset(); }), asCALL_GENERIC);
 	e->RegisterObjectMethod(apType, (sT + " GetLastError()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
-		T r = P::At(g->GetObject())->mLastError;
+		T r = P::At(g->GetObject())->LastError();
 		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
 	}), asCALL_GENERIC);
 	e->RegisterObjectMethod(apType, (sT + " GetLastDerivative()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
-		T r = P::At(g->GetObject())->mLastDerivative;
+		T r = P::At(g->GetObject())->LastDerivative();
 		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
 	}), asCALL_GENERIC);
 	e->RegisterObjectMethod(apType, (sT + " GetLastIntegral()").c_str(), asFUNCTION(+[](asIScriptGeneric *g) {
-		T r = P::At(g->GetObject())->mLastIntegral;
+		T r = P::At(g->GetObject())->LastIntegral();
 		if constexpr (std::is_same<T, float>::value) g->SetReturnFloat(r); else g->SetReturnObject(&r);
 	}), asCALL_GENERIC);
 }

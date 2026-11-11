@@ -1,4 +1,5 @@
 #include "SomaScriptRuntime.h"
+#include "RustSomaScript.h"
 #include "SomaBase.h"
 #include "SomaScriptApi.h"
 #include "SomaFsb.h"
@@ -11,6 +12,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <unistd.h>
 #include <vector>
@@ -29,29 +31,21 @@ static void MessageCallback(const asSMessageInfo *apMsg, void *)
 
 static std::string FindApiFile(const std::string &asGame)
 {
-	std::vector<std::string> vCandidates;
+	using namespace OhplGs6;
 	const char *pEnv = getenv("OPENHPL_SOMA_SCRIPT_API");
-	if (pEnv && asGame == SomaGameId())
-		vCandidates.push_back(pEnv);
+	std::string sEnv = pEnv ? pEnv : "";
 	char sExe[4096];
 	ssize_t lLen = readlink("/proc/self/exe", sExe, sizeof(sExe) - 1);
-	if (lLen > 0)
-	{
-		sExe[lLen] = 0;
-		std::string sDir(sExe);
-		sDir = sDir.substr(0, sDir.find_last_of('/') + 1);
-		if (asGame == SomaGameId())
-			vCandidates.push_back(sDir + "script_api.txt");
-		vCandidates.push_back(sDir + "../share/open-hpl/" + asGame + "/script_api.txt");
-	}
-	vCandidates.push_back("/usr/share/open-hpl/" + asGame + "/script_api.txt");
+	std::string sExePath = lLen > 0 ? std::string(sExe, lLen) : "";
+	std::string sSource;
 #ifdef OPENHPL_SOURCE_DIR
-	vCandidates.push_back(std::string(OPENHPL_SOURCE_DIR) + "/" + asGame + "/data/script_api.txt");
+	sSource = OPENHPL_SOURCE_DIR;
 #endif
-	for (size_t i = 0; i < vCandidates.size(); ++i)
-		if (std::ifstream(vCandidates[i].c_str()).is_open())
-			return vCandidates[i];
-	return "";
+	const std::string &sCurrent = SomaGameId();
+	return Call8([&](OhplGs6Sink8 s, void *c) {
+		ohpl_gs6_find_api_file(Str(asGame), Str(sCurrent), pEnv ? Str(sEnv) : StrNull(), lLen > 0 ? Str(sExePath) : StrNull(),
+							   sSource.empty() ? StrNull() : Str(sSource), s, c);
+	});
 }
 
 cSomaScriptRuntime::cSomaScriptRuntime() : mpEngine(NULL), mpBuilder(NULL), mlModuleCount(0)
@@ -188,10 +182,10 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, std::string_view asDecl, c
 	if (it == mapType.end())
 	{
 		// "$Func": a global function of the object's module, like iScriptUserClassInterface::ScriptPrepare
-		std::string sDecl(asDecl);
-		size_t lGlobal = sDecl.find('$');
-		asIScriptFunction *pFound = lGlobal == std::string::npos ? pType->GetMethodByDecl(sDecl.c_str())
-									: pType->GetModule() ? pType->GetModule()->GetFunctionByDecl(std::string(sDecl).erase(lGlobal, 1).c_str()) : NULL;
+		std::string sDecl(asDecl), sPlain;
+		bool bGlobal = ohpl_gs6_split_global_marker(OhplGs6::U(sDecl), sDecl.size(), OhplGs6::ToString, &sPlain);
+		asIScriptFunction *pFound = bGlobal == false ? pType->GetMethodByDecl(sDecl.c_str())
+									: pType->GetModule() ? pType->GetModule()->GetFunctionByDecl(sPlain.c_str()) : NULL;
 		it = mapType.emplace(std::move(sDecl), pFound).first;
 	}
 	asIScriptFunction *pFunc = it->second;
@@ -212,74 +206,98 @@ bool cSomaScriptRuntime::Call(asIScriptObject *apObj, std::string_view asDecl, c
 	return bOk;
 }
 
+namespace
+{
+	struct cCallbackDecls
+	{
+		std::string msFunc, msWithArg, msNoArg;
+	};
+}
+
 bool cSomaScriptRuntime::CallByName(asIScriptObject *apObj, const std::string &asName, const std::string &asArg)
 {
 	if (apObj == NULL || asName.empty())
 		return false;
+	cCallbackDecls d;
+	bool bGlobal = ohpl_gs6_callback_decls(
+		OhplGs6::U(asName), asName.size(), +[](void *c, const unsigned char *p, size_t n) { ((cCallbackDecls *)c)->msFunc.assign((const char *)p, n); },
+		+[](void *c, const unsigned char *p, size_t n) { ((cCallbackDecls *)c)->msWithArg.assign((const char *)p, n); },
+		+[](void *c, const unsigned char *p, size_t n) { ((cCallbackDecls *)c)->msNoArg.assign((const char *)p, n); }, &d);
 	// "$Func": a global function of the object's module rather than a method
-	if (asName.size() > 1 && asName[0] == '$')
+	if (bGlobal)
 	{
 		asIScriptModule *pModule = apObj->GetObjectType()->GetModule();
-		std::string sFunc = asName.substr(1);
-		asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByDecl(("void " + sFunc + "(const tString &in)").c_str()) : NULL;
+		asIScriptFunction *pFunc = pModule ? pModule->GetFunctionByDecl(d.msWithArg.c_str()) : NULL;
 		bool bArg = pFunc != NULL;
 		if (pFunc == NULL && pModule)
-			pFunc = pModule->GetFunctionByDecl(("void " + sFunc + "()").c_str());
+			pFunc = pModule->GetFunctionByDecl(d.msNoArg.c_str());
 		if (pFunc == NULL)
 		{
-			Warning("SOMA script: global callback '%s' not found\n", sFunc.c_str());
+			Warning("SOMA script: global callback '%s' not found\n", d.msFunc.c_str());
 			return false;
 		}
 		asIScriptContext *pCtx = mpEngine->RequestContext();
 		pCtx->Prepare(pFunc);
 		if (bArg)
 			pCtx->SetArgObject(0, (void *)&asArg);
-		bool bOk = Execute(pCtx, sFunc);
+		bool bOk = Execute(pCtx, d.msFunc);
 		mpEngine->ReturnContext(pCtx);
 		return bOk;
 	}
 	asITypeInfo *pType = apObj->GetObjectType();
-	std::string sWithArg = "void " + asName + "(const tString &in)";
-	if (pType->GetMethodByDecl(sWithArg.c_str()))
-		return Call(apObj, sWithArg, [&](asIScriptContext *apCtx) { apCtx->SetArgObject(0, (void *)&asArg); });
-	std::string sNoArg = "void " + asName + "()";
-	if (pType->GetMethodByDecl(sNoArg.c_str()))
-		return Call(apObj, sNoArg);
+	if (pType->GetMethodByDecl(d.msWithArg.c_str()))
+		return Call(apObj, d.msWithArg, [&](asIScriptContext *apCtx) { apCtx->SetArgObject(0, (void *)&asArg); });
+	if (pType->GetMethodByDecl(d.msNoArg.c_str()))
+		return Call(apObj, d.msNoArg);
 	Warning("SOMA script: callback '%s' not found on %s\n", asName.c_str(), pType->GetName());
 	return false;
 }
 
 void cSomaScriptRuntime::LogStubReport(int alTop)
 {
-	std::vector<std::pair<int, std::string>> v;
 	const std::map<std::string, int> &counts = cSomaScriptApi::GetStubCallCounts();
+	std::vector<OhplGs6Str> vNames;
+	std::vector<int> vCounts;
 	for (std::map<std::string, int>::const_iterator it = counts.begin(); it != counts.end(); ++it)
-		v.push_back(std::make_pair(it->second, it->first));
-	std::sort(v.rbegin(), v.rend());
-	Log("SOMA script: %d unimplemented API functions called\n", (int)v.size());
-	for (int i = 0; i < (int)v.size() && i < alTop; ++i)
-		Log("  %6d  %s\n", v[i].first, v[i].second.c_str());
+	{
+		vNames.push_back(OhplGs6::Str(it->first));
+		vCounts.push_back(it->second);
+	}
+	std::vector<std::string> vLines;
+	ohpl_gs6_stub_report(vNames.data(), vCounts.data(), vNames.size(), alTop, OhplGs6::AppendString, &vLines);
+	for (const std::string &sLine : vLines)
+		Log("%s", sLine.c_str());
 }
 
 bool cSomaScriptRuntime::Exec(const std::string &asCode, const std::string &asModule, std::string &asError)
 {
 	asIScriptModule *pModule = asModule.empty() ? mpEngine->GetModule("__exec", asGM_ALWAYS_CREATE) : NULL;
-	for (std::map<std::string, asIScriptModule *>::iterator it = mmapModules.begin(); pModule == NULL && it != mmapModules.end(); ++it)
-		if (it->second && it->first.find(asModule) != std::string::npos)
-			pModule = it->second;
+	std::vector<OhplGs6Str> vKeys;
+	std::vector<unsigned char> vLoaded;
+	std::vector<asIScriptModule *> vModules;
+	for (std::map<std::string, asIScriptModule *>::iterator it = mmapModules.begin(); it != mmapModules.end(); ++it)
+	{
+		vKeys.push_back(OhplGs6::Str(it->first));
+		vLoaded.push_back(it->second != NULL);
+		vModules.push_back(it->second);
+	}
 	if (pModule == NULL)
 	{
-		asError = "script files:";
-		for (std::map<std::string, asIScriptModule *>::iterator it = mmapModules.begin(); it != mmapModules.end(); ++it)
-			asError += " " + it->first;
+		ptrdiff_t lPick = ohpl_gs6_pick_module(vKeys.data(), (const bool *)vLoaded.data(), vKeys.size(), OhplGs6::U(asModule), asModule.size());
+		if (lPick >= 0)
+			pModule = vModules[lPick];
+	}
+	if (pModule == NULL)
+	{
+		asError = OhplGs6::Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_script_files_error(vKeys.data(), vKeys.size(), s, c); });
 		return false;
 	}
 	asIScriptFunction *pFunc = NULL;
 	std::string sMessages;
 	mpEngine->SetMessageCallback(asFUNCTION(+[](const asSMessageInfo *msg, void *param) {
-		*(std::string *)param += std::string(msg->message) + " (" + std::to_string(msg->row) + ":" + std::to_string(msg->col) + ")\n";
+		*(std::string *)param += OhplGs6::Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_exec_message(OhplGs6::U(msg->message), strlen(msg->message), msg->row, msg->col, s, c); });
 	}), &sMessages, asCALL_CDECL);
-	int r = pModule->CompileFunction("exec", ("void __exec() {\n" + asCode + "\n}").c_str(), -1, 0, &pFunc);
+	int r = pModule->CompileFunction("exec", OhplGs6::Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_exec_source(OhplGs6::U(asCode), asCode.size(), s, c); }).c_str(), -1, 0, &pFunc);
 	mpEngine->SetMessageCallback(asFUNCTION(MessageCallback), NULL, asCALL_CDECL);
 	if (r < 0)
 	{

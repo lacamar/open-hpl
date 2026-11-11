@@ -6,32 +6,111 @@
 #include "SomaBase.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptRuntime.h"
+#include "RustSomaScript.h"
 #include "impl/scriptarray.h"
 
 #include <map>
 #include <unordered_map>
+#include <cstring>
 #include <limits>
 #include <sstream>
 
-struct cSomaVariant
+using namespace OhplGs6;
+
+static void SetWords(unsigned int alScope, const tString &asName, int alIdx, unsigned int alField, const void *apData, size_t alBytes)
 {
-	tString s;
-	bool b = false;
-	int i = 0;
-	float f = 0;
-	cVector2f v2 = 0;
-	cVector3f v3 = 0;
-	float v4[4] = {0, 0, 0, 0};
+	unsigned int vWords[16] = {};
+	memcpy(vWords, apData, alBytes);
+	ohpl_gs6_var_set(alScope, U(asName), asName.size(), alIdx, alField, vWords, nullptr, 0);
+}
+
+static void GetWords(unsigned int alScope, const tString &asName, int alIdx, unsigned int alField, void *apData, size_t alBytes)
+{
+	unsigned int vWords[16];
+	ohpl_gs6_var_get(alScope, U(asName), asName.size(), alIdx, alField, vWords);
+	memcpy(apData, vWords, alBytes);
+}
+
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const tString &x)
+{
+	ohpl_gs6_var_set(alScope, U(asName), asName.size(), alIdx, kOhplGs6FieldString, nullptr, U(x), x.size());
+}
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, bool x)
+{
+	unsigned int w = x;
+	SetWords(alScope, asName, alIdx, kOhplGs6FieldBool, &w, 4);
+}
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, int x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldInt, &x, 4); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, float x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldFloat, &x, 4); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const cVector2f &x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldVector2f, x.v, 8); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const cVector3f &x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldVector3f, x.v, 12); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const cMatrixf &x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldMatrix, x.v, 64); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const cColor &x) { SetWords(alScope, asName, alIdx, kOhplGs6FieldColor, x.v, 16); }
+static void SetField(unsigned int alScope, const tString &asName, int alIdx, const cSomaID &x)
+{
+	int v[3] = {x.mA, x.mB, x.mC};
+	SetWords(alScope, asName, alIdx, kOhplGs6FieldId, v, 12);
+}
+
+template <class T> static T GetField(unsigned int alScope, const tString &asName, int alIdx);
+template <> tString GetField<tString>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	return Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_var_get_str(alScope, U(asName), asName.size(), alIdx, s, c); });
+}
+template <> bool GetField<bool>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	unsigned int w;
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldBool, &w, 4);
+	return w != 0;
+}
+template <> int GetField<int>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	int v;
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldInt, &v, 4);
+	return v;
+}
+template <> float GetField<float>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	float v;
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldFloat, &v, 4);
+	return v;
+}
+template <> cVector2f GetField<cVector2f>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	cVector2f v;
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldVector2f, v.v, 8);
+	return v;
+}
+template <> cVector3f GetField<cVector3f>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	cVector3f v;
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldVector3f, v.v, 12);
+	return v;
+}
+template <> cMatrixf GetField<cMatrixf>(unsigned int alScope, const tString &asName, int alIdx)
+{
 	cMatrixf m = cMatrixf::Identity;
-	cColor c = cColor(0, 0);
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldMatrix, m.v, 64);
+	return m;
+}
+template <> cColor GetField<cColor>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	cColor c(0, 0);
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldColor, c.v, 16);
+	return c;
+}
+template <> cSomaID GetField<cSomaID>(unsigned int alScope, const tString &asName, int alIdx)
+{
+	int v[3];
+	GetWords(alScope, asName, alIdx, kOhplGs6FieldId, v, 12);
 	cSomaID id;
-};
+	id.mA = (uint8_t)v[0];
+	id.mB = v[1];
+	id.mC = v[2];
+	return id;
+}
 
-struct cSomaVector4 { float x, y, z, w; };
-
-static std::map<tString, cSomaVariant> gmapVars;
-static std::map<int, cSomaVariant> gmapArgs;
-static cSomaVariant gReturn;
+static const tString gsNoName;
 
 std::string gsSomaExecOutput;
 int glSomaUnderwaterUsers = 0;
@@ -40,53 +119,12 @@ const tString &SomaCurrentLanguage();
 
 tString SomaSerializeGlobalVars()
 {
-	std::ostringstream out;
-	out.precision(9);
-	for (auto &it : gmapVars)
-	{
-		const cSomaVariant &v = it.second;
-		out << "var\t" << it.first.size() << ":" << it.first << v.s.size() << ":" << v.s << " " << v.b << " " << v.i << " " << v.f << " "
-			<< v.v2.x << " " << v.v2.y << " " << v.v3.x << " " << v.v3.y << " " << v.v3.z << " " << v.v4[0] << " " << v.v4[1] << " "
-			<< v.v4[2] << " " << v.v4[3] << " " << v.c.r << " " << v.c.g << " " << v.c.b << " " << v.c.a << " " << (int)v.id.mA << " "
-			<< v.id.mB << " " << v.id.mC;
-		for (int i = 0; i < 16; ++i)
-			out << " " << v.m.v[i];
-		out << "\n";
-	}
-	return out.str();
+	return Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_serialize_vars(s, c); });
 }
 
 void SomaDeserializeGlobalVars(const tString &asData)
 {
-	gmapVars.clear();
-	std::istringstream in(asData);
-	std::string sKey;
-	while (in >> sKey)
-	{
-		if (sKey != "var")
-		{
-			in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			continue;
-		}
-		auto ReadStr = [&in]() {
-			size_t lLen = 0;
-			in >> lLen;
-			in.get();
-			std::string s(lLen, '\0');
-			in.read(&s[0], lLen);
-			return s;
-		};
-		in.get();
-		tString sName = ReadStr();
-		cSomaVariant &v = gmapVars[sName];
-		v.s = ReadStr();
-		int lA = 0;
-		in >> v.b >> v.i >> v.f >> v.v2.x >> v.v2.y >> v.v3.x >> v.v3.y >> v.v3.z >> v.v4[0] >> v.v4[1] >> v.v4[2] >> v.v4[3] >> v.c.r >> v.c.g >> v.c.b >> v.c.a >>
-			lA >> v.id.mB >> v.id.mC;
-		v.id.mA = (uint8_t)lA;
-		for (int i = 0; i < 16; ++i)
-			in >> v.m.v[i];
-	}
+	ohpl_gs6_deserialize_vars(U(asData), asData.size());
 }
 
 tWString SomaParseString(const tWString &asText);
@@ -161,19 +199,14 @@ bool SomaRunGlobalFunc(const tString &asObject, const tString &asClass, const tS
 // cGlobalScriptFuncs::FAKE_*: secret codes, keys measured on the official game
 static void ShowSecretCode(const char *apKey, tString asX)
 {
-	if (asX.size() < 3)
-		return;
-	asX.resize(3);
-	for (int i = 0; i < 3; ++i)
-		asX[i] ^= apKey[i];
-	gmapArgs[0].s = asX;
-	SomaRunGlobalFunc("DescriptionHandler", "", "_Global_Add");
+	if (ohpl_gs6_secret_code(U(apKey), U(asX), asX.size()))
+		SomaRunGlobalFunc("DescriptionHandler", "", "_Global_Add");
 }
 
-#define SOMA_GLOBAL_TYPE(NAME, ASTYPE, CTYPE, FIELD)                                                                                                         \
-	SOMA_FUNC(e, "void cScript_SetGlobalVar" NAME "(const tString &in asName, " ASTYPE ")", +[](const tString &n, CTYPE x) { gmapVars[n].FIELD = x; });    \
-	SOMA_FUNC(e, "void cScript_SetGlobalArg" NAME "(int alIdx, " ASTYPE ")", +[](int i, CTYPE x) { gmapArgs[i].FIELD = x; });                              \
-	SOMA_FUNC(e, "void cScript_SetGlobalReturn" NAME "(" ASTYPE ")", +[](CTYPE x) { gReturn.FIELD = x; });
+#define SOMA_GLOBAL_TYPE(NAME, ASTYPE, CTYPE)                                                                                                                  \
+	SOMA_FUNC(e, "void cScript_SetGlobalVar" NAME "(const tString &in asName, " ASTYPE ")", +[](const tString &n, CTYPE x) { SetField(kOhplGs6ScopeVar, n, 0, x); }); \
+	SOMA_FUNC(e, "void cScript_SetGlobalArg" NAME "(int alIdx, " ASTYPE ")", +[](int i, CTYPE x) { SetField(kOhplGs6ScopeArg, gsNoName, i, x); });                  \
+	SOMA_FUNC(e, "void cScript_SetGlobalReturn" NAME "(" ASTYPE ")", +[](CTYPE x) { SetField(kOhplGs6ScopeReturn, gsNoName, 0, x); });
 
 // Official natives that set the global args, run an entity script's _Global_ function and return
 // the global return value (SomaGlobalFuncsTable.cpp)
@@ -188,43 +221,43 @@ static void ForwardToEntityScript(asIScriptGeneric *g)
 	for (asUINT i = 1; i < g->GetArgCount(); ++i)
 	{
 		int lTypeId = g->GetArgTypeId(i);
-		cSomaVariant &v = gmapArgs[(int)i - 1];
+		int lArg = (int)i - 1;
 		std::string sType = TypeName(lTypeId);
 		if (lTypeId == asTYPEID_BOOL)
-			v.b = g->GetArgByte(i) != 0;
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, g->GetArgByte(i) != 0);
 		else if (lTypeId == asTYPEID_FLOAT)
-			v.f = g->GetArgFloat(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, g->GetArgFloat(i));
 		else if (lTypeId <= asTYPEID_DOUBLE || (pEngine->GetTypeInfoById(lTypeId) && (pEngine->GetTypeInfoById(lTypeId)->GetFlags() & asOBJ_ENUM)))
-			v.i = (int)g->GetArgDWord(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, (int)g->GetArgDWord(i));
 		else if (sType == "tString")
-			v.s = *(tString *)g->GetArgObject(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, *(tString *)g->GetArgObject(i));
 		else if (sType == "cVector3f")
-			v.v3 = *(cVector3f *)g->GetArgObject(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, *(cVector3f *)g->GetArgObject(i));
 		else if (sType == "cVector2f")
-			v.v2 = *(cVector2f *)g->GetArgObject(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, *(cVector2f *)g->GetArgObject(i));
 		else if (sType == "cColor")
-			v.c = *(cColor *)g->GetArgObject(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, *(cColor *)g->GetArgObject(i));
 		else if (sType == "tID")
-			v.id = *(cSomaID *)g->GetArgObject(i);
+			SetField(kOhplGs6ScopeArg, gsNoName, lArg, *(cSomaID *)g->GetArgObject(i));
 	}
-	gReturn = cSomaVariant();
+	ohpl_gs6_reset_return();
 	SomaRunGlobalFunc(*(tString *)g->GetArgObject(0), pFunc->mpClass, pFunc->mpFunc);
 	int lRet = g->GetFunction()->GetReturnTypeId();
 	std::string sRet = TypeName(lRet);
 	if (lRet == asTYPEID_VOID)
 		return;
 	if (lRet == asTYPEID_BOOL)
-		g->SetReturnByte(gReturn.b);
+		g->SetReturnByte(GetField<bool>(kOhplGs6ScopeReturn, gsNoName, 0));
 	else if (lRet == asTYPEID_FLOAT)
-		g->SetReturnFloat(gReturn.f);
+		g->SetReturnFloat(GetField<float>(kOhplGs6ScopeReturn, gsNoName, 0));
 	else if (lRet <= asTYPEID_DOUBLE || (pEngine->GetTypeInfoById(lRet) && (pEngine->GetTypeInfoById(lRet)->GetFlags() & asOBJ_ENUM)))
-		g->SetReturnDWord((asDWORD)gReturn.i);
+		g->SetReturnDWord((asDWORD)GetField<int>(kOhplGs6ScopeReturn, gsNoName, 0));
 	else if (sRet == "tString")
-		new (g->GetAddressOfReturnLocation()) tString(gReturn.s);
+		new (g->GetAddressOfReturnLocation()) tString(GetField<tString>(kOhplGs6ScopeReturn, gsNoName, 0));
 	else if (sRet == "cVector3f")
-		new (g->GetAddressOfReturnLocation()) cVector3f(gReturn.v3);
+		new (g->GetAddressOfReturnLocation()) cVector3f(GetField<cVector3f>(kOhplGs6ScopeReturn, gsNoName, 0));
 	else if (sRet == "cVector2f")
-		new (g->GetAddressOfReturnLocation()) cVector2f(gReturn.v2);
+		new (g->GetAddressOfReturnLocation()) cVector2f(GetField<cVector2f>(kOhplGs6ScopeReturn, gsNoName, 0));
 }
 
 void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
@@ -243,41 +276,41 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	}
 
 	SOMA_FUNC(e, "void SlideDoor_SetClosed(const tString& in asName, bool abClosed, bool abInstant = false)", +[](const tString &n, bool c, bool i) {
-		gmapArgs[0].f = c ? 0.0f : 1.0f;
-		gmapArgs[1].b = i;
+		SetField(kOhplGs6ScopeArg, gsNoName, 0, c ? 0.0f : 1.0f);
+		SetField(kOhplGs6ScopeArg, gsNoName, 1, i);
 		SomaRunGlobalFunc(n, "cScrPropSlideDoor", "_Global_SetOpenAmount");
 	});
 	SOMA_FUNC(e, "bool cScript_RunGlobalFunc(const tString&in asObjectName, const tString&in asClassName, const tString&in asFuncName)", (SomaRunGlobalFunc));
 
-	SOMA_GLOBAL_TYPE("String", "const tString &in asVar", const tString &, s)
-	SOMA_GLOBAL_TYPE("Bool", "bool abX", bool, b)
-	SOMA_GLOBAL_TYPE("Int", "int alX", int, i)
-	SOMA_GLOBAL_TYPE("Float", "float afX", float, f)
-	SOMA_GLOBAL_TYPE("Vector2f", "const cVector2f&in avX", const cVector2f &, v2)
-	SOMA_GLOBAL_TYPE("Vector3f", "const cVector3f&in avX", const cVector3f &, v3)
-	SOMA_GLOBAL_TYPE("Matrix", "const cMatrixf&in a_mtxX", const cMatrixf &, m)
-	SOMA_GLOBAL_TYPE("Color", "const cColor&in aX", const cColor &, c)
-	SOMA_GLOBAL_TYPE("ID", "tID alX", cSomaID, id)
+	SOMA_GLOBAL_TYPE("String", "const tString &in asVar", const tString &)
+	SOMA_GLOBAL_TYPE("Bool", "bool abX", bool)
+	SOMA_GLOBAL_TYPE("Int", "int alX", int)
+	SOMA_GLOBAL_TYPE("Float", "float afX", float)
+	SOMA_GLOBAL_TYPE("Vector2f", "const cVector2f&in avX", const cVector2f &)
+	SOMA_GLOBAL_TYPE("Vector3f", "const cVector3f&in avX", const cVector3f &)
+	SOMA_GLOBAL_TYPE("Matrix", "const cMatrixf&in a_mtxX", const cMatrixf &)
+	SOMA_GLOBAL_TYPE("Color", "const cColor&in aX", const cColor &)
+	SOMA_GLOBAL_TYPE("ID", "tID alX", cSomaID)
 
-	SOMA_FUNC(e, "tString cScript_GetGlobalVarString(const tString &in asName)", +[](const tString &n) { return gmapVars[n].s; });
-	SOMA_FUNC(e, "bool cScript_GetGlobalVarBool(const tString &in asName)", +[](const tString &n) { return gmapVars[n].b; });
-	SOMA_FUNC(e, "int cScript_GetGlobalVarInt(const tString &in asName)", +[](const tString &n) { return gmapVars[n].i; });
-	SOMA_FUNC(e, "float cScript_GetGlobalVarFloat(const tString &in asName)", +[](const tString &n) { return gmapVars[n].f; });
-	SOMA_FUNC(e, "cVector2f cScript_GetGlobalVarVector2f(const tString &in asName)", +[](const tString &n) { return gmapVars[n].v2; });
-	SOMA_FUNC(e, "cVector3f cScript_GetGlobalVarVector3f(const tString &in asName)", +[](const tString &n) { return gmapVars[n].v3; });
-	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalVarMatrix(const tString &in asName)", +[](const tString &n) { return gmapVars[n].m; });
-	SOMA_FUNC(e, "cColor cScript_GetGlobalVarColor(const tString &in asName)", +[](const tString &n) { return gmapVars[n].c; });
-	SOMA_FUNC(e, "tID cScript_GetGlobalVarID(const tString &in asName)", +[](const tString &n) { return gmapVars[n].id; });
+	SOMA_FUNC(e, "tString cScript_GetGlobalVarString(const tString &in asName)", +[](const tString &n) { return GetField<tString>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "bool cScript_GetGlobalVarBool(const tString &in asName)", +[](const tString &n) { return GetField<bool>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "int cScript_GetGlobalVarInt(const tString &in asName)", +[](const tString &n) { return GetField<int>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "float cScript_GetGlobalVarFloat(const tString &in asName)", +[](const tString &n) { return GetField<float>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "cVector2f cScript_GetGlobalVarVector2f(const tString &in asName)", +[](const tString &n) { return GetField<cVector2f>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "cVector3f cScript_GetGlobalVarVector3f(const tString &in asName)", +[](const tString &n) { return GetField<cVector3f>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalVarMatrix(const tString &in asName)", +[](const tString &n) { return GetField<cMatrixf>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "cColor cScript_GetGlobalVarColor(const tString &in asName)", +[](const tString &n) { return GetField<cColor>(kOhplGs6ScopeVar, n, 0); });
+	SOMA_FUNC(e, "tID cScript_GetGlobalVarID(const tString &in asName)", +[](const tString &n) { return GetField<cSomaID>(kOhplGs6ScopeVar, n, 0); });
 
-	SOMA_FUNC(e, "tString cScript_GetGlobalArgString(int alIdx)", +[](int i) { return gmapArgs[i].s; });
-	SOMA_FUNC(e, "bool cScript_GetGlobalArgBool(int alIdx)", +[](int i) { return gmapArgs[i].b; });
-	SOMA_FUNC(e, "int cScript_GetGlobalArgInt(int alIdx)", +[](int i) { return gmapArgs[i].i; });
-	SOMA_FUNC(e, "float cScript_GetGlobalArgFloat(int alIdx)", +[](int i) { return gmapArgs[i].f; });
-	SOMA_FUNC(e, "cVector2f cScript_GetGlobalArgVector2f(int alIdx)", +[](int i) { return gmapArgs[i].v2; });
-	SOMA_FUNC(e, "cVector3f cScript_GetGlobalArgVector3f(int alIdx)", +[](int i) { return gmapArgs[i].v3; });
-	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalArgMatrix(int alIdx)", +[](int i) { return gmapArgs[i].m; });
-	SOMA_FUNC(e, "cColor cScript_GetGlobalArgColor(int alIdx)", +[](int i) { return gmapArgs[i].c; });
-	SOMA_FUNC(e, "tID cScript_GetGlobalArgID(int alIdx)", +[](int i) { return gmapArgs[i].id; });
+	SOMA_FUNC(e, "tString cScript_GetGlobalArgString(int alIdx)", +[](int i) { return GetField<tString>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "bool cScript_GetGlobalArgBool(int alIdx)", +[](int i) { return GetField<bool>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "int cScript_GetGlobalArgInt(int alIdx)", +[](int i) { return GetField<int>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "float cScript_GetGlobalArgFloat(int alIdx)", +[](int i) { return GetField<float>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "cVector2f cScript_GetGlobalArgVector2f(int alIdx)", +[](int i) { return GetField<cVector2f>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "cVector3f cScript_GetGlobalArgVector3f(int alIdx)", +[](int i) { return GetField<cVector3f>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalArgMatrix(int alIdx)", +[](int i) { return GetField<cMatrixf>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "cColor cScript_GetGlobalArgColor(int alIdx)", +[](int i) { return GetField<cColor>(kOhplGs6ScopeArg, gsNoName, i); });
+	SOMA_FUNC(e, "tID cScript_GetGlobalArgID(int alIdx)", +[](int i) { return GetField<cSomaID>(kOhplGs6ScopeArg, gsNoName, i); });
 
 	SOMA_FUNC(e, "void cLux_DropPageFocus(const tString&in asX)", +[](const tString &x) { ShowSecretCode("\x1e\x28\x56", x); });
 	SOMA_FUNC(e, "void cLux_PreloadWebpage(const tString &in asX)", +[](const tString &x) { ShowSecretCode("\x53\x58\x15", x); });
@@ -285,15 +318,19 @@ void RegisterSomaScriptGlobalNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void cLux_RegisterCollisionRadius(int alX)", +[](int x) { ShowSecretCode("\x62\x71\x60", tString(3, (char)x)); });
 	SOMA_FUNC(e, "void cLux_ResetShudderEffects(int alX)", +[](int x) { ShowSecretCode("\x4e\x41\x53", tString(3, (char)x)); });
 
-	SOMA_FUNC(e, "const tString& cScript_GetGlobalReturnString()", +[]() -> const tString & { return gReturn.s; });
-	SOMA_FUNC(e, "bool cScript_GetGlobalReturnBool()", +[]() { return gReturn.b; });
-	SOMA_FUNC(e, "int cScript_GetGlobalReturnInt()", +[]() { return gReturn.i; });
-	SOMA_FUNC(e, "float cScript_GetGlobalReturnFloat()", +[]() { return gReturn.f; });
-	SOMA_FUNC(e, "cVector2f cScript_GetGlobalReturnVector2f()", +[]() { return gReturn.v2; });
-	SOMA_FUNC(e, "cVector3f cScript_GetGlobalReturnVector3f()", +[]() { return gReturn.v3; });
-	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalReturnMatrix()", +[]() { return gReturn.m; });
-	SOMA_FUNC(e, "cColor cScript_GetGlobalReturnColor()", +[]() { return gReturn.c; });
-	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return gReturn.id; });
+	SOMA_FUNC(e, "const tString& cScript_GetGlobalReturnString()", +[]() -> const tString & {
+		static tString sReturn;
+		sReturn = GetField<tString>(kOhplGs6ScopeReturn, gsNoName, 0);
+		return sReturn;
+	});
+	SOMA_FUNC(e, "bool cScript_GetGlobalReturnBool()", +[]() { return GetField<bool>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "int cScript_GetGlobalReturnInt()", +[]() { return GetField<int>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "float cScript_GetGlobalReturnFloat()", +[]() { return GetField<float>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "cVector2f cScript_GetGlobalReturnVector2f()", +[]() { return GetField<cVector2f>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "cVector3f cScript_GetGlobalReturnVector3f()", +[]() { return GetField<cVector3f>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "cMatrixf cScript_GetGlobalReturnMatrix()", +[]() { return GetField<cMatrixf>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "cColor cScript_GetGlobalReturnColor()", +[]() { return GetField<cColor>(kOhplGs6ScopeReturn, gsNoName, 0); });
+	SOMA_FUNC(e, "tID cScript_GetGlobalReturnID()", +[]() { return GetField<cSomaID>(kOhplGs6ScopeReturn, gsNoName, 0); });
 
 	typedef const tString &S;
 	SOMA_FUNC(e, "const tString &cLux_GetCurrentLanguage()", +[]() -> const tString & { return SomaCurrentLanguage(); });

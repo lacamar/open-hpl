@@ -1,6 +1,7 @@
 #include "SomaScriptStrings.h"
 #include "SomaScriptNatives.h"
 #include "SomaScriptBind.h"
+#include "RustSomaScript.h"
 
 #include "impl/scriptarray.h"
 #include "math/MathTypes.h"
@@ -10,78 +11,41 @@
 #include <cstdio>
 
 using namespace hpl;
+using namespace OhplGs6;
+
+static const unsigned int *W(const tWString &s) { return (const unsigned int *)s.data(); }
 
 static tString FloatToString(float f, int alDecimals, bool abRemoveZeros)
 {
-	char sBuf[64];
-	if (alDecimals < 0)
-		snprintf(sBuf, sizeof(sBuf), "%g", f);
-	else
-		snprintf(sBuf, sizeof(sBuf), "%.*f", alDecimals, f);
-	tString s = sBuf;
-	if (abRemoveZeros && s.find('.') != tString::npos)
-	{
-		while (!s.empty() && s.back() == '0')
-			s.pop_back();
-		if (!s.empty() && s.back() == '.')
-			s.pop_back();
-	}
-	return s;
+	return Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_float_to_string(f, alDecimals, abRemoveZeros, s, c); });
 }
 
-static int FindChar(const tString &s, char c, bool abLast)
+static tString PaddedInt(int x, int p)
 {
-	size_t p = abLast ? s.find_last_of(c) : s.find_first_of(c);
-	return p == tString::npos ? -1 : (int)p;
+	return Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_int_padded(x, p, s, c); });
 }
 
-template <class S> static int FindStr(const S &s, const S &sub, bool abLast)
+static tString Suffix(const tString &s)
 {
-	size_t p = abLast ? s.rfind(sub) : s.find(sub);
-	return p == S::npos ? -1 : (int)p;
+	return Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_numeric_suffix(U(s), s.size(), k, c); });
 }
 
-template <class S> static void SplitInto(const S &asData, const S &asSep, std::vector<S> &aOut)
+static tWString SuffixW(const tWString &s)
 {
-	// Empty separators: cString::GetStringVec's defaults
-	static const S sDefault = {' ', '\n', '\r', '\t', ','};
-	const S &sSep = asSep.empty() ? sDefault : asSep;
-	S sCur;
-	for (auto c : asData)
-	{
-		if (sSep.find(c) != S::npos)
-		{
-			if (!sCur.empty())
-				aOut.push_back(sCur);
-			sCur.clear();
-		}
-		else
-			sCur += c;
-	}
-	if (!sCur.empty())
-		aOut.push_back(sCur);
-}
-
-template <class S> static S NumericSuffix(const S &s)
-{
-	size_t p = s.find_last_not_of(S{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'});
-	return p == S::npos ? s : s.substr(p + 1);
+	return Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_numeric_suffix_w(W(s), s.size(), k, c); });
 }
 
 void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 {
 	RegisterSomaScriptStringConcats(e);
 	SOMA_FUNC(e, "tString cString_ToString(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)", (FloatToString));
-	SOMA_FUNC(e, "tString cString_ToString(int alX, int alPaddingZeros)", +[](int x, int p) { char b[32]; snprintf(b, sizeof(b), "%0*d", p, x); return tString(b); });
+	SOMA_FUNC(e, "tString cString_ToString(int alX, int alPaddingZeros)", +[](int x, int p) { return PaddedInt(x, p); });
 	SOMA_FUNC(e, "tWString cString_ToStringW(float afX, int alNumOfDecimals=-1, bool abRemoveZeros=false)",
 			  +[](float f, int d, bool r) { return cString::To16Char(FloatToString(f, d, r)); });
-	SOMA_FUNC(e, "tWString cString_ToStringW(int alX, int alPaddingZeros)", +[](int x, int p) { char b[32]; snprintf(b, sizeof(b), "%0*d", p, x); return cString::To16Char(b); });
+	SOMA_FUNC(e, "tWString cString_ToStringW(int alX, int alPaddingZeros)", +[](int x, int p) { return cString::To16Char(PaddedInt(x, p)); });
 	SOMA_FUNC(e, "tWString cString_ReplaceStringToW(const tWString&in aString, const tWString&in asOldString,const tWString&in asNewString)",
 			  +[](const tWString &s, const tWString &o, const tWString &n) {
-				  tWString r = s;
-				  for (size_t i = o.empty() ? tWString::npos : r.find(o); i != tWString::npos; i = r.find(o, i + n.size()))
-					  r.replace(i, o.size(), n);
-				  return r;
+				  return Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_replace_w(W(s), s.size(), W(o), o.size(), W(n), n.size(), k, c); });
 			  });
 	SOMA_FUNC(e, "float cString_ToFloat(const tString&in asStr, float afDefault)", +[](const tString &s, float d) { return cString::ToFloat(s.c_str(), d); });
 	SOMA_FUNC(e, "int cString_ToInt(const tString&in asStr, int alDefault)", +[](const tString &s, int d) { return cString::ToInt(s.c_str(), d); });
@@ -89,63 +53,52 @@ void RegisterSomaScriptStringNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "cVector2f cString_ToVector2f(const tString&in asStr, const cVector2f&in avDefault)", +[](const tString &s, const cVector2f &d) { return cString::ToVector2f(s.c_str(), d); });
 	SOMA_FUNC(e, "cVector3f cString_ToVector3f(const tString&in asStr, const cVector3f&in avDefault)", +[](const tString &s, const cVector3f &d) { return cString::ToVector3f(s.c_str(), d); });
 	SOMA_FUNC(e, "cColor cString_ToColor(const tString&in asStr, const cColor&in aDefault)", +[](const tString &s, const cColor &d) { return cString::ToColor(s.c_str(), d); });
-	SOMA_FUNC(e, "tString cString_GetLastChar(const tString&in aString)", +[](const tString &s) { return s.empty() ? tString() : s.substr(s.size() - 1); });
-	SOMA_FUNC(e, "int cString_GetFirstCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return FindChar(s, (char)c, false); });
-	SOMA_FUNC(e, "int cString_GetLastCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return FindChar(s, (char)c, true); });
-	SOMA_FUNC(e, "int cString_GetFirstStringPos(const tString&in aString, const tString&in aChar)", +[](const tString &s, const tString &c) { return FindStr(s, c, false); });
-	SOMA_FUNC(e, "int cString_GetLastStringPos(const tString&in aString, const tString&in aChar)", +[](const tString &s, const tString &c) { return FindStr(s, c, true); });
-	SOMA_FUNC(e, "int cString_GetFirstStringPosW(const tWString&in aString, const tWString&in aChar)", +[](const tWString &s, const tWString &c) { return FindStr(s, c, false); });
-	SOMA_FUNC(e, "int cString_GetLastStringPosW(const tWString&in aString, const tWString&in aChar)", +[](const tWString &s, const tWString &c) { return FindStr(s, c, true); });
+	SOMA_FUNC(e, "tString cString_GetLastChar(const tString&in aString)",
+			  +[](const tString &s) { return Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_last_char(U(s), s.size(), k, c); }); });
+	SOMA_FUNC(e, "int cString_GetFirstCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return ohpl_gs6_find_char(U(s), s.size(), (unsigned char)c, false); });
+	SOMA_FUNC(e, "int cString_GetLastCharPos(const tString&in aString, int8 alChar)", +[](const tString &s, int8_t c) { return ohpl_gs6_find_char(U(s), s.size(), (unsigned char)c, true); });
+	SOMA_FUNC(e, "int cString_GetFirstStringPos(const tString&in aString, const tString&in aChar)",
+			  +[](const tString &s, const tString &c) { return ohpl_gs6_find_str(U(s), s.size(), U(c), c.size(), false); });
+	SOMA_FUNC(e, "int cString_GetLastStringPos(const tString&in aString, const tString&in aChar)",
+			  +[](const tString &s, const tString &c) { return ohpl_gs6_find_str(U(s), s.size(), U(c), c.size(), true); });
+	SOMA_FUNC(e, "int cString_GetFirstStringPosW(const tWString&in aString, const tWString&in aChar)",
+			  +[](const tWString &s, const tWString &c) { return ohpl_gs6_find_str_w(W(s), s.size(), W(c), c.size(), false); });
+	SOMA_FUNC(e, "int cString_GetLastStringPosW(const tWString&in aString, const tWString&in aChar)",
+			  +[](const tWString &s, const tWString &c) { return ohpl_gs6_find_str_w(W(s), s.size(), W(c), c.size(), true); });
 	SOMA_FUNC(e, "int cString_CountCharsInString(const tString&in aString, const tString&in aChar)",
-			  +[](const tString &s, const tString &c) { int n = 0; for (size_t p = s.find(c); !c.empty() && p != tString::npos; p = s.find(c, p + c.size())) ++n; return n; });
+			  +[](const tString &s, const tString &c) { return ohpl_gs6_count_chars(U(s), s.size(), U(c), c.size()); });
 	SOMA_FUNC(e, "tWString cString_GetDecodedString(const tString&in asStr)", +[](const tString &s) { return GetDecodedString(s); });
-	SOMA_FUNC(e, "uint cString_GetHash(const tString&in asStr)", +[](const tString &s) { unsigned int h = 5381; for (char c : s) h = h * 33 + (unsigned char)c; return h; });
-	SOMA_FUNC(e, "tString cString_GetNumericSuffix(const tString&in asStr)", +[](const tString &s) { return NumericSuffix(s); });
-	SOMA_FUNC(e, "tWString cString_GetNumericSuffixW(const tWString&in asStr)", +[](const tWString &s) { return NumericSuffix(s); });
+	SOMA_FUNC(e, "uint cString_GetHash(const tString&in asStr)", +[](const tString &s) { return ohpl_gs6_hash(U(s), s.size()); });
+	SOMA_FUNC(e, "tString cString_GetNumericSuffix(const tString&in asStr)", +[](const tString &s) { return Suffix(s); });
+	SOMA_FUNC(e, "tWString cString_GetNumericSuffixW(const tWString&in asStr)", +[](const tWString &s) { return SuffixW(s); });
 	SOMA_FUNC(e, "int cString_GetNumericSuffixInt(const tString&in aString, int alDefault=0)",
-			  +[](const tString &s, int d) { tString n = NumericSuffix(s); return n.empty() ? d : atoi(n.c_str()); });
+			  +[](const tString &s, int d) { return ohpl_gs6_numeric_suffix_int(U(s), s.size(), d); });
 	SOMA_FUNC(e, "int cString_GetNumericSuffixIntW(const tWString&in aString, int alDefault=0)",
-			  +[](const tWString &s, int d) { tWString n = NumericSuffix(s); return n.empty() ? d : (int)wcstol(n.c_str(), NULL, 10); });
+			  +[](const tWString &s, int d) { return ohpl_gs6_numeric_suffix_int_w(W(s), s.size(), d); });
 	SOMA_FUNC(e, "void cString_GetStringVecW(const tWString&in asData, array<tWString> &inout avOutStrings, const tWString&in asSepp)",
 			  +[](const tWString &asData, CScriptArray &aOut, const tWString &asSep) {
 				  std::vector<tWString> v;
-				  SplitInto(asData, asSep, v);
+				  ohpl_gs6_split_w(W(asData), asData.size(), W(asSep), asSep.size(), AppendWString, &v);
 				  for (tWString &s : v)
 					  aOut.InsertLast(&s);
 			  });
 	SOMA_FUNC(e, "void cString_GetStringVec(const tString&in asData, array<tString> &inout avOutStrings, const tString&in asSepp)",
 			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
 				  std::vector<tString> v;
-				  SplitInto(asData, asSep, v);
+				  ohpl_gs6_split(U(asData), asData.size(), U(asSep), asSep.size(), AppendString, &v);
 				  for (tString &s : v)
 					  aOut.InsertLast(&s);
 			  });
 	SOMA_FUNC(e, "void cString_GetFloatVec(const tString&in asData, array<float> &inout avOutFloats, const tString&in asSepp)",
 			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
-				  std::vector<tString> v;
-				  SplitInto(asData, asSep, v);
-				  for (tString &s : v) { float f = (float)atof(s.c_str()); aOut.InsertLast(&f); }
+				  ohpl_gs6_float_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, float f) { ((CScriptArray *)c)->InsertLast(&f); }, &aOut);
 			  });
 	SOMA_FUNC(e, "void cString_GetIntVec(const tString&in asData, array<int> &inout avOutInts, const tString&in asSepp)",
 			  +[](const tString &asData, CScriptArray &aOut, const tString &asSep) {
-				  std::vector<tString> v;
-				  SplitInto(asData, asSep, v);
-				  for (tString &s : v) { int l = atoi(s.c_str()); aOut.InsertLast(&l); }
+				  ohpl_gs6_int_vec(U(asData), asData.size(), U(asSep), asSep.size(), +[](void *c, int l) { ((CScriptArray *)c)->InsertLast(&l); }, &aOut);
 			  });
 	SOMA_FUNC(e, "tString String_SecondsToClockDisplay(float afSeconds, bool abShowHours, bool abShowMinutes, bool abShowSeconds, bool abShowHundredths)",
 			  +[](float s, bool bH, bool bM, bool bS, bool bC) {
-				  std::vector<int> v;
-				  int h = (int)(s / 3600.0f); s -= (float)(h * 3600); if (bH) v.push_back(h);
-				  int m = (int)(s / 60.0f); s -= (float)(m * 60); if (bM) v.push_back(m);
-				  int sec = (int)s; if (bS) v.push_back(sec);
-				  if (bC) v.push_back((int)((s - (float)sec) * 100.0f));
-				  tString r;
-				  for (size_t i = 0; i < v.size(); ++i)
-				  {
-					  if (i) r += ":";
-					  if (v[i] <= 9) r += "0";
-					  r += cString::ToString(v[i]);
-				  }
-				  return r;
+				  return Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_clock(s, bH, bM, bS, bC, k, c); });
 			  });
 }

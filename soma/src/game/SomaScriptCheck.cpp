@@ -1,4 +1,5 @@
 #include "SomaScriptCheck.h"
+#include "RustSomaScript.h"
 #include "SomaScriptApi.h"
 #include "SomaScriptBuilder.h"
 #include "SomaScriptStrings.h"
@@ -38,44 +39,12 @@ struct cCheckMessages
 
 static std::string JsonEscape(const std::string &s)
 {
-	std::string o;
-	for (char c : s)
-	{
-		if (c == '"' || c == '\\')
-			o += '\\';
-		if (c == '\n')
-		{
-			o += "\\n";
-			continue;
-		}
-		if ((unsigned char)c < 0x20)
-			continue;
-		o += c;
-	}
-	return o;
+	return OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_json_escape(OhplGs6::U(s), s.size(), k, c); });
 }
 
-static void FindMapScripts(const std::string &asDir, std::vector<std::string> &aOut, int alDepth)
+static void FindMapScripts(const std::string &asDir, std::vector<std::string> &aOut)
 {
-	DIR *pDir = opendir(asDir.c_str());
-	if (pDir == NULL || alDepth > 3)
-	{
-		if (pDir)
-			closedir(pDir);
-		return;
-	}
-	while (dirent *pEnt = readdir(pDir))
-	{
-		std::string sName = pEnt->d_name;
-		if (sName == "." || sName == ".." || sName == "maps")
-			continue;
-		std::string sFull = asDir + "/" + sName;
-		if (sName.size() > 4 && sName.compare(sName.size() - 4, 4, ".hps") == 0)
-			aOut.push_back(sFull);
-		else if (pEnt->d_type == DT_DIR || pEnt->d_type == DT_LNK)
-			FindMapScripts(sFull, aOut, alDepth + 1);
-	}
-	closedir(pDir);
+	ohpl_gs6_map_scripts(OhplGs6::U(asDir), asDir.size(), OhplGs6::AppendString, &aOut);
 }
 
 // Stubbed application functions a module calls (asBC_CALLSYS / asBC_Thiscall1 operands), counted once per module
@@ -121,18 +90,20 @@ static void CollectStubCalls(asIScriptModule *apModule, std::map<std::string, in
 static void FindConfigScripts(const std::string &asGameDir, std::vector<std::string> &aOut)
 {
 	const char *vCfgs[] = {"EntityTypes.cfg", "Modules.cfg", "PlayerStates.cfg", "game.cfg", "Effects.cfg"};
-	std::regex re("\"([^\"]+\\.hps)\"", std::regex::icase);
+	std::vector<std::string> vTexts;
 	for (const char *pCfg : vCfgs)
 	{
 		std::ifstream f((asGameDir + "/config/" + pCfg).c_str());
 		std::stringstream ss;
 		ss << f.rdbuf();
-		std::string s = ss.str();
-		for (std::sregex_iterator it(s.begin(), s.end(), re), end; it != end; ++it)
-			aOut.push_back((*it)[1]);
+		vTexts.push_back(ss.str());
 	}
-	std::sort(aOut.begin(), aOut.end());
-	aOut.erase(std::unique(aOut.begin(), aOut.end()), aOut.end());
+	std::vector<OhplGs6Str> vFiles;
+	for (const std::string &sText : vTexts)
+		vFiles.push_back(OhplGs6::Str(sText));
+	std::vector<std::string> vFound;
+	ohpl_gs6_config_scripts(vFiles.data(), vFiles.size(), OhplGs6::AppendString, &vFound);
+	aOut.insert(aOut.end(), vFound.begin(), vFound.end());
 }
 
 int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFile, const std::string &asReport)
@@ -179,7 +150,7 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 		std::string sPath = builder.Resolve(s, asGameDir + "/script/");
 		s = sPath.empty() ? asGameDir + "/script/" + s : sPath;
 	}
-	FindMapScripts(asGameDir + "/maps", vEntries, 0);
+	FindMapScripts(asGameDir + "/maps", vEntries);
 
 	std::ofstream out(asReport.c_str());
 	out << "{\"api_errors\":[";
@@ -208,7 +179,9 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 		out << (i ? "," : "") << "\"" << JsonEscape(sRel) << "\":{\"ok\":" << (r >= 0 ? "true" : "false")
 			<< ",\"missing_include\":\"" << JsonEscape(sMissing) << "\",\"error_count\":" << msgs.mvErrors.size() << ",\"errors\":[";
 		for (size_t j = 0; j < msgs.mvErrors.size() && j < 20; ++j)
-			out << (j ? "," : "") << "\"" << JsonEscape(msgs.mvErrors[j].substr(msgs.mvErrors[j].find("/script/") != std::string::npos ? msgs.mvErrors[j].find("/script/") + 1 : 0)) << "\"";
+			out << (j ? "," : "") << "\""
+				<< JsonEscape(OhplGs6::Call8([&](OhplGs6Sink8 k, void *c) { ohpl_gs6_from_script_dir(OhplGs6::U(msgs.mvErrors[j]), msgs.mvErrors[j].size(), k, c); }))
+				<< "\"";
 		out << "]}";
 		if (asIScriptModule *pModule = pEngine->GetModule(("check_" + std::to_string(i)).c_str()))
 			CollectStubCalls(pModule, mapStubModules);
@@ -216,9 +189,19 @@ int RunSomaScriptCheck(const std::string &asGameDir, const std::string &asApiFil
 	}
 	int lTotal = (int)vEntries.size() - lMissing;
 	std::vector<std::pair<int, std::string>> vStubs;
-	for (auto &it : mapStubModules)
-		vStubs.push_back(std::make_pair(it.second, it.first));
-	std::sort(vStubs.rbegin(), vStubs.rend());
+	{
+		std::vector<OhplGs6Str> vNames;
+		std::vector<int> vCounts;
+		for (auto &it : mapStubModules)
+		{
+			vNames.push_back(OhplGs6::Str(it.first));
+			vCounts.push_back(it.second);
+		}
+		std::vector<size_t> vOrder(vNames.size());
+		ohpl_gs6_stub_order(vNames.data(), vCounts.data(), vNames.size(), vOrder.data());
+		for (size_t lIdx : vOrder)
+			vStubs.push_back(std::make_pair(vCounts[lIdx], std::string((const char *)vNames[lIdx].ptr, vNames[lIdx].len)));
+	}
 	out << "},\"stub_calls\":{";
 	for (size_t i = 0; i < vStubs.size(); ++i)
 		out << (i ? "," : "") << "\"" << JsonEscape(vStubs[i].second) << "\":" << vStubs[i].first;
