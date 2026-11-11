@@ -4,14 +4,11 @@
 #include "SomaScriptBind.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
-#include "impl/tinyXML/tinyxml.h"
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <sstream>
-
-typedef cSomaSoundEvents::cEvent cEvent;
 
 namespace
 {
@@ -30,10 +27,83 @@ public:
 	void OnPauseUpdate(float afTimeStep) { cSomaSoundEvents::Get()->Update(afTimeStep); }
 };
 
-float DbToGain(float afDb) { return std::pow(10.0f, afDb / 20.0f); }
-float RandDb(float afRandDb) { return afRandDb < 0 ? DbToGain(cMath::RandRectf(afRandDb, 0)) : 1.0f; }
-float RandRange(float afMin, float afMax) { return afMax > afMin ? cMath::RandRectf(afMin, afMax) : afMin; }
+const unsigned char *U(const tString &s) { return (const unsigned char *)s.data(); }
+
+void SinkString(void *apCtx, const unsigned char *apData, size_t alLen) { static_cast<tString *>(apCtx)->assign((const char *)apData, alLen); }
+
+struct cSoundHost
+{
+	static bool Valid(void *, size_t e, int id) { return Handler()->IsValid((cSoundEntry *)e, id); }
+	static bool Play(void *, const OhplGs5PlayReq *r, size_t *pEntry, int *pId)
+	{
+		tString sFile((const char *)r->file, r->file_len);
+		cVector3f vPos(r->pos[0], r->pos[1], r->pos[2]);
+		cSoundEntry *p;
+		if (r->kind == 0)
+			p = Handler()->Play(sFile, r->looped, 0, vPos, 1e5f, 2e5f, (eSoundEntryType)r->entry_type, false, true, 0, r->stream);
+		else if (r->kind == 1)
+			p = Handler()->PlayGuiStream(sFile, r->looped, 0, vPos, (eSoundEntryType)r->entry_type);
+		else
+			p = Handler()->PlayGui(sFile, r->looped, 0, vPos, (eSoundEntryType)r->entry_type);
+		if (p == NULL)
+			return false;
+		*pEntry = (size_t)p;
+		*pId = p->GetId();
+		return true;
+	}
+	static void Stop(void *, size_t e) { ((cSoundEntry *)e)->Stop(); }
+	static void Pause(void *, size_t e, bool b) { ((cSoundEntry *)e)->SetPaused(b); }
+	static double TotalTime(void *, size_t e) { return ((cSoundEntry *)e)->GetChannel()->GetTotalTime(); }
+	static void SetLooping(void *, size_t e, bool b) { ((cSoundEntry *)e)->GetChannel()->SetLooping(b); }
+	static void SetFilter(void *, size_t e, int which, float f)
+	{
+		iSoundChannel *pCh = ((cSoundEntry *)e)->GetChannel();
+		if (which == 0)
+			pCh->SetFilterGainHF(f);
+		else if (which == 1)
+			pCh->SetFilterGainLF(f);
+		else
+			pCh->SetEnvSendGain(f);
+	}
+	static void SetPosition(void *, size_t e, const float *v) { ((cSoundEntry *)e)->GetChannel()->SetPosition(cVector3f(v[0], v[1], v[2])); }
+	static void SetDefaultVolume(void *, size_t e, float f) { ((cSoundEntry *)e)->SetDefaultVolume(f); }
+	static void SetDefaultSpeed(void *, size_t e, float f) { ((cSoundEntry *)e)->SetDefaultSpeed(f); }
+	static void Listener(void *, float *o)
+	{
+		iLowLevelSound *pLow = gpSomaBase->mpEngine->GetSound()->GetLowLevel();
+		cVector3f p = pLow->GetListenerPosition(), f = pLow->GetListenerForward(), u = pLow->GetListenerUp();
+		o[0] = p.x; o[1] = p.y; o[2] = p.z; o[3] = f.x; o[4] = f.y; o[5] = f.z; o[6] = u.x; o[7] = u.y; o[8] = u.z;
+	}
+	static void Entity(void *, size_t e, float *o)
+	{
+		cSoundEntity *p = (cSoundEntity *)e;
+		cVector3f v = p->GetWorldPosition();
+		o[0] = v.x; o[1] = v.y; o[2] = v.z;
+		o[3] = p->GetMinDistance();
+		o[4] = p->GetMaxDistance();
+		o[5] = p->GetVolume();
+	}
+};
+
+const OhplGs5Host *Host()
+{
+	static const OhplGs5Host host = {NULL, cSoundHost::Valid, cSoundHost::Play, cSoundHost::Stop, cSoundHost::Pause, cSoundHost::TotalTime,
+									 cSoundHost::SetLooping, cSoundHost::SetFilter, cSoundHost::SetPosition, cSoundHost::SetDefaultVolume,
+									 cSoundHost::SetDefaultSpeed, cSoundHost::Listener, cSoundHost::Entity};
+	return &host;
+}
+
+OhplGs5Bank *Bank() { return cSomaSoundEvents::Get()->GetBank(); }
+
+tString EventName(OhplGs5Bank *apBank, size_t alEvent)
+{
+	tString s;
+	ohpl_gs5_ev_name(apBank, alEvent, SinkString, &s);
+	return s;
+}
 } // namespace
+
+cSomaSoundEvents::cSomaSoundEvents() : mpBank(ohpl_gs5_bank_new()) {}
 
 cSomaSoundEvents *cSomaSoundEvents::Get()
 {
@@ -41,221 +111,46 @@ cSomaSoundEvents *cSomaSoundEvents::Get()
 	return &events;
 }
 
-static tString Text(TiXmlElement *apElem, const char *apChild, const tString &asDefault = "")
-{
-	TiXmlElement *pChild = apElem ? apElem->FirstChildElement(apChild) : NULL;
-	return pChild && pChild->GetText() ? tString(pChild->GetText()) : asDefault;
-}
-
-static float Num(TiXmlElement *apElem, const char *apChild, float afDefault = 0)
-{
-	return cString::ToFloat(Text(apElem, apChild).c_str(), afDefault);
-}
-
-static std::vector<TiXmlElement *> Children(TiXmlElement *apElem, const char *apName)
-{
-	std::vector<TiXmlElement *> v;
-	for (TiXmlElement *p = apElem->FirstChildElement(apName); p; p = p->NextSiblingElement(apName))
-		v.push_back(p);
-	return v;
-}
-
-float cSomaSoundEvents::cEnvelope::Eval(float afX) const
-{
-	if (mvPoints.empty())
-		return 1;
-	if (afX <= mvPoints.front().x)
-		return mvPoints.front().y;
-	for (size_t i = 1; i < mvPoints.size(); ++i)
-		if (afX <= mvPoints[i].x)
-		{
-			const cVector2f &a = mvPoints[i - 1], &b = mvPoints[i];
-			float t = b.x > a.x ? (afX - a.x) / (b.x - a.x) : 1;
-			return a.y + (b.y - a.y) * t;
-		}
-	return mvPoints.back().y;
-}
-
-bool cSomaSoundEvents::cEvent::HasFiles() const
-{
-	for (const cSoundDef &d : mvDefs)
-		for (const tString &f : d.mvFiles)
-			if (f != "")
-				return true;
-	return false;
-}
-
 void cSomaSoundEvents::LoadProject(const tString &asProject)
 {
 	tString sKey = cString::ToLowerCase(asProject);
-	if (msetProjects.insert(sKey).second == false)
+	if (ohpl_gs5_ev_mark_project(mpBank, U(sKey), sKey.size()) == false)
 		return;
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
-	TiXmlDocument doc;
 	tWString sFdp = pRes->GetFileSearcher()->GetFilePath(asProject + ".fdp");
 	FILE *pFile = cPlatform::OpenFile(sFdp, _W("rb"));
-	bool bLoaded = pFile && doc.LoadFile(pFile);
+	std::vector<unsigned char> vData;
+	bool bReadOk = true;
 	if (pFile)
+	{
+		fseek(pFile, 0, SEEK_END);
+		long lLength = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		if (lLength > 0)
+		{
+			vData.resize(lLength);
+			bReadOk = fread(vData.data(), lLength, 1, pFile) == 1;
+		}
 		fclose(pFile);
-	TiXmlElement *pDoc = doc.RootElement();
-	if (bLoaded == false || pDoc == NULL)
+	}
+	tString sProject;
+	int lCount = 0;
+	if (pFile == NULL || ohpl_gs5_ev_load_fdp(mpBank, vData.data(), vData.size(), bReadOk, U(asProject), asProject.size(), SinkString, &sProject, &lCount) == false)
 	{
 		Warning("SOMA sound: no event project '%s'\n", asProject.c_str());
 		return;
 	}
 
-	std::map<tString, cSoundDef> mapDefs;
-	std::function<void(TiXmlElement *)> readDefs = [&](TiXmlElement *apFolder) {
-		for (TiXmlElement *pDef : Children(apFolder, "sounddef"))
-		{
-			cSoundDef &d = mapDefs[Text(pDef, "name")];
-			tString sType = Text(pDef, "type");
-			d.mbSequential = sType.compare(0, 10, "sequential") == 0;
-			d.mfVolume = DbToGain(Num(pDef, "volume_db"));
-			d.mfVolumeRandDb = Num(pDef, "volume_randomization");
-			d.mfPitch = Num(pDef, "pitch");
-			d.mfPitchRand = Num(pDef, "pitch_randomization");
-			d.mfSpawnMin = Num(pDef, "spawntime_min") / 1000.0f;
-			d.mfSpawnMax = Num(pDef, "spawntime_max") / 1000.0f;
-			d.mlSpawnCount = std::max(1, (int)Num(pDef, "spawn_max", 1));
-			d.mfDelayMin = Num(pDef, "trigger_delay_min") / 1000.0f;
-			d.mfDelayMax = Num(pDef, "trigger_delay_max") / 1000.0f;
-			for (TiXmlElement *pWave : Children(pDef, "waveform"))
-			{
-				tString sFile = Text(pWave, "filename");
-				if (sFile != "")
-					d.mvWaves.push_back(cWave{Text(pWave, "soundbankname"), cString::SetFileExt(cString::GetFileName(sFile), "")});
-			}
-		}
-		for (TiXmlElement *pSub : Children(apFolder, "sounddeffolder"))
-			readDefs(pSub);
-	};
-	readDefs(pDoc);
-
-	static const std::map<tString, int> mapBehavior = {
-		{"Steal_oldest", eMaxBehavior_StealOldest}, {"Steal_newest", eMaxBehavior_StealNewest}, {"Steal_quietest", eMaxBehavior_StealQuietest},
-		{"Just_fail", eMaxBehavior_JustFail}, {"Just_fail_if_quietest", eMaxBehavior_JustFailIfQuietest}};
-	static const std::map<tString, int> mapRolloff = {
-		{"Linear", eRolloff_Linear}, {"LinearSquare", eRolloff_LinearSquare}, {"Logarithmic", eRolloff_Log}, {"Custom", eRolloff_Custom}};
-
-	tString sProject = Text(pDoc, "name", asProject);
-	int lCount = 0;
-	std::function<void(TiXmlElement *, const tString &)> readGroup = [&](TiXmlElement *apGroup, const tString &asPath) {
-		std::vector<TiXmlElement *> vEvents = Children(apGroup, "event");
-		for (TiXmlElement *pSimple : Children(apGroup, "simpleevent"))
-			for (TiXmlElement *pEvent : Children(pSimple, "event"))
-				vEvents.push_back(pEvent);
-		for (TiXmlElement *pEvent : vEvents)
-		{
-			cEvent ev;
-			ev.msName = asPath + "/" + Text(pEvent, "name");
-			ev.mfVolume = DbToGain(Num(pEvent, "volume_db"));
-			ev.mfVolumeRandDb = Num(pEvent, "volume_randomization");
-			ev.mfPitch = Num(pEvent, "pitch");
-			ev.mfPitchRand = Num(pEvent, "pitch_randomization");
-			ev.mb3D = Text(pEvent, "mode") == "x_3d";
-			ev.mfPanLevel = Num(pEvent, "panlevel3d", 1);
-			ev.mfReverbGain = std::pow(10.0f, Num(pEvent, "reverblevel_db") / 20);
-			ev.mbOneShot = Text(pEvent, "oneshot", "Yes") != "No";
-			ev.mfMinDist = Num(pEvent, "mindistance", 1);
-			ev.mfMaxDist = Num(pEvent, "maxdistance", 20);
-			auto rolloff = mapRolloff.find(Text(pEvent, "rolloff"));
-			ev.mlRolloff = rolloff != mapRolloff.end() ? rolloff->second : eRolloff_Log;
-			ev.mlMaxPlaybacks = (int)Num(pEvent, "maxplaybacks");
-			auto behavior = mapBehavior.find(Text(pEvent, "maxplaybacks_behavior"));
-			ev.mlMaxBehavior = behavior != mapBehavior.end() ? behavior->second : eMaxBehavior_StealOldest;
-			ev.mfFadeIn = Num(pEvent, "fadein_time") / 1000.0f;
-			ev.mfFadeOut = Num(pEvent, "fadeout_time") / 1000.0f;
-			tString sCat = cString::ToLowerCase(Text(pEvent, "category"));
-			sCat = sCat.substr(0, sCat.find('/'));
-			ev.mlCategoryType = sCat == "world" ? 1 : sCat == "worldclean" ? 2 : sCat == "gui" ? 4 : sCat == "guiworld" ? 8 : -1;
-
-			for (TiXmlElement *pParam : Children(pEvent, "parameter"))
-			{
-				cParam p;
-				p.msName = Text(pParam, "name");
-				p.mfMin = Num(pParam, "rangemin");
-				p.mfMax = Num(pParam, "rangemax", 1);
-				p.mfVelocity = Num(pParam, "velocity");
-				p.mfSeek = Num(pParam, "seekspeed");
-				p.mlLoopMode = (int)Num(pParam, "loopmode");
-				if (TiXmlElement *pSustain = pParam->FirstChildElement("sustainpoint"); pSustain && Num(pSustain, "enabled"))
-					p.mfSustain = Num(pSustain, "value");
-				p.mlBuiltin = p.msName == "(distance)" ? 1 : p.msName == "(listener angle)" ? 2 : p.msName == "(event angle)" ? 3 : 0;
-				ev.mvParams.push_back(p);
-			}
-			auto paramIdx = [&](const tString &asName) {
-				for (size_t i = 0; i < ev.mvParams.size(); ++i)
-					if (ev.mvParams[i].msName == asName)
-						return (int)i;
-				return -1;
-			};
-
-			std::map<tString, int> mapLocalDefs;
-			for (TiXmlElement *pLayer : Children(pEvent, "layer"))
-			{
-				if (Text(pLayer, "mute") == "1")
-					continue;
-				cLayer layer;
-				layer.mlParam = paramIdx(Text(pLayer, "controlparameter"));
-				for (TiXmlElement *pSound : Children(pLayer, "sound"))
-				{
-					auto def = mapDefs.find(Text(pSound, "name"));
-					if (def == mapDefs.end())
-						continue;
-					auto local = mapLocalDefs.find(def->first);
-					if (local == mapLocalDefs.end())
-					{
-						local = mapLocalDefs.insert({def->first, (int)ev.mvDefs.size()}).first;
-						ev.mvDefs.push_back(def->second);
-					}
-					cLayerSound s;
-					s.mlDef = local->second;
-					s.mfVolume = Num(pSound, "volume", 1);
-					s.mlLoopMode = (int)Num(pSound, "loopmode", 1);
-					s.mfX0 = Num(pSound, "x");
-					s.mfX1 = s.mfX0 + Num(pSound, "width", 1);
-					layer.mvSounds.push_back(s);
-				}
-				for (TiXmlElement *pEnv : Children(pLayer, "envelope"))
-				{
-					static const std::map<tString, int> mapDsp = {{"Volume", eDsp_Volume}, {"FMOD ParamEQ", eDsp_EqGain}, {"FMOD Lowpass", eDsp_Lowpass},
-						{"FMOD Lowpass Simple", eDsp_Lowpass}, {"FMOD Highpass", eDsp_Highpass}, {"FMOD Highpass Simple", eDsp_Highpass}, {"Pitch", eDsp_Pitch}, {"3D Pan Level", eDsp_PanLevel}, {"Reverb Level", eDsp_ReverbLevel}};
-					auto dsp = mapDsp.find(Text(pEnv, "dsp_name"));
-					int lParamIdx = (int)Num(pEnv, "dsp_paramindex");
-					if (dsp == mapDsp.end() || lParamIdx != (dsp->second == eDsp_EqGain ? 2 : 0) || Text(pEnv, "mute") == "1")
-						continue;
-					cEnvelope env;
-					env.mlDsp = dsp->second;
-					env.mlParam = paramIdx(Text(pEnv, "controlparameter"));
-					for (TiXmlElement *pPoint : Children(pEnv, "point"))
-					{
-						tStringVec vNums;
-						cString::GetStringVec(pPoint->GetText() ? pPoint->GetText() : "", vNums, NULL);
-						if (vNums.size() >= 2)
-							env.mvPoints.push_back(cVector2f(cString::ToFloat(vNums[0].c_str(), 0), cString::ToFloat(vNums[1].c_str(), 1)));
-					}
-					layer.mvEnvelopes.push_back(env);
-				}
-				if (layer.mvSounds.empty() == false)
-					ev.mvLayers.push_back(layer);
-			}
-			mmapEvents[cString::ToLowerCase(ev.msName)] = ev;
-			++lCount;
-		}
-		for (TiXmlElement *pSub : Children(apGroup, "eventgroup"))
-			readGroup(pSub, asPath + "/" + Text(pSub, "name"));
-	};
-	readGroup(pDoc, sProject);
-
 	// One pass per bank: banks are large and read whole
 	tWString sCacheDir = cSomaFsb::GetCacheDir(_W("events-v4"));
 	std::map<tString, std::set<tString>> mapByBank;
-	for (auto &it : mmapEvents)
-		if (it.first.compare(0, sKey.size() + 1, sKey + "/") == 0)
-			for (const cSoundDef &d : it.second.mvDefs)
-				for (const cWave &w : d.mvWaves)
-					mapByBank[w.msBank].insert(w.msSample);
+	struct cWanted
+	{
+		std::map<tString, std::set<tString>> *mpMap;
+	} wanted = {&mapByBank};
+	ohpl_gs5_ev_wanted(mpBank, U(sKey), sKey.size(), +[](void *c, const unsigned char *b, size_t bn, const unsigned char *s, size_t sn) {
+		(*static_cast<cWanted *>(c)->mpMap)[tString((const char *)b, bn)].insert(tString((const char *)s, sn));
+	}, &wanted);
 	std::map<tString, tString> mapFiles;
 	for (auto &bank : mapByBank)
 	{
@@ -273,17 +168,10 @@ void cSomaSoundEvents::LoadProject(const tString &asProject)
 		for (auto &f : mapBankFiles)
 			mapFiles[bank.first + "__" + f.first] = f.second;
 	}
-	for (auto &it : mmapEvents)
-		if (it.first.compare(0, sKey.size() + 1, sKey + "/") == 0 && it.second.mbLoaded == false)
-		{
-			for (cSoundDef &d : it.second.mvDefs)
-				for (const cWave &w : d.mvWaves)
-				{
-					auto f = mapFiles.find(w.msBank + "__" + w.msSample);
-					d.mvFiles.push_back(f != mapFiles.end() ? f->second : "");
-				}
-			it.second.mbLoaded = true;
-		}
+	std::vector<OhplGs5FilePair> vPairs;
+	for (auto &f : mapFiles)
+		vPairs.push_back({U(f.first), f.first.size(), U(f.second), f.second.size()});
+	ohpl_gs5_ev_assign(mpBank, U(sKey), sKey.size(), vPairs.data(), vPairs.size());
 	cFileSearcher *pSearcher = pRes->GetFileSearcher();
 	if (std::any_of(mapFiles.begin(), mapFiles.end(), [&](auto &f) { return pSearcher->GetFilePath(f.second) == _W(""); }))
 		pRes->AddResourceDir(sCacheDir, false);
@@ -295,79 +183,55 @@ void cSomaSoundEvents::PreloadProject(const tString &asProject)
 	LoadProject(asProject);
 }
 
-cEvent *cSomaSoundEvents::GetEvent(const tString &asName)
+int cSomaSoundEvents::GetEvent(const tString &asName)
 {
-	if (asName.empty() || cString::GetFileExt(asName) != "")
-		return NULL;
-	tString sKey = cString::ToLowerCase(asName);
-	size_t lSlash = sKey.find('/');
-	if (lSlash == tString::npos)
-		return NULL;
-	LoadProject(asName.substr(0, lSlash));
-	auto it = mmapEvents.find(sKey);
-	return it == mmapEvents.end() ? NULL : &it->second;
-}
-
-cEvent *cSomaSoundEvents::FileEvent(const tString &asFile, bool abLoop, bool abStream)
-{
-	tString sKey = "file:" + cString::ToLowerCase(asFile) + (abLoop ? ":loop" : "") + (abStream ? ":stream" : "");
-	cEvent &ev = mmapEvents[sKey];
-	if (ev.mbLoaded)
-		return &ev;
-	ev.msName = asFile;
-	ev.mb3D = false;
-	ev.mbOneShot = abLoop == false;
-	ev.mbStream = abStream;
-	ev.mvDefs.resize(1);
-	ev.mvDefs[0].mvFiles.push_back(asFile);
-	ev.mvLayers.resize(1);
-	ev.mvLayers[0].mvSounds.resize(1);
-	ev.mvLayers[0].mvSounds[0].mlDef = 0;
-	ev.mvLayers[0].mvSounds[0].mlLoopMode = abLoop ? 0 : 1;
-	ev.mbLoaded = true;
-	return &ev;
+	int64_t lProject = ohpl_gs5_ev_project_len(U(asName), asName.size());
+	if (lProject < 0)
+		return -1;
+	LoadProject(asName.substr(0, lProject));
+	return (int)ohpl_gs5_ev_find(mpBank, U(asName), asName.size());
 }
 
 cSoundEntityData *cSomaSoundEvents::Resolve(const tString &asEvent)
 {
-	cEvent *pEvent = GetEvent(asEvent);
-	if (pEvent == NULL)
+	int lEvent = GetEvent(asEvent);
+	if (lEvent < 0)
 		return NULL;
-	if (pEvent->mpData)
-		return pEvent->mpData;
-	if (pEvent->HasFiles() == false)
+	OhplGs5EventInfo info;
+	ohpl_gs5_ev_info(mpBank, lEvent, &info);
+	if (info.data)
+		return (cSoundEntityData *)info.data;
+	if (info.has_files == false)
 	{
-		if (pEvent->mvDefs.empty() == false)
+		if (info.has_defs)
 			Warning("SOMA sound: event '%s' has no playable samples\n", asEvent.c_str());
 		return NULL;
 	}
 
 	cResources *pRes = gpSomaBase->mpEngine->GetResources();
 	cSoundEntityData *pData = hplNew(cSoundEntityData, (cString::ToLowerCase(asEvent), pRes, gpSomaBase->mpEngine->GetSound()));
-	for (const cSoundDef &d : pEvent->mvDefs)
-		for (const tString &f : d.mvFiles)
-			if (f != "")
-				pData->AddSoundName(f, eSoundEntityType_Main);
+	ohpl_gs5_ev_files(mpBank, lEvent, +[](void *c, const unsigned char *f, size_t n) {
+		static_cast<cSoundEntityData *>(c)->AddSoundName(tString((const char *)f, n), eSoundEntityType_Main);
+	}, pData);
 	pData->SetVolume(1);
-	pData->SetMinDistance(pEvent->mfMinDist);
-	pData->SetMaxDistance(pEvent->mfMaxDist);
-	pData->SetLoop(pEvent->mbOneShot == false);
-	pData->SetUse3D(pEvent->mb3D);
+	pData->SetMinDistance(info.min_dist);
+	pData->SetMaxDistance(info.max_dist);
+	pData->SetLoop(info.one_shot == false);
+	pData->SetUse3D(info.is_3d);
 	pData->SetStream(false);
 	pData->SetFadeStart(false);
 	pData->SetFadeStop(false);
-	pEvent->mpData = pData;
-	mmapDataEvents[pData] = pEvent;
+	ohpl_gs5_ev_set_data(mpBank, lEvent, (size_t)pData);
 
 	static bool bFactory = false;
 	if (bFactory == false)
 	{
 		bFactory = true;
 		cSoundEntity::SetEventFactory(+[](cSoundEntity *apEntity) -> iSoundEntityEvent * {
-			auto it = Get()->mmapDataEvents.find(apEntity->GetData());
-			if (it == Get()->mmapDataEvents.end())
+			int64_t lIdx = ohpl_gs5_ev_of_data(Bank(), (size_t)apEntity->GetData());
+			if (lIdx < 0)
 				return NULL;
-			return hplNew(cSomaSoundInstance, (it->second, apEntity->GetName(), apEntity, eSoundEntryType_World));
+			return hplNew(cSomaSoundInstance, ((size_t)lIdx, apEntity->GetName(), apEntity, eSoundEntryType_World));
 		});
 	}
 	return pData;
@@ -375,14 +239,16 @@ cSoundEntityData *cSomaSoundEvents::Resolve(const tString &asEvent)
 
 cSomaSoundInstance *cSomaSoundEvents::PlayGui(const tString &asEvent, float afVolume, int alEntryType, bool abLoop, bool abStream)
 {
-	cEvent *pEvent = GetEvent(asEvent);
-	if (pEvent == NULL && cString::GetFileExt(asEvent) == "" && asEvent.find('/') != tString::npos)
+	int lEvent = GetEvent(asEvent);
+	if (lEvent < 0 && cString::GetFileExt(asEvent) == "" && asEvent.find('/') != tString::npos)
 		return NULL;
-	if (pEvent == NULL)
-		pEvent = FileEvent(asEvent, abLoop, abStream);
-	if (pEvent->HasFiles() == false)
+	if (lEvent < 0)
+		lEvent = (int)ohpl_gs5_ev_file_event(mpBank, U(asEvent), asEvent.size(), abLoop, abStream);
+	OhplGs5EventInfo info;
+	ohpl_gs5_ev_info(mpBank, lEvent, &info);
+	if (info.has_files == false)
 		return NULL;
-	cSomaSoundInstance *pInst = hplNew(cSomaSoundInstance, (pEvent, pEvent->msName, NULL, (eSoundEntryType)alEntryType));
+	cSomaSoundInstance *pInst = hplNew(cSomaSoundInstance, ((size_t)lEvent, EventName(mpBank, lEvent), NULL, (eSoundEntryType)alEntryType));
 	pInst->SetVolume(afVolume);
 	pInst->Play();
 	if (pInst->IsActive() == false)
@@ -395,13 +261,14 @@ cSomaSoundInstance *cSomaSoundEvents::PlayGui(const tString &asEvent, float afVo
 
 cSomaSoundInstance *cSomaSoundEvents::Play3D(const tString &asEvent, float afVolume, const cVector3f &avPos, int alEntryType)
 {
-	cEvent *pEvent = GetEvent(asEvent);
-	if (pEvent == NULL || pEvent->HasFiles() == false)
+	int lEvent = GetEvent(asEvent);
+	OhplGs5EventInfo info;
+	if (lEvent < 0 || ohpl_gs5_ev_info(mpBank, lEvent, &info) == false || info.has_files == false)
 		return NULL;
-	cSomaSoundInstance *pInst = hplNew(cSomaSoundInstance, (pEvent, pEvent->msName, NULL, (eSoundEntryType)alEntryType));
+	cSomaSoundInstance *pInst = hplNew(cSomaSoundInstance, ((size_t)lEvent, EventName(mpBank, lEvent), NULL, (eSoundEntryType)alEntryType));
 	pInst->SetVolume(afVolume);
 	pInst->SetPosition(avPos);
-	pInst->mb3DPlay = pEvent->mb3D;
+	pInst->mpS->play_3d = info.is_3d;
 	pInst->Play();
 	if (pInst->IsActive() == false)
 	{
@@ -449,11 +316,14 @@ bool cSomaSoundEvents::IsLive(cSomaSoundInstance *apInstance, int alId)
 	return it != mmapLive.end() && (alId < 0 || it->second == alId);
 }
 
-cSomaSoundInstance::cSomaSoundInstance(cEvent *apEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType)
-	: mpEvent(apEvent), msName(asName), mpEntity(apEntity), mType(apEvent->mlCategoryType >= 0 ? (eSoundEntryType)apEvent->mlCategoryType : aType)
+cSomaSoundInstance::cSomaSoundInstance(size_t alEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType)
+	: msName(asName), mpEntity(apEntity)
 {
 	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
-	mlId = pEvents->mlNextId++;
+	mlH = ohpl_gs5_inst_new(pEvents->mpBank, alEvent, (size_t)apEntity, apEntity != NULL, (int)aType);
+	mpS = ohpl_gs5_inst_state(pEvents->mpBank, mlH);
+	ohpl_gs5_ev_info(pEvents->mpBank, alEvent, &mEvent);
+	mlId = mpS->id;
 	pEvents->mlstInstances.push_back(this);
 	pEvents->mmapLive[this] = mlId;
 	if (pEvents->mbUpdaterAdded == false)
@@ -461,536 +331,69 @@ cSomaSoundInstance::cSomaSoundInstance(cEvent *apEvent, const tString &asName, c
 		pEvents->mbUpdaterAdded = true;
 		gpSomaBase->mpEngine->GetUpdater()->AddGlobalUpdate(hplNew(cSomaSoundUpdater, ()));
 	}
-	mb3DPlay = mpEntity && mpEvent->mb3D;
-	for (const cSomaSoundEvents::cParam &p : mpEvent->mvParams)
-		mvParamValue.push_back(p.mfMin);
-	mvParamTarget = mvParamValue;
 }
 
 cSomaSoundInstance::~cSomaSoundInstance()
 {
-	for (cVoice &v : mvVoices)
-		if (Handler()->IsValid(v.mpEntry, v.mlEntryId))
-			v.mpEntry->Stop();
 	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
+	ohpl_gs5_inst_destroy(pEvents->mpBank, Host(), mlH);
 	pEvents->mlstInstances.remove(this);
 	pEvents->mmapLive.erase(this);
 }
 
-void cSomaSoundInstance::Play()
-{
-	if (mbStarted && mbStopped == false)
-		return;
-	StopNow();
-	Start();
-}
-
-void cSomaSoundInstance::Start()
-{
-	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
-	if (mpEvent->mlMaxPlaybacks > 0)
-	{
-		std::vector<cSomaSoundInstance *> vSame;
-		for (cSomaSoundInstance *p : pEvents->mlstInstances)
-			if (p != this && p->mpEvent == mpEvent && p->mbStarted && p->mbStopped == false)
-				vSame.push_back(p);
-		if ((int)vSame.size() >= mpEvent->mlMaxPlaybacks)
-		{
-			cSomaSoundInstance *pSteal = NULL;
-			switch (mpEvent->mlMaxBehavior)
-			{
-			case cSomaSoundEvents::eMaxBehavior_StealOldest: pSteal = vSame.front(); break;
-			case cSomaSoundEvents::eMaxBehavior_StealNewest: pSteal = vSame.back(); break;
-			case cSomaSoundEvents::eMaxBehavior_StealQuietest:
-				pSteal = vSame.front();
-				for (cSomaSoundInstance *p : vSame)
-					if (p->mfAudibility < pSteal->mfAudibility)
-						pSteal = p;
-				break;
-			default: break;
-			}
-			if (pSteal == NULL)
-			{
-				// official cSoundEntity::PlaySoundEvent stops only oneshots here, loops retry
-				// official PlaySoundEvent gives up after 201 failed starts
-				mbStarted = mbStopped = mpEvent->mbOneShot || mpEntity == NULL || ++mlStartFails > 201;
-				return;
-			}
-			pSteal->StopNow();
-		}
-	}
-	mbStarted = true;
-	mbStopped = false;
-	mbStopAtFadeEnd = false;
-	mfTime = 0;
-	mfRandGain = RandDb(mpEvent->mfVolumeRandDb);
-	mfRandPitch = cMath::RandRectf(-mpEvent->mfPitchRand, mpEvent->mfPitchRand);
-	mvSlots.assign(mpEvent->mvLayers.size(), std::vector<cSlot>());
-	for (size_t i = 0; i < mpEvent->mvLayers.size(); ++i)
-		mvSlots[i].resize(mpEvent->mvLayers[i].mvSounds.size());
-	if (mpEvent->mfFadeIn > 0)
-	{
-		mfFade = 0;
-		mfFadeDest = 1;
-		mfFadeSpeed = 1.0f / mpEvent->mfFadeIn;
-	}
-}
-
-void cSomaSoundInstance::StopNow()
-{
-	for (cVoice &v : mvVoices)
-		if (Handler()->IsValid(v.mpEntry, v.mlEntryId))
-			v.mpEntry->Stop();
-	mvVoices.clear();
-	mbStopped = true;
-	mfAudibility = 0;
-}
-
-void cSomaSoundInstance::Stop(bool abPlayEnd)
-{
-	if (mbStopDisabled || mbStopped)
-		return;
-	if (mpEvent->mfFadeOut > 0)
-	{
-		mbStopped = true;
-		mbStopAtFadeEnd = true;
-		mfFadeDest = 0;
-		mfFadeSpeed = -1.0f / mpEvent->mfFadeOut;
-		return;
-	}
-	StopNow();
-}
-
-void cSomaSoundInstance::FadeOut(float afSpeed)
-{
-	if (mbStopped || mbStopDisabled)
-		return;
-	if (afSpeed <= 0)
-	{
-		StopNow();
-		return;
-	}
-	mbStopped = true;
-	mbStopAtFadeEnd = true;
-	mfFadeDest = 0;
-	mfFadeSpeed = -afSpeed;
-}
-
-void cSomaSoundInstance::FadeInTo(float afVolumeMul, float afSpeed)
-{
-	if (mbStarted == false || mbStopped)
-		Play();
-	mbStopAtFadeEnd = false;
-	if (afSpeed <= 0)
-	{
-		mfFade = mfFadeDest = afVolumeMul;
-		mfFadeSpeed = 0;
-		return;
-	}
-	mfFade = 0;
-	mfFadeDest = afVolumeMul;
-	mfFadeSpeed = afSpeed;
-}
-
-void cSomaSoundInstance::FadeVolumeMulTo(float afDest, float afSpeed)
-{
-	if (afSpeed <= 0)
-	{
-		SetVolumeMul(afDest);
-		return;
-	}
-	mfVolumeMulDest = afDest;
-	mfVolumeMulSpeed = std::fabs(afSpeed);
-}
-
-void cSomaSoundInstance::FadeSpeedMulTo(float afDest, float afSpeed)
-{
-	if (afSpeed <= 0)
-	{
-		SetSpeedMul(afDest);
-		return;
-	}
-	mfSpeedMulDest = afDest;
-	mfSpeedMulSpeed = std::fabs(afSpeed);
-}
+void cSomaSoundInstance::Play() { ohpl_gs5_inst_play(Bank(), Host(), mlH); }
+void cSomaSoundInstance::StopNow() { ohpl_gs5_inst_stop_now(Bank(), Host(), mlH); }
+void cSomaSoundInstance::Stop(bool abPlayEnd) { ohpl_gs5_inst_stop(Bank(), Host(), mlH); }
+void cSomaSoundInstance::FadeOut(float afSpeed) { ohpl_gs5_inst_fade_out(Bank(), Host(), mlH, afSpeed); }
+void cSomaSoundInstance::FadeInTo(float afVolumeMul, float afSpeed) { ohpl_gs5_inst_fade_in_to(Bank(), Host(), mlH, afVolumeMul, afSpeed); }
+void cSomaSoundInstance::FadeVolumeMulTo(float afDest, float afSpeed) { ohpl_gs5_inst_fade_volume_mul_to(Bank(), mlH, afDest, afSpeed); }
+void cSomaSoundInstance::FadeSpeedMulTo(float afDest, float afSpeed) { ohpl_gs5_inst_fade_speed_mul_to(Bank(), mlH, afDest, afSpeed); }
+void cSomaSoundInstance::Update(float afTimeStep) { ohpl_gs5_inst_update(Bank(), Host(), mlH, afTimeStep); }
+void cSomaSoundInstance::SetPaused(bool abX) { ohpl_gs5_inst_set_paused(Bank(), Host(), mlH, abX); }
+void cSomaSoundInstance::SetParam(int alIdx, float afValue) { ohpl_gs5_inst_set_param(Bank(), mlH, alIdx, afValue); }
+float cSomaSoundInstance::GetParamValue(int alIdx) { return ohpl_gs5_inst_param_value(Bank(), mlH, alIdx); }
+int cSomaSoundInstance::GetParamNum() { return ohpl_gs5_inst_param_count(Bank(), mlH); }
+float cSomaSoundInstance::GetTotalTime() { return ohpl_gs5_inst_total_time(Bank(), Host(), mlH); }
+bool cSomaSoundInstance::IsStopped() { return mpS->stopped && ohpl_gs5_inst_voice(Bank(), mlH, 0, NULL) == 0; }
 
 int cSomaSoundInstance::ParamIndex(const tString &asName)
 {
-	for (size_t i = 0; i < mpEvent->mvParams.size(); ++i)
-		if (cString::ToLowerCase(mpEvent->mvParams[i].msName) == cString::ToLowerCase(asName))
-			return (int)i;
-	return -1;
-}
-
-void cSomaSoundInstance::SetParam(int alIdx, float afValue)
-{
-	if (alIdx < 0 || alIdx >= (int)mvParamValue.size())
-		return;
-	const cSomaSoundEvents::cParam &p = mpEvent->mvParams[alIdx];
-	mvParamValue[alIdx] = mvParamTarget[alIdx] = cMath::Clamp(afValue, p.mfMin, p.mfMax);
-}
-
-float cSomaSoundInstance::GetParamValue(int alIdx)
-{
-	return alIdx >= 0 && alIdx < (int)mvParamValue.size() ? mvParamValue[alIdx] : 0;
+	return ohpl_gs5_inst_param_index(Bank(), mlH, U(asName), asName.size());
 }
 
 const cSomaSoundEvents::cParam *cSomaSoundInstance::GetParamDef(int alIdx)
 {
-	return alIdx >= 0 && alIdx < (int)mpEvent->mvParams.size() ? &mpEvent->mvParams[alIdx] : NULL;
-}
-
-void cSomaSoundInstance::SetPaused(bool abX)
-{
-	mbPaused = abX;
-	for (cVoice &v : mvVoices)
-		if (Handler()->IsValid(v.mpEntry, v.mlEntryId))
-			v.mpEntry->SetPaused(abX);
-}
-
-float cSomaSoundInstance::GetTotalTime()
-{
-	float fTotal = 0;
-	for (cVoice &v : mvVoices)
-		if (Handler()->IsValid(v.mpEntry, v.mlEntryId))
-			fTotal = std::max(fTotal, (float)v.mpEntry->GetChannel()->GetTotalTime());
-	return fTotal;
-}
-
-float cSomaSoundInstance::ParamNorm(int alIdx)
-{
-	const cSomaSoundEvents::cParam &p = mpEvent->mvParams[alIdx];
-	return p.mfMax > p.mfMin ? (mvParamValue[alIdx] - p.mfMin) / (p.mfMax - p.mfMin) : 0;
-}
-
-cVector3f cSomaSoundInstance::SourcePos()
-{
-	return mpEntity ? mpEntity->GetWorldPosition() : mvPos;
-}
-
-// FMOD Ex stereo pans by constant power on sin(azimuth) with no rear or elevation cue; move the
-// source to where OpenAL Soft's stereo panpot gives the same L/R ratio.
-// ponytail: table measured from OpenAL Soft 1.24 panpot (4 deg steps); HRTF/UHJ output differs.
-cVector3f cSomaSoundInstance::PanPos(float afPanMul)
-{
-	static const float vQ[] = {0, .0897f, .175f, .263f, .346f, .429f, .510f, .585f, .656f, .725f, .789f, .846f, .895f, .938f, .973f, 1};
-	iLowLevelSound *pLow = gpSomaBase->mpEngine->GetSound()->GetLowLevel();
-	cVector3f vPos = SourcePos(), vListener = pLow->GetListenerPosition();
-	cVector3f vDir = vPos - vListener;
-	float fDist = vDir.Length();
-	if (fDist < 1e-3f)
-		return vPos;
-	cVector3f vFwd = pLow->GetListenerForward() * -1, vRight = cMath::Vector3Cross(vFwd, pLow->GetListenerUp());
-	float fPan = cMath::Vector3Dot(vDir, vRight) / fDist * mpEvent->mfPanLevel * afPanMul;
-	float fAbs = std::min(std::fabs(fPan), 1.0f);
-	float fL = std::sqrt((1 - fAbs) / 2), fR = std::sqrt((1 + fAbs) / 2), fQ = (fR - fL) / (fR + fL);
-	size_t i = 1;
-	while (i < 15 && vQ[i] < fQ)
-		++i;
-	float fAngle = cMath::ToRad(4 * (i - 1 + (fQ - vQ[i - 1]) / (vQ[i] - vQ[i - 1])));
-	return vListener + (vFwd * std::cos(fAngle) + vRight * (std::sin(fAngle) * (fPan < 0 ? -1 : 1))) * fDist;
-}
-
-float cSomaSoundInstance::ListenerDistance()
-{
-	return cMath::Vector3Dist(gpSomaBase->mpEngine->GetSound()->GetLowLevel()->GetListenerPosition(), SourcePos());
-}
-
-float cSomaSoundInstance::DistanceGain(float afDist)
-{
-	float fMin = mpEntity ? mpEntity->GetMinDistance() : mpEvent->mfMinDist;
-	float fMax = mpEntity ? mpEntity->GetMaxDistance() : mpEvent->mfMaxDist;
-	if (afDist <= fMin)
-		return 1;
-	switch (mpEvent->mlRolloff)
-	{
-	case cSomaSoundEvents::eRolloff_Linear:
-	case cSomaSoundEvents::eRolloff_LinearSquare:
-	{
-		float t = fMax > fMin ? cMath::Clamp(1 - (afDist - fMin) / (fMax - fMin), 0.0f, 1.0f) : 0;
-		return mpEvent->mlRolloff == cSomaSoundEvents::eRolloff_Linear ? t : t * t;
-	}
-	case cSomaSoundEvents::eRolloff_Log: return fMin / std::min(afDist, std::max(fMax, fMin));
-	default: return 1;
-	}
-}
-
-bool cSomaSoundInstance::StartVoice(int alLayer, int alSound, bool abLoop)
-{
-	const cSomaSoundEvents::cLayerSound &snd = mpEvent->mvLayers[alLayer].mvSounds[alSound];
-	cSomaSoundEvents::cSoundDef &def = mpEvent->mvDefs[snd.mlDef];
-	int lNum = (int)def.mvFiles.size();
-	if (lNum == 0)
-		return false;
-	int lIdx;
-	if (def.mbSequential)
-		lIdx = (def.mlLast + 1) % lNum;
-	else
-	{
-		lIdx = cMath::RandRectl(0, lNum - 1);
-		if (lNum > 1 && lIdx == def.mlLast)
-			lIdx = (lIdx + 1 + cMath::RandRectl(0, lNum - 2)) % lNum;
-	}
-	def.mlLast = lIdx;
-	const tString &sFile = def.mvFiles[lIdx];
-	if (sFile == "")
-		return false;
-
-	cSoundEntry *pEntry;
-	if (mb3DPlay)
-		pEntry = Handler()->Play(sFile, abLoop, 0, PanPos(), 1e5f, 2e5f, mType, false, true, 0, mpEvent->mbStream);
-	else if (mpEvent->mbStream)
-		pEntry = Handler()->PlayGuiStream(sFile, abLoop, 0, cVector3f(0, 0, 1), mType);
-	else
-		pEntry = Handler()->PlayGui(sFile, abLoop, 0, cVector3f(0, 0, 1), mType);
-	if (pEntry == NULL)
-		return false;
-	cVoice v;
-	v.mpEntry = pEntry;
-	v.mlEntryId = pEntry->GetId();
-	v.mlLayer = alLayer;
-	v.mlSound = alSound;
-	v.mfGain = RandDb(def.mfVolumeRandDb);
-	v.mfSpeed = std::pow(2.0f, def.mfPitch + cMath::RandRectf(-def.mfPitchRand, def.mfPitchRand));
-	v.mbLoop = abLoop;
-	mvVoices.push_back(v);
-	return true;
-}
-
-void cSomaSoundInstance::Update(float afTimeStep)
-{
-	if (mbPaused)
-		return;
-	if (mbStarted == false)
-	{
-		if (mpEntity == NULL || mbStopped)
-			return;
-		Start();
-		if (mbStarted == false)
-			return;
-	}
-	if (mbStopped && mvVoices.empty())
-		return;
-	mfTime += afTimeStep;
-
-	auto approach = [afTimeStep](float &afX, float afDest, float afSpeed) {
-		if (afX < afDest)
-			afX = std::min(afDest, afX + afSpeed * afTimeStep);
-		else
-			afX = std::max(afDest, afX - afSpeed * afTimeStep);
-	};
-	if (mfFadeSpeed != 0)
-	{
-		approach(mfFade, mfFadeDest, std::fabs(mfFadeSpeed));
-		if (mfFade == mfFadeDest)
-		{
-			mfFadeSpeed = 0;
-			if (mbStopAtFadeEnd)
-			{
-				StopNow();
-				mfFade = mfFadeDest = 1;
-				mbStopAtFadeEnd = false;
-				return;
-			}
-		}
-	}
-	approach(mfVolumeMul, mfVolumeMulDest, mfVolumeMulSpeed);
-	approach(mfSpeedMul, mfSpeedMulDest, mfSpeedMulSpeed);
-
-	float fDist = mb3DPlay ? ListenerDistance() : 0;
-	for (size_t i = 0; i < mvParamValue.size(); ++i)
-	{
-		const cSomaSoundEvents::cParam &p = mpEvent->mvParams[i];
-		if (p.mlBuiltin == 1)
-			mvParamValue[i] = cMath::Clamp(fDist, p.mfMin, p.mfMax);
-		else if (p.mlBuiltin)
-			mvParamValue[i] = p.mfMin;
-		else if (p.mfVelocity != 0 && mbStopped == false)
-		{
-			float fRange = p.mfMax - p.mfMin;
-			float fX = mvParamValue[i] + p.mfVelocity * fRange * afTimeStep;
-			float fSustain = p.mfMin + p.mfSustain * fRange;
-			if (p.mfSustain >= 0 && mvParamValue[i] <= fSustain && fX > fSustain)
-				fX = fSustain;
-			if (fX > p.mfMax)
-			{
-				if (p.mlLoopMode == 0 && fRange > 0)
-					fX = p.mfMin + std::fmod(fX - p.mfMin, fRange);
-				else
-				{
-					fX = p.mfMax;
-					if (p.mlLoopMode == 2)
-						Stop(false);
-				}
-			}
-			mvParamValue[i] = fX;
-		}
-	}
-
-	float fBase = mpEvent->mfVolume * mfRandGain * mfVolume * mfVolumeMul * mfFade;
-	if (mpEntity)
-		fBase *= mpEntity->GetVolume();
-	if (mb3DPlay)
-		fBase *= DistanceGain(fDist);
-	float fEventSpeed = std::pow(2.0f, mpEvent->mfPitch + mfRandPitch) * mfSpeedMul;
-
-	for (size_t i = 0; i < mvVoices.size();)
-	{
-		if (Handler()->IsValid(mvVoices[i].mpEntry, mvVoices[i].mlEntryId))
-			++i;
-		else
-			mvVoices.erase(mvVoices.begin() + i);
-	}
-
-	bool bPending = false;
-	std::vector<std::vector<float>> vGain(mpEvent->mvLayers.size());
-	std::vector<cVector2f> vFilter(mpEvent->mvLayers.size(), cVector2f(1));
-	std::vector<float> vSpeed(mpEvent->mvLayers.size(), 1), vPan(mpEvent->mvLayers.size(), 1), vSend(mpEvent->mvLayers.size(), mpEvent->mfReverbGain);
-	for (size_t l = 0; l < mpEvent->mvLayers.size(); ++l)
-	{
-		const cSomaSoundEvents::cLayer &layer = mpEvent->mvLayers[l];
-		float fX = layer.mlParam >= 0 ? ParamNorm(layer.mlParam) : 0;
-		float fLayerGain = fBase;
-		for (const cSomaSoundEvents::cEnvelope &env : layer.mvEnvelopes)
-		{
-			float fY = env.Eval(env.mlParam >= 0 ? ParamNorm(env.mlParam) : fX);
-			// EFX only has shelves (HF at 5 kHz, LF at 250 Hz): take each FMOD filter's 12 dB/oct
-			// response at 8 kHz / 100 Hz. ponytail: no EQ boost, centre or bandwidth.
-			float fCutoff = 10 * std::pow(2200.0f, fY);
-			switch (env.mlDsp)
-			{
-			case cSomaSoundEvents::eDsp_Volume: fLayerGain *= fY; break;
-			case cSomaSoundEvents::eDsp_EqGain: vFilter[l].x *= std::min(0.05f + 2.95f * fY, 1.0f); break;
-			case cSomaSoundEvents::eDsp_Lowpass: vFilter[l].x /= std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)); break;
-			case cSomaSoundEvents::eDsp_Highpass: vFilter[l].y /= std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)); break;
-			case cSomaSoundEvents::eDsp_Pitch: vSpeed[l] *= std::pow(2.0f, (fY - 0.5f) * 8); break;
-			case cSomaSoundEvents::eDsp_PanLevel: vPan[l] *= fY; break;
-			case cSomaSoundEvents::eDsp_ReverbLevel: vSend[l] *= fY; break;
-			}
-		}
-		vGain[l].resize(layer.mvSounds.size());
-		for (size_t s = 0; s < layer.mvSounds.size(); ++s)
-		{
-			const cSomaSoundEvents::cLayerSound &snd = layer.mvSounds[s];
-			const cSomaSoundEvents::cSoundDef &def = mpEvent->mvDefs[snd.mlDef];
-			float fGain = fLayerGain * snd.mfVolume * def.mfVolume;
-			vGain[l][s] = fGain;
-			cSlot &slot = mvSlots[l][s];
-			bool bInRange = (mbStopped == false || mbStopAtFadeEnd) && (layer.mlParam < 0 || (fX >= snd.mfX0 && (fX < snd.mfX1 || snd.mfX1 >= 0.999f)));
-			if (bInRange && slot.mbInRange == false)
-			{
-				slot.mbTriggered = false;
-				slot.mfDelay = RandRange(def.mfDelayMin, def.mfDelayMax);
-				slot.mfSpawnTimer = 0;
-			}
-			slot.mbInRange = bInRange;
-
-			bool bAudible = fGain > 1e-4f || mb3DPlay == false;
-			int lVoices = 0;
-			for (cVoice &v : mvVoices)
-				if (v.mlLayer == (int)l && v.mlSound == (int)s)
-				{
-					++lVoices;
-					if (bInRange && v.mbLoop && bAudible == false)
-						v.mpEntry->Stop();
-					else if (bInRange == false && v.mbLoop)
-					{
-						if (snd.mlLoopMode == 2)
-						{
-							v.mpEntry->GetChannel()->SetLooping(false);
-							v.mbLoop = false;
-						}
-						else
-							v.mpEntry->Stop();
-					}
-				}
-			if (bInRange == false)
-				continue;
-			if (slot.mfDelay > 0)
-			{
-				slot.mfDelay -= afTimeStep;
-				bPending = true;
-				continue;
-			}
-			if (snd.mlLoopMode != 1)
-			{
-				if (lVoices == 0 && bAudible)
-					StartVoice((int)l, (int)s, true);
-				bPending = true;
-			}
-			else if (def.mfSpawnMax > 0)
-			{
-				slot.mfSpawnTimer -= afTimeStep;
-				// a spawn blocked by spawn_max fires when a voice frees up
-				if (slot.mfSpawnTimer <= 0 && lVoices < def.mlSpawnCount && bAudible)
-				{
-					StartVoice((int)l, (int)s, false);
-					slot.mfSpawnTimer = RandRange(def.mfSpawnMin, def.mfSpawnMax);
-				}
-				bPending = true;
-			}
-			else if (slot.mbTriggered == false)
-			{
-				slot.mbTriggered = true;
-				StartVoice((int)l, (int)s, false);
-			}
-		}
-	}
-
-	mfAudibility = 0;
-	std::vector<cVector3f> vPos(mpEvent->mvLayers.size());
-	if (mb3DPlay)
-		for (size_t l = 0; l < vPos.size(); ++l)
-			vPos[l] = PanPos(vPan[l]);
-	for (size_t i = 0; i < mvVoices.size();)
-	{
-		cVoice &v = mvVoices[i];
-		if (Handler()->IsValid(v.mpEntry, v.mlEntryId) == false)
-		{
-			mvVoices.erase(mvVoices.begin() + i);
-			continue;
-		}
-		float fGain = vGain[v.mlLayer][v.mlSound] * v.mfGain;
-		v.mpEntry->SetDefaultVolume(fGain);
-		v.mpEntry->SetDefaultSpeed(v.mfSpeed * fEventSpeed * vSpeed[v.mlLayer]);
-		const cVector2f &vF = vFilter[v.mlLayer];
-		if (std::fabs(vF.x - v.mfGainHF) > 0.01f || std::fabs(vF.y - v.mfGainLF) > 0.01f)
-		{
-			v.mfGainHF = vF.x;
-			v.mfGainLF = vF.y;
-			v.mpEntry->GetChannel()->SetFilterGainHF(vF.x);
-			v.mpEntry->GetChannel()->SetFilterGainLF(vF.y);
-		}
-		if (std::fabs(vSend[v.mlLayer] - v.mfSendGain) > 0.01f)
-		{
-			v.mfSendGain = vSend[v.mlLayer];
-			v.mpEntry->GetChannel()->SetEnvSendGain(v.mfSendGain);
-		}
-		if (mb3DPlay)
-			v.mpEntry->GetChannel()->SetPosition(vPos[v.mlLayer]);
-		mfAudibility += fGain;
-		++i;
-	}
-
-	// oneshot=No events without parameters still finish (menu_glitch, maxplaybacks 1)
-	if (mbStopped == false && (mpEvent->mbOneShot || mpEvent->mvParams.empty()) && bPending == false && mvVoices.empty())
-		mbStopped = true;
+	OhplGs5ParamDef d;
+	if (ohpl_gs5_inst_param_def(Bank(), mlH, alIdx, &d, SinkString, &mParamCache.msName) == false)
+		return NULL;
+	mParamCache.mfMin = d.min;
+	mParamCache.mfMax = d.max;
+	mParamCache.mfVelocity = d.velocity;
+	mParamCache.mfSeek = d.seek;
+	mParamCache.mfSustain = d.sustain;
+	mParamCache.mlLoopMode = d.loop_mode;
+	mParamCache.mlBuiltin = d.builtin;
+	return &mParamCache;
 }
 
 tString cSomaSoundInstance::Describe()
 {
+	int lVoices = ohpl_gs5_inst_voice(Bank(), mlH, 0, NULL);
 	char buf[256];
-	snprintf(buf, sizeof(buf), "%s voices=%d aud=%.3f vol=%.2f mul=%.2f fade=%.2f%s%s", msName.c_str(), (int)mvVoices.size(), mfAudibility, mfVolume,
-			 mfVolumeMul, mfFade, mpEntity ? " entity" : "", mbStopped ? " stopped" : "");
+	snprintf(buf, sizeof(buf), "%s voices=%d aud=%.3f vol=%.2f mul=%.2f fade=%.2f%s%s", msName.c_str(), lVoices, mpS->audibility, mpS->volume,
+			 mpS->volume_mul, mpS->fade, mpEntity ? " entity" : "", mpS->stopped ? " stopped" : "");
 	tString s = buf;
-	for (const cVoice &v : mvVoices)
-		if (v.mfGainHF < 1 || v.mfGainLF < 1)
-			s += " hf=" + cString::ToString(v.mfGainHF) + " lf=" + cString::ToString(v.mfGainLF);
-	for (const cVoice &v : mvVoices)
-		if (v.mfSendGain < 1)
-			s += " send=" + cString::ToString(v.mfSendGain);
-	for (size_t i = 0; i < mvParamValue.size(); ++i)
-		s += " " + mpEvent->mvParams[i].msName + "=" + cString::ToString(mvParamValue[i]);
+	std::vector<std::array<float, 3>> vVoices(lVoices);
+	for (int i = 0; i < lVoices; ++i)
+		ohpl_gs5_inst_voice(Bank(), mlH, i, vVoices[i].data());
+	for (auto &v : vVoices)
+		if (v[0] < 1 || v[1] < 1)
+			s += " hf=" + cString::ToString(v[0]) + " lf=" + cString::ToString(v[1]);
+	for (auto &v : vVoices)
+		if (v[2] < 1)
+			s += " send=" + cString::ToString(v[2]);
+	for (int i = 0; i < GetParamNum(); ++i)
+		s += " " + GetParamDef(i)->msName + "=" + cString::ToString(GetParamValue(i));
 	return s;
 }
 
@@ -1255,8 +658,8 @@ static void RegisterEntryNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, "cSoundEntry", "float GetSpeed()", +[](Inst *p) { return Live(p) ? p->GetSpeedMul() : 1.0f; });
 	SOMA_METHOD(e, "cSoundEntry", "float GetVolumeMul()", +[](Inst *p) { return Live(p) ? p->GetVolumeMul() : 0.0f; });
 	SOMA_METHOD(e, "cSoundEntry", "float GetSpeedMul()", +[](Inst *p) { return Live(p) ? p->GetSpeedMul() : 1.0f; });
-	SOMA_METHOD(e, "cSoundEntry", "float GetMinDistance()", +[](Inst *p) { return Live(p) ? p->GetEvent()->mfMinDist : 0.0f; });
-	SOMA_METHOD(e, "cSoundEntry", "float GetMaxDistance()", +[](Inst *p) { return Live(p) ? p->GetEvent()->mfMaxDist : 0.0f; });
+	SOMA_METHOD(e, "cSoundEntry", "float GetMinDistance()", +[](Inst *p) { return Live(p) ? p->GetMinDist() : 0.0f; });
+	SOMA_METHOD(e, "cSoundEntry", "float GetMaxDistance()", +[](Inst *p) { return Live(p) ? p->GetMaxDist() : 0.0f; });
 	SOMA_METHOD(e, "cSoundEntry", "bool Is3D()", +[](Inst *p) { return Live(p) && p->Is3D(); });
 	SOMA_METHOD(e, "cSoundEntry", "bool IsOneShot()", +[](Inst *p) { return Live(p) && p->IsOneShot(); });
 	SOMA_METHOD(e, "cSoundEntry", "bool IsVirtual()", +[](Inst *p) { return Live(p) && p->GetAudibility() < 1e-4f; });

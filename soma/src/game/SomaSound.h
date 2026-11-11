@@ -2,6 +2,7 @@
 #define SOMA_SOUND_H
 
 #include "hpl.h"
+#include "RustSomaSound.h"
 
 #include <angelscript.h>
 #include <map>
@@ -34,48 +35,6 @@ public:
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
-	struct cWave
-	{
-		tString msBank;
-		tString msSample;
-	};
-	enum eDsp { eDsp_Volume, eDsp_EqGain, eDsp_Lowpass, eDsp_Highpass, eDsp_Pitch, eDsp_PanLevel, eDsp_ReverbLevel };
-	struct cEnvelope
-	{
-		int mlParam = -1;
-		int mlDsp = eDsp_Volume;
-		std::vector<cVector2f> mvPoints;
-		float Eval(float afX) const;
-	};
-	struct cSoundDef
-	{
-		bool mbSequential = false;
-		float mfVolume = 1;
-		float mfVolumeRandDb = 0;
-		float mfPitch = 0;
-		float mfPitchRand = 0;
-		float mfSpawnMin = 0;
-		float mfSpawnMax = 0;
-		int mlSpawnCount = 1;
-		float mfDelayMin = 0;
-		float mfDelayMax = 0;
-		std::vector<cWave> mvWaves;
-		std::vector<tString> mvFiles;
-		int mlLast = -1;
-	};
-	struct cLayerSound
-	{
-		int mlDef = -1;
-		float mfVolume = 1;
-		int mlLoopMode = 1;
-		float mfX0 = 0, mfX1 = 1;
-	};
-	struct cLayer
-	{
-		int mlParam = -1;
-		std::vector<cLayerSound> mvSounds;
-		std::vector<cEnvelope> mvEnvelopes;
-	};
 	struct cParam
 	{
 		tString msName;
@@ -86,149 +45,92 @@ public:
 		int mlLoopMode = 0;
 		int mlBuiltin = 0;
 	};
-	enum eRolloff { eRolloff_Linear, eRolloff_LinearSquare, eRolloff_Log, eRolloff_Custom };
-	enum eMaxBehavior { eMaxBehavior_StealOldest, eMaxBehavior_StealNewest, eMaxBehavior_StealQuietest, eMaxBehavior_JustFail, eMaxBehavior_JustFailIfQuietest };
-	struct cEvent
-	{
-		tString msName;
-		float mfVolume = 1;
-		float mfVolumeRandDb = 0;
-		float mfPitch = 0;
-		float mfPitchRand = 0;
-		bool mb3D = true;
-		float mfPanLevel = 1;
-		float mfReverbGain = 1;
-		bool mbOneShot = true;
-		float mfMinDist = 1;
-		float mfMaxDist = 20;
-		int mlRolloff = eRolloff_Linear;
-		int mlMaxPlaybacks = 0;
-		int mlMaxBehavior = eMaxBehavior_StealOldest;
-		float mfFadeIn = 0;
-		float mfFadeOut = 0;
-		bool mbStream = false;
-		int mlCategoryType = -1;
-		std::vector<cParam> mvParams;
-		std::vector<cLayer> mvLayers;
-		std::vector<cSoundDef> mvDefs;
-		cSoundEntityData *mpData = NULL;
-		bool mbLoaded = false;
-		bool HasFiles() const;
-	};
+
+	OhplGs5Bank *GetBank() { return mpBank; }
 
 private:
+	cSomaSoundEvents();
 	void LoadProject(const tString &asProject);
-	cEvent *GetEvent(const tString &asName);
-	cEvent *FileEvent(const tString &asFile, bool abLoop, bool abStream);
+	int GetEvent(const tString &asName);
 
-	std::map<tString, cEvent> mmapEvents;
-	std::map<cSoundEntityData *, cEvent *> mmapDataEvents;
-	std::set<tString> msetProjects;
+	OhplGs5Bank *mpBank;
 	std::list<cSomaSoundInstance *> mlstInstances;
 	std::map<cSomaSoundInstance *, int> mmapLive;
-	tWString msCacheDir;
 	bool mbUpdaterAdded = false;
-	int mlNextId = 1;
 };
 
 class cSomaSoundInstance : public iSoundEntityEvent
 {
 public:
-	typedef cSomaSoundEvents::cEvent cEvent;
-	cSomaSoundInstance(cEvent *apEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType);
+	cSomaSoundInstance(size_t alEvent, const tString &asName, cSoundEntity *apEntity, eSoundEntryType aType);
 	~cSomaSoundInstance();
 
 	void Play();
 	void Stop(bool abPlayEnd);
 	void FadeIn(float afSpeed) { FadeInTo(1, afSpeed); }
 	void FadeOut(float afSpeed);
-	bool IsStopped() { return mbStopped && mvVoices.empty(); }
+	bool IsStopped();
 	void Update(float afTimeStep);
 
 	void FadeInTo(float afVolumeMul, float afSpeed);
 	void StopNow();
 	void FadeVolumeMulTo(float afDest, float afSpeed);
-	void SetVolumeMul(float afX) { mfVolumeMul = mfVolumeMulDest = afX; }
-	float GetVolumeMul() { return mfVolumeMul; }
+	void SetVolumeMul(float afX) { mpS->volume_mul = mpS->volume_mul_dest = afX; }
+	float GetVolumeMul() { return mpS->volume_mul; }
 	void FadeSpeedMulTo(float afDest, float afSpeed);
-	void SetSpeedMul(float afX) { mfSpeedMul = mfSpeedMulDest = afX; }
-	float GetSpeedMul() { return mfSpeedMul; }
-	void SetVolume(float afX) { mfVolume = afX; }
-	float GetVolume() { return mfVolume; }
+	void SetSpeedMul(float afX) { mpS->speed_mul = mpS->speed_mul_dest = afX; }
+	float GetSpeedMul() { return mpS->speed_mul; }
+	void SetVolume(float afX) { mpS->volume = afX; }
+	float GetVolume() { return mpS->volume; }
 	void SetParam(int alIdx, float afValue) override;
 	void SetParam(const tString &asName, float afValue) override { SetParam(ParamIndex(asName), afValue); }
 	int ParamIndex(const tString &asName);
 	float GetParamValue(int alIdx);
-	int GetParamNum() { return (int)mvParamValue.size(); }
+	int GetParamNum();
 	const cSomaSoundEvents::cParam *GetParamDef(int alIdx);
 	void SetPaused(bool abX);
-	bool GetPaused() { return mbPaused; }
-	bool IsPlaying() { return mbStopped == false; }
-	void SetPosition(const cVector3f &avPos) { mvPos = avPos; }
+	bool GetPaused() { return mpS->paused; }
+	bool IsPlaying() { return mpS->stopped == false; }
+	void SetPosition(const cVector3f &avPos) { mvPos = avPos; mpS->pos[0] = avPos.x; mpS->pos[1] = avPos.y; mpS->pos[2] = avPos.z; }
 	const cVector3f &GetPosition() { return mvPos; }
-	float GetElapsedTime() { return mfTime; }
+	float GetElapsedTime() { return mpS->time; }
 	float GetTotalTime();
-	float GetAudibility() { return mfAudibility; }
-	bool Is3D() { return mpEvent->mb3D; }
-	bool IsOneShot() { return mpEvent->mbOneShot; }
-	eSoundEntryType GetType() { return mType; }
-	void SetStopDisabled(bool abX) { mbStopDisabled = abX; }
-	bool GetStopDisabled() { return mbStopDisabled; }
-	bool IsActive() { return mbStopped == false; }
+	float GetAudibility() { return mpS->audibility; }
+	bool Is3D() { return mEvent.is_3d; }
+	bool IsOneShot() { return mEvent.one_shot; }
+	float GetMinDist() { return mEvent.min_dist; }
+	float GetMaxDist() { return mEvent.max_dist; }
+	eSoundEntryType GetType() { return (eSoundEntryType)mpS->entry_type; }
+	void SetStopDisabled(bool abX) { mpS->stop_disabled = abX; }
+	bool GetStopDisabled() { return mpS->stop_disabled; }
+	bool IsActive() { return mpS->stopped == false; }
 
 	const tString &GetName() { return msName; }
 	int GetId() { return mlId; }
-	cEvent *GetEvent() { return mpEvent; }
 	tString Describe();
 
 private:
 	friend class cSomaSoundEvents;
 	friend class cSomaSaveState;
-	struct cVoice
-	{
-		cSoundEntry *mpEntry;
-		int mlEntryId;
-		int mlLayer, mlSound;
-		float mfGain;
-		float mfSpeed;
-		bool mbLoop;
-		float mfGainHF = 1, mfGainLF = 1, mfSendGain = 1;
-	};
-	struct cSlot
-	{
-		bool mbInRange = false;
-		bool mbTriggered = false;
-		float mfDelay = 0;
-		float mfSpawnTimer = 0;
-	};
-	void Start();
-	bool StartVoice(int alLayer, int alSound, bool abLoop);
-	float ParamNorm(int alIdx);
-	float DistanceGain(float afDist);
-	cVector3f SourcePos();
-	cVector3f PanPos(float afPanMul = 1);
-	float ListenerDistance();
 
-	cEvent *mpEvent;
+	// SomaSave reads these two
+	struct cStateFloat
+	{
+		OhplGs5InstState *const *mppS;
+		float OhplGs5InstState::*mpField;
+		operator float() const { return (*mppS)->*mpField; }
+	};
+
+	size_t mlH;
+	OhplGs5InstState *mpS;
+	cStateFloat mfFadeDest{&mpS, &OhplGs5InstState::fade_dest};
+	cStateFloat mfVolumeMulDest{&mpS, &OhplGs5InstState::volume_mul_dest};
+	OhplGs5EventInfo mEvent;
 	tString msName;
 	int mlId;
 	cSoundEntity *mpEntity;
-	eSoundEntryType mType;
 	cVector3f mvPos = cVector3f(0, 0, 1);
-	std::vector<float> mvParamValue, mvParamTarget;
-	std::vector<cVoice> mvVoices;
-	std::vector<std::vector<cSlot>> mvSlots;
-	float mfRandGain = 1, mfRandPitch = 0;
-	float mfVolume = 1;
-	float mfVolumeMul = 1, mfVolumeMulDest = 1, mfVolumeMulSpeed = 0;
-	float mfSpeedMul = 1, mfSpeedMulDest = 1, mfSpeedMulSpeed = 0;
-	float mfFade = 1, mfFadeDest = 1, mfFadeSpeed = 0;
-	bool mbStopAtFadeEnd = false;
-	int mlStartFails = 0;
-	bool mbStarted = false, mbStopped = false, mbPaused = false, mbStopDisabled = false;
-	bool mb3DPlay = false;
-	float mfTime = 0;
-	float mfAudibility = 0;
+	cSomaSoundEvents::cParam mParamCache;
 };
 
 tString SomaSerializeMusic();
