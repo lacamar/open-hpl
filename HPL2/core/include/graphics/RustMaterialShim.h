@@ -141,7 +141,7 @@ namespace hpl { namespace rustmat {
 	}
 
 	/// Settings CompileMaterialSpecifics gives the material.
-	inline void ApplyCompile(cMaterial *apMaterial, const OhplCompileOut &c)
+	inline void ApplyCompile(cMaterial *apMaterial, const OhplMatCompileOut &c)
 	{
 		for(int mode=0; mode<eMaterialRenderMode_LastEnum; ++mode)
 		{
@@ -478,7 +478,7 @@ namespace hpl { namespace rustmat {
 	{
 		OhplMatView v = MakeView(apMaterial);
 		OhplGlobals g = MakeGlobals();
-		OhplCompileOut out;
+		OhplMatCompileOut out;
 		ohpl_mat_compile(alKind, &v, apVars, &g, &out);
 		ApplyCompile(apMaterial, out);
 	}

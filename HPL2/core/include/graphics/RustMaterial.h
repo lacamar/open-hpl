@@ -231,7 +231,7 @@ namespace hpl {
 	struct OhplProgSel { int manager; int mode; uint32_t flags; };
 	struct OhplTexSel { int kind; int slot; };
 
-	struct OhplCompileOut
+	struct OhplMatCompileOut
 	{
 		uint32_t specSet, specVal, objSet, objVal;
 		int alphaMode, dissolveFilter, blendMode, hasRefraction, refractionEdge, worldReflection, translucentIllum;
@@ -266,7 +266,7 @@ namespace hpl {
 	static_assert(sizeof(OhplWorld) == 80 && offsetof(OhplWorld, fogActive) == 76, "OhplWorld layout");
 	static_assert(sizeof(OhplLight) == 136 && offsetof(OhplLight, bands) == 84, "OhplLight layout");
 	static_assert(sizeof(OhplUniform) == 80 && offsetof(OhplUniform, v) == 16, "OhplUniform layout");
-	static_assert(sizeof(OhplProgSel) == 12 && sizeof(OhplTexSel) == 8 && sizeof(OhplCompileOut) == 44 && sizeof(OhplLoadOut) == 20, "result layouts");
+	static_assert(sizeof(OhplProgSel) == 12 && sizeof(OhplTexSel) == 8 && sizeof(OhplMatCompileOut) == 44 && sizeof(OhplLoadOut) == 20, "result layouts");
 	static_assert(sizeof(OhplUvAnim) == 16, "OhplUvAnim layout");
 
 	//--------------------------------------------------------------------
@@ -325,7 +325,7 @@ namespace hpl {
 	void ohpl_mat_destroy_target(int kind, int mode, int blendMode, OhplProgSel* out);
 	int ohpl_mat_render_program_slot(int kind, int mode, const OhplGlobals* g);
 	void ohpl_mat_undergrowth_render_program(const OhplUndergrowthVars* vars, int mode, const OhplRenderView* r, OhplHostVt* host, OhplProgSel* out, size_t* fields);
-	void ohpl_mat_compile(int kind, const OhplMatView* view, const void* vars, const OhplGlobals* g, OhplCompileOut* out);
+	void ohpl_mat_compile(int kind, const OhplMatView* view, const void* vars, const OhplGlobals* g, OhplMatCompileOut* out);
 	size_t ohpl_mat_setup_type(int kind, int mode, const OhplRenderView* r, OhplUniform* out, size_t cap);
 	size_t ohpl_mat_setup_material(int kind, int mode, const OhplMatView* view, const void* vars, const OhplGlobals* g, const OhplRenderView* r,
 								   size_t fieldNum, OhplHostVt* host, OhplUniform* out, size_t cap);
