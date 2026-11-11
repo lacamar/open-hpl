@@ -23,17 +23,20 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxUi.h"
 
 //----------------------------------------------
 
 class cLuxInventory_Item;
+class cLuxNote;
+class cLuxDiary;
 
 //----------------------------------------------
 
 class iLuxItemType
 {
 public:	
-	iLuxItemType(const tString& asName, eLuxItemType aType);
+	iLuxItemType(eLuxItemType aType);
 	~iLuxItemType();
 
 	const tString& GetName(){ return msName; }
@@ -43,7 +46,7 @@ public:
 	int GetMaxCount(){ return mlMaxCount;}
 	bool ShowPickUpMessage(){ return mbShowPickUpMessage;}
 
-	virtual bool GetHasMaxAmount(){ return false;}
+	virtual bool GetHasMaxAmount(){ return ohpl_ga8_it_has_max(mType) != 0;}
 	virtual void OnUse(cLuxInventory_Item *apItem, int alSlotIndex)=0;
 	virtual tWString GetDisplayedNameAdd(cLuxInventory_Item *apItem){ return _W(""); }
 	
@@ -51,6 +54,9 @@ public:
 
 protected:
 	void AddCompletionAmount(int alAmount);
+	void RunEvents(const std::vector<OhplGa8Event> &avEvents, cLuxInventory_Item *apItem, cLuxNote *apNote, cLuxDiary *apDiary);
+	void FillItem(cLuxInventory_Item *apItem, OhplGa8ItItem &aItem);
+	void FillPlayer(OhplGa8ItPlayer &aPlayer);
 	bool mbHasCount;
 	int mlMaxCount;
 	bool mbShowPickUpMessage;
@@ -176,7 +182,6 @@ class cLuxItemType_Tinderbox : public iLuxItemType
 public:	
 	cLuxItemType_Tinderbox();
 
-	bool GetHasMaxAmount();
 	bool BeforeAddItem(cLuxInventory_Item *apItem);
 	void OnUse(cLuxInventory_Item *apItem, int alSlotIndex);
 

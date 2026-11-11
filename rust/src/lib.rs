@@ -35,6 +35,7 @@ mod input_tables;
 pub mod luxenemy;
 pub mod luxsave;
 pub mod luxscript;
+pub mod luxui;
 pub mod material;
 pub mod math;
 pub mod meshload;
