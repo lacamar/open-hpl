@@ -25,6 +25,7 @@
 #include "system/LowLevelSystem.h"
 #include "resources/MeshLoaderHandler.h"
 #include "resources/FileSearcher.h"
+#include "resources/RustResMgr.h"
 #include "graphics/SubMesh.h"
 #include "graphics/VertexBuffer.h"
 
@@ -65,55 +66,23 @@ namespace hpl {
 
 	cMesh* cMeshManager::CreateMesh(const tString& asName, tMeshLoadFlag aFlag)
 	{
-		tWString sPath;
 		cMesh* pMesh;
-		tString asNewName;
 
 		BeginLoad(asName);
 
-		asNewName = asName;
-
-		//If the file is missing an extension, search for an existing file.
-		if(cString::GetFileExt(asNewName) == "")
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
+		cRmOut out;
+		if(ohpl_rm_resolve_model(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw())==0)
 		{
-			bool bFound = false;
-			tStringVec *pTypes = mpResources->GetMeshLoaderHandler()->GetSupportedTypes();
-			for(size_t i=0; i< pTypes->size(); i++)
-			{
-				asNewName = cString::SetFileExt(asNewName, (*pTypes)[i]);
-				tWString sPath = mpResources->GetFileSearcher()->GetFilePath(asNewName);
-				if(sPath != _W(""))
-				{
-					bFound = true;
-					break;
-				}
-			}
-
-			if(bFound == false){
-				Error("Couldn't find mesh file '%s' in any supported format!\n",asName.c_str());
-				EndLoad();
-				return NULL;
-			}
+			Error("Couldn't find mesh file '%s' in any supported format!\n",asName.c_str());
+			EndLoad();
+			return NULL;
 		}
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
 
-		pMesh = static_cast<cMesh*>(FindLoadedResource(asNewName,sPath));
-
-		//An extra hackish check to load msh or anim
-		//TODO: When the model is loaded, then it 
-		/*if(pMesh==NULL && sPath==_W(""))
-		{
-			tString sExt = cString::GetFileExt(asNewName);
-			tString sNewExt="";
-			if(sExt=="dae") sNewExt = "msh";
-			if(sExt=="dae_anim") sNewExt = "anim";
-			
-			if(sNewExt != "")
-			{
-				FindLoadedResource(cString::SetFileExt(asNewName, sNewExt), sPath);
-
-				if(sPath!=_W("")) sPath = cString::SetFileExtW(sPath, cString::To16Char(sExt));
-			}
-		}*/
+		pMesh = static_cast<cMesh*>(out.Res());
 
 		if(pMesh==NULL && sPath!=_W(""))
 		{
@@ -123,13 +92,12 @@ namespace hpl {
 				EndLoad();
 				return NULL;
 			}
-
 			AddResource(pMesh);
 		}
 
 		if(pMesh)pMesh->IncUserCount();
 		else Error("Couldn't load mesh '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pMesh;
 	}
@@ -158,15 +126,11 @@ namespace hpl {
 
 	void cMeshManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
 

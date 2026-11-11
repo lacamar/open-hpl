@@ -26,6 +26,7 @@
 #include "resources/ImageManager.h"
 
 #include "graphics/FontData.h"
+#include "resources/RustResMgr.h"
 
 
 namespace hpl {
@@ -62,25 +63,27 @@ namespace hpl {
 	iFontData* cFontManager::CreateFontData(const tString& asName, int alSize,unsigned short alFirstChar,
 											unsigned short alLastChar)
 	{
-		tWString sPath;
 		iFontData* pFont;
-		tString asNewName = cString::ToLowerCase(asName);
 
 		BeginLoad(asName);
-		
-		//asNewName = cString::SetFileExt(asName,"ttf");
 
-		pFont = static_cast<iFontData*>(this->FindLoadedResource(asNewName,sPath));
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut out;
+		ohpl_rm_resolve_simple(env.raw(), 1, RM_STR(asName), out.raw());
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
+
+		pFont = static_cast<iFontData*>(out.Res());
 
 		if(pFont==NULL && sPath!=_W(""))
 		{
 			pFont = mpGraphics->GetLowLevel()->CreateFontData(asNewName);
 			pFont->SetUp(mpResources,mpGui);
-			
-			tString sExt = cString::ToLowerCase(cString::GetFileExt(asName));
+
+			int lKind = ohpl_rm_font_kind(RM_STR(asName));
 
 			//True Type Font
-			if(sExt == "ttf")
+			if(lKind == 1)
 			{
 				if(pFont->CreateFromFontFile(sPath,alSize,alFirstChar,alLastChar)==false){
 					hplDelete(pFont);
@@ -89,7 +92,7 @@ namespace hpl {
 				}
 			}
 			//Angel code font type
-			else if(sExt == "fnt")
+			else if(lKind == 2)
 			{
 				if(pFont->CreateFromBitmapFile(sPath)==false){
 					hplDelete(pFont);
@@ -104,14 +107,13 @@ namespace hpl {
 				EndLoad();
 				return NULL;
 			}
-			
-			//mpResources->GetImageManager()->FlushAll();
+
 			AddResource(pFont);
 		}
 
 		if(pFont)pFont->IncUserCount();
 		else Error("Couldn't create font '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pFont;
 	}
@@ -126,15 +128,11 @@ namespace hpl {
 
 	void cFontManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
 

@@ -27,6 +27,7 @@
 #include "system/LowLevelSystem.h"
 #include "sound/SoundHandler.h"
 #include "sound/SoundChannel.h"
+#include "resources/RustResMgr.h"
 
 namespace hpl {
 
@@ -42,12 +43,14 @@ namespace hpl {
 	{
 		mpSound = apSound;
 		mpResources = apResources;
+		mpCustom = ohpl_rm_custom_new();
 	}
 
 	cSoundEntityManager::~cSoundEntityManager()
 	{
         DestroyAll();
 
+		ohpl_rm_custom_free(mpCustom);
 		Log(" Done with sound entities\n");
 	}
 
@@ -75,26 +78,26 @@ namespace hpl {
 	void cSoundEntityManager::AddCustomSoundEntity(const tString& asName, cSoundEntityData *apData)
 	{
 		apData->IncUserCount();
-		m_mapCustom[cString::ToLowerCase(asName)] = apData;
+		ohpl_rm_custom_set(mpCustom, RM_STR(asName), apData);
 	}
 
 	cSoundEntityData* cSoundEntityManager::CreateSoundEntity(const tString& asName)
 	{
-		std::map<tString, cSoundEntityData*>::iterator customIt = m_mapCustom.find(cString::ToLowerCase(asName));
-		if(customIt != m_mapCustom.end())
+		bool bCustom = false;
+		cSoundEntityData *pStored = static_cast<cSoundEntityData*>(ohpl_rm_custom_get(mpCustom, RM_STR(asName), &bCustom));
+		if(bCustom)
 		{
-			if(customIt->second) customIt->second->IncUserCount();
-			return customIt->second;
+			if(pStored) pStored->IncUserCount();
+			return pStored;
 		}
 
-		tWString sPath;
 		cSoundEntityData* pSoundEntity;
-		tString asNewName;
 
-		if(mpCustomResolver && cString::GetFileExt(asName)=="" && mpFileSearcher->GetFilePath(cString::SetFileExt(asName,"snt"))==_W(""))
+		cRmEnv env(mpFileSearcher, this);
+		if(ohpl_rm_snd_needs_resolver(env.raw(), RM_STR(asName), mpCustomResolver != NULL))
 		{
 			cSoundEntityData *pCustom = mpCustomResolver(asName);
-			m_mapCustom[cString::ToLowerCase(asName)] = pCustom;
+			ohpl_rm_custom_set(mpCustom, RM_STR(asName), pCustom);
 			if(pCustom)
 			{
 				pCustom->IncUserCount();
@@ -102,12 +105,15 @@ namespace hpl {
 			}
 			return pCustom;
 		}
-		
+
 		BeginLoad(asName);
 
-		asNewName = cString::SetFileExt(asName,"snt");
-		
-		pSoundEntity = static_cast<cSoundEntityData*>(this->FindLoadedResource(asNewName,sPath));
+		cRmOut out;
+		ohpl_rm_resolve_simple(env.raw(), 3, RM_STR(asName), out.raw());
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
+
+		pSoundEntity = static_cast<cSoundEntityData*>(out.Res());
 
 		if(pSoundEntity==NULL && sPath!=_W(""))
 		{
@@ -123,10 +129,10 @@ namespace hpl {
 				pSoundEntity =NULL;
 			}
 		}
-		
+
 		if(pSoundEntity)pSoundEntity->IncUserCount();
 		else Error("Couldn't create SoundEntity '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pSoundEntity;
 	}
@@ -141,13 +147,9 @@ namespace hpl {
 
 	void cSoundEntityManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 }
