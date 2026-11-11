@@ -23,6 +23,7 @@
 #include "gui/Widget.h"
 #include "gui/WidgetSlider.h"
 #include "gui/WidgetBaseClasses.h"
+#include "gui/RustWidget2.h"
 
 
 namespace hpl {
@@ -40,13 +41,13 @@ namespace hpl {
 		virtual ~cWidgetComboBox();
 
 		void SetSelectedItem(int alX,bool abMoveList=false, bool abGenCallback=true);
-		int GetSelectedItem(){ return mlSelectedItem;}
+		int GetSelectedItem(){ return mCombo.selected;}
 
 		void SetCanEdit(bool abX);
 		bool GetCanEdit();
 
 		void SetMaxShownItems(int alX);
-		int GetMaxShownItems(){ return mlMaxItems;}
+		int GetMaxShownItems(){ return mCombo.max_items;}
 
 		void SetDefaultFontSize(const cVector2f& avSize);
 		
@@ -110,19 +111,11 @@ namespace hpl {
 		cWidgetButton *mpButton;
 		cWidgetSlider *mpSlider;
 
-		bool mbMenuOpen;
-		bool mbClickedAfterOpen;
-		float mfMenuHeight;
-		cVector3f mvMenuPos;
+		OhplW2Combo mCombo;
 
 		float mfButtonWidth;
 		float mfSliderWidth;
 
-		int mlMouseOverSelection;
-		int mlSelectedItem;
-		int mlFirstItem;
-		int mlMaxItems;
-		int mlItemsShown;
 
 		cGuiGfxElement *mpGfxBackground;
 
@@ -130,8 +123,6 @@ namespace hpl {
 		
 		cGuiGfxElement *mvGfxBorders[4];
 		cGuiGfxElement *mvGfxCorners[4];
-		
-		bool mbOpenByUIButton;
 	};
 
 };

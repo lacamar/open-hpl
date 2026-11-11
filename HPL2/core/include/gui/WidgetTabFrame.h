@@ -21,6 +21,7 @@
 #define HPL_WIDGET_TAB_FRAME
 
 #include "gui/Widget.h"
+#include "gui/RustWidget2.h"
 
 using namespace std;
 
@@ -195,24 +196,16 @@ namespace hpl
 		float mfBackgroundZ;
 		float mfForegroundZ;
 
-		float mfButtonSize;
-		float mfFirstTabOffset;
-		float mfTabSeparation;
 
-		int mlFirstVisibleTab;
-		int mlLastVisibleTab;
 
 		bool mbTabOnTopChanged;
 
-		float mfTabInactiveOffset;
-		float mfTabActiveOffset;
+		OhplW2TabState mState;
+
 
 		cGuiGfxElement* mvGfxArrows[2];
 		cGuiGfxElement* mvGfxDisabledArrows[2];
 
-		float mfTextLeftPadding;
-		float mfTextRightPadding;
-		float mfIconPadding;
 
 		cGuiGfxElement* mvGfxTabLabelBorders[4];
 		cGuiGfxElement* mvGfxTabLabelCorners[4];

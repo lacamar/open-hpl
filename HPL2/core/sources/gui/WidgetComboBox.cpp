@@ -32,6 +32,8 @@
 #include "gui/WidgetButton.h"
 #include "gui/WidgetSlider.h"
 
+#include <vector>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -49,20 +51,7 @@ namespace hpl {
 		mpButton = NULL;
 		mpSlider = NULL;
 
-		mbMenuOpen = false;
-
-		mbOpenByUIButton = false;
-
-		//mbConnectedToChildren = false;
-
-		mfMenuHeight = 0;
-
-		mlSelectedItem = -1;
-		mlMouseOverSelection =-1;
-
-		mlFirstItem =0;
-		mlMaxItems =12;
-		mlItemsShown = 0;
+		mCombo = ohpl_w2_combo_init();
 	}
 
 	//-----------------------------------------------------------------------
@@ -84,38 +73,24 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	
+
 	void cWidgetComboBox::SetSelectedItem(int alX, bool abMoveList, bool abGenCallback)
 	{
-		if(alX >= GetItemNum() || 
-			mlSelectedItem == alX) return;
+		OhplW2SliderSet slider;
+		if(ohpl_w2_combo_select1(&mCombo, alX, abMoveList, GetItemNum(), &slider)==false) return;
 
-		mlSelectedItem = alX;
+		if(slider.set) mpSlider->SetValue(slider.value);
 
-		if(abMoveList && mlSelectedItem >= mlFirstItem + mlMaxItems)
-		{
-			while(mlSelectedItem >= mlFirstItem + mlMaxItems)
-			{
-				mlFirstItem++;
-			}
-			mpSlider->SetValue(mlFirstItem);
-		}
-		if(abMoveList && mlSelectedItem < mlFirstItem && mlSelectedItem >=0)
-		{
-			while(mlSelectedItem < mlFirstItem)
-			{
-				mlFirstItem--;
-			}
-			mpSlider->SetValue(mlSelectedItem);
-		}
-		
-		if(mlSelectedItem >=0 && mlSelectedItem < GetItemNum())
-			SetText(mvItems[mlSelectedItem]->GetText());
+		slider = ohpl_w2_combo_select2(&mCombo, abMoveList);
+		if(slider.set) mpSlider->SetValue(slider.value);
+
+		if(mCombo.selected >=0 && mCombo.selected < GetItemNum())
+			SetText(mvItems[mCombo.selected]->GetText());
 		else
 			SetText(_W(""));
 
 		if(abGenCallback)
-			ProcessMessage(eGuiMessage_SelectionChange, cGuiMessageData(mlSelectedItem));
+			ProcessMessage(eGuiMessage_SelectionChange, cGuiMessageData(mCombo.selected));
 	}
 
 	//-----------------------------------------------------------------------
@@ -134,7 +109,7 @@ namespace hpl {
 
 	void cWidgetComboBox::SetMaxShownItems(int alX)
 	{
-		mlMaxItems = alX;
+		mCombo.max_items = alX;
 
 		UpdateProperties();
 	}
@@ -152,62 +127,42 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
 	void cWidgetComboBox::UpdateProperties()
 	{
-		if((int)mvItems.size() <= mlMaxItems)
-			mlItemsShown = (int)mvItems.size();
-		else
-			mlItemsShown = mlMaxItems;
-
-		mfMenuHeight = 2 + (mvDefaultFontSize.y+2)* (float)mlItemsShown + 2;
-
-		if(mlSelectedItem>=(int)mvItems.size())
+		if(ohpl_w2_combo_update(&mCombo, mvDefaultFontSize.y, (int)mvItems.size()))
 			SetSelectedItem((int)mvItems.size()-1);
-		
+
 		OnChangeSize();
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cWidgetComboBox::OpenMenu()
 	{
-		if(mvItems.empty()) return;
+		if(ohpl_w2_combo_can_open(&mCombo, (int)mvItems.size())==false) return;
 
-		if(mbMenuOpen) return;
-		
 		mpSet->PushAttentionWidget();
 		mpSet->PushFocusedWidget();
 		mpSet->PushDefaultFocusNavWidget();
 
 		mpSet->SetAttentionWidget(this);
-		mbMenuOpen = true;
 
-		mlMouseOverSelection = mlSelectedItem;
+		cVector2f vBorders[2] = {mvGfxBorders[1]->GetActiveSize(), mvGfxBorders[2]->GetActiveSize()};
+		float fGlobalY = GetGlobalPosition().y;
+		OhplW2ComboOpen open;
+		ohpl_w2_combo_open(&mCombo, (int)mvItems.size(), &mvSize, vBorders, fGlobalY, mpSet->GetPopUpZ(),
+						   mpSet->GetVirtualSize().y, &open);
 
-		mvMenuPos = cVector3f(0, 
-							  mvSize.y+mvGfxBorders[1]->GetActiveSize().y,
-							  mpSet->GetPopUpZ()+1);
-
-		if(GetGlobalPosition().y+mvMenuPos.y+mfMenuHeight>mpSet->GetVirtualSize().y)
-		{
-			float fDiff = GetGlobalPosition().y+mvMenuPos.y+mfMenuHeight-mpSet->GetVirtualSize().y;
-			mvMenuPos.y-=fDiff;
-		}
-		
-		if((int)mvItems.size() > mlMaxItems)
+		if(open.slider)
 		{
 			mpSlider->SetEnabled(true);
 			mpSlider->SetVisible(true);
 
-			mpSlider->SetPosition(mvMenuPos + cVector3f(mvSize.x - 20 - mvGfxBorders[1]->GetActiveSize().x,1,0.2f));
-			mpSlider->SetSize(cVector2f(20,mfMenuHeight - mvGfxBorders[1]->GetActiveSize().y -
-														mvGfxBorders[2]->GetActiveSize().y));
-
-			//mpSlider->SetMaxValue(GetItemNum());
-			//mpSlider->SetBarValueSize(mlMaxItems);
+			mpSlider->SetPosition(open.slider_pos);
+			mpSlider->SetSize(open.slider_size);
 
 			mpSet->SetFocusedWidget(this);
 		}
@@ -215,18 +170,13 @@ namespace hpl {
 		{
 			mpSet->SetFocusedWidget(this);
 		}
-
-		// This sets clip active in a quite sneaky way, why that?
-		//mbClipsGraphics = true;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetComboBox::CloseMenu()
 	{
-		if(mbMenuOpen==false) return;
-
-		mbMenuOpen = false;
+		if(ohpl_w2_combo_close(&mCombo)==false) return;
 
 		mpSet->PopAttentionWidget();
 		mpSet->PopFocusedWidget();
@@ -237,29 +187,25 @@ namespace hpl {
 
 		mbClipsGraphics = false;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	bool cWidgetComboBox::ButtonPress(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		if(aData.mlVal==eGuiMouseButton_Left)
+		cVector3f vLocalPos(0);
+		if(aData.mlVal==eGuiMouseButton_Left && mCombo.menu_open)
+			vLocalPos = WorldToLocalPosition(aData.mvPos);
+
+		switch(ohpl_w2_combo_button_press(&mCombo, aData.mlVal, &vLocalPos, mvSize.x))
 		{
-			if(mbMenuOpen)
-			{
-				cVector3f vLocalPos = WorldToLocalPosition(aData.mvPos);
-				if(vLocalPos.x >= mvMenuPos.x && vLocalPos.y <= mvMenuPos.x + mvSize.x &&
-					vLocalPos.y >= mvMenuPos.y && vLocalPos.y <= mvMenuPos.y + mfMenuHeight)
-				{
-					return OnMouseDown(aData) && OnMouseUp(aData);
-				}
-				else
-					CloseMenu();
-			}
-			else
-			{
-				OpenMenu();
-				mbClickedAfterOpen = false;
-			}
+		case 1:
+			return OnMouseDown(aData) && OnMouseUp(aData);
+		case 2:
+			CloseMenu();
+			return true;
+		case 3:
+			OpenMenu();
+			mCombo.clicked_after_open = false;
 			return true;
 		}
 		return false;
@@ -270,7 +216,7 @@ namespace hpl {
 
 	bool cWidgetComboBox::SliderMove(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		mlFirstItem = aData.mlVal;
+		mCombo.first_item = aData.mlVal;
 
 		return true;
 	}
@@ -278,7 +224,7 @@ namespace hpl {
 
 	bool cWidgetComboBox::SliderLostFocus(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen && GetMouseIsOver()==false)
+		if(mCombo.menu_open && GetMouseIsOver()==false)
 		{
 			CloseMenu();
 		}
@@ -294,7 +240,7 @@ namespace hpl {
 		mpText = mpSet->CreateWidgetTextBox(0,mvSize,_W(""),this);
 		mpText->SetText(msText);
 		mpText->SetCanEdit(false);
-		
+
 		mpButton = mpSet->CreateWidgetButton(0,0,_W(""),this);
 		mpButton->SetImage(mpSkin->GetGfx(eGuiSkinGfx_ComboBoxButtonIcon), false);
 		mpButton->AddCallback(eGuiMessage_MouseDown, this, kGuiCallback(ButtonPress));
@@ -311,7 +257,7 @@ namespace hpl {
 
 
 		AddCallback(eGuiMessage_OnDraw,this, kGuiCallback(DrawText));
-	
+
 		OnChangeSize();
 	}
 
@@ -322,16 +268,17 @@ namespace hpl {
 		if(mpText && mpButton && mpSlider)
 		{
 			mpText->SetSize(mvSize);
-			mvSize = mpText->GetSize();	
+			mvSize = mpText->GetSize();
 
 			cVector2f vBackSize = mpText->GetBackgroundSize();
-			
-			mpButton->SetSize(cVector2f(mfButtonWidth,vBackSize.y));
-			mpButton->SetPosition(cVector3f( mvSize.x - (mvSize.x - vBackSize.x)/2 - mfButtonWidth,
-											(mvSize.y - vBackSize.y)/2, 0.3f));
 
-			mpSlider->SetBarValueSize(mlMaxItems);
-			mpSlider->SetMaxValue((int)mvItems.size() - mlMaxItems);
+			OhplW2ComboLayout layout;
+			ohpl_w2_combo_layout(&mvSize, &vBackSize, mfButtonWidth, &layout);
+			mpButton->SetSize(layout.button_size);
+			mpButton->SetPosition(layout.button_pos);
+
+			mpSlider->SetBarValueSize(mCombo.max_items);
+			mpSlider->SetMaxValue((int)mvItems.size() - mCombo.max_items);
 		}
 	}
 
@@ -365,23 +312,25 @@ namespace hpl {
 
 	void cWidgetComboBox::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		if(mbMenuOpen)
+		if(mCombo.menu_open)
 		{
 			///////////////////////////////
 			// Set up base as clip region
 			cGuiClipRegion *pPrevClipRegion = mpSet->GetCurrentClipRegion();
 			mpSet->SetCurrentClipRegion(mpSet->GetBaseClipRegion());
 
+			cVector3f vGlobal = GetGlobalPosition();
+			OhplW2ComboDraw draw;
+			ohpl_w2_combo_draw(&mCombo, &vGlobal, mvSize.x, &draw);
+
 			////////////////////////////
 			//Draw background
-			mpSet->DrawGfx(mpGfxBackground,GetGlobalPosition() + mvMenuPos,
-							cVector2f(mvSize.x, mfMenuHeight));
+			mpSet->DrawGfx(mpGfxBackground, draw.bg_pos, draw.bg_size);
 
 			////////////////////////////////
 			// Draw borders
-			DrawBordersAndCorners(	NULL, mvGfxBorders, mvGfxCorners, 
-									GetGlobalPosition() + mvMenuPos + cVector3f(0,0,0.2f),
-									cVector2f(mvSize.x, mfMenuHeight));
+			DrawBordersAndCorners(	NULL, mvGfxBorders, mvGfxCorners,
+									draw.border_pos, draw.border_size);
 
 			///////////////////////////////
 			// Reset clip region
@@ -393,7 +342,7 @@ namespace hpl {
 
 	bool cWidgetComboBox::DrawText(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen==false) return false;
+		if(mCombo.menu_open==false) return false;
 
 		///////////////////////////////
 		// Set up base as clip region
@@ -402,22 +351,25 @@ namespace hpl {
 
 		///////////////////////////////
 		// Draw text entries
-		cVector3f vPos = GetGlobalPosition() + 
-			mvMenuPos + cVector3f(3,2,0.2f);
-		
-		for(int i=mlFirstItem; i<(int)mvItems.size(); ++i)
+		cVector3f vGlobal = GetGlobalPosition();
+		std::vector<OhplW2RowOp> vOps(mvItems.size()*2+2);
+		size_t lCount = ohpl_w2_combo_rows(&mCombo, &vGlobal, mvSize.x, mvDefaultFontSize.y, (int)mvItems.size(),
+										   vOps.data(), vOps.size());
+		for(size_t i=0; i<lCount; ++i)
 		{
-			if(i-mlFirstItem >= mlMaxItems) break;
-
-			if(i == mlMouseOverSelection)
+			const OhplW2RowOp& op = vOps[i];
+			switch(op.kind)
 			{
-				mpSet->DrawGfx(mpGfxSelection,vPos - cVector3f(3,0,0.1f),
-								cVector2f(mvSize.x,mvDefaultFontSize.y));
-				DrawDefaultTextHighlight(mvItems[i]->GetText(),vPos,eFontAlign_Left);
+			case kOhplW2OpSelection:
+				mpSet->DrawGfx(mpGfxSelection, op.pos, op.size);
+				break;
+			case kOhplW2OpTextHighlight:
+				DrawDefaultTextHighlight(mvItems[op.item]->GetText(),op.pos,eFontAlign_Left);
+				break;
+			case kOhplW2OpText:
+				DrawDefaultText(mvItems[op.item]->GetText(),op.pos,eFontAlign_Left);
+				break;
 			}
-			else
-				DrawDefaultText(mvItems[i]->GetText(),vPos,eFontAlign_Left);
-			vPos.y += mvDefaultFontSize.y +2;
 		}
 
 		///////////////////////////////
@@ -428,58 +380,45 @@ namespace hpl {
 		return true;
 	}
 	kGuiCallbackDeclaredFuncEnd(cWidgetComboBox,DrawText)
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetComboBox::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen==false) return false;
+		if(mCombo.menu_open==false) return false;
 
 		if(GetMouseIsOver()==false) return false;
 
 		cVector3f vLocalPos = WorldToLocalPosition(aData.mvPos);
 
-		if(vLocalPos.y <= mvMenuPos.y) return false;
-		if(mpSlider->IsEnabled() && vLocalPos.x >= mvSize.x - 20) return false;
-
-		float fToTextStart = 2 + mvMenuPos.y + mvGfxCorners[0]->GetActiveSize().y;
-		int lSelection = (int)(( vLocalPos.y - fToTextStart) / (mvDefaultFontSize.y+2));
-		if(lSelection <0) lSelection =0;
-
-		lSelection = lSelection + mlFirstItem;
-
-		if(lSelection >= (int)mvItems.size()) lSelection = (int)mvItems.size()-1;
-
-		mlMouseOverSelection = lSelection;
-
-		return true;
+		return ohpl_w2_combo_mouse_move(&mCombo, true, &vLocalPos, mvSize.x, mpSlider->IsEnabled(),
+										mvGfxCorners[0]->GetActiveSize().y, mvDefaultFontSize.y, (int)mvItems.size());
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cWidgetComboBox::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen == false) return false;
-
-		mbClickedAfterOpen = true;
+		int lWheel;
+		if(ohpl_w2_combo_mouse_down_pre(&mCombo, aData.mlVal, &lWheel)==false) return false;
 
 		int lSliderValue = mpSlider->GetValue();
 		int lValueAdd = mpSlider->GetButtonValueAdd();
 
-		if(aData.mlVal & eGuiMouseButton_WheelUp)
+		if(lWheel < 0)
 			mpSlider->SetValue(lSliderValue-lValueAdd);
-		else if(aData.mlVal & eGuiMouseButton_WheelDown)
+		else if(lWheel > 0)
 			mpSlider->SetValue(lSliderValue+lValueAdd);
 		else
 		{
 			cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
-	        
-			if(vLocal.y < mvMenuPos.y || vLocal.y > mvMenuPos.y + mfMenuHeight)
+
+			if(ohpl_w2_combo_mouse_down_closes(&mCombo, vLocal.y))
 			{
 				CloseMenu();
 			}
 		}
-	
+
 		return true;
 	}
 
@@ -487,15 +426,13 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen == false || mbClickedAfterOpen == false) return false;
-		if((aData.mlVal&eGuiMouseButton_WheelUp) || (aData.mlVal & eGuiMouseButton_WheelDown))
-            return false;
+		if(ohpl_w2_combo_mouse_up_pre(&mCombo, aData.mlVal)==false) return false;
 
 		cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
 
-		if(vLocal.y > mvMenuPos.y)
+		if(ohpl_w2_combo_mouse_up_selects(&mCombo, vLocal.y))
 		{
-			SetSelectedItem(mlMouseOverSelection);
+			SetSelectedItem(mCombo.mouse_over);
 			CloseMenu();
 		}
 
@@ -508,9 +445,9 @@ namespace hpl {
 	{
 		return false;
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetComboBox::OnMouseLeave(const cGuiMessageData& aData)
 	{
 		return false;
@@ -520,78 +457,39 @@ namespace hpl {
 
 	bool cWidgetComboBox::OnUIArrowPress(const cGuiMessageData& aData)
 	{
-		if(mbMenuOpen)
-		{
-			if(aData.mlVal==eUIArrow_Down)
-			{
-				if(mlMouseOverSelection+1 <= GetItemNum()-1) mlMouseOverSelection++;
-			}
-			else if(aData.mlVal==eUIArrow_Up)
-			{
-				if(mlMouseOverSelection-1 >= 0)	mlMouseOverSelection--;
-			}
-		
-			int lVal = mpSlider->GetValue() / mpSlider->GetButtonValueAdd();
+		if(mCombo.menu_open==false) return false;
 
-			if(mlMouseOverSelection < lVal)
-				mpSlider->SetValue(int((mlMouseOverSelection) * mpSlider->GetButtonValueAdd()));
-			
-			if(mlMouseOverSelection > lVal + 11)
-				mpSlider->SetValue(int((mlMouseOverSelection - 11) * mpSlider->GetButtonValueAdd()));
-			return true;
-		}
+		int lSet;
+		bool bHasSet;
+		bool bRet = ohpl_w2_combo_ui_arrow(&mCombo, aData.mlVal, GetItemNum(), mpSlider->GetValue(),
+										   mpSlider->GetButtonValueAdd(), &lSet, &bHasSet);
+		if(bHasSet)
+			mpSlider->SetValue(lSet);
 
-		return false;
+		return bRet;
 	}
 
 	bool cWidgetComboBox::OnUIButtonPress(const cGuiMessageData& aData)
 	{
-		if(HasFocus())
-		{
-			if(aData.mlVal&eUIButton_Secondary)
-			{
-				if(mbMenuOpen)
-				{
-					mbOpenByUIButton = false;
-					CloseMenu();
-					
-					return true;
-				}
-				else
-					return false;
-			}
-			else if((aData.mlVal&eUIButton_Primary)==0)
-			{
-				return false;
-			}
+		OhplW2ComboUiButton button = ohpl_w2_combo_ui_button(&mCombo, HasFocus(), aData.mlVal);
 
-			if(mbOpenByUIButton==false)
-			{
-				if(mbMenuOpen==false)
-				{
-					mbOpenByUIButton = true;
-					OpenMenu();
-				}
-				else
-				{
-					SetSelectedItem(mlMouseOverSelection, true, true);
-					CloseMenu();
-				}
-			}
-			else
-			{
-				if(mbMenuOpen)
-				{
-					SetSelectedItem(mlMouseOverSelection, true, true);
-					CloseMenu();
-					mbOpenByUIButton = false;
-				}
-			}
-		
-			return aData.mlVal==eUIButton_Primary;
+		switch(button.action)
+		{
+		case 1:
+			CloseMenu();
+			break;
+		case 2:
+			OpenMenu();
+			break;
+		case 3:
+			SetSelectedItem(mCombo.mouse_over, true, true);
+			CloseMenu();
+			if(button.clear_open_by_ui)
+				mCombo.open_by_ui = false;
+			break;
 		}
 
-		return false;
+		return button.ret;
 	}
 
 	bool cWidgetComboBox::OnUIButtonRelease(const cGuiMessageData& aData)
@@ -605,15 +503,14 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	bool cWidgetComboBox::OnLostFocus(const cGuiMessageData& aData)
-	{	
-		if(mbMenuOpen && mbOpenByUIButton==false)
+	{
+		if(mCombo.menu_open && mCombo.open_by_ui==false)
 		{
 			cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
-			if(vLocal.x < mvMenuPos.x || vLocal.x > mvMenuPos.x + mvSize.x
-				|| vLocal.y < mvMenuPos.y || vLocal.y > mvMenuPos.y + mfMenuHeight)
+			if(ohpl_w2_combo_lost_focus(&mCombo, &vLocal, mvSize.x))
 				CloseMenu();
 		}
-	
+
 		return false;
 	}
 
@@ -621,71 +518,21 @@ namespace hpl {
 
 	bool cWidgetComboBox::PointIsInside(const cVector2f& avPoint, bool abOnlyClipped)
 	{
-		if(mbMenuOpen==false && CheckPointInsideClippingParent(avPoint)==false)
+		if(mCombo.menu_open==false && CheckPointInsideClippingParent(avPoint)==false)
 			return false;
 
 		if(abOnlyClipped && mbClipsGraphics==false) return true;
 
 		cVector3f vMousePos = WorldToLocalPosition(cVector3f(avPoint));
-		bool bInside = false;
-		
-		if(	vMousePos.x < 0 || vMousePos.x > mvSize.x || 
-			vMousePos.y < 0 || vMousePos.y > mvSize.y)
-		{
-			bInside = false;
-		}
-		else
-		{
-			bInside = true;	
-		}
 
-		if(bInside==false)
-		{
-			if(mbMenuOpen)
-			{
-				if(vMousePos.x >= mvMenuPos.x && vMousePos.x <= mvMenuPos.x + mvSize.x &&
-					vMousePos.y >= mvMenuPos.y && vMousePos.y <= mvMenuPos.y + mfMenuHeight)
-					bInside = true;
-			}
-		}
-
-		return bInside;
+		return ohpl_w2_combo_point_inside(&mCombo, &vMousePos, &mvSize);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cWidgetComboBox::SliderOnUIArrowPress(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		if(aData.mlVal==eUIArrow_Up)
-		{
-			mlMouseOverSelection--;
-			if(mlMouseOverSelection<0)
-			{
-				mlMouseOverSelection = GetItemNum()-1;
-
-				mlFirstItem = mlMouseOverSelection-mlItemsShown+1;
-			}
-
-			if(mlMouseOverSelection<mlFirstItem)
-				mlFirstItem = mlMouseOverSelection;
-		}
-		else if(aData.mlVal==eUIArrow_Down)
-		{
-			mlMouseOverSelection++;
-			if(mlMouseOverSelection>GetItemNum()-1)
-			{
-				mlMouseOverSelection = 0;
-
-				mlFirstItem = 0;
-			}
-
-			if(mlMouseOverSelection>mlFirstItem+mlItemsShown-1)
-				mlFirstItem = mlMouseOverSelection-mlItemsShown+1;
-		}
-		else
-			return false;
-
-		return true;
+		return ohpl_w2_combo_slider_arrow(&mCombo, aData.mlVal, GetItemNum());
 	}
 	kGuiCallbackDeclaredFuncEnd(cWidgetComboBox, SliderOnUIArrowPress);
 
@@ -693,10 +540,10 @@ namespace hpl {
 	{
 		if(aData.mlVal==eUIButton_Primary)
 		{
-			SetSelectedItem(mlMouseOverSelection);
+			SetSelectedItem(mCombo.mouse_over);
 			CloseMenu();
 
-			mbOpenByUIButton = false;
+			mCombo.open_by_ui = false;
 			mpSet->SetFocusedWidget(this);
 		}
 

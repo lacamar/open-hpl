@@ -42,7 +42,7 @@ namespace hpl {
 	cWidgetMultiPropertyListBox::cWidgetMultiPropertyListBox(cGuiSet* apSet, cGuiSkin* apSkin) : iWidgetListBoxBase(apSet,apSkin)
 	{
 		mbClipsGraphics = true;
-		mlNumBlankRows = 1;
+		mList.num_blank_rows = 1;
 	}
 
 	cWidgetMultiPropertyListBox::~cWidgetMultiPropertyListBox()
@@ -116,7 +116,7 @@ namespace hpl {
 
 	cVector3f cWidgetMultiPropertyListBox::GetItemStartPos()
 	{
-		return GetGlobalPosition() + cVector3f(0, mlNumBlankRows * (mvDefaultFontSize.y+2), mfBackgroundZ+0.02f);
+		return GetGlobalPosition() + cVector3f(0, mList.num_blank_rows * (mvDefaultFontSize.y+2), mfBackgroundZ+0.02f);
 	}
 
 	//-------------------------------------------------------------------------------
@@ -165,9 +165,9 @@ namespace hpl {
 		/////////////////////////////
 		// Draws items
 		vPosition = GetItemStartPos();
-		for(size_t i=mlFirstItem; i<mvItems.size(); ++i)
+		for(size_t i=mList.first_item; i<mvItems.size(); ++i)
 		{
-			if(i-mlFirstItem > mlMaxItems) break;
+			if(i-mList.first_item > mList.max_items) break;
 
 			cWidgetItem* pItem = mvItems[i];
 
