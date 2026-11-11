@@ -8,6 +8,10 @@ pub mod deferred_light_ffi;
 #[cfg(test)]
 mod deferred_light_tests;
 pub mod deferred_lightlist;
+pub mod deferred_pass;
+pub mod deferred_pass_ffi;
+#[cfg(test)]
+mod deferred_pass_tests;
 pub mod deferred_post;
 #[cfg(test)]
 mod deferred_tests;

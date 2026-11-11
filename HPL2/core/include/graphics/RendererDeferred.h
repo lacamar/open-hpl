@@ -235,12 +235,7 @@ namespace hpl {
 		void SetupLightsAndRenderQueries();
 		void InitLightRendering();
 		void RenderLights();
-		void RenderLights_StencilBack_ScreenQuad();
-		void RenderLights_StencilFront_RenderBack();
-		void RenderLights_RenderBack();
-		void RenderLights_Batches();
-		void RenderLights_Box_StencilFront_RenderBack();
-		void RenderLights_Box_RenderBack();
+		void RenderLightList(int alPass);
 		bool RenderLights_BoxWeighted();
 		void RenderLights_Directional();
 		void RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul);
@@ -272,7 +267,6 @@ namespace hpl {
 
 		////////////////
 		//Draw helpers
-		void RenderBoxLight(cDeferredLight* apLightData);
 		
 		////////////////
 		//Misc Helpers
@@ -376,7 +370,7 @@ namespace hpl {
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
-		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true, cDeferredLight *apLight = NULL);
+		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true, cDeferredLight *apLight = NULL, const char *apLogName = NULL);
 		void FillLightState(OhplDlLightState &aState, cDeferredLight *apLightData, bool abViewProj);
 		iVertexBuffer* GetLightShapeBuffer(int alShape);
 		void RunStep(int alStep, int alArg);

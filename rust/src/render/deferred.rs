@@ -255,6 +255,15 @@ pub enum Step {
     CallbackPostTranslucent,
     RetrieveLightOcclusion,
     CopyAccumToPostEffects,
+    InitLightRendering,
+    RenderSsao,
+    RenderHpl3Ssao,
+    /// Answered with whether the weighted box pass handled the box lights.
+    RenderBoxWeighted,
+    RenderDirectional,
+    RenderNightVision,
+    ApplyHpl3Ssao,
+    LightPass(i32),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -380,6 +389,7 @@ pub enum Op {
         f: [f32; 4],
     },
     Dl(DlOp),
+    P3(P3Op),
 }
 
 /// Frustum and query questions only the shim can answer.
@@ -428,6 +438,43 @@ pub enum DlOp {
     ClearShadowTexture,
     ShadowData,
     RenderShadowMap,
+}
+
+/// Light pass operations (G6c) on renderer state and light objects.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum P3Op {
+    StencilActive(bool),
+    ClearStencil,
+    ClearColorStencil,
+    Stencil {
+        func: i32,
+        reference: i32,
+        mask: i32,
+        fail: i32,
+        zfail: i32,
+        zpass: i32,
+    },
+    StencilWriteMask(i32),
+    /// Counter-clockwise when true.
+    Cull(bool),
+    Scissor(i32),
+    ScissorOff,
+    /// `SetupProgramAndTextures` plus `SetupLightProgramVariables` for a light.
+    LightProgram {
+        idx: i32,
+        flags: u32,
+    },
+    /// `SetupShadowMapRendering`; flag.
+    ShadowSetup(i32),
+    /// `RenderLightShadowMap`.
+    ShadowMap(i32),
+    PairBegin(i32),
+    PairEnd,
+    StencilDirty(bool),
+    Log {
+        kind: i32,
+        idx: i32,
+    },
 }
 
 /// Appends ops when the queue runs dry; returns false once nothing more will come.
