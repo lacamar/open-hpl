@@ -1,7 +1,7 @@
 //! `iLuxProp`: base variables, damage, effect fading, the scripted static move and the
 //! "ignore the player until outside" check.
 
-use super::ops::{Op, Ops, Probe, op};
+use super::ops::{Op, Ops, Pod, Probe, op};
 use super::vars::{Vars, put_var, zero3};
 use crate::math::{
     IDENTITY, dot3, fma, len3, matrix_mul, matrix_mul_vec, matrix_rotate, normalize3, v3,
@@ -357,14 +357,14 @@ pub fn mesh_fading(s: &mut BaseState, dt: f32, has_mesh: bool, ops: &mut Ops) {
 }
 
 /// `UpdateAnimation`: run the stored callback when the non-looping animation finished.
-pub fn anim_update(index: &mut i32, over: bool, has_callback: bool, ops: &mut Ops) {
-    if *index < 0 {
+pub fn anim_update(index: Pod<i32>, over: bool, has_callback: bool, ops: &mut Ops) {
+    if *index.m() < 0 {
         return;
     }
     if over {
-        *index = -1;
+        *index.m() = -1;
         if has_callback {
-            ops.event(Op::new(op::RUN_ANIM_CALLBACK), index);
+            ops.event(Op::new(op::RUN_ANIM_CALLBACK));
         }
     }
 }

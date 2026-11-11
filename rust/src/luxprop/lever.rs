@@ -1,7 +1,7 @@
 //! `cLuxProp_Lever`: min/max/middle states, stuck states and the spring back to a goal angle.
 
 use super::object::{MoveData, load_rotate};
-use super::ops::{Op, Ops, Probe, op};
+use super::ops::{Op, Ops, Pod, Probe, op};
 use super::vars::{Vars, put_var};
 use super::wheel::to_stuck_state;
 use crate::math::{dot3, fma, to_rad, v3};
@@ -86,30 +86,30 @@ pub fn setup(s: &mut LeverState, p: &LeverParams, min: f32, max: f32, ops: &mut 
     calculate_middle_angle(s, p);
 }
 
-fn change_state(s: &mut LeverState, state: i32, effects: bool, ops: &mut Ops) {
-    if s.current_state == state {
+fn change_state(s: Pod<LeverState>, state: i32, effects: bool, ops: &mut Ops) {
+    if s.m().current_state == state {
         return;
     }
-    s.current_state = state;
-    ops.event(Op::new(op::CONN_STATE).i(state), s);
+    s.m().current_state = state;
+    ops.event(Op::new(op::CONN_STATE).i(state));
     if state == 1 || state == -1 {
         ops.push(Op::new(op::LIMIT_SOUND).i(state).j(i32::from(effects)));
     }
-    ops.event(Op::new(op::CONN_LIMIT).i(state), s);
+    ops.event(Op::new(op::CONN_LIMIT).i(state));
 }
 
 pub fn set_stuck_state(
-    s: &mut LeverState,
+    s: Pod<LeverState>,
     p: &LeverParams,
     state: i32,
     effects: bool,
     ops: &mut Ops,
 ) {
-    if s.stuck_state == state {
+    if s.m().stuck_state == state {
         return;
     }
-    s.stuck_state = state;
-    s.stuck_sound_timer = 0.0;
+    s.m().stuck_state = state;
+    s.m().stuck_sound_timer = 0.0;
     let hinge = |ops: &mut Ops, min: f32, max: f32| {
         ops.push(Op::new(op::HINGE_MIN).i(0).f(min));
         ops.push(Op::new(op::HINGE_MAX).i(0).f(max));
@@ -118,38 +118,38 @@ pub fn set_stuck_state(
         change_state(s, 1, effects, ops);
         hinge(
             ops,
-            s.default_max_angle - p.max_limit_range,
-            s.default_max_angle,
+            s.m().default_max_angle - p.max_limit_range,
+            s.m().default_max_angle,
         );
     } else if state == -1 {
         change_state(s, -1, effects, ops);
         hinge(
             ops,
-            s.default_min_angle,
-            s.default_min_angle + p.min_limit_range,
+            s.m().default_min_angle,
+            s.m().default_min_angle + p.min_limit_range,
         );
     } else {
-        hinge(ops, s.default_min_angle, s.default_max_angle);
+        hinge(ops, s.m().default_min_angle, s.m().default_max_angle);
     }
 }
 
-pub fn on_connection_state(s: &mut LeverState, p: &LeverParams, state: i32, ops: &mut Ops) {
+pub fn on_connection_state(s: Pod<LeverState>, p: &LeverParams, state: i32, ops: &mut Ops) {
     set_stuck_state(s, p, if state > 0 { -1 } else { 0 }, true, ops);
 }
 
 /// `OnInteract` before the player state change; returns whether to show the hint.
-pub fn on_interact(s: &mut LeverState, p: &LeverParams, show_hints: bool, ops: &mut Ops) -> bool {
-    if s.stuck_state != 0 && s.interaction_disables_stuck {
+pub fn on_interact(s: Pod<LeverState>, p: &LeverParams, show_hints: bool, ops: &mut Ops) -> bool {
+    if s.m().stuck_state != 0 && s.m().interaction_disables_stuck {
         set_stuck_state(s, p, 0, true, ops);
     }
-    s.stuck_state == 0 && show_hints
+    s.m().stuck_state == 0 && show_hints
 }
 
-fn update_check_limit(s: &mut LeverState, p: &LeverParams, angle: f32, ops: &mut Ops) {
-    if s.stuck_state != 0 {
+fn update_check_limit(s: Pod<LeverState>, p: &LeverParams, angle: f32, ops: &mut Ops) {
+    if s.m().stuck_state != 0 {
         return;
     }
-    let (dmax, dmin) = (s.default_max_angle, s.default_min_angle);
+    let (dmax, dmin) = (s.m().default_max_angle, s.m().default_min_angle);
     if angle > dmax - p.max_limit_range {
         change_state(s, 1, true, ops);
         if p.max_limit_stuck {
@@ -206,7 +206,7 @@ fn update_auto_move(
 }
 
 pub fn update(
-    s: &mut LeverState,
+    s: Pod<LeverState>,
     p: &LeverParams,
     dt: f32,
     interacted: bool,
@@ -215,27 +215,27 @@ pub fn update(
 ) {
     let h = probe.hinge(0);
     let angle = h.angle;
-    if s.stuck_state != 0 && interacted {
-        if s.stuck_sound_timer > 0.0 {
-            s.stuck_sound_timer -= dt;
+    if s.m().stuck_state != 0 && interacted {
+        if s.m().stuck_sound_timer > 0.0 {
+            s.m().stuck_sound_timer -= dt;
         } else if super::base::sqr_len(h.child_ang_vel) > 0.01f32 {
             ops.push(Op::new(op::PLAY_SOUND).i(op::SND_LEVER_STUCK));
-            s.stuck_sound_timer = 1.5;
+            s.m().stuck_sound_timer = 1.5;
         }
     }
     update_check_limit(s, p, angle, ops);
-    update_auto_move(s, p, angle, dt, interacted, probe, ops);
+    update_auto_move(s.m(), p, angle, dt, interacted, probe, ops);
 }
 
 /// `LoadInstanceVariables`.
-pub fn load_instance(v: &dyn Vars, s: &mut LeverState, p: &mut LeverParams, ops: &mut Ops) {
+pub fn load_instance(v: &dyn Vars, s: Pod<LeverState>, p: Pod<LeverParams>, ops: &mut Ops) {
     let stuck = to_stuck_state(&v.string("StuckState", b""));
-    set_stuck_state(s, p, stuck, false, ops);
-    s.interaction_disables_stuck = v.boolean("InteractionDisablesStuck", false);
+    set_stuck_state(s, p.r(), stuck, false, ops);
+    s.m().interaction_disables_stuck = v.boolean("InteractionDisablesStuck", false);
     if v.boolean("OverrideDefaults", false) {
-        p.middle_angle_amount = v.float("MiddleAngleAmount", 0.0);
-        p.auto_move_to_angle = v.boolean("AutoMoveToAngle", true);
-        p.auto_move_goal = to_auto_move_goal(&v.string("AutoMoveGoal", b"Middle"));
-        calculate_middle_angle(s, p);
+        p.m().middle_angle_amount = v.float("MiddleAngleAmount", 0.0);
+        p.m().auto_move_to_angle = v.boolean("AutoMoveToAngle", true);
+        p.m().auto_move_goal = to_auto_move_goal(&v.string("AutoMoveGoal", b"Middle"));
+        calculate_middle_angle(s.m(), p.r());
     }
 }

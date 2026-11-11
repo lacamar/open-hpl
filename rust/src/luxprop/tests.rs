@@ -2,7 +2,7 @@ use super::base::{self, BaseState, EffectsIn, LightData, MoveIn};
 use super::lever::{self, LeverParams, LeverState};
 use super::multislider::{self, MultiParams, MultiState};
 use super::object::{self, JointData, ObjectState};
-use super::ops::{Hinge, Slider};
+use super::ops::{Hinge, Pod, Slider};
 use super::swingdoor::{self, DoorJoint, DoorState, Env};
 use super::wheel::{self, WheelParams, WheelState};
 use super::{Op, Ops, Probe, op};
@@ -245,14 +245,14 @@ fn wheel_limits_and_stuck() {
         ..WheelState::default()
     };
     let mut probe = Mock::default();
-    let (_, ops) = run(|o| wheel::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, ops) = run(|o| wheel::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.stuck_state, 1);
     assert_eq!(s.current_state, 1);
     let c = codes(&ops);
     assert!(
         c.contains(&op::CONN_STATE) && c.contains(&op::CONN_LIMIT) && c.contains(&op::CONN_TURN)
     );
-    let (_, _) = run(|o| wheel::set_stuck_state(&mut s, &p, 0, true, &mut probe, o));
+    let (_, _) = run(|o| wheel::set_stuck_state(Pod::new(&mut s), &p, 0, true, &mut probe, o));
     assert_eq!(s.stuck_state, 0);
 }
 
@@ -269,7 +269,7 @@ fn lever_states_and_middle() {
     assert_eq!(s.middle_angle, 0.0);
     let mut probe = Mock::default();
     probe.hinge.angle = 0.95;
-    let (_, ops) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, ops) = run(|o| lever::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 1);
     assert_eq!(
         codes(&ops),
@@ -288,7 +288,8 @@ fn multislider_states_and_sticking() {
     let mut s = MultiState::new();
     let mut probe = Mock::default();
     probe.slider.distance = 0.55;
-    let (_, ops) = run(|o| multislider::update(&mut s, &p, &states, 0.016, false, &mut probe, o));
+    let (_, ops) =
+        run(|o| multislider::update(Pod::new(&mut s), &p, &states, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 1);
     assert_eq!(codes(&ops), [op::CHANGE_SOUND, op::RUN_CHANGE_CALLBACK]);
     assert!(multislider::compute_states(0.0, 1.0, -2).is_empty());
@@ -310,7 +311,7 @@ fn insanity_vision_counts_down() {
         sanity: 10.0,
         interacted: false,
     };
-    let (_, ops) = run(|o| object::update(&mut s, &p, &i, &a, &mut probe, o));
+    let (_, ops) = run(|o| object::update(Pod::new(&mut s), &p, &i, &a, &mut probe, o));
     assert_eq!(s.insanity_vision_count, 2.0);
     assert_eq!(codes(&ops), [op::INSANITY_VISIBLE]);
     assert_eq!(ops[0].i, 1);
@@ -407,13 +408,23 @@ fn multislider_sticks_at_exactly_the_distance() {
     let mut s = MultiState::new();
     let mut probe = Mock::default();
     probe.slider.distance = 0.75;
-    let (_, ops) = run(|o| multislider::update(&mut s, &p, &states, 0.016, false, &mut probe, o));
+    let (_, ops) =
+        run(|o| multislider::update(Pod::new(&mut s), &p, &states, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 1);
     assert_eq!(codes(&ops), [op::CHANGE_SOUND, op::RUN_CHANGE_CALLBACK]);
     probe.slider.distance = 0.76;
     let mut s = MultiState::new();
-    let (_, _) =
-        run(|o| multislider::update(&mut s, &p, &states[..2], 0.016, false, &mut probe, o));
+    let (_, _) = run(|o| {
+        multislider::update(
+            Pod::new(&mut s),
+            &p,
+            &states[..2],
+            0.016,
+            false,
+            &mut probe,
+            o,
+        )
+    });
     assert_eq!(s.current_state, -1);
 }
 
@@ -435,21 +446,21 @@ fn lever_middle_band_edges() {
     let mut probe = Mock::default();
     probe.hinge.angle = 0.3 - to_rad(10.0) - 0.002;
     let mut s = fresh();
-    let (_, ops) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, ops) = run(|o| lever::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 0);
     assert_eq!(codes(&ops), [op::CONN_STATE, op::CONN_LIMIT]);
     probe.hinge.angle = 0.3 - to_rad(10.0) + 0.002;
     let mut s = fresh();
-    let (_, ops) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, ops) = run(|o| lever::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 1);
     assert!(ops.is_empty());
     probe.hinge.angle = to_rad(10.0) + 0.002;
     let mut s = fresh();
-    let (_, _) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, _) = run(|o| lever::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 0);
     probe.hinge.angle = to_rad(10.0) - 0.002;
     let mut s = fresh();
-    let (_, _) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    let (_, _) = run(|o| lever::update(Pod::new(&mut s), &p, 0.016, false, &mut probe, o));
     assert_eq!(s.current_state, 1);
 }
 
@@ -461,7 +472,7 @@ fn door_damage_levels() {
         ..swingdoor::DoorParams::default()
     };
     let mut s = DoorState::new();
-    let (_, ops) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    let (_, ops) = run(|o| swingdoor::on_health_change(Pod::new(&mut s), &p, 20.0, true, o));
     assert_eq!(s.current_mesh_entity, 2);
     assert_eq!(
         ops.last().map(|o| (o.code, o.i)),
@@ -470,30 +481,29 @@ fn door_damage_levels() {
     // already at level 1: a second hit still moves to level 2, and level 2 stays put
     let mut s = DoorState::new();
     s.current_mesh_entity = 1;
-    let (_, _) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    let (_, _) = run(|o| swingdoor::on_health_change(Pod::new(&mut s), &p, 20.0, true, o));
     assert_eq!(s.current_mesh_entity, 2);
-    let (_, ops) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    let (_, ops) = run(|o| swingdoor::on_health_change(Pod::new(&mut s), &p, 20.0, true, o));
     assert!(ops.is_empty());
     let mut s = DoorState::new();
-    let (_, _) = run(|o| swingdoor::on_health_change(&mut s, &p, 40.0, true, o));
+    let (_, _) = run(|o| swingdoor::on_health_change(Pod::new(&mut s), &p, 40.0, true, o));
     assert_eq!(s.current_mesh_entity, 1);
 }
 
 #[test]
-fn events_reread_state_after_the_script() {
-    let mut s = WheelState {
-        angle: 1.0,
-        ..WheelState::default()
-    };
-    let mut ops_log = Vec::new();
+fn events_leave_no_borrow_live() {
+    let mut s = WheelState::default();
     let ptr = std::ptr::from_mut(&mut s);
+    let pod = Pod::new(&mut s);
     let mut sink = |o: &Op| {
-        ops_log.push(o.code);
         if o.code == op::CONN_STATE {
             // the script re-enters the wheel and changes its state
             unsafe { (*ptr).stuck_state = 7 };
         }
     };
-    Ops(&mut sink).event(Op::new(op::CONN_STATE), &mut s);
-    assert_eq!(s.stuck_state, 7);
+    let mut ops = Ops(&mut sink);
+    pod.m().angle = 1.0;
+    ops.event(Op::new(op::CONN_STATE));
+    assert_eq!(pod.m().stuck_state, 7);
+    assert_eq!(pod.m().angle, 1.0);
 }

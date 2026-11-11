@@ -14,7 +14,7 @@ use super::multislider::{self, MultiParams, MultiState};
 use super::object::{
     self, ImpactBody, JointData, ObjectInstance, ObjectParams, ObjectState, UpdateIn,
 };
-use super::ops::{Hinge, Op, Ops, Probe, Slider};
+use super::ops::{Hinge, Op, Ops, Pod, Probe, Slider};
 use super::swingdoor::{self, DoorJoint, DoorParams, DoorState, Env};
 use super::vars::Vars;
 use super::wheel::{self, WheelParams, WheelState};
@@ -62,6 +62,11 @@ fn vr<'a>(p: *const VarsRef) -> &'a VarsRef {
 fn hr<'a>(p: *const Host) -> &'a Host {
     // SAFETY: caller contract.
     unsafe { &*p }
+}
+
+fn pod<T>(p: *mut T) -> Pod<T> {
+    // SAFETY: caller contract: `p` is live state.
+    unsafe { Pod::from_ptr(p) }
 }
 
 fn rw<'a, T>(p: *mut T) -> &'a mut T {
@@ -328,7 +333,7 @@ pub unsafe extern "C" fn ohpl_ga4_anim_update(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        base::anim_update(rw(index), over, has_callback, ops)
+        base::anim_update(pod(index), over, has_callback, ops)
     });
 }
 
@@ -547,7 +552,7 @@ pub unsafe extern "C" fn ohpl_ga4_object_update(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        object::update(rw(s), rd(p), rd(i), rd(a), host!(host), ops);
+        object::update(pod(s), rd(p), rd(i), rd(a), host!(host), ops);
     });
 }
 
@@ -808,7 +813,7 @@ pub unsafe extern "C" fn ohpl_ga4_door_on_health_change(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        swingdoor::on_health_change(rw(s), rd(p), health, has_main, ops);
+        swingdoor::on_health_change(pod(s), rd(p), health, has_main, ops);
     });
 }
 
@@ -822,7 +827,7 @@ pub unsafe extern "C" fn ohpl_ga4_door_reset(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        swingdoor::reset(rw(s), env!(joints, n, n_joints), host!(host), ops);
+        swingdoor::reset(pod(s), env!(joints, n, n_joints), host!(host), ops);
     });
 }
 
@@ -842,7 +847,7 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        wheel::load_instance(vr(v), rw(s), rw(p), host!(host), ops);
+        wheel::load_instance(vr(v), pod(s), pod(p), host!(host), ops);
     });
 }
 
@@ -866,7 +871,7 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_set_stuck_state(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        wheel::set_stuck_state(rw(s), rd(p), state, effects, host!(host), ops);
+        wheel::set_stuck_state(pod(s), rd(p), state, effects, host!(host), ops);
     });
 }
 
@@ -892,7 +897,7 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_on_connection_state(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        wheel::on_connection_state(rw(s), rd(p), state, host!(host), ops);
+        wheel::on_connection_state(pod(s), rd(p), state, host!(host), ops);
     });
 }
 
@@ -906,7 +911,7 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_on_interact(
 ) -> bool {
     with_ops(rd(sink), |ops| {
         let disables = rd(s).interaction_disables_stuck;
-        wheel::on_interact(rw(s), rd(p), show_hints, disables, host!(host), ops)
+        wheel::on_interact(pod(s), rd(p), show_hints, disables, host!(host), ops)
     })
 }
 
@@ -925,7 +930,7 @@ pub unsafe extern "C" fn ohpl_ga4_wheel_update(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        wheel::update(rw(s), rd(p), dt, interacted, host!(host), ops);
+        wheel::update(pod(s), rd(p), dt, interacted, host!(host), ops);
     });
 }
 
@@ -944,7 +949,7 @@ pub unsafe extern "C" fn ohpl_ga4_lever_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        lever::load_instance(vr(v), rw(s), rw(p), ops)
+        lever::load_instance(vr(v), pod(s), pod(p), ops)
     });
 }
 
@@ -981,7 +986,7 @@ pub unsafe extern "C" fn ohpl_ga4_lever_set_stuck_state(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        lever::set_stuck_state(rw(s), rd(p), state, effects, ops)
+        lever::set_stuck_state(pod(s), rd(p), state, effects, ops)
     });
 }
 
@@ -993,7 +998,7 @@ pub unsafe extern "C" fn ohpl_ga4_lever_on_connection_state(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        lever::on_connection_state(rw(s), rd(p), state, ops)
+        lever::on_connection_state(pod(s), rd(p), state, ops)
     });
 }
 
@@ -1005,7 +1010,7 @@ pub unsafe extern "C" fn ohpl_ga4_lever_on_interact(
     sink: *const Sink,
 ) -> bool {
     with_ops(rd(sink), |ops| {
-        lever::on_interact(rw(s), rd(p), show_hints, ops)
+        lever::on_interact(pod(s), rd(p), show_hints, ops)
     })
 }
 
@@ -1019,7 +1024,7 @@ pub unsafe extern "C" fn ohpl_ga4_lever_update(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        lever::update(rw(s), rd(p), dt, interacted, host!(host), ops);
+        lever::update(pod(s), rd(p), dt, interacted, host!(host), ops);
     });
 }
 
@@ -1200,7 +1205,7 @@ pub unsafe extern "C" fn ohpl_ga4_multi_set_stuck_state(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        multislider::set_stuck_state(rw(s), sl(states, n), state, effects, ops);
+        multislider::set_stuck_state(pod(s), sl(states, n), state, effects, ops);
     });
 }
 
@@ -1212,7 +1217,7 @@ pub unsafe extern "C" fn ohpl_ga4_multi_on_interact(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        multislider::on_interact(rw(s), sl(states, n), ops)
+        multislider::on_interact(pod(s), sl(states, n), ops)
     });
 }
 
@@ -1229,7 +1234,7 @@ pub unsafe extern "C" fn ohpl_ga4_multi_update(
 ) {
     with_ops(rd(sink), |ops| {
         multislider::update(
-            rw(s),
+            pod(s),
             rd(p),
             sl(states, n),
             dt,
@@ -1249,7 +1254,7 @@ pub unsafe extern "C" fn ohpl_ga4_multi_load_instance(
     sink: *const Sink,
 ) {
     with_ops(rd(sink), |ops| {
-        multislider::load_instance(vr(v), rw(s), sl(states, n), ops);
+        multislider::load_instance(vr(v), pod(s), sl(states, n), ops);
     });
 }
 

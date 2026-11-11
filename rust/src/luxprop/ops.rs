@@ -66,14 +66,52 @@ impl Ops<'_> {
         (self.0)(&op);
     }
 
-    /// A re-entrant op (script, entity creation). C++ runs it right away and the script may call
-    /// back into this prop and rewrite its POD state, so `s` is handed over (its pointer escapes
-    /// through `black_box`) and re-read afterwards.
-    pub fn event<T: Copy>(&mut self, op: Op, s: &mut T) {
-        let p = std::hint::black_box(std::ptr::from_mut(s));
+    /// A re-entrant op (script, entity creation): C++ runs it right here and the script may call
+    /// back into this prop. No reference to the prop's state may be live across it; callers use
+    /// `Pod` handles and borrow only between events.
+    pub fn event(&mut self, op: Op) {
         (self.0)(&op);
-        // SAFETY: `p` is `s`; the callee may have rewritten it, hence the volatile read.
-        *s = unsafe { std::ptr::read_volatile(p) };
+    }
+}
+
+/// A handle to prop state owned by C++. `m` gives a short-lived borrow, valid only until the next
+/// event; no borrow is ever held across one.
+pub struct Pod<T>(std::ptr::NonNull<T>);
+
+impl<T> Clone for Pod<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for Pod<T> {}
+
+impl<T> Pod<T> {
+    pub fn new(r: &mut T) -> Self {
+        Self(std::ptr::NonNull::from(r))
+    }
+
+    /// # Safety
+    /// `p` is non-null and points to live state for the whole call.
+    pub unsafe fn from_ptr(p: *mut T) -> Self {
+        // SAFETY: caller contract.
+        Self(unsafe { std::ptr::NonNull::new_unchecked(p) })
+    }
+
+    /// A shared borrow of the state, for read-only data such as the settings.
+    pub fn r(&self) -> &T {
+        // SAFETY: as in `m`; C++ only reads this data while a script runs.
+        unsafe { &*self.0.as_ptr() }
+    }
+
+    #[expect(
+        clippy::mut_from_ref,
+        reason = "short borrow of C++-owned state, see the type docs"
+    )]
+    pub fn m(&self) -> &mut T {
+        // SAFETY: the handle points to live state; callers keep the borrow within one statement
+        // and never across an event.
+        unsafe { &mut *self.0.as_ptr() }
     }
 }
 

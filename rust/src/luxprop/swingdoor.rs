@@ -2,7 +2,7 @@
 
 use super::base::{set_translation, translation};
 use super::object::{MoveData, load_rotate};
-use super::ops::{Op, Ops, Probe, op};
+use super::ops::{Op, Ops, Pod, Probe, op};
 use super::vars::{Vars, put_var};
 use crate::math::{to_rad, v3};
 use crate::types::{Matrixf, Quaternion};
@@ -368,28 +368,28 @@ pub fn update(
 
 /// `OnHealthChange`. `has_main` is whether any body has mass.
 pub fn on_health_change(
-    s: &mut DoorState,
+    s: Pod<DoorState>,
     p: &DoorParams,
     health: f32,
     has_main: bool,
     ops: &mut Ops,
 ) {
-    if !p.breakable || s.disable_breakable || s.broken {
+    if !p.breakable || s.m().disable_breakable || s.m().broken {
         return;
     }
     let mut effects = 0;
-    if health <= 0.0 && !s.broken {
-        s.broken = true;
-        set_damage_level(s, 0, ops);
+    if health <= 0.0 && !s.m().broken {
+        s.m().broken = true;
+        set_damage_level(s.m(), 0, ops);
         ops.push(Op::new(op::DOOR_DISABLE_BODIES));
-        ops.event(Op::new(op::DOOR_BROKEN_ENTITY), s);
-        ops.event(Op::new(op::RUN_BREAK_CALLBACK), s);
+        ops.event(Op::new(op::DOOR_BROKEN_ENTITY));
+        ops.event(Op::new(op::RUN_BREAK_CALLBACK));
         effects = 2;
-    } else if health < p.health_damage[1] && s.current_mesh_entity <= 1 {
-        set_damage_level(s, 2, ops);
+    } else if health < p.health_damage[1] && s.m().current_mesh_entity <= 1 {
+        set_damage_level(s.m(), 2, ops);
         effects = 1;
-    } else if health < p.health_damage[0] && s.current_mesh_entity == 0 {
-        set_damage_level(s, 1, ops);
+    } else if health < p.health_damage[0] && s.m().current_mesh_entity == 0 {
+        set_damage_level(s.m(), 1, ops);
         effects = 1;
     }
     if has_main && effects != 0 {
@@ -397,16 +397,16 @@ pub fn on_health_change(
     }
 }
 
-pub fn reset(s: &mut DoorState, e: &Env, probe: &mut dyn Probe, ops: &mut Ops) {
-    if s.broken {
-        s.broken = false;
-        if s.broken_entity_id >= 0 {
-            let id = s.broken_entity_id;
-            ops.event(Op::new(op::DOOR_DESTROY_BROKEN).i(id), s);
+pub fn reset(s: Pod<DoorState>, e: &Env, probe: &mut dyn Probe, ops: &mut Ops) {
+    if s.m().broken {
+        s.m().broken = false;
+        if s.m().broken_entity_id >= 0 {
+            let id = s.m().broken_entity_id;
+            ops.event(Op::new(op::DOOR_DESTROY_BROKEN).i(id));
         }
     }
-    setup_physics(s, e, 0.0, true, false, probe, ops);
-    set_damage_level(s, 0, ops);
+    setup_physics(s.m(), e, 0.0, true, false, probe, ops);
+    set_damage_level(s.m(), 0, ops);
 }
 
 pub fn load_instance(

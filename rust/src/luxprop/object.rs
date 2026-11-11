@@ -1,7 +1,7 @@
 //! `cLuxProp_Object`: variables, interaction rules, impact breaking, stuck joints, life length,
 //! food and insanity-vision timers.
 
-use super::ops::{Op, Ops, Probe, op};
+use super::ops::{Op, Ops, Pod, Probe, op};
 use super::vars::{Vars, put_var, zero3};
 use crate::math::{dot3, fma, len3, normalize3, to_rad, v3};
 use crate::types::Vector3f;
@@ -287,7 +287,7 @@ pub struct UpdateIn {
 }
 
 pub fn update(
-    s: &mut ObjectState,
+    s: Pod<ObjectState>,
     p: &ObjectParams,
     i: &ObjectInstance,
     a: &UpdateIn,
@@ -296,23 +296,23 @@ pub fn update(
 ) {
     let dt = a.dt;
     if p.is_food {
-        if s.food_attract_count > 0.0 {
-            s.food_attract_count -= dt;
+        if s.m().food_attract_count > 0.0 {
+            s.m().food_attract_count -= dt;
         } else {
-            s.food_attract_count = 2.0;
-            ops.event(Op::new(op::FOOD_ATTRACT), s);
+            s.m().food_attract_count = 2.0;
+            ops.event(Op::new(op::FOOD_ATTRACT));
         }
     }
-    update_insanity(s, i, a, probe, ops);
+    update_insanity(s.m(), i, a, probe, ops);
     if p.life_length > 0.0 {
-        s.life_length_count += dt;
-        let left = p.life_length - s.life_length_count;
+        s.m().life_length_count += dt;
+        let left = p.life_length - s.m().life_length_count;
         let dist = if left > 0.0 { left } else { 0.0 };
         if dist < 1.0 {
             ops.push(Op::new(op::COVERAGE).f(dist));
         }
-        if s.life_length_count >= p.life_length {
-            ops.event(Op::new(op::BREAK), s);
+        if s.m().life_length_count >= p.life_length {
+            ops.event(Op::new(op::BREAK));
         }
     }
 }

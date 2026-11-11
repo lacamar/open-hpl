@@ -18,5 +18,5 @@ mod tests;
 mod vars;
 mod wheel;
 
-pub use ops::{Op, Ops, Probe, op};
+pub use ops::{Op, Ops, Pod, Probe, op};
 pub use vars::Vars;
