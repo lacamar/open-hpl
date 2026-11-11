@@ -5,8 +5,9 @@
 //! the shim owns (`NONE` is a null pointer). Values only the shim can read (headroom, program
 //! creation results, world state) are `Query` ops answered through `Plan::feed`.
 //!
-//! Later chunks add a `Source` per function (G6b: SSAO, edge smooth, lights; G6c: the rest) and new
-//! `Op`/`Step` variants; slot and variable ids live in this module so both sides stay in step.
+//! G6b (`deferred_light*`: SSAO, edge smooth, light setup and lists) added the `Dl`/`AskGeom` ops. G6c
+//! (from `RenderLights_StencilBack_ScreenQuad`) adds more `Source`s and `Op`/`Step` variants; slot
+//! and variable ids live in the `deferred*` modules so both sides stay in step.
 
 use std::collections::VecDeque;
 
@@ -150,11 +151,15 @@ pub enum State {
 pub mod st {
     pub const BLEND_NONE: i32 = 0;
     pub const BLEND_ALPHA: i32 = 1;
+    pub const BLEND_ADD: i32 = 2;
+    pub const BLEND_MUL: i32 = 3;
     pub const ALPHA_SOLID: i32 = 0;
     pub const CHANNEL_RGBA: i32 = 0;
     pub const CHANNEL_NONE: i32 = 1;
+    pub const CHANNEL_RGB: i32 = 2;
     pub const FUNC_EQUAL: i32 = 0;
     pub const FUNC_LESS_OR_EQUAL: i32 = 1;
+    pub const FUNC_GREATER_OR_EQUAL: i32 = 2;
 }
 
 pub mod pf {
@@ -164,6 +169,7 @@ pub mod pf {
 
 pub mod comp {
     pub const FULL: i32 = 0;
+    pub const COLOR: i32 = 2;
     pub const LINEAR_DEPTH: i32 = 5;
 }
 
@@ -185,6 +191,8 @@ pub enum Query {
 pub enum Feed {
     Bool(bool),
     Float(f32),
+    Int(i32),
+    Vec3([f32; 3]),
 }
 
 impl Feed {
@@ -195,7 +203,21 @@ impl Feed {
     pub fn float(self) -> f32 {
         match self {
             Feed::Float(v) => v,
-            Feed::Bool(_) => 0.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn int(self) -> i32 {
+        match self {
+            Feed::Int(v) => v,
+            _ => 0,
+        }
+    }
+
+    pub fn vec3(self) -> [f32; 3] {
+        match self {
+            Feed::Vec3(v) => v,
+            _ => [0.0; 3],
         }
     }
 }
@@ -317,6 +339,95 @@ pub enum Op {
         combo: i32,
     },
     Step(Step),
+    FlatProjectionMinMax {
+        min: [f32; 3],
+        max: [f32; 3],
+    },
+    NormalFrustumProjection,
+    QuadAt {
+        pos: [f32; 3],
+        size: [f32; 2],
+        min: [f32; 2],
+        max: [f32; 2],
+    },
+    CopyFbToTex {
+        tex: i32,
+        size: Vector2l,
+    },
+    SetAccumBuffer,
+    /// `SetMatrixf` of the 16 floats in plan array `arr`.
+    Matrix {
+        prog: i32,
+        id: i32,
+        arr: i32,
+    },
+    InvViewMatrix {
+        prog: i32,
+        id: i32,
+    },
+    ScreenPositionVars {
+        prog: i32,
+    },
+    /// `mpProgramManager->GenerateProgram`; stores into program slot `slot`, answered with a flag.
+    GenProgram {
+        slot: i32,
+        mode: i32,
+        flags: u32,
+    },
+    AskGeom {
+        q: Geom,
+        idx: i32,
+        f: [f32; 4],
+    },
+    Dl(DlOp),
+}
+
+/// Frustum and query questions only the shim can answer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Geom {
+    /// `CheckSphereNearPlaneIntersection(f[0..3], f[3])`; flag.
+    SphereNearPlane,
+    /// Light `idx`'s spot frustum against the camera near plane; flag.
+    FrustumNearPlane,
+    /// Spot frustum intersection with the line to the light's volume center; `Feed::Vec3`.
+    LineIntersection,
+    /// Light `idx`'s bounding volume against the near plane; flag.
+    BoxNearPlane,
+    QueryFetch,
+    QuerySamples,
+    ShadowNeedsUpdate,
+}
+
+/// Light list bookkeeping the shim performs on its own objects.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DlOp {
+    ClearPairs,
+    ClearTempLights,
+    SetMinLargeArea(i32),
+    Light(i32),
+    AcquireQuery(i32),
+    SetModelView(i32),
+    SetShape(i32),
+    QueryBegin(i32),
+    QueryEnd(i32),
+    DrawCurrent,
+    Flush,
+    InvView,
+    UpdateFullscreenQuad {
+        pos: [f32; 3],
+        size: [f32; 2],
+    },
+    LightMatrix(i32),
+    QueryLog {
+        idx: i32,
+        samples: i32,
+        visible: bool,
+    },
+    ReleaseQuery(i32),
+    Lists,
+    ClearShadowTexture,
+    ShadowData,
+    RenderShadowMap,
 }
 
 /// Appends ops when the queue runs dry; returns false once nothing more will come.
@@ -348,10 +459,11 @@ impl Default for FilmGrain {
 }
 
 /// Renderer state a plan mutates; the shim copies it back after the replay.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Results {
     pub film_grain: FilmGrain,
     pub trail_consumed: bool,
+    pub lights: super::deferred_light::LightResults,
 }
 
 pub struct Out<'a> {
@@ -443,7 +555,14 @@ pub fn fixed(ops: Vec<Op>) -> Plan {
     Plan::new(Fixed(Some(ops)))
 }
 
-fn state(which: State, val: i32) -> Op {
+/// A fixed op list whose `Matrix`/`FloatArr` ops index `arrays`.
+pub fn fixed_with_arrays(ops: Vec<Op>, arrays: Vec<Vec<f32>>) -> Plan {
+    let mut p = fixed(ops);
+    p.arrays = arrays;
+    p
+}
+
+pub(super) fn state(which: State, val: i32) -> Op {
     Op::State { which, val }
 }
 

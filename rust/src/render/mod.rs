@@ -3,6 +3,11 @@
 pub mod combo;
 pub mod deferred;
 pub mod deferred_ffi;
+pub mod deferred_light;
+pub mod deferred_light_ffi;
+#[cfg(test)]
+mod deferred_light_tests;
+pub mod deferred_lightlist;
 pub mod deferred_post;
 #[cfg(test)]
 mod deferred_tests;
