@@ -80,6 +80,8 @@ public:
 	const tString& GetDisplayNameEntry(){ return msDisplayNameEntry;}
 
 	bool LoadFromFile(const tString & asFile, bool abLoadEntities);
+	void LoadScript(const tString & asFile);
+	void ApplyHardMode();
 	
 	void AfterWorldLoadEntitySetup();
 	

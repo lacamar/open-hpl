@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_SlimeDamage.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -111,10 +112,7 @@ void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 {
 	//////////////////////////
 	// Check update count
-	mfCheckCollisionCount-=afTimeStep;
-	if(mfCheckCollisionCount>0) return;
-
-	mfCheckCollisionCount = cMath::RandRectf(mfMinCheckAttackTime, mfMaxCheckAttackTime);
+	if(ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfMinCheckAttackTime, mfMaxCheckAttackTime)==false) return;
 
 	//////////////////////////
 	// Check collision
@@ -148,7 +146,7 @@ void cLuxArea_SlimeDamage::OnUpdate(float afTimeStep)
 		//Run Callback
 		if(msCallback != "")
 		{
-			mpMap->RunScript(msCallback+"(\""+msName+"\")");
+			mpMap->RunScript(ohpl_ga5::Call1(msCallback, msName));
 		}
 
 		/////////////////////////

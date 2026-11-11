@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Script.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 
@@ -99,9 +100,7 @@ cLuxArea_Script::~cLuxArea_Script()
 
 bool cLuxArea_Script::CanInteract(iPhysicsBody *apBody)
 {
-	if(mbItemInteraction) return true;
-
-    return msInteractCallback!="";
+	return ohpl_ga5_script_can_interact(mbItemInteraction, msInteractCallback!="");
 }
 
 //-----------------------------------------------------------------------
@@ -115,14 +114,8 @@ bool cLuxArea_Script::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 eLuxFocusCrosshair cLuxArea_Script::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(msInteractCallback!="")
-	{
-		return mCustomFocusCrossHair==eLuxFocusCrosshair_Default ? eLuxFocusCrosshair_Grab : mCustomFocusCrossHair;
-	}
-	else
-	{
-		return eLuxFocusCrosshair_Default;
-	}
+	return (eLuxFocusCrosshair)ohpl_ga5_script_crosshair(msInteractCallback!="", mCustomFocusCrossHair,
+														eLuxFocusCrosshair_Default, eLuxFocusCrosshair_Grab);
 }
 
 //-----------------------------------------------------------------------

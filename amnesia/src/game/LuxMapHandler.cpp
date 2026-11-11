@@ -18,6 +18,7 @@
  */
 
 #include "LuxMapHandler.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -81,7 +82,7 @@ void cMapHandlerSoundCallback::OnStart(cSoundEntity *apSoundEntity)
 	for(size_t i=0; i< mvEnemyHearableSounds.size(); ++i)
 	{
 		tString &sName = mvEnemyHearableSounds[i];
-		if(sTypeName.size() >= sName.size() && sName == sTypeName.substr(0,sName.size()))
+		if(ohpl_ga5_sound_prefix_matches(sTypeName.data(), sTypeName.size(), sName.data(), sName.size()))
 		{
 			bUsed = true;
 			break;
@@ -395,7 +396,7 @@ void cLuxMapHandler::OnLeaveContainer(const tString& asNewContainer)
 void cLuxMapHandler::ChangeMap(const tString& asMapName, const tString& asStartPos, const tString& asStartSound, const tString& asEndSound)
 {
 	mMapChangeData.mbActive = true;
-	mMapChangeData.msMapFile = cString::SetFileExt(asMapName, "map");
+	ohpl_ga5_change_file(asMapName.data(), asMapName.size(), ohpl_ga5::Collect, &mMapChangeData.msMapFile);
 	mMapChangeData.msStartPos = asStartPos;
     mMapChangeData.msSound = asEndSound;
 
@@ -433,48 +434,60 @@ void cLuxMapHandler::DestroyMap(cLuxMap* apMap, bool abLoadingSaveGame)
 
 void cLuxMapHandler::SetCurrentMap(cLuxMap* apMap, bool abRunScript, bool abFirstTime, const tString& asPlayerPos)
 {
-	if(mpCurrentMap == apMap) return;
+	unsigned char vPlan[12];
+	size_t lPlanSize = ohpl_ga5_set_current_plan(mpCurrentMap!=NULL, apMap!=NULL, mpCurrentMap == apMap, vPlan);
 
-	//////////////////////////////////
-	//Unload stuff from previous map
-    if(mpCurrentMap)
+	for(size_t i=0; i<lPlanSize; ++i)
 	{
-		mpCurrentMap->OnLeave(abRunScript);
-		
+		switch(vPlan[i])
+		{
+		//////////////////////////////////
+		//Unload stuff from previous map
+		case kOhplGa5SetLeave:
+			mpCurrentMap->OnLeave(abRunScript);
+			break;
 		//Leave callback for modules
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_DestroyWorldEntities, mpCurrentMap);
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapLeave, mpCurrentMap);
-	}
-
-	mpCurrentMap = apMap;
-
-	//////////////////////////////////
-	//Setup stuff for previous map
-	if(mpCurrentMap)
-	{
+		case kOhplGa5SetDestroyWorldEntities:
+			gpBase->RunModuleMessage(eLuxUpdateableMessage_DestroyWorldEntities, mpCurrentMap);
+			break;
+		case kOhplGa5SetMapLeave:
+			gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapLeave, mpCurrentMap);
+			break;
+		case kOhplGa5SetAssign:
+			mpCurrentMap = apMap;
+			break;
+		//////////////////////////////////
+		//Setup stuff for previous map
 		//Enter callback for modules
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_CreateWorldEntities, mpCurrentMap);
-		gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapEnter, mpCurrentMap);
-
+		case kOhplGa5SetCreateWorldEntities:
+			gpBase->RunModuleMessage(eLuxUpdateableMessage_CreateWorldEntities, mpCurrentMap);
+			break;
+		case kOhplGa5SetMapEnter:
+			gpBase->RunModuleMessage(eLuxUpdateableMessage_OnMapEnter, mpCurrentMap);
+			break;
 		//Set the player position
-		mpCurrentMap->PlacePlayerAtStartPos(asPlayerPos);
-
+		case kOhplGa5SetPlacePlayer:
+			mpCurrentMap->PlacePlayerAtStartPos(asPlayerPos);
+			break;
 		//Create an automatic checkpoint
-		mpCurrentMap->SetCheckPoint("_auto", asPlayerPos, "");
-		
+		case kOhplGa5SetAutoCheckpoint:
+			mpCurrentMap->SetCheckPoint("_auto", asPlayerPos, "");
+			break;
 		//Map enter callback
-		mpCurrentMap->OnEnter(abRunScript, abFirstTime);
-
+		case kOhplGa5SetEnter:
+			mpCurrentMap->OnEnter(abRunScript, abFirstTime);
+			break;
 		//Set this as world in viewport
-		mpViewport->SetWorld(mpCurrentMap->GetWorld());
-
-		mRenderCallback.mpPhysicsWorld = mpCurrentMap->GetPhysicsWorld();
-		mRenderCallback.mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
-	}
-	else
-	{
+		case kOhplGa5SetViewWorld:
+			mpViewport->SetWorld(mpCurrentMap->GetWorld());
+			mRenderCallback.mpPhysicsWorld = mpCurrentMap->GetPhysicsWorld();
+			mRenderCallback.mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
+			break;
 		//If no map, set NULL as world
-		mpViewport->SetWorld(NULL);
+		case kOhplGa5SetViewNoWorld:
+			mpViewport->SetWorld(NULL);
+			break;
+		}
 	}
 }
 
@@ -482,22 +495,20 @@ void cLuxMapHandler::SetCurrentMap(cLuxMap* apMap, bool abRunScript, bool abFirs
 
 void cLuxMapHandler::PauseSoundsAndMusic()
 {
-	if(mbPausedSoundsAndMusic) return;
+	if(ohpl_ga5_pause_sounds(&mbPausedSoundsAndMusic)==false) return;
 
 	cSound *pSound = gpBase->mpEngine->GetSound();
 	pSound->GetSoundHandler()->PauseAll(eSoundEntryType_All);
 	pSound->GetMusicHandler()->Pause();
-	mbPausedSoundsAndMusic = true;
 }
 
 void cLuxMapHandler::ResumeSoundsAndMusic()
 {
-	if(mbPausedSoundsAndMusic)
+	if(ohpl_ga5_resume_sounds(&mbPausedSoundsAndMusic))
 	{
 		cSound *pSound = gpBase->mpEngine->GetSound();
 		pSound->GetSoundHandler()->ResumeAll(eSoundEntryType_All);
 		pSound->GetMusicHandler()->Resume();
-		mbPausedSoundsAndMusic = false;
 	}
 }
 
@@ -568,7 +579,9 @@ void cLuxMapHandler::SaveMainConfig()
 
 tString cLuxMapHandler::FileToMapName(const tString& asFile)
 {
-	return cString::ToLowerCase(cString::GetFileName(cString::SetFileExt(asFile, "")));
+	tString sName;
+	ohpl_ga5_map_name(asFile.data(), asFile.size(), ohpl_ga5::Collect, &sName);
+	return sName;
 }
 
 //-----------------------------------------------------------------------
@@ -577,7 +590,7 @@ void cLuxMapHandler::SetShowCommentary(bool abX)
 {
 	mbShowCommentary = abX;
 
-	if(mbShowCommentary==false)
+	if(ohpl_ga5_commentary_stops(mbShowCommentary))
 	{
 		gpBase->mpEffectHandler->GetPlayCommentary()->Stop();
 	}
@@ -587,8 +600,8 @@ void cLuxMapHandler::SetShowCommentary(bool abX)
 
 void cLuxMapHandler::CheckMapChange(float afTimeStep)
 {
-	if(mMapChangeData.mbActive==false) return;
-	if(gpBase->mpEffectHandler->GetFade()->IsFading()) return;
+	if(ohpl_ga5_change_proceeds(	mMapChangeData.mbActive,
+									mMapChangeData.mbActive && gpBase->mpEffectHandler->GetFade()->IsFading())==false) return;
 
 	///////////////////////////////////////
 	// Setup variables
@@ -614,7 +627,7 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 	///////////////////////
 	// Load map
 	tString sNewMapName = FileToMapName(mMapChangeData.msMapFile);
-	if(mpCurrentMap->GetName() != sNewMapName)
+	if(ohpl_ga5_is_new_map(mpCurrentMap->GetName().data(), mpCurrentMap->GetName().size(), mMapChangeData.msMapFile.data(), mMapChangeData.msMapFile.size()))
 	{
 		mpSavedGameMutex->Lock();
 
@@ -647,20 +660,21 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 		
 		if(pLastMap)
 		{
-			if (pLastMap->GetName() == "08_cellar_maze" && pMap->GetName() == "09_back_hall")
+			int lEvents = ohpl_ga5_pair_events(	gpBase->mbHardMode, pLastMap->GetName().data(), pLastMap->GetName().size(),
+												pMap->GetName().data(), pMap->GetName().size());
+			if (lEvents & kOhplGa5EventEscapeArtist)
 			{
 				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_EscapeArtist);
 			}
 
-			if (pLastMap->GetName() == "14_elevator" && pMap->GetName() == "15_prison_south")
+			if (lEvents & kOhplGa5EventDescendant)
 			{
 				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Descendant);
 			}
 
 			//////////////
 			// HARDMODE
-			if (gpBase->mbHardMode &&
-				pLastMap->GetName() == "27_torture_chancel_redux" && pMap->GetName() == "28_inner_sanctum")
+			if (lEvents & kOhplGa5EventSanity)
 			{
 				gpBase->mpPlayer->AddSanity(100.f, true);
 			}
@@ -668,7 +682,7 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 
 		//////////////////////
 		// Set new and destroy old
-		bool bFirstTime = mpSavedGame->MapExists(sNewMapName)==false;	
+		bool bFirstTime = ohpl_ga5_first_time(mpSavedGame->MapExists(sNewMapName));
 		
 		SetCurrentMap(pMap, false, bFirstTime, mMapChangeData.msStartPos);
 		DestroyMap(pLastMap, false);
@@ -687,7 +701,7 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 
 		//////////////////////////////////
 		//Check if any more load time needed
-		fTimeTaken = (float)(cPlatform::GetApplicationTime() - lLoadStartTime)/1000.0f;
+		fTimeTaken = ohpl_ga5_load_seconds(lLoadStartTime, cPlatform::GetApplicationTime());
 		
 		ProgLog(eLuxProgressLogLevel_High, "Entering map "+ mpCurrentMap->GetName());
 	}

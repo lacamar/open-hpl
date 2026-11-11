@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Liquid.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -113,7 +114,8 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 {
 	float fHeight = mpBody->GetShape()->GetSize().y;
 	cVector3f vPos = mpBody->GetWorldPosition();
-	mSurfacePlane.FromNormalPoint(	cVector3f(0,1,0), cVector3f(0,vPos.y,0) + cVector3f(0,fHeight/2,0));
+
+	ohpl_ga5_liquid_surface_plane(vPos.y, fHeight, reinterpret_cast<OhplGa5Plane*>(&mSurfacePlane));
 }
 
 //-----------------------------------------------------------------------
@@ -121,14 +123,14 @@ void cLuxArea_Liquid::SetupAfterLoad(cWorld *apWorld)
 void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 {
 	//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-	if(afTimeStep < gpBase->mpEngine->GetStepSize()*0.8f) return;
+	if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
 
 	///////////////////////////
 	// Get data
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 	iPhysicsBody *pAreaBody = mpBody;
-	
-	float fSurfaceY =	mpBody->GetWorldPosition().y + mpBody->GetShape()->GetSize().y /2;
+
+	float fSurfaceY =	ohpl_ga5_liquid_surface_y(mpBody->GetWorldPosition().y, mpBody->GetShape()->GetSize().y);
 
 	cCollideData collideData;
 	collideData.SetMaxSize(1);
@@ -137,18 +139,16 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 	// Update count
 	mfTimeCount += afTimeStep;
 
-	
 	///////////////////////////
 	// Iterate bodies
 	std::vector<iPhysicsBody*> vBodies;
 	pPhysicsWorld->GetBodiesInBV(mpBody->GetBoundingVolume(),&vBodies);
-	
+
 	for(size_t i=0; i<vBodies.size(); ++i)
 	{
 		iPhysicsBody *pBody = vBodies[i];
 
-		if(pBody->GetCollide()==false || pBody->IsActive()==false) continue;
-		if(pBody->GetMass()==0 && pBody->IsCharacter()==false) continue;
+		if(ohpl_ga5_body_skipped(pBody->GetCollide(), pBody->IsActive(), pBody->GetMass(), pBody->IsCharacter())) continue;
 
 		bool bInsideWater = true;
 
@@ -169,7 +169,7 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 				bInsideWater = false;
 			}
 		}
-		
+
 		/////////////////////////
 		//Character specific
 		if(pBody->IsCharacter())
@@ -183,7 +183,6 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 			DoBuoyancyOnBody(pBody, fSurfaceY, bInsideWater);
 		}
 	}
-	
 }
 
 //-----------------------------------------------------------------------
@@ -198,16 +197,24 @@ void cLuxArea_Liquid::OnUpdate(float afTimeStep)
 void cLuxArea_Liquid::DoBuoyancyOnBody(iPhysicsBody *apBody, float afSurfaceY, bool abInsideWater)
 {
 	/////////////////////////
-	//Check if in water
-	if(abInsideWater==false)
+	//Check if in water, and the interaction check
+	bool bAllowed = false;
+	if(abInsideWater) bAllowed = gpBase->mpPlayer->GetCurrentStateData()->AllowBuoyancy(apBody);
+
+	bool bActive = false;
+	float fDistSqr = 0;
+	if(abInsideWater && bAllowed)
 	{
-		apBody->SetBuoyancyActive(false);
-		return;
+		bActive = apBody->GetBuoyancyActive();
+		cVector3f vCamPos = gpBase->mpPlayer->GetCamera()->GetPosition();
+		fDistSqr = cMath::Vector3DistSqr(vCamPos, apBody->GetLocalPosition());
 	}
 
-	/////////////////////////
-	//Interaction check
-	if(gpBase->mpPlayer->GetCurrentStateData()->AllowBuoyancy(apBody)==false)
+	OhplGa5BuoyIn buoyIn = { abInsideWater, bAllowed, bActive, mbHasWaves };
+	OhplGa5BuoyOut buoyOut;
+	ohpl_ga5_liquid_body(&buoyIn, fDistSqr, mfMaxWaveDistanceSqr, &buoyOut);
+
+	if(buoyOut.deactivate)
 	{
 		apBody->SetBuoyancyActive(false);
 		return;
@@ -215,7 +222,7 @@ void cLuxArea_Liquid::DoBuoyancyOnBody(iPhysicsBody *apBody, float afSurfaceY, b
 
 	///////////////////////////////
 	//Add Buoyancy
-	if(apBody->GetBuoyancyActive()==false)
+	if(buoyOut.setup)
 	{
 		apBody->SetBuoyancySurface(mSurfacePlane);
 		apBody->SetBuoyancyDensity(mfDensity);
@@ -229,17 +236,13 @@ void cLuxArea_Liquid::DoBuoyancyOnBody(iPhysicsBody *apBody, float afSurfaceY, b
 
 	////////////////////////
 	// Add waves
-	cVector3f vCamPos = gpBase->mpPlayer->GetCamera()->GetPosition();
-	float fDistSqr = cMath::Vector3DistSqr(vCamPos, apBody->GetLocalPosition());
-	if(mbHasWaves && fDistSqr < mfMaxWaveDistanceSqr)
+	if(buoyOut.waves)
 	{
 		cVector3f vPos = cMath::MatrixMul(apBody->GetLocalMatrix(),apBody->GetMassCentre());
-
-		float fAddX = sin(mfTimeCount * mfWaveFreq + vPos.x * 15)*mfWaveAmp*0.3f;
-		float fAddZ = sin(mfTimeCount * mfWaveFreq + vPos.z * 15)*mfWaveAmp*0.3f;
+		float fWaveY = ohpl_ga5_wave_surface_y(mfTimeCount, mfWaveFreq, vPos.x, vPos.z, mfWaveAmp, afSurfaceY);
 
 		cPlanef tempPlane;
-		tempPlane.FromNormalPoint(	cVector3f(0,1,0), cVector3f(0,afSurfaceY + fAddX + fAddZ,0));
+		ohpl_ga5_wave_plane(fWaveY, reinterpret_cast<OhplGa5Plane*>(&tempPlane));
 
 		apBody->SetBuoyancySurface(tempPlane);
 		apBody->Enable();
@@ -252,28 +255,26 @@ void cLuxArea_Liquid::DoBuoyancyOnCharBody(iCharacterBody *apCharBody, float afS
 {
 	cLuxPlayer *pPlayer = gpBase->mpPlayer;
 
+	bool bIsPlayer = apCharBody == pPlayer->GetCharacterBody();
+	iLuxEnemy *pEnemy = bIsPlayer ? NULL : (iLuxEnemy*)apCharBody->GetUserData();
+	bool bInWater = bIsPlayer ? pPlayer->IsInWater() : (pEnemy ? pEnemy->IsInWater() : false);
+	int lAction = ohpl_ga5_liquid_char(bIsPlayer, pEnemy!=NULL, abInsideWater, bInWater);
+
 	//////////////////////////////////
 	// Player
-	if(apCharBody == pPlayer->GetCharacterBody())
+	if(bIsPlayer)
 	{
-		////////////////////
-		//In water
-		if(abInsideWater)
+		if(lAction == kOhplGa5CharEnter)
 		{
-			if(pPlayer->IsInWater()==false)
+			pPlayer->SetIsInWater(true);
+			pPlayer->SetWaterSpeedMul(mfPlayerSpeedMul);
+			if(mpPhysicsMaterial)
 			{
-				pPlayer->SetIsInWater(true);
-				pPlayer->SetWaterSpeedMul(mfPlayerSpeedMul);
-				if(mpPhysicsMaterial)
-				{
-					pPlayer->SetWaterStepSound(mpPhysicsMaterial->GetSurfaceData()->GetStepType());
-				}
-				SplashEffect(apCharBody->GetCurrentBody(), afSurfaceY);
+				pPlayer->SetWaterStepSound(mpPhysicsMaterial->GetSurfaceData()->GetStepType());
 			}
+			SplashEffect(apCharBody->GetCurrentBody(), afSurfaceY);
 		}
-		////////////////////
-		//Out of water
-		else
+		else if(lAction == kOhplGa5CharLeave)
 		{
 			pPlayer->SetIsInWater(false);
 		}
@@ -282,19 +283,13 @@ void cLuxArea_Liquid::DoBuoyancyOnCharBody(iCharacterBody *apCharBody, float afS
 	// Enemy
 	else
 	{
-		iLuxEnemy *pEnemy = (iLuxEnemy*)apCharBody->GetUserData();
-		if(pEnemy==NULL) return;
-
-        if(abInsideWater)
+		if(lAction == kOhplGa5CharEnter)
 		{
-			if(pEnemy->IsInWater()==false)
-			{
-				pEnemy->SetInWater(true);
-				pEnemy->SetWaterSurfaceY(afSurfaceY);
-				pEnemy->SetWaterSurfaceData(mpPhysicsMaterial->GetSurfaceData());
-			}
+			pEnemy->SetInWater(true);
+			pEnemy->SetWaterSurfaceY(afSurfaceY);
+			pEnemy->SetWaterSurfaceData(mpPhysicsMaterial->GetSurfaceData());
 		}
-		else
+		else if(lAction == kOhplGa5CharLeave)
 		{
 			pEnemy->SetInWater(false);
 		}

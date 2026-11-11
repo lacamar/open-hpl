@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Examine.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -115,7 +116,7 @@ void cLuxArea_Examine::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxArea_Examine::OnUpdate(float afTimeStep)
 {
-	if(mfPlaySoundCount>0) mfPlaySoundCount -= afTimeStep;
+	ohpl_ga5_examine_tick(&mfPlaySoundCount, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -130,14 +131,19 @@ bool cLuxArea_Examine::CanInteract(iPhysicsBody *apBody)
 bool cLuxArea_Examine::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	float fSanity = gpBase->mpPlayer->GetSanity();
-	
+
+	OhplGa5ExamineIn examineIn = {	msDescCat != "", msDescInsaneCat != "", msDescInsaneEntry != "",
+									msSound != "", msInsaneSound != "" };
+	OhplGa5ExamineOut examineOut;
+	ohpl_ga5_examine_interact(&examineIn, fSanity, mfInsaneLimit, mfPlaySoundCount, &examineOut);
+
 	////////////////////////////////
 	// Show text
-	if(msDescCat != "")
+	if(examineOut.showText)
 	{
 		tString sCat = msDescCat;
 		tString sEntry = msDescEntry;
-		if(fSanity < mfInsaneLimit && msDescInsaneCat != "" && msDescInsaneEntry != "")
+		if(examineOut.insaneText)
 		{
 			sCat = msDescInsaneCat;
 			sEntry = msDescInsaneEntry;
@@ -148,18 +154,16 @@ bool cLuxArea_Examine::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 	////////////////////////////////
 	// Play sound
-	if(mfPlaySoundCount <=0 && msSound != "")
+	if(examineOut.playSound)
 	{
 		tString sSound = msSound;
-		if(fSanity < mfInsaneLimit && msInsaneSound != "")
+		if(examineOut.insaneSound)
 			sSound = msInsaneSound;
 
-		if(sSound != "")
-			gpBase->mpHelpFuncs->PlayGuiSoundData(sSound, eSoundEntryType_Gui);
+		gpBase->mpHelpFuncs->PlayGuiSoundData(sSound, eSoundEntryType_Gui);
 	}
-
-
 	mfPlaySoundCount = 0.5f;
+
 	return true;
 }
 
