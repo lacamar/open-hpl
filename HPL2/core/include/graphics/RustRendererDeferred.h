@@ -592,6 +592,67 @@ namespace hpl {
 		OhplDrPlan* ohpl_dr4_plan_hpl3_render(const OhplDr4Hpl3RenderIn*);
 		void ohpl_dr4_plan_hpl3_state(const OhplDrPlan*, OhplDr4Hpl3State* out);
 	}
+
+	// G6e: object passes (Z, G-buffer, decals, illumination, translucent, reflection, sky box).
+	// Ids and layouts mirror rust/src/render/deferred_obj.rs. Object ops: op.b = mode/argument, op.c = list, op.d = index,
+	// op.e = texture unit; ask ops that name only an object carry the index in op.b.
+	enum eOhplDr5X
+	{
+		eOhplDr5X_ObjProgram = 100, eOhplDr5X_ObjTextures, eOhplDr5X_ObjMatrixPtr, eOhplDr5X_ObjVbuf, eOhplDr5X_ObjDrawMat,
+		eOhplDr5X_ObjZ, eOhplDr5X_ObjTexUnit, eOhplDr5X_AskObjBlend, eOhplDr5X_SetAlphaLimit, eOhplDr5X_SkyMatrix,
+		eOhplDr5X_SkyTexture, eOhplDr5X_SkyVbuf, eOhplDr5X_Quad2, eOhplDr5X_TexReflection, eOhplDr5X_SetWorldFog,
+		eOhplDr5X_AskWorldFog, eOhplDr5X_AskCompiledFog, eOhplDr5X_ObjCompile, eOhplDr5X_AskTransInfo, eOhplDr5X_AskFogVis,
+		eOhplDr5X_SetTempFog, eOhplDr5X_AskUpdateGraphics, eOhplDr5X_AskRetrieveQuery, eOhplDr5X_ObjModelMatrix,
+		eOhplDr5X_SetMatrixCtx, eOhplDr5X_AskPlaneVisible, eOhplDr5X_WaitRetrieveQueries, eOhplDr5X_AskClipRectObj,
+		eOhplDr5X_AskBvMinMax, eOhplDr5X_FlatProjectionSize, eOhplDr5X_QuadClip, eOhplDr5X_CopyRefractionRect,
+		eOhplDr5X_CopyRefractionFull, eOhplDr5X_SetDof, eOhplDr5X_AskReflInfo, eOhplDr5X_AskPlaneBv, eOhplDr5X_AskReflCleared,
+		eOhplDr5X_ReflSetFb, eOhplDr5X_ReflSetCleared, eOhplDr5X_ReflLog, eOhplDr5X_ReflBegin, eOhplDr5X_AskReflTarget,
+		eOhplDr5X_AskReflSurface, eOhplDr5X_ReflFrustum, eOhplDr5X_ReflResetPlanes, eOhplDr5X_ReflAddPlane, eOhplDr5X_ReflScissor,
+		eOhplDr5X_ReflTarget, eOhplDr5X_ReflRender, eOhplDr5X_ReflEnd,
+	};
+	enum
+	{
+		kOhplDr5PassEarlyZ = 16, kOhplDr5PassGBuffer, kOhplDr5PassGBufferContent, kOhplDr5PassDecals, kOhplDr5PassIllumination,
+		kOhplDr5PassSkyBox, kOhplDr5PassReflectionContent, kOhplDr5PassTranslucent,
+	};
+	enum { kOhplDr5LogSetup, kOhplDr5LogClearBegin, kOhplDr5LogClearEnd, kOhplDr5LogClipLimits, kOhplDr5LogScissor };
+	enum { kOhplDr5AlphaTrans = 1, kOhplDr5ChannelA = 3, kOhplDr5CompColorAndDepth = 1 };
+	// words of the AskTransInfo answer
+	enum
+	{
+		kOhplDr5InfoAffectedByDof, kOhplDr5InfoHasRefraction, kOhplDr5InfoHasWorldReflection, kOhplDr5InfoAffectedByFog,
+		kOhplDr5InfoHasTranslucentIllumination, kOhplDr5InfoUseRefractionEdgeCheck, kOhplDr5InfoDepthTest, kOhplDr5InfoBlend,
+		kOhplDr5InfoRenderType, kOhplDr5InfoBvCenter, kOhplDr5InfoBvRadius = 12, kOhplDr5InfoWords,
+	};
+
+	struct OhplDr5DecalIn { int32_t count; bool depthInNormalAlpha; };
+	struct OhplDr5SkyIn { bool worldOk, active; float farPlane; OhplVec3f rotation, origin; };
+	struct OhplDr5Camera { OhplDlFrustum f; float farPlane; OhplVec3f forward; };
+	struct OhplDr5TransIn
+	{
+		int32_t count, debugSkip, dofPass;
+		bool depthInNormalAlpha, hdr, isReflection, fogActive, underwater, secondary, renderWorldReflection, clipReflectionScreenRect,
+			settingsLog, occlusionTestLargeLights;
+		int32_t fogAreaNum;
+		float dofStart, dofEnd, dofFalloff;
+		OhplVec2l rtSize;
+		OhplDr5Camera camera;
+	};
+	static_assert(sizeof(OhplDr5DecalIn) == 8 && sizeof(OhplDr5SkyIn) == 32 && sizeof(OhplDr5Camera) == 172 && sizeof(OhplDr5TransIn) == 220,
+				  "Rust struct layout");
+
+	extern "C"
+	{
+		OhplDrPlan* ohpl_dr5_plan_z(int32_t n);
+		OhplDrPlan* ohpl_dr5_plan_gbuffer(int32_t n);
+		OhplDrPlan* ohpl_dr5_plan_illumination(int32_t n);
+		OhplDrPlan* ohpl_dr5_plan_gbuffer_content(float w, float h, int32_t numTextures);
+		OhplDrPlan* ohpl_dr5_plan_reflection_content(float w, float h, int32_t div);
+		OhplDrPlan* ohpl_dr5_plan_decals(const OhplDr5DecalIn*);
+		OhplDrPlan* ohpl_dr5_plan_skybox(const OhplDr5SkyIn*);
+		OhplDrPlan* ohpl_dr5_plan_translucent(const OhplDr5TransIn*);
+		void ohpl_dr5_feed_words(OhplDrPlan*, const uint32_t* v, size_t n);
+	}
 }
 
 #endif
