@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Flashback.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -95,13 +96,11 @@ cLuxArea_Flashback::~cLuxArea_Flashback()
 void cLuxArea_Flashback::OnUpdate(float afTimeStep)
 {
 	//Do not update this unless it is a proper game update (when eveything is 100% intialized)
-	if(afTimeStep < gpBase->mpEngine->GetStepSize()*0.8f) return;
+	if(ohpl_ga5_step_too_small(afTimeStep, gpBase->mpEngine->GetStepSize())) return;
 
 	//////////////////////////
 	// Check update count
-	mfCheckCollisionCount-=afTimeStep;
-	if(mfCheckCollisionCount>0) return;
-	mfCheckCollisionCount = 0.1f;
+	if(ohpl_ga5_tick_fixed(&mfCheckCollisionCount, afTimeStep, 0.1f)==false) return;
 
 	//////////////////////////
 	// Check collision

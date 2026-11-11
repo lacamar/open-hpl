@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Ladder.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -99,12 +100,12 @@ void cLuxArea_Ladder::SetupAfterLoad(cWorld *apWorld)
 {
 	/////////////////////////////////
 	//Generate some variables based on the area body
-	cMatrixf mtxInv = cMath::MatrixInverse(mpBody->GetWorldMatrix());
-
-	mvForward = mtxInv.GetForward();
-
-	mfMaxY = mpBody->GetWorldPosition().y + mpBody->GetShape()->GetSize().y/2.0f;
-	mfMinY = mpBody->GetWorldPosition().y - mpBody->GetShape()->GetSize().y/2.0f;
+	cMatrixf mtxWorld = mpBody->GetWorldMatrix();
+	OhplGa5LadderSetup setup;
+	ohpl_ga5_ladder_setup(reinterpret_cast<const OhplGa5Mtx*>(&mtxWorld), mpBody->GetWorldPosition().y, mpBody->GetShape()->GetSize().y, &setup);
+	mvForward = cVector3f(setup.forward.x, setup.forward.y, setup.forward.z);
+	mfMaxY = setup.maxY;
+	mfMinY = setup.minY;
 }
 
 //-----------------------------------------------------------------------
@@ -122,37 +123,24 @@ bool cLuxArea_Ladder::CanInteract(iPhysicsBody *apBody)
 
 //-----------------------------------------------------------------------
 
+static bool LadderFits(void *apCtx, const OhplGa5Vec3 *apPos)
+{
+	iCharacterBody *pCharBody = static_cast<iCharacterBody*>(apCtx);
+	return pCharBody->CheckCharacterFits(cVector3f(apPos->x, apPos->y, apPos->z), false,0,NULL,kEpsilonf);
+}
+
 bool cLuxArea_Ladder::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	///////////////////////////////
 	//Check if the pos in front of the ladder is free.
 	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
 	iPhysicsWorld *pWorld = gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld();
+
 	cVector3f vStartPos = GetStartPosition();
-	bool bFound = false;
-	bool bFirstTry = true;
 
-    //Check higher and higher positions until a free is found.
-	do
-	{
-		if(pCharBody->CheckCharacterFits(vStartPos, false,0,NULL,kEpsilonf))
-		{
-            if(bFirstTry==false)
-			{
-				vStartPos+=cVector3f(0,0.1f,0);
-			}
-			
-			bFound = true;
-			break;
-		}
-
-		bFirstTry = false;
-		vStartPos += cVector3f(0,0.1f,0);
-	}
-	while(vStartPos.y <= mfMaxY-0.2f);
-
+	//Check higher and higher positions until a free is found.
 	//If not found, the skip
-	if(bFound==false)
+	if(ohpl_ga5_ladder_find_start(reinterpret_cast<OhplGa5Vec3*>(&vStartPos), mfMaxY, LadderFits, pCharBody)==false)
 	{
 		//TODO: Message?
 		return false;
@@ -185,18 +173,14 @@ cVector3f cLuxArea_Ladder::GetStartRotation()
 cVector3f cLuxArea_Ladder::GetStartPosition()
 {
 	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
-
 	cVector3f vCharSize = pCharBody->GetShape(0)->GetSize();
-
 	cVector3f vPos = pCharBody->GetPosition();
-	cVector3f vLadderPos =	mpBody->GetWorldPosition() + GetForward()*vCharSize.x *0.6f;
-	vLadderPos.y = vPos.y+0.05f;
+	cVector3f vLadderPos = mpBody->GetWorldPosition();
+	cVector3f vForward = GetForward();
 
-	if(vLadderPos.y > mfMaxY - vCharSize.y*0.3f) vLadderPos.y = mfMaxY - vCharSize.y*0.3f;
-
-	if(vLadderPos.y - vCharSize.y/2 < mfMinY) vLadderPos.y = mfMinY + vCharSize.y/2+0.1f;
-
-	return vLadderPos;
+	cVector3f vResult;
+	ohpl_ga5_ladder_start_pos(reinterpret_cast<const OhplGa5Vec3*>(&vLadderPos), reinterpret_cast<const OhplGa5Vec3*>(&vForward), reinterpret_cast<const OhplGa5Vec3*>(&vCharSize), vPos.y, mfMaxY, mfMinY, reinterpret_cast<OhplGa5Vec3*>(&vResult));
+	return vResult;
 }
 
 //-----------------------------------------------------------------------
