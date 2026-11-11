@@ -26,7 +26,7 @@ pub(crate) use geom::{
     aabb_inside, aabb_line_intersection, plane_aabb_collision, plane_aabb_sphere_collision,
 };
 pub(crate) use geom::{point_in_aabb, points_aabb_planes_collision};
-pub(crate) use libm::{asin, cos, sin};
+pub(crate) use libm::{acos, asin, cos, sin};
 pub(crate) use libm::{atan2, tan};
 #[cfg(test)]
 pub(crate) use libm::{c_rand, c_srand};
@@ -35,6 +35,10 @@ pub(crate) use matrix::{
     matrix_scale, rotate_z,
 };
 pub(crate) use matrix::{matrix_mul_divide_w, perspective_projection};
+pub(crate) use matrix::{
+    matrix_quaternion, matrix_unit_vectors, quat_dot, quat_from_angle_axis,
+    quat_from_rotation_matrix,
+};
 pub(crate) use matrix::{matrix_translate, orthographic_projection, transpose};
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
