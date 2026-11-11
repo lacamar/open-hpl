@@ -18,6 +18,7 @@
 #include "gui/Gui.h"
 #include "gui/GuiSet.h"
 #include "math/Math.h"
+#include "engine/RustEngine.h"
 #include "resources/FileSearcher.h"
 #include "resources/FontManager.h"
 #include "resources/Resources.h"
@@ -37,24 +38,26 @@
 
 namespace hpl {
 
+	static tString ReadFile(const char *apPath)
+	{
+		std::ifstream file(apPath, std::ios::binary);
+		return tString(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+	}
+
 	static tString ReadFirstLine(const char *apPath)
 	{
-		std::ifstream file(apPath);
+		tString sFile = ReadFile(apPath);
 		tString sLine;
-		std::getline(file, sLine);
-		return sLine.c_str();
+		ohpl_en_first_line(OhplEnP(sFile), sFile.size(), OhplEnAssign, &sLine);
+		return sLine;
 	}
 
 	static tString OsName()
 	{
-		std::ifstream file("/etc/os-release");
-		tString sLine;
-		while(std::getline(file, sLine))
-		{
-			if(sLine.rfind("PRETTY_NAME=", 0) == 0)
-				return cString::ReplaceStringTo(sLine.substr(12), "\"", "");
-		}
-		return "Linux";
+		tString sFile = ReadFile("/etc/os-release");
+		tString sName;
+		ohpl_en_os_name(OhplEnP(sFile), sFile.size(), OhplEnAssign, &sName);
+		return sName;
 	}
 
 	static tString JsonVec(const cVector3f &v)
@@ -108,21 +111,22 @@ namespace hpl {
 		uname(&uts);
 		tString sDevice = ReadFirstLine("/sys/firmware/devicetree/base/model");
 		if(sDevice.empty()) sDevice = ReadFirstLine("/sys/class/dmi/id/product_name");
-		long lMemGb = (sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE) + (1L << 29)) >> 30;
+		long lMemGb = ohpl_en_mem_gb(sysconf(_SC_PHYS_PAGES), sysconf(_SC_PAGESIZE));
 
-		mvSystem.push_back("Open HPL " OPENHPL_VERSION);
-		mvSystem.push_back(sDevice + "  |  " + uts.machine + ", " +
-			cString::ToString((int)std::thread::hardware_concurrency()) + " cores, " +
-			cString::ToString((int)lMemGb) + " GB");
-		mvSystem.push_back(OsName() + "  |  Linux " + uts.release);
+		tString sOs = OsName();
+		tString sMachine = uts.machine;
+		tString sKernel = uts.release;
+		tString sVersion = OPENHPL_VERSION;
+		OhplEnSystemInfo Info = { OhplEnB(sVersion), OhplEnB(sDevice), OhplEnB(sMachine), (int)std::thread::hardware_concurrency(), (int)lMemGb, OhplEnB(sOs), OhplEnB(sKernel) };
+		ohpl_en_system_lines(&Info, OhplEnPush, &mvSystem);
 		mvSystem.push_back(mpEngine->GetGraphics()->GetLowLevel()->GetRendererDescription());
 		return true;
 	}
 
 	void cDevHud::Render(bool abHud)
 	{
-		bool bToast = mlSavedTime && cPlatform::GetApplicationTime() - mlSavedTime < 4000;
-		if(!abHud && !mbBugOpen && !bToast) return;
+		bool bToast = mlSavedTime && ohpl_en_toast_active(mlSavedTime, cPlatform::GetApplicationTime());
+		if(!ohpl_en_should_render(abHud, mbBugOpen, bToast)) return;
 		if(!Init()) return;
 
 		iLowLevelGraphics *pLowGfx = mpEngine->GetGraphics()->GetLowLevel();
@@ -144,30 +148,28 @@ namespace hpl {
 
 		if(abHud)
 		{
-			float fSize = cMath::Max(14.0f, vScreen.y / 60.0f);
+			float fSize = ohpl_en_hud_font_size(vScreen.y);
 			cVector2f vFont(fSize);
 			tWStringVec vLines;
 			for(const tString &sLine : mvSystem) vLines.push_back(cString::UTF8ToWChar(sLine));
-			wchar_t sStats[128];
-			swprintf(sStats, 128, L"%dx%d  |  %.0f FPS  %.1f ms", vScreen.x, vScreen.y,
-				mpEngine->GetFPS(), mpEngine->GetAvgFrameTimeInMS());
-			vLines.push_back(sStats);
+			tString sStats;
+			ohpl_en_hud_stats_line(vScreen.x, vScreen.y, mpEngine->GetFPS(), mpEngine->GetAvgFrameTimeInMS(), OhplEnAssign, &sStats);
+			vLines.push_back(cString::UTF8ToWChar(sStats));
 
 			float fWidth = 0;
 			for(const tWString &sLine : vLines)
 				fWidth = cMath::Max(fWidth, mpFont->GetLength(vFont, sLine.c_str()));
 
-			float fPad = fSize * 0.5f;
-			float fLineH = fSize * 1.25f;
-			cVector3f vPos(fPad, fPad, 0);
-			mpSet->DrawGfx(mpBackground, vPos, cVector2f(fWidth + fPad * 2, fLineH * vLines.size() + fPad * 2));
+			OhplEnHudLayout Layout = ohpl_en_hud_layout(fSize, fWidth, vLines.size());
+			cVector3f vPos(Layout.pad, Layout.pad, 0);
+			mpSet->DrawGfx(mpBackground, vPos, cVector2f(Layout.bgW, Layout.bgH));
 
-			vPos += cVector3f(fPad, fPad, 1);
+			vPos = cVector3f(Layout.textX, Layout.textY, 1);
 			for(size_t i = 0; i < vLines.size(); ++i)
 			{
 				cColor col = i == 0 ? cColor(1, 0.75f, 0.2f, 1) : cColor(1, 1);
 				mpSet->DrawFont(vLines[i], mpFont, vPos, vFont, col);
-				vPos.y += fLineH;
+				vPos.y += Layout.lineH;
 			}
 		}
 
@@ -179,50 +181,47 @@ namespace hpl {
 
 	void cDevHud::RenderBugReport(const cVector2l &avScreen)
 	{
-		float fSize = cMath::Max(16.0f, avScreen.y / 45.0f);
-		cVector2f vFont(fSize);
-		float fPad = fSize * 0.75f;
-		float fLineH = fSize * 1.25f;
-		float fBoxW = avScreen.x * 0.6f;
-		float fTextW = fBoxW - fPad * 2;
+		OhplEnBugMetrics Metrics = ohpl_en_bug_metrics(avScreen.x, avScreen.y);
+		cVector2f vFont(Metrics.font);
+		float fBoxW = Metrics.boxW;
 
 		tWStringVec vLines;
 		if(mbBugOpen)
 		{
 			vLines.push_back(_W("Bug report  -  Enter: save   Shift+Enter: new line   Esc: cancel"));
-			tWString sText = msBugText + ((cPlatform::GetApplicationTime() / 500) % 2 ? _W("_") : _W(" "));
-			tWString sLine;
-			for(wchar_t c : sText)
-			{
-				if(c == L'\n') { vLines.push_back(sLine); sLine.clear(); continue; }
-				sLine += c;
-				if(mpFont->GetLength(vFont, sLine.c_str()) > fTextW)
+			tWString sText = msBugText;
+			sText += (wchar_t)ohpl_en_cursor_char(cPlatform::GetApplicationTime());
+
+			struct tWrapCtx { iFontData *mpFont; cVector2f mvFont; tWStringVec *mpLines; } Ctx = { mpFont, vFont, &vLines };
+			ohpl_en_wrap_bug_text((const uint32_t*)sText.data(), sText.size(), Metrics.textW,
+				[](void *apCtx, const uint32_t *apText, size_t alLen) -> float
 				{
-					size_t lSpace = sLine.find_last_of(L' ');
-					size_t lCut = lSpace == tWString::npos || lSpace == 0 ? sLine.size() - 1 : lSpace + 1;
-					vLines.push_back(sLine.substr(0, lCut));
-					sLine = sLine.substr(lCut);
-				}
-			}
-			vLines.push_back(sLine);
+					tWrapCtx *pCtx = static_cast<tWrapCtx*>(apCtx);
+					tWString sLine((const wchar_t*)apText, alLen);
+					return pCtx->mpFont->GetLength(pCtx->mvFont, sLine.c_str());
+				},
+				[](void *apCtx, const uint32_t *apText, size_t alLen)
+				{
+					static_cast<tWrapCtx*>(apCtx)->mpLines->push_back(tWString((const wchar_t*)apText, alLen));
+				}, &Ctx);
 		}
 		else
 		{
 			vLines.push_back(_W("Bug report saved"));
 			vLines.push_back(cString::UTF8ToWChar(msLastSaved));
-			fBoxW = cMath::Max(fBoxW, mpFont->GetLength(vFont, vLines[1].c_str()) + fPad * 2);
+			fBoxW = ohpl_en_bug_toast_box_w(Metrics, mpFont->GetLength(vFont, vLines[1].c_str()));
 		}
 
-		float fBoxH = fLineH * cMath::Max((int)vLines.size(), 4) + fPad * 2;
-		cVector3f vPos((avScreen.x - fBoxW) * 0.5f, avScreen.y * 0.25f, 10);
-		mpSet->DrawGfx(mpBackground, vPos, cVector2f(fBoxW, fBoxH));
+		OhplEnBugBox Box = ohpl_en_bug_box(Metrics, fBoxW, vLines.size(), avScreen.x, avScreen.y);
+		cVector3f vPos(Box.x, Box.y, 10);
+		mpSet->DrawGfx(mpBackground, vPos, cVector2f(Box.w, Box.h));
 
-		vPos += cVector3f(fPad, fPad, 1);
+		vPos = cVector3f(Box.textX, Box.textY, 11);
 		for(size_t i = 0; i < vLines.size(); ++i)
 		{
 			cColor col = i == 0 ? cColor(1, 0.75f, 0.2f, 1) : cColor(1, 1);
 			mpSet->DrawFont(vLines[i], mpFont, vPos, vFont, col);
-			vPos.y += fLineH;
+			vPos.y += Metrics.lineH;
 		}
 	}
 
@@ -260,7 +259,7 @@ namespace hpl {
 	{
 		if(!mbBugOpen)
 		{
-			if(aEvent.type == SDL_KEYDOWN && aEvent.key.keysym.sym == SDLK_F9 && !aEvent.key.repeat)
+			if(ohpl_en_opens_report(aEvent.type, aEvent.type == SDL_KEYDOWN ? (int)aEvent.key.keysym.sym : 0, aEvent.type == SDL_KEYDOWN && aEvent.key.repeat))
 			{
 				OpenBugReport();
 				return true;
@@ -275,35 +274,34 @@ namespace hpl {
 			return true;
 		case SDL_KEYDOWN:
 		{
-			SDL_Keycode key = aEvent.key.keysym.sym;
 			bool bCtrl = aEvent.key.keysym.mod & KMOD_CTRL;
-			if(key == SDLK_ESCAPE) CloseBugReport();
-			else if((key == SDLK_RETURN || key == SDLK_KP_ENTER) && (aEvent.key.keysym.mod & KMOD_SHIFT)) msBugText += L'\n';
-			else if(key == SDLK_RETURN || key == SDLK_KP_ENTER) { SaveBugReport(); CloseBugReport(); }
-			else if(key == SDLK_BACKSPACE && bCtrl)
+			bool bShift = aEvent.key.keysym.mod & KMOD_SHIFT;
+			switch(ohpl_en_key_action((int)aEvent.key.keysym.sym, bCtrl, bShift, msBugText.empty()))
 			{
-				size_t lEnd = msBugText.find_last_not_of(L" \n");
-				size_t lCut = lEnd == tWString::npos ? 0 : msBugText.find_last_of(L" \n", lEnd);
-				msBugText.resize(lCut == tWString::npos ? 0 : lCut + 1);
+			case 1: CloseBugReport(); break;
+			case 2: msBugText += L'\n'; break;
+			case 3: SaveBugReport(); CloseBugReport(); break;
+			case 4:
+			{
+				tWString sNew;
+				ohpl_en_ctrl_backspace((const uint32_t*)msBugText.data(), msBugText.size(), OhplEnWAssign, &sNew);
+				msBugText = sNew;
+				break;
 			}
-			else if(key == SDLK_BACKSPACE && !msBugText.empty()) msBugText.pop_back();
-			else if(key == SDLK_v && bCtrl && SDL_HasClipboardText())
-			{
-				char *pClip = SDL_GetClipboardText();
-				msBugText += cString::UTF8ToWChar(pClip);
-				SDL_free(pClip);
+			case 5: msBugText.pop_back(); break;
+			case 6:
+				if(SDL_HasClipboardText())
+				{
+					char *pClip = SDL_GetClipboardText();
+					msBugText += cString::UTF8ToWChar(pClip);
+					SDL_free(pClip);
+				}
+				break;
 			}
 			return true;
 		}
-		case SDL_MOUSEMOTION:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
-		case SDL_MOUSEWHEEL:
-		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_CONTROLLERAXISMOTION:
-			return true;
 		}
-		return false;
+		return ohpl_en_swallowed_event(aEvent.type);
 	}
 
 	void cDevHud::SaveBugReport()
@@ -312,10 +310,21 @@ namespace hpl {
 		Init();
 
 		fs::path root = fs::path(cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGDataHome)).c_str()) / "open-hpl" / "bugs";
-		tString sId = msBugTime;
+		tString sId;
+		{
+			struct tNameCtx { fs::path mRoot; tString msId; } NameCtx = { root, "" };
+			ohpl_en_unique_name(OhplEnP(msBugTime), msBugTime.size(),
+				[](void *apCtx, const uint8_t *apName, size_t alLen) -> bool
+				{
+					return fs::exists(static_cast<tNameCtx*>(apCtx)->mRoot / tString((const char*)apName, alLen).c_str());
+				},
+				[](void *apCtx, const uint8_t *apName, size_t alLen)
+				{
+					static_cast<tNameCtx*>(apCtx)->msId.assign((const char*)apName, alLen);
+				}, &NameCtx);
+			sId = NameCtx.msId;
+		}
 		fs::path dir = root / sId.c_str();
-		for(int i = 2; fs::exists(dir); ++i) dir = root / (sId + "-" + cString::ToString(i)).c_str();
-		sId = dir.filename().string().c_str();
 		std::error_code ec;
 		fs::create_directories(dir, ec);
 		if(ec)
@@ -324,17 +333,14 @@ namespace hpl {
 			return;
 		}
 
-		tString sFiles;
-		if(mpBugShot && mpEngine->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(
-			mpBugShot, cString::UTF8ToWChar((dir / "screenshot.png").c_str()), 0))
-			sFiles += "\"screenshot\":\"screenshot.png\"";
+		bool bShotSaved = mpBugShot && mpEngine->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(
+			mpBugShot, cString::UTF8ToWChar((dir / "screenshot.png").c_str()), 0);
 
 		tString sDesc = cString::S16BitToUTF8(msBugText);
 		Log("Bug report %s: %s\n", sId.c_str(), sDesc.c_str());
 
 		tString sLog = cString::To8Char(GetLogFile());
-		if(fs::copy_file(sLog.c_str(), dir / "hpl.log", ec))
-			sFiles += tString(sFiles.empty() ? "" : ",") + "\"log\":\"hpl.log\"";
+		bool bLogCopied = fs::copy_file(sLog.c_str(), dir / "hpl.log", ec);
 
 		cViewport *pViewport = NULL;
 		for(cViewport *pVp : mpEngine->GetScene()->GetViewportList())
@@ -348,52 +354,75 @@ namespace hpl {
 		ssize_t lExe = readlink("/proc/self/exe", sExe, sizeof(sExe) - 1);
 		sExe[lExe > 0 ? lExe : 0] = 0;
 
-		tString sArgs;
-		std::ifstream cmdline("/proc/self/cmdline");
-		for(std::string sArg; std::getline(cmdline, sArg, '\0');)
-			sArgs += tString(sArgs.empty() ? "" : ",") + JsonStr(sArg.c_str());
+		tString sCmdline = ReadFile("/proc/self/cmdline");
+		tStringVec vArgs;
+		ohpl_en_cmdline_args(OhplEnP(sCmdline), sCmdline.size(), OhplEnPush, &vArgs);
 
-		tString sEnv;
+		std::vector<std::pair<tString, tString> > vEnv;
 		for(char **pEnv = environ; *pEnv; ++pEnv)
 		{
 			tString sVar = *pEnv;
-			if(sVar.rfind("OPENHPL_", 0) != 0 && sVar.rfind("OHPL_", 0) != 0) continue;
-			size_t lEq = sVar.find('=');
-			sEnv += tString(sEnv.empty() ? "" : ",") + JsonStr(sVar.substr(0, lEq)) + ":" + JsonStr(sVar.substr(lEq + 1));
+			tStringVec vPair;
+			if(!ohpl_en_env_pair(OhplEnP(sVar), sVar.size(), OhplEnPush, &vPair)) continue;
+			vEnv.push_back(std::make_pair(vPair[0], vPair[1]));
 		}
 
-		tString sSystem;
-		for(const tString &sLine : mvSystem) sSystem += tString(sSystem.empty() ? "" : ",") + JsonStr(sLine);
+		tString sFiles;
+		ohpl_en_files_json(bShotSaved, bLogCopied, OhplEnAssign, &sFiles);
+
+		std::vector<OhplEnBytes> vArgBytes;
+		for(const tString &sArg : vArgs) vArgBytes.push_back(OhplEnB(sArg));
+		std::vector<OhplEnBytesPair> vEnvBytes;
+		for(const std::pair<tString, tString> &Var : vEnv) vEnvBytes.push_back(OhplEnBytesPair{ OhplEnB(Var.first), OhplEnB(Var.second) });
+		std::vector<OhplEnBytes> vSystemBytes;
+		for(const tString &sLine : mvSystem) vSystemBytes.push_back(OhplEnB(sLine));
 
 		const cVector2l &vScreen = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt();
-		tString sJson = "{\"id\":" + JsonStr(sId) +
-			",\"time\":" + JsonStr(msBugTime) +
-			",\"description\":" + JsonStr(sDesc) +
-			",\"version\":" + JsonStr(OPENHPL_VERSION) +
-			",\"exe\":" + JsonStr(sExe) +
-			",\"cwd\":" + JsonStr(sCwd) +
-			",\"args\":[" + sArgs + "]" +
-			",\"env\":{" + sEnv + "}" +
-			",\"system\":[" + sSystem + "]" +
-			",\"resolution\":[" + cString::ToString(vScreen.x) + "," + cString::ToString(vScreen.y) + "]" +
-			",\"fps\":" + cString::ToString(mpEngine->GetFPS()) +
-			",\"frame_ms\":" + cString::ToString(mpEngine->GetAvgFrameTimeInMS()) +
-			",\"game_time\":" + cString::ToString((float)mpEngine->GetGameTime());
+		tString sVersion = OPENHPL_VERSION;
+		tString sExeStr = sExe;
+		tString sCwdStr = sCwd;
+		tString sMap, sWorld, sRender;
+		OhplEnReport Report = {};
+		Report.id = OhplEnB(sId);
+		Report.time = OhplEnB(msBugTime);
+		Report.description = OhplEnB(sDesc);
+		Report.version = OhplEnB(sVersion);
+		Report.exe = OhplEnB(sExeStr);
+		Report.cwd = OhplEnB(sCwdStr);
+		Report.args = vArgBytes.data();
+		Report.argsN = vArgBytes.size();
+		Report.env = vEnvBytes.data();
+		Report.envN = vEnvBytes.size();
+		Report.system = vSystemBytes.data();
+		Report.systemN = vSystemBytes.size();
+		Report.resX = vScreen.x;
+		Report.resY = vScreen.y;
+		Report.fps = mpEngine->GetFPS();
+		Report.frameMs = mpEngine->GetAvgFrameTimeInMS();
+		Report.gameTime = (float)mpEngine->GetGameTime();
 		if(pViewport)
 		{
 			cCamera *pCam = pViewport->GetCamera();
-			sJson += ",\"map\":" + JsonStr(pViewport->GetWorld()->GetName()) +
-				",\"camera\":{\"pos\":" + JsonVec(pCam->GetPosition()) +
-				",\"forward\":" + JsonVec(pCam->GetForward()) + "}" +
-				",\"world\":" + cEngineDiagnostics::GetWorldStatsJson(pViewport->GetWorld()) +
-				",\"render\":" + cEngineDiagnostics::GetRenderStatsJson(pViewport, mpEngine->GetGraphics());
+			sMap = pViewport->GetWorld()->GetName();
+			sWorld = cEngineDiagnostics::GetWorldStatsJson(pViewport->GetWorld());
+			sRender = cEngineDiagnostics::GetRenderStatsJson(pViewport, mpEngine->GetGraphics());
+			Report.hasScene = true;
+			Report.map = OhplEnB(sMap);
+			Report.pos[0] = pCam->GetPosition().x; Report.pos[1] = pCam->GetPosition().y; Report.pos[2] = pCam->GetPosition().z;
+			Report.forward[0] = pCam->GetForward().x; Report.forward[1] = pCam->GetForward().y; Report.forward[2] = pCam->GetForward().z;
+			Report.worldJson = OhplEnB(sWorld);
+			Report.renderJson = OhplEnB(sRender);
 		}
-		sJson += ",\"files\":{" + sFiles + "}}";
+		Report.files = OhplEnB(sFiles);
+		tString sJson;
+		ohpl_en_report_json(&Report, OhplEnAssign, &sJson);
 
 		std::ofstream(dir / "report.json") << sJson << "\n";
-		std::ofstream(root / "index.jsonl", std::ios::app) << "{\"id\":" << JsonStr(sId) <<
-			",\"map\":" << JsonStr(pViewport ? pViewport->GetWorld()->GetName() : "") <<
-			",\"description\":" << JsonStr(sDesc) << ",\"dir\":" << JsonStr(dir.c_str()) << "}\n";
+		tString sMapName = pViewport ? tString(pViewport->GetWorld()->GetName()) : tString();
+		tString sDir = dir.c_str();
+		tString sIndex;
+		ohpl_en_index_line(OhplEnB(sId), OhplEnB(sMapName), OhplEnB(sDesc), OhplEnB(sDir), OhplEnAssign, &sIndex);
+		std::ofstream(root / "index.jsonl", std::ios::app) << sIndex;
 
 		msLastSaved = dir.c_str();
 		mlSavedTime = cPlatform::GetApplicationTime();

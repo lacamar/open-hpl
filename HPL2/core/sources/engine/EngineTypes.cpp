@@ -21,6 +21,9 @@
 
 #include "system/LowLevelSystem.h"
 #include "math/Math.h"
+#include "engine/RustEngine.h"
+
+#include <cstddef>
 
 namespace hpl {
 
@@ -31,24 +34,27 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
+	static_assert(sizeof(cMultipleSettingsHandler::cGSEntry) == sizeof(OhplEnMsEntry), "cGSEntry layout");
+	static_assert(eMultipleSettingsCalcType_Mul == 0 && eMultipleSettingsCalcType_Min == 1 &&
+				  eMultipleSettingsCalcType_Max == 2 && eMultipleSettingsCalcType_Avg == 3, "calc types");
+
 	void cMultipleSettingsHandler::cGSEntry::FadeTo(float afDest, float afSpeed, bool abDestroyAtDest)
 	{
-		mfDest = afDest;
-		mfSpeed = cMath::GetCorrectSignOfSpeed(mfVal, mfDest,afSpeed);
-		mbDestroyAtDest = abDestroyAtDest;
+		ohpl_en_ms_fade_to(reinterpret_cast<OhplEnMsEntry*>(this), afDest, afSpeed, abDestroyAtDest);
 	}
 
 	void cMultipleSettingsHandler::cGSEntry::SetValAndDest(float afVal)
 	{
-		mfVal = afVal;
-		mfDest = mfVal;
+		ohpl_en_ms_set_val_and_dest(reinterpret_cast<OhplEnMsEntry*>(this), afVal);
 	}
 
 	//-----------------------------------------------------------------------
 
 	cMultipleSettingsHandler::cMultipleSettingsHandler()
 	{
-
+		static_assert(offsetof(cGSEntry, mfVal) == 0 && offsetof(cGSEntry, mfDest) == 4 &&
+					  offsetof(cGSEntry, mfSpeed) == 8 && offsetof(cGSEntry, mTypes) == 12 &&
+					  offsetof(cGSEntry, mbDestroyAtDest) == 16, "cGSEntry layout");
 	}
 
 	cMultipleSettingsHandler::~cMultipleSettingsHandler()
@@ -63,46 +69,37 @@ namespace hpl {
 
 	cMultipleSettingsHandler::cGSEntry* cMultipleSettingsHandler::GetEntry(int alIdx, bool abForceCreation)
 	{
-		if(alIdx >= (int)mvEntries.size())
+		bool bOccupied = alIdx >= 0 && alIdx < (int)mvEntries.size() && mvEntries[alIdx] != NULL;
+		switch(ohpl_en_ms_slot_action(alIdx, mvEntries.size(), bOccupied, abForceCreation))
 		{
-			if(abForceCreation)
-			{
-				mvEntries.resize(alIdx+1, NULL);
-				mvEntries[alIdx] = hplNew( cMultipleSettingsHandler::cGSEntry, () );
-			}
-			else
-			{
-				return NULL;
-			}
-		}
-		else if(mvEntries[alIdx]==NULL && abForceCreation)
-		{
+		case 1:
+			return mvEntries[alIdx];
+		case 2:
 			mvEntries[alIdx] = hplNew( cMultipleSettingsHandler::cGSEntry, () );
+			return mvEntries[alIdx];
+		case 3:
+			mvEntries.resize(alIdx+1, NULL);
+			mvEntries[alIdx] = hplNew( cMultipleSettingsHandler::cGSEntry, () );
+			return mvEntries[alIdx];
 		}
-
-		return mvEntries[alIdx];
+		return NULL;
 	}
 
 	//-----------------------------------------------------------------------
 
 	int cMultipleSettingsHandler::CreateEntry()
 	{
-		for(size_t i=0; i< mvEntries.size(); ++i)
-		{
-			if(mvEntries[i] == NULL)
-			{
-				mvEntries[i] = hplNew( cMultipleSettingsHandler::cGSEntry, () );
-				return (int)i;
-			}
-		}
-
-		mvEntries.push_back( hplNew( cMultipleSettingsHandler::cGSEntry, () ) );
-		return (int)mvEntries.size() - 1;
+		size_t lIdx = ohpl_en_ms_create_slot(reinterpret_cast<const OhplEnMsEntry* const*>(mvEntries.data()), mvEntries.size());
+		if(lIdx < mvEntries.size())
+			mvEntries[lIdx] = hplNew( cMultipleSettingsHandler::cGSEntry, () );
+		else
+			mvEntries.push_back( hplNew( cMultipleSettingsHandler::cGSEntry, () ) );
+		return (int)lIdx;
 	}
 
 	void cMultipleSettingsHandler::DestroyEntry(int alIdx)
 	{
-		if(mvEntries[alIdx])
+		if(alIdx >= 0 && alIdx < (int)mvEntries.size() && mvEntries[alIdx])
 		{
 			hplDelete( mvEntries[alIdx] );
 			mvEntries[alIdx] = NULL;
@@ -113,54 +110,7 @@ namespace hpl {
 
 	float cMultipleSettingsHandler::CalcResults(tFlag aTypes, eMultipleSettingsCalcType aCalcType, float afDefault)
 	{
-		if(mvEntries.empty()) return afDefault;
-
-		float fFinal= 0;
-		bool bFirst = true;
-		bool bUsedEntry=false;
-
-		for(size_t i=0; i<mvEntries.size(); ++i)
-		{
-			cMultipleSettingsHandler::cGSEntry *pEntry = mvEntries[i];
-			if(pEntry==NULL) continue;
-			
-			if( (pEntry->mTypes & aTypes) == 0) continue;
-			
-			bUsedEntry = true;
-
-			switch(aCalcType)
-			{
-			case eMultipleSettingsCalcType_Mul:
-				if(bFirst) fFinal =1;
-				fFinal *= pEntry->mfVal;
-				break;
-
-			case eMultipleSettingsCalcType_Min:
-				if(bFirst || fFinal > pEntry->mfVal) fFinal = pEntry->mfVal;
-				break;
-
-			case eMultipleSettingsCalcType_Max:
-				if(bFirst || fFinal < pEntry->mfVal) fFinal = pEntry->mfVal;
-				break;
-
-			case eMultipleSettingsCalcType_Avg:
-				if(bFirst) fFinal =0;
-				fFinal += pEntry->mfVal;
-				break;
-			}
-
-			
-			bFirst = false;
-		}
-
-		if(bUsedEntry==false) return afDefault;
-
-		if(aCalcType == eMultipleSettingsCalcType_Avg)
-		{
-			fFinal = fFinal / (float)mvEntries.size();
-		}
-
-		return fFinal;
+		return ohpl_en_ms_calc_results(reinterpret_cast<const OhplEnMsEntry* const*>(mvEntries.data()), mvEntries.size(), aTypes, aCalcType, afDefault);
 	}
 
 	//-----------------------------------------------------------------------
@@ -172,20 +122,7 @@ namespace hpl {
 			cMultipleSettingsHandler::cGSEntry *pEntry = mvEntries[i];
 			if(pEntry==NULL) continue;
 
-			if(pEntry->mfVal != pEntry->mfDest)
-			{
-				pEntry->mfVal += pEntry->mfSpeed * afTimeStep;
-				if(pEntry->mfSpeed < 0 && pEntry->mfVal < pEntry->mfDest)
-				{
-					pEntry->mfVal = pEntry->mfDest;
-				}
-				else if(pEntry->mfSpeed > 0 && pEntry->mfVal > pEntry->mfDest)
-				{
-					pEntry->mfVal = pEntry->mfDest;
-				}
-			}
-
-			if(pEntry->mbDestroyAtDest && pEntry->mfVal == pEntry->mfDest)
+			if(ohpl_en_ms_update(reinterpret_cast<OhplEnMsEntry*>(pEntry), afTimeStep))
 			{
 				hplDelete(pEntry);
 				mvEntries[i] = NULL;

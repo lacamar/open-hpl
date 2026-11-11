@@ -20,22 +20,18 @@
 #ifndef HPL_UPDATER_H
 #define HPL_UPDATER_H
 
+
 #include <map>
 #include <list>
 
 #include "engine/EngineTypes.h"
+#include "engine/RustEngine.h"
 #include "system/SystemTypes.h"
 
 namespace hpl {
 
 	class iUpdateable;
 	class iLowLevelSystem;
-
-	typedef std::list<iUpdateable*> tUpdateableList;
-	typedef tUpdateableList::iterator tUpdateableListIt;
-
-	typedef std::map<tString, tUpdateableList> tUpdateContainerMap;
-	typedef tUpdateContainerMap::iterator tUpdateContainerMapIt;
 
 	class cUpdater
 	{
@@ -82,14 +78,8 @@ namespace hpl {
 		bool AddGlobalUpdate(iUpdateable* apUpdate);
 	
 	private:
-		tString msCurrentUpdates;
-
-        tUpdateContainerMap m_mapUpdateContainer;
-
+		OhplEnUpdater *mpHandle;
 		iLowLevelSystem *mpLowLevelSystem;
-		
-		tUpdateableList *mpCurrentUpdates;
-		tUpdateableList mlstGlobalUpdateableList;
 	};
 };
 #endif // HPL_UPDATER_H

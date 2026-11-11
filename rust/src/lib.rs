@@ -18,6 +18,7 @@
 pub mod ai;
 pub mod binary_buffer;
 pub mod crc;
+pub mod engine;
 pub mod entity_loader;
 mod ffi;
 pub mod fsb5;
