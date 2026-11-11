@@ -36,12 +36,59 @@ namespace hpl {
 		eOhplDrOp_Ask,
 		eOhplDrOp_TryToneMap,
 		eOhplDrOp_Step,
+		eOhplDrOp_FlatProjectionMinMax,
+		eOhplDrOp_NormalFrustumProjection,
+		eOhplDrOp_QuadAt,
+		eOhplDrOp_CopyFbToTex,
+		eOhplDrOp_SetAccumBuffer,
+		eOhplDrOp_Matrix,
+		eOhplDrOp_InvViewMatrix,
+		eOhplDrOp_ScreenPositionVars,
+		eOhplDrOp_GenProgram,
+		eOhplDrOp_AskGeom,
+		eOhplDrOp_Dl,
+	};
+
+	enum eOhplDrGeom
+	{
+		eOhplDrGeom_SphereNearPlane,
+		eOhplDrGeom_FrustumNearPlane,
+		eOhplDrGeom_LineIntersection,
+		eOhplDrGeom_BoxNearPlane,
+		eOhplDrGeom_QueryFetch,
+		eOhplDrGeom_QuerySamples,
+		eOhplDrGeom_ShadowNeedsUpdate,
+	};
+
+	enum eOhplDrDl
+	{
+		eOhplDrDl_ClearPairs,
+		eOhplDrDl_ClearTempLights,
+		eOhplDrDl_SetMinLargeArea,
+		eOhplDrDl_Light,
+		eOhplDrDl_AcquireQuery,
+		eOhplDrDl_SetModelView,
+		eOhplDrDl_SetShape,
+		eOhplDrDl_QueryBegin,
+		eOhplDrDl_QueryEnd,
+		eOhplDrDl_DrawCurrent,
+		eOhplDrDl_Flush,
+		eOhplDrDl_InvView,
+		eOhplDrDl_UpdateFullscreenQuad,
+		eOhplDrDl_LightMatrix,
+		eOhplDrDl_QueryLog,
+		eOhplDrDl_ReleaseQuery,
+		eOhplDrDl_Lists,
+		eOhplDrDl_ClearShadowTexture,
+		eOhplDrDl_ShadowData,
+		eOhplDrDl_RenderShadowMap,
 	};
 
 	enum eOhplDrState { eOhplDrState_DepthTest, eOhplDrState_DepthWrite, eOhplDrState_DepthFunc, eOhplDrState_Blend,
 						eOhplDrState_Alpha, eOhplDrState_Channel };
-	enum { kOhplDrBlendNone = 0, kOhplDrBlendAlpha = 1, kOhplDrAlphaSolid = 0, kOhplDrChannelRgba = 0, kOhplDrChannelNone = 1,
-		   kOhplDrFuncEqual = 0, kOhplDrFuncLessOrEqual = 1 };
+	enum { kOhplDrBlendNone = 0, kOhplDrBlendAlpha = 1, kOhplDrBlendAdd = 2, kOhplDrBlendMul = 3, kOhplDrAlphaSolid = 0,
+		   kOhplDrChannelRgba = 0, kOhplDrChannelNone = 1, kOhplDrChannelRgb = 2,
+		   kOhplDrFuncEqual = 0, kOhplDrFuncLessOrEqual = 1, kOhplDrFuncGreaterOrEqual = 2 };
 	enum { kOhplDrFormatRgba = 0, kOhplDrFormatRgba16 = 1 };
 	enum { kOhplDrCompFull = 0, kOhplDrCompLinearDepth = 5 };
 	enum { kOhplDrClearDepth = 1, kOhplDrClearColor = 2 };
@@ -114,7 +161,7 @@ namespace hpl {
 	{
 		uint32_t kind;
 		int32_t a, b, c, d, e;
-		float f[4];
+		float f[12];
 	};
 
 	struct OhplDrFilmGrain
@@ -160,6 +207,8 @@ namespace hpl {
 		bool ohpl_dr_plan_next(OhplDrPlan*, OhplDrOp* out);
 		void ohpl_dr_plan_feed_bool(OhplDrPlan*, bool v);
 		void ohpl_dr_plan_feed_float(OhplDrPlan*, float v);
+		void ohpl_dr_plan_feed_int(OhplDrPlan*, int32_t v);
+		void ohpl_dr_plan_feed_vec3(OhplDrPlan*, float x, float y, float z);
 		const float* ohpl_dr_plan_array(const OhplDrPlan*, int idx);
 		void ohpl_dr_plan_film_grain(const OhplDrPlan*, OhplDrFilmGrain* out);
 		bool ohpl_dr_plan_trail_consumed(const OhplDrPlan*);
@@ -181,6 +230,132 @@ namespace hpl {
 		void ohpl_dr_batch_sizes(int vertices, int indices, int lights, int* outVertices, int* outIndices);
 		void ohpl_dr_debug_gbuffer_texture(int idx, const int shadowCounts[3], OhplDrDebugTex* out);
 		size_t ohpl_dr_tonemap_defines(int combo, bool hpl35, int* out, size_t cap);
+	}
+
+	// G6b: SSAO, edge smoothing and light setup. Fields mirror rust/src/render/deferred_light*.rs.
+	enum
+	{
+		kOhplDlFbLinearDepth = 0, kOhplDlFbSsao = 1, kOhplDlFbSsaoBlur = 2, kOhplDlFbEdgeLinearDepth = 3, kOhplDlFbCount = 4,
+		kOhplDlTexGbufDepth = 0, kOhplDlTexGbufNormal = 1, kOhplDlTexLinearDepth = 2, kOhplDlTexSsaoScatter = 3, kOhplDlTexSsao = 4,
+		kOhplDlTexSsaoBlur = 5, kOhplDlTexEdgeLinear = 6, kOhplDlTexEdgeTemp = 7, kOhplDlTexFalloff = 8, kOhplDlTexGobo = 9,
+		kOhplDlTexShadow = 10, kOhplDlTexJitter = 11, kOhplDlTexSpotFalloff = 12, kOhplDlTexGbuffer0 = 13, kOhplDlGbufferMax = 5,
+		kOhplDlTexCount = 18,
+		kOhplDlProgSsaoUnpack = 0, kOhplDlProgSsaoRender = 1, kOhplDlProgSsaoBlur0 = 2, kOhplDlProgSsaoBlur1 = 3,
+		kOhplDlProgEdgeUnpack = 4, kOhplDlProgEdgeRender = 5, kOhplDlProgDepthOnly = 6, kOhplDlProgLight = 7, kOhplDlProgCount = 8,
+		kOhplDlShapePyramid = 3,
+	};
+
+	struct OhplDlFarIn { float plane, top, bottom, right, left; };
+	struct OhplDlRect { int32_t x, y, w, h; };
+
+	struct OhplDlSsaoIn
+	{
+		bool loaded, active, inBoxLight, boxListsEmpty, gbuffer64bit, onColorBuffer, unpackOk, renderOk, blurOk[2];
+		OhplDlFarIn far;
+		OhplVec2l gbufferDepthSize, ssaoSize;
+		float scatterMul, scatterMin, scatterMax, depthDiffMul, skipEdge;
+	};
+
+	struct OhplDlEdgeIn
+	{
+		bool loaded, useEdgeSmooth, gbuffer64bit, renderOk;
+		OhplDlFarIn far;
+		OhplVec2l screen;
+		float screenF[2];
+	};
+
+	struct OhplDlLightIn
+	{
+		int32_t kind;
+		float radius, brightness, falloffPow, spotFalloffPow, translucency;
+		float diffuse[4];
+		bool castSpecular, castDiffuse, castShadows, hasGobo, goboSpecular, hasMaskBox;
+		int32_t shadowRes;
+		float shadowBlur;
+		OhplVec3f maskCenter, maskSize;
+		OhplMat4 world;
+		OhplVec3f worldPos, bvMin, bvMax, bvCenter;
+		float tanHalfFov, aspect, cosHalfFov, nearClip;
+		OhplMat4 viewProj;
+		OhplVec3f boxSize;
+		int32_t boxPrio;
+		uint64_t falloffMap, gobo, spotFalloff, id;
+	};
+
+	struct OhplDlLightOut
+	{
+		OhplMat4 render, transform;
+		OhplDlRect clip;
+		int32_t area;
+		bool insideNearPlane, castShadows;
+		int32_t shadowRes;
+	};
+
+	struct OhplDlLightState
+	{
+		OhplDlLightIn light;
+		OhplMat4 viewRender, viewTransform, invView;
+		bool castShadows, shadowTex;
+		OhplVec2l shadowSize;
+		bool jitter, hdr, underwater;
+		float fogColor[4], fogStart, fogEnd, fogFalloffExp, distanceFade, farPlane;
+		int32_t depthTextureIdx;
+		bool programOk;
+	};
+
+	struct OhplDlFrustum
+	{
+		OhplMat4 view, proj;
+		bool perspective;
+		float fov, nearPlane, aspect;
+		OhplVec3f origin;
+	};
+
+	struct OhplDlSetupIn
+	{
+		bool testLargeLights, useOcclusionCulling, renderShadows;
+		OhplVec2l rtSize;
+		float minLargeNormalizedArea;
+		int32_t maxShadowRes;
+		float shadowDistNone, shadowDistLow, shadowDistMedium, tanHalfFov;
+		int32_t sampleLimit;
+		OhplDlFrustum frustum;
+	};
+
+	struct OhplDlPair { uint64_t light; int32_t samples; };
+
+	struct OhplDlInitLight
+	{
+		OhplDlLightIn light;
+		bool insideNear, hasQuery;
+		int32_t area;
+	};
+
+	struct OhplDlInitIn
+	{
+		OhplMat4 view;
+		float lastFov, lastFarPlane, fov, farPlane, farLeft, farBottom, farRight, farTop;
+		int32_t minLargeArea, sampleLimit;
+	};
+
+	static_assert(sizeof(OhplDrOp) == 72 && sizeof(OhplDlLightIn) == 320 && sizeof(OhplDlLightOut) == 156 && sizeof(OhplDlLightState) == 576 &&
+				  sizeof(OhplDlSsaoIn) == 68 && sizeof(OhplDlEdgeIn) == 40 && sizeof(OhplDlSetupIn) == 196 && sizeof(OhplDlPair) == 16 &&
+				  sizeof(OhplDlInitLight) == 328 && sizeof(OhplDlInitIn) == 104 && sizeof(OhplDlFrustum) == 156, "Rust struct layout");
+
+	extern "C"
+	{
+		OhplDrPlan* ohpl_dl_plan_ssao(const OhplDlSsaoIn*);
+		OhplDrPlan* ohpl_dl_plan_edge_smooth(const OhplDlEdgeIn*);
+		OhplDrPlan* ohpl_dl_plan_light_variables(const OhplDlLightState*);
+		OhplDrPlan* ohpl_dl_plan_light_program(const OhplDlLightState*, uint32_t extraFlags, int32_t mode);
+		OhplDrPlan* ohpl_dl_plan_shadow_map(int32_t gbufferTextures);
+		OhplDrPlan* ohpl_dl_plan_setup_lights(const OhplDlSetupIn*, const OhplDlLightIn* lights, size_t n, const OhplDlPair* pairs, size_t np);
+		OhplDrPlan* ohpl_dl_plan_init_lights(const OhplDlInitIn*, const OhplDlInitLight* lights, size_t n);
+		bool ohpl_dl_plan_light_out(const OhplDrPlan*, int32_t idx, OhplDlLightOut* out);
+		void ohpl_dl_plan_inv_view(const OhplDrPlan*, OhplMat4* out);
+		size_t ohpl_dl_plan_list(const OhplDrPlan*, int32_t which, const uint32_t** out);
+		int32_t ohpl_dl_plan_rendered(const OhplDrPlan*);
+		int32_t ohpl_dl_light_shape(int32_t kind, int32_t quality);
 	}
 }
 

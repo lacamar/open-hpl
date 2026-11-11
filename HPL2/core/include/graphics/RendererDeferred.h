@@ -376,7 +376,9 @@ namespace hpl {
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
-		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true);
+		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true, cDeferredLight *apLight = NULL);
+		void FillLightState(OhplDlLightState &aState, cDeferredLight *apLightData, bool abViewProj);
+		iVertexBuffer* GetLightShapeBuffer(int alShape);
 		void RunStep(int alStep, int alArg);
 		iGpuProgram* GetToneMapProgram(int alCombo);
 

@@ -5,7 +5,7 @@
 
 use std::slice;
 
-use super::deferred::{self as dr, Feed, Op, Plan, Query, State, Step};
+use super::deferred::{self as dr, DlOp, Feed, Geom, Op, Plan, Query, State, Step};
 use super::deferred_post::{CopyIn, plan_copy_accum};
 use crate::types::{Vector2f, Vector2l};
 
@@ -18,10 +18,18 @@ pub struct OpC {
     pub c: i32,
     pub d: i32,
     pub e: i32,
-    pub f: [f32; 4],
+    pub f: [f32; 12],
 }
 
-const fn op(kind: u32, a: i32, b: i32, c: i32, d: i32, e: i32, f: [f32; 4]) -> OpC {
+fn pad<const N: usize>(f: [f32; N]) -> [f32; 12] {
+    let mut out = [0.0; 12];
+    for (o, v) in out.iter_mut().zip(f) {
+        *o = v;
+    }
+    out
+}
+
+fn op(kind: u32, a: i32, b: i32, c: i32, d: i32, e: i32, f: [f32; 4]) -> OpC {
     OpC {
         kind,
         a,
@@ -29,11 +37,61 @@ const fn op(kind: u32, a: i32, b: i32, c: i32, d: i32, e: i32, f: [f32; 4]) -> O
         c,
         d,
         e,
-        f,
+        f: pad(f),
     }
 }
 
 const Z4: [f32; 4] = [0.0; 4];
+
+fn geom_id(g: Geom) -> i32 {
+    match g {
+        Geom::SphereNearPlane => 0,
+        Geom::FrustumNearPlane => 1,
+        Geom::LineIntersection => 2,
+        Geom::BoxNearPlane => 3,
+        Geom::QueryFetch => 4,
+        Geom::QuerySamples => 5,
+        Geom::ShadowNeedsUpdate => 6,
+    }
+}
+
+fn dl_op(o: DlOp) -> OpC {
+    let k = 32;
+    match o {
+        DlOp::ClearPairs => op(k, 0, 0, 0, 0, 0, Z4),
+        DlOp::ClearTempLights => op(k, 1, 0, 0, 0, 0, Z4),
+        DlOp::SetMinLargeArea(v) => op(k, 2, v, 0, 0, 0, Z4),
+        DlOp::Light(i) => op(k, 3, i, 0, 0, 0, Z4),
+        DlOp::AcquireQuery(i) => op(k, 4, i, 0, 0, 0, Z4),
+        DlOp::SetModelView(i) => op(k, 5, i, 0, 0, 0, Z4),
+        DlOp::SetShape(v) => op(k, 6, v, 0, 0, 0, Z4),
+        DlOp::QueryBegin(i) => op(k, 7, i, 0, 0, 0, Z4),
+        DlOp::QueryEnd(i) => op(k, 8, i, 0, 0, 0, Z4),
+        DlOp::DrawCurrent => op(k, 9, 0, 0, 0, 0, Z4),
+        DlOp::Flush => op(k, 10, 0, 0, 0, 0, Z4),
+        DlOp::InvView => op(k, 11, 0, 0, 0, 0, Z4),
+        DlOp::UpdateFullscreenQuad { pos, size } => OpC {
+            kind: k,
+            a: 12,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+            f: pad([pos[0], pos[1], pos[2], size[0], size[1]]),
+        },
+        DlOp::LightMatrix(i) => op(k, 13, i, 0, 0, 0, Z4),
+        DlOp::QueryLog {
+            idx,
+            samples,
+            visible,
+        } => op(k, 14, idx, samples, i32::from(visible), 0, Z4),
+        DlOp::ReleaseQuery(i) => op(k, 15, i, 0, 0, 0, Z4),
+        DlOp::Lists => op(k, 16, 0, 0, 0, 0, Z4),
+        DlOp::ClearShadowTexture => op(k, 17, 0, 0, 0, 0, Z4),
+        DlOp::ShadowData => op(k, 18, 0, 0, 0, 0, Z4),
+        DlOp::RenderShadowMap => op(k, 19, 0, 0, 0, 0, Z4),
+    }
+}
 
 fn state_id(s: State) -> i32 {
     match s {
@@ -126,6 +184,32 @@ impl From<Op> for OpC {
                 let (id, arg) = step_id(s);
                 op(21, id, arg, 0, 0, 0, Z4)
             }
+            Op::FlatProjectionMinMax { min, max } => OpC {
+                kind: 22,
+                f: pad([min[0], min[1], min[2], max[0], max[1], max[2]]),
+                ..OpC::default()
+            },
+            Op::NormalFrustumProjection => op(23, 0, 0, 0, 0, 0, Z4),
+            Op::QuadAt {
+                pos,
+                size,
+                min,
+                max,
+            } => OpC {
+                kind: 24,
+                f: pad([
+                    pos[0], pos[1], pos[2], size[0], size[1], min[0], min[1], max[0], max[1],
+                ]),
+                ..OpC::default()
+            },
+            Op::CopyFbToTex { tex, size } => op(25, tex, size.x, size.y, 0, 0, Z4),
+            Op::SetAccumBuffer => op(26, 0, 0, 0, 0, 0, Z4),
+            Op::Matrix { prog, id, arr } => op(27, prog, id, arr, 0, 0, Z4),
+            Op::InvViewMatrix { prog, id } => op(28, prog, id, 0, 0, 0, Z4),
+            Op::ScreenPositionVars { prog } => op(29, prog, 0, 0, 0, 0, Z4),
+            Op::GenProgram { slot, mode, flags } => op(30, slot, mode, flags as i32, 0, 0, Z4),
+            Op::AskGeom { q, idx, f } => op(31, geom_id(q), idx, 0, 0, 0, f),
+            Op::Dl(d) => dl_op(d),
         }
     }
 }
@@ -298,6 +382,30 @@ pub unsafe extern "C" fn ohpl_dr_plan_feed_bool(plan: *mut Plan, v: bool) {
     // SAFETY: the caller's contract.
     if let Some(p) = unsafe { plan.as_mut() } {
         p.feed(Feed::Bool(v));
+    }
+}
+
+/// Answers the last `Ask` op with an int.
+///
+/// # Safety
+/// `plan` is null or a live handle.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_dr_plan_feed_int(plan: *mut Plan, v: i32) {
+    // SAFETY: the caller's contract.
+    if let Some(p) = unsafe { plan.as_mut() } {
+        p.feed(Feed::Int(v));
+    }
+}
+
+/// Answers the last `Ask` op with a vector.
+///
+/// # Safety
+/// `plan` is null or a live handle.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_dr_plan_feed_vec3(plan: *mut Plan, x: f32, y: f32, z: f32) {
+    // SAFETY: the caller's contract.
+    if let Some(p) = unsafe { plan.as_mut() } {
+        p.feed(Feed::Vec3([x, y, z]));
     }
 }
 
