@@ -10,11 +10,15 @@ mod ffi;
 mod grunt;
 mod host;
 mod machine;
+mod manpig;
 mod mover;
 mod pathfinder;
 mod senses;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_ga3b;
+mod waterlurker;
 
 pub use host::{AnimReq, Cmd, Host};
 

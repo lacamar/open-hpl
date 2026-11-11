@@ -87,6 +87,11 @@ private:
 	void SplashWater(eWaterLurkerSplash aType);
 
 	//////////////////////
+	// Rust handlers (rust/src/luxenemy/waterlurker.rs)
+	OhplGa3Host Ga3WlHost();
+	static int Ga3WlCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
+
+	//////////////////////
 	// Callbacks
 	bool PlayerIsDetected();
 	void OnSetActiveEnemySpecific(bool abX);
@@ -117,7 +122,7 @@ private:
 	//////////////
 	//Variables
 
-	
+	OhplGa3bWlCtx mGa3Wl;
 };
 
 //----------------------------------------------
