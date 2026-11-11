@@ -43,6 +43,7 @@
 
 #include "graphics/LowLevelGraphics.h"
 #include "math/MathTypes.h"
+#include "impl/RustGl.h"
 
 
 namespace hpl {
@@ -339,24 +340,9 @@ namespace hpl {
 
 		//////////////////////////////////////
 		//Render state settings
-		cColorWriteDL mColorWrite;
-		bool mbDepthWrite;
-		
-		bool mbCullActive;
-		eCullMode mCullMode;
-		
-		bool mbDepthTestActive;
-		eDepthTestFunc mDepthTestFunc;
-
-		bool mbAlphaTestActive;
-		eAlphaTestFunc mAlphaTestFunc;
-		float mfAlphaTestFuncRef;
-		
-		bool mbScissorActive;
+		OhplGlState mGl;
 		cVector2l mvScissorPos;
 		cVector2l mvScissorSize;
-		
-		bool mbBlendActive;
 
 		iFrameBuffer* mpFrameBuffer;
 		cVector2l mvFrameBufferPos;
@@ -406,8 +392,6 @@ namespace hpl {
 
 		//////////////////////////////////////
 		//Texture
-		GLenum mvCurrentTextureTarget[kMaxTextureUnits];
-		int mlCurrentActiveTextureUnit;
 
 #ifdef WITH_CG
 		//////////////////////////////////////

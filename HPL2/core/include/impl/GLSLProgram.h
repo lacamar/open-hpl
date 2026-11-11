@@ -29,6 +29,7 @@
 #include "graphics/GPUProgram.h"
 
 #include <GL/glew.h>
+#include "impl/RustGl.h"
 
 namespace hpl {
 
@@ -86,7 +87,7 @@ namespace hpl {
 		GLuint mlHandle;
 		static int mlCurrentProgram;
 
-		std::vector<cGLSLParam> mvParameters;
+		OhplGlParams *mpParams;
     };
 };
 #endif // HPL_GLSL_PROGRAM_H

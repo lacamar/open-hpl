@@ -44,9 +44,8 @@ namespace hpl {
 		mpGfxSDL = static_cast<cLowLevelGraphicsSDL*>(mpLowLevelGraphics);
 
 		mlTextureIndex = 0;
-		mfTimeCount =0;
-
-		mfTimeDir = 1;
+		mClock.count = 0;
+		mClock.dir = 1;
 	}
 
 	cSDLTexture::~cSDLTexture()
@@ -141,28 +140,18 @@ namespace hpl {
 
 	bool cSDLTexture::CreateFromRawData(const cVector3l &avSize,ePixelFormat aPixelFormat, unsigned char *apData)
 	{
-		;
-
 		GenerateHandles(1);
 
-		mvSize = avSize;
+		int lDataSize;
+		OhplGlV3 vRaw = ohpl_gl_tex_raw_size(OhplGl(avSize), aPixelFormat, &lDataSize);
+		mvSize = cVector3l(vRaw.x, vRaw.y, vRaw.z);
 		mPixelFormat = aPixelFormat;
 
-		//Make sure size is now below 0
-		if(mvSize.x<1)mvSize.x=1;
-		if(mvSize.y<1)mvSize.y=1;
-		if(mvSize.z<1)mvSize.z=1;
-
-		//////////////////////////////
-		//Get gl properties
 		GLenum GLTarget = TextureTypeToGLTarget(mType);
-		
-		//////////////////////////////////
-		//Create the texture data
+
 		glEnable(GLTarget);
 		glBindTexture(GLTarget, mvTextureHandles[0]);
 
-		int lDataSize = avSize.x * avSize.y * avSize.z * GetBytesPerPixel(aPixelFormat);
 		bool bRet = CopyTextureDataToGL(mvTextureHandles[0],0,apData, lDataSize, avSize, aPixelFormat,0);
 		if(bRet==false)
 		{
@@ -171,17 +160,16 @@ namespace hpl {
 		}
 
 		mbContainsData = true;
-		
+
 		if(mbUseMipMaps)
 		{
 			GenerateMipMaps(GLTarget,aPixelFormat,avSize,apData,lDataSize,0);
 		}
-		
 
 		SetupProperties(mvTextureHandles[0]);
 
 		glDisable(GLTarget);
-		
+
 		return true;
 	}
 
@@ -225,35 +213,7 @@ namespace hpl {
 
 	void cSDLTexture::Update(float afTimeStep)
 	{
-		if(mvTextureHandles.size() > 1)
-		{
-			float fMax = (float)(mvTextureHandles.size());
-			mfTimeCount += afTimeStep * (1.0f/mfFrameTime) * mfTimeDir;
-
-			if(mfTimeDir > 0)
-			{
-				if(mfTimeCount >= fMax)
-				{
-					if(mAnimMode == eTextureAnimMode_Loop)
-					{
-						mfTimeCount =0;
-					}
-					else
-					{
-						mfTimeCount = fMax - 1.0f;
-						mfTimeDir = -1.0f;
-					}
-				}
-			}
-			else
-			{
-				if(mfTimeCount < 0)
-				{
-					mfTimeCount =1;
-					mfTimeDir = 1.0f;
-				}
-			}
-		}
+		ohpl_gl_clock_update(&mClock, mvTextureHandles.size(), afTimeStep, mfFrameTime, mAnimMode);
 	}
 
 	//-----------------------------------------------------------------------
@@ -265,76 +225,26 @@ namespace hpl {
 	
 	void cSDLTexture::NextFrame()
 	{
-		mfTimeCount += mfTimeDir;
-
-		if(mfTimeDir > 0)
-		{
-			float fMax = (float)(mvTextureHandles.size());
-			if(mfTimeCount >= fMax)
-			{
-				if(mAnimMode == eTextureAnimMode_Loop)
-				{
-					mfTimeCount =0;
-				}
-				else
-				{
-					mfTimeCount = fMax - 1.0f;
-					mfTimeDir = -1.0f;
-				}
-			}
-		}
-		else
-		{
-			if(mfTimeCount < 0)
-			{
-				mfTimeCount =1;
-				mfTimeDir = 1.0f;
-			}
-		}
+		ohpl_gl_clock_next(&mClock, mvTextureHandles.size(), mAnimMode);
 	}
 
 	void cSDLTexture::PrevFrame()
 	{
-		mfTimeCount -= mfTimeDir;
-
-		if(mfTimeDir < 0)
-		{
-			float fMax = (float)(mvTextureHandles.size());
-			if(mfTimeCount >= fMax)
-			{
-				if(mAnimMode == eTextureAnimMode_Loop)
-				{
-					mfTimeCount =0;
-				}
-				else
-				{
-					mfTimeCount = fMax - 1.0f;
-					mfTimeDir = -1.0f;
-				}
-			}
-		}
-		else
-		{
-			if(mfTimeCount < 0)
-			{
-				mfTimeCount =1;
-				mfTimeDir = 1.0f;
-			}
-		}
+		ohpl_gl_clock_prev(&mClock, mvTextureHandles.size(), mAnimMode);
 	}
 	
 	float cSDLTexture::GetT()
 	{
-		return cMath::Modulus(mfTimeCount,1.0f);
+		return cMath::Modulus(mClock.count,1.0f);
 	}
 
 	float cSDLTexture::GetTimeCount()
 	{
-		return mfTimeCount;
+		return mClock.count;
 	}
 	void cSDLTexture::SetTimeCount(float afX)
 	{
-		mfTimeCount = afX;
+		mClock.count = afX;
 	}
 	int cSDLTexture::GetCurrentLowlevelHandle()
 	{
@@ -369,55 +279,24 @@ namespace hpl {
 	void cSDLTexture::SetFilter(eTextureFilter aFilter)
 	{
 		if(mFilter == aFilter) return;
-
-		;
-
 		mFilter = aFilter;
+
 		if(mbContainsData)
 		{
 			GLenum GLTarget = GetGLTextureTargetEnum(mType);
+			unsigned int vFilter[2];
+			ohpl_gl_tex_filter_params(mFilter, mbUseMipMaps, mType, vFilter);
 
 			glEnable(GLTarget);
 			for(size_t i=0; i < mvTextureHandles.size(); ++i)
 			{
 				glBindTexture(GLTarget, mvTextureHandles[i]);
-
-				if(mbUseMipMaps && mType != eTextureType_Rect)
+				if(vFilter[0])
 				{
-					switch(mFilter)
-					{
-					case eTextureFilter_Nearest:
-						glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-						glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-						break;
-					case eTextureFilter_Bilinear:
-						glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-						glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						break;
-					case eTextureFilter_Trilinear:
-						glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-						glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						break;
-					}
-				}
-				else
-				{
-					switch(mFilter)
-					{
-					case eTextureFilter_Nearest:
-						glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-						glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-						break;
-					case eTextureFilter_Bilinear:
-					case eTextureFilter_Trilinear:
-						glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-						glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						break;
-					}
-					
+					glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, vFilter[0]);
+					glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, vFilter[1]);
 				}
 			}
-
 			glDisable(GLTarget);
 		}
 	}
@@ -429,11 +308,7 @@ namespace hpl {
 		if(mbContainsData==false) return;
 		if(!mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering)) return;
 		if(afX < 1.0f) return;
-		if(afX > (float) mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering)) return;
-
-		if(mfAnisotropyDegree == afX) return;
-
-		;
+		if(!ohpl_gl_tex_aniso_apply(true, true, mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), afX, mfAnisotropyDegree)) return;
 
 		mfAnisotropyDegree = afX;
 
@@ -443,10 +318,8 @@ namespace hpl {
 		for(size_t i=0; i < mvTextureHandles.size(); ++i)
 		{
 			glBindTexture(GLTarget, mvTextureHandles[i]);
-
 			glTexParameterf(GLTarget,GL_TEXTURE_MAX_ANISOTROPY_EXT ,mfAnisotropyDegree);
 		}
-
 		glDisable(GLTarget);
 	}
 
@@ -625,8 +498,7 @@ namespace hpl {
 		{
 			GLenum GLTarget = GetGLTextureTargetEnum(mType);
 
-			GLenum GLBinding = GLTarget == GL_TEXTURE_CUBE_MAP ? GL_TEXTURE_BINDING_CUBE_MAP : GLTarget == GL_TEXTURE_3D ? GL_TEXTURE_BINDING_3D :
-							   GLTarget == GL_TEXTURE_RECTANGLE ? GL_TEXTURE_BINDING_RECTANGLE : GLTarget == GL_TEXTURE_1D ? GL_TEXTURE_BINDING_1D : GL_TEXTURE_BINDING_2D;
+			GLenum GLBinding = ohpl_gl_texture_binding(GLTarget);
 			GLint lPrevBound = 0;
 			glGetIntegerv(GLBinding, &lPrevBound);
 			glEnable(GLTarget);
@@ -645,23 +517,9 @@ namespace hpl {
 
 	unsigned int cSDLTexture::GetTextureHandle()
 	{
-		if(mbContainsData==false) return 0;
-
-		size_t lTexHandleNum = mvTextureHandles.size();
-
-		if(lTexHandleNum > 1)
-		{
-			int lFrame = (int) mfTimeCount;
-			return mvTextureHandles[lFrame];
-		}
-		else if(lTexHandleNum==0)
-		{
-			return 0;
-		}
-		else
-		{
-			return mvTextureHandles[0];
-		}
+		int64_t lSlot = ohpl_gl_tex_handle_slot(mbContainsData, mvTextureHandles.size(), mClock.count);
+		if(lSlot < 0) return 0;
+		return mvTextureHandles[lSlot];
 	}
 
 	//-----------------------------------------------------------------------
@@ -729,131 +587,65 @@ namespace hpl {
 
 	bool cSDLTexture::CreateTexture(	int alTextureHandle,
 										cBitmapData* apBitmapImage, int alNumOfMipMaps,
-										const cVector3l avSize, ePixelFormat aPixelFormat, 
+										const cVector3l avSize, ePixelFormat aPixelFormat,
 										int alFaceNum,bool abGenerateMipMaps,
 										bool abCheckForResize)
 	{
-		/////////////////////////////
-		//Check so size is power of 2
-		if((!cMath::IsPow2(avSize.x) || !cMath::IsPow2(avSize.y)) && mType != eTextureType_Rect)
+		OhplGlCreateIn in = { (int)mType, (int)aPixelFormat, avSize, mvMinDownScaleSize, alNumOfMipMaps,
+							  (unsigned)mlSizeDownScaleLevel, abGenerateMipMaps, abCheckForResize };
+		OhplGlCreatePlan plan;
+		ohpl_gl_tex_plan_create(&in, &plan);
+
+		if(plan.warnPow2)
 		{
 			Warning("Texture '%s' does not have a pow2 size!\n",msName.c_str());
 		}
 
-		//////////////////////////////
-		//Setup properties
-		mvSize = avSize;
+		mvSize = plan.size;
 		mPixelFormat = aPixelFormat;
-		mbIsCompressed = PixelFormatIsCompressed(aPixelFormat);
+		mbIsCompressed = plan.compressed;
 
-		//////////////////////////////
-		//Get gl properties
 		GLenum GLTarget = TextureTypeToGLTarget(mType);
 		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
-		
-		//The mipmap level in the BitmapImage array that is top level in hierarchy
-		int lStartMipMapLevel = 0; 
 
-		/////////////////////////////
-		//Check if resize is needed, 
-		// cannot do with compressed textures unless they have custom mipmaps
 		unsigned char *pResizeData = NULL;
 		int lResizeDataSize = 0;
-		if(	mlSizeDownScaleLevel > 0 && abCheckForResize && 
-			(mbIsCompressed==false || alNumOfMipMaps>1) &&
-			PixelFormatIsDepth(aPixelFormat) == false)
+		if(plan.resize)
 		{
-			//////////////////////
-			//Resize by using a higher level mipmap as start
-			if(alNumOfMipMaps > 1)
-			{
-				if(alNumOfMipMaps-1 < (int)mlSizeDownScaleLevel)
-					lStartMipMapLevel = alNumOfMipMaps-1;
-				else
-					lStartMipMapLevel = (int)mlSizeDownScaleLevel;
+			lResizeDataSize = plan.resizeBytes;
+			pResizeData = hplNewArray(unsigned char, lResizeDataSize);
 
-				//Change the size
-				mvSize.x >>= lStartMipMapLevel;
-				mvSize.y >>= lStartMipMapLevel;
-				mvSize.z >>= lStartMipMapLevel;
-
-				if(mvSize.x==0) mvSize.x =1;if(mvSize.y==0) mvSize.y =1;if(mvSize.z==0) mvSize.z =1;
-			}
-			//////////////////////
-			//Resize by changing data (do only for 2D textures)
-			else if((mType == eTextureType_2D || mType == eTextureType_CubeMap) &&
-					mvSize.x > mvMinDownScaleSize.x &&	mvSize.y > mvMinDownScaleSize.y )
-			{
-				//Shrink the size as much as possible until minimum is reached
-				cVector3l vNewSize = mvSize;
-				for(int i=0; i<(int)mlSizeDownScaleLevel; ++i)
-				{
-					vNewSize.x >>= 1;
-					vNewSize.y >>= 1;
-
-					if(vNewSize.x <= mvMinDownScaleSize.x || mvSize.y <= mvMinDownScaleSize.y) break;
-				}
-
-				//Create new data and resize current data to it.
-				int lChannels = GetBytesPerPixel(aPixelFormat);
-				lResizeDataSize = vNewSize.x * vNewSize.y * lChannels;
-				pResizeData = hplNewArray(unsigned char, lResizeDataSize);
-
-				
-				gluScaleImage(	GLFormat,mvSize.x, mvSize.y, GL_UNSIGNED_BYTE, apBitmapImage->mpData,
-								vNewSize.x, vNewSize.y,GL_UNSIGNED_BYTE,pResizeData);
-
-				mvSize = vNewSize;
-			}
+			gluScaleImage(	GLFormat,avSize.x, avSize.y, GL_UNSIGNED_BYTE, apBitmapImage->mpData,
+							plan.size.x, plan.size.y,GL_UNSIGNED_BYTE,pResizeData);
 		}
 
-		//////////////////////////////////
-		//Bind texture
 		glEnable(GLTarget);
 		glBindTexture(GLTarget, alTextureHandle);
 
-		//Log("Texture: '%s' StartLevel: %d Mipmap num: %d GenerateMipmaps: %d\n", msName.c_str(), lStartMipMapLevel,alNumOfMipMaps, abGenerateMipMaps);
-		
-		/////////////////////////////
-		//Create texture, including mipmaps if generating.
 		bool bRet = true;
-		int lMipMapCount = abGenerateMipMaps ? alNumOfMipMaps : lStartMipMapLevel+1;
-		cVector3l vSize = mvSize;
-		for(int i=lStartMipMapLevel; i<lMipMapCount; ++i)
+		int lMipMapCount = plan.endLevel;
+		for(int i=plan.startLevel; i<lMipMapCount; ++i)
 		{
-			if(vSize.x==0) vSize.x =1;
-			if(vSize.y==0) vSize.y =1;
-			if(vSize.z==0) vSize.z =1;
+			int lCount = i-plan.startLevel;
+			OhplGlV3 vLevel = ohpl_gl_tex_level_size(OhplGl(plan.size), lCount);
+			cVector3l vSize(vLevel.x, vLevel.y, vLevel.z);
 
-			int lImageMipMap = i;
-			int lCount = i-lStartMipMapLevel;
+			unsigned char *pData = apBitmapImage[i].mpData;
+			int lSize = apBitmapImage[i].mlSize;
 
-			//Log(" %d, %d\n", lCount, lImageMipMap);
-
-
-			unsigned char *pData = apBitmapImage[lImageMipMap].mpData;
-			int lSize = apBitmapImage[lImageMipMap].mlSize;
-
-			//Use resized data if available
 			if(lCount==0 && pResizeData)
 			{
-				//Log("Using new data! Size: %dx%d data: %d\n",vSize.x, vSize.y,pResizeData);
 				pData = pResizeData;
 				lSize = lResizeDataSize;
 			}
-			
+
 			if(CopyTextureDataToGL(	alTextureHandle,lCount,pData,lSize, vSize,aPixelFormat,alFaceNum) == false)
 			{
 				bRet = false;
 				break;
 			}
-
-			vSize.x >>= 1;
-			vSize.y >>= 1;
-			vSize.z >>= 1;
 		}
 
-		//Check for errors
 		if(bRet==false)
 		{
 			glDisable(GLTarget);
@@ -861,16 +653,12 @@ namespace hpl {
 			return false;
 		}
 
-		//Mark that the texture got some data now.
 		mbContainsData = true;
 
-		// DDS chains may stop above 1x1
-		if(abGenerateMipMaps && alNumOfMipMaps > 1)
-			glTexParameteri(GLTarget, GL_TEXTURE_MAX_LEVEL, lMipMapCount - lStartMipMapLevel - 1);
+		if(plan.maxLevel >= 0)
+			glTexParameteri(GLTarget, GL_TEXTURE_MAX_LEVEL, plan.maxLevel);
 
-		//////////////////////////////////
-		//Generate mipmaps
-		if(abGenerateMipMaps && alNumOfMipMaps <= 1)
+		if(plan.buildMips)
 		{
 			if(pResizeData)
 				GenerateMipMaps(GLTarget,aPixelFormat,mvSize,pResizeData,lResizeDataSize,alFaceNum);
@@ -878,9 +666,7 @@ namespace hpl {
 				GenerateMipMaps(GLTarget,aPixelFormat,mvSize,apBitmapImage->mpData,apBitmapImage->mlSize,alFaceNum);
 		}
 
-		//Destroy resized data if available
 		if(pResizeData) hplDeleteArray(pResizeData);
-
 
 		glDisable(GLTarget);
 
@@ -889,79 +675,36 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static GLenum ToSRGBFormat(GLenum aFormat)
-	{
-		switch(aFormat)
-		{
-		case GL_RGB:							return GL_SRGB8;
-		case GL_RGBA:							return GL_SRGB8_ALPHA8;
-		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:	return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
-		case GL_COMPRESSED_RGBA_BPTC_UNORM:		return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
-		}
-		return aFormat;
-	}
+
 
 	//-----------------------------------------------------------------------
 
-	void cSDLTexture::GenerateMipMaps(	GLenum aGLTarget, ePixelFormat aPixelFormat,const cVector3l avSize, 
+	void cSDLTexture::GenerateMipMaps(	GLenum aGLTarget, ePixelFormat aPixelFormat,const cVector3l avSize,
 										unsigned char *apData,int alDataSize, int alFaceNum)
 	{
-		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
-		GLenum GLInternalFormat = PixelFormatToGLInternalFormat(aPixelFormat);
-		if(mbsRGB) GLInternalFormat = ToSRGBFormat(GLInternalFormat);
-		int lBytesPerPixel = GetBytesPerPixel(aPixelFormat);
+		OhplGlMipPlan plan;
+		ohpl_gl_tex_plan_mips(mType, mUsage, GLEW_EXT_framebuffer_object, mbsRGB, aPixelFormat, OhplGl(avSize), alFaceNum, &plan);
 
-		////////////////////////////////
-		// Generate mipmaps if the format is not compressed.
-		if(mUsage == eTextureUsage_RenderTarget)
+		switch(plan.action)
 		{
-			if(GLEW_EXT_framebuffer_object)
-			{
-				glGenerateMipmapEXT(aGLTarget);
-			}
-			else
-			{
-				mbUseMipMaps = false;	
-			}
+		case kOhplGlMipGenerate:
+			glGenerateMipmapEXT(aGLTarget);
+			break;
+		case kOhplGlMipBuild1D:
+			gluBuild1DMipmaps(	aGLTarget,plan.internal,avSize.x,
+								plan.format, GL_UNSIGNED_BYTE,
+								apData);
+			break;
+		case kOhplGlMipBuild2D:
+			gluBuild2DMipmaps(	plan.target,
+								plan.internal,avSize.x,avSize.y,
+								plan.format, GL_UNSIGNED_BYTE,
+								apData);
+			break;
 		}
-		else if(PixelFormatIsCompressed(aPixelFormat)==false)
-		{
-			if(mType == eTextureType_1D)
-			{
-				gluBuild1DMipmaps(	aGLTarget,GLInternalFormat,avSize.x,
-									GLFormat, GL_UNSIGNED_BYTE, 
-									apData);
-			}
-			else if(mType == eTextureType_2D ||	mType == eTextureType_CubeMap)
-			{
-				gluBuild2DMipmaps(	mType == eTextureType_CubeMap ?  
-									GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + alFaceNum : aGLTarget,
-									GLInternalFormat,avSize.x,avSize.y,
-									GLFormat, GL_UNSIGNED_BYTE, 
-									apData);
-			}
-			
 
-			//Calculate memory taken by mipmaps
-			cVector3l vTempSize = avSize;
-			while(vTempSize.x>1 || vTempSize.y>1 || vTempSize.z>1)
-			{
-				vTempSize.x >>= 1;
-				vTempSize.y >>= 1;
-				vTempSize.z >>= 1;
-				if(vTempSize.x==0)vTempSize.x=1; if(vTempSize.y==0)vTempSize.y=1; if(vTempSize.z==0)vTempSize.z=1;
-				
-				mlMemorySize += vTempSize.x * vTempSize.y * vTempSize.z * lBytesPerPixel;
-			}
-		}
-		////////////////////////////////
-		// Mipmaps could not be generated, turn off their usage.
-		else
-		{
-			mbUseMipMaps = false;
-		}
+		mlMemorySize += plan.memory;
+		if(plan.disableMips) mbUseMipMaps = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -969,86 +712,41 @@ namespace hpl {
 	bool cSDLTexture::CopyTextureDataToGL(	int alTextureHandle, int alLevel,unsigned char *apData,int alDataSize,
 											const cVector3l avSize, ePixelFormat aPixelFormat,int alFaceNum)
 	{
-		GLenum GLTarget = TextureTypeToGLTarget(mType);
-		GLenum GLFormat = PixelFormatToGLFormat(aPixelFormat);
-		GLenum GLInternalFormat = PixelFormatToGLInternalFormat(aPixelFormat);
-		
+		OhplGlUpload up;
+		ohpl_gl_tex_plan_upload(mType, mbsRGB, aPixelFormat, alLevel, alDataSize, OhplGl(avSize), alFaceNum, &up);
 
-		//Clear gl errors.
 		while(glGetError()!=GL_NO_ERROR);
 
-		//Update memory size
 		mlMemorySize += alDataSize;
 
-		/////////////////////////////////////////
-		// Load compressed data
-		if(PixelFormatIsCompressed(aPixelFormat))
+		switch(up.kind)
 		{
-			GLenum GLCompressionFormat = GetGLCompressionFormatFromPixelFormat(aPixelFormat);
-			if(mbsRGB) GLCompressionFormat = ToSRGBFormat(GLCompressionFormat);
-
-			if(mType == eTextureType_1D)
+		case 1:
+			glCompressedTexImage1DARB(up.target, up.level, up.internal, up.size.x, 0, up.bytes, apData);
+			break;
+		case 2:
+			glCompressedTexImage2DARB(up.target, up.level, up.internal, up.size.x, up.size.y, 0, up.bytes, apData);
+			if(up.swizzle)
 			{
-				glCompressedTexImage1DARB(	GLTarget, alLevel, 
-					GLCompressionFormat, 
-					avSize.x,
-					0, alDataSize, apData);
+				// SOMA uploads these as LATC2
+				GLint vSwizzle[4] = { GL_RED, GL_RED, GL_RED, GL_GREEN };
+				glTexParameteriv(TextureTypeToGLTarget(mType), GL_TEXTURE_SWIZZLE_RGBA, vSwizzle);
 			}
-			else if(mType == eTextureType_2D || mType == eTextureType_CubeMap)
-			{
-				glCompressedTexImage2DARB(	mType == eTextureType_CubeMap ?  
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + alFaceNum : GLTarget, 
-					alLevel, 
-					GLCompressionFormat, 
-					avSize.x, avSize.y,
-					0, alDataSize, apData);
-
-				if(aPixelFormat == ePixelFormat_RGTC2)
-				{
-					// SOMA uploads these as LATC2
-					GLint vSwizzle[4] = { GL_RED, GL_RED, GL_RED, GL_GREEN };
-					glTexParameteriv(GLTarget, GL_TEXTURE_SWIZZLE_RGBA, vSwizzle);
-				}
-			}
-			else if(mType == eTextureType_3D)
-			{
-				glCompressedTexImage3DARB(	GLTarget, alLevel, 
-					GLCompressionFormat, 
-					avSize.x, avSize.y,avSize.z,
-					0, alDataSize, apData);
-			}
-		}
-		/////////////////////////////////////////
-		// Load uncompressed data
-		else
-		{
-			GLenum glType = PixelFormatIsFloatingPoint(aPixelFormat) ? GL_FLOAT : GL_UNSIGNED_BYTE;
-			if(mbsRGB) GLInternalFormat = ToSRGBFormat(GLInternalFormat);
-
-			if(mType == eTextureType_1D)
-			{
-				glTexImage1D(	GLTarget, alLevel, GLInternalFormat, 
-					avSize.x,0,GLFormat,
-					glType, apData);
-			}
-			else if(mType == eTextureType_2D || mType == eTextureType_Rect ||
-				mType == eTextureType_CubeMap)
-			{
-				glTexImage2D(	mType == eTextureType_CubeMap ?  
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + alFaceNum : GLTarget, 
-					alLevel, GLInternalFormat, 
-					avSize.x, avSize.y,
-					0, GLFormat, glType, apData);
-			}
-			else if(mType == eTextureType_3D)
-			{
-				glTexImage3D(	GLTarget, alLevel, 
-					GLInternalFormat, avSize.x, avSize.y,avSize.z,
-					0, GLFormat, glType, apData);
-			}
+			break;
+		case 3:
+			glCompressedTexImage3DARB(up.target, up.level, up.internal, up.size.x, up.size.y, up.size.z, 0, up.bytes, apData);
+			break;
+		case 4:
+			glTexImage1D(up.target, up.level, up.internal, up.size.x, 0, up.format, up.glType, apData);
+			break;
+		case 5:
+			glTexImage2D(up.target, up.level, up.internal, up.size.x, up.size.y, 0, up.format, up.glType, apData);
+			break;
+		case 6:
+			glTexImage3D(up.target, up.level, up.internal, up.size.x, up.size.y, up.size.z, 0, up.format, up.glType, apData);
+			break;
 		}
 
-		//Check if something went wrong
 		if(glGetError()!=GL_NO_ERROR) return false;
 
 		return true;
@@ -1059,53 +757,34 @@ namespace hpl {
 	void cSDLTexture::SetupProperties(int alTextureHandle)
 	{
 		if(mbContainsData==false) return;
-		
+
 		GLenum GLTarget = TextureTypeToGLTarget(mType);
 
 		glEnable(GLTarget);
 		glBindTexture(GLTarget, alTextureHandle);
 
-		/////////////////////////////////////////
-		//Filtering
-		if(mbUseMipMaps && mType != eTextureType_Rect)
-		{
-			if(mFilter == eTextureFilter_Bilinear)
-				glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-			else
-				glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		}
-		else{
-			glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		}
+		int vWrap[3] = { (int)mWrapS, (int)mWrapT, (int)mWrapR };
+		OhplGlProps props;
+		ohpl_gl_tex_plan_props(mType, mbUseMipMaps, mFilter, vWrap, &props);
 
+		glTexParameteri(GLTarget, GL_TEXTURE_MIN_FILTER, props.minFilter);
 		glTexParameteri(GLTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		//////////////////////
-		// Rect (force clamp to edge skip anisotropy)
-        if(mType == eTextureType_Rect)
+		if(props.rect)
 		{
 			mWrapS = eTextureWrap_ClampToEdge;
 			mWrapT = eTextureWrap_ClampToEdge;
 			mWrapR = eTextureWrap_ClampToEdge;
-
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,GetGLWrapEnum(mWrapS));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,GetGLWrapEnum(mWrapT));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,GetGLWrapEnum(mWrapR));
 		}
-		/////////////////////
-		// Normal
-		else
-		{
-			/////////////////////////////////////////
-			//Wrapping
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,GetGLWrapEnum(mWrapS));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,GetGLWrapEnum(mWrapT));
-			glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,GetGLWrapEnum(mWrapR));
 
-			/////////////////////////////////////////
-			//Anisotropic filtering
+		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_S,props.wrap[0]);
+		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_T,props.wrap[1]);
+		glTexParameteri(GLTarget,GL_TEXTURE_WRAP_R,props.wrap[2]);
+
+		if(props.rect == false)
+		{
 			if(	mpLowLevelGraphics->GetCaps(eGraphicCaps_AnisotropicFiltering) &&
-				(float) mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering) >= mfAnisotropyDegree)
+				ohpl_gl_tex_aniso_fits(mpLowLevelGraphics->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfAnisotropyDegree))
 			{
 				glTexParameterf(GLTarget,GL_TEXTURE_MAX_ANISOTROPY_EXT ,mfAnisotropyDegree);
 			}

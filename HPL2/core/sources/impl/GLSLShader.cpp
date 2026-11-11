@@ -18,6 +18,7 @@
  */
 
 #include "impl/GLSLShader.h"
+#include "impl/RustGl.h"
 #include "system/EngineDiagnostics.h"
 #include "impl/SDLTexture.h"
 #include "impl/LowLevelGraphicsSDL.h"
@@ -114,9 +115,9 @@ namespace hpl{
 		if(const char *pDumpDir = getenv("OPENHPL_DUMP_SHADERS_DIR"))
 		{
 			static int lDumpCount = 0;
-			tString sName = msName;
-			for(char &c : sName) if(c == '/' || c == '\\') c = '_';
-			tString sPath = tString(pDumpDir) + "/" + cString::ToString(lDumpCount++) + "_" + sName + (mShaderType == eGpuShaderType_Vertex ? ".vert" : ".frag");
+			tString sPath = tString(pDumpDir) + "/";
+			ohpl_gl_shader_dump_name(lDumpCount++, msName.data(), msName.size(), mShaderType == eGpuShaderType_Vertex,
+				[](void *apOut, const unsigned char *apData, size_t alLen){ static_cast<tString*>(apOut)->append((const char*)apData, alLen); }, &sPath);
 			if(FILE *pFile = fopen(sPath.c_str(), "wb")) { fputs(apStringData, pFile); fclose(pFile); }
 		}
 		glShaderSource(mlHandle, 1, &apStringData, NULL);
@@ -203,39 +204,21 @@ namespace hpl{
 
 	//-----------------------------------------------------------------------
 
+	static void LogShaderLine(void *apCtx, int alRow, const char *apLine, size_t alLen)
+	{
+		Log("[%04d] %s\n",alRow, std::string(apLine, alLen).c_str());
+	}
+
 	void cGLSLShader::LogShaderCode(const char *apStringData)
 	{
-		int lRow =1;
-		tString sRowCode ="";
-		for(int i=0; apStringData[i]!=0; ++i)
-		{
-			char lChar = apStringData[i];
-			if(lChar=='\r') continue; //Can skip this sign.
-
-			if(lChar == '\n')
-			{
-				Log("[%04d] %s\n",lRow, sRowCode.c_str());
-				sRowCode.resize(0);
-				lRow++;
-			}
-			else
-			{
-				sRowCode +=lChar;
-			}
-		}
+		ohpl_gl_shader_code_lines(apStringData, LogShaderLine, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum cGLSLShader::GetGLShaderType(eGpuShaderType aType)
 	{
-		switch(aType)
-		{
-		case eGpuShaderType_Fragment:	return GL_FRAGMENT_SHADER;
-		case eGpuShaderType_Vertex:		return GL_VERTEX_SHADER;
-		}
-
-		return GL_VERTEX_SHADER;
+		return ohpl_gl_shader_type(aType);
 	}
 	
 	//-----------------------------------------------------------------------

@@ -24,6 +24,7 @@
 #include "math/Math.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/GlOps.h"
 
 #include <memory.h>
 
@@ -78,9 +79,7 @@ namespace hpl {
 
 		if(mlElementHandle == 0 && mvIndexArray.empty()==false) CompileSpecific();
 
-		GLenum usageType = GL_STATIC_DRAW_ARB;
-		if(mUsageType== eVertexBufferUsageType_Dynamic) usageType = GL_DYNAMIC_DRAW_ARB;
-		else if(mUsageType== eVertexBufferUsageType_Stream) usageType = GL_STREAM_DRAW_ARB;
+		GLenum usageType = ohpl_gl_usage(mUsageType);
 
 		//Create the VBO vertex arrays
 		for(size_t i=0; i<mvElementArrays.size(); ++i)
@@ -120,24 +119,14 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::Draw(eVertexBufferDrawType aDrawType)
 	{
-		;
+		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
-		eVertexBufferDrawType drawType = aDrawType == eVertexBufferDrawType_LastEnum ? mDrawType : aDrawType;
-
-		///////////////////////////////
-		//Get the draw type
-		GLenum mode = GetDrawModeFromDrawType(drawType);
-	
-		//////////////////////////////////
-		//Bind and draw the buffer
 		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,mlElementHandle);
 
-		int lSize = mlElementNum;
-		if(mlElementNum<0) lSize = GetIndexNum();
+		int lSize = ohpl_gl_vb_draw_count(mlElementNum, GetIndexNum());
 
 		cEngineDiagnostics::CountDrawCall();
 		glDrawElements(mode,lSize,GL_UNSIGNED_INT, (char*) NULL);
-		//glDrawRangeElements(mode,0,GetVertexNum(),lSize,GL_UNSIGNED_INT, NULL);
 
 		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
 	}
@@ -146,16 +135,8 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::DrawIndices(unsigned int *apIndices, int alCount,eVertexBufferDrawType aDrawType)
 	{
-		;
+		GLenum mode = ohpl_gl_vb_draw_mode(mDrawType, aDrawType);
 
-		eVertexBufferDrawType drawType = aDrawType == eVertexBufferDrawType_LastEnum ? mDrawType : aDrawType;
-
-		///////////////////////////////
-		//Get the draw type
-		GLenum mode = GetDrawModeFromDrawType(drawType);
-
-		//////////////////////////////////
-		//Bind and draw the buffer
 		cEngineDiagnostics::CountDrawCall();
 		glDrawElements(mode, alCount, GL_UNSIGNED_INT, apIndices);
 	}
@@ -176,22 +157,10 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::UnBind()
 	{
-		;
-
-		glBindBufferARB(GL_ARRAY_BUFFER_ARB,0);
-
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-
-			//Log("Unbinding %d handle %d, type: %d\n",i,pElement->mlGLHandle, pElement->mType);
-			
-			int lTextureUnit = GetVertexElementTextureUnit(pElement->mType);
-			if(lTextureUnit >=0) glClientActiveTextureARB(GL_TEXTURE0_ARB + lTextureUnit);
-
-			glDisableClientState( GetGLArrayFromVertexElement(pElement->mType) );
-		}
-		glClientActiveTextureARB(GL_TEXTURE0_ARB);
+		OhplGlOp vOps[kOhplGlMaxOps];
+		size_t lCount = ohpl_gl_vb_unbind(mvElemDesc, mvElementArrays.size(), vOps);
+		OhplGlOpSources src = {NULL, NULL, NULL};
+		RunGlOps(vOps, lCount, src);
 	}
 
 	//-----------------------------------------------------------------------
@@ -206,9 +175,7 @@ namespace hpl {
 	{
 		;
 
-		GLenum usageType = GL_STATIC_DRAW_ARB;
-		if(mUsageType== eVertexBufferUsageType_Dynamic) usageType = GL_DYNAMIC_DRAW_ARB;
-		else if(mUsageType== eVertexBufferUsageType_Stream) usageType = GL_STREAM_DRAW_ARB;
+		GLenum usageType = ohpl_gl_usage(mUsageType);
 
 		//Create the VBO vertex arrays
 		for(size_t i=0; i<mvElementArrays.size(); ++i)
@@ -216,6 +183,7 @@ namespace hpl {
 			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
             
 			glGenBuffersARB(1,(GLuint *)&pElement->mlGLHandle);
+			mvElemDesc[i].handle = pElement->mlGLHandle;
 			glBindBufferARB(GL_ARRAY_BUFFER_ARB, pElement->mlGLHandle);
 
 			glBufferDataARB(GL_ARRAY_BUFFER_ARB, pElement->Size() * GetVertexFormatByteSize(pElement->mFormat),
@@ -249,81 +217,10 @@ namespace hpl {
 
 	void cVertexBufferOGL_VBO::SetVertexStates()
 	{
-		////////////////////////////////////////
-		// Set all vertices except position
-		bool bHadExtraTextureUnit = false;
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-			if(pElement->mType == eVertexBufferElement_Position) continue;	//Make sure postion is called last...
-
-			//Log("Binding %d handle %d, type: %d\n",i,pElement->mlGLHandle, pElement->mType);
-			
-			GLenum GLType = GetGLTypeFromVertexFormat(pElement->mFormat);
-			int lSize = pElement->mlElementNum;
-
-			int lTextureUnit = GetVertexElementTextureUnit(pElement->mType);
-			if(lTextureUnit >=0) {
-				if(lTextureUnit>0)bHadExtraTextureUnit = true;
-				glClientActiveTextureARB(GL_TEXTURE0_ARB + lTextureUnit);
-			}
-
-			glEnableClientState( GetGLArrayFromVertexElement(pElement->mType) );
-				
-			glBindBufferARB(GL_ARRAY_BUFFER_ARB,pElement->mlGLHandle);
-			
-			switch(pElement->mType)
-			{
-			case eVertexBufferElement_Normal:
-				//Log(" Normal\n");
-				glNormalPointer(GLType, 0, (char*)NULL);
-				break;
-					
-			case eVertexBufferElement_Color0:
-				//Log(" Color\n");
-				glColorPointer(lSize,GLType, 0, (char*)NULL);
-				break;
-			
-			case eVertexBufferElement_Color1:
-				//Log(" Color2\n");
-				glSecondaryColorPointerEXT(lSize,GLType, 0, (char*)NULL);
-				break;
-			
-			case eVertexBufferElement_Texture1Tangent:	
-			case eVertexBufferElement_Texture0:			
-			case eVertexBufferElement_Texture1:			
-			case eVertexBufferElement_Texture2:			
-			case eVertexBufferElement_Texture3:			
-			case eVertexBufferElement_Texture4:	
-				//Log(" Texture\n");
-				glTexCoordPointer(lSize,GLType,0,(char*)NULL );
-				break;					
-			//TODO: User types
-			}
-		}
-		if(bHadExtraTextureUnit) glClientActiveTextureARB(GL_TEXTURE0_ARB);
-
-		
-		////////////////////////////////////////
-		// Set position vertex, so it is set last.
-		for(size_t i=0; i<mvElementArrays.size(); ++i)
-		{
-			cVtxBufferGLElementArray *pElement = mvElementArrays[i];
-			if(pElement->mType != eVertexBufferElement_Position) continue; //Only set position
-
-			//Log("Binding %d handle %d, type: %d\n",i,pElement->mlGLHandle, pElement->mType);
-
-			GLenum GLType = GetGLTypeFromVertexFormat(pElement->mFormat);
-			int lSize = pElement->mlElementNum;
-
-			glEnableClientState( GetGLArrayFromVertexElement(pElement->mType) );
-
-			glBindBufferARB(GL_ARRAY_BUFFER_ARB,pElement->mlGLHandle);
-
-			glVertexPointer(lSize,GLType, 0, (char*)NULL);
-		}
-
-		glBindBufferARB(GL_ARRAY_BUFFER_ARB,0);
+		OhplGlOp vOps[kOhplGlMaxOps];
+		size_t lCount = ohpl_gl_vb_bind_vbo(mvElemDesc, mvElementArrays.size(), vOps);
+		OhplGlOpSources src = {NULL, NULL, NULL};
+		RunGlOps(vOps, lCount, src);
 	}
 
 	//-----------------------------------------------------------------------

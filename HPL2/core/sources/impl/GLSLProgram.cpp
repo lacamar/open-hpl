@@ -49,6 +49,7 @@ namespace hpl{
 		;
 
 		mlHandle = glCreateProgram();
+		mpParams = ohpl_gl_params_new();
 
 	}
 
@@ -66,8 +67,9 @@ namespace hpl{
 				glDetachShader(mlHandle,pGLSLShader->GetHandle());
 			}
 		}
-		if(mlCurrentProgram == mlHandle) mlCurrentProgram = 0;
+		ohpl_gl_prog_forget(&mlCurrentProgram, mlHandle);
 		glDeleteProgram(mlHandle);
+		ohpl_gl_params_free(mpParams);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -150,11 +152,7 @@ namespace hpl{
 
 	void cGLSLProgram::Bind()
 	{
-		if(mlCurrentProgram == mlHandle) return;
-
-		;
-
-		mlCurrentProgram = mlHandle;
+		if(!ohpl_gl_prog_bind(&mlCurrentProgram, mlHandle)) return;
 		glUseProgram(mlHandle);
 	}
 
@@ -162,12 +160,8 @@ namespace hpl{
 
 	void cGLSLProgram::UnBind()
 	{
-		if(mlCurrentProgram == 0) return;
-
-		;
-
-		mlCurrentProgram = 0;
-		glUseProgram(0);	
+		if(!ohpl_gl_prog_unbind(&mlCurrentProgram)) return;
+		glUseProgram(0);
 	}
 
 
@@ -184,7 +178,7 @@ namespace hpl{
 			glGetActiveUniform(mlHandle, i, sizeof(sName), NULL, &lSize, &type, sName);
 			float vVal[16] = {0};
 			glGetUniformfv(mlHandle, glGetUniformLocation(mlHandle, sName), vVal);
-			int lN = type==GL_FLOAT_VEC2 ? 2 : type==GL_FLOAT_VEC3 ? 3 : type==GL_FLOAT_VEC4 ? 4 : type==GL_FLOAT_MAT4 ? 16 : 1;
+			int lN = ohpl_gl_uniform_components(type);
 			sOut += sName;
 			for(int j=0; j<lN; ++j) sOut += " " + cString::ToString(vVal[j]);
 			sOut += "\n";
@@ -212,100 +206,48 @@ namespace hpl{
 
 	int cGLSLProgram::GetVariableId(const tString& asName)
 	{
-		;
+		int lId = ohpl_gl_params_find(mpParams, asName.data(), asName.size());
+		if(lId >= 0) return lId;
 
-		for(size_t i=0; i<mvParameters.size(); ++i)
-		{
-			if(mvParameters[i].msName == asName) return (int)i;
-		}
+		GLint lLocation = glGetUniformLocation(mlHandle,asName.c_str());
+		if(lLocation <0) return -1;
 
-		GLint lId = glGetUniformLocation(mlHandle,asName.c_str());
-		if(lId <0) return -1;
-
-		mvParameters.push_back(cGLSLParam(lId,asName));
-
-		return (int)mvParameters.size()-1;
+		return ohpl_gl_params_add(mpParams, asName.data(), asName.size(), lLocation);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cGLSLProgram::GetVariableAsId(const tString& asName, int alId)
 	{
-		if(alId<0) return false;
+		int lState = ohpl_gl_params_as_id_begin(mpParams, asName.data(), asName.size(), alId);
+		if(lState != 2) return lState == 1;
 
-		;
-
-		////////////////////////
-		// Check if id is already set to variable
-		for(size_t i=0; i<mvParameters.size(); ++i)
-		{
-			if(mvParameters[i].msName == asName)
-			{
-				if(i == alId)	return true;
-				else			return false;
-			}
-		}
-		////////////////////////
-		// Check if variable exits
 		GLint lHandle = glGetUniformLocation(mlHandle,asName.c_str());
-		if(lHandle <0) return false;
-
-		////////////////////////
-		// Check if the id is taken
-		if(alId < (int)mvParameters.size())
-		{
-			if(mvParameters[alId].mlId >=0)
-			{
-				if(mvParameters[alId].mlId == lHandle) 
-					return true;
-				else
-					return false;
-			}
-		}
-		////////////////////////
-		// Resize vector so id fits
-		else
-		{
-			mvParameters.resize(alId+1);
-		}
-		
-		////////////////////////
-		// Vector is big enough and id is not taken or already added, 
-		// add it.
-		mvParameters[alId].mlId = lHandle;
-		mvParameters[alId].msName = asName;
-		
-		return true;
+		return ohpl_gl_params_as_id_finish(mpParams, asName.data(), asName.size(), alId, lHandle);
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cGLSLProgram::SetInt(int alVarId, int alX)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
-
-		;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
 		if(mlCurrentProgram != mlHandle) Bind();
-
-		glUniform1i(mvParameters[alVarId].mlId, alX);
-
+		glUniform1i(lLocation, alX);
 		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
 
-	bool  cGLSLProgram::SetFloat(int alVarId, float afX)
+	bool cGLSLProgram::SetFloat(int alVarId, float afX)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
-		;
-		
 		if(mlCurrentProgram != mlHandle) Bind();
-
-		glUniform1f(mvParameters[alVarId].mlId, afX);
-	
+		glUniform1f(lLocation, afX);
 		return true;
 	}
 
@@ -313,54 +255,47 @@ namespace hpl{
 
 	bool cGLSLProgram::SetFloatArray(int alVarId, const float *apX, int alCount)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
+
 		if(mlCurrentProgram != mlHandle) Bind();
-		glUniform1fv(mvParameters[alVarId].mlId, alCount, apX);
+		glUniform1fv(lLocation, alCount, apX);
 		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool  cGLSLProgram::SetVec2f(int alVarId, float afX,float afY)
+	bool cGLSLProgram::SetVec2f(int alVarId, float afX,float afY)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
-
-		;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
 		if(mlCurrentProgram != mlHandle) Bind();
-		
-		glUniform2f(mvParameters[alVarId].mlId, afX, afY);
-
+		glUniform2f(lLocation, afX, afY);
 		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool  cGLSLProgram::SetVec3f(int alVarId, float afX,float afY,float afZ)
+	bool cGLSLProgram::SetVec3f(int alVarId, float afX,float afY,float afZ)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
-
-		;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
 		if(mlCurrentProgram != mlHandle) Bind();
-
-		glUniform3f(mvParameters[alVarId].mlId, afX, afY, afZ);
-		
+		glUniform3f(lLocation, afX, afY, afZ);
 		return true;
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool  cGLSLProgram::SetVec4f(int alVarId, float afX,float afY,float afZ, float afW)
+	bool cGLSLProgram::SetVec4f(int alVarId, float afX,float afY,float afZ, float afW)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
-
-		;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
 		if(mlCurrentProgram != mlHandle) Bind();
-
-		glUniform4f(mvParameters[alVarId].mlId, afX, afY, afZ,afW);
-		
+		glUniform4f(lLocation, afX, afY, afZ,afW);
 		return true;
 	}
 
@@ -368,14 +303,11 @@ namespace hpl{
 
 	bool cGLSLProgram::SetMatrixf(int alVarId, const cMatrixf& aMtx)
 	{
-		if(alVarId<0 || alVarId >= (int)mvParameters.size()) return false;
-
-		;
+		int lLocation;
+		if(!ohpl_gl_params_location(mpParams, alVarId, &lLocation)) return false;
 
 		if(mlCurrentProgram != mlHandle) Bind();
-		
-		glUniformMatrix4fv(mvParameters[alVarId].mlId, 1, true, aMtx.v);
-
+		glUniformMatrix4fv(lLocation, 1, true, aMtx.v);
 		return true;
 	}
 

@@ -21,6 +21,7 @@
 #define HPL_VERTEXBUFFER_OPENGL_H
 
 #include "graphics/VertexBuffer.h"
+#include "impl/RustGl.h"
 
 
 namespace hpl {
@@ -124,6 +125,7 @@ namespace hpl {
 		}
 		
 		signed char mvElementArrayIndex[eVertexBufferElement_LastEnum];
+		OhplGlElem mvElemDesc[eVertexBufferElement_LastEnum];
 		std::vector<cVtxBufferGLElementArray*> mvElementArrays;
 		
 		tUIntVec mvIndexArray;

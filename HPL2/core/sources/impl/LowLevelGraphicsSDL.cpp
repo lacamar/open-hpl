@@ -39,6 +39,7 @@
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLFontData.h"
 #include "impl/SDLTexture.h"
+#include "impl/GlOps.h"
 //#include "impl/CGShader.h"
 //#include "impl/CGProgram.h"
 #include "impl/GLSLShader.h"
@@ -104,9 +105,7 @@ namespace hpl {
 
 		mpFrameBuffer = NULL;
 
-		for(int i=0;i<kMaxTextureUnits;i++)
-			mvCurrentTextureTarget[i] = 0;
-		mlCurrentActiveTextureUnit = -1;
+		ohpl_gl_state_new(&mGl);
 
 		//Create the batch arrays:
 		mlBatchStride = 13;
@@ -411,25 +410,10 @@ namespace hpl {
 	{
 		///////////////////////////////
 		// Setup variables
-		mColorWrite.r = true; mColorWrite.g = true;
-		mColorWrite.b = true; mColorWrite.a = true;
-		mbDepthWrite = true;
-
-		mbCullActive = true;
-		mCullMode = eCullMode_CounterClockwise;
-
-		mbDepthTestActive = true;
-		mDepthTestFunc = eDepthTestFunc_LessOrEqual;
-
-		mbAlphaTestActive = false;
-		mAlphaTestFunc = eAlphaTestFunc_GreaterOrEqual;
-		mfAlphaTestFuncRef = 0.6f;
-
-		mbScissorActive = false;
+		ohpl_gl_state_setup(&mGl);
 		mvScissorPos =0;
 		mvScissorSize = mvScreenSize;
 
-		mbBlendActive = false;
 
 		mpFrameBuffer = NULL;
 		mvFrameBufferPos =0;
@@ -454,8 +438,8 @@ namespace hpl {
 		///////////////////////////////
 		//Render Settings
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GetGLDepthTestFuncEnum(mDepthTestFunc));
-		glAlphaFunc(GetGLAlphaTestFuncEnum(mAlphaTestFunc),mfAlphaTestFuncRef);
+		glDepthFunc(GetGLDepthTestFuncEnum((eDepthTestFunc)mGl.depthFunc));
+		glAlphaFunc(GetGLAlphaTestFuncEnum((eAlphaTestFunc)mGl.alphaFunc),mGl.alphaRef);
 
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
@@ -966,29 +950,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cLowLevelGraphicsSDL::CopyFrameBufferToTexure(iTexture* apTex, const cVector2l &avPos, 
-		const cVector2l &avSize, const cVector2l &avTexOffset)
+	void cLowLevelGraphicsSDL::CopyFrameBufferToTexure(iTexture* apTex, const cVector2l &avPos,
+													const cVector2l &avSize, const cVector2l &avTexOffset)
 	{
-		;
-
 		if(apTex==NULL)return;
 
-		cVector2l vSize = avSize;
-		if(vSize.x <= 0) vSize.x = mvFrameBufferSize.x;
-		if(vSize.y <= 0) vSize.y = mvFrameBufferSize.y;
-
-		cVector2l vPos = mvFrameBufferPos + avPos;
-		vPos.y = (mvFrameBufferTotalSize.y - vSize.y)-vPos.y;
-
-		cVector2l vTexPos = avTexOffset;
-		vTexPos.y = (apTex->GetHeight() - vSize.y)-vTexPos.y;
-
-		//Log(" Copying current to texture Pos: %d:%d Size: %dx%d TextureOffset: %d:%d\n",
-		//	vPos.x, vPos.y, vSize.x, vSize.y, vTexPos.x, vTexPos.y);
+		int vRect[6];
+		ohpl_gl_copy_to_texture(OhplGl(mvFrameBufferPos), OhplGl(mvFrameBufferSize), OhplGl(mvFrameBufferTotalSize), OhplGl(avPos), OhplGl(avSize), OhplGl(avTexOffset), apTex->GetHeight(), vRect);
 
 		SetTexture(0, apTex);
-		glCopyTexSubImage2D(GetGLTextureTargetEnum(apTex->GetType()),0,	vTexPos.x, vTexPos.y,
-							vPos.x, vPos.y, vSize.x, vSize.y);
+		glCopyTexSubImage2D(GetGLTextureTargetEnum(apTex->GetType()),0,	vRect[0], vRect[1],
+							vRect[2], vRect[3], vRect[4], vRect[5]);
 	}
 
 	//-----------------------------------------------------------------------
@@ -997,12 +969,10 @@ namespace hpl {
 	{
 		;
 
-		cVector2l vSize = avScreenSize;
-		if(vSize.x <= 0) vSize.x = mvFrameBufferSize.x;
-		if(vSize.y <= 0) vSize.y = mvFrameBufferSize.y;
-
-		cVector2l vPos = mvFrameBufferPos + avScreenPos;
-		vPos.y = (mvFrameBufferTotalSize.y - vSize.y)-vPos.y;
+		int vRect[4];
+		ohpl_gl_read_rect(OhplGl(mvFrameBufferPos), OhplGl(mvFrameBufferSize), OhplGl(mvFrameBufferTotalSize), OhplGl(avScreenPos), OhplGl(avScreenSize), vRect);
+		cVector2l vSize(vRect[2], vRect[3]);
+		cVector2l vPos(vRect[0], vRect[1]);
 
 		cBitmap *pBitmap = hplNew(cBitmap, () );
 
@@ -1064,48 +1034,23 @@ namespace hpl {
 		}
 
 		/////////////////////////////////////
-		//Get framebuffer size
-		if(mpFrameBuffer)	mvFrameBufferTotalSize = mpFrameBuffer->GetSize();
-		else				mvFrameBufferTotalSize = mvScreenSize;
-		
-		cVector2l vFrameBufferSize = avSize;
-		if(vFrameBufferSize.x <0 || vFrameBufferSize.y<0)
-		{
-			vFrameBufferSize = mvFrameBufferTotalSize;
-		}
-		cVector2l vFrameBufferPos = avPos;
-
-		///////////////////////////////////////////////////////
-		//Set Viewport
-		if(true)//mvFrameBufferPos != vFrameBufferPos || mvFrameBufferSize != vFrameBufferSize)
-		{
-			mvFrameBufferSize = vFrameBufferSize;
-			mvFrameBufferPos = vFrameBufferPos;
-
-			if(mpFrameBuffer)
-			{
-				vFrameBufferPos.y = (mpFrameBuffer->GetSize().y - vFrameBufferSize.y)-vFrameBufferPos.y;
-			}
-			else
-			{
-				vFrameBufferPos.y = (mvScreenSize.y - vFrameBufferSize.y)-vFrameBufferPos.y;
-			}
-			glViewport(vFrameBufferPos.x,vFrameBufferPos.y,vFrameBufferSize.x, vFrameBufferSize.y);
-		}
+		//Get framebuffer size and set viewport
+		OhplGlViewport vp;
+		ohpl_gl_viewport(OhplGl(mpFrameBuffer ? mpFrameBuffer->GetSize() : mvScreenSize), OhplGl(avPos), OhplGl(avSize), &vp);
+		mvFrameBufferTotalSize = vp.total;
+		mvFrameBufferSize = vp.size;
+		mvFrameBufferPos = vp.pos;
+		glViewport(vp.gl[0], vp.gl[1], vp.gl[2], vp.gl[3]);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetFrameBufferDrawTargets(int *apTargets, int alNumOfTargets)
 	{
-		;
-
-		std::vector<GLenum> vAttachmentVec;
-		for(int i=0; i<alNumOfTargets; ++i)
-		{
-			vAttachmentVec.push_back(GL_COLOR_ATTACHMENT0_EXT + apTargets[i]);
-		}
-		glDrawBuffers(alNumOfTargets, &vAttachmentVec[0]);
+		unsigned int vAttachments[64];
+		ohpl_gl_draw_targets(apTargets, alNumOfTargets > 0 ? (size_t)alNumOfTargets : 0, vAttachments, 64);
+		int lNum = alNumOfTargets > 64 ? 64 : alNumOfTargets;
+		glDrawBuffers(lNum, lNum > 0 ? vAttachments : NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1209,46 +1154,21 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-		;
-
-		if( mColorWrite.r == abR &&
-			mColorWrite.g == abG &&
-			mColorWrite.b == abB &&
-			mColorWrite.a == abA)
-		{
-			return;
-		}
-		mColorWrite.r = abR;
-		mColorWrite.g = abG;
-		mColorWrite.b = abB;
-		mColorWrite.a = abA;
-
-		glColorMask(abR,abG,abB,abA);
+		if(ohpl_gl_state_color_write(&mGl, abR, abG, abB, abA)) glColorMask(abR,abG,abB,abA);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)
 	{
-		;
-
-		if(mbDepthWrite == abX) return;
-
-		mbDepthWrite = abX;
-
-		glDepthMask(abX);
+		if(ohpl_gl_state_depth_write(&mGl, abX)) glDepthMask(abX);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthTestActive(bool abX)
 	{
-		;
-
-		if(mbDepthTestActive == abX) return;
-
-		mbDepthTestActive = abX;
-
+		if(!ohpl_gl_state_depth_test(&mGl, abX)) return;
 		if(abX) glEnable(GL_DEPTH_TEST);
 		else glDisable(GL_DEPTH_TEST);
 	}
@@ -1257,24 +1177,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetDepthTestFunc(eDepthTestFunc aFunc)
 	{
-		;
-
-		if(mDepthTestFunc == aFunc) return;
-		mDepthTestFunc = aFunc;
-
-		glDepthFunc(GetGLDepthTestFuncEnum(aFunc));
+		if(ohpl_gl_state_depth_func(&mGl, aFunc)) glDepthFunc(GetGLDepthTestFuncEnum(aFunc));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestActive(bool abX)
 	{
-		;
-
-		if(mbAlphaTestActive == abX) return;
-
-		mbAlphaTestActive = abX;
-
+		if(!ohpl_gl_state_alpha_test(&mGl, abX)) return;
 		if(abX) glEnable(GL_ALPHA_TEST);
 		else glDisable(GL_ALPHA_TEST);
 	}
@@ -1283,14 +1193,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetAlphaTestFunc(eAlphaTestFunc aFunc,float afRef)
 	{
-		;
-
-		if(mAlphaTestFunc == aFunc && mfAlphaTestFuncRef == afRef) return;
-
-		mAlphaTestFunc = aFunc;
-		mfAlphaTestFuncRef = afRef;
-
-		glAlphaFunc(GetGLAlphaTestFuncEnum(aFunc),afRef);
+		if(ohpl_gl_state_alpha_func(&mGl, aFunc, afRef)) glAlphaFunc(GetGLAlphaTestFuncEnum(aFunc),afRef);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1399,20 +1302,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetCullActive(bool abX)
 	{
-		;
-
-		//if(mbCullActive == abX) return;
-		mbCullActive = abX;
-
+		ohpl_gl_state_cull_active(&mGl, abX);
 		if(abX) glEnable(GL_CULL_FACE);
 		else	glDisable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
 	void cLowLevelGraphicsSDL::SetCullMode(eCullMode aMode)
 	{
-		//if(mCullMode == aMode) return;
-		mCullMode = aMode;
-
+		ohpl_gl_state_cull_mode(&mGl, aMode);
 		glCullFace(GL_BACK);
 		if(aMode == eCullMode_Clockwise)	glFrontFace(GL_CCW);
 		else								glFrontFace(GL_CW);
@@ -1422,12 +1319,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetScissorActive(bool abX)
 	{
-		;
-
-		if(mbScissorActive == abX) return;
-
-		mbScissorActive = abX;
-
+		if(!ohpl_gl_state_scissor(&mGl, abX)) return;
 		if(abX) glEnable(GL_SCISSOR_TEST);
 		else glDisable(GL_SCISSOR_TEST);
 	}
@@ -1436,13 +1328,9 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize)
 	{
-		;
-
-		cVector2l vFrameBufferSize;
-		if(mpFrameBuffer)	vFrameBufferSize = mpFrameBuffer->GetSize();
-		else				vFrameBufferSize = mvScreenSize;
-
-		glScissor(avPos.x, (vFrameBufferSize.y - avPos.y)-avSize.y, avSize.x, avSize.y);
+		int vRect[4];
+		ohpl_gl_scissor_rect(mpFrameBuffer ? mpFrameBuffer->GetSize().y : mvScreenSize.y, OhplGl(avPos), OhplGl(avSize), vRect);
+		glScissor(vRect[0], vRect[1], vRect[2], vRect[3]);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1480,11 +1368,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBlendActive(bool abX)
 	{
-		;
-
-		if(mbBlendActive == abX) return;
-		mbBlendActive = abX;
-
+		if(!ohpl_gl_state_blend(&mGl, abX)) return;
 		if(abX)
 			glEnable(GL_BLEND);
 		else
@@ -1627,62 +1511,24 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetTexture(unsigned int alUnit,iTexture* apTex)
 	{
-		;
-
 		GLenum NewTarget=0;
 		if(apTex)	NewTarget = GetGLTextureTargetEnum(apTex->GetType());
-		
-		GLenum LastTarget = mvCurrentTextureTarget[alUnit];
-		bool bFixed = alUnit < 8;
 
-		//Check if multi texturing is supported.
-		if(GLEW_ARB_multitexture && mlCurrentActiveTextureUnit != (int)alUnit){
-			glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
-			mlCurrentActiveTextureUnit = (int)alUnit;
-		}
+		OhplGlTexPlan plan;
+		ohpl_gl_state_set_texture(&mGl, alUnit, NewTarget, apTex != NULL, GLEW_ARB_multitexture, &plan);
 
-		//Disable this unit if NULL
-		if(apTex == NULL)
-		{
-			if(LastTarget!=0 && bFixed)
-				glDisable(LastTarget);
-
-			//glBindTexture(LastTarget,0);
-		}
-		//Enable the unit, set the texture handle and bind the pbuffer
-		else
-		{
-			if(LastTarget!=0 && NewTarget != LastTarget && bFixed)
-			{
-				glDisable(LastTarget);
-			}
-
-			cSDLTexture *pSDLTex = static_cast<cSDLTexture*> (apTex);
-
-			glBindTexture(NewTarget, pSDLTex->GetTextureHandle());
-
-			if(NewTarget != LastTarget && bFixed) glEnable(NewTarget);
-
-			//if it is a render target we need to do some more binding.
-			if(pSDLTex->GetUsage() == eTextureUsage_RenderTarget)
-			{
-				//TODO: Do something else?
-			}
-		}
-
-		mvCurrentTextureTarget[alUnit] = NewTarget;
+		if(plan.activeUnit >= 0) glActiveTextureARB(GL_TEXTURE0_ARB + plan.activeUnit);
+		if(plan.disable) glDisable(plan.disable);
+		if(plan.bind) glBindTexture(NewTarget, static_cast<cSDLTexture*>(apTex)->GetTextureHandle());
+		if(plan.enable) glEnable(plan.enable);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetActiveTextureUnit(unsigned int alUnit)
 	{
-		;
-
-		if(mlCurrentActiveTextureUnit == (int)alUnit) return;
-
+		if(!ohpl_gl_state_active_unit(&mGl, alUnit)) return;
 		glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
-		mlCurrentActiveTextureUnit = (int)alUnit;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1761,16 +1607,10 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)
 	{
-		;
-
-		glClientActiveTextureARB(GL_TEXTURE0_ARB+alUnit);
-
-		if(abActive==false){
-			glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		}
-		else {
-			glTexCoordPointer(3,GL_FLOAT,0, &mpTexCoordArray[alUnit][0]);
-		}
+		OhplGlOp vOps[kOhplGlMaxOps];
+		size_t lCount = ohpl_gl_batch_texture_unit(alUnit, abActive, sizeof(float)*mlBatchStride, vOps);
+		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
+		RunGlOps(vOps, lCount, src);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1837,65 +1677,20 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetUpBatchArrays()
 	{
-		;
-
-		//Set the arrays
-		glVertexPointer(3,GL_FLOAT, sizeof(float)*mlBatchStride, mpVertexArray);
-		glColorPointer(4,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[3]);
-		glNormalPointer(GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[10]);
-
-		glClientActiveTextureARB(GL_TEXTURE0_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		glClientActiveTextureARB(GL_TEXTURE1_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		glClientActiveTextureARB(GL_TEXTURE2_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
+		OhplGlOp vOps[kOhplGlMaxOps];
+		size_t lCount = ohpl_gl_batch_arrays(sizeof(float)*mlBatchStride, vOps);
+		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
+		RunGlOps(vOps, lCount, src);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
 	{
-		;
-
-		if(aFlags & eVtxBatchFlag_Position)	glEnableClientState(GL_VERTEX_ARRAY );
-		else glDisableClientState(GL_VERTEX_ARRAY );
-
-		if(aFlags & eVtxBatchFlag_Color0) glEnableClientState(GL_COLOR_ARRAY );
-		else glDisableClientState(GL_COLOR_ARRAY );
-
-		if(aFlags & eVtxBatchFlag_Normal) glEnableClientState(GL_NORMAL_ARRAY );
-		else glDisableClientState(GL_NORMAL_ARRAY );
-
-
-		if(aFlags & eVtxBatchFlag_Texture0){ 
-			glClientActiveTextureARB(GL_TEXTURE0_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE0_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-		if(aFlags & eVtxBatchFlag_Texture1){ 
-			glClientActiveTextureARB(GL_TEXTURE1_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE1_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-		if(aFlags & eVtxBatchFlag_Texture2){ 
-			glClientActiveTextureARB(GL_TEXTURE2_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE2_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-
+		OhplGlOp vOps[kOhplGlMaxOps];
+		size_t lCount = ohpl_gl_batch_states(aFlags, vOps);
+		OhplGlOpSources src = {NULL, mpVertexArray, mpTexCoordArray};
+		RunGlOps(vOps, lCount, src);
 	}
 #ifdef WITH_CG
 	void cLowLevelGraphicsSDL::InitCG()
@@ -1935,17 +1730,7 @@ namespace hpl {
 
 	GLenum GetGLWrapEnum(eTextureWrap aMode)
 	{
-		;
-
-		switch(aMode)
-		{
-		case eTextureWrap_Clamp: return GL_CLAMP;
-		case eTextureWrap_Repeat: return GL_REPEAT;
-		case eTextureWrap_ClampToEdge: return GL_CLAMP_TO_EDGE;
-		case eTextureWrap_ClampToBorder: return GL_CLAMP_TO_BORDER;
-		}
-
-		return GL_REPEAT;
+		return ohpl_gl_wrap(aMode);
 	}
 
 
@@ -1953,325 +1738,108 @@ namespace hpl {
 
 	GLenum PixelFormatToGLFormat(ePixelFormat aFormat)
 	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_Alpha:			return GL_ALPHA;
-		case ePixelFormat_Luminance:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB:				return GL_RGB;
-		case ePixelFormat_RGBA:				return GL_RGBA;
-		case ePixelFormat_BGR:				return GL_BGR_EXT;
-		case ePixelFormat_BGRA:				return GL_BGRA_EXT;
-		case ePixelFormat_Depth16:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Depth24:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Depth32:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Alpha16:			return GL_ALPHA;
-		case ePixelFormat_Luminance16:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha16:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB16:			return GL_RGB;
-		case ePixelFormat_RGBA16:			return GL_RGBA;
-		case ePixelFormat_Alpha32:			return GL_ALPHA;
-		case ePixelFormat_Luminance32:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha32: return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB32:			return GL_RGB;
-		case ePixelFormat_RGBA32:			return GL_RGBA;
-		};
-
-		return 0;
+		return ohpl_gl_pixel_format(aFormat);
 	}
 
 	//-------------------------------------------------
 
 	GLenum PixelFormatToGLInternalFormat(ePixelFormat aFormat)
 	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_Alpha:			return GL_ALPHA;
-		case ePixelFormat_Luminance:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB:				return GL_RGB;
-		case ePixelFormat_RGBA:				return GL_RGBA;
-		case ePixelFormat_BGR:				return GL_RGB;
-		case ePixelFormat_BGRA:				return GL_RGBA;
-		case ePixelFormat_Depth16:			return GL_DEPTH_COMPONENT16;
-		case ePixelFormat_Depth24:			return GL_DEPTH_COMPONENT24;
-		case ePixelFormat_Depth32:			return GL_DEPTH_COMPONENT32;
-		case ePixelFormat_Alpha16:			return GL_ALPHA16F_ARB;
-		case ePixelFormat_Luminance16:		return GL_LUMINANCE16F_ARB;
-		case ePixelFormat_LuminanceAlpha16:	return GL_LUMINANCE_ALPHA16F_ARB;
-		case ePixelFormat_RGB16:			return GL_RGB16F_ARB;
-		case ePixelFormat_RGBA16:			return GL_RGBA16F_ARB;
-		case ePixelFormat_Alpha32:			return GL_ALPHA32F_ARB;
-		case ePixelFormat_Luminance32:		return GL_LUMINANCE32F_ARB;
-		case ePixelFormat_LuminanceAlpha32: return GL_LUMINANCE_ALPHA32F_ARB;
-		case ePixelFormat_RGB32:			return GL_RGB32F_ARB;
-		case ePixelFormat_RGBA32:			return GL_RGBA32F_ARB;
-		};
-
-		return 0;
+		return ohpl_gl_pixel_internal_format(aFormat);
 	}
 
 	//-------------------------------------------------
 
 	GLenum GetGLCompressionFormatFromPixelFormat(ePixelFormat aFormat)
 	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_DXT1:				return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		case ePixelFormat_DXT3:				return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		case ePixelFormat_DXT5:				return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		case ePixelFormat_RGTC2:			return GL_COMPRESSED_RG_RGTC2;
-		case ePixelFormat_RGTC1:			return GL_COMPRESSED_RED_RGTC1;
-		case ePixelFormat_BC6H:				return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
-		case ePixelFormat_BC7:				return GL_COMPRESSED_RGBA_BPTC_UNORM;
-		}
-		return 0;
+		return ohpl_gl_compression_format(aFormat);
 	}
 
 	//-------------------------------------------------
 
 	GLenum TextureTypeToGLTarget(eTextureType aType)
 	{
-		switch(aType)
-		{
-		case eTextureType_1D:		return GL_TEXTURE_1D;	
-		case eTextureType_2D:		return GL_TEXTURE_2D;
-		case eTextureType_Rect:		return GL_TEXTURE_RECTANGLE_NV;
-		case eTextureType_CubeMap:	return GL_TEXTURE_CUBE_MAP_ARB;
-		case eTextureType_3D:		return GL_TEXTURE_3D;
-		}
-		return 0;
+		return ohpl_gl_texture_target(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLBlendEnum(eBlendFunc aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eBlendFunc_Zero:					return GL_ZERO;
-		case eBlendFunc_One:					return GL_ONE;
-		case eBlendFunc_SrcColor:				return GL_SRC_COLOR;
-		case eBlendFunc_OneMinusSrcColor:		return GL_ONE_MINUS_SRC_COLOR;
-		case eBlendFunc_DestColor:				return GL_DST_COLOR;
-		case eBlendFunc_OneMinusDestColor:		return GL_ONE_MINUS_DST_COLOR;
-		case eBlendFunc_SrcAlpha:				return GL_SRC_ALPHA;
-		case eBlendFunc_OneMinusSrcAlpha:		return GL_ONE_MINUS_SRC_ALPHA;
-		case eBlendFunc_DestAlpha:				return GL_DST_ALPHA;
-		case eBlendFunc_OneMinusDestAlpha:		return GL_ONE_MINUS_DST_ALPHA;
-		case eBlendFunc_SrcAlphaSaturate:		return GL_SRC_ALPHA_SATURATE;
-		}
-		return 0;
+		return ohpl_gl_blend(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureParamEnum(eTextureParam aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eTextureParam_ColorFunc:		return GL_COMBINE_RGB_ARB;
-		case eTextureParam_AlphaFunc:		return GL_COMBINE_ALPHA_ARB;
-		case eTextureParam_ColorSource0:	return GL_SOURCE0_RGB_ARB;
-		case eTextureParam_ColorSource1:	return GL_SOURCE1_RGB_ARB;
-		case eTextureParam_ColorSource2:	return GL_SOURCE2_RGB_ARB;
-		case eTextureParam_AlphaSource0:	return GL_SOURCE0_ALPHA_ARB;
-		case eTextureParam_AlphaSource1:	return GL_SOURCE1_ALPHA_ARB;
-		case eTextureParam_AlphaSource2:	return GL_SOURCE2_ALPHA_ARB;
-		case eTextureParam_ColorOp0:		return GL_OPERAND0_RGB_ARB;
-		case eTextureParam_ColorOp1:		return GL_OPERAND1_RGB_ARB;
-		case eTextureParam_ColorOp2:		return GL_OPERAND2_RGB_ARB;
-		case eTextureParam_AlphaOp0:		return GL_OPERAND0_ALPHA_ARB;
-		case eTextureParam_AlphaOp1:		return GL_OPERAND1_ALPHA_ARB;
-		case eTextureParam_AlphaOp2:		return GL_OPERAND2_ALPHA_ARB;
-		case eTextureParam_ColorScale:		return GL_RGB_SCALE_ARB;
-		case eTextureParam_AlphaScale:		return GL_ALPHA_SCALE;	
-		}
-		return 0;
+		return ohpl_gl_texture_param(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureOpEnum(eTextureOp aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eTextureOp_Color:			return GL_SRC_COLOR;
-		case eTextureOp_OneMinusColor:	return GL_ONE_MINUS_SRC_COLOR;
-		case eTextureOp_Alpha:			return GL_SRC_ALPHA;
-		case eTextureOp_OneMinusAlpha:	return GL_ONE_MINUS_SRC_ALPHA;
-		}
-		return 0;
+		return ohpl_gl_texture_op(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureSourceEnum(eTextureSource aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eTextureSource_Texture:	return GL_TEXTURE;
-		case eTextureSource_Constant:	return GL_CONSTANT_ARB;
-		case eTextureSource_Primary:	return GL_PRIMARY_COLOR_ARB;
-		case eTextureSource_Previous:	return GL_PREVIOUS_ARB;
-		}
-		return 0;
+		return ohpl_gl_texture_source(aType);
 	}
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureTargetEnum(eTextureType aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eTextureType_1D:		return GL_TEXTURE_1D;	
-		case eTextureType_2D:		return GL_TEXTURE_2D;
-		case eTextureType_Rect:
-			{
-				return GL_TEXTURE_RECTANGLE_NV;
-			}
-		case eTextureType_CubeMap:	return GL_TEXTURE_CUBE_MAP_ARB;
-		case eTextureType_3D:		return GL_TEXTURE_3D;
-		}
-		return 0;
+		return ohpl_gl_texture_target(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureCompareMode(eTextureCompareMode aMode)
 	{
-		;
-
-		switch(aMode)
-		{
-		case eTextureCompareMode_None:			return GL_NONE;
-		case eTextureCompareMode_RToTexture:	return GL_COMPARE_R_TO_TEXTURE;
-		}
-		return 0;
+		return ohpl_gl_compare_mode(aMode);
 	}
 	
 	GLenum GetGLTextureCompareFunc(eTextureCompareFunc aFunc)
 	{
-		switch(aFunc)
-		{
-		case eTextureCompareFunc_LessOrEqual:		return GL_LEQUAL;
-		case eTextureCompareFunc_GreaterOrEqual:	return GL_GEQUAL;
-		}
-		return 0;
+		return ohpl_gl_compare_func(aFunc);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLTextureFuncEnum(eTextureFunc aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eTextureFunc_Modulate:		return GL_MODULATE;
-		case eTextureFunc_Replace:		return GL_REPLACE;
-		case eTextureFunc_Add:			return GL_ADD;
-		case eTextureFunc_Substract:	return GL_SUBTRACT_ARB;
-		case eTextureFunc_AddSigned:	return GL_ADD_SIGNED_ARB;
-		case eTextureFunc_Interpolate:	return GL_INTERPOLATE_ARB;
-		case eTextureFunc_Dot3RGB:		return GL_DOT3_RGB_ARB;
-		case eTextureFunc_Dot3RGBA:		return GL_DOT3_RGBA_ARB;
-		}
-		return 0;
+		return ohpl_gl_texture_func(aType);
 	}
 
 	//-----------------------------------------------------------------------
 	GLenum GetGLDepthTestFuncEnum(eDepthTestFunc aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eDepthTestFunc_Never:			return GL_NEVER;
-		case eDepthTestFunc_Less:				return GL_LESS;
-		case eDepthTestFunc_LessOrEqual:		return GL_LEQUAL;
-		case eDepthTestFunc_Greater:			return GL_GREATER; 
-		case eDepthTestFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eDepthTestFunc_Equal:			return GL_EQUAL;
-		case eDepthTestFunc_NotEqual:			return GL_NOTEQUAL;
-		case eDepthTestFunc_Always:			return GL_ALWAYS; 
-		}
-		return 0;
+		return ohpl_gl_compare(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLAlphaTestFuncEnum(eAlphaTestFunc aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eAlphaTestFunc_Never:			return GL_NEVER;
-		case eAlphaTestFunc_Less:				return GL_LESS;
-		case eAlphaTestFunc_LessOrEqual:		return GL_LEQUAL;
-		case eAlphaTestFunc_Greater:			return GL_GREATER; 
-		case eAlphaTestFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eAlphaTestFunc_Equal:			return GL_EQUAL;
-		case eAlphaTestFunc_NotEqual:			return GL_NOTEQUAL;
-		case eAlphaTestFunc_Always:			return GL_ALWAYS; 
-		}
-		return 0;
+		return ohpl_gl_compare(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLStencilFuncEnum(eStencilFunc aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eStencilFunc_Never:			return GL_NEVER;
-		case eStencilFunc_Less:				return GL_LESS;
-		case eStencilFunc_LessOrEqual:		return GL_LEQUAL;
-		case eStencilFunc_Greater:			return GL_GREATER; 
-		case eStencilFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eStencilFunc_Equal:			return GL_EQUAL;
-		case eStencilFunc_NotEqual:			return GL_NOTEQUAL;
-		case eStencilFunc_Always:			return GL_ALWAYS; 
-		}
-		return 0;
+		return ohpl_gl_compare(aType);
 	}
 
 	//-----------------------------------------------------------------------
 
 	GLenum GetGLStencilOpEnum(eStencilOp aType)
 	{
-		;
-
-		switch(aType)
-		{
-		case eStencilOp_Keep:			return GL_KEEP; 
-		case eStencilOp_Zero:			return GL_ZERO; 
-		case eStencilOp_Replace:		return GL_REPLACE; 
-		case eStencilOp_Increment:		return GL_INCR; 
-		case eStencilOp_Decrement:		return GL_DECR;
-		case eStencilOp_Invert:			return GL_INVERT;
-		case eStencilOp_IncrementWrap:	return GL_INCR_WRAP_EXT;
-		case eStencilOp_DecrementWrap:	return GL_DECR_WRAP_EXT;
-		}
-		return 0;
+		return ohpl_gl_stencil_op(aType);
 	}
 
 	//-----------------------------------------------------------------------

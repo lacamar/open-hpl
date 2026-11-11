@@ -42,58 +42,19 @@ namespace hpl {
 
 	unsigned int GetGLArrayFromVertexElement(eVertexBufferElement aType)
 	{
-		switch(aType)
-		{
-		case eVertexBufferElement_Normal:			return GL_NORMAL_ARRAY;
-		case eVertexBufferElement_Position:			return GL_VERTEX_ARRAY;
-		case eVertexBufferElement_Color0:			return GL_COLOR_ARRAY;
-		case eVertexBufferElement_Color1:			return GL_SECONDARY_COLOR_ARRAY;
-		case eVertexBufferElement_Texture1Tangent:	return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_Texture0:			return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_Texture1:			return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_Texture2:			return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_Texture3:			return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_Texture4:			return GL_TEXTURE_COORD_ARRAY;
-		case eVertexBufferElement_User0:			return 0;
-		case eVertexBufferElement_User1:			return 0;
-		case eVertexBufferElement_User2:			return 0;
-		case eVertexBufferElement_User3:			return 0;
-		}
-
-		return 0;
+		return ohpl_gl_vertex_array(aType);
 	}
 	
 	unsigned int  GetGLTypeFromVertexFormat(eVertexBufferElementFormat aFormat)
 	{
-		switch(aFormat)
-		{
-		case eVertexBufferElementFormat_Float:	return GL_FLOAT;
-		case eVertexBufferElementFormat_Int:	return GL_INT;
-		case eVertexBufferElementFormat_Byte:	return GL_UNSIGNED_BYTE;
-		}
-
-		return 0;
+		return ohpl_gl_vertex_type(aFormat);
 	}
 
 	//-----------------------------------------------------------------------
 
 	unsigned int GetDrawModeFromDrawType(eVertexBufferDrawType aDrawType)
 	{
-		switch(aDrawType)
-		{
-		case eVertexBufferDrawType_Tri:			return GL_TRIANGLES;
-		case eVertexBufferDrawType_TriStrip:	return GL_TRIANGLE_STRIP;
-		case eVertexBufferDrawType_TriFan:		return GL_TRIANGLE_FAN;
-
-		case eVertexBufferDrawType_Quad:		return GL_QUADS;
-		case eVertexBufferDrawType_QuadStrip:	return GL_QUAD_STRIP;
-		
-		case eVertexBufferDrawType_Line:		return GL_LINES;
-		case eVertexBufferDrawType_LineStrip:	return GL_LINE_STRIP;
-		case eVertexBufferDrawType_LineLoop:	return GL_LINE_LOOP;
-		}
-
-		return 0;
+		return ohpl_gl_draw_type_mode(aDrawType);
 	}
 
 	//-----------------------------------------------------------------------
@@ -237,6 +198,11 @@ namespace hpl {
 		if(mlReservedVtxSize > 0) pElement->Reserve(alElementNum * mlReservedVtxSize);
 
 		mvElementArrayIndex[aType] = (char)mvElementArrays.size();
+		OhplGlElem &desc = mvElemDesc[mvElementArrays.size()];
+		desc.kind = aType;
+		desc.format = aFormat;
+		desc.elementNum = alElementNum;
+		desc.handle = 0;
 
 		mvElementArrays.push_back(pElement);
 	}
@@ -246,16 +212,9 @@ namespace hpl {
 	{
 		cVtxBufferGLElementArray *pElement = GetElementArray(aType);
 
-		pElement->PushBack(&avVtx.x);
-		pElement->PushBack(&avVtx.y);
-		
-		if(pElement->mlElementNum > 2)
-			pElement->PushBack(&avVtx.z);
-		if(pElement->mlElementNum > 3)
-		{
-			float lX = 1;
-			pElement->PushBack(&lX);
-		}
+		float vValues[4];
+		size_t lCount = ohpl_gl_vb_vec3_components(pElement->mlElementNum, avVtx.x, avVtx.y, avVtx.z, vValues);
+		for(size_t i=0; i<lCount; ++i) pElement->PushBack(&vValues[i]);
 	}
 
 	//-----------------------------------------------------------------------
@@ -275,8 +234,8 @@ namespace hpl {
 	void iVertexBufferOpenGL::AddVertexColor(eVertexBufferElement aType,const cColor& aColor)
 	{
 		cVtxBufferGLElementArray *pElement = GetElementArray(aType);
-        
-		if(pElement->mFormat == eVertexBufferElementFormat_Float)
+
+		if(ohpl_gl_vb_color_components(pElement->mFormat) == 4)
 		{
 			pElement->PushBack(&aColor.r);
 			pElement->PushBack(&aColor.g);
@@ -298,14 +257,15 @@ namespace hpl {
 	{
 		cBoundingVolume bv;
 
-        if( (mVertexFlags & eVertexElementFlag_Position) == 0)
+        int lCheck = ohpl_gl_vb_bounding_check(mVertexFlags, mvElementArrayIndex[eVertexBufferElement_Position] < 0 ? 0 : GetElementArray(eVertexBufferElement_Position)->mFormat);
+		if(lCheck == 1)
 		{
 			Warning("Could not create bounding volume from buffer %d  because no position element was present!\n",this);
 			return bv;
 		}
 
 		cVtxBufferGLElementArray *pElement = GetElementArray(eVertexBufferElement_Position);
-		if(pElement->mFormat != eVertexBufferElementFormat_Float)
+		if(lCheck == 2)
 		{
 			Warning("Could not breate bounding volume since postion was not for format float in buffer %d!\n",this);
 			return bv;
@@ -332,6 +292,9 @@ namespace hpl {
 			cVtxBufferGLElementArray *pTextureElement = GetElementArray(eVertexBufferElement_Texture0);
 			cVtxBufferGLElementArray *pTangentElement = GetElementArray(eVertexBufferElement_Texture1Tangent);
 
+			if(pPosElement && pNormalElement && pTextureElement && pTangentElement)
+			{
+
 			pTangentElement->Resize(GetVertexNum()*4);
 			
 			cMath::CreateTriTangentVectors((float*)pTangentElement->GetArrayPtr(),
@@ -344,6 +307,7 @@ namespace hpl {
 											(float*)pNormalElement->GetArrayPtr(),
 											GetVertexNum()
 				);
+			}
 		}
 
 		//////////////////////////////////////////
@@ -359,21 +323,9 @@ namespace hpl {
 	{
 		cVtxBufferGLElementArray *pPosElement = GetElementArray(eVertexBufferElement_Position);
 
-		//Set to new size.
-		int lSize = (int)pPosElement->Size();
-		pPosElement->Reserve(lSize*2);
-
-		float *pPosArray = (float*)pPosElement->GetArrayPtr();
-
-		int lCount = lSize /4;
-		int lZero =0;
-		for(int i=0; i< lCount; i++)
-		{
-			pPosElement->PushBack(&pPosArray[i*4+0]);
-			pPosElement->PushBack(&pPosArray[i*4+1]);
-			pPosElement->PushBack(&pPosArray[i*4+2]);
-			pPosElement->PushBack(&lZero);
-		}
+		size_t lSize = pPosElement->Size();
+		pPosElement->Resize(lSize + ohpl_gl_vb_shadow_double_extra(lSize));
+		ohpl_gl_vb_shadow_double_fill(pPosElement->mFormat, (unsigned*)pPosElement->GetArrayPtr(), pPosElement->Size(), lSize);
 
 		mbHasShadowDouble = true;
 
@@ -387,80 +339,19 @@ namespace hpl {
 
 	void iVertexBufferOpenGL::Transform(const cMatrixf &a_mtxTransform)
 	{
-		///////////////
-		//Get position
-		float *pPosArray = (float*)GetElementArray(eVertexBufferElement_Position)->GetArrayPtr();
-		
-		///////////////
-		//Get normal
-		float *pNormalArray = NULL;
+		cVtxBufferGLElementArray *pPosElement = GetElementArray(eVertexBufferElement_Position);
 		cVtxBufferGLElementArray *pNormalElement = GetElementArray(eVertexBufferElement_Normal);
-		if(pNormalElement) pNormalArray = (float*)pNormalElement->GetArrayPtr();
-		
-		///////////////
-		//Get tangent
-		float *pTangentArray = NULL;
 		cVtxBufferGLElementArray *pTangentElement = GetElementArray(eVertexBufferElement_Texture1Tangent);
-		if(pTangentElement)	pTangentArray = (float*)pTangentElement->GetArrayPtr();
-	
-		//////////////////////
-		// Get variables
-		int lVtxNum = GetVertexNum();
+		if(pPosElement == NULL || pPosElement->mFormat == eVertexBufferElementFormat_Byte) return;
+		if(pNormalElement && pNormalElement->mFormat == eVertexBufferElementFormat_Byte) pNormalElement = NULL;
+		if(pTangentElement && pTangentElement->mFormat == eVertexBufferElementFormat_Byte) pTangentElement = NULL;
 
-		cMatrixf mtxRot = a_mtxTransform.GetRotation();
-		cMatrixf mtxNormalRot = cMath::MatrixInverse(mtxRot).GetTranspose();
+		tVertexElementFlag vtxFlag = ohpl_gl_vb_transform(&a_mtxTransform,
+			(float*)pPosElement->GetArrayPtr(), pPosElement->Size(),
+			pNormalElement ? (float*)pNormalElement->GetArrayPtr() : NULL, pNormalElement ? pNormalElement->Size() : 0,
+			pTangentElement ? (float*)pTangentElement->GetArrayPtr() : NULL, pTangentElement ? pTangentElement->Size() : 0,
+			GetVertexNum(), pPosElement->mlElementNum, mbHasShadowDouble);
 
-		int lVtxStride = GetElementArray(eVertexBufferElement_Position)->mlElementNum;
-		int lShadowDoubleOffset = GetVertexNum()*4;
-
-		//////////////////////
-		// Iterate and transform data
-		for(int i=0; i<lVtxNum; i++)
-		{
-			//////////////////
-			// Position
-			if(pPosArray)
-			{
-				float* pPos = &pPosArray[i*lVtxStride];
-				
-				cVector3f vPos = cMath::MatrixMul(a_mtxTransform, cVector3f(pPos[0],pPos[1],pPos[2]));
-				pPos[0] = vPos.x; pPos[1] = vPos.y; pPos[2] = vPos.z;
-
-				if(mbHasShadowDouble){
-					float* pExtraPos = &pPosArray[i*lVtxStride + lShadowDoubleOffset];
-					pExtraPos[0] = vPos.x; pExtraPos[1] = vPos.y; pExtraPos[2] = vPos.z;
-				}
-			}
-		
-			//////////////////
-			// Normals
-			if(pNormalArray)
-			{
-				float* pNorm = &pNormalArray[i*3];
-
-				cVector3f vNorm = cMath::MatrixMul3x3(mtxNormalRot, cVector3f(pNorm[0],pNorm[1],pNorm[2]));
-				vNorm.Normalize();
-				pNorm[0] = vNorm.x; pNorm[1] = vNorm.y; pNorm[2] = vNorm.z;
-			}
-
-			//////////////////
-			// Tangents
-			if(pTangentArray)
-			{
-				float* pTan = &pTangentArray[i*4];
-
-				cVector3f vTan = cMath::MatrixMul3x3(mtxRot, cVector3f(pTan[0],pTan[1],pTan[2]));
-				vTan.Normalize();
-				pTan[0] = vTan.x; pTan[1] = vTan.y; pTan[2] = vTan.z;
-			}
-		}
-
-		////////////////////////////
-		//Update the data
-		tVertexElementFlag vtxFlag = eVertexElementFlag_Position;
-		if(pNormalArray) vtxFlag |= eVertexElementFlag_Normal;
-		if(pTangentArray) vtxFlag |= eVertexElementFlag_Texture1;
-		
 		UpdateData(vtxFlag ,false);
 	}
 
@@ -549,7 +440,7 @@ namespace hpl {
 	iVertexBuffer* iVertexBufferOpenGL::CreateCopy(	eVertexBufferType aType, eVertexBufferUsageType aUsageType,
 													tVertexElementFlag alVtxToCopy)
 	{
-		if(alVtxToCopy == eFlagBit_All) alVtxToCopy = mVertexFlags;
+		alVtxToCopy = ohpl_gl_vb_copy_flags(alVtxToCopy, mVertexFlags);
 
 		iVertexBufferOpenGL *pVtxBuff = static_cast<iVertexBufferOpenGL*>(
 			mpLowLevelGraphics->CreateVertexBuffer(aType, mDrawType, aUsageType, GetIndexNum(), GetVertexNum()));
@@ -601,11 +492,7 @@ namespace hpl {
 	int iVertexBufferOpenGL::GetVertexNum()
 	{
 		cVtxBufferGLElementArray *pPosElement = GetElementArray(eVertexBufferElement_Position);
-		int lSize = (int)pPosElement->Size() / pPosElement->mlElementNum;
-
-		//If there is a shadow double, just return the length of the first half.
-		if(mbHasShadowDouble)	return lSize / 2;
-		else					return lSize;
+		return ohpl_gl_vb_vertex_num((int)pPosElement->Size(), pPosElement->mlElementNum, mbHasShadowDouble);
 	}
 	
 	//-----------------------------------------------------------------------
