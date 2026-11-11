@@ -1,5 +1,6 @@
 #include "SomaFsb.h"
 #include "RustFsb.h"
+#include "RustSomaSound.h"
 #include "SomaConfig.h"
 #include "SomaVorbisSetups.h"
 #include <vorbis/vorbisfile.h>
@@ -25,6 +26,10 @@ struct cFsbSample
 static const unsigned int kFsbMode_Pcm16 = 2;
 static const unsigned int kFsbMode_ImaAdpcm = 7;
 static const unsigned int kFsbMode_Vorbis = 15;
+
+static const unsigned char *U(const tString &s) { return (const unsigned char *)s.data(); }
+
+static void SinkName(void *apCtx, const unsigned char *apData, size_t alLen) { static_cast<tString *>(apCtx)->assign((const char *)apData, alLen); }
 
 static OhplFsbSample ToRust(const cFsbSample &aSample)
 {
@@ -109,17 +114,9 @@ static bool DownmixOggToWav(const cFsbSample &aSample, const std::vector<unsigne
 		long n = ov_read_float(&vf, &pBuf, 4096, &lSection);
 		if (n <= 0)
 			break;
-		for (long i = 0; i < n; ++i)
-		{
-			float l = 0, r = 0;
-			for (int c = 0; c < lCh; ++c)
-			{
-				l += pBuf[c][i] * vL[c];
-				r += pBuf[c][i] * vR[c];
-			}
-			vPcm.push_back((short)cMath::Clamp(l * 32767.0f, -32768.0f, 32767.0f));
-			vPcm.push_back((short)cMath::Clamp(r * 32767.0f, -32768.0f, 32767.0f));
-		}
+		size_t lOld = vPcm.size();
+		vPcm.resize(lOld + (size_t)n * 2);
+		ohpl_gs5_fsb_downmix_block(pBuf, lCh, (size_t)n, vL.data(), vR.data(), vPcm.data() + lOld);
 	}
 	ov_clear(&vf);
 	cFsbSample stereo = aSample;
@@ -151,7 +148,7 @@ static bool EncodeSample(unsigned int alMode, const cFsbSample &aSample, const s
 
 static bool FsbModeSupported(unsigned int alMode)
 {
-	return alMode == kFsbMode_Pcm16 || alMode == kFsbMode_ImaAdpcm || alMode == kFsbMode_Vorbis;
+	return ohpl_gs5_fsb_mode_supported(alMode);
 }
 
 static bool ReadWholeFile(const tWString &asPath, std::vector<unsigned char> &aOut)
@@ -216,23 +213,25 @@ void cSomaFsb::ExtractBank(cResources *apResources, const char *apBankPath, cons
 		return;
 	}
 
+	std::vector<tString> vWantedNames;
+	for (size_t w = 0; w < alCount; ++w)
+		vWantedNames.push_back(apWanted[w].pSampleName);
+	std::vector<OhplGs5Str> vWanted;
+	for (const tString &sName : vWantedNames)
+		vWanted.push_back({U(sName), sName.size()});
 	for (size_t i = 0; i < vSamples.size(); ++i)
 	{
-		for (size_t w = 0; w < alCount; ++w)
+		int64_t w = ohpl_gs5_fsb_wanted_index(U(vSamples[i].msName), vSamples[i].msName.size(), vWanted.data(), vWanted.size());
+		if (w < 0)
+			continue;
+		std::vector<unsigned char> vOut;
+		if (EncodeSample(lMode, vSamples[i], vFile, vOut) == false)
 		{
-			if (vSamples[i].msName != apWanted[w].pSampleName)
-				continue;
-
-			std::vector<unsigned char> vOut;
-			if (EncodeSample(lMode, vSamples[i], vFile, vOut) == false)
-			{
-				Log("SOMA fsb: '%s' in '%s' cannot be encoded (Vorbis setup crc32 %u or data outside bank) - skipped\n",
-					vSamples[i].msName.c_str(), apBankPath, vSamples[i].mlVorbisCrc);
-				break;
-			}
-			WriteWholeFile(asCacheDir + cString::To16Char(apWanted[w].pCacheFile), vOut);
-			break;
+			Log("SOMA fsb: '%s' in '%s' cannot be encoded (Vorbis setup crc32 %u or data outside bank) - skipped\n",
+				vSamples[i].msName.c_str(), apBankPath, vSamples[i].mlVorbisCrc);
+			continue;
 		}
+		WriteWholeFile(asCacheDir + cString::To16Char(apWanted[w].pCacheFile), vOut);
 	}
 }
 
@@ -243,12 +242,13 @@ void cSomaFsb::ExtractSamples(const tWString &asBankFile, const tWString &asCach
 	for (const tString &sSample : avSamples)
 	{
 		tString sOgg = asPrefix + sSample + ".ogg", sWav = asPrefix + sSample + ".wav";
-		if (cPlatform::FileExists(asCacheDir + cString::To16Char(sOgg)))
-			amapOut[sSample] = sOgg;
-		else if (cPlatform::FileExists(asCacheDir + cString::To16Char(sWav)))
-			amapOut[sSample] = sWav;
-		else
-			vMissing.push_back(sSample);
+		bool bOgg = cPlatform::FileExists(asCacheDir + cString::To16Char(sOgg));
+		switch (ohpl_gs5_fsb_cached_state(bOgg, bOgg == false && cPlatform::FileExists(asCacheDir + cString::To16Char(sWav))))
+		{
+		case 1: amapOut[sSample] = sOgg; break;
+		case 2: amapOut[sSample] = sWav; break;
+		default: vMissing.push_back(sSample);
+		}
 	}
 	if (vMissing.empty())
 		return;
@@ -265,7 +265,8 @@ void cSomaFsb::ExtractSamples(const tWString &asBankFile, const tWString &asCach
 		if (setWanted.count(sample.msName) == 0)
 			continue;
 		std::vector<unsigned char> vOut;
-		tString sFile = asPrefix + sample.msName + (lMode == kFsbMode_Vorbis && sample.mlChannels <= 2 ? ".ogg" : ".wav");
+		tString sFile;
+		ohpl_gs5_fsb_output_name(U(asPrefix), asPrefix.size(), U(sample.msName), sample.msName.size(), lMode, sample.mlChannels, SinkName, &sFile);
 		if (EncodeSample(lMode, sample, vFile, vOut) == false)
 			continue;
 		WriteWholeFile(asCacheDir + cString::To16Char(sFile), vOut);

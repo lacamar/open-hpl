@@ -2,6 +2,7 @@
 #define SOMA_LUX_VOICE_H
 
 #include "hpl.h"
+#include "RustSomaSound.h"
 
 #include <angelscript.h>
 #include <array>
@@ -21,6 +22,9 @@ public:
 	~cSomaLuxVoiceHandler();
 
 	static cSomaLuxVoiceHandler *Get() { return mpInstance; }
+	cEngine *GetEngine() { return mpEngine; }
+	std::vector<tWStringVec> mvRowCache; // word wrap results of the frame's subtitles, in drawing order
+	iFontData *GetFont() { return mpFont; }
 
 	// cLuxVoiceHandler::LoadFromFile: the map's .voice (and once, the global one)
 	void LoadMapFile(const tString &asHpmPath, const tString &asMapName);
@@ -41,7 +45,7 @@ public:
 	bool SceneIsActive(const tString &asScene);
 	bool SceneInvolvingCharacterIsActive(const tString &asName);
 	bool SubjectInvolvesCharacter(const tString &asSubject, const tString &asName);
-	bool AnySceneIsActive() { return mvPlaying.empty() == false; }
+	bool AnySceneIsActive();
 	int GetSubjectLineNumber(const tString &asSubject);
 	float GetTimeLeftOnLastLineOfPlayingSubject(const tString &asSubject);
 	const tString &GetSubjectSceneName(const tString &asSubject);
@@ -61,81 +65,10 @@ public:
 
 	// cLuxEffectHandler::FadeIn/FadeOut: black overlay under the subtitles
 	void FadeTo(float afGoal, float afTime);
-	bool IsFading() { return mfFadeAlpha != mfFadeGoal; }
-	float GetFadeAlpha() { return mfFadeAlpha; }
-
-	struct cSound
-	{
-		tString msText;
-		tString msFile;
-		float mfVoiceOffset = 0;
-		float mfTextOffset = 0;
-		float mfEndPadding = 0;
-		float mfVolume = 1;
-		tString msEffect;
-		bool mbEndsAfterEffect = false;
-	};
-	struct cLine
-	{
-		tString msCharacter;
-		tString msDisplayName;
-		tString msCallback;
-		float mfCharVolume = 1;
-		int mlEntryType = 8;
-		tString msSource;
-		float mfMinDist = 0, mfMaxDist = 0;
-		bool mbWorldSpace = false, mbChangeSource = false;
-		int mlPrio = 0;
-		bool mbPlayOnce = false;
-		std::vector<cSound> mvSounds;
-	};
-	struct cSubject
-	{
-		tString msName;
-		tString msScene;
-		tString msSet; // map name or "global"
-		bool mbSingleRandomLine = false;
-		int mlLastLine = -1;
-		std::vector<cLine> mvLines;
-	};
+	bool IsFading();
+	float GetFadeAlpha();
 
 private:
-	typedef std::array<float, 17> tVisemes;
-	struct cLipFrame
-	{
-		int mlStart, mlEnd;
-		tVisemes mvW;
-	};
-	struct cPlaying
-	{
-		cSubject *mpSubject;
-		int mlPrio = 0;
-		tString msCallback;
-		std::function<void()> mOnDone;
-		std::vector<int> mvLines;
-		size_t mlLine = 0;
-		size_t mlSound = 0;
-		float mfTime = 0;
-		int mlStep = 0; // 0 before the sound, 1 playing, 2 end padding
-		cSoundEntry *mpEntry = NULL;
-		int mlEntryId = -1;
-		float mfFallback = 0;
-		float mfTextDelay = 0;
-		tString msSubtitle;
-		bool mbPaused = false;
-		bool mbPlayWhilePaused = false;
-		tString msSourceEntity;
-		float mfSourceMin = 0, mfSourceMax = 0, mfListenRange = -1, mfMinFreq = 22000, mfMaxFreq = 22000, mfSourceDist = 0;
-		int mlFreqFlags = 0;
-		tString msFile;
-		tString msLipEntity;
-		std::shared_ptr<std::vector<cLipFrame>> mpLipsync;
-		cSomaSoundInstance *mpEffect = NULL; // outlives its sound until the next one with an effect
-		int mlEffectId = -1;
-		std::vector<std::pair<cSoundEntry *, int>> mvOldVoices;
-		std::vector<std::pair<cSomaSoundInstance *, int>> mvOldEffects;
-	};
-	void GetSpectrum(cPlaying &p, std::vector<float> &avOut, int alNum);
 	struct cPcm
 	{
 		tString msFile;
@@ -143,60 +76,25 @@ private:
 		int mlChannels = 0, mlRate = 0;
 	};
 	bool LoadPcm(const tString &asFile);
-	std::shared_ptr<std::vector<cLipFrame>> LoadLipsync(const tString &asFile);
+	void GetSpectrum(bool abByScene, const tString &asKey, std::vector<float> &avOut, int alNum);
 	void UpdateLipsync();
-	std::set<tString> msetLipEntities;
 	bool LoadVoiceFile(const tString &asFile, const tString &asSet);
 	void LoadLangFile(const tString &asFile);
-	void StartSound(cPlaying &aP);
-	void StopSound(cPlaying &aP);
-	void ApplyPause(cPlaying &aP);
-	void Finish(size_t alIdx);
-	void LineCallback(cSubject *apSubject, int alLine, bool abStart);
-	tString SoundKey(cSubject *apSubject, size_t alLine, size_t alSound);
+	bool ReadText(const tString &asFile, tString &asOut);
+	void StopScene(const tString &asScene);
+	void UpdateSpeakingCallbacks();
+	std::function<void()> TakeDone(uint64_t alToken);
 
 	static cSomaLuxVoiceHandler *mpInstance;
 
 	cEngine *mpEngine;
-	std::map<tString, std::unique_ptr<cSubject>> mmapSubjects;
-	std::map<tString, tString> mmapText; // lowercase key -> text
-	std::vector<tString> mvLoadedSets;
-	std::vector<cPlaying> mvPlaying;
+	OhplGs5Voices *mpV;
+	std::map<uint64_t, std::function<void()>> mmapOnDone;
+	uint64_t mlNextToken = 1;
 	cPcm mPcm; // ponytail: one decoded voice, two characters visualized at once would re-decode every call
-	struct cSource
-	{
-		tString msEntity;
-		float mfMinDist, mfMaxDist;
-		bool mbUse3D;
-		float mfListenRange = -1, mfMinFreq = 22000, mfMaxFreq = 22000;
-		int mlFreqFlags = 0;
-	};
-	std::map<tString, cSource> mmapSources;
-	struct cSceneVolume
-	{
-		float mfVolume = 1, mfGoal = 1, mfSpeed = 0;
-		float mfFocus = 1;
-	};
-	std::map<tString, cSceneVolume> mmapSceneVolumes;
-	std::map<tString, int> mmapSceneFocusPrio;
-	tString msFocusScene, msForcedFocusScene;
-	float mfFocusTimer = 0;
-	void UpdateFocus(float afTimeStep);
-	struct cImmediateSubtitle
-	{
-		std::vector<tString> mvRows;
-		tString msName;
-		cColor mColor;
-		int mlDrawnChars;
-	};
-	std::vector<cImmediateSubtitle> mvImmediate;
-	std::map<tString, tString> mmapSpeakingCallbacks;
-	std::set<tString> msetSpeaking;
-	void UpdateSpeakingCallbacks();
+	std::set<tString> msetLipEntities;
+	tString msSceneCache;
 
-	float mfFadeAlpha = 0;
-	float mfFadeGoal = 0;
-	float mfFadeSpeed = 0;
 	cGuiGfxElement *mpFadeGfx = NULL;
 
 	cGuiSet *mpGuiSet = NULL;
