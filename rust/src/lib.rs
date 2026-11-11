@@ -45,6 +45,7 @@ mod resources_ffi;
 pub mod scene;
 pub mod sdlsys;
 pub mod shader;
+pub mod somascript;
 pub mod sound;
 pub mod string;
 mod string_ffi;

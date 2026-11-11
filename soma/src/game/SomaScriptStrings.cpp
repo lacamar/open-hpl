@@ -2,6 +2,8 @@
 
 #include "hpl.h"
 
+#include "RustSomaScript.h"
+
 #include "impl/scriptarray.h"
 
 #include <cassert>
@@ -54,7 +56,10 @@ template <class S> static S Add(const S &a, const S &b) { return a + b; }
 template <class S> static asQWORD Length(const S &s) { return s.size(); }
 template <class S> static void Resize(asQWORD alSize, S &s) { s.resize((size_t)alSize); }
 
-static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem) { new (apMem) std::wstring(asIn.begin(), asIn.end()); }
+static void ConstructWFromNarrow(const std::string &asIn, std::wstring *apMem)
+{
+	new (apMem) std::wstring(OhplGs6::Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_widen(OhplGs6::U(asIn), asIn.size(), k, c); }));
+}
 
 static uint8_t &CharAt(unsigned int alIdx, std::string &s)
 {
@@ -72,54 +77,94 @@ static uint16_t &WCharAt(unsigned int alIdx, std::wstring &s)
 	return *(uint16_t *)&s[alIdx];
 }
 
-static std::string ToStr(float f)
+static std::string Tos(unsigned int alKind, const float *apF, size_t alF, const int *apI = nullptr, size_t alI = 0)
 {
-	char sBuf[64];
-	snprintf(sBuf, sizeof(sBuf), "%f", f);
-	return sBuf;
+	return OhplGs6::Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_tostr(alKind, apF, alF, apI, alI, s, c); });
 }
-static std::string ToStr(int l) { return std::to_string(l); }
-static std::string ToStr(unsigned int l) { return std::to_string(l); }
-static std::string ToStr(bool b) { return b ? "true" : "false"; }
-
-static std::string Join(std::initializer_list<std::string> avParts)
+static std::string ToStr(float f) { return Tos(kOhplGs6ToStrFloat, &f, 1); }
+static std::string ToStr(int l) { return Tos(kOhplGs6ToStrInt, nullptr, 0, &l, 1); }
+static std::string ToStr(unsigned int l)
 {
-	std::string s = "(";
-	for (const std::string &p : avParts)
-		s += (s.size() > 1 ? " : " : "") + p;
-	return s + ")";
+	int v = (int)l;
+	return Tos(kOhplGs6ToStrUint, nullptr, 0, &v, 1);
 }
-static std::string ToStr(const hpl::cVector2f &v) { return Join({ToStr(v.x), ToStr(v.y)}); }
-static std::string ToStr(const hpl::cVector2l &v) { return Join({ToStr(v.x), ToStr(v.y)}); }
-static std::string ToStr(const hpl::cVector3f &v) { return Join({ToStr(v.x), ToStr(v.y), ToStr(v.z)}); }
-static std::string ToStr(const hpl::cVector3l &v) { return Join({ToStr(v.x), ToStr(v.y), ToStr(v.z)}); }
+static std::string ToStr(bool b)
+{
+	int v = b;
+	return Tos(kOhplGs6ToStrBool, nullptr, 0, &v, 1);
+}
+static std::string ToStr(const hpl::cVector2f &v)
+{
+	float a[] = {v.x, v.y};
+	return Tos(kOhplGs6ToStrFloats, a, 2);
+}
+static std::string ToStr(const hpl::cVector2l &v)
+{
+	int a[] = {v.x, v.y};
+	return Tos(kOhplGs6ToStrInts, nullptr, 0, a, 2);
+}
+static std::string ToStr(const hpl::cVector3f &v)
+{
+	float a[] = {v.x, v.y, v.z};
+	return Tos(kOhplGs6ToStrFloats, a, 3);
+}
+static std::string ToStr(const hpl::cVector3l &v)
+{
+	int a[] = {v.x, v.y, v.z};
+	return Tos(kOhplGs6ToStrInts, nullptr, 0, a, 3);
+}
 struct cVector4Layout
 {
 	float x, y, z, w;
 };
-static std::string ToStr(const cVector4Layout &v) { return Join({ToStr(v.x), ToStr(v.y), ToStr(v.z), ToStr(v.w)}); }
-static std::string ToStr(const hpl::cColor &c) { return Join({ToStr(c.r), ToStr(c.g), ToStr(c.b), ToStr(c.a)}); }
-static std::string ToStr(const hpl::cQuaternion &q) { return Join({ToStr(q.v.x), ToStr(q.v.y), ToStr(q.v.z), ToStr(q.w)}); }
-static std::string ToStr(const hpl::cRect2f &r) { return "(" + Join({ToStr(r.x), ToStr(r.y)}) + Join({ToStr(r.w), ToStr(r.h)}) + ")"; }
-static std::string ToStr(const hpl::cRect2l &r) { return "(" + Join({ToStr(r.x), ToStr(r.y)}) + Join({ToStr(r.w), ToStr(r.h)}) + ")"; }
-static std::string ToStr(const hpl::cPlanef &p) { return "(" + Join({ToStr(p.a), ToStr(p.b), ToStr(p.c), ToStr(p.d)}) + ")"; }
+static std::string ToStr(const cVector4Layout &v)
+{
+	float a[] = {v.x, v.y, v.z, v.w};
+	return Tos(kOhplGs6ToStrFloats, a, 4);
+}
+static std::string ToStr(const hpl::cColor &c)
+{
+	float a[] = {c.r, c.g, c.b, c.a};
+	return Tos(kOhplGs6ToStrFloats, a, 4);
+}
+static std::string ToStr(const hpl::cQuaternion &q)
+{
+	float a[] = {q.v.x, q.v.y, q.v.z, q.w};
+	return Tos(kOhplGs6ToStrFloats, a, 4);
+}
+static std::string ToStr(const hpl::cRect2f &r)
+{
+	float a[] = {r.x, r.y, r.w, r.h};
+	return Tos(kOhplGs6ToStrRectF, a, 4);
+}
+static std::string ToStr(const hpl::cRect2l &r)
+{
+	int a[] = {r.x, r.y, r.w, r.h};
+	return Tos(kOhplGs6ToStrRectL, nullptr, 0, a, 4);
+}
+static std::string ToStr(const hpl::cPlanef &p)
+{
+	float a[] = {p.a, p.b, p.c, p.d};
+	return Tos(kOhplGs6ToStrPlane, a, 4);
+}
 static std::string ToStr(hpl::cDate d) { return "(" + d.ToString() + ")"; }
 static std::string ToStr(const hpl::cMatrixf &m)
 {
-	std::string s = "(";
-	for (int i = 0; i < 4; ++i)
-	{
-		std::string sRow = Join({ToStr(m.m[i][0]), ToStr(m.m[i][1]), ToStr(m.m[i][2]), ToStr(m.m[i][3])});
-		s += (i ? " [" : "[") + sRow.substr(1, sRow.size() - 2) + "]";
-	}
-	return s + ")";
+	float a[16];
+	for (int i = 0; i < 16; ++i)
+		a[i] = m.m[i / 4][i % 4];
+	return Tos(kOhplGs6ToStrMatrix, a, 16);
 }
 struct cSomaIDLayout
 {
 	uint8_t mA;
 	int32_t mB, mC;
 };
-static std::string ToStr(const cSomaIDLayout &aID) { return "(" + std::to_string(aID.mA) + " " + std::to_string(aID.mB) + " " + std::to_string(aID.mC) + ")"; }
+static std::string ToStr(const cSomaIDLayout &aID)
+{
+	int a[] = {aID.mA, aID.mB, aID.mC};
+	return Tos(kOhplGs6ToStrId, nullptr, 0, a, 3);
+}
 
 template <class T> static std::string &AssignT(const T &v, std::string &s) { s = ToStr(v); return s; }
 template <class T> static std::string &AddAssignT(const T &v, std::string &s) { s += ToStr(v); return s; }
@@ -127,7 +172,10 @@ template <class T> static std::string AddStrT(const std::string &s, const T &v) 
 template <class T> static std::string AddTStr(const T &v, const std::string &s) { return ToStr(v) + s; }
 
 static std::string ToStr(const std::string &s) { return s; }
-static std::wstring ToWStr(const std::string &s) { return std::wstring(s.begin(), s.end()); }
+static std::wstring ToWStr(const std::string &s)
+{
+	return OhplGs6::Call32([&](OhplGs6Sink32 k, void *c) { ohpl_gs6_widen(OhplGs6::U(s), s.size(), k, c); });
+}
 
 template <class T> static std::wstring &WAssignT(const T &v, std::wstring &s) { return s = ToWStr(ToStr(v)); }
 template <class T> static std::wstring &WAddAssignT(const T &v, std::wstring &s) { return s += ToWStr(ToStr(v)); }
