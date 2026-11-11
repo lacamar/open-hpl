@@ -44,6 +44,20 @@ pub mod x {
     pub const DIR_SET_FB: i32 = 29;
     pub const DIR_RENDER: i32 = 30;
     pub const TEX_BUFFER: i32 = 31;
+    pub const SET_VERTEX_BUFFER_NONE: i32 = 32;
+    pub const ENV_VISIBLE: i32 = 33;
+    pub const ENV_SETUP_BASE: i32 = 34;
+    pub const ENV_VERTEX_BUFFER: i32 = 35;
+    pub const ENV_ITERATION: i32 = 36;
+    pub const FLARE_RETRIEVE: i32 = 37;
+    pub const FLARE_UPDATE: i32 = 38;
+    pub const BLEND_RAW: i32 = 39;
+    pub const FLARE_TEXTURE: i32 = 40;
+    pub const FLARE_IRIS_BUFFER: i32 = 41;
+    pub const ASK_GLARE: i32 = 42;
+    pub const GLARE_WRITE: i32 = 43;
+    pub const GLARE_UPDATE_DATA: i32 = 44;
+    pub const SET_GLARE_BUFFER: i32 = 45;
 }
 
 pub mod pass {

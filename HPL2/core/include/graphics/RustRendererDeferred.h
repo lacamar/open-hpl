@@ -418,7 +418,10 @@ namespace hpl {
 		eOhplDr4X_SetupFogData, eOhplDr4X_ClearFogData, eOhplDr4X_AskFogs, eOhplDr4X_Log, eOhplDr4X_DirShadowCreate,
 		eOhplDr4X_AskDirShadowSize, eOhplDr4X_PolygonOffsetActive, eOhplDr4X_DepthClampActive, eOhplDr4X_PolygonOffset,
 		eOhplDr4X_OcclusionPlanes, eOhplDr4X_AlphaLimitDefault, eOhplDr4X_DirShadowFb, eOhplDr4X_DirFrustum, eOhplDr4X_DirCasters,
-		eOhplDr4X_DirSetFb, eOhplDr4X_DirRender, eOhplDr4X_TexBuffer,
+		eOhplDr4X_DirSetFb, eOhplDr4X_DirRender, eOhplDr4X_TexBuffer, eOhplDr4X_SetVertexBufferNone, eOhplDr4X_EnvVisible,
+		eOhplDr4X_EnvSetupBase, eOhplDr4X_EnvVertexBuffer, eOhplDr4X_EnvIteration, eOhplDr4X_FlareRetrieve, eOhplDr4X_FlareUpdate,
+		eOhplDr4X_BlendRaw, eOhplDr4X_FlareTexture, eOhplDr4X_FlareIrisBuffer, eOhplDr4X_AskGlare, eOhplDr4X_GlareWrite,
+		eOhplDr4X_GlareUpdateData, eOhplDr4X_SetGlareBuffer,
 	};
 	enum { kOhplDr4PassDof, kOhplDr4PassFullScreenFog, kOhplDr4PassFog };
 	enum { kOhplDr4LogDirectional, kOhplDr4LogBoxWeighted };
@@ -517,6 +520,32 @@ namespace hpl {
 		int32_t gbufferTextures;
 	};
 
+	struct OhplDr4EnvIn
+	{
+		int32_t active, num, behindFocus;
+		float focusStart, focusEnd, falloff;
+		OhplMat4 proj;
+	};
+
+	struct OhplDr4FlareUpdateIn
+	{
+		int32_t isReflection, count;
+		float frameTime;
+		int32_t frame;
+	};
+
+	struct OhplDr4GlareIn
+	{
+		int32_t irisOk, glareOk, flareCount, multiCount, fogActive;
+		float fogStart, fogEnd, fogFalloff, fogAlpha, cam[3], aspect;
+	};
+
+	struct OhplDr4GlareFlare { float vis; int32_t anyActive; };
+	struct OhplDr4IrisFlare { int32_t texOk, blend; float vis, pos[3]; };
+
+	static_assert(sizeof(OhplDr4EnvIn) == 88 && sizeof(OhplDr4FlareUpdateIn) == 16 && sizeof(OhplDr4GlareIn) == 52 &&
+				  sizeof(OhplDr4GlareFlare) == 8 && sizeof(OhplDr4IrisFlare) == 24, "Rust struct layout");
+
 	static_assert(sizeof(OhplDr4NightIn) == 48 && sizeof(OhplDr4Hpl3In) == 28 && sizeof(OhplDr4DofIn) == 44 && sizeof(OhplDr4FogWorld) == 272 &&
 				  sizeof(OhplDr4FogParams) == 88 && sizeof(OhplDr4FogArea) == 168 && sizeof(OhplDr4DirIn) == 344 &&
 				  sizeof(OhplDr4BoxLight) == 240 && sizeof(OhplDr4BoxIn) == 128, "Rust struct layout");
@@ -533,6 +562,11 @@ namespace hpl {
 		OhplDrPlan* ohpl_dr4_plan_directional(const OhplDr4DirIn*);
 		OhplDrPlan* ohpl_dr4_plan_box_weighted(const OhplDr4BoxIn*, const OhplDr4BoxLight* lights, size_t n);
 		bool ohpl_dr4_plan_handled(const OhplDrPlan*);
+		OhplDrPlan* ohpl_dr4_plan_env(const OhplDr4EnvIn*);
+		OhplDrPlan* ohpl_dr4_plan_update_flares(const OhplDr4FlareUpdateIn*);
+		OhplDrPlan* ohpl_dr4_plan_glare(const OhplDr4GlareIn*, const OhplDr4GlareFlare* flares, size_t nflares,
+										const OhplDr4IrisFlare* iris, size_t niris, const float* pos, size_t npos);
+		void ohpl_dr4_feed_floats(OhplDrPlan*, const float* v, size_t n);
 	}
 }
 

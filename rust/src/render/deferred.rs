@@ -196,6 +196,7 @@ pub enum Feed {
     Int(i32),
     Vec3([f32; 3]),
     Fogs(Vec<super::deferred_fog::FogAreaIn>),
+    Floats(Vec<f32>),
 }
 
 impl Feed {
@@ -214,6 +215,13 @@ impl Feed {
         match self {
             Feed::Int(v) => v,
             _ => 0,
+        }
+    }
+
+    pub fn floats(self) -> Vec<f32> {
+        match self {
+            Feed::Floats(v) => v,
+            _ => Vec::new(),
         }
     }
 

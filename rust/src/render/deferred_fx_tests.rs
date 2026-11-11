@@ -517,3 +517,207 @@ fn box_weighted_underwater_tints_only_the_flat_lights() {
     });
     assert_eq!(sky, Some([1.0, 1.0, 1.0]));
 }
+
+use super::deferred_misc::{
+    EnvIn, FlareUpdateIn, GlareFlare, GlareIn, IrisFlare, plan_environment_particles,
+    plan_multi_iris_and_glare, plan_update_lens_flares,
+};
+
+fn env_in() -> EnvIn {
+    EnvIn {
+        active: 1,
+        num: 2,
+        behind_focus: 0,
+        focus_start: 1.0,
+        focus_end: 3.0,
+        falloff: 1.0,
+        proj: IDENTITY,
+    }
+}
+
+fn env_run(i: EnvIn, dof: bool, systems: [[f32; 3]; 2]) -> Vec<Op> {
+    run(plan_environment_particles(i), move |o| match o {
+        Op::Ask(Query::DepthOfField) => Some(Feed::Bool(dof)),
+        Op::P4(p) if p.id == x::ENV_VISIBLE => Some(Feed::Vec3(
+            systems.get(p.a as usize).copied().unwrap_or([0.0; 3]),
+        )),
+        _ => None,
+    })
+}
+
+#[test]
+fn environment_particles_early_outs() {
+    let none = [[0.0; 3]; 2];
+    assert!(
+        env_run(
+            EnvIn {
+                active: 0,
+                ..env_in()
+            },
+            false,
+            none
+        )
+        .is_empty()
+    );
+    assert!(env_run(EnvIn { num: 0, ..env_in() }, false, none).is_empty());
+    let skipped = env_run(env_in(), false, none);
+    assert_eq!(skipped, vec![Op::Ask(Query::DepthOfField)]);
+}
+
+#[test]
+fn environment_particles_draw_each_iteration_of_visible_systems() {
+    let v = env_run(
+        EnvIn {
+            behind_focus: 1,
+            ..env_in()
+        },
+        false,
+        [[1.0, 1.0, 3.0], [1.0, 0.0, 2.0]],
+    );
+    assert_eq!(count_p4(&v, x::ENV_ITERATION), 3);
+    assert_eq!(count_p4(&v, x::ENV_SETUP_BASE), 1);
+    let setup = v.iter().find_map(|o| match o {
+        Op::P4(p) if p.id == x::ENV_SETUP_BASE => Some(p.f),
+        _ => None,
+    });
+    assert_eq!(
+        setup.map(|f| [f[0], f[1], f[2], f[3]]),
+        Some([0.0, 0.0, 0.0, 1.0])
+    );
+    assert_eq!(v.last(), Some(&p4(x::SET_VERTEX_BUFFER_NONE, 0, 0)));
+}
+
+#[test]
+fn environment_particles_dof_params_follow_the_projection() {
+    let v = env_run(env_in(), true, [[1.0, 1.0, 1.0], [0.0; 3]]);
+    let f = v.iter().find_map(|o| match o {
+        Op::P4(p) if p.id == x::ENV_SETUP_BASE => Some(p.f),
+        _ => None,
+    });
+    let f = f.unwrap_or_default();
+    assert_eq!([f[0], f[2], f[3]], [-3.0, 1.0, -1.0]);
+    assert_eq!(f[1], 1.0 / ((-1.0 - -3.0) * 0.5));
+}
+
+#[test]
+fn lens_flare_update_skips_reflections() {
+    let i = FlareUpdateIn {
+        is_reflection: 1,
+        count: 3,
+        frame_time: 0.5,
+        frame: 7,
+    };
+    assert!(run(plan_update_lens_flares(i), no_answers).is_empty());
+    let v = run(
+        plan_update_lens_flares(FlareUpdateIn {
+            is_reflection: 0,
+            ..i
+        }),
+        no_answers,
+    );
+    assert_eq!(count_p4(&v, x::FLARE_RETRIEVE), 3);
+    assert_eq!(count_p4(&v, x::FLARE_UPDATE), 3);
+}
+
+fn glare_in() -> GlareIn {
+    GlareIn {
+        iris_ok: 1,
+        glare_ok: 1,
+        flare_count: 2,
+        multi_count: 1,
+        aspect: 1.0,
+        ..GlareIn::default()
+    }
+}
+
+fn glare_run(
+    i: GlareIn,
+    flares: Vec<GlareFlare>,
+    iris: Vec<IrisFlare>,
+    color: [f32; 7],
+) -> Vec<Op> {
+    run(
+        plan_multi_iris_and_glare(i, flares, iris, vec![0.5; GLARE_VERTS * 4]),
+        move |o| {
+            matches!(o, Op::P4(p) if p.id == x::ASK_GLARE).then(|| Feed::Floats(color.to_vec()))
+        },
+    )
+}
+
+#[test]
+fn glare_needs_programs_and_flares() {
+    for i in [
+        GlareIn {
+            iris_ok: 0,
+            ..glare_in()
+        },
+        GlareIn {
+            glare_ok: 0,
+            ..glare_in()
+        },
+        GlareIn {
+            flare_count: 0,
+            ..glare_in()
+        },
+    ] {
+        assert!(glare_run(i, Vec::new(), Vec::new(), [0.0; 7]).is_empty());
+    }
+}
+
+#[test]
+fn glare_draws_only_when_the_summed_colour_is_visible() {
+    let flares = vec![
+        GlareFlare {
+            vis: 1.0,
+            any_active: 1,
+        },
+        GlareFlare {
+            vis: 0.0,
+            any_active: 1,
+        },
+    ];
+    let lit = glare_run(
+        glare_in(),
+        flares.clone(),
+        Vec::new(),
+        [1.0, 0.5, 0.25, 1.0, 0.5, 0.5, 0.0],
+    );
+    assert_eq!(count_p4(&lit, x::ASK_GLARE), 1);
+    assert_eq!(count_p4(&lit, x::GLARE_UPDATE_DATA), 1);
+    let dark = glare_run(
+        glare_in(),
+        flares,
+        Vec::new(),
+        [0.0, 0.0, 0.001, 1.0, 0.5, 0.5, 0.0],
+    );
+    assert_eq!(count_p4(&dark, x::GLARE_WRITE), 1);
+    assert_eq!(count_p4(&dark, x::GLARE_UPDATE_DATA), 0);
+}
+
+#[test]
+fn glare_iris_skips_missing_textures_and_fully_fogged_flares() {
+    let iris = |tex_ok, vis| IrisFlare {
+        tex_ok,
+        blend: 2,
+        vis,
+        pos: [0.0, 0.0, -10.0],
+    };
+    let draws = |i: GlareIn, f: IrisFlare| {
+        glare_run(i, Vec::new(), vec![f], [0.0; 7])
+            .iter()
+            .filter(|o| is_p4(o, x::FLARE_IRIS_BUFFER))
+            .count()
+    };
+    assert_eq!(draws(glare_in(), iris(1, 0.5)), 1);
+    assert_eq!(draws(glare_in(), iris(0, 0.5)), 0);
+    assert_eq!(draws(glare_in(), iris(1, 0.0)), 0);
+    let fogged = GlareIn {
+        fog_active: 1,
+        fog_start: 0.0,
+        fog_end: 5.0,
+        fog_falloff: 1.0,
+        fog_alpha: 1.0,
+        ..glare_in()
+    };
+    assert_eq!(draws(fogged, iris(1, 0.5)), 0);
+}

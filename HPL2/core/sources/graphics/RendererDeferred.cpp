@@ -2023,6 +2023,40 @@ namespace hpl {
 					break;
 				}
 				case eOhplDr4X_TexBuffer:			SetTexture(op.b, GetBufferTexture(op.c)); break;
+				case eOhplDr4X_SetVertexBufferNone:	SetVertexBuffer(NULL); break;
+				case eOhplDr4X_EnvVisible:
+				{
+					cEnvironmentParticles *pEnv = mpCurrentWorld->GetEnvironmentParticles(op.b);
+					float vAnswer[3] = {0, 0, 0};
+					if(pEnv->IsVisible(mpCurrentFrustum))
+					{
+						iGpuProgram *pProg = pEnv->GetProgram(op.c != 0);
+						apProgs[0] = pProg;
+						apTexs[0] = pEnv->mpTexture;
+						vAnswer[0] = 1; vAnswer[1] = pProg != NULL ? 1.0f : 0.0f; vAnswer[2] = (float)pEnv->GetIterationNumInt();
+					}
+					ohpl_dr_plan_feed_vec3(apPlan, vAnswer[0], vAnswer[1], vAnswer[2]);
+					break;
+				}
+				case eOhplDr4X_EnvSetupBase:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramBase(apProgs[0], mpCurrentFrustum, op.f); break;
+				case eOhplDr4X_EnvVertexBuffer:		SetVertexBuffer(mpCurrentWorld->GetEnvironmentParticles(op.b)->mpVtxBuffer); break;
+				case eOhplDr4X_EnvIteration:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramIteration(apProgs[0], op.c); break;
+				case eOhplDr4X_FlareRetrieve:		mpCurrentRenderList->GetLensFlares()[op.b]->RetrieveOcculsionQuery(this); break;
+				case eOhplDr4X_FlareUpdate:			mpCurrentRenderList->GetLensFlares()[op.b]->UpdateVisibility(op.f[0], op.c); break;
+				case eOhplDr4X_BlendRaw:			SetBlendMode((eMaterialBlendMode)op.b); break;
+				case eOhplDr4X_FlareTexture:		SetTexture(0, mpCurrentRenderList->GetMultiIrisFlares()[op.b]->GetTypeMaterial(eLensFlareType_MultiIris)->GetTexture(eMaterialTexture_Diffuse)); break;
+				case eOhplDr4X_FlareIrisBuffer:		SetVertexBuffer(mpCurrentRenderList->GetMultiIrisFlares()[op.b]->PrepareMultiIrisVertexBuffer(mpCurrentFrustum, op.f[0])); break;
+				case eOhplDr4X_AskGlare:
+				{
+					cVector3f vGlarePos;
+					cColor cGlare = mpCurrentRenderList->GetLensFlares()[op.b]->GetGlare(mpCurrentFrustum, vGlarePos, op.f[0]);
+					float vAnswer[7] = {cGlare.r, cGlare.g, cGlare.b, cGlare.a, vGlarePos.x, vGlarePos.y, vGlarePos.z};
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 7);
+					break;
+				}
+				case eOhplDr4X_GlareWrite:			memcpy(mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0), ohpl_dr_plan_array(apPlan, op.b), kOhplDrGlareVerts*4*sizeof(float)); break;
+				case eOhplDr4X_GlareUpdateData:		mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false); break;
+				case eOhplDr4X_SetGlareBuffer:		SetVertexBuffer(mpGlareVtxBuffer); break;
 				}
 				break;
 			}
@@ -2998,133 +3032,79 @@ namespace hpl {
 
 	void cRendererDeferred::RenderEnvironmentParticles(bool abBehindFocus)
 	{
-		if(mpCurrentWorld->GetEnvironmentParticlesActive()==false || mpCurrentWorld->GetEnvironmentParticleNum()==0) return;
-		bool bDof = DepthOfFieldIsActive();
-		if(!bDof && !abBehindFocus) return;
-
-		float fDofParams[4] = {0, 0, abBehindFocus ? 0.0f : 1.0f, abBehindFocus ? 1.0f : -1.0f};
-		if(bDof)
-		{
-			const cMatrixf& mtxProj = mpCurrentFrustum->GetProjectionMatrix();
-			float fEndZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusEnd())).z;
-			float fStartZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusStart())).z;
-			fDofParams[0] = fEndZ;
-			fDofParams[1] = 1.0f / ((fStartZ - fEndZ) * 0.5f / cMath::Max(mpCurrentWorld->GetDepthOfFieldFalloff(), 1e-15f));
-		}
-
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetMatrix(NULL);
-		SetBlendMode(eMaterialBlendMode_Alpha);
-		SetCullActive(false);
-		SetNormalFrustumProjection();
-
-		for(int i=0; i<mpCurrentWorld->GetEnvironmentParticleNum(); ++i)
-		{
-			cEnvironmentParticles *pEnv = mpCurrentWorld->GetEnvironmentParticles(i);
-			if(pEnv->IsVisible(mpCurrentFrustum)==false) continue;
-			iGpuProgram *pProg = pEnv->GetProgram(bDof);
-			if(pProg==NULL) continue;
-			SetProgram(pProg);
-			pEnv->SetupProgramBase(pProg, mpCurrentFrustum, fDofParams);
-			SetTexture(0, pEnv->mpTexture);
-			SetVertexBuffer(pEnv->mpVtxBuffer);
-			for(int j=0; j<pEnv->GetIterationNumInt(); ++j)
-			{
-				pEnv->SetupProgramIteration(pProg, j);
-				DrawCurrent();
-			}
-		}
-
-		SetCullActive(true);
-		SetTexture(0, NULL);
-		SetProgram(NULL);
-		SetVertexBuffer(NULL);
+		OhplDr4EnvIn in;
+		memset(&in, 0, sizeof(in));
+		in.active = mpCurrentWorld->GetEnvironmentParticlesActive();
+		in.num = mpCurrentWorld->GetEnvironmentParticleNum();
+		in.behindFocus = abBehindFocus;
+		in.focusStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+		in.focusEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+		in.falloff = mpCurrentWorld->GetDepthOfFieldFalloff();
+		memcpy(&in.proj, &mpCurrentFrustum->GetProjectionMatrix(), sizeof(OhplMat4));
+		iGpuProgram *vProgs[1] = {NULL};
+		iTexture *vTexs[1] = {NULL};
+		RunPlan(ohpl_dr4_plan_env(&in), NULL, vTexs, vProgs);
 	}
 
 	void cRendererDeferred::UpdateLensFlares()
 	{
-		if(mpCurrentSettings->mbIsReflection) return;
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
-		{
-			pFlare->RetrieveOcculsionQuery(this);
-			pFlare->UpdateVisibility(mfCurrentFrameTime, GetRenderFrameCount());
-		}
+		OhplDr4FlareUpdateIn in;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.count = (int)mpCurrentRenderList->GetLensFlares().size();
+		in.frameTime = mfCurrentFrameTime;
+		in.frame = GetRenderFrameCount();
+		RunPlan(ohpl_dr4_plan_update_flares(&in), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderMultiIrisAndGlare()
 	{
-		if(mpLensFlareIrisProgram==NULL || mpLensFlareGlareProgram==NULL || mpCurrentRenderList->GetLensFlares().empty()) return;
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetCullActive(false);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetMatrix(NULL);
-
-		cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetMultiIrisFlares())
+		OhplDr4GlareIn in;
+		memset(&in, 0, sizeof(in));
+		const std::vector<cLensFlare*> &vFlares = mpCurrentRenderList->GetLensFlares();
+		in.irisOk = mpLensFlareIrisProgram != NULL;
+		in.glareOk = mpLensFlareGlareProgram != NULL;
+		in.flareCount = (int)vFlares.size();
+		std::vector<OhplDr4GlareFlare> vGlare;
+		std::vector<OhplDr4IrisFlare> vIris;
+		std::vector<float> vPos;
+		if(in.irisOk && in.glareOk && !vFlares.empty())
 		{
-			cMaterial *pMat = pFlare->GetTypeMaterial(eLensFlareType_MultiIris);
-			iTexture *pTex = pMat->GetTexture(eMaterialTexture_Diffuse);
-			if(pTex==NULL) continue;
-
-			float fVis = pFlare->GetVisibility();
-			if(WorldFogActive())
+			cWorld *pWorld = mpCurrentWorld;
+			in.fogActive = WorldFogActive();
+			in.fogStart = pWorld->GetFogStart();
+			in.fogEnd = pWorld->GetFogEnd();
+			in.fogFalloff = pWorld->GetFogFalloffExp();
+			in.fogAlpha = pWorld->GetFogColor().a;
+			cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
+			in.cam[0] = vCamPos.x; in.cam[1] = vCamPos.y; in.cam[2] = vCamPos.z;
+			in.aspect = mvScreenSizeFloat.x / mvScreenSizeFloat.y;
+			vGlare.resize(vFlares.size());
+			for(size_t i=0; i<vFlares.size(); ++i)
 			{
-				// ponytail: material type fog-end scale taken as 1
-				float fDist = cMath::Vector3Dist(vCamPos, pFlare->GetWorldPosition());
-				float fStart = mpCurrentWorld->GetFogStart(), fEnd = mpCurrentWorld->GetFogEnd();
-				float fP = powf(cMath::Clamp((fDist - fStart)/(fEnd - fStart), 0, 1), mpCurrentWorld->GetFogFalloffExp());
-				fVis *= (1 - fP) + (1 - mpCurrentWorld->GetFogColor().a)*fP;
+				vGlare[i].vis = vFlares[i]->GetVisibility();
+				vGlare[i].anyActive = !(vGlare[i].vis <= 0) && vFlares[i]->IsAnyTypeActive();
 			}
-			if(fVis <= 0) continue;
-
-			SetBlendMode(pMat->GetBlendMode());
-			SetTexture(0, pTex);
-			SetProgram(mpLensFlareIrisProgram);
-			SetVertexBuffer(pFlare->PrepareMultiIrisVertexBuffer(mpCurrentFrustum, fVis));
-			DrawCurrent();
-		}
-
-		float *pCol = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-		const float *pPos = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		std::fill(pCol, pCol + 400*4, 0.0f);
-		float fAspect = mvScreenSizeFloat.x / mvScreenSizeFloat.y;
-		float fSum = 0;
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
-		{
-			float fVis = pFlare->GetVisibility();
-			if(fVis <= 0 || pFlare->IsAnyTypeActive()==false) continue;
-			cVector3f vGlarePos;
-			cColor cGlare = pFlare->GetGlare(mpCurrentFrustum, vGlarePos, fVis);
-			if(cGlare.r + cGlare.g + cGlare.b <= 0) continue;
-			fSum += cGlare.r + cGlare.g + cGlare.b;
-			for(int i=0; i<400; ++i)
+			const std::vector<cLensFlare*> &vMulti = mpCurrentRenderList->GetMultiIrisFlares();
+			in.multiCount = (int)vMulti.size();
+			vIris.resize(vMulti.size());
+			for(size_t i=0; i<vMulti.size(); ++i)
 			{
-				cVector3f vD((pPos[i*4] - vGlarePos.x)*fAspect, (1 - pPos[i*4+1]) - vGlarePos.y, pPos[i*4+2]);
-				float fD2 = cMath::Vector3Dot(vD, vD);
-				float fW = 1.4142135f / (1 + 128*fD2*fD2);
-				for(int c=0; c<4; ++c) pCol[i*4+c] += cGlare.v[c]*fW;
+				cMaterial *pMat = vMulti[i]->GetTypeMaterial(eLensFlareType_MultiIris);
+				vIris[i].texOk = pMat->GetTexture(eMaterialTexture_Diffuse) != NULL;
+				vIris[i].blend = (int)pMat->GetBlendMode();
+				vIris[i].vis = vMulti[i]->GetVisibility();
+				cVector3f vPos3 = vMulti[i]->GetWorldPosition();
+				vIris[i].pos[0] = vPos3.x; vIris[i].pos[1] = vPos3.y; vIris[i].pos[2] = vPos3.z;
 			}
+			const float *pPos = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+			vPos.assign(pPos, pPos + kOhplDrGlareVerts*4);
 		}
-		if(fSum > 1/255.0f)
-		{
-			mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false);
-			SetBlendMode(eMaterialBlendMode_Add);
-			SetTexture(0, NULL);
-			SetProgram(mpLensFlareGlareProgram);
-			SetVertexBuffer(mpGlareVtxBuffer);
-			DrawCurrent();
-		}
-
-		SetDepthTest(true);
-		SetCullActive(true);
+		iGpuProgram *vProgs[2] = {mpLensFlareIrisProgram, mpLensFlareGlareProgram};
+		iTexture *vTexs[1] = {NULL};
+		RunPlan(ohpl_dr4_plan_glare(&in, vGlare.empty() ? NULL : &vGlare[0], vGlare.size(), vIris.empty() ? NULL : &vIris[0], vIris.size(),
+									vPos.empty() ? NULL : &vPos[0], vPos.size()), NULL, vTexs, vProgs);
 	}
 
 	//-----------------------------------------------------------------------
