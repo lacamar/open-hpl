@@ -49,6 +49,7 @@ mod resources_ffi;
 pub mod scene;
 pub mod sdlsys;
 pub mod shader;
+pub mod somaagent;
 pub mod somaent;
 pub mod somascript;
 pub mod somasound;

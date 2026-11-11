@@ -8,11 +8,11 @@
 #include "SomaScriptApi.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptRuntime.h"
+#include "RustSomaAgent.h"
 
 #include "impl/scriptarray.h"
 #include "impl/tinyXML/tinyxml.h"
 
-#include <deque>
 
 #include <algorithm>
 #include <angelscript.h>
@@ -107,16 +107,12 @@ namespace
 	struct cAgent;
 	cAgent *Agent(E *apEnt);
 
-	struct cAgentStateMachine : cAgentComponent
+	struct cAgentStateMachine : cAgentComponent, OhplGs2SmPod
 	{
 		std::map<int, tString> mapStates, mapSubStates;
-		int mlCur = -1, mlPrev = -1, mlNext = -1;
-		int mlSubCur = -1, mlSubPrev = -1, mlSubNext = -1;
-		bool mbInSub = false;
-		struct cTimer { uint64_t mlId; float mfTime; };
-		std::vector<cTimer> mvTimers[2];
 
-		cAgentStateMachine(E *p) : cAgentComponent(p, eComp_StateMachine) {}
+		cAgentStateMachine(E *p) : cAgentComponent(p, eComp_StateMachine) { ohpl_gs2_sm_init(this); }
+		~cAgentStateMachine() { ohpl_gs2_sm_free(this); }
 
 		tString Name(int alId) { auto it = mapStates.find(alId); return it == mapStates.end() ? tString() : it->second; }
 		tString SubName(int alId) { auto it = mapSubStates.find(alId); return it == mapSubStates.end() ? tString() : it->second; }
@@ -151,130 +147,65 @@ namespace
 				mlSubNext = alState;
 		}
 
-		void Reset()
-		{
-			mlCur = mlPrev = mlSubCur = mlSubPrev = mlSubNext = -1;
-			mlNext = mapStates.empty() ? -1 : 0;
-			mbInSub = false;
-			mvTimers[0].clear();
-			mvTimers[1].clear();
-		}
+		void Reset() { ohpl_gs2_sm_reset(this, mapStates.empty() == false); }
 
 		void OnSetActive() override { Reset(); }
 
-		void AddTimer(uint64_t alId, float afTime) { mvTimers[mbInSub].push_back(cTimer{alId, afTime}); }
-		void StopTimer(uint64_t alId) { std::erase_if(mvTimers[mbInSub], [alId](const cTimer &t) { return t.mlId == alId; }); }
-		bool TimerExists(uint64_t alId) { return std::any_of(mvTimers[mbInSub].begin(), mvTimers[mbInSub].end(), [alId](const cTimer &t) { return t.mlId == alId; }); }
+		void AddTimer(uint64_t alId, float afTime) { ohpl_gs2_sm_add_timer(this, mbInSub, alId, afTime); }
+		void StopTimer(uint64_t alId) { ohpl_gs2_sm_stop_timer(this, mbInSub, alId); }
+		bool TimerExists(uint64_t alId) { return ohpl_gs2_sm_timer_exists(this, mbInSub, alId); }
+		int TimerCount(bool abSub) { return (int)ohpl_gs2_sm_timer_len(this, abSub); }
 
-		void UpdateTimers(bool abSub, int alState, float afTimeStep)
+		static bool Exists(void *apCtx, bool abSub, int alId)
 		{
-			std::vector<uint64_t> vDue;
-			std::erase_if(mvTimers[abSub], [&](cTimer &t) { t.mfTime -= afTimeStep; return t.mfTime <= 0 && (vDue.push_back(t.mlId), true); });
-			for (uint64_t lId : vDue)
-				Run(abSub, alState, "TimerUp(uint64)", [lId](asIScriptContext *c) { c->SetArgQWord(0, lId); });
+			cAgentStateMachine *p = (cAgentStateMachine *)apCtx;
+			return (abSub ? p->mapSubStates : p->mapStates).count(alId) != 0;
+		}
+
+		// each script call is stepped out of Rust, so a script's effect is seen by the phases after it
+		void Drive()
+		{
+			OhplGs2Action a;
+			while (ohpl_gs2_sm_next(this, this, &Exists, &a))
+				switch (a.kind)
+				{
+				case eOhplGs2Act_Leave: Run(a.sub, a.state, "Leave()"); break;
+				case eOhplGs2Act_Enter: Run(a.sub, a.state, "Enter()"); break;
+				case eOhplGs2Act_Update: Run(a.sub, a.state, "Update(float)", [dt = a.arg_f](asIScriptContext *c) { c->SetArgFloat(0, dt); }); break;
+				case eOhplGs2Act_TimerUp: Run(a.sub, a.state, "TimerUp(uint64)", [lId = a.arg_u](asIScriptContext *c) { c->SetArgQWord(0, lId); }); break;
+				case eOhplGs2Act_SubStateOver: Run(false, a.state, "SubStateOver(int)", [lOld = a.arg_i](asIScriptContext *c) { c->SetArgDWord(0, lOld); }); break;
+				case eOhplGs2Act_Message: Run(a.sub, a.state, "Message(int)", [lMsg = a.arg_i](asIScriptContext *c) { c->SetArgDWord(0, lMsg); }); break;
+				}
 		}
 
 		// cLuxStateMachine::OnUpdate: state changes requested last frame are applied here
 		void Update(float afTimeStep) override
 		{
-			auto dt = [afTimeStep](asIScriptContext *c) { c->SetArgFloat(0, afTimeStep); };
-			int lNext = mlNext;
-			if (lNext >= 0 ? mlCur != lNext : mlCur >= 0)
-			{
-				mlPrev = mlCur;
-				if (mlCur >= 0)
-					Run(false, mlCur, "Leave()");
-				mlCur = mapStates.count(lNext) ? lNext : -1;
-				mlSubNext = -1;
-				mvTimers[0].clear();
-				if (mlCur >= 0)
-					Run(false, mlCur, "Enter()");
-			}
-			if (mlCur >= 0)
-			{
-				Run(false, mlCur, "Update(float)", dt);
-				UpdateTimers(false, mlCur, afTimeStep);
-			}
-			lNext = mlSubNext;
-			if (lNext >= 0 ? mlSubCur != lNext : mlSubCur >= 0)
-			{
-				int lOld = mlSubCur;
-				mlSubPrev = mlSubCur;
-				if (lOld >= 0)
-					Run(true, lOld, "Leave()");
-				mlSubCur = mapSubStates.count(lNext) ? lNext : -1;
-				if (lOld >= 0 && mlCur >= 0)
-					Run(false, mlCur, "SubStateOver(int)", [lOld](asIScriptContext *c) { c->SetArgDWord(0, lOld); });
-				mvTimers[1].clear();
-				if (mlSubCur >= 0)
-					Run(true, mlSubCur, "Enter()");
-			}
-			if (mlSubCur >= 0)
-			{
-				Run(true, mlSubCur, "Update(float)", dt);
-				UpdateTimers(true, mlSubCur, afTimeStep);
-			}
+			ohpl_gs2_sm_begin_update(this, afTimeStep);
+			Drive();
 		}
 
 		void OnMessage(int alMessage) override
 		{
-			auto msg = [alMessage](asIScriptContext *c) { c->SetArgDWord(0, alMessage); };
-			if (mlCur >= 0)
-				Run(false, mlCur, "Message(int)", msg);
-			if (mlSubCur >= 0)
-				Run(true, mlSubCur, "Message(int)", msg);
+			ohpl_gs2_sm_begin_message(this, alMessage);
+			Drive();
 		}
 	};
 
-	struct cAgentSpeedState
-	{
-		float mfForward = 1, mfBackward = 1, mfSideways = 1;
-		float mfTurnBreakMul = -1, mfTurnSpeedMul = -1, mfTurnMaxSpeed = -1;
-		float mfForwardAcc = -1, mfForwardDeacc = -1, mfSidewayAcc = -1, mfSidewayDeacc = -1;
-	};
+	typedef OhplGs2SpeedState cAgentSpeedState;
+	typedef OhplGs2WallSample cWallSample;
 
-	struct cAgentCharMover : cAgentComponent
+	struct cAgentCharMover : cAgentComponent, OhplGs2CharMover
 	{
 		iCharacterBody *mpBody;
-		float mfMaxForward = 1, mfMaxBackward = 1;
-		float mfTurnMinBreakAngle = cMath::ToRad(40), mfTurnBreakMul = 0, mfTurnSpeedMul = 3, mfTurnMaxSpeed = 4;
-		float mfStoppedToWalk = 0.05f, mfWalkToRun = 3, mfWalkToStopped = 0.025f, mfRunToWalk = 0.8f;
-		float mfMoveSpeedAnimMul = 1;
-		bool mbUseMoveStateAnims = true;
 		tString msIdleAnim = "Idle", msWalkAnim = "Walk", msRunAnim = "Run", msBackwardAnim;
 		std::map<int, cAgentSpeedState> mapSpeedStates;
-		int mlEditState = -1, mlSpeedState = -1;
-		bool mbMoving = false, mbMoveRequested = false, mbSlowDownAtGoal = false, mb3D = false;
-		cVector3f mvGoal = 0;
-		bool mbTurning = false;
-		float mfTurnGoal = 0;
-		bool mbBanking = false;
-		float mfBankAngleMul = 1, mfBankMaxAngle = 0, mfBankMaxSpeed = 1, mfTurnSpeed = 0, mfTurnSign = 1, mfRoll = 0, mfRollGoal = 0;
+		int mlEditState = -1;
 		tString msTurnedCallback;
-		int mlAnimState = -1;
-		bool mbAnimPlaying = false;
-		float mfStuck = 0;
-		static constexpr int kStuckFrames = 30;
-		static constexpr float kMaxStuck = 2.0f;
-		cVector3f mvStuckDisp[kStuckFrames];
-		int mlStuckIdx = 0, mlStuckCount = 0;
 		tString msIdleExtra;
-		float mfIdleExtraMin = 0, mfIdleExtraMax = 0, mfIdleExtraWait = 0, mfIdleExtraLeft = 0;
-		int mlIdleExtraCount = 0;
-		bool mbIdleExtraActive = true;
-		struct cWallSample
-		{
-			cVector3f mvDir = 0, mvPush = 0;
-			float mfWeight = 0;
-			bool mbHit = false;
-		};
 		std::vector<cWallSample> mvWallSamples;
-		bool mbWallAvoid = false;
-		float mfWallRadius = 0, mfWallSteer = 0, mfWallTimer = 0;
-		bool mbObjectAvoid = false;
-		float mfObjectAvoidDist = 2, mfObjectAvoidMinMass = 4, mfObjectAvoidSteer = 1;
 
-		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) {}
+		cAgentCharMover(E *p, iCharacterBody *apBody) : cAgentComponent(p, eComp_CharMover), mpBody(apBody) { mfTurnMinBreakAngle = cMath::ToRad(40); }
 
 		cAgentSpeedState *Edit() { return mlEditState >= 0 ? &mapSpeedStates[mlEditState] : NULL; }
 		cAgentSpeedState *Current()
@@ -310,148 +241,9 @@ namespace
 				Error("Could not find any animation start with '%s' in entity '%s' to be used for idle extra!\n", asName.c_str(), mpEntity->msName.c_str());
 		}
 
-		void UpdateIdleExtra(float afTimeStep, int alAnim)
-		{
-			if (mlIdleExtraCount <= 0 || alAnim != 0 || mbUseMoveStateAnims == false)
-				return;
-			cMeshEntity *pMesh = mpEntity->mpMesh;
-			if (mfIdleExtraLeft > 0 && (mfIdleExtraLeft -= afTimeStep) <= 0)
-			{
-				int lIdx = mpEntity->PlayAnimation(msIdleAnim, 0.3f, true, "");
-				if (lIdx >= 0)
-					pMesh->GetAnimationState(lIdx)->SetRelativeTimePosition(cMath::RandRectf(0, 1));
-			}
-			if (mbIdleExtraActive == false || (mfIdleExtraWait -= afTimeStep) > 0)
-				return;
-			tString sAnim = msIdleExtra + cString::ToString(cMath::RandRectl(1, mlIdleExtraCount));
-			if (cAnimationState *pAnim = pMesh->GetAnimationStateFromName(sAnim))
-			{
-				mfIdleExtraLeft = pAnim->GetLength() - 0.3f;
-				mfIdleExtraWait = mfIdleExtraLeft + cMath::RandRectf(mfIdleExtraMin, mfIdleExtraMax);
-				mpEntity->PlayAnimation(sAnim, 0.3f, false, "");
-			}
-		}
-
-		cVector3f UpdateWallAvoidance(float afTimeStep)
-		{
-			if (mbWallAvoid == false || mvWallSamples.empty() || mbMoving == false)
-				return 0;
-			cVector3f vPos = mpBody->GetPosition();
-			if ((mfWallTimer += afTimeStep) >= 0.1f)
-			{
-				mfWallTimer = 0;
-				cVector3f vFwd = mpBody->GetForward(), vRight = mpBody->GetRight();
-				if (mb3D == false)
-					vFwd.y = vRight.y = 0;
-				vFwd.Normalize();
-				vRight.Normalize();
-				cVector3f vUp = cMath::Vector3Cross(vRight, vFwd);
-				for (cWallSample &s : mvWallSamples)
-				{
-					if (s.mbHit == false)
-					{
-						cVector3f vDir(cMath::RandRectf(-1, 1), cMath::RandRectf(-1, 1), cMath::RandRectf(0.2f, 1));
-						if (mb3D == false)
-						{
-							if (std::fabs(vDir.x) < std::fabs(vDir.y))
-								std::swap(vDir.x, vDir.y);
-							vDir.y *= 0.15f;
-						}
-						vDir.Normalize();
-						s.mvDir = vRight * vDir.x + vUp * vDir.y + vFwd * vDir.z;
-						s.mfWeight = 0.1f;
-					}
-					float fDist;
-					cVector3f vNormal;
-					s.mbHit = SomaRaycast(mpEntity, vPos, vPos + s.mvDir * mfWallRadius, fDist, vNormal);
-					if (s.mbHit)
-						s.mvPush = s.mvDir * -(1 - fDist / mfWallRadius);
-				}
-			}
-			cVector3f vSum = 0;
-			bool bAny = false;
-			for (cWallSample &s : mvWallSamples)
-				if (s.mbHit)
-				{
-					s.mfWeight = cMath::Min(s.mfWeight + 5 * afTimeStep, 1.0f);
-					vSum += s.mvPush * s.mfWeight;
-					bAny = true;
-				}
-			if (bAny == false)
-				return 0;
-			if (vSum.SqrLength() > 1)
-				vSum.Normalize();
-			return vSum * mfWallSteer;
-		}
-
-		// ponytail: one sphere per body, official clusters nearby non-character bodies (cMath::RecursiveClustering3D)
-		cVector3f UpdateObjectAvoidance(float afTimeStep)
-		{
-			if (mbObjectAvoid == false || mbMoving == false)
-				return 0;
-			cVector3f vVel = mpBody->GetVelocity(afTimeStep);
-			float fSpeed = vVel.Length();
-			if (fSpeed < 1e-4f)
-				return 0;
-			cVector3f vPos = mpBody->GetPosition();
-			cVector3f vToGoal = mvGoal - vPos;
-			if (mb3D == false)
-				vToGoal.y = 0;
-			vToGoal.Normalize();
-			cVector3f vSide = cMath::MatrixMul(cMath::MatrixRotateY(kPi2f), cVector3f(vVel.x, 0, vVel.z) / fSpeed);
-			vSide.Normalize();
-			cBoundingVolume bv;
-			bv.SetLocalMinMax(vPos - mfObjectAvoidDist, vPos + mfObjectAvoidDist);
-			std::vector<iPhysicsBody *> vBodies;
-			mpEntity->mpMap->GetWorld()->GetPhysicsWorld()->GetBodiesInBV(&bv, &vBodies);
-			iCharacterBody *pPlayer = PlayerBody();
-			iPhysicsBody *pPlayerBody = pPlayer ? pPlayer->GetCurrentBody() : NULL;
-			cVector3f vSum = 0;
-			for (iPhysicsBody *pBody : vBodies)
-			{
-				float fMass = pBody->GetMass();
-				if (pBody->IsActive() == false || pBody->GetCollide() == false || (fMass == 0 && pBody->IsCharacter() == false) || (fMass != 0 && fMass < mfObjectAvoidMinMass) ||
-					pBody == pPlayerBody || pBody == mpBody->GetCurrentBody())
-					continue;
-				cVector3f vCenter = pBody->GetBoundingVolume()->GetWorldCenter();
-				float fRadius = pBody->GetBoundingVolume()->GetRadius() * 0.71f;
-				if ((vCenter - vPos).SqrLength() > (fRadius + mfObjectAvoidDist) * (fRadius + mfObjectAvoidDist) || (mvGoal - vCenter).SqrLength() < fRadius * fRadius)
-					continue;
-				cVector3f vAway = vPos - vCenter;
-				if (mb3D == false)
-					vAway.y = 0;
-				float fDist = vAway.Length() - fRadius;
-				if (fDist > mfObjectAvoidDist)
-					continue;
-				fDist = cMath::Max(fDist, 1e-4f);
-				vAway.Normalize();
-				float fAngle = cMath::Vector3Angle(vAway * -1, vToGoal);
-				if (fAngle < cMath::ToRad(20))
-					fDist *= 0.5f;
-				float fWeight = 1 - fDist / mfObjectAvoidDist;
-				if (fAngle < cMath::ToRad(30))
-					vAway += cMath::Vector3Dot(vSide, vAway) < 0 ? vSide * -1 : vSide;
-				vSum += vAway * (fWeight * fWeight * mfObjectAvoidSteer);
-			}
-			return vSum;
-		}
-
-		void MoveToPos(const cVector3f &avPos, bool abSlowDown)
-		{
-			mvGoal = avPos;
-			mbMoveRequested = true;
-			mbSlowDownAtGoal = abSlowDown;
-			mbTurning = false;
-		}
-
-		void Stop() { mbMoving = mbMoveRequested = false; }
-
-		void TurnTo(float afYaw)
-		{
-			mbMoving = mbMoveRequested = false;
-			mbTurning = true;
-			mfTurnGoal = afYaw;
-		}
+		void MoveToPos(const cVector3f &avPos, bool abSlowDown) { ohpl_gs2_cm_move_to_pos(this, avPos.v, abSlowDown); }
+		void Stop() { ohpl_gs2_cm_stop(this); }
+		void TurnTo(float afYaw) { ohpl_gs2_cm_turn_to(this, afYaw); }
 
 		float ForwardSpeed()
 		{
@@ -470,169 +262,9 @@ namespace
 			return lIdx;
 		}
 
-		void SetUseMoveStateAnims(bool abX)
-		{
-			if (abX == mbUseMoveStateAnims)
-				return;
-			mbUseMoveStateAnims = abX;
-			if (abX)
-			{
-				mbAnimPlaying = false;
-				mlAnimState = -1;
-			}
-		}
+		void SetUseMoveStateAnims(bool abX) { ohpl_gs2_cm_set_use_move_state_anims(this, abX); }
 
-		void PlayMoveAnim(int alState, float afSpeed)
-		{
-			if (mbAnimPlaying && mpEntity->mlCurrentAnim < 0)
-				SetUseMoveStateAnims(true);
-			if (mbUseMoveStateAnims == false)
-			{
-				mlAnimState = -1;
-				return;
-			}
-			const tString &sAnim = alState == 0 ? msIdleAnim : alState == 1 ? msWalkAnim : msRunAnim;
-			if (alState != mlAnimState && sAnim != "")
-			{
-				mlAnimState = alState;
-				mpEntity->PlayAnimation(sAnim, 0.3f, true, "");
-			}
-			if (alState > 0 && mpEntity->mpMesh && mpEntity->mlCurrentAnim >= 0)
-				if (cAnimationState *pAnim = mpEntity->mpMesh->GetAnimationState(mpEntity->mlCurrentAnim))
-					pAnim->SetSpeed(cMath::Max(afSpeed * mfMoveSpeedAnimMul / cMath::Max(alState == 1 ? 1.0f : mfWalkToRun, 0.1f), 0.2f));
-		}
-
-		void UpdateStuck(float afTimeStep, float afSpeed)
-		{
-			cVector3f vDisp = mpBody->GetPosition() - mpBody->GetLastPosition();
-			mvStuckDisp[mlStuckIdx] = vDisp;
-			mlStuckIdx = (mlStuckIdx + 1) % kStuckFrames;
-			mlStuckCount = cMath::Min(mlStuckCount + 1, kStuckFrames);
-			if (mbAnimPlaying || afSpeed < 1e-5f)
-			{
-				mfStuck = 0;
-				return;
-			}
-			cVector3f vSum = 0;
-			for (int i = 0; i < mlStuckCount; ++i)
-				vSum += mvStuckDisp[i];
-			float fDist = vDisp.Length();
-			float fDot = cMath::Vector3Dot(mpBody->GetForward(), fDist > 1e-8f ? vDisp / fDist : vDisp);
-			if (vSum.Length() < 0.1f * afSpeed || fDist / afTimeStep / afSpeed < 0.3f || (std::fabs(fDot) < 0.3f && afSpeed > 0.001f))
-				mfStuck = cMath::Min(mfStuck + afTimeStep, kMaxStuck);
-			else
-				mfStuck = cMath::Max(mfStuck - 0.8f * afTimeStep, 0.0f);
-			if (mfStuck >= kMaxStuck)
-			{
-				mfStuck = 0;
-				SomaAgentSendMessage(mpEntity, eMsg_StuckCounterIsAtMax);
-			}
-		}
-
-		void Update(float afTimeStep) override
-		{
-			if (mpBody == NULL)
-				return;
-			// the real MoveToPos moves the body for one frame only; callers re-send it every frame
-			mbMoving = std::exchange(mbMoveRequested, false);
-			cAgentSpeedState *pState = Current();
-			float fTurnSpeedMul = pState && pState->mfTurnSpeedMul >= 0 ? pState->mfTurnSpeedMul : mfTurnSpeedMul;
-			float fTurnMax = pState && pState->mfTurnMaxSpeed >= 0 ? pState->mfTurnMaxSpeed : mfTurnMaxSpeed;
-			float fBreakMul = pState && pState->mfTurnBreakMul >= 0 ? pState->mfTurnBreakMul : mfTurnBreakMul;
-
-			float fYaw = mpBody->GetYaw();
-			float fGoalYaw = fYaw;
-			bool bRotate = false;
-			float fDist = 0;
-			cVector3f vAvoid = UpdateWallAvoidance(afTimeStep) + UpdateObjectAvoidance(afTimeStep);
-			if (mbMoving)
-			{
-				cVector3f vDelta = mvGoal - mpBody->GetPosition();
-				if (vAvoid != 0)
-				{
-					cVector3f vOffset = vAvoid * cMath::Min(vDelta.Length() / (2 * mpBody->GetSize().x + 2), 1.0f);
-					if (mb3D == false)
-						vOffset.y = 0;
-					cVector3f vAvoidDelta = vDelta + vOffset;
-					vAvoidDelta.y = 0;
-					if (vAvoidDelta.Length() > 0.05f)
-						vDelta = cVector3f(vAvoidDelta.x, vDelta.y + vOffset.y, vAvoidDelta.z);
-				}
-				float fDY = mb3D ? vDelta.y : 0;
-				vDelta.y = 0;
-				float fDistXZ = vDelta.Length();
-				fDist = std::sqrt(fDistXZ * fDistXZ + fDY * fDY);
-				if (fDistXZ > 0.05f)
-				{
-					fGoalYaw = YawTo(vDelta);
-					bRotate = true;
-				}
-				if (mb3D && fDist > 0.05f)
-				{
-					float fPitchDiff = std::atan2(fDY, fDistXZ) - mpBody->GetPitch();
-					mpBody->AddPitch(cMath::Clamp(fPitchDiff, -mfTurnMaxSpeed * afTimeStep, mfTurnMaxSpeed * afTimeStep));
-				}
-			}
-			else if (mbTurning)
-			{
-				fGoalYaw = mfTurnGoal;
-				bRotate = true;
-			}
-			float fDiff = Wrap(fGoalYaw - fYaw);
-			if (bRotate)
-			{
-				float fStep = cMath::Min(std::fabs(fDiff) * fTurnSpeedMul, fTurnMax) * afTimeStep;
-				fStep = cMath::Min(fStep, std::fabs(fDiff));
-				mpBody->SetYaw(fYaw + (fDiff < 0 ? -fStep : fStep));
-				mfTurnSpeed = fStep / afTimeStep;
-				mfTurnSign = fDiff < 0 ? -1.0f : 1.0f;
-				if (mbTurning && std::fabs(fDiff) < cMath::ToRad(2))
-				{
-					mbTurning = false;
-					SetYawNear(mpBody, fGoalYaw);
-					SomaAgentSendMessage(mpEntity, eMsg_TurningDone);
-					if (msTurnedCallback != "")
-						SomaMapScriptCall("void " + msTurnedCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEntity->msName); });
-				}
-			}
-			else
-				mfTurnSpeed = cMath::Max(mfTurnSpeed - 4 * afTimeStep, 0.0f);
-			if (mbBanking)
-				mfRollGoal = cMath::Clamp(mfTurnSign * mfTurnSpeed * mfBankAngleMul, -mfBankMaxAngle, mfBankMaxAngle);
-			mfRoll += cMath::Clamp((mfRollGoal - mfRoll) * mfBankMaxSpeed, -mfBankMaxSpeed, mfBankMaxSpeed) * afTimeStep;
-
-			float fWanted = 0;
-			if (mbMoving)
-			{
-				fWanted = ForwardSpeed();
-				if (std::fabs(fDiff) > mfTurnMinBreakAngle)
-					fWanted *= fBreakMul;
-				if (mbSlowDownAtGoal && fDist < 1.0f)
-					fWanted *= cMath::Max(fDist, 0.2f);
-			}
-			mpBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, cMath::Max(fWanted, 0.001f));
-			if (pState && pState->mfForwardAcc > 0)
-				mpBody->SetMoveAcc(eCharDir_Forward, pState->mfForwardAcc);
-			if (pState && pState->mfForwardDeacc > 0)
-				mpBody->SetMoveDeacc(eCharDir_Forward, pState->mfForwardDeacc);
-			if (fWanted > 0)
-				mpBody->Move(eCharDir_Forward, 1);
-
-			float fSpeed = mpBody->GetMoveSpeed(eCharDir_Forward);
-			UpdateStuck(afTimeStep, fSpeed);
-
-			int lAnim = mlAnimState < 0 ? 0 : mlAnimState;
-			if (lAnim == 0 && fSpeed > mfStoppedToWalk)
-				lAnim = 1;
-			else if (lAnim == 1 && fSpeed > mfWalkToRun)
-				lAnim = 2;
-			else if (lAnim == 2 && fSpeed < mfRunToWalk)
-				lAnim = 1;
-			else if (lAnim == 1 && fSpeed < mfWalkToStopped)
-				lAnim = 0;
-			PlayMoveAnim(lAnim, fSpeed);
-			UpdateIdleExtra(afTimeStep, lAnim);
-		}
+		void Update(float afTimeStep) override;
 	};
 
 	struct cNodeData
@@ -711,27 +343,17 @@ namespace
 		bool mbLoopAnim;
 	};
 
-	struct cAgentPathfinder : cAgentComponent
+	struct cAgentPathfinder : cAgentComponent, OhplGs2Pathfinder
 	{
 		tString msContainer;
 		cNodeData *mpNodes = NULL;
 		float mfMaxHeight = 1.0f, mfMaxEdgeDist = 5;
 		bool mbAtCenter = false;
 		std::vector<cVector3f> mvPath;
-		size_t mlPathIdx = 0;
-		bool mbMoving = false, mbExact = false, mbGoalPending = false;
-		cVector3f mvGoal = 0;
-		std::deque<float> mvDistHistory;
 		tString msResultCallback, msEndOfPathCallback;
-		bool mbCallbackInMap = false;
 		std::vector<cAINode *> mvNodeArray;
 		std::vector<float> mvNodeArrayDist;
-
 		std::vector<cAgentTrackNode> mvTrack;
-		int mlTrackIdx = -1;
-		bool mbTrackActive = false, mbTrackPaused = false, mbTrackLoop = false;
-		bool mbAtTrackNode = false;
-		float mfTrackWait = 0, mfTrackFreq = 1;
 		tString msTrackCallback;
 
 		cAgentPathfinder(E *p) : cAgentComponent(p, eComp_Pathfinder) {}
@@ -767,27 +389,8 @@ namespace
 			return true;
 		}
 
-		void MoveTo(const cVector3f &avGoal, bool abExact, const tString &asCallback, bool abInMap)
-		{
-			mvGoal = avGoal;
-			mbExact = abExact;
-			msResultCallback = asCallback;
-			mbCallbackInMap = abInMap;
-			if (BuildPath(avGoal, mvPath) == false)
-				mvPath.assign(1, avGoal);
-			mlPathIdx = 0;
-			mbMoving = true;
-			mvDistHistory.clear();
-			if (cAgentCharMover *pMover = Mover())
-				pMover->MoveToPos(mvPath[0], abExact && mvPath.size() == 1);
-		}
-
-		void Stop()
-		{
-			mbMoving = false;
-			if (cAgentCharMover *pMover = Mover())
-				pMover->Stop();
-		}
+		void MoveTo(const cVector3f &avGoal, bool abExact, const tString &asCallback, bool abInMap);
+		void Stop();
 
 		void RunResultCallback(bool abOk)
 		{
@@ -805,114 +408,11 @@ namespace
 				mpEntity->Call("void " + sFunc + "(bool)", [abOk](asIScriptContext *c) { c->SetArgByte(0, abOk); });
 		}
 
-		void ArriveEnd(bool abOk = true)
-		{
-			mbMoving = false;
-			if (cAgentCharMover *pMover = Mover())
-				pMover->Stop();
-			SomaAgentSendMessage(mpEntity, eMsg_EndOfPath, 0, abOk);
-			if (msEndOfPathCallback != "")
-			{
-				tString sFunc = msEndOfPathCallback;
-				msEndOfPathCallback = "";
-				SomaMapScriptCall("void " + sFunc + "(const tString &in, bool)", [&](asIScriptContext *c) {
-					c->SetArgObject(0, &mpEntity->msName);
-					c->SetArgByte(1, abOk);
-				});
-			}
-			if (mbTrackActive && mlTrackIdx >= 0 && mlTrackIdx < (int)mvTrack.size())
-			{
-				mbAtTrackNode = true;
-				mfTrackWait = 0;
-				if (abOk == false)
-					return;
-				const cAgentTrackNode &node = mvTrack[mlTrackIdx];
-				mfTrackWait = cMath::RandRectf(node.mfMinWait, node.mfMaxWait);
-				if (node.msAnim != "" && Mover())
-					Mover()->PlayAnimation(node.msAnim, 0.3f, node.mbLoopAnim, "");
-				SomaAgentSendMessage(mpEntity, eMsg_AtTrackNode);
-			}
-			else
-				RunResultCallback(abOk);
-		}
-
-		void OnMessage(int alMessage) override
-		{
-			if (alMessage == eMsg_StuckCounterIsAtMax)
-				ArriveEnd(false);
-		}
-
-		void StartTrackNode()
-		{
-			if (mlTrackIdx < 0 || mlTrackIdx >= (int)mvTrack.size())
-				return;
-			cNodeData *pNodes = Nodes();
-			cAINode *pNode = pNodes ? pNodes->mpContainer->GetNodeFromName(mvTrack[mlTrackIdx].msNode) : NULL;
-			if (pNode == NULL)
-			{
-				Warning("SOMA agent '%s': track node '%s' not found\n", mpEntity->msName.c_str(), mvTrack[mlTrackIdx].msNode.c_str());
-				mbTrackActive = false;
-				return;
-			}
-			mbAtTrackNode = false;
-			tString sKeep = msResultCallback;
-			MoveTo(pNode->GetPosition(), false, "", false);
-			msResultCallback = sKeep;
-		}
-
-		void GoToNextTrackNode()
-		{
-			if (mvTrack.empty())
-				return;
-			++mlTrackIdx;
-			if (mlTrackIdx >= (int)mvTrack.size())
-			{
-				SomaAgentSendMessage(mpEntity, eMsg_EndOfTrack);
-				if (msTrackCallback != "")
-					SomaMapScriptCall("void " + msTrackCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEntity->msName); });
-				if (mbTrackLoop == false)
-				{
-					mbTrackActive = false;
-					mlTrackIdx = (int)mvTrack.size() - 1;
-					return;
-				}
-				mlTrackIdx = 0;
-			}
-			StartTrackNode();
-		}
-
-		void Update(float afTimeStep) override
-		{
-			if (mbTrackActive && mbTrackPaused == false && mbAtTrackNode && mbMoving == false)
-			{
-				mfTrackWait -= afTimeStep;
-				if (mfTrackWait <= 0)
-					GoToNextTrackNode();
-			}
-			if (mbMoving == false || mvPath.empty())
-				return;
-			bool bLast = mlPathIdx + 1 >= mvPath.size();
-			if (Arrived(mvPath[mlPathIdx], bLast))
-			{
-				mvDistHistory.clear();
-				if (bLast)
-				{
-					ArriveEnd();
-					return;
-				}
-				++mlPathIdx;
-			}
-			mbGoalPending = true;
-		}
-
-		bool Arrived(const cVector3f &avNode, bool abLast);
-
-		// queued like the real goal message, so it lands after the state machine's MoveToPos
-		void SendGoal()
-		{
-			if (std::exchange(mbGoalPending, false) && mbMoving && mlPathIdx < mvPath.size() && Mover())
-				Mover()->MoveToPos(mvPath[mlPathIdx], mbExact && mlPathIdx + 1 >= mvPath.size());
-		}
+		void OnMessage(int alMessage) override;
+		void Update(float afTimeStep) override;
+		void SendGoal();
+		void StartTrackNode();
+		void GoToNextTrackNode();
 
 		cAINode *NodeAtPos(const cVector3f &avPos, float afMin, float afMax, bool abClosest, bool abLOS, cAINode *apSkip)
 		{
@@ -967,22 +467,17 @@ namespace
 		void Update(float afTimeStep) override
 		{
 			auto it = mapStates.find(mlCur);
-			if (mbActive == false || it == mapStates.end() || it->second.msSound == "")
+			bool bHas = it != mapStates.end() && it->second.msSound != "";
+			if (ohpl_gs2_bark_due(&mfCount, afTimeStep, mbActive, bHas, bHas ? it->second.mfMin : 0, bHas ? it->second.mfMax : 0) == false)
 				return;
-			mfCount -= afTimeStep;
-			if (mfCount > 0)
-				return;
-			mfCount = cMath::RandRectf(it->second.mfMin, it->second.mfMax);
 			if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
 				if (cSoundEntity *pSound = pMap->GetWorld()->CreateSoundEntity(mpEntity->msName + "_Bark", it->second.msSound, true))
 					pSound->SetPosition(mpEntity->GetPosition());
 		}
 	};
 
-	struct cAgentSoundListener : cAgentComponent
+	struct cAgentSoundListener : cAgentComponent, OhplGs2SoundListener
 	{
-		float mfHearRadius = 30, mfRadiusMul = 1, mfMinRadius = 0, mfMaxRadius = 1000, mfIgnoreRadius = 0, mfMaxPlayerInteractTime = 0;
-		int mlMinPrio = 0;
 		cAgentSoundListener(E *p) : cAgentComponent(p, eComp_SoundListener) {}
 	};
 
@@ -1179,7 +674,7 @@ namespace
 		cAgentEdgeGlow(E *p) : cAgentComponent(p, eComp_EdgeGlow) {}
 	};
 
-	struct cAgent
+	struct cAgent : OhplGs2AgentState
 	{
 		cSomaLuxEntity *mpEnt;
 		iCharacterBody *mpBody = NULL;
@@ -1187,24 +682,11 @@ namespace
 		std::vector<std::unique_ptr<cAgentComponent>> mvComponents;
 		cAgentMessageData mMessage;
 		tString msMessageCallback;
-
-		bool mbSensesActive = true, mbUpdateDetection = true;
-		float mfFOV = cMath::ToRad(90), mfFOVMul = 1, mfSightRange = 30, mfSightRangeMul = 1, mfEyeHeight = 0.9f;
-		float mfDetectMinTime = 0, mfDetectCount = 0, mfDetectTimer = 0, mfCurrentSightDist = 0;
-		int mlSeenCount = 0;
-		bool mbSeen = false, mbDetected = false, mbSightRangeAffectedByModifiers = true;
-		cVector3f mvLastKnownPlayerPos = 0;
-		bool mbStaticCollider = false, mbCheckForDoors = true, mbAlignGround = false;
-		float mfAlignRayStart = 0.5f, mfAlignRayMax = 0.5f, mfAlignTimer = 0, mfAlignY = 0, mvAlignDist[3] = {};
-		int mlAlignCount = 0, mlAlignIdx = 0;
-		cVector3f mvGroundAlignPos = 0;
 		cBoneState *mpPosBone = NULL;
-		bool mbPosBoneIsFeet = true, mbGlobalSpace = false, mbGravityBeforeGlobal = true, mbCollisionBeforeGlobal = true;
-		float mfPosBoneYOffset = 0;
-		float mfMaxDoorDist = 1, mfCheckDoorsCount = 0, mfDoorCheckTimer = 0;
-		bool mbAutoDisable = false;
-		float mfAutoDisableMinDist = 0, mfAutoDisableTimer = 0, mfAutoDisableCount = 0;
 		tString msAutoDisableCallback;
+		std::vector<iPhysicsBody *> mvAvoidBodies;
+
+		cAgent() { mfFOV = cMath::ToRad(90); }
 
 		template <class T> T *Find(int alType)
 		{
@@ -1217,148 +699,6 @@ namespace
 		cVector3f Eye() { return mpBody ? mpBody->GetFeetPosition() + cVector3f(0, mpBody->GetSize().y * mfEyeHeight, 0) : mpEnt->GetPosition(); }
 		float PlayerDist() { return cMath::Vector3Dist(mpBody ? mpBody->GetFeetPosition() : mpEnt->GetPosition(), PlayerBody()->GetFeetPosition()); }
 		cVector3f Forward() { return mpBody ? mpBody->GetForward() : cVector3f(0, 0, -1); }
-
-		bool PlayerInSight(float afFOV)
-		{
-			iCharacterBody *pPlayer = PlayerBody();
-			cVector3f vEye = Eye();
-			cVector3f vHead = pPlayer->GetPosition() + cVector3f(0, pPlayer->GetSize().y * 0.4f, 0);
-			cVector3f vDir = vHead - vEye;
-			return cMath::Vector3Angle(cMath::Vector3Normalize(vDir), Forward()) < afFOV * 0.5f && SomaLineOfSight(vEye, vHead, mpEnt);
-		}
-
-		void ResetPlayerDetectionState()
-		{
-			mbDetected = mbSeen = false;
-			mfDetectCount = 0;
-		}
-
-		void SetSensesActive(bool abX)
-		{
-			if (mbSensesActive == abX)
-				return;
-			mbSensesActive = abX;
-			if (abX == false)
-				SomaAgentSendMessage(mpEnt, eMsg_SensesDeactivated, 0);
-			ResetPlayerDetectionState();
-		}
-
-		void SetUndetected()
-		{
-			if (mbDetected)
-				SomaAgentSendMessage(mpEnt, eMsg_PlayerUndetected, 0);
-			mbDetected = false;
-		}
-
-		void DetectedCallback(bool abX)
-		{
-			if (abX == false || mfDetectMinTime > mfDetectCount)
-			{
-				if (abX)
-					mfDetectCount += 0.15f;
-				else if (mfDetectCount > 0)
-					mfDetectCount -= 0.15f;
-				SetUndetected();
-				return;
-			}
-			mvLastKnownPlayerPos = PlayerBody()->GetFeetPosition();
-			if (mbDetected == false)
-			{
-				mbDetected = true;
-				SomaAgentSendMessage(mpEnt, eMsg_PlayerDetected, 0);
-			}
-		}
-
-		void SeenCallback(bool abX)
-		{
-			mbSeen = abX && ++mlSeenCount >= 4;
-			if (abX == false)
-				mlSeenCount = 0;
-			if (mbSeen)
-				return DetectedCallback(true);
-			if (mpBody && mpBody->GetSize().x > PlayerDist())
-				return DetectedCallback(PlayerInSight(mfFOV * mfFOVMul));
-			if (mfDetectCount > 0)
-				mfDetectCount -= 0.15f;
-			SetUndetected();
-		}
-
-		void UpdateSenses(float afTimeStep)
-		{
-			cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-			if (mbSensesActive == false || pPlayer == NULL || pPlayer->GetCharacterBody() == NULL)
-				return;
-			if (pPlayer->IsDead())
-			{
-				SetUndetected();
-				mbSeen = false;
-				return;
-			}
-			mfDetectTimer += afTimeStep;
-			if (mfDetectTimer < 0.15f)
-				return;
-			mfDetectTimer = 0;
-			if (mbUpdateDetection == false)
-			{
-				mbSeen = false;
-				SetUndetected();
-				return;
-			}
-			float fRange = mfSightRange * mfSightRangeMul;
-			float fMax = -1;
-			if (mbSightRangeAffectedByModifiers)
-			{
-				fRange *= pPlayer->GetVisibilityRangeMul();
-				fMax = pPlayer->GetVisibilityMaxRange();
-			}
-			mfCurrentSightDist = fMax >= 0 ? std::min(fRange, fMax) : fRange;
-			SeenCallback(PlayerDist() <= mfCurrentSightDist && PlayerInSight(mfFOV * mfFOVMul));
-		}
-
-		void UpdateAutoDisable(float afTimeStep)
-		{
-			if (mbAutoDisable == false || (mfAutoDisableTimer -= afTimeStep) > 0)
-				return;
-			mfAutoDisableTimer = 0.3f;
-			if (PlayerDist() < mfAutoDisableMinDist)
-				return;
-			if (SomaEntityInPlayerLOS(mpEnt, true) || cSomaLuxPlayer::Get()->IsDead())
-			{
-				mfAutoDisableCount = 0;
-				return;
-			}
-			if ((mfAutoDisableCount += 0.3f) <= 3)
-				return;
-			mbAutoDisable = false;
-			mpEnt->SetActive(false);
-			cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-			if (msAutoDisableCallback != "" && pMap && pMap->GetScript())
-				cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msAutoDisableCallback + "(const tString &in)",
-												[this](asIScriptContext *c) { c->SetArgObject(0, &mpEnt->msName); });
-		}
-
-		void CheckForDoors(float afTimeStep)
-		{
-			mfCheckDoorsCount -= afTimeStep;
-			mfDoorCheckTimer -= afTimeStep;
-			if (mbCheckForDoors == false || mpBody == NULL || mfCheckDoorsCount > 0 || mfDoorCheckTimer > 0 || mpEnt->mpMap == NULL)
-				return;
-			mfDoorCheckTimer = 0.1f;
-			if (mpBody->GetMoveSpeed(eCharDir_Forward) < 0.05f)
-				return;
-			float fMax = mpBody->GetSize().x * 0.5f + mfMaxDoorDist;
-			for (cSomaLuxEntity *pDoor : mpEnt->mpMap->GetEntities())
-			{
-				float fDist;
-				if (pDoor->mbIsDoor && pDoor->mbIsClosedDoor && pDoor->mbActive &&
-					SomaRayHitsEntity(pDoor, mpBody->GetPosition(), Forward(), fMax, fDist))
-				{
-					memcpy(mMessage.mBlock + 44, &pDoor->mID, sizeof(cSomaID));
-					SomaAgentSendMessage(mpEnt, 18, pDoor->GetPosition());
-					return;
-				}
-			}
-		}
 
 		float FloorDist(const cVector3f &avStart, const cVector3f &avEnd)
 		{
@@ -1407,70 +747,13 @@ namespace
 			return fResult;
 		}
 
-		// curbs without risers never trigger the body's side-collision step climb
-		void StepUp()
-		{
-			if (mpBody == NULL || mbGlobalSpace || mbStaticCollider || mpBody->GetTestCollision() == false || mpEnt->mpMap == NULL)
-				return;
-			cVector3f vFeet = mpBody->GetFeetPosition();
-			float fStep = mpBody->GetMaxStepSize();
-			float fDist = FloorDist(vFeet + cVector3f(0, fStep, 0), vFeet);
-			if (fDist < fStep - 0.01f)
-				mpBody->SetFeetPosition(vFeet + cVector3f(0, fStep - fDist, 0));
-		}
-
-		void AlignWithGround(float afTimeStep)
-		{
-			if (mbAlignGround == false || mpBody == NULL || mpEnt->mpMap == NULL || mpBody->IsOnGround() == false || (mfAlignTimer -= afTimeStep) > 0)
-				return;
-			mfAlignTimer = 0.02f;
-			cVector3f vAhead = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw()), cVector3f(0, 0, -1)) * mpBody->GetSize().x * mfAlignRayStart;
-			cVector3f vStart = mpBody->GetFeetPosition() + vAhead + cVector3f(0, 0.05f, 0);
-			float fDist = FloorDist(vStart, vStart - cVector3f(0, mfAlignRayMax, 0));
-			if (fDist > mfAlignRayMax)
-				return;
-			mvAlignDist[mlAlignIdx] = fDist - 0.05f;
-			mlAlignIdx = (mlAlignIdx + 1) % 3;
-			mlAlignCount = std::min(mlAlignCount + 1, 3);
-			mfAlignY = 0;
-			for (int i = 0; i < mlAlignCount; ++i)
-				mfAlignY += mvAlignDist[i] / mlAlignCount;
-			mvGroundAlignPos = mpBody->GetFeetPosition() + vAhead - cVector3f(0, mfAlignY, 0);
-		}
-
-		void SyncMesh()
-		{
-			if (mpBody == NULL || mpEnt->mpMesh == NULL)
-				return;
-			if (mbGlobalSpace != mpEnt->mbGlobalSpaceAnim)
-			{
-				mbGlobalSpace = mpEnt->mbGlobalSpaceAnim;
-				if (mbGlobalSpace)
-					mbGravityBeforeGlobal = mpBody->GravityIsActive(), mbCollisionBeforeGlobal = mpBody->GetTestCollision();
-				mpBody->SetGravityActive(mbGlobalSpace == false && mbGravityBeforeGlobal);
-				mpBody->SetTestCollision(mbGlobalSpace == false && mbCollisionBeforeGlobal);
-				if (mbGlobalSpace)
-					mpBody->SetYaw(0);
-			}
-			if (mbGlobalSpace)
-			{
-				if (mpPosBone == NULL)
-					return;
-				cVector3f vPos = mpPosBone->GetWorldPosition() + cVector3f(0, mfPosBoneYOffset * mpEnt->mvScale.y, 0);
-				if (mbPosBoneIsFeet)
-					mpBody->SetFeetPosition(vPos);
-				else
-					mpBody->SetPosition(vPos);
-				return;
-			}
-			cMatrixf mtx = cMath::MatrixMul(cMath::MatrixRotateY(mpBody->GetYaw() + kPif), cMath::MatrixRotateX(-mpBody->GetPitch() * mpBody->GetEntityPitchAmount()));
-			if (cAgentCharMover *pMover = Find<cAgentCharMover>(eComp_CharMover); pMover && pMover->mfRoll != 0)
-				mtx = cMath::MatrixMul(mtx, cMath::MatrixRotateZ(-pMover->mfRoll));
-			mtx.SetTranslation(mpBody->GetFeetPosition());
-			cMatrixf mtxOffset = mtxMeshOffset;
-			mtxOffset.m[1][3] -= mfAlignY;
-			mpEnt->mpMesh->SetMatrix(cMath::MatrixMul(mtx, mtxOffset));
-		}
+		void Replay(OhplGs2Events *apEvents);
+		void PreUpdate(float afTimeStep);
+		void SetSensesActive(bool abX);
+		void ResetPlayerDetectionState() { ohpl_gs2_agent_reset_detection(this); }
+		void StepUp();
+		void AlignWithGround(float afTimeStep);
+		void SyncMesh();
 	};
 
 	std::unordered_map<cSomaLuxEntity *, std::unique_ptr<cAgent>> gmapAgents;
@@ -1638,32 +921,351 @@ namespace
 		return mbAtCenter ? pAgent->mpBody->GetPosition() : pAgent->mpBody->GetFeetPosition();
 	}
 
-	// cLuxPathfinder::UpdateMoving: node inside the enlarged body box, or no progress for 150 frames near it
-	bool cAgentPathfinder::Arrived(const cVector3f &avNode, bool abLast)
+	namespace gs2
+	{
+		cAgent *A(void *c) { return (cAgent *)c; }
+		void Out(float *o, const cVector3f &v)
+		{
+			o[0] = v.x;
+			o[1] = v.y;
+			o[2] = v.z;
+		}
+		cVector3f In(const float *p) { return cVector3f(p[0], p[1], p[2]); }
+		cSomaLuxPlayer *Player() { return cSomaLuxPlayer::Get(); }
+		cAgentCharMover *Mover(void *c) { return A(c)->Find<cAgentCharMover>(eComp_CharMover); }
+		cAgentPathfinder *Path(void *c) { return A(c)->Find<cAgentPathfinder>(eComp_Pathfinder); }
+		const tString *MoveAnim(void *c, int s)
+		{
+			cAgentCharMover *m = Mover(c);
+			return m ? (s == 0 ? &m->msIdleAnim : s == 1 ? &m->msWalkAnim : &m->msRunAnim) : NULL;
+		}
+
+		const OhplGs2Host &Host()
+		{
+			static const OhplGs2Host h = {
+				NULL,
+				[](void *c) { return A(c)->mpBody != NULL; },
+				[](void *c) { return A(c)->mpEnt->mpMap != NULL; },
+				[](void *c) { return A(c)->mpEnt->mpMesh != NULL; },
+				[](void *c, float *o) { Out(o, A(c)->mpEnt->GetPosition()); },
+				[](void *c) { return A(c)->mpEnt->mvScale.y; },
+				[](void *c) { return A(c)->mpEnt->mbGlobalSpaceAnim; },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetPosition()); },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetFeetPosition()); },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetSize()); },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetForward()); },
+				[](void *c) { return A(c)->mpBody->GetYaw(); },
+				[](void *c) { return A(c)->mpBody->GetPitch(); },
+				[](void *c) { return A(c)->mpBody->GetEntityPitchAmount(); },
+				[](void *c) { return A(c)->mpBody->GetMoveSpeed(eCharDir_Forward); },
+				[](void *c) { return A(c)->mpBody->IsOnGround(); },
+				[](void *c) { return A(c)->mpBody->GetTestCollision(); },
+				[](void *c) { return A(c)->mpBody->GravityIsActive(); },
+				[](void *c) { return A(c)->mpBody->GetMaxStepSize(); },
+				[](void *c, float y) { A(c)->mpBody->SetYaw(y); },
+				[](void *c, const float *p) { A(c)->mpBody->SetPosition(In(p)); },
+				[](void *c, const float *p) { A(c)->mpBody->SetFeetPosition(In(p)); },
+				[](void *c, bool b) { A(c)->mpBody->SetGravityActive(b); },
+				[](void *c, bool b) { A(c)->mpBody->SetTestCollision(b); },
+				[](void *c) { return A(c)->mpPosBone != NULL; },
+				[](void *c, float *o) { Out(o, A(c)->mpPosBone->GetWorldPosition()); },
+				[](void *c, const float *m) { cMatrixf mtx; memcpy(mtx.v, m, sizeof(float) * 16); A(c)->mpEnt->mpMesh->SetMatrix(mtx); },
+				[](void *) { return Player() && Player()->GetCharacterBody(); },
+				[](void *) { return Player() && Player()->IsDead(); },
+				[](void *) { return Player() ? Player()->GetVisibilityRangeMul() : 1.0f; },
+				[](void *) { return Player() ? Player()->GetVisibilityMaxRange() : -1.0f; },
+				[](void *, float *o) { iCharacterBody *b = PlayerBody(); Out(o, b ? b->GetPosition() : cVector3f(0)); },
+				[](void *, float *o) { iCharacterBody *b = PlayerBody(); Out(o, b ? b->GetFeetPosition() : cVector3f(0)); },
+				[](void *) { iCharacterBody *b = PlayerBody(); return b ? b->GetSize().y : 0.0f; },
+				[](void *c, const float *a, const float *b) { return SomaLineOfSight(In(a), In(b), A(c)->mpEnt); },
+				[](void *c) { return SomaEntityInPlayerLOS(A(c)->mpEnt, true); },
+				[](void *c, const float *a, const float *b) { return A(c)->FloorDist(In(a), In(b)); },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetLastPosition()); },
+				[](void *c, float *o) { Out(o, A(c)->mpBody->GetRight()); },
+				[](void *c, float dt, float *o) { Out(o, A(c)->mpBody->GetVelocity(dt)); },
+				[](void *c, float p) { A(c)->mpBody->AddPitch(p); },
+				[](void *c, float v) { A(c)->mpBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, v); },
+				[](void *c, float v) { A(c)->mpBody->SetMoveAcc(eCharDir_Forward, v); },
+				[](void *c, float v) { A(c)->mpBody->SetMoveDeacc(eCharDir_Forward, v); },
+				[](void *c) { A(c)->mpBody->Move(eCharDir_Forward, 1); },
+				[](void *c, const float *a, const float *b, float *d, float *n) {
+					cVector3f vNormal;
+					bool bHit = SomaRaycast(A(c)->mpEnt, In(a), In(b), *d, vNormal);
+					Out(n, vNormal);
+					return bHit;
+				},
+				[](void *c, const float *p, float d) -> size_t {
+					cAgent *a = A(c);
+					cVector3f vPos = In(p);
+					cBoundingVolume bv;
+					bv.SetLocalMinMax(vPos - d, vPos + d);
+					a->mvAvoidBodies.clear();
+					a->mpEnt->mpMap->GetWorld()->GetPhysicsWorld()->GetBodiesInBV(&bv, &a->mvAvoidBodies);
+					return a->mvAvoidBodies.size();
+				},
+				[](void *c, size_t i, OhplGs2AvoidBody *o) {
+					cAgent *a = A(c);
+					iPhysicsBody *pBody = a->mvAvoidBodies[i];
+					iCharacterBody *pPlayer = PlayerBody();
+					iPhysicsBody *pPlayerBody = pPlayer ? pPlayer->GetCurrentBody() : NULL;
+					o->mass = pBody->GetMass();
+					o->active = pBody->IsActive();
+					o->collide = pBody->GetCollide();
+					o->character = pBody->IsCharacter();
+					o->player = pBody == pPlayerBody;
+					o->own = pBody == a->mpBody->GetCurrentBody();
+					Out(o->center, pBody->GetBoundingVolume()->GetWorldCenter());
+					o->radius = pBody->GetBoundingVolume()->GetRadius();
+				},
+				[](void *c) { return A(c)->mpEnt->mlCurrentAnim; },
+				[](void *c, int s) { const tString *p = MoveAnim(c, s); return p && *p != ""; },
+				[](void *c, int s) { A(c)->mpEnt->PlayAnimation(*MoveAnim(c, s), 0.3f, true, ""); },
+				[](void *c, float v) {
+					cSomaLuxEntity *p = A(c)->mpEnt;
+					if (p->mpMesh && p->mlCurrentAnim >= 0)
+						if (cAnimationState *pAnim = p->mpMesh->GetAnimationState(p->mlCurrentAnim))
+							pAnim->SetSpeed(v);
+				},
+				[](void *c) {
+					cAgentCharMover *m = Mover(c);
+					cMeshEntity *pMesh = m->mpEntity->mpMesh;
+					int lIdx = m->mpEntity->PlayAnimation(m->msIdleAnim, 0.3f, true, "");
+					if (lIdx >= 0)
+						pMesh->GetAnimationState(lIdx)->SetRelativeTimePosition(cMath::RandRectf(0, 1));
+				},
+				[](void *c, int i, float *o) {
+					cAgentCharMover *m = Mover(c);
+					cAnimationState *pAnim = m->mpEntity->mpMesh->GetAnimationStateFromName(m->msIdleExtra + cString::ToString(i));
+					if (pAnim)
+						*o = pAnim->GetLength();
+					return pAnim != NULL;
+				},
+				[](void *c, int i) {
+					cAgentCharMover *m = Mover(c);
+					m->mpEntity->PlayAnimation(m->msIdleExtra + cString::ToString(i), 0.3f, false, "");
+				},
+				[](void *c, float *o) { Path(c) ? Out(o, Path(c)->Feet()) : Out(o, cVector3f(0)); },
+				[](void *c) -> size_t { return Path(c) ? Path(c)->mvPath.size() : 0; },
+				[](void *c, size_t i, float *o) { Out(o, Path(c) && i < Path(c)->mvPath.size() ? Path(c)->mvPath[i] : cVector3f(0)); },
+				[](void *c, const float *g) {
+					cAgentPathfinder *p = Path(c);
+					if (p == NULL)
+						return;
+					cVector3f vGoal = In(g);
+					if (p->BuildPath(vGoal, p->mvPath) == false)
+						p->mvPath.assign(1, vGoal);
+				},
+				[](void *c) -> size_t { return Path(c) ? Path(c)->mvTrack.size() : 0; },
+				[](void *c, size_t i, OhplGs2TrackNodeInfo *o) {
+					const cAgentTrackNode &n = Path(c)->mvTrack[i];
+					*o = {n.mfMinWait, n.mfMaxWait, n.msAnim != "", n.mbLoopAnim};
+				},
+				[](void *c, size_t i, float *o) {
+					cAgentPathfinder *p = Path(c);
+					cNodeData *pNodes = p->Nodes();
+					cAINode *pNode = pNodes ? pNodes->mpContainer->GetNodeFromName(p->mvTrack[i].msNode) : NULL;
+					if (pNode == NULL)
+					{
+						Warning("SOMA agent '%s': track node '%s' not found\n", p->mpEntity->msName.c_str(), p->mvTrack[i].msNode.c_str());
+						return false;
+					}
+					Out(o, pNode->GetPosition());
+					return true;
+				},
+				[](void *c) -> size_t { return A(c)->mpEnt->mpMap ? A(c)->mpEnt->mpMap->GetEntities().size() : 0; },
+				[](void *c, size_t i, const float *origin, const float *dir, float fMax, float *o) {
+					cSomaLuxEntity *pDoor = A(c)->mpEnt->mpMap->GetEntities()[i];
+					float fDist;
+					if (pDoor->mbIsDoor && pDoor->mbIsClosedDoor && pDoor->mbActive && SomaRayHitsEntity(pDoor, In(origin), In(dir), fMax, fDist))
+					{
+						Out(o, pDoor->GetPosition());
+						return true;
+					}
+					return false;
+				},
+			};
+			return h;
+		}
+
+		struct cEvents
+		{
+			OhplGs2Events *mp = ohpl_gs2_events_new();
+			~cEvents() { ohpl_gs2_events_free(mp); }
+			operator OhplGs2Events *() { return mp; }
+		};
+
+		// the table's ctx is the agent; copy it per call so one static table serves all agents
+		struct cCall
+		{
+			OhplGs2Host mHost;
+			cCall(cAgent *apAgent) : mHost(Host()) { mHost.ctx = apAgent; }
+			operator const OhplGs2Host *() { return &mHost; }
+		};
+	}
+
+	void cAgent::Replay(OhplGs2Events *apEvents)
+	{
+		for (size_t i = 0; i < ohpl_gs2_events_len(apEvents); ++i)
+		{
+			OhplGs2Event e = ohpl_gs2_events_data(apEvents)[i];
+			cAgentPathfinder *pPF = Find<cAgentPathfinder>(eComp_Pathfinder);
+			cAgentCharMover *pMover = Find<cAgentCharMover>(eComp_CharMover);
+			switch (e.kind)
+			{
+			case eOhplGs2Ev_Message:
+				SomaAgentSendMessage(mpEnt, e.a, cVector3f(e.v[0], e.v[1], e.v[2]), e.b);
+				break;
+			case eOhplGs2Ev_SetInactive:
+				mpEnt->SetActive(false);
+				break;
+			case eOhplGs2Ev_AutoDisableCallback:
+			{
+				cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+				if (msAutoDisableCallback != "" && pMap && pMap->GetScript())
+					cSomaScriptRuntime::Get()->Call(pMap->GetScript(), "void " + msAutoDisableCallback + "(const tString &in)",
+													[this](asIScriptContext *c) { c->SetArgObject(0, &mpEnt->msName); });
+				break;
+			}
+			case eOhplGs2Ev_DoorMessage:
+			{
+				const std::vector<cSomaLuxEntity *> &vEnts = mpEnt->mpMap->GetEntities();
+				if (e.a >= 0 && (size_t)e.a < vEnts.size())
+					memcpy(mMessage.mBlock + 44, &vEnts[e.a]->mID, sizeof(cSomaID));
+				SomaAgentSendMessage(mpEnt, 18, cVector3f(e.v[0], e.v[1], e.v[2]));
+				break;
+			}
+			case eOhplGs2Ev_TurnedCallback:
+				if (pMover && pMover->msTurnedCallback != "")
+					SomaMapScriptCall("void " + pMover->msTurnedCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEnt->msName); });
+				break;
+			case eOhplGs2Ev_EndOfPathCallback:
+				if (pPF && pPF->msEndOfPathCallback != "")
+				{
+					tString sFunc = pPF->msEndOfPathCallback;
+					pPF->msEndOfPathCallback = "";
+					bool bOk = e.a != 0;
+					SomaMapScriptCall("void " + sFunc + "(const tString &in, bool)", [&](asIScriptContext *c) {
+						c->SetArgObject(0, &mpEnt->msName);
+						c->SetArgByte(1, bOk);
+					});
+				}
+				break;
+			case eOhplGs2Ev_ResultCallback:
+				if (pPF)
+					pPF->RunResultCallback(e.a != 0);
+				break;
+			case eOhplGs2Ev_TrackCallback:
+				if (pPF && pPF->msTrackCallback != "")
+					SomaMapScriptCall("void " + pPF->msTrackCallback + "(const tString &in)", [&](asIScriptContext *c) { c->SetArgObject(0, &mpEnt->msName); });
+				break;
+			case eOhplGs2Ev_TrackPlayAnim:
+				if (pPF && pMover && e.a >= 0 && (size_t)e.a < pPF->mvTrack.size())
+				{
+					const cAgentTrackNode &node = pPF->mvTrack[e.a];
+					pMover->PlayAnimation(node.msAnim, 0.3f, node.mbLoopAnim, "");
+				}
+				break;
+			}
+		}
+	}
+
+	void cAgent::PreUpdate(float afTimeStep)
+	{
+		gs2::cEvents ev;
+		ohpl_gs2_agent_pre_update(this, gs2::cCall(this), ev, afTimeStep);
+		Replay(ev);
+	}
+
+	void cAgent::SetSensesActive(bool abX)
+	{
+		gs2::cEvents ev;
+		ohpl_gs2_agent_set_senses_active(this, gs2::cCall(this), ev, abX);
+		Replay(ev);
+	}
+
+	void cAgent::StepUp()
+	{
+		gs2::cEvents ev;
+		ohpl_gs2_agent_step_up(this, gs2::cCall(this), ev);
+	}
+
+	void cAgent::AlignWithGround(float afTimeStep)
+	{
+		gs2::cEvents ev;
+		ohpl_gs2_agent_align(this, gs2::cCall(this), ev, afTimeStep);
+	}
+
+	void cAgent::SyncMesh()
+	{
+		gs2::cEvents ev;
+		cAgentCharMover *pMover = Find<cAgentCharMover>(eComp_CharMover);
+		ohpl_gs2_agent_sync_mesh(this, gs2::cCall(this), ev, mtxMeshOffset.v, pMover ? pMover->mfRoll : 0.0f);
+	}
+
+	void cAgentCharMover::Update(float afTimeStep)
 	{
 		cAgent *pAgent = Agent(mpEntity);
-		if (pAgent == NULL || pAgent->mpBody == NULL)
-		{
-			cVector3f vDelta = avNode - Feet();
-			float fHeight = std::fabs(vDelta.y);
-			vDelta.y = 0;
-			return vDelta.Length() < (abLast ? (mbExact ? 0.15f : 0.4f) : 0.6f) && fHeight < 2.0f;
-		}
-		cVector3f vSize = pAgent->mpBody->GetSize(), vPos = pAgent->mpBody->GetPosition();
-		float fDistSqr = cMath::Vector3DistSqr(vPos, avNode);
-		mvDistHistory.push_back(fDistSqr);
-		if (mvDistHistory.size() > 150)
-		{
-			mvDistHistory.pop_front();
-			float fGrowth = 0;
-			for (float f : mvDistHistory)
-				fGrowth += f - mvDistHistory.front();
-			if (fGrowth > 0 && fDistSqr < vSize.y * 1.5f)
-				return true;
-		}
-		cVector3f vD = avNode - vPos + cVector3f(0, 0.1f * vSize.y, 0);
-		return std::fabs(vD.x) <= vSize.x * 0.65f && std::fabs(vD.y) <= vSize.y * 0.6f + 0.225f && std::fabs(vD.z) <= vSize.z * 0.65f;
+		if (pAgent == NULL)
+			return;
+		gs2::cEvents ev;
+		ohpl_gs2_cm_update(this, Current(), mvWallSamples.data(), mvWallSamples.size(), afTimeStep, gs2::cCall(pAgent), ev);
+		pAgent->Replay(ev);
 	}
+
+	void cAgentPathfinder::Update(float afTimeStep)
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent == NULL)
+			return;
+		gs2::cEvents ev;
+		ohpl_gs2_pf_update(this, Mover(), afTimeStep, gs2::cCall(pAgent), ev);
+		pAgent->Replay(ev);
+	}
+
+	void cAgentPathfinder::OnMessage(int alMessage)
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent == NULL)
+			return;
+		gs2::cEvents ev;
+		ohpl_gs2_pf_on_message(this, Mover(), alMessage, gs2::cCall(pAgent), ev);
+		pAgent->Replay(ev);
+	}
+
+	void cAgentPathfinder::SendGoal()
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent)
+			ohpl_gs2_pf_send_goal(this, Mover(), gs2::cCall(pAgent));
+	}
+
+	void cAgentPathfinder::MoveTo(const cVector3f &avGoal, bool abExact, const tString &asCallback, bool abInMap)
+	{
+		msResultCallback = asCallback;
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent)
+			ohpl_gs2_pf_move_to(this, Mover(), gs2::cCall(pAgent), avGoal.v, abExact, abInMap);
+	}
+
+	void cAgentPathfinder::Stop() { ohpl_gs2_pf_stop(this, Mover()); }
+
+	void cAgentPathfinder::StartTrackNode()
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent)
+			ohpl_gs2_pf_start_track_node(this, Mover(), gs2::cCall(pAgent));
+	}
+
+	void cAgentPathfinder::GoToNextTrackNode()
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent == NULL)
+			return;
+		gs2::cEvents ev;
+		ohpl_gs2_pf_go_to_next_track_node(this, Mover(), gs2::cCall(pAgent), ev);
+		pAgent->Replay(ev);
+	}
+
 
 	cAgent *AgentOrNew(E *apEnt)
 	{
@@ -1729,7 +1331,7 @@ namespace
 	// cLuxProximitySensor::OnVariableUpdate 0x9c9d00
 	struct cAgentProximitySensor : cAgentComponent
 	{
-		struct cState { bool mbExists = false, mbActive = false, mbInside = false, mbLOS = false, mbDetectedCheck = false; float mfEnter = 0, mfLeave = 0; };
+		typedef OhplGs2ProxState cState;
 		std::vector<cState> mvStates;
 		float mfTimer = 0;
 		cAgentProximitySensor(E *p) : cAgentComponent(p, eComp_ProximitySensor) {}
@@ -1742,31 +1344,18 @@ namespace
 			return NULL;
 		}
 
-		void Update(float afTimeStep) override
-		{
-			mfTimer += afTimeStep;
-			iCharacterBody *pPlayer = PlayerBody();
-			if (mfTimer < 0.15f || pPlayer == NULL)
-				return;
-			mfTimer = 0;
-			cAgent *pAgent = Agent(mpEntity);
-			bool bAI = pAgent && pAgent->mpBody;
-			auto sees = [&] { return SomaLineOfSight(pAgent->Eye(), pPlayer->GetPosition(), mpEntity); };
-			for (size_t i = 0; i < mvStates.size(); ++i)
-			{
-				cState &s = mvStates[i];
-				if (s.mbExists == false || s.mbActive == false)
-					continue;
-				float fDist = cMath::Vector3Dist(AgentPos(mpEntity), pPlayer->GetPosition());
-				bool bQualifies = bAI == false || ((s.mbDetectedCheck == false || pAgent->mbDetected) && (s.mbLOS == false || sees()));
-				bool bInside = s.mbInside ? fDist <= s.mfLeave && bQualifies : fDist <= s.mfEnter && bQualifies;
-				if (bInside == s.mbInside)
-					continue;
-				s.mbInside = bInside;
-				SomaAgentSendMessage(mpEntity, bInside ? 0x15 : 0x16, 0, (int)i);
-			}
-		}
+		void Update(float afTimeStep) override;
 	};
+
+	void cAgentProximitySensor::Update(float afTimeStep)
+	{
+		cAgent *pAgent = Agent(mpEntity);
+		if (pAgent == NULL)
+			return;
+		gs2::cEvents ev;
+		ohpl_gs2_proximity_update(&mfTimer, mvStates.data(), mvStates.size(), pAgent, pAgent->mpBody != NULL, afTimeStep, gs2::cCall(pAgent), ev);
+		pAgent->Replay(ev);
+	}
 
 	// cLuxAttackDamage::OnVariableUpdate / ShapeDamage, cLuxAttackShapeCallback::OnAABBResult 0xb17d90
 	// ponytail: player only, sphere vs body capsule; props/agents are not hit
@@ -2093,14 +1682,14 @@ tString SomaAgentDebug(cSomaLuxEntity *apEnt)
 		return "";
 	tString s;
 	if (cAgentStateMachine *pSM = pAgent->Find<cAgentStateMachine>(eComp_StateMachine))
-		s += "state=" + pSM->Name(pSM->mlCur) + " prev=" + pSM->Name(pSM->mlPrev) + " next=" + pSM->Name(pSM->mlNext) + " timers=" + cString::ToString((int)pSM->mvTimers[0].size());
+		s += "state=" + pSM->Name(pSM->mlCur) + " prev=" + pSM->Name(pSM->mlPrev) + " next=" + pSM->Name(pSM->mlNext) + " timers=" + cString::ToString(pSM->TimerCount(false));
 	if (cAgentPathfinder *pPF = pAgent->Find<cAgentPathfinder>(eComp_Pathfinder))
 		s += " pf_moving=" + cString::ToString(pPF->mbMoving) + " path=" + cString::ToString((int)pPF->mlPathIdx) + "/" + cString::ToString((int)pPF->mvPath.size()) +
-			 " goal=" + pPF->mvGoal.ToString() + " track=" + cString::ToString(pPF->mlTrackIdx) + "/" + cString::ToString((int)pPF->mvTrack.size()) +
+			 " goal=" + cVector3f(pPF->mvGoal[0], pPF->mvGoal[1], pPF->mvGoal[2]).ToString() + " track=" + cString::ToString(pPF->mlTrackIdx) + "/" + cString::ToString((int)pPF->mvTrack.size()) +
 			 " track_active=" + cString::ToString(pPF->mbTrackActive) + " paused=" + cString::ToString(pPF->mbTrackPaused) + " at_node=" + cString::ToString(pPF->mbAtTrackNode) +
 			 " wait=" + cString::ToString(pPF->mfTrackWait);
 	if (cAgentCharMover *pM = pAgent->Find<cAgentCharMover>(eComp_CharMover))
-		s += " cm_moving=" + cString::ToString(pM->mbMoving) + " cm_goal=" + pM->mvGoal.ToString() + " speed_state=" + cString::ToString(pM->mlSpeedState) +
+		s += " cm_moving=" + cString::ToString(pM->mbMoving) + " cm_goal=" + cVector3f(pM->mvGoal[0], pM->mvGoal[1], pM->mvGoal[2]).ToString() + " speed_state=" + cString::ToString(pM->mlSpeedState) +
 			 " fwd=" + cString::ToString(pM->ForwardSpeed()) + " stuck=" + cString::ToString(pM->mfStuck) + " turning=" + cString::ToString(pM->mbTurning) +
 			 " anim=" + (apEnt->mpMesh && apEnt->mlCurrentAnim >= 0 ? apEnt->mpMesh->GetAnimationState(apEnt->mlCurrentAnim)->GetName() : tString("")) +
 			 " idle_extra=" + cString::ToString(pM->mlIdleExtraCount) + "/" + cString::ToString(pM->mfIdleExtraWait) + " wall=" + cString::ToString(pM->mbWallAvoid) + "/" +
@@ -2113,9 +1702,7 @@ void SomaUpdateAgent(cSomaLuxEntity *apEnt, float afTimeStep)
 	cAgent *pAgent = Agent(apEnt);
 	if (pAgent == NULL || apEnt->mbActive == false)
 		return;
-	pAgent->UpdateSenses(afTimeStep);
-	pAgent->CheckForDoors(afTimeStep);
-	pAgent->UpdateAutoDisable(afTimeStep);
+	pAgent->PreUpdate(afTimeStep);
 	if (apEnt->mbActive == false)
 		return;
 	SomaUpdateComponents(apEnt, afTimeStep);
@@ -2132,11 +1719,10 @@ void SomaBroadcastSoundHeard(const cVector3f &avPos, float afRadius, int alPrio)
 	{
 		cAgent *pAgent = it.second.get();
 		cAgentSoundListener *pListener = pAgent->Find<cAgentSoundListener>(eComp_SoundListener);
-		if (pListener == NULL || pListener->mbActive == false || pAgent->mpEnt->mbActive == false || alPrio < pListener->mlMinPrio)
+		if (pListener == NULL)
 			continue;
-		float fRadius = cMath::Clamp(afRadius * pListener->mfRadiusMul, pListener->mfMinRadius, pListener->mfMaxRadius);
-		float fDist = cMath::Vector3Dist(AgentPos(pAgent->mpEnt), avPos);
-		if (fDist < fRadius && fDist < pListener->mfHearRadius + fRadius && fDist >= pListener->mfIgnoreRadius)
+		cVector3f vAgent = AgentPos(pAgent->mpEnt);
+		if (ohpl_gs2_sound_heard(pListener, pListener->mbActive, pAgent->mpEnt->mbActive, vAgent.v, avPos.v, afRadius, alPrio))
 			SomaAgentSendMessage(pAgent->mpEnt, eMsg_SoundHeard, avPos, alPrio);
 	}
 }
@@ -2247,12 +1833,12 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, A, "float GetSightRange()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRange : 0.0f; });
 	SOMA_METHOD(e, A, "void SetSightRangeMul(float afX)", +[](E *p, float x) { if (cAgent *a = Agent(p)) a->mfSightRangeMul = x; });
 	SOMA_METHOD(e, A, "float GetSightRangeMul()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfSightRangeMul : 1.0f; });
-	SOMA_METHOD(e, A, "const cVector3f& GetLastKnownPlayerPos()", +[](E *p) -> const cVector3f & { static cVector3f z(0); cAgent *a = Agent(p); return a ? a->mvLastKnownPlayerPos : z; });
-	SOMA_METHOD(e, A, "float GetDistFromLastKnownToActualPlayerPos()", +[](E *p) { cAgent *a = Agent(p); return a ? cMath::Vector3Dist(a->mvLastKnownPlayerPos, PlayerFeet()) : 0.0f; });
+	SOMA_METHOD(e, A, "const cVector3f& GetLastKnownPlayerPos()", +[](E *p) -> const cVector3f & { static cVector3f v; cAgent *a = Agent(p); v = a ? cVector3f(a->mvLastKnownPlayerPos.x, a->mvLastKnownPlayerPos.y, a->mvLastKnownPlayerPos.z) : cVector3f(0); return v; });
+	SOMA_METHOD(e, A, "float GetDistFromLastKnownToActualPlayerPos()", +[](E *p) { cAgent *a = Agent(p); return a ? cMath::Vector3Dist(cVector3f(a->mvLastKnownPlayerPos.x, a->mvLastKnownPlayerPos.y, a->mvLastKnownPlayerPos.z), PlayerFeet()) : 0.0f; });
 	SOMA_METHOD(e, A, "void RevealPlayerPos()", +[](E *p) {
 		if (cAgent *a = Agent(p))
 		{
-			a->mvLastKnownPlayerPos = PlayerFeet();
+			a->mvLastKnownPlayerPos = {PlayerFeet().x, PlayerFeet().y, PlayerFeet().z};
 			a->mbSeen = a->mbDetected = true;
 			a->mfDetectCount = cMath::Max(a->mfDetectCount, a->mfDetectMinTime);
 		}
@@ -2319,7 +1905,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, A, "float GetMaxCheckDoorDistance()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfMaxDoorDist : 0.0f; });
 	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRay(bool abX)", +[](E *p, bool b) { if (cAgent *a = Agent(p)) { a->mbAlignGround = b; a->mlAlignCount = a->mlAlignIdx = 0; } });
 	SOMA_METHOD(e, A, "bool GetAlignEntityWithGroundRay()", +[](E *p) { cAgent *a = Agent(p); return a && a->mbAlignGround; });
-	SOMA_METHOD(e, A, "const cVector3f& GetGroundAlignPosition()", +[](E *p) -> const cVector3f & { static cVector3f vZero = 0; cAgent *a = Agent(p); return a ? a->mvGroundAlignPos : vZero; });
+	SOMA_METHOD(e, A, "const cVector3f& GetGroundAlignPosition()", +[](E *p) -> const cVector3f & { static cVector3f v; cAgent *a = Agent(p); v = a ? cVector3f(a->mvGroundAlignPos.x, a->mvGroundAlignPos.y, a->mvGroundAlignPos.z) : cVector3f(0); return v; });
 	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundRelativeRayStart(float afX)", +[](E *p, float f) { if (cAgent *a = Agent(p)) a->mfAlignRayStart = f; });
 	SOMA_METHOD(e, A, "float GetAlignEntityWithGroundRelativeRayStart()", +[](E *p) { cAgent *a = Agent(p); return a ? a->mfAlignRayStart : 0.5f; });
 	SOMA_METHOD(e, A, "void SetAlignEntityWithGroundMaxRayDistance(float afX)", +[](E *p, float f) { if (cAgent *a = Agent(p)) a->mfAlignRayMax = f; });
@@ -2620,7 +2206,7 @@ void SomaRegisterAgentNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "float GetMoveSpeed()", +[](CM *m) { return m->mpBody ? m->mpBody->GetMoveSpeed(eCharDir_Forward) : 0.0f; });
 	SOMA_METHOD(e, T, "float GetWantedSpeedAmount()", +[](CM *m) { return m->mbMoving ? 1.0f : 0.0f; });
 	SOMA_METHOD(e, T, "float GetStuckCounter()", +[](CM *m) { return m->mfStuck; });
-	SOMA_METHOD(e, T, "float GetMaxStuckCounter()", +[](CM *) { return CM::kMaxStuck; });
+	SOMA_METHOD(e, T, "float GetMaxStuckCounter()", +[](CM *) { return 2.0f; });
 	SOMA_METHOD(e, T, "void ResetStuckCounter()", +[](CM *m) { m->mfStuck = 0; });
 	SOMA_METHOD(e, T, "void SetMaxForwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxForward = x; });
 	SOMA_METHOD(e, T, "void SetMaxBackwardSpeed(float afX)", +[](CM *m, float x) { m->mfMaxBackward = x; });
