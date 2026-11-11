@@ -19,6 +19,8 @@
 
 #include "LuxEnemy.h"
 
+#include <cstring>
+
 #include "LuxEnemyMover.h"
 #include "LuxEnemyPathfinder.h"
 
@@ -29,6 +31,7 @@
 #include "LuxPlayerHelpers.h"
 #include "LuxInteractConnections.h"
 #include "LuxMusicHandler.h"
+#include "LuxGlobalDataHandler.h"
 #include "LuxEffectRenderer.h"
 #include "LuxMoveState_Normal.h"
 #include "LuxDebugHandler.h"
@@ -504,6 +507,57 @@ iLuxEnemy::iLuxEnemy(const tString &asName, int alID, cLuxMap *apMap, eLuxEnemyT
 	mfCrouchVisibleRangeMul = 0.5f;
 
 	m_mtxCharMeshOffset = cMatrixf::Identity;
+	mpGa3Queue = ohpl_ga3_queue_new();
+	memset(&mGa3Ctx, 0, sizeof(mGa3Ctx));
+	mGa3Ctx.queue = mpGa3Queue;
+	mGa3Ctx.cur = reinterpret_cast<int*>(&mCurrentState);
+	mGa3Ctx.next = reinterpret_cast<int*>(&mNextState);
+	mGa3Ctx.prev = reinterpret_cast<int*>(&mPreviousState);
+	mGa3Ctx.disabled = &mbDisabled;
+	mGa3Ctx.lookCount = &mfLookForPlayerCount;
+	mGa3Ctx.losCount = &mlPlayerInLOSCount;
+	mGa3Ctx.canSee = &mbCanSeePlayer;
+	mGa3Ctx.detected = &mbPlayerDetected;
+	mGa3Ctx.inRange = &mbPlayerInRange;
+	mGa3Ctx.checkDoorCount = &mfCheckAtDoorCount;
+	mGa3Ctx.stuckAtDoor = &mbStuckAtDoor;
+	mGa3Ctx.stuckDoorId = &mlStuckDoorID;
+	mGa3Ctx.lastPosCount = &mfLastPlayerPosCount;
+	mGa3Ctx.lastKnown = &mvLastKnownPlayerPos.x;
+	mGa3Ctx.fovMul = &mfFOVMul;
+	mGa3Ctx.sightRange = &mfSightRange;
+	mGa3Ctx.health = &mfHealth;
+	mGa3Ctx.blind = &mbBlind;
+	mGa3Ctx.darknessSightRange = &mfDarknessSightRange;
+	mGa3Ctx.inDarknessLightLevel = &mfPlayerInDarknessLightLevel;
+	mGa3Ctx.crouchVisibleRangeMul = &mfCrouchVisibleRangeMul;
+	mGa3Ctx.skipVisibilityHandicaps = &mbSkipVisibilityRangeHandicaps;
+	mGa3Ctx.fov = &mfFOV;
+	mGa3Ctx.fovXMul = &mfFOVXMul;
+	mGa3Ctx.activationDistance = &mfActivationDistance;
+	mGa3Ctx.maxRegenHealth = &mfMaxRegenHealth;
+	mGa3Ctx.regenHealthSpeed = &mfRegenHealthSpeed;
+	mGa3Ctx.damageCount = &mfDamageCount;
+	mGa3Ctx.tempPos = &mvTempPos.x;
+	mGa3Ctx.tempVal = &mfTempVal;
+	mGa3Ctx.tempValL = &mlTempVal;
+	mGa3Ctx.attackHitCounter = &mlAttackHitCounter;
+	mGa3Ctx.forwardSpeed = &mfForwardSpeed;
+	mGa3Ctx.backwardSpeed = &mfBackwardSpeed;
+	mGa3Ctx.forwardAcc = &mfForwardAcc;
+	mGa3Ctx.forwardDeacc = &mfForwardDeacc;
+	mGa3Ctx.defForwardSpeed = &mfDefaultForwardSpeed;
+	mGa3Ctx.defBackwardSpeed = &mfDefaultBackwardSpeed;
+	mGa3Ctx.defForwardAcc = &mfDefaultForwardAcc;
+	mGa3Ctx.defForwardDeacc = &mfDefaultForwardDeacc;
+	mGa3Ctx.pose = reinterpret_cast<int*>(&mCurrentPose);
+	mGa3Ctx.startPosition = &mvStartPosition.x;
+	mGa3Ctx.hearVolume = &mfHearVolume;
+	mGa3Ctx.playerSearchTime = &mfPlayerSearchTime;
+	mGa3Ctx.normalAttackDistance = &mfNormalAttackDistance;
+	mGa3Ctx.curPatrol = &mlCurrentPatrolNode;
+	mGa3Ctx.isSeenByPlayer = &mbIsSeenByPlayer;
+	mGa3Ctx.autoRemoveAtPathEnd = &mbAutoRemoveAtPathEnd;
 
 	mfCheckGroundRayCount =0;
 	mlMaxGroundCheckDists = 3;
@@ -573,6 +627,7 @@ iLuxEnemy::~iLuxEnemy()
 
 	////////////////////
 	// Destroy Helpers
+	ohpl_ga3_queue_free(mpGa3Queue);
 	hplDelete(mpPathfinder);
 	hplDelete(mpMover);
 }
@@ -591,6 +646,10 @@ void iLuxEnemy::SetupAfterLoad(cWorld *apWorld)
 	// Create helpers
 	mpMover = hplNew(cLuxEnemyMover, (this,mpCharBody));
 	mpPathfinder = hplNew(cLuxEnemyPathfinder, (this,mpMover));
+	mGa3Ctx.mover = &mpMover->mS;
+	mGa3Ctx.pfMoving = &mpPathfinder->mbMoving;
+	mGa3Ctx.pfGoal = &mpPathfinder->mvMoveGoalPos.x;
+	mGa3Ctx.pfWin = &mpPathfinder->mWin;
 	
 	///////////////////////
 	// Setup implemented 
@@ -857,31 +916,8 @@ void iLuxEnemy::ChangeState(eLuxEnemyState aState)
 
 void iLuxEnemy::SendMessage(eLuxEnemyMessage aType, float afTime, bool abLocalScope, const cVector3f& avX,float afX, int alX)
 {
-	if(mbDisabled) return;
-	if(	TriggersDisabled() && 
-		aType > eLuxEnemyMessage_EndOfPath && 
-		aType != eLuxEnemyMessage_PlayerInRange && 
-		aType != eLuxEnemyMessage_PlayerOutOfRange
-		) 
-	{
-		return;
-	}
-
-	if(aType == eLuxEnemyMessage_PlayerInRange)
-	{
-		gpBase->mpProgressLogHandler->AddLog(eLuxProgressLogLevel_Low, "Enemy '"+msName+"'  is in range");
-	}
-
-	cLuxStateMessage message;
-	message.mfCount = afTime;
-	message.mfTime = afTime;
-	message.mState = abLocalScope ? mCurrentState : eLuxEnemyState_LastEnum;
-	message.mType = aType;
-	message.mvCustomValue = avX;
-	message.mfCustomValue = afX;
-	message.mlCustomValue = alX;
-
-	mlstMessages.push_back(message);
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_send_message(&mGa3Ctx, &host, aType, afTime, abLocalScope, &avX.x, afX, alX);
 }
 
 //-----------------------------------------------------------------------
@@ -899,8 +935,19 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 							bool abOverideMoveState,
 							bool abUseMoveAnimWhenCurrentIsOver)
 {
+	if(PlayAnimImpl(asName, abLoop, afFadeTime, abDependsOnSpeed, afSpeedMul, abSyncWithPrevFrame, abUseMoveAnimWhenCurrentIsOver))
+		mpMover->SetOverideMoveState(abOverideMoveState);
+}
+
+//-----------------------------------------------------------------------
+
+bool iLuxEnemy::PlayAnimImpl(	const tString &asName, bool abLoop, float afFadeTime,
+								bool abDependsOnSpeed, float afSpeedMul,
+								bool abSyncWithPrevFrame,
+								bool abUseMoveAnimWhenCurrentIsOver)
+{
 	//if not using animations, then return.
-	if(mbUseAnimations==false) return;
+	if(mbUseAnimations==false) return false;
 
 	//Check if the animation is already playing.
 	if(	mpCurrentAnimation != NULL && 
@@ -908,7 +955,7 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 		mpCurrentAnimation->IsActive() &&
 		mpCurrentAnimation->IsOver()== false)
 	{
-		return;
+		return false;
 	}
 
 	//////////////////////////
@@ -917,7 +964,7 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 	if(pNewAnim==NULL)
 	{
 		Warning("Animation '%s' does not exist!\n",asName.c_str());
-		return;
+		return false;
 	}
 
 	//////////////////////////
@@ -954,21 +1001,25 @@ void iLuxEnemy::PlayAnim(	const tString &asName, bool abLoop, float afFadeTime,
 	mfAnimationSpeedMul = afSpeedMul;
 	mbUseMoveAnimWhenCurrentIsOver = abUseMoveAnimWhenCurrentIsOver;
 
-	mpMover->SetOverideMoveState(abOverideMoveState);
+	return true;
 }
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
+bool iLuxEnemy::FadeOutCurrentAnimImpl(float afFadeTime)
 {
-	if(mpCurrentAnimation==NULL) return;
-	if(mpCurrentAnimation->IsLooping()) return;
+	if(mpCurrentAnimation==NULL) return false;
+	if(mpCurrentAnimation->IsLooping()) return false;
 
 	mpCurrentAnimation->FadeOut(afFadeTime);
-
 	mpCurrentAnimation = NULL;
 
-	if(mbUseMoveAnimWhenCurrentIsOver) mpMover->UseMoveStateAnimations();
+	return mbUseMoveAnimWhenCurrentIsOver;
+}
+
+void iLuxEnemy::FadeOutCurrentAnim(float afFadeTime)
+{
+	if(FadeOutCurrentAnimImpl(afFadeTime)) mpMover->UseMoveStateAnimations();
 }
 
 //-----------------------------------------------------------------------
@@ -1116,19 +1167,12 @@ cLuxEnemyPatrolNode* iLuxEnemy::GetCurrentPatrolNode()
 
 bool iLuxEnemy::IsAtLastPatrolNode()
 {
-	return mlCurrentPatrolNode >= (int)mvPatrolNodes.size()-1;
+	return ohpl_ga3_patrol_is_at_last(mlCurrentPatrolNode, (int)mvPatrolNodes.size());
 }
 
 void iLuxEnemy::IncCurrentPatrolNode(bool abLoopIfAtEnd)
 {
-	mlCurrentPatrolNode++;
-	if(mlCurrentPatrolNode >= (int)mvPatrolNodes.size())
-	{
-		if(abLoopIfAtEnd)
-			mlCurrentPatrolNode =0;
-		else
-			mlCurrentPatrolNode = (int)mvPatrolNodes.size()-1;
-	}
+	ohpl_ga3_patrol_inc(&mlCurrentPatrolNode, (int)mvPatrolNodes.size(), abLoopIfAtEnd);
 }
 
 //-----------------------------------------------------------------------
@@ -1240,59 +1284,11 @@ bool iLuxEnemy::StateEvent(int alState, eLuxEnemyStateEvent aEvent, cLuxStateMes
 
 void iLuxEnemy::UpdateStateMachine(float afTimeStep)
 {
-	//////////////////
-	// Update
-	CheckStateChange();
-	StateEvent(mCurrentState, eLuxEnemyStateEvent_Update, NULL);
-	CheckStateChange();
-
-	//////////////////
-	// Check messages
-	for(tLuxStateMessageListIt it = mlstMessages.begin(); it != mlstMessages.end(); )
-	{
-		cLuxStateMessage& message = *it;
-		
-		////////////////////////////
-		//Check if the scope is right else remove
-		if(message.mState != eLuxEnemyState_LastEnum && message.mState != mCurrentState)
-		{
-			it = mlstMessages.erase(it);
-			continue;
-		}
-		
-		////////////////////////////
-		//Check if message is to be sent
-		message.mfCount -= afTimeStep;
-		if(message.mfCount <= 0)
-		{
-			StateEvent(mCurrentState, eLuxEnemyStateEvent_Message, &message);
-			it = mlstMessages.erase(it);
-			continue;
-		}
-
-		////////////////////////////
-		//Inc iterator
-		++it;
-	}
-
-	CheckStateChange();
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_state_machine(&mGa3Ctx, &host, afTimeStep, Ga3RustStateMachine() ? NULL : &iLuxEnemy::Ga3StateCb, this);
 }
 
 //-----------------------------------------------------------------------
-
-void iLuxEnemy::CheckStateChange()
-{
-	if(mNextState != mCurrentState)
-	{
-		if(mCurrentState != eLuxEnemyState_LastEnum)
-			StateEvent(mCurrentState, eLuxEnemyStateEvent_Leave, NULL);
-		
-		mPreviousState = mCurrentState;
-		mCurrentState = mNextState;
-		StateEvent(mCurrentState, eLuxEnemyStateEvent_Enter, NULL);
-	}
-
-}
 
 //-----------------------------------------------------------------------
 
@@ -1375,272 +1371,50 @@ void iLuxEnemy::UpdateAnimation(float afTimeStep)
 
 void iLuxEnemy::UpdateCharBody(float afTimeStep)
 {
-	float fMul = mpMover->CalculateSpeedMul(afTimeStep);
-
-	mpCharBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, mfForwardSpeed*fMul);
-	mpCharBody->SetMaxNegativeMoveSpeed(eCharDir_Forward, mfBackwardSpeed*fMul);
-	mpCharBody->SetMoveAcc(eCharDir_Forward,mfForwardAcc);
-	mpCharBody->SetMoveDeacc(eCharDir_Forward,mfForwardDeacc);
+	OhplGa3Host host = Ga3Host();
+	OhplGa3MoverParams params;
+	Ga3MoverParams(params);
+	ohpl_ga3_update_char_body(&mGa3Ctx, &host, &params);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateCanSeePlayer(float afTimeStep)
 {
-	cLuxPlayer *pPlayer = gpBase->mpPlayer;
-
-	if(pPlayer->IsDead()) return;
-	
-	if(TriggersDisabled())
-	{
-		mbCanSeePlayer = false;
-	}
-
-	if(mbBlind)
-	{
-		mvLastKnownPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-		mbCanSeePlayer = false;
-		return;
-	}
-
-	////////////////////////////////
-	//Check if it is time to check for player
-	mfLookForPlayerCount-= afTimeStep;
-	if(mfLookForPlayerCount > 0) return;
-	mfLookForPlayerCount = 0.3f;
-
-	/////////////////////////////
-	// Set up variables
-	iCharacterBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody();
-	
-	float fDist = cMath::Vector3Dist(pPlayerBody->GetPosition(), mpCharBody->GetPosition());
-
-	bool bLanternOn = gpBase->mpPlayer->GetHelperLantern()->IsActive();
-
-	////////////////////////
-	// Check if crouching
-	bool bCrouching = false;
-	if(pPlayer->GetCurrentMoveState() == eLuxMoveState_Normal)
-	{
-		cLuxMoveState_Normal *pNormalMove = static_cast<cLuxMoveState_Normal*>(pPlayer->GetCurrentMoveStateData());
-		if(pNormalMove->IsCrouching())
-		{
-			bCrouching = true;
-		}
-	}
-
-	////////////////////////
-	// Check range
-	float fMaxRange = mfSightRange;
-
-	if(bLanternOn) mfSightRange *= 1.5f;
-	
-	if(bLanternOn==false && pPlayer->GetHelperLightLevel()->GetNormalLightLevel() < mfPlayerInDarknessLightLevel && pPlayer->GetAvgSpeed() < 0.05f && 
-		mbSkipVisibilityRangeHandicaps==false)
-		fMaxRange = mfDarknessSightRange;
-	
-	if(bCrouching && bLanternOn==false && mbSkipVisibilityRangeHandicaps==false)
-		fMaxRange = fMaxRange * mfCrouchVisibleRangeMul;
-	
-	if(fMaxRange < fDist)
-	{
-		if(mbCanSeePlayer==false) SendMessage(eLuxEnemyMessage_PlayerUnseen,0,false);
-		mbCanSeePlayer = false;
-		mlPlayerInLOSCount=0;
-		return;
-	}
-	
-	////////////////////////
-	// Get the min dist (use to check if player is close enough to be seen no matter what)
-	float fMinDist =	mpCharBody->GetCurrentBody()->GetBoundingVolume()->GetRadius() + 
-						pPlayerBody->GetCurrentBody()->GetBoundingVolume()->GetRadius() + 0.05f;
-	
-	//Skip the FOV test if really close to the player.
-	bool bUseFOV = (fDist >= fMinDist);
-
-	////////////////////////////////
-	//Player is in LOS
-	//TODO: Skipping closer than min dist test! Put back?
-	if(LineOfSight(pPlayerBody->GetPosition(), pPlayerBody->GetSize(), bUseFOV))
-	{
-		if(mlPlayerInLOSCount >= 2)
-		{
-			if(mbCanSeePlayer==false)
-			{
-				SendMessage(eLuxEnemyMessage_PlayerSeen,0,false);
-			}
-			mbCanSeePlayer = true;
-		}
-		else
-		{
-			mlPlayerInLOSCount++;
-		}
-	}
-	////////////////////////////////
-	//Player is NOT in LOS
-	else
-	{
-		if(mlPlayerInLOSCount>0)
-		{
-			mlPlayerInLOSCount=0;
-
-			if(mbCanSeePlayer==false)
-			{
-				SendMessage(eLuxEnemyMessage_PlayerUnseen,0,false);
-			}
-			mbCanSeePlayer = false;
-		}
-	}
-
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_can_see_player(&mGa3Ctx, &host, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdatePlayerDetected(float afTimeStep)
 {
-	if(gpBase->mpPlayer->IsDead()) return;
-
-	bool bDetected = PlayerIsDetected();
-
-	if(bDetected && mbPlayerDetected==false)
-	{
-		SendMessage(eLuxEnemyMessage_PlayerDetected, 0, false);
-	}
-	else if(bDetected==false && mbPlayerDetected)
-	{
-		SendMessage(eLuxEnemyMessage_PlayerUndetected, 0, false);
-	}
-
-	mbPlayerDetected = bDetected;
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_player_detected(&mGa3Ctx, &host, &iLuxEnemy::Ga3DetectedCb, this);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdatePlayerInRange(float afTimeStep)
 {
-	if(gpBase->mpPlayer->IsDead()) return;
-
-	float fDistance = DistToPlayer();
-
-	if(fDistance <= mfActivationDistance && mbPlayerInRange==false)
-	{
-		mbPlayerInRange = true;
-		SendMessage(eLuxEnemyMessage_PlayerInRange);
-	}
-	else if(fDistance > mfActivationDistance*1.25f+2.0f && mbPlayerInRange)
-	{
-		mbPlayerInRange = false;
-		SendMessage(eLuxEnemyMessage_PlayerOutOfRange);
-	}
-
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_player_in_range(&mGa3Ctx, &host);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateCheckStuckAtDoor(float afTimeStep)
 {
-	if(mpMover->GetStuckCounter() < 0.1f)
-	{
-		mbStuckAtDoor = false;
-		return;
-	}
-
-	mfCheckAtDoorCount -= afTimeStep;
-	if(mfCheckAtDoorCount > 0.0f) return;
-	mfCheckAtDoorCount = 0.1f;
-
-	bool bAtDoor = false;
-	mlStuckDoorID = -1;
-
-	cBoundingVolume *pBV = mpCharBody->GetCurrentBody()->GetBoundingVolume();
-	iLuxProp *pSwingDoor;
-
-	
-	////////////////////////////////
-	// Get the diretion of the player
-	// If moving with path finder get the dir by getting next goal position.
-	cVector3f vPlayerDir;
-	if(mpPathfinder->IsMoving())
-		vPlayerDir = cMath::Vector3Normalize(mpPathfinder->GetNextGoalPos() - mpCharBody->GetPosition());
-	else
-		vPlayerDir = mpCharBody->GetForward();
-
-
-	//////////////////////
-	// Iterate entities and look for a door overlapping
-    cLuxEntityIterator entIt = mpMap->GetEntityIterator();
-	while(entIt.HasNext())
-	{
-		iLuxEntity *pEntity = entIt.Next();
-		if(pEntity->GetEntityType() != eLuxEntityType_Prop) continue;
-		if(pEntity->GetDestroyMe()) continue;
-
-		iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
-		if(pProp->GetPropType() != eLuxPropType_SwingDoor) continue;
-		
-		for(int i=0; i<pProp->GetBodyNum(); ++i)
-		{
-			iPhysicsBody *pBody = pProp->GetBody(i);
-			if(pBody->GetMass()==0) continue;
-			
-			//////////////////////
-			//Check BV intersection
-			if(cMath::CheckBVIntersection(*pBV, *pBody->GetBoundingVolume())==false)
-			{
-				continue;
-			}
-
-            //Calculate direction to door.
-			cVector3f vToDoor = cMath::Vector3Normalize(pBody->GetLocalPosition() - mpCharBody->GetPosition());
-			float fDot = cMath::Vector3Dot(vPlayerDir, vToDoor);
-			
-			/////////////////////////////
-			//Check if player faces door
-			if(fDot > 0.2f)
-			{
-				mlStuckDoorID = pProp->GetID();
-				pSwingDoor = pProp;
-				bAtDoor = true;
-				break;
-			}
-		}
-		
-		if(bAtDoor) break;
-	}
-
-	//////////////////////
-	// Change state if needed and send message
-	if(bAtDoor && mbStuckAtDoor==false)
-	{
-		mbStuckAtDoor = true;
-		mpMover->ResetStuckCounter();
-		SendMessage(eLuxEnemyMessage_StuckAtDoor,0,false, pSwingDoor->GetMainBody()->GetWorldPosition());
-	}
-	else if(bAtDoor==false && mbStuckAtDoor)
-	{
-		mbStuckAtDoor = false;
-	}
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_check_stuck_at_door(&mGa3Ctx, &host, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEnemy::UpdateCheckLastPlayerPos(float afTimeStep)
 {
-	if(CanSeePlayer())
-	{
-		mfLastPlayerPosCount += afTimeStep;
-		if(mfLastPlayerPosCount > 1.0f) mfLastPlayerPosCount = 1.0f;
-	}
-	else
-	{
-		mfLastPlayerPosCount -= afTimeStep;
-		if(mfLastPlayerPosCount < 0) mfLastPlayerPosCount=0;
-	}
-
-	if(mfLastPlayerPosCount > 0)
-	{
-		mvLastKnownPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-	}
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_check_last_player_pos(&mGa3Ctx, &host, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -1722,13 +1496,8 @@ void iLuxEnemy::UpdateDarknessGlow(float afTimeStep)
 
 void iLuxEnemy::UpdateRegenHealth(float afTimeStep)
 {
-	if(mfHealth <= 0) return;
-
-    if(mfHealth < mfMaxRegenHealth && mfRegenHealthSpeed >0)
-	{
-		mfHealth += afTimeStep * mfRegenHealthSpeed;
-		if(mfHealth > mfMaxRegenHealth) mfHealth = mfMaxRegenHealth;
-	}
+	OhplGa3Host host = Ga3Host();
+	ohpl_ga3_update_regen_health(&mGa3Ctx, &host, afTimeStep);
 }
 
 void iLuxEnemy::UpdateHallucination(float afTimeStep)
@@ -1832,83 +1601,20 @@ void iLuxEnemy::SetMoveSpeed(eLuxEnemyMoveSpeed aType)
 
 cAINode *iLuxEnemy::GetSearchForPlayerNode(int alMaxIterations, float afMaxAngleMul, float afMinDistMul, float afMaxDistMul)
 {
-	float fMaxAngle = mfPlayerSearchMaxAngle * afMaxAngleMul;
-
-	////////////////////
-	//Iterate until a node is found or max iterations is reached.
-	for(int i=0; i<alMaxIterations; ++i)
-	{
-		//Get the angle 
-		float fAngle = cMath::RandRectf(-fMaxAngle, fMaxAngle);
-
-		//Get the distance and direction to player
-		cVector3f vToPlayer = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition() - mpCharBody->GetFeetPosition();
-		float fToPlayerDist = vToPlayer.Length();
-		vToPlayer.Normalize();
-
-		//Rotate the direction to player 
-		cVector3f vSearchDir = cMath::MatrixMul(cMath::MatrixRotateY(fAngle), vToPlayer);
-
-		//The length to use
-		float fLength = cMath::RandRectf(mfPlayerSearchMinDistMul*afMinDistMul, mfPlayerSearchMaxDistMul*afMaxDistMul) * fToPlayerDist;
-
-		//The wanted positon
-		cVector3f vWantedPos = mpCharBody->GetFeetPosition() + vSearchDir*fLength;
-
-		//Find the node closests to the postion
-		cAINode * pNode = mpPathfinder->GetNodeAtPos(vWantedPos, 0, fLength,true, false, true, mpLastSearchNode);
-		if(pNode)
-		{
-			mpLastSearchNode = pNode;
-			return pNode;
-		}
-	}
-	
-	////////////////////
-	//Jut pick a random node around the enemy
-	return mpPathfinder->GetNodeAtPos(mpCharBody->GetFeetPosition(), 0, 13.0f,false, false, true, mpLastSearchNode);
+	OhplGa3Host host = Ga3Host();
+	const float vParams[4] = {mfPlayerSearchMaxAngle, mfPlayerSearchMinDistMul, mfPlayerSearchMaxDistMul, 0};
+	int lIdx = ohpl_ga3_search_for_player_node(&mGa3Ctx, &host, alMaxIterations, afMaxAngleMul, afMinDistMul, afMaxDistMul, &vParams);
+	return lIdx < 0 ? NULL : mpPathfinder->mvGa3Nodes[lIdx];
 }
 
 //-----------------------------------------------------------------------
 
 cAINode *iLuxEnemy::GetPatrolAroundPlayerNode(int alMaxIterations, float afMaxAngleMul, float afMinDistMul, float afMaxDistMul)
 {
-	float fMaxAngle = mfPlayerPatrolMaxAngle * afMaxAngleMul;
-
-	cVector3f vPlayerFeetPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-
-	////////////////////
-	//Iterate until a node is found or max iterations is reached.
-	for(int i=0; i<alMaxIterations; ++i)
-	{
-		//Get the angle 
-		float fAngle = cMath::RandRectf(-fMaxAngle, fMaxAngle);
-
-		//Get the distance direction from player to enemy start position.
-		cVector3f vToStart = mvStartPosition - vPlayerFeetPos;
-		vToStart.Normalize();
-
-		//Rotate the direction to player 
-		cVector3f vSearchDir = cMath::MatrixMul(cMath::MatrixRotateY(fAngle), vToStart);
-
-		//The length to use
-		float fLength = cMath::RandRectf(mfPlayerPatrolMinDist*afMinDistMul, mfPlayerPatrolMaxDist*afMaxDistMul);
-
-		//The wanted position
-		cVector3f vWantedPos = vPlayerFeetPos + vSearchDir*fLength;
-
-		//Find the node closets to the position
-		cAINode * pNode = mpPathfinder->GetNodeAtPos(vWantedPos, 0, fLength,true, false, true, mpLastSearchNode);
-		if(pNode)
-		{
-			mpLastSearchNode = pNode;
-			return pNode;
-		}
-	}
-
-	////////////////////
-	//Jut pick a random node around the enemy
-	return mpPathfinder->GetNodeAtPos(mpCharBody->GetFeetPosition(), 0, 13.0f,false, false, true, mpLastSearchNode);
+	OhplGa3Host host = Ga3Host();
+	const float vParams[3] = {mfPlayerPatrolMaxAngle, mfPlayerPatrolMinDist, mfPlayerPatrolMaxDist};
+	int lIdx = ohpl_ga3_patrol_around_player_node(&mGa3Ctx, &host, alMaxIterations, afMaxAngleMul, afMinDistMul, afMaxDistMul, &vParams, &mvStartPosition.x);
+	return lIdx < 0 ? NULL : mpPathfinder->mvGa3Nodes[lIdx];
 }
 
 //-----------------------------------------------------------------------
@@ -1926,63 +1632,14 @@ static const cVector2f gvPosAdds[] = {cVector2f(0,0),
 
 bool iLuxEnemy::LineOfSight(const cVector3f &avPos, const cVector3f &avSize, bool abCheckFOV)
 {
-	return LineOfSight(avPos, avSize, abCheckFOV, mpCharBody->GetPosition() + cVector3f(0,mpCharBody->GetSize().y/2 - 0.1f, 0));
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_line_of_sight(&mGa3Ctx, &host, &avPos.x, &avSize.x, abCheckFOV, NULL);
 }
 
 bool iLuxEnemy::LineOfSight(const cVector3f &avPos, const cVector3f &avSize, bool abCheckFOV, const cVector3f& avSourcePos)
 {
-	/////////////////////////////////////////
-	//Get the start and end center for the test.
-	cVector3f vStartCenter = avSourcePos;
-	cVector3f vEndCenter = avPos;
-
-	/////////////////////////////
-	//Calculate the right vector
-	const cVector3f vForward = cMath::Vector3Normalize(vEndCenter - vStartCenter);
-	const cVector3f vUp = cVector3f(0,1.0f,0);
-	const cVector3f vRight = cMath::Vector3Cross(vForward, vUp);
-
-	////////////////////////////////////
-	//Check if the pos is within FOV
-	if(abCheckFOV)
-	{
-		if(InFOV(avPos)==false)
-		{
-			return false;
-		}
-	}
-
-	/////////////////////////////////////
-	//Get the half with and height. Make them a little smaller so that player can slide over junk on floor.
-	const float fHalfWidth = avSize.x * 0.4f;
-	const float fHalfHeight = avSize.y * 0.4f;
-
-	////////////////////////////
-	// Init variables
-	//Count of 2 is need for a line of sight success.
-	int lCount=0;
-	const int lMaxAdds = 9;
-	
-	///////////////////////////////////
-	//Iterate through all the rays.
-	for(int i=0; i< lMaxAdds; ++i)
-	{
-		cVector3f vAdd = vRight * (gvPosAdds[i].x*fHalfWidth) + vUp * (gvPosAdds[i].y*fHalfHeight);
-		cVector3f vStart = vStartCenter + vAdd;
-		cVector3f vEnd = vEndCenter + vAdd;
-
-		if(gpBase->mpMapHelper->CheckLineOfSight(vStart, vEnd,false))
-		{
-			lCount++;
-		}
-
-		if(lCount==2)
-		{
-			return true;
-		}
-	}
-	
-	return false;
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_line_of_sight(&mGa3Ctx, &host, &avPos.x, &avSize.x, abCheckFOV, &avSourcePos.x);
 }
 
 //-----------------------------------------------------------------------
@@ -2129,16 +1786,14 @@ cVector3f iLuxEnemy::GetDirection2D(const cVector3f &avPos)
 
 float iLuxEnemy::DistToPlayer()
 {
-	if(gpBase->mpPlayer->IsDead()) return 100000.0f;
-
-	return DistToChar(gpBase->mpPlayer->GetCharacterBody());
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_dist_to_player(&mGa3Ctx, &host);
 }
 
 float iLuxEnemy::DistToPlayer2D()
 {
-	if(gpBase->mpPlayer->IsDead()) return 100000.0f;
-
-	return DistToChar2D(gpBase->mpPlayer->GetCharacterBody());
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_dist_to_player_2d(&mGa3Ctx, &host);
 }
 
 float iLuxEnemy::DistToPlayer2D(const cVector3f& avPos)
@@ -2204,19 +1859,8 @@ bool iLuxEnemy::IsVisibleToPlayerAtFeetPos(const cVector3f& avFeetPos)
 
 float iLuxEnemy::GetPlayerMovementTowardEnemyAmount()
 {
-	iCharacterBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody();
-	
-	cVector3f vPlayerDir = pPlayerBody->GetVelocity(gpBase->mpEngine->GetStepSize());
-	vPlayerDir.y =0;
-	
-	//If not moving much, return lowest amount
-    if(vPlayerDir.SqrLength() < 0.1f*0.1f) return -1; 
-	vPlayerDir.Normalize();
-
-	cVector3f vPlayerToEnemyDir = mpCharBody->GetPosition() - pPlayerBody->GetPosition();
-	vPlayerToEnemyDir.y =0; vPlayerToEnemyDir.Normalize();
-
-	return cMath::Vector3Dot(vPlayerDir, vPlayerToEnemyDir);
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_player_movement_toward_enemy(&mGa3Ctx, &host);
 }
 
 //-----------------------------------------------------------------------
@@ -2232,29 +1876,14 @@ bool iLuxEnemy::OutsideStartRadius()
 
 bool iLuxEnemy::InFOV(const cVector3f &avPos)
 {
-	float fFOV = mfFOV * mfFOVMul;
-    if(fFOV < k2Pif)
-	{
-		cVector3f vStartCenter = mpCharBody->GetPosition() + cVector3f(0,mpCharBody->GetSize().y/2 - 0.2f, 0); //Use eye pos
-
-		const cVector3f vDirToPos = cMath::Vector3Normalize(avPos - vStartCenter);
-		cVector3f vEnemyForward = mpCharBody->GetForward();
-
-		cVector3f vToPlayerAngle = cMath::GetAngleFromPoints3D(0,vDirToPos);
-		cVector3f vEnemyAngle = cMath::GetAngleFromPoints3D(0,vEnemyForward);
-
-		float fAngleX = cMath::Abs(cMath::GetAngleDistanceRad(vToPlayerAngle.x,vEnemyAngle.x));
-		float fAngleY = cMath::Abs(cMath::GetAngleDistanceRad(vToPlayerAngle.y,vEnemyAngle.y));
-
-		if(fAngleY > fFOV*0.5f) return false;
-		if(fAngleX > fFOV*mfFOVXMul*0.5f) return false;
-	}
-	return true;
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_in_fov(&mGa3Ctx, &host, &avPos.x);
 }
 
 bool iLuxEnemy::PlayerInFOV()
 {
-	return InFOV(gpBase->mpPlayer->GetCharacterBody()->GetPosition());
+	OhplGa3Host host = Ga3Host();
+	return ohpl_ga3_player_in_fov(&mGa3Ctx, &host);
 }
 
 //-----------------------------------------------------------------------
@@ -2555,18 +2184,19 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	///////////////////////
 	//Messages
-	for(tLuxStateMessageListIt it = mlstMessages.begin(); it != mlstMessages.end(); ++it)
+	for(size_t i=0; i<ohpl_ga3_queue_len(mpGa3Queue); ++i)
 	{
-		cLuxStateMessage& message = *it;
+		OhplGa3Msg message;
+		ohpl_ga3_queue_get(mpGa3Queue, i, &message);
 		cLuxStateMessage_SaveData savedMessage;
 
-		savedMessage.mfCount = message.mfCount;
-		savedMessage.mfTime = message.mfTime;
-		savedMessage.mvCustomValue = message.mvCustomValue;
-		savedMessage.mlState = message.mState;
-		savedMessage.mlType = message.mType;
-		
-        pData->mvMessages.Add(savedMessage);	
+		savedMessage.mfCount = message.count;
+		savedMessage.mfTime = message.time;
+		savedMessage.mvCustomValue = cVector3f(message.customV[0], message.customV[1], message.customV[2]);
+		savedMessage.mlState = message.state;
+		savedMessage.mlType = message.ty;
+
+		pData->mvMessages.Add(savedMessage);
 	}
 
 	///////////////////////
@@ -2721,16 +2351,19 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//Messages
 	for(size_t i=0; i<pData->mvMessages.Size(); ++i)
 	{
-		cLuxStateMessage message;
+		OhplGa3Msg message;
+		memset(&message, 0, sizeof(message));
 		cLuxStateMessage_SaveData& savedMessage = pData->mvMessages[i];
 
-		message.mfCount =		savedMessage.mfCount;
-		message.mfTime =		savedMessage.mfTime;
-		message.mvCustomValue = savedMessage.mvCustomValue;
-		message.mState =		(eLuxEnemyState)savedMessage.mlState;
-		message.mType =			(eLuxEnemyMessage)savedMessage.mlType;
+		message.count =			savedMessage.mfCount;
+		message.time =			savedMessage.mfTime;
+		message.customV[0] =	savedMessage.mvCustomValue.x;
+		message.customV[1] =	savedMessage.mvCustomValue.y;
+		message.customV[2] =	savedMessage.mvCustomValue.z;
+		message.state =			savedMessage.mlState;
+		message.ty =			savedMessage.mlType;
 
-		mlstMessages.push_back(message);	
+		ohpl_ga3_queue_push_raw(mpGa3Queue, &message);
 	}
 
 	///////////////////////
@@ -2786,3 +2419,263 @@ void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 
 //-----------------------------------------------------------------------
 
+
+//-----------------------------------------------------------------------
+
+//////////////////////////////////////////////////////////////////////////
+// RUST ENEMY CORE HOST
+//////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------------
+
+OhplGa3Host iLuxEnemy::Ga3Host()
+{
+	OhplGa3Host host;
+	host.ctx = this;
+	host.call = &iLuxEnemy::Ga3Call;
+	return host;
+}
+
+void iLuxEnemy::Ga3MoverParams(OhplGa3MoverParams &aParams)
+{
+	aParams.turnMinBreakAngle = mfTurnMinBreakAngle;
+	aParams.turnBreakMul = mfTurnBreakMul;
+	aParams.turnSpeedMul = mfTurnSpeedMul;
+	aParams.turnMaxSpeed = mfTurnMaxSpeed;
+	aParams.moveSpeedAnimMul = mfMoveSpeedAnimMul;
+	aParams.pose = mCurrentPose;
+	for(int i=0; i<2; ++i)
+	{
+		aParams.stoppedToWalk[i] = mfStoppedToWalkSpeed[i];
+		aParams.walkToStopped[i] = mfWalkToStoppedSpeed[i];
+		aParams.walkToRun[i] = mfWalkToRunSpeed[i];
+		aParams.runToWalk[i] = mfRunToWalkSpeed[i];
+	}
+}
+
+bool iLuxEnemy::Ga3StateCb(void *apEnemy, int alState, int alEvent, const OhplGa3Msg *apMessage)
+{
+	return static_cast<iLuxEnemy*>(apEnemy)->StateEventImplement(alState, (eLuxEnemyStateEvent)alEvent, (cLuxStateMessage*)apMessage);
+}
+
+bool iLuxEnemy::Ga3DetectedCb(void *apEnemy)
+{
+	return static_cast<iLuxEnemy*>(apEnemy)->PlayerIsDetected();
+}
+
+static void Ga3Put(float *apDest, const cVector3f &avV)
+{
+	apDest[0] = avV.x; apDest[1] = avV.y; apDest[2] = avV.z;
+}
+
+static cVector3f Ga3Get(const float *apSrc)
+{
+	return cVector3f(apSrc[0], apSrc[1], apSrc[2]);
+}
+
+int iLuxEnemy::Ga3Call(void *apEnemy, unsigned alOp, OhplGa3Io *apIo)
+{
+	iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(apEnemy);
+	iCharacterBody *pBody = pEnemy->mpCharBody;
+	cLuxPlayer *pPlayer = gpBase->mpPlayer;
+	iCharacterBody *pPlayerBody = pPlayer->GetCharacterBody();
+
+	switch(alOp)
+	{
+	case eOhplGa3Op_StepSize:		apIo->f[0] = gpBase->mpEngine->GetStepSize(); return 0;
+	case eOhplGa3Op_BodyPos:		Ga3Put(apIo->v[0], pBody->GetPosition()); return 0;
+	case eOhplGa3Op_BodyLastPos:	Ga3Put(apIo->v[0], pBody->GetLastPosition()); return 0;
+	case eOhplGa3Op_BodyFeet:		Ga3Put(apIo->v[0], pBody->GetFeetPosition()); return 0;
+	case eOhplGa3Op_BodySize:		Ga3Put(apIo->v[0], pBody->GetSize()); return 0;
+	case eOhplGa3Op_BodyForward:	Ga3Put(apIo->v[0], pBody->GetForward()); return 0;
+	case eOhplGa3Op_BodyYaw:		apIo->f[0] = pBody->GetYaw(); return 0;
+	case eOhplGa3Op_BodyMoveSpeedFwd:	apIo->f[0] = pBody->GetMoveSpeed(eCharDir_Forward); return 0;
+	case eOhplGa3Op_BodyMoveDelay:	apIo->f[0] = pBody->GetMoveDelay(); return 0;
+	case eOhplGa3Op_BodyVelocity:	Ga3Put(apIo->v[0], pBody->GetVelocity(apIo->f[0])); return 0;
+	case eOhplGa3Op_BodyMoveFwd:	pBody->Move(eCharDir_Forward, 1.0f); return 0;
+	case eOhplGa3Op_BodyAddYaw:		pBody->AddYaw(apIo->f[0]); return 0;
+	case eOhplGa3Op_BodySetSpeeds:
+		pBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, apIo->f[0]);
+		pBody->SetMaxNegativeMoveSpeed(eCharDir_Forward, apIo->f[1]);
+		pBody->SetMoveAcc(eCharDir_Forward, apIo->f[2]);
+		pBody->SetMoveDeacc(eCharDir_Forward, apIo->f[3]);
+		return 0;
+	case eOhplGa3Op_BodyBvRadius:	apIo->f[0] = pBody->GetCurrentBody()->GetBoundingVolume()->GetRadius(); return 0;
+	case eOhplGa3Op_BodySetActive:	pBody->SetActive(apIo->i[0] != 0); return 0;
+	case eOhplGa3Op_PlayAnim:
+	{
+		int lN = apIo->i[1];
+		tString sName;
+		switch(apIo->i[0])
+		{
+		case eOhplGa3Anim_Backward:		sName = pEnemy->GetBackwardAnimationName(); break;
+		case eOhplGa3Anim_Idle:			sName = pEnemy->GetIdleAnimationName(); break;
+		case eOhplGa3Anim_Walk:			sName = pEnemy->GetWalkAnimationName(); break;
+		case eOhplGa3Anim_Run:			sName = pEnemy->GetRunAnimationName(); break;
+		case eOhplGa3Anim_IdleExtra:	sName = "IdleExtra"+cString::ToString(lN); break;
+		case eOhplGa3Anim_Notice:		sName = "Notice"+cString::ToString(lN); break;
+		case eOhplGa3Anim_BreakDoor:	sName = "BreakDoor"; break;
+		case eOhplGa3Anim_SwingClaws:	sName = "SwingClaws0"+cString::ToString(lN); break;
+		case eOhplGa3Anim_SwingLaunch:	sName = "SwingLaunch"; break;
+		case eOhplGa3Anim_Flinch:		sName = "Flinch"; break;
+		case eOhplGa3Anim_Dead:			sName = "Dead"; break;
+		}
+		return pEnemy->PlayAnimImpl(sName, apIo->i[2] != 0, apIo->f[0], apIo->i[3] != 0, apIo->f[1], apIo->i[4] != 0, apIo->i[6] != 0) ? 1 : 0;
+	}
+	case eOhplGa3Op_AnimExists:		return pEnemy->mpCurrentAnimation ? 1 : 0;
+	case eOhplGa3Op_AnimSetSpeed:	pEnemy->mpCurrentAnimation->SetSpeed(apIo->f[0]); return 0;
+	case eOhplGa3Op_FadeOutAnim:	return pEnemy->FadeOutCurrentAnimImpl(apIo->f[0]) ? 1 : 0;
+
+	case eOhplGa3Op_PlayerDead:		return pPlayer->IsDead() ? 1 : 0;
+	case eOhplGa3Op_PlayerFeet:		Ga3Put(apIo->v[0], pPlayerBody->GetFeetPosition()); return 0;
+	case eOhplGa3Op_PlayerPos:		Ga3Put(apIo->v[0], pPlayerBody->GetPosition()); return 0;
+	case eOhplGa3Op_PlayerSize:		Ga3Put(apIo->v[0], pPlayerBody->GetSize()); return 0;
+	case eOhplGa3Op_PlayerCamPos:	Ga3Put(apIo->v[0], pPlayer->GetCamera()->GetPosition()); return 0;
+	case eOhplGa3Op_PlayerBvRadius:	apIo->f[0] = pPlayerBody->GetCurrentBody()->GetBoundingVolume()->GetRadius(); return 0;
+	case eOhplGa3Op_PlayerLantern:	return pPlayer->GetHelperLantern()->IsActive() ? 1 : 0;
+	case eOhplGa3Op_PlayerCrouch:
+		if(pPlayer->GetCurrentMoveState() == eLuxMoveState_Normal)
+		{
+			cLuxMoveState_Normal *pNormalMove = static_cast<cLuxMoveState_Normal*>(pPlayer->GetCurrentMoveStateData());
+			if(pNormalMove->IsCrouching()) return 1;
+		}
+		return 0;
+	case eOhplGa3Op_PlayerLightLevel:	apIo->f[0] = pPlayer->GetHelperLightLevel()->GetNormalLightLevel(); return 0;
+	case eOhplGa3Op_PlayerAvgSpeed:		apIo->f[0] = pPlayer->GetAvgSpeed(); return 0;
+	case eOhplGa3Op_PlayerVelocity:		Ga3Put(apIo->v[0], pPlayerBody->GetVelocity(apIo->f[0])); return 0;
+	case eOhplGa3Op_PlayerTerror:		apIo->f[0] = pPlayer->GetTerror(); return 0;
+	case eOhplGa3Op_PlayerSetTerror:	pPlayer->SetTerror(apIo->f[0]); return 0;
+	case eOhplGa3Op_PlayerAddTerrorEnemy:		pPlayer->AddTerrorEnemy(pEnemy); return 0;
+	case eOhplGa3Op_PlayerRemoveTerrorEnemy:	pPlayer->RemoveTerrorEnemy(pEnemy); return 0;
+	case eOhplGa3Op_TriggersDisabled:	return pEnemy->TriggersDisabled() ? 1 : 0;
+	case eOhplGa3Op_Music:
+		if(apIo->i[0]) gpBase->mpMusicHandler->AddEnemy((eLuxEnemyMusic)apIo->i[1], pEnemy);
+		else			gpBase->mpMusicHandler->RemoveEnemy((eLuxEnemyMusic)apIo->i[1], pEnemy);
+		return 0;
+	case eOhplGa3Op_LosRay:
+		return gpBase->mpMapHelper->CheckLineOfSight(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), false) ? 1 : 0;
+	case eOhplGa3Op_EntityAttachPos:
+	{
+		iLuxEntity *pEnt = pEnemy->mpMap->GetEntityByID(apIo->i[0]);
+		if(pEnt==NULL){ Ga3Put(apIo->v[0], cVector3f(0)); return 0;}
+		Ga3Put(apIo->v[0], pEnt->GetAttachEntity()->GetWorldPosition());
+		return 0;
+	}
+	case eOhplGa3Op_DoorBroken:		return pEnemy->mpMap->DoorIsBroken(apIo->i[0]) ? 1 : 0;
+	case eOhplGa3Op_DebugMsg:
+		switch(apIo->i[0])
+		{
+		case 1:		gpBase->mpDebugHandler->AddMessage(_W("Enemy ") + cString::To16Char(pEnemy->msName)+_W(" enabled!"), false ); break;
+		case 2:		gpBase->mpDebugHandler->AddMessage(_W("Sound Heard! Vol: ")+cString::ToStringW(apIo->f[0]),false); break;
+		case 3:		gpBase->mpDebugHandler->AddMessage(_W("Could not find node near sound!"),false); break;
+		case 100:	gpBase->mpProgressLogHandler->AddLog(eLuxProgressLogLevel_Low, "Enemy '"+pEnemy->msName+"'  is in range"); break;
+		}
+		return 0;
+	case eOhplGa3Op_PlaySound:
+	{
+		const tString *psName = pEnemy->Ga3SoundName(apIo->i[0]);
+		if(psName) pEnemy->PlaySound(*psName);
+		return 0;
+	}
+	case eOhplGa3Op_ChangeSoundState:	pEnemy->ChangeSoundState((eLuxEnemySoundState)apIo->i[0]); return 0;
+	case eOhplGa3Op_ActivateSoundAllowed:	return gpBase->mpGlobalDataHandler->GetEnemyActivateSoundAllowed() ? 1 : 0;
+	case eOhplGa3Op_SetActivateSoundMade:	gpBase->mpGlobalDataHandler->SetEnemyActivateSoundMade(); return 0;
+
+	case eOhplGa3Op_PfMoveTo:		return pEnemy->mpPathfinder->MoveTo(Ga3Get(apIo->v[0])) ? 1 : 0;
+	case eOhplGa3Op_PfStop:			pEnemy->mpPathfinder->Stop(); return 0;
+	case eOhplGa3Op_PfPathLen:		return (int)pEnemy->mpPathfinder->mlstPathNodes.size();
+	case eOhplGa3Op_PfPathBack:		Ga3Put(apIo->v[0], pEnemy->mpPathfinder->mlstPathNodes.back()->GetPosition()); return 0;
+	case eOhplGa3Op_PfPathPop:		pEnemy->mpPathfinder->mlstPathNodes.pop_back(); return 0;
+	case eOhplGa3Op_PfPathClear:	pEnemy->mpPathfinder->mlstPathNodes.clear(); return 0;
+
+	case eOhplGa3Op_NcPresent:		return pEnemy->mpPathfinder->mpNodeContainer ? 1 : 0;
+	case eOhplGa3Op_NcCount:		return pEnemy->mpPathfinder->mpNodeContainer->GetNodeNum();
+	case eOhplGa3Op_NcIterBegin:
+	{
+		cLuxEnemyPathfinder *pPf = pEnemy->mpPathfinder;
+		pPf->mlGa3SkipMode = apIo->i[0];
+		pPf->mvGa3Nodes.clear();
+		cAINodeIterator it = pPf->mpNodeContainer->GetNodeIterator(Ga3Get(apIo->v[0]), apIo->f[0]);
+		while(it.HasNext()) pPf->mvGa3Nodes.push_back(it.Next());
+		return (int)pPf->mvGa3Nodes.size();
+	}
+	case eOhplGa3Op_NcIterNode:
+	{
+		cLuxEnemyPathfinder *pPf = pEnemy->mpPathfinder;
+		cAINode *pNode = pPf->mvGa3Nodes[apIo->i[0]];
+		cAINode *pSkip = NULL;
+		if(pPf->mlGa3SkipMode == 1)			pSkip = pEnemy->mpLastSearchNode;
+		else if(pPf->mlGa3SkipMode == 2)	pSkip = pPf->mpGa3ExplicitSkip;
+		if(pNode == pSkip) return 0;
+		if(apIo->i[1] && pEnemy->mpMap->AINodeIsUsedAsGoal(pNode)) return 0;
+		Ga3Put(apIo->v[0], pNode->GetPosition());
+		return 1;
+	}
+	case eOhplGa3Op_NcFreePath:
+		return pEnemy->mpPathfinder->mpNodeContainer->FreePath(Ga3Get(apIo->v[0]), Ga3Get(apIo->v[1]), apIo->i[0], apIo->i[1]) ? 1 : 0;
+	case eOhplGa3Op_NcCommitLast:	pEnemy->mpLastSearchNode = pEnemy->mpPathfinder->mvGa3Nodes[apIo->i[0]]; return 0;
+	case eOhplGa3Op_BvContains:
+	{
+		cBoundingVolume tempBV;
+		tempBV.SetSize(Ga3Get(apIo->v[1]));
+		tempBV.SetPosition(Ga3Get(apIo->v[2]));
+		return cMath::CheckPointInBVIntersection(Ga3Get(apIo->v[0]), tempBV) ? 1 : 0;
+	}
+	case eOhplGa3Op_DoorCount:
+	{
+		pEnemy->mvGa3Doors.clear();
+		cBoundingVolume *pBV = pBody->GetCurrentBody()->GetBoundingVolume();
+		cLuxEntityIterator entIt = pEnemy->mpMap->GetEntityIterator();
+		while(entIt.HasNext())
+		{
+			iLuxEntity *pEntity = entIt.Next();
+			if(pEntity->GetEntityType() != eLuxEntityType_Prop) continue;
+			if(pEntity->GetDestroyMe()) continue;
+			iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
+			if(pProp->GetPropType() != eLuxPropType_SwingDoor) continue;
+			for(int i=0; i<pProp->GetBodyNum(); ++i)
+			{
+				iPhysicsBody *pDoorBody = pProp->GetBody(i);
+				if(pDoorBody->GetMass()==0) continue;
+				if(cMath::CheckBVIntersection(*pBV, *pDoorBody->GetBoundingVolume())==false) continue;
+				pEnemy->mvGa3Doors.push_back(std::make_pair(pProp, pDoorBody));
+			}
+		}
+		return (int)pEnemy->mvGa3Doors.size();
+	}
+	case eOhplGa3Op_DoorAt:
+	{
+		iLuxProp *pProp = pEnemy->mvGa3Doors[apIo->i[0]].first;
+		iPhysicsBody *pDoorBody = pEnemy->mvGa3Doors[apIo->i[0]].second;
+		Ga3Put(apIo->v[0], pDoorBody->GetLocalPosition());
+		Ga3Put(apIo->v[1], pProp->GetMainBody()->GetWorldPosition());
+		return pProp->GetID();
+	}
+	case eOhplGa3Op_EnemyStateFatal:	FatalError("Tried calling undefined state %d!\n", apIo->i[0]); return 0;
+	case eOhplGa3Op_PatrolCount:		return (int)pEnemy->mvPatrolNodes.size();
+	case eOhplGa3Op_PatrolNodePos:
+	{
+		cLuxEnemyPatrolNode *pNode = pEnemy->Ga3PatrolNode(apIo->i[0]);
+		if(pNode==NULL) return 0;
+		Ga3Put(apIo->v[0], pNode->mpNode->GetPosition());
+		return 1;
+	}
+	case eOhplGa3Op_PatrolWait:
+	{
+		cLuxEnemyPatrolNode *pNode = pEnemy->Ga3PatrolNode(apIo->i[0]);
+		if(pNode==NULL) return 0;
+		apIo->f[0] = pNode->mfWaitTime;
+		return 1;
+	}
+	case eOhplGa3Op_SetActiveFalse:		pEnemy->SetActive(false); return 0;
+	case eOhplGa3Op_RunCallback:		pEnemy->RunCallbackFunc("OnAutoDisabled"); return 0;
+	case eOhplGa3Op_BroadcastHelp:
+		pEnemy->mpMap->BroadcastEnemyMessage(eLuxEnemyMessage_HelpMe, true, Ga3Get(apIo->v[0]), apIo->f[0], 0, false, Ga3Get(apIo->v[1]));
+		return 0;
+	case eOhplGa3Op_Attack:
+		if(apIo->i[0] == 0)	pEnemy->Attack(pEnemy->mNormalAttackSize, pEnemy->mNormalAttackDamage);
+		else				pEnemy->Attack(pEnemy->mNormalAttackSize, pEnemy->mBreakDoorAttackDamage);
+		return 0;
+	}
+	return 0;
+}
