@@ -23,6 +23,7 @@
 #include "LuxArea.h"
 #include "LuxProp.h"
 #include "LuxMap.h"
+#include "RustLuxScript.h"
 
 //////////////////////////////////////////////////////////////////////////
 // TYPE CONVERSIONS
@@ -34,20 +35,19 @@ bool LuxIsCorrectType(iLuxEntity *apEntity, eLuxEntityType aType, int alSubType)
 {
 	if(aType == eLuxEntityType_LastEnum) return true;
 
-	eLuxEntityType entityType = apEntity->GetEntityType();
-	if(entityType != aType) return false;
+	int lPrep = ohpl_ga1_type_prep(apEntity->GetEntityType(), aType, alSubType);
+	if(lPrep == kOhplGa1TypeNo) return false;
+	if(lPrep == kOhplGa1TypeYes) return true;
 
-	if(alSubType<0) return true;
-
-	if(entityType == eLuxEntityType_Area)
+	if(lPrep == kOhplGa1TypeNeedArea)
 	{
 		iLuxArea *pArea = static_cast<iLuxArea*>(apEntity);
-		return pArea->GetAreaType() == (eLuxAreaType)alSubType;
+		return ohpl_ga1_type_sub(pArea->GetAreaType(), alSubType);
 	}
 	else
 	{
 		iLuxProp *pProp = static_cast<iLuxProp*>(apEntity);
-		return pProp->GetPropType() == (eLuxPropType)alSubType;
+		return ohpl_ga1_type_sub(pProp->GetPropType(), alSubType);
 	}
 }
 //-----------------------------------------------------------------------
@@ -169,13 +169,15 @@ void iLuxCollideCallbackContainer::CheckCollisionCallback(const tString& asName,
 
 		/////////////////////
 		//Handle collision
-		if( (bCollide && pCallback->mbColliding==false) || (bCollide==false && pCallback->mbColliding) )
+		OhplGa1CollideStep step = ohpl_ga1_collide_step(pCallback->mbColliding, pCallback->mlStates, bCollide);
+		if(step.transition)
 		{
-			int lState = bCollide ? 1 : -1;
             pCallback->mbColliding = bCollide;
-			if(lState == pCallback->mlStates || pCallback->mlStates==0)
+
+			if(step.fire)
 			{
-				tString sCommand = pCallback->msCallbackFunc+"(\"" + asName + "\", \""+ pEntity->GetName()+"\", "+cString::ToString(lState)+")" ;
+				tString sCommand;
+				ohpl_ga1_collide_command(OHPL_GA1_S(pCallback->msCallbackFunc), OHPL_GA1_S(asName), OHPL_GA1_S(pEntity->GetName()), step.state, OhplGa1SinkStr, &sCommand);
 				apMap->RunScript(sCommand);
 			
 				///////////////////////
@@ -339,26 +341,18 @@ void iLuxCollideCallbackContainer::RemoveCollideCallbackInstantly(iLuxEntity *ap
 
 //-----------------------------------------------------------------------
 
+static_assert(sizeof(cLuxAlphaFader) == 16 && offsetof(cLuxAlphaFader, mbActive) == 4 && offsetof(cLuxAlphaFader, mfFadeOutSpeed) == 12, "cLuxAlphaFader layout");
+
 void cLuxAlphaFader::Reset()
 {
-	mbActive = false;
-	mfAlpha =0;
+	ohpl_ga1_alpha_reset(this);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxAlphaFader::Update(float afTimeStep)
 {
-	if(mbActive)
-	{
-		mfAlpha += mfFadeInSpeed*afTimeStep;
-		if(mfAlpha > 1.0f) mfAlpha = 1.0f;
-	}
-	else
-	{
-		mfAlpha -= mfFadeOutSpeed*afTimeStep;
-		if(mfAlpha < 0) mfAlpha = 0;
-	}
+	ohpl_ga1_alpha_update(this, afTimeStep);
 }
 
 //-----------------------------------------------------------------------

@@ -25,6 +25,7 @@
 #include "LuxMap.h"
 #include "LuxEntity.h"
 #include "LuxInputHandler.h"
+#include "RustLuxScript.h"
 
 //-----------------------------------------------------------------------
 
@@ -220,46 +221,15 @@ void cLuxHelpFuncs::CleanupData()
 
 tWString cLuxHelpFuncs::ParseString(const tWString& asInput)
 {
+	static_assert(sizeof(wchar_t) == sizeof(unsigned int), "wchar_t is 32 bit");
+	std::vector<unsigned int> vOps;
+	ohpl_ga1_parse_plan(reinterpret_cast<const unsigned int*>(asInput.data()), asInput.size(), OhplGa1SinkU32, &vOps);
+
 	tWString sOutput=_W("");
-	tWString sCommand =_W("");
-	bool bParseVar = false;
-
-    for(size_t i=0; i<asInput.size(); ++i)
+	for(size_t i=0; i+3<vOps.size(); i+=4)
 	{
-		wchar_t lChar = asInput[i];
-		
-		////////////////////////
-		// Parse variable
-		if(bParseVar)
-		{
-			// Add character to command
-			if( (lChar >= 'a' && lChar <= 'z') || (lChar >= 'A' && lChar <= 'Z') )
-			{
-				sCommand += lChar;
-			}
-			//Parse command
-			else
-			{
-				sOutput += ParseStringCommand(sCommand);
-				sOutput += lChar;
-				bParseVar = false;
-			}
-
-		}
-		////////////////////////
-		// Normal parsing
-		else
-		{
-			if(lChar == '$')
-			{
-                bParseVar = true;
-				sCommand = _W("");
-			}
-			else
-			{
-				sOutput += lChar;
-			}
-		}
+		if(vOps[i] == kOhplGa1OpChar)	sOutput += (wchar_t)vOps[i+1];
+		else							sOutput += ParseStringCommand(asInput.substr(vOps[i+1], vOps[i+2]), vOps[i+3]);
 	}
 
 	return sOutput;
@@ -269,9 +239,7 @@ tWString cLuxHelpFuncs::ParseString(const tWString& asInput)
 
 float cLuxHelpFuncs::GetStringDuration(const tWString& asStr)
 {
-	float fTime = mfTextDuration_StartTime + (float)asStr.length() * mfTextDuration_CharTime;
-	if(fTime < mfTextDuration_MinTime) fTime = mfTextDuration_MinTime;
-	return fTime;
+	return ohpl_ga1_string_duration(mfTextDuration_StartTime, mfTextDuration_MinTime, mfTextDuration_CharTime, asStr.length());
 }
 
 //-----------------------------------------------------------------------
@@ -313,13 +281,13 @@ void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 //-----------------------------------------------------------------------
 
 
-tWString cLuxHelpFuncs::ParseStringCommand(const tWString& asCommand)
+tWString cLuxHelpFuncs::ParseStringCommand(const tWString& asCommand, unsigned int alClass)
 {
 	tWString sPrefix = cString::SubW(asCommand, 0, 3);
 	
 	////////////////////////////////
 	// Button
-	if(sPrefix == _W("But") )
+	if(alClass == kOhplGa1CmdButton)
 	{
 		tString sAction = cString::To8Char(cString::SubW(asCommand, 3));
 
@@ -388,7 +356,7 @@ tWString cLuxHelpFuncs::ParseStringCommand(const tWString& asCommand)
 
 		return sOutput;
 	}
-	else if(asCommand == _W("Look"))
+	else if(alClass == kOhplGa1CmdLook)
 	{
 		tWString sOutput = _W("");
 #ifdef USE_GAMEPAD

@@ -83,7 +83,7 @@ public:
 
 	cGuiSet* GetSet(){ return mpSet;}
 private:
-	tWString ParseStringCommand(const tWString& asCommand);
+tWString ParseStringCommand(const tWString& asCommand, unsigned int alClass);
 
 	cGuiSet *mpSet;
 	iLowLevelGraphics *mpLowLevelGfx;

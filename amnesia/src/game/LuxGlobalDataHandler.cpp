@@ -23,6 +23,7 @@
 #include "LuxMapHandler.h"
 #include "LuxPlayer.h"
 #include "LuxEnemy.h"
+#include "RustLuxScript.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -34,6 +35,7 @@
 cLuxGlobalDataHandler::cLuxGlobalDataHandler() : iLuxUpdateable("LuxGlobalDataHandler")
 {
 	mpScript = NULL;
+	mfEnemyActivateSoundCount = 0;
 	
 	mfLightLampMinSanityIncrease = gpBase->mpGameCfg->GetFloat("Player_Sanity", "LightLampMinSanityIncrease",0);
 	mfLightLampMaxSanityIncrease = gpBase->mpGameCfg->GetFloat("Player_Sanity", "LightLampMaxSanityIncrease",0);
@@ -94,10 +96,7 @@ void cLuxGlobalDataHandler::Reset()
 
 void cLuxGlobalDataHandler::Update(float afTimeStep)
 {
-	if(mfEnemyActivateSoundCount>0)
-	{
-		mfEnemyActivateSoundCount-=afTimeStep;
-	}
+	ohpl_ga1_enemy_sound_update(&mfEnemyActivateSoundCount, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -171,12 +170,12 @@ cLuxScriptVar* cLuxGlobalDataHandler::GetVar(const tString &asName)
 
 bool cLuxGlobalDataHandler::GetEnemyActivateSoundAllowed()
 {
-	return mfEnemyActivateSoundCount<=0;
+	return ohpl_ga1_enemy_sound_allowed(mfEnemyActivateSoundCount);
 }
 
 void cLuxGlobalDataHandler::SetEnemyActivateSoundMade()
 {
-	mfEnemyActivateSoundCount = 5.0f;
+	mfEnemyActivateSoundCount = ohpl_ga1_enemy_sound_cooldown();
 }
 
 //-----------------------------------------------------------------------
