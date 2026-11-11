@@ -122,6 +122,23 @@ pub(super) mod cmath {
     }
 
     #[inline(never)]
+    pub fn matrix_mul_3x3(a: &Matrixf, v: Vector3f) -> Vector3f {
+        crate::math::matrix_mul_3x3(a, v)
+    }
+
+    unsafe extern "C" {
+        fn ohpl_math_matrix_rotate(rot: *const Vector3f, order: i32, out: *mut Matrixf);
+    }
+
+    /// Through the C entry the original calls, so constant orders do not fold.
+    pub fn matrix_rotate(rot: Vector3f, order: i32) -> Matrixf {
+        let mut m = Matrixf::default();
+        // SAFETY: exported by crate::math; both pointers are live locals.
+        unsafe { ohpl_math_matrix_rotate(&rot, order, &mut m) };
+        m
+    }
+
+    #[inline(never)]
     pub fn plane_dist(p: &Planef, v: Vector3f) -> f32 {
         crate::math::plane_dist(p, v)
     }
@@ -133,6 +150,7 @@ pub(super) enum Item {
     Op(Op),
     Arr(Vec<f32>, Box<dyn FnOnce(i32) -> Op>),
     Ask(Op, Cont),
+    Lazy(Box<dyn FnOnce() -> Vec<Item>>),
 }
 
 pub(super) struct Seq {
@@ -167,6 +185,11 @@ impl Source for Seq {
                     out.push(op);
                     self.pending = Some(c);
                     return true;
+                }
+                Item::Lazy(f) => {
+                    for it in f().into_iter().rev() {
+                        self.items.push_front(it);
+                    }
                 }
             }
         }

@@ -16,6 +16,10 @@ pub mod deferred_light_ffi;
 mod deferred_light_tests;
 pub mod deferred_lightlist;
 pub mod deferred_misc;
+pub mod deferred_obj;
+pub mod deferred_obj_ffi;
+#[cfg(test)]
+mod deferred_obj_tests;
 pub mod deferred_pass;
 pub mod deferred_pass_ffi;
 #[cfg(test)]

@@ -28,7 +28,7 @@ pub(super) fn exp(x: f32) -> f32 {
     unsafe { expf(x) }
 }
 
-fn tan(x: f32) -> f32 {
+pub(super) fn tan(x: f32) -> f32 {
     // SAFETY: pure libm function on a plain float.
     unsafe { tanf(x) }
 }
@@ -156,9 +156,11 @@ pub mod st {
     pub const BLEND_PREMUL_ALPHA: i32 = 4;
     pub const BLEND_MODULATE_SOURCE: i32 = 5;
     pub const ALPHA_SOLID: i32 = 0;
+    pub const ALPHA_TRANS: i32 = 1;
     pub const CHANNEL_RGBA: i32 = 0;
     pub const CHANNEL_NONE: i32 = 1;
     pub const CHANNEL_RGB: i32 = 2;
+    pub const CHANNEL_A: i32 = 3;
     pub const FUNC_EQUAL: i32 = 0;
     pub const FUNC_LESS_OR_EQUAL: i32 = 1;
     pub const FUNC_GREATER_OR_EQUAL: i32 = 2;
@@ -171,6 +173,7 @@ pub mod pf {
 
 pub mod comp {
     pub const FULL: i32 = 0;
+    pub const COLOR_AND_DEPTH: i32 = 1;
     pub const COLOR: i32 = 2;
     pub const LINEAR_DEPTH: i32 = 5;
 }
@@ -197,6 +200,8 @@ pub enum Feed {
     Vec3([f32; 3]),
     Fogs(Vec<super::deferred_fog::FogAreaIn>),
     Floats(Vec<f32>),
+    /// Raw words: ints, flags and float bit patterns that must survive the trip exactly.
+    Words(Vec<u32>),
 }
 
 impl Feed {
@@ -221,6 +226,13 @@ impl Feed {
     pub fn floats(self) -> Vec<f32> {
         match self {
             Feed::Floats(v) => v,
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn words(self) -> Vec<u32> {
+        match self {
+            Feed::Words(v) => v,
             _ => Vec::new(),
         }
     }
@@ -688,8 +700,12 @@ pub enum Pass {
 
 /// The state set around the per-object loops of `RenderZ` and `RenderGbuffer`.
 pub fn plan_pass(p: Pass) -> Plan {
+    fixed(pass_ops(p))
+}
+
+pub(super) fn pass_ops(p: Pass) -> Vec<Op> {
     use st::*;
-    let ops = match p {
+    match p {
         Pass::ZBegin => vec![
             state(State::DepthTest, 1),
             state(State::DepthWrite, 1),
@@ -707,8 +723,7 @@ pub fn plan_pass(p: Pass) -> Plan {
             state(State::Channel, CHANNEL_RGBA),
         ],
         Pass::GbufferEnd => vec![state(State::DepthFunc, FUNC_LESS_OR_EQUAL)],
-    };
-    fixed(ops)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

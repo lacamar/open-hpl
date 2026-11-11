@@ -223,7 +223,6 @@ namespace hpl {
 		void SetupRenderVariables();
 
 		void RenderZ();
-		void RenderDynamicZTemp();
 		void RenderGbuffer();
 		void RenderSSAO();
 		void RenderHpl3SSAO();
@@ -241,8 +240,6 @@ namespace hpl {
         
 		void RenderIllumination();
 
-		void RenderReflection(iRenderable *apObject);
-		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
 		void RenderDecals();
 		void SetFogDepthTexture(bool abBind, int alUnit=0);

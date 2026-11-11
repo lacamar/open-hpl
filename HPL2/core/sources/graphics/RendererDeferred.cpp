@@ -1611,6 +1611,43 @@ namespace hpl {
 		memcpy(&aWorld.invView, &m_mtxInvView, sizeof(OhplMat4));
 	}
 
+	static int CountList(cRenderList *apList, eRenderListType aType)
+	{
+		int lNum = 0;
+		cRenderableVecIterator it = apList->GetArrayIterator(aType);
+		while(it.HasNext()) { it.Next(); ++lNum; }
+		return lNum;
+	}
+
+	static const char* PassName(int alPass)
+	{
+		switch(alPass)
+		{
+		case kOhplDr4PassDof:			return "DepthOfField";
+		case kOhplDr4PassFullScreenFog:	return "FullScreenFog";
+		case kOhplDr4PassSsao:			return "SSAO";
+		case kOhplDr5PassEarlyZ:		return "EarlyZ";
+		case kOhplDr5PassGBuffer:		return "GBuffer";
+		case kOhplDr5PassGBufferContent:	return "GBufferContent";
+		case kOhplDr5PassDecals:		return "Decals";
+		case kOhplDr5PassIllumination:	return "Illumination";
+		case kOhplDr5PassSkyBox:		return "DeferredSkyBox";
+		case kOhplDr5PassReflectionContent:	return "ReflectionContent";
+		case kOhplDr5PassTranslucent:	return "Translucent";
+		}
+		return "Fog";
+	}
+
+	struct OhplDr5Reflection
+	{
+		cFrustum *mpSavedFrustum;
+		cRenderSettings *mpSavedSettings;
+		cRenderTarget *mpSavedRenderTarget;
+		bool mbSavedSendFrameBufferToPostEffects;
+		cFrustum mFrustum;
+		cRenderTarget mRenderTarget;
+	};
+
 	void cRendererDeferred::RunStep(int alStep, int alArg)
 	{
 		tRenderableFlag lVisibleFlags = mpCurrentSettings->mbIsReflection ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
@@ -1680,6 +1717,20 @@ namespace hpl {
 		auto Light = [&](int i) { return i >= 0 && i < (int)mvTempDeferredLights.size() ? mvTempDeferredLights[i] : (cDeferredLight*)NULL; };
 		cShadowMapData *pShadowData = NULL;
 		eTextureFilter savedFilter = eTextureFilter_Nearest;
+		std::vector<iRenderable*> vObjects[eRenderListType_LastEnum];
+		bool vObjectsLoaded[eRenderListType_LastEnum] = {};
+		auto Obj = [&](int alList, int alIdx) -> iRenderable*
+		{
+			if(vObjectsLoaded[alList]==false)
+			{
+				vObjectsLoaded[alList] = true;
+				cRenderableVecIterator it = mpCurrentRenderList->GetArrayIterator((eRenderListType)alList);
+				while(it.HasNext()) vObjects[alList].push_back(it.Next());
+			}
+			return vObjects[alList][alIdx];
+		};
+		cMatrixf *pCtxMatrix = NULL;
+		OhplDr5Reflection *pRefl = NULL;
 		OhplDrOp op;
 		while(ohpl_dr_plan_next(apPlan, &op))
 		{
@@ -1698,9 +1749,9 @@ namespace hpl {
 								 op.b == kOhplDrBlendMul ? eMaterialBlendMode_Mul : op.b == kOhplDrBlendPremulAlpha ? eMaterialBlendMode_PremulAlpha :
 								 op.b == kOhplDrBlendModulateSource ? eMaterialBlendMode_ModulateSource : eMaterialBlendMode_None);
 					break;
-				case eOhplDrState_Alpha:		SetAlphaMode(eMaterialAlphaMode_Solid); break;
+				case eOhplDrState_Alpha:		SetAlphaMode(op.b == kOhplDr5AlphaTrans ? eMaterialAlphaMode_Trans : eMaterialAlphaMode_Solid); break;
 				case eOhplDrState_Channel:
-					SetChannelMode(op.b == kOhplDrChannelNone ? eMaterialChannelMode_None : op.b == kOhplDrChannelRgb ? eMaterialChannelMode_RGB : eMaterialChannelMode_RGBA);
+					SetChannelMode(op.b == kOhplDrChannelNone ? eMaterialChannelMode_None : op.b == kOhplDrChannelRgb ? eMaterialChannelMode_RGB : op.b == kOhplDr5ChannelA ? eMaterialChannelMode_A : eMaterialChannelMode_RGBA);
 					break;
 				}
 				break;
@@ -1934,8 +1985,8 @@ namespace hpl {
 				case eOhplDr4X_FilterRestore:		Tex(op.b)->SetFilter(savedFilter); break;
 				case eOhplDr4X_DrawAccumQuad:		DrawAccumulationQuad(); break;
 				case eOhplDr4X_PassBegin:
-					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
-					if(mbLog) Log("----------\n -- Start Rendering %s:\n----------\n", op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
+					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(PassName(op.b));
+					if(mbLog) Log("----------\n -- Start Rendering %s:\n----------\n", PassName(op.b));
 					break;
 				case eOhplDr4X_PassEnd:
 					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassEnd();
@@ -2058,10 +2109,207 @@ namespace hpl {
 				case eOhplDr4X_GlareUpdateData:		mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false); break;
 				case eOhplDr4X_SetGlareBuffer:		SetVertexBuffer(mpGlareVtxBuffer); break;
 				case eOhplDr4X_SetFb3:				SetFrameBuffer(Fb(op.b), false, false); break;
+				case eOhplDr5X_ObjProgram:			SetMaterialProgram((eMaterialRenderMode)op.b, Obj(op.c, op.d)->GetMaterial()); break;
+				case eOhplDr5X_ObjTextures:			SetMaterialTextures((eMaterialRenderMode)op.b, Obj(op.c, op.d)->GetMaterial()); break;
+				case eOhplDr5X_ObjMatrixPtr:		SetMatrix(Obj(op.c, op.d)->GetModelMatrixPtr()); break;
+				case eOhplDr5X_ObjVbuf:				SetVertexBuffer(Obj(op.c, op.d)->GetVertexBuffer()); break;
+				case eOhplDr5X_ObjDrawMat:			DrawCurrentMaterial((eMaterialRenderMode)op.b, Obj(op.c, op.d)); break;
+				case eOhplDr5X_ObjZ:				RenderZObject(Obj(op.c, op.d), NULL); break;
+				case eOhplDr5X_ObjTexUnit:			SetTexture(op.e, Obj(op.c, op.d)->GetMaterial()->GetTextureInUnit((eMaterialRenderMode)op.b, op.e)); break;
+				case eOhplDr5X_AskObjBlend:			ohpl_dr_plan_feed_int(apPlan, (int)Obj(op.c, op.d)->GetMaterial()->GetBlendMode()); break;
+				case eOhplDr5X_SetAlphaLimit:		SetAlphaLimit(op.f[0]); break;
+				case eOhplDr5X_SkyMatrix:			memcpy(&m_mtxSkyBox, ohpl_dr_plan_array(apPlan, op.b), sizeof(OhplMat4)); SetMatrix(&m_mtxSkyBox); break;
+				case eOhplDr5X_SkyTexture:			SetTexture(0, mpCurrentWorld->GetSkyBoxTexture()); break;
+				case eOhplDr5X_SkyVbuf:				SetVertexBuffer(mpCurrentWorld->GetSkyBoxVertexBuffer()); break;
+				case eOhplDr5X_Quad2:				DrawQuad(cVector2f(op.f[0], op.f[1]), cVector2f(op.f[2], op.f[3]), 0, cVector2f(op.f[4], op.f[5]), true); break;
+				case eOhplDr5X_TexReflection:		SetTexture(0, mpReflectionTexture); break;
+				case eOhplDr5X_SetWorldFog:			cMaterialType_Translucent::SetWorldFog(op.b != 0, op.c != 0); break;
+				case eOhplDr5X_AskWorldFog:			ohpl_dr_plan_feed_int(apPlan, (int)cMaterialType_Translucent::GetWorldFog()); break;
+				case eOhplDr5X_AskCompiledFog:		ohpl_dr_plan_feed_int(apPlan, (int)Obj(eRenderListType_Translucent, op.b)->GetMaterial()->mlCompiledWorldFog); break;
+				case eOhplDr5X_ObjCompile:			Obj(eRenderListType_Translucent, op.b)->GetMaterial()->Compile(); break;
+				case eOhplDr5X_AskTransInfo:
+				{
+					iRenderable *pObject = Obj(eRenderListType_Translucent, op.b);
+					cMaterial *pMaterial = pObject->GetMaterial();
+					uint32_t vWords[kOhplDr5InfoWords] = {};
+					vWords[kOhplDr5InfoAffectedByDof] = pMaterial->GetAffectedByDepthOfField();
+					vWords[kOhplDr5InfoHasRefraction] = pMaterial->HasRefraction();
+					vWords[kOhplDr5InfoHasWorldReflection] = pMaterial->HasWorldReflection();
+					vWords[kOhplDr5InfoAffectedByFog] = pMaterial->GetAffectedByFog();
+					vWords[kOhplDr5InfoHasTranslucentIllumination] = pMaterial->HasTranslucentIllumination();
+					vWords[kOhplDr5InfoUseRefractionEdgeCheck] = pMaterial->UseRefractionEdgeCheck();
+					vWords[kOhplDr5InfoDepthTest] = pMaterial->GetDepthTest();
+					vWords[kOhplDr5InfoBlend] = (uint32_t)pMaterial->GetBlendMode();
+					vWords[kOhplDr5InfoRenderType] = (uint32_t)pObject->GetRenderType();
+					cBoundingVolume *pBV = op.c ? pObject->GetBoundingVolume() : NULL;
+					if(pBV)
+					{
+						cVector3f vCenter = pBV->GetWorldCenter();
+						float fRadius = pBV->GetRadius();
+						memcpy(&vWords[kOhplDr5InfoBvCenter], &vCenter, 12);
+						memcpy(&vWords[kOhplDr5InfoBvRadius], &fRadius, 4);
+					}
+					ohpl_dr5_feed_words(apPlan, vWords, kOhplDr5InfoWords);
+					break;
+				}
+				case eOhplDr5X_AskFogVis:
+				{
+					cFogAreaRenderData *pData = &mpCurrentSettings->mvFogRenderData[op.b];
+					float vAnswer[6];
+					vAnswer[0] = GetFogAreaVisibilityForObject(pData, Obj(eRenderListType_Translucent, op.c));
+					cFogArea *pFogArea = pData->mpFogArea;
+					vAnswer[1] = pFogArea->GetColor().r; vAnswer[2] = pFogArea->GetColor().g; vAnswer[3] = pFogArea->GetColor().b; vAnswer[4] = pFogArea->GetColor().a;
+					vAnswer[5] = pFogArea->GetBrightness();
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 6);
+					break;
+				}
+				case eOhplDr5X_SetTempFog:			mfTempAlpha = op.f[0]; mTempFogAreaColor = cColor(op.f[1], op.f[2], op.f[3], op.f[4]); break;
+				case eOhplDr5X_AskUpdateGraphics:	ohpl_dr_plan_feed_bool(apPlan, Obj(eRenderListType_Translucent, op.b)->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)); break;
+				case eOhplDr5X_AskRetrieveQuery:	ohpl_dr_plan_feed_bool(apPlan, Obj(eRenderListType_Translucent, op.b)->RetrieveOcculsionQuery(this)); break;
+				case eOhplDr5X_ObjModelMatrix:		pCtxMatrix = Obj(eRenderListType_Translucent, op.b)->GetModelMatrix(mpCurrentFrustum); break;
+				case eOhplDr5X_SetMatrixCtx:		SetMatrix(pCtxMatrix); break;
+				case eOhplDr5X_AskPlaneVisible:		ohpl_dr_plan_feed_bool(apPlan, CheckRenderablePlaneIsVisible(Obj(eRenderListType_Translucent, op.b), mpCurrentFrustum)); break;
+				case eOhplDr5X_WaitRetrieveQueries:	WaitAndRetrieveAllOcclusionQueries(); break;
+				case eOhplDr5X_AskClipRectObj:
+				{
+					cRect2l clipRect = GetClipRectFromObject(Obj(eRenderListType_Translucent, op.b), op.f[0], mpCurrentFrustum, mvRenderTargetSize, op.f[1]);
+					uint32_t vWords[4] = {(uint32_t)clipRect.x, (uint32_t)clipRect.y, (uint32_t)clipRect.w, (uint32_t)clipRect.h};
+					ohpl_dr5_feed_words(apPlan, vWords, 4);
+					break;
+				}
+				case eOhplDr5X_AskBvMinMax:
+				{
+					cBoundingVolume *pBV = Obj(eRenderListType_Translucent, op.b)->GetBoundingVolume();
+					const cVector3f &vMin = pBV->GetMin();
+					const cVector3f &vMax = pBV->GetMax();
+					float vAnswer[6] = {vMin.x, vMin.y, vMin.z, vMax.x, vMax.y, vMax.z};
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 6);
+					break;
+				}
+				case eOhplDr5X_FlatProjectionSize:	SetFlatProjection(cVector2f(op.f[0], op.f[1])); break;
+				case eOhplDr5X_QuadClip:			DrawQuad(cVector2f(op.f[0], op.f[1]), cVector2f(op.f[2], op.f[3]), 0, 1, false, cColor(1,0)); break;
+				case eOhplDr5X_CopyRefractionRect:	CopyFrameBufferToTexure(mpRefractionTexture, cVector2l(op.b, op.c), cVector2l(op.d, op.e), cVector2l(op.b, op.c), true); break;
+				case eOhplDr5X_CopyRefractionFull:	CopyFrameBufferToTexure(mpRefractionTexture, 0, cVector2l(op.b, op.c), 0, true); break;
+				case eOhplDr5X_SetDof:				cMaterialType_Translucent::SetDepthOfField(op.b != 0, cColor(op.f[0], op.f[1], op.f[2], op.f[3])); break;
+				case eOhplDr5X_AskReflInfo:
+				{
+					cMaterial *pMaterial = Obj(eRenderListType_Translucent, op.b)->GetMaterial();
+					float vAnswer[3] = {pMaterial->GetMaxReflectionDistance(), pMaterial->GetWorldReflectionOcclusionTest() ? 1.0f : 0.0f, Obj(eRenderListType_Translucent, op.b)->GetIsOneSided() ? 1.0f : 0.0f};
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 3);
+					break;
+				}
+				case eOhplDr5X_AskPlaneBv:
+				{
+					cPlanef plane;
+					plane.a = op.f[0]; plane.b = op.f[1]; plane.c = op.f[2]; plane.d = op.f[3];
+					ohpl_dr_plan_feed_int(apPlan, (int)cMath::CheckPlaneBVCollision(plane, *Obj(eRenderListType_Translucent, op.b)->GetBoundingVolume()));
+					break;
+				}
+				case eOhplDr5X_AskReflCleared:		ohpl_dr_plan_feed_bool(apPlan, mbReflectionTextureCleared); break;
+				case eOhplDr5X_ReflSetFb:			SetFrameBuffer(mpReflectionBuffer, false, false); break;
+				case eOhplDr5X_ReflSetCleared:		mbReflectionTextureCleared = op.b != 0; break;
+				case eOhplDr5X_ReflLog:
+					if(op.b ? mpCurrentSettings->mbLog : mbLog)
+					{
+						switch(op.c)
+						{
+						case kOhplDr5LogSetup:		Log("------------- Setting up Reflection rendering -----------\n"); break;
+						case kOhplDr5LogClearBegin:	Log("- Clear reflection Begin!\n"); break;
+						case kOhplDr5LogClearEnd:	Log("- Clear reflection End!\n"); break;
+						case kOhplDr5LogClipLimits:	Log("  Normalized Clip limits: (%s) -> (%s)\n", cVector3f(op.f[0], op.f[1], op.f[2]).ToString().c_str(), cVector3f(op.f[3], op.f[4], op.f[5]).ToString().c_str()); break;
+						case kOhplDr5LogScissor:	Log("  Setting up scissor rect. pos: (%d, %d)  %d x %d\n", (int)op.f[0], (int)op.f[1], (int)op.f[2], (int)op.f[3]); break;
+						}
+					}
+					break;
+				case eOhplDr5X_ReflBegin:
+					pRefl = hplNew( OhplDr5Reflection, () );
+					pRefl->mpSavedFrustum = mpCurrentFrustum;
+					pRefl->mpSavedSettings = mpCurrentSettings;
+					pRefl->mpSavedRenderTarget = mpCurrentRenderTarget;
+					pRefl->mbSavedSendFrameBufferToPostEffects = mbSendFrameBufferToPostEffects;
+					EndRendering(false);
+					SetAlphaLimit(mfDefaultAlphaLimit);
+					mpCurrentSettings->SetupReflectionSettings();
+					mpCurrentSettings->mpReflectionSettings->mbUseOcclusionCulling = op.b != 0;
+					mbReflectionTextureCleared = false;
+					break;
+				case eOhplDr5X_AskReflTarget:
+				{
+					uint32_t vWords[12] = {};
+					vWords[0] = (uint32_t)mpCurrentRenderTarget->mvPos.x; vWords[1] = (uint32_t)mpCurrentRenderTarget->mvPos.y;
+					vWords[2] = (uint32_t)mpCurrentRenderTarget->mvSize.x; vWords[3] = (uint32_t)mpCurrentRenderTarget->mvSize.y;
+					if(mpCurrentRenderTarget->mpFrameBuffer)
+					{
+						vWords[4] = (uint32_t)mpCurrentRenderTarget->mpFrameBuffer->GetSize().x; vWords[5] = (uint32_t)mpCurrentRenderTarget->mpFrameBuffer->GetSize().y;
+						vWords[6] = 1;
+					}
+					vWords[7] = (uint32_t)mvScreenSize.x; vWords[8] = (uint32_t)mvScreenSize.y;
+					vWords[9] = (uint32_t)mlReflectionSizeDiv;
+					if(mpReflectionBuffer) { vWords[10] = (uint32_t)mpReflectionBuffer->GetSize().x; vWords[11] = (uint32_t)mpReflectionBuffer->GetSize().y; }
+					ohpl_dr5_feed_words(apPlan, vWords, 12);
+					break;
+				}
+				case eOhplDr5X_AskReflSurface:
+				{
+					cSubMeshEntity *pSubEnt = static_cast<cSubMeshEntity*>(Obj(eRenderListType_Translucent, op.b));
+					cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+					float vAnswer[28];
+					const cMatrixf &mtxWorld = pSubEnt->GetWorldMatrix();
+					for(int r=0; r<4; ++r) for(int c=0; c<4; ++c) vAnswer[r*4+c] = mtxWorld.m[r][c];
+					const cVector3f &vNormal = pSubMesh->GetOneSidedNormal();
+					const cVector3f &vPoint = pSubMesh->GetOneSidedPoint();
+					vAnswer[16] = vNormal.x; vAnswer[17] = vNormal.y; vAnswer[18] = vNormal.z;
+					vAnswer[19] = vPoint.x; vAnswer[20] = vPoint.y; vAnswer[21] = vPoint.z;
+					const cVector3f &vMin = pSubEnt->GetBoundingVolume()->GetMin();
+					const cVector3f &vMax = pSubEnt->GetBoundingVolume()->GetMax();
+					vAnswer[22] = vMin.x; vAnswer[23] = vMin.y; vAnswer[24] = vMin.z;
+					vAnswer[25] = vMax.x; vAnswer[26] = vMax.y; vAnswer[27] = vMax.z;
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 28);
+					break;
+				}
+				case eOhplDr5X_ReflFrustum:
+				{
+					cMatrixf mtxProj, mtxView, mtxCamProj;
+					const float *pMtx = ohpl_dr_plan_array(apPlan, op.b);
+					memcpy(&mtxProj, pMtx, sizeof(OhplMat4));
+					memcpy(&mtxView, pMtx + 16, sizeof(OhplMat4));
+					memcpy(&mtxCamProj, pMtx + 32, sizeof(OhplMat4));
+					pRefl->mFrustum.SetupPerspectiveProj(mtxProj, mtxView, op.f[0], op.f[1], op.f[2], op.f[3], cVector3f(op.f[4], op.f[5], op.f[6]), false, &mtxCamProj, true);
+					pRefl->mFrustum.SetInvertsCullMode(true);
+					break;
+				}
+				case eOhplDr5X_ReflResetPlanes:		mpCurrentSettings->mpReflectionSettings->ResetOcclusionPlanes(); break;
+				case eOhplDr5X_ReflAddPlane:
+				{
+					cPlanef plane;
+					plane.a = op.f[0]; plane.b = op.f[1]; plane.c = op.f[2]; plane.d = op.f[3];
+					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(plane);
+					break;
+				}
+				case eOhplDr5X_ReflScissor:
+					mpCurrentSettings->mpReflectionSettings->mbUseScissorRect = true;
+					mpCurrentSettings->mpReflectionSettings->mvScissorRectPos = cVector2l(op.b, op.c);
+					mpCurrentSettings->mpReflectionSettings->mvScissorRectSize = cVector2l(op.d, op.e);
+					break;
+				case eOhplDr5X_ReflTarget:
+					pRefl->mRenderTarget.mpFrameBuffer = mpReflectionBuffer;
+					pRefl->mRenderTarget.mvPos = cVector2l(op.b, op.c);
+					pRefl->mRenderTarget.mvSize = cVector2l(op.d, op.e);
+					break;
+				case eOhplDr5X_ReflRender:
+					if(mpCurrentSettings->mbLog) Log("\n==============================\n= BEGIN RENDER REFLECTION\n==============================\n\n");
+					Render(mfCurrentFrameTime, &pRefl->mFrustum, mpCurrentWorld, mpCurrentSettings->mpReflectionSettings, &pRefl->mRenderTarget, false, mpCallbackList);
+					if(mpCurrentSettings->mbLog) Log("\n==============================\n= END RENDER REFLECTION\n==============================\n\n");
+					break;
+				case eOhplDr5X_ReflEnd:
+					BeginRendering(mfCurrentFrameTime, pRefl->mpSavedFrustum, mpCurrentWorld, pRefl->mpSavedSettings, pRefl->mpSavedRenderTarget,
+								   pRefl->mbSavedSendFrameBufferToPostEffects, mpCallbackList, false);
+					break;
 				}
 				break;
 			}
 		}
+		if(pRefl) hplDelete(pRefl);
 		if(abFree) ohpl_dr_plan_free(apPlan);
 	}
 
@@ -2091,95 +2339,14 @@ namespace hpl {
 
 	void cRendererDeferred::RenderZ()
 	{
-		START_RENDER_PASS(EarlyZ);
-
-		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_ZBegin), NULL, NULL, NULL);
-
-		cRenderableVecIterator zIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Z);
-		while(zIt.HasNext())
-		{
-			iRenderable *pObject = zIt.Next();
-			RenderZObject(pObject, NULL);
-		}
-
-		END_RENDER_PASS();
+		RunPlan(ohpl_dr5_plan_z(CountList(mpCurrentRenderList, eRenderListType_Z)), NULL, NULL, NULL);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cRendererDeferred::RenderDynamicZTemp()
-	{
-		START_RENDER_PASS(EarlyZ);
-
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-
-		for(int i=0; i<mpCurrentRenderList->GetSolidObjectNum(); ++i)
-		{
-			iRenderable *pObject = mpCurrentRenderList->GetSolidObject(i);
-			if(pObject->IsStatic()) continue;
-
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			SetMaterialProgram(eMaterialRenderMode_Z,pMaterial);
-
-			if(pMaterial->GetTexture(eMaterialTexture_Alpha))
-			{
-				SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Alpha));
-				SetAlphaMode(eMaterialAlphaMode_Trans);
-			}
-			else
-			{
-				SetTexture(0,NULL);
-				SetAlphaMode(eMaterialAlphaMode_Solid);
-			}
-
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(eMaterialRenderMode_Z, pObject);
-		}
-		END_RENDER_PASS();
-	}
-
-	
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderGbuffer()
 	{
-		START_RENDER_PASS(GBuffer);
-
-		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_GbufferBegin), NULL, NULL, NULL);
-
-		
-		////////////////////////////////////
-		//Iterate renderable objects and render to G-Buffer
-		cRenderableVecIterator diffuseIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Diffuse);
-		while(diffuseIt.HasNext())
-		{
-			iRenderable *pObject = diffuseIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			SetMaterialProgram(eMaterialRenderMode_Diffuse,pMaterial);
-
-			SetMaterialTextures(eMaterialRenderMode_Diffuse, pMaterial);
-
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(eMaterialRenderMode_Diffuse, pObject);
-		}
-		
-		RunPlan(ohpl_dr_plan_pass(eOhplDrPass_GbufferEnd), NULL, NULL, NULL);
-
-		END_RENDER_PASS();
+		RunPlan(ohpl_dr5_plan_gbuffer(CountList(mpCurrentRenderList, eRenderListType_Diffuse)), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -2736,91 +2903,17 @@ namespace hpl {
 
 	void cRendererDeferred::RenderIllumination()
 	{
-		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)==false) return;
-
-		cRenderableVecIterator illumIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Illumination);
-		if(illumIt.HasNext()==false) return;
-
-		START_RENDER_PASS(Illumination);
-
-		
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetDepthTestFunc(eDepthTestFunc_Equal);
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		SetTextureRange(NULL,1);
-				
-		while(illumIt.HasNext())
-		{
-			iRenderable *pObject = illumIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-			SetMaterialProgram(eMaterialRenderMode_Illumination,pMaterial);
-			
-			SetTexture(0,pMaterial->GetTextureInUnit(eMaterialRenderMode_Illumination,0));
-			
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(eMaterialRenderMode_Illumination, pObject);
-		}
-
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-
-		
-		END_RENDER_PASS();
+		RunPlan(ohpl_dr5_plan_illumination(CountList(mpCurrentRenderList, eRenderListType_Illumination)), NULL, NULL, NULL);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderDecals()
 	{
-		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)==false) return;
-
-		START_RENDER_PASS(Decals);
-
-		SetGBuffer(eGBufferComponents_ColorAndDepth);
-
-		SetDepthTest(true);
-		SetDepthWrite(false);
-
-		SetAlphaLimit(0.01f);
-		SetAlphaMode(eMaterialAlphaMode_Trans);
-		// HPL3 keeps diffuse alpha (translucency) out of decals
-		SetChannelMode(mbDepthInNormalAlpha ? eMaterialChannelMode_RGB : eMaterialChannelMode_RGBA);
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-
-
-		float fHalfFovTan=0;
-
-		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Decal);
-		while(transIt.HasNext())
-		{
-			iRenderable *pObject = transIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			SetBlendMode(pMaterial->GetBlendMode());
-
-			SetMaterialProgram(eMaterialRenderMode_Diffuse,pMaterial);
-
-			SetMaterialTextures(eMaterialRenderMode_Diffuse, pMaterial);
-
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrent();
-		}
-
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-
-		END_RENDER_PASS();
+		OhplDr5DecalIn in = {};
+		in.count = CountList(mpCurrentRenderList, eRenderListType_Decal);
+		in.depthInNormalAlpha = mbDepthInNormalAlpha;
+		RunPlan(ohpl_dr5_plan_decals(&in), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
@@ -3053,560 +3146,38 @@ namespace hpl {
 
 	void cRendererDeferred::RenderTranslucent(int alDofPass)
 	{
-		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)==false) return;
-
-		START_RENDER_PASS(Translucent);
-
-		///////////////////////////////
-		//Set up rendering
-		SetDepthTest(true);
-		SetDepthWrite(false);
-
-		SetAlphaLimit(0.01f);
-		SetAlphaMode(eMaterialAlphaMode_Trans);
-		if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(true);
-
-		///////////////////////////////
-		//Set up variables
-		float fHalfFovTan=0;
-		cMaterialType_Translucent::SetWorldFog(WorldUnderwaterFog(this), WorldFogActive() && mpCurrentWorld->GetSecondaryFogActive());
-		tFlag lWorldFog = cMaterialType_Translucent::GetWorldFog();
-
-		// each mid-pass copy flushes the whole tiled framebuffer, so one copy is reused until a draw overlaps;
-		// refractive particles ignore each other, like particles within one emitter
-		bool bRefractionValid = false;
-		std::vector<cRect2l> vDrawnSinceCopy;
-
-		///////////////////////////////
-		//Iterate transparent objects
-		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
-		int lTransIdx = -1;
-		while(transIt.HasNext())
-		{
-			iRenderable *pObject = transIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-			if(++lTransIdx == mlDebugSkipTranslucent) continue;
-			if(pMaterial->mlCompiledWorldFog != lWorldFog) pMaterial->Compile();
-
-			// objects straddling the focus end draw in both passes, crossfaded per pixel
-			bool bDofBlend = false;
-			cColor vDofParams(0,0);
-			if(alDofPass && pMaterial->GetAffectedByDepthOfField()==false)
-			{
-				if(alDofPass==1) continue;
-			}
-			else if(alDofPass)
-			{
-				cBoundingVolume *pBV = pObject->GetBoundingVolume();
-				float fDepth = -cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pBV->GetWorldCenter()).z;
-				float fStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
-				float fEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
-				bool bBehind = fDepth - pBV->GetRadius() > fEnd;
-				bDofBlend = bBehind==false && fDepth + pBV->GetRadius() > fEnd && pMaterial->HasRefraction()==false;
-				if(bDofBlend==false && bBehind != (alDofPass==1)) continue;
-				float fFalloffLen = (fEnd - fStart) * 0.5f / cMath::Max(1e-15f, mpCurrentWorld->GetDepthOfFieldFalloff());
-				vDofParams = cColor(fEnd, -1.0f / cMath::Max(1e-6f, fFalloffLen), alDofPass==1 ? 0.0f : 1.0f, alDofPass==1 ? 1.0f : -1.0f);
-			}
-
-			eMaterialRenderMode renderMode = WorldFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
-			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;
-
-			//No world reflections in a reflection!
-			if(mpCurrentSettings->mbIsReflection && pMaterial->HasWorldReflection()) continue;
-
-			////////////////////////////////////////
-			// Check the fog area alpha
-			mfTempAlpha = 1;
-			mTempFogAreaColor = cColor(0,0);
-			if(pMaterial->GetAffectedByFog())
-			{
-				for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
-				{
-					float fVisibility = GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], pObject);
-					if(mbHdr==false) { mfTempAlpha *= fVisibility; continue; }
-
-					// HPL3 fogs translucents toward the area colour instead of fading them
-					cFogArea *pFogArea = mpCurrentSettings->mvFogRenderData[i].mpFogArea;
-					cColor fogCol = GetFogRenderColor(pFogArea->GetColor(), pFogArea->GetBrightness());
-					float fA = 1 - fVisibility;
-					float fPrevA = mTempFogAreaColor.a * (1 - fA);
-					float fNewA = fPrevA + fA;
-					if(fNewA <= 0) continue;
-					mTempFogAreaColor = (mTempFogAreaColor * fPrevA + fogCol * fA) * (1 / fNewA);
-					mTempFogAreaColor.a = fNewA;
-				}
-				if(mTempFogAreaColor.a > 0) renderMode = eMaterialRenderMode_DiffuseFog;
-			}
-			
-			
-			////////////////////////////////////////
-			// Update object, need to do this here since otherwise the reflection rendering might reset it!
-
-			//Before viewport
-			if(pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)==false)
-			{
-				continue;
-			}
-			
-			if(pObject->RetrieveOcculsionQuery(this)==false)
-			{
-				continue;
-			}
-			
-			cMatrixf *pMatrix = pObject->GetModelMatrix(mpCurrentFrustum);
-
-			////////////////////////////////////////
-			// World reflection
-			if(pMaterial->HasWorldReflection() && pObject->GetRenderType() == eRenderableType_SubMesh)
-			{
-				if(CheckRenderablePlaneIsVisible(pObject, mpCurrentFrustum)==false) continue;
-
-				///////////////////////////////////
-				//Retrieve all occlusion queries before rendering new scene. 
-				//  Otherwise it will lead to problems on some cards.
-				WaitAndRetrieveAllOcclusionQueries();	//Queires for halos and such
-				if(mbOcclusionTestLargeLights)
-					RetrieveAllLightOcclusionPair(false);	//Queries for light visibility (false = no stop and wait!)
-
-				///////////////////////////////////
-				//Render the reflection
-				cSubMeshEntity *pReflectSubMeshEnt = static_cast<cSubMeshEntity*>(pObject);
-				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(false);
-				RenderReflection(pReflectSubMeshEnt);
-				if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(true);
-				bRefractionValid = false;
-			}
-
-			////////////////////////////////////////
-			// Refraction set up
-			if(pMaterial->HasRefraction())
-			{
-				if(CheckRenderablePlaneIsVisible(pObject, mpCurrentFrustum)==false) continue;
-				
-				////////////////////////////////////
-				// Get the clip rect needed by the refraction
-				cBoundingVolume *pBV = pObject->GetBoundingVolume();
-
-				if(fHalfFovTan ==0)	
-					fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
-				cRect2l clipRect = GetClipRectFromObject(pObject, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
-				
-				////////////////////////////////////
-				// Add an extra check to make sure there is no bleeding. Draw outline of mesh to alpha!
-				if(pMaterial->UseRefractionEdgeCheck())
-				{
-					////////////////////////////////////
-					// Clear alpha
-					SetFlatProjection(cVector2f((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y));					
-					
-					//Set up new settings
-					SetDepthTest(false);
-					SetProgram(NULL);
-					SetBlendMode(eMaterialBlendMode_None);
-					SetAlphaMode(eMaterialAlphaMode_Solid);
-					SetChannelMode(eMaterialChannelMode_A);
-					SetTextureRange(NULL,0);
-					
-					DrawQuad(	cVector2f((float)clipRect.x, (float)clipRect.y), 
-								cVector2f((float)clipRect.w, (float)clipRect.h), 0, 1, false, cColor(1,0));
-                    
-					//Set Normal projection and depth test
-					SetNormalFrustumProjection();
-					SetDepthTest(true);
-
-					////////////////////////////////////
-					// Render alpha of object
-					SetMatrix(pMatrix);
-					SetVertexBuffer(pObject->GetVertexBuffer());
-
-					DrawCurrent();
-										
-					//Set backs settings to normal.
-					SetChannelMode(eMaterialChannelMode_RGBA);
-					SetAlphaMode(eMaterialAlphaMode_Trans);
-				}
-				
-				////////////////////////////////////
-				// Copy frame buffer to texture (an empty rect would mean the whole screen)
-				if(pMaterial->UseRefractionEdgeCheck())
-				{
-					if(clipRect.w > 0 && clipRect.h > 0)
-					CopyFrameBufferToTexure(mpRefractionTexture, 
-											cVector2l(clipRect.x, clipRect.y), 
-											cVector2l(clipRect.w, clipRect.h), 
-											cVector2l(clipRect.x, clipRect.y),
-											true);
-					bRefractionValid = false;
-				}
-				else if(bRefractionValid==false || std::any_of(vDrawnSinceCopy.begin(), vDrawnSinceCopy.end(),
-							[&](const cRect2l& r){ return cMath::CheckRectIntersection(r, clipRect); }))
-				{
-					CopyFrameBufferToTexure(mpRefractionTexture, 0, mvRenderTargetSize, 0, true);
-					bRefractionValid = true;
-					vDrawnSinceCopy.clear();
-				}
-				
-			}
-			
-			////////////////////////////////////////
-			// Set up and render
-			if(pMaterial->HasRefraction())	SetBlendMode(eMaterialBlendMode_None); //Blending shall take place in shader!
-			else							SetBlendMode(pMaterial->GetBlendMode());
-			SetDepthTest(pMaterial->GetDepthTest());
-			
-			cMaterialType_Translucent::SetDepthOfField(bDofBlend, vDofParams);
-			SetMaterialProgram(renderMode,pMaterial);
-			SetMaterialTextures(renderMode, pMaterial);
-			
-			SetMatrix(pMatrix);
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(renderMode, pObject);
-			cMaterialType_Translucent::SetDepthOfField(false);
-
-
-			////////////////////////////////////////
-			// Set up and render Illumination
-			if(pMaterial->HasTranslucentIllumination() && (bDofBlend==false || alDofPass==2))
-			{
-				renderMode = renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog;
-
-				SetBlendMode(eMaterialBlendMode_Add);
-				SetDepthTest(pMaterial->GetDepthTest());
-				
-				SetMaterialProgram(renderMode,pMaterial);
-				SetMaterialTextures(renderMode, pMaterial);
-				
-				SetMatrix(pMatrix);
-
-				SetVertexBuffer(pObject->GetVertexBuffer());
-
-				DrawCurrentMaterial(renderMode, pObject);
-			}
-
-			bool bRefractiveParticle = pMaterial->HasRefraction() && pObject->GetRenderType()==eRenderableType_ParticleEmitter;
-			if(bRefractionValid && bRefractiveParticle==false)
-			{
-				cRect2l drawnRect;
-				if(fHalfFovTan ==0) fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
-				cMath::GetClipRectFromBV(drawnRect, *pObject->GetBoundingVolume(), mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
-				vDrawnSinceCopy.push_back(drawnRect);
-			}
-		}
-
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		if(mbDepthInNormalAlpha) GetGbufferTexture(1)->SetRedFromAlpha(false);
-
-		
-
-		END_RENDER_PASS();
+		OhplDr5TransIn in = {};
+		in.count = CountList(mpCurrentRenderList, eRenderListType_Translucent);
+		in.debugSkip = mlDebugSkipTranslucent;
+		in.dofPass = alDofPass;
+		in.depthInNormalAlpha = mbDepthInNormalAlpha;
+		in.hdr = mbHdr;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.fogActive = WorldFogActive();
+		in.underwater = WorldUnderwaterFog(this);
+		in.secondary = WorldFogActive() && mpCurrentWorld->GetSecondaryFogActive();
+		in.renderWorldReflection = mpCurrentSettings->mbRenderWorldReflection;
+		in.clipReflectionScreenRect = mpCurrentSettings->mbClipReflectionScreenRect;
+		in.settingsLog = mpCurrentSettings->mbLog;
+		in.occlusionTestLargeLights = mbOcclusionTestLargeLights;
+		in.fogAreaNum = (int32_t)mpCurrentSettings->mvFogRenderData.size();
+		in.dofStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+		in.dofEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+		in.dofFalloff = mpCurrentWorld->GetDepthOfFieldFalloff();
+		in.rtSize.x = mvRenderTargetSize.x; in.rtSize.y = mvRenderTargetSize.y;
+		CopyMat(in.camera.f.view, mpCurrentFrustum->GetViewMatrix());
+		CopyMat(in.camera.f.proj, mpCurrentFrustum->GetProjectionMatrix());
+		in.camera.f.perspective = mpCurrentFrustum->GetProjectionType() == eProjectionType_Perspective;
+		in.camera.f.fov = mpCurrentFrustum->GetFOV();
+		in.camera.f.nearPlane = mpCurrentFrustum->GetNearPlane();
+		in.camera.f.aspect = mpCurrentFrustum->GetAspect();
+		in.camera.f.origin = ToVec3(mpCurrentFrustum->GetOrigin());
+		in.camera.farPlane = mpCurrentFrustum->GetFarPlane();
+		cVector3f vForward = mpCurrentFrustum->GetForward();
+		in.camera.forward.x = vForward.x; in.camera.forward.y = vForward.y; in.camera.forward.z = vForward.z;
+		RunPlan(ohpl_dr5_plan_translucent(&in), NULL, NULL, NULL);
 	}
 
-    //-----------------------------------------------------------------------
-
-	void cRendererDeferred::RenderReflection(iRenderable *apObject)
-	{
-		////////////////////////////////////
-		//Set up variables
-		cSubMeshEntity *pReflectionObject = static_cast<cSubMeshEntity*>(apObject);
-		cMaterial *pRelfMaterial = pReflectionObject->GetMaterial();
-
-
-		///////////////////////////
-		//Check if surface is close enough for reflection!
-		bool bReflectionIsInRange=true;
-		if(pRelfMaterial->GetMaxReflectionDistance() > 0)
-		{
-			cVector3f vPoint = mpCurrentFrustum->GetOrigin() + mpCurrentFrustum->GetForward()*-1*pRelfMaterial->GetMaxReflectionDistance();
-			cVector3f vNormal = mpCurrentFrustum->GetForward();
-
-			cPlanef maxRelfctionDistPlane;
-			maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
-
-			if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *pReflectionObject->GetBoundingVolume())==eCollision_Outside)
-			{
-				bReflectionIsInRange = false;
-			}
-		}
-
-		//////////////////////////////////////////////
-		// Render the reflection!
-		if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && pReflectionObject->GetIsOneSided())
-		{
-			RenderSubMeshEntityReflection(pReflectionObject);
-		}
-		//////////////////////////////////////////////
-		// No reflection, just clear!
-		else
-		{	
-			if(mbReflectionTextureCleared == false)
-			{
-				if(mpCurrentSettings->mbLog) Log("- Clear reflection Begin!\n");
-
-				cRenderTarget renderTarget;
-				renderTarget.mpFrameBuffer = mpReflectionBuffer;
-
-				SetFrameBuffer(mpReflectionBuffer, false, false);
-
-				ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
-
-				SetAccumulationBuffer();
-
-				mbReflectionTextureCleared = true;
-
-				if(mpCurrentSettings->mbLog) Log("- Clear reflection End!\n");
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-	
-	void cRendererDeferred::RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject)
-	{
-		cMaterial *pRelfMaterial = pReflectionObject->GetMaterial();
-
-		if(mbLog) Log("------------- Setting up Reflection rendering -----------\n");
-
-		////////////////////////
-		//Reset settings from normal rendering
-		cFrustum *pSaved_Frustum = mpCurrentFrustum;
-		cRenderSettings *pSaved_Settings = mpCurrentSettings;
-		cRenderTarget *pSaved_RenderTarget = mpCurrentRenderTarget;
-		bool bSaved_SendFrameBufferToPostEffects = mbSendFrameBufferToPostEffects;
-
-		EndRendering(false);
-
-		SetAlphaLimit(mfDefaultAlphaLimit);//Need to have the normal alpha limit!
-
-		////////////////////////
-		//Setup settings
-		mpCurrentSettings->SetupReflectionSettings();
-
-		mpCurrentSettings->mpReflectionSettings->mbUseOcclusionCulling = pRelfMaterial->GetWorldReflectionOcclusionTest();
-
-		///////////////////////////////////
-		//Reflection texture is not cleared!
-		mbReflectionTextureCleared = false;
-
-		///////////////////////////////////
-		//Make render target
-		cRenderTarget renderTarget;
-		cVector2l vCurrentFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : mvScreenSize;
-		renderTarget.mpFrameBuffer = mpReflectionBuffer;
-		renderTarget.mvPos = mpCurrentRenderTarget->mvPos / mlReflectionSizeDiv;
-		renderTarget.mvSize.x = mpCurrentRenderTarget->mvSize.x == -1 ? vCurrentFrameBufferSize.x/mlReflectionSizeDiv : mpCurrentRenderTarget->mvSize.x/mlReflectionSizeDiv;
-		renderTarget.mvSize.y = mpCurrentRenderTarget->mvSize.y == -1 ? vCurrentFrameBufferSize.y/mlReflectionSizeDiv : mpCurrentRenderTarget->mvSize.y/mlReflectionSizeDiv;
-
-		///////////////////////////
-		//Make a frustum, mirrored along the plane
-		cSubMesh *pSubMesh = pReflectionObject->GetSubMesh();
-		cVector3f vSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-		cVector3f vSurfacePos = cMath::MatrixMul(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
-
-		cPlanef reflectPlane;
-		reflectPlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
-
-		cMatrixf mtxReflection = cMath::MatrixPlaneMirror(reflectPlane);
-		cMatrixf mtxReflView = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxReflection);
-		cVector3f vReflOrigin = cMath::MatrixMul(mtxReflection, mpCurrentFrustum->GetOrigin());
-
-
-		cMatrixf mtxProj = mpCurrentFrustum->GetProjectionMatrix();
-
-		cPlanef cameraSpaceReflPlane = cMath::TransformPlane(mtxReflView, reflectPlane);
-		cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(mtxProj, cameraSpaceReflPlane);
-
-		cFrustum reflectFrustum;
-		reflectFrustum.SetupPerspectiveProj(mtxReflProj, mtxReflView, 
-			mpCurrentFrustum->GetFarPlane(),mpCurrentFrustum->GetNearPlane(), 
-			mpCurrentFrustum->GetFOV(), mpCurrentFrustum->GetAspect(),
-			vReflOrigin,false, &mtxProj, true);
-		reflectFrustum.SetInvertsCullMode(true);
-
-		///////////////////////////
-		//Reset clip planes
-		mpCurrentSettings->mpReflectionSettings->ResetOcclusionPlanes();
-
-		///////////////////////////
-		//End of reflection clip plane
-		if(pRelfMaterial->GetMaxReflectionDistance() > 0)
-		{
-			cVector3f vForward = mpCurrentFrustum->GetForward()*-1;
-			float fMaxReflDist = pRelfMaterial->GetMaxReflectionDistance();
-			cPlanef maxRelfctionDistPlane;
-
-			///////////////////////////////
-			//Forward and normal is aligned, the normal of plane becomes inverse forward
-			float fFDotN = cMath::Vector3Dot(vForward, vSurfaceNormal);
-			if(fFDotN <-0.99999f)
-			{
-				cVector3f vClipNormal, vClipPoint;
-				vClipNormal = vForward*-1;
-				vClipPoint = mpCurrentFrustum->GetOrigin() + vForward*pRelfMaterial->GetMaxReflectionDistance();
-
-				maxRelfctionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
-			}
-			///////////////////////////////
-			//Get the plane into camera space and then get a point where z=max reflection distance. 
-			//Note: Because of test above a and b in plane cannot be 0!
-			else
-			{
-				cPlanef cameraSpacePlane = cMath::TransformPlane(mpCurrentFrustum->GetViewMatrix(), reflectPlane);
-
-				cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
-				cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
-
-				//Vertical row (x always same)
-				if(fabs(cameraSpacePlane.b) < 0.0001f)
-				{
-					vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-					vPoint2 = vPoint1;
-					vPoint2.y+=1;
-				}
-				//Horizontal row (y always same)
-				else if(fabs(cameraSpacePlane.a) < 0.0001f)
-				{
-					vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-					vPoint2 = vPoint1;
-					vPoint2.x+=1;
-				}
-				//Oblique row (x and y changes)
-				else
-				{
-					vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-					vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-				}
-
-				cMatrixf mtxInvCamera = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
-				vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
-				vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
-
-				cVector3f vNormal = cMath::Vector3Cross(vPoint1-vReflOrigin, vPoint2-vReflOrigin);
-				vNormal.Normalize();
-				//make sure normal has correct sign!
-				if(cMath::Vector3Dot(vSurfaceNormal, vNormal)<0) vNormal = vNormal*-1;
-
-				maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint1);
-			}
-
-
-			mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(maxRelfctionDistPlane);
-		}
-
-		//////////////////////////
-		// Add screen rect Occlusion planes!
-		if(mpCurrentSettings->mbClipReflectionScreenRect)
-		{
-			cVector3f vUp = reflectFrustum.GetViewMatrix().GetUp();
-			cVector3f vRight = reflectFrustum.GetViewMatrix().GetRight();
-			cVector3f vForward = reflectFrustum.GetViewMatrix().GetForward();
-			cVector3f vOrigin = reflectFrustum.GetOrigin();
-
-			float fNearPlane = reflectFrustum.GetNearPlane();
-			float fHalfFovTan = tan(reflectFrustum.GetFOV()*0.5f);
-			float fNearTop =  fHalfFovTan * fNearPlane;
-			float fNearRight = reflectFrustum.GetAspect() * fNearTop;
-
-			cVector3f vMin,vMax;
-			bool bNeedsClipRect = false;
-			bool bVisible = cMath::GetNormalizedClipRectFromBV(vMin, vMax, *pReflectionObject->GetBoundingVolume(), &reflectFrustum, fHalfFovTan);
-			if(bVisible)
-			{
-				if(mbLog) Log("  Normalized Clip limits: (%s) -> (%s)\n", vMin.ToString().c_str(), vMax.ToString().c_str());
-				////////////////////////////
-				// Right
-				if(vMax.x <1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vRight*(vMax.x*fNearRight) + vForward*-fNearPlane;
-					cPlanef rightPlane;
-					rightPlane.FromPoints(vOrigin, vNearPlanePos, vNearPlanePos+vUp);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(rightPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Left
-				if(vMin.x >-1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vRight*(vMin.x*fNearRight) + vForward*-fNearPlane;
-					cPlanef leftPlane;
-					leftPlane.FromPoints(vOrigin, vNearPlanePos+vUp, vNearPlanePos);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(leftPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Top
-				if(vMax.y <1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vUp*(vMax.y*fNearTop) + vForward*-fNearPlane;
-					cPlanef topPlane;
-					topPlane.FromPoints(vOrigin, vNearPlanePos+vRight, vNearPlanePos);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(topPlane);
-					bNeedsClipRect = true;
-				}
-
-				////////////////////////////
-				// Bottom
-				if(vMin.y >-1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vUp*(vMin.y*fNearTop) + vForward*-fNearPlane;
-					cPlanef bottomPlane;
-					bottomPlane.FromPoints(vOrigin, vNearPlanePos, vNearPlanePos+vRight);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(bottomPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Add a stencil rect!
-				if(bNeedsClipRect)
-				{
-					cVector2l vFrameBufferSize = renderTarget.mpFrameBuffer->GetSize();
-					cVector2l vRenderTargetSize;
-					vRenderTargetSize.x = renderTarget.mvSize.x < 0 ? vFrameBufferSize.x : renderTarget.mvSize.x;
-					vRenderTargetSize.y = renderTarget.mvSize.y < 0 ? vFrameBufferSize.y : renderTarget.mvSize.y;
-
-					cRect2l clipRect;
-					cMath::GetClipRectFromBV(clipRect, *pReflectionObject->GetBoundingVolume(), mpCurrentFrustum, vRenderTargetSize, fHalfFovTan);
-
-					if(mbLog) Log("  Setting up scissor rect. pos: (%d, %d)  %d x %d\n", clipRect.x, clipRect.y,clipRect.w, clipRect.h);
-
-					mpCurrentSettings->mpReflectionSettings->mbUseScissorRect = true;
-					mpCurrentSettings->mpReflectionSettings->mvScissorRectPos = cVector2l(clipRect.x, clipRect.y);
-					mpCurrentSettings->mpReflectionSettings->mvScissorRectSize = cVector2l(clipRect.w, clipRect.h);
-				}
-			}
-		}
-
-		///////////////////////////
-		//Render
-		if(mpCurrentSettings->mbLog)
-			Log("\n==============================\n= BEGIN RENDER REFLECTION\n==============================\n\n");
-
-		Render(mfCurrentFrameTime, &reflectFrustum, mpCurrentWorld, mpCurrentSettings->mpReflectionSettings, &renderTarget, false, mpCallbackList);				
-
-		if(mpCurrentSettings->mbLog)
-			Log("\n==============================\n= END RENDER REFLECTION\n==============================\n\n");
-
-
-		///////////////////////////
-		//Set back to order!
-		BeginRendering(	mfCurrentFrameTime, pSaved_Frustum, mpCurrentWorld, pSaved_Settings, pSaved_RenderTarget, 
-						bSaved_SendFrameBufferToPostEffects,mpCallbackList, false);
-
-
-		SetAccumulationBuffer();
-
-		//Set trans stuff
-		SetDepthTest(true);
-		SetDepthWrite(false);
-
-		SetAlphaLimit(0.01f);
-		SetAlphaMode(eMaterialAlphaMode_Trans);
-	}
-	
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::SetAccumulationBuffer()
@@ -3647,122 +3218,35 @@ namespace hpl {
 
 	void cRendererDeferred::RenderDeferredSkyBox()
 	{
-		if(mpCurrentWorld==NULL || mpCurrentWorld->GetSkyBoxActive()==false) return;
-		START_RENDER_PASS(DeferredSkyBox);
-
-		SetGBuffer(eGBufferComponents_ColorAndDepth);
-		
-
-		//Debug, leave in for Luis or someone to test.
-		//int lTargets1[] = {0,3};
-		//mpLowLevelGraphics->SetFrameBufferDrawTargets(lTargets1,2);
-
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		/////////////////////////
-		//Calculate and set matrix
-		float fFarClip = mpCurrentFrustum->GetFarPlane();
-		float fSide = sqrt((fFarClip*fFarClip) / 3) *0.95f;
-
-		m_mtxSkyBox = cMath::MatrixRotate(mpCurrentWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ);
-		for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) m_mtxSkyBox.m[i][j] *= fSide;
-
-		m_mtxSkyBox.SetTranslation(mpCurrentFrustum->GetOrigin());
-
-		SetMatrix(&m_mtxSkyBox);
-
-		/////////////////////////
-		//Program
-		SetProgram(NULL);//mpSkyBoxProgram);
-
-		/////////////////////////
-		//Texture and vertex buffer
-		SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
-		SetTextureRange(NULL,1);
-
-		SetVertexBuffer(mpCurrentWorld->GetSkyBoxVertexBuffer());
-
-		DrawCurrent();
-
-		//Debug, leave in for Luis or someone to test.
-		//int lTargets2[] = {0,1,2,3};
-		//mpLowLevelGraphics->SetFrameBufferDrawTargets(lTargets2,4);
-
-		END_RENDER_PASS();
+		OhplDr5SkyIn in = {};
+		in.worldOk = mpCurrentWorld != NULL;
+		in.active = in.worldOk && mpCurrentWorld->GetSkyBoxActive();
+		if(in.active)
+		{
+			in.farPlane = mpCurrentFrustum->GetFarPlane();
+			cVector3f vRot = mpCurrentWorld->GetSkyBoxRotation();
+			in.rotation.x = vRot.x; in.rotation.y = vRot.y; in.rotation.z = vRot.z;
+			const cVector3f &vOrigin = mpCurrentFrustum->GetOrigin();
+			in.origin.x = vOrigin.x; in.origin.y = vOrigin.y; in.origin.z = vOrigin.z;
+		}
+		RunPlan(ohpl_dr5_plan_skybox(&in), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
-
 	void cRendererDeferred::RenderGbufferContent()
 	{
-		START_RENDER_PASS(GBufferContent);
-
-		//Pure testing below
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		SetAccumulationBuffer();
-
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, false);
-
-		SetFlatProjection();
-		SetProgram(NULL);
-
-		SetTextureRange(NULL,1);
-
-		SetTexture(0,GetBufferTexture(0));
-		DrawQuad(cVector2f(0,0),cVector2f(0.5f,0.5f), 0,mvScreenSizeFloat, true);
-		SetTexture(0,GetBufferTexture(1));
-		DrawQuad(cVector2f(0.5f,0),cVector2f(0.5f,0.5f), 0,mvScreenSizeFloat, true);
-		SetTexture(0,GetBufferTexture(2));
-		DrawQuad(cVector2f(0,0.5f),cVector2f(0.5f,0.5f), 0,mvScreenSizeFloat, true);
-		if(mlNumOfGBufferTextures > 3)
-		{
-			SetTexture(0,GetBufferTexture(3));
-			DrawQuad(cVector2f(0.5f,0.5f),cVector2f(0.5f,0.5f), 0,mvScreenSizeFloat, true);
-		}
-		
-
-		SetNormalFrustumProjection();
-		END_RENDER_PASS();
+		RunPlan(ohpl_dr5_plan_gbuffer_content(mvScreenSizeFloat.x, mvScreenSizeFloat.y, mlNumOfGBufferTextures), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderReflectionContent()
 	{
-		START_RENDER_PASS(ReflectionContent);
-
-		//Pure testing below
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		SetAccumulationBuffer();
-
-		SetFlatProjection();
-		SetProgram(NULL);
-
-		SetTextureRange(NULL,1);
-
-		SetTexture(0,mpReflectionTexture);
-		DrawQuad(cVector2f(0,0),cVector2f(1,1), 0, mvScreenSizeFloat / (float)mlReflectionSizeDiv, true);
-		
-
-		SetNormalFrustumProjection();
-		END_RENDER_PASS();
+		RunPlan(ohpl_dr5_plan_reflection_content(mvScreenSizeFloat.x, mvScreenSizeFloat.y, mlReflectionSizeDiv), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
+
 
 }
