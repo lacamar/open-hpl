@@ -50,6 +50,8 @@ pub trait ScriptHost {
     fn prop_type_id(&mut self, obj: Addr, i: u32) -> i32;
     fn prop_addr(&mut self, obj: Addr, i: u32) -> Addr;
     fn type_decl(&mut self, obj: Addr, type_id: i32) -> Vec<u8>;
+    /// A script object left unread: `class` and the property bytes after it (tools and tests).
+    fn skipped_script(&mut self, _class: &[u8], _body: &[u8]) {}
 }
 
 pub fn write_value(
@@ -260,6 +262,13 @@ pub fn read_script(h: &mut dyn ScriptHost, i: &mut In, version: i32, obj: Option
     let class = i.str();
     match obj {
         Some(obj) if class == h.obj_class(obj).as_slice() => read_object(h, i, version, obj),
-        _ => i.skip_object(),
+        _ => {
+            let start = i.p;
+            i.skip_object();
+            h.skipped_script(
+                class,
+                i.s.get(start..i.p.min(i.s.len())).unwrap_or_default(),
+            );
+        }
     }
 }

@@ -354,6 +354,27 @@ impl ScriptHost for Fake {
     fn type_decl(&mut self, _o: Addr, t: i32) -> Vec<u8> {
         format!("T{t}").into_bytes()
     }
+
+    fn skipped_script(&mut self, class: &[u8], body: &[u8]) {
+        if std::env::var_os("OHPL_GS4_DUMP").is_some() {
+            eprintln!("SCRIPT {}", String::from_utf8_lossy(class));
+            let mut i = In::new(body);
+            let n = i.u32();
+            let mut k = 0;
+            while k < n && i.ok {
+                let (name, decl, len) = (i.str(), i.str(), i.u32());
+                eprintln!(
+                    "PROP {} {} {} {}",
+                    String::from_utf8_lossy(class),
+                    String::from_utf8_lossy(name),
+                    String::from_utf8_lossy(decl),
+                    len
+                );
+                i.p += len as usize;
+                k += 1;
+            }
+        }
+    }
 }
 
 fn script_roundtrip(seed: u64) {
@@ -586,6 +607,7 @@ fn header_roundtrip_and_errors() {
 
 #[derive(Default)]
 struct Log {
+    ctx: &'static str,
     entities: Vec<Vec<u8>>,
     ents_done: usize,
     lights: usize,
@@ -630,20 +652,31 @@ impl ReadHost for Log {
         self.timers += 1;
     }
     fn map_script(&mut self) -> Option<Addr> {
+        self.ctx = "MAP";
         None
     }
     fn spawned(&mut self, _s: &Spawned) {
         self.spawned += 1;
     }
     fn entity_begin(&mut self, name: &[u8]) -> usize {
+        if std::env::var_os("OHPL_GS4_DUMP").is_some() {
+            eprintln!(
+                "ENT {}",
+                name.iter().map(|b| format!("{b:02x}")).collect::<String>()
+            );
+        }
         self.entities.push(name.to_vec());
         self.entities.len()
     }
     fn entity_head(&mut self, _h: usize, e: &EntityHead) {
+        if std::env::var_os("OHPL_GS4_DUMP").is_some() {
+            eprintln!("ENTSHAPE {} {}", e.bodies.get().len(), e.joints.get().len());
+        }
         self.bodies += e.bodies.get().len();
         self.joints += e.joints.get().len();
     }
     fn entity_script(&mut self, _h: usize) -> Option<Addr> {
+        self.ctx = "ENTSCRIPT";
         None
     }
     fn entity_tail(&mut self, _h: usize, _e: &EntityHead, t: &EntityTail) {
@@ -653,13 +686,20 @@ impl ReadHost for Log {
     fn entities_done(&mut self, saved: &[Str]) {
         self.ents_done = saved.len();
     }
-    fn other_begin(&mut self, _k: &[u8]) -> usize {
+    fn other_begin(&mut self, k: &[u8]) -> usize {
+        if std::env::var_os("OHPL_GS4_DUMP").is_some() {
+            eprintln!(
+                "OTHER {}",
+                k.iter().map(|b| format!("{b:02x}")).collect::<String>()
+            );
+        }
         self.others += 1;
         0
     }
     fn other_timers(&mut self, _h: usize, _t: &Timers) {}
     fn other_reset(&mut self, _h: usize) {}
     fn other_script(&mut self, _h: usize) -> Option<Addr> {
+        self.ctx = "OTHERSCRIPT";
         None
     }
     fn light(&mut self, _l: &Light) {

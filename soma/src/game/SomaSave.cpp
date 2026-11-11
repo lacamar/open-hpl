@@ -79,6 +79,16 @@ namespace
 		memcpy(&d, s, N);
 	}
 
+	// field-wise: the padding bytes of cSomaID are not part of the value
+	void IdFromB(cSomaID &d, const unsigned char (&s)[12])
+	{
+		static_assert(sizeof(cSomaID) == 12 && offsetof(cSomaID, mB) == 4 && offsetof(cSomaID, mC) == 8, "cSomaID layout");
+		memset((void *)&d, 0, sizeof(d));
+		d.mA = s[0];
+		memcpy(&d.mB, s + 4, 4);
+		memcpy(&d.mC, s + 8, 4);
+	}
+
 	void SinkW(void *c, const uint32_t *p, size_t n) { ((tWString *)c)->assign((const wchar_t *)p, n); }
 	void SinkS(void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); }
 
@@ -924,7 +934,7 @@ public:
 		cVector3f vScale;
 		FromF(vScale, x->scale);
 		cSomaID id;
-		FromB(id, x->id);
+		IdFromB(id, x->id);
 		cSomaLuxEntity *p = pMap->GetEntity(sName);
 		if (p == NULL || p->mbSpawned == false)
 			p = pMap->CreateEntity(sName, sFile, m, vScale);
@@ -952,7 +962,7 @@ public:
 		t->mbInteractionDisabled = e->interaction_disabled;
 		t->mbInteractedWith = e->interacted_with;
 		t->mlParentType = e->parent_type;
-		FromB(t->mParentID, e->parent_id);
+		IdFromB(t->mParentID, e->parent_id);
 		t->msParentName = FromRS(e->parent_name);
 		t->msInteractCallback = FromRS(e->interact_cb);
 		t->mbInteractCallbackAutoRemove = e->interact_auto_remove;
