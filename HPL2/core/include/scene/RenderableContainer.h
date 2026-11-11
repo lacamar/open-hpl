@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
+#include "graphics/RustRenderer.h"
 #include "scene/SceneTypes.h"
 
 namespace hpl {
@@ -46,19 +47,12 @@ namespace hpl {
 		void SwitchAndClearVisibleNodeSet();
 		void SetNodeVisible(iRenderableContainerNode *apNode);
 		bool WasNodeVisible(iRenderableContainerNode *apNode);
-
 		void Reset();
 
-		// Delayed occlusion culling: results of earlier frames' queries, never waited on
-		std::map<iRenderableContainerNode*, iOcclusionQuery*> m_mapPendingQueries;
-		std::map<iRenderableContainerNode*, int> m_mapOccludedFrame;
-		std::vector<iRenderableContainerNode*> mvQueryNodes;
-		int mlFrameCounter;
+		OhplRnTracker *GetRustTracker(){ return mpTracker;}
 
 	private:
-		tRenderableContainerNodeSet m_setVisibleNodes[2];
-		int mlCurrentVisibleNodeSet;
-
+		OhplRnTracker *mpTracker;
 	};
 
 	//-------------------------------------------
@@ -90,62 +84,46 @@ namespace hpl {
 		inline tRenderableList* GetObjectList() { return &mlstObjects; }
 		inline bool HasObjects() { return mlstObjects.empty() == false; }
 
-		inline iRenderableContainerNode* GetParent(){ return mpParent;}
-		inline void SetParent(iRenderableContainerNode* apParent){ mpParent = apParent;}
+		inline iRenderableContainerNode* GetParent(){ return (iRenderableContainerNode*)mS.mpParent;}
+		inline void SetParent(iRenderableContainerNode* apParent){ mS.mpParent = (uintptr_t)apParent;}
 
 		inline int GetObjectNum(){ return (int)mlstObjects.size();}
-		
-		inline const cVector3f& GetMin() const{ return mvMin;}
-		inline const cVector3f& GetMax() const{ return mvMax;}
 
-		inline const cVector3f GetCenter() const{ return mvCenter;}
-		inline float GetRadius() const { return mfRadius;}
+		inline const cVector3f& GetMin() const{ return mS.mvMin;}
+		inline const cVector3f& GetMax() const{ return mS.mvMax;}
+		inline const cVector3f GetCenter() const{ return mS.mvCenter;}
+		inline float GetRadius() const { return mS.mfRadius;}
 
-		inline float GetViewDistance()const{ return mfViewDistance;}
-		inline void SetViewDistance(float afX){ mfViewDistance = afX;}
+		inline float GetViewDistance()const{ return mS.mfViewDistance;}
+		inline void SetViewDistance(float afX){ mS.mfViewDistance = afX;}
 
-		inline bool IsInsideView() const{ return mbInsideView;}
-		inline void SetInsideView(bool abX) { mbInsideView = abX;}
+		inline bool IsInsideView() const{ return mS.mbInsideView;}
+		inline void SetInsideView(bool abX) { mS.mbInsideView = abX;}
 
-		inline bool UsesFlagsAndVisibility() { return mbUsesFlagsAndVisibility;}
+		inline bool UsesFlagsAndVisibility() { return mS.mbUsesFlagsAndVisibility;}
 
-		inline tRenderableFlag GetRenderFlags() const { return mlRenderFlags;}
-		inline bool HasVisibleObjects() const { return mbVisibleObjects;}
+		inline tRenderableFlag GetRenderFlags() const { return mS.mlRenderFlags;}
+		inline bool HasVisibleObjects() const { return mS.mbVisibleObjects;}
 
-		inline void SetRenderFlags(tRenderableFlag alFlags) { mlRenderFlags = alFlags;}
-		inline void SetHasVisibleObjects(bool abX) { mbVisibleObjects = abX;}
+		inline void SetRenderFlags(tRenderableFlag alFlags) { mS.mlRenderFlags = alFlags;}
+		inline void SetHasVisibleObjects(bool abX) { mS.mbVisibleObjects = abX;}
 
-		inline void SetNeedPropertyUpdate(bool abX){ mbNeedPropertyUpdate = abX;}
-		inline bool GetNeedPropertyUpdate() const { return mbNeedPropertyUpdate;}
+		inline void SetNeedPropertyUpdate(bool abX){ mS.mbNeedPropertyUpdate = abX;}
+		inline bool GetNeedPropertyUpdate() const { return mS.mbNeedPropertyUpdate;}
 
 		void PushUpNeedAABBUpdate();
-		inline bool GetNeedAABBUpdate() const { return mbNeedAABBUpdate;}
+		inline bool GetNeedAABBUpdate() const { return mS.mbNeedAABBUpdate;}
 
-		inline void SetPrevFrustumCollision(eCollision aX){ mPrevFrustumCollision = aX;}
-		inline eCollision GetPrevFrustumCollision() const { return mPrevFrustumCollision;}
+		inline void SetPrevFrustumCollision(eCollision aX){ mS.mPrevFrustumCollision = aX;}
+		inline eCollision GetPrevFrustumCollision() const { return (eCollision)mS.mPrevFrustumCollision;}
 
 		void CalculateMinMaxFromObjects();
-	
+
+		inline OhplRcNodeBase& State(){ return mS;}
+
 	protected:
-		cVector3f mvMin;
-		cVector3f mvMax;
-		float mfRadius;
-		cVector3f mvCenter;
+		OhplRcNodeBase mS;
 
-		tRenderableFlag mlRenderFlags;
-		bool mbVisibleObjects;
-
-		bool mbNeedPropertyUpdate;
-		bool mbNeedAABBUpdate;
-
-		bool mbUsesFlagsAndVisibility;
-        
-		//Temp structures
-		float mfViewDistance;
-		bool mbInsideView;
-		eCollision mPrevFrustumCollision;
-
-		iRenderableContainerNode *mpParent;
 		tRenderableContainerNodeList mlstChildNodes;
 		tRenderableList mlstObjects;
 	};
@@ -174,11 +152,17 @@ namespace hpl {
 		virtual void RenderDebug(cRendererCallbackFunctions *apFunctions)=0;
 
 	private:
-		void CheckNeedPropertyUpdateIteration(iRenderableContainerNode* apNode);
-		void CheckNeedAABBUpdateIteration(iRenderableContainerNode* apNode);
-
 		virtual void SpecificUpdateBeforeRendering(){}
 	};
+
+	//-------------------------------------------
+
+	/**
+	 * Host callbacks for the node and renderable entries of OhplRnHostVt (nodes are iRenderableContainerNode,
+	 * objects iRenderable). The context is unused by these entries.
+	 */
+	void OhplFillContainerHost(OhplRnHostVt &avVt);
+	const OhplRnHostVt* OhplContainerHost();
 
 	//-------------------------------------------
 };

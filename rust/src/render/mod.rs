@@ -22,6 +22,11 @@ pub mod posteffect;
 pub mod posteffect_ffi;
 #[cfg(test)]
 mod posteffect_tests;
+pub mod renderer;
+mod renderer_ffi;
+pub mod renderer_simple;
+#[cfg(test)]
+mod renderer_tests;
 
 #[cfg(test)]
 mod tests;
