@@ -532,6 +532,7 @@ impl Default for FilmGrain {
 #[derive(Clone, Debug, Default)]
 pub struct Results {
     pub handled: bool,
+    pub h3: super::deferred_ssao3::Hpl3State,
     pub film_grain: FilmGrain,
     pub trail_consumed: bool,
     pub lights: super::deferred_light::LightResults,

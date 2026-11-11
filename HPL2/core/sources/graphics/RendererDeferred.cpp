@@ -1934,8 +1934,8 @@ namespace hpl {
 				case eOhplDr4X_FilterRestore:		Tex(op.b)->SetFilter(savedFilter); break;
 				case eOhplDr4X_DrawAccumQuad:		DrawAccumulationQuad(); break;
 				case eOhplDr4X_PassBegin:
-					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : "Fog");
-					if(mbLog) Log("----------\n -- Start Rendering %s:\n----------\n", op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : "Fog");
+					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
+					if(mbLog) Log("----------\n -- Start Rendering %s:\n----------\n", op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
 					break;
 				case eOhplDr4X_PassEnd:
 					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassEnd();
@@ -2057,6 +2057,7 @@ namespace hpl {
 				case eOhplDr4X_GlareWrite:			memcpy(mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0), ohpl_dr_plan_array(apPlan, op.b), kOhplDrGlareVerts*4*sizeof(float)); break;
 				case eOhplDr4X_GlareUpdateData:		mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false); break;
 				case eOhplDr4X_SetGlareBuffer:		SetVertexBuffer(mpGlareVtxBuffer); break;
+				case eOhplDr4X_SetFb3:				SetFrameBuffer(Fb(op.b), false, false); break;
 				}
 				break;
 			}
@@ -2831,108 +2832,49 @@ namespace hpl {
 
 	void cRendererDeferred::RenderHpl3SSAO()
 	{
-		mbH3SSAORendered = false;
-		if(mpH3SSAORenderProgram==NULL || mpH3SSAODownsampleProgram==NULL || mpH3SSAOBlurProgram==NULL ||
-			mpH3SSAOTemporalProgram==NULL || mpH3SSAOUpsampleProgram==NULL) return;
-		if(mpCurrentSettings->mbIsReflection || mpCurrentSettings->mbSSAOActive==false) return;
-
-		START_RENDER_PASS(SSAO);
-
-		const float fDiv = (float)mlSSAOBufferSizeDiv;
-		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV() * 0.5f);
-		float fT = fTanHalfFov * mfFarPlane;
-		float fW = mpCurrentFrustum->GetAspect() * fT;
-		cVector3f vUVToView0(2*fW, 2*fT, 0), vUVToView1(-fW, -fT, -mfFarPlane);
-		cVector2f vSize((float)mpH3SSAOTexture[0]->GetWidth(), (float)mpH3SSAOTexture[0]->GetHeight());
-		iTexture *pDepthN = GetBufferTexture(1);
-
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetTextureRange(NULL, 0);
-		SetFlatProjection();
-
-		SetProgram(mpH3SSAODownsampleProgram);
-		mpH3SSAODownsampleProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f / mvScreenSizeFloat.x, 1.0f / mvScreenSizeFloat.y));
-		SetFogDepthTexture(true, 0);
-		for(size_t i=0; i<mvH3SSAOMipBuffers.size(); ++i)
+		OhplDr4Hpl3RenderIn in;
+		memset(&in, 0, sizeof(in));
+		in.programsOk = mpH3SSAORenderProgram != NULL && mpH3SSAODownsampleProgram != NULL && mpH3SSAOBlurProgram != NULL &&
+						mpH3SSAOTemporalProgram != NULL && mpH3SSAOUpsampleProgram != NULL;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.ssaoActive = mpCurrentSettings->mbSSAOActive;
+		in.time = mfH3SSAOTime;
+		in.firstFrame = mbH3SSAOFirstFrame;
+		memcpy(&in.prevView, &m_mtxH3SSAOPrevView, sizeof(OhplMat4));
+		iFrameBuffer *vFbs[3 + 16];
+		iTexture *vTexs[4] = {NULL, NULL, NULL, NULL};
+		iGpuProgram *vProgs[4] = {NULL, NULL, NULL, NULL};
+		if(in.programsOk && !in.isReflection && in.ssaoActive)
 		{
-			SetFrameBuffer(mvH3SSAOMipBuffers[i], false, false);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+			in.sizeDiv = mlSSAOBufferSizeDiv;
+			in.fov = mpCurrentFrustum->GetFOV();
+			in.aspect = mpCurrentFrustum->GetAspect();
+			in.farPlane = mfFarPlane;
+			in.texW = mpH3SSAOTexture[0]->GetWidth();
+			in.texH = mpH3SSAOTexture[0]->GetHeight();
+			in.mipW = mpH3SSAOMipTexture->GetWidth();
+			in.mipH = mpH3SSAOMipTexture->GetHeight();
+			in.screenFx = mvScreenSizeFloat.x;
+			in.screenFy = mvScreenSizeFloat.y;
+			in.depthInNormalAlpha = mbDepthInNormalAlpha;
+			in.linearDepthIdx = mlLinearDepthTextureIdx;
+			in.mipBuffers = (int)std::min<size_t>(mvH3SSAOMipBuffers.size(), 16);
+			in.frameTime = mfCurrentFrameTime;
+			memcpy(&in.view, &mpCurrentFrustum->GetViewMatrix(), sizeof(OhplMat4));
+			memcpy(&in.proj, &mpCurrentFrustum->GetProjectionMatrix(), sizeof(OhplMat4));
+			for(int i=0; i<3; ++i) { vFbs[i] = mpH3SSAOBuffer[i]; vTexs[i] = mpH3SSAOTexture[i]; }
+			for(int i=0; i<in.mipBuffers; ++i) vFbs[3+i] = mvH3SSAOMipBuffers[i];
+			vTexs[3] = mpH3SSAOMipTexture;
+			vProgs[0] = mpH3SSAORenderProgram; vProgs[1] = mpH3SSAODownsampleProgram; vProgs[2] = mpH3SSAOBlurProgram; vProgs[3] = mpH3SSAOTemporalProgram;
 		}
-		SetFogDepthTexture(false, 0);
-
-		mfH3SSAOTime = fmodf(mfH3SSAOTime + mfCurrentFrameTime, 256.0f);
-		cVector2f vMipSize((float)mpH3SSAOMipTexture->GetWidth(), (float)mpH3SSAOMipTexture->GetHeight());
-		SetFrameBuffer(mpH3SSAOBuffer[0], false, false);
-		SetProgram(mpH3SSAORenderProgram);
-		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
-		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
-		mpH3SSAORenderProgram->SetFloat(kVar_afT, mfH3SSAOTime * 1.9416110515594482f);
-		mpH3SSAORenderProgram->SetFloat(kVar_afStepSizeMax, 0.5f / fTanHalfFov);
-		mpH3SSAORenderProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAORenderProgram->SetFloat(kVar_afRadius, 1.5f);
-		mpH3SSAORenderProgram->SetFloat(kVar_afScreenSizeDiv, fDiv);
-		mpH3SSAORenderProgram->SetFloat(kVar_afLodScale, 0.4f * (int)sqrtf(vMipSize.x*vMipSize.x + vMipSize.y*vMipSize.y + 1));
-		SetTexture(0, pDepthN);
-		SetTexture(1, mpH3SSAOMipTexture);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetTexture(1, NULL);
-
-		SetProgram(mpH3SSAOBlurProgram);
-		mpH3SSAOBlurProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOBlurProgram->SetFloat(kVar_afDepthDifference, 0.0625f);
-		cVector2f vBlurDir[2] = {cVector2f(0, 1.0f / vSize.y), cVector2f(1.0f / vSize.x, 0)};
-		int vBlurPasses[4][3] = {{0,1,0}, {1,0,1}, {1,0,0}, {0,2,1}};
-
-		for(int i=0; i<2; ++i)
-		{
-			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
-			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
-			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		}
-
-		const cMatrixf& mtxView = mpCurrentFrustum->GetViewMatrix();
-		cMatrixf mtxTemporalView = mbH3SSAOFirstFrame ? cMatrixf::Identity : cMath::MatrixMul(m_mtxH3SSAOPrevView, cMath::MatrixInverse(mtxView));
-		float fAmount = cMath::Clamp(mfCurrentFrameTime, 1.0f/60.0f, 1.0f/15.0f);
-		float fMoved = mtxTemporalView.GetTranslation().Length();
-		if(fMoved > 0.1f) fAmount += (fMoved - 0.1f) / 10.0f;
-		if(mbH3SSAOFirstFrame) fAmount += 2.0f;
-		mbH3SSAOFirstFrame = false;
-		m_mtxH3SSAOPrevView = mtxView;
-
-		SetFrameBuffer(mpH3SSAOBuffer[1], false, false);
-		SetProgram(mpH3SSAOTemporalProgram);
-		mpH3SSAOTemporalProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
-		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
-		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalView, mtxTemporalView);
-		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalProjection, mpCurrentFrustum->GetProjectionMatrix());
-		mpH3SSAOTemporalProgram->SetVec2f(kVar_avScreenSize, vSize);
-		mpH3SSAOTemporalProgram->SetFloat(kVar_afTemporalBlurAmount, cMath::Clamp(fAmount, 0.0f, 1.0f));
-		SetTexture(0, mpH3SSAOTexture[0]);
-		SetTexture(1, mpH3SSAOTexture[2]);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetTexture(1, NULL);
-
-		SetProgram(mpH3SSAOBlurProgram);
-		for(int i=2; i<4; ++i)
-		{
-			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
-			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
-			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		}
-
-		SetTexture(0, NULL);
-		SetProgram(NULL);
-		SetNormalFrustumProjection();
-		mbH3SSAORendered = true;
-
-		END_RENDER_PASS();
+		OhplDrPlan *pPlan = ohpl_dr4_plan_hpl3_render(&in);
+		OhplDr4Hpl3State state;
+		ohpl_dr4_plan_hpl3_state(pPlan, &state);
+		mfH3SSAOTime = state.time;
+		mbH3SSAOFirstFrame = state.firstFrame != 0;
+		mbH3SSAORendered = state.rendered != 0;
+		memcpy(&m_mtxH3SSAOPrevView, &state.prevView, sizeof(OhplMat4));
+		RunPlan(pPlan, vFbs, vTexs, vProgs);
 	}
 
 	void cRendererDeferred::RenderNightVision()

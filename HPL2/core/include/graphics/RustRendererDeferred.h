@@ -421,9 +421,9 @@ namespace hpl {
 		eOhplDr4X_DirSetFb, eOhplDr4X_DirRender, eOhplDr4X_TexBuffer, eOhplDr4X_SetVertexBufferNone, eOhplDr4X_EnvVisible,
 		eOhplDr4X_EnvSetupBase, eOhplDr4X_EnvVertexBuffer, eOhplDr4X_EnvIteration, eOhplDr4X_FlareRetrieve, eOhplDr4X_FlareUpdate,
 		eOhplDr4X_BlendRaw, eOhplDr4X_FlareTexture, eOhplDr4X_FlareIrisBuffer, eOhplDr4X_AskGlare, eOhplDr4X_GlareWrite,
-		eOhplDr4X_GlareUpdateData, eOhplDr4X_SetGlareBuffer,
+		eOhplDr4X_GlareUpdateData, eOhplDr4X_SetGlareBuffer, eOhplDr4X_SetFb3,
 	};
-	enum { kOhplDr4PassDof, kOhplDr4PassFullScreenFog, kOhplDr4PassFog };
+	enum { kOhplDr4PassDof, kOhplDr4PassFullScreenFog, kOhplDr4PassFog, kOhplDr4PassSsao };
 	enum { kOhplDr4LogDirectional, kOhplDr4LogBoxWeighted };
 	enum
 	{
@@ -543,6 +543,28 @@ namespace hpl {
 	struct OhplDr4GlareFlare { float vis; int32_t anyActive; };
 	struct OhplDr4IrisFlare { int32_t texOk, blend; float vis, pos[3]; };
 
+	struct OhplDr4Hpl3RenderIn
+	{
+		int32_t programsOk, isReflection, ssaoActive, sizeDiv;
+		float fov, aspect, farPlane;
+		int32_t texW, texH, mipW, mipH;
+		float screenFx, screenFy;
+		int32_t depthInNormalAlpha, linearDepthIdx, mipBuffers;
+		float time;
+		int32_t firstFrame;
+		float frameTime;
+		OhplMat4 prevView, view, proj;
+	};
+
+	struct OhplDr4Hpl3State
+	{
+		float time;
+		int32_t firstFrame, rendered;
+		OhplMat4 prevView;
+	};
+
+	static_assert(sizeof(OhplDr4Hpl3RenderIn) == 268 && sizeof(OhplDr4Hpl3State) == 76, "Rust struct layout");
+
 	static_assert(sizeof(OhplDr4EnvIn) == 88 && sizeof(OhplDr4FlareUpdateIn) == 16 && sizeof(OhplDr4GlareIn) == 52 &&
 				  sizeof(OhplDr4GlareFlare) == 8 && sizeof(OhplDr4IrisFlare) == 24, "Rust struct layout");
 
@@ -567,6 +589,8 @@ namespace hpl {
 		OhplDrPlan* ohpl_dr4_plan_glare(const OhplDr4GlareIn*, const OhplDr4GlareFlare* flares, size_t nflares,
 										const OhplDr4IrisFlare* iris, size_t niris, const float* pos, size_t npos);
 		void ohpl_dr4_feed_floats(OhplDrPlan*, const float* v, size_t n);
+		OhplDrPlan* ohpl_dr4_plan_hpl3_render(const OhplDr4Hpl3RenderIn*);
+		void ohpl_dr4_plan_hpl3_state(const OhplDrPlan*, OhplDr4Hpl3State* out);
 	}
 }
 

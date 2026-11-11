@@ -14,6 +14,7 @@ use super::deferred_misc::{
     EnvIn, FlareUpdateIn, GlareFlare, GlareIn, IrisFlare, plan_environment_particles,
     plan_multi_iris_and_glare, plan_update_lens_flares,
 };
+use super::deferred_ssao3::{Hpl3RenderIn, Hpl3State, plan_hpl3_ssao};
 
 fn boxed(p: Plan) -> *mut Plan {
     Box::into_raw(Box::new(p))
@@ -200,8 +201,29 @@ pub unsafe extern "C" fn ohpl_dr4_feed_floats(plan: *mut Plan, v: *const f32, n:
     }
 }
 
+/// # Safety
+/// `i` is null or valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_dr4_plan_hpl3_render(i: *const Hpl3RenderIn) -> *mut Plan {
+    // SAFETY: the caller's contract.
+    unsafe { i.as_ref() }.map_or(std::ptr::null_mut(), |i| boxed(plan_hpl3_ssao(i)))
+}
+
+/// The renderer members `RenderHpl3SSAO` stores back.
+///
+/// # Safety
+/// `plan` is null or live; `out` is null or valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ohpl_dr4_plan_hpl3_state(plan: *const Plan, out: *mut Hpl3State) {
+    // SAFETY: the caller's contract.
+    if let (Some(p), Some(out)) = (unsafe { plan.as_ref() }, unsafe { out.as_mut() }) {
+        *out = p.res.h3;
+    }
+}
+
 const _: () = {
     use std::mem::size_of;
+    assert!(size_of::<Hpl3RenderIn>() == 268 && size_of::<Hpl3State>() == 76);
     assert!(
         size_of::<NightIn>() == 48
             && size_of::<Hpl3In>() == 28

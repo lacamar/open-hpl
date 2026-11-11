@@ -21,6 +21,7 @@ pub mod deferred_pass_ffi;
 #[cfg(test)]
 mod deferred_pass_tests;
 pub mod deferred_post;
+pub mod deferred_ssao3;
 #[cfg(test)]
 mod deferred_tests;
 pub mod ffi;

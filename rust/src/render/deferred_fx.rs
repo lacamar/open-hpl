@@ -58,6 +58,7 @@ pub mod x {
     pub const GLARE_WRITE: i32 = 43;
     pub const GLARE_UPDATE_DATA: i32 = 44;
     pub const SET_GLARE_BUFFER: i32 = 45;
+    pub const SET_FB3: i32 = 46;
 }
 
 pub mod pass {

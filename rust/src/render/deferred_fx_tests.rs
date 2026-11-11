@@ -721,3 +721,93 @@ fn glare_iris_skips_missing_textures_and_fully_fogged_flares() {
     };
     assert_eq!(draws(fogged, iris(1, 0.5)), 0);
 }
+
+use super::deferred_ssao3::{Hpl3RenderIn, plan_hpl3_ssao};
+
+fn h3_in() -> Hpl3RenderIn {
+    Hpl3RenderIn {
+        programs_ok: 1,
+        ssao_active: 1,
+        size_div: 2,
+        fov: 1.0,
+        aspect: 1.5,
+        far_plane: 100.0,
+        tex_w: 64,
+        tex_h: 32,
+        mip_w: 16,
+        mip_h: 8,
+        screen_fx: 128.0,
+        screen_fy: 64.0,
+        mip_buffers: 3,
+        time: 255.5,
+        first_frame: 1,
+        frame_time: 1.0,
+        prev_view: IDENTITY,
+        view: IDENTITY,
+        proj: IDENTITY,
+        ..Hpl3RenderIn::default()
+    }
+}
+
+#[test]
+fn hpl3_ssao_is_skipped_without_programs_reflection_or_ssao() {
+    for i in [
+        Hpl3RenderIn {
+            programs_ok: 0,
+            ..h3_in()
+        },
+        Hpl3RenderIn {
+            is_reflection: 1,
+            ..h3_in()
+        },
+        Hpl3RenderIn {
+            ssao_active: 0,
+            ..h3_in()
+        },
+    ] {
+        let p = plan_hpl3_ssao(&i);
+        assert_eq!(p.res.h3.rendered, 0);
+        assert_eq!(p.res.h3.first_frame, 1);
+        assert_eq!(p.res.h3.time, 255.5);
+        assert!(run(p, no_answers).is_empty());
+    }
+}
+
+#[test]
+fn hpl3_ssao_draws_mips_render_blurs_and_temporal() {
+    let p = plan_hpl3_ssao(&h3_in());
+    assert_eq!(p.res.h3.rendered, 1);
+    assert_eq!(p.res.h3.first_frame, 0);
+    assert_eq!(p.res.h3.time, 0.5);
+    let v = run(p, no_answers);
+    let quads = v.iter().filter(|o| matches!(o, Op::Quad { .. })).count();
+    assert_eq!(quads, 3 + 1 + 2 + 1 + 2);
+    assert_eq!(count_p4(&v, x::SET_FB3), 3 + 1 + 2 + 1 + 2);
+    assert_eq!(count_p4(&v, x::PASS_BEGIN), 1);
+    assert_eq!(count_p4(&v, x::PASS_END), 1);
+}
+
+#[test]
+fn hpl3_ssao_first_frame_uses_identity_and_extra_blur() {
+    let v = run(plan_hpl3_ssao(&h3_in()), no_answers);
+    let amount = v.iter().find_map(|o| match o {
+        Op::Float { id, v, .. } if *id == super::deferred_ssao3::var::AF_TEMPORAL_BLUR_AMOUNT => {
+            Some(*v)
+        }
+        _ => None,
+    });
+    assert_eq!(amount, Some(1.0));
+    let later = Hpl3RenderIn {
+        first_frame: 0,
+        frame_time: 0.0,
+        ..h3_in()
+    };
+    let v = run(plan_hpl3_ssao(&later), no_answers);
+    let amount = v.iter().find_map(|o| match o {
+        Op::Float { id, v, .. } if *id == super::deferred_ssao3::var::AF_TEMPORAL_BLUR_AMOUNT => {
+            Some(*v)
+        }
+        _ => None,
+    });
+    assert_eq!(amount, Some(1.0 / 60.0));
+}
