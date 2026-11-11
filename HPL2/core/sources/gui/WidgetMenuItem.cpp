@@ -29,8 +29,13 @@
 #include "gui/GuiSkin.h"
 
 #include "graphics/FontData.h"
+#include "gui/RustWidget3.h"
 
 namespace hpl {
+	static int ItemKind(eWidgetType aType)
+	{
+		return aType==eWidgetType_ContextMenu ? kOhplW3KindContext : (aType==eWidgetType_MainMenu ? kOhplW3KindMain : kOhplW3KindOther);
+	}
 
 	//----------------------------------------------------------------
 
@@ -110,9 +115,11 @@ namespace hpl {
 	{
 		cGuiGlobalShortcut* pShortcut = iWidget::AddShortcut(alKeyModifiers, aKey, eGuiMessage_ButtonPressed, true, false);
 
-		if(msShortcutText!=_W(""))
-			msShortcutText += _W(",");
-		msShortcutText += cString::To16Char(mvShortcuts.back()->ToString());
+		tWString sAdd = cString::To16Char(mvShortcuts.back()->ToString());
+		tWString sCur = msShortcutText;
+		size_t lLen = ohpl_w3_join_shortcut(sCur.data(), sCur.size(), sAdd.data(), sAdd.size(), NULL, 0);
+		msShortcutText.assign(lLen, _W('\0'));
+		if(lLen) ohpl_w3_join_shortcut(sCur.data(), sCur.size(), sAdd.data(), sAdd.size(), &msShortcutText[0], lLen);
 
 		GetParentMenu()->UpdateMenuWidth(GetTextLength());
 
@@ -150,33 +157,12 @@ namespace hpl {
 	{
 		if(mpChildMenu==NULL) return;
 
-		///////////////////////////////////
-		// Set up submenu new position
-		cVector3f vChildPos = GetParentMenu()->GetGlobalPosition() + cVector3f(0,mvPosition.y,mvPosition.z);
-		float fParentWidth = GetParentMenu()->GetSize().x;
-		float fChildWidth = mpChildMenu->GetSize().x;
+		cVector3f vParentGlobal = GetParentMenu()->GetGlobalPosition();
+		cVector3f vChildPos;
+		ohpl_w3_item_submenu_pos(ItemKind(mItemType), &vParentGlobal, &mvPosition, mvSize.y,
+								 GetParentMenu()->GetSize().x, mpChildMenu->GetSize().x,
+								 mpSet->GetVirtualSize().x, &vChildPos);
 
-		////////////////////////////////
-		// Show submenu according to item type
-		switch(mItemType)
-		{
-		// If this Item belongs to a ContextMenu, pop submenu at one of the sides
-		case eWidgetType_ContextMenu:
-			
-            if(vChildPos.x + fParentWidth + fChildWidth> mpSet->GetVirtualSize().x)
-				vChildPos.x -= fChildWidth;
-			else
-				vChildPos.x += fParentWidth;
-
-			break;
-		// If this Item belongs to a MainMenu, pop submenu below
-		case eWidgetType_MainMenu:
-			vChildPos.x += mvPosition.x;
-			vChildPos.y += mvSize.y;
-			break;
-		default:
-			break;
-		}
 		//mpChildMenu->SetGlobalPosition(vChildPos);
 		//mpChildMenu->SetEnabled(true);
 		//mpChildMenu->SetVisible(true);
@@ -186,13 +172,10 @@ namespace hpl {
 
 	void cWidgetMenuItem::OnInit()
 	{
-		float fY = 2*mfItemVPadding;
-		if(IsSeparator())
-			fY += mfSeparatorHeight;
-		else
-			fY += mpDefaultFont->mvSize.y;
-
-		SetSize(cVector2f(GetParentMenu()->GetMenuItemWidth(),fY));
+		cVector2f vSize;
+		ohpl_w3_item_init_size(IsSeparator(), mfSeparatorHeight, mfItemVPadding, mpDefaultFont->mvSize.y,
+							   GetParentMenu()->GetMenuItemWidth(), &vSize);
+		SetSize(vSize);
 	}
 
 	//----------------------------------------------------------------
@@ -202,77 +185,55 @@ namespace hpl {
 		if(IsVisible() == false || (mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false))
 			return;
 
-		////////////////////////////////////////////
-		// If context menu, increase timer
-		if(GetMouseIsOver() && mItemType==eWidgetType_ContextMenu )
-			mfTimer+=afTimeStep;
-		/////////////////////////////////////////////
-		// If item is highlighted, has submenu, and timer has right value, pop up submenu
-		if(GetParentMenu()->GetHightlightedItem()==this && IsParent())
-		{
-			if(mfTimer>=mfOpenMenuTime && IsMenuOpen()==false)
-			{
-				ShowSubMenu();
-			}
-		}
+		OhplW3ItemUpdate update = ohpl_w3_item_update(mfTimer, afTimeStep, mfOpenMenuTime, GetMouseIsOver(),
+													  ItemKind(mItemType),
+													  GetParentMenu()->GetHightlightedItem()==this, IsParent(),
+													  IsMenuOpen());
+		mfTimer = update.timer;
+		if(update.show_submenu)
+			ShowSubMenu();
 	}
 
 	//----------------------------------------------------------------
 
 	void cWidgetMenuItem::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		if(IsSeparator())
+		OhplW3ItemDrawIn in;
+		in.kind = ItemKind(mItemType);
+		in.separator = IsSeparator();
+		in.highlighted = (GetParentMenu()->GetHightlightedItem()==this);
+		in.enabled = IsEnabled();
+		in.widget_enabled = mbEnabled;
+		in.is_parent = IsParent();
+		in.checked = mbChecked;
+		in.global = GetGlobalPosition();
+		in.size = mvSize;
+		in.separator_padding = mfSeparatorPadding;
+		in.separator_height = mfSeparatorHeight;
+		in.arrow_offset = GetParentMenu()->GetArrowOffset();
+		in.check_offset = GetParentMenu()->GetCheckOffset();
+		in.text_offset = GetParentMenu()->GetTextOffset();
+
+		OhplW3MenuOp vOps[kOhplW3MaxItemOps];
+		size_t lOps = ohpl_w3_item_draw(&in, vOps, kOhplW3MaxItemOps);
+		cGuiGfxElement* vGfx[5] = { mpGfxLine, mpGfxSubMenuArrow, mpGfxChecked[0], mpGfxChecked[1], mpGfxSelection };
+		for(size_t i=0; i<lOps && i<kOhplW3MaxItemOps; ++i)
 		{
-			mpSet->DrawGfx(mpGfxLine, GetGlobalPosition() + cVector3f(mfSeparatorPadding,mvSize.y*0.5f-1,0.2f), 
-								cVector2f(mvSize.x-2*mfSeparatorPadding, mfSeparatorHeight));
-			return;
-		}
-
-		bool bHighlight = (GetParentMenu()->GetHightlightedItem()==this);
-		bool bEnabled = IsEnabled();
-
-		cColor col = bEnabled ? (bHighlight? mDefaultFontHighlightColor : mDefaultFontColor ) :
-						mpSkin->GetFont(eGuiSkinFont_Disabled)->mColor;
-
-		const cVector3f& vArrowOffset = GetParentMenu()->GetArrowOffset();
-		const cVector3f& vCheckOffset = GetParentMenu()->GetCheckOffset();
-		const cVector3f& vTextOffset = GetParentMenu()->GetTextOffset();
-		
-		//////////////////////////////////////////////
-		// Draw the item according to the item type
-		switch(mItemType)
-		{
-		// If this Item belongs to a ContextMenu
-		case eWidgetType_ContextMenu:
-
-			// Draw arrow icon if has submenu
-			if(IsParent())
-				mpSet->DrawGfx(mpGfxSubMenuArrow,GetGlobalPosition()+vArrowOffset);
+			const OhplW3MenuOp& op = vOps[i];
+			if(op.kind==kOhplW3OpGfx)
+			{
+				if(op.has_size)
+					mpSet->DrawGfx(vGfx[op.slot], op.pos, op.size);
+				else
+					mpSet->DrawGfx(vGfx[op.slot], op.pos);
+			}
 			else
-				DrawDefaultText(msShortcutText, GetGlobalPosition()+cVector3f(vArrowOffset.x,vTextOffset.y,vTextOffset.z), eFontAlign_Right, col);
-
-			// Draw check icon if checked
-			if(mbChecked)
-				mpSet->DrawGfx(mpGfxChecked[mbEnabled], GetGlobalPosition() + vCheckOffset);
-
-			break;
-		// If this Item belongs to a MainMenu
-		case eWidgetType_MainMenu:
-			break;
+			{
+				cColor col = op.color==kOhplW3ColorDisabled ? mpSkin->GetFont(eGuiSkinFont_Disabled)->mColor :
+							 (op.color==kOhplW3ColorHighlight ? mDefaultFontHighlightColor : mDefaultFontColor);
+				DrawDefaultText(op.slot==kOhplW3TextShortcut ? msShortcutText : msText, op.pos, (eFontAlign)op.align, col);
+			}
 		}
-
-		////////////////////////////////////////////////////////
-        // Draw item with highlight, this should happen when:
-		//	- Pointer is over the item
-		//	- this item's submenu is open and pointer is not over this item's menu			
-		if(bHighlight)
-		{
-			// Draw Selection Bar
-			mpSet->DrawGfx(mpGfxSelection, GetGlobalPosition()+cVector3f(0,0,0.1f), mvSize);					
-		}
-			
-			
-		DrawDefaultText(msText, GetGlobalPosition()+vTextOffset, eFontAlign_Left, col);
 	}
 
 	//----------------------------------------------------------------
@@ -310,12 +271,10 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(IsSeparator()) return false;
-		if(GetParentMenu()->GetHightlightedItem()!=this) return false;
+		OhplW3ItemUp up = ohpl_w3_item_mouse_up(IsSeparator(), GetParentMenu()->GetHightlightedItem()==this, IsParent());
+		if(up.ret==false) return false;
 
-		//////////////////////////////////////
-		// If is "leaf" item, hide menu (completely if Context, all but topmost if Main)
-		if(IsParent()==false)
+		if(up.hide_topmost)
 			GetParentMenu()->GetTopMostMenu()->Hide();
 
 		ProcessMessage(eGuiMessage_ButtonPressed, aData, true, true);
@@ -336,12 +295,8 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(IsVisible()==false || 
-			mpSet->GetDrawMouse()==false || 
-			(mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false))
-			return true;
-
-		if(GetMouseIsOver())
+		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
+		if(ohpl_w3_item_mouse_move_highlights(IsVisible(), mpSet->GetDrawMouse(), bAttentionBlocks, GetMouseIsOver()))
 			GetParentMenu()->SetHighlightedItem(this);
 		return true;
 	}
@@ -350,13 +305,15 @@ namespace hpl {
 
 	bool cWidgetMenuItem::OnMouseLeave(const cGuiMessageData& aData)
 	{
-		if(mpSet->GetAttentionWidget()!=NULL && 
-			IsConnectedTo(mpSet->GetAttentionWidget())==false) return false;
+		bool bAttentionBlocks = mpSet->GetAttentionWidget()!=NULL && IsConnectedTo(mpSet->GetAttentionWidget())==false;
+		OhplW3ItemLeave leave = ohpl_w3_item_mouse_leave(bAttentionBlocks, IsMenuOpen());
+		if(leave.ret==false) return false;
 
-		if(IsMenuOpen()==false)
+		if(leave.clear_highlight)
 			GetParentMenu()->SetHighlightedItem(NULL);
 
-		mfTimer = 0;
+		if(leave.reset_timer)
+			mfTimer = 0;
 
 		return true;
 	}

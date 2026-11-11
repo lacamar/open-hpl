@@ -24,6 +24,7 @@
 #include "gui/GuiGfxElement.h"
 
 #include "graphics/FontData.h"
+#include "gui/RustWidget3.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -72,12 +73,13 @@ namespace hpl {
 		// - If this is the topmost menu, clear the AttentionWidget
 		// - And hides the menu
 
-		if(IsSubmenuOpen()) 
+		OhplW3CtxHide plan = ohpl_w3_ctx_hide_plan(IsSubmenuOpen(), GetParentMenu()!=NULL);
+		if(plan.hide_child)
 			mpHighlightedItem->GetChildMenu()->Hide();
 
         SetHighlightedItem(NULL);
 
-		if(GetParentMenu())
+		if(plan.notify_parent)
 			GetParentMenu()->OnChildMenuHide();
 		else
 		{
@@ -104,10 +106,7 @@ namespace hpl {
 
 	float cWidgetContextMenu::GetMenuItemWidth()
 	{
-		float fLeftBorderWidth = mvGfxBorders[0]->GetImageSize().x;
-		float fRightBorderWidth = mvGfxBorders[1]->GetImageSize().x;
-		
-		return mvSize.x - (fLeftBorderWidth+fRightBorderWidth);
+		return ohpl_w3_ctx_item_width(mvSize.x, mvGfxBorders[0]->GetImageSize().x, mvGfxBorders[1]->GetImageSize().x);
 	}
 
 	//-----------------------------------------------------------------------
@@ -120,16 +119,11 @@ namespace hpl {
 
 	void cWidgetContextMenu::UpdateMenuItemsPos(cWidgetMenuItem* apNewItem)
 	{
-		float fUpperBorderHeight = mvGfxBorders[2]->GetImageSize().y;
-		float fLeftBorderWidth = mvGfxBorders[0]->GetImageSize().x;
+		cVector3f vPos;
+		ohpl_w3_ctx_item_pos(mvSize.y, mvGfxBorders[2]->GetImageSize().y, mvGfxBorders[0]->GetImageSize().x,
+							 mvMenuItems.size(), &vPos);
 
-		float fMenuItemY = mvSize.y;
-		if(mvMenuItems.size()>1)
-			fMenuItemY -= fUpperBorderHeight;
-		else
-			fMenuItemY += fUpperBorderHeight;
-
-		apNewItem->SetPosition(cVector3f(fLeftBorderWidth, fMenuItemY, 0.1f));
+		apNewItem->SetPosition(vPos);
 	}
 
 	//-----------------------------------------------------------------------
@@ -140,65 +134,52 @@ namespace hpl {
 
 		UpdateMenuWidth(fTextLength);
 
-		///////////////////////////////////////////////////////////////////////
-		// Update actual ContextMenu height
 		float fSeparation = 0;
 		size_t lNumItems = mvMenuItems.size();
 
 		if(lNumItems>1)
 		{
 			cWidgetMenuItem *pPreviousItem = mvMenuItems[lNumItems-2];
-			fSeparation = (pPreviousItem->IsSeparator()?0:(apNewItem->IsSeparator()?0:mfItemSeparation));
+			fSeparation = ohpl_w3_ctx_separation(pPreviousItem->IsSeparator(), apNewItem->IsSeparator(), mfItemSeparation);
 		}
 		else
 		{
-			SetSize(cVector2f(mvSize.x,mvGfxBorders[2]->GetImageSize().y + mvGfxBorders[3]->GetImageSize().y));
+			cVector2f vEmpty;
+			ohpl_w3_ctx_empty_size(mvSize.x, mvGfxBorders[2]->GetImageSize().y, mvGfxBorders[3]->GetImageSize().y, &vEmpty);
+			SetSize(vEmpty);
 		}
 
-
-		SetSize(cVector2f(mvSize.x, mvSize.y+apNewItem->GetSize().y+fSeparation) );
+		cVector2f vGrown;
+		ohpl_w3_ctx_grown_size(&mvSize, apNewItem->GetSize().y, fSeparation, &vGrown);
+		SetSize(vGrown);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetContextMenu::UpdateMenuWidth(float afItemTextWidth)
 	{
-		float fItemWidth = GetMenuItemWidth();
+		OhplW3CtxMetrics met = { mfItemHPadding, mfItemCheckIconSize, mfItemTextLeftPadding, mfItemTextRightPadding,
+								 mfItemArrowIconSize, mfItemVPadding,
+								 mvGfxBorders[0]->GetImageSize().x, mvGfxBorders[1]->GetImageSize().x };
+		OhplW3CtxWidth width;
+		ohpl_w3_ctx_update_width(&met, afItemTextWidth, GetMenuItemWidth(), mvSize.y, &width);
 
-		// This computes the width of all non text items
-		float fNonTextWidth =	mfItemHPadding + mfItemCheckIconSize + mfItemTextLeftPadding +  
-								mfItemTextRightPadding + mfItemArrowIconSize + mfItemHPadding;
-
-		/////////////////////////////////////////////////////////////////
-		// Update MenuItem now. This also sets up check and arrow icons and text offset
-
-		// Check if all items need to be updated with new Width (if text length is greater than the reserved width...)
-		if(afItemTextWidth > fItemWidth-fNonTextWidth) 
+		if(width.resize_items)
 		{
-			fItemWidth = afItemTextWidth + fNonTextWidth;
-			
 			for(tWidgetMenuItemVectorIt it = mvMenuItems.begin(); it != mvMenuItems.end(); ++it)
 			{
 				cWidgetMenuItem* pItem = *it;
 
-               	pItem->SetSize(cVector2f(fItemWidth, pItem->GetSize().y) );
+				pItem->SetSize(cVector2f(width.item_width, pItem->GetSize().y) );
 			}
 		}
 
-		float fMenuWidth = fItemWidth + mvGfxBorders[0]->GetImageSize().x + mvGfxBorders[1]->GetImageSize().x;
-		SetSize(cVector2f(fMenuWidth, mvSize.y));
+		SetSize(width.menu_size);
 
-		SetArrowPos(cVector3f(fItemWidth - (mfItemHPadding + mfItemArrowIconSize),
-												 mfItemArrowIconSize*0.5f,
-												 0.2f));
+		SetArrowPos(width.arrow_pos);
 
-		// Set text and check icon offsets, these should not change
-		SetTextPos(cVector3f(	mfItemHPadding + mfItemCheckIconSize + mfItemTextLeftPadding,
-								mfItemVPadding, 
-								0.2f));
-		SetCheckPos(cVector3f(	mfItemHPadding,
-								mfItemVPadding,
-								0.2f));
+		SetTextPos(width.text_pos);
+		SetCheckPos(width.check_pos);
 	}
 
 	//-----------------------------------------------------------------------
@@ -228,13 +209,12 @@ namespace hpl {
 		// Checks if should hide (ie if parent menu highlights some item other 
 		// than this menu's parent item, or if SetMustHide(true) has been called)
 
-		if(IsVisible() && mpParentItem!=NULL && GetParentMenu()->GetHightlightedItem()!=mpParentItem)
+		OhplW3CtxUpdate update = ohpl_w3_ctx_update(mfTimer, afTimeStep, mfHideTime, IsVisible(),
+													mpParentItem!=NULL && GetParentMenu()->GetHightlightedItem()!=mpParentItem);
+		mfTimer = update.timer;
+		if(update.hide_timer)
 		{
-			mfTimer+=afTimeStep;
-			if(mfTimer>=mfHideTime)
-			{
-				Hide();
-			}
+			Hide();
 		}
 
 		if(mbMustHide)
@@ -279,7 +259,9 @@ namespace hpl {
 	bool cWidgetContextMenu::OnLostFocus(const cGuiMessageData& aData)
 	{
 		iWidget* pFocus = mpSet->GetFocusedWidget();
-		if(pFocus==NULL || IsConnectedTo(pFocus, false)==false && pFocus->IsConnectedTo(this, false)==false)
+		bool bConnectedToFocus = pFocus ? IsConnectedTo(pFocus, false) : false;
+		bool bFocusConnectedToMenu = pFocus ? pFocus->IsConnectedTo(this, false) : false;
+		if(ohpl_w3_ctx_lost_focus_hides(pFocus==NULL, bConnectedToFocus, bFocusConnectedToMenu))
 			GetTopMostMenu()->SetMustHide(true);
 
 		return true;
@@ -321,7 +303,7 @@ namespace hpl {
 
 	bool cWidgetContextMenu::OnKeyPress(const cGuiMessageData& aData)
 	{
-		if(aData.mKeyPress.mKey==eKey_Escape)
+		if(ohpl_w3_ctx_key_hides(aData.mKeyPress.mKey))
 		{
 			Hide();
 			return true;

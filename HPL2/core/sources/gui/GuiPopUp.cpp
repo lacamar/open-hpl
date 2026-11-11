@@ -44,7 +44,9 @@ namespace hpl {
 
 		mpSet->mlPopupCount++;
 
-		cVector3f vPos = cVector3f(mpSet->GetVirtualSize()-avPopUpSize)*0.5f + cVector3f(0,0, mpSet->GetPopUpZ());
+		cVector2f vVirtualSize = mpSet->GetVirtualSize();
+		cVector3f vPos;
+		ohpl_w3_popup_pos(&vVirtualSize, &avPopUpSize, mpSet->GetPopUpZ(), &vPos);
 		mpSet->IncPopUpZ();
 
 		mpWindow = mpSet->CreateWidgetWindow(abAddCloseButton?eWidgetWindowButtonFlag_ButtonClose:eWidgetWindowButtonFlag_None,
@@ -55,12 +57,8 @@ namespace hpl {
 		////////////////////////
 		// Set up Attention and focus
 
-		mbAttChanged = false;
-		mpNewAttention = mpSet->GetAttentionWidget();
-		mbFocusChanged = false;
-		mpNewFocused = mpSet->GetFocusedWidget();
-		mbDefaultUIFocusChanged = false;
-		mpNewDefaultUIFocus = mpSet->GetDefaultFocusNavWidget();
+		ohpl_w3_popup_init((size_t)mpSet->GetAttentionWidget(), (size_t)mpSet->GetFocusedWidget(),
+						   (size_t)mpSet->GetDefaultFocusNavWidget(), &mPopUp);
 
 		mpSet->PushAttentionWidget();
 		mpSet->PushFocusedWidget();
@@ -84,12 +82,12 @@ namespace hpl {
 		mpSet->PopFocusedWidget();
 		mpSet->PopDefaultFocusNavWidget();
 		
-		if(mbAttChanged)
-			mpSet->SetAttentionWidget(mpNewAttention);
-		if(mbFocusChanged)
-			mpSet->SetFocusedWidget(mpNewFocused);
-		if(mbDefaultUIFocusChanged)
-			mpSet->SetDefaultFocusNavWidget(mpNewDefaultUIFocus);
+		if(mPopUp.att_changed)
+			mpSet->SetAttentionWidget((iWidget*)mPopUp.new_attention);
+		if(mPopUp.focus_changed)
+			mpSet->SetFocusedWidget((iWidget*)mPopUp.new_focus);
+		if(mPopUp.default_focus_changed)
+			mpSet->SetDefaultFocusNavWidget((iWidget*)mPopUp.new_default_focus);
 		
 		if(mpDestroyCallbackObject && mpDestroyCallback) {
 			mpDestroyCallback(mpDestroyCallbackObject, NULL, cGuiMessageData());
@@ -154,34 +152,22 @@ namespace hpl {
 	{
 		if(apObj==NULL || apCallback==NULL) return false;
 
-		iWidget *pPreCallAtt, *pPreCallFocus, *pPreCallDefaultUIFocus, *pPostCallAtt, *pPostCallFocus, *pPostCallDefaultUIFocus;
-		
+		size_t vPre[3] = { 0, 0, 0 };
+
 		if(abRunFocusChangeChecks)
 		{
-			pPreCallAtt = mpSet->GetAttentionWidget();
-			pPreCallFocus = mpSet->GetFocusedWidget();
-			pPreCallDefaultUIFocus = mpSet->GetDefaultFocusNavWidget();
+			vPre[0] = (size_t)mpSet->GetAttentionWidget();
+			vPre[1] = (size_t)mpSet->GetFocusedWidget();
+			vPre[2] = (size_t)mpSet->GetDefaultFocusNavWidget();
 		}
 
 		bool bRet = apCallback(apObj, apWidget, aData);
 
 		if(abRunFocusChangeChecks)
 		{
-			pPostCallAtt = mpSet->GetAttentionWidget();
-			pPostCallFocus = mpSet->GetFocusedWidget();
-			pPostCallDefaultUIFocus = mpSet->GetDefaultFocusNavWidget();
-
-			mbAttChanged = pPreCallAtt!=pPostCallAtt;
-			if(mbAttChanged)
-				mpNewAttention = pPostCallAtt;
-			
-			mbFocusChanged = pPreCallFocus!=pPostCallFocus;
-			if(mbFocusChanged)
-				mpNewFocused = pPostCallFocus;
-
-			mbDefaultUIFocusChanged = pPreCallDefaultUIFocus!=pPostCallDefaultUIFocus;
-			if(mbDefaultUIFocusChanged)
-				mpNewDefaultUIFocus = pPostCallDefaultUIFocus;
+			size_t vPost[3] = { (size_t)mpSet->GetAttentionWidget(), (size_t)mpSet->GetFocusedWidget(),
+								(size_t)mpSet->GetDefaultFocusNavWidget() };
+			ohpl_w3_popup_after_callback(&mPopUp, vPre, vPost);
 		}
 
 		return bRet;
