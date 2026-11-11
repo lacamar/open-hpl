@@ -51,6 +51,7 @@ pub mod sdlsys;
 pub mod shader;
 pub mod somascript;
 pub mod somasound;
+pub mod somaui;
 pub mod sound;
 pub mod string;
 mod string_ffi;

@@ -1,5 +1,6 @@
 #include "SomaPostEffects.h"
 #include "SomaBase.h"
+#include "RustSomaUi.h"
 #include "SomaScriptBind.h"
 
 #include <angelscript.h>
@@ -39,12 +40,6 @@ namespace
 		cSomaPostEffect *pEffect = static_cast<cSomaPostEffect *>(apObj);
 		return gsetEffects.count(pEffect) ? pEffect : NULL;
 	}
-
-	cColor Hue(float afDeg)
-	{
-		auto f = [&](float n) { float k = fmodf(n + afDeg / 60.0f, 6.0f); return 1 - std::max(0.0f, std::min({k, 4 - k, 1.0f})); };
-		return cColor(f(5), f(3), f(1), 1);
-	}
 }
 
 cSomaPostEffect::cSomaPostEffect(const tString &asType)
@@ -60,8 +55,9 @@ cSomaPostEffect::~cSomaPostEffect() { gsetEffects.erase(this); }
 void cSomaPostEffect::Set(std::initializer_list<float> alParams)
 {
 	std::copy(alParams.begin(), alParams.end(), mfParams);
-	bool bActive = mfParams[gvTypes[mlType].mlKey] > 0;
-	if (bActive && !IsActive())
+	bool bClear;
+	bool bActive = ohpl_gs7_pfx_set_activity(mlType, mfParams, IsActive(), &bClear);
+	if (bClear)
 		mbClear = true;
 	SetActive(bActive);
 }
@@ -72,7 +68,7 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 	{
 		// applied next frame by cRendererDeferred::RenderImageTrail, on the HDR buffer
 		float fFrameTime = mpCurrentComposite->GetCurrentFrameTime();
-		cRendererDeferred::SetImageTrailAlpha(mbClear ? 1 : std::max(0.05f, 1 - powf(1 - expf(mfParams[0] * -60 * 0.015f), fFrameTime * 60)));
+		cRendererDeferred::SetImageTrailAlpha(ohpl_gs7_pfx_trail_alpha(mfParams[0], fFrameTime, mbClear));
 		mbClear = false;
 		return apIn;
 	}
@@ -108,16 +104,14 @@ iTexture *cSomaPostEffect::RenderEffect(iTexture *apIn, iFrameBuffer *apOut)
 
 	if (mlType == eChromatic)
 	{
-		cVector2f vScale = cVector2f(mpLowLevelGraphics->GetScreenSizeFloat().y * p[0]) / vTex;
-		cVector2f vDir(sinf(p[1]), -cosf(p[1])), vOffset(p[3], p[4]);
-		pProg->SetVec2f(U("avOffsetA"), (vOffset + vDir) * vScale);
-		pProg->SetVec2f(U("avOffsetB"), vOffset * vScale);
-		pProg->SetVec2f(U("avOffsetC"), (vOffset - vDir) * vScale);
-		cColor vCol[3] = {Hue(fmodf(p[2], 360)), Hue(fmodf(p[2] + 120, 360)), Hue(fmodf(p[2] + 240, 360))};
-		cColor sum = vCol[0] + vCol[1] + vCol[2];
-		const char *vNames[] = {"avColorA", "avColorB", "avColorC"};
-		for (int i = 0; i < 3; ++i)
-			pProg->SetVec4f(U(vNames[i]), vCol[i].r / sum.r, vCol[i].g / sum.g, vCol[i].b / sum.b, vCol[i].a / sum.a);
+		OhplGs7Chromatic ch;
+		ohpl_gs7_pfx_chromatic(p, mpLowLevelGraphics->GetScreenSizeFloat().y, vTex.v, &ch);
+		pProg->SetVec2f(U("avOffsetA"), cVector2f(ch.offset_a[0], ch.offset_a[1]));
+		pProg->SetVec2f(U("avOffsetB"), cVector2f(ch.offset_b[0], ch.offset_b[1]));
+		pProg->SetVec2f(U("avOffsetC"), cVector2f(ch.offset_c[0], ch.offset_c[1]));
+		pProg->SetVec4f(U("avColorA"), ch.color_a[0], ch.color_a[1], ch.color_a[2], ch.color_a[3]);
+		pProg->SetVec4f(U("avColorB"), ch.color_b[0], ch.color_b[1], ch.color_b[2], ch.color_b[3]);
+		pProg->SetVec4f(U("avColorC"), ch.color_c[0], ch.color_c[1], ch.color_c[2], ch.color_c[3]);
 	}
 	else if (mlType == eRadialBlur)
 	{
@@ -185,12 +179,12 @@ void main()
 	{
 	public:
 		struct cAnim { tString msName; int mlIdx; float mfSpeed = 1, mfWeight = 1; };
-		struct cFade { int mlMat; float mfT, mfSpeed; };
 		struct cTentacle { cVector3f mvPos = 0, mvRot = 0; };
 
-		cSomaFearTentacles() : cSomaPostEffect("FearTentacles") {}
+		cSomaFearTentacles() : cSomaPostEffect("FearTentacles") { mpFades = ohpl_gs7_pfx_tentacles_new(); }
 		~cSomaFearTentacles()
 		{
+			ohpl_gs7_pfx_tentacles_free(mpFades);
 			ClearEntities();
 			for (cMaterial *pMat : mvMaterials)
 				if (pMat) mpResources->GetMaterialManager()->Destroy(pMat);
@@ -250,30 +244,19 @@ void main()
 			if (lIdx < 0)
 				return;
 			mvAnims.push_back({asName, lIdx});
-			float fStep = (afMax - afMin) / mvGroups.size(), fSpeed = afMin + cMath::RandRectf(0, fStep);
-			for (cMeshEntity *pEnt : mvGroups)
+			std::vector<float> vSpeeds(mvGroups.size());
+			ohpl_gs7_pfx_tentacle_speeds(mvGroups.size(), afMin, afMax, vSpeeds.data());
+			for (size_t i = 0; i < mvGroups.size(); ++i)
 			{
+				cMeshEntity *pEnt = mvGroups[i];
 				pEnt->Play(lIdx, true, false);
-				fSpeed += fStep;
-				pEnt->GetAnimationState(lIdx)->SetBaseSpeed(fSpeed);
+				pEnt->GetAnimationState(lIdx)->SetBaseSpeed(vSpeeds[i]);
 			}
 		}
 
 		void SetMaterial(int alIdx, float afTime)
 		{
-			if (mvTentacles.empty() || alIdx < 0 || alIdx >= (int)mvMaterials.size())
-				return;
-			if (afTime <= 0)
-			{
-				mlMat = alIdx;
-				mvFades.clear();
-			}
-			else if (alIdx == mlMat)
-				for (cFade &fade : mvFades) fade.mfSpeed = -1 / afTime;
-			else if (mvFades.empty() == false && mvFades.back().mlMat == alIdx)
-				mvFades.back().mfSpeed = 1 / afTime;
-			else
-				mvFades.push_back({alIdx, 0, 1 / afTime});
+			ohpl_gs7_pfx_tentacles_set_material(mpFades, mvTentacles.size(), mvMaterials.size(), alIdx, afTime);
 		}
 
 		cAnim *Anim(const tString &asName)
@@ -293,7 +276,7 @@ void main()
 			mvGroups.clear();
 			mvTentacles.clear();
 			mvAnims.clear();
-			mvFades.clear();
+			ohpl_gs7_pfx_tentacles_clear(mpFades);
 		}
 
 		void DestroyTarget()
@@ -333,36 +316,24 @@ void main()
 
 		iTexture *RenderEffect(iTexture *apIn, iFrameBuffer *apOut) override
 		{
-			cMaterial *pMatA = mlMat < (int)mvMaterials.size() ? mvMaterials[mlMat] : NULL;
+			int lMat = ohpl_gs7_pfx_tentacles_material(mpFades);
+			cMaterial *pMatA = lMat < (int)mvMaterials.size() ? mvMaterials[lMat] : NULL;
 			if (mvTentacles.empty() || mvAnims.empty() || pMatA == NULL || LoadPrograms() == false)
 				return apIn;
 
 			cPostEffectComposite *c = mpCurrentComposite;
 			float fDt = c->GetCurrentFrameTime();
-			mfTime += fDt * mvAnims[0].mfSpeed;
-			if (mfTime > 10000)
-				mfTime = 0;
+			mfTime = ohpl_gs7_pfx_tentacle_time(mfTime, fDt, mvAnims[0].mfSpeed);
 
-			for (auto it = mvFades.begin(); it != mvFades.end();)
-			{
-				it->mfT += fDt * it->mfSpeed;
-				if (it->mfSpeed > 0 && it->mfT >= 1)
-				{
-					mlMat = it->mlMat;
-					it = mvFades.erase(it);
-				}
-				else if (it->mfSpeed < 0 && it->mfT <= 0)
-					it = mvFades.erase(it);
-				else
-					++it;
-			}
-			pMatA = mvMaterials[mlMat];
-			cMaterial *pMatB = mvFades.empty() ? NULL : mvMaterials[mvFades.front().mlMat];
+			ohpl_gs7_pfx_tentacles_advance(mpFades, fDt);
+			pMatA = mvMaterials[ohpl_gs7_pfx_tentacles_material(mpFades)];
+			float fMatAlpha;
+			int lSecond = ohpl_gs7_pfx_tentacles_blend(mpFades, &fMatAlpha);
+			cMaterial *pMatB = lSecond < 0 ? NULL : mvMaterials[lSecond];
 			if (pMatA == NULL)
 				return apIn;
 			if (pMatB == NULL)
 				pMatB = pMatA;
-			float fMatAlpha = mvFades.empty() ? 0 : mvFades.front().mfT;
 
 			for (cMeshEntity *pEnt : mvGroups)
 			{
@@ -377,8 +348,7 @@ void main()
 			}
 
 			cVector2l vSize(apIn->GetWidth(), apIn->GetHeight());
-			if (vSize.x > 1920)
-				vSize = cVector2l(1920, vSize.y * 1920 / vSize.x);
+			ohpl_gs7_pfx_tentacle_target(vSize.x, vSize.y, vSize.v);
 			if (mpTarget == NULL || mpTarget->GetWidth() != vSize.x || mpTarget->GetHeight() != vSize.y)
 			{
 				DestroyTarget();
@@ -416,12 +386,15 @@ void main()
 			pProg->SetFloat(U("afTime"), mfTime);
 			pProg->SetFloat(U("afMaterialAlpha"), fMatAlpha);
 			int lModel = U("a_mtxModel"), lPos = U("avPos"), lInstance = U("afInstance");
-			cMatrixf mtxAspect = cMath::MatrixScale(cVector3f((float)vSize.y / vSize.x, 1, 1));
 			for (size_t i = 0; i < mvTentacles.size(); ++i)
 			{
 				// ponytail: displaced after CPU skinning, tentacles of a group share a pose; GPU dual-quat instancing if it shows
-				pProg->SetMatrixf(lModel, cMath::MatrixMul(mtxAspect, cMath::MatrixRotate(mvTentacles[i].mvRot, eEulerRotationOrder_YZX)));
-				pProg->SetVec3f(lPos, mvTentacles[i].mvPos * (1 - p[2]));
+				cMatrixf mtxModel;
+				ohpl_gs7_pfx_tentacle_model(vSize.x, vSize.y, mvTentacles[i].mvRot.v, &mtxModel.m[0][0]);
+				pProg->SetMatrixf(lModel, mtxModel);
+				cVector3f vPos;
+				ohpl_gs7_pfx_tentacle_pos(mvTentacles[i].mvPos.v, p[2], vPos.v);
+				pProg->SetVec3f(lPos, vPos);
 				pProg->SetFloat(lInstance, (float)i);
 				c->SetVertexBuffer(mvGroups[i % mvGroups.size()]->GetSubMeshEntity(0)->GetVertexBuffer());
 				c->DrawCurrent();
@@ -440,7 +413,7 @@ void main()
 			pProg->SetFloat(U("afIntensity"), p[4]);
 			pProg->SetFloat(U("afAlpha"), p[5]);
 			pProg->SetVec2f(U("avTentacleUvMul"), cVector2f(1, 1));
-			pProg->SetFloat(U("afAspect"), (float)vSize.x / vSize.y);
+			pProg->SetFloat(U("afAspect"), ohpl_gs7_pfx_tentacle_aspect(vSize.x, vSize.y));
 			pProg->SetFloat(U("afCircleRadius"), p[6]);
 			pProg->SetFloat(U("afCircleAlpha"), p[7]);
 			pProg->SetFloat(U("afCircleSoftness"), p[8]);
@@ -452,8 +425,7 @@ void main()
 
 		std::vector<cAnim> mvAnims;
 		std::vector<cMaterial *> mvMaterials;
-		std::vector<cFade> mvFades;
-		int mlMat = 0;
+		OhplGs7TentacleFades *mpFades = NULL;
 		float mfTime = 0;
 		iTexture *mpTarget = NULL;
 		iFrameBuffer *mpBuffer = NULL;
@@ -473,8 +445,6 @@ void main()
 		struct cLevel
 		{
 			int w, h, lDiv;
-			float fD, fT, vWeights[7];
-			cVector2f vOffH[7], vOffV[7];
 			iTexture *pTexA = NULL, *pTexB = NULL;
 			iFrameBuffer *pFbA = NULL, *pFbB = NULL;
 		};
@@ -529,46 +499,30 @@ void main()
 		void CreateLevels(const cVector2l &avScreen)
 		{
 			DestroyLevels();
-			cLevel l0 = {avScreen.x, avScreen.y, 1};
-			Target(l0.pTexB, l0.pFbB, l0.w, l0.h);
-			mvLevels.push_back(l0);
-			for (cLevel l = l0; l.w > 8;)
+			OhplGs7LevelSize vSizes[24];
+			size_t lNum = ohpl_gs7_pfx_blur_levels(avScreen.x, avScreen.y, vSizes, 24);
+			for (size_t i = 0; i < lNum; ++i)
 			{
-				l.lDiv <<= 1;
-				l.w = (l.w + 1) / 2;
-				l.h = (l.h + 1) / 2;
-				Target(l.pTexA, l.pFbA, l.w, l.h);
+				cLevel l = {vSizes[i].w, vSizes[i].h, vSizes[i].div};
+				if (i > 0)
+					Target(l.pTexA, l.pFbA, l.w, l.h);
 				Target(l.pTexB, l.pFbB, l.w, l.h);
 				mvLevels.push_back(l);
 			}
 		}
 
-		static void Weights(cLevel &l)
-		{
-			float fSum = 0;
-			l.vWeights[0] = 1;
-			l.vOffH[0] = l.vOffV[0] = cVector2f(0);
-			for (int i = 1; i < 7; ++i)
-			{
-				float x = 2.0f * i - 1, w0 = expf(-x * x / l.fD), w1 = expf(-(x + 1) * (x + 1) / l.fD), w = w0 + w1;
-				float fOff = w > 0 ? x + w1 / w : x;
-				l.vWeights[i] = w;
-				fSum += w;
-				l.vOffH[i] = cVector2f(fOff / l.w, 0);
-				l.vOffV[i] = cVector2f(0, fOff / l.h);
-			}
-			for (float &w : l.vWeights) w /= 1 + 2 * fSum;
-		}
-
-		iGpuProgram *Program(int alProg, const cLevel *apUniforms, bool abVertical)
+		iGpuProgram *Program(int alProg, const OhplGs7BlurWeights *apUniforms, bool abVertical)
 		{
 			iGpuProgram *p = gpBlurProgs[alProg];
 			mpCurrentComposite->SetProgram(p);
 			if (apUniforms)
 			{
-				p->SetFloatArray(p->GetVariableId("avWeights"), apUniforms->vWeights, 7);
+				p->SetFloatArray(p->GetVariableId("avWeights"), apUniforms->weights, 7);
 				for (int i = 0; i < 7; ++i)
-					p->SetVec2f(p->GetVariableId("avOffsets[" + std::to_string(i) + "]"), abVertical ? apUniforms->vOffV[i] : apUniforms->vOffH[i]);
+				{
+					const float *v = abVertical ? apUniforms->off_v[i] : apUniforms->off_h[i];
+					p->SetVec2f(p->GetVariableId("avOffsets[" + std::to_string(i) + "]"), cVector2f(v[0], v[1]));
+				}
 			}
 			return p;
 		}
@@ -578,14 +532,6 @@ void main()
 			SetFrameBuffer(apFb);
 			mpCurrentComposite->SetTexture(0, apTex);
 			DrawQuad(0, 1, apTex, false);
-		}
-
-		void Blur(cLevel *apL, bool abVertical)
-		{
-			if (apL == NULL || (abVertical && apL->pFbA == NULL))
-				return;
-			Program(eBlurProg, apL, abVertical);
-			Pass(abVertical ? apL->pFbA : apL->pFbB, abVertical ? apL->pTexB : apL->pTexA);
 		}
 
 		// official cPostEffect_Blur::RenderEffect 0x10c72a0
@@ -604,69 +550,43 @@ void main()
 			c->SetChannelMode(eMaterialChannelMode_RGBA);
 			c->SetTextureRange(NULL, 1);
 
-			float fSize = vScreen.y * mfParams[0] * 0.25f;
-			cLevel *pCur = NULL, *pPrev = NULL;
-			for (cLevel &l : mvLevels)
+			std::vector<OhplGs7LevelSize> vSizes;
+			for (const cLevel &l : mvLevels)
+				vSizes.push_back({l.w, l.h, l.lDiv});
+			OhplGs7BlurPlan plan;
+			ohpl_gs7_pfx_blur_plan(mfParams[0], vScreen.y, vSizes.data(), vSizes.size(), &plan);
+			iTexture *pResult = apIn;
+			for (size_t i = 0; i < plan.n_ops; ++i)
 			{
-				l.fD = fSize / l.lDiv;
-				l.fT = cMath::Clamp(l.fD / 14, 0, 1) * 2 - 1;
-				if (pPrev)
+				const OhplGs7BlurOp &op = plan.ops[i];
+				cLevel &l = mvLevels[op.level];
+				if (op.kind == OHPL_GS7_BLUR_DOWNSAMPLE)
 				{
 					Program(eBlurPlain, NULL, false);
-					Pass(l.pFbA, pPrev->pTexA);
+					Pass(l.pFbA, mvLevels[op.level - 1].pTexA);
 				}
-				if (l.fT < 1)
+				else if (op.kind == OHPL_GS7_BLUR_BLUR)
 				{
-					pCur = &l;
-					break;
-				}
-				pPrev = &l;
-			}
-			iTexture *pResult = apIn;
-			if (pCur)
-			{
-				const float fCutoff = 0.125f; // cPostEffectParams_Blur::mfWeightCutoffThreshold
-				pCur->fT = (pCur->fT - fCutoff) / (1 - fCutoff);
-				cLevel *pSecond = pPrev;
-				if (pPrev && pCur->fT <= 0)
-				{
-					pCur = pPrev;
-					pSecond = NULL;
-				}
-				if (pCur->fT == 1)
-					pSecond = NULL;
-				Weights(*pCur);
-				if (pSecond)
-					Weights(*pSecond);
-				Blur(pCur, false);
-				Blur(pSecond, false);
-				Blur(pCur, true);
-				Blur(pSecond, true);
-
-				iTexture *pTex;
-				if (pSecond)
-				{
-					// level 0 combine uses cur's offsets and weights, as official
-					iGpuProgram *p = pSecond == &mvLevels[0] ? Program(eBlurBlurCombine, pCur, true) : Program(eBlurCombineMip, NULL, false);
-					p->SetFloat(p->GetVariableId("afAlpha"), 1 - pCur->fT);
-					pTex = pSecond == &mvLevels[0] ? pSecond->pTexB : pSecond->pTexA;
-					c->SetTextureRange(NULL, 2);
-					c->SetTexture(1, pCur->pTexA);
-				}
-				else if (pCur == &mvLevels[0])
-				{
-					Program(eBlurProg, pCur, true);
-					pTex = pCur->pTexB;
+					Program(eBlurProg, &plan.weights[op.slot], op.vertical);
+					Pass(op.vertical ? l.pFbA : l.pFbB, op.vertical ? l.pTexB : l.pTexA);
 				}
 				else
 				{
-					Program(eBlurPlain, NULL, false);
-					pTex = pCur->pTexA;
+					iGpuProgram *p = Program(op.program, op.slot >= 0 ? &plan.weights[op.slot] : NULL, op.vertical);
+					if (op.program == eBlurCombineMip || op.program == eBlurBlurCombine)
+						p->SetFloat(p->GetVariableId("afAlpha"), op.alpha);
+					cLevel &lt = mvLevels[op.tex0_level];
+					iTexture *pTex = op.tex0_b ? lt.pTexB : lt.pTexA;
+					if (op.tex1_level >= 0)
+					{
+						c->SetTextureRange(NULL, 2);
+						c->SetTexture(1, mvLevels[op.tex1_level].pTexA);
+					}
+					c->SetTexture(0, pTex);
+					SetFinalFrameBuffer(apOut);
+					DrawQuad(0, 1, pTex, true);
+					pResult = apOut->GetColorBuffer(0)->ToTexture();
 				}
-				c->SetTexture(0, pTex);
-				SetFinalFrameBuffer(apOut);
-				DrawQuad(0, 1, pTex, true);
-				pResult = apOut->GetColorBuffer(0)->ToTexture();
 			}
 			c->SetProgram(NULL);
 			c->SetTextureRange(NULL, 0);

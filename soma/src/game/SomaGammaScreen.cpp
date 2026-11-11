@@ -1,6 +1,7 @@
 #include "SomaGammaScreen.h"
 #include "SomaBase.h"
 #include "SomaLuxGame.h"
+#include "RustSomaUi.h"
 
 #include <fstream>
 
@@ -29,54 +30,47 @@ cSomaGammaScreen::cSomaGammaScreen(cEngine *apEngine, cSomaBase *apBase) : iUpda
 	mpCheckerboardGfx = mpGui->CreateGfxTexture("gamma.tga", eGuiMaterial_Alpha, eTextureType_2D);
 
 	if (mpCheckerboardGfx)
-	{
 		mvCheckerboardSize = mpCheckerboardGfx->GetImageSize();
-		mvCheckerboardPos = cVector2f((mvScreenSize.x - mvCheckerboardSize.x) * 0.5f,
-									   (mvScreenSize.y - mvCheckerboardSize.y) * 0.5f - 40);
-	}
 
 	mpInstructionsFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("sansation_large_bold.fnt");
 	mfInstructionsFontHeight = 24.0f;
 	mfInstructionsRowHeight = mfInstructionsFontHeight + 6.0f;
 
+	float fWrapWidth = 0;
 	if (mpInstructionsFont)
 	{
-		float fWrapWidth = cMath::Min(700.0f, mvScreenSize.x - 160.0f);
-		if (fWrapWidth < 200.0f)
-			fWrapWidth = mvScreenSize.x; // degenerate tiny headless resolution - don't wrap into nothing
+		fWrapWidth = ohpl_gs7_gamma_wrap_width(mvScreenSize.x);
 
 		mpInstructionsFont->GetWordWrapRows(fWrapWidth, mfInstructionsRowHeight,
 											 cVector2f(mfInstructionsFontHeight, mfInstructionsFontHeight),
 											 _W("Adjust gamma so you can barely make out the details on the robot poster on the left."),
 											 &mvInstructionRows);
-
-		float fBlockHeight = mfInstructionsRowHeight * (float)mvInstructionRows.size();
-
-		mvInstructionsPos = cVector2f((mvScreenSize.x - fWrapWidth) * 0.5f,
-									   cMath::Max(20.0f, mvCheckerboardPos.y - 20.0f - fBlockHeight));
 	}
+
+	OhplGs7GammaLayout layout;
+	ohpl_gs7_gamma_layout(mvScreenSize.v, mpCheckerboardGfx ? mvCheckerboardSize.v : NULL, fWrapWidth, mvInstructionRows.size(), &layout);
+	if (mpCheckerboardGfx)
+		mvCheckerboardPos = cVector2f(layout.checker_pos[0], layout.checker_pos[1]);
+	if (mpInstructionsFont)
+		mvInstructionsPos = cVector2f(layout.instructions_pos[0], layout.instructions_pos[1]);
 
 	mfGammaMinValue = 0.3f;
 	mfGammaMaxValue = 2.0f;
 
-	cVector2f vSliderSize(300, 25);
-	cVector3f vSliderPos((mvScreenSize.x - vSliderSize.x) * 0.5f,
-						  mvCheckerboardPos.y + mvCheckerboardSize.y + 30, 0.1f);
+	cVector2f vSliderSize(layout.slider_size[0], layout.slider_size[1]);
+	cVector3f vSliderPos(layout.slider_pos[0], layout.slider_pos[1], layout.slider_pos[2]);
 
 	mpSlider = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, vSliderPos, vSliderSize, 100, NULL);
 	mpSlider->AddCallback(eGuiMessage_SliderMove, this, &cSomaGammaScreen::GammaSliderMoved_static_gui);
 
 	{
 		float fCurrentGamma = mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection();
-		fCurrentGamma = cMath::Clamp(fCurrentGamma, mfGammaMinValue, mfGammaMaxValue);
-		int lValue = cMath::RoundToInt((fCurrentGamma - mfGammaMinValue) * 100.0f / (mfGammaMaxValue - mfGammaMinValue));
-		mpSlider->SetValue(lValue, false);
+		mpSlider->SetValue(ohpl_gs7_gamma_to_slider(fCurrentGamma), false);
 	}
 
 	// Real button: dragging the slider must not count as continue
-	cVector2f vButtonSize(120, 30);
-	cVector3f vButtonPos((mvScreenSize.x - vButtonSize.x) * 0.5f,
-						  vSliderPos.y + vSliderSize.y + 30, 0.1f);
+	cVector2f vButtonSize(layout.button_size[0], layout.button_size[1]);
+	cVector3f vButtonPos(layout.button_pos[0], layout.button_pos[1], layout.button_pos[2]);
 	mpContinueButton = mpGuiSet->CreateWidgetButton(vButtonPos, vButtonSize, _W("Continue"), NULL);
 	mpContinueButton->AddCallback(eGuiMessage_ButtonPressed, this, &cSomaGammaScreen::ContinuePressed_static_gui);
 
@@ -169,9 +163,10 @@ void cSomaGammaScreen::Update(float afTimeStep)
 		mpGui->SendMousePos(pMouse->GetAbsPosition(), pMouse->GetRelPosition());
 
 		bool bDown = pMouse->ButtonIsDown(eMouseButton_Left);
-		if (bDown && mbMouseWasDown == false)
+		int lEdge = ohpl_gs7_mouse_edge(bDown, mbMouseWasDown);
+		if (lEdge == 1)
 			mpGui->SendMouseClickDown(eGuiMouseButton_Left);
-		if (bDown == false && mbMouseWasDown)
+		if (lEdge == 2)
 			mpGui->SendMouseClickUp(eGuiMouseButton_Left);
 		mbMouseWasDown = bDown;
 	}
@@ -210,8 +205,7 @@ bool cSomaGammaScreen::GammaSliderMoved_static_gui(void *apObject, iWidget *apWi
 
 bool cSomaGammaScreen::GammaSliderMoved(iWidget *apWidget, const cGuiMessageData &aData)
 {
-	float fSliderRelValue = ((float)mpSlider->GetValue()) / (float)mpSlider->GetMaxValue();
-	float fGamma = mfGammaMinValue + (mfGammaMaxValue - mfGammaMinValue) * fSliderRelValue;
+	float fGamma = ohpl_gs7_gamma_from_slider(mpSlider->GetValue(), mpSlider->GetMaxValue());
 
 	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
 

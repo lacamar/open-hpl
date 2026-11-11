@@ -2,6 +2,7 @@
 #define SOMA_IMGUI_H
 
 #include "hpl.h"
+#include "RustSomaUi.h"
 
 #include <angelscript.h>
 #include <map>
@@ -82,18 +83,8 @@ public:
 		bool mbDefInt = false, mbDefFloat = false;
 	};
 	// cImGui::GetDefaultOrCurrent*: a widget's default re-applies whenever the caller changes it
-	static int DefaultOrCurrent(cState &s, int alDef)
-	{
-		if (s.mbSetInt == false || (s.mbDefInt && s.mlDefInt != alDef)) s.mlInt = alDef, s.mbSetInt = true;
-		s.mlDefInt = alDef, s.mbDefInt = true;
-		return s.mlInt;
-	}
-	static float DefaultOrCurrent(cState &s, float afDef)
-	{
-		if (s.mbSetFloat == false || (s.mbDefFloat && s.mfDefFloat != afDef)) s.mfFloat = afDef, s.mbSetFloat = true;
-		s.mfDefFloat = afDef, s.mbDefFloat = true;
-		return s.mfFloat;
-	}
+	static int DefaultOrCurrent(cState &s, int alDef) { return ohpl_gs7_im_default_or_current_int((OhplGs7ImState *)&s, alDef); }
+	static float DefaultOrCurrent(cState &s, float afDef) { return ohpl_gs7_im_default_or_current_float((OhplGs7ImState *)&s, afDef); }
 	std::map<uint64_t, cState> mmapStates;
 	cState &State(uint64_t alId) { return mmapStates[alId]; }
 	template <class F> F GetOrSetState(uint64_t alId, F cState::*apField, bool cState::*apSet, const F &aDefault)
@@ -190,7 +181,6 @@ public:
 		cVector2f mvSize = 0;
 	};
 	cPrev mPrev;
-	void SetPrevFocus(cState &aState, bool abOver);
 
 	// Keyboard/gamepad focus: widgets register a nav rect per frame, End() moves focus along it
 	struct cNavEntry
@@ -209,8 +199,7 @@ public:
 	void SetFocus(const tString &asName);
 	bool WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector2f &avSize, cState &aState);
 	bool BecamePressed(bool abKeys, bool abMouse);
-	const cNavEntry *FindNav(uint64_t alId);
-	uint64_t NavClosest(const cNavEntry &aCur, const cVector2l &avDir, bool abAhead, bool abLoose);
+	OhplGs7ImActions Actions();
 	void UpdateUIMovement();
 
 	std::vector<tWString> mvItems;
