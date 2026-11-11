@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_MultiSlider.h"
+#include <cstring>
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -48,29 +49,20 @@ void cLuxPropLoader_MultiSlider::LoadVariables(iLuxProp *apProp, cXmlElement *ap
 {
 	cLuxProp_MultiSlider  *pMultiSlider = static_cast<cLuxProp_MultiSlider*>(apProp);
 
-	///////////////////////////
-	// General
-	pMultiSlider->mSlideData.mfSlideMaxSpeed = GetVarFloat("SlideMaxSpeed", 5.0f);
-	pMultiSlider->mSlideData.mfSlideSlowDownFactor = GetVarFloat("SlideSlowDownFactor", 1.0f);
-	pMultiSlider->mSlideData.mfSlideSpeedFactor = GetVarFloat("SlideSpeedFactor", 1.0f);
-	pMultiSlider->mSlideData.mfSlideThrowImpulse = GetVarFloat("SlideThrowImpulse", 3.0f);
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplGa4Slot_ChangeStateSound, pMultiSlider->msChangeStateSound)
+		.Slot(kOhplGa4Slot_MultiStuckSound, pMultiSlider->msStuckSound);
+	ohpl_ga4_multi_load(vars.Vars(), &pMultiSlider->mP);
 
-	pMultiSlider->mlNumOfStates = GetVarInt("NumOfStates", 2);
-	if(pMultiSlider->mlNumOfStates < 2)
+	pMultiSlider->mSlideData.mfSlideMaxSpeed = pMultiSlider->mP.data.max_speed;
+	pMultiSlider->mSlideData.mfSlideSlowDownFactor = pMultiSlider->mP.data.slow_down_factor;
+	pMultiSlider->mSlideData.mfSlideSpeedFactor = pMultiSlider->mP.data.speed_factor;
+	pMultiSlider->mSlideData.mfSlideThrowImpulse = pMultiSlider->mP.data.throw_impulse;
+
+	if(pMultiSlider->mP.few_states)
 	{
 		Warning("MultiSlider '%s' has fewer than 2 states! It will not function properly!\n", pMultiSlider->GetName().c_str());
 	}
-	pMultiSlider->mfStickToStateMaxDist = GetVarFloat("StickToStateMaxDist", 0.1f);
-
-	pMultiSlider->mbCanInteractWithStaticBody = GetVarBool("CanInteractWithStaticBody", true);
-	
-	pMultiSlider->mbAutoMoveToCurrentState = GetVarBool("AutoMoveToCurrentState", true);
-	pMultiSlider->mfAutoMoveSpeedFactor = GetVarFloat("AutoMoveSpeedFactor", 2);
-	pMultiSlider->mfAutoMoveMaxSpeed = GetVarFloat("AutoMoveMaxSpeed", 8);
-	
-	pMultiSlider->msChangeStateSound = GetVarString("ChangeStateSound", "");
-	
-	pMultiSlider->msStuckSound = GetVarString("StuckSound", "");
 }
 //-----------------------------------------------------------------------
 
@@ -78,12 +70,16 @@ void cLuxPropLoader_MultiSlider::LoadInstanceVariables(iLuxProp *apProp, cResour
 {
 	cLuxProp_MultiSlider  *pMultiSlider = static_cast<cLuxProp_MultiSlider*>(apProp);
 
-	int lStuckState = apInstanceVars->GetVarInt("StuckState", -1);
-	pMultiSlider->SetStuckState(lStuckState, false);
+	//The callback is read after the stuck state is set, so that setting it does not run it.
+	tString sChangeStateCallback;
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	vars.Slot(kOhplGa4Slot_ChangeStateCallback, sChangeStateCallback);
 
-	pMultiSlider->mbInteractionDisablesStuck = apInstanceVars->GetVarBool("InteractionDisablesStuck", false);
+	OhplGa4Run run(pMultiSlider);
+	ohpl_ga4_multi_load_instance(vars.Vars(), &pMultiSlider->mS, pMultiSlider->mvStates.data(), (int)pMultiSlider->mvStates.size(), run.Sink());
+	run.Finish();
 
-	pMultiSlider->msChangeStateCallback = apInstanceVars->GetVarString("ChangeStateCallback", "");
+	pMultiSlider->msChangeStateCallback = sChangeStateCallback;
 }
 
 //-----------------------------------------------------------------------
@@ -97,16 +93,14 @@ void cLuxPropLoader_MultiSlider::LoadInstanceVariables(iLuxProp *apProp, cResour
 
 cLuxProp_MultiSlider::cLuxProp_MultiSlider(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_MultiSlider)
 {
-	mlCurrentState  = -1;
-	mlStuckState = -1;
-	mbInteractionDisablesStuck = false;
+	memset(&mP, 0, sizeof(mP));
+	ohpl_ga4_multi_state_new(&mS);
 
 	mAutoMovePid.SetErrorNum(10);
 	mAutoMovePid.p = 40.0f;
 	mAutoMovePid.i = 0.0f;
 	mAutoMovePid.d = 0.0f;//Derative fucks up big time.. so skip!
 
-	mfStuckSoundTimer =0;
 }
 
 //-----------------------------------------------------------------------
@@ -126,16 +120,14 @@ cLuxProp_MultiSlider::~cLuxProp_MultiSlider()
 
 bool cLuxProp_MultiSlider::CanInteract(iPhysicsBody *apBody)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody==false) return false;
-
-	return true;
+	return ohpl_ga4_multi_can_interact(&mP, apBody->GetMass());
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_MultiSlider::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody)
+	if(apBody->GetMass()==0 && mP.can_interact_static)
 	{
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
@@ -147,8 +139,9 @@ bool cLuxProp_MultiSlider::OnInteract(iPhysicsBody *apBody, const cVector3f &avP
 		}
 	}
 
-	if(mlStuckState !=0 && mbInteractionDisablesStuck)
-		SetStuckState(-1, true);
+	OhplGa4Run run(this);
+	ohpl_ga4_multi_on_interact(&mS, mvStates.data(), (int)mvStates.size(), run.Sink());
+	run.Finish();
 
 	gpBase->mpHintHandler->Add("EntitySlide", kTranslate("Hints", "EntitySlide"), 0);
 
@@ -156,7 +149,7 @@ bool cLuxProp_MultiSlider::OnInteract(iPhysicsBody *apBody, const cVector3f &avP
 	gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractSlide);
 
 	mAutoMovePid.Reset();
-	
+
 	return true;
 }
 
@@ -177,21 +170,11 @@ void cLuxProp_MultiSlider::OnSetupAfterLoad(cWorld *apWorld)
 
 	///////////////////////
 	//Set up data
-	mfDefaultMinDist = mpSliderJoint->GetMinDistance();
-	mfDefaultMaxDist = mpSliderJoint->GetMaxDistance();
+	mS.default_min_dist = mpSliderJoint->GetMinDistance();
+	mS.default_max_dist = mpSliderJoint->GetMaxDistance();
 
-	///////////////////////
-	//Set up limits
-	mvStates.resize(mlNumOfStates);
-	float fTotalDist = mfDefaultMaxDist - mfDefaultMinDist;
-	float fStatePosAdd = fTotalDist / (float)(mlNumOfStates-1);
-	float fStatePos = mfDefaultMinDist;
-	for(size_t i=0; i<mvStates.size(); ++i)
-	{
-		cLuxProp_MultiSlider_State *pState = &mvStates[i];
-		pState->mfPos = fStatePos;
-		fStatePos += fStatePosAdd;
-	}
+	mvStates.resize(mP.num_of_states > 0 ? mP.num_of_states : 0);
+	ohpl_ga4_multi_compute_states(mS.default_min_dist, mS.default_max_dist, mP.num_of_states, mvStates.data());
 }
 
 //-----------------------------------------------------------------------
@@ -204,11 +187,9 @@ void cLuxProp_MultiSlider::OnResetProperties()
 
 void cLuxProp_MultiSlider::UpdatePropSpecific(float afTimeStep)
 {
-	float fDist = mpSliderJoint->GetDistance();
-
-	UpdateCheckStuckSound(afTimeStep);
-	UpdateCheckNewState(fDist, afTimeStep);
-	UpdateAutoMove(fDist, afTimeStep);
+	OhplGa4Run run(this);
+	ohpl_ga4_multi_update(&mS, &mP, mvStates.data(), (int)mvStates.size(), afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -222,7 +203,7 @@ void cLuxProp_MultiSlider::BeforePropDestruction()
 
 eLuxFocusCrosshair cLuxProp_MultiSlider::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody==false) return eLuxFocusCrosshair_Default;
+	if(ohpl_ga4_multi_can_interact(&mP, apBody->GetMass())==false) return eLuxFocusCrosshair_Default;
 
 	return eLuxFocusCrosshair_Grab;
 }
@@ -231,41 +212,72 @@ eLuxFocusCrosshair cLuxProp_MultiSlider::GetFocusCrosshair(iPhysicsBody *apBody,
 
 void cLuxProp_MultiSlider::SetStuckState(int alState, bool abEffects)
 {
-	if(mlStuckState == alState) return;
-
-	mlStuckState = alState;
-
-	mfStuckSoundTimer =0; //Reset the stuck timer!
-
-	//////////////////////////
-	//Stuck on
-    if(mlStuckState >= 0)
-	{
-		ChangeState(alState, abEffects);
-
-		float fPos = mvStates[mlStuckState].mfPos;
-		float fMin = mlStuckState==0 ? fPos : fPos - 0.05f;
-		float fMax = mlStuckState==(int)mvStates.size()-1 ? fPos : fPos + 0.05f;
-		
-		mpSliderJoint->SetMinDistance(fMin);
-		mpSliderJoint->SetMaxDistance(fMax);
-	}
-	//////////////////////////
-	//Stuck off
-	else
-	{
-		mpSliderJoint->SetMinDistance(mfDefaultMinDist);
-		mpSliderJoint->SetMaxDistance(mfDefaultMaxDist);
-	}
-
-	mpSliderBody->Enable();
+	OhplGa4Run run(this);
+	ohpl_ga4_multi_set_stuck_state(&mS, mvStates.data(), (int)mvStates.size(), alState, abEffects, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxProp_MultiSlider::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	//Since there are multiple states, it does not really work with connections.
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_MultiSlider::Ga4Slider(OhplGa4Slider *apOut)
+{
+	cVector3f vPin = mpSliderJoint->GetPinDir();
+	cVector3f vVel = mpSliderJoint->GetChildBody()->GetLinearVelocity();
+
+	apOut->distance = mpSliderJoint->GetDistance();
+	memcpy(apOut->pin_dir, vPin.v, sizeof(apOut->pin_dir));
+	memcpy(apOut->child_lin_vel, vVel.v, sizeof(apOut->child_lin_vel));
+	apOut->child_mass = mpSliderBody->GetMass();
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_MultiSlider::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
+	{
+	case kOhplGa4Op_SliderMin:
+		mpSliderJoint->SetMinDistance(aOp.f[0]);
+		break;
+	case kOhplGa4Op_SliderMax:
+		mpSliderJoint->SetMaxDistance(aOp.f[0]);
+		break;
+	case kOhplGa4Op_SliderWake:
+		mpSliderBody->Enable();
+		break;
+	case kOhplGa4Op_SliderForce:
+		{
+			float fForceSize = mAutoMovePid.Output(aOp.f[0], aOp.f[1]);
+			fForceSize *= mpSliderBody->GetMass();
+
+			mpSliderBody->AddForce(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2])*fForceSize);
+		}
+		break;
+	case kOhplGa4Op_PlaySound:
+		PlaySound("MultiSliderStuck", msStuckSound, true, true);
+		break;
+	case kOhplGa4Op_ChangeSound:
+		if(aOp.j && msChangeStateSound != "")
+		{
+			cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("MultiSliderSound", msChangeStateSound, true);
+			if(pSound) pSound->SetPosition(mpSliderBody->GetLocalPosition());
+		}
+		break;
+	case kOhplGa4Op_RunChangeCallback:
+		if(msChangeStateCallback!="")
+		{
+			mpMap->RunScript(msChangeStateCallback + "(\""+msName+"\", "+cString::ToString(aOp.i)+")");
+		}
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -274,103 +286,6 @@ void cLuxProp_MultiSlider::OnConnectionStateChange(iLuxEntity *apEntity, int alS
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 //////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::UpdateCheckStuckSound(float afTimeStep)
-{
-	if(mlStuckState <0 || mbIsInteractedWith==false) return;
-
-	if(mfStuckSoundTimer >0)
-	{
-		mfStuckSoundTimer-=afTimeStep; 
-		return;
-	}
-	
-	float fSpeedSqr = mpSliderJoint->GetChildBody()->GetLinearVelocity().SqrLength();
-	if(fSpeedSqr > 0.01f)
-	{
-		PlaySound("MultiSliderStuck", msStuckSound, true, true);
-		mfStuckSoundTimer = 1.5f;
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::UpdateCheckNewState(float afPos, float afTimeStep)
-{
-	if(mlStuckState >=0) return;
-
-	for(size_t i=0; i<mvStates.size(); ++i)
-	{
-		cLuxProp_MultiSlider_State *pState = &mvStates[i];
-		if(i==mlCurrentState) continue;
-
-        float fDistToState = cMath::Abs(afPos-pState->mfPos);
-		if(fDistToState <= mfStickToStateMaxDist)
-		{
-			//TODO: Move lever to state ??
-			ChangeState(i, true);
-			break;
-		}
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::UpdateAutoMove(float afPos, float afTimeStep)
-{
-	if(IsInteractedWith() || mbAutoMoveToCurrentState==false || mlStuckState!=-1 || mlCurrentState==-1) return;
-	
-	///////////////////////////
-	// Get the wanted speed
-    float fGoalPos = mvStates[mlCurrentState].mfPos;
-	
-	float fWantedSpeed = mfAutoMoveSpeedFactor * (fGoalPos - afPos);
-	if(cMath::Abs(fWantedSpeed)<0.003f) return;
-	
-	if(fWantedSpeed > mfAutoMoveMaxSpeed)	fWantedSpeed = mfAutoMoveMaxSpeed;
-	if(fWantedSpeed < -mfAutoMoveMaxSpeed)	fWantedSpeed = -mfAutoMoveMaxSpeed;
-
-	///////////////////////////
-	// Calculate the torque
-	cVector3f vMoveDir = mpSliderJoint->GetPinDir();
-	cVector3f vBodyVel = mpSliderBody->GetLinearVelocity();
-	float fSliderSpeed = cMath::Vector3Dot(vMoveDir, vBodyVel);
-	
-	//mpMultiSliderBody->SetAngularVelocity(vWantedVel);
-	
-	float fForceSize = mAutoMovePid.Output(fWantedSpeed - fSliderSpeed, afTimeStep);
-	fForceSize *= mpSliderBody->GetMass();
-
-	//Log("Pos: %f Goal: %f Wanted: %f current: %f Force: %f\n", afPos,fGoalPos, fWantedSpeed, fSliderSpeed, fForceSize);
-	
-	mpSliderBody->AddForce(vMoveDir*fForceSize);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_MultiSlider::ChangeState(int alState, bool abEffects)
-{
-	if(mlCurrentState == alState) return;
-
-	mlCurrentState = alState;
-
-	///////////////////////
-	//Play sound
-	if(abEffects  && msChangeStateSound != "")
-	{
-		cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("MultiSliderSound", msChangeStateSound, true);
-		if(pSound) pSound->SetPosition(mpSliderBody->GetLocalPosition());
-	}
-
-	///////////////////////
-	//Callback
-	if(msChangeStateCallback!="")
-	{
-		mpMap->RunScript(msChangeStateCallback + "(\""+msName+"\", "+cString::ToString(mlCurrentState)+")");
-	}
-}
 
 //-----------------------------------------------------------------------
 
@@ -405,9 +320,9 @@ void cLuxProp_MultiSlider::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData,mlCurrentState);
-	kCopyToVar(pData,mlStuckState);
-	kCopyToVar(pData,mbInteractionDisablesStuck);
+	pData->mlCurrentState = mS.current_state;
+	pData->mlStuckState = mS.stuck_state;
+	pData->mbInteractionDisablesStuck = mS.interaction_disables_stuck;
 	kCopyToVar(pData,msChangeStateCallback);
 }
 
@@ -422,9 +337,9 @@ void cLuxProp_MultiSlider::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData,mlCurrentState);
+	mS.current_state = pData->mlCurrentState;
 	SetStuckState(pData->mlStuckState, false);
-	kCopyFromVar(pData,mbInteractionDisablesStuck);
+	mS.interaction_disables_stuck = pData->mbInteractionDisablesStuck;
 	kCopyFromVar(pData,msChangeStateCallback);
 }
 

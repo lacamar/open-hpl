@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxProp.h"
+#include <cstring>
 
 //----------------------------------------------
 
@@ -70,8 +71,8 @@ public:
 	//Properties
 	void SetAngularOffsetPos(const cVector3f& avWorldPos);
 
-	const cMatrixf& GetClosedTransform(){ return m_mtxClosedTransform;}
-	const cMatrixf& GetOpenTransform(){ return m_mtxOpenTransform;}
+	cMatrixf GetClosedTransform(){ cMatrixf m; memcpy(m.v, mS.closed, sizeof(m.v)); return m;}
+	cMatrixf GetOpenTransform(){ cMatrixf m; memcpy(m.v, mS.open, sizeof(m.v)); return m;}
 	
 	float GetMoveState();
 		
@@ -90,35 +91,19 @@ private:
 	void UpdateAutoMove(float afTimeStep);
 
 	void OnStartMove();
-	void CalculateOpenRotateMatrix();
 	
 	//Vars
-	cVector3f mvAngularOffsetPos;
-	bool mbUseAngularLocalOffset;
-	bool mbAutoMoveReachedGoal;
 
 	tString msAngularOffsetArea;
+	OhplGa4MoveParams mP;
+	OhplGa4MoveObj mS;
 
 	//Data
-	eLuxMoveObjectType mMoveObjectType;
 
-	float mfOpenAmount;
-	eLuxAxis mMoveAxis;
 
-	float mfOpenAcc;
-	float mfOpenSpeed;
 	
-	float mfCloseAcc;
-	float mfCloseSpeed;
 	
-	bool mbAutoMove;
-	float mfAutoMoveStateGoal;
-	float mfAutoMoveAcc;
-	float mfAutoMoveSpeed;
-	float mfAutoMoveSlowdownDist;
 
-	cMatrixf m_mtxClosedTransform;
-	cMatrixf m_mtxOpenTransform;
 };
 
 //----------------------------------------------

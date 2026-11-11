@@ -9,16 +9,7 @@ use crate::math::{
 };
 use crate::string;
 
-unsafe extern "C" {
-    fn ohpl_math_matrix_slerp(t: f32, a: *const Matrixf, b: *const Matrixf, out: *mut Matrixf);
-}
-
-fn matrix_slerp(t: f32, a: &Matrixf, b: &Matrixf) -> Matrixf {
-    let mut out = Matrixf::default();
-    // SAFETY: all pointers come from live references; the callee writes `out` only.
-    unsafe { ohpl_math_matrix_slerp(t, a, b, &mut out) };
-    out
-}
+use crate::math::matrix_slerp;
 
 /// The `afTimeStep < GetStepSize()*0.8f` guard of the areas that only update on real game steps.
 pub fn step_too_small(step: f32, engine_step: f32) -> bool {

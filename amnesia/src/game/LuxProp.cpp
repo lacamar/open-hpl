@@ -23,6 +23,8 @@
 #include "LuxPlayer.h"
 #include "LuxInteractConnections.h"
 
+#include <cstring>
+
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -74,7 +76,6 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 
 	pProp->mpMeshEntity = mpEntity;
 
-	
 	//Set body userdata
 	for(size_t i=0; i<mvBodies.size(); ++i)
 	{
@@ -85,37 +86,30 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 
 	//////////////////////////////
 	// Load base properties
-	pProp->mfHealth = GetVarFloat("Health", 100);
-	pProp->mlToughness = GetVarInt("Toughness", 0);
-
-	pProp->mfMaxFocusDistance = GetVarFloat("MaxFocusDistance", 0);
-	pProp->msMainBodyName = GetVarString("MainPhysicsBody", "");
-	
-	pProp->mbDissolveOnDestruction = GetVarBool("DissolveOnDestruction", false);
-	pProp->mfDissolveTime = GetVarFloat("DissolveTime", 1.0f);
-
-	pProp->mbShowMesh = GetVarBool("ShowMesh", true);
+	OhplGa4BaseParams bp;
+	{
+		OhplGa4VarsAdapter vars(this);
+		vars.Slot(kOhplGa4Slot_MainBody, pProp->msMainBodyName)
+			.Slot(kOhplGa4Slot_EffectsOnSound, pProp->msEffectsOnSound)
+			.Slot(kOhplGa4Slot_EffectsOffSound, pProp->msEffectsOffSound)
+			.Slot(kOhplGa4Slot_MoveStartSound, pProp->msMoveStartSound)
+			.Slot(kOhplGa4Slot_MoveStopSound, pProp->msMoveStopSound)
+			.Slot(kOhplGa4Slot_MoveLoopSound, pProp->msMoveLoopSound);
+		ohpl_ga4_base_load(vars.Vars(), &bp);
+	}
+	pProp->mfHealth = bp.health;
+	pProp->mlToughness = bp.toughness;
+	pProp->mfMaxFocusDistance = bp.max_focus_distance;
+	pProp->mbDissolveOnDestruction = bp.dissolve_on_destruction;
+	pProp->mfDissolveTime = bp.dissolve_time;
+	pProp->mbShowMesh = bp.show_mesh;
 	if(mpEntity) mpEntity->SetVisible(pProp->mbShowMesh);
-
-	pProp->mbShowHints = GetVarBool("ShowHints", true);
-
-	//////////////////////////////
-	// Load effects properties
-	pProp->msEffectsOnSound = GetVarString("EffectsOnSound", "");
-	pProp->msEffectsOffSound = GetVarString("EffectsOffSound", "");
-
-	pProp->mfEffectsOnTime = GetVarFloat("EffectsOnTime", 1);
-	pProp->mfEffectsOffTime = GetVarFloat("EffectsOffTime", 1);
-
-	pProp->mEffectsOffLightColor = GetVarColor("EffectsOffLightColor", cColor(0,0));
-	pProp->mfEffectsOffLightRadius = GetVarFloat("EffectsOffLightRadius", 1);
-
-	//////////////////////////////
-	// Load move properties
-	pProp->mbMoveCheckCollision = GetVarBool("StaticMoveCheckCollision", true);
-	pProp->msMoveStartSound = GetVarString("StaticMoveStartSound", "");
-	pProp->msMoveStopSound = GetVarString("StaticMoveStopSound", "");
-	pProp->msMoveLoopSound = GetVarString("StaticMoveLoopSound", "");
+	pProp->mbShowHints = bp.show_hints;
+	pProp->mfEffectsOnTime = bp.effects_on_time;
+	pProp->mfEffectsOffTime = bp.effects_off_time;
+	pProp->mEffectsOffLightColor = cColor(bp.effects_off_light_color[0], bp.effects_off_light_color[1], bp.effects_off_light_color[2], bp.effects_off_light_color[3]);
+	pProp->mfEffectsOffLightRadius = bp.effects_off_light_radius;
+	pProp->mbMoveCheckCollision = bp.move_check_collision;
 
 	gpBase->PreloadSound(pProp->msMoveStartSound);
 	gpBase->PreloadSound(pProp->msMoveStopSound);
@@ -123,16 +117,15 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 
 	//////////////////////////////
 	// Load misc properties
-	if(pProp->mpMeshEntity && pProp->mpMeshEntity->GetAnimationStateNum()>0 && GetVarBool("RandomizeAnimationStart", true))
+	if(pProp->mpMeshEntity && pProp->mpMeshEntity->GetAnimationStateNum()>0 && bp.randomize_anim_start)
 	{
 		cAnimationState *pAnim = pProp->mpMeshEntity->GetAnimationState(0);
 		float fLength = pAnim->GetLength();
 		float fStartTime = cMath::RandRectf(0, fLength);
-		
+
 		pAnim->SetTimePosition(fStartTime);
 	}
-		
-	
+
 	//////////////////////////////
 	// Load type specific properties
 	LoadVariables(pProp, apRootElem);
@@ -154,26 +147,28 @@ void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTra
 	// Instance vars
 	if(apInstanceVars)
 	{
-		if(pProp->mpMeshEntity)
+		OhplGa4BaseInstance bi;
 		{
-			pProp->mpMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, apInstanceVars->GetVarBool("CastShadows", true));
+			OhplGa4VarsAdapter inst(apInstanceVars);
+			inst.Slots(kOhplGa4Slot_ConnectedProp, pProp->mvConnectedProps)
+				.Slot(kOhplGa4Slot_CallbackFunc, pProp->msCallbackFunc)
+				.Slot(kOhplGa4Slot_ConnChange, pProp->msConnectionStateChangeCallback);
+			tString sLookAt, sInteract;
+			inst.Slot(kOhplGa4Slot_LookAt, sLookAt).Slot(kOhplGa4Slot_Interact, sInteract);
+			ohpl_ga4_base_load_instance(inst.Vars(), mbForceFullGameSave, &bi);
+
+			if(pProp->mpMeshEntity)
+			{
+				pProp->mpMeshEntity->SetRenderFlagBit(eRenderableFlag_ShadowCaster, bi.cast_shadows);
+			}
+
+			pProp->mbFullGameSave = bi.full_game_save;
+
+			pProp->SetPlayerLookAtCallback(sLookAt, bi.look_at_auto_remove);
+			pProp->SetPlayerInteractCallback(sInteract, bi.interact_auto_remove);
+
+			pProp->SetStaticPhysics(bi.static_physics);
 		}
-
-		tString sConnectedProps = apInstanceVars->GetVarString("ConnectedProps", "");
-		cString::GetStringVec(sConnectedProps, pProp->mvConnectedProps);
-
-		pProp->msCallbackFunc = apInstanceVars->GetVarString("CallbackFunc", "");
-		pProp->msConnectionStateChangeCallback = apInstanceVars->GetVarString("ConnectionStateChangeCallback", "");
-		pProp->mbFullGameSave = mbForceFullGameSave ? true : apInstanceVars->GetVarBool("FullGameSave", false);
-
-		pProp->SetPlayerLookAtCallback(	apInstanceVars->GetVarString("PlayerLookAtCallback",""),
-										apInstanceVars->GetVarBool("PlayerLookAtCallbackAutoRemove",false) );
-
-		pProp->SetPlayerInteractCallback(	apInstanceVars->GetVarString("PlayerInteractCallback",""),
-											apInstanceVars->GetVarBool("PlayerInteractCallbackAutoRemove",false) );
-
-		pProp->SetStaticPhysics(apInstanceVars->GetVarBool("StaticPhysics", false));
-
 
 		LoadInstanceVariables(pProp, apInstanceVars);
 	}
@@ -193,12 +188,9 @@ iLuxProp::iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType
 
 	mpAttachmentParent = NULL;
 
-	mbCheckOutsidePlayer = false;
 	mbIsInteractedWith = false;
-	
-	mbEffectsActive = true;
-	mfEffectsAlpha = 1;
-	mbEffectAlphaFading = true;
+
+	ohpl_ga4_base_init(&mBase);
 
 	mbHasFlickering = false;
 
@@ -208,28 +200,9 @@ iLuxProp::iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType
 
 	mpMainBody = NULL;
 
-	mfMovingVolume =0;
-	mfMoveStartCount =0;
-
-	mbMoving = false;
-	mbMovingAngular = false;
-	mbMovingLinear = false;
 	mpMoveLoopSound = NULL;
 
-	mfMoveLinearAcc =0;
-	mfMoveLinearSpeed=0;
-	mfMoveLinearSlowdownDist=0;
-	
-	mfMoveAngularAcc =0;
-	mfMoveAngularSpeed =0;
-	mfMoveAngularSlowdownDist=0;
-	
 	mlCurrentNonLoopAnimIndex = -1;
-
-	mfFadeInAlpha = 1.0f;
-	mfFadeInSpeed =0;
- 
-	m_mtxLastBodyMoveMatrix = cMatrixf::Identity;
 
     mpParentBone = NULL;
 	mfBodyMassBackup = 1;
@@ -498,153 +471,48 @@ void iLuxProp::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 
 //-----------------------------------------------------------------------
 
+OhplGa4EffectsIn iLuxProp::Ga4EffectsEnv(bool abActive, bool abFade)
+{
+	OhplGa4EffectsIn env;
+	env.active = abActive;
+	env.fade = abFade;
+	env.n_ps = (int)mvParticleSystems.size();
+	env.n_sounds = (int)mvSoundEntities.size();
+	env.on_time = mfEffectsOnTime;
+	env.off_time = mfEffectsOffTime;
+	env.off_radius = mfEffectsOffLightRadius;
+	env.on_sound = msEffectsOnSound != "";
+	env.off_sound = msEffectsOffSound != "";
+	return env;
+}
+
 void iLuxProp::SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)
 {
-	if(abActive == mbEffectsActive) return;
-
-	mbEffectsActive = abActive;
-
-	mbEffectAlphaFading = true;
-
-	///////////////////////
-	// Effects On stuff
-	if(mbEffectsActive)
-	{
-		////////////////
-		// Create particle systems
-		for(size_t i=0; i<mvParticleSystems.size(); ++i)
-		{
-			cLuxProp_PSData *pPSData = &mvEffectPSData[i];
-			cParticleSystem *pPS = mpWorld->CreateParticleSystem(pPSData->msName, pPSData->msDataName,1);
-			if(pPS)
-			{
-				pPS->SetMatrix(pPSData->m_mtxLocalTransform);
-				if(pPSData->mpParent) pPSData->mpParent->AddChild(pPS);
-			}
-
-			mvParticleSystems[i] = pPS;
-		}
-
-		////////////////
-		// Lights
-		for(size_t i=0; i<mvLights.size(); ++i)
-		{	
-			iLight *pLight = mvLights[i];
-			cLuxProp_LightData *pLightData = &mvEffectLightData[i];
-
-			if(abFadeAndPlaySounds)
-			{
-				pLight->FadeTo(pLightData->mOnColor, pLightData->mfOnRadius, mfEffectsOnTime);
-			}
-			else 
-			{
-				pLight->SetDiffuseColor(pLightData->mOnColor);
-				pLight->SetRadius(pLightData->mfOnRadius);
-				pLight->SetFlickerActive(pLightData->mbFlickering);
-			}
-		}
-
-		////////////////
-		// Sounds
-		for(size_t i=0; i<mvSoundEntities.size(); ++i)
-		{
-			cSoundEntity *pSound = mvSoundEntities[i];
-
-			if(abFadeAndPlaySounds)	pSound->FadeIn(1.0f / mfEffectsOnTime);
-			else					pSound->Play(false);
-		}
-
-		////////////////
-		// Effect alpha
-		if(abFadeAndPlaySounds==false) mfEffectsAlpha = 1.0f;
-	}
-	///////////////////////
-	// Effects Off stuff
-	else
-	{
-		////////////////
-		// Kill / Destroy particle systems
-		for(size_t i=0; i<mvParticleSystems.size(); ++i)
-		{
-			cParticleSystem *pPS = mvParticleSystems[i];
-			mvParticleSystems[i] = NULL;
-
-			if(abFadeAndPlaySounds)	pPS->Kill();
-			else					mpWorld->DestroyParticleSystem(pPS);
-		}
-
-		////////////////
-		// Lights
-		for(size_t i=0; i<mvLights.size(); ++i)
-		{	
-			iLight *pLight = mvLights[i];
-			cLuxProp_LightData *pLightData = &mvEffectLightData[i];
-
-			pLight->StopFading();
-			pLight->SetFlickerActive(false);
-			float fOffRadius = mfEffectsOffLightRadius >=0 ? mfEffectsOffLightRadius : pLightData->mfOnRadius;
-			if(abFadeAndPlaySounds)
-			{	
-				pLight->FadeTo(mEffectsOffLightColor, fOffRadius, mfEffectsOffTime);
-			}
-			else
-			{	
-				pLight->SetDiffuseColor(mEffectsOffLightColor);
-				pLight->SetRadius(fOffRadius);
-			}
-		}
-
-		////////////////
-		// Sounds
-		for(size_t i=0; i<mvSoundEntities.size(); ++i)
-		{
-			cSoundEntity *pSound = mvSoundEntities[i];
-
-			if(abFadeAndPlaySounds)	pSound->FadeOut(1.0f / mfEffectsOffTime);
-			else					pSound->Stop(false);
-		}
-
-		////////////////
-		// Effect alpha
-		if(abFadeAndPlaySounds==false) mfEffectsAlpha = 0.0f;
-	}
-
-	////////////////
-	// Play sound
-	if(abFadeAndPlaySounds)
-	{
-		tString sSound = mbEffectsActive ? msEffectsOnSound : msEffectsOffSound;
-
-		if(sSound != "")
-		{
-			cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_lightlitchange",sSound, true);
-			if(pSound)
-			{
-				pSound->SetPosition(GetWorldCenterPos());
-			}
-		}
-	}
+	OhplGa4EffectsIn env = Ga4EffectsEnv(abActive, abFadeAndPlaySounds);
+	OhplGa4Run run(this);
+	ohpl_ga4_effects_set_active(&mBase, &env, Ga4Lights(), Ga4LightNum(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxProp::GiveDamage(float afAmount, int alStrength)
 {
-	if(alStrength < mlToughness-1)			afAmount =0;
-	else if(alStrength == mlToughness-1)	afAmount *= 0.5;
-	
-	SetHealth(mfHealth - afAmount);
+	float fAmount;
+	float fHealth = ohpl_ga4_give_damage(mfHealth, mlToughness, afAmount, alStrength, &fAmount);
 
-	OnDamage(afAmount, alStrength);
+	SetHealth(fHealth);
+
+	OnDamage(fAmount, alStrength);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxProp::SetDisableCollisionUntilOutSidePlayer(bool abX)
 {
-	mbCheckOutsidePlayer = abX;
+	mBase.check_outside_player = abX;
 
-	if(mbCheckOutsidePlayer)
+	if(mBase.check_outside_player)
 	{
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
@@ -658,53 +526,19 @@ void iLuxProp::SetDisableCollisionUntilOutSidePlayer(bool abX)
 
 void iLuxProp::MoveLinearTo(const cVector3f& avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed)
 {
-	if(mbMoving == false && mfMoveStartCount <=0)
-	{
-		PlaySound("MoveStart", msMoveStartSound,true, true);
-	}
-	mfMoveStartCount = 1.0f;
-
-	mbMoving = true;
-	mbMovingLinear = true;
-	
-	mvMoveLinearGoal = avGoal;
-	mfMoveLinearAcc = afAcc;
-	mfMoveLinearMaxSpeed = afMaxSpeed;
-	mfMoveLinearSlowdownDist = afSlowdownDist;
-
-	if(abResetSpeed) mfMoveLinearSpeed =0;
-
-	OnStartMove();
+	OhplGa4Run run(this);
+	ohpl_ga4_move_linear_to(&mBase, avGoal.v, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed, run.Sink());
+	run.Finish();
 }
 
 //-------------------------------------------------------------------
 
-void iLuxProp::MoveAngularTo(const cMatrixf& a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, 
+void iLuxProp::MoveAngularTo(const cMatrixf& a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed,
 							 bool abUseOffset, const cVector3f &avWorldOffset, const cVector3f &avLocalOffset)
 {
-	if(mbMoving == false && mfMoveStartCount <=0)
-	{
-		PlaySound("MoveStart", msMoveStartSound,true, true);
-	}
-	mfMoveStartCount = 1.0f;
-
-	mbMoving = true;
-	mbMovingAngular = true;
-	
-	m_mtxMoveAngularGoal = a_mtxGoal;
-	mfMoveAngularAcc = afAcc;
-	mfMoveAngularMaxSpeed = afMaxSpeed;
-	mfMoveAngularSlowdownDist = afSlowdownDist;
-
-	if(abResetSpeed) mfMoveAngularSpeed =0;
-
-	mbMoveAngularUseOffset = abUseOffset;
-	mvMoveAngularWorldOffset = avWorldOffset;
-	mvMoveAngularLocalOffset = avLocalOffset;
-
-	mbMoveAngularNoGoal = false;
-
-	OnStartMove();
+	OhplGa4Run run(this);
+	ohpl_ga4_move_angular_to(&mBase, a_mtxGoal.v, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed, abUseOffset, avWorldOffset.v, avLocalOffset.v, run.Sink());
+	run.Finish();
 }
 
 //-------------------------------------------------------------------
@@ -712,49 +546,27 @@ void iLuxProp::MoveAngularTo(const cMatrixf& a_mtxGoal, float afAcc, float afMax
 void iLuxProp::RotateAtSpeed(	float afAcc, float afGoalSpeed, const cVector3f& avAxis, bool abResetSpeed,
 								 bool abUseOffset, const cVector3f &avWorldOffset, const cVector3f &avLocalOffset)
 {
-	if(mbMoving == false && mfMoveStartCount <=0) 
-	{
-		PlaySound("MoveStart", msMoveStartSound,true, true);
-	}
-	mfMoveStartCount = 1.0f;
-
-	mbMoving = true;
-	mbMovingAngular = true;
-
-	mfMoveAngularAcc = afAcc;
-	mfMoveAngularMaxSpeed = afGoalSpeed;
-	
-	if(abResetSpeed) mfMoveAngularSpeed =0;
-
-	mbMoveAngularNoGoal = true;
-	mvMoveAngularNoGoalDir = cMath::Vector3Normalize(avAxis);
-
-	mbMoveAngularUseOffset = abUseOffset;
-	mvMoveAngularWorldOffset = avWorldOffset;
-	mvMoveAngularLocalOffset = avLocalOffset;
-
-	OnStartMove();
+	OhplGa4Run run(this);
+	ohpl_ga4_rotate_at_speed(&mBase, afAcc, afGoalSpeed, avAxis.v, abResetSpeed, abUseOffset, avWorldOffset.v, avLocalOffset.v, run.Sink());
+	run.Finish();
 }
 
 //-------------------------------------------------------------------
 
 void iLuxProp::StopMove()
 {
-	mbMovingLinear=false;
-	mbMovingAngular=false;
-	mbMoving = false;
-	
-	if(mfMoveStartCount <=0)
-		PlaySound("MoveStop", msMoveStopSound,true, true);
+	OhplGa4Run run(this);
+	ohpl_ga4_stop_move(&mBase, run.Sink());
+	run.Finish();
 }
 
 //-------------------------------------------------------------------
 
 void iLuxProp::FadeInMeshEntity(float afTime)
 {
-	mfFadeInAlpha =0;
-	mfFadeInSpeed = 1.0f/ afTime;
-	if(mpMeshEntity) mpMeshEntity->SetCoverageAmount(0);
+	OhplGa4Run run(this);
+	ohpl_ga4_fade_in_mesh(&mBase, afTime, mpMeshEntity!=NULL, run.Sink());
+	run.Finish();
 }
 
 //-------------------------------------------------------------------
@@ -775,12 +587,8 @@ void iLuxProp::ResetProperties()
 	
 	///////////////////////////////////
 	// Reset variables
-	mbMoving = false;
-	mbMovingAngular = false;
-	mbMovingLinear = false;
+	ohpl_ga4_reset_move(&mBase);
 	mpMoveLoopSound = NULL;
-
-	mfMoveAngularSpeed =0;
 
 	mfHealth = 100;
 
@@ -1072,7 +880,7 @@ void iLuxProp::InteractConnectionTurn(float afAngle, float afPrevAngle, float af
 {
 	//if(abs(afAngle - afPrevAngle) < 0.001f) return;
 
-	float fT = (afAngle-afMinAngle)/(afMaxAngle - afMinAngle);
+	float fT = ohpl_ga4_connection_turn(afAngle, afMinAngle, afMaxAngle);
 
 	for(size_t i=0; i<mvInteractConnections.size(); ++i)
 	{
@@ -1080,7 +888,7 @@ void iLuxProp::InteractConnectionTurn(float afAngle, float afPrevAngle, float af
 
 		if(pConnection->GetInteractionOnly() && mbIsInteractedWith==false) continue;
 
-		pConnection->OnTurn(afAngle - afPrevAngle, fT);	
+		pConnection->OnTurn(afAngle - afPrevAngle, fT);
 	}
 }
 
@@ -1259,55 +1067,9 @@ bool iLuxProp::BillboardConnectedToLight(cBillboard *apBB)
 
 void iLuxProp::UpdateEffectFading(float afTimeStep)
 {
-	if(mbEffectAlphaFading==false) return;
-
-	/////////////////
-	// Turn on effect
-	if(mbEffectsActive)
-	{
-		mfEffectsAlpha += (1.0f/mfEffectsOnTime) * afTimeStep;
-		if(mfEffectsAlpha > 1.0f)
-		{
-			mfEffectsAlpha = 1.0f;
-
-			for(size_t i=0; i<mvLights.size(); ++i)
-			{	
-				iLight *pLight = mvLights[i];
-				pLight->SetFlickerActive(mvEffectLightData[i].mbFlickering);
-			}
-			
-			mbEffectAlphaFading = false;
-		}
-	}
-	/////////////////
-	// Turn off effect
-	else
-	{
-		mfEffectsAlpha -= (1.0f/mfEffectsOffTime) * afTimeStep;
-		if(mfEffectsAlpha < 0)
-		{
-			mfEffectsAlpha = 0;
-			mbEffectAlphaFading = false;
-		}
-	}
-
-
-	/////////////////////
-	// Billboards
-	for(size_t i=0; i<mvBillboards.size(); ++i)
-	{
-		cBillboard *pBillboard = mvBillboards[i];
-		if(mvEffectBillboardData[i].mbConnectedToLight) continue;
-		
-		pBillboard->SetColor(mvEffectBillboardData[i].mOnColor * mfEffectsAlpha);
-	}
-
-	/////////////////////
-	// Mesh illumination alpha
-	if(mpMeshEntity)
-	{
-		mpMeshEntity->SetIlluminationAmount(mfEffectsAlpha);
-	}
+	OhplGa4Run run(this);
+	ohpl_ga4_effects_update(&mBase, afTimeStep, mfEffectsOnTime, mfEffectsOffTime, Ga4Lights(), Ga4LightNum(), mpMeshEntity!=NULL, run.Sink());
+	run.Finish();
 }
 
 
@@ -1315,10 +1077,9 @@ void iLuxProp::UpdateEffectFading(float afTimeStep)
 
 void iLuxProp::UpdateMeshFading(float afTimeStep)
 {
-	if(mfFadeInAlpha >= 1 || mpMeshEntity==NULL) return;
-
-    mfFadeInAlpha += mfFadeInSpeed * afTimeStep;
-	mpMeshEntity->SetCoverageAmount(mfFadeInAlpha);
+	OhplGa4Run run(this);
+	ohpl_ga4_mesh_fading(&mBase, afTimeStep, mpMeshEntity!=NULL, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -1347,15 +1108,16 @@ void iLuxProp::UpdateAttachedProps(float afTimeStep, bool abForceUpdate)
 
 void iLuxProp::UpdateAnimation(float afTimeStep)
 {
-	if(mlCurrentNonLoopAnimIndex<0) return;
-
-    cAnimationState *pAnimState = mpMeshEntity->GetAnimationState(mlCurrentNonLoopAnimIndex);	
-	if(pAnimState->IsOver())
+	bool bOver = false;
+	if(mlCurrentNonLoopAnimIndex>=0)
 	{
-		mlCurrentNonLoopAnimIndex = -1;
-		if(msAnimCallback !="")
-			mpMap->RunScript(msAnimCallback + "(\""+ msName + "\")");
+		cAnimationState *pAnimState = mpMeshEntity->GetAnimationState(mlCurrentNonLoopAnimIndex);
+		bOver = pAnimState->IsOver();
 	}
+
+	OhplGa4Run run(this);
+	ohpl_ga4_anim_update(&mlCurrentNonLoopAnimIndex, bOver, msAnimCallback != "", run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -1365,375 +1127,244 @@ void iLuxProp::UpdateMoveSoundVolume()
 	if(mpMoveLoopSound==NULL) return;
 
 	cSoundEntry *pEntry = mpMoveLoopSound->GetSoundEntry(eSoundEntityType_Main, true);
-	if(pEntry) pEntry->SetVolumeMul(mfMovingVolume);
+	if(pEntry) pEntry->SetVolumeMul(mBase.moving_volume);
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxProp::UpdateMoving(float afTimeStep)
 {
-	////////////////////////////////
-	// Update move start count
-	if(mfMoveStartCount > 0)
-	{
-		mfMoveStartCount -= afTimeStep;
-	}
+	OhplGa4MoveIn in;
+	memset(&in, 0, sizeof(in));
+	in.dt = afTimeStep;
+	if(mBase.moving) memcpy(in.body, GetMainBody()->GetLocalMatrix().v, sizeof(in.body));
+	in.check_collision = mbMoveCheckCollision;
+	in.loop_present = mpMoveLoopSound != NULL;
+	in.loop_alive = mpMoveLoopSound && mpMap->GetWorld()->SoundEntityExists(mpMoveLoopSound, mlMoveLoopSoundID);
+	in.loop_sound = msMoveLoopSound != "";
 
-	////////////////////////////////
-	// Check if moving and update move sound
-	if(mbMoving ==false)
-	{
-		//Fade out move sound
-		if(mfMovingVolume >0)
-		{
-			mfMovingVolume -= afTimeStep;
-			if(mfMovingVolume < 0)
-			{
-				mfMovingVolume =0;
-				if(mpMoveLoopSound)
-				{
-					mpMoveLoopSound->Stop(false);
-					mpMap->GetWorld()->DestroySoundEntity(mpMoveLoopSound);
-
-					mpMoveLoopSound = NULL;
-				}
-			}
-			else
-			{
-				UpdateMoveSoundVolume();
-			}
-		}
-
-		return;
-	}
-
-	//////////////////////////////
-	//Check if speed is enough!
-	bool bHasMoveSpeed = false;
-	if(mbMovingLinear)
-	{
-		const float fMinLinear = 0.001f * (1.0f/60.0f);
-
-		float fSpeedSqr = cMath::Vector3DistSqr(m_mtxLastBodyMoveMatrix.GetTranslation(), GetMainBody()->GetLocalMatrix().GetTranslation());
-		if(fSpeedSqr > fMinLinear*fMinLinear) bHasMoveSpeed = true;
-	}
-	if(bHasMoveSpeed == false && mbMovingAngular)
-	{
-		const float fMinAngular = 0.001f * (1.0f/60.0f);
-
-		cVector3f vVel = cMath::MatrixEulerAngleDistance(m_mtxLastBodyMoveMatrix.GetRotation(), GetMainBody()->GetLocalMatrix().GetRotation());
-		float fSpeedSqr = vVel.SqrLength();
-		if(fSpeedSqr > fMinAngular*fMinAngular) bHasMoveSpeed = true;
-	}
-
-	//////////////////////////////
-	//Fade in move sound
-	if(bHasMoveSpeed && mfMovingVolume < 1)
-	{
-		//////////////////////////////
-		// If no move sound, start it!
-		if(mpMoveLoopSound==NULL && msMoveLoopSound != "")
-		{
-			mpMoveLoopSound = PlaySound("MoveLoop",msMoveLoopSound,false, true);
-			if(mpMoveLoopSound)
-			{
-				mlMoveLoopSoundID = mpMoveLoopSound->GetCreationID();
-				mpMoveLoopSound->Play(false);
-				
-				cSoundEntry* pEntry = mpMoveLoopSound->GetSoundEntry(eSoundEntityType_Main, true);
-				if(pEntry) pEntry->SetVolumeMul(0);
-			}
-		}
-
-		//////////////////////////////
-		// Increase volume
-		mfMovingVolume += afTimeStep*1.2f;//Important that sounds fades in faster than out! (in case mbMoving "flickers" )
-		if(mfMovingVolume >1) mfMovingVolume =1.0f;
-		
-		//////////////////////////////
-		// Update sound
-		UpdateMoveSoundVolume();
-	}
-	//////////////////////////////
-	//Fade out move sound
-	else if(bHasMoveSpeed==false && mfMovingVolume > 0)
-	{
-		mfMovingVolume -= afTimeStep;
-		if(mfMovingVolume <0)
-		{
-			mfMovingVolume =0;
-			if(mpMoveLoopSound && mpMap->GetWorld()->SoundEntityExists(mpMoveLoopSound, mlMoveLoopSoundID))
-			{
-				mpMoveLoopSound->Stop(false);
-				mpMap->GetWorld()->DestroySoundEntity(mpMoveLoopSound);
-				
-				mpMoveLoopSound = NULL;
-				mlMoveLoopSoundID = -1;
-			}
-		}
-		else
-		{
-			UpdateMoveSoundVolume();
-		}
-	}
-
-	///////////////////////////
-	// Save the last matrix before updating.
-	m_mtxLastBodyMoveMatrix = GetMainBody()->GetLocalMatrix();
-
-	///////////////////////////
-	// Update movement matrix
-    UpdateLinearMoving(afTimeStep);    
-	UpdateAngularMoving(afTimeStep);
-
-	///////////////////////////
-	// Stop movement
-	if(mbMovingLinear==false && mbMovingAngular==false)
-	{
-		StopMove();
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxProp::UpdateLinearMoving(float afTimeStep)
-{
-	if(mbMovingLinear==false) return;
-	
-	iPhysicsBody *pBody = GetMainBody();
-
-    cVector3f vDelta = mvMoveLinearGoal - pBody->GetLocalPosition();
-
-	float fDist = vDelta.Length();
-
-	cVector3f vMoveVel = 0;
-
-	/////////////
-	//Check if almost at goal
-	if(fDist <= mfMoveLinearSpeed*afTimeStep*1.05f || fDist < 0.01)
-	{
-		mfMoveLinearSpeed =0;
-		vMoveVel = vDelta / afTimeStep;
-		mbMovingLinear = false;
-	}
-	/////////////
-	//Update speed
-	else
-	{
-		cVector3f vDir = vDelta / fDist;
-
-		if(fDist < mfMoveLinearSlowdownDist)
-		{
-			mfMoveLinearSpeed = (fDist / mfMoveLinearSlowdownDist) * mfMoveLinearMaxSpeed;
-		}
-		else
-		{
-			mfMoveLinearSpeed += mfMoveLinearAcc * afTimeStep;
-			if(mfMoveLinearSpeed > mfMoveLinearMaxSpeed) mfMoveLinearSpeed = mfMoveLinearMaxSpeed;
-		}
-
-		vMoveVel = vDir * mfMoveLinearSpeed;
-	}
-
-	//////////////////////////
-	//Check collision, if force == 0 skip!
-	if(mbMoveCheckCollision)
-		CheckMoveCollision(vMoveVel, mfMoveLinearSpeed, afTimeStep);
-
-	//////////////////////////
-	//Update body position
-	if(vMoveVel != 0)
-	{
-		pBody->StaticLinearMove(vMoveVel);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void iLuxProp::UpdateAngularMoving(float afTimeStep)
-{
-	if(mbMovingAngular==false) return;
-
-	iPhysicsBody *pBody = GetMainBody();
-	cVector3f vMoveVel =0;
-	
-	//Not used! Old stuff. The angles returned can be quite different at times when no rotaiton is needed (0,0,0) (360,0,360)
-	//cVector3f vCurrentAngles =	cMath::MatrixToEulerAngles(pBody->GetLocalMatrix(), eEulerRotationOrder_XYZ);
-	//cVector3f vWantedAngles =	cMath::MatrixToEulerAngles(m_mtxMoveAngularGoal, eEulerRotationOrder_XYZ);
-	//cVector3f vDelta = cMath::Vector3AngleDistanceRad(vCurrentAngles, vWantedAngles);
-	//Log("B---------------\n");
-	//Log("Angles %s -> %s\n", cMath::Vector3ToDeg(vCurrentAngles).ToString().c_str(), cMath::Vector3ToDeg(vWantedAngles).ToString().c_str());
-	
-	/////////////////////////////////
-	// Move without goal
-	if(mbMoveAngularNoGoal)
-	{
-		float fAcc = mfMoveAngularMaxSpeed < mfMoveAngularSpeed ? -mfMoveAngularAcc : mfMoveAngularAcc;
-
-		mfMoveAngularSpeed += fAcc * afTimeStep;
-		if( (fAcc < 0 && mfMoveAngularSpeed < mfMoveAngularMaxSpeed) ||
-			(fAcc > 0 && mfMoveAngularSpeed > mfMoveAngularMaxSpeed) )
-		{
-			mfMoveAngularSpeed = mfMoveAngularMaxSpeed;
-			if(mfMoveAngularSpeed == 0)
-			{
-				mbMovingAngular = false;
-			}
-		}
-
-		vMoveVel = mvMoveAngularNoGoalDir * mfMoveAngularSpeed;
-	}
-	/////////////////////////////////
-	// Move with goal
-	else
-	{
-		cVector3f vDelta = cMath::MatrixEulerAngleDistance(pBody->GetLocalMatrix(), m_mtxMoveAngularGoal);
-
-		float fDist = vDelta.Length();
-		
-		/////////////
-		//Check if almost at goal
-		if(fDist <= mfMoveAngularSpeed*afTimeStep*1.05f || fDist < 0.01)
-		{
-			mfMoveAngularSpeed =0;
-			vMoveVel = vDelta / afTimeStep;
-			mbMovingAngular = false;
-		}
-		/////////////
-		//Update speed
-		else
-		{
-			cVector3f vDir = vDelta / fDist;
-
-			if(fDist < mfMoveAngularSlowdownDist)
-			{
-				mfMoveAngularSpeed = (fDist / mfMoveAngularSlowdownDist) * mfMoveAngularMaxSpeed;
-			}
-			else
-			{
-				mfMoveAngularSpeed += mfMoveAngularAcc * afTimeStep;
-				if(mfMoveAngularSpeed > mfMoveAngularMaxSpeed) mfMoveAngularSpeed = mfMoveAngularMaxSpeed;
-			}
-
-			vMoveVel = vDir * mfMoveAngularSpeed;
-		}
-	}
-
-	//Log("Move speed: %s\n", vMoveVel.ToString().c_str());
-
-	/////////////////////////////////
-	// Rotate the body
-	pBody->StaticAngularMove(vMoveVel);
-
-	/////////////
-	//Update position too.
-	if(mbMoveAngularUseOffset)
-	{
-		cMatrixf mtxNewBody = cMath::MatrixMul(cMath::MatrixRotate(vMoveVel*afTimeStep,eEulerRotationOrder_XYZ), pBody->GetLocalMatrix().GetRotation());
-		mtxNewBody.SetTranslation(pBody->GetLocalMatrix().GetTranslation());
-		cVector3f vOffset = cMath::MatrixMul(mtxNewBody, mvMoveAngularLocalOffset);
-
-		cVector3f vDiff = mvMoveAngularWorldOffset - vOffset;
-		pBody->StaticLinearMove(vDiff / afTimeStep );
-    }
-}
-
-
-//-----------------------------------------------------------------------
-
-void iLuxProp::CheckMoveCollision(cVector3f& avMoveVel, float &afSpeed, float afTimeStep)
-{
-	if(avMoveVel==0) return;
-
-	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
-	iPhysicsBody *pBody = GetMainBody();
-
-	//Get matrix after movement
-	cMatrixf mtxNew = pBody->GetLocalMatrix();
-	cVector3f vAdd = avMoveVel*afTimeStep;
-	mtxNew.SetTranslation(mtxNew.GetTranslation() + vAdd);
-
-	//Log("Checking collision!\n");
-
-	//Check collision and get push back
-	cVector3f vPushVec(0);
-	pPhysicsWorld->CheckShapeWorldCollision(&vPushVec,pBody->GetShape(),mtxNew, NULL, true, false);
-	if(vPushVec == 0) return;
-	
-	//See how much of the velocity that needs to be "removed".
-	float fAddLengthSqr  = vAdd.SqrLength();
-	float fVelAmount = 1.0f - cMath::Vector3Dot(vPushVec, vAdd*-1.0f)/fAddLengthSqr;
-	//fVelAmount -= 0.001f;
-	if(fVelAmount < 0) fVelAmount =0;
-	
-	//Update speed and velocity
-	afSpeed = afSpeed * fVelAmount;
-	avMoveVel =  avMoveVel * fVelAmount;	
+	OhplGa4Run run(this);
+	ohpl_ga4_update_moving(&mBase, &in, run.Host(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxProp::UpdateCheckIfOutsidePlayer(float afTimeStep)
 {
-	if(mbCheckOutsidePlayer==false) return;
+	if(mBase.check_outside_player==false) return;
 
-	///////////////////////
-	// Set up variables
-    bool bNotColliding = true;
-	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
+	iPhysicsBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody();
 
-	cLuxPlayer *pPlayer = gpBase->mpPlayer;
-	iPhysicsBody *pPlayerBody = pPlayer->GetCharacterBody()->GetCurrentBody();
-
-	cCollideData collideData;
-	collideData.SetMaxSize(1);
-	
-	///////////////////////
-	// Iterate bodies
+	std::vector<OhplGa4OutsideBody> vBodies(mvBodies.size());
 	for(size_t i=0; i<mvBodies.size(); ++i)
 	{
 		iPhysicsBody *pBody = mvBodies[i];
-		
-		//Check this body is disabled.
-		if(pBody->GetCollideCharacter()==true || mvDefaultBodySettings[i].mbCollideCharacter==false)
-		{
-			continue;
-		}
+		OhplGa4OutsideBody &b = vBodies[i];
 
-        // Check shape collision
-        cVector3f vPush(0);
-		bool bCollide = pPhysicsWorld->CheckShapeCollision(	pBody->GetShape(),pBody->GetLocalMatrix(),
-															pPlayerBody->GetShape(), pPlayerBody->GetLocalMatrix(),
-															collideData,1,false);
-		if(bCollide)
-		{
-			bNotColliding = false;
+		b.collide_character = pBody->GetCollideCharacter();
+		b.default_collide_character = mvDefaultBodySettings[i].mbCollideCharacter;
+		cVector3f vPos = pBody->GetLocalPosition();
+		cVector3f vVel = pBody->GetLinearVelocity();
+		memcpy(b.pos, vPos.v, sizeof(b.pos));
+		memcpy(b.vel, vVel.v, sizeof(b.vel));
+	}
+	cVector3f vPlayerPos = pPlayerBody->GetLocalPosition();
 
-			/////////////////////////////////////////
-			//Add a small impulse away from the player
-			//  and be sure to make sure the speed in that dir is not too much!
-			cVector3f vDir = pBody->GetLocalPosition() - pPlayerBody->GetLocalPosition();
-			vDir.y *=0.1f; //Do not have much in the ydir!
-			vDir.Normalize();
-			
-			cVector3f vVel = pBody->GetLinearVelocity();
-			cVector3f vRelVel =  vDir * cMath::Vector3Dot(vVel, vDir);
-			if(vRelVel.Length() < 0.5f)
+	OhplGa4Run run(this);
+	bool bDone = ohpl_ga4_outside_player(vBodies.empty() ? NULL : &vBodies[0], (int)vBodies.size(), vPlayerPos.v, run.Host(), run.Sink());
+	run.Finish();
+
+	if(bDone)
+	{
+		mBase.check_outside_player = false;
+	}
+}
+
+//-----------------------------------------------------------------------
+
+void iLuxProp::Ga4MovePush(const float *apAdd, float *apOut)
+{
+	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
+	iPhysicsBody *pBody = GetMainBody();
+
+	cMatrixf mtxNew = pBody->GetLocalMatrix();
+	cVector3f vAdd(apAdd[0], apAdd[1], apAdd[2]);
+	mtxNew.SetTranslation(mtxNew.GetTranslation() + vAdd);
+
+	cVector3f vPushVec(0);
+	pPhysicsWorld->CheckShapeWorldCollision(&vPushVec,pBody->GetShape(),mtxNew, NULL, true, false);
+	apOut[0] = vPushVec.x; apOut[1] = vPushVec.y; apOut[2] = vPushVec.z;
+}
+
+//-----------------------------------------------------------------------
+
+bool iLuxProp::Ga4OutsideCollides(int alIdx)
+{
+	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
+	iPhysicsBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody();
+	iPhysicsBody *pBody = mvBodies[alIdx];
+
+	cCollideData collideData;
+	collideData.SetMaxSize(1);
+
+	return pPhysicsWorld->CheckShapeCollision(	pBody->GetShape(),pBody->GetLocalMatrix(),
+												pPlayerBody->GetShape(), pPlayerBody->GetLocalMatrix(),
+												collideData,1,false);
+}
+
+//-----------------------------------------------------------------------
+
+void iLuxProp::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
+	{
+	case kOhplGa4Op_FxPsCreateAll:
+		for(size_t i=0; i<mvParticleSystems.size(); ++i)
+		{
+			cLuxProp_PSData *pPSData = &mvEffectPSData[i];
+			cParticleSystem *pPS = mpWorld->CreateParticleSystem(pPSData->msName, pPSData->msDataName,1);
+			if(pPS)
 			{
-				pBody->AddImpulse(vDir *0.5f);
+				pPS->SetMatrix(pPSData->m_mtxLocalTransform);
+				if(pPSData->mpParent) pPSData->mpParent->AddChild(pPS);
+			}
+
+			mvParticleSystems[i] = pPS;
+		}
+		break;
+	case kOhplGa4Op_FxLightFadeOn:
+		mvLights[aOp.i]->FadeTo(mvEffectLightData[aOp.i].mOnColor, mvEffectLightData[aOp.i].mfOnRadius, aOp.f[0]);
+		break;
+	case kOhplGa4Op_FxLightSetOn:
+		mvLights[aOp.i]->SetDiffuseColor(mvEffectLightData[aOp.i].mOnColor);
+		mvLights[aOp.i]->SetRadius(mvEffectLightData[aOp.i].mfOnRadius);
+		mvLights[aOp.i]->SetFlickerActive(mvEffectLightData[aOp.i].mbFlickering);
+		break;
+	case kOhplGa4Op_FxSoundFadeIn:
+		mvSoundEntities[aOp.i]->FadeIn(aOp.f[0]);
+		break;
+	case kOhplGa4Op_FxSoundPlay:
+		mvSoundEntities[aOp.i]->Play(false);
+		break;
+	case kOhplGa4Op_FxPsKillAll:
+		for(size_t i=0; i<mvParticleSystems.size(); ++i)
+		{
+			cParticleSystem *pPS = mvParticleSystems[i];
+			mvParticleSystems[i] = NULL;
+
+			if(aOp.j)	pPS->Kill();
+			else		mpWorld->DestroyParticleSystem(pPS);
+		}
+		break;
+	case kOhplGa4Op_FxLightOff:
+		{
+			iLight *pLight = mvLights[aOp.i];
+			pLight->StopFading();
+			pLight->SetFlickerActive(false);
+			if(aOp.j)
+			{
+				pLight->FadeTo(mEffectsOffLightColor, aOp.f[0], aOp.f[1]);
+			}
+			else
+			{
+				pLight->SetDiffuseColor(mEffectsOffLightColor);
+				pLight->SetRadius(aOp.f[0]);
 			}
 		}
-		else
+		break;
+	case kOhplGa4Op_FxSoundFadeOut:
+		mvSoundEntities[aOp.i]->FadeOut(aOp.f[0]);
+		break;
+	case kOhplGa4Op_FxSoundStop:
+		mvSoundEntities[aOp.i]->Stop(false);
+		break;
+	case kOhplGa4Op_FxChangeSound:
 		{
-			pBody->SetCollideCharacter(true);
-		}
-	}
+			tString sSound = aOp.i ? msEffectsOnSound : msEffectsOffSound;
 
-	///////////////////////
-	// See if all bodies are outside of player
-	if(bNotColliding)
-	{
-		mbCheckOutsidePlayer = false;
+			if(sSound != "")
+			{
+				cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_lightlitchange",sSound, true);
+				if(pSound)
+				{
+					pSound->SetPosition(GetWorldCenterPos());
+				}
+			}
+		}
+		break;
+	case kOhplGa4Op_FxLightFlicker:
+		mvLights[aOp.i]->SetFlickerActive(mvEffectLightData[aOp.i].mbFlickering);
+		break;
+	case kOhplGa4Op_FxBillboards:
+		for(size_t i=0; i<mvBillboards.size(); ++i)
+		{
+			cBillboard *pBillboard = mvBillboards[i];
+			if(mvEffectBillboardData[i].mbConnectedToLight) continue;
+
+			pBillboard->SetColor(mvEffectBillboardData[i].mOnColor * aOp.f[0]);
+		}
+		break;
+	case kOhplGa4Op_FxMeshIllum:
+		mpMeshEntity->SetIlluminationAmount(aOp.f[0]);
+		break;
+	case kOhplGa4Op_Coverage:
+		mpMeshEntity->SetCoverageAmount(aOp.f[0]);
+		break;
+	case kOhplGa4Op_SndMoveStart:
+		PlaySound("MoveStart", msMoveStartSound,true, true);
+		break;
+	case kOhplGa4Op_SndMoveStop:
+		PlaySound("MoveStop", msMoveStopSound,true, true);
+		break;
+	case kOhplGa4Op_MoveLoopStart:
+		mpMoveLoopSound = PlaySound("MoveLoop",msMoveLoopSound,false, true);
+		if(mpMoveLoopSound)
+		{
+			mlMoveLoopSoundID = mpMoveLoopSound->GetCreationID();
+			mpMoveLoopSound->Play(false);
+
+			cSoundEntry* pEntry = mpMoveLoopSound->GetSoundEntry(eSoundEntityType_Main, true);
+			if(pEntry) pEntry->SetVolumeMul(0);
+		}
+		break;
+	case kOhplGa4Op_MoveLoopVolume:
+		UpdateMoveSoundVolume();
+		break;
+	case kOhplGa4Op_MoveLoopKill:
+		mpMoveLoopSound->Stop(false);
+		mpMap->GetWorld()->DestroySoundEntity(mpMoveLoopSound);
+
+		mpMoveLoopSound = NULL;
+		if(aOp.j) mlMoveLoopSoundID = -1;
+		break;
+	case kOhplGa4Op_StaticLinearMove:
+		GetMainBody()->StaticLinearMove(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]));
+		break;
+	case kOhplGa4Op_StaticAngularMove:
+		GetMainBody()->StaticAngularMove(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]));
+		break;
+	case kOhplGa4Op_OnStartMove:
+		OnStartMove();
+		break;
+	case kOhplGa4Op_OutsideImpulse:
+		mvBodies[aOp.i]->AddImpulse(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]));
+		break;
+	case kOhplGa4Op_OutsideCollideChar:
+		mvBodies[aOp.i]->SetCollideCharacter(true);
+		break;
+	case kOhplGa4Op_ConnLimit:
+		InteractConnectionLimit(aOp.i);
+		break;
+	case kOhplGa4Op_ConnTurn:
+		InteractConnectionTurn(aOp.f[0], aOp.f[1], aOp.f[2], aOp.f[3]);
+		break;
+	case kOhplGa4Op_ConnState:
+		ConnectionStateChange(aOp.i);
+		break;
+	case kOhplGa4Op_RunAnimCallback:
+		mpMap->RunScript(msAnimCallback + "(\""+ msName + "\")");
+		break;
 	}
 }
 
@@ -1904,35 +1535,36 @@ void iLuxProp::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	kCopyToVar(pData, mfHealth);
 
-	kCopyToVar(pData, mbCheckOutsidePlayer);
+	pData->mbCheckOutsidePlayer = mBase.check_outside_player;
 
-	kCopyToVar(pData, mbEffectsActive);
-	kCopyToVar(pData, mfEffectsAlpha);
+	pData->mbEffectsActive = mBase.effects_active;
+	pData->mfEffectsAlpha = mBase.effects_alpha;
 
 	kCopyToVar(pData, mbStaticPhysics);
 
-	kCopyToVar(pData, mbMoving);
+	pData->mbMoving = mBase.moving;
 
-	kCopyToVar(pData, mbMovingLinear);
-	kCopyToVar(pData, mfMoveLinearMaxSpeed);
-	kCopyToVar(pData, mfMoveLinearAcc);
-	kCopyToVar(pData, mfMoveLinearSpeed);
-	kCopyToVar(pData, mfMoveLinearSlowdownDist);
-	kCopyToVar(pData, mvMoveLinearGoal);
+	pData->mbMovingLinear = mBase.moving_linear;
+	pData->mfMoveLinearMaxSpeed = mBase.linear.max_speed;
+	pData->mfMoveLinearAcc = mBase.linear.acc;
+	pData->mfMoveLinearSpeed = mBase.linear.speed;
+	pData->mfMoveLinearSlowdownDist = mBase.linear.slowdown;
+	pData->mvMoveLinearGoal = cVector3f(mBase.linear.goal[0], mBase.linear.goal[1], mBase.linear.goal[2]);
 
-	kCopyToVar(pData, mbMovingAngular);
-	kCopyToVar(pData, mfMoveAngularMaxSpeed);
-	kCopyToVar(pData, mfMoveAngularAcc);
-	kCopyToVar(pData, mfMoveAngularSpeed);
-	kCopyToVar(pData, mfMoveAngularSlowdownDist);
-	kCopyToVar(pData, m_mtxMoveAngularGoal);
+	pData->mbMovingAngular = mBase.moving_angular;
+	pData->mfMoveAngularMaxSpeed = mBase.angular.max_speed;
+	pData->mfMoveAngularAcc = mBase.angular.acc;
+	pData->mfMoveAngularSpeed = mBase.angular.speed;
+	pData->mfMoveAngularSlowdownDist = mBase.angular.slowdown;
+	memcpy(pData->m_mtxMoveAngularGoal.v, mBase.angular.goal, sizeof(mBase.angular.goal));
+
 	
-	kCopyToVar(pData, mbMoveAngularNoGoal);
-	kCopyToVar(pData, mvMoveAngularNoGoalDir);
+	pData->mbMoveAngularNoGoal = mBase.angular.no_goal;
+	pData->mvMoveAngularNoGoalDir = cVector3f(mBase.angular.no_goal_dir[0], mBase.angular.no_goal_dir[1], mBase.angular.no_goal_dir[2]);
 
-	kCopyToVar(pData, mbMoveAngularUseOffset);
-	kCopyToVar(pData, mvMoveAngularWorldOffset);
-	kCopyToVar(pData, mvMoveAngularLocalOffset);
+	pData->mbMoveAngularUseOffset = mBase.angular.use_offset;
+	pData->mvMoveAngularWorldOffset = cVector3f(mBase.angular.world_offset[0], mBase.angular.world_offset[1], mBase.angular.world_offset[2]);
+	pData->mvMoveAngularLocalOffset = cVector3f(mBase.angular.local_offset[0], mBase.angular.local_offset[1], mBase.angular.local_offset[2]);
 
 	kCopyToVar(pData, mlCurrentNonLoopAnimIndex);
 	kCopyToVar(pData, msAnimCallback);
@@ -2053,34 +1685,34 @@ void iLuxProp::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	kCopyFromVar(pData, mfHealth);
 
-	kCopyFromVar(pData, mbCheckOutsidePlayer);
+	mBase.check_outside_player = pData->mbCheckOutsidePlayer;
 
 	SetEffectsActive(pData->mbEffectsActive, false);
-	kCopyFromVar(pData, mfEffectsAlpha); 
+	mBase.effects_alpha = pData->mfEffectsAlpha;
 
 	SetStaticPhysics(pData->mbStaticPhysics);
 
-	kCopyFromVar(pData, mbMoving);
-	kCopyFromVar(pData, mbMovingLinear);
-	kCopyFromVar(pData, mfMoveLinearMaxSpeed);
-	kCopyFromVar(pData, mfMoveLinearAcc);
-	kCopyFromVar(pData, mfMoveLinearSpeed);
-	kCopyFromVar(pData, mfMoveLinearSlowdownDist);
-	kCopyFromVar(pData, mvMoveLinearGoal);
+	mBase.moving = pData->mbMoving;
+	mBase.moving_linear = pData->mbMovingLinear;
+	mBase.linear.max_speed = pData->mfMoveLinearMaxSpeed;
+	mBase.linear.acc = pData->mfMoveLinearAcc;
+	mBase.linear.speed = pData->mfMoveLinearSpeed;
+	mBase.linear.slowdown = pData->mfMoveLinearSlowdownDist;
+	mBase.linear.goal[0] = pData->mvMoveLinearGoal.x; mBase.linear.goal[1] = pData->mvMoveLinearGoal.y; mBase.linear.goal[2] = pData->mvMoveLinearGoal.z;
 
-	kCopyFromVar(pData, mbMovingAngular);
-	kCopyFromVar(pData, mfMoveAngularMaxSpeed);
-	kCopyFromVar(pData, mfMoveAngularAcc);
-	kCopyFromVar(pData, mfMoveAngularSpeed);
-	kCopyFromVar(pData, mfMoveAngularSlowdownDist);
-	kCopyFromVar(pData, m_mtxMoveAngularGoal);
+	mBase.moving_angular = pData->mbMovingAngular;
+	mBase.angular.max_speed = pData->mfMoveAngularMaxSpeed;
+	mBase.angular.acc = pData->mfMoveAngularAcc;
+	mBase.angular.speed = pData->mfMoveAngularSpeed;
+	mBase.angular.slowdown = pData->mfMoveAngularSlowdownDist;
+	memcpy(mBase.angular.goal, pData->m_mtxMoveAngularGoal.v, sizeof(mBase.angular.goal));
 	
-	kCopyFromVar(pData, mbMoveAngularNoGoal);
-	kCopyFromVar(pData, mvMoveAngularNoGoalDir);
+	mBase.angular.no_goal = pData->mbMoveAngularNoGoal;
+	mBase.angular.no_goal_dir[0] = pData->mvMoveAngularNoGoalDir.x; mBase.angular.no_goal_dir[1] = pData->mvMoveAngularNoGoalDir.y; mBase.angular.no_goal_dir[2] = pData->mvMoveAngularNoGoalDir.z;
 	
-	kCopyFromVar(pData, mbMoveAngularUseOffset);
-	kCopyFromVar(pData, mvMoveAngularWorldOffset);
-	kCopyFromVar(pData, mvMoveAngularLocalOffset);
+	mBase.angular.use_offset = pData->mbMoveAngularUseOffset;
+	mBase.angular.world_offset[0] = pData->mvMoveAngularWorldOffset.x; mBase.angular.world_offset[1] = pData->mvMoveAngularWorldOffset.y; mBase.angular.world_offset[2] = pData->mvMoveAngularWorldOffset.z;
+	mBase.angular.local_offset[0] = pData->mvMoveAngularLocalOffset.x; mBase.angular.local_offset[1] = pData->mvMoveAngularLocalOffset.y; mBase.angular.local_offset[2] = pData->mvMoveAngularLocalOffset.z;
 
 	kCopyFromVar(pData, mlCurrentNonLoopAnimIndex);
 	kCopyFromVar(pData, msAnimCallback);

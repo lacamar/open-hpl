@@ -35,6 +35,7 @@ pub(crate) use matrix::{
     IDENTITY, matrix_inverse, matrix_mul, matrix_mul_3x3, matrix_mul_vec, matrix_rotate,
     matrix_scale, rotate_z,
 };
+pub(crate) use matrix::{matrix_euler_angle_distance, matrix_slerp};
 pub(crate) use matrix::{matrix_mul_divide_w, perspective_projection};
 pub(crate) use matrix::{
     matrix_quaternion, matrix_unit_vectors, quat_dot, quat_from_angle_axis,
