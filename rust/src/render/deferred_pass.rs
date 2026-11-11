@@ -5,7 +5,9 @@
 use std::collections::VecDeque;
 
 use super::deferred::{DlOp, Feed, Op, Out, P3Op, Plan, Source, State, Step, st, state};
-use super::deferred_light::{MAX_GBUFFER_TEXTURES, feature, light_shape, res, slot, var};
+use super::deferred_light::{
+    MAX_GBUFFER_TEXTURES, feature, light_shape, linear_light_color, res, slot, var,
+};
 
 pub mod pslot {
     pub const STENCIL_PROG: i32 = 8;
@@ -106,14 +108,6 @@ fn bit(i: usize) -> i32 {
 
 fn log(kind: i32, idx: i32) -> Op {
     p3(P3Op::Log { kind, idx })
-}
-
-fn linear_light_color(c: [f32; 4], hdr: bool) -> [f32; 4] {
-    if hdr {
-        [c[0] * c[0], c[1] * c[1], c[2] * c[2], c[3]]
-    } else {
-        c
-    }
 }
 
 /// `cRendererDeferred::RenderBoxLight`.

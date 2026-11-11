@@ -447,7 +447,7 @@ pub fn plan_edge_smooth(i: &EdgeIn) -> Option<Plan> {
     Some(fixed_with_arrays(ops, Vec::new()))
 }
 
-fn linear_light_color(c: [f32; 4], hdr: bool) -> [f32; 4] {
+pub(super) fn linear_light_color(c: [f32; 4], hdr: bool) -> [f32; 4] {
     if hdr {
         [c[0] * c[0], c[1] * c[1], c[2] * c[2], c[3]]
     } else {
@@ -467,7 +467,7 @@ fn light_shader_color(l: &LightIn, hdr: bool) -> [f32; 4] {
     c
 }
 
-fn underwater_fog_color(c: [f32; 4]) -> [f32; 4] {
+pub(super) fn underwater_fog_color(c: [f32; 4]) -> [f32; 4] {
     // the squares are reused below, so gcc keeps them unfused
     let inv = 1.0 / (c[0] * c[0] + c[1] * c[1] + c[2] * c[2] + 1e-13);
     [
