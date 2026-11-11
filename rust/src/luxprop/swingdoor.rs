@@ -382,8 +382,8 @@ pub fn on_health_change(
         s.broken = true;
         set_damage_level(s, 0, ops);
         ops.push(Op::new(op::DOOR_DISABLE_BODIES));
-        ops.push(Op::new(op::DOOR_BROKEN_ENTITY));
-        ops.push(Op::new(op::RUN_BREAK_CALLBACK));
+        ops.event(Op::new(op::DOOR_BROKEN_ENTITY), s);
+        ops.event(Op::new(op::RUN_BREAK_CALLBACK), s);
         effects = 2;
     } else if health < p.health_damage[1] && s.current_mesh_entity <= 1 {
         set_damage_level(s, 2, ops);
@@ -401,7 +401,8 @@ pub fn reset(s: &mut DoorState, e: &Env, probe: &mut dyn Probe, ops: &mut Ops) {
     if s.broken {
         s.broken = false;
         if s.broken_entity_id >= 0 {
-            ops.push(Op::new(op::DOOR_DESTROY_BROKEN).i(s.broken_entity_id));
+            let id = s.broken_entity_id;
+            ops.event(Op::new(op::DOOR_DESTROY_BROKEN).i(id), s);
         }
     }
     setup_physics(s, e, 0.0, true, false, probe, ops);

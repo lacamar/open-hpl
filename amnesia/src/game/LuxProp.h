@@ -424,7 +424,6 @@ public:
 	virtual bool Ga4InsanityInFov(){ return false;}
 	void Ga4MovePush(const float *apAdd, float *apOut);
 	bool Ga4OutsideCollides(int alIdx);
-	static bool Ga4IsEvent(int alCode);
 
     void SetParentBone(cBoneState * apParentBone, const cMatrixf & apParentBoneOffsetMatrix, tString asParentName, tString asParentBoneName);
     void DetachFromParentBone();
@@ -573,9 +572,8 @@ private:
 static_assert(sizeof(cLuxProp_LightData) == sizeof(OhplGa4LightData), "light data layout");
 
 /**
- * Collects the ops of one Rust call and replays them in order once it returns. A query made
- * by Rust in the middle (joint angle, ...) first applies the ops so far, except the re-entrant
- * ones (scripts, entity creation), which wait for the end of the call.
+ * Applies the ops of one Rust call in order, as they are issued. A re-entrant op (script, entity
+ * creation) runs right there: Rust has handed over its state and re-reads it afterwards.
  */
 class OhplGa4Run
 {
@@ -588,40 +586,18 @@ public:
 	}
 	const OhplGa4Sink *Sink() const { return &mSink; }
 	const OhplGa4Host *Host() const { return &mHost; }
-	void Finish()
-	{
-		for(size_t i=0; i<mvOps.size(); ++i)
-		{
-			if(mvDone[i]) continue;
-			mvDone[i] = 1;
-			OhplGa4Op op = mvOps[i];
-			mpProp->Ga4ApplyOp(op);
-		}
-		mvOps.clear(); mvDone.clear();
-	}
-	void Flush()
-	{
-		for(size_t i=0; i<mvOps.size(); ++i)
-		{
-			if(mvDone[i] || iLuxProp::Ga4IsEvent(mvOps[i].code)) continue;
-			mvDone[i] = 1;
-			OhplGa4Op op = mvOps[i];
-			mpProp->Ga4ApplyOp(op);
-		}
-	}
+	void Finish() {}
 
 private:
 	static OhplGa4Run *Me(void *c){ return (OhplGa4Run*)c; }
-	static void Push(void *c, const OhplGa4Op *op){ Me(c)->mvOps.push_back(*op); Me(c)->mvDone.push_back(0); }
-	static void MovePush(void *c, const float *add, float *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4MovePush(add, out); }
-	static bool OutsideCollides(void *c, int i){ Me(c)->Flush(); return Me(c)->mpProp->Ga4OutsideCollides(i); }
-	static bool InsanityInFov(void *c){ Me(c)->Flush(); return Me(c)->mpProp->Ga4InsanityInFov(); }
-	static void Hinge(void *c, int i, OhplGa4Hinge *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4Hinge(i, out); }
-	static void Slider(void *c, OhplGa4Slider *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4Slider(out); }
+	static void Push(void *c, const OhplGa4Op *op){ OhplGa4Op o = *op; Me(c)->mpProp->Ga4ApplyOp(o); }
+	static void MovePush(void *c, const float *add, float *out){ Me(c)->mpProp->Ga4MovePush(add, out); }
+	static bool OutsideCollides(void *c, int i){ return Me(c)->mpProp->Ga4OutsideCollides(i); }
+	static bool InsanityInFov(void *c){ return Me(c)->mpProp->Ga4InsanityInFov(); }
+	static void Hinge(void *c, int i, OhplGa4Hinge *out){ Me(c)->mpProp->Ga4Hinge(i, out); }
+	static void Slider(void *c, OhplGa4Slider *out){ Me(c)->mpProp->Ga4Slider(out); }
 
 	iLuxProp *mpProp;
-	std::vector<OhplGa4Op> mvOps;
-	std::vector<char> mvDone;
 	OhplGa4Sink mSink;
 	OhplGa4Host mHost;
 };

@@ -1,6 +1,5 @@
-//! The replay list shared by every prop: C++ applies each op in order after the call returns.
-//! A `Probe` query made mid-call first applies the ops issued so far; no re-entrant op (a script
-//! or entity creation) is ever issued before a query in the same call.
+//! The op list shared by every prop: C++ applies each op in order, as it is issued. Re-entrant ops
+//! (scripts, entity creation) go through `Ops::event`, which hands the state over and re-reads it.
 
 use crate::types::{Matrixf, Vector3f};
 
@@ -65,6 +64,16 @@ pub struct Ops<'a>(pub &'a mut dyn FnMut(&Op));
 impl Ops<'_> {
     pub fn push(&mut self, op: Op) {
         (self.0)(&op);
+    }
+
+    /// A re-entrant op (script, entity creation). C++ runs it right away and the script may call
+    /// back into this prop and rewrite its POD state, so `s` is handed over (its pointer escapes
+    /// through `black_box`) and re-read afterwards.
+    pub fn event<T: Copy>(&mut self, op: Op, s: &mut T) {
+        let p = std::hint::black_box(std::ptr::from_mut(s));
+        (self.0)(&op);
+        // SAFETY: `p` is `s`; the callee may have rewritten it, hence the volatile read.
+        *s = unsafe { std::ptr::read_volatile(p) };
     }
 }
 

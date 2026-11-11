@@ -1,8 +1,8 @@
 //! Amnesia prop core (`LuxProp`, `_Object`, `_SwingDoor`, `_Wheel`, `_Lever`, `_Lamp`,
 //! `_MultiSlider`, `_MoveObject`): `.ent` variable parsing, state machines, limits, health and
 //! break decisions, effect timing and move maths. Joints, bodies, meshes, sounds, particles and
-//! script calls stay C++: Rust returns them as ordered `Op`s that C++ replays after the call, so
-//! a script that re-enters the prop never meets a borrowed state.
+//! script calls stay C++: Rust issues them as ordered `Op`s that C++ applies immediately. A script
+//! that re-enters the prop rewrites its POD state, which Rust re-reads after each such op.
 
 mod base;
 mod ffi;

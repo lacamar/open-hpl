@@ -300,7 +300,7 @@ pub fn update(
             s.food_attract_count -= dt;
         } else {
             s.food_attract_count = 2.0;
-            ops.push(Op::new(op::FOOD_ATTRACT));
+            ops.event(Op::new(op::FOOD_ATTRACT), s);
         }
     }
     update_insanity(s, i, a, probe, ops);
@@ -312,7 +312,7 @@ pub fn update(
             ops.push(Op::new(op::COVERAGE).f(dist));
         }
         if s.life_length_count >= p.life_length {
-            ops.push(Op::new(op::BREAK));
+            ops.event(Op::new(op::BREAK), s);
         }
     }
 }

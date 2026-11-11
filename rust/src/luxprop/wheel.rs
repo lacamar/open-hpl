@@ -118,10 +118,10 @@ fn change_state(s: &mut WheelState, p: &WheelParams, state: i32, effects: bool, 
     }
     s.current_state = state;
     if state == 1 || state == -1 {
-        ops.push(Op::new(op::CONN_STATE).i(state));
+        ops.event(Op::new(op::CONN_STATE).i(state), s);
         ops.push(Op::new(op::LIMIT_SOUND).i(state).j(i32::from(effects)));
     }
-    ops.push(Op::new(op::CONN_LIMIT).i(state));
+    ops.event(Op::new(op::CONN_LIMIT).i(state), s);
 }
 
 pub fn set_stuck_state(
@@ -288,10 +288,11 @@ fn update_angle(
             set_min_joint(s, p.min_limit, ops);
         }
     }
-    ops.push(Op {
+    let turn = Op {
         f: [s.angle, s.prev_angle, p.min_limit, p.max_limit],
         ..Op::new(op::CONN_TURN)
-    });
+    };
+    ops.event(turn, s);
 }
 
 fn update_check_limit(s: &mut WheelState, p: &WheelParams, probe: &mut dyn Probe, ops: &mut Ops) {

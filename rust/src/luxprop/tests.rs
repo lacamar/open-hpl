@@ -396,3 +396,104 @@ fn nan_sign_probe() {
         );
     }
 }
+
+#[test]
+fn multislider_sticks_at_exactly_the_distance() {
+    let states = [0.0f32, 0.5, 1.0];
+    let p = MultiParams {
+        stick_to_state_max_dist: 0.25,
+        ..MultiParams::default()
+    };
+    let mut s = MultiState::new();
+    let mut probe = Mock::default();
+    probe.slider.distance = 0.75;
+    let (_, ops) = run(|o| multislider::update(&mut s, &p, &states, 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, 1);
+    assert_eq!(codes(&ops), [op::CHANGE_SOUND, op::RUN_CHANGE_CALLBACK]);
+    probe.slider.distance = 0.76;
+    let mut s = MultiState::new();
+    let (_, _) =
+        run(|o| multislider::update(&mut s, &p, &states[..2], 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, -1);
+}
+
+#[test]
+fn lever_middle_band_edges() {
+    let p = LeverParams {
+        min_limit_range: to_rad(5.0),
+        max_limit_range: to_rad(5.0),
+        auto_move_to_angle: false,
+        ..LeverParams::default()
+    };
+    // 17 degrees of travel: the middle band is [max - 10, min + 10] degrees, both clauses edge on it
+    let fresh = || LeverState {
+        default_min_angle: 0.0,
+        default_max_angle: 0.3,
+        current_state: 1,
+        ..LeverState::default()
+    };
+    let mut probe = Mock::default();
+    probe.hinge.angle = 0.3 - to_rad(10.0) - 0.002;
+    let mut s = fresh();
+    let (_, ops) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, 0);
+    assert_eq!(codes(&ops), [op::CONN_STATE, op::CONN_LIMIT]);
+    probe.hinge.angle = 0.3 - to_rad(10.0) + 0.002;
+    let mut s = fresh();
+    let (_, ops) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, 1);
+    assert!(ops.is_empty());
+    probe.hinge.angle = to_rad(10.0) + 0.002;
+    let mut s = fresh();
+    let (_, _) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, 0);
+    probe.hinge.angle = to_rad(10.0) - 0.002;
+    let mut s = fresh();
+    let (_, _) = run(|o| lever::update(&mut s, &p, 0.016, false, &mut probe, o));
+    assert_eq!(s.current_state, 1);
+}
+
+#[test]
+fn door_damage_levels() {
+    let p = swingdoor::DoorParams {
+        breakable: true,
+        health_damage: [60.0, 30.0],
+        ..swingdoor::DoorParams::default()
+    };
+    let mut s = DoorState::new();
+    let (_, ops) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    assert_eq!(s.current_mesh_entity, 2);
+    assert_eq!(
+        ops.last().map(|o| (o.code, o.i)),
+        Some((op::DOOR_EFFECTS, 1))
+    );
+    // already at level 1: a second hit still moves to level 2, and level 2 stays put
+    let mut s = DoorState::new();
+    s.current_mesh_entity = 1;
+    let (_, _) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    assert_eq!(s.current_mesh_entity, 2);
+    let (_, ops) = run(|o| swingdoor::on_health_change(&mut s, &p, 20.0, true, o));
+    assert!(ops.is_empty());
+    let mut s = DoorState::new();
+    let (_, _) = run(|o| swingdoor::on_health_change(&mut s, &p, 40.0, true, o));
+    assert_eq!(s.current_mesh_entity, 1);
+}
+
+#[test]
+fn events_reread_state_after_the_script() {
+    let mut s = WheelState {
+        angle: 1.0,
+        ..WheelState::default()
+    };
+    let mut ops_log = Vec::new();
+    let ptr = std::ptr::from_mut(&mut s);
+    let mut sink = |o: &Op| {
+        ops_log.push(o.code);
+        if o.code == op::CONN_STATE {
+            // the script re-enters the wheel and changes its state
+            unsafe { (*ptr).stuck_state = 7 };
+        }
+    };
+    Ops(&mut sink).event(Op::new(op::CONN_STATE), &mut s);
+    assert_eq!(s.stuck_state, 7);
+}

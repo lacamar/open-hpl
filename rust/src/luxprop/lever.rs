@@ -91,11 +91,11 @@ fn change_state(s: &mut LeverState, state: i32, effects: bool, ops: &mut Ops) {
         return;
     }
     s.current_state = state;
-    ops.push(Op::new(op::CONN_STATE).i(state));
+    ops.event(Op::new(op::CONN_STATE).i(state), s);
     if state == 1 || state == -1 {
         ops.push(Op::new(op::LIMIT_SOUND).i(state).j(i32::from(effects)));
     }
-    ops.push(Op::new(op::CONN_LIMIT).i(state));
+    ops.event(Op::new(op::CONN_LIMIT).i(state), s);
 }
 
 pub fn set_stuck_state(

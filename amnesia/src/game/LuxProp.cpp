@@ -1183,27 +1183,6 @@ void iLuxProp::UpdateCheckIfOutsidePlayer(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-bool iLuxProp::Ga4IsEvent(int alCode)
-{
-	switch(alCode)
-	{
-	case kOhplGa4Op_ConnLimit:
-	case kOhplGa4Op_ConnTurn:
-	case kOhplGa4Op_ConnState:
-	case kOhplGa4Op_RunAnimCallback:
-	case kOhplGa4Op_Break:
-	case kOhplGa4Op_FoodAttract:
-	case kOhplGa4Op_DoorBrokenEntity:
-	case kOhplGa4Op_RunChangeCallback:
-	case kOhplGa4Op_RunBreakCallback:
-	case kOhplGa4Op_DoorDestroyBroken:
-		return true;
-	}
-	return false;
-}
-
-//-----------------------------------------------------------------------
-
 void iLuxProp::Ga4MovePush(const float *apAdd, float *apOut)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();

@@ -80,7 +80,7 @@ fn change_state(s: &mut MultiState, state: i32, effects: bool, ops: &mut Ops) {
     }
     s.current_state = state;
     ops.push(Op::new(op::CHANGE_SOUND).j(i32::from(effects)));
-    ops.push(Op::new(op::RUN_CHANGE_CALLBACK).i(state));
+    ops.event(Op::new(op::RUN_CHANGE_CALLBACK).i(state), s);
 }
 
 /// An out-of-range stuck state indexes past the C++ vector; here the position reads 0.

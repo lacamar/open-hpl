@@ -364,7 +364,7 @@ pub fn anim_update(index: &mut i32, over: bool, has_callback: bool, ops: &mut Op
     if over {
         *index = -1;
         if has_callback {
-            ops.push(Op::new(op::RUN_ANIM_CALLBACK));
+            ops.event(Op::new(op::RUN_ANIM_CALLBACK), index);
         }
     }
 }
