@@ -111,8 +111,8 @@ namespace hpl {
 		{
 			friend class cMultipleSettingsHandler;
 		public:
-			cGSEntry() : mfVal(1),mfDest(1), mTypes(0), mbDestroyAtDest(false){}
-			cGSEntry(float afVal,tFlag aTypes) : mfVal(afVal),mfDest(afVal), mTypes(aTypes), mbDestroyAtDest(false){}
+			cGSEntry() : mfVal(1),mfDest(1), mfSpeed(0), mTypes(0), mbDestroyAtDest(false){}
+			cGSEntry(float afVal,tFlag aTypes) : mfVal(afVal),mfDest(afVal), mfSpeed(0), mTypes(aTypes), mbDestroyAtDest(false){}
 
 			void FadeTo(float afDest, float afSpeed, bool abDestroyAtDest);
 			void SetValAndDest(float afVal);
@@ -144,7 +144,7 @@ namespace hpl {
 		cGSEntry* GetEntry(int alIdx, bool abForceCreation=true);
 		int CreateEntry();
 		void DestroyEntry(int alIdx);
-		bool EntryExists(int alIdx){ return mvEntries[alIdx] != NULL;}
+		bool EntryExists(int alIdx){ return alIdx >= 0 && alIdx < (int)mvEntries.size() && mvEntries[alIdx] != NULL;}
 
 		float CalcResults(tFlag mTypes, eMultipleSettingsCalcType aCalcType, float afDefault);
 

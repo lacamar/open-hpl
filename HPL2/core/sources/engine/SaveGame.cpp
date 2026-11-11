@@ -48,8 +48,7 @@ namespace hpl {
 
 	iSaveObject::iSaveObject()
 	{
-		mlSaveObjectId = _mlGlobalIdCount++;
-		if(_mlGlobalIdCount <0) _mlGlobalIdCount=0;
+		mlSaveObjectId = ohpl_en_save_next_id(&_mlGlobalIdCount);
 
 		mbIsSaved = true;
 	}
@@ -91,72 +90,69 @@ namespace hpl {
 
 	cSaveObjectHandler::cSaveObjectHandler()
 	{
-
+		mpReg = ohpl_en_reg_new();
 	}
 	
 	cSaveObjectHandler::~cSaveObjectHandler()
 	{
-
+		ohpl_en_reg_free(mpReg);
 	}
 
 	//------------------------------------------------------------------------
 
 	void cSaveObjectHandler::Add(iSaveObject *pObject)
 	{
-		m_mapSaveObjects.insert(tSaveObjectMap::value_type(pObject->GetSaveObjectId(),pObject));
+		ohpl_en_reg_add(mpReg, pObject->GetSaveObjectId(), reinterpret_cast<size_t>(pObject));
 	}
 	
 	//------------------------------------------------------------------------
 
 	iSaveObject* cSaveObjectHandler::Get(int alId)
 	{
-		tSaveObjectMapIt it = m_mapSaveObjects.find(alId);
-		if(it== m_mapSaveObjects.end()){
+		iSaveObject *pObject = reinterpret_cast<iSaveObject*>(ohpl_en_reg_get(mpReg, alId));
+		if(pObject == NULL){
 			Warning("Couldn't find save object with id %d\n",alId);
 			return NULL;
 		}
 
-		return it->second;
+		return pObject;
 	}
 
 	//------------------------------------------------------------------------
 
 	cSaveObjectIterator cSaveObjectHandler::GetIterator()
 	{
-		return cSaveObjectIterator(&m_mapSaveObjects);
+		return cSaveObjectIterator(mpReg);
 	}
 	
 	//------------------------------------------------------------------------
 
 	void cSaveObjectHandler::SetUpAll(cEngine *apGame)
 	{
-		int lMaxId =0;
-
-		tSaveObjectMapIt it = m_mapSaveObjects.begin();
-        for(; it != m_mapSaveObjects.end(); ++it)
-		{
-			iSaveObject *pObject = it->second;
-
-			if(pObject->GetSaveObjectId() > lMaxId) lMaxId = pObject->GetSaveObjectId();
-
-			pObject->SaveDataSetup(this,apGame);
-		}
-
-		iSaveObject::_mlGlobalIdCount = lMaxId;
+		struct tCtx { cSaveObjectHandler *mpHandler; cEngine *mpGame; } ctx = { this, apGame };
+		iSaveObject::_mlGlobalIdCount = ohpl_en_reg_set_up_all(mpReg,
+			[](void *apCtx, size_t alObject) -> int
+			{
+				tCtx *pCtx = static_cast<tCtx*>(apCtx);
+				iSaveObject *pObject = reinterpret_cast<iSaveObject*>(alObject);
+				int lId = pObject->GetSaveObjectId();
+				pObject->SaveDataSetup(pCtx->mpHandler, pCtx->mpGame);
+				return lId;
+			}, &ctx);
 	}
 	
 	//------------------------------------------------------------------------
 
 	void cSaveObjectHandler::Clear()
 	{
-		m_mapSaveObjects.clear();
+		ohpl_en_reg_clear(mpReg);
 	}
 
 	//------------------------------------------------------------------------
 
 	size_t cSaveObjectHandler::Size()
 	{
-		return m_mapSaveObjects.size();
+		return ohpl_en_reg_size(mpReg);
 	}
 
 	//------------------------------------------------------------------------
@@ -170,34 +166,34 @@ namespace hpl {
 	
 	cSaveDataHandler::cSaveDataHandler()
 	{
-
+		mpReg = ohpl_en_reg_new();
 	}
 
 	cSaveDataHandler::~cSaveDataHandler()
 	{
-
+		ohpl_en_reg_free(mpReg);
 	}
 	
 	//------------------------------------------------------------------------
 
 	void cSaveDataHandler::Add(iSaveData *pData)
 	{
-		m_mapSaveData.insert(tSaveDataMap::value_type(pData->GetSaveCreatePrio(), pData));
+		ohpl_en_reg_add(mpReg, pData->GetSaveCreatePrio(), reinterpret_cast<size_t>(pData));
 	}
 
 	cSaveDataIterator cSaveDataHandler::GetIterator()
 	{
-		return cSaveDataIterator(&m_mapSaveData);
+		return cSaveDataIterator(mpReg);
 	}
 
 	void cSaveDataHandler::Clear()
 	{
-		m_mapSaveData.clear();
+		ohpl_en_reg_clear(mpReg);
 	}
 
 	size_t cSaveDataHandler::Size()
 	{
-		return m_mapSaveData.size();
+		return ohpl_en_reg_size(mpReg);
 	}
 	
 	//------------------------------------------------------------------------
@@ -215,7 +211,7 @@ namespace hpl {
 
 	iContainerIterator* cSaveDataHandler::CreateIteratorPtr()
 	{
-		return hplNew( cSaveDataIterator, (&m_mapSaveData) );
+		return hplNew( cSaveDataIterator, (mpReg) );
 	}
 
 	//------------------------------------------------------------------------
