@@ -25,6 +25,7 @@
 #include "sound/SoundData.h"
 #include "sound/LowLevelSound.h"
 #include "resources/FileSearcher.h"
+#include "resources/RustResMgr.h"
 
 namespace hpl {
 
@@ -115,10 +116,8 @@ namespace hpl {
 
 	void cSoundManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-			
 		iSoundData *pData = static_cast<iSoundData *>(apResource);
-		if(pData->IsStream() && pData->HasUsers()==false)
+		if(ohpl_rm_destroy_sound(apResource->GetMeta(), pData->IsStream()))
 		{
 			STLFindAndDelete(mlstStreamData, pData);
 		}
@@ -163,47 +162,23 @@ namespace hpl {
 	
 	iSoundData *cSoundManager::FindSampleData(const tString &asName, tWString &asFilePath)
 	{
-		iSoundData *pData=NULL;
-
-		if(cString::GetFileExt(asName)=="")
-		{
-			for(tStringListIt it = mlstFileFormats.begin();it!=mlstFileFormats.end();++it)
-			{
-				tString sNewName = cString::SetFileExt(asName,*it);
-				
-				pData = static_cast<iSoundData*> (FindLoadedResource(sNewName, asFilePath));
-				if((pData==NULL && asFilePath!=_W("")) || pData!=NULL)break;
-			}
-		}
-		else
-		{
-			pData = static_cast<iSoundData*> (FindLoadedResource(asName, asFilePath));
-		}
-
-		return pData;
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts formats(mlstFileFormats);
+		cRmOut out;
+		ohpl_rm_find_sample(env.raw(), RM_STR(asName), formats.data(), formats.size(), out.raw());
+		asFilePath = out.msPath;
+		return static_cast<iSoundData*>(out.Res());
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundManager::FindStreamPath(const tString &asName, tWString &asFilePath)
 	{
-		iSoundData *pData=NULL;
-
-		if(cString::GetFileExt(asName)=="")
-		{
-			for(tStringListIt it = mlstFileFormats.begin();it!=mlstFileFormats.end();++it)
-			{
-				tString sNewName = cString::SetFileExt(asName,*it);
-
-				asFilePath = mpFileSearcher->GetFilePath(sNewName);
-				if(asFilePath != _W("")) break;
-			}
-		}
-		else
-		{
-			asFilePath = mpFileSearcher->GetFilePath(asName);
-		}
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts formats(mlstFileFormats);
+		cRmOut out;
+		ohpl_rm_find_stream_path(env.raw(), RM_STR(asName), formats.data(), formats.size(), out.raw());
+		asFilePath = out.msPath;
 	}
 
-	//-----------------------------------------------------------------------
 }

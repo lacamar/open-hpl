@@ -67,14 +67,13 @@ namespace hpl {
 		}
 
 		iVideoStream *pVideo = mpResources->GetVideoLoaderHandler()->LoadVideo(sPath);
-		pVideo->SetFullPath(sPath);
-
 		if(pVideo == NULL)
 		{
 			EndLoad();
 			Error("Could not load video '%s'\n",asName.c_str());
 			return NULL;
 		}
+		pVideo->SetFullPath(sPath);
 
 		AddResource(pVideo);
 

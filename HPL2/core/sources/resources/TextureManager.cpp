@@ -28,6 +28,7 @@
 #include "resources/FileSearcher.h"
 #include "graphics/Bitmap.h"
 #include "resources/BitmapLoaderHandler.h"
+#include "resources/RustResMgr.h"
 
 
 namespace hpl {
@@ -101,108 +102,65 @@ namespace hpl {
 	iTexture* cTextureManager::CreateAnim(const tString& asName,bool abUseMipMaps,eTextureType aType,
 											eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		tString asFirstFrameName = asName;
-		if(cString::GetFileExt(asName)=="")
-			for(const tString &sExt : *mpBitmapLoaderHandler->GetSupportedTypes())
-				if(mpFileSearcher->GetFilePath(asName+"."+sExt)!=_W("")) { asFirstFrameName = asName+"."+sExt; break; }
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts exts(*mpBitmapLoaderHandler->GetSupportedTypes());
+		cRmOut firstFrame;
+		ohpl_rm_anim_first_frame(env.raw(), RM_STR(asName), exts.data(), exts.size(), firstFrame.raw());
+		const tString& asFirstFrameName = firstFrame.msName;
 
 		BeginLoad(asFirstFrameName);
-		
-		///////////////////////////
-		//Check the base name
-		int lPos = cString::GetFirstStringPos(asFirstFrameName, "01");
-		if(lPos <0)
+
+		cRmOut plan;
+		int lPlan = ohpl_rm_anim_plan(env.raw(), RM_STR(asFirstFrameName), plan.raw());
+
+		//The error returns below leave the load tab open, as before.
+		if(lPlan == -1)
 		{
 			Error("First frame of animation '%s' must contain '01'!\n", asFirstFrameName.c_str());
 			return NULL;
 		}
-
-		//Remove 01 in the string
-		tString sSub1 = cString::Sub(asFirstFrameName, 0,lPos);
-		tString sSub2 = cString::Sub(asFirstFrameName, lPos+2);
-		tString sBaseName = sSub1 + sSub2;
-
-		if(sSub2.size()==0 || sSub2[0]!='.')
+		if(lPlan == -2)
 		{
 			Error("First frame of animation '%s' must contain '01' before extension!\n", asFirstFrameName.c_str());
 			return NULL;
 		}
-
-		///////////////////////////
-		//Check if texture exists
-		
-		//Create a fake full path.
-		tWString sFirstFramePath = mpFileSearcher->GetFilePath(asFirstFrameName);
-		if(sFirstFramePath == _W(""))
+		if(lPlan == -3)
 		{
 			Error("First frame of animation '%s' could not be found!\n", asFirstFrameName.c_str());
 			return NULL;
 		}
-		tWString sFakeFullPath = cString::GetFilePathW(sFirstFramePath) + cString::To16Char(cString::GetFileName(sBaseName));
-		
-        iTexture* pTexture = static_cast<iTexture*>(GetResource(sFakeFullPath));
-		
-		///////////////////////////
-		//Check if texture exists
-		if(pTexture==NULL)
+		if(lPlan == -4)
 		{
-			tString sFileExt = cString::GetFileExt(sBaseName);
-			tString sFileName = cString::SetFileExt(cString::GetFileName(sBaseName),"");
+			Error("No textures found for animation %s\n",plan.msName.c_str());
+			EndLoad();
+			return NULL;
+		}
 
-			tStringVec mvFileNames;
+		iTexture* pTexture = static_cast<iTexture*>(plan.Res());
 
-			tString sTest = sFileName + "01."+sFileExt;
-			int lNum = 2;
-			tWStringVec vPaths;
+		if(lPlan == 1)
+		{
+			const tString& sBaseName = plan.msName;
+			const tWString& sFakeFullPath = plan.msPath;
+			const std::vector<tWString>& vPaths = plan.mvItems;
 
-			while(true)
-			{
-				tWString sPath = mpFileSearcher->GetFilePath(sTest);
-                
-				if(sPath == _W(""))
-				{
-					break;
-				}
-				else
-				{
-					vPaths.push_back(sPath);
-					if(lNum<10)
-						sTest = sFileName + "0"+cString::ToString(lNum)+"."+sFileExt;
-					else
-						sTest = sFileName + cString::ToString(lNum)+"."+sFileExt;
-					
-					++lNum;
-				}
-			}
-
-			if(vPaths.empty()) 
-			{
-				Error("No textures found for animation %s\n",sBaseName.c_str());
-				EndLoad();
-				return NULL;
-			}
-			
 			std::vector<cBitmap*> vBitmaps;
 			for(size_t i =0; i< vPaths.size(); ++i)
 			{
 				cBitmap* pBmp = mpBitmapLoaderHandler->LoadBitmap(vPaths[i],0);
 				if(pBmp==NULL){
 					Error("Couldn't load bitmap '%s'!\n",cString::To8Char(vPaths[i]).c_str());
-					
 					for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-					
 					EndLoad();
 					return NULL;
 				}
-
 				vBitmaps.push_back(pBmp);
 			}
-			
+
 			//Create the animated texture
 			pTexture = mpGraphics->GetLowLevel()->CreateTexture(sBaseName, aType, aUsage);
 			pTexture->SetsRGB(mbSRGB);
 			pTexture->SetFullPath(sFakeFullPath);
-			
 			pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
 
 			if(pTexture->CreateAnimFromBitmapVec(&vBitmaps)==false)
@@ -216,7 +174,7 @@ namespace hpl {
 
 			//Bitmaps no longer needed.
 			for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-			
+
 			mlMemoryUsage += pTexture->GetMemorySize();
 			AddResource(pTexture);
 			m_setAnimTextures.insert(pTexture);
@@ -224,62 +182,52 @@ namespace hpl {
 
 		if(pTexture)pTexture->IncUserCount();
 		else Error("Couldn't texture '%s'\n",asFirstFrameName.c_str());
-		
+
 		EndLoad();
 		return pTexture;
 	}
 
 	//-----------------------------------------------------------------------
-	
-	iTexture* cTextureManager::CreateCubeMap(const tString& asPathName,bool abUseMipMaps, 
+
+	iTexture* cTextureManager::CreateCubeMap(const tString& asPathName,bool abUseMipMaps,
 											eTextureUsage aUsage,
 											unsigned int alTextureSizeLevel)
 	{
-		tString sExt = cString::ToLowerCase(cString::GetFileExt(asPathName));
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut pre;
 
 		/////////////////////////////////////////////////////////
 		// Load Cubemap from single file
-		if(sExt == "dds")
+		if(ohpl_rm_cube_pre(env.raw(), RM_STR(asPathName), pre.raw()) == 0)
 		{
-			return CreateSimpleTexture(asPathName,abUseMipMaps,aUsage,eTextureType_CubeMap,alTextureSizeLevel);	
+			return CreateSimpleTexture(asPathName,abUseMipMaps,aUsage,eTextureType_CubeMap,alTextureSizeLevel);
 		}
 		/////////////////////////////////////////////////////////
 		// Load Cubemap from multiple files
 		else
 		{
-			tString sName = cString::SetFileExt(asPathName,"");
-
-			tWString sFakeFullPath = cString::To16Char(sName);
-			iTexture* pTexture = static_cast<iTexture*>(GetResource(sFakeFullPath));
+			const tString& sName = pre.msName;
+			const tWString& sFakeFullPath = pre.msPath;
+			iTexture* pTexture = static_cast<iTexture*>(pre.Res());
 
 			BeginLoad(asPathName);
-					
+
 			if(pTexture==NULL)
 			{
 				//See if files for all faces exist
-				tWStringVec vPaths;
-				tWString sPath=_W("");
-				for(int i=0;i <6 ;i++)
+				cRmExts exts(*mpBitmapLoaderHandler->GetSupportedTypes());
+				cRmOut faces;
+				int lFace = ohpl_rm_cube_faces(env.raw(), RM_STR(sName), exts.data(), exts.size(), faces.raw());
+				if(lFace != 0)
 				{
-					tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
-					for(tStringVecIt it = apFileFormatsVec->begin();it!=apFileFormatsVec->end();++it)
-					{
-						tString sNewName = sName + mvCubeSideSuffixes[i] + "." + *it;
-						sPath = mpFileSearcher->GetFilePath(sNewName);
-		               
-						if(sPath!=_W(""))break;
-					}
-					
-					if(sPath==_W(""))
-					{
-						tString sNewName = sName + mvCubeSideSuffixes[i];
-						Error("Couldn't find %d-face '%s', for cubemap '%s' in path: '%s'\n",i,sNewName.c_str(),sName.c_str(), asPathName.c_str());
-						return NULL;
-					}
-
-					vPaths.push_back(sPath);
+					int i = lFace-1;
+					tString sNewName = sName + mvCubeSideSuffixes[i];
+					//The load tab stays open, as before.
+					Error("Couldn't find %d-face '%s', for cubemap '%s' in path: '%s'\n",i,sNewName.c_str(),sName.c_str(), asPathName.c_str());
+					return NULL;
 				}
-				
+				const std::vector<tWString>& vPaths = faces.mvItems;
+
 				//Load bitmaps for all faces
 				std::vector<cBitmap*> vBitmaps;
 				for(int i=0;i<6; i++)
@@ -291,7 +239,6 @@ namespace hpl {
 						EndLoad();
 						return NULL;
 					}
-					
 					vBitmaps.push_back(pBmp);
 				}
 
@@ -299,7 +246,6 @@ namespace hpl {
 				pTexture = mpGraphics->GetLowLevel()->CreateTexture(sName,eTextureType_CubeMap, aUsage);
 				pTexture->SetsRGB(mbSRGB);
 				pTexture->SetFullPath(sFakeFullPath);
-				
 				pTexture->SetUseMipMaps(abUseMipMaps);
 				pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
 
@@ -314,14 +260,14 @@ namespace hpl {
 
 				//Bitmaps no longer needed.
 				for(int j=0;j<(int)vBitmaps.size();j++)	hplDelete(vBitmaps[j]);
-				
+
 				mlMemoryUsage += pTexture->GetMemorySize();
 				AddResource(pTexture);
 			}
 
 			if(pTexture)pTexture->IncUserCount();
 			else Error("Couldn't texture '%s'\n",sName.c_str());
-			
+
 			EndLoad();
 			return pTexture;
 		}
@@ -337,9 +283,7 @@ namespace hpl {
 
 	void cTextureManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false)
+		if(ohpl_rm_destroy_standard(apResource->GetMeta()))
 		{
 			mlMemoryUsage -= static_cast<iTexture*>(apResource)->GetMemorySize();
 			m_setAnimTextures.erase(static_cast<iTexture*>(apResource));
@@ -423,45 +367,12 @@ namespace hpl {
 	
 	iTexture* cTextureManager::FindTexture2D(const tString &asName, tWString &asFilePath)
 	{
-		iTexture *pTexture=NULL;
-
-		if(cString::GetFileExt(asName)=="")
-		{
-			int lMaxCount =-1;
-
-			///////////////////////
-			//Iterate the different formats
-			tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
-			for(tStringVecIt it = apFileFormatsVec->begin();it!= apFileFormatsVec->end();++it)
-			{
-				tWString sTempPath = _W("");
-				iTexture *pTempTex=NULL;
-				int lCount=0;
-
-				tString sNewName = cString::SetFileExt(asName,*it);
-				pTempTex = static_cast<iTexture*> (FindLoadedResource(sNewName, sTempPath, &lCount));
-
-				///////////////////////
-				//Check if the image exists and then check if it has the hightest equal count.
-				if((pTempTex==NULL && sTempPath!=_W("")) || pTempTex!=NULL)
-				{
-					if(lCount > lMaxCount)
-					{
-						lMaxCount = lCount;
-						asFilePath = sTempPath;
-						pTexture = pTempTex;
-					}
-				}
-			}
-		}
-		else
-		{
-			pTexture = static_cast<iTexture*> (FindLoadedResource(asName, asFilePath));
-		}
-
-		return pTexture;
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts exts(*mpBitmapLoaderHandler->GetSupportedTypes());
+		cRmOut out;
+		ohpl_rm_find_with_formats(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw());
+		asFilePath = out.msPath;
+		return static_cast<iTexture*>(out.Res());
 	}
 
-
-	//-----------------------------------------------------------------------
 }

@@ -23,6 +23,7 @@
 #include "resources/Resources.h"
 #include "system/Script.h"
 #include "system/LowLevelSystem.h"
+#include "resources/RustResMgr.h"
 
 
 
@@ -58,35 +59,33 @@ namespace hpl {
 
 	iScript* cScriptManager::CreateScript(const tString& asName, tString *apCompileMessages)
 	{
-		tWString sPath;
 		iScript* pScript;
-		tString asNewName;
 
 		BeginLoad(asName);
-		
-		if(cString::GetFileExt(asName) != "chps")
-			asNewName = cString::SetFileExt(asName,"hps");
-		else
-			asNewName = cString::SetFileExt(asName,"chps");
-		
-		pScript = static_cast<iScript*>(this->FindLoadedResource(asNewName,sPath));
-		
+
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut out;
+		ohpl_rm_resolve_simple(env.raw(), 2, RM_STR(asName), out.raw());
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
+
+		pScript = static_cast<iScript*>(out.Res());
+
 		if(pScript==NULL && sPath!=_W(""))
 		{
 			pScript = mpSystem->GetLowLevel()->CreateScript(asNewName);
-			
 			if(pScript->CreateFromFile(sPath, apCompileMessages)==false){
 				hplDelete(pScript);
 				EndLoad();
 				return NULL;
 			}
-			
+
 			AddResource(pScript);
 		}
 
 		if(pScript)pScript->IncUserCount();
 		else Error("Couldn't create script '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pScript;
 	}
@@ -101,15 +100,11 @@ namespace hpl {
 
 	void cScriptManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
 

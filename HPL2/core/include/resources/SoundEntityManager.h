@@ -24,6 +24,8 @@
 
 #include <map>
 
+struct OhplRmCustom;
+
 namespace hpl {
 
 	class cSound;
@@ -50,7 +52,7 @@ namespace hpl {
 	private:
 		cSound* mpSound;
 		cResources* mpResources;
-		std::map<tString, cSoundEntityData*> m_mapCustom;
+		OhplRmCustom* mpCustom;
 		tCustomSoundEntityResolver mpCustomResolver = NULL;
 	};
 

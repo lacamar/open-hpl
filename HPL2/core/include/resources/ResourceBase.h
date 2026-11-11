@@ -69,6 +69,8 @@ namespace hpl {
 		void DecUserCount(){ohpl_resmeta_dec_user(&mMeta);}
 		bool HasUsers(){ return mMeta.user_count>0;}
 
+		OhplResMeta* GetMeta(){ return &mMeta; }
+
 		static bool GetLogCreateAndDelete(){ return mbLogCreateAndDelete;}
 		static void SetLogCreateAndDelete(bool abX){ mbLogCreateAndDelete = abX;}
 

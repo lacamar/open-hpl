@@ -40,6 +40,10 @@ pub mod platform;
 mod platform_ffi;
 pub mod preprocess;
 pub mod render;
+pub mod resmgr;
+mod resmgr_ffi;
+#[cfg(test)]
+mod resmgr_tests;
 pub mod resources;
 mod resources_ffi;
 pub mod scene;

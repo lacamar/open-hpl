@@ -27,6 +27,7 @@
 #include "system/String.h"
 
 #include "impl/tinyXML/tinyxml.h"
+#include "resources/RustResMgr.h"
 
 namespace hpl {
 
@@ -72,12 +73,15 @@ namespace hpl {
 	{
 		cParticleSystemData *pData = NULL;
 
-		tString sFile = cString::SetFileExt(asType,"ps");
-		tWString sPath = mpFileSearcher->GetFilePath(sFile);
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut byFile;
+		ohpl_rm_particle_by_file(env.raw(), RM_STR(asType), byFile.raw());
+		const tString& sFile = byFile.msName;
+		const tWString& sPath = byFile.msPath;
 
 		BeginLoad(asName);
 
-		pData = static_cast<cParticleSystemData*>(GetResource(sPath));
+		pData = static_cast<cParticleSystemData*>(byFile.Res());
 		if(pData == NULL)
 		{
 			if(sPath == _W(""))
@@ -122,7 +126,8 @@ namespace hpl {
 
 		BeginLoad(asName);
 
-		pPSData = static_cast<cParticleSystemData*>(GetResource(cString::To16Char(asDataName)));
+		cRmEnv env(mpFileSearcher, this);
+		pPSData = static_cast<cParticleSystemData*>(static_cast<iResourceBase*>(ohpl_rm_particle_by_data(env.raw(), RM_STR(asDataName))));
 
 		if(pPSData==NULL)
 		{
@@ -160,10 +165,13 @@ namespace hpl {
 
 	void cParticleManager::Preload(const tString& asFile)
 	{
-		tString sFile = cString::SetFileExt(asFile,"ps");
-		tWString sPath = mpFileSearcher->GetFilePath(sFile);
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut byFile;
+		ohpl_rm_particle_by_file(env.raw(), RM_STR(asFile), byFile.raw());
+		const tString& sFile = byFile.msName;
+		const tWString& sPath = byFile.msPath;
 		
-		cParticleSystemData *pData = static_cast<cParticleSystemData*>(GetResource(sPath));
+		cParticleSystemData *pData = static_cast<cParticleSystemData*>(byFile.Res());
 		if(pData == NULL)
 		{
 			if(sPath == _W(""))
@@ -195,10 +203,7 @@ namespace hpl {
 
 	void cParticleManager::Destroy(iResourceBase* apResource)
 	{
-		if(apResource->HasUsers())
-		{
-			apResource->DecUserCount();
-		}
+		ohpl_rm_destroy_particle(apResource->GetMeta());
 	}
 	
 	//-----------------------------------------------------------------------

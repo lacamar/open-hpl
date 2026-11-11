@@ -30,6 +30,8 @@
 
 class TiXmlElement;
 
+struct OhplRmLoaders;
+
 namespace hpl {
 
 	class cImageEntity;
@@ -269,11 +271,8 @@ namespace hpl {
 		cWorldLoaderHandler *mpWorldLoaderHandler;
 		cVideoLoaderHandler *mpVideoLoaderHandler;
 				
-		tEntityLoaderMap m_mEntityLoaders;
-		iEntityLoader* mpDefaultEntityLoader;
-
-		tAreaLoaderMap m_mAreaLoaders;
-		iAreaLoader* mpDefaultAreaLoader;
+		OhplRmLoaders* mpEntityLoaders;
+		OhplRmLoaders* mpAreaLoaders;
 
 		tXmlDocumentList mlstXmlDocuments;
 		tBinaryBufferList mlstBinBuffers;

@@ -26,6 +26,7 @@
 #include "system/LowLevelSystem.h"
 #include "resources/MeshLoaderHandler.h"
 #include "resources/FileSearcher.h"
+#include "resources/RustResMgr.h"
 
 
 namespace hpl {
@@ -61,50 +62,35 @@ namespace hpl {
 
 	cAnimation* cAnimationManager::CreateAnimation(const tString& asName)
 	{
-		tWString sPath;
 		cAnimation *pAnimation=NULL;
-		tString asNewName;
 
 		BeginLoad(asName);
 
-		asNewName = asName;
-		
-		//If the file is missing an extension, search for an existing file.
-		if(cString::GetFileExt(asNewName) == "")
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts exts(*mpResources->GetMeshLoaderHandler()->GetSupportedTypes());
+		cRmOut out;
+		if(ohpl_rm_resolve_model(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw())==0)
 		{
-			bool bFound = false;
-			tStringVec *pTypes = mpResources->GetMeshLoaderHandler()->GetSupportedTypes();
-			for(size_t i=0; i< pTypes->size(); i++)
-			{
-				asNewName = cString::SetFileExt(asNewName, (*pTypes)[i]);
-				tWString sPath = mpResources->GetFileSearcher()->GetFilePath(asNewName);
-				if(sPath != _W(""))
-				{
-					bFound = true;
-					break;
-				}
-			}
-
-			if(bFound == false){
-				Error("Couldn't find animation file '%s' in any supported format!\n",asName.c_str());
-				EndLoad();
-				return NULL;
-			}
+			Error("Couldn't find animation file '%s' in any supported format!\n",asName.c_str());
+			EndLoad();
+			return NULL;
 		}
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
 
-		pAnimation = static_cast<cAnimation*>(this->FindLoadedResource(asNewName,sPath));
+		pAnimation = static_cast<cAnimation*>(out.Res());
 
 		if(pAnimation==NULL && sPath!=_W(""))
 		{
 			cMeshLoaderHandler *pMeshLoadHandler = mpResources->GetMeshLoaderHandler();
+
 			pAnimation = pMeshLoadHandler->LoadAnimation(sPath);
-			
 			if(pAnimation) AddResource(pAnimation);
 		}
 
 		if(pAnimation) pAnimation->IncUserCount();
 		else Error("Couldn't create animation '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pAnimation;
 	}
@@ -119,15 +105,11 @@ namespace hpl {
 
 	void cAnimationManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
 
