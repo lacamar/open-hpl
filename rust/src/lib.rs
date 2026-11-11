@@ -33,6 +33,7 @@ pub mod input;
 mod input_ffi;
 mod input_tables;
 pub mod luxenemy;
+pub mod luxsave;
 pub mod luxscript;
 pub mod material;
 pub mod math;
