@@ -6,14 +6,21 @@ pub mod draw;
 mod ffi;
 mod ffi_skin;
 mod ffi_widget;
+mod ffi_widget2;
+mod ffi_widget3;
 pub mod gfx;
 pub mod guicore;
 pub mod layout;
 pub mod list;
+pub mod popup;
 pub mod skin;
 mod sort;
 pub mod widget;
 pub mod widgets_base;
+pub mod widgets_list;
+pub mod widgets_menu;
+pub mod widgets_slider;
+pub mod widgets_text;
 
 #[cfg(test)]
 mod tests;
@@ -21,3 +28,7 @@ mod tests;
 mod tests_skin;
 #[cfg(test)]
 mod tests_widget;
+#[cfg(test)]
+mod tests_widget2;
+#[cfg(test)]
+mod tests_widget3;

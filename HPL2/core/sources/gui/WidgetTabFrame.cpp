@@ -28,6 +28,10 @@
 
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
+#include "gui/RustWidget2.h"
+
+#include <cstring>
+#include <vector>
 
 #include "graphics/FontData.h"
 
@@ -77,9 +81,12 @@ namespace hpl
 	{
 		cWidgetTabFrame* pFrame = mpParentTab->mpParentTabFrame;
 		
-		while (mvPosition.x + mvSize.x > pFrame->mvSize.x)
+		// The C++ loops forever (or reads past the tab vector) when the label cannot be scrolled into view
+		for(int i=0; i<=(int)pFrame->mvTabs.size() && mvPosition.x + mvSize.x > pFrame->mvSize.x; ++i)
 		{
+			int lFirst = pFrame->mState.first_visible;
 			pFrame->ArrowButton_Pressed(pFrame->mvArrowButtons[1], cGuiMessageData());
+			if(pFrame->mState.first_visible == lFirst) break;
 		}
 
 		mpParentTab->GetParentTabFrame()->SetTabOnTop(mpParentTab);
@@ -94,15 +101,9 @@ namespace hpl
 		cWidgetTabFrame* pTabFrame = mpParentTab->mpParentTabFrame;
 		float fBordersWidth = pTabFrame->mvGfxTabLabelBorders[0]->GetImageSize().x + 
 								pTabFrame->mvGfxTabLabelBorders[1]->GetImageSize().x;
-		float fNewWidth = mpDefaultFontType->GetLength(mpDefaultFont->mvSize, msText.c_str()) + 
-								pTabFrame->mfTextLeftPadding + 
-								pTabFrame->mfTextRightPadding + 
-								fBordersWidth;
-
-		if(mpGfxIcon!=NULL)
-		{
-			fNewWidth += mpGfxIcon->GetImageSize().x + 2*pTabFrame->mfIconPadding;
-		}
+		float fLength = mpDefaultFontType->GetLength(mpDefaultFont->mvSize, msText.c_str());
+		float fNewWidth = ohpl_w2_tab_label_width(&pTabFrame->mState, fLength, fBordersWidth, mpGfxIcon!=NULL,
+												  mpGfxIcon!=NULL ? mpGfxIcon->GetImageSize().x : 0);
 
 		SetSize(cVector2f(fNewWidth,mvSize.y));
 	}
@@ -121,7 +122,10 @@ namespace hpl
 	void cWidgetTabLabel::OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
 		cWidgetTabFrame* pTabFrame = mpParentTab->mpParentTabFrame;
-		cVector3f vTextPos = GetGlobalPosition() + cVector3f(pTabFrame->mfTextLeftPadding,2,0.1f);
+		cVector3f vGlobal = GetGlobalPosition();
+		cVector3f vTextPos;
+		ohpl_w2_tab_label_text_pos(&pTabFrame->mState, &vGlobal, mpGfxIcon!=NULL,
+								   mpGfxIcon!=NULL ? mpGfxIcon->GetImageSize().x : 0, &vTextPos);
 		
 		cGuiGfxElement* pBG;
 
@@ -135,11 +139,6 @@ namespace hpl
 		}
 
 		
-		if(mpGfxIcon!=NULL)
-		{
-			vTextPos.x += 2*pTabFrame->mfIconPadding + mpGfxIcon->GetImageSize().x;
-		}
-
 		DrawDefaultText(msText, vTextPos, eFontAlign_Left);
 		DrawBordersAndCorners(pBG, 
 								pTabFrame->mvGfxTabLabelBorders, 
@@ -245,9 +244,8 @@ namespace hpl
 	void cWidgetTab::SetOnTop(bool abX)
 	{
 		mbOnTop = abX;
-		float fOffset = abX ? mpParentTabFrame->mfTabActiveOffset : mpParentTabFrame->mfTabInactiveOffset;
 		cVector3f vPos = mpTabLabel->GetLocalPosition();
-		vPos.y = -fOffset;
+		vPos.y = ohpl_w2_tab_label_pos_y(&mpParentTabFrame->mState, abX);
 		
 		mpTabLabel->SetPosition(vPos);
 		mpFrame->SetEnabled(abX);
@@ -270,20 +268,7 @@ namespace hpl
 		cVector3f vFrameGlobalPos = mpFrame->GetGlobalPosition();
 		cVector2f vFrameSize = mpFrame->GetSize();
 
-		if( avPoint.x < vFrameGlobalPos.x || avPoint.x > vFrameGlobalPos.x + vFrameSize.x || 
-			avPoint.y < vFrameGlobalPos.y || avPoint.y > vFrameGlobalPos.y + vFrameSize.y)
-		{
-			if( bLabelVisible==false || 
-				avPoint.x < vLabelGlobalPos.x || avPoint.x > vLabelGlobalPos.x + vLabelSize.x || 
-				avPoint.y < vLabelGlobalPos.y || avPoint.y > vLabelGlobalPos.y + vLabelSize.y) 
-				return false;
-			else
-				return true;
-		}
-		else
-		{
-			return true;	
-		}
+		return ohpl_w2_tab_point_inside(&avPoint, bLabelVisible, &vLabelGlobalPos, &vLabelSize, &vFrameGlobalPos, &vFrameSize);
 	}
 
 	//-------------------------------------------------------------------
@@ -305,37 +290,33 @@ namespace hpl
 	{
 		if(mpTabLabel == NULL || mpFrame == NULL) return;
 
-		float fTextHeight = mpDefaultFont->mvSize.y + 8;
+		OhplW2TabLayout l;
+		ohpl_w2_tab_layout(&mvSize, mpDefaultFont->mvSize.y, mpParentTabFrame->mState.active_offset, &l);
 
-		mpTabLabel->SetPosition(cVector3f(0,mpParentTabFrame->mfTabActiveOffset, 0.1f));
+		mpTabLabel->SetPosition(l.label_pos);
 		
-		mpFrame->SetPosition(cVector3f(0,fTextHeight-4 + mpParentTabFrame->mfTabActiveOffset, 0.1f));
-		mpFrame->SetSize(mvSize - cVector2f(0, fTextHeight + mpParentTabFrame->mfTabActiveOffset));
+		mpFrame->SetPosition(l.frame_pos);
+		mpFrame->SetSize(l.frame_size);
 	}
 
 	//-------------------------------------------------------------------
 
 	void cWidgetTab::OnInit()
 	{
-		float fLabelHeight = mpDefaultFont->mvSize.y+8;
+		cVector2f vCorners[3] = {mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize(),
+								 mpParentTabFrame->mvGfxTabCorners[1]->GetActiveSize(),
+								 mpParentTabFrame->mvGfxTabCorners[2]->GetActiveSize()};
+		OhplW2TabInit init;
+		ohpl_w2_tab_init(&mvSize, mpDefaultFont->mvSize.y, mpParentTabFrame->mState.active_offset, vCorners, &init);
+		float fLabelHeight = init.label_h;
 		mpTabLabel = mpSet->CreateWidgetTabLabel(0,
 												 cVector2f(0, fLabelHeight),
 												 msText,
 												 NULL);
 		mpTabLabel->mpParentTab = this;
 
-		//float fFrameOffset = cMath::Max(mpParentTabFrame->mfTabActiveOffset, mpParentTabFrame->mfTabInactiveOffset);
-		float fFrameOffset = mpParentTabFrame->mfTabActiveOffset;
-		cVector2f vCornerSize = cVector2f(mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize().x + 
-										  mpParentTabFrame->mvGfxTabCorners[1]->GetActiveSize().x, 
-										  mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize().y +
-										  mpParentTabFrame->mvGfxTabCorners[2]->GetActiveSize().y);
-								
-								
-								
-
 		mpFrame = mpSet->CreateWidgetFrame(0,
-											mvSize-cVector2f(vCornerSize.x,fLabelHeight+fFrameOffset+vCornerSize.y),
+											init.frame_size,
 											false,
 											NULL,
 											mpParentTabFrame->mbHoriScrollEnabled, mpParentTabFrame->mbVertScrollEnabled);
@@ -345,8 +326,7 @@ namespace hpl
 		AttachChild(mpFrame);
 		mpTabLabel->SetPosition(cVector3f(0, 0, 0.1f));
 
-		cVector3f vPos = cVector3f(mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize().x, mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize().y, 0);
-		mpFrame->SetPosition(cVector3f(vPos.x,vPos.y + fLabelHeight+fFrameOffset-mpParentTabFrame->mvGfxTabCorners[0]->GetActiveSize().y,0));
+		mpFrame->SetPosition(init.frame_pos);
 
 		SetOnTop(false);
 	}
@@ -392,8 +372,7 @@ namespace hpl
 		mfBackgroundZ = 0;
 		mfForegroundZ = 0.9f;
 
-		mlFirstVisibleTab = 0;
-		mlLastVisibleTab = 0;
+		memset(&mState, 0, sizeof(mState));
 
 		mpTopTab = NULL;
 
@@ -572,17 +551,12 @@ namespace hpl
 	bool cWidgetTabFrame::OnUIButtonPress(const cGuiMessageData& aData)
 	{
 		int lTabOnTopIndex = GetTabOnTopIndex();
+		int lTarget;
 
-		if(aData.mlVal & eUIButton_PrevPage)
-		{
-			SetTabOnTopByIndex(--lTabOnTopIndex);
-		}
-		else if(aData.mlVal & eUIButton_NextPage)
-		{
-			SetTabOnTopByIndex(++lTabOnTopIndex);
-		}
-		else
+		if(ohpl_w2_tab_page_target(aData.mlVal, lTabOnTopIndex, &lTarget)==false)
 			return false;
+
+		SetTabOnTopByIndex(lTarget);
 
 		return true;
 	}
@@ -591,20 +565,10 @@ namespace hpl
 
 	bool cWidgetTabFrame::ArrowButton_Pressed(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		///////////////////////////
-		// Left Arrow Button
 		if(apWidget==mvArrowButtons[0])
-		{
-			if(mlFirstVisibleTab>0)
-				mlFirstVisibleTab--;
-		}
-		///////////////////////////
-		// Right Arrow Button
+			ohpl_w2_tab_arrow(&mState, false, (int)mvTabs.size());
 		if(apWidget==mvArrowButtons[1])
-		{
-			if(mlLastVisibleTab < (int) mvTabs.size()-1)
-				mlFirstVisibleTab++;
-		}
+			ohpl_w2_tab_arrow(&mState, true, (int)mvTabs.size());
 		
 		UpdateTabVisibility();
 		return true;
@@ -615,43 +579,45 @@ namespace hpl
 
 	void cWidgetTabFrame::UpdateTabVisibility()
 	{
-		float fPosX = mfFirstTabOffset;
-		
+		size_t lNum = mvTabs.size();
+		std::vector<float> vWidths(lNum);
+		std::vector<OhplW2TabItem> vItems(lNum);
+		for(size_t i=0; i<lNum; ++i)
+			vWidths[i] = mvTabs[i]->mpTabLabel->GetSize().x;
+
+		OhplW2TabArrows arrows;
+		ohpl_w2_tab_visibility(&mState, mvSize.x, vWidths.data(), vItems.data(), lNum, &arrows);
+
 		///////////////////////////////
 		// Hide tabs at the left of the first visible
-		for(int i=0; i<mlFirstVisibleTab; ++i)
+		for(size_t i=0; i<lNum; ++i)
 		{
-			cWidgetTab* pTab = mvTabs[i];
+			if(vItems[i].visible) continue;
+			if((int)i >= mState.first_visible) continue;
 
-			pTab->mpTabLabel->SetVisible(false);
-			pTab->mpTabLabel->SetEnabled(false);
+			mvTabs[i]->mpTabLabel->SetVisible(false);
+			mvTabs[i]->mpTabLabel->SetEnabled(false);
 		}
 
 		////////////////////////////////
-		// Check how many tabs are visible
-		for(int i=mlFirstVisibleTab; i<(int) mvTabs.size(); ++i)
+		// Show the rest and place them
+		for(size_t i=0; i<lNum; ++i)
 		{
-			cWidgetTab* pTab = mvTabs[i];
+			if(vItems[i].visible==false) continue;
 
+			cWidgetTab* pTab = mvTabs[i];
 			pTab->mpTabLabel->SetVisible(true);
 			pTab->mpTabLabel->SetEnabled(true);
-			pTab->SetLabelPosX(fPosX);
-				
-
-			if(fPosX+pTab->mpTabLabel->GetSize().x < mvSize.x-(mfButtonSize*2+2))
-                mlLastVisibleTab = i;
-
-			fPosX += pTab->mpTabLabel->GetSize().x + mfTabSeparation;
+			pTab->SetLabelPosX(vItems[i].pos_x);
 		}
 
 		////////////////////////////////
 		// Update arrow buttons
-		mvArrowButtons[0]->SetEnabled(mlFirstVisibleTab>0);
-		mvArrowButtons[1]->SetEnabled(mlLastVisibleTab<(int)mvTabs.size()-1);
+		mvArrowButtons[0]->SetEnabled(arrows.left_enabled);
+		mvArrowButtons[1]->SetEnabled(arrows.right_enabled);
 
-		bool bArrowsShown = (mlLastVisibleTab-mlFirstVisibleTab<(int)mvTabs.size()-1);
-		mvArrowButtons[0]->SetVisible(bArrowsShown);
-		mvArrowButtons[1]->SetVisible(bArrowsShown);
+		mvArrowButtons[0]->SetVisible(arrows.shown);
+		mvArrowButtons[1]->SetVisible(arrows.shown);
 	}
 
 	//-------------------------------------------------------------------
@@ -679,7 +645,7 @@ namespace hpl
 		{
 			mvArrowButtons[i] = mpSet->CreateWidgetButton(0,0,_W(""),this);
 			mvArrowButtons[i]->SetImage(mvGfxArrows[i],false);
-			mvArrowButtons[i]->SetSize(mfButtonSize);
+			mvArrowButtons[i]->SetSize(mState.button_size);
 			mvArrowButtons[i]->AddCallback(eGuiMessage_ButtonPressed,this,kGuiCallback(ArrowButton_Pressed));	
 		}
 
@@ -692,7 +658,11 @@ namespace hpl
 	{
 		if(mvArrowButtons[0]==NULL || mvArrowButtons[1]==NULL) return;
 		for(int i = 0; i<2; ++i)
-			mvArrowButtons[i]->SetPosition(cVector3f(mvSize.x - (mfButtonSize+2)*(2-i), 0, mfForegroundZ+0.5f));
+		{
+			cVector3f vPos;
+			ohpl_w2_tab_arrow_pos(&mState, mvSize.x, i, mfForegroundZ, &vPos);
+			mvArrowButtons[i]->SetPosition(vPos);
+		}
 
 		for(int i=0; i<(int)mvTabs.size(); ++i)
 			mvTabs[i]->SetSize(mvSize);
@@ -706,16 +676,16 @@ namespace hpl
 	{
 		//////////////////////////////////////////////
 		// Attributes
-		mfButtonSize = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameButtonSize).x;
-		mfFirstTabOffset = mpSkin->GetAttribute(eGuiSkinAttribute_FirstTabOffset).x;
-		mfTabSeparation = mpSkin->GetAttribute(eGuiSkinAttribute_TabSeparation).x;
+		mState.button_size = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameButtonSize).x;
+		mState.first_tab_offset = mpSkin->GetAttribute(eGuiSkinAttribute_FirstTabOffset).x;
+		mState.tab_separation = mpSkin->GetAttribute(eGuiSkinAttribute_TabSeparation).x;
 
-		mfTabInactiveOffset = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameLabelInactiveOffset).x;
-		mfTabActiveOffset = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameLabelActiveOffset).x;
+		mState.inactive_offset = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameLabelInactiveOffset).x;
+		mState.active_offset = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameLabelActiveOffset).x;
 
-		mfIconPadding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameIconPadding).x;
-		mfTextLeftPadding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameTextRightPadding).x;
-		mfTextRightPadding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameTextLeftPadding).x;
+		mState.icon_padding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameIconPadding).x;
+		mState.text_left_padding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameTextRightPadding).x;
+		mState.text_right_padding = mpSkin->GetAttribute(eGuiSkinAttribute_TabFrameTextLeftPadding).x;
 
 		//////////////////////////////////////////////
 		// Tab scroll buttons gfx

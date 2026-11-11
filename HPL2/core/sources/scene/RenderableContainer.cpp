@@ -24,6 +24,10 @@
 #include "graphics/Renderable.h"
 #include "graphics/OcclusionQuery.h"
 #include "math/Math.h"
+#include "math/BoundingVolume.h"
+
+#include <cstring>
+#include <vector>
 
 namespace hpl {
 
@@ -35,32 +39,24 @@ namespace hpl {
 
 	cVisibleRCNodeTracker::cVisibleRCNodeTracker()
 	{
-		mlCurrentVisibleNodeSet =0;
-
-		mlFrameCounter =0;
+		mpTracker = ohpl_rn_tracker_new();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cVisibleRCNodeTracker::SwitchAndClearVisibleNodeSet()
 	{
-		mlCurrentVisibleNodeSet++;
-		if(mlCurrentVisibleNodeSet>=2) mlCurrentVisibleNodeSet=0;
-		
-		m_setVisibleNodes[mlCurrentVisibleNodeSet].clear();
+		ohpl_rn_tracker_switch(mpTracker);
 	}
 
 	void cVisibleRCNodeTracker::SetNodeVisible(iRenderableContainerNode *apNode)
 	{
-		m_setVisibleNodes[mlCurrentVisibleNodeSet].insert(apNode);
+		ohpl_rn_tracker_set_visible(mpTracker, (uintptr_t)apNode);
 	}
 
 	bool cVisibleRCNodeTracker::WasNodeVisible(iRenderableContainerNode *apNode)
 	{
-		int lPrevSet = mlCurrentVisibleNodeSet==0 ? 1 : 0;
-
-		tRenderableContainerNodeSetIt it  = m_setVisibleNodes[lPrevSet].find(apNode);
-		return it != m_setVisibleNodes[lPrevSet].end();
+		return ohpl_rn_tracker_was_visible(mpTracker, (uintptr_t)apNode);
 	}
 
 	//-----------------------------------------------------------------------
@@ -68,19 +64,16 @@ namespace hpl {
 	cVisibleRCNodeTracker::~cVisibleRCNodeTracker()
 	{
 		Reset();
+		ohpl_rn_tracker_free(mpTracker);
 	}
 
 	void cVisibleRCNodeTracker::Reset()
 	{
-		mlCurrentVisibleNodeSet =0;
-		mlFrameCounter =0;
+		std::vector<uintptr_t> vPending(ohpl_rn_tracker_pending(mpTracker, NULL, 0));
+		ohpl_rn_tracker_pending(mpTracker, vPending.empty() ? NULL : &vPending[0], vPending.size());
+		for(uintptr_t pQuery : vPending) hplDelete((iOcclusionQuery*)pQuery);
 
-		for(int i=0; i<2; i++) m_setVisibleNodes[i].clear();
-
-		for(auto &it : m_mapPendingQueries) hplDelete(it.second);
-		m_mapPendingQueries.clear();
-		m_mapOccludedFrame.clear();
-		mvQueryNodes.clear();
+		ohpl_rn_tracker_reset(mpTracker);
 	}
 
 	//-----------------------------------------------------------------------
@@ -98,33 +91,112 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
-	static void PushUpNeedPropertyUpdate(iRenderableContainerNode *apNode)
-	{
-		apNode->SetNeedPropertyUpdate(true);
-		
-		if(apNode->GetParent()) PushUpNeedPropertyUpdate(apNode->GetParent());
-	}
-
-	static inline void PushUpNeedPropertyUpdateFromObject(iRenderable *apObject)
-	{
-		iRenderableContainerNode *pNode = apObject->GetRenderContainerNode();
-		
-		if(pNode) PushUpNeedPropertyUpdate(pNode);
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cRenderableContainerObjectCallback::OnVisibleChange(iRenderable *apObject)
 	{
-		PushUpNeedPropertyUpdateFromObject(apObject);
+		ohpl_bt_object_properties_changed(OhplContainerHost(), NULL, (uintptr_t)apObject);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cRenderableContainerObjectCallback::OnRenderFlagsChange(iRenderable *apObject)
 	{
-		PushUpNeedPropertyUpdateFromObject(apObject);	
+		ohpl_bt_object_properties_changed(OhplContainerHost(), NULL, (uintptr_t)apObject);
+	}
+
+	//-----------------------------------------------------------------------
+
+	//////////////////////////////////////////////////////////////////////////
+	// HOST CALLBACKS
+	//////////////////////////////////////////////////////////////////////////
+
+	//-----------------------------------------------------------------------
+
+	static inline iRenderableContainerNode* HNode(uintptr_t alNode){ return (iRenderableContainerNode*)alNode;}
+	static inline iRenderable* HObj(uintptr_t alObj){ return (iRenderable*)alObj;}
+
+	static OhplRcNodeBase* HBase(void*, uintptr_t alNode){ return &HNode(alNode)->State();}
+
+	static size_t HChildCount(void*, uintptr_t alNode){ return HNode(alNode)->GetChildNodeList()->size();}
+
+	static size_t HChildren(void*, uintptr_t alNode, uintptr_t *apOut, size_t alCap)
+	{
+		size_t lCount =0;
+		for(iRenderableContainerNode *pChild : *HNode(alNode)->GetChildNodeList())
+		{
+			if(lCount < alCap) apOut[lCount] = (uintptr_t)pChild;
+			++lCount;
+		}
+		return lCount;
+	}
+
+	static size_t HObjectCount(void*, uintptr_t alNode){ return HNode(alNode)->GetObjectList()->size();}
+
+	static size_t HObjects(void*, uintptr_t alNode, uintptr_t *apOut, size_t alCap)
+	{
+		size_t lCount =0;
+		for(iRenderable *pObject : *HNode(alNode)->GetObjectList())
+		{
+			if(lCount < alCap) apOut[lCount] = (uintptr_t)pObject;
+			++lCount;
+		}
+		return lCount;
+	}
+
+	static void HPushObject(void*, uintptr_t alNode, uintptr_t alObj){ HNode(alNode)->GetObjectList()->push_back(HObj(alObj));}
+	static void HClearObjects(void*, uintptr_t alNode){ HNode(alNode)->GetObjectList()->clear();}
+	static void HRemoveFirstObject(void*, uintptr_t alNode, uintptr_t alObj){ STLFindAndRemove(*HNode(alNode)->GetObjectList(), HObj(alObj));}
+	static void HRemoveAllObjects(void*, uintptr_t alNode, uintptr_t alObj){ HNode(alNode)->GetObjectList()->remove(HObj(alObj));}
+
+	static void HDeleteChildren(void*, uintptr_t alNode){ STLDeleteAll(*HNode(alNode)->GetChildNodeList());}
+	static void HDeleteChild(void*, uintptr_t alParent, uintptr_t alChild){ STLFindAndDelete(*HNode(alParent)->GetChildNodeList(), HNode(alChild));}
+	static void HClearChildren(void*, uintptr_t alNode){ HNode(alNode)->GetChildNodeList()->clear();}
+	static void HPushChild(void*, uintptr_t alNode, uintptr_t alChild){ HNode(alNode)->GetChildNodeList()->push_back(HNode(alChild));}
+	static void HDeleteNode(void*, uintptr_t alNode){ hplDelete(HNode(alNode));}
+
+	static uintptr_t HObjectNode(void*, uintptr_t alObj){ return (uintptr_t)HObj(alObj)->GetRenderContainerNode();}
+	static void HSetObjectNode(void*, uintptr_t alObj, uintptr_t alNode){ HObj(alObj)->SetRenderContainerNode(HNode(alNode));}
+
+	static void HObjectBV(void*, uintptr_t alObj, OhplRcBv *apOut)
+	{
+		cBoundingVolume *pBV = HObj(alObj)->GetBoundingVolume();
+		apOut->mvMin = pBV->GetMin();
+		apOut->mvMax = pBV->GetMax();
+		apOut->mvCenter = pBV->GetWorldCenter();
+		apOut->mvPosition = pBV->GetPosition();
+		apOut->mfRadius = pBV->GetRadius();
+	}
+
+	static bool HObjectVisible(void*, uintptr_t alObj){ return HObj(alObj)->IsVisible();}
+	static uint32_t HObjectRenderFlags(void*, uintptr_t alObj){ return HObj(alObj)->GetRenderFlags();}
+
+	void OhplFillContainerHost(OhplRnHostVt &avVt)
+	{
+		avVt.base = HBase;
+		avVt.child_count = HChildCount;
+		avVt.children = HChildren;
+		avVt.object_count = HObjectCount;
+		avVt.objects = HObjects;
+		avVt.push_object = HPushObject;
+		avVt.clear_objects = HClearObjects;
+		avVt.remove_first_object = HRemoveFirstObject;
+		avVt.remove_all_objects = HRemoveAllObjects;
+		avVt.delete_children = HDeleteChildren;
+		avVt.delete_child = HDeleteChild;
+		avVt.clear_children = HClearChildren;
+		avVt.push_child = HPushChild;
+		avVt.delete_node = HDeleteNode;
+		avVt.object_node = HObjectNode;
+		avVt.set_object_node = HSetObjectNode;
+		avVt.object_bv = HObjectBV;
+		avVt.object_visible = HObjectVisible;
+		avVt.object_render_flags = HObjectRenderFlags;
+	}
+
+	const OhplRnHostVt* OhplContainerHost()
+	{
+		static const OhplRnHostVt vt = []{ OhplRnHostVt v; memset(&v, 0, sizeof(v)); OhplFillContainerHost(v); return v; }();
+		return &vt;
 	}
 
 	//-----------------------------------------------------------------------
@@ -132,56 +204,24 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// RENDERABLE CONTAINER NODE
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	iRenderableContainerNode::iRenderableContainerNode()
 	{
-		mvMin =0;
-		mvMax =0;
-		mfRadius =0;
-		mvCenter =0;
-
-		mbNeedPropertyUpdate = true;
-		mbNeedAABBUpdate = false;
-		mPrevFrustumCollision = eCollision_Outside;
+		ohpl_bt_node_base_init(&mS, false);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderableContainerNode::PushUpNeedAABBUpdate()
 	{
-		if(mbNeedAABBUpdate) return;
-
-		mbNeedAABBUpdate = true;
-
-		if(mpParent) mpParent->PushUpNeedAABBUpdate();
+		ohpl_bt_push_up_aabb_update(OhplContainerHost(), NULL, (uintptr_t)this);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderableContainerNode::CalculateMinMaxFromObjects()
 	{
-		cVector3f vNodeMin(100000.0f);
-		cVector3f vNodeMax(-100000.0f);
-		
-		tRenderableListIt it = mlstObjects.begin();
-		for(; it != mlstObjects.end(); ++it)
-		{
-			iRenderable *pObject = *it;
-
-			const cVector3f &vMin = pObject->GetBoundingVolume()->GetMin();
-			const cVector3f &vMax = pObject->GetBoundingVolume()->GetMax();
-
-			if(vNodeMin.x > vMin.x) vNodeMin.x = vMin.x;
-			if(vNodeMin.y > vMin.y) vNodeMin.y = vMin.y;
-			if(vNodeMin.z > vMin.z) vNodeMin.z = vMin.z;
-
-			if(vNodeMax.x < vMax.x) vNodeMax.x = vMax.x;
-			if(vNodeMax.y < vMax.y) vNodeMax.y = vMax.y;
-			if(vNodeMax.z < vMax.z) vNodeMax.z = vMax.z;
-		}
-
-		mvMin = vNodeMin;
-		mvMax = vNodeMax;
+		ohpl_bt_calculate_min_max(OhplContainerHost(), NULL, (uintptr_t)this);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -189,106 +229,14 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	
+
 	void iRenderableContainer::UpdateBeforeRendering()
 	{
-		iRenderableContainerNode *pRoot = GetRoot();
-
-		/////////////////////////
-		//Check if root or any children needs to update properties
-		if(pRoot->GetNeedPropertyUpdate())
-		{
-			CheckNeedPropertyUpdateIteration(pRoot);
-		}
-
-		/////////////////////////
-		//Check if root or any children needs to update AABB
-		if(pRoot->GetNeedAABBUpdate())
-		{
-			CheckNeedAABBUpdateIteration(pRoot);
-		}
+		ohpl_bt_update_before_rendering(OhplContainerHost(), NULL, (uintptr_t)GetRoot());
 
 		/////////////////////////
 		//Container specific Update
 		SpecificUpdateBeforeRendering();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderableContainer::CheckNeedPropertyUpdateIteration(iRenderableContainerNode* apNode)
-	{
-		//Reset node variables
-		apNode->mlRenderFlags = 0;
-		apNode->mbVisibleObjects = false;
-		apNode->mbNeedPropertyUpdate = false;
-
-		/////////////////////////////
-		// See if child nodes need update and update variables according to nodes too
-		if(apNode->HasChildNodes())
-		{
-			tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
-			for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
-			{
-				iRenderableContainerNode *pChildNode = *childIt;
-				
-				if(pChildNode->GetNeedPropertyUpdate()) CheckNeedPropertyUpdateIteration(pChildNode);
-				
-				//Update flags according to node.
-				if(pChildNode->HasVisibleObjects()) apNode->mbVisibleObjects = true;
-				apNode->mlRenderFlags |= pChildNode->GetRenderFlags();
-			}
-		}
-
-		/////////////////////////////
-		// Update variables according to objects if any
-		if(apNode->HasObjects())
-		{
-			tRenderableListIt it = apNode->GetObjectList()->begin();
-			for(; it != apNode->GetObjectList()->end(); ++it)
-			{
-				iRenderable *pObject = *it;
-
-				if(pObject->IsVisible() ) apNode->mbVisibleObjects = true;
-				apNode->mlRenderFlags |= pObject->GetRenderFlags();
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderableContainer::CheckNeedAABBUpdateIteration(iRenderableContainerNode* apNode)
-	{
-		apNode->mbNeedAABBUpdate = false;
-
-		if(apNode->HasObjects()) 
-		{
-			apNode->CalculateMinMaxFromObjects();		
-		}
-		else
-		{
-			apNode->mvMin = 100000;
-			apNode->mvMax = -100000;
-		}
-		
-		/////////////////////////////
-		// See if child nodes need update and update variables according to nodes too
-		if(apNode->HasChildNodes())
-		{
-			tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
-			for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
-			{
-				iRenderableContainerNode *pChildNode = *childIt;
-
-				if(pChildNode->GetNeedAABBUpdate()) CheckNeedAABBUpdateIteration(pChildNode);
-				
-				cMath::ExpandAABB(apNode->mvMin, apNode->mvMax, pChildNode->mvMin, pChildNode->mvMax);
-			}
-		}
-
-		//////////////////////////
-		// Calculate sphere size and pos
-		apNode->mvCenter = (apNode->mvMax + apNode->mvMin) *0.5f;
-		apNode->mfRadius = (apNode->mvMax - apNode->mvMin).Length()*0.5f;
 	}
 
 	//-----------------------------------------------------------------------

@@ -223,7 +223,6 @@ namespace hpl {
 		void SetupRenderVariables();
 
 		void RenderZ();
-		void RenderDynamicZTemp();
 		void RenderGbuffer();
 		void RenderSSAO();
 		void RenderHpl3SSAO();
@@ -235,20 +234,12 @@ namespace hpl {
 		void SetupLightsAndRenderQueries();
 		void InitLightRendering();
 		void RenderLights();
-		void RenderLights_StencilBack_ScreenQuad();
-		void RenderLights_StencilFront_RenderBack();
-		void RenderLights_RenderBack();
-		void RenderLights_Batches();
-		void RenderLights_Box_StencilFront_RenderBack();
-		void RenderLights_Box_RenderBack();
+		void RenderLightList(int alPass);
 		bool RenderLights_BoxWeighted();
 		void RenderLights_Directional();
-		void RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul);
         
 		void RenderIllumination();
 
-		void RenderReflection(iRenderable *apObject);
-		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
 		void RenderDecals();
 		void SetFogDepthTexture(bool abBind, int alUnit=0);
@@ -256,7 +247,6 @@ namespace hpl {
 		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
-		iGpuProgram* SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass);
 		void RenderTranslucent(int alDofPass=0);
 		void RenderEnvironmentParticles(bool abBehindFocus);
 		void UpdateLensFlares();
@@ -272,7 +262,6 @@ namespace hpl {
 
 		////////////////
 		//Draw helpers
-		void RenderBoxLight(cDeferredLight* apLightData);
 		
 		////////////////
 		//Misc Helpers
@@ -334,8 +323,6 @@ namespace hpl {
 		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
 		cShadowMapData *mpDirShadowData;
-		cMatrixf mvDirShadowMtxSlice[4];
-		float mfDirShadowDistance, mfDirShadowDepth0;
 		cFrustum mDirShadowFrustum[4];
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
@@ -376,7 +363,10 @@ namespace hpl {
 		iGpuProgram *mpDofFocusProgram;
 		iGpuProgram *mpDofBlurProgram;
 		iTexture *mpDofGaussTexture;
-		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true);
+		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true, cDeferredLight *apLight = NULL, const char *apLogName = NULL);
+		void FillLightState(OhplDlLightState &aState, cDeferredLight *apLightData, bool abViewProj);
+		void FillFogWorld(OhplDr4FogWorld &aWorld);
+		iVertexBuffer* GetLightShapeBuffer(int alShape);
 		void RunStep(int alStep, int alArg);
 		iGpuProgram* GetToneMapProgram(int alCombo);
 

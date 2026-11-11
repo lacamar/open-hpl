@@ -21,6 +21,7 @@
 #define HPL_WIDGET_SLIDER_H
 
 #include "gui/Widget.h"
+#include "gui/RustWidget2.h"
 
 namespace hpl {
 
@@ -36,22 +37,22 @@ namespace hpl {
 		cWidgetSlider(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetSliderOrientation aOrientation);
 		virtual ~cWidgetSlider();
 
-		int GetValue(){ return mlValue;}
+		int GetValue(){ return mSlider.value;}
 		void SetValue(int alValue, bool abGenCallback=true);
 		
-		int GetMaxValue(){ return mlMaxValue;}
+		int GetMaxValue(){ return mSlider.max_value;}
 		void SetMaxValue(int alMax);
 		
-		int GetButtonValueAdd(){ return mlButtonValueAdd; }
+		int GetButtonValueAdd(){ return mSlider.button_add; }
 		void SetButtonValueAdd(int alAdd);
 
-		int GetBarClickValueAdd() { return mlBarClickValueAdd; }
+		int GetBarClickValueAdd() { return mSlider.click_add; }
 		void SetBarClickValueAdd(int alAdd);
 
-		int GetBarValueSize(){ return mlBarValueSize;}
+		int GetBarValueSize(){ return mSlider.bar_value_size;}
 		void SetBarValueSize(int alSize);
 
-		float GetButtonSize() const{return mfButtonSize;}
+		float GetButtonSize() const{return mSlider.button_size;}
 
 	protected:
 		/////////////////////////
@@ -89,27 +90,7 @@ namespace hpl {
 
 		/////////////////////////
 		// Data
-		eWidgetSliderOrientation mOrientation;
-
-		bool mbPressed;
-
-		float mfButtonSize;
-
-		int mlValue;
-		int mlMaxValue;
-		int mlButtonValueAdd;
-		int mlBarClickValueAdd;
-		int mlBarValueSize; //This is how big the bar is compared to the max value of the slider
-		float mfValueStep;
-
-		cVector3f mvBarPos;
-		cVector2f mvBarSize;
-		float mfSliderSize;
-		cRect2f mBarRect;
-		float mfMaxPos;
-		float mfMinPos;
-
-		cVector2f mvRelMousePos;
+		OhplW2Slider mSlider;
 
 		cWidgetButton* mvButtons[2];
 

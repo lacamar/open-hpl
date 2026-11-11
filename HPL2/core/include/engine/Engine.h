@@ -22,6 +22,7 @@
 
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
+#include "engine/RustEngine.h"
 
 namespace hpl {
 
@@ -54,16 +55,13 @@ namespace hpl {
 	{
 	public:
 		cFPSCounter(iLowLevelSystem* apLowLevelSystem);
-		
+
 		void AddFrame();
-		
-		float mfFPS;
-		float mfUpdateRate;
+
+		OhplEnFps mFps;
+
 	private:
 		iLowLevelSystem* mpLowLevelSystem;
-		int mlFramecounter;
-		float mfFrametimestart;
-		float mfFrametime;
 	};
 
 	//---------------------------------------------------
@@ -72,21 +70,22 @@ namespace hpl {
 	{
 	public:
 		cSetupVarContainer();
+		~cSetupVarContainer();
+		cSetupVarContainer(const cSetupVarContainer&) = delete;
+		cSetupVarContainer& operator=(const cSetupVarContainer&) = delete;
 
 		void AddString(const tString& asName, const tString& asValue);
-		
 		void AddInt(const tString& asName, int alValue);
 		void AddFloat(const tString& asName, float afValue);
 		void AddBool(const tString& asName, bool abValue);
 
-		const tString& GetString(const tString& asName);
-
+		tString GetString(const tString& asName);
 		float GetFloat(const tString& asName, float afDefault);
 		int GetInt(const tString& asName,int alDefault);
 		bool GetBool(const tString& asName, bool abDefault);
+
 	private:
-		std::map<tString, tString>  m_mapVars; 
-		tString msBlank;
+		OhplEnSetupVars *mpVars;
 	};
 
 	//---------------------------------------------------
@@ -153,7 +152,7 @@ namespace hpl {
 
 		float GetFrameTime(){ return mfFrameTime;}
 
-		double GetGameTime(){ return mfGameTime;}
+		double GetGameTime(){ return mLoop.gameTime;}
 
 		void SetLimitFPS(bool abX){ mbLimitFPS = abX;}
 		bool GetLimitFPS(){ return mbLimitFPS;}
@@ -202,7 +201,7 @@ namespace hpl {
 
 		float mfFrameTime;
 
-		double mfGameTime;
+		OhplEnLoop mLoop;
 
 		iLowLevelEngineSetup *mpGameSetup;
 		cUpdater *mpUpdater;

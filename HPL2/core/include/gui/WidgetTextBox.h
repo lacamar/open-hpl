@@ -21,6 +21,7 @@
 #define HPL_WIDGET_TEXT_BOX_H
 
 #include "gui/Widget.h"
+#include "gui/RustWidget2.h"
 
 namespace hpl {
 
@@ -28,24 +29,27 @@ namespace hpl {
 	
 	class cWidgetButton;
 	class cGuiPopUpUIKeyboard;
+	struct OhplW2TbCtx;
+	struct OhplW2TbEvent;
 
 	class cWidgetTextBox : public iWidget
 	{
 		friend class cGuiPopUpUIKeyboard;
+		friend struct OhplW2TbCtx;
 	public:
 		cWidgetTextBox(cGuiSet *apSet, cGuiSkin *apSkin, eWidgetTextBoxInputType aType);
 		virtual ~cWidgetTextBox();
 
 		void SetDefaultFontSize(const cVector2f& avSize);
 
-		void SetCallbackOnLostFocus(bool abX) { mbCallbackOnLostFocus = abX; }
-		bool GetCallbackOnLostFocus() { return mbCallbackOnLostFocus; }
+		void SetCallbackOnLostFocus(bool abX) { mState.enter_on_lost_focus = abX; }
+		bool GetCallbackOnLostFocus() { return mState.enter_on_lost_focus; }
 
-		void SetForceCallBackOnEnter(bool abX) { mbForceCallBackOnEnter=abX; }
-		bool GetForceCallBackOnEnter() { return mbForceCallBackOnEnter; }
+		void SetForceCallBackOnEnter(bool abX) { mState.force_enter=abX; }
+		bool GetForceCallBackOnEnter() { return mState.force_enter; }
 		
 		void SetMaxTextLength(int alLength);
-		int GetMaxTextLength(){return mlMaxCharacters;}
+		int GetMaxTextLength(){return mState.max_chars;}
 
 		void SetSelectedText(int alStart=0, int alCount=-1);
 
@@ -54,22 +58,22 @@ namespace hpl {
 		void SetMaxTextSizeNeg(float afX);
 
 		void SetCanEdit(bool abX);
-		bool GetCanEdit(){return mbCanEdit;}
+		bool GetCanEdit(){return mState.can_edit;}
 
 		void SetShowButtons(bool abX) { mbShowButtons = abX; }
 
-		void SetNumericAdd(float afX) { mfNumericAdd = afX; }
-		float GetNumericAdd() { return mfNumericAdd; }
+		void SetNumericAdd(float afX) { mState.numeric_add = afX; }
+		float GetNumericAdd() { return mState.numeric_add; }
 
 		void SetNumericValue(float afX);
 		float GetNumericValue();
 
 		void SetLowerBound(bool abX, float afValue=0);
-		float GetLowerBound() { return mfLowerBound; }
+		float GetLowerBound() { return mState.lower; }
 		void SetUpperBound(bool abX, float afValue=0);
-		float GetUpperBound() { return mfUpperBound; }
+		float GetUpperBound() { return mState.upper; }
 
-		void SetDecimals(int alX) { mlDecimals = alX; }
+		void SetDecimals(int alX) { mState.decimals = alX; }
 		int GetDecimals();
 
 		static void SetDefaultDecimals(int alX) { mlDefaultDecimals = alX; }
@@ -88,9 +92,9 @@ namespace hpl {
 		*/
 		void SetLegalCharCodeMaxLimit(wchar_t alX);
 
-		bool GetLegalCharCodeLimitEnabled(){ return mbLegalCharCodeLimitEnabled;}
-		wchar_t GetLegalCharCodeMinLimit(){ return mlLegalCharCodeMinLimit;}
-		wchar_t GetLegalCharCodeMaxLimit(){ return mlLegalCharCodeMaxLimit;}
+		bool GetLegalCharCodeLimitEnabled(){ return mState.limit_enabled;}
+		wchar_t GetLegalCharCodeMinLimit(){ return mState.limit_min;}
+		wchar_t GetLegalCharCodeMaxLimit(){ return mState.limit_max;}
 		
 	protected:
 		/////////////////////////
@@ -102,14 +106,8 @@ namespace hpl {
 		bool ButtonPressed(iWidget* apWidget, const cGuiMessageData& aData);
 		kGuiCallbackDeclarationEnd(ButtonPressed);
 
-		int WorldToCharPos(const cVector2f &avWorldPos);
-		float CharToLocalPos(int alChar);
-		void SetMarkerPos(int alPos);
-		int GetLastCharInSize(int alStartPos, float afMaxSize, float afLengthAdd);
-		int GetFirstCharInSize(int alStartPos, float afMaxSize, float afLengthAdd);
-		bool WidgetConsiderSomeCharsIllegal();
-		bool IsIllegalChar(wchar_t alChar);
-		void SetTextUpdated();
+		void SetupCall(OhplW2TbCtx& aCtx, OhplW2TextCall& aCall);
+		bool ApplyEvents(OhplW2TbCtx& aCtx, const cGuiMessageData& aData);
 
 		/////////////////////////
 		// Implemented functions
@@ -146,42 +144,14 @@ namespace hpl {
 		/////////////////////////
 		// Data
 		iWidget* mpPrevAttention;
-		bool mbPressed;
-		int mlMarkerCharPos;
-		int mlSelectedTextEnd;
-		int mlFirstVisibleChar;
-		int mlVisibleCharSize;
-		float mfTextMaxSize;
-
-		int mlMaxCharacters;
-
-		float mfMaxTextSizeNeg;
-
-		bool mbCanEdit;
+		OhplW2Text mState;
 
 		eWidgetTextBoxInputType mInputType;
 		bool mbShowButtons;
-		float mfNumericAdd;
-		float mfNumericValue;
-		bool mbNumericValueUpdated;
 
-		bool mbHasLowerBound;
-		float mfLowerBound;
-
-		bool mbHasUpperBound;
-		float mfUpperBound;
-
-		int mlDecimals;
 		static int mlDefaultDecimals;
 
 		tWString msIllegalChars;
-		bool mbLegalCharCodeLimitEnabled;
-		wchar_t mlLegalCharCodeMaxLimit;
-		wchar_t mlLegalCharCodeMinLimit;
-
-		bool mbChangedSinceLastEnter;
-		bool mbForceCallBackOnEnter;
-		bool mbCallbackOnLostFocus;
 
 		cWidgetButton *mvButtons[2];
 		
@@ -193,9 +163,10 @@ namespace hpl {
 		cGuiGfxElement *mvGfxBorders[4];
 		cGuiGfxElement *mvGfxCorners[4];
 
-		bool mbGotFocusRecently;
-
 		bool mbUIKeyboardOpen;
+
+		bool mbReplaying;
+		const OhplW2TbEvent* mpReplayEvent;
 	};
 
 };

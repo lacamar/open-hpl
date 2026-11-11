@@ -20,10 +20,12 @@
 #ifndef HPL_SAVE_GAME_H
 #define HPL_SAVE_GAME_H
 
+#include <deque>
 #include <map>
 
 #include "system/SystemTypes.h"
 #include "system/SerializeClass.h"
+#include "engine/RustEngine.h"
 
 class TiXmlElement;
 
@@ -174,10 +176,37 @@ namespace hpl {
 
 	//---------------------------------------------------------
 
-	typedef std::multimap<int, iSaveObject*> tSaveObjectMap;
-	typedef tSaveObjectMap::iterator tSaveObjectMapIt;
+	// Walks a Rust registry in key order, then insertion order.
+	template<class T>
+	class cSaveRegistryIterator : public iContainerIterator
+	{
+	public:
+		cSaveRegistryIterator(OhplEnRegistry *apReg) : mpReg(apReg)
+		{
+			mCursor.key = 0; mCursor.seq = 0; mCursor.started = false;
+		}
 
-	typedef cSTLMapIterator<iSaveObject*,tSaveObjectMap,tSaveObjectMapIt> cSaveObjectIterator;
+		bool HasNext() { return ohpl_en_reg_has_next(mpReg, &mCursor); }
+
+		void* NextPtr()
+		{
+			size_t lObj = ohpl_en_reg_next(mpReg, &mCursor);
+			if(lObj == 0) return NULL;
+			mvStore.push_back(reinterpret_cast<T>(lObj));
+			return &mvStore.back();
+		}
+
+		T Next() { return reinterpret_cast<T>(ohpl_en_reg_next(mpReg, &mCursor)); }
+
+		T PeekNext() { return reinterpret_cast<T>(ohpl_en_reg_peek(mpReg, &mCursor)); }
+
+	private:
+		OhplEnRegistry *mpReg;
+		OhplEnCursor mCursor;
+		std::deque<T> mvStore;
+	};
+
+	typedef cSaveRegistryIterator<iSaveObject*> cSaveObjectIterator;
 
 	/**
 	* This store all the SaveObjects created at load time.
@@ -187,6 +216,8 @@ namespace hpl {
 	public:
 		cSaveObjectHandler();
 		~cSaveObjectHandler();
+		cSaveObjectHandler(const cSaveObjectHandler&) = delete;
+		cSaveObjectHandler& operator=(const cSaveObjectHandler&) = delete;
 
 	public:
 		void Add(iSaveObject *pObject);
@@ -202,15 +233,12 @@ namespace hpl {
 
 	private:
 
-		tSaveObjectMap m_mapSaveObjects;
+		OhplEnRegistry *mpReg;
 	};
 
 	//---------------------------------------------------------
 
-	typedef std::multimap<int, iSaveData*> tSaveDataMap;
-	typedef tSaveDataMap::iterator tSaveDataMapIt;
-
-	typedef cSTLMapIterator<iSaveData*,tSaveDataMap,tSaveDataMapIt> cSaveDataIterator;
+	typedef cSaveRegistryIterator<iSaveData*> cSaveDataIterator;
 
 	/**
 	* Used to keep track of save data.
@@ -220,6 +248,8 @@ namespace hpl {
 	public:
 		cSaveDataHandler();
 		~cSaveDataHandler();
+		cSaveDataHandler(const cSaveDataHandler&) = delete;
+		cSaveDataHandler& operator=(const cSaveDataHandler&) = delete;
 
 		void Add(iSaveData *pData);
 
@@ -234,7 +264,7 @@ namespace hpl {
 
 		iContainerIterator* CreateIteratorPtr();
 
-		tSaveDataMap m_mapSaveData;
+		OhplEnRegistry *mpReg;
 	};
 
 	//---------------------------------------------------------

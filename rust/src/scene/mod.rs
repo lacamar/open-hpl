@@ -10,6 +10,10 @@ use std::mem::take;
 mod animstate;
 mod beam;
 mod billboard;
+pub mod boxtree_dyn;
+pub(crate) mod boxtree_dyn_ffi;
+#[cfg(test)]
+pub(crate) mod boxtree_dyn_tests;
 mod camera;
 mod ffi;
 mod ffi_light;

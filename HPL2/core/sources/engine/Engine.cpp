@@ -57,6 +57,12 @@
 #include <chrono>
 #include <cstdlib>
 
+static_assert(hpl::eVariableType_LastEnum == 8, "ohpl_en variable types");
+static_assert(hpl::eUpdateableMessage_AppGotInputFocus == 11 && hpl::eUpdateableMessage_AppGotMouseFocus == 12 &&
+			  hpl::eUpdateableMessage_AppGotVisibility == 13 && hpl::eUpdateableMessage_AppLostInputFocus == 14 &&
+			  hpl::eUpdateableMessage_AppLostMouseFocus == 15 && hpl::eUpdateableMessage_AppLostVisibility == 16,
+			  "ohpl_en focus messages");
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -65,100 +71,72 @@ namespace hpl {
 
 	cFPSCounter::cFPSCounter(iLowLevelSystem* apLowLevelSystem)
 	{
-		mfFPS = 60;
-
-		mlFramecounter=0;
-		mfFrametimestart=0;
-		mfFrametime=0;
-	
-		mfUpdateRate = 1;
-
 		mpLowLevelSystem = apLowLevelSystem;
-
-		mfFrametimestart = ((float)cPlatform::GetApplicationTime()) / 1000.0f; 
+		ohpl_en_fps_init(&mFps, cPlatform::GetApplicationTime());
 	}
-	
+
 	void cFPSCounter::AddFrame()
 	{
-		mlFramecounter++;
-
-		mfFrametime = (((float)cPlatform::GetApplicationTime()) / 1000.0f) - mfFrametimestart;
-		
-		// update the timer
-		if (mfFrametime >= mfUpdateRate)
-		{
-			mfFPS = ((float)mlFramecounter)/mfFrametime;
-			mlFramecounter = 0;
-			mfFrametimestart = ((float)cPlatform::GetApplicationTime()) / 1000.0f; 
-		}
+		ohpl_en_fps_add_frame(&mFps, cPlatform::GetApplicationTime());
 	}
-	
+
 	//////////////////////////////////////////////////////////////////////////
 	// SETUP VAR CONTAINER
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
 	cSetupVarContainer::cSetupVarContainer()
 	{
-		msBlank = "";
+		mpVars = ohpl_en_vars_new();
+	}
+
+	cSetupVarContainer::~cSetupVarContainer()
+	{
+		ohpl_en_vars_free(mpVars);
 	}
 
 	//-----------------------------------------------------------------------
 
-
 	void cSetupVarContainer::AddString(const tString& asName, const tString& asValue)
 	{
-		std::map<tString, tString>::value_type val(asName,asValue);
-		m_mapVars.insert(val);
+		ohpl_en_vars_add_string(mpVars, OhplEnP(asName), asName.size(), OhplEnP(asValue), asValue.size());
 	}
 
 	void cSetupVarContainer::AddInt(const tString& asName, int alValue)
 	{
-		AddString(asName, cString::ToString(alValue));
+		ohpl_en_vars_add_int(mpVars, OhplEnP(asName), asName.size(), alValue);
 	}
 	void cSetupVarContainer::AddFloat(const tString& asName, float afValue)
 	{
-		AddString(asName, cString::ToString(afValue));
+		ohpl_en_vars_add_float(mpVars, OhplEnP(asName), asName.size(), afValue);
 	}
 	void cSetupVarContainer::AddBool(const tString& asName, bool abValue)
 	{
-		AddString(asName, abValue ? "true" : "false");
+		ohpl_en_vars_add_bool(mpVars, OhplEnP(asName), asName.size(), abValue);
 	}
 
 	//-----------------------------------------------------------------------
 
 
-	const tString& cSetupVarContainer::GetString(const tString& asName)
+	tString cSetupVarContainer::GetString(const tString& asName)
 	{
-		std::map<tString, tString>::iterator it = m_mapVars.find(asName);
-		if(it == m_mapVars.end()) return msBlank;
-		else return it->second;
+		tString sVal;
+		ohpl_en_vars_get_string(mpVars, OhplEnP(asName), asName.size(), OhplEnAssign, &sVal);
+		return sVal;
 	}
 
 	float cSetupVarContainer::GetFloat(const tString& asName, float afDefault)
 	{
-		const tString& sVal = GetString(asName);
-		if(sVal == "") 
-			return afDefault;
-		else 
-			return cString::ToFloat(sVal.c_str(),afDefault);
+		return ohpl_en_vars_get_float(mpVars, OhplEnP(asName), asName.size(), afDefault);
 	}
 	int cSetupVarContainer::GetInt(const tString& asName, int alDefault)
 	{
-		const tString& sVal = GetString(asName);
-		if(sVal == "") 
-			return alDefault;
-		else 
-			return cString::ToInt(sVal.c_str(),alDefault);
+		return ohpl_en_vars_get_int(mpVars, OhplEnP(asName), asName.size(), alDefault);
 	}
 	bool cSetupVarContainer::GetBool(const tString& asName, bool abDefault)
 	{
-		const tString& sVal = GetString(asName);
-		if(sVal == "") 
-			return abDefault;
-		else 
-			return cString::ToBool(sVal.c_str(),abDefault);
+		return ohpl_en_vars_get_bool(mpVars, OhplEnP(asName), asName.size(), abDefault);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -202,7 +180,7 @@ namespace hpl {
 	void cEngine::SetDevHudActive(bool abX)
 	{
 		const char *pEnv = getenv("OPENHPL_DEV_HUD");
-		mbDevHudActive = abX || (pEnv && pEnv[0] == '1');
+		mbDevHudActive = ohpl_en_dev_hud_active(abX, pEnv && pEnv[0] ? (unsigned char)pEnv[0] : -1);
 	}
 
 	//-----------------------------------------------------------------------
@@ -230,14 +208,8 @@ namespace hpl {
 		mbApplicationIsVisible = false;
 
 		mvEngineTypeStrings.resize(eVariableType_LastEnum);
-		mvEngineTypeStrings[eVariableType_Int] =	"Int";
-		mvEngineTypeStrings[eVariableType_Float] =	"Float";
-		mvEngineTypeStrings[eVariableType_Vec2] =	"Vector2";
-		mvEngineTypeStrings[eVariableType_Vec3] =	"Vector3";
-		mvEngineTypeStrings[eVariableType_Color] =	"Color";
-		mvEngineTypeStrings[eVariableType_String] =	"String";
-		mvEngineTypeStrings[eVariableType_Enum] =	"Enum";
-		mvEngineTypeStrings[eVariableType_Bool] =	"Bool";
+		for(int i=0; i<(int)eVariableType_LastEnum; ++i)
+			ohpl_en_engine_type_name(i, OhplEnAssign, &mvEngineTypeStrings[i]);
 	}
 
 
@@ -373,7 +345,7 @@ namespace hpl {
 
 		mbRenderOnce = false;
 
-		mfGameTime =0;
+		ohpl_en_loop_init(&mLoop);
 
 		mbLimitFPS = true;
 
@@ -428,37 +400,27 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	int glClearUpdateCheck=0;
 	void cEngine::Run()
 	{
 		//Log line that ends user init.
 		Log("--------------------------------------------------------\n\n");
-		
-		double fNumOfTimes=0;
-		double fMediumTime=0;
 
 		mpUpdater->BroadcastMessageToAll(eUpdateableMessage_OnStart);
-		
+
 		mpLogicTimer->Reset();
 
 		//Loop the game... fix the var...
 		unsigned long lTempTime = cPlatform::GetApplicationTime();
-		
+
 		Log("Game Running\n");
 		Log("--------------------------------------------------------\n");
 
 		mfFrameTime = 0;
 		mpFrameTimer->Start();
-		
-		bool bIsUpdated = true;
-		bool bBufferSwap = false;
-		bool bSwappedOnce = false;
+
+		ohpl_en_loop_begin_run(&mLoop);
 		typedef std::chrono::steady_clock tClock;
 		auto MsSince = [](tClock::time_point t) { return std::chrono::duration<double, std::milli>(tClock::now() - t).count(); };
-		double fLogicMs = 0, fSwapMs = 0;
-		int lSteps = 0;
-		
-		//cMemoryManager::SetLogCreation(true);
 
 		while(!GetGameIsDone())
 		{
@@ -473,7 +435,7 @@ namespace hpl {
 				cPlatform::Sleep(10);
 				mpInput->Update(1.0f/100.0f);
 				if(mpHeadlessControl) mpHeadlessControl->LogicStep();
-				bIsUpdated = true;
+				ohpl_en_loop_pause_tick(&mLoop);
 
 				mpUpdater->RunMessage(eUpdateableMessage_OnPauseUpdate, 1.0f/100.0f);
 			}
@@ -484,14 +446,14 @@ namespace hpl {
 				tClock::time_point tLogic = tClock::now();
 				while(mpLogicTimer->WantUpdate() && !GetGameIsDone())
 				{
-					++lSteps;
+					ohpl_en_loop_step_begin(&mLoop);
 					/////////////////////////////////////////////
 					// Run Update callback in updater
 					mpUpdater->RunMessage(eUpdateableMessage_PreUpdate, GetStepSize());
 					mpUpdater->RunMessage(eUpdateableMessage_Update, GetStepSize());
 					mpUpdater->RunMessage(eUpdateableMessage_PostUpdate, GetStepSize());
 					if(mpHeadlessControl) mpHeadlessControl->LogicStep();
-					bIsUpdated = true;
+					ohpl_en_loop_step_end(&mLoop);
 
                     if (mpInput->isQuitMessagePosted()) {
 
@@ -512,59 +474,48 @@ namespace hpl {
 					// If log update is active, clear it regularly.
 					if(GetUpdateLogActive())
 					{
-						glClearUpdateCheck++;
-						if(glClearUpdateCheck % 20 == 0)
+						if(ohpl_en_loop_update_log_tick(&mLoop))
 						{
 							if(mpUpdater->GetCurrentContainerName() == "Default") ClearUpdateLogFile();
 						}
 					}
-				
+
 					//Increase game time.
-					mfGameTime += GetStepSize();
+					ohpl_en_loop_advance_game_time(&mLoop, GetStepSize());
 				}
 				mpLogicTimer->EndUpdateLoop();
-				fLogicMs += MsSince(tLogic);
+				ohpl_en_loop_add_logic_ms(&mLoop, MsSince(tLogic));
 			}
 
 			if(mpHeadlessControl) mpHeadlessControl->Update();
 
-			//if(GetGameIsDone()) Log("1\n");
-
             ////////////////////////////////////
 			// If rendering once, make a check and if already drawn screen, just continue
-			if(mbRenderOnce && bSwappedOnce)
+			if(ohpl_en_loop_skip_render_once(&mLoop, mbRenderOnce))
 			{
 				continue;
 			}
 
-			//if(GetGameIsDone()) Log("2\n");
-
 			////////////////////////////////////////////////
 			//Swap buffers and call callback, do this after update, so hardware can work during update
-			if(bBufferSwap)
+			if(ohpl_en_loop_take_swap(&mLoop))
 			{
-				bBufferSwap = false;
 				START_TIMING(WaitAndFinishRendering)
-				//mpGraphics->GetLowLevel()->WaitAndFinishRendering();
 				STOP_TIMING(WaitAndFinishRendering)
 
 				START_TIMING(SwapBuffers)
 				tClock::time_point tSwap = tClock::now();
 				mpGraphics->GetLowLevel()->SwapBuffers();
-				fSwapMs += MsSince(tSwap);
+				ohpl_en_loop_add_swap_ms(&mLoop, MsSince(tSwap));
 				STOP_TIMING(SwapBuffers)
-				
-				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
-				mpUpdater->RunMessage(eUpdateableMessage_OnPostBufferSwap);
-				bSwappedOnce =true;
-				if(mbRenderOnce) continue;
-			}
 
-			//if(GetGameIsDone()) Log("3\n");
+				mpUpdater->RunMessage(eUpdateableMessage_OnPostBufferSwap);
+				if(ohpl_en_loop_swap_done(&mLoop, mbRenderOnce)) continue;
+			}
 
 			////////////////////////////////////
 			// Render frame
-			if(mbLimitFPS==false || bIsUpdated)
+			if(ohpl_en_loop_want_render(&mLoop, mbLimitFPS))
 			{
 				///////////////////////////////////////
            		//Get the the from the last frame.
@@ -575,7 +526,7 @@ namespace hpl {
 				START_TIMING(OnDraw)
 				mpUpdater->RunMessage(eUpdateableMessage_OnDraw, mfFrameTime);
 				STOP_TIMING(OnDraw)
-				
+
 				//Render this frame
 				START_TIMING(RenderAll)
 				mpScene->Render(mfFrameTime, tSceneRenderFlag_All);
@@ -592,38 +543,32 @@ namespace hpl {
 				STOP_TIMING(FlushRender)
 
 				cEngineDiagnostics::EndFrame();
-				cEngineDiagnostics::AddFrameTiming(fLogicMs, lSteps, MsSince(tRender), fSwapMs);
-				fLogicMs = fSwapMs = 0;
-				lSteps = 0;
-				
+				OhplEnFrameTiming Timing;
+				ohpl_en_loop_frame_rendered(&mLoop, &Timing);
+				cEngineDiagnostics::AddFrameTiming(Timing.logicMs, Timing.steps, MsSince(tRender), Timing.swapMs);
+
 				//Update fps counter.
 				mpFPSCounter->AddFrame();
-	           	
-				fNumOfTimes++;
-				bIsUpdated = false;
-				bBufferSwap = true;
 			}
 			else
 			{
 				cPlatform::Sleep(1);
 			}
-
-			//if(GetGameIsDone()) Log("4\n");
 		}
 		Log("--------------------------------------------------------\n\n");
-	
+
 		Log("Statistics\n");
 		Log("--------------------------------------------------------\n");
 
 		unsigned long lTime = cPlatform::GetApplicationTime() - lTempTime;
-		fMediumTime = fNumOfTimes/(((double)lTime)/1000);
-		
+		double fMediumTime = ohpl_en_loop_mean_framerate(&mLoop, lTime);
+
 		Log(" Medium framerate: %f\n", fMediumTime);
 		Log("--------------------------------------------------------\n\n");
 
 		Log("User Exit\n");
 		Log("--------------------------------------------------------\n");
-		
+
 		mpUpdater->BroadcastMessageToAll(eUpdateableMessage_OnExit);
 	}
 	//-----------------------------------------------------------------------
@@ -674,7 +619,7 @@ namespace hpl {
 	
 	float cEngine::GetFPS()
 	{
-		return mpFPSCounter->mfFPS;
+		return mpFPSCounter->mFps.fps;
 	}
 
 	//-----------------------------------------------------------------------
@@ -688,18 +633,18 @@ namespace hpl {
 
 	float cEngine::GetAvgFrameTimeInMS()
 	{
-		return (1.0f/mpFPSCounter->mfFPS)*1000.0f;
+		return ohpl_en_fps_avg_frame_ms(&mpFPSCounter->mFps);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cEngine::SetFPSUpdateRate(float afSec)
 	{
-		mpFPSCounter->mfUpdateRate = afSec;
+		mpFPSCounter->mFps.updateRate = afSec;
 	}
 	float cEngine::GetFPSUpdateRate()
 	{
-		return mpFPSCounter->mfUpdateRate;
+		return mpFPSCounter->mFps.updateRate;
 	}
 
 	//-----------------------------------------------------------------------
@@ -782,13 +727,7 @@ namespace hpl {
 
 	eVariableType cEngine::GetEngineTypeFromString(const tString& asType)
 	{
-		for(int i=0;i<(int)mvEngineTypeStrings.size();++i)
-		{
-			if(asType==mvEngineTypeStrings[i])
-				return (eVariableType)i;
-		}
-
-		return eVariableType_LastEnum;
+		return (eVariableType)ohpl_en_engine_type_from_string(OhplEnP(asType), asType.size());
 	}
 
 	eVariableType cEngine::GetEngineTypeFromStringW(const tWString& asType)
@@ -835,7 +774,7 @@ namespace hpl {
 	void cEngine::UpdateFrameTimer()
 	{
 		mpFrameTimer->Stop();
-		mfFrameTime = (float) mpFrameTimer->GetTimeInSec();
+		mfFrameTime = ohpl_en_frame_time(mpFrameTimer->GetTimeInSec());
 
 		/*mlstFrameTimes.push_back(mpFrameTimer->GetTimeInMilliSec());
 		if((int)mlstFrameTimes.size() >= mlMaxFrameTimes)
@@ -858,23 +797,17 @@ namespace hpl {
 	{
 		// Hidden headless window: focus comes from the control socket only
 		if(mpHeadlessControl) return;
-		bool bHadInputFocus = mbApplicationHasInputFocus;
-		bool bHadMouseFocus = mbApplicationHasMouseFocus;
-		bool bHadVisibility = mbApplicationIsVisible;
+		uint32_t lHad = (mbApplicationHasInputFocus ? 1 : 0) | (mbApplicationHasMouseFocus ? 2 : 0) | (mbApplicationIsVisible ? 4 : 0);
 
         iLowLevelGraphics *pllGfx = mpGraphics->GetLowLevel();
 		mbApplicationHasInputFocus = pllGfx->GetWindowInputFocus();
 		mbApplicationHasMouseFocus = pllGfx->GetWindowMouseFocus();
 		mbApplicationIsVisible = pllGfx->GetWindowIsVisible();
+		uint32_t lNow = (mbApplicationHasInputFocus ? 1 : 0) | (mbApplicationHasMouseFocus ? 2 : 0) | (mbApplicationIsVisible ? 4 : 0);
 
-		if(bHadInputFocus && !mbApplicationHasInputFocus) mpUpdater->RunMessage(eUpdateableMessage_AppLostInputFocus);
-		if(!bHadInputFocus && mbApplicationHasInputFocus) mpUpdater->RunMessage(eUpdateableMessage_AppGotInputFocus);
-
-		if(bHadMouseFocus && !mbApplicationHasMouseFocus) mpUpdater->RunMessage(eUpdateableMessage_AppLostMouseFocus);
-		if(!bHadMouseFocus && mbApplicationHasMouseFocus) mpUpdater->RunMessage(eUpdateableMessage_AppGotMouseFocus);
-
-		if(bHadVisibility && !mbApplicationIsVisible) mpUpdater->RunMessage(eUpdateableMessage_AppLostVisibility);
-		if(!bHadVisibility && mbApplicationIsVisible) mpUpdater->RunMessage(eUpdateableMessage_AppGotVisibility);
+		int vMessages[8];
+		size_t lCount = ohpl_en_focus_messages(lHad, lNow, vMessages);
+		for(size_t i = 0; i < lCount; ++i) mpUpdater->RunMessage((eUpdateableMessage)vMessages[i]);
 	}
 
 	//-----------------------------------------------------------------------

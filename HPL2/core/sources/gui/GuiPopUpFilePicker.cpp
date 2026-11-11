@@ -41,6 +41,8 @@
 #include "gui/WidgetButton.h"
 #include "gui/WidgetComboBox.h"
 
+#include "gui/RustWidget3.h"
+
 namespace hpl {
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -63,12 +65,11 @@ namespace hpl {
 		mpCallbackObject = apCallbackObject;
 		mpCallback = apCallback;
 
-		msStartFilename = cString::GetFileNameW(asStartFilename);
-		if(msStartFilename.empty())
-			msStartFilename = cString::GetFileNameW(asStartPath);
-
-		if(msStartFilename==asStartPath)
-			msStartFilename.clear();
+		size_t lMaxLen = asStartFilename.size() > asStartPath.size() ? asStartFilename.size() : asStartPath.size();
+		msStartFilename.assign(lMaxLen, _W('\0'));
+		msStartFilename.resize(ohpl_w3_fp_start_filename(asStartFilename.data(), asStartFilename.size(),
+														 asStartPath.data(), asStartPath.size(),
+														 lMaxLen ? &msStartFilename[0] : NULL, lMaxLen));
 
 		mpSaveFileDest = NULL;
 		mpLoadFileListDest = NULL;
@@ -128,10 +129,10 @@ namespace hpl {
 		else if(apWidget == mvButtons[1] ||
 				apWidget == mpCurrentFileName)
 		{
-			if(mpCurrentFileName->GetText() == _W(""))
-				mpSet->CreatePopUpMessageBox(	_W("Error"), 
-												_W("File name must not be empty"), 
-												_W("OK"), 
+			if(ohpl_w3_fp_accept(mPickerType, mpCurrentFileName->GetText() == _W(""), false)==kOhplW3FpErrorEmpty)
+				mpSet->CreatePopUpMessageBox(	_W("Error"),
+												_W("File name must not be empty"),
+												_W("OK"),
 												_W(""),
 												NULL,NULL);
 			else
@@ -139,46 +140,46 @@ namespace hpl {
 				tWString sFilenameFullPath = GetCurrentFullPath() + mpCurrentFileName->GetText();
 				bool bFileExists = cPlatform::FileExists(sFilenameFullPath);
 
-				switch(mPickerType)
+				if(mPickerType==eFilePickerType_Save)
 				{
-				case eFilePickerType_Save:
-
-					if(cString::GetFileExtW(sFilenameFullPath)!=cString::SubW(mvCategories[0]->mvFilters[0],2))
+					bool bHasFilter = mvCategories.empty()==false && mvCategories[0]->mvFilters.empty()==false;
+					tWString sFilter = bHasFilter ? mvCategories[0]->mvFilters[0] : tWString();
+					bool bAppend;
+					size_t lExtLen = ohpl_w3_fp_save_extension(sFilenameFullPath.data(), sFilenameFullPath.size(), bHasFilter,
+															   sFilter.data(), sFilter.size(), NULL, 0, &bAppend);
+					if(bAppend)
 					{
-						tWString sExt = cString::SubW(mvCategories[0]->mvFilters[0],1);
+						tWString sExt(lExtLen, _W('\0'));
+						if(lExtLen) ohpl_w3_fp_save_extension(sFilenameFullPath.data(), sFilenameFullPath.size(), bHasFilter,
+															  sFilter.data(), sFilter.size(), &sExt[0], lExtLen, &bAppend);
 						mpCurrentFileName->SetText(mpCurrentFileName->GetText() + sExt);
 						sFilenameFullPath += sExt;
 
 						bFileExists = bFileExists || cPlatform::FileExists(sFilenameFullPath);
 					}
-					
-					if(bFileExists)
-					{
-						mpSet->CreatePopUpMessageBox(	_W("Warning"), 
-														_W("File already exists. Overwrite?"),
-														_W("Yes"), _W("No"), 
-														this, kGuiCallback(MessageBoxReturnCallback));
-					}
-					else
-					{
-						BuildSaveFileName();
-						ClosePopUp(true);
-					}
+				}
 
+				switch(ohpl_w3_fp_accept(mPickerType, false, bFileExists))
+				{
+				case kOhplW3FpSaveConfirm:
+					mpSet->CreatePopUpMessageBox(	_W("Warning"),
+													_W("File already exists. Overwrite?"),
+													_W("Yes"), _W("No"),
+													this, kGuiCallback(MessageBoxReturnCallback));
 					break;
-				case eFilePickerType_Load:
-					if(bFileExists==false)
-					{
-						mpSet->CreatePopUpMessageBox(	_W("Error"), 
-														_W("File does not exist. Please choose a valid file."), 
-														_W("OK"), _W(""), 
-														NULL, NULL);
-					}
-					else
-					{
-						BuildLoadFileList();
-						ClosePopUp(true);
-					}
+				case kOhplW3FpSaveDone:
+					BuildSaveFileName();
+					ClosePopUp(true);
+					break;
+				case kOhplW3FpLoadMissing:
+					mpSet->CreatePopUpMessageBox(	_W("Error"),
+													_W("File does not exist. Please choose a valid file."),
+													_W("OK"), _W(""),
+													NULL, NULL);
+					break;
+				case kOhplW3FpLoadDone:
+					BuildLoadFileList();
+					ClosePopUp(true);
 					break;
 				default:
 					break;
@@ -201,17 +202,10 @@ namespace hpl {
 	{
 		/////////////////////////
 		// If button pressed is 0 (Yes)
-		if(aData.mlVal == 0)
+		if(ohpl_w3_fp_overwrite_confirmed(mPickerType, aData.mlVal))
 		{
-			switch(mPickerType)
-			{
-			case eFilePickerType_Load:
-				break;
-			case eFilePickerType_Save:
-				BuildSaveFileName();
-				ClosePopUp(true);
-				break;
-			}
+			BuildSaveFileName();
+			ClosePopUp(true);
 		}
 		return true;
 	}
@@ -229,16 +223,17 @@ namespace hpl {
 		
 		////////////////////////////////////////
         // If the selection is a system item (e.g. begins with "<") handle it differently
-        if(lSelection < (lNumItems - mvCurrentDirFullPath.size())) {
+		OhplW3DirSelect sel = ohpl_w3_fp_dir_select(lSelection, lNumItems, mvCurrentDirFullPath.size());
+        if(sel.action==kOhplW3DirClear) {
             mvCurrentDirFullPath.clear();
             NavigateTo(pBox->GetItemText(lSelection));
         }
         // If selection is not last item, remove items from selection onwards, then navigate to selection
-        else if(lSelection != lNumItems-1)
+        else if(sel.action==kOhplW3DirPop)
 		{
 			sDir = pBox->GetItemText(lSelection);
 
-			for(int i=lNumItems; i>lSelection; --i)
+			for(size_t i=0; i<sel.pops; ++i)
 			{
 				mvCurrentDirFullPath.pop_back();
 			}
@@ -256,7 +251,9 @@ namespace hpl {
 	{
 		/////////////////////////////////////
 		// Get path item which got the double click
-		tWString sPath = mpFileList->GetItem(mpFileList->GetSelectedItem())->GetProperty(1)->GetText();
+		cWidgetItem* pItem = (cWidgetItem*)mpFileList->GetItem(mpFileList->GetSelectedItem());
+		if(pItem==NULL || pItem->GetProperty(1)==NULL) return true;
+		tWString sPath = pItem->GetProperty(1)->GetText();
 
 		// Try to navigate to path (if folder)
 		if(NavigateTo(sPath)==false)
@@ -347,16 +344,18 @@ namespace hpl {
 		{
 			cFileBrowserCategory* pCat = mvCategories[i];
 
-			tWString sFilterText = pCat->msName + _W(" (");
-
+			std::vector<const wchar_t*> vFilters;
+			std::vector<size_t> vLens;
 			for(int j=0;j <(int)pCat->mvFilters.size();++j)
 			{
-				if(j!=0) sFilterText += _W(", ");
-
-				sFilterText += pCat->mvFilters[j];
+				vFilters.push_back(pCat->mvFilters[j].data());
+				vLens.push_back(pCat->mvFilters[j].size());
 			}
-
-			sFilterText += _W(")");
+			size_t lLen = ohpl_w3_fp_filter_text(pCat->msName.data(), pCat->msName.size(), vFilters.data(), vLens.data(),
+												 vFilters.size(), NULL, 0);
+			tWString sFilterText(lLen, _W('\0'));
+			if(lLen) ohpl_w3_fp_filter_text(pCat->msName.data(), pCat->msName.size(), vFilters.data(), vLens.data(),
+											vFilters.size(), &sFilterText[0], lLen);
 
 			mpFilterList->AddItem(sFilterText);
 		}
@@ -369,17 +368,19 @@ namespace hpl {
 	void cGuiPopUpFilePicker::OnNavigate()
 	{
 		mpCurrentDirectory->ClearItems();
-		mpCurrentDirectory->AddItem(_W("<System Root>"));
-        if (iFileBrowser::msPersonalDir.length()) {
-            mpCurrentDirectory->AddItem(_W("<Personal Folder>"));
-        }
-        if (iFileBrowser::msGameDir.length()) {
-            mpCurrentDirectory->AddItem(_W("<Game Folder>"));
-        }
-
-		for(int i=0;i<(int)mvCurrentDirFullPath.size();++i)
+		std::vector<int32_t> vEntries(ohpl_w3_fp_dir_entries(iFileBrowser::msPersonalDir.length()!=0, iFileBrowser::msGameDir.length()!=0,
+															 mvCurrentDirFullPath.size(), NULL, 0));
+		ohpl_w3_fp_dir_entries(iFileBrowser::msPersonalDir.length()!=0, iFileBrowser::msGameDir.length()!=0,
+							   mvCurrentDirFullPath.size(), vEntries.data(), vEntries.size());
+		for(size_t i=0; i<vEntries.size(); ++i)
 		{
-			mpCurrentDirectory->AddItem(mvCurrentDirFullPath[i]);
+			switch(vEntries[i])
+			{
+			case kOhplW3DirRoot: mpCurrentDirectory->AddItem(_W("<System Root>")); break;
+			case kOhplW3DirPersonal: mpCurrentDirectory->AddItem(_W("<Personal Folder>")); break;
+			case kOhplW3DirGame: mpCurrentDirectory->AddItem(_W("<Game Folder>")); break;
+			default: mpCurrentDirectory->AddItem(mvCurrentDirFullPath[vEntries[i]]); break;
+			}
 		}
 		mpCurrentDirectory->SetText(GetCurrentFullPath());
 
@@ -454,19 +455,11 @@ namespace hpl {
 	void cGuiPopUpFilePicker::Init()
 	{
 		tWString sCaption;
+		sCaption.resize(ohpl_w3_fp_caption(mPickerType, NULL, 0));
+		ohpl_w3_fp_caption(mPickerType, &sCaption[0], sCaption.size());
 
-		switch(mPickerType)
-		{
-		case eFilePickerType_Load:
-			sCaption = _W("Load");
-			break;
-		case eFilePickerType_Save:
-			sCaption = _W("Save");
-			break;
-		default:
-			break;
-		}
-		sCaption += _W(" file");
+		OhplW3FpLayout layout;
+		ohpl_w3_fp_layout(mpWindow->GetDefaultFontSize().y, &layout);
 
 		////////////////////////////////
 		// Set up graphics
@@ -485,8 +478,8 @@ namespace hpl {
 		mpWindow->SetText(sCaption);
 		
 		// Current directory TextBox
-		mpCurrentDirectory = mpSet->CreateWidgetComboBox(cVector3f(30,60,0.1f),
-														cVector2f(400, mpWindow->GetDefaultFontSize().y+2),
+		mpCurrentDirectory = mpSet->CreateWidgetComboBox(layout.dir_pos,
+														layout.dir_size,
 														_W(""), 
 														mpWindow);
 		mpCurrentDirectory->SetCanEdit(false);
@@ -504,20 +497,20 @@ namespace hpl {
 		}
 
         if(mpGfxUpButton) mvButtons[0]->SetImage( mpGfxUpButton, false);
-		mvButtons[0]->SetPosition(cVector3f(435,60,0.1f));
-		mvButtons[0]->SetSize(23);
+		mvButtons[0]->SetPosition(layout.button_pos[0]);
+		mvButtons[0]->SetSize(layout.button_size[0]);
 		
 		mvButtons[1]->SetText(sCaption);
-		mvButtons[1]->SetPosition(cVector3f(500,425, 0.5f));
-		mvButtons[1]->SetSize(cVector2f(70,20));
+		mvButtons[1]->SetPosition(layout.button_pos[1]);
+		mvButtons[1]->SetSize(layout.button_size[1]);
 		
 		mvButtons[2]->SetText(_W("Cancel"));
-		mvButtons[2]->SetPosition(cVector3f(500,450, 0.5f));
-		mvButtons[2]->SetSize(cVector2f(70,20));
+		mvButtons[2]->SetPosition(layout.button_pos[2]);
+		mvButtons[2]->SetSize(layout.button_size[2]);
 
 		// Current file name TextBox
-		mpCurrentFileName = mpSet->CreateWidgetTextBox(	cVector3f(30,425,0.5f),
-														cVector2f(400,mpWindow->GetDefaultFontSize().y+2),
+		mpCurrentFileName = mpSet->CreateWidgetTextBox(	layout.name_pos,
+														layout.name_size,
 														msStartFilename, 
 														mpWindow);
 		mpCurrentFileName->SetForceCallBackOnEnter(true);
@@ -528,24 +521,24 @@ namespace hpl {
 		mpCurrentFileName->SetSelectedText();
 		
 		// Filters ComboBox
-		mpFilterList = mpSet->CreateWidgetComboBox(	cVector3f(30, 450, 0.5f), 
-													cVector2f(300, mpWindow->GetDefaultFontSize().y+2),
+		mpFilterList = mpSet->CreateWidgetComboBox(	layout.filter_pos,
+													layout.filter_size,
 													_W(""), 
 													mpWindow);
 		mpFilterList->AddCallback(eGuiMessage_SelectionChange, this, kGuiCallback(FilterList_OnSelectionChange));
 
 		// File ListBox        
-		mpFileList = mpSet->CreateWidgetMultiPropertyListBox(cVector3f(30,90,1),
-															 cVector2f(540,300),
+		mpFileList = mpSet->CreateWidgetMultiPropertyListBox(layout.list_pos,
+															 layout.list_size,
 															 mpWindow);
 		mpFileList->AddColumn("",0);
-		mpFileList->SetColumnWidth(0,24);
+		mpFileList->SetColumnWidth(0,layout.column_width[0]);
 		mpFileList->AddColumn("Name",1);
-		mpFileList->SetColumnWidth(1,300);
+		mpFileList->SetColumnWidth(1,layout.column_width[1]);
 		mpFileList->AddColumn("Size",2, eFontAlign_Right);
-		mpFileList->SetColumnWidth(2,75);
+		mpFileList->SetColumnWidth(2,layout.column_width[2]);
 		mpFileList->AddColumn("Date modified",3);
-		mpFileList->SetColumnWidth(3,125);
+		mpFileList->SetColumnWidth(3,layout.column_width[3]);
 
 		mpFileList->AddCallback(eGuiMessage_SelectionChange, this, kGuiCallback(FileList_OnSelectionChange));
 		mpFileList->AddCallback(eGuiMessage_SelectionDoubleClick, this, kGuiCallback(FileList_OnSelectionDblClick));

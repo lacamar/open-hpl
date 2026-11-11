@@ -20,6 +20,7 @@
 #ifndef HPL_GUI_POP_UP_H
 #define HPL_GUI_POP_UP_H
 
+#include "gui/RustWidget3.h"
 #include "gui/GuiTypes.h"
 
 namespace hpl {
@@ -40,7 +41,7 @@ namespace hpl {
 		void SetKillOnEscapeKey(bool abX);
 		bool GetKillOnEscapeKey();
 
-		void SetNextFocusWidget(iWidget *apNewFocused)  { mpNewFocused = apNewFocused; mbFocusChanged = apNewFocused != NULL; }
+		void SetNextFocusWidget(iWidget *apNewFocused)  { ohpl_w3_popup_set_next_focus(&mPopUp, (size_t)apNewFocused); }
 		cGuiSet* GetGuiSet() { return mpSet; }
 
 	protected:
@@ -66,12 +67,7 @@ namespace hpl {
 		void* mpDestroyCallbackObject;
 		tGuiCallbackFunc mpDestroyCallback;
 
-		bool mbAttChanged;
-		iWidget* mpNewAttention;
-		bool mbFocusChanged;
-		iWidget* mpNewFocused;
-		bool mbDefaultUIFocusChanged;
-		iWidget* mpNewDefaultUIFocus;
+		OhplW3PopUp mPopUp;
 	};
 
 };

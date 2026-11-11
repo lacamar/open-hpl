@@ -35,9 +35,157 @@
 
 #include "gui/WidgetButton.h"
 
+#include <cstring>
+#include <vector>
+
 namespace hpl {
 
 	int cWidgetTextBox::mlDefaultDecimals = 3;
+
+	//////////////////////////////////////////////////////////////////////////
+	// RUST GLUE
+	//////////////////////////////////////////////////////////////////////////
+
+	struct OhplW2TbEvent
+	{
+		int mlKind;
+		tWString msText;
+		tWString msNested;
+		bool mbNested;
+	};
+
+	struct OhplW2TbCtx
+	{
+		cWidgetTextBox* mpWidget;
+		iFontData* mpFont;
+		cVector2f mvFontSize;
+		cVector2f mvMouse;
+		std::vector<OhplW2TbEvent> mvEvents;
+		tWString msClipboard;
+		tWString msNumber;
+		OhplW2TextHost mHost;
+
+		static float LocalX(void* apCtx)
+		{
+			OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+			return pCtx->mpWidget->WorldToLocalPosition(pCtx->mvMouse).x;
+		}
+	};
+
+	static bool TbGlyph(void* apCtx, int alNum, float* apAdvance)
+	{
+		OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+		if(pCtx->mpFont==NULL) return false;
+		cGlyph* pGlyph = pCtx->mpFont->GetGlyph(alNum);
+		if(pGlyph==NULL) return false;
+		*apAdvance = pGlyph->mfAdvance;
+		return true;
+	}
+
+	static float TbLength(void* apCtx, const wchar_t* apText, size_t alLen)
+	{
+		OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+		if(pCtx->mpFont==NULL) return 0;
+		tWString sText(apText, alLen);
+		return pCtx->mpFont->GetLength(pCtx->mvFontSize, sText.c_str());
+	}
+
+	static const wchar_t* TbClipboard(void* apCtx, size_t* apLen)
+	{
+		OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+		pCtx->msClipboard = cPlatform::LoadTextFromClipboard();
+		*apLen = pCtx->msClipboard.size();
+		return pCtx->msClipboard.data();
+	}
+
+	static void TbCopy(void* apCtx, const wchar_t* apText, size_t alLen)
+	{
+		cPlatform::CopyTextToClipboard(tWString(apText, alLen));
+	}
+
+	static float TbToFloat(void* apCtx, const wchar_t* apText, size_t alLen, int alDecimals)
+	{
+		tWString sText(apText, alLen);
+		float fValue = cString::ToFloat(cString::To8Char(sText).c_str(), 0);
+		return cMath::RoundFloatToDecimals(fValue, alDecimals);
+	}
+
+	static const wchar_t* TbFloatText(void* apCtx, float afValue, int alDecimals, size_t* apLen)
+	{
+		OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+		pCtx->msNumber = cString::ToStringW(afValue, alDecimals, true);
+		*apLen = pCtx->msNumber.size();
+		return pCtx->msNumber.data();
+	}
+
+	static void TbEmit(void* apCtx, int alKind, const wchar_t* apA, size_t alALen, const wchar_t* apB, size_t alBLen, bool abHasB)
+	{
+		OhplW2TbCtx* pCtx = (OhplW2TbCtx*)apCtx;
+		OhplW2TbEvent ev;
+		ev.mlKind = alKind;
+		if(apA) ev.msText.assign(apA, alALen);
+		if(abHasB && apB) ev.msNested.assign(apB, alBLen);
+		ev.mbNested = abHasB;
+		pCtx->mvEvents.push_back(ev);
+	}
+
+	void cWidgetTextBox::SetupCall(OhplW2TbCtx& aCtx, OhplW2TextCall& aCall)
+	{
+		aCtx.mpWidget = this;
+		aCtx.mpFont = mpDefaultFontType;
+		aCtx.mvFontSize = mvDefaultFontSize;
+		aCtx.mvMouse = cVector2f(0);
+		aCtx.mHost.ctx = &aCtx;
+		aCtx.mHost.glyph = TbGlyph;
+		aCtx.mHost.local_x = OhplW2TbCtx::LocalX;
+		aCtx.mHost.length = TbLength;
+		aCtx.mHost.clipboard = TbClipboard;
+		aCtx.mHost.copy = TbCopy;
+		aCtx.mHost.to_float = TbToFloat;
+		aCtx.mHost.float_text = TbFloatText;
+		aCtx.mHost.emit = TbEmit;
+
+		aCall.st = &mState;
+		aCall.env.font_first = mpDefaultFontType ? mpDefaultFontType->GetFirstChar() : 0;
+		aCall.env.font_last = mpDefaultFontType ? mpDefaultFontType->GetLastChar() : 0;
+		aCall.env.font_size = mvDefaultFontSize;
+		aCall.env.corner0 = mvGfxCorners[0]->GetActiveSize();
+		aCall.env.default_decimals = mlDefaultDecimals;
+		aCall.host = &aCtx.mHost;
+		aCall.text = msText.data();
+		aCall.text_len = msText.size();
+		aCall.illegal = msIllegalChars.data();
+		aCall.illegal_len = msIllegalChars.size();
+	}
+
+	// Replays the iWidget::SetText side effects Rust computed; true is the TextBoxEnter result.
+	bool cWidgetTextBox::ApplyEvents(OhplW2TbCtx& aCtx, const cGuiMessageData& aData)
+	{
+		bool bResult = true;
+		for(size_t i=0; i<aCtx.mvEvents.size(); ++i)
+		{
+			OhplW2TbEvent& ev = aCtx.mvEvents[i];
+			if(ev.mlKind==kOhplW2TbEmitEnter)
+			{
+				bResult = ProcessMessage(eGuiMessage_TextBoxEnter, aData);
+				continue;
+			}
+
+			mbReplaying = true;
+			mpReplayEvent = &ev;
+			SetText(ev.msText);
+			mpReplayEvent = NULL;
+			mbReplaying = false;
+		}
+		aCtx.mvEvents.clear();
+		return bResult;
+	}
+
+	static bool TbReturn(int alRet, bool abEnterResult)
+	{
+		if(alRet==kOhplW2RetEnter) return abEnterResult;
+		return alRet==kOhplW2RetTrue;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -51,49 +199,18 @@ namespace hpl {
 		mvButtons[1] = NULL;
 		mInputType = aType;
 		mbShowButtons = false;
-		
+
+		mbReplaying = false;
+		mpReplayEvent = NULL;
+		memset(&mState, 0, sizeof(mState));
 		LoadGraphics();
 
 		mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerText);
 		mpPrevAttention = NULL;
 
-		mlMarkerCharPos = -1;
-		mlSelectedTextEnd = -1;
-
-		mlFirstVisibleChar =0;
-		mlVisibleCharSize =0;
-
-		mfTextMaxSize =0;
-		mfMaxTextSizeNeg =0;
-
-		mlMaxCharacters = -1;
-
-		mlVisibleCharSize =0;
-
-		mbPressed = false;
-
-		mbCanEdit = true;
+		mState = ohpl_w2_tb_init(aType==eWidgetTextBoxInputType_Numeric);
 
 		msIllegalChars = _W("");
-		
-		mbLegalCharCodeLimitEnabled = false;
-		mlLegalCharCodeMaxLimit = 0;
-		mlLegalCharCodeMinLimit = 0;
-
-		mbChangedSinceLastEnter = false;
-		mbForceCallBackOnEnter = false;
-		mbCallbackOnLostFocus = true;
-
-		mbHasLowerBound = false;
-		mbHasUpperBound = false;
-		mfLowerBound = 0;
-		mfUpperBound = 0;
-
-		mlDecimals = -1;
-
-		mfNumericAdd = 0.5f;
-		mfNumericValue = 0;
-		mbNumericValueUpdated = true;
 
 		mbUIKeyboardOpen = false;
 	}
@@ -124,47 +241,32 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void cWidgetTextBox::SetMaxTextLength(int alLength)
 	{
-		if(mlMaxCharacters == alLength) return;
-
-		mlMaxCharacters = alLength;
-
-		if(mlMaxCharacters >=0 && (int)msText.size() > mlMaxCharacters)
-		{
-			SetText(cString::SubW(msText,0,mlMaxCharacters));
-			
-			if(mlSelectedTextEnd >= mlMaxCharacters) mlSelectedTextEnd = mlMaxCharacters-1;
-			if(mlMarkerCharPos >= mlMaxCharacters) mlMarkerCharPos = mlMaxCharacters-1;
-
-			OnChangeText();
-		}
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_set_max_len(&call, alLength);
+		ApplyEvents(ctx, cGuiMessageData());
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetTextBox::SetSelectedText(int alStart, int alCount)
 	{
-		int lTextLen = (int)msText.length();
-
-		if(alStart<0)
-			alStart = 0;
-		if(alStart>lTextLen)
-			alStart = lTextLen;
-		mlSelectedTextEnd=alStart;
-
-		if(alCount==-1)
-			alCount = lTextLen-mlSelectedTextEnd;
-
-        SetMarkerPos(mlSelectedTextEnd+alCount);
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_set_selected(&call, alStart, alCount);
+		ApplyEvents(ctx, cGuiMessageData());
 	}
 
 	//-----------------------------------------------------------------------
 
 	cVector2f cWidgetTextBox::GetBackgroundSize()
 	{
-		return cVector2f(mvSize.x - mvGfxCorners[0]->GetActiveSize().x - 
+		return cVector2f(mvSize.x - mvGfxCorners[0]->GetActiveSize().x -
 										mvGfxCorners[1]->GetActiveSize().x,
 						mvSize.y - mvGfxCorners[0]->GetActiveSize().y -
 									mvGfxCorners[2]->GetActiveSize().y);
@@ -174,7 +276,7 @@ namespace hpl {
 
 	void cWidgetTextBox::SetMaxTextSizeNeg(float afX)
 	{
-		mfMaxTextSizeNeg = afX;
+		mState.max_size_neg = afX;
 
 		OnChangeSize();
 	}
@@ -183,16 +285,16 @@ namespace hpl {
 
 	void cWidgetTextBox::SetCanEdit(bool abX)
 	{
-		mbCanEdit = abX;
+		mState.can_edit = abX;
 
-		if(mbCanEdit)	mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerText);
-		else			mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerNormal);
+		if(mState.can_edit)	mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerText);
+		else				mpPointerGfx = mpSkin->GetGfx(eGuiSkinGfx_PointerNormal);
 
 		for(int i=0;i<2;++i)
 		{
 			cWidgetButton* pButton = mvButtons[i];
 			if(pButton)
-				pButton->SetEnabled(mbCanEdit);
+				pButton->SetEnabled(mState.can_edit);
 		}
 
 	}
@@ -201,64 +303,49 @@ namespace hpl {
 
 	void cWidgetTextBox::SetNumericValue(float afX)
 	{
-		if(mInputType!=eWidgetTextBoxInputType_Numeric)
-			return;
-
-		if(mbHasLowerBound && afX<mfLowerBound)
-			afX = mfLowerBound;
-		if(mbHasUpperBound && afX>mfUpperBound)
-			afX = mfUpperBound;
-
-		if(mfNumericValue==afX)
-			return;
-
-		mfNumericValue = afX;
-
-		tWString sText = cString::ToStringW(mfNumericValue, GetDecimals(), true);
-		SetText(sText);
-
-		SetTextUpdated();
-		mbNumericValueUpdated = false;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_set_numeric(&call, afX);
+		ApplyEvents(ctx, cGuiMessageData());
 	}
 
 	//-----------------------------------------------------------------------
 
 	float cWidgetTextBox::GetNumericValue()
 	{
-		if(mbNumericValueUpdated)
-		{
-			mbNumericValueUpdated = false;
-			mfNumericValue = cString::ToFloat(cString::To8Char(msText).c_str(), 0);
-			mfNumericValue = cMath::RoundFloatToDecimals(mfNumericValue, GetDecimals());
-		}
-
-		return mfNumericValue;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		float fValue = ohpl_w2_tb_get_numeric(&call);
+		ApplyEvents(ctx, cGuiMessageData());
+		return fValue;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetTextBox::SetLowerBound(bool abX, float afValue)
 	{
-		mbHasLowerBound = abX;
-		mfLowerBound = afValue;
+		mState.has_lower = abX;
+		mState.lower = afValue;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cWidgetTextBox::SetUpperBound(bool abX, float afValue)
 	{
-		mbHasUpperBound = abX;
-		mfUpperBound = afValue;
+		mState.has_upper = abX;
+		mState.upper = afValue;
 	}
 
 	//-----------------------------------------------------------------------
 
 	int cWidgetTextBox::GetDecimals()
 	{
-		if(mlDecimals<0)
+		if(mState.decimals<0)
 			return mlDefaultDecimals;
 
-		return mlDecimals;
+		return mState.decimals;
 	}
 
 	//-----------------------------------------------------------------------
@@ -277,17 +364,17 @@ namespace hpl {
 
 	void cWidgetTextBox::SetLegalCharCodeLimitEnabled(bool abX)
 	{
-		mbLegalCharCodeLimitEnabled = abX;
+		mState.limit_enabled = abX;
 	}
-	
+
 	void cWidgetTextBox::SetLegalCharCodeMinLimit(wchar_t alX)
 	{
-		mlLegalCharCodeMinLimit = alX;
+		mState.limit_min = alX;
 	}
-	
+
 	void cWidgetTextBox::SetLegalCharCodeMaxLimit(wchar_t alX)
 	{
-		mlLegalCharCodeMaxLimit = alX;
+		mState.limit_max = alX;
 	}
 
 	//-----------------------------------------------------------------------
@@ -295,7 +382,7 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	//-----------------------------------------------------------------------
 
 	bool cWidgetTextBox::Widget_OnValueUp(iWidget* apWidget, const cGuiMessageData& aData)
@@ -318,186 +405,34 @@ namespace hpl {
 
 	bool cWidgetTextBox::ButtonPressed(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		if(IsEnabled()==false)
-			return false;
+		int lWhich = -1;
+		if(apWidget==mvButtons[0]) lWhich = 0;
+		else if(apWidget==mvButtons[1]) lWhich = 1;
 
-		float fAdd=0;
-
-		if(apWidget==mvButtons[0])
-		{
-			fAdd = mfNumericAdd;
-		}
-		else if(apWidget==mvButtons[1])
-		{
-			fAdd = -mfNumericAdd;
-		}
-
-		if(fAdd==0)
-			return true;
-
-		SetNumericValue(GetNumericValue()+fAdd);
-
-		return OnEnter(aData);
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		int lRet = ohpl_w2_tb_button_pressed(&call, lWhich, IsEnabled());
+		bool bEnter = ApplyEvents(ctx, aData);
+		return TbReturn(lRet, bEnter);
 	}
 	kGuiCallbackDeclaredFuncEnd(cWidgetTextBox, ButtonPressed);
 
 	//-----------------------------------------------------------------------
 
-	int cWidgetTextBox::GetLastCharInSize(int alStartPos, float afMaxSize, float afLengthAdd)
-	{
-		int lCharPos = (int)msText.size();
-		float fLength =0;
-		int lFirst = mpDefaultFontType->GetFirstChar();
-		int lLast = mpDefaultFontType->GetLastChar();
-		for(int i=alStartPos; i< (int)msText.size(); ++i)
-		{
-			if(i < lFirst || i >lLast) continue;
-
-			cGlyph* pGlyph = mpDefaultFontType->GetGlyph(msText[i] - lFirst);
-			if(pGlyph==NULL)continue;
-
-			fLength += pGlyph->mfAdvance * mvDefaultFontSize.x;
-			if(fLength + afLengthAdd >= afMaxSize)
-			{
-				lCharPos = i;
-				break;
-			}
-		}
-
-		return lCharPos;
-	}
-	
-	//-----------------------------------------------------------------------
-
-	int cWidgetTextBox::GetFirstCharInSize(int alStartPos, float afMaxSize, float afLengthAdd)
-	{
-		int lCharPos = 0;
-		float fLength =0;
-		int lFirst = mpDefaultFontType->GetFirstChar();
-		int lLast = mpDefaultFontType->GetLastChar();
-		for(int i=alStartPos; i>=0 ; --i)
-		{
-			if(i < lFirst || i >lLast) continue;
-
-			cGlyph* pGlyph = mpDefaultFontType->GetGlyph(msText[i] - lFirst);
-			if(pGlyph==NULL)continue;
-
-			fLength += pGlyph->mfAdvance * mvDefaultFontSize.x;
-			if(fLength + afLengthAdd >= afMaxSize)
-			{
-				lCharPos = i;
-				break;
-			}
-		}
-
-		return lCharPos;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cWidgetTextBox::WidgetConsiderSomeCharsIllegal()
-	{
-		if(msIllegalChars.length()>0) return true;
-		if(mbLegalCharCodeLimitEnabled) return true;
-		return false;
-	}
-	
-	bool cWidgetTextBox::IsIllegalChar(wchar_t alChar)
-	{
-		for(size_t i=0; i<msIllegalChars.length(); ++i)
-		{
-			if(msIllegalChars[i] == alChar) return true;
-		}
-
-        if(mbLegalCharCodeLimitEnabled)
-		{
-			if(alChar > mlLegalCharCodeMaxLimit) return true;
-			if(alChar < mlLegalCharCodeMinLimit) return true;
-		}
-		return false;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWidgetTextBox::SetTextUpdated()
-	{
-		mbChangedSinceLastEnter = true;
-
-		if(mInputType==eWidgetTextBoxInputType_Numeric)
-			mbNumericValueUpdated = true;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	int cWidgetTextBox::WorldToCharPos(const cVector2f &avWorldPos)
-	{
-		float fTextPos =	WorldToLocalPosition(avWorldPos).x - 
-							mvGfxCorners[0]->GetActiveSize().x + 3;
-
-		int lMarkerCharPos;
-		if(fTextPos >0)
-		{
-			lMarkerCharPos = GetLastCharInSize(mlFirstVisibleChar,fTextPos,3.0f);
-		}
-		else
-		{
-			lMarkerCharPos =mlFirstVisibleChar;
-		}
-
-		return lMarkerCharPos;
-	}
-
-	//-----------------------------------------------------------------------
-
-	float cWidgetTextBox::CharToLocalPos(int alChar)
-	{
-		float fMarkerPos = -2;
-		if(alChar>0 && alChar - mlFirstVisibleChar >0)
-		{
-			fMarkerPos = mpDefaultFontType->GetLength(mvDefaultFontSize,
-				cString::SubW(msText,mlFirstVisibleChar,alChar-mlFirstVisibleChar).c_str());
-		}
-		return fMarkerPos;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cWidgetTextBox::SetMarkerPos(int alPos)
-	{
-		mlMarkerCharPos = alPos;
-		if(mlMarkerCharPos < 0) mlMarkerCharPos =0;
-		if(mlMarkerCharPos > (int)msText.size() && msText.size()>0) mlMarkerCharPos =(int)msText.size();
-
-		if(mlMarkerCharPos > mlFirstVisibleChar + mlVisibleCharSize)
-		{
-			mlFirstVisibleChar =	GetFirstCharInSize(mlMarkerCharPos,mfTextMaxSize,0)+1;
-			if(msText.size()<=1) mlFirstVisibleChar =0;
-			OnChangeText();
-		}
-		else if(mlMarkerCharPos < mlFirstVisibleChar)
-		{
-			mlFirstVisibleChar = mlMarkerCharPos;
-			OnChangeText();
-		}
-
-	}
-	
-	//-----------------------------------------------------------------------
-
 	void cWidgetTextBox::OnChangeSize()
 	{
-		mvSize.y =	mvGfxBorders[0]->GetActiveSize().y +
-					mvGfxBorders[2]->GetActiveSize().y +
-					mvDefaultFontSize.y + 2 * 2;
+		cVector2f vBorders[3] = {mvGfxBorders[0]->GetActiveSize(), mvGfxBorders[1]->GetActiveSize(),
+								 mvGfxBorders[2]->GetActiveSize()};
 
 		float fButtonWidth = 0;
 		if(mInputType==eWidgetTextBoxInputType_Numeric && mvButtons[0])
 			fButtonWidth = mvButtons[0]->GetSize().x;
 
-		mfTextMaxSize = mvSize.x - mvGfxBorders[0]->GetActiveSize().x -
-						mvGfxBorders[1]->GetActiveSize().x  - 3 * 2 -
-						mfMaxTextSizeNeg - fButtonWidth;
+		float fHeight, fTextMaxSize;
+		ohpl_w2_tb_layout(&mState, mvSize.x, vBorders, mvDefaultFontSize.y, fButtonWidth, &fHeight, &fTextMaxSize);
+		mvSize.y = fHeight;
+		mState.text_max_size = fTextMaxSize;
 
 		OnChangeText();
 	}
@@ -506,26 +441,24 @@ namespace hpl {
 
 	void cWidgetTextBox::OnChangeText()
 	{
-		if(msText == _W(""))
-			mlVisibleCharSize = 0;
-		else
-			mlVisibleCharSize = GetLastCharInSize(	mlFirstVisibleChar,mfTextMaxSize,0) - 
-													mlFirstVisibleChar;
-
-		if(mlMaxCharacters >=0 && (int)msText.size() > mlMaxCharacters)
+		if(mbReplaying)
 		{
-			SetText(cString::SubW(msText,0,mlMaxCharacters));
-
-			if(mlSelectedTextEnd >= mlMaxCharacters) mlSelectedTextEnd = mlMaxCharacters-1;
-			if(mlMarkerCharPos >= mlMaxCharacters) mlMarkerCharPos = mlMaxCharacters-1;
+			// Rust already ran OnChangeText; only the nested truncating SetText is left to issue
+			const OhplW2TbEvent* pEvent = mpReplayEvent;
+			mpReplayEvent = NULL;
+			if(pEvent && pEvent->mbNested)
+				SetText(pEvent->msNested);
+			mbReplaying = false;
+			return;
 		}
 
-		if(mbTextChanged && mInputType == eWidgetTextBoxInputType_Numeric)
-		{
-			mbNumericValueUpdated = true;
-		}
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_change_text(&call, mbTextChanged);
+		ApplyEvents(ctx, cGuiMessageData());
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cWidgetTextBox::OnInit()
@@ -552,7 +485,7 @@ namespace hpl {
 		mvButtons[1]->SetText(_W("-"));
 
 		// Init numeric value + text
-		mfNumericValue = -1;
+		mState.numeric_value = -1;
 		SetNumericValue(0);
 	}
 
@@ -582,73 +515,54 @@ namespace hpl {
 
 	void cWidgetTextBox::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{
-		////////////////////////////////
-		// Text
 		cColor col = IsEnabled()? mDefaultFontColor : mpSkin->GetFont(eGuiSkinFont_Disabled)->mColor;
 
-		cVector3f vTextAdd = cVector3f(3,2,0.2f) + mvGfxCorners[0]->GetActiveSize();
-		DrawDefaultText(cString::SubW(msText,mlFirstVisibleChar,mlVisibleCharSize),
-						GetGlobalPosition()+ vTextAdd,
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		cVector3f vGlobal = GetGlobalPosition();
+		OhplW2TextDraw d;
+		ohpl_w2_tb_draw(&call, &vGlobal, &d);
+
+		////////////////////////////////
+		// Text
+		DrawDefaultText(cString::SubW(msText,d.text_start,d.text_len),
+						d.text_pos,
 						eFontAlign_Left,col);
 
 		//Marker
-		if(mlMarkerCharPos >=0)
+		if(d.has_marker)
 		{
-			float fMarkerPos = CharToLocalPos(mlMarkerCharPos);
-			mpSet->DrawGfx(	mpGfxMarker,GetGlobalPosition() + vTextAdd + cVector3f(fMarkerPos,0,0.1f),
-							cVector2f(2, mvDefaultFontSize.y));
+			mpSet->DrawGfx(	mpGfxMarker, d.marker_pos, d.marker_size);
 
 			//Selected text
-			if(mlSelectedTextEnd >=0)
+			if(d.has_selection)
 			{
-				int lStart = mlMarkerCharPos < mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-				int lEnd = mlMarkerCharPos > mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-				int lSelectSize = lEnd - lStart;
+				mpSet->DrawGfx( mpGfxSelectedTextBack, d.sel_pos, d.sel_size);
 
-				int lHighlightStart = mlFirstVisibleChar > lStart ? mlFirstVisibleChar : lStart;
-				int lHighlightEnd =  mlFirstVisibleChar+mlVisibleCharSize < lEnd ? mlFirstVisibleChar+mlVisibleCharSize : lEnd;
-				int lHighlightSize = lHighlightEnd - lHighlightStart;
-
-				float fSelectEnd = CharToLocalPos(mlSelectedTextEnd);
-
-				float fPos = fSelectEnd < fMarkerPos ? fSelectEnd : fMarkerPos;
-				float fEnd = fSelectEnd > fMarkerPos ? fSelectEnd : fMarkerPos;
-				
-				if(fPos <0)fPos =0;
-				if(fEnd > mfTextMaxSize) fEnd = mfTextMaxSize;
-				
-				float fSize = fEnd - fPos;
-
-				mpSet->DrawGfx( mpGfxSelectedTextBack, GetGlobalPosition() + 
-								vTextAdd + cVector3f(fPos,0,0.01f),
-								cVector2f(fSize,mvDefaultFontSize.y));
-
-				DrawDefaultTextHighlight(cString::SubW(msText,lHighlightStart,lHighlightSize), 
-								GetGlobalPosition() + vTextAdd + cVector3f(fPos,0,0.02f),
+				DrawDefaultTextHighlight(cString::SubW(msText,d.hl_start,d.hl_len),
+								d.hl_pos,
 								eFontAlign_Left);
 			}
 		}
 
-		
+
 		////////////////////////////////
 		// Background and Borders
-		DrawBordersAndCorners(	mpGfxBackground, mvGfxBorders, mvGfxCorners, 
+		DrawBordersAndCorners(	mpGfxBackground, mvGfxBorders, mvGfxCorners,
 								GetGlobalPosition(), mvSize);
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetTextBox::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(mbPressed)
-		{
-			int lPos = WorldToCharPos(aData.mvPos);
-			if(lPos != mlMarkerCharPos)
-			{
-				if(mlSelectedTextEnd==-1) mlSelectedTextEnd = mlMarkerCharPos;
-				SetMarkerPos(lPos);
-			}
-		}
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ctx.mvMouse = aData.mvPos;
+		ohpl_w2_tb_mouse_move(&call);
+		ApplyEvents(ctx, aData);
 
 		return true;
 	}
@@ -657,15 +571,20 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseDown(const cGuiMessageData& aData)
 	{
-		if((aData.mlVal & eGuiMouseButton_Left) == 0) return false;
-		if(mbCanEdit==false) return false;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ctx.mvMouse = aData.mvPos;
+		bool bAttention = false;
+		int lRet = ohpl_w2_tb_mouse_down(&call, aData.mlVal, &bAttention);
+		ApplyEvents(ctx, aData);
+		if(lRet==kOhplW2RetFalse) return false;
 
-		SetMarkerPos(WorldToCharPos(aData.mvPos));
-		mlSelectedTextEnd=-1;
-
-		mbPressed = true;
-		mpPrevAttention = mpSet->GetAttentionWidget();
-		mpSet->SetAttentionWidget(this);
+		if(bAttention)
+		{
+			mpPrevAttention = mpSet->GetAttentionWidget();
+			mpSet->SetAttentionWidget(this);
+		}
 
 		return true;
 	}
@@ -674,33 +593,27 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if((aData.mlVal &  eGuiMouseButton_Left) == 0) return true;
-		if(mbCanEdit==false) return true;
-
-		if(mbGotFocusRecently)
+		int lMarker, lSelectEnd;
 		{
-			int lPos = WorldToCharPos(aData.mvPos);
-			if(mlSelectedTextEnd==-1 || mlSelectedTextEnd==lPos)
-			{
-				SetMarkerPos((int)msText.size());
-				mlSelectedTextEnd=0;
-			}
-
-			mbGotFocusRecently = false;
+			OhplW2TbCtx ctx;
+			OhplW2TextCall call;
+			SetupCall(ctx, call);
+			ctx.mvMouse = aData.mvPos;
+			bool bRestore = ohpl_w2_tb_mouse_up(&call, aData.mlVal, &lMarker, &lSelectEnd);
+			ApplyEvents(ctx, aData);
+			if(bRestore==false) return true;
 		}
 
-		mbPressed = false;
-
 		// SetAttention steals focus, so restore vars after it
-		int lMarker = mlMarkerCharPos;
-		int lSelectEnd = mlSelectedTextEnd;
-
 		mpSet->SetAttentionWidget(mpPrevAttention, false);
 
-		mbGotFocusRecently = false;
-
-		SetMarkerPos(lMarker);
-		mlSelectedTextEnd = lSelectEnd;
+		{
+			OhplW2TbCtx ctx;
+			OhplW2TextCall call;
+			SetupCall(ctx, call);
+			ohpl_w2_tb_mouse_up_restore(&call, lMarker, lSelectEnd);
+			ApplyEvents(ctx, aData);
+		}
 
 		return true;
 	}
@@ -709,35 +622,13 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnMouseDoubleClick(const cGuiMessageData& aData)
 	{
-		if((aData.mlVal & eGuiMouseButton_Left) == 0) return true;
-		if(mbCanEdit==false) return true;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ctx.mvMouse = aData.mvPos;
+		ohpl_w2_tb_double_click(&call, aData.mlVal);
+		ApplyEvents(ctx, aData);
 
-        SetMarkerPos(WorldToCharPos(aData.mvPos));
-
-		if(mlMarkerCharPos!=msText.size() && msText[mlMarkerCharPos] == _W(' ')) return true;
-
-		/////////////////////////////
-		//Get space to the right.
-		for(mlSelectedTextEnd=mlMarkerCharPos; mlSelectedTextEnd>0; --mlSelectedTextEnd)
-		{
-			if(msText[mlSelectedTextEnd-1] == _W(' ') )
-				break;
-		}
-
-		/////////////////////////////
-		//Get space to the left
-		for(size_t i=mlMarkerCharPos; i<msText.size(); ++i)
-		{
-			if(msText[i] == _W(' ') || i==msText.size()-1)
-			{
-				if(i==(int)msText.size()-1) SetMarkerPos((int)i+1);
-				else						SetMarkerPos((int)i);
-				break;
-			}
-		}
-		
-		mbPressed = false;
-		
 		return true;
 	}
 
@@ -747,13 +638,11 @@ namespace hpl {
 	{
 		return true;
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetTextBox::OnMouseLeave(const cGuiMessageData& aData)
 	{
-		//mbPressed = false;
-
 		return false;
 	}
 
@@ -761,8 +650,10 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnGotFocus(const cGuiMessageData& aData)
 	{
-		mbGotFocusRecently = true;
-		//SetSelectedText();
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_got_focus(&call);
 
 		return true;
 	}
@@ -771,10 +662,10 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnGotTabFocus(const cGuiMessageData& aData)
 	{
-		//SetSelectedText();
-		mlMarkerCharPos = (int)msText.size();
-		mlSelectedTextEnd = 0;
-		mbGotFocusRecently = false;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_got_tab_focus(&call);
 
 		return true;
 	}
@@ -783,383 +674,45 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnLostFocus(const cGuiMessageData& aData)
 	{
-		// TODO : better change this to call some OnLostFocus callback
-		if(mbCallbackOnLostFocus)
-			OnEnter(aData);
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_lost_focus(&call);
+		ApplyEvents(ctx, aData);
 
-		mbPressed = false;
-		mlMarkerCharPos = -1;
-		mlSelectedTextEnd = -1;
 		return false;
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetTextBox::OnKeyPress(const cGuiMessageData& aData)
 	{
-		// XXX = maybe does not have sense to capture keypresses if edit is disabled?
-		if(mbCanEdit==false) return false;
-		if(mlMarkerCharPos <0) return false;
-		
-		eKey key = aData.mKeyPress.mKey;
-		int mod = aData.mKeyPress.mlModifier;
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		bool bAnim = false;
+		int lRet = ohpl_w2_tb_key(&call, aData.mKeyPress.mKey, aData.mKeyPress.mlModifier, aData.mKeyPress.mlUnicode, &bAnim);
+		if(bAnim && mpGfxMarker) mpGfxMarker->SetAnimationTime(0);
+		bool bEnter = ApplyEvents(ctx, aData);
 
-		if(mpGfxMarker)mpGfxMarker->SetAnimationTime(0);
- 
-		//////////////////////////////
-		//Enter
-		if(key == eKey_Return || key == eKey_KP_Enter)
-		{
-			return OnEnter(aData);
-		}
-		//////////////////////////////
-		//Copy / Pase / Cut
-		else if(mod & eKeyModifier_Ctrl)
-		{
-			int lStart = mlMarkerCharPos < mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-			int lEnd = mlMarkerCharPos > mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-			int lSelectSize = lEnd - lStart;
-			
-			/////////////////////////////
-			// Select all
-			if(key == eKey_A)
-			{
-				mlSelectedTextEnd = 0;
-				mlMarkerCharPos = (int)msText.size(); // Marker must be after the last character.
-
-				return true;
-			}
-			/////////////////////////////
-			// Copy
-			else if(key == eKey_C)
-			{
-				if(mlSelectedTextEnd >=0)
-					cPlatform::CopyTextToClipboard(cString::SubW(msText,lStart, lSelectSize));
-
-				return true;
-			}
-			/////////////////////////////
-			// Cut
-			else if(key == eKey_X)
-			{
-				if(mlSelectedTextEnd >=0)
-				{
-					cPlatform::CopyTextToClipboard(cString::SubW(msText,lStart, lSelectSize));
-					SetText(cString::SubW(msText,0,	lStart) + cString::SubW(msText,lEnd));
-					mlSelectedTextEnd = -1;
-
-					SetTextUpdated();
-				}
-
-				return true;
-			}
-			/////////////////////////////
-			// Paste
-			else if(key == eKey_V)
-			{
-				tWString sExtra = cPlatform::LoadTextFromClipboard();
-				if(sExtra.empty())
-					return true;
-
-				//Make sure extra does not contain illegal character
-				if(WidgetConsiderSomeCharsIllegal())
-				{
-					tWString sTempExtra = sExtra;
-					sExtra = _W("");
-					for(size_t i=0; i<sTempExtra.size(); ++i)
-					{
-						if(IsIllegalChar(sTempExtra[i])==false)
-							sExtra += sTempExtra[i];
-					}
-				}
-				
-				if(mlSelectedTextEnd <0)
-				{
-					if(	mlMaxCharacters ==-1 || 
-						(int)msText.size() + (int)sExtra.size() <= mlMaxCharacters)
-					{
-						SetText(cString::SubW(msText,0,	mlMarkerCharPos)+ sExtra +
-								cString::SubW(msText,mlMarkerCharPos) );
-
-						SetMarkerPos(mlMarkerCharPos+(int)sExtra.size());
-					}
-				}
-				else
-				{
-					if(	mlMaxCharacters < 0 ||
-						(int)sExtra.size() <= lSelectSize ||
-						(int)sExtra.size() + (int)msText.size() - lSelectSize <= mlMaxCharacters)
-					{
-						SetText(cString::SubW(msText,0,	lStart) + sExtra + 
-								cString::SubW(msText,lEnd));
-
-						mlSelectedTextEnd = -1;
-						SetMarkerPos(lStart+(int)sExtra.size());
-					}
-				}
-
-				SetTextUpdated();
-
-				return true;
-			}
-		}
-		//////////////////////////////
-		//Arrow keys		
-		else if(key == eKey_Left || key == eKey_Right)
-		{
-			if(mod & eKeyModifier_Shift)
-			{
-				if(mlSelectedTextEnd==-1) 
-					mlSelectedTextEnd = mlMarkerCharPos;
-
-				if(key == eKey_Left)	SetMarkerPos(mlMarkerCharPos-1);
-				else					SetMarkerPos(mlMarkerCharPos+1);
-			}
-			else
-			{
-				if(key == eKey_Left)	SetMarkerPos(mlMarkerCharPos-1);
-				else					SetMarkerPos(mlMarkerCharPos+1);
-
-				mlSelectedTextEnd = -1;
-			}
-
-			return true;
-		}
-		//////////////////////////////
-		//Delete and backspace
-		else if(key == eKey_Delete || key == eKey_BackSpace)
-		{
-            if(mlSelectedTextEnd >=0)
-			{
-				int lStart = mlMarkerCharPos < mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-				int lEnd = mlMarkerCharPos > mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-
-				SetText(cString::SubW(msText,0,	lStart) + cString::SubW(msText,lEnd));
-
-				mlSelectedTextEnd = -1;
-				SetMarkerPos(lStart);
-
-				SetTextUpdated();
-			}
-			else
-			{
-				if(key == eKey_Delete)
-				{
-					SetText(cString::SubW(msText,0,	mlMarkerCharPos)+ 
-							cString::SubW(msText,mlMarkerCharPos+1));
-
-					SetTextUpdated();
-				}
-				else
-				{
-					if(mlMarkerCharPos!=0)
-					{
-						SetText(cString::SubW(msText,0,	mlMarkerCharPos-1)+ 
-								cString::SubW(msText,mlMarkerCharPos));
-						SetMarkerPos(mlMarkerCharPos-1);
-
-						SetTextUpdated();
-					}
-				}
-			}
-
-			return true;
-		}
-		//////////////////////////////
-		//Home
-		else if(key == eKey_Home)
-		{
-			if(mod & eKeyModifier_Shift)
-			{
-				if(mlSelectedTextEnd==-1) mlSelectedTextEnd = mlMarkerCharPos;
-			}
-			else
-			{
-				mlSelectedTextEnd = -1;
-			}
-			SetMarkerPos(0);
-
-
-			return true;
-		}
-		//////////////////////////////
-		//End
-		else if(key == eKey_End)
-		{
-			if(mod & eKeyModifier_Shift)
-			{
-				if(mlSelectedTextEnd==-1) mlSelectedTextEnd = mlMarkerCharPos;
-			}
-			else
-			{
-				mlSelectedTextEnd = -1;
-			}
-			SetMarkerPos((int)msText.size());
-
-
-			return true;
-		}
-		//////////////////////////////////
-		// Character
-		else 
-		{
-			//////////////////////////////
-			// Set up data
-			int lFirstFontChar = mpDefaultFontType->GetFirstChar();
-			int lLastFontChar = mpDefaultFontType->GetLastChar();
-			wchar_t unicode = aData.mKeyPress.mlUnicode;
-			wchar_t lFirstNum = _W('0');
-			wchar_t lLastNum = _W('9');
-
-			//////////////////////
-			// Check so character is not illegal
-			if(IsIllegalChar(unicode)) return true;
-			
-			///////////////////////////
-			// Numerical Input
-			if(mInputType == eWidgetTextBoxInputType_Numeric)
-			{
-				if(	unicode >= lFirstNum && unicode <= lLastNum ||
-					(unicode == _W('.') || unicode == _W('-')) &&
-					mpDefaultFontType->GetGlyph(unicode - lFirstFontChar))
-				{
-					if(mlSelectedTextEnd<0)
-					{
-						if(unicode==_W('-'))
-						{
-							if(mlMarkerCharPos==0)
-							{
-								if(msText[0]!=_W('-'))
-								{
-									SetText(unicode + cString::SubW(msText,0));
-									SetMarkerPos(mlMarkerCharPos+1);
-
-									SetTextUpdated();
-								}
-							}
-						}
-						else if(unicode==_W('.'))
-						{
-							if(mlDecimals!=0 && cString::CountCharsInStringW(msText,_W("."))==0)
-							{
-								SetText(cString::SubW(msText,0,mlMarkerCharPos) + unicode +
-										cString::SubW(msText,mlMarkerCharPos) );
-								SetMarkerPos(mlMarkerCharPos+1);
-
-								SetTextUpdated();
-							}
-						}
-						else
-						{
-							
-							SetText(cString::SubW(msText,0,mlMarkerCharPos) + unicode +
-										cString::SubW(msText,mlMarkerCharPos) );
-							SetMarkerPos(mlMarkerCharPos+1);
-
-							SetTextUpdated();
-						}
-					}
-					else
-					{
-						int lStart = mlMarkerCharPos < mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-						int lEnd = mlMarkerCharPos > mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-					
-						if(unicode==_W('-'))
-						{
-							if(lStart==0)
-							{
-								SetText(unicode + cString::SubW(msText,lEnd));
-
-								SetTextUpdated();
-							}
-						}
-						else if(unicode==_W('.'))
-						{
-							int lNumDots = cString::CountCharsInStringW(msText,_W("."));
-							int lDotPos = cString::GetLastStringPosW(msText,_W("."));
-
-							if(	lNumDots==0 ||
-								lNumDots==1 && 
-								lDotPos >=lStart && lDotPos <= lEnd)
-							{
-								SetText(cString::SubW(msText,0,lStart) + unicode +
-										cString::SubW(msText,lEnd));
-
-								SetTextUpdated();
-							}
-						}
-						else
-						{
-							SetText(cString::SubW(msText,0,lStart) + unicode +
-										cString::SubW(msText,lEnd));
-
-							SetTextUpdated();
-						}
-					
-						mlSelectedTextEnd = -1;
-
-						SetMarkerPos(lStart+1);
-					}
-				}
-			}
-			///////////////////////////
-			// Normal text input
-			else
-			{
-				if( unicode >= lFirstFontChar && unicode <= lLastFontChar &&
-					mpDefaultFontType->GetGlyph(unicode - lFirstFontChar))
-				{
-					if(	mlSelectedTextEnd <0)
-					{
-						if(mlMaxCharacters ==-1 || (int)msText.size() < mlMaxCharacters)
-						{
-							SetText(cString::SubW(msText,0,	mlMarkerCharPos)+ unicode +
-									cString::SubW(msText,mlMarkerCharPos) );		
-
-							SetMarkerPos(mlMarkerCharPos+1);
-
-							SetTextUpdated();
-						}
-					}
-					else
-					{
-						int lStart = mlMarkerCharPos < mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-						int lEnd = mlMarkerCharPos > mlSelectedTextEnd ? mlMarkerCharPos : mlSelectedTextEnd;
-					
-						SetText(cString::SubW(msText,0,	lStart) + unicode + 
-								cString::SubW(msText,lEnd));
-
-						mlSelectedTextEnd = -1;
-
-						SetMarkerPos(lStart+1);
-
-						SetTextUpdated();
-					}
-				}
-			}
-
-			return true;
-		}
-		
-		return false;
+		return TbReturn(lRet, bEnter);
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool cWidgetTextBox::OnUIButtonPress(const cGuiMessageData& aData)
 	{
-		// XXX = maybe does not have sense to capture keypresses if edit is disabled?
-		if(mbCanEdit==false) return false;
-		
-		if(HasFocus() && aData.mlVal==eUIButton_Primary)
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		bool bKeyboard = ohpl_w2_tb_ui_button(&call, HasFocus(), aData.mlVal);
+		ApplyEvents(ctx, aData);
+		if(bKeyboard)
 		{
-			mlSelectedTextEnd = 0;
-			SetMarkerPos(msText.length());
 			mpSet->CreatePopUpUIKeyboard(this);
-
 			return true;
 		}
-		
+
 		return false;
 	}
 
@@ -1167,19 +720,13 @@ namespace hpl {
 
 	bool cWidgetTextBox::OnEnter(const cGuiMessageData& aData)
 	{
-		if(mInputType==eWidgetTextBoxInputType_Numeric)
-		{
-			SetText(cString::ToStringW(GetNumericValue(), GetDecimals(), true));
-			mbNumericValueUpdated = false;
-		}
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		bool bIssued = ohpl_w2_tb_enter(&call);
+		bool bResult = ApplyEvents(ctx, aData);
 
-		if(mbChangedSinceLastEnter || mbForceCallBackOnEnter)
-		{
-			mbChangedSinceLastEnter = false;
-			return ProcessMessage(eGuiMessage_TextBoxEnter, aData);
-		}
-
-		return true;
+		return bIssued ? bResult : true;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1188,10 +735,13 @@ namespace hpl {
 	{
 		mbUIKeyboardOpen = true;
 
-		mlSelectedTextEnd = 0;
-		SetMarkerPos(msText.length());
+		OhplW2TbCtx ctx;
+		OhplW2TextCall call;
+		SetupCall(ctx, call);
+		ohpl_w2_tb_ui_keyboard_open(&call);
+		ApplyEvents(ctx, cGuiMessageData());
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	void cWidgetTextBox::OnUIKeyboardClose()
@@ -1199,7 +749,7 @@ namespace hpl {
 		mbUIKeyboardOpen = false;
 		OnLostFocus(cGuiMessageData());
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 }

@@ -1,4 +1,5 @@
 #include "impl/LowLevelGraphicsVulkan.h"
+#include "impl/RustVk.h"
 
 #include "graphics/Bitmap.h"
 #include "math/Math.h"
@@ -33,109 +34,32 @@ namespace hpl {
 
 	static cVkFormat ToVkFormat(ePixelFormat aFormat, bool abSRGB, VkFormat aDepth24)
 	{
-		const VkComponentSwizzle R = VK_COMPONENT_SWIZZLE_R, G = VK_COMPONENT_SWIZZLE_G, ONE = VK_COMPONENT_SWIZZLE_ONE, ZERO = VK_COMPONENT_SWIZZLE_ZERO;
+		OhplVkFormat r;
+		ohpl_vk_format((int)aFormat, abSRGB, (uint32_t)aDepth24, &r);
 		cVkFormat f;
-		switch(aFormat)
-		{
-		case ePixelFormat_Alpha: f.mFormat = VK_FORMAT_R8_UNORM; f.mSwizzle = {ZERO, ZERO, ZERO, R}; break;
-		case ePixelFormat_Luminance: f.mFormat = VK_FORMAT_R8_UNORM; f.mSwizzle = {R, R, R, ONE}; break;
-		case ePixelFormat_LuminanceAlpha: f.mFormat = VK_FORMAT_R8G8_UNORM; f.mSwizzle = {R, R, R, G}; break;
-		case ePixelFormat_RGB: f.mFormat = abSRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM; f.mConvert = eConvert_RGBtoRGBA; break;
-		case ePixelFormat_RGBA: f.mFormat = abSRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM; break;
-		case ePixelFormat_BGR: f.mFormat = abSRGB ? VK_FORMAT_B8G8R8A8_SRGB : VK_FORMAT_B8G8R8A8_UNORM; f.mConvert = eConvert_RGBtoRGBA; break;
-		case ePixelFormat_BGRA: f.mFormat = abSRGB ? VK_FORMAT_B8G8R8A8_SRGB : VK_FORMAT_B8G8R8A8_UNORM; break;
-		case ePixelFormat_DXT1: f.mFormat = abSRGB ? VK_FORMAT_BC1_RGBA_SRGB_BLOCK : VK_FORMAT_BC1_RGBA_UNORM_BLOCK; break;
-		case ePixelFormat_DXT2:
-		case ePixelFormat_DXT3: f.mFormat = abSRGB ? VK_FORMAT_BC2_SRGB_BLOCK : VK_FORMAT_BC2_UNORM_BLOCK; break;
-		case ePixelFormat_DXT4:
-		case ePixelFormat_DXT5: f.mFormat = abSRGB ? VK_FORMAT_BC3_SRGB_BLOCK : VK_FORMAT_BC3_UNORM_BLOCK; break;
-		case ePixelFormat_RGTC1: f.mFormat = VK_FORMAT_BC4_UNORM_BLOCK; break;
-		case ePixelFormat_RGTC2: f.mFormat = VK_FORMAT_BC5_UNORM_BLOCK; f.mSwizzle = {R, R, R, G}; break; // SOMA uploads these as LATC2
-		case ePixelFormat_BC6H: f.mFormat = VK_FORMAT_BC6H_UFLOAT_BLOCK; break;
-		case ePixelFormat_BC7: f.mFormat = abSRGB ? VK_FORMAT_BC7_SRGB_BLOCK : VK_FORMAT_BC7_UNORM_BLOCK; break;
-		case ePixelFormat_Depth16: f.mFormat = VK_FORMAT_D16_UNORM; break;
-		case ePixelFormat_Depth24: f.mFormat = aDepth24; break;
-		case ePixelFormat_Depth32: f.mFormat = VK_FORMAT_D32_SFLOAT; break;
-		case ePixelFormat_Alpha16: f.mFormat = VK_FORMAT_R16_SFLOAT; f.mSwizzle = {ZERO, ZERO, ZERO, R}; f.mConvert = eConvert_FloatToHalf; f.mlSrcComponents = 1; break;
-		case ePixelFormat_Luminance16: f.mFormat = VK_FORMAT_R16_SFLOAT; f.mSwizzle = {R, R, R, ONE}; f.mConvert = eConvert_FloatToHalf; f.mlSrcComponents = 1; break;
-		case ePixelFormat_LuminanceAlpha16: f.mFormat = VK_FORMAT_R16G16_SFLOAT; f.mSwizzle = {R, R, R, G}; f.mConvert = eConvert_FloatToHalf; f.mlSrcComponents = 2; break;
-		case ePixelFormat_RGB16: f.mFormat = VK_FORMAT_R16G16B16A16_SFLOAT; f.mConvert = eConvert_FloatToHalf; f.mlSrcComponents = 3; break;
-		case ePixelFormat_RGBA16: f.mFormat = VK_FORMAT_R16G16B16A16_SFLOAT; f.mConvert = eConvert_FloatToHalf; f.mlSrcComponents = 4; break;
-		case ePixelFormat_Alpha32: f.mFormat = VK_FORMAT_R32_SFLOAT; f.mSwizzle = {ZERO, ZERO, ZERO, R}; break;
-		case ePixelFormat_Luminance32: f.mFormat = VK_FORMAT_R32_SFLOAT; f.mSwizzle = {R, R, R, ONE}; break;
-		case ePixelFormat_LuminanceAlpha32: f.mFormat = VK_FORMAT_R32G32_SFLOAT; f.mSwizzle = {R, R, R, G}; break;
-		case ePixelFormat_RGB32: f.mFormat = VK_FORMAT_R32G32B32A32_SFLOAT; f.mConvert = eConvert_Float3to4; break;
-		case ePixelFormat_RGBA32: f.mFormat = VK_FORMAT_R32G32B32A32_SFLOAT; break;
-		default: break;
-		}
+		f.mFormat = (VkFormat)r.format;
+		f.mSwizzle = { (VkComponentSwizzle)r.swizzle[0], (VkComponentSwizzle)r.swizzle[1], (VkComponentSwizzle)r.swizzle[2], (VkComponentSwizzle)r.swizzle[3] };
+		f.mConvert = (eConvert)r.convert;
+		f.mlSrcComponents = r.srcComponents;
 		return f;
 	}
 
-	static uint16_t FloatToHalf(float f)
-	{
-		uint32_t x;
-		memcpy(&x, &f, 4);
-		uint32_t s = (x >> 16) & 0x8000;
-		int e = (int)((x >> 23) & 0xFF) - 127 + 15;
-		uint32_t m = x & 0x7FFFFF;
-		if(((x >> 23) & 0xFF) == 0xFF) return (uint16_t)(s | 0x7C00 | (m ? 0x200 : 0));
-		if(e >= 31) return (uint16_t)(s | 0x7C00);
-		if(e <= 0)
-		{
-			if(e < -10) return (uint16_t)s;
-			m |= 0x800000;
-			return (uint16_t)(s | (m >> (14 - e)));
-		}
-		return (uint16_t)(s | (e << 10) | (m >> 13));
-	}
-
-	// Returns data in the layout the Vulkan format expects (may point into avScratch)
+	// Returns data in the layout the Vulkan format expects (may point into avScratch); NULL if the conversion buffer is unrepresentable
 	static const void* ConvertPixels(const cVkFormat& aFmt, const void *apData, size_t alPixels, std::vector<unsigned char>& avScratch, size_t& alSize)
 	{
-		switch(aFmt.mConvert)
-		{
-		case eConvert_RGBtoRGBA:
-		{
-			avScratch.resize(alPixels * 4);
-			const unsigned char *s = (const unsigned char*)apData;
-			for(size_t i=0; i<alPixels; ++i) { avScratch[i*4] = s[i*3]; avScratch[i*4+1] = s[i*3+1]; avScratch[i*4+2] = s[i*3+2]; avScratch[i*4+3] = 255; }
-			alSize = avScratch.size();
-			return avScratch.data();
-		}
-		case eConvert_FloatToHalf:
-		{
-			int lDst = aFmt.mlSrcComponents == 3 ? 4 : aFmt.mlSrcComponents;
-			avScratch.resize(alPixels * lDst * 2);
-			uint16_t *d = (uint16_t*)avScratch.data();
-			const float *s = (const float*)apData;
-			for(size_t i=0; i<alPixels; ++i)
-				for(int c=0; c<lDst; ++c) d[i*lDst + c] = c < aFmt.mlSrcComponents ? FloatToHalf(s[i*aFmt.mlSrcComponents + c]) : FloatToHalf(1.0f);
-			alSize = avScratch.size();
-			return avScratch.data();
-		}
-		case eConvert_Float3to4:
-		{
-			avScratch.resize(alPixels * 16);
-			float *d = (float*)avScratch.data();
-			const float *s = (const float*)apData;
-			for(size_t i=0; i<alPixels; ++i) { d[i*4] = s[i*3]; d[i*4+1] = s[i*3+1]; d[i*4+2] = s[i*3+2]; d[i*4+3] = 1; }
-			alSize = avScratch.size();
-			return avScratch.data();
-		}
-		default:
-			return apData;
-		}
+		if(aFmt.mConvert == eConvert_None) return apData;
+		OhplVkFormat r = {};
+		r.convert = aFmt.mConvert;
+		r.srcComponents = aFmt.mlSrcComponents;
+		size_t lSrc, lDst;
+		if(!ohpl_vk_convert_len(&r, alPixels, &lSrc, &lDst)) return NULL;
+		avScratch.resize(lDst);
+		ohpl_vk_convert_pixels(&r, (const uint8_t*)apData, lSrc, alPixels, avScratch.data(), lDst);
+		alSize = lDst;
+		return avScratch.data();
 	}
 
-	static VkSamplerAddressMode ToVkWrap(eTextureWrap aMode)
-	{
-		switch(aMode)
-		{
-		case eTextureWrap_Repeat: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		case eTextureWrap_ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		default: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		}
-	}
+	static VkSamplerAddressMode ToVkWrap(eTextureWrap aMode){ return (VkSamplerAddressMode)ohpl_vk_wrap((int)aMode); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// TEXTURE
@@ -204,36 +128,21 @@ namespace hpl {
 		size_t lSize = alDataSize;
 		size_t lPixels = (size_t)std::max(1, avSize.x) * std::max(1, avSize.y) * std::max(1, avSize.z);
 		const void *pData = ConvertPixels(fmt, apData, lPixels, vScratch, lSize);
+		if(pData == NULL) return;
 		mpGfx->UploadToImage(mvImages[alIdx], alLevel, alLayer, avOffset, avSize, pData, lSize);
 	}
 
-	static int FullMipCount(const cVector3l& v)
-	{
-		int lMax = std::max(v.x, std::max(v.y, v.z)), n = 1;
-		while(lMax > 1) { lMax >>= 1; ++n; }
-		return n;
-	}
+	static int FullMipCount(const cVector3l& v){ return ohpl_vk_full_mip_count(v.x, v.y, v.z); }
 
 	// 2x2 box filter on 8-bit data, like gluScaleImage at exact halvings
 	static void HalveImage(std::vector<unsigned char>& avData, cVector3l& avSize, int alBpp)
 	{
-		cVector3l vNew(std::max(1, avSize.x/2), std::max(1, avSize.y/2), 1);
-		std::vector<unsigned char> vOut((size_t)vNew.x * vNew.y * alBpp);
-		for(int y=0; y<vNew.y; ++y)
-			for(int x=0; x<vNew.x; ++x)
-				for(int c=0; c<alBpp; ++c)
-				{
-					int lSum = 0;
-					for(int dy=0; dy<2; ++dy)
-						for(int dx=0; dx<2; ++dx)
-						{
-							int sx = std::min(avSize.x-1, x*2+dx), sy = std::min(avSize.y-1, y*2+dy);
-							lSum += avData[((size_t)sy*avSize.x + sx)*alBpp + c];
-						}
-					vOut[((size_t)y*vNew.x + x)*alBpp + c] = (unsigned char)((lSum + 2) / 4);
-				}
+		int vNew[2];
+		ohpl_vk_halve_size(avSize.x, avSize.y, vNew);
+		std::vector<unsigned char> vOut((size_t)vNew[0] * vNew[1] * alBpp);
+		ohpl_vk_halve_image(avData.data(), avData.size(), avSize.x, avSize.y, alBpp, vOut.data(), vOut.size());
 		avData.swap(vOut);
-		avSize = vNew;
+		avSize = cVector3l(vNew[0], vNew[1], 1);
 	}
 
 	bool cVulkanTexture::CreateFromBitmapToIndex(cBitmap* apBmp, int alIdx)
@@ -249,24 +158,24 @@ namespace hpl {
 		mvSize = apBmp->GetSize();
 		mPixelFormat = format;
 		mbIsCompressed = PixelFormatIsCompressed(format);
-		if(mbIsCompressed && lNumMips <= 1) mbUseMipMaps = false;
-		if(mType == eTextureType_Rect) mbUseMipMaps = false;
-
-		int lStart = 0;
-		bool bCpuResize = false;
-		if(mlSizeDownScaleLevel > 0 && (!mbIsCompressed || lNumMips > 1) && !PixelFormatIsDepth(format))
-		{
-			if(lNumMips > 1)
-			{
-				lStart = std::min(lNumMips - 1, (int)mlSizeDownScaleLevel);
-				mvSize.x = std::max(1, mvSize.x >> lStart);
-				mvSize.y = std::max(1, mvSize.y >> lStart);
-				mvSize.z = std::max(1, mvSize.z >> lStart);
-			}
-			else if((mType == eTextureType_2D || mType == eTextureType_CubeMap) && mvSize.x > mvMinDownScaleSize.x && mvSize.y > mvMinDownScaleSize.y &&
-					!PixelFormatIsFloatingPoint(format))
-				bCpuResize = true;
-		}
+		OhplVkMipIn mipIn = {};
+		mipIn.size[0] = mvSize.x; mipIn.size[1] = mvSize.y; mipIn.size[2] = mvSize.z;
+		mipIn.numMips = lNumMips;
+		mipIn.downscale = mlSizeDownScaleLevel;
+		mipIn.minSize[0] = mvMinDownScaleSize.x; mipIn.minSize[1] = mvMinDownScaleSize.y; mipIn.minSize[2] = mvMinDownScaleSize.z;
+		mipIn.useMipmaps = mbUseMipMaps;
+		mipIn.compressed = mbIsCompressed;
+		mipIn.depth = PixelFormatIsDepth(format);
+		mipIn.floating = PixelFormatIsFloatingPoint(format);
+		mipIn.cube = mType == eTextureType_CubeMap;
+		mipIn.tex2d = mType == eTextureType_2D;
+		mipIn.rect = mType == eTextureType_Rect;
+		OhplVkMipPlan mipPlan;
+		ohpl_vk_mip_plan(&mipIn, &mipPlan);
+		mbUseMipMaps = mipPlan.useMipmaps;
+		int lStart = mipPlan.start;
+		bool bCpuResize = mipPlan.cpuResize;
+		if(!bCpuResize) mvSize = cVector3l(mipPlan.size[0], mipPlan.size[1], mipPlan.size[2]);
 
 		std::vector<std::vector<unsigned char>> vResized(lFaces);
 		cVector3l vBaseSize = mvSize;
@@ -288,8 +197,8 @@ namespace hpl {
 			mvSize = vBaseSize;
 		}
 
-		bool bProvidedMips = mbUseMipMaps && lNumMips > 1 && !bCpuResize;
-		int lLevels = !mbUseMipMaps ? 1 : bProvidedMips ? lNumMips - lStart : FullMipCount(mvSize);
+		bool bProvidedMips = mipPlan.provided;
+		int lLevels = mipPlan.levels;
 		if(!CreateImage(alIdx, mvSize, format, lLevels)) return false;
 
 		mlMemorySize = 0;
@@ -760,32 +669,12 @@ namespace hpl {
 		}
 
 		// Primitives Vulkan lacks become triangle/line lists
-		cLowLevelGraphicsVulkan::ePrim prim = cLowLevelGraphicsVulkan::ePrim_Triangles;
-		std::vector<unsigned int> vConverted;
+		cLowLevelGraphicsVulkan::ePrim prim = (cLowLevelGraphicsVulkan::ePrim)ohpl_vk_prim((int)aDrawType);
+		static thread_local std::vector<unsigned int> vConverted;
 		const unsigned int *pIdx = apIndices;
 		int lCount = alCount;
-		switch(aDrawType)
-		{
-		case eVertexBufferDrawType_TriStrip: prim = cLowLevelGraphicsVulkan::ePrim_TriStrip; break;
-		case eVertexBufferDrawType_TriFan: prim = cLowLevelGraphicsVulkan::ePrim_TriFan; break;
-		case eVertexBufferDrawType_Line: prim = cLowLevelGraphicsVulkan::ePrim_Lines; break;
-		case eVertexBufferDrawType_LineStrip: prim = cLowLevelGraphicsVulkan::ePrim_LineStrip; break;
-		case eVertexBufferDrawType_LineLoop:
-			prim = cLowLevelGraphicsVulkan::ePrim_LineStrip;
-			vConverted.assign(apIndices, apIndices + alCount);
-			vConverted.push_back(apIndices[0]);
-			break;
-		case eVertexBufferDrawType_Quad:
-			for(int q=0; q+3<alCount; q+=4)
-				for(int k : {0, 1, 2, 0, 2, 3}) vConverted.push_back(apIndices[q+k]);
-			break;
-		case eVertexBufferDrawType_QuadStrip:
-			for(int q=0; q+3<alCount; q+=2)
-				for(int k : {0, 1, 3, 0, 3, 2}) vConverted.push_back(apIndices[q+k]);
-			break;
-		default: break;
-		}
-		if(!vConverted.empty() || aDrawType == eVertexBufferDrawType_Quad || aDrawType == eVertexBufferDrawType_QuadStrip)
+		vConverted.resize(ohpl_vk_converted_len((int)aDrawType, alCount));
+		if(ohpl_vk_convert_indices((int)aDrawType, apIndices, alCount, vConverted.data(), vConverted.size()))
 		{
 			pIdx = vConverted.data();
 			lCount = (int)vConverted.size();
@@ -917,16 +806,15 @@ namespace hpl {
 					vu.msName = u.name;
 					size_t lBracket = vu.msName.find('[');
 					if(lBracket != tString::npos) vu.msName.resize(lBracket);
-					vu.mlOffset = u.offset;
-					vu.mlArrayStride = u.arrayStride > 0 ? u.arrayStride : 16;
-					vu.mlCount = std::max(1, u.size);
-					// GL type enums: FLOAT_MAT3 0x8B5B, FLOAT_MAT4 0x8B5C, INT* 0x1404/0x8B53-55, UNSIGNED_INT 0x1405, BOOL* 0x8B56-59
-					int lType = u.glDefineType;
-					vu.mlMatrixColumns = lType == 0x8B5B ? 3 : lType == 0x8B5C ? 4 : 0;
-					vu.mbInt = lType == 0x1404 || lType == 0x1405 || (lType >= 0x8B53 && lType <= 0x8B59);
-					vu.mbBool = lType >= 0x8B56 && lType <= 0x8B59;
-					vu.mlComponents = lType == 0x8B50 || lType == 0x8B53 || lType == 0x8B57 ? 2 : lType == 0x8B51 || lType == 0x8B54 || lType == 0x8B58 ? 3 :
-									  lType == 0x8B52 || lType == 0x8B55 || lType == 0x8B59 ? 4 : vu.mlMatrixColumns ? vu.mlMatrixColumns * vu.mlMatrixColumns : 1;
+					OhplVkUniform ru;
+					ohpl_vk_reflect_uniform(u.offset, u.glDefineType, u.size, u.arrayStride, &ru);
+					vu.mlOffset = ru.offset;
+					vu.mlArrayStride = ru.arrayStride;
+					vu.mlCount = ru.count;
+					vu.mlMatrixColumns = ru.matrixColumns;
+					vu.mbInt = ru.isInt;
+					vu.mbBool = ru.isBool;
+					vu.mlComponents = ru.components;
 					mvUniforms.push_back(vu);
 				}
 			}
@@ -957,17 +845,17 @@ namespace hpl {
 		return false;
 	}
 
+	static OhplVkUniform ToRust(const cVulkanUniform& u)
+	{
+		OhplVkUniform r = { u.mlOffset, u.mlArrayStride, u.mlMatrixColumns, u.mlCount, u.mbInt, u.mbBool, u.mlComponents };
+		return r;
+	}
+
 	// "name" or "name[i]"
 	int cVulkanProgram::FindUniform(const tString& asName, int* apElement)
 	{
-		tString sBase = asName;
-		int lElement = 0;
-		size_t lBracket = asName.find('[');
-		if(lBracket != tString::npos)
-		{
-			sBase = asName.substr(0, lBracket);
-			lElement = atoi(asName.c_str() + lBracket + 1);
-		}
+		int lElement;
+		tString sBase = asName.substr(0, ohpl_vk_split_uniform_name(asName.data(), asName.size(), &lElement));
 		if(apElement) *apElement = lElement;
 		for(size_t i=0; i<mvUniforms.size(); ++i)
 			if(mvUniforms[i].msName == sBase) return lElement < mvUniforms[i].mlCount ? (int)i : -1;
@@ -1005,31 +893,16 @@ namespace hpl {
 	bool cVulkanProgram::Write(int alVarId, const float *apData, int alComponents, int alCount, bool abInt)
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
-		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
+		OhplVkUniform u = ToRust(mvUniforms[mvParameters[alVarId].mlUniform]);
 		// GL rejects setters whose size or base type don't match the declaration (GL_INVALID_OPERATION)
-		if(alComponents != u.mlComponents || (u.mbInt && !u.mbBool)) return false;
-		int lFirst = mvParameters[alVarId].mlElement;
-		int lCount = std::min(alCount, u.mlCount - lFirst);
-		for(int e=0; e<lCount; ++e)
-		{
-			unsigned char *pDst = mvUniformData.data() + u.mlOffset + (lFirst + e) * u.mlArrayStride;
-			if(pDst + alComponents * 4 > mvUniformData.data() + mvUniformData.size()) return false;
-			for(int c=0; c<alComponents; ++c)
-			{
-				if(u.mbInt) { int32_t v = (int32_t)apData[e*alComponents + c]; memcpy(pDst + c*4, &v, 4); }
-				else memcpy(pDst + c*4, &apData[e*alComponents + c], 4);
-			}
-		}
-		return true;
+		return ohpl_vk_write_uniform(mvUniformData.data(), mvUniformData.size(), &u, mvParameters[alVarId].mlElement, alComponents, alCount, apData);
 	}
 
 	bool cVulkanProgram::SetInt(int alVarId, int alX)
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
-		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
-		if(!u.mbInt || u.mlComponents != 1) return false;
-		memcpy(mvUniformData.data() + u.mlOffset + mvParameters[alVarId].mlElement * u.mlArrayStride, &alX, 4);
-		return true;
+		OhplVkUniform u = ToRust(mvUniforms[mvParameters[alVarId].mlUniform]);
+		return ohpl_vk_write_int(mvUniformData.data(), mvUniformData.size(), &u, mvParameters[alVarId].mlElement, alX);
 	}
 
 	bool cVulkanProgram::SetFloat(int alVarId, float afX){ return Write(alVarId, &afX, 1, 1); }
@@ -1041,16 +914,8 @@ namespace hpl {
 	bool cVulkanProgram::SetMatrixf(int alVarId, const cMatrixf& aMtx)
 	{
 		if(alVarId < 0 || alVarId >= (int)mvParameters.size() || mvParameters[alVarId].mlUniform < 0) return false;
-		const cVulkanUniform& u = mvUniforms[mvParameters[alVarId].mlUniform];
-		if(u.mlMatrixColumns != 4) return false;
-		int lCols = 4;
-		int lOffset = u.mlOffset + mvParameters[alVarId].mlElement * u.mlArrayStride;
-		if(lOffset + lCols * 16 > (int)mvUniformData.size()) return false;
-		float *pDst = (float*)(mvUniformData.data() + lOffset);
-		for(int c=0; c<lCols; ++c)
-			for(int r=0; r<4; ++r)
-				pDst[c*4 + r] = r < lCols ? aMtx.m[r][c] : 0.0f;
-		return true;
+		OhplVkUniform u = ToRust(mvUniforms[mvParameters[alVarId].mlUniform]);
+		return ohpl_vk_write_mat4(mvUniformData.data(), mvUniformData.size(), &u, mvParameters[alVarId].mlElement, &aMtx.m[0][0]);
 	}
 
 	tString cVulkanProgram::DumpUniforms()

@@ -46,19 +46,10 @@ namespace hpl {
 								eWidgetSliderOrientation aOrientation) 
 					: iWidget(eWidgetType_Slider,apSet, apSkin)
 	{
-		mOrientation = aOrientation;
-
-		mbPressed = false;
-
-		mlValue =0;
-		mlMaxValue =10;
-		mlButtonValueAdd =1;
-		mlBarClickValueAdd = mlButtonValueAdd*10;
-		mlBarValueSize = 1;
+		mSlider = ohpl_w2_slider_init(aOrientation == eWidgetSliderOrientation_Vertical,
+									  mpSkin->GetAttribute(eGuiSkinAttribute_SliderButtonSize).x);
 
 		for(int i=0; i<2; ++i) mvButtons[i] = NULL;
-
-		mfButtonSize = mpSkin->GetAttribute(eGuiSkinAttribute_SliderButtonSize).x;
 
 		LoadGraphics();
 	}
@@ -83,51 +74,36 @@ namespace hpl {
 	
 	void cWidgetSlider::SetValue(int alValue, bool abGenCallback)
 	{ 
-		if(alValue<0) alValue = 0;
-		if(alValue>mlMaxValue) alValue = mlMaxValue;
-
-		if(mlValue == alValue) return;
-		mlValue = alValue;
+		int lNew;
+		if(ohpl_w2_slider_set_value(&mSlider, alValue, &lNew)==false) return;
 
 		if(abGenCallback) 
 		{
-			ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mlValue));
-			if(mbPressed==false)
-				ProcessMessage(eGuiMessage_SliderRelease, cGuiMessageData(mlValue));
+			ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mSlider.value));
+			if(mSlider.pressed==false)
+				ProcessMessage(eGuiMessage_SliderRelease, cGuiMessageData(mSlider.value));
 		}
 		UpdateBarProperties();
 	}
 
 	void cWidgetSlider::SetMaxValue(int alMax)
 	{ 
-		if(mlMaxValue == alMax) return;
-
-		mlMaxValue = alMax;
-		if(mlMaxValue <0)mlMaxValue=0;
-
-		if(mlBarValueSize > mlMaxValue) mlBarValueSize = mlMaxValue;
-
-		UpdateBarProperties();
+		if(ohpl_w2_slider_set_max(&mSlider, alMax)) UpdateBarProperties();
 	}
 
 	void cWidgetSlider::SetButtonValueAdd(int alAdd)
 	{ 
-		mlButtonValueAdd = alAdd;
+		mSlider.button_add = alAdd;
 	}
 
 	void cWidgetSlider::SetBarClickValueAdd(int alAdd)
 	{
-		mlBarClickValueAdd = alAdd;
+		mSlider.click_add = alAdd;
 	}
 
 	void cWidgetSlider::SetBarValueSize(int alSize)
 	{ 
-		if(mlBarValueSize == alSize) return;
-
-		mlBarValueSize  = alSize;
-		if(mlBarValueSize > mlMaxValue+1) mlBarValueSize = mlMaxValue+1;
-
-		UpdateBarProperties();
+		if(ohpl_w2_slider_set_bar_size(&mSlider, alSize)) UpdateBarProperties();
 	}
 
 	//-----------------------------------------------------------------------
@@ -141,55 +117,10 @@ namespace hpl {
 
 	void cWidgetSlider::UpdateBarProperties()
 	{
-		//////////////////////////
-		// Vertical
-		if(mOrientation == eWidgetSliderOrientation_Vertical)
-		{
-			mfSliderSize = mvSize.y-mfButtonSize*2;
-
-			mvBarSize = cVector2f(mvSize.x, 
-				((float)mlBarValueSize / (float)(mlMaxValue+1))*(mfSliderSize));
-
-			float fMinSize = mvGfxCorners[0]->GetActiveSize().y + mvGfxCorners[3]->GetActiveSize().y + 2;
-			if(mvBarSize.y < fMinSize) mvBarSize.y = fMinSize;
-
-			//The set taken for each value
-			if(mlMaxValue > 0)
-				mfValueStep =	(1 / (float)(mlMaxValue)) * (mfSliderSize - mvBarSize.y);
-			else
-				mfValueStep = 0;
-
-			mvBarPos = cVector3f(0, mfButtonSize + mfValueStep*(float)mlValue,0.2f);
-		}
-		//////////////////////////
-		// Horizontal
-		else
-		{
-			mfSliderSize = mvSize.x-mfButtonSize*2;
-
-			mvBarSize = cVector2f(((float)mlBarValueSize / (float)(mlMaxValue+1))*(mfSliderSize),
-									mvSize.y);
-
-			float fMinSize = mvGfxCorners[0]->GetActiveSize().x + mvGfxCorners[3]->GetActiveSize().x + 2;
-			if(mvBarSize.x < fMinSize) mvBarSize.x = fMinSize;
-
-			//The set taken for each value
-			if(mlMaxValue > 0)
-				mfValueStep =	(1 / (float)(mlMaxValue)) * (mfSliderSize - mvBarSize.x);
-			else
-				mfValueStep =0;
-
-			mvBarPos = cVector3f(mfButtonSize + mfValueStep*(float)mlValue,0,0.2f);
-		}
-		
-		mBarRect.x = GetGlobalPosition().x + mvBarPos.x;
-		mBarRect.y = GetGlobalPosition().y + mvBarPos.y;
-		mBarRect.w = mvBarSize.x;
-		mBarRect.h = mvBarSize.y;
-
-		
-		mfMaxPos = mfButtonSize + mfValueStep * (float)(mlMaxValue);
-		mfMinPos = mfButtonSize;
+		cVector2f vCorner0 = mvGfxCorners[0]->GetActiveSize();
+		cVector2f vCorner3 = mvGfxCorners[3]->GetActiveSize();
+		cVector3f vGlobal = GetGlobalPosition();
+		ohpl_w2_slider_update_bar(&mSlider, &mvSize, &vGlobal, &vCorner0, &vCorner3);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -199,11 +130,8 @@ namespace hpl {
 		int i;
 		for(i=0; i<2; ++i) if(mvButtons[i] == apWidget) break;
 
-		if(i==0) SetValue(mlValue-mlButtonValueAdd);
-		if(i==1) SetValue(mlValue+mlButtonValueAdd);
-		
-		//Call callbacks.
-		//ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mlValue));
+		if(i==0) SetValue(mSlider.value-mSlider.button_add);
+		if(i==1) SetValue(mSlider.value+mSlider.button_add);
 		
 		return true;
 	}
@@ -244,16 +172,12 @@ namespace hpl {
 		mvGfxCorners[2] = mpSkin->GetGfx(eGuiSkinGfx_SliderHandleCornerRD);
 		mvGfxCorners[3] = mpSkin->GetGfx(eGuiSkinGfx_SliderHandleCornerLD);
 		
-		//////////////////////////
-		// Vertical
-		if(mOrientation == eWidgetSliderOrientation_Vertical)
+		if(mSlider.vertical)
 		{
 			mvGfxArrow[0] = mpSkin->GetGfx(eGuiSkinGfx_SliderVertArrowUp);
 			mvGfxArrow[1] = mpSkin->GetGfx(eGuiSkinGfx_SliderVertArrowDown);
 			mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_SliderVertBackground);
 		}
-		//////////////////////////
-		// Horizontal
 		else
 		{
 			mvGfxArrow[0] = mpSkin->GetGfx(eGuiSkinGfx_SliderHoriArrowUp);
@@ -261,7 +185,7 @@ namespace hpl {
 			mpGfxBackground = mpSkin->GetGfx(eGuiSkinGfx_SliderHoriBackground);
 		}
 
-		mfButtonSize = mpSkin->GetAttribute(eGuiSkinAttribute_SliderButtonSize).x;
+		mSlider.button_size = mpSkin->GetAttribute(eGuiSkinAttribute_SliderButtonSize).x;
 	}
 
 	//-----------------------------------------------------------------------
@@ -269,26 +193,13 @@ namespace hpl {
 	void cWidgetSlider::OnChangeSize()
 	{
 		if(mvButtons[0] == NULL || mvButtons[1] == NULL) return;
-		
-		//////////////////////////
-		// Vertical
-		if(mOrientation == eWidgetSliderOrientation_Vertical)
-		{
-			mvButtons[0]->SetPosition(cVector3f(0,0,0.2f));
-			mvButtons[0]->SetSize(cVector2f(mvSize.x, mfButtonSize));
-			
-			mvButtons[1]->SetPosition(cVector3f(0,mvSize.y-mfButtonSize,0.2f));
-			mvButtons[1]->SetSize(cVector2f(mvSize.x, mfButtonSize));
-		}
-		//////////////////////////
-		// Horizontal
-		else
-		{
-			mvButtons[0]->SetPosition(cVector3f(0,0,0.2f));
-			mvButtons[0]->SetSize(cVector2f(mfButtonSize,mvSize.y));
 
-			mvButtons[1]->SetPosition(cVector3f(mvSize.x-mfButtonSize,0,0.2f));
-			mvButtons[1]->SetSize(cVector2f(mfButtonSize, mvSize.y));
+		OhplW2PosSize vButtons[2];
+		ohpl_w2_slider_buttons(mSlider.vertical, &mvSize, mSlider.button_size, vButtons);
+		for(int i=0; i<2; ++i)
+		{
+			mvButtons[i]->SetPosition(vButtons[i].pos);
+			mvButtons[i]->SetSize(vButtons[i].size);
 		}
 
 		UpdateBarProperties();
@@ -305,74 +216,28 @@ namespace hpl {
 
 	void cWidgetSlider::OnDraw(float afTimeStep, cGuiClipRegion *apClipRegion)
 	{	
-		////////////////////////////////
-		// Background
+		cVector3f vGlobal = GetGlobalPosition();
+		OhplW2SliderDraw d;
+		ohpl_w2_slider_draw(&mSlider, &mvSize, &vGlobal, &d);
 
-		// Vertical
-		if(mOrientation == eWidgetSliderOrientation_Vertical)
-		{
-			mpSet->DrawGfx(mpGfxBackground, GetGlobalPosition() + 
-							cVector3f(0,mfButtonSize,0.1f),
-							cVector2f(mvSize.x,mvSize.y - mfButtonSize*2));
-		}
-		// Horizontal
-		else
-		{
-			mpSet->DrawGfx(mpGfxBackground, GetGlobalPosition() + 
-				cVector3f(mfButtonSize,0,0.1f),
-				cVector2f(mvSize.x - mfButtonSize*2,mvSize.y));
-		}
+		mpSet->DrawGfx(mpGfxBackground, d.track_pos, d.track_size);
 
-		////////////////////////////////
-		// Borders and button background
 		DrawBordersAndCorners(	mpGfxButtonBackground, mvGfxBorders, mvGfxCorners, 
-								GetGlobalPosition() + mvBarPos, mvBarSize);
+								d.bar_pos, d.bar_size);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	bool cWidgetSlider::OnMouseMove(const cGuiMessageData& aData)
 	{
-		if(mbPressed)
+		if(mSlider.pressed)
 		{
+			cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
+			cVector3f vGlobal = GetGlobalPosition();
 			int lVal;
-			// Vertical
-			if(mOrientation == eWidgetSliderOrientation_Vertical)
-			{
-				mvBarPos.y = WorldToLocalPosition(aData.mvPos).y + mvRelMousePos.y;
-
-				if(mvBarPos.y > mfMaxPos) mvBarPos.y = mfMaxPos;
-				if(mvBarPos.y < mfMinPos) mvBarPos.y = mfMinPos;
-
-				mBarRect.y = GetGlobalPosition().y + mvBarPos.y;
-				lVal = (int)((mvBarPos.y-mfButtonSize) / mfValueStep + 0.5f);
-			}
-			// Horizontal
-			else
-			{
-				mvBarPos.x = WorldToLocalPosition(aData.mvPos).x + mvRelMousePos.x;
-
-				if(mvBarPos.x > mfMaxPos) mvBarPos.x = mfMaxPos;
-				if(mvBarPos.x < mfMinPos) mvBarPos.x = mfMinPos;
-
-				mBarRect.x = GetGlobalPosition().x + mvBarPos.x;
-				lVal = (int)((mvBarPos.x-mfButtonSize) / mfValueStep + 0.5f);
-			}
-			
-			
-			if(lVal>mlMaxValue)lVal = mlMaxValue;
-			if(lVal<0)lVal = 0;
-			if(lVal != mlValue)
-			{
-				mlValue = lVal;
-				ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mlValue));
-			}
+			if(ohpl_w2_slider_mouse_move(&mSlider, &vLocal, &vGlobal, &lVal))
+				ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mSlider.value));
 		}
-		
-		/*if(mbPressed && cMath::PointBoxCollision(aData.mvPos,mBarRect)==false)
-		{
-			mbPressed = false;
-		}*/
 
 		return true;
 	}
@@ -386,72 +251,27 @@ namespace hpl {
 			return false;
 		}
 
-		if(cMath::CheckPointInRectIntersection(aData.mvPos,mBarRect))
-		{
-			mbPressed = true;
-
-			cVector3f vRel = mvBarPos - WorldToLocalPosition(aData.mvPos);
-			mvRelMousePos.x = vRel.x;
-			mvRelMousePos.y = vRel.y;
-		}
-		else
-		{
-			int lVal;
-			float fValue =  mlBarClickValueAdd*mfValueStep;
-
-			if(mOrientation == eWidgetSliderOrientation_Vertical)
-			{
-				if(WorldToLocalPosition(aData.mvPos.y).y < mvBarPos.y+mBarRect.h)
-				{
-					fValue*=-1;
-				}
-
-				mvBarPos.y += fValue;
-				if(mvBarPos.y > mfMaxPos) mvBarPos.y = mfMaxPos;
-				if(mvBarPos.y < mfMinPos) mvBarPos.y = mfMinPos;
-
-				mBarRect.y = GetGlobalPosition().y + mvBarPos.y;
-				lVal = (int)((mvBarPos.y-mfButtonSize) / mfValueStep + 0.5f);
-			}
-			else
-			{
-                if(WorldToLocalPosition(aData.mvPos.x).x < mvBarPos.x+mBarRect.w)
-				{
-					fValue*=-1;
-				}
-				
-				mvBarPos.x += fValue;
-				if(mvBarPos.x > mfMaxPos) mvBarPos.x = mfMaxPos;
-				if(mvBarPos.x < mfMinPos) mvBarPos.x = mfMinPos;
-
-				mBarRect.x = GetGlobalPosition().x + mvBarPos.x;
-				lVal = (int)((mvBarPos.x-mfButtonSize) / mfValueStep + 0.5f);
-			}
-			if(lVal>mlMaxValue)lVal = mlMaxValue;
-			if(lVal<0)lVal = 0;
-			if(lVal != mlValue)
-			{
-				mlValue = lVal;
-				ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mlValue));
-			}
-			//mvRelMousePos.x = -mBarRect.w*0.5f;
-			//mvRelMousePos.y = -mBarRect.h*0.5f;
-		}
+		cVector3f vLocal = WorldToLocalPosition(aData.mvPos);
+		cVector3f vGlobal = GetGlobalPosition();
+		int lVal;
+		bool bFire = false;
+		bool bRet = ohpl_w2_slider_mouse_down(&mSlider, aData.mlVal, &aData.mvPos, &vLocal, &vGlobal, &lVal, &bFire);
+		if(bFire)
+			ProcessMessage(eGuiMessage_SliderMove, cGuiMessageData(mSlider.value));
 		
-		return true;
+		return bRet;
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cWidgetSlider::OnMouseUp(const cGuiMessageData& aData)
 	{
-		if(mbPressed)
+		if(ohpl_w2_slider_release(&mSlider))
 		{
-			mbPressed = false;
 			UpdateBarProperties();
 		}
 
-		ProcessMessage(eGuiMessage_SliderRelease, cGuiMessageData(mlValue));
+		ProcessMessage(eGuiMessage_SliderRelease, cGuiMessageData(mSlider.value));
 		
 		return true;
 	}
@@ -477,9 +297,8 @@ namespace hpl {
 
 	bool cWidgetSlider::OnLostFocus(const cGuiMessageData& aData)
 	{
-		if(mbPressed)
+		if(ohpl_w2_slider_release(&mSlider))
 		{
-			mbPressed = false;
 			UpdateBarProperties();
 		}
 
@@ -490,25 +309,10 @@ namespace hpl {
 
 	bool cWidgetSlider::OnUIArrowPress(const cGuiMessageData& aData)
 	{
-		bool bRet = false;
-		if(mOrientation==eWidgetSliderOrientation_Horizontal)
-		{
-			if(aData.mlVal==eUIArrow_Left)
-				bRet = ArrowButtonDown(mvButtons[0], aData);
+		int lButton = ohpl_w2_slider_arrow(mSlider.vertical, aData.mlVal);
+		if(lButton < 0) return false;
 
-			if(aData.mlVal==eUIArrow_Right)
-				bRet = ArrowButtonDown(mvButtons[1], aData);
-		}
-		else
-		{
-			if(aData.mlVal==eUIArrow_Up)
-				bRet = ArrowButtonDown(mvButtons[0], aData);
-
-			if(aData.mlVal==eUIArrow_Down)
-				bRet = ArrowButtonDown(mvButtons[1], aData);
-		}
-
-		return bRet;
+		return ArrowButtonDown(mvButtons[lButton], aData);
 	}
 
 	bool cWidgetSlider::OnUIArrowRelease(const cGuiMessageData& aData)

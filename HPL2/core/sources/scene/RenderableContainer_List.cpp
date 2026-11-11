@@ -53,7 +53,7 @@ namespace hpl {
 	
 	cRenderableContainer_List::cRenderableContainer_List()
 	{
-		mRoot.mpParent = NULL;
+		mRoot.SetParent(NULL);
 	}
 	
 	cRenderableContainer_List::~cRenderableContainer_List()

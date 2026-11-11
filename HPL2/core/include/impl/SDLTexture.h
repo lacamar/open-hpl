@@ -22,6 +22,7 @@
 
 #include "graphics/Texture.h"
 #include "impl/LowLevelGraphicsSDL.h"
+#include "impl/RustGl.h"
 
 #include <GL/glew.h>
 #if defined(__APPLE__)&&defined(__MACH__)
@@ -104,9 +105,8 @@ namespace hpl {
 		bool mbContainsData;
 		cLowLevelGraphicsSDL* mpGfxSDL;
 
-		float mfTimeCount;
+		OhplGlClock mClock;
 		int mlTextureIndex;
-		float mfTimeDir;
 	};
 
 };

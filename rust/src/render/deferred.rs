@@ -5,8 +5,9 @@
 //! the shim owns (`NONE` is a null pointer). Values only the shim can read (headroom, program
 //! creation results, world state) are `Query` ops answered through `Plan::feed`.
 //!
-//! Later chunks add a `Source` per function (G6b: SSAO, edge smooth, lights; G6c: the rest) and new
-//! `Op`/`Step` variants; slot and variable ids live in this module so both sides stay in step.
+//! G6b (`deferred_light*`: SSAO, edge smooth, light setup and lists) added the `Dl`/`AskGeom` ops. G6c
+//! (from `RenderLights_StencilBack_ScreenQuad`) adds more `Source`s and `Op`/`Step` variants; slot
+//! and variable ids live in the `deferred*` modules so both sides stay in step.
 
 use std::collections::VecDeque;
 
@@ -27,12 +28,12 @@ pub(super) fn exp(x: f32) -> f32 {
     unsafe { expf(x) }
 }
 
-fn tan(x: f32) -> f32 {
+pub(super) fn tan(x: f32) -> f32 {
     // SAFETY: pure libm function on a plain float.
     unsafe { tanf(x) }
 }
 
-fn log2(x: f32) -> f32 {
+pub(super) fn log2(x: f32) -> f32 {
     // SAFETY: pure libm function on a plain float.
     unsafe { log2f(x) }
 }
@@ -150,11 +151,19 @@ pub enum State {
 pub mod st {
     pub const BLEND_NONE: i32 = 0;
     pub const BLEND_ALPHA: i32 = 1;
+    pub const BLEND_ADD: i32 = 2;
+    pub const BLEND_MUL: i32 = 3;
+    pub const BLEND_PREMUL_ALPHA: i32 = 4;
+    pub const BLEND_MODULATE_SOURCE: i32 = 5;
     pub const ALPHA_SOLID: i32 = 0;
+    pub const ALPHA_TRANS: i32 = 1;
     pub const CHANNEL_RGBA: i32 = 0;
     pub const CHANNEL_NONE: i32 = 1;
+    pub const CHANNEL_RGB: i32 = 2;
+    pub const CHANNEL_A: i32 = 3;
     pub const FUNC_EQUAL: i32 = 0;
     pub const FUNC_LESS_OR_EQUAL: i32 = 1;
+    pub const FUNC_GREATER_OR_EQUAL: i32 = 2;
 }
 
 pub mod pf {
@@ -164,6 +173,8 @@ pub mod pf {
 
 pub mod comp {
     pub const FULL: i32 = 0;
+    pub const COLOR_AND_DEPTH: i32 = 1;
+    pub const COLOR: i32 = 2;
     pub const LINEAR_DEPTH: i32 = 5;
 }
 
@@ -181,10 +192,16 @@ pub enum Query {
 }
 
 /// Answer to a `Query`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Feed {
     Bool(bool),
     Float(f32),
+    Int(i32),
+    Vec3([f32; 3]),
+    Fogs(Vec<super::deferred_fog::FogAreaIn>),
+    Floats(Vec<f32>),
+    /// Raw words: ints, flags and float bit patterns that must survive the trip exactly.
+    Words(Vec<u32>),
 }
 
 impl Feed {
@@ -195,7 +212,35 @@ impl Feed {
     pub fn float(self) -> f32 {
         match self {
             Feed::Float(v) => v,
-            Feed::Bool(_) => 0.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn int(self) -> i32 {
+        match self {
+            Feed::Int(v) => v,
+            _ => 0,
+        }
+    }
+
+    pub fn floats(self) -> Vec<f32> {
+        match self {
+            Feed::Floats(v) => v,
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn words(self) -> Vec<u32> {
+        match self {
+            Feed::Words(v) => v,
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn vec3(self) -> [f32; 3] {
+        match self {
+            Feed::Vec3(v) => v,
+            _ => [0.0; 3],
         }
     }
 }
@@ -233,6 +278,15 @@ pub enum Step {
     CallbackPostTranslucent,
     RetrieveLightOcclusion,
     CopyAccumToPostEffects,
+    InitLightRendering,
+    RenderSsao,
+    RenderHpl3Ssao,
+    /// Answered with whether the weighted box pass handled the box lights.
+    RenderBoxWeighted,
+    RenderDirectional,
+    RenderNightVision,
+    ApplyHpl3Ssao,
+    LightPass(i32),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -317,6 +371,145 @@ pub enum Op {
         combo: i32,
     },
     Step(Step),
+    FlatProjectionMinMax {
+        min: [f32; 3],
+        max: [f32; 3],
+    },
+    NormalFrustumProjection,
+    QuadAt {
+        pos: [f32; 3],
+        size: [f32; 2],
+        min: [f32; 2],
+        max: [f32; 2],
+    },
+    CopyFbToTex {
+        tex: i32,
+        size: Vector2l,
+    },
+    SetAccumBuffer,
+    /// `SetMatrixf` of the 16 floats in plan array `arr`.
+    Matrix {
+        prog: i32,
+        id: i32,
+        arr: i32,
+    },
+    InvViewMatrix {
+        prog: i32,
+        id: i32,
+    },
+    ScreenPositionVars {
+        prog: i32,
+    },
+    /// `mpProgramManager->GenerateProgram`; stores into program slot `slot`, answered with a flag.
+    GenProgram {
+        slot: i32,
+        mode: i32,
+        flags: u32,
+    },
+    AskGeom {
+        q: Geom,
+        idx: i32,
+        f: [f32; 4],
+    },
+    Dl(DlOp),
+    P3(P3Op),
+    P4(P4),
+}
+
+/// A call into the renderer (`deferred_fx::x` ids) the shim performs with its own objects.
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub struct P4 {
+    pub id: i32,
+    pub a: i32,
+    pub b: i32,
+    pub c: i32,
+    pub d: i32,
+    pub f: [f32; 8],
+}
+
+/// Frustum and query questions only the shim can answer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Geom {
+    /// `CheckSphereNearPlaneIntersection(f[0..3], f[3])`; flag.
+    SphereNearPlane,
+    /// Light `idx`'s spot frustum against the camera near plane; flag.
+    FrustumNearPlane,
+    /// Spot frustum intersection with the line to the light's volume center; `Feed::Vec3`.
+    LineIntersection,
+    /// Light `idx`'s bounding volume against the near plane; flag.
+    BoxNearPlane,
+    QueryFetch,
+    QuerySamples,
+    ShadowNeedsUpdate,
+}
+
+/// Light list bookkeeping the shim performs on its own objects.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DlOp {
+    ClearPairs,
+    ClearTempLights,
+    SetMinLargeArea(i32),
+    Light(i32),
+    AcquireQuery(i32),
+    SetModelView(i32),
+    SetShape(i32),
+    QueryBegin(i32),
+    QueryEnd(i32),
+    DrawCurrent,
+    Flush,
+    InvView,
+    UpdateFullscreenQuad {
+        pos: [f32; 3],
+        size: [f32; 2],
+    },
+    LightMatrix(i32),
+    QueryLog {
+        idx: i32,
+        samples: i32,
+        visible: bool,
+    },
+    ReleaseQuery(i32),
+    Lists,
+    ClearShadowTexture,
+    ShadowData,
+    RenderShadowMap,
+}
+
+/// Light pass operations (G6c) on renderer state and light objects.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum P3Op {
+    StencilActive(bool),
+    ClearStencil,
+    ClearColorStencil,
+    Stencil {
+        func: i32,
+        reference: i32,
+        mask: i32,
+        fail: i32,
+        zfail: i32,
+        zpass: i32,
+    },
+    StencilWriteMask(i32),
+    /// Counter-clockwise when true.
+    Cull(bool),
+    Scissor(i32),
+    ScissorOff,
+    /// `SetupProgramAndTextures` plus `SetupLightProgramVariables` for a light.
+    LightProgram {
+        idx: i32,
+        flags: u32,
+    },
+    /// `SetupShadowMapRendering`; flag.
+    ShadowSetup(i32),
+    /// `RenderLightShadowMap`.
+    ShadowMap(i32),
+    PairBegin(i32),
+    PairEnd,
+    StencilDirty(bool),
+    Log {
+        kind: i32,
+        idx: i32,
+    },
 }
 
 /// Appends ops when the queue runs dry; returns false once nothing more will come.
@@ -348,10 +541,13 @@ impl Default for FilmGrain {
 }
 
 /// Renderer state a plan mutates; the shim copies it back after the replay.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Results {
+    pub handled: bool,
+    pub h3: super::deferred_ssao3::Hpl3State,
     pub film_grain: FilmGrain,
     pub trail_consumed: bool,
+    pub lights: super::deferred_light::LightResults,
 }
 
 pub struct Out<'a> {
@@ -443,7 +639,14 @@ pub fn fixed(ops: Vec<Op>) -> Plan {
     Plan::new(Fixed(Some(ops)))
 }
 
-fn state(which: State, val: i32) -> Op {
+/// A fixed op list whose `Matrix`/`FloatArr` ops index `arrays`.
+pub fn fixed_with_arrays(ops: Vec<Op>, arrays: Vec<Vec<f32>>) -> Plan {
+    let mut p = fixed(ops);
+    p.arrays = arrays;
+    p
+}
+
+pub(super) fn state(which: State, val: i32) -> Op {
     Op::State { which, val }
 }
 
@@ -497,8 +700,12 @@ pub enum Pass {
 
 /// The state set around the per-object loops of `RenderZ` and `RenderGbuffer`.
 pub fn plan_pass(p: Pass) -> Plan {
+    fixed(pass_ops(p))
+}
+
+pub(super) fn pass_ops(p: Pass) -> Vec<Op> {
     use st::*;
-    let ops = match p {
+    match p {
         Pass::ZBegin => vec![
             state(State::DepthTest, 1),
             state(State::DepthWrite, 1),
@@ -516,8 +723,7 @@ pub fn plan_pass(p: Pass) -> Plan {
             state(State::Channel, CHANNEL_RGBA),
         ],
         Pass::GbufferEnd => vec![state(State::DepthFunc, FUNC_LESS_OR_EQUAL)],
-    };
-    fixed(ops)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

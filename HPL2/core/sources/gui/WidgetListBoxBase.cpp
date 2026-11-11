@@ -30,6 +30,8 @@
 
 #include "gui/WidgetSlider.h"
 
+#include <vector>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -44,24 +46,13 @@ namespace hpl {
 
 		mfBackgroundZ = -0.5;
 
-		mlFirstItem = 0;
-		mlMaxItems = 1;
-
-		mlCursorPos = 0;
-		mlLastCursorPos = 0;
-		mlAnchorPos = -1;
-		mlNumClicksOnSamePos = 0;
-
-		mlNumBlankRows = 0;
+		mList = ohpl_w2_list_init();
 
 		mfSliderWidth = mpSkin->GetAttribute(eGuiSkinAttribute_ListBoxSliderWidth).x;
 
 		mpSlider = NULL;
 
-		mbAllowMultiSelection = false;
 		mbClearingSelection = false;
-
-		mbLocked = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -70,7 +61,7 @@ namespace hpl {
 	{
 		if(mpSet->IsDestroyingSet()==false)
 		{
-			mpSet->DestroyWidget(mpSlider);			
+			mpSet->DestroyWidget(mpSlider);
 		}
 	}
 
@@ -81,59 +72,34 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
-	
-	void iWidgetListBoxBase::SetSelectedItem(int alX, bool abMoveList, bool abGenerateCallback, eListBoxSelectType aType, 
+
+	void iWidgetListBoxBase::SetSelectedItem(int alX, bool abMoveList, bool abGenerateCallback, eListBoxSelectType aType,
 												bool abClearPrevious)
 	{
-		if(abClearPrevious || mbAllowMultiSelection==false)
+		if(abClearPrevious || mList.allow_multi==false)
 			ClearSelection();
 
 		if(abMoveList)
 			SetCursorPos(alX, true, true);
 
 		cWidgetItem* pItem = GetItem(alX);
-		if(mbAllowMultiSelection)
-		{
-			switch(aType)
-			{
-
-			case eListBoxSelectType_Select:
-				{
-					if(pItem)
-						pItem->SetSelected(true);
-				}
-				break;
-			case eListBoxSelectType_Toggle:
-				{
-					if(pItem)
-						pItem->SetSelected(!pItem->IsSelected());
-				}
-				break;
-			case eListBoxSelectType_FromLastCursor:
-				SelectRange(mlLastCursorPos, alX);
-				break;
-			case eListBoxSelectType_FromAnchorPos:
-				SelectRange(mlAnchorPos, alX);
-				break;
-			}
-		}
-		else
-		{
-			if(pItem)
-				pItem->SetSelected(true);
-		}
+		OhplW2SelAction action = ohpl_w2_list_select_action(&mList, aType, alX, pItem!=NULL, pItem ? pItem->IsSelected() : false);
+		if(action.kind==1)
+			pItem->SetSelected(action.flag);
+		else if(action.kind==2)
+			SelectRange(action.start, action.end);
 
 		if(abGenerateCallback)
 			ProcessMessage(eGuiMessage_SelectionChange, cGuiMessageData(alX));
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	int iWidgetListBoxBase::GetSelectedItem()
 	{
 		if(mlstSelectedItems.empty())
 			return -1;
-		
+
 		return mlstSelectedItems.back();
 	}
 
@@ -141,13 +107,8 @@ namespace hpl {
 
 	int iWidgetListBoxBase::GetMultiSelection(int alIdx)
 	{
-		int i=0;
-		for(tIntListIt it=mlstSelectedItems.begin(); it!=mlstSelectedItems.end() || i>alIdx; ++it, ++i)
-		{
-			if(i==alIdx)
-				return *it;
-		}
-		return -1;
+		std::vector<int> vSelected(mlstSelectedItems.begin(), mlstSelectedItems.end());
+		return ohpl_w2_list_multi_selection(vSelected.data(), vSelected.size(), alIdx);
 	}
 
 	//-----------------------------------------------------------------------
@@ -165,7 +126,8 @@ namespace hpl {
 		tIntListIt it = mlstSelectedItems.begin();
 		for(;it!=mlstSelectedItems.end();++it)
 		{
-			mvItems[*it]->SetSelected(false);
+			cWidgetItem* pItem = GetItem(*it);
+			if(pItem) pItem->SetSelected(false);
 		}
 		mlstSelectedItems.clear();
 
@@ -189,62 +151,53 @@ namespace hpl {
 
 	void iWidgetListBoxBase::SelectRange(int alStart, int alEnd)
 	{
-		int add;
+		OhplW2Range range = ohpl_w2_list_range(alStart, alEnd, GetItemNum());
 
-		if(alStart<alEnd)
-			add = 1;
-		else
-			add = -1;
-
-		cWidgetItem* pItem = NULL;
-		for(int i=alStart;i!=alEnd;i+=add)
+		for(int i=0; i<range.count; ++i)
 		{
-			pItem = GetItem(i);
+			cWidgetItem* pItem = GetItem(range.first + i*range.step);
 			if(pItem)
 				pItem->SetSelected(true);
 		}
-		pItem = GetItem(alEnd);
-		if(pItem)
-			pItem->SetSelected(true);
+		if(range.end_valid)
+		{
+			cWidgetItem* pItem = GetItem(alEnd);
+			if(pItem)
+				pItem->SetSelected(true);
+		}
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iWidgetListBoxBase::UpdateProperties()
 	{
-		mlNumItems = (int)mvItems.size();
-		mlMaxItems = (int)(mvSize.y /(mvDefaultFontSize.y +2))-1;
+		OhplW2ListUpdate update;
+		ohpl_w2_list_update(&mList, mvSize.y, mvDefaultFontSize.y, (int)mvItems.size(), &update);
 
         if(mpSlider == NULL)
 			return;
-		
-		if((int)mvItems.size() > mlMaxItems)
+
+		if(update.big)
 		{
-			mpSlider->SetBarValueSize(mlMaxItems);
-			mpSlider->SetMaxValue((int)mvItems.size() - mlMaxItems);
+			mpSlider->SetBarValueSize(update.bar_value_size);
+			mpSlider->SetMaxValue(update.max_value);
 		}
 		else
 		{
-			mpSlider->SetMaxValue(0);
-			mpSlider->SetBarValueSize(1);
+			mpSlider->SetMaxValue(update.max_value);
+			mpSlider->SetBarValueSize(update.bar_value_size);
 		}
 
 		mpSlider->SetButtonValueAdd(1);
-		mpSlider->SetBarClickValueAdd(mlMaxItems-1);
+		mpSlider->SetBarClickValueAdd(mList.max_items-1);
 
-		tIntListIt it = mlstSelectedItems.begin();
-		for(;it!=mlstSelectedItems.end();)
-		{
-			int lIdx = *it;
-			if(lIdx>=GetItemNum())
-				it = mlstSelectedItems.erase(it);
-			else
-				++it;
-		}
+		std::vector<int> vSelected(mlstSelectedItems.begin(), mlstSelectedItems.end());
+		vSelected.resize(ohpl_w2_list_prune(vSelected.data(), vSelected.size(), GetItemNum()));
+		mlstSelectedItems.assign(vSelected.begin(), vSelected.end());
 
 		mpSlider->SetValue(GetSelectedItem(), true);
 
-		if(mlNumItems==0)
+		if(mList.num_items==0)
 			SetCursorPos(0,true, true);
 	}
 
@@ -288,12 +241,12 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::MoveSlider(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		mlFirstItem = aData.mlVal;
+		mList.first_item = aData.mlVal;
 
 		return true;
 	}
 	kGuiCallbackDeclaredFuncEnd(iWidgetListBoxBase,MoveSlider)
-	
+
 	//-----------------------------------------------------------------------
 
 	void iWidgetListBoxBase::OnLoadGraphics()
@@ -321,15 +274,15 @@ namespace hpl {
 		// Background
 		mpSet->DrawGfx(	mpGfxBackground,GetGlobalPosition() +cVector3f(0,0,mfBackgroundZ),
 						mvSize);
-		
-		
+
+
 		////////////////////////////////
 		// Borders
-		DrawBordersAndCorners(	NULL, mvGfxBorders, mvGfxCorners, 
-								GetGlobalPosition() - 
+		DrawBordersAndCorners(	NULL, mvGfxBorders, mvGfxCorners,
+								GetGlobalPosition() -
 									cVector3f(	mvGfxCorners[0]->GetActiveSize().x,
-												mvGfxCorners[0]->GetActiveSize().y,0), 
-									mvSize +	mvGfxCorners[0]->GetActiveSize() + 
+												mvGfxCorners[0]->GetActiveSize().y,0),
+									mvSize +	mvGfxCorners[0]->GetActiveSize() +
 												mvGfxCorners[2]->GetActiveSize());
 	}
 
@@ -344,19 +297,15 @@ namespace hpl {
 		// Draw cursor
 		if(HasFocus())
 		{
-			int lIndex = mlCursorPos-mlFirstItem;
-			if(lIndex!=-1)
+			if(mList.cursor_pos-mList.first_item!=-1)
 			{
 				cVector3f vPosition = GetItemStartPos();
-				
-				cVector3f vUpperLeftCorner = vPosition + cVector3f(-1,lIndex*(mvDefaultFontSize.y+2),0);
-				cVector2f vWidth = cVector2f(mvSize.x-mfSliderWidth,1);
-				cVector2f vHeight = cVector2f(1, mvDefaultFontSize.y);
-
-				mpSet->DrawGfx(cGui::mpGfxRect, vUpperLeftCorner, vWidth, cColor(0.3f, 0.4));
-				mpSet->DrawGfx(cGui::mpGfxRect, vUpperLeftCorner+cVector3f(0,vHeight.y,0), vWidth, cColor(0.3f, 0.4));
-				mpSet->DrawGfx(cGui::mpGfxRect, vUpperLeftCorner, vHeight, cColor(0.3f, 0.4));
-				mpSet->DrawGfx(cGui::mpGfxRect, vUpperLeftCorner+cVector3f(vHeight.x,0,0), vHeight, cColor(0.3f, 0.4));
+				OhplW2PosSize vLines[4];
+				if(ohpl_w2_list_cursor_lines(&mList, &vPosition, mvSize.x, mfSliderWidth, mvDefaultFontSize.y, vLines))
+				{
+					for(int i=0; i<4; ++i)
+						mpSet->DrawGfx(cGui::mpGfxRect, vLines[i].pos, vLines[i].size, cColor(0.3f, 0.4));
+				}
 			}
 		}
 
@@ -364,7 +313,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool iWidgetListBoxBase::OnMouseMove(const cGuiMessageData& aData)
 	{
 		return true;
@@ -375,13 +324,14 @@ namespace hpl {
 	bool iWidgetListBoxBase::OnMouseDown(const cGuiMessageData& aData)
 	{
 		int lSliderValue = mpSlider->GetValue();
-		if(aData.mlVal == eGuiMouseButton_WheelUp)
+		int lWheel = ohpl_w2_list_wheel(aData.mlVal);
+		if(lWheel==0)
 		{
 			mpSlider->SetValue(lSliderValue-5);
 			return true;
 		}
 
-		if(aData.mlVal == eGuiMouseButton_WheelDown)
+		if(lWheel==1)
 		{
 			mpSlider->SetValue(lSliderValue+5);
 			return true;
@@ -389,33 +339,20 @@ namespace hpl {
 
 		cVector3f vLocalPos = WorldToLocalPosition(aData.mvPos);
 
-		int lSelection = (int)((vLocalPos.y - 2) / (mvDefaultFontSize.y+2)) - mlNumBlankRows;
-		if(lSelection < 0) return false;
+		int lModifier = aData.mKeyPress.mlModifier;
+		OhplW2ListMouse mouse = ohpl_w2_list_mouse_down(&mList, vLocalPos.y, mvDefaultFontSize.y, lModifier);
+		if(mouse.proceed==false) return false;
 
-		lSelection = lSelection + mlFirstItem;
+		ApplyCursor(mouse.cursor, true);
 
-		bool bUsingCtrl = (aData.mKeyPress.mlModifier & eKeyModifier_Ctrl)!=0;
-		bool bUsingShift = (aData.mKeyPress.mlModifier & eKeyModifier_Shift)!=0;
-		bool bClearSelection = !bUsingCtrl;
+		bool bUsingShift = (lModifier & eKeyModifier_Shift)!=0;
+		int lCursor = ohpl_w2_list_mouse_down_finish(&mList, bUsingShift, mouse.index);
 
-		eListBoxSelectType type = bUsingShift? eListBoxSelectType_FromAnchorPos :
-												(bUsingCtrl? eListBoxSelectType_Toggle : eListBoxSelectType_Select);
-		
-		SetCursorPos(lSelection,true,false);
-
-		if(bUsingShift==false)
-			SetAnchorPos(mlCursorPos);
-
-		if(lSelection==mlLastCursorPos)
-			++mlNumClicksOnSamePos;
-		else
-			mlNumClicksOnSamePos = 1;
-
-		cWidgetItem* pItem = GetItem(mlCursorPos);
+		cWidgetItem* pItem = GetItem(lCursor);
 		if(GetMultiSelectionNum()==1 && pItem && pItem->IsSelected())
 			;
 		else
-			SetSelectedItem(mlCursorPos, false, true, type, bClearSelection);
+			SetSelectedItem(lCursor, false, true, (eListBoxSelectType)mouse.ty, mouse.clear);
 
 		return true;
 	}
@@ -433,17 +370,12 @@ namespace hpl {
 	{
 		cVector3f vLocalPos = WorldToLocalPosition(aData.mvPos);
 
-		// If vLocalPos is on the slider, ignore event
-		if(vLocalPos.x > mvSize.x - mpSlider->GetSize().x)
-			return false;
-
-		if(mlCursorPos!=-1 && mlNumClicksOnSamePos>=2)
-		{
-			mlNumClicksOnSamePos = 0;
+		bool bFire = false;
+		bool bRet = ohpl_w2_list_double_click(&mList, vLocalPos.x, mvSize.x, mpSlider->GetSize().x, &bFire);
+		if(bFire)
 			ProcessMessage(eGuiMessage_SelectionDoubleClick, aData);
-		}
 
-		return true;
+		return bRet;
 	}
 
 
@@ -453,9 +385,9 @@ namespace hpl {
 	{
 		return false;
 	}
-	
+
 	//-----------------------------------------------------------------------
-	
+
 	bool iWidgetListBoxBase::OnMouseLeave(const cGuiMessageData& aData)
 	{
 		return false;
@@ -465,67 +397,26 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnKeyPress(const cGuiMessageData& aData)
 	{
-		eKey key = aData.mKeyPress.mKey;
-		int keyMod = aData.mKeyPress.mlModifier;
-		eListBoxSelectType type = eListBoxSelectType_Select;
-		bool bUsingCtrl = ((keyMod&eKeyModifier_Ctrl)!=0);
-		bool bUsingShift = ((keyMod&eKeyModifier_Shift)!=0);
+		int lMod = aData.mKeyPress.mlModifier;
+		OhplW2ListKey key = ohpl_w2_list_key(&mList, aData.mKeyPress.mKey, lMod);
 
-		if(key == eKey_Up)
+		if(key.arrow)
 		{
-			SetCursorPos(mlCursorPos-1, true, true);
-			if(bUsingCtrl==false && bUsingShift==false)
-				SetAnchorPos(mlCursorPos);
-			
-			if(bUsingCtrl==false && bUsingShift==false)
-			{
-				SetSelectedItem(mlCursorPos, false, true, eListBoxSelectType_Select, true);
-			}
-			else if(bUsingShift)
-			{
-				SetSelectedItem(mlCursorPos, false, true, eListBoxSelectType_FromAnchorPos, bUsingCtrl==false);
-			}
+			ApplyCursor(key.cursor, true);
+
+			OhplW2ListKey finish = ohpl_w2_list_key_finish(&mList, lMod);
+			if(finish.select)
+				SetSelectedItem(mList.cursor_pos, false, true, (eListBoxSelectType)finish.ty, finish.clear);
 
 			return true;
 		}
-		else if(key == eKey_Down)
+		if(key.select)
 		{
-			SetCursorPos(mlCursorPos+1, true, true);
-			if(bUsingCtrl==false && bUsingShift==false)
-				SetAnchorPos(mlCursorPos);
-			
-			if(bUsingCtrl==false && bUsingShift==false)
-			{
-				SetSelectedItem(mlCursorPos, false, true, eListBoxSelectType_Select, true);
-			}
-			else if(bUsingShift)
-			{
-				SetSelectedItem(mlCursorPos, false, true, eListBoxSelectType_FromAnchorPos, bUsingCtrl==false);
-			}
+			SetSelectedItem(mList.cursor_pos, false, true, (eListBoxSelectType)key.ty, key.clear);
 
 			return true;
 		}
-		else if(key == eKey_Space)
-		{
-			eListBoxSelectType type;
-			bool bClearSelection;
 
-			if(bUsingCtrl)
-			{
-				type = eListBoxSelectType_Toggle;
-				bClearSelection = false;
-			}
-			else
-			{
-				type = eListBoxSelectType_Select;
-				bClearSelection = true;
-			}
-
-			SetSelectedItem(mlCursorPos, false, true, type, bClearSelection);
-
-			return true;
-		}
-		
 		return false;
 	}
 
@@ -533,32 +424,18 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnUIArrowPress(const cGuiMessageData& aData)
 	{
-		if(mbLocked==false)
+		OhplW2ListArrow arrow = ohpl_w2_list_ui_arrow(&mList, aData.mlVal);
+		if(arrow.handled==false)
 			return false;
 
-		bool bUnlock = false;
+		ApplyCursor(arrow.cursor, true);
 
-		if(aData.mlVal==eUIArrow_Up)
-		{
-			SetCursorPos(mlCursorPos-1, true, true);
-		}
-		else if(aData.mlVal==eUIArrow_Down)
-		{
-			int lOldPos = mlCursorPos;
+		SetSelectedItem(mList.cursor_pos, true, true, eListBoxSelectType_Select);
 
-			SetCursorPos(mlCursorPos+1, true, true);
-
-			bUnlock = lOldPos == mlCursorPos;
-		}
-		else
-			return false;
-
-		SetSelectedItem(mlCursorPos, true, true, eListBoxSelectType_Select);
-
-		if(bUnlock)
+		if(arrow.unlock)
 		{
 			ProcessMessage(eGuiMessage_CheckChange, aData);
-			mbLocked = false;
+			mList.locked = false;
 		}
 
 		return true;
@@ -573,36 +450,27 @@ namespace hpl {
 
 	bool iWidgetListBoxBase::OnUIButtonPress(const cGuiMessageData& aData)
 	{
-		if(HasFocus())
-		{
-			if(aData.mlVal==eUIButton_Primary)
-			{
-				if(GetSelectedItem() == -1)
-				{
-					SetCursorPos(0, true,true);
-					SetSelectedItem(mlCursorPos, true, true, eListBoxSelectType_Select);
-				}
-				if(mbLocked == true)
-				{
-				    if(ProcessMessage(eGuiMessage_CheckChange, aData))
-					{
-						mbLocked = false;
-						return true;
-					}
-				}
+		OhplW2ListButton button = ohpl_w2_list_ui_button(&mList, HasFocus(), aData.mlVal, GetSelectedItem());
+		if(button.ret==0) return false;
+		if(button.ret==1) return true;
 
-				mbLocked=true;
-			}
-			if(aData.mlVal==eUIButton_Secondary)
+		if(button.init_select)
+		{
+			SetCursorPos(0, true,true);
+			SetSelectedItem(mList.cursor_pos, true, true, eListBoxSelectType_Select);
+		}
+		if(button.check_locked)
+		{
+		    if(ProcessMessage(eGuiMessage_CheckChange, aData))
 			{
-				if(mbLocked == false) return false;
-				mbLocked=false;
+				mList.locked = false;
+				return true;
 			}
-		
-			return true;
 		}
 
-		return false;
+		mList.locked = true;
+
+		return true;
 	}
 
 	bool iWidgetListBoxBase::OnUIButtonRelease(const cGuiMessageData& aData)
@@ -616,7 +484,7 @@ namespace hpl {
 		{
 			if(aData.mlVal==eUIButton_Primary)
 			{
-				mbLocked = false;
+				mList.locked = false;
 				return ProcessMessage(eGuiMessage_SelectionDoubleClick, aData);
 			}
 
@@ -628,40 +496,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void iWidgetListBoxBase::ApplyCursor(const OhplW2SliderSet& aFirst, bool abMoveList)
+	{
+		if(aFirst.set) mpSlider->SetValue(aFirst.value);
+
+		OhplW2SliderSet second = ohpl_w2_list_cursor2(&mList, abMoveList);
+		if(second.set) mpSlider->SetValue(second.value);
+	}
+
 	void iWidgetListBoxBase::SetCursorPos(int alPos, bool abMoveList, bool abClamp)
 	{
-		if(abClamp)
-		{
-			if(alPos<0)
-				alPos = 0;
-			if(alPos>=mlNumItems)
-				alPos = mlNumItems-1;
-		}
-		else
-		{
-			if(alPos<0 || alPos>=mlNumItems)
-				alPos = -1;
-		}
-
-		mlLastCursorPos = mlCursorPos;
-		mlCursorPos = alPos;
-
-		if(abMoveList && mlCursorPos >= mlFirstItem + mlMaxItems)
-		{
-			while(mlCursorPos >= mlFirstItem + mlMaxItems)
-			{
-				mlFirstItem++;
-			}
-			mpSlider->SetValue(mlFirstItem);
-		}
-		if(abMoveList && mlCursorPos < mlFirstItem && mlCursorPos>=0)
-		{
-			while(mlCursorPos < mlFirstItem)
-			{
-				mlFirstItem--;
-			}
-			mpSlider->SetValue(mlCursorPos);
-		}
+		ApplyCursor(ohpl_w2_list_cursor1(&mList, alPos, abMoveList, abClamp), abMoveList);
 	}
 
 	//-----------------------------------------------------------------------
