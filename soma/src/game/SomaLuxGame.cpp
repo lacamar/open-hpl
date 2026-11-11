@@ -35,7 +35,7 @@ template <class F> void cSomaLuxGame::ForEach(F aFunc, bool abActiveEffectsOnly)
 		aFunc(p);
 	// cLuxEffectHandler is a built-in global module, registered before user modules
 	for (cSomaLuxEffect *p : mvEffects)
-		if (p->mbActive || !abActiveEffectsOnly)
+		if (ohpl_gs3_visits_effect(p->mbActive, abActiveEffectsOnly))
 			aFunc(p);
 	for (cSomaLuxModule *p : mvModules)
 		aFunc(p);
@@ -61,8 +61,10 @@ cConfigFile *SomaGameConfig() { return gpGameConfig; }
 float SomaStringDuration(const tWString &asText)
 {
 	cConfigFile *c = gpGameConfig;
-	return std::max(c->GetFloat("General", "TextDuration_MinTime", 2.5f),
-					c->GetFloat("General", "TextDuration_StartTime", 1.5f) + asText.size() * c->GetFloat("General", "TextDuration_CharTime", 0.07f));
+	float fMin = c->GetFloat("General", "TextDuration_MinTime", 2.5f);
+	float fStart = c->GetFloat("General", "TextDuration_StartTime", 1.5f);
+	float fChar = c->GetFloat("General", "TextDuration_CharTime", 0.07f);
+	return ohpl_gs3_string_duration(fMin, fStart, fChar, asText.size());
 }
 
 static void LoadConfigs()
@@ -393,10 +395,10 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 	// cLuxGuiHandler::SetImGuiInputFocus: absolute pointer only while a 2D ImGui has input; in-world screens move their own cursor
 	static int lRelative = -1;
 	cSomaImGui *pInputFocus = cSomaImGui::GetInputFocus();
-	int lWantRelative = pInputFocus == NULL || pInputFocus->GetSet()->Is3D();
-	if (lWantRelative != lRelative)
+	int lMode = ohpl_gs3_pointer_mode(lRelative, pInputFocus != NULL, pInputFocus && pInputFocus->GetSet()->Is3D());
+	if (lMode >= 0)
 	{
-		lRelative = lWantRelative;
+		lRelative = lMode;
 		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->RelativeMouse(lRelative);
 		gpSomaBase->mpEngine->GetInput()->GetLowLevel()->LockInput(true);
 	}
@@ -407,7 +409,7 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 		iMouse *pMouse = gpSomaBase->mpEngine->GetInput()->GetMouse();
 		// Pointer starts centred until the OS reports motion, as in the official game
 		static bool bMouseMoved = false;
-		bMouseMoved |= mvMouseRel.x != 0 || mvMouseRel.y != 0;
+		bMouseMoved = ohpl_gs3_pointer_moved(bMouseMoved, mvMouseRel.x, mvMouseRel.y);
 		cVector2l vPos = bMouseMoved ? pMouse->GetAbsPosition() : gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeInt() / 2;
 		pFocus->SendMousePosition(vPos, mvMouseRel);
 	}
@@ -425,7 +427,7 @@ void cSomaLuxGame::UpdateGui(float afTimeStep)
 void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 {
 	// Paused: only modules (the menu) hear input
-	if (gpSomaBase->mbScriptGamePaused)
+	if (ohpl_gs3_route_action(gpSomaBase->mbScriptGamePaused))
 	{
 		for (cSomaLuxModule *p : mvModules)
 			p->OnAction(alAction, abPressed);
@@ -438,7 +440,7 @@ void cSomaLuxGame::BroadcastAction(int alAction, bool abPressed)
 
 void cSomaLuxGame::BroadcastAnalog(int alAnalogId, const cVector3f &avAmount)
 {
-	if (gpSomaBase->mbScriptGamePaused)
+	if (ohpl_gs3_analog_allowed(gpSomaBase->mbScriptGamePaused) == false)
 		return;
 	ForEach([&](cSomaLuxScriptable *p) { p->OnAnalogInput(alAnalogId, avAmount); }, true);
 }

@@ -2,6 +2,7 @@
 #define SOMA_LUX_SCRIPTABLE_H
 
 #include "hpl.h"
+#include "RustSomaLux.h"
 
 #include <angelscript.h>
 #include <functional>
@@ -65,14 +66,9 @@ public:
 
 protected:
 	friend class cSomaSaveState;
-	struct cTimer
+	struct cTimer : OhplGs3Timer
 	{
-		uint64_t mlId;
-		float mfLength;
-		float mfTimeLeft;
 		tString msFunc;
-		bool mbRepeat;
-		bool mbPaused;
 	};
 	struct cFader
 	{
@@ -84,6 +80,7 @@ protected:
 		bool mbReverseAtEnd;
 		bool mbPaused;
 	};
+	static_assert(sizeof(cFader) == sizeof(OhplGs3Fader) && offsetof(cFader, mbReverseAtEnd) == offsetof(OhplGs3Fader, mbReverseAtEnd));
 	cTimer *FindTimer(uint64_t alId);
 	cFader *FindFader(uint64_t alId);
 	cFader *GetOrAddFader(uint64_t alId, bool abSkipIfExists);

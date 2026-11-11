@@ -82,24 +82,8 @@ public:
 
 	static void RegisterNatives(asIScriptEngine *apEngine);
 
-	struct cMoveVector
-	{
-		cVector3f mvValue = 0;
-		cVector3f mvGoal = 0;
-		float mfSpeed = 0;
-		float mfAcc = 0;
-		float mfMaxSpeed = 0;
-		float mfSlowdownDist = 0;
-		bool mbMoving = false;
-	};
-	struct cFadeValue
-	{
-		float mfValue = 0;
-		float mfGoal = 0;
-		float mfSpeed = 0;
-		float mfMaxSpeed = 0;
-		float mfSpeedMul = 0;
-	};
+	struct cMoveVector : OhplGs3MoveVec {};
+	struct cFadeValue : OhplGs3Fade {};
 
 	cVector3f mvBaseCameraPosAdd = 0;
 	std::map<int, cMoveVector> mmapCameraPosAdd;
@@ -117,17 +101,17 @@ public:
 	}
 	float GetFOVMul()
 	{
-		float f = mFOVMul.mfValue;
+		std::vector<float> v;
 		for (auto &it : mmapFOVMul)
-			f *= it.second.mfValue;
-		return f;
+			v.push_back(it.second.mfValue);
+		return ohpl_gs3_fov_mul(mFOVMul.mfValue, v.data(), v.size());
 	}
 	cFadeValue mFOVMul, mAspectMul, mFOV;
 
 	void SetHealth(float afX);
 	bool GiveDamage(float afAmount, int alType, float afMinHealth, const cSomaID &aSource, int alDamageID);
 	std::vector<int> mvDamageIDs;
-	bool IsDead() const { return mfHealth <= 0 && mbCanDie; }
+	bool IsDead() const { return ohpl_gs3_is_dead(mfHealth, mbCanDie); }
 	float mfHealth = 1;
 	bool mbCanDie = true;
 	float mfMaxHealth = 1;
@@ -145,18 +129,17 @@ public:
 	std::map<int, float> mmapVisibilityMaxRange;
 	float GetVisibilityRangeMul()
 	{
-		float f = 1;
+		std::vector<float> v;
 		for (auto &it : mmapVisibilityRangeMul)
-			f *= it.second;
-		return f;
+			v.push_back(it.second);
+		return ohpl_gs3_visibility_range_mul(v.data(), v.size());
 	}
 	float GetVisibilityMaxRange()
 	{
-		float f = -1;
+		std::vector<float> v;
 		for (auto &it : mmapVisibilityMaxRange)
-			if (it.second >= 0)
-				f = f < 0 ? it.second : std::min(f, it.second);
-		return f;
+			v.push_back(it.second);
+		return ohpl_gs3_visibility_max_range(v.data(), v.size());
 	}
 
 	float mfTimeSincePhysicsInteraction = 0;
@@ -245,8 +228,8 @@ public:
 	void LatchActions();
 	void ClearGuiInput();
 	bool IsDown(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId]; }
-	bool BecameDown(int alId) { return IsDown(alId) && mvPrevDown[alId] == false; }
-	bool BecameUp(int alId) { return alId >= 0 && alId < kMaxActions && mvDown[alId] == false && mvPrevDown[alId]; }
+	bool BecameDown(int alId) { return ActionEdge(alId) == 1; }
+	bool BecameUp(int alId) { return ActionEdge(alId) == 2; }
 
 	bool mbInvertMouse = false;
 	bool mbSmoothMouse = true;
@@ -259,6 +242,11 @@ public:
 
 private:
 	static const int kMaxActions = 256;
+	int ActionEdge(int alId)
+	{
+		bool bInRange = alId >= 0 && alId < kMaxActions;
+		return ohpl_gs3_action_edge(alId, kMaxActions, bInRange && mvDown[alId], bInRange && mvPrevDown[alId]);
+	}
 	bool mvDown[kMaxActions] = {};
 	bool mvPrevDown[kMaxActions] = {};
 	bool mvPrevKeys[eKey_LastEnum] = {};
