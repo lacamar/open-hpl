@@ -79,20 +79,7 @@ namespace hpl {
 		const cVector3f &vMin = apObject->GetBoundingVolume()->GetMin();
 		const cVector3f &vMax = apObject->GetBoundingVolume()->GetMax();
 
-		//if(	vMin.x == avNodeMin.x || vMin.y == avNodeMin.y || vMin.z == avNodeMin.z ||
-		//	vMax.x == avNodeMax.x || vMax.y == avNodeMax.y || vMax.z == avNodeMax.z)
-		if(	cMath::Abs(vMin.x - avNodeMin.x)<kEpsilonf || 
-			cMath::Abs(vMin.y - avNodeMin.y)<kEpsilonf || 
-			cMath::Abs(vMin.z - avNodeMin.z)<kEpsilonf ||
-			
-			cMath::Abs(vMax.x - avNodeMax.x)<kEpsilonf || 
-			cMath::Abs(vMax.y - avNodeMax.y)<kEpsilonf || 
-			cMath::Abs(vMax.z - avNodeMax.z)<kEpsilonf)
-		{
-			return true;
-		}
-		
-		return false;
+		return ohpl_rc_at_edge(&vMin, &vMax, &avNodeMin, &avNodeMax);
 	}
 
 	//-----------------------------------------------------------------------
@@ -340,16 +327,7 @@ namespace hpl {
 
 				cVector3f vNodeSize = mvMax - mvMin;
 
-				float fLongestSide = vNodeSize.x;
-				mlSplitAxis =0;
-				if(fLongestSide < vNodeSize.y){	
-					fLongestSide = vNodeSize.y;
-					mlSplitAxis = 1;
-				}
-				if(fLongestSide < vNodeSize.z){	
-					fLongestSide = vNodeSize.z;	
-					mlSplitAxis = 2;
-				}
+				mlSplitAxis = ohpl_rc_longest_axis(&vNodeSize);
 			}
 
 			////////////////////////////////////////
@@ -1063,51 +1041,10 @@ namespace hpl {
 	 */
 	int cRenderableContainer_DynBoxTree::GetSplitGroup(iRenderable *apObject, float afSplitPlane, int alAxis, const cVector3f &avNodeSize)
 	{
-		float fMinVal =   GetAxisFromVec(apObject->GetBoundingVolume()->GetMin(),alAxis);
-		float fMaxVal =   GetAxisFromVec(apObject->GetBoundingVolume()->GetMax(),alAxis);
-
-		//////////////////////////
-		//Above cut plane
-		if(fMinVal >= afSplitPlane)
-		{
-			return 0;
-		}
-		//////////////////////////
-		//Below cut plane
-		else if(fMaxVal <= afSplitPlane)
-		{
-			return 1;
-		}
-		//////////////////////////
-		//Intersection
-		else
-		{
-			////////////////////////
-			//Calculate how much the object crosses over on each side
-			float fAboveDist = fMaxVal - afSplitPlane;
-			float fBelowDist = afSplitPlane - fMinVal;
-			
-			float fNodeSize = GetAxisFromVec(avNodeSize, alAxis);	//Using the size of entire node since it one side might be very small.
-
-			/////////////////////
-			//Get the least amount of cross over, and on which side it is.
-			float fMinDist = fAboveDist;
-			int lDestDir = 1;	//If above is smallest, object should be below and vice verce.
-			if(fBelowDist < fMinDist)
-			{
-				fMinDist = fBelowDist;
-				lDestDir =0;
-			}
-			
-			/////////////////////
-			//Check if the amount of cross over is small enough to not treat it as an intersection.
-			float fMinCrossOverAmount = fMinDist / fNodeSize;
-			if(fMinCrossOverAmount <= mfMaxIntersectionAmount) return lDestDir;
-			
-			return 2;
-		}
+		return ohpl_rc_split_group(&apObject->GetBoundingVolume()->GetMin(), &apObject->GetBoundingVolume()->GetMax(),
+									afSplitPlane, alAxis, &avNodeSize, mfMaxIntersectionAmount);
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 

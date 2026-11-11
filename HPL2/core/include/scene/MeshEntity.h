@@ -215,6 +215,7 @@ namespace hpl {
 
 	private:
 		float GetAnimationWeightMul();
+		void SyncAnimCores();
 
 		void CreateNodes();
 
@@ -264,6 +265,9 @@ namespace hpl {
 		std::vector<cMatrixf> mvBoneRestPose;
 
 		std::vector<cMatrixf> mvBoneMatrices;
+		std::vector<OhplAnimCore*> mvAnimCores;
+		std::vector<const cMatrixf*> mvScratchWorld, mvScratchInvBind;
+		std::vector<float> mvScratchRadii;
 
 		bool mbSkeletonPhysics;
 		bool mbSkeletonPhysicsFading;

@@ -66,7 +66,6 @@ namespace hpl {
 	class cGuiGfxElement
 	{
 		friend class cGuiSet;
-		friend class cGuiRenderObjectCompare;
 	public:
 		cGuiGfxElement(cGui* apGui);
 		~cGuiGfxElement();
@@ -95,6 +94,7 @@ namespace hpl {
 		cGuiGfxAnimation* CreateAnimtion(const tString& asName);
 		void PlayAnimation(int alNum);
 		cGuiGfxAnimation* GetAnimation(int alIdx){return mvAnimations[alIdx];}
+		int GetAnimationNum(){ return (int)mvAnimations.size();}
 		void SetAnimationTime(float afTime);
 
 		void SetAnimationPaused(bool abX){mbAnimationPaused = abX;}

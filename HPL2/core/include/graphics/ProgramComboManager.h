@@ -23,6 +23,7 @@
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustRender.h"
 
 namespace hpl {
 
@@ -55,36 +56,6 @@ namespace hpl {
 	typedef std::list<cProgramComboVariable> tProgramComboVariableList;
 	typedef tProgramComboVariableList::iterator tProgramComboVariableListIt;
 
-	//---------------------------------------------------
-
-	class cProgramComboShader
-	{
-	public:
-		cProgramComboShader() : mpShader(NULL), mlUserCount(0) {}
-
-		iGpuShader* mpShader;
-		int mlUserCount;
-	};
-
-	typedef std::map<unsigned int, cProgramComboShader*> tProgramComboShaderMap;
-	typedef tProgramComboShaderMap::iterator tProgramComboShaderMapIt;
-
-	//---------------------------------------------------
-
-	class cProgramComboProgram
-	{
-	public:
-		cProgramComboProgram() : mpProgram(NULL), mlUserCount(0) {}
-		
-		void DestroyProgram();
-
-		iGpuProgram* mpProgram;
-		int mlUserCount;
-	};
-
-	typedef std::map<unsigned int, cProgramComboProgram*> tProgramComboProgramMap;
-	typedef tProgramComboProgramMap::iterator tProgramComboProgramMapIt;
-	
 	//---------------------------------------------------
 
 	class cProgramComboSettingsVar
@@ -181,9 +152,7 @@ namespace hpl {
 		int mlNumOfMainModes;
 		std::vector<int> mvCombinationNum;
 
-		std::vector<tProgramComboProgramMap> mvProgramSets;
-		std::vector<tProgramComboShaderMap> mvVtxShaderSets;
-		std::vector<tProgramComboShaderMap> mvFragShaderSets;
+		OhplComboHandle *mpCombo;
 
 		tGpuShaderList mlstExtraShaders;
 		tGpuProgramList mlstExtraPrograms;

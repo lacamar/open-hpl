@@ -23,7 +23,7 @@
 #include "system/String.h"
 #include "system/Platform.h"
 
-#include "impl/tinyXML/tinyxml.h"
+#include "gui/RustGuiSkin.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiGfxElement.h"
@@ -89,40 +89,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static eGuiGfxAnimationType ToAnimType(const char* apString)
-	{
-		if(apString==NULL) return eGuiGfxAnimationType_Loop;
-
-		tString sLow = cString::ToLowerCase(apString);
-
-		if(sLow == "loop") return eGuiGfxAnimationType_Loop;
-		if(sLow == "oscillate") return eGuiGfxAnimationType_Oscillate;
-		if(sLow == "random") return eGuiGfxAnimationType_Random;
-		if(sLow == "stop_at_end") return eGuiGfxAnimationType_StopAtEnd;
-
-		Warning("Animation type '%s' does not exist!\n",sLow.c_str());
-
-		return eGuiGfxAnimationType_Loop;
-	}
-
-	static eGuiMaterial ToMaterial(const char* apString)
-	{
-		if(apString==NULL) return eGuiMaterial_Alpha;
-
-		tString sLow = cString::ToLowerCase(apString);
-				
-		if(sLow=="alpha") return eGuiMaterial_Alpha;
-		if(sLow=="diffuse") return eGuiMaterial_Diffuse;
-		if(sLow=="font_normal") return eGuiMaterial_FontNormal;
-		if(sLow=="additive") return eGuiMaterial_Additive;
-		if(sLow=="modulative") return eGuiMaterial_Modulative;
-		if(sLow=="premulalpha") return eGuiMaterial_PremulAlpha;
-
-		Warning("Material type '%s' does not exist!\n",sLow.c_str());
-
-		return eGuiMaterial_Alpha;
-	}
-	
 	bool cGuiSkin::LoadFromFile(const tWString &asFile)
 	{
 		//////////////////////////////////
@@ -132,49 +98,36 @@ namespace hpl {
 			Error("Couldn't load skin file '%s'!\n",asFile.c_str());
 			return false;
 		}
-		TiXmlDocument* pXmlDoc = hplNew( TiXmlDocument, () );
-		if(pXmlDoc->LoadFile(pFile)==false)
-		{
-			Error("Couldn't load skin file '%s'!\n",asFile.c_str());
-			fclose(pFile);
-			hplDelete(pXmlDoc);
-			return false;
-		}
+
+		fseek(pFile, 0, SEEK_END);
+		long lLength = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		std::vector<char> vData(lLength > 0 ? lLength : 0);
+		bool bReadOk = lLength <= 0 || fread(vData.data(), lLength, 1, pFile) == 1;
 		fclose(pFile);
 
-		/////////////////////////
-		//Get the root.
-		TiXmlElement* pRootElem = pXmlDoc->RootElement();
-
+		int lStatus = 0;
+		void *pSkin = ohpl_gui_skin_parse(vData.data(), vData.size(), bReadOk, &lStatus);
+		if(pSkin==NULL)
+		{
+			Error("Couldn't load skin file '%s'!\n",asFile.c_str());
+			return false;
+		}
+		const OhplSkinView *pView = ohpl_gui_skin_view(pSkin);
 
 		//////////////////////////////////////
 		// ATTRIBUTES
-		TiXmlElement* pAttributesElement = pRootElem->FirstChildElement("Attributes");
-
 		tBoolVec vAttribLoaded;
 		vAttribLoaded.resize(eGuiSkinAttribute_LastEnum, false);
 
-		//Iterate font elements
-		TiXmlElement* pAttributeElem = pAttributesElement->FirstChildElement();
-		for(; pAttributeElem != NULL; pAttributeElem = pAttributeElem->NextSiblingElement())
+		for(size_t i=0; i<pView->attributeCount; ++i)
 		{
-			tString sType = cString::ToString(pAttributeElem->Attribute("type"),"");
+			const OhplSkinAttribute &attr = pView->attributes[i];
 
-			eGuiSkinAttribute type = mpGui->GetSkinAttributeFromString(sType);
+			eGuiSkinAttribute type = mpGui->GetSkinAttributeFromString(attr.type);
 			if(type == eGuiSkinAttribute_LastEnum) continue;
 
-			tString sValue = cString::ToString(pAttributeElem->Attribute("value"),"");
-
-			cVector3f vVal(0);
-			tFloatVec vValues;
-            tString sSepp=" ";
-			cString::GetFloatVec(sValue,vValues,&sSepp);
-            
-			if(vValues.size()>0) vVal.x = vValues[0];
-			if(vValues.size()>1) vVal.y = vValues[1];
-			if(vValues.size()>2) vVal.z = vValues[2];
-			
-			mvAttributes[type] = vVal;
+			mvAttributes[type] = cVector3f(attr.value[0], attr.value[1], attr.value[2]);
 			vAttribLoaded[type] = true;
 		}
 
@@ -184,31 +137,20 @@ namespace hpl {
 			if(vAttribLoaded[i]==false) Error("Could not find gui skin '%s' attribute %s!\n", msName.c_str(),mpGui->GetSkinAttributeString((eGuiSkinAttribute)i).c_str());
 		}
 
-
-
 		//////////////////////////////////////
 		// FONTS
-		TiXmlElement* pFontsElement = pRootElem->FirstChildElement("Fonts");
-
-		//Iterate font elements
-		TiXmlElement* pFontElem = pFontsElement->FirstChildElement();
-		for(; pFontElem != NULL; pFontElem = pFontElem->NextSiblingElement())
+		for(size_t i=0; i<pView->fontCount; ++i)
 		{
-			tString sType = cString::ToString(pFontElem->Attribute("type"),"");
+			const OhplSkinFont &font = pView->fonts[i];
 
-			eGuiSkinFont type = mpGui->GetSkinFontFromString(sType);
+			eGuiSkinFont type = mpGui->GetSkinFontFromString(font.type);
 			if(type == eGuiSkinFont_LastEnum) continue;
 
-			tString sFontFile = cString::ToString(pFontElem->Attribute("file"),"");
-			cVector2f vSize = cString::ToVector2f(pFontElem->Attribute("size"),1);
-			cColor color = cString::ToColor(pFontElem->Attribute("color"),cColor(1,1));
-			
 			cGuiSkinFont *pFont = hplNew( cGuiSkinFont, (mpGui) );
 
-			pFont->mpFont = mpGui->GetResources()->GetFontManager()->CreateFontData(sFontFile);
-			pFont->mvSize = vSize;
-			pFont->mColor = color;
-
+			pFont->mpFont = mpGui->GetResources()->GetFontManager()->CreateFontData(font.file);
+			pFont->mvSize = cVector2f(font.size[0], font.size[1]);
+			pFont->mColor = cColor(font.color[0], font.color[1], font.color[2], font.color[3]);
 
 			mvFonts[type] = pFont;
         }
@@ -219,32 +161,22 @@ namespace hpl {
 			if(mvFonts[i]==NULL) Error("Could not find gui skin '%s' font %s!\n", msName.c_str(),mpGui->GetSkinFontString((eGuiSkinFont)i).c_str());
 		}
 
-
 		//////////////////////////////////////
 		// GFX ELEMENTS
-		
-		//Get gfx element
-		TiXmlElement* pGfxElementsElement = pRootElem->FirstChildElement("GfxElements");
-
-		//Iterate gfx elements
-		TiXmlElement* pGfxElem = pGfxElementsElement->FirstChildElement();
-		for(; pGfxElem != NULL; pGfxElem = pGfxElem->NextSiblingElement())
+		for(size_t i=0; i<pView->gfxCount; ++i)
 		{
-			tString sType = cString::ToString(pGfxElem->Attribute("type"),"");
-			
-			eGuiSkinGfx type = mpGui->GetSkinGfxFromString(sType);
+			const OhplSkinGfx &gfx = pView->gfx[i];
+
+			eGuiSkinGfx type = mpGui->GetSkinGfxFromString(gfx.type);
 			if(type == eGuiSkinGfx_LastEnum) continue;
 
-			tString sFile = cString::ToString(pGfxElem->Attribute("file"),"");
-			cVector2f vOffset = cString::ToVector2f(pGfxElem->Attribute("offset"),0);
-			cVector2f vSize = cString::ToVector2f(pGfxElem->Attribute("active_size"),-1);
-			cColor color = cString::ToColor(pGfxElem->Attribute("color"),cColor(1,1));
-			eGuiMaterial material = ToMaterial(pGfxElem->Attribute("material"));
+			tString sFile = gfx.file;
+			cColor color(gfx.color[0], gfx.color[1], gfx.color[2], gfx.color[3]);
+			eGuiMaterial material = (eGuiMaterial)gfx.material;
+			if(gfx.materialWarn) Warning("Material type '%s' does not exist!\n",gfx.materialWarn);
+			if(gfx.animWarn) Warning("Animation type '%s' does not exist!\n",gfx.animWarn);
+			bool bAnimated = gfx.animated != 0;
 
-			bool bAnimated = cString::ToBool(pGfxElem->Attribute("animated"),false);
-			float fAnimFrameTime = cString::ToFloat(pGfxElem->Attribute("anim_frame_time"),1);
-			eGuiGfxAnimationType animType = ToAnimType(pGfxElem->Attribute("anim_mode"));
-			
 			cGuiGfxElement *pGfx = NULL;
 			if(sFile != "")
 			{
@@ -264,16 +196,16 @@ namespace hpl {
 
 			if(pGfx)
 			{
-				if(bAnimated)
+				if(bAnimated && pGfx->GetAnimationNum() > 0)
 				{
 					cGuiGfxAnimation *pAnim = pGfx->GetAnimation(0);
-					pAnim->SetFrameLength(fAnimFrameTime);
-					pAnim->SetType(animType);
+					pAnim->SetFrameLength(gfx.frameTime);
+					pAnim->SetType((eGuiGfxAnimationType)gfx.animMode);
 				}
 
-				if(vSize.x >=0) 
-					pGfx->SetActiveSize(vSize);
-				pGfx->SetOffset(cVector3f(vOffset.x, vOffset.y,0));
+				if(gfx.hasActiveSize)
+					pGfx->SetActiveSize(cVector2f(gfx.activeSize[0], gfx.activeSize[1]));
+				pGfx->SetOffset(cVector3f(gfx.offset[0], gfx.offset[1],0));
 				
 				mvGfxElements[type] = pGfx;
 			}
@@ -285,7 +217,7 @@ namespace hpl {
 			if(mvGfxElements[i]==NULL) Error("Could not find gui skin '%s' gfx %s!\n", msName.c_str(),mpGui->GetSkinGfxString((eGuiSkinGfx)i).c_str());
 		}
 
-		hplDelete(pXmlDoc);
+		ohpl_gui_skin_free(pSkin);
 
 		return true;
 	}

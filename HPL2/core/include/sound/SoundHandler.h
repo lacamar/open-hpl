@@ -25,6 +25,7 @@
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "sound/SoundTypes.h"
+#include "sound/RustSound.h"
 #include "engine/EngineTypes.h"
 
 #include "physics/PhysicsWorld.h"
@@ -84,21 +85,21 @@ namespace hpl {
 		bool Update(float afTimeStep);
 
 		inline const tString& GetName() const { return msName;}
-		inline eSoundEntryType GetType() const { return mType; }
+		inline eSoundEntryType GetType() const { return (eSoundEntryType)mS.entry_type; }
 		inline int GetId() const { return mlId; }
 		inline iSoundChannel* GetChannel() const { return mpSound; }
 		
-		inline bool IsFirstTime(){ return mbFirstTime; }
+		inline bool IsFirstTime(){ return mS.first_time; }
 
 		void Stop();
 		void SetPaused(bool abX);
 
-		void SetDefaultVolume(float afVolume);
-		void SetDefaultSpeed(float afSpeed);
+		void SetDefaultVolume(float afVolume){ mS.normal_volume = afVolume; }
+		void SetDefaultSpeed(float afSpeed){ mS.normal_speed = afSpeed; }
 
-		void SetVolumeMul(float afMul);
-		float GetVolumeMul() const { return mfVolumeMul; }
-		void SetSpeedMul(float afMul);
+		void SetVolumeMul(float afMul){ mS.volume_mul = afMul; mS.volume_fade_dest = afMul; }
+		float GetVolumeMul() const { return mS.volume_mul; }
+		void SetSpeedMul(float afMul){ mS.speed_mul = afMul; mS.speed_fade_dest = afMul; }
 
 		void FadeVolumeMulTo(float afDestMul, float afSpeed);
 		void FadeSpeedMulTo(float afDestMul, float afSpeed);
@@ -109,43 +110,16 @@ namespace hpl {
 		iSoundEntryCallback* GetCallBack(){ return mpCallback;}
 		void SetCallBack(iSoundEntryCallback* apCallback){ mpCallback = apCallback;}
 
-		void SetStopDisabled(bool abX){mbStopDisabled = abX;}
-		bool GetStopDisabled(){ return mbStopDisabled;}
+		void SetStopDisabled(bool abX){mS.stop_disabled = abX;}
+		bool GetStopDisabled(){ return mS.stop_disabled;}
 		
 	private:
-		void UpdateVolumeMulFade(float afTimeStep);
-		void UpdateSpeedMulFade(float afTimeStep);
-
-		void Update3DSpecifics(float afTimeStep);
-		
 		tString msName;
 		iSoundChannel* mpSound;
 		cSoundHandler *mpSoundHandler;
-
-		eSoundEntryType mType;
 		int mlId;
 
-		bool mb3D;
-
-		float mfNormalVolume;
-		float mfVolumeMul;
-		float mfVolumeFadeDest;
-		float mfVolumeFadeSpeed;
-		bool mbStopAfterFadeOut;
-				
-		float mfNormalSpeed;
-		float mfSpeedMul;
-		float mfSpeedFadeDest;
-		float mfSpeedFadeSpeed;
-
-		bool mbFirstTime;
-		
-		float mfBlockMul;
-		float mfBlockFadeDest;
-		float mfBlockFadeSpeed;
-
-		bool mbStream;
-		bool mbStopDisabled;
+		OhplSoundEntryState mS;
 
 		iSoundEntryCallback *mpCallback;
 	};
@@ -211,6 +185,8 @@ namespace hpl {
 										eSoundEntryType aEntryType = eSoundEntryType_Gui,
 										const cVector3f& avPos=cVector3f(0,0,1), bool *apNotEnoughChannels=NULL);
 
+
+		iLowLevelSound* GetLowLevelSound(){ return mpLowLevelSound; }
 
 		void SetSilent(bool abX){ mbSilent = abX; }
 		bool GetSilent(){ return mbSilent; }

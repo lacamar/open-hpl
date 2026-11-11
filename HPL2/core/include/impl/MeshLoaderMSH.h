@@ -59,17 +59,13 @@ namespace hpl {
 
 	private:
 		void AddAnimation(cAnimation *apAnimation, cBinaryBuffer* apBuffer);
-		cAnimation* GetAnimation(cBinaryBuffer* apBuffer, const tWString &asFullPath, bool abHpl3=false);
 
 		void AddNodeToBuffer(cNode3D *apNode, cBinaryBuffer* apBuffer, int alLevel);
-		void GetNodeFromBuffer(cNode3D *apParentNode, cMesh *apMesh, cBinaryBuffer* apBuffer, int alLevel);
 
 		void AddBoneToBuffer(cBone *apBone, cBinaryBuffer* apBuffer, int alLevel);
-		void GetBoneFromBuffer(cBone *apParentBone, cBinaryBuffer* apBuffer, int alLevel, bool abUnitScale);
 
 		void* GetVertexBufferWithFormat(iVertexBuffer *apVtxBuffer, eVertexBufferElement aElement, eVertexBufferElementFormat aFormat);
 		void AddBinaryBufferDataWithFormat(cBinaryBuffer* apBuffer, void *apSrcData, size_t alSize, eVertexBufferElementFormat aFormat);
-		void GetBinaryBufferDataWithFormat(cBinaryBuffer* apBuffer, void *apDestData, size_t alSize, eVertexBufferElementFormat aFormat);
 	};
 
 };

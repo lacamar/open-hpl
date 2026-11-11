@@ -4,8 +4,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 log=$(mktemp)
 trap 'command rm -f "$log"' EXIT
-make -C amnesia/src/build -j8 Soma Amnesia Amfp Launcher PhysicsNewtonTests CStringTests \
-	PlatformXdgPathTests HpslTranspilerTests GlslToVulkanTests >"$log" 2>&1 || { grep -m5 'error' "$log"; exit 1; }
+make -C amnesia/src/build -j"${OHPL_JOBS:-8}" Soma Amnesia Amfp Launcher PhysicsNewtonTests CStringTests \
+	PlatformXdgPathTests HpslTranspilerTests GlslToVulkanTests TraceRecorderTests >"$log" 2>&1 || { grep -m5 'error' "$log"; exit 1; }
 ctest --test-dir amnesia/src/build 2>&1 | grep -E 'tests passed|Failed'
 for g in soma amnesia rebirth bunker; do eval "$(scripts/soma-init.sh "$g" 2>/dev/null)"; done
 for g in soma rebirth bunker; do

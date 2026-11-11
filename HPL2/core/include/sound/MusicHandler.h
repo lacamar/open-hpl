@@ -20,8 +20,8 @@
 #ifndef HPL_MUSICHANDLER_H
 #define HPL_MUSICHANDLER_H
 
-#include <list>
 #include "system/SystemTypes.h"
+#include "sound/RustSound.h"
 
 namespace hpl {
 
@@ -47,36 +47,20 @@ namespace hpl {
 	//////////// MUSIC ENTRY ///////////////////////////
 	////////////////////////////////////////////////////
 
-	class cMusicEntry
+	class cMusicEntry : public OhplMusicSong
 	{
 	public:
-		cMusicEntry() : msFileName(""), mpStream(NULL), mfMaxVolume(1), 
-			mfVolume(0), mfVolumeAdd(0.01f){}
+		cMusicEntry() : msFileName("")
+		{
+			mpStream = NULL;
+			mfMaxVolume = 1;
+			mfVolume = 0;
+			mfVolumeAdd = 0.01f;
+			mbLoop = false;
+		}
 
 		tString msFileName;
-		iSoundChannel* mpStream;
-		float mfMaxVolume;
-		float mfVolume;
-		float mfVolumeAdd;
-		bool mbLoop;
 	};
-
-	typedef std::list<cMusicEntry*> tMusicEntryList;
-	typedef tMusicEntryList::iterator tMusicEntryListIt;
-
-	////////////////////////////////////////////////////
-	//////////// RESUME ENTRY ///////////////////////////
-	////////////////////////////////////////////////////
-
-	class cMusicResumeEntry
-	{
-	public:
-		tString msFileName;
-		double mfCurrentPos;
-	};
-
-	typedef std::list<cMusicResumeEntry*> tMusicResumeEntryList;
-	typedef tMusicResumeEntryList::iterator tMusicResumeEntryListIt;
 
 	////////////////////////////////////////////////////
 	//////////// MUSIC HANDLER ///////////////////////
@@ -110,7 +94,7 @@ namespace hpl {
 
 		void FadeVolumeMul(float afDest, float afSpeed);
 		void SetVolumeMul(float afMul);
-		float GetVolumeMul(){ return mfVolumeMul;}
+		float GetVolumeMul(){ return ohpl_music_volume_mul(mpRust);}
 		
 		
 		/**
@@ -135,20 +119,7 @@ namespace hpl {
 		iLowLevelSound* mpLowLevelSound;
 		cResources* mpResources;
 
-		tMusicEntryList mlstFadingSongs;
-		cMusicEntry* mpMainSong;
-		cMusicLock* mpLock;
-		bool mbIsPaused;
-
-		float mfVolumeMul;
-		float mfVolumeMulFadeGoal;
-		float mfVolumeMulFadeSpeed;
-
-		tMusicResumeEntryList mlstResumeEntries;
-
-		cMusicResumeEntry* GetResumeEntry(const tString& asFileName);
-		void UpdateResumeEntry(cMusicEntry* apSong, float afFadeStepSize);
-		bool LoadAndStart(const tString& asFileName,cMusicEntry* apSong  ,float afVolume, bool abLoop, bool abResume);
+		OhplMusic* mpRust;
 	};
 
 };

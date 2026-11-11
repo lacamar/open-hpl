@@ -136,44 +136,13 @@ namespace hpl {
 
 	iTexture* cPostEffect_ImageTrail::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_Alpha);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-		mpCurrentComposite->SetTextureRange(NULL,0);
+		iTexture *vTextures[2] = {apInputTexture, mpAccumTexture};
+		iFrameBuffer *vFrameBuffers[1] = {mpAccumBuffer};
+		iGpuProgram *vPrograms[1] = {mpImageTrailType->mpProgram};
 
-		/////////////////////////
-		// Render to accumulation buffer
-		mpCurrentComposite->SetFrameBuffer(mpAccumBuffer);
-		
-		mpCurrentComposite->SetProgram(mpImageTrailType->mpProgram);
-		if(mbClearFrameBuffer)
-		{
-			mpCurrentComposite->ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
-			mbClearFrameBuffer = false;
-			if(mpImageTrailType->mpProgram)
-				mpImageTrailType->mpProgram->SetFloat(kVar_afAlpha, 1.0f);
-		}
-		else
-		{
-			// Get the amount of blur depending frame time.
-			//*30 is just so that good amount values are still between 0 - 1
-			float fFrameTime = mpCurrentComposite->GetCurrentFrameTime();
-			float fPow = (1.0f / fFrameTime) * mParams.mfAmount; //The higher this is, the more blur!
-			float fAmount = exp(-fPow * 0.015f); 
-			if(mpImageTrailType->mpProgram)
-				mpImageTrailType->mpProgram->SetFloat(kVar_afAlpha, fAmount);
-		}
-		
-		mpCurrentComposite->SetTexture(0, apInputTexture);
-				
-		DrawQuad(0, 1, apInputTexture, true);
-
-		mpCurrentComposite->SetProgram(NULL);
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		
-		return mpAccumTexture;
+		OhplPePlan *pPlan = ohpl_pe_plan_image_trail(mParams.mfAmount, mpCurrentComposite->GetCurrentFrameTime(),
+													 mpImageTrailType->mpProgram != NULL, &mbClearFrameBuffer);
+		return RunPlan(pPlan, vTextures, vFrameBuffers, vPrograms, apFinalTempBuffer);
 	}
 
 	//-----------------------------------------------------------------------

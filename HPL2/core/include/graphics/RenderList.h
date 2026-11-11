@@ -21,6 +21,7 @@
 #define HPL_RENDER_LIST_H
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustRender.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 
@@ -78,9 +79,7 @@ namespace hpl {
 		iRenderable* GetTransObject(int alIdx){ return mvTransObjects[alIdx];}
 
 	private:
-		void CompileArray(eRenderListType aType);
-		
-		void FindNearestLargeSurfacePlane();
+		void ApplyOrder(eRenderListType aType, const tRenderableVec& avSource);
 
 		float mfFrameTime;
 		cFrustum *mpFrustum;
@@ -96,6 +95,12 @@ namespace hpl {
 		std::vector<cLensFlare*> mvMultiIrisFlares;
 
 		tRenderableVec mvSortedArrays[eRenderListType_LastEnum];
+
+		std::vector<OhplSolidKey> mvSolidKeys;
+		std::vector<OhplTransKey> mvTransKeys;
+		std::vector<OhplDecalKey> mvDecalKeys;
+		std::vector<OhplIllumKey> mvIllumKeys;
+		std::vector<unsigned> mvOrder[eRenderListType_LastEnum];
 	};
 
 	//---------------------------------------------

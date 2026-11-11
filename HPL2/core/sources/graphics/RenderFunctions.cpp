@@ -35,85 +35,237 @@
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
+	// RUST BACKEND CALLBACKS
+	//////////////////////////////////////////////////////////////////////////
+
+	static inline uintptr_t PtrId(const void *apPtr){ return (uintptr_t)apPtr; }
+	static inline OhplVec2l ToOhpl(const cVector2l& avVec){ OhplVec2l v = {avVec.x, avVec.y}; return v; }
+	static inline OhplVec2f ToOhpl(const cVector2f& avVec){ OhplVec2f v = {avVec.x, avVec.y}; return v; }
+
+	struct cRenderFunctionsBackend
+	{
+		static iRenderFunctions* Self(void *apCtx){ return static_cast<iRenderFunctions*>(static_cast<OhplRenderState*>(apCtx)); }
+
+		static void DepthTest(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetDepthTestActive(b); }
+		static void DepthWrite(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetDepthWriteActive(b); }
+		static void DepthFunc(void *c, unsigned f){ Self(c)->mpLowLevelGraphics->SetDepthTestFunc((eDepthTestFunc)f); }
+		static void CullActive(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetCullActive(b); }
+		static void CullMode(void *c, unsigned m){ Self(c)->mpLowLevelGraphics->SetCullMode((eCullMode)m); }
+		static void StencilActive(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetStencilActive(b); }
+		static void ScissorActive(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetScissorActive(b); }
+		static void ScissorRect(void *c, OhplVec2l p, OhplVec2l s){ Self(c)->mpLowLevelGraphics->SetScissorRect(cVector2l(p.x, p.y), cVector2l(s.x, s.y)); }
+		static void ColorWrite(void *c, bool r, bool g, bool b, bool a){ Self(c)->mpLowLevelGraphics->SetColorWriteActive(r, g, b, a); }
+		static void AlphaTestActive(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetAlphaTestActive(b); }
+		static void AlphaTestGreaterOrEqual(void *c, float l){ Self(c)->mpLowLevelGraphics->SetAlphaTestFunc(eAlphaTestFunc_GreaterOrEqual, l); }
+		static void BlendActive(void *c, bool b){ Self(c)->mpLowLevelGraphics->SetBlendActive(b); }
+		static void BlendFunc(void *c, unsigned s, unsigned d){ Self(c)->mpLowLevelGraphics->SetBlendFunc((eBlendFunc)s, (eBlendFunc)d); }
+		static void ProgramBind(void*, uintptr_t p){ reinterpret_cast<iGpuProgram*>(p)->Bind(); }
+		static void ProgramUnbind(void*, uintptr_t p){ reinterpret_cast<iGpuProgram*>(p)->UnBind(); }
+		static void Texture(void *c, int u, uintptr_t t){ Self(c)->mpLowLevelGraphics->SetTexture(u, reinterpret_cast<iTexture*>(t)); }
+		static void VertexBufferUnbind(void*, uintptr_t v){ reinterpret_cast<iVertexBuffer*>(v)->UnBind(); }
+		static void VertexBufferBind(void*, uintptr_t v){ reinterpret_cast<iVertexBuffer*>(v)->Bind(); }
+		static void SetProjection(void *c, uintptr_t m){ Self(c)->mpLowLevelGraphics->SetMatrix(eMatrix_Projection, *reinterpret_cast<const cMatrixf*>(m)); }
+
+		static void SetModelMatrix(void *c, uintptr_t m)
+		{
+			iRenderFunctions *pSelf = Self(c);
+			if(m)
+			{
+				cMatrixf mtxModel = cMath::MatrixMul(pSelf->mpCurrentFrustum->GetViewMatrix(), *reinterpret_cast<cMatrixf*>(m));
+				pSelf->mpLowLevelGraphics->SetMatrix(eMatrix_ModelView,mtxModel);
+			}
+			else
+			{
+				pSelf->mpLowLevelGraphics->SetMatrix(eMatrix_ModelView,pSelf->mpCurrentFrustum->GetViewMatrix());
+			}
+		}
+
+		static void SetFrameBuffer(void *c, uintptr_t fb, bool abUsePosAndSize, OhplVec2l p, OhplVec2l s)
+		{
+			iLowLevelGraphics *pLlg = Self(c)->mpLowLevelGraphics;
+			if(abUsePosAndSize)	pLlg->SetCurrentFrameBuffer(reinterpret_cast<iFrameBuffer*>(fb), cVector2l(p.x, p.y), cVector2l(s.x, s.y));
+			else				pLlg->SetCurrentFrameBuffer(reinterpret_cast<iFrameBuffer*>(fb));
+		}
+
+		static void FrameBufferSize(void*, uintptr_t fb, OhplVec2l *apOut)
+		{
+			cVector2l vSize = reinterpret_cast<iFrameBuffer*>(fb)->GetSize();
+			apOut->x = vSize.x;
+			apOut->y = vSize.y;
+		}
+
+		static void ClearFrameBuffer(void *c, unsigned f){ Self(c)->mpLowLevelGraphics->ClearFrameBuffer(f); }
+
+		static void LogEvent(void *c, int alEvent, int64_t a, int64_t b, int64_t cc, int64_t d, float f)
+		{
+			iRenderFunctions *pSelf = Self(c);
+			switch(alEvent)
+			{
+			case eOhplRfLog_Projection:
+				{
+					const cMatrixf *pMtx = reinterpret_cast<const cMatrixf*>(a);
+					Log(" Setting projection matrix: %d  %s.\n",(int)a, pMtx->ToString().c_str());
+				}
+				break;
+			case eOhplRfLog_DepthTest:		Log("  Setting depth test active: %d\n", (int)a); break;
+			case eOhplRfLog_DepthWrite:		Log("  Setting depth write active: %d\n", (int)a); break;
+			case eOhplRfLog_DepthFunc:
+				{
+					tString sFunc="Unknown";
+					switch((eDepthTestFunc)a)
+					{
+					case eDepthTestFunc_Never:			sFunc = "Never"; break;
+					case eDepthTestFunc_Less:			sFunc = "Less"; break;
+					case eDepthTestFunc_LessOrEqual:	sFunc = "LessOrEqual"; break;
+					case eDepthTestFunc_Greater:		sFunc = "Greater"; break;
+					case eDepthTestFunc_GreaterOrEqual:	sFunc = "GreaterOrEqual"; break;
+					case eDepthTestFunc_Equal:			sFunc = "Equal"; break;
+					case eDepthTestFunc_NotEqual:		sFunc = "NotEqual"; break;
+					case eDepthTestFunc_Always:			sFunc = "Always"; break;
+					default: break;
+					}
+					Log("  Setting depth func: %s\n", sFunc.c_str());
+				}
+				break;
+			case eOhplRfLog_CullActive:		Log("  Setting cull active: %d\n",(int)a); break;
+			case eOhplRfLog_CullMode:
+				{
+					tString sMode="Unknown";
+					switch((eCullMode)a)
+					{
+					case eCullMode_Clockwise:			sMode = "Clockwise"; break;
+					case eCullMode_CounterClockwise:	sMode = "CounterClockwise"; break;
+					default: break;
+					}
+					Log("  Setting cull mode: %s\n", sMode.c_str());
+				}
+				break;
+			case eOhplRfLog_StencilActive:	Log("  Setting stencil active: %d\n",(int)a); break;
+			case eOhplRfLog_ScissorActive:	Log("  Setting scissor active: %d\n",(int)a); break;
+			case eOhplRfLog_ScissorRect:	Log("  Setting scissor rect: %d, %d, %dx%d\n", (int)a, (int)b, (int)cc, (int)d); break;
+			case eOhplRfLog_ChannelMode:
+				switch((eMaterialChannelMode)a)
+				{
+				case eMaterialChannelMode_RGBA:	Log("  Setting channel mode: RGBA\n"); break;
+				case eMaterialChannelMode_RGB:	Log("  Setting channel mode: RGB\n"); break;
+				case eMaterialChannelMode_A:	Log("  Setting channel mode: A\n"); break;
+				case eMaterialChannelMode_None:	Log("  Setting channel mode: None\n"); break;
+				default: break;
+				}
+				break;
+			case eOhplRfLog_AlphaMode:		Log(a ? "  Setting alpha mode: Solid\n" : "  Setting alpha mode: Trans\n"); break;
+			case eOhplRfLog_AlphaLimit:		Log("  Setting alpha limit: %f\n", f); break;
+			case eOhplRfLog_BlendMode:
+				switch((eMaterialBlendMode)a)
+				{
+				case eMaterialBlendMode_None:			Log("  Setting blend mode: None\n"); break;
+				case eMaterialBlendMode_Add:			Log("  Setting blend mode: Add\n"); break;
+				case eMaterialBlendMode_Mul:			Log("  Setting blend mode: Mul\n"); break;
+				case eMaterialBlendMode_MulX2:			Log("  Setting blend mode: MulX2\n"); break;
+				case eMaterialBlendMode_Alpha:			Log("  Setting blend mode: Alpha\n"); break;
+				case eMaterialBlendMode_PremulAlpha:	Log("  Setting blend mode: PremulAlpha\n"); break;
+				case eMaterialBlendMode_ModulateSource:	Log("  Setting blend mode: ModulateSource\n"); break;
+				default: break;
+				}
+				break;
+			case eOhplRfLog_Program:		Log("  Setting gpu program %d : '%s'\n", (int)a, reinterpret_cast<iGpuProgram*>(a)->GetName().c_str()); break;
+			case eOhplRfLog_ProgramNull:	Log("  Setting gpu program NULL\n"); break;
+			case eOhplRfLog_Texture:
+				if(b)	Log("  Setting texture unit: %d, %d/'%s'\n",(int)a,(int)b,reinterpret_cast<iTexture*>(b)->GetName().c_str());
+				else	Log("  Setting texture unit: %d, 'NULL\n",(int)a);
+				break;
+			case eOhplRfLog_VertexBuffer:		Log("  Setting vertex buffer: %d\n",(int)a); break;
+			case eOhplRfLog_VertexBufferNull:	Log("  Setting vertex buffer: NULL\n"); break;
+			case eOhplRfLog_ModelMatrix:		Log("  Setting model matrix: %d / %s\n",(int)a, reinterpret_cast<cMatrixf*>(a)->ToString().c_str()); break;
+			case eOhplRfLog_ModelMatrixNull:	Log("  Setting model matrix: NULL\n"); break;
+			case eOhplRfLog_InvertCull:			Log(" Inverting Cull Modes!\n"); break;
+			case eOhplRfLog_FrameBufferPos:
+				{
+					iFrameBuffer *pFb = reinterpret_cast<iFrameBuffer*>(a);
+					Log(" Setting FrameBuffer %d '%s', pos: %d,%d size: %dx%d\n",	(int)a, pFb ? pFb->GetName().c_str() : "",
+						(int)b, (int)cc, pSelf->mvRenderTargetSize.x, pSelf->mvRenderTargetSize.y);
+				}
+				break;
+			case eOhplRfLog_FrameBufferDefault:
+				{
+					iFrameBuffer *pFb = reinterpret_cast<iFrameBuffer*>(a);
+					Log(" Setting FrameBuffer %d '%s', default size\n", (int)a, pFb ? pFb->GetName().c_str() : "");
+				}
+				break;
+			case eOhplRfLog_ClearPortionGlobal:
+			case eOhplRfLog_ClearPortionTarget:
+				Log(" Clearing portion of frame buffer. Pos: %d,%d Size: %dx%d\n", (int)a, (int)b, (int)cc, (int)d);
+				break;
+			case eOhplRfLog_ClearAll:		Log(" Clearing entire frame buffer\n"); break;
+			}
+		}
+	};
+
+	static void SetupBackend(OhplRfBackend& aBackend, OhplRenderState *apState)
+	{
+		aBackend.ctx = apState;
+		aBackend.depthTest = cRenderFunctionsBackend::DepthTest;
+		aBackend.depthWrite = cRenderFunctionsBackend::DepthWrite;
+		aBackend.depthFunc = cRenderFunctionsBackend::DepthFunc;
+		aBackend.cullActive = cRenderFunctionsBackend::CullActive;
+		aBackend.cullMode = cRenderFunctionsBackend::CullMode;
+		aBackend.stencilActive = cRenderFunctionsBackend::StencilActive;
+		aBackend.scissorActive = cRenderFunctionsBackend::ScissorActive;
+		aBackend.scissorRect = cRenderFunctionsBackend::ScissorRect;
+		aBackend.colorWrite = cRenderFunctionsBackend::ColorWrite;
+		aBackend.alphaTestActive = cRenderFunctionsBackend::AlphaTestActive;
+		aBackend.alphaTestGreaterOrEqual = cRenderFunctionsBackend::AlphaTestGreaterOrEqual;
+		aBackend.blendActive = cRenderFunctionsBackend::BlendActive;
+		aBackend.blendFunc = cRenderFunctionsBackend::BlendFunc;
+		aBackend.programBind = cRenderFunctionsBackend::ProgramBind;
+		aBackend.programUnbind = cRenderFunctionsBackend::ProgramUnbind;
+		aBackend.texture = cRenderFunctionsBackend::Texture;
+		aBackend.vertexBufferUnbind = cRenderFunctionsBackend::VertexBufferUnbind;
+		aBackend.vertexBufferBind = cRenderFunctionsBackend::VertexBufferBind;
+		aBackend.setProjection = cRenderFunctionsBackend::SetProjection;
+		aBackend.setModelMatrix = cRenderFunctionsBackend::SetModelMatrix;
+		aBackend.setFrameBuffer = cRenderFunctionsBackend::SetFrameBuffer;
+		aBackend.frameBufferSize = cRenderFunctionsBackend::FrameBufferSize;
+		aBackend.clearFrameBuffer = cRenderFunctionsBackend::ClearFrameBuffer;
+		aBackend.log = cRenderFunctionsBackend::LogEvent;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
 	// PUBLIC METHODS
 	//////////////////////////////////////////////////////////////////////////
-	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetupRenderFunctions(iLowLevelGraphics *apLowLevelGraphics)
 	{
 		mpLowLevelGraphics = apLowLevelGraphics;
+		SetupBackend(mBackend, this);
 
 		mvScreenSize = mpLowLevelGraphics->GetScreenSizeInt();
 		mvScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	void iRenderFunctions::InitAndResetRenderFunctions(	cFrustum *apFrustum, cRenderTarget *apRenderTarget, bool abLog,
-														bool abUseGlobalScissorRect, 
+														bool abUseGlobalScissorRect,
 														const cVector2l& avGlobalScissorRectPos, const cVector2l& avGlobalScissorRectSize)
 	{
 		mpCurrentFrustum = apFrustum;
 		mpCurrentRenderTarget = apRenderTarget;
-		mbLog = abLog;
+		SetupBackend(mBackend, this);
 
-		mvScreenSize = mpLowLevelGraphics->GetScreenSizeInt();
-		mvScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
+		cVector2l vScreenSize = mpLowLevelGraphics->GetScreenSizeInt();
+		cVector2f vScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
+		cVector2l vFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : vScreenSize;
 
-		////////////////////////////////
-		//Set up variables
-		mpCurrentProjectionMatrix = NULL;
-		mbInvertCullMode = false;
-		mbCurrentDepthTest = true;
-		mbCurrentDepthWrite = true;
-		mbCurrentStencilActive = false;
-		mvCurrentScissorRectPos =0;
-		mvCurrentScissorRectSize = -1;
-		mbCurrentScissorActive = false;
-		mCurrentDepthTestFunc = eDepthTestFunc_LessOrEqual;
-		mbCurrentCullActive = true;
-		mCurrentCullMode = eCullMode_CounterClockwise;
-		mCurrentChannelMode = eMaterialChannelMode_RGBA;
-		mCurrentAlphaMode = eMaterialAlphaMode_LastEnum;
-		mfCurrentAlphaLimit = -1;
-		mCurrentBlendMode = eMaterialBlendMode_LastEnum;
-		mpCurrentProgram = NULL;
-		mpCurrentVtxBuffer = NULL;
-		mpCurrentMatrix = &m_mtxNULL;
-		mpCurrentMaterial = NULL;
-		mpCurrentMaterialType = NULL;
-
-		for(int i=0; i<kMaxTextureUnits; ++i) mvCurrentTexture[i] = NULL;
-
-		////////////////////////////////
-		//Get size of render target
-		cVector2l vFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : mvScreenSize;
-		mvRenderTargetSize.x = mpCurrentRenderTarget->mvSize.x <0 ? vFrameBufferSize.x : mpCurrentRenderTarget->mvSize.x;
-		mvRenderTargetSize.y = mpCurrentRenderTarget->mvSize.y <0 ? vFrameBufferSize.y : mpCurrentRenderTarget->mvSize.y;
-
-		mvCurrentFrameBufferSize = vFrameBufferSize;
-
-		////////////////////////////////
-		//Set up scissor rect
-		mbUseGlobalScissorRect = abUseGlobalScissorRect;
-		mvGlobalScissorRectPos = avGlobalScissorRectPos;
-		mvGlobalScissorRectSize = avGlobalScissorRectSize;
-		mbGlobalScissorRectActive = false;
+		ohpl_rf_init(this, PtrId(&m_mtxNULL), abLog, abUseGlobalScissorRect, ToOhpl(avGlobalScissorRectPos), ToOhpl(avGlobalScissorRectSize),
+					 ToOhpl(vScreenSize), ToOhpl(vScreenSizeFloat), ToOhpl(vFrameBufferSize), ToOhpl(mpCurrentRenderTarget->mvSize));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::ExitAndCleanUpRenderFunctions()
 	{
-		////////////////////////////////
-		//Clean up scissor rect
-		if(mbUseGlobalScissorRect)
-		{
-			mbUseGlobalScissorRect = false;
-			
-			if(mbLog) Log("  Setting scissor active: 0\n");
-			mpLowLevelGraphics->SetScissorActive(false);
-		}
+		ohpl_rf_exit(this, &mBackend);
 	}
 
 	//-----------------------------------------------------------------------
@@ -121,8 +273,6 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
 	//////////////////////////////////////////////////////////////////////////
-	
-	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetFlatProjection(const cVector2f &avSize,float afMin,float afMax)
 	{
@@ -130,10 +280,7 @@ namespace hpl {
 
 		mpLowLevelGraphics->SetOrthoProjection(avSize,afMin,afMax);
 		mpLowLevelGraphics->SetIdentityMatrix(eMatrix_ModelView);
-		mpCurrentMatrix = &m_mtxNULL;
-		mpCurrentProjectionMatrix = NULL;
-
-		SetInvertCullMode(false);
+		ohpl_rf_flat_projection_set(this, &mBackend, PtrId(&m_mtxNULL));
 	}
 
 	//-----------------------------------------------------------------------
@@ -144,10 +291,7 @@ namespace hpl {
 
 		mpLowLevelGraphics->SetOrthoProjection(avMin,avMax);
 		mpLowLevelGraphics->SetIdentityMatrix(eMatrix_ModelView);
-		mpCurrentMatrix = &m_mtxNULL;
-		mpCurrentProjectionMatrix = NULL;
-
-		SetInvertCullMode(false);
+		ohpl_rf_flat_projection_set(this, &mBackend, PtrId(&m_mtxNULL));
 	}
 
 	//-----------------------------------------------------------------------
@@ -160,7 +304,7 @@ namespace hpl {
 	void iRenderFunctions::SetFrustumProjection(cFrustum *apFrustum)
 	{
 		SetProjectionMatrix(&apFrustum->GetProjectionMatrix());
-		
+
 		SetInvertCullMode(mpCurrentFrustum->GetInvertsCullMode());
 	}
 
@@ -168,127 +312,17 @@ namespace hpl {
 
 	void iRenderFunctions::SetProjectionMatrix(const cMatrixf *apProjMatrix)
 	{
-		if(mpCurrentProjectionMatrix == apProjMatrix) return;
-
-		if(mbLog) Log(" Setting projection matrix: %d  %s.\n",apProjMatrix, apProjMatrix->ToString().c_str());
-
-		mpLowLevelGraphics->SetMatrix(eMatrix_Projection, *apProjMatrix);
-		mpCurrentMatrix = &m_mtxNULL;
-		mpCurrentProjectionMatrix = apProjMatrix;
+		ohpl_rf_set_projection_matrix(this, &mBackend, PtrId(&m_mtxNULL), PtrId(apProjMatrix));
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool iRenderFunctions::SetDepthTest(bool abX)
-	{
-		if(mbCurrentDepthTest == abX) return false;
-
-		if(mbLog) Log("  Setting depth test active: %d\n", abX);
-
-		mpLowLevelGraphics->SetDepthTestActive(abX);
-		mbCurrentDepthTest = abX;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetDepthWrite(bool abX)
-	{
-		if(mbCurrentDepthWrite == abX) return false;
-
-		if(mbLog) Log("  Setting depth write active: %d\n", abX);
-
-		mpLowLevelGraphics->SetDepthWriteActive(abX);
-		mbCurrentDepthWrite = abX;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetDepthTestFunc(eDepthTestFunc aFunc)
-	{
-		if(mCurrentDepthTestFunc == aFunc) return false;
-
-		if(mbLog) 
-		{
-			tString sFunc="Unknown";
-			switch(aFunc)
-			{
-			case eDepthTestFunc_Never:			sFunc = "Never"; break;
-			case eDepthTestFunc_Less:			sFunc = "Less"; break;
-			case eDepthTestFunc_LessOrEqual:	sFunc = "LessOrEqual"; break;
-			case eDepthTestFunc_Greater:		sFunc = "Greater"; break;
-			case eDepthTestFunc_GreaterOrEqual:	sFunc = "GreaterOrEqual"; break;
-			case eDepthTestFunc_Equal:			sFunc = "Equal"; break;
-			case eDepthTestFunc_NotEqual:		sFunc = "NotEqual"; break;
-			case eDepthTestFunc_Always:			sFunc = "Always"; break;
-			}
-			Log("  Setting depth func: %s\n", sFunc.c_str());
-		}
-
-		mCurrentDepthTestFunc = aFunc;
-		mpLowLevelGraphics->SetDepthTestFunc(aFunc);
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetCullActive(bool abX)
-	{
-		if(mbCurrentCullActive == abX) return false;
-
-		if(mbLog) Log("  Setting cull active: %d\n",abX);
-
-		mbCurrentCullActive = abX;
-		mpLowLevelGraphics->SetCullActive(abX);
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	bool iRenderFunctions::SetCullMode(eCullMode aMode, bool abCheckIfInverted)
-	{
-		if(abCheckIfInverted && mbInvertCullMode)
-			aMode = aMode==eCullMode_Clockwise ? eCullMode_CounterClockwise : eCullMode_Clockwise;
-
-		if(mCurrentCullMode == aMode) return false;
-
-		if(mbLog)
-		{
-			tString sMode="Unknown";
-			switch(aMode)
-			{
-			case eCullMode_Clockwise:			sMode = "Clockwise"; break;
-			case eCullMode_CounterClockwise:	sMode = "CounterClockwise"; break;
-			}
-			Log("  Setting cull mode: %s\n", sMode.c_str());
-		}
-
-		mCurrentCullMode = aMode;
-		mpLowLevelGraphics->SetCullMode(aMode);
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetStencilActive(bool abX)
-	{
-		if(mbCurrentStencilActive == abX) return false;
-
-		if(mbLog) Log("  Setting stencil active: %d\n",abX);
-
-		mpLowLevelGraphics->SetStencilActive(abX);
-		mbCurrentStencilActive = abX;
-
-		return true;
-	}
-
+	bool iRenderFunctions::SetDepthTest(bool abX){ return ohpl_rf_set_depth_test(this, &mBackend, abX); }
+	bool iRenderFunctions::SetDepthWrite(bool abX){ return ohpl_rf_set_depth_write(this, &mBackend, abX); }
+	bool iRenderFunctions::SetDepthTestFunc(eDepthTestFunc aFunc){ return ohpl_rf_set_depth_test_func(this, &mBackend, aFunc); }
+	bool iRenderFunctions::SetCullActive(bool abX){ return ohpl_rf_set_cull_active(this, &mBackend, abX); }
+	bool iRenderFunctions::SetCullMode(eCullMode aMode, bool abCheckIfInverted){ return ohpl_rf_set_cull_mode(this, &mBackend, aMode, abCheckIfInverted); }
+	bool iRenderFunctions::SetStencilActive(bool abX){ return ohpl_rf_set_stencil_active(this, &mBackend, abX); }
 
 	//-----------------------------------------------------------------------
 
@@ -296,19 +330,19 @@ namespace hpl {
 	{
 		mpLowLevelGraphics->SetStencilWriteMask(alMask);
 	}
-	
+
 	void iRenderFunctions::SetStencil(	eStencilFunc aFunc,int alRef, unsigned int aMask,
 										eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
 		mpLowLevelGraphics->SetStencil(aFunc, alRef, aMask, aFailOp, aZFailOp, aZPassOp);
 	}
-	
+
 	void iRenderFunctions::SetStencilTwoSide(	eStencilFunc aFrontFunc,eStencilFunc aBackFunc,
 												int alRef, unsigned int aMask,
 												eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
 												eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
 	{
-		mpLowLevelGraphics->SetStencilTwoSide(	aFrontFunc, aBackFunc, 
+		mpLowLevelGraphics->SetStencilTwoSide(	aFrontFunc, aBackFunc,
 												alRef, aMask,
 												aFrontFailOp, aFrontZFailOp, aFrontZPassOp,
 												aBackFailOp, aBackZFailOp, aBackZPassOp);
@@ -318,37 +352,9 @@ namespace hpl {
 
 	bool iRenderFunctions::SetScissorActive(bool abX)
 	{
-		if(mbCurrentScissorActive == abX) return false;
-
-		////////////////////////
-		// Change scissor rect
-		if(mbUseGlobalScissorRect)
-		{
-			if(mbCurrentScissorActive)
-			{
-				if(mvCurrentScissorRectSize.x > -1)
-					SetScissorRect(mvCurrentScissorRectPos, mvCurrentScissorRectSize, false);
-			}
-			else
-			{
-				SetScissorRect(mvGlobalScissorRectPos, mvGlobalScissorRectSize, false);
-			}
-
-			return false;
-		}
-		////////////////////////
-		// Set scissor on / off
-		else
-		{
-			if(mbLog) Log("  Setting scissor active: %d\n",abX);
-
-			mpLowLevelGraphics->SetScissorActive(abX);
-			mbCurrentScissorActive = abX;
-		}
-		
-		return true;
+		return ohpl_rf_set_scissor_active(this, &mBackend, abX, ToOhpl(mpCurrentRenderTarget->mvPos));
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	bool iRenderFunctions::SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling)
@@ -358,282 +364,25 @@ namespace hpl {
 
 	bool iRenderFunctions::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling)
 	{
-		/////////////////////////////
-		// Clip the rect
-		cVector2l vFinalPos=avPos + mpCurrentRenderTarget->mvPos;
-		cVector2l vFinalSize = avSize;
-
-		cVector2l vMin = mbUseGlobalScissorRect ? mvGlobalScissorRectPos : mpCurrentRenderTarget->mvPos;
-		cVector2l vMax = mbUseGlobalScissorRect ? mvGlobalScissorRectSize+vMin : mvRenderTargetSize+vMin;
-
-		if(vFinalPos.x < vMin.x) vFinalPos.x = vMin.x;
-		if(vFinalPos.y < vMin.y) vFinalPos.y = vMin.y;
-		
-		if(vFinalPos.x+vFinalSize.x > vMax.x) vFinalSize.x = vMax.x - vFinalPos.x;
-		if(vFinalPos.y+vFinalSize.y > vMax.y) vFinalSize.y = vMax.y - vFinalPos.y;
-
-		/////////////////////////////
-		// Check if already set
-		if(mvCurrentScissorRectPos == vFinalPos && mvCurrentScissorRectSize == vFinalSize) return false;
-
-		mvCurrentScissorRectPos = vFinalPos;
-		mvCurrentScissorRectSize = vFinalSize;
-
-		/////////////////////////////
-		// Set the clip rect
-		if(	mbUseGlobalScissorRect == false &&
-			vFinalPos.x == 0 && vFinalPos.y ==0 &&
-			vFinalSize.x == mvRenderTargetSize.x && vFinalSize.y == mvRenderTargetSize.y)
-		{
-			if(abAutoEnabling)SetScissorActive(false);
-			return false;
-		}
-		else
-		{
-			if(abAutoEnabling) SetScissorActive(true);
-			
-			if(mbLog)
-				Log("  Setting scissor rect: %d, %d, %dx%d\n",	vFinalPos.x, vFinalPos.y, vFinalSize.x,vFinalSize.y);
-			
-			mpLowLevelGraphics->SetScissorRect(mvCurrentScissorRectPos, mvCurrentScissorRectSize);
-			return true;
-		}
+		return ohpl_rf_set_scissor_rect(this, &mBackend, ToOhpl(avPos), ToOhpl(avSize), abAutoEnabling, ToOhpl(mpCurrentRenderTarget->mvPos));
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool iRenderFunctions::SetChannelMode(eMaterialChannelMode aMode)
-	{
-		if(mCurrentChannelMode == aMode) return false;
-
-		switch(aMode)
-		{
-		case eMaterialChannelMode_RGBA:
-			if(mbLog) Log("  Setting channel mode: RGBA\n");
-			mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
-			break;
-		case eMaterialChannelMode_RGB:
-			if(mbLog) Log("  Setting channel mode: RGB\n");
-			mpLowLevelGraphics->SetColorWriteActive(true, true, true, false);
-			break;
-		case eMaterialChannelMode_A:
-			if(mbLog) Log("  Setting channel mode: A\n");
-			mpLowLevelGraphics->SetColorWriteActive(false, false, false, true);
-			break;
-		case eMaterialChannelMode_None:
-			if(mbLog) Log("  Setting channel mode: None\n");
-			mpLowLevelGraphics->SetColorWriteActive(false, false, false, false);
-			break;
-		}
-
-		mCurrentChannelMode = aMode;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetAlphaMode(eMaterialAlphaMode aMode)
-	{
-		if(mCurrentAlphaMode == aMode) return false;
-
-		if(aMode == eMaterialAlphaMode_Solid)
-		{
-			if(mbLog) Log("  Setting alpha mode: Solid\n");
-			mpLowLevelGraphics->SetAlphaTestActive(false);
-		}
-		else
-		{
-			if(mbLog) Log("  Setting alpha mode: Trans\n");
-			mpLowLevelGraphics->SetAlphaTestActive(true);
-		}
-		mCurrentAlphaMode = aMode;
-
-		return true;
-	}
-
-	bool iRenderFunctions::SetAlphaLimit(float afLimit)
-	{
-		if(afLimit == mfCurrentAlphaLimit) return false;
-
-		mfCurrentAlphaLimit = afLimit;
-
-        if(mbLog) Log("  Setting alpha limit: %f\n", mfCurrentAlphaLimit);
-
-		mpLowLevelGraphics->SetAlphaTestFunc(eAlphaTestFunc_GreaterOrEqual, mfCurrentAlphaLimit);
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetBlendMode(eMaterialBlendMode aMode)
-	{
-		if(mCurrentBlendMode == aMode) return false;
-
-		///////////////////////////
-		// Blend off
-		if(aMode == eMaterialBlendMode_None)
-		{
-			if(mbLog) Log("  Setting blend mode: None\n");
-			mpLowLevelGraphics->SetBlendActive(false);
-		}
-		///////////////////////////
-		// Blend on
-		else
-		{
-			mpLowLevelGraphics->SetBlendActive(true);
-
-			switch(aMode)
-			{
-			case eMaterialBlendMode_Add: 
-				if(mbLog) Log("  Setting blend mode: Add\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_One,eBlendFunc_One);
-				break;
-			case eMaterialBlendMode_Mul:
-				if(mbLog) Log("  Setting blend mode: Mul\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_Zero,eBlendFunc_SrcColor);
-				break;
-			case eMaterialBlendMode_MulX2:
-				if(mbLog) Log("  Setting blend mode: MulX2\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_DestColor,eBlendFunc_SrcColor);
-				break;
-			case eMaterialBlendMode_Alpha:
-				if(mbLog) Log("  Setting blend mode: Alpha\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_SrcAlpha,eBlendFunc_OneMinusSrcAlpha);
-				break;
-			case eMaterialBlendMode_PremulAlpha:
-				if(mbLog) Log("  Setting blend mode: PremulAlpha\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_One,eBlendFunc_OneMinusSrcAlpha);
-				break;
-			case eMaterialBlendMode_ModulateSource:
-				if(mbLog) Log("  Setting blend mode: ModulateSource\n");
-				mpLowLevelGraphics->SetBlendFunc(eBlendFunc_DestAlpha,eBlendFunc_One);
-				break;
-			}
-		}
-
-		mCurrentBlendMode = aMode;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderFunctions::SetProgram(iGpuProgram *apProgram)
-	{
-		if(mpCurrentProgram == apProgram) return false;
-
-		if(apProgram)
-		{
-			if(mbLog) Log("  Setting gpu program %d : '%s'\n", apProgram, apProgram->GetName().c_str());
-			apProgram->Bind();
-		}
-		else
-		{
-			if(mbLog) Log("  Setting gpu program NULL\n");
-			mpCurrentProgram->UnBind();
-		}
-
-		mpCurrentProgram = apProgram;
-
-		//Setting material this way will always NULL current material and material type.
-		mpCurrentMaterialType = NULL;
-		mpCurrentMaterial = NULL;
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderFunctions::SetTexture(int alUnit, iTexture *apTexture)
-	{
-		if(mvCurrentTexture[alUnit] == apTexture) return;
-
-		if(mbLog) {
-			if(apTexture)
-				Log("  Setting texture unit: %d, %d/'%s'\n",alUnit,apTexture,apTexture->GetName().c_str());
-			else
-				Log("  Setting texture unit: %d, 'NULL\n",alUnit);
-		}
-		mpLowLevelGraphics->SetTexture(alUnit, apTexture);
-
-		mvCurrentTexture[alUnit] = apTexture;
-	}
-
-	//-----------------------------------------------------------------------
+	bool iRenderFunctions::SetChannelMode(eMaterialChannelMode aMode){ return ohpl_rf_set_channel_mode(this, &mBackend, aMode); }
+	bool iRenderFunctions::SetAlphaMode(eMaterialAlphaMode aMode){ return ohpl_rf_set_alpha_mode(this, &mBackend, aMode); }
+	bool iRenderFunctions::SetAlphaLimit(float afLimit){ return ohpl_rf_set_alpha_limit(this, &mBackend, afLimit); }
+	bool iRenderFunctions::SetBlendMode(eMaterialBlendMode aMode){ return ohpl_rf_set_blend_mode(this, &mBackend, aMode); }
+	bool iRenderFunctions::SetProgram(iGpuProgram *apProgram){ return ohpl_rf_set_program(this, &mBackend, PtrId(apProgram)); }
+	void iRenderFunctions::SetTexture(int alUnit, iTexture *apTexture){ ohpl_rf_set_texture(this, &mBackend, alUnit, PtrId(apTexture)); }
 
 	void iRenderFunctions::SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit)
 	{
-		for(int i=alFirstUnit; i<= alLastUnit; ++i)
-		{
-			if(mvCurrentTexture[i] != apTexture)
-			{
-				if(mbLog) {
-					if(apTexture)
-						Log("  Setting texture unit: %d, %d/'%s'\n",i,apTexture,apTexture->GetName().c_str());
-					else
-						Log("  Setting texture unit: %d, 'NULL\n",i);
-				}
-
-				mpLowLevelGraphics->SetTexture(i, apTexture);
-				mvCurrentTexture[i] = apTexture;
-			}
-		}
+		ohpl_rf_set_texture_range(this, &mBackend, PtrId(apTexture), alFirstUnit, alLastUnit);
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iRenderFunctions::SetVertexBuffer(iVertexBuffer *apVtxBuffer)
-	{
-		if(mpCurrentVtxBuffer == apVtxBuffer) return;
-
-		if(mbLog) {
-			if(apVtxBuffer)
-				Log("  Setting vertex buffer: %d\n",apVtxBuffer);
-			else
-				Log("  Setting vertex buffer: NULL\n");
-		}
-
-		if(mpCurrentVtxBuffer) mpCurrentVtxBuffer->UnBind();
-		if(apVtxBuffer) apVtxBuffer->Bind();
-
-		mpCurrentVtxBuffer = apVtxBuffer;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderFunctions::SetMatrix(cMatrixf *apMatrix)
-	{
-		//////////////////////////
-		//Set matrix
-		if(mpCurrentMatrix != apMatrix)
-		{
-			//Normal matrix
-			if(apMatrix)
-			{
-				if(mbLog) Log("  Setting model matrix: %d / %s\n",apMatrix, apMatrix->ToString().c_str());
-
-				cMatrixf mtxModel = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *apMatrix);
-
-				mpLowLevelGraphics->SetMatrix(eMatrix_ModelView,mtxModel);
-			}
-			//NULL matrix
-			else
-			{
-				if(mbLog) Log("  Setting model matrix: NULL\n");
-
-				mpLowLevelGraphics->SetMatrix(eMatrix_ModelView,mpCurrentFrustum->GetViewMatrix());
-			}
-
-			mpCurrentMatrix = apMatrix;
-		}
-
-		//////////////////////////
-		// Setup program
-
-		//TODO: Only needed when using Cg
-	}
+	void iRenderFunctions::SetVertexBuffer(iVertexBuffer *apVtxBuffer){ ohpl_rf_set_vertex_buffer(this, &mBackend, PtrId(apVtxBuffer)); }
+	void iRenderFunctions::SetMatrix(cMatrixf *apMatrix){ ohpl_rf_set_matrix(this, &mBackend, PtrId(apMatrix)); }
 
 	//-----------------------------------------------------------------------
 
@@ -643,153 +392,25 @@ namespace hpl {
 		if(mbLog) Log("  Setting view matrix: %s\n",cMath::MatrixToChar(a_mtxModelView));
 
 		mpLowLevelGraphics->SetMatrix(eMatrix_ModelView,a_mtxModelView);
-		mpCurrentMatrix = &m_mtxNULL;
-
-		//////////////////////////
-		// Setup program
-
-		//TODO: Only needed when using Cg
+		ohpl_rf_model_view_set(this, PtrId(&m_mtxNULL));
 	}
 
 	//-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+	void iRenderFunctions::SetInvertCullMode(bool abX){ ohpl_rf_set_invert_cull_mode(this, &mBackend, abX); }
 
-	void iRenderFunctions::SetInvertCullMode(bool abX)
-	{
-		if(mbInvertCullMode == abX) return;
-
-		mbInvertCullMode = abX;
-		if(mbLog) Log(" Inverting Cull Modes!\n");
-		
-		SetCullMode(mCurrentCullMode == eCullMode_Clockwise ? eCullMode_CounterClockwise : eCullMode_Clockwise, false);
-	}
-	
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetFrameBuffer(iFrameBuffer *apFrameBuffer, bool abUsePosAndSize, bool abUseGlobalScissor)
 	{
-		if(abUsePosAndSize)
-		{
-			if(mbLog){
-				Log(" Setting FrameBuffer %d '%s', pos: %d,%d size: %dx%d\n",	apFrameBuffer, apFrameBuffer ? apFrameBuffer->GetName().c_str() : "",
-					mpCurrentRenderTarget->mvPos.x,
-					mpCurrentRenderTarget->mvPos.y,
-					mvRenderTargetSize.x,
-					mvRenderTargetSize.y);
-			}
-			mpLowLevelGraphics->SetCurrentFrameBuffer(	apFrameBuffer,mpCurrentRenderTarget->mvPos,	mvRenderTargetSize);
-		}
-		else
-		{
-			if(mbLog){
-				Log(" Setting FrameBuffer %d '%s', default size\n", apFrameBuffer, apFrameBuffer ? apFrameBuffer->GetName().c_str() : "");
-			}
-			mpLowLevelGraphics->SetCurrentFrameBuffer(apFrameBuffer);
-		}
-
-		////////////////////////////////
-		//Set new frame buffer size
-		cVector2l vPrevFrameBufferSize = mvCurrentFrameBufferSize;
-		mvCurrentFrameBufferSize = apFrameBuffer ? apFrameBuffer->GetSize() : mvScreenSize;
-
-		////////////////////////////////////
-		//Setup the scissor rect
-		if(mbUseGlobalScissorRect)
-		{
-			////////////////////////////////////
-			//Global scissor Activated
-			if(abUseGlobalScissor)
-			{
-				////////////////////////////////////
-				//Set Active
-				if(mbGlobalScissorRectActive==false)
-				{
-					if(mbLog)
-					{
-						Log("  Setting scissor active: 1\n");
-						
-					}
-				
-					mpLowLevelGraphics->SetScissorActive(true);
-				}
-				
-				////////////////////////////////////
-				//Setup rect
-				if(mbGlobalScissorRectActive==false || mvCurrentFrameBufferSize != vPrevFrameBufferSize)
-				{
-					if(mbLog)
-					{
-						Log("  Setting scissor rect: %d, %d, %dx%d\n",	mvGlobalScissorRectPos.x, mvGlobalScissorRectPos.y, 
-																		mvGlobalScissorRectSize.x,mvGlobalScissorRectSize.y);
-					}
-
-					mpLowLevelGraphics->SetScissorRect(mvGlobalScissorRectPos, mvGlobalScissorRectSize);
-				}
-				
-				mbGlobalScissorRectActive = true;
-			}
-			////////////////////////////////////
-			//Global scissor not active
-			else
-			{
-				if(mbGlobalScissorRectActive)
-				{
-					if(mbLog) Log("  Setting scissor active: 0\n");
-				
-					mpLowLevelGraphics->SetScissorActive(false);
-					mbGlobalScissorRectActive = false;
-				}
-			}
-		}
+		ohpl_rf_set_frame_buffer(this, &mBackend, PtrId(apFrameBuffer), abUsePosAndSize, abUseGlobalScissor, ToOhpl(mpCurrentRenderTarget->mvPos));
 	}
+
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::ClearFrameBuffer(tClearFrameBufferFlag aFlags, bool abUsePosAndSize)
 	{
-		bool bScissorUsed=false;
-		if(	abUsePosAndSize &&
-			(mpCurrentRenderTarget->mvPos != cVector2l(0,0) || mvRenderTargetSize != mvCurrentFrameBufferSize || mbUseGlobalScissorRect) )
-		{
-			/////////////////////////////////
-			// Global scissor rect (do no setup and do not turn off scissor at the end!)
-			if(mbUseGlobalScissorRect)
-			{
-				if(mbLog) {
-					Log(" Clearing portion of frame buffer. Pos: %d,%d Size: %dx%d\n",
-						mvGlobalScissorRectPos.x, mvGlobalScissorRectPos.y,
-						mvGlobalScissorRectSize.x, mvGlobalScissorRectSize.y);
-				}
-			}
-			/////////////////////////////////
-			// Render target size
-			else
-			{
-				if(mbLog) {
-					Log(" Clearing portion of frame buffer. Pos: %d,%d Size: %dx%d\n",
-						mpCurrentRenderTarget->mvPos.x,	mpCurrentRenderTarget->mvPos.y,
-						mvRenderTargetSize.x, mvRenderTargetSize.y);
-				}
-
-				mpLowLevelGraphics->SetScissorActive(true);
-				mpLowLevelGraphics->SetScissorRect(mpCurrentRenderTarget->mvPos, mvRenderTargetSize);
-				bScissorUsed = true;
-			}
-		}
-		else
-		{
-			if(mbLog)
-			{
-				Log(" Clearing entire frame buffer\n");
-			}
-		}
-
-		/////////////////////////////////
-		// Clear the buffer
-		mpLowLevelGraphics->ClearFrameBuffer(aFlags);
-
-		if(bScissorUsed)
-			mpLowLevelGraphics->SetScissorActive(false);
+		ohpl_rf_clear_frame_buffer(this, &mBackend, aFlags, abUsePosAndSize, ToOhpl(mpCurrentRenderTarget->mvPos));
 	}
 
 	//-----------------------------------------------------------------------

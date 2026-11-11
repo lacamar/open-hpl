@@ -27,6 +27,8 @@
 #include "math/Math.h"
 #include "scene/Node3D.h"
 #include <algorithm>
+#include <vector>
+#include "impl/RustNewton.h"
 
 namespace hpl {
 
@@ -499,91 +501,63 @@ namespace hpl {
 	{
 		cCollideShapeNewton *pShape = static_cast<cCollideShapeNewton*>(mpShape);
 		cPhysicsBody_Buoyancy &b = mBuoyancy;
-		float fDensity = b.mfDensity * mfBuoyancyDensityMul;
-		if (mfMass == 0 || fDensity <= 0)
+		if (mfMass == 0 || b.mfDensity * mfBuoyancyDensityMul <= 0)
 			return false;
 
 		const cMatrixf &mtx = GetLocalMatrix();
-		cPlanef surface = cMath::TransformPlane(cMath::MatrixInverse(mtx), b.mSurface);
-		cVector3f vCom = GetMassCentre();
-		cVector3f vForce = 0, vTorque = 0;
-		float fVolume = 0;
-		for (int i = 0; i < pShape->GetSubShapeNum(); ++i)
+		int lSubNum = pShape->GetSubShapeNum();
+		OhplNewtonSubShape stackSubs[8];
+		std::vector<OhplNewtonSubShape> heapSubs;
+		OhplNewtonSubShape *pSubs = stackSubs;
+		if (lSubNum > 8)
+		{
+			heapSubs.resize(lSubNum);
+			pSubs = heapSubs.data();
+		}
+		for (int i = 0; i < lSubNum; ++i)
 		{
 			cCollideShapeNewton *pSub = static_cast<cCollideShapeNewton*>(pShape->GetSubShape(i));
 			float fR;
 			const tVector3fVec &vPoints = pSub->GetBuoyancyPoints(fR);
-			if (vPoints.empty())
-				continue;
-			float fPointVol = 4.18879032f * fR * fR * fR;
-			cVector3f vLift = surface.GetNormal() * (fDensity * avGravity.Length() * pSub->GetVolume());
-			cVector3f vPointLift = vLift / (float)vPoints.size();
-			float fSum = 0;
-			for (const cVector3f &vP : vPoints)
-			{
-				float d = cMath::PlaneToPointDist(surface, vP), v;
-				if (d > fR)
-					continue;
-				if (d < -fR)
-					v = fPointVol;
-				else if (d >= 0)
-					v = (2 * fR + d) * (fR - d) * (fR - d) * (kPif / 3);
-				else
-					v = d * d * (kPif / 3) * (d + 3 * fR) + 0.5f * fPointVol;
-				fSum += v;
-				vTorque += cMath::Vector3Cross(vP - vCom, vPointLift * (v / fPointVol));
-			}
-			float fFrac = fSum / (fPointVol * vPoints.size());
-			vForce += vLift * fFrac;
-			fVolume += fFrac * pSub->GetVolume();
+			pSubs[i] = OhplNewtonSubShape{vPoints.empty() ? nullptr : &vPoints[0], vPoints.size(), fR, pSub->GetVolume()};
 		}
-		if (fVolume <= 0)
-			return false;
-		vForce = cMath::MatrixMul3x3(mtx, vForce);
-		vTorque = cMath::MatrixMul3x3(mtx, vTorque);
 
-		float fMul = cMath::Min(b.mfDragDensityMul, mfBuoyancyDensityMul);
-		float fDrag = b.mfDensity * fMul;
-		if (fDrag > 0)
+		OhplNewtonBuoyIn in;
+		in.mass = mfMass;
+		in.density = b.mfDensity;
+		in.densityMul = mfBuoyancyDensityMul;
+		in.dragDensityMul = b.mfDragDensityMul;
+		in.linearViscosity = b.mfLinearViscosity;
+		in.angularViscosity = b.mfAngularViscosity;
+		in.maxLinearSpeed = mfMaxLinearSpeed;
+		in.maxAngularSpeed = mfMaxAngularSpeed;
+		in.shapeVolume = pShape->GetVolume();
+		in.timeStep = afTimeStep;
+		in.noPrevVel = b.mbNoPrevVel;
+		in.surface = b.mSurface;
+		in.matrix = mtx;
+		in.inverse = cMath::MatrixInverse(mtx);
+		in.inertia = GetInertiaMatrix();
+		in.massCentre = GetMassCentre();
+		in.gravity = avGravity;
+		in.linearVelocity = GetLinearVelocity();
+		in.angularVelocity = GetAngularVelocity();
+		in.prevLinearVel = b.mvPrevLinearVel;
+		in.prevAngularVel = b.mvPrevAngularVel;
+
+		OhplNewtonBuoyOut out;
+		if (ohpl_newton_buoyancy(&in, pSubs, lSubNum, &out) == false)
+			return false;
+
+		if (out.dragUpdated)
 		{
-			float fFrac = fVolume / pShape->GetVolume();
-			cVector3f vLin = GetLinearVelocity(), vAng = GetAngularVelocity();
-			cMatrixf mtxInertia = GetInertiaMatrix();
-			cVector3f vL = 0, vA = 0;
-			float fSpeed = vLin.Length();
-			if (fSpeed > 0)
-			{
-				float c = mfMaxLinearSpeed > 0 ? cMath::Min(fSpeed, mfMaxLinearSpeed * fMul) : fMul * fSpeed;
-				c = cMath::Min(c, 0.5f * c * c);
-				vL = vLin * (-c * b.mfLinearViscosity * fDrag * fFrac * mfMass / fSpeed);
-			}
-			float fAngSpeed = vAng.Length();
-			if (fAngSpeed > 0)
-			{
-				float c = mfMaxAngularSpeed > 0 ? cMath::Min(fAngSpeed, mfMaxAngularSpeed * fMul) : fMul * fAngSpeed;
-				c = cMath::Min(c, 0.5f * c * c);
-				vA = cMath::MatrixMul(mtxInertia, vAng / fAngSpeed) * (-fDrag * c * b.mfAngularViscosity * fFrac);
-			}
-			cVector3f vW = vLin * (-2 * fMul);
-			cVector3f vWa = vAng * (-0.5f * fMul);
-			if (b.mbNoPrevVel == false)
-			{
-				vW += (vLin - b.mvPrevLinearVel) * (-fMul * 0.1f / afTimeStep);
-				vWa += (vAng - b.mvPrevAngularVel) * (-fMul * 0.025f / afTimeStep);
-			}
-			cMath::Vector3ClampToLength(vW, 50);
-			cMath::Vector3ClampToLength(vWa, 50);
-			vL += vW * (mfMass * b.mfLinearViscosity * fMul);
-			vA += cMath::MatrixMul(mtxInertia, vWa) * (b.mfAngularViscosity * fMul);
-			vForce += cVector3f(vL.x * 0.25f, vL.y, vL.z * 0.25f);
-			vTorque += vA * 0.05125f;
-			b.mvPrevLinearVel = vLin;
-			b.mvPrevAngularVel = vAng;
-			b.mbNoPrevVel = false;
-			b.mfDragDensityMul = b.mfDragDensityMul * (1 - afTimeStep) + mfBuoyancyDensityMul * afTimeStep;
+			b.mvPrevLinearVel = out.prevLinearVel;
+			b.mvPrevAngularVel = out.prevAngularVel;
+			b.mbNoPrevVel = out.noPrevVel;
+			b.mfDragDensityMul = out.dragDensityMul;
 		}
-		mvBuoyancyForce = vForce;
-		mvBuoyancyTorque = vTorque;
+		mvBuoyancyForce = out.force;
+		mvBuoyancyTorque = out.torque;
 		return true;
 	}
 
@@ -657,24 +631,16 @@ namespace hpl {
 		// Linear
 		if (pRigidBody->mfMaxLinearSpeed > 0)
 		{
-			cVector3f vVel = pRigidBody->GetLinearVelocity();
-			float fSqrSpeed = vVel.Length();
-			if (fSqrSpeed > pRigidBody->mfMaxLinearSpeed * pRigidBody->mfMaxLinearSpeed)
-			{
-				vVel = (vVel / sqrtf(fSqrSpeed)) * pRigidBody->mfMaxLinearSpeed;
-				pRigidBody->SetLinearVelocity(vVel);
-			}
+			cVector3f vVel = pRigidBody->GetLinearVelocity(), vClamped;
+			if (ohpl_newton_clamp_speed(&vVel, pRigidBody->mfMaxLinearSpeed, &vClamped))
+				pRigidBody->SetLinearVelocity(vClamped);
 		}
 		// Angular
 		if (pRigidBody->mfMaxAngularSpeed > 0)
 		{
-			cVector3f vVel = pRigidBody->GetAngularVelocity();
-			float fSqrSpeed = vVel.Length();
-			if (fSqrSpeed > pRigidBody->mfMaxAngularSpeed * pRigidBody->mfMaxAngularSpeed)
-			{
-				vVel = (vVel / sqrtf(fSqrSpeed)) * pRigidBody->mfMaxAngularSpeed;
-				pRigidBody->SetAngularVelocity(vVel);
-			}
+			cVector3f vVel = pRigidBody->GetAngularVelocity(), vClamped;
+			if (ohpl_newton_clamp_speed(&vVel, pRigidBody->mfMaxAngularSpeed, &vClamped))
+				pRigidBody->SetAngularVelocity(vClamped);
 		}
 
 		//cVector3f vForce;

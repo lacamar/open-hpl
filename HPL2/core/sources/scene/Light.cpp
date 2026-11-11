@@ -20,6 +20,7 @@
 #include "scene/Light.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "system/String.h"
 
@@ -88,12 +89,7 @@ namespace hpl {
 		mlShadowCastersAffected = eObjectVariabilityFlag_All;
 		mfRadius =0;
 		mfSourceRadius = 0;
-		mfFadeTime=0;
-		mbFlickering = false;
-	
-		mfFlickerStateLength = 0;
-
-		mfFadeTime =0;
+		memset((void*)&mAnim, 0, sizeof(mAnim));
 
 		mfFalloffPow = 1.0f;
 		mfSpotFalloffPow = 1.0f;
@@ -192,205 +188,107 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	OhplLightLive iLight::LiveState() const
+	{
+		OhplLightLive live;
+		live.diffuse = mDiffuseColor;
+		live.radius = mfRadius;
+		live.brightness = mfBrightness;
+		return live;
+	}
+
 	void iLight::FadeBrightnessTo(float afBrightness, float afTime, std::function<float(float)> aEasing)
 	{
-		mfBrightFadeTime = afTime > 0 ? afTime : 0.0001f;
-		mfBrightFadeCount = 0;
-		mfBrightFadeStart = mfBrightness;
-		mfBrightFadeDest = afBrightness;
+		OhplLightLive live = LiveState();
+		ohpl_light_fade_brightness_to(&mAnim, &live, afBrightness, afTime);
 		mBrightFadeEasing = aEasing;
 	}
 
 	void iLight::UpdateLight(float afTimeStep)
-	{	
-		if(mfBrightFadeTime>0)
-		{
-			mfBrightFadeCount = cMath::Min(mfBrightFadeCount + afTimeStep, mfBrightFadeTime);
-			float fT = mfBrightFadeCount / mfBrightFadeTime;
-			if(mBrightFadeEasing) fT = mBrightFadeEasing(fT);
-			SetBrightness(mfBrightFadeStart + (mfBrightFadeDest - mfBrightFadeStart) * fT);
-			if(mfBrightFadeCount >= mfBrightFadeTime) mfBrightFadeTime = 0;
-		}
-
-		/////////////////////////////////////////////
-		// Fade
-		if(mfFadeTime>0)
-		{
-			//Log("Fading: %f / %f\n",afTimeStep,mfFadeTime);
-
-			float fNewRadius = mfRadius + mfRadiusAdd*afTimeStep;
-			SetRadius(fNewRadius);
-			
-			mDiffuseColor.r += mColAdd.r*afTimeStep;
-			mDiffuseColor.g += mColAdd.g*afTimeStep;
-			mDiffuseColor.b += mColAdd.b*afTimeStep;
-			mDiffuseColor.a += mColAdd.a*afTimeStep;
-			SetDiffuseColor(mDiffuseColor);
-
-			mfFadeTime-=afTimeStep;
-
-			//Set the dest values.
-			if(mfFadeTime<=0)
+	{
+		OhplLightLive live = LiveState();
+		OhplLightHostVt host;
+		host.ctx = this;
+		host.ease = [](void *p, float afT){
+			iLight *pLight = static_cast<iLight*>(p);
+			return pLight->mBrightFadeEasing ? pLight->mBrightFadeEasing(afT) : afT;
+		};
+		host.set_brightness = [](void *p, float afX){ static_cast<iLight*>(p)->SetBrightness(afX); };
+		host.set_radius = [](void *p, float afX){ static_cast<iLight*>(p)->SetRadius(afX); };
+		host.set_diffuse = [](void *p, const cColor *apCol){ static_cast<iLight*>(p)->SetDiffuseColor(*apCol); };
+		host.assign_diffuse = [](void *p, const cColor *apCol){ static_cast<iLight*>(p)->mDiffuseColor = *apCol; };
+		host.raw_radius = [](void *p, float afX){ static_cast<iLight*>(p)->mfRadius = afX; };
+		host.flicker_sound = [](void *p, bool abOn){
+			iLight *pLight = static_cast<iLight*>(p);
+			cSoundEntity *pSound = pLight->mpWorld->CreateSoundEntity(abOn ? "FlickerOn" : "FlickerOff",
+								abOn ? pLight->msFlickerOnSound : pLight->msFlickerOffSound, true);
+			if(pSound)
 			{
-				mfFadeTime =0;
-				SetDiffuseColor(mDestCol);
-				mfRadius = mfDestRadius;
+				pSound->SetIsSaved(false);
+				pSound->SetPosition(pLight->GetWorldPosition());
 			}
-		}
-
-		/////////////////////////////////////////////
-		// Flickering
-		if(mbFlickering && mfFadeTime<=0)
-		{	
-			//////////////////////
-			//On
-			if(mbFlickerOn)
-			{
-				if(mfFlickerTime >= mfFlickerStateLength)
-				{
-					mbFlickerOn = false;
-					if(!mbFlickerFade)
-					{
-						SetDiffuseColor(mFlickerOffColor);
-						SetRadius(mfFlickerOffRadius);
-					}
-					else
-					{
-						FadeTo(mFlickerOffColor,mfFlickerOffRadius, cMath::RandRectf(mfFlickerOffFadeMinLength, mfFlickerOffFadeMaxLength));
-					}
-					//Sound
-					if(msFlickerOffSound!=""){
-						cSoundEntity *pSound = mpWorld->CreateSoundEntity("FlickerOff",
-																			msFlickerOffSound,true);
-						if(pSound)
-						{
-							pSound->SetIsSaved(false);
-							pSound->SetPosition(GetWorldPosition());
-						}
-					}
-
-					OnFlickerOff();
-
-					mfFlickerTime =0;
-					mfFlickerStateLength = cMath::RandRectf(mfFlickerOffMinLength,mfFlickerOffMaxLength);
-				}
-			}
-			//////////////////////
-			//Off
-			else 
-			{
-				if(mfFlickerTime >= mfFlickerStateLength)
-				{
-					mbFlickerOn = true;
-					if(!mbFlickerFade)
-					{
-						SetDiffuseColor(mFlickerOnColor);
-						SetRadius(mfFlickerOnRadius);
-					}
-					else
-					{
-						FadeTo(mFlickerOnColor,mfFlickerOnRadius,cMath::RandRectf(mfFlickerOnFadeMinLength, mfFlickerOnFadeMaxLength));
-					}
-					if(msFlickerOnSound!=""){
-						cSoundEntity *pSound = mpWorld->CreateSoundEntity("FlickerOn", msFlickerOnSound,true);
-						if(pSound)
-						{
-							pSound->SetIsSaved(false);
-							pSound->SetPosition(GetWorldPosition());
-						}
-					}
-
-					OnFlickerOn();
-
-					mfFlickerTime =0;
-					mfFlickerStateLength = cMath::RandRectf(mfFlickerOnMinLength,mfFlickerOnMaxLength);
-				}
-			}
-
-			mfFlickerTime += afTimeStep;
-		}
-
-		/*Log("Time: %f Length: %f FadeTime: %f Color: (%f %f %f %f)\n",mfFlickerTime, mfFlickerStateLength,
-		mfFadeTime,
-		mDiffuseColor.r,mDiffuseColor.g,
-		mDiffuseColor.b,mDiffuseColor.a);*/
+		};
+		host.flicker_event = [](void *p, bool abOn){
+			iLight *pLight = static_cast<iLight*>(p);
+			if(abOn) pLight->OnFlickerOn(); else pLight->OnFlickerOff();
+		};
+		ohpl_light_update(&mAnim, &live, msFlickerOnSound != "", msFlickerOffSound != "", &host, afTimeStep);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iLight::FadeTo(const cColor& aCol, float afRadius, float afTime)
 	{
-		if(afTime<=0) afTime = 0.0001f;
-
-		mfFadeTime = afTime;
-
-		mColAdd.r = (aCol.r - mDiffuseColor.r)/afTime;
-		mColAdd.g = (aCol.g - mDiffuseColor.g)/afTime;
-		mColAdd.b = (aCol.b - mDiffuseColor.b)/afTime;
-		mColAdd.a = (aCol.a - mDiffuseColor.a)/afTime;
-
-		mfRadiusAdd = (afRadius - mfRadius)/afTime;
-
-		mfDestRadius = afRadius;
-		mDestCol = aCol;
+		OhplLightLive live = LiveState();
+		ohpl_light_fade_to(&mAnim, &live, &aCol, afRadius, afTime);
 	}
 
 	void iLight::StopFading()
 	{
-		mfFadeTime =0;
+		mAnim.fade_time = 0;
 	}
 
 	bool iLight::IsFading()
 	{
-		return mfFadeTime != 0;
+		return mAnim.fade_time != 0;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iLight::SetFlickerActive(bool abX)
 	{
-		mbFlickering = abX;
+		mAnim.flickering = abX;
 	}
 
 	void iLight::SetFlicker(const cColor& aOffCol, float afOffRadius,
 		float afOnMinLength, float afOnMaxLength,const tString &asOnSound,const tString &asOnPS,
 		float afOffMinLength, float afOffMaxLength,const tString &asOffSound,const tString &asOffPS,
-		bool abFade,	float afOnFadeMinLength, float afOnFadeMaxLength, 
+		bool abFade,	float afOnFadeMinLength, float afOnFadeMaxLength,
 						float afOffFadeMinLength, float afOffFadeMaxLength)
 	{
-		mFlickerOffColor = aOffCol;
-		mfFlickerOffRadius = afOffRadius;
-
-		mfFlickerOnMinLength = afOnMinLength;
-		mfFlickerOnMaxLength = afOnMaxLength;
 		msFlickerOnSound = asOnSound;
 		msFlickerOnPS = asOnPS;
-
-		mfFlickerOffMinLength = afOffMinLength;
-		mfFlickerOffMaxLength = afOffMaxLength;
 		msFlickerOffSound = asOffSound;
 		msFlickerOffPS = asOffPS;
 
-		mbFlickerFade = abFade;
-
-		mfFlickerOnFadeMinLength = afOnFadeMinLength;
-		mfFlickerOnFadeMaxLength = afOnFadeMaxLength;
-		mfFlickerOffFadeMinLength = afOffFadeMinLength;
-		mfFlickerOffFadeMaxLength = afOffFadeMaxLength;
-
-		mFlickerOnColor = mDiffuseColor;
-		mfFlickerOnRadius = mfRadius;
-
-		mbFlickerOn = true;
-		mfFlickerTime =0;
-
-		mfFadeTime =0;
-
-		mfFlickerStateLength = cMath::RandRectf(mfFlickerOnMinLength,mfFlickerOnMaxLength);
+		OhplFlickerCfg cfg;
+		cfg.off_color = aOffCol;
+		cfg.off_radius = afOffRadius;
+		cfg.on_min_length = afOnMinLength;
+		cfg.on_max_length = afOnMaxLength;
+		cfg.off_min_length = afOffMinLength;
+		cfg.off_max_length = afOffMaxLength;
+		cfg.fade = abFade;
+		cfg.on_fade_min_length = afOnFadeMinLength;
+		cfg.on_fade_max_length = afOnFadeMaxLength;
+		cfg.off_fade_min_length = afOffFadeMinLength;
+		cfg.off_fade_max_length = afOffFadeMaxLength;
+		OhplLightLive live = LiveState();
+		ohpl_light_set_flicker(&mAnim, &live, &cfg);
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	bool iLight::CheckObjectIntersection(iRenderable *apObject)
 	{
 		//Log("------ Checking %s with light %s -----\n",apObject->GetName().c_str(), GetName().c_str());
@@ -432,7 +330,7 @@ namespace hpl {
 	void iLight::UpdateLogic(float afTimeStep)
 	{
 		UpdateLight(afTimeStep);
-		if(mfFadeTime>0 || mbFlickering)
+		if(mAnim.fade_time>0 || mAnim.flickering)
 		{
 			mbUpdateBoundingVolume = true;
 			

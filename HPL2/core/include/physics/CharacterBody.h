@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "physics/PhysicsWorld.h"
 #include "math/PidController.h"
+#include "physics/RustCharacter.h"
 
 namespace hpl {
 
@@ -120,7 +121,7 @@ namespace hpl {
 
 		int AddExtraSize(const cVector3f& avSize);
 		void SetActiveSize(int alNum);
-		int GetActiveSize(){ return mlCurrentShapeIdx; }
+		int GetActiveSize(){ return mS.currentShapeIdx; }
 
 		void Update(float afTimeStep);
 
@@ -136,7 +137,7 @@ namespace hpl {
 		// General Properties
 
 		void SetActive(bool abX);
-		bool IsActive(){ return mbActive;}
+		bool IsActive(){ return mS.active;}
 
 
 		///////////////////////////////////////
@@ -158,7 +159,7 @@ namespace hpl {
 		void SetTestCollision(bool abX);
 		void SetPhysicsBodyActive(bool abX);
 		bool GetPhysicsBodyActive(){ return mbPhysicsBodyActive;}
-		bool GetTestCollision(){return mbTestCollision;}
+		bool GetTestCollision(){return mS.testCollision;}
 
 		void SetMaxPositiveMoveSpeed(eCharDir aDir, float afX);
 		float GetMaxPositiveMoveSpeed(eCharDir aDir);
@@ -167,19 +168,19 @@ namespace hpl {
 
 		void SetMoveSpeed(eCharDir aDir, float afX);
 		float GetMoveSpeed(eCharDir aDir);
-		void SetMoveSpeedMul(eCharDir aDir, float afX){ mfMoveSpeedMul[aDir] = afX;}
-		float GetMoveSpeedMul(eCharDir aDir){ return mfMoveSpeedMul[aDir];}
+		void SetMoveSpeedMul(eCharDir aDir, float afX){ mS.moveSpeedMul[aDir] = afX;}
+		float GetMoveSpeedMul(eCharDir aDir){ return mS.moveSpeedMul[aDir];}
 		void SetMoveAcc(eCharDir aDir, float afX);
 		float GetMoveAcc(eCharDir aDir);
 		void SetMoveDeacc(eCharDir aDir, float afX);
 		float GetMoveDeacc(eCharDir aDir);
 
-		void SetMoveOppositeDirAccMul(eCharDir aDir, float afX){mfMoveOppositeDirAccMul[aDir] = afX;}
-		float GetMoveOppositeDirAccMul(eCharDir aDir){ return mfMoveOppositeDirAccMul[aDir];}
+		void SetMoveOppositeDirAccMul(eCharDir aDir, float afX){mS.moveOppositeDirAccMul[aDir] = afX;}
+		float GetMoveOppositeDirAccMul(eCharDir aDir){ return mS.moveOppositeDirAccMul[aDir];}
 		
 		
-		void SetDeaccelerateMoveSpeedInAir(bool abX){ mbDeaccelerateMoveSpeedInAir = abX;}
-		bool GetDeaccelerateMoveSpeedInAir(){ return mbDeaccelerateMoveSpeedInAir;}
+		void SetDeaccelerateMoveSpeedInAir(bool abX){ mS.deaccelerateMoveSpeedInAir = abX;}
+		bool GetDeaccelerateMoveSpeedInAir(){ return mS.deaccelerateMoveSpeedInAir;}
 
 		cVector3f GetVelocity(float afFrameTime);
 
@@ -202,7 +203,7 @@ namespace hpl {
 		const cVector3f& GetRight();
 		const cVector3f& GetUp();
 
-		const cMatrixf& GetMoveMatrix(){ return m_mtxMove;}
+		const cMatrixf& GetMoveMatrix(){ return mS.mtxMove;}
 
 		void SetGravityActive(bool abX);
 		bool GravityIsActive();
@@ -214,33 +215,33 @@ namespace hpl {
 		void SetCustomGravity(const cVector3f& avCustomGravity);
 		cVector3f GetCustomGravity();
 
-		void AddForceVelocity(const cVector3f& avVel){ mvVelocity += avVel;}
-		void SetForceVelocity(const cVector3f& avVel){ mvVelocity = avVel;}
-		cVector3f GetForceVelocity(){ return mvVelocity;}
+		void AddForceVelocity(const cVector3f& avVel){ mS.velocity += avVel;}
+		void SetForceVelocity(const cVector3f& avVel){ mS.velocity = avVel;}
+		cVector3f GetForceVelocity(){ return mS.velocity;}
 
 		bool IsOnGround();
-		void SetMaxOnGroundCount(int alX) { mlMaxOnGroundCount = alX;}
-		int GetMaxOnGroundCount() { return mlMaxOnGroundCount;}
+		void SetMaxOnGroundCount(int alX) { mS.maxOnGroundCount = alX;}
+		int GetMaxOnGroundCount() { return mS.maxOnGroundCount;}
 
 		void SetCollideFlags(tFlag alX);
-		inline tFlag GetCollideFlags() const { return mlCollideFlags;}
+		inline tFlag GetCollideFlags() const { return mS.collideFlags;}
 
-		void SetGroundFriction(float afX){ mfGroundFriction = afX;}
-		float GetGroundFriction(){ return mfGroundFriction;}
+		void SetGroundFriction(float afX){ mS.groundFriction = afX;}
+		float GetGroundFriction(){ return mS.groundFriction;}
 
-		void SetAirFriction(float afX){ mfAirFriction = afX;}
-		float GetAirFriction(){ return mfAirFriction;}
+		void SetAirFriction(float afX){ mS.airFriction = afX;}
+		float GetAirFriction(){ return mS.airFriction;}
 
-		void SetDisableDiagSpeedBoost(bool abX){ mbDisableDiagSpeedBoost = abX;}
-		bool GetDisableDiagSpeedBoost(){ return mbDisableDiagSpeedBoost;}
+		void SetDisableDiagSpeedBoost(bool abX){ mS.disableDiagSpeedBoost = abX;}
+		bool GetDisableDiagSpeedBoost(){ return mS.disableDiagSpeedBoost;}
 
-		void SetMoveDelay(float afX){mfMoveDelayCount=afX;}
-		float GetMoveDelay(){ return mfMoveDelayCount;}
+		void SetMoveDelay(float afX){mS.moveDelayCount=afX;}
+		float GetMoveDelay(){ return mS.moveDelayCount;}
 
 		///////////////////////////////////////
 		// Interaction Properties
 
-		bool GetMovedLastUpdate(){ return mbActive && mbMovedLastUpdate;}
+		bool GetMovedLastUpdate(){ return mS.active && mS.movedLastUpdate;}
 
 		void SetMaxPushMass(float afX){ mfMaxPushMass = afX;}
 		void SetPushForce(float afX){ mfPushForce = afX;}
@@ -267,34 +268,34 @@ namespace hpl {
 
 		void SetMaxNoSlideSlopeAngle(float afAngle);
 		float GetMaxNoSlideSlopeAngle();
-		void SetGroundAngleMin(float afAngle){ mfGroundAngleMinCos = cos(afAngle); }
-		float GetGroundAngleMin(){ return acos(mfGroundAngleMinCos); }
+		void SetGroundAngleMin(float afAngle){ mS.groundAngleMinCos = cos(afAngle); }
+		float GetGroundAngleMin(){ return acos(mS.groundAngleMinCos); }
 
 		void SetStickToSlope(bool abX){ mbStickToSlope = abX;}
 		bool GetStickToSlope(){ return mbStickToSlope;}
 
-		float GetMaxStepSize(){ return mfMaxStepHeight;}
-		void SetMaxStepSize(float afSize){ mfMaxStepHeight = afSize;}
+		float GetMaxStepSize(){ return mS.maxStepHeight;}
+		void SetMaxStepSize(float afSize){ mS.maxStepHeight = afSize;}
 
-		float GetMaxStepSizeInAir(){ return mfMaxStepHeightInAir;}
-		void SetMaxStepSizeInAir(float afSize){ mfMaxStepHeightInAir = afSize;}
+		float GetMaxStepSizeInAir(){ return mS.maxStepHeightInAir;}
+		void SetMaxStepSizeInAir(float afSize){ mS.maxStepHeightInAir = afSize;}
 
-		void SetStepClimbSpeed(float afX){ mfStepClimbSpeed = afX;}
-		float GetStepClimbSpeed(){ return mfStepClimbSpeed;}
+		void SetStepClimbSpeed(float afX){ mS.stepClimbSpeed = afX;}
+		float GetStepClimbSpeed(){ return mS.stepClimbSpeed;}
 
-		void SetAccurateClimbing(bool abX){ mbAccurateClimbing = abX;}
-		bool GetAccurateClimbing(){ return mbAccurateClimbing;}
+		void SetAccurateClimbing(bool abX){ mS.accurateClimbing = abX;}
+		bool GetAccurateClimbing(){ return mS.accurateClimbing;}
 
-		void SetClimbForwardMul(float afX){ mfClimbForwardMul= afX;}
-		float GetClimbForwardMul(){ return mfClimbForwardMul;}
+		void SetClimbForwardMul(float afX){ mS.climbForwardMul= afX;}
+		float GetClimbForwardMul(){ return mS.climbForwardMul;}
 
-		void SetClimbHeightAdd(float afX){ mfClimbHeightAdd = afX;}
-		float GetClimbHeightAdd(){ return mfClimbHeightAdd;}
+		void SetClimbHeightAdd(float afX){ mS.climbHeightAdd = afX;}
+		float GetClimbHeightAdd(){ return mS.climbHeightAdd;}
 
-		bool IsClimbing(){ return mbClimbing;}
+		bool IsClimbing(){ return mS.climbing;}
 		void ResetClimbing();
 
-		const cVector3f& GetLastGroundNormal(){ return mvLastGroundNormal;}
+		const cVector3f& GetLastGroundNormal(){ return mS.lastGroundNormal;}
 
 		void SetRotateYawWhenGravityAttached(bool abX){ mbRotateYawWhenGravityAttached = abX;}
 		bool GetRotateYawWhenGravityAttached(){ return mbRotateYawWhenGravityAttached;}
@@ -365,7 +366,7 @@ namespace hpl {
 		
 		///////////////////////////////////////
 		//Debug:
-		const cVector3f& GetLastMovePosAdd(){ return mvLastMovePosAdd;}
+		const cVector3f& GetLastMovePosAdd(){ return mS.lastMovePosAdd;}
 		
 	protected:
 		void UpdateMoveMatrix();
@@ -376,21 +377,13 @@ namespace hpl {
 		void UpdateBodyConnection(float afTimeStep);
 		void UpdateCharacterConnection(float afTimeStep);
 		
-		cVector3f UpdatePostionFromCharSpeed(float afTimeStep);
 
-		void AlignPosAddAccordingToGroundNormal(cVector3f &avPosAdd);
 
-		void CheckMoveCollision(const cVector3f &avPosAdd, float afTimeStep);
 		
-		void CheckStepClimbing(const cVector3f &avPosAdd, bool abCollided, const cVector3f &avPushBack, float afTimeStep);
 		static bool mbHpl3;
 
-		void UpdateStepClimbing(float afTimeStep);
 
-		void UpdateForces(float afTimeStep);
-		void UpdateFriction(float afTimeStep);
 
-		void CheckForceCollision(float afTimeStep);
 
 		void UpdateForcePushing(float afTimeStep);
 
@@ -407,51 +400,27 @@ namespace hpl {
 
 		bool CheckCollision(cVector3f *apPushBackVector, const cVector3f& avPos, iPhysicsWorldCollisionCallback *apCallback,int alShapeIdx=-1);
 
+		OhplCharState mS;
+		OhplCharVt MakeVt();
+
 		tString msName;
 
-		float mfMass;
 
-		bool mbActive;
 
 		bool mbCollideCharacter;
 
-		bool mbTestCollision;
 		bool mbPhysicsBodyActive;
 
 		bool mbStickToSlope;
 
-		bool mbDisableDiagSpeedBoost;
 
-		tFlag mlCollideFlags;
 
-		bool mbGravityActive;
-		float mfMaxGravitySpeed;
-		bool mbCustomGravity;
-		cVector3f mvCustomGravity;
 
-		cVector3f mvPosition;
-		cVector3f mvLastPosition;
 		
-		float mfMaxPosMoveSpeed[2];
-		float mfMaxNegMoveSpeed[2];
 
-		float mfCurrentMoveAcc[2];
-		float mfMoveAcc[2];
-		float mfMoveDeacc[2];
-		float mfMoveSpeed[2];
-		float mfMoveSpeedMul[2];
-		float mfMoveOppositeDirAccMul[2];
-		bool mbMoving[2];
-		bool mbDeaccelerateMoveSpeedInAir;
-		cVector3f mvLastMovePosAdd;
 
-		bool mbMovedLastUpdate;
 
-		float mfPitch;
-		float mfYaw;
 
-        int mlOnGroundCount;
-		int mlMaxOnGroundCount;
 
 		float mfMaxPushMass;
 		float mfPushForce;
@@ -464,25 +433,13 @@ namespace hpl {
 
 		int mlMinBodyPushStrength;
 
-		float mfCheckStepClimbCount;
-		float mfCheckStepClimbInterval;
 
-		float mfMaxNoSlideSlopeAngleCos;
-		float mfGroundAngleMinCos = 0.001f;
 
-		cVector3f mvForce;
-		cVector3f mvVelocity;
 		std::vector<cVector3f> mvSafePositions;
 		cVector3f mvSafePosHistory[4];
 		float mfSafePosTimer, mfSafePosInterval, mfSafePosBuffer;
-		cVector3f mvLastGroundNormal;
 		
-		cVector3f mvSize;
 
-		cMatrixf m_mtxMove;
-		cVector3f mvForward;
-		cVector3f mvRight;
-		cVector3f mvUp;
 
 		float mfConstantContactForceMul;
 		float mfVelocityContactForceMul;
@@ -506,10 +463,7 @@ namespace hpl {
 		int mlEntitySmoothYPosNum;
 		tFloatList mlstEntityYPositions;
 
-		float mfGroundFriction;
-		float mfAirFriction;
 
-		float mfMoveDelayCount;
 
 		void *mpUserData;
 	
@@ -548,15 +502,7 @@ namespace hpl {
 		cMatrixf m_mtxGravityAttachedPrevMatrix;
 		int mlGravityAttachmentContacts;
 		cVector3f mvGravityAttachmentBodyVelocity;
-		cVector3f mvGravityAttachmentVelocity;
 		
-		float mfMaxStepHeight;
-		float mfMaxStepHeightInAir;
-		float mfStepClimbSpeed;
-		float mfClimbForwardMul;
-		float mfClimbHeightAdd;
-		bool mbClimbing;
-		bool mbAccurateClimbing;
 
 		iCharacterBodyCallback *mpCallback;
 
@@ -568,7 +514,6 @@ namespace hpl {
 
 		iPhysicsMaterial *mpGravityCollideMaterial;
 
-		int mlCurrentShapeIdx;
 		iCollideShape *mpCurrentShape;
 		iPhysicsBody *mpCurrentBody;
 		std::vector<iCollideShape*> mvShapes;

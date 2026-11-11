@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.82
+Version:        1.3.83
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -60,7 +60,7 @@ cd amnesia/src
     -DUSE_GAMEPAD=ON \
     -DAMNESIA_WITH_SERIAL=OFF
 %cmake_build --target Amnesia --target Launcher --target Soma \
-    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests --target GlslToVulkanTests
+    --target PhysicsNewtonTests --target CStringTests --target PlatformXdgPathTests --target HpslTranspilerTests --target GlslToVulkanTests --target TraceRecorderTests
 cd -
 
 magick 'amnesia/src/game/Lux.ico[0]' %{name}.png
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Wed Nov 11 2026 lacamar <lchlnm@pm.me> - 1.3.83-1
+- Port GUI, physics, materials, post effects to Rust
+- Port world, sound entities, image loaders to Rust
+- Port deferred renderer setup and bloom to Rust
+
 * Tue Nov 10 2026 lacamar <lchlnm@pm.me> - 1.3.82-1
 - Fix possible crash after map transfer
 - Harden map, cache and XML loading against corrupt data

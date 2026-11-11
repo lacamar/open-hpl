@@ -21,6 +21,7 @@
 #include "scene/Entity3D.h"
 #include "system/LowLevelSystem.h"
 #include "math/Math.h"
+#include "scene/RustNode.h"
 
 namespace hpl {
 
@@ -260,8 +261,9 @@ namespace hpl {
 	{
 		if(mpParent)
 		{
-			SetMatrix(cMath::MatrixMul(cMath::MatrixInverse(mpParent->GetWorldMatrix()),
-										a_mtxWorldTransform));
+			cMatrixf mtxLocal;
+			ohpl_scene_world_to_local(&mpParent->GetWorldMatrix(), &a_mtxWorldTransform, &mtxLocal);
+			SetMatrix(mtxLocal);
 		}
 		else
 		{
@@ -302,8 +304,9 @@ namespace hpl {
 
 	void cNode3D::AddRotation(const cVector3f& avRot, eEulerRotationOrder aOrder)
 	{
-		cQuaternion qRot = cMath::MatrixToQuaternion(cMath::MatrixRotate(avRot, aOrder));
-		AddRotation(qRot);
+		cQuaternion qNew;
+		ohpl_scene_node_add_rotation(&avRot, (int)aOrder, &mqRotation, &qNew);
+		mqRotation = qNew;
 	}
 	
 	void cNode3D::AddRotation(const cQuaternion& aqRotation)
@@ -323,22 +326,8 @@ namespace hpl {
 
 	void cNode3D::UpdateMatrix(bool abSetChildrenUpdated)
 	{
-		cMatrixf mtxTransform = GetLocalMatrix();
-
-		//Save the translation and set it to 0 so that only the rotation is altered.
-		cVector3f vPos = mtxTransform.GetTranslation();
-		mtxTransform.SetTranslation(cVector3f(0,0,0));
-
-		//Log("Startpos: %s",vPos.ToString().c_str());
-		//Log("World pos: %s\n",GetWorldMatrix().GetTranslation().ToString().c_str());
-		
-		//The animation rotation is applied before the local.
-		mtxTransform = cMath::MatrixMul(mtxTransform, cMath::MatrixQuaternion(mqRotation));
-
-		//Skip scale for now.
-		//mtxTransform = cMath::MatrixMul(cMath::MatrixScale(mvScale), mtxTransform);
-		
-		mtxTransform.SetTranslation(vPos + mvTranslation);
+		cMatrixf mtxTransform;
+		ohpl_scene_node_update_matrix(&GetLocalMatrix(), &mqRotation, &mvTranslation, &mtxTransform);
 
 		SetMatrix(mtxTransform,abSetChildrenUpdated);
 

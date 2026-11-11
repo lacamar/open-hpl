@@ -18,6 +18,7 @@
  */
 
 #include "scene/LightSpot.h"
+#include "scene/RustLight.h"
 
 #include "impl/tinyXML/tinyxml.h"
 #include "math/Math.h"
@@ -38,12 +39,6 @@ namespace hpl {
 	float cLightSpot::mfShadowNearClip = 0;
 
 	
-	static const cMatrixf g_mtxTextureUnitFix(	0.5f,0,   0,   0.5f,
-												0,   0.5f,0,   0.5f,
-												0,   0,   0.5f,0.5f,
-												0,   0,   0,   1.0f
-												);
-			
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -69,8 +64,7 @@ namespace hpl {
 		mfNearClipPlane = 0.1f;
 		mfRadius = 100.0f;
 
-		mfTanHalfFOV = tan(mfFOV*0.5f);
-		mfCosHalfFOV = cos(mfFOV*0.5f);
+		ohpl_light_spot_half_fov(mfFOV, &mfTanHalfFOV, &mfCosHalfFOV);
 
 		mbFovUpdated = true;
 		
@@ -121,8 +115,7 @@ namespace hpl {
 		mfFOV = afAngle;
 		mbProjectionUpdated = true;
 
-		mfTanHalfFOV = tan(mfFOV*0.5f);
-		mfCosHalfFOV = cos(mfFOV*0.5f);
+		ohpl_light_spot_half_fov(mfFOV, &mfTanHalfFOV, &mfCosHalfFOV);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -145,27 +138,7 @@ namespace hpl {
 	{
 		if(mbProjectionUpdated)
 		{
-			float fFar = mfRadius;
-			float fNear = mfShadowNearClip > 0 ? cMath::Min(mfNearClipPlane, mfShadowNearClip) : mfNearClipPlane;
-			float fTop = tan(mfFOV*0.5f) * fNear;
-			float fBottom = -fTop;
-			float fRight = mfAspect * fTop;
-			float fLeft = mfAspect * fBottom;
-
-			float A = (2.0f*fNear) / (fRight - fLeft);
-			float B = (2.0f*fNear) / (fTop - fBottom);
-			float D = -1.0f;
-			float C = -(2.0f*fFar*fNear) / (fFar - fNear);
-			float Z = -(fFar + fNear)/(fFar - fNear);
-			
-			float X = 0;
-			float Y = 0;
-			
-			m_mtxProjection = cMatrixf(
-				A,0,X,0,
-				0,B,Y,0,
-				0,0,Z,C,
-				0,0,D,0);
+			ohpl_light_spot_projection(mfFOV, mfAspect, mfNearClipPlane, mfShadowNearClip, mfRadius, &m_mtxProjection);
 
 			mbProjectionUpdated = false;	
 			mbViewProjUpdated = true;
@@ -181,8 +154,9 @@ namespace hpl {
 	{
 		if(mlViewProjMatrixCount != GetTransformUpdateCount() || mbViewProjUpdated || mbProjectionUpdated)
 		{
-			m_mtxViewProj = cMath::MatrixMul(GetProjectionMatrix(),GetViewMatrix());
-			m_mtxViewProj = cMath::MatrixMul(g_mtxTextureUnitFix, m_mtxViewProj);
+			const cMatrixf &mtxProj = GetProjectionMatrix();
+			const cMatrixf &mtxView = GetViewMatrix();
+			ohpl_light_spot_view_proj(&mtxProj, &mtxView, &m_mtxViewProj);
 			
 			mlViewProjMatrixCount = GetTransformUpdateCount();
 			mbViewProjUpdated = false;
@@ -199,7 +173,7 @@ namespace hpl {
 		{
 			mpFrustum->SetupPerspectiveProj(GetProjectionMatrix(),
 											GetViewMatrix(),
-											mfRadius,mfShadowNearClip > 0 ? cMath::Min(mfNearClipPlane, mfShadowNearClip) : mfNearClipPlane,
+											mfRadius,ohpl_light_spot_near(mfNearClipPlane, mfShadowNearClip),
 											mfFOV,mfAspect,GetWorldPosition(),false);
 			mbFrustumUpdated = false;
 			mlFrustumMatrixCount = GetTransformUpdateCount();

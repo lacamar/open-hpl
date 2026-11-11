@@ -25,6 +25,7 @@
 namespace hpl {
 
 	class cGuiSkinFont;
+	struct OhplWdButtonState;
 
 	class cWidgetButton : public iWidget
 	{
@@ -47,6 +48,7 @@ namespace hpl {
 		bool IsPressed() { return mbPressed; }
 		
 	protected:
+		OhplWdButtonState GetRustState();
 		/////////////////////////
 		// Implemented functions
 		void OnLoadGraphics();

@@ -88,6 +88,9 @@ namespace hpl {
 									cVector3f *apPosVec);
 
 	private:
+		void BuildRustParams();
+		OhplPeParams mRustParams;
+
         bool OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams);
 		float mfShortestDist;
 		bool mbIntersected;
@@ -259,27 +262,14 @@ namespace hpl {
 										);
 		~cParticleEmitter_UserData(void);
 
-		void Kill();
-
-		bool IsDying();
+		bool CheckCollision(const cVector3f &avStart, const cVector3f &avEnd, cVector3f *apNormal, cVector3f *apPoint);
 
 	private:
 		void UpdateMotion(float afTimeStep);
-		void SetParticleDefaults(cParticle *apParticle);
 
 
 		cParticleEmitterData_UserData *mpData;
 
-		float mfTime;
-		float mfCreateCount;
-
-		float mfCollideCount;
-
-		float mfPauseCount;
-		float mfPauseWaitCount;
-		bool mbPaused;
-
-		bool mbRespawn;
 	};
 	
 

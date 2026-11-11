@@ -31,6 +31,7 @@
 #include "graphics/VertexBuffer.h"
 
 #include <algorithm>
+#include <memory>
 
 namespace hpl {
 
@@ -78,32 +79,21 @@ namespace hpl {
 		}
 
 		////////////////////////////////
-		//Iterate post effects and find the last one.
-		iPostEffect *pLastEffect = NULL;
-		tPostEffectMapIt it = m_mapPostEffects.begin();
-        for(; it!= m_mapPostEffects.end(); ++it)
-		{
-			iPostEffect *pPostEffect = it->second;
-			if(pPostEffect->IsActive()==false) continue;
-			
-			pLastEffect = pPostEffect;
-		}
+		//Render the active post effects, alternating the final temp buffers.
+		size_t lNum = m_mapPostEffects.size();
+		std::unique_ptr<bool[]> vActive(new bool[lNum + 1]);
+		for(size_t i=0; i<lNum; ++i)
+			vActive[i] = m_mapPostEffects[i].second->IsActive();
 
-		////////////////////////////////
-		//Iterate post effects and render them
-		int lCurrentTempBuffer =0;
+		std::vector<OhplPeStep> vSteps(lNum + 1);
+		size_t lSteps = ohpl_pe_chain(vActive.get(), lNum, vSteps.data());
+		iPostEffect *pLastEffect = lSteps > 0 ? m_mapPostEffects[vSteps[lSteps-1].index].second : NULL;
+
 		iTexture *pInputTex = apInputTexture;
-		it = m_mapPostEffects.begin();
-		for(; it!= m_mapPostEffects.end(); ++it)
+		for(size_t i=0; i<lSteps; ++i)
 		{
-			iPostEffect *pPostEffect =it->second;
-			if(pPostEffect->IsActive()==false) continue;
-		
-			bool bLastEffect = pPostEffect == pLastEffect;
-
-			pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[lCurrentTempBuffer] ,bLastEffect);
-
-			lCurrentTempBuffer = lCurrentTempBuffer==0 ? 1 : 0;
+			iPostEffect *pPostEffect = m_mapPostEffects[vSteps[i].index].second;
+			pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[vSteps[i].buffer],pPostEffect == pLastEffect);
 		}
 
 		///////////////////////////////
@@ -117,7 +107,10 @@ namespace hpl {
 	{
 		if(apPostEffect==NULL) return;
 
-		m_mapPostEffects.insert(tPostEffectMap::value_type(alPrio, apPostEffect));
+		std::vector<int> vPrios;
+		for(size_t i=0; i<m_mapPostEffects.size(); ++i) vPrios.push_back(m_mapPostEffects[i].first);
+		size_t lPos = ohpl_pe_insert_pos(vPrios.data(), vPrios.size(), alPrio);
+		m_mapPostEffects.insert(m_mapPostEffects.begin() + lPos, std::make_pair(alPrio, apPostEffect));
 		mvPostEffects.push_back(apPostEffect);
 	}
 

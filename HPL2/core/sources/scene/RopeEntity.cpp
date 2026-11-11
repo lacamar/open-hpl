@@ -18,6 +18,7 @@
  */
 
 #include "scene/RopeEntity.h"
+#include "scene/RustLight.h"
 
 #include "math/Math.h"
 
@@ -92,6 +93,7 @@ namespace hpl {
 		mbApplyTransformToBV = false;
 
 		mlLastUpdateCount = -1;
+		mbMultiplyAlphaWithColor = false;
 	}
 
 	//-----------------------------------------------------------------------
@@ -127,23 +129,8 @@ namespace hpl {
 
 		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 
-		cColor finalColor = mColor;
-		if(mbMultiplyAlphaWithColor)
-		{
-			finalColor.r = finalColor.r * mColor.a;
-			finalColor.g = finalColor.g * mColor.a;
-			finalColor.b = finalColor.b * mColor.a;
-		}
+		ohpl_rope_set_colors(&mColor, mbMultiplyAlphaWithColor, pColors, mlMaxSegments * 4);
 
-		for(int i=0; i<mlMaxSegments * 4; ++i)
-		{
-			pColors[0] = finalColor.r;
-			pColors[1] = finalColor.g;
-			pColors[2] = finalColor.b;
-			pColors[3] = finalColor.a;
-			pColors+=4;
-		}
-		
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
@@ -160,18 +147,13 @@ namespace hpl {
 	{
 		if(mlLastUpdateCount != mpRope->GetUpdateCount())
 		{
-			cVector3f vMin(1000000.0f);
-			cVector3f vMax(-1000000.0f);
-
+			mvPoints.clear();
 			cVerletParticleIterator it = mpRope->GetParticleIterator();
-			while(it.HasNext())
-			{
-				cVerletParticle *pPart = it.Next();
-				
-				cMath::ExpandAABB(vMin,vMax, pPart->GetPosition(), pPart->GetPosition());
-			}
-			
-			mBoundingVolume.SetLocalMinMax(vMin-cVector3f(mfRadius),vMax+cVector3f(mfRadius));
+			while(it.HasNext()) mvPoints.push_back(it.Next()->GetPosition());
+
+			cVector3f vMin, vMax;
+			ohpl_rope_bounds(mvPoints.data(), (int)mvPoints.size(), mfRadius, &vMin, &vMax);
+			mBoundingVolume.SetLocalMinMax(vMin, vMax);
 
 			mlLastUpdateCount = mpRope->GetUpdateCount();
 		}
@@ -188,28 +170,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static inline void SetVec3(float *apPos, const cVector3f &aPos)
-	{
-		apPos[0] = aPos.x;
-		apPos[1] = aPos.y;
-		apPos[2] = aPos.z;
-	}
-
-	static inline void SetVec4(float *apPos, const cVector3f &aPos)
-	{
-		apPos[0] = aPos.x;
-		apPos[1] = aPos.y;
-		apPos[2] = aPos.z;
-		apPos[3] = 1;
-	}
-
-	//-----------------------------------------------------------------------
-
-	static cVector2f gvPosAdd[4] = {
-		//cVector2f (1,1), cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1)
-		cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1), cVector2f (1,1)
-	};
-
 	bool cRopeEntity::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
 	{
 		float *pPosArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
@@ -217,101 +177,23 @@ namespace hpl {
 		float *pNrmArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Normal);
 		float *pTanArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture1Tangent);
 
-		float fSegmentLength = mpRope->GetSegmentLength();
-
-		cVector3f vTexCoords[4] = {	
-				cVector3f(1,1,0),	//Bottom left
-				cVector3f(0,1,0),	//Bottom right
-				cVector3f(0,0,0),	//Top left
-				cVector3f(1,0,0)	//Top right
-		};
-
-		vTexCoords[0].y *= mfLengthTileAmount;
-		vTexCoords[1].y *= mfLengthTileAmount;
-
+		mvPoints.clear();
 		cVerletParticleIterator it = mpRope->GetParticleIterator();
-		int lCount=0;
-		cVector3f vPrevPos;
 		while(it.HasNext())
 		{
-			if(lCount >= mlMaxSegments) break;
-			++lCount;
-
+			if((int)mvPoints.size() >= mlMaxSegments) break;
 			cVerletParticle *pPart = it.Next();
-
-			if(lCount == 1){
-				vPrevPos = pPart->GetPosition();
-				continue; 
-			}
-
-			/////////////////////////
-			//Calculate properties
-			cVector3f vPos = pPart->GetSmoothPosition();
-			cVector3f vDelta = vPos - vPrevPos;
-			float fLength = vDelta.Length();
-			cVector3f vUp = vDelta / fLength;
-			cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, apFrustum->GetForward()));
-			cVector3f vFwd = cMath::Vector3Cross(vRight, vUp);
-
-			/////////////////////////
-			//Update position
-			for(int i=0; i<4; ++i)
-				SetVec4(&pPosArray[i*4], vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength);
-			
-			/////////////////////////
-			//Update uv
-			if(lCount==2 && (fLength < fSegmentLength || fSegmentLength==0))
-			{
-				//////////////////
-				//No segments
-				if(fSegmentLength==0)
-				{
-					float fYAdd = 1 - fLength/ mfLengthTileSize;
-
-					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0));
-					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0));
-
-					SetVec3(&pUvArray[2*3], vTexCoords[2]);
-					SetVec3(&pUvArray[3*3], vTexCoords[3]);
-				}
-				//////////////////
-				//First segment of many
-				else
-				{
-					float fYAdd = (1 - (fLength / fSegmentLength))*mfLengthTileAmount;
-
-					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0) );
-					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0) );
-
-					SetVec3(&pUvArray[2*3], vTexCoords[2]);
-					SetVec3(&pUvArray[3*3], vTexCoords[3]);
-				}
-			}
-			else
-			{
-				for(int i=0; i<4; ++i)
-					SetVec3(&pUvArray[i*3], vTexCoords[i]);
-			}
-
-			/////////////////////////
-			//Update Normal and Tangent
-			for(int i=0; i<4; ++i)
-			{
-				SetVec3(&pNrmArray[i*3], vFwd);
-				SetVec4(&pTanArray[i*4], vRight);
-			}
-						
-			/////////////////////////
-			//Update pointers
-			pPosArray += 4 * 4;
-			pUvArray +=	 3 * 4;
-			pNrmArray += 3 * 4;
-			pTanArray += 4 * 4;
-
-			/////////////////////////
-			//Update misc
-			vPrevPos = vPos;
+			mvPoints.push_back(mvPoints.empty() ? pPart->GetPosition() : pPart->GetSmoothPosition());
 		}
+		int lCount = (int)mvPoints.size();
+
+		OhplRopeParams params;
+		params.forward = apFrustum->GetForward();
+		params.radius = mfRadius;
+		params.segment_length = mpRope->GetSegmentLength();
+		params.tile_amount = mfLengthTileAmount;
+		params.tile_size = mfLengthTileSize;
+		ohpl_rope_quads(mvPoints.data(), lCount, &params, pPosArray, pUvArray, pNrmArray, pTanArray, mlMaxSegments);
 
 		mpVtxBuffer->SetElementNum((lCount-1) * 6);
 

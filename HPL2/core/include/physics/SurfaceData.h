@@ -30,6 +30,7 @@ namespace hpl {
 	#define eRollAxisFlag_Z		4
 	
     class cPhysics;
+	struct OhplSurfaceParams;
 	class iPhysicsWorld;
 	class iPhysicsBody;
 	class cResources;
@@ -156,6 +157,8 @@ namespace hpl {
 		void SetHapticSurface(iHapticSurface* apSurface){mpHapticSurface  = apSurface;}
 		
 	protected:
+		void RustParams(OhplSurfaceParams &aParams) const;
+
 		cResources *mpResources;
 		cPhysics *mpPhysics;
 		tString msName;

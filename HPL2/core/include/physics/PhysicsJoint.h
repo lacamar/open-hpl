@@ -92,6 +92,7 @@ namespace hpl {
 
 	class iPhysicsJoint
 	{
+	friend struct cRustPhysicsAccess;
 	#ifdef __GNUC__
 		typedef iSaveObject __super;
 	#endif
@@ -270,9 +271,7 @@ namespace hpl {
 		void OnMinLimit();
 		void OnNoLimit();
 
-		void CalcSoundFreq(float afSpeed,float *apFreq, float *apVol);
 
-        void LimitEffect(cJointLimitEffect *pEffect);
 	};
 };
 #endif // HPL_PHYSICS_JOINT_H

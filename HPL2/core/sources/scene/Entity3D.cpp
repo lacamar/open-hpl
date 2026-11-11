@@ -20,6 +20,7 @@
 #include "scene/Entity3D.h"
 #include "scene/Node3D.h"
 #include "math/Math.h"
+#include "scene/RustNode.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -155,8 +156,9 @@ namespace hpl {
 	{
 		if(mpParent)
 		{
-			SetMatrix(cMath::MatrixMul(cMath::MatrixInverse(mpParent->GetWorldMatrix()),
-				a_mtxWorldTransform));
+			cMatrixf mtxLocal;
+			ohpl_scene_world_to_local(&mpParent->GetWorldMatrix(), &a_mtxWorldTransform, &mtxLocal);
+			SetMatrix(mtxLocal);
 		}
 		else
 		{

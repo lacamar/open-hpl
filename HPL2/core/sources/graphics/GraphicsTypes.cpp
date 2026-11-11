@@ -18,6 +18,7 @@
  */
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustGraphics.h"
 
 #include "graphics/Texture.h"
 #include "graphics/FrameBuffer.h"
@@ -31,187 +32,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement)
-	{
-		switch(aElement)
-		{
-		case eVertexBufferElement_Normal:			return eVertexElementFlag_Normal;
-		case eVertexBufferElement_Position:			return eVertexElementFlag_Position;
-		case eVertexBufferElement_Color0:			return eVertexElementFlag_Color0;
-		case eVertexBufferElement_Color1:			return eVertexElementFlag_Color1;
-		case eVertexBufferElement_Texture1Tangent:	return eVertexElementFlag_Texture1;
-		case eVertexBufferElement_Texture0:			return eVertexElementFlag_Texture0;
-		case eVertexBufferElement_Texture1:			return eVertexElementFlag_Texture1;
-		case eVertexBufferElement_Texture2:			return eVertexElementFlag_Texture2;
-		case eVertexBufferElement_Texture3:			return eVertexElementFlag_Texture3;
-		case eVertexBufferElement_Texture4:			return eVertexElementFlag_Texture4;
-		case eVertexBufferElement_User0:			return eVertexElementFlag_User0;
-		case eVertexBufferElement_User1:			return eVertexElementFlag_User1;
-		case eVertexBufferElement_User2:			return eVertexElementFlag_User2;
-		case eVertexBufferElement_User3:			return eVertexElementFlag_User3;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	int GetVertexFormatByteSize(eVertexBufferElementFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case eVertexBufferElementFormat_Float:	return sizeof(float);
-		case eVertexBufferElementFormat_Int:	return sizeof(int);
-		case eVertexBufferElementFormat_Byte:	return sizeof(char);
-		}
-		
-		return 0;
-	}
-
-	int GetVertexElementTextureUnit(eVertexBufferElement aElement)
-	{
-		switch(aElement)
-		{
-		case eVertexBufferElement_Texture1Tangent:	return 1;
-		case eVertexBufferElement_Texture0:			return 0;
-		case eVertexBufferElement_Texture1:			return 1;
-		case eVertexBufferElement_Texture2:			return 2;
-		case eVertexBufferElement_Texture3:			return 3;
-		case eVertexBufferElement_Texture4:			return 4;
-		}
-		return -1;
-	}
-
-	//-----------------------------------------------------------------------
-
-	int GetChannelsInPixelFormat(ePixelFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case ePixelFormat_Unknown:			return 0;
-		case ePixelFormat_Alpha:			return 1;
-		case ePixelFormat_Luminance:		return 1;
-		case ePixelFormat_LuminanceAlpha:	return 2;
-		case ePixelFormat_RGB:				return 3;
-		case ePixelFormat_RGBA:				return 4;
-		case ePixelFormat_BGR:				return 3;
-		case ePixelFormat_BGRA:				return 4;
-		case ePixelFormat_DXT1:				return 4;//Not entirely true... can be 3 too...
-		case ePixelFormat_DXT2:				return 4;
-		case ePixelFormat_DXT3:				return 4;
-		case ePixelFormat_DXT4:				return 4;
-		case ePixelFormat_DXT5:				return 4;
-		case ePixelFormat_RGTC2:			return 4;
-		case ePixelFormat_RGTC1:			return 1;
-		case ePixelFormat_BC6H:			return 3;
-		case ePixelFormat_BC7:			return 4;
-		case ePixelFormat_Depth16:			return 1;
-		case ePixelFormat_Depth24:			return 1;
-		case ePixelFormat_Depth32:			return 1;
-		case ePixelFormat_Alpha16:			return 1;
-		case ePixelFormat_Luminance16:		return 1;
-		case ePixelFormat_LuminanceAlpha16:	return 2;
-		case ePixelFormat_RGB16:			return 3;
-		case ePixelFormat_RGBA16:			return 4;
-		case ePixelFormat_Alpha32:			return 1;
-		case ePixelFormat_Luminance32:		return 1;
-		case ePixelFormat_LuminanceAlpha32:	return 2;
-		case ePixelFormat_RGB32:			return 3;
-		case ePixelFormat_RGBA32:			return 4;
-		}	
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-	int GetBytesPerPixel(ePixelFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case ePixelFormat_Unknown:			return 0;
-		case ePixelFormat_Alpha:			return 1;
-		case ePixelFormat_Luminance:		return 1;
-		case ePixelFormat_LuminanceAlpha:	return 2;
-		case ePixelFormat_RGB:				return 3;
-		case ePixelFormat_RGBA:				return 4;
-		case ePixelFormat_BGR:				return 3;
-		case ePixelFormat_BGRA:				return 4;
-		case ePixelFormat_DXT1:				return 1; //Not true... is 0.5
-		case ePixelFormat_DXT2:				return 1;
-		case ePixelFormat_DXT3:				return 1;
-		case ePixelFormat_DXT4:				return 1;
-		case ePixelFormat_DXT5:				return 1;
-		case ePixelFormat_RGTC2:			return 1;
-		case ePixelFormat_RGTC1:			return 1;
-		case ePixelFormat_BC6H:			return 1;
-		case ePixelFormat_BC7:			return 1;
-		case ePixelFormat_Depth16:			return 2;
-		case ePixelFormat_Depth24:			return 3;
-		case ePixelFormat_Depth32:			return 4;
-		case ePixelFormat_Alpha16:			return 2;
-		case ePixelFormat_Luminance16:		return 2;
-		case ePixelFormat_LuminanceAlpha16:	return 4;
-		case ePixelFormat_RGB16:			return 6;
-		case ePixelFormat_RGBA16:			return 8;
-		case ePixelFormat_Alpha32:			return 4;
-		case ePixelFormat_Luminance32:		return 4;
-		case ePixelFormat_LuminanceAlpha32:	return 8;
-		case ePixelFormat_RGB32:			return 12;
-		case ePixelFormat_RGBA32:			return 16;
-		}	
-		return 0;
-	}
-	
-	//-----------------------------------------------------------------------
-	bool PixelFormatIsCompressed(ePixelFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case ePixelFormat_DXT1:				return true;
-		case ePixelFormat_DXT2:				return true;
-		case ePixelFormat_DXT3:				return true;
-		case ePixelFormat_DXT4:				return true;
-		case ePixelFormat_DXT5:				return true;
-		case ePixelFormat_RGTC2:			return true;
-		case ePixelFormat_RGTC1:			return true;
-		case ePixelFormat_BC6H:			return true;
-		case ePixelFormat_BC7:			return true;
-		}
-		return false;
-	}
-
-	//-----------------------------------------------------------------------
-	bool PixelFormatIsDepth(ePixelFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case ePixelFormat_Depth16:			return true;
-		case ePixelFormat_Depth24:			return true;
-		case ePixelFormat_Depth32:			return true;
-		}
-		return false;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool PixelFormatIsFloatingPoint(ePixelFormat aFormat)
-	{
-		switch(aFormat)
-		{
-			case ePixelFormat_Alpha16:			return true;
-			case ePixelFormat_Luminance16:		return true;
-			case ePixelFormat_LuminanceAlpha16:	return true;
-			case ePixelFormat_RGB16:			return true;
-			case ePixelFormat_RGBA16:			return true;
-			case ePixelFormat_Alpha32:			return true;
-			case ePixelFormat_Luminance32:		return true;
-			case ePixelFormat_LuminanceAlpha32:	return true;
-			case ePixelFormat_RGB32:			return true;
-			case ePixelFormat_RGBA32:			return true;
-		}
-
-		return false;
-	}
-
-	//-----------------------------------------------------------------------
+	tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement) { return ohpl_gfx_vertex_element_flag(aElement); }
+	int GetVertexFormatByteSize(eVertexBufferElementFormat aFormat) { return ohpl_gfx_vertex_format_byte_size(aFormat); }
+	int GetVertexElementTextureUnit(eVertexBufferElement aElement) { return ohpl_gfx_vertex_element_texture_unit(aElement); }
+	int GetChannelsInPixelFormat(ePixelFormat aFormat) { return ohpl_gfx_channels(aFormat); }
+	int GetBytesPerPixel(ePixelFormat aFormat) { return ohpl_gfx_bytes_per_pixel(aFormat); }
+	bool PixelFormatIsCompressed(ePixelFormat aFormat) { return ohpl_gfx_is_compressed(aFormat); }
+	bool PixelFormatIsDepth(ePixelFormat aFormat) { return ohpl_gfx_is_depth(aFormat); }
+	bool PixelFormatIsFloatingPoint(ePixelFormat aFormat) { return ohpl_gfx_is_floating_point(aFormat); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// VIDEO MODE

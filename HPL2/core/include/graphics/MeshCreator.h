@@ -58,13 +58,8 @@ namespace hpl {
 		iVertexBuffer* CreateBoxVertexBuffer(cVector3f avSize);
 
 	private:
-		cVector3f GetBoxTex(int i,int x, int y, int z, cVector3f *vAdd);
-		int GetBoxIdx(int i,int x, int y, int z);
-		
-		void CreateCircumference(float afRadius, float afSectionStep, float afHeight, tVector3fVec& avPositions);
-		void WrapSides(iVertexBuffer* apVtxBuffer, int alStartVertexIdx, int alSections);
-		void WrapUpperCap(iVertexBuffer* apVtxBuffer, int alCenterVertexIdx, int alStartVertexIdx, int alSections);
-		void WrapLowerCap(iVertexBuffer* apVtxBuffer, int alCenterVertexIdx, int alStartVertexIdx, int alSections);
+		cMesh* CreateMeshFromBuffer(const tString &asName, iVertexBuffer *apVtxBuffer, const tString &asMaterial, bool abSetMaterialName);
+		iVertexBuffer* CompileOrDelete(iVertexBuffer *apVtxBuffer);
 
 		iLowLevelGraphics *mpLowLevelGraphics;
 		cResources *mpResources;

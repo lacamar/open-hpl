@@ -25,6 +25,7 @@
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "scene/RustParticles.h"
 
 namespace hpl {
 
@@ -101,65 +102,6 @@ namespace hpl {
 
 	//-------------------------------------------------------------------
 
-	class cParticle
-	{
-	public:
-		cParticle(){}
-
-		cVector3f mvPos;
-		cVector3f mvLastPos;
-		cVector3f mvLastCollidePos;
-		cVector3f mvAcc;
-		cVector3f mvVel;
-
-		float mfSpeedMul;
-		float mfMaxSpeed;
-
-		cColor mStartColor;
-		cColor mColor;
-
-		cVector2f mvStartSize;
-		cVector2f mvSize;
-
-		float mfStartLife;
-		float mfLife;
-		float mfLifeSize_MiddleStart;
-		float mfLifeSize_MiddleEnd;
-
-		float mfLifeColor_MiddleStart;
-		float mfLifeColor_MiddleEnd;
-
-		int mlSubDivNum;
-
-		float mfBounceAmount;
-		int mlBounceCount;
-
-		cVector3f mvExtra;
-
-		// NEW
-
-		float mfSpin;
-		float mfSpinVel;
-		float mfSpinFactor;
-
-
-		cVector3f mvRevolutionVel;
-
-		// Beam Specific
-
-		int mlLowFreqPoints;
-		int mlHighFreqPoints;
-		std::vector<cVector3f> mvBeamPoints;
-
-		// ---
-
-	};
-
-	//-------------------------------------------------------------------
-
-	typedef std::vector<cParticle*> tParticleVec;
-	typedef tParticleVec::iterator tParticleVecIt;
-
 	//-------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////
@@ -177,21 +119,19 @@ namespace hpl {
 
 		void Render(){}
 
-		void SetSubDivUV(const cVector2l &avSubDiv);
-
 		void SetWorld(cWorld *apWorld) { mpWorld = apWorld;}
 
 		void SetSystem(cParticleSystem *apSystem){ mpParentSystem = apSystem;}
 
-		virtual bool IsDead(){ return mlNumOfParticles==0 && mbDying;}
-		virtual bool IsDying(){ return mbDying;}
-		virtual void Kill(){ mbDying = true;}
-		void KillInstantly();
+		virtual bool IsDead(){ return ohpl_pe_is_dead(mpRust);}
+		virtual bool IsDying(){ return ohpl_pe_is_dying(mpRust);}
+		virtual void Kill(){ ohpl_pe_kill(mpRust);}
+		void KillInstantly(){ ohpl_pe_kill_instantly(mpRust);}
 
 		void SetDataName(const tString &asName){msDataName = asName;}
 		void SetDataSize(const cVector3f &avSize){mvDataSize = avSize;}
 
-		int GetParticleNum(){ return mlNumOfParticles;}
+		int GetParticleNum(){ return (int)ohpl_pe_num_particles(mpRust);}
 
 		//Entity implementation
 		tString GetEntityType(){ return "ParticleEmitter"; }
@@ -211,11 +151,7 @@ namespace hpl {
 		eRenderableType GetRenderType(){ return eRenderableType_ParticleEmitter;}
 
 	protected:
-		void SwapRemove(unsigned int alIndex);
-		cParticle* CreateParticle();
-
 		virtual void UpdateMotion(float afTimeStep)=0;
-		virtual void SetParticleDefaults(cParticle *apParticle)=0;
 		
 		cGraphics *mpGraphics;
 		cResources *mpResources;
@@ -223,9 +159,8 @@ namespace hpl {
 		tString msDataName;
 		cVector3f mvDataSize;
 
-		tParticleVec mvParticles;
-		unsigned int mlNumOfParticles;
-		unsigned int mlMaxParticles;
+		OhplEmitter *mpRust;
+		unsigned int mlPoolSize;
 
 		cMatrixf m_mtxTemp;
 
@@ -234,15 +169,11 @@ namespace hpl {
 		int mlSleepCount;
 
 		//Vars for easier updating.
-		bool mbDying;
-		float mfFrame;
 
 		bool mbUpdateGfx;
 		bool mbUpdateBV;
 
 		iVertexBuffer *mpVtxBuffer;
-
-		std::vector<cPESubDivision> mvSubDivUV;
 
 		cVector3f mvDirection;
 		int mlDirectionUpdateCount;

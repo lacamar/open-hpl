@@ -24,6 +24,7 @@
 #include <list>
 #include "system/SystemTypes.h"
 #include "input/Gamepad.h"
+#include "input/RustInput.h"
 //#include "input/InputTypes.h"
 
 #include "SDL2/SDL.h"
@@ -79,42 +80,15 @@ namespace hpl {
 		//void SetColorLED(const cColor& aColor){}
 		//cColor GetColorLED(){ return cColor(0,0); }
 	private:
-		void UpdateAxis(int alAxis, float afVal);
-		void UpdateAxis(int alAxis0, float afVal0, int alAxis1, float afVal1);
-
-		eGamepadButton		SDLToButton(Uint8 alButton);
-		eGamepadAxis		SDLToAxis(Uint8 alAxis);
-		float				SDLToAxisValue(Sint16 alAxisValue);
-		eGamepadHat			SDLToHat(Uint8 alHat);
-		eGamepadHatState	SDLToHatState(Uint8 alHat);
-		eGamepadBall		SDLToBall(Uint8 alBall);
-
 		tString msGamepadName;
 
-		std::vector<float>				mvAxisArray;
-		std::vector<eGamepadAxisRange>	mvAxisRange;
-		std::vector<bool>				mvButtonArray;
-
-		std::list<cGamepadInputData> mlstInputUpdates;
-
-		std::list<cGamepadInputData> mlstButtonsPressed;
-		std::list<cGamepadInputData> mlstButtonsReleased;
-
-		std::list<cGamepadInputData> mlstAxisChanges;
+		OhplGamepad *mpRust;
+		std::vector<OhplInputEvent> mvEvents;
 
 		SDL_GameController	*mpHandle;
-		SDL_JoystickID      mlInstance;
+		SDL_JoystickID		mlInstance;
 		cLowLevelInputSDL	*mpLowLevelInputSDL;
 		SDL_Haptic* mpHaptic;
-
-		unsigned int mlLastTimeActive;
-
-		bool mbRumbleActive;
-		std::vector<float> mvRumble;
-
-		static float mfInvAxisMax;
-		static float mfDeadZoneRadius;
-		static float mfDeadZoneRadiusSqr;
 	};
 
 };

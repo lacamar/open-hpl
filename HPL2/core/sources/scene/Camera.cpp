@@ -24,6 +24,7 @@
 #include "graphics/LowLevelGraphics.h"
 
 #include "math/Math.h"
+#include "scene/RustNode.h"
 
 #include "scene/Entity3D.h"
 
@@ -349,19 +350,7 @@ namespace hpl {
 	{
 		if(mbViewUpdated)
 		{
-			m_mtxView=  cMatrixf::Identity;
-
-			if(mRotateMode == eCameraRotateMode_EulerAngles)
-			{
-				m_mtxView = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition *-1), m_mtxView);
-				m_mtxView = cMath::MatrixMul(cMath::MatrixRotateY(-mfYaw), m_mtxView);
-				m_mtxView = cMath::MatrixMul(cMath::MatrixRotateX(-mfPitch), m_mtxView);
-				m_mtxView = cMath::MatrixMul(cMath::MatrixRotateZ(-mfRoll), m_mtxView);
-			}
-			else if(mRotateMode == eCameraRotateMode_Matrix)
-			{
-				m_mtxView = cMath::MatrixMul(m_mtxMatrixRotation, cMath::MatrixTranslate(mvPosition*-1));
-			}
+			ohpl_scene_camera_view_matrix((int)mRotateMode, &mvPosition, mfYaw, mfPitch, mfRoll, &m_mtxMatrixRotation, &m_mtxView);
 
 			mbViewUpdated = false;
 		}
@@ -374,18 +363,7 @@ namespace hpl {
 	{
 		if(mbProjectionUpdated)
 		{
-			//////////////////////////////////////////////
-			// Perspective projection
-			if(mProjectionType == eProjectionType_Perspective)
-			{
-				m_mtxProjection = cMath::MatrixPerspectiveProjection(mfNearClipPlane, mfFarClipPlane, mfFOV, mfAspect, mbInfFarPlane);
-			}
-			//////////////////////////////////////////////
-			// Orthographic projection
-			else
-			{
-				m_mtxProjection = cMath::MatrixOrthographicProjection(mfNearClipPlane, mfFarClipPlane, mvViewSize);
-			}
+			ohpl_scene_camera_projection((int)mProjectionType, mfNearClipPlane, mfFarClipPlane, mfFOV, mfAspect, mbInfFarPlane, &mvViewSize, &m_mtxProjection);
 
 			mbProjectionUpdated = false;
 		}
@@ -437,48 +415,11 @@ namespace hpl {
 								  const cMatrixf& amtxCameraRotation,
 								  const cVector3f& avCameraPos, const cVector3f& avCameraFwd, const cVector3f& avCameraUp, const cVector3f& avCameraRgt)
 	{
-		cVector2f vNormalizedScreen((avScreenPos.x / avVirtualScreenSize.x) - 0.5f,
-									0.5f - (avScreenPos.y / avVirtualScreenSize.y));
-		
-		//////////////////////////////////////////////
-		// Perspective projection
-		if(mProjectionType == eProjectionType_Perspective)
+		cVector3f vPos, vDir;
+		if(ohpl_scene_camera_unproject((int)mProjectionType, mfNearClipPlane, mfFOV, mfAspect, &mvViewSize, &avScreenPos, &avVirtualScreenSize,
+									   &amtxCameraRotation, &avCameraPos, &avCameraFwd, &avCameraUp, &avCameraRgt, &vPos, &vDir))
 		{
-			float afNormalizedSlope = tan(mfFOV*0.5f);
-
-			cVector2f avViewportToWorld;
-			avViewportToWorld.y = afNormalizedSlope * mfNearClipPlane * 2.0f;
-			avViewportToWorld.x = avViewportToWorld.y * mfAspect;
-	        
-			cVector3f vDir(	vNormalizedScreen.x * avViewportToWorld.x,
-							vNormalizedScreen.y * avViewportToWorld.y,
-							-mfNearClipPlane);
-
-			cMatrixf mtxRot = cMath::MatrixInverse(amtxCameraRotation);
-
-			vDir = cMath::MatrixMul(mtxRot,vDir);
-			vDir.Normalize();
-
 			if(apDirection) *apDirection = vDir;
-			if(apPosition) *apPosition = avCameraPos;
-		}
-		//////////////////////////////////////////////
-		// Orthographic projection
-		else if(mProjectionType == eProjectionType_Orthographic)
-		{
-			cVector3f vPos = avCameraPos;
-			cVector3f vForward = avCameraFwd;
-			cVector3f vUp =		avCameraUp;
-			cVector3f vRight = avCameraRgt;
-            
-			//Near plane position
-			vPos += vForward * mfNearClipPlane;
-
-			//Get position on near plane
-			vPos += vRight * vNormalizedScreen.x * mvViewSize.x;
-			vPos += vUp * vNormalizedScreen.y * mvViewSize.y;
-
-			if(apDirection) *apDirection = vForward;
 			if(apPosition) *apPosition = vPos;
 		}
 	}
@@ -560,14 +501,7 @@ namespace hpl {
 	{
 		if(mbMoveUpdated)
 		{
-			if(mRotateMode == eCameraRotateMode_EulerAngles)
-			{
-				m_mtxMove = cMath::MatrixRotateY(-mfYaw);
-				if(mMoveMode==eCameraMoveMode_Fly)
-				{
-					m_mtxMove = cMath::MatrixMul(cMath::MatrixRotateX(-mfPitch),m_mtxMove);
-				}
-			}
+			ohpl_scene_camera_move_matrix((int)mRotateMode, (int)mMoveMode, mfYaw, mfPitch, &m_mtxMove);
 
 			mbMoveUpdated = false;
 		}

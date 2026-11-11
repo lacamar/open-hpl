@@ -18,6 +18,7 @@
  */
 
 #include "impl/MeshLoaderCollada.h"
+#include "impl/RustMeshLoadCollada.h"
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -41,6 +42,188 @@
 #include "math/Math.h"
 
 namespace hpl {
+
+	//////////////////////////////////////////////////////////////////////////
+	// RUST RESULT DECODING
+	//////////////////////////////////////////////////////////////////////////
+
+	namespace {
+
+	class ColladaReader
+	{
+	public:
+		ColladaReader(const uint8_t *apData, size_t alLen) : mpData(apData), mlLen(alLen), mlPos(0) {}
+
+		uint8_t U8() { return mpData[mlPos++]; }
+		uint32_t U32() { uint32_t l; memcpy(&l, mpData + mlPos, 4); mlPos += 4; return l; }
+		int32_t I32() { return (int32_t)U32(); }
+		float F32() { float f; memcpy(&f, mpData + mlPos, 4); mlPos += 4; return f; }
+		tString Str() { uint32_t l = U32(); tString s((const char*)mpData + mlPos, l); mlPos += l; return s; }
+		void Floats(float *apDest, int alNum) { for(int i=0; i<alNum; ++i) apDest[i] = F32(); }
+		cMatrixf Matrix() { float v[16]; Floats(v, 16); return cMatrixf(v); }
+		cVector3f Vec3() { float v[3]; Floats(v, 3); return cVector3f(v[0], v[1], v[2]); }
+		tFloatVec FloatVec() { uint32_t l = U32(); tFloatVec v; v.reserve(l); for(uint32_t i=0; i<l; ++i) v.push_back(F32()); return v; }
+
+	private:
+		const uint8_t *mpData;
+		size_t mlLen;
+		size_t mlPos;
+	};
+
+	}
+
+	static void ReadStructures(ColladaReader &R,
+		tColladaImageVec *apColladaImageVec,
+		tColladaTextureVec *apColladaTextureVec,
+		tColladaMaterialVec *apColladaMaterialVec,
+		tColladaLightVec *apColladaLightVec,
+		tColladaGeometryVec *apColladaGeometryVec,
+		tColladaControllerVec *apColladaControllerVec,
+		tColladaAnimationVec *apColladaAnimVec,
+		cColladaScene *apColladaScene)
+	{
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaImage Image;
+			Image.msId = R.Str(); Image.msName = R.Str(); Image.msSource = R.Str();
+			if(apColladaImageVec) apColladaImageVec->push_back(Image);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaTexture Texture;
+			Texture.msId = R.Str(); Texture.msImage = R.Str();
+			if(apColladaTextureVec) apColladaTextureVec->push_back(Texture);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaMaterial Material;
+			Material.msId = R.Str(); Material.msName = R.Str(); Material.msTexture = R.Str();
+			if(apColladaMaterialVec) apColladaMaterialVec->push_back(Material);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaLight Light;
+			Light.msId = R.Str(); Light.msName = R.Str(); Light.msType = R.Str();
+			Light.mDiffuseColor.r = R.F32(); Light.mDiffuseColor.g = R.F32(); Light.mDiffuseColor.b = R.F32();
+			Light.mfAngle = R.F32();
+			R.U8();
+			if(apColladaLightVec) apColladaLightVec->push_back(Light);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaGeometry Geometry;
+			Geometry.msId = R.Str(); Geometry.msName = R.Str(); Geometry.msMaterial = R.Str();
+			for(uint32_t a = R.U32(); a > 0; --a)
+			{
+				cColladaVtxArray Array;
+				Array.msId = R.Str(); Array.msType = R.Str(); Array.mbIsInVertex = R.U8() != 0;
+				for(uint32_t v = R.U32(); v > 0; --v) Array.mvArray.push_back(R.Vec3());
+				Geometry.mvArrayVec.push_back(Array);
+			}
+			Geometry.mlPosIdxNum = R.I32(); Geometry.mlNormIdxNum = R.I32(); Geometry.mlTexIdxNum = R.I32();
+			Geometry.mlPosArrayIdx = R.I32(); Geometry.mlNormArrayIdx = R.I32(); Geometry.mlTexArrayIdx = R.I32();
+			uint32_t lVtxNum = R.U32();
+			Geometry.mvVertexVec.resize(lVtxNum);
+			for(uint32_t v = 0; v < lVtxNum; ++v)
+			{
+				cVertex &Vtx = Geometry.mvVertexVec[v];
+				Vtx.pos = R.Vec3(); Vtx.tex = R.Vec3(); Vtx.norm = R.Vec3();
+				Vtx.col.r = R.F32(); Vtx.col.g = R.F32(); Vtx.col.b = R.F32(); Vtx.col.a = R.F32();
+			}
+			uint32_t lIdxNum = R.U32();
+			Geometry.mvIndexVec.resize(lIdxNum);
+			for(uint32_t i = 0; i < lIdxNum; ++i) Geometry.mvIndexVec[i] = R.U32();
+			Geometry.mvTangents = R.FloatVec();
+			if(apColladaGeometryVec) apColladaGeometryVec->push_back(Geometry);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaController Controller;
+			Controller.msTarget = R.Str(); Controller.msId = R.Str();
+			bool bBind = R.U8() != 0;
+			cMatrixf mtxBind = R.Matrix();
+			if(bBind) Controller.m_mtxBindShapeMatrix = mtxBind;
+			for(uint32_t j = R.U32(); j > 0; --j) Controller.mvJoints.push_back(R.Str());
+			Controller.mvWeights = R.FloatVec();
+			for(uint32_t m = R.U32(); m > 0; --m) Controller.mvMatrices.push_back(R.Matrix());
+			Controller.mvPairs.resize(R.U32());
+			for(size_t v = 0; v < Controller.mvPairs.size(); ++v)
+				for(uint32_t p = R.U32(); p > 0; --p)
+				{
+					int lJoint = R.I32();
+					int lWeight = R.I32();
+					Controller.mvPairs[v].push_back(cColladaJointPair(lJoint, lWeight));
+				}
+			if(apColladaControllerVec) apColladaControllerVec->push_back(Controller);
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaAnimation Anim;
+			Anim.msId = R.Str(); Anim.msTargetNode = R.Str();
+			for(uint32_t c = R.U32(); c > 0; --c)
+			{
+				cColladaChannel Channel;
+				Channel.msId = R.Str(); Channel.msTarget = R.Str(); Channel.msSource = R.Str();
+				Anim.mvChannels.push_back(Channel);
+			}
+			for(uint32_t s = R.U32(); s > 0; --s)
+			{
+				cColladaSampler Sampler;
+				Sampler.msId = R.Str(); Sampler.msTimeArray = R.Str(); Sampler.msValueArray = R.Str(); Sampler.msTarget = R.Str();
+				Anim.mvSamplers.push_back(Sampler);
+			}
+			for(uint32_t s = R.U32(); s > 0; --s)
+			{
+				cColladaAnimSource Source;
+				Source.msId = R.Str(); Source.mvValues = R.FloatVec();
+				Anim.mvSources.push_back(Source);
+			}
+			if(apColladaAnimVec) apColladaAnimVec->push_back(Anim);
+		}
+
+		float fStart = R.F32(), fEnd = R.F32(), fDelta = R.F32();
+		if(apColladaScene) { apColladaScene->mfStartTime = fStart; apColladaScene->mfEndTime = fEnd; apColladaScene->mfDeltaTime = fDelta; }
+		std::vector<cColladaNode*> vNodes;
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			cColladaNode Node;
+			Node.msId = R.Str(); Node.msName = R.Str(); Node.msSid = R.Str(); Node.msType = R.Str();
+			Node.msInstanceMaterial = R.Str(); Node.msSource = R.Str();
+			Node.mbSourceIsFile = R.U8() != 0;
+			Node.mbSourceIsLight = R.U8() != 0;
+			Node.m_mtxTransform = R.Matrix();
+			Node.m_mtxWorldTransform = R.Matrix();
+			Node.mvScale = R.Vec3();
+			int lParent = R.I32();
+			tColladaTransformList lstTransforms;
+			for(uint32_t t = R.U32(); t > 0; --t)
+			{
+				cColladaTransform Transform;
+				Transform.msSid = R.Str(); Transform.msType = R.Str(); Transform.mvValues = R.FloatVec();
+				lstTransforms.push_back(Transform);
+			}
+			if(apColladaScene == NULL) continue;
+			cColladaNode *pParent = lParent < 0 ? &apColladaScene->mRoot : vNodes[lParent];
+			cColladaNode *pNode = pParent->CreateChild();
+			apColladaScene->mlstNodes.push_back(pNode);
+			vNodes.push_back(pNode);
+			pNode->msId = Node.msId; pNode->msName = Node.msName; pNode->msSid = Node.msSid; pNode->msType = Node.msType;
+			pNode->msInstanceMaterial = Node.msInstanceMaterial; pNode->msSource = Node.msSource;
+			pNode->mbSourceIsFile = Node.mbSourceIsFile; pNode->mbSourceIsLight = Node.mbSourceIsLight;
+			pNode->m_mtxTransform = Node.m_mtxTransform; pNode->m_mtxWorldTransform = Node.m_mtxWorldTransform;
+			pNode->mvScale = Node.mvScale;
+			pNode->mlstTransforms = lstTransforms;
+		}
+		for(uint32_t n = R.U32(); n > 0; --n)
+		{
+			uint8_t lLevel = R.U8();
+			tString sMsg = R.Str();
+			if(lLevel == 0)			Log("%s", sMsg.c_str());
+			else if(lLevel == 1)	Warning("%s", sMsg.c_str());
+			else					Error("%s", sMsg.c_str());
+		}
+	}
+
 
 	//------------------------------------------------------------------------
 
@@ -93,267 +276,51 @@ namespace hpl {
 		}
 
 		Log("Cache out of date! Reloading collada file '%s'\n",cString::To8Char(asFile).c_str());
-
 		/////////////////////////////////////////////////
 		// LOAD THE DOCUMENT
-		//unsigned long lStartTime = mpSystem->GetLowLevel()->GetTime();
-		
 		FILE *pFile = cPlatform::OpenFile(asFile, _W("rb"));
 		if(pFile==NULL) return false;
 
-		TiXmlDocument* pXmlDoc = hplNew(TiXmlDocument, () );
-		if(pXmlDoc->LoadFile(pFile)==false)
-		{
-			Error("Couldn't load Collada XML file '%s'!\n",asFile.c_str());
-			fclose(pFile);
-			hplDelete(pXmlDoc);
-			return false;
-		}
-
+		fseek(pFile, 0, SEEK_END);
+		long lLength = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		std::vector<uint8_t> vData(lLength > 0 ? lLength : 0);
+		bool bReadOk = lLength <= 0 || fread(vData.data(), lLength, 1, pFile) == 1;
 		fclose(pFile);
 
-		//unsigned long lTime = mpSystem->GetLowLevel()->GetTime() - lStartTime;
-		//Log("Loading collada XML file for '%s' took: %d ms\n",asFile.c_str(),lTime);
+		uint32_t lFlags = 0;
+		if(apColladaImageVec)		lFlags |= eOhplColladaImages;
+		if(apColladaTextureVec)		lFlags |= eOhplColladaTextures;
+		if(apColladaMaterialVec)	lFlags |= eOhplColladaMaterials;
+		if(apColladaLightVec)		lFlags |= eOhplColladaLights;
+		if(apColladaGeometryVec)	lFlags |= eOhplColladaGeometry;
+		if(apColladaControllerVec)	lFlags |= eOhplColladaControllers;
+		if(apColladaAnimVec)		lFlags |= eOhplColladaAnims;
+		if(apColladaScene)			lFlags |= eOhplColladaScene;
+		if(mbConvertUnit)			lFlags |= eOhplColladaConvertUnit;
+		if(mbConvertUnitFromAnyTool) lFlags |= eOhplColladaConvertUnitAny;
 
-		//Get the root.
-		TiXmlElement* pRootElem = pXmlDoc->RootElement();
-
-		/////////////////////////////////////////////////
-		// FIRST SETUP
-
-		//Set up axis as Y.
-		mbZToY = false;
-		mfUnitScale = 1.0f;
-
-		//Load assets element.
-		TiXmlElement *pAssetElem = pRootElem->FirstChildElement("asset");
-		if(pAssetElem)
+		OhplColladaBlob *pBlob = NULL;
+		int lRet = ohpl_collada_parse(vData.data(), vData.size(), bReadOk, lFlags, &pBlob);
+		if(lRet == 1)
 		{
-			TiXmlElement *pUpAxisElem = pAssetElem->FirstChildElement("up_axis");
-			if(pUpAxisElem)
-			{
-				TiXmlText *pAxisText = pUpAxisElem->FirstChild()->ToText();
-
-				if(tString(pAxisText->Value())=="Z_UP"){
-					mbZToY = true;
-					//Log("!!!!!!!Z IS UP!!!!!!");
-				}
-			}
-
-
-			bool bGetUnit = false;
-
-			// Only get unit from 3ds max files!
-			TiXmlElement *pCont = pAssetElem->FirstChildElement("contributor");
-			
-			if(pCont)
-			{
-				pCont = pCont->FirstChildElement("authoring_tool");
-			}
-			else
-			{
-				pCont = pAssetElem->FirstChildElement("authoring_tool");
-			}
-
-			if(pCont)
-			{
-				tString sName = cString::ToString(pCont->FirstChild()->Value(), ""); 
-
-				if(sName == "FBX COLLADA exporter")
-				{
-					bGetUnit = true;
-				}
-			}
-
-			TiXmlElement *pUnitElem = pAssetElem->FirstChildElement("unit");
-
-			if(pUnitElem && (bGetUnit || mbConvertUnitFromAnyTool) && mbConvertUnit)
-			{
-				float fUnitTypeScale = 1.0f;
-				float fUnitValue = 1.0f;
-
-				TiXmlAttribute *pFirstAttri = pUnitElem->FirstAttribute();
-
-				for(;pFirstAttri; pFirstAttri = pFirstAttri->Next())
-				{
-					tString sName = cString::ToString(pFirstAttri->Name(), "");
-
-					if(sName == "meter")
-					{
-						//////////////
-						// Read the scale
-						fUnitValue = (float)pFirstAttri->DoubleValue();
-					}					
-				}
-
-				mfUnitScale = fUnitValue;
-			}
-
+			Error("Couldn't load Collada XML file '%s'!\n",asFile.c_str());
+			ohpl_collada_free(pBlob);
+			return false;
 		}
-		else
+		if(lRet != 0)
 		{
-			Error("Couldn't find asset element!\n");
+			Error("Couldn't parse Collada file '%s': %.*s\n", cString::To8Char(asFile).c_str(),
+					(int)ohpl_collada_blob_len(pBlob), (const char*)ohpl_collada_blob_data(pBlob));
+			ohpl_collada_free(pBlob);
+			return false;
 		}
-		
-		//mbZToY = false;
-		//mfUnitScale = 1.0f;
-
-
-		/////////////////////////////////////////////////
-		// ITERATE THE LIBRARIES BEFORE SCENE LIBRARIES
-		TiXmlElement* pLibraryElem = pRootElem->FirstChildElement();
-		while(pLibraryElem)
-		{
-			tString sType = cString::ToString(pLibraryElem->Attribute("type"),"");
-			tString sValue = cString::ToString(pLibraryElem->Value(),"");
-
-			// Lights
-			if((sType == "LIGHT" || sValue == "library_lights") && apColladaLightVec)
-			{
-				///Log("Loading type: %s\n",sType.c_str());
-				LoadLights(pLibraryElem,*apColladaLightVec);
-				//Log(" --- \n");
-			}	
-
-			pLibraryElem = pLibraryElem->NextSiblingElement();
-		}
-
-		//////////////////////////////////////////////
-		// LOAD SCENE
-		if(apColladaScene)
-		{
-			TiXmlElement* pSceneElem = pRootElem->FirstChildElement("library_visual_scenes");
-			if(pSceneElem){
-				pSceneElem = pSceneElem->FirstChildElement("visual_scene");
-				if(pSceneElem==NULL) Warning("No visual scene element found!\n");
-			}
-
-			if(pSceneElem==NULL) pSceneElem = pRootElem->FirstChildElement("scene");
-
-			if(pSceneElem==NULL)
-			{ 
-				Warning("No scene element found!\n");
-			}
-			else
-			{
-				//Get start and end time (MAYA ONLY!)
-				TiXmlElement* pExtraElem = pSceneElem->FirstChildElement("extra");
-				if(pExtraElem)
-				{	
-					// Get techniques
-					TiXmlElement* pExtraTechElem = pExtraElem->FirstChildElement("technique");
-					for(;pExtraTechElem; pExtraTechElem = pExtraTechElem->NextSiblingElement("technique"))
-					{
-						//Check for maya profile
-						tString sProfile = cString::ToString(pExtraTechElem->Attribute("profile"),"");
-						if(sProfile == "MAYA" || sProfile == "FCOLLADA")
-						{
-							//Iterate params
-							TiXmlElement *pParam = pExtraTechElem->FirstChildElement();
-							for(;pParam; pParam = pParam->NextSiblingElement())
-							{
-								tString sName = cString::ToString(pParam->Attribute("name"),"");
-								if(sName=="")
-								{
-									sName = cString::ToString(pParam->Value(),"");
-								}
-
-								sName = cString::ToLowerCase(sName);
-
-								TiXmlText *pText = pParam->FirstChild()->ToText();
-								float fValue = cString::ToFloat(pText->Value(),0);
-
-								if(sName == "start_time") apColladaScene->mfStartTime = fValue;
-								else if(sName == "end_time") apColladaScene->mfEndTime = fValue;
-							}
-						}
-
-						apColladaScene->mfDeltaTime = apColladaScene->mfEndTime - apColladaScene->mfStartTime;
-					}
-
-					//Log("Anim Start: %f End: %f\n",apColladaScene->mfStartTime, apColladaScene->mfEndTime);
-				}
-				else
-				{
-					apColladaScene->mfStartTime = 0;
-					apColladaScene->mfEndTime = 0;
-					apColladaScene->mfDeltaTime = -1;
-					Warning("No 'extra scene' element found!\n");
-				}
-
-				//Load all nodes in the scene.
-				TiXmlElement* pNodeElem = pSceneElem->FirstChildElement("node");
-				while(pNodeElem)
-				{
-					LoadColladaScene(pNodeElem, &apColladaScene->mRoot, apColladaScene, apColladaLightVec);
-
-					pNodeElem = pNodeElem->NextSiblingElement("node");
-				}
-			}
-		}
-
-		/////////////////////////////////////////////////
-		// ITERATE THE AFTER SCENE LIBRARIES
-
-		pLibraryElem = pRootElem->FirstChildElement();
-		while(pLibraryElem)
-		{
-			tString sValue = cString::ToString(pLibraryElem->Value(),"");
-			tString sType = cString::ToString(pLibraryElem->Attribute("type"),"");
-
-			// Image
-			if((sType == "IMAGE" || sValue == "library_images") && apColladaImageVec)
-			{
-				//Loads all images files available
-				LoadImages(pLibraryElem, *apColladaImageVec);
-			}
-			// Effects / Texture (texture is name in older versions)
-			else if((sType == "TEXTURE" || sValue == "library_effects") && apColladaTextureVec)
-			{
-				//Loads all texture and their settings
-				LoadTextures(pLibraryElem, *apColladaTextureVec);
-			}
-			// Material
-			else if((sType == "MATERIAL" || sValue == "library_materials") && apColladaMaterialVec)
-			{
-				//All materials used are loaded
-				LoadMaterials(pLibraryElem, *apColladaMaterialVec);
-			}
-			// Geometry
-			else if((sType == "GEOMETRY" || sValue == "library_geometries") && apColladaGeometryVec)
-			{
-				//geometry for all objects in the scene are loaded.
-				LoadGeometry(pLibraryElem, *apColladaGeometryVec);
-			}
-			// Animation
-			else if((sType == "ANIMATION" || sValue == "library_animations") && apColladaScene && apColladaAnimVec)
-			{
-				LoadAnimations(pLibraryElem, *apColladaAnimVec, apColladaScene);
-			}
-			// Controller
-			else if((sType == "CONTROLLER" || sValue == "library_controllers") && apColladaGeometryVec && apColladaControllerVec)
-			{
-				LoadControllers(pLibraryElem,*apColladaControllerVec,apColladaGeometryVec);
-			}
-
-
-			//Log(" ---- \n",sType.c_str());
-
-			pLibraryElem = pLibraryElem->NextSiblingElement();
-		}
-
-		/*if(abCache && mbLoadAndSaveMSHFormat==false)
-		{
-			SaveStructures(sCacheFile,apColladaImageVec,
-							apColladaTextureVec,
-							apColladaMaterialVec,
-							apColladaLightVec,
-							apColladaGeometryVec,
-							apColladaControllerVec,
-							apColladaAnimVec,
-							apColladaScene);
-		}*/
-		hplDelete(pXmlDoc);
+		ColladaReader Reader(ohpl_collada_blob_data(pBlob), ohpl_collada_blob_len(pBlob));
+		mbZToY = Reader.U8() != 0;
+		mfUnitScale = Reader.F32();
+		ReadStructures(Reader, apColladaImageVec, apColladaTextureVec, apColladaMaterialVec, apColladaLightVec,
+						apColladaGeometryVec, apColladaControllerVec, apColladaAnimVec, apColladaScene);
+		ohpl_collada_free(pBlob);
 		return true;
 	}
 

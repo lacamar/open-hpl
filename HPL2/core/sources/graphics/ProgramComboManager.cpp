@@ -39,22 +39,7 @@ namespace hpl {
 
 	const static bool gbLogStuff = false;
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROGRAM
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cProgramComboProgram::DestroyProgram()
-	{
-		if(mpProgram==NULL) return;
-
-		hplDelete(mpProgram);
-		mpProgram = NULL;
-	}
-
-	//-----------------------------------------------------------------------
-
+	static inline uintptr_t PtrId(const void *apPtr){ return (uintptr_t)apPtr; }
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -73,9 +58,7 @@ namespace hpl {
 		
 		mvCombinationNum.resize(mlNumOfMainModes);
 		
-		mvProgramSets.resize(mlNumOfMainModes);
-		mvVtxShaderSets.resize(mlNumOfMainModes);
-		mvFragShaderSets.resize(mlNumOfMainModes);
+		mpCombo = ohpl_combo_new(mlNumOfMainModes);
 
 		mvVarLists.resize(mlNumOfMainModes);
 		mvSettings.resize(mlNumOfMainModes);
@@ -84,6 +67,7 @@ namespace hpl {
 	cProgramComboManager::~cProgramComboManager()
 	{
 		DestroyShadersAndPrograms();
+		ohpl_combo_free(mpCombo);
 	}
 
 	//-----------------------------------------------------------------------
@@ -96,64 +80,45 @@ namespace hpl {
 
 	iGpuProgram* cProgramComboManager::GenerateProgram(int alMainMode, int alFlags)
 	{
-		cProgramComboProgram *pProgData = NULL;
+		uintptr_t lFound = 0;
+		if(ohpl_combo_program_acquire(mpCombo, alMainMode, alFlags, &lFound))
+		{
+			return reinterpret_cast<iGpuProgram*>(lFound);
+		}
 
-		tProgramComboProgramMapIt it = mvProgramSets[alMainMode].find(alFlags);
+		cProgramComboSettings& comboSettings = mvSettings[alMainMode];
+		tString sProgramName = GenerateProgramName(alMainMode, alFlags);
+
+		////////////////////////////////////
+		// Create (or get) shaders
+		iGpuShader *pVtxShader = GetShaderForCombo(alMainMode, alFlags, comboSettings.msVtxShader, kPC_VertexBit);
+		iGpuShader *pFragShader = GetShaderForCombo(alMainMode, alFlags, comboSettings.msFragShader, kPC_FragmentBit);
 
 		////////////////////////////////////
 		// Create program
-		if(it == mvProgramSets[alMainMode].end())
+		iGpuProgram* pProgram = NULL;
+
+		if(pVtxShader && pFragShader)
+			pProgram = CreateProgramFromShaders(sProgramName, pVtxShader, pFragShader,false);
+
+		ohpl_combo_program_insert(mpCombo, alMainMode, alFlags, PtrId(pProgram));
+
+		////////////////////////////////////
+		// Init variables
+		if(pProgram)
 		{
-			// Create data and add to map
-			pProgData = hplNew(cProgramComboProgram, () );
-			mvProgramSets[alMainMode].insert(tProgramComboProgramMap::value_type(alFlags, pProgData));
-			
-			cProgramComboSettings& comboSettings = mvSettings[alMainMode];
-			tString sProgramName = GenerateProgramName(alMainMode, alFlags);
-			
-			////////////////////////////////////
-			// Create (or get) shaders
-			iGpuShader *pVtxShader = GetShaderForCombo(alMainMode, alFlags, comboSettings.msVtxShader, kPC_VertexBit);			
-			iGpuShader *pFragShader = GetShaderForCombo(alMainMode, alFlags, comboSettings.msFragShader, kPC_FragmentBit);
+			pProgram->SetUserId(alFlags);
 
-			////////////////////////////////////
-			// Create program
-			iGpuProgram* pProgram = NULL;
-			
-			if(pVtxShader && pFragShader)
-				pProgram = CreateProgramFromShaders(sProgramName, pVtxShader, pFragShader,false);
-			
-			pProgData->mpProgram = pProgram;
-						
-			////////////////////////////////////
-			// Init variables
-			if(pProgram)
+			tProgramComboVariableListIt it = mvVarLists[alMainMode].begin();
+			tProgramComboVariableListIt endIt = mvVarLists[alMainMode].end();
+			for(; it != endIt; ++it)
 			{
-				pProgram->SetUserId(alFlags);
-
-				tProgramComboVariableListIt it = mvVarLists[alMainMode].begin();
-				tProgramComboVariableListIt endIt = mvVarLists[alMainMode].end();
-				for(; it != endIt; ++it)
-				{
-					cProgramComboVariable &var = *it;
-					pProgram->GetVariableAsId(var.msVarName,var.mlId);		                
-				}
-
-				//Log(" -- Creating program '%s' / %d\n", sProgramName.c_str(), pProgram);
+				cProgramComboVariable &var = *it;
+				pProgram->GetVariableAsId(var.msVarName,var.mlId);
 			}
 		}
-		//////////////////////////////////////
-		// Program exists, get from list
-		else
-		{
-			pProgData = it->second;
-		}
 
-		//////////////////////////////////////
-		// Increase user count
-		pProgData->mlUserCount++;
-		
-		return pProgData->mpProgram;
+		return pProgram;
 	}
 
 	//--------------------------------------------------------------------------
@@ -166,9 +131,10 @@ namespace hpl {
 	{
 		////////////////////////////////
 		//Set up variables and containers
-		int lFeatureNum = alFeatureNum;
-		int lCombinations = (int)(pow(2.0,(double)lFeatureNum)+0.49);
-		mvCombinationNum[alMainMode] = lCombinations;
+		std::vector<unsigned> vStages(alFeatureNum > 0 ? alFeatureNum : 0);
+		for(int i=0;i<alFeatureNum; ++i)
+			vStages[i] = apFeatures[i].mlShaders;
+		mvCombinationNum[alMainMode] = ohpl_combo_setup(mpCombo, alMainMode, vStages.data(), vStages.size());
 				
 		////////////////////////////////
 		//Save settings
@@ -202,30 +168,25 @@ namespace hpl {
 
 	void cProgramComboManager::DestroyGeneratedProgram(int alMainMode, iGpuProgram* apProgram)
 	{
-		tProgramComboProgramMapIt it = mvProgramSets[alMainMode].find(apProgram->GetUserId());
-		if(it == mvProgramSets[alMainMode].end())
+		uintptr_t lHandle = 0;
+		int lResult = ohpl_combo_program_release(mpCombo, alMainMode, apProgram->GetUserId(), &lHandle);
+		if(lResult == 0)
 		{
 			Error("Could not find and destroy generated program: %s\n", apProgram->GetName().c_str());
 			return;
 		}
 
-		cProgramComboProgram *pProgData = it->second;
-		iGpuProgram *pProgram = pProgData->mpProgram;
-		
 		/////////////////////////
-		//Dec user count and destroy if 0
-		pProgData->mlUserCount--;
-		if(pProgData->mlUserCount <= 0)
+		//Destroy if the user count reached 0
+		if(lResult == 2)
 		{
+			iGpuProgram *pProgram = reinterpret_cast<iGpuProgram*>(lHandle);
 			iGpuShader *pVtxShader = pProgram->GetShader(eGpuShaderType_Vertex);
 			iGpuShader *pFragShader = pProgram->GetShader(eGpuShaderType_Fragment);
-			
+
 			/////////////////////////
 			//Destroy program
-			//Log("    Destroying program '%s'/%d id: %d\n", pProgram->GetName().c_str(),pProgram, pProgram->GetUserId());
-			mvProgramSets[alMainMode].erase(it);
 			if(pProgram) hplDelete(pProgram);
-			hplDelete(pProgData);
 
 			/////////////////////////
 			//Destroy shaders (must be done after program deletion!)
@@ -240,32 +201,19 @@ namespace hpl {
 
 	void cProgramComboManager::DestroyGeneratedShader(int alMainMode, iGpuShader* apShader, eGpuShaderType aType)
 	{
-		tProgramComboShaderMap* pShaderSet = aType== eGpuShaderType_Vertex ? &mvVtxShaderSets[alMainMode] : &mvFragShaderSets[alMainMode];
-		
-		/////////////////////////
-		//Search for shader using id (which is the saved bitflags)
-		tProgramComboShaderMapIt it = pShaderSet->find(apShader->GetUserId());
-		if(it == pShaderSet->end())
+		uintptr_t lHandle = 0;
+		int lResult = ohpl_combo_shader_release(mpCombo, alMainMode, aType== eGpuShaderType_Vertex ? kPC_VertexBit : kPC_FragmentBit, apShader->GetUserId(), &lHandle);
+		if(lResult == 0)
 		{
 			Error("Could not find and destroy generated shader: '%s' with id %d in combo manager '%s'\n", apShader->GetName().c_str(), apShader->GetUserId(), msName.c_str());
 			return;
 		}
 
-		cProgramComboShader *pShaderData = it->second;
-		iGpuShader *pShader = pShaderData->mpShader;
-
-		/////////////////////////
-		//Dec user count and destroy if 0
-		pShaderData->mlUserCount--;
-		if(pShaderData->mlUserCount <=0)
+		if(lResult == 2)
 		{
-			//Log(" Destroying shader '%s' id: %d\n", pShader->GetName().c_str(), pShader->GetUserId());
-
-			pShaderSet->erase(it);
+			iGpuShader *pShader = reinterpret_cast<iGpuShader*>(lHandle);
 			if(pShader) mpResources->GetGpuShaderManager()->Destroy(pShader);
-			hplDelete(pShaderData);
 		}
-
 	}
 
 	//-----------------------------------------------------------------------
@@ -410,22 +358,18 @@ namespace hpl {
 			// Destroy Generated Content
 
 			//Programs
-			for(tProgramComboProgramMapIt it = mvProgramSets[rmode].begin(); it != mvProgramSets[rmode].end(); ++it)
+			uintptr_t lHandle = 0;
+			while(ohpl_combo_pop_program(mpCombo, rmode, &lHandle))
 			{
-				cProgramComboProgram *pProgramData = it->second;
-				pProgramData->DestroyProgram();
+				if(lHandle) hplDelete(reinterpret_cast<iGpuProgram*>(lHandle));
 			}
-			STLMapDeleteAll(mvProgramSets[rmode]);
 
 			//Shaders (must be after programs!)
-			for(tProgramComboShaderMapIt it = mvVtxShaderSets[rmode].begin(); it != mvVtxShaderSets[rmode].end(); ++it)
-				if(it->second->mpShader)	mpResources->GetGpuShaderManager()->Destroy(it->second->mpShader);
+			while(ohpl_combo_pop_shader(mpCombo, rmode, kPC_VertexBit, &lHandle))
+				if(lHandle)	mpResources->GetGpuShaderManager()->Destroy(reinterpret_cast<iGpuShader*>(lHandle));
 
-			for(tProgramComboShaderMapIt it = mvFragShaderSets[rmode].begin(); it != mvFragShaderSets[rmode].end(); ++it)
-				if(it->second->mpShader)	mpResources->GetGpuShaderManager()->Destroy(it->second->mpShader);
-
-			STLMapDeleteAll(mvVtxShaderSets[rmode]);
-			STLMapDeleteAll(mvFragShaderSets[rmode]);
+			while(ohpl_combo_pop_shader(mpCombo, rmode, kPC_FragmentBit, &lHandle))
+				if(lHandle)	mpResources->GetGpuShaderManager()->Destroy(reinterpret_cast<iGpuShader*>(lHandle));
 
 			mvVarLists[rmode].clear();
 
@@ -479,43 +423,24 @@ namespace hpl {
 		//////////////////////////////
 		// Calculate the valid bit flags for current shader type
 		// Valid means that only bits use the correct shader type is part of bit string.
-		int lValidBits =0;
-		for(size_t i=0; i<comboSettings.mvFeatures.size(); ++i)
-		{
-			int lCurrentBit = cMath::GetFlagBit((int)i);
-			if( (alBitFlags & lCurrentBit) &&
-				(comboSettings.mvFeatures[i].mlShaders & aShaderType) )
-			{
-				lValidBits |= lCurrentBit; 
-			}
-		}
-		
+		int lValidBits = (int)ohpl_combo_valid_bits(mpCombo, alMainMode, alBitFlags, aShaderType);
+
 		//////////////////////////////
 		// Check if program exists and if so return it
-		tProgramComboShaderMap* pShaderSet = aShaderType== kPC_VertexBit ? &mvVtxShaderSets[alMainMode] : &mvFragShaderSets[alMainMode];
-		tProgramComboShaderMapIt it = pShaderSet->find(lValidBits);
-		if(it != pShaderSet->end())
+		uintptr_t lFound = 0;
+		if(ohpl_combo_shader_acquire(mpCombo, alMainMode, aShaderType, lValidBits, &lFound))
 		{
-			cProgramComboShader *pShaderData = it->second;
-			
-			pShaderData->mlUserCount++;
-			return pShaderData->mpShader;
+			return reinterpret_cast<iGpuShader*>(lFound);
 		}
 
 		//////////////////////////////
 		// Create program, add to set and return it
-		cProgramComboShader *pShaderData = hplNew(cProgramComboShader , ());
 		iGpuShader* pShader = CreateShaderFromFeatures(	asShaderName, aShaderType, alBitFlags,
 														comboSettings.mvFeatures.empty() ? NULL : &comboSettings.mvFeatures[0], (int)comboSettings.mvFeatures.size(),
 														comboSettings.mvDefaultVars.empty() ? NULL : &comboSettings.mvDefaultVars[0], (int)comboSettings.mvDefaultVars.size());
-		pShaderData->mpShader = pShader;
-		pShaderData->mlUserCount++;
-		pShaderSet->insert(tProgramComboShaderMap::value_type(lValidBits, pShaderData));
+		ohpl_combo_shader_insert(mpCombo, alMainMode, aShaderType, lValidBits, PtrId(pShader));
 
 		if(pShader) pShader->SetUserId(lValidBits);
-
-		//tString sTempName = asShaderName +"_"+GenerateProgramName(alMainMode, lValidBits);
-		//Log("Created shader '%s' id: %d\n", pShader->GetName().c_str(), pShader->GetUserId());
 
 		return pShader;
 	}

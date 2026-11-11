@@ -19,295 +19,40 @@
 
 #include "graphics/MaterialType_BasicSolid.h"
 
-#include "system/LowLevelSystem.h"
-#include "system/PreprocessParser.h"
-
-#include "resources/Resources.h"
 #include "resources/TextureManager.h"
-#include "resources/GpuShaderManager.h"
-
-#include "math/Frustum.h"
-#include "math/Math.h"
-
-#include "graphics/Graphics.h"
-#include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/Renderer.h"
-#include "graphics/Material.h"
-#include "graphics/ProgramComboManager.h"
-#include "graphics/Renderable.h"
-#include "graphics/RendererDeferred.h"
-#include "scene/World.h"
-#include "scene/ForceField.h"
-
+#include "graphics/RustMaterialShim.h"
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// DEFINES
-	//////////////////////////////////////////////////////////////////////////
-	
-	//------------------------------
-	// Variables
-	//------------------------------
-	#define kVar_afInvFarPlane					0
-	#define kVar_avHeightMapScaleAndBias		1
-	#define kVar_a_mtxUV						2	
-	#define kVar_afColorMul						3
-	#define kVar_afDissolveAmount				4
-	#define kVar_avFrenselBiasPow				5
-	#define kVar_a_mtxInvViewRotation			6
-	#define kVar_avColorMul						7
-	#define kVar_avIlluminationMul				8
-	#define kVar_afT							9
-	#define kVar_avSwayProperties				10
-	#define kVar_avSwayOctavesMul				11
-	#define kVar_afSwayYFreqMul					12
-	#define kVar_avSwaySingleDirection			13
-	#define kVar_avSwaySinglesampleDirection	14
-	#define kVar_a_mtxModel						15
-	#define kVar_afFarPlane						16
-	#define kVar_avDetailProperties				17
-	#define kVar_avDetailWeights				18
-	#define kVar_a_mtxNormalFrag				19
-	#define kVar_afBlendHardness				20
-	#define kVar_afBlendHardnessVtx				21
-	#define kVar_afNormalMapBlendImpact			22
-	#define kVar_avTextureScale					23
-	#define kVar_avForceFieldPos0				24
-	#define kVar_avHeightmapScale				40
-	#define kVar_afNormalBlendHardness			41
-	#define kVar_afColorBlendHardness			42
-	#define kVar_avBlendVecX					43
-	#define kVar_avBlendMask					46
-	#define kVar_avDiffuseMask					47
-	#define kVar_avSpecularMask					48
-	#define kVar_avNormalMask					49
-	#define kVar_a_mtxBlendBand					50
-	#define kVar_a_mtxInvView					51
-	#define kVar_avLiquidColor					52
-	#define kVar_avLiquidSpecular				53
-	#define kVar_afLiquidInvTextureSize			54
-	#define kVar_avLiquidFade					55
-
-
-	//------------------------------
-	//Diffuse Features and data
-	//------------------------------
-	#define eFeature_Diffuse_NormalMaps		eFlagBit_0
-	#define eFeature_Diffuse_Specular		eFlagBit_1
-	#define eFeature_Diffuse_Parallax		eFlagBit_2
-	#define eFeature_Diffuse_UvAnimation	eFlagBit_3
-	#define eFeature_Diffuse_Skeleton		eFlagBit_4
-	#define eFeature_Diffuse_EnvMap			eFlagBit_5
-	#define eFeature_Diffuse_CubeMapAlpha	eFlagBit_6
-	#define eFeature_Diffuse_Sway			eFlagBit_7
-	#define eFeature_Diffuse_SwaySingleDir	eFlagBit_8
-	#define eFeature_Diffuse_SwayMap		eFlagBit_9
-	#define eFeature_Diffuse_DetailDiffuse	eFlagBit_10
-	#define eFeature_Diffuse_DetailNormal	eFlagBit_11
-	#define eFeature_Diffuse_Translucency	eFlagBit_12
-	#define eFeature_Diffuse_ForceFields	eFlagBit_13
-	#define eFeature_Diffuse_Liquid			eFlagBit_14
-	#define eFeature_Diffuse_LiquidAlpha	eFlagBit_15
-	#define eFeature_Diffuse_LiquidMul		eFlagBit_16
-		
-	#define kDiffuseFeatureNum 17
-
-	static cProgramComboFeature vDiffuseFeatureVec[] =
-	{
-		cProgramComboFeature("UseNormalMapping", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseSpecular", kPC_FragmentBit),		
-		cProgramComboFeature("UseParallax", kPC_VertexBit | kPC_FragmentBit, eFeature_Diffuse_NormalMaps),							
-		cProgramComboFeature("UseUvAnimation", kPC_VertexBit),							
-		cProgramComboFeature("UseSkeleton",	kPC_VertexBit),	
-		cProgramComboFeature("UseEnvMap", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
-		cProgramComboFeature("UseSway", kPC_VertexBit),
-		cProgramComboFeature("UseSwaySingleDir", kPC_VertexBit),
-		cProgramComboFeature("UseSwayMap", kPC_VertexBit),
-		cProgramComboFeature("UseDetailDiffuse", kPC_FragmentBit),
-		cProgramComboFeature("UseDetailNormal", kPC_FragmentBit, eFeature_Diffuse_NormalMaps),
-		cProgramComboFeature("UseTranslucency", kPC_FragmentBit),
-		cProgramComboFeature("UseFourForceFields", kPC_VertexBit),
-		cProgramComboFeature("UseLiquid", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("LiquidBlendMode_Alpha", kPC_FragmentBit),
-		cProgramComboFeature("LiquidBlendMode_Mul", kPC_FragmentBit),
-	};
-
-	//------------------------------
-	//Illumination Features and data
-	//------------------------------
-	#define eFeature_Illum_UvAnimation	eFlagBit_0
-	#define eFeature_Illum_Skeleton		eFlagBit_1
-
-	#define kIllumFeatureNum 2
-
-	cProgramComboFeature vIllumFeatureVec[] =
-	{
-		cProgramComboFeature("UseUvAnimation", kPC_VertexBit),							
-		cProgramComboFeature("UseSkeleton",	kPC_VertexBit),							
-	};
-
-	//------------------------------
-	//Z Features and data
-	//------------------------------
-	#define eFeature_Z_UseAlpha					eFlagBit_0
-	#define eFeature_Z_UvAnimation				eFlagBit_1
-	#define eFeature_Z_Dissolve					eFlagBit_2
-	#define eFeature_Z_DissolveAlpha			eFlagBit_3
-	#define eFeature_Z_UseAlphaDissolveFilter	eFlagBit_4
-	#define eFeature_Z_Sway						eFlagBit_5
-	#define eFeature_Z_SwaySingleDir			eFlagBit_6
-	#define eFeature_Z_SwayMap					eFlagBit_7
-	#define eFeature_Z_ForceFields				eFlagBit_8
-	
-	#define kZFeatureNum 9
-
-	cProgramComboFeature vZFeatureVec[] =
-	{
-			cProgramComboFeature("UseAlphaMap",					kPC_FragmentBit),
-			cProgramComboFeature("UseUvAnimation",				kPC_VertexBit),
-			cProgramComboFeature("UseDissolve",					kPC_FragmentBit),
-			cProgramComboFeature("UseDissolveAlphaMap",			kPC_FragmentBit),
-			cProgramComboFeature("UseAlphaUseDissolveFilter",	kPC_FragmentBit),
-			cProgramComboFeature("UseSway",						kPC_VertexBit),
-			cProgramComboFeature("UseSwaySingleDir",			kPC_VertexBit),
-			cProgramComboFeature("UseSwayMap",					kPC_VertexBit),
-			cProgramComboFeature("UseFourForceFields",			kPC_VertexBit),
-	};
-
-	//------------------------------
-	//Projected UV Features and data
-	//------------------------------
-	#define eFeature_PUV_NormalMaps			eFlagBit_0
-	#define eFeature_PUV_Specular			eFlagBit_1
-	#define eFeature_PUV_BottomTexture		eFlagBit_2
-	#define eFeature_PUV_DiffuseMap			eFlagBit_3
-	#define eFeature_PUV_NMapBlendWeight	eFlagBit_4
-
-	#define kProjectedUVFeatureNum 5
-
-	static cProgramComboFeature vProjectedUVFeatureVec[] =
-	{
-		cProgramComboFeature("UseNormalMapping", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseSpecular", kPC_FragmentBit),
-		cProgramComboFeature("UseBottomTexture", kPC_FragmentBit),
-		cProgramComboFeature("UseDiffuseMap", kPC_FragmentBit),
-		cProgramComboFeature("UseNormalMapBlendWeight", kPC_FragmentBit, eFeature_PUV_NormalMaps),
-	};
-
-	//------------------------------
-	//VertexBlend Features and data
-	//------------------------------
-	//Bits 0-11: texture kind (Diffuse, Specular, NMap, Height) * 3 + channel
-	#define eFeature_VB_NormalUv_R			eFlagBit_12
-	#define eFeature_VB_AlphaMask			eFlagBit_15
-	#define eFeature_VB_OverlayNormal		(1u << 16)
-	#define eFeature_VB_Tangents			(1u << 17)
-
-	#define kVertexBlendFeatureNum 18
-
-	static cProgramComboFeature vVertexBlendFeatureVec[] =
-	{
-		cProgramComboFeature("UseDiffuse_R", kPC_FragmentBit),
-		cProgramComboFeature("UseDiffuse_G", kPC_FragmentBit),
-		cProgramComboFeature("UseDiffuse_B", kPC_FragmentBit),
-		cProgramComboFeature("UseSpecular_R", kPC_FragmentBit),
-		cProgramComboFeature("UseSpecular_G", kPC_FragmentBit),
-		cProgramComboFeature("UseSpecular_B", kPC_FragmentBit),
-		cProgramComboFeature("UseNormalMap_R", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseNormalMap_G", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseNormalMap_B", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseParallax_R", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseParallax_G", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseParallax_B", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseNormalUv_R", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseNormalUv_G", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseNormalUv_B", kPC_VertexBit | kPC_FragmentBit),
-		cProgramComboFeature("UseAlphaMask", kPC_FragmentBit),
-		cProgramComboFeature("OverlayNormal", kPC_FragmentBit),
-		//the vertex shader only declares the tangent input with this
-		cProgramComboFeature("UseNormalMapping", kPC_VertexBit),
-	};
-
-	//------------------------------
-
-	static void AddSwayVariableIds(cProgramComboManager *apManager, int alMode)
-	{
-		apManager->AddGenerateProgramVariableId("afT", kVar_afT, alMode);
-		apManager->AddGenerateProgramVariableId("avSwayProperties", kVar_avSwayProperties, alMode);
-		apManager->AddGenerateProgramVariableId("avSwayOctavesMul", kVar_avSwayOctavesMul, alMode);
-		apManager->AddGenerateProgramVariableId("afSwayYFreqMul", kVar_afSwayYFreqMul, alMode);
-		apManager->AddGenerateProgramVariableId("avSwaySingleDirection", kVar_avSwaySingleDirection, alMode);
-		apManager->AddGenerateProgramVariableId("avSwaySinglesampleDirection", kVar_avSwaySinglesampleDirection, alMode);
-		apManager->AddGenerateProgramVariableId("a_mtxModel", kVar_a_mtxModel, alMode);
-		iMaterialType::AddForceFieldVariableIds(apManager, kVar_avForceFieldPos0, alMode);
-	}
-
-	static tFlag SwayFlags(cMaterialType_SolidDiffuse_Vars *apVars, cMaterial *apMaterial, tFlag alSway, tFlag alSingleDir, tFlag alMap, tFlag alForceFields)
-	{
-		if(apVars->mbSwayActive == false) return 0;
-		tFlag lFlags = alSway;
-		if(apVars->mbSwaySingleDir) lFlags |= alSingleDir;
-		if(apVars->mbSwayForceFieldAffected) lFlags |= alForceFields;
-		if(apMaterial->GetTexture(eMaterialTexture_Height)) lFlags |= alMap;
-		return lFlags;
-	}
-
-	//------------------------------
-	
-	//////////////////////////////////////////////////////////////////////////
-	// STATIC OBJECTS
-	//////////////////////////////////////////////////////////////////////////
-
-	//--------------------------------------------------------------------------
+	using namespace rustmat;
 
 	bool iMaterialType_SolidBase::mbGlobalDataCreated = false;
 	cProgramComboManager* iMaterialType_SolidBase::mpGlobalProgramManager;
 
 	float iMaterialType_SolidBase::mfVirtualPositionAddScale = 0.03f;
 
-	//--------------------------------------------------------------------------
+	static const OhplSolidDiffuseVars* DiffuseVars(cMaterial *apMaterial){ return static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars()); }
+	static const OhplProjectedUvVars* ProjectedVars(cMaterial *apMaterial){ return static_cast<cMaterialType_ProjectedUV_Vars*>(apMaterial->GetVars()); }
+	static const OhplVertexBlendVars* BlendVars(cMaterial *apMaterial){ return static_cast<cMaterialType_VertexBlend_Vars*>(apMaterial->GetVars()); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// SOLID BASE
 	//////////////////////////////////////////////////////////////////////////
-
-	//--------------------------------------------------------------------------
 
 	iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics,apResources)
 	{
 		mbIsGlobalDataCreator = false;
 	}
 
-	//--------------------------------------------------------------------------
-
 	iMaterialType_SolidBase::~iMaterialType_SolidBase()
 	{
 
 	}
 
-	//--------------------------------------------------------------------------
-
 	void iMaterialType_SolidBase::DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
 	{
-		/////////////////////////////
-		// Remove from global manager
-		if(aRenderMode == eMaterialRenderMode_Z || aRenderMode ==  eMaterialRenderMode_Z_Dissolve)
-		{
-			mpGlobalProgramManager->DestroyGeneratedProgram(eMaterialRenderMode_Z, apProgram);
-		}
-		/////////////////////////////
-		// Remove from normal manager
-		else
-		{
-			mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
-		}
+		rustmat::DestroyProgram(eOhplMatKind_SolidDiffuse, aRenderMode, 0, apProgram, mpProgramManager, mpGlobalProgramManager, NULL);
 	}
-	
-	//--------------------------------------------------------------------------
 
 	void iMaterialType_SolidBase::CreateGlobalPrograms()
 	{
@@ -316,39 +61,21 @@ namespace hpl {
 		mbGlobalDataCreated = true;
 		mbIsGlobalDataCreator = true;
 
-		/////////////////////////////
-		//Load programs
 		//This makes this material's program manager responsible for managing the global programs!
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Z,"Z","deferred_base_vtx.glsl", "deferred_base_frag.glsl", 
-													vZFeatureVec,kZFeatureNum, defaultVars);
-		
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Z);
-		mpProgramManager->AddGenerateProgramVariableId("afDissolveAmount",kVar_afDissolveAmount,eMaterialRenderMode_Z);
-		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Z);
+		RunSetup(eOhplMatKind_SolidDiffuse, true, MakeGlobals(), mpProgramManager, NULL);
 
 		mpGlobalProgramManager = mpProgramManager;
 	}
 
-	//--------------------------------------------------------------------------
-
 	void iMaterialType_SolidBase::LoadData()
 	{
-		/////////////////////////////
 		//Global data init (that is shared between Solid materials)
 		CreateGlobalPrograms();
 
-		//////////////
-		// Create textures
 		mpDissolveTexture = mpResources->GetTextureManager()->Create2D("core_dissolve.tga",true);
-
 
 		LoadSpecificData();
 	}
-
-	//--------------------------------------------------------------------------
 
 	void iMaterialType_SolidBase::DestroyData()
 	{
@@ -362,8 +89,6 @@ namespace hpl {
 		mpProgramManager->DestroyShadersAndPrograms();
 	}
 
-	//--------------------------------------------------------------------------
-
 	void iMaterialType_SolidBase::LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars)
 	{
 
@@ -374,487 +99,70 @@ namespace hpl {
 
 	}
 
-	//--------------------------------------------------------------------------
-
 	void iMaterialType_SolidBase::CompileMaterialSpecifics(cMaterial *apMaterial)
 	{
-		////////////////////////
-		//If there is an alpha texture, set alpha mode to trans, else solid.
-		if(apMaterial->GetTexture(eMaterialTexture_Alpha))
-		{
-			apMaterial->SetAlphaMode(eMaterialAlphaMode_Trans);
-		}
-		else
-		{
-			apMaterial->SetAlphaMode(eMaterialAlphaMode_Solid);
-		}
-
 		CompileSolidSpecifics(apMaterial);
 	}
-
-	//--------------------------------------------------------------------------
-
 
 	//////////////////////////////////////////////////////////////////////////
 	// SOLID DIFFUSE
 	//////////////////////////////////////////////////////////////////////////
-	
-	//--------------------------------------------------------------------------
-	
+
 	cMaterialType_SolidDiffuse::cMaterialType_SolidDiffuse(cGraphics *apGraphics, cResources *apResources) : iMaterialType_SolidBase(apGraphics, apResources)
 	{
-		AddUsedTexture(eMaterialTexture_Diffuse);
-		AddUsedTexture(eMaterialTexture_NMap);
-		AddUsedTexture(eMaterialTexture_Alpha);
-		AddUsedTexture(eMaterialTexture_Specular);
-		AddUsedTexture(eMaterialTexture_Height);
-		AddUsedTexture(eMaterialTexture_Illumination);
-		AddUsedTexture(eMaterialTexture_DissolveAlpha);
-		AddUsedTexture(eMaterialTexture_CubeMap);
-		AddUsedTexture(eMaterialTexture_CubeMapAlpha);
-		AddUsedTexture(eMaterialTexture_DetailDiffuse);
-		AddUsedTexture(eMaterialTexture_DetailNMap);
-		AddUsedTexture(eMaterialTexture_Translucency);
-		AddUsedTexture(eMaterialTexture_Liquid);
-
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
-
-		AddVarFloat("HeightMapScale", 0.05f, "");
-		AddVarFloat("HeightMapBias", 0, "");
-		AddVarFloat("FrenselBias", 0.2f, "Bias for Fresnel term. values: 0-1. Higher means that more of reflection is seen when looking straight at object.");
-		AddVarFloat("FrenselPow", 8.0f, "The higher the 'sharper' the reflection is, meaning that it is only clearly seen at sharp angles.");
-		AddVarBool("AlphaDissolveFilter", false, "If alpha values between 0 and 1 should be used and dissolve the texture. This can be useful for things like hair.");
+		InitFromRust(eOhplMatKind_SolidDiffuse);
 	}
-	
-	//--------------------------------------------------------------------------
 
 	cMaterialType_SolidDiffuse::~cMaterialType_SolidDiffuse()
 	{
 	}
 
-	//--------------------------------------------------------------------------
-
-
 	void cMaterialType_SolidDiffuse::LoadSpecificData()
 	{
-		/////////////////////////////
-		//Load Diffuse programs
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseNormals");
-		defaultVars.Add("UseDepth");
-		defaultVars.Add("VirtualPositionAddScale",mfVirtualPositionAddScale);
-		// selects the constant buffers of shaders that dropped the plain-uniform path
-		defaultVars.Add("MaterialType_SolidDiffuse");
-		
-		//Get the G-buffer type
-		if(cRendererDeferred::GetGBufferType() == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit");
-		else																defaultVars.Add("Deferred_64bit");
-
-		//Set up number of gbuffer textures used
-		if(cRendererDeferred::GetNumOfGBufferTextures() == 4)	defaultVars.Add("RenderTargets_4");
-		else													defaultVars.Add("RenderTargets_3");
-
-		//Set up relief mapping method
-		if(	iRenderer::GetParallaxQuality() != eParallaxQuality_Low &&
-			mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_ShaderModel_3)!=0) 
-		{
-			defaultVars.Add("ParallaxMethod_Relief");
-		}
-		else														
-		{
-			defaultVars.Add("ParallaxMethod_Simple");
-		}
-
-		
-		
-		if(cRendererDeferred::GetHdr())
-		{
-			defaultVars.Add("UseColor");
-			defaultVars.Add("UseColorMul");
-		}
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_base_vtx.glsl", "deferred_gbuffer_solid_frag.glsl", 
-													vDiffuseFeatureVec,kDiffuseFeatureNum, defaultVars);
-
-		/////////////////////////////
-		//Load Illumination programs
-		defaultVars.Clear();
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseColor");
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Illumination,"Illum","deferred_base_vtx.glsl", "deferred_illumination_frag.glsl", 
-													vIllumFeatureVec,kIllumFeatureNum, defaultVars);
-
-		
-		////////////////////////////////
-		//Set up variable ids
-		mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane",kVar_afInvFarPlane,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avHeightMapScaleAndBias",kVar_avHeightMapScaleAndBias, eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView", kVar_a_mtxInvViewRotation,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afFarPlane", kVar_afFarPlane,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avDetailProperties", kVar_avDetailProperties,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avDetailWeights", kVar_avDetailWeights,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avLiquidColor", kVar_avLiquidColor,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avLiquidSpecular", kVar_avLiquidSpecular,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afLiquidInvTextureSize", kVar_afLiquidInvTextureSize,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afInvTextureSize", kVar_afLiquidInvTextureSize,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("px_vLiquidFade", kVar_avLiquidFade,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avLiquidFade", kVar_avLiquidFade,eMaterialRenderMode_Diffuse);
-		AddSwayVariableIds(mpProgramManager, eMaterialRenderMode_Diffuse);
-
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Illumination);
-		mpProgramManager->AddGenerateProgramVariableId("afColorMul",kVar_afColorMul,eMaterialRenderMode_Illumination);
-		mpProgramManager->AddGenerateProgramVariableId("avIlluminationMul",kVar_avIlluminationMul,eMaterialRenderMode_Illumination);
+		RunSetup(eOhplMatKind_SolidDiffuse, false, MakeGlobals(mpGraphics, mfVirtualPositionAddScale), mpProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_SolidDiffuse::CompileSolidSpecifics(cMaterial *apMaterial)
 	{
-		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-
-		//////////////////////////////////
-		//Z specifics
-		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
-		if(cRendererDeferred::GetHdr() || apMaterial->GetTexture(eMaterialTexture_Liquid)) apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
-		if(apMaterial->GetTexture(eMaterialTexture_Liquid)) apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-		apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
-		if(pVars->mbSwayActive)
-		{
-			for(eMaterialRenderMode mode : {eMaterialRenderMode_Z, eMaterialRenderMode_Z_Dissolve, eMaterialRenderMode_Diffuse})
-			{
-				apMaterial->SetHasSpecificSettings(mode,true);
-				apMaterial->SetHasObjectSpecificsSettings(mode,true);
-			}
-		}
-		
-		//////////////////////////////////
-		//Normal map and height specifics
-		if(apMaterial->GetTexture(eMaterialTexture_NMap))
-		{
-			if(apMaterial->GetTexture(eMaterialTexture_Height))
-			{
-				apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-			}
-		}
-
-		//////////////////////////////////
-		//Uv animation specifics
-		if(apMaterial->HasUvAnimation())
-		{
-			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Z,true);
-			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Illumination,true);
-		}
-
-		//////////////////////////////////
-		//Cubemap and detail
-		if(apMaterial->GetTexture(eMaterialTexture_CubeMap) || apMaterial->GetTexture(eMaterialTexture_DetailDiffuse) || apMaterial->GetTexture(eMaterialTexture_DetailNMap))
-		{
-			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-		}
-
-		//////////////////////////////////
-		//Illuminations specifics
-		if(apMaterial->GetTexture(eMaterialTexture_Illumination))
-		{
-			apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination,true);
-		}
+		CompileMaterial(eOhplMatKind_SolidDiffuse, DiffuseVars(apMaterial), apMaterial);
 	}
 
-	//--------------------------------------------------------------------------
-
-	
 	iTexture* cMaterialType_SolidDiffuse::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-
-		////////////////////////////
-		//Z
-		if(aRenderMode == eMaterialRenderMode_Z)
-		{
-			switch(alUnit)
-			{
-			case 0: return apMaterial->GetTexture(eMaterialTexture_Alpha);
-			case 1: return mpDissolveTexture;
-			case 3: return pVars->mbSwayActive ? apMaterial->GetTexture(eMaterialTexture_Height) : NULL;
-			}
-		}
-		////////////////////////////
-		//Z Dissolve
-		else if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			switch(alUnit)
-			{
-			case 0: return apMaterial->GetTexture(eMaterialTexture_Alpha);
-			case 1: return mpDissolveTexture;
-			case 2: return apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
-			case 3: return pVars->mbSwayActive ? apMaterial->GetTexture(eMaterialTexture_Height) : NULL;
-			}
-		}
-		////////////////////////////
-		//Diffuse
-		else if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			if(alUnit > 3 && cGpuShaderManager::IsHpsl())
-			{
-				switch(alUnit)
-				{
-				case 5: return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-				case 6: return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-				case 8: return apMaterial->GetTexture(eMaterialTexture_DetailDiffuse);
-				case 9: return apMaterial->GetTexture(eMaterialTexture_NMap) ? apMaterial->GetTexture(eMaterialTexture_DetailNMap) : NULL;
-				case 10: return apMaterial->GetTexture(eMaterialTexture_Translucency);
-				case 11: return apMaterial->GetTexture(eMaterialTexture_Liquid);
-				}
-				return NULL;
-			}
-			switch(alUnit)
-			{
-			case 0: return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-			case 1: return apMaterial->GetTexture(eMaterialTexture_NMap);
-			case 2: return apMaterial->GetTexture(eMaterialTexture_Specular);
-			case 3: return apMaterial->GetTexture(eMaterialTexture_Height);
-			case 4: return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-			case 5: return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-			}
-		}
-		////////////////////////////
-		//Illumination
-		else if(aRenderMode == eMaterialRenderMode_Illumination)
-		{
-			switch(alUnit)
-			{
-			case 0: return apMaterial->GetTexture(eMaterialTexture_Illumination);
-			}
-		}
-
-		return NULL;
+		return TextureForUnit(eOhplMatKind_SolidDiffuse, DiffuseVars(apMaterial), apMaterial, mpGraphics, aRenderMode, alUnit, mpDissolveTexture, NULL);
 	}
-	//--------------------------------------------------------------------------
 
 	iTexture* cMaterialType_SolidDiffuse::GetSpecialTexture(cMaterial *apMaterial, eMaterialRenderMode aRenderMode,iRenderer *apRenderer, int alUnit)
 	{
 		return NULL;
 	}
-	
-	//--------------------------------------------------------------------------
-	
+
 	iGpuProgram* cMaterialType_SolidDiffuse::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-
-		////////////////////////////
-		//Z
-		if(aRenderMode == eMaterialRenderMode_Z)
-		{
-			tFlag lFlags =0;
-			if(apMaterial->GetTexture(eMaterialTexture_Alpha))	lFlags |= eFeature_Z_UseAlpha;
-			if(apMaterial->HasUvAnimation())					lFlags |= eFeature_Z_UvAnimation;
-			if(pVars->mbAlphaDissolveFilter)					lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap, eFeature_Z_ForceFields);
-
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
-		}
-		////////////////////////////
-		//Z Dissolve
-		else if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			tFlag lFlags =0;
-			lFlags |= eFeature_Z_Dissolve;
-			if(apMaterial->GetTexture(eMaterialTexture_Alpha))			lFlags |= eFeature_Z_UseAlpha;
-			if(apMaterial->GetTexture(eMaterialTexture_DissolveAlpha))	lFlags |= eFeature_Z_DissolveAlpha;
-			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Z_UvAnimation;
-			if(pVars->mbAlphaDissolveFilter)							lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Z_Sway, eFeature_Z_SwaySingleDir, eFeature_Z_SwayMap, eFeature_Z_ForceFields);
-
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
-		}
-		////////////////////////////
-		//Diffuse
-		else if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			tFlag lFlags =0;
-			if(apMaterial->GetTexture(eMaterialTexture_NMap))			lFlags |= eFeature_Diffuse_NormalMaps;
-			if(apMaterial->GetTexture(eMaterialTexture_Specular))		lFlags |= eFeature_Diffuse_Specular;
-			if(	apMaterial->GetTexture(eMaterialTexture_Height) && 
-				iRenderer::GetParallaxEnabled() && pVars->mbSwayActive == false)	lFlags |= eFeature_Diffuse_Parallax;
-			if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
-			{	
-				lFlags |= eFeature_Diffuse_EnvMap;
-				if(apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha))	lFlags |= eFeature_Diffuse_CubeMapAlpha;
-			}
-			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Diffuse_UvAnimation;
-			if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse))	lFlags |= eFeature_Diffuse_DetailDiffuse;
-			if(apMaterial->GetTexture(eMaterialTexture_DetailNMap))		lFlags |= eFeature_Diffuse_DetailNormal;
-			if(apMaterial->GetTexture(eMaterialTexture_Translucency))	lFlags |= eFeature_Diffuse_Translucency;
-			if(apMaterial->GetTexture(eMaterialTexture_Liquid) && cGpuShaderManager::IsHpsl())
-			{
-				lFlags |= eFeature_Diffuse_Liquid;
-				if(pVars->msLiquidBlendMode == "Alpha")	lFlags |= eFeature_Diffuse_LiquidAlpha;
-				else if(pVars->msLiquidBlendMode == "Mul")	lFlags |= eFeature_Diffuse_LiquidMul;
-			}
-			lFlags |= SwayFlags(pVars, apMaterial, eFeature_Diffuse_Sway, eFeature_Diffuse_SwaySingleDir, eFeature_Diffuse_SwayMap, eFeature_Diffuse_ForceFields);
-
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
-		}
-		////////////////////////////
-		//Illumination
-		else if(aRenderMode == eMaterialRenderMode_Illumination)
-		{
-			tFlag lFlags =0;
-			if(apMaterial->HasUvAnimation())	lFlags |= eFeature_Illum_UvAnimation;
-
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
-		}
-
-		return NULL;
+		return PickProgram(SelectProgram(eOhplMatKind_SolidDiffuse, DiffuseVars(apMaterial), apMaterial, aRenderMode, alSkeleton), mpProgramManager, mpGlobalProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_SolidDiffuse::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)
 	{
-		////////////////////////////
-		//Diffuse
-		if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
-
-			apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/pFrustum->GetFarPlane());
-			apProgram->SetFloat(kVar_afFarPlane, pFrustum->GetFarPlane());
-		}
-		
+		SetupType(eOhplMatKind_SolidDiffuse, aRenderMode, apProgram, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_SolidDiffuse::SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
 																iRenderer *apRenderer)
 	{
-		if(	aRenderMode == eMaterialRenderMode_Diffuse || 
-			aRenderMode == eMaterialRenderMode_Z || 
-			aRenderMode == eMaterialRenderMode_Z_Dissolve || 
-			aRenderMode == eMaterialRenderMode_Illumination)
-		{
-			/////////////////////////
-			//UV Animation
-			if(apMaterial->HasUvAnimation())
-			{
-				apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
-			}
-
-			cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-			if(pVars->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
-			{
-				apProgram->SetFloat(kVar_afT, apRenderer->GetTimeCount());
-				apProgram->SetVec3f(kVar_avSwayProperties, pVars->mvSwayProperties);
-				apProgram->SetVec3f(kVar_avSwayOctavesMul, pVars->mvSwayOctaveMuls);
-				apProgram->SetFloat(kVar_afSwayYFreqMul, pVars->mfSwayYFreqMul);
-				apProgram->SetVec3f(kVar_avSwaySingleDirection, pVars->mvSwaySingleDir);
-				apProgram->SetVec3f(kVar_avSwaySinglesampleDirection, pVars->mvSwaySingleSampleDir);
-			}
-			
-			if(aRenderMode == eMaterialRenderMode_Diffuse)
-			{
-				/////////////////////////
-				//Parallax
-				if(apMaterial->GetTexture(eMaterialTexture_Height) && iRenderer::GetParallaxEnabled() && pVars->mbSwayActive == false)
-				{
-					apProgram->SetVec2f(kVar_avHeightMapScaleAndBias, pVars->mfHeightMapScale, pVars->mfHeightMapBias);
-				}
-
-				/////////////////////////
-				//Cube Map
-				if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
-				{
-					apProgram->SetVec2f(kVar_avFrenselBiasPow, pVars->mfFrenselBias, pVars->mfFrenselPow);
-					
-					cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
-					apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
-				}
-
-				if(apMaterial->GetTexture(eMaterialTexture_DetailDiffuse) || apMaterial->GetTexture(eMaterialTexture_DetailNMap))
-				{
-					const float *p = pVars->mvDetailProperties;
-					apProgram->SetVec4f(kVar_avDetailProperties, p[0], p[1], p[2], p[3]);
-					apProgram->SetVec3f(kVar_avDetailWeights, pVars->mvDetailWeights);
-				}
-
-				if(iTexture *pLiquid = apMaterial->GetTexture(eMaterialTexture_Liquid))
-				{
-					apProgram->SetColor4f(kVar_avLiquidColor, pVars->mLiquidColor);
-					apProgram->SetColor4f(kVar_avLiquidSpecular, pVars->mLiquidSpecular);
-					apProgram->SetFloat(kVar_afLiquidInvTextureSize, 1.0f / (float)cMath::Max(pLiquid->GetWidth(), pLiquid->GetHeight()));
-				}
-			}
-		}
+		SetupMaterial(eOhplMatKind_SolidDiffuse, DiffuseVars(apMaterial), aRenderMode, apProgram, apMaterial, apRenderer);
 	}
-	
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_SolidDiffuse::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 																iRenderer *apRenderer)
 	{
-		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apObject->GetMaterial()->GetVars();
-		if(pVars->mbSwayActive && aRenderMode != eMaterialRenderMode_Illumination)
-		{
-			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
-			apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
-			if(pVars->mbSwayForceFieldAffected)
-			{
-				cForceField *vFields[4];
-				cBoundingVolume *pBV = apObject->GetBoundingVolume();
-				int lNum = apRenderer->GetCurrentWorld()->GetForceFields(pBV->GetMin(), pBV->GetMax(), vFields);
-				iMaterialType::SetForceFieldVars(apProgram, kVar_avForceFieldPos0, vFields, lNum, pVars->mfSwayForceFieldMul, pVars->mfSwayForceFieldMax);
-			}
-		}
-		
-		////////////////////////////
-		//Z Dissolve
-		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			bool bRet = apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
-			if(bRet==false)Error("Could not set variable!\n");
-		}
-		////////////////////////////
-		//Illumination
-		else if(aRenderMode == eMaterialRenderMode_Illumination)
-		{
-			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
-			cColor illum = apObject->GetIlluminationColor() * (apObject->GetIlluminationAmount() * pVars->mfIlluminationBrightness);
-			// HPL3 illum pass multiplies by ColorMul.rgb * ColorMul.a
-			if(cGpuShaderManager::IsHpsl()) illum = illum * apObject->GetColorMul() * apObject->GetColorMul().a;
-			apProgram->SetColor4f(kVar_avIlluminationMul, illum);
-		}
-		else if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
-			if(apObject->GetMaterial()->GetTexture(eMaterialTexture_Liquid))
-			{
-				// official SetupObjectInstanceData 0xdbd050
-				float fT = apObject->GetLiquidAmount();
-				if(fT <= -1) fT += 1 + apRenderer->GetTimeCount();
-				float fIn = pVars->mvLiquidFadeSpeed.x, fOut = pVars->mvLiquidFadeSpeed.y;
-				if(pVars->mbLiquidLoopFade) fT = std::fmod(fT, (fIn + fOut) * 1.1f);
-				if(fOut <= 0) fOut = fT + 1e6f;
-				apProgram->SetVec4f(kVar_avLiquidFade, fT / fIn - 1, (fOut - fT) / fIn, 1 / (pVars->mfLiquidEdgeSize + 0.01f), 2 * pVars->mfLiquidDryness);
-			}
-		}
+		SetupObject(eOhplMatKind_SolidDiffuse, DiffuseVars(apObject->GetMaterial()), aRenderMode, apProgram, apObject, apRenderer);
 	}
-
-
-	//--------------------------------------------------------------------------
 
 	iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
 	{
 		return hplNew(cMaterialType_SolidDiffuse_Vars,());
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_SolidDiffuse::LoadVariables(cMaterial* apMaterial, cResourceVarsObject *apVars)
 	{
@@ -864,188 +172,60 @@ namespace hpl {
 			pVars = (cMaterialType_SolidDiffuse_Vars*)CreateSpecificVariables();
 			apMaterial->SetVars(pVars);
 		}
-				
-		pVars->mfHeightMapScale = apVars->GetVarFloat("HeightMapScale", 0.1f);
-		pVars->mfHeightMapBias = apVars->GetVarFloat("HeightMapBias", 0);
-		pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
-		pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0f);
-		pVars->mbAlphaDissolveFilter = apVars->GetVarBool("AlphaDissolveFilter", false);
-		pVars->mbSwayActive = apVars->GetVarBool("SwayActive", false);
-		pVars->mbSwaySingleDir = apVars->GetVarBool("SwaySingleDir", false);
-		pVars->mvSwayProperties = cVector3f(apVars->GetVarFloat("SwayFreq", 1), apVars->GetVarFloat("SwayAmplitude", 0.1f), apVars->GetVarFloat("SwaySpeed", 1));
-		pVars->mvSwayOctaveMuls = apVars->GetVarVector3f("SwayOctaveMuls", cVector3f(0.125f, 0.25f, 1));
-		pVars->mfSwayYFreqMul = apVars->GetVarFloat("SwayYFreqMul", 0);
-		pVars->mvSwaySingleDir = apVars->GetVarVector3f("SwaySingleDirVector", cVector3f(0, 0, 1));
-		pVars->mvSwaySingleSampleDir = apVars->GetVarVector3f("SwaySingleSampleVector", cVector3f(1, 0, 0));
-		pVars->mbSwayForceFieldAffected = apVars->GetVarBool("SwayForceFieldAffected", false);
-		pVars->mfSwayForceFieldMul = apVars->GetVarFloat("SwayForceFieldMul", 0);
-		pVars->mfSwayForceFieldMax = apVars->GetVarFloat("SwayForceFieldMax", 0);
-		float fFadeStart = apVars->GetVarFloat("DetailFadeStart", 5);
-		cVector2f vDetailUvMul = apVars->GetVarVector2f("DetailUvMul", 4);
-		pVars->mvDetailProperties[0] = fFadeStart;
-		pVars->mvDetailProperties[1] = apVars->GetVarFloat("DetailFadeEnd", 10) - fFadeStart;
-		pVars->mvDetailProperties[2] = vDetailUvMul.x;
-		pVars->mvDetailProperties[3] = vDetailUvMul.y;
-		pVars->mvDetailWeights = cVector3f(apVars->GetVarFloat("DetailWeight_Diffuse", 1), apVars->GetVarFloat("DetailWeight_Specular", 1), apVars->GetVarFloat("DetailWeight_Normal", 1));
-		pVars->mfIlluminationBrightness = apVars->GetVarFloat("IlluminationBrightness", 1);
-		pVars->mLiquidColor = apVars->GetVarColor("LiquidTrickleColor", cColor(0,0,0,1));
-		pVars->mLiquidSpecular = apVars->GetVarColor("LiquidTrickleSpecular", cColor(0,0,0,0));
-		pVars->mbLiquidLoopFade = apVars->GetVarBool("LiquidTrickleLoopFade", false);
-		pVars->mvLiquidFadeSpeed = apVars->GetVarVector2f("LiquidTrickleFadeSpeed", cVector2f(0.5f, 0.5f));
-		pVars->mfLiquidEdgeSize = apVars->GetVarFloat("LiquidTrickleEdgeSize", 0.5f);
-		pVars->mfLiquidDryness = apVars->GetVarFloat("LiquidTrickleDryness", 0.5f);
-		pVars->msLiquidBlendMode = apVars->GetVarString("LiquidTrickleBlendMode", "Alpha");
-	}
 
-	//--------------------------------------------------------------------------
+		rustmat::LoadVariables(eOhplMatKind_SolidDiffuse, apMaterial, apVars, static_cast<OhplSolidDiffuseVars*>(pVars));
+	}
 
 	void cMaterialType_SolidDiffuse::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
 	{
-		cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-
-		apVars->AddVarFloat("HeightMapScale", pVars->mfHeightMapScale);
-		apVars->AddVarFloat("HeightMapBias", pVars->mfHeightMapBias);
-		apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
-		apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
-		apVars->AddVarBool("AlphaDissolveFilter", pVars->mbAlphaDissolveFilter);
+		VarValues(eOhplMatKind_SolidDiffuse, DiffuseVars(apMaterial), apMaterial, apVars);
 	}
 
-	//--------------------------------------------------------------------------
 	//////////////////////////////////////////////////////////////////////////
 	// PROJECTED UV
 	//////////////////////////////////////////////////////////////////////////
 
-	//--------------------------------------------------------------------------
-
-	// ponytail: no detail/blend maps or PlanarUVRotation/TextureUVOffset (unused or all default in SOMA data)
 	cMaterialType_ProjectedUV::cMaterialType_ProjectedUV(cGraphics *apGraphics, cResources *apResources) : iMaterialType_SolidBase(apGraphics, apResources)
 	{
-		for(int i=eMaterialTexture_DiffuseSide; i<=eMaterialTexture_SpecularBottom; ++i)
-			AddUsedTexture((eMaterialTexture)i);
-
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+		InitFromRust(eOhplMatKind_ProjectedUv);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::LoadSpecificData()
 	{
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseNormals");
-		defaultVars.Add("UseDepth");
-		defaultVars.Add("UseColor");
-		defaultVars.Add("UseColorMul");
-		defaultVars.Add("MaterialType_ProjectedUV");
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_projected_uv_vtx.glsl", "deferred_projected_uv_frag.glsl",
-													vProjectedUVFeatureVec,kProjectedUVFeatureNum, defaultVars);
-
-		mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane",kVar_afInvFarPlane,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxNormalFrag", kVar_a_mtxNormalFrag,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afBlendHardness", kVar_afBlendHardness,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afBlendHardnessVtx", kVar_afBlendHardnessVtx,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afNormalMapBlendImpact", kVar_afNormalMapBlendImpact,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avTextureScale", kVar_avTextureScale,eMaterialRenderMode_Diffuse);
+		RunSetup(eOhplMatKind_ProjectedUv, false, MakeGlobals(), mpProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::CompileSolidSpecifics(cMaterial *apMaterial)
 	{
-		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
-		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
-	}
-
-	//--------------------------------------------------------------------------
-
-	static bool HasProjectedTexture(cMaterial *apMaterial, int alFirst, int alStep)
-	{
-		for(int i=0; i<3; ++i)
-			if(apMaterial->GetTexture((eMaterialTexture)(alFirst + i*alStep))) return true;
-		return false;
+		CompileMaterial(eOhplMatKind_ProjectedUv, ProjectedVars(apMaterial), apMaterial);
 	}
 
 	iTexture* cMaterialType_ProjectedUV::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z || aRenderMode == eMaterialRenderMode_Z_Dissolve)
-			return alUnit == 1 ? mpDissolveTexture : NULL;
-
-		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 8) return NULL;
-
-		//Units 0-8: Diffuse, NMap, Specular x Side, Top, Bottom; a missing one falls back to another of its kind
-		int lFirst = eMaterialTexture_DiffuseSide + alUnit/3*3;
-		for(int i=0; i<3; ++i)
-			if(iTexture *pTex = apMaterial->GetTexture((eMaterialTexture)(lFirst + (alUnit%3 + i)%3))) return pTex;
-		return NULL;
+		return TextureForUnit(eOhplMatKind_ProjectedUv, ProjectedVars(apMaterial), apMaterial, mpGraphics, aRenderMode, alUnit, mpDissolveTexture, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	iGpuProgram* cMaterialType_ProjectedUV::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z)			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, 0);
-		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)	return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, eFeature_Z_Dissolve);
-		if(aRenderMode != eMaterialRenderMode_Diffuse)		return NULL;
-
-		cMaterialType_ProjectedUV_Vars *pVars = (cMaterialType_ProjectedUV_Vars*)apMaterial->GetVars();
-		tFlag lFlags = 0;
-		if(HasProjectedTexture(apMaterial, eMaterialTexture_DiffuseSide, 1))	lFlags |= eFeature_PUV_DiffuseMap;
-		if(HasProjectedTexture(apMaterial, eMaterialTexture_NMapSide, 1))		lFlags |= eFeature_PUV_NormalMaps;
-		if(HasProjectedTexture(apMaterial, eMaterialTexture_SpecularSide, 1))	lFlags |= eFeature_PUV_Specular;
-		if(HasProjectedTexture(apMaterial, eMaterialTexture_DiffuseBottom, 3))	lFlags |= eFeature_PUV_BottomTexture;
-		if(pVars->mfNormalMapBlendImpact > 0)									lFlags |= eFeature_PUV_NMapBlendWeight;
-
-		return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+		return PickProgram(SelectProgram(eOhplMatKind_ProjectedUv, ProjectedVars(apMaterial), apMaterial, aRenderMode, alSkeleton), mpProgramManager, mpGlobalProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
-
-		apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/apRenderer->GetCurrentFrustum()->GetFarPlane());
+		SetupType(eOhplMatKind_ProjectedUv, aRenderMode, apProgram, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
 																iRenderer *apRenderer)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
-
-		cMaterialType_ProjectedUV_Vars *pVars = (cMaterialType_ProjectedUV_Vars*)apMaterial->GetVars();
-		apProgram->SetFloat(kVar_afBlendHardness, pVars->mfBlendHardness);
-		apProgram->SetFloat(kVar_afBlendHardnessVtx, pVars->mfBlendHardness);
-		apProgram->SetFloat(kVar_afNormalMapBlendImpact, pVars->mfNormalMapBlendImpact);
-		apProgram->SetVec3f(kVar_avTextureScale, pVars->mvTextureScale);
+		SetupMaterial(eOhplMatKind_ProjectedUv, ProjectedVars(apMaterial), aRenderMode, apProgram, apMaterial, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 																iRenderer *apRenderer)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
-		}
-		else if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			//Official static batches are in world space; other objects only project in world space with DynamicObjectSupport
-			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
-			bool bWorld = pMtx && (apObject->IsStatic() || ((cMaterialType_ProjectedUV_Vars*)apObject->GetMaterial()->GetVars())->mbDynamicObjectSupport);
-			apProgram->SetMatrixf(kVar_a_mtxUV, bWorld ? *pMtx : cMatrixf::Identity);
-			const cMatrixf &mtxView = apRenderer->GetCurrentFrustum()->GetViewMatrix();
-			apProgram->SetMatrixf(kVar_a_mtxNormalFrag, bWorld || pMtx == NULL ? mtxView : cMath::MatrixMul(mtxView, *pMtx));
-			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
-		}
+		SetupObject(eOhplMatKind_ProjectedUv, ProjectedVars(apObject->GetMaterial()), aRenderMode, apProgram, apObject, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_ProjectedUV::LoadVariables(cMaterial* apMaterial, cResourceVarsObject *apVars)
 	{
@@ -1056,189 +236,54 @@ namespace hpl {
 			apMaterial->SetVars(pVars);
 		}
 
-		pVars->mfBlendHardness = cMath::Clamp(1 - apVars->GetVarFloat("BlendSmoothness", 0.5f), 0.0f, 0.99f);
-		pVars->mfNormalMapBlendImpact = cMath::Clamp(apVars->GetVarFloat("NormalMapBlendImpact", 0), 0.0f, 1.0f);
-		pVars->mvTextureScale = cVector3f(	1.0f / apVars->GetVarFloat("TextureUVScaleSide", 1),
-											1.0f / apVars->GetVarFloat("TextureUVScaleTop", 1),
-											1.0f / apVars->GetVarFloat("TextureUVScaleBottom", 1));
-		pVars->mbDynamicObjectSupport = apVars->GetVarBool("DynamicObjectSupport", false);
+		rustmat::LoadVariables(eOhplMatKind_ProjectedUv, apMaterial, apVars, static_cast<OhplProjectedUvVars*>(pVars));
 	}
-
-	//--------------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
 	// VERTEX BLEND
 	//////////////////////////////////////////////////////////////////////////
 
-	//--------------------------------------------------------------------------
-
 	cMaterialType_VertexBlend::cMaterialType_VertexBlend(cGraphics *apGraphics, cResources *apResources) : iMaterialType_SolidBase(apGraphics, apResources)
 	{
-		for(int i=eMaterialTexture_Diffuse_R; i<=eMaterialTexture_Height_B; ++i)
-			AddUsedTexture((eMaterialTexture)i);
-
-		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+		InitFromRust(eOhplMatKind_VertexBlend);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::LoadSpecificData()
 	{
-		cParserVarContainer defaultVars;
-		defaultVars.Add("UseUv");
-		defaultVars.Add("UseNormals");
-		defaultVars.Add("UseDepth");
-		defaultVars.Add("UseColor");
-		defaultVars.Add("UseColorMul");
-		defaultVars.Add("MaterialType_BlendWeight");
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Diffuse,"Diffuse","deferred_projected_uv_vtx.glsl", "deferred_projected_blendweight_frag.glsl",
-													vVertexBlendFeatureVec,kVertexBlendFeatureNum, defaultVars);
-
-		mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane",kVar_afInvFarPlane,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxModel",kVar_a_mtxModel,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvView",kVar_a_mtxInvView,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avColorMul", kVar_avColorMul,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avHeightmapScale", kVar_avHeightmapScale,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afNormalBlendHardness", kVar_afNormalBlendHardness,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("afColorBlendHardness", kVar_afColorBlendHardness,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avTextureScale", kVar_avTextureScale,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBlendVecX", kVar_avBlendVecX,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBlendVecY", kVar_avBlendVecX+1,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBlendVecZ", kVar_avBlendVecX+2,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avBlendMask", kVar_avBlendMask,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avDiffuseMask", kVar_avDiffuseMask,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avSpecularMask", kVar_avSpecularMask,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("avNormalMask", kVar_avNormalMask,eMaterialRenderMode_Diffuse);
-		mpProgramManager->AddGenerateProgramVariableId("a_mtxBlendBand", kVar_a_mtxBlendBand,eMaterialRenderMode_Diffuse);
+		RunSetup(eOhplMatKind_VertexBlend, false, MakeGlobals(), mpProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::CompileSolidSpecifics(cMaterial *apMaterial)
 	{
-		apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
-		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse,true);
-		apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve,true);
-	}
-
-	//--------------------------------------------------------------------------
-
-	//alKind: 0 Diffuse, 1 Specular, 2 NMap, 3 Height
-	static cVector3f GetVertexBlendMask(cMaterial *apMaterial, int alKind)
-	{
-		cVector3f vMask;
-		for(int i=0; i<3; ++i)
-			vMask.v[i] = apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + i*4 + alKind)) ? 1.0f : 0.0f;
-		return vMask;
-	}
-
-	static cVector3f GetVertexBlendMask(cMaterial *apMaterial)
-	{
-		return cMath::Vector3Max(GetVertexBlendMask(apMaterial, 0), cMath::Vector3Max(GetVertexBlendMask(apMaterial, 1), GetVertexBlendMask(apMaterial, 2)));
+		CompileMaterial(eOhplMatKind_VertexBlend, BlendVars(apMaterial), apMaterial);
 	}
 
 	iTexture* cMaterialType_VertexBlend::GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z || aRenderMode == eMaterialRenderMode_Z_Dissolve)
-			return alUnit == 1 ? mpDissolveTexture : NULL;
-
-		if(aRenderMode != eMaterialRenderMode_Diffuse || alUnit > 11) return NULL;
-
-		return apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + alUnit));
+		return TextureForUnit(eOhplMatKind_VertexBlend, BlendVars(apMaterial), apMaterial, mpGraphics, aRenderMode, alUnit, mpDissolveTexture, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	iGpuProgram* cMaterialType_VertexBlend::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z)			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, 0);
-		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)	return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, eFeature_Z_Dissolve);
-		if(aRenderMode != eMaterialRenderMode_Diffuse)		return NULL;
-
-		cMaterialType_VertexBlend_Vars *pVars = (cMaterialType_VertexBlend_Vars*)apMaterial->GetVars();
-		cVector3f vBlendMask = GetVertexBlendMask(apMaterial);
-		bool bAllAuto = pVars->mvAutoUv[0] && pVars->mvAutoUv[1] && pVars->mvAutoUv[2];
-
-		tFlag lFlags = 0;
-		for(int i=0; i<3; ++i)
-		{
-			for(int lKind=0; lKind<4; ++lKind)
-			{
-				if(apMaterial->GetTexture((eMaterialTexture)(eMaterialTexture_Diffuse_R + i*4 + lKind)) == NULL) continue;
-				if(lKind == 3 && pVars->mvHeightMapScale.v[i] <= 0) continue;
-				lFlags |= eFlagBit_0 << (lKind*3 + i);
-			}
-			if(bAllAuto == false && (pVars->mvAutoUv[i] == false || vBlendMask.v[i] == 0))
-				lFlags |= eFeature_VB_NormalUv_R << i;
-		}
-		if(pVars->mbAlphaMask)		lFlags |= eFeature_VB_AlphaMask;
-		if(pVars->mbOverlayNormal)	lFlags |= eFeature_VB_OverlayNormal;
-		if((lFlags & (eFeature_VB_NormalUv_R*7)) && (lFlags & (eFlagBit_6*63))) lFlags |= eFeature_VB_Tangents;
-
-		return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+		return PickProgram(SelectProgram(eOhplMatKind_VertexBlend, BlendVars(apMaterial), apMaterial, aRenderMode, alSkeleton), mpProgramManager, mpGlobalProgramManager, NULL);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
-
-		apProgram->SetFloat(kVar_afInvFarPlane, 1.0f/apRenderer->GetCurrentFrustum()->GetFarPlane());
-		apProgram->SetMatrixf(kVar_a_mtxInvView, cMath::MatrixInverse(apRenderer->GetCurrentFrustum()->GetViewMatrix()));
+		SetupType(eOhplMatKind_VertexBlend, aRenderMode, apProgram, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
 																iRenderer *apRenderer)
 	{
-		if(aRenderMode != eMaterialRenderMode_Diffuse) return;
-
-		cMaterialType_VertexBlend_Vars *pVars = (cMaterialType_VertexBlend_Vars*)apMaterial->GetVars();
-		apProgram->SetVec3f(kVar_avHeightmapScale, pVars->mvHeightMapScale);
-		apProgram->SetFloat(kVar_afNormalBlendHardness, pVars->mfNormalBlendHardness);
-		apProgram->SetFloat(kVar_afColorBlendHardness, pVars->mfColorBlendHardness);
-		apProgram->SetVec3f(kVar_avTextureScale, pVars->mvTextureScale);
-		apProgram->SetVec3f(kVar_avBlendMask, GetVertexBlendMask(apMaterial));
-		apProgram->SetVec3f(kVar_avDiffuseMask, GetVertexBlendMask(apMaterial, 0));
-		apProgram->SetVec3f(kVar_avSpecularMask, GetVertexBlendMask(apMaterial, 1));
-		apProgram->SetVec3f(kVar_avNormalMask, GetVertexBlendMask(apMaterial, 2));
-
-		//World axes and directional weights in view space, like the normal
-		const cMatrixf &mtxView = apRenderer->GetCurrentFrustum()->GetViewMatrix();
-		cMatrixf mtxBlendBand = cMatrixf::Identity;
-		for(int i=0; i<3; ++i)
-		{
-			cVector3f vAxis(0);
-			vAxis.v[i] = 1;
-			apProgram->SetVec3f(kVar_avBlendVecX + i, cMath::MatrixMul3x3(mtxView, vAxis));
-
-			const cColor &dir = pVars->mvDirectionalWeight[i];
-			cVector3f vDir = cMath::MatrixMul3x3(mtxView, cVector3f(dir.r, dir.g, dir.b));
-			mtxBlendBand.m[i][0] = vDir.x; mtxBlendBand.m[i][1] = vDir.y; mtxBlendBand.m[i][2] = vDir.z; mtxBlendBand.m[i][3] = dir.a;
-		}
-		apProgram->SetMatrixf(kVar_a_mtxBlendBand, mtxBlendBand);
+		SetupMaterial(eOhplMatKind_VertexBlend, BlendVars(apMaterial), aRenderMode, apProgram, apMaterial, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 																iRenderer *apRenderer)
 	{
-		if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			apProgram->SetFloat(kVar_afDissolveAmount, apRenderer->GetObjectCoverage(apObject));
-		}
-		else if(aRenderMode == eMaterialRenderMode_Diffuse)
-		{
-			cMatrixf *pMtx = apObject->GetModelMatrixPtr();
-			apProgram->SetMatrixf(kVar_a_mtxModel, pMtx ? *pMtx : cMatrixf::Identity);
-			apProgram->SetColor4f(kVar_avColorMul, apObject->GetColorMul());
-		}
+		SetupObject(eOhplMatKind_VertexBlend, BlendVars(apObject->GetMaterial()), aRenderMode, apProgram, apObject, apRenderer);
 	}
-
-	//--------------------------------------------------------------------------
 
 	void cMaterialType_VertexBlend::LoadVariables(cMaterial* apMaterial, cResourceVarsObject *apVars)
 	{
@@ -1249,22 +294,6 @@ namespace hpl {
 			apMaterial->SetVars(pVars);
 		}
 
-		float fSmoothness = apVars->GetVarFloat("BlendSmoothness", 0.5f);
-		pVars->mfNormalBlendHardness = cMath::Clamp(1 - fSmoothness, 0.0f, 0.99f);
-		pVars->mfColorBlendHardness = cMath::Clamp(1 - apVars->GetVarFloat("ColorBlendSmoothness", fSmoothness), 0.0f, 0.99f);
-
-		static const char* const vChannels[] = { "R", "G", "B" };
-		for(int i=0; i<3; ++i)
-		{
-			tString sChannel = vChannels[i];
-			pVars->mvTextureScale.v[i] = apVars->GetVarFloat("TextureUVScale" + sChannel, 1);
-			pVars->mvHeightMapScale.v[i] = apVars->GetVarFloat("HeightMapScale" + sChannel, 0.1f);
-			pVars->mvAutoUv[i] = apVars->GetVarBool("AutoUv" + sChannel, true);
-			pVars->mvDirectionalWeight[i] = apVars->GetVarColor("DirectionalWeight" + sChannel, cColor(0,0,0,1));
-		}
-		pVars->mbAlphaMask = apVars->GetVarBool("AlphaMask", true);
-		pVars->mbOverlayNormal = apVars->GetVarBool("OverlayNormal", false);
+		rustmat::LoadVariables(eOhplMatKind_VertexBlend, apMaterial, apVars, static_cast<OhplVertexBlendVars*>(pVars));
 	}
-
-	//--------------------------------------------------------------------------
 }

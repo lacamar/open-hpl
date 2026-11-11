@@ -27,6 +27,8 @@
 #include "physics/PhysicsMaterial.h"
 #include "haptic/HapticTypes.h"
 
+struct OhplImpactCounts;
+
 namespace hpl {
 	
 	class iLowLevelPhysics;
@@ -85,7 +87,7 @@ namespace hpl {
 
 		void SetMaxImpacts(int alX){ mlMaxImpacts = alX;}
 		int GetMaxImpacts(){ return mlMaxImpacts;}
-		int GetNumOfImpacts(){ return (int)mlstImpactCounts.size();}
+		int GetNumOfImpacts();
 
 		bool CanPlayImpact();
 		void AddImpact();
@@ -108,7 +110,7 @@ namespace hpl {
 		tPhysicsWorldList mlstWorlds;
 		tSurfaceDataMap m_mapSurfaceData;
 
-		tPhysicsImpactCountList mlstImpactCounts;
+		OhplImpactCounts *mpImpactCounts;
 		float mfImpactDuration;
 		int mlMaxImpacts;
 		bool mbLog;

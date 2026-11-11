@@ -21,31 +21,12 @@
 #define HPL_RENDERABLE_CONTAINER_BOXTREE_H
 
 #include "scene/RenderableContainer.h"
+#include "scene/RustRenderableContainer.h"
 
 namespace hpl {
 
 	//-------------------------------------------
 
-	class cBoxTreeTempNode;
-
-	typedef std::list<cBoxTreeTempNode*> tBoxTreeTempNodeList;
-	typedef std::list<cBoxTreeTempNode*>::iterator tBoxTreeTempNodeListIt;
-
-	class cBoxTreeTempNode
-	{
-	public:
-		cBoxTreeTempNode(cBoxTreeTempNode *apParent) : mpParent(apParent), mlSplitAxisCount(0) {}
-		~cBoxTreeTempNode(){ STLDeleteAll(mlstChildren); };
-
-		cBoxTreeTempNode *mpParent;
-		int mlSplitAxisCount;
-
-		tBoxTreeTempNodeList mlstChildren;
-		tRenderableList mlstObjects;
-	};
-
-	//-------------------------------------------
-	
 	class cRCNode_BoxTree : public iRenderableContainerNode
 	{
 	friend class cRenderableContainer_BoxTree;
@@ -93,19 +74,8 @@ namespace hpl {
 		
 
 	private:
-		void CompileTempNode(cBoxTreeTempNode *apNode, int alLevel, int alSplitAxis);
-		void BuildNodeFromTemp(cBoxTreeTempNode *apTempNode, cRCNode_BoxTree *apNode, int alLevel);
-
 		void RenderDebugNode(cRendererCallbackFunctions *apFunctions, cRCNode_BoxTree *apNode, int alLevel);
 
-		void CalculateMinMax(tRenderableList *apObjectList, cVector3f& avMin, cVector3f& avMax);
-		cVector3f CalculateSize(tRenderableList *apObjectList);
-
-		float CalculateObjectsVolume(tRenderableList &alstObjects);
-		float CalculateBestCutPlane(tRenderableList &alstObjects, int alAxis, const cVector3f &avNodeSize);
-
-		int GetSplitGroup(iRenderable *apObject, float afCutPlane, int alAxis, const cVector3f &avNodeSize);
-		
 		cRCNode_BoxTree* mpRoot;
 
 		int mlMinLeafObjects;

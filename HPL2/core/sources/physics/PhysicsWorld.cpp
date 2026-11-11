@@ -34,6 +34,7 @@
 #include "scene/World.h"
 #include "system/Platform.h"
 #include "scene/SoundEntity.h"
+#include "physics/RustPhysics.h"
 
 namespace hpl {
 
@@ -460,14 +461,11 @@ namespace hpl {
 		{
 			iPhysicsBody *pBody = mvTempBodies[i];
 			
-			if(pBody->IsActive()==false)continue;
-			if(pBody->IsCharacter() && abCollideCharacter==false) continue;
-			if(pBody == apSkipBody) continue;
-			if(abSkipStatic && pBody->GetMass()==0 && pBody->IsCharacter()==false) continue;
-			if(abIsCharacter && pBody->GetCollideCharacter()==false) continue;
-			if(abIsCharacter==false && pBody->GetCollide()==false) continue;
-			if(alMinPushStrength > pBody->GetPushStrength()) continue;
-			if(iPhysicsBody::CollideFlagsMatch(alCollideFlags, pBody->GetCollideFlags())==false) continue;
+			OhplBodyFilter filter = { pBody->IsActive(), pBody->IsCharacter(), pBody == apSkipBody, pBody->GetMass(),
+				pBody->GetCollideCharacter(), pBody->GetCollide(), (int32_t)pBody->GetPushStrength(),
+				iPhysicsBody::CollideFlagsMatch(alCollideFlags, pBody->GetCollideFlags()),
+				abCollideCharacter, abIsCharacter, abSkipStatic, (int32_t)alMinPushStrength };
+			if(ohpl_phys_world_body_passes(&filter)==false) continue;
 
 			//Note: Still make this check, since GetBodiesInBV is not exact.
 			if(cMath::CheckBVIntersection(boundingVolume,*pBody->GetBoundingVolume())==false)
@@ -490,11 +488,7 @@ namespace hpl {
 				{
 					cCollidePoint &point = collideData.mvContactPoints[i];
 				
-					cVector3f vPush = point.mvNormal*point.mfDepth;
-
-					if(std::abs(apPushVector->x) < std::abs(vPush.x)) apPushVector->x = vPush.x;
-					if(std::abs(apPushVector->y) < std::abs(vPush.y)) apPushVector->y = vPush.y;
-					if(std::abs(apPushVector->z) < std::abs(vPush.z)) apPushVector->z = vPush.z;
+					ohpl_phys_world_merge_push(apPushVector, &point.mvNormal, point.mfDepth);
 				}
 			}
 			if(bRet)bCollide = true;

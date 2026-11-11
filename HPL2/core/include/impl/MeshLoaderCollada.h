@@ -27,7 +27,6 @@
 #include "physics/PhysicsJoint.h"
 #include "system/MemoryManager.h"
 
-class TiXmlElement;
 
 namespace hpl {
 
@@ -550,45 +549,11 @@ namespace hpl {
 							tColladaAnimationVec *apColladaAnimVec,
 							cColladaScene *apColladaScene);
 
-		void LoadColladaScene(TiXmlElement* apRootElem,cColladaNode *apParentNode, cColladaScene *apScene,
-								tColladaLightVec *apColladaLightVec);
-
-		void LoadAnimations(TiXmlElement* apRootElem, tColladaAnimationVec &avAnimations,
-								cColladaScene *apColladaScene);
-
-		void LoadImages(TiXmlElement* apRootElem, tColladaImageVec &avColladaImageVec);
-		
-		void LoadTextures(TiXmlElement* apRootElem, tColladaTextureVec &avColladaTextureVec);
-
-		void LoadMaterials(TiXmlElement* apRootElem, tColladaMaterialVec &avColladaMaterialVec);
-		
-		void LoadLights(TiXmlElement* apRootElem, tColladaLightVec &avColladaLightVec);
-
-		void LoadGeometry(TiXmlElement* apRootElem, tColladaGeometryVec &avColladaGeometryVec);
-		void LoadVertexData(TiXmlElement* apSourceElem, tVector3fVec &avVtxVec);
-		
-		void LoadControllers(TiXmlElement* apRootElem, tColladaControllerVec &avColladaControllerVec,
-							tColladaGeometryVec *apColladaGeometryVec);
-		void LoadJointData(TiXmlElement* apSourceElem, cColladaController &aController);
-
-		//Helpers
-		void SplitVertices(cColladaGeometry &aGeometry,tColladaExtraVtxListVec &avExtraVtxVec, 
-							tVertexVec &avVertexVec, tUIntVec &avIndexVec);
-
-
-		void FillVertexVec(const char* apChars,tVector3fVec &avVtxVec, int alElements, int alVtxCount);
-		tString GetTopString(const tString asPath);
 		tString GetMaterialTextureFile(const tString &asMaterial, tColladaMaterialVec &avColladaMaterialVec,
 																tColladaTextureVec &avColladaTextureVec,
 																tColladaImageVec &avColladaImageVec);
 
-		cVector3f GetVectorPos(const cVector3f &avVec);
-		cVector3f GetVectorNormal(const cVector3f &avVec);
 		cMatrixf GetMatrix(const cMatrixf &amtxA);
-		cVector3f GetVectorPosFromPtr(float *apVec);
-		cVector3f GetVectorRotationFromPtr(float *apVec);
-		cVector3f GetVectorScaleFromPtr(float *apVec);
-		
 	};
 
 };

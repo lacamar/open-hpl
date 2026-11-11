@@ -18,6 +18,9 @@
  */
 
 #include "graphics/FontData.h"
+#include "graphics/RustGraphics.h"
+#include <stddef.h>
+#include <stdexcept>
 #include <stdarg.h>
 #include <stdlib.h>
 
@@ -209,125 +212,23 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool IsChineseFullwidthChar(wchar_t aChar)
+	static OhplGlyphs GlyphView(const tGlyphVec& avGlyphs, unsigned short alFirst, unsigned short alLast)
 	{
-		switch (aChar)
-		{
-		case 12290: // punctuation mark
-		case 65292: // comma
-		case 65311: // question mark
-		case 65281: // exclamation mark
-			return true;
-		default:
-			return false;
-		}
-		return false;
+		OhplGlyphs g = { (const void* const*)avGlyphs.data(), avGlyphs.size(), alFirst, alLast, offsetof(cGlyph, mfAdvance) };
+		return g;
 	}
 
-
-	struct cRowLength
+	static void PushRow(void* apCtx, const wchar_t* apRow, size_t alLen)
 	{
-		unsigned int mlPos;
-		bool mbIncr;
-	};
-
+		((tWStringVec*)apCtx)->push_back(tWString(apRow, alLen));
+	}
 
 	void iFontData::GetWordWrapRows(float afLength,float afFontHeight,cVector2f avSize,
 							const tWString& asString,tWStringVec *apRowVec)
 	{
-		int rows = 0;
-
-		unsigned int pos;
-		unsigned int first_letter=0;
-		unsigned int last_space=0;
-
-		std::list<cRowLength> rowLengthList;
-		cRowLength row;
-		float fTextLength;
-
-		for(pos = 0; pos < asString.size();pos++)
-		{
-			//Log("char: %d\n",(char)asString[pos]);
-			if(asString[pos] == _W(' ') || asString[pos] == _W('\n') || IsChineseFullwidthChar(asString[pos]))
-			{
-				tWString temp = asString.substr(first_letter, pos-first_letter);
-				fTextLength =  GetLength(avSize,temp.c_str());
-				
-				//Log("r:%d p:%d f:%d l:%d Temp:'%s'\n",rows,pos,first_letter,last_space, temp.c_str());
-				bool nothing = true;
-				if(fTextLength > afLength && IsChineseFullwidthChar(asString[pos]) == false)
-				{
-					rows++;
-					
-					row.mbIncr = true;
-					row.mlPos = last_space;
-					rowLengthList.push_back(row);
-
-					first_letter=last_space+1;
-					last_space = pos;
-					nothing = false;
-				}
-				else if (fTextLength > afLength && IsChineseFullwidthChar(asString[pos]) == true)
-				{	
-					row.mbIncr = false;
-					row.mlPos = last_space + 1;
-					rowLengthList.push_back(row);
-
-					first_letter = last_space + 1;
-					last_space = pos;
-					rows++;
-					nothing = false;
-				}
-
-				if(asString[pos] == _W('\n'))
-				{
-					last_space = pos;
-					first_letter=last_space+1;
-					
-					row.mbIncr = true;
-					row.mlPos = last_space;
-					rowLengthList.push_back(row);
-
-
-					rows++;
-					nothing = false;
-				}
-				if(nothing)
-				{
-					last_space = pos;
-				}
-			}
-		}
-		tWString temp =  asString.substr(first_letter, pos-first_letter);
-		fTextLength = GetLength(avSize,temp.c_str());
-		if(fTextLength > afLength)
-		{
-			rows++;
-			row.mlPos = last_space;
-			row.mbIncr = true;
-			rowLengthList.push_back(row);
-		}
-
-		if(rows==0)
-		{
-			apRowVec->push_back(asString.c_str());
-		}
-		else
-		{
-			first_letter=0;
-			unsigned int i=0;
-
-			for(std::list<cRowLength>::iterator it = rowLengthList.begin();it != rowLengthList.end();++it)
-			{
-				apRowVec->push_back(asString.substr(first_letter, it->mlPos -first_letter).c_str());
-				i++;
-				first_letter = it->mlPos;
-				if (it->mbIncr)
-					first_letter++;
-			}
-			apRowVec->push_back(asString.substr(first_letter).c_str());
-
-		}
+		OhplGlyphs g = GlyphView(mvGlyphs, mlFirstChar, mlLastChar);
+		if(ohpl_font_word_wrap(&g, afLength, avSize.x, asString.data(), asString.size(), PushRow, apRowVec)==false)
+			throw std::out_of_range("basic_string::substr");
 	}
 	
 	//-----------------------------------------------------------------------
@@ -335,7 +236,6 @@ namespace hpl {
 	float iFontData::GetLength(const cVector2f& avSize,const wchar_t* sText)
 	{
 		int lCount=0;
-		float lXAdd =0;
 		float fLength =0;
 		while(sText[lCount] != 0)
 		{
@@ -349,9 +249,6 @@ namespace hpl {
 			cGlyph *pGlyph = GetGlyph(lGlyphNum);
 			if(pGlyph)
 			{
-				cVector2f vOffset(pGlyph->mvOffset * avSize);
-				cVector2f vSize(pGlyph->mvSize * avSize);
-
 				fLength += pGlyph->mfAdvance*avSize.x; 
 			}
 			lCount++;
@@ -392,16 +289,12 @@ namespace hpl {
 		
 		//////////////////////////
 		//Sizes
-		cVector2f vSize;
-		vSize.x = ((float)avSize.x)/((float)avFontSize.x) * mvSizeRatio.x;
-		vSize.y = ((float)avSize.y)/((float)avFontSize.y) * mvSizeRatio.y;
+		float vM[5];
+		ohpl_font_glyph_metrics(&avOffset, &avSize, &avFontSize, alAdvance, &mvSizeRatio, vM);
+		cVector2f vOffset(vM[0], vM[1]);
+		cVector2f vSize(vM[2], vM[3]);
+		float fAdvance = vM[4];
 
-		cVector2f vOffset;
-		vOffset.x = ((float)avOffset.x)/((float)avFontSize.x) * mvSizeRatio.x;
-		vOffset.y = ((float)avOffset.y)/((float)avFontSize.y) * mvSizeRatio.y;
-		
-        float fAdvance = ((float)alAdvance)/((float)avFontSize.x) * mvSizeRatio.x;
-		
 		cGlyph* pGlyph = hplNew( cGlyph,(pGuiGfx,vOffset,vSize,fAdvance));
 
 		return pGlyph;

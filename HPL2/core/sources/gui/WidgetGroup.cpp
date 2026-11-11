@@ -25,6 +25,7 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiSkin.h"
 #include "gui/GuiGfxElement.h"
+#include "gui/RustWidget.h"
 
 #include "gui/WidgetLabel.h"
 
@@ -83,7 +84,9 @@ namespace hpl {
 
 	void cWidgetGroup::OnInit()
 	{
-		mpHeader = mpSet->CreateWidgetLabel(cVector3f(mfHeaderOffset,-mpDefaultFont->mvSize.y*0.5f,0.1f),0, msText, this);
+		cVector3f vHeaderPos;
+		ohpl_wd_group_header_pos(mfHeaderOffset, mpDefaultFont->mvSize.y, &vHeaderPos);
+		mpHeader = mpSet->CreateWidgetLabel(vHeaderPos,0, msText, this);
 		mpHeader->SetTextAlign(eFontAlign_Left);
 		mpHeader->SetAutogenerateSize(true);
 
@@ -122,90 +125,23 @@ namespace hpl {
 
 	void cWidgetGroup::OnDraw(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
-		const cVector3f& vPos = GetGlobalPosition();
+		OhplWdGroupDraw d;
+		d.global = GetGlobalPosition();
+		d.size = mvSize;
+		d.has_background = mpGfxBackground != NULL;
+		d.header_breaks_border = mbHeaderBreaksUpperBorder;
 		if(mbHeaderBreaksUpperBorder)
 		{
-			const cVector3f& vHeaderPos = mpHeader->GetLocalPosition();
-			cVector3f vPostHeaderPos = cVector3f(vHeaderPos.x + mpHeader->GetSize().x,0,0);
-
-			float fPreHeaderWidth = vHeaderPos.x;
-			float fPostHeaderWidth = mvSize.x - fPreHeaderWidth - mpHeader->GetSize().x;
-
-			mpSet->SetDrawOffset(vPos);
-
-			cVector3f vOffset;
-			cVector2f vSize;
-
-			vOffset.z = 0;
-
-			///////////////////////
-			// Background
-			if(mpGfxBackground)
-			{
-				vOffset.x = mvGfxCorners[0]->GetActiveSize().x;
-				vOffset.y = mvGfxCorners[0]->GetActiveSize().y;
-
-				vSize = mvSize - mvGfxCorners[2]->GetActiveSize()-mvGfxCorners[0]->GetActiveSize();
-				
-				mpSet->DrawGfx(mpGfxBackground,vOffset,
-								vSize,
-								cColor(1,1));
-			}
-
-			{
-				///////////////////////
-				// Borders
-				//Right
-				mpSet->DrawGfx(	mvGfxBorders[0],
-					cVector3f(	mvSize.x - mvGfxBorders[0]->GetActiveSize().x,
-					mvGfxCorners[1]->GetActiveSize().y,0),
-					cVector2f(	mvGfxBorders[0]->GetImageSize().x, 
-					mvSize.y - (mvGfxCorners[2]->GetActiveSize().y +
-					mvGfxCorners[1]->GetActiveSize().y)));
-				//Left
-				mpSet->DrawGfx(	mvGfxBorders[1],
-					cVector3f(	0,mvGfxCorners[0]->GetActiveSize().y,0),
-					cVector2f(	mvGfxBorders[1]->GetImageSize().x, 
-					mvSize.y - (mvGfxCorners[3]->GetActiveSize().y + 
-					mvGfxCorners[0]->GetActiveSize().y)));
-
-				//Up
-				mpSet->DrawGfx(mvGfxBorders[2], 
-								cVector3f(mvGfxCorners[0]->GetActiveSize().x,0,0), 
-								cVector2f(fPreHeaderWidth-4, mvGfxBorders[2]->GetActiveSize().y));
-				mpSet->DrawGfx(mvGfxBorders[2], 
-								vPostHeaderPos+cVector3f(4,0,0) , 
-								cVector2f(fPostHeaderWidth-mvGfxCorners[1]->GetActiveSize().x-4, mvGfxBorders[2]->GetActiveSize().y));
-
-				//Down
-				mpSet->DrawGfx(	mvGfxBorders[3],
-					cVector3f(	mvGfxCorners[3]->GetActiveSize().x, 
-					mvSize.y - mvGfxCorners[3]->GetActiveSize().y,0),
-					cVector2f(	mvSize.x - (mvGfxCorners[2]->GetActiveSize().x+
-					mvGfxCorners[3]->GetActiveSize().x), 
-					mvGfxBorders[3]->GetImageSize().y));
-
-
-				///////////////////////
-				// Corners
-				//Left Up
-				mpSet->DrawGfx(mvGfxCorners[0], cVector3f(0,0,0));
-				//Right Up
-				mpSet->DrawGfx(mvGfxCorners[1], cVector3f(	mvSize.x - mvGfxCorners[1]->GetActiveSize().x,0,0));
-
-				//Right Down
-				mpSet->DrawGfx(mvGfxCorners[2], cVector3f(	mvSize.x -  mvGfxCorners[2]->GetActiveSize().x,
-					mvSize.y -  mvGfxCorners[2]->GetActiveSize().y,0));
-				//Left Down
-				mpSet->DrawGfx(mvGfxCorners[3], cVector3f(	0,mvSize.y - mvGfxCorners[3]->GetActiveSize().y,0));
-			}
-
-			mpSet->SetDrawOffset(0);
+			d.header_pos = mpHeader->GetLocalPosition();
+			d.header_size = mpHeader->GetSize();
 		}
-		else
-		{
-			DrawBordersAndCorners(mpGfxBackground, mvGfxBorders, mvGfxCorners, vPos, mvSize);
-		}
+
+		OhplWdGfxTable table;
+		table.SetFrame(mpGfxBackground, mvGfxBorders, mvGfxCorners);
+
+		OhplWdOp ops[kOhplWdMaxOps];
+		size_t lCount = ohpl_wd_group_draw(ops, kOhplWdMaxOps, &d, table.m);
+		OhplWdRun(mpSet, ops, lCount, table, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------

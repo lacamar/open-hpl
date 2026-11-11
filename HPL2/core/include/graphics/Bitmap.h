@@ -83,11 +83,6 @@ namespace hpl {
 		
 		
 	private:
-		void CopyPixel(	unsigned char* apDest, ePixelFormat aDestFormat, 
-						unsigned char* apSrc, ePixelFormat aSrcFormat);
-		unsigned char* ConvertDataToFormat(unsigned char* apPixelData, ePixelFormat aSrcFormat, ePixelFormat aDestFormat);
-		unsigned char* ConvertDataToRGBA(unsigned char* apPixelData, ePixelFormat aFormat);
-
 		std::vector<cBitmapData> mvImages;
 		bool mbDataIsCompressed;
 

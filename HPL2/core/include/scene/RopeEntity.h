@@ -115,6 +115,7 @@ namespace hpl {
 		bool mbMultiplyAlphaWithColor;
 
 		int mlLastUpdateCount;
+		std::vector<cVector3f> mvPoints;
 	};
 
 };

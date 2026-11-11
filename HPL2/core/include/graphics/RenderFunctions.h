@@ -21,6 +21,7 @@
 #define HPL_RENDER_FUNCTIONS_H
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RustRender.h"
 #include "math/MathTypes.h"
 
 namespace hpl {
@@ -38,8 +39,53 @@ namespace hpl {
 
 	//---------------------------------------------
 	
-	class iRenderFunctions
+	// Layout contract with rust/src/render/funcs.rs State.
+	struct OhplRenderState
 	{
+		const cMatrixf *mpCurrentProjectionMatrix;
+		cVector2l mvRenderTargetSize;		//Use this when ever some calculations involving the size of rendertarget is involved!
+		cVector2l mvCurrentFrameBufferSize;	//This shall NOT be used in calculations and is simply as a helper
+		cVector2l mvScreenSize;
+		cVector2f mvScreenSizeFloat;
+		bool mbLog;
+		bool mbInvertCullMode;
+		bool mbUseGlobalScissorRect;
+		bool mbGlobalScissorRectActive;
+		cVector2l mvGlobalScissorRectPos;
+		cVector2l mvGlobalScissorRectSize;
+		bool mbCurrentDepthTest;
+		bool mbCurrentDepthWrite;
+		bool mbCurrentStencilActive;
+		cVector2l mvCurrentScissorRectPos;
+		cVector2l mvCurrentScissorRectSize;
+		bool mbCurrentScissorActive;
+		eDepthTestFunc mCurrentDepthTestFunc;
+		bool mbCurrentCullActive;
+		eCullMode mCurrentCullMode;
+		eMaterialChannelMode mCurrentChannelMode;
+		eMaterialAlphaMode mCurrentAlphaMode;
+		float mfCurrentAlphaLimit;
+		eMaterialBlendMode mCurrentBlendMode;
+		iTexture *mvCurrentTexture[kMaxTextureUnits];
+		iGpuProgram* mpCurrentProgram;
+		iVertexBuffer *mpCurrentVtxBuffer;
+		cMatrixf *mpCurrentMatrix;
+		cMaterial *mpCurrentMaterial;
+		iMaterialType *mpCurrentMaterialType;
+	};
+
+	static_assert(sizeof(OhplRenderState) == 280 && offsetof(OhplRenderState, mvScreenSizeFloat) == 32 &&
+				  offsetof(OhplRenderState, mbLog) == 40 && offsetof(OhplRenderState, mvGlobalScissorRectPos) == 44 &&
+				  offsetof(OhplRenderState, mbCurrentDepthTest) == 60 && offsetof(OhplRenderState, mvCurrentScissorRectPos) == 64 &&
+				  offsetof(OhplRenderState, mbCurrentScissorActive) == 80 && offsetof(OhplRenderState, mCurrentDepthTestFunc) == 84 &&
+				  offsetof(OhplRenderState, mCurrentCullMode) == 92 && offsetof(OhplRenderState, mfCurrentAlphaLimit) == 104 &&
+				  offsetof(OhplRenderState, mCurrentBlendMode) == 108 && offsetof(OhplRenderState, mvCurrentTexture) == 112 &&
+				  offsetof(OhplRenderState, mpCurrentProgram) == 240 && offsetof(OhplRenderState, mpCurrentMaterialType) == 272,
+				  "OhplRenderState layout");
+
+	class iRenderFunctions : protected OhplRenderState
+	{
+		friend struct cRenderFunctionsBackend;
 	public:
 		virtual ~iRenderFunctions() { }
 
@@ -127,43 +173,8 @@ namespace hpl {
 
 		cFrustum *mpCurrentFrustum;
 		cRenderTarget *mpCurrentRenderTarget;
-		const cMatrixf *mpCurrentProjectionMatrix;
 
-		cVector2l mvRenderTargetSize;		//Use this when ever some calculations involving the size of rendertarget is involved!
-		cVector2l mvCurrentFrameBufferSize;	//This shall NOT be used in calculations and is simply as a helper
-
-		cVector2l mvScreenSize;
-		cVector2f mvScreenSizeFloat;
-
-		bool mbLog;
-		bool mbInvertCullMode;
-
-		bool mbUseGlobalScissorRect;
-		bool mbGlobalScissorRectActive;
-		cVector2l mvGlobalScissorRectPos;
-		cVector2l mvGlobalScissorRectSize;
-
-		bool mbCurrentDepthTest;
-		bool mbCurrentDepthWrite;
-		bool mbCurrentStencilActive;
-		cVector2l mvCurrentScissorRectPos;
-		cVector2l mvCurrentScissorRectSize;
-		bool mbCurrentScissorActive;
-		eDepthTestFunc mCurrentDepthTestFunc;
-		bool mbCurrentCullActive;
-		eCullMode mCurrentCullMode;
-		eMaterialChannelMode mCurrentChannelMode;
-		eMaterialAlphaMode mCurrentAlphaMode;
-		float mfCurrentAlphaLimit;
-		eMaterialBlendMode mCurrentBlendMode;
-		iTexture *mvCurrentTexture[kMaxTextureUnits];
-		iGpuProgram* mpCurrentProgram;
-		iVertexBuffer *mpCurrentVtxBuffer;
-		cMatrixf *mpCurrentMatrix;
-
-		cMaterial *mpCurrentMaterial;
-		iMaterialType *mpCurrentMaterialType;
-		
+		OhplRfBackend mBackend;
 		cMatrixf m_mtxNULL; //used to reset current matrix pointer.
 	};
 	

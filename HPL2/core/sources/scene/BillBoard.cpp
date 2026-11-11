@@ -18,6 +18,7 @@
  */
 
 #include "scene/BillBoard.h"
+#include "scene/RustParticles.h"
 
 #include "impl/tinyXML/tinyxml.h"
 
@@ -138,20 +139,7 @@ namespace hpl {
 		mvSize = avSize;
 		mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));
 
-		float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		
-		cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-								cVector3f((mvSize.x/2),(mvSize.y/2),0)};
-
-		for(int i=0; i<4;++i)
-		{
-			pPos[0] = vCoords[i].x;
-			pPos[1] = vCoords[i].y;
-			pPos[2] = vCoords[i].z;
-			pPos+=4;
-		}
+		ohpl_bb_vertex_positions(&mvSize, mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position));
 
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
 
@@ -215,18 +203,9 @@ namespace hpl {
 
 	void cBillboard::UpdateVertexColors()
 	{
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-		float fRgbMul = mfHaloAlpha * mfBrightness;
-		cColor col = mColor;
-		if(cRendererDeferred::GetHdr()) col = cColor(col.r*col.r, col.g*col.g, col.b*col.b, col.a);
-		for(int i=0; i<4;++i)
-		{
-			pColors[0] = col.r * fRgbMul;
-			pColors[1] = col.g * fRgbMul;
-			pColors[2] = col.b * fRgbMul;
-			pColors[3] = mColor.a * mfHaloAlpha;
-			pColors+=4;
-		}
+		ohpl_bb_vertex_colors(&mColor, mfBrightness, mfHaloAlpha, cRendererDeferred::GetHdr(),
+							  mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0));
+
 		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
@@ -257,66 +236,15 @@ namespace hpl {
 			return &GetWorldMatrix();
 		}
 
-		//////////////////////
-		// Set up for all rotating billboards
-		m_mtxTempTransform = GetWorldMatrix();
-		cVector3f vForward, vRight, vUp;
-
-		cVector3f vCameraForward = apFrustum->GetOrigin() - GetWorldPosition();
-		vCameraForward.Normalize();
-
-		//////////////////////
-		// Point
-		if(mType == eBillboardType_Point)
-		{
-			vForward = vCameraForward;
-			vRight = cMath::Vector3Cross(apFrustum->GetViewMatrix().GetUp(), vForward);
-			vUp = cMath::Vector3Cross(vForward,vRight);
-		}
-		//////////////////////
-		// Axis
-		else if(mType == eBillboardType_Axis)
-		{
-			vUp = cMath::MatrixMul(GetWorldMatrix().GetRotation(),mvAxis);
-			vUp.Normalize();
-			
-			if(vUp == vCameraForward)
-			{
-				vRight = cMath::Vector3Cross(vUp, vCameraForward);
-				Warning("Billboard Right vector is not correct! Contact programmer!\n");
-			}
-			else
-				vRight = cMath::Vector3Cross(vUp, vCameraForward);
-
-			vRight.Normalize();
-			vForward = cMath::Vector3Cross(vRight, vUp);
-
-			//vForward.Normalize();
-			//vUp.Normalize();
-		}
-
-		if(mfForwardOffset!=0)
-		{
-			cVector3f vPos = m_mtxTempTransform.GetTranslation();
-			vPos +=  vCameraForward * mfForwardOffset;
-			m_mtxTempTransform.SetTranslation(vPos);
-		}
-
-		//Set right vector
-		m_mtxTempTransform.m[0][0] = vRight.x;
-		m_mtxTempTransform.m[1][0] = vRight.y;
-		m_mtxTempTransform.m[2][0] = vRight.z;
-
-		//Set up vector
-		m_mtxTempTransform.m[0][1] = vUp.x;
-		m_mtxTempTransform.m[1][1] = vUp.y;
-		m_mtxTempTransform.m[2][1] = vUp.z;
-
-		//Set forward vector
-		m_mtxTempTransform.m[0][2] = vForward.x;
-		m_mtxTempTransform.m[1][2] = vForward.y;
-		m_mtxTempTransform.m[2][2] = vForward.z;
-
+		OhplBbModelIn in;
+		in.mlKind = mType;
+		in.mfForwardOffset = mfForwardOffset;
+		in.m_mtxWorld = GetWorldMatrix();
+		in.mvCamOrigin = apFrustum->GetOrigin();
+		in.mvViewUp = apFrustum->GetViewMatrix().GetUp();
+		in.mvAxis = mvAxis;
+		if(ohpl_bb_model_matrix(&in, &m_mtxTempTransform))
+			Warning("Billboard Right vector is not correct! Contact programmer!\n");
 		return &m_mtxTempTransform;
 	}
 

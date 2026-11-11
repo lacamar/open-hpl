@@ -33,102 +33,47 @@ namespace hpl {
 
 	cLogicTimer::cLogicTimer(int alUpdatesPerSec, iLowLevelSystem *apLowLevelSystem)
 	{
-		mlMaxUpdates = alUpdatesPerSec/10;
-		mlUpdateCount =0;
-		
 		mpLowLevelSystem = apLowLevelSystem;
-
-		mfSpeedMul = 1.0f;
-
-		SetUpdatesPerSec(alUpdatesPerSec);
+		ohpl_lt_init(&mTimer, alUpdatesPerSec, cPlatform::GetApplicationTime());
 	}
-
-	//-----------------------------------------------------------------------
 
 	cLogicTimer::~cLogicTimer()
 	{
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 	void cLogicTimer::Reset()
 	{
-		mlLocalTime = (double)cPlatform::GetApplicationTime();
+		ohpl_lt_reset(&mTimer, cPlatform::GetApplicationTime());
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cLogicTimer::WantUpdate()
 	{
-		++mlUpdateCount;
-		if(mlUpdateCount > mlMaxUpdates) return false;
-
-		if(mlLocalTime< (double)cPlatform::GetApplicationTime())
-		{
-			Update();
-			return true;
-		}
-		return false;
+		return ohpl_lt_want_update(&mTimer, cPlatform::GetApplicationTime());
 	}
-	
-	//-----------------------------------------------------------------------
 
 	void cLogicTimer::EndUpdateLoop()
 	{
-		if(mlUpdateCount > mlMaxUpdates){
-			Reset();
-		}
-
-		mlUpdateCount=0;
+		ohpl_lt_end_update_loop(&mTimer, cPlatform::GetApplicationTime());
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLogicTimer::SetUpdatesPerSec(int alUpdatesPerSec)
 	{
-		mlLocalTimeAdd = 1000.0/((double)alUpdatesPerSec);
-		Reset();
+		ohpl_lt_set_updates_per_sec(&mTimer, alUpdatesPerSec, cPlatform::GetApplicationTime());
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLogicTimer::SetMaxUpdates(int alMax)
 	{
-		mlMaxUpdates = alMax;
+		mTimer.maxUpdates = alMax;
 	}
-
-	//-----------------------------------------------------------------------
 
 	int cLogicTimer::GetUpdatesPerSec()
 	{
-		return (int)std::lround(1000.0 / mlLocalTimeAdd);
+		return ohpl_lt_updates_per_sec(&mTimer);
 	}
-	
-	//-----------------------------------------------------------------------
 
 	float cLogicTimer::GetStepSize()
 	{
-		return (float)(mlLocalTimeAdd/1000.0);
+		return ohpl_lt_step_size(&mTimer);
 	}
-
-	//-----------------------------------------------------------------------
-	
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cLogicTimer::Update()
-	{
-		mlLocalTime += mlLocalTimeAdd/mfSpeedMul;
-	}
-
-	//-----------------------------------------------------------------------
 
 }

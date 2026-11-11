@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -55,6 +56,12 @@
 #include "impl/scriptarray.h"
 
 #include "system/String.h"
+#include "impl/RustImpl.h"
+
+static void AppendSink(void *apCtx, const char *apData, size_t alLen)
+{
+	((std::string*)apCtx)->append(apData, alLen);
+}
 
 #ifndef WIN32
 #include <clocale>
@@ -102,9 +109,8 @@ static void AddSteamRoot(std::set<std::string> &aSet, const std::string &asPath)
 {
 	char vReal[PATH_MAX];
 	if(realpath(asPath.c_str(), vReal) == NULL) return;
-	std::string sReal = std::string(vReal) + "/";
-	size_t lPos = sReal.find("/steamapps/common/");
-	if(lPos != std::string::npos) aSet.insert(sReal.substr(0, lPos + 17));
+	std::string sRoot;
+	if(ohpl_sys_steam_root(vReal, AppendSink, &sRoot)) aSet.insert(sRoot);
 }
 
 static void AddSteamLibraryFolders(std::set<std::string> &aSet, const std::string &asVdf)
@@ -112,11 +118,8 @@ static void AddSteamLibraryFolders(std::set<std::string> &aSet, const std::strin
 	std::ifstream file(asVdf);
 	for(std::string sLine; std::getline(file, sLine);)
 	{
-		size_t lKey = sLine.find("\"path\"");
-		if(lKey == std::string::npos) continue;
-		size_t lStart = sLine.find('"', lKey + 6);
-		size_t lEnd = lStart == std::string::npos ? lStart : sLine.find('"', lStart + 1);
-		if(lEnd != std::string::npos) AddSteamRoot(aSet, sLine.substr(lStart + 1, lEnd - lStart - 1) + "/steamapps/common");
+		std::string sPath;
+		if(ohpl_sys_vdf_path(sLine.data(), sLine.size(), AppendSink, &sPath)) AddSteamRoot(aSet, sPath + "/steamapps/common");
 	}
 }
 
@@ -152,15 +155,15 @@ static bool ProtectSteamLibraries()
 	}
 	else
 	{
-		static const unsigned long vFlags[][2] = { {ST_NOSUID, MS_NOSUID}, {ST_NODEV, MS_NODEV}, {ST_NOEXEC, MS_NOEXEC},
-			{ST_NOATIME, MS_NOATIME}, {ST_NODIRATIME, MS_NODIRATIME}, {ST_RELATIME, MS_RELATIME} };
+		static_assert(ST_NOSUID == 2 && ST_NODEV == 4 && ST_NOEXEC == 8 && ST_NOATIME == 1024 && ST_NODIRATIME == 2048 && ST_RELATIME == 4096 &&
+			MS_RDONLY == 1 && MS_NOSUID == 2 && MS_NODEV == 4 && MS_NOEXEC == 8 && MS_REMOUNT == 32 && MS_NOATIME == 1024 &&
+			MS_NODIRATIME == 2048 && MS_BIND == 4096 && MS_RELATIME == (1 << 21), "mount flags cross the ABI");
 		for(const std::string &sRoot : setRoots)
 		{
 			struct statvfs st;
-			unsigned long lFlags = MS_BIND | MS_REMOUNT | MS_RDONLY;
+			unsigned long lFlags = 0;
 			bool bOk = mount(sRoot.c_str(), sRoot.c_str(), NULL, MS_BIND | MS_REC, NULL) == 0 && statvfs(sRoot.c_str(), &st) == 0;
-			for(size_t i = 0; bOk && i < sizeof(vFlags) / sizeof(vFlags[0]); ++i)
-				if(st.f_flag & vFlags[i][0]) lFlags |= vFlags[i][1];
+			if(bOk) lFlags = (unsigned long)ohpl_sys_remount_flags(st.f_flag);
 			if(!bOk || mount(NULL, sRoot.c_str(), NULL, lFlags, NULL) != 0)
 				fprintf(stderr, "open-hpl: could not make '%s' read-only: %s\n", sRoot.c_str(), strerror(errno));
 		}
@@ -200,11 +203,12 @@ int main(int argc, char *argv[])
 	bool bGotGameDirArg = false;
 	hpl::tString cmdline = "";
 	for (int i=1; i < argc; i++) {
-        if (strcmp(argv[i], "-cwd") == 0) {
+		unsigned lKind = ohpl_sys_classify_arg(argv[i], bGotGameDirArg);
+        if (lKind == kOhplArgCwd) {
             cwd = true;
-        } else if (strncmp(argv[i], "-psn", 4) == 0) {
+        } else if (lKind == kOhplArgSkip) {
             // skip "finder" process number
-		} else if (bGotGameDirArg == false && argv[i][0] != '-') {
+		} else if (lKind == kOhplArgGameDir) {
 			struct stat dirStat;
 			if (stat(argv[i], &dirStat) == 0 && S_ISDIR(dirStat.st_mode))
 			{
@@ -303,19 +307,12 @@ namespace hpl {
 	static bool PathLooksLikeSteamInstall(const tWString &asFile)
 	{
 		tString sPath = cString::To8Char(asFile);
-		tString sFull = sPath;
+		const char *pCwd = NULL;
 #ifndef WIN32
-		if (sPath.empty() == false && sPath[0] != '/')
-		{
-			char vCwd[4096];
-			if (getcwd(vCwd, sizeof(vCwd)) != NULL)
-			{
-				sFull = tString(vCwd) + "/" + sPath;
-			}
-		}
+		char vCwd[4096];
+		if (sPath.empty() == false && sPath[0] != '/' && getcwd(vCwd, sizeof(vCwd)) != NULL) pCwd = vCwd;
 #endif
-		return sFull.find("/steamapps/common/") != tString::npos ||
-			   sFull.find("\\steamapps\\common\\") != tString::npos;
+		return ohpl_sys_looks_like_steam_install(sPath.data(), sPath.size(), pCwd);
 	}
 
 	void cLogWriter::ReopenFile()
@@ -515,36 +512,22 @@ namespace hpl {
 
 	void cScriptOutput::AddMessage(const asSMessageInfo *msg)
 	{
-		char sMess[1024];
-
-		tString type = "ERR ";
-		if( msg->type == asMSGTYPE_WARNING ) 
-			type = "WARN";
-		else if( msg->type == asMSGTYPE_INFORMATION ) 
-			type = "INFO";
-
-		sprintf(sMess,"%s (%d, %d) : %s : %s\n", msg->section, msg->row, msg->col, type.c_str(), msg->message);
-
-		msMessage += sMess;
+		unsigned lKind = msg->type == asMSGTYPE_WARNING ? 1 : msg->type == asMSGTYPE_INFORMATION ? 2 : 0;
+		ohpl_sys_script_message(msg->section, msg->row, msg->col, lKind, msg->message, AppendSink, &msMessage);
 	}
 	//-----------------------------------------------------------------------
 
+	static void LogChunkSink(void *apCtx, const char *apData, size_t alLen)
+	{
+		((std::vector<tString>*)apCtx)->push_back(tString(apData, alLen));
+	}
+
 	void cScriptOutput::Display()
 	{
-		if(msMessage.size()>500)
-		{
-			while(msMessage.size() > 500)
-			{
-				tString sSub = msMessage.substr(0,500);
-				msMessage = msMessage.substr(500);
-				Log(sSub.c_str());
-			}
-			Log(msMessage.c_str());
-		}
-		else
-		{
-			Log(msMessage.c_str());
-		}
+		std::vector<tString> vChunks;
+		ohpl_sys_script_chunks(msMessage.data(), msMessage.size(), LogChunkSink, &vChunks);
+		for(size_t i=0; i<vChunks.size(); ++i) Log(vChunks[i].c_str());
+		if(vChunks.size() > 1) msMessage = vChunks.back();
 	}
 	//-----------------------------------------------------------------------
 

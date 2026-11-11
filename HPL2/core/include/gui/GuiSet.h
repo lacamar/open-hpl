@@ -77,33 +77,9 @@ namespace hpl {
     
 	//---------------------------------------------
 	
+	struct OhplGuiGfxInfo;
+
 	class cGuiClipRegion;
-	class cGuiRenderObject
-	{
-	public:
-		cGuiRenderObject() : mpGfx(NULL), mvPos(0), mvSize(0), mColor(0,0), mpCustomMaterial(NULL), mpClipRegion(NULL), mbRotated(false), mfAngle(0.0f), mvPivot(0.0f)
-		{}
-
-		cGuiGfxElement *mpGfx;
-		cVector3f mvPos;
-		cVector2f mvSize;
-		cColor mColor;
-		iGuiMaterial *mpCustomMaterial;
-		cGuiClipRegion *mpClipRegion;
-
-		bool mbRotated;
-		float mfAngle;
-		cVector3f mvPivot;
-	};
-
-	class cGuiRenderObjectCompare
-	{
-	public:
-		bool operator()(const cGuiRenderObject& aObjectA, const cGuiRenderObject& aObjectB) const;
-	};
-
-	typedef std::multiset<cGuiRenderObject,cGuiRenderObjectCompare> tGuiRenderObjectSet;
-	typedef tGuiRenderObjectSet::iterator tGuiRenderObjectSetIt;
 
 	//-----------------------------------------------
 		
@@ -491,6 +467,9 @@ namespace hpl {
 									eFontAlign aAlign);
 								
 
+		static void HostGfxInfo(void *apCtx, void *apGfx, OhplGuiGfxInfo *apOut);
+		static void HostGfxFlush(void *apCtx, void *apGfx);
+		static void* HostMaterial(void *apCtx, int alMaterial);
 		void RenderClipRegion();
 		void SetClipArea(iLowLevelGraphics *apLowLevel, cGuiClipRegion *apRegion);
 
@@ -548,7 +527,7 @@ namespace hpl {
 		iWidget* mpWidgetRoot;
 		tWidgetList mlstWidgets;
 
-		tGuiRenderObjectSet m_setRenderObjects;
+		void *mpRustRenderList;
 
 		int mlPopupCount;
 		float mfLastPopUpZ;

@@ -124,10 +124,10 @@ namespace hpl {
 
 		virtual iGpuProgram* GetRenderProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iRenderer *apRenderer);
 
-		static void AddForceFieldVariableIds(cProgramComboManager *apManager, int alFirstId, int alMode);
-		static void SetForceFieldVars(iGpuProgram *apProgram, int alFirstId, cForceField **apFields, int alNum, float afForceMul, float afMaxForce);
-
 	protected:
+
+		/// Translucent/decal flags, type-specific passes, used textures and user variables of Rust material kind alKind.
+		void InitFromRust(int alKind);
 
 		void AddUsedTexture(eMaterialTexture aType);
 
