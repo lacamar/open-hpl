@@ -23,6 +23,7 @@
 #include "gui/WidgetMenuItem.h"
 
 #include "graphics/FontData.h"
+#include "gui/RustWidget3.h"
 
 #include "system/LowLevelSystem.h"
 
@@ -56,19 +57,20 @@ namespace hpl {
 
 	void cWidgetMainMenu::UpdateMenuItemsPos(cWidgetMenuItem* apNewItem)
 	{
-		cVector3f vPos = cVector3f(3,mfItemVPadding,1);
-		
 		size_t lNumItems = mvMenuItems.size();
 
 		/////////////////////////////////////
 		// If not the first item added, get previous one lentgh and pos,
 		// and set it as new item's position.
-		if(lNumItems > 1)
+		cVector3f vPos;
+		bool bHasPrev = lNumItems > 1;
+		float fPrevX = 0, fPrevW = 0;
+		if(bHasPrev)
 		{
-			vPos.x += mvMenuItems[lNumItems-2]->GetLocalPosition().x;
-			vPos.x += mvMenuItems[lNumItems-2]->GetSize().x;
-			vPos.x += mfItemSeparation;
+			fPrevX = mvMenuItems[lNumItems-2]->GetLocalPosition().x;
+			fPrevW = mvMenuItems[lNumItems-2]->GetSize().x;
 		}
+		ohpl_w3_main_item_pos(mfItemVPadding, bHasPrev, fPrevX, fPrevW, mfItemSeparation, &vPos);
 
 		apNewItem->SetPosition(vPos);
 	}
@@ -81,10 +83,12 @@ namespace hpl {
 		// Set item text length as items size 
 		float fLength = apNewItem->GetTextLength();
 
-        apNewItem->SetSize(cVector2f(fLength + 2*mfItemTextPadding, mpDefaultFont->mvSize.y + 2*mfItemVPadding));
+		OhplW3MainItemSize size;
+		ohpl_w3_main_item_size(fLength, mfItemTextPadding, mpDefaultFont->mvSize.y, mfItemVPadding, &size);
+        apNewItem->SetSize(size.size);
 
 		// Also set text offset
-		SetTextPos(cVector3f(mfItemTextPadding,mfItemVPadding,0.2f));
+		SetTextPos(size.text_pos);
 	}
 
 	//-----------------------------------------------------------------------
@@ -135,33 +139,19 @@ namespace hpl {
 
 	void cWidgetMainMenu::OnInit()
 	{
-		float fWidth;
-		float fHeight = mpDefaultFont->mvSize.y + 4 + 4;
-		float fXOffset = 0;
-
 		/////////////////////////////////////////////////////////////////////
 		// If has parent, use parent width. If not, use screen width (temp)
 
 		eWidgetType type = mpParent->GetType();
-		switch(type)
-		{
-		case eWidgetType_Root:
-			fWidth = mpSet->GetVirtualSize().x;
-			break;
-		case eWidgetType_Window:
-			fWidth = mpParent->GetSize().x - 2 - 2;
-			fXOffset = 2;
-			break;
-		default:
-			fWidth = mpParent->GetSize().x;
-			break;
-		}
+		int lParentKind = type==eWidgetType_Root ? kOhplW3ParentRoot :
+						  (type==eWidgetType_Window ? kOhplW3ParentWindow : kOhplW3ParentOther);
+		OhplW3MainInit init;
+		ohpl_w3_main_init(lParentKind, mpSet->GetVirtualSize().x, mpParent->GetSize().x, mpDefaultFont->mvSize.y, &init);
 
-		SetSize(cVector2f(fWidth, fHeight));
+		SetSize(init.size);
 
-		fHeight=0;
-		mpParent->SetChildrenOffset(cVector3f(0,fHeight,0));
-		SetPosition(GetLocalPosition()+cVector3f(fXOffset,-fHeight,1));
+		mpParent->SetChildrenOffset(init.children_offset);
+		SetPosition(GetLocalPosition()+init.pos_delta);
 	}
 
 	//-----------------------------------------------------------------------

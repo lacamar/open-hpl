@@ -24,6 +24,7 @@
 #include "math/Math.h"
 
 #include "graphics/FontData.h"
+#include "gui/RustWidget3.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiSkin.h"
@@ -54,31 +55,27 @@ namespace hpl {
 
 		cGuiSkinFont *pFont = mpSkin->GetFont(eGuiSkinFont_Default);
 		
-		float fWindowMinLength = pFont->mpFont->GetLength(pFont->mvSize,asLabel.c_str());
+		float fLabelLength = pFont->mpFont->GetLength(pFont->mvSize,asLabel.c_str());
 		float fTextLength = pFont->mpFont->GetLength(pFont->mvSize,asText.c_str());
-
-		if(fTextLength > fWindowMinLength) fWindowMinLength = fTextLength;
-
-		float fWindowWidth = fWindowMinLength+40 > 200 ? fWindowMinLength+40 : 200;
 
 		cVector2f vVirtSize = mpSet->GetVirtualSize();
 
-		float fWindowHeight = 90 + pFont->mvSize.y;
-		
-		cVector3f vPos = cVector3f(	cMath::Max(vVirtSize.x/2 - fWindowWidth/2, 0.0f),
-										cMath::Max(vVirtSize.y/2 - fWindowHeight/2, 0.0f), 100);
+		OhplW3MsgBoxLayout layout;
+		ohpl_w3_msgbox_layout(fLabelLength, fTextLength, pFont->mvSize.y, &vVirtSize, asButton2 != _W(""), &layout);
+		float fWindowWidth = layout.window_size.x;
+		cVector3f vPos = layout.window_pos;
 
 		//////////////////////////
 		// Window
 		mpWindow->SetText(asLabel);
 		mpWindow->SetPosition(vPos);
-		mpWindow->SetSize(cVector2f(fWindowWidth, fWindowHeight));
+		mpWindow->SetSize(layout.window_size);
 		
 		//////////////////////////
 		// Buttons
 		if(asButton2 == _W(""))
 		{
-			vPos = cVector3f(fWindowWidth/2 - 40, 50 + pFont->mvSize.y,1);
+			vPos = layout.button0_pos;
 			mvButtons[0] = mpSet->CreateWidgetButton(vPos,cVector2f(80,30),asButton1,mpWindow);
 			mvButtons[0]->AddCallback(eGuiMessage_ButtonPressed,this, kGuiCallback(ButtonPress));
 			mvButtons[0]->AddCallback(eGuiMessage_UIButtonPress,this, kGuiCallback(GamepadButtonPress));
@@ -88,13 +85,13 @@ namespace hpl {
 		}
 		else
 		{
-			vPos = cVector3f(fWindowWidth/2 - (80*2+20)/2, 50 + pFont->mvSize.y,1);
+			vPos = layout.button0_pos;
 			mvButtons[0] = mpSet->CreateWidgetButton(vPos,cVector2f(80,30),asButton1,mpWindow);
 			mvButtons[0]->AddCallback(eGuiMessage_ButtonPressed,this, kGuiCallback(ButtonPress));
 			mvButtons[0]->AddCallback(eGuiMessage_UIButtonPress,this, kGuiCallback(GamepadButtonPress));
 			mvButtons[0]->SetGlobalUIInputListener(true);
 
-			vPos.x += 80+20;
+			vPos = layout.button1_pos;
 			mvButtons[1] = mpSet->CreateWidgetButton(vPos,cVector2f(80,30),asButton2,mpWindow);
 			mvButtons[1]->AddCallback(eGuiMessage_ButtonPressed,this, kGuiCallback(ButtonPress));
 			mvButtons[1]->AddCallback(eGuiMessage_UIButtonPress,this, kGuiCallback(GamepadButtonPress));
@@ -109,8 +106,8 @@ namespace hpl {
 		
 		//////////////////////////
 		// Label
-		vPos = cVector3f(20, 30,1);
-		mpLabel = mpSet->CreateWidgetLabel(vPos,cVector2f(fWindowWidth-10,pFont->mvSize.y),
+		vPos = layout.label_pos;
+		mpLabel = mpSet->CreateWidgetLabel(vPos,layout.label_size,
 											asText,mpWindow);
 
 		SetUpDefaultFocus(mvButtons[0]);
@@ -160,9 +157,10 @@ namespace hpl {
 
 	bool cGuiPopUpMessageBox::GamepadButtonPress(iWidget* apWidget,const cGuiMessageData& aData)
 	{
-		if(!(aData.mlVal == eUIButton_Primary || aData.mlVal == eUIButton_Secondary)) return false;
+		bool bSecond;
+		if(ohpl_w3_msgbox_gamepad(aData.mlVal, mvButtons[1]!=NULL, &bSecond)==false) return false;
 
-		if(aData.mlVal == eUIButton_Secondary && mvButtons[1]) apWidget = mvButtons[1];
+		if(bSecond) apWidget = mvButtons[1];
 
 		return ButtonPress(apWidget, aData);
 	}

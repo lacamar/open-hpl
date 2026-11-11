@@ -28,6 +28,7 @@
 #include "math/Math.h"
 
 #include "graphics/FontData.h"
+#include "gui/RustWidget3.h"
 
 #include "gui/Gui.h"
 #include "gui/GuiSkin.h"
@@ -126,10 +127,12 @@ namespace hpl {
 
 	bool cGuiPopUpColorPicker::Slider_OnMove(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		int i=0;
-		for(;i<4;++i)	if(mvSliderColorComponent[i]==apWidget)break;
+		bool bHits[4];
+		for(int j=0;j<4;++j) bHits[j] = mvSliderColorComponent[j]==apWidget;
+		int i = ohpl_w3_color_component(bHits);
+		if(i<0) return true;
 
-		mColor.v[i] = mvSliderColorComponent[i]->GetValue()*0.001f;
+		mColor.v[i] = ohpl_w3_color_from_slider(mvSliderColorComponent[i]->GetValue());
 
 		UpdateInputs();
 
@@ -143,8 +146,10 @@ namespace hpl {
 
 	bool cGuiPopUpColorPicker::Input_OnTextBoxEnter(iWidget* apWidget, const cGuiMessageData& aData)
 	{
-		int i=0;
-		for(;i<4;++i)	if(mvInputColorComponent[i]==apWidget)break;
+		bool bHits[4];
+		for(int j=0;j<4;++j) bHits[j] = mvInputColorComponent[j]==apWidget;
+		int i = ohpl_w3_color_component(bHits);
+		if(i<0) return true;
 
 		mColor.v[i] = mvInputColorComponent[i]->GetNumericValue();
 
@@ -192,31 +197,34 @@ namespace hpl {
 			mvButtons[i]->AddCallback(eGuiMessage_ButtonPressed, this, kGuiCallback(Button_Pressed));
 		}
 
+		OhplW3ColorLayout layout;
+		ohpl_w3_color_layout(&layout);
+
 		mvButtons[0]->SetEnabled(false);
 		mvButtons[0]->SetVisible(false);
-		mvButtons[0]->SetPosition(cVector3f(60,200,0.1f));
-		mvButtons[0]->SetSize(23);
-		
+		mvButtons[0]->SetPosition(layout.button_pos[0]);
+		mvButtons[0]->SetSize(layout.button_size[0]);
+
 		mvButtons[1]->SetText(_W("Ok"));
-		mvButtons[1]->SetPosition(cVector3f(60,220, 0.5f));
-		mvButtons[1]->SetSize(cVector2f(70,20));
-		
+		mvButtons[1]->SetPosition(layout.button_pos[1]);
+		mvButtons[1]->SetSize(layout.button_size[1]);
+
 		mvButtons[2]->SetText(_W("Cancel"));
-		mvButtons[2]->SetPosition(cVector3f(150,220, 0.5f));
-		mvButtons[2]->SetSize(cVector2f(70,20));
+		mvButtons[2]->SetPosition(layout.button_pos[2]);
+		mvButtons[2]->SetSize(layout.button_size[2]);
 
 		tWString vLabelStrings[4] = { _W("R"),_W("G"),_W("B"), _W("A") };
 
-		cVector3f vPos = cVector3f(95,50,0.2f);
+
 		for(int i=0;i<4;++i)
 		{
-			mvLabelColorComponent[i] = mpSet->CreateWidgetLabel(vPos+cVector3f(5,5,0) + cVector3f(0,30.0f*i,0),0,vLabelStrings[i],mpWindow);
+			mvLabelColorComponent[i] = mpSet->CreateWidgetLabel(layout.label_pos[i],0,vLabelStrings[i],mpWindow);
 
-			mvSliderColorComponent[i] = mpSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal,vPos + cVector3f(30,30.0f*i,0),cVector2f(100,25),1000, mpWindow);
-			mvSliderColorComponent[i]->SetValue((int)(mColor.v[i]*1000));
+			mvSliderColorComponent[i] = mpSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal,layout.slider_pos[i],cVector2f(100,25),1000, mpWindow);
+			mvSliderColorComponent[i]->SetValue(ohpl_w3_color_slider_value(mColor.v[i]));
 			mvSliderColorComponent[i]->AddCallback(eGuiMessage_SliderMove, this, kGuiCallback(Slider_OnMove));
 
-			mvInputColorComponent[i] = mpSet->CreateWidgetTextBox(vPos + cVector3f(150,30.0f*i,0),cVector2f(80,25),_W(""), mpWindow,eWidgetTextBoxInputType_Numeric, 0.1f);
+			mvInputColorComponent[i] = mpSet->CreateWidgetTextBox(layout.input_pos[i],cVector2f(80,25),_W(""), mpWindow,eWidgetTextBoxInputType_Numeric, 0.1f);
 			mvInputColorComponent[i]->SetLowerBound(true,0);
 			mvInputColorComponent[i]->SetUpperBound(true,1);
 			mvInputColorComponent[i]->SetDecimals(3);
@@ -226,13 +234,13 @@ namespace hpl {
 		
 		mOldColor = mColor;
 
-		mpFrameCurrentColor = mpSet->CreateWidgetFrame(cVector3f(10,40,0.5f),50,true,mpWindow);
+		mpFrameCurrentColor = mpSet->CreateWidgetFrame(layout.current_frame_pos,50,true,mpWindow);
 		mpFrameCurrentColor->SetBackGroundColor(cColor(mColor.r,mColor.g,mColor.b,1));
 		mpFrameCurrentColor->SetDrawBackground(true);
 		mpFrameCurrentColor->SetBackgroundZ(0);
 		
 
-		mpFramePreviousColor = mpSet->CreateWidgetFrame(cVector3f(35,65,0.1f),50,true,mpWindow);
+		mpFramePreviousColor = mpSet->CreateWidgetFrame(layout.previous_frame_pos,50,true,mpWindow);
 		mpFramePreviousColor->SetBackGroundColor(cColor(mOldColor.r,mOldColor.g,mOldColor.b,1));
 		mpFramePreviousColor->SetDrawBackground(true);
 		mpFramePreviousColor->SetBackgroundZ(0);
@@ -248,7 +256,7 @@ namespace hpl {
 
 	void cGuiPopUpColorPicker::ClosePopUp()
 	{
-		if((mColor == mOldColor)==false)
+		if(ohpl_w3_color_changed(&mColor, &mOldColor))
 		{
 			if(mpDestColor)
 				*mpDestColor = mColor;
@@ -264,7 +272,7 @@ namespace hpl {
 	{
 		for(int i=0;i<4;++i)
 		{
-			mvSliderColorComponent[i]->SetValue((int)(mColor.v[i]*1000),false);
+			mvSliderColorComponent[i]->SetValue(ohpl_w3_color_slider_value(mColor.v[i]),false);
 		}
 	}
 

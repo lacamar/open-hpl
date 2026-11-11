@@ -62,7 +62,7 @@ namespace hpl {
 	protected:
 		/////////////////////////////
 		// Own functions
-		void SetUpKey(iWidget* apKeyWidget, eKey aKey, int alUnicode, bool abShift=true);
+		void SetUpKey(iWidget* apKeyWidget, eKey aKey, int alUnicode, int alUnicodeUpper);
 
 		bool Key_OnPress(iWidget* apWidget, const cGuiMessageData& aData);
 		kGuiCallbackDeclarationEnd(Key_OnPress);
