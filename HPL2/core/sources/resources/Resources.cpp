@@ -52,6 +52,7 @@
 #include "system/Platform.h"
 
 #include "impl/tinyXML/tinyxml.h"
+#include "resources/RustResMgr.h"
 
 namespace hpl {
 
@@ -75,8 +76,8 @@ namespace hpl {
 
 		mpFileSearcher = hplNew( cFileSearcher, () );
 
-		mpDefaultEntityLoader = NULL;
-		mpDefaultAreaLoader = NULL;
+		mpEntityLoaders = ohpl_rm_loaders_new();
+		mpAreaLoaders = ohpl_rm_loaders_new();
 
 		mpLanguageFile = NULL;
 	}
@@ -85,13 +86,15 @@ namespace hpl {
 
 	tWString cResources::GetCacheFile(const tWString& asFile, const tWString& asExt)
 	{
-		tWString sFile = cString::SetFileExtW(cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome) + _W("open-hpl/files/") + asFile.substr(asFile.find_first_not_of(_W('/'))), asExt);
-		for(size_t lPos = sFile.find(_W('/'), 1); lPos != tWString::npos; lPos = sFile.find(_W('/'), lPos + 1))
+		tWString sHome = cPlatform::GetSystemSpecialPath(eSystemPath_XDGCacheHome);
+		cRmOut out;
+		ohpl_rm_cache_file(reinterpret_cast<const uint32_t*>(sHome.data()), sHome.size(), reinterpret_cast<const uint32_t*>(asFile.data()), asFile.size(),
+							reinterpret_cast<const uint32_t*>(asExt.data()), asExt.size(), out.raw());
+		for(const tWString& sDir : out.mvItems)
 		{
-			tWString sDir = sFile.substr(0, lPos);
 			if(cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
 		}
-		return sFile;
+		return out.msPath;
 	}
 
 	//-----------------------------------------------------------------------
@@ -101,8 +104,10 @@ namespace hpl {
 		Log("Exiting Resources Module\n");
 		Log("--------------------------------------------------------\n");
 
-		STLMapDeleteAll(m_mEntityLoaders);
-		STLMapDeleteAll(m_mAreaLoaders);
+		ohpl_rm_loaders_each(mpEntityLoaders, [](void*, void* apLoader){ hplDelete(static_cast<iEntityLoader*>(apLoader)); }, NULL);
+		ohpl_rm_loaders_each(mpAreaLoaders, [](void*, void* apLoader){ hplDelete(static_cast<iAreaLoader*>(apLoader)); }, NULL);
+		ohpl_rm_loaders_free(mpEntityLoaders);
+		ohpl_rm_loaders_free(mpAreaLoaders);
 
 		STLDeleteAll(mlstXmlDocuments);
 		STLDeleteAll(mlstBinBuffers);
@@ -417,61 +422,40 @@ namespace hpl {
 
 	void cResources::AddEntityLoader(iEntityLoader* apLoader, bool abSetAsDefault)
 	{
-		m_mEntityLoaders.insert(tEntityLoaderMap::value_type(apLoader->GetName(), apLoader));
-
-		if(abSetAsDefault){
-			mpDefaultEntityLoader = apLoader;
-		}
+		ohpl_rm_loaders_add(mpEntityLoaders, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
 	}
 
 	iEntityLoader* cResources::GetEntityLoader(const tString& asName)
 	{
-		tEntityLoaderMapIt it = m_mEntityLoaders.find(asName);
-		if(it == m_mEntityLoaders.end()){
+		bool bMissing = false;
+		iEntityLoader* pLoader = static_cast<iEntityLoader*>(ohpl_rm_loaders_get(mpEntityLoaders, RM_STR(asName), &bMissing));
+		if(bMissing)
+		{
 			Warning("No loader for type '%s' found!\n",asName.c_str());
-			
-			if(mpDefaultEntityLoader){
-				Log("Using default loader!\n");
-				return mpDefaultEntityLoader;
-			}
-			else {
-				return NULL;
-			}
+			if(pLoader) Log("Using default loader!\n");
 		}
-
-		return it->second;
+		return pLoader;
 	}
 
 	//-----------------------------------------------------------------------
 
-
 	void cResources::AddAreaLoader(iAreaLoader* apLoader, bool abSetAsDefault)
 	{
-		m_mAreaLoaders.insert(tAreaLoaderMap::value_type(apLoader->GetName(), apLoader));
-
-		if(abSetAsDefault){
-			mpDefaultAreaLoader = apLoader;
-		}
+		ohpl_rm_loaders_add(mpAreaLoaders, RM_STR(apLoader->GetName()), apLoader, abSetAsDefault);
 	}
 
 	iAreaLoader* cResources::GetAreaLoader(const tString& asName)
 	{
-		tAreaLoaderMapIt it = m_mAreaLoaders.find(asName);
-		if(it == m_mAreaLoaders.end()){
+		bool bMissing = false;
+		iAreaLoader* pLoader = static_cast<iAreaLoader*>(ohpl_rm_loaders_get(mpAreaLoaders, RM_STR(asName), &bMissing));
+		if(bMissing)
+		{
 			Warning("No loader for area type '%s' found!\n",asName.c_str());
-
-			if(mpDefaultAreaLoader){
-				Log("Using default loader!\n");
-				return mpDefaultAreaLoader;
-			}
-			else {
-				return NULL;
-			}
+			if(pLoader) Log("Using default loader!\n");
 		}
-
-		return it->second;
+		return pLoader;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	bool cResources::LoadResourceDirsFile(const tString &asFile, const tWString &asAltPath)
@@ -497,13 +481,9 @@ namespace hpl {
 
 			bool bAddSubDirs = pChildElem->GetAttributeBool("AddSubDirs",false);
 
-			if(sPath[0]=='/' || sPath[0]=='\\') sPath = cString::Sub(sPath, 1);
-
-			tWString tsPath = cString::To16Char(sPath);
-			if (asAltPath.length() > 0) {
-				AddResourceDir(asAltPath + tsPath,bAddSubDirs);
-			}
-			AddResourceDir(tsPath,bAddSubDirs);
+			cRmOut dirs;
+			ohpl_rm_resource_dirs(RM_STR(sPath), reinterpret_cast<const uint32_t*>(asAltPath.data()), asAltPath.size(), dirs.raw());
+			for(const tWString& sDir : dirs.mvItems) AddResourceDir(sDir,bAddSubDirs);
 		}
 
 		hplDelete( pDoc);

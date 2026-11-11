@@ -1,44 +1,58 @@
 #include "SomaToneMapping.h"
+#include "RustSomaUi.h"
 #include "SomaBase.h"
 #include "SomaScriptBind.h"
 #include "SomaScriptApi.h"
 #include "SomaLuxGame.h"
 
 #include <angelscript.h>
+#include <cstring>
 
 cSomaToneMapping *cSomaToneMapping::mpInstance = NULL;
 
 namespace
 {
-	struct cFade
-	{
-		float mfGoal = 1e30f;
-		float mfSpeed = 0;
-	};
-	cFade gExposureFade, gWhiteCutFade;
+	OhplGs7ToneState gTone;
 
-	void Step(float &afValue, cFade &aFade, float afGoal, float afTime, float afTimeStep)
+	void Pull(cSomaToneMapping *p)
 	{
-		if (afGoal != aFade.mfGoal)
-		{
-			aFade.mfGoal = afGoal;
-			aFade.mfSpeed = afTime > 0 ? std::fabs(afGoal - afValue) / afTime : 1e30f;
-		}
-		float fStep = aFade.mfSpeed * afTimeStep;
-		if (std::fabs(afGoal - afValue) <= fStep) afValue = afGoal;
-		else afValue += afGoal > afValue ? fStep : -fStep;
+		gTone.world_exposure = p->mfWorldExposure;
+		gTone.world_white_cut = p->mfWorldWhiteCut;
+		gTone.world_fade_time = p->mfWorldFadeTime;
+		gTone.exposure = p->mfExposure;
+		gTone.white_cut = p->mfWhiteCut;
+		gTone.transition_time = p->mfTransitionTime;
 	}
 
-	const cWorldExposureArea *AreaAt(cWorld *apWorld, const cVector3f &avPos)
+	void Push(cSomaToneMapping *p)
 	{
+		p->mfWorldExposure = gTone.world_exposure;
+		p->mfWorldWhiteCut = gTone.world_white_cut;
+		p->mfWorldFadeTime = gTone.world_fade_time;
+		p->mfExposure = gTone.exposure;
+		p->mfWhiteCut = gTone.white_cut;
+		p->mfTransitionTime = gTone.transition_time;
+	}
+
+	// Index into the world's exposure areas, -1 for none; the chosen area is copied to apOut
+	int AreaAt(cWorld *apWorld, const cVector3f &avPos, OhplGs7ExposureArea *apOut)
+	{
+		std::vector<OhplGs7ExposureArea> vAreas;
 		for (const cWorldExposureArea &area : apWorld->GetExposureAreas())
 		{
-			cVector3f vLocal = cMath::MatrixMul(area.m_mtxInvTransform, avPos);
-			if (std::fabs(vLocal.x) <= area.mvHalfSize.x && std::fabs(vLocal.y) <= area.mvHalfSize.y &&
-				std::fabs(vLocal.z) <= area.mvHalfSize.z)
-				return &area;
+			OhplGs7ExposureArea a;
+			static_assert(sizeof(a.inv_transform) == sizeof(area.m_mtxInvTransform.m), "matrix layout");
+			memcpy(a.inv_transform, area.m_mtxInvTransform.m, sizeof(a.inv_transform));
+			memcpy(a.half_size, area.mvHalfSize.v, sizeof(a.half_size));
+			a.exposure = area.mfExposure;
+			a.white_cut = area.mfWhiteCut;
+			a.transition_time = area.mfTransitionTime;
+			vAreas.push_back(a);
 		}
-		return NULL;
+		int lIdx = ohpl_gs7_tone_area_at(vAreas.data(), vAreas.size(), avPos.v);
+		if (lIdx >= 0)
+			*apOut = vAreas[lIdx];
+		return lIdx;
 	}
 }
 
@@ -70,9 +84,8 @@ cSomaToneMapping::cSomaToneMapping() : iUpdateable("SomaToneMapping")
 	mbFilmGrainActive = true;
 	mbColorGradingActive = true;
 	mbSRGB = false;
-	mfWorldExposure = mfExposure = 0;
-	mfWorldWhiteCut = mfWhiteCut = 3.5f;
-	mfWorldFadeTime = mfTransitionTime = 0.5f;
+	ohpl_gs7_tone_state_default(&gTone);
+	Push(this);
 }
 
 void cSomaToneMapping::OnMapLoaded(cWorld *apWorld)
@@ -84,18 +97,12 @@ void cSomaToneMapping::OnMapLoaded(cWorld *apWorld)
 	mpGradingTexture = mpGradingTarget = NULL;
 	if (apWorld->GetColorGradingTexture() != "") mpGradingTexture = CreateGrading(apWorld->GetColorGradingTexture());
 	mfKey = apWorld->GetToneMappingKey();
-	mfWorldExposure = mfExposure = apWorld->GetToneMappingExposure();
-	mfWorldWhiteCut = mfWhiteCut = apWorld->GetToneMappingWhiteCut();
-	mfWorldFadeTime = 0.5f;
+	Pull(this);
 	cCamera *pCam = gpSomaBase->GetDebugCamera();
-	const cWorldExposureArea *pArea = pCam ? AreaAt(apWorld, pCam->GetPosition()) : NULL;
-	if (pArea)
-	{
-		mfExposure = pArea->mfExposure;
-		mfWhiteCut = pArea->mfWhiteCut;
-	}
-	gExposureFade = cFade();
-	gWhiteCutFade = cFade();
+	OhplGs7ExposureArea area;
+	bool bArea = pCam && AreaAt(apWorld, pCam->GetPosition(), &area) >= 0;
+	ohpl_gs7_tone_map_loaded(&gTone, apWorld->GetToneMappingExposure(), apWorld->GetToneMappingWhiteCut(), bArea ? &area : NULL);
+	Push(this);
 	Update(0);
 }
 
@@ -125,9 +132,10 @@ void cSomaToneMapping::SetGradingLayer(int alPrio, const tString &asName, float 
 		}
 	iTexture *pTex = CreateGrading(asName);
 	if (pTex == NULL) return;
-	auto it = mvGradingLayers.begin();
-	while (it != mvGradingLayers.end() && it->mlPrio <= alPrio) ++it;
-	mvGradingLayers.insert(it, {alPrio, asName, pTex, afAlpha});
+	std::vector<int> vPrios;
+	for (cGradingLayer &layer : mvGradingLayers) vPrios.push_back(layer.mlPrio);
+	size_t lAt = ohpl_gs7_tone_layer_insert_index(vPrios.data(), vPrios.size(), alPrio);
+	mvGradingLayers.insert(mvGradingLayers.begin() + lAt, {alPrio, asName, pTex, afAlpha});
 }
 
 void cSomaToneMapping::RemoveGradingLayer(const tString &asName)
@@ -150,32 +158,27 @@ void cSomaToneMapping::FadeExposure(float afExposure, float afWhiteCut, float af
 
 void cSomaToneMapping::Update(float afTimeStep)
 {
-	if (mpWorld && mpWorld == gpSomaBase->GetCurrentWorld())
+	Pull(this);
+	gTone.grading_blend = mfGradingBlend;
+	gTone.grading_fade_time = mfGradingFadeTime;
+	bool bWorld = mpWorld && mpWorld == gpSomaBase->GetCurrentWorld();
+	OhplGs7ExposureArea area;
+	bool bArea = false;
+	if (bWorld)
 	{
-		float fGoalExp = mfWorldExposure, fGoalWhiteCut = mfWorldWhiteCut;
-		mfTransitionTime = mfWorldFadeTime;
 		cCamera *pCam = gpSomaBase->GetDebugCamera();
-		const cWorldExposureArea *pArea = pCam ? AreaAt(mpWorld, pCam->GetPosition()) : NULL;
-		if (pArea)
-		{
-			fGoalExp = pArea->mfExposure;
-			fGoalWhiteCut = pArea->mfWhiteCut;
-			mfTransitionTime = pArea->mfTransitionTime;
-		}
-		Step(mfExposure, gExposureFade, fGoalExp, mfTransitionTime, afTimeStep);
-		Step(mfWhiteCut, gWhiteCutFade, fGoalWhiteCut, mfTransitionTime, afTimeStep);
+		bArea = pCam && AreaAt(mpWorld, pCam->GetPosition(), &area) >= 0;
 	}
-	cRendererDeferred::SetToneMapping(mfKey, powf(2.0f, mfExposure), mfWhiteCut, mfGamma);
-	if (mpGradingTarget)
+	ohpl_gs7_tone_update_exposure(&gTone, bWorld, bArea ? &area : NULL, afTimeStep);
+	Push(this);
+	cRendererDeferred::SetToneMapping(mfKey, ohpl_gs7_tone_exposure_scale(mfExposure), mfWhiteCut, mfGamma);
+	if (ohpl_gs7_tone_update_grading(&gTone, mpGradingTarget != NULL, mpGradingTexture != NULL, afTimeStep))
 	{
-		mfGradingBlend += mfGradingFadeTime > 0 ? afTimeStep / mfGradingFadeTime : 1;
-		if (mfGradingBlend >= 1 || mpGradingTexture == NULL)
-		{
-			if (mpGradingTexture) gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Destroy(mpGradingTexture);
-			mpGradingTexture = mpGradingTarget;
-			mpGradingTarget = NULL;
-		}
+		if (mpGradingTexture) gpSomaBase->mpEngine->GetResources()->GetTextureManager()->Destroy(mpGradingTexture);
+		mpGradingTexture = mpGradingTarget;
+		mpGradingTarget = NULL;
 	}
+	mfGradingBlend = gTone.grading_blend;
 	if (mvGradingLayers.empty() == false && mpGradingTexture == NULL) mpGradingTexture = CreateGrading("grading_default.dds");
 	std::vector<std::pair<iTexture *, float>> vLayers;
 	for (cGradingLayer &layer : mvGradingLayers) vLayers.push_back({layer.mpTexture, layer.mfAlpha});

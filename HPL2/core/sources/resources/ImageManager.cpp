@@ -32,6 +32,7 @@
 #include "resources/Resources.h"
 #include "resources/BitmapLoaderHandler.h"
 #include "resources/FileSearcher.h"
+#include "resources/RustResMgr.h"
 
 
 namespace hpl {
@@ -184,13 +185,13 @@ namespace hpl {
 		//Log("  Users Before: %d\n",pImage->GetUserCount());
 		//Log("  Framepics Before: %d\n",pFrame->GetPicCount());
 
-		pImage->DecUserCount();//dec frame count as well.. is that ok?
+		bool bDelete = ohpl_rm_destroy_standard(pImage->GetMeta());//dec frame count as well.. is that ok?
 		
 		//Log("---\n");
 		//Log("  Destroyed Image: '%s' Users: %d\n",pImage->GetName().c_str(),pImage->GetUserCount());
 		//Log("  Frame %d has left Pics: %d\n",pFrame,pFrame->GetPicCount());
 		
-		if(pImage->HasUsers()==false)
+		if(bDelete)
 		{
 			pFrame->DecPicCount(); // Doing it here now instead.
 			if(pBmpFrame) pBmpFrame->DecPicCount();
@@ -200,12 +201,13 @@ namespace hpl {
 			//Log("  deleting image and dec frame to %d images!\n",pFrame->GetPicCount());
 		}
 		
-		if(pFrame->IsEmpty())
+		uint32_t lAfter = ohpl_rm_destroy_image_frame(pFrame->IsEmpty(), pFrame->IsCustom(), pBmpFrame != NULL);
+		if(lAfter & 2)
 		{
 			//Log("  Deleting frame...\n");
 
 			//Delete the bitmap frame that has this this frame.
-			if(pFrame->IsCustom()==false && pBmpFrame!= NULL)
+			if(lAfter & 1)
 			{
 				for(tFrameBitmapListIt it=mlstBitmapFrames.begin();it!=mlstBitmapFrames.end();++it)
 				{
@@ -306,43 +308,12 @@ namespace hpl {
 
 	cFrameSubImage *cImageManager::FindImage(const tString &asName, tWString &asFilePath)
 	{
-		cFrameSubImage *pImage=NULL;
-
-		if(cString::GetFileExt(asName)=="")
-		{
-			int lMaxCount =-1;
-
-			///////////////////////
-			//Iterate the different formats
-			tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
-			for(tStringVecIt it = apFileFormatsVec->begin();it!= apFileFormatsVec->end();++it)
-			{
-				tWString sTempPath = _W("");
-				cFrameSubImage *pTempImage=NULL;
-				int lCount=0;
-
-				tString sNewName = cString::SetFileExt(asName,*it);
-				pTempImage = static_cast<cFrameSubImage*> (FindLoadedResource(sNewName, sTempPath, &lCount));
-
-				///////////////////////
-				//Check if the image exists and then check if it has the hightest equal count.
-				if((pTempImage==NULL && sTempPath!=_W("")) || pTempImage!=NULL)
-				{
-					if(lCount > lMaxCount)
-					{
-						lMaxCount = lCount;
-						asFilePath = sTempPath;
-						pImage = pTempImage;
-					}
-				}
-			}
-		}
-		else
-		{
-			pImage = static_cast<cFrameSubImage*> (FindLoadedResource(asName, asFilePath));
-		}
-
-		return pImage;
+		cRmEnv env(mpFileSearcher, this);
+		cRmExts exts(*mpBitmapLoaderHandler->GetSupportedTypes());
+		cRmOut out;
+		ohpl_rm_find_with_formats(env.raw(), RM_STR(asName), exts.data(), exts.size(), out.raw());
+		asFilePath = out.msPath;
+		return static_cast<cFrameSubImage*>(out.Res());
 	}
 
 	//-----------------------------------------------------------------------
@@ -388,8 +359,7 @@ namespace hpl {
 				
 				//pImage = CreateBitmapFrame(mvFrameSize)->AddBitmap(apBmp);
 				cVector2l vSize = mvFrameSize;
-				while(vSize.x < apBmp->GetWidth()+2) vSize.x *= 2;
-				while(vSize.y < apBmp->GetHeight()+2) vSize.y *= 2;
+				ohpl_rm_image_frame_size(vSize.x, vSize.y, apBmp->GetWidth(), apBmp->GetHeight(), &vSize.x, &vSize.y);
 				cFrameBitmap * pFrame = CreateBitmapFrame(vSize);
 				if(pFrame)
 				{

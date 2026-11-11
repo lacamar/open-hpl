@@ -297,6 +297,7 @@ public:
 
 	
 private:
+	void RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags);
 	bool CanDrawCrossHair();
 	void DrawHud(float afFrameTime);
 

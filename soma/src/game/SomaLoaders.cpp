@@ -1,6 +1,7 @@
 #include "SomaLoaders.h"
 #include "SomaLux.h"
 #include "SomaLuxEntity.h"
+#include "RustSomaUi.h"
 
 #include "resources/WorldLoaderHpm.h"
 
@@ -15,22 +16,20 @@ extern tString gsSomaSpawnName;
 // Static meshes are never animated or moved by HPL2's world update
 void cSomaGenericEntityLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
-	bool bDynamic = gsSomaSpawnName != "";
 	cXmlElement *pModel = apRootElem->GetFirstElement("ModelData");
 	cXmlElement *pAnims = pModel ? pModel->GetFirstElement("Animations") : NULL;
-	if (pAnims && pAnims->GetFirstElement("Animation"))
-		bDynamic = true;
 	cXmlElement *pProcAnims = pModel ? pModel->GetFirstElement("ProcAnimations") : NULL;
-	if (pProcAnims && pProcAnims->GetFirstElement("Animation"))
-		bDynamic = true;
 	cXmlElement *pBodies = pModel ? pModel->GetFirstElement("Bodies") : NULL;
+	std::vector<float> vMasses;
 	if (pBodies)
 	{
 		cXmlNodeListIterator it = pBodies->GetChildIterator();
-		while (it.HasNext() && bDynamic == false)
+		while (it.HasNext())
 			if (cXmlElement *pBody = it.Next()->ToElement())
-				bDynamic = pBody->GetAttributeFloat("Mass", 0) > 0;
+				vMasses.push_back(pBody->GetAttributeFloat("Mass", 0));
 	}
+	bool bDynamic = ohpl_gs7_load_is_dynamic(gsSomaSpawnName != "", pAnims && pAnims->GetFirstElement("Animation"), pProcAnims && pProcAnims->GetFirstElement("Animation"),
+											 vMasses.data(), vMasses.size());
 	mbLoadAsStatic = bDynamic == false;
 }
 
@@ -43,14 +42,11 @@ static cSomaID ElementID()
 	{
 		tIntVec v;
 		cString::GetIntVec(pElem->GetAttributeString("UID", ""), v, NULL);
-		if (v.size() == 3)
-		{
-			id.mA = (uint8_t)v[0];
-			id.mB = v[1];
-			id.mC = v[2];
-		}
-		else
-			id.mC = pElem->GetAttributeInt("ID", 0);
+		OhplGs7ElementId r;
+		ohpl_gs7_load_element_id(v.data(), v.size(), pElem->GetAttributeInt("ID", 0), &r);
+		id.mA = r.a;
+		id.mB = r.b;
+		id.mC = r.c;
 	}
 	return id;
 }
@@ -65,10 +61,11 @@ static void LoadInstanceVars(cResourceVarsObject &aVars)
 
 static eSomaLuxEntityType TypeFromEntityType(const tString &asType)
 {
-	if (asType.compare(0, 6, "Agent_") == 0)
-		return eSomaLuxEntityType_Agent;
-	if (asType.compare(0, 8, "Critter_") == 0 || asType.compare(0, 8, "critter_") == 0)
-		return eSomaLuxEntityType_Critter;
+	switch (ohpl_gs7_load_kind((const unsigned char *)asType.data(), asType.size()))
+	{
+	case 1: return eSomaLuxEntityType_Agent;
+	case 2: return eSomaLuxEntityType_Critter;
+	}
 	return eSomaLuxEntityType_Prop;
 }
 
@@ -153,19 +150,19 @@ bool cSomaGenericEntityLoader::BeforeJoints()
 	cXmlElement *pElem = cWorldLoaderHpm::GetCurrentElement();
 	cXmlElement *pPose = pElem ? pElem->GetFirstElement("Pose") : NULL;
 	cSkeleton *pSkeleton = mpEntity && mpEntity->GetMesh() ? mpEntity->GetMesh()->GetSkeleton() : NULL;
-	if (pPose == NULL || pSkeleton == NULL) return false;
+	if (ohpl_gs7_load_before_joints(pPose != NULL, pSkeleton != NULL) == false) return false;
 
 	tFloatVec vVals;
 	cString::GetFloatVec(pPose->GetAttributeString("_Text"), vVals, NULL);
-	if (!mpEntity->SetBoneRestPoseFromMapValues(vVals)) return true;
-	mpEntity->AlignBodiesToSkeleton(false);
+	if (ohpl_gs7_load_align_bodies(mpEntity->SetBoneRestPoseFromMapValues(vVals)))
+		mpEntity->AlignBodiesToSkeleton(false);
 	return true;
 }
 
 void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform, cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	// HPL2 only attaches these to bodies; HPL3 parents them to the mesh entity otherwise
-	if (mpEntity && mvBodies.empty())
+	if (ohpl_gs7_load_reparent_children(mpEntity != NULL, mvBodies.size()))
 	{
 		std::vector<iEntity3D *> vChildren(mvLights.begin(), mvLights.end());
 		vChildren.insert(vChildren.end(), mvBillboards.begin(), mvBillboards.end());
@@ -176,11 +173,15 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		for (iEntity3D *pChild : vChildren)
 			if (pChild->GetEntityParent() == NULL && pChild->GetParent() == NULL)
 			{
-				pChild->SetPosition(pChild->GetLocalPosition() * mvScale);
+			{
+				cVector3f vLocal = pChild->GetLocalPosition(), vOffset;
+				ohpl_gs7_load_scaled_offset(vLocal.v, mvScale.v, vOffset.v);
+				pChild->SetPosition(vOffset);
 				mpEntity->AddChild(pChild);
 			}
+			}
 	}
-	float fMeanScale = (mvScale.x + mvScale.y + mvScale.z) / 3.0f;
+	float fMeanScale = ohpl_gs7_load_mean_scale(mvScale.v);
 	for (iLight *pLight : mvLights)
 		pLight->SetRadius(pLight->GetRadius() * fMeanScale);
 	for (cBillboard *pBB : mvBillboards)
@@ -203,11 +204,11 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		if (mpEntity && mpEntity->GetAnimationStateNum() > 0 && mpEntity->GetAnimationState(0)->IsActive())
 		{
 			cAnimationState *pAnim = mpEntity->GetAnimationState(0);
-			if (pEnt->meType == eSomaLuxEntityType_Prop && GetVarBool("RandomizeAnimationStart", true))
+			if (ohpl_gs7_load_random_anim_start(pEnt->meType == eSomaLuxEntityType_Prop, GetVarBool("RandomizeAnimationStart", true)))
 				pAnim->SetTimePosition(cMath::RandRectf(0, pAnim->GetLength()));
 			pEnt->mlCurrentAnim = 0;
 		}
-		pEnt->mbShowMesh = GetVarBool("ShowMesh", msEntityType != "StaticCollider");
+		pEnt->mbShowMesh = GetVarBool("ShowMesh", ohpl_gs7_load_default_show_mesh((const unsigned char *)msEntityType.data(), msEntityType.size()));
 		pEnt->mvBodies = mvBodies;
 		for (iPhysicsBody *pBody : mvBodies)
 			pEnt->mvDefaultCollideCharacter.push_back(pBody->GetCollideCharacter());
@@ -217,11 +218,11 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		if (apInstanceVars && (apInstanceVars->GetVarBool("Static", false) || apInstanceVars->GetVarBool("StaticPhysics", false)))
 			pEnt->SetStaticPhysics(true);
 		// cLuxPropLoader::AfterLoad: gravity-free first steps let Newton put resting props to sleep
-		if (pEnt->meType == eSomaLuxEntityType_Prop && mbActive && !GetVarBool("DisableFreezeAtStart", false) && !(mpEntity && mpEntity->GetSkeletonPhysicsActive()))
+		if (ohpl_gs7_load_freeze_props(pEnt->meType == eSomaLuxEntityType_Prop, mbActive, GetVarBool("DisableFreezeAtStart", false), mpEntity && mpEntity->GetSkeletonPhysicsActive()))
 			for (iPhysicsBody *pBody : mvBodies)
 				if (pBody->GetMass() > 0)
 					pBody->Freeze();
-		if (pEnt->meType == eSomaLuxEntityType_Prop && GetVarBool("NoGravityWhenUnderwater", false))
+		if (ohpl_gs7_load_no_gravity_underwater(pEnt->meType == eSomaLuxEntityType_Prop, GetVarBool("NoGravityWhenUnderwater", false)))
 			for (iPhysicsBody *pBody : mvBodies)
 				pBody->SetNoGravityWhenUnderwater(true);
 		if (apInstanceVars)
@@ -255,8 +256,11 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 			for (int i = 0; i < mpEntity->GetBoneStateNum(); ++i)
 			{
 				cBoneState *pBone = mpEntity->GetBoneState(i);
-				if (cString::ToLowerCase(cString::Sub(pBone->GetName(), 0, 7)) == "socket_")
-					pEnt->mvSockets.push_back({cString::Sub(pBone->GetName(), 7), pBone, cMatrixf::Identity});
+			{
+				const tString &sBone = pBone->GetName();
+				if (ptrdiff_t lOffset = ohpl_gs7_load_socket_offset((const unsigned char *)sBone.data(), sBone.size()); lOffset >= 0)
+					pEnt->mvSockets.push_back({cString::Sub(sBone, (int)lOffset), pBone, cMatrixf::Identity});
+			}
 			}
 		LoadInstanceVars(pEnt->mInstanceVars);
 		cSomaLuxEntity::Pending().push_back(pEnt);
@@ -275,20 +279,24 @@ void cSomaGenericEntityLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf
 		for (iLight *pLight : mvLights)
 		{
 			cColor col = pLight->GetDiffuseColor();
-			col = cColor(col.r * effectMul.r, col.g * effectMul.g, col.b * effectMul.b, col.a);
+			ohpl_gs7_load_color_mul(col.v, effectMul.v, col.v);
 			pLight->SetDiffuseColor(col);
 			pLight->SetDefaultDiffuseColor(col);
 			pLight->SetBrightness(pLight->GetBrightness() * fBrightnessMul);
 			pLight->SetDefaultBrightness(pLight->GetBrightness());
 		}
 		for (cBillboard *pBB : mvBillboards)
-			pBB->SetColor(pBB->GetColor() * effectMul);
+		{
+			cColor bbCol = pBB->GetColor();
+			ohpl_gs7_load_color_mul_all(bbCol.v, effectMul.v, bbCol.v);
+			pBB->SetColor(bbCol);
+		}
 	}
 
 	// ShowMesh=false marks collision-only meshes; StaticCollider has no such var but is never visible
 	if (mpEntity)
 	{
-		bool bDefaultShowMesh = (msEntityType != "StaticCollider");
+		bool bDefaultShowMesh = ohpl_gs7_load_default_show_mesh((const unsigned char *)msEntityType.data(), msEntityType.size());
 		mpEntity->SetVisible(GetVarBool("ShowMesh", bDefaultShowMesh));
 	}
 

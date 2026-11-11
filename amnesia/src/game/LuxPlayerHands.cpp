@@ -25,6 +25,7 @@
 
 #include "LuxHandObject_Melee.h"
 #include "LuxHandObject_LightSource.h"
+#include "RustLuxPlayer.h"
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -161,78 +162,42 @@ void cLuxPlayerHands::Update(float afTimeStep)
 	{
 		cAnimationState *pAnim = mpHandsEntity->GetAnimationState(i);
 	}
-	
-	////////////////////////////
-	// Disabled
-	if(mHandState == eLuxHandsState_Disabled)
+	bool bHasObject = mpCurrentHandObject != NULL;
+	bool bAnimOver = false;
+	if(mHandState == eLuxHandsState_Holster || mHandState == eLuxHandsState_Draw || (mHandState == eLuxHandsState_HandObject && bHasObject))
 	{
-		return;
+		bAnimOver = AnimOver();
 	}
-	////////////////////////////
-	// Holster
-	else if(mHandState == eLuxHandsState_Holster)
+	bool bObjectAnimOver = false;
+	if(mHandState == eLuxHandsState_HandObject && bHasObject && bAnimOver)
 	{
-		if(AnimOver())
+		bObjectAnimOver = mpCurrentHandObject->AnimationIsOver();
+	}
+	int lNewState;
+	OhplGa2Ops ops;
+	bool bUpdateObjects = ohpl_ga2_hands_update((int)mHandState, bHasObject, bAnimOver, bObjectAnimOver, &lNewState, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		switch(ops.ops[i].kind)
 		{
-			////////////////////
-			//Draw up new object
-			if(mpCurrentHandObject)
-			{
-				cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-
-				CreateAndAttachHandObject(pMap, mpCurrentHandObject);
-				PlayAnim(mpCurrentHandObject->GetAnimDraw(),false);
-				
-				mHandState = eLuxHandsState_Draw;
-			}
-			////////////////////
-			//Disable hands
-			else
-			{
-				HideAllHandObjects();
-				mpHandsEntity->SetVisible(false);
-				mHandState = eLuxHandsState_Disabled;
-			}
+		case kOhplGa2HandsAttachDraw:
+		{
+			cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
+			CreateAndAttachHandObject(pMap, mpCurrentHandObject);
+			PlayAnim(mpCurrentHandObject->GetAnimDraw(),false);
+			break;
 		}
-	}	
-	////////////////////////////
-	// Draw
-	else if(mHandState == eLuxHandsState_Draw)
-	{
-		if(AnimOver())
-		{
+		case kOhplGa2HandsDisable:
+			HideAllHandObjects();
+			mpHandsEntity->SetVisible(false);
+			break;
+		case kOhplGa2HandsIdle:
 			PlayAnim(mpCurrentHandObject->GetAnimIdle(),true);
-			mHandState = eLuxHandsState_Idle;
-		}
-
-	}		
-	////////////////////////////
-	// Idle
-	else if(mHandState == eLuxHandsState_Idle)
-	{
-
-	}
-	////////////////////////////
-	// Hand Object Specific
-	else if(mHandState == eLuxHandsState_HandObject)
-	{
-		if(mpCurrentHandObject)
-		{
-			//////////////////////////////
-			//Animation is over check
-			if(AnimOver())
-			{
-				if(mpCurrentHandObject->AnimationIsOver())
-				{
-					PlayAnim(mpCurrentHandObject->GetAnimIdle(),true);
-					mHandState = eLuxHandsState_Idle;
-					return;
-				}
-			}
+			break;
 		}
 	}
-
-	////////////////////
+	mHandState = (eLuxHandsState)lNewState;
+	if(bUpdateObjects == false) return;
 	// Update Hand Object (need to do like this, since current might not be drawn yet!)
 	for(size_t i=0; i<mvHandObjects.size(); ++i)
 	{
@@ -347,9 +312,7 @@ bool cLuxPlayerHands::CheckAnimationEvent(float afRelTime)
 
 void cLuxPlayerHands::DoAction(eLuxPlayerAction aAction, bool abPressed)
 {
-	if(mpCurrentHandObject==NULL) return;
-	if(mHandState != eLuxHandsState_Idle && mHandState != eLuxHandsState_HandObject) return;
-
+	if(ohpl_ga2_hands_action_gate((int)mHandState, mpCurrentHandObject != NULL) == false) return;
 	if(mpCurrentHandObject->DoAction(aAction, abPressed))
 	{
 		mHandState = eLuxHandsState_HandObject;
@@ -396,27 +359,21 @@ iLuxHandObject* cLuxPlayerHands::GetHandObject(const tString& asName)
 void cLuxPlayerHands::SetCurrentHandObject(iLuxHandObject *apObject)
 {
 	if(mpCurrentHandObject == apObject) return;
-
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-
 	ResetHandObjectVars();
-	
-	////////////////////////
+	int lPlan = ohpl_ga2_hands_switch_plan(mpCurrentHandObject != NULL, apObject != NULL);
 	// Previous hand set
-    if(mpCurrentHandObject)
+	if(lPlan == 1)
 	{
 		PlayAnim(mpCurrentHandObject->GetAnimHolster(),false);
-		
 		mHandState = eLuxHandsState_Holster;
 	}
-	////////////////////////
 	// Draw directly
-	else if(apObject)
+	else if(lPlan == 2)
 	{
 		CreateAndAttachHandObject(pMap, apObject);
 		PlayAnim(apObject->GetAnimDraw(),false);
 		mpHandsEntity->SetVisible(true);
-
 		mHandState = eLuxHandsState_Draw;
 	}
 	mpCurrentHandObject = apObject;
@@ -517,51 +474,28 @@ void cLuxPlayerHands::HideAllHandObjects()
 void cLuxPlayerHands::UpdatePlayerHandsPos(float afTimeStep)
 {
 	if(mpHandsEntity==NULL) return;
-
 	cCamera *pCam = mpPlayer->GetCamera();
-
 	cVector3f vRotation(pCam->GetPitch(), pCam->GetYaw(), pCam->GetRoll());
 	mlstCamRotations.push_back(vRotation);
-	if(mlstCamRotations.size() > mlMaxCamRotations) mlstCamRotations.pop_front();
-	
-	////////////////////////////////////////
-	// Iterate all of the saved rotations and calculate a new
-	cVector3f vFinalRot = 0;
-	float fWeightTotal =0;
-	float fCount = 1.0f;
-
-	tVector3fListIt it = mlstCamRotations.begin();
-	for(; it != mlstCamRotations.end(); ++it)
-	{
-		float fWeight = fCount / ((float)mlstCamRotations.size());
-		fWeight *= fWeight; //Exp increase...
-		++fCount;
-
-		vFinalRot += *it * fWeight;
-		fWeightTotal += fWeight;
-	}
-
-	vFinalRot = vFinalRot / fWeightTotal;
-	
-	////////////////////////////////////////
+	if(ohpl_ga2_rotations_pop(mlstCamRotations.size(), mlMaxCamRotations)) mlstCamRotations.pop_front();
+	std::vector<cVector3f> vRotations(mlstCamRotations.begin(), mlstCamRotations.end());
+	cVector3f vFinalRot;
+	ohpl_ga2_hands_rotation(vRotations.data(), vRotations.size(), &vFinalRot);
 	// Set hand matrix
 	cMatrixf mtxHands = cMath::MatrixRotate(vFinalRot, eEulerRotationOrder_ZXY);
-
-	cVector3f vHandPosAdd =0;
-	vHandPosAdd -= mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_Bob);
-	vHandPosAdd -= mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_ScreenShake);
-	vHandPosAdd -= mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_Hurt);
-	///vHandPosAdd -= mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_Lean);
-
-	cVector3f vRight = pCam->GetRight();
-	cVector3f vUp = pCam->GetUp();
-	cVector3f vFwd = pCam->GetForward();
-
-	vHandPosAdd = vRight * vHandPosAdd.x + vUp * vHandPosAdd.y + vFwd * vHandPosAdd.z;
-
-	mtxHands.SetTranslation(pCam->GetPosition() - vHandPosAdd *mfPosAddMul);
-
-    mpHandsEntity->SetMatrix(mtxHands);
+	OhplGa2HandsPos p;
+	p.mvCamPos = pCam->GetPosition();
+	p.mvRight = pCam->GetRight();
+	p.mvUp = pCam->GetUp();
+	p.mvForward = pCam->GetForward();
+	p.mvBob = mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_Bob);
+	p.mvShake = mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_ScreenShake);
+	p.mvHurt = mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_Hurt);
+	p.mfPosAddMul = mfPosAddMul;
+	cVector3f vPos;
+	ohpl_ga2_hands_translation(&p, &vPos);
+	mtxHands.SetTranslation(vPos);
+	mpHandsEntity->SetMatrix(mtxHands);
 }
 
 //-----------------------------------------------------------------------

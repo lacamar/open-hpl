@@ -18,6 +18,8 @@
  */
 
 #include "LuxSavedGameTypes.h"
+#include "RustLuxSave.h"
+#include <vector>
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -43,6 +45,18 @@
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
+
+namespace
+{
+
+template<class E>
+int Ga6Tramp(void *apCtx, unsigned alOp, int alA, int alB)
+{
+	E *e = static_cast<E*>(apCtx);
+	return e->mpSelf->Ga6Op(e, alOp, alA, alB);
+}
+
+}
 
 void cLuxLoadScreenHandler_SaveData::FromLoadScreenHandler(cLuxLoadScreenHandler *apData)
 {
@@ -99,25 +113,49 @@ void cLuxInsanityHandler_SaveData::FromInsanityHandler(cLuxInsanityHandler *apDa
 	}
 }
 
+namespace
+{
+
+struct InsanityEnv
+{
+	cLuxInsanityHandler_SaveData *mpSelf;
+	cLuxInsanityHandler *mpData;
+};
+
+}
+
+int cLuxInsanityHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	InsanityEnv &e = *static_cast<InsanityEnv*>(apEnv);
+	cLuxInsanityHandler *apData = e.mpData;
+	switch(alOp)
+	{
+	case eOhplGa6Op_InsToCount:
+		apData->mfNewEventCount = mfNewEventCount;
+		return 0;
+	case eOhplGa6Op_InsSavedEventN:
+		return (int)mvEvents.Size();
+	case eOhplGa6Op_InsLiveEventN:
+		return (int)apData->mvEvents.size();
+	case eOhplGa6Op_InsEventTo:
+		apData->mvEvents[alA]->SetUsed(mvEvents[alA].mbUsed);
+		return 0;
+	case eOhplGa6Op_InsClearSets:
+		apData->m_setDisabledSets.clear();
+		return 0;
+	case eOhplGa6Op_InsSavedSetN:
+		return (int)mvDisabledSets.Size();
+	case eOhplGa6Op_InsInsertSet:
+		apData->m_setDisabledSets.insert(mvDisabledSets[alA].msName);
+		return 0;
+	}
+	return 0;
+}
+
 void cLuxInsanityHandler_SaveData::ToInsanityHandler(cLuxMap *apMap, cLuxInsanityHandler *apData)
 {
-	apData->mfNewEventCount = mfNewEventCount;
-
-	//Events
-	if(mvEvents.Size() == apData->mvEvents.size())
-	{
-		for(size_t i=0; i<mvEvents.Size(); ++i)
-		{
-			apData->mvEvents[i]->SetUsed(mvEvents[i].mbUsed);
-		}
-	}
-
-	//Disabled Events
-	apData->m_setDisabledSets.clear();
-	for(size_t i=0; i<mvDisabledSets.Size(); ++i)
-	{
-		apData->m_setDisabledSets.insert(mvDisabledSets[i].msName);
-	}
+	InsanityEnv env = { this, apData };
+	ohpl_ga6_insanity_to(&env, Ga6Tramp<InsanityEnv>);
 }
 
 //-----------------------------------------------------------------------
@@ -297,139 +335,174 @@ void cLuxEffectHandler_SoundMul_SaveData::ToEntry(int alIdx, cMultipleSettingsHa
 
 //-----------------------------------------------------------------------
 
+namespace
+{
+
+struct EffectsEnv
+{
+	cLuxEffectHandler_SaveData *mpSelf;
+	cLuxEffectHandler *mpEffects;
+	cLuxMap *mpMap;
+	cMultipleSettingsHandler::cGSEntry *mpEntry;
+};
+
+}
+
+int cLuxEffectHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	EffectsEnv &e = *static_cast<EffectsEnv*>(apEnv);
+	cLuxEffectHandler *apEffects = e.mpEffects;
+	cLuxMap *apMap = e.mpMap;
+	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
+	cContainerVec<cLuxEffectHandler_SoundMul_SaveData> &vMul = alA == eOhplGa6Kind_Volume ? mvGlobalSoundVolumeMul : mvGlobalSoundSpeedMul;
+	cMultipleSettingsHandler *pMulHandler = alA == eOhplGa6Kind_Volume ? pSoundHandler->GetGlobalVolumeSettingsHandler() : pSoundHandler->GetGlobalSpeedSettingsHandler();
+	switch(alOp)
+	{
+	case eOhplGa6Op_EffectFromBase:
+		{
+				cLuxEffect_Fade *pFade = apEffects->GetFade();
+
+				mbFade_Active = pFade->IsActive();
+				mfFade_GoalAlpha = pFade->mfGoalAlpha;
+				mfFade_Alpha = pFade->mfAlpha;
+				mfFade_FadeSpeed = pFade->mfFadeSpeed;
+
+				//////////////////////
+				// ImageTrail
+				cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
+
+				mbImageTrail_Active = pImageTrail->mbActive;
+				mfImageTrail_Amount = pImageTrail->mfAmount;
+				mfImageTrail_AmountGoal = pImageTrail->mfAmountGoal;
+				mfImageTrail_FadeSpeed = pImageTrail->mfFadeSpeed;
+
+				//////////////////////
+				// Sepia COlor
+				cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
+
+				mbSepiaColor_Active = pSepiaColor->mbActive;
+				mfSepiaColor_Amount = pSepiaColor->mfAmount;
+				mfSepiaColor_AmountGoal = pSepiaColor->mfAmountGoal;
+				mfSepiaColor_FadeSpeed = pSepiaColor->mfFadeSpeed;
+
+				//////////////////////
+				// Radial blur
+				cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
+
+				mbRadialBlur_Active = pRadialBlur->mbActive;
+				mfRadialBlur_Size = pRadialBlur->mfSize;
+				mfRadialBlur_BlurStartDist = pRadialBlur->mfBlurStartDist;
+				mfRadialBlur_SizeGoal = pRadialBlur->mfSizeGoal;
+				mfRadialBlur_FadeSpeed = pRadialBlur->mfFadeSpeed;
+
+				//////////////////////
+				// Voice data
+				mbVoiceActive = apEffects->GetPlayVoice()->mbActive;
+				msVoiceOverCallback = apEffects->GetPlayVoice()->msOverCallback;
+			    mvVoiceData.Clear();
+				tLuxVoiceDataListIt voiceIt = apEffects->GetPlayVoice()->mlstVoices.begin();
+				for(; voiceIt != apEffects->GetPlayVoice()->mlstVoices.end(); ++voiceIt)
+				{
+					mvVoiceData.Add(*voiceIt);
+				}
+	
+				//////////////////////
+				// Sound volume and speed mul
+		}
+		return 0;
+	case eOhplGa6Op_EffectVolumeCount:
+		return (int)eLuxGlobalVolumeType_LastEnum;
+	case eOhplGa6Op_EffectResizeVolumes:
+		mvGlobalSoundVolumeMul.Resize(alA);
+		mvGlobalSoundSpeedMul.Resize(alA);
+		return 0;
+	case eOhplGa6Op_EffectVolumeKind:
+		return (alA == eLuxGlobalVolumeType_Commentary || alA == eLuxGlobalVolumeType_DebugMenu) ? eOhplGa6Vol_Skipped : eOhplGa6Vol_Normal;
+	case eOhplGa6Op_EffectEntryPresent:
+		e.mpEntry = pMulHandler->GetEntry(alB, false);
+		return e.mpEntry != NULL;
+	case eOhplGa6Op_EffectEntryFrom:
+		vMul[alB].FromEntry(e.mpEntry);
+		return 0;
+	case eOhplGa6Op_EffectEntryInactive:
+		vMul[alB].FromEntry(NULL);
+		return 0;
+	case eOhplGa6Op_EffectToBase:
+		{
+				cLuxEffect_Fade *pFade = apEffects->GetFade();
+
+				pFade->mbActive = mbFade_Active;
+				pFade->mfGoalAlpha = mfFade_GoalAlpha;
+				pFade->mfAlpha = mfFade_Alpha;
+				pFade->mfFadeSpeed = mfFade_FadeSpeed;
+
+				//////////////////////
+				// ImageTrail
+				cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
+
+				gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(mbImageTrail_Active);
+				pImageTrail->mbActive = mbImageTrail_Active;
+				pImageTrail->mfAmount = mfImageTrail_Amount;
+				pImageTrail->mfAmountGoal = mfImageTrail_AmountGoal;
+				pImageTrail->mfFadeSpeed = mfImageTrail_FadeSpeed;
+
+				//////////////////////
+				// Sepia COlor
+				cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
+
+				gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(mbSepiaColor_Active);
+				pSepiaColor->mbActive = mbSepiaColor_Active;
+				pSepiaColor->mfAmount = mfSepiaColor_Amount;
+				pSepiaColor->mfAmountGoal = mfSepiaColor_AmountGoal;
+				pSepiaColor->mfFadeSpeed = mfSepiaColor_FadeSpeed;
+
+				//////////////////////
+				// Radial blur
+				cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
+
+				gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(mbRadialBlur_Active);
+				pRadialBlur->mbActive = mbRadialBlur_Active;
+				pRadialBlur->mfSize = mfRadialBlur_Size;
+				pRadialBlur->mfBlurStartDist = mfRadialBlur_BlurStartDist;
+				pRadialBlur->mfSizeGoal = mfRadialBlur_SizeGoal;
+				pRadialBlur->mfFadeSpeed = mfRadialBlur_FadeSpeed;
+
+				//////////////////////
+				// Voice data
+				apEffects->GetPlayVoice()->mbActive = mbVoiceActive;
+				apEffects->GetPlayVoice()->msOverCallback = msVoiceOverCallback;
+				apEffects->GetPlayVoice()->mlstVoices.clear();
+				for(size_t i=0; i<mvVoiceData.Size(); ++i)
+				{
+					apEffects->GetPlayVoice()->mlstVoices.push_back(mvVoiceData[i]);
+				}
+
+				//////////////////////
+				// Sound volume and speed mul
+		}
+		return 0;
+	case eOhplGa6Op_EffectSavedCount:
+		return (int)vMul.Size();
+	case eOhplGa6Op_EffectEntryActive:
+		return vMul[alB].mbActive;
+	case eOhplGa6Op_EffectEntryApply:
+	case eOhplGa6Op_EffectEntryDestroy:
+		vMul[alB].ToEntry(alB, pMulHandler);
+		return 0;
+	}
+	return 0;
+}
+
 void cLuxEffectHandler_SaveData::FromEffectHandler(cLuxEffectHandler *apEffects)
 {
-	//////////////////////
-	// Fade In / Out
-	cLuxEffect_Fade *pFade = apEffects->GetFade();
-
-	mbFade_Active = pFade->IsActive();
-	mfFade_GoalAlpha = pFade->mfGoalAlpha;
-	mfFade_Alpha = pFade->mfAlpha;
-	mfFade_FadeSpeed = pFade->mfFadeSpeed;
-
-	//////////////////////
-	// ImageTrail
-	cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
-
-	mbImageTrail_Active = pImageTrail->mbActive;
-	mfImageTrail_Amount = pImageTrail->mfAmount;
-	mfImageTrail_AmountGoal = pImageTrail->mfAmountGoal;
-	mfImageTrail_FadeSpeed = pImageTrail->mfFadeSpeed;
-
-	//////////////////////
-	// Sepia COlor
-	cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
-
-	mbSepiaColor_Active = pSepiaColor->mbActive;
-	mfSepiaColor_Amount = pSepiaColor->mfAmount;
-	mfSepiaColor_AmountGoal = pSepiaColor->mfAmountGoal;
-	mfSepiaColor_FadeSpeed = pSepiaColor->mfFadeSpeed;
-
-	//////////////////////
-	// Radial blur
-	cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
-
-	mbRadialBlur_Active = pRadialBlur->mbActive;
-	mfRadialBlur_Size = pRadialBlur->mfSize;
-	mfRadialBlur_BlurStartDist = pRadialBlur->mfBlurStartDist;
-	mfRadialBlur_SizeGoal = pRadialBlur->mfSizeGoal;
-	mfRadialBlur_FadeSpeed = pRadialBlur->mfFadeSpeed;
-
-	//////////////////////
-	// Voice data
-	mbVoiceActive = apEffects->GetPlayVoice()->mbActive;
-	msVoiceOverCallback = apEffects->GetPlayVoice()->msOverCallback;
-    mvVoiceData.Clear();
-	tLuxVoiceDataListIt voiceIt = apEffects->GetPlayVoice()->mlstVoices.begin();
-	for(; voiceIt != apEffects->GetPlayVoice()->mlstVoices.end(); ++voiceIt)
-	{
-		mvVoiceData.Add(*voiceIt);
-	}
-	
-	//////////////////////
-	// Sound volume and speed mul
-	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-	mvGlobalSoundVolumeMul.Resize(eLuxGlobalVolumeType_LastEnum);
-	mvGlobalSoundSpeedMul.Resize(eLuxGlobalVolumeType_LastEnum);
-	for(size_t i=0; i<eLuxGlobalVolumeType_LastEnum; ++i)
-	{
-		if(i == eLuxGlobalVolumeType_Commentary || i == eLuxGlobalVolumeType_DebugMenu)continue;
-
-		mvGlobalSoundVolumeMul[i].FromEntry(pSoundHandler->GetGlobalVolumeSettingsHandler()->GetEntry(i, false) );
-		mvGlobalSoundSpeedMul[i].FromEntry(pSoundHandler->GetGlobalSpeedSettingsHandler()->GetEntry(i, false) );
-	}
+	EffectsEnv env = { this, apEffects, NULL, NULL };
+	ohpl_ga6_effects_from(&env, Ga6Tramp<EffectsEnv>);
 }
 
 void cLuxEffectHandler_SaveData::ToEffectHandler(cLuxMap *apMap, cLuxEffectHandler *apEffects)
 {
-	//////////////////////
-	// Fade In / Out
-	cLuxEffect_Fade *pFade = apEffects->GetFade();
-
-	pFade->mbActive = mbFade_Active;
-	pFade->mfGoalAlpha = mfFade_GoalAlpha;
-	pFade->mfAlpha = mfFade_Alpha;
-	pFade->mfFadeSpeed = mfFade_FadeSpeed;
-
-	//////////////////////
-	// ImageTrail
-	cLuxEffect_ImageTrail *pImageTrail = apEffects->GetImageTrail();
-
-	gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(mbImageTrail_Active);
-	pImageTrail->mbActive = mbImageTrail_Active;
-	pImageTrail->mfAmount = mfImageTrail_Amount;
-	pImageTrail->mfAmountGoal = mfImageTrail_AmountGoal;
-	pImageTrail->mfFadeSpeed = mfImageTrail_FadeSpeed;
-
-	//////////////////////
-	// Sepia COlor
-	cLuxEffect_SepiaColor *pSepiaColor = apEffects->GetSepiaColor();
-
-	gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(mbSepiaColor_Active);
-	pSepiaColor->mbActive = mbSepiaColor_Active;
-	pSepiaColor->mfAmount = mfSepiaColor_Amount;
-	pSepiaColor->mfAmountGoal = mfSepiaColor_AmountGoal;
-	pSepiaColor->mfFadeSpeed = mfSepiaColor_FadeSpeed;
-
-	//////////////////////
-	// Radial blur
-	cLuxEffect_RadialBlur *pRadialBlur = apEffects->GetRadialBlur();
-
-	gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(mbRadialBlur_Active);
-	pRadialBlur->mbActive = mbRadialBlur_Active;
-	pRadialBlur->mfSize = mfRadialBlur_Size;
-	pRadialBlur->mfBlurStartDist = mfRadialBlur_BlurStartDist;
-	pRadialBlur->mfSizeGoal = mfRadialBlur_SizeGoal;
-	pRadialBlur->mfFadeSpeed = mfRadialBlur_FadeSpeed;
-
-	//////////////////////
-	// Voice data
-	apEffects->GetPlayVoice()->mbActive = mbVoiceActive;
-	apEffects->GetPlayVoice()->msOverCallback = msVoiceOverCallback;
-	apEffects->GetPlayVoice()->mlstVoices.clear();
-	for(size_t i=0; i<mvVoiceData.Size(); ++i)
-	{
-		apEffects->GetPlayVoice()->mlstVoices.push_back(mvVoiceData[i]);
-	}
-	
-	//////////////////////
-	// Sound volume and speed mul
-	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-
-	for(size_t i=0; i<mvGlobalSoundVolumeMul.Size(); ++i)
-	{
-		if(i == eLuxGlobalVolumeType_Commentary || i == eLuxGlobalVolumeType_DebugMenu) continue;
-
-		mvGlobalSoundVolumeMul[i].ToEntry(i, pSoundHandler->GetGlobalVolumeSettingsHandler() );
-	}
-	
-	for(size_t i=0; i<mvGlobalSoundSpeedMul.Size(); ++i)
-	{
-		if(i == eLuxGlobalVolumeType_Commentary || i == eLuxGlobalVolumeType_DebugMenu) continue;
-
-		mvGlobalSoundSpeedMul[i].ToEntry(i, pSoundHandler->GetGlobalSpeedSettingsHandler() );
-	}
+	EffectsEnv env = { this, apEffects, apMap, NULL };
+	ohpl_ga6_effects_to(&env, Ga6Tramp<EffectsEnv>);
 }
 
 //-----------------------------------------------------------------------
@@ -483,138 +556,159 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
+namespace
+{
+
+struct MusicEnv
+{
+	cLuxMusicHandler_SaveData *mpSelf;
+	cLuxMusicHandler *mpMusic;
+	cLuxMap *mpMap;
+	cMusicEntry *mpEntry;
+	iLuxEntity *mpEntity;
+	std::vector<iLuxEnemy*> mvEnemies[2];
+};
+
+}
+
+int cLuxMusicHandler_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	MusicEnv &e = *static_cast<MusicEnv*>(apEnv);
+	cLuxMusicHandler *apMusic = e.mpMusic;
+	cLuxMap *apMap = e.mpMap;
+	cMusicEntry *pMusicEntry = e.mpEntry;
+	eLuxEnemyMusic setKind = alA == eOhplGa6Set_Attack ? eLuxEnemyMusic_Attack : eLuxEnemyMusic_Search;
+	switch(alOp)
+	{
+	case eOhplGa6Op_MusicHasSong:
+		e.mpEntry = apMusic->mpMusicHandler->GetCurrentSong();
+		return e.mpEntry != NULL;
+	case eOhplGa6Op_MusicFromSong:
+		{
+					msCurrentMusic = pMusicEntry->msFileName;
+					mfCurrentMusicMaxVolume = pMusicEntry->mfMaxVolume;
+					mfCurrentMusicVolume = pMusicEntry->mfVolume;
+					mfCurrentMusicVolumeAdd = pMusicEntry->mfVolumeAdd;
+					mfCurrentMusicTime = pMusicEntry->mpStream->GetElapsedTime();
+					mbCurrentMusicLoop = pMusicEntry->mbLoop;
+		}
+		return 0;
+	case eOhplGa6Op_MusicFromNoSong:
+		msCurrentMusic = "";
+		mfCurrentMusicVolume = 0;
+		mfCurrentMusicVolumeAdd = 0;
+		mfCurrentMusicMaxVolume = 0;
+		mfCurrentMusicTime = 0;
+		mbCurrentMusicLoop = false;
+		return 0;
+	case eOhplGa6Op_MusicFromMisc:
+		{
+				mlCurrentMaxPrio = apMusic->mlCurrentMaxPrio;
+				mbEnemyClosePlaying = apMusic->mbEnemyClosePlaying;
+				mbAttackPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack];
+				mbSearchPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search];
+
+				///////////////////
+				// Music
+		}
+		return 0;
+	case eOhplGa6Op_MusicFromEntries:
+		{
+				mvMusic.Resize(apMusic->mvGameMusic.size());
+				for(size_t i=0; i<mvMusic.Size(); ++i)
+				{
+					mvMusic[i].msFile = apMusic->mvGameMusic[i].msFile;
+					mvMusic[i].mbLoop = apMusic->mvGameMusic[i].mbLoop;
+					mvMusic[i].mbResume = apMusic->mvGameMusic[i].mbResume;
+					mvMusic[i].mfVolume = apMusic->mvGameMusic[i].mfVolume;
+					mvMusic[i].mbSpecialEffect = apMusic->mvGameMusic[i].mbSpecialEffect;
+				}
+
+				///////////////////
+				// Enemies
+
+				//Attackers
+		}
+		return 0;
+	case eOhplGa6Op_MusicEnemyN:
+		{
+			e.mvEnemies[alA].clear();
+			tLuxEnemySetIt it = apMusic->m_setEnemies[setKind].begin();
+			for(; it != apMusic->m_setEnemies[setKind].end(); ++it)
+				e.mvEnemies[alA].push_back(*it);
+			return (int)e.mvEnemies[alA].size();
+		}
+	case eOhplGa6Op_MusicEnemyId:
+		return e.mvEnemies[alA][alB]->GetID();
+	case eOhplGa6Op_MusicAddAttackerId:
+		mvAttackerIDs.Add(alA);
+		return 0;
+	case eOhplGa6Op_MusicHasSavedSong:
+		return msCurrentMusic != "";
+	case eOhplGa6Op_MusicPlay:
+		return apMusic->mpMusicHandler->Play(msCurrentMusic,mfCurrentMusicMaxVolume,0.1f, mbCurrentMusicLoop, false);
+	case eOhplGa6Op_MusicHasCurrentSong:
+		e.mpEntry = apMusic->mpMusicHandler->GetCurrentSong();
+		return e.mpEntry != NULL;
+	case eOhplGa6Op_MusicApplySong:
+		pMusicEntry->mfMaxVolume = mfCurrentMusicMaxVolume;
+		pMusicEntry->mfVolume = mfCurrentMusicVolume;
+		pMusicEntry->mfVolumeAdd = mfCurrentMusicVolumeAdd;
+		pMusicEntry->mpStream->SetElapsedTime(mfCurrentMusicTime);
+		pMusicEntry->mbLoop = mbCurrentMusicLoop;
+		return 0;
+	case eOhplGa6Op_MusicToMisc:
+		{
+				apMusic->mlCurrentMaxPrio = mlCurrentMaxPrio;
+				apMusic->mbEnemyClosePlaying = mbEnemyClosePlaying;
+				apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack] = mbAttackPlaying;
+				apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search] = mbSearchPlaying;
+
+
+				///////////////////
+				// Music
+		}
+		return 0;
+	case eOhplGa6Op_MusicLiveEntryN:
+		return (int)apMusic->mvGameMusic.size();
+	case eOhplGa6Op_MusicSavedEntryN:
+		return (int)mvMusic.Size();
+	case eOhplGa6Op_MusicEntryTo:
+		apMusic->mvGameMusic[alA].msFile = mvMusic[alA].msFile;
+		apMusic->mvGameMusic[alA].mbLoop = mvMusic[alA].mbLoop;
+		apMusic->mvGameMusic[alA].mbResume = mvMusic[alA].mbResume;
+		apMusic->mvGameMusic[alA].mfVolume = mvMusic[alA].mfVolume;
+		apMusic->mvGameMusic[alA].mbSpecialEffect = mvMusic[alA].mbSpecialEffect;
+		return 0;
+	case eOhplGa6Op_MusicSavedIdN:
+		return (int)(alA == eOhplGa6Set_Attack ? mvAttackerIDs.Size() : mvSearcherIDs.Size());
+	case eOhplGa6Op_MusicSavedId:
+		return alA == eOhplGa6Set_Attack ? mvAttackerIDs[alB] : mvSearcherIDs[alB];
+	case eOhplGa6Op_MusicFindEnemy:
+		e.mpEntity = apMap->GetEntityByID(alA);
+		return e.mpEntity && e.mpEntity->GetEntityType() == eLuxEntityType_Enemy;
+	case eOhplGa6Op_MusicInsertEnemy:
+		apMusic->m_setEnemies[alB == eOhplGa6Set_Attack ? eLuxEnemyMusic_Attack : eLuxEnemyMusic_Search].insert(static_cast<iLuxEnemy*>(e.mpEntity));
+		return 0;
+	case eOhplGa6Op_MusicWarn:
+		Warning("Could not find entity with id %d\n", alA);
+		return 0;
+	}
+	return 0;
+}
+
 void cLuxMusicHandler_SaveData::FromMusicHandler(cLuxMusicHandler *apMusic)
 {
-	///////////////////
-	// Current Music
-	cMusicEntry *pMusicEntry = apMusic->mpMusicHandler->GetCurrentSong();
-	if(pMusicEntry)
-	{
-		msCurrentMusic = pMusicEntry->msFileName;
-		mfCurrentMusicMaxVolume = pMusicEntry->mfMaxVolume;
-		mfCurrentMusicVolume = pMusicEntry->mfVolume;
-		mfCurrentMusicVolumeAdd = pMusicEntry->mfVolumeAdd;
-		mfCurrentMusicTime = pMusicEntry->mpStream->GetElapsedTime();
-		mbCurrentMusicLoop = pMusicEntry->mbLoop;
-	}
-	else
-	{
-		msCurrentMusic = "";
-	}
-
-	///////////////////
-	// Vars
-	mlCurrentMaxPrio = apMusic->mlCurrentMaxPrio;
-	mbEnemyClosePlaying = apMusic->mbEnemyClosePlaying;
-	mbAttackPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack];
-	mbSearchPlaying = apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search];
-
-	///////////////////
-	// Music
-	mvMusic.Resize(apMusic->mvGameMusic.size());
-	for(size_t i=0; i<mvMusic.Size(); ++i)
-	{
-		mvMusic[i].msFile = apMusic->mvGameMusic[i].msFile;
-		mvMusic[i].mbLoop = apMusic->mvGameMusic[i].mbLoop;
-		mvMusic[i].mbResume = apMusic->mvGameMusic[i].mbResume;
-		mvMusic[i].mfVolume = apMusic->mvGameMusic[i].mfVolume;
-		mvMusic[i].mbSpecialEffect = apMusic->mvGameMusic[i].mbSpecialEffect;
-	}
-
-	///////////////////
-	// Enemies
-
-	//Attackers
-	tLuxEnemySetIt it = apMusic->m_setEnemies[eLuxEnemyMusic_Attack].begin();
-	for(; it != apMusic->m_setEnemies[eLuxEnemyMusic_Attack].end(); ++it)
-	{
-		iLuxEnemy *pEnemy = *it;
-		mvAttackerIDs.Add(pEnemy->GetID());
-	}
-
-	//Searchers
-	it = apMusic->m_setEnemies[eLuxEnemyMusic_Search].begin();
-	for(; it != apMusic->m_setEnemies[eLuxEnemyMusic_Search].end(); ++it)
-	{
-		iLuxEnemy *pEnemy = *it;
-		mvAttackerIDs.Add(pEnemy->GetID());
-	}
+	MusicEnv env = { this, apMusic, NULL, NULL, NULL };
+	ohpl_ga6_music_from(&env, Ga6Tramp<MusicEnv>);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMusicHandler_SaveData::ToMusicHandler(cLuxMap *apMap, cLuxMusicHandler *apMusic)
 {
-	///////////////////
-	// Current Music
-	if(msCurrentMusic != "")
-	{
-		bool bRet = apMusic->mpMusicHandler->Play(msCurrentMusic,mfCurrentMusicMaxVolume,0.1f, mbCurrentMusicLoop, false);
-		if(bRet)
-		{	
-			cMusicEntry *pMusicEntry = apMusic->mpMusicHandler->GetCurrentSong();
-			if(pMusicEntry)
-			{
-				pMusicEntry->mfMaxVolume = mfCurrentMusicMaxVolume;
-				pMusicEntry->mfVolume = mfCurrentMusicVolume; 
-				pMusicEntry->mfVolumeAdd = mfCurrentMusicVolumeAdd;
-				pMusicEntry->mpStream->SetElapsedTime(mfCurrentMusicTime);
-				pMusicEntry->mbLoop = mbCurrentMusicLoop;
-			}
-		}
-	}
-
-	///////////////////
-	// Vars
-	apMusic->mlCurrentMaxPrio = mlCurrentMaxPrio;
-	apMusic->mbEnemyClosePlaying = mbEnemyClosePlaying;
-	apMusic->mbEnemyPlaying[eLuxEnemyMusic_Attack] = mbAttackPlaying;
-	apMusic->mbEnemyPlaying[eLuxEnemyMusic_Search] = mbSearchPlaying;
-
-	
-	///////////////////
-	// Music
-	for(size_t i=0; i<mvMusic.Size(); ++i)
-	{
-		apMusic->mvGameMusic[i].msFile = mvMusic[i].msFile;
-		apMusic->mvGameMusic[i].mbLoop = mvMusic[i].mbLoop;
-		apMusic->mvGameMusic[i].mbResume = mvMusic[i].mbResume;
-		apMusic->mvGameMusic[i].mfVolume = mvMusic[i].mfVolume;
-		apMusic->mvGameMusic[i].mbSpecialEffect = mvMusic[i].mbSpecialEffect;
-	}
-
-	///////////////////
-	// Enemies
-
-	//Attackers
-	for(size_t i=0; i<mvAttackerIDs.Size(); ++i)
-	{
-		iLuxEntity *pEntity = apMap->GetEntityByID(mvAttackerIDs[i]);
-        if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Enemy)
-		{
-			iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(pEntity);
-			apMusic->m_setEnemies[eLuxEnemyMusic_Attack].insert(pEnemy);
-		}
-		else
-		{
-			Warning("Could not find entity with id %d\n", mvAttackerIDs[i]);
-		}
-	}
-
-	//Searchers
-	for(size_t i=0; i<mvSearcherIDs.Size(); ++i)
-	{
-		iLuxEntity *pEntity = apMap->GetEntityByID(mvSearcherIDs[i]);
-		if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Enemy)
-		{
-			iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(pEntity);
-			apMusic->m_setEnemies[eLuxEnemyMusic_Search].insert(pEnemy);
-		}
-		else
-		{
-			Warning("Could not find entity with id %d\n", mvAttackerIDs[i]);
-		}
-	}
+	MusicEnv env = { this, apMusic, apMap, NULL, NULL };
+	ohpl_ga6_music_to(&env, Ga6Tramp<MusicEnv>);
 }
 
 //-----------------------------------------------------------------------
@@ -866,43 +960,72 @@ void cLuxInventory_SaveData::FromInventory(cLuxInventory *apInventory)
 
 //-----------------------------------------------------------------------
 
+namespace
+{
+
+struct InventoryEnv
+{
+	cLuxInventory_SaveData *mpSelf;
+	cLuxInventory *mpData;
+};
+
+}
+
+int cLuxInventory_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	InventoryEnv &e = *static_cast<InventoryEnv*>(apEnv);
+	cLuxInventory *apInventory = e.mpData;
+	switch(alOp)
+	{
+	case eOhplGa6Op_InvToDisabled:
+		apInventory->mbDisabled = mbDisabled;
+		return 0;
+	case eOhplGa6Op_InvEquippedIndex:
+		return mlEquippedHandItem;
+	case eOhplGa6Op_InvEquip:
+		{
+			cLuxInventory_Item *pItem = apInventory->GetItem(mlEquippedHandItem);
+			apInventory->SetEquippedHandItem(pItem);
+		}
+		return 0;
+	case eOhplGa6Op_InvEquipNone:
+		apInventory->SetEquippedHandItem(NULL);
+		return 0;
+	case eOhplGa6Op_InvToItems:
+		{
+				for(size_t i=0; i<mvItems.Size(); ++i)
+				{
+					cLuxInventory_Item_SaveData& saveItem = mvItems[i];
+
+					cLuxInventory_Item *pItem = apInventory->AddItem(	saveItem.msName, (eLuxItemType)saveItem.mlType, saveItem.msSubType,
+																		saveItem.msImageFile, saveItem.mfAmount, saveItem.msVal, saveItem.msExtraVal);
+					pItem->SetGameNameEntry(saveItem.msGameNameEntry);
+					pItem->SetGameDescEntry(saveItem.msGameDescEntry);
+					pItem->SetCount(saveItem.mlCount);
+				}
+
+				///////////////////////////
+				//Combine callbacks
+		}
+		return 0;
+	case eOhplGa6Op_InvToCallbacks:
+		{
+				for(size_t i=0; i<mvCombineCallbacks.Size(); ++i)
+				{
+					cLuxCombineItemsCallback *pCallback = hplNew(cLuxCombineItemsCallback, ());
+					*pCallback = mvCombineCallbacks[i];
+					apInventory->mlstCombineCallbacks.push_back(pCallback);
+				}
+		}
+		return 0;
+	}
+	return 0;
+}
+
 void cLuxInventory_SaveData::ToInventory(cLuxMap *apMap, cLuxInventory *apInventory)
 {
-	///////////////////////////
-	//Variables
-	apInventory->mbDisabled = mbDisabled;
-	if(mlEquippedHandItem >0)
-	{
-		cLuxInventory_Item *pItem = apInventory->GetItem(mlEquippedHandItem);
-		apInventory->SetEquippedHandItem(pItem);
-	}
-	else
-	{
-		apInventory->SetEquippedHandItem(NULL);
-	}
-
-
-	///////////////////////////
-	//Items
-	for(size_t i=0; i<mvItems.Size(); ++i)
-	{
-		cLuxInventory_Item_SaveData& saveItem = mvItems[i];
-
-		cLuxInventory_Item *pItem = apInventory->AddItem(	saveItem.msName, (eLuxItemType)saveItem.mlType, saveItem.msSubType, 
-															saveItem.msImageFile, saveItem.mfAmount, saveItem.msVal, saveItem.msExtraVal);
-		pItem->SetGameNameEntry(saveItem.msGameNameEntry);
-		pItem->SetGameDescEntry(saveItem.msGameDescEntry);
-		pItem->SetCount(saveItem.mlCount);
-	}
-
-	///////////////////////////
-	//Combine callbacks
-	for(size_t i=0; i<mvCombineCallbacks.Size(); ++i)
-	{
-		cLuxCombineItemsCallback *pCallback = hplNew(cLuxCombineItemsCallback, ());
-		*pCallback = mvCombineCallbacks[i];
-		apInventory->mlstCombineCallbacks.push_back(pCallback);
-	}
+	InventoryEnv env = { this, apInventory };
+	ohpl_ga6_inventory_to(&env, Ga6Tramp<InventoryEnv>);
 }
 
 //-----------------------------------------------------------------------
@@ -922,53 +1045,95 @@ kEndSerialize()
 
 //-----------------------------------------------------------------------
 
+namespace
+{
+
+struct HandsEnv
+{
+	cLuxPlayerHands_SaveData *mpSelf;
+	cLuxPlayerHands *mpHands;
+	cLuxMap *mpMap;
+};
+
+}
+
+int cLuxPlayerHands_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	HandsEnv &e = *static_cast<HandsEnv*>(apEnv);
+	cLuxPlayerHands *apPlayerHands = e.mpHands;
+	cLuxMap *apMap = e.mpMap;
+	switch(alOp)
+	{
+	case eOhplGa6Op_HandsHasObject:
+		return apPlayerHands->mpCurrentHandObject != NULL;
+	case eOhplGa6Op_HandsFromObject:
+		msCurrentHandObject = apPlayerHands->mpCurrentHandObject->GetName();
+		return 0;
+	case eOhplGa6Op_HandsFromNoObject:
+		msCurrentHandObject = "";
+		return 0;
+	case eOhplGa6Op_HandsFromRest:
+		mlState = apPlayerHands->mHandState;
+		{
+				msCurrentAnim = apPlayerHands->msCurrentAnim;
+
+			    mMesh.FromMeshEntity(apPlayerHands->mpHandsEntity);
+
+				mfHandObjectChargeCount = apPlayerHands->mfHandObjectChargeCount;
+				mlHandObjectState = apPlayerHands->mlHandObjectState;
+				mbHandObjectAttackDown = apPlayerHands->mbHandObjectAttackDown;
+				mbHandObjectInteractDown = apPlayerHands->mbHandObjectInteractDown;
+				mfHandObjectAlpha = apPlayerHands->mfHandObjectAlpha;
+		}
+		return 0;
+	case eOhplGa6Op_HandsToState:
+		apPlayerHands->mHandState = (eLuxHandsState)mlState;
+		return 0;
+	case eOhplGa6Op_HandsHasSavedObject:
+		return msCurrentHandObject != "";
+	case eOhplGa6Op_HandsFindObject:
+		apPlayerHands->mpCurrentHandObject = apPlayerHands->GetHandObject(msCurrentHandObject);
+		return 0;
+	case eOhplGa6Op_HandsHasCurrentObject:
+		return apPlayerHands->mpCurrentHandObject != NULL;
+	case eOhplGa6Op_HandsAttachObject:
+		apPlayerHands->CreateAndAttachHandObject(apMap, apPlayerHands->mpCurrentHandObject);
+		return 0;
+	case eOhplGa6Op_HandsToRest:
+		{
+				apPlayerHands->msCurrentAnim = msCurrentAnim;
+
+				mMesh.ToMeshEntity(apPlayerHands->mpHandsEntity);
+
+				apPlayerHands->mfHandObjectChargeCount = mfHandObjectChargeCount;
+				apPlayerHands->mlHandObjectState = mlHandObjectState;
+				apPlayerHands->mbHandObjectAttackDown = mbHandObjectAttackDown;
+				apPlayerHands->mbHandObjectInteractDown = mbHandObjectInteractDown;
+				apPlayerHands->mfHandObjectAlpha = mfHandObjectAlpha;
+
+				//If hand object is active, set state as idle
+		}
+		return 0;
+	case eOhplGa6Op_HandsIdleCondition:
+		return apPlayerHands->mHandState == eLuxHandsState_HandObject && apPlayerHands->mpCurrentHandObject;
+	case eOhplGa6Op_HandsIdleAfterLoad:
+		apPlayerHands->PlayAnim(apPlayerHands->mpCurrentHandObject->GetAnimIdle(),true);
+		apPlayerHands->mHandState = eLuxHandsState_Idle;
+		return 0;
+	}
+	return 0;
+}
+
 void cLuxPlayerHands_SaveData::FromPlayerHands(cLuxPlayerHands *apPlayerHands)
 {
-	mlState = apPlayerHands->mHandState;
-	
-	if(apPlayerHands->mpCurrentHandObject)
-		msCurrentHandObject = apPlayerHands->mpCurrentHandObject->GetName();
-	else
-		msCurrentHandObject = "";
-
-	msCurrentAnim = apPlayerHands->msCurrentAnim;
-
-    mMesh.FromMeshEntity(apPlayerHands->mpHandsEntity);
-
-	mfHandObjectChargeCount = apPlayerHands->mfHandObjectChargeCount;
-	mlHandObjectState = apPlayerHands->mlHandObjectState;
-	mbHandObjectAttackDown = apPlayerHands->mbHandObjectAttackDown;
-	mbHandObjectInteractDown = apPlayerHands->mbHandObjectInteractDown;
-	mfHandObjectAlpha = apPlayerHands->mfHandObjectAlpha;
+	HandsEnv env = { this, apPlayerHands, NULL };
+	ohpl_ga6_hands_from(&env, Ga6Tramp<HandsEnv>);
 }
 
 void cLuxPlayerHands_SaveData::ToPlayerHands(cLuxMap *apMap, cLuxPlayerHands *apPlayerHands)
 {
-	apPlayerHands->mHandState = (eLuxHandsState)mlState;
-
-	if(msCurrentHandObject != "")
-	{
-		apPlayerHands->mpCurrentHandObject = apPlayerHands->GetHandObject(msCurrentHandObject);
-		if(apPlayerHands->mpCurrentHandObject)
-			apPlayerHands->CreateAndAttachHandObject(apMap, apPlayerHands->mpCurrentHandObject);
-	}
-
-	apPlayerHands->msCurrentAnim = msCurrentAnim;
-
-	mMesh.ToMeshEntity(apPlayerHands->mpHandsEntity);
-
-	apPlayerHands->mfHandObjectChargeCount = mfHandObjectChargeCount;
-	apPlayerHands->mlHandObjectState = mlHandObjectState;
-	apPlayerHands->mbHandObjectAttackDown = mbHandObjectAttackDown;
-	apPlayerHands->mbHandObjectInteractDown = mbHandObjectInteractDown;
-	apPlayerHands->mfHandObjectAlpha = mfHandObjectAlpha;
-
-	//If hand object is active, set state as idle
-	if(apPlayerHands->mHandState == eLuxHandsState_HandObject && apPlayerHands->mpCurrentHandObject)
-	{
-		apPlayerHands->PlayAnim(apPlayerHands->mpCurrentHandObject->GetAnimIdle(),true);
-		apPlayerHands->mHandState = eLuxHandsState_Idle;
-	}
+	HandsEnv env = { this, apPlayerHands, apMap };
+	ohpl_ga6_hands_to(&env, Ga6Tramp<HandsEnv>);
 }
 
 //-----------------------------------------------------------------------
@@ -1011,389 +1176,425 @@ cLuxPlayer_SaveData::~cLuxPlayer_SaveData()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayer_SaveData::FromPlayer(cLuxPlayer *apPlayer)
+namespace
 {
-	//////////////////////
-	///State
-	iLuxPlayerState *pState = apPlayer->GetCurrentStateData();
-	if(pState->IsSaved())
-	{
-		mlState = apPlayer->GetCurrentState();
 
+struct PlayerEnv
+{
+	cLuxPlayer_SaveData *mpSelf;
+	cLuxPlayer *mpPlayer;
+	cLuxMap *mpMap;
+	iLuxPlayerState *mpState;
+	eLuxPlayerState mState;
+	iLuxEntity *mpEntity;
+};
+
+}
+
+int cLuxPlayer_SaveData::Ga6Op(void *apEnv, unsigned alOp, int alA, int alB)
+{
+	PlayerEnv &e = *static_cast<PlayerEnv*>(apEnv);
+	cLuxPlayer *apPlayer = e.mpPlayer;
+	cLuxMap *apMap = e.mpMap;
+	iLuxPlayerState *pState = e.mpState;
+	switch(alOp)
+	{
+	case eOhplGa6Op_PlayerStateSaved:
+		e.mpState = apPlayer->GetCurrentStateData();
+		return e.mpState->IsSaved();
+	case eOhplGa6Op_PlayerFromState:
+		mlState = apPlayer->GetCurrentState();
 		mpStateData = pState->CreateSaveData();
 		pState->SaveToSaveData(mpStateData);
-	}
-	else
-	{
+		return 0;
+	case eOhplGa6Op_PlayerFromNoState:
 		mlState = eLuxPlayerState_Normal;
 		mpStateData = NULL;
-	}
+		return 0;
+	case eOhplGa6Op_PlayerFromBlock:
+		{
+				mbActive = apPlayer->mbActive;
 
-	//////////////////////
-	///Variables
-	mbActive = apPlayer->mbActive;
+			    mbUsesDragFootsteps = apPlayer->mbUsesDragFootsteps;
 
-    mbUsesDragFootsteps = apPlayer->mbUsesDragFootsteps;
+				mfHealth = apPlayer->mfHealth;
+				mfSanity = apPlayer->mfSanity;
+				mfLampOil = apPlayer->mfLampOil;
 
-	mfHealth = apPlayer->mfHealth;
-	mfSanity = apPlayer->mfSanity;
-	mfLampOil = apPlayer->mfLampOil;
+				mfTerror = apPlayer->mfTerror;
+				mlCoins = apPlayer->mlCoins;
+				mlTinderboxes = apPlayer->mlTinderboxes;
 
-	mfTerror = apPlayer->mfTerror;
-	mlCoins = apPlayer->mlCoins;
-	mlTinderboxes = apPlayer->mlTinderboxes;
+				mvHeadSpinSpeed = apPlayer->mvHeadSpinSpeed;
 
-	mvHeadSpinSpeed = apPlayer->mvHeadSpinSpeed;
+				mbLanternOn = apPlayer->GetHelperLantern()->IsActive();
+				mbLanternDisabled = apPlayer->GetHelperLantern()->GetDisabled();
 
-	mbLanternOn = apPlayer->GetHelperLantern()->IsActive();
-	mbLanternDisabled = apPlayer->GetHelperLantern()->GetDisabled();
+				msDeathHintCat = apPlayer->GetHelperDeath()->GetHintCat();
+				msDeathHintEntry = apPlayer->GetHelperDeath()->GetHintEntry();
 
-	msDeathHintCat = apPlayer->GetHelperDeath()->GetHintCat();
-	msDeathHintEntry = apPlayer->GetHelperDeath()->GetHintEntry();
+				cLuxMoveState_Normal *pMoveNormal = static_cast<cLuxMoveState_Normal*>(apPlayer->GetMoveStateData(eLuxMoveState_Normal));
+			    mbCrouching = pMoveNormal->mbCrouching;
 
-	cLuxMoveState_Normal *pMoveNormal = static_cast<cLuxMoveState_Normal*>(apPlayer->GetMoveStateData(eLuxMoveState_Normal));
-    mbCrouching = pMoveNormal->mbCrouching;
-
-	//////////////////////
-	/// SpawnPS
-	mbSpawnPSActive = apPlayer->GetHelperSpawnPS()->IsActive();
-	mbSpawnPSFile = apPlayer->GetHelperSpawnPS()->GetFileName();
+				//////////////////////
+				/// SpawnPS
+				mbSpawnPSActive = apPlayer->GetHelperSpawnPS()->IsActive();
+				mbSpawnPSFile = apPlayer->GetHelperSpawnPS()->GetFileName();
 	
-	//////////////////////
-	/// Flashback
-	mbFlashbackActive = apPlayer->GetHelperFlashback()->mbActive;
-	mfFlashbackStartCount =	apPlayer->GetHelperFlashback()->mfFlashbackStartCount;
-	mfFlashDelay = apPlayer->GetHelperFlashback()->mfFlashDelay;
-	msFlashbackFile = apPlayer->GetHelperFlashback()->msFlashbackFile;
-	msFlashbackCallback = apPlayer->GetHelperFlashback()->msCallback;
-	mlstFlashbackQueue.Clear();
-	tLuxFlashbackDataListIt flashIt = apPlayer->GetHelperFlashback()->mlstFlashbackQueue.begin();
-	for(; flashIt != apPlayer->GetHelperFlashback()->mlstFlashbackQueue.end(); ++flashIt)
-	{
-		cLuxFlashbackData& flashData = *flashIt;
-		cLuxFlashbackData_SaveData saveData;
-		saveData.msFile = flashData.msFile;
-		saveData.msCallback = flashData.msCallback;
+				//////////////////////
+				/// Flashback
+				mbFlashbackActive = apPlayer->GetHelperFlashback()->mbActive;
+				mfFlashbackStartCount =	apPlayer->GetHelperFlashback()->mfFlashbackStartCount;
+				mfFlashDelay = apPlayer->GetHelperFlashback()->mfFlashDelay;
+				msFlashbackFile = apPlayer->GetHelperFlashback()->msFlashbackFile;
+				msFlashbackCallback = apPlayer->GetHelperFlashback()->msCallback;
+				mlstFlashbackQueue.Clear();
+				tLuxFlashbackDataListIt flashIt = apPlayer->GetHelperFlashback()->mlstFlashbackQueue.begin();
+				for(; flashIt != apPlayer->GetHelperFlashback()->mlstFlashbackQueue.end(); ++flashIt)
+				{
+					cLuxFlashbackData& flashData = *flashIt;
+					cLuxFlashbackData_SaveData saveData;
+					saveData.msFile = flashData.msFile;
+					saveData.msCallback = flashData.msCallback;
 
-		mlstFlashbackQueue.Add(saveData);
-	}
+					mlstFlashbackQueue.Add(saveData);
+				}
 
-	//////////////////////
-	/// Insanity collapse
-	mbInsanityCollapse_Active = apPlayer->GetInsanityCollapse()->mbActive;
-	mlInsanityCollapse_State = apPlayer->GetInsanityCollapse()->mlState;
-	mfInsanityCollapse_HeightAdd = apPlayer->GetInsanityCollapse()->mfHeightAdd;
-	mfInsanityCollapse_Roll = apPlayer->GetInsanityCollapse()->mfRoll;
-	mfInsanityCollapse_T = apPlayer->GetInsanityCollapse()->mfT;;
+				//////////////////////
+				/// Insanity collapse
+				mbInsanityCollapse_Active = apPlayer->GetInsanityCollapse()->mbActive;
+				mlInsanityCollapse_State = apPlayer->GetInsanityCollapse()->mlState;
+				mfInsanityCollapse_HeightAdd = apPlayer->GetInsanityCollapse()->mfHeightAdd;
+				mfInsanityCollapse_Roll = apPlayer->GetInsanityCollapse()->mfRoll;
+				mfInsanityCollapse_T = apPlayer->GetInsanityCollapse()->mfT;;
 
-	//////////////////////
-	/// Sanity
-	mfSanity_AtLowSanityCount = apPlayer->GetHelperSanity()->mfAtLowSanityCount;
+				//////////////////////
+				/// Sanity
+				mfSanity_AtLowSanityCount = apPlayer->GetHelperSanity()->mfAtLowSanityCount;
 
-	//////////////////////
-	// Look At
-	mbLookAt_Active = apPlayer->GetHelperLookAt()->mbActive;
-	mvLookAt_TargetPos = apPlayer->GetHelperLookAt()->mvTargetPos;
-	mvLookAt_CurrentSpeed = apPlayer->GetHelperLookAt()->mvCurrentSpeed;
-	mfLookAt_SpeedMul = apPlayer->GetHelperLookAt()->mfSpeedMul;
-	mfLookAt_MaxSpeed = apPlayer->GetHelperLookAt()->mfMaxSpeed;
-	msLookAt_AtTargetCallback = apPlayer->GetHelperLookAt()->msAtTargetCallback;
-	mfLookAt_DestFovMul = apPlayer->GetHelperLookAt()->mfDestFovMul;
-	mfLookAt_Fov = apPlayer->GetHelperLookAt()->mfFov;
-	mfLookAt_FovSpeed = apPlayer->GetHelperLookAt()->mfFovSpeed;
-	mfLookAt_FovMaxSpeed = apPlayer->GetHelperLookAt()->mfFovMaxSpeed;
+				//////////////////////
+				// Look At
+				mbLookAt_Active = apPlayer->GetHelperLookAt()->mbActive;
+				mvLookAt_TargetPos = apPlayer->GetHelperLookAt()->mvTargetPos;
+				mvLookAt_CurrentSpeed = apPlayer->GetHelperLookAt()->mvCurrentSpeed;
+				mfLookAt_SpeedMul = apPlayer->GetHelperLookAt()->mfSpeedMul;
+				mfLookAt_MaxSpeed = apPlayer->GetHelperLookAt()->mfMaxSpeed;
+				msLookAt_AtTargetCallback = apPlayer->GetHelperLookAt()->msAtTargetCallback;
+				mfLookAt_DestFovMul = apPlayer->GetHelperLookAt()->mfDestFovMul;
+				mfLookAt_Fov = apPlayer->GetHelperLookAt()->mfFov;
+				mfLookAt_FovSpeed = apPlayer->GetHelperLookAt()->mfFovSpeed;
+				mfLookAt_FovMaxSpeed = apPlayer->GetHelperLookAt()->mfFovMaxSpeed;
 
-	//////////////////////
-	// Darkness
-	mfDarkness_Active = apPlayer->GetHelperInDarkness()->mbActive;
+				//////////////////////
+				// Darkness
+				mfDarkness_Active = apPlayer->GetHelperInDarkness()->mbActive;
 
-	//////////////////////
-	/// Misc vars
-	kCopyFromVar(apPlayer, mbIsInWater);
-	kCopyFromVar(apPlayer, msWaterStepSound);
-	kCopyFromVar(apPlayer, mfWaterSpeedMul);
+				//////////////////////
+				/// Misc vars
+				kCopyFromVar(apPlayer, mbIsInWater);
+				kCopyFromVar(apPlayer, msWaterStepSound);
+				kCopyFromVar(apPlayer, mfWaterSpeedMul);
 
-	kCopyFromVar(apPlayer, mbJumpDisabled);
-	kCopyFromVar(apPlayer, mbCrouchDisabled);
-	kCopyFromVar(apPlayer, mbSanityDrainDisabled);
+				kCopyFromVar(apPlayer, mbJumpDisabled);
+				kCopyFromVar(apPlayer, mbCrouchDisabled);
+				kCopyFromVar(apPlayer, mbSanityDrainDisabled);
 
-	kCopyFromVar(apPlayer, mfInteractionMoveSpeedMul);
-	kCopyFromVar(apPlayer, mfEventMoveSpeedMul);
-	kCopyFromVar(apPlayer, mfEventRunSpeedMul);
-	kCopyFromVar(apPlayer, mfScriptMoveSpeedMul);
-	kCopyFromVar(apPlayer, mfScriptRunSpeedMul);
-	kCopyFromVar(apPlayer, mfLookSpeedMul);
-	kCopyFromVar(apPlayer, mfHurtMoveSpeedMul);
-	kCopyFromVar(apPlayer, mfInsanityCollapseSpeedMul);
+				kCopyFromVar(apPlayer, mfInteractionMoveSpeedMul);
+				kCopyFromVar(apPlayer, mfEventMoveSpeedMul);
+				kCopyFromVar(apPlayer, mfEventRunSpeedMul);
+				kCopyFromVar(apPlayer, mfScriptMoveSpeedMul);
+				kCopyFromVar(apPlayer, mfScriptRunSpeedMul);
+				kCopyFromVar(apPlayer, mfLookSpeedMul);
+				kCopyFromVar(apPlayer, mfHurtMoveSpeedMul);
+				kCopyFromVar(apPlayer, mfInsanityCollapseSpeedMul);
 
-	kCopyFromVar(apPlayer, mfScriptJumpForceMul);
+				kCopyFromVar(apPlayer, mfScriptJumpForceMul);
 
-	kCopyFromVar(apPlayer, mfAspectMul);
-	kCopyFromVar(apPlayer, mfFOVMul);
-	kCopyFromVar(apPlayer, mfAspectMulGoal);
-	kCopyFromVar(apPlayer, mfFOVMulGoal);
-	kCopyFromVar(apPlayer, mfAspectMulSpeed);
-	kCopyFromVar(apPlayer, mfFOVMulSpeed);
+				kCopyFromVar(apPlayer, mfAspectMul);
+				kCopyFromVar(apPlayer, mfFOVMul);
+				kCopyFromVar(apPlayer, mfAspectMulGoal);
+				kCopyFromVar(apPlayer, mfFOVMulGoal);
+				kCopyFromVar(apPlayer, mfAspectMulSpeed);
+				kCopyFromVar(apPlayer, mfFOVMulSpeed);
 
-	kCopyFromVar(apPlayer, mfRoll);
-	kCopyFromVar(apPlayer, mfRollGoal);
-	kCopyFromVar(apPlayer, mfRollSpeedMul);
-	kCopyFromVar(apPlayer, mfRollMaxSpeed);
+				kCopyFromVar(apPlayer, mfRoll);
+				kCopyFromVar(apPlayer, mfRollGoal);
+				kCopyFromVar(apPlayer, mfRollSpeedMul);
+				kCopyFromVar(apPlayer, mfRollMaxSpeed);
 
-    kCopyFromVar( apPlayer, mbFadingPitch );
-    kCopyFromVar( apPlayer, mfPitchGoal );
-    kCopyFromVar( apPlayer, mfPitchSpeedMul );
-    kCopyFromVar( apPlayer, mfPitchMaxSpeed );
+			    kCopyFromVar( apPlayer, mbFadingPitch );
+			    kCopyFromVar( apPlayer, mfPitchGoal );
+			    kCopyFromVar( apPlayer, mfPitchSpeedMul );
+			    kCopyFromVar( apPlayer, mfPitchMaxSpeed );
 
-	kCopyFromVar(apPlayer, mvCamAnimPos);
-	kCopyFromVar(apPlayer, mvCamAnimPosGoal);
-	kCopyFromVar(apPlayer, mfCamAnimPosSpeedMul);
-	kCopyFromVar(apPlayer, mfCamAnimPosMaxSpeed);
+				kCopyFromVar(apPlayer, mvCamAnimPos);
+				kCopyFromVar(apPlayer, mvCamAnimPosGoal);
+				kCopyFromVar(apPlayer, mfCamAnimPosSpeedMul);
+				kCopyFromVar(apPlayer, mfCamAnimPosMaxSpeed);
 
-	kCopyFromVar(apPlayer, mbNoFallDamage);
+				kCopyFromVar(apPlayer, mbNoFallDamage);
 
-	kCopyFromVar(apPlayer, mbScriptShowFocusIconAndCrossHair);
+				kCopyFromVar(apPlayer, mbScriptShowFocusIconAndCrossHair);
 
-	//TODO: Get the correct move mode!?
+				//TODO: Get the correct move mode!?
 
-	//////////////////////
-	///Body
-	mCharBody.FromBody(apPlayer->mpCharBody);
+				//////////////////////
+				///Body
+				mCharBody.FromBody(apPlayer->mpCharBody);
 	
-	//////////////////////
-	///Camera
-	cCamera *pCam = apPlayer->GetCamera();
-	mvCameraAngles = cVector3f(pCam->GetPitch(),pCam->GetYaw(), pCam->GetRoll());
+				//////////////////////
+				///Camera
+				cCamera *pCam = apPlayer->GetCamera();
+				mvCameraAngles = cVector3f(pCam->GetPitch(),pCam->GetYaw(), pCam->GetRoll());
 
-	mfPitchMaxLimit = pCam->GetPitchMaxLimit();
-	mfPitchMinLimit = pCam->GetPitchMinLimit();
-	mfYawMaxLimit = pCam->GetYawMaxLimit();
-	mfYawMinLimit = pCam->GetYawMinLimit();
+				mfPitchMaxLimit = pCam->GetPitchMaxLimit();
+				mfPitchMinLimit = pCam->GetPitchMinLimit();
+				mfYawMaxLimit = pCam->GetYawMaxLimit();
+				mfYawMinLimit = pCam->GetYawMinLimit();
 
-	mvHeadPosAdds.Resize(apPlayer->mvHeadPosAdds.size());
-	for(size_t i=0; i<mvHeadPosAdds.Size(); ++i)
-		mvHeadPosAdds[i] = apPlayer->mvHeadPosAdds[i];
+				mvHeadPosAdds.Resize(apPlayer->mvHeadPosAdds.size());
+				for(size_t i=0; i<mvHeadPosAdds.Size(); ++i)
+					mvHeadPosAdds[i] = apPlayer->mvHeadPosAdds[i];
 
-	///////////////////
-	// Terror Enemies
-	tLuxEnemySetIt it = apPlayer->m_setTerrorEnemies.begin();
-	for(; it != apPlayer->m_setTerrorEnemies.end(); ++it)
-	{
-		iLuxEnemy *pEnemy = *it;
-		mvTerrorEnemyIDs.Add(pEnemy->GetID());
+				///////////////////
+				// Terror Enemies
+				tLuxEnemySetIt it = apPlayer->m_setTerrorEnemies.begin();
+				for(; it != apPlayer->m_setTerrorEnemies.end(); ++it)
+				{
+					iLuxEnemy *pEnemy = *it;
+					mvTerrorEnemyIDs.Add(pEnemy->GetID());
+				}
+
+				//////////////////////
+				///Player hands
+				mPlayerHands.FromPlayerHands(apPlayer->GetHands());
+
+				//////////////////////
+				///Collide callbacks
+				for(tLuxCollideCallbackListIt it = apPlayer->mlstCollideCallbacks.begin(); it != apPlayer->mlstCollideCallbacks.end(); ++it)
+				{
+					cLuxCollideCallback *pCallback = *it;
+					cLuxCollideCallback_SaveData saveCallback;
+					saveCallback.FromCallback(pCallback);
+
+					mlstCollideCallbacks.Add(saveCallback);
+				}
+		}
+		return 0;
+	case eOhplGa6Op_PlayerToStateBefore:
+		e.mState = (eLuxPlayerState)mlState;
+		e.mpState = apPlayer->GetStateData(e.mState);
+		return 0;
+	case eOhplGa6Op_PlayerHasStateData:
+		return mpStateData != NULL;
+	case eOhplGa6Op_PlayerLoadStateBefore:
+		pState->LoadFromSaveDataBeforeEnter(apMap, mpStateData);
+		return 0;
+	case eOhplGa6Op_PlayerChangeState:
+		apPlayer->ChangeState(e.mState);
+		return 0;
+	case eOhplGa6Op_PlayerLoadStateAfter:
+		pState->LoadFromSaveDataAfterEnter(apMap, mpStateData);
+		return 0;
+	case eOhplGa6Op_PlayerToBlock1:
+		{
+				apPlayer->mbActive = mbActive;
+
+			    apPlayer->mbUsesDragFootsteps = mbUsesDragFootsteps;
+
+				apPlayer->mfHealth = mfHealth;
+				apPlayer->mfSanity = mfSanity;
+				apPlayer->mfLampOil = mfLampOil;
+	
+				apPlayer->mfTerror = mfTerror;
+				apPlayer->mlCoins = mlCoins;
+				apPlayer->mlTinderboxes = mlTinderboxes;
+
+				apPlayer->mvHeadSpinSpeed = mvHeadSpinSpeed;
+
+				apPlayer->GetHelperLantern()->SetActive(mbLanternOn, false, false);
+				apPlayer->GetHelperLantern()->SetDisabled(mbLanternDisabled);
+
+				apPlayer->GetHelperDeath()->SetHint(msDeathHintCat, msDeathHintEntry);
+
+				cLuxMoveState_Normal *pMoveNormal = static_cast<cLuxMoveState_Normal*>(apPlayer->GetMoveStateData(eLuxMoveState_Normal));
+				pMoveNormal->mbCrouching = mbCrouching;
+
+				//////////////////////
+				/// SpawnPS
+		}
+		return 0;
+	case eOhplGa6Op_PlayerSpawnPsActive:
+		return mbSpawnPSActive;
+	case eOhplGa6Op_PlayerSpawnPsStart:
+		apPlayer->GetHelperSpawnPS()->Start(mbSpawnPSFile);
+		return 0;
+	case eOhplGa6Op_PlayerSpawnPsStop:
+		apPlayer->GetHelperSpawnPS()->Stop();
+		return 0;
+	case eOhplGa6Op_PlayerToBlock2:
+		{
+				apPlayer->GetHelperFlashback()->mbActive = mbFlashbackActive;
+				apPlayer->GetHelperFlashback()->mfFlashbackStartCount = mfFlashbackStartCount;
+				apPlayer->GetHelperFlashback()->mfFlashDelay = mfFlashDelay;
+				apPlayer->GetHelperFlashback()->msFlashbackFile = msFlashbackFile;
+				apPlayer->GetHelperFlashback()->msCallback = msFlashbackCallback;
+	
+				apPlayer->GetHelperFlashback()->mlstFlashbackQueue.clear();
+				cContainerListIterator<cLuxFlashbackData_SaveData> flashIt =mlstFlashbackQueue.GetIterator();
+				while(flashIt.HasNext())
+				{
+					cLuxFlashbackData_SaveData saveData = flashIt.Next();
+					apPlayer->GetHelperFlashback()->mlstFlashbackQueue.push_back(cLuxFlashbackData(saveData.msFile,saveData.msCallback) );
+				}
+
+				//////////////////////
+				/// Insanity collapse
+				apPlayer->GetInsanityCollapse()->mbActive = mbInsanityCollapse_Active;
+				apPlayer->GetInsanityCollapse()->mlState = mlInsanityCollapse_State;
+				apPlayer->GetInsanityCollapse()->mfHeightAdd = mfInsanityCollapse_HeightAdd;
+				apPlayer->GetInsanityCollapse()->mfRoll = mfInsanityCollapse_Roll;
+				apPlayer->GetInsanityCollapse()->mfT = mfInsanityCollapse_T;
+
+				//////////////////////
+				/// Sanity
+				apPlayer->GetHelperSanity()->mfAtLowSanityCount = mfSanity_AtLowSanityCount;
+
+				//////////////////////
+				// Look At
+				apPlayer->GetHelperLookAt()->mbActive = mbLookAt_Active;
+				apPlayer->GetHelperLookAt()->mvTargetPos = mvLookAt_TargetPos;
+				apPlayer->GetHelperLookAt()->mvCurrentSpeed = mvLookAt_CurrentSpeed;
+				apPlayer->GetHelperLookAt()->mfSpeedMul = mfLookAt_SpeedMul;
+				apPlayer->GetHelperLookAt()->mfMaxSpeed = mfLookAt_MaxSpeed;
+				apPlayer->GetHelperLookAt()->msAtTargetCallback = msLookAt_AtTargetCallback;
+				apPlayer->GetHelperLookAt()->mfDestFovMul = mfLookAt_DestFovMul;
+				apPlayer->GetHelperLookAt()->mfFov = mfLookAt_Fov;
+				apPlayer->GetHelperLookAt()->mfFovSpeed = mfLookAt_FovSpeed;
+				apPlayer->GetHelperLookAt()->mfFovMaxSpeed = mfLookAt_FovMaxSpeed;
+	
+				//////////////////////
+				// Darkness
+				apPlayer->GetHelperInDarkness()->SetActive(mfDarkness_Active);
+
+				//////////////////////
+				/// Misc vars
+				kCopyToVar(apPlayer, mbIsInWater);
+				kCopyToVar(apPlayer, msWaterStepSound);
+				kCopyToVar(apPlayer, mfWaterSpeedMul);
+
+				kCopyToVar(apPlayer, mbJumpDisabled);
+				kCopyToVar(apPlayer, mbCrouchDisabled);
+				kCopyFromVar(apPlayer, mbSanityDrainDisabled);
+
+				kCopyToVar(apPlayer, mfInteractionMoveSpeedMul);
+				kCopyToVar(apPlayer, mfEventMoveSpeedMul);
+				kCopyToVar(apPlayer, mfEventRunSpeedMul);
+				kCopyToVar(apPlayer, mfScriptMoveSpeedMul);
+				kCopyToVar(apPlayer, mfScriptRunSpeedMul);
+				kCopyToVar(apPlayer, mfLookSpeedMul);
+				kCopyToVar(apPlayer, mfHurtMoveSpeedMul);
+				kCopyToVar(apPlayer, mfInsanityCollapseSpeedMul);
+
+				kCopyToVar(apPlayer, mfScriptJumpForceMul);
+
+				kCopyToVar(apPlayer, mfAspectMul);
+				kCopyToVar(apPlayer, mfFOVMul);
+				kCopyToVar(apPlayer, mfAspectMulGoal);
+				kCopyToVar(apPlayer, mfFOVMulGoal);
+				kCopyToVar(apPlayer, mfAspectMulSpeed);
+				kCopyToVar(apPlayer, mfFOVMulSpeed);
+
+				kCopyToVar(apPlayer, mfRoll);
+				kCopyToVar(apPlayer, mfRollGoal);
+				kCopyToVar(apPlayer, mfRollSpeedMul);
+				kCopyToVar(apPlayer, mfRollMaxSpeed);
+
+			    kCopyToVar( apPlayer, mbFadingPitch );
+			    kCopyToVar( apPlayer, mfPitchGoal );
+			    kCopyToVar( apPlayer, mfPitchSpeedMul );
+			    kCopyToVar( apPlayer, mfPitchMaxSpeed );
+
+				kCopyToVar(apPlayer, mvCamAnimPos);
+				kCopyToVar(apPlayer, mvCamAnimPosGoal);
+				kCopyToVar(apPlayer, mfCamAnimPosSpeedMul);
+				kCopyToVar(apPlayer, mfCamAnimPosMaxSpeed);
+
+				kCopyToVar(apPlayer, mbNoFallDamage);
+
+				kCopyToVar(apPlayer, mbScriptShowFocusIconAndCrossHair);
+
+				//TODO: Set the correct move mode!
+
+
+				//////////////////////
+				///Body
+				mCharBody.ToBody(apPlayer->mpCharBody);
+
+
+				//////////////////////
+				///Camera
+				cCamera *pCam = apPlayer->GetCamera();
+				pCam->SetPitchLimits(mfPitchMinLimit, mfPitchMaxLimit);
+				pCam->SetYawLimits(mfYawMinLimit, mfYawMaxLimit);
+	
+				pCam->SetPitch(mvCameraAngles.x);
+				pCam->SetYaw(mvCameraAngles.y);
+				pCam->SetRoll(mvCameraAngles.z);
+		}
+		return 0;
+	case eOhplGa6Op_PlayerHeadPosAddsMatch:
+		return apPlayer->mvHeadPosAdds.size() == mvHeadPosAdds.Size();
+	case eOhplGa6Op_PlayerToHeadPosAdds:
+		for(size_t i=0; i<apPlayer->mvHeadPosAdds.size(); ++i)
+			apPlayer->mvHeadPosAdds[i] = mvHeadPosAdds[i];
+		return 0;
+	case eOhplGa6Op_PlayerSavedTerrorN:
+		return (int)mvTerrorEnemyIDs.Size();
+	case eOhplGa6Op_PlayerSavedTerrorId:
+		return mvTerrorEnemyIDs[alA];
+	case eOhplGa6Op_PlayerFindEnemy:
+		e.mpEntity = apMap->GetEntityByID(alA);
+		return e.mpEntity && e.mpEntity->GetEntityType() == eLuxEntityType_Enemy;
+	case eOhplGa6Op_PlayerInsertTerror:
+		apPlayer->m_setTerrorEnemies.insert(static_cast<iLuxEnemy*>(e.mpEntity));
+		return 0;
+	case eOhplGa6Op_PlayerWarnTerror:
+		Warning("Could not find entity with id %d\n", alA);
+		return 0;
+	case eOhplGa6Op_PlayerToBlock3:
+		{
+				mPlayerHands.ToPlayerHands(apMap, apPlayer->GetHands());
+
+				//////////////////////
+				///Collide callbacks
+				cContainerListIterator<cLuxCollideCallback_SaveData> it = mlstCollideCallbacks.GetIterator();
+				while(it.HasNext())
+				{
+					cLuxCollideCallback_SaveData& saveCallback = it.Next();
+					cLuxCollideCallback *pCallback = hplNew(cLuxCollideCallback, ());
+
+					saveCallback.ToCallback(apMap, apPlayer, pCallback);
+					apPlayer->mlstCollideCallbacks.push_back(pCallback);
+				}
+		}
+		return 0;
 	}
+	return 0;
+}
 
-	//////////////////////
-	///Player hands
-	mPlayerHands.FromPlayerHands(apPlayer->GetHands());
-
-	//////////////////////
-	///Collide callbacks
-	for(tLuxCollideCallbackListIt it = apPlayer->mlstCollideCallbacks.begin(); it != apPlayer->mlstCollideCallbacks.end(); ++it)
-	{
-		cLuxCollideCallback *pCallback = *it;
-		cLuxCollideCallback_SaveData saveCallback;
-		saveCallback.FromCallback(pCallback);
-
-		mlstCollideCallbacks.Add(saveCallback);
-	}
+void cLuxPlayer_SaveData::FromPlayer(cLuxPlayer *apPlayer)
+{
+	PlayerEnv env = { this, apPlayer, NULL, NULL, eLuxPlayerState_Normal, NULL };
+	ohpl_ga6_player_from(&env, Ga6Tramp<PlayerEnv>);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer_SaveData::ToPlayer(cLuxMap *apMap,cLuxPlayer *apPlayer)
 {
-	//////////////////////
-	///State
-	eLuxPlayerState playerState = (eLuxPlayerState)mlState;
-	iLuxPlayerState *pState = apPlayer->GetStateData(playerState);
-
-	if(mpStateData) pState->LoadFromSaveDataBeforeEnter(apMap, mpStateData);
-	apPlayer->ChangeState(playerState);
-	if(mpStateData) pState->LoadFromSaveDataAfterEnter(apMap, mpStateData);
-
-	//////////////////////
-	///Variables
-	apPlayer->mbActive = mbActive;
-
-    apPlayer->mbUsesDragFootsteps = mbUsesDragFootsteps;
-
-	apPlayer->mfHealth = mfHealth;
-	apPlayer->mfSanity = mfSanity;
-	apPlayer->mfLampOil = mfLampOil;
-	
-	apPlayer->mfTerror = mfTerror;
-	apPlayer->mlCoins = mlCoins;
-	apPlayer->mlTinderboxes = mlTinderboxes;
-
-	apPlayer->mvHeadSpinSpeed = mvHeadSpinSpeed;
-
-	apPlayer->GetHelperLantern()->SetActive(mbLanternOn, false, false);
-	apPlayer->GetHelperLantern()->SetDisabled(mbLanternDisabled);
-
-	apPlayer->GetHelperDeath()->SetHint(msDeathHintCat, msDeathHintEntry);
-
-	cLuxMoveState_Normal *pMoveNormal = static_cast<cLuxMoveState_Normal*>(apPlayer->GetMoveStateData(eLuxMoveState_Normal));
-	pMoveNormal->mbCrouching = mbCrouching;
-
-	//////////////////////
-	/// SpawnPS
-	if(mbSpawnPSActive)
-	{
-		apPlayer->GetHelperSpawnPS()->Start(mbSpawnPSFile); 
-	}
-	else
-	{
-		apPlayer->GetHelperSpawnPS()->Stop();
-	}
-	 
-	//////////////////////
-	/// Flashback
-	apPlayer->GetHelperFlashback()->mbActive = mbFlashbackActive;
-	apPlayer->GetHelperFlashback()->mfFlashbackStartCount = mfFlashbackStartCount;
-	apPlayer->GetHelperFlashback()->mfFlashDelay = mfFlashDelay;
-	apPlayer->GetHelperFlashback()->msFlashbackFile = msFlashbackFile;
-	apPlayer->GetHelperFlashback()->msCallback = msFlashbackCallback;
-	
-	apPlayer->GetHelperFlashback()->mlstFlashbackQueue.clear();
-	cContainerListIterator<cLuxFlashbackData_SaveData> flashIt =mlstFlashbackQueue.GetIterator();
-	while(flashIt.HasNext())
-	{
-		cLuxFlashbackData_SaveData saveData = flashIt.Next();
-		apPlayer->GetHelperFlashback()->mlstFlashbackQueue.push_back(cLuxFlashbackData(saveData.msFile,saveData.msCallback) );
-	}
-
-	//////////////////////
-	/// Insanity collapse
-	apPlayer->GetInsanityCollapse()->mbActive = mbInsanityCollapse_Active;
-	apPlayer->GetInsanityCollapse()->mlState = mlInsanityCollapse_State;
-	apPlayer->GetInsanityCollapse()->mfHeightAdd = mfInsanityCollapse_HeightAdd;
-	apPlayer->GetInsanityCollapse()->mfRoll = mfInsanityCollapse_Roll;
-	apPlayer->GetInsanityCollapse()->mfT = mfInsanityCollapse_T;
-
-	//////////////////////
-	/// Sanity
-	apPlayer->GetHelperSanity()->mfAtLowSanityCount = mfSanity_AtLowSanityCount;
-
-	//////////////////////
-	// Look At
-	apPlayer->GetHelperLookAt()->mbActive = mbLookAt_Active;
-	apPlayer->GetHelperLookAt()->mvTargetPos = mvLookAt_TargetPos;
-	apPlayer->GetHelperLookAt()->mvCurrentSpeed = mvLookAt_CurrentSpeed;
-	apPlayer->GetHelperLookAt()->mfSpeedMul = mfLookAt_SpeedMul;
-	apPlayer->GetHelperLookAt()->mfMaxSpeed = mfLookAt_MaxSpeed;
-	apPlayer->GetHelperLookAt()->msAtTargetCallback = msLookAt_AtTargetCallback;
-	apPlayer->GetHelperLookAt()->mfDestFovMul = mfLookAt_DestFovMul;
-	apPlayer->GetHelperLookAt()->mfFov = mfLookAt_Fov;
-	apPlayer->GetHelperLookAt()->mfFovSpeed = mfLookAt_FovSpeed;
-	apPlayer->GetHelperLookAt()->mfFovMaxSpeed = mfLookAt_FovMaxSpeed;
-	
-	//////////////////////
-	// Darkness
-	apPlayer->GetHelperInDarkness()->SetActive(mfDarkness_Active);
-
-	//////////////////////
-	/// Misc vars
-	kCopyToVar(apPlayer, mbIsInWater);
-	kCopyToVar(apPlayer, msWaterStepSound);
-	kCopyToVar(apPlayer, mfWaterSpeedMul);
-
-	kCopyToVar(apPlayer, mbJumpDisabled);
-	kCopyToVar(apPlayer, mbCrouchDisabled);
-	kCopyFromVar(apPlayer, mbSanityDrainDisabled);
-
-	kCopyToVar(apPlayer, mfInteractionMoveSpeedMul);
-	kCopyToVar(apPlayer, mfEventMoveSpeedMul);
-	kCopyToVar(apPlayer, mfEventRunSpeedMul);
-	kCopyToVar(apPlayer, mfScriptMoveSpeedMul);
-	kCopyToVar(apPlayer, mfScriptRunSpeedMul);
-	kCopyToVar(apPlayer, mfLookSpeedMul);
-	kCopyToVar(apPlayer, mfHurtMoveSpeedMul);
-	kCopyToVar(apPlayer, mfInsanityCollapseSpeedMul);
-
-	kCopyToVar(apPlayer, mfScriptJumpForceMul);
-
-	kCopyToVar(apPlayer, mfAspectMul);
-	kCopyToVar(apPlayer, mfFOVMul);
-	kCopyToVar(apPlayer, mfAspectMulGoal);
-	kCopyToVar(apPlayer, mfFOVMulGoal);
-	kCopyToVar(apPlayer, mfAspectMulSpeed);
-	kCopyToVar(apPlayer, mfFOVMulSpeed);
-
-	kCopyToVar(apPlayer, mfRoll);
-	kCopyToVar(apPlayer, mfRollGoal);
-	kCopyToVar(apPlayer, mfRollSpeedMul);
-	kCopyToVar(apPlayer, mfRollMaxSpeed);
-
-    kCopyToVar( apPlayer, mbFadingPitch );
-    kCopyToVar( apPlayer, mfPitchGoal );
-    kCopyToVar( apPlayer, mfPitchSpeedMul );
-    kCopyToVar( apPlayer, mfPitchMaxSpeed );
-
-	kCopyToVar(apPlayer, mvCamAnimPos);
-	kCopyToVar(apPlayer, mvCamAnimPosGoal);
-	kCopyToVar(apPlayer, mfCamAnimPosSpeedMul);
-	kCopyToVar(apPlayer, mfCamAnimPosMaxSpeed);
-
-	kCopyToVar(apPlayer, mbNoFallDamage);
-
-	kCopyToVar(apPlayer, mbScriptShowFocusIconAndCrossHair);
-
-	//TODO: Set the correct move mode!
-
-
-	//////////////////////
-	///Body
-	mCharBody.ToBody(apPlayer->mpCharBody);
-
-
-	//////////////////////
-	///Camera
-	cCamera *pCam = apPlayer->GetCamera();
-	pCam->SetPitchLimits(mfPitchMinLimit, mfPitchMaxLimit);
-	pCam->SetYawLimits(mfYawMinLimit, mfYawMaxLimit);
-	
-	pCam->SetPitch(mvCameraAngles.x);
-	pCam->SetYaw(mvCameraAngles.y);
-	pCam->SetRoll(mvCameraAngles.z);
-
-	if(apPlayer->mvHeadPosAdds.size() == mvHeadPosAdds.Size())
-	{
-		for(size_t i=0; i<apPlayer->mvHeadPosAdds.size(); ++i)
-			apPlayer->mvHeadPosAdds[i] = mvHeadPosAdds[i];
-	}
-	
-	///////////////////
-	// Terror Enemies
-	for(size_t i=0; i<mvTerrorEnemyIDs.Size(); ++i)
-	{
-		iLuxEntity *pEntity = apMap->GetEntityByID(mvTerrorEnemyIDs[i]);
-		if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Enemy)
-		{
-			iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(pEntity);
-			apPlayer->m_setTerrorEnemies.insert(pEnemy);
-		}
-		else
-		{
-			Warning("Could not find entity with id %d\n", mvTerrorEnemyIDs[i]);
-		}
-	}
-
-	//////////////////////
-	///Player hands
-	mPlayerHands.ToPlayerHands(apMap, apPlayer->GetHands());
-
-	//////////////////////
-	///Collide callbacks
-	cContainerListIterator<cLuxCollideCallback_SaveData> it = mlstCollideCallbacks.GetIterator();
-	while(it.HasNext())
-	{
-		cLuxCollideCallback_SaveData& saveCallback = it.Next();
-		cLuxCollideCallback *pCallback = hplNew(cLuxCollideCallback, ());
-
-		saveCallback.ToCallback(apMap, apPlayer, pCallback);
-		apPlayer->mlstCollideCallbacks.push_back(pCallback);
-	}
+	PlayerEnv env = { this, apPlayer, apMap, NULL, eLuxPlayerState_Normal, NULL };
+	ohpl_ga6_player_to(&env, Ga6Tramp<PlayerEnv>);
 }
 
 //-----------------------------------------------------------------------

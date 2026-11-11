@@ -5,6 +5,7 @@
 #include "SomaLuxGame.h"
 #include "SomaLuxScriptable.h"
 #include "SomaScriptBind.h"
+#include "RustSomaUi.h"
 
 #include "impl/scriptarray.h"
 #include "input/ActionKeyboard.h"
@@ -23,6 +24,17 @@ cSomaImGui *SomaHudImGui();
 cSomaImGui *cSomaImGui::GetInputFocus()
 {
 	return mbGameHudFocus ? SomaHudImGui() : mpInputFocus;
+}
+
+static_assert(sizeof(cSomaImGui::cState) == sizeof(OhplGs7ImState) && offsetof(cSomaImGui::cState, mlDefInt) == 44, "cState layout");
+static_assert(sizeof(cSomaImGui::cFade) == sizeof(OhplGs7ImFade), "cFade layout");
+static_assert(sizeof(cSomaImGui::cLayout) == sizeof(OhplGs7ImLayout), "cLayout layout");
+static_assert(sizeof(cSomaImGui::cPrev) == sizeof(OhplGs7ImPrev), "cPrev layout");
+static_assert(sizeof(cSomaImGui::cNavEntry) == sizeof(OhplGs7ImNav), "cNavEntry layout");
+
+namespace
+{
+	OhplGs7ImState *R(cSomaImGui::cState &s) { return (OhplGs7ImState *)&s; }
 }
 
 // Recovered struct layouts (script_api.txt property offsets, soma-re-struct-defaults.py)
@@ -50,7 +62,12 @@ namespace
 		const tString *s = F<const tString *>(p, off);
 		return s ? *s : sEmpty;
 	}
-	cColor Mul(const cColor &a, const cColor &b) { return cColor(a.r * b.r, a.g * b.g, a.b * b.b, a.a * b.a); }
+	cColor Mul(const cColor &a, const cColor &b)
+	{
+		cColor r;
+		ohpl_gs7_im_color_mul(a.v, b.v, r.v);
+		return r;
+	}
 	uint64_t Id(const tString &s) { return SomaHash64(s); }
 	struct S_
 	{
@@ -126,18 +143,11 @@ void cSomaImGui::Begin(float afTimeStep)
 	for (auto it = mmapFades.begin(); it != mmapFades.end(); ++it)
 	{
 		cFade &f = it->second;
-		f.mfCount = std::min(f.mfCount + afTimeStep, f.mfTime);
-		float t = f.mfTime > 0 ? SomaEasing(f.mlEasing, f.mfCount / f.mfTime) : 1;
-		float v[4];
-		for (int i = 0; i < 4; ++i)
-			v[i] = f.mvStart[i] + (f.mvGoal[i] - f.mvStart[i]) * t;
+		float x;
+		bool bTime = ohpl_gs7_im_fade_advance((OhplGs7ImFade *)&f, afTimeStep, &x);
+		float t = bTime ? SomaEasing(f.mlEasing, x) : 1;
 		cState &st = mmapStates[it->first];
-		if (f.mlType == 0)
-			st.mfFloat = v[0], st.mbSetFloat = true;
-		else if (f.mlType == 1)
-			st.mvVec = cVector3f(v[0], v[1], v[2]), st.mbSetVec = true;
-		else
-			st.mCol = cColor(v[0], v[1], v[2], v[3]), st.mbSetCol = true;
+		ohpl_gs7_im_fade_apply((const OhplGs7ImFade *)&f, t, R(st));
 	}
 	for (cTimer &t : mvTimers)
 		t.mfTime -= afTimeStep, t.mbTouched = false;
@@ -224,48 +234,24 @@ void cSomaImGui::SendMousePosition(const cVector2l &avPos, const cVector2l &avRe
 {
 	cVector2f vScreen = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 	cVector2f vVirtual = mpSet->GetVirtualSize();
-	if (mpSet->Is3D())
-	{
-		// Screens in the world: the captured mouse moves a cursor across the screen
-		float fScale = vVirtual.y / vScreen.y * 1.5f;
-		cVector2f vRel((float)avRel.x * fScale, (float)avRel.y * fScale);
-		mvCursor3D.x = cMath::Clamp(mvCursor3D.x + vRel.x, 0.0f, vVirtual.x);
-		mvCursor3D.y = cMath::Clamp(mvCursor3D.y + vRel.y, 0.0f, vVirtual.y);
-		SendMouseVirtualPosition(mvCursor3D, vRel);
-		return;
-	}
-	cVector2f vScale(vVirtual.x / vScreen.x, vVirtual.y / vScreen.y);
-	SendMouseVirtualPosition(cVector2f((float)avPos.x * vScale.x, (float)avPos.y * vScale.y) - mpSet->GetVirtualSizeOffset(),
-							 cVector2f((float)avRel.x * vScale.x, (float)avRel.y * vScale.y));
+	bool b3D = mpSet->Is3D();
+	cVector2f vOffset = b3D ? cVector2f(0) : mpSet->GetVirtualSizeOffset();
+	OhplGs7ImMouseIn in = {{vScreen.x, vScreen.y}, {vVirtual.x, vVirtual.y}, {vOffset.x, vOffset.y}, b3D, {mvCursor3D.x, mvCursor3D.y}};
+	OhplGs7ImMouseOut out;
+	ohpl_gs7_im_mouse_map(&in, avPos.x, avPos.y, avRel.x, avRel.y, &out);
+	if (b3D)
+		mvCursor3D = cVector2f(out.cursor_3d[0], out.cursor_3d[1]);
+	SendMouseVirtualPosition(cVector2f(out.pos[0], out.pos[1]), cVector2f(out.rel[0], out.rel[1]));
 }
 
 void cSomaImGui::Fade(uint64_t alId, int alType, const float *apGoal, float afTime, int alEasing, bool abReplace)
 {
 	auto it = mmapFades.find(alId);
-	if (it != mmapFades.end() && abReplace == false && it->second.mfCount < it->second.mfTime)
+	if (ohpl_gs7_im_fade_blocked(it != mmapFades.end() ? (const OhplGs7ImFade *)&it->second : NULL, abReplace))
 		return;
 	cState &st = mmapStates[alId];
 	cFade f;
-	f.mlType = alType;
-	float vStart[4] = {st.mfFloat, 0, 0, 0};
-	if (alType == 1)
-	{
-		vStart[0] = st.mvVec.x;
-		vStart[1] = st.mvVec.y;
-		vStart[2] = st.mvVec.z;
-	}
-	else if (alType == 2)
-	{
-		vStart[0] = st.mCol.r;
-		vStart[1] = st.mCol.g;
-		vStart[2] = st.mCol.b;
-		vStart[3] = st.mCol.a;
-	}
-	memcpy(f.mvStart, vStart, sizeof(vStart));
-	memcpy(f.mvGoal, apGoal, sizeof(f.mvGoal));
-	f.mfTime = afTime;
-	f.mfCount = 0;
-	f.mlEasing = alEasing;
+	ohpl_gs7_im_fade_make(R(st), alType, apGoal, afTime, alEasing, (OhplGs7ImFade *)&f);
 	mmapFades[alId] = f;
 }
 
@@ -611,29 +597,23 @@ void cSomaImGui::DrawText(const tWString &asText, const void *apFont, const cCol
 						  float afSizeMul)
 {
 	cVector2f vFont = FontSize(apFont, afSizeMul);
-	float fX = alAlign == eFontAlign_Center ? avPos.x + avSize.x * 0.5f : alAlign == eFontAlign_Right ? avPos.x + avSize.x : avPos.x;
-	float fY = avPos.y + std::max(0.0f, (avSize.y - vFont.y) * 0.5f);
-	DrawFont(asText, apFont, cVector3f(fX, fY, avPos.z + 0.2f), alAlign, cVector2f(afSizeMul), aColor);
+	cVector3f vOrigin;
+	ohpl_gs7_im_text_origin(avPos.v, avSize.v, vFont.v, alAlign, vOrigin.v);
+	DrawFont(asText, apFont, vOrigin, alAlign, cVector2f(afSizeMul), aColor);
 }
 
 void cSomaImGui::Layout(cVector3f &avPos, cVector2f &avSize, const cVector2f &avDefaultSize, bool abAlign)
 {
-	if (avSize.x < 0)
-		avSize.x = avDefaultSize.x;
-	if (avSize.y < 0)
-		avSize.y = avDefaultSize.y;
-	avPos += mvLayouts.empty() ? GroupPos() : mvLayouts.back().mvCursor;
-	if (abAlign)
-		avPos = Align(avPos, avSize, mlAlign);
+	cVector3f vOrigin = mvLayouts.empty() ? GroupPos() : mvLayouts.back().mvCursor;
+	ohpl_gs7_im_layout(avPos.v, avSize.v, avDefaultSize.v, vOrigin.v, abAlign, mlAlign);
 }
 
 // The position names the given corner/centre of the widget
 cVector3f cSomaImGui::Align(const cVector3f &avPos, const cVector2f &avSize, int alAlign)
 {
-	static const float vAlign[9][2] = {{0, 0}, {0, 1}, {0, 0.5f}, {1, 0}, {1, 1}, {1, 0.5f}, {0.5f, 0.5f}, {0.5f, 0}, {0.5f, 1}};
-	if (alAlign <= 0 || alAlign >= 9)
-		return avPos;
-	return cVector3f(avPos.x - avSize.x * vAlign[alAlign][0], avPos.y - avSize.y * vAlign[alAlign][1], avPos.z);
+	cVector3f vOut;
+	ohpl_gs7_im_align(avPos.v, avSize.v, alAlign, vOut.v);
+	return vOut;
 }
 
 void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool abUpdated)
@@ -643,34 +623,12 @@ void cSomaImGui::Advance(const cVector3f &avPos, const cVector2f &avSize, bool a
 	mPrev.mbUpdated = abUpdated;
 	if (mvLayouts.empty())
 		return;
-	cLayout &l = mvLayouts.back();
-	if (l.mlType == 3)
-		l.mvCursor.y = avPos.y + avSize.y + l.mvSpacing.y;
-	else if (l.mlType == 1)
-		l.mvCursor.x = avPos.x + avSize.x + l.mvSpacing.x;
-	else if (l.mlType == 2)
-	{
-		if (l.mvSpacing.x > 0.1f)
-			l.mvCursor.x += std::ceil(avSize.x / l.mvSpacing.x) * l.mvSpacing.x;
-	}
-	else
-	{
-		l.mvCursor.x = avPos.x + avSize.x + l.mvSpacing.x;
-		l.mfLineMax = std::max(l.mfLineMax, avSize.y);
-		if (l.mvSize.x > 0 && l.mvCursor.x > l.mvStart.x + l.mvSize.x)
-		{
-			l.mvCursor.x = l.mvStart.x;
-			l.mvCursor.y += l.mfLineMax + l.mvSpacing.y;
-			l.mfLineMax = 0;
-		}
-	}
+	ohpl_gs7_im_advance((OhplGs7ImLayout *)&mvLayouts.back(), avPos.v, avSize.v);
 }
 
 bool cSomaImGui::MouseOver(const cVector3f &avPos, const cVector2f &avSize)
 {
-	if (mMods.mbUseInput == false || this != GetInputFocus())
-		return false;
-	return mvMousePos.x >= avPos.x && mvMousePos.y >= avPos.y && mvMousePos.x < avPos.x + avSize.x && mvMousePos.y < avPos.y + avSize.y;
+	return ohpl_gs7_im_mouse_over(mMods.mbUseInput, this == GetInputFocus(), mvMousePos.v, avPos.v, avSize.v);
 }
 
 void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, const cVector2f &avSize, bool abInFocus, bool abTriggered, int alInFocusGfx,
@@ -685,15 +643,6 @@ void cSomaImGui::DrawWidgetBase(const void *apData, const cVector3f &avPos, cons
 		DrawGfx((char *)apData + alTriggeredGfx, avPos + cVector3f(0, 0, 0.06f), avSize, cColor(1, 1));
 }
 
-// Per widget across frames: the previous widget is a different one each call
-void cSomaImGui::SetPrevFocus(cState &aState, bool abOver)
-{
-	mPrev.mbWasInFocus = aState.mbInFocus && abOver == false;
-	mPrev.mbBecameInFocus = abOver && aState.mbInFocus == false;
-	mPrev.mbInFocus = abOver;
-	aState.mbInFocus = abOver;
-}
-
 void cSomaImGui::SetFocus(const tString &asName)
 {
 	mlFocus = mlPrevFocus = asName.empty() ? 0 : Id(asName);
@@ -701,140 +650,54 @@ void cSomaImGui::SetFocus(const tString &asName)
 	mlLastCount = 0;
 }
 
+namespace
+{
+	// the focus members of a UI as one struct for the Rust core
+	OhplGs7ImFocus FocusOf(const cSomaImGui *p)
+	{
+		return {p->mlFocus, p->mlPrevFocus, {p->mvLastDir.x, p->mvLastDir.y}, p->mlLastCount, p->mbFoundFocus, p->mlWrapMode, p->mlGroupFlags, p->mlMouseLock};
+	}
+}
+
+OhplGs7ImActions cSomaImGui::Actions()
+{
+	return {&mvActionDown, &mvActionTriggered, &mvActionUsed};
+}
+
 // cImGui::DoWidgetBase: the mouse takes focus only when it moves or clicks, the earliest drawn widget wins
 bool cSomaImGui::WidgetBase(uint64_t alId, const cVector3f &avPos, const cVector2f &avSize, cState &aState)
 {
-	bool bOver = false;
-	if (mMods.mbUseInput)
-	{
-		if (mbShowMouse == false || mlMouseLock > 0 || this != GetInputFocus())
-		{
-			if (mlFocus == alId)
-				mbFoundFocus = true;
-		}
-		else
-		{
-			if (mlFocus == 0 && mbFirstRun && mbFoundFocus == false)
-			{
-				mlFocus = alId;
-				mbFoundFocus = true;
-			}
-			bOver = MouseOver(avPos, avSize);
-			bool bAct = mvMouseRel.x != 0 || mvMouseRel.y != 0 || mvActionTriggered[1] || mvActionTriggered[0];
-			if (bOver && bAct && mbFoundFocus == false)
-			{
-				mlFocus = alId;
-				mbFoundFocus = true;
-			}
-			else if (bOver == false && bAct && mlFocus == alId)
-				mlFocus = 0;
-		}
-		if (mMods.mbUseUIPos)
-		{
-			const cVector2f &h = mMods.mvExpHori, &v = mMods.mvExpVert;
-			cNavEntry e;
-			e.mlId = alId;
-			e.mvPos = cVector2l((int)(avPos.x - h.x * avSize.x), (int)(avPos.y - v.x * avSize.y));
-			e.mvSize = cVector2l((int)((h.x + h.y) * avSize.x + avSize.x), (int)((v.x + v.y) * avSize.y + avSize.y));
-			e.mlWrap = mlWrapMode;
-			e.mlGroup = mlGroupFlags;
-			mvNav.push_back(e);
-		}
-	}
-	bool bIn = mMods.mbUseInput && mlFocus == alId;
-	SetPrevFocus(aState, bIn);
-	mPrev.mbMouseOver = bOver;
-	return bIn;
+	OhplGs7ImFocus f = FocusOf(this);
+	OhplGs7ImWidgetIn in = {mMods.mbUseInput, mbShowMouse, this == GetInputFocus(), mbFirstRun, mMods.mbUseUIPos, {mvMouseRel.x, mvMouseRel.y},
+							{mMods.mvExpHori.x, mMods.mvExpHori.y}, {mMods.mvExpVert.x, mMods.mvExpVert.y}, {avPos.x, avPos.y, avPos.z}, {avSize.x, avSize.y}, {mvMousePos.x, mvMousePos.y}};
+	OhplGs7ImActions act = Actions();
+	OhplGs7ImWidgetOut out;
+	ohpl_gs7_im_widget_base(alId, &in, &f, &act, R(aState), (OhplGs7ImPrev *)&mPrev, &out);
+	mlFocus = f.focus;
+	mlPrevFocus = f.prev_focus;
+	mvLastDir = cVector2l(f.last_dir[0], f.last_dir[1]);
+	mlLastCount = f.last_count;
+	mbFoundFocus = f.found_focus;
+	if (out.has_nav)
+		mvNav.push_back(*(cNavEntry *)&out.nav);
+	return out.in_focus;
 }
 
 bool cSomaImGui::BecamePressed(bool abKeys, bool abMouse)
 {
-	bool b = false;
-	if (abKeys)
-		b = ActionTriggered(2);
-	if (abMouse)
-		b = ActionTriggered(1) || b;
-	return b;
-}
-
-const cSomaImGui::cNavEntry *cSomaImGui::FindNav(uint64_t alId)
-{
-	for (const cNavEntry &e : mvNav)
-		if (e.mlId == alId)
-			return &e;
-	return NULL;
-}
-
-// cImGui::GetClosestUIPos: distance along the move axis between top-left corners, lanes must overlap
-uint64_t cSomaImGui::NavClosest(const cNavEntry &aCur, const cVector2l &avDir, bool abAhead, bool abLoose)
-{
-	int mv = avDir.x == 0 ? 1 : 0, perp = 1 - mv;
-	const cNavEntry *pBest = NULL;
-	int lBest = 0;
-	for (const cNavEntry &e : mvNav)
-	{
-		if (e.mlId == mlFocus || (e.mlGroup & aCur.mlGroup) == 0)
-			continue;
-		int lo = abLoose ? e.mvPos.v[perp] - e.mvSize.v[perp] / 2 : e.mvPos.v[perp];
-		int ext = abLoose ? 2 * e.mvSize.v[perp] : e.mvSize.v[perp];
-		if ((lo < aCur.mvPos.v[perp] + aCur.mvSize.v[perp] && aCur.mvPos.v[perp] < lo + ext) == false)
-			continue;
-		int lDelta = e.mvPos.v[mv] - aCur.mvPos.v[mv];
-		if ((lDelta * avDir.v[mv] > 0) != abAhead)
-			continue;
-		int lDist = std::abs(lDelta);
-		if (pBest == NULL || (abAhead ? lDist < lBest : lDist > lBest))
-		{
-			pBest = &e;
-			lBest = lDist;
-		}
-	}
-	return pBest ? pBest->mlId : 0;
+	OhplGs7ImActions act = Actions();
+	return ohpl_gs7_im_became_pressed(&act, abKeys, abMouse);
 }
 
 void cSomaImGui::UpdateUIMovement()
 {
-	static const int kDirs[4][3] = {{4, 0, -1}, {5, 0, 1}, {6, 1, 0}, {7, -1, 0}};
-	cVector2l vDir(0, 0);
-	for (const auto &d : kDirs)
-		if (ActionTriggered(d[0], true) && vDir.x == 0 && vDir.y == 0)
-			vDir = cVector2l(d[1], d[2]);
-	bool bConfirm = ActionTriggered(2, true);
-	bool bMove = vDir.x != 0 || vDir.y != 0;
-	if ((bMove == false && bConfirm == false) || mvNav.empty())
-		return;
-	const cNavEntry *pCur = FindNav(mlFocus);
-	if (pCur == NULL)
-	{
-		mlFocus = mlPrevFocus = mvNav[0].mlId;
-		mvLastDir = 0;
-		mlLastCount = 0;
-		return;
-	}
-	if (mvNav.size() < 2 || bMove == false)
-		return;
-	uint64_t lTarget = 0;
-	if ((int)mvNav.size() == mlLastCount && mvLastDir.x == -vDir.x && mvLastDir.y == -vDir.y && FindNav(mlPrevFocus))
-		lTarget = mlPrevFocus;
-	else
-	{
-		bool bHori = vDir.x != 0;
-		bool bWrap = pCur->mlWrap == 3 || (pCur->mlWrap == 1 && bHori) || (pCur->mlWrap == 2 && bHori == false);
-		lTarget = NavClosest(*pCur, vDir, true, false);
-		if (lTarget == 0 && bWrap)
-			lTarget = NavClosest(*pCur, vDir, false, false);
-		if (lTarget == 0)
-			lTarget = NavClosest(*pCur, vDir, true, true);
-		if (lTarget == 0 && bWrap)
-			lTarget = NavClosest(*pCur, vDir, false, true);
-	}
-	if (lTarget)
-	{
-		mlPrevFocus = mlFocus;
-		mlFocus = lTarget;
-		mvLastDir = vDir;
-		mlLastCount = (int)mvNav.size();
-	}
+	OhplGs7ImFocus f = FocusOf(this);
+	OhplGs7ImActions act = Actions();
+	ohpl_gs7_im_update_ui_movement((const OhplGs7ImNav *)mvNav.data(), mvNav.size(), &f, &act);
+	mlFocus = f.focus;
+	mlPrevFocus = f.prev_focus;
+	mvLastDir = cVector2l(f.last_dir[0], f.last_dir[1]);
+	mlLastCount = f.last_count;
 }
 
 bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const void *apData, cVector3f avPos, cVector2f avSize, int alMode)
@@ -844,42 +707,18 @@ bool cSomaImGui::DoButton(const tString &asName, const tWString &asText, const v
 	cState &st = State(lId);
 	bool bOver = WidgetBase(lId, avPos, avSize, st);
 	bool bMouseOver = mPrev.mbMouseOver;
-	bool bClicked = bOver && BecamePressed(true, true);
-	bool bDown = bOver && (mvActionDown[2] || (bMouseOver && mvActionDown[1]));
-	bool bResult = bClicked;
-	if (alMode == 1) // toggle
-	{
-		if (st.mbSetInt == false)
-		{
-			st.mlInt = 0;
-			st.mbSetInt = true;
-		}
-		if (bClicked)
-			st.mlInt = !st.mlInt;
-		bResult = st.mlInt != 0;
-	}
-	else if (alMode == 2) // repeat
-	{
-		if (bDown)
-		{
-			st.mfFloat -= mfTimeStep;
-			bResult = bClicked || st.mfFloat <= 0;
-			if (st.mfFloat <= 0)
-				st.mfFloat = 0.1f;
-		}
-		else
-			st.mfFloat = 0.4f;
-	}
-	// cImGui::DoButtonBase: state colours replace the base, disabled multiplies frame and text
-	bool bTrig = alMode == 1 ? bResult : alMode == 3 || (alMode != 4 && bDown && bOver);
 	bool bUseTrigGfx = F<bool>(apData, kBUseTrigGfx), bUseFocusGfx = F<bool>(apData, kBUseInFocusGfx);
-	bool bFocus = bOver && (alMode == 2 && bTrig && (bUseTrigGfx || F<bool>(apData, kBUseTrigColor))) == false;
+	OhplGs7ImButtonFlags flags = {bUseTrigGfx, bUseFocusGfx, F<bool>(apData, kBUseTrigColor), F<bool>(apData, kBUseTrigFocusColor), F<bool>(apData, kBUseInFocusColor)};
+	OhplGs7ImActions act = Actions();
+	OhplGs7ImButtonOut r;
+	ohpl_gs7_im_button(R(st), &act, bOver, bMouseOver, alMode, mfTimeStep, &flags, &r);
+	bool bClicked = r.clicked, bDown = r.down, bResult = r.result, bTrig = r.trig, bFocus = r.focus;
 	cColor col = F<cColor>(apData, kWColorBase);
-	if (bTrig && bFocus && F<bool>(apData, kBUseTrigFocusColor) && bUseTrigGfx == false)
+	if (r.color == OHPL_GS7_IM_COLOR_TRIG_FOCUS)
 		col = F<cColor>(apData, kBColorTrigFocus);
-	else if (bTrig && F<bool>(apData, kBUseTrigColor) && bUseTrigGfx == false)
+	else if (r.color == OHPL_GS7_IM_COLOR_TRIG)
 		col = F<cColor>(apData, kBColorTrig);
-	else if (bFocus && F<bool>(apData, kBUseInFocusColor) && bUseFocusGfx == false)
+	else if (r.color == OHPL_GS7_IM_COLOR_FOCUS)
 		col = F<cColor>(apData, kBColorInFocus);
 	cColor textCol = F<cColor>(apData, kWColorText);
 	if (mMods.mbUseInput == false && F<bool>(apData, kWUseDisabledColor))
@@ -984,35 +823,14 @@ float cSomaImGui::DoSlider(const tString &asName, float afDefault, float afMin, 
 	bool bIn = WidgetBase(Id(asName), avPos, avSize, st);
 	bool bOver = mPrev.mbMouseOver;
 	float fOld = st.mfFloat;
-	if (bIn)
-	{
-		float fStep = afStep > 0 ? afStep : (afMax - afMin) * 0.05f;
-		int lInc = abVertical ? 5 : 6, lDec = abVertical ? 4 : 7;
-		float d = (ActionTriggered(lInc) ? fStep : 0) - (ActionTriggered(lDec) ? fStep : 0);
-		d += (ActionTriggered(8) ? fStep : 0) - (ActionTriggered(9) ? fStep : 0);
-		if (abVertical)
-			d = -d;
-		if (d != 0)
-			st.mfFloat = cMath::Clamp(st.mfFloat + d, cMath::Min(afMin, afMax), cMath::Max(afMin, afMax));
-		if (bOver && ActionTriggered(1))
-			st.mlInt = 1;
-	}
-	if (mvActionDown[1] == false)
-		st.mlInt = 0;
-	if (st.mlInt && avSize.x > 0 && avSize.y > 0)
-	{
+	OhplGs7ImSliderIn in = {bIn, bOver, afMin, afMax, afStep, abVertical, {avPos.x, avPos.y, avPos.z}, {avSize.x, avSize.y}, {mvMousePos.x, mvMousePos.y}};
+	OhplGs7ImActions act = Actions();
+	if (ohpl_gs7_im_slider(R(st), &act, &in))
 		mlMouseLock = 2;
-		float t = abVertical ? 1 - (mvMousePos.y - avPos.y) / avSize.y : (mvMousePos.x - avPos.x) / avSize.x;
-		float v = afMin + cMath::Clamp(t, 0.0f, 1.0f) * (afMax - afMin);
-		if (afStep > 0)
-			v = afMin + std::round((v - afMin) / afStep) * afStep;
-		st.mfFloat = v;
-	}
 	DrawWidgetBase(apData, avPos, avSize, bIn, false, -1, -1);
-	float t = afMax > afMin ? (st.mfFloat - afMin) / (afMax - afMin) : 0;
 	cVector2f vButton = F<cVector2f>(apData, kSliderButtonSize);
-	cVector3f vButtonPos = abVertical ? cVector3f(avPos.x, avPos.y + (1 - t) * (avSize.y - vButton.y), avPos.z + 0.1f)
-									  : cVector3f(avPos.x + t * (avSize.x - vButton.x), avPos.y, avPos.z + 0.1f);
+	cVector3f vButtonPos;
+	ohpl_gs7_im_slider_button_pos(st.mfFloat, afMin, afMax, avPos.v, avSize.v, vButton.v, abVertical, vButtonPos.v);
 	if (F<bool>(apData, kSliderUseButton))
 		DrawGfx((char *)apData + kSliderGfxButton, vButtonPos, vButton, cColor(1, 1));
 	Advance(avPos, avSize, st.mfFloat != fOld);
@@ -1025,9 +843,8 @@ bool cSomaImGui::DoCheckBox(const tString &asName, const tWString &asText, bool 
 	cState &st = State(Id(asName));
 	DefaultOrCurrent(st, (int)abDefault);
 	bool bOver = WidgetBase(Id(asName), avPos, avSize, st);
-	bool bToggled = bOver && BecamePressed(true, true);
-	if (bToggled)
-		st.mlInt = !st.mlInt;
+	OhplGs7ImActions act = Actions();
+	bool bToggled = ohpl_gs7_im_checkbox(R(st), &act, bOver);
 	DrawWidgetBase(apData, avPos, avSize, bOver, false, -1, -1);
 	cVector2f vBox = F<cVector2f>(apData, kCheckBoxSize);
 	DrawGfx((char *)apData + kCheckGfxBox, avPos + cVector3f(0, 0, 0.1f), vBox, cColor(1, 1));
@@ -1047,15 +864,9 @@ int cSomaImGui::DoMultiSelect(const tString &asName, int alDefault, const void *
 	int lOld = st.mlInt;
 	cVector2f vArrow = F<cVector2f>(apData, kMultiArrowSize);
 	bool bOver = WidgetBase(Id(asName), avPos, avSize, st);
-	if (bOver && lNum > 0)
-	{
-		int d = ActionTriggered(2) + ActionTriggered(6) - ActionTriggered(7);
-		if (ActionTriggered(1) && mPrev.mbMouseOver)
-			d += mvMousePos.x < avPos.x + avSize.x * 0.5f ? -1 : 1;
-		st.mlInt = ((st.mlInt + d) % lNum + lNum) % lNum;
-	}
-	if (lNum > 0)
-		st.mlInt = cMath::Clamp(st.mlInt, 0, lNum - 1);
+	OhplGs7ImMultiIn in = {bOver, mPrev.mbMouseOver, lNum, mvMousePos.x, avPos.x, avSize.x};
+	OhplGs7ImActions act = Actions();
+	ohpl_gs7_im_multi_select(R(st), &act, &in);
 	DrawWidgetBase(apData, avPos, avSize, bOver, false, -1, -1);
 	DrawGfx((char *)apData + kMultiGfxArrowLeft, avPos + cVector3f(0, (avSize.y - vArrow.y) * 0.5f, 0.1f), vArrow, cColor(1, 1));
 	DrawGfx((char *)apData + kMultiGfxArrowRight, avPos + cVector3f(avSize.x - vArrow.x, (avSize.y - vArrow.y) * 0.5f, 0.1f), vArrow, cColor(1, 1));
@@ -1072,11 +883,10 @@ void cSomaImGui::DoGauge(const void *apData, float afFill, cVector3f avPos, cVec
 	if (F<bool>(apData, kGaugeUseFrame))
 		DrawFrame((char *)apData + kGaugeFrame, avPos, avSize, F<cColor>(apData, kWColorBase));
 	cVector2f vPad = F<cVector2f>(apData, kGaugePadding);
-	cVector2f vInner = avSize - vPad * 2;
-	float fFill = cMath::Clamp(afFill, 0.0f, 1.0f);
 	bool bVert = F<int>(apData, kGaugeOrient) == 1;
-	cVector2f vFill = bVert ? cVector2f(vInner.x, vInner.y * fFill) : cVector2f(vInner.x * fFill, vInner.y);
-	cVector3f vFillPos = avPos + cVector3f(vPad.x, vPad.y + (bVert ? vInner.y - vFill.y : 0), 0.1f);
+	cVector3f vFillPos;
+	cVector2f vFill;
+	ohpl_gs7_im_gauge_fill(avPos.v, avSize.v, vPad.v, afFill, bVert, vFillPos.v, vFill.v);
 	DrawGfx((char *)apData + kGaugeFill, vFillPos, vFill, F<cColor>(apData, kWColorBase));
 	Advance(avPos, avSize);
 }
@@ -1086,43 +896,40 @@ void cSomaImGui::DoWindowStart(const tWString &asCaption, const void *apData, cV
 	Layout(avPos, avSize, F<cVector2f>(apData, kWDefaultSize));
 	cColor colBase = F<cColor>(apData, kWColorBase);
 	DrawFrame((char *)apData + kWindowFrame, avPos, avSize, colBase);
-	float fHeader = 0;
-	if (F<bool>(apData, kWUseHeader))
+	const void *pFont = (char *)apData + kWFont;
+	OhplGs7ImWindowIn wi;
+	memcpy(wi.pos, avPos.v, sizeof(wi.pos));
+	memcpy(wi.size, avSize.v, sizeof(wi.size));
+	wi.use_header = F<bool>(apData, kWUseHeader);
+	wi.header_type = F<int>(apData, kWHeaderType);
+	memcpy(wi.label_offset, F<cVector3f>(apData, kWLabelOffset).v, sizeof(wi.label_offset));
+	memcpy(wi.label_pad, &F<float>(apData, kWindowLabelPadTop), sizeof(wi.label_pad));
+	wi.label_min_width = F<float>(apData, kWindowLabelMinWidth);
+	float fMul = F<float>(apData, kWCaptionSizeMul);
+	cVector2f vFont = 0;
+	wi.caption_length = 0;
+	if (wi.use_header)
 	{
-		const void *pFont = (char *)apData + kWFont;
-		const float *pLabelPad = &F<float>(apData, kWindowLabelPadTop);
-		float fPadT = pLabelPad[0], fPadR = pLabelPad[1], fPadB = pLabelPad[2], fPadL = pLabelPad[3];
-		cVector3f vOffset = F<cVector3f>(apData, kWLabelOffset);
-		float fMul = F<float>(apData, kWCaptionSizeMul);
-		cVector2f vFont = FontSize(pFont, fMul);
-		cVector3f vPos = avPos + cVector3f(vOffset.x, vOffset.y, 0.1f);
-		cVector2f vSize(vFont.x, fPadT + fPadB + vFont.y);
-		int lType = F<int>(apData, kWHeaderType);
-		if (lType == 1)
-			vSize.x = std::max(GetFontLength(pFont, fMul, asCaption) + fPadR + fPadL, F<float>(apData, kWindowLabelMinWidth));
-		else if (lType == 0)
-			vSize.x = avSize.x - 2 * vOffset.x;
-		DrawFrame((char *)apData + kWLabelFrame, vPos, vSize, colBase);
-		cVector3f vText = vPos + cVector3f(fPadL, fPadT, 0);
-		int lAlign = F<int>(apData, kWFontAlign);
-		float fFree = vSize.x - (2 * vOffset.x + fPadR + fPadL);
-		if (fFree > 0)
-		{
-			vText.y += (vSize.y - (fPadT + fPadB + vOffset.y) - vFont.y) * 0.5f;
-			vText.z += 0.2f;
-			if (lAlign == eFontAlign_Right)
-				vText.x += fFree;
-			else if (lAlign == eFontAlign_Center)
-				vText.x += fFree * 0.5f;
-		}
-		DrawFont(asCaption, pFont, vText, lAlign, cVector2f(fMul), F<cColor>(apData, kWColorText));
-		fHeader = vSize.y;
+		vFont = FontSize(pFont, fMul);
+		if (wi.header_type == 1)
+			wi.caption_length = GetFontLength(pFont, fMul, asCaption);
 	}
-	float fTop = F<float>(apData, kWindowPadTop), fLeft = F<float>(apData, kWindowPadLeft);
-	float fRight = F<float>(apData, kWindowPadRight), fBottom = F<float>(apData, kWindowPadBottom);
+	memcpy(wi.font_size, vFont.v, sizeof(wi.font_size));
+	wi.font_align = F<int>(apData, kWFontAlign);
+	wi.pad[0] = F<float>(apData, kWindowPadTop);
+	wi.pad[1] = F<float>(apData, kWindowPadRight);
+	wi.pad[2] = F<float>(apData, kWindowPadBottom);
+	wi.pad[3] = F<float>(apData, kWindowPadLeft);
+	OhplGs7ImWindowOut wo;
+	ohpl_gs7_im_window(&wi, &wo);
+	if (wo.has_header)
+	{
+		DrawFrame((char *)apData + kWLabelFrame, cVector3f(wo.header_pos[0], wo.header_pos[1], wo.header_pos[2]), cVector2f(wo.header_size[0], wo.header_size[1]), colBase);
+		DrawFont(asCaption, pFont, cVector3f(wo.text_pos[0], wo.text_pos[1], wo.text_pos[2]), wi.font_align, cVector2f(fMul), F<cColor>(apData, kWColorText));
+	}
 	cGroup g;
-	g.mvPos = avPos + cVector3f(fLeft, fHeader + fTop, 0.3f);
-	g.mvSize = avSize - cVector2f(fLeft + fRight, fTop + fBottom + fHeader);
+	g.mvPos = cVector3f(wo.group_pos[0], wo.group_pos[1], wo.group_pos[2]);
+	g.mvSize = cVector2f(wo.group_size[0], wo.group_size[1]);
 	g.mbClip = abClip;
 	PushGroup(g);
 	mPrev.mvPos = avPos;

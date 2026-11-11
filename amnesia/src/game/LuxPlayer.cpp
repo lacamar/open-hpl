@@ -47,6 +47,7 @@
 #include "LuxPlayerHands.h"
 
 #include "LuxAreaNodes.h"
+#include "RustLuxPlayer.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -597,23 +598,7 @@ void cLuxPlayer::RenderTrans(cRendererCallbackFunctions* apFunctions)
 
 void cLuxPlayer::GiveDamage(float afAmount, int alStrength, eLuxDamageType aType, bool abSpinHead, bool abLethal)
 {
-	if(mfHealth <=0) return;
-
-	mfHealth -= afAmount;
-
-	mpHudEffect->AddDamageSplash(aType);
-	mpHudEffect->Flash(cColor(0.6f,0,0, 0.5f),eGuiMaterial_Alpha,0,0.25f);
-	if(abSpinHead) SpinHead(mfHeadSpinDamageSpeed);
-
-	if(abLethal==false && mfHealth < 10)
-	{
-		mfHealth = 10;
-	}
-
-	if(mfHealth <=0)
-	{
-		mpDeath->Start();
-	}
+	RunVitals(kOhplGa2GiveDamage, afAmount, (int)aType, (abSpinHead ? 1u : 0u) | (abLethal ? 2u : 0u));
 }
 
 //-----------------------------------------------------------------------
@@ -630,26 +615,7 @@ void cLuxPlayer::GiveSanityDamage(float afAmount)
 
 void cLuxPlayer::LowerSanity(float afAmount, bool abUseEffect)
 {
-	if(mfHealth <=0) return;
-
-	mfSanity -= afAmount;
-	if(mfSanity < 0)
-	{
-		mfSanity =0;
-
-
-		mpInsanityCollapse->Start();
-
-		//////////////////
-		// HARDMODE
-		if (gpBase->mbHardMode)
-		{
-			SetHealth(0.f);
-		}
-	}
-
-	if(abUseEffect)
-		mpSanity->SetSanityLost();
+	RunVitals(kOhplGa2LowerSanityOp, afAmount, 0, abUseEffect ? 1u : 0u);
 }
 
 //-----------------------------------------------------------------------
@@ -869,30 +835,12 @@ void cLuxPlayer::SetActive(bool abX)
 
 void cLuxPlayer::SetHealth(float afX)
 {
-	if(mfHealth <=0 && afX <= 0) return;
-
-	mfHealth = afX;
-
-	if(mfHealth <=0)
-	{
-		mpDeath->Start();
-	}
+	RunVitals(kOhplGa2SetHealthOp, afX, 0, 0);
 }
 
 void cLuxPlayer::SetSanity(float afX)
 {
-	mfSanity = afX;
-
-	//////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode)
-	{
-		if (mfSanity <= 0)
-		{
-			SetHealth(0.f);
-		}
-	}
-
+	RunVitals(kOhplGa2SetSanityOp, afX, 0, 0);
 }
 
 void cLuxPlayer::SetLampOil(float afX)
@@ -904,49 +852,42 @@ void cLuxPlayer::SetLampOil(float afX)
 
 void cLuxPlayer::AddHealth(float afX)
 {
-	if( (mfHealth >= 100 && afX>0) || mfHealth<0) return;
-	
-	mfHealth += afX;
-	if(mfHealth > 100) mfHealth = 100;
-
-	if(mfHealth <=0)
-	{
-		mpDeath->Start();
-	}
+	RunVitals(kOhplGa2AddHealthOp, afX, 0, 0);
 }
 
 void cLuxPlayer::AddSanity(float afX, bool abShowEffect)
 {
-	if(mfSanity >= 100 && afX>0) return;
-
-	mfSanity += afX;
-	if(mfSanity > 100) mfSanity = 100;
-	if(mfSanity < 0)
-	{
-		mfSanity = 0;
-		mpInsanityCollapse->Start();
-
-		//////////////////
-		// HARDMODE
-		if (gpBase->mbHardMode)
-		{
-			SetHealth(0.f);
-		}
-	}
-
-	if(afX >0 && abShowEffect)
-	{
-		gpBase->mpEffectHandler->GetSanityGainFlash()->Start();
-	}
+	RunVitals(kOhplGa2AddSanityOp, afX, 0, abShowEffect ? 1u : 0u);
 }
 
 void cLuxPlayer::AddLampOil(float afX)
 {
-	if(mfLampOil >= 100 && afX>0) return;
+	RunVitals(kOhplGa2AddLampOilOp, afX, 0, 0);
+}
 
-	mfLampOil += afX;
-	if(mfLampOil > 100) mfLampOil = 100;
-	if(mfLampOil < 0) mfLampOil = 0;
+void cLuxPlayer::RunVitals(int alWhich, float afAmount, int alType, unsigned int alFlags)
+{
+	OhplGa2Vitals v = {mfHealth, mfSanity, mfLampOil, gpBase->mbHardMode ? 1u : 0u};
+	OhplGa2Ops ops;
+	ohpl_ga2_vitals(alWhich, &v, afAmount, alType, alFlags, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		const OhplGa2Op &op = ops.ops[i];
+		switch(op.kind)
+		{
+		case kOhplGa2SetHealth: mfHealth = op.a; break;
+		case kOhplGa2SetSanity: mfSanity = op.a; break;
+		case kOhplGa2SetOil: mfLampOil = op.a; break;
+		case kOhplGa2DamageSplash: mpHudEffect->AddDamageSplash((eLuxDamageType)op.i); break;
+		case kOhplGa2HitFlash: mpHudEffect->Flash(cColor(0.6f,0,0, 0.5f),eGuiMaterial_Alpha,0,0.25f); break;
+		case kOhplGa2SpinHead: SpinHead(mfHeadSpinDamageSpeed); break;
+		case kOhplGa2DeathStart: mpDeath->Start(); break;
+		case kOhplGa2CollapseStart: mpInsanityCollapse->Start(); break;
+		case kOhplGa2SanityLost: mpSanity->SetSanityLost(); break;
+		case kOhplGa2SanityGainFlash: gpBase->mpEffectHandler->GetSanityGainFlash()->Start(); break;
+		case kOhplGa2Kill: SetHealth(0.f); break;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -1037,15 +978,7 @@ void cLuxPlayer::FadeRollTo(float afX, float afSpeedMul, float afMaxSpeed)
 
 void cLuxPlayer::FadePitchTo(float afX, float afSpeedMul, float afMaxSpeed)
 {
-	float fPitchLimitMin = mpCamera->GetPitchMinLimit();
-	float fPitchLimitMax = mpCamera->GetPitchMaxLimit();
-
-	if(fPitchLimitMin!=0 || fPitchLimitMax!=0)
-	{
-		if(afX > fPitchLimitMax) afX = fPitchLimitMax;
-		if(afX < fPitchLimitMin) afX = fPitchLimitMin;
-	}
-
+	afX = ohpl_ga2_clamp_pitch_goal(afX, mpCamera->GetPitchMinLimit(), mpCamera->GetPitchMaxLimit());
 	mfPitchGoal = afX;
 	mfPitchSpeedMul = afSpeedMul;
 	mfPitchMaxSpeed = afMaxSpeed;
@@ -1222,43 +1155,24 @@ void cLuxPlayer::RunHelperLuxMessage(eLuxUpdateableMessage aMessage, void *apDat
 
 void cLuxPlayer::UpdateHeadPosAdd(float afTimeStep)
 {
-	cVector3f vAdd = mvCameraPosAdd;
-
-	/////////////////////////
-	// Iterate different head offsets and add
-    for(size_t i=0; i<mvHeadPosAdds.size(); ++i)
+	std::vector<OhplGa2HeadPosAdd> vAdds(mvHeadPosAdds.size());
+	for(size_t i=0; i<vAdds.size(); ++i)
 	{
-		cLuxHeadPosAdd *pPosAdd = &mvHeadPosAdds[i];
-
-		/////////////////////
-		// Movement
-		if(pPosAdd->mbMoving)
-		{
-			cVector3f vDir = pPosAdd->mvMoveGoal - pPosAdd->mvAdd;
-			float fDist = vDir.Length();
-			vDir = vDir / fDist;
-			
-			//If close enough to goal, slow down.
-            float fSpeed = pPosAdd->mfMoveSpeed;
-			if(fDist < pPosAdd->mfMoveSlowDownDist)
-			{
-				fSpeed *= fDist / pPosAdd->mfMoveSlowDownDist;
-			}
-
-			pPosAdd->mvAdd += vDir * fSpeed * afTimeStep;
-
-			if(fDist < 0.001f)
-			{
-				pPosAdd->mbMoving = false;
-				pPosAdd->mvAdd = pPosAdd->mvMoveGoal;
-			}
-		}
-
-		vAdd += pPosAdd->mvAdd;
+		const cLuxHeadPosAdd &add = mvHeadPosAdds[i];
+		vAdds[i].mbMoving = add.mbMoving;
+		vAdds[i].mvMoveGoal = add.mvMoveGoal;
+		vAdds[i].mfMoveSpeed = add.mfMoveSpeed;
+		vAdds[i].mfMoveSlowDownDist = add.mfMoveSlowDownDist;
+		vAdds[i].mvAdd = add.mvAdd;
 	}
-	mvHeadPosAddSum = vAdd - mvCameraPosAdd;
-
-	
+	cVector3f vAdd, vSum;
+	ohpl_ga2_update_head_pos_add(vAdds.data(), vAdds.size(), &mvCameraPosAdd, afTimeStep, &vAdd, &vSum);
+	for(size_t i=0; i<vAdds.size(); ++i)
+	{
+		mvHeadPosAdds[i].mbMoving = vAdds[i].mbMoving != 0;
+		mvHeadPosAdds[i].mvAdd = vAdds[i].mvAdd;
+	}
+	mvHeadPosAddSum = vSum;
 	mpCharBody->SetCameraPosAdd(vAdd);
 }
 
@@ -1266,119 +1180,62 @@ void cLuxPlayer::UpdateHeadPosAdd(float afTimeStep)
 
 void cLuxPlayer::UpdateCamera(float afTimeStep)
 {
-	if (mbFreeCameraActive) return;
-
-
-	////////////////
-	// FOV
-	if(mfFOVMul != mfFOVMulGoal)
+	OhplGa2CamState s;
+	s.mfFOV = mfFOV;
+	s.mfAspect = mfAspect;
+	s.mfFOVMul = mfFOVMul;
+	s.mfFOVMulGoal = mfFOVMulGoal;
+	s.mfFOVMulSpeed = mfFOVMulSpeed;
+	s.mfAspectMul = mfAspectMul;
+	s.mfAspectMulGoal = mfAspectMulGoal;
+	s.mfAspectMulSpeed = mfAspectMulSpeed;
+	s.mfRoll = mfRoll;
+	s.mfRollGoal = mfRollGoal;
+	s.mfRollSpeedMul = mfRollSpeedMul;
+	s.mfRollMaxSpeed = mfRollMaxSpeed;
+	s.mfLeanRoll = mfLeanRoll;
+	s.mfLeanRollGoal = mfLeanRollGoal;
+	s.mfLeanRollSpeedMul = mfLeanRollSpeedMul;
+	s.mfLeanRollMaxSpeed = mfLeanRollMaxSpeed;
+	s.mfPitchGoal = mfPitchGoal;
+	s.mfPitchSpeedMul = mfPitchSpeedMul;
+	s.mfPitchMaxSpeed = mfPitchMaxSpeed;
+	s.mvCamAnimPos = mvCamAnimPos;
+	s.mvCamAnimPosGoal = mvCamAnimPosGoal;
+	s.mfCamAnimPosSpeedMul = mfCamAnimPosSpeedMul;
+	s.mfCamAnimPosMaxSpeed = mfCamAnimPosMaxSpeed;
+	s.mbFadingPitch = mbFadingPitch;
+	s.mbFreeCamera = mbFreeCameraActive;
+	s.mfCamPitch = mpCamera->GetPitch();
+	s.mfPitchMin = mpCamera->GetPitchMinLimit();
+	s.mfPitchMax = mpCamera->GetPitchMaxLimit();
+	OhplGa2Ops ops;
+	ohpl_ga2_update_camera(&s, afTimeStep, &ops);
+	mfFOVMul = s.mfFOVMul;
+	mfAspectMul = s.mfAspectMul;
+	mfRoll = s.mfRoll;
+	mfLeanRoll = s.mfLeanRoll;
+	mbFadingPitch = s.mbFadingPitch != 0;
+	mvCamAnimPos = s.mvCamAnimPos;
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		float fSpeed = (mfFOVMulGoal - mfFOVMul) * mfFOVMulSpeed;
-		mfFOVMul += afTimeStep * fSpeed;
-		
-		if(cMath::Abs(mfFOVMulGoal - mfFOVMul) < 0.004f) 
-			mfFOVMul = mfFOVMulGoal;
-
-		mpCamera->SetFOV(mfFOV*mfFOVMul);
-	}
-
-	////////////////
-	// Aspect
-	if(mfAspectMul != mfAspectMulGoal)
-	{
-		float fSpeed = (mfAspectMulGoal - mfAspectMul) * mfAspectMulSpeed;
-		mfAspectMul += afTimeStep * fSpeed;
-		
-		if(cMath::Abs(mfAspectMulGoal - mfAspectMul) < 0.004f) mfAspectMul = mfAspectMulGoal;
-
-		mpCamera->SetAspect(mfAspect*mfAspectMul);
-	}
-
-	bool bUpdatedRoll = false;
-	////////////////
-	// Roll
-	if(mfRoll != mfRollGoal)
-	{
-		float fSpeed = (mfRollGoal - mfRoll) * mfRollSpeedMul;
-		if(fSpeed > mfRollMaxSpeed) fSpeed = mfRollMaxSpeed;
-		if(fSpeed < -mfRollMaxSpeed) fSpeed = -mfRollMaxSpeed;
-		
-		mfRoll += afTimeStep * fSpeed;
-
-		if(cMath::Abs(mfRollGoal - mfRoll) < 0.004f) mfRoll = mfRollGoal;
-
-		bUpdatedRoll = true;
-	}
-
-	////////////////
-	// Pitch
-	if(mbFadingPitch)
-	{
-		float fSpeed = (mfPitchGoal - mpCamera->GetPitch()) * mfPitchSpeedMul;
-		if(fSpeed > mfPitchMaxSpeed) fSpeed = mfPitchMaxSpeed;
-		if(fSpeed < -mfPitchMaxSpeed) fSpeed = -mfPitchMaxSpeed;
-
-		mpCamera->SetPitch(mpCamera->GetPitch() + afTimeStep * fSpeed);
-
-		if(cMath::Abs(mfPitchGoal - mpCamera->GetPitch()) < 0.004f)
+		const OhplGa2Op &op = ops.ops[i];
+		switch(op.kind)
 		{
-			mpCamera->SetPitch(mfPitchGoal);
-			mbFadingPitch = false;
+		case kOhplGa2SetFov: mpCamera->SetFOV(op.a); break;
+		case kOhplGa2SetAspect: mpCamera->SetAspect(op.a); break;
+		case kOhplGa2SetPitch: mpCamera->SetPitch(op.a); break;
+		case kOhplGa2SetRoll: mpCamera->SetRoll(op.a); break;
 		}
 	}
-
-	////////////////
-	// Lean Roll
-	if(mfLeanRoll != mfLeanRollGoal)
-	{
-		float fSpeed = (mfLeanRollGoal - mfLeanRoll) * mfLeanRollSpeedMul;
-		if(fSpeed > mfLeanRollMaxSpeed) fSpeed = mfLeanRollMaxSpeed;
-		if(fSpeed < -mfLeanRollMaxSpeed) fSpeed = -mfLeanRollMaxSpeed;
-
-		mfLeanRoll += afTimeStep * fSpeed;
-
-		if(cMath::Abs(mfLeanRollGoal - mfLeanRoll) < 0.004f) mfLeanRoll = mfLeanRollGoal;
-
-		bUpdatedRoll = true;
-	}
-
-	if(bUpdatedRoll)
-		mpCamera->SetRoll(mfRoll + mfLeanRoll);
-
-	////////////////
-	// Cam pos
-	if(mvCamAnimPos != mvCamAnimPosGoal)
-	{
-		cVector3f vDir = mvCamAnimPosGoal - mvCamAnimPos;
-		float fSpeed = vDir.Length() * mfCamAnimPosSpeedMul;
-		if(fSpeed > mfCamAnimPosMaxSpeed) fSpeed = mfCamAnimPosMaxSpeed;
-		vDir.Normalize();
-
-        mvCamAnimPos += vDir * fSpeed;
-	}
-
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateTerror(float afTimeStep)
 {
-	if(m_setTerrorEnemies.empty() || IsDead())
-	{
-		mfTerror -= mfTerrorDecSpeed * afTimeStep;
-		if(mfTerror < 0) mfTerror =0;
-	}
-	else
-	{
-		float fSpeed = mpCharBody->GetVelocity(afTimeStep).Length();
-
-		mfTerror += mfTerrorIncSpeed * afTimeStep; //+ fSpeed * afTimeStep * 0.1f;
-		if(mfTerror > 1) mfTerror = 1;
-	}
-
-
+	mfTerror = ohpl_ga2_terror_step(mfTerror, !(m_setTerrorEnemies.empty() || IsDead()), mfTerrorIncSpeed, mfTerrorDecSpeed, afTimeStep);
 	cSoundHandler *pSoundHandler = gpBase->mpEngine->GetSound()->GetSoundHandler();
-
 	if(mfTerror > 0)
 	{
 		if(mpTerrorSound == NULL)
@@ -1407,52 +1264,27 @@ void cLuxPlayer::UpdateTerror(float afTimeStep)
 
 void cLuxPlayer::SpinHead(float afSpeed)
 {
-	mvHeadSpinSpeed = cVector2f(cMath::RandRectf(-1,1), cMath::RandRectf(0,0.5f));
-	if(mvHeadSpinSpeed.x == 0 && mvHeadSpinSpeed.y == 0) mvHeadSpinSpeed.x = 1;
-	else mvHeadSpinSpeed.Normalize();
-
-	mvHeadSpinSpeed *= afSpeed;
-
+	float fYawRand = cMath::RandRectf(-1,1);
+	float fPitchRand = cMath::RandRectf(0,0.5f);
+	ohpl_ga2_spin_head(fYawRand, fPitchRand, afSpeed, &mvHeadSpinSpeed);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateHeadSpin(float afTimeStep)
 {
-	if(mvHeadSpinSpeed == 0)
-	{
-		return;
-	}
-	
-	mpCamera->AddPitch(mvHeadSpinSpeed.y * afTimeStep);
-	mpCamera->AddYaw(mvHeadSpinSpeed.x * afTimeStep);
+	cVector2f vAdd;
+	if(ohpl_ga2_update_head_spin(&mvHeadSpinSpeed, mfHeadSpinDeacc, afTimeStep, &vAdd) == false) return;
+	mpCamera->AddPitch(vAdd.x);
+	mpCamera->AddYaw(vAdd.y);
 	mpCharBody->SetYaw(mpCamera->GetYaw());
-
-	float fLength = mvHeadSpinSpeed.Length();
-	cVector2f vDir = mvHeadSpinSpeed;
-	vDir.Normalize();
-	
-	fLength -= afTimeStep * mfHeadSpinDeacc;
-	if(fLength < 0) fLength = 0;
-    mvHeadSpinSpeed = vDir * fLength;	
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxPlayer::UpdateFocusText(float afTimeStep)
 {
-	if(	gpBase->mpMessageHandler->IsPauseMessageActive() || 
-		//gpBase->mpMessageHandler->IsMessageActive() || <- this interfeere with signs and stuff so not a good thing to have!
-		msFocusText == _W(""))
-	{
-		mfFocusTextAlpha -= afTimeStep*2.0f;
-		if(mfFocusTextAlpha < 0.0f) mfFocusTextAlpha =0;
-	}
-	else
-	{
-		mfFocusTextAlpha += afTimeStep*2.0f;
-		if(mfFocusTextAlpha > 1.0f) mfFocusTextAlpha =1;
-	}
+	mfFocusTextAlpha = ohpl_ga2_focus_alpha(mfFocusTextAlpha, gpBase->mpMessageHandler->IsPauseMessageActive() || msFocusText == _W(""), afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -1461,15 +1293,9 @@ void cLuxPlayer::UpdateAvgSpeed(float afTimeStep)
 {
 	float fSpeed = mpCharBody->GetVelocity(afTimeStep).Length();
 	mlstPrevSpeeds.push_back(fSpeed);
-	if((int)mlstPrevSpeeds.size() > mlMaxPrevSpeeds) mlstPrevSpeeds.pop_front();
-
-	mfAvgSpeed = 0;
-	std::list<float>::iterator it = mlstPrevSpeeds.begin();
-	for(; it != mlstPrevSpeeds.end(); ++it)
-	{
-		mfAvgSpeed += *it;
-	}
-	mfAvgSpeed /= (float)mlstPrevSpeeds.size();
+	if(ohpl_ga2_prev_speeds_pop(mlstPrevSpeeds.size(), mlMaxPrevSpeeds)) mlstPrevSpeeds.pop_front();
+	std::vector<float> vSpeeds(mlstPrevSpeeds.begin(), mlstPrevSpeeds.end());
+	mfAvgSpeed = ohpl_ga2_avg_speed(vSpeeds.data(), vSpeeds.size());
 }
 
 //-----------------------------------------------------------------------

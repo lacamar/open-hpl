@@ -35,6 +35,7 @@
 #include "resources/XmlDocument.h"
 
 #include "impl/tinyXML/tinyxml.h"
+#include "resources/RustResMgr.h"
 
 
 
@@ -121,23 +122,22 @@ namespace hpl {
 
 	cMaterial* cMaterialManager::CreateMaterial(const tString& asName)
 	{
-		if(asName=="")
-			return NULL;
-
-		tWString sPath;
 		cMaterial* pMaterial;
-		tString asNewName;
+
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut out;
+		if(ohpl_rm_resolve_simple(env.raw(), 4, RM_STR(asName), out.raw())==0)
+			return NULL;
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
 
 		BeginLoad(asName);
 
-		asNewName = cString::SetFileExt(asName,"mat");
-
-		pMaterial = static_cast<cMaterial*>(this->FindLoadedResource(asNewName,sPath));
+		pMaterial = static_cast<cMaterial*>(out.Res());
 
 		if(pMaterial==NULL && sPath!=_W(""))
 		{
 			pMaterial = LoadFromFile(asNewName,sPath);
-
 			if(pMaterial==NULL){
 				Error("Couldn't load material '%s'\n",asNewName.c_str());
 				EndLoad();
@@ -171,9 +171,7 @@ namespace hpl {
 
 	void cMaterialManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false)
+		if(ohpl_rm_destroy_standard(apResource->GetMeta()))
 		{
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -215,16 +213,9 @@ namespace hpl {
 	
 	void cMaterialManager::SetTextureAnisotropy(float afX)
 	{
-		if(afX <1.0 || mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_AnisotropicFiltering)==0)
-		{
+		if(!ohpl_rm_mat_anisotropy_accepted(afX, mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_AnisotropicFiltering),
+											mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_MaxAnisotropicFiltering), mfTextureAnisotropy))
 			return;
-		}
-		if(afX > (float) mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_MaxAnisotropicFiltering))
-		{
-			return;
-		}
-
-		if(mfTextureAnisotropy == afX) return;
 		mfTextureAnisotropy = afX;
 
 		tResourceBaseMapIt it = m_mapResources.begin();
@@ -244,13 +235,14 @@ namespace hpl {
 
 	tString cMaterialManager::GetPhysicsMaterialName(const tString& asName)
 	{
-		tWString sPath;
 		cMaterial* pMaterial;
-		tString asNewName;
 
-		asNewName = cString::SetFileExt(asName,"mat");
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut out;
+		ohpl_rm_resolve_simple(env.raw(), 5, RM_STR(asName), out.raw());
+		const tWString& sPath = out.msPath;
 
-		pMaterial = static_cast<cMaterial*>(this->FindLoadedResource(asNewName,sPath));
+		pMaterial = static_cast<cMaterial*>(out.Res());
 
 		if(pMaterial==NULL && sPath!=_W(""))
 		{
@@ -307,20 +299,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	static bool TextureTypeIsSRGB(eMaterialTexture aType)
 	{
-		switch(aType)
-		{
-		case eMaterialTexture_Diffuse:		case eMaterialTexture_Specular:
-		case eMaterialTexture_Illumination:	case eMaterialTexture_DetailDiffuse:
-		case eMaterialTexture_CubeMap:		case eMaterialTexture_CubeMapAlpha:
-		case eMaterialTexture_DiffuseSide:	case eMaterialTexture_DiffuseTop:	case eMaterialTexture_DiffuseBottom:
-		case eMaterialTexture_SpecularSide:	case eMaterialTexture_SpecularTop:	case eMaterialTexture_SpecularBottom:
-		case eMaterialTexture_Diffuse_R:	case eMaterialTexture_Specular_R:
-		case eMaterialTexture_Diffuse_G:	case eMaterialTexture_Specular_G:
-		case eMaterialTexture_Diffuse_B:	case eMaterialTexture_Specular_B:
-			return true;
-		default:
-			return false;
-		}
+		return ohpl_rm_mat_texture_is_srgb((int)aType);
 	}
 
 	//-----------------------------------------------------------------------
@@ -428,46 +407,42 @@ namespace hpl {
 			
 			if(sFile=="") continue;
 			
-			if(cString::GetFilePath(sFile).length() <= 1)
 			{
-				sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asPath)));
+				tString sNewFile;
+				ohpl_rm_mat_texture_file(RM_STR(sFile), reinterpret_cast<const uint32_t*>(asPath.data()), asPath.size(),
+					[](void* c, const uint8_t* p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sNewFile);
+				sFile = sNewFile;
 			}
 			//Log("Texture: '%s'\n",sFile.c_str());
 			//Log(" Loading!\n");
 
 			mpResources->GetTextureManager()->SetSRGB(TextureTypeIsSRGB(pUsedTexture->mType));
-			if(animMode != eTextureAnimMode_None)
+			switch(ohpl_rm_mat_create_kind((int)animMode, (int)type))
 			{
+			case 0:
 				pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
-			}
-			else
-			{
-				
-				if(type == eTextureType_1D)
-				{
-					pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
-																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel);
-				}
-				else if(type == eTextureType_2D)
-				{
-					pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
+				break;
+			case 1:
+				pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
-				}
-				else if(type == eTextureType_3D)
-				{
-					pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
+				break;
+			case 2:
+				pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
+																	eTextureUsage_Normal,
+																	mlTextureSizeDownScaleLevel);
+				break;
+			case 3:
+				pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
+																	eTextureUsage_Normal,
+																	mlTextureSizeDownScaleLevel);
+				break;
+			case 4:
+				//Check for DDS ending and load cubemap as file.
+				pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
-				}
-				else if(type == eTextureType_CubeMap)
-				{
-					//Check for DDS ending and load cubemap as file.
-					pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
-																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel);
-				}
+				break;
 			}
 
 			mpResources->GetTextureManager()->SetSRGB(false);
@@ -535,124 +510,68 @@ namespace hpl {
 
 	eTextureType cMaterialManager::GetType(const tString& asType)
 	{
-		if(cString::ToLowerCase(asType) == "cube" || cString::ToLowerCase(asType) == "rect") return eTextureType_CubeMap;
-		else if(cString::ToLowerCase(asType) == "1d") return eTextureType_1D;
-		else if(cString::ToLowerCase(asType) == "2d") return eTextureType_2D;
-		else if(cString::ToLowerCase(asType) == "3d") return eTextureType_3D;
-
-		return eTextureType_2D;
+		return (eTextureType)ohpl_rm_mat_texture_type(RM_STR(asType));
 	}
+
 	//-----------------------------------------------------------------------
-	
+
 	tString cMaterialManager::GetTextureString(eMaterialTexture aType)
 	{
-		if(aType >= eMaterialTexture_Diffuse_R && aType <= eMaterialTexture_Height_B)
-		{
-			static const char* const vKinds[] = { "Diffuse_", "Specular_", "NMap_", "Height_" };
-			int lIdx = aType - eMaterialTexture_Diffuse_R;
-			return tString(vKinds[lIdx % 4]) + "RGB"[lIdx / 4];
-		}
-
-		switch(aType)
-		{
-			case eMaterialTexture_Diffuse: return "Diffuse";
-			case eMaterialTexture_Alpha: return "Alpha";
-			case eMaterialTexture_NMap: return "NMap";
-			case eMaterialTexture_Height: return "Height";
-			case eMaterialTexture_Illumination: return "Illumination";
-			case eMaterialTexture_Specular: return "Specular";
-			case eMaterialTexture_CubeMap: return "CubeMap";
-			case eMaterialTexture_DissolveAlpha: return "DissolveAlpha";
-			case eMaterialTexture_CubeMapAlpha: return "CubeMapAlpha";
-			case eMaterialTexture_DetailDiffuse: return "DetailDiffuse";
-			case eMaterialTexture_DetailNMap: return "DetailNMap";
-			case eMaterialTexture_Translucency: return "Translucency";
-			case eMaterialTexture_Liquid: return "Liquid";
-			case eMaterialTexture_DiffuseSide: return "DiffuseSide";
-			case eMaterialTexture_DiffuseTop: return "DiffuseTop";
-			case eMaterialTexture_DiffuseBottom: return "DiffuseBottom";
-			case eMaterialTexture_NMapSide: return "NMapSide";
-			case eMaterialTexture_NMapTop: return "NMapTop";
-			case eMaterialTexture_NMapBottom: return "NMapBottom";
-			case eMaterialTexture_SpecularSide: return "SpecularSide";
-			case eMaterialTexture_SpecularTop: return "SpecularTop";
-			case eMaterialTexture_SpecularBottom: return "SpecularBottom";
-		}
-
-		return "";
+		tString sOut;
+		ohpl_rm_mat_texture_string((int)aType, [](void* c, const uint8_t* p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sOut);
+		return sOut;
 	}
-	
+
 	//-----------------------------------------------------------------------
 
 	eTextureWrap cMaterialManager::GetWrap(const tString& asType)
 	{
-		if(cString::ToLowerCase(asType) == "repeat") return eTextureWrap_Repeat;
-		else if(cString::ToLowerCase(asType) == "clamp") return eTextureWrap_Clamp;
-		else if(cString::ToLowerCase(asType) == "clamptoedge") return eTextureWrap_ClampToEdge;
-
-		return eTextureWrap_Repeat;
+		return (eTextureWrap)ohpl_rm_mat_wrap(RM_STR(asType));
 	}
+
+	//-----------------------------------------------------------------------
 
 	eTextureAnimMode cMaterialManager::GetAnimMode(const tString& asType)
 	{
-		if(cString::ToLowerCase(asType) == "none") return eTextureAnimMode_None;
-		else if(cString::ToLowerCase(asType) == "loop") return eTextureAnimMode_Loop;
-		else if(cString::ToLowerCase(asType) == "oscillate") return eTextureAnimMode_Oscillate;
-
-		return eTextureAnimMode_None;
+		return (eTextureAnimMode)ohpl_rm_mat_anim_mode(RM_STR(asType));
 	}
 
 	//-----------------------------------------------------------------------
 
 	eMaterialBlendMode cMaterialManager::GetBlendMode(const tString& asType)
 	{
-		tString sLow = cString::ToLowerCase(asType);
-		if(sLow == "add")	return eMaterialBlendMode_Add;
-		if(sLow == "mul")	return eMaterialBlendMode_Mul;
-		if(sLow == "mulx2")	return eMaterialBlendMode_MulX2;
-		if(sLow == "alpha")	return eMaterialBlendMode_Alpha;
-		if(sLow == "premulalpha")	return eMaterialBlendMode_PremulAlpha;
-
-		Warning("Material BlendMode '%s' does not exist!\n",asType.c_str());
-
-		return eMaterialBlendMode_Add;
+		bool bWarn = false;
+		eMaterialBlendMode mode = (eMaterialBlendMode)ohpl_rm_mat_blend_mode(RM_STR(asType), &bWarn);
+		if(bWarn) Warning("Material BlendMode '%s' does not exist!\n",asType.c_str());
+		return mode;
 	}
 
 	//-----------------------------------------------------------------------
-	
+
 	eMaterialUvAnimation cMaterialManager::GetUvAnimType(const char* apString)
 	{
-		if(apString==NULL){ 
-			Error("Uv animation attribute Type does not exist!\n");
-			return eMaterialUvAnimation_LastEnum;
+		bool bErr = false;
+		eMaterialUvAnimation type = (eMaterialUvAnimation)ohpl_rm_mat_uv_anim_type(reinterpret_cast<const uint8_t*>(apString), apString ? strlen(apString) : 0, &bErr);
+		if(bErr)
+		{
+			if(apString==NULL) Error("Uv animation attribute Type does not exist!\n");
+			else Error("Invalid uv animation type %s\n",apString);
 		}
-		
-		tString sLow = cString::ToLowerCase(apString);
-		
-		if(sLow == "translate") return eMaterialUvAnimation_Translate;
-		if(sLow == "sin") return eMaterialUvAnimation_Sin;
-		if(sLow == "rotate") return eMaterialUvAnimation_Rotate;
-		
-		Error("Invalid uv animation type %s\n",apString);
-		return eMaterialUvAnimation_LastEnum;
-	}
-	
-	eMaterialAnimationAxis cMaterialManager::GetAnimAxis(const char* apString)
-	{
-		if(apString==NULL){ 
-			Error("Uv animation attribute Axis does not exist!\n");
-			return eMaterialAnimationAxis_LastEnum;
-		}
-
-		tString sLow = cString::ToLowerCase(apString);
-
-		if(sLow == "x") return eMaterialAnimationAxis_X;
-		if(sLow == "y") return eMaterialAnimationAxis_Y;
-		if(sLow == "z") return eMaterialAnimationAxis_Z;
-
-		Error("Invalid animation axis %s\n",apString);
-		return eMaterialAnimationAxis_LastEnum;
+		return type;
 	}
 
 	//-----------------------------------------------------------------------
+
+	eMaterialAnimationAxis cMaterialManager::GetAnimAxis(const char* apString)
+	{
+		bool bErr = false;
+		eMaterialAnimationAxis axis = (eMaterialAnimationAxis)ohpl_rm_mat_anim_axis(reinterpret_cast<const uint8_t*>(apString), apString ? strlen(apString) : 0, &bErr);
+		if(bErr)
+		{
+			if(apString==NULL) Error("Uv animation attribute Axis does not exist!\n");
+			else Error("Invalid animation axis %s\n",apString);
+		}
+		return axis;
+	}
+
 }

@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+struct OhplGs6Builder;
+
 // Members declared [nosave] or [volatile], skipped by save games
 bool SomaScriptIsNoSave(asITypeInfo *apType, const char *asProp);
 
@@ -15,6 +17,9 @@ class cSomaScriptBuilder
 {
 public:
 	explicit cSomaScriptBuilder(const std::string &asGameDir, const std::string &asCacheDir = "");
+	~cSomaScriptBuilder();
+	cSomaScriptBuilder(const cSomaScriptBuilder &) = delete;
+	cSomaScriptBuilder &operator=(const cSomaScriptBuilder &) = delete;
 
 	std::string Resolve(const std::string &asInclude, const std::string &asFromFile) const;
 
@@ -24,13 +29,11 @@ public:
 	const std::string &GetGameDir() const { return msGameDir; }
 
 private:
-	bool AddFile(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile,
-				 std::map<std::string, bool> &aIncluded, std::string *apMissingInclude);
+	bool Collect(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile, std::string *apMissingInclude);
 
 	std::string msGameDir;
 	std::string msCacheDir;
-	std::map<std::string, std::string> mmapByRelPath;  // lowercase path under script/
-	std::map<std::string, std::string> mmapByBaseName; // lowercase basename
+	OhplGs6Builder *mpRust;
 };
 
 #endif // SOMA_SCRIPT_BUILDER_H

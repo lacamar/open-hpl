@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxEnemy.h"
 
 //----------------------------------------------
 
@@ -48,6 +49,7 @@ class cLuxEnemyMover
 friend class cLuxEnemyMover_SaveData;
 friend class iLuxEnemy;
 friend class cLuxEnemy_ManPig;
+friend class cLuxEnemy_Grunt;
 public:	
 	cLuxEnemyMover(iLuxEnemy *apEnemy, iCharacterBody *apCharBody);
 	virtual ~cLuxEnemyMover();
@@ -79,13 +81,13 @@ public:
 	//This gets speed / wanted_speed
 	float GetWantedSpeedAmount();
 
-	void SetOverideMoveState(bool abX){ mbOverideMoveState = abX;}
-	bool GetOverideMoveState(){ return mbOverideMoveState;}
+	void SetOverideMoveState(bool abX){ mS.overideMoveState = abX;}
+	bool GetOverideMoveState(){ return mS.overideMoveState;}
 
-	float GetStuckCounter(){ return mfStuckCounter; }
-	float GetMaxStuckCounter(){ return mfMaxStuckCounter; }
-	bool GetStuckCounterIsAtMax(){ return mfStuckCounter >= mfMaxStuckCounter;}
-	void ResetStuckCounter(){ mfStuckCounter =0; }
+	float GetStuckCounter(){ return mS.stuckCounter; }
+	float GetMaxStuckCounter(){ return mS.maxStuckCounter; }
+	bool GetStuckCounterIsAtMax(){ return mS.stuckCounter >= mS.maxStuckCounter;}
+	void ResetStuckCounter(){ mS.stuckCounter =0; }
 
 	
 	//////////////////////
@@ -95,8 +97,6 @@ public:
 	//Save data stuff
 	
 private:
-	void UpdateStuckCounter(float afTimeStep);	
-	void UpdateTurning(float afTimeStep);
 	void UpdateMoveAnimation(float afTimeStep);
 	void UpdateStepEffects(float afTimeStep);
 
@@ -105,21 +105,10 @@ private:
 	iLuxEnemy *mpEnemy;
 	iCharacterBody *mpCharBody;
 
-	float mfStuckLimit;
-	float mfMaxStuckCounter;
-
-
 	///////////////////
-	// Variables
-	bool mbTurning;
-	float mfTurnGoalAngle;
-	float mfTurnSpeed;
-	float mfTurnBreakAcc;
-
-	float mfStuckCounter;
-
-	eLuxEnemyMoveState mMoveState;
-	bool mbOverideMoveState;
+	// Variables (stuck limits, turning and move state live in the Rust-edited POD)
+	OhplGa3Mover mS;
+	eLuxEnemyMoveState &mMoveState;
 };
 
 //----------------------------------------------

@@ -1,109 +1,26 @@
 #include "SomaScriptBuilder.h"
+#include "RustSomaScript.h"
 #include "SomaConfig.h"
 #include "system/LowLevelSystem.h"
 
-#include <algorithm>
-#include <cstring>
-#include <dirent.h>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iterator>
-#include <regex>
-#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
-static std::set<std::string> gsetNoSave;
+using namespace OhplGs6;
 
 bool SomaScriptIsNoSave(asITypeInfo *apType, const char *asProp)
 {
 	for (; apType; apType = apType->GetBaseType())
-		if (gsetNoSave.count(std::string(apType->GetName()) + "::" + asProp))
+	{
+		std::string sKey = std::string(apType->GetName()) + "::" + asProp;
+		if (ohpl_gs6_is_nosave(U(sKey), sKey.size()))
 			return true;
+	}
 	return false;
-}
-
-// Constructs AngelScript 2.28 accepted but 2.38 rejects, as {file suffix, from, to}.
-static const char *gvCompatPatches[][3] = {
-	{"custom_depth/agent_deepsea_suit.hps", "CheckShapeWorldCollision(cVector3f_Zero,", "CheckShapeWorldCollision(void,"},
-	{"modules/emotionhandler.hps", "lBeat<0 ? null : mvHeartbeats[lBeat]", "lBeat<0 ? null : @mvHeartbeats[lBeat]"},
-	{"modules/rathandler.hps", "? mvFoodEntities[lClosestIx] : null", "? @mvFoodEntities[lClosestIx] : null"},
-	{"helper_custom_depth_imgui.hps", "const cGuiDialogBoxSettings &in aSettings", "cGuiDialogBoxSettings &in aSettings"},
-	{"03_02_omicron_inside.hps", ".length-", ".length()-"},
-	{"03_02_omicron_inside.hps", ".length -", ".length() -"},
-	{"custom/player/player_custom.hps", "30.f, fRayDist, 0.f)", "30.f, fRayDist, void)"},
-	{"modules/playerbodyhandler.hps", "[ePlayerBodyAnimationState_Custom]", "[ePlayerBodyAnimationState::ePlayerBodyAnimationState_Custom]"},
-	{"modules/playerbodyhandler.hps", "abX ? ePlayerBodyAnimationState_Custom :", "abX ? ePlayerBodyAnimationState::ePlayerBodyAnimationState_Custom :"},
-	{"03_07_dwf_d_factory.hps", "\"PLAYER MUL \" = ", "\"PLAYER MUL \" + "},
-	{"soma:modules/menuhandler.hps", "kOptionsGameplayBgSize = cVector2f(680, 255)", "kOptionsGameplayBgSize = cVector2f(680, 293)"},
-	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true);", "OptionMenu_UpdateExtraWidth(\"CrosshairSimple\", true); OptionMenu_UpdateExtraWidth(\"OpenHplHud\", true);"},
-	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton);",
-	 "OptionMenu_UpdateFocus(\"CrosshairSimple\", msSelectedGameplayButton); } {"
-	 " bool bValue = mpConfig.GetBool(\"Gameplay\", \"OpenHplHud\", false);"
-	 " bool bNewValue = OptionMenu_ButtonOptionsToggle(\"OpenHplHud\", kMainMenuButtonPos, lY++, msSelectedGameplayButton, bValue, mlActionHorizontal);"
-	 " if(bValue != bNewValue) { mpConfig.SetBool(\"Gameplay\", \"OpenHplHud\", bNewValue); ApplySettings(); }"
-	 " msSelectedGameplayButton = OptionMenu_UpdateFocus(\"OpenHplHud\", msSelectedGameplayButton);"},
-	{"soma:modules/menuhandler.hps", "kOptionsVideoDisplayBgSize = cVector2f(680, 335)", "kOptionsVideoDisplayBgSize = cVector2f(680, 487)"},
-	{"soma:modules/menuhandler.hps", "OptionMenu_UpdateExtraWidth(\"FOV\", false);",
-	 "const cVector2f kOptionsBgPos = cVector2f(100, 190); const cVector2f kMainMenuButtonPos = cVector2f(136, 205);"
-	 " OptionMenu_UpdateExtraWidth(\"FOV\", false); OptionMenu_UpdateExtraWidth(\"Renderer\", false); OptionMenu_UpdateExtraWidth(\"ColorOutput\", false);"
-	 " OptionMenu_UpdateExtraWidth(\"HdrPaperWhite\", false); OptionMenu_UpdateExtraWidth(\"HdrPeak\", false);"},
-	// open-hpl renderer and colour output rows after AA; colour applies live, renderer on restart
-	{"soma:modules/menuhandler.hps", "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton);",
-	 "msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"AA\", msSelectedVideoDisplayButton); } {"
-	 " array<tString> vRenderers = { \"OpenGL\", \"Vulkan\" }; lY++;"
-	 " int lValue = mpConfig.GetString(\"Graphics\", \"Renderer\", \"OpenGL\") == \"Vulkan\" ? 1 : 0;"
-	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(\"Renderer\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, vRenderers, lValue, false, mlActionHorizontal);"
-	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"Renderer\", vRenderers[lNewValue]); }"
-	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"Renderer\", msSelectedVideoDisplayButton); } {"
-	 " array<tString> vOutputs = { \"SDR\", \"HDR10\", \"scRGB\", \"P3\" }; lY++;"
-	 " tString sOutput = mpConfig.GetString(\"Graphics\", \"ColorOutput\", \"SDR\"); int lValue = 0;"
-	 " for(uint i=0; i<vOutputs.length(); ++i) if(vOutputs[i] == sOutput) lValue = i;"
-	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(\"ColorOutput\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, vOutputs, lValue, false, mlActionHorizontal);"
-	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"ColorOutput\", vOutputs[lNewValue]); }"
-	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"ColorOutput\", msSelectedVideoDisplayButton); } {"
-	 " lY++; float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPaperWhite\", 203); float fValue = (fNits - 80) / 320.0f;"
-	 " float fNewValue = OptionMenu_ButtonOptionsSlider(\"HdrPaperWhite\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits));"
-	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPaperWhite\", fNewValue * 320.0f + 80); }"
-	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"HdrPaperWhite\", msSelectedVideoDisplayButton); } {"
-	 " lY++; float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPeak\", 1000); float fValue = (fNits - 400) / 1600.0f;"
-	 " float fNewValue = OptionMenu_ButtonOptionsSlider(\"HdrPeak\", kMainMenuButtonPos, lY, msSelectedVideoDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits));"
-	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPeak\", fNewValue * 1600.0f + 400); }"
-	 " msSelectedVideoDisplayButton = OptionMenu_UpdateFocus(\"HdrPeak\", msSelectedVideoDisplayButton);"},
-	// Rebirth/Bunker Display rows before FOV; the first row reuses FOV's own if. $MS/$SL: Bunker's extra call args
-	{"!soma:modules/menuhandler.hps", "\"AllowSlowdowns\", \"FOV\"", "\"AllowSlowdowns\", \"Renderer\", \"ColorOutput\", \"HdrPaperWhite\", \"HdrPeak\", \"FOV\""},
-	{"!soma:modules/menuhandler.hps", "OptionMenu_UpdateMultiSelectionExtraWidth(vVSyncValues);",
-	 "OptionMenu_UpdateMultiSelectionExtraWidth(vVSyncValues); array<tString> vRenderers = { \"OpenGL\", \"Vulkan\" };"
-	 " array<tString> vOutputs = { \"SDR\", \"HDR10\", \"scRGB\", \"P3\" };"
-	 " OptionMenu_UpdateMultiSelectionExtraWidth(vRenderers); OptionMenu_UpdateMultiSelectionExtraWidth(vOutputs);"},
-	{"!soma:modules/menuhandler.hps", "float fFOVMin = 50;",
-	 "int lValue = mpConfig.GetString(\"Graphics\", \"Renderer\", \"OpenGL\") == \"Vulkan\" ? 1 : 0;"
-	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, vRenderers, lValue, false, mlActionHorizontal, \"Menu\", 0, vRightAnchor, vInfoBoxPos, mfTransitionAlpha$MS);"
-	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"Renderer\", vRenderers[lNewValue]); }"
-	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
-	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
-	 " tString sOutput = mpConfig.GetString(\"Graphics\", \"ColorOutput\", \"SDR\"); int lValue = 0;"
-	 " for(uint i=0; i<vOutputs.length(); ++i) if(vOutputs[i] == sOutput) lValue = i;"
-	 " int lNewValue = OptionMenu_ButtonOptionsMultiSelect(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, vOutputs, lValue, false, mlActionHorizontal, \"Menu\", 0, vRightAnchor, vInfoBoxPos, mfTransitionAlpha$MS);"
-	 " if(lValue != lNewValue) { mlOptionChanges++; mpConfig.SetString(\"Graphics\", \"ColorOutput\", vOutputs[lNewValue]); }"
-	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
-	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
-	 " float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPaperWhite\", 203); float fValue = (fNits - 80) / 320.0f;"
-	 " float fNewValue = OptionMenu_ButtonOptionsSlider(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits), \"\", vRightAnchor, vInfoBoxPos, mfTransitionAlpha$SL);"
-	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPaperWhite\", fNewValue * 320.0f + 80); }"
-	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
-	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) {"
-	 " float fNits = mpConfig.GetFloat(\"Graphics\", \"HdrPeak\", 1000); float fValue = (fNits - 400) / 1600.0f;"
-	 " float fNewValue = OptionMenu_ButtonOptionsSlider(vMenuItems[mlCurrentItemId-mlFirstItemId], kOptionsDisplayButtonPos, mlCurrentItemId, msSelectedDisplayButton, fValue, 0.025f, mlActionHorizontal, \"\" + cMath_RoundToInt(fNits), \"\", vRightAnchor, vInfoBoxPos, mfTransitionAlpha$SL);"
-	 " if(fValue != fNewValue) { mlOptionChanges++; mpConfig.SetFloat(\"Graphics\", \"HdrPeak\", fNewValue * 1600.0f + 400); }"
-	 " msSelectedDisplayButton = OptionMenu_UpdateFocusCustom(vMenuItems, vMenuItems[mlCurrentItemId], msSelectedDisplayButton);"
-	 " } mlCurrentItemId++; if (OptionMenu_CheckOutOfLimits(mlCurrentItemId) == false) { float fFOVMin = 50;"},
-};
-
-static void ReplaceAll(std::string &asText, const std::string &asFrom, const std::string &asTo)
-{
-	for (size_t p = asText.find(asFrom); p != std::string::npos; p = asText.find(asFrom, p + asTo.size()))
-		asText.replace(p, asFrom.size(), asTo);
 }
 
 struct cByteStream : asIBinaryStream
@@ -125,173 +42,49 @@ struct cByteStream : asIBinaryStream
 	}
 };
 
-static uint64_t Fnv(const void *apData, size_t alSize, uint64_t alHash = 14695981039346656037ull)
-{
-	for (size_t i = 0; i < alSize; ++i)
-		alHash = (alHash ^ ((const unsigned char *)apData)[i]) * 1099511628211ull;
-	return alHash;
-}
-
-static std::string Hex(uint64_t alValue)
-{
-	char vBuf[17];
-	snprintf(vBuf, sizeof(vBuf), "%016llx", (unsigned long long)alValue);
-	return vBuf;
-}
-
-static std::string Lower(std::string s)
-{
-	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-	return s;
-}
-
-static void Index(const std::string &asRoot, const std::string &asRel, std::map<std::string, std::string> &aByRel,
-				  std::map<std::string, std::string> &aByBase)
-{
-	DIR *pDir = opendir((asRoot + "/" + asRel).c_str());
-	if (pDir == NULL)
-		return;
-	while (dirent *pEnt = readdir(pDir))
-	{
-		std::string sName = pEnt->d_name;
-		if (sName == "." || sName == "..")
-			continue;
-		std::string sRel = asRel.empty() ? sName : asRel + "/" + sName;
-		std::string sFull = asRoot + "/" + sRel;
-		struct stat st;
-		if (stat(sFull.c_str(), &st) != 0)
-			continue;
-		if (S_ISDIR(st.st_mode))
-			Index(asRoot, sRel, aByRel, aByBase);
-		else if (Lower(sName).size() > 4 && Lower(sName).compare(Lower(sName).size() - 4, 4, ".hps") == 0)
-		{
-			aByRel[Lower(sRel)] = sFull;
-			aByBase.insert(std::make_pair(Lower(sName), sFull));
-		}
-	}
-	closedir(pDir);
-}
-
 cSomaScriptBuilder::cSomaScriptBuilder(const std::string &asGameDir, const std::string &asCacheDir)
 	: msGameDir(asGameDir), msCacheDir(asCacheDir)
 {
-	Index(asGameDir + "/script", "", mmapByRelPath, mmapByBaseName);
+	const std::string &sGame = SomaGameId();
+	mpRust = ohpl_gs6_builder_new(U(asGameDir), asGameDir.size(), U(sGame), sGame.size());
+}
+
+cSomaScriptBuilder::~cSomaScriptBuilder()
+{
+	ohpl_gs6_builder_free(mpRust);
 }
 
 std::string cSomaScriptBuilder::Resolve(const std::string &asInclude, const std::string &asFromFile) const
 {
-	std::string sKey = Lower(asInclude);
-	std::replace(sKey.begin(), sKey.end(), '\\', '/');
-	std::map<std::string, std::string>::const_iterator it = mmapByRelPath.find(sKey);
-	if (it != mmapByRelPath.end())
-		return it->second;
-
-	std::string sDir = asFromFile.substr(0, asFromFile.find_last_of('/') + 1);
-	std::ifstream f((sDir + asInclude).c_str());
-	if (f.is_open())
-		return sDir + asInclude;
-
-	size_t lSlash = sKey.find_last_of('/');
-	it = mmapByBaseName.find(lSlash == std::string::npos ? sKey : sKey.substr(lSlash + 1));
-	return it != mmapByBaseName.end() ? it->second : "";
+	return Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_builder_resolve(mpRust, U(asInclude), asInclude.size(), U(asFromFile), asFromFile.size(), s, c); });
 }
 
-bool cSomaScriptBuilder::AddFile(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile,
-								 std::map<std::string, bool> &aIncluded, std::string *apMissingInclude)
+namespace
 {
-	if (aIncluded[asFile])
-		return true;
-	aIncluded[asFile] = true;
+	struct cCollected
+	{
+		std::vector<std::pair<std::string, std::string>> *mpSections;
+		std::string msMissing;
+		std::vector<std::string> mvWarnings;
+	};
+}
 
-	std::ifstream f(asFile.c_str(), std::ios::binary);
-	if (f.is_open() == false)
+bool cSomaScriptBuilder::Collect(std::vector<std::pair<std::string, std::string>> &avSections, const std::string &asFile, std::string *apMissingInclude)
+{
+	cCollected out{&avSections, "", {}};
+	bool bOk = ohpl_gs6_builder_collect(
+		mpRust, U(asFile), asFile.size(),
+		+[](void *c, const unsigned char *n, size_t ln, const unsigned char *code, size_t lc) {
+			((cCollected *)c)->mpSections->emplace_back(std::string((const char *)n, ln), std::string((const char *)code, lc));
+		},
+		+[](void *c, const unsigned char *p, size_t n) { ((cCollected *)c)->msMissing.assign((const char *)p, n); },
+		+[](void *c, const unsigned char *p, size_t n) { ((cCollected *)c)->mvWarnings.emplace_back((const char *)p, n); }, &out);
+	if (bOk == false)
 		return false;
-	std::stringstream ss;
-	ss << f.rdbuf();
-	std::string sCode = ss.str();
-
-	std::string sLowerFile = Lower(asFile);
-	for (auto &patch : gvCompatPatches)
-	{
-		// "soma:" / "!soma:" prefix limits a patch to SOMA or to the other HPL3 games
-		const char *pFile = patch[0];
-		bool bSoma = SomaGameId() == "soma";
-		if (strncmp(pFile, "soma:", 5) == 0) { if (!bSoma) continue; pFile += 5; }
-		else if (strncmp(pFile, "!soma:", 6) == 0) { if (bSoma) continue; pFile += 6; }
-		size_t lSuffix = strlen(pFile);
-		if (sLowerFile.size() < lSuffix || sLowerFile.compare(sLowerFile.size() - lSuffix, lSuffix, pFile) != 0)
-			continue;
-		std::string sTo = patch[2];
-		bool bBunker = SomaGameId() == "bunker";
-		ReplaceAll(sTo, "$MS", bBunker ? ", false, false, true, \"\", cString_To16Char(\"\"), true" : "");
-		ReplaceAll(sTo, "$SL", bBunker ? ", false, true, true" : "");
-		int lHits = 0;
-		for (size_t p = sCode.find(patch[1]); p != std::string::npos; p = sCode.find(patch[1], p + sTo.size()), ++lHits)
-			sCode.replace(p, strlen(patch[1]), sTo);
-		if (lHits == 0)
-			Warning("Script compat patch for '%s' found no '%.60s'\n", pFile, patch[1]);
-	}
-
-	// Blank out #include lines (keeping line numbers) and add each include as its own section.
-	std::vector<std::string> vIncludes;
-	size_t lPos = 0;
-	std::string sClass;
-	while (lPos < sCode.size())
-	{
-		size_t lEnd = sCode.find('\n', lPos);
-		if (lEnd == std::string::npos)
-			lEnd = sCode.size();
-		size_t lFirst = sCode.find_first_not_of(" \t", lPos);
-		static const std::regex reClass("^\\s*(?:shared\\s+|abstract\\s+|mixin\\s+)*class\\s+(\\w+)");
-		std::smatch m;
-		std::string sLine = sCode.substr(lPos, lEnd - lPos);
-		if (sLine.find("class") != std::string::npos && std::regex_search(sLine, m, reClass))
-			sClass = m[1];
-		// Save-system metadata on declarations ([nosave], [volatile]): recorded, then blanked out.
-		while (lFirst < lEnd && sCode[lFirst] == '[')
-		{
-			size_t lClose = sCode.find(']', lFirst);
-			if (lClose == std::string::npos || lClose >= lEnd)
-				break;
-			std::string sValue = sCode.substr(lFirst + 1, lClose - lFirst - 1);
-			size_t lDeclEnd = sCode.find_first_of(";=(", lClose);
-			if ((sValue == "nosave" || sValue == "volatile") && lDeclEnd != std::string::npos)
-			{
-				size_t lNameEnd = sCode.find_last_not_of(" \t\r\n", lDeclEnd - 1);
-				size_t lNameStart = sCode.find_last_of(" \t\r\n&@", lNameEnd);
-				if (lNameEnd != std::string::npos && lNameStart != std::string::npos && lNameStart < lNameEnd)
-					gsetNoSave.insert(sClass + "::" + sCode.substr(lNameStart + 1, lNameEnd - lNameStart));
-			}
-			for (size_t i = lFirst; i <= lClose; ++i)
-				sCode[i] = ' ';
-			lFirst = sCode.find_first_not_of(" \t", lClose + 1);
-		}
-		if (lFirst < lEnd && sCode.compare(lFirst, 8, "#include") == 0)
-		{
-			size_t q1 = sCode.find('"', lFirst);
-			size_t q2 = q1 == std::string::npos ? q1 : sCode.find('"', q1 + 1);
-			if (q2 != std::string::npos && q2 < lEnd)
-				vIncludes.push_back(sCode.substr(q1 + 1, q2 - q1 - 1));
-			for (size_t i = lPos; i < lEnd; ++i)
-				if (sCode[i] != '\r')
-					sCode[i] = ' ';
-		}
-		lPos = lEnd + 1;
-	}
-
-	avSections.emplace_back(asFile, sCode);
-
-	for (size_t i = 0; i < vIncludes.size(); ++i)
-	{
-		std::string sPath = Resolve(vIncludes[i], asFile);
-		if (sPath.empty())
-		{
-			if (apMissingInclude && apMissingInclude->empty())
-				*apMissingInclude = vIncludes[i] + " (from " + asFile + ")";
-			continue;
-		}
-		AddFile(avSections, sPath, aIncluded, apMissingInclude);
-	}
+	for (const std::string &sWarning : out.mvWarnings)
+		Warning("%s", sWarning.c_str());
+	if (apMissingInclude && apMissingInclude->empty())
+		*apMissingInclude = out.msMissing;
 	return true;
 }
 
@@ -299,8 +92,7 @@ int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asMo
 							  std::string *apMissingInclude)
 {
 	std::vector<std::pair<std::string, std::string>> vSections;
-	std::map<std::string, bool> mapIncluded;
-	if (AddFile(vSections, asEntryFile, mapIncluded, apMissingInclude) == false)
+	if (Collect(vSections, asEntryFile, apMissingInclude) == false)
 		return asERROR;
 	asIScriptModule *pModule = apEngine->GetModule(asModuleName.c_str(), asGM_ALWAYS_CREATE);
 
@@ -309,11 +101,20 @@ int cSomaScriptBuilder::Build(asIScriptEngine *apEngine, const std::string &asMo
 	struct stat st;
 	if (msCacheDir.empty() == false && stat("/proc/self/exe", &st) == 0)
 	{
-		uint64_t lHash = Fnv(&st.st_size, sizeof(st.st_size), Fnv(&st.st_mtim, sizeof(st.st_mtim)));
+		std::vector<const unsigned char *> vNames, vCodes;
+		std::vector<size_t> vNameLens, vCodeLens;
 		for (auto &sec : vSections)
-			lHash = Fnv(sec.second.data(), sec.second.size(), Fnv(sec.first.c_str(), sec.first.size() + 1, lHash));
-		sKey = Hex(lHash);
-		sCacheFile = msCacheDir + "/" + Hex(Fnv(asEntryFile.data(), asEntryFile.size())) + ".asb";
+		{
+			vNames.push_back(U(sec.first));
+			vNameLens.push_back(sec.first.size());
+			vCodes.push_back(U(sec.second));
+			vCodeLens.push_back(sec.second.size());
+		}
+		sKey = Call8([&](OhplGs6Sink8 s, void *c) {
+			ohpl_gs6_cache_key(st.st_size, st.st_mtim.tv_sec, st.st_mtim.tv_nsec, vNames.data(), vNameLens.data(), vCodes.data(), vCodeLens.data(),
+							   vSections.size(), s, c);
+		});
+		sCacheFile = msCacheDir + "/" + Call8([&](OhplGs6Sink8 s, void *c) { ohpl_gs6_cache_file_name(U(asEntryFile), asEntryFile.size(), s, c); });
 
 		cByteStream in;
 		std::ifstream f(sCacheFile.c_str(), std::ios::binary);

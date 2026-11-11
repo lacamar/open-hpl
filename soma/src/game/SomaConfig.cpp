@@ -1,19 +1,26 @@
 #include "SomaConfig.h"
+#include "RustSomaSave.h"
 
 #include <fstream>
 #include <iterator>
 
-const std::string &SomaGameId()
+static int SomaGameIdIndex()
 {
-	static std::string sId;
-	if (sId.empty())
+	static int lIdx = -1;
+	if (lIdx < 0)
 	{
 		const char *pDir = getenv("OPENHPL_SOMA_GAME_DIR");
 		std::ifstream f((pDir ? std::string(pDir) + "/" : std::string()) + "config/main_init.cfg");
 		std::string s((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-		sId = s.find("Rebirth") != std::string::npos ? "rebirth" : s.find("Bunker") != std::string::npos ? "bunker" : "soma";
+		lIdx = ohpl_gs4_game_id((const unsigned char *)s.data(), s.size());
 	}
-	return sId;
+	return lIdx;
+}
+
+const std::string &SomaGameId()
+{
+	static const std::string vIds[] = {"soma", "rebirth", "bunker"};
+	return vIds[SomaGameIdIndex()];
 }
 
 tWString SomaGameIdW()
@@ -21,16 +28,46 @@ tWString SomaGameIdW()
 	return cString::To16Char(SomaGameId()) + _W("/");
 }
 
+int SomaGameIdValue()
+{
+	return SomaGameIdIndex();
+}
+
 tWString cSomaConfig::GetConfigFilePath()
 {
-	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome) + _W("open-hpl/");
-	if (cPlatform::FolderExists(sDir) == false)
-		cPlatform::CreateFolder(sDir);
-	sDir += SomaGameIdW();
-	if (cPlatform::FolderExists(sDir) == false)
-		cPlatform::CreateFolder(sDir);
+	struct cPaths
+	{
+		tWString msFile;
+	} paths;
+	tWString sRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome);
+	const std::string &sId = SomaGameId();
+	ohpl_gs4_paths(1, (const uint32_t *)sRoot.data(), sRoot.size(), (const unsigned char *)sId.data(), sId.size(), false, 0,
+				   [](void *c, const uint32_t *apPath, size_t alPath, bool abFile) {
+					   tWString sPath((const wchar_t *)apPath, alPath);
+					   if (abFile)
+						   ((cPaths *)c)->msFile = sPath;
+					   else if (cPlatform::FolderExists(sPath) == false)
+						   cPlatform::CreateFolder(sPath);
+				   },
+				   &paths);
+	return paths.msFile;
+}
 
-	return sDir + _W("main_settings.cfg");
+static std::string S(const char *p, size_t n)
+{
+	return std::string(p, n);
+}
+
+static OhplGs4CfgHost MakeCfgHost(cConfigFile *apCfg)
+{
+	return OhplGs4CfgHost{
+		apCfg,
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, float d) { return ((cConfigFile *)c)->GetFloat(S(l, ln), S(k, kn), d); },
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, bool d) { return ((cConfigFile *)c)->GetBool(S(l, ln), S(k, kn), d); },
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, int32_t d) { return ((cConfigFile *)c)->GetInt(S(l, ln), S(k, kn), d); },
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, float v) { ((cConfigFile *)c)->SetFloat(S(l, ln), S(k, kn), v); },
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, bool v) { ((cConfigFile *)c)->SetBool(S(l, ln), S(k, kn), v); },
+		[](void *c, const char *l, size_t ln, const char *k, size_t kn, int32_t v) { ((cConfigFile *)c)->SetInt(S(l, ln), S(k, kn), v); }};
 }
 
 void cSomaConfig::Load()
@@ -45,14 +82,17 @@ void cSomaConfig::Load()
 		return;
 	}
 
-	mfMasterVolume = pCfg->GetFloat("Sound", "Volume", mfMasterVolume);
-	mfGamma = pCfg->GetFloat("Graphics", "Gamma", mfGamma);
-	mbVSync = pCfg->GetBool("Screen", "Vsync", mbVSync);
-	mbFullscreen = pCfg->GetBool("Screen", "FullScreen", mbFullscreen);
-	mlScreenWidth = pCfg->GetInt("Screen", "Width", mlScreenWidth);
-	mlScreenHeight = pCfg->GetInt("Screen", "Height", mlScreenHeight);
-	mbAntiAliasing = pCfg->GetBool("Graphics", "AntiAliasing", mbAntiAliasing);
-	mbShowSubtitles = pCfg->GetBool("Sound", "ShowSubtitles", mbShowSubtitles);
+	OhplGs4Config c = {mfMasterVolume, mfGamma, mlScreenWidth, mlScreenHeight, mbVSync, mbFullscreen, mbAntiAliasing, mbShowSubtitles};
+	OhplGs4CfgHost host = MakeCfgHost(pCfg);
+	ohpl_gs4_cfg_load(&host, &c);
+	mfMasterVolume = c.master_volume;
+	mfGamma = c.gamma;
+	mbVSync = c.vsync;
+	mbFullscreen = c.fullscreen;
+	mlScreenWidth = c.screen_width;
+	mlScreenHeight = c.screen_height;
+	mbAntiAliasing = c.anti_aliasing;
+	mbShowSubtitles = c.show_subtitles;
 
 	hplDelete(pCfg);
 }
@@ -63,14 +103,9 @@ void cSomaConfig::Save()
 
 	cConfigFile *pCfg = hplNew(cConfigFile, (sFile));
 
-	pCfg->SetFloat("Sound", "Volume", mfMasterVolume);
-	pCfg->SetFloat("Graphics", "Gamma", mfGamma);
-	pCfg->SetBool("Screen", "Vsync", mbVSync);
-	pCfg->SetBool("Screen", "FullScreen", mbFullscreen);
-	pCfg->SetInt("Screen", "Width", mlScreenWidth);
-	pCfg->SetInt("Screen", "Height", mlScreenHeight);
-	pCfg->SetBool("Graphics", "AntiAliasing", mbAntiAliasing);
-	pCfg->SetBool("Sound", "ShowSubtitles", mbShowSubtitles);
+	OhplGs4Config c = {mfMasterVolume, mfGamma, mlScreenWidth, mlScreenHeight, mbVSync, mbFullscreen, mbAntiAliasing, mbShowSubtitles};
+	OhplGs4CfgHost host = MakeCfgHost(pCfg);
+	ohpl_gs4_cfg_save(&host, &c);
 
 	if (pCfg->Save() == false)
 		Log("SOMA: failed to save settings to '%s'\n", cString::To8Char(sFile).c_str());

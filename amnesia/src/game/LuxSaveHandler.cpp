@@ -18,6 +18,8 @@
  */
 
 #include "LuxSaveHandler.h"
+#include "RustLuxSave.h"
+#include <vector>
 
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
@@ -45,6 +47,29 @@
 //////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------
+
+namespace
+{
+
+void Ga6Sink(void *apCtx, const unsigned *apData, size_t alSize)
+{
+	static_cast<tWString*>(apCtx)->assign((const wchar_t*)apData, alSize);
+}
+
+void Ga6Translate(void *apCtx, const unsigned *apData, size_t alSize, OhplGa6Sink32 apSink, void *apSinkCtx)
+{
+	tWString sToken((const wchar_t*)apData, alSize);
+	tWString sOut = kTranslate("Levels", cString::To8Char(sToken));
+	apSink(apSinkCtx, (const unsigned*)sOut.data(), sOut.size());
+}
+
+OhplGa6Date Ga6Date(const cDate &aDate)
+{
+	OhplGa6Date date = { aDate.seconds, aDate.minutes, aDate.hours, aDate.month_day, aDate.month, aDate.year };
+	return date;
+}
+
+}
 
 cLuxSaveHandlerThreadClass::cLuxSaveHandlerThreadClass()
 {
@@ -290,7 +315,7 @@ bool cLuxSaveHandler::AutoLoad(bool abResetProgressLogger)
 	// HARDMODE
 	if (gpBase->mbHardMode)
 	{
-		if (sFile.find(_W("HardMode")) == tWString::npos)
+		if (!ohpl_ga6_hardmode_file_ok((const unsigned*)sFile.data(), sFile.size()))
 		{
 			Error("Could not find a hard mode save file in '%s'!\n", cString::To8Char(gpBase->msProfileSavePath).c_str());
 			return false;
@@ -491,30 +516,7 @@ void cLuxSaveHandler::LoadSaveGameData(cLuxSaveGame_SaveData *apSave)
 tWString cLuxSaveHandler::GetProperSaveName(const tWString &asFile)
 {
 	tWString sProperName;
-
-	tWStringVec vSaveNameStrings;
-	tWString sSeparator = _W("_");
-	cString::GetStringVecW(asFile, vSaveNameStrings, &sSeparator);
-
-	if(vSaveNameStrings.size() != 9) return _W("INVALID SAVE FILE SYNTAX");
-
-	// Store prefix
-	sProperName = vSaveNameStrings[0];
-	sProperName += _W(" ");
-
-	// Store map name
-	sProperName += _W("- ") + kTranslate("Levels", cString::To8Char(vSaveNameStrings[1])) + _W(" -") ;
-	sProperName += _W(" ");
-
-	// Store date
-	sProperName += vSaveNameStrings[4] + _W("/") + vSaveNameStrings[3] + _W("-") + vSaveNameStrings[2];
-	sProperName += _W(" ");
-
-	// Store time, adding a padding '0' if only one char
-	for(int i=5; i<=7; ++i)
-		if(vSaveNameStrings[i].size()==1) vSaveNameStrings[i] = _W("0")+vSaveNameStrings[i];
-	sProperName += vSaveNameStrings[5] + _W(":") + vSaveNameStrings[6] + _W(":")+ vSaveNameStrings[7];
-
+	ohpl_ga6_proper_name((const unsigned*)asFile.data(), asFile.size(), Ga6Translate, NULL, Ga6Sink, &sProperName);
 	return sProperName;
 }
 
@@ -529,24 +531,16 @@ tWString cLuxSaveHandler::GetProperSaveName(const tWString &asFile)
 tWString cLuxSaveHandler::GetSaveName(const tWString &asPrefix)
 {
 	cLuxMap *pCurrentMap = gpBase->mpMapHandler->GetCurrentMap();
-
 	tString sMapName = pCurrentMap->GetDisplayNameEntry();
-	if(sMapName == "") sMapName = "NULL";
-
 	cDate currentDate = cPlatform::GetDate();
-	tWString sFileName =	asPrefix+ _W("_") +
-							cString::To16Char(sMapName) + _W("_") +
-							cString::ToStringW(currentDate.year)+_W("_") +
-							cString::ToStringW(currentDate.month+1)+_W("_") +
-							cString::ToStringW(currentDate.month_day)+_W("_") +
-							cString::ToStringW(currentDate.hours)+_W("_") +
-							cString::ToStringW(currentDate.minutes)+_W("_") +
-							cString::ToStringW(currentDate.seconds)+_W("_") +
-							cString::ToStringW(mlSaveNameCount)+
-							_W(".sav");
-	mlSaveNameCount++;
-	if(mlSaveNameCount >= 100 || currentDate!=mLatestSaveDate) mlSaveNameCount =0;
 
+	tWString sMap = cString::To16Char(sMapName);
+	OhplGa6NameState state = { mlSaveNameCount, Ga6Date(mLatestSaveDate) };
+	OhplGa6Date date = Ga6Date(currentDate);
+	tWString sFileName;
+	ohpl_ga6_save_name(&state, (const unsigned*)asPrefix.data(), asPrefix.size(), (const unsigned*)sMap.data(), sMap.size(), &date, Ga6Sink, &sFileName);
+
+	mlSaveNameCount = state.count;
 	mLatestSaveDate = currentDate;
 
 	return sFileName;
@@ -554,83 +548,39 @@ tWString cLuxSaveHandler::GetSaveName(const tWString &asPrefix)
 
 void cLuxSaveHandler::DeleteOldestSaveFiles(const tWString &asFolder, int alMax)
 {
-	//////////////////////////
-	// Get save files
 	tWStringList lstFiles;
 	cPlatform::FindFilesInDir(lstFiles, asFolder, _W("*.sav"));
 
-	//////////////////////////
-	// If more than max, delete the oldest. Continue until delete failed or size is below max.
-	size_t lLastSize = 0;
-	while( (int)lstFiles.size() >= alMax && lLastSize != lstFiles.size())
+	std::vector<tWString> vFiles(lstFiles.begin(), lstFiles.end());
+	std::vector<OhplGa6Date> vDates;
+	for(size_t i=0; i<vFiles.size(); ++i)
 	{
-		cDate oldestDate;
-		tWStringListIt oldestIt = lstFiles.end();
-		tWString sOldestPath;
-
-		bool bFirst = true;
-
-		//////////////////////////////////////////
-		//Iterate the files and look for oldest
-		for(tWStringListIt it = lstFiles.begin(); it != lstFiles.end(); ++it)
-		{
-			tWString sFile = *it;
-			tWString sPath = asFolder + sFile;
-			cDate fileDate = cPlatform::FileCreationDate(sPath);
-
-			//Log(" '%s' date: %s\n", cString::To8Char(sFile).c_str(), fileDate.ToString().c_str());
-
-			if(bFirst || fileDate < oldestDate)
-			{
-				bFirst = false;
-				oldestDate = fileDate;
-				sOldestPath = sPath;
-				oldestIt = it;
-			}
-		}
-
-		//////////////////////////////////////////
-		//Delete the oldest file and remove from list.
-		//Log("Oldest: '%s'\n", cString::To8Char(sOldestPath).c_str());
-		lLastSize = lstFiles.size();
-		if(oldestIt != lstFiles.end())
-		{
-			cPlatform::RemoveFile(sOldestPath);
-			lstFiles.erase(oldestIt);
-		}
+		vDates.push_back(Ga6Date(cPlatform::FileCreationDate(asFolder + vFiles[i])));
 	}
 
+	std::vector<int> vVictims(vFiles.size() + 1);
+	size_t lCount = ohpl_ga6_rotation_victims(vDates.data(), vDates.size(), alMax, vVictims.data());
+	for(size_t i=0; i<lCount; ++i)
+	{
+		cPlatform::RemoveFile(asFolder + vFiles[vVictims[i]]);
+	}
 }
 
 tWString cLuxSaveHandler::GetNewestSaveFile(const tWString &asFolder)
 {
-	//////////////////////////
-	// Get save files
 	tWStringList lstFiles;
 	cPlatform::FindFilesInDir(lstFiles, asFolder, _W("*.sav"));
 
 	if(lstFiles.empty()) return _W("");
 
-	cDate newestDate;
-	tWString sNewestFile;
-	bool bFirst = true;
-
-	//////////////////////////////////////////
-	//Iterate the files and look for newest
-	for(tWStringListIt it = lstFiles.begin(); it != lstFiles.end(); ++it)
+	std::vector<tWString> vFiles(lstFiles.begin(), lstFiles.end());
+	std::vector<OhplGa6Date> vDates;
+	for(size_t i=0; i<vFiles.size(); ++i)
 	{
-		tWString sFile = *it;
-		tWString sPath = asFolder + sFile;
-		cDate fileDate = cPlatform::FileModifiedDate(sPath);
-
-		if(bFirst || fileDate > newestDate)
-		{
-			bFirst = false;
-			newestDate = fileDate;
-			sNewestFile = sFile;
-		}
+		vDates.push_back(Ga6Date(cPlatform::FileModifiedDate(asFolder + vFiles[i])));
 	}
 
-	return sNewestFile;
+	int lNewest = ohpl_ga6_newest(vDates.data(), vDates.size());
+	return lNewest < 0 ? _W("") : vFiles[lNewest];
 }
 

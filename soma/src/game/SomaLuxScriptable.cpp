@@ -4,65 +4,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
-// hpl::cString::GetHash64 in the official binary: FNV-style, characters taken from the end, sign-extended
-uint64_t SomaHash64(const tString &asStr)
-{
-	if (asStr.empty())
-		return 0;
-	uint64_t h = 0x14650fb0739d0383ull;
-	for (size_t i = asStr.size(); i-- > 0;)
-		h = ((uint64_t)(int64_t)(signed char)asStr[i] ^ h) * 0x100000001b3ull;
-	return h;
-}
+uint64_t SomaHash64(const tString &asStr) { return ohpl_gs3_hash64((const unsigned char *)asStr.data(), asStr.size()); }
 
-float SomaEasing(int alType, float t)
-{
-	const float kPi = 3.14159265f;
-	auto bounceOut = [](float x) {
-		if (x < 1 / 2.75f) return 7.5625f * x * x;
-		if (x < 2 / 2.75f) { x -= 1.5f / 2.75f; return 7.5625f * x * x + 0.75f; }
-		if (x < 2.5f / 2.75f) { x -= 2.25f / 2.75f; return 7.5625f * x * x + 0.9375f; }
-		x -= 2.625f / 2.75f;
-		return 7.5625f * x * x + 0.984375f;
-	};
-	const float c1 = 1.70158f, c2 = c1 * 1.525f, c3 = c1 + 1, c4 = (2 * kPi) / 3, c5 = (2 * kPi) / 4.5f;
-	switch (alType)
-	{
-	case 1: return 1 - cosf(t * kPi / 2);
-	case 2: return sinf(t * kPi / 2);
-	case 3: return -(cosf(kPi * t) - 1) / 2;
-	case 4: return t * t;
-	case 5: return 1 - (1 - t) * (1 - t);
-	case 6: return t < 0.5f ? 2 * t * t : 1 - powf(-2 * t + 2, 2) / 2;
-	case 7: return t * t * t;
-	case 8: return 1 - powf(1 - t, 3);
-	case 9: return t < 0.5f ? 4 * t * t * t : 1 - powf(-2 * t + 2, 3) / 2;
-	case 10: return t * t * t * t;
-	case 11: return 1 - powf(1 - t, 4);
-	case 12: return t < 0.5f ? 8 * powf(t, 4) : 1 - powf(-2 * t + 2, 4) / 2;
-	case 13: return powf(t, 5);
-	case 14: return 1 - powf(1 - t, 5);
-	case 15: return t < 0.5f ? 16 * powf(t, 5) : 1 - powf(-2 * t + 2, 5) / 2;
-	case 16: return t == 0 ? 0 : powf(2, 10 * t - 10);
-	case 17: return t == 1 ? 1 : 1 - powf(2, -10 * t);
-	case 18: return t == 0 ? 0 : t == 1 ? 1 : t < 0.5f ? powf(2, 20 * t - 10) / 2 : (2 - powf(2, -20 * t + 10)) / 2;
-	case 19: return 1 - sqrtf(1 - t * t);
-	case 20: return sqrtf(1 - (t - 1) * (t - 1));
-	case 21: return t < 0.5f ? (1 - sqrtf(1 - 4 * t * t)) / 2 : (sqrtf(1 - powf(-2 * t + 2, 2)) + 1) / 2;
-	case 22: return c3 * t * t * t - c1 * t * t;
-	case 23: return 1 + c3 * powf(t - 1, 3) + c1 * powf(t - 1, 2);
-	case 24: return t < 0.5f ? (powf(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2 : (powf(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-	case 25: return t == 0 ? 0 : t == 1 ? 1 : -powf(2, 10 * t - 10) * sinf((t * 10 - 10.75f) * c4);
-	case 26: return t == 0 ? 0 : t == 1 ? 1 : powf(2, -10 * t) * sinf((t * 10 - 0.75f) * c4) + 1;
-	case 27: return t == 0 ? 0 : t == 1 ? 1 : t < 0.5f ? -(powf(2, 20 * t - 10) * sinf((20 * t - 11.125f) * c5)) / 2
-																	   : (powf(2, -20 * t + 10) * sinf((20 * t - 11.125f) * c5)) / 2 + 1;
-	case 28: return 1 - bounceOut(1 - t);
-	case 29: return bounceOut(t);
-	case 30: return t < 0.5f ? (1 - bounceOut(1 - 2 * t)) / 2 : (1 + bounceOut(2 * t - 1)) / 2;
-	default: return t;
-	}
-}
+float SomaEasing(int alType, float t) { return ohpl_gs3_easing(alType, t); }
 
 std::vector<cSomaLuxScriptable *> cSomaLuxScriptable::mvAll;
 uint64_t cSomaLuxScriptable::mlAllVersion = 0;
@@ -180,60 +126,40 @@ cSomaLuxScriptable::cFader *cSomaLuxScriptable::GetOrAddFader(uint64_t alId, boo
 
 void cSomaLuxScriptable::UpdateTimers(float afTimeStep)
 {
-	std::vector<cTimer> vDue;
-	for (size_t i = 0; i < mvTimers.size();)
-	{
-		cTimer &t = mvTimers[i];
-		if (t.mbPaused == false)
-			t.mfTimeLeft -= afTimeStep;
-		if (t.mbPaused == false && t.mfTimeLeft <= 0)
+	size_t lNum = mvTimers.size();
+	std::vector<uint32_t> vDueIdx(lNum);
+	std::unique_ptr<uint8_t[]> vKeep(new uint8_t[lNum]);
+	size_t lDue = ohpl_gs3_timers_update(mvTimers.data(), lNum, sizeof(cTimer), afTimeStep, vDueIdx.data(), vKeep.get());
+	std::vector<std::pair<uint64_t, tString>> vDue;
+	for (size_t i = 0; i < lDue; ++i)
+		vDue.emplace_back(mvTimers[vDueIdx[i]].mlId, mvTimers[vDueIdx[i]].msFunc);
+	size_t lOut = 0;
+	for (size_t i = 0; i < lNum; ++i)
+		if (vKeep[i])
 		{
-			vDue.push_back(t);
-			if (t.mbRepeat)
-			{
-				t.mfTimeLeft += t.mfLength;
-				++i;
-			}
-			else
-				mvTimers.erase(mvTimers.begin() + i);
+			if (lOut != i)
+				mvTimers[lOut] = std::move(mvTimers[i]);
+			++lOut;
 		}
-		else
-			++i;
-	}
-	for (size_t i = 0; i < vDue.size(); ++i)
+	mvTimers.resize(lOut);
+	for (auto &[lId, sFunc] : vDue)
 	{
-		if (vDue[i].msFunc.empty())
+		if (sFunc.empty())
 			continue;
-		uint64_t lId = vDue[i].mlId;
-		Call("void " + vDue[i].msFunc + "(uint64)", [lId](asIScriptContext *c) { c->SetArgQWord(0, lId); });
+		uint64_t lCallId = lId;
+		Call("void " + sFunc + "(uint64)", [lCallId](asIScriptContext *c) { c->SetArgQWord(0, lCallId); });
 	}
 
-	for (size_t i = 0; i < mvFaders.size(); ++i)
-	{
-		cFader &f = mvFaders[i];
-		if (f.mbPaused || f.mfValue == f.mfGoal)
-			continue;
-		float fStep = f.mfSpeed * afTimeStep;
-		if (fabsf(f.mfGoal - f.mfValue) <= fStep)
-		{
-			f.mfValue = f.mfGoal;
-			if (f.mbReverseAtEnd)
-			{
-				std::swap(f.mfStart, f.mfGoal);
-				f.mbReverseAtEnd = false;
-			}
-		}
-		else
-			f.mfValue += f.mfGoal > f.mfValue ? fStep : -fStep;
-	}
+	ohpl_gs3_faders_update((OhplGs3Fader *)mvFaders.data(), mvFaders.size(), afTimeStep);
 }
 
 void cSomaLuxScriptable::Timer_Add(uint64_t alId, float afTime, const tString &asFunc, bool abCreateIfExist, bool abRepeat)
 {
 	cTimer *pTimer = FindTimer(alId);
-	if (pTimer && abCreateIfExist == false)
+	int lPlan = ohpl_gs3_timer_add(pTimer != NULL, abCreateIfExist);
+	if (lPlan == 0)
 		return;
-	if (pTimer == NULL)
+	if (lPlan == 1)
 	{
 		mvTimers.push_back(cTimer());
 		pTimer = &mvTimers.back();
@@ -268,16 +194,13 @@ void cSomaLuxScriptable::Timer_SetPaused(uint64_t alId, bool abX)
 bool cSomaLuxScriptable::Timer_TimeHasPassed(uint64_t alId, float afLength)
 {
 	cTimer *t = FindTimer(alId);
-	return t == NULL || t->mfLength - t->mfTimeLeft >= afLength;
+	return ohpl_gs3_timer_has_passed(t != NULL, t ? t->mfLength : 0, t ? t->mfTimeLeft : 0, afLength);
 }
 
 float cSomaLuxScriptable::Timer_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs)
 {
 	cTimer *t = FindTimer(alId);
-	float fT = (t == NULL || t->mfLength <= 0) ? 1.0f : 1.0f - t->mfTimeLeft / t->mfLength;
-	fT = fT < 0 ? 0 : (fT > 1 ? 1 : fT);
-	float fV = afMin + (afMax - afMin) * SomaEasing(alEasing, fT);
-	return abAbs ? fabsf(fV) : fV;
+	return ohpl_gs3_timer_value(t != NULL, t ? t->mfLength : 0, t ? t->mfTimeLeft : 0, afMin, afMax, alEasing, abAbs);
 }
 
 void cSomaLuxScriptable::Fader_FadeTo(uint64_t alId, float afGoal, float afTime, bool abReverseAtEnd, bool abSkipIfExists)
@@ -287,7 +210,7 @@ void cSomaLuxScriptable::Fader_FadeTo(uint64_t alId, float afGoal, float afTime,
 		return;
 	f->mfStart = f->mfValue;
 	f->mfGoal = afGoal;
-	f->mfSpeed = afTime > 0 ? fabsf(afGoal - f->mfValue) / afTime : 1e9f;
+	f->mfSpeed = ohpl_gs3_fade_speed(f->mfValue, afGoal, afTime);
 	f->mbReverseAtEnd = abReverseAtEnd;
 }
 
@@ -306,10 +229,7 @@ void cSomaLuxScriptable::Fader_SetPaused(uint64_t alId, bool abPaused)
 float cSomaLuxScriptable::Fader_GetValue(uint64_t alId, float afMin, float afMax, int alEasing, bool abAbs)
 {
 	cFader *f = FindFader(alId);
-	float fT = f ? f->mfValue : 0;
-	fT = fT < 0 ? 0 : (fT > 1 ? 1 : fT);
-	float fV = afMin + (afMax - afMin) * SomaEasing(alEasing, fT);
-	return abAbs ? fabsf(fV) : fV;
+	return ohpl_gs3_fader_value(f != NULL, f ? f->mfValue : 0, afMin, afMax, alEasing, abAbs);
 }
 
 static uint64_t Id(const tString &s) { return SomaHash64(s); }

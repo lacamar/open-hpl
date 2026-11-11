@@ -24,6 +24,7 @@
 #include "resources/Resources.h"
 #include "resources/LowLevelResources.h"
 #include "resources/XmlDocument.h"
+#include "resources/RustResMgr.h"
 
 
 namespace hpl {
@@ -79,34 +80,38 @@ namespace hpl {
 
 	cEntFile* cEntFileManager::CreateEntFile(const tString& asName)
 	{
-		tWString sPath;
 		cEntFile* pEntFile;
-		tString asNewName = cString::SetFileExt(cString::ToLowerCase(asName), "ent");
 
 		BeginLoad(asName);
-		
-		pEntFile = static_cast<cEntFile*>(this->FindLoadedResource(asNewName,sPath));
+
+		cRmEnv env(mpFileSearcher, this);
+		cRmOut out;
+		ohpl_rm_resolve_simple(env.raw(), 0, RM_STR(asName), out.raw());
+		const tString& asNewName = out.msName;
+		const tWString& sPath = out.msPath;
+
+		pEntFile = static_cast<cEntFile*>(out.Res());
 
 		if(pEntFile==NULL && sPath!=_W(""))
 		{
 			pEntFile = hplNew(cEntFile, (asNewName, sPath.c_str(), mpResources));
+
 			if(pEntFile->CreateFromFile()==false)
 			{
 				Error("Couldn't load entity file '%s'!\n",cString::To8Char(sPath).c_str());
 				hplDelete(pEntFile);
-
 				EndLoad();
 				return NULL;
 			}
-			
+
 			AddResource(pEntFile);
 		}
-		
+
 		if(pEntFile)
 			pEntFile->IncUserCount();
 		else
 			Error("Couldn't create ent file '%s'\n",asNewName.c_str());
-		
+
 		EndLoad();
 		return pEntFile;
 	}
@@ -121,15 +126,11 @@ namespace hpl {
 
 	void cEntFileManager::Destroy(iResourceBase* apResource)
 	{
-		apResource->DecUserCount();
-
-		if(apResource->HasUsers()==false){
+		if(ohpl_rm_destroy_standard(apResource->GetMeta())){
 			RemoveResource(apResource);
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
 

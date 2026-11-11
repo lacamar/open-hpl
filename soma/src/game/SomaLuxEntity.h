@@ -1,6 +1,7 @@
 #ifndef SOMA_LUX_ENTITY_H
 #define SOMA_LUX_ENTITY_H
 
+#include "RustSomaEntity.h"
 #include "SomaLuxScriptable.h"
 
 #include <map>
@@ -272,8 +273,7 @@ public:
 	{
 		tString msName;
 		std::vector<cProcTrack> mvTracks;
-		bool mbActive = false, mbLoop = false;
-		float mfTime = 0, mfSpeed = 0, mfSpeedTarget = 0, mfSpeedStep = 0, mfAmount = 1, mfAmountStep = 0;
+		OhplGs1Proc mState;
 	};
 	std::vector<cProcAnim> mvProcAnims;
 	bool mbProcDirty = false;
@@ -300,17 +300,12 @@ public:
 	cMatrixf m_mtxLiquidPlaced = cMatrixf::Identity;
 	bool mbCheckCollision = false, mbCheckCenterInArea = false, mbCheckDynamic = true, mbCheckStatic = false, mbCheckCharacters = false;
 	float mfTimeSinceCheck = 0;
-	bool mbMoving = false;
-	cVector3f mvMoveGoal;
-	float mfMoveAcc = 0, mfMoveMaxSpeed = 0, mfMoveSlowdownDist = 0, mfMoveSpeed = 0;
+	OhplGs1Move mMove;
 	tString msMoveCallback;
 	void MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal, const tString &asCallback);
 	void RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal);
 	void StopMove();
-	int mlRotateMode = 0; // 1 align to goal, 2 constant speed
-	cMatrixf m_mtxRotateGoal = cMatrixf::Identity;
-	cVector3f mvRotateAxis = 0, mvPivotLocal = 0;
-	float mfRotateAcc = 0, mfRotateMaxSpeed = 0, mfRotateSlowdown = 0, mfRotateSpeed = 0;
+	OhplGs1Rotate mRotate;
 	tString msRotateCallback;
 	int mlCurrentAnim = -1;
 

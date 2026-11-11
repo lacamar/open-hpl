@@ -40,6 +40,9 @@ cLuxEnemyPathfinder::cLuxEnemyPathfinder(iLuxEnemy *apEnemy, cLuxEnemyMover *apM
 
 	mpAStar = NULL;
 	mpNodeContainer = NULL;
+	mpGa3ExplicitSkip = NULL;
+	mlGa3SkipMode = 2;
+	mWin.len = 0;
 }
 
 //-----------------------------------------------------------------------
@@ -88,7 +91,7 @@ bool cLuxEnemyPathfinder::MoveTo(const cVector3f& avPos)
 	// Set up data
 	iCharacterBody *pCharBody = mpEnemy->mpCharBody;
 
-	mlstPathNodeDistances.clear();
+	mWin.len = 0;
 	mlstPathNodes.clear();
 	mbMoving = true;
 	
@@ -133,7 +136,7 @@ void cLuxEnemyPathfinder::Stop()
 {
 	mbMoving = false;
 	mlstPathNodes.clear();
-	mlstPathNodeDistances.clear();
+	mWin.len = 0;
 }
 
 cAINode* cLuxEnemyPathfinder::GetNodeAtPos(const cVector3f &avPos,float afMinDistance,float afMaxDistance,bool abGetClosest, 
@@ -144,87 +147,13 @@ cAINode* cLuxEnemyPathfinder::GetNodeAtPos(const cVector3f &avPos,float afMinDis
 {
 	if(mpNodeContainer==NULL) return NULL;	
 
-	float fMaxDistSqr = afMaxDistance * afMaxDistance;
-	float fMinDistSqr = afMinDistance * afMinDistance;
-
-	int i = cMath::RandRectl(0, mpNodeContainer->GetNodeNum()-1);
-	int lCount=0;
-
-	float fClosestDistSqr = fMaxDistSqr * 10;
-	cAINode *pRetNode = NULL;
-
-	std::vector<cAINode*> vNodesInDistance;
-
-	//Log("-------------\nIterating nodes.Pos: (%s)\n-------------\n", avPos.ToString().c_str());
-	cAINodeIterator startNodeIt =  mpNodeContainer->GetNodeIterator(avPos,afMaxDistance);
-	while(startNodeIt.HasNext())
-	{
-		cAINode *pNode = startNodeIt.Next();
-
-		if(pNode == apSkipNode) continue;
-		if(abSkipUsedNodes && mpEnemy->mpMap->AINodeIsUsedAsGoal(pNode)) continue;
-		
-		
-		float fDistSqr = cMath::Vector3DistSqr(pNode->GetPosition(), avPos);
-
-		//Log(" %s dist: %f. pos: (%s)\n", pNode->GetName().c_str(), sqrtf(fDistSqr), pNode->GetPosition().ToString().c_str());
-
-		
-		////////////////////
-		// Check if within distance
-		if(fDistSqr > fMaxDistSqr || fDistSqr < fMinDistSqr)
-		{
-			//Log("Not inside min and max dist!\n");
-			continue;
-		}
-
-		////////////////////////////////
-		// Check if closest
-		if(abGetClosest)
-		{
-			if(fDistSqr > fClosestDistSqr)
-			{
-				//Log("Not closest!\n");
-				continue;
-			}
-		}
-				
-		///////////////////////////////////
-		//Check if there is a free path from pos to node
-		if(	abPosToNodeFreePathCheck &&
-			mpNodeContainer->FreePath(avPos, pNode->GetPosition(),alFreePathRayNum, alFreePathRayNum)==false)
-		{
-			//Log("Not free path from pps!\n");
-			continue;
-		}
-
-		///////////////////////////////////
-		//Check if there is a free path from pos to node
-		if(	abEnemyToNodeFreePathCheck &&
-			mpNodeContainer->FreePath(mpEnemy->mpCharBody->GetPosition(), pNode->GetPosition(),alFreePathRayNum, alFreePathRayNum)==false)
-		{
-			//Log("Not free path from enemy!\n");
-			continue;
-		}
-
-		//If not getting closest, to an array to do a random
-		if(abGetClosest==false)
-		{
-			vNodesInDistance.push_back(pNode);
-		}
-		
-		pRetNode = pNode;
-		fClosestDistSqr = fDistSqr;
-	}
-
-	if(abGetClosest==false && vNodesInDistance.empty()==false)
-	{
-		int lIdx = cMath::RandRectl(0, (int)vNodesInDistance.size()-1);
-		return vNodesInDistance[lIdx];
-	}
-	
-	
-	return pRetNode;
+	mpGa3ExplicitSkip = apSkipNode;
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	cVector3f vNodePos;
+	int lIdx = ohpl_ga3_node_at_pos(&host, &avPos.x, afMinDistance, afMaxDistance, abGetClosest, abPosToNodeFreePathCheck, abEnemyToNodeFreePathCheck,
+									2, alFreePathRayNum, abSkipUsedNodes, &vNodePos.x);
+	if(lIdx < 0) return NULL;
+	return mvGa3Nodes[lIdx];
 }
 
 //-----------------------------------------------------------------------
@@ -307,15 +236,10 @@ void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 
 cVector3f  cLuxEnemyPathfinder::GetNextGoalPos()
 {
-	if(mlstPathNodes.empty())
-	{
-		return mvMoveGoalPos;
-	}
-	else
-	{
-		cAINode *pCurrentNode = mlstPathNodes.back();
-		return pCurrentNode->GetPosition();
-	}
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	cVector3f vPos;
+	ohpl_ga3_next_goal_pos(&host, &mvMoveGoalPos.x, &vPos.x);
+	return vPos;
 }
 
 const cVector3f& cLuxEnemyPathfinder::GetFinalGoalPos()
@@ -333,85 +257,8 @@ const cVector3f& cLuxEnemyPathfinder::GetFinalGoalPos()
 
 void cLuxEnemyPathfinder::UpdateMoving(float afTimeStep)
 {
-	if(mbMoving==false) return;
-
-	iCharacterBody *pCharBody = mpEnemy->mpCharBody;
-	cAINode *pCurrentNode = NULL;
-	
-	cVector3f vGoal;
-	cVector3f vPos = pCharBody->GetPosition(); 
-
-	cBoundingVolume tempBV; //= *pCharBody->GetCurrentBody()->GetBoundingVolume();
-	cVector3f vBodySize = pCharBody->GetSize();
-	tempBV.SetSize(cVector3f(vBodySize.x*1.3f, vBodySize.y*1.2f+0.45f, vBodySize.z*1.3f));
-	tempBV.SetPosition(pCharBody->GetPosition() - cVector3f(0,vBodySize.y*0.1f,0));
-
-	/////////////////////////////////////////
-	//Get the position to move towards and current node if there is any.
-	if(mlstPathNodes.empty())
-	{
-		vGoal = mvMoveGoalPos;
-	}
-	else{
-		pCurrentNode = mlstPathNodes.back();
-		vGoal = pCurrentNode->GetPosition();
-	}
-
-	////////////////////////////////
-	// Move to the position
-	mpMover->MoveToPos(vGoal);
-	
-	////////////////////////////////
-	//Check if character is stuck at node
-	bool bStuckAtNode = false;
-	float fNodeDist = cMath::Vector3DistSqr(vGoal,pCharBody->GetFeetPosition());
-	mlstPathNodeDistances.push_back(fNodeDist);
-	if((int)mlstPathNodeDistances.size() > 150)
-	{
-		mlstPathNodeDistances.pop_front();
-		float fNodeDistAvg=0;
-
-		std::list<float>::iterator it = mlstPathNodeDistances.begin();
-		float fPreviousDistance = *it;
-		++it;
-		for(; it != mlstPathNodeDistances.end();++it)
-		{
-			float fChange = *it - fPreviousDistance;
-			fNodeDistAvg += fChange;
-		}
-
-		if(	fNodeDistAvg > 0 &&	fNodeDist < pCharBody->GetSize().x * 1.5f)
-		{
-			bStuckAtNode = true;
-		}
-	}
-
-	////////////////////////////////
-	//Check if node is reached
-	if(bStuckAtNode || cMath::CheckPointInBVIntersection(vGoal, tempBV))
-	{
-		if(mlstPathNodes.empty())
-		{
-			mbMoving = false;
-			mpEnemy->SendMessage(eLuxEnemyMessage_EndOfPath);
-		}
-		else
-		{
-			mlstPathNodes.pop_back(); //Go to next node next update.
-		}
-		mlstPathNodeDistances.clear();
-	}
-	////////////////////////////////
-	//Check if stuck
-	else if(mpMover->GetStuckCounterIsAtMax())
-	{
-		mpMover->ResetStuckCounter();
-
-		mlstPathNodes.clear();
-		mlstPathNodeDistances.clear();
-
-		mpEnemy->SendMessage(eLuxEnemyMessage_EndOfPath,0,false, 0,0,1);
-	}
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	ohpl_ga3_update_moving(&mpEnemy->mGa3Ctx, &host);
 }
 
 //-----------------------------------------------------------------------

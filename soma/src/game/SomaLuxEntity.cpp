@@ -12,6 +12,7 @@
 #include "SomaCritter.h"
 
 #include <cmath>
+#include <memory>
 #include <random>
 #include <set>
 #include "SomaLux.h"
@@ -232,9 +233,7 @@ void cSomaLuxEntity::SetEffectsActive(bool abX, bool abFade)
 {
 	CaptureEffectDefaults();
 	float fTime = abFade ? mVars.GetVarFloat(abX ? "EffectsOnTime" : "EffectsOffTime", 1) : 0;
-	mfEffectsFadeSpeed = fTime > 0 ? (abX ? 1 : -1) / fTime : 0;
-	if (mfEffectsFadeSpeed == 0)
-		mfEffectsAlpha = abX ? 1.0f : mfEffectsOffAlpha;
+	mfEffectsFadeSpeed = ohpl_gs1_effects_fade_setup(abX, fTime, mfEffectsOffAlpha, &mfEffectsAlpha);
 	for (cParticleSystem *pPS : mvParticleSystems)
 		if (pPS)
 		{
@@ -272,28 +271,33 @@ void cSomaLuxEntity::CaptureEffectDefaults()
 void cSomaLuxEntity::ApplyEffectsAlpha()
 {
 	CaptureEffectDefaults();
-	bool bOn = mfEffectsAlpha > 0 && mbActive;
+	bool bOn = ohpl_gs1_effects_on(mfEffectsAlpha, mbActive);
+	auto Tint = [&](const cColor &aDef) {
+		cColor col;
+		ohpl_gs1_effect_color(&aDef, &mEffectBaseColor, mfEffectsAlpha, &col);
+		return col;
+	};
 	size_t i = 0;
 	for (iLight *pLight : mvLights)
 	{
-		cColor col = mvEffectDefaults[i++] * mEffectBaseColor * mfEffectsAlpha;
-		bool bLit = bOn && col.r + col.g + col.b > 0;
+		cColor col = Tint(mvEffectDefaults[i++]);
+		bool bLit = ohpl_gs1_light_lit(&col, bOn);
 		pLight->SetDiffuseColor(col);
 		pLight->SetVisible(bLit);
 		pLight->SetActive(bLit);
 	}
 	for (cBillboard *pBB : mvBillboards)
 	{
-		pBB->SetColor(mvEffectDefaults[i++] * mEffectBaseColor * mfEffectsAlpha);
+		pBB->SetColor(Tint(mvEffectDefaults[i++]));
 		pBB->SetVisible(bOn);
 		pBB->SetActive(bOn);
 	}
 	for (cLensFlare *pFlare : mvLensFlares)
 		for (int t = 0; t < eLensFlareType_LastEnum; ++t, ++i)
 			if (pFlare->IsFlareActive((eLensFlareType)t))
-				pFlare->SetFlareColor((eLensFlareType)t, mvEffectDefaults[i] * mEffectBaseColor * mfEffectsAlpha);
+				pFlare->SetFlareColor((eLensFlareType)t, Tint(mvEffectDefaults[i]));
 	if (mpMesh)
-		mpMesh->SetIlluminationColor((mbIllumBaseSet ? mIllumBaseColor : mInstanceVars.GetVarColor("IllumColor", cColor(1, 1))) * mEffectBaseColor * mfEffectsAlpha);
+		mpMesh->SetIlluminationColor(Tint(mbIllumBaseSet ? mIllumBaseColor : mInstanceVars.GetVarColor("IllumColor", cColor(1, 1))));
 }
 
 cMatrixf cSomaLuxEntity::GetMatrix()
@@ -330,9 +334,9 @@ void cSomaLuxEntity::MakeDynamic()
 // inv(a_mtxBase)*a_mtx without cancelling large world translations
 static cMatrixf RelativeMatrix(const cMatrixf &a_mtxBase, const cMatrixf &a_mtx)
 {
-	cMatrixf mtx = a_mtx;
-	mtx.SetTranslation(a_mtx.GetTranslation() - a_mtxBase.GetTranslation());
-	return cMath::MatrixMul(cMath::MatrixInverse(a_mtxBase.GetRotation()), mtx);
+	cMatrixf mtx;
+	ohpl_gs1_relative_matrix(&a_mtxBase, &a_mtx, &mtx);
+	return mtx;
 }
 
 void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
@@ -362,17 +366,14 @@ void cSomaLuxEntity::SetMatrix(const cMatrixf &a_mtx, bool abMainBodyOnly)
 
 int cSomaLuxEntity::PlayAnimation(const tString &asName, float afFadeTime, bool abLoop, const tString &asCallback)
 {
-	if (mpMesh == NULL)
+	int lIdx = mpMesh ? mpMesh->GetAnimationStateIndex(asName) : -1;
+	int lPlan = ohpl_gs1_play_plan(mpMesh != NULL, lIdx, asName.empty(), mpMesh ? mpMesh->GetAnimationStateNum() : 0, afFadeTime);
+	if (lPlan == kOhplGs1PlayMissingError)
+		Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), msName.c_str());
+	if (lPlan == kOhplGs1PlayNone || lPlan == kOhplGs1PlayMissingError)
 		return -1;
-	int lIdx = mpMesh->GetAnimationStateIndex(asName);
-	if (lIdx < 0)
-	{
-		if (asName.empty() == false && mpMesh->GetAnimationStateNum() > 0)
-			Error("Could not find animation '%s' for entity '%s'\n", asName.c_str(), msName.c_str());
-		return -1;
-	}
 	mvAnimQueue.clear();
-	if (afFadeTime > 0)
+	if (lPlan == kOhplGs1PlayFade)
 		mpMesh->PlayFadeTo(lIdx, abLoop, afFadeTime);
 	else
 		mpMesh->Play(lIdx, abLoop, true);
@@ -392,20 +393,18 @@ bool cSomaLuxEntity::GetAnimationIsPlaying()
 
 void cSomaLuxEntity::StopAnimation(int alIdx, float afFadeTime)
 {
-	if (mpMesh == NULL || alIdx < 0 || alIdx >= mpMesh->GetAnimationStateNum())
-		return;
-	if (alIdx == mlCurrentAnim)
+	bool bValid = mpMesh && alIdx >= 0 && alIdx < mpMesh->GetAnimationStateNum();
+	cAnimationState *pState = bValid ? mpMesh->GetAnimationState(alIdx) : NULL;
+	int lPlan = ohpl_gs1_stop_plan(mpMesh != NULL, alIdx, mpMesh ? mpMesh->GetAnimationStateNum() : 0, mlCurrentAnim, pState && pState->IsActive(), afFadeTime);
+	if (lPlan & kOhplGs1StopClearCurrent)
 	{
 		mvAnimQueue.clear();
 		mlCurrentAnim = -1;
 		msAnimCallback = "";
 	}
-	cAnimationState *pState = mpMesh->GetAnimationState(alIdx);
-	if (pState->IsActive() == false)
-		return;
-	if (afFadeTime > 0)
+	if (lPlan & kOhplGs1StopFade)
 		pState->FadeOut(afFadeTime);
-	else
+	else if (lPlan & kOhplGs1StopOff)
 		pState->SetActive(false);
 }
 
@@ -420,10 +419,11 @@ void cSomaLuxEntity::StopAnimations(float afFadeTime)
 
 void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 {
-	if (mpMesh == NULL || mlCurrentAnim < 0 || GetAnimationIsPlaying())
+	int lAction = ohpl_gs1_anim_update_action(mpMesh != NULL, mlCurrentAnim, GetAnimationIsPlaying(), mvAnimQueue.empty() == false, msAnimCallback != "");
+	if (lAction == kOhplGs1AnimNone)
 		return;
 	tString sAnim = mpMesh->GetAnimationState(mlCurrentAnim)->GetName();
-	if (mvAnimQueue.empty() == false)
+	if (lAction == kOhplGs1AnimNext)
 	{
 		std::pair<tString, bool> next = mvAnimQueue.front();
 		mvAnimQueue.erase(mvAnimQueue.begin());
@@ -436,7 +436,7 @@ void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 	tString sCallback = msAnimCallback;
 	msAnimCallback = "";
 	mlCurrentAnim = -1;
-	if (sCallback != "")
+	if (lAction == kOhplGs1AnimFinishCallback)
 	{
 		cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
 		if (pMap && pMap->GetScript())
@@ -449,47 +449,26 @@ void cSomaLuxEntity::UpdateAnimation(float afTimeStep)
 
 void cSomaLuxEntity::MoveLinearTo(const cVector3f &avGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const tString &asCallback)
 {
-	mbMoving = true;
-	mvMoveGoal = avGoal;
-	mfMoveAcc = afAcc;
-	mfMoveMaxSpeed = afMaxSpeed;
-	mfMoveSlowdownDist = afSlowdownDist;
-	if (abResetSpeed)
-		mfMoveSpeed = 0;
+	ohpl_gs1_move_start(&mMove, &avGoal, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed);
 	msMoveCallback = asCallback;
 }
 
 void cSomaLuxEntity::MoveAngularTo(const cMatrixf &a_mtxGoal, float afAcc, float afMaxSpeed, float afSlowdownDist, bool abResetSpeed, const cVector3f &avPivotLocal,
 								   const tString &asCallback)
 {
-	mlRotateMode = 1;
-	m_mtxRotateGoal = a_mtxGoal.GetRotation();
-	mfRotateAcc = afAcc;
-	mfRotateMaxSpeed = afMaxSpeed;
-	mfRotateSlowdown = afSlowdownDist;
-	if (abResetSpeed)
-		mfRotateSpeed = 0;
-	mvPivotLocal = avPivotLocal;
+	ohpl_gs1_rotate_align(&mRotate, &a_mtxGoal, afAcc, afMaxSpeed, afSlowdownDist, abResetSpeed, &avPivotLocal);
 	msRotateCallback = asCallback;
 }
 
 void cSomaLuxEntity::RotateAtSpeed(float afAcc, float afGoalSpeed, const cVector3f &avAxis, bool abResetSpeed, const cVector3f &avPivotLocal)
 {
-	mlRotateMode = 2;
-	mfRotateAcc = afAcc;
-	mfRotateMaxSpeed = afGoalSpeed;
-	mvRotateAxis = avAxis;
-	if (abResetSpeed)
-		mfRotateSpeed = 0;
-	mvPivotLocal = avPivotLocal;
+	ohpl_gs1_rotate_speed(&mRotate, afAcc, afGoalSpeed, &avAxis, abResetSpeed, &avPivotLocal);
 }
 
 void cSomaLuxEntity::StopMove()
 {
-	mbMoving = false;
-	mfMoveSpeed = 0;
-	mlRotateMode = 0;
-	mfRotateSpeed = 0;
+	ohpl_gs1_move_stop(&mMove);
+	ohpl_gs1_rotate_stop(&mRotate);
 }
 
 static void RunMoveCallback(cSomaLuxEntity *apEnt, tString &asCallback)
@@ -503,57 +482,20 @@ static void RunMoveCallback(cSomaLuxEntity *apEnt, tString &asCallback)
 
 void cSomaLuxEntity::UpdateRotate(float afTimeStep)
 {
-	cMatrixf m = GetMatrix();
-	cMatrixf mtxRot = m.GetRotation();
-	cVector3f vPivot = m.GetTranslation() + cMath::MatrixMul3x3(mtxRot, mvPivotLocal);
-	cMatrixf mtxStep;
-	bool bDone = false;
-	if (mlRotateMode == 2)
-	{
-		float fDiff = mfRotateMaxSpeed - mfRotateSpeed;
-		mfRotateSpeed += cMath::Clamp(fDiff, -mfRotateAcc * afTimeStep, mfRotateAcc * afTimeStep);
-		cVector3f vAxis = mvRotateAxis;
-		if (vAxis.SqrLength() < 1e-8f || mfRotateSpeed == 0)
-			return;
-		cQuaternion q;
-		q.FromAngleAxis(mfRotateSpeed * afTimeStep, cMath::Vector3Normalize(vAxis));
-		mtxStep = cMath::MatrixQuaternion(q);
-	}
-	else
-	{
-		cQuaternion qCur, qGoal;
-		qCur.FromRotationMatrix(mtxRot);
-		qGoal.FromRotationMatrix(m_mtxRotateGoal);
-		// cMath::QuaternionSlerp's shortest-path branch is wrong for dot < 0
-		if (cMath::QuaternionDot(qCur, qGoal) < 0)
-			qGoal = qGoal * -1.0f;
-		float fAngle = 2 * std::acos(cMath::Min(cMath::QuaternionDot(qCur, qGoal), 1.0f));
-		mfRotateSpeed = cMath::Min(mfRotateSpeed + mfRotateAcc * afTimeStep, mfRotateMaxSpeed);
-		float fSpeed = mfRotateSpeed;
-		if (mfRotateSlowdown > 0 && fAngle < mfRotateSlowdown)
-			fSpeed = cMath::Min(fSpeed, cMath::Max(mfRotateMaxSpeed * fAngle / mfRotateSlowdown, mfRotateMaxSpeed * 0.05f));
-		float fStep = fSpeed * afTimeStep;
-		bDone = fStep >= fAngle;
-		cQuaternion qNew = bDone ? qGoal : cMath::QuaternionSlerp(fStep / fAngle, qCur, qGoal, true);
-		qNew.Normalize();
-		mtxStep = cMath::MatrixMul(cMath::MatrixQuaternion(qNew), cMath::MatrixInverse(mtxRot));
-	}
-	cMatrixf mtxNew = cMath::MatrixMul(mtxStep, mtxRot);
-	mtxNew.SetTranslation(vPivot + cMath::MatrixMul3x3(mtxStep, m.GetTranslation() - vPivot));
+	cMatrixf m = GetMatrix(), mtxNew;
+	int lResult = ohpl_gs1_rotate_step(&mRotate, afTimeStep, &m, &mtxNew);
+	if (lResult == 0)
+		return;
 	// HPL3 movers only move the main body
 	SetMatrix(mtxNew, true);
-	if (bDone)
-	{
-		mlRotateMode = 0;
-		mfRotateSpeed = 0;
+	if (lResult == 2)
 		RunMoveCallback(this, msRotateCallback);
-	}
 }
 
 void cSomaLuxEntity::UpdateStaticMoveSound()
 {
-	bool bMoving = mbMoving || mlRotateMode == 1 || (mlRotateMode == 2 && mfRotateMaxSpeed != 0);
-	if (bMoving == mbStaticMoveSound && mpStaticMoveLoop == NULL)
+	bool bMoving = ohpl_gs1_is_moving(mMove.moving, mRotate.mode, mRotate.max_speed);
+	if (ohpl_gs1_static_move_enter(bMoving, mbStaticMoveSound, mpStaticMoveLoop != NULL) == false)
 		return;
 	cSomaLuxMap *pMap = mpMap ? mpMap : cSomaLuxMap::GetCurrent();
 	if (pMap == NULL)
@@ -561,9 +503,10 @@ void cSomaLuxEntity::UpdateStaticMoveSound()
 	cWorld *pWorld = pMap->GetWorld();
 	bool bLoopAlive = mpStaticMoveLoop && pWorld->SoundEntityExists(mpStaticMoveLoop, mlStaticMoveLoopID);
 	cVector3f vPos = GetMatrix().GetTranslation();
-	if (bMoving == mbStaticMoveSound)
+	int lPlan = ohpl_gs1_static_move_plan(bMoving, mbStaticMoveSound, bLoopAlive);
+	if (lPlan != kOhplGs1MoveSoundSwitch)
 	{
-		if (bLoopAlive)
+		if (lPlan == kOhplGs1MoveSoundReposition)
 			mpStaticMoveLoop->SetPosition(vPos);
 		return;
 	}
@@ -620,11 +563,9 @@ void cSomaLuxEntity::UpdateCharCollision()
 				continue;
 			}
 			bOutside = false;
-			cVector3f vDir = pBody->GetLocalPosition() - pPlayerBody->GetLocalPosition();
-			vDir.y *= 0.1f;
-			vDir.Normalize();
-			if (std::fabs(cMath::Vector3Dot(pBody->GetLinearVelocity(), vDir)) < 0.5f)
-				pBody->AddImpulse(vDir * 0.5f);
+			cVector3f vBodyPos = pBody->GetLocalPosition(), vPlayerPos = pPlayerBody->GetLocalPosition(), vVel = pBody->GetLinearVelocity(), vPush;
+			if (ohpl_gs1_outside_push(&vBodyPos, &vPlayerPos, &vVel, &vPush))
+				pBody->AddImpulse(vPush);
 		}
 		mbCheckOutsidePlayer = !bOutside;
 		return;
@@ -637,93 +578,108 @@ void cSomaLuxEntity::UpdateCharCollision()
 		for (iPhysicsBody *pBody : mvBodies)
 			pBody->SetCollideCharacter(true);
 	}
-	size_t lDone = 0;
-	for (size_t i = 0; i < mvBodies.size(); ++i)
+	size_t lNum = mvBodies.size();
+	std::unique_ptr<bool[]> vCollide(new bool[lNum + 1]), vDefault(new bool[lNum + 1]), vClear(new bool[lNum + 1]);
+	std::unique_ptr<float[]> vLinSqr(new float[lNum + 1]), vAngSqr(new float[lNum + 1]);
+	for (size_t i = 0; i < lNum; ++i)
 	{
-		iPhysicsBody *pBody = mvBodies[i];
-		if (pBody->GetCollideCharacter() && mvDefaultCollideCharacter[i] == false &&
-			pBody->GetLinearVelocity().SqrLength() >= 0.01f && pBody->GetAngularVelocity().SqrLength() >= 0.01f)
-			continue;
-		if (pBody->GetCollideCharacter() && mvDefaultCollideCharacter[i] == false)
-			pBody->SetCollideCharacter(false);
-		++lDone;
+		vCollide[i] = mvBodies[i]->GetCollideCharacter();
+		vDefault[i] = mvDefaultCollideCharacter[i];
+		vLinSqr[i] = mvBodies[i]->GetLinearVelocity().SqrLength();
+		vAngSqr[i] = mvBodies[i]->GetAngularVelocity().SqrLength();
 	}
-	if (lDone == mvBodies.size())
+	bool bAllDone = ohpl_gs1_char_stopped_step(lNum, vCollide.get(), vDefault.get(), vLinSqr.get(), vAngSqr.get(), vClear.get());
+	for (size_t i = 0; i < lNum; ++i)
+		if (vClear[i])
+			mvBodies[i]->SetCollideCharacter(false);
+	if (bAllDone)
 		mbCharCollisionUntilStopped = false;
 }
 
 void cSomaLuxEntity::UpdateMove(float afTimeStep)
 {
 	UpdateStaticMoveSound();
-	if (mlRotateMode)
+	if (mRotate.mode)
 		UpdateRotate(afTimeStep);
-	if (mbMoving == false)
+	if (mMove.moving == false)
 		return;
 	cMatrixf m = GetMatrix();
-	cVector3f vDelta = mvMoveGoal - m.GetTranslation();
-	float fDist = vDelta.Length();
-	mfMoveSpeed = cMath::Min(mfMoveSpeed + mfMoveAcc * afTimeStep, mfMoveMaxSpeed);
-	float fSpeed = mfMoveSpeed;
-	if (mfMoveSlowdownDist > 0 && fDist < mfMoveSlowdownDist)
-		fSpeed = cMath::Min(fSpeed, cMath::Max(mfMoveMaxSpeed * fDist / mfMoveSlowdownDist, mfMoveMaxSpeed * 0.05f));
-	float fStep = fSpeed * afTimeStep;
-	bool bDone = fStep >= fDist;
-	m.SetTranslation(bDone ? mvMoveGoal : m.GetTranslation() + vDelta * (fStep / fDist));
+	cVector3f vPos = m.GetTranslation(), vNew;
+	int lResult = ohpl_gs1_move_step(&mMove, afTimeStep, &vPos, &vNew);
+	m.SetTranslation(vNew);
 	SetMatrix(m, true);
-	if (bDone == false)
-		return;
-	mbMoving = false;
-	mfMoveSpeed = 0;
-	RunMoveCallback(this, msMoveCallback);
+	if (lResult == 2)
+		RunMoveCallback(this, msMoveCallback);
+}
+
+namespace
+{
+	const OhplGs1VarsOps gVarsOps = {
+		+[](void *c, const unsigned char *n, size_t len, void (*out)(void *, const unsigned char *, size_t), void *oc) {
+			tString s = ((cResourceVarsObject *)c)->GetVarString(tString((const char *)n, len), "");
+			out(oc, (const unsigned char *)s.data(), s.size());
+		},
+		+[](void *c, const unsigned char *n, size_t len, bool d) { return ((cResourceVarsObject *)c)->GetVarBool(tString((const char *)n, len), d); },
+		+[](void *c, const unsigned char *n, size_t len, float d) { return ((cResourceVarsObject *)c)->GetVarFloat(tString((const char *)n, len), d); },
+		+[](void *c, const unsigned char *n, size_t len, int d) { return ((cResourceVarsObject *)c)->GetVarInt(tString((const char *)n, len), d); },
+	};
 }
 
 void cSomaLuxEntity::ApplyInstanceVars(cSomaLuxEntity *apPlayer)
 {
-	cResourceVarsObject &v = mInstanceVars;
-	if (v.GetVarString("PlayerInteractCallback", "") != "")
+	OhplGs1Vars inst{&gVarsOps, &mInstanceVars}, vars{&gVarsOps, &mVars};
+	struct cReplay
 	{
-		msInteractCallback = v.GetVarString("PlayerInteractCallback", "");
-		mbInteractCallbackAutoRemove = v.GetVarBool("PlayerInteractCallbackAutoRemove", false);
-	}
-	if (v.GetVarString("PlayerLookAtCallback", "") != "")
-	{
-		msLookAtCallback = v.GetVarString("PlayerLookAtCallback", "");
-		mbLookAtCallbackAutoRemove = v.GetVarBool("PlayerLookAtCallbackAutoRemove", false);
-		mbLookAtCheckCenter = v.GetVarBool("PlayerLookAtCheckCenterOfScreen", true);
-		mbLookAtCheckRay = v.GetVarBool("PlayerLookAtCheckRayIntersection", true);
-		mfLookAtMaxDistance = v.GetVarFloat("PlayerLookAtMaxDistance", -1);
-		mfLookAtDelay = v.GetVarFloat("PlayerLookAtCallbackDelay", 0);
-	}
-	tString sSep = ";, ";
-	tStringVec vEnts, vFuncs;
-	cString::GetStringVec(v.GetVarString("CC_Entities", ""), vEnts, &sSep);
-	cString::GetStringVec(v.GetVarString("CC_Funcs", ""), vFuncs, &sSep);
-	// iLuxEntity::SetupCollideCallbacks: "player" goes on the player's container, this entity as child
-	for (size_t i = 0; i < vEnts.size() && vFuncs.empty() == false; ++i)
-	{
-		const tString &sFunc = vFuncs[std::min(i, vFuncs.size() - 1)];
-		if (cString::ToLowerCase(vEnts[i]) != "player")
-			mvCollideCallbacks.push_back(cCollideCallback{vEnts[i], sFunc});
-		else if (apPlayer && apPlayer != this)
-			apPlayer->mvCollideCallbacks.push_back(cCollideCallback{msName, sFunc});
-	}
-	if (v.GetVarString("UserVar", "") != "")
-		mmapScriptVars[""] = v.GetVarString("UserVar", "");
-	msConnectionCallback = v.GetVarString("ConnectionStateChangeCallback", "");
-	tStringVec vConnected;
-	cString::GetStringVec(v.GetVarString("ConnectedEntity", ""), vConnected, &sSep);
-	for (const tString &sEnt : vConnected)
-		mvConnections.push_back(cConnection{"", sEnt, v.GetVarBool("ConnectedEntityInvertState", false), v.GetVarInt("ConnectedEntityStatesUsed", 0)});
-	mfHealth = mVars.GetVarFloat("Health", 100);
-	if (mVars.GetVarBool("BreakActive", false) && v.GetVarBool("DisableBreakable", false) == false)
-	{
-		mbBreakable = true;
-		AddBodyCallback();
-	}
-	if (v.GetVarFloat("MaxInteractDistance", 0) > 0)
-		mfMaxInteractDistance = v.GetVarFloat("MaxInteractDistance", 0);
-	if (v.GetVarBool("InteractionDisabled", false))
-		mbInteractionDisabled = true;
+		cSomaLuxEntity *mpThis, *mpPlayer;
+	} replay{this, apPlayer};
+	ohpl_gs1_apply_instance_vars(&inst, &vars, +[](void *apCtx, const OhplGs1Op *apOp) {
+		cReplay &r = *(cReplay *)apCtx;
+		cSomaLuxEntity *e = r.mpThis;
+		tString s0((const char *)apOp->s0, apOp->n0), s1((const char *)apOp->s1, apOp->n1);
+		switch (apOp->kind)
+		{
+		case 0:
+			e->msInteractCallback = s0;
+			e->mbInteractCallbackAutoRemove = apOp->b0;
+			break;
+		case 1:
+			e->msLookAtCallback = s0;
+			e->mbLookAtCallbackAutoRemove = apOp->b0;
+			e->mbLookAtCheckCenter = apOp->b1;
+			e->mbLookAtCheckRay = apOp->b2;
+			e->mfLookAtMaxDistance = apOp->f0;
+			e->mfLookAtDelay = apOp->f1;
+			break;
+		case 2: // iLuxEntity::SetupCollideCallbacks: "player" goes on the player's container, this entity as child
+			if (apOp->b0 == false)
+				e->mvCollideCallbacks.push_back(cCollideCallback{s0, s1});
+			else if (r.mpPlayer && r.mpPlayer != e)
+				r.mpPlayer->mvCollideCallbacks.push_back(cCollideCallback{e->msName, s1});
+			break;
+		case 3:
+			e->mmapScriptVars[""] = s0;
+			break;
+		case 4:
+			e->msConnectionCallback = s0;
+			break;
+		case 5:
+			e->mvConnections.push_back(cConnection{"", s0, apOp->b0, apOp->i0});
+			break;
+		case 6:
+			e->mfHealth = apOp->f0;
+			break;
+		case 7:
+			e->mbBreakable = true;
+			e->AddBodyCallback();
+			break;
+		case 8:
+			e->mfMaxInteractDistance = apOp->f0;
+			break;
+		case 9:
+			e->mbInteractionDisabled = true;
+			break;
+		}
+	}, &replay);
 }
 
 // Fits position = origin + u * right + v * down over the submesh vertices, so GUI (0,0) is the
@@ -1020,30 +976,16 @@ void cSomaGuiScreenRenderer::OnPostSolidDraw(cRendererCallbackFunctions *apFunct
 
 void cSomaLuxEntity::UpdateGui(float afTimeStep)
 {
-	if (mfGuiFadeSpeed != 0)
-	{
-		mfGuiFade += mfGuiFadeSpeed * afTimeStep;
-		if (mfGuiFade <= 0 || mfGuiFade >= 1)
-		{
-			mbGuiActive = mfGuiFade > 0;
-			mfGuiFade = mbGuiActive ? 1 : 0;
-			mfGuiFadeSpeed = 0;
-		}
-	}
+	ohpl_gs1_gui_fade_step(&mfGuiFade, &mfGuiFadeSpeed, &mbGuiActive, afTimeStep);
 	UpdateGuiScreen();
 	if (mpImGui == NULL || mbGuiActive == false || msOnGuiFunc == "" || mbActive == false)
 		return;
-	if (cSomaImGui::GetScriptInputFocus() != mpImGui)
-	{
-		mfGuiTimeAcc += afTimeStep;
-		if (mfGuiTimeAcc < 1.0f / cMath::Clamp(mfGuiFPS, 1.0f, 30.0f) && mbGuiDirty == false)
-			return;
-		afTimeStep = mfGuiTimeAcc;
-		mfGuiTimeAcc = 0;
-		mbGuiDirty = false;
-		if (mbGuiUpdateWhenOutOfView == false && mpGuiSubMesh && mpGuiSubMesh->GetRenderFrameCount() != iRenderer::GetRenderFrameCount())
-			return;
-	}
+	float fGuiStep;
+	bool bSubMeshRendered = mpGuiSubMesh && mpGuiSubMesh->GetRenderFrameCount() == iRenderer::GetRenderFrameCount();
+	if (ohpl_gs1_gui_gate(cSomaImGui::GetScriptInputFocus() == mpImGui, mfGuiFPS, mbGuiUpdateWhenOutOfView, mpGuiSubMesh != NULL, bSubMeshRendered,
+						  &mfGuiTimeAcc, &mbGuiDirty, afTimeStep, &fGuiStep) == false)
+		return;
+	afTimeStep = fGuiStep;
 	++mlGuiCalls;
 	cSomaImGui *pPrev = cSomaImGui::GetCurrent();
 	cSomaImGui::SetCurrent(mpImGui);
@@ -1060,9 +1002,7 @@ void cSomaLuxEntity::UpdateGui(float afTimeStep)
 
 float cSomaLuxEntity::GetMaxInteractDistance()
 {
-	if (mfMaxInteractDistance > 0)
-		return mfMaxInteractDistance;
-	return cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetDefaultInteractDistance(meType) : 2.0f;
+	return ohpl_gs1_max_interact_distance(mfMaxInteractDistance, cSomaLuxGame::Get() ? cSomaLuxGame::Get()->GetDefaultInteractDistance(meType) : 2.0f);
 }
 
 bool cSomaLuxEntity::CanInteract(int alType, iPhysicsBody *apBody)
@@ -1082,39 +1022,25 @@ void cSomaLuxEntity::SetEffectBaseColor(const cColor &aCol)
 
 void cSomaLuxEntity::FadeEffectBaseColor(const cColor &aCol, float afTime)
 {
-	if (afTime <= 0)
+	if (ohpl_gs1_color_fade_begin(afTime, &mfEffectColorTime, &mfEffectColorT))
 	{
-		mfEffectColorTime = 0;
 		SetEffectBaseColor(aCol);
 		return;
 	}
 	mEffectColorFrom = mEffectBaseColor;
 	mEffectColorTo = aCol;
-	mfEffectColorTime = afTime;
-	mfEffectColorT = 0;
 }
 
 void cSomaLuxEntity::UpdateEffectColor(float afTimeStep)
 {
-	if (mfMeshFadeAlpha < 1 && mpMesh)
-	{
-		mfMeshFadeAlpha = cMath::Min(mfMeshFadeAlpha + mfMeshFadeSpeed * afTimeStep, 1.0f);
+	unsigned lFlags = ohpl_gs1_effects_update_fades(&mfMeshFadeAlpha, mfMeshFadeSpeed, mpMesh != NULL, &mfEffectsAlpha, &mfEffectsFadeSpeed, mfEffectsOffAlpha, afTimeStep);
+	if (lFlags & kOhplGs1EffectsUpdateMesh)
 		mpMesh->SetCoverageAmount(mfMeshFadeAlpha);
-	}
-	if (mfEffectsFadeSpeed != 0)
-	{
-		float fMin = mfEffectsFadeSpeed < 0 ? mfEffectsOffAlpha : 0;
-		mfEffectsAlpha = cMath::Clamp(mfEffectsAlpha + mfEffectsFadeSpeed * afTimeStep, fMin, 1.0f);
-		if (mfEffectsAlpha == fMin || mfEffectsAlpha == 1)
-			mfEffectsFadeSpeed = 0;
+	if (lFlags & kOhplGs1EffectsUpdateEffects)
 		ApplyEffectsAlpha();
-	}
-	if (mfEffectColorTime <= 0)
-		return;
-	mfEffectColorT = std::min(mfEffectColorT + afTimeStep / mfEffectColorTime, 1.0f);
-	SetEffectBaseColor(mEffectColorFrom * (1 - mfEffectColorT) + mEffectColorTo * mfEffectColorT);
-	if (mfEffectColorT >= 1)
-		mfEffectColorTime = 0;
+	cColor col;
+	if (ohpl_gs1_color_fade_step(&mEffectColorFrom, &mEffectColorTo, &mfEffectColorTime, &mfEffectColorT, afTimeStep, &col))
+		SetEffectBaseColor(col);
 }
 
 // Negative length plays backwards from wherever the animation is
@@ -1128,22 +1054,17 @@ void cSomaLuxEntity::SetLiquidAmount(float afX)
 
 void cSomaLuxEntity::FadeLiquidAmountTo(float afTarget, float afTime)
 {
-	if (afTime <= 0) { SetLiquidAmount(afTarget); return; }
-	mfLiquidTarget = afTarget;
-	mfLiquidSpeed = std::fabs(afTarget - mfLiquidAmount) / afTime;
+	if (ohpl_gs1_liquid_fade(afTarget, afTime, mfLiquidAmount, &mfLiquidTarget, &mfLiquidSpeed))
+		SetLiquidAmount(afTarget);
 }
 
 void cSomaLuxEntity::UpdateLiquidAmount(float afTimeStep)
 {
-	if (mfLiquidSpeed == 0) return;
-	float fStep = mfLiquidSpeed * afTimeStep;
-	if (std::fabs(mfLiquidTarget - mfLiquidAmount) <= fStep)
-	{
+	int lResult = ohpl_gs1_liquid_update(afTimeStep, &mfLiquidAmount, mfLiquidTarget, mfLiquidSpeed);
+	if (lResult == kOhplGs1LiquidSnap)
 		SetLiquidAmount(mfLiquidTarget);
-		return;
-	}
-	mfLiquidAmount += mfLiquidTarget > mfLiquidAmount ? fStep : -fStep;
-	if (mpMesh) mpMesh->SetLiquidAmount(mfLiquidAmount);
+	else if (lResult == kOhplGs1LiquidMoved && mpMesh)
+		mpMesh->SetLiquidAmount(mfLiquidAmount);
 }
 
 void cSomaLuxEntity::PlayProcAnimation(const tString &asName, float afLength, bool abLoop, float afAmountFadeTime, float afSpeedFadeTime)
@@ -1152,22 +1073,7 @@ void cSomaLuxEntity::PlayProcAnimation(const tString &asName, float afLength, bo
 	{
 		if (anim.msName != asName)
 			continue;
-		float fSpeed = afLength != 0 ? 1 / afLength : 0;
-		if (!anim.mbActive)
-		{
-			anim.mfTime = fSpeed < 0 ? 1 : 0;
-			anim.mfAmount = 0;
-			anim.mfSpeed = 0;
-		}
-		anim.mbActive = true;
-		anim.mbLoop = abLoop;
-		anim.mfAmountStep = afAmountFadeTime > 0 ? 1 / afAmountFadeTime : 0;
-		if (afAmountFadeTime <= 0)
-			anim.mfAmount = 1;
-		anim.mfSpeedTarget = fSpeed;
-		anim.mfSpeedStep = afSpeedFadeTime > 0 ? std::fabs(fSpeed - anim.mfSpeed) / afSpeedFadeTime : 0;
-		if (afSpeedFadeTime <= 0)
-			anim.mfSpeed = fSpeed;
+		ohpl_gs1_proc_play(&anim.mState, afLength, abLoop, afAmountFadeTime, afSpeedFadeTime);
 		mbProcDirty = true;
 	}
 }
@@ -1182,30 +1088,14 @@ void cSomaLuxEntity::UpdateProcAnimations(float afTimeStep)
 	{
 		for (cProcTrack &track : anim.mvTracks)
 			mapMatrices.emplace(track.mpSub, track.m_mtxBase);
-		if (!anim.mbActive)
+		if (!anim.mState.active)
 			continue;
-		anim.mfAmount = std::min(anim.mfAmount + anim.mfAmountStep * afTimeStep, 1.0f);
-		float fMaxStep = anim.mfSpeedStep * afTimeStep;
-		anim.mfSpeed += cMath::Clamp(anim.mfSpeedTarget - anim.mfSpeed, -fMaxStep, fMaxStep);
-		anim.mfTime += anim.mfSpeed * afTimeStep;
-		anim.mfTime = anim.mbLoop ? anim.mfTime - std::floor(anim.mfTime) : cMath::Clamp(anim.mfTime, 0.0f, 1.0f);
-		mbProcDirty |= anim.mbLoop || anim.mfAmount < 1 || anim.mfSpeed != anim.mfSpeedTarget || (anim.mfTime > 0 && anim.mfTime < 1);
-
+		mbProcDirty |= ohpl_gs1_proc_step(&anim.mState, afTimeStep);
 		for (cProcTrack &track : anim.mvTracks)
 		{
-			float f = anim.mfTime * track.mlCycles;
-			f = !anim.mbLoop && anim.mfTime >= 1 ? 1 : f - std::floor(f);
-			if (track.mbReverse)
-				f = f < 0.5f ? f * 2 : 2 - f * 2;
-			if (track.msEasing == "sinein")
-				f = 1 - std::cos(f * kPif / 2);
-			else if (track.msEasing == "sineout")
-				f = std::sin(f * kPif / 2);
-			else if (track.msEasing == "sineinout")
-				f = 0.5f - 0.5f * std::cos(f * kPif);
-			float fValue = (track.mfMin + (track.mfMax - track.mfMin) * f) * anim.mfAmount;
-			cMatrixf mtxOffset = track.mbRotate ? cMath::MatrixRotate(track.mvAxes * cMath::ToRad(fValue), eEulerRotationOrder_XYZ)
-												: cMath::MatrixTranslate(track.mvAxes * fValue);
+			cMatrixf mtxOffset;
+			ohpl_gs1_proc_track(&anim.mState, track.mbRotate, track.mbReverse, &track.mvAxes, track.mfMin, track.mfMax, track.mlCycles,
+								(const unsigned char *)track.msEasing.data(), track.msEasing.size(), &mtxOffset);
 			mapMatrices[track.mpSub] = cMath::MatrixMul(mapMatrices[track.mpSub], mtxOffset);
 		}
 	}
@@ -1224,17 +1114,13 @@ void cSomaLuxEntity::SetHealth(float afX)
 {
 	mfHealth = afX;
 	Call("void OnHealthChange()");
-	if (mfHealth <= 0 && mInstanceVars.GetVarBool("DisableBreakable", false) == false)
+	if (ohpl_gs1_health_breaks(mfHealth, mInstanceVars.GetVarBool("DisableBreakable", false)))
 		Break();
 }
 
 void cSomaLuxEntity::GiveDamage(float afAmount, int alStrength, const tString &asType, const tString &asSource)
 {
-	int lToughness = mVars.GetVarInt("Toughness", 0);
-	if (alStrength < lToughness - 1)
-		afAmount = 0;
-	else if (alStrength == lToughness - 1)
-		afAmount *= 0.5f;
+	afAmount = ohpl_gs1_damage_amount(afAmount, alStrength, mVars.GetVarInt("Toughness", 0));
 	SetHealth(mfHealth - afAmount);
 	Call("void GiveDamage(float, int, const tString&in, const tString&in)", [&](asIScriptContext *c) {
 		c->SetArgFloat(0, afAmount);
@@ -1345,13 +1231,11 @@ void cSomaLuxEntity::cBreakBodyCallback::OnBodyCollide(iPhysicsBody *apBody, iPh
 	if (mpEntity->mbScriptCollision && pMap)
 		pMap->mvPendingCollisions.push_back({mpEntity, apBody, apCollideBody, *apContactData});
 	float fSpeed = apContactData->mfMaxContactNormalSpeed;
-	if (mpEntity->mbBreakable == false || mpEntity->mbBroken || mpEntity->mbActive == false || fSpeed <= 0 || pMap == NULL || pMap->GetTime() - mfStartTime <= 0.5)
+	if (ohpl_gs1_break_gate(mpEntity->mbBreakable, mpEntity->mbBroken, mpEntity->mbActive, fSpeed, pMap != NULL, pMap ? pMap->GetTime() : 0.0, mfStartTime) == false)
 		return;
-	float fMass2 = apCollideBody->GetMass() > 0 ? apCollideBody->GetMass() : 1e6f;
 	float fV1 = apBody->GetVelocityAtPosition(apContactData->mvContactPosition).Length();
 	float fV2 = apCollideBody->GetVelocityAtPosition(apContactData->mvContactPosition).Length();
-	float fMass = fV1 + fV2 > 0 ? apBody->GetMass() + (fMass2 - apBody->GetMass()) * (fV2 / (fV1 + fV2)) : apBody->GetMass();
-	if (0.5f * fSpeed * fSpeed * fMass > mpEntity->mVars.GetVarFloat("BreakMinEnergy", 1000))
+	if (ohpl_gs1_break_energy_exceeds(fSpeed, apBody->GetMass(), apCollideBody->GetMass(), fV1, fV2, mpEntity->mVars.GetVarFloat("BreakMinEnergy", 1000)))
 		mpEntity->Break();
 }
 
@@ -1369,9 +1253,9 @@ void cSomaLuxEntity::ChangeConnectionState(int alState)
 	std::vector<cConnection> vConnections = mvConnections;
 	for (const cConnection &conn : vConnections)
 	{
-		if (conn.mlStatesUsed != 0 && alState != conn.mlStatesUsed)
+		int lState;
+		if (ohpl_gs1_connection_state(alState, conn.mlStatesUsed, conn.mbInvert, &lState) == false)
 			continue;
-		int lState = conn.mbInvert ? -alState : alState;
 		for (cSomaLuxEntity *pEnt : pMap->GetEntities())
 			if (pEnt != this && cString::MatchesWildcard(conn.msEntity, pEnt->msName))
 				pEnt->Call("void OnConnectionStateChange(iLuxEntity@ apEntity, int alState)", [&](asIScriptContext *c) {
@@ -1407,7 +1291,7 @@ void cSomaLuxEntity::ChangeInteractConnectionState(float afT)
 	std::vector<cInteractConnection> vConnections = mvInteractConnections;
 	for (const cInteractConnection &conn : vConnections)
 	{
-		float fT = SomaEasing(conn.mlEasing, cMath::Clamp(conn.mbInvert ? 1 - afT : afT, 0.0f, 1.0f));
+		float fT = SomaEasing(conn.mlEasing, ohpl_gs1_interact_connection_input(afT, conn.mbInvert));
 		cSomaLuxEntity *pProp = pMap ? pMap->GetEntity(conn.mPropID) : NULL;
 		if (pProp == NULL)
 			continue;
@@ -1447,21 +1331,9 @@ void cSomaLuxEntity::CreateAreaBody(iPhysicsWorld *apWorld)
 {
 	if (apWorld == NULL || mvBodies.empty() == false)
 		return;
-	cMatrixf m = m_mtxOnLoad;
-	cVector3f vCols[3];
-	for (int i = 0; i < 3; ++i)
-		vCols[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
-	cVector3f vSize = mvSize;
-	for (int i = 0; i < 3; ++i)
-	{
-		float fLen = vCols[i].Length();
-		if (fLen > 0)
-		{
-			vCols[i] = vCols[i] / fLen;
-			vSize.v[i] *= fLen;
-		}
-	}
-	cMatrixf mtxBody = cMath::MatrixUnitVectors(vCols[0], vCols[1], vCols[2], m.GetTranslation());
+	cMatrixf mtxBody;
+	cVector3f vSize;
+	ohpl_gs1_area_body(&m_mtxOnLoad, &mvSize, &mtxBody, &vSize);
 	iPhysicsBody *pBody = apWorld->CreateBody(msName, apWorld->CreateBoxShape(vSize, NULL));
 	pBody->SetMass(0);
 	pBody->SetCollide(false);
@@ -1678,35 +1550,19 @@ void cSomaLuxEntity::RemoveCollideCallbacks(const tString &asChild)
 	std::erase_if(mvCollideCallbacks, [&](const cCollideCallback &c) { return cString::MatchesWildcard(asChild, c.msChild) || cString::MatchesWildcard(c.msChild, asChild); });
 }
 
-struct cSomaOBB
-{
-	cVector3f mvCenter;
-	cVector3f mvAxis[3];
-	cVector3f mvHalf;
-};
+typedef OhplGs1Obb cSomaOBB;
 
 static cSomaOBB AABBToOBB(const cVector3f &avMin, const cVector3f &avMax)
 {
 	cSomaOBB box;
-	box.mvCenter = (avMin + avMax) * 0.5f;
-	box.mvHalf = (avMax - avMin) * 0.5f;
-	box.mvAxis[0] = cVector3f(1, 0, 0);
-	box.mvAxis[1] = cVector3f(0, 1, 0);
-	box.mvAxis[2] = cVector3f(0, 0, 1);
+	ohpl_gs1_aabb_to_obb(&avMin, &avMax, &box);
 	return box;
 }
 
 static cSomaOBB MatrixOBB(const cMatrixf &am, const cVector3f &avMin, const cVector3f &avMax)
 {
 	cSomaOBB box;
-	box.mvCenter = cMath::MatrixMul(am, (avMin + avMax) * 0.5f);
-	for (int i = 0; i < 3; ++i)
-	{
-		cVector3f vCol(am.m[0][i], am.m[1][i], am.m[2][i]);
-		float fLen = vCol.Length();
-		box.mvAxis[i] = fLen > 0 ? vCol / fLen : cVector3f(i == 0, i == 1, i == 2);
-		box.mvHalf.v[i] = (avMax.v[i] - avMin.v[i]) * 0.5f * (fLen > 0 ? fLen : 1);
-	}
+	ohpl_gs1_matrix_obb(&am, &avMin, &avMax, &box);
 	return box;
 }
 
@@ -1752,11 +1608,7 @@ static void EntityBoxes(cSomaLuxEntity *apEnt, std::vector<cSomaOBB> &avOut, boo
 
 static bool PointInOBB(const cSomaOBB &b, const cVector3f &avPos)
 {
-	cVector3f d = avPos - b.mvCenter;
-	for (int i = 0; i < 3; ++i)
-		if (std::fabs(cMath::Vector3Dot(d, b.mvAxis[i])) > b.mvHalf.v[i])
-			return false;
-	return true;
+	return ohpl_gs1_point_in_obb(&b, &avPos);
 }
 
 // cMeshCreator::CreateGridPlane: upper submesh faces +y, lower (reversed winding) faces -y
@@ -1865,7 +1717,7 @@ float SomaPlayerLiquidSurface()
 			continue;
 		std::vector<cSomaOBB> v;
 		EntityBoxes(pEnt, v);
-		fSurface = std::max(fSurface, v[0].mvCenter.y + v[0].mvHalf.y);
+		fSurface = std::max(fSurface, ohpl_gs1_liquid_surface(&v[0]));
 	}
 	return fSurface;
 }
@@ -1909,12 +1761,10 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 	iPhysicsWorld *pWorld = pMap ? pMap->GetWorld()->GetPhysicsWorld() : NULL;
 	if (pWorld == NULL)
 		return;
-	cVector3f vExt(0.2f);
-	for (int i = 0; i < 3; ++i)
-		for (int k = 0; k < 3; ++k)
-			vExt.v[k] += std::fabs(aBox.mvAxis[i].v[k]) * aBox.mvHalf.v[i];
+	cVector3f vExt;
+	ohpl_gs1_liquid_extent(&aBox, &vExt);
 	cBoundingVolume bv;
-	bv.SetLocalMinMax(aBox.mvCenter - vExt, aBox.mvCenter + vExt);
+	bv.SetLocalMinMax(aBox.center - vExt, aBox.center + vExt);
 	std::vector<iPhysicsBody *> vBodies;
 	pWorld->GetBodiesInBV(&bv, &vBodies);
 
@@ -1955,7 +1805,7 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 		}
 		if (pBody->GetNoGravityWhenUnderwater())
 		{
-			bool bUnder = pBody->GetBoundingVolume()->GetMax().y <= aBox.mvCenter.y + vExt.y - 0.2f;
+			bool bUnder = ohpl_gs1_liquid_body_under(pBody->GetBoundingVolume()->GetMax().y, aBox.center.y, vExt.y);
 			if (pOwner == NULL || pOwner->mbInteractedWith == false)
 				pBody->SetGravity(!bUnder);
 			pBody->SetIsUnderwater(bUnder);
@@ -1976,8 +1826,7 @@ static void LiquidBuoyancy(cSomaLuxEntity *apArea, const cSomaOBB &aBox, float a
 		if (bWaves && apCam && cMath::Vector3DistSqr(pBody->GetLocalPosition(), apCam->GetPosition()) < fMaxWaveDist * fMaxWaveDist)
 		{
 			cVector3f c = cMath::MatrixMul(pBody->GetLocalMatrix(), pBody->GetMassCentre());
-			float fT = afTime * fWaveFreq;
-			float fH = afSurfaceY + 0.3f * fWaveAmp * (std::sin(15 * c.x + fT) + std::sin(15 * c.z + fT));
+			float fH = ohpl_gs1_liquid_wave_height(afSurfaceY, fWaveAmp, fWaveFreq, afTime, c.x, c.z);
 			cPlanef wave;
 			wave.FromNormalPoint(cVector3f(0, 1, 0), cVector3f(0, fH, 0));
 			pBody->SetBuoyancySurface(wave);
@@ -1999,7 +1848,7 @@ void cSomaLuxEntity::UpdateLiquid(float afTimeStep)
 	EntityBoxes(this, v);
 	if (afTimeStep >= gpSomaBase->mpEngine->GetStepSize() * 0.8f)
 	{
-		float fSurfaceY = v[0].mvCenter.y + v[0].mvHalf.y;
+		float fSurfaceY = ohpl_gs1_liquid_surface(&v[0]);
 		mfLiquidTime += afTimeStep;
 		LiquidBuoyancy(this, v[0], fSurfaceY, fSurfaceY != mfLiquidSurfaceY, mfLiquidTime, pCam);
 		LiquidPlayer(this, v[0], fSurfaceY, afTimeStep);
@@ -2027,27 +1876,7 @@ void cSomaLuxEntity::UpdateLiquid(float afTimeStep)
 
 static bool OBBOverlap(const cSomaOBB &a, const cSomaOBB &b)
 {
-	cVector3f vT = b.mvCenter - a.mvCenter;
-	auto separated = [&](const cVector3f &axis) {
-		float fLen = axis.SqrLength();
-		if (fLen < 1e-8f)
-			return false;
-		float ra = 0, rb = 0;
-		for (int i = 0; i < 3; ++i)
-		{
-			ra += a.mvHalf.v[i] * std::fabs(cMath::Vector3Dot(a.mvAxis[i], axis));
-			rb += b.mvHalf.v[i] * std::fabs(cMath::Vector3Dot(b.mvAxis[i], axis));
-		}
-		return std::fabs(cMath::Vector3Dot(vT, axis)) > ra + rb;
-	};
-	for (int i = 0; i < 3; ++i)
-		if (separated(a.mvAxis[i]) || separated(b.mvAxis[i]))
-			return false;
-	for (int i = 0; i < 3; ++i)
-		for (int j = 0; j < 3; ++j)
-			if (separated(cMath::Vector3Cross(a.mvAxis[i], b.mvAxis[j])))
-				return false;
-	return true;
+	return ohpl_gs1_obb_overlap(&a, &b);
 }
 
 bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
@@ -2065,9 +1894,9 @@ bool SomaEntityIsOnScreen(cSomaLuxEntity *apEnt, bool abRayCast)
 	{
 		cVector3f vHalf;
 		for (int k = 0; k < 3; ++k)
-			vHalf.v[k] = std::fabs(box.mvAxis[0].v[k]) * box.mvHalf.x + std::fabs(box.mvAxis[1].v[k]) * box.mvHalf.y + std::fabs(box.mvAxis[2].v[k]) * box.mvHalf.z;
+			vHalf.v[k] = std::fabs(box.axis[0].v[k]) * box.half.x + std::fabs(box.axis[1].v[k]) * box.half.y + std::fabs(box.axis[2].v[k]) * box.half.z;
 		cBoundingVolume bv;
-		bv.SetLocalMinMax(box.mvCenter - vHalf - cVector3f(0.001f), box.mvCenter + vHalf + cVector3f(0.001f));
+		bv.SetLocalMinMax(box.center - vHalf - cVector3f(0.001f), box.center + vHalf + cVector3f(0.001f));
 		if (pFrustum->CollideBoundingVolume(&bv) == eCollision_Outside)
 			continue;
 		// from just in front of the entity origin back to the camera, like iLuxEntity::CheckIsOnScreen
@@ -2107,9 +1936,9 @@ static bool BodyInArea(cSomaLuxEntity *apArea, iPhysicsBody *apBody, bool abCent
 	const cSomaOBB &box = vBoxes[0];
 	if (abCenter == false)
 		return OBBOverlap(box, AABBToOBB(apBody->GetBoundingVolume()->GetMin(), apBody->GetBoundingVolume()->GetMax()));
-	cVector3f vDelta = cMath::MatrixMul(apBody->GetLocalMatrix(), apBody->GetMassCentre()) - box.mvCenter;
+	cVector3f vDelta = cMath::MatrixMul(apBody->GetLocalMatrix(), apBody->GetMassCentre()) - box.center;
 	for (int i = 0; i < 3; ++i)
-		if (std::fabs(cMath::Vector3Dot(vDelta, box.mvAxis[i])) > box.mvHalf.v[i])
+		if (std::fabs(cMath::Vector3Dot(vDelta, box.axis[i])) > box.half.v[i])
 			return false;
 	return true;
 }
@@ -2158,28 +1987,7 @@ void cSomaLuxEntity::UpdateCheckCollision(float afTimeStep)
 
 static bool RayHitsOBB(const cSomaOBB &b, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afT)
 {
-	cVector3f vRel = avStart - b.mvCenter;
-	float tMin = 0, tMax = afMaxDist;
-	for (int i = 0; i < 3; ++i)
-	{
-		float o = cMath::Vector3Dot(vRel, b.mvAxis[i]);
-		float d = cMath::Vector3Dot(avDir, b.mvAxis[i]);
-		if (std::fabs(d) < 1e-6f)
-		{
-			if (std::fabs(o) > b.mvHalf.v[i])
-				return false;
-			continue;
-		}
-		float t1 = (-b.mvHalf.v[i] - o) / d, t2 = (b.mvHalf.v[i] - o) / d;
-		if (t1 > t2)
-			std::swap(t1, t2);
-		tMin = std::max(tMin, t1);
-		tMax = std::min(tMax, t2);
-		if (tMin > tMax)
-			return false;
-	}
-	afT = tMin;
-	return true;
+	return ohpl_gs1_ray_hits_obb(&b, &avStart, &avDir, afMaxDist, &afT);
 }
 
 bool SomaRayHitsEntity(cSomaLuxEntity *apEnt, const cVector3f &avStart, const cVector3f &avDir, float afMaxDist, float &afDistOut)
@@ -2297,9 +2105,9 @@ bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam)
 	float fMax = std::max(apEnt->mfLookAtMaxDistance, 50.0f), t;
 	for (const cSomaOBB &b : vBoxes)
 	{
-		float fR = b.mvHalf.Length(), fDist = cMath::Vector3Dist(b.mvCenter, vCam);
+		float fR = b.half.Length(), fDist = cMath::Vector3Dist(b.center, vCam);
 		cBoundingVolume bv;
-		bv.SetLocalMinMax(b.mvCenter - fR, b.mvCenter + fR);
+		bv.SetLocalMinMax(b.center - fR, b.center + fR);
 		if (apCam->GetFrustum()->CollideBoundingVolume(&bv) == eCollision_Outside || fDist > fMax ||
 			(apEnt->mfLookAtMaxDistance > 0 && fDist > apEnt->mfLookAtMaxDistance))
 			continue;
@@ -2307,7 +2115,7 @@ bool SomaPlayerLooksAt(cSomaLuxEntity *apEnt, cCamera *apCam)
 			continue;
 		if (apEnt->mbLookAtCheckRay == false || fR * fR + 0.05f > fDist * fDist)
 			return true;
-		cVector3f vNear = b.mvCenter - (b.mvCenter - vCam) * (fR / fDist), vUp = apCam->GetUp() * (fR * 0.5f), vRight = apCam->GetRight() * (fR * 0.5f);
+		cVector3f vNear = b.center - (b.center - vCam) * (fR / fDist), vUp = apCam->GetUp() * (fR * 0.5f), vRight = apCam->GetRight() * (fR * 0.5f);
 		for (const cVector3f &p : {vNear, vNear + vUp, vNear - vUp, vNear + vRight, vNear - vRight})
 			if (SomaLineOfSight(vCam, p, apEnt))
 				return true;
@@ -2843,7 +2651,7 @@ bool cSomaLuxEntity::GetAttachmentParentMatrix(cMatrixf &a_mtxOut)
 iPhysicsBody *cSomaLuxEntity::GetBodyFromName(const tString &asName)
 {
 	for (iPhysicsBody *b : mvBodies)
-		if (asName != "" && (b->GetName() == asName || cString::GetFileName(b->GetName()) == asName || b->GetName().ends_with("_" + asName)))
+		if (ohpl_gs1_body_name_matches((const unsigned char *)b->GetName().data(), b->GetName().size(), (const unsigned char *)asName.data(), asName.size()))
 			return b;
 	return NULL;
 }
@@ -2891,25 +2699,10 @@ void cSomaLuxEntity::UpdateAttachment()
 		return;
 	}
 	cAttachment *a = mpAttachment;
-	cMatrixf mtxOld = GetMatrix();
-	if (a->mbUseRotation)
-	{
-		if (mtxParent == a->m_mtxParentPrev)
-			return;
-		if (a->mbLocked)
-			SetMatrix(cMath::MatrixMul(mtxParent, a->m_mtxOffset));
-		else
-			SetMatrix(cMath::MatrixMul(mtxParent, RelativeMatrix(a->m_mtxParentPrev, GetMatrix())));
-	}
-	else
-	{
-		cVector3f vDelta = mtxParent.GetTranslation() - a->m_mtxParentPrev.GetTranslation();
-		if (vDelta == cVector3f(0))
-			return;
-		cMatrixf mtx = GetMatrix();
-		mtx.SetTranslation(a->mbLocked ? cMath::MatrixMul(mtxParent, a->m_mtxOffset).GetTranslation() : mtx.GetTranslation() + vDelta);
-		SetMatrix(mtx);
-	}
+	cMatrixf mtxOld = GetMatrix(), mtxNew;
+	if (ohpl_gs1_attachment_step(&mtxParent, &a->m_mtxParentPrev, &a->m_mtxOffset, &mtxOld, a->mbUseRotation, a->mbLocked, &mtxNew) == false)
+		return;
+	SetMatrix(mtxNew);
 	a->m_mtxParentPrev = mtxParent;
 	for (iPhysicsBody *pBody : mvBodies)
 		pBody->Enable();
@@ -3024,10 +2817,10 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 								return false;
 							cBoundingVolume &bv = s->GetBoundingVolume();
 							cSomaOBB box;
-							box.mvCenter = cMath::MatrixMul(m, cMath::MatrixMul(s->GetOffset(), (bv.GetLocalMin() + bv.GetLocalMax()) * 0.5f));
-							box.mvHalf = (bv.GetLocalMax() - bv.GetLocalMin()) * 0.5f;
+							box.center = cMath::MatrixMul(m, cMath::MatrixMul(s->GetOffset(), (bv.GetLocalMin() + bv.GetLocalMax()) * 0.5f));
+							box.half = (bv.GetLocalMax() - bv.GetLocalMin()) * 0.5f;
 							for (int i = 0; i < 3; ++i)
-								box.mvAxis[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
+								box.axis[i] = cVector3f(m.m[0][i], m.m[1][i], m.m[2][i]);
 							std::vector<cSomaOBB> v;
 							EntityBoxes(p, v);
 							for (const cSomaOBB &a : v)
@@ -3075,7 +2868,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 						if (pMat || asMat == "") pSub->SetCustomMaterial(pMat, true);
 					}
 				});
-	SOMA_METHOD(e, "cLuxProp", "bool IsMoving()", +[](cSomaLuxEntity *p) { return p->mbMoving; });
+	SOMA_METHOD(e, "cLuxProp", "bool IsMoving()", +[](cSomaLuxEntity *p) { return p->mMove.moving; });
 	SOMA_METHOD(e, "cLuxProp", "void SetHealth(float afX)", +[](cSomaLuxEntity *p, float x) { p->SetHealth(x); });
 	SOMA_METHOD(e, "cLuxProp", "float GetHealth()", +[](cSomaLuxEntity *p) { return p->mfHealth; });
 	SOMA_METHOD(e, "cLuxProp", "void Break()", +[](cSomaLuxEntity *p) { p->Break(); });
@@ -3484,7 +3277,7 @@ void cSomaLuxEntity::RegisterNatives(asIScriptEngine *e)
 	SOMA_FUNC(e, "void Prop_RotateToSpeed(const tString &in asPropName, float afAcc, float afGoalSpeed, bool abResetSpeed, const tString &in asOffsetEntity)",
 			  +[](S n, float a, float s, bool r, S off) {
 				  cSomaLuxEntity *pOff = off != "" ? Find(off) : NULL;
-				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, p->mvRotateAxis.SqrLength() > 0 ? p->mvRotateAxis : cVector3f(0, 1, 0), r, pOff ? cMath::MatrixMul(cMath::MatrixInverse(p->GetMatrix()), pOff->GetPosition()) : cVector3f(0)); });
+				  ForMatching(n, [&](cSomaLuxEntity *p) { p->RotateAtSpeed(a, s, p->mRotate.axis.SqrLength() > 0 ? p->mRotate.axis : cVector3f(0, 1, 0), r, pOff ? cMath::MatrixMul(cMath::MatrixInverse(p->GetMatrix()), pOff->GetPosition()) : cVector3f(0)); });
 			  });
 	SOMA_FUNC(e, "void Entity_PlaceAtEntity(const tString &in asEntityName, const tString &in asTargetEntity, const cVector3f &in avOffset = cVector3f_Zero, bool abAlignRotation = false, bool abUseEntFileCenter=false)",
 			  +[](S n, S t, const cVector3f &off, bool bAlign, bool) {

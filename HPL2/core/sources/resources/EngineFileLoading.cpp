@@ -21,6 +21,7 @@
 
 #include "resources/XmlDocument.h"
 #include "resources/Resources.h"
+#include "resources/RustResMgr.h"
 #include "resources/TextureManager.h"
 #include "resources/MaterialManager.h"
 
@@ -137,8 +138,8 @@ namespace hpl {
 		kBeginWorldEntityLoad();
 		
 		tString sSoundFile = apElement->GetAttributeString("SoundEntityFile");
-		bool bUseDefault = apElement->GetAttributeBool("UseDefault");
-		if(apElement->GetAttribute("UseCustomProperties")) bUseDefault = !apElement->GetAttributeBool("UseCustomProperties");
+		bool bUseDefault = ohpl_rm_world_sound_use_default(apElement->GetAttributeBool("UseDefault"),
+				apElement->GetAttribute("UseCustomProperties") ? (int)apElement->GetAttributeBool("UseCustomProperties") : -1);
 		if(sSoundFile=="") return NULL;
 
 		cSoundEntity *pSound = apWorld->CreateSoundEntity(asNamePrefix+sName,sSoundFile,false);
@@ -160,11 +161,7 @@ namespace hpl {
 
 	static eBillboardType ToBillboardType(const tString& asType)
 	{
-		if(asType == "Axis") return eBillboardType_Axis;
-		if(asType == "Point") return eBillboardType_Point;
-		if(asType == "FixedAxis") return eBillboardType_FixedAxis;
-
-		return eBillboardType_Point;
+		return (eBillboardType)ohpl_rm_world_billboard_type(RM_STR(asType));
 	}
 
 	cBillboard* cEngineFileLoading::LoadBillboard(cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic,
@@ -253,21 +250,12 @@ namespace hpl {
 
 	static eShadowMapResolution ToShadowMapResolution(const tString& asType)
 	{
-		tString sLowType = cString::ToLowerCase(asType);
-
-        if(sLowType == "high") return eShadowMapResolution_High;
-		if(sLowType == "medium") return eShadowMapResolution_Medium;
-		if(sLowType == "low") return eShadowMapResolution_Low;
-		return eShadowMapResolution_High;
+		return (eShadowMapResolution)ohpl_rm_world_shadow_resolution(RM_STR(asType));
 	}
 
 	static eTextureAnimMode ToTextureAnimMode(const tString& asType)
 	{
-		if(cString::ToLowerCase(asType) == "none") return eTextureAnimMode_None;
-		else if(cString::ToLowerCase(asType) == "loop") return eTextureAnimMode_Loop;
-		else if(cString::ToLowerCase(asType) == "oscillate") return eTextureAnimMode_Oscillate;
-
-		return eTextureAnimMode_None;
+		return (eTextureAnimMode)ohpl_rm_mat_anim_mode(RM_STR(asType));
 	}
 	
 	iLight* cEngineFileLoading::LoadLight(	cXmlElement* apElement, const tString& asNamePrefix, cWorld *apWorld, cResources *apResources, bool abStatic)
@@ -280,7 +268,8 @@ namespace hpl {
 
 		//////////////////////////
 		// Box Light
-		if(apElement->GetValue() == "BoxLight")
+		int lLightKind = ohpl_rm_world_light_kind(RM_STR(apElement->GetValue()));
+		if(lLightKind == 0)
 		{
 			cLightBox *pLightBox = apWorld->CreateLightBox(asNamePrefix+sName, bStatic);
 			pLight = pLightBox;
@@ -304,14 +293,15 @@ namespace hpl {
 					tFloatVec vValues;
 					cString::GetFloatVec(pSetElem->GetAttributeString("_Text"), vValues);
 					std::vector<cVector3f> vBands;
-					for(size_t i=0; i+2<vValues.size(); i+=3) vBands.push_back(cVector3f(vValues[i], vValues[i+1], vValues[i+2]));
+					size_t lBandCount = ohpl_rm_world_band_count(vValues.size());
+					for(size_t i=0; i<lBandCount; ++i) vBands.push_back(cVector3f(vValues[i*3], vValues[i*3+1], vValues[i*3+2]));
 					pLightBox->AddIrradianceSet(pSetElem->GetAttributeString("SetName"), vBands);
 				}
 			}
 		}
 		//////////////////////////
 		// Spotlightt
-		else if(apElement->GetValue() == "SpotLight")
+		else if(lLightKind == 1)
 		{
 			cLightSpot *pLightSpot = apWorld->CreateLightSpot(asNamePrefix+sName,"", bStatic); 
 			pLight = pLightSpot;
@@ -332,7 +322,7 @@ namespace hpl {
 		}
 		//////////////////////////
 		// Point Light
-		else if(apElement->GetValue() == "PointLight")
+		else if(lLightKind == 2)
 		{
 			cLightPoint *pLightPoint  = apWorld->CreateLightPoint(asNamePrefix+sName,"", bStatic); 
 			pLight = pLightPoint;
@@ -368,19 +358,12 @@ namespace hpl {
 
 				iTexture *pGoboTex=NULL;
 				apResources->GetTextureManager()->SetSRGB(true);
-				if(lightType  == eLightType_Spot)
+				switch(ohpl_rm_world_gobo_kind(lightType == eLightType_Spot, (int)animMode))
 				{
-					if(animMode == eTextureAnimMode_None)
-						pGoboTex = apResources->GetTextureManager()->Create2D(sGobo,true);
-					else
-						pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo, true, eTextureType_2D);
-				}
-				else
-				{
-					if(animMode == eTextureAnimMode_None)
-						pGoboTex = apResources->GetTextureManager()->CreateCubeMap(sGobo,true);
-					else
-						pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap);
+				case 0: pGoboTex = apResources->GetTextureManager()->Create2D(sGobo,true); break;
+				case 1: pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo, true, eTextureType_2D); break;
+				case 2: pGoboTex = apResources->GetTextureManager()->CreateCubeMap(sGobo,true); break;
+				case 3: pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap); break;
 				}
 				apResources->GetTextureManager()->SetSRGB(false);
 	
@@ -405,16 +388,14 @@ namespace hpl {
 		pLight->SetSpotFalloffPow(apElement->GetAttributeFloat("SpotFalloffPow", 1));
 		pLight->SetBrightness(apElement->GetAttributeFloat("Brightness", 1));
 		pLight->SetDefaultBrightness(pLight->GetBrightness());
-		pLight->SetMaskID((unsigned int)strtoul(apElement->GetAttributeString("ConnectedLightMaskID", "4294967295").c_str(), NULL, 10));
+		tString sMaskID = apElement->GetAttributeString("ConnectedLightMaskID", "4294967295");
+		pLight->SetMaskID(ohpl_rm_world_light_mask_id(RM_STR(sMaskID)));
 
 		pLight->SetShadowMapResolution( ToShadowMapResolution(apElement->GetAttributeString("ShadowResolution", "High")) );
 		
 		bool bShadowsAffectDynamic = apElement->GetAttributeBool("ShadowsAffectDynamic", true);
 		bool bShadowsAffectStatic = apElement->GetAttributeBool("ShadowsAffectStatic", true);
-		tObjectVariabilityFlag lFlags =0;
-		if(bShadowsAffectDynamic)	lFlags |= eObjectVariabilityFlag_Dynamic;
-		if(bShadowsAffectStatic)	lFlags |= eObjectVariabilityFlag_Static;
-		pLight->SetShadowCastersAffected(lFlags);
+		pLight->SetShadowCastersAffected(ohpl_rm_world_shadow_casters(bShadowsAffectDynamic, bShadowsAffectStatic));
 
 		//////////////////////
 		// Backwards compitabilty:
@@ -481,13 +462,32 @@ namespace hpl {
 		tFloatVec vDataArrays[4];
 		tIntVec vIdxArray;
 		tString sSepp=" ";
+		//A missing array element or short array used to read past the data.
+		if(pIndicesElem==NULL)
+		{
+			Warning("Decal %s is missing its index array, skipping!\n", asName.c_str());
+			return NULL;
+		}
 		for(int i=0; i<4; ++i)
 		{
-			vDataArrays->reserve(lNumOfVtx * glDecalNumOfElements[i]);
+			if(pDataArrayElem[i]==NULL)
+			{
+				Warning("Decal %s is missing a vertex array, skipping!\n", asName.c_str());
+				return NULL;
+			}
 			cString::GetFloatVec(pDataArrayElem[i]->GetAttributeString("Array"), vDataArrays[i],&sSepp);
 		}
-		vIdxArray.reserve(lNumOfIdx);
 		cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), vIdxArray,&sSepp);
+
+		const float *pArrays[4] = { vDataArrays[0].data(), vDataArrays[1].data(), vDataArrays[2].data(), vDataArrays[3].data() };
+		size_t lArrayLens[4] = { vDataArrays[0].size(), vDataArrays[1].size(), vDataArrays[2].size(), vDataArrays[3].size() };
+		if(ohpl_rm_world_decal_vertices(pArrays, lArrayLens, (size_t)lNumOfVtx, NULL)==false || vIdxArray.size() < (size_t)lNumOfIdx)
+		{
+			Warning("Decal %s has too little geometry data, skipping!\n", asName.c_str());
+			return NULL;
+		}
+		std::vector<float> vPacked((size_t)lNumOfVtx * 16);
+		ohpl_rm_world_decal_vertices(pArrays, lArrayLens, (size_t)lNumOfVtx, vPacked.data());
 	
 		//////////////////////////////////
 		// Create vertex buffer
@@ -505,7 +505,7 @@ namespace hpl {
 		{
 			for(int i=0; i<4; ++i)
 			{
-				float *pData = &vDataArrays[i][vtx*glDecalNumOfElements[i]];
+				const float *pData = &vPacked[((size_t)vtx*4 + i)*4];
 
 				if(glDecalNumOfElements[i]==2)
 					pVtxBuffer->AddVertexVec3f(glDecalElementType[i], cVector3f(pData[0],pData[1],0) );

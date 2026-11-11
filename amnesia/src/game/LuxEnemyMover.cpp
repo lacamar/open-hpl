@@ -30,23 +30,23 @@
 
 //-----------------------------------------------------------------------
 
-cLuxEnemyMover::cLuxEnemyMover(iLuxEnemy *apEnemy, iCharacterBody *apCharBody)
+cLuxEnemyMover::cLuxEnemyMover(iLuxEnemy *apEnemy, iCharacterBody *apCharBody) : mMoveState(reinterpret_cast<eLuxEnemyMoveState&>(mS.moveState))
 {
 	mpEnemy = apEnemy;
 	mpCharBody = apCharBody;
 
-	mbTurning = false;
-	mfTurnGoalAngle =0;
-	mfTurnSpeed =0;
-	mfTurnBreakAcc =0;
+	mS.turning = false;
+	mS.turnGoalAngle =0;
+	mS.turnSpeed =0;
+	mS.turnBreakAcc =0;
 
-	mfStuckLimit = 0.3f;
-	mfMaxStuckCounter = 2.0f;
+	mS.stuckLimit = 0.3f;
+	mS.maxStuckCounter = 2.0f;
 
-	mfStuckCounter =0;
+	mS.stuckCounter =0;
 
 	mMoveState = eLuxEnemyMoveState_LastEnum;
-	mbOverideMoveState = false;
+	mS.overideMoveState = false;
 }
 
 //-----------------------------------------------------------------------
@@ -71,9 +71,10 @@ void cLuxEnemyMover::SetupAfterLoad(cWorld *apWorld)
 
 void cLuxEnemyMover::OnUpdate(float afTimeStep)
 {
-	UpdateStuckCounter(afTimeStep);
-	UpdateTurning(afTimeStep);	
-	UpdateMoveAnimation(afTimeStep);
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	OhplGa3MoverParams params;
+	mpEnemy->Ga3MoverParams(params);
+	ohpl_ga3_mover_update(&mS, &params, afTimeStep, &host);
 	UpdateStepEffects(afTimeStep);
 }
 
@@ -81,80 +82,53 @@ void cLuxEnemyMover::OnUpdate(float afTimeStep)
 
 void cLuxEnemyMover::MoveToPos(const cVector3f& avFeetPos)
 {
-	TurnToPos(avFeetPos);
-	mpCharBody->Move(eCharDir_Forward,1.0f);
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	ohpl_ga3_mover_move_to_pos(&mS, &avFeetPos.x, &host);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEnemyMover::TurnToPos(const cVector3f& avFeetPos)
 {
-	cVector3f vStartPos = mpCharBody->GetPosition(); 
-
-	float fGoalAngle = -cMath::GetAngleFromPoints2D(cVector2f(vStartPos.x, vStartPos.z), 
-													cVector2f(avFeetPos.x, avFeetPos.z));
-	TurnToAngle(fGoalAngle);
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	ohpl_ga3_mover_turn_to_pos(&mS, &avFeetPos.x, &host);
 }
 
 void cLuxEnemyMover::TurnToAngle(float afAngle)
 {
-	mbTurning = true;
-
-	mfTurnGoalAngle = afAngle;
+	ohpl_ga3_mover_turn_to_angle(&mS, afAngle);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEnemyMover::UseMoveStateAnimations()
 {
-	if(mbOverideMoveState==false) return;
-	
-	mbOverideMoveState = false;
-	mMoveState = eLuxEnemyMoveState_LastEnum;
+	ohpl_ga3_mover_use_move_state_animations(&mS);
 }
 
 //-----------------------------------------------------------------------
 
 float cLuxEnemyMover::CalculateSpeedMul(float afTimeStep)
 {
-	float fMul = 1.0f;
-
-	//////////////////////
-	//Break when making sharp turns
-	if(mbTurning)
-	{
-		float fAngleDist = std::fabs(cMath::GetAngleDistanceRad(mpCharBody->GetYaw(), mfTurnGoalAngle));
-
-		if(fAngleDist >= mpEnemy->mfTurnMinBreakAngle && mpCharBody->GetMoveSpeed(eCharDir_Forward)>0.15f)
-		{
-			fMul -= mpEnemy->mfTurnBreakMul * fAngleDist;
-			if(fMul<0) fMul =0;
-		}
-
-		//Log("%p: %f, %f, %f\n", this, cMath::ToDeg(fAngleDist), fMul, mpCharBody->GetMoveSpeed(eCharDir_Forward));
-	}
-
-	return fMul;
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	OhplGa3MoverParams params;
+	mpEnemy->Ga3MoverParams(params);
+	return ohpl_ga3_mover_speed_mul(&mS, &params, &host);
 }
 
 //-----------------------------------------------------------------------
 
 float cLuxEnemyMover::GetMoveSpeed()
 {
-	cVector3f vVel = mpCharBody->GetVelocity(gpBase->mpEngine->GetStepSize());
-	vVel.y =0;
-	return vVel.Length();
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	return ohpl_ga3_mover_move_speed(&host);
 }
 //-----------------------------------------------------------------------
 
 float cLuxEnemyMover::GetWantedSpeedAmount()
 {
-	float fWantedSpeed = mpCharBody->GetMoveSpeed(eCharDir_Forward);
-	float fRealSpeed = GetMoveSpeed();
-	
-	if(fabs(fWantedSpeed) < 0.001f) return 1;
-
-	return fRealSpeed / fWantedSpeed;
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	return ohpl_ga3_mover_wanted_speed_amount(&host);
 }
 
 //-----------------------------------------------------------------------
@@ -165,178 +139,12 @@ float cLuxEnemyMover::GetWantedSpeedAmount()
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyMover::UpdateStuckCounter(float afTimeStep)
-{
-	///////////////////////
-	// Get the wanted speed and the real speed
-	float fWantedSpeed = mpCharBody->GetMoveSpeed(eCharDir_Forward);
-	float fRealSpeed = cMath::Vector3Dist(mpCharBody->GetPosition(), mpCharBody->GetLastPosition());
-	fRealSpeed = fRealSpeed / afTimeStep;
-
-	///////////////////////
-	// Get the wanted direction and real direction
-	cVector3f vWantedDir = mpCharBody->GetForward();
-	cVector3f vRealDir = mpCharBody->GetPosition() - mpCharBody->GetLastPosition();
-	vRealDir.Normalize();
-
-	float fCos = cMath::Vector3Dot(vWantedDir,vRealDir);
-
-	///////////////////////
-	// Calculate 
-	if( fRealSpeed/fWantedSpeed < mfStuckLimit || (std::fabs(fCos) < 0.3f && fWantedSpeed > 0.001f) )
-	{
-		mfStuckCounter += afTimeStep ;
-		if(mfStuckCounter > mfMaxStuckCounter) mfStuckCounter = mfMaxStuckCounter;
-	}
-	else
-	{
-		mfStuckCounter -= afTimeStep*0.8f;
-		if(mfStuckCounter<0)mfStuckCounter =0;
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxEnemyMover::UpdateTurning(float afTimeStep)
-{
-	if(mbTurning==false) return;
-
-	//////////////////////////////
-	//Get distance to goal angle
-	float fAngleDist = cMath::GetAngleDistanceRad(mpCharBody->GetYaw(), mfTurnGoalAngle);
-
-	/////////////////
-	//Check if close enough to goal
-	if(std::fabs(fAngleDist) < 0.001f)
-	{
-		mbTurning = false;
-		mfTurnSpeed =0;
-		mfTurnBreakAcc =0;
-		return;
-	}
-
-	//////////////////////
-	//Calculate the turn speed
-	mfTurnSpeed = cMath::Min(mpEnemy->mfTurnSpeedMul * std::fabs(fAngleDist), mpEnemy->mfTurnMaxSpeed);
-
-	if(fAngleDist < 0)	mpCharBody->AddYaw(-mfTurnSpeed * afTimeStep);
-	else				mpCharBody->AddYaw(mfTurnSpeed * afTimeStep);
-}
-//-----------------------------------------------------------------------
-
 void cLuxEnemyMover::UpdateMoveAnimation(float afTimeStep)
 {
-	if(mbOverideMoveState) return;
-
-	float fSpeed = GetMoveSpeed();
-	if(mpCharBody->GetMoveSpeed(eCharDir_Forward) <0) fSpeed = -fSpeed;
-
-	//Log("Update move anim. Speed: %f Current: %d\n", fSpeed, mMoveState);
-	
-	eLuxEnemyPoseType pose = mpEnemy->mCurrentPose;
-	
-	////////////////////////////////
-	// Move state animation
-	eLuxEnemyMoveState prevMoveState = mMoveState;
-
-	switch(mMoveState)
-	{
-	/////////////////
-	// Backward
-	case eLuxEnemyMoveState_Backward:
-		if(fSpeed >= 0)
-			mMoveState = eLuxEnemyMoveState_Stopped;
-
-		break;
-
-	/////////////////
-	// Stopped State
-	case eLuxEnemyMoveState_Stopped:
-		if(fSpeed < -0.05f)
-			mMoveState = eLuxEnemyMoveState_Backward;
-		else if(fSpeed >= mpEnemy->mfStoppedToWalkSpeed[pose])
-			mMoveState = eLuxEnemyMoveState_Walking;
-		else if(std::fabs(mfTurnSpeed) > 0.07f && mpCharBody->GetMoveDelay()<=0)
-			mMoveState = eLuxEnemyMoveState_Walking;
-
-		break;
-
-	/////////////////
-	// Walking State
-	case eLuxEnemyMoveState_Walking:
-		if(fSpeed >= mpEnemy->mfWalkToRunSpeed[pose])
-			mMoveState = eLuxEnemyMoveState_Running;
-		else if(fSpeed <= mpEnemy->mfWalkToStoppedSpeed[pose])
-		{
-			if(std::fabs(mfTurnSpeed) < 0.03f) mMoveState = eLuxEnemyMoveState_Stopped;
-		}
-
-		break;
-
-	/////////////////
-	// Running State
-	case eLuxEnemyMoveState_Running:
-		if(fSpeed <= mpEnemy->mfRunToWalkSpeed[pose])
-			mMoveState = eLuxEnemyMoveState_Walking;
-
-		break;
-
-	/////////////////
-	// NULL
-	case eLuxEnemyMoveState_LastEnum:
-		mMoveState = eLuxEnemyMoveState_Stopped;
-		break;
-	}
-	
-	//////////////////////////////////////////////
-	//If move state has changed, change animation
-	if(prevMoveState != mMoveState)
-	{
-		//Backward
-		if(mMoveState == eLuxEnemyMoveState_Backward)
-		{
-			//Log(" To Backward\n");
-			mpEnemy->PlayAnim(mpEnemy->GetBackwardAnimationName(), true, 0.4f, true, mpEnemy->mfMoveSpeedAnimMul, false, false);
-		}
-		//Stopped
-		else if(mMoveState == eLuxEnemyMoveState_Stopped)
-		{
-			//Log(" To Stop\n");
-			mpEnemy->PlayAnim(mpEnemy->GetIdleAnimationName(),true,0.7f,false,1.0f,false,false);
-		}
-		//Walking
-		else if(mMoveState == eLuxEnemyMoveState_Walking)
-		{
-			bool bSync = prevMoveState == eLuxEnemyMoveState_Running ? true : false;
-			//Log(" To Walk. Synch: %d\n", bSync);
-
-			mpEnemy->PlayAnim(mpEnemy->GetWalkAnimationName(),true, 0.5f, true, mpEnemy->mfMoveSpeedAnimMul, bSync, false);
-		}
-		//Running
-		else if(mMoveState == eLuxEnemyMoveState_Running)
-		{
-			bool bSync = prevMoveState == eLuxEnemyMoveState_Walking ? true : false;
-			//Log(" To Run. Synch: %d\n", bSync);
-			
-          mpEnemy->PlayAnim(mpEnemy->GetRunAnimationName(),true, 0.5f, true, mpEnemy->mfMoveSpeedAnimMul, bSync, false);
-		}
-	}
-
-	/////////////////////////////////
-	//Update animation speed
-	if(mpEnemy->mpCurrentAnimation && mMoveState != eLuxEnemyMoveState_Stopped)
-	{
-		if(std::fabs(fSpeed) > 0.05f)
-		{
-			//Log(" Anim speed: %f\n", std::fabs(fSpeed) * mpEnemy->mfMoveSpeedAnimMul);
-			mpEnemy->mpCurrentAnimation->SetSpeed(std::fabs(fSpeed) * mpEnemy->mfMoveSpeedAnimMul);
-		}
-		else
-		{
-			//Log(" Anim speed: %f\n", std::fabs(mfTurnSpeed) * mpEnemy->mfMoveSpeedAnimMul * 2);
-			mpEnemy->mpCurrentAnimation->SetSpeed(std::fabs(mfTurnSpeed) * mpEnemy->mfMoveSpeedAnimMul * 2);
-		}
-	}
+	OhplGa3Host host = mpEnemy->Ga3Host();
+	OhplGa3MoverParams params;
+	mpEnemy->Ga3MoverParams(params);
+	ohpl_ga3_mover_update_move_animation(&mS, &params, &host);
 }
 
 //-----------------------------------------------------------------------
@@ -427,30 +235,30 @@ kEndSerialize()
 
 void cLuxEnemyMover_SaveData::FromMover(cLuxEnemyMover *apMover)
 {	
-	mbTurning = apMover->mbTurning;
-	mfTurnGoalAngle = apMover->mfTurnGoalAngle;
-	mfTurnSpeed = apMover->mfTurnSpeed;
-	mfTurnBreakAcc = apMover->mfTurnBreakAcc;
+	mbTurning = apMover->mS.turning;
+	mfTurnGoalAngle = apMover->mS.turnGoalAngle;
+	mfTurnSpeed = apMover->mS.turnSpeed;
+	mfTurnBreakAcc = apMover->mS.turnBreakAcc;
 
-	mfStuckCounter = apMover->mfStuckCounter;
+	mfStuckCounter = apMover->mS.stuckCounter;
 
 	mlMoveState = apMover->mMoveState;
-	mbOverideMoveState = apMover->mbOverideMoveState;
+	mbOverideMoveState = apMover->mS.overideMoveState;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEnemyMover_SaveData::ToMover(cLuxEnemyMover *apMover)
 {
-	apMover->mbTurning = mbTurning;
-	apMover->mfTurnGoalAngle = mfTurnGoalAngle;
-	apMover->mfTurnSpeed = mfTurnSpeed;
-	apMover->mfTurnBreakAcc = mfTurnBreakAcc;
+	apMover->mS.turning = mbTurning;
+	apMover->mS.turnGoalAngle = mfTurnGoalAngle;
+	apMover->mS.turnSpeed = mfTurnSpeed;
+	apMover->mS.turnBreakAcc = mfTurnBreakAcc;
 
-	apMover->mfStuckCounter = mfStuckCounter;
+	apMover->mS.stuckCounter = mfStuckCounter;
 
 	apMover->mMoveState = (eLuxEnemyMoveState)mlMoveState;
-	apMover->mbOverideMoveState = mbOverideMoveState;
+	apMover->mS.overideMoveState = mbOverideMoveState;
 }
 
 //-----------------------------------------------------------------------

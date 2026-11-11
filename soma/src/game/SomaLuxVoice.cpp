@@ -25,61 +25,127 @@ void SomaMapScriptCall(const tString &asDecl, const std::function<void(asIScript
 		cSomaScriptRuntime::Get()->Call(pMap->GetScript(), asDecl, aSetArgs);
 }
 
-// .voice and some .lang files are UTF-16 with a BOM
-static bool ReadTextFile(const tWString &asPath, tString &asOut)
+namespace
 {
-	std::ifstream file(cString::To8Char(asPath).c_str(), std::ios::binary);
-	if (!file)
-		return false;
-	std::stringstream ss;
-	ss << file.rdbuf();
-	std::string s = ss.str();
-	if (s.size() >= 2 && (unsigned char)s[0] == 0xff && (unsigned char)s[1] == 0xfe)
+const unsigned char *U(const tString &s) { return (const unsigned char *)s.data(); }
+
+void SinkString(void *apCtx, const unsigned char *apData, size_t alLen) { static_cast<tString *>(apCtx)->assign((const char *)apData, alLen); }
+
+cEngine *E() { return cSomaLuxVoiceHandler::Get()->GetEngine(); }
+cSoundHandler *H() { return E()->GetSound()->GetSoundHandler(); }
+
+struct cVoiceHost
+{
+	static bool EntryValid(void *, size_t e, int id) { return H()->IsValid((cSoundEntry *)e, id); }
+	static void EntrySetVolumeMul(void *, size_t e, float f) { ((cSoundEntry *)e)->SetVolumeMul(f); }
+	static void EntryFadeOut(void *, size_t e, float f) { ((cSoundEntry *)e)->FadeOut(f); }
+	static void EntrySetPaused(void *, size_t e, bool b) { ((cSoundEntry *)e)->SetPaused(b); }
+	static void ChannelSetPosition(void *, size_t e, const float *v) { ((cSoundEntry *)e)->GetChannel()->SetPosition(cVector3f(v[0], v[1], v[2])); }
+	static void ChannelFilter(void *, size_t e, bool abHigh, float f)
 	{
-		tWString w;
-		for (size_t i = 2; i + 1 < s.size(); i += 2)
-			w += (wchar_t)((unsigned char)s[i] | ((unsigned char)s[i + 1] << 8));
-		asOut = cString::To8Char(w);
+		if (abHigh)
+			((cSoundEntry *)e)->GetChannel()->SetFilterGainLF(f);
+		else
+			((cSoundEntry *)e)->GetChannel()->SetFilterGainHF(f);
 	}
-	else if (s.size() >= 3 && (unsigned char)s[0] == 0xef && (unsigned char)s[1] == 0xbb && (unsigned char)s[2] == 0xbf)
-		asOut = s.substr(3);
-	else
-		asOut = s;
-	size_t lEnc = asOut.find("encoding=\"utf-16\"");
-	if (lEnc != tString::npos)
-		asOut.replace(lEnc, 17, "encoding=\"utf-8\"");
-	return true;
-}
-
-static iXmlDocument *ParseXml(cEngine *apEngine, const tString &asFile)
-{
-	tWString sPath = apEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile);
-	tString sData;
-	if (sPath == _W("") || ReadTextFile(sPath, sData) == false)
-		return NULL;
-	iXmlDocument *pDoc = apEngine->GetResources()->GetLowLevel()->CreateXmlDocument();
-	if (pDoc->CreateFromString(sData) == false)
+	static double ChannelTotal(void *, size_t e) { return ((cSoundEntry *)e)->GetChannel()->GetTotalTime(); }
+	static double ChannelElapsed(void *, size_t e) { return ((cSoundEntry *)e)->GetChannel()->GetElapsedTime(); }
+	static void ListenerPos(void *, float *o)
 	{
-		hplDelete(pDoc);
-		return NULL;
+		cVector3f v = E()->GetSound()->GetLowLevel()->GetListenerPosition();
+		o[0] = v.x; o[1] = v.y; o[2] = v.z;
 	}
-	return pDoc;
-}
+	static bool MapEntityPos(void *, const unsigned char *n, size_t l, float *o)
+	{
+		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+		cSomaLuxEntity *p = pMap ? pMap->GetEntity(tString((const char *)n, l)) : NULL;
+		if (p == NULL)
+			return false;
+		cVector3f v = p->GetPosition();
+		o[0] = v.x; o[1] = v.y; o[2] = v.z;
+		return true;
+	}
+	static bool MapCurrent(void *) { return cSomaLuxMap::GetCurrent() != NULL; }
+	static bool FileExists(void *, const unsigned char *f, size_t l)
+	{
+		return E()->GetResources()->GetFileSearcher()->GetFilePath(tString((const char *)f, l)) != _W("");
+	}
+	static bool ReadFile(void *, const unsigned char *f, size_t l, void (*sink)(void *, const unsigned char *, size_t), void *ctx)
+	{
+		std::ifstream file(cString::To8Char(E()->GetResources()->GetFileSearcher()->GetFilePath(tString((const char *)f, l))).c_str(), std::ios::binary);
+		if (!file)
+			return false;
+		std::string d((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		sink(ctx, (const unsigned char *)d.data(), d.size());
+		return true;
+	}
+	static bool Play3D(void *, const unsigned char *f, size_t l, float vol, const float *pos, float mn, float mx, int type, size_t *pe, int *pid)
+	{
+		cSoundEntry *p = H()->Play3D(tString((const char *)f, l), false, vol, cVector3f(pos[0], pos[1], pos[2]), mn, mx, (eSoundEntryType)type, false, 0, true);
+		if (p == NULL)
+			return false;
+		*pe = (size_t)p;
+		*pid = p->GetId();
+		return true;
+	}
+	static bool PlayGuiStream(void *, const unsigned char *f, size_t l, float vol, int type, size_t *pe, int *pid)
+	{
+		cSoundEntry *p = H()->PlayGuiStream(tString((const char *)f, l), false, vol, cVector3f(0, 0, 1), (eSoundEntryType)type);
+		if (p == NULL)
+			return false;
+		*pe = (size_t)p;
+		*pid = p->GetId();
+		return true;
+	}
+	static bool EffectPlay(void *, const unsigned char *f, size_t l, float vol, int type, size_t *pe, int *pid)
+	{
+		cSomaSoundInstance *p = cSomaSoundEvents::Get()->PlayGui(tString((const char *)f, l), vol, type, false, true);
+		if (p == NULL)
+			return false;
+		*pe = (size_t)p;
+		*pid = p->GetId();
+		return true;
+	}
+	static bool EffectLive(void *, size_t e, int id) { return cSomaSoundEvents::Get()->IsLive((cSomaSoundInstance *)e, id); }
+	static void EffectSetVolumeMul(void *, size_t e, float f) { ((cSomaSoundInstance *)e)->SetVolumeMul(f); }
+	static void EffectFadeOut(void *, size_t e, float f) { ((cSomaSoundInstance *)e)->FadeOut(f); }
+	static void EffectSetPaused(void *, size_t e, bool b) { ((cSomaSoundInstance *)e)->SetPaused(b); }
+	static bool EffectIsPlaying(void *, size_t e) { return ((cSomaSoundInstance *)e)->IsPlaying(); }
+	static float EffectTotal(void *, size_t e) { return ((cSomaSoundInstance *)e)->GetTotalTime(); }
+	static float EffectElapsed(void *, size_t e) { return ((cSomaSoundInstance *)e)->GetElapsedTime(); }
+	static bool PlayedHas(void *, const unsigned char *k, size_t l)
+	{
+		return cSomaLuxVoiceHandler::Get()->msetPlayedLines.count(tString((const char *)k, l)) > 0;
+	}
+	static bool PlayedInsert(void *, const unsigned char *k, size_t l)
+	{
+		return cSomaLuxVoiceHandler::Get()->msetPlayedLines.insert(tString((const char *)k, l)).second;
+	}
+	static void LogText(void *, const unsigned char *t, size_t l) { Log("%s", tString((const char *)t, l).c_str()); }
+	static void ErrorText(void *, const unsigned char *t, size_t l) { Error("%s", tString((const char *)t, l).c_str()); }
+	static size_t WrapRows(void *, const unsigned char *t, size_t l, float afWidth, float afLineHeight, const float *s)
+	{
+		tWStringVec vRows;
+		cSomaLuxVoiceHandler::Get()->GetFont()->GetWordWrapRows(afWidth, afLineHeight, cVector2f(s[0], s[1]), cString::To16Char(tString((const char *)t, l)), &vRows);
+		cSomaLuxVoiceHandler::Get()->mvRowCache.push_back(vRows);
+		return vRows.size();
+	}
+};
 
-static std::vector<cXmlElement *> Children(iXmlNode *apNode, const tString &asName)
+const OhplGs5VoiceHost *VHost()
 {
-	std::vector<cXmlElement *> v;
-	if (apNode == NULL)
-		return v;
-	cXmlNodeListIterator it = apNode->GetChildIterator();
-	while (it.HasNext())
-		if (cXmlElement *p = it.Next()->ToElement())
-			if (asName.empty() || p->GetValue() == asName)
-				v.push_back(p);
-	return v;
+	static const OhplGs5VoiceHost host = {NULL, cVoiceHost::EntryValid, cVoiceHost::EntrySetVolumeMul, cVoiceHost::EntryFadeOut, cVoiceHost::EntrySetPaused,
+										  cVoiceHost::ChannelSetPosition, cVoiceHost::ChannelFilter, cVoiceHost::ChannelTotal, cVoiceHost::ChannelElapsed,
+										  cVoiceHost::ListenerPos, cVoiceHost::MapEntityPos, cVoiceHost::MapCurrent, cVoiceHost::FileExists,
+										  cVoiceHost::ReadFile, cVoiceHost::Play3D, cVoiceHost::PlayGuiStream, cVoiceHost::EffectPlay,
+										  cVoiceHost::EffectLive, cVoiceHost::EffectSetVolumeMul, cVoiceHost::EffectFadeOut, cVoiceHost::EffectSetPaused,
+										  cVoiceHost::EffectIsPlaying, cVoiceHost::EffectTotal, cVoiceHost::EffectElapsed, cVoiceHost::PlayedHas,
+										  cVoiceHost::PlayedInsert, cVoiceHost::LogText, cVoiceHost::ErrorText, cVoiceHost::WrapRows};
+	return &host;
 }
+} // namespace
 
-cSomaLuxVoiceHandler::cSomaLuxVoiceHandler(cEngine *apEngine) : iUpdateable("SomaLuxVoice"), mpEngine(apEngine)
+cSomaLuxVoiceHandler::cSomaLuxVoiceHandler(cEngine *apEngine) : iUpdateable("SomaLuxVoice"), mpEngine(apEngine), mpV(ohpl_gs5_voice_new())
 {
 	mpInstance = this;
 	cGui *pGui = mpEngine->GetGui();
@@ -96,99 +162,49 @@ cSomaLuxVoiceHandler::~cSomaLuxVoiceHandler()
 {
 	if (mpInstance == this)
 		mpInstance = NULL;
+	ohpl_gs5_voice_free(mpV);
+}
+
+// .voice and some .lang files are UTF-16 with a BOM
+bool cSomaLuxVoiceHandler::ReadText(const tString &asFile, tString &asOut)
+{
+	tWString sPath = mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile);
+	if (sPath == _W(""))
+		return false;
+	std::ifstream file(cString::To8Char(sPath).c_str(), std::ios::binary);
+	if (!file)
+		return false;
+	std::stringstream ss;
+	ss << file.rdbuf();
+	std::string s = ss.str();
+	ohpl_gs5_decode_text((const unsigned char *)s.data(), s.size(), SinkString, &asOut);
+	return true;
 }
 
 void cSomaLuxVoiceHandler::LoadLangFile(const tString &asFile)
 {
-	iXmlDocument *pDoc = ParseXml(mpEngine, asFile);
-	if (pDoc == NULL)
-		return;
-	for (cXmlElement *pCat : Children(pDoc, "CATEGORY"))
-		if (cString::ToLowerCase(pCat->GetAttributeString("Name", "")).find("voices_") == 0)
-			for (cXmlElement *pEntry : Children(pCat, "Entry"))
-				mmapText[cString::ToLowerCase(pEntry->GetAttributeString("Name", ""))] = pEntry->GetAttributeString("_Text", "");
-	hplDelete(pDoc);
+	tString sData;
+	if (ReadText(asFile, sData))
+		ohpl_gs5_voice_load_lang(mpV, U(sData), sData.size());
 }
 
 bool cSomaLuxVoiceHandler::LoadVoiceFile(const tString &asFile, const tString &asSet)
 {
-	iXmlDocument *pDoc = ParseXml(mpEngine, asFile);
-	if (pDoc == NULL)
+	tString sData;
+	int64_t lCount = ReadText(asFile, sData) ? ohpl_gs5_voice_load_voice(mpV, U(sData), sData.size(), U(asSet), asSet.size()) : -1;
+	if (lCount < 0)
 	{
 		Warning("SOMA voice: could not load '%s'\n", asFile.c_str());
 		return false;
 	}
-	std::map<int, cLine> mapChars;
-	for (cXmlElement *p : Children(pDoc->GetFirstElement("Characters"), "Character"))
-	{
-		cLine &c = mapChars[p->GetAttributeInt("ID", -1)];
-		c.msCharacter = p->GetAttributeString("Name", "");
-		c.msDisplayName = p->GetAttributeString("DisplayName", c.msCharacter);
-		c.mfCharVolume = p->GetAttributeFloat("Volume", 1);
-		tString sType = p->GetAttributeString("EntryType", "GUIWorld");
-		c.mlEntryType = sType == "World" ? 1 : sType == "WorldClean" ? 2 : sType == "GUI" ? 4 : 8;
-		c.msSource = p->GetAttributeString("EntitySource", "");
-		c.mfMinDist = p->GetAttributeFloat("MinDist", 0);
-		c.mfMaxDist = p->GetAttributeFloat("MaxDist", 0);
-		c.mbWorldSpace = p->GetAttributeBool("WorldSpace", false);
-	}
-	std::map<int, tString> mapScenes;
-	for (cXmlElement *p : Children(pDoc->GetFirstElement("Scenes"), "Scene"))
-	{
-		mapScenes[p->GetAttributeInt("ID", -1)] = p->GetAttributeString("Name", "");
-		mmapSceneFocusPrio[p->GetAttributeString("Name", "")] = p->GetAttributeInt("FocusPrio", 0);
-	}
-
-	int lCount = 0;
-	for (cXmlElement *pSubj : Children(pDoc->GetFirstElement("Subjects"), "Subject"))
-	{
-		std::unique_ptr<cSubject> pSubject(new cSubject());
-		pSubject->msName = pSubj->GetAttributeString("Name", "");
-		pSubject->msScene = mapScenes[pSubj->GetAttributeInt("SceneId", -1)];
-		pSubject->msSet = asSet;
-		pSubject->mbSingleRandomLine = pSubj->GetAttributeBool("UseSingleRandomLine", false);
-		for (cXmlElement *pLine : Children(pSubj, "Line"))
-		{
-			cLine line = mapChars[pLine->GetAttributeInt("CharacterId", -1)];
-			line.msCallback = pLine->GetAttributeString("Callback", "");
-			line.mlPrio = pLine->GetAttributeInt("Prio", 0);
-			line.mbPlayOnce = pLine->GetAttributeBool("PlayOnce", false);
-			if (pLine->GetAttributeBool("ChangeSource", false))
-			{
-				line.msSource = pLine->GetAttributeString("EntitySource", "");
-				line.mfMinDist = pLine->GetAttributeFloat("MinDist", 0);
-				line.mfMaxDist = pLine->GetAttributeFloat("MaxDist", 0);
-				line.mbChangeSource = true;
-			}
-			for (cXmlElement *pSound : Children(pLine, "Sound"))
-			{
-				cSound sound;
-				sound.msText = pSound->GetAttributeString("Text", "");
-				sound.msFile = pSound->GetAttributeString("FileName", "");
-				sound.mfVoiceOffset = pSound->GetAttributeFloat("VoiceOffset", 0);
-				sound.mfEndPadding = pSound->GetAttributeFloat("EndPadding", 0);
-				sound.mfTextOffset = pSound->GetAttributeFloat("TextOffset", 0);
-				sound.mfVolume = pSound->GetAttributeFloat("Volume", 1);
-				sound.msEffect = pSound->GetAttributeString("ExtraEffectFile", "");
-				sound.mbEndsAfterEffect = pSound->GetAttributeBool("EndsAfterExtraEffect", false);
-				line.mvSounds.push_back(sound);
-			}
-			pSubject->mvLines.push_back(line);
-		}
-		mmapSubjects[pSubject->msName] = std::move(pSubject);
-		++lCount;
-	}
-	hplDelete(pDoc);
-	Log("SOMA voice: %d subjects from '%s'\n", lCount, asFile.c_str());
+	Log("SOMA voice: %d subjects from '%s'\n", (int)lCount, asFile.c_str());
 	return true;
 }
 
 void cSomaLuxVoiceHandler::LoadMapFile(const tString &asHpmPath, const tString &asMapName)
 {
-	for (const tString &s : mvLoadedSets)
-		if (s == asMapName)
-			return;
-	mvLoadedSets.push_back(asMapName);
+	if (ohpl_gs5_voice_mark_set(mpV, U(asMapName), asMapName.size()) == false)
+		return;
 	LoadVoiceFile(asMapName + ".voice", asMapName);
 	LoadLangFile(asMapName + ".lang");
 }
@@ -196,403 +212,140 @@ void cSomaLuxVoiceHandler::LoadMapFile(const tString &asHpmPath, const tString &
 void cSomaLuxVoiceHandler::Reset()
 {
 	StopAll();
-	mmapSources.clear();
 	msetLipEntities.clear();
-	mmapSceneVolumes.clear();
-	msFocusScene.clear();
-	msForcedFocusScene.clear();
-	mfFocusTimer = 0;
-	mmapSpeakingCallbacks.clear();
-	msetSpeaking.clear();
+	ohpl_gs5_voice_reset_state(mpV);
 }
 
-tString cSomaLuxVoiceHandler::SoundKey(cSubject *apSubject, size_t alLine, size_t alSound)
+std::function<void()> cSomaLuxVoiceHandler::TakeDone(uint64_t alToken)
 {
-	const tString &sFile = apSubject->mvLines[alLine].mvSounds[alSound].msFile;
-	if (sFile != "")
-		return sFile;
-	char vNum[32];
-	snprintf(vNum, sizeof(vNum), "_%03d_", (int)alLine + 1);
-	tString sKey = apSubject->msScene + "_" + apSubject->msName + vNum + apSubject->mvLines[alLine].msCharacter;
-	snprintf(vNum, sizeof(vNum), "_%03d", (int)alSound + 1);
-	return sKey + vNum;
+	std::function<void()> f;
+	auto it = mmapOnDone.find(alToken);
+	if (it != mmapOnDone.end())
+	{
+		f = it->second;
+		mmapOnDone.erase(it);
+	}
+	return f;
 }
 
 bool cSomaLuxVoiceHandler::Play(const tString &asSubject, int alLine, const tString &asCallback, int alPrio, const std::function<void()> &aOnDone,
 								bool abPlayWhilePaused)
 {
-	auto it = mmapSubjects.find(asSubject);
-	if (it == mmapSubjects.end())
-	{
-		Error("Voice subject '%s' could not be found in voicehandler\n", asSubject.c_str());
+	if (ohpl_gs5_voice_play_check(mpV, VHost(), U(asSubject), asSubject.size(), alPrio) <= 0)
 		return false;
+	tString sScene;
+	ohpl_gs5_voice_scene_of(mpV, U(asSubject), asSubject.size(), SinkString, &sScene);
+	StopScene(sScene);
+	uint64_t lToken = 0;
+	if (aOnDone)
+	{
+		lToken = mlNextToken++;
+		mmapOnDone[lToken] = aOnDone;
 	}
-	cSubject *pSubject = it->second.get();
-	// cLuxVoiceSceneInstance::Play: a busy scene only yields to a higher prio
-	for (const cPlaying &q : mvPlaying)
-		if (q.mpSubject->msScene == pSubject->msScene && q.mlPrio >= alPrio)
-			return false;
-	Stop(pSubject->msScene);
+	bool bOk = ohpl_gs5_voice_play_start(mpV, VHost(), U(asSubject), asSubject.size(), alLine, U(asCallback), asCallback.size(), alPrio, lToken, abPlayWhilePaused);
+	if (bOk == false && lToken)
+		mmapOnDone.erase(lToken);
+	return bOk;
+}
 
-	cPlaying p;
-	p.mpSubject = pSubject;
-	p.mlPrio = alPrio;
-	p.msCallback = asCallback;
-	p.mOnDone = aOnDone;
-	p.mbPlayWhilePaused = abPlayWhilePaused;
-	const std::vector<cLine> &vLines = pSubject->mvLines;
-	if (vLines.empty())
-		return false;
-	auto Key = [&](int i) { return pSubject->msName + "#" + cString::ToString(i); };
-	auto Played = [&](int i) { return msetPlayedLines.count(Key(i)) > 0; };
-	if (alLine >= 0)
+void cSomaLuxVoiceHandler::StopScene(const tString &asScene)
+{
+	for (;;)
 	{
-		if (alLine >= (int)vLines.size())
-			return false;
-		p.mvLines.push_back(alLine);
-	}
-	else if (pSubject->mbSingleRandomLine)
-	{
-		// highest Prio among unplayed lines, not the previous pick when there is a choice
-		std::vector<int> vCand;
-		for (int i = 0; i < (int)vLines.size(); ++i)
+		int64_t lToken = ohpl_gs5_voice_stop_next(mpV, VHost(), U(asScene), asScene.size());
+		if (lToken < 0)
+			break;
+		if (lToken)
 		{
-			if (vLines[i].mbPlayOnce && Played(i))
-				continue;
-			if (vCand.empty() || vLines[i].mlPrio > vLines[vCand[0]].mlPrio)
-				vCand = {i};
-			else if (vLines[i].mlPrio == vLines[vCand[0]].mlPrio)
-				vCand.push_back(i);
+			std::function<void()> onDone = TakeDone(lToken);
+			if (onDone)
+				onDone();
 		}
-		if (vCand.empty())
-			return false;
-		int r = cMath::RandRectl(0, (int)vCand.size() - 1);
-		if (vCand.size() > 2 && vCand[r] == pSubject->mlLastLine)
-			r = (r + 1) % (int)vCand.size();
-		pSubject->mlLastLine = vCand[r];
-		p.mvLines.push_back(vCand[r]);
 	}
-	else
-	{
-		p.mvLines.push_back(0);
-		// the engine tests the first line's PlayOnce for every queued line
-		for (int i = 1; i < (int)vLines.size(); ++i)
-			if (vLines[0].mbPlayOnce == false || msetPlayedLines.insert(Key(i)).second)
-				p.mvLines.push_back(i);
-	}
-	if (vLines[p.mvLines[0]].mbPlayOnce && msetPlayedLines.insert(Key(p.mvLines[0])).second == false)
-		return false;
-	mvPlaying.push_back(p);
-	// cLuxVoiceSceneInstance::Play 0xc28470: takes focus unless the focused scene has >= FocusPrio
-	auto itCur = mmapSceneFocusPrio.find(msFocusScene);
-	if (itCur == mmapSceneFocusPrio.end() || itCur->second < mmapSceneFocusPrio[pSubject->msScene])
-	{
-		msFocusScene = pSubject->msScene;
-		mmapSceneVolumes[msFocusScene].mfFocus = 1;
-	}
-	return true;
 }
 
-void cSomaLuxVoiceHandler::StartSound(cPlaying &aP)
+void cSomaLuxVoiceHandler::Stop(const tString &asScene)
 {
-	cSubject *pSubject = aP.mpSubject;
-	const cLine &line = pSubject->mvLines[aP.mvLines[aP.mlLine]];
-	const cSound &sound = line.mvSounds[aP.mlSound];
-	tString sKey = SoundKey(pSubject, aP.mvLines[aP.mlLine], aP.mlSound);
-	auto itText = mmapText.find(cString::ToLowerCase(sKey));
-	tString sText = itText != mmapText.end() && itText->second != "" ? itText->second : sound.msText;
-	aP.msSubtitle = sText.empty() || line.msDisplayName.empty() ? sText : line.msDisplayName + ": " + sText;
-	aP.mfTextDelay = std::max(sound.mfTextOffset - sound.mfVoiceOffset, 0.0f);
-
-	tString sFile = "voices/" + pSubject->msSet + "/" + sKey + ".ogg";
-	aP.msFile = sFile;
-	aP.mpEntry = NULL;
-	aP.msSourceEntity = "";
-	float fVolume = sound.mfVolume * line.mfCharVolume * mmapSceneVolumes[pSubject->msScene].mfVolume;
-	cSource src = {line.msSource, line.mfMinDist, line.mfMaxDist, line.mbWorldSpace && line.msSource != ""};
-	auto itSource = mmapSources.find(line.msCharacter);
-	if (itSource != mmapSources.end() && !line.mbChangeSource)
-	{
-		src = itSource->second;
-		src.mbUse3D = src.mbUse3D && line.mbWorldSpace;
-	}
-	cSomaLuxEntity *pSource = src.mbUse3D && src.mfMaxDist > 0 && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(src.msEntity) : NULL;
-	if (mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sFile) == _W(""))
-		;
-	else if (pSource)
-	{
-		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->Play3D(sFile, false, fVolume, pSource->GetPosition(), src.mfMinDist, src.mfMaxDist,
-																	  (eSoundEntryType)(aP.mbPlayWhilePaused ? 4 : line.mlEntryType), false, 0, true);
-		aP.msSourceEntity = src.msEntity;
-		aP.mfSourceMin = src.mfMinDist;
-		aP.mfSourceMax = src.mfMaxDist;
-		aP.mfListenRange = src.mfListenRange;
-		aP.mfMinFreq = src.mfMinFreq;
-		aP.mfMaxFreq = src.mfMaxFreq;
-		aP.mlFreqFlags = src.mlFreqFlags;
-	}
-	else
-		aP.mpEntry = mpEngine->GetSound()->GetSoundHandler()->PlayGuiStream(sFile, false, fVolume, cVector3f(0, 0, 1), (eSoundEntryType)(aP.mbPlayWhilePaused ? 4 : line.mlEntryType));
-	aP.mlEntryId = aP.mpEntry ? aP.mpEntry->GetId() : -1;
-	aP.msLipEntity = itSource != mmapSources.end() && !line.mbChangeSource ? src.msEntity : line.msSource;
-	aP.mpLipsync = aP.mpEntry && aP.msLipEntity != "" ? LoadLipsync("voices/" + pSubject->msSet + "/lipsync/" + sKey + ".anno") : nullptr;
-	Log("SOMA voice: %s%s\n", sKey.c_str(), aP.mpEntry ? "" : " (no audio)");
-	// Missing audio still shows its subtitle for a reading time
-	aP.mfFallback = 0.5f + 0.09f * (float)sText.size();
+	StopScene(asScene);
 }
 
-// cLuxVoiceSceneInstance::FadeOutSoundsPlaying, game.cfg Voice*FadeOutSpeed = 2
-void cSomaLuxVoiceHandler::StopSound(cPlaying &aP)
+void cSomaLuxVoiceHandler::StopAll()
 {
-	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
-	aP.mvOldVoices.push_back({aP.mpEntry, aP.mlEntryId});
-	aP.mvOldEffects.push_back({aP.mpEffect, aP.mlEffectId});
-	for (auto &v : aP.mvOldVoices)
-		if (v.first && pHandler->IsValid(v.first, v.second))
-			v.first->FadeOut(2);
-	for (auto &e : aP.mvOldEffects)
-		if (e.first && pEvents->IsLive(e.first, e.second))
-			e.first->FadeOut(2);
-	aP.mvOldVoices.clear();
-	aP.mvOldEffects.clear();
-	aP.mpEntry = NULL;
-	aP.mpEffect = NULL;
+	ohpl_gs5_voice_stop_all(mpV, VHost());
+	mmapOnDone.clear();
 }
 
-void cSomaLuxVoiceHandler::Finish(size_t alIdx)
+void cSomaLuxVoiceHandler::SkipCurrentLine(const tString &asScene)
 {
-	cPlaying p = mvPlaying[alIdx];
-	mvPlaying.erase(mvPlaying.begin() + alIdx);
-	if (p.msCallback != "")
-		SomaMapScriptCall("void " + p.msCallback + "(const tString&in, const tString&in)", [&](asIScriptContext *c) {
-			c->SetArgObject(0, &p.mpSubject->msScene);
-			c->SetArgObject(1, &p.mpSubject->msName);
-		});
-	if (p.mOnDone)
-		p.mOnDone();
+	ohpl_gs5_voice_skip_line(mpV, VHost(), U(asScene), asScene.size());
 }
 
-void cSomaLuxVoiceHandler::LineCallback(cSubject *apSubject, int alLine, bool abStart)
+bool cSomaLuxVoiceHandler::CharacterIsSpeaking(const tString &asName)
 {
-	tString sFunc = apSubject->mvLines[alLine].msCallback;
-	if (sFunc != "")
-		SomaMapScriptCall("void " + sFunc + "(const tString&in, const tString&in, int, bool)", [&](asIScriptContext *c) {
-			c->SetArgObject(0, &apSubject->msScene);
-			c->SetArgObject(1, &apSubject->msName);
-			c->SetArgDWord(2, alLine);
-			c->SetArgByte(3, abStart);
-		});
+	return ohpl_gs5_voice_character_is_speaking(mpV, U(asName), asName.size());
 }
 
 void cSomaLuxVoiceHandler::SetSource(const tString &asCharacter, const tString &asEntity, float afMinDist, float afMaxDist, bool abUse3D,
 									 float afListenRange, float afMinFreq, float afMaxFreq, int alFreqFlags)
 {
-	mmapSources[asCharacter] = {asEntity, afMinDist, afMaxDist, abUse3D, afListenRange, afMinFreq, afMaxFreq, alFreqFlags};
+	ohpl_gs5_voice_set_source(mpV, U(asCharacter), asCharacter.size(), U(asEntity), asEntity.size(), afMinDist, afMaxDist, abUse3D, afListenRange, afMinFreq,
+							  afMaxFreq, alFreqFlags);
 }
 
 void cSomaLuxVoiceHandler::SetFocusScene(const tString &asScene)
 {
-	msForcedFocusScene = asScene;
-	if (asScene.empty() == false && mmapSceneFocusPrio.count(asScene))
-		msFocusScene = asScene;
-	else if (asScene.empty())
-		msFocusScene.clear();
-	else
-		Error("Could not find voice scene '%s'\n", asScene.c_str());
-}
-
-// cLuxVoiceHandler::Update 0xc461f0, game.cfg Voice ChangeFocusDelay/OutOfFocusVolumeMul/SceneFocusFadeInSpeed
-void cSomaLuxVoiceHandler::UpdateFocus(float afTimeStep)
-{
-	const float fDelay = 2, fOutMul = 0.5f, fSpeed = 0.5f;
-	auto Active = [this](const tString &s) {
-		for (const cPlaying &p : mvPlaying)
-			if (p.mpSubject->msScene == s)
-				return true;
-		return false;
-	};
-	if (mvPlaying.empty() || msForcedFocusScene.empty() == false)
-		mfFocusTimer = 0;
-	else if (Active(msFocusScene) == false)
-	{
-		if (mfFocusTimer < fDelay)
-			mfFocusTimer += afTimeStep;
-		else
-		{
-			mfFocusTimer = 0;
-			int lBest = -100000;
-			for (const cPlaying &p : mvPlaying)
-			{
-				int lPrio = mmapSceneFocusPrio[p.mpSubject->msScene];
-				if (lPrio > lBest)
-				{
-					lBest = lPrio;
-					msFocusScene = p.mpSubject->msScene;
-				}
-			}
-		}
-	}
-	for (auto &it : mmapSceneVolumes)
-	{
-		float &f = it.second.mfFocus;
-		const float fGoal = it.first == msFocusScene ? 1.0f : fOutMul;
-		f = f < fGoal ? std::min(f + fSpeed * afTimeStep, fGoal) : std::max(f - fSpeed * afTimeStep, fGoal);
-	}
+	ohpl_gs5_voice_set_focus_scene(mpV, VHost(), U(asScene), asScene.size());
 }
 
 void cSomaLuxVoiceHandler::FadeSceneVolumeTo(const tString &asScene, float afVolume, float afTime)
 {
-	cSceneVolume &v = mmapSceneVolumes[asScene];
-	v.mfGoal = afVolume;
-	v.mfSpeed = afTime > 0 ? std::fabs(afVolume - v.mfVolume) / afTime : 0;
-	if (afTime <= 0)
-		v.mfVolume = afVolume;
+	ohpl_gs5_voice_fade_scene_volume(mpV, U(asScene), asScene.size(), afVolume, afTime);
 }
 
 void cSomaLuxVoiceHandler::FadeTo(float afGoal, float afTime)
 {
-	mfFadeGoal = afGoal;
-	mfFadeSpeed = afTime > 0 ? 1.0f / afTime : 0;
-	if (afTime <= 0)
-		mfFadeAlpha = afGoal;
+	ohpl_gs5_voice_fade_to(mpV, afGoal, afTime);
 }
+
+bool cSomaLuxVoiceHandler::IsFading() { return ohpl_gs5_voice_is_fading(mpV); }
+float cSomaLuxVoiceHandler::GetFadeAlpha() { return ohpl_gs5_voice_fade_alpha(mpV); }
+bool cSomaLuxVoiceHandler::AnySceneIsActive() { return ohpl_gs5_voice_any_active(mpV); }
 
 void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 {
 	const bool bGamePaused = gpSomaBase->mbScriptGamePaused;
-	auto Frozen = [bGamePaused](const cPlaying &p) { return bGamePaused && p.mbPlayWhilePaused == false; };
-	const float fStep = bGamePaused ? 0 : afTimeStep;
-	if (mfFadeAlpha < mfFadeGoal)
-		mfFadeAlpha = std::min(mfFadeAlpha + mfFadeSpeed * fStep, mfFadeGoal);
-	else if (mfFadeAlpha > mfFadeGoal)
-		mfFadeAlpha = std::max(mfFadeAlpha - mfFadeSpeed * fStep, mfFadeGoal);
-
-	for (auto &it : mmapSceneVolumes)
+	ohpl_gs5_voice_update_begin(mpV, VHost(), afTimeStep, bGamePaused);
+	for (;;)
 	{
-		cSceneVolume &v = it.second;
-		if (v.mfVolume < v.mfGoal)
-			v.mfVolume = std::min(v.mfVolume + v.mfSpeed * fStep, v.mfGoal);
-		else if (v.mfVolume > v.mfGoal)
-			v.mfVolume = std::max(v.mfVolume - v.mfSpeed * fStep, v.mfGoal);
-	}
-	UpdateFocus(fStep);
-	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
-	for (cPlaying &p : mvPlaying)
-	{
-		if (Frozen(p))
-			continue;
-		auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
-		float fVol = itVol != mmapSceneVolumes.end() ? itVol->second.mfVolume * itVol->second.mfFocus : 1;
-		p.mvOldVoices.erase(std::remove_if(p.mvOldVoices.begin(), p.mvOldVoices.end(), [pHandler](auto &v) { return pHandler->IsValid(v.first, v.second) == false; }),
-							p.mvOldVoices.end());
-		p.mvOldEffects.erase(std::remove_if(p.mvOldEffects.begin(), p.mvOldEffects.end(), [pEvents](auto &e) { return pEvents->IsLive(e.first, e.second) == false; }),
-							 p.mvOldEffects.end());
-		for (auto &v : p.mvOldVoices)
-			v.first->SetVolumeMul(fVol);
-		for (auto &e : p.mvOldEffects)
-			e.first->SetVolumeMul(fVol);
-		if (p.mpEffect && pEvents->IsLive(p.mpEffect, p.mlEffectId))
-			p.mpEffect->SetVolumeMul(fVol);
-		if (p.mpEntry == NULL || pHandler->IsValid(p.mpEntry, p.mlEntryId) == false)
-			continue;
-		p.mpEntry->SetVolumeMul(fVol);
-		cSomaLuxEntity *pSource = p.msSourceEntity != "" && cSomaLuxMap::GetCurrent() ? cSomaLuxMap::GetCurrent()->GetEntity(p.msSourceEntity) : NULL;
-		if (pSource)
+		struct cOne
 		{
-			p.mpEntry->GetChannel()->SetPosition(pSource->GetPosition());
-			// cLuxVoiceHandler::Update: cutoff follows distance between the source's min and max
-			float fDist = cMath::Vector3Dist(mpEngine->GetSound()->GetLowLevel()->GetListenerPosition(), pSource->GetPosition());
-			p.mfSourceDist = fDist;
-			if (p.mlFreqFlags)
+			cSomaLuxVoiceHandler *mpSelf;
+		} one = {this};
+		bool bMore = ohpl_gs5_voice_update_step(mpV, VHost(), +[](void *apCtx, const OhplGs5VoiceEvent *e) {
+			cOne *p = static_cast<cOne *>(apCtx);
+			tString sFunc((const char *)e->func, e->func_len), sScene((const char *)e->scene, e->scene_len), sName((const char *)e->name, e->name_len);
+			if (e->kind == 0)
 			{
-				float fT = cMath::Clamp((fDist - p.mfSourceMin) / (p.mfSourceMax - p.mfSourceMin + 0.01f), 0.0f, 1.0f);
-				float fCutoff = cMath::Max(p.mfMinFreq + (p.mfMaxFreq - p.mfMinFreq) * fT, 1.0f);
-				if (p.mlFreqFlags & 1)
-					p.mpEntry->GetChannel()->SetFilterGainHF(1.0f / std::sqrt(1 + std::pow(8000 / fCutoff, 4.0f)));
-				if (p.mlFreqFlags & 2)
-					p.mpEntry->GetChannel()->SetFilterGainLF(1.0f / std::sqrt(1 + std::pow(fCutoff / 100, 4.0f)));
+				// the script may stop everything; the finished scene's completion still runs
+				std::function<void()> onDone = e->on_done ? p->mpSelf->TakeDone(e->on_done) : std::function<void()>();
+				if (sFunc != "")
+					SomaMapScriptCall("void " + sFunc + "(const tString&in, const tString&in)", [&](asIScriptContext *c) {
+						c->SetArgObject(0, &sScene);
+						c->SetArgObject(1, &sName);
+					});
+				if (onDone)
+					onDone();
 			}
-		}
-	}
-	for (size_t i = 0; i < mvPlaying.size();)
-	{
-		cPlaying &p = mvPlaying[i];
-		if (p.mbPaused || Frozen(p))
-		{
-			++i;
-			continue;
-		}
-		if (p.mlLine >= p.mvLines.size())
-		{
-			Finish(i);
-			continue;
-		}
-		const cLine &line = p.mpSubject->mvLines[p.mvLines[p.mlLine]];
-		if (p.mlSound >= line.mvSounds.size())
-		{
-			int lLine = p.mvLines[p.mlLine];
-			cSubject *pSubject = p.mpSubject;
-			++p.mlLine;
-			p.mlSound = 0;
-			p.mlStep = 0;
-			p.mfTime = 0;
-			LineCallback(pSubject, lLine, false);
-			continue;
-		}
-		const cSound &sound = line.mvSounds[p.mlSound];
-		// cLuxVoiceSceneInstance::PlaySound: ExtraEffectOffset is 0 throughout the data
-		if (p.mlStep == 0 && p.mfTime == 0 && afTimeStep > 0 && sound.msEffect != "")
-		{
-			p.mvOldEffects.push_back({p.mpEffect, p.mlEffectId});
-			p.mpEffect = pEvents->PlayGui(sound.msEffect, sound.mfVolume, p.mbPlayWhilePaused ? 4 : line.mlEntryType, false, true);
-			p.mlEffectId = p.mpEffect ? p.mpEffect->GetId() : -1;
-			auto itVol = mmapSceneVolumes.find(p.mpSubject->msScene);
-			if (p.mpEffect && itVol != mmapSceneVolumes.end())
-				p.mpEffect->SetVolumeMul(itVol->second.mfVolume);
-		}
-		p.mfTime += afTimeStep;
-		if (p.mlStep == 0 && p.mfTime >= sound.mfVoiceOffset)
-		{
-			StartSound(p);
-			p.mlStep = 1;
-			p.mfTime = 0;
-			if (p.mlSound == 0)
-			{
-				LineCallback(p.mpSubject, p.mvLines[p.mlLine], true);
-				++i;
-				continue;
-			}
-		}
-		else if (p.mlStep == 1)
-		{
-			// positive EndPadding hands over early and lets the sound play out; negative is a gap after it
-			bool bPlaying;
-			if (sound.mbEndsAfterEffect)
-				bPlaying = p.mpEffect && pEvents->IsLive(p.mpEffect, p.mlEffectId) && p.mpEffect->IsPlaying() &&
-						   p.mpEffect->GetTotalTime() - p.mpEffect->GetElapsedTime() >= sound.mfEndPadding;
-			else if (p.mpEntry)
-				bPlaying = pHandler->IsValid(p.mpEntry, p.mlEntryId) &&
-						   p.mpEntry->GetChannel()->GetTotalTime() - p.mpEntry->GetChannel()->GetElapsedTime() >= sound.mfEndPadding;
 			else
-				bPlaying = p.mfTime < p.mfFallback;
-			if (bPlaying == false)
-			{
-				p.mvOldVoices.push_back({p.mpEntry, p.mlEntryId});
-				p.mpEntry = NULL;
-				p.mlStep = 2;
-				p.mfTime = 0;
-			}
-		}
-		else if (p.mlStep == 2 && p.mfTime >= std::max(-sound.mfEndPadding, 0.0f))
-		{
-			p.msSubtitle = "";
-			++p.mlSound;
-			p.mlStep = 0;
-			p.mfTime = 0;
-		}
-		++i;
+				SomaMapScriptCall("void " + sFunc + "(const tString&in, const tString&in, int, bool)", [&](asIScriptContext *c) {
+					c->SetArgObject(0, &sScene);
+					c->SetArgObject(1, &sName);
+					c->SetArgDWord(2, e->line);
+					c->SetArgByte(3, e->start);
+				});
+		}, &one);
+		if (bMore == false)
+			break;
 	}
 	if (bGamePaused)
 		return;
@@ -602,32 +355,20 @@ void cSomaLuxVoiceHandler::UpdateVoices(float afTimeStep)
 
 void cSomaLuxVoiceHandler::SetSpeakingCallback(const tString &asCharacter, const tString &asFunc)
 {
-	if (asFunc == "")
-		mmapSpeakingCallbacks.erase(asCharacter);
-	else
-		mmapSpeakingCallbacks[asCharacter] = asFunc;
+	ohpl_gs5_voice_set_speaking_callback(mpV, U(asCharacter), asCharacter.size(), U(asFunc), asFunc.size());
 }
 
 void cSomaLuxVoiceHandler::UpdateSpeakingCallbacks()
 {
-	std::set<tString> setNow;
-	for (cPlaying &p : mvPlaying)
-		if (p.mlLine < p.mvLines.size() && p.mlStep == 1)
-			setNow.insert(p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter);
 	std::vector<std::pair<tString, bool>> vChanged;
-	for (const tString &s : setNow)
-		if (msetSpeaking.count(s) == 0)
-			vChanged.push_back({s, true});
-	for (const tString &s : msetSpeaking)
-		if (setNow.count(s) == 0)
-			vChanged.push_back({s, false});
-	msetSpeaking = setNow;
+	ohpl_gs5_voice_speaking_changes(mpV, +[](void *c, const unsigned char *n, size_t l, bool b) {
+		static_cast<std::vector<std::pair<tString, bool>> *>(c)->push_back({tString((const char *)n, l), b});
+	}, &vChanged);
 	for (auto &it : vChanged)
 	{
-		auto itCb = mmapSpeakingCallbacks.find(it.first);
-		if (itCb == mmapSpeakingCallbacks.end())
+		tString sFunc;
+		if (ohpl_gs5_voice_speaking_func(mpV, U(it.first), it.first.size(), SinkString, &sFunc) == false)
 			continue;
-		tString sFunc = itCb->second;
 		bool bKeep = true;
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
 		if (pMap && pMap->GetScript() && cSomaScriptRuntime::Get())
@@ -635,200 +376,79 @@ void cSomaLuxVoiceHandler::UpdateSpeakingCallbacks()
 				c->SetArgObject(0, &it.first);
 				c->SetArgByte(1, it.second);
 			}, [&](asIScriptContext *c) { bKeep = c->GetReturnByte() != 0; });
-		auto itNow = mmapSpeakingCallbacks.find(it.first);
-		if (bKeep == false && itNow != mmapSpeakingCallbacks.end() && itNow->second == sFunc)
-			mmapSpeakingCallbacks.erase(itNow);
+		ohpl_gs5_voice_speaking_done(mpV, U(it.first), it.first.size(), U(sFunc), sFunc.size(), bKeep);
 	}
 }
 
 void cSomaLuxVoiceHandler::AddSubtitle(const std::vector<tString> &avRows, const tString &asName, const cColor &aColor, int alDrawnChars)
 {
-	mvImmediate.push_back({avRows, asName, aColor, alDrawnChars});
+	std::vector<OhplGs5Str> vRows;
+	for (const tString &s : avRows)
+		vRows.push_back({U(s), s.size()});
+	float vColor[4] = {aColor.r, aColor.g, aColor.b, aColor.a};
+	ohpl_gs5_voice_add_subtitle(mpV, vRows.data(), vRows.size(), U(asName), asName.size(), vColor, alDrawnChars);
 }
 
 void cSomaLuxVoiceHandler::OnDraw(float afFrameTime)
 {
-	std::vector<cImmediateSubtitle> vImmediate;
-	vImmediate.swap(mvImmediate);
 	// cLuxFadeEffect::OnDraw: on the HUD set at z 0.9, so HUD ImGui (credits) draws over it
-	if (mfFadeAlpha > 0 && cSomaLuxMap::GetCurrent())
+	float fFadeAlpha = GetFadeAlpha();
+	if (fFadeAlpha > 0 && cSomaLuxMap::GetCurrent())
 	{
 		cGuiSet *pHud = SomaHudImGui()->GetSet();
 		cVector2f vSize = pHud->GetVirtualSize();
 		cVector2f vPos = pHud->GetVirtualSizeOffset() * -1.0f - vSize * 0.125f;
-		pHud->DrawGfx(mpFadeGfx, cVector3f(vPos.x, vPos.y, 0.9f), vSize * 1.25f, cColor(0, mfFadeAlpha));
+		pHud->DrawGfx(mpFadeGfx, cVector3f(vPos.x, vPos.y, 0.9f), vSize * 1.25f, cColor(0, fFadeAlpha));
 	}
 	if (mpFont == NULL || (gpSomaBase && gpSomaBase->GetConfig()->mbShowSubtitles == false))
+	{
+		ohpl_gs5_voice_drop_immediate(mpV);
 		return;
+	}
 	cVector2f vScreen = mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 	mpGuiSet->SetVirtualSize(vScreen, -1000, 1000, cVector2f(0));
 	// game.cfg <Voice FontSize="26" TextY="700" MaxTextWidth="860"> on a 768 line canvas
 	float fScale = vScreen.y / 768.0f;
-	float fY = 700 * fScale;
 	cVector2f vSize(26 * fScale, 26 * fScale);
-	for (auto it = mvPlaying.rbegin(); it != mvPlaying.rend(); ++it)
+	struct cDraw
 	{
-		// cLuxVoiceSceneInstance::OnDraw 0xc33b40 skips paused scenes
-		if (it->msSubtitle.empty() || it->mlStep == 0 || (it->mlStep == 1 && it->mfTime < it->mfTextDelay) || it->mbPaused ||
-			(gpSomaBase->mbScriptGamePaused && it->mbPlayWhilePaused == false))
-			continue;
-		if (it->mfListenRange >= 0 && it->msSourceEntity != "" && it->mfSourceDist > it->mfListenRange)
-			continue;
-		float fAlpha = it->msSourceEntity != "" && it->mfListenRange >= 0 ? cMath::Clamp(1.0f - 6.0f * (it->mfSourceDist - it->mfSourceMin) / std::max(it->mfSourceMax, 0.01f), 0.2f, 1.0f) : 1.0f;
-		tWStringVec vRows;
-		mpFont->GetWordWrapRows(860 * fScale, vSize.y, vSize, cString::To16Char(it->msSubtitle), &vRows);
-		fY -= vSize.y * (float)(vRows.size() - 1);
+		cSomaLuxVoiceHandler *mpSelf;
+		cVector2f mvScreen, mvSize;
+		float mfScale;
+		size_t mlNext;
+	} draw = {this, vScreen, vSize, fScale, 0};
+	mvRowCache.clear();
+	ohpl_gs5_voice_subtitles(mpV, VHost(), vScreen.y, gpSomaBase->mbScriptGamePaused, +[](void *apCtx, const unsigned char *t, size_t l, float afAlpha, bool abColor,
+																						const float *apColor, float afY, size_t alRows) {
+		cDraw *d = static_cast<cDraw *>(apCtx);
+		const tWStringVec &vRows = d->mpSelf->mvRowCache[d->mlNext++];
+		cColor col = abColor ? cColor(apColor[0], apColor[1], apColor[2], apColor[3]) : cColor(1, afAlpha);
 		for (size_t r = 0; r < vRows.size(); ++r)
 		{
-			cVector3f vPos(vScreen.x * 0.5f, fY + vSize.y * (float)r, 5);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, fAlpha), eFontAlign_Center);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, cColor(1, fAlpha), eFontAlign_Center);
+			cVector3f vPos(d->mvScreen.x * 0.5f, afY + d->mvSize.y * (float)r, 5);
+			d->mpSelf->mpGuiSet->DrawFont(vRows[r], d->mpSelf->mpFont, vPos + cVector3f(d->mfScale, d->mfScale, -0.1f), d->mvSize, cColor(0, afAlpha),
+										  eFontAlign_Center);
+			d->mpSelf->mpGuiSet->DrawFont(vRows[r], d->mpSelf->mpFont, vPos, d->mvSize, col, eFontAlign_Center);
 		}
-		fY -= vSize.y * 1.3f;
-	}
-	for (const cImmediateSubtitle &sub : vImmediate)
-	{
-		tString sText = sub.msName.empty() ? "" : sub.msName + ": ";
-		for (size_t i = 0; i < sub.mvRows.size(); ++i)
-			sText += (i ? " " : "") + sub.mvRows[i];
-		if (sub.mlDrawnChars >= 0 && (size_t)sub.mlDrawnChars < sText.size())
-			sText.resize(sub.mlDrawnChars);
-		tWStringVec vRows;
-		mpFont->GetWordWrapRows(860 * fScale, vSize.y, vSize, cString::To16Char(sText), &vRows);
-		fY -= vSize.y * (float)(vRows.size() - 1);
-		for (size_t r = 0; r < vRows.size(); ++r)
-		{
-			cVector3f vPos(vScreen.x * 0.5f, fY + vSize.y * (float)r, 5);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos + cVector3f(fScale, fScale, -0.1f), vSize, cColor(0, sub.mColor.a), eFontAlign_Center);
-			mpGuiSet->DrawFont(vRows[r], mpFont, vPos, vSize, sub.mColor, eFontAlign_Center);
-		}
-		fY -= vSize.y * 1.3f;
-	}
+	}, &draw);
 }
 
 bool cSomaLuxVoiceHandler::SubjectExists(const tString &asSubject)
 {
-	return mmapSubjects.count(asSubject) > 0;
+	return ohpl_gs5_voice_subject_exists(mpV, U(asSubject), asSubject.size());
 }
 
-void cSomaLuxVoiceHandler::Stop(const tString &asScene)
-{
-	for (size_t i = 0; i < mvPlaying.size();)
-		if (mvPlaying[i].mpSubject->msScene == asScene)
-		{
-			StopSound(mvPlaying[i]);
-			auto onDone = mvPlaying[i].mOnDone;
-			mvPlaying.erase(mvPlaying.begin() + i);
-			if (onDone)
-				onDone();
-		}
-		else
-			++i;
-}
-
-void cSomaLuxVoiceHandler::StopAll()
-{
-	for (cPlaying &p : mvPlaying)
-		StopSound(p);
-	mvPlaying.clear();
-}
-
-void cSomaLuxVoiceHandler::SkipCurrentLine(const tString &asScene)
-{
-	for (cPlaying &p : mvPlaying)
-		if (p.mpSubject->msScene == asScene)
-		{
-			StopSound(p);
-			p.msSubtitle = "";
-			++p.mlLine;
-			p.mlSound = 0;
-			p.mlStep = 0;
-			p.mfTime = 0;
-		}
-}
-
-bool cSomaLuxVoiceHandler::CharacterIsSpeaking(const tString &asName)
-{
-	for (cPlaying &p : mvPlaying)
-		if (p.mlLine < p.mvLines.size() && p.mlStep == 1 && p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter == asName)
-			return true;
-	return false;
-}
-
-// .anno (Annosoft): TEA-ECB over the first ceil8(size/2) bytes, then "ONNA", version, frames of
-// {start ms, end ms, n, n x {char[3] phoneme, f32 weight}}
-std::shared_ptr<std::vector<cSomaLuxVoiceHandler::cLipFrame>> cSomaLuxVoiceHandler::LoadLipsync(const tString &asFile)
-{
-	std::ifstream file(cString::To8Char(mpEngine->GetResources()->GetFileSearcher()->GetFilePath(asFile)).c_str(), std::ios::binary);
-	if (!file)
-		return nullptr;
-	std::string d((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	static const uint32_t k[4] = {0x8f812a90, 0x71823fad, 0x0317fab7, 0xc3856aa5};
-	size_t lEnc = std::min((d.size() / 2 + 7) / 8 * 8, d.size() / 8 * 8);
-	for (size_t i = 0; i < lEnc; i += 8)
-	{
-		uint32_t v[2];
-		memcpy(v, &d[i], 8);
-		for (uint32_t r = 0, sum = 0xc6ef3720; r < 32; ++r, sum -= 0x9e3779b9)
-		{
-			v[1] -= ((v[0] << 4) + k[2]) ^ (v[0] + sum) ^ ((v[0] >> 5) + k[3]);
-			v[0] -= ((v[1] << 4) + k[0]) ^ (v[1] + sum) ^ ((v[1] >> 5) + k[1]);
-		}
-		memcpy(&d[i], v, 8);
-	}
-	int32_t h[3];
-	if (d.size() < 12 || d.compare(0, 4, "ONNA") != 0)
-		return nullptr;
-	memcpy(h, d.data(), 12);
-	// Soma_NoSteam.exe 0x140568440 + 0x140358170 (17-viseme set)
-	static const std::map<std::string, int> mapViseme = {
-		{"AA", 1}, {"AH", 2}, {"h", 2}, {"AO", 3}, {"AW", 4}, {"OW", 4}, {"OY", 5}, {"UH", 5}, {"UW", 5}, {"AE", 6}, {"EH", 6},
-		{"AY", 7}, {"IH", 7}, {"EY", 8}, {"IY", 9}, {"y", 9}, {"ER", 10}, {"r", 10}, {"l", 11}, {"w", 12}, {"b", 13}, {"m", 13},
-		{"p", 13}, {"DH", 14}, {"NG", 14}, {"TH", 14}, {"ZH", 14}, {"d", 14}, {"g", 14}, {"k", 14}, {"n", 14}, {"s", 14},
-		{"t", 14}, {"z", 14}, {"CH", 15}, {"SH", 15}, {"j", 15}, {"f", 16}, {"v", 16}, {"x", 17}};
-	auto pOut = std::make_shared<std::vector<cLipFrame>>();
-	size_t p = 12;
-	for (int f = 0; f < h[2] && p + 12 <= d.size(); ++f)
-	{
-		cLipFrame fr = {};
-		int32_t n;
-		memcpy(&fr.mlStart, &d[p], 4);
-		memcpy(&fr.mlEnd, &d[p + 4], 4);
-		memcpy(&n, &d[p + 8], 4);
-		p += 12;
-		for (int i = 0; i < n && p + 7 <= d.size(); ++i, p += 7)
-		{
-			float w;
-			memcpy(&w, &d[p + 3], 4);
-			auto it = mapViseme.find(std::string(&d[p], strnlen(&d[p], 3)));
-			if (it != mapViseme.end())
-				fr.mvW[it->second - 1] += w;
-		}
-		pOut->push_back(fr);
-	}
-	return pOut;
-}
-
-// Visemes_17_N anim states as an unnormalized layer, sampled at the voice's playback time
+// .anno (Annosoft) decoding and the viseme sampling are in Rust; the animation states stay here
 void cSomaLuxVoiceHandler::UpdateLipsync()
 {
 	cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
+	typedef std::array<float, 17> tVisemes;
 	std::map<tString, tVisemes> mapWeights;
-	for (cPlaying &p : mvPlaying)
-	{
-		if (p.mpLipsync == NULL || p.mpLipsync->empty() || p.mlStep != 1 || p.mpEntry == NULL ||
-			mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false)
-			continue;
-		const std::vector<cLipFrame> &v = *p.mpLipsync;
-		float fMs = p.mpEntry->GetChannel()->GetElapsedTime() * 1000.0f + 30; // cActorAnimController starts its timer at 0.03
-		auto it = std::upper_bound(v.begin(), v.end(), fMs, [](float t, const cLipFrame &f) { return t < f.mlStart; });
-		const cLipFrame &a = it == v.begin() ? v.front() : *(it - 1);
-		const cLipFrame &b = it == v.end() ? a : *it;
-		float fT = b.mlStart > a.mlStart ? cMath::Clamp((fMs - a.mlStart) / (b.mlStart - a.mlStart), 0.0f, 1.0f) : 0;
-		tVisemes &w = mapWeights[p.msLipEntity];
-		for (size_t i = 0; i < w.size(); ++i)
-			w[i] = cMath::Clamp(a.mvW[i] + (b.mvW[i] - a.mvW[i]) * fT, 0.0f, 2.0f);
-	}
+	ohpl_gs5_voice_lip_weights(mpV, VHost(), +[](void *c, const unsigned char *n, size_t l, const float *w) {
+		tVisemes v;
+		std::copy(w, w + 17, v.begin());
+		(*static_cast<std::map<tString, tVisemes> *>(c))[tString((const char *)n, l)] = v;
+	}, &mapWeights);
 	std::set<tString> setAll = msetLipEntities;
 	for (auto &it : mapWeights)
 		setAll.insert(it.first);
@@ -882,155 +502,81 @@ bool cSomaLuxVoiceHandler::LoadPcm(const tString &asFile)
 	return true;
 }
 
-// cLuxVoiceHandler::GetSpectrumFromScene -> FMOD Channel::getSpectrum: |FFT| of the last 2n samples
-// at the 48 kHz mix rate, rect window, averaged over channels
-void cSomaLuxVoiceHandler::GetSpectrum(cPlaying &p, std::vector<float> &avOut, int alNum)
+// cLuxVoiceHandler::GetSpectrumFromScene -> FMOD Channel::getSpectrum
+void cSomaLuxVoiceHandler::GetSpectrum(bool abByScene, const tString &asKey, std::vector<float> &avOut, int alNum)
 {
-	avOut.assign(alNum, 0.0f);
-	if (p.mpEntry == NULL || mpEngine->GetSound()->GetSoundHandler()->IsValid(p.mpEntry, p.mlEntryId) == false || LoadPcm(p.msFile) == false)
+	size_t lEntry = 0;
+	int lId = 0;
+	tString sFile;
+	if (ohpl_gs5_voice_spectrum_target(mpV, abByScene, U(asKey), asKey.size(), &lEntry, &lId, SinkString, &sFile) == false)
 		return;
-	int lN = 2 * alNum, lCh = mPcm.mlChannels;
-	double fStep = mPcm.mlRate / 48000.0;
-	long lFrames = (long)mPcm.mvData.size() / lCh;
-	long lEnd = (long)(p.mpEntry->GetChannel()->GetElapsedTime() * mPcm.mlRate);
-	for (int c = 0; c < lCh; ++c)
-		for (int k = 0; k < alNum; ++k)
-		{
-			float fRe = 0, fIm = 0;
-			for (int n = 0; n < lN; ++n)
-			{
-				long i = lEnd - (long)((lN - n) * fStep);
-				if (i < 0 || i >= lFrames)
-					continue;
-				float x = mPcm.mvData[i * lCh + c], a = k2Pif * k * n / lN;
-				fRe += x * cosf(a);
-				fIm -= x * sinf(a);
-			}
-			avOut[k] += sqrtf(fRe * fRe + fIm * fIm) * 2.0f / lN / lCh;
-		}
+	avOut.assign(alNum, 0.0f);
+	if (lEntry == 0 || cVoiceHost::EntryValid(NULL, lEntry, lId) == false || LoadPcm(sFile) == false)
+		return;
+	ohpl_gs5_spectrum(mPcm.mvData.data(), mPcm.mvData.size(), mPcm.mlChannels, mPcm.mlRate, cVoiceHost::ChannelElapsed(NULL, lEntry), alNum, avOut.data());
 }
 
 void cSomaLuxVoiceHandler::GetSpectrumFromSpeakingCharacter(const tString &asName, std::vector<float> &avOut, int alNum)
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mlLine < p.mvLines.size() && p.mpSubject->mvLines[p.mvLines[p.mlLine]].msCharacter == asName)
-			return GetSpectrum(p, avOut, alNum);
+	GetSpectrum(false, asName, avOut, alNum);
 }
 
 void cSomaLuxVoiceHandler::GetSpectrumFromScene(const tString &asScene, std::vector<float> &avOut, int alNum)
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mpSubject->msScene == asScene)
-			return GetSpectrum(p, avOut, alNum);
+	GetSpectrum(true, asScene, avOut, alNum);
 }
 
 bool cSomaLuxVoiceHandler::SubjectIsPlaying(const tString &asName)
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mpSubject->msName == asName)
-			return true;
-	return false;
+	return ohpl_gs5_voice_subject_is_playing(mpV, U(asName), asName.size());
 }
 
 float cSomaLuxVoiceHandler::GetTimeLeftOnLastLineOfPlayingSubject(const tString &asSubject)
 {
-	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	for (cPlaying &p : mvPlaying)
-	{
-		if (p.mpSubject->msName != asSubject || p.mlLine >= p.mvLines.size())
-			continue;
-		int lLine = p.mvLines[p.mlLine];
-		if (lLine + 1 != (int)p.mpSubject->mvLines.size() || p.mlSound + 1 != p.mpSubject->mvLines[lLine].mvSounds.size() ||
-			p.mpEntry == NULL || pHandler->IsValid(p.mpEntry, p.mlEntryId) == false)
-			return -1;
-		return (float)(p.mpEntry->GetChannel()->GetTotalTime() - p.mpEntry->GetChannel()->GetElapsedTime());
-	}
-	return -1;
+	return ohpl_gs5_voice_time_left(mpV, VHost(), U(asSubject), asSubject.size());
 }
 
 bool cSomaLuxVoiceHandler::SceneIsActive(const tString &asScene)
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mpSubject->msScene == asScene)
-			return true;
-	return false;
+	return ohpl_gs5_voice_scene_is_active(mpV, U(asScene), asScene.size());
 }
 
 bool cSomaLuxVoiceHandler::SceneInvolvingCharacterIsActive(const tString &asName)
 {
-	for (cPlaying &p : mvPlaying)
-		for (const cLine &l : p.mpSubject->mvLines)
-			if (l.msCharacter == asName)
-				return true;
-	return false;
+	return ohpl_gs5_voice_scene_involving_character_is_active(mpV, U(asName), asName.size());
 }
 
 bool cSomaLuxVoiceHandler::SubjectInvolvesCharacter(const tString &asSubject, const tString &asName)
 {
-	auto it = mmapSubjects.find(asSubject);
-	if (it == mmapSubjects.end())
-		return false;
-	for (const cLine &l : it->second->mvLines)
-		if (l.msCharacter == asName)
-			return true;
-	return false;
+	return ohpl_gs5_voice_subject_involves(mpV, U(asSubject), asSubject.size(), U(asName), asName.size());
 }
 
 int cSomaLuxVoiceHandler::GetSubjectLineNumber(const tString &asSubject)
 {
-	auto it = mmapSubjects.find(asSubject);
-	return it == mmapSubjects.end() ? 0 : (int)it->second->mvLines.size();
+	return ohpl_gs5_voice_subject_line_count(mpV, U(asSubject), asSubject.size());
 }
 
 const tString &cSomaLuxVoiceHandler::GetSubjectSceneName(const tString &asSubject)
 {
-	static tString sEmpty;
-	auto it = mmapSubjects.find(asSubject);
-	return it == mmapSubjects.end() ? sEmpty : it->second->msScene;
-}
-
-// cLuxVoiceHandler::SetPaused 0xc457e0: pauses the scene's sound entries too
-void cSomaLuxVoiceHandler::ApplyPause(cPlaying &aP)
-{
-	cSoundHandler *pHandler = mpEngine->GetSound()->GetSoundHandler();
-	cSomaSoundEvents *pEvents = cSomaSoundEvents::Get();
-	if (aP.mpEntry && pHandler->IsValid(aP.mpEntry, aP.mlEntryId))
-		aP.mpEntry->SetPaused(aP.mbPaused);
-	for (auto &v : aP.mvOldVoices)
-		if (pHandler->IsValid(v.first, v.second))
-			v.first->SetPaused(aP.mbPaused);
-	if (aP.mpEffect && pEvents->IsLive(aP.mpEffect, aP.mlEffectId))
-		aP.mpEffect->SetPaused(aP.mbPaused);
-	for (auto &e : aP.mvOldEffects)
-		if (e.first && pEvents->IsLive(e.first, e.second))
-			e.first->SetPaused(aP.mbPaused);
+	msSceneCache.clear();
+	ohpl_gs5_voice_subject_scene(mpV, U(asSubject), asSubject.size(), SinkString, &msSceneCache);
+	return msSceneCache;
 }
 
 void cSomaLuxVoiceHandler::SetPaused(const tString &asScene, bool abX)
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mpSubject->msScene == asScene)
-		{
-			p.mbPaused = abX;
-			ApplyPause(p);
-		}
+	ohpl_gs5_voice_set_paused(mpV, VHost(), U(asScene), asScene.size(), abX);
 }
 
 void cSomaLuxVoiceHandler::SetPausedAll(bool abX)
 {
-	for (cPlaying &p : mvPlaying)
-	{
-		p.mbPaused = abX;
-		ApplyPause(p);
-	}
+	ohpl_gs5_voice_set_paused_all(mpV, VHost(), abX);
 }
 
 // the game's ResumeAll unpauses every entry
 void cSomaLuxVoiceHandler::ReapplyPauses()
 {
-	for (cPlaying &p : mvPlaying)
-		if (p.mbPaused)
-			ApplyPause(p);
+	ohpl_gs5_voice_reapply_pauses(mpV, VHost());
 }
 
 cSomaLuxDialogHandler *cSomaLuxDialogHandler::Get()
