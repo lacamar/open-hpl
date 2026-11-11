@@ -88,20 +88,22 @@ public:
 	iLuxInteractData_RotateBase* GetMoveBaseData(){ return &mWheelData;}
 
 	void SetStuckState(int alState, bool abEffects);
-	int  GetStuckState(){ return mlStuckState; }
+	int  GetStuckState(){ return mS.stuck_state; }
 
 	void SetAngle(float afX, bool abAutoMoveToAngle);
-	float GetAngle(){ return mfAngle;}
+	float GetAngle(){ return mS.angle;}
 
-	float GetMinLimit(){ return mfMinLimit;}
-	float GetMaxLimit(){ return mfMaxLimit;}
+	float GetMinLimit(){ return mP.min_limit;}
+	float GetMaxLimit(){ return mP.max_limit;}
 
-	void SetInteractionDisablesStuck(bool abX){ mbInteractionDisablesStuck = abX;}
-	bool GetInteractionDisablesStuck(bool abX){ return mbInteractionDisablesStuck;}
+	void SetInteractionDisablesStuck(bool abX){ mS.interaction_disables_stuck = abX;}
+	bool GetInteractionDisablesStuck(bool abX){ return mS.interaction_disables_stuck;}
 
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	void Ga4Hinge(int alIdx, OhplGa4Hinge *apOut);
 	
 	//////////////////////
 	//Save data stuff
@@ -111,20 +113,16 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void UpdateAngle(float afTimeStep);
-	void UpdateCheckLimit(float afTimeStep);
-	void UpdateAutoRotation(float afTimeStep);
 
-	void SetMaxJointAngle(float afMaxAngle);
-	void SetMinJointAngle(float afMinAngle);
 	
-	void ChangeState(int alState, bool abEffects);
 
 	void ResetAutoMove();
 
 	////////////////////////////
 	// Data
 	cLuxInteractData_Wheel mWheelData;
+	OhplGa4WheelParams mP;
+	OhplGa4Wheel mS;
 
 	cPidController<cVector3f> mRotatePid;
 
@@ -133,17 +131,9 @@ private:
 
 	////////////////////////////
 	// Settings
-	bool mbCanInteractWithStaticBody;
 
-	float mfMinLimitRange;
-	float mfMaxLimitRange;
 
-	float mfMinLimit;
-	float mfMaxLimit;
-	bool mbMinLimitStuck;
-	bool mbMaxLimitStuck;
 
-	int mlSpinDir;
 
 	tString msMinLimitSound;
 	tString msMaxLimitSound;
@@ -151,29 +141,15 @@ private:
 	tString msStuckSound;
 
 	
-	bool mbSlowDownRotation;
-	bool mbSkipMiddleState;
 
 	////////////////////////////
 	// Variables
-	float mfAngle;
-	float mfPrevAngle;
 
-	float mfStuckSoundTimer;
 
-	float mfLastToMax;
-	float mfLastToMin;
 	
-	int mlCurrentState;
-	int mlStuckState;
 
-	float mfJointAngle;
-	float mfPrevJointAngle;
 
-	bool mbAutoMoving;
-	float mfAutoMoveGoal;
 
-	bool mbInteractionDisablesStuck;
 };
 
 //----------------------------------------------

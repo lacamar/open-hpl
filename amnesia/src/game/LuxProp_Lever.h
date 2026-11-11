@@ -70,17 +70,19 @@ public:
 	//Properties
 	iLuxInteractData_RotateBase* GetMoveBaseData(){ return &mLeverData;}
 	
-	int GetLeverState(){ return mlCurrentState; }
+	int GetLeverState(){ return mS.current_state; }
 
 	void SetStuckState(int alState, bool abEffects);
-	int  GetStuckState(){ return mlStuckState; }
+	int  GetStuckState(){ return mS.stuck_state; }
 
-	void SetInteractionDisablesStuck(bool abX){ mbInteractionDisablesStuck = abX;}
-	bool GetInteractionDisablesStuck(bool abX){ return mbInteractionDisablesStuck;}
+	void SetInteractionDisablesStuck(bool abX){ mS.interaction_disables_stuck = abX;}
+	bool GetInteractionDisablesStuck(bool abX){ return mS.interaction_disables_stuck;}
 
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	void Ga4Hinge(int alIdx, OhplGa4Hinge *apOut);
 	
 	//////////////////////
 	//Save data stuff
@@ -90,47 +92,27 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void CalculateMiddleAngle();
 
-	void UpdateCheckStuckSound(float afTimeStep);
-	void UpdateCheckLimit(float afAngle, float afTimeStep);
-	void UpdateAutoMove(float afAngle, float afTimeStep);
 
-	void ChangeState(int alState, bool abEffects);
 
 	cLuxInteractData_Lever mLeverData;
+	OhplGa4LeverParams mP;
+	OhplGa4Lever mS;
 
-	float mfStuckSoundTimer;
 
-	float mfDefaultMinAngle;
-	float mfDefaultMaxAngle;
 	iPhysicsJointHinge *mpHingeJoint;
 	iPhysicsBody *mpLeverBody;
 	
-	bool mbCanInteractWithStaticBody;
-	float mfMinLimitRange;
-	float mfMaxLimitRange;
-	bool mbMinLimitStuck;
-	bool mbMaxLimitStuck;
 
-	float mfMiddleAngle;
-	float mfMiddleAngleAmount;
-	bool mbAutoMoveToAngle;
-	int mlAutoMoveGoal;
-	float mfAutoMoveSpeedFactor;
-	float mfAutoMoveMaxSpeed;
 
 	tString msMinLimitSound;
 	tString msMaxLimitSound;
 
 	cPidController<cVector3f> mRotatePid;
 
-	int mlCurrentState;
-	int mlStuckState;
 
 	tString msStuckSound;
 
-	bool mbInteractionDisablesStuck;
 };
 
 //----------------------------------------------

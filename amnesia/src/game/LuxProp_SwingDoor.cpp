@@ -25,6 +25,8 @@
 
 #include "LuxMap.h"
 
+#include <cstring>
+
 //////////////////////////////////////////////////////////////////////////
 // LOADER
 //////////////////////////////////////////////////////////////////////////
@@ -49,37 +51,25 @@ void cLuxPropLoader_SwingDoor::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 {
 	cLuxProp_SwingDoor  *pSwingDoor = static_cast<cLuxProp_SwingDoor*>(apProp);
 
-	///////////////////////////
-	// General
-	pSwingDoor->mSwingDoorData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-	pSwingDoor->mSwingDoorData.mfMoveSlowDownFactor = GetVarFloat("MoveSlowDownFactor", 3.0f);
-	pSwingDoor->mSwingDoorData.mfMoveSpeedFactor = GetVarFloat("MoveSpeedFactor", 1.0f);
-	pSwingDoor->mSwingDoorData.mfMoveThrowImpulse = GetVarFloat("MoveThrowImpulse", 6.0f);
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplGa4Slot_CloseOn, pSwingDoor->msCloseOnSound)
+		.Slot(kOhplGa4Slot_CloseOff, pSwingDoor->msCloseOffSound)
+		.Slot(kOhplGa4Slot_LockOn, pSwingDoor->msLockOnSound)
+		.Slot(kOhplGa4Slot_LockOff, pSwingDoor->msLockOffSound)
+		.Slot(kOhplGa4Slot_InteractLocked, pSwingDoor->msInteractLockedSound)
+		.Slot(kOhplGa4Slot_DamageMesh1, pSwingDoor->msDamageMesh[0])
+		.Slot(kOhplGa4Slot_DamageMesh2, pSwingDoor->msDamageMesh[1])
+		.Slot(kOhplGa4Slot_BrokenEntity, pSwingDoor->msBrokenEntity)
+		.Slot(kOhplGa4Slot_DamageSound, pSwingDoor->msDamageSound)
+		.Slot(kOhplGa4Slot_DamagePs, pSwingDoor->msDamagePS)
+		.Slot(kOhplGa4Slot_DoorBreakSound, pSwingDoor->msBreakSound)
+		.Slot(kOhplGa4Slot_DoorBreakPs, pSwingDoor->msBreakPS);
+	ohpl_ga4_door_load(vars.Vars(), &pSwingDoor->mP);
 
-	pSwingDoor->mbCanInteractWithStaticBody = GetVarBool("CanInteractWithStaticBody", false);
-
-	pSwingDoor->msCloseOnSound = GetVarString("CloseOnSound", "");
-	pSwingDoor->msCloseOffSound = GetVarString("CloseOffSound", "");
-	pSwingDoor->msLockOnSound = GetVarString("LockOnSound", "");
-	pSwingDoor->msLockOffSound = GetVarString("LockOffSound", "");
-	pSwingDoor->msInteractLockedSound = GetVarString("InteractLockedSound", "");
-
-	
-	pSwingDoor->mbBreakable = GetVarBool("Breakable", false);
-
-	pSwingDoor->msDamageMesh[0] = GetVarString("DamageMesh1", "");
-	pSwingDoor->msDamageMesh[1] = GetVarString("DamageMesh2", "");
-	pSwingDoor->msBrokenEntity = GetVarString("BrokenEntity", "");
-
-	pSwingDoor->msDamageSound = GetVarString("DamageSound", "");
-	pSwingDoor->msDamagePS = GetVarString("DamagePS", "");
-
-	pSwingDoor->msBreakSound = GetVarString("BreakSound", "");
-	pSwingDoor->msBreakPS = GetVarString("BreakPS", "");
-	pSwingDoor->mfBreakImpulse = GetVarFloat("BreakImpulse", 0);
-
-	pSwingDoor->mfHealthDamage[0] = GetVarFloat("HealthDamage1", 0);
-	pSwingDoor->mfHealthDamage[1] = GetVarFloat("HealthDamage2", 0);
+	pSwingDoor->mSwingDoorData.mfMoveMaxSpeed = pSwingDoor->mP.data.max_speed;
+	pSwingDoor->mSwingDoorData.mfMoveSlowDownFactor = pSwingDoor->mP.data.slow_down_factor;
+	pSwingDoor->mSwingDoorData.mfMoveSpeedFactor = pSwingDoor->mP.data.speed_factor;
+	pSwingDoor->mSwingDoorData.mfMoveThrowImpulse = pSwingDoor->mP.data.throw_impulse;
 }
 
 //-----------------------------------------------------------------------
@@ -87,13 +77,14 @@ void cLuxPropLoader_SwingDoor::LoadVariables(iLuxProp *apProp, cXmlElement *apRo
 void cLuxPropLoader_SwingDoor::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
 	cLuxProp_SwingDoor  *pSwingDoor = static_cast<cLuxProp_SwingDoor*>(apProp);
-	
-	pSwingDoor->mbDisableBreakable = apInstanceVars->GetVarBool("DisableBreakable",false);
 
-	pSwingDoor->SetLocked(apInstanceVars->GetVarBool("Locked",false),false);
-	float fOpenAmount = apInstanceVars->GetVarFloat("OpenAmount",0);
-	
-    pSwingDoor->SetupDoorPhysics(fOpenAmount);	
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	std::vector<OhplGa4DoorJoint> vJoints = pSwingDoor->Ga4DoorJoints();
+
+	OhplGa4Run run(pSwingDoor);
+	ohpl_ga4_door_load_instance(vars.Vars(), &pSwingDoor->mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(),
+								(int)pSwingDoor->mvJoints.size(), run.Host(), run.Sink());
+	run.Finish();
 }
 //-----------------------------------------------------------------------
 
@@ -106,26 +97,11 @@ void cLuxPropLoader_SwingDoor::LoadInstanceVariables(iLuxProp *apProp, cResource
 
 cLuxProp_SwingDoor::cLuxProp_SwingDoor(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_SwingDoor)
 {
-	mbClosed = false;
-	mbLocked = false;	
-
-	mlBrokenEntityID = -1;
-
-	mbDisableAutoClose = false;
-
-	mlCurrentMeshEntity = 0;
-	mbBroken = false;
+	memset(&mP, 0, sizeof(mP));
+	ohpl_ga4_door_state_new(&mS);
 
 	for(int i=0; i<3; ++i)
 		mpDamageMeshEntity[i] =NULL;
-
-	mfInteractSoundCount =0;
-
-    mfGoalOpenAmount = 0;
-    mbOpeningTowardsMaxAngle = true;
-    mfCurrentOpenAmount = 0;
-    mfOpenSpeed = 0;
-    mbIsUpdatingOpenAmount = false;
 }
 
 //-----------------------------------------------------------------------
@@ -149,23 +125,18 @@ cLuxProp_SwingDoor::~cLuxProp_SwingDoor()
 
 bool cLuxProp_SwingDoor::CanInteract(iPhysicsBody *apBody)
 {
-	if(	apBody->GetMass()==0 && mbCanInteractWithStaticBody==false && mpMap->BodyIsInDetachableStickyArea(apBody)==false) 
-	{
-		return false;
-	}
-
-	return true;
+	return ohpl_ga4_door_can_interact(&mP, apBody->GetMass(), mpMap->BodyIsInDetachableStickyArea(apBody));
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_SwingDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-    if ( mbIsUpdatingOpenAmount ) return true;
+    if ( mS.is_updating_open_amount ) return true;
 
 	///////////////////////////////
 	//If body mass is 0, get a dynamic body
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody)
+	if(apBody->GetMass()==0 && mP.can_interact_static)
 	{
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
@@ -184,25 +155,17 @@ bool cLuxProp_SwingDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 
 	mpMap->DetachBodyFromStickyArea(apBody);
 
-	if(mbLocked && mfInteractSoundCount <=0)
-	{
-		PlaySound("InteractLocked",msInteractLockedSound,true, true);
-		mfInteractSoundCount = 0.5f;
-	}
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	bool bHint = ohpl_ga4_door_on_interact(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), mbShowHints, run.Sink());
+	run.Finish();
 
-	if(mbLocked==false)
-	{
-		SetClosed(false, true);
-	}
-
-	mbDisableAutoClose = false;
-
-	if(mbLocked == false  && mbShowHints)
+	if(bHint)
 		gpBase->mpHintHandler->Add("EntitySwingDoor", kTranslate("Hints", "EntitySwingDoor"), 0);
 
 	cLuxPlayerStateVars::SetupInteraction(apBody, avPos);
 	gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractSwingDoor);
-	
+
 	return true;
 }
 
@@ -308,22 +271,12 @@ void cLuxProp_SwingDoor::OnSetupAfterLoad(cWorld *apWorld)
 
 void cLuxProp_SwingDoor::OnResetProperties()
 {
-	if(mbBroken)
 	{
-		mbBroken = false;
-		if(mlBrokenEntityID >=0)
-		{
-			iLuxEntity *pEntity = mpMap->GetEntityByID(mlBrokenEntityID);
-			if(pEntity)
-			{
-				mpMap->DestroyEntity(pEntity);
-			}
-		}
+		std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+		OhplGa4Run run(this);
+		ohpl_ga4_door_reset(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), run.Host(), run.Sink());
+		run.Finish();
 	}
-	
-	SetupDoorPhysics(0.0f);
-
-	SetCurrentDamageLevel(0);
 
 	//////////////////////////////
 	// Enable all bodies and meshes
@@ -357,22 +310,10 @@ void cLuxProp_SwingDoor::OnResetProperties()
 
 void cLuxProp_SwingDoor::UpdatePropSpecific(float afTimeStep)
 {
-    UpdateOpening( afTimeStep );
-	if(mfInteractSoundCount >0)
-		mfInteractSoundCount-=afTimeStep;
-
-	////////////////////////////////
-	// If the door is close to 0 angle, then close it
-	if(mbClosed==false && IsInteractedWith()==false && mbDisableAutoClose == false && mvJoints.size()==1)
-	{
-		for(size_t i=0; i<mvJointData.size(); ++i)
-		{
-			if(cMath::Abs(mvJointData[i].mpHingeJoint->GetAngle()) < cMath::ToRad(10))
-			{
-				SetClosed(true, true);
-			}
-		}
-	}
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_update(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -399,7 +340,7 @@ void cLuxProp_SwingDoor::ImplementedOnSetActive(bool abX)
 	{
 		if(mpDamageMeshEntity[i])
 		{
-			bool bActive = abX ? mlCurrentMeshEntity==i : false;
+			bool bActive = abX ? mS.current_mesh_entity==i : false;
 
 			mpDamageMeshEntity[i]->SetVisible(bActive);
 			mpDamageMeshEntity[i]->SetActive(bActive);
@@ -411,43 +352,211 @@ void cLuxProp_SwingDoor::ImplementedOnSetActive(bool abX)
 
 void cLuxProp_SwingDoor::OnHealthChange()
 {
-	if(mbBreakable==false || mbDisableBreakable) return;
-	if(mbBroken) return;
-
-	tString msSound = "";
-	tString msPS = "";
-
-	/////////////////////////////
-	// Get Main body
-	iPhysicsBody *pMainBody = NULL;
-	int lMainBodyIdx =-1;
-
+	bool bHasMain = false;
 	for(size_t i=0; i<mvBodies.size(); ++i)
 	{
-		if(mvBodies[i]->GetMass()!=0)
-		{
-			pMainBody = mvBodies[i];
-			lMainBodyIdx = (int)i;
-		}
+		if(mvBodies[i]->GetMass()!=0) bHasMain = true;
 	}
 
-	////////////////////////
-	// Broken
-	if(mfHealth <= 0 && mbBroken == false)
+	OhplGa4Run run(this);
+	ohpl_ga4_door_on_health_change(&mS, &mP, mfHealth, bHasMain, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::OnDamage(float afAmount, int alStrength)
+{
+	
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::SetClosed(bool abClosed, bool abEffects)
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_set_closed(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), abClosed, abEffects, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+int cLuxProp_SwingDoor::GetDoorState()
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	int lState = ohpl_ga4_door_state(vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), run.Host());
+	run.Finish();
+	return lState;
+}
+
+//-----------------------------------------------------------------------
+
+
+void cLuxProp_SwingDoor::SetLocked(bool abLocked, bool abEffects)
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_set_locked(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), abLocked, abEffects, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::SetCurrentDamageLevel(int alX)
+{
+	OhplGa4Run run(this);
+	ohpl_ga4_door_set_damage_level(&mS, alX, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+cMeshEntity* cLuxProp_SwingDoor::GetEffectMeshEntity()
+{
+	if(mS.current_mesh_entity <0) return NULL;
+
+    return mpDamageMeshEntity[mS.current_mesh_entity];
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_on_connection_state(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), alState, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+
+//////////////////////////////////////////////////////////////////////////
+// PRIVATE METHODS
+//////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------------
+
+
+void cLuxProp_SwingDoor::SetOpenAmount(float afOpenAmount, float afDuration, bool abGoTowardsMaxAngle)
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_set_open_amount(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), afOpenAmount, afDuration, abGoTowardsMaxAngle, run.Host(), run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+std::vector<OhplGa4DoorJoint> cLuxProp_SwingDoor::Ga4DoorJoints()
+{
+	std::vector<OhplGa4DoorJoint> vJoints(mvJointData.size());
+	for(size_t i=0; i<mvJointData.size(); ++i)
 	{
-		mbBroken = true;	
+		vJoints[i].max_angle = mvJointData[i].mfMaxAngle;
+		vJoints[i].min_angle = mvJointData[i].mfMinAngle;
+	}
+	return vJoints;
+}
 
-		SetCurrentDamageLevel(0);
+//-----------------------------------------------------------------------
 
+void cLuxProp_SwingDoor::Ga4Hinge(int alIdx, OhplGa4Hinge *apOut)
+{
+	iPhysicsJointHinge *pHinge = mvJointData[alIdx].mpHingeJoint;
+	iPhysicsBody *pChild = mvJointData[alIdx].mpChildBody;
+
+	apOut->angle = pHinge->GetAngle();
+	apOut->min_angle = pHinge->GetMinAngle();
+	apOut->max_angle = pHinge->GetMaxAngle();
+	cVector3f vPin = pHinge->GetPinDir();
+	cVector3f vPivot = pHinge->GetPivotPoint();
+	cVector3f vAngVel = pChild->GetAngularVelocity();
+	memcpy(apOut->pin_dir, vPin.v, sizeof(apOut->pin_dir));
+	memcpy(apOut->pivot, vPivot.v, sizeof(apOut->pivot));
+	memcpy(apOut->child, pChild->GetLocalMatrix().v, sizeof(apOut->child));
+	memcpy(apOut->child_ang_vel, vAngVel.v, sizeof(apOut->child_ang_vel));
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_SwingDoor::SetupDoorPhysics(float afOpenAmount, bool abOpenTowardsMaxAngle, bool abApplyAlways)
+{
+	std::vector<OhplGa4DoorJoint> vJoints = Ga4DoorJoints();
+	OhplGa4Run run(this);
+	ohpl_ga4_door_setup_physics(&mS, vJoints.empty() ? NULL : &vJoints[0], (int)vJoints.size(), (int)mvJoints.size(), afOpenAmount, abOpenTowardsMaxAngle, abApplyAlways, run.Host(), run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+static void Ga4Matrix(const float *apM, cMatrixf &a_mtx)
+{
+	memcpy(a_mtx.v, apM, sizeof(a_mtx.v));
+}
+
+void cLuxProp_SwingDoor::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
+	{
+	case kOhplGa4Op_HingeMax:
+		mvJointData[aOp.i].mpHingeJoint->SetMaxAngle(aOp.f[0]);
+		break;
+	case kOhplGa4Op_HingeSticky:
+		mvJointData[aOp.i].mpHingeJoint->SetStickyMinLimit(aOp.j != 0);
+		mvJointData[aOp.i].mpHingeJoint->SetStickyMaxLimit(aOp.j != 0);
+		break;
+	case kOhplGa4Op_BodiesWake:
+		//Add force to all bodies so that the door really closes.
+		for(size_t i=0; i<mvBodies.size(); ++i)
+		{
+			iPhysicsBody *pBody = mvBodies[i];
+
+			pBody->AddForce(cVector3f(1,1,1));
+		}
+		break;
+	case kOhplGa4Op_PlaySound:
+		switch(aOp.i)
+		{
+		case kOhplGa4Snd_CloseOn:		PlaySound("CloseOn",msCloseOnSound,true, true); break;
+		case kOhplGa4Snd_CloseOff:		PlaySound("CloseOff",msCloseOffSound,true, true); break;
+		case kOhplGa4Snd_LockOn:		PlaySound("LockedOn",msLockOnSound,true, true); break;
+		case kOhplGa4Snd_LockOff:		PlaySound("LockedOff",msLockOffSound,true, true); break;
+		case kOhplGa4Snd_InteractLocked:PlaySound("InteractLocked",msInteractLockedSound,true, true); break;
+		}
+		break;
+	case kOhplGa4Op_DoorBodyMatrix:
+		{
+			cMatrixf mtxBody;
+			Ga4Matrix(aOp.m, mtxBody);
+			mvJointData[aOp.i].mpChildBody->SetMatrix(mtxBody);
+		}
+		break;
+	case kOhplGa4Op_BodyZeroVel:
+		mvJointData[aOp.i].mpChildBody->SetAngularVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
+		mvJointData[aOp.i].mpChildBody->SetLinearVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
+		break;
+	case kOhplGa4Op_DoorDamageLevel:
+		for(int i=0; i<3; ++i)
+		{
+			if(mpDamageMeshEntity[i])
+			{
+				bool bActive = aOp.i==i;
+
+				mpDamageMeshEntity[i]->SetVisible(bActive);
+				mpDamageMeshEntity[i]->SetActive(bActive);
+			}
+		}
+		break;
+	case kOhplGa4Op_DoorDisableBodies:
 		////////////////////////////
 		//Disable all bodies + any children
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
 			iPhysicsBody *pBody = mvBodies[i];
 			if(pBody->GetMass()==0) continue;
-
-			pMainBody = pBody;
-			lMainBodyIdx = (int)i;
 
 			pBody->SetActive(false);
 
@@ -468,345 +577,102 @@ void cLuxProp_SwingDoor::OnHealthChange()
 				}
 			}
 		}
-		
-		////////////////////////////
-		//Create broken entity
-		if(pMainBody && msBrokenEntity != "")
+		break;
+	case kOhplGa4Op_DoorBrokenEntity:
 		{
-			cEntityBodyExtraData* pBodyData = &mvBodyExtraData[lMainBodyIdx];
-
-			cMatrixf mtxInvLocalBody = cMath::MatrixInverse(pBodyData->m_mtxLocalTransform);
-			cMatrixf mtxEntity = cMath::MatrixMul(pMainBody->GetLocalMatrix(), mtxInvLocalBody);
-
-			mpMap->ResetLatestEntity();
-			mpMap->CreateEntity(msName + "_broken", msBrokenEntity, mtxEntity, mvOnLoadScale);	
-
-			////////////////////////
-			//Add impulse and velocity
-			iLuxEntity *pEntity = mpMap->GetLatestEntity();
-			if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Prop)
+			iPhysicsBody *pMainBody = NULL;
+			int lMainBodyIdx =-1;
+			for(size_t i=0; i<mvBodies.size(); ++i)
 			{
-				mlBrokenEntityID = pEntity->GetID();
-
-				iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
-
-				for(int i=0; i< pProp->GetBodyNum(); ++i)
+				if(mvBodies[i]->GetMass()!=0)
 				{
-					iPhysicsBody *pNewBody = pProp->GetBody(i);
-					cVector3f vNewBodyCenter = cMath::MatrixMul(pNewBody->GetLocalMatrix(), pNewBody->GetMassCentre());
+					pMainBody = mvBodies[i];
+					lMainBodyIdx = (int)i;
+				}
+			}
 
-					cVector3f vImpulseDir = cMath::Vector3Normalize(vNewBodyCenter - mtxEntity.GetTranslation());
+			////////////////////////////
+			//Create broken entity
+			if(pMainBody && msBrokenEntity != "")
+			{
+				cEntityBodyExtraData* pBodyData = &mvBodyExtraData[lMainBodyIdx];
 
-					pNewBody->AddImpulse(vImpulseDir*mfBreakImpulse + pMainBody->GetLinearVelocity());
+				cMatrixf mtxInvLocalBody = cMath::MatrixInverse(pBodyData->m_mtxLocalTransform);
+				cMatrixf mtxEntity = cMath::MatrixMul(pMainBody->GetLocalMatrix(), mtxInvLocalBody);
+
+				mpMap->ResetLatestEntity();
+				mpMap->CreateEntity(msName + "_broken", msBrokenEntity, mtxEntity, mvOnLoadScale);
+
+				////////////////////////
+				//Add impulse and velocity
+				iLuxEntity *pEntity = mpMap->GetLatestEntity();
+				if(pEntity && pEntity->GetEntityType() == eLuxEntityType_Prop)
+				{
+					mS.broken_entity_id = pEntity->GetID();
+
+					iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
+
+					for(int i=0; i< pProp->GetBodyNum(); ++i)
+					{
+						iPhysicsBody *pNewBody = pProp->GetBody(i);
+						cVector3f vNewBodyCenter = cMath::MatrixMul(pNewBody->GetLocalMatrix(), pNewBody->GetMassCentre());
+
+						cVector3f vMainVel = pMainBody->GetLinearVelocity();
+						cVector3f vOrigin = mtxEntity.GetTranslation();
+						cVector3f vImpulse;
+						ohpl_ga4_break_impulse(vNewBodyCenter.v, vOrigin.v, mP.break_impulse, vMainVel.v, vImpulse.v);
+
+						pNewBody->AddImpulse(vImpulse);
+					}
 				}
 			}
 		}
-		
-		msSound = msBreakSound;
-		msPS = msBreakPS;
-
-		///////////////////////
-		// Callback
+		break;
+	case kOhplGa4Op_RunBreakCallback:
 		RunCallbackFunc("Break");
-	}
-	////////////////////////
-	// Damage 2
-	else if(mfHealth <  mfHealthDamage[1] && mlCurrentMeshEntity<=1)
-	{
-		SetCurrentDamageLevel(2);	
-
-		msSound = msDamageSound;
-		msPS = msDamagePS;
-	}
-	////////////////////////
-	// Damage 1
-	else if(mfHealth < mfHealthDamage[0] && mlCurrentMeshEntity==0)
-	{
-		SetCurrentDamageLevel(1);
-
-		msSound = msDamageSound;
-		msPS = msDamagePS;
-	}
-
-	/////////////////////////////
-	// Effects
-	if(pMainBody)
-	{
-		///////////////////////
-		// Create Sound
-		if(msSound != "")
+		break;
+	case kOhplGa4Op_DoorDestroyBroken:
 		{
-			cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_BreakSound", msSound, true);
-			if(pSound) pSound->SetPosition(pMainBody->GetLocalPosition());
-		}
-
-		///////////////////////
-		// Create Particle System
-		if(msPS != "")
-		{
-			cParticleSystem *pPS = mpWorld->CreateParticleSystem(msName + "_BreakPS", msPS,1);
-			if(pPS) pPS->SetMatrix(pMainBody->GetLocalMatrix());
-		}
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::OnDamage(float afAmount, int alStrength)
-{
-	
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::SetClosed(bool abClosed, bool abEffects)
-{
-	if(mbClosed == abClosed) return;
-
-	mbClosed = abClosed;
-
-	for(size_t i=0; i<mvJointData.size(); ++i)
-	{
-		iPhysicsJointHinge *pHingeJoint = mvJointData[i].mpHingeJoint;
-
-		if(mbClosed)
-		{
-			pHingeJoint->SetMaxAngle(cMath::ToRad(2.0f));
-			pHingeJoint->SetStickyMinLimit(false);
-			pHingeJoint->SetStickyMaxLimit(false);
-		}
-		else
-		{
-			pHingeJoint->SetMaxAngle(mvJointData[i].mfMaxAngle);
-			pHingeJoint->SetStickyMinLimit(true);
-			pHingeJoint->SetStickyMaxLimit(true);
-		}
-	}
-
-	//Add force to all bodies so that the door really closes.
-	for(size_t i=0; i<mvBodies.size(); ++i)
-	{
-		iPhysicsBody *pBody = mvBodies[i];
-
-		pBody->AddForce(cVector3f(1,1,1));
-	}
-
-	if(abEffects)
-	{
-		if(mbClosed)PlaySound("CloseOn",msCloseOnSound,true, true);
-		else		PlaySound("CloseOff",msCloseOffSound,true, true);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-int cLuxProp_SwingDoor::GetDoorState()
-{
-	int lState =0;
-
-	for(size_t i=0; i<mvJointData.size(); ++i)
-	{
-		iPhysicsJointHinge *pHingeJoint = mvJointData[i].mpHingeJoint;
-
-		float fAbsAngle = cMath::Abs(pHingeJoint->GetAngle());
-		
-		float fClosedAngle = cMath::ToRad(5);
-		float fOpenAngle = cMath::Abs(mvJointData[i].mfMaxAngle)*0.70f;
-
-		if(fAbsAngle < fClosedAngle)
-		{
-			if(lState == 1) return 0;
-			lState = -1;
-		}
-		else if(fAbsAngle >  fOpenAngle)
-		{
-			if(lState == -1) return 0;
-			lState = 1;	
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	return lState;
-}
-
-//-----------------------------------------------------------------------
-
-
-void cLuxProp_SwingDoor::SetLocked(bool abLocked, bool abEffects)
-{
-	if(mbLocked == abLocked) return;
-
-	mbLocked = abLocked;
-	
-	if(mbLocked) SetClosed(true, false);
-
-	if(abEffects)
-	{
-		if(mbLocked)PlaySound("LockedOn",msLockOnSound,true, true);
-		else		PlaySound("LockedOff",msLockOffSound,true, true);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::SetCurrentDamageLevel(int alX)
-{
-	if(mlCurrentMeshEntity == alX) return;
-
-	mlCurrentMeshEntity = alX;
-
-	for(int i=0; i<3; ++i)
-	{
-		if(mpDamageMeshEntity[i])
-		{
-			bool bActive = mlCurrentMeshEntity==i;
-
-			mpDamageMeshEntity[i]->SetVisible(bActive);
-			mpDamageMeshEntity[i]->SetActive(bActive);
-		}
-	}
-}
-
-//-----------------------------------------------------------------------
-
-cMeshEntity* cLuxProp_SwingDoor::GetEffectMeshEntity()
-{
-	if(mlCurrentMeshEntity <0) return NULL;
-
-    return mpDamageMeshEntity[mlCurrentMeshEntity];
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
-{
-	if(alState > 0)		SetLocked(true, true);
-	else				SetLocked(false, true);
-}
-
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-
-void cLuxProp_SwingDoor::SetOpenAmount(float afOpenAmount, float afDuration, bool abGoTowardsMaxAngle)
-{
-    if ( mvJointData.size() <= 0 ) return;
-
-    iPhysicsJointHinge *pHingeJoint = mvJointData[0].mpHingeJoint;
-
-    mvJointData[0].mpChildBody->SetAngularVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
-    mvJointData[0].mpChildBody->SetLinearVelocity( cVector3f( 0.0f, 0.0f, 0.0f ) );
-
-    if ( !pHingeJoint
-        || abGoTowardsMaxAngle && pHingeJoint->GetMaxAngle() == 0.0f
-        || !abGoTowardsMaxAngle && pHingeJoint->GetMinAngle() == 0.0f)
-    {
-        return;
-    }
-
-    mfGoalOpenAmount = afOpenAmount;
-    mbOpeningTowardsMaxAngle = abGoTowardsMaxAngle;
-
-    if ( abGoTowardsMaxAngle )
-    {
-        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMaxAngle();
-    }
-    else
-    {
-        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMinAngle();
-    }
-
-    if ( mfGoalOpenAmount == mfCurrentOpenAmount ) return;
-
-    if ( afDuration <= 0.0f )
-    {
-        SetupDoorPhysics(afOpenAmount, abGoTowardsMaxAngle, true);
-        return;
-    }
-
-    mfOpenSpeed = ( mfGoalOpenAmount - mfCurrentOpenAmount ) / afDuration;
-    mbIsUpdatingOpenAmount = true;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::UpdateOpening(float afTimeStep)
-{
-    if ( !mbIsUpdatingOpenAmount ) return;
-
-    float newOpenAmount = mfCurrentOpenAmount + afTimeStep * mfOpenSpeed;
-
-    if ( ( mfOpenSpeed > 0 && newOpenAmount >= mfGoalOpenAmount )
-        || ( mfOpenSpeed < 0 && newOpenAmount <= mfGoalOpenAmount ) )
-    {
-        SetupDoorPhysics( mfGoalOpenAmount - mfCurrentOpenAmount, mbOpeningTowardsMaxAngle, true );
-        mbIsUpdatingOpenAmount = false;
-        return;
-    }
-
-    SetupDoorPhysics( afTimeStep * mfOpenSpeed, mbOpeningTowardsMaxAngle, true );
-
-    iPhysicsJointHinge *pHingeJoint = mvJointData[0].mpHingeJoint;
-
-    if ( mbOpeningTowardsMaxAngle )
-    {
-        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMaxAngle();
-    }
-    else
-    {
-        mfCurrentOpenAmount = pHingeJoint->GetAngle() / pHingeJoint->GetMinAngle();
-    }
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_SwingDoor::SetupDoorPhysics(float afOpenAmount, bool abOpenTowardsMaxAngle, bool abApplyAlways)
-{
-	////////////////////////////////////
-	// Set open amount
-	if(abApplyAlways || afOpenAmount>0)
-	{
-		for(size_t i=0; i<mvJointData.size(); ++i)
-		{
-			iPhysicsJointHinge *pHingeJoint = mvJointData[i].mpHingeJoint;
-			iPhysicsBody *pChildBody = mvJointData[i].mpChildBody;
-			float fWantedAngle = (abOpenTowardsMaxAngle ? mvJointData[i].mfMaxAngle : mvJointData[i].mfMinAngle) * afOpenAmount;
-
-			cQuaternion qRotation; qRotation.FromAngleAxis(-fWantedAngle, pHingeJoint->GetPinDir());
-			cMatrixf mtxRotation = cMath::MatrixQuaternion(qRotation);
-			cMatrixf mtxBody = pChildBody->GetLocalMatrix();
-
-			cVector3f vBodyPos = pChildBody->GetLocalPosition();
-			cVector3f vPivotOffset = pHingeJoint->GetPivotPoint() - pChildBody->GetLocalPosition();
-
-			mtxBody.SetTranslation(vPivotOffset*-1);
-			mtxBody = cMath::MatrixMul(mtxRotation, mtxBody);
-			mtxBody.SetTranslation(mtxBody.GetTranslation() + vPivotOffset + vBodyPos);
-
-			pChildBody->SetMatrix(mtxBody);
-		}
-	}
-
-	////////////////////////////////////
-	// Close door (using no effects) if in range. 
-	if(mvJoints.size()==1)
-	{
-		for(size_t i=0; i<mvJointData.size(); ++i)
-		{
-			if(cMath::Abs(mvJointData[i].mpHingeJoint->GetAngle()) < cMath::ToRad(10))
+			iLuxEntity *pEntity = mpMap->GetEntityByID(aOp.i);
+			if(pEntity)
 			{
-				SetClosed(true, false);
+				mpMap->DestroyEntity(pEntity);
 			}
 		}
+		break;
+	case kOhplGa4Op_DoorEffects:
+		{
+			iPhysicsBody *pMainBody = NULL;
+			for(size_t i=0; i<mvBodies.size(); ++i)
+			{
+				if(mvBodies[i]->GetMass()!=0) pMainBody = mvBodies[i];
+			}
+
+			const tString &sSound = aOp.i==2 ? msBreakSound : msDamageSound;
+			const tString &sPS = aOp.i==2 ? msBreakPS : msDamagePS;
+
+			if(pMainBody)
+			{
+				///////////////////////
+				// Create Sound
+				if(sSound != "")
+				{
+					cSoundEntity *pSound = mpWorld->CreateSoundEntity(msName + "_BreakSound", sSound, true);
+					if(pSound) pSound->SetPosition(pMainBody->GetLocalPosition());
+				}
+
+				///////////////////////
+				// Create Particle System
+				if(sPS != "")
+				{
+					cParticleSystem *pPS = mpWorld->CreateParticleSystem(msName + "_BreakPS", sPS,1);
+					if(pPS) pPS->SetMatrix(pMainBody->GetLocalMatrix());
+				}
+			}
+		}
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
 	}
 }
 
@@ -879,18 +745,18 @@ void cLuxProp_SwingDoor::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData, mbLocked);
-	kCopyToVar(pData, mbBroken);
-	kCopyToVar(pData, mbClosed);
-	kCopyToVar(pData, mlBrokenEntityID);
-	kCopyToVar(pData, mlCurrentMeshEntity);
-	kCopyToVar(pData, mbDisableBreakable);
-	kCopyToVar(pData, mbDisableAutoClose);
-	kCopyToVar(pData, mfGoalOpenAmount);
-	kCopyToVar(pData, mbOpeningTowardsMaxAngle);
-	kCopyToVar(pData, mfCurrentOpenAmount);
-	kCopyToVar(pData, mfOpenSpeed);
-	kCopyToVar(pData, mbIsUpdatingOpenAmount);
+	pData->mbLocked = mS.locked;
+	pData->mbBroken = mS.broken;
+	pData->mbClosed = mS.closed;
+	pData->mlBrokenEntityID = mS.broken_entity_id;
+	pData->mlCurrentMeshEntity = mS.current_mesh_entity;
+	pData->mbDisableBreakable = mS.disable_breakable;
+	pData->mbDisableAutoClose = mS.disable_auto_close;
+	pData->mfGoalOpenAmount = mS.goal_open_amount;
+	pData->mbOpeningTowardsMaxAngle = mS.opening_towards_max;
+	pData->mfCurrentOpenAmount = mS.current_open_amount;
+	pData->mfOpenSpeed = mS.open_speed;
+	pData->mbIsUpdatingOpenAmount = mS.is_updating_open_amount;
 
 	if(mpDamageMeshEntity[1])
 		pData->mDamageMesh1.FromMeshEntity(mpDamageMeshEntity[1]);
@@ -910,17 +776,17 @@ void cLuxProp_SwingDoor::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	//////////////////
 	//Set variables
 	SetClosed(pData->mbClosed, false);
-	kCopyFromVar(pData, mbLocked);
-	kCopyFromVar(pData, mbBroken);
-	kCopyFromVar(pData, mlBrokenEntityID);
-	kCopyFromVar(pData, mlCurrentMeshEntity);
-	kCopyFromVar(pData, mbDisableBreakable);
-	kCopyFromVar(pData, mbDisableAutoClose);
-	kCopyFromVar(pData, mfGoalOpenAmount);
-	kCopyFromVar(pData, mbOpeningTowardsMaxAngle);
-	kCopyFromVar(pData, mfCurrentOpenAmount);
-	kCopyFromVar(pData, mfOpenSpeed);
-	kCopyFromVar(pData, mbIsUpdatingOpenAmount);
+	mS.locked = pData->mbLocked;
+	mS.broken = pData->mbBroken;
+	mS.broken_entity_id = pData->mlBrokenEntityID;
+	mS.current_mesh_entity = pData->mlCurrentMeshEntity;
+	mS.disable_breakable = pData->mbDisableBreakable;
+	mS.disable_auto_close = pData->mbDisableAutoClose;
+	mS.goal_open_amount = pData->mfGoalOpenAmount;
+	mS.opening_towards_max = pData->mbOpeningTowardsMaxAngle;
+	mS.current_open_amount = pData->mfCurrentOpenAmount;
+	mS.open_speed = pData->mfOpenSpeed;
+	mS.is_updating_open_amount = pData->mbIsUpdatingOpenAmount;
 
 	if(mpDamageMeshEntity[1])
 		pData->mDamageMesh1.ToMeshEntity(mpDamageMeshEntity[1]);

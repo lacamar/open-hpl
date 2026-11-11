@@ -123,7 +123,7 @@ public:
 	cLuxInteractData_Push* GetPushData(){ return &mPushData;}
 	cLuxInteractData_Slide* GetSlideData(){ return &mSlideData;}
 
-	bool IsFood(){ return mbIsFood;}
+	bool IsFood(){ return mP.is_food;}
 
 	bool ShowOutlinesOnConnectedBodies();
 
@@ -144,45 +144,36 @@ public:
 
 private:
 	void UpdateFoodEnemyAttraction(float afTimeStep);
-	void UpdateInsanityVision(float afTimeStep);
+	void FoodAttractEnemies();
 	void SetInsanityVisionVisability(bool abX);
+public:
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	bool Ga4InsanityInFov();
+private:
 
 	void SetJointMinMax(int alIdx, float afMin, float afMax);
 	
 
 	//General
-	eLuxObjectType mObjectType;
 
 	//Vars
-	bool mbBroken;
-	float mfLifeLengthCount;
 	tString msContainedItem;
-	int mlStuckState;
-	bool mbDisableBreakable;
 
-	bool mbIsInsanityVision;
-	float mfVisionMaxSanity;
-	bool mbInsanityVisionActive;
 
-	float mfFoodAttractCount;
-	float mfInsanityVisionCount;
 	
 	//Data
+	OhplGa4ObjectParams mP;
+	OhplGa4ObjectInstance mI;
+	OhplGa4ObjectState mS;
+	std::vector<OhplGa4JointData> mvJointData;
 	cLuxProp_Object_BodyCallback *mpBodyCallback;
 
 	cLuxProp_Object_BreakData mBreakData;
 
-	std::vector<cLuxProp_Object_JointData> mvJointData;
 
-	float mfLifeLength;
 
-	bool mbIsFood;
 
-	float mfHitDamageAmount;
-	int mlHitDamageStrength;
-	float mfMinHitDamageSpeed;
 
-	bool mbGrabSkipNonOuterBodies;
 
 	cLuxInteractData_Grab mGrabData;
 	cLuxInteractData_Push mPushData;	
@@ -202,7 +193,6 @@ public:
 	void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars);
 
 private:
-	eLuxObjectType GetObjectType(const tString&asName);
 
 	float mfGrabDefaultMaxFocusDist;
 	float mfPushDefaultMaxFocusDist;

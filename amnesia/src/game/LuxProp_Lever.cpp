@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_Lever.h"
+#include <cstring>
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -44,74 +45,31 @@ iLuxProp *cLuxPropLoader_Lever::CreateProp(const tString& asName, int alID, cLux
 
 //-----------------------------------------------------------------------
 
-static int ToAutoMoveGoal(const tString& asType)
-{
-	if(asType == "Middle")	return 0;
-	if(asType == "Max")		return 1;
-	if(asType == "Min")		return -1;
-
-	return 0;
-}
-
 void cLuxPropLoader_Lever::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
 {
 	cLuxProp_Lever  *pLever = static_cast<cLuxProp_Lever*>(apProp);
 
-	///////////////////////////
-	// General
-	pLever->mLeverData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-	pLever->mLeverData.mfMoveSlowDownFactor = GetVarFloat("MoveSlowDownFactor", 3.0f);
-	pLever->mLeverData.mfMoveSpeedFactor = GetVarFloat("MoveSpeedFactor", 1.0f);
-	pLever->mLeverData.mfMoveThrowImpulse = GetVarFloat("MoveThrowImpulse", 6.0f);
+	OhplGa4VarsAdapter vars(this);
+	vars.Slot(kOhplGa4Slot_LeverMinSound, pLever->msMinLimitSound)
+		.Slot(kOhplGa4Slot_LeverMaxSound, pLever->msMaxLimitSound)
+		.Slot(kOhplGa4Slot_LeverStuckSound, pLever->msStuckSound);
+	ohpl_ga4_lever_load(vars.Vars(), &pLever->mP);
 
-	pLever->mbCanInteractWithStaticBody = GetVarBool("CanInteractWithStaticBody", true);
-	pLever->mfMinLimitRange = cMath::ToRad(GetVarFloat("MinLimitRange", 5.0f));
-	pLever->mfMaxLimitRange = cMath::ToRad(GetVarFloat("MaxLimitRange", 5.0f));
-	pLever->mbMinLimitStuck = GetVarBool("MinLimitStuck", false);
-	pLever->mbMaxLimitStuck = GetVarBool("MaxLimitStuck", false);
-
-	pLever->mfMiddleAngleAmount = GetVarFloat("MiddleAngleAmount", 0);
-	
-	pLever->mbAutoMoveToAngle = GetVarBool("AutoMoveToAngle", true);
-	pLever->mlAutoMoveGoal = ToAutoMoveGoal(GetVarString("AutoMoveGoal", "Middle"));
-	pLever->mfAutoMoveSpeedFactor = GetVarFloat("AutoMoveSpeedFactor", 2.0f);
-	pLever->mfAutoMoveMaxSpeed = GetVarFloat("AutoMoveMaxSpeed", 8.0f);
-	
-	pLever->msMinLimitSound = GetVarString("MinLimitSound", "");
-	pLever->msMaxLimitSound = GetVarString("MaxLimitSound", "");
-
-	pLever->msStuckSound = GetVarString("StuckSound", "");
+	pLever->mLeverData.mfMoveMaxSpeed = pLever->mP.data.max_speed;
+	pLever->mLeverData.mfMoveSlowDownFactor = pLever->mP.data.slow_down_factor;
+	pLever->mLeverData.mfMoveSpeedFactor = pLever->mP.data.speed_factor;
+	pLever->mLeverData.mfMoveThrowImpulse = pLever->mP.data.throw_impulse;
 }
 //-----------------------------------------------------------------------
-
-static int ToStuckState(const tString& asType)
-{
-	if(asType == "None")	return 0;
-	if(asType == "Min")		return -1;
-	if(asType == "Max")		return 1;
-
-	return 0;
-}
 
 void cLuxPropLoader_Lever::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)
 {
 	cLuxProp_Lever  *pLever = static_cast<cLuxProp_Lever*>(apProp);
 
-	int lStuckState = ToStuckState(apInstanceVars-> GetVarString("StuckState", ""));
-	pLever->SetStuckState(lStuckState, false);
-
-	pLever->mbInteractionDisablesStuck = apInstanceVars-> GetVarBool("InteractionDisablesStuck", false);
-
-	bool bOverrideDefault = apInstanceVars->GetVarBool("OverrideDefaults", false);
-	if(bOverrideDefault)
-	{
-		pLever->mfMiddleAngleAmount = apInstanceVars->GetVarFloat("MiddleAngleAmount", 0);
-		pLever->mbAutoMoveToAngle = apInstanceVars->GetVarBool("AutoMoveToAngle", true);
-		pLever->mlAutoMoveGoal = ToAutoMoveGoal(apInstanceVars->GetVarString("AutoMoveGoal", "Middle"));
-
-		//Need to recalculate middle angle!
-		pLever->CalculateMiddleAngle();
-	}
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	OhplGa4Run run(pLever);
+	ohpl_ga4_lever_load_instance(vars.Vars(), &pLever->mS, &pLever->mP, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -125,11 +83,8 @@ void cLuxPropLoader_Lever::LoadInstanceVariables(iLuxProp *apProp, cResourceVars
 
 cLuxProp_Lever::cLuxProp_Lever(const tString &asName, int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Lever)
 {
-	mlCurrentState  = 0; //-1 = min, 1=max, 0= middle
-	mlStuckState = 0;//-1 = min, 1=max, 0= not stuck
-	mbInteractionDisablesStuck = false;
-
-	mfStuckSoundTimer =0;
+	memset(&mP, 0, sizeof(mP));
+	memset(&mS, 0, sizeof(mS));
 
 	mRotatePid.SetErrorNum(10);
 	mRotatePid.p = 10.0f;
@@ -154,16 +109,14 @@ cLuxProp_Lever::~cLuxProp_Lever()
 
 bool cLuxProp_Lever::CanInteract(iPhysicsBody *apBody)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody==false) return false;
-
-	return true;
+	return ohpl_ga4_lever_can_interact(&mP, apBody->GetMass());
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_Lever::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody)
+	if(apBody->GetMass()==0 && mP.can_interact_static)
 	{
 		for(size_t i=0; i<mvBodies.size(); ++i)
 		{
@@ -175,17 +128,18 @@ bool cLuxProp_Lever::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 		}
 	}
 
-	if(mlStuckState !=0 && mbInteractionDisablesStuck)
-		SetStuckState(0, true);
+	OhplGa4Run run(this);
+	bool bHint = ohpl_ga4_lever_on_interact(&mS, &mP, mbShowHints, run.Sink());
+	run.Finish();
 
-	if(mlStuckState ==0 && mbShowHints)
+	if(bHint)
 		gpBase->mpHintHandler->Add("EntityLever", kTranslate("Hints", "EntityLever"), 0);
 
 	cLuxPlayerStateVars::SetupInteraction(apBody, avPos);
 	gpBase->mpPlayer->ChangeState(eLuxPlayerState_InteractLever);
 
 	mRotatePid.Reset();
-	
+
 	return true;
 }
 
@@ -205,24 +159,16 @@ void cLuxProp_Lever::OnSetupAfterLoad(cWorld *apWorld)
 
 	mpLeverBody = mpHingeJoint->GetChildBody();
 
-	if(mbAutoMoveToAngle)
+	if(mP.auto_move_to_angle)
 	{
 		mpLeverBody->SetGravity(false);
 	}
 
 	///////////////////////
 	//Set update properties
-	mpHingeJoint->SetStickyMinLimit(true);
-	mpHingeJoint->SetStickyMaxLimit(true);
-
-	///////////////////////
-	//Set up data
-	mfDefaultMinAngle = mpHingeJoint->GetMinAngle();
-	mfDefaultMaxAngle = mpHingeJoint->GetMaxAngle();
-
-	///////////////////////
-	//Calculate the middle angle
-	CalculateMiddleAngle();
+	OhplGa4Run run(this);
+	ohpl_ga4_lever_setup(&mS, &mP, mpHingeJoint->GetMinAngle(), mpHingeJoint->GetMaxAngle(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -235,11 +181,9 @@ void cLuxProp_Lever::OnResetProperties()
 
 void cLuxProp_Lever::UpdatePropSpecific(float afTimeStep)
 {
-	float fAngle = mpHingeJoint->GetAngle();
-
-	UpdateCheckStuckSound(afTimeStep);
-	UpdateCheckLimit(fAngle, afTimeStep);
-	UpdateAutoMove(fAngle, afTimeStep);
+	OhplGa4Run run(this);
+	ohpl_ga4_lever_update(&mS, &mP, afTimeStep, IsInteractedWith(), run.Host(), run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -253,7 +197,7 @@ void cLuxProp_Lever::BeforePropDestruction()
 
 eLuxFocusCrosshair cLuxProp_Lever::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(apBody->GetMass()==0 && mbCanInteractWithStaticBody==false) return eLuxFocusCrosshair_Default;
+	if(ohpl_ga4_lever_can_interact(&mP, apBody->GetMass())==false) return eLuxFocusCrosshair_Default;
 
 	return eLuxFocusCrosshair_Grab;
 }
@@ -262,42 +206,80 @@ eLuxFocusCrosshair cLuxProp_Lever::GetFocusCrosshair(iPhysicsBody *apBody, const
 
 void cLuxProp_Lever::SetStuckState(int alState, bool abEffects)
 {
-	if(mlStuckState == alState) return;
-
-	mlStuckState = alState;
-
-	mfStuckSoundTimer =0; //Reset the stuck timer!
-
-	//Max
-    if(mlStuckState == 1)
-	{
-		ChangeState(1, abEffects);
-
-		mpHingeJoint->SetMinAngle(mfDefaultMaxAngle - mfMaxLimitRange);
-		mpHingeJoint->SetMaxAngle(mfDefaultMaxAngle);
-	}
-	//Min
-	else if(mlStuckState == -1)
-	{
-		ChangeState(-1, abEffects);
-
-		mpHingeJoint->SetMinAngle(mfDefaultMinAngle);
-		mpHingeJoint->SetMaxAngle(mfDefaultMinAngle + mfMinLimitRange);
-	}
-	//None
-	else
-	{
-		mpHingeJoint->SetMinAngle(mfDefaultMinAngle);
-		mpHingeJoint->SetMaxAngle(mfDefaultMaxAngle);
-	}
+	OhplGa4Run run(this);
+	ohpl_ga4_lever_set_stuck_state(&mS, &mP, alState, abEffects, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxProp_Lever::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	if(alState >0)	SetStuckState(-1, true);
-	else			SetStuckState(0, true);
+	OhplGa4Run run(this);
+	ohpl_ga4_lever_on_connection_state(&mS, &mP, alState, run.Sink());
+	run.Finish();
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_Lever::Ga4Hinge(int alIdx, OhplGa4Hinge *apOut)
+{
+	apOut->angle = mpHingeJoint->GetAngle();
+	apOut->min_angle = mpHingeJoint->GetMinAngle();
+	apOut->max_angle = mpHingeJoint->GetMaxAngle();
+	cVector3f vPin = mpHingeJoint->GetPinDir();
+	cVector3f vPivot = mpHingeJoint->GetPivotPoint();
+	cVector3f vAngVel = mpHingeJoint->GetChildBody()->GetAngularVelocity();
+	memcpy(apOut->pin_dir, vPin.v, sizeof(apOut->pin_dir));
+	memcpy(apOut->pivot, vPivot.v, sizeof(apOut->pivot));
+	memcpy(apOut->child, mpLeverBody->GetLocalMatrix().v, sizeof(apOut->child));
+	memcpy(apOut->child_ang_vel, vAngVel.v, sizeof(apOut->child_ang_vel));
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxProp_Lever::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
+	{
+	case kOhplGa4Op_HingeMin:
+		mpHingeJoint->SetMinAngle(aOp.f[0]);
+		break;
+	case kOhplGa4Op_HingeMax:
+		mpHingeJoint->SetMaxAngle(aOp.f[0]);
+		break;
+	case kOhplGa4Op_HingeSticky:
+		mpHingeJoint->SetStickyMinLimit(aOp.j != 0);
+		mpHingeJoint->SetStickyMaxLimit(aOp.j != 0);
+		break;
+	case kOhplGa4Op_BodyAngVel:
+		mpLeverBody->SetAngularVelocity(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]));
+		break;
+	case kOhplGa4Op_PidTorque:
+		{
+			cVector3f vTorque = mRotatePid.Output(cVector3f(aOp.v[0], aOp.v[1], aOp.v[2]), aOp.f[0]);
+			vTorque = cMath::MatrixMul(mpLeverBody->GetInertiaMatrix(), vTorque);
+
+			mpLeverBody->AddTorque(vTorque);
+		}
+		break;
+	case kOhplGa4Op_PlaySound:
+		PlaySound("LeverStuck", msStuckSound, true, true);
+		break;
+	case kOhplGa4Op_LimitSound:
+		if(aOp.j)
+		{
+			tString sSound = aOp.i == 1 ? msMaxLimitSound : msMinLimitSound;
+			if(sSound != "")
+			{
+				cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("LeverSound", sSound, true);
+				if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
+			}
+		}
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -306,142 +288,6 @@ void cLuxProp_Lever::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 //////////////////////////////////////////////////////////////////////////
 // PRIVATE METHODS
 //////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::CalculateMiddleAngle()
-{
-	float fAngleT = (mfMiddleAngleAmount+1)/2; //be between 0 and 1
-	mfMiddleAngle = mfDefaultMinAngle + (mfDefaultMaxAngle - mfDefaultMinAngle)*fAngleT;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::UpdateCheckStuckSound(float afTimeStep)
-{
-	if(mlStuckState == 0 || mbIsInteractedWith==false) return;
-
-	if(mfStuckSoundTimer >0)
-	{
-		mfStuckSoundTimer-=afTimeStep; 
-		return;
-	}
-	
-	float fSpeedSqr = mpHingeJoint->GetChildBody()->GetAngularVelocity().SqrLength();
-	if(fSpeedSqr > 0.01f)
-	{
-		PlaySound("LeverStuck", msStuckSound, true, true);
-		mfStuckSoundTimer = 1.5f;
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::UpdateCheckLimit(float afAngle, float afTimeStep)
-{
-	if(mlStuckState !=0) return;
-
-	///////////////////////
-	//Max
-	if(afAngle > (mfDefaultMaxAngle - mfMaxLimitRange))
-	{
-		ChangeState(1, true);
-		if(mbMaxLimitStuck) SetStuckState(1, false);
-	}
-	///////////////////////
-	//Min
-	else if(afAngle < (mfDefaultMinAngle + mfMinLimitRange))
-	{
-		ChangeState(-1, true);
-		if(mbMinLimitStuck) SetStuckState(-1, false);
-	}
-	///////////////////////
-	//Middle
-	else if(afAngle < (mfDefaultMaxAngle - mfMaxLimitRange)-cMath::ToRad(5) ||
-			afAngle > (mfDefaultMinAngle + mfMinLimitRange)+cMath::ToRad(5))
-	{
-		ChangeState(0, true);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::UpdateAutoMove(float afAngle, float afTimeStep)
-{
-	if(IsInteractedWith() || mbAutoMoveToAngle==false || mlStuckState!=0) return;
-
-	///////////////////////////
-	// Get the wanted speed
-    float fGoalAngle = 0;
-	if(mlAutoMoveGoal == 0) fGoalAngle = mfMiddleAngle;
-	else if(mlAutoMoveGoal == -1)	fGoalAngle = mfDefaultMinAngle + mfMinLimitRange/2.0f;
-	else if(mlAutoMoveGoal == 1)	fGoalAngle = mfDefaultMaxAngle - mfMaxLimitRange/2.0f;
-	
-	float fWantedSpeed = mfAutoMoveSpeedFactor * (afAngle - fGoalAngle);
-	
-	if(fWantedSpeed > mfAutoMoveMaxSpeed)	fWantedSpeed = mfAutoMoveMaxSpeed;
-	if(fWantedSpeed < -mfAutoMoveMaxSpeed)	fWantedSpeed = -mfAutoMoveMaxSpeed;
-
-	///////////////////////////
-	// Calculate the torque
-	cVector3f vRotateDir = mpHingeJoint->GetPinDir();
-	cVector3f vBodyVel = mpLeverBody->GetAngularVelocity();
-	cVector3f vHingeVel = vRotateDir * cMath::Vector3Dot(vRotateDir, vBodyVel);
-	cVector3f vWantedVel = vRotateDir * fWantedSpeed;
-
-	//This is a bit wierd? (think need to have as removing might screw things up!)
-	mpLeverBody->SetAngularVelocity(vWantedVel);
-
-	
-	cVector3f vTorque = mRotatePid.Output(vWantedVel - vHingeVel, afTimeStep);
-	vTorque = cMath::MatrixMul(mpLeverBody->GetInertiaMatrix(), vTorque);
-
-	mpLeverBody->AddTorque(vTorque);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxProp_Lever::ChangeState(int alState, bool abEffects)
-{
-	if(mlCurrentState == alState) return;
-
-	mlCurrentState = alState;
-
-	tString sSound = "";
-	
-	/////////////////
-	//Max
-	if(mlCurrentState == 1)
-	{
-		sSound = msMaxLimitSound;
-		ConnectionStateChange(1);
-	}
-	/////////////////
-	//Min
-	else if(mlCurrentState == -1)
-	{
-		sSound = msMinLimitSound;
-		ConnectionStateChange(-1);
-	}
-	/////////////////
-	//Middle
-	else if(mlCurrentState == 0)
-	{
-		ConnectionStateChange(0);
-	}
-
-	///////////////////////
-	//Play sound
-	if(abEffects  && sSound != "")
-	{
-		cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity("LeverSound", sSound, true);
-		if(pSound) pSound->SetPosition(mpHingeJoint->GetPivotPoint());
-	}
-
-	/////////////////
-	//Connection
-	InteractConnectionLimit(mlCurrentState);
-}
 
 //-----------------------------------------------------------------------
 
@@ -478,12 +324,12 @@ void cLuxProp_Lever::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData,mlCurrentState);
-	kCopyToVar(pData,mlStuckState);
-	kCopyToVar(pData,mbInteractionDisablesStuck);
-	kCopyToVar(pData,mfMiddleAngleAmount);
-	kCopyToVar(pData,mbAutoMoveToAngle);
-	kCopyToVar(pData,mlAutoMoveGoal);
+	pData->mlCurrentState = mS.current_state;
+	pData->mlStuckState = mS.stuck_state;
+	pData->mbInteractionDisablesStuck = mS.interaction_disables_stuck;
+	pData->mfMiddleAngleAmount = mP.middle_angle_amount;
+	pData->mbAutoMoveToAngle = mP.auto_move_to_angle;
+	pData->mlAutoMoveGoal = mP.auto_move_goal;
 }
 
 //-----------------------------------------------------------------------
@@ -497,12 +343,12 @@ void cLuxProp_Lever::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData,mlCurrentState);
+	mS.current_state = pData->mlCurrentState;
 	SetStuckState(pData->mlStuckState, false);
-	kCopyFromVar(pData,mbInteractionDisablesStuck);
-	kCopyFromVar(pData,mfMiddleAngleAmount);
-	kCopyFromVar(pData,mbAutoMoveToAngle);
-	kCopyFromVar(pData,mlAutoMoveGoal);
+	mS.interaction_disables_stuck = pData->mbInteractionDisablesStuck;
+	mP.middle_angle_amount = pData->mfMiddleAngleAmount;
+	mP.auto_move_to_angle = pData->mbAutoMoveToAngle;
+	mP.auto_move_goal = pData->mlAutoMoveGoal;
 }
 
 //-----------------------------------------------------------------------

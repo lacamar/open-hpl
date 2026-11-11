@@ -76,19 +76,21 @@ public:
 	//Properties
 	cLuxInteractData_Slide* GetSlideData(){ return &mSlideData;}
 	
-	int GetMultiSliderState(){ return mlCurrentState; }
+	int GetMultiSliderState(){ return mS.current_state; }
 
 	void SetStuckState(int alState, bool abEffects);
-	int  GetStuckState(){ return mlStuckState; }
+	int  GetStuckState(){ return mS.stuck_state; }
 
-	void SetInteractionDisablesStuck(bool abX){ mbInteractionDisablesStuck = abX;}
-	bool GetInteractionDisablesStuck(bool abX){ return mbInteractionDisablesStuck;}
+	void SetInteractionDisablesStuck(bool abX){ mS.interaction_disables_stuck = abX;}
+	bool GetInteractionDisablesStuck(bool abX){ return mS.interaction_disables_stuck;}
 
 	void SetChangeStateCallback(const tString &asCallback){ msChangeStateCallback=asCallback;}
 
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	void Ga4Slider(OhplGa4Slider *apOut);
 	
 	//////////////////////
 	//Save data stuff
@@ -98,40 +100,25 @@ public:
 	void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
 private:
-	void CalculateMiddleAngle();
 
-	void UpdateCheckStuckSound(float afTimeStep);
-	void UpdateCheckNewState(float afPos, float afTimeStep);
-	void UpdateAutoMove(float afPos, float afTimeStep);
 
-	void ChangeState(int alState, bool abEffects);
 
 	cLuxInteractData_Slide mSlideData;
 
 	iPhysicsJointSlider *mpSliderJoint;
 	iPhysicsBody *mpSliderBody;
-	std::vector<cLuxProp_MultiSlider_State> mvStates;
+	std::vector<float> mvStates;
+	OhplGa4MultiParams mP;
+	OhplGa4Multi mS;
 
-	int mlNumOfStates;
-	float mfStickToStateMaxDist;
 	
-	bool mbCanInteractWithStaticBody;
 	
-	bool mbAutoMoveToCurrentState;
-	float mfAutoMoveSpeedFactor;
-	float mfAutoMoveMaxSpeed;
 	
 	tString msChangeStateSound;
 	tString msStuckSound;
 
-	float mfDefaultMinDist;
-	float mfDefaultMaxDist;
 
-	int mlCurrentState;
-	int mlStuckState;
-	float mfStuckSoundTimer;
 
-	bool mbInteractionDisablesStuck;
 
 	cPidController<float> mAutoMovePid;
 

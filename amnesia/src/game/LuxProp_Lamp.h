@@ -106,11 +106,11 @@ public:
 	cLuxInteractData_Grab* GetGrabData(){ return &mGrabData;}
 	
 	void SetLit(bool abX, bool abUseEffects);
-	bool GetLit(){ return mbLit; }
+	bool GetLit(){ return mS.lit; }
 
 	bool CanBeIgnitByPlayer();
 	void FadeTo(float afR, float afG, float afB, float afA, float afRadius, float afTime);
-	void SetCanBeLitByPlayer(bool abX){ mbCanBeLitByPlayer = abX; }
+	void SetCanBeLitByPlayer(bool abX){ mP.can_be_lit_by_player = abX; }
 
 	//////////////////////
 	//Connection callbacks
@@ -128,23 +128,18 @@ private:
 	void SetupLampLightConnection();
 
 	//Vars
-	bool mbLit;
 
-	bool mbLightConnectionSetup;
 
 	cLuxLampLightConnection *mpLightConnection;
 	tString msConnectionLight;
-	float mfConnectionLightAmount;
-	bool mbConnectionLightUseOnColor;
-	bool mbConnectionLightUseSpec;
 
 	
 	//Data
-	bool mbCanBeLitByPlayer;
-	bool mbCanBeGrabbed;
 
 	
 	cLuxInteractData_Grab mGrabData;
+	OhplGa4LampParams mP;
+	OhplGa4Lamp mS;
 };
 
 //----------------------------------------------

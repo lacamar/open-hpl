@@ -24,6 +24,8 @@
 
 #include "LuxEntity.h"
 #include "LuxSavedEngineTypes.h"
+#include "RustLuxProp.h"
+#include <map>
 
 
 //----------------------------------------------
@@ -96,6 +98,63 @@ public:
 
 //----------------------------------------------
 class iLuxProp;
+
+//----------------------------------------------
+
+class OhplGa4VarsAdapter
+{
+public:
+	OhplGa4VarsAdapter(cResourceVarsObject *apVars) : mpVars(apVars) { mVars.ops = &gOps; mVars.ctx = this; }
+	OhplGa4VarsAdapter &Slot(int alSlot, tString &asDest) { mmapSlots[alSlot] = &asDest; return *this; }
+	OhplGa4VarsAdapter &Slots(int alSlot, tStringVec &avDest) { mmapVecSlots[alSlot] = &avDest; return *this; }
+	const OhplGa4Vars *Vars() const { return &mVars; }
+
+private:
+	static tString Name(const unsigned char *n, size_t len) { return tString((const char *)n, len); }
+	static OhplGa4VarsAdapter *Me(void *c) { return (OhplGa4VarsAdapter *)c; }
+
+	static void GetString(void *c, const unsigned char *n, size_t len, const unsigned char *d, size_t dlen, void (*out)(void *, const unsigned char *, size_t), void *oc)
+	{
+		tString s = Me(c)->mpVars->GetVarString(Name(n, len), tString((const char *)d, dlen));
+		out(oc, (const unsigned char *)s.data(), s.size());
+	}
+	static bool GetBool(void *c, const unsigned char *n, size_t len, bool d) { return Me(c)->mpVars->GetVarBool(Name(n, len), d); }
+	static float GetFloat(void *c, const unsigned char *n, size_t len, float d) { return Me(c)->mpVars->GetVarFloat(Name(n, len), d); }
+	static int GetInt(void *c, const unsigned char *n, size_t len, int d) { return Me(c)->mpVars->GetVarInt(Name(n, len), d); }
+	static void GetVec3(void *c, const unsigned char *n, size_t len, const float *d, float *out)
+	{
+		cVector3f v = Me(c)->mpVars->GetVarVector3f(Name(n, len), cVector3f(d[0], d[1], d[2]));
+		out[0] = v.x; out[1] = v.y; out[2] = v.z;
+	}
+	static void GetColor(void *c, const unsigned char *n, size_t len, const float *d, float *out)
+	{
+		cColor v = Me(c)->mpVars->GetVarColor(Name(n, len), cColor(d[0], d[1], d[2], d[3]));
+		out[0] = v.r; out[1] = v.g; out[2] = v.b; out[3] = v.a;
+	}
+	static void Put(void *c, int alSlot, const unsigned char *s, size_t len)
+	{
+		OhplGa4VarsAdapter *me = Me(c);
+		std::map<int, tString *>::iterator it = me->mmapSlots.find(alSlot);
+		if (it != me->mmapSlots.end())
+		{
+			it->second->assign((const char *)s, len);
+			return;
+		}
+		std::map<int, tStringVec *>::iterator vit = me->mmapVecSlots.find(alSlot);
+		if (vit != me->mmapVecSlots.end())
+			vit->second->push_back(tString((const char *)s, len));
+	}
+
+	static const OhplGa4VarsOps gOps;
+	cResourceVarsObject *mpVars;
+	OhplGa4Vars mVars;
+	std::map<int, tString *> mmapSlots;
+	std::map<int, tStringVec *> mmapVecSlots;
+};
+
+inline const OhplGa4VarsOps OhplGa4VarsAdapter::gOps = {
+	&OhplGa4VarsAdapter::GetString, &OhplGa4VarsAdapter::GetBool, &OhplGa4VarsAdapter::GetFloat, &OhplGa4VarsAdapter::GetInt,
+	&OhplGa4VarsAdapter::GetVec3, &OhplGa4VarsAdapter::GetColor, &OhplGa4VarsAdapter::Put};
 
 //----------------------------------------------
 
@@ -240,6 +299,7 @@ typedef iLuxEntity super_class;
 friend class cLuxSavedGameEntity;
 friend class iLuxPropLoader;
 friend class cLuxProp_WorldCollisionCallback;
+friend class OhplGa4Run;
 public:	
 	iLuxProp(const tString &asName, int alID, cLuxMap *apMap, eLuxPropType aPropType);
 	virtual ~iLuxProp();
@@ -294,12 +354,12 @@ public:
 
 	void SetEffectsActive(bool abActive, bool abFadeAndPlaySounds);
 
-	float GetEffectsAlpha(){ return mfEffectsAlpha;}
+	float GetEffectsAlpha(){ return mBase.effects_alpha;}
 
 	void SetIsInteractedWith(bool abX){  mbIsInteractedWith = abX;}
 	bool IsInteractedWith(){  return mbIsInteractedWith;}
 
-	bool IsMoving(){ return mbMoving; }
+	bool IsMoving(){ return mBase.moving; }
 	
 	virtual cLuxInteractData_Grab* GetGrabData(){ return NULL;}
 	virtual cLuxInteractData_Push* GetPushData(){ return NULL;}
@@ -356,6 +416,16 @@ public:
 	virtual void LoadFromSaveData(iLuxEntity_SaveData* apSaveData);
 	virtual void SetupSaveData(iLuxEntity_SaveData *apSaveData);
 
+	//////////////////////
+	//Rust replay (see OhplGa4Run)
+	virtual void Ga4ApplyOp(const OhplGa4Op &aOp);
+	virtual void Ga4Hinge(int alIdx, OhplGa4Hinge *apOut){}
+	virtual void Ga4Slider(OhplGa4Slider *apOut){}
+	virtual bool Ga4InsanityInFov(){ return false;}
+	void Ga4MovePush(const float *apAdd, float *apOut);
+	bool Ga4OutsideCollides(int alIdx);
+	static bool Ga4IsEvent(int alCode);
+
     void SetParentBone(cBoneState * apParentBone, const cMatrixf & apParentBoneOffsetMatrix, tString asParentName, tString asParentBoneName);
     void DetachFromParentBone();
 protected:
@@ -376,6 +446,9 @@ protected:
 	virtual void OnStartMove(){}
 
 	void UpdateAttachedProps(float afTimeStep, bool abForceUpdate);
+	OhplGa4EffectsIn Ga4EffectsEnv(bool abActive, bool abFade);
+	const OhplGa4LightData *Ga4Lights(){ return mvEffectLightData.empty() ? NULL : (const OhplGa4LightData*)&mvEffectLightData[0]; }
+	int Ga4LightNum(){ return (int)mvLights.size(); }
 
 	void UpdateAnimation(float afTimeStep);
 
@@ -386,12 +459,9 @@ protected:
 	void UpdateMoveSoundVolume();
 
 	void UpdateMoving(float afTimeStep);
-	void UpdateLinearMoving(float afTimeStep);
-	void UpdateAngularMoving(float afTimeStep);
 	
 	void UpdateMeshFading(float afTimeStep);
 
-	void CheckMoveCollision(cVector3f& avMoveVel, float &afSpeed, float afTimeStep);
 
 	void UpdateCheckIfOutsidePlayer(float afTimeStep);
 
@@ -412,44 +482,20 @@ protected:
     bool mbBodyActiveBackup;
     cMatrixf mBodyMatrixBackup;
 
-	bool mbCheckOutsidePlayer;
 
 	bool mbIsInteractedWith;
+	OhplGa4Base mBase;
 
-	bool mbEffectsActive;
-	float mfEffectsAlpha;
-	bool mbEffectAlphaFading;
 
     bool mbStaticPhysics;
 	
 	bool mbHasFlickering;
 
-	bool mbMoving;
 	
-	float mfMovingVolume;
-	float mfMoveStartCount;
 
-	bool mbMovingLinear;
-	float mfMoveLinearMaxSpeed;
-	float mfMoveLinearAcc;
-	float mfMoveLinearSpeed;
-	float mfMoveLinearSlowdownDist;
-	cVector3f mvMoveLinearGoal;
 
-	bool mbMovingAngular;
-	float mfMoveAngularMaxSpeed;
-	float mfMoveAngularAcc;
-	float mfMoveAngularSpeed;
-	float mfMoveAngularSlowdownDist;
-	cMatrixf m_mtxMoveAngularGoal;
-	bool mbMoveAngularNoGoal;
-	cVector3f mvMoveAngularNoGoalDir;
 
-	bool mbMoveAngularUseOffset;
-	cVector3f mvMoveAngularWorldOffset;
-	cVector3f mvMoveAngularLocalOffset;
 
-	cMatrixf m_mtxLastBodyMoveMatrix;
 
 	int mlCurrentNonLoopAnimIndex;
 	tString msAnimCallback;
@@ -457,8 +503,6 @@ protected:
 	bool mbDissolveOnDestruction;
 	float mfDissolveTime;
 
-	float mfFadeInAlpha;
-	float mfFadeInSpeed;
 
 	iLuxProp *mpAttachmentParent;
 	tLuxProp_AttachedPropList mlstAttachedProps;
@@ -522,6 +566,64 @@ protected:
 	
 private:
 	eLuxPropType mPropType;
+};
+
+//----------------------------------------------
+
+static_assert(sizeof(cLuxProp_LightData) == sizeof(OhplGa4LightData), "light data layout");
+
+/**
+ * Collects the ops of one Rust call and replays them in order once it returns. A query made
+ * by Rust in the middle (joint angle, ...) first applies the ops so far, except the re-entrant
+ * ones (scripts, entity creation), which wait for the end of the call.
+ */
+class OhplGa4Run
+{
+public:
+	OhplGa4Run(iLuxProp *apProp) : mpProp(apProp)
+	{
+		mSink.ctx = this; mSink.push = &Push;
+		mHost.ctx = this; mHost.move_push = &MovePush; mHost.outside_collides = &OutsideCollides;
+		mHost.insanity_in_fov = &InsanityInFov; mHost.hinge = &Hinge; mHost.slider = &Slider;
+	}
+	const OhplGa4Sink *Sink() const { return &mSink; }
+	const OhplGa4Host *Host() const { return &mHost; }
+	void Finish()
+	{
+		for(size_t i=0; i<mvOps.size(); ++i)
+		{
+			if(mvDone[i]) continue;
+			mvDone[i] = 1;
+			OhplGa4Op op = mvOps[i];
+			mpProp->Ga4ApplyOp(op);
+		}
+		mvOps.clear(); mvDone.clear();
+	}
+	void Flush()
+	{
+		for(size_t i=0; i<mvOps.size(); ++i)
+		{
+			if(mvDone[i] || iLuxProp::Ga4IsEvent(mvOps[i].code)) continue;
+			mvDone[i] = 1;
+			OhplGa4Op op = mvOps[i];
+			mpProp->Ga4ApplyOp(op);
+		}
+	}
+
+private:
+	static OhplGa4Run *Me(void *c){ return (OhplGa4Run*)c; }
+	static void Push(void *c, const OhplGa4Op *op){ Me(c)->mvOps.push_back(*op); Me(c)->mvDone.push_back(0); }
+	static void MovePush(void *c, const float *add, float *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4MovePush(add, out); }
+	static bool OutsideCollides(void *c, int i){ Me(c)->Flush(); return Me(c)->mpProp->Ga4OutsideCollides(i); }
+	static bool InsanityInFov(void *c){ Me(c)->Flush(); return Me(c)->mpProp->Ga4InsanityInFov(); }
+	static void Hinge(void *c, int i, OhplGa4Hinge *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4Hinge(i, out); }
+	static void Slider(void *c, OhplGa4Slider *out){ Me(c)->Flush(); Me(c)->mpProp->Ga4Slider(out); }
+
+	iLuxProp *mpProp;
+	std::vector<OhplGa4Op> mvOps;
+	std::vector<char> mvDone;
+	OhplGa4Sink mSink;
+	OhplGa4Host mHost;
 };
 
 //----------------------------------------------

@@ -18,6 +18,7 @@
  */
 
 #include "LuxProp_Lamp.h"
+#include <cstring>
 
 #include "LuxPlayer.h"
 #include "LuxPlayerState.h"
@@ -50,27 +51,23 @@ void cLuxPropLoader_Lamp::LoadVariables(iLuxProp *apProp, cXmlElement *apRootEle
 {
 	cLuxProp_Lamp  *pLamp = static_cast<cLuxProp_Lamp*>(apProp);
 
-	///////////////////////////
-	// General
-	pLamp->mbCanBeLitByPlayer = GetVarBool("CanBeLitByPlayer", true);
+	OhplGa4VarsAdapter vars(this);
+	ohpl_ga4_lamp_load(vars.Vars(), &pLamp->mP);
 
-	pLamp->mbCanBeGrabbed = GetVarBool("CanBeGrabbed", false);
-
-	///////////////////////////
-	// Grab specific
-	pLamp->mGrabData.mbGrabUseDepth = GetVarBool("GrabUseDepth", false);
-	pLamp->mGrabData.mfGrabDepth = GetVarFloat("GrabDepth", 1.5f);
-	pLamp->mGrabData.mfGrabDepthInc = GetVarFloat("GrabDepthInc", 0.1f);
-	pLamp->mGrabData.mfGrabMinDepth = GetVarFloat("GrabMinDepth", 1.0f);
-	pLamp->mGrabData.mfGrabMaxDepth = GetVarFloat("GrabMaxDepth", 2.0f);
-	pLamp->mGrabData.mvGrabPositionOffset = GetVarVector3f("GrabPositionOffset", 0.0f);
-	pLamp->mGrabData.mvGrabRotationOffset = cMath::Vector3ToRad(GetVarVector3f("GrabRotationOffset", 0.0f));
-	pLamp->mGrabData.mfGrabThrowImpulse = GetVarFloat("GrabThrowImpulse", 10.0f);
-	pLamp->mGrabData.mbGrabUseOffset = GetVarBool("GrabUseOffset", true);
-	pLamp->mGrabData.mfGrabMassMul = GetVarFloat("GrabMassMul", 0.1f);
-	pLamp->mGrabData.mfForceMul = GetVarFloat("GrabForceMul", 1);
-	pLamp->mGrabData.mfTorqueMul = GetVarFloat("GrabTorqueMul", 1);
-	pLamp->mGrabData.mbUseRotation = GetVarBool("GrabUseRotation", true);
+	const OhplGa4Grab &g = pLamp->mP.grab;
+	pLamp->mGrabData.mbGrabUseDepth = g.use_depth;
+	pLamp->mGrabData.mfGrabDepth = g.depth;
+	pLamp->mGrabData.mfGrabDepthInc = g.depth_inc;
+	pLamp->mGrabData.mfGrabMinDepth = g.min_depth;
+	pLamp->mGrabData.mfGrabMaxDepth = g.max_depth;
+	pLamp->mGrabData.mvGrabPositionOffset = cVector3f(g.position_offset[0], g.position_offset[1], g.position_offset[2]);
+	pLamp->mGrabData.mvGrabRotationOffset = cVector3f(g.rotation_offset[0], g.rotation_offset[1], g.rotation_offset[2]);
+	pLamp->mGrabData.mfGrabThrowImpulse = g.throw_impulse;
+	pLamp->mGrabData.mbGrabUseOffset = g.use_offset;
+	pLamp->mGrabData.mfGrabMassMul = g.mass_mul;
+	pLamp->mGrabData.mfForceMul = g.force_mul;
+	pLamp->mGrabData.mfTorqueMul = g.torque_mul;
+	pLamp->mGrabData.mbUseRotation = g.use_rotation;
 }
 
 //-----------------------------------------------------------------------
@@ -79,14 +76,13 @@ void cLuxPropLoader_Lamp::LoadInstanceVariables(iLuxProp *apProp, cResourceVarsO
 {
     cLuxProp_Lamp  *pLamp = static_cast<cLuxProp_Lamp*>(apProp);
 
-	pLamp->SetLit(apInstanceVars->GetVarBool("Lit",true), false);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	vars.Slot(kOhplGa4Slot_ConnectedLight, pLamp->msConnectionLight);
+	OhplGa4EffectsIn env = pLamp->Ga4EffectsEnv(true, false);
 
-	/////////////////////////////////
-	//Connect a light to the lamp
-	pLamp->msConnectionLight = apInstanceVars->GetVarString("ConnectedLight","");
-	pLamp->mfConnectionLightAmount = apInstanceVars->GetVarFloat("ConnectionLightAmount",0);
-	pLamp->mbConnectionLightUseOnColor = apInstanceVars->GetVarBool("ConnectionLightUseOnColor",false);
-	pLamp->mbConnectionLightUseSpec = apInstanceVars->GetVarBool("ConnectionLightUseSpec",false);
+	OhplGa4Run run(pLamp);
+	ohpl_ga4_lamp_load_instance(vars.Vars(), &pLamp->mS, &pLamp->mBase, &env, pLamp->Ga4Lights(), pLamp->Ga4LightNum(), run.Sink());
+	run.Finish();
 }
 //-----------------------------------------------------------------------
 
@@ -117,23 +113,35 @@ cLuxLampLightConnection::~cLuxLampLightConnection()
 
 void cLuxLampLightConnection::Update(float afTimeStep)
 {
-	cColor finalColor = mpLight->GetDefaultDiffuseColor();
-	
+	cColor defaultColor = mpLight->GetDefaultDiffuseColor();
+
+	std::vector<OhplGa4LampLink> vLinks;
 	tLuxLampLightConnection_LampListIt it = mlstLamps.begin();
 	for(; it != mlstLamps.end(); ++it)
 	{
 		cLuxLampLightConnection_Lamp *pLampConnection = *it;
 		cLuxProp_Lamp *pLamp = pLampConnection->mpLamp;
-		if(pLamp->mvLights.empty()) continue;
 
-		cColor lightColor = pLampConnection->mbUseLightOnColor ?	pLamp->mvEffectLightData[0].mOnColor :
-																	pLamp->mvLights[0]->GetDiffuseColor();
-		if(pLampConnection->mbUseLightSpec==false) lightColor.a = 0;
-
-	    finalColor = finalColor + lightColor * pLampConnection->mfAmount * pLampConnection->mpLamp->GetEffectsAlpha();
+		OhplGa4LampLink link;
+		memset(&link, 0, sizeof(link));
+		link.has_lights = pLamp->mvLights.empty()==false;
+		if(link.has_lights)
+		{
+			cColor lightColor = pLampConnection->mbUseLightOnColor ?	pLamp->mvEffectLightData[0].mOnColor :
+																		pLamp->mvLights[0]->GetDiffuseColor();
+			link.color[0] = lightColor.r; link.color[1] = lightColor.g; link.color[2] = lightColor.b; link.color[3] = lightColor.a;
+		}
+		link.use_spec = pLampConnection->mbUseLightSpec;
+		link.amount = pLampConnection->mfAmount;
+		link.effects_alpha = pLamp->GetEffectsAlpha();
+		vLinks.push_back(link);
 	}
 
-	mpLight->SetDiffuseColor(finalColor);
+	float vDefault[4] = { defaultColor.r, defaultColor.g, defaultColor.b, defaultColor.a };
+	float vFinal[4];
+	ohpl_ga4_lamp_light_connection_color(vDefault, vLinks.empty() ? NULL : &vLinks[0], (int)vLinks.size(), vFinal);
+
+	mpLight->SetDiffuseColor(cColor(vFinal[0], vFinal[1], vFinal[2], vFinal[3]));
 }
 
 //-----------------------------------------------------------------------
@@ -179,9 +187,10 @@ void cLuxLampLightConnection::RemoveLamp(cLuxProp_Lamp *apLamp)
 
 cLuxProp_Lamp::cLuxProp_Lamp(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp(asName,alID,apMap, eLuxPropType_Lamp)
 {
-	mbLit = true;
+	memset(&mP, 0, sizeof(mP));
+	ohpl_ga4_lamp_state_new(&mS);
+
 	mpLightConnection = NULL;
-	mbLightConnectionSetup = false;
 }
 
 //-----------------------------------------------------------------------
@@ -202,10 +211,7 @@ cLuxProp_Lamp::~cLuxProp_Lamp()
 
 bool cLuxProp_Lamp::CanInteract(iPhysicsBody *apBody)
 {
-	if(CanBeIgnitByPlayer() && mbLit==false) return true;
-	if(msInteractCallback != "") return true;
-	
-	return false;
+	return ohpl_ga4_lamp_can_interact(&mS, &mP, msInteractCallback != "");
 }
 
 //-----------------------------------------------------------------------
@@ -214,7 +220,7 @@ bool cLuxProp_Lamp::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
 	//////////////////////
 	//Turn off
-	if(mbLit)
+	if(mS.lit)
 	{
 		//SetLit(false, true);
 		//Nothing...
@@ -233,10 +239,7 @@ bool cLuxProp_Lamp::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 
 		/////////////////////
 		// Add sanity
-		float fIncreaseAmount = 1.0f - gpBase->mpPlayer->GetSanity() / 100.0f;
-		fIncreaseAmount = fIncreaseAmount*fIncreaseAmount; //Want exp curve
-		float fSanityAdd =	gpBase->mpGlobalDataHandler->GetLightLampMinSanityIncrease() * (1-fIncreaseAmount) + 
-							gpBase->mpGlobalDataHandler->GetLightLampMaxSanityIncrease()*fIncreaseAmount;
+		float fSanityAdd = ohpl_ga4_lamp_sanity_add(gpBase->mpPlayer->GetSanity(), gpBase->mpGlobalDataHandler->GetLightLampMinSanityIncrease(), gpBase->mpGlobalDataHandler->GetLightLampMaxSanityIncrease());
 		gpBase->mpPlayer->AddSanity(fSanityAdd, false);
 
 		////////////////////
@@ -271,7 +274,7 @@ void cLuxProp_Lamp::OnSetupAfterLoad(cWorld *apWorld)
 
 void cLuxProp_Lamp::UpdatePropSpecific(float afTimeStep)
 {
-	if(mbLightConnectionSetup == false)
+	if(mS.light_connection_setup == false)
 	{
 		SetupLampLightConnection();
 	}
@@ -284,15 +287,12 @@ void cLuxProp_Lamp::FadeTo(float afR, float afG, float afB, float afA, float afR
 	for(size_t i=0; i<mvLights.size(); ++i)
 	{
 		iLight *pLight = mvLights[i];
-
-		cColor newColor(
-			afR >=0 ? afR : pLight->GetDiffuseColor().r,
-			afG >=0 ? afG : pLight->GetDiffuseColor().g,
-			afB >=0 ? afB : pLight->GetDiffuseColor().b,
-			afA >=0 ? afA : pLight->GetDiffuseColor().a
-			);
-
-		float fNewRadius = afRadius >=0 ? afRadius : pLight->GetRadius();
+		cColor lightColor = pLight->GetDiffuseColor();
+		float vLight[4] = { lightColor.r, lightColor.g, lightColor.b, lightColor.a };
+		float vWanted[4] = { afR, afG, afB, afA };
+		float vNew[4];
+		float fNewRadius = ohpl_ga4_lamp_fade_target(vLight, pLight->GetRadius(), vWanted, afRadius, vNew);
+		cColor newColor(vNew[0], vNew[1], vNew[2], vNew[3]);
 
 		pLight->SetFlickerActive(false);
 		pLight->SetVisible(true);
@@ -310,20 +310,18 @@ void cLuxProp_Lamp::BeforePropDestruction()
 
 eLuxFocusCrosshair cLuxProp_Lamp::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	//if(CanBeIgnitByPlayer())	return eLuxFocusCrosshair_Ignite;
-	if(mCustomFocusCrossHair != eLuxFocusCrosshair_Default && mbLit==true)
+	switch(ohpl_ga4_lamp_focus_crosshair(&mS, &mP, mCustomFocusCrossHair==eLuxFocusCrosshair_Default, msInteractCallback != ""))
 	{
-		return mCustomFocusCrossHair;
+	case 1: return mCustomFocusCrossHair;
+	case 2: return eLuxFocusCrosshair_Ignite;
 	}
-
-	if(CanInteract(apBody)) return eLuxFocusCrosshair_Ignite;
 
 	return eLuxFocusCrosshair_Default;
 }
 
 tWString cLuxProp_Lamp::GetFocusText()
 {
-	if(CanInteract(GetMainBody()) && mbLit==false) 
+	if(CanInteract(GetMainBody()) && mS.lit==false)
 	{
 		return _W("x ") + cString::ToStringW(gpBase->mpPlayer->GetTinderboxes());
 	}
@@ -334,19 +332,20 @@ tWString cLuxProp_Lamp::GetFocusText()
 
 void cLuxProp_Lamp::SetLit(bool abX, bool abUseEffects)
 {
-	if(mbLit == abX) return;
-
-    mbLit =  abX;
-	
-	SetEffectsActive(mbLit, abUseEffects);
+	OhplGa4EffectsIn env = Ga4EffectsEnv(abX, abUseEffects);
+	OhplGa4Run run(this);
+	ohpl_ga4_lamp_set_lit(&mS, &mBase, &env, Ga4Lights(), Ga4LightNum(), abX, abUseEffects, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxProp_Lamp::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	if(alState > 0)	SetLit(true, true);
-	if(alState < 0)	SetLit(false, true);
+	OhplGa4EffectsIn env = Ga4EffectsEnv(true, true);
+	OhplGa4Run run(this);
+	ohpl_ga4_lamp_on_connection_state(&mS, &mBase, &env, Ga4Lights(), Ga4LightNum(), alState, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -377,22 +376,21 @@ void cLuxProp_Lamp::SetupLampLightConnection()
 			
 		if(pConnectionLight)
 		{
-			mpMap->AddLampLightConnection(this, pConnectionLight, mfConnectionLightAmount, mbConnectionLightUseOnColor, mbConnectionLightUseSpec);
+			mpMap->AddLampLightConnection(this, pConnectionLight, mS.connection_light_amount, mS.connection_light_use_on_color, mS.connection_light_use_spec);
 		}
 		else
 		{
 			Error("Light '%s' that is connected to lamp '%s' does not exist!\n", msConnectionLight.c_str(), msName.c_str());
 		}
 	}
-	mbLightConnectionSetup = true;
+	mS.light_connection_setup = true;
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxProp_Lamp::CanBeIgnitByPlayer()
 {
-	if(mbLit || mbCanBeLitByPlayer==false) return false;
-	return true;
+	return ohpl_ga4_lamp_can_ignite(&mS, &mP);
 }
 
 //-----------------------------------------------------------------------
@@ -430,12 +428,12 @@ void cLuxProp_Lamp::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData,mbLit);
-	kCopyToVar(pData,mbLightConnectionSetup);
+	pData->mbLit = mS.lit;
+	pData->mbLightConnectionSetup = mS.light_connection_setup;
 	kCopyToVar(pData,msConnectionLight);
-	kCopyToVar(pData,mfConnectionLightAmount);
-	kCopyToVar(pData,mbConnectionLightUseOnColor);
-	kCopyToVar(pData,mbConnectionLightUseSpec);
+	pData->mfConnectionLightAmount = mS.connection_light_amount;
+	pData->mbConnectionLightUseOnColor = mS.connection_light_use_on_color;
+	pData->mbConnectionLightUseSpec = mS.connection_light_use_spec;
 }
 
 //-----------------------------------------------------------------------
@@ -449,12 +447,12 @@ void cLuxProp_Lamp::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData,	mbLit);
-	kCopyFromVar(pData,mbLightConnectionSetup);
+	mS.lit = pData->mbLit;
+	mS.light_connection_setup = pData->mbLightConnectionSetup;
 	kCopyFromVar(pData,msConnectionLight);
-	kCopyFromVar(pData,mfConnectionLightAmount);
-	kCopyFromVar(pData,mbConnectionLightUseOnColor);
-	kCopyFromVar(pData,mbConnectionLightUseSpec);
+	mS.connection_light_amount = pData->mfConnectionLightAmount;
+	mS.connection_light_use_on_color = pData->mbConnectionLightUseOnColor;
+	mS.connection_light_use_spec = pData->mbConnectionLightUseSpec;
 }
 
 //-----------------------------------------------------------------------
