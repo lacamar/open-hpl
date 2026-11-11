@@ -121,83 +121,8 @@ namespace hpl {
 	{
 		START_RENDER_PASS(WireFrame);
 
-		////////////////////////////////////////////
-		// Diffuse Objects
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+		RunSimpleRenderOps(true, false, NULL, NULL);
 
-		SetTextureRange(NULL,0);
-
-		int lCount =0;
-		cRenderableVecIterator diffIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Diffuse);
-		while(diffIt.HasNext())
-		{
-			iRenderable *pObject = diffIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
-		
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
-			lCount++;
-		}
-
-		////////////////////////////////////////////
-		// Decal Objects
-		SetDepthWrite(false);
-
-		cRenderableVecIterator decalIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Decal);
-		while(decalIt.HasNext())
-		{
-			iRenderable *pObject = decalIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			SetBlendMode(pMaterial->GetBlendMode());
-
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
-
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
-		}
-
-		RunCallback(eRendererMessage_PostSolid);
-
-
-		////////////////////////////////////////////
-		// Trans Objects
-		SetDepthWrite(false);
-		
-		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
-		while(transIt.HasNext())
-		{
-			iRenderable *pObject = transIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime);
-
-			SetBlendMode(pMaterial->GetBlendMode());
-
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
-
-			SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
-		}
-		
-		RunCallback(eRendererMessage_PostTranslucent);
-		
-		
 		END_RENDER_PASS();
 	}
 

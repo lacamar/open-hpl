@@ -58,6 +58,7 @@
 #include "scene/FogArea.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace hpl {
 
@@ -81,24 +82,194 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	int iRenderer::mlRenderFrameCount =0;
-	
+
 	//-----------------------------------------------------------------------
-	
+
+	//////////////////////////////////////////////////////////////////////////
+	// RUST HOST
+	//////////////////////////////////////////////////////////////////////////
+
+	//-----------------------------------------------------------------------
+
+	struct cRendererRustHost
+	{
+		struct Ctx
+		{
+			iRenderer *mpRenderer;
+			tRenderCHCObjectCallbackFunc mpCallback;
+			tRenderableVec *mpCasters;
+		};
+
+		static iRenderableContainerNode* N(uintptr_t alNode){ return (iRenderableContainerNode*)alNode;}
+		static iRenderable* O(uintptr_t alObj){ return (iRenderable*)alObj;}
+		static cFrustum* F(uintptr_t alFrustum){ return (cFrustum*)alFrustum;}
+		static iOcclusionQuery* Q(uintptr_t alQuery){ return (iOcclusionQuery*)alQuery;}
+		static Ctx* C(void *apCtx){ return (Ctx*)apCtx;}
+
+		static void UpdateNode(void*, uintptr_t alNode){ N(alNode)->UpdateBeforeUse();}
+		static int32_t CollideNode(void*, uintptr_t alFrustum, uintptr_t alNode){ return F(alFrustum)->CollideNode(N(alNode));}
+		static int32_t CollideObject(void*, uintptr_t alFrustum, uintptr_t alObj){ return F(alFrustum)->CollideBoundingVolume(O(alObj)->GetBoundingVolume());}
+		static bool ObjectCollidesWithFrustum(void*, uintptr_t alFrustum, uintptr_t alObj){ return O(alObj)->CollidesWithFrustum(F(alFrustum));}
+		static bool NearPlaneAABB(void*, uintptr_t alFrustum, const cVector3f *apMin, const cVector3f *apMax){ return F(alFrustum)->CheckAABBNearPlaneIntersection(*apMin, *apMax);}
+
+		static void ObjectCheck(void*, uintptr_t alObj, OhplRnObjCheck *apOut)
+		{
+			iRenderable *pObject = O(alObj);
+			apOut->mbVisible = pObject->IsVisible();
+			apOut->mlRenderFlags = pObject->GetRenderFlags();
+			apOut->mbCulledByFog = pObject->IsCulledByFog();
+			apOut->mbCulledByDistance = pObject->IsCulledByDistance();
+			apOut->mfFade = pObject->DistanceCullFade();
+			cBoundingVolume *pBV = pObject->GetBoundingVolume();
+			apOut->mbHasBV = pBV != NULL;
+			if(pBV)
+			{
+				apOut->mvMin = pBV->GetMin();
+				apOut->mvMax = pBV->GetMax();
+			}
+		}
+
+		static void SetObjectFade(void*, uintptr_t alObj, float afFade){ O(alObj)->DistanceCullFade() = afFade;}
+
+		static void ObjectMaterial(void*, uintptr_t alObj, OhplRnMatView *apOut)
+		{
+			cMaterial *pMaterial = O(alObj)->GetMaterial();
+			apOut->mbPresent = pMaterial != NULL;
+			if(pMaterial==NULL) return;
+			apOut->mbTranslucent = pMaterial->GetType()->IsTranslucent();
+			apOut->mlAlphaMode = (int32_t)pMaterial->GetAlphaMode();
+			apOut->mpZProgram = (uintptr_t)pMaterial->GetProgram(0,eMaterialRenderMode_Z);
+			apOut->mpDiffuseTexture = (uintptr_t)pMaterial->GetTexture(eMaterialTexture_Diffuse);
+		}
+
+		static void SetViewSpaceZ(void*, uintptr_t alObj, float afZ){ O(alObj)->SetViewSpaceZ(afZ);}
+		static float GetViewSpaceZ(void*, uintptr_t alObj){ return O(alObj)->GetViewSpaceZ();}
+
+		static void AddToRenderList(void *apCtx, uintptr_t alObj){ C(apCtx)->mpRenderer->mpCurrentRenderList->AddObject(O(alObj));}
+		static bool RenderObject(void *apCtx, uintptr_t alObj){ return C(apCtx)->mpCallback(C(apCtx)->mpRenderer, O(alObj));}
+		static void RenderNodeBox(void *apCtx, uintptr_t alNode, uintptr_t alQuery){ C(apCtx)->mpRenderer->RenderNodeBoundingBox(N(alNode), Q(alQuery));}
+		static uintptr_t GetQuery(void *apCtx){ return (uintptr_t)C(apCtx)->mpRenderer->GetOcclusionQuery();}
+		static void ReleaseQuery(void *apCtx, uintptr_t alQuery){ C(apCtx)->mpRenderer->ReleaseOcclusionQuery(Q(alQuery));}
+		static bool QueryFetch(void*, uintptr_t alQuery){ return Q(alQuery)->FetchResults();}
+		static uint32_t QuerySamples(void*, uintptr_t alQuery){ return Q(alQuery)->GetSampleCount();}
+		static void Flush(void *apCtx){ C(apCtx)->mpRenderer->mpLowLevelGraphics->FlushRendering();}
+		static void Caster(void *apCtx, uintptr_t alObj){ C(apCtx)->mpCasters->push_back(O(alObj));}
+	};
+
+	const OhplRnHostVt* iRenderer::RustHost()
+	{
+		static const OhplRnHostVt vt = []{
+			OhplRnHostVt v;
+			memset(&v, 0, sizeof(v));
+			OhplFillContainerHost(v);
+			v.update_node = cRendererRustHost::UpdateNode;
+			v.collide_node = cRendererRustHost::CollideNode;
+			v.collide_object = cRendererRustHost::CollideObject;
+			v.object_collides_frustum = cRendererRustHost::ObjectCollidesWithFrustum;
+			v.near_plane_aabb = cRendererRustHost::NearPlaneAABB;
+			v.object_check = cRendererRustHost::ObjectCheck;
+			v.set_object_fade = cRendererRustHost::SetObjectFade;
+			v.object_material = cRendererRustHost::ObjectMaterial;
+			v.set_view_space_z = cRendererRustHost::SetViewSpaceZ;
+			v.view_space_z = cRendererRustHost::GetViewSpaceZ;
+			v.add_to_render_list = cRendererRustHost::AddToRenderList;
+			v.render_object = cRendererRustHost::RenderObject;
+			v.render_node_bbox = cRendererRustHost::RenderNodeBox;
+			v.get_query = cRendererRustHost::GetQuery;
+			v.release_query = cRendererRustHost::ReleaseQuery;
+			v.query_fetch = cRendererRustHost::QueryFetch;
+			v.query_samples = cRendererRustHost::QuerySamples;
+			v.flush = cRendererRustHost::Flush;
+			v.caster = cRendererRustHost::Caster;
+			return v;
+		}();
+		return &vt;
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iRenderer::FillChecks(OhplRnChecks &avChecks)
+	{
+		avChecks.mbOcclusionPlanesActive = mbOcclusionPlanesActive;
+		avChecks.mpPlanes = mvCurrentOcclusionPlanes.empty() ? NULL : &mvCurrentOcclusionPlanes[0];
+		avChecks.mlPlaneCount = mvCurrentOcclusionPlanes.size();
+		avChecks.mbFogCullPlaneActive = mbFogCullPlaneActive;
+		avChecks.mFogCullPlane = mFogCullPlane;
+		avChecks.mbDistanceCullActive = mbDistanceCullActive;
+		avChecks.mvOrigin = mvDistanceCullOrigin;
+		avChecks.mfMinRangeSqr = mfDistanceCullMinRangeSqr;
+		avChecks.mfScreenSizeSqr = mfDistanceCullScreenSizeSqr;
+		avChecks.mfRandomSize = mfDistanceCullRandomSize;
+		avChecks.mfFadeTime = mfDistanceCullFadeTime;
+		avChecks.mfFadeTimeInv = mfDistanceCullFadeTimeInv;
+		avChecks.mfMaxRangeSqr = mfDistanceCullMaxRangeSqr;
+		avChecks.mfTime = mfDistanceCullTime;
+	}
+
+	void iRenderer::RunSimpleRenderOps(bool abWireFrame, bool abUseShaders, iGpuProgram *apFlatProgram, iGpuProgram *apDiffuseProgram)
+	{
+		static const eRenderListType vTypes[4] = { eRenderListType_Z, eRenderListType_Diffuse, eRenderListType_Decal, eRenderListType_Translucent };
+		std::vector<iRenderable*> vLists[4];
+		for(int i=0; i<4; ++i)
+		{
+			if(abWireFrame && i==0) continue;
+			cRenderableVecIterator it = mpCurrentRenderList->GetArrayIterator(vTypes[i]);
+			while(it.HasNext()) vLists[i].push_back(it.Next());
+		}
+
+		std::vector<char> vZHasAlpha(vLists[0].size());
+		for(size_t i=0; i<vLists[0].size(); ++i) vZHasAlpha[i] = vLists[0][i]->GetMaterial()->GetTexture(eMaterialTexture_Alpha) != NULL;
+
+		bool *pAlpha = (bool*)(vZHasAlpha.empty() ? NULL : &vZHasAlpha[0]);
+		size_t lOpNum = ohpl_rn_simple_ops(pAlpha, vLists[0].size(), vLists[1].size(), vLists[2].size(), vLists[3].size(), abUseShaders, abWireFrame, NULL, 0);
+		std::vector<OhplRnOp> vOps(lOpNum);
+		ohpl_rn_simple_ops(pAlpha, vLists[0].size(), vLists[1].size(), vLists[2].size(), vLists[3].size(), abUseShaders, abWireFrame, lOpNum ? &vOps[0] : NULL, lOpNum);
+
+		for(size_t i=0; i<vOps.size(); ++i)
+		{
+			const OhplRnOp &op = vOps[i];
+			iRenderable *pObject = NULL;
+			if(op.mlKind >= eOhplRnOp_ObjTexture && op.mlKind <= eOhplRnOp_ObjMatrixFrustum) pObject = vLists[op.mlList][op.mlIndex];
+
+			switch(op.mlKind)
+			{
+			case eOhplRnOp_DepthFunc:		SetDepthTestFunc(op.mlArg==0 ? eDepthTestFunc_LessOrEqual : eDepthTestFunc_Equal); break;
+			case eOhplRnOp_DepthTest:		SetDepthTest(op.mlArg!=0); break;
+			case eOhplRnOp_DepthWrite:		SetDepthWrite(op.mlArg!=0); break;
+			case eOhplRnOp_BlendNone:		SetBlendMode(eMaterialBlendMode_None); break;
+			case eOhplRnOp_AlphaMode:		SetAlphaMode(op.mlArg==0 ? eMaterialAlphaMode_Solid : eMaterialAlphaMode_Trans); break;
+			case eOhplRnOp_ChannelMode:		SetChannelMode(op.mlArg==0 ? eMaterialChannelMode_None : eMaterialChannelMode_RGBA); break;
+			case eOhplRnOp_TextureRangeNone:SetTextureRange(NULL,0); break;
+			case eOhplRnOp_Program:			SetProgram(op.mlArg==0 ? apFlatProgram : apDiffuseProgram); break;
+			case eOhplRnOp_ObjTexture:		SetTexture(0, pObject->GetMaterial()->GetTexture(op.mlArg==0 ? eMaterialTexture_Alpha : eMaterialTexture_Diffuse)); break;
+			case eOhplRnOp_ObjMatrix:		SetMatrix(pObject->GetModelMatrixPtr()); break;
+			case eOhplRnOp_ObjVertexBuffer:	SetVertexBuffer(pObject->GetVertexBuffer()); break;
+			case eOhplRnOp_ObjBlend:		SetBlendMode(pObject->GetMaterial()->GetBlendMode()); break;
+			case eOhplRnOp_ObjUpdateGraphics:pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime); break;
+			case eOhplRnOp_ObjMatrixFrustum:SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum)); break;
+			case eOhplRnOp_Draw:			if(op.mlArg==0) DrawCurrent(); else DrawCurrent(eVertexBufferDrawType_LineStrip); break;
+			case eOhplRnOp_Callback:		RunCallback(op.mlArg==0 ? eRendererMessage_PostSolid : eRendererMessage_PostTranslucent); break;
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------------
+
+	void iRenderer::FillFrustumData(cFrustum *apFrustum, OhplRnFrustumData &avData)
+	{
+		avData.mvOrigin = apFrustum->GetOrigin();
+		avData.mvForward = apFrustum->GetForward();
+		for(int i=0; i<eFrustumPlane_LastEnum; ++i) avData.mvPlanes[i] = apFrustum->GetPlane((eFrustumPlane)i);
+	}
+
+	//-----------------------------------------------------------------------
+
 	//////////////////////////////////////////////////////////////////////////
 	// RENDERER SORTING
 	//////////////////////////////////////////////////////////////////////////
 
 	//-----------------------------------------------------------------------
 
-	bool cRendererNodeSortFunc::operator()(iRenderableContainerNode* apNodeA, iRenderableContainerNode* apNodeB) const
-	{
-		if(apNodeA->IsInsideView() != apNodeB->IsInsideView())
-		{
-			return apNodeA->IsInsideView() > apNodeB->IsInsideView();
-		}
-
-		return apNodeA->GetViewDistance() >	apNodeB->GetViewDistance();
-	}
 
 	//-----------------------------------------------------------------------
 		
@@ -770,46 +941,22 @@ namespace hpl {
     
 	cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight)
 	{
-		////////////////////////////
-		//If size is 1, then just return that one
-		if(mvShadowMapData[aResolution].size()==1) return mvShadowMapData[aResolution][0];
+		std::vector<cShadowMapData*> &vData = mvShadowMapData[aResolution];
 
-		//////////////////////////
-		//Set up variables
-		cShadowMapData *pBestData = NULL;  
-		int lMaxFrameDist = -1;
-
-		////////////////////////////
-		//Iterate the shadow map array looking for shadow map already used by light
-		//Else find the one with the largest frame length.
-		for(size_t i=0; i<mvShadowMapData[aResolution].size(); ++i)
+		std::vector<OhplRnShadowSlot> vSlots(vData.size());
+		for(size_t i=0; i<vData.size(); ++i)
 		{
-			cShadowMapData *pData = mvShadowMapData[aResolution][i];
-			
-            if(pData->mCache.mpLight == apLight)
-			{
-				pBestData = pData;
-				break;
-			}
-			else 
-			{
-				int lFrameDist = cMath::Abs(pData->mlFrameCount- mlRenderFrameCount);
-				if(lFrameDist > lMaxFrameDist)
-				{
-					lMaxFrameDist = lFrameDist;
-					pBestData = pData;	
-				}
-			}
+			vSlots[i].mpLight = (uintptr_t)vData[i]->mCache.mpLight;
+			vSlots[i].mlFrameCount = vData[i]->mlFrameCount;
 		}
 
-		////////////////////////////
-		//Update the usage count
-		if(pBestData)
-		{
-			pBestData->mlFrameCount = mlRenderFrameCount;
-		}
-		
-		
+		bool bUpdateFrameCount = false;
+		int64_t lBest = ohpl_rn_pick_shadow_map(vSlots.empty() ? NULL : &vSlots[0], vSlots.size(), (uintptr_t)apLight, mlRenderFrameCount, &bUpdateFrameCount);
+		if(lBest < 0) return NULL;
+
+		cShadowMapData *pBestData = vData[(size_t)lBest];
+		if(bUpdateFrameCount) pBestData->mlFrameCount = mlRenderFrameCount;
+
 		return pBestData;
 	}
 
@@ -822,20 +969,30 @@ namespace hpl {
 		if(apLight->GetOcclusionCullShadowCasters()) return true;
 
 		cShadowMapLightCache& cacheData = apShadowData->mCache;
-		
-		///////////////////////////
-		// Check if texture map and light are valid
-		bool bValid =	cacheData.mpLight == apLight &&	cacheData.mlTransformCount == apLight->GetTransformUpdateCount() &&
-						cacheData.mfRadius == apLight->GetRadius();
 
-		/////////////////////////////
-		// Spotlight specific
-		if(bValid && apLight->GetLightType() == eLightType_Spot)
+		OhplRnShadowCache cache;
+		cache.mpLight = (uintptr_t)cacheData.mpLight;
+		cache.mlTransformCount = cacheData.mlTransformCount;
+		cache.mfRadius = cacheData.mfRadius;
+		cache.mfFOV = cacheData.mfFOV;
+		cache.mfAspect = cacheData.mfAspect;
+		cache.mfNearClip = cacheData.mfNearClip;
+
+		OhplRnLightKey key;
+		key.mpLight = (uintptr_t)apLight;
+		key.mlTransformCount = apLight->GetTransformUpdateCount();
+		key.mfRadius = apLight->GetRadius();
+		key.mbIsSpot = apLight->GetLightType() == eLightType_Spot;
+		key.mfFOV = key.mfAspect = key.mfNearClip = 0;
+		if(key.mbIsSpot)
 		{
 			cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
-			bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV &&
-					 pSpotLight->GetNearClipPlane() == cacheData.mfNearClip;
+			key.mfAspect = pSpotLight->GetAspect();
+			key.mfFOV = pSpotLight->GetFOV();
+			key.mfNearClip = pSpotLight->GetNearClipPlane();
 		}
+
+		bool bValid = ohpl_rn_shadow_cache_valid(&cache, &key);
 
 		/////////////////////////////
 		// Shadow casters
@@ -851,7 +1008,7 @@ namespace hpl {
 			cacheData.SetFromLight(apLight);
 			apLight->SetShadowCasterCacheFromVec(mvShadowCasters);
 		}
-		
+
 		return bValid ? false : true;
 	}
 	
@@ -916,120 +1073,31 @@ namespace hpl {
 	
 	//-----------------------------------------------------------------------
 
-	void iRenderer::CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags)
-	{
-		///////////////////////////////////////
-		//Make sure node is updated
-		apNode->UpdateBeforeUse();
-
-		///////////////////////////////////////
-		//Get frustum collision, if previous was inside, then this is too!
-		eCollision frustumCollision = mpCurrentFrustum->CollideNode(apNode);
-		
-		////////////////////////////////
-		//Do a visible check but always iterate the root node!	
-		if(apNode->GetParent())
-		{
-			if(	frustumCollision == eCollision_Outside) return;
-			if(CheckNodeIsVisible(apNode)==false)		return;
-			if(mpCurrentSettings->mbUseDelayedOcclusionCulling && DelayedOcclusionCulled(apNode)) return;
-		}
-
-		////////////////////////
-		//Iterate children
-		if(apNode->HasChildNodes())
-		{
-			tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
-			for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
-			{
-				iRenderableContainerNode *pChildNode = *childIt;
-				CheckNodesAndAddToListIterative(pChildNode, alNeededFlags);
-			}
-		}
-
-		/////////////////////////////
-		//Iterate objects
-		if(apNode->HasObjects())
-		{
-			tRenderableListIt it = apNode->GetObjectList()->begin();
-			for(; it != apNode->GetObjectList()->end(); ++it)
-			{
-				iRenderable *pObject = *it;
-				if(CheckObjectIsVisible(pObject, alNeededFlags)==false) continue;
-
-			    if(	frustumCollision == eCollision_Inside ||
-					pObject->CollidesWithFrustum(mpCurrentFrustum))
-				{
-					mpCurrentRenderList->AddObject(pObject);
-				}
-			}
-		}
-	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderer::FetchDelayedOcclusionResults()
 	{
-		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
-		int lFrame = ++pTracker->mlFrameCounter;
 		mpCurrentSettings->mlNumberOfOcclusionQueries =0;
-		pTracker->mvQueryNodes.clear();
 
-		for(auto it = pTracker->m_mapPendingQueries.begin(); it != pTracker->m_mapPendingQueries.end();)
-		{
-			if(it->second->FetchResults()==false) { ++it; continue; }
-
-			if((int)it->second->GetSampleCount() > mpCurrentSettings->mlSampleVisiblilityLimit)
-				pTracker->m_mapOccludedFrame.erase(it->first);
-			else
-				pTracker->m_mapOccludedFrame[it->first] = lFrame;
-
-			ReleaseOcclusionQuery(it->second);
-			it = pTracker->m_mapPendingQueries.erase(it);
-		}
-
-		if((lFrame & 255)==0)
-			for(auto it = pTracker->m_mapOccludedFrame.begin(); it != pTracker->m_mapOccludedFrame.end();)
-				it = it->second < lFrame - 8 ? pTracker->m_mapOccludedFrame.erase(it) : std::next(it);
+		cRendererRustHost::Ctx ctx = { this, NULL, NULL };
+		ohpl_rn_fetch_delayed(RustHost(), &ctx, mpCurrentSettings->mpVisibleNodeTracker->GetRustTracker(), mpCurrentSettings->mlSampleVisiblilityLimit);
 	}
 
 	// Occluded only while queries keep confirming it; unknown counts as visible.
-	bool iRenderer::DelayedOcclusionCulled(iRenderableContainerNode *apNode)
-	{
-		if(apNode->HasChildNodes() || apNode->HasObjects()==false) return false;
-		if(mpCurrentFrustum->CheckAABBNearPlaneIntersection(apNode->GetMin(), apNode->GetMax())) return false;
-
-		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
-		int lFrame = pTracker->mlFrameCounter;
-		bool bPending = pTracker->m_mapPendingQueries.count(apNode) > 0;
-
-		auto it = pTracker->m_mapOccludedFrame.find(apNode);
-		bool bOccluded = it != pTracker->m_mapOccludedFrame.end() && it->second >= lFrame - 4;
-
-		// Visible leaves are re-tested every 4th frame, staggered
-		if(bPending==false && (bOccluded || ((lFrame + ((size_t)apNode >> 6)) & 3)==0))
-			pTracker->mvQueryNodes.push_back(apNode);
-
-		return bOccluded;
-	}
 
 	void iRenderer::RenderDelayedOcclusionQueries()
 	{
-		cVisibleRCNodeTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker;
-		if(pTracker->mvQueryNodes.empty()) return;
+		OhplRnTracker *pTracker = mpCurrentSettings->mpVisibleNodeTracker->GetRustTracker();
+		if(ohpl_rn_has_delayed_queries(pTracker)==false) return;
 
 		SetDepthTest(true);
 		SetBlendMode(eMaterialBlendMode_None);
 		SetChannelMode(eMaterialChannelMode_None);
 		SetTextureRange(NULL,0);
 
-		for(iRenderableContainerNode *pNode : pTracker->mvQueryNodes)
-		{
-			iOcclusionQuery *pQuery = GetOcclusionQuery();
-			RenderNodeBoundingBox(pNode, pQuery);
-			pTracker->m_mapPendingQueries[pNode] = pQuery;
-		}
-		pTracker->mvQueryNodes.clear();
+		cRendererRustHost::Ctx ctx = { this, NULL, NULL };
+		ohpl_rn_render_delayed(RustHost(), &ctx, pTracker);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1038,7 +1106,12 @@ namespace hpl {
 	{
 		apContainer->UpdateBeforeRendering();
 
-		CheckNodesAndAddToListIterative(apContainer->GetRoot(), alNeededFlags);
+		OhplRnChecks checks;
+		FillChecks(checks);
+		cRendererRustHost::Ctx ctx = { this, NULL, NULL };
+		ohpl_rn_add_visible_to_list(	RustHost(), &ctx, &checks, mpCurrentSettings->mpVisibleNodeTracker->GetRustTracker(),
+										(uintptr_t)mpCurrentFrustum, mpCurrentSettings->mbUseDelayedOcclusionCulling, alNeededFlags,
+										(uintptr_t)apContainer->GetRoot());
 	}
 
 	//-----------------------------------------------------------------------
@@ -1046,97 +1119,9 @@ namespace hpl {
 	/**
 	* Inserts the child nodes in apNode in a_setNodeStack.
 	*/
-	void iRenderer::PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags)
-	{
-		if(apNode->HasChildNodes()==false) return;
-
-		tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
-		for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
-		{
-			iRenderableContainerNode *pChildNode = *childIt;
-
-			///////////////////////
-			// Make sure node is update
-			pChildNode->UpdateBeforeUse();
-
-			///////////////////////////////////////////////////
-			// Check node has object and needed flags
-			if(	pChildNode->UsesFlagsAndVisibility() &&
-				(pChildNode->HasVisibleObjects()==false || (pChildNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
-			{
-				continue;
-			}
-
-			///////////////////////////////////////////////////
-			// Check if inside frustum, skipping test if parent was inside
-			eCollision frustumCollision =	apNode->GetPrevFrustumCollision() == eCollision_Inside ?
-													eCollision_Inside : mpCurrentFrustum->CollideNode(pChildNode);
-
-			if(frustumCollision == eCollision_Outside) continue;
-			if(CheckNodeIsVisible(pChildNode)==false) continue;
-
-            pChildNode->SetPrevFrustumCollision(frustumCollision);
-
-
-			////////////////////////////////////////////////////////
-			//Check if the frustum origin is inside the node AABB.
-			// If so no intersection test is needed
-			if(mpCurrentFrustum->CheckAABBNearPlaneIntersection(pChildNode->GetMin(), pChildNode->GetMax()))
-			{
-				cVector3f vViewSpacePos = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), pChildNode->GetCenter());
-				pChildNode->SetViewDistance(vViewSpacePos.z);
-				pChildNode->SetInsideView(true);
-			}
-			////////////////////////////////////////////////////////
-			// Frustum origin is outside of node. Do intersection test.
-			else
-			{	
-				cVector3f vIntersection;
-				cMath::CheckAABBLineIntersection(pChildNode->GetMin(), pChildNode->GetMax(), 
-												mpCurrentFrustum->GetOrigin(), pChildNode->GetCenter(),
-												&vIntersection, NULL);
-				cVector3f vViewSpacePos = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), vIntersection);
-				pChildNode->SetViewDistance(vViewSpacePos.z);
-				pChildNode->SetInsideView(false);
-			}
-			
-			////////////////////////////////////////////////////////
-			// Add to sorted stack.
-			a_setNodeStack.insert(pChildNode);
-		}
-	}
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered)
-	{
-		//DEBUG
-		// Skip using a query and just render the node.
-		if(	mbOnlyRenderPrevVisibleOcclusionObjects && 
-			mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1)
-		{
-			RenderNodeBoundingBox(apNode,NULL);
-			return;
-		}
-
-		//////////////////////
-		//Create the pair
-		cNodeOcclusionPair noPair;
-		noPair.mpNode = apNode;
-		noPair.mpQuery = GetOcclusionQuery();
-		noPair.mbObjectsRendered = abObjectsRendered;
-
-		if(mbLog)Log("CHC: Testing query %d on node: %d\n",noPair.mpQuery, apNode);
-
-		/////////////////////
-		// Render node AABB
-		RenderNodeBoundingBox(apNode, noPair.mpQuery);		
-		
-		
-		/////////////////////
-		// Add to list
-		apList->push_back(noPair);
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -1213,69 +1198,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static std::vector<iRenderable*> gvSortedObjects;
-	int iRenderer::RenderAndAddNodeObjects(iRenderableContainerNode *apNode, tRenderCHCObjectCallbackFunc apRenderCallback, tRenderableFlag alNeededFlags)
-	{
-		if(apNode->HasObjects()==false) return 0;
-
-		int lRenderedObjects = 0;
-
-		////////////////////////////////////
-		//Iterate sorted objects and render
-		for(tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it)
-		{
-			iRenderable *pObject = *it;
-			
-			//////////////////////
-			// Check if object is visible
-			if(CheckObjectIsVisible(pObject, alNeededFlags)==false) continue;
-
-			/////////////////////////////
-			//Check if inside frustum, skip test node was inside
-			if(	apNode->GetPrevFrustumCollision() != eCollision_Inside && 
-				pObject->CollidesWithFrustum(mpCurrentFrustum)==false)
-			{
-				continue;
-			}
-
-			if(apRenderCallback(this,pObject))
-			{
-				++lRenderedObjects;
-			}
-		}
-
-		return lRenderedObjects;
-	}
-	
-	//-----------------------------------------------------------------------
-	
-	cVisibleRCNodeTracker *gpCurrentVisibleNodeTracker = NULL;
-    void iRenderer::PushUpVisibility(iRenderableContainerNode *apNode)
-	{
-		gpCurrentVisibleNodeTracker->SetNodeVisible(apNode);
-		
-		if(apNode->GetParent()) PushUpVisibility(apNode->GetParent());
-	}
-
-	//-----------------------------------------------------------------------
-	
-	static void PrintNodeDebugContents(tRendererSortedNodeSet &a_setNodes)
-	{
-		Log("  Nodes:\n");
-		tRendererSortedNodeSetIt it = a_setNodes.begin();
-		for(; it != a_setNodes.end(); ++it)
-		{
-			iRenderableContainerNode *pNode = *it;
-            
-			Log("   Node: %d, inside: %d, children %d, objects: %d\n", pNode, pNode->IsInsideView(), 
-																	pNode->GetChildNodeList()->size(),
-																	pNode->GetObjectNum());
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-
 	void iRenderer::CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
 																tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
 																bool abSetupRenderStates,
@@ -1297,14 +1219,12 @@ namespace hpl {
 		}
 
 		////////////////////////////
-		//Set up stack and other variables
+		//Set up the containers and the root nodes
 		const tFlag vContainerFlags[2] = { eObjectVariabilityFlag_Static, eObjectVariabilityFlag_Dynamic};
 
 		iRenderableContainer *pContainers[2];
 		pContainers[0] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static);
 		pContainers[1] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
-
-		tNodeOcclusionPairList lstNodeOcclusionPairs;
 
 		// Set up output variables
 		mpCurrentSettings->mlNumberOfOcclusionQueries =0;
@@ -1312,10 +1232,8 @@ namespace hpl {
 		// Switch sets, so that the last frames set is not current.
 		apVisibleNodeTracker->SwitchAndClearVisibleNodeSet();
 
-		tRenderCHCObjectCallbackFunc pRenderCallback;
-		if(apRenderObjectCallback)	pRenderCallback = apRenderObjectCallback;
-		else						pRenderCallback = RenderObjectZAndAddToRenderListStaticCallback;
-
+		cRendererRustHost::Ctx ctx = { this, NULL, NULL };
+		ctx.mpCallback = apRenderObjectCallback ? apRenderObjectCallback : RenderObjectZAndAddToRenderListStaticCallback;
 
 		// Setup the container before rendering
 		for(int i=0;i<2; ++i)
@@ -1326,510 +1244,64 @@ namespace hpl {
 			}
 		}
 
-		// Temp variable used when pushing visibility
-		gpCurrentVisibleNodeTracker = apVisibleNodeTracker;
-
-		//Debug:
-		//mpCurrentSettings->mlstRenderedNodes.clear();
-
-		//Add Root nodes to stack
-		tRendererSortedNodeSet setNodeStack;
+		uintptr_t vRoots[2];
+		size_t lRootNum =0;
 		for(int i=0;i<2; ++i)
 		{
 			if(vContainerFlags[i] & alObjectTypes)
 			{
-				iRenderableContainerNode *pNode = pContainers[i]->GetRoot();
-				pNode->UpdateBeforeUse();	//Make sure node is updated.	
-				pNode->SetInsideView(true);	//We never want to check root! Assume player is inside.
-				setNodeStack.insert(pNode);
+				vRoots[lRootNum++] = (uintptr_t)pContainers[i]->GetRoot();
 			}
 		}
 
+		OhplRnChecks checks;
+		FillChecks(checks);
 
-		//Render at least X objects without rendering nodes, to some occluders
-		int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;	
-				
-		////////////////////////////
-		//Iterate the nodes on the stack.
-		while(setNodeStack.empty()==false || lstNodeOcclusionPairs.empty()==false)
-		{
-			//if(mbLog) PrintNodeDebugContents(setNodeStack);
+		OhplRnChc chc;
+		chc.mpFrustum = (uintptr_t)mpCurrentFrustum;
+		chc.m_mtxView = mpCurrentFrustum->GetViewMatrix();
+		chc.mvOrigin = mpCurrentFrustum->GetOrigin();
+		chc.mlNeededFlags = alNeededFlags;
+		chc.mlMinObjectsBeforeOcclusion = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
+		chc.mlSampleLimit = mpCurrentSettings->mlSampleVisiblilityLimit;
+		chc.mbOnlyRenderPrevVisible = mbOnlyRenderPrevVisibleOcclusionObjects;
+		chc.mlOnlyPrevVisibleFrameCount = mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount;
 
-			///////////////////////////
-			//If node stack not empty, pop the first node on the stack
-			if(setNodeStack.empty()==false)
-			{
-				tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); //Might be slow...
-				iRenderableContainerNode *pNode = *firstIt;
-				setNodeStack.erase(firstIt); //This is most likely very slow... use list?
-
-				//////////////////////////
-				// Check if node is a leaf  
-				bool bNodeIsLeaf = pNode->HasChildNodes()==false;
-
-				//////////////////////////
-				// Check if near plane is inside node AABB
-				bool bNearPlaneInsideNode = pNode->IsInsideView();
-
-				//////////////////////////
-				// Check if node was visible
-				bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
-
-				//////////////////////////
-				//Render nodes and queue queries
-				// Only do this if:
-				// - Near plane is not inside node AABB 
-				// - All of the closest objects have been rendered (so there are some blockers)
-				// - Node was not visible or node is leaf (always draw leaves!)
-				if(	bNearPlaneInsideNode==false && lMinRenderedObjects<=0 && 
-					(bWasVisible==false || bNodeIsLeaf) )
-				{
-					////////////////
-					//If node is leaf and was visible render objects directly.
-					// Rendering directly can be good as it may result in extra blocker for next node test.
-					bool bRenderObjects = false;
-					if(bNodeIsLeaf && bWasVisible) bRenderObjects = true;
-															
-					/////////////////////////////////////
-					// Render AABB and add query to list
-					AddAndRenderNodeOcclusionQuery(&lstNodeOcclusionPairs, pNode, bRenderObjects);
-					
-					//////////////////////////
-					//Render node objects after AABB so that an object does not occlude its own node.
-					if(bRenderObjects) RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-
-					//Debug:
-					// Skipping any queries, so must push up visible if this node was visible
-					if(mbOnlyRenderPrevVisibleOcclusionObjects && 
-						mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
-						bRenderObjects && bWasVisible)
-					{
-						PushUpVisibility(pNode);
-					}
-				}
-				//////////////////////////
-				//If previous test failed, push children to stack and render objects (if any) directly.
-				else
-				{
-					if(mbLog)
-					{
-						if(lMinRenderedObjects>0)
-							Log("CHC: Rendered objects left: %d node %d, pushing children and rendering nodes!\n",lMinRenderedObjects, pNode);
-						else
-							Log("CHC: Near plane inside node %d, pushing children and rendering nodes!\n",pNode);
-					}
-					
-					////////////////
-					//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
-					PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
-
-					////////////////
-					//Render objects if any
-					int lObjectsRendered = RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-					lMinRenderedObjects -= lObjectsRendered;
-				}
-
-				////////////////////
-				// If node stack is empty, it is a good time to flush!
-				if(setNodeStack.empty())
-				{
-					mpLowLevelGraphics->FlushRendering();
-				}
-			}
-
-			///////////////////////////
-			//If node-query list is not empty, check if the first query is ready
-			// Only once the stack drains: some drivers (Mesa agx) flush and wait on every availability poll.
-			if(lstNodeOcclusionPairs.empty()==false && setNodeStack.empty())
-			{
-				cNodeOcclusionPair& noPair = lstNodeOcclusionPairs.front();
-
-							
-				//////////////////////////////////////
-				//Check if the query is done
-				if(noPair.mpQuery->FetchResults()==false)
-				{
-					//Do nothing for now....
-				}
-				///////////////////////
-				// Query is ready
-				else
-				{
-					////////////
-					//Get data, release query and pop front
-					bool bObjectsRendered = noPair.mbObjectsRendered;
-					iRenderableContainerNode *pNode = noPair.mpNode;
-					
-					int lSampleCount = noPair.mpQuery->GetSampleCount();
-					ReleaseOcclusionQuery(noPair.mpQuery);
-					
-					lstNodeOcclusionPairs.pop_front(); //Makes noPair invalid
-
-					if(mbLog)Log("CHC: Fetching query %d on node: %d, samples: %d\n",noPair.mpQuery, pNode, lSampleCount);
-
-					//////////
-					// Check if node is visible and if so handle children and objects
-					if(lSampleCount > mpCurrentSettings->mlSampleVisiblilityLimit)
-					{
-						if(mbLog)Log("CHC: Rendering objects in node %d\n", pNode);
-
-						////////////////
-						//Set node and all of its parents as visible.
-						PushUpVisibility(pNode);
-						
-						////////////////
-						//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
-						PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
-
-						////////////////
-						//Render objects if any and not already rendered.
-						if(bObjectsRendered==false){
-							RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-						}
-					}
-					else
-					{
-						if(mbLog) Log("CHC: Skipping node %d\n", pNode);
-
-					}
-				}
-			}
-
-		}
-
-		//Debug:
-		if(mbOnlyRenderPrevVisibleOcclusionObjects)
-		{
-			mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount++;
-		}
+		mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount =
+			ohpl_rn_chc_traverse(RustHost(), &ctx, &checks, apVisibleNodeTracker->GetRustTracker(), &chc, vRoots, lRootNum);
 
 		END_RENDER_PASS();
 	}
 	
 	//-----------------------------------------------------------------------
 
-	static tRenderableVec* gpLightShadowCasterVec=NULL;
-	static cFrustum *gpLightFrustum=NULL;
-	static float gfShadowCasterMinRadius=0;
-	static cFrustum *gpViewFrustum=NULL;
-	static eFrustumPlane gvBeyondLightAndViewPlanes[6]; //Use to check if an caster is not going to affect view.
-	static int glBeyondLightAndViewPlaneNum;
-	static bool gbLightBehindNearPlane;
-	static bool gbShadowCasterViewCheck=false;
-
-	static void SetupBeyondLightAndViewPlanes(cFrustum *apViewFrustum, cFrustum *apLightFrustum)
-	{
-		gpViewFrustum = apViewFrustum;
-
-		/////////////////////////
-		// Get the camera planes that face away from the light
-		glBeyondLightAndViewPlaneNum =0;
-		cVector3f vLightForward = apLightFrustum->GetForward();
-		for(int i=0; i<eFrustumPlane_LastEnum; ++i)
-		{
-			const cPlanef& cameraPlane = gpViewFrustum->GetPlane((eFrustumPlane)i);
-
-			//Check so plane is facing the light
-			// Above 0 because GetForward from frustum is inverted.
-			// Note that this is not optimal, but good enough for now. Should have some other way of choosing to make it better.
-			cVector3f vPlaneNormal = cameraPlane.GetNormal();
-			if(cMath::Vector3Dot(vPlaneNormal, vLightForward) > 0)	
-			{
-				gvBeyondLightAndViewPlanes[glBeyondLightAndViewPlaneNum] = (eFrustumPlane)i;
-				++glBeyondLightAndViewPlaneNum;
-			}
-		}
-		
-		/////////////////////////
-		// See if light is behind near plane
-		gbLightBehindNearPlane = cMath::PlaneToPointDist(gpViewFrustum->GetPlane(eFrustumPlane_Near), apLightFrustum->GetOrigin()) < 0;
-	}
-
-	//-----------------------------------------------------------------------
-	
-	static bool BoxIntersectOrInsidePlane(const cPlanef& aPlane,cVector3f *apCornerVec)
-	{
-		for(int corner =0; corner < 8; ++corner)
-		{
-			//Check if point is inside, if so skip plane...
-			if(cMath::PlaneToPointDist(aPlane, apCornerVec[corner]) > 0)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	static bool BoxInsidePlane(const cPlanef& aPlane,cVector3f *apCornerVec)
-	{
-		for(int corner =0; corner < 8; ++corner)
-		{
-			//Check if point is inside, if so skip plane...
-			if(cMath::PlaneToPointDist(aPlane, apCornerVec[corner]) < 0)
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iRenderer::CheckShadowCasterContributesToView(iRenderable *apObject)
-	{
-		//This should be always true since the shadow map might be saved and will then end up faulty if some objects have been dismissed!
-		if(!gbShadowCasterViewCheck) return true;
-
-
-		cBoundingVolume *pBV = apObject->GetBoundingVolume();
-
-		//Log("---- Checking %s --- \n",apObject->GetName().c_str());
-
-		//Log("1\n");
-		//////////////////////////////////////
-		//If light is behind near plane, one must check if object in front of near plane
-		bool bObjectMightOnNearPlane=false;
-		if(gbLightBehindNearPlane)
-		{
-			return true;	//Temp, until I can come up with a qay to resolve the issues.
-
-			const cPlanef& nearPlane = gpViewFrustum->GetPlane(eFrustumPlane_Near);
-			float fDist = cMath::PlaneToPointDist(nearPlane, pBV->GetWorldCenter());
-			
-			//Object is outside of near plane. 
-			if(fDist < -pBV->GetRadius()) return true; 
-
-			//Object is not really inside near plane, test more accurately later
-			if(fDist < pBV->GetRadius())
-			{
-				bObjectMightOnNearPlane = true;	//Do not test yet
-			}
-		}
-
-		eCollision frustumCollision = eCollision_Inside;
-		
-		//Log("2\n");
-		////////////////////////////
-		// Sphere test
-		int lOutsideCount=0;
-		int lInsideCount=0;
-		for(int i=0; i<glBeyondLightAndViewPlaneNum; ++i)
-		{
-			eFrustumPlane frustumPlane = gvBeyondLightAndViewPlanes[i];
-			const cPlanef& cameraPlane = gpViewFrustum->GetPlane(frustumPlane);
-			
-			float fDist = cMath::PlaneToPointDist(cameraPlane, pBV->GetWorldCenter());
-			
-			//Test if inside of plane
-			if(fDist > pBV->GetRadius())
-			{
-				lInsideCount++;
-			}
-			else if(fDist < -pBV->GetRadius())
-			{
-				lOutsideCount++;
-				break;
-			}
-		}
-		
-		//Log("3\n");
-		// If all was inside, then we are sure it contributes
-		if(lInsideCount == glBeyondLightAndViewPlaneNum) return true;
-
-		//Log("4\n");
-		// If any was outside, we are sure it does NOT contribute
-		if(lOutsideCount > 0 && bObjectMightOnNearPlane==false) return false;
-				
-		////////////////////
-		// Create corners
-		const cVector3f& vMax = pBV->GetMax();
-		const cVector3f& vMin = pBV->GetMin();
-
-		cVector3f vCorners[8] ={
-			cVector3f(vMax.x,vMax.y,vMax.z), cVector3f(vMax.x,vMax.y,vMin.z),
-				cVector3f(vMax.x,vMin.y,vMax.z), cVector3f(vMax.x,vMin.y,vMin.z),
-
-				cVector3f(vMin.x,vMax.y,vMax.z), cVector3f(vMin.x,vMax.y,vMin.z),
-				cVector3f(vMin.x,vMin.y,vMax.z), cVector3f(vMin.x,vMin.y,vMin.z),
-		};
-		
-		//Log("5\n");
-		////////////////////////////
-		// Check near plane intersection
-		if(lOutsideCount > 0 && bObjectMightOnNearPlane)
-		{
-			//If object is not fully inside, it contributes
-			if(BoxInsidePlane(gpViewFrustum->GetPlane(eFrustumPlane_Near),vCorners)==false)
-			{
-				return true;
-			}
-			bObjectMightOnNearPlane = false;//Reset so it is not tested again.
-		}
-		
-		////////////////////////////
-		// Box Test
-		
-		//Log("6\n");
-		//If needed check so that it is inside the near plane
-		if(bObjectMightOnNearPlane)
-		{
-			//If object is not fully inside, it contributes
-			if(BoxInsidePlane(gpViewFrustum->GetPlane(eFrustumPlane_Near),vCorners)==false)
-			{
-				return true;
-			}
-		}
-		
-		//Log("7\n");
-		//Iterate all planes separating between contributing and not.
-		bool bContributes;
-		for(int plane=0; plane<glBeyondLightAndViewPlaneNum; ++plane)
-		{
-			eFrustumPlane frustumPlane = gvBeyondLightAndViewPlanes[plane];
-			const cPlanef& cameraPlane = gpViewFrustum->GetPlane(frustumPlane);
-			
-			bContributes = BoxIntersectOrInsidePlane(cameraPlane, vCorners);
-
-			//Log("plane %d contribute: %d\n",frustumPlane, bContributes);
-
-			if(bContributes==false) break;
-		}
-		
-		return bContributes;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	void iRenderer::GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision)
-	{
-		///////////////////////////////////////
-		//Make sure node is updated
-		apNode->UpdateBeforeUse();
-
-		///////////////////////////////////////
-		//Get frustum collision, if previous was inside, then this is too!
-		eCollision frustumCollision = aPrevCollision == eCollision_Inside ? aPrevCollision : gpLightFrustum->CollideNode(apNode);
-		
-		///////////////////////////////////
-		//Check if visible but always iterate the root node!	
-		if(apNode->GetParent()) 
-		{
-			if(frustumCollision == eCollision_Outside) return;
-			if(CheckNodeIsVisible(apNode)==false) return;
-		}
-
-		////////////////////////
-		//Iterate children
-		if(apNode->HasChildNodes())
-		{
-			for(tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin(); childIt != apNode->GetChildNodeList()->end(); ++childIt)
-			{
-				iRenderableContainerNode *pChildNode = *childIt;
-				GetShadowCastersIterative(pChildNode, frustumCollision);
-			}
-		}
-
-		/////////////////////////////
-		//Iterate objects
-		if(apNode->HasObjects())
-		{
-			for(tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it)
-			{
-				iRenderable *pObject = *it;
-				
-				/////////
-				//Check so visible and shadow caster
-				if(	CheckObjectIsVisible(pObject, eRenderableFlag_ShadowCaster)==false ||
-					pObject->GetMaterial() == NULL ||
-					pObject->GetMaterial()->GetType()->IsTranslucent() ||
-					pObject->GetBoundingVolume()->GetRadius() < gfShadowCasterMinRadius)
-				{
-					continue;
-				}
-				
-				/////////
-				//Check if in frustum
-				if(	frustumCollision != eCollision_Inside &&
-					gpLightFrustum->CollideBoundingVolume(pObject->GetBoundingVolume()) == eCollision_Outside)
-				{
-					continue;
-				}
-				
-				/////////
-				// Check if it contributes to scene
-				if(CheckShadowCasterContributesToView(pObject)==false) continue;
-
-				
-				///////////////////////////////
-				// Add object!
-				
-				//Calculate the view space Z (just a squared distance)
-				pObject->SetViewSpaceZ(cMath::Vector3DistSqr(pObject->GetBoundingVolume()->GetWorldCenter(), 
-															gpLightFrustum->GetOrigin()));
-
-				//Add to list
-				gpLightShadowCasterVec->push_back(pObject);				
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iRenderer::GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum, float afMinRadius, bool abViewCheck)
 	{
 		apContainer->UpdateBeforeRendering();
 
-		gpLightFrustum = apLightFrustum;
-		gfShadowCasterMinRadius = afMinRadius;
-		gpLightShadowCasterVec = &avObjectVec;
-		gbShadowCasterViewCheck = abViewCheck;
+		OhplRnChecks checks;
+		FillChecks(checks);
+
+		OhplRnShadowQuery query;
+		query.mpLight = (uintptr_t)apLightFrustum;
+		query.mvLightOrigin = apLightFrustum->GetOrigin();
+		query.mfMinRadius = afMinRadius;
+		query.mlCasterFlag = eRenderableFlag_ShadowCaster;
+		query.mbHasViewCheck = abViewCheck;
 		if(abViewCheck)
 		{
-			SetupBeyondLightAndViewPlanes(mpCurrentFrustum, apLightFrustum);
-			gbLightBehindNearPlane = false; // sun is at infinity
+			OhplRnFrustumData viewData, lightData;
+			FillFrustumData(mpCurrentFrustum, viewData);
+			FillFrustumData(apLightFrustum, lightData);
+			ohpl_rn_view_check(&viewData, &lightData, &query.mViewCheck);
 		}
 
-		GetShadowCastersIterative(apContainer->GetRoot(), eCollision_Outside);
-		gbShadowCasterViewCheck = false;
+		cRendererRustHost::Ctx ctx = { this, NULL, &avObjectVec };
+		ohpl_rn_shadow_casters(RustHost(), &ctx, &checks, &query, (uintptr_t)apContainer->GetRoot());
 	}
 
 	//-----------------------------------------------------------------------
 
-	static bool SortFunc_ShadowCasters(iRenderable* apObjectA, iRenderable *apObjectB)
-	{
-		cMaterial *pMatA = apObjectA->GetMaterial();
-		cMaterial *pMatB = apObjectB->GetMaterial();
-
-		//////////////////////////
-		//Alpha mode
-		if(pMatA->GetAlphaMode() != pMatB->GetAlphaMode())
-		{
-			return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
-		}
-
-		//////////////////////////
-		//If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
-		if(	pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans )
-		{
-			if(pMatA->GetProgram(0,eMaterialRenderMode_Z) != pMatB->GetProgram(0,eMaterialRenderMode_Z))
-			{
-				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
-			}
-
-			if(pMatA->GetTexture(eMaterialTexture_Diffuse) != pMatB->GetTexture(eMaterialTexture_Diffuse))
-			{
-				return pMatA->GetTexture(eMaterialTexture_Diffuse) < pMatB->GetTexture(eMaterialTexture_Diffuse);
-			}
-		}
-
-		//////////////////////////
-		//View space depth, no need to test further since Z should almost never be the same for two objects.
-		//View space z is really just BB dist dis squared, so use "<"
-		return apObjectA->GetViewSpaceZ() < apObjectB->GetViewSpaceZ();
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -1841,9 +1313,6 @@ namespace hpl {
 
 		cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
 		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
-
-		//Set the view frustum, needed in some functions cause the current is set for the light during rendering.
-		SetupBeyondLightAndViewPlanes(mpCurrentFrustum, pLightFrustum);
 
 		/////////////////////////
 		// If culling by occlusion, skip rest of function
@@ -1871,7 +1340,7 @@ namespace hpl {
 		if(mvShadowCasters.empty()) return false;
 
 		//Sort the list
-		std::sort(mvShadowCasters.begin(), mvShadowCasters.end(), SortFunc_ShadowCasters);
+		ohpl_rn_sort_shadow_casters(RustHost(), NULL, (uintptr_t*)&mvShadowCasters[0], mvShadowCasters.size());
 		
 		return true;
 	}
@@ -1893,9 +1362,6 @@ namespace hpl {
 		{
 			return false;
 		}
-
-		//Check so it affects the view frustum
-		if(CheckShadowCasterContributesToView(apObject)==false) return false;
 
 		//mvShadowCasters.push_back(apObject); //Debug. Only to see what object are rendered.
 		
@@ -2358,79 +1824,11 @@ namespace hpl {
 
 	bool iRenderer::CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags)
 	{
-		/////////////////////////////
-		// Is Visible var
-		if(apObject->IsVisible()==false) return false;
-
-		/////////////////////////////
-		// Check flags
-		if((apObject->GetRenderFlags() & alNeededFlags) != alNeededFlags) return false;
-
-		/////////////////////////////
-		// Clip plane check.
-		// NOTE: This shall always be the user clip planes! Since we wanna cull stuff like nodes where clip planes are not active, etc.
-		if(mvCurrentOcclusionPlanes.empty()==false && mbOcclusionPlanesActive)
-		{
-			cBoundingVolume *pBV = apObject->GetBoundingVolume();
-			for(size_t i=0; i<mvCurrentOcclusionPlanes.size(); ++i)
-			{
-				cPlanef& plane = mvCurrentOcclusionPlanes[i];
-				
-				if(cMath::CheckPlaneBVCollision(plane, *pBV)==eCollision_Outside) return false;
-			}
-		}
-
-		if(mbFogCullPlaneActive && mbOcclusionPlanesActive && apObject->IsCulledByFog() &&
-		   cMath::CheckPlaneBVCollision(mFogCullPlane, *apObject->GetBoundingVolume())==eCollision_Outside) return false;
-
-		return CheckObjectDistanceCull(apObject)==false;
+		OhplRnChecks checks;
+		FillChecks(checks);
+		return ohpl_rn_object_visible(RustHost(), NULL, &checks, (uintptr_t)apObject, alNeededFlags);
 	}
 
-	bool iRenderer::CheckObjectDistanceCull(iRenderable *apObject)
-	{
-		if(mbDistanceCullActive==false || apObject->IsCulledByDistance()==false) return false;
-		cBoundingVolume *pBV = apObject->GetBoundingVolume();
-		if(pBV==NULL) return false;
-
-		const cVector3f& vMin = pBV->GetMin();
-		const cVector3f& vMax = pBV->GetMax();
-		cVector3f vClosest(	cMath::Clamp(mvDistanceCullOrigin.x, vMin.x, vMax.x),
-							cMath::Clamp(mvDistanceCullOrigin.y, vMin.y, vMax.y),
-							cMath::Clamp(mvDistanceCullOrigin.z, vMin.z, vMax.z));
-		float fDistSqr = cMath::Vector3DistSqr(vClosest, mvDistanceCullOrigin);
-
-		float fScale = 1 + (cMath::FastRandomFloat((int)(size_t)apObject) + 1) * mfDistanceCullRandomSize;
-		float fScaleSqr = fScale * fScale;
-
-		cVector3f vExt = vMax - vMin;
-		float fA = vExt.x, fB = vExt.y, fC = vExt.z;
-		if(fA < fB) std::swap(fA, fB);
-		if(fB < fC) std::swap(fB, fC);
-		if(fA < fB) std::swap(fA, fB);
-		float fSize = (fA + fB) * 0.5f;
-
-		bool bSmall = fSize*fSize*fScaleSqr < mfDistanceCullScreenSizeSqr*fDistSqr;
-		bool bVisible = !((bSmall || mfDistanceCullMaxRangeSqr*fScaleSqr < fDistSqr) && mfDistanceCullMinRangeSqr*fScaleSqr <= fDistSqr);
-
-		// fade >= 0: visible since time fade; < 0: culled since time -fade
-		float& fFade = apObject->DistanceCullFade();
-		const float fT = mfDistanceCullTime, fFadeTime = mfDistanceCullFadeTime;
-		if(bVisible)
-		{
-			if(fFade < 0)
-			{
-				float fElapsed = fFade + fT;
-				fFade = fFadeTime > fElapsed ? fT - fFadeTime + fElapsed : fT;
-			}
-		}
-		else if(fFade > 0)
-		{
-			float fElapsed = fT - fFade;
-			fFade = fFadeTime > fElapsed ? fFadeTime - fT - fElapsed : -fT;
-		}
-
-		return fFade < 0 && fFade + fT > fFadeTime;
-	}
 
 	float iRenderer::GetObjectCoverage(iRenderable *apObject)
 	{
@@ -2439,67 +1837,22 @@ namespace hpl {
 
 	float iRenderer::GetDistanceFadeAmount(iRenderable *apObject)
 	{
-		if(mbDistanceCullActive==false) return 1;
-		float fFade = apObject->DistanceCullFade();
-		if(fFade < 0) return cMath::Clamp(1 - (fFade + mfDistanceCullTime) * mfDistanceCullFadeTimeInv, 0.0f, 1.0f);
-		return cMath::Clamp((mfDistanceCullTime - fFade) * mfDistanceCullFadeTimeInv, 0.0f, 1.0f);
+		OhplRnChecks checks;
+		FillChecks(checks);
+		return ohpl_rn_distance_fade_amount(&checks, apObject->DistanceCullFade());
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool iRenderer::CheckNodeIsVisible(iRenderableContainerNode *apNode)
 	{
-		if(mbOcclusionPlanesActive==false || mvCurrentOcclusionPlanes.empty()) return true;
-
-		// NOTE: This shall always be the user clip planes! The render function ones might not be active when culling is needed and so on.
-		for(size_t i=0; i<mvCurrentOcclusionPlanes.size(); ++i)
-		{
-			cPlanef& plane = mvCurrentOcclusionPlanes[i];
-
-			if(cMath::CheckPlaneAABBCollision(	plane, apNode->GetMin(), apNode->GetMax(), 
-												apNode->GetCenter(), apNode->GetRadius())==eCollision_Outside)
-			{
-				return false;
-			}
-		}
-
-        return true;
+		OhplRnChecks checks;
+		FillChecks(checks);
+		return ohpl_rn_node_visible(RustHost(), NULL, &checks, (uintptr_t)apNode);
 	}
 
 	//-----------------------------------------------------------------------
 
-	bool iRenderer::CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix)
-	{
-		cPlanef boxspaceNearPlane = cMath::TransformPlane(a_mtxInvBoxModelMatrix, mpCurrentFrustum->GetPlane(eFrustumPlane_Near));
-		cVector3f vNearPlaneVtx[4];
-		for(int i=0; i<4; ++i)
-		{
-			vNearPlaneVtx[i] = cMath::MatrixMul(a_mtxInvBoxModelMatrix, mpCurrentFrustum->GetVertex(i));
-		}
-
-		cVector3f vMin(-0.5f);
-		cVector3f vMax(0.5f);
-
-		//////////////////////////////
-		// AABB vs Near Plane
-		/*if(cMath::CheckPlaneAABBCollision(boxspaceNearPlane, vMin, vMax)!= eCollision_Intersect)
-		{
-			//return false;
-		}*/
-
-		//////////////////////////////
-		// Near plane points vs AABB
-		for(int i=0; i<4; ++i)
-		{
-			if(cMath::CheckPointInAABBIntersection(vNearPlaneVtx[i], vMin, vMax)) return true;
-		}
-
-		//////////////////////////////
-		// Check if near plane points intersect with box
-		if(cMath::CheckPointsAABBPlanesCollision(vNearPlaneVtx, 4, vMin, vMax)!=eCollision_Outside) return true;
-
-		return false;
-	}
 
 	//-----------------------------------------------------------------------
 	
@@ -2515,63 +1868,9 @@ namespace hpl {
 	};
 	static const cVector3f gvFogBoxCompareSize = cVector3f(0.5001f);
 
-	bool iRenderer::CheckFogAreaRayIntersection(cMatrixf &a_mtxInvBoxModelMatrix, const cVector3f &avBoxSpaceRayStart, const cVector3f& avRayDir,
-												float &afEntryDist, float &afExitDist)
-	{
-		cVector3f vBoxSpaceDir = cMath::MatrixMul3x3(a_mtxInvBoxModelMatrix, avRayDir);
-
-		bool bFoundIntersection=false;
-		afExitDist = 0;
-
-		///////////////////////////////////
-		// Iterate the sides of the cube
-		for(int i=0; i<6; ++i)
-		{
-			const cVector3f& vPlaneNormal = gvFogBoxPlaneNormals[i];
-
-			///////////////////////////////////
-			// Calculate plane intersection
-			float fMul = cMath::Vector3Dot(vPlaneNormal, vBoxSpaceDir);
-			if(fabs(fMul)<0.0001f) continue;
-			float fNegDist = -(cMath::Vector3Dot(vPlaneNormal, avBoxSpaceRayStart)+0.5f);
-
-			float fT = fNegDist / fMul;
-			if(fT <0) continue;
-			cVector3f vAbsNrmIntersect = cMath::Vector3Abs(vBoxSpaceDir*fT + avBoxSpaceRayStart);
-			
-			///////////////////////////////////
-			// Check if the intersection is inside the cube
-			if(cMath::Vector3LessEqual(vAbsNrmIntersect,  gvFogBoxCompareSize))
-			{
-				//////////////////////
-				// First intersection
-				if(bFoundIntersection==false)
-				{
-					afEntryDist = fT;
-					afExitDist = fT;
-					bFoundIntersection = true;
-				}
-				//////////////////////
-				// There has already been a intersection.
-				else
-				{
-					afEntryDist = cMath::Min(afEntryDist, fT);
-					afExitDist = cMath::Max(afExitDist, fT);
-				}
-			}
-		}
-
-		if(afExitDist<0) return false;
-		
-		return bFoundIntersection;
-	}
 
 	//-----------------------------------------------------------------------
 
-	static bool SortFunc_FogAreaData(const cFogAreaRenderData& aFogDataA, const cFogAreaRenderData& aFogDataB)
-	{
-		return aFogDataA.mpFogArea->GetViewSpaceZ() < aFogDataB.mpFogArea->GetViewSpaceZ();		
-	}
 
 
 	void iRenderer::SetupFogRenderDataArray(bool abSort)
@@ -2584,7 +1883,10 @@ namespace hpl {
 
 			fogData.mpFogArea = pFogArea;
 			fogData.m_mtxInvBoxSpace = cMath::MatrixInverse( *pFogArea->GetModelMatrixPtr() );
-			fogData.mbInsideNearFrustum = CheckFogAreaInsideNearPlane(fogData.m_mtxInvBoxSpace);
+
+			cVector3f vNearPlaneVtx[4];
+			for(int j=0; j<4; ++j) vNearPlaneVtx[j] = mpCurrentFrustum->GetVertex(j);
+			fogData.mbInsideNearFrustum = ohpl_rn_fog_inside_near_plane(&fogData.m_mtxInvBoxSpace, vNearPlaneVtx);
 			fogData.mvBoxSpaceFrustumOrigin = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetOrigin());
 
 			mpCurrentSettings->mvFogRenderData.push_back(fogData);
@@ -2592,7 +1894,16 @@ namespace hpl {
 
 		if(abSort && mpCurrentSettings->mvFogRenderData.empty()==false)
 		{
-			std::sort(mpCurrentSettings->mvFogRenderData.begin(), mpCurrentSettings->mvFogRenderData.end(), SortFunc_FogAreaData);
+			std::vector<cFogAreaRenderData> &vData = mpCurrentSettings->mvFogRenderData;
+			std::vector<float> vViewZ(vData.size());
+			std::vector<uint32_t> vOrder(vData.size());
+			for(size_t i=0; i<vData.size(); ++i) vViewZ[i] = vData[i].mpFogArea->GetViewSpaceZ();
+			ohpl_rn_fog_sort_order(&vViewZ[0], vViewZ.size(), &vOrder[0]);
+
+			std::vector<cFogAreaRenderData> vSorted;
+			vSorted.reserve(vData.size());
+			for(size_t i=0; i<vOrder.size(); ++i) vSorted.push_back(vData[vOrder[i]]);
+			vData.swap(vSorted);
 		}
 	}
 
@@ -2602,57 +1913,18 @@ namespace hpl {
 	{
 		cFogArea *pFogArea = apFogData->mpFogArea;
 
+		OhplRnFogParams params;
+		params.mbShowBacksideInside = pFogArea->GetShowBacksideWhenInside();
+		params.mbShowBacksideOutside = pFogArea->GetShowBacksideWhenOutside();
+		params.mbInsideNearPlane = apFogData->mbInsideNearFrustum;
+		params.mfStart = pFogArea->GetStart();
+		params.mfEnd = pFogArea->GetEnd();
+		params.mfColorA = pFogArea->GetColor().a;
+		params.mfFalloffExp = pFogArea->GetFalloffExp();
+
 		cVector3f vObjectPos = apObject->GetBoundingVolume()->GetWorldCenter();
-		cVector3f vRayDir = vObjectPos - mpCurrentFrustum->GetOrigin();
-		float fCameraDistance = vRayDir.Length();
-		vRayDir = vRayDir / fCameraDistance;
-
-        float fEntryDist, fExitDist;
-		if(CheckFogAreaRayIntersection(apFogData->m_mtxInvBoxSpace,apFogData->mvBoxSpaceFrustumOrigin, vRayDir, fEntryDist, fExitDist)==false)
-		{
-			return 1.0f;
-		}
-		
-		if(apFogData->mbInsideNearFrustum==false && fCameraDistance < fEntryDist)
-		{
-			return 1.0f;
-		}
-
-		//////////////////////////////
-		//Calculate the distance the ray travels in the fog
-		float fFogDist;
-		if(apFogData->mbInsideNearFrustum)
-		{
-			if(pFogArea->GetShowBacksideWhenInside())
-				fFogDist = cMath::Min(fExitDist, fCameraDistance);
-			else
-				fFogDist = fCameraDistance;
-		}
-		else
-		{
-			if(pFogArea->GetShowBacksideWhenOutside())
-				fFogDist = cMath::Min(fExitDist - fEntryDist, fCameraDistance - fEntryDist);
-			else
-				fFogDist = fCameraDistance - fEntryDist;
-		}
-
-		//////////////////////////////
-		//Calculate the alpha
-		if(fFogDist <=0) return 1.0f;
-		
-		float fFogStart = pFogArea->GetStart();
-		float fFogEnd = pFogArea->GetEnd();
-		float fFogAlpha = 1 - pFogArea->GetColor().a;
-
-		if(fFogDist < fFogStart) return 1.0f;
-		
-		if(fFogDist > fFogEnd) return fFogAlpha;
-
-		float fAlpha = (fFogDist - fFogStart) / (fFogEnd - fFogStart);
-		if(pFogArea->GetFalloffExp()!=1) 
-			fAlpha = powf(fAlpha, pFogArea->GetFalloffExp());
-
-		return (1.0f-fAlpha) + fFogAlpha * fAlpha;
+		cVector3f vFrustumOrigin = mpCurrentFrustum->GetOrigin();
+		return ohpl_rn_fog_visibility(&params, &apFogData->m_mtxInvBoxSpace, &apFogData->mvBoxSpaceFrustumOrigin, &vFrustumOrigin, &vObjectPos);
 	}
 
 
@@ -2783,18 +2055,7 @@ namespace hpl {
 
 	eShadowMapResolution iRenderer::GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax)
 	{
-		if(aMax == eShadowMapResolution_High)
-		{
-			return aWanted;
-		}
-		else if(aMax == eShadowMapResolution_Medium)
-		{
-			return aWanted == eShadowMapResolution_High ? eShadowMapResolution_Medium : aWanted;
-		}
-		else
-		{
-			return eShadowMapResolution_Low;
-		}
+		return (eShadowMapResolution)ohpl_rn_shadow_map_resolution((int32_t)aWanted, (int32_t)aMax);
 	}
 
 	//-----------------------------------------------------------------------

@@ -22,6 +22,10 @@ mod tangents;
 pub use crate::types::{Matrixf, Quaternion, Vector2f, Vector2l, Vector3f};
 pub(crate) use geom::expand_aabb;
 pub(crate) use geom::rect_fit_l;
+pub(crate) use geom::{
+    aabb_inside, aabb_line_intersection, plane_aabb_collision, plane_aabb_sphere_collision,
+};
+pub(crate) use geom::{point_in_aabb, points_aabb_planes_collision};
 pub(crate) use libm::{asin, cos, sin};
 pub(crate) use libm::{atan2, tan};
 #[cfg(test)]

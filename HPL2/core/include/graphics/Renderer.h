@@ -27,6 +27,8 @@
 #include "graphics/RenderFunctions.h"
 #include "system/EngineDiagnostics.h"
 
+#include "graphics/RustRenderer.h"
+
 namespace hpl {
 
 	//---------------------------------------------
@@ -205,18 +207,6 @@ namespace hpl {
 
 	//---------------------------------------------
 
-	class cRendererNodeSortFunc
-	{
-	public:
-		bool operator()(iRenderableContainerNode* apNodeA, iRenderableContainerNode* apNodeB) const;
-	};
-
-
-	typedef std::multiset<iRenderableContainerNode*, cRendererNodeSortFunc> tRendererSortedNodeSet;
-	typedef tRendererSortedNodeSet::iterator tRendererSortedNodeSetIt;
-
-	//---------------------------------------------
-
 	class cShadowMapLightCache
 	{
 	public:
@@ -252,6 +242,7 @@ namespace hpl {
 	{
 	friend class cRendererCallbackFunctions;
 	friend class cRenderSettings;
+	friend struct cRendererRustHost;
 	public:
 		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
 		virtual ~iRenderer();
@@ -356,10 +347,8 @@ namespace hpl {
 		 */
 		void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags); 
 
-		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
 
 		void FetchDelayedOcclusionResults();
-		bool DelayedOcclusionCulled(iRenderableContainerNode *apNode);
 		void RenderDelayedOcclusionQueries();
 
 
@@ -374,15 +363,9 @@ namespace hpl {
 		static bool RenderObjectZAndAddToRenderListStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
 		bool RenderObjectZAndAddToRenderList(iRenderable *apObject);
 
-		void PushUpVisibility(iRenderableContainerNode *apNode);
 		void RenderNodeBoundingBox(iRenderableContainerNode *apNode, iOcclusionQuery *apQuery);
-		int RenderAndAddNodeObjects(iRenderableContainerNode *apNode, tRenderCHCObjectCallbackFunc apRenderCallback, tRenderableFlag alNeededFlags);
 		
-		void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
-		void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
 
-		bool CheckShadowCasterContributesToView(iRenderable *apObject);
-		void GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision);
 		void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum, float afMinRadius=0, bool abViewCheck=false);
 		bool SetupShadowMapRendering(iLight *apLight);
 
@@ -427,17 +410,13 @@ namespace hpl {
 		* Checks the IsVisible and also clip planes (in setttings), if visible in reflection and other stuff . No frustum check!
 		*/
 		bool CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags);
-		bool CheckObjectDistanceCull(iRenderable *apObject);
 
 		/**
 		 * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
 		 */
 		bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
 
-		bool CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix);
 		void SetupFogRenderDataArray(bool abSort);
-		bool CheckFogAreaRayIntersection(	cMatrixf &a_mtxInvBoxModelMatrix, const cVector3f &avBoxSpaceRayStart, const cVector3f& avRayDir,
-											float &afEntryDist, float &afExitDist);
 		float GetFogAreaVisibilityForObject(cFogAreaRenderData *apFogData, iRenderable *apObject);
 
 		void SetOcclusionPlanesActive(bool abX);
@@ -453,6 +432,15 @@ namespace hpl {
 		void RunCallback(eRendererMessage aMessage);
 
 		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
+
+		/**
+		 * Replays the draw sequence the Rust side computes for the simple and wire frame renderers.
+		 */
+		void RunSimpleRenderOps(bool abWireFrame, bool abUseShaders, iGpuProgram *apFlatProgram, iGpuProgram *apDiffuseProgram);
+
+		void FillChecks(OhplRnChecks &avChecks);
+		void FillFrustumData(cFrustum *apFrustum, OhplRnFrustumData &avData);
+		const OhplRnHostVt* RustHost();
 
 		iOcclusionQuery *GetOcclusionQuery();
 		void ReleaseOcclusionQuery(iOcclusionQuery * apQuery);

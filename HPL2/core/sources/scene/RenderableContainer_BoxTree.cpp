@@ -37,9 +37,7 @@ namespace hpl {
 	
 	cRCNode_BoxTree::cRCNode_BoxTree()
 	{
-		mpParent = NULL;
-
-		mbUsesFlagsAndVisibility = true;
+		mS.mbUsesFlagsAndVisibility = true;
 	}
 
 	//-----------------------------------------------------------------------
@@ -74,9 +72,9 @@ namespace hpl {
 
 		//Create the root
 		mpRoot = hplNew( cRCNode_BoxTree, ());
-		mpRoot->mpParent = NULL;
-		mpRoot->mfViewDistance =0;
-		mpRoot->mbInsideView = true;
+		mpRoot->mS.mpParent = 0;
+		mpRoot->mS.mfViewDistance =0;
+		mpRoot->mS.mbInsideView = true;
 
 		mpObjectCalllback = hplNew( cRenderableContainerObjectCallback, () );
 	}
@@ -103,30 +101,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static void RemoveFromNode(iRenderableContainerNode *apNode, iRenderable *apRenderable)
-	{
-		apNode->GetObjectList()->remove(apRenderable);
-		for(iRenderableContainerNode *pChild : *apNode->GetChildNodeList())
-			RemoveFromNode(pChild, apRenderable);
-	}
-
-	static void RemoveSetFromNode(iRenderableContainerNode *apNode, const std::set<iRenderable*>& aSet)
-	{
-		apNode->GetObjectList()->remove_if([&](iRenderable* pR) { return aSet.count(pR) != 0; });
-		for(iRenderableContainerNode *pChild : *apNode->GetChildNodeList())
-			RemoveSetFromNode(pChild, aSet);
-	}
-
 	void cRenderableContainer_BoxTree::Remove(iRenderable *apRenderable)
 	{
 		STLFindAndRemove(m_mlstTempObjects, apRenderable);
-		if(mpRoot) RemoveFromNode(mpRoot, apRenderable);
+		if(mpRoot) ohpl_bt_boxtree_remove(OhplContainerHost(), NULL, (uintptr_t)mpRoot, (uintptr_t)apRenderable);
 	}
 
 	void cRenderableContainer_BoxTree::RemoveSet(const std::set<iRenderable*>& aSet)
 	{
 		m_mlstTempObjects.remove_if([&](iRenderable* pR) { return aSet.count(pR) != 0; });
-		if(mpRoot) RemoveSetFromNode(mpRoot, aSet);
+		if(mpRoot)
+		{
+			std::vector<uintptr_t> vSet;
+			for(iRenderable *pR : aSet) vSet.push_back((uintptr_t)pR);
+			ohpl_bt_boxtree_remove_set(OhplContainerHost(), NULL, (uintptr_t)mpRoot, vSet.empty() ? NULL : &vSet[0], vSet.size());
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -141,9 +130,9 @@ namespace hpl {
 	{
 		if(mpRoot) hplDelete(mpRoot);
 		mpRoot = hplNew( cRCNode_BoxTree, ());
-		mpRoot->mpParent = NULL;
-		mpRoot->mfViewDistance =0;
-		mpRoot->mbInsideView = true;
+		mpRoot->mS.mpParent = 0;
+		mpRoot->mS.mfViewDistance =0;
+		mpRoot->mS.mbInsideView = true;
 
 		std::vector<iRenderable*> vObjects(m_mlstTempObjects.begin(), m_mlstTempObjects.end());
 		std::vector<OhplRcObject> vBounds(vObjects.size());
@@ -176,13 +165,13 @@ namespace hpl {
 			vNodes[i] = pNode;
 			if(i>0)
 			{
-				pNode->mpParent = vNodes[src.mlParent];
+				pNode->SetParent(vNodes[src.mlParent]);
 				vNodes[src.mlParent]->mlstChildNodes.push_back(pNode);
 			}
-			pNode->mvMin = src.mvMin;
-			pNode->mvMax = src.mvMax;
-			pNode->mvCenter = src.mvCenter;
-			pNode->mfRadius = src.mfRadius;
+			pNode->mS.mvMin = src.mvMin;
+			pNode->mS.mvMax = src.mvMax;
+			pNode->mS.mvCenter = src.mvCenter;
+			pNode->mS.mfRadius = src.mfRadius;
 
 			for(uint32_t j=0; j<src.mlObjectCount; ++j)
 			{
