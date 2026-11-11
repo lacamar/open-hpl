@@ -50,6 +50,7 @@ pub mod scene;
 pub mod sdlsys;
 pub mod shader;
 pub mod somaent;
+pub mod somasave;
 pub mod somascript;
 pub mod somasound;
 pub mod sound;
