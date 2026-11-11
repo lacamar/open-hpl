@@ -52,6 +52,7 @@ pub mod shader;
 pub mod somaagent;
 pub mod somaent;
 pub mod somalux;
+pub mod somasave;
 pub mod somascript;
 pub mod somasound;
 pub mod somaui;

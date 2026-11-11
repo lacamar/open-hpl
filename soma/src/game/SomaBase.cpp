@@ -1,4 +1,5 @@
 #include "SomaBase.h"
+#include "RustSomaSave.h"
 #include "SomaPostEffects.h"
 #include "SomaSound.h"
 #include "SomaSoundscape.h"
@@ -1268,21 +1269,19 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cRendererDeferred::SetGBufferTextureType(eTextureType_2D);
 	cGraphics::SetTempFrameBufferTextureType(eTextureType_2D);
 	// HPL3 gathers raw shadow depth (official iRenderer::CreateShadowMapData 0xd51790 sets no compare mode)
-	if(SomaGameId() == "rebirth" || SomaGameId() == "bunker")
+	OhplGs4EnginePlan plan = ohpl_gs4_engine_plan(SomaGameIdValue());
+	if(plan.shadow_map_compare_off)
 		iRenderer::SetShadowMapCompare(false);
-	if(SomaGameId() == "rebirth")
-		cRendererDeferred::SetLinearDepthTextureIdx(3);
-	else if(SomaGameId() == "bunker")
-	{
-		// specular split into RG and B+power targets
-		cRendererDeferred::SetNumOfGBufferTextures(5);
-		cRendererDeferred::SetLinearDepthTextureIdx(4);
-	}
-	else
+	// specular split into RG and B+power targets
+	if(plan.gbuffer_textures >= 0)
+		cRendererDeferred::SetNumOfGBufferTextures(plan.gbuffer_textures);
+	if(plan.linear_depth_texture_idx >= 0)
+		cRendererDeferred::SetLinearDepthTextureIdx(plan.linear_depth_texture_idx);
+	if(plan.depth_in_normal_alpha)
 		cRendererDeferred::SetDepthInNormalAlpha(true);
 	cMeshLoaderCollada::SetConvertUnitFromAnyTool(true);
 	cMeshLoaderCollada::SetUnscaledSkeleton(true);
-	cMeshLoaderMSH::mbKeepHpl3Animations = SomaGameId() == "soma";
+	cMeshLoaderMSH::mbKeepHpl3Animations = plan.keep_hpl3_animations;
 
 	cRendererDeferred::SetShadowDistanceNone(1e6f);
 	cImageManager::SetDefaultFrameSize(cVector2l(1024,1024));
@@ -1301,7 +1300,7 @@ bool cSomaBase::Init(const tString &asCommandline)
 	cMaterialType_Translucent::SetLightProbes(true);
 	cRendererDeferred::SetHdr(true);
 	// newer shaders have no in-shader decode
-	cTextureManager::SetHardwareSRGB(SomaGameId() != "soma");
+	cTextureManager::SetHardwareSRGB(plan.hardware_srgb);
 	cGpuShaderManager::AddGlobalDefine("UseLinearColorSpaceCorrection");
 	cGpuShaderManager::AddGlobalDefine("LinearColorSpaceCorrectionType_Standard");
 
@@ -1392,14 +1391,15 @@ void cSomaBase::OnGammaScreenFinished()
 
 void cSomaBase::ProceedPastBoot()
 {
-	const char *pTestMap = getenv("OPENHPL_SOMA_MAP");
-	if (pTestMap != NULL && pTestMap[0] != '\0')
+	std::vector<std::string> vTest;
+	if (ohpl_gs4_boot_map(getenv("OPENHPL_SOMA_MAP"), getenv("OPENHPL_SOMA_MAP_STARTPOS"),
+						  [](void *c, const unsigned char *apStr, size_t alLen) { ((std::vector<std::string> *)c)->emplace_back((const char *)apStr, alLen); },
+						  &vTest))
 	{
 		tString sError;
-		const char *pStartPos = getenv("OPENHPL_SOMA_MAP_STARTPOS");
-		if (LoadMap(pTestMap, cVector3f(0, 1.7f, 0), sError, pStartPos ? pStartPos : "*"))
+		if (LoadMap(vTest[0], cVector3f(0, 1.7f, 0), sError, vTest[1]))
 			return;
-		Error("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s)\n", pTestMap, sError.c_str());
+		Error("SOMA: OPENHPL_SOMA_MAP='%s' failed to load (%s)\n", vTest[0].c_str(), sError.c_str());
 		mpEngine->Exit();
 		return;
 	}
@@ -1422,9 +1422,9 @@ void cSomaBase::Run()
 
 bool cSomaBase::ParseCommandLine(const tString &asCommandline)
 {
-	msInitConfigFile = cString::To16Char(asCommandline);
-	if (msInitConfigFile == _W(""))
-		msInitConfigFile = _W("config/main_init.cfg");
+	ohpl_gs4_init_config_file((const unsigned char *)asCommandline.data(), asCommandline.size(),
+							  [](void *c, const uint32_t *apFile, size_t alLen) { ((tWString *)c)->assign((const wchar_t *)apFile, alLen); },
+							  &msInitConfigFile);
 
 	return true;
 }
@@ -1434,7 +1434,9 @@ bool cSomaBase::InitMainConfig()
 	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
 	if (pInitCfg->Load() == false)
 	{
-		msErrorMessage = _W("Could not load main init file: ") + msInitConfigFile;
+		ohpl_gs4_init_config_error((const uint32_t *)msInitConfigFile.data(), msInitConfigFile.size(),
+								   [](void *c, const uint32_t *apMsg, size_t alLen) { ((tWString *)c)->assign((const wchar_t *)apMsg, alLen); },
+								   &msErrorMessage);
 		hplDelete(pInitCfg);
 		return false;
 	}
@@ -1453,25 +1455,26 @@ void cSomaBase::SetupLogFile()
 #if defined(__linux__)
 	// default hpl.log lands in cwd, the Steam install
 	tWString sStateRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome);
-	tWString sStateDir = sStateRoot + _W("open-hpl/");
-	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-	sStateDir += SomaGameIdW();
-	if(cPlatform::FolderExists(sStateDir) == false) cPlatform::CreateFolder(sStateDir);
-
+	const std::string &sId = SomaGameId();
+	tWString sLogFile;
 	// per-PID: concurrent headless runs would truncate each other
-	tWString sLogFile = sStateDir + _W("hpl.log");
-	if(getenv("OPENHPL_HEADLESS_SOCKET") != NULL)
-	{
-		sLogFile = sStateDir + _W("hpl-") + cString::ToStringW((int)getpid()) + _W(".log");
-	}
+	ohpl_gs4_paths(2, (const uint32_t *)sStateRoot.data(), sStateRoot.size(), (const unsigned char *)sId.data(), sId.size(),
+				   getenv("OPENHPL_HEADLESS_SOCKET") != NULL, (int)getpid(),
+				   [](void *c, const uint32_t *apPath, size_t alPath, bool abFile) {
+					   tWString sPath((const wchar_t *)apPath, alPath);
+					   if(abFile)
+						   *(tWString *)c = sPath;
+					   else if(cPlatform::FolderExists(sPath) == false)
+						   cPlatform::CreateFolder(sPath);
+				   },
+				   &sLogFile);
 	SetLogFile(sLogFile);
 #endif
 }
 
 bool cSomaBase::InitEngine()
 {
-	const char *pFreeCam = getenv("OPENHPL_SOMA_FREECAM");
-	mbUseRealPlayer = pFreeCam == NULL || pFreeCam[0] == 0 || strcmp(pFreeCam, "0") == 0;
+	mbUseRealPlayer = ohpl_gs4_use_real_player(getenv("OPENHPL_SOMA_FREECAM"));
 
 	cEngineInitVars vars;
 	// FMOD virtualises voices past its 64 (MaxVirtualChannels=1000); OpenAL fails instead
@@ -1529,7 +1532,9 @@ bool cSomaBase::InitEngine()
 void cSomaBase::LoadScriptMainMenu()
 {
 	tString sError, sMenu = GetInitConfigString("MainMenu", "File");
-	if (LoadMap(sMenu.empty() ? "main_menu.hpm" : sMenu, cVector3f(0), sError, "*") == false)
+	ohpl_gs4_menu_map((const unsigned char *)sMenu.data(), sMenu.size(),
+					  [](void *c, const unsigned char *apStr, size_t alLen) { ((tString *)c)->assign((const char *)apStr, alLen); }, &sMenu);
+	if (LoadMap(sMenu, cVector3f(0), sError, "*") == false)
 		Error("SOMA: main menu failed (%s)\n", sError.c_str());
 }
 
@@ -1650,13 +1655,14 @@ bool cSomaBase::LoadMap(const tString &asMapFile, const cVector3f &avStartPos, t
 	float fAreaYaw = 0;
 	bool bFoundArea = false;
 	bool bCrouching = false;
-	if (asStartPosName != "")
+	int lStartArea = ohpl_gs4_start_area((const unsigned char *)asStartPosName.data(), asStartPosName.size());
+	if (lStartArea != 0)
 	{
 		// "*" = the map's first PlayerStart area
-		cStartPosEntity *pStartPos = asStartPosName == "*" ? NULL : pNewWorld->GetStartPosEntity(asStartPosName);
+		cStartPosEntity *pStartPos = lStartArea == 1 ? NULL : pNewWorld->GetStartPosEntity(asStartPosName);
 		if (pStartPos == NULL)
 		{
-			if (asStartPosName != "*")
+			if (lStartArea == 2)
 				Log("SOMA: map '%s' has no PlayerStart Area named '%s', using the first\n", asMapFile.c_str(), asStartPosName.c_str());
 			pStartPos = pNewWorld->GetFirstStartPosEntityByName();
 		}

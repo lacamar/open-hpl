@@ -1,4 +1,5 @@
 #include "SomaSave.h"
+#include "RustSomaSave.h"
 #include "SomaAgent.h"
 #include "SomaBase.h"
 #include "SomaImGui.h"
@@ -17,6 +18,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <deque>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -26,8 +28,6 @@
 
 namespace
 {
-	const char kMagic[] = "OHPLSAVO"; // version char is '0' + n
-
 	tString gsMapFile, gsStartPos;
 	bool gbExplorationMode = false;
 	std::string gsPendingState;
@@ -40,9 +40,8 @@ namespace
 	bool gbHoldAfterHeader = false;
 	tString gsHeldMap, gsHeldPos;
 	tString gsLoadCallbackObject, gsLoadCallbackFunc;
-	int glSaveNameCount = 0;
+	OhplGs4NameState gNameState = {};
 	tWString gsSaveSuffix;
-	cDate gLatestSaveDate;
 	const int kMaxAutoSaves = 20; // game.cfg Saving/MaxAutoSaves
 
 	// cLuxSaveHandler::LoadSavedGame_StartGame
@@ -55,49 +54,87 @@ namespace
 			SomaRunGlobalFunc(sObj, "", sFunc);
 	}
 
+	OhplGs4Str RS(const std::string &s) { return OhplGs4Str{(const unsigned char *)s.data(), s.size()}; }
+	std::string FromRS(OhplGs4Str s) { return std::string((const char *)s.p, s.n); }
+	template <class T> OhplGs4Slice<T> Sl(const std::vector<T> &v) { return OhplGs4Slice<T>{v.data(), v.size()}; }
+
+	template <size_t N, class T> void CopyF(float (&d)[N], const T &s)
+	{
+		static_assert(sizeof(T) == N * sizeof(float), "pod size");
+		memcpy(d, &s, sizeof(T));
+	}
+	template <class T, size_t N> void CopyB(unsigned char (&d)[N], const T &s)
+	{
+		static_assert(sizeof(T) == N, "pod size");
+		memcpy(d, &s, N);
+	}
+	template <class T, size_t N> void FromF(T &d, const float (&s)[N])
+	{
+		static_assert(sizeof(T) == N * sizeof(float), "pod size");
+		memcpy(&d, s, sizeof(T));
+	}
+	template <class T, size_t N> void FromB(T &d, const unsigned char (&s)[N])
+	{
+		static_assert(sizeof(T) == N, "pod size");
+		memcpy(&d, s, N);
+	}
+
+	// field-wise: the padding bytes of cSomaID are not part of the value
+	void IdFromB(cSomaID &d, const unsigned char (&s)[12])
+	{
+		static_assert(sizeof(cSomaID) == 12 && offsetof(cSomaID, mB) == 4 && offsetof(cSomaID, mC) == 8, "cSomaID layout");
+		memset((void *)&d, 0, sizeof(d));
+		d.mA = s[0];
+		memcpy(&d.mB, s + 4, 4);
+		memcpy(&d.mC, s + 8, 4);
+	}
+
+	void SinkW(void *c, const uint32_t *p, size_t n) { ((tWString *)c)->assign((const wchar_t *)p, n); }
+	void SinkS(void *c, const unsigned char *p, size_t n) { ((std::string *)c)->assign((const char *)p, n); }
+
+	struct cNamesCtx
+	{
+		tWString msTranslated;
+	};
+
+	void NamesTranslate(void *apCtx, const unsigned char *apKey, size_t alKey, const uint32_t **appOut, size_t *apLen)
+	{
+		cNamesCtx *c = (cNamesCtx *)apCtx;
+		c->msTranslated = gpSomaBase->mpEngine->GetResources()->Translate("Levels", std::string((const char *)apKey, alKey));
+		*appOut = (const uint32_t *)c->msTranslated.data();
+		*apLen = c->msTranslated.size();
+	}
+
+	void NamesMTime(void *, const uint32_t *apFile, size_t alFile, int32_t *apOut)
+	{
+		tWString sFile((const wchar_t *)apFile, alFile);
+		struct stat st = {};
+		stat(cString::To8Char(cSomaSaveHandler::GetSaveDir() + sFile).c_str(), &st);
+		struct tm t = {};
+		localtime_r(&st.st_mtime, &t);
+		apOut[0] = t.tm_mday;
+		apOut[1] = t.tm_mon + 1;
+		apOut[2] = t.tm_year + 1900;
+		apOut[3] = t.tm_hour;
+		apOut[4] = t.tm_min;
+		apOut[5] = t.tm_sec;
+	}
+
+	OhplGs4Date ToRustDate(const cDate &d) { return OhplGs4Date{d.seconds, d.minutes, d.hours, d.month_day, d.month, d.year}; }
+
 	tWString GetSaveName(const tWString &asPrefix)
 	{
 		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		tString sMapName = pMap && pMap->msDisplayNameEntry != "" ? pMap->msDisplayNameEntry : "NULL";
-		cDate d = cPlatform::GetDate();
-		tWString sName = asPrefix + _W("_") + cString::To16Char(sMapName);
-		for (int lX : {d.year, d.month + 1, d.month_day, d.hours, d.minutes, d.seconds, glSaveNameCount})
-			sName += _W("_") + cString::ToStringW(lX);
-		if (++glSaveNameCount >= 100 || d != gLatestSaveDate)
-			glSaveNameCount = 0;
-		gLatestSaveDate = d;
-		return sName + (gsSaveSuffix.empty() ? _W("") : _W("_") + gsSaveSuffix) + _W(".sav");
-	}
-
-	// HPL3 lists "Prefix_map_Y_M_D_h_m_s_n[_suffix]" saves as "Prefix - <level> - ", "D/M-Y hh:mm:ss"
-	void GetProperSaveName(const tWString &asFile, tWString &asName, tString &asDate, tWString &asSuffix)
-	{
-		tWStringVec vParts;
-		tWString sSep = _W("_");
-		cString::GetStringVecW(cString::SetFileExtW(asFile, _W("")), vParts, &sSep);
-		asSuffix = vParts.size() == 10 ? vParts[9] : _W("");
-		if (vParts.size() != 9 && vParts.size() != 10)
-		{
-			asName = cString::SetFileExtW(asFile, _W(""));
-			struct stat st = {};
-			stat(cString::To8Char(cSomaSaveHandler::GetSaveDir() + asFile).c_str(), &st);
-			struct tm t = {};
-			localtime_r(&st.st_mtime, &t);
-			char vBuf[64];
-			snprintf(vBuf, sizeof(vBuf), "%d/%d/%d %d:%02d:%02d", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900, t.tm_hour, t.tm_min, t.tm_sec);
-			asDate = vBuf;
-			return;
-		}
-		asName = vParts[0] + _W(" - ") + gpSomaBase->mpEngine->GetResources()->Translate("Levels", cString::To8Char(vParts[1])) + _W(" - ");
-		for (int i = 5; i <= 7; ++i)
-			if (vParts[i].size() == 1)
-				vParts[i] = _W("0") + vParts[i];
-		asDate = cString::To8Char(vParts[4] + _W("/") + vParts[3] + _W("-") + vParts[2] + _W(" ") + vParts[5] + _W(":") + vParts[6] + _W(":") + vParts[7]);
+		tString sMapName = pMap ? pMap->msDisplayNameEntry : "";
+		OhplGs4Date d = ToRustDate(cPlatform::GetDate());
+		tWString sName;
+		ohpl_gs4_save_name(&gNameState, (const uint32_t *)asPrefix.data(), asPrefix.size(), (const unsigned char *)sMapName.data(),
+						   sMapName.size(), &d, (const uint32_t *)gsSaveSuffix.data(), gsSaveSuffix.size(), SinkW, &sName);
+		return sName;
 	}
 
 	struct cSaveInfo
 	{
-		cDate mDate;
 		tWString msFile, msName, msSuffix;
 		tString msDate;
 	};
@@ -106,282 +143,206 @@ namespace
 	{
 		tWStringList lstFiles;
 		cPlatform::FindFilesInDir(lstFiles, cSomaSaveHandler::GetSaveDir(), _W("*.sav"));
-		std::vector<cSaveInfo> vSaves;
-		for (const tWString &sFile : lstFiles)
+		std::vector<tWString> vFiles(lstFiles.begin(), lstFiles.end());
+		std::vector<OhplGs4SaveFile> vRecs;
+		for (const tWString &sFile : vFiles)
+			vRecs.push_back(OhplGs4SaveFile{(const uint32_t *)sFile.data(), sFile.size(),
+											ToRustDate(cPlatform::FileModifiedDate(cSomaSaveHandler::GetSaveDir() + sFile))});
+		struct cList
 		{
-			cSaveInfo i;
-			i.mDate = cPlatform::FileModifiedDate(cSomaSaveHandler::GetSaveDir() + sFile);
-			i.msFile = sFile;
-			GetProperSaveName(sFile, i.msName, i.msDate, i.msSuffix);
-			vSaves.push_back(i);
-		}
-		std::sort(vSaves.begin(), vSaves.end(), [](const cSaveInfo &a, const cSaveInfo &b) { return b.mDate < a.mDate; });
-		return vSaves;
+			std::vector<tWString> *mpFiles;
+			std::vector<cSaveInfo> mvOut;
+		} list = {&vFiles, {}};
+		cNamesCtx names;
+		OhplGs4NamesHost host = {&names, NamesTranslate, NamesMTime};
+		ohpl_gs4_list_saves(&host, vRecs.data(), vRecs.size(),
+							[](void *c, size_t alSrc, const uint32_t *apName, size_t alName, const unsigned char *apDate, size_t alDate,
+							   const uint32_t *apSuffix, size_t alSuffix) {
+								cList *l = (cList *)c;
+								cSaveInfo i;
+								i.msFile = (*l->mpFiles)[alSrc];
+								i.msName.assign((const wchar_t *)apName, alName);
+								i.msDate.assign((const char *)apDate, alDate);
+								i.msSuffix.assign((const wchar_t *)apSuffix, alSuffix);
+								l->mvOut.push_back(i);
+							},
+							&list);
+		return list.mvOut;
 	}
 
 	void DeleteOldestSaveFiles(int alMax)
 	{
-		int lCount = 0;
-		for (const cSaveInfo &i : ListSaves())
-			if (i.msSuffix == gsSaveSuffix && ++lCount >= alMax)
-				cPlatform::RemoveFile(cSomaSaveHandler::GetSaveDir() + i.msFile);
+		std::vector<cSaveInfo> vSaves = ListSaves();
+		std::vector<OhplGs4W> vSuffixes;
+		for (const cSaveInfo &i : vSaves)
+			vSuffixes.push_back(OhplGs4W{(const uint32_t *)i.msSuffix.data(), i.msSuffix.size()});
+		std::vector<unsigned char> vRemove(vSaves.size());
+		ohpl_gs4_rotation(vSuffixes.data(), vSuffixes.size(), (const uint32_t *)gsSaveSuffix.data(), gsSaveSuffix.size(), alMax, vRemove.data());
+		for (size_t i = 0; i < vSaves.size(); ++i)
+			if (vRemove[i])
+				cPlatform::RemoveFile(cSomaSaveHandler::GetSaveDir() + vSaves[i].msFile);
 	}
 
-	struct cOut
-	{
-		std::string s;
-		void Bytes(const void *p, size_t n) { s.append((const char *)p, n); }
-		template <class T> void Pod(const T &x) { Bytes(&x, sizeof(T)); }
-		void Str(const std::string &x)
-		{
-			Pod((uint32_t)x.size());
-			s += x;
-		}
-	};
-
-	struct cIn
-	{
-		const std::string &s;
-		size_t p = 0;
-		bool ok = true;
-		explicit cIn(const std::string &x) : s(x) {}
-		bool Bytes(void *d, size_t n)
-		{
-			if (ok == false || p + n > s.size())
-				return ok = false;
-			memcpy(d, s.data() + p, n);
-			p += n;
-			return true;
-		}
-		template <class T> T Pod()
-		{
-			T x{};
-			Bytes(&x, sizeof(T));
-			return x;
-		}
-		std::string Str()
-		{
-			uint32_t n = Pod<uint32_t>();
-			if (ok == false || p + n > s.size())
-			{
-				ok = false;
-				return "";
-			}
-			std::string r = s.substr(p, n);
-			p += n;
-			return r;
-		}
-		void SkipObject()
-		{
-			uint32_t n = Pod<uint32_t>();
-			for (uint32_t i = 0; i < n && ok; ++i)
-			{
-				Str();
-				Str();
-				p += Pod<uint32_t>();
-			}
-		}
-	};
-
-	// Script objects: properties by name and declaration, [nosave]/[volatile] members skipped
-
-	void WriteObject(cOut &o, asIScriptObject *apObj, std::set<void *> &aVisited);
-	void ReadObject(cIn &in, asIScriptObject *apObj);
+	// Script objects: the walker is Rust; these answer for the AngelScript engine
 
 	bool IsString(asITypeInfo *t) { return strcmp(t->GetName(), "tString") == 0 || strcmp(t->GetName(), "string") == 0; }
 	bool IsWString(asITypeInfo *t) { return strcmp(t->GetName(), "tWString") == 0; }
 	bool IsArray(asITypeInfo *t) { return strcmp(t->GetName(), "array") == 0; }
 	bool IsRawValue(asITypeInfo *t) { return (t->GetFlags() & asOBJ_VALUE) && t->GetSize() > 0 && t->GetSize() <= 256; }
 
-	void WriteValue(cOut &o, asIScriptEngine *e, int alTypeId, const void *apAddr, std::set<void *> &aVisited)
+	struct cScriptCtx
 	{
-		if (alTypeId & asTYPEID_OBJHANDLE)
-		{
-			void *pObj = *(void *const *)apAddr;
-			asITypeInfo *t = e->GetTypeInfoById(alTypeId);
-			if (pObj == NULL || t == NULL || (t->GetFlags() & asOBJ_SCRIPT_OBJECT) == 0 || aVisited.count(pObj))
-			{
-				o.Pod((uint8_t)0);
-				return;
-			}
-			o.Pod((uint8_t)1);
-			o.Str(((asIScriptObject *)pObj)->GetObjectType()->GetName());
-			WriteObject(o, (asIScriptObject *)pObj, aVisited);
-			return;
-		}
-		if (alTypeId <= asTYPEID_DOUBLE)
-		{
-			o.Bytes(apAddr, e->GetSizeOfPrimitiveType(alTypeId));
-			return;
-		}
-		asITypeInfo *t = e->GetTypeInfoById(alTypeId);
-		if (t == NULL)
-			return;
-		if (t->GetFlags() & asOBJ_ENUM)
-			o.Bytes(apAddr, 4);
-		else if (t->GetFlags() & asOBJ_SCRIPT_OBJECT)
-			WriteObject(o, (asIScriptObject *)apAddr, aVisited);
-		else if (IsString(t))
-			o.Str(*(const std::string *)apAddr);
-		else if (IsWString(t))
-		{
-			const tWString &w = *(const tWString *)apAddr;
-			o.Pod((uint32_t)w.size());
-			o.Bytes(w.data(), w.size() * sizeof(wchar_t));
-		}
-		else if (IsArray(t))
-		{
-			CScriptArray *pArr = (CScriptArray *)apAddr;
-			o.Pod((uint32_t)pArr->GetSize());
-			for (asUINT i = 0; i < pArr->GetSize(); ++i)
-				WriteValue(o, e, pArr->GetElementTypeId(), pArr->At(i), aVisited);
-		}
-		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
-		{
-			auto &set = SomaStringSetOf((void *)apAddr);
-			o.Pod((uint32_t)set.size());
-			for (const tString &s : set)
-				o.Str(s);
-		}
-		else if (IsRawValue(t))
-			o.Bytes(apAddr, t->GetSize());
-	}
+		asIScriptEngine *mpEngine;
+		std::string msDecl;
+		std::vector<tString> mvSet;
+		OhplGs4ScriptHost mHost;
 
-	void ReadValue(cIn &in, asIScriptEngine *e, int alTypeId, void *apAddr)
-	{
-		if (alTypeId & asTYPEID_OBJHANDLE)
+		explicit cScriptCtx(asIScriptEngine *apEngine) : mpEngine(apEngine)
 		{
-			if (in.Pod<uint8_t>() == 0)
-				return;
-			std::string sClass = in.Str();
+			mHost.ctx = this;
+			mHost.handle_obj = HandleObj;
+			mHost.resolve_handle = ResolveHandle;
+			mHost.obj_class = ObjClass;
+			mHost.prim_size = PrimSize;
+			mHost.kind = Kind;
+			mHost.string_get = StringGet;
+			mHost.string_set = StringSet;
+			mHost.wstring_get = WStringGet;
+			mHost.wstring_set = WStringSet;
+			mHost.array_len = ArrayLen;
+			mHost.array_elem_type = ArrayElemType;
+			mHost.array_at = ArrayAt;
+			mHost.array_resize = ArrayResize;
+			mHost.set_items = SetItems;
+			mHost.set_item = SetItem;
+			mHost.set_clear = SetClear;
+			mHost.set_insert = SetInsert;
+			mHost.prop_count = PropCount;
+			mHost.prop_saved = PropSaved;
+			mHost.prop_name = PropName;
+			mHost.prop_type_id = PropTypeId;
+			mHost.prop_addr = PropAddr;
+			mHost.type_decl = TypeDecl;
+		}
+
+		static cScriptCtx *C(void *p) { return (cScriptCtx *)p; }
+		static asIScriptObject *O(size_t a) { return (asIScriptObject *)a; }
+
+		static bool HandleObj(void *c, size_t alAddr, int alTypeId, size_t *apObj)
+		{
+			void *pObj = *(void *const *)alAddr;
+			asITypeInfo *t = C(c)->mpEngine->GetTypeInfoById(alTypeId);
+			if (pObj == NULL || t == NULL || (t->GetFlags() & asOBJ_SCRIPT_OBJECT) == 0)
+				return false;
+			*apObj = (size_t)pObj;
+			return true;
+		}
+
+		static bool ResolveHandle(void *c, size_t alAddr, int alTypeId, const unsigned char *apClass, size_t alClass, size_t *apObj)
+		{
+			asIScriptEngine *e = C(c)->mpEngine;
+			std::string sClass((const char *)apClass, alClass);
 			asITypeInfo *t = e->GetTypeInfoById(alTypeId);
-			asIScriptObject *&pObj = *(asIScriptObject **)apAddr;
+			asIScriptObject *&pObj = *(asIScriptObject **)alAddr;
 			asITypeInfo *pClass = t && t->GetModule() ? t->GetModule()->GetTypeInfoByName(sClass.c_str()) : NULL;
 			if (pObj == NULL && pClass && (pClass->GetFlags() & asOBJ_SCRIPT_OBJECT))
 				pObj = (asIScriptObject *)e->CreateScriptObject(pClass);
 			if (pObj && sClass == pObj->GetObjectType()->GetName())
-				ReadObject(in, pObj);
-			else
-				in.SkipObject();
-			return;
-		}
-		if (alTypeId <= asTYPEID_DOUBLE)
-		{
-			in.Bytes(apAddr, e->GetSizeOfPrimitiveType(alTypeId));
-			return;
-		}
-		asITypeInfo *t = e->GetTypeInfoById(alTypeId);
-		if (t == NULL)
-			return;
-		if (t->GetFlags() & asOBJ_ENUM)
-			in.Bytes(apAddr, 4);
-		else if (t->GetFlags() & asOBJ_SCRIPT_OBJECT)
-			ReadObject(in, (asIScriptObject *)apAddr);
-		else if (IsString(t))
-			*(std::string *)apAddr = in.Str();
-		else if (IsWString(t))
-		{
-			uint32_t n = in.Pod<uint32_t>();
-			if (n > 1000000)
 			{
-				in.ok = false;
-				return;
+				*apObj = (size_t)pObj;
+				return true;
 			}
-			tWString w(n, 0);
-			in.Bytes(w.data(), n * sizeof(wchar_t));
-			*(tWString *)apAddr = w;
+			return false;
 		}
-		else if (IsArray(t))
+
+		static void ObjClass(void *, size_t alObj, const unsigned char **app, size_t *apLen)
 		{
-			CScriptArray *pArr = (CScriptArray *)apAddr;
-			uint32_t n = in.Pod<uint32_t>();
-			if (in.ok == false || n > 1000000)
+			const char *s = O(alObj)->GetObjectType()->GetName();
+			*app = (const unsigned char *)s;
+			*apLen = strlen(s);
+		}
+
+		static size_t PrimSize(void *c, int alTypeId) { return C(c)->mpEngine->GetSizeOfPrimitiveType(alTypeId); }
+
+		static int Kind(void *c, int alTypeId, size_t *apRaw)
+		{
+			asITypeInfo *t = C(c)->mpEngine->GetTypeInfoById(alTypeId);
+			if (t == NULL)
+				return 0;
+			if (t->GetFlags() & asOBJ_ENUM)
+				return 1;
+			if (t->GetFlags() & asOBJ_SCRIPT_OBJECT)
+				return 2;
+			if (IsString(t))
+				return 3;
+			if (IsWString(t))
+				return 4;
+			if (IsArray(t))
+				return 5;
+			if (strcmp(t->GetName(), "cScriptStringSet") == 0)
+				return 6;
+			if (IsRawValue(t))
 			{
-				in.ok = false;
-				return;
+				*apRaw = t->GetSize();
+				return 7;
 			}
-			pArr->Resize(n);
-			for (asUINT i = 0; i < n && in.ok; ++i)
-				ReadValue(in, e, pArr->GetElementTypeId(), pArr->At(i));
+			return 8;
 		}
-		else if (strcmp(t->GetName(), "cScriptStringSet") == 0)
-		{
-			uint32_t n = glPendingVersion >= 31 ? in.Pod<uint32_t>() : 0;
-			auto &set = SomaStringSetOf(apAddr);
-			set.clear();
-			for (uint32_t i = 0; i < n && in.ok; ++i)
-				set.insert(in.Str());
-		}
-		else if (IsRawValue(t))
-			in.Bytes(apAddr, t->GetSize());
-	}
 
-	void WriteObject(cOut &o, asIScriptObject *apObj, std::set<void *> &aVisited)
-	{
-		aVisited.insert(apObj);
-		asIScriptEngine *e = apObj->GetEngine();
-		std::vector<asUINT> vProps;
-		for (asUINT i = 0; i < apObj->GetPropertyCount(); ++i)
-			if (SomaScriptIsNoSave(apObj->GetObjectType(), apObj->GetPropertyName(i)) == false)
-				vProps.push_back(i);
-		o.Pod((uint32_t)vProps.size());
-		for (asUINT i : vProps)
+		static void StringGet(void *, size_t a, const unsigned char **app, size_t *apLen)
 		{
-			int lTypeId = apObj->GetPropertyTypeId(i);
-			o.Str(apObj->GetPropertyName(i));
-			o.Str(e->GetTypeDeclaration(lTypeId, true));
-			cOut value;
-			WriteValue(value, e, lTypeId, apObj->GetAddressOfProperty(i), aVisited);
-			o.Pod((uint32_t)value.s.size());
-			o.s += value.s;
+			const std::string &s = *(const std::string *)a;
+			*app = (const unsigned char *)s.data();
+			*apLen = s.size();
 		}
-	}
-
-	void ReadObject(cIn &in, asIScriptObject *apObj)
-	{
-		asIScriptEngine *e = apObj->GetEngine();
-		uint32_t n = in.Pod<uint32_t>();
-		for (uint32_t k = 0; k < n && in.ok; ++k)
+		static void StringSet(void *, size_t a, const unsigned char *ap, size_t alLen) { ((std::string *)a)->assign((const char *)ap, alLen); }
+		static void WStringGet(void *, size_t a, const uint32_t **app, size_t *apLen)
 		{
-			std::string sName = in.Str();
-			std::string sDecl = in.Str();
-			uint32_t lLen = in.Pod<uint32_t>();
-			size_t lEnd = in.p + lLen;
-			for (asUINT i = 0; i < apObj->GetPropertyCount(); ++i)
-			{
-				int lTypeId = apObj->GetPropertyTypeId(i);
-				if (sName != apObj->GetPropertyName(i) || sDecl != e->GetTypeDeclaration(lTypeId, true))
-					continue;
-				cIn value(in.s);
-				value.p = in.p;
-				ReadValue(value, e, lTypeId, apObj->GetAddressOfProperty(i));
-				break;
-			}
-			in.p = lEnd;
+			const tWString &w = *(const tWString *)a;
+			*app = (const uint32_t *)w.data();
+			*apLen = w.size();
 		}
-	}
+		static void WStringSet(void *, size_t a, const uint32_t *ap, size_t alLen) { *(tWString *)a = tWString((const wchar_t *)ap, alLen); }
+		static uint32_t ArrayLen(void *, size_t a) { return ((CScriptArray *)a)->GetSize(); }
+		static int ArrayElemType(void *, size_t a) { return ((CScriptArray *)a)->GetElementTypeId(); }
+		static size_t ArrayAt(void *, size_t a, uint32_t i) { return (size_t)((CScriptArray *)a)->At(i); }
+		static void ArrayResize(void *, size_t a, uint32_t n) { ((CScriptArray *)a)->Resize(n); }
 
-	void WriteScript(cOut &o, asIScriptObject *apObj)
-	{
-		std::set<void *> setVisited;
-		o.Pod((uint8_t)(apObj != NULL));
-		if (apObj)
+		static size_t SetItems(void *c, size_t a)
 		{
-			o.Str(apObj->GetObjectType()->GetName());
-			WriteObject(o, apObj, setVisited);
+			cScriptCtx *s = C(c);
+			s->mvSet.clear();
+			for (const tString &x : SomaStringSetOf((void *)a))
+				s->mvSet.push_back(x);
+			return s->mvSet.size();
 		}
-	}
+		static void SetItem(void *c, size_t i, const unsigned char **app, size_t *apLen)
+		{
+			const tString &s = C(c)->mvSet[i];
+			*app = (const unsigned char *)s.data();
+			*apLen = s.size();
+		}
+		static void SetClear(void *, size_t a) { SomaStringSetOf((void *)a).clear(); }
+		static void SetInsert(void *, size_t a, const unsigned char *ap, size_t alLen) { SomaStringSetOf((void *)a).insert(std::string((const char *)ap, alLen)); }
 
-	void ReadScript(cIn &in, asIScriptObject *apObj)
-	{
-		if (in.Pod<uint8_t>() == 0)
-			return;
-		std::string sClass = in.Str();
-		if (apObj && sClass == apObj->GetObjectType()->GetName())
-			ReadObject(in, apObj);
-		else
-			in.SkipObject();
-	}
+		static uint32_t PropCount(void *, size_t o) { return O(o)->GetPropertyCount(); }
+		static bool PropSaved(void *, size_t o, uint32_t i) { return SomaScriptIsNoSave(O(o)->GetObjectType(), O(o)->GetPropertyName(i)) == false; }
+		static void PropName(void *, size_t o, uint32_t i, const unsigned char **app, size_t *apLen)
+		{
+			const char *s = O(o)->GetPropertyName(i);
+			*app = (const unsigned char *)s;
+			*apLen = strlen(s);
+		}
+		static int PropTypeId(void *, size_t o, uint32_t i) { return O(o)->GetPropertyTypeId(i); }
+		static size_t PropAddr(void *, size_t o, uint32_t i) { return (size_t)O(o)->GetAddressOfProperty(i); }
+		static void TypeDecl(void *c, size_t, int alTypeId, const unsigned char **app, size_t *apLen)
+		{
+			cScriptCtx *s = C(c);
+			s->msDecl = s->mpEngine->GetTypeDeclaration(alTypeId, true);
+			*app = (const unsigned char *)s->msDecl.data();
+			*apLen = s->msDecl.size();
+		}
+	};
 
 	// ponytail: primitives only; [nosave] handles/objects set up in Init keep their value
 	void ResetNoSave(asIScriptObject *apObj)
@@ -405,195 +366,625 @@ namespace
 	{
 		return p->msScriptName + "|" + (p->GetScript() ? p->GetScript()->GetObjectType()->GetName() : "");
 	}
+
+	struct cStrPool
+	{
+		std::deque<std::string> mStrs;
+		OhplGs4Str Add(const std::string &s)
+		{
+			mStrs.push_back(s);
+			return RS(mStrs.back());
+		}
+	};
+
+	struct cEntScratch
+	{
+		cStrPool mPool;
+		std::vector<OhplGs4Collide> mCollide;
+		std::vector<OhplGs4Body> mBodies;
+		std::vector<float> mDynMass;
+		std::vector<OhplGs4Joint> mJoints;
+		std::vector<OhplGs4Timer> mTimers;
+		std::vector<OhplGs4Fader> mFaders;
+		std::vector<OhplGs4VarPair> mVars;
+		std::vector<OhplGs4ImTimer> mImTimers;
+		std::vector<OhplGs4ImStatePair> mImStates;
+		std::vector<OhplGs4Anim> mAnims;
+		std::vector<OhplGs4Conn> mConns;
+
+		void Clear() { *this = cEntScratch(); }
+	};
+
+	struct cWriteCtx
+	{
+		cSomaLuxMap *mpMap = NULL;
+		cSomaLuxPlayer *mpPlayer = NULL;
+		cStrPool mPool;
+		std::deque<std::vector<float>> mParams;
+		std::vector<cSomaLuxEntity *> mvEnts;
+		std::vector<cSomaLuxScriptable *> mvOthers;
+		cEntScratch mHead, mTail, mOther;
+		std::vector<OhplGs4MapTimer> mMapTimers;
+		std::vector<OhplGs4Spawned> mSpawned;
+		std::vector<OhplGs4Light> mLights;
+		std::vector<OhplGs4Particle> mParticles;
+		std::vector<OhplGs4Sound> mSounds;
+		std::vector<OhplGs4Billboard> mBillboards;
+		std::vector<OhplGs4Agent> mAgents;
+		std::vector<OhplGs4CamTex> mCamTextures;
+		std::vector<OhplGs4FogArea> mFogAreas;
+		std::vector<OhplGs4Colliding> mColliding;
+		std::vector<OhplGs4OwnedLight> mOwnedLights;
+		std::unique_ptr<cScriptCtx> mpScript{new cScriptCtx(NULL)};
+	};
+
+	struct cReadCtx
+	{
+		cSomaLuxMap *mpMap = NULL;
+		std::unique_ptr<cScriptCtx> mpScript;
+		std::unique_ptr<cSomaLuxEntity> mpDummyEnt;
+		std::unique_ptr<cSomaLuxScriptable> mpDummyOther;
+		std::map<tString, cSomaLuxScriptable *> mmapOther;
+		bool mbOtherBuilt = false;
+		std::multimap<tString, cParticleSystem *> mmapPS, mmapOwnedPS;
+		std::multimap<tString, cSoundEntity *> mmapSounds;
+	};
 }
 
 class cSomaSaveState
 {
 public:
-	static void WriteTimers(cOut &o, cSomaLuxScriptable *p)
+	static void GatherTimers(cEntScratch &s, OhplGs4Timers &aOut, cSomaLuxScriptable *p)
 	{
-		o.Pod((uint32_t)p->mvTimers.size());
 		for (auto &t : p->mvTimers)
-		{
-			o.Pod(t.mlId);
-			o.Pod(t.mfLength);
-			o.Pod(t.mfTimeLeft);
-			o.Str(t.msFunc);
-			o.Pod(t.mbRepeat);
-			o.Pod(t.mbPaused);
-		}
-		o.Pod((uint32_t)p->mvFaders.size());
+			s.mTimers.push_back(OhplGs4Timer{s.mPool.Add(t.msFunc), t.mlId, t.mfLength, t.mfTimeLeft, t.mbRepeat, t.mbPaused});
 		for (auto &f : p->mvFaders)
-			o.Pod(f);
+		{
+			OhplGs4Fader b;
+			static_assert(sizeof(b) == sizeof(f), "cFader size");
+			memcpy(&b, &f, sizeof(f));
+			s.mFaders.push_back(b);
+		}
+		aOut.timers = Sl(s.mTimers);
+		aOut.faders = Sl(s.mFaders);
 	}
 
-	static void ReadTimers(cIn &in, cSomaLuxScriptable *p)
+	static void ApplyTimers(cSomaLuxScriptable *p, const OhplGs4Timers *aT)
 	{
 		p->mvTimers.clear();
-		uint32_t n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
+		for (size_t i = 0; i < aT->timers.n; ++i)
 		{
+			const OhplGs4Timer &x = aT->timers.p[i];
 			cSomaLuxScriptable::cTimer t;
-			t.mlId = in.Pod<uint64_t>();
-			t.mfLength = in.Pod<float>();
-			t.mfTimeLeft = in.Pod<float>();
-			t.msFunc = in.Str();
-			t.mbRepeat = in.Pod<bool>();
-			t.mbPaused = in.Pod<bool>();
+			t.mlId = x.id;
+			t.mfLength = x.length;
+			t.mfTimeLeft = x.time_left;
+			t.msFunc = FromRS(x.func);
+			t.mbRepeat = x.repeat;
+			t.mbPaused = x.paused;
 			p->mvTimers.push_back(t);
 		}
 		p->mvFaders.clear();
-		n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-			p->mvFaders.push_back(in.Pod<cSomaLuxScriptable::cFader>());
+		for (size_t i = 0; i < aT->faders.n; ++i)
+		{
+			cSomaLuxScriptable::cFader f;
+			static_assert(sizeof(f) == sizeof(OhplGs4Fader), "cFader size");
+			memcpy(&f, &aT->faders.p[i], sizeof(f));
+			p->mvFaders.push_back(f);
+		}
 	}
 
-	static void WriteEntity(cOut &o, cSomaLuxEntity *p)
+	static void GatherEntityHead(cEntScratch &s, cSomaLuxEntity *p, OhplGs4EntityHead &h)
 	{
-		o.Str(p->msName);
-		o.Pod(p->mbActive);
-		o.Pod(p->mbInteractionDisabled);
-		o.Pod(p->mbInteractedWith);
-		o.Pod(p->mbEffectsActive);
-		o.Pod(p->mlParentType);
-		o.Pod(p->mParentID);
-		o.Str(p->msParentName);
-		o.Str(p->msInteractCallback);
-		o.Pod(p->mbInteractCallbackAutoRemove);
-		o.Str(p->msLookAtCallback);
-		o.Pod(p->mbLookAtCallbackAutoRemove);
-		o.Pod(p->mbLookAtCheckCenter);
-		o.Pod(p->mbLookAtCheckRay);
-		o.Pod(p->mfLookAtMaxDistance);
-		o.Pod(p->mfLookAtDelay);
-		o.Pod((uint32_t)p->mvCollideCallbacks.size());
+		s.Clear();
+		memset(&h, 0, sizeof(h));
+		h.name = s.mPool.Add(p->msName);
+		h.active = p->mbActive;
+		h.interaction_disabled = p->mbInteractionDisabled;
+		h.interacted_with = p->mbInteractedWith;
+		h.effects_active = p->mbEffectsActive;
+		h.parent_type = p->mlParentType;
+		CopyB(h.parent_id, p->mParentID);
+		h.parent_name = s.mPool.Add(p->msParentName);
+		h.interact_cb = s.mPool.Add(p->msInteractCallback);
+		h.interact_auto_remove = p->mbInteractCallbackAutoRemove;
+		h.look_cb = s.mPool.Add(p->msLookAtCallback);
+		h.look_auto_remove = p->mbLookAtCallbackAutoRemove;
+		h.look_center = p->mbLookAtCheckCenter;
+		h.look_ray = p->mbLookAtCheckRay;
+		h.look_max = p->mfLookAtMaxDistance;
+		h.look_delay = p->mfLookAtDelay;
 		for (auto &c : p->mvCollideCallbacks)
-		{
-			o.Str(c.msChild);
-			o.Str(c.msFunc);
-		}
-		o.Pod((uint32_t)p->mvBodies.size());
+			s.mCollide.push_back(OhplGs4Collide{s.mPool.Add(c.msChild), s.mPool.Add(c.msFunc)});
+		h.collide = Sl(s.mCollide);
 		for (iPhysicsBody *b : p->mvBodies)
 		{
-			o.Pod(b->GetWorldMatrix());
-			o.Pod(b->IsActive());
-			o.Pod(b->GetMass());
-			o.Pod(b->GetGravity());
+			OhplGs4Body x;
+			memset(&x, 0, sizeof(x));
+			CopyF(x.mtx, b->GetWorldMatrix());
+			x.active = b->IsActive();
+			x.mass = b->GetMass();
+			x.gravity = b->GetGravity();
+			s.mBodies.push_back(x);
 		}
+		h.bodies = Sl(s.mBodies);
 		if (p->mvBodies.empty())
-			o.Pod(p->GetMatrix());
-		o.Pod(p->mbStaticPhysics);
-		o.Pod((uint32_t)p->mvDynamicMass.size());
+			CopyF(h.mtx, p->GetMatrix());
+		h.static_physics = p->mbStaticPhysics;
 		for (float f : p->mvDynamicMass)
-			o.Pod(f);
+			s.mDynMass.push_back(f);
+		h.dyn_mass = Sl(s.mDynMass);
 		cSomaLuxEntity::cAttachment *a = p->mpAttachment;
-		o.Pod(a != NULL);
+		h.has_attach = a != NULL;
 		if (a)
 		{
-			o.Str(a->msParent);
-			o.Str(a->mpBody ? a->mpBody->GetName() : "");
-			o.Str(a->msSocket);
-			o.Pod(a->mbUseRotation);
-			o.Pod(a->mbLocked);
-			o.Pod(a->m_mtxParentPrev);
-			o.Pod(a->m_mtxOffset);
+			h.attach.parent = s.mPool.Add(a->msParent);
+			h.attach.body = s.mPool.Add(a->mpBody ? a->mpBody->GetName() : "");
+			h.attach.socket = s.mPool.Add(a->msSocket);
+			h.attach.use_rotation = a->mbUseRotation;
+			h.attach.locked = a->mbLocked;
+			CopyF(h.attach.parent_prev, a->m_mtxParentPrev);
+			CopyF(h.attach.offset, a->m_mtxOffset);
 		}
-		o.Pod((uint32_t)p->Joints().size());
 		for (iPhysicsJoint *j : p->Joints())
 		{
-			o.Str(j->GetName());
+			OhplGs4Joint x;
+			x.name = s.mPool.Add(j->GetName());
 			cVector2f v(0, 0);
 			if (j->GetType() == ePhysicsJointType_Hinge)
 				v = cVector2f(static_cast<iPhysicsJointHinge *>(j)->GetMinAngle(), static_cast<iPhysicsJointHinge *>(j)->GetMaxAngle());
 			else if (j->GetType() == ePhysicsJointType_Slider)
 				v = cVector2f(static_cast<iPhysicsJointSlider *>(j)->GetMinDistance(), static_cast<iPhysicsJointSlider *>(j)->GetMaxDistance());
-			o.Pod(v);
+			CopyF(x.limits, v);
+			s.mJoints.push_back(x);
 		}
-		WriteTimers(o, p);
-		WriteScript(o, p->GetScript());
-		o.Pod((uint32_t)p->mmapScriptVars.size());
+		h.joints = Sl(s.mJoints);
+		GatherTimers(s, h.timers, p);
+	}
+
+	static void GatherEntityTail(cEntScratch &s, cSomaLuxEntity *p, OhplGs4EntityTail &t)
+	{
+		s.Clear();
+		memset(&t, 0, sizeof(t));
 		for (auto &v : p->mmapScriptVars)
+			s.mVars.push_back(OhplGs4VarPair{s.mPool.Add(v.first), s.mPool.Add(v.second)});
+		t.vars = Sl(s.mVars);
+		t.gui_active = p->mbGuiActive;
+		t.on_gui = s.mPool.Add(p->msOnGuiFunc);
+		if (p->mpImGui)
 		{
-			o.Str(v.first);
-			o.Str(v.second);
-		}
-		o.Pod(p->mbGuiActive);
-		o.Str(p->msOnGuiFunc);
-		o.Pod((uint32_t)(p->mpImGui ? p->mpImGui->mvTimers.size() : 0));
-		if (p->mpImGui)
 			for (auto &tm : p->mpImGui->mvTimers)
-				o.Pod(tm);
-		o.Pod((uint32_t)(p->mpImGui ? p->mpImGui->mmapStates.size() : 0));
-		if (p->mpImGui)
+			{
+				OhplGs4ImTimer b;
+				static_assert(sizeof(b) == sizeof(tm), "imgui timer size");
+				memcpy(&b, &tm, sizeof(tm));
+				s.mImTimers.push_back(b);
+			}
 			for (auto &st : p->mpImGui->mmapStates)
 			{
-				o.Pod(st.first);
-				o.Pod(st.second);
+				OhplGs4ImStatePair b;
+				static_assert(sizeof(b.state) == sizeof(st.second), "imgui state size");
+				memset(&b, 0, sizeof(b));
+				b.id = st.first;
+				memcpy(&b.state, &st.second, sizeof(st.second));
+				s.mImStates.push_back(b);
 			}
+		}
+		t.imgui_timers = Sl(s.mImTimers);
+		t.imgui_states = Sl(s.mImStates);
 		int lAnims = p->mpMesh ? p->mpMesh->GetAnimationStateNum() : 0;
-		o.Pod((uint32_t)lAnims);
 		for (int i = 0; i < lAnims; ++i)
 		{
 			cAnimationState *a = p->mpMesh->GetAnimationState(i);
-			o.Str(a->GetName());
-			o.Pod(a->IsActive());
-			o.Pod(a->IsLooping());
-			o.Pod(a->IsPaused());
-			o.Pod(a->GetTimePosition());
-			o.Pod(a->GetWeight());
-			o.Pod(a->GetSpeed());
-			o.Pod(a->GetFadeStep());
+			s.mAnims.push_back(OhplGs4Anim{s.mPool.Add(a->GetName()), a->GetTimePosition(), a->GetWeight(), a->GetSpeed(), a->GetFadeStep(),
+										   a->IsActive(), a->IsLooping(), a->IsPaused()});
 		}
-		o.Str(p->msConnectionCallback);
-		o.Pod((uint32_t)p->mvConnections.size());
+		t.anims = Sl(s.mAnims);
+		t.conn_cb = s.mPool.Add(p->msConnectionCallback);
 		for (auto &c : p->mvConnections)
+			s.mConns.push_back(OhplGs4Conn{s.mPool.Add(c.msName), s.mPool.Add(c.msEntity), c.mlStatesUsed, c.mbInvert});
+		t.conns = Sl(s.mConns);
+	}
+
+	static size_t WObj(cWriteCtx *w, asIScriptObject *apObj)
+	{
+		if (apObj)
+			w->mpScript->mpEngine = apObj->GetEngine();
+		return (size_t)apObj;
+	}
+	static void WMapScript(void *c, OhplGs4Out *o)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		ohpl_gs4_write_script(o, &w->mpScript->mHost, WObj(w, w->mpMap->GetScript()));
+	}
+	static void WEntityHead(void *c, size_t i, OhplGs4EntityHead *h)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		GatherEntityHead(w->mHead, w->mvEnts[i], *h);
+	}
+	static void WEntityScript(void *c, size_t i, OhplGs4Out *o)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		ohpl_gs4_write_script(o, &w->mpScript->mHost, WObj(w, w->mvEnts[i]->GetScript()));
+	}
+	static void WEntityTail(void *c, size_t i, OhplGs4EntityTail *t)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		GatherEntityTail(w->mTail, w->mvEnts[i], *t);
+	}
+	static void WOtherKey(void *c, size_t i, OhplGs4Str *s)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		w->mOther.Clear();
+		*s = w->mOther.mPool.Add(ScriptableKey(w->mvOthers[i]));
+	}
+	static void WOtherTimers(void *c, size_t i, OhplGs4Timers *t)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		GatherTimers(w->mOther, *t, w->mvOthers[i]);
+	}
+	static void WOtherScript(void *c, size_t i, OhplGs4Out *o)
+	{
+		cWriteCtx *w = (cWriteCtx *)c;
+		ohpl_gs4_write_script(o, &w->mpScript->mHost, WObj(w, w->mvOthers[i]->GetScript()));
+	}
+
+	static void GatherWorld(cWriteCtx &c, OhplGs4World &w)
+	{
+		memset(&w, 0, sizeof(w));
+		cSomaLuxMap *pMap = c.mpMap = cSomaLuxMap::GetCurrent();
+		cSomaLuxPlayer *pPlayer = c.mpPlayer = cSomaLuxPlayer::Get();
+		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
+		w.player.present = pBody != NULL;
+		w.player.gravity_active = 0;
+		if (pBody)
 		{
-			o.Str(c.msName);
-			o.Str(c.msEntity);
-			o.Pod(c.mbInvert);
-			o.Pod(c.mlStatesUsed);
+			CopyF(w.player.feet, pBody->GetFeetPosition());
+			w.player.yaw = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetYaw() : pBody->GetYaw();
+			w.player.pitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0.0f;
+			w.player.state = pPlayer->GetState() ? pPlayer->GetState()->mlId : -1;
+			w.player.move_state = pPlayer->GetMoveState() ? pPlayer->GetMoveState()->mlId : -1;
+			// int return read as its low byte: 0/1 crouching
+			w.player.char_crouching = (int)pPlayer->CallBool("int GetCharacterState()", nullptr, false);
+			w.player.gravity_active = (uint8_t)pBody->GetCustomGravityActive();
+			CopyF(w.player.gravity, pBody->GetCustomGravity());
+		}
+
+		// a save from inside a timer callback must not keep that expired timer
+		for (const cSomaLuxTimer &t : pMap->GetTimers())
+		{
+			if (pMap->IsTimerLive(t) == false)
+				continue;
+			c.mMapTimers.push_back(OhplGs4MapTimer{c.mPool.Add(t.msName), c.mPool.Add(t.msFunction), c.mPool.Add(t.msUserString), t.mfTime,
+												   t.mfUserFloat, t.mfLength, t.mlUserInt, t.mbPaused});
+		}
+		w.map_timers = Sl(c.mMapTimers);
+
+		for (cSomaLuxEntity *p : pMap->GetEntities())
+			if (p->mbSpawned)
+			{
+				OhplGs4Spawned x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(p->msName);
+				x.file = c.mPool.Add(p->msFileName);
+				CopyF(x.mtx, p->GetMatrix());
+				CopyF(x.scale, p->mvScale);
+				CopyB(x.id, p->mID);
+				c.mSpawned.push_back(x);
+			}
+		w.spawned = Sl(c.mSpawned);
+
+		c.mvEnts = pMap->GetEntities();
+		w.entity_count = c.mvEnts.size();
+		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
+			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
+				c.mvOthers.push_back(p);
+		w.other_count = c.mvOthers.size();
+
+		cLightListIterator it = pMap->GetWorld()->GetLightIterator();
+		while (it.HasNext())
+			if (iLight *l = it.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() == NULL)
+			{
+				bool bFlicker = l->GetFlickerActive();
+				OhplGs4Light x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(l->GetName());
+				x.active = l->IsActive();
+				x.visible = l->GetVisibleVar();
+				x.flicker = bFlicker;
+				CopyF(x.color, bFlicker ? l->GetFlickerOnColor() : l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
+				x.radius = bFlicker ? l->GetFlickerOnRadius() : l->IsFading() ? l->GetDestRadius() : l->GetRadius();
+				x.brightness = l->GetBrightness();
+				c.mLights.push_back(x);
+			}
+		w.lights = Sl(c.mLights);
+
+		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
+		while (psIt.HasNext())
+			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && (ps->GetParent() == NULL || ps->GetEntityParent()) && ps->IsDying() == false)
+			{
+				OhplGs4Particle x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(ps->GetName());
+				x.data = c.mPool.Add(ps->GetDataName());
+				CopyF(x.size, ps->GetDataSize());
+				CopyF(x.mtx, ps->GetLocalMatrix());
+				CopyF(x.color, ps->GetColor());
+				x.brightness = ps->GetBrightness();
+				x.active = ps->IsActive();
+				x.visible = ps->IsVisible();
+				x.fade_at_distance = ps->GetFadeAtDistance();
+				x.fade[0] = ps->GetMinFadeDistanceStart();
+				x.fade[1] = ps->GetMinFadeDistanceEnd();
+				x.fade[2] = ps->GetMaxFadeDistanceStart();
+				x.fade[3] = ps->GetMaxFadeDistanceEnd();
+				uint32_t lDead = 0;
+				for (int i = 0; i < ps->GetEmitterNum() && i < 32; ++i)
+					if (ps->GetEmitter(i)->IsDying())
+						lDead |= 1u << i;
+				x.dead = lDead;
+				x.owned = ps->GetEntityParent() != NULL;
+				c.mParticles.push_back(x);
+			}
+		w.particles = Sl(c.mParticles);
+
+		cSoundEntityIterator sIt = pMap->GetWorld()->GetSoundEntityIterator();
+		while (sIt.HasNext())
+			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL && s->GetData())
+			{
+				OhplGs4Sound x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(s->GetName());
+				x.data = c.mPool.Add(s->GetData()->GetName());
+				x.remove = s->GetRemoveWhenOver();
+				x.active = s->IsActive();
+				x.stopped = s->IsStopped() || s->IsFadingOut();
+				x.min_dist = s->GetMinDistance();
+				x.max_dist = s->GetMaxDistance();
+				x.volume = s->GetVolume();
+				CopyF(x.pos, s->GetLocalPosition());
+				cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent();
+				x.fade = pInst ? pInst->mfFadeDest : 1.0f;
+				x.volume_mul = pInst ? pInst->mfVolumeMulDest : 1.0f;
+				c.mParams.emplace_back();
+				for (int i = 0; pInst && i < pInst->GetParamNum(); ++i)
+					c.mParams.back().push_back(pInst->GetParamValue(i));
+				x.params = Sl(c.mParams.back());
+				c.mSounds.push_back(x);
+			}
+		w.sounds = Sl(c.mSounds);
+
+		cBillboardIterator bIt = pMap->GetWorld()->GetBillboardIterator();
+		while (bIt.HasNext())
+			if (cBillboard *b = bIt.Next(); b->IsSaved() && b->GetParent() == NULL && b->GetEntityParent() == NULL)
+			{
+				OhplGs4Billboard x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(b->GetName());
+				x.visible = b->GetVisibleVar();
+				CopyF(x.color, b->GetColor());
+				c.mBillboards.push_back(x);
+			}
+		w.billboards = Sl(c.mBillboards);
+
+		w.health = pPlayer ? pPlayer->mfHealth : 1.0f;
+		cMatrixf m;
+		for (cSomaLuxEntity *p : pMap->GetEntities())
+			if (SomaAgentGetMatrix(p, m))
+			{
+				OhplGs4Agent x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(p->msName);
+				CopyF(x.mtx, m);
+				x.state = SomaAgentGetState(p);
+				float fYaw;
+				bool bSenses, bDetection;
+				SomaAgentSaveExtra(p, fYaw, bSenses, bDetection);
+				x.yaw = fYaw;
+				x.senses = bSenses;
+				x.detection = bDetection;
+				x.path = c.mPool.Add(SomaAgentSavePath(p));
+				c.mAgents.push_back(x);
+			}
+		w.agents = Sl(c.mAgents);
+
+		w.underwater = pMap->mbIsUnderwater;
+		cWorld *wd = pMap->GetWorld();
+		bool vFlags[5] = {wd->GetFogActive(), wd->GetFogCulling(), wd->GetFogUnderwater(), wd->GetSecondaryFogActive(), wd->GetSkyBoxActive()};
+		for (int i = 0; i < 5; ++i)
+			w.fog.flags[i] = vFlags[i];
+		float vFloats[9] = {wd->GetFogStart(), wd->GetFogEnd(), wd->GetFogFalloffExp(), wd->GetFogBrightness(), wd->GetSecondaryFogStart(),
+							wd->GetSecondaryFogEnd(), wd->GetSecondaryFogFalloffExp(), wd->GetSecondaryFogBrightness(), wd->GetSkyBoxBrightness()};
+		for (int i = 0; i < 9; ++i)
+			w.fog.floats[i] = vFloats[i];
+		CopyF(w.fog.colors[0], wd->GetFogColor());
+		CopyF(w.fog.colors[1], wd->GetSecondaryFogColor());
+		CopyF(w.fog.colors[2], wd->GetSkyBoxColor());
+
+		for (const cSomaCameraTextureState &t : SomaGetCameraTextures())
+		{
+			OhplGs4CamTex x;
+			memset(&x, 0, sizeof(x));
+			x.name = c.mPool.Add(t.msName);
+			x.attached = c.mPool.Add(t.msAttached);
+			static_assert(sizeof(t.mvSize) == sizeof(x.size), "cVector2l size");
+			memcpy(x.size, &t.mvSize, sizeof(x.size));
+			x.fps = t.mlFPS;
+			x.fov = t.mfFOV;
+			x.near_plane = t.mfNear;
+			x.far_plane = t.mfFar;
+			CopyF(x.rot, t.mtxRotation);
+			CopyF(x.pos, t.mvPosition);
+			c.mCamTextures.push_back(x);
+		}
+		w.cam_textures = Sl(c.mCamTextures);
+
+		cFogAreaIterator fIt = wd->GetFogAreaIterator();
+		while (fIt.HasNext())
+		{
+			cFogArea *f = fIt.Next();
+			c.mFogAreas.push_back(OhplGs4FogArea{c.mPool.Add(f->GetName()), f->IsVisible()});
+		}
+		w.fog_areas = Sl(c.mFogAreas);
+
+		for (auto &[pParent, pChild, sFunc] : pMap->msetColliding)
+			c.mColliding.push_back(OhplGs4Colliding{c.mPool.Add(pParent->msName), c.mPool.Add(pChild->msName), c.mPool.Add(sFunc)});
+		w.colliding = Sl(c.mColliding);
+		w.display_name = c.mPool.Add(pMap->msDisplayNameEntry);
+
+		cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
+		w.has_camera = pCam != NULL;
+		if (pCam)
+		{
+			w.camera.detached = (uint8_t)(pBody && pBody->GetCamera() == NULL);
+			CopyF(w.camera.pos, pCam->GetPosition());
+			w.camera.limits[0] = pCam->GetPitchMinLimit();
+			w.camera.limits[1] = pCam->GetPitchMaxLimit();
+			w.camera.limits[2] = pCam->GetYawMinLimit();
+			w.camera.limits[3] = pCam->GetYawMaxLimit();
+			static_assert(sizeof(pPlayer->mFOVMul) == sizeof(w.camera.fov_mul), "cFadeValue size");
+			memcpy(&w.camera.fov_mul, &pPlayer->mFOVMul, sizeof(w.camera.fov_mul));
+			memcpy(&w.camera.aspect_mul, &pPlayer->mAspectMul, sizeof(w.camera.aspect_mul));
+		}
+
+		cLightListIterator ownedIt = wd->GetLightIterator();
+		while (ownedIt.HasNext())
+			if (iLight *l = ownedIt.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() && l->GetFlickerActive() == false)
+			{
+				OhplGs4OwnedLight x;
+				memset(&x, 0, sizeof(x));
+				x.name = c.mPool.Add(l->GetName());
+				x.visible = l->GetVisibleVar();
+				CopyF(x.color, l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
+				x.radius = l->IsFading() ? l->GetDestRadius() : l->GetRadius();
+				c.mOwnedLights.push_back(x);
+			}
+		w.owned_lights = Sl(c.mOwnedLights);
+
+		cSomaToneMapping *pTone = cSomaToneMapping::Get();
+		w.has_tone = pTone != NULL;
+		if (pTone)
+		{
+			w.tone.exposure = pTone->mfWorldExposure;
+			w.tone.white_cut = pTone->mfWorldWhiteCut;
 		}
 	}
 
-	static tString ReadEntity(cIn &in, cSomaLuxMap *apMap)
+	// The whole save file; the music state is taken after the world, like the original stream
+	static std::string Build(const tString &asMapFile, const tString &asStartPos, bool abExploration)
 	{
-		tString sName = in.Str();
-		cSomaLuxEntity *p = apMap->GetEntity(sName);
-		cSomaLuxEntity dummy;
-		cSomaLuxEntity *t = p ? p : &dummy;
-		bool bActive = in.Pod<bool>();
-		t->mbInteractionDisabled = in.Pod<bool>();
-		t->mbInteractedWith = in.Pod<bool>();
-		bool bEffects = in.Pod<bool>();
-		t->mlParentType = in.Pod<int>();
-		t->mParentID = in.Pod<cSomaID>();
-		t->msParentName = in.Str();
-		t->msInteractCallback = in.Str();
-		t->mbInteractCallbackAutoRemove = in.Pod<bool>();
-		t->msLookAtCallback = in.Str();
-		t->mbLookAtCallbackAutoRemove = in.Pod<bool>();
+		cWriteCtx c;
+		OhplGs4World w;
+		cStrPool pool;
+		tString sVars = SomaSerializeGlobalVars();
+		tString sPreload = SomaPreloadMap();
+		std::vector<OhplGs4Str> vVisited, vPlayed;
+		for (const tString &sMap : gpSomaBase->GetVisitedMaps())
+			vVisited.push_back(pool.Add(sMap));
+		std::set<tString> setPlayed;
+		if (cSomaLuxVoiceHandler::Get())
+			setPlayed = cSomaLuxVoiceHandler::Get()->msetPlayedLines;
+		for (const tString &sLine : setPlayed)
+			vPlayed.push_back(pool.Add(sLine));
+		GatherWorld(c, w);
+		tString sMusic = SomaSerializeMusic();
+		OhplGs4HeaderOut h = {RS(asMapFile), RS(asStartPos), Sl(vVisited), RS(sVars), RS(sPreload), Sl(vPlayed), RS(sMusic), abExploration};
+		OhplGs4WriteHost host = {&c, WMapScript, WEntityHead, WEntityScript, WEntityTail, WOtherKey, WOtherTimers, WOtherScript};
+		std::string sOut;
+		ohpl_gs4_encode_save(&h, &w, &host, SinkS, &sOut);
+		return sOut;
+	}
+
+	// ReadWorld host: the stream parse and its order are Rust; these apply to the engine objects
+	static cReadCtx *R(void *c) { return (cReadCtx *)c; }
+
+	static bool RHasPlayer(void *) { return cSomaLuxPlayer::Get() != NULL; }
+	static bool RHasCamera(void *)
+	{
+		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+		return pPlayer && pPlayer->GetCamera();
+	}
+	static void RMapTimersBegin(void *c) { R(c)->mpMap->GetTimers().clear(); }
+	static void RMapTimer(void *c, const OhplGs4MapTimer *x)
+	{
+		cSomaLuxTimer t;
+		t.msName = FromRS(x->name);
+		t.msFunction = FromRS(x->func);
+		t.mfTime = x->time;
+		t.mbPaused = x->paused;
+		t.mfUserFloat = x->user_float;
+		t.mlUserInt = x->user_int;
+		t.msUserString = FromRS(x->user_str);
+		t.mfLength = x->length;
+		R(c)->mpMap->GetTimers().push_back(t);
+	}
+	static size_t RObj(cReadCtx *r, asIScriptObject *apObj)
+	{
+		if (apObj)
+			r->mpScript->mpEngine = apObj->GetEngine();
+		return (size_t)apObj;
+	}
+	static size_t RMapScript(void *c) { return RObj(R(c), R(c)->mpMap->GetScript()); }
+	static void RSpawned(void *c, const OhplGs4Spawned *x)
+	{
+		cSomaLuxMap *pMap = R(c)->mpMap;
+		tString sName = FromRS(x->name), sFile = FromRS(x->file);
+		cMatrixf m;
+		FromF(m, x->mtx);
+		cVector3f vScale;
+		FromF(vScale, x->scale);
+		cSomaID id;
+		IdFromB(id, x->id);
+		cSomaLuxEntity *p = pMap->GetEntity(sName);
+		if (p == NULL || p->mbSpawned == false)
+			p = pMap->CreateEntity(sName, sFile, m, vScale);
+		if (p == NULL)
+			return;
+		p->mID = id;
+		pMap->mlNextId = std::max(pMap->mlNextId, id.mB + 1);
+	}
+
+	static size_t REntityBegin(void *c, OhplGs4Str aName)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxEntity *p = r->mpMap->GetEntity(FromRS(aName));
+		if (p == NULL)
+			r->mpDummyEnt.reset(new cSomaLuxEntity);
+		return (size_t)p;
+	}
+
+	static void REntityHead(void *c, size_t h, const OhplGs4EntityHead *e)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxEntity *p = (cSomaLuxEntity *)h;
+		cSomaLuxEntity *t = p ? p : r->mpDummyEnt.get();
+		cSomaLuxMap *apMap = r->mpMap;
+		t->mbInteractionDisabled = e->interaction_disabled;
+		t->mbInteractedWith = e->interacted_with;
+		t->mlParentType = e->parent_type;
+		IdFromB(t->mParentID, e->parent_id);
+		t->msParentName = FromRS(e->parent_name);
+		t->msInteractCallback = FromRS(e->interact_cb);
+		t->mbInteractCallbackAutoRemove = e->interact_auto_remove;
+		t->msLookAtCallback = FromRS(e->look_cb);
+		t->mbLookAtCallbackAutoRemove = e->look_auto_remove;
 		if (glPendingVersion >= 8)
 		{
-			t->mbLookAtCheckCenter = in.Pod<bool>();
-			t->mbLookAtCheckRay = in.Pod<bool>();
-			t->mfLookAtMaxDistance = in.Pod<float>();
-			t->mfLookAtDelay = in.Pod<float>();
+			t->mbLookAtCheckCenter = e->look_center;
+			t->mbLookAtCheckRay = e->look_ray;
+			t->mfLookAtMaxDistance = e->look_max;
+			t->mfLookAtDelay = e->look_delay;
 		}
 		t->mvCollideCallbacks.clear();
-		uint32_t n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
+		for (size_t i = 0; i < e->collide.n; ++i)
+			t->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{FromRS(e->collide.p[i].child), FromRS(e->collide.p[i].func)});
+		for (size_t i = 0; i < e->bodies.n; ++i)
 		{
-			tString sChild = in.Str();
-			tString sFunc = in.Str();
-			t->mvCollideCallbacks.push_back(cSomaLuxEntity::cCollideCallback{sChild, sFunc});
-		}
-		n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			cMatrixf m = in.Pod<cMatrixf>();
-			bool bBodyActive = glPendingVersion >= 5 ? in.Pod<bool>() : true;
-			float fMass = glPendingVersion >= 9 ? in.Pod<float>() : -1;
-			bool bGravity = glPendingVersion >= 9 ? in.Pod<bool>() : true;
+			cMatrixf m;
+			FromF(m, e->bodies.p[i].mtx);
+			bool bBodyActive = e->bodies.p[i].active;
+			float fMass = e->bodies.p[i].mass;
+			bool bGravity = e->bodies.p[i].gravity;
 			if (p == NULL || i >= p->mvBodies.size())
 				continue;
 			if (fMass >= 0)
@@ -611,37 +1002,34 @@ public:
 		}
 		if (glPendingVersion >= 6)
 		{
-			if (n == 0)
+			if (e->has_mtx)
 			{
-				cMatrixf m = in.Pod<cMatrixf>();
+				cMatrixf m;
+				FromF(m, e->mtx);
 				if (p && p->mvBodies.empty() && m != p->GetMatrix())
 					p->SetMatrix(m);
 			}
 			if (glPendingVersion >= 17)
 			{
-				bool bStatic = in.Pod<bool>();
-				std::vector<float> vMass;
-				uint32_t lMass = in.Pod<uint32_t>();
-				for (uint32_t i = 0; i < lMass && in.ok; ++i)
-					vMass.push_back(in.Pod<float>());
+				std::vector<float> vMass(e->dyn_mass.p, e->dyn_mass.p + e->dyn_mass.n);
 				if (p)
 				{
-					p->mbStaticPhysics = bStatic;
+					p->mbStaticPhysics = e->static_physics;
 					p->mvDynamicMass = vMass;
 				}
 			}
 			if (p)
 				p->RemoveAttachment();
-			if (in.Pod<bool>())
+			if (e->has_attach)
 			{
 				cSomaLuxEntity::cAttachment a;
-				a.msParent = in.Str();
-				tString sBody = in.Str();
-				a.msSocket = in.Str();
-				a.mbUseRotation = in.Pod<bool>();
-				a.mbLocked = in.Pod<bool>();
-				a.m_mtxParentPrev = in.Pod<cMatrixf>();
-				a.m_mtxOffset = in.Pod<cMatrixf>();
+				a.msParent = FromRS(e->attach.parent);
+				tString sBody = FromRS(e->attach.body);
+				a.msSocket = FromRS(e->attach.socket);
+				a.mbUseRotation = e->attach.use_rotation;
+				a.mbLocked = e->attach.locked;
+				FromF(a.m_mtxParentPrev, e->attach.parent_prev);
+				FromF(a.m_mtxOffset, e->attach.offset);
 				cSomaLuxEntity *pParent = apMap->GetEntity(a.msParent);
 				if (p && pParent)
 				{
@@ -653,12 +1041,12 @@ public:
 				}
 			}
 		}
-		n = glPendingVersion >= 7 ? in.Pod<uint32_t>() : 0;
 		std::vector<iPhysicsJoint *> vBroken = p ? p->Joints() : std::vector<iPhysicsJoint *>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
+		for (size_t i = 0; i < e->joints.n; ++i)
 		{
-			tString sJoint = glPendingVersion >= 11 ? in.Str() : "";
-			cVector2f v = in.Pod<cVector2f>();
+			tString sJoint = FromRS(e->joints.p[i].name);
+			cVector2f v;
+			FromF(v, e->joints.p[i].limits);
 			iPhysicsJoint *j = p && i < p->mvJoints.size() ? p->mvJoints[i] : NULL;
 			if (glPendingVersion >= 11)
 			{
@@ -680,322 +1068,427 @@ public:
 		if (glPendingVersion >= 11)
 			for (iPhysicsJoint *j : vBroken)
 				apMap->GetWorld()->GetPhysicsWorld()->DestroyJoint(j);
-		ReadTimers(in, t);
-		ReadScript(in, t->GetScript());
+		ApplyTimers(t, &e->timers);
+	}
+
+	static size_t REntityScript(void *c, size_t h)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxEntity *t = h ? (cSomaLuxEntity *)h : r->mpDummyEnt.get();
+		return RObj(r, t->GetScript());
+	}
+
+	static void REntityTail(void *c, size_t h, const OhplGs4EntityHead *e, const OhplGs4EntityTail *x)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxEntity *p = (cSomaLuxEntity *)h;
+		cSomaLuxEntity *t = p ? p : r->mpDummyEnt.get();
 		if (glPendingVersion >= 12)
 		{
 			t->mmapScriptVars.clear();
-			uint32_t lVars = in.Pod<uint32_t>();
-			for (uint32_t i = 0; i < lVars && in.ok; ++i)
-			{
-				tString sVar = in.Str();
-				t->mmapScriptVars[sVar] = in.Str();
-			}
+			for (size_t i = 0; i < x->vars.n; ++i)
+				t->mmapScriptVars[FromRS(x->vars.p[i].key)] = FromRS(x->vars.p[i].value);
 		}
 		if (glPendingVersion >= 13)
 		{
-			t->mbGuiActive = in.Pod<bool>();
+			t->mbGuiActive = x->gui_active;
 			t->mfGuiFade = t->mbGuiActive;
 		}
 		if (glPendingVersion >= 23)
 		{
-			t->msOnGuiFunc = in.Str();
-			n = in.Pod<uint32_t>();
-			for (uint32_t i = 0; i < n && in.ok; ++i)
+			t->msOnGuiFunc = FromRS(x->on_gui);
+			for (size_t i = 0; i < x->imgui_timers.n; ++i)
 			{
-				cSomaImGui::cTimer tm = in.Pod<cSomaImGui::cTimer>();
+				cSomaImGui::cTimer tm;
+				static_assert(sizeof(tm) == sizeof(OhplGs4ImTimer), "imgui timer size");
+				memcpy(&tm, &x->imgui_timers.p[i], sizeof(tm));
 				if (t->mpImGui)
 					t->mpImGui->mvTimers.push_back(tm);
 			}
 		}
-		n = glPendingVersion >= 14 ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
+		for (size_t i = 0; i < x->imgui_states.n; ++i)
 		{
-			uint64_t lId = in.Pod<uint64_t>();
-			cSomaImGui::cState st = in.Pod<cSomaImGui::cState>();
+			cSomaImGui::cState st;
+			static_assert(sizeof(st) == sizeof(OhplGs4ImState), "imgui state size");
+			memcpy(&st, &x->imgui_states.p[i].state, sizeof(st));
 			if (t->mpImGui)
-				t->mpImGui->mmapStates[lId] = st;
+				t->mpImGui->mmapStates[x->imgui_states.p[i].id] = st;
 		}
-		n = glPendingVersion >= 18 ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
+		for (size_t i = 0; i < x->anims.n; ++i)
 		{
-			tString sAnim = in.Str();
-			bool bOn = in.Pod<bool>(), bLoop = in.Pod<bool>(), bPaused = in.Pod<bool>();
-			float fTime = in.Pod<float>(), fWeight = in.Pod<float>(), fSpeed = in.Pod<float>(), fFade = in.Pod<float>();
-			cAnimationState *a = t->mpMesh ? t->mpMesh->GetAnimationStateFromName(sAnim) : NULL;
+			const OhplGs4Anim &an = x->anims.p[i];
+			cAnimationState *a = t->mpMesh ? t->mpMesh->GetAnimationStateFromName(FromRS(an.name)) : NULL;
 			if (a == NULL)
 				continue;
-			a->SetActive(bOn);
-			a->SetLoop(bLoop);
-			a->SetPaused(bPaused);
-			a->SetTimePosition(fTime);
-			a->SetWeight(fWeight);
-			a->SetSpeed(fSpeed);
-			a->SetFadeStep(fFade);
+			a->SetActive(an.active);
+			a->SetLoop(an.looping);
+			a->SetPaused(an.paused);
+			a->SetTimePosition(an.time);
+			a->SetWeight(an.weight);
+			a->SetSpeed(an.speed);
+			a->SetFadeStep(an.fade);
 		}
 		if (glPendingVersion >= 20)
 		{
-			t->msConnectionCallback = in.Str();
+			t->msConnectionCallback = FromRS(x->conn_cb);
 			t->mvConnections.clear();
-			n = in.Pod<uint32_t>();
-			for (uint32_t i = 0; i < n && in.ok; ++i)
+			for (size_t i = 0; i < x->conns.n; ++i)
 			{
-				cSomaLuxEntity::cConnection c;
-				c.msName = in.Str();
-				c.msEntity = in.Str();
-				c.mbInvert = in.Pod<bool>();
-				c.mlStatesUsed = in.Pod<int>();
-				t->mvConnections.push_back(c);
+				cSomaLuxEntity::cConnection cn;
+				cn.msName = FromRS(x->conns.p[i].name);
+				cn.msEntity = FromRS(x->conns.p[i].entity);
+				cn.mbInvert = x->conns.p[i].invert;
+				cn.mlStatesUsed = x->conns.p[i].states_used;
+				t->mvConnections.push_back(cn);
 			}
 		}
+		bool bEffects = e->effects_active, bActive = e->active;
 		if (p && p->mbEffectsActive != bEffects)
 			p->SetEffectsActive(bEffects && p->mbActive);
 		t->mbEffectsActive = bEffects;
 		if (p && p->mbActive != bActive)
 			p->SetActive(bActive);
-		return sName;
+		r->mpDummyEnt.reset();
 	}
 
-	static void WriteWorld(cOut &o)
+	static void REntitiesDone(void *c, const OhplGs4Str *apSaved, size_t alCount)
 	{
-		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
-		o.Pod((uint8_t)(pBody != NULL));
-		if (pBody)
+		cSomaLuxMap *pMap = R(c)->mpMap;
+		std::set<tString> setSaved;
+		for (size_t i = 0; i < alCount; ++i)
+			setSaved.insert(FromRS(apSaved[i]));
+		// entities destroyed before the save (broken windows) come back with the fresh map load
+		for (cSomaLuxEntity *p : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
+			if (setSaved.count(cString::ToLowerCase(p->msName)) == 0)
+				pMap->DestroyEntity(p);
+	}
+
+	static size_t ROtherBegin(void *c, OhplGs4Str aKey)
+	{
+		cReadCtx *r = R(c);
+		if (r->mbOtherBuilt == false)
 		{
-			o.Pod(pBody->GetFeetPosition());
-			o.Pod(pPlayer->GetCamera() ? pPlayer->GetCamera()->GetYaw() : pBody->GetYaw());
-			o.Pod(pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0.0f);
-			o.Pod(pPlayer->GetState() ? pPlayer->GetState()->mlId : -1);
-			o.Pod(pPlayer->GetMoveState() ? pPlayer->GetMoveState()->mlId : -1);
-			// int return read as its low byte: 0/1 crouching
-			o.Pod((int)pPlayer->CallBool("int GetCharacterState()", nullptr, false));
-			o.Pod((uint8_t)pBody->GetCustomGravityActive());
-			o.Pod(pBody->GetCustomGravity());
+			r->mbOtherBuilt = true;
+			for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
+				if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
+					r->mmapOther.emplace(ScriptableKey(p), p);
 		}
+		auto it = r->mmapOther.find(FromRS(aKey));
+		if (it != r->mmapOther.end())
+			return (size_t)it->second;
+		r->mpDummyOther.reset(new cSomaLuxScriptable);
+		return 0;
+	}
+	static void ROtherTimers(void *c, size_t h, const OhplGs4Timers *t)
+	{
+		cReadCtx *r = R(c);
+		ApplyTimers(h ? (cSomaLuxScriptable *)h : r->mpDummyOther.get(), t);
+	}
+	static void ROtherReset(void *c, size_t h)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxScriptable *p = h ? (cSomaLuxScriptable *)h : r->mpDummyOther.get();
+		if (dynamic_cast<cSomaLuxModule *>(p))
+			ResetNoSave(p->GetScript());
+	}
+	static size_t ROtherScript(void *c, size_t h)
+	{
+		cReadCtx *r = R(c);
+		cSomaLuxScriptable *p = h ? (cSomaLuxScriptable *)h : r->mpDummyOther.get();
+		size_t lObj = RObj(r, p->GetScript());
+		if (h == 0)
+			r->mpDummyOther.reset();
+		return lObj;
+	}
 
-		// a save from inside a timer callback must not keep that expired timer
-		o.Pod((uint32_t)std::count_if(pMap->GetTimers().begin(), pMap->GetTimers().end(),
-									  [&](const cSomaLuxTimer &t) { return pMap->IsTimerLive(t); }));
-		for (const cSomaLuxTimer &t : pMap->GetTimers())
-		{
-			if (pMap->IsTimerLive(t) == false)
-				continue;
-			o.Str(t.msName);
-			o.Str(t.msFunction);
-			o.Pod(t.mfTime);
-			o.Pod(t.mbPaused);
-			o.Pod(t.mfUserFloat);
-			o.Pod(t.mlUserInt);
-			o.Str(t.msUserString);
-			o.Pod(t.mfLength);
-		}
-		WriteScript(o, pMap->GetScript());
+	static void RLight(void *c, const OhplGs4Light *x)
+	{
+		iLight *l = R(c)->mpMap->GetWorld()->GetLight(FromRS(x->name));
+		if (l == NULL)
+			return;
+		cColor col;
+		FromF(col, x->color);
+		l->SetActive(x->active);
+		l->SetVisible(x->visible);
+		l->SetDiffuseColor(col);
+		l->SetRadius(x->radius);
+		l->SetBrightness(x->brightness);
+		l->SetFlickerActive(x->flicker);
+	}
 
-		std::vector<cSomaLuxEntity *> vSpawned;
-		for (cSomaLuxEntity *p : pMap->GetEntities())
-			if (p->mbSpawned)
-				vSpawned.push_back(p);
-		o.Pod((uint32_t)vSpawned.size());
-		for (cSomaLuxEntity *p : vSpawned)
-		{
-			o.Str(p->msName);
-			o.Str(p->msFileName);
-			o.Pod(p->GetMatrix());
-			o.Pod(p->mvScale);
-			o.Pod(p->mID);
-		}
-
-		o.Pod((uint32_t)pMap->GetEntities().size());
-		for (cSomaLuxEntity *p : pMap->GetEntities())
-			WriteEntity(o, p);
-
-		std::vector<cSomaLuxScriptable *> vOther;
-		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
-			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
-				vOther.push_back(p);
-		o.Pod((uint32_t)vOther.size());
-		for (cSomaLuxScriptable *p : vOther)
-		{
-			o.Str(ScriptableKey(p));
-			WriteTimers(o, p);
-			WriteScript(o, p->GetScript());
-		}
-
-		std::vector<iLight *> vLights;
-		cLightListIterator it = pMap->GetWorld()->GetLightIterator();
-		while (it.HasNext())
-			if (iLight *l = it.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() == NULL)
-				vLights.push_back(l);
-		o.Pod((uint32_t)vLights.size());
-		for (iLight *l : vLights)
-		{
-			bool bFlicker = l->GetFlickerActive();
-			o.Str(l->GetName());
-			o.Pod(l->IsActive());
-			o.Pod(l->GetVisibleVar());
-			o.Pod(bFlicker);
-			o.Pod(bFlicker ? l->GetFlickerOnColor() : l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
-			o.Pod(bFlicker ? l->GetFlickerOnRadius() : l->IsFading() ? l->GetDestRadius() : l->GetRadius());
-			o.Pod(l->GetBrightness());
-		}
-
-		std::vector<cParticleSystem *> vPS;
-		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
+	static void RParticlesBegin(void *c)
+	{
+		cReadCtx *r = R(c);
+		cParticleSystemIterator psIt = r->mpMap->GetWorld()->GetParticleSystemIterator();
 		while (psIt.HasNext())
-			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && (ps->GetParent() == NULL || ps->GetEntityParent()) && ps->IsDying() == false)
-				vPS.push_back(ps);
-		o.Pod((uint32_t)vPS.size());
-		for (cParticleSystem *ps : vPS)
-		{
-			o.Str(ps->GetName());
-			o.Str(ps->GetDataName());
-			o.Pod(ps->GetDataSize());
-			o.Pod(ps->GetLocalMatrix());
-			o.Pod(ps->GetColor());
-			o.Pod(ps->GetBrightness());
-			o.Pod(ps->IsActive());
-			o.Pod(ps->IsVisible());
-			o.Pod(ps->GetFadeAtDistance());
-			for (float f : {ps->GetMinFadeDistanceStart(), ps->GetMinFadeDistanceEnd(), ps->GetMaxFadeDistanceStart(), ps->GetMaxFadeDistanceEnd()})
-				o.Pod(f);
-			uint32_t lDead = 0;
-			for (int i = 0; i < ps->GetEmitterNum() && i < 32; ++i)
-				if (ps->GetEmitter(i)->IsDying())
-					lDead |= 1u << i;
-			o.Pod(lDead);
-			o.Pod(ps->GetEntityParent() != NULL);
-		}
-
-		std::vector<cSoundEntity *> vSounds;
-		cSoundEntityIterator sIt = pMap->GetWorld()->GetSoundEntityIterator();
-		while (sIt.HasNext())
-			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL && s->GetData())
-				vSounds.push_back(s);
-		o.Pod((uint32_t)vSounds.size());
-		for (cSoundEntity *s : vSounds)
-		{
-			o.Str(s->GetName());
-			o.Str(s->GetData()->GetName());
-			o.Pod(s->GetRemoveWhenOver());
-			o.Pod(s->IsActive());
-			o.Pod(s->IsStopped() || s->IsFadingOut());
-			o.Pod(s->GetMinDistance());
-			o.Pod(s->GetMaxDistance());
-			o.Pod(s->GetVolume());
-			o.Pod(s->GetLocalPosition());
-			cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent();
-			o.Pod(pInst ? pInst->mfFadeDest : 1.0f);
-			o.Pod(pInst ? pInst->mfVolumeMulDest : 1.0f);
-			o.Pod((uint32_t)(pInst ? pInst->GetParamNum() : 0));
-			for (int i = 0; pInst && i < pInst->GetParamNum(); ++i)
-				o.Pod(pInst->GetParamValue(i));
-		}
-
-		std::vector<cBillboard *> vBillboards;
-		cBillboardIterator bIt = pMap->GetWorld()->GetBillboardIterator();
-		while (bIt.HasNext())
-			if (cBillboard *b = bIt.Next(); b->IsSaved() && b->GetParent() == NULL && b->GetEntityParent() == NULL)
-				vBillboards.push_back(b);
-		o.Pod((uint32_t)vBillboards.size());
-		for (cBillboard *b : vBillboards)
-		{
-			o.Str(b->GetName());
-			o.Pod(b->GetVisibleVar());
-			o.Pod(b->GetColor());
-		}
-		o.Pod(pPlayer ? pPlayer->mfHealth : 1.0f);
-		std::vector<std::pair<cSomaLuxEntity *, cMatrixf>> vAgents;
+			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL)
+				r->mmapPS.emplace(ps->GetName(), ps);
+			else if (ps->IsSaved() && ps->GetEntityParent())
+				r->mmapOwnedPS.emplace(ps->GetName(), ps);
+	}
+	static void RParticle(void *c, const OhplGs4Particle *x)
+	{
+		cReadCtx *r = R(c);
+		tString sName = FromRS(x->name), sData = FromRS(x->data);
+		cVector3f vSize;
+		FromF(vSize, x->size);
 		cMatrixf m;
-		for (cSomaLuxEntity *p : pMap->GetEntities())
-			if (SomaAgentGetMatrix(p, m))
-				vAgents.emplace_back(p, m);
-		o.Pod((uint32_t)vAgents.size());
-		for (auto &a : vAgents)
+		FromF(m, x->mtx);
+		cColor col;
+		FromF(col, x->color);
+		cParticleSystem *ps = NULL;
+		auto &mapSrc = x->owned ? r->mmapOwnedPS : r->mmapPS;
+		if (auto it = mapSrc.find(sName); it != mapSrc.end())
 		{
-			o.Str(a.first->msName);
-			o.Pod(a.second);
-			o.Pod(SomaAgentGetState(a.first));
-			float fYaw;
-			bool bSenses, bDetection;
-			SomaAgentSaveExtra(a.first, fYaw, bSenses, bDetection);
-			o.Pod(fYaw);
-			o.Pod(bSenses);
-			o.Pod(bDetection);
-			o.Str(SomaAgentSavePath(a.first));
+			ps = it->second;
+			mapSrc.erase(it);
 		}
-		o.Pod(pMap->mbIsUnderwater);
-		cWorld *w = pMap->GetWorld();
-		for (bool b : {w->GetFogActive(), w->GetFogCulling(), w->GetFogUnderwater(), w->GetSecondaryFogActive(), w->GetSkyBoxActive()})
-			o.Pod(b);
-		for (float f : {w->GetFogStart(), w->GetFogEnd(), w->GetFogFalloffExp(), w->GetFogBrightness(), w->GetSecondaryFogStart(),
-						w->GetSecondaryFogEnd(), w->GetSecondaryFogFalloffExp(), w->GetSecondaryFogBrightness(), w->GetSkyBoxBrightness()})
-			o.Pod(f);
-		for (cColor c : {w->GetFogColor(), w->GetSecondaryFogColor(), w->GetSkyBoxColor()})
-			o.Pod(c);
-		std::vector<cSomaCameraTextureState> vCams = SomaGetCameraTextures();
-		o.Pod((uint32_t)vCams.size());
-		for (const cSomaCameraTextureState &c : vCams)
+		else if (x->owned || (ps = r->mpMap->GetWorld()->CreateParticleSystem(sName, sData, vSize)) == NULL)
+			return;
+		ps->SetMatrix(m);
+		ps->SetColor(col);
+		ps->SetBrightness(x->brightness);
+		ps->SetActive(x->active);
+		ps->SetVisible(x->visible);
+		ps->SetFadeAtDistance(x->fade_at_distance);
+		ps->SetMinFadeDistanceStart(x->fade[0]);
+		ps->SetMinFadeDistanceEnd(x->fade[1]);
+		ps->SetMaxFadeDistanceStart(x->fade[2]);
+		ps->SetMaxFadeDistanceEnd(x->fade[3]);
+		for (int e = 0; e < ps->GetEmitterNum() && e < 32; ++e)
+			if (x->dead & (1u << e))
+				ps->GetEmitter(e)->KillInstantly();
+	}
+	static void RParticlesEnd(void *c, bool abHas)
+	{
+		if (abHas)
+			for (auto &it : R(c)->mmapPS)
+				it.second->KillInstantly();
+	}
+
+	static void RSoundsBegin(void *c)
+	{
+		cReadCtx *r = R(c);
+		cSoundEntityIterator sIt = r->mpMap->GetWorld()->GetSoundEntityIterator();
+		while (sIt.HasNext())
+			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL)
+				r->mmapSounds.emplace(s->GetName(), s);
+	}
+	static void RSound(void *c, const OhplGs4Sound *x)
+	{
+		cReadCtx *r = R(c);
+		tString sName = FromRS(x->name), sData = FromRS(x->data);
+		cVector3f vPos;
+		FromF(vPos, x->pos);
+		cSoundEntity *s = NULL;
+		if (auto it = r->mmapSounds.find(sName); it != r->mmapSounds.end())
 		{
-			o.Str(c.msName);
-			o.Str(c.msAttached);
-			o.Pod(c.mvSize);
-			o.Pod(c.mlFPS);
-			for (float f : {c.mfFOV, c.mfNear, c.mfFar})
-				o.Pod(f);
-			o.Pod(c.mtxRotation);
-			o.Pod(c.mvPosition);
+			s = it->second;
+			r->mmapSounds.erase(it);
 		}
-		std::vector<cFogArea *> vFog;
-		cFogAreaIterator fIt = w->GetFogAreaIterator();
-		while (fIt.HasNext())
-			vFog.push_back(fIt.Next());
-		o.Pod((uint32_t)vFog.size());
-		for (cFogArea *f : vFog)
+		else if ((s = r->mpMap->GetWorld()->CreateSoundEntity(sName, sData, x->remove)) == NULL)
+			return;
+		s->SetActive(x->active);
+		s->SetMinDistance(x->min_dist);
+		s->SetMaxDistance(x->max_dist);
+		s->SetVolume(x->volume);
+		s->SetPosition(vPos);
+		if (cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent())
 		{
-			o.Str(f->GetName());
-			o.Pod(f->IsVisible());
+			pInst->FadeInTo(x->fade, 0);
+			pInst->SetVolumeMul(x->volume_mul);
+			for (size_t p = 0; p < x->params.n; ++p)
+				pInst->SetParam((int)p, x->params.p[p]);
 		}
-		o.Pod((uint32_t)pMap->msetColliding.size());
-		for (auto &[pParent, pChild, sFunc] : pMap->msetColliding)
+		if (x->stopped)
+			s->Stop(false);
+	}
+	static void RSoundsEnd(void *c, bool abHas)
+	{
+		if (abHas)
+			for (auto &it : R(c)->mmapSounds)
+				it.second->Stop(false);
+	}
+
+	static void RBillboard(void *c, const OhplGs4Billboard *x)
+	{
+		cColor col;
+		FromF(col, x->color);
+		if (cBillboard *b = R(c)->mpMap->GetWorld()->GetBillboard(FromRS(x->name)))
 		{
-			o.Str(pParent->msName);
-			o.Str(pChild->msName);
-			o.Str(sFunc);
+			b->SetVisible(x->visible);
+			b->SetColor(col);
 		}
-		o.Str(pMap->msDisplayNameEntry);
-		cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
-		o.Pod((uint8_t)(pCam != NULL));
-		if (pCam)
+	}
+
+	static void RPlayerApply(void *, const OhplGs4Player *x)
+	{
+		if (x->gravity_active >= 0)
 		{
-			o.Pod((uint8_t)(pBody && pBody->GetCamera() == NULL));
-			o.Pod(pCam->GetPosition());
-			for (float f : {pCam->GetPitchMinLimit(), pCam->GetPitchMaxLimit(), pCam->GetYawMinLimit(), pCam->GetYawMaxLimit()})
-				o.Pod(f);
-			o.Pod(pPlayer->mFOVMul);
-			o.Pod(pPlayer->mAspectMul);
+			glSavedGravityActive = x->gravity_active;
+			FromF(gvSavedGravity, x->gravity);
 		}
-		std::vector<iLight *> vOwnedLights;
-		cLightListIterator ownedIt = pMap->GetWorld()->GetLightIterator();
-		while (ownedIt.HasNext())
-			if (iLight *l = ownedIt.Next(); l->IsSaved() && l->GetParent() == NULL && l->GetEntityParent() && l->GetFlickerActive() == false)
-				vOwnedLights.push_back(l);
-		o.Pod((uint32_t)vOwnedLights.size());
-		for (iLight *l : vOwnedLights)
+		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+		if (pPlayer)
 		{
-			o.Str(l->GetName());
-			o.Pod(l->GetVisibleVar());
-			o.Pod(l->IsFading() ? l->GetDestColor() : l->GetDiffuseColor());
-			o.Pod(l->IsFading() ? l->GetDestRadius() : l->GetRadius());
+			cVector3f vFeet;
+			FromF(vFeet, x->feet);
+			if (x->move_state >= 0)
+				pPlayer->ChangeMoveState(x->move_state);
+			if (x->state >= 0)
+				pPlayer->ChangeState(x->state);
+			pPlayer->PlaceAtStart(vFeet, x->yaw, x->char_crouching > 0);
+			if (pPlayer->GetCamera())
+				pPlayer->GetCamera()->SetPitch(x->pitch);
 		}
-		cSomaToneMapping *pTone = cSomaToneMapping::Get();
-		o.Pod((uint8_t)(pTone != NULL));
-		if (pTone)
+	}
+	static void RHealth(void *, float afHealth) { cSomaLuxPlayer::Get()->mfHealth = afHealth; }
+
+	static void RAgent(void *c, const OhplGs4Agent *x)
+	{
+		cSomaLuxEntity *p = R(c)->mpMap->GetEntity(FromRS(x->name));
+		cMatrixf m;
+		FromF(m, x->mtx);
+		if (p && SomaAgentSetMatrix(p, m))
 		{
-			o.Pod(pTone->mfWorldExposure);
-			o.Pod(pTone->mfWorldWhiteCut);
+			if (glPendingVersion >= 10)
+				SomaAgentLoadExtra(p, x->yaw, x->senses, x->detection);
+			SomaAgentChangeState(p, x->state);
+			SomaAgentLoadPath(p, FromRS(x->path));
 		}
+	}
+	static void RUnderwater(void *, bool ab) { gnSavedUnderwater = ab; }
+	static void RFog(void *c, const OhplGs4Fog *x)
+	{
+		cWorld *w = R(c)->mpMap->GetWorld();
+		cColor col[3];
+		for (int i = 0; i < 3; ++i)
+			FromF(col[i], x->colors[i]);
+		const float *f = x->floats;
+		const bool *b = x->flags;
+		w->SetFogActive(b[0]);
+		w->SetFogCulling(b[1]);
+		w->SetFogUnderwater(b[2]);
+		w->SetSecondaryFogActive(b[3]);
+		w->SetSkyBoxActive(b[4]);
+		w->SetFogStart(f[0]);
+		w->SetFogEnd(f[1]);
+		w->SetFogFalloffExp(f[2]);
+		w->SetFogBrightness(f[3]);
+		w->SetSecondaryFogStart(f[4]);
+		w->SetSecondaryFogEnd(f[5]);
+		w->SetSecondaryFogFalloffExp(f[6]);
+		w->SetSecondaryFogBrightness(f[7]);
+		w->SetSkyBoxBrightness(f[8]);
+		w->SetFogColor(col[0]);
+		w->SetSecondaryFogColor(col[1]);
+		w->SetSkyBoxColor(col[2]);
+	}
+	static void RCamTexture(void *, const OhplGs4CamTex *x)
+	{
+		cSomaCameraTextureState c;
+		c.msName = FromRS(x->name);
+		c.msAttached = FromRS(x->attached);
+		memcpy(&c.mvSize, x->size, sizeof(x->size));
+		c.mlFPS = x->fps;
+		c.mfFOV = x->fov;
+		c.mfNear = x->near_plane;
+		c.mfFar = x->far_plane;
+		FromF(c.mtxRotation, x->rot);
+		FromF(c.mvPosition, x->pos);
+		SomaRestoreCameraTexture(c);
+	}
+	static void RFogArea(void *c, const OhplGs4FogArea *x)
+	{
+		if (cFogArea *f = R(c)->mpMap->GetWorld()->GetFogArea(FromRS(x->name)))
+			f->SetVisible(x->visible);
+	}
+	static void RColliding(void *c, const OhplGs4Colliding *x)
+	{
+		cSomaLuxMap *pMap = R(c)->mpMap;
+		cSomaLuxEntity *pParent = pMap->GetEntity(FromRS(x->parent)), *pChild = pMap->GetEntity(FromRS(x->child));
+		if (pParent && pChild)
+			pMap->msetColliding.emplace(pParent, pChild, FromRS(x->func));
+	}
+	// Maps that set it in OnEnter, which a load skips
+	static void RDisplayName(void *c, OhplGs4Str aName) { R(c)->mpMap->msDisplayNameEntry = FromRS(aName); }
+	// mid-sequence saves: custom-control cameras are detached and limited by the script
+	static void RCamera(void *, const OhplGs4Camera *x)
+	{
+		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
+		cCamera *pCam = pPlayer->GetCamera();
+		cVector3f vPos;
+		FromF(vPos, x->pos);
+		memcpy(&pPlayer->mFOVMul, &x->fov_mul, sizeof(x->fov_mul));
+		memcpy(&pPlayer->mAspectMul, &x->aspect_mul, sizeof(x->aspect_mul));
+		pCam->SetPitchLimits(x->limits[0], x->limits[1]);
+		pCam->SetYawLimits(x->limits[2], x->limits[3]);
+		if (x->detached != 0 && pPlayer->GetCharacterBody())
+		{
+			pPlayer->GetCharacterBody()->SetCamera(NULL);
+			pCam->SetPosition(vPos);
+		}
+	}
+	static void ROwnedLight(void *c, const OhplGs4OwnedLight *x)
+	{
+		iLight *l = R(c)->mpMap->GetWorld()->GetLight(FromRS(x->name));
+		if (l == NULL)
+			return;
+		cColor col;
+		FromF(col, x->color);
+		l->SetVisible(x->visible);
+		l->SetDiffuseColor(col);
+		l->SetRadius(x->radius);
+	}
+	static void RTone(void *, const OhplGs4Tone *x)
+	{
+		if (cSomaToneMapping *pTone = cSomaToneMapping::Get())
+			pTone->FadeExposure(x->exposure, x->white_cut, 0);
+	}
+
+	static void ReadWorld(OhplGs4In *apIn)
+	{
+		cReadCtx r;
+		r.mpMap = cSomaLuxMap::GetCurrent();
+		r.mpScript.reset(new cScriptCtx(NULL));
+		OhplGs4ReadHost host = {&r,
+								&r.mpScript->mHost,
+								RHasPlayer,
+								RHasCamera,
+								RMapTimersBegin,
+								RMapTimer,
+								RMapScript,
+								RSpawned,
+								REntityBegin,
+								REntityHead,
+								REntityScript,
+								REntityTail,
+								REntitiesDone,
+								ROtherBegin,
+								ROtherTimers,
+								ROtherReset,
+								ROtherScript,
+								RLight,
+								RParticlesBegin,
+								RParticle,
+								RParticlesEnd,
+								RSoundsBegin,
+								RSound,
+								RSoundsEnd,
+								RBillboard,
+								RPlayerApply,
+								RHealth,
+								RAgent,
+								RUnderwater,
+								RFog,
+								RCamTexture,
+								RFogArea,
+								RColliding,
+								RDisplayName,
+								RCamera,
+								ROwnedLight,
+								RTone};
+		ohpl_gs4_read_world(apIn, glPendingVersion, &host);
 	}
 
 	// Setup() may have run Map_SetUnderwater; redo it so globals and gravity follow the save
@@ -1019,375 +1512,25 @@ public:
 			++glSomaUnderwaterUsers;
 		}
 	}
-
-	static void ReadWorld(cIn &in)
-	{
-		cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent();
-		bool bPlayer = in.Pod<uint8_t>() != 0;
-		cVector3f vFeet(0);
-		float fYaw = 0, fPitch = 0;
-		int lState = -1, lMoveState = -1, lCharState = 0;
-		if (bPlayer)
-		{
-			vFeet = in.Pod<cVector3f>();
-			fYaw = in.Pod<float>();
-			fPitch = in.Pod<float>();
-			lState = in.Pod<int>();
-			lMoveState = in.Pod<int>();
-			if (glPendingVersion >= 15)
-				lCharState = in.Pod<int>();
-			if (glPendingVersion >= 28)
-			{
-				glSavedGravityActive = in.Pod<uint8_t>();
-				gvSavedGravity = in.Pod<cVector3f>();
-			}
-		}
-
-		pMap->GetTimers().clear();
-		uint32_t n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			cSomaLuxTimer t;
-			t.msName = in.Str();
-			t.msFunction = in.Str();
-			t.mfTime = in.Pod<float>();
-			t.mbPaused = in.Pod<bool>();
-			t.mfUserFloat = in.Pod<float>();
-			t.mlUserInt = in.Pod<int>();
-			t.msUserString = in.Str();
-			t.mfLength = in.Pod<float>();
-			pMap->GetTimers().push_back(t);
-		}
-		ReadScript(in, pMap->GetScript());
-
-		n = glPendingVersion >= 4 ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sName = in.Str(), sFile = in.Str();
-			cMatrixf m = in.Pod<cMatrixf>();
-			cVector3f vScale = in.Pod<cVector3f>();
-			cSomaID id = in.Pod<cSomaID>();
-			cSomaLuxEntity *p = pMap->GetEntity(sName);
-			if (p == NULL || p->mbSpawned == false)
-				p = pMap->CreateEntity(sName, sFile, m, vScale);
-			if (p == NULL)
-				continue;
-			p->mID = id;
-			pMap->mlNextId = std::max(pMap->mlNextId, id.mB + 1);
-		}
-
-		n = in.Pod<uint32_t>();
-		std::set<tString> setSaved;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-			setSaved.insert(cString::ToLowerCase(ReadEntity(in, pMap)));
-		// entities destroyed before the save (broken windows) come back with the fresh map load
-		if (in.ok)
-			for (cSomaLuxEntity *p : std::vector<cSomaLuxEntity *>(pMap->GetEntities()))
-				if (setSaved.count(cString::ToLowerCase(p->msName)) == 0)
-					pMap->DestroyEntity(p);
-
-		std::map<tString, cSomaLuxScriptable *> mapOther;
-		for (cSomaLuxScriptable *p : cSomaLuxScriptable::GetAll())
-			if (dynamic_cast<cSomaLuxEntity *>(p) == NULL && p->GetScript() && p->mbSaved)
-				mapOther.emplace(ScriptableKey(p), p);
-		n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sKey = in.Str();
-			auto it = mapOther.find(sKey);
-			cSomaLuxScriptable dummy;
-			cSomaLuxScriptable *p = it != mapOther.end() ? it->second : &dummy;
-			ReadTimers(in, p);
-			if (dynamic_cast<cSomaLuxModule *>(p))
-				ResetNoSave(p->GetScript());
-			ReadScript(in, p->GetScript());
-		}
-
-		n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			iLight *l = pMap->GetWorld()->GetLight(in.Str());
-			bool bActive = in.Pod<bool>(), bVisible = in.Pod<bool>(), bFlicker = in.Pod<bool>();
-			cColor col = in.Pod<cColor>();
-			float fRadius = in.Pod<float>(), fBrightness = in.Pod<float>();
-			if (l == NULL || in.ok == false)
-				continue;
-			l->SetActive(bActive);
-			l->SetVisible(bVisible);
-			l->SetDiffuseColor(col);
-			l->SetRadius(fRadius);
-			l->SetBrightness(fBrightness);
-			l->SetFlickerActive(bFlicker);
-		}
-
-		std::multimap<tString, cParticleSystem *> mapPS, mapOwnedPS;
-		cParticleSystemIterator psIt = pMap->GetWorld()->GetParticleSystemIterator();
-		while (psIt.HasNext())
-			if (cParticleSystem *ps = psIt.Next(); ps->IsSaved() && ps->GetParent() == NULL && ps->GetEntityParent() == NULL)
-				mapPS.emplace(ps->GetName(), ps);
-			else if (ps->IsSaved() && ps->GetEntityParent())
-				mapOwnedPS.emplace(ps->GetName(), ps);
-		n = in.Pod<uint32_t>();
-		bool bHasPS = in.ok;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sName = in.Str(), sData = in.Str();
-			cVector3f vSize = in.Pod<cVector3f>();
-			cMatrixf m = in.Pod<cMatrixf>();
-			cColor col = in.Pod<cColor>();
-			float fBrightness = in.Pod<float>();
-			bool bActive = in.Pod<bool>(), bVisible = in.Pod<bool>(), bFade = in.Pod<bool>();
-			float vFade[4];
-			for (float &f : vFade)
-				f = in.Pod<float>();
-			uint32_t lDead = in.Pod<uint32_t>();
-			bool bOwned = glPendingVersion >= 22 && in.Pod<bool>();
-			if (in.ok == false)
-				break;
-			cParticleSystem *ps = NULL;
-			auto &mapSrc = bOwned ? mapOwnedPS : mapPS;
-			if (auto it = mapSrc.find(sName); it != mapSrc.end())
-			{
-				ps = it->second;
-				mapSrc.erase(it);
-			}
-			else if (bOwned || (ps = pMap->GetWorld()->CreateParticleSystem(sName, sData, vSize)) == NULL)
-				continue;
-			ps->SetMatrix(m);
-			ps->SetColor(col);
-			ps->SetBrightness(fBrightness);
-			ps->SetActive(bActive);
-			ps->SetVisible(bVisible);
-			ps->SetFadeAtDistance(bFade);
-			ps->SetMinFadeDistanceStart(vFade[0]);
-			ps->SetMinFadeDistanceEnd(vFade[1]);
-			ps->SetMaxFadeDistanceStart(vFade[2]);
-			ps->SetMaxFadeDistanceEnd(vFade[3]);
-			for (int e = 0; e < ps->GetEmitterNum() && e < 32; ++e)
-				if (lDead & (1u << e))
-					ps->GetEmitter(e)->KillInstantly();
-		}
-		if (bHasPS)
-			for (auto &it : mapPS)
-				it.second->KillInstantly();
-
-		std::multimap<tString, cSoundEntity *> mapSounds;
-		cSoundEntityIterator sIt = pMap->GetWorld()->GetSoundEntityIterator();
-		while (sIt.HasNext())
-			if (cSoundEntity *s = sIt.Next(); s->IsSaved() && s->GetParent() == NULL && s->GetEntityParent() == NULL)
-				mapSounds.emplace(s->GetName(), s);
-		n = in.Pod<uint32_t>();
-		bool bHasSounds = in.ok;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sName = in.Str(), sData = in.Str();
-			bool bRemove = in.Pod<bool>(), bActive = in.Pod<bool>(), bStopped = in.Pod<bool>();
-			float fMin = in.Pod<float>(), fMax = in.Pod<float>(), fVol = in.Pod<float>();
-			cVector3f vPos = in.Pod<cVector3f>();
-			float fFade = in.Pod<float>(), fVolMul = in.Pod<float>();
-			std::vector<float> vParams(std::min(in.Pod<uint32_t>(), 256u));
-			for (float &f : vParams)
-				f = in.Pod<float>();
-			if (in.ok == false)
-				break;
-			cSoundEntity *s = NULL;
-			if (auto it = mapSounds.find(sName); it != mapSounds.end())
-			{
-				s = it->second;
-				mapSounds.erase(it);
-			}
-			else if ((s = pMap->GetWorld()->CreateSoundEntity(sName, sData, bRemove)) == NULL)
-				continue;
-			s->SetActive(bActive);
-			s->SetMinDistance(fMin);
-			s->SetMaxDistance(fMax);
-			s->SetVolume(fVol);
-			s->SetPosition(vPos);
-			if (cSomaSoundInstance *pInst = (cSomaSoundInstance *)s->GetEvent())
-			{
-				pInst->FadeInTo(fFade, 0);
-				pInst->SetVolumeMul(fVolMul);
-				for (size_t p = 0; p < vParams.size(); ++p)
-					pInst->SetParam((int)p, vParams[p]);
-			}
-			if (bStopped)
-				s->Stop(false);
-		}
-		if (bHasSounds)
-			for (auto &it : mapSounds)
-				it.second->Stop(false);
-
-		n = in.Pod<uint32_t>();
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sName = in.Str();
-			bool bVisible = in.Pod<bool>();
-			cColor col = in.Pod<cColor>();
-			if (cBillboard *b = in.ok ? pMap->GetWorld()->GetBillboard(sName) : NULL)
-			{
-				b->SetVisible(bVisible);
-				b->SetColor(col);
-			}
-		}
-
-		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
-		if (bPlayer && pPlayer)
-		{
-			if (lMoveState >= 0)
-				pPlayer->ChangeMoveState(lMoveState);
-			if (lState >= 0)
-				pPlayer->ChangeState(lState);
-			pPlayer->PlaceAtStart(vFeet, fYaw, lCharState > 0);
-			if (pPlayer->GetCamera())
-				pPlayer->GetCamera()->SetPitch(fPitch);
-		}
-		// ponytail: trailing field so pre-health saves still load
-		if (pPlayer && in.p < in.s.size())
-			pPlayer->mfHealth = in.Pod<float>();
-		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			cSomaLuxEntity *p = pMap->GetEntity(in.Str());
-			cMatrixf m = in.Pod<cMatrixf>();
-			int lState = in.Pod<int>();
-			float fYaw = glPendingVersion >= 10 ? in.Pod<float>() : 0;
-			bool bSenses = glPendingVersion >= 10 ? in.Pod<bool>() : true;
-			bool bDetection = glPendingVersion >= 10 ? in.Pod<bool>() : true;
-			std::string sPath = glPendingVersion >= 24 ? in.Str() : "";
-			if (p && SomaAgentSetMatrix(p, m))
-			{
-				if (glPendingVersion >= 10)
-					SomaAgentLoadExtra(p, fYaw, bSenses, bDetection);
-				SomaAgentChangeState(p, lState);
-				SomaAgentLoadPath(p, sPath);
-			}
-		}
-		if (in.p < in.s.size())
-		{
-			gnSavedUnderwater = in.Pod<bool>();
-		}
-		if (in.p < in.s.size())
-		{
-			cWorld *w = pMap->GetWorld();
-			bool b[5];
-			float f[9];
-			cColor c[3];
-			for (bool &x : b) x = in.Pod<bool>();
-			for (float &x : f) x = in.Pod<float>();
-			for (cColor &x : c) x = in.Pod<cColor>();
-			if (in.ok)
-			{
-				w->SetFogActive(b[0]);
-				w->SetFogCulling(b[1]);
-				w->SetFogUnderwater(b[2]);
-				w->SetSecondaryFogActive(b[3]);
-				w->SetSkyBoxActive(b[4]);
-				w->SetFogStart(f[0]);
-				w->SetFogEnd(f[1]);
-				w->SetFogFalloffExp(f[2]);
-				w->SetFogBrightness(f[3]);
-				w->SetSecondaryFogStart(f[4]);
-				w->SetSecondaryFogEnd(f[5]);
-				w->SetSecondaryFogFalloffExp(f[6]);
-				w->SetSecondaryFogBrightness(f[7]);
-				w->SetSkyBoxBrightness(f[8]);
-				w->SetFogColor(c[0]);
-				w->SetSecondaryFogColor(c[1]);
-				w->SetSkyBoxColor(c[2]);
-			}
-		}
-		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			cSomaCameraTextureState c;
-			c.msName = in.Str();
-			c.msAttached = in.Str();
-			c.mvSize = in.Pod<cVector2l>();
-			c.mlFPS = in.Pod<unsigned>();
-			c.mfFOV = in.Pod<float>();
-			c.mfNear = in.Pod<float>();
-			c.mfFar = in.Pod<float>();
-			c.mtxRotation = in.Pod<cMatrixf>();
-			c.mvPosition = in.Pod<cVector3f>();
-			if (in.ok)
-				SomaRestoreCameraTexture(c);
-		}
-		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sName = in.Str();
-			bool bVisible = in.Pod<bool>();
-			if (cFogArea *f = in.ok ? pMap->GetWorld()->GetFogArea(sName) : NULL)
-				f->SetVisible(bVisible);
-		}
-		n = in.p < in.s.size() ? in.Pod<uint32_t>() : 0;
-		for (uint32_t i = 0; i < n && in.ok; ++i)
-		{
-			tString sParent = in.Str(), sChild = in.Str(), sFunc = in.Str();
-			cSomaLuxEntity *pParent = pMap->GetEntity(sParent), *pChild = pMap->GetEntity(sChild);
-			if (pParent && pChild)
-				pMap->msetColliding.emplace(pParent, pChild, sFunc);
-		}
-		// Maps that set it in OnEnter, which a load skips
-		if (glPendingVersion >= 25)
-			pMap->msDisplayNameEntry = in.Str();
-		// mid-sequence saves: custom-control cameras are detached and limited by the script
-		cCamera *pCam = pPlayer ? pPlayer->GetCamera() : NULL;
-		if (glPendingVersion >= 26 && in.Pod<uint8_t>() && pCam)
-		{
-			bool bDetached = in.Pod<uint8_t>() != 0;
-			cVector3f vPos = in.Pod<cVector3f>();
-			float f[4];
-			for (float &x : f)
-				x = in.Pod<float>();
-			pPlayer->mFOVMul = in.Pod<cSomaLuxPlayer::cFadeValue>();
-			pPlayer->mAspectMul = in.Pod<cSomaLuxPlayer::cFadeValue>();
-			pCam->SetPitchLimits(f[0], f[1]);
-			pCam->SetYawLimits(f[2], f[3]);
-			if (bDetached && pPlayer->GetCharacterBody())
-			{
-				pPlayer->GetCharacterBody()->SetCamera(NULL);
-				pCam->SetPosition(vPos);
-			}
-		}
-		if (glPendingVersion >= 29)
-		{
-			uint32_t nOwned = in.Pod<uint32_t>();
-			for (uint32_t i = 0; i < nOwned && in.ok; ++i)
-			{
-				iLight *l = pMap->GetWorld()->GetLight(in.Str());
-				bool bVisible = in.Pod<bool>();
-				cColor col = in.Pod<cColor>();
-				float fRadius = in.Pod<float>();
-				if (l == NULL || in.ok == false)
-					continue;
-				l->SetVisible(bVisible);
-				l->SetDiffuseColor(col);
-				l->SetRadius(fRadius);
-			}
-		}
-		if (glPendingVersion >= 30)
-		{
-			if (in.Pod<uint8_t>())
-			{
-				float fExposure = in.Pod<float>(), fWhiteCut = in.Pod<float>();
-				if (cSomaToneMapping *pTone = cSomaToneMapping::Get(); pTone && in.ok)
-					pTone->FadeExposure(fExposure, fWhiteCut, 0);
-			}
-		}
-	}
 };
 
 tWString cSomaSaveHandler::GetSaveDir()
 {
-	tWString sDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGDataHome);
-	for (const tWString &sPart : {tWString(_W("open-hpl/")), SomaGameIdW(), tWString(_W("saves/"))})
+	struct cDirs
 	{
-		sDir += sPart;
-		if (cPlatform::FolderExists(sDir) == false)
-			cPlatform::CreateFolder(sDir);
-	}
-	return sDir;
+		tWString msLast;
+	} dirs;
+	tWString sRoot = cPlatform::GetSystemSpecialPath(eSystemPath_XDGDataHome);
+	const std::string &sId = SomaGameId();
+	ohpl_gs4_paths(0, (const uint32_t *)sRoot.data(), sRoot.size(), (const unsigned char *)sId.data(), sId.size(), false, 0,
+				   [](void *c, const uint32_t *apDir, size_t alDir, bool) {
+					   tWString sDir((const wchar_t *)apDir, alDir);
+					   if (cPlatform::FolderExists(sDir) == false)
+						   cPlatform::CreateFolder(sDir);
+					   ((cDirs *)c)->msLast = sDir;
+				   },
+				   &dirs);
+	return dirs.msLast;
 }
 
 void cSomaSaveHandler::OnMapEnter(const tString &asMapFile, const tString &asStartPos)
@@ -1401,34 +1544,16 @@ bool cSomaSaveHandler::Save(const tWString &asFile)
 	if (gsMapFile.empty() || cSomaLuxMap::GetCurrent() == NULL ||
 		cString::GetFileName(gsMapFile) == cString::GetFileName(gpSomaBase->GetInitConfigString("MainMenu", "File")))
 		return false;
-	cOut o;
-	o.Bytes(kMagic, 8);
-	o.Str(gsMapFile);
-	o.Str(gsStartPos);
-	o.Pod((uint32_t)gpSomaBase->GetVisitedMaps().size());
-	for (const tString &sMap : gpSomaBase->GetVisitedMaps())
-		o.Str(sMap);
-	o.Str(SomaSerializeGlobalVars());
-	o.Pod(gbExplorationMode);
-	// cLuxSaveHandler: a running map stream resumes after load
-	o.Str(SomaPreloadMap());
-	std::set<tString> setPlayed;
-	if (cSomaLuxVoiceHandler::Get())
-		setPlayed = cSomaLuxVoiceHandler::Get()->msetPlayedLines;
-	o.Pod((uint32_t)setPlayed.size());
-	for (const tString &sLine : setPlayed)
-		o.Str(sLine);
-	cSomaSaveState::WriteWorld(o);
-	o.Str(SomaSerializeMusic());
+	std::string sData = cSomaSaveState::Build(gsMapFile, gsStartPos, gbExplorationMode);
 
 	tWString sPath = GetSaveDir() + cString::GetFileNameW(asFile);
 	std::ofstream file(cString::To8Char(sPath).c_str(), std::ios::binary | std::ios::trunc);
-	if (file.is_open() == false || file.write(o.s.data(), o.s.size()).good() == false)
+	if (file.is_open() == false || file.write(sData.data(), sData.size()).good() == false)
 	{
 		Error("SOMA save: could not write '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
 	}
-	Log("SOMA save: %s (%s, %d bytes)\n", cString::To8Char(sPath).c_str(), gsMapFile.c_str(), (int)o.s.size());
+	Log("SOMA save: %s (%s, %d bytes)\n", cString::To8Char(sPath).c_str(), gsMapFile.c_str(), (int)sData.size());
 	return true;
 }
 
@@ -1459,30 +1584,39 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	std::stringstream data;
 	data << file.rdbuf();
 	std::string sData = data.str();
-	cIn in(sData);
-	char vMagic[8] = {};
-	in.Bytes(vMagic, 8);
-	int lVersion = vMagic[7] - '0';
-	if (file.is_open() == false || memcmp(vMagic, kMagic, 7) != 0 || lVersion < 2 || lVersion > 31)
+	OhplGs4Header *pHeader = NULL;
+	int lStatus = ohpl_gs4_header_read((const unsigned char *)sData.data(), sData.size(), file.is_open(), &pHeader);
+	struct cHeaderGuard
+	{
+		OhplGs4Header *mp;
+		~cHeaderGuard() { ohpl_gs4_header_free(mp); }
+	} guard = {pHeader};
+	auto Field = [&](size_t alWhich) {
+		const unsigned char *p = NULL;
+		size_t n = 0;
+		ohpl_gs4_header_str(pHeader, alWhich, &p, &n);
+		return std::string((const char *)p, n);
+	};
+	if (lStatus == 1)
 	{
 		Error("SOMA save: could not read '%s'\n", cString::To8Char(sPath).c_str());
 		return false;
 	}
-	tString sMap = in.Str();
-	tString sPos = in.Str();
-	std::set<tString> setVisited;
-	uint32_t n = in.Pod<uint32_t>();
-	for (uint32_t i = 0; i < n && in.ok; ++i)
-		setVisited.insert(in.Str());
-	tString sVars = in.Str();
-	bool bExploration = lVersion == 2 ? false : in.Pod<bool>();
-	gsPendingPreload = lVersion >= 19 ? in.Str() : "";
-	std::set<tString> setPlayed;
-	n = lVersion >= 21 ? in.Pod<uint32_t>() : 0;
-	for (uint32_t i = 0; i < n && in.ok; ++i)
-		setPlayed.insert(in.Str());
-	if (in.ok == false || sMap.empty())
+	OhplGs4HeaderInfo info = ohpl_gs4_header_info(pHeader);
+	int lVersion = info.version;
+	gsPendingPreload = lVersion >= 19 ? Field(3) : "";
+	if (lStatus == 2)
 		return false;
+	tString sMap = Field(0);
+	tString sPos = Field(1);
+	std::set<tString> setVisited;
+	for (size_t i = 0; i < info.visited; ++i)
+		setVisited.insert(Field(4 + i));
+	tString sVars = Field(2);
+	bool bExploration = info.exploration;
+	std::set<tString> setPlayed;
+	for (size_t i = 0; i < info.played; ++i)
+		setPlayed.insert(Field(0x10000 + i));
 
 	gbExplorationMode = bExploration;
 	if (cSomaLuxVoiceHandler::Get())
@@ -1492,7 +1626,7 @@ bool cSomaSaveHandler::Load(const tWString &asFile, bool abImmediate)
 	// The saved state replaces OnStart
 	setVisited.insert(sMap);
 	gpSomaBase->GetVisitedMaps() = setVisited;
-	gsPendingState = sData.substr(in.p);
+	gsPendingState = sData.substr(info.body);
 	glPendingVersion = lVersion;
 	Log("SOMA save: loading %s (%s)\n", cString::To8Char(sPath).c_str(), sMap.c_str());
 	if (abImmediate == false)
@@ -1517,13 +1651,20 @@ bool cSomaSaveHandler::ApplyPendingState()
 		return false;
 	std::string sState;
 	sState.swap(gsPendingState);
-	cIn in(sState);
+	OhplGs4In *pIn = ohpl_gs4_in_new((const unsigned char *)sState.data(), sState.size());
 	SomaPreloadMap() = gsPendingPreload;
 	gnSavedUnderwater = -1;
 	glSavedGravityActive = -1;
-	cSomaSaveState::ReadWorld(in);
+	cSomaSaveState::ReadWorld(pIn);
 	if (glPendingVersion >= 27)
-		SomaDeserializeMusic(in.Str());
+	{
+		const unsigned char *pMusic = NULL;
+		size_t lMusic = 0;
+		ohpl_gs4_in_str(pIn, &pMusic, &lMusic);
+		SomaDeserializeMusic(std::string((const char *)pMusic, lMusic));
+	}
+	bool bTruncated = ohpl_gs4_in_ok(pIn) == false;
+	ohpl_gs4_in_free(pIn);
 	cSomaLuxMap::GetCurrent()->Setup();
 	if (gnSavedUnderwater >= 0)
 		cSomaSaveState::ApplyUnderwater(cSomaLuxMap::GetCurrent(), gnSavedUnderwater != 0);
@@ -1534,7 +1675,7 @@ bool cSomaSaveHandler::ApplyPendingState()
 		pBody->SetCustomGravityActive(glSavedGravityActive != 0);
 		pBody->SetCustomGravity(gvSavedGravity);
 	}
-	if (in.ok == false)
+	if (bTruncated)
 		Warning("SOMA save: saved state is truncated\n");
 	if (cSomaLuxPlayer::Get())
 		cSomaLuxPlayer::Get()->SetActive(true);

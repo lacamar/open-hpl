@@ -8,6 +8,8 @@ using namespace hpl;
 // "soma", "rebirth" or "bunker", from the game's main_init.cfg
 const std::string &SomaGameId();
 tWString SomaGameIdW();
+// 0 soma, 1 rebirth, 2 bunker
+int SomaGameIdValue();
 
 class cSomaConfig
 {
