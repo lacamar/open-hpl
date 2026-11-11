@@ -27,6 +27,9 @@
 //----------------------------------------------
 
 class cLuxPlayer;
+struct OhplGa2Ops;
+struct OhplGa2Sanity;
+struct OhplGa2Death;
 
 //----------------------------------------------
 
@@ -99,8 +102,6 @@ public:
 	float AddAndGetPitchAdd(float afX);
 
 private:
-	void SetSwayActive(bool abX);
-	void UpdateSway(float afTimeStep);
 
 	float mfStartSwayMaxSanity;
 
@@ -319,14 +320,14 @@ public:
 private:
 	float GetCurrentSizeMul();
 
+	void ToRust(OhplGa2Sanity &s);
+	void FromRust(const OhplGa2Sanity &s);
+	void Replay(const OhplGa2Ops &ops);
 	void UpdateInsaneEffects(float afTimeStep);
 	void UpdateCheckEnemySeen(float afTimeStep);
 	void UpdateHit(float afTimeStep);
 	
-	void UpdateInsanityVisuals(float afTimeStep);
 	void UpdateEnemySeenEffect(float afTimeStep);
-	void UpdateLosingSanity(float afTimeStep);
-	void UpdateLowSanity(float afTimeStep);
 	
 	float mfHitAlpha;
 	bool mbHitActive;
@@ -464,6 +465,9 @@ public:
 
 private:
 	void ResetGame();
+	void ToRust(OhplGa2Death &s);
+	void FromRust(const OhplGa2Death &s);
+	void Replay(const OhplGa2Ops &ops);
 
 	bool mbToMainMenu;
 	bool mbActive;
