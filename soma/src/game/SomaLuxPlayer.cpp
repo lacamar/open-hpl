@@ -9,6 +9,7 @@
 #include "SomaScriptRuntime.h"
 #include "impl/scriptarray.h"
 #include <algorithm>
+#include <array>
 
 #include <cmath>
 #include <cstring>
@@ -30,16 +31,21 @@ void cSomaLuxMoveState::OnUpdate(float afTimeStep)
 	iCharacterBody *pBody = mpPlayer ? mpPlayer->GetCharacterBody() : NULL;
 	if (mbAutoUpdateSpeedSettings == false || pBody == NULL)
 		return;
-	pBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, mfMaxForwardSpeed * mfMaxForwardSpeedMul);
-	pBody->SetMaxNegativeMoveSpeed(eCharDir_Forward, -(mfMaxBackwardSpeed * mfMaxBackwardSpeedMul));
-	pBody->SetMaxPositiveMoveSpeed(eCharDir_Right, mfMaxSidwaySpeed * mfMaxSidwaySpeedMul);
-	pBody->SetMaxNegativeMoveSpeed(eCharDir_Right, -(mfMaxSidwaySpeed * mfMaxSidwaySpeedMul));
-	pBody->SetMoveAcc(eCharDir_Forward, mfForwardAcc);
-	pBody->SetMoveAcc(eCharDir_Right, mfSidewayAcc);
-	pBody->SetMoveDeacc(eCharDir_Forward, mfForwardDeacc);
-	pBody->SetMoveDeacc(eCharDir_Right, mfSidewayDeacc);
-	pBody->SetMoveOppositeDirAccMul(eCharDir_Forward, mfForwardOppositeDirAccMul);
-	pBody->SetMoveOppositeDirAccMul(eCharDir_Right, mfSidewayOppositeDirAccMul);
+	OhplGs3MoveSpeeds speeds = {mfMaxForwardSpeed, mfMaxBackwardSpeed, mfMaxSidwaySpeed, mfForwardAcc, mfSidewayAcc, mfForwardDeacc,
+								mfSidewayDeacc, mfForwardOppositeDirAccMul, mfSidewayOppositeDirAccMul, mfMaxForwardSpeedMul,
+								mfMaxBackwardSpeedMul, mfMaxSidwaySpeedMul};
+	float v[10];
+	ohpl_gs3_move_speed_settings(&speeds, v);
+	pBody->SetMaxPositiveMoveSpeed(eCharDir_Forward, v[0]);
+	pBody->SetMaxNegativeMoveSpeed(eCharDir_Forward, v[1]);
+	pBody->SetMaxPositiveMoveSpeed(eCharDir_Right, v[2]);
+	pBody->SetMaxNegativeMoveSpeed(eCharDir_Right, v[3]);
+	pBody->SetMoveAcc(eCharDir_Forward, v[4]);
+	pBody->SetMoveAcc(eCharDir_Right, v[5]);
+	pBody->SetMoveDeacc(eCharDir_Forward, v[6]);
+	pBody->SetMoveDeacc(eCharDir_Right, v[7]);
+	pBody->SetMoveOppositeDirAccMul(eCharDir_Forward, v[8]);
+	pBody->SetMoveOppositeDirAccMul(eCharDir_Right, v[9]);
 }
 
 cSomaLuxPlayer::cSomaLuxPlayer()
@@ -145,12 +151,13 @@ void cSomaLuxPlayer::AddMoveState(const tString &asName, int alId, const tString
 void cSomaLuxPlayer::ChangeState(int alId)
 {
 	auto it = mmapStates.find(alId);
-	if (it == mmapStates.end())
+	int lPlan = ohpl_gs3_state_change(it != mmapStates.end(), it != mmapStates.end() && it->second == mpState);
+	if (lPlan == 0)
 	{
 		Error("Could not change to state id %d. It does not exist!\n", alId);
 		return;
 	}
-	if (it->second == mpState)
+	if (lPlan == 1)
 		return;
 	cSomaLuxPlayerState *pPrev = mpState;
 	if (pPrev)
@@ -162,12 +169,13 @@ void cSomaLuxPlayer::ChangeState(int alId)
 void cSomaLuxPlayer::ChangeMoveState(int alId)
 {
 	auto it = mmapMoveStates.find(alId);
-	if (it == mmapMoveStates.end())
+	int lPlan = ohpl_gs3_state_change(it != mmapMoveStates.end(), it != mmapMoveStates.end() && it->second == mpMoveState);
+	if (lPlan == 0)
 	{
 		Error("Could not change to move state id %d. It does not exist!\n", alId);
 		return;
 	}
-	if (it->second == mpMoveState)
+	if (lPlan == 1)
 		return;
 	cSomaLuxMoveState *pPrev = mpMoveState;
 	if (pPrev)
@@ -178,7 +186,7 @@ void cSomaLuxPlayer::ChangeMoveState(int alId)
 
 void cSomaLuxPlayer::PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool abCrouching)
 {
-	if (mpCharBody == NULL)
+	if (ohpl_gs3_place_plan(mpCharBody != NULL, false) == 0)
 		return;
 	cVector3f vPos = avFeetPos;
 	bool bScript = Call("void SetupStartPos(const cVector3f&in avPos, float afAngle, bool abCrouching)", [&](asIScriptContext *c) {
@@ -186,7 +194,7 @@ void cSomaLuxPlayer::PlaceAtStart(const cVector3f &avFeetPos, float afYaw, bool 
 		c->SetArgFloat(1, afYaw);
 		c->SetArgByte(2, abCrouching);
 	});
-	if (bScript == false)
+	if (ohpl_gs3_place_plan(true, bScript) == 2)
 	{
 		mpCharBody->SetFeetPosition(avFeetPos);
 		mpCharBody->SetYaw(afYaw);
@@ -217,11 +225,7 @@ void cSomaLuxPlayer::OnUpdate(float afTimeStep)
 	if (mpCharBody)
 	{
 		cVector3f vVel = mpCharBody->GetVelocity(afTimeStep);
-		vVel.y = 0;
-		float fSpeed = vVel.Length();
-		mfAverageMoveSpeed = mfAverageMoveSpeed * 0.9f + fSpeed * 0.1f;
-		if (fSpeed > 0.001f)
-			mvAverageMoveDirection = mvAverageMoveDirection * 0.9f + (vVel / fSpeed) * 0.1f;
+		ohpl_gs3_update_average_move(&mfAverageMoveSpeed, &mvAverageMoveDirection, &vVel);
 	}
 	UpdateCamera(afTimeStep);
 }
@@ -255,7 +259,7 @@ void cSomaLuxPlayer::OnGui(float afTimeStep)
 void cSomaLuxPlayer::OnMessage(const char *apDecl)
 {
 	// the map is gone, so states that cleared their data on map leave must not run OnLeaveState
-	if (strcmp(apDecl, "void Reset()") == 0 && mpState && mpState->mlId != 0)
+	if (ohpl_gs3_drops_state_on_reset(ohpl_gs3_message_kind((const unsigned char *)apDecl, strlen(apDecl)), mpState != NULL, mpState ? mpState->mlId : 0))
 		mpState = NULL;
 	cSomaLuxScriptable::OnMessage(apDecl);
 	for (auto &it : mmapStates)
@@ -268,9 +272,10 @@ extern bool gbMapChangeIsTransfer;
 
 void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 {
-	bool bDestroy = strcmp(apDecl, "void DestroyWorldEntities(cLuxMap @apMap)") == 0;
+	int lKind = ohpl_gs3_message_kind((const unsigned char *)apDecl, strlen(apDecl));
+	bool bDestroy = lKind == 3;
 	// Real engine (ResetMapSpecifics): states back to id 0, no OnLeaveState
-	if (strcmp(apDecl, "void OnMapEnter(cLuxMap @apMap)") == 0)
+	if (lKind == 2)
 	{
 		mpState = mmapStates.count(0) ? mmapStates[0] : NULL;
 		if (mpState)
@@ -278,7 +283,7 @@ void cSomaLuxPlayer::OnMapMessage(const char *apDecl, void *apMap)
 		mpMoveState = mmapMoveStates.count(0) ? mmapMoveStates[0] : NULL;
 		if (mpMoveState)
 			mpMoveState->Call("void OnEnterState(int alPrevStateId)", IntArg(-1));
-		if (gbMapChangeIsTransfer == false)
+		if (ohpl_gs3_clears_camera_adds(gbMapChangeIsTransfer))
 			mmapCameraPosAdd.clear();
 		if (mpCamera)
 		{
@@ -323,26 +328,7 @@ void cSomaLuxPlayer::OnAnalogInput(int alAnalogId, const cVector3f &avAmount)
 	cSomaLuxScriptable::OnAnalogInput(alAnalogId, avAmount);
 }
 
-static float FadeTowards(cSomaLuxPlayer::cFadeValue &aX, float afTimeStep)
-{
-	float fDiff = aX.mfGoal - aX.mfValue;
-	float fSpeed = aX.mfSpeedMul > 0 ? std::fabs(fDiff) * aX.mfSpeedMul : aX.mfSpeed;
-	if (aX.mfMaxSpeed > 0)
-		fSpeed = std::min(fSpeed, aX.mfMaxSpeed);
-	if (fSpeed <= 0 || std::fabs(fDiff) <= std::max(fSpeed * afTimeStep, 0.0001f))
-		aX.mfValue = aX.mfGoal;
-	else
-		aX.mfValue += fDiff > 0 ? fSpeed * afTimeStep : -fSpeed * afTimeStep;
-	return aX.mfValue;
-}
-
-static float AngleDelta(float afFrom, float afTo)
-{
-	float d = std::fmod(afTo - afFrom + kPif, k2Pif);
-	if (d < 0)
-		d += k2Pif;
-	return d - kPif;
-}
+static float FadeTowards(cSomaLuxPlayer::cFadeValue &aX, float afTimeStep) { return ohpl_gs3_fade_towards(&aX, afTimeStep); }
 
 void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 {
@@ -353,23 +339,7 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 	for (auto &it : mmapCameraPosAdd)
 	{
 		cMoveVector &m = it.second;
-		if (m.mbMoving)
-		{
-			cVector3f vDelta = m.mvGoal - m.mvValue;
-			float fDist = vDelta.Length();
-			m.mfSpeed = std::min(m.mfSpeed + m.mfAcc * afTimeStep, m.mfMaxSpeed);
-			float fSpeed = m.mfSpeed;
-			if (m.mfSlowdownDist > 0 && fDist < m.mfSlowdownDist)
-				fSpeed *= std::max(fDist / m.mfSlowdownDist, 0.1f);
-			if (fDist <= fSpeed * afTimeStep || fDist < 0.0001f)
-			{
-				m.mvValue = m.mvGoal;
-				m.mbMoving = false;
-				m.mfSpeed = 0;
-			}
-			else
-				m.mvValue += vDelta * (fSpeed * afTimeStep / fDist);
-		}
+		ohpl_gs3_step_move_vec(&m, afTimeStep);
 		vAdd += m.mvValue;
 	}
 	if (mpCharBody)
@@ -392,40 +362,30 @@ void cSomaLuxPlayer::UpdateCamera(float afTimeStep)
 
 	if (mbCameraRotateActive)
 	{
-		cVector3f vTarget = mbCameraRotateLocal ? mpCamera->GetPosition() + mvCameraRotateTarget : mvCameraRotateTarget;
-		cVector3f vDir = vTarget - mpCamera->GetPosition();
-		float fYaw = std::atan2(-vDir.x, -vDir.z);
-		float fPitch = std::atan2(vDir.y, std::sqrt(vDir.x * vDir.x + vDir.z * vDir.z));
-		float fDYaw = AngleDelta(mpCharBody->GetYaw(), fYaw);
-		float fDPitch = fPitch - mpCamera->GetPitch();
-		mfCameraRotateSpeed = std::min(mfCameraRotateSpeed + mfCameraRotateAcc * afTimeStep, mfCameraRotateMaxSpeed);
-		float fMax = std::min(mfCameraRotateSpeed, std::sqrt(fDYaw * fDYaw + fDPitch * fDPitch) * mfCameraRotateSpeedMul) * afTimeStep;
-		float fLen = std::sqrt(fDYaw * fDYaw + fDPitch * fDPitch);
-		if (fLen > 0.0001f)
+		OhplGs3RotateIn in = {mfCameraRotateSpeed, mfCameraRotateAcc, mfCameraRotateSpeedMul, mfCameraRotateMaxSpeed, mbCameraRotateLocal,
+							  mvCameraRotateTarget};
+		OhplGs3RotateOut out;
+		cVector3f vCamPos = mpCamera->GetPosition();
+		ohpl_gs3_step_camera_rotate(&in, &vCamPos, mpCharBody->GetYaw(), mpCamera->GetPitch(), afTimeStep, &out);
+		mfCameraRotateSpeed = out.mfSpeed;
+		if (out.mbApply)
 		{
-			float f = std::min(fMax / fLen, 1.0f);
-			mpCharBody->AddYaw(fDYaw * f);
-			mpCamera->AddPitch(fDPitch * f);
+			mpCharBody->AddYaw(out.mfAddYaw);
+			mpCamera->AddPitch(out.mfAddPitch);
 		}
 	}
 
 	if (mbAutomoveActive)
 	{
-		cVector3f vDelta = mvAutomoveTarget - mpCharBody->GetFeetPosition();
-		vDelta.y = 0;
-		float fDist = vDelta.Length();
-		if (fDist < 0.05f)
-			mbAutomoveActive = false;
-		else
+		cVector3f vFeet = mpCharBody->GetFeetPosition(), vFwd = mpCharBody->GetForward(), vRight = mpCharBody->GetRight();
+		float fForward, fRight;
+		if (ohpl_gs3_step_automove(&mvAutomoveTarget, &vFeet, &vFwd, &vRight, mfAutomoveSpeedMul, &fForward, &fRight))
 		{
-			cVector3f vFwd = mpCharBody->GetForward(), vRight = mpCharBody->GetRight();
-			vFwd.y = vRight.y = 0;
-			vFwd.Normalize();
-			vRight.Normalize();
-			float fMul = std::min(1.0f, fDist * mfAutomoveSpeedMul);
-			mpCharBody->Move(eCharDir_Forward, cMath::Vector3Dot(vDelta, vFwd) / fDist * fMul);
-			mpCharBody->Move(eCharDir_Right, cMath::Vector3Dot(vDelta, vRight) / fDist * fMul);
+			mpCharBody->Move(eCharDir_Forward, fForward);
+			mpCharBody->Move(eCharDir_Right, fRight);
 		}
+		else
+			mbAutomoveActive = false;
 	}
 
 	if (mpCharBody->GetCamera() == mpCamera)
@@ -646,30 +606,29 @@ void cSomaLuxInputHandler::UpdateInput(float afTimeStep, bool abGameInput)
 			pGame->BroadcastAction(a.mlId, true);
 		else if (BecameUp(a.mlId))
 			pGame->BroadcastAction(a.mlId, false);
-		if (a.mlAnalogId >= 0 && a.mlAxis >= 0 && a.mlAxis < 3 && pInput->IsTriggerd(a.mlId) && a.mfMul != 0)
+		bool bTriggered = a.mlAnalogId >= 0 && a.mlAxis >= 0 && a.mlAxis < 3 && pInput->IsTriggerd(a.mlId);
+		float fMul;
+		int lAxis = ohpl_gs3_analog_fire(a.mlAnalogId, a.mlAxis, a.mfMul, bTriggered, &fMul);
+		if (lAxis >= 0)
 		{
 			cVector3f v(0);
-			v.v[a.mlAxis] = a.mfMul;
+			v.v[lAxis] = fMul;
 			pGame->BroadcastAnalog(a.mlAnalogId, v);
 		}
 	}
 
 	float fHeight = gpSomaBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat().y;
-	cVector2f v = cVector2f((float)pGame->mvMouseRel.x, (float)pGame->mvMouseRel.y) * mfMouseSensitivity / fHeight;
+	cVector2f v;
+	ohpl_gs3_mouse_vector(pGame->mvMouseRel.x, pGame->mvMouseRel.y, mfMouseSensitivity, fHeight, &v.x, &v.y);
 	if (mbSmoothMouse)
 	{
 		mlstSmoothMousePos.push_front(v);
-		if ((int)mlstSmoothMousePos.size() > mlMaxSmoothMousePos)
+		if (ohpl_gs3_pops_oldest_sample(mlstSmoothMousePos.size(), mlMaxSmoothMousePos))
 			mlstSmoothMousePos.pop_back();
-		cVector2f vSum(0);
-		float fMul = 1, fTotal = 0;
+		std::vector<std::array<float, 2>> vSamples;
 		for (const cVector2f &p : mlstSmoothMousePos)
-		{
-			vSum += p * fMul;
-			fTotal += fMul;
-			fMul *= mfPrevSmoothMousePosMul;
-		}
-		v = vSum / fTotal;
+			vSamples.push_back({p.x, p.y});
+		ohpl_gs3_smooth_mouse((const float(*)[2])vSamples.data(), vSamples.size(), mfPrevSmoothMousePosMul, &v.x, &v.y);
 	}
 	if (mbInvertMouse)
 		v.y = -v.y;
@@ -690,9 +649,7 @@ static std::vector<cSomaLuxEntity *> UsedLiquidAreas()
 // cLuxPlayer::SetHealth 0xca7940 / IsDead 0xcbb000: health <= 0 is only death with CanDie
 void cSomaLuxPlayer::SetHealth(float afX)
 {
-	bool bWasDead = IsDead();
-	mfHealth = std::min(afX, mfMaxHealth);
-	if (bWasDead || IsDead() == false)
+	if (ohpl_gs3_set_health(mfHealth, mfMaxHealth, mbCanDie, afX, &mfHealth) == false)
 		return;
 	tString sSource;
 	auto args = [&](asIScriptContext *c) {
@@ -713,11 +670,13 @@ bool cSomaLuxPlayer::GiveDamage(float afAmount, int alType, float afMinHealth, c
 		return false;
 	if (alDamageID != -1)
 	{
-		if (std::find(mvDamageIDs.begin(), mvDamageIDs.end(), alDamageID) != mvDamageIDs.end())
+		int lPlan = ohpl_gs3_damage_id(mvDamageIDs.data(), mvDamageIDs.size(), alDamageID);
+		if (lPlan == 1)
 			return false;
-		if (mvDamageIDs.size() > 7)
+		if (lPlan == 3)
 			mvDamageIDs.erase(mvDamageIDs.begin());
-		mvDamageIDs.push_back(alDamageID);
+		if (lPlan >= 2)
+			mvDamageIDs.push_back(alDamageID);
 	}
 	cSomaID src = aSource;
 	Call("void OnDamageTaken(float, int, tID)", [&](asIScriptContext *c) {
@@ -725,7 +684,7 @@ bool cSomaLuxPlayer::GiveDamage(float afAmount, int alType, float afMinHealth, c
 		c->SetArgDWord(1, alType);
 		c->SetArgObject(2, &src);
 	});
-	SetHealth(std::max(mfHealth - afAmount, afMinHealth));
+	SetHealth(ohpl_gs3_health_after_damage(mfHealth, afAmount, afMinHealth));
 	return true;
 }
 
@@ -770,7 +729,7 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void AddMoveState(const tString&in asName, int alId, const tString&in asScriptFile, const tString&in asScriptClass)",
 				+[](P *p, S n, int id, S f, S c) { p->AddMoveState(n, id, f, c); });
 	SOMA_METHOD(e, T, "void GiveDamage(float afAmount, int alStrength, int aType, float afMinHealth, const tString&in asSource)",
-				+[](P *p, float a, int, int, float fMin, S) { p->SetHealth(std::max(std::min(p->mfHealth, std::max(p->mfHealth - a, fMin)), 0.0f)); });
+				+[](P *p, float a, int, int, float fMin, S) { p->SetHealth(ohpl_gs3_health_after_script_damage(p->mfHealth, a, fMin)); });
 	SOMA_METHOD(e, T, "bool GiveDamage(float afAmount, int alStrength, int aType, float afMinHealth, tID a_idSource, int alDamageID)",
 				+[](P *p, float a, int, int t, float fMin, cSomaID src, int id) { return p->GiveDamage(a, t, fMin, src, id); });
 	SOMA_METHOD(e, T, "void SetBaseCameraPosAdd(const cVector3f&in avVec)", +[](P *p, V v) { p->mvBaseCameraPosAdd = v; });
@@ -865,7 +824,7 @@ void cSomaLuxPlayer::RegisterNatives(asIScriptEngine *e)
 	SOMA_METHOD(e, T, "void SetMaxHealth(float afX)", +[](P *p, float x) { p->mfMaxHealth = x; });
 	SOMA_METHOD(e, T, "float GetMaxHealth()", +[](P *p) { return p->mfMaxHealth; });
 	SOMA_METHOD(e, T, "void AddHealth(float afX, float afMinHealth)", +[](P *p, float x, float fMin) {
-		p->SetHealth(std::max(p->mfHealth + x, fMin));
+		p->SetHealth(ohpl_gs3_add_health(p->mfHealth, x, fMin));
 	});
 	SOMA_METHOD(e, T, "bool IsDead()", +[](P *p) { return p->IsDead(); });
 	SOMA_METHOD(e, T, "bool HasCollideCallbacks()", +[](P *) {

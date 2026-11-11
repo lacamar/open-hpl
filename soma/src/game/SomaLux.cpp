@@ -31,7 +31,11 @@
 static tString gsPendingMap, gsPendingStart, gsPendingTransfer, gsPreloadMap;
 bool gbMapChangeIsTransfer = false;
 static float gfPendingFadeIn = -1;
-static int glPreloadPrio = 2;
+static OhplGs3Preload gPreloadState = [] { OhplGs3Preload p; ohpl_gs3_preload_init(&p); return p; }();
+static OhplGs3Pause gPauseState = [] { OhplGs3Pause p; ohpl_gs3_pause_init(&p); return p; }();
+#define glPreloadPrio gPreloadState.mlPrio
+#define gbSavingEnabled gPauseState.mbSavingEnabled
+static const unsigned char *U(const tString &s) { return (const unsigned char *)s.data(); }
 
 static bool gbPendingNewGame = false;
 
@@ -48,11 +52,7 @@ static struct
 } gPreload;
 static const size_t kPreloadStackSize = 64 << 20;
 
-static bool SameMap(const tString &a, const tString &b)
-{
-	return cString::ToLowerCase(cString::SetFileExt(cString::GetFileName(a), "")) ==
-		   cString::ToLowerCase(cString::SetFileExt(cString::GetFileName(b), ""));
-}
+static bool SameMap(const tString &a, const tString &b) { return ohpl_gs3_same_map(U(a), a.size(), U(b), b.size()); }
 
 static void PreloadFiber()
 {
@@ -114,11 +114,13 @@ static cWorld *PreloadFinish()
 
 cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport)
 {
-	if (gPreload.msMap == "")
+	int lTake = ohpl_gs3_take_plan(U(gPreload.msMap), gPreload.msMap.size(), U(asMap), asMap.size());
+	if (lTake == 0)
 		return NULL;
-	bool bSame = SameMap(gPreload.msMap, asMap);
+	bool bSame = lTake == 2;
 	cWorld *pWorld = PreloadFinish();
-	if (pWorld && bSame)
+	int lTaken = ohpl_gs3_taken(pWorld != NULL, bSame);
+	if (lTaken == 0)
 	{
 		pWorld->SetActive(true);
 		if (apLoadReport)
@@ -128,40 +130,30 @@ cWorld *SomaTakePreloadedWorld(const tString &asMap, tString *apLoadReport)
 	for (cSomaLuxEntity *pEnt : cSomaLuxEntity::Pending())
 		delete pEnt;
 	cSomaLuxEntity::Pending().clear();
-	if (pWorld)
+	if (lTaken == 2)
 		gpSomaBase->mpEngine->GetScene()->DestroyWorld(pWorld);
 	return NULL;
 }
 
 static bool PreloadReady(const tString &asMap)
 {
-	return gPreload.msMap != "" && gPreload.mbRunning == false && SameMap(gPreload.msMap, asMap);
+	return ohpl_gs3_preload_ready(U(gPreload.msMap), gPreload.msMap.size(), gPreload.mbRunning, U(asMap), asMap.size());
 }
 
 static void PreloadUpdate()
 {
-	if (gsPreloadMap != "" && gPreload.msMap != gsPreloadMap)
-	{
-		if (gPreload.msMap != "")
-			SomaTakePreloadedWorld("");
+	OhplGs3Tick tick;
+	ohpl_gs3_preload_tick(&gPreloadState, U(gsPreloadMap), gsPreloadMap.size(), U(gPreload.msMap), gPreload.msMap.size(), gPreload.mbRunning,
+						  cEngineDiagnostics::GetRenderedFrameCount(), &tick);
+	if (tick.mbDropOld)
+		SomaTakePreloadedWorld("");
+	if (tick.mbStart)
 		PreloadStart(gsPreloadMap);
-	}
-	static const unsigned long vBudgetMs[] = {0, 2, 4, 8, 25};
-	static unsigned int lLastFrame = ~0u;
-	static double fDebtMs = 0;
-	unsigned int lFrame = cEngineDiagnostics::GetRenderedFrameCount();
-	if (lFrame == lLastFrame || gPreload.mbRunning == false || glPreloadPrio <= 0)
+	if (tick.mbStep == false)
 		return;
-	lLastFrame = lFrame;
-	unsigned long lBudget = vBudgetMs[std::min(glPreloadPrio, 4)];
-	if (fDebtMs > 0)
-	{
-		fDebtMs -= lBudget;
-		return;
-	}
 	unsigned long lStart = cPlatform::GetApplicationTime();
-	PreloadStep(lBudget);
-	fDebtMs = std::max(0.0, (double)(cPlatform::GetApplicationTime() - lStart) - lBudget);
+	PreloadStep(tick.mlBudgetMs);
+	ohpl_gs3_preload_stepped(&gPreloadState, cPlatform::GetApplicationTime() - lStart, tick.mlBudgetMs);
 }
 
 cSomaLuxMap *cSomaLuxMap::mpCurrent = NULL;
@@ -796,51 +788,48 @@ static void PauseSoundInstances(tFlag alTypes, bool abX)
 
 // cLuxMap::PauseSoundsAndMusic 0xb19280 / ResumeSoundsAndMusic 0xb147a0 (Rebirth)
 static std::set<cMeshEntity *> gsetUpdateWhenPaused;
-static bool gbSavingEnabled = true;
-static float gfSavingDisabledTime = 0;
 
 void SomaSetGamePaused(bool abX, bool abMusic, bool abSounds, bool abAmbience, tFlag alTypes)
 {
-	static bool bMusicP = false, bSoundsP = false, bAmbP = false;
-	if (abX == false && gpSomaBase->mbScriptGamePaused == false)
-		return;
-	gpSomaBase->mbScriptGamePaused = abX;
-	if (abX == false)
-		gsetUpdateWhenPaused.clear();
-	if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
-		pMap->GetWorld()->SetActive(pMap->mbActive && abX == false);
+	OhplGs3Op vOps[kOhplGs3OpCapacity];
+	size_t lNum = ohpl_gs3_set_paused(&gPauseState, gpSomaBase->mbScriptGamePaused, abX, abMusic, abSounds, abAmbience, alTypes, vOps);
 	cSound *pSound = gpSomaBase->mpEngine->GetSound();
-	if (abX == false)
+	for (size_t i = 0; i < lNum; ++i)
 	{
-		pSound->GetMusicHandler()->Resume();
-		pSound->GetSoundHandler()->ResumeAll(eSoundEntryType_All);
-		PauseSoundInstances(eSoundEntryType_All, false);
-		cSomaSoundscape::Get()->SetPaused(false);
-		bMusicP = bSoundsP = bAmbP = false;
-		if (cSomaLuxVoiceHandler::Get())
-			cSomaLuxVoiceHandler::Get()->ReapplyPauses();
-		return;
-	}
-	if (bMusicP == false && abMusic)
-	{
-		pSound->GetMusicHandler()->Pause();
-		bMusicP = true;
-	}
-	if (bSoundsP == false && abSounds)
-	{
-		pSound->GetSoundHandler()->PauseAll(alTypes);
-		PauseSoundInstances(alTypes, true);
-		bSoundsP = bAmbP = true;
-		if (abAmbience == false)
+		switch (vOps[i].mlCode)
 		{
-			cSomaSoundscape::Get()->SetPaused(false);
-			bAmbP = false;
+		case kOhplGs3OpSetScriptPaused:
+			gpSomaBase->mbScriptGamePaused = vOps[i].mlArg != 0;
+			break;
+		case kOhplGs3OpClearUpdateWhenPaused:
+			gsetUpdateWhenPaused.clear();
+			break;
+		case kOhplGs3OpWorldActive:
+			if (cSomaLuxMap *pMap = cSomaLuxMap::GetCurrent())
+				pMap->GetWorld()->SetActive(pMap->mbActive && vOps[i].mlArg != 0);
+			break;
+		case kOhplGs3OpMusicResume:
+			pSound->GetMusicHandler()->Resume();
+			break;
+		case kOhplGs3OpMusicPause:
+			pSound->GetMusicHandler()->Pause();
+			break;
+		case kOhplGs3OpSoundsResumeAll:
+			pSound->GetSoundHandler()->ResumeAll(eSoundEntryType_All);
+			PauseSoundInstances(eSoundEntryType_All, false);
+			break;
+		case kOhplGs3OpSoundsPause:
+			pSound->GetSoundHandler()->PauseAll(vOps[i].mlArg);
+			PauseSoundInstances(vOps[i].mlArg, true);
+			break;
+		case kOhplGs3OpSoundscapePaused:
+			cSomaSoundscape::Get()->SetPaused(vOps[i].mlArg != 0);
+			break;
+		case kOhplGs3OpReapplyVoicePauses:
+			if (cSomaLuxVoiceHandler::Get())
+				cSomaLuxVoiceHandler::Get()->ReapplyPauses();
+			break;
 		}
-	}
-	else if (bAmbP == false && abAmbience)
-	{
-		cSomaSoundscape::Get()->SetPaused(true);
-		bAmbP = true;
 	}
 }
 
@@ -881,35 +870,35 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 				if (tString(pObj->GetPropertyName(i)) == "mbHasSaveFiles")
 					*(bool *)pObj->GetAddressOfProperty(i) = false;
 		}
-		tString sTransfer = sStart.empty() ? gsPendingTransfer : "";
+		OhplGs3Begin begin;
+		ohpl_gs3_map_begin(sStart.empty(), gsPendingTransfer.empty(), bMap, U(gsPreloadMap), gsPreloadMap.size(), U(sMap), sMap.size(), &begin);
+		// open-hpl-dbi: a start position drops the transfer area
+		tString sTransfer = begin.mbUseTransfer ? gsPendingTransfer : "";
 		gbMapChangeIsTransfer = sTransfer != "";
 		cSomaLuxPlayer *pPlayer = cSomaLuxPlayer::Get();
 		// cLuxMapHandler::PerformMapChange: MapTransferData runs only for the preloaded map; otherwise the player gets the start area
-		bool bPreloaded = gsPreloadMap != "" && SameMap(gsPreloadMap, sMap);
-		cSomaLuxEntity *pArea = bMap && bPreloaded && sTransfer != "" ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
+		cSomaLuxEntity *pArea = begin.mbLookupArea ? cSomaLuxMap::GetCurrent()->GetEntity(sTransfer) : NULL;
 		iCharacterBody *pBody = pPlayer ? pPlayer->GetCharacterBody() : NULL;
 		// cLuxMapHandler::MapTransferData: player and props inside the transfer area keep their pose, static ones too (moving platforms)
 		std::vector<std::pair<tString, std::vector<cMatrixf>>> vCarried;
-		cMatrixf mtxRel;
-		float fYawRel = 0, fPitch = 0;
-		int lActiveSize = 0;
-		if (pArea && pBody)
+		OhplGs3Rel rel = {};
+		bool bCaptured = pArea && pBody;
+		if (bCaptured)
 		{
-			cMatrixf mtxInv = cMath::MatrixInverse(pArea->GetMatrix());
-			mtxRel = cMath::MatrixTranslate(cMath::MatrixMul(mtxInv, pBody->GetFeetPosition()));
-			fYawRel = pBody->GetYaw() - SomaStartYaw(pArea->GetMatrix());
-			lActiveSize = pBody->GetActiveSize();
-			fPitch = pPlayer->GetCamera() ? pPlayer->GetCamera()->GetPitch() : 0;
+			cMatrixf mtxArea = pArea->GetMatrix();
+			cVector3f vFeet = pBody->GetFeetPosition();
+			bool bCamera = pPlayer->GetCamera() != NULL;
+			ohpl_gs3_capture(&mtxArea, &vFeet, pBody->GetYaw(), pBody->GetActiveSize(), bCamera, bCamera ? pPlayer->GetCamera()->GetPitch() : 0, &rel);
 			for (cSomaLuxEntity *p : cSomaLuxMap::GetCurrent()->GetEntities())
 			{
 				if (p->meType != eSomaLuxEntityType_Prop || p->mbAllowMapTransfer == false || p->mbActive == false || p->mvBodies.empty())
 					continue;
-				cVector3f v = cMath::MatrixMul(mtxInv, p->mvBodies[0]->GetWorldPosition());
-				if (std::abs(v.x) > pArea->mvSize.x / 2 || std::abs(v.y) > pArea->mvSize.y / 2 || std::abs(v.z) > pArea->mvSize.z / 2)
+				cVector3f vBodyPos = p->mvBodies[0]->GetWorldPosition();
+				if (ohpl_gs3_carries(&rel.mtxInv, &vBodyPos, &pArea->mvSize) == false)
 					continue;
 				std::vector<cMatrixf> vMtx;
 				for (iPhysicsBody *b : p->mvBodies)
-					vMtx.push_back(cMath::MatrixMul(mtxInv, b->GetWorldMatrix()));
+					vMtx.push_back(cMath::MatrixMul(rel.mtxInv, b->GetWorldMatrix()));
 				vCarried.emplace_back(p->msName, vMtx);
 			}
 		}
@@ -929,25 +918,29 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		if (gfPendingFadeIn >= 0 && cSomaLuxVoiceHandler::Get())
 			cSomaLuxVoiceHandler::Get()->FadeTo(0, gfPendingFadeIn);
 		gfPendingFadeIn = -1;
-		if (bLoaded == false)
+		int lAfter = ohpl_gs3_after_load(bLoaded, bCaptured, cSomaLuxMap::GetCurrent() != NULL);
+		if (lAfter == 0)
 			Error("SOMA script: %s\n", sError.c_str());
-		else if (pArea && pBody && cSomaLuxMap::GetCurrent())
+		else if (lAfter == 2)
 		{
 			if (cSomaLuxEntity *pNew = cSomaLuxMap::GetCurrent()->GetEntity(sTransfer))
 			{
 				// iCharacterBody::CopyFromBodySettings after PlacePlayerAtStartPos: the transferred player keeps crouch and camera
+				cMatrixf mtxNew = pNew->GetMatrix();
+				OhplGs3Arrival arrival;
+				ohpl_gs3_arrive(&mtxNew, &rel, &arrival);
 				if (iCharacterBody *pNewBody = pPlayer->GetCharacterBody())
-					pNewBody->SetActiveSize(lActiveSize);
-				pPlayer->PlaceAtStart(cMath::MatrixMul(pNew->GetMatrix(), mtxRel).GetTranslation(),
-									  SomaStartYaw(pNew->GetMatrix()) + fYawRel, lActiveSize == 1);
+					pNewBody->SetActiveSize(rel.mlActiveSize);
+				pPlayer->PlaceAtStart(arrival.mvFeet, arrival.mfYaw, arrival.mbCrouching);
 				if (pPlayer->GetCamera())
-					pPlayer->GetCamera()->SetPitch(fPitch);
+					pPlayer->GetCamera()->SetPitch(rel.mfPitch);
 				for (auto &[sName, vMtx] : vCarried)
 				{
 					cSomaLuxEntity *p = cSomaLuxMap::GetCurrent()->GetEntity(sName);
-					if (p == NULL || p->mvBodies.size() != vMtx.size())
+					int lRestore = ohpl_gs3_restore_prop(p != NULL, p && p->mvBodies.size() == vMtx.size(), p && p->mpMesh && p->mpMesh->IsStatic());
+					if (lRestore == 0)
 						continue;
-					if (p->mpMesh && p->mpMesh->IsStatic())
+					if (lRestore == 2)
 						p->MakeDynamic();
 					for (size_t i = 0; i < vMtx.size(); ++i)
 						p->mvBodies[i]->SetMatrix(cMath::MatrixMul(pNew->GetMatrix(), vMtx[i]));
@@ -964,11 +957,13 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 		cSomaLuxGame::Get()->mbGameInput = bMap && gpSomaBase->UsesRealPlayer();
 		cSomaLuxGame::Get()->Update(afTimeStep, gpSomaBase->mbScriptGamePaused);
 	}
-	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive && gpSomaBase->mbScriptGamePaused == false)
+	uint32_t lFrame = ohpl_gs3_frame_plan(cSomaLuxGame::Get() != NULL, cSomaLuxMap::GetCurrent() != NULL,
+										  cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive, bMap && gpSomaBase->UsesRealPlayer(),
+										  gpSomaBase->mbScriptGamePaused);
+	if (lFrame & 8)
 		cSomaLuxMap::GetCurrent()->Update(afTimeStep);
-	if (gbSavingEnabled == false && gfSavingDisabledTime > 0 && (gfSavingDisabledTime -= afTimeStep) <= 0)
-		gbSavingEnabled = true;
-	if (gpSomaBase->mbScriptGamePaused)
+	ohpl_gs3_tick_saving(&gPauseState, afTimeStep);
+	if (lFrame & 16)
 		for (cMeshEntity *pMesh : gsetUpdateWhenPaused)
 			pMesh->UpdateLogic(afTimeStep);
 	mbUpdated = true;
@@ -976,14 +971,14 @@ void cSomaLuxUpdater::Update(float afTimeStep)
 
 void cSomaLuxUpdater::PostUpdate(float afTimeStep)
 {
-	if (mbUpdated == false || gpSomaBase->ScriptsHeld())
-		return;
-	mbUpdated = false;
-	if (gpSomaBase->mbScriptGamePaused)
-		return;
-	if (cSomaLuxGame::Get())
+	bool bHeld = gpSomaBase->ScriptsHeld();
+	uint32_t lPost = ohpl_gs3_post_plan(mbUpdated, bHeld, gpSomaBase->mbScriptGamePaused, cSomaLuxGame::Get() != NULL,
+										cSomaLuxMap::GetCurrent() != NULL, cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive);
+	if (mbUpdated && bHeld == false)
+		mbUpdated = false;
+	if (lPost & 1)
 		cSomaLuxGame::Get()->PostUpdate(afTimeStep);
-	if (cSomaLuxMap::GetCurrent() && cSomaLuxMap::GetCurrent()->mbActive)
+	if (lPost & 2)
 		cSomaLuxMap::GetCurrent()->PostUpdate(afTimeStep);
 }
 
@@ -1495,7 +1490,7 @@ void RegisterSomaScriptLuxNatives(asIScriptEngine *e)
 		SOMA_FUNC(e, "void cLux_SetGamePaused(bool abX)", +[](bool b) { SomaSetGamePaused(b); });
 	SOMA_FUNC(e, "void cLux_AddUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { if (m) gsetUpdateWhenPaused.insert(m); });
 	SOMA_FUNC(e, "void cLux_RemoveUpdateWhenPausedEntity(cMeshEntity@ apMeshEntity)", +[](cMeshEntity *m) { gsetUpdateWhenPaused.erase(m); });
-	SOMA_FUNC(e, "void cLux_DisableSaving(float afDuration)", +[](float d) { gbSavingEnabled = false; gfSavingDisabledTime = d; });
+	SOMA_FUNC(e, "void cLux_DisableSaving(float afDuration)", +[](float d) { ohpl_gs3_disable_saving(&gPauseState, d); });
 	SOMA_FUNC(e, "void cLux_EnableSaving()", +[]() { gbSavingEnabled = true; });
 	SOMA_FUNC(e, "bool cLux_GetSavingEnabled()", +[]() { return gbSavingEnabled; });
 	SOMA_METHOD(e, "cWorld", "void SetSkyboxRotation(const cVector3f&in avX)", +[](cWorld *w, const cVector3f &v) { w->SetSkyBoxRotation(v); });
