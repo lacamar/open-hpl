@@ -1,4 +1,5 @@
 #include "impl/LowLevelGraphicsVulkan.h"
+#include "impl/RustVk.h"
 
 #include "impl/SDLFontData.h"
 #include "graphics/Bitmap.h"
@@ -55,47 +56,13 @@ namespace hpl {
 		return aFunc >= 0 && aFunc < 8 ? v[aFunc] : VK_COMPARE_OP_ALWAYS;
 	}
 
-	static VkStencilOp ToVkStencilOp(eStencilOp aOp)
-	{
-		switch(aOp)
-		{
-		case eStencilOp_Keep: return VK_STENCIL_OP_KEEP;
-		case eStencilOp_Zero: return VK_STENCIL_OP_ZERO;
-		case eStencilOp_Replace: return VK_STENCIL_OP_REPLACE;
-		case eStencilOp_Increment: return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-		case eStencilOp_Decrement: return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-		case eStencilOp_Invert: return VK_STENCIL_OP_INVERT;
-		case eStencilOp_IncrementWrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-		case eStencilOp_DecrementWrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
-		default: return VK_STENCIL_OP_KEEP;
-		}
-	}
+	static VkStencilOp ToVkStencilOp(eStencilOp aOp){ return (VkStencilOp)ohpl_vk_stencil_op((int)aOp); }
 
-	static VkBlendFactor ToVkBlend(eBlendFunc aFunc)
-	{
-		switch(aFunc)
-		{
-		case eBlendFunc_Zero: return VK_BLEND_FACTOR_ZERO;
-		case eBlendFunc_One: return VK_BLEND_FACTOR_ONE;
-		case eBlendFunc_SrcColor: return VK_BLEND_FACTOR_SRC_COLOR;
-		case eBlendFunc_OneMinusSrcColor: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-		case eBlendFunc_DestColor: return VK_BLEND_FACTOR_DST_COLOR;
-		case eBlendFunc_OneMinusDestColor: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-		case eBlendFunc_SrcAlpha: return VK_BLEND_FACTOR_SRC_ALPHA;
-		case eBlendFunc_OneMinusSrcAlpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		case eBlendFunc_DestAlpha: return VK_BLEND_FACTOR_DST_ALPHA;
-		case eBlendFunc_OneMinusDestAlpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-		case eBlendFunc_SrcAlphaSaturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-		default: return VK_BLEND_FACTOR_ONE;
-		}
-	}
+	static VkBlendFactor ToVkBlend(eBlendFunc aFunc){ return (VkBlendFactor)ohpl_vk_blend_factor((int)aFunc); }
 
 	static void WriteMatrix(unsigned char *apDst, const cMatrixf& aMtx, int alColumns)
 	{
-		float *pDst = (float*)apDst;
-		for(int c=0; c<alColumns; ++c)
-			for(int r=0; r<4; ++r)
-				pDst[c*4 + r] = r < alColumns ? aMtx.m[r][c] : 0.0f;
+		ohpl_vk_write_matrix((float*)apDst, &aMtx.m[0][0], alColumns);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -675,12 +642,7 @@ namespace hpl {
 		if(apMapped) *apMapped = info.pMappedData;
 	}
 
-	VkFormat UnormOfSrgb(VkFormat aFormat)
-	{
-		if(aFormat == VK_FORMAT_R8G8B8A8_SRGB) return VK_FORMAT_R8G8B8A8_UNORM;
-		if(aFormat == VK_FORMAT_B8G8R8A8_SRGB) return VK_FORMAT_B8G8R8A8_UNORM;
-		return aFormat;
-	}
+	VkFormat UnormOfSrgb(VkFormat aFormat){ return (VkFormat)ohpl_vk_unorm_of_srgb((uint32_t)aFormat); }
 
 	void cLowLevelGraphicsVulkan::CreateImage(cVulkanImage& aImg, VkImageType aType, VkImageViewType aViewType, VkFormat aFormat, const cVector3l& avSize,
 											  int alLevels, int alLayers, VkImageUsageFlags aUsage, const VkComponentMapping* apSwizzle)
@@ -770,10 +732,10 @@ namespace hpl {
 
 	VkSampler cLowLevelGraphicsVulkan::GetSampler(const VkSamplerCreateInfo& aInfo)
 	{
-		uint64_t key = (uint64_t)aInfo.magFilter | (uint64_t)aInfo.minFilter << 2 | (uint64_t)aInfo.mipmapMode << 4 |
-					   (uint64_t)aInfo.addressModeU << 6 | (uint64_t)aInfo.addressModeV << 9 | (uint64_t)aInfo.addressModeW << 12 |
-					   (uint64_t)aInfo.compareEnable << 15 | (uint64_t)aInfo.compareOp << 16 | (uint64_t)(aInfo.maxAnisotropy * 4) << 20 |
-					   (uint64_t)(aInfo.anisotropyEnable) << 28 | (uint64_t)(aInfo.maxLod * 4) << 29;
+		OhplVkSamplerKey rk = { (unsigned)aInfo.magFilter, (unsigned)aInfo.minFilter, (unsigned)aInfo.mipmapMode, (unsigned)aInfo.addressModeU,
+								(unsigned)aInfo.addressModeV, (unsigned)aInfo.addressModeW, (unsigned)aInfo.compareEnable, (unsigned)aInfo.compareOp,
+								aInfo.maxAnisotropy, (unsigned)aInfo.anisotropyEnable, aInfo.maxLod };
+		uint64_t key = ohpl_vk_sampler_key(&rk);
 		auto it = mmapSamplers.find(key);
 		if(it != mmapSamplers.end()) return it->second;
 		VkSampler s;
@@ -795,21 +757,22 @@ namespace hpl {
 	void* cLowLevelGraphicsVulkan::AllocTransient(size_t alSize, VkBuffer& aBuffer, VkDeviceSize& aOffset, size_t alAlign)
 	{
 		cRingBuffer& r = mvRing[mlFrame];
-		size_t lOffset = (r.mlUsed + alAlign - 1) & ~(alAlign - 1);
-		if(lOffset + alSize > r.mlSize)
+		OhplVkRing plan;
+		ohpl_vk_ring_alloc(r.mlUsed, r.mlSize, alSize, alAlign, &plan);
+		size_t lOffset = plan.offset;
+		if(plan.grow)
 		{
 			VkBuffer oldBuffer = r.mBuffer;
 			VmaAllocation oldAlloc = r.mpAlloc;
 			VmaAllocator alloc = mpAllocator;
 			DeferDestroy([alloc, oldBuffer, oldAlloc]{ vmaDestroyBuffer(alloc, oldBuffer, oldAlloc); });
-			r.mlSize = std::max(r.mlSize * 2, alSize * 2);
+			r.mlSize = plan.newSize;
 			void *pMapped;
 			CreateBuffer(r.mlSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
 						 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, r.mBuffer, r.mpAlloc, &pMapped);
 			r.mpMapped = (unsigned char*)pMapped;
-			lOffset = 0;
 		}
-		r.mlUsed = lOffset + alSize;
+		r.mlUsed = plan.used;
 		aBuffer = r.mBuffer;
 		aOffset = lOffset;
 		return r.mpMapped + lOffset;
@@ -1134,22 +1097,22 @@ namespace hpl {
 		VkCommandBuffer cmd = Cmd();
 		cVector2l vTotal = mpFrameBuffer ? mpFrameBuffer->GetSize() : mvScreenSize;
 
+		OhplVkViewport rv;
+		{
+			int vTot[2] = { vTotal.x, vTotal.y }, vPos[2] = { mvFrameBufferPos.x, mvFrameBufferPos.y }, vSize[2] = { mvFrameBufferSize.x, mvFrameBufferSize.y };
+			int vScPos[2] = { mState.mvScissorPos.x, mState.mvScissorPos.y }, vScSize[2] = { mState.mvScissorSize.x, mState.mvScissorSize.y };
+			ohpl_vk_viewport(vTot, vPos, vSize, mState.mbScissor, vScPos, vScSize, &rv);
+		}
 		VkViewport vp;
-		vp.x = (float)mvFrameBufferPos.x;
-		vp.y = (float)((vTotal.y - mvFrameBufferSize.y) - mvFrameBufferPos.y);
-		vp.width = (float)mvFrameBufferSize.x;
-		vp.height = (float)mvFrameBufferSize.y;
+		vp.x = rv.viewport[0];
+		vp.y = rv.viewport[1];
+		vp.width = rv.viewport[2];
+		vp.height = rv.viewport[3];
 		vp.minDepth = 0;
 		vp.maxDepth = 1;
 		vkCmdSetViewportWithCount(cmd, 1, &vp);
 
-		VkRect2D sc = { {0, 0}, { (uint32_t)vTotal.x, (uint32_t)vTotal.y } };
-		if(mState.mbScissor)
-		{
-			int x0 = std::max(0, mState.mvScissorPos.x), y0 = std::max(0, mState.mvScissorPos.y);
-			int x1 = std::max(x0, mState.mvScissorPos.x + mState.mvScissorSize.x), y1 = std::max(y0, mState.mvScissorPos.y + mState.mvScissorSize.y);
-			sc = { {x0, y0}, { (uint32_t)(x1 - x0), (uint32_t)(y1 - y0) } };
-		}
+		VkRect2D sc = { {rv.scissor[0], rv.scissor[1]}, { rv.scissorSize[0], rv.scissorSize[1] } };
 		vkCmdSetScissorWithCount(cmd, 1, &sc);
 
 		vkCmdSetRasterizerDiscardEnable(cmd, VK_FALSE);
@@ -1648,50 +1611,10 @@ namespace hpl {
 
 	static void UnpackPixel(VkFormat aFormat, const unsigned char *p, float *apOut)
 	{
-		auto Half = [](uint16_t h) -> float {
-			uint32_t s = (h >> 15) & 1, e = (h >> 10) & 0x1F, m = h & 0x3FF;
-			float f = e == 0 ? std::ldexp((float)m, -24) : e == 31 ? (m ? NAN : INFINITY) : std::ldexp((float)(m | 0x400), (int)e - 25);
-			return s ? -f : f;
-		};
-		switch(aFormat)
-		{
-		case VK_FORMAT_B8G8R8A8_UNORM: case VK_FORMAT_B8G8R8A8_SRGB:
-			apOut[0] = p[2]/255.0f; apOut[1] = p[1]/255.0f; apOut[2] = p[0]/255.0f; apOut[3] = p[3]/255.0f; break;
-		case VK_FORMAT_R16G16B16A16_SFLOAT:
-			for(int i=0; i<4; ++i) apOut[i] = Half(((const uint16_t*)p)[i]); break;
-		case VK_FORMAT_R16G16_SFLOAT:
-			apOut[0] = Half(((const uint16_t*)p)[0]); apOut[1] = Half(((const uint16_t*)p)[1]); apOut[2] = 0; apOut[3] = 1; break;
-		case VK_FORMAT_R16_SFLOAT:
-			apOut[0] = apOut[1] = apOut[2] = Half(*(const uint16_t*)p); apOut[3] = 1; break;
-		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			memcpy(apOut, p, 16); break;
-		case VK_FORMAT_R32_SFLOAT: case VK_FORMAT_D32_SFLOAT: case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			apOut[0] = apOut[1] = apOut[2] = *(const float*)p; apOut[3] = 1; break;
-		case VK_FORMAT_D24_UNORM_S8_UINT: case VK_FORMAT_X8_D24_UNORM_PACK32:
-			apOut[0] = apOut[1] = apOut[2] = (*(const uint32_t*)p & 0xFFFFFF) / 16777215.0f; apOut[3] = 1; break;
-		case VK_FORMAT_D16_UNORM:
-			apOut[0] = apOut[1] = apOut[2] = *(const uint16_t*)p / 65535.0f; apOut[3] = 1; break;
-		case VK_FORMAT_R8_UNORM:
-			apOut[0] = apOut[1] = apOut[2] = p[0]/255.0f; apOut[3] = 1; break;
-		case VK_FORMAT_R8G8_UNORM:
-			apOut[0] = p[0]/255.0f; apOut[1] = p[1]/255.0f; apOut[2] = 0; apOut[3] = 1; break;
-		default:
-			for(int i=0; i<4; ++i) apOut[i] = p[i]/255.0f; break;
-		}
+		ohpl_vk_unpack_pixel((uint32_t)aFormat, p, ohpl_vk_format_size((uint32_t)aFormat), apOut);
 	}
 
-	size_t VulkanFormatSize(VkFormat aFormat)
-	{
-		switch(aFormat)
-		{
-		case VK_FORMAT_R8_UNORM: return 1;
-		case VK_FORMAT_R8G8_UNORM: case VK_FORMAT_R16_SFLOAT: case VK_FORMAT_D16_UNORM: return 2;
-		case VK_FORMAT_R16G16B16A16_SFLOAT: return 8;
-		case VK_FORMAT_R32G32B32A32_SFLOAT: return 16;
-		case VK_FORMAT_R16G16_SFLOAT: return 4;
-		default: return 4;
-		}
-	}
+	size_t VulkanFormatSize(VkFormat aFormat){ return ohpl_vk_format_size((uint32_t)aFormat); }
 
 	bool VulkanReadPixelsFloat(cLowLevelGraphicsVulkan *apGfx, cVulkanImage& aImg, int alLevel, int alLayer, const cVector2l& avPos, const cVector2l& avSize, std::vector<float>& avOut)
 	{
@@ -1859,10 +1782,9 @@ namespace hpl {
 
 	static cMatrixf GlOrtho(float l, float r, float b, float t, float n, float f)
 	{
-		return cMatrixf(2/(r-l), 0, 0, -(r+l)/(r-l),
-						0, 2/(t-b), 0, -(t+b)/(t-b),
-						0, 0, -2/(f-n), -(f+n)/(f-n),
-						0, 0, 0, 1);
+		cMatrixf m;
+		ohpl_vk_gl_ortho(l, r, b, t, n, f, &m.m[0][0]);
+		return m;
 	}
 
 	void cLowLevelGraphicsVulkan::SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)

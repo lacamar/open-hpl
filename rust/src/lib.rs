@@ -50,5 +50,6 @@ pub mod string;
 mod string_ffi;
 pub mod system;
 pub mod types;
+pub mod vk;
 pub mod world_hpm;
 pub mod xml;
