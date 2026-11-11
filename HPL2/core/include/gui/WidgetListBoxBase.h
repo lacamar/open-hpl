@@ -22,6 +22,7 @@
 
 #include "gui/Widget.h"
 #include "gui/WidgetBaseClasses.h"
+#include "gui/RustWidget2.h"
 
 namespace hpl {
 
@@ -61,20 +62,20 @@ namespace hpl {
 		int GetMultiSelectionNum();
 		int GetMultiSelection(int alIdx);
 
-		void SetAllowMultiSelection(bool abX) { mbAllowMultiSelection = abX; }
-		bool GetAllowMultiSelection() { return mbAllowMultiSelection; }
+		void SetAllowMultiSelection(bool abX) { mList.allow_multi = abX; }
+		bool GetAllowMultiSelection() { return mList.allow_multi; }
 
 		void ClearSelection();
 
 		virtual cVector3f GetItemStartPos();
 
 		void SetCursorPos(int alPos, bool abMoveList, bool abClamp);
-		int GetCursorPos() { return mlCursorPos; }
+		int GetCursorPos() { return mList.cursor_pos; }
 		
-		void SetAnchorPos(int alX) { mlAnchorPos = alX; }
+		void SetAnchorPos(int alX) { mList.anchor_pos = alX; }
 
-		bool GetIsLocked() { return mbLocked; }
-		void SetIsLocked(bool abX) { mbLocked = abX; }
+		bool GetIsLocked() { return mList.locked; }
+		void SetIsLocked(bool abX) { mList.locked = abX; }
         		
 	protected:
 		/////////////////////////
@@ -82,6 +83,7 @@ namespace hpl {
 		virtual void DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion){}
 
 		void SelectRange(int alStart, int alEnd);
+		void ApplyCursor(const OhplW2SliderSet& aFirst, bool abMoveList);
 
 		void UpdateProperties();
 
@@ -122,15 +124,10 @@ namespace hpl {
 		float mfBackgroundZ;
 		float mfSliderWidth;
 
-		int mlFirstItem;
-		int mlMaxItems;
+		OhplW2List mList;
 
 		tIntList mlstSelectedItems;
 
-		int mlCursorPos;
-		int mlLastCursorPos;
-		int mlAnchorPos;
-		int mlNumClicksOnSamePos;
 
 		cGuiGfxElement *mpGfxBackground;
 		cGuiGfxElement *mpGfxSelection;
@@ -140,14 +137,8 @@ namespace hpl {
 
 		cWidgetSlider *mpSlider;
 
-		bool mbAllowMultiSelection;
 		bool mbSelectionUpdated;
 		bool mbClearingSelection;
-
-		int mlNumItems;
-		int mlNumBlankRows;
-
-		bool mbLocked;
 	};
 
 };

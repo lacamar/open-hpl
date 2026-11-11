@@ -31,6 +31,7 @@
 #include "gui/WidgetSlider.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace hpl {
 
@@ -69,28 +70,43 @@ namespace hpl {
 	void cWidgetListBox::DrawItems(float afTimeStep, cGuiClipRegion* apClipRegion)
 	{
 		cVector3f vPosition = GetItemStartPos()+cVector3f(3,0,mfBackgroundZ+0.1f);
-		for(int i=mlFirstItem; i < (int)mvItems.size(); ++i)
+
+		std::vector<uint8_t> vRows;
+		for(int i=mList.first_item; i < (int)mvItems.size(); ++i)
 		{
-			if(i-mlFirstItem > mlMaxItems) break;
+			if(i-mList.first_item > mList.max_items) break;
 			cWidgetItem* pItem = mvItems[i];
-			if(pItem==NULL)
-				continue;
-
-			if(pItem->IsSelectable()==false)
-			{
-				mpSet->DrawGfx( mpGfxBackground, vPosition - cVector3f(3,0,0.01f), cVector2f(mvSize.x, mvDefaultFontSize.y), cColor(0.82f,0.81f,0.79f,1));
-			}
-
-			if(pItem->IsSelected())
-			{
-				mpSet->DrawGfx(	mpGfxSelection,vPosition - cVector3f(3,0,0.01f),
-								cVector2f(mvSize.x,mvDefaultFontSize.y));
-				DrawDefaultTextHighlight(pItem->GetText(),vPosition,eFontAlign_Left);
-			}
+			uint8_t lFlags = 0;
+			if(pItem==NULL) lFlags = kOhplW2RowNull;
 			else
-				DrawDefaultText(pItem->GetText(),vPosition,eFontAlign_Left);
-			
-			vPosition.y += mvDefaultFontSize.y +2;
+			{
+				if(pItem->IsSelectable()==false) lFlags |= kOhplW2RowUnselectable;
+				if(pItem->IsSelected()) lFlags |= kOhplW2RowSelected;
+			}
+			vRows.push_back(lFlags);
+		}
+
+		std::vector<OhplW2RowOp> vOps(vRows.size()*3+1);
+		size_t lCount = ohpl_w2_list_rows(mList.first_item, mList.max_items, (int)mvItems.size(), &vPosition, mvSize.x,
+										  mvDefaultFontSize.y, vRows.data(), vRows.size(), vOps.data(), vOps.size());
+		for(size_t i=0; i<lCount; ++i)
+		{
+			const OhplW2RowOp& op = vOps[i];
+			switch(op.kind)
+			{
+			case kOhplW2OpBackground:
+				mpSet->DrawGfx( mpGfxBackground, op.pos, op.size, cColor(0.82f,0.81f,0.79f,1));
+				break;
+			case kOhplW2OpSelection:
+				mpSet->DrawGfx(	mpGfxSelection, op.pos, op.size);
+				break;
+			case kOhplW2OpTextHighlight:
+				DrawDefaultTextHighlight(mvItems[op.item]->GetText(),op.pos,eFontAlign_Left);
+				break;
+			case kOhplW2OpText:
+				DrawDefaultText(mvItems[op.item]->GetText(),op.pos,eFontAlign_Left);
+				break;
+			}
 		}
 	}
 	
