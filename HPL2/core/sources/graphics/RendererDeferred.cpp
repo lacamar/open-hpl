@@ -319,6 +319,59 @@ namespace hpl {
 				  kVar_afGradingMapAlpha2 == kOhplDrVar_afGradingMapAlpha2 && kVar_afHdrHeadroom == kOhplDrVar_afHdrHeadroom,
 				  "kVar ids out of step with rust/src/render/deferred.rs");
 
+	static_assert(kVar_avFogSettings == 95 &&
+				  kVar_avSecondFogSettings == 96 &&
+				  kVar_avCameraPos == 97 &&
+				  kVar_alFogType == 98 &&
+				  kVar_avSecondFogColor == 74 &&
+				  kVar_avSecondFogStartAndLength == 75 &&
+				  kVar_afSecondFalloffExp == 76 &&
+				  kVar_afNegFarPlane == 3 &&
+				  kVar_avFogStartAndLength == 14 &&
+				  kVar_avFogColor == 15 &&
+				  kVar_afFalloffExp == 20 &&
+				  kVar_a_mtxNoise == 70 &&
+				  kVar_afInvNoiseScale == 71 &&
+				  kVar_afNoiseStrength == 72 &&
+				  kVar_avSkyboxColor == 73 &&
+				  kVar_a_mtxSkybox == 99 &&
+				  kVar_afSkyboxMipNum == 100 &&
+				  kVar_avRayCastStart == 16 &&
+				  kVar_a_mtxBoxInvViewModelRotation == 17 &&
+				  kVar_avNegPlaneDistNeg == 18 &&
+				  kVar_avNegPlaneDistPos == 19 &&
+				  kVar_afFarPlane == 10 &&
+				  kVar_avLightColor == 1 &&
+				  kVar_afFalloffPow == 26 &&
+				  kVar_afMaxDistance == 101 &&
+				  kVar_afSizeDiv == 67 &&
+				  kVar_afPower == 68 &&
+				  kVar_avFocusStartEnd == 53 &&
+				  kVar_avOffsetMul == 54 &&
+				  kVar_avAmbientColorSky == 35 &&
+				  kVar_avAmbientColorGround == 36 &&
+				  kVar_avLightDirection == 78 &&
+				  kVar_avViewSpaceUp == 94 &&
+				  kVar_afTranslucencyScale == 69 &&
+				  kVar_a_mtxLightViewProj0 == 87 &&
+				  kVar_alSliceNum == 113 &&
+				  kVar_a_mtxLightViewProjSlice0 == 115 &&
+				  kVar_afSliceDiv == 114 &&
+				  kVar_afShadowDistance == 112 &&
+				  kVar_avShadowParams == 110 &&
+				  kVar_avShadowMapSize == 111 &&
+				  kVar_avSplitsNear == 91 &&
+				  kVar_avSplitsFar == 92 &&
+				  kVar_avSplitOffsetMul == 93 &&
+				  kVar_avShadowMapOffsetMul == 8 &&
+				  kVar_a_mtxInvView == 32 &&
+				  kVar_avBoxCenter == 37 &&
+				  kVar_avBoxExtent == 38 &&
+				  kVar_afFalloff == 39 &&
+				  kVar_afBevel == 40 &&
+				  kVar_afWeight == 41 &&
+				  kVar_avBand0 == 43, "kVar ids out of step with rust/src/render/deferred_{fx,dir}.rs");
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -1492,6 +1545,72 @@ namespace hpl {
 		RunPlan(ohpl_dr_plan_objects(in), NULL, NULL, NULL);
 	}
 
+	static void FillFogParams(OhplDr4FogParams &aParams, cWorld *apWorld, cFogArea *apFogArea)
+	{
+		const cColor &color = apFogArea ? apFogArea->GetColor() : apWorld->GetFogColor();
+		const cVector3f &vTurb = apFogArea ? apFogArea->GetNoiseTurbulence() : apWorld->GetFogNoiseTurbulence();
+		aParams.isArea = apFogArea != NULL;
+		aParams.start = apFogArea ? apFogArea->GetStart() : apWorld->GetFogStart();
+		aParams.end = apFogArea ? apFogArea->GetEnd() : apWorld->GetFogEnd();
+		aParams.falloff = apFogArea ? apFogArea->GetFalloffExp() : apWorld->GetFogFalloffExp();
+		aParams.color[0] = color.r; aParams.color[1] = color.g; aParams.color[2] = color.b; aParams.color[3] = color.a;
+		aParams.brightness = apFogArea ? apFogArea->GetBrightness() : apWorld->GetFogBrightness();
+		aParams.noiseStrength = apFogArea ? apFogArea->GetNoiseStrength() : apWorld->GetFogNoiseStrength();
+		aParams.noiseSize = apFogArea ? apFogArea->GetNoiseSize() : apWorld->GetFogNoiseSize();
+		aParams.turb[0] = vTurb.x; aParams.turb[1] = vTurb.y; aParams.turb[2] = vTurb.z;
+		aParams.skyboxWanted = apFogArea ? apFogArea->GetSkybox() : apWorld->GetFogUseSkybox();
+		aParams.lighten = apFogArea ? apFogArea->GetLighten() : apWorld->GetFogLighten();
+		aParams.exp = apFogArea ? apFogArea->GetExponential() : apWorld->GetFogExponential();
+		aParams.height = apFogArea ? apFogArea->GetHeightBased() : apWorld->GetFogHeightBased();
+		aParams.density = apFogArea ? apFogArea->GetDensity() : apWorld->GetFogDensity();
+		aParams.heightDensity = apFogArea ? apFogArea->GetHeightDensity() : apWorld->GetFogHeightDensity();
+		aParams.heightHorizon = apFogArea ? apFogArea->GetHeightHorizon() : apWorld->GetFogHeightHorizon();
+		aParams.bvMinY = apFogArea ? apFogArea->GetBoundingVolume()->GetMin().y : 0;
+	}
+
+	void cRendererDeferred::FillFogWorld(OhplDr4FogWorld &aWorld)
+	{
+		cWorld *pWorld = mpCurrentWorld;
+		memset(&aWorld, 0, sizeof(aWorld));
+		aWorld.hdr = mbHdr;
+		aWorld.depthInNormalAlpha = mbDepthInNormalAlpha;
+		aWorld.linearDepthIdx = mlLinearDepthTextureIdx;
+		aWorld.fogActive = WorldFogActive();
+		aWorld.fogUnderwater = pWorld->GetFogUnderwater();
+		aWorld.areaNum = mpCurrentRenderList->GetFogAreaNum();
+		aWorld.frustumFar = mpCurrentFrustum->GetFarPlane();
+		aWorld.camY = mpCurrentFrustum->GetOrigin().y;
+		aWorld.time = GetTimeCount();
+		aWorld.rtW = mvRenderTargetSize.x;
+		aWorld.rtH = mvRenderTargetSize.y;
+		aWorld.secActive = pWorld->GetSecondaryFogActive();
+		aWorld.secStart = pWorld->GetSecondaryFogStart();
+		aWorld.secEnd = pWorld->GetSecondaryFogEnd();
+		aWorld.secFalloff = pWorld->GetSecondaryFogFalloffExp();
+		aWorld.secHorizon = pWorld->GetSecondaryFogHeightHorizon();
+		aWorld.secDensity = pWorld->GetSecondaryFogDensity();
+		aWorld.secHeightDensity = pWorld->GetSecondaryFogHeightDensity();
+		const cColor &secColor = pWorld->GetSecondaryFogColor();
+		aWorld.secColor[0] = secColor.r; aWorld.secColor[1] = secColor.g; aWorld.secColor[2] = secColor.b; aWorld.secColor[3] = secColor.a;
+		aWorld.secBrightness = pWorld->GetSecondaryFogBrightness();
+		aWorld.skyTex = pWorld->GetFogSkyboxTexture() != NULL;
+		aWorld.skyActive = pWorld->GetSkyBoxActive();
+		aWorld.skySeparate = pWorld->GetFogSkyboxTexture() != pWorld->GetSkyBoxTexture();
+		const cColor &skyColor = pWorld->GetSkyBoxColor();
+		aWorld.skyColor[0] = skyColor.r; aWorld.skyColor[1] = skyColor.g; aWorld.skyColor[2] = skyColor.b; aWorld.skyColor[3] = skyColor.a;
+		aWorld.skyBrightness = pWorld->GetSkyBoxBrightness();
+		const cVector3f &vSkyRot = pWorld->GetSkyBoxRotation();
+		aWorld.skyRot[0] = vSkyRot.x; aWorld.skyRot[1] = vSkyRot.y; aWorld.skyRot[2] = vSkyRot.z;
+		if(pWorld->GetFogSkyboxTexture())
+		{
+			const cVector3l &vSkySize = pWorld->GetFogSkyboxTexture()->GetSize();
+			aWorld.skyW = vSkySize.x;
+			aWorld.skyH = vSkySize.y;
+		}
+		memcpy(&aWorld.view, &mpCurrentFrustum->GetViewMatrix(), sizeof(OhplMat4));
+		memcpy(&aWorld.invView, &m_mtxInvView, sizeof(OhplMat4));
+	}
+
 	void cRendererDeferred::RunStep(int alStep, int alArg)
 	{
 		tRenderableFlag lVisibleFlags = mpCurrentSettings->mbIsReflection ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
@@ -1560,6 +1679,7 @@ namespace hpl {
 		auto Prog = [&](int i) { return i >= 0 ? apProgs[i] : (iGpuProgram*)NULL; };
 		auto Light = [&](int i) { return i >= 0 && i < (int)mvTempDeferredLights.size() ? mvTempDeferredLights[i] : (cDeferredLight*)NULL; };
 		cShadowMapData *pShadowData = NULL;
+		eTextureFilter savedFilter = eTextureFilter_Nearest;
 		OhplDrOp op;
 		while(ohpl_dr_plan_next(apPlan, &op))
 		{
@@ -1575,7 +1695,8 @@ namespace hpl {
 					break;
 				case eOhplDrState_Blend:
 					SetBlendMode(op.b == kOhplDrBlendAlpha ? eMaterialBlendMode_Alpha : op.b == kOhplDrBlendAdd ? eMaterialBlendMode_Add :
-								 op.b == kOhplDrBlendMul ? eMaterialBlendMode_Mul : eMaterialBlendMode_None);
+								 op.b == kOhplDrBlendMul ? eMaterialBlendMode_Mul : op.b == kOhplDrBlendPremulAlpha ? eMaterialBlendMode_PremulAlpha :
+								 op.b == kOhplDrBlendModulateSource ? eMaterialBlendMode_ModulateSource : eMaterialBlendMode_None);
 					break;
 				case eOhplDrState_Alpha:		SetAlphaMode(eMaterialAlphaMode_Solid); break;
 				case eOhplDrState_Channel:
@@ -1803,6 +1924,142 @@ namespace hpl {
 				case eOhplDrDl_RenderShadowMap:		RenderShadowMap(apLight->mpLight, pShadowData->mpBuffer); break;
 				}
 				break;
+			case eOhplDrOp_P4:
+				switch(op.a)
+				{
+				case eOhplDr4X_TexGbuffer:			SetTexture(op.b, GetGbufferTexture(op.c)); break;
+				case eOhplDr4X_RedFromAlpha:		GetGbufferTexture(1)->SetRedFromAlpha(op.b != 0); break;
+				case eOhplDr4X_FilterSave:			savedFilter = Tex(op.b)->GetFilter(); break;
+				case eOhplDr4X_FilterNearest:		Tex(op.b)->SetFilter(eTextureFilter_Nearest); break;
+				case eOhplDr4X_FilterRestore:		Tex(op.b)->SetFilter(savedFilter); break;
+				case eOhplDr4X_DrawAccumQuad:		DrawAccumulationQuad(); break;
+				case eOhplDr4X_PassBegin:
+					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassBegin(op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
+					if(mbLog) Log("----------\n -- Start Rendering %s:\n----------\n", op.b == kOhplDr4PassDof ? "DepthOfField" : op.b == kOhplDr4PassFullScreenFog ? "FullScreenFog" : op.b == kOhplDr4PassSsao ? "SSAO" : "Fog");
+					break;
+				case eOhplDr4X_PassEnd:
+					if(cEngineDiagnostics::mbGpuTiming) cEngineDiagnostics::GpuPassEnd();
+					if(mbLog) Log("----------\n");
+					break;
+				case eOhplDr4X_QuadPlain:			DrawQuad(0, 1); break;
+				case eOhplDr4X_MatrixNull:			SetMatrix(NULL); break;
+				case eOhplDr4X_CullActive:			SetCullActive(op.b != 0); break;
+				case eOhplDr4X_GenFogProgram:
+					apProgs[op.b] = mpFogProgramManager->GenerateProgram(0, (tFlag)op.c);
+					ohpl_dr_plan_feed_bool(apPlan, apProgs[op.b] != NULL);
+					break;
+				case eOhplDr4X_EnsureFogNoise:
+					if(mpFogNoiseTexture==NULL) mpFogNoiseTexture = mpResources->GetTextureManager()->Create3D("core_value_noise.dds", true);
+					apTexs[kOhplDr4FogTexNoise] = mpFogNoiseTexture;
+					ohpl_dr_plan_feed_bool(apPlan, mpFogNoiseTexture != NULL);
+					break;
+				case eOhplDr4X_IntAsk:				ohpl_dr_plan_feed_bool(apPlan, Prog(op.b) ? Prog(op.b)->SetInt(op.c, op.d) : false); break;
+				case eOhplDr4X_FogAreaMatrix:		SetMatrix(mpCurrentSettings->mvFogRenderData[op.b].mpFogArea->GetModelMatrixPtr()); break;
+				case eOhplDr4X_SetupFogData:		SetupFogRenderDataArray(true); break;
+				case eOhplDr4X_ClearFogData:		mpCurrentSettings->mvFogRenderData.resize(0); break;
+				case eOhplDr4X_AskFogs:
+				{
+					std::vector<OhplDr4FogArea> vAreas(mpCurrentSettings->mvFogRenderData.size());
+					for(size_t i=0; i<vAreas.size(); ++i)
+					{
+						cFogAreaRenderData &fogData = mpCurrentSettings->mvFogRenderData[i];
+						cFogArea *pFogArea = fogData.mpFogArea;
+						OhplDr4FogArea &a = vAreas[i];
+						a.insideNear = fogData.mbInsideNearFrustum;
+						a.backsideInside = pFogArea->GetShowBacksideWhenInside();
+						a.backsideOutside = pFogArea->GetShowBacksideWhenOutside();
+						a.underwater = pFogArea->GetUnderwater();
+						FillFogParams(a.params, mpCurrentWorld, pFogArea);
+						memcpy(&a.model, pFogArea->GetModelMatrixPtr(), sizeof(OhplMat4));
+					}
+					ohpl_dr4_feed_fogs(apPlan, vAreas.empty() ? NULL : &vAreas[0], vAreas.size());
+					break;
+				}
+				case eOhplDr4X_Log:
+					if(mbLog)
+					{
+						if(op.b == kOhplDr4LogDirectional) Log(" Rendering directional light\n");
+						else Log(" Rendering weighted box light: '%s'\n", Light(op.c)->mpLight->GetName().c_str());
+					}
+					break;
+				case eOhplDr4X_DirShadowCreate:		mpDirShadowData = CreateShadowMap("DirShadowMap", cVector3l(op.b, op.b, 1), ePixelFormat_Depth24); break;
+				case eOhplDr4X_AskDirShadowSize:
+					apTexs[kOhplDr4DirTexShadow] = mpDirShadowData->mpTexture;
+					apTexs[kOhplDr4DirTexJitter] = mpShadowJitterTexture;
+					ohpl_dr_plan_feed_vec3(apPlan, (float)mpDirShadowData->mpTexture->GetWidth(), (float)mpDirShadowData->mpTexture->GetHeight(), 0);
+					break;
+				case eOhplDr4X_PolygonOffsetActive:	mpLowLevelGraphics->SetPolygonOffsetActive(op.b != 0); break;
+				case eOhplDr4X_DepthClampActive:	mpLowLevelGraphics->SetDepthClampActive(op.b != 0); break;
+				case eOhplDr4X_PolygonOffset:		mpLowLevelGraphics->SetPolygonOffset(op.f[0], op.f[1]); break;
+				case eOhplDr4X_OcclusionPlanes:		SetOcclusionPlanesActive(op.b != 0); break;
+				case eOhplDr4X_AlphaLimitDefault:	SetAlphaLimit(mfDefaultAlphaLimit); break;
+				case eOhplDr4X_DirShadowFb:			SetFrameBuffer(mpDirShadowData->mpBuffer, false, false); break;
+				case eOhplDr4X_DirFrustum:
+				{
+					cMatrixf mtxProj, mtxView;
+					const float *pMtx = ohpl_dr_plan_array(apPlan, op.c);
+					memcpy(&mtxProj, pMtx, sizeof(OhplMat4));
+					memcpy(&mtxView, pMtx + 16, sizeof(OhplMat4));
+					mDirShadowFrustum[op.b].SetupOrthoProj(mtxProj, mtxView, op.f[0], 0, cVector2f(op.f[1], op.f[2]), cVector3f(op.f[3], op.f[4], op.f[5]));
+					break;
+				}
+				case eOhplDr4X_DirCasters:
+				{
+					cFrustum *pFrustum = &mDirShadowFrustum[op.b];
+					mvShadowCasters.resize(0);
+					if(op.c & 1) GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvShadowCasters, pFrustum, op.f[0], op.d != 0);
+					if(op.c & 2) GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvShadowCasters, pFrustum, op.f[0], op.d != 0);
+					break;
+				}
+				case eOhplDr4X_DirSetFb:			mpLowLevelGraphics->SetCurrentFrameBuffer(mpDirShadowData->mpBuffer, cVector2l(op.b, op.c), cVector2l(op.d)); break;
+				case eOhplDr4X_DirRender:
+				{
+					cFrustum *pLastFrustum = mpCurrentFrustum;
+					cFrustum *pFrustum = &mDirShadowFrustum[op.b];
+					mpCurrentFrustum = pFrustum;
+					SetFrustumProjection(pFrustum);
+					RenderShadowCastersNormal(pFrustum);
+					mpCurrentFrustum = pLastFrustum;
+					break;
+				}
+				case eOhplDr4X_TexBuffer:			SetTexture(op.b, GetBufferTexture(op.c)); break;
+				case eOhplDr4X_SetVertexBufferNone:	SetVertexBuffer(NULL); break;
+				case eOhplDr4X_EnvVisible:
+				{
+					cEnvironmentParticles *pEnv = mpCurrentWorld->GetEnvironmentParticles(op.b);
+					float vAnswer[3] = {0, 0, 0};
+					if(pEnv->IsVisible(mpCurrentFrustum))
+					{
+						iGpuProgram *pProg = pEnv->GetProgram(op.c != 0);
+						apProgs[0] = pProg;
+						apTexs[0] = pEnv->mpTexture;
+						vAnswer[0] = 1; vAnswer[1] = pProg != NULL ? 1.0f : 0.0f; vAnswer[2] = (float)pEnv->GetIterationNumInt();
+					}
+					ohpl_dr_plan_feed_vec3(apPlan, vAnswer[0], vAnswer[1], vAnswer[2]);
+					break;
+				}
+				case eOhplDr4X_EnvSetupBase:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramBase(apProgs[0], mpCurrentFrustum, op.f); break;
+				case eOhplDr4X_EnvVertexBuffer:		SetVertexBuffer(mpCurrentWorld->GetEnvironmentParticles(op.b)->mpVtxBuffer); break;
+				case eOhplDr4X_EnvIteration:		mpCurrentWorld->GetEnvironmentParticles(op.b)->SetupProgramIteration(apProgs[0], op.c); break;
+				case eOhplDr4X_FlareRetrieve:		mpCurrentRenderList->GetLensFlares()[op.b]->RetrieveOcculsionQuery(this); break;
+				case eOhplDr4X_FlareUpdate:			mpCurrentRenderList->GetLensFlares()[op.b]->UpdateVisibility(op.f[0], op.c); break;
+				case eOhplDr4X_BlendRaw:			SetBlendMode((eMaterialBlendMode)op.b); break;
+				case eOhplDr4X_FlareTexture:		SetTexture(0, mpCurrentRenderList->GetMultiIrisFlares()[op.b]->GetTypeMaterial(eLensFlareType_MultiIris)->GetTexture(eMaterialTexture_Diffuse)); break;
+				case eOhplDr4X_FlareIrisBuffer:		SetVertexBuffer(mpCurrentRenderList->GetMultiIrisFlares()[op.b]->PrepareMultiIrisVertexBuffer(mpCurrentFrustum, op.f[0])); break;
+				case eOhplDr4X_AskGlare:
+				{
+					cVector3f vGlarePos;
+					cColor cGlare = mpCurrentRenderList->GetLensFlares()[op.b]->GetGlare(mpCurrentFrustum, vGlarePos, op.f[0]);
+					float vAnswer[7] = {cGlare.r, cGlare.g, cGlare.b, cGlare.a, vGlarePos.x, vGlarePos.y, vGlarePos.z};
+					ohpl_dr4_feed_floats(apPlan, vAnswer, 7);
+					break;
+				}
+				case eOhplDr4X_GlareWrite:			memcpy(mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0), ohpl_dr_plan_array(apPlan, op.b), kOhplDrGlareVerts*4*sizeof(float)); break;
+				case eOhplDr4X_GlareUpdateData:		mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false); break;
+				case eOhplDr4X_SetGlareBuffer:		SetVertexBuffer(mpGlareVtxBuffer); break;
+				case eOhplDr4X_SetFb3:				SetFrameBuffer(Fb(op.b), false, false); break;
+				}
+				break;
 			}
 		}
 		if(abFree) ohpl_dr_plan_free(apPlan);
@@ -2023,27 +2280,6 @@ namespace hpl {
 	#define kStartStencilBit			0
 
 	//-----------------------------------------------------------------------
-
-	static cColor LinearLightColor(const cColor& aCol)
-	{
-		if(cRendererDeferred::GetHdr()==false) return aCol;
-		return cColor(aCol.r * aCol.r, aCol.g * aCol.g, aCol.b * aCol.b, aCol.a);
-	}
-
-	// official cRendererDeferred::GetLightInstanceData 0xd7ee68: shader reads w<0 as no diffuse
-	static cColor LightShaderColor(iLight *apLight)
-	{
-		cColor col = LinearLightColor(apLight->GetDiffuseColor());
-		if(!apLight->GetCastSpecularLight()) col.a = 0;
-		if(!apLight->GetCastDiffuseLight()) col.a = -col.a;
-		return col;
-	}
-
-	static cColor UnderwaterFogColor(const cColor& aCol)
-	{
-		float fInvLen2 = 1.0f / (aCol.r*aCol.r + aCol.g*aCol.g + aCol.b*aCol.b + 1e-13f);
-		return cColor(aCol.r*aCol.r*fInvLen2, aCol.g*aCol.g*fInvLen2, aCol.b*aCol.b*fInvLen2, aCol.a);
-	}
 
 	static bool WorldUnderwaterFog(iRenderer *apRenderer)
 	{
@@ -2333,326 +2569,126 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	static bool SortFunc_BoxWeighted(const cDeferredLight* apLightDataA, const cDeferredLight* apLightDataB)
-	{
-		cLightBox *pA = static_cast<cLightBox*>(apLightDataA->mpLight);
-		cLightBox *pB = static_cast<cLightBox*>(apLightDataB->mpLight);
-		static const int vRank[3] = {0, 2, 1};
-		int lA = vRank[(int)cMath::Clamp((int)pA->GetBlendFunc(), 0, 2)], lB = vRank[(int)cMath::Clamp((int)pB->GetBlendFunc(), 0, 2)];
-		if(lA != lB) return lA < lB;
-		if(pA->GetBoxLightPrio() != pB->GetBoxLightPrio()) return pA->GetBoxLightPrio() < pB->GetBoxLightPrio();
-		return pA < pB;
-	}
+
 
 	bool cRendererDeferred::RenderLights_BoxWeighted()
 	{
-		if(mpBoxWeightBuffer==NULL || mpBoxResolveProgram==NULL || mpCurrentSettings->mbIsReflection) return false;
-
-		std::vector<cDeferredLight*> vLights = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack];
-		vLights.insert(vLights.end(), mvSortedLights[eDeferredLightList_Box_RenderBack].begin(), mvSortedLights[eDeferredLightList_Box_RenderBack].end());
-		if(vLights.empty()) return true;
-		std::sort(vLights.begin(), vLights.end(), SortFunc_BoxWeighted);
-
-		SetFrameBuffer(mpBoxWeightBuffer, true);
-		mpLowLevelGraphics->SetClearColor(cColor(0,0,0,1.5259022e-05f));
-		ClearFrameBuffer(eClearFrameBufferFlag_Color, true);
-		mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
-
-		SetDepthTest(false);
-		SetStencilActive(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetCullMode(eCullMode_Clockwise);
-		SetVertexBuffer(mpShapeBox);
-
-		cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
-		cVector3f vViewUp = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix().GetRotation(), cVector3f(0,1,0));
-		for(size_t i=0; i<vLights.size(); ++i)
+		OhplDr4BoxIn in;
+		memset(&in, 0, sizeof(in));
+		in.bufferOk = mpBoxWeightBuffer != NULL;
+		in.resolveOk = mpBoxResolveProgram != NULL;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		std::vector<OhplDr4BoxLight> vLights;
+		iGpuProgram *vProgs[kOhplDr4BoxProgCount];
+		for(int b=0; b<3; ++b) for(int s=0; s<2; ++s)
 		{
-			cLightBox *pBox = static_cast<cLightBox*>(vLights[i]->mpLight);
-			int lBlend = cMath::Clamp((int)pBox->GetBlendFunc(), 0, 2);
-			iGpuProgram *pProg = mpBoxWeightedProgram[lBlend][pBox->GetUseSphericalHarmonics() ? 1 : 0];
-			if(pProg==NULL) continue;
-			if(mbLog) Log(" Rendering weighted box light: '%s'\n", pBox->GetName().c_str());
-
-			SetBlendMode(lBlend == eLightBoxBlendFunc_Replace ? eMaterialBlendMode_PremulAlpha :
-						 lBlend == eLightBoxBlendFunc_Add ? eMaterialBlendMode_ModulateSource : eMaterialBlendMode_Add);
-			SetProgram(pProg);
-
-			cColor diffuse = LinearLightColor(pBox->GetDiffuseColor()) * (pBox->GetBrightness() * GetDistanceFadeAmount(pBox));
-			if(WorldUnderwaterFog(this) && !pBox->GetUseSphericalHarmonics())
-			{
-				cColor fogCol = UnderwaterFogColor(mpCurrentWorld->GetFogColor());
-				diffuse.r *= fogCol.r; diffuse.g *= fogCol.g; diffuse.b *= fogCol.b;
-			}
-			const cColor &sky = pBox->GetAmbientColorSky();
-			const cColor &ground = pBox->GetAmbientColorGround();
-			pProg->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			SetScreenPositionVars(pProg);
-			pProg->SetMatrixf(kVar_a_mtxInvView, m_mtxInvView);
-			pProg->SetVec3f(kVar_avBoxCenter, pBox->GetWorldPosition() + pBox->GetProbeOffset() - vCamPos);
-			pProg->SetVec3f(kVar_avBoxExtent, pBox->GetSize() * 0.5f);
-			pProg->SetFloat(kVar_afFalloff, pBox->GetFalloffPow());
-			pProg->SetVec3f(kVar_avViewSpaceUp, vViewUp);
-			const cVector3f *pBands = pBox->GetIrradianceBands();
-			if(mbBoxInstanceInputs)
-			{
-				cColor skyCol = diffuse * LinearLightColor(sky), groundCol = diffuse * LinearLightColor(ground);
-				pProg->SetFloat(kVar_afFarPlane, mpCurrentFrustum->GetFarPlane());
-				pProg->SetFloat(kVar_afBevel, sqrtf(3.0f - 2.0f*pBox->GetBevel()));
-				pProg->SetFloat(kVar_afWeight, pBox->GetWeight() * GetDistanceFadeAmount(pBox));
-				pProg->SetColor4f(kVar_avAmbientColorSky, skyCol);
-				pProg->SetColor4f(kVar_avAmbientColorGround, groundCol);
-				cColor mul = (skyCol + groundCol) * 0.5f;
-				const float vMul[3] = {mul.r, mul.g, mul.b};
-				const cVector3f *b = pBands;
-				// the official renderer writes the blue quadratic row past the light's data, so it stays zero
-				for(int c=0; c<3; ++c)
-				{
-					pProg->SetVec4f(kVar_avBand0+c, b[3].v[c]*vMul[c], b[1].v[c]*vMul[c], b[2].v[c]*vMul[c], (b[0].v[c]-b[6].v[c])*vMul[c]);
-					if(c<2) pProg->SetVec4f(kVar_avBand0+3+c, b[4].v[c]*vMul[c], b[5].v[c]*vMul[c], 3.0f*b[6].v[c]*vMul[c], b[7].v[c]*vMul[c]);
-				}
-				pProg->SetVec4f(kVar_avBand0+5, 0,0,0,0);
-				pProg->SetVec4f(kVar_avBand0+6, b[8].x*mul.r, b[8].y*mul.g, b[8].z*mul.b, fabsf(mul.a));
-			}
-			else
-			{
-				pProg->SetVec3f(kVar_avAmbientColorSky, sky.r*diffuse.r, sky.g*diffuse.g, sky.b*diffuse.b);
-				pProg->SetVec3f(kVar_avAmbientColorGround, ground.r*diffuse.r, ground.g*diffuse.g, ground.b*diffuse.b);
-				pProg->SetFloat(kVar_afBevel, pBox->GetBevel());
-				pProg->SetFloat(kVar_afWeight, pBox->GetWeight());
-				for(int k=0; k<9; ++k) pProg->SetVec3f(kVar_avBand0+k, pBands[k]);
-			}
-
-			SetModelViewMatrix(vLights[i]->m_mtxViewSpaceRender);
-			DrawCurrent();
+			vProgs[b*2+s] = mpBoxWeightedProgram[b][s];
+			if(vProgs[b*2+s]) in.progOk |= 1 << (b*2+s);
 		}
+		vProgs[kOhplDr4BoxProgResolve] = mpBoxResolveProgram;
+		if(in.bufferOk && in.resolveOk && !in.isReflection)
+		{
+			in.instanceInputs = mbBoxInstanceInputs;
+			in.underwater = WorldUnderwaterFog(this);
+			in.hdr = GetHdr();
+			in.frustumFar = mpCurrentFrustum->GetFarPlane();
+			cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
+			in.origin[0] = vCamPos.x; in.origin[1] = vCamPos.y; in.origin[2] = vCamPos.z;
+			memcpy(&in.view, &mpCurrentFrustum->GetViewMatrix(), sizeof(OhplMat4));
+			cColor fogColor = mpCurrentWorld->GetFogColor();
+			for(int c=0; c<4; ++c) in.fogColor[c] = fogColor.v[c];
+			in.gbufferTextures = mlNumOfGBufferTextures;
 
-		SetAccumulationBuffer();
-		SetBlendMode(eMaterialBlendMode_None);
-		SetCullMode(eCullMode_CounterClockwise);
-		SetFlatProjection();
-		SetProgram(mpBoxResolveProgram);
-		SetTexture(0, mpBoxWeightTexture);
-		SetTextureRange(NULL, 1);
-		DrawAccumulationQuad();
-		SetNormalFrustumProjection();
-
-		for(int i=0; i<mlNumOfGBufferTextures; ++i) SetTexture(i, GetBufferTexture(i));
-		SetTextureRange(NULL, mlNumOfGBufferTextures);
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetCullMode(eCullMode_Clockwise);
-		SetDepthTest(true);
-		return true;
+			std::vector<cDeferredLight*> vSorted = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack];
+			vSorted.insert(vSorted.end(), mvSortedLights[eDeferredLightList_Box_RenderBack].begin(), mvSortedLights[eDeferredLightList_Box_RenderBack].end());
+			vLights.resize(vSorted.size());
+			for(size_t i=0; i<vSorted.size(); ++i)
+			{
+				cLightBox *pBox = static_cast<cLightBox*>(vSorted[i]->mpLight);
+				OhplDr4BoxLight &l = vLights[i];
+				memset(&l, 0, sizeof(l));
+				l.id = (uint64_t)(uintptr_t)pBox;
+				l.idx = (int)(std::find(mvTempDeferredLights.begin(), mvTempDeferredLights.end(), vSorted[i]) - mvTempDeferredLights.begin());
+				l.blendFunc = (int)pBox->GetBlendFunc();
+				l.prio = pBox->GetBoxLightPrio();
+				l.spherical = pBox->GetUseSphericalHarmonics();
+				cColor diffuse = pBox->GetDiffuseColor();
+				cColor sky = pBox->GetAmbientColorSky();
+				cColor ground = pBox->GetAmbientColorGround();
+				for(int c=0; c<4; ++c) { l.diffuse[c] = diffuse.v[c]; l.ambientSky[c] = sky.v[c]; l.ambientGround[c] = ground.v[c]; }
+				l.brightness = pBox->GetBrightness();
+				l.fade = GetDistanceFadeAmount(pBox);
+				cVector3f vPos = pBox->GetWorldPosition(), vProbe = pBox->GetProbeOffset(), vSize = pBox->GetSize();
+				for(int c=0; c<3; ++c) { l.pos[c] = vPos.v[c]; l.probeOffset[c] = vProbe.v[c]; l.size[c] = vSize.v[c]; }
+				l.falloff = pBox->GetFalloffPow();
+				l.bevel = pBox->GetBevel();
+				l.weight = pBox->GetWeight();
+				const cVector3f *pBands = pBox->GetIrradianceBands();
+				for(int k=0; k<9; ++k) for(int c=0; c<3; ++c) l.bands[k][c] = pBands[k].v[c];
+			}
+		}
+		iFrameBuffer *vFbs[1] = {mpBoxWeightBuffer};
+		iTexture *vTexs[1] = {mpBoxWeightTexture};
+		OhplDrPlan *pPlan = ohpl_dr4_plan_box_weighted(&in, vLights.empty() ? NULL : &vLights[0], vLights.size());
+		bool bHandled = ohpl_dr4_plan_handled(pPlan);
+		RunPlan(pPlan, vFbs, vTexs, vProgs);
+		return bHandled;
 	}
 
 	void cRendererDeferred::RenderLights_Directional()
 	{
-		if(mpCurrentWorld->GetDirectionalLightActive()==false) return;
-		cLightDirectional *pLight = mpCurrentWorld->GetDirectionalLight();
-		if(pLight->GetBrightness() <= 0) return;
-
-		tFlag lFlags = eFeature_Light_Directional;
-		if(pLight->GetDiffuseColor().a > 0 && pLight->GetCastSpecularLight())	lFlags |= eFeature_Light_Specular;
-		if(pLight->GetTranslucency() > 0)	lFlags |= eFeature_Light_Translucency;
-		if(WorldUnderwaterFog(this))	lFlags |= eFeature_Light_UnderwaterFog;
-		cMatrixf vShadowMtx[4];
-		float vSplitsNear[4], vSplitsFar[4], vSplitOffsetMul[4];
-		if(pLight->GetCastShadows() && mpCurrentSettings->mbRenderShadows)
+		OhplDr4DirIn in;
+		memset(&in, 0, sizeof(in));
+		in.active = mpCurrentWorld->GetDirectionalLightActive();
+		if(in.active)
 		{
-			lFlags |= eFeature_Light_ShadowMap;
-			RenderDirectionalShadowMap(pLight, vShadowMtx, vSplitsNear, vSplitsFar, vSplitOffsetMul);
+			cLightDirectional *pLight = mpCurrentWorld->GetDirectionalLight();
+			cColor diffuse = pLight->GetDiffuseColor();
+			cColor sky = pLight->GetAmbientColorSky();
+			cColor ground = pLight->GetAmbientColorGround();
+			cVector3f vDir = pLight->GetDirection();
+			cColor fogColor = mpCurrentWorld->GetFogColor();
+			in.brightness = pLight->GetBrightness();
+			for(int c=0; c<4; ++c) { in.diffuse[c] = diffuse.v[c]; in.ambientSky[c] = sky.v[c]; in.ambientGround[c] = ground.v[c]; in.fogColor[c] = fogColor.v[c]; }
+			in.castSpecular = pLight->GetCastSpecularLight();
+			in.castDiffuse = pLight->GetCastDiffuseLight();
+			in.translucency = pLight->GetTranslucency();
+			in.underwater = WorldUnderwaterFog(this);
+			in.castShadows = pLight->GetCastShadows();
+			in.renderShadows = mpCurrentSettings->mbRenderShadows;
+			in.hdr = GetHdr();
+			in.direction[0] = vDir.x; in.direction[1] = vDir.y; in.direction[2] = vDir.z;
+			in.shadowBlur = pLight->GetShadowMapBlurAmount();
+			in.frustumFar = mpCurrentFrustum->GetFarPlane();
+			in.frustumNear = mpCurrentFrustum->GetNearPlane();
+			in.fov = mpCurrentFrustum->GetFOV();
+			in.aspect = mpCurrentFrustum->GetAspect();
+			memcpy(&in.view, &mpCurrentFrustum->GetViewMatrix(), sizeof(OhplMat4));
+			memcpy(&in.invView, &m_mtxInvView, sizeof(OhplMat4));
+			in.fogActive = mpCurrentWorld->GetFogActive();
+			in.fogEnd = mpCurrentWorld->GetFogEnd();
+			in.shadowDistance = pLight->GetShadowDistance();
+			in.sliceLogTerm = pLight->GetAutoShadowSliceLogTerm();
+			in.casterDistance = pLight->GetShadowCasterDistance();
+			in.biasMul = pLight->GetShadowMapBiasMul();
+			in.slopeBiasMul = pLight->GetShadowMapSlopeScaleBiasMul();
+			in.castersAffected = pLight->GetShadowCastersAffected();
+			in.mapBias = mpCurrentSettings->mfShadowMapBias;
+			in.mapSlopeBias = mpCurrentSettings->mfShadowMapSlopeScaleBias;
+			in.shadowExists = mpDirShadowData != NULL;
+			in.shadowRes = mShadowMapResolution;
+			in.depthClamp = mbShadowDepthClamp;
+			in.sunCasterCull = mbSunCasterCull;
+			in.jitterTex = mpShadowJitterTexture != NULL;
+			in.farLeft = mfFarLeft; in.farBottom = mfFarBottom; in.farRight = mfFarRight; in.farTop = mfFarTop; in.farPlane = mfFarPlane;
+			in.gbufferTextures = mlNumOfGBufferTextures;
 		}
-		iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
-		if(pProgram==NULL) return;
-		if(mbLog) Log(" Rendering directional light\n");
-
-		SetProgram(pProgram);
-		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-		SetScreenPositionVars(pProgram);
-
-		float fBrightness = pLight->GetBrightness();
-		cColor lightColor = LightShaderColor(pLight);
-		lightColor.r *= fBrightness; lightColor.g *= fBrightness; lightColor.b *= fBrightness;
-		pProgram->SetColor4f(kVar_avLightColor, lightColor);
-		cColor sky = LinearLightColor(pLight->GetAmbientColorSky()) * fBrightness;
-		cColor ground = LinearLightColor(pLight->GetAmbientColorGround()) * fBrightness;
-		pProgram->SetVec3f(kVar_avAmbientColorSky, sky.r, sky.g, sky.b);
-		pProgram->SetVec3f(kVar_avAmbientColorGround, ground.r, ground.g, ground.b);
-		const cMatrixf &mtxView = mpCurrentFrustum->GetViewMatrix();
-		pProgram->SetVec3f(kVar_avLightDirection, cMath::MatrixMul3x3(mtxView, pLight->GetDirection() * -1.0f));
-		pProgram->SetVec3f(kVar_avViewSpaceUp, cMath::MatrixMul3x3(mtxView, cVector3f(0,1,0)));
-		pProgram->SetFloat(kVar_afTranslucencyScale, pLight->GetTranslucency() * pLight->GetTranslucency() * 0.5f);
-		if(WorldUnderwaterFog(this)) pProgram->SetColor4f(kVar_avFogColor, UnderwaterFogColor(mpCurrentWorld->GetFogColor()));
-
-		if(lFlags & eFeature_Light_ShadowMap)
-		{
-			for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProj0+i, vShadowMtx[i]);
-			if(pProgram->SetInt(kVar_alSliceNum, 4))
-			{
-				for(int i=0; i<4; ++i) pProgram->SetMatrixf(kVar_a_mtxLightViewProjSlice0+i, mvDirShadowMtxSlice[i]);
-				pProgram->SetFloat(kVar_afSliceDiv, 0.25f);
-				pProgram->SetFloat(kVar_afShadowDistance, mfDirShadowDistance);
-				pProgram->SetVec4f(kVar_avShadowParams, 0, mfDirShadowDepth0, 24.0f * mfDirShadowDepth0, 0);
-				pProgram->SetVec2f(kVar_avShadowMapSize, cVector2f((float)mpDirShadowData->mpTexture->GetWidth(), (float)mpDirShadowData->mpTexture->GetHeight()));
-			}
-			pProgram->SetVec4f(kVar_avSplitsNear, vSplitsNear[0], vSplitsNear[1], vSplitsNear[2], vSplitsNear[3]);
-			pProgram->SetVec4f(kVar_avSplitsFar, vSplitsFar[0], vSplitsFar[1], vSplitsFar[2], vSplitsFar[3]);
-			pProgram->SetVec4f(kVar_avSplitOffsetMul, vSplitOffsetMul[0], vSplitOffsetMul[1], vSplitOffsetMul[2], vSplitOffsetMul[3]);
-			pProgram->SetVec2f(kVar_avShadowMapOffsetMul, pLight->GetShadowMapBlurAmount() / (float)mpDirShadowData->mpTexture->GetWidth());
-			SetTexture(6, mpDirShadowData->mpTexture);
-			if(mpShadowJitterTexture) SetTexture(7, mpShadowJitterTexture);
-		}
-
-		SetStencilActive(false);
-		SetDepthTest(false);
-		SetCullMode(eCullMode_CounterClockwise);
-		SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
-		SetVertexBuffer(mpFullscreenLightQuad);
-		DrawCurrent();
-		SetNormalFrustumProjection();
-		SetCullMode(eCullMode_Clockwise);
-		SetDepthTest(true);
+		iGpuProgram *vProgs[1] = {NULL};
+		iTexture *vTexs[2] = {NULL, NULL};
+		RunPlan(ohpl_dr4_plan_directional(&in), NULL, vTexs, vProgs);
 	}
 
-	void cRendererDeferred::RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul)
-	{
-		const int lSlices = 4;
-		if(mpDirShadowData==NULL)
-		{
-			int lSize = mShadowMapResolution == eShadowMapResolution_High ? 2048 : mShadowMapResolution == eShadowMapResolution_Medium ? 1024 : 512;
-			mpDirShadowData = CreateShadowMap("DirShadowMap", cVector3l(lSize, lSize, 1), ePixelFormat_Depth24);
-		}
-		int lSliceRes = mpDirShadowData->mpTexture->GetWidth() / 2;
 
-		////////////////////////
-		// Practical split scheme
-		float fNear = mpCurrentFrustum->GetNearPlane(), fFar = mpCurrentFrustum->GetFarPlane();
-		if(mpCurrentWorld->GetFogActive() && mpCurrentWorld->GetFogColor().a >= 0.9) fFar = mpCurrentWorld->GetFogEnd();
-		const float fLightShadowDistance = apLight->GetShadowDistance();
-		if(fLightShadowDistance != -1.0f) fFar = cMath::Min(fFar, fLightShadowDistance);
-		mfDirShadowDistance = fLightShadowDistance == -1.0f ? fFar : fLightShadowDistance;
-		float fLogTerm = apLight->GetAutoShadowSliceLogTerm();
-		float vSplit[lSlices+1];
-		for(int i=0; i<=lSlices; ++i)
-		{
-			float fT = (float)i / (float)lSlices;
-			vSplit[i] = cMath::Interpolate(fNear + (fFar-fNear)*fT, fNear * powf(fFar/fNear, fT), fLogTerm);
-		}
-
-		////////////////////////
-		// Light rotation, rows: right, up, back
-		cVector3f vBack = apLight->GetDirection() * -1.0f;
-		vBack.Normalize();
-		cVector3f vUp0 = fabsf(vBack.y) > 0.99f ? cVector3f(1,0,0) : cVector3f(0,1,0);
-		cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp0, vBack));
-		cVector3f vUp = cMath::Vector3Cross(vBack, vRight);
-
-		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV()*0.5f);
-		float fAspect = mpCurrentFrustum->GetAspect();
-		float fCasterDist = apLight->GetShadowCasterDistance();
-
-		////////////////////////
-		// Render states
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetChannelMode(eMaterialChannelMode_None);
-		SetTextureRange(NULL,0);
-		SetOcclusionPlanesActive(false);
-		mpLowLevelGraphics->SetPolygonOffsetActive(true);
-		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(true);
-		SetCullActive(false);
-		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(),
-											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
-		SetFrameBuffer(mpDirShadowData->mpBuffer, false, false);
-		mpLowLevelGraphics->SetClearDepth(1);
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth, false);
-
-		cFrustum *pLastFrustum = mpCurrentFrustum;
-		for(int i=0; i<lSlices; ++i)
-		{
-			////////////////////////
-			// Bounding sphere of the slice, rotation stable
-			cVector3f vCorners[8];
-			cVector3f vCenter(0);
-			for(int j=0; j<8; ++j)
-			{
-				float fZ = vSplit[i + j/4];
-				float fH = fZ * fTanHalfFov;
-				vCorners[j] = cMath::MatrixMul(m_mtxInvView, cVector3f((j&1 ? 1 : -1)*fH*fAspect, (j&2 ? 1 : -1)*fH, -fZ));
-				vCenter += vCorners[j] / 8.0f;
-			}
-			float fRadius = 0;
-			for(int j=0; j<8; ++j) fRadius = cMath::Max(fRadius, cMath::Vector3Dist(vCorners[j], vCenter));
-			fRadius = ceilf(fRadius * 16.0f) / 16.0f;
-
-			////////////////////////
-			// Light view snapped to texels so the map does not swim
-			cVector3f vC(cMath::Vector3Dot(vRight, vCenter), cMath::Vector3Dot(vUp, vCenter), cMath::Vector3Dot(vBack, vCenter));
-			float fTexel = 2.0f * fRadius / (float)lSliceRes;
-			vC.x = floorf(vC.x / fTexel) * fTexel;
-			vC.y = floorf(vC.y / fTexel) * fTexel;
-			vC.z += fRadius + fCasterDist;
-			cMatrixf mtxView(	vRight.x, vRight.y, vRight.z, -vC.x,
-								vUp.x,    vUp.y,    vUp.z,    -vC.y,
-								vBack.x,  vBack.y,  vBack.z,  -vC.z,
-								0, 0, 0, 1);
-			float fDepth = 2.0f * fRadius + fCasterDist;
-			cMatrixf mtxProj = cMath::MatrixOrthographicProjection(0, fDepth, cVector2f(2.0f * fRadius));
-			cVector3f vEye = vRight * vC.x + vUp * vC.y + vBack * vC.z;
-			cFrustum *pFrustum = &mDirShadowFrustum[i];
-			pFrustum->SetupOrthoProj(mtxProj, mtxView, fDepth, 0, cVector2f(2.0f * fRadius), vEye);
-
-			////////////////////////
-			// Casters
-			mvShadowCasters.resize(0);
-			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Dynamic)
-				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvShadowCasters, pFrustum, mbSunCasterCull ? 4.0f * fTexel : 0, mbSunCasterCull);
-			if(apLight->GetShadowCastersAffected() & eObjectVariabilityFlag_Static)
-				GetShadowCasters(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvShadowCasters, pFrustum, mbSunCasterCull ? 4.0f * fTexel : 0, mbSunCasterCull);
-
-			mpLowLevelGraphics->SetCurrentFrameBuffer(mpDirShadowData->mpBuffer, cVector2l((i%2)*lSliceRes, (1-i/2)*lSliceRes), cVector2l(lSliceRes));
-			mpCurrentFrustum = pFrustum;
-			SetFrustumProjection(pFrustum);
-			RenderShadowCastersNormal(pFrustum);
-			mpCurrentFrustum = pLastFrustum;
-
-			////////////////////////
-			// Lookup: view space -> atlas quadrant
-			cMatrixf mtxAtlas(	0.25f, 0, 0, 0.25f + 0.5f*(i%2),
-								0, 0.25f, 0, 0.25f + 0.5f*(i/2),
-								0, 0, 0.5f, 0.5f,
-								0, 0, 0, 1);
-			apMtx[i] = cMath::MatrixMul(cMath::MatrixMul(mtxAtlas, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
-			cMatrixf mtxBias(	0.5f, 0, 0, 0.5f,
-								0, 0.5f, 0, 0.5f,
-								0, 0, 0.5f, 0.5f,
-								0, 0, 0, 1);
-			mvDirShadowMtxSlice[i] = cMath::MatrixMul(cMath::MatrixMul(mtxBias, cMath::MatrixMul(mtxProj, mtxView)), m_mtxInvView);
-			if(i == 0) mfDirShadowDepth0 = fDepth;
-			apNear[i] = -vSplit[i];
-			apFar[i] = i == lSlices-1 ? -1e6f : -vSplit[i+1];
-			apOffsetMul[i] = (vSplit[1]-vSplit[0]) / (vSplit[i+1]-vSplit[i]);
-		}
-
-		SetTexture(0,NULL);
-		SetOcclusionPlanesActive(true);
-		mpLowLevelGraphics->SetPolygonOffsetActive(false);
-		if(mbShadowDepthClamp) mpLowLevelGraphics->SetDepthClampActive(false);
-		SetCullActive(true);
-		SetNormalFrustumProjection();
-
-		SetAccumulationBuffer();
-		for(int i=0; i<mlNumOfGBufferTextures; ++i) SetTexture(i, GetBufferTexture(i));
-		SetDepthTestFunc(eDepthTestFunc_GreaterOrEqual);
-		SetDepthWrite(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-	}
 
 	void cRendererDeferred::RenderLights()
 	{
@@ -2791,181 +2827,92 @@ namespace hpl {
 
 	void cRendererDeferred::SetFogDepthTexture(bool abBind, int alUnit)
 	{
-		if(mbDepthInNormalAlpha == false)
-		{
-			if(abBind) SetTexture(alUnit, GetGbufferTexture(mlLinearDepthTextureIdx));
-			return;
-		}
-		GetGbufferTexture(1)->SetRedFromAlpha(abBind);
-		if(abBind) SetTexture(alUnit, GetGbufferTexture(1));
+		RunPlan(ohpl_dr4_plan_fog_depth(mbDepthInNormalAlpha, mlLinearDepthTextureIdx, abBind, alUnit), NULL, NULL, NULL);
 	}
 
 	void cRendererDeferred::RenderHpl3SSAO()
 	{
-		mbH3SSAORendered = false;
-		if(mpH3SSAORenderProgram==NULL || mpH3SSAODownsampleProgram==NULL || mpH3SSAOBlurProgram==NULL ||
-			mpH3SSAOTemporalProgram==NULL || mpH3SSAOUpsampleProgram==NULL) return;
-		if(mpCurrentSettings->mbIsReflection || mpCurrentSettings->mbSSAOActive==false) return;
-
-		START_RENDER_PASS(SSAO);
-
-		const float fDiv = (float)mlSSAOBufferSizeDiv;
-		float fTanHalfFov = tanf(mpCurrentFrustum->GetFOV() * 0.5f);
-		float fT = fTanHalfFov * mfFarPlane;
-		float fW = mpCurrentFrustum->GetAspect() * fT;
-		cVector3f vUVToView0(2*fW, 2*fT, 0), vUVToView1(-fW, -fT, -mfFarPlane);
-		cVector2f vSize((float)mpH3SSAOTexture[0]->GetWidth(), (float)mpH3SSAOTexture[0]->GetHeight());
-		iTexture *pDepthN = GetBufferTexture(1);
-
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetTextureRange(NULL, 0);
-		SetFlatProjection();
-
-		SetProgram(mpH3SSAODownsampleProgram);
-		mpH3SSAODownsampleProgram->SetVec2f(kVar_avInvScreenSize, cVector2f(1.0f / mvScreenSizeFloat.x, 1.0f / mvScreenSizeFloat.y));
-		SetFogDepthTexture(true, 0);
-		for(size_t i=0; i<mvH3SSAOMipBuffers.size(); ++i)
+		OhplDr4Hpl3RenderIn in;
+		memset(&in, 0, sizeof(in));
+		in.programsOk = mpH3SSAORenderProgram != NULL && mpH3SSAODownsampleProgram != NULL && mpH3SSAOBlurProgram != NULL &&
+						mpH3SSAOTemporalProgram != NULL && mpH3SSAOUpsampleProgram != NULL;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.ssaoActive = mpCurrentSettings->mbSSAOActive;
+		in.time = mfH3SSAOTime;
+		in.firstFrame = mbH3SSAOFirstFrame;
+		memcpy(&in.prevView, &m_mtxH3SSAOPrevView, sizeof(OhplMat4));
+		iFrameBuffer *vFbs[3 + 16];
+		iTexture *vTexs[4] = {NULL, NULL, NULL, NULL};
+		iGpuProgram *vProgs[4] = {NULL, NULL, NULL, NULL};
+		if(in.programsOk && !in.isReflection && in.ssaoActive)
 		{
-			SetFrameBuffer(mvH3SSAOMipBuffers[i], false, false);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
+			in.sizeDiv = mlSSAOBufferSizeDiv;
+			in.fov = mpCurrentFrustum->GetFOV();
+			in.aspect = mpCurrentFrustum->GetAspect();
+			in.farPlane = mfFarPlane;
+			in.texW = mpH3SSAOTexture[0]->GetWidth();
+			in.texH = mpH3SSAOTexture[0]->GetHeight();
+			in.mipW = mpH3SSAOMipTexture->GetWidth();
+			in.mipH = mpH3SSAOMipTexture->GetHeight();
+			in.screenFx = mvScreenSizeFloat.x;
+			in.screenFy = mvScreenSizeFloat.y;
+			in.depthInNormalAlpha = mbDepthInNormalAlpha;
+			in.linearDepthIdx = mlLinearDepthTextureIdx;
+			in.mipBuffers = (int)std::min<size_t>(mvH3SSAOMipBuffers.size(), 16);
+			in.frameTime = mfCurrentFrameTime;
+			memcpy(&in.view, &mpCurrentFrustum->GetViewMatrix(), sizeof(OhplMat4));
+			memcpy(&in.proj, &mpCurrentFrustum->GetProjectionMatrix(), sizeof(OhplMat4));
+			for(int i=0; i<3; ++i) { vFbs[i] = mpH3SSAOBuffer[i]; vTexs[i] = mpH3SSAOTexture[i]; }
+			for(int i=0; i<in.mipBuffers; ++i) vFbs[3+i] = mvH3SSAOMipBuffers[i];
+			vTexs[3] = mpH3SSAOMipTexture;
+			vProgs[0] = mpH3SSAORenderProgram; vProgs[1] = mpH3SSAODownsampleProgram; vProgs[2] = mpH3SSAOBlurProgram; vProgs[3] = mpH3SSAOTemporalProgram;
 		}
-		SetFogDepthTexture(false, 0);
-
-		mfH3SSAOTime = fmodf(mfH3SSAOTime + mfCurrentFrameTime, 256.0f);
-		cVector2f vMipSize((float)mpH3SSAOMipTexture->GetWidth(), (float)mpH3SSAOMipTexture->GetHeight());
-		SetFrameBuffer(mpH3SSAOBuffer[0], false, false);
-		SetProgram(mpH3SSAORenderProgram);
-		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
-		mpH3SSAORenderProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
-		mpH3SSAORenderProgram->SetFloat(kVar_afT, mfH3SSAOTime * 1.9416110515594482f);
-		mpH3SSAORenderProgram->SetFloat(kVar_afStepSizeMax, 0.5f / fTanHalfFov);
-		mpH3SSAORenderProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAORenderProgram->SetFloat(kVar_afRadius, 1.5f);
-		mpH3SSAORenderProgram->SetFloat(kVar_afScreenSizeDiv, fDiv);
-		mpH3SSAORenderProgram->SetFloat(kVar_afLodScale, 0.4f * (int)sqrtf(vMipSize.x*vMipSize.x + vMipSize.y*vMipSize.y + 1));
-		SetTexture(0, pDepthN);
-		SetTexture(1, mpH3SSAOMipTexture);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetTexture(1, NULL);
-
-		SetProgram(mpH3SSAOBlurProgram);
-		mpH3SSAOBlurProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOBlurProgram->SetFloat(kVar_afDepthDifference, 0.0625f);
-		cVector2f vBlurDir[2] = {cVector2f(0, 1.0f / vSize.y), cVector2f(1.0f / vSize.x, 0)};
-		int vBlurPasses[4][3] = {{0,1,0}, {1,0,1}, {1,0,0}, {0,2,1}};
-
-		for(int i=0; i<2; ++i)
-		{
-			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
-			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
-			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		}
-
-		const cMatrixf& mtxView = mpCurrentFrustum->GetViewMatrix();
-		cMatrixf mtxTemporalView = mbH3SSAOFirstFrame ? cMatrixf::Identity : cMath::MatrixMul(m_mtxH3SSAOPrevView, cMath::MatrixInverse(mtxView));
-		float fAmount = cMath::Clamp(mfCurrentFrameTime, 1.0f/60.0f, 1.0f/15.0f);
-		float fMoved = mtxTemporalView.GetTranslation().Length();
-		if(fMoved > 0.1f) fAmount += (fMoved - 0.1f) / 10.0f;
-		if(mbH3SSAOFirstFrame) fAmount += 2.0f;
-		mbH3SSAOFirstFrame = false;
-		m_mtxH3SSAOPrevView = mtxView;
-
-		SetFrameBuffer(mpH3SSAOBuffer[1], false, false);
-		SetProgram(mpH3SSAOTemporalProgram);
-		mpH3SSAOTemporalProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView0, vUVToView0);
-		mpH3SSAOTemporalProgram->SetVec3f(kVar_avUVToView1, vUVToView1);
-		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalView, mtxTemporalView);
-		mpH3SSAOTemporalProgram->SetMatrixf(kVar_a_mtxTemporalProjection, mpCurrentFrustum->GetProjectionMatrix());
-		mpH3SSAOTemporalProgram->SetVec2f(kVar_avScreenSize, vSize);
-		mpH3SSAOTemporalProgram->SetFloat(kVar_afTemporalBlurAmount, cMath::Clamp(fAmount, 0.0f, 1.0f));
-		SetTexture(0, mpH3SSAOTexture[0]);
-		SetTexture(1, mpH3SSAOTexture[2]);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetTexture(1, NULL);
-
-		SetProgram(mpH3SSAOBlurProgram);
-		for(int i=2; i<4; ++i)
-		{
-			SetFrameBuffer(mpH3SSAOBuffer[vBlurPasses[i][1]], false, false);
-			mpH3SSAOBlurProgram->SetVec2f(kVar_avDirection, vBlurDir[vBlurPasses[i][2]]);
-			SetTexture(0, mpH3SSAOTexture[vBlurPasses[i][0]]);
-			DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		}
-
-		SetTexture(0, NULL);
-		SetProgram(NULL);
-		SetNormalFrustumProjection();
-		mbH3SSAORendered = true;
-
-		END_RENDER_PASS();
+		OhplDrPlan *pPlan = ohpl_dr4_plan_hpl3_render(&in);
+		OhplDr4Hpl3State state;
+		ohpl_dr4_plan_hpl3_state(pPlan, &state);
+		mfH3SSAOTime = state.time;
+		mbH3SSAOFirstFrame = state.firstFrame != 0;
+		mbH3SSAORendered = state.rendered != 0;
+		memcpy(&m_mtxH3SSAOPrevView, &state.prevView, sizeof(OhplMat4));
+		RunPlan(pPlan, vFbs, vTexs, vProgs);
 	}
 
 	void cRendererDeferred::RenderNightVision()
 	{
-		if(mpNightVisionProgram==NULL || mpCurrentWorld->GetNightVisionVisible()==false) return;
-
-		cColor col = mpCurrentWorld->GetNightVisionColor();
-		float fBrightness = mpCurrentWorld->GetNightVisionBrightness();
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetStencilActive(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetFlatProjection();
-
-		SetAccumulationBuffer();
-		SetProgram(mpNightVisionProgram);
-		mpNightVisionProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpNightVisionProgram->SetColor4f(kVar_avLightColor, cColor(col.r*col.r*fBrightness, col.g*col.g*fBrightness, col.b*col.b*fBrightness, col.a));
-		mpNightVisionProgram->SetFloat(kVar_afFalloffPow, mpCurrentWorld->GetNightVisionFalloff());
-		mpNightVisionProgram->SetFloat(kVar_afMaxDistance, mpCurrentWorld->GetNightVisionRadiusMax());
-		SetScreenPositionVars(mpNightVisionProgram);
-		for(int i=0; i<3; ++i) SetTexture(i, GetGbufferTexture(i));
-		SetFogDepthTexture(true, 3);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetFogDepthTexture(false, 3);
-		SetTextureRange(NULL, 0);
-		SetProgram(NULL);
-
-		SetNormalFrustumProjection();
-		SetDepthTest(true);
+		OhplDr4NightIn in = {};
+		in.programOk = mpNightVisionProgram != NULL;
+		in.visible = mpNightVisionProgram != NULL && mpCurrentWorld->GetNightVisionVisible();
+		if(in.visible)
+		{
+			cColor col = mpCurrentWorld->GetNightVisionColor();
+			in.color[0] = col.r; in.color[1] = col.g; in.color[2] = col.b; in.color[3] = col.a;
+			in.brightness = mpCurrentWorld->GetNightVisionBrightness();
+			in.falloff = mpCurrentWorld->GetNightVisionFalloff();
+			in.radiusMax = mpCurrentWorld->GetNightVisionRadiusMax();
+		}
+		in.farPlane = mfFarPlane;
+		in.depthInNormalAlpha = mbDepthInNormalAlpha;
+		in.linearDepthIdx = mlLinearDepthTextureIdx;
+		iGpuProgram *vProgs[1] = {mpNightVisionProgram};
+		RunPlan(ohpl_dr4_plan_night_vision(&in), NULL, NULL, vProgs);
 	}
 
 	void cRendererDeferred::ApplyHpl3SSAO()
 	{
-		if(mbH3SSAORendered==false) return;
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetStencilActive(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetBlendMode(eMaterialBlendMode_Mul);
-		SetFlatProjection();
-
-		SetAccumulationBuffer();
-		SetProgram(mpH3SSAOUpsampleProgram);
-		mpH3SSAOUpsampleProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		mpH3SSAOUpsampleProgram->SetFloat(kVar_afSizeDiv, 1.0f / mlSSAOBufferSizeDiv);
-		mpH3SSAOUpsampleProgram->SetFloat(kVar_afPower, 8.0f);
-		SetTexture(0, mpH3SSAOTexture[2]);
-		SetFogDepthTexture(true, 1);
-		cVector2f vHalfTexel(0.5f / mpH3SSAOTexture[2]->GetWidth(), 0.5f / mpH3SSAOTexture[2]->GetHeight());
-		DrawQuad(cVector2f(0,0),1, vHalfTexel * -1.0f, cVector2f(1,1) - vHalfTexel, true);
-		SetFogDepthTexture(false, 1);
-		SetTexture(0, NULL);
-		SetTexture(1, NULL);
-		SetProgram(NULL);
-
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetNormalFrustumProjection();
-		SetDepthTest(true);
+		OhplDr4Hpl3In in = {};
+		in.rendered = mbH3SSAORendered;
+		if(mbH3SSAORendered)
+		{
+			in.farPlane = mfFarPlane;
+			in.sizeDiv = mlSSAOBufferSizeDiv;
+			in.texW = mpH3SSAOTexture[2]->GetWidth();
+			in.texH = mpH3SSAOTexture[2]->GetHeight();
+		}
+		in.depthInNormalAlpha = mbDepthInNormalAlpha;
+		in.linearDepthIdx = mlLinearDepthTextureIdx;
+		iGpuProgram *vProgs[1] = {mpH3SSAOUpsampleProgram};
+		iTexture *vTexs[1] = {mpH3SSAOTexture[2]};
+		RunPlan(ohpl_dr4_plan_hpl3_ssao(&in), NULL, vTexs, vProgs);
 	}
 
 	bool cRendererDeferred::DepthOfFieldIsActive()
@@ -2976,219 +2923,38 @@ namespace hpl {
 
 	void cRendererDeferred::RenderDepthOfField()
 	{
-		if(DepthOfFieldIsActive()==false) return;
-
-		START_RENDER_PASS(DepthOfField);
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetFlatProjection();
-
-		float fStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
-		float fEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
-		float fFalloffLen = (fEnd - fStart) * 0.5f / cMath::Max(1e-15f, mpCurrentWorld->GetDepthOfFieldFalloff());
-		float fNear = mpCurrentFrustum->GetNearPlane();
-
-		iFrameBuffer *pBufferA = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,6);
-		iFrameBuffer *pBufferB = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA16,7);
-		iTexture *pTexA = pBufferA->GetColorBuffer(0)->ToTexture();
-		iTexture *pTexB = pBufferB->GetColorBuffer(0)->ToTexture();
-
-		SetFrameBuffer(pBufferA, false);
-		SetProgram(mpDofFocusProgram);
-		mpDofFocusProgram->SetVec4f(kVar_avFocusStartEnd, fNear + 0.5f*fStart, fNear + fStart, fEnd, fEnd + fFalloffLen);
-		mpDofFocusProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		eTextureFilter accumFilter = mpAccumBufferTexture->GetFilter();
-		mpAccumBufferTexture->SetFilter(eTextureFilter_Nearest);
-		SetTexture(0, mpAccumBufferTexture);
-		SetFogDepthTexture(true, 1);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-		SetFogDepthTexture(false, 1);
-		mpAccumBufferTexture->SetFilter(accumFilter);
-
-		SetFrameBuffer(pBufferB, false);
-		SetProgram(mpDofBlurProgram);
-		mpDofBlurProgram->SetVec2f(kVar_avOffsetMul, cVector2f(1.0f / mvScreenSizeFloat.x, 0));
-		pTexA->SetFilter(eTextureFilter_Nearest);
-		SetTexture(0, pTexA);
-		SetTexture(1, mpDofGaussTexture);
-		DrawQuad(cVector2f(0,0),1, cVector2f(0,0), cVector2f(1,1), true);
-
-		SetAccumulationBuffer();
-		mpDofBlurProgram->SetVec2f(kVar_avOffsetMul, cVector2f(0, -1.0f / mvScreenSizeFloat.y));
-		pTexB->SetFilter(eTextureFilter_Nearest);
-		SetTexture(0, pTexB);
-		DrawAccumulationQuad();
-
-		SetTexture(0, NULL);
-		SetTexture(1, NULL);
-		SetProgram(NULL);
-		SetNormalFrustumProjection();
-
-		END_RENDER_PASS();
+		OhplDr4DofIn in = {};
+		in.screenW = mvScreenSize.x;
+		in.screenH = mvScreenSize.y;
+		in.screenFx = mvScreenSizeFloat.x;
+		in.screenFy = mvScreenSizeFloat.y;
+		in.focusStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+		in.focusEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+		in.falloff = mpCurrentWorld->GetDepthOfFieldFalloff();
+		in.nearPlane = mpCurrentFrustum->GetNearPlane();
+		in.farPlane = mfFarPlane;
+		in.depthInNormalAlpha = mbDepthInNormalAlpha;
+		in.linearDepthIdx = mlLinearDepthTextureIdx;
+		iGpuProgram *vProgs[2] = {mpDofFocusProgram, mpDofBlurProgram};
+		iTexture *vTexs[4] = {mpAccumBufferTexture, mpDofGaussTexture, NULL, NULL};
+		iFrameBuffer *vFbs[2] = {NULL, NULL};
+		RunPlan(ohpl_dr4_plan_dof(&in), vFbs, vTexs, vProgs);
 	}
 
-	static cVector3f FogNoiseTurbulence(const cVector3f& avTurb, float afSize, float afTime)
-	{
-		float t = afTime*0.0625f, a = 4*t, b = a+1;
-		float d1 = 0.125f*sin(2.5f*b+13+1.13f*t) + 0.25f*sin(b+17+1.17f*t) + sin(0.5f*b+103+t);
-		float b2 = b+d1;
-		float d2 = 0.125f*sin(2.5f*b2+103+1.13f*t) + 0.25f*sin(b2+13+1.17f*t) + sin(0.5f*b2+113+t);
-		return cVector3f(d1*avTurb.x, a*avTurb.y, d2*avTurb.z) * cMath::Max(1.0f, afSize*0.25f);
-	}
 
-	iGpuProgram* cRendererDeferred::SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass)
-	{
-		cWorld *pWorld = mpCurrentWorld;
-		float fStart = apFogArea ? apFogArea->GetStart() : pWorld->GetFogStart();
-		float fEnd = apFogArea ? apFogArea->GetEnd() : pWorld->GetFogEnd();
-		float fFalloff = apFogArea ? apFogArea->GetFalloffExp() : pWorld->GetFogFalloffExp();
-		const cColor& color = apFogArea ? apFogArea->GetColor() : pWorld->GetFogColor();
-		float fBrightness = apFogArea ? apFogArea->GetBrightness() : pWorld->GetFogBrightness();
-		float fNoiseStrength = apFogArea ? apFogArea->GetNoiseStrength() : pWorld->GetFogNoiseStrength();
-		float fNoiseSize = apFogArea ? apFogArea->GetNoiseSize() : pWorld->GetFogNoiseSize();
-		const cVector3f& vTurb = apFogArea ? apFogArea->GetNoiseTurbulence() : pWorld->GetFogNoiseTurbulence();
-		bool bSecondary = apFogArea==NULL && pWorld->GetSecondaryFogActive();
 
-		if(fNoiseStrength > 0)
-		{
-			if(mpFogNoiseTexture==NULL) mpFogNoiseTexture = mpResources->GetTextureManager()->Create3D("core_value_noise.dds", true);
-			if(mpFogNoiseTexture) alFlags |= eFeature_FogArea_Noise;
-		}
-		bool bSkybox = false;
-		if(abUnderwaterPass)
-		{
-			alFlags |= eFeature_FogArea_Underwater;
-		}
-		else
-		{
-			bSkybox = (apFogArea ? apFogArea->GetSkybox() : pWorld->GetFogUseSkybox()) && pWorld->GetFogSkyboxTexture() && pWorld->GetSkyBoxActive();
-			if(bSkybox) alFlags |= eFeature_FogArea_Skybox;
-			if(bSkybox && pWorld->GetFogSkyboxTexture() != pWorld->GetSkyBoxTexture()) alFlags |= eFeature_FogArea_SeparateSkybox;
-			if(apFogArea) alFlags |= eFeature_FogArea_FogArea;
-			if(apFogArea ? apFogArea->GetLighten() : pWorld->GetFogLighten()) alFlags |= eFeature_FogArea_Lighten;
-		}
-		if(bSecondary) alFlags |= eFeature_FogArea_Secondary;
 
-		iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, alFlags);
-		SetProgram(pProgram);
-		if(pProgram==NULL) return NULL;
-
-		cVector2f vStartAndLength(fStart, fEnd - fStart);
-		cColor fogColor = abUnderwaterPass ? UnderwaterFogColor(color) : GetFogRenderColor(color, fBrightness);
-
-		bool bExp = apFogArea ? apFogArea->GetExponential() : pWorld->GetFogExponential();
-		bool bHeight = apFogArea ? apFogArea->GetHeightBased() : pWorld->GetFogHeightBased();
-		cColor settings(fStart, fEnd, fFalloff, 0), secSettings(0, 0);
-		cVector3f vCamHeight(mpCurrentFrustum->GetOrigin().y);
-		if(bExp || bHeight)
-		{
-			settings.b = (apFogArea ? apFogArea->GetDensity() : pWorld->GetFogDensity()) * 0.03125f;
-			settings.a = apFogArea ? apFogArea->GetHeightDensity() : pWorld->GetFogHeightDensity();
-			vCamHeight.x -= apFogArea ? apFogArea->GetHeightHorizon() : pWorld->GetFogHeightHorizon();
-		}
-		if(apFogArea && bHeight) vCamHeight -= cVector3f(apFogArea->GetBoundingVolume()->GetMin().y);
-		if(bSecondary && abUnderwaterPass==false)
-		{
-			vCamHeight.y -= pWorld->GetSecondaryFogHeightHorizon();
-			secSettings = cColor(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd(), pWorld->GetSecondaryFogFalloffExp(), 0);
-			if(bExp || bHeight)
-			{
-				// x32 vs x1/32 for the primary: as in the official renderer
-				secSettings.b = pWorld->GetSecondaryFogDensity() * 32.0f;
-				secSettings.a = pWorld->GetSecondaryFogHeightDensity();
-			}
-			if(pWorld->GetSecondaryFogEnd() > fEnd)
-			{
-				std::swap(settings, secSettings);
-				std::swap(vCamHeight.x, vCamHeight.y);
-			}
-		}
-		pProgram->SetColor4f(kVar_avFogSettings, settings);
-		pProgram->SetColor4f(kVar_avSecondFogSettings, secSettings);
-		pProgram->SetVec3f(kVar_avCameraPos, vCamHeight);
-		pProgram->SetInt(kVar_alFogType, (bExp ? 1 : 0) | (bHeight ? 2 : 0));
-
-		if(bSecondary)
-		{
-			cVector2f vSecStartAndLength(pWorld->GetSecondaryFogStart(), pWorld->GetSecondaryFogEnd() - pWorld->GetSecondaryFogStart());
-			cColor secColor = GetFogRenderColor(pWorld->GetSecondaryFogColor(), pWorld->GetSecondaryFogBrightness());
-			float fSecFalloff = pWorld->GetSecondaryFogFalloffExp();
-			if(abUnderwaterPass==false && pWorld->GetSecondaryFogEnd() > fEnd)
-			{
-				std::swap(vStartAndLength, vSecStartAndLength);
-				std::swap(fogColor, secColor);
-				std::swap(fFalloff, fSecFalloff);
-			}
-			pProgram->SetColor4f(kVar_avSecondFogColor, secColor);
-			pProgram->SetVec2f(kVar_avSecondFogStartAndLength, vSecStartAndLength);
-			pProgram->SetFloat(kVar_afSecondFalloffExp, fSecFalloff);
-		}
-
-		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-		pProgram->SetVec2f(kVar_avFogStartAndLength, vStartAndLength);
-		pProgram->SetColor4f(kVar_avFogColor, fogColor);
-		pProgram->SetFloat(kVar_afFalloffExp, fFalloff);
-		SetScreenPositionVars(pProgram);
-		pProgram->SetMatrixf(kVar_a_mtxNoise, cMath::MatrixMul(cMath::MatrixTranslate(FogNoiseTurbulence(vTurb, fNoiseSize, GetTimeCount())), m_mtxInvView));
-		if(alFlags & eFeature_FogArea_Noise)
-		{
-			pProgram->SetFloat(kVar_afInvNoiseScale, 1.0f / fNoiseSize);
-			pProgram->SetFloat(kVar_afNoiseStrength, fNoiseStrength);
-			SetTexture(1, mpFogNoiseTexture);
-		}
-		if(bSkybox)
-		{
-			pProgram->SetColor4f(kVar_avSkyboxColor, GetFogRenderColor(pWorld->GetSkyBoxColor(), pWorld->GetSkyBoxBrightness()));
-			SetTexture(2, pWorld->GetFogSkyboxTexture());
-			pProgram->SetMatrixf(kVar_a_mtxSkybox, cMath::MatrixRotate(pWorld->GetSkyBoxRotation(), eEulerRotationOrder_XYZ).GetTranspose());
-			const cVector3l& vSkySize = pWorld->GetFogSkyboxTexture()->GetSize();
-			pProgram->SetFloat(kVar_afSkyboxMipNum, log2f((float)cMath::Max(vSkySize.x, vSkySize.y)));
-		}
-		if(alFlags & eFeature_FogArea_Lighten)
-		{
-			CopyFrameBufferToTexure(mpRefractionTexture, 0, mvRenderTargetSize, 0, true);
-			SetTexture(3, mpRefractionTexture);
-			SetBlendMode(eMaterialBlendMode_None);
-		}
-		return pProgram;
-	}
 
 	void cRendererDeferred::RenderFullScreenFog()
 	{
-		if(WorldFogActive()==false) return;
-
-		START_RENDER_PASS(FullScreenFog);
-
-		//////////////////////////
-		// Set up rendering
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-
-		SetFogDepthTexture(true);
-		SetTextureRange(NULL, 1);
-
-		SetMatrix(NULL);
-		SetFlatProjection();
-
-		for(int lPass = mpCurrentWorld->GetFogUnderwater() ? 0 : 1; lPass < 2; ++lPass)
-		{
-			SetBlendMode(lPass==0 ? eMaterialBlendMode_Mul : eMaterialBlendMode_Alpha);
-			if(SetupFogProgram(NULL, 0, lPass==0)) DrawQuad(0, 1);
-		}
-
-		SetNormalFrustumProjection();
-		SetDepthTest(true);
-		SetFogDepthTexture(false);
-		SetTextureRange(NULL, 1);
-
-		END_RENDER_PASS();
+		OhplDr4FogWorld world;
+		OhplDr4FogParams params;
+		FillFogWorld(world);
+		memset(&params, 0, sizeof(params));
+		if(world.fogActive) FillFogParams(params, mpCurrentWorld, NULL);
+		iGpuProgram *vProgs[1] = {NULL};
+		iTexture *vTexs[3] = {mpFogNoiseTexture, mpCurrentWorld->GetFogSkyboxTexture(), mpRefractionTexture};
+		RunPlan(ohpl_dr4_plan_full_screen_fog(&world, &params), NULL, vTexs, vProgs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -3196,91 +2962,11 @@ namespace hpl {
 
 	void cRendererDeferred::RenderFog()
 	{
-		if(mpCurrentRenderList->GetFogAreaNum()==0)
-		{
-			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
-			return;
-		}
-
-		START_RENDER_PASS(Fog);
-
-		SetupFogRenderDataArray(true);
-
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		
-		SetFogDepthTexture(true);
-		SetTextureRange(NULL, 1);
-
-		
-		for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
-		{
-			cFogAreaRenderData& fogData = mpCurrentSettings->mvFogRenderData[i];
-			cFogArea *pFogArea = fogData.mpFogArea;
-			
-			/////////////////////////////////////////////
-			// Get program
-			int lFlags =0;
-			if(fogData.mbInsideNearFrustum)
-			{
-				if(pFogArea->GetShowBacksideWhenInside()) lFlags |= eFeature_FogArea_Backside;
-			}
-			else
-			{
-				if(pFogArea->GetShowBacksideWhenOutside()) lFlags |= eFeature_FogArea_Backside;
-				lFlags |= eFeature_FogArea_OutsideBox;
-			}
-			
-			for(int lPass = pFogArea->GetUnderwater() ? 0 : 1; lPass < 2; ++lPass)
-			{
-				SetBlendMode(lPass==0 ? eMaterialBlendMode_Mul : eMaterialBlendMode_Alpha);
-				iGpuProgram *pProgram = SetupFogProgram(pFogArea, lFlags, lPass==0);
-				if(pProgram==NULL) continue;
-
-				/////////////////////////////////////////////
-				//Outside of box setup
-				if(fogData.mbInsideNearFrustum==false)
-				{
-					cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
-					cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-
-				
-					pProgram->SetVec3f(kVar_avRayCastStart, vRayCastStart);
-					pProgram->SetMatrixf(kVar_a_mtxBoxInvViewModelRotation, mtxInvModelView.GetRotation());
-
-					cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
-												cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
-					cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
-												cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
-
-					pProgram->SetVec3f(kVar_avNegPlaneDistNeg, vNegPlaneDistNeg*-1);
-					pProgram->SetVec3f(kVar_avNegPlaneDistPos, vNegPlaneDistPos*-1);
-				}
-			
-				/////////////////////////////////////////////
-				// Render
-				SetCullMode(fogData.mbInsideNearFrustum ? eCullMode_Clockwise : eCullMode_CounterClockwise);
-				SetDepthTest(!fogData.mbInsideNearFrustum);
-
-				SetMatrix(pFogArea->GetModelMatrixPtr());
-
-				SetVertexBuffer(mpShapeBox);
-
-				DrawCurrent();
-			}
-		}
-
-		//////////////////////////////////
-		// Reset settings
-		SetCullMode(eCullMode_CounterClockwise);
-		SetDepthTest(true);
-		SetFogDepthTexture(false);
-		SetTextureRange(NULL, 1);
-
-		END_RENDER_PASS();
+		OhplDr4FogWorld world;
+		FillFogWorld(world);
+		iGpuProgram *vProgs[1] = {NULL};
+		iTexture *vTexs[3] = {mpFogNoiseTexture, mpCurrentWorld->GetFogSkyboxTexture(), mpRefractionTexture};
+		RunPlan(ohpl_dr4_plan_fog(&world), NULL, vTexs, vProgs);
 	}
 	
 	//-----------------------------------------------------------------------
@@ -3288,133 +2974,79 @@ namespace hpl {
 
 	void cRendererDeferred::RenderEnvironmentParticles(bool abBehindFocus)
 	{
-		if(mpCurrentWorld->GetEnvironmentParticlesActive()==false || mpCurrentWorld->GetEnvironmentParticleNum()==0) return;
-		bool bDof = DepthOfFieldIsActive();
-		if(!bDof && !abBehindFocus) return;
-
-		float fDofParams[4] = {0, 0, abBehindFocus ? 0.0f : 1.0f, abBehindFocus ? 1.0f : -1.0f};
-		if(bDof)
-		{
-			const cMatrixf& mtxProj = mpCurrentFrustum->GetProjectionMatrix();
-			float fEndZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusEnd())).z;
-			float fStartZ = cMath::MatrixMul(mtxProj, cVector3f(0, 0, -mpCurrentWorld->GetDepthOfFieldFocusStart())).z;
-			fDofParams[0] = fEndZ;
-			fDofParams[1] = 1.0f / ((fStartZ - fEndZ) * 0.5f / cMath::Max(mpCurrentWorld->GetDepthOfFieldFalloff(), 1e-15f));
-		}
-
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetMatrix(NULL);
-		SetBlendMode(eMaterialBlendMode_Alpha);
-		SetCullActive(false);
-		SetNormalFrustumProjection();
-
-		for(int i=0; i<mpCurrentWorld->GetEnvironmentParticleNum(); ++i)
-		{
-			cEnvironmentParticles *pEnv = mpCurrentWorld->GetEnvironmentParticles(i);
-			if(pEnv->IsVisible(mpCurrentFrustum)==false) continue;
-			iGpuProgram *pProg = pEnv->GetProgram(bDof);
-			if(pProg==NULL) continue;
-			SetProgram(pProg);
-			pEnv->SetupProgramBase(pProg, mpCurrentFrustum, fDofParams);
-			SetTexture(0, pEnv->mpTexture);
-			SetVertexBuffer(pEnv->mpVtxBuffer);
-			for(int j=0; j<pEnv->GetIterationNumInt(); ++j)
-			{
-				pEnv->SetupProgramIteration(pProg, j);
-				DrawCurrent();
-			}
-		}
-
-		SetCullActive(true);
-		SetTexture(0, NULL);
-		SetProgram(NULL);
-		SetVertexBuffer(NULL);
+		OhplDr4EnvIn in;
+		memset(&in, 0, sizeof(in));
+		in.active = mpCurrentWorld->GetEnvironmentParticlesActive();
+		in.num = mpCurrentWorld->GetEnvironmentParticleNum();
+		in.behindFocus = abBehindFocus;
+		in.focusStart = mpCurrentWorld->GetDepthOfFieldFocusStart();
+		in.focusEnd = mpCurrentWorld->GetDepthOfFieldFocusEnd();
+		in.falloff = mpCurrentWorld->GetDepthOfFieldFalloff();
+		memcpy(&in.proj, &mpCurrentFrustum->GetProjectionMatrix(), sizeof(OhplMat4));
+		iGpuProgram *vProgs[1] = {NULL};
+		iTexture *vTexs[1] = {NULL};
+		RunPlan(ohpl_dr4_plan_env(&in), NULL, vTexs, vProgs);
 	}
 
 	void cRendererDeferred::UpdateLensFlares()
 	{
-		if(mpCurrentSettings->mbIsReflection) return;
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
-		{
-			pFlare->RetrieveOcculsionQuery(this);
-			pFlare->UpdateVisibility(mfCurrentFrameTime, GetRenderFrameCount());
-		}
+		OhplDr4FlareUpdateIn in;
+		in.isReflection = mpCurrentSettings->mbIsReflection;
+		in.count = (int)mpCurrentRenderList->GetLensFlares().size();
+		in.frameTime = mfCurrentFrameTime;
+		in.frame = GetRenderFrameCount();
+		RunPlan(ohpl_dr4_plan_update_flares(&in), NULL, NULL, NULL);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderMultiIrisAndGlare()
 	{
-		if(mpLensFlareIrisProgram==NULL || mpLensFlareGlareProgram==NULL || mpCurrentRenderList->GetLensFlares().empty()) return;
-
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetCullActive(false);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetMatrix(NULL);
-
-		cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetMultiIrisFlares())
+		OhplDr4GlareIn in;
+		memset(&in, 0, sizeof(in));
+		const std::vector<cLensFlare*> &vFlares = mpCurrentRenderList->GetLensFlares();
+		in.irisOk = mpLensFlareIrisProgram != NULL;
+		in.glareOk = mpLensFlareGlareProgram != NULL;
+		in.flareCount = (int)vFlares.size();
+		std::vector<OhplDr4GlareFlare> vGlare;
+		std::vector<OhplDr4IrisFlare> vIris;
+		std::vector<float> vPos;
+		if(in.irisOk && in.glareOk && !vFlares.empty())
 		{
-			cMaterial *pMat = pFlare->GetTypeMaterial(eLensFlareType_MultiIris);
-			iTexture *pTex = pMat->GetTexture(eMaterialTexture_Diffuse);
-			if(pTex==NULL) continue;
-
-			float fVis = pFlare->GetVisibility();
-			if(WorldFogActive())
+			cWorld *pWorld = mpCurrentWorld;
+			in.fogActive = WorldFogActive();
+			in.fogStart = pWorld->GetFogStart();
+			in.fogEnd = pWorld->GetFogEnd();
+			in.fogFalloff = pWorld->GetFogFalloffExp();
+			in.fogAlpha = pWorld->GetFogColor().a;
+			cVector3f vCamPos = mpCurrentFrustum->GetOrigin();
+			in.cam[0] = vCamPos.x; in.cam[1] = vCamPos.y; in.cam[2] = vCamPos.z;
+			in.aspect = mvScreenSizeFloat.x / mvScreenSizeFloat.y;
+			vGlare.resize(vFlares.size());
+			for(size_t i=0; i<vFlares.size(); ++i)
 			{
-				// ponytail: material type fog-end scale taken as 1
-				float fDist = cMath::Vector3Dist(vCamPos, pFlare->GetWorldPosition());
-				float fStart = mpCurrentWorld->GetFogStart(), fEnd = mpCurrentWorld->GetFogEnd();
-				float fP = powf(cMath::Clamp((fDist - fStart)/(fEnd - fStart), 0, 1), mpCurrentWorld->GetFogFalloffExp());
-				fVis *= (1 - fP) + (1 - mpCurrentWorld->GetFogColor().a)*fP;
+				vGlare[i].vis = vFlares[i]->GetVisibility();
+				vGlare[i].anyActive = !(vGlare[i].vis <= 0) && vFlares[i]->IsAnyTypeActive();
 			}
-			if(fVis <= 0) continue;
-
-			SetBlendMode(pMat->GetBlendMode());
-			SetTexture(0, pTex);
-			SetProgram(mpLensFlareIrisProgram);
-			SetVertexBuffer(pFlare->PrepareMultiIrisVertexBuffer(mpCurrentFrustum, fVis));
-			DrawCurrent();
-		}
-
-		float *pCol = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-		const float *pPos = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		std::fill(pCol, pCol + 400*4, 0.0f);
-		float fAspect = mvScreenSizeFloat.x / mvScreenSizeFloat.y;
-		float fSum = 0;
-		for(cLensFlare *pFlare : mpCurrentRenderList->GetLensFlares())
-		{
-			float fVis = pFlare->GetVisibility();
-			if(fVis <= 0 || pFlare->IsAnyTypeActive()==false) continue;
-			cVector3f vGlarePos;
-			cColor cGlare = pFlare->GetGlare(mpCurrentFrustum, vGlarePos, fVis);
-			if(cGlare.r + cGlare.g + cGlare.b <= 0) continue;
-			fSum += cGlare.r + cGlare.g + cGlare.b;
-			for(int i=0; i<400; ++i)
+			const std::vector<cLensFlare*> &vMulti = mpCurrentRenderList->GetMultiIrisFlares();
+			in.multiCount = (int)vMulti.size();
+			vIris.resize(vMulti.size());
+			for(size_t i=0; i<vMulti.size(); ++i)
 			{
-				cVector3f vD((pPos[i*4] - vGlarePos.x)*fAspect, (1 - pPos[i*4+1]) - vGlarePos.y, pPos[i*4+2]);
-				float fD2 = cMath::Vector3Dot(vD, vD);
-				float fW = 1.4142135f / (1 + 128*fD2*fD2);
-				for(int c=0; c<4; ++c) pCol[i*4+c] += cGlare.v[c]*fW;
+				cMaterial *pMat = vMulti[i]->GetTypeMaterial(eLensFlareType_MultiIris);
+				vIris[i].texOk = pMat->GetTexture(eMaterialTexture_Diffuse) != NULL;
+				vIris[i].blend = (int)pMat->GetBlendMode();
+				vIris[i].vis = vMulti[i]->GetVisibility();
+				cVector3f vPos3 = vMulti[i]->GetWorldPosition();
+				vIris[i].pos[0] = vPos3.x; vIris[i].pos[1] = vPos3.y; vIris[i].pos[2] = vPos3.z;
 			}
+			const float *pPos = mpGlareVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+			vPos.assign(pPos, pPos + kOhplDrGlareVerts*4);
 		}
-		if(fSum > 1/255.0f)
-		{
-			mpGlareVtxBuffer->UpdateData(eVertexElementFlag_Color0, false);
-			SetBlendMode(eMaterialBlendMode_Add);
-			SetTexture(0, NULL);
-			SetProgram(mpLensFlareGlareProgram);
-			SetVertexBuffer(mpGlareVtxBuffer);
-			DrawCurrent();
-		}
-
-		SetDepthTest(true);
-		SetCullActive(true);
+		iGpuProgram *vProgs[2] = {mpLensFlareIrisProgram, mpLensFlareGlareProgram};
+		iTexture *vTexs[1] = {NULL};
+		RunPlan(ohpl_dr4_plan_glare(&in, vGlare.empty() ? NULL : &vGlare[0], vGlare.size(), vIris.empty() ? NULL : &vIris[0], vIris.size(),
+									vPos.empty() ? NULL : &vPos[0], vPos.size()), NULL, vTexs, vProgs);
 	}
 
 	//-----------------------------------------------------------------------

@@ -33,7 +33,7 @@ fn tan(x: f32) -> f32 {
     unsafe { tanf(x) }
 }
 
-fn log2(x: f32) -> f32 {
+pub(super) fn log2(x: f32) -> f32 {
     // SAFETY: pure libm function on a plain float.
     unsafe { log2f(x) }
 }
@@ -153,6 +153,8 @@ pub mod st {
     pub const BLEND_ALPHA: i32 = 1;
     pub const BLEND_ADD: i32 = 2;
     pub const BLEND_MUL: i32 = 3;
+    pub const BLEND_PREMUL_ALPHA: i32 = 4;
+    pub const BLEND_MODULATE_SOURCE: i32 = 5;
     pub const ALPHA_SOLID: i32 = 0;
     pub const CHANNEL_RGBA: i32 = 0;
     pub const CHANNEL_NONE: i32 = 1;
@@ -187,12 +189,14 @@ pub enum Query {
 }
 
 /// Answer to a `Query`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Feed {
     Bool(bool),
     Float(f32),
     Int(i32),
     Vec3([f32; 3]),
+    Fogs(Vec<super::deferred_fog::FogAreaIn>),
+    Floats(Vec<f32>),
 }
 
 impl Feed {
@@ -211,6 +215,13 @@ impl Feed {
         match self {
             Feed::Int(v) => v,
             _ => 0,
+        }
+    }
+
+    pub fn floats(self) -> Vec<f32> {
+        match self {
+            Feed::Floats(v) => v,
+            _ => Vec::new(),
         }
     }
 
@@ -390,6 +401,18 @@ pub enum Op {
     },
     Dl(DlOp),
     P3(P3Op),
+    P4(P4),
+}
+
+/// A call into the renderer (`deferred_fx::x` ids) the shim performs with its own objects.
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub struct P4 {
+    pub id: i32,
+    pub a: i32,
+    pub b: i32,
+    pub c: i32,
+    pub d: i32,
+    pub f: [f32; 8],
 }
 
 /// Frustum and query questions only the shim can answer.
@@ -508,6 +531,8 @@ impl Default for FilmGrain {
 /// Renderer state a plan mutates; the shim copies it back after the replay.
 #[derive(Clone, Debug, Default)]
 pub struct Results {
+    pub handled: bool,
+    pub h3: super::deferred_ssao3::Hpl3State,
     pub film_grain: FilmGrain,
     pub trail_consumed: bool,
     pub lights: super::deferred_light::LightResults,

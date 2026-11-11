@@ -238,7 +238,6 @@ namespace hpl {
 		void RenderLightList(int alPass);
 		bool RenderLights_BoxWeighted();
 		void RenderLights_Directional();
-		void RenderDirectionalShadowMap(cLightDirectional *apLight, cMatrixf *apMtx, float *apNear, float *apFar, float *apOffsetMul);
         
 		void RenderIllumination();
 
@@ -251,7 +250,6 @@ namespace hpl {
 		void RenderDepthOfField();
 		void RenderFullScreenFog();
 		void RenderFog();
-		iGpuProgram* SetupFogProgram(cFogArea *apFogArea, tFlag alFlags, bool abUnderwaterPass);
 		void RenderTranslucent(int alDofPass=0);
 		void RenderEnvironmentParticles(bool abBehindFocus);
 		void UpdateLensFlares();
@@ -328,8 +326,6 @@ namespace hpl {
 		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
 		cShadowMapData *mpDirShadowData;
-		cMatrixf mvDirShadowMtxSlice[4];
-		float mfDirShadowDistance, mfDirShadowDepth0;
 		cFrustum mDirShadowFrustum[4];
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
@@ -372,6 +368,7 @@ namespace hpl {
 		iTexture *mpDofGaussTexture;
 		void RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree = true, cDeferredLight *apLight = NULL, const char *apLogName = NULL);
 		void FillLightState(OhplDlLightState &aState, cDeferredLight *apLightData, bool abViewProj);
+		void FillFogWorld(OhplDr4FogWorld &aWorld);
 		iVertexBuffer* GetLightShapeBuffer(int alShape);
 		void RunStep(int alStep, int alArg);
 		iGpuProgram* GetToneMapProgram(int alCombo);

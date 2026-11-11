@@ -255,6 +255,15 @@ impl From<Op> for OpC {
             Op::AskGeom { q, idx, f } => op(31, geom_id(q), idx, 0, 0, 0, f),
             Op::Dl(d) => dl_op(d),
             Op::P3(p) => p3_op(p),
+            Op::P4(p) => OpC {
+                kind: 34,
+                a: p.id,
+                b: p.a,
+                c: p.b,
+                d: p.c,
+                e: p.d,
+                f: pad(p.f),
+            },
         }
     }
 }

@@ -48,6 +48,7 @@ namespace hpl {
 		eOhplDrOp_AskGeom,
 		eOhplDrOp_Dl,
 		eOhplDrOp_P3,
+		eOhplDrOp_P4,
 	};
 
 	enum eOhplDrGeom
@@ -87,7 +88,7 @@ namespace hpl {
 
 	enum eOhplDrState { eOhplDrState_DepthTest, eOhplDrState_DepthWrite, eOhplDrState_DepthFunc, eOhplDrState_Blend,
 						eOhplDrState_Alpha, eOhplDrState_Channel };
-	enum { kOhplDrBlendNone = 0, kOhplDrBlendAlpha = 1, kOhplDrBlendAdd = 2, kOhplDrBlendMul = 3, kOhplDrAlphaSolid = 0,
+	enum { kOhplDrBlendNone = 0, kOhplDrBlendAlpha = 1, kOhplDrBlendAdd = 2, kOhplDrBlendMul = 3, kOhplDrBlendPremulAlpha = 4, kOhplDrBlendModulateSource = 5, kOhplDrAlphaSolid = 0,
 		   kOhplDrChannelRgba = 0, kOhplDrChannelNone = 1, kOhplDrChannelRgb = 2,
 		   kOhplDrFuncEqual = 0, kOhplDrFuncLessOrEqual = 1, kOhplDrFuncGreaterOrEqual = 2 };
 	enum { kOhplDrFormatRgba = 0, kOhplDrFormatRgba16 = 1 };
@@ -405,6 +406,191 @@ namespace hpl {
 		size_t ohpl_dl_plan_list(const OhplDrPlan*, int32_t which, const uint32_t** out);
 		int32_t ohpl_dl_plan_rendered(const OhplDrPlan*);
 		int32_t ohpl_dl_light_shape(int32_t kind, int32_t quality);
+	}
+
+	// G6d: fog, depth of field, night vision, HPL3 SSAO upsample, directional and weighted box lights.
+	// Fields mirror rust/src/render/deferred_{fx,fog,dir,box}.rs; every field is 4 bytes wide.
+	enum eOhplDr4X
+	{
+		eOhplDr4X_TexGbuffer, eOhplDr4X_RedFromAlpha, eOhplDr4X_FilterSave, eOhplDr4X_FilterNearest, eOhplDr4X_FilterRestore,
+		eOhplDr4X_DrawAccumQuad, eOhplDr4X_PassBegin, eOhplDr4X_PassEnd, eOhplDr4X_QuadPlain, eOhplDr4X_MatrixNull,
+		eOhplDr4X_CullActive, eOhplDr4X_GenFogProgram, eOhplDr4X_EnsureFogNoise, eOhplDr4X_IntAsk, eOhplDr4X_FogAreaMatrix,
+		eOhplDr4X_SetupFogData, eOhplDr4X_ClearFogData, eOhplDr4X_AskFogs, eOhplDr4X_Log, eOhplDr4X_DirShadowCreate,
+		eOhplDr4X_AskDirShadowSize, eOhplDr4X_PolygonOffsetActive, eOhplDr4X_DepthClampActive, eOhplDr4X_PolygonOffset,
+		eOhplDr4X_OcclusionPlanes, eOhplDr4X_AlphaLimitDefault, eOhplDr4X_DirShadowFb, eOhplDr4X_DirFrustum, eOhplDr4X_DirCasters,
+		eOhplDr4X_DirSetFb, eOhplDr4X_DirRender, eOhplDr4X_TexBuffer, eOhplDr4X_SetVertexBufferNone, eOhplDr4X_EnvVisible,
+		eOhplDr4X_EnvSetupBase, eOhplDr4X_EnvVertexBuffer, eOhplDr4X_EnvIteration, eOhplDr4X_FlareRetrieve, eOhplDr4X_FlareUpdate,
+		eOhplDr4X_BlendRaw, eOhplDr4X_FlareTexture, eOhplDr4X_FlareIrisBuffer, eOhplDr4X_AskGlare, eOhplDr4X_GlareWrite,
+		eOhplDr4X_GlareUpdateData, eOhplDr4X_SetGlareBuffer, eOhplDr4X_SetFb3,
+	};
+	enum { kOhplDr4PassDof, kOhplDr4PassFullScreenFog, kOhplDr4PassFog, kOhplDr4PassSsao };
+	enum { kOhplDr4LogDirectional, kOhplDr4LogBoxWeighted };
+	enum
+	{
+		kOhplDr4FogProg = 0, kOhplDr4FogTexNoise = 0, kOhplDr4FogTexSky = 1, kOhplDr4FogTexRefraction = 2,
+		kOhplDr4NvProg = 0, kOhplDr4H3UpsampleProg = 0, kOhplDr4H3TexSsao = 0,
+		kOhplDr4DofProgFocus = 0, kOhplDr4DofProgBlur = 1, kOhplDr4DofTexAccum = 0, kOhplDr4DofTexGauss = 1, kOhplDr4DofTexA = 2,
+		kOhplDr4DofTexB = 3, kOhplDr4DofFbA = 0, kOhplDr4DofFbB = 1,
+		kOhplDr4DirProg = 0, kOhplDr4DirTexShadow = 0, kOhplDr4DirTexJitter = 1,
+		kOhplDr4BoxProgResolve = 6, kOhplDr4BoxFb = 0, kOhplDr4BoxTexWeight = 0, kOhplDr4BoxProgCount = 7,
+	};
+
+	struct OhplDr4NightIn
+	{
+		int32_t programOk, visible;
+		float color[4];
+		float brightness, falloff, radiusMax, farPlane;
+		int32_t depthInNormalAlpha, linearDepthIdx;
+	};
+
+	struct OhplDr4Hpl3In
+	{
+		int32_t rendered;
+		float farPlane;
+		int32_t sizeDiv, texW, texH, depthInNormalAlpha, linearDepthIdx;
+	};
+
+	struct OhplDr4DofIn
+	{
+		int32_t screenW, screenH;
+		float screenFx, screenFy, focusStart, focusEnd, falloff, nearPlane, farPlane;
+		int32_t depthInNormalAlpha, linearDepthIdx;
+	};
+
+	struct OhplDr4FogWorld
+	{
+		int32_t hdr, depthInNormalAlpha, linearDepthIdx, fogActive, fogUnderwater, areaNum;
+		float frustumFar, camY, time;
+		int32_t rtW, rtH, secActive;
+		float secStart, secEnd, secFalloff, secHorizon, secDensity, secHeightDensity;
+		float secColor[4], secBrightness;
+		int32_t skyTex, skyActive, skySeparate;
+		float skyColor[4], skyBrightness, skyRot[3];
+		int32_t skyW, skyH;
+		OhplMat4 view, invView;
+	};
+
+	struct OhplDr4FogParams
+	{
+		int32_t isArea;
+		float start, end, falloff, color[4], brightness, noiseStrength, noiseSize, turb[3];
+		int32_t skyboxWanted, lighten, exp, height;
+		float density, heightDensity, heightHorizon, bvMinY;
+	};
+
+	struct OhplDr4FogArea
+	{
+		int32_t insideNear, backsideInside, backsideOutside, underwater;
+		OhplDr4FogParams params;
+		OhplMat4 model;
+	};
+
+	struct OhplDr4DirIn
+	{
+		int32_t active;
+		float brightness, diffuse[4];
+		int32_t castSpecular, castDiffuse;
+		float translucency;
+		int32_t underwater, castShadows, renderShadows, hdr;
+		float ambientSky[4], ambientGround[4], direction[3], shadowBlur, frustumFar, frustumNear, fov, aspect;
+		OhplMat4 view, invView;
+		int32_t fogActive;
+		float fogColor[4], fogEnd, shadowDistance, sliceLogTerm, casterDistance, biasMul, slopeBiasMul;
+		int32_t castersAffected;
+		float mapBias, mapSlopeBias;
+		int32_t shadowExists, shadowRes, depthClamp, sunCasterCull, jitterTex;
+		float farLeft, farBottom, farRight, farTop, farPlane;
+		int32_t gbufferTextures;
+	};
+
+	struct OhplDr4BoxLight
+	{
+		uint64_t id;
+		int32_t idx, blendFunc, prio, spherical;
+		float diffuse[4], brightness, fade, ambientSky[4], ambientGround[4], pos[3], probeOffset[3], size[3], falloff, bevel, weight,
+			bands[9][3];
+	};
+
+	struct OhplDr4BoxIn
+	{
+		int32_t bufferOk, resolveOk, isReflection, progOk, instanceInputs, underwater, hdr;
+		float frustumFar, origin[3];
+		OhplMat4 view;
+		float fogColor[4];
+		int32_t gbufferTextures;
+	};
+
+	struct OhplDr4EnvIn
+	{
+		int32_t active, num, behindFocus;
+		float focusStart, focusEnd, falloff;
+		OhplMat4 proj;
+	};
+
+	struct OhplDr4FlareUpdateIn
+	{
+		int32_t isReflection, count;
+		float frameTime;
+		int32_t frame;
+	};
+
+	struct OhplDr4GlareIn
+	{
+		int32_t irisOk, glareOk, flareCount, multiCount, fogActive;
+		float fogStart, fogEnd, fogFalloff, fogAlpha, cam[3], aspect;
+	};
+
+	struct OhplDr4GlareFlare { float vis; int32_t anyActive; };
+	struct OhplDr4IrisFlare { int32_t texOk, blend; float vis, pos[3]; };
+
+	struct OhplDr4Hpl3RenderIn
+	{
+		int32_t programsOk, isReflection, ssaoActive, sizeDiv;
+		float fov, aspect, farPlane;
+		int32_t texW, texH, mipW, mipH;
+		float screenFx, screenFy;
+		int32_t depthInNormalAlpha, linearDepthIdx, mipBuffers;
+		float time;
+		int32_t firstFrame;
+		float frameTime;
+		OhplMat4 prevView, view, proj;
+	};
+
+	struct OhplDr4Hpl3State
+	{
+		float time;
+		int32_t firstFrame, rendered;
+		OhplMat4 prevView;
+	};
+
+	static_assert(sizeof(OhplDr4Hpl3RenderIn) == 268 && sizeof(OhplDr4Hpl3State) == 76, "Rust struct layout");
+
+	static_assert(sizeof(OhplDr4EnvIn) == 88 && sizeof(OhplDr4FlareUpdateIn) == 16 && sizeof(OhplDr4GlareIn) == 52 &&
+				  sizeof(OhplDr4GlareFlare) == 8 && sizeof(OhplDr4IrisFlare) == 24, "Rust struct layout");
+
+	static_assert(sizeof(OhplDr4NightIn) == 48 && sizeof(OhplDr4Hpl3In) == 28 && sizeof(OhplDr4DofIn) == 44 && sizeof(OhplDr4FogWorld) == 272 &&
+				  sizeof(OhplDr4FogParams) == 88 && sizeof(OhplDr4FogArea) == 168 && sizeof(OhplDr4DirIn) == 344 &&
+				  sizeof(OhplDr4BoxLight) == 240 && sizeof(OhplDr4BoxIn) == 128, "Rust struct layout");
+
+	extern "C"
+	{
+		OhplDrPlan* ohpl_dr4_plan_fog_depth(bool depthInNormalAlpha, int32_t linearIdx, bool bind, int32_t unit);
+		OhplDrPlan* ohpl_dr4_plan_night_vision(const OhplDr4NightIn*);
+		OhplDrPlan* ohpl_dr4_plan_hpl3_ssao(const OhplDr4Hpl3In*);
+		OhplDrPlan* ohpl_dr4_plan_dof(const OhplDr4DofIn*);
+		OhplDrPlan* ohpl_dr4_plan_full_screen_fog(const OhplDr4FogWorld*, const OhplDr4FogParams*);
+		OhplDrPlan* ohpl_dr4_plan_fog(const OhplDr4FogWorld*);
+		void ohpl_dr4_feed_fogs(OhplDrPlan*, const OhplDr4FogArea* areas, size_t n);
+		OhplDrPlan* ohpl_dr4_plan_directional(const OhplDr4DirIn*);
+		OhplDrPlan* ohpl_dr4_plan_box_weighted(const OhplDr4BoxIn*, const OhplDr4BoxLight* lights, size_t n);
+		bool ohpl_dr4_plan_handled(const OhplDrPlan*);
+		OhplDrPlan* ohpl_dr4_plan_env(const OhplDr4EnvIn*);
+		OhplDrPlan* ohpl_dr4_plan_update_flares(const OhplDr4FlareUpdateIn*);
+		OhplDrPlan* ohpl_dr4_plan_glare(const OhplDr4GlareIn*, const OhplDr4GlareFlare* flares, size_t nflares,
+										const OhplDr4IrisFlare* iris, size_t niris, const float* pos, size_t npos);
+		void ohpl_dr4_feed_floats(OhplDrPlan*, const float* v, size_t n);
+		OhplDrPlan* ohpl_dr4_plan_hpl3_render(const OhplDr4Hpl3RenderIn*);
+		void ohpl_dr4_plan_hpl3_state(const OhplDrPlan*, OhplDr4Hpl3State* out);
 	}
 }
 
