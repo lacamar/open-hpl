@@ -18,6 +18,8 @@
  */
 
 #include "LuxSavedMap.h"
+#include "RustLuxSave.h"
+#include <vector>
 
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
@@ -55,379 +57,389 @@ cLuxSavedMap::~cLuxSavedMap()
 
 //-----------------------------------------------------------------------
 
-void cLuxSavedMap::FromMap(cLuxMap *apMap)
+namespace
 {
-	/////////////////////////////////
-	// Init
-	cWorld *pWorld = apMap->GetWorld();
 
+struct MapFromEnv
+{
+	cLuxSavedMap *mpData;
+	cLuxMap *mpMap;
+	cWorld *mpWorld;
+	std::vector<iLight*> mvLights;
+	std::vector<cSoundEntity*> mvSounds;
+	std::vector<cParticleSystem*> mvPS;
+	std::vector<iLuxEntity*> mvEntities;
+};
 
-	/////////////////////////////////
-	// General properties
-	msFileName = apMap->GetFileName();
-	msDisplayNameEntry = apMap->GetDisplayNameEntry();
+}
 
-	msLanternLitCallback = apMap->msLanternLitCallback;
-
-	mlNumberOfQuests = apMap->mlNumberOfQuests;
-	mlTotalCompletionAmount = apMap->mlTotalCompletionAmount;
-	mlCurrentCompletionAmount = apMap->mlCurrentCompletionAmount;
-
-	msCheckPointName = apMap->msCheckPointName;
-	msCheckPointStartPos = apMap->msCheckPointStartPos;
-	msCheckPointCallback = apMap->msCheckPointCallback;
-	mlCheckPointCount = apMap->mlCheckPointCount;
-	msCheckPointMusic = apMap->msCheckPointMusic;
-	mlCheckPointMusicPrio = apMap->mlCheckPointMusicPrio;
-	mbCheckPointMusicResume = apMap->mbCheckPointMusicResume;
-	mfCheckPointMusicVolume = apMap->mfCheckPointMusicVolume;
-
-
-	/////////////////////////////////
-	// Sky box
-	mbSkyBoxActive = pWorld->GetSkyBoxActive();
-	msSkyboxTexture = pWorld->GetSkyBoxTexture() ? pWorld->GetSkyBoxTexture()->GetName() : "";
-	mSkyBoxColor = pWorld->GetSkyBoxColor();
-
-	/////////////////////////////////
-	// Fog
-	mbFogActive = pWorld->GetFogActive();
-	mbFogCulling = pWorld->GetFogCulling();
-	mfFogStart = pWorld->GetFogStart();
-	mfFogEnd = pWorld->GetFogEnd();
-	mfFogFalloffExp = pWorld->GetFogFalloffExp();
-	mFogColor = pWorld->GetFogColor();
-	
-	/////////////////////////////////
-	// Lights
+int cLuxSavedMap::Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB)
+{
+	MapFromEnv &e = *static_cast<MapFromEnv*>(apCtx);
+	cLuxSavedMap &d = *e.mpData;
+	cLuxMap *apMap = e.mpMap;
+	cWorld *pWorld = e.mpWorld;
+	switch(alOp)
 	{
-		cLightListIterator lightIt = pWorld->GetLightIterator();
-		while(lightIt.HasNext())
+	case eOhplGa6Op_MapFromHead:
+		d.msFileName = apMap->GetFileName();
+		d.msDisplayNameEntry = apMap->GetDisplayNameEntry();
+		d.msLanternLitCallback = apMap->msLanternLitCallback;
+		d.mlNumberOfQuests = apMap->mlNumberOfQuests;
+		d.mlTotalCompletionAmount = apMap->mlTotalCompletionAmount;
+		d.mlCurrentCompletionAmount = apMap->mlCurrentCompletionAmount;
+		d.msCheckPointName = apMap->msCheckPointName;
+		d.msCheckPointStartPos = apMap->msCheckPointStartPos;
+		d.msCheckPointCallback = apMap->msCheckPointCallback;
+		d.mlCheckPointCount = apMap->mlCheckPointCount;
+		d.msCheckPointMusic = apMap->msCheckPointMusic;
+		d.mlCheckPointMusicPrio = apMap->mlCheckPointMusicPrio;
+		d.mbCheckPointMusicResume = apMap->mbCheckPointMusicResume;
+		d.mfCheckPointMusicVolume = apMap->mfCheckPointMusicVolume;
+		d.mbSkyBoxActive = pWorld->GetSkyBoxActive();
+		d.msSkyboxTexture = pWorld->GetSkyBoxTexture() ? pWorld->GetSkyBoxTexture()->GetName() : "";
+		d.mSkyBoxColor = pWorld->GetSkyBoxColor();
+		d.mbFogActive = pWorld->GetFogActive();
+		d.mbFogCulling = pWorld->GetFogCulling();
+		d.mfFogStart = pWorld->GetFogStart();
+		d.mfFogEnd = pWorld->GetFogEnd();
+		d.mfFogFalloffExp = pWorld->GetFogFalloffExp();
+		d.mFogColor = pWorld->GetFogColor();
+		return 0;
+	case eOhplGa6Op_MapLightN:
 		{
-			iLight *pLight = lightIt.Next();
-
-			if(pLight->IsSaved() && pLight->GetEntityParent() == NULL && pLight->GetParent()==NULL)
-			{
-				cEngineLight_SaveData saveLight;
-				saveLight.FromLight(pLight);
-
-				mlstLights.Add(saveLight);
-			}
+			cLightListIterator lightIt = pWorld->GetLightIterator();
+			while(lightIt.HasNext()) e.mvLights.push_back(lightIt.Next());
 		}
-	}
-
-	/////////////////////////////////
-	// Sounds
-	{
-		cSoundEntityIterator soundIt = pWorld->GetSoundEntityIterator();
-		while(soundIt.HasNext())
+		return (int)e.mvLights.size();
+	case eOhplGa6Op_MapLightFlags:
 		{
-			cSoundEntity *pSound = soundIt.Next();
-
-			if(	pSound->IsSaved() && pSound->GetEntityParent() == NULL && pSound->GetParent()==NULL && pSound->GetData()->GetLoop() )
-			{
-				cEngineSound_SaveData saveSound;
-				saveSound.FromSound(pSound);
-
-				mlstSounds.Add(saveSound);
-			}
+			iLight *pLight = e.mvLights[alA];
+			return (pLight->IsSaved() ? eOhplGa6Flag_Saved : 0) |
+				(pLight->GetEntityParent() == NULL ? eOhplGa6Flag_NoEntityParent : 0) |
+				(pLight->GetParent() == NULL ? eOhplGa6Flag_NoParent : 0);
 		}
-	}
-
-	/////////////////////////////////
-	// Particle systems
-	{
-		cParticleSystemIterator psIt = pWorld->GetParticleSystemIterator();
-		while(psIt.HasNext())
+	case eOhplGa6Op_MapLightFrom:
 		{
-			cParticleSystem *pPS = psIt.Next();
-
-			if(	pPS->IsSaved() && pPS->GetEntityParent() == NULL && pPS->GetParent()==NULL && pPS->IsDying()==false)
-			{
-				cEnginePS_SaveData savePS;
-				savePS.FromPS(pPS);
-
-				mlstPS.Add(savePS);
-			}
+			cEngineLight_SaveData saveLight{};
+			saveLight.FromLight(e.mvLights[alA]);
+			d.mlstLights.Add(saveLight);
 		}
-	}
-
-	/////////////////////////////////
-	// Entities
-    cLuxEntityIterator entityIt = apMap->GetEntityIterator();
-	while(entityIt.HasNext())
-	{
-		iLuxEntity *pEntity = entityIt.Next();
-        if(pEntity->IsSaved() && pEntity->GetDestroyMe()==false)
+		return 0;
+	case eOhplGa6Op_MapSoundN:
 		{
+			cSoundEntityIterator soundIt = pWorld->GetSoundEntityIterator();
+			while(soundIt.HasNext()) e.mvSounds.push_back(soundIt.Next());
+		}
+		return (int)e.mvSounds.size();
+	case eOhplGa6Op_MapSoundFlags:
+		{
+			cSoundEntity *pSound = e.mvSounds[alA];
+			return (pSound->IsSaved() ? eOhplGa6Flag_Saved : 0) |
+				(pSound->GetEntityParent() == NULL ? eOhplGa6Flag_NoEntityParent : 0) |
+				(pSound->GetParent() == NULL ? eOhplGa6Flag_NoParent : 0);
+		}
+	case eOhplGa6Op_MapSoundLoop:
+		return e.mvSounds[alA]->GetData()->GetLoop();
+	case eOhplGa6Op_MapSoundFrom:
+		{
+			cEngineSound_SaveData saveSound{};
+			saveSound.FromSound(e.mvSounds[alA]);
+			d.mlstSounds.Add(saveSound);
+		}
+		return 0;
+	case eOhplGa6Op_MapPsN:
+		{
+			cParticleSystemIterator psIt = pWorld->GetParticleSystemIterator();
+			while(psIt.HasNext()) e.mvPS.push_back(psIt.Next());
+		}
+		return (int)e.mvPS.size();
+	case eOhplGa6Op_MapPsFlags:
+		{
+			cParticleSystem *pPS = e.mvPS[alA];
+			return (pPS->IsSaved() ? eOhplGa6Flag_Saved : 0) |
+				(pPS->GetEntityParent() == NULL ? eOhplGa6Flag_NoEntityParent : 0) |
+				(pPS->GetParent() == NULL ? eOhplGa6Flag_NoParent : 0);
+		}
+	case eOhplGa6Op_MapPsDying:
+		return e.mvPS[alA]->IsDying();
+	case eOhplGa6Op_MapPsFrom:
+		{
+			cEnginePS_SaveData savePS{};
+			savePS.FromPS(e.mvPS[alA]);
+			d.mlstPS.Add(savePS);
+		}
+		return 0;
+	case eOhplGa6Op_MapEntN:
+		{
+			cLuxEntityIterator entityIt = apMap->GetEntityIterator();
+			while(entityIt.HasNext()) e.mvEntities.push_back(entityIt.Next());
+		}
+		return (int)e.mvEntities.size();
+	case eOhplGa6Op_MapEntSaved:
+		return e.mvEntities[alA]->IsSaved();
+	case eOhplGa6Op_MapEntDestroyMe:
+		return e.mvEntities[alA]->GetDestroyMe();
+	case eOhplGa6Op_MapEntFrom:
+		{
+			iLuxEntity *pEntity = e.mvEntities[alA];
 			iLuxEntity_SaveData *pSaveData = pEntity->CreateSaveData();
 			pEntity->SaveToSaveData(pSaveData);
-			
-			mlstEntities.Add(pSaveData);
+			d.mlstEntities.Add(pSaveData);
 		}
-	}
-
-	/////////////////////
-	//Vars
-	{
-		tLuxScriptVarMapIt it = apMap->m_mapVars.begin();
-		for(; it != apMap->m_mapVars.end(); ++it)
+		return 0;
+	case eOhplGa6Op_MapFromTail:
 		{
-			mlstVars.Add(it->second);
+			tLuxScriptVarMapIt it = apMap->m_mapVars.begin();
+			for(; it != apMap->m_mapVars.end(); ++it)
+			{
+				d.mlstVars.Add(it->second);
+			}
 		}
-	}
-
-	/////////////////////
-	//Timers
-	{
-		tLuxEventTimerListIt it = apMap->mlstTimers.begin();
-		for(; it != apMap->mlstTimers.end(); ++it)
 		{
-			cLuxEventTimer *pTimer = *it;
-			mlstTimers.Add(*pTimer);
+			tLuxEventTimerListIt it = apMap->mlstTimers.begin();
+			for(; it != apMap->mlstTimers.end(); ++it)
+			{
+				cLuxEventTimer *pTimer = *it;
+				d.mlstTimers.Add(*pTimer);
+			}
 		}
-	}
-
-	/////////////////////////////////
-	// Ropes
-	{
-		cRopeEntityIterator ropeIt = apMap->GetWorld()->GetRopeEntityIterator();
-		while(ropeIt.HasNext())
 		{
-			cRopeEntity *pRope = ropeIt.Next();
-			
-			cEngineRope_SaveData saveRope;
-            saveRope.FromRope(pRope);
-
-			mlstRopes.Add(saveRope);
+			cRopeEntityIterator ropeIt = apMap->GetWorld()->GetRopeEntityIterator();
+			while(ropeIt.HasNext())
+			{
+				cRopeEntity *pRope = ropeIt.Next();
+				cEngineRope_SaveData saveRope{};
+				saveRope.FromRope(pRope);
+				d.mlstRopes.Add(saveRope);
+			}
 		}
-	}
-
-
-	/////////////////////////////////
-	// Use Item callbacks
-	{
-		tLuxUseItemCallbackListIt it = apMap->mlstUseItemCallbacks.begin();
-		for(; it != apMap->mlstUseItemCallbacks.end(); ++it)
 		{
-			cLuxUseItemCallback *pCallback = *it;
-			mvUseItemCallbacks.Add(*pCallback);
+			tLuxUseItemCallbackListIt it = apMap->mlstUseItemCallbacks.begin();
+			for(; it != apMap->mlstUseItemCallbacks.end(); ++it)
+			{
+				cLuxUseItemCallback *pCallback = *it;
+				d.mvUseItemCallbacks.Add(*pCallback);
+			}
 		}
+		return 0;
 	}
+	return 0;
+}
 
+namespace
+{
+
+struct MapToEnv
+{
+	cLuxSavedMap *mpData;
+	cLuxMap *mpMap;
+	cWorld *mpWorld;
+	std::vector<cEngineLight_SaveData*> mvSavedLights;
+	std::vector<cEngineSound_SaveData*> mvSavedSounds;
+	std::vector<cEnginePS_SaveData*> mvSavedPS;
+	std::vector<iLuxEntity_SaveData*> mvSavedEntities;
+	std::vector<cEngineRope_SaveData*> mvSavedRopes;
+	iLight *mpLight;
+	cSoundEntity *mpSound;
+	cParticleSystem *mpPS;
+	iLuxEntity *mpEntity;
+	cRopeEntity *mpRope;
+	std::vector<iLuxEntity*> mvLoaded;
+};
+
+}
+
+int cLuxSavedMap::Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB)
+{
+	MapToEnv &e = *static_cast<MapToEnv*>(apCtx);
+	cLuxSavedMap &d = *e.mpData;
+	cLuxMap *apMap = e.mpMap;
+	cWorld *pWorld = e.mpWorld;
+	switch(alOp)
+	{
+	case eOhplGa6Op_MapToHead:
+		apMap->SetDisplayNameEntry(d.msDisplayNameEntry);
+		apMap->msLanternLitCallback = d.msLanternLitCallback;
+		apMap->mlNumberOfQuests = d.mlNumberOfQuests;
+		apMap->mlTotalCompletionAmount = d.mlTotalCompletionAmount;
+		apMap->mlCurrentCompletionAmount = d.mlCurrentCompletionAmount;
+		apMap->msCheckPointName = d.msCheckPointName;
+		apMap->msCheckPointStartPos = d.msCheckPointStartPos;
+		apMap->msCheckPointCallback = d.msCheckPointCallback;
+		apMap->mlCheckPointCount = d.mlCheckPointCount;
+		apMap->msCheckPointMusic = d.msCheckPointMusic;
+		apMap->mlCheckPointMusicPrio = d.mlCheckPointMusicPrio;
+		apMap->mbCheckPointMusicResume = d.mbCheckPointMusicResume;
+		apMap->mfCheckPointMusicVolume = d.mfCheckPointMusicVolume;
+		pWorld->SetSkyBoxActive(d.mbSkyBoxActive);
+		return 0;
+	case eOhplGa6Op_MapSkyIsNone:
+		return d.msSkyboxTexture == "";
+	case eOhplGa6Op_MapSkyNull:
+		pWorld->SetSkyBox(NULL, true);
+		return 0;
+	case eOhplGa6Op_MapSkyLoad:
+		{
+			iTexture *pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(d.msSkyboxTexture, true);
+			pWorld->SetSkyBox(pTexture, true);
+		}
+		return 0;
+	case eOhplGa6Op_MapToFog:
+		pWorld->SetSkyBoxColor(d.mSkyBoxColor);
+		pWorld->SetFogActive(d.mbFogActive);
+		pWorld->SetFogCulling(d.mbFogCulling);
+		pWorld->SetFogStart(d.mfFogStart);
+		pWorld->SetFogEnd(d.mfFogEnd);
+		pWorld->SetFogFalloffExp(d.mfFogFalloffExp);
+		pWorld->SetFogColor(d.mFogColor);
+		return 0;
+	case eOhplGa6Op_MapSavedLightN:
+		{
+			cContainerListIterator<cEngineLight_SaveData> it = d.mlstLights.GetIterator();
+			while(it.HasNext()) e.mvSavedLights.push_back(&it.Next());
+		}
+		return (int)e.mvSavedLights.size();
+	case eOhplGa6Op_MapFindLight:
+		e.mpLight = pWorld->GetLightFromUniqueID(e.mvSavedLights[alA]->mlID);
+		return e.mpLight != NULL;
+	case eOhplGa6Op_MapLightTo:
+		e.mvSavedLights[alA]->ToLight(e.mpLight);
+		return 0;
+	case eOhplGa6Op_MapLightWarn:
+		Warning("Could not find saved light '%s'\n", e.mvSavedLights[alA]->msName.c_str());
+		return 0;
+	case eOhplGa6Op_MapSavedSoundN:
+		{
+			cContainerListIterator<cEngineSound_SaveData> it = d.mlstSounds.GetIterator();
+			while(it.HasNext()) e.mvSavedSounds.push_back(&it.Next());
+		}
+		return (int)e.mvSavedSounds.size();
+	case eOhplGa6Op_MapCreateSound:
+		{
+			cEngineSound_SaveData &saveSound = *e.mvSavedSounds[alA];
+			e.mpSound = pWorld->CreateSoundEntity(saveSound.msName, saveSound.msSoundDataName, saveSound.mbRemoveWhenOver);
+		}
+		return e.mpSound != NULL;
+	case eOhplGa6Op_MapSoundTo:
+		e.mvSavedSounds[alA]->ToSound(e.mpSound);
+		return 0;
+	case eOhplGa6Op_MapSoundWarn:
+		Warning("Could not create sound '%s'\n", e.mvSavedSounds[alA]->msSoundDataName.c_str());
+		return 0;
+	case eOhplGa6Op_MapSavedPsN:
+		{
+			cContainerListIterator<cEnginePS_SaveData> it = d.mlstPS.GetIterator();
+			while(it.HasNext()) e.mvSavedPS.push_back(&it.Next());
+		}
+		return (int)e.mvSavedPS.size();
+	case eOhplGa6Op_MapCreatePs:
+		{
+			cEnginePS_SaveData &savePS = *e.mvSavedPS[alA];
+			e.mpPS = pWorld->CreateParticleSystem(savePS.msName, savePS.msType, 1);
+		}
+		return e.mpPS != NULL;
+	case eOhplGa6Op_MapPsTo:
+		e.mvSavedPS[alA]->ToPS(e.mpPS);
+		return 0;
+	case eOhplGa6Op_MapPsWarn:
+		Warning("Could not create particle system '%s'\n", e.mvSavedPS[alA]->msType.c_str());
+		return 0;
+	case eOhplGa6Op_MapLoadBegin:
+		gpBase->mpCurrentMapLoading = apMap;
+		return 0;
+	case eOhplGa6Op_MapLoadEnd:
+		gpBase->mpCurrentMapLoading = NULL;
+		return 0;
+	case eOhplGa6Op_MapSavedEntN:
+		{
+			cContainerListIterator<iLuxEntity_SaveData*> it = d.mlstEntities.GetIterator();
+			while(it.HasNext()) e.mvSavedEntities.push_back(it.Next());
+		}
+		return (int)e.mvSavedEntities.size();
+	case eOhplGa6Op_MapCreateEntity:
+		e.mpEntity = e.mvSavedEntities[alA]->CreateEntity(apMap);
+		return e.mpEntity != NULL;
+	case eOhplGa6Op_MapEntLoad:
+		e.mpEntity->LoadFromSaveData(e.mvSavedEntities[alA]);
+		e.mpEntity->SetSaveData(e.mvSavedEntities[alA]);
+		e.mvLoaded.push_back(e.mpEntity);
+		return 0;
+	case eOhplGa6Op_MapSavedRopeN:
+		{
+			cContainerListIterator<cEngineRope_SaveData> it = d.mlstRopes.GetIterator();
+			while(it.HasNext()) e.mvSavedRopes.push_back(&it.Next());
+		}
+		return (int)e.mvSavedRopes.size();
+	case eOhplGa6Op_MapRopeCreate:
+		e.mpRope = e.mvSavedRopes[alA]->CreateRope(apMap);
+		return 0;
+	case eOhplGa6Op_MapRopeTo:
+		e.mvSavedRopes[alA]->ToRope(e.mpRope, apMap);
+		return 0;
+	case eOhplGa6Op_MapAfterLoad:
+		apMap->AfterWorldLoadEntitySetup();
+		return 0;
+	case eOhplGa6Op_MapVarsTimers:
+		{
+			apMap->m_mapVars.clear();
+			cContainerListIterator<cLuxScriptVar> it = d.mlstVars.GetIterator();
+			while(it.HasNext())
+			{
+				cLuxScriptVar& scriptVar = it.Next();
+				apMap->m_mapVars.insert(tLuxScriptVarMap::value_type(scriptVar.msName, scriptVar));
+			}
+		}
+		{
+			STLDeleteAll(apMap->mlstTimers);
+			cContainerListIterator<cLuxEventTimer> it = d.mlstTimers.GetIterator();
+			while(it.HasNext())
+			{
+				cLuxEventTimer& savedTimer = it.Next();
+				cLuxEventTimer *pTimer = hplNew(cLuxEventTimer,());
+				*pTimer = savedTimer;
+				apMap->mlstTimers.push_back(pTimer);
+			}
+		}
+		return 0;
+	case eOhplGa6Op_MapLoadedN:
+		return (int)e.mvLoaded.size();
+	case eOhplGa6Op_MapSetupEntity:
+		e.mvLoaded[alA]->SetupSaveData(e.mvLoaded[alA]->GetSaveData());
+		return 0;
+	case eOhplGa6Op_MapLoadedActive:
+		return e.mvLoaded[alA]->IsActive();
+	case eOhplGa6Op_MapLoadedUpdate:
+		e.mvLoaded[alA]->UpdateLogic(0.001f);
+		return 0;
+	case eOhplGa6Op_MapUseItemCallbacks:
+		{
+			STLDeleteAll(apMap->mlstUseItemCallbacks);
+			for(size_t i=0; i<d.mvUseItemCallbacks.Size(); ++i)
+			{
+				cLuxUseItemCallback *pCallback = hplNew(cLuxUseItemCallback, ());
+				*pCallback = d.mvUseItemCallbacks[i];
+				apMap->mlstUseItemCallbacks.push_back(pCallback);
+			}
+		}
+		return 0;
+	}
+	return 0;
+}
+
+void cLuxSavedMap::FromMap(cLuxMap *apMap)
+{
+	MapFromEnv env = { this, apMap, apMap->GetWorld() };
+	ohpl_ga6_map_from(&env, cLuxSavedMap::Ga6FromCall);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxSavedMap::ToMap(cLuxMap *apMap)
-{	
-	/////////////////////////////////
-	// Init
-	cWorld *pWorld = apMap->GetWorld();
-
-	apMap->SetDisplayNameEntry(msDisplayNameEntry);
-
-	apMap->msLanternLitCallback = msLanternLitCallback;
-
-	apMap->mlNumberOfQuests = mlNumberOfQuests;
-	apMap->mlTotalCompletionAmount = mlTotalCompletionAmount;
-	apMap->mlCurrentCompletionAmount = mlCurrentCompletionAmount;
-
-	apMap->msCheckPointName = msCheckPointName;
-	apMap->msCheckPointStartPos = msCheckPointStartPos;
-	apMap->msCheckPointCallback = msCheckPointCallback;
-	apMap->mlCheckPointCount = mlCheckPointCount;
-	apMap->msCheckPointMusic = msCheckPointMusic;
-	apMap->mlCheckPointMusicPrio = mlCheckPointMusicPrio;
-	apMap->mbCheckPointMusicResume = mbCheckPointMusicResume;
-	apMap->mfCheckPointMusicVolume = mfCheckPointMusicVolume;
-
-	/////////////////////////////////
-	// Sky box
-	pWorld->SetSkyBoxActive(mbSkyBoxActive);
-	if(msSkyboxTexture=="")	
-	{
-		pWorld->SetSkyBox(NULL, true);
-	}
-	else
-	{
-		iTexture *pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(msSkyboxTexture, true);
-		pWorld->SetSkyBox(pTexture, true);
-	}
-
-	pWorld->SetSkyBoxColor(mSkyBoxColor);
-
-	/////////////////////////////////
-	// Fog
-	pWorld->SetFogActive(mbFogActive);
-	pWorld->SetFogCulling(mbFogCulling);
-	pWorld->SetFogStart(mfFogStart);
-	pWorld->SetFogEnd(mfFogEnd);
-	pWorld->SetFogFalloffExp(mfFogFalloffExp);
-	pWorld->SetFogColor(mFogColor);
-
-	/////////////////////////////////
-	// Lights
-	{
-		cContainerListIterator<cEngineLight_SaveData> lightSaveLight = mlstLights.GetIterator();
-		while (lightSaveLight.HasNext())
-		{
-			cEngineLight_SaveData& saveLight = lightSaveLight.Next();
-
-			iLight *pLight = pWorld->GetLightFromUniqueID(saveLight.mlID);
-			if(pLight)
-			{
-				saveLight.ToLight(pLight);	
-			}
-			else
-			{
-				Warning("Could not find saved light '%s'\n", saveLight.msName.c_str());
-			}
-		}
-	}
-
-	/////////////////////////////////
-	// Sounds
-	{
-		cContainerListIterator<cEngineSound_SaveData> saveSoundIt = mlstSounds.GetIterator();
-		while (saveSoundIt.HasNext())
-		{
-			cEngineSound_SaveData& saveSound = saveSoundIt.Next();
-
-			cSoundEntity *pSound = pWorld->CreateSoundEntity(saveSound.msName, saveSound.msSoundDataName, saveSound.mbRemoveWhenOver);
-			if(pSound)
-			{
-				saveSound.ToSound(pSound);	
-			}
-			else
-			{
-				Warning("Could not create sound '%s'\n", saveSound.msSoundDataName.c_str());
-			}
-		}
-	}
-
-	/////////////////////////////////
-	// Particle Systems
-	{
-		cContainerListIterator<cEnginePS_SaveData> savePSIt = mlstPS.GetIterator();
-		while (savePSIt.HasNext())
-		{
-			cEnginePS_SaveData& savePS = savePSIt.Next();
-
-			cParticleSystem *pPS = pWorld->CreateParticleSystem(savePS.msName, savePS.msType, 1);
-			if(pPS)
-			{
-				savePS.ToPS(pPS);
-			}
-			else
-			{
-				Warning("Could not create particle system '%s'\n", savePS.msType.c_str());
-			}
-		}
-	}
-
-	/////////////////////////////////
-	// Entities
-	tLuxEntityList lstEntities;
-	{
-		gpBase->mpCurrentMapLoading = apMap;	
-
-		/////////////////////
-		//Create entities
-		cContainerListIterator<iLuxEntity_SaveData*> it = mlstEntities.GetIterator();
-		while(it.HasNext())
-		{
-			iLuxEntity_SaveData *pSaveEntity = it.Next();
-			iLuxEntity *pGameEntity = pSaveEntity->CreateEntity(apMap);
-			if (pGameEntity) {
-				pGameEntity->LoadFromSaveData(pSaveEntity);
-				pGameEntity->SetSaveData(pSaveEntity);
-
-				lstEntities.push_back(pGameEntity);
-			}
-		}
-
-		gpBase->mpCurrentMapLoading = NULL;
-	}
-	
-	/////////////////////////////////
-	// Ropes (needs to be after entities)
-	{
-		cContainerListIterator<cEngineRope_SaveData> saveRopeIt = mlstRopes.GetIterator();
-		while (saveRopeIt.HasNext())
-		{
-			cEngineRope_SaveData& saveRope = saveRopeIt.Next();
-
-			cRopeEntity *pRope = saveRope.CreateRope(apMap);
-			saveRope.ToRope(pRope, apMap);
-		}
-	}
-
-	//Setup entities after the load.
-	apMap->AfterWorldLoadEntitySetup();
-
-	/////////////////////
-	//Vars
-	{
-		apMap->m_mapVars.clear();
-		cContainerListIterator<cLuxScriptVar> it = mlstVars.GetIterator();
-		while(it.HasNext())
-		{
-			cLuxScriptVar& scriptVar = it.Next();
-			apMap->m_mapVars.insert(tLuxScriptVarMap::value_type(scriptVar.msName, scriptVar));
-		}
-	}
-
-	/////////////////////
-	//Timers
-	{
-		STLDeleteAll(apMap->mlstTimers);
-		cContainerListIterator<cLuxEventTimer> it = mlstTimers.GetIterator();
-		while(it.HasNext())
-		{
-			cLuxEventTimer& savedTimer = it.Next();
-			
-			cLuxEventTimer *pTimer = hplNew(cLuxEventTimer,());
-			*pTimer = savedTimer;
-
-			apMap->mlstTimers.push_back(pTimer);
-		}
-		
-	}
-
-	/////////////////////
-	//Entities Setup
-	{
-		gpBase->mpCurrentMapLoading = apMap;
-
-		for(tLuxEntityListIt it = lstEntities.begin(); it != lstEntities.end(); ++it)
-		{
-			iLuxEntity *pEntity = *it;
-
-			pEntity->SetupSaveData(pEntity->GetSaveData());
-			if(pEntity->IsActive())
-				pEntity->UpdateLogic(0.001f); 
-		}
-
-		gpBase->mpCurrentMapLoading = NULL;
-	}
-
-	/////////////////////////////////
-	// Use Item callbacks
-	//Log("---Checking callbacks!\n");
-	{
-		STLDeleteAll(apMap->mlstUseItemCallbacks);
-		for(size_t i=0; i<mvUseItemCallbacks.Size(); ++i)
-		{
-			cLuxUseItemCallback *pCallback = hplNew(cLuxUseItemCallback, ());
-			*pCallback = mvUseItemCallbacks[i];
-			
-			//Log("Adding callback: '%s' '%s' '%s' '%s'\n", pCallback->msName.c_str(), pCallback->msEntity.c_str(), pCallback->msItem.c_str(), pCallback->msFunction.c_str());
-
-			apMap->mlstUseItemCallbacks.push_back(pCallback);
-		}
-	}
-
+{
+	MapToEnv env = { this, apMap, apMap->GetWorld() };
+	env.mpLight = NULL; env.mpSound = NULL; env.mpPS = NULL; env.mpEntity = NULL; env.mpRope = NULL;
+	ohpl_ga6_map_to(&env, cLuxSavedMap::Ga6ToCall);
 }
 
 //-----------------------------------------------------------------------

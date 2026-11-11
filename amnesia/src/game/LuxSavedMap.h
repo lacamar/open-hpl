@@ -42,6 +42,9 @@ public:
 	void FromMap(cLuxMap *apMap);
 	void ToMap(cLuxMap *apMap);
 
+	static int Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB);
+	static int Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB);
+
 	tString msFileName;
 
 	tString msDisplayNameEntry;

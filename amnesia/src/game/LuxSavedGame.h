@@ -47,6 +47,9 @@ public:
 	void FromEntity(iLuxEntity *apEntity);
 	void ToEntity(cLuxMap *apMap, iLuxEntity *apEntity);
 
+	static int Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB);
+	static int Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB);
+
 	int mlID;
 
 	//Prop specfics:
@@ -68,6 +71,8 @@ public:
 
 	void FromEnemy(iLuxEnemy *apEnemy);
 	void ToEnemy(cLuxMap *apMap, iLuxEnemy *apEnemy);
+
+	static int Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB);
 
 	int mlID;
 	bool mbActive;
@@ -103,6 +108,9 @@ public:
 
 	void FromMap(cLuxMap *apMap);
 	void ToMap(cLuxMap *apMap);
+
+	static int Ga6FromCall(void *apCtx, unsigned alOp, int alA, int alB);
+	static int Ga6ToCall(void *apCtx, unsigned alOp, int alA, int alB);
 	
 	tString msName;
 	tString msDisplayNameEntry;
@@ -151,8 +159,6 @@ public:
 	cContainerList<int> mlstUnbrokenItemContainers;
 	cContainerList<int> mlstBrokenContainersWithActiveItem;
 	cContainerList<int> mlstUnlitLamps;
-private:
-	bool EntitySaveDataExists(int alID);
 };
 
 //----------------------------------------------

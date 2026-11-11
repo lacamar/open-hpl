@@ -86,6 +86,8 @@ class cLuxInsanityHandler_SaveData : public iSerializable
 public:
 	void FromInsanityHandler(cLuxInsanityHandler *apData);
 	void ToInsanityHandler(cLuxMap *apMap, cLuxInsanityHandler *apData);
+
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
 	
 	float mfNewEventCount;
 	cContainerVec<cLuxInsanityHandler_Event_SaveData> mvEvents;
@@ -150,6 +152,8 @@ class cLuxEffectHandler_SaveData : public iSerializable
 public:
 	void FromEffectHandler(cLuxEffectHandler *apEffects);
 	void ToEffectHandler(cLuxMap *apMap, cLuxEffectHandler *apEffects);
+
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
 	
 	bool mbFade_Active;
 	float mfFade_GoalAlpha;
@@ -201,6 +205,8 @@ class cLuxMusicHandler_SaveData : public iSerializable
 public:
 	void FromMusicHandler(cLuxMusicHandler *apMusic);
 	void ToMusicHandler(cLuxMap *apMap, cLuxMusicHandler *apMusic);
+
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
 
 	tString msCurrentMusic;
 	float mfCurrentMusicVolume;
@@ -285,6 +291,8 @@ public:
 	void FromInventory(cLuxInventory *apInventory);
 	void ToInventory(cLuxMap *apMap, cLuxInventory *apInventory);
 
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
+
 	bool mbDisabled;
 
 	int mlEquippedHandItem;
@@ -301,6 +309,8 @@ class cLuxPlayerHands_SaveData : public iSerializable
 public:
 	void FromPlayerHands(cLuxPlayerHands *apPlayerHands);
 	void ToPlayerHands(cLuxMap *apMap, cLuxPlayerHands *apPlayerHands);
+
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
 	
 	int mlState;
 	tString msCurrentHandObject;
@@ -333,6 +343,8 @@ public:
 
 	void FromPlayer(cLuxPlayer *apPlayer);
 	void ToPlayer(cLuxMap *apMap, cLuxPlayer *apPlayer);
+
+	int Ga6Op(void *apEnv, unsigned alOp, int alA, int alB);
 
 	int mlState;
 	iLuxPlayerState_SaveData *mpStateData;
