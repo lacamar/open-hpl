@@ -5,7 +5,7 @@
 
 use std::slice;
 
-use super::deferred::{self as dr, DlOp, Feed, Geom, Op, Plan, Query, State, Step};
+use super::deferred::{self as dr, DlOp, Feed, Geom, Op, P3Op, Plan, Query, State, Step};
 use super::deferred_post::{CopyIn, plan_copy_accum};
 use crate::types::{Vector2f, Vector2l};
 
@@ -93,6 +93,42 @@ fn dl_op(o: DlOp) -> OpC {
     }
 }
 
+fn p3_op(o: P3Op) -> OpC {
+    let k = 33;
+    match o {
+        P3Op::StencilActive(v) => op(k, 0, i32::from(v), 0, 0, 0, Z4),
+        P3Op::ClearStencil => op(k, 1, 0, 0, 0, 0, Z4),
+        P3Op::ClearColorStencil => op(k, 2, 0, 0, 0, 0, Z4),
+        P3Op::Stencil {
+            func,
+            reference,
+            mask,
+            fail,
+            zfail,
+            zpass,
+        } => op(
+            k,
+            3,
+            func,
+            reference,
+            mask,
+            fail | (zfail << 8) | (zpass << 16),
+            Z4,
+        ),
+        P3Op::StencilWriteMask(m) => op(k, 4, m, 0, 0, 0, Z4),
+        P3Op::Cull(ccw) => op(k, 5, i32::from(ccw), 0, 0, 0, Z4),
+        P3Op::Scissor(i) => op(k, 6, i, 0, 0, 0, Z4),
+        P3Op::ScissorOff => op(k, 7, 0, 0, 0, 0, Z4),
+        P3Op::LightProgram { idx, flags } => op(k, 8, idx, flags as i32, 0, 0, Z4),
+        P3Op::ShadowSetup(i) => op(k, 9, i, 0, 0, 0, Z4),
+        P3Op::ShadowMap(i) => op(k, 10, i, 0, 0, 0, Z4),
+        P3Op::PairBegin(i) => op(k, 11, i, 0, 0, 0, Z4),
+        P3Op::PairEnd => op(k, 12, 0, 0, 0, 0, Z4),
+        P3Op::StencilDirty(v) => op(k, 13, i32::from(v), 0, 0, 0, Z4),
+        P3Op::Log { kind, idx } => op(k, 14, kind, idx, 0, 0, Z4),
+    }
+}
+
 fn state_id(s: State) -> i32 {
     match s {
         State::DepthTest => 0,
@@ -147,6 +183,14 @@ fn step_id(s: Step) -> (i32, i32) {
         CallbackPostTranslucent => (28, 0),
         RetrieveLightOcclusion => (29, 0),
         CopyAccumToPostEffects => (30, 0),
+        InitLightRendering => (31, 0),
+        RenderSsao => (32, 0),
+        RenderHpl3Ssao => (33, 0),
+        RenderBoxWeighted => (34, 0),
+        RenderDirectional => (35, 0),
+        RenderNightVision => (36, 0),
+        ApplyHpl3Ssao => (37, 0),
+        LightPass(n) => (38, n),
     }
 }
 
@@ -210,6 +254,7 @@ impl From<Op> for OpC {
             Op::GenProgram { slot, mode, flags } => op(30, slot, mode, flags as i32, 0, 0, Z4),
             Op::AskGeom { q, idx, f } => op(31, geom_id(q), idx, 0, 0, 0, f),
             Op::Dl(d) => dl_op(d),
+            Op::P3(p) => p3_op(p),
         }
     }
 }

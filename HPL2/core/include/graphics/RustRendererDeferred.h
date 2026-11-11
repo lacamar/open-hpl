@@ -47,6 +47,7 @@ namespace hpl {
 		eOhplDrOp_GenProgram,
 		eOhplDrOp_AskGeom,
 		eOhplDrOp_Dl,
+		eOhplDrOp_P3,
 	};
 
 	enum eOhplDrGeom
@@ -127,6 +128,14 @@ namespace hpl {
 		eOhplDrStep_CallbackPostTranslucent,
 		eOhplDrStep_RetrieveLightOcclusion,
 		eOhplDrStep_CopyAccumToPostEffects,
+		eOhplDrStep_InitLightRendering,
+		eOhplDrStep_RenderSsao,
+		eOhplDrStep_RenderHpl3Ssao,
+		eOhplDrStep_RenderBoxWeighted,
+		eOhplDrStep_RenderDirectional,
+		eOhplDrStep_RenderNightVision,
+		eOhplDrStep_ApplyHpl3Ssao,
+		eOhplDrStep_LightPass,
 	};
 
 	enum eOhplDrPass { eOhplDrPass_ZBegin, eOhplDrPass_GbufferBegin, eOhplDrPass_GbufferEnd };
@@ -341,6 +350,46 @@ namespace hpl {
 	static_assert(sizeof(OhplDrOp) == 72 && sizeof(OhplDlLightIn) == 320 && sizeof(OhplDlLightOut) == 156 && sizeof(OhplDlLightState) == 576 &&
 				  sizeof(OhplDlSsaoIn) == 68 && sizeof(OhplDlEdgeIn) == 40 && sizeof(OhplDlSetupIn) == 196 && sizeof(OhplDlPair) == 16 &&
 				  sizeof(OhplDlInitLight) == 328 && sizeof(OhplDlInitIn) == 104 && sizeof(OhplDlFrustum) == 156, "Rust struct layout");
+
+	// G6c: light passes. Fields mirror rust/src/render/deferred_pass.rs.
+	enum eOhplDr3P3
+	{
+		eOhplDr3P3_StencilActive, eOhplDr3P3_ClearStencil, eOhplDr3P3_ClearColorStencil, eOhplDr3P3_Stencil, eOhplDr3P3_StencilWriteMask,
+		eOhplDr3P3_Cull, eOhplDr3P3_Scissor, eOhplDr3P3_ScissorOff, eOhplDr3P3_LightProgram, eOhplDr3P3_ShadowSetup, eOhplDr3P3_ShadowMap,
+		eOhplDr3P3_PairBegin, eOhplDr3P3_PairEnd, eOhplDr3P3_StencilDirty, eOhplDr3P3_Log,
+	};
+	enum { kOhplDr3StencilFuncEqual = 0, kOhplDr3StencilFuncAlways = 1, kOhplDr3StencilOpKeep = 0, kOhplDr3StencilOpReplace = 1 };
+	enum { kOhplDr3LogBegin = 0, kOhplDr3LogStencil = 1, kOhplDr3LogRender = 2, kOhplDr3LogEnd = 3 };
+	enum { kOhplDr3ProgStencil = 8, kOhplDr3ProgBox0 = 9, kOhplDr3ProgBox1 = 10, kOhplDr3ProgCount = 11, kOhplDr3ShapeBox = 4, kOhplDr3ShapeFullscreenQuad = 5 };
+	enum eOhplDr3Pass
+	{
+		eOhplDr3Pass_StencilBackScreenQuad, eOhplDr3Pass_StencilFrontRenderBack, eOhplDr3Pass_RenderBack, eOhplDr3Pass_BoxStencilFrontRenderBack,
+		eOhplDr3Pass_BoxRenderBack,
+	};
+
+	struct OhplDr3PassLight
+	{
+		int32_t idx, kind;
+		bool castShadows, insideNear;
+		int32_t blendFunc;
+		float diffuse[4];
+		float brightness, distanceFade;
+	};
+
+	struct OhplDr3PassIn
+	{
+		int32_t pass;
+		bool stencilDirty, depthCull, occlusionTest, boxSsao, hdr;
+		float farLeft, farBottom, farRight, farTop, farPlane;
+	};
+
+	static_assert(sizeof(OhplDr3PassLight) == 40 && sizeof(OhplDr3PassIn) == 32, "Rust struct layout");
+
+	extern "C"
+	{
+		OhplDrPlan* ohpl_dr3_plan_light_pass(const OhplDr3PassIn*, const OhplDr3PassLight* lights, size_t n);
+		OhplDrPlan* ohpl_dr3_plan_render_lights(int32_t gbufferTextures);
+	}
 
 	extern "C"
 	{

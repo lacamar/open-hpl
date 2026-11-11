@@ -1541,12 +1541,20 @@ namespace hpl {
 		case eOhplDrStep_RenderMultiIrisAndGlare:	RenderMultiIrisAndGlare(); break;
 		case eOhplDrStep_CallbackPostTranslucent:	RunCallback(eRendererMessage_PostTranslucent); break;
 		case eOhplDrStep_RetrieveLightOcclusion:	RetrieveAllLightOcclusionPair(false); break;
+		case eOhplDrStep_InitLightRendering:		InitLightRendering(); break;
+		case eOhplDrStep_RenderSsao:				RenderSSAO(); break;
+		case eOhplDrStep_RenderHpl3Ssao:			RenderHpl3SSAO(); break;
+		case eOhplDrStep_RenderDirectional:			RenderLights_Directional(); break;
+		case eOhplDrStep_RenderNightVision:			RenderNightVision(); break;
+		case eOhplDrStep_ApplyHpl3Ssao:				ApplyHpl3SSAO(); break;
+		case eOhplDrStep_LightPass:					RenderLightList(alArg); break;
 		case eOhplDrStep_CopyAccumToPostEffects:	CopyAccumTo(mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,6)); break;
 		}
 	}
 
-	void cRendererDeferred::RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree, cDeferredLight *apLight)
+	void cRendererDeferred::RunPlan(OhplDrPlan *apPlan, iFrameBuffer **apFbs, iTexture **apTexs, iGpuProgram **apProgs, bool abFree, cDeferredLight *apLight, const char *apLogName)
 	{
+		cLightOcclusionPair loPair;
 		auto Fb = [&](int i) { return i >= 0 ? apFbs[i] : (iFrameBuffer*)NULL; };
 		auto Tex = [&](int i) { return i >= 0 ? apTexs[i] : (iTexture*)NULL; };
 		auto Prog = [&](int i) { return i >= 0 ? apProgs[i] : (iGpuProgram*)NULL; };
@@ -1618,7 +1626,10 @@ namespace hpl {
 				apProgs[kOhplDrProgTonemap] = GetToneMapProgram(op.a);
 				ohpl_dr_plan_feed_bool(apPlan, apProgs[kOhplDrProgTonemap] != NULL);
 				break;
-			case eOhplDrOp_Step:				RunStep(op.a, op.b); break;
+			case eOhplDrOp_Step:
+				if(op.a == eOhplDrStep_RenderBoxWeighted) ohpl_dr_plan_feed_bool(apPlan, RenderLights_BoxWeighted());
+				else RunStep(op.a, op.b);
+				break;
 			case eOhplDrOp_FlatProjectionMinMax:	SetFlatProjectionMinMax(cVector3f(op.f[0], op.f[1], op.f[2]), cVector3f(op.f[3], op.f[4], op.f[5])); break;
 			case eOhplDrOp_NormalFrustumProjection:	SetNormalFrustumProjection(); break;
 			case eOhplDrOp_QuadAt:
@@ -1667,6 +1678,55 @@ namespace hpl {
 				}
 				break;
 			}
+			case eOhplDrOp_P3:
+				switch(op.a)
+				{
+				case eOhplDr3P3_StencilActive:	SetStencilActive(op.b != 0); break;
+				case eOhplDr3P3_ClearStencil:	ClearFrameBuffer(eClearFrameBufferFlag_Stencil, true); break;
+				case eOhplDr3P3_ClearColorStencil:	ClearFrameBuffer(eClearFrameBufferFlag_Color | eClearFrameBufferFlag_Stencil, true); break;
+				case eOhplDr3P3_Stencil:
+					SetStencil(op.b == kOhplDr3StencilFuncEqual ? eStencilFunc_Equal : eStencilFunc_Always, op.c, op.d,
+							   (op.e & 0xff) == kOhplDr3StencilOpReplace ? eStencilOp_Replace : eStencilOp_Keep,
+							   ((op.e >> 8) & 0xff) == kOhplDr3StencilOpReplace ? eStencilOp_Replace : eStencilOp_Keep,
+							   ((op.e >> 16) & 0xff) == kOhplDr3StencilOpReplace ? eStencilOp_Replace : eStencilOp_Keep);
+					break;
+				case eOhplDr3P3_StencilWriteMask:	SetStencilWriteMask(op.b); break;
+				case eOhplDr3P3_Cull:				SetCullMode(op.b ? eCullMode_CounterClockwise : eCullMode_Clockwise); break;
+				case eOhplDr3P3_Scissor:			SetScissorRect(Light(op.b)->mClipRect, true); break;
+				case eOhplDr3P3_ScissorOff:			SetScissorActive(false); break;
+				case eOhplDr3P3_LightProgram:
+				{
+					iGpuProgram *pProgram = SetupProgramAndTextures(Light(op.b), (tFlag)op.c);
+					SetupLightProgramVariables(pProgram, Light(op.b));
+					break;
+				}
+				case eOhplDr3P3_ShadowSetup:		ohpl_dr_plan_feed_bool(apPlan, SetupShadowMapRendering(Light(op.b)->mpLight)); break;
+				case eOhplDr3P3_ShadowMap:			RenderLightShadowMap(Light(op.b)); break;
+				case eOhplDr3P3_PairBegin:
+					loPair.mpLight = Light(op.b)->mpLight;
+					loPair.mpQuery = GetOcclusionQuery();
+					loPair.mpQuery->Begin();
+					break;
+				case eOhplDr3P3_PairEnd:
+					loPair.mpQuery->End();
+					mpCurrentSettings->mvLightOcclusionPairs.push_back(loPair);
+					break;
+				case eOhplDr3P3_StencilDirty:		mbStencilNeedClearing = op.b != 0; break;
+				case eOhplDr3P3_Log:
+					if(mbLog && apLogName)
+					{
+						iLight *pLight = op.c >= 0 && Light(op.c) ? Light(op.c)->mpLight : NULL;
+						switch(op.b)
+						{
+						case kOhplDr3LogBegin:		Log("---\nRendering Lights %s Begin\n", apLogName); break;
+						case kOhplDr3LogStencil:	Log(" Stencil light: '%s' / %d\n", pLight->GetName().c_str(), (int)(intptr_t)pLight); break;
+						case kOhplDr3LogRender:		Log(" Rendering light: '%s' / %d\n", pLight->GetName().c_str(), (int)(intptr_t)pLight); break;
+						case kOhplDr3LogEnd:		Log("Rendering Lights %s End\n---\n", apLogName); break;
+						}
+					}
+					break;
+				}
+				break;
 			case eOhplDrOp_Dl:
 				switch(op.a)
 				{
@@ -2139,6 +2199,8 @@ namespace hpl {
 	iVertexBuffer* cRendererDeferred::GetLightShapeBuffer(int alShape)
 	{
 		if(alShape == kOhplDlShapePyramid) return mpShapePyramid;
+		if(alShape == kOhplDr3ShapeBox) return mpShapeBox;
+		if(alShape == kOhplDr3ShapeFullscreenQuad) return mpFullscreenLightQuad;
 		if(alShape >= 0 && alShape < eDeferredShapeQuality_LastEnum) return mpShapeSphere[alShape];
 		return NULL;
 	}
@@ -2221,565 +2283,55 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::RenderLights_StencilBack_ScreenQuad()
+	void cRendererDeferred::RenderLightList(int alPass)
 	{
-		if(mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad].empty()) return;
-		if(mbLog) Log("---\nRendering Lights StencilBack_ScreenQuad Begin\n");
-		
-		//Check if stencil is dirty
-		if(mbStencilNeedClearing)
+		static const int vListOfPass[] = {eDeferredLightList_StencilBack_ScreenQuad, eDeferredLightList_StencilFront_RenderBack, eDeferredLightList_RenderBack,
+										  eDeferredLightList_Box_StencilFront_RenderBack, eDeferredLightList_Box_RenderBack};
+		static const char *vNames[] = {"StencilBack_ScreenQuad", "StencilFront_RenderBack", "RenderBack", "Box_StencilFront_RenderBack", "Box_RenderBack"};
+		if(alPass < 0 || alPass >= 5) return;
+		std::vector<cDeferredLight*> &vSorted = mvSortedLights[vListOfPass[alPass]];
+
+		OhplDr3PassIn in = {};
+		in.pass = alPass;
+		in.stencilDirty = mbStencilNeedClearing;
+		in.depthCull = mbDepthCullLights;
+		in.occlusionTest = mbOcclusionTestLargeLights;
+		in.boxSsao = mbSSAOLoaded && mpCurrentSettings->mbSSAOActive && mSSAOType == eDeferredSSAO_InBoxLight;
+		in.hdr = GetHdr();
+		in.farLeft = mfFarLeft; in.farBottom = mfFarBottom; in.farRight = mfFarRight; in.farTop = mfFarTop; in.farPlane = mfFarPlane;
+
+		std::vector<OhplDr3PassLight> vLights(vSorted.size());
+		for(size_t i=0; i<vLights.size(); ++i)
 		{
-			ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
-			mbStencilNeedClearing = false;
-		}
-		
-		if(mbDepthCullLights) SetStencilActive(true);
-		
-		///////////////////////
-		// Render Inside Near Plane Lights
-		int lNumOfNearPlaneLights = (int)mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad].size();
-		int lStartLight = 0;
-		while(lNumOfNearPlaneLights>0)
-		{
-			//cVector2l vMinClip(10000,10000);
-			//cVector2l vMaxClip(-1000,-10000);
-
-			int lIterations;
-			if(lNumOfNearPlaneLights >kMaxStencilBitsUsed)	lIterations = kMaxStencilBitsUsed;
-			else											lIterations = lNumOfNearPlaneLights;
-
-			lNumOfNearPlaneLights -= lIterations;
-
-			/////////////////////////////
-			//Render stencil
-			if(mbDepthCullLights)
-				SetDepthTest(true);
-			else
-				SetDepthTest(false);
-			SetChannelMode(eMaterialChannelMode_None);
-			SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Replace);
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-				if(mbLog)Log(" Stencil light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencilWriteMask(cMath::GetFlagBit(kStartStencilBit + i));
-
-				//Set up textures
-				SetTexture(5,NULL);
-
-				//Set up matrix
-				//SetupLightMatrix(m_mtxTempLight,pLight, mpCurrentFrustum);
-				SetModelViewMatrix(pLightData->m_mtxViewSpaceRender);
-
-				//Set vertex buffer
-				SetVertexBuffer(GetLightShape(pLight, eDeferredShapeQuality_Medium));
-
-				//Set program
-				SetProgram(mpLightStencilProgram);
-
-				DrawCurrent();
-			}
-
-			/////////////////////////////
-			//Render lights as quads
-			SetDepthTest(false);
-			SetChannelMode(eMaterialChannelMode_RGBA);
-			SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
-			SetCullMode(eCullMode_CounterClockwise);
-			
-			SetStencilWriteMask(0xFF);
-			
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-
-				//////////////////
-				// Render shadow (if light is caster)
-				if(pLightData->mbCastShadows && SetupShadowMapRendering(pLight))
-				{
-					if(mbDepthCullLights) 
-					{
-						SetStencilActive(false);
-						SetDepthTest(true);
-					}
-					else
-					{
-						SetDepthTest(false);
-					}
-
-					//Render shadow map
-					RenderLightShadowMap(pLightData);
-					
-					if(mbDepthCullLights) 
-					{
-						SetDepthTest(false);
-						SetStencilActive(true);
-					}
-					else
-					{
-						SetDepthTest(false);
-					}
-
-					SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
-				}
-
-				//////////////////
-				// Render light
-				if(mbLog)Log(" Rendering light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencil(	eStencilFunc_Equal, 0xFF, cMath::GetFlagBit(kStartStencilBit + i),
-												eStencilOp_Keep, eStencilOp_Keep,eStencilOp_Keep);
-
-				//Set vertex buffer
-				SetVertexBuffer(mpFullscreenLightQuad);
-
-				// Set up clip
-				SetScissorRect(pLightData->mClipRect, true);
-								
-				//Debug data
-				RenderSingleLightDebug();
-
-				//Set up program and textures
-				iGpuProgram *pProgram = SetupProgramAndTextures(pLightData,0);
-
-				//Set up Light specific variables
-				SetupLightProgramVariables(pProgram, pLightData);
-
-				//Draw the light
-				DrawCurrent();
-				
-				/////////////////////////////
-				// Update min max clip rect occupied by lights 
-				/*if(vMinClip.x > lightData.mClipRect.x) vMinClip.x = lightData.mClipRect.x;
-				if(vMinClip.y > lightData.mClipRect.y) vMinClip.y = lightData.mClipRect.y;
-				if(vMaxClip.x < lightData.mClipRect.x+lightData.mClipRect.w) vMaxClip.x = lightData.mClipRect.x+lightData.mClipRect.w;
-				if(vMaxClip.y < lightData.mClipRect.y+lightData.mClipRect.h) vMaxClip.y = lightData.mClipRect.y+lightData.mClipRect.h;*/
-			}
-			
-			/////////////////////////////
-			//Go back to normal frustum projection
-			SetNormalFrustumProjection();
-			SetCullMode(eCullMode_Clockwise);
-			SetScissorActive(false);
-
-			/////////////////////////////
-			//Prepare for next iteration (if any)
-			if(lNumOfNearPlaneLights >0)
-			{
-				//According to test there was a slow down using this. Keeping code anyways.
-				//cRect2l dirtyRect(vMinClip, vMaxClip - vMinClip);
-				//SetupScissorRect(dirtyRect);
-				
-				lStartLight += kMaxStencilBitsUsed;
-				ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
-			}
-		}
-		
-		////////////////////////////////////////
-		// Reset things needed
-		mbStencilNeedClearing = true;
-		if(mbLog) Log("Rendering Lights StencilBack_ScreenQuad End\n---\n");
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cRendererDeferred::RenderLights_StencilFront_RenderBack()
-	{
-		if(mvSortedLights[eDeferredLightList_StencilFront_RenderBack].empty()) return;
-		if(mbLog) Log("---\nRendering Lights StencilFront_RenderBack Begin\n");
-
-		//Check if stencil is dirty
-		if(mbStencilNeedClearing)
-		{
-			ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
-			mbStencilNeedClearing = false;
-		}
-
-		if(mbDepthCullLights) 
-		{
-			SetStencilActive(true);
-			SetDepthTest(true);
-		}
-		else
-		{
-			SetDepthTest(false);
-		}
-		
-		///////////////////////
-		// Render Large Lights
-		int lNumOfNearPlaneLights = (int)mvSortedLights[eDeferredLightList_StencilFront_RenderBack].size();
-		int lStartLight = 0;
-		while(lNumOfNearPlaneLights>0)
-		{
-
-			
-			int lIterations;
-			if(lNumOfNearPlaneLights >kMaxStencilBitsUsed)	lIterations = kMaxStencilBitsUsed;
-			else											lIterations = lNumOfNearPlaneLights;
-
-			lNumOfNearPlaneLights -= lIterations;
-
-			/////////////////////////////
-			//Render stencil using the front (back?!), set bit at zfail (since test is inverted)
-			SetChannelMode(eMaterialChannelMode_None);
-			SetCullMode(eCullMode_CounterClockwise);
-			SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Replace,eStencilOp_Keep);
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_StencilFront_RenderBack][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-				if(mbLog)Log(" Stencil light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencilWriteMask(cMath::GetFlagBit(kStartStencilBit + i));
-
-				//Set up textures
-				SetTexture(5,NULL);
-
-				//Set up matrix
-				SetModelViewMatrix(pLightData->m_mtxViewSpaceRender);
-
-				//Set vertex buffer
-				//SetVertexBuffer(mpShapeSphereMedRes);
-				SetVertexBuffer(GetLightShape(pLight, eDeferredShapeQuality_Medium));
-
-				//Set program
-				SetProgram(mpLightStencilProgram);
-
-				//Draw the light
-				DrawCurrent();
-			}
-
-			/////////////////////////////
-			//Render back (front?!) of light geometry, checking depth and stencil
-			SetChannelMode(eMaterialChannelMode_RGBA);
-			SetCullMode(eCullMode_Clockwise);
-			SetStencilWriteMask(0xFF);
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_StencilFront_RenderBack][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-				
-				//////////////////
-				// Render shadow (if light is caster)
-				if(pLightData->mbCastShadows && SetupShadowMapRendering(pLight))
-				{
-					//Setup render modes for shadow map rendering
-					SetCullMode(eCullMode_CounterClockwise);
-					SetStencilActive(false);
-
-					//Render shadow map
-					RenderLightShadowMap(pLightData);
-					
-					//Reset render settings to previous
-					SetStencilActive(true);
-					SetCullMode(eCullMode_Clockwise);
-				}
-				
-				//////////////////
-				// Render light
-				if(mbLog)Log(" Rendering light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencil(	eStencilFunc_Equal, 0xFF, cMath::GetFlagBit(kStartStencilBit + i),
-												eStencilOp_Keep, eStencilOp_Keep,eStencilOp_Keep);
-
-				//Set up matrix
-				SetModelViewMatrix(pLightData->m_mtxViewSpaceRender);
-
-				//Set vertex buffer
-				//SetVertexBuffer(mpShapeSphereHighRes);
-				SetVertexBuffer(GetLightShape(pLight, eDeferredShapeQuality_High));
-				
-				//Set up program and textures
-				iGpuProgram *pProgram = SetupProgramAndTextures(pLightData,eFeature_Light_LightShapes | eFeature_Light_DivideInFrag);
-
-				//Set up Light specific variables
-				SetupLightProgramVariables(pProgram, pLightData);
-
-				//Draw the light
-				////////////////////////
-				// If lights are occlusion tested, render a query with the front and push back into Light-Occlusion pair vector
-				if(mbOcclusionTestLargeLights)
-				{
-					cLightOcclusionPair loPair;
-					loPair.mpLight = pLight;
-					loPair.mpQuery = GetOcclusionQuery();
-
-					loPair.mpQuery->Begin();
-					DrawCurrent();
-					loPair.mpQuery->End();
-
-					mpCurrentSettings->mvLightOcclusionPairs.push_back(loPair);
-				}
-				///////////////////////////////
-				//Normal rendering of front
-				else
-				{
-					DrawCurrent();
-				}
-			}
-			
-			/////////////////////////////
-			//Prepare for next iteration (if any)
-			if(lNumOfNearPlaneLights >0)
-			{
-				lStartLight += kMaxStencilBitsUsed;
-				ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
-			}
-		}
-
-		////////////////////////////////////////
-		// Reset things needed
-		mbStencilNeedClearing = true;
-		if(mbLog) Log("Rendering Lights StencilFront_RenderBack End\n---\n");
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cRendererDeferred::RenderLights_RenderBack()
-	{
-		if(mvSortedLights[eDeferredLightList_RenderBack].empty()) return;
-		if(mbLog) Log("---\nRendering Lights RenderBack Begin\n");
-		
-		if(mbDepthCullLights)
-		{
-			SetStencilActive(false);
-			SetDepthTest(true);
-		}
-		else
-		{
-			SetDepthTest(false);
-		}
-		
-		/////////////////////////////
-		//Render back of light geometry, checking depth
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		for(size_t i=0; i<mvSortedLights[eDeferredLightList_RenderBack].size(); ++i)
-		{
-			cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_RenderBack][i];
+			cDeferredLight *pLightData = vSorted[i];
 			iLight *pLight = pLightData->mpLight;
-
-			//////////////////
-			// Render shadow (if light is caster)
-			if(pLightData->mbCastShadows && SetupShadowMapRendering(pLight))
+			OhplDr3PassLight &l = vLights[i];
+			memset(&l, 0, sizeof(l));
+			l.idx = (int)(std::find(mvTempDeferredLights.begin(), mvTempDeferredLights.end(), pLightData) - mvTempDeferredLights.begin());
+			l.kind = pLight->GetLightType();
+			l.castShadows = pLightData->mbCastShadows;
+			l.insideNear = pLightData->mbInsideNearPlane;
+			if(alPass >= 3)
 			{
-				//Setup render modes for shadow map rendering
-				SetCullMode(eCullMode_CounterClockwise);
-
-				//Render shadow map
-				RenderLightShadowMap(pLightData);
-
-				//Reset render settings to previous
-				SetCullMode(eCullMode_Clockwise);
-			}
-
-			//////////////////
-			// Render light
-			if(mbLog)Log(" Rendering light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-			//Set up matrix
-			SetModelViewMatrix(pLightData->m_mtxViewSpaceRender);
-
-			//Set vertex buffer
-			//SetVertexBuffer(mpShapeSphereMedRes);
-			SetVertexBuffer(GetLightShape(pLight, eDeferredShapeQuality_Medium));
-
-			//Set up program and textures
-			tFlag lExtraFlags = eFeature_Light_LightShapes; 
-			if(pLightData->mbInsideNearPlane) lExtraFlags |= eFeature_Light_DivideInFrag;
-			iGpuProgram *pProgram = SetupProgramAndTextures(pLightData,lExtraFlags);
-
-			//Set up Light specific variables
-			SetupLightProgramVariables(pProgram, pLightData);
-
-			//Draw the light
-			DrawCurrent();
-		}
-		if(mbLog) Log("Rendering Lights RenderBack End\n---\n");
-	}
-
-	//------------------------------------------------------------------------------
-
-	void cRendererDeferred::RenderBoxLight(cDeferredLight* apLightData)
-	{
-		iLight *pLight = apLightData->mpLight;
-		if(mbLog)Log(" Rendering light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-		cLightBox *pLightBox = static_cast<cLightBox*>(pLight);
-
-		//Get correct program, depending if ssao is used or not.
-		int lProgramNum =	(mbSSAOLoaded && mpCurrentSettings->mbSSAOActive && mSSAOType == eDeferredSSAO_InBoxLight) ? 1 :0;
-
-		//Set up texture
-		if(lProgramNum == 1) SetTexture(5, mpSSAOTexture);
-
-		//Set up program
-		SetProgram(mpLightBoxProgram[lProgramNum]);
-
-		//Set up Light specific variables
-		if(mpLightBoxProgram[lProgramNum])
-		{
-			cColor boxColor = LinearLightColor(pLight->GetDiffuseColor());
-			float fBrightness = pLight->GetBrightness() * GetDistanceFadeAmount(pLight);
-			boxColor.r *= fBrightness; boxColor.g *= fBrightness; boxColor.b *= fBrightness;
-			mpLightBoxProgram[lProgramNum]->SetColor4f(kVar_avLightColor,boxColor);
-		}
-
-		//Blend mode
-		switch(pLightBox->GetBlendFunc())
-		{
-		case eLightBoxBlendFunc_Add:
-			SetBlendMode(eMaterialBlendMode_Add); break;
-		case eLightBoxBlendFunc_Replace:
-			SetBlendMode(eMaterialBlendMode_None); break;
-		}
-
-		//Set up matrix
-		SetModelViewMatrix(apLightData->m_mtxViewSpaceRender);
-
-		//Draw the light
-		DrawCurrent();
-	}
-
-	//------------------------------------------------------------------------------
-
-	void cRendererDeferred::RenderLights_Box_StencilFront_RenderBack()
-	{
-		if(mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack].empty()) return;
-		if(mbLog) Log("---\nRendering Lights Box_StencilFront_RenderBack Begin\n");
-
-		//Check if stencil is dirty
-		if(mbStencilNeedClearing)
-		{
-			ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
-			mbStencilNeedClearing = false;
-		}
-
-		if(mbDepthCullLights)
-		{
-			SetStencilActive(true);
-			SetDepthTest(true);
-		}
-		else
-		{
-			SetDepthTest(false);
-		}
-		SetVertexBuffer(mpShapeBox);
-
-		///////////////////////
-		// Render Large Lights
-		int lNumOfNearPlaneLights = (int)mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack].size();
-		int lStartLight = 0;
-		while(lNumOfNearPlaneLights>0)
-		{
-			int lIterations;
-			if(lNumOfNearPlaneLights >kMaxStencilBitsUsed)	lIterations = kMaxStencilBitsUsed;
-			else											lIterations = lNumOfNearPlaneLights;
-
-			lNumOfNearPlaneLights -= lIterations;
-
-			/////////////////////////////
-			//Render stencil using the front, set bit at zfail (since test is inverted)
-			SetChannelMode(eMaterialChannelMode_None);
-			SetCullMode(eCullMode_CounterClockwise);
-			SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Replace,eStencilOp_Keep);
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-				if(mbLog)Log(" Stencil light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencilWriteMask(cMath::GetFlagBit(kStartStencilBit + i));
-
-				//Set up matrix
-				SetModelViewMatrix(pLightData->m_mtxViewSpaceRender);
-
-				//Set program
-				SetProgram(mpLightStencilProgram);
-
-				DrawCurrent();
-			}
-
-			/////////////////////////////
-			//Render back of light geometry, checking depth and stencil
-			SetChannelMode(eMaterialChannelMode_RGBA);
-			SetCullMode(eCullMode_Clockwise);
-			SetStencilWriteMask(0xFF);
-			for(int i=0; i<lIterations; ++i)
-			{
-				cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack][lStartLight + i];
-				iLight *pLight = pLightData->mpLight;
-				if(mbLog)Log(" Rendering light: '%s' / %d\n",pLight->GetName().c_str(), pLight);
-
-				//Stencil
-				SetStencil(	eStencilFunc_Equal, 0xFF, cMath::GetFlagBit(kStartStencilBit + i),
-												eStencilOp_Keep, eStencilOp_Keep,eStencilOp_Keep);
-				//SetStencil(	eStencilFunc_Always, 0xFF, cMath::GetFlagBit(kStartStencilBit + i),
-				//								eStencilOp_Keep, eStencilOp_Keep,eStencilOp_Keep);
-				
-				RenderBoxLight(pLightData);
-			}
-
-			/////////////////////////////
-			//Prepare for next iteration (if any)
-			if(lNumOfNearPlaneLights >0)
-			{
-				lStartLight += kMaxStencilBitsUsed;
-				ClearFrameBuffer(eClearFrameBufferFlag_Stencil,true);
+				cLightBox *pBox = static_cast<cLightBox*>(pLight);
+				l.blendFunc = pBox->GetBlendFunc();
+				cColor diffuse = pLight->GetDiffuseColor();
+				l.diffuse[0] = diffuse.r; l.diffuse[1] = diffuse.g; l.diffuse[2] = diffuse.b; l.diffuse[3] = diffuse.a;
+				l.brightness = pLight->GetBrightness();
+				l.distanceFade = GetDistanceFadeAmount(pLight);
 			}
 		}
 
-		////////////////////////////////////////
-		// Reset things needed
-		mbStencilNeedClearing = true;
-		SetBlendMode(eMaterialBlendMode_Add);
-		
-		if(mbLog) Log("Rendering Lights Box_StencilFront_RenderBack End\n---\n");
+		iTexture *vTexs[kOhplDlTexCount] = {};
+		vTexs[kOhplDlTexSsao] = mpSSAOTexture;
+		iGpuProgram *vProgs[kOhplDr3ProgCount] = {};
+		vProgs[kOhplDr3ProgStencil] = mpLightStencilProgram;
+		vProgs[kOhplDr3ProgBox0] = mpLightBoxProgram[0];
+		vProgs[kOhplDr3ProgBox1] = mpLightBoxProgram[1];
+		RunPlan(ohpl_dr3_plan_light_pass(&in, vLights.empty() ? NULL : &vLights[0], vLights.size()), NULL, vTexs, vProgs, true, NULL, vNames[alPass]);
 	}
 
-	//------------------------------------------------------------------------------
-	
-	void cRendererDeferred::RenderLights_Box_RenderBack()
-	{
-		if(mvSortedLights[eDeferredLightList_Box_RenderBack].empty()) return;
-		if(mbLog) Log("---\nRendering Lights Box_RenderBack Begin\n");
-
-		if(mbDepthCullLights)
-		{
-			SetStencilActive(false);
-			SetDepthTest(true);
-		}
-		else
-		{
-			SetDepthTest(false);
-		}
-
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetVertexBuffer(mpShapeBox);
-		
-		/////////////////////////////
-		//Render back of light geometry, checking depth
-		for(size_t i=0; i<mvSortedLights[eDeferredLightList_Box_RenderBack].size(); ++i)
-		{
-			cDeferredLight* pLightData = mvSortedLights[eDeferredLightList_Box_RenderBack][i];
-
-			RenderBoxLight(pLightData);
-		}
-
-		//Reset what is needed.
-		SetBlendMode(eMaterialBlendMode_Add);
-
-		if(mbLog) Log("Rendering Lights Box_RenderBack End\n---\n");
-	}
-	
-	//------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------
 
 	static bool SortFunc_BoxWeighted(const cDeferredLight* apLightDataA, const cDeferredLight* apLightDataB)
 	{
@@ -3106,74 +2658,10 @@ namespace hpl {
 	{
 		START_RENDER_PASS(Lights);
 
-		/////////////////////////////////////////
-		// Sort the Lights and place them in the lists
-		InitLightRendering();
+		iTexture *vTexs[kOhplDlTexCount] = {};
+		for(int i=0; i<mlNumOfGBufferTextures && i<kOhplDlGbufferMax; ++i) vTexs[kOhplDlTexGbuffer0 + i] = GetBufferTexture(i);
+		RunPlan(ohpl_dr3_plan_render_lights(mlNumOfGBufferTextures), NULL, vTexs, NULL);
 
-
-		/////////////////////////////////////////
-		// Render SSAO (used by box lights)
-		RenderSSAO();
-		RenderHpl3SSAO();
-		
-		/////////////////////////////////////////
-		// Set up general render states.
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_Add);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-		for(int i=0; i<mlNumOfGBufferTextures; ++i) SetTexture(i, GetBufferTexture(i));
-		SetTextureRange(NULL, mlNumOfGBufferTextures);
-
-		////////////////////////////////
-		//Set up frame buffer
-		SetAccumulationBuffer();
-		ClearFrameBuffer(eClearFrameBufferFlag_Color |eClearFrameBufferFlag_Stencil,true); //Perhaps there is some ambient light that can be added instead?
-
-		///////////////////////
-		// Set up culling and depth mode
-		SetCullMode(eCullMode_Clockwise);
-		SetDepthTestFunc(eDepthTestFunc_GreaterOrEqual);
-
-		///////////////////////
-		// Render box lights
-		if(!RenderLights_BoxWeighted())
-		{
-			RenderLights_Box_StencilFront_RenderBack();
-			RenderLights_Box_RenderBack();
-		}
-		RenderLights_Directional();
-		
-		///////////////////////
-		// Render lights that are inside near plane
-		RenderLights_StencilBack_ScreenQuad();
-
-		///////////////////////
-		// Render lights with large screen size or with shadows.
-		RenderLights_StencilFront_RenderBack();
-
-		///////////////////////
-		// Simple rendering with no stencil
-		RenderLights_RenderBack();
-		
-		///////////////////////
-		// Batch lights and renderer several at a time.
-		// Skip for now...
-		//RenderLights_Batches();
-				
-		////////////////////////////
-		//Reset settings
-		SetStencilActive(false);
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetCullMode(eCullMode_CounterClockwise);
-
-		RenderNightVision();
-		ApplyHpl3SSAO();
-
-		////////////////////////////
-		//Debug: Draw wire frame for all lights!
 		#ifdef kDebug_RenderLightData
 		{
 			SetDepthTest(true);
