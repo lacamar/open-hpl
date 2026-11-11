@@ -66,6 +66,22 @@
 #include "LuxInteractConnections.h"
 
 #include "LuxAchievementHandler.h"
+#include "RustLuxScript.h"
+
+static_assert(eLuxEntityType_Area == 1 && eLuxEntityType_LastEnum == 5, "ga1 entity type ids");
+static_assert(eLuxProgressLogLevel_Medium == 1 && eLuxProgressLogLevel_High == 2, "ga1 progress levels");
+static_assert(eLuxDamageType_Claws == 1 && eLuxDamageType_Slash == 2, "ga1 damage types");
+static_assert(eLuxFocusCrosshair_Default == 0 && eLuxFocusCrosshair_Grab == 1 && eLuxFocusCrosshair_Push == 2 &&
+			  eLuxFocusCrosshair_Ignite == 3 && eLuxFocusCrosshair_Pick == 4 && eLuxFocusCrosshair_LevelDoor == 5 &&
+			  eLuxFocusCrosshair_Ladder == 6, "ga1 crosshairs");
+static_assert(eLuxEnemyPoseType_Biped == 0 && eLuxEnemyPoseType_Quadruped == 1, "ga1 poses");
+
+static const eLuxAchievement gvGa1Achievements[] =
+{
+	eLuxAchievement_Insanity, eLuxAchievement_Benefactor, eLuxAchievement_Survivor, eLuxAchievement_Sacrifice,
+	eLuxAchievement_Quitter, eLuxAchievement_Egotist, eLuxAchievement_Altruist, eLuxAchievement_Vacillator,
+	eLuxAchievement_Alchemist, eLuxAchievement_Pipeworker, eLuxAchievement_Restorer,
+};
 
 
 
@@ -238,7 +254,7 @@ bool cLuxScriptHandler::GetEntities(const tString& asName,tLuxEntityList &alstEn
 
 	///////////////////
 	// Exact match
-	if(cString::CountCharsInString(asName,"*")==0)
+	if(!ohpl_ga1_has_wildcard(OHPL_GA1_S(asName)))
 	{
 		iLuxEntity *pEntity = pMap->GetEntityByName(asName,aType, alSubType);
 		if(pEntity==NULL)
@@ -253,31 +269,15 @@ bool cLuxScriptHandler::GetEntities(const tString& asName,tLuxEntityList &alstEn
 	// Wild card
 	else
 	{
-		tStringVec vWantedStrings;
-		tString sSepp = "*";
-		cString::GetStringVec(asName,vWantedStrings,&sSepp);
+		OhplGa1WildPtr wild(asName);
 
-        cLuxEntityIterator it = pMap->GetEntityIterator();
+		cLuxEntityIterator it = pMap->GetEntityIterator();
 		while(it.HasNext())
 		{
 			iLuxEntity *pEntity = it.Next();
-			if(LuxIsCorrectType(pEntity,aType, alSubType))
+			if(LuxIsCorrectType(pEntity,aType, alSubType) && wild.Matches(pEntity->GetName()))
 			{
-				bool bContainsStrings = true;
-				int lLastPos = -1;
-				
-				//Iterate wanted strings and name make sure they exist and show up in correct order.
-				for(size_t i=0; i<vWantedStrings.size(); ++i)
-				{
-					int lPos = cString::GetFirstStringPos(pEntity->GetName(), vWantedStrings[i]);
-                    if(lPos <= lLastPos) 
-					{
-						bContainsStrings = false;
-						break;
-					}
-				}
-
-				if(bContainsStrings) alstEntities.push_back(pEntity);	
+				alstEntities.push_back(pEntity);
 			}
 		}
 
@@ -333,12 +333,12 @@ iPhysicsBody* cLuxScriptHandler::GetBodyInEntity(iLuxEntity* apEntity, const tSt
 
 	iPhysicsBody *pBody = NULL;
 	
-	if(asName != "" && apEntity->GetBodyNum()>1)
+	if(ohpl_ga1_searches_bodies(OHPL_GA1_S(asName), apEntity->GetBodyNum()))
 	{
 		for(int i= 0; i < apEntity->GetBodyNum(); ++i)
 		{
-			tString sBodyName = cString::Sub(apEntity->GetBody(i)->GetName(), (int)apEntity->GetName().size() +1);
-			if(sBodyName == asName){
+			const tString &sBodyName = apEntity->GetBody(i)->GetName();
+			if(ohpl_ga1_body_matches(OHPL_GA1_S(sBodyName), (int)apEntity->GetName().size(), OHPL_GA1_S(asName))){
 				pBody = apEntity->GetBody(i);
 				break;
 			}
@@ -779,10 +779,7 @@ void __stdcall cLuxScriptHandler::AddDebugMessage(string& asString, bool abCheck
 
 void __stdcall cLuxScriptHandler::ProgLog(string& asLevel, string& asMessage)
 {
-	tString sLowType = cString::ToLowerCase(asLevel);
-	eLuxProgressLogLevel level = eLuxProgressLogLevel_Low;
-	if(sLowType == "medium") level = eLuxProgressLogLevel_Medium;
-	if(sLowType == "high") level = eLuxProgressLogLevel_High;
+	eLuxProgressLogLevel level = (eLuxProgressLogLevel)ohpl_ga1_progress_level(OHPL_GA1_S(asLevel));
 
     gpBase->mpProgressLogHandler->AddLog(level, asMessage);	
 }
@@ -810,7 +807,7 @@ int __stdcall cLuxScriptHandler::RandInt(int alMin, int alMax)
 
 bool __stdcall cLuxScriptHandler::StringContains(string& asString, string& asSubString)
 {
-	return cString::GetFirstStringPos(asString, asSubString)>=0;
+	return ohpl_ga1_string_contains(OHPL_GA1_S(asString), OHPL_GA1_S(asSubString));
 }
 
 //-----------------------------------------------------------------------
@@ -860,12 +857,16 @@ float __stdcall cLuxScriptHandler::GetTimerTimeLeft(string& asName)
 
 void __stdcall cLuxScriptHandler::SetLocalVarInt(string& asName, int alVal)
 {
-	SetLocalVarString(asName, cString::ToString(alVal));
+	tString sVal;
+	ohpl_ga1_var_from_int(alVal, OhplGa1SinkStr, &sVal);
+	SetLocalVarString(asName, sVal);
 }
 
 void __stdcall cLuxScriptHandler::SetLocalVarFloat(string& asName, float afVal)
 {
-	SetLocalVarString(asName, cString::ToString(afVal));
+	tString sVal;
+	ohpl_ga1_var_from_float(afVal, OhplGa1SinkStr, &sVal);
+	SetLocalVarString(asName, sVal);
 }
 
 void __stdcall cLuxScriptHandler::SetLocalVarString(string& asName, const string& asVal)
@@ -895,7 +896,7 @@ void __stdcall cLuxScriptHandler::AddLocalVarInt(string& asName, int alVal)
 		return;
 	}
 
-	pVar->msVal = cString::ToString(cString::ToInt(pVar->msVal.c_str(),0)+alVal);
+	ohpl_ga1_var_add_int(OHPL_GA1_S(pVar->msVal), alVal, OhplGa1SinkStr, &pVar->msVal);
 }
 
 void __stdcall cLuxScriptHandler::AddLocalVarFloat(string& asName, float afVal)
@@ -909,7 +910,7 @@ void __stdcall cLuxScriptHandler::AddLocalVarFloat(string& asName, float afVal)
 		return;
 	}
 
-	pVar->msVal = cString::ToString(cString::ToFloat(pVar->msVal.c_str(),0)+afVal);
+	ohpl_ga1_var_add_float(OHPL_GA1_S(pVar->msVal), afVal, OhplGa1SinkStr, &pVar->msVal);
 }
 
 void __stdcall cLuxScriptHandler::AddLocalVarString(string& asName, string& asVal)
@@ -931,17 +932,13 @@ void __stdcall cLuxScriptHandler::AddLocalVarString(string& asName, string& asVa
 int __stdcall cLuxScriptHandler::GetLocalVarInt(string& asName)
 {
 	string sVal = GetLocalVarString(asName);
-	if(sVal=="") return 0;
-
-	return cString::ToInt(sVal.c_str(),0);
+	return ohpl_ga1_var_get_int(OHPL_GA1_S(sVal));
 }
 
 float __stdcall cLuxScriptHandler::GetLocalVarFloat(string& asName)
 {
 	string sVal = GetLocalVarString(asName);
-	if(sVal=="") return 0;
-
-	return cString::ToFloat(sVal.c_str(),0);
+	return ohpl_ga1_var_get_float(OHPL_GA1_S(sVal));
 }
 
 string gsGetLocalVarNullString = "";
@@ -963,12 +960,15 @@ string& __stdcall cLuxScriptHandler::GetLocalVarString(string& asName)
 
 void __stdcall cLuxScriptHandler::SetGlobalVarInt(string& asName, int alVal)
 {
-	SetGlobalVarString(asName, cString::ToString(alVal));
+	tString sVal;
+	ohpl_ga1_var_from_int(alVal, OhplGa1SinkStr, &sVal);
+	SetGlobalVarString(asName, sVal);
 }
 
 void __stdcall cLuxScriptHandler::SetGlobalVarFloat(string& asName, float afVal)
 {
-	string t =  cString::ToString(afVal);
+	string t;
+	ohpl_ga1_var_from_float(afVal, OhplGa1SinkStr, &t);
 	SetGlobalVarString(asName, t);
 }
 
@@ -993,7 +993,7 @@ void __stdcall cLuxScriptHandler::AddGlobalVarInt(string& asName, int alVal)
 		return;
 	}
 
-	pVar->msVal = cString::ToString(cString::ToInt(pVar->msVal.c_str(),0)+alVal);
+	ohpl_ga1_var_add_int(OHPL_GA1_S(pVar->msVal), alVal, OhplGa1SinkStr, &pVar->msVal);
 }
 
 void __stdcall cLuxScriptHandler::AddGlobalVarFloat(string& asName, float afVal)
@@ -1004,7 +1004,7 @@ void __stdcall cLuxScriptHandler::AddGlobalVarFloat(string& asName, float afVal)
 		return;
 	}
 
-	pVar->msVal = cString::ToString(cString::ToFloat(pVar->msVal.c_str(),0)+afVal);
+	ohpl_ga1_var_add_float(OHPL_GA1_S(pVar->msVal), afVal, OhplGa1SinkStr, &pVar->msVal);
 }
 
 void __stdcall cLuxScriptHandler::AddGlobalVarString(string& asName, string& asVal)
@@ -1023,17 +1023,13 @@ void __stdcall cLuxScriptHandler::AddGlobalVarString(string& asName, string& asV
 int __stdcall cLuxScriptHandler::GetGlobalVarInt(string& asName)
 {
 	string sVal = GetGlobalVarString(asName);
-	if(sVal=="") return 0;
-
-	return cString::ToInt(sVal.c_str(),0);
+	return ohpl_ga1_var_get_int(OHPL_GA1_S(sVal));
 }
 
 float __stdcall cLuxScriptHandler::GetGlobalVarFloat(string& asName)
 {
 	string sVal = GetGlobalVarString(asName);
-	if(sVal=="") return 0;
-
-	return cString::ToFloat(sVal.c_str(),0);
+	return ohpl_ga1_var_get_float(OHPL_GA1_S(sVal));
 }
 
 string& __stdcall cLuxScriptHandler::GetGlobalVarString(string& asName)
@@ -1636,7 +1632,7 @@ void __stdcall cLuxScriptHandler::PlayScriptedAnimation(string& asName, string& 
 
 void __stdcall cLuxScriptHandler::PlaySoundAtPosition(string& asSoundName, string& asSoundFile, float afX, float afY, float afZ, float afFadeTime, bool abSaveSound)
 {
-	float fFadeSpeed = afFadeTime ==0 ? 0 : 1.0f/afFadeTime;
+	float fFadeSpeed = ohpl_ga1_fade_speed(afFadeTime);
 	bool bRemoveWhenOver = true;
 
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
@@ -2086,7 +2082,7 @@ void __stdcall cLuxScriptHandler::AddEffectVoice(string& asVoiceFile, string& as
 
 void __stdcall cLuxScriptHandler::StopAllEffectVoices(float afFadeOutTime)
 {
-	gpBase->mpEffectHandler->GetPlayVoice()->StopVoices(1.0f/afFadeOutTime);
+	gpBase->mpEffectHandler->GetPlayVoice()->StopVoices(ohpl_ga1_inverse(afFadeOutTime));
 }
 
 //-----------------------------------------------------------------------
@@ -2161,58 +2157,28 @@ bool __stdcall cLuxScriptHandler::InsanityEventIsActive()
 #pragma optimize("", off)
 void __stdcall cLuxScriptHandler::UnlockAchievement(string& asName)
 {
-	bool bUnlockHardmode = false;
-
-	if (asName == "Benefactor")
+	int lAch = ohpl_ga1_achievement(OHPL_GA1_S(asName));
+	if (lAch != kOhplGa1AchNone)
 	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Benefactor);
-		bUnlockHardmode = true;
-	}
-	else if (asName == "Survivor")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Survivor);
-		bUnlockHardmode = true;
-	}
-	else if (asName == "Sacrifice")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Sacrifice);
-		bUnlockHardmode = true;
-	}
-	else if (asName == "Quitter")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Quitter);
-	}
-	else if (asName == "Egotist")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Egotist);
-	}
-	else if (asName == "Altruist")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Altruist);
-	}
-	else if (asName == "Vacillator")
-	{
-		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Vacillator);
+		gpBase->mpAchievementHandler->UnlockAchievement(gvGa1Achievements[lAch]);
 	}
 
-	if (gpBase->mbHardMode)
+	if (gpBase->mbHardMode && ohpl_ga1_achievement_hardmode(lAch))
 	{
-		if (bUnlockHardmode)
-		{
-			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Masochist);
-		}
+		gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Masochist);
 	}
 }
+
 #pragma optimize("",on)
 
 //-----------------------------------------------------------------------
 
 void __stdcall cLuxScriptHandler::PlayGuiSound(string& asSoundEntFile, float afVolume)
 {
-	tString sExt = cString::GetFileExt(asSoundEntFile);
+
 
 	//Sound entity!
-	if(sExt == "" || sExt == "snt")
+	if(ohpl_ga1_sound_is_entity(OHPL_GA1_S(asSoundEntFile)))
 	{
 		gpBase->mpHelpFuncs->PlayGuiSoundData(asSoundEntFile, eSoundEntryType_Gui, afVolume);
 	}
@@ -2259,7 +2225,10 @@ void __stdcall cLuxScriptHandler::AddPlayerBodyForce(float afX, float afY, float
 	cVector3f vForce;
 	if(abUseLocalCoords)
 	{
-		vForce = pBody->GetForward()*afZ + pBody->GetRight()*afY + pBody->GetUp()*afY;
+		cVector3f vForward = pBody->GetForward(), vRight = pBody->GetRight(), vUp = pBody->GetUp();
+		float vOut[3];
+		ohpl_ga1_local_force(&vForward.x, &vRight.x, &vUp.x, afY, afZ, vOut);
+		vForce = cVector3f(vOut[0], vOut[1], vOut[2]);
 	}
 	else
 	{
@@ -2388,33 +2357,15 @@ void __stdcall cLuxScriptHandler::SetSanityDrainDisabled(bool abX)
 
 void __stdcall cLuxScriptHandler::GiveSanityBoost()
 {
-	if(gpBase->mpPlayer->GetSanity() < 25.0f)
-		gpBase->mpPlayer->AddSanity(100.0f - gpBase->mpPlayer->GetSanity());
-	else if(gpBase->mpPlayer->GetSanity() < 50.0f)
-		gpBase->mpPlayer->AddSanity(90.0f - gpBase->mpPlayer->GetSanity());
-	else if(gpBase->mpPlayer->GetSanity() < 75.0f)
-		gpBase->mpPlayer->AddSanity(80.0f - gpBase->mpPlayer->GetSanity());
-	else
-		gpBase->mpPlayer->AddSanity(5.0f);
-
+	gpBase->mpPlayer->AddSanity(ohpl_ga1_sanity_boost(gpBase->mpPlayer->GetSanity()));
 }
 
 //-----------------------------------------------------------------------
 
 void __stdcall cLuxScriptHandler::GiveSanityBoostSmall()
 {
-	cLuxPlayer* pPlayer = gpBase->mpPlayer;
-
-	if(pPlayer->GetSanity() < 25.0f)
-		pPlayer->AddSanity(20.0f);
-	else if(pPlayer->GetSanity() < 50.0f)
-		pPlayer->AddSanity(15.0f);
-	else if(pPlayer->GetSanity() < 75.0f)
-		pPlayer->AddSanity(10.0f);
-	else
-		pPlayer->AddSanity(5.0f);
+	gpBase->mpPlayer->AddSanity(ohpl_ga1_sanity_boost_small(gpBase->mpPlayer->GetSanity()));
 }
-
 
 //-----------------------------------------------------------------------
 
@@ -2430,10 +2381,7 @@ void __stdcall cLuxScriptHandler::GiveSanityBoostSmall()
 
 void __stdcall cLuxScriptHandler::GivePlayerDamage(float afAmount, string& asType, bool abSpinHead, bool abLethal)
 {
-	tString sLowType = cString::ToLowerCase(asType);
-	eLuxDamageType type = eLuxDamageType_BloodSplat;
-	if(sLowType == "claws") type = eLuxDamageType_Claws;
-	if(sLowType == "slash") type = eLuxDamageType_Slash;
+	eLuxDamageType type = (eLuxDamageType)ohpl_ga1_damage_type(OHPL_GA1_S(asType));
 	
 	gpBase->mpPlayer->GiveDamage(afAmount, 1, type, abSpinHead,abLethal);
 }
@@ -2652,17 +2600,10 @@ void __stdcall cLuxScriptHandler::CompleteQuest(string& asName, string& asNameAn
 		cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 		if(pMap) pMap->AddCompletionAmount(gpBase->mpCompletionCountHandler->mlQuestCompletionValue, 6.0f);
 
-		if (asName == "02Web")
+		int lAch = ohpl_ga1_quest_achievement(OHPL_GA1_S(asName));
+		if (lAch != kOhplGa1AchNone)
 		{
-			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Alchemist);
-		}
-		else if (asName == "SewerFlooded")
-		{
-			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Pipeworker);
-		}
-		else if (asName == "21FindOrb")
-		{
-			gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Restorer);
+			gpBase->mpAchievementHandler->UnlockAchievement(gvGa1Achievements[lAch]);
 		}
 	}
 }
@@ -2910,7 +2851,7 @@ void __stdcall cLuxScriptHandler::DestroyParticleSystem(string& asName)
 
 void __stdcall cLuxScriptHandler::PlaySoundAtEntity(string& asSoundName, string& asSoundFile, string& asEntity, float afFadeTime, bool abSaveSound)
 {
-	float fFadeSpeed = afFadeTime ==0 ? 0 : 1.0f/afFadeTime;
+	float fFadeSpeed = ohpl_ga1_fade_speed(afFadeTime);
 
 	bool bRemoveWhenOver = true;//abSaveSound ? false : true;
 
@@ -2965,7 +2906,7 @@ void __stdcall cLuxScriptHandler::FadeInSound(string& asSoundName, float afFadeT
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	if(pMap==NULL) return;
 
-	float fFadeSpeed = afFadeTime ==0 ? 0 : 1.0f/afFadeTime;
+	float fFadeSpeed = ohpl_ga1_fade_speed(afFadeTime);
 	
 	cSoundEntity *pSound = pMap->GetWorld()->GetSoundEntity(asSoundName);
 	if(pSound)
@@ -2987,7 +2928,7 @@ void __stdcall cLuxScriptHandler::StopSound(string& asSoundName, float afFadeTim
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	if(pMap==NULL) return;
 
-	float fFadeSpeed = afFadeTime ==0 ? 0 : 1.0f/afFadeTime;
+	float fFadeSpeed = ohpl_ga1_fade_speed(afFadeTime);
 	bool bFound = false;
 
 	cSoundEntityIterator it = pMap->GetWorld()->GetSoundEntityIterator();
@@ -3234,15 +3175,8 @@ float __stdcall cLuxScriptHandler::GetEntityPosZ(string& asName)
 
 static eLuxFocusCrosshair StringToCrossHair(const tString &asCrossHair)
 {
-	tString sLowCross = cString::ToLowerCase(asCrossHair);
-	
-	if(sLowCross=="default")	return eLuxFocusCrosshair_Default;
-	if(sLowCross=="grab")		return eLuxFocusCrosshair_Grab;
-	if(sLowCross=="push")		return eLuxFocusCrosshair_Push;
-	if(sLowCross=="ignite")		return eLuxFocusCrosshair_Ignite;
-	if(sLowCross=="pick")		return eLuxFocusCrosshair_Pick;
-	if(sLowCross=="leveldoor")	return eLuxFocusCrosshair_LevelDoor;
-	if(sLowCross=="ladder")		return eLuxFocusCrosshair_Ladder;
+	int lCross = ohpl_ga1_crosshair(OHPL_GA1_S(asCrossHair));
+	if(lCross >= 0) return (eLuxFocusCrosshair)lCross;
 
     Error("CrossHair type '%s' does not exist!\n", asCrossHair.c_str());
 	return eLuxFocusCrosshair_Default;
@@ -4035,8 +3969,8 @@ void __stdcall cLuxScriptHandler::TeleportEnemyToEntity(string & asName, string 
 void __stdcall cLuxScriptHandler::ChangeManPigPose(string& asName, string& asPoseType)
 {
 	eLuxEnemyPoseType pose = eLuxEnemyPoseType_LastEnum;
-	if(asPoseType == "Biped")			pose =eLuxEnemyPoseType_Biped;
-	else if(asPoseType == "Quadruped")	pose =eLuxEnemyPoseType_Quadruped;
+	int lPose = ohpl_ga1_pose(OHPL_GA1_S(asPoseType));
+	if(lPose >= 0) pose = (eLuxEnemyPoseType)lPose;
 
 	if(pose == eLuxEnemyPoseType_LastEnum)
 	{
@@ -4239,7 +4173,7 @@ void __stdcall cLuxScriptHandler::RemoveEntityCollideCallback(string& asName, st
 
 cVector3f VecToCoordSystem(iPhysicsBody *apBody, const cVector3f& avVec, const tString& asCoordSystem)
 {
-	if(cString::ToLowerCase(asCoordSystem)=="local")
+	if(ohpl_ga1_coord_is_local(OHPL_GA1_S(asCoordSystem)))
 	{
 		return cMath::MatrixMul(apBody->GetLocalMatrix().GetRotation(),avVec);
 	}
@@ -4446,7 +4380,7 @@ void __stdcall cLuxScriptHandler::ConnectEntities(string& asName, string& asMain
 	//////////////////////////
 	//Create graphical entity
 
-	int lMaxSegments = (int)(afMaxTotalLength / afSegmentLength)+4;
+	int lMaxSegments = ohpl_ga1_rope_segments(afMaxTotalLength, afSegmentLength);
 	cRopeEntity *pRopeGfx = pMap->GetWorld()->CreateRopeEntity(asName, pRope, lMaxSegments);
 
 	pRopeGfx->SetMaterial(pResources->GetMaterialManager()->CreateMaterial(asMaterial));
@@ -4494,62 +4428,62 @@ void __stdcall cLuxScriptHandler::ConnectEntities(string& asName, string& asMain
 
 float __stdcall cLuxScriptHandler::ScriptSin(float afX)
 {
-	return sinf(afX);
+	return ohpl_ga1_sin(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptCos(float afX)
 {
-	return cosf(afX);
+	return ohpl_ga1_cos(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptTan(float afX)
 {
-	return tanf(afX);
+	return ohpl_ga1_tan(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptAsin(float afX)
 {
-	return asinf(afX);
+	return ohpl_ga1_asin(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptAcos(float afX)
 {
-	return acosf(afX);
+	return ohpl_ga1_acos(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptAtan(float afX)
 {
-	return atanf(afX);
+	return ohpl_ga1_atan(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptAtan2(float afX, float afY)
 {
-	return atan2f(afX, afY);
+	return ohpl_ga1_atan2(afX, afY);
 }
 
 float __stdcall cLuxScriptHandler::ScriptSqrt(float afX)
 {
-	return sqrtf(afX);
+	return ohpl_ga1_sqrt(afX);
 }
 
 float __stdcall cLuxScriptHandler::ScriptPow(float afBase, float afExp)
 {
-	return powf(afBase, afExp);
+	return ohpl_ga1_pow(afBase, afExp);
 }
 
 float __stdcall cLuxScriptHandler::ScriptMin(float afA, float afB)
 {
-	return cMath::Min(afA, afB);
+	return ohpl_ga1_min(afA, afB);
 }
 
 float __stdcall cLuxScriptHandler::ScriptMax(float afA, float afB)
 {
-	return cMath::Max(afA, afB);
+	return ohpl_ga1_max(afA, afB);
 }
 
 float __stdcall cLuxScriptHandler::ScriptClamp(float afX, float afMin, float afMax)
 {
-	return cMath::Clamp(afX, afMin, afMax);
+	return ohpl_ga1_clamp(afX, afMin, afMax);
 }
 
 float __stdcall cLuxScriptHandler::ScriptAbs(float afX)
@@ -4561,17 +4495,17 @@ float __stdcall cLuxScriptHandler::ScriptAbs(float afX)
 
 int __stdcall cLuxScriptHandler::ScriptStringToInt(string& asString)
 {
-	return cString::ToInt(asString.c_str(), 0);
+	return ohpl_ga1_string_to_int(OHPL_GA1_S(asString));
 }
 
 float __stdcall cLuxScriptHandler::ScriptStringToFloat(string& asString)
 {
-	return cString::ToFloat(asString.c_str(), 0);
+	return ohpl_ga1_string_to_float(OHPL_GA1_S(asString));
 }
 
 bool __stdcall cLuxScriptHandler::ScriptStringToBool(string& asString)
 {
-	return cString::ToBool(asString.c_str(), false);
+	return ohpl_ga1_string_to_bool(OHPL_GA1_S(asString));
 }
 
 
