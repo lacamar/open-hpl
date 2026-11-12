@@ -1,3 +1,3 @@
-H15 body/joint bookkeeping (OHPL_IMPL=rust) is checked against the L4 vectors: ../L4/newton_scenes.txt.
-scripts/l4-diff.sh: cpp vs rust dumps identical, 11 scenes x 600 steps, equal to the L4 golden.
-Unit replay of book vs host slots: rust/src/physics/tests.rs (body_book_replaces_host_slots, joint_book_keeps_step_counters).
+H15 body/joint bookkeeping (OHPL_IMPL=rust) is checked against the L4 vectors: ../L4/newton_scenes.txt (scripts/l4-diff.sh).
+surface_parse.txt: "<game>/<file> <materials> <fnv64>" of the legacy TinyXML loader on every real materials.cfg; replayed by rust/src/physics/tests_h15.rs (skips without Steam data, STEAM_COMMON overrides).
+h15_scenes.txt: surface_drop / surface_mover, 600 steps: body state hashes, surface calls at the ohpl_phys_surface_* boundary, update-list flags; scripts/h15-diff.sh cpp vs rust identical.

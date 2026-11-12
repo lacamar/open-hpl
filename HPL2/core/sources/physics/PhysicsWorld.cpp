@@ -35,8 +35,31 @@
 #include "system/Platform.h"
 #include "scene/SoundEntity.h"
 #include "physics/RustPhysics.h"
+#include "physics/RustPhysBook.h"
 
 namespace hpl {
+
+	namespace {
+		struct cUpdateWalk { iPhysicsWorld *mpWorld; float mfTimeStep; };
+
+		bool UpdateBodyBefore(void *apCtx, size_t alBody)
+		{
+			cUpdateWalk *pWalk = static_cast<cUpdateWalk*>(apCtx);
+			return reinterpret_cast<iPhysicsBody*>(alBody)->UpdateBeforeSimulate(pWalk->mfTimeStep);
+		}
+
+		void UpdateBodyAfter(void *apCtx, size_t alBody)
+		{
+			cUpdateWalk *pWalk = static_cast<cUpdateWalk*>(apCtx);
+			reinterpret_cast<iPhysicsBody*>(alBody)->UpdateAfterSimulate(pWalk->mfTimeStep);
+		}
+
+		void UpdateBodyRemove(void *apCtx, size_t alBody)
+		{
+			cUpdateWalk *pWalk = static_cast<cUpdateWalk*>(apCtx);
+			pWalk->mpWorld->RemoveBodyFromUpdateList(reinterpret_cast<iPhysicsBody*>(alBody), false);
+		}
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
@@ -47,13 +70,15 @@ namespace hpl {
 	iPhysicsWorld::iPhysicsWorld()
 	{
 		mbLogDebug = false;
+		mpWorld = NULL;
+		mRsBook = OhplBackendRustRequested() ? ohpl_h15_world_new() : 0;
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPhysicsWorld::~iPhysicsWorld()
 	{
-		
+		if(mRsBook) ohpl_h15_world_free(mRsBook);
 	}
 
 	//-----------------------------------------------------------------------
@@ -101,6 +126,13 @@ namespace hpl {
 		////////////////////////////////////
 		//Update the rigid bodies before simulation.
 		START_TIMING(BodyBeforeSimulate)
+		cUpdateWalk walk = { this, afTimeStep };
+		if(mRsBook)
+		{
+			ohpl_h15_world_update_before(mRsBook, &walk, UpdateBodyBefore, UpdateBodyRemove);
+		}
+		else
+		{
 		tPhysicsBodyList lstRemoveUpdateBodies;
 		for(tPhysicsBodySetIt BodyIt = m_setUpdateBodies.begin(); BodyIt != m_setUpdateBodies.end(); ++BodyIt)
 		{
@@ -122,6 +154,7 @@ namespace hpl {
 
 				RemoveBodyFromUpdateList(pBody, false);
 			}
+		}
 		}
 		STOP_TIMING(BodyBeforeSimulate)
 		
@@ -157,6 +190,11 @@ namespace hpl {
 		////////////////////////////////////
 		//Update the rigid bodies after simulation.
 		START_TIMING(BodyAfterSimulate)	
+		if(mRsBook)
+		{
+			ohpl_h15_world_update_after(mRsBook, &walk, UpdateBodyAfter);
+		}
+		else
 		for(tPhysicsBodySetIt BodyIt = m_setUpdateBodies.begin(); BodyIt != m_setUpdateBodies.end(); ++BodyIt)
 		{
 			iPhysicsBody *pBody = *BodyIt;
@@ -240,7 +278,8 @@ namespace hpl {
 	{
 		if(apBody->IsInUpdateList()) return;
 
-		m_setUpdateBodies.insert(apBody);
+		if(mRsBook) ohpl_h15_world_update_insert(mRsBook, reinterpret_cast<size_t>(apBody));
+		else m_setUpdateBodies.insert(apBody);
 		apBody->SetInUpdateList(true);
 	}
 
@@ -250,7 +289,8 @@ namespace hpl {
 	{
 		if(apBody->IsInUpdateList()==false) return;
 
-		m_setUpdateBodies.erase(apBody);
+		if(mRsBook) ohpl_h15_world_update_remove(mRsBook, reinterpret_cast<size_t>(apBody));
+		else m_setUpdateBodies.erase(apBody);
 		apBody->SetInUpdateList(false);
 	}
 
@@ -360,6 +400,7 @@ namespace hpl {
 		}
 		mlstBodies.clear();
 		m_setUpdateBodies.clear();
+		if(mRsBook) ohpl_h15_world_update_clear(mRsBook);
 
 		STLDeleteAll(mlstRopes);
 

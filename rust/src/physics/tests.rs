@@ -618,3 +618,65 @@ fn joint_book_keeps_step_counters() {
     );
     super::book::joint_free(bk);
 }
+
+struct WorldCtx {
+    book: u64,
+    seen: Vec<usize>,
+    removed: Vec<usize>,
+}
+
+unsafe extern "C" fn world_before(c: *mut std::ffi::c_void, b: usize) -> bool {
+    // SAFETY: the test passes a live WorldCtx.
+    let c = unsafe { &mut *c.cast::<WorldCtx>() };
+    c.seen.push(b);
+    if b == 20 {
+        super::ffi::ohpl_h15_world_update_insert(c.book, 25);
+        super::ffi::ohpl_h15_world_update_insert(c.book, 5);
+    }
+    b != 30
+}
+
+unsafe extern "C" fn world_remove(c: *mut std::ffi::c_void, b: usize) {
+    // SAFETY: the test passes a live WorldCtx.
+    let c = unsafe { &mut *c.cast::<WorldCtx>() };
+    c.removed.push(b);
+    super::ffi::ohpl_h15_world_update_remove(c.book, b);
+}
+
+unsafe extern "C" fn world_after(c: *mut std::ffi::c_void, b: usize) {
+    // SAFETY: the test passes a live WorldCtx.
+    unsafe { &mut *c.cast::<WorldCtx>() }.seen.push(b);
+}
+
+#[test]
+fn world_update_set_matches_std_set_walk() {
+    let bk = super::ffi::ohpl_h15_world_new();
+    for b in [30, 10, 20] {
+        assert!(super::ffi::ohpl_h15_world_update_insert(bk, b));
+    }
+    assert!(!super::ffi::ohpl_h15_world_update_insert(bk, 10));
+    let mut c = WorldCtx {
+        book: bk,
+        seen: vec![],
+        removed: vec![],
+    };
+    // SAFETY: c outlives the calls.
+    unsafe {
+        super::ffi::ohpl_h15_world_update_before(
+            bk,
+            (&raw mut c).cast(),
+            world_before,
+            world_remove,
+        );
+    }
+    // 5 was inserted below the cursor: std::set would not visit it either.
+    assert_eq!(c.seen, [10, 20, 25, 30]);
+    assert_eq!(c.removed, [30]);
+    c.seen.clear();
+    // SAFETY: as above.
+    unsafe { super::ffi::ohpl_h15_world_update_after(bk, (&raw mut c).cast(), world_after) };
+    assert_eq!(c.seen, [5, 10, 20, 25]);
+    super::ffi::ohpl_h15_world_update_clear(bk);
+    super::ffi::ohpl_h15_world_free(bk);
+    assert!(!super::ffi::ohpl_h15_world_update_insert(bk, 1));
+}

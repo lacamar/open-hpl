@@ -1,6 +1,8 @@
 //! `cPhysics` impact throttling and the body filter / push merge of `CheckShapeWorldCollision`.
 
+use super::book;
 use crate::types::Vector3f;
+use std::ffi::c_void;
 
 #[derive(Debug, Default)]
 pub struct ImpactCounts(Vec<f32>);
@@ -74,5 +76,46 @@ pub fn merge_push(push: Vector3f, normal: Vector3f, depth: f32) -> Vector3f {
         x: pick(push.x, v.x),
         y: pick(push.y, v.y),
         z: pick(push.z, v.z),
+    }
+}
+
+pub type BodyBefore = unsafe extern "C" fn(*mut c_void, usize) -> bool;
+pub type BodyAfter = unsafe extern "C" fn(*mut c_void, usize);
+
+fn next(book: u64, after: Option<usize>) -> Option<usize> {
+    book::world_with(book, |w| w.next_after(after)).flatten()
+}
+
+/// Before-simulate pass over the update set: bodies whose callback returns false are
+/// handed to `remove` after the walk. No lock is held across a callback.
+///
+/// # Safety
+/// `ctx` is valid for the callbacks, which may add or remove bodies of this world.
+pub unsafe fn update_before(book: u64, ctx: *mut c_void, before: BodyBefore, remove: BodyAfter) {
+    let mut drop_list = Vec::new();
+    let mut cur = next(book, None);
+    while let Some(b) = cur {
+        // SAFETY: caller contract.
+        if !unsafe { before(ctx, b) } {
+            drop_list.push(b);
+        }
+        cur = next(book, Some(b));
+    }
+    for b in drop_list {
+        // SAFETY: caller contract.
+        unsafe { remove(ctx, b) };
+    }
+}
+
+/// After-simulate pass over the update set.
+///
+/// # Safety
+/// As [`update_before`].
+pub unsafe fn update_after(book: u64, ctx: *mut c_void, after: BodyAfter) {
+    let mut cur = next(book, None);
+    while let Some(b) = cur {
+        // SAFETY: caller contract.
+        unsafe { after(ctx, b) };
+        cur = next(book, Some(b));
     }
 }

@@ -1,0 +1,6 @@
+Amnesia The Dark Descent/materials.cfg 22 97ec25873ff29641
+Amnesia The Dark Descent/ptest_materials.cfg 22 86c5600fa6417db5
+Machine for Pigs/materials.cfg 46 52a11e0437c3c1c0
+Amnesia Rebirth/materials.cfg 194 354074b2107aa3c9
+Amnesia The Bunker/materials.cfg 203 783f99a90eea26f7
+SOMA/materials.cfg 211 380eefd4ee5ac34c
