@@ -18,6 +18,8 @@
  */
 
 #include "impl/MutexSDL.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #if USE_SDL2
 #include "SDL2/SDL.h"
@@ -36,13 +38,15 @@ namespace hpl {
 	cMutexSDL::cMutexSDL()
 	{
 		mpMutexHandle = NULL;
-		mpMutexHandle = SDL_CreateMutex();
+		mpRust = OhplBackendRustRequested() ? ohpl_l1_mutex_new() : NULL;
+		if(mpRust == NULL) mpMutexHandle = SDL_CreateMutex();
 	}
 
 	//-----------------------------------------------------------------------
 
 	cMutexSDL::~cMutexSDL()
 	{
+		if(mpRust) ohpl_l1_mutex_free(mpRust);
 		if(mpMutexHandle)
 			SDL_DestroyMutex(mpMutexHandle);
 	}
@@ -57,11 +61,13 @@ namespace hpl {
 	
 	bool cMutexSDL::Lock()
 	{
+		if(mpRust) return ohpl_l1_mutex_lock(mpRust);
 		return SDL_LockMutex(mpMutexHandle)!=-1;
 	}
 	
 	bool cMutexSDL::Unlock()
 	{
+		if(mpRust) return ohpl_l1_mutex_unlock(mpRust);
 		return SDL_UnlockMutex(mpMutexHandle)!=-1;
 	}
 

@@ -1,0 +1,42 @@
+ARGS [dir1]
+CMD []
+CWD 1
+ARGS [-cwd|dir1]
+CMD []
+CWD 1
+ARGS [dir1|-cwd]
+CMD []
+CWD 1
+ARGS [nodir|dir1]
+CMD [nodir]
+CWD 1
+ARGS [-psn_0_1|dir1|x]
+CMD [x]
+CWD 1
+ARGS [dir1|dir2|-foo]
+CMD [dir2 -foo]
+CWD 1
+ARGS [baddir|-cwd]
+CMD []
+CWD 1
+ARGS [baddir|dir1]
+CMD [dir1]
+CWD 0
+ARGS [-a|-b|c]
+CMD [-a -b c]
+CWD 0
+ARGS []
+CMD []
+CWD 0
+ARGS [a|b|dir1|c]
+CMD [a b c]
+CWD 1
+ARGS [-cwd|-cwd]
+CMD []
+CWD 1
+ARGS [dir1|-cwd|baddir]
+CMD [baddir]
+CWD 1
+ARGS [x|-psn|y]
+CMD [x y]
+CWD 0

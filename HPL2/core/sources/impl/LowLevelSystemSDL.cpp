@@ -57,6 +57,8 @@
 
 #include "system/String.h"
 #include "impl/RustImpl.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 static void AppendSink(void *apCtx, const char *apData, size_t alLen)
 {
@@ -183,8 +185,28 @@ static bool ProtectSteamLibraries()
 }
 #endif
 
+static void AppendSinkU8(void *apCtx, const unsigned char *apData, size_t alLen)
+{
+	((std::string*)apCtx)->append((const char*)apData, alLen);
+}
+
 int main(int argc, char *argv[])
 {
+#ifdef __linux__
+	if(hpl::OhplBackendRustRequested())
+	{
+		bool bCwd = false;
+		hpl::tString sCmdLine;
+		if(ohpl_l1_main_args(argc, argv, AppendSinkU8, &sCmdLine, &bCwd) != 0) return 1;
+		if(!bCwd)
+		{
+			hpl::tString sDataDir = hpl::cPlatform::GetDataDir();
+			if(chdir(sDataDir.c_str())) {}
+		}
+		if(!ohpl_l1_protect_steam()) return 1;
+		return hplMain(sCmdLine);
+	}
+#endif
 #ifdef __linux__
 	if(!std::setlocale(LC_CTYPE, "")) {
 		fprintf(stderr, "Can't set the specified locale! Check LANG, LC_CTYPE, LC_ALL.\n");
@@ -266,18 +288,24 @@ namespace hpl {
 	{
 		msFileName = asFileName;
 		mpFile = NULL;
+		mpRust = NULL;
 	}
 
 	cLogWriter::~cLogWriter()
 	{
 		if(mpFile) fclose(mpFile);
+		if(mpRust) ohpl_l1_log_close(mpRust);
 	}
 
 	void cLogWriter::Write(const tString& asMessage)
 	{
-		if(!mpFile) ReopenFile();
+		if(!mpFile && !mpRust) ReopenFile();
 		
-		if(mpFile)
+		if(mpRust)
+		{
+			ohpl_l1_log_write(mpRust, asMessage.c_str());
+		}
+		else if(mpFile)
 		{
 			fprintf(mpFile, "%s", asMessage.c_str());
 			fflush(mpFile);
@@ -298,7 +326,7 @@ namespace hpl {
 		if(msFileName == asFile) return;
 
 		msFileName = asFile;
-		if(mpFile) ReopenFile();
+		if(mpFile || mpRust) ReopenFile();
 	}
 
 	//-----------------------------------------------------------------------
@@ -319,6 +347,8 @@ namespace hpl {
 	{
 		if(mpFile) fclose(mpFile);
 		mpFile = NULL;
+		if(mpRust) ohpl_l1_log_close(mpRust);
+		mpRust = NULL;
 
 		if(PathLooksLikeSteamInstall(msFileName))
 		{
@@ -330,6 +360,11 @@ namespace hpl {
 			return;
 		}
 
+		if(OhplBackendRustRequested())
+		{
+			mpRust = ohpl_l1_log_open(cString::To8Char(msFileName).c_str());
+			return;
+		}
 		#ifdef WIN32
 			mpFile = _wfopen(msFileName.c_str(),_W("w"));
 		#else

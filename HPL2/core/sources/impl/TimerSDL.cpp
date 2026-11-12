@@ -18,6 +18,8 @@
  */
 
 #include "impl/TimerSDL.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #include <stdlib.h>
 
@@ -31,6 +33,7 @@ namespace hpl {
 	
 	cTimerSDL::cTimerSDL()
 	{
+		mpRust = OhplBackendRustRequested() ? ohpl_l1_timer_new() : NULL;
 #ifdef WIN32
 		QueryPerformanceFrequency(&mFrequency);
 		mStartCount.QuadPart = 0;
@@ -50,6 +53,7 @@ namespace hpl {
 
 	cTimerSDL::~cTimerSDL()
 	{
+		if(mpRust) ohpl_l1_timer_free(mpRust);
 
 	}
 
@@ -63,6 +67,7 @@ namespace hpl {
 	
 	void cTimerSDL::Start()
 	{
+		if(mpRust) { ohpl_l1_timer_start(mpRust); return; }
 		mbStopped = false;
 #ifdef WIN32
 		QueryPerformanceCounter(&mStartCount);
@@ -73,6 +78,7 @@ namespace hpl {
 	
 	void cTimerSDL::Stop()
 	{
+		if(mpRust) { ohpl_l1_timer_stop(mpRust); return; }
 #ifdef WIN32
 		QueryPerformanceCounter(&mEndCount);
 #else
@@ -83,6 +89,7 @@ namespace hpl {
 
 	double cTimerSDL::GetTimeInMicroSec()
 	{
+		if(mpRust) return ohpl_l1_timer_micros(mpRust);
 #ifdef WIN32
 		if(mbStopped==false)
 			QueryPerformanceCounter(&mEndCount);

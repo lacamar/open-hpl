@@ -18,6 +18,8 @@
  */
 
 #include "impl/ThreadSDL.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #if USE_SDL2
 #include "SDL2/SDL.h"
@@ -38,12 +40,14 @@ namespace hpl {
 	cThreadSDL::cThreadSDL()
 	{
 		mpThreadHandle = NULL;
+		mpRust = OhplBackendRustRequested() ? ohpl_l1_thread_new() : NULL;
 	}
 
 	//-----------------------------------------------------------------------
 
 	cThreadSDL::~cThreadSDL()
 	{
+		if(mpRust) ohpl_l1_thread_free(mpRust);
 
 	}
 
@@ -58,6 +62,7 @@ namespace hpl {
 	void cThreadSDL::Start()
 	{
 		mbThreadActive = true;
+		if(mpRust) { ohpl_l1_thread_start(mpRust, iThread::MainThreadFunc, typeid(this).name(), this); return; }
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         mpThreadHandle = SDL_CreateThread(iThread::MainThreadFunc, typeid(this).name(), this);
 #else
@@ -70,6 +75,7 @@ namespace hpl {
 	void cThreadSDL::Stop()
 	{
 		mbThreadActive = false;
+		if(mpRust) { ohpl_l1_thread_stop(mpRust); return; }
 		SDL_WaitThread(mpThreadHandle,0);
 		mpThreadHandle = NULL;
 	}
@@ -78,6 +84,7 @@ namespace hpl {
 
 	void cThreadSDL::Sleep(unsigned int alSleepTime)
 	{
+		if(mpRust) { ohpl_l1_delay(alSleepTime); return; }
 		SDL_Delay(alSleepTime);
 	}
 
@@ -86,6 +93,7 @@ namespace hpl {
 	void cThreadSDL::SetPriority(eThreadPrio aPrio)
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
+        if(mpRust) { ohpl_l1_thread_set_priority((int)aPrio); iThread::SetPriority(aPrio); return; }
         int prio = TranslateEnginePrio(aPrio);
         SDL_SetThreadPriority((SDL_ThreadPriority)prio);
 #else

@@ -19,6 +19,8 @@
 
 #include "system/Platform.h"
 #include "system/RustPlatform.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #include <stdexcept>
 
@@ -50,6 +52,30 @@
 
 namespace hpl {
 
+	static void L1Utf8Sink(void *apCtx, const unsigned char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(reinterpret_cast<const char*>(apData), alLen);
+	}
+
+	static void L1NameSink(void *apCtx, const uint32_t *apData, size_t alLen)
+	{
+		static_cast<tWStringList*>(apCtx)->push_back(tWString(apData, apData + alLen));
+	}
+
+	static cDate L1ToDate(const OhplL1Date &aDate)
+	{
+		cDate date;
+		date.seconds = aDate.seconds;
+		date.minutes = aDate.minutes;
+		date.hours = aDate.hours;
+		date.month_day = aDate.month_day;
+		date.month = aDate.month;
+		date.year = aDate.year;
+		date.week_day = aDate.week_day;
+		date.year_day = aDate.year_day;
+		return date;
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// FILE HANDLING
 	//////////////////////////////////////////////////////////////////////////
@@ -58,6 +84,7 @@ namespace hpl {
 
 	unsigned long cPlatform::GetFileSize(const tWString& asFileName)
 	{
+		if(OhplBackendRustRequested()) return ohpl_l1_file_size(cString::To8Char(asFileName).c_str());
 		struct stat statbuf;
 		if (stat(cString::To8Char(asFileName).c_str(), &statbuf) == -1) {
 			return 0;
@@ -81,6 +108,7 @@ namespace hpl {
 
 	bool cPlatform::FileExists(const tWString& asFileName)
 	{
+		if(OhplBackendRustRequested()) return ohpl_l1_file_exists(cString::To8Char(asFileName).c_str());
 		struct stat statbuf;
 		return (lstat(cString::To8Char(asFileName).c_str(), &statbuf) == 0);
 	}
@@ -89,6 +117,7 @@ namespace hpl {
 
 	void cPlatform::RemoveFile(const tWString& asFilePath)
 	{
+		if(OhplBackendRustRequested()) { ohpl_l1_remove_file(cString::To8Char(asFilePath).c_str()); return; }
 		int ret = unlink(cString::To8Char(asFilePath).c_str());
 	}
 
@@ -109,6 +138,7 @@ namespace hpl {
 
 	bool cPlatform::CreateFolder(const tWString& asPath)
 	{
+		if(OhplBackendRustRequested()) return ohpl_l1_create_folder(cString::To8Char(asPath).c_str());
 		tString sPath = cString::To8Char(asPath);
 		for(size_t i = sPath.find('/', 1); i != tString::npos; i = sPath.find('/', i + 1))
 			mkdir(sPath.substr(0, i).c_str(), 0755);
@@ -159,6 +189,7 @@ namespace hpl {
 
 	bool cPlatform::FolderExists(const tWString& asPath)
 	{
+		if(OhplBackendRustRequested()) return ohpl_l1_folder_exists(cString::To8Char(asPath).c_str());
 		struct stat statbuf;
 		if (stat(cString::To8Char(asPath).c_str(), &statbuf)!=0) {
             return false;
@@ -171,6 +202,12 @@ namespace hpl {
 
 	tWString cPlatform::GetFullFilePath(const tWString& asFilePath)
 	{
+		if(OhplBackendRustRequested())
+		{
+			tString sReal;
+			ohpl_l1_full_path(cString::To8Char(asFilePath).c_str(), L1Utf8Sink, &sReal);
+			return cString::To16Char(sReal);
+		}
 		char rpath[PATH_MAX];
 		realpath(cString::To8Char(asFilePath).c_str(), rpath);
 		tWString ret = cString::To16Char(tString(rpath)); 
@@ -204,6 +241,7 @@ namespace hpl {
 
 	cDate cPlatform::FileModifiedDate(const tWString& asFilePath)
 	{
+		if(OhplBackendRustRequested()) return L1ToDate(ohpl_l1_file_date(cString::To8Char(asFilePath).c_str(), false));
 		struct tm pClock;
 		struct stat attrib;
 		stat(cString::To8Char(asFilePath).c_str(), &attrib);
@@ -219,6 +257,7 @@ namespace hpl {
 
 	cDate cPlatform::FileCreationDate(const tWString& asFilePath)
 	{
+		if(OhplBackendRustRequested()) return L1ToDate(ohpl_l1_file_date(cString::To8Char(asFilePath).c_str(), true));
 		struct tm pClock;
 
 		struct stat attrib;
@@ -250,6 +289,11 @@ namespace hpl {
 	}
 	void cPlatform::FindFilesInDir(tWStringList &alstStrings,const tWString& asDir, const tWString& asMask, bool abAddHidden)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_l1_find_files(cString::To8Char(asDir).c_str(), (const uint32_t*)asMask.data(), asMask.size(), L1NameSink, &alstStrings);
+			return;
+		}
 		//Get the search string
 		wchar_t sSpec[256];
 		wchar_t end = asDir[asDir.size()-1];
@@ -284,6 +328,11 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	void cPlatform::FindFoldersInDir(tWStringList &alstStrings,const tWString& asDir, bool abAddHidden, bool abAddUpFolder)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_l1_find_folders(cString::To8Char(asDir).c_str(), abAddHidden, abAddUpFolder, L1NameSink, &alstStrings);
+			return;
+		}
 		//Get the search string
 		char sSpec[256];
 		tString sDir8 = cString::To8Char(asDir);
@@ -348,6 +397,12 @@ namespace hpl {
 
 	tWString cPlatform::GetWorkingDir()
 	{
+		if(OhplBackendRustRequested())
+		{
+			tString sDir;
+			ohpl_l1_working_dir(L1Utf8Sink, &sDir);
+			return cString::To16Char(sDir);
+		}
 		char buff[MAXPATHLEN];
 		getcwd(buff, MAXPATHLEN);
 		return cString::To16Char(tString(buff));
@@ -376,6 +431,13 @@ namespace hpl {
 
 		sMess += text;
 
+		if(OhplBackendRustRequested())
+		{
+			tString sCaption8 = cString::To8Char(asCaption);
+			tString sMessage8 = cString::To8Char(sMess);
+			ohpl_l1_message_box((unsigned)eType, sCaption8.c_str(), sMessage8.c_str());
+			return;
+		}
 #if defined(__APPLE__) && (HPL_MINIMAL || !SDL_VERSION_ATLEAST(2,0,0))
 		OSXAlertBox(eType, cString::To8Char(asCaption), cString::To8Char(sMess));
 #elif SDL_VERSION_ATLEAST(2,0,0)
@@ -458,6 +520,7 @@ namespace hpl {
 
 	cDate cPlatform::GetDate()
 	{
+		if(OhplBackendRustRequested()) return L1ToDate(ohpl_l1_date_now());
 		time_t lTime;
 		time(&lTime);
 

@@ -32,6 +32,8 @@
 #include "haptic/Haptic.h"
 #include "system/HeadlessControl.h"
 #include "impl/RustImpl.h"
+#include "impl/RustBackends.h"
+#include "impl/RustL1.h"
 
 #include "impl/KeyboardSDL.h"
 #include "impl/MouseSDL.h"
@@ -63,6 +65,11 @@
 
 namespace hpl {
 
+	static void L1ErrorSink(void *apCtx, const unsigned char *apData, size_t alLen)
+	{
+		static_cast<tString*>(apCtx)->assign(reinterpret_cast<const char*>(apData), alLen);
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -72,9 +79,22 @@ namespace hpl {
 	cSDLEngineSetup::cSDLEngineSetup(tFlag alHplSetupFlags, const cEngineInitVars *apVars)
 	{
 #if SDL_VERSION_ATLEAST(2,0,0)
-		SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
+		if(OhplBackendRustRequested()) ohpl_l1_sdl_hints();
+		else SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
 #endif
 		AcquireHeadlessSingleInstanceLock();
+		if(OhplBackendRustRequested())
+		{
+			if(!ohpl_l1_sdl_init((alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video)) != 0))
+			{
+				tString sError;
+				ohpl_l1_sdl_error(L1ErrorSink, &sError);
+				FatalError("Error Initializing Display: %s", sError.c_str());
+				exit(1);
+			}
+		}
+		else
+		{
 
 		bool bVideoSetup = (alHplSetupFlags & (eHplSetup_Screen | eHplSetup_Video)) != 0;
 		unsigned lEnvPlan = ohpl_sys_engine_env(getenv("OPENHPL_HEADLESS_SOCKET") != NULL, getenv("ALSOFT_DRIVERS") != NULL,
@@ -132,6 +152,8 @@ namespace hpl {
 			SDL_Init( SDL_INIT_TIMER );
 		}
 		
+		}
+
 		//////////////////////////
 		// System
 		mpLowLevelSystem = hplNew( cLowLevelSystemSDL, () );
@@ -201,6 +223,11 @@ namespace hpl {
 #ifdef INCLUDE_HAPTIC 	
 		hplDelete(mpLowLevelHaptic);
 #endif
+		if(OhplBackendRustRequested())
+		{
+			ohpl_l1_sdl_shutdown();
+			return;
+		}
 
 #if SDL_VERSION_ATLEAST(2,0,0)
         SDL_EnableScreenSaver();

@@ -5,6 +5,16 @@
 #include <SDL2/SDL.h>
 #include <zlib.h>
 
+#include <sys/mount.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/time.h>
+#include <sched.h>
+#include <time.h>
+#include <langinfo.h>
+#include <locale.h>
+#include <unistd.h>
+
 #include <cstddef>
 #include <type_traits>
 
@@ -828,3 +838,14 @@ static_assert((long long)(Z_SYNC_FLUSH) == 2LL, "Z_SYNC_FLUSH");
 static_assert((long long)(Z_FINISH) == 4LL, "Z_FINISH");
 static_assert((long long)(Z_DEFAULT_COMPRESSION) == -1LL, "Z_DEFAULT_COMPRESSION");
 static_assert(ohpl_streq(ZLIB_VERSION, "1.3.1") || ZLIB_VERSION[0] == '1', "ZLIB_VERSION major");
+
+// libc layouts used by rust/src/backend/sdl/clib.rs (L1)
+static_assert(sizeof(struct stat) == 128 && offsetof(struct stat, st_mode) == 16 && offsetof(struct stat, st_size) == 48
+	&& offsetof(struct stat, st_mtim) == 88 && offsetof(struct stat, st_ctim) == 104, "struct stat");
+static_assert(sizeof(struct statvfs) == 112 && offsetof(struct statvfs, f_flag) == 72, "struct statvfs");
+static_assert(sizeof(struct tm) == 56 && offsetof(struct tm, tm_gmtoff) == 40, "struct tm");
+static_assert(sizeof(struct timeval) == 16 && offsetof(struct timeval, tv_usec) == 8, "struct timeval");
+static_assert(S_IFMT == 0170000 && S_IFDIR == 0040000, "S_IF");
+static_assert(LC_CTYPE == 0 && CODESET == 14, "locale");
+static_assert(CLONE_NEWNS == 0x00020000 && CLONE_NEWUSER == 0x10000000, "CLONE_NEW");
+static_assert(MS_REC == 16384 && MS_PRIVATE == (1 << 18) && MS_BIND == 4096 && W_OK == 2, "mount flags");
