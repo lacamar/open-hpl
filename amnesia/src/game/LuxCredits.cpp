@@ -24,6 +24,8 @@
 #include "LuxLoadScreenHandler.h"
 #include "LuxMusicHandler.h"
 #include "LuxInputHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //-----------------------------------------------------------------------
 
@@ -77,6 +79,9 @@ cLuxCredits::cLuxCredits() : iLuxUpdateable("LuxCredits")
 	mfScrollSpeed = gpBase->mpMenuCfg->GetFloat("Credits","ScrollSpeed",0);
 	mfFadeSpeed = gpBase->mpMenuCfg->GetFloat("Credits","FadeSpeed",0);
 
+	ohpl_ga7b_cr_new(&mS);
+
+
 	///////////////////////////////
 	//Setup variables
 	Reset();
@@ -111,13 +116,12 @@ void cLuxCredits::Reset()
 	msMusic = "";
 	mbLoopMusic = false;
 	mvTextRows.clear();
+	mvRows.clear();
 
 	mbActive = false;
 
-	mfYPos =600;
-	mlState =0;
-	mfTime =0;
-	mfFadeAlpha =0;
+	ohpl_ga7b_cr_reset(&mS);
+
 
 	mKeyBuffer.Clear();
 }
@@ -178,94 +182,20 @@ static tString DecryptCryptoStringCode(const tString &asEncStr, cBinaryBuffer &a
 
 void cLuxCredits::Update(float afTimeStep)
 {
-	mfTime += afTimeStep;
+	uint32_t lUpdate = ohpl_ga7b_cr_update(&mS, afTimeStep, mvRows.data(), mvRows.size(), mfScrollSpeed, mfFadeSpeed);
 
-	//////////////////////////////////////////////
-	// STATE 0
-	if(mlState ==0 || mlState ==1)
+	if(lUpdate & eOhplGa7bCr_StopMusic)
 	{
-		mfYPos -= afTimeStep * mfScrollSpeed;
-		
-		////////////////////////////////
-		//Check if the credits are over.
-		float fSize[2] = {17,19};
-		float fY = mfYPos;
-
-		//Calculate Y
-		for(size_t i=0; i< mvTextRows.size(); ++i)
-		{
-			int lSize =0;
-			if(mvTextRows[i][0] == _W('*')) lSize=1;
-			if(mvTextRows[i].size()<=1) fY += fSize[lSize];
-			fY += fSize[lSize];
-		}
-		//Almost done, fade out song.
-		if(fY < -120)
-		{
-			cMusicHandler *pMusicHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
-			pMusicHandler->Stop(0.1f);
-		}
-
-		//Finished, fade out!
-		if(fY < -280 && mlState==0)
-		{
-			mfTime =0;
-			mlState++;
-		}
-		if(mlState ==0) return;
-	}
-	//////////////////////////////////////////////
-	// STATE 1/4 - FADE OUT
-	if(mlState ==1 || mlState==4)
-	{
-		mfFadeAlpha += afTimeStep * mfFadeSpeed;
-		if(mfFadeAlpha > 1)
-		{
-			mfFadeAlpha = 1;
-
-			//Last fae out, end game
-			if(mlState==4)
-			{
-				gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
-
-				gpBase->mpLoadScreenHandler->DrawMenuScreen();
-				gpBase->mpEngine->GetUpdater()->SetContainer("MainMenu");
-			}
-			//NExt state
-			else
-			{
-				mlState++;
-				if(mlState == 2)
-				{
-					///////////////////////
-					// If ptest, see if we want to add surprise
-					if(gpBase->mbPTestActivated)
-					{
-						/*mKeyBuffer.SetPos(0);
-						int lCRC = mKeyBuffer.GetCRC(kCRCKey);
-						if(lCRC == kKeyBufferCRC)
-						{
-						}*/
-					}
-				}
-			}
-		}
-		return;
-	}
-	//////////////////////////////////////////////
-	// STATE 2 - FADE IN
-	if(mlState ==2)
-	{
-		mfFadeAlpha -= afTimeStep * mfFadeSpeed;
-		if(mfFadeAlpha < 0)
-		{
-			mfFadeAlpha = 0;
-			mlState++;			
-		}
-		return;
+		cMusicHandler *pMusicHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
+		pMusicHandler->Stop(0.1f);
 	}
 
-	
+	if(lUpdate & eOhplGa7bCr_Finish)
+	{
+		gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
+		gpBase->mpLoadScreenHandler->DrawMenuScreen();
+		gpBase->mpEngine->GetUpdater()->SetContainer("MainMenu");
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -281,33 +211,32 @@ void cLuxCredits::Setup(const tString& asMusic, bool abLoopMusic, const tString&
 {
 	msMusic = asMusic;
 	mbLoopMusic = abLoopMusic;
-	mlEndNum = alEndNum;
+	mS.mlEndNum = alEndNum;
+
 
 
 	tWString sText = kTranslate(asTextCat, asTextEntry);
-	mpFontNormal->GetWordWrapRows(750, 19,17,sText,&mvTextRows);	
+	mpFontNormal->GetWordWrapRows(750, 19,17,sText,&mvTextRows);
+
+	mvRows.clear();
+	for(size_t i=0; i<mvTextRows.size(); ++i)
+	{
+		OhplGa7bRow row = { (uint32_t)mvTextRows[i].size(), mvTextRows[i].empty() ? 0u : (uint32_t)mvTextRows[i][0] };
+		mvRows.push_back(row);
+	}
+
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxCredits::ExitPressed()
 {
-	//Only skip forward during text roll or The End
-	if(mlState!=0 && mlState!=3) return; 
-	
-	//Always show for at least 3 sec
-	if(mfTime <3) return;
-	
-	mlState++;
-	mfTime =0;
-
 	//If start scroll fade out, stop music.
-	if(mlState==1)
+	if(ohpl_ga7b_cr_exit_pressed(&mS))
 	{
 		cMusicHandler *pMusicHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
 		pMusicHandler->Stop(0.1f);
 	}
-
 }
 
 //-----------------------------------------------------------------------
@@ -320,69 +249,44 @@ void cLuxCredits::OnDraw(float afFrameTime)
 
 	//////////////////////////////////////////////
 	// Fade
-	if(mfFadeAlpha > 0)
+	if(mS.mfFadeAlpha > 0)
 	{
-		mpGuiSet->DrawGfx(mpBlackGfx, mvGuiSetStartPos+cVector3f(0,0,20), mvGuiSetSize, cColor(1, mfFadeAlpha));
+		mpGuiSet->DrawGfx(mpBlackGfx, mvGuiSetStartPos+cVector3f(0,0,20), mvGuiSetSize, cColor(1, mS.mfFadeAlpha));
 	}
 	
 	//////////////////////////////////////////////
 	// STATE 0 - CREDITS
-	if(mlState == 0 || mlState==1)
+	if(mS.mlState == 0 || mS.mlState==1)
 	{
-		float fRowAdd[2] = {mvNormalFontSize.y+2, mvHeaderFontSize.y+2};
-		float fY = mfYPos;
-		for(size_t i=0; i< mvTextRows.size(); ++i)
+		std::vector<OhplGa7bDrawRow> vDraw(mvRows.size());
+		size_t lDrawNum = ohpl_ga7b_cr_draw_rows(mS.mfY, mvRows.data(), mvRows.size(), mvNormalFontSize.y+2, mvHeaderFontSize.y+2, vDraw.data(), vDraw.size());
+
+		for(size_t i=0; i< lDrawNum; ++i)
 		{
-			int lSize =0;
-			
-			////////////////////////
-			// String is empty row
-			if(mvTextRows[i].size()<=1)
-			{
-				fY += fRowAdd[lSize];
-			}
-			////////////////////////
-			// Text row
+			const OhplGa7bDrawRow &row = vDraw[i];
+			//Normal
+			if(row.mbHeader==false)
+				mpGuiSet->DrawFont(mvTextRows[row.mlRow], mpFontNormal, cVector3f(400,row.mfY,10), mvNormalFontSize, cColor(1,row.mfAlpha),eFontAlign_Center);
+			//Header
 			else
-			{
-				//Check if header
-				if(mvTextRows[i][0] == _W('*'))	lSize=1;
-
-				////////////////////////
-				//Draw Font
-				if(fY >= -fRowAdd[lSize])
-				{
-					if(fY > 600) continue;
-
-					float fAlpha = fY/300;
-					if(fAlpha > 1) fAlpha = (2 - fAlpha);
-
-					//Normal
-					if(lSize==0)
-						mpGuiSet->DrawFont(mvTextRows[i], mpFontNormal, cVector3f(400,fY,10), mvNormalFontSize, cColor(1,fAlpha),eFontAlign_Center);
-					//Header
-					else
-						mpGuiSet->DrawFont(cString::SubW(mvTextRows[i],1), mpFontHeader, cVector3f(400,fY,10), mvHeaderFontSize, cColor(0.8f,fAlpha),eFontAlign_Center);
-				}
-			}
-
-			//Increase row counter
-			fY += fRowAdd[lSize];
+				mpGuiSet->DrawFont(cString::SubW(mvTextRows[row.mlRow],1), mpFontHeader, cVector3f(400,row.mfY,10), mvHeaderFontSize, cColor(0.8f,row.mfAlpha),eFontAlign_Center);
 		}
 	}
 	//////////////////////////////////////////////
 	// STATE 1 - SECRET CODE
-	else if(mlState >=2)
+	else if(mS.mlState >=2)
 	{	
 		mpGuiSet->DrawFont(kTranslate("General", "TheEnd"), mpFontHeader, cVector3f(400,290,10),mvTheEndFontSize,cColor(1,1),eFontAlign_Center);
 
 		//Secret code
-		if(mlEndNum >=0 && mlEndNum<=2 && gpBase->mbPTestActivated==false)
+		int lEndCode = ohpl_ga7b_cr_end_code(mS.mlEndNum, gpBase->mbPTestActivated);
+		if(lEndCode >= 0)
 		{
 			tWString sCode = _W("");
-			if(mlEndNum==0)	sCode = _W("tyr299");
-			if(mlEndNum==1)	sCode = _W("odn314");
-			if(mlEndNum==2)	sCode = _W("lke271");
+			if(lEndCode==0)	sCode = _W("tyr299");
+			if(lEndCode==1)	sCode = _W("odn314");
+			if(lEndCode==2)	sCode = _W("lke271");
+
 
 			mpGuiSet->DrawFont(sCode, mpFontNormal, cVector3f(400,560,10),15,cColor(0.65f,1),eFontAlign_Center);
 		}

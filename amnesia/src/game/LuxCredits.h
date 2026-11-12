@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMenu2.h"
+
 
 //----------------------------------------------
 
@@ -84,15 +86,14 @@ private:
 	cBinaryBuffer mKeyBuffer;
 	tString msMusic;
 	bool mbLoopMusic;
-	int mlEndNum;
+
 
 	tWStringVec mvTextRows;
 
 	bool mbActive;
-	float mfYPos;
-	int mlState;
-	float mfTime;
-	float mfFadeAlpha;
+	OhplGa7bCredits mS;
+	std::vector<OhplGa7bRow> mvRows;
+
 
 };
 

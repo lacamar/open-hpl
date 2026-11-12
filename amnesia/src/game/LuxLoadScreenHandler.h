@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMenu2.h"
+
 
 enum eLuxLoadScreenState
 {
@@ -72,7 +74,7 @@ public:
 	const tString& GetLoadTextCat(){ return msLoadTextCat;}
 	const tString& GetLoadTextEntry(){ return msLoadTextEntry;}
 	const tString& GetLoadTextImage(){ return msLoadTextImage;}
-	int GetLoadTextEntryRandomNum(){ return mlTextRandomNum; }
+	int GetLoadTextEntryRandomNum(){ return mS.mlRandNum; }
 
 private:
 	void Exit();
@@ -122,15 +124,13 @@ private:
 	tString msLoadTextCat;
 	tString msLoadTextEntry;
 	tString msLoadTextImage;
-	int mlTextRandomNum;
-	int mlPrevTextNumBitFlags;
+
 
 	tString msGameScreenEndSound;
 
-	float mfLoadingAlpha;
-    float mfAlpha;
-	float mfExtraTime;
-	eLuxLoadScreenState mState;
+	OhplGa7bLoad mS;
+	int &mlPrevTextNumBitFlags = mS.mlPrevBits;
+
 	tString msCurrentGameScreenTextEntry;
 	tString msCurrentGameScreenImage;
 };

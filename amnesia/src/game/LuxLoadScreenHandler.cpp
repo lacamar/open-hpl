@@ -21,6 +21,8 @@
 
 #include "LuxHelpFuncs.h"
 #include "LuxInputHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //-----------------------------------------------------------------------
 
@@ -40,6 +42,8 @@ cLuxLoadScreenHandler::cLuxLoadScreenHandler() : iLuxUpdateable("LuxLoadScreenHa
 
 	///////////////////////////////
 	//Setup GUI stuff
+	ohpl_ga7b_ls_new(&mS);
+
 	mpGuiSkin = mpGui->CreateSkin("gui_main_menu.skin");
 	mpGuiSet = mpGui->CreateSet("LoadScreen",mpGuiSkin);
 
@@ -116,13 +120,8 @@ void cLuxLoadScreenHandler::Reset()
 	msLoadTextCat = "";
 	msLoadTextEntry = "";
 	msLoadTextImage = "";
-	mlTextRandomNum = 0;
-	mlPrevTextNumBitFlags = 0;
+	ohpl_ga7b_ls_reset(&mS);
 
-	mfLoadingAlpha = 1.0f;
-	mfAlpha =0;
-	mfExtraTime=0;
-	mState = eLuxLoadScreenState_LastEnum;
 
 	msCurrentGameScreenTextEntry = "";
 
@@ -142,7 +141,7 @@ void cLuxLoadScreenHandler::Reset()
 
 void cLuxLoadScreenHandler::Update(float afTimeStep)
 {
-	switch(mState)
+	switch(mS.mlState)
 	{
 	case eLuxLoadScreenState_Game: UpdateGameState(afTimeStep); break;
 	}
@@ -170,7 +169,7 @@ void cLuxLoadScreenHandler::OnLeaveContainer(const tString& asNewContainer)
 
 void cLuxLoadScreenHandler::OnDraw(float afFrameTime)
 {
-	switch(mState)
+	switch(mS.mlState)
 	{
 	case eLuxLoadScreenState_Game: DrawGameState(afFrameTime); break;
 	}
@@ -182,27 +181,18 @@ void cLuxLoadScreenHandler::GameScreenLoadDone(const tString& asEndSound ,float 
 {
 	/////////////////////////////
 	// Init variables
-	mfAlpha =1;
-	mfExtraTime = 0;
-	mfLoadingAlpha = 1.0f;
-	mState = eLuxLoadScreenState_Game;
-	msGameScreenEndSound = asEndSound;
-
-	/////////////////////////////
-	// Calculate extra time
-	if(msCurrentGameScreenTextEntry!="")
+	bool bHasText = msCurrentGameScreenTextEntry!="";
+	float fTimeWanted = 0;
+	if(bHasText)
 	{
 		tWString sLoadText = kTranslate(msLoadTextCat, msCurrentGameScreenTextEntry);
-		float fTimeWanted = gpBase->mpHelpFuncs->GetStringDuration(sLoadText)*mfTextDurationMul;
-		if(fTimeWanted > afLoadTime)
-		{
-			mfExtraTime = fTimeWanted - afLoadTime;
-		}
-
-		//Log("TimeTaken: %f TimeWanted: %f\n", afLoadTime,fTimeWanted);
+		fTimeWanted = gpBase->mpHelpFuncs->GetStringDuration(sLoadText)*mfTextDurationMul;
 	}
 
-	
+	ohpl_ga7b_ls_load_done(&mS, bHasText, fTimeWanted, afLoadTime);
+	msGameScreenEndSound = asEndSound;
+
+
 	/////////////////////////////
 	// Change State
 	gpBase->mpEngine->GetUpdater()->SetContainer("LoadScreen");
@@ -213,7 +203,9 @@ void cLuxLoadScreenHandler::GameScreenLoadDone(const tString& asEndSound ,float 
 
 void cLuxLoadScreenHandler::SetupLoadText(const tString& asCat, const tString& asEntry, int alRandomNum, const tString& asImage)
 {
-	if(msLoadTextCat == asCat && msLoadTextEntry==asEntry && msLoadTextImage == asImage && mlTextRandomNum == alRandomNum)
+	bool bSame = msLoadTextCat == asCat && msLoadTextEntry==asEntry && msLoadTextImage == asImage && mS.mlRandNum == alRandomNum;
+	ohpl_ga7b_ls_setup(&mS, bSame, alRandomNum);
+	if(bSame)
 	{
 		return;
 	}
@@ -221,8 +213,6 @@ void cLuxLoadScreenHandler::SetupLoadText(const tString& asCat, const tString& a
 	msLoadTextCat = asCat;
 	msLoadTextEntry = asEntry;
 	msLoadTextImage = asImage;
-	mlTextRandomNum = alRandomNum;
-	mlPrevTextNumBitFlags = 0;
 }
 
 //-----------------------------------------------------------------------
@@ -232,7 +222,7 @@ void cLuxLoadScreenHandler::DrawGameScreen()
 	msCurrentGameScreenTextEntry = GetGameScreenTextEntry();
 	msCurrentGameScreenImage = msLoadTextImage;
 
-	mfLoadingAlpha = 1.0f;
+	mS.mfLoadingAlpha = 1.0f;
 	DrawGameScreen(gpBase->mpHelpFuncs->GetSet());
 
 	gpBase->mpHelpFuncs->DrawSetToScreen();
@@ -254,7 +244,7 @@ void cLuxLoadScreenHandler::DrawMenuScreen()
 	//////////////////////
 	//Draw Image
 	cVector2f vImageSize = pImage->GetImageSize();
-	pSet->DrawGfx(pImage, cVector3f(400,300,0)- cVector3f(vImageSize.x/2.0f, vImageSize.y/2.0f, 0));
+	pSet->DrawGfx(pImage, cVector3f(ohpl_ga7b_ls_centered(vImageSize.x, 400), ohpl_ga7b_ls_centered(vImageSize.y, 300), 0));
 	
 	//////////////////////
 	//Draw Text
@@ -280,10 +270,7 @@ void cLuxLoadScreenHandler::DrawBlankScreen()
 
 void cLuxLoadScreenHandler::ExitPressed()
 {
-	if(mState == eLuxLoadScreenState_Game)
-	{
-		mfExtraTime =0;
-	}
+	ohpl_ga7b_ls_exit_pressed(&mS);
 	//Exit();
 }
 
@@ -307,7 +294,7 @@ void cLuxLoadScreenHandler::Exit()
 	gpBase->mpEngine->GetUpdater()->SetContainer("Default");
 	gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
 
-	if(mState == eLuxLoadScreenState_Game)
+	if(mS.mlState == eLuxLoadScreenState_Game)
 	{
 		gpBase->mpHelpFuncs->PlayGuiSoundData(msGameScreenEndSound, eSoundEntryType_Gui);
 	}
@@ -318,35 +305,11 @@ void cLuxLoadScreenHandler::Exit()
 tString cLuxLoadScreenHandler::GetGameScreenTextEntry()
 {
 	if(msLoadTextCat == "" || msLoadTextEntry == "") return "";
-	
+
 	tString sEntry = msLoadTextEntry;
-	if(mlTextRandomNum > 1)
-	{
-		int lNum = -1;
-		int lIdx = cMath::RandRectl(0, mlTextRandomNum-1);
-		for(int i=0; i<mlTextRandomNum; ++i)
-		{
-			if((cMath::GetFlagBit(lIdx) & mlPrevTextNumBitFlags)==0)
-			{
-				lNum = lIdx;
-				break;
-			}
-			++lIdx; 
-			if(lIdx >= mlTextRandomNum) lIdx =0;
-		}
-
-		//All area taken, just take random.
-		if(lNum <0)
-		{
-			mlPrevTextNumBitFlags =0;
-			lNum = cMath::RandRectl(0, mlTextRandomNum-1);
-		}
-
-		mlPrevTextNumBitFlags |= cMath::GetFlagBit(lNum);
-
-		if(lNum <10)	sEntry += '0'+cString::ToString(lNum+1);
-		else			sEntry += cString::ToString(lNum+1);
-	}
+	tString sSuffix;
+	ohpl_ga7b_ls_text_suffix(&mS, OhplGa7bStrSink, &sSuffix);
+	sEntry += sSuffix;
 	return sEntry;
 }
 
@@ -365,28 +328,8 @@ void cLuxLoadScreenHandler::LoadCurrentImage(const tString &asImage)
 
 void cLuxLoadScreenHandler::UpdateGameState(float afTimeStep)
 {
-	////////////////////////////
-	// LoadAlpha
-	if(mfLoadingAlpha >0)
+	if(ohpl_ga7b_ls_update_game(&mS, afTimeStep, mfFadeOutTime))
 	{
-		mfLoadingAlpha -= afTimeStep*0.33f;
-		if(mfLoadingAlpha<0)mfLoadingAlpha =0;
-	}
-
-	////////////////////////////
-	// Update extra time
-	if(mfExtraTime > 0)
-	{
-		mfExtraTime -= afTimeStep;
-		return;
-	}
-	
-	////////////////////////////
-	// Alpha
-    mfAlpha -= afTimeStep * (1.0f/mfFadeOutTime);
-	if(mfAlpha<0)
-	{
-		mfAlpha =0;
 		Exit();
 	}
 }
@@ -399,7 +342,7 @@ void cLuxLoadScreenHandler::DrawGameState(float afFrameTime)
 
 	DrawGameScreen(mpGuiSet);
 
-	mpGuiSet->DrawGfx(mpWhiteGfx, cVector3f(mvGuiSetStartPos.x,mvGuiSetStartPos.y,40), mvGuiSetSize, cColor(0, 1.0f-mfAlpha));
+	mpGuiSet->DrawGfx(mpWhiteGfx, cVector3f(mvGuiSetStartPos.x,mvGuiSetStartPos.y,40), mvGuiSetSize, cColor(0, 1.0f-mS.mfAlpha));
 }
 
 //-----------------------------------------------------------------------
@@ -415,9 +358,9 @@ void cLuxLoadScreenHandler::DrawGameScreen(cGuiSet *apSet)
 	if(mpCurrentImage)
 	{
 		cVector3f vPos(0,mfImageY, 0.5f);
-		vPos.x = 400 - mpCurrentImage->GetImageSize().x/2.0f;
+		vPos.x = ohpl_ga7b_ls_centered(mpCurrentImage->GetImageSize().x, 400);
 
-		apSet->DrawGfx(mpCurrentImage, vPos,-1, cColor(1,1,1,mfLoadingAlpha));
+		apSet->DrawGfx(mpCurrentImage, vPos,-1, cColor(1,1,1,mS.mfLoadingAlpha));
 	}
 
 	//////////////////////
@@ -429,8 +372,7 @@ void cLuxLoadScreenHandler::DrawGameScreen(cGuiSet *apSet)
 		tWStringVec vTextRows;
 		mpFontDefault->GetWordWrapRows(mfTextMaxWidth, mvTextFontSize.y, mvTextFontSize, kTranslate(msLoadTextCat, msCurrentGameScreenTextEntry),&vTextRows);
 
-		float fT = cMath::SmoothCurve(mfLoadingAlpha);
-		float fY = mfTextWithImageY*fT + mfTextAloneY*(1.0f-fT);
+		float fY = ohpl_ga7b_ls_text_y(mS.mfLoadingAlpha, mfTextWithImageY, mfTextAloneY);
 		cVector3f vTextPos(400-mfTextMaxWidth/2,fY,1);
 		for(size_t i=0; i<vTextRows.size(); ++i)
 		{
@@ -443,14 +385,14 @@ void cLuxLoadScreenHandler::DrawGameScreen(cGuiSet *apSet)
 		tWString sLoading = kTranslate("General", "Loading");
 		cVector3f vPos(400, mfLoadingY,1);
 
-		apSet->DrawFont(sLoading, mpFontDefault, vPos, mvLoadingFontSize, cColor(1,0,0,mfLoadingAlpha), eFontAlign_Center);
+		apSet->DrawFont(sLoading, mpFontDefault, vPos, mvLoadingFontSize, cColor(1,0,0,mS.mfLoadingAlpha), eFontAlign_Center);
 	}
 	//////////////////////
 	//Draw loading only
 	else
 	{
 		tWString sLoading = kTranslate("General", "Loading");
-		cVector3f vPos(400, 300-mvLoadingFontSize.y/2,1);
+		cVector3f vPos(400, ohpl_ga7b_ls_centered(mvLoadingFontSize.y, 300),1);
 
 		apSet->DrawFont(sLoading, mpFontDefault, vPos, mvLoadingFontSize, cColor(1,1), eFontAlign_Center);
 	}
