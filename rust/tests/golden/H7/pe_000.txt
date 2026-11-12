@@ -1,0 +1,109 @@
+new Bloom active 1 disabled 0 p 0
+-o get Bloom -> 0
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set Bloom 55
+  onsetparams 55
+active 0 disabled 1 p 55
+-o disabled 0
+active 1 disabled 0 p 55
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 55
+-o active 0
+active 0 disabled 0 p 55
+-o get Bloom -> 55
+active 0 disabled 0 p 55
+-o set ColorConvTex 568
+active 0 disabled 0 p 55
+-o get Other -> -1
+active 0 disabled 0 p 55
+-o disabled 0
+active 0 disabled 0 p 55
+-o get RadialBlur -> -1
+active 0 disabled 0 p 55
+-o get Bloom -> 55
+active 0 disabled 0 p 55
+-o set Other 249
+active 0 disabled 0 p 55
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 55
+-o disabled 1
+active 0 disabled 1 p 55
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 55
+-o set RadialBlur 194
+active 0 disabled 1 p 55
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 55
+-o set Bloom 912
+  onsetparams 912
+active 0 disabled 1 p 912
+-o disabled 1
+active 0 disabled 1 p 912
+-o set ImageTrail 172
+active 0 disabled 1 p 912
+-o get Other -> -1
+active 0 disabled 1 p 912
+-o disabled 1
+active 0 disabled 1 p 912
+-o disabled 0
+active 1 disabled 0 p 912
+-o disabled 1
+active 0 disabled 1 p 912
+-o get Bloom -> 912
+active 0 disabled 1 p 912
+-o disabled 1
+active 0 disabled 1 p 912
+-o get RadialBlur -> -1
+active 0 disabled 1 p 912
+-o set Other 592
+active 0 disabled 1 p 912
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 912
+-o set ImageTrail 709
+active 0 disabled 1 p 912
+-o get Bloom -> 912
+active 0 disabled 1 p 912
+-o set ColorConvTex 827
+active 0 disabled 1 p 912
+-o get Bloom -> 912
+active 0 disabled 1 p 912
+-o set ImageTrail 772
+active 0 disabled 1 p 912
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 912
+-o set ColorConvTex 447
+active 0 disabled 1 p 912
+-o disabled 0
+active 0 disabled 0 p 912
+-o disabled 0
+active 0 disabled 0 p 912
+-o set Bloom 398
+  onsetparams 398
+active 0 disabled 0 p 398
+-o get RadialBlur -> -1
+active 0 disabled 0 p 398
+-o get Bloom -> 398
+active 0 disabled 0 p 398
+-o set Bloom 779
+  onsetparams 779
+active 0 disabled 0 p 779
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 779
+-o set ColorConvTex 452
+active 0 disabled 0 p 779
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 779
+-o set ColorConvTex 725
+active 0 disabled 0 p 779
+-o active 0
+active 0 disabled 0 p 779
+-o set Bloom 841
+  onsetparams 841
+active 0 disabled 0 p 841
+-o get RadialBlur -> -1
+active 0 disabled 0 p 841

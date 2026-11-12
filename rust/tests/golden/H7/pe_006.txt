@@ -1,0 +1,102 @@
+new Other active 1 disabled 0 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o get Bloom -> -1
+active 0 disabled 0 p 0
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o set RadialBlur 207
+active 0 disabled 0 p 0
+-o set RadialBlur 706
+active 0 disabled 0 p 0
+-o set RadialBlur 935
+active 0 disabled 0 p 0
+-o get Other -> 0
+active 0 disabled 0 p 0
+-o set ColorConvTex 893
+active 0 disabled 0 p 0
+-o active 0
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o active 1
+  onsetactive 1
+active 1 disabled 0 p 0
+-o set RadialBlur 142
+active 1 disabled 0 p 0
+-o set ColorConvTex 117
+active 1 disabled 0 p 0
+-o active 1
+active 1 disabled 0 p 0
+-o get Other -> 0
+active 1 disabled 0 p 0
+-o set ImageTrail 960
+active 1 disabled 0 p 0
+-o set ColorConvTex 788
+active 1 disabled 0 p 0
+-o set ImageTrail 89
+active 1 disabled 0 p 0
+-o get Bloom -> -1
+active 1 disabled 0 p 0
+-o set ImageTrail 321
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set ImageTrail 206
+active 0 disabled 1 p 0
+-o get Bloom -> -1
+active 0 disabled 1 p 0
+-o disabled 0
+active 1 disabled 0 p 0
+-o set ColorConvTex 240
+active 1 disabled 0 p 0
+-o set RadialBlur 148
+active 1 disabled 0 p 0
+-o get RadialBlur -> -1
+active 1 disabled 0 p 0
+-o get ImageTrail -> -1
+active 1 disabled 0 p 0
+-o set Other 68
+  onsetparams 68
+active 1 disabled 0 p 68
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 68
+-o set ImageTrail 62
+active 0 disabled 0 p 68
+-o get Other -> 68
+active 0 disabled 0 p 68
+-o get ImageTrail -> -1
+active 0 disabled 0 p 68
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 68
+-o set RadialBlur 742
+active 0 disabled 0 p 68
+-o set Bloom 222
+active 0 disabled 0 p 68
+-o disabled 1
+active 0 disabled 1 p 68
+-o get Other -> 68
+active 0 disabled 1 p 68
+-o set ColorConvTex 359
+active 0 disabled 1 p 68
+-o active 0
+active 0 disabled 1 p 68
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 68
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 68
+-o get Other -> 68
+active 0 disabled 1 p 68
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 68
+-o set Other 352
+  onsetparams 352
+active 0 disabled 1 p 352

@@ -29,6 +29,8 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Material.h"
 #include "graphics/RustMaterial.h"
+#include "graphics/RustMaterialH7.h"
+#include "impl/RustBackends.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -201,14 +203,15 @@ namespace hpl {
 
 	void iMaterialType::InitFromRust(int alKind)
 	{
-		uint32_t lFlags = ohpl_mat_type_flags(alKind);
+		const bool bRs = OhplBackendRustRequested();
+		uint32_t lFlags = bRs ? ohpl_h7_type_flags(alKind) : ohpl_mat_type_flags(alKind);
 		mbIsTranslucent = (lFlags & 1) != 0;
 		mbIsDecal = (lFlags & 2) != 0;
 		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
 			if(lFlags & (1u << (8 + i))) mbHasTypeSpecifics[i] = true;
 
 		int vTextures[eMaterialTexture_LastEnum];
-		size_t lNum = ohpl_mat_used_textures(alKind, vTextures, eMaterialTexture_LastEnum);
+		size_t lNum = bRs ? ohpl_h7_type_used_textures(alKind, vTextures, eMaterialTexture_LastEnum) : ohpl_mat_used_textures(alKind, vTextures, eMaterialTexture_LastEnum);
 		for(size_t i=0; i<lNum && i<(size_t)eMaterialTexture_LastEnum; ++i) AddUsedTexture((eMaterialTexture)vTextures[i]);
 
 		OhplVarDef def;

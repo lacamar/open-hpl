@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/RustPostEffect.h"
+#include "graphics/RustMaterialH7.h"
 
 namespace hpl {
 
@@ -101,7 +102,7 @@ namespace hpl {
 		 *
 		 * \param abX 
 		 */
-		void SetDisabled(bool abX) { mbDisabled = abX; }
+		void SetDisabled(bool abX);
 		bool IsDisabled() { return mbDisabled; }
 
 		void SetActive(bool abX);
@@ -152,6 +153,8 @@ namespace hpl {
 		bool mbIsLastEffect;
 
 		bool mbFinalFrameBufferUsed;
+
+		OhplH7Pe *mpRs;
 	};
 
 	//------------------------------------------

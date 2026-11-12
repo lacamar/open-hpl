@@ -1,0 +1,98 @@
+new (none) active 1 disabled 0 p 0
+-o get Other -> -1
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 0
+-o set RadialBlur 98
+active 0 disabled 1 p 0
+-o disabled 0
+active 0 disabled 0 p 0
+-o set Other 915
+active 0 disabled 0 p 0
+-o set RadialBlur 475
+active 0 disabled 0 p 0
+-o set ColorConvTex 166
+active 0 disabled 0 p 0
+-o get Bloom -> -1
+active 0 disabled 0 p 0
+-o active 1
+  onsetactive 1
+active 1 disabled 0 p 0
+-o set Other 47
+active 1 disabled 0 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 0
+-o get RadialBlur -> -1
+active 0 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set Other 671
+active 0 disabled 1 p 0
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 0
+-o set Bloom 208
+active 0 disabled 1 p 0
+-o set ColorConvTex 117
+active 0 disabled 1 p 0
+-o set ImageTrail 292
+active 0 disabled 1 p 0
+-o set Other 115
+active 0 disabled 1 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set RadialBlur 626
+active 0 disabled 1 p 0
+-o get ImageTrail -> -1
+active 0 disabled 1 p 0
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 0
+-o set Bloom 209
+active 0 disabled 1 p 0
+-o get Other -> -1
+active 0 disabled 1 p 0
+-o set RadialBlur 330
+active 0 disabled 1 p 0
+-o get Bloom -> -1
+active 0 disabled 1 p 0
+-o set ColorConvTex 582
+active 0 disabled 1 p 0
+-o get Other -> -1
+active 0 disabled 1 p 0
+-o active 1
+active 0 disabled 1 p 0
+-o disabled 0
+active 1 disabled 0 p 0
+-o set ImageTrail 388
+active 1 disabled 0 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 0
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 0
+-o disabled 0
+active 0 disabled 0 p 0
+-o set RadialBlur 823
+active 0 disabled 0 p 0
+-o set Other 336
+active 0 disabled 0 p 0
+-o set ImageTrail 127
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o get Bloom -> -1
+active 0 disabled 0 p 0
+-o get RadialBlur -> -1
+active 0 disabled 0 p 0
+-o set Other 690
+active 0 disabled 0 p 0
+-o get Other -> -1
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0

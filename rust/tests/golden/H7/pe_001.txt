@@ -1,0 +1,100 @@
+new (none) active 1 disabled 0 p 0
+-o get ColorConvTex -> -1
+active 1 disabled 0 p 0
+-o set Bloom 775
+active 1 disabled 0 p 0
+-o active 1
+active 1 disabled 0 p 0
+-o set Other 970
+active 1 disabled 0 p 0
+-o set RadialBlur 55
+active 1 disabled 0 p 0
+-o set RadialBlur 897
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o get Bloom -> -1
+active 0 disabled 1 p 0
+-o active 1
+active 0 disabled 1 p 0
+-o active 1
+active 0 disabled 1 p 0
+-o set ColorConvTex 759
+active 0 disabled 1 p 0
+-o set RadialBlur 464
+active 0 disabled 1 p 0
+-o get Bloom -> -1
+active 0 disabled 1 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 0
+-o disabled 0
+active 0 disabled 0 p 0
+-o get RadialBlur -> -1
+active 0 disabled 0 p 0
+-o set ColorConvTex 593
+active 0 disabled 0 p 0
+-o get Bloom -> -1
+active 0 disabled 0 p 0
+-o active 0
+active 0 disabled 0 p 0
+-o set Bloom 23
+active 0 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set Bloom 238
+active 0 disabled 1 p 0
+-o active 0
+active 0 disabled 1 p 0
+-o get Other -> -1
+active 0 disabled 1 p 0
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 0
+-o set Bloom 225
+active 0 disabled 1 p 0
+-o set RadialBlur 485
+active 0 disabled 1 p 0
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 0
+-o get RadialBlur -> -1
+active 0 disabled 1 p 0
+-o active 1
+active 0 disabled 1 p 0
+-o set Other 756
+active 0 disabled 1 p 0
+-o set Bloom 172
+active 0 disabled 1 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o disabled 0
+active 1 disabled 0 p 0
+-o get RadialBlur -> -1
+active 1 disabled 0 p 0
+-o disabled 0
+active 1 disabled 0 p 0
+-o set Other 736
+active 1 disabled 0 p 0
+-o get Bloom -> -1
+active 1 disabled 0 p 0
+-o get Bloom -> -1
+active 1 disabled 0 p 0
+-o get RadialBlur -> -1
+active 1 disabled 0 p 0
+-o get ImageTrail -> -1
+active 1 disabled 0 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o get Bloom -> -1
+active 0 disabled 1 p 0
+-o get RadialBlur -> -1
+active 0 disabled 1 p 0
+-o get ImageTrail -> -1
+active 0 disabled 1 p 0
+-o get ImageTrail -> -1
+active 0 disabled 1 p 0
+-o set RadialBlur 264
+active 0 disabled 1 p 0
