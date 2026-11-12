@@ -276,4 +276,74 @@ bool ohpl_ga3_patrol_is_at_last(int cur, int size);
 void ohpl_ga3_patrol_inc(int *cur, int size, bool loopAtEnd);
 }
 
+// GA3b: ManPig and WaterLurker handlers (rust/src/luxenemy/manpig.rs, waterlurker.rs).
+struct OhplGa3bPigCtx
+{
+	bool *lastShortMiss;
+	bool *forceCharge;
+	float *fleeInvisibleCount;
+	bool *threatenOnAlert;
+	bool *fleeFromPlayer;
+	bool *autoDisableAfterFlee;
+	int *idleBehavior;
+	int *patrolMoveSpeed;
+	bool *allowZeroWait;
+	float *damageMul;
+	float *runSpeedMul;
+	bool *playActivateSound;
+	float *huntPauseTimeMul;
+	bool *isTesla;
+	float *teslaNotice;
+	float *inLanternCount;
+	float *checkFlashLight;
+	float *lanternSensitivity;
+	bool *disableTriggers;
+};
+
+struct OhplGa3bWlCtx
+{
+	float *playerDetectionHeight;
+	float *afterAttackPause;
+	bool *causesSanityDecrease;
+};
+
+enum
+{
+	eOhplGa3bOp_SeenByPlayer = 200,
+	eOhplGa3bOp_InFovAtFeet = 201,
+	eOhplGa3bOp_VisibleAtFeet = 202,
+	eOhplGa3bOp_TeleportFeet = 203,
+	eOhplGa3bOp_BodySetMoveDelay = 204,
+	eOhplGa3bOp_PlayHuntSound = 205,
+	eOhplGa3bOp_InsidePlayerView = 206,
+	eOhplGa3bOp_PatrolNodeInfo = 207,
+	eOhplGa3bOp_AttackEx = 208,
+	eOhplGa3bOp_ForceTesla = 209,
+	eOhplGa3bOp_PlayerYaw = 210,
+	eOhplGa3bOp_WlSplash = 220,
+	eOhplGa3bOp_WlFoodBite = 221,
+	eOhplGa3bOp_WlDebug = 222,
+};
+
+// Animation kinds for eOhplGa3Op_PlayAnim; the name is built in C++ with the pose suffix.
+enum
+{
+	eOhplGa3bAnim_IdleExtraPose = 100,
+	eOhplGa3bAnim_NoticePose = 101,
+	eOhplGa3bAnim_ThreatLoop = 102,
+	eOhplGa3bAnim_AttackPose = 103,
+	eOhplGa3bAnim_Bite = 104,
+	eOhplGa3bAnim_Charge = 105,
+	eOhplGa3bAnim_FlinchPose = 106,
+	eOhplGa3bAnim_DeadPlain = 107,
+	eOhplGa3bAnim_PatrolNode = 108,
+};
+
+extern "C" {
+bool ohpl_ga3b_pig_event(const OhplGa3Ctx *c, const OhplGa3bPigCtx *p, const OhplGa3Host *h, int state, int ev, const OhplGa3Msg *m);
+void ohpl_ga3b_pig_update_lantern(const OhplGa3Ctx *c, const OhplGa3bPigCtx *p, const OhplGa3Host *h, float dt);
+bool ohpl_ga3b_wl_event(const OhplGa3Ctx *c, const OhplGa3bWlCtx *w, const OhplGa3Host *h, int state, int ev, const OhplGa3Msg *m);
+bool ohpl_ga3b_wl_player_is_detected(const OhplGa3Ctx *c, const OhplGa3bWlCtx *w, const OhplGa3Host *h);
+}
+
 #endif

@@ -18,6 +18,7 @@
  */
 
 #include "LuxMap.h"
+#include "RustLuxMap.h"
 
 #include "LuxConfigHandler.h"
 
@@ -139,28 +140,43 @@ bool cLuxMap::LoadFromFile(const tString & asFile, bool abLoadEntities)
 		static int lDemoCount;
 	#endif
 
-	tWorldLoadFlag lFlags =0;
-	//if(abLoadEntities==false) lFlags |= eWorldLoadFlag_NoGameEntities;
-	if(abLoadEntities==false) lFlags |= eWorldLoadFlag_NoDynamicGameEntities;
-	if(gpBase->mpConfigHandler->mbFastPhysicsLoad) lFlags |= eWorldLoadFlag_FastPhysicsLoad;
-	if(gpBase->mpConfigHandler->mbFastStaticLoad) lFlags |= eWorldLoadFlag_FastStaticLoad;
-	if(gpBase->mpConfigHandler->mbFastEntityLoad) lFlags |= eWorldLoadFlag_FastEntityLoad;
+	tWorldLoadFlag lFlags = (tWorldLoadFlag)ohpl_ga5_world_load_flags(	abLoadEntities, gpBase->mpConfigHandler->mbFastPhysicsLoad,
+																		gpBase->mpConfigHandler->mbFastStaticLoad, gpBase->mpConfigHandler->mbFastEntityLoad,
+																		eWorldLoadFlag_NoDynamicGameEntities, eWorldLoadFlag_FastPhysicsLoad,
+																		eWorldLoadFlag_FastStaticLoad, eWorldLoadFlag_FastEntityLoad);
 
+	LoadScript(asFile);
+
+	//Load the world
+	mpWorld = mpEngine->GetScene()->LoadWorld(asFile,lFlags);
+	if(mpWorld==NULL)
+		FatalError("Could not load world file '%s'\n", asFile.c_str());
+
+	mpPhysicsWorld = mpWorld->GetPhysicsWorld();
+
+	if(abLoadEntities) AfterWorldLoadEntitySetup();
+
+	gpBase->mpCurrentMapLoading = NULL;
+
+
+	if (gpBase->mbHardMode) ApplyHardMode();
+
+	return true;
+}
+
+void cLuxMap::LoadScript(const tString & asFile)
+{
 	//Script file
-	bool bScriptExists = false;
 	tString sScriptFile = cString::SetFileExt(asFile,"hps");
-	if(gpBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sScriptFile)!=_W("")) 
-	{
-		bScriptExists = true;
-	}
-	else if(cResources::GetCreateAndLoadCompressedMaps())
+	bool bPlainScript = gpBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sScriptFile)!=_W("");
+	bool bCompressedEnabled = cResources::GetCreateAndLoadCompressedMaps();
+	bool bCompressedScript = false;
+	if(bPlainScript==false && bCompressedEnabled)
 	{
 		sScriptFile = cString::SetFileExt(asFile,"chps");
-		if(gpBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sScriptFile)!=_W("")) 
-		{
-			bScriptExists = true;
-		}
+		bCompressedScript = gpBase->mpEngine->GetResources()->GetFileSearcher()->GetFilePath(sScriptFile)!=_W("");
 	}
+	bool bScriptExists = ohpl_ga5_script_choice(bPlainScript, bCompressedEnabled, bCompressedScript) != kOhplGa5ScriptNone;
 	
 	if(bScriptExists)
 	{
@@ -169,18 +185,8 @@ bool cLuxMap::LoadFromFile(const tString & asFile, bool abLoadEntities)
 		if(mpScript==NULL)
 		{
 			//Only get errors!
-			tStringVec sMessRows;
-			tString sSepp = "\n";
-			cString::GetStringVec(sCompileMessages, sMessRows, &sSepp);
-			
-			tString sErrorMess="";
-			for(size_t i=0; i<sMessRows.size(); ++i)
-			{
-				if(cString::GetFirstStringPos(sMessRows[i], "ERR") >= 0)
-				{
-					sErrorMess += " "+sMessRows[i]+"\n";
-				}
-			}
+			tString sErrorMess;
+			ohpl_ga5_compile_errors(sCompileMessages.data(), sCompileMessages.size(), ohpl_ga5::Collect, &sErrorMess);
 
 			FatalError("Could not load script file '%s'!\n%s", sScriptFile.c_str(), sErrorMess.c_str());
 		}
@@ -189,129 +195,103 @@ bool cLuxMap::LoadFromFile(const tString & asFile, bool abLoadEntities)
 	{
 		Error("Script file %s does not exist!\n", sScriptFile.c_str());
 	}
+}
 
-	//Load the world
-	mpWorld = mpEngine->GetScene()->LoadWorld(asFile,lFlags);
-	if(mpWorld==NULL) 
-		FatalError("Could not load world file '%s'\n", asFile.c_str());
+//-----------------------------------------------------------------------
 
-	mpPhysicsWorld = mpWorld->GetPhysicsWorld();
+void cLuxMap::ApplyHardMode()
+{
+	std::vector<iLuxEntity*> vEntitiesToDestroy;
+		
+	int lNumTotalTinderboxes = 0;
+	int lNumRemovedTinderboxes = 0;
 
-	if(abLoadEntities) AfterWorldLoadEntitySetup();
 
-	gpBase->mpCurrentMapLoading = NULL;
-	
+	float fTinderBoxRemoveEvery = ohpl_ga5_hard_tinderbox_every(gpBase->mpPlayer->GetTinderboxes());
+	float fTinderBoxCounter = 0.0f;
+	//float fTinderBoxRemoveEvery = 8.5f / 10.0f;
 
-	//////////////////
-	// HARDMODE
-	if (gpBase->mbHardMode)
+	int lNumTotalOil = 0;
+	int lNumRemovedOil = 0;
+
+	float fLampOilCounter = 0.0f;
+	float fLampOilRemoveEvery = ohpl_ga5_hard_oil_every();
+
+	/////////////////////
+	// Go through all entities
+	for (tLuxEntityListIt entityIt = mlstEntities.begin(); entityIt != mlstEntities.end(); ++entityIt)
 	{
-		std::vector<iLuxEntity*> vEntitiesToDestroy;
-			
-		int lNumTotalTinderboxes = 0;
-		int lNumRemovedTinderboxes = 0;
-		
+		iLuxEntity *pEntity = *entityIt;
 
-		float fMin = 7.0f / 10.0f;
-		float fMax = 9.5f / 10.0f;
+		eLuxEntityType entityType = pEntity->GetEntityType();
 
-		float fCurrentNumTinderBoxes = static_cast<float>(gpBase->mpPlayer->GetTinderboxes());
-		float fMaxNumTinderboxes = 6;
-
-		float fT = fCurrentNumTinderBoxes / fMaxNumTinderboxes;
-
-		float fTinderBoxRemoveEvery = (1.0f - fT)*fMin + fT*fMax;
-
-		float fTinderBoxCounter = 0.0f;
-		//float fTinderBoxRemoveEvery = 8.5f / 10.0f;
-
-		int lNumTotalOil = 0;
-		int lNumRemovedOil = 0;
-
-		float fLampOilCounter = 0.0f;
-		float fLampOilRemoveEvery = 6.5f / 10.0f;
-		
 		/////////////////////
-		// Go through all entities
-		for (tLuxEntityListIt entityIt = mlstEntities.begin(); entityIt != mlstEntities.end(); ++entityIt)
+		// Check if entity is right type
+		if (entityType == eLuxEntityType_Prop)
 		{
-			iLuxEntity *pEntity = *entityIt;
+			iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
+			eLuxPropType propType = pProp->GetPropType();
 
-			eLuxEntityType entityType = pEntity->GetEntityType();
 
-			/////////////////////
-			// Check if entity is right type
-			if (entityType == eLuxEntityType_Prop)
+			if (propType == eLuxPropType_Item)
 			{
-				iLuxProp *pProp = static_cast<iLuxProp*>(pEntity);
-				eLuxPropType propType = pProp->GetPropType();
+				cLuxProp_Item *pItem = static_cast<cLuxProp_Item*>(pProp);
+				eLuxItemType itemType = pItem->GetItemType();
 
-
-				if (propType == eLuxPropType_Item)
+				/////////////////////
+				// Tinderbox
+				if (itemType == eLuxItemType_Tinderbox)
 				{
-					cLuxProp_Item *pItem = static_cast<cLuxProp_Item*>(pProp);
-					eLuxItemType itemType = pItem->GetItemType();
-					
-					/////////////////////
-					// Tinderbox
-					if (itemType == eLuxItemType_Tinderbox)
-					{
-						lNumTotalTinderboxes++;
-						fTinderBoxCounter += fTinderBoxRemoveEvery; 
+					lNumTotalTinderboxes++;
 
-						if (fTinderBoxCounter >= 1.0f)
-						{
-							fTinderBoxCounter -= 1.0f;
-							vEntitiesToDestroy.push_back(pEntity);
-							lNumRemovedTinderboxes++;
-							continue;
-						}
+					if (ohpl_ga5_hard_remove(&fTinderBoxCounter, fTinderBoxRemoveEvery))
+					{
+						vEntitiesToDestroy.push_back(pEntity);
+						lNumRemovedTinderboxes++;
+						continue;
 					}
+				}
 
-					/////////////////////
-					// Lamp oil
-					if (itemType == eLuxItemType_LampOil)
+				/////////////////////
+				// Lamp oil
+				if (itemType == eLuxItemType_LampOil)
+				{
+					lNumTotalOil++;
+
+					if (ohpl_ga5_hard_remove(&fLampOilCounter, fLampOilRemoveEvery))
 					{
-						fLampOilCounter += fLampOilRemoveEvery;
-						lNumTotalOil++;
-						if (fLampOilCounter >= 1.0f)
-						{
-							fLampOilCounter -= 1.0f;
-							vEntitiesToDestroy.push_back(pEntity);
-							lNumRemovedOil++;
-							continue;
-						}
+						vEntitiesToDestroy.push_back(pEntity);
+						lNumRemovedOil++;
+						continue;
 					}
 				}
 			}
 		}
-
-		//////////////////////////
-		// Print what i've done
-		#if not MAC_OS && not LINUX
-		sDebugMsg += L" of ";
-		sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalTinderboxes));
-		sDebugMsg += L" tinderboxes removed, ";
-		sDebugMsg += std::to_wstring(static_cast<long double>(fTinderBoxRemoveEvery));
-		gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
-
-		sDebugMsg = std::to_wstring(static_cast<long long>(lNumRemovedOil));
-		sDebugMsg += L" of ";
-		sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalOil));
-		sDebugMsg += L" oil removed";
-
-		gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
-        #endif
-
-		//////////////////////////
-		// Remove the entities from above
-		for (size_t i = 0; i < vEntitiesToDestroy.size(); ++i)
-		{
-			DestroyEntity(vEntitiesToDestroy[i]);
-		}
 	}
 
-	return true;
+	//////////////////////////
+	// Print what i've done
+	#if not MAC_OS && not LINUX
+	sDebugMsg += L" of ";
+	sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalTinderboxes));
+	sDebugMsg += L" tinderboxes removed, ";
+	sDebugMsg += std::to_wstring(static_cast<long double>(fTinderBoxRemoveEvery));
+	gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
+
+	sDebugMsg = std::to_wstring(static_cast<long long>(lNumRemovedOil));
+	sDebugMsg += L" of ";
+	sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalOil));
+	sDebugMsg += L" oil removed";
+
+	gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
+        #endif
+
+	//////////////////////////
+	// Remove the entities from above
+	for (size_t i = 0; i < vEntitiesToDestroy.size(); ++i)
+	{
+		DestroyEntity(vEntitiesToDestroy[i]);
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -338,26 +318,15 @@ void cLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
 	for(; entityIt != mlstEntities.end(); ++entityIt)
 	{
 		iLuxEntity *pEntity = *entityIt;
-
 		pEntity->OnMapEnter();
 	}
 
-	if(abRunScript)
-	{
-		///////////////
-		//Run script
-		if(mpScript) 
-		{
-			if(abFirstTime)
-			{
-				mpScript->Run("OnStart()");
-				CalculateTotalCompletionAmount();
-			}
-
-			mpScript->Run("OnEnter()");
-		}
-	}
-	
+	///////////////
+	//Run script
+	int lPlan = ohpl_ga5_enter_plan(abRunScript, mpScript!=NULL, abFirstTime);
+	if(lPlan & kOhplGa5EnterStart) mpScript->Run("OnStart()");
+	if(lPlan & kOhplGa5EnterCompletion) CalculateTotalCompletionAmount();
+	if(lPlan & kOhplGa5EnterEnter) mpScript->Run("OnEnter()");
 }
 
 
@@ -365,9 +334,9 @@ void cLuxMap::OnEnter(bool abRunScript, bool abFirstTime)
 
 void cLuxMap::OnLeave(bool abRunScript)
 {
-	if(abRunScript)
+	if(ohpl_ga5_run_script_allowed(mpScript!=NULL, abRunScript))
 	{
-		if(mpScript) mpScript->Run("OnLeave()");
+		mpScript->Run("OnLeave()");
 	}
 }
 
@@ -401,10 +370,9 @@ void cLuxMap::Update(float afTimeStep)
 
 void cLuxMap::RunScript(const tString& asCommand)
 {
-	if(mpScript==NULL) return;
-	if(this != gpBase->mpMapHandler->GetCurrentMap()) return;
+	if(ohpl_ga5_run_script_allowed(mpScript!=NULL, this == gpBase->mpMapHandler->GetCurrentMap())==false) return;
 
-    mpScript->Run(asCommand);
+	mpScript->Run(asCommand);
 }
 
 bool cLuxMap::RecompileScript(tString *apOutput)
@@ -477,7 +445,7 @@ void cLuxMap::SetCheckPoint(const tString& asName, const tString& asStartPos, co
 	for(int i= gpBase->mpMusicHandler->GetMaxPrio();i>=0; --i)
 	{
 		cLuxMusic *pMusic = gpBase->mpMusicHandler->GetMusic(i);
-		if(pMusic->msFile != "" && pMusic->mbLoop && pMusic->mbSpecialEffect==false)
+		if(ohpl_ga5_checkpoint_music_pick(pMusic->mbLoop, pMusic->mbSpecialEffect, pMusic->msFile.data(), pMusic->msFile.size()))
 		{
 			msCheckPointMusic = pMusic->msFile;
 			mlCheckPointMusicPrio = i;
@@ -487,7 +455,7 @@ void cLuxMap::SetCheckPoint(const tString& asName, const tString& asStartPos, co
 			
 			//When music handler plays music, it multiplies it to get a new volume. Need to change that back when storing.
 			float fMusicVolumeMul =gpBase->mpMusicHandler->GetVolumeMul();
-			if(fMusicVolumeMul>0) mfCheckPointMusicVolume /= fMusicVolumeMul;
+			mfCheckPointMusicVolume = ohpl_ga5_checkpoint_music_volume(mfCheckPointMusicVolume, fMusicVolumeMul);
 
 			break;
 		}
@@ -538,7 +506,10 @@ void cLuxMap::LoadCheckPoint()
 
 	//////////////////////////////
 	// Run script (last thing done!)
-	RunScript(msCheckPointCallback + "(\""+ msCheckPointName + "\", "+cString::ToString(mlCheckPointCount)+")"  );
+	tString sCheckPointCall;
+	ohpl_ga5_checkpoint_call(mlCheckPointCount, msCheckPointCallback.data(), msCheckPointCallback.size(),
+							msCheckPointName.data(), msCheckPointName.size(), ohpl_ga5::Collect, &sCheckPointCall);
+	RunScript(sCheckPointCall);
 	
 	mlCheckPointCount++;
 }
@@ -584,22 +555,21 @@ void cLuxMap::AddEntity(iLuxEntity *apEntity)
 {
 	m_mapEntitiesByName.insert(tLuxEntityNameMap::value_type(cString::ToLowerCase(apEntity->GetName()), apEntity));
 	m_mapEntitiesByID.insert(tLuxEntityIDMap::value_type(apEntity->GetID(), apEntity));
-	mlstEntities.push_back(apEntity);
 
+	mlstEntities.push_back(apEntity);
 	mpLatestAddedEntity = apEntity;
 
-	if(apEntity->GetEntityType() == eLuxEntityType_Enemy)
+	bool bIsArea = apEntity->GetEntityType() == eLuxEntityType_Area;
+	int lLists = ohpl_ga5_entity_lists(	apEntity->GetEntityType() == eLuxEntityType_Enemy, bIsArea,
+										bIsArea && static_cast<iLuxArea*>(apEntity)->GetAreaType() == eLuxAreaType_Sticky);
+	if(lLists & kOhplGa5ListEnemy)
 	{
 		iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(apEntity);
 		mlstEnemies.push_back(pEnemy);
 	}
-	else if(apEntity->GetEntityType() == eLuxEntityType_Area)
+	else if(lLists & kOhplGa5ListSticky)
 	{
-		iLuxArea *pArea = static_cast<iLuxArea*>(apEntity);
-		if(pArea->GetAreaType() == eLuxAreaType_Sticky)
-		{
-			mlstStickyAreas.push_back(static_cast<cLuxArea_Sticky*>(pArea));
-		}
+		mlstStickyAreas.push_back(static_cast<cLuxArea_Sticky*>(static_cast<iLuxArea*>(apEntity)));
 	}
 }
 
@@ -714,12 +684,10 @@ void cLuxMap::BroadcastEnemySoundMessage(const cVector3f& avPos, float afVolume 
 		}
 
 		/////////////////////////
-		//Calculate volume
+		//Calculate volume (skip sounds that are too close)
 		float fDistance = cMath::Vector3Dist(pBv->GetWorldCenter(), avPos);
-		if(fDistance < 2.0f) continue; //Skip sounds that are too close!
-
-		float fHearVolume = 1.0f - cMath::Clamp( (fDistance - afMinDist)/(afMaxDist - afMinDist), 0.0f ,1.0f);
-		fHearVolume *= afVolume;
+		float fHearVolume;
+		if(ohpl_ga5_sound_volume(fDistance, afMinDist, afMaxDist, afVolume, &fHearVolume)==false) continue;
 
 		/////////////////////////
 		//Send message
@@ -1005,9 +973,9 @@ void cLuxMap::RemoveUseItemCallback(cLuxUseItemCallback * apCallback, const tStr
 		if(pCallback == apCallback)
 		{
 			//Safety check that the callback really is the same!
-			if(asName != "" && pCallback->msName != asName)
+			if(ohpl_ga5_callback_remove_ok(asName.data(), asName.size(), pCallback->msName.data(), pCallback->msName.size())==false)
 			{
-				break;	
+				break;
 			}
 
 			hplDelete(apCallback);
@@ -1028,7 +996,8 @@ cLuxUseItemCallback* cLuxMap::GetUseItemCallback(const tString& asItem, const tS
 		//	pCallback->msName.c_str(), pCallback->msEntity.c_str(), pCallback->msItem.c_str(), pCallback->msFunction.c_str());
 
 
-        if(pCallback->msItem == asItem && pCallback->msEntity == asEntity)
+        if(ohpl_ga5_use_item_matches(	pCallback->msItem.data(), pCallback->msItem.size(), pCallback->msEntity.data(), pCallback->msEntity.size(),
+										asItem.data(), asItem.size(), asEntity.data(), asEntity.size()))
 		{
 			return pCallback;
 		}
@@ -1043,7 +1012,7 @@ void cLuxMap::AddTimer(const tString& asName, float afTime, const tString& asFun
 {
 	cLuxEventTimer *pTimer = hplNew( cLuxEventTimer, ());
 	pTimer->msName = asName;
-	pTimer->mfCount = afTime > 0 ? afTime : 0.001f; //Not allow 0 or lower for time!
+	pTimer->mfCount = ohpl_ga5_timer_count(afTime); //Not allow 0 or lower for time!
 	pTimer->msFunction = asFunction;
 	pTimer->mbDestroyMe = false;
 
@@ -1059,7 +1028,7 @@ void cLuxMap::RemoveTimer(const tString& asName)
 		cLuxEventTimer *pTimer = *it;
 		if(pTimer->msName == asName)
 		{
-			if(mbUpdatingTimers)
+			if(ohpl_ga5_timer_remove_marks(mbUpdatingTimers))
 			{
 				pTimer->mbDestroyMe = true;
 				++it;
@@ -1099,17 +1068,10 @@ cLuxEventTimer* cLuxMap::GetTimer(const tString& asName)
 
 void cLuxMap::AddCompletionAmount(int alAmount, float afDelay)
 {
-	float fPrevious = mlTotalCompletionAmount==0 ? 0 : (float)mlCurrentCompletionAmount/(float)mlTotalCompletionAmount;
-	mlCurrentCompletionAmount += alAmount;
-	float fNew = mlTotalCompletionAmount==0 ? 0 : (float)mlCurrentCompletionAmount/(float)mlTotalCompletionAmount;
+	float fPrevious, fNew;
+	ohpl_ga5_completion_add(&mlCurrentCompletionAmount, mlTotalCompletionAmount, alAmount, &fPrevious, &fNew);
 
 	gpBase->mpCompletionCountHandler->ShowCompletionIncrease(fPrevious, fNew, afDelay);
-
-	//float fPercent = (float)mlCurrentCompletionAmount/(float)mlTotalCompletionAmount;
-	//gpBase->mpDebugHandler->AddMessage(_W("Completion value: ")+cString::ToStringW(mlCurrentCompletionAmount) + _W(" / ")+
-	//															cString::ToStringW(mlTotalCompletionAmount) + _W(" Percent: ")+
-	//															cString::ToStringW(fPercent),
-	//															false);
 }
 
 //-----------------------------------------------------------------------
@@ -1126,7 +1088,7 @@ void cLuxMap::AddDissolveEntity(cMeshEntity *apMeshEntity, float afTime)
 
     cLuxDissolveEntity *pDissolveEnt = hplNew(cLuxDissolveEntity, (this));
 	pDissolveEnt->mpEntity = pNewEntity;
-	pDissolveEnt->mfFadeSpeed = 1.0f/afTime;
+	pDissolveEnt->mfFadeSpeed = ohpl_ga5_dissolve_speed(afTime);
 	pDissolveEnt->mfAlpha =1;
 
 	//////////////////////
@@ -1210,18 +1172,22 @@ cLuxScriptVar* cLuxMap::GetVar(const tString &asName)
 
 void cLuxMap::CalculateTotalCompletionAmount()
 {
+	int vValues[5] = {	gpBase->mpCompletionCountHandler->mlItemCompletionValue, gpBase->mpCompletionCountHandler->mlNoteCompletionValue,
+						gpBase->mpCompletionCountHandler->mlDiaryCompletionValue, gpBase->mpCompletionCountHandler->mlChestCompletionValue,
+						gpBase->mpCompletionCountHandler->mlFlashbackCompletionValue };
+
 	////////////////
 	//Quests
-	mlTotalCompletionAmount += mlNumberOfQuests * gpBase->mpCompletionCountHandler->mlQuestCompletionValue;
+	mlTotalCompletionAmount = ohpl_ga5_quest_completion(mlTotalCompletionAmount, mlNumberOfQuests, gpBase->mpCompletionCountHandler->mlQuestCompletionValue);
 
 	////////////////
 	//Entities
 	for(tLuxEntityListIt entityIt = mlstEntities.begin(); entityIt != mlstEntities.end(); ++entityIt)
 	{
 		iLuxEntity *pEntity = *entityIt;
-		
 		eLuxEntityType entityType = pEntity->GetEntityType();
-		
+		int lKind = kOhplGa5CompleteNone;
+
 		/////////////////////////
 		// Prop
         if(entityType == eLuxEntityType_Prop)
@@ -1235,16 +1201,16 @@ void cLuxMap::CalculateTotalCompletionAmount()
 			{
 				cLuxProp_Item *pItem = static_cast<cLuxProp_Item*>(pProp);
 				eLuxItemType itemType = pItem->GetItemType();
-				
-                if(itemType == eLuxItemType_Puzzle) mlTotalCompletionAmount += gpBase->mpCompletionCountHandler->mlItemCompletionValue;
-				if(itemType == eLuxItemType_Note) mlTotalCompletionAmount += gpBase->mpCompletionCountHandler->mlNoteCompletionValue;
-				if(itemType == eLuxItemType_Diary) mlTotalCompletionAmount += gpBase->mpCompletionCountHandler->mlDiaryCompletionValue;
+
+                if(itemType == eLuxItemType_Puzzle) lKind = kOhplGa5CompletePuzzle;
+				if(itemType == eLuxItemType_Note) lKind = kOhplGa5CompleteNote;
+				if(itemType == eLuxItemType_Diary) lKind = kOhplGa5CompleteDiary;
 			}
 			/////////////////////////
 			// Chest
 			else if(propType == eLuxPropType_Chest)
 			{
-				mlTotalCompletionAmount += gpBase->mpCompletionCountHandler->mlChestCompletionValue;
+				lKind = kOhplGa5CompleteChest;
 			}
 		}
 		/////////////////////////
@@ -1254,8 +1220,10 @@ void cLuxMap::CalculateTotalCompletionAmount()
 			iLuxArea *pArea = static_cast<iLuxArea*>(pEntity);
 			eLuxAreaType areaType = pArea->GetAreaType();
 
-            if(areaType == eLuxAreaType_Flashback) mlTotalCompletionAmount += gpBase->mpCompletionCountHandler->mlFlashbackCompletionValue;
+            if(areaType == eLuxAreaType_Flashback) lKind = kOhplGa5CompleteFlashback;
 		}
+
+		mlTotalCompletionAmount += ohpl_ga5_completion_value(lKind, vValues);
 	}
 
 	gpBase->mpDebugHandler->AddMessage(_W("Total completion value: ")+cString::ToStringW(mlTotalCompletionAmount), false);
@@ -1265,19 +1233,14 @@ void cLuxMap::CalculateTotalCompletionAmount()
 
 int cLuxMap::GetFreeEntityID()
 {
-	int lEntId =0;
-
-	//Iterate the IDs until a free is found
-	tLuxEntityIDMapIt it = m_mapEntitiesByID.begin();
-	for(; it != m_mapEntitiesByID.end(); ++it)
+	//Find the lowest id not used in the id map (ascending)
+	std::vector<int> vIds;
+	for(tLuxEntityIDMapIt it = m_mapEntitiesByID.begin(); it != m_mapEntitiesByID.end(); ++it)
 	{
-		int lId = it->first;
-		
-		if(lId != lEntId) return lEntId;
-		++lEntId;
+		vIds.push_back(it->first);
 	}
-	
-	return lEntId;
+
+	return ohpl_ga5_free_entity_id(vIds.data(), vIds.size());
 }
 
 //-----------------------------------------------------------------------
@@ -1294,25 +1257,25 @@ void cLuxMap::UpdateToBeDesotroyedEntities(bool abUseCallbacks)
 			gpBase->mpPlayer->GetCurrentStateData()->OnDestroyEntity(pEntity);
 			pEntity->BeforeEntityDestruction();
 		}
-		
+
 		STLFindAndRemove(mlstEntities, pEntity);
 		STLMapFindAndRemove(m_mapEntitiesByName, pEntity);
 		STLMapFindAndRemove(m_mapEntitiesByID, pEntity);
 
+		bool bIsArea = pEntity->GetEntityType() == eLuxEntityType_Area;
+		int lLists = ohpl_ga5_entity_lists(	pEntity->GetEntityType() == eLuxEntityType_Enemy, bIsArea,
+											bIsArea && static_cast<iLuxArea*>(pEntity)->GetAreaType() == eLuxAreaType_Sticky);
+
 		//Extra remove for enemies
-		if(pEntity->GetEntityType() == eLuxEntityType_Enemy)
+		if(lLists & kOhplGa5ListEnemy)
 		{
 			iLuxEnemy *pEnemy = static_cast<iLuxEnemy*>(pEntity);
 			STLFindAndRemove(mlstEnemies, pEnemy);
 		}
 		//Extra remove for sticky areas
-		else if(pEntity->GetEntityType() == eLuxEntityType_Area)
+		else if(lLists & kOhplGa5ListSticky)
 		{
-			iLuxArea *pArea = static_cast<iLuxArea*>(pEntity);
-			if(pArea->GetAreaType() == eLuxAreaType_Sticky)
-			{
-				STLFindAndRemove(mlstStickyAreas, static_cast<cLuxArea_Sticky*>(pArea));
-			}
+			STLFindAndRemove(mlstStickyAreas, static_cast<cLuxArea_Sticky*>(static_cast<iLuxArea*>(pEntity)));
 		}
 
 		hplDelete(pEntity);
@@ -1331,7 +1294,7 @@ void cLuxMap::UpdateTimers(float afTimeStep)
 	for(tLuxEventTimerListIt it= mlstTimers.begin(); it != mlstTimers.end(); ++it)
 	{
 		cLuxEventTimer *pTimer = *it;
-		pTimer->mfCount -= afTimeStep;
+		pTimer->mfCount = ohpl_ga5_timer_step(pTimer->mfCount, afTimeStep);
 	}
 
 	//////////////////////
@@ -1340,9 +1303,9 @@ void cLuxMap::UpdateTimers(float afTimeStep)
 	{
 		cLuxEventTimer *pTimer = *it;
 
-		if(pTimer->mfCount <=0 && pTimer->mbDestroyMe==false)
+		if(ohpl_ga5_timer_due(pTimer->mfCount, pTimer->mbDestroyMe))
 		{
-			RunScript(pTimer->msFunction+"(\""+pTimer->msName+"\")");
+			RunScript(ohpl_ga5::Call1(pTimer->msFunction, pTimer->msName));
 			it = mlstTimers.erase(it);
 			hplDelete(pTimer);
 			
@@ -1380,9 +1343,10 @@ void cLuxMap::UpdateDissolveEntities(float afTimeStep)
 	{
 		cLuxDissolveEntity *pEntity = *it;
 
-        pEntity->mfAlpha-= pEntity->mfFadeSpeed *afTimeStep;
+        bool bRemove = ohpl_ga5_dissolve_step(&pEntity->mfAlpha, pEntity->mfFadeSpeed, afTimeStep);
 		pEntity->mpEntity->SetCoverageAmount(pEntity->mfAlpha);
-		if(pEntity->mfAlpha<=0)
+
+		if(bRemove)
 		{
 			it = mlstDissolveEntities.erase(it);
 			hplDelete(pEntity);
@@ -1411,9 +1375,9 @@ void cLuxMap::UpdateLampLightConnections(float afTimeStep)
 
 void cLuxMap::UpdateCheckCommentaryIconActive(float afTimeStep)
 {
-	if(mbCommentaryIconsActive == gpBase->mpMapHandler->GetShowCommentary()) return;
-
-	mbCommentaryIconsActive = gpBase->mpMapHandler->GetShowCommentary();
+	int lNewState = ohpl_ga5_commentary_sync(mbCommentaryIconsActive, gpBase->mpMapHandler->GetShowCommentary());
+	if(lNewState < 0) return;
+	mbCommentaryIconsActive = lNewState != 0;
 
 	//////////////////////////////
 	//Go through all entities and set commentary icons with proper active value
@@ -1421,7 +1385,6 @@ void cLuxMap::UpdateCheckCommentaryIconActive(float afTimeStep)
 	for(; entityIt != mlstEntities.end(); ++entityIt)
 	{
 		iLuxEntity *pEntity = *entityIt;
-
 		if(pEntity->GetEntityType() == eLuxEntityType_CommentaryIcon)
 		{
 			pEntity->SetActive(mbCommentaryIconsActive);

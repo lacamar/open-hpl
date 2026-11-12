@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Sticky.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -251,60 +252,43 @@ void cLuxArea_Sticky::DetachBody()
 void cLuxArea_Sticky::UpdateAttachBody(float afTimeStep)
 {
 	if(mpAttachedBody==NULL || mfSetMtxTime >= 1) return;
-	
-	//////////////////////////////////
-	// Move and rotate
-	if(mbMoveBody && mbRotateBody)
+
+	OhplGa5StickyIn attachIn;
+	memcpy(&attachIn.start, &mtxAttachedStart, sizeof(attachIn.start));
+	cMatrixf mtxArea = mpBody->GetWorldMatrix();
+	memcpy(&attachIn.areaWorld, &mtxArea, sizeof(attachIn.areaWorld));
+	cVector3f vAreaPos = mpBody->GetWorldPosition();
+	cVector3f vMassCentre = mpAttachedBody->GetMassCentre();
+	cVector3f vAttachedPos = mpAttachedBody->GetWorldPosition();
+	memcpy(&attachIn.areaPos, &vAreaPos, sizeof(attachIn.areaPos));
+	memcpy(&attachIn.massCentre, &vMassCentre, sizeof(attachIn.massCentre));
+	memcpy(&attachIn.attachedPos, &vAttachedPos, sizeof(attachIn.attachedPos));
+	attachIn.poseTime = mfPoseTime;
+	attachIn.step = afTimeStep;
+	attachIn.setTime = mfSetMtxTime;
+	attachIn.moveBody = mbMoveBody;
+	attachIn.rotateBody = mbRotateBody;
+
+	OhplGa5StickyOut attachOut;
+	ohpl_ga5_sticky_attach(&attachIn, &attachOut);
+
+	mfSetMtxTime = attachOut.setTime;
+	if(attachOut.mode == kOhplGa5AttachSetMatrix)
 	{
-		if(mfPoseTime==0)	mfSetMtxTime = 1.0f;
-		else				mfSetMtxTime += afTimeStep / mfPoseTime;
-
-		cMatrixf mtxGoal = mpBody->GetWorldMatrix();
-		mtxGoal.SetTranslation(mpBody->GetWorldPosition() - mpAttachedBody->GetMassCentre());
-
-		cMatrixf mtxNew = cMath::MatrixSlerp(mfSetMtxTime,mtxAttachedStart,mtxGoal,true);
-
+		cMatrixf mtxNew;
+		memcpy(&mtxNew, &attachOut.mtx, sizeof(attachOut.mtx));
 		mpAttachedBody->SetMatrix(mtxNew);
 	}
-	//////////////////////////////////
-	// Move only
-	else if(mbMoveBody && !mbRotateBody)
+	else if(attachOut.mode == kOhplGa5AttachSetPosition)
 	{
-		if(mfPoseTime==0)	mfSetMtxTime = 1.0f;
-		else				mfSetMtxTime += afTimeStep / mfPoseTime;
-
-		cVector3f vGoal = mpBody->GetWorldPosition() - mpAttachedBody->GetMassCentre();
-
-		cVector3f vNew =	mtxAttachedStart.GetTranslation()* (1-mfSetMtxTime) +
-			vGoal *mfSetMtxTime;
-
+		cVector3f vNew;
+		memcpy(&vNew, &attachOut.pos, sizeof(attachOut.pos));
 		mpAttachedBody->SetPosition(vNew);
 	}
-	//////////////////////////////////
-	// Rotate only
-	else if(!mbMoveBody && mbRotateBody)
-	{
-		if(mfPoseTime==0)	mfSetMtxTime = 1.0f;
-		else				mfSetMtxTime += afTimeStep / mfPoseTime;
-
-		cMatrixf mtxGoal = mpBody->GetWorldMatrix();
-
-		cMatrixf mtxNew = cMath::MatrixSlerp(mfSetMtxTime,mtxAttachedStart,mtxGoal,true);
-
-		mtxNew.SetTranslation(mpAttachedBody->GetWorldPosition());
-		mpAttachedBody->SetMatrix(mtxNew);
-	}
-	//////////////////////////////////
-	// No transformation
-	else
-	{
-		mfSetMtxTime = 1.0f;
-	}
-
 
 	//////////////////////////////////
 	// If attached body in place, do effects
-	if(mfSetMtxTime >= 1)
+	if(attachOut.done)
 	{
 		cWorld *pWorld = mpMap->GetWorld();
 
@@ -347,10 +331,7 @@ void cLuxArea_Sticky::UpdateCollision(float afTimeStep)
 	{
 		iPhysicsBody *pBody = vBodies[i];
 
-		if(pBody->GetCollide()==false || pBody->IsActive()==false) continue;
-		if(pBody->GetMass()==0 && pBody->IsCharacter()==false) continue;
-
-		bool bInsideWater = true;
+		if(ohpl_ga5_body_skipped(pBody->GetCollide(), pBody->IsActive(), pBody->GetMass(), pBody->IsCharacter())) continue;
 
 		/////////////////////////
 		//Bounding volume check
@@ -366,28 +347,17 @@ void cLuxArea_Sticky::UpdateCollision(float afTimeStep)
 		}
 
 		//////////////////////////
-		//If not inside then skip this body
-		if(bInsideBV==false)
-		{
-			//If this was the last body that was attached, it has now moved out and does not need to be rejected.
-			if(pBody == mpLastAttachedBody)
-				mpLastAttachedBody = NULL;
-			
-			continue;
-		}
-
-		//////////////////////////
-		//If the previously attached body is still inside, then skip it.
-		if(pBody == mpLastAttachedBody) continue;
+		//If not inside then skip this body, if the previously attached body is still inside, then skip it.
+		//If the last attached body has moved out it does not need to be rejected any more.
+		int lInside = ohpl_ga5_sticky_inside(bInsideBV, pBody == mpLastAttachedBody);
+		if(lInside == kOhplGa5InsideForgetLast) mpLastAttachedBody = NULL;
+		if(lInside != kOhplGa5InsideProceed) continue;
 
 		///////////////////////////
 		// See if body is right for attaching
 		mbAllowAttachment = false;
-		if(msAttachableBodyName!="")
-		{
-			if(cString::GetFirstStringPos(pBody->GetName(), msAttachableBodyName)<0) continue;
-			mbAllowAttachment = true;
-		}
+		if(ohpl_ga5_sticky_name(msAttachableBodyName.data(), msAttachableBodyName.size(),
+								pBody->GetName().data(), pBody->GetName().size(), &mbAllowAttachment)) continue;
 
 		///////////////////////////////
 		//Check for collision
@@ -396,21 +366,19 @@ void cLuxArea_Sticky::UpdateCollision(float afTimeStep)
 		{
 			continue;
 		}
-	
+
 		///////////////////////////
 		// Call callback and see if it should be attached.
 		if(msAttachFunction!="")
 		{
 			mpMap->RunScript(GetCallbackFunc(msAttachFunction,pBody));
-
-			if(mbAllowAttachment==false) continue;
+			if(ohpl_ga5_sticky_after_callback(true, mbAllowAttachment)) continue;
 		}
 
 		///////////////////////////
 		// Attach
 		AttachBody(pBody);
 	}
-
 }
 
 
@@ -418,7 +386,7 @@ void cLuxArea_Sticky::UpdateCollision(float afTimeStep)
 
 tString cLuxArea_Sticky::GetCallbackFunc(const tString &asFunc,iPhysicsBody *apBody)
 {
-	return asFunc + "(\"" + msName + "\",\"" + apBody->GetName() + "\")"; 
+	return ohpl_ga5::Call2(asFunc, msName, apBody->GetName());
 }
 
 //-----------------------------------------------------------------------

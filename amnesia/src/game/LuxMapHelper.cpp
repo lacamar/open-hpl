@@ -18,6 +18,7 @@
  */
 
 #include "LuxMapHelper.h"
+#include "RustLuxMap.h"
 
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
@@ -43,7 +44,11 @@ void cLuxLineOfSightCallback::Reset()
 
 bool cLuxLineOfSightCallback::BeforeIntersect(iPhysicsBody *apBody)
 {
-	if(apBody->IsCharacter() || apBody->GetCollide()==false || (mbCheckShadow && apBody->GetBlocksLight()==false) )
+	bool bIsChar = apBody->IsCharacter();
+	bool bCollide = apBody->GetCollide();
+	bool bBlocksLight = apBody->GetBlocksLight();
+
+	if(ohpl_ga5_los_before(bIsChar, bCollide, mbCheckShadow, bBlocksLight, false, NULL, 0)==false)
 	{
 		return false;
 	}
@@ -52,35 +57,22 @@ bool cLuxLineOfSightCallback::BeforeIntersect(iPhysicsBody *apBody)
 	if(pEntity && pEntity->GetMeshEntity())
 	{
 		cMeshEntity *pMeshEntity = pEntity->GetMeshEntity();
-		if(pMeshEntity)
-		{
-			bool bFoundSolid = false;
-			for(int i=0; i< pMeshEntity->GetSubMeshEntityNum(); ++i)
-			{
-				cSubMeshEntity *pSubMeshEnt = pMeshEntity->GetSubMeshEntity(i);
-				if(pSubMeshEnt->GetEntityParent() != (iEntity3D*)apBody)
-				{ 
-					continue;
-				}
 
-				cMaterial *pMaterial = pSubMeshEnt->GetMaterial(); 
-				if(	pMaterial && pMaterial->GetType()->IsTranslucent()==false &&
-					(mbCheckShadow==false || pSubMeshEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster)) )
-				{
-					bFoundSolid = true;
-					break;
-				}
-			}
-			if(bFoundSolid==false)
-			{
-				//if(bDebug)Log("Out on non solid!\n");
-				return false;
-			}
-		}
-		else
+		std::vector<OhplGa5SubMesh> vSubMeshes;
+		for(int i=0; i< pMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
-			return false;
+			cSubMeshEntity *pSubMeshEnt = pMeshEntity->GetSubMeshEntity(i);
+			cMaterial *pMaterial = pSubMeshEnt->GetMaterial();
+
+			OhplGa5SubMesh subMesh;
+			subMesh.parentIsBody = pSubMeshEnt->GetEntityParent() == (iEntity3D*)apBody;
+			subMesh.hasMaterial = pMaterial != NULL;
+			subMesh.translucent = pMaterial ? pMaterial->GetType()->IsTranslucent() : false;
+			subMesh.shadowCaster = pSubMeshEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster);
+			vSubMeshes.push_back(subMesh);
 		}
+
+		return ohpl_ga5_los_before(bIsChar, bCollide, mbCheckShadow, bBlocksLight, true, vSubMeshes.data(), vSubMeshes.size());
 	}
 
 	return true;
@@ -114,29 +106,20 @@ void cLuxClosestEntityCallback::Reset()
 bool cLuxClosestEntityCallback::BeforeIntersect(iPhysicsBody *apBody)
 {
 	//LogUpdate("Testing: %s\n", apBody->GetName().c_str());
-
 	mlCheckCount++;
 
 	iLuxEntity* pEntity = (iLuxEntity*)apBody->GetUserData();
-	if(pEntity)
-	{
-		if(pEntity->IsActive()==false) return false;
-		if(apBody->GetCollide()==false && pEntity->CanInteract(apBody)==false) return false;
-	}
-	else
-	{
-		if(apBody->IsCharacter()) return false; 
-		if(apBody->GetCollide()==false) return false;
-	}
-	
-	return true;
+	int lAction = ohpl_ga5_closest_entity_before(pEntity!=NULL, pEntity ? pEntity->IsActive() : false, apBody->GetCollide(), apBody->IsCharacter());
+	if(lAction == kOhplGa5ClosestAsk) return pEntity->CanInteract(apBody);
+
+	return lAction == kOhplGa5ClosestAccept;
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxClosestEntityCallback::OnIntersect(iPhysicsBody *apBody,cPhysicsRayParams *apParams)
 {
-	if(apParams->mfDist < mfClosestDist)
+	if(ohpl_ga5_closer(apParams->mfDist, mfClosestDist))
 	{
 		mfClosestDist = apParams->mfDist;
         mpClosestBody = apBody;
@@ -165,14 +148,14 @@ void cLuxClosestCharColliderCallback::Reset()
 
 bool cLuxClosestCharColliderCallback::BeforeIntersect(iPhysicsBody *apBody)
 {
-	return apBody->GetCollideCharacter() && apBody->IsCharacter()==false;
+	return ohpl_ga5_char_collider_before(apBody->GetCollideCharacter(), apBody->IsCharacter());
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxClosestCharColliderCallback::OnIntersect(iPhysicsBody *apBody,cPhysicsRayParams *apParams)
 {
-	if(apParams->mfDist < mfClosestDist)
+	if(ohpl_ga5_closer(apParams->mfDist, mfClosestDist))
 	{
 		mfClosestDist = apParams->mfDist;
 		mvClosestNormal = apParams->mvNormal;
@@ -201,11 +184,7 @@ void cLuxAttackRayCallback::Setup(iPhysicsBody *apSkipBody)
 
 bool cLuxAttackRayCallback::BeforeIntersect(iPhysicsBody *apBody)
 {
-	if(apBody->IsCharacter() || apBody->GetCollide()==false || mpSkipBody == apBody)
-	{
-		return false;
-	}
-	return true;
+	return ohpl_ga5_attack_ray_before(apBody->IsCharacter(), apBody->GetCollide(), mpSkipBody == apBody);
 }
 
 bool cLuxAttackRayCallback::OnIntersect(iPhysicsBody *apBody,cPhysicsRayParams *apParams)
@@ -299,23 +278,11 @@ bool cLuxMapHelper::ShapeDamage(iCollideShape *apShape, const cMatrixf& a_mtxTra
 	{
 		iPhysicsBody *pBody = vBodies[i];
 
-		if(pBody->IsActive()==false) continue;
-		if(pBody->GetCollide()==false) continue;
-
-		///////////////////////
-		//Check if valid
-		if(pBody->GetUserData() && abCheckProps==false) continue;
-		if(pBody->IsCharacter())
-		{
-			if(pBody == gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody())
-			{
-				if(abCheckPlayer == false) continue;
-			}
-			else
-			{
-				if(abCheckEnemies == false) continue;
-			}
-		}
+		bool bIsCharBody = pBody->IsCharacter();
+		OhplGa5DamageFilter damageFilter = {	pBody->IsActive(), pBody->GetCollide(), pBody->GetUserData()!=NULL, abCheckProps, bIsCharBody,
+												bIsCharBody && pBody == gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody(),
+												abCheckPlayer, abCheckEnemies };
+		if(ohpl_ga5_damage_skips(&damageFilter)) continue;
 
 		///////////////////////
 		//Check collision
@@ -347,28 +314,37 @@ bool cLuxMapHelper::ShapeDamage(iCollideShape *apShape, const cMatrixf& a_mtxTra
 
 		///////////////////////
 		//Calculate the hit position
-		cVector3f vHitPos =0;
+		std::vector<OhplGa5Vec3> vContactPoints;
 		for(int i=0; i < collideData.mlNumOfPoints; ++i)
 		{
-			vHitPos += collideData.mvContactPoints[i].mvPoint;
+			const cVector3f &vPoint = collideData.mvContactPoints[i].mvPoint;
+			OhplGa5Vec3 contact = { vPoint.x, vPoint.y, vPoint.z };
+			vContactPoints.push_back(contact);
 		}
-		vHitPos = vHitPos / (float)collideData.mlNumOfPoints;
+		cVector3f vHitPos;
+		ohpl_ga5_hit_position(vContactPoints.data(), vContactPoints.size(), reinterpret_cast<OhplGa5Vec3*>(&vHitPos));
 		lstHitPositions.push_back(vHitPos);
 
         ///////////////////////
 		//Add Force
-		if(pBody->GetMass() > 0 || pBody->IsCharacter())
+		if(ohpl_ga5_takes_push(pBody->GetMass(), pBody->IsCharacter()))
 		{
-			cVector3f vDir = cMath::Vector3Normalize(vHitPos - avOrigin);
+			cVector3f vDir;
+			ohpl_ga5_hit_direction(reinterpret_cast<const OhplGa5Vec3*>(&vHitPos), reinterpret_cast<const OhplGa5Vec3*>(&avOrigin),
+									reinterpret_cast<OhplGa5Vec3*>(&vDir));
 			
 			if(pBody->IsCharacter())
 			{
-				pBody->GetCharacterBody()->AddForceVelocity(vDir * afForce * 0.1f);
+				cVector3f vPush;
+				ohpl_ga5_char_push(reinterpret_cast<const OhplGa5Vec3*>(&vDir), afForce, reinterpret_cast<OhplGa5Vec3*>(&vPush));
+				pBody->GetCharacterBody()->AddForceVelocity(vPush);
 			}
 			else
 			{
-				float fImpulse = cMath::Min(afForce / pBody->GetMass(), afMaxImpulse);
-				pBody->AddImpulseAtPosition(vDir * fImpulse, vHitPos);
+				cVector3f vImpulse;
+				ohpl_ga5_prop_impulse(reinterpret_cast<const OhplGa5Vec3*>(&vDir), afForce, pBody->GetMass(), afMaxImpulse,
+										reinterpret_cast<OhplGa5Vec3*>(&vImpulse));
+				pBody->AddImpulseAtPosition(vImpulse, vHitPos);
 			}
 		}
 		
@@ -425,11 +401,12 @@ bool cLuxMapHelper::ShapeDamage(iCollideShape *apShape, const cMatrixf& a_mtxTra
 		///////////////////////
 		//Add Damage
 		float fDamage = cMath::RandRectf(afMinDamage, afMaxDamage);
-		if(pEntity)
+		int lTarget = ohpl_ga5_damage_target(pEntity!=NULL, pBody == gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody());
+		if(lTarget == kOhplGa5TargetEntity)
 		{
 			pEntity->GiveDamage(fDamage,alStrength);
 		}
-		else if(pBody == gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody())
+		else if(lTarget == kOhplGa5TargetPlayer)
 		{
 			gpBase->mpPlayer->GiveDamage(fDamage,alStrength, aDamageType, true, abLethalForPlayer);
 			if(apHitPlayer) *apHitPlayer = true;
@@ -512,11 +489,7 @@ bool cLuxMapHelper::GetClosestCharCollider(const cVector3f& avStart,const cVecto
 
 static float GetMaxRGB(const cColor &aCol)
 {
-	float fAmount = aCol.r;
-	if(fAmount < aCol.g) fAmount = aCol.g;
-	if(fAmount < aCol.b) fAmount = aCol.b;
-
-	return fAmount;
+	return ohpl_ga5_max_rgb(aCol.r, aCol.g, aCol.b);
 }
 
 float cLuxMapHelper::GetLightLevelAtPos(const cVector3f& avPos, std::vector<iLight*>* apSkipLightsVec, float afRadiusAdd)
@@ -572,7 +545,9 @@ float cLuxMapHelper::GetLightLevelAtPos(const cVector3f& avPos, std::vector<iLig
 		
 		///////////////////////////
 		//Box light
-		if(pLight->GetLightType() == eLightType_Box)
+		int lLightKind = ohpl_ga5_light_kind(	pLight->GetLightType() == eLightType_Box, pLight->GetLightType() == eLightType_Spot,
+											pLight->GetLightType() == eLightType_Spot && pLight->GetCastShadows());
+		if(lLightKind == kOhplGa5LightBox)
 		{
 			fLightLevel += GetMaxRGB(pLight->GetDiffuseColor());
 		}
@@ -581,7 +556,7 @@ float cLuxMapHelper::GetLightLevelAtPos(const cVector3f& avPos, std::vector<iLig
 		else
 		{
 			//Check line of sight
-			if(	pLight->GetLightType() == eLightType_Spot && pLight->GetCastShadows() &&
+			if(	lLightKind == kOhplGa5LightNeedsLos &&
 				CheckLineOfSight(pLight->GetWorldPosition(),avPos, true)==false)
 			{
 				continue;
@@ -594,11 +569,7 @@ float cLuxMapHelper::GetLightLevelAtPos(const cVector3f& avPos, std::vector<iLig
 			float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), avPos);
 
 			//Calculate attenuation
-			float fT = 1 - fDist / (pLight->GetRadius() + afRadiusAdd);
-			if(fT<0)fT =0;
-			fAmount *= fT;
-
-			fLightLevel += fAmount;
+			fLightLevel = ohpl_ga5_light_falloff_add(fLightLevel, fAmount, fDist, pLight->GetRadius(), afRadiusAdd);
 		}
   	}
 

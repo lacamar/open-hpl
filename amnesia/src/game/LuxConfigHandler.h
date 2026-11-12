@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxBase.h"
 
 //----------------------------------------------
 
@@ -37,7 +38,7 @@ public:
 
 	bool ShowRestartWarning(cGuiSet* apSet, void* apObject, tGuiCallbackFunc apCallback);
 
-	void SetGameNeedsRestart() { mbGameNeedsRestart=true; mbRestartDialogShown=false; }
+	void SetGameNeedsRestart() { ohpl_ga9_restart_set(&mRestart); }
 
 	// Variables
 	bool mbLoadDebugMenu;
@@ -95,8 +96,7 @@ public:
 
 	
 private:
-	bool mbGameNeedsRestart;
-	bool mbRestartDialogShown;
+	OhplGa9Restart mRestart;
 };
 
 //----------------------------------------------

@@ -24,6 +24,7 @@
 
 #include <deque>
 #include "LuxBase.h"
+#include "RustLuxFx.h"
 
 //----------------------------------------------
 
@@ -100,6 +101,9 @@ public:
 	void DoAction(eLuxPlayerAction aAction, bool abPressed);
 
 private:
+	OhplGa9bEmotion ToRust();
+	void FromRust(const OhplGa9bEmotion &s);
+
 	cGuiGfxElement *mpWhiteGfx;
 	iFontData *mpFont;
 	cVector2f mvFontSize;
@@ -230,6 +234,9 @@ public:
 	void SetDirectAlpha(float afX);
 
 private:
+	OhplGa9bFade ToRust();
+	void FromRust(const OhplGa9bFade &s);
+
 	cGuiGfxElement *mpWhiteGfx;
 
 	float mfGoalAlpha;
@@ -255,6 +262,9 @@ public:
 	void DrawFlash(cGuiSet *apSet ,float afTimeStep);
 
 private:
+	OhplGa9bFlash ToRust();
+	void FromRust(const OhplGa9bFlash &s);
+
 	cGuiGfxElement *mpWhiteGfx;
 
 	float mfAlpha;
@@ -287,6 +297,9 @@ public:
 	void OnDraw(float afFrameTime);
 
 private:
+	OhplGa9bFlash ToRust();
+	void FromRust(const OhplGa9bFlash &s);
+
 	cGuiGfxElement *mpWhiteGfx;
 
 	float mfAlpha;

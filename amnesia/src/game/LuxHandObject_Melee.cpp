@@ -145,65 +145,47 @@ void cLuxHandObject_Melee::Update(float afTimeStep)
 
 bool cLuxHandObject_Melee::DoAction(eLuxPlayerAction aAction, bool abPressed)
 {
-	////////////////////////////
-	// Attack
 	if(aAction == eLuxPlayerAction_Attack)
 	{
-		if(mpHands->GetState()== eLuxHandsState_Idle)
-		{
-			if(abPressed)
-			{
-				Charge();
-				return true;
-			}
-		}
-		else if(mpHands->GetState()== eLuxHandsState_HandObject)
-		{
-			if(abPressed ==false && mpHands->mlHandObjectState != 2)
-			{
-				mpHands->mbHandObjectAttackDown = false;
-				if(mpHands->mlHandObjectState !=0) Swing();
-			}
-		}
+		OhplGa4bHands hands = GetHands();
+		OhplGa4bMeleeAct act;
+		ohpl_ga4b_hand_melee_do_action((int)mpHands->GetState(), abPressed, &hands, &act);
+		SetHands(hands);
+		if(act.charge) Charge();
+		if(act.swing) Swing();
+		return act.ret;
 	}
+
 	return false;
+}
+
+OhplGa4bHands cLuxHandObject_Melee::GetHands()
+{
+	OhplGa4bHands hands;
+	hands.obj_state = mpHands->mlHandObjectState;
+	hands.attack_down = mpHands->mbHandObjectAttackDown;
+	hands.charge_count = mpHands->mfHandObjectChargeCount;
+	return hands;
+}
+
+void cLuxHandObject_Melee::SetHands(const OhplGa4bHands &aHands)
+{
+	mpHands->mlHandObjectState = aHands.obj_state;
+	mpHands->mbHandObjectAttackDown = aHands.attack_down;
+	mpHands->mfHandObjectChargeCount = aHands.charge_count;
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxHandObject_Melee::AnimationIsOver()
 {
-	///////////////////////
-	//Going to charge
-	if(mpHands->mlHandObjectState == 0)
-	{
-		if(mpHands->mbHandObjectAttackDown==false)
-		{
-			Swing();
-		}
-		else
-		{
-			gpBase->mpPlayer->SetInteractionMoveSpeedMul(mfChargePlayerSpeedMul);
-			mpHands->mlHandObjectState = 1;
-		}
-
-		return false;
-	}
-	///////////////////////
-	//Charging
-	else if(mpHands->mlHandObjectState == 1)
-	{
-		return false;	
-	}
-	///////////////////////
-	//Swing
-	else if(mpHands->mlHandObjectState == 2)
-	{
-		mpHands->mlHandObjectState =0;
-		return true;
-		
-	}
-	return false;
+	OhplGa4bHands hands = GetHands();
+	OhplGa4bMeleeAct act;
+	ohpl_ga4b_hand_melee_anim_over(&hands, &act);
+	SetHands(hands);
+	if(act.swing) Swing();
+	if(act.charge_speed) gpBase->mpPlayer->SetInteractionMoveSpeedMul(mfChargePlayerSpeedMul);
+	return act.ret;
 }
 
 //-----------------------------------------------------------------------
@@ -216,18 +198,14 @@ bool cLuxHandObject_Melee::AnimationIsOver()
 
 void cLuxHandObject_Melee::UpdateCharge(float afTimeStep)
 {
-	if(mpHands->mbHandObjectAttackDown==false) return;
-
-	if(mpHands->mfHandObjectChargeCount < 1)
+	OhplGa4bHands hands = GetHands();
+	bool bDone = ohpl_ga4b_hand_melee_update_charge(&hands, mfChargeTime, afTimeStep);
+	SetHands(hands);
+	if(bDone)
 	{
-		mpHands->mfHandObjectChargeCount += afTimeStep * (1.0f/mfChargeTime);
-		if(mpHands->mfHandObjectChargeCount >= 1.0f)
-		{
-			mpHands->mfHandObjectChargeCount = 1;
-			gpBase->mpPlayer->FadeAspectMulTo(0.9f, 4);
-			gpBase->mpPlayer->FadeFOVMulTo(0.95f, 2);
-			gpBase->mpHelpFuncs->PlayGuiSoundData(msChargeDoneSound,eSoundEntryType_World);
-		}
+		gpBase->mpPlayer->FadeAspectMulTo(0.9f, 4);
+		gpBase->mpPlayer->FadeFOVMulTo(0.95f, 2);
+		gpBase->mpHelpFuncs->PlayGuiSoundData(msChargeDoneSound,eSoundEntryType_World);
 	}
 }
 
@@ -243,7 +221,8 @@ void cLuxHandObject_Melee::UpdateCheckDamageEvent(float afTimeStep)
 		cMatrixf mtxHands = cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ);
 		mtxHands.SetTranslation(pCam->GetPosition());
 
-		float fDamageMul = mpHands->mfHandObjectChargeCount>=1 ? 2.0f : 1.0f;
+		OhplGa4bHands hands = GetHands();
+		float fDamageMul = ohpl_ga4b_hand_melee_damage_mul(&hands);
 
 		bool bHit = gpBase->mpMapHelper->ShapeDamage(	mpCollideShape, mtxHands, pCam->GetPosition(),
 											mfAttackMinDamage*fDamageMul, mfAttackMaxDamage*fDamageMul,
@@ -263,13 +242,15 @@ void cLuxHandObject_Melee::UpdateCheckDamageEvent(float afTimeStep)
 
 void cLuxHandObject_Melee::Swing()
 {
-	//Reset any charing stuff
 	gpBase->mpPlayer->SetInteractionMoveSpeedMul(1.0f);
 	gpBase->mpPlayer->FadeAspectMulTo(1.0f, 7.0f);
 	gpBase->mpPlayer->FadeFOVMulTo(1.0f, 3.5f);
 
-	mpHands->mlHandObjectState=2;
-	if(mpHands->mfHandObjectChargeCount >= 1)
+	OhplGa4bHands hands = GetHands();
+	bool bCharged = ohpl_ga4b_hand_melee_swing(&hands);
+	SetHands(hands);
+
+	if(bCharged)
 	{
 		mpHands->PlayAnim(msHandsAnim_SwingCharge, false);
 		gpBase->mpHelpFuncs->PlayGuiSoundData(msSwingChargeSound,eSoundEntryType_World);
@@ -279,17 +260,16 @@ void cLuxHandObject_Melee::Swing()
 		mpHands->PlayAnim(msHandsAnim_Swing, false);
 		gpBase->mpHelpFuncs->PlayGuiSoundData(msSwingSound,eSoundEntryType_World);
 	}
-	
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxHandObject_Melee::Charge()
 {
-	mpHands->mbHandObjectAttackDown = true;
-	mpHands->mfHandObjectChargeCount =0;
-	mpHands->mlHandObjectState =0;
-	
+	OhplGa4bHands hands = GetHands();
+	ohpl_ga4b_hand_melee_charge(&hands);
+	SetHands(hands);
+
 	mpHands->PlayAnim(msHandsAnim_Charge, false);
 	gpBase->mpHelpFuncs->PlayGuiSoundData(msChargeSound,eSoundEntryType_World);
 }

@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxUi.h"
 
 //----------------------------------------------
 
@@ -238,7 +239,7 @@ public:
 	 * if life time is <=0 then the life time is calculated based on string length.
 	 */
 	void SetMessageText(const tWString &asText, float afLifeTime);
-	bool GetMessageActive(){ return mbMessageActive;}
+	bool GetMessageActive(){ return mS.message_active != 0;}
 
 	void SetPickedItem(cLuxInventory_Item *apItem, const cVector2f& avOffset);
 	cLuxInventory_Item* GetPickedItem(){ return mpPickedItem;}
@@ -246,7 +247,7 @@ public:
 	void SetCurrentWidget(iWidget *apWidget);
 	iWidget* GetCurrentWidget(){ return mpCurrentWidget;}
 
-	void SetEnterFromJournal(bool abX){ mbEnterFromJournal = abX;}
+	void SetEnterFromJournal(bool abX){ mS.enter_from_journal = abX;}
 
 	cLuxInventory_Item* GetItem(int alIdx){ return mvItems[alIdx];}
 	int GetItemNum(){ return (int)mvItems.size();}
@@ -258,8 +259,8 @@ public:
 	iLuxItemType * GetItemTypeData(eLuxItemType aType){ return mvItemTypes[aType];}
 
 
-	bool GetPickedItemMoved() { return mbPickedObjectMoved; }
-	double GetItemPickedAt() { return mfPickedUpAt; }
+	bool GetPickedItemMoved() { return mS.picked_moved != 0; }
+	double GetItemPickedAt() { return mS.picked_at; }
 
 #ifdef USE_GAMEPAD
 	void AppDeviceWasPlugged();
@@ -270,6 +271,7 @@ private:
 	///////////////////////
 	// Helper methods
 	void DrawDescTextRow(const tWString& asText, const cColor& aCol);
+	void RunDrawEvents(const std::vector<OhplGa8Event> &avEvents, cGuiGfxElement** apGfxCorners, cGuiGfxElement** apGfxBorders);
 
 	void ResetSessionVars();
 
@@ -394,9 +396,9 @@ private:
 
 	///////////////////////
 	// Settings
-	float mfFadeInTime;
-	float mfFadeOutTime;
-	
+	OhplGa8InvState mS;
+	bool mbDisabled;
+
 	///////////////////////
 	// Data
 	cGui *mpGui;
@@ -449,9 +451,6 @@ private:
 	cGuiGfxElement *mpRemainingOilBG;
 	cGuiGfxElement* mpOilBubble[3];
 	cGuiGfxElement* mpOilLiquid;
-	cVector3f mvOilBubblePos[3];
-	float mvOilBubbleSpeed[3];
-	float mfOilMovementT;
 
 	cGuiGfxElement *mpTinderbox;
 
@@ -559,11 +558,6 @@ private:
 
 	///////////////////////
 	// Variables
-	float mfAlpha;
-	bool mbActive;
-	bool mbDisabled;
-	bool mbExitToJournal;
-	bool mbEnterFromJournal;
 
 	cLuxAlphaFader mvAlphaFader[eLuxInventoryFader_LastEnum];
 
@@ -574,15 +568,8 @@ private:
 
 	tWString msOldHeaderText;
 	tWString msOldNormalText;
-	float mfOldDescTextAlpha;
 
 	tWString msMessageText;
-	float mfMessageTextLife;
-	float mfMessageTextAlpha;
-	bool mbMessageActive;
-	
-	double mfPickedUpAt;
-	bool mbPickedObjectMoved;
 	cLuxInventory_Item *mpPickedItem;
 	cVector2f mvPickedItemOffset;
 	iWidget *mpCurrentWidget;
@@ -592,9 +579,6 @@ private:
 
 	std::vector<cGuiGfxElement*> mvGridLines;
 
-	float mfTimer;
-	tFloatVec mvPulseMiddle;
-	tFloatVec mvPulseFreq;
 };
 
 //----------------------------------------------

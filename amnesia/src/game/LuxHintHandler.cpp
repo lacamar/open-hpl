@@ -37,12 +37,12 @@ cLuxHintHandler::cLuxHintHandler() : iLuxUpdateable("LuxHintHandler")
 {
 	mpFont = NULL;
 
-	mfYPos = gpBase->mpMenuCfg->GetFloat("Hints","YPos",0);
-	mvFontSize = gpBase->mpMenuCfg->GetVector2f("Hints","FontSize",0);
-
-	mfTextDurationMul = gpBase->mpMenuCfg->GetFloat("Hints","TextDurationMul",0);
-
-	mHintOscill.SetUp(0, 1, 0, 1, 1);
+	mS.active = 0;
+	mS.alpha = 0;
+	mS.show_count = 0;
+	cVector2f vFontSize = gpBase->mpMenuCfg->GetVector2f("Hints","FontSize",0);
+	ohpl_ga8_hint_init(&mS, gpBase->mpMenuCfg->GetFloat("Hints","YPos",0), vFontSize.x, vFontSize.y,
+						gpBase->mpMenuCfg->GetFloat("Hints","TextDurationMul",0));
 
 	//////////////
 	// Set up icons for each gamepad button
@@ -152,8 +152,7 @@ void cLuxHintHandler::OnStart()
 
 void cLuxHintHandler::Reset()
 {
-	mfAlpha =0;
-	mfShowTextCount =0;
+	ohpl_ga8_hint_reset(&mS);
 	msCurrentText = _W("");
 	m_setHintsGiven.clear();
 	m_setHintsBlocked.clear();
@@ -163,14 +162,14 @@ void cLuxHintHandler::Reset()
 
 void cLuxHintHandler::LoadUserConfig()
 {
-	mbActive = gpBase->mpUserConfig->GetBool("Game", "ShowHints", true);
+	mS.active = gpBase->mpUserConfig->GetBool("Game", "ShowHints", true);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxHintHandler::SaveUserConfig()
 {
-	gpBase->mpUserConfig->SetBool("Game", "ShowHints", mbActive);
+	gpBase->mpUserConfig->SetBool("Game", "ShowHints", mS.active != 0);
 }
 
 //-----------------------------------------------------------------------
@@ -191,31 +190,23 @@ void cLuxHintHandler::OnDraw(float afFrameTime)
 
 void cLuxHintHandler::DrawHintText(float afFrameTime, cGuiSet *apGuiSet)
 {
-	if(gpBase->mbPTestActivated) return;
+	if(ohpl_ga8_hint_drawable(&mS, gpBase->mbPTestActivated) == 0) return;
 
-	if(mbActive==false || mfAlpha<=0) return;
-
-	float fX = mHintOscill.val*0.5;
-	cColor hintCol(1,fX,fX, mfAlpha);
-	apGuiSet->DrawFont(mpFont, cVector3f(400,mfYPos,20),mvFontSize,hintCol, eFontAlign_Center, eGuiMaterial_FontNormal,
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
+	float vLabel[7];
+	ohpl_ga8_hint_label(&mS, vLabel);
+	cColor hintCol(vLabel[3], vLabel[4], vLabel[5], vLabel[6]);
+	apGuiSet->DrawFont(mpFont, cVector3f(vLabel[0],vLabel[1],vLabel[2]),vFontSize,hintCol, eFontAlign_Center, eGuiMaterial_FontNormal,
 		_W(" %ls"), kTranslate("Hints", "HINT:").c_str());
 
 	tWStringVec vRows;
-	float fMaxWidth = 680;
-	float fStartY = mfYPos + mvFontSize.y + 3.0f;
-	mpFont->GetWordWrapRows(fMaxWidth,15, mvFontSize, msCurrentText, &vRows);
-    if(vRows.size()==1)
+	mpFont->GetWordWrapRows(ohpl_ga8_hint_wrap_width(),ohpl_ga8_hint_wrap_line(), vFontSize, msCurrentText, &vRows);
+	for(size_t i=0; i<vRows.size(); ++i)
 	{
-		apGuiSet->DrawFont(mpFont, cVector3f(400,fStartY,20),mvFontSize,cColor(1,mfAlpha), eFontAlign_Center, eGuiMaterial_FontNormal,
-							_W(" %ls"), msCurrentText.c_str());
-	}
-	else
-	{
-		for(size_t i=0; i<vRows.size(); ++i)
-		{
-			apGuiSet->DrawFont(mpFont, cVector3f(400-fMaxWidth*0.5f, fStartY + (float)i* (mvFontSize.y+2.0f), 20),mvFontSize,cColor(1,mfAlpha), eFontAlign_Left, eGuiMaterial_FontNormal,
-								_W(" %ls"), vRows[i].c_str());
-		}
+		float vPos[4];
+		ohpl_ga8_hint_row(&mS, vRows.size(), i, vPos);
+		apGuiSet->DrawFont(mpFont, cVector3f(vPos[0], vPos[1], vPos[2]),vFontSize,cColor(1,mS.alpha), vPos[3] != 0 ? eFontAlign_Center : eFontAlign_Left, eGuiMaterial_FontNormal,
+							_W(" %ls"), vRows.size()==1 ? msCurrentText.c_str() : vRows[i].c_str());
 	}
 
 #ifdef USE_GAMEPAD
@@ -223,46 +214,22 @@ void cLuxHintHandler::DrawHintText(float afFrameTime, cGuiSet *apGuiSet)
 	// Draw all the icons
 	for(size_t i = 0; i < mvHintIcons.size(); ++i)
 	{
-		apGuiSet->DrawGfx(mvHintIcons[i].mpGuiIcon, mvHintIcons[i].mvPosition, mvHintIcons[i].mvSize, cColor(1,mfAlpha), eGuiMaterial_Alpha);
+		apGuiSet->DrawGfx(mvHintIcons[i].mpGuiIcon, mvHintIcons[i].mvPosition, mvHintIcons[i].mvSize, cColor(1,mS.alpha), eGuiMaterial_Alpha);
 	}
 #endif
 }
 
 void cLuxHintHandler::UpdateHintText(float afTimeStep)
 {
-	if(mbActive==false) return;
-
-	if(mfAlpha>0) mHintOscill.Update(afTimeStep);
-
-	/////////////////////
-	//Decrease alpha
-	if(mfShowTextCount<=0 && mfAlpha>0)
-	{
-		mfAlpha -= 0.5 * afTimeStep;
-		if(mfAlpha <0) mfAlpha =0;
-		return;
-	}
-	/////////////////////
-	//Increase alpha
-	if(mfShowTextCount > 0)
-	{
-		mfAlpha += 1.2f * afTimeStep;
-		if(mfAlpha >1) mfAlpha =1;
-
-		mfShowTextCount -= afTimeStep;
-	}
+	ohpl_ga8_hint_update(&mS, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxHintHandler::SetActive(bool abX)
 {
-	mbActive = abX;
-
-	if(mbActive==false)
+	if(ohpl_ga8_hint_set_active(&mS, abX))
 	{
-		mfAlpha =0;
-		mfShowTextCount =0;
 		msCurrentText = _W("");
 	}
 }
@@ -271,18 +238,12 @@ void cLuxHintHandler::SetActive(bool abX)
 
 bool cLuxHintHandler::Add(const tString &asName, const tWString &asMessage, float afTimeShown)
 {
-    if(mfShowTextCount >0) return false;
-
-	if(m_setHintsBlocked.count(asName)>0) return false;
-
-	tStringSetIt it = m_setHintsGiven.find(asName);
-	if(it != m_setHintsGiven.end()) return false;
+	if(ohpl_ga8_hint_can_add(&mS, m_setHintsBlocked.count(asName)>0, m_setHintsGiven.find(asName) != m_setHintsGiven.end()) == 0) return false;
 
 	m_setHintsGiven.insert(asName);
 
     msCurrentText = gpBase->mpHelpFuncs->ParseString(asMessage);
-	mfShowTextCount = afTimeShown <=0 ? gpBase->mpHelpFuncs->GetStringDuration(msCurrentText)*mfTextDurationMul : afTimeShown;
-	mfAlpha =0;
+	ohpl_ga8_hint_start(&mS, afTimeShown, afTimeShown <=0 ? gpBase->mpHelpFuncs->GetStringDuration(msCurrentText) : 0);
 
 #ifdef USE_GAMEPAD
 	ParseStringForGamepadIcons();
@@ -327,62 +288,13 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 {
 	mvHintIcons.clear();
 
-	tWString sOutput=_W("");
-	tWString sCommand =_W("");
-	bool bParseVar = false;
-	
 	int lPosition = 0;
- 
-	/////////////////
-	// Find all the icons
-    for(size_t i=0; i<msCurrentText.size(); ++i)
-	{
-		wchar_t lChar = msCurrentText[i];
-		
-		////////////////////////
-		// Parse variable
-		if(bParseVar)
-		{
-			// Add character to command
-			if( lChar != '$' )
-			{
-				sCommand += lChar;
-			}
-			//Parse command
-			else
-			{
-				///////////
-				// Create the icon and get the replacement text for buttons that have no icon
-				tWString sReplace = AddGamepadIconAtPosition(sCommand, lPosition);
-
-				/////////
-				// Make room for the icon
-				sOutput += sReplace;
-				lPosition += sReplace.size();
-
-				bParseVar = false;
-			}
-
-		}
-		////////////////////////
-		// Normal parsing
-		else
-		{
-			if(lChar == '$')
-			{
-                bParseVar = true;
-				sCommand = _W("");
-			}
-			else
-			{
-				lPosition++;
-				sOutput += lChar;
-			}
-		}
-	}
+	tWString sOutput;
+	ohpl_ga8_strip_icons((const unsigned*)msCurrentText.data(), msCurrentText.size(), &cLuxHintHandler::IconReplace, this, OhplGa8WideSink, &sOutput);
 
 	msCurrentText = sOutput;
 
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
 	if(mvHintIcons.size() > 0)
 	{
 		size_t lIconIdx = 0;
@@ -391,9 +303,9 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 		///////////////////
 		// Get the correct size and position for each icon
 		tWStringVec vRows;
-		float fMaxWidth = 680;
-		float fStartY = mfYPos + mvFontSize.y + 3.0f;
-		mpFont->GetWordWrapRows(fMaxWidth,15, mvFontSize, msCurrentText, &vRows);
+		float fMaxWidth = ohpl_ga8_hint_wrap_width();
+		float fStartY = mS.y_pos + vFontSize.y + 3.0f;
+		mpFont->GetWordWrapRows(fMaxWidth,ohpl_ga8_hint_wrap_line(), vFontSize, msCurrentText, &vRows);
 		wchar_t sRowText[1024];
 
 		for(size_t i=0; i<vRows.size(); ++i)
@@ -408,11 +320,11 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 			if(vRows.size()==1)
 			{
 				vPos = cVector3f(400,fStartY,20);
-				vPos.x -= mpFont->GetLength(mvFontSize, sRowText)/2;
+				vPos.x -= mpFont->GetLength(vFontSize, sRowText)/2;
 			}
 			else
 			{
-				vPos = cVector3f(400-fMaxWidth*0.5f, fStartY + (float)i* (mvFontSize.y+2.0f), 20);
+				vPos = cVector3f(400-fMaxWidth*0.5f, fStartY + (float)i* (vFontSize.y+2.0f), 20);
 			}
 
 			//////////////////////////////////////////////////////
@@ -436,8 +348,8 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 
 				if(pGlyph)
 				{
-					cVector2f vSize(pGlyph->mvSize * mvFontSize);
-					vPos.x += pGlyph->mfAdvance*mvFontSize.x; 
+					cVector2f vSize(pGlyph->mvSize * vFontSize);
+					vPos.x += pGlyph->mfAdvance*vFontSize.x;
 				}
 
 				if(lPosition == mvHintIcons[lIconIdx].mlCharacterPosition)
@@ -449,7 +361,7 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 					// Set the size and aspect ratio
 					mvHintIcons[lIconIdx].mvSize = mvHintIcons[lIconIdx].mpGuiIcon->GetImageSize();
 					mvHintIcons[lIconIdx].mvSize /= mvHintIcons[lIconIdx].mvSize.y;
-					mvHintIcons[lIconIdx].mvSize *= mvFontSize;
+					mvHintIcons[lIconIdx].mvSize *= vFontSize;
 
 					if(++lIconIdx == mvHintIcons.size())
 					{
@@ -462,6 +374,14 @@ void cLuxHintHandler::ParseStringForGamepadIcons()
 			}
 		}
 	}
+}
+
+//-----------------------------------------------------------------------
+
+void cLuxHintHandler::IconReplace(void *apCtx, const unsigned *apCmd, size_t alLen, int alPos, OhplGa8Sink32 apSink, void *apSinkCtx)
+{
+	tWString sReplace = ((cLuxHintHandler*)apCtx)->AddGamepadIconAtPosition(tWString((const wchar_t*)apCmd, alLen), alPos);
+	apSink(apSinkCtx, (const unsigned*)sReplace.data(), sReplace.size());
 }
 
 //-----------------------------------------------------------------------

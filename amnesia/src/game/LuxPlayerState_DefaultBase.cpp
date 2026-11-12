@@ -146,59 +146,37 @@ bool iLuxPlayerState_DefaultBase::OnDoAction(eLuxPlayerAction aAction,bool abPre
 {
 	if(mpPlayer->GetCurrentMoveStateData()->GetAllowsInteraction()==false) return true;
 
-	////////////////////////////
-	// Implemented
 	if(ImplementedDoAction(aAction, abPressed)==false)
 	{
 		return false;
 	}
 
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact)
+	bool bInteract;
+	bool bPass = ohpl_ga2b_default_base_interact(OhplGa2bActOf(aAction), abPressed,
+												aAction == eLuxPlayerAction_Interact && abPressed && CanInteractWithEntity(), &bInteract);
+	if(bInteract)
 	{
-		// Pressed
-		if(abPressed)
-		{
-			if(CanInteractWithEntity())
-			{
-				mpEntityInFocus->OnInteract(mpBodyInFocus,mvFocusPos);
-				mpEntityInFocus->RunInteractCallbackFunc();
-			}
-			return false;
-		}
+		mpEntityInFocus->OnInteract(mpBodyInFocus,mvFocusPos);
+		mpEntityInFocus->RunInteractCallbackFunc();
 	}
-	
-
-	return true;
+	return bPass;
 }
 
 //-----------------------------------------------------------------------
 
 cGuiGfxElement* iLuxPlayerState_DefaultBase::GetCrosshair()
-{ 
-	if(mpEntityInFocus && mfFocusDistance < mpEntityInFocus->GetMaxFocusDistance())
+{
+	if(ohpl_ga2b_focus_in_range(mpEntityInFocus != NULL, mfFocusDistance, mpEntityInFocus ? mpEntityInFocus->GetMaxFocusDistance() : 0.0f))
 	{
 		eLuxFocusCrosshair crossHair = mpEntityInFocus->GetFocusCrosshair(mpBodyInFocus, mvFocusPos);
-		if(mpEntityInFocus->GetInteractionDisabled()) crossHair = eLuxFocusCrosshair_Default;
-
-		if(	crossHair == eLuxFocusCrosshair_LastEnum ||
-			crossHair == eLuxFocusCrosshair_Default)
-		{
-			return mpDefaultCrosshairGfx;
-		}
-		else
-		{
-			if(mpPlayer->GetFocusIconStyle()==eLuxFocusIconStyle_Default)
-				return mvFocusCrosshairGfx[crossHair];
-			else
-				return mpSimpleInteractCrosshairGfx;
-		}
+		int lPick = ohpl_ga2b_crosshair_pick(crossHair, eLuxFocusCrosshair_Default, eLuxFocusCrosshair_LastEnum,
+											mpEntityInFocus->GetInteractionDisabled(),
+											mpPlayer->GetFocusIconStyle()==eLuxFocusIconStyle_Default);
+		if(lPick == -1) return mpDefaultCrosshairGfx;
+		if(lPick == -2) return mpSimpleInteractCrosshairGfx;
+		return mvFocusCrosshairGfx[lPick];
 	}
-	else
-	{
-		return mpDefaultCrosshairGfx;
-	}
+	return mpDefaultCrosshairGfx;
 }
 
 //-----------------------------------------------------------------------
@@ -227,21 +205,20 @@ bool iLuxPlayerState_DefaultBase::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhy
 	if(apEntity->GetEntityType() != eLuxEntityType_Prop) return false;
 
 	iLuxProp *pProp = static_cast<iLuxProp*>(apEntity);
-
-	return pProp->GetPropType()==eLuxPropType_Item && apEntity->CanInteract(apBody) && apEntity->GetInteractionDisabled()==false;
+	bool bItem = pProp->GetPropType()==eLuxPropType_Item;
+	bool bCan = bItem && apEntity->CanInteract(apBody);
+	bool bDisabled = bCan && apEntity->GetInteractionDisabled();
+	return ohpl_ga2b_show_outline(bItem, bCan, bDisabled);
 }
 
 //-----------------------------------------------------------------------
 
 bool iLuxPlayerState_DefaultBase::CanInteractWithEntity()
 {
-	if(	mpEntityInFocus && mfFocusDistance < mpEntityInFocus->GetMaxFocusDistance() && 
-		mpEntityInFocus->CanInteract(mpBodyInFocus) && mpEntityInFocus->GetInteractionDisabled()==false)
-	{
-		return true;
-	}
-
-	return false;
+	bool bInRange = ohpl_ga2b_focus_in_range(mpEntityInFocus != NULL, mfFocusDistance, mpEntityInFocus ? mpEntityInFocus->GetMaxFocusDistance() : 0.0f);
+	bool bCan = bInRange && mpEntityInFocus->CanInteract(mpBodyInFocus);
+	bool bDisabled = bCan && mpEntityInFocus->GetInteractionDisabled();
+	return ohpl_ga2b_focus_can_interact(bInRange, bCan, bDisabled);
 }
 
 //-----------------------------------------------------------------------
@@ -258,10 +235,9 @@ static bool BodyIsAdded(iPhysicsBody *apBody, tPhysicsBodyList &alstBodies)
 void iLuxPlayerState_DefaultBase::AddOutlineObjects(iPhysicsBody *apBody, iLuxEntity *apEntity, const cVector3f &avFocusPos)
 {
 	gpBase->mpEffectRenderer->ClearOutlineObjects();
-	if(	apEntity==NULL || 
-		apEntity->GetEntityType()!= eLuxEntityType_Prop || 
-		mfFocusDistance > apEntity->GetMaxFocusDistance() || 
-		ShowOutlineOnEntity(apEntity, apBody, avFocusPos)==false)
+	bool bOutlineGate = ohpl_ga2b_outline_gate(apEntity != NULL, apEntity && apEntity->GetEntityType() == eLuxEntityType_Prop,
+											mfFocusDistance, apEntity ? apEntity->GetMaxFocusDistance() : 0.0f);
+	if(bOutlineGate == false || ShowOutlineOnEntity(apEntity, apBody, avFocusPos)==false)
 	{
 		mbCurrentEntityHasOutline = false;
 		return;

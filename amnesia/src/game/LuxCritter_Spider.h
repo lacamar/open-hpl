@@ -80,30 +80,15 @@ private:
 	
 	void UpdateVelocity(float afTimeStep);
 	void UpdateGroundCheck(float afTimeStep);
+	void OnGa4bSound(int alKind);
 	
 	//Data
-	float mfMaxIdleSpeed;
-	float mfMaxHuntSpeed;
-	
 	tString msHitSound;
 	tString msIdleSound;
-	cVector2f mvIdleSoundRandMinMax;
 	tString msAttackSound;
 
-	cVector2f mvAttackPlayerDistMinMax;
-	float mfHuntPlayerDist;
-	cVector2f mvHuntTimeMinMax;
-	cVector2f mvMoveTimeMinMax;
-	cVector2f mvIdleTimeMinMax;
-
-	//Vars
-	eLuxCritterState mState;
-	float mfFallingCount;
-	float mfNewGroundNormalCount;
-	bool mbOnGround;
-	float mfMaxSpeed;
-	float mfCount;
-	float mfPlaySoundCount;
+	OhplGa4bSpiderParams mSP;
+	OhplGa4bSpider mSS;
 };
 
 //----------------------------------------------

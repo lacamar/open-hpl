@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxUi.h"
 
 //----------------------------------------
 
@@ -53,21 +54,22 @@ public:
 	* if time is <=0 then the life time is calculated based on string length.
 	*/
 	void SetMessage(const tWString& asText, float afTime);
-	bool IsMessageActive(){ return mfMessageTime>0; }
+	bool IsMessageActive(){ return mS.message_time>0; }
 
 	void OnDraw(float afFrameTime);
 
 	void DoAction(eLuxPlayerAction aAction, bool abPressed);
 
-	bool IsPauseMessageActive(){ return mbPauseMessageActive; }
+	bool IsPauseMessageActive(){ return mS.pause_active != 0; }
 	void SetPauseMessageActive(bool abX);
 
-	bool ShowSubtitles(){ return mbShowSubtitles;}
-	void SetShowSubtitles(bool abX){ mbShowSubtitles=abX;}
+	bool ShowSubtitles(){ return mS.show_subtitles != 0;}
+	void SetShowSubtitles(bool abX){ mS.show_subtitles=abX;}
 
-	bool ShowEffectSubtitles(){ return mbShowEffectSubtitles; }
-	void SetShowEffectSubtitles(bool abX){ mbShowEffectSubtitles=abX; }
+	bool ShowEffectSubtitles(){ return mS.show_effect_subtitles != 0; }
+	void SetShowEffectSubtitles(bool abX){ mS.show_effect_subtitles=abX; }
 private:
+	void RunEvents(const std::vector<OhplGa8Event> &avEvents);
 	void DrawQuestAdded();
 	void DrawMessage();
 	void DrawPauseMessage();
@@ -81,29 +83,13 @@ private:
 	cGuiGfxElement *mpQuestAddedIcon;
 	tString msQuestAddedSound;
 	
-	cVector2f mvFontSize;
-	
+	OhplGa8MessageState mS;
+
 	//////////////////
 	// Variables
-	bool mbShowSubtitles;
-	bool mbShowEffectSubtitles;
-
-	bool mbPauseMessageActive;
-	float mfPauseMessageAlpha;
-
-	float mfMessageAlpha;
-	float mfMessageTime;
-
-	bool mbQuestMessageActive;
-	float mfQuestMessageAlpha;
-	float mfQuestMessageTime;
-
-	cLinearOscillation mQuestOscill;
-
 	tWStringVec mvMessageRows;
 
 	tWStringVec mvLines;
-	bool mbMessageYesNo;
 	iLuxMessageCallback* mpCallback;
 };
 

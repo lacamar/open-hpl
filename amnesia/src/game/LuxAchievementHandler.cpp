@@ -21,6 +21,7 @@
 
 #include "LuxBase.h"
 #include "LuxAchievementHandler.h"
+#include "RustLuxFx.h"
 #include "LuxDebugHandler.h"
 
 //-----------------------------------------------------------------------
@@ -84,15 +85,14 @@ void iLuxAchievementHandler::CreateAchievement(int alID, const tString& asName)
 
 void iLuxAchievementHandler::UnlockAchievement(int alID)
 {
-	if(mbRegistered == false)
+	int lGate = ohpl_ga9b_achievement_unlock_gate(mbRegistered, m_mapAchievements.find(alID) != m_mapAchievements.end());
+	if(lGate == kOhplGa9bUnlockNotRegistered)
 	{
 		Error("Failed to activate Achievement %d. iLuxAchievementHandler::RegisterAchievements() has not been called\n", alID);
 		return;
 	}
 
-	std::map<int, tString>::iterator it = m_mapAchievements.find(alID);
-
-	if(it == m_mapAchievements.end())
+	if(lGate == kOhplGa9bUnlockUnknown)
 	{
 		Error("Failed to activate Achievement %d. No achievement with that id\n", alID);
 	}

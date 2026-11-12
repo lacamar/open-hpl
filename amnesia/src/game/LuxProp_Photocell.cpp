@@ -127,23 +127,11 @@ void cLuxProp_Photocell::UpdatePropSpecific(float afTimeStep)
 
 	/////////////////////
 	// Set mesh alpha
-	float fGoalAmount = cMath::Clamp( (mfLightLevel - mfLightLevelOffLimit) / (mfLightLevelOnLimit - mfLightLevelOffLimit), 0.0f, 1.0f);
-	
+	float fGoalAmount = ohpl_ga4b_photo_goal(mfLightLevel, mfLightLevelOnLimit, mfLightLevelOffLimit);
+
 	if(mpMeshEntity && mpMeshEntity->GetIlluminationAmount() != fGoalAmount)
 	{
-		float fCurrent = mpMeshEntity->GetIlluminationAmount();
-		if(fCurrent < fGoalAmount)
-		{
-			fCurrent += afTimeStep;
-			if(fCurrent > fGoalAmount) fCurrent = fGoalAmount;
-		}
-		else if(fCurrent > fGoalAmount)
-		{
-			fCurrent -= afTimeStep;
-			if(fCurrent < fGoalAmount) fCurrent = fGoalAmount;
-		}
-
-		mpMeshEntity->SetIlluminationAmount(fCurrent);
+		mpMeshEntity->SetIlluminationAmount(ohpl_ga4b_photo_illum_step(mpMeshEntity->GetIlluminationAmount(), fGoalAmount, afTimeStep));
 	}
 }
 
@@ -173,51 +161,24 @@ eLuxFocusCrosshair cLuxProp_Photocell::GetFocusCrosshair(iPhysicsBody *apBody, c
 
 void cLuxProp_Photocell::UpdateLightLevel(float afTimeStep)
 {
-	mfLightLevelCheckCount += afTimeStep;
-	if(mfLightLevelCheckCount < 1.0f / 30.0f) return;
+	if(ohpl_ga4b_photo_tick(&mfLightLevelCheckCount, afTimeStep)==false) return;
 
-    mfLightLevelCheckCount = 0;
-
-	mfLightLevel = 0;
 	cBoundingVolume *pBV = mpMeshEntity->GetBoundingVolume();
-	cVector3f vAxisAdd = pBV->GetSize()*0.5f + cVector3f(0.02f);
-	cVector3f vSamplePos[6] = {
-		pBV->GetWorldCenter() + cVector3f(vAxisAdd.x,0,0),
-		pBV->GetWorldCenter() - cVector3f(vAxisAdd.x,0,0),
-		pBV->GetWorldCenter() + cVector3f(0,vAxisAdd.y,0),
-		pBV->GetWorldCenter() - cVector3f(0,vAxisAdd.y,0),
-		pBV->GetWorldCenter() + cVector3f(0,0,vAxisAdd.z),
-		pBV->GetWorldCenter() - cVector3f(0,0,vAxisAdd.z)
-	};
+	cVector3f vSize = pBV->GetSize();
+	cVector3f vCenter = pBV->GetWorldCenter();
 
+	cVector3f vSamplePos[6];
+	ohpl_ga4b_photo_samples(vSize.v, vCenter.v, vSamplePos[0].v);
+
+	float vLight[6];
 	for(int i=0; i<6; ++i)
 	{
-		float fLight = gpBase->mpMapHelper->GetLightLevelAtPos(vSamplePos[i]);
-		if(fLight > mfLightLevel) mfLightLevel = fLight;
+		vLight[i] = gpBase->mpMapHelper->GetLightLevelAtPos(vSamplePos[i]);
 	}
+	mfLightLevel = ohpl_ga4b_photo_level(vLight, 6);
 
-	////////////////////////////
-	//Check if on / off
-	if(mbLit)
-	{
-		if(mfLightLevel < mfLightLevelOffLimit)
-		{
-			//Log("LightLevel: %f, OFF!\n", mfLightLevel);
-
-			mbLit = false;
-			ConnectionStateChange(-1);
-		}
-	}
-	else
-	{
-		if(mfLightLevel > mfLightLevelOnLimit)
-		{
-			//Log("LightLevel: %f, ON!\n", mfLightLevel);
-
-			mbLit = true;
-			ConnectionStateChange(1);
-		}
-	}
+	int lConnState = ohpl_ga4b_photo_switch(mfLightLevel, &mbLit, mfLightLevelOnLimit, mfLightLevelOffLimit);
+	if(lConnState != 0) ConnectionStateChange(lConnState);
 }
 
 //-----------------------------------------------------------------------

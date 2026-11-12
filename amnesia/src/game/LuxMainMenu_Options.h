@@ -71,8 +71,8 @@ private:
 
 	void ApplyChanges();
 
-	float GetPaperWhite() { return GetSliderValue(mpSPaperWhite, 80, 400); }
-	float GetPeakNits() { return GetSliderValue(mpSPeak, 400, 2000); }
+	float GetPaperWhite();
+	float GetPeakNits();
 	float GetGamma() { return GetSliderValue(mpSGamma, mfGammaMin, mfGammaMax); }
 	float GetSensitivity() { return GetSliderValue(mpSMouseSensitivity, mfMouseSensitivityMin, mfMouseSensitivityMax); }
 #ifdef USE_GAMEPAD

@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxUi.h"
 
 //----------------------------------------
 
@@ -51,12 +52,6 @@ public:
 };
 //----------------------------------------
 
-class cLuxNotePage
-{
-public:
-	tString msVoice;
-	tWStringVec mvRows;
-};
 
 //----------------------------------------
 
@@ -284,7 +279,7 @@ private:
 	float mfMouseOverPulse;
 
 	tWString msHeader;
-	std::vector<cLuxNotePage> mvPages;
+	OhplGa8Pages *mpPages;
 	int mlCurrentNotePage;
 	
 	cSoundEntry *mpVoiceEntry;

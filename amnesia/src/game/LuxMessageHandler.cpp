@@ -44,7 +44,11 @@ cLuxMessageHandler::cLuxMessageHandler() : iLuxUpdateable("LuxMusicHandler")
 	if(sQuestAddedImage != "")	mpQuestAddedIcon = pGui->CreateGfxImage(sQuestAddedImage, eGuiMaterial_Alpha);
 	else					mpQuestAddedIcon = NULL;
 
-	mvFontSize = gpBase->mpMenuCfg->GetVector2f("Messages", "GameMessageFontSize",0);
+	memset(&mS, 0, sizeof(mS));
+	cVector2f vFontSize = gpBase->mpMenuCfg->GetVector2f("Messages", "GameMessageFontSize",0);
+	mS.font_size[0] = vFontSize.x;
+	mS.font_size[1] = vFontSize.y;
+	mpCallback = NULL;
 }
 
 //-----------------------------------------------------------------------
@@ -76,37 +80,26 @@ void cLuxMessageHandler::OnStart()
 
 void cLuxMessageHandler::Reset()
 {
-	mbPauseMessageActive = false;
-	mfPauseMessageAlpha =0;
-
-	mbQuestMessageActive = false;
-	mfQuestMessageAlpha = 0;
-	mfQuestMessageTime = 0;
-
-	mQuestOscill.SetUp(0,1,0, 1,1);
+	ohpl_ga8_msg_reset(&mS);
 
 	mvLines.clear();
 	mpCallback = NULL;
-	mbMessageYesNo = false;
-
-	mfMessageAlpha =0;
-	mfMessageTime = 0;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::LoadUserConfig()
 {
-	mbShowSubtitles = gpBase->mpUserConfig->GetBool("Game", "ShowSubtitles", true);
-	mbShowEffectSubtitles = gpBase->mpUserConfig->GetBool("Game", "ShowEffectSubtitles", false);
+	mS.show_subtitles = gpBase->mpUserConfig->GetBool("Game", "ShowSubtitles", true);
+	mS.show_effect_subtitles = gpBase->mpUserConfig->GetBool("Game", "ShowEffectSubtitles", false);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::SaveUserConfig()
 {
-	gpBase->mpUserConfig->SetBool("Game", "ShowSubtitles", mbShowSubtitles);
-	gpBase->mpUserConfig->SetBool("Game", "ShowEffectSubtitles", mbShowEffectSubtitles);
+	gpBase->mpUserConfig->SetBool("Game", "ShowSubtitles", mS.show_subtitles != 0);
+	gpBase->mpUserConfig->SetBool("Game", "ShowEffectSubtitles", mS.show_effect_subtitles != 0);
 }
 
 //-----------------------------------------------------------------------
@@ -125,11 +118,7 @@ void cLuxMessageHandler::OnMapLeave(cLuxMap *apMap)
 
 void cLuxMessageHandler::StarQuestAddedMessage()
 {
-	if(mbQuestMessageActive) return;
-
-	mbQuestMessageActive = true;
-	mfQuestMessageAlpha =0;
-	mfQuestMessageTime =0;
+	ohpl_ga8_msg_start_quest(&mS);
 }
 
 
@@ -138,12 +127,13 @@ void cLuxMessageHandler::StarQuestAddedMessage()
 void cLuxMessageHandler::StartPauseMessage(const tWString& asText, bool abYesNo, iLuxMessageCallback *apCallback)
 {
 	mvLines.clear();
-	
-    mpFont->GetWordWrapRows(500,mvFontSize.y+2,mvFontSize, gpBase->mpHelpFuncs->ParseString(asText),&mvLines);
-	mbMessageYesNo = abYesNo;
+
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
+    mpFont->GetWordWrapRows(ohpl_ga8_msg_wrap_width(1),ohpl_ga8_msg_line_height(vFontSize.y),vFontSize, gpBase->mpHelpFuncs->ParseString(asText),&mvLines);
 	mpCallback = apCallback;
 
-	SetPauseMessageActive(true);
+	OhplGa8Buf buf;
+	RunEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_start_pause(&mS, abYesNo, buf.mvRaw, OHPL_GA8_EVMAX)));
 }
 
 //-----------------------------------------------------------------------
@@ -151,80 +141,41 @@ void cLuxMessageHandler::StartPauseMessage(const tWString& asText, bool abYesNo,
 void cLuxMessageHandler::SetMessage(const tWString& asText, float afTime)
 {
 	tWString sParsedText = gpBase->mpHelpFuncs->ParseString(asText);
-	mfMessageAlpha =0.0f;
-	mfMessageTime = afTime <=0 ? gpBase->mpHelpFuncs->GetStringDuration(sParsedText) : afTime;
-	
+	ohpl_ga8_msg_set_message(&mS, afTime, afTime <=0 ? gpBase->mpHelpFuncs->GetStringDuration(sParsedText) : 0);
+
 	mvMessageRows.clear();
 
-	mpFont->GetWordWrapRows(700,mvFontSize.y+2,mvFontSize, sParsedText, &mvMessageRows);
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
+	mpFont->GetWordWrapRows(ohpl_ga8_msg_wrap_width(0),ohpl_ga8_msg_line_height(vFontSize.y),vFontSize, sParsedText, &mvMessageRows);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::Update(float afTimeStep)
 {
-	////////////////////////////////
-	// Message
-	if(mfMessageTime > 0)
-	{
-		mfMessageTime -= afTimeStep;
-		
-		mfMessageAlpha += afTimeStep*1;
-		if(mfMessageAlpha > 1) mfMessageAlpha =1;
-	}
-	else if(mfMessageAlpha > 0)
-	{
-		mfMessageAlpha -= afTimeStep * 1.5f;
-		if(mfMessageAlpha < 0) mfMessageAlpha =0;
-	}
+	OhplGa8Buf buf;
+	RunEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_update(&mS, afTimeStep, buf.mvRaw, OHPL_GA8_EVMAX)));
+}
 
-	////////////////////////////////
-	// Quest message
-	if(mbQuestMessageActive)
+//-----------------------------------------------------------------------
+
+void cLuxMessageHandler::RunEvents(const std::vector<OhplGa8Event> &avEvents)
+{
+	for(size_t i=0; i<avEvents.size(); ++i)
 	{
-		if(mfQuestMessageAlpha < 0.1)
+		const OhplGa8Event &e = avEvents[i];
+		switch(e.kind)
 		{
-			mfQuestMessageAlpha += afTimeStep;
-			if(mfQuestMessageAlpha >= 0.1)
-				gpBase->mpHelpFuncs->PlayGuiSoundData(msQuestAddedSound, eSoundEntryType_Gui); //Have it here so that is not played directly!
+		case eOhplGa8Msg_QuestSound:
+			gpBase->mpHelpFuncs->PlayGuiSoundData(msQuestAddedSound, eSoundEntryType_Gui);
+			break;
+		case eOhplGa8Msg_SetUpdateActive:
+			gpBase->mpMapHandler->SetUpdateActive(e.a != 0);
+			break;
+		case eOhplGa8Msg_Callback:
+			if(mpCallback) mpCallback->OnPress(e.a != 0);
+			break;
 		}
-		else if(mfQuestMessageAlpha < 1)
-		{
-			mfQuestMessageAlpha += afTimeStep;
-			if(mfQuestMessageAlpha > 1)
-			{
-				mfQuestMessageAlpha =1;
-			}
-		}
-		else
-		{
-			mfQuestMessageTime += afTimeStep;
-			if(mfQuestMessageTime > 3)
-			{
-				mbQuestMessageActive = false;
-			}
-		}
-	}
-	else if(mfQuestMessageAlpha > 0)
-	{
-		mfQuestMessageAlpha -= afTimeStep;
-		if(mfQuestMessageAlpha <0) mfQuestMessageAlpha =0;
-	}
-
-	if(mfQuestMessageAlpha >0) mQuestOscill.Update(afTimeStep);
-
-
-	////////////////////////////////
-	// Pause message
-	if(mbPauseMessageActive)
-	{
-		mfPauseMessageAlpha += afTimeStep * 2.0f;
-		if(mfPauseMessageAlpha > 1)mfPauseMessageAlpha = 1;
-	}
-	else
-	{
-		mfPauseMessageAlpha -= afTimeStep * 2.0f;
-		if(mfPauseMessageAlpha < 0) mfPauseMessageAlpha =0;
 	}
 }
 
@@ -240,33 +191,19 @@ void cLuxMessageHandler::OnDraw(float afFrameTime)
 
 void cLuxMessageHandler::DoAction(eLuxPlayerAction aAction, bool abPressed)
 {
-    if(abPressed)
-	{
-		SetPauseMessageActive(false);
+	int lAction = aAction == eLuxPlayerAction_Interact ? eOhplGa8MsgAction_Interact :
+					(aAction == eLuxPlayerAction_Attack ? eOhplGa8MsgAction_Attack : -1);
 
-		if(mbMessageYesNo)
-		{
-			if(aAction == eLuxPlayerAction_Interact)
-			{
-				if(mpCallback) mpCallback->OnPress(true);
-			}
-			else if(aAction == eLuxPlayerAction_Attack)
-			{
-				if(mpCallback) mpCallback->OnPress(false);
-			}
-		}
-	}
+	OhplGa8Buf buf;
+	RunEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_do_action(&mS, lAction, abPressed, mpCallback != NULL, buf.mvRaw, OHPL_GA8_EVMAX)));
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::SetPauseMessageActive(bool abX)
 {
-	if(mbPauseMessageActive == abX) return;
-
-	mbPauseMessageActive = abX;
-
-	gpBase->mpMapHandler->SetUpdateActive(mbPauseMessageActive? false : true);
+	OhplGa8Buf buf;
+	RunEvents(OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_set_pause(&mS, abX, buf.mvRaw, OHPL_GA8_EVMAX)));
 }
 
 //-----------------------------------------------------------------------
@@ -279,78 +216,69 @@ void cLuxMessageHandler::SetPauseMessageActive(bool abX)
 
 void cLuxMessageHandler::DrawQuestAdded()
 {
-	if(mfQuestMessageAlpha <= 0 || mpQuestAddedIcon==NULL) return;
+	OhplGa8Buf buf;
+	cVector2f vIconSize = mpQuestAddedIcon ? mpQuestAddedIcon->GetActiveSize() : cVector2f(0);
+	float vCenter[2] = { gpBase->mvHudVirtualCenterSize.x, gpBase->mvHudVirtualCenterSize.y };
+	float vStart[3] = { gpBase->mvHudVirtualStartPos.x, gpBase->mvHudVirtualStartPos.y, gpBase->mvHudVirtualStartPos.z };
+	float vIcon[2] = { vIconSize.x, vIconSize.y };
+	std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw,
+		ohpl_ga8_msg_draw_quest(&mS, mpQuestAddedIcon ? vIcon : NULL, vCenter, vStart, buf.mvRaw, OHPL_GA8_EVMAX));
 
-	cVector2f vPos2D = gpBase->mvHudVirtualCenterSize - mpQuestAddedIcon->GetActiveSize() - cVector2f(20,20);
-	cVector3f vPos(vPos2D.x, vPos2D.y, 10);
-	vPos -= gpBase->mvHudVirtualStartPos;//minus since coordinates are negative!
-
-	gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, vPos, -1, cColor(1, mfQuestMessageAlpha));
-	
-	for(int i=0; i<2; ++i)
-		gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, vPos+cVector3f(0,0,1), -1, cColor(mfQuestMessageAlpha*mQuestOscill.val, 1), eGuiMaterial_Additive);
+	for(size_t i=0; i<vEvents.size(); ++i)
+	{
+		const OhplGa8Event &e = vEvents[i];
+		if(e.kind == eOhplGa8Msg_QuestIcon)
+			gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(1, e.v[8]));
+		else
+			gpBase->mpGameHudSet->DrawGfx(mpQuestAddedIcon, cVector3f(e.v[0],e.v[1],e.v[2]), -1, cColor(e.v[5], e.v[8]), eGuiMaterial_Additive);
+	}
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::DrawMessage()
 {
-	if(mfMessageAlpha <= 0) return;
-
-	float fAlpha = mfMessageAlpha;
-	if(mfPauseMessageAlpha > 0)
+	OhplGa8Buf buf;
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
+	std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_draw_message(&mS, mvMessageRows.size(), buf.mvRaw, OHPL_GA8_EVMAX));
+	for(size_t i=0; i<vEvents.size(); ++i)
 	{
-		fAlpha = mfMessageAlpha * (1-mfPauseMessageAlpha);
+		const OhplGa8Event &e = vEvents[i];
+		gpBase->mpGameHudSet->DrawFont(mvMessageRows[e.a], mpFont,cVector3f(e.v[0],e.v[1],e.v[2]),vFontSize, cColor(1, e.v[8]),eFontAlign_Center);
 	}
-	
-	cVector3f vTextPos = cVector3f(400, 345, 4);
-	for(size_t i=0; i<mvMessageRows.size(); ++i)
-	{
-		gpBase->mpGameHudSet->DrawFont(mvMessageRows[i], mpFont,vTextPos,mvFontSize, cColor(1, fAlpha),eFontAlign_Center);
-		vTextPos.y += mvFontSize.y+2;
-	}
-	
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMessageHandler::DrawPauseMessage()
 {
-	if(mfPauseMessageAlpha <= 0) return;
-
-	////////////////////////
-	// Black background
-	gpBase->mpGameHudSet->DrawGfx(mpBlackGfx,cVector3f(0,0,3),cVector2f(800,600),cColor(1, mfPauseMessageAlpha*0.5f));
-
-	////////////////////////
-	// Text
-	cVector3f vTextPos = cVector3f(150, 200, 4);
-	for(size_t i=0; i< mvLines.size(); ++i)
+	OhplGa8Buf buf;
+	cVector2f vFontSize(mS.font_size[0], mS.font_size[1]);
+	std::vector<OhplGa8Event> vEvents = OhplGa8Take(buf.mvRaw, ohpl_ga8_msg_draw_pause(&mS, mvLines.size(), buf.mvRaw, OHPL_GA8_EVMAX));
+	for(size_t i=0; i<vEvents.size(); ++i)
 	{
-		gpBase->mpGameHudSet->DrawFont(mvLines[i], mpFont,vTextPos,mvFontSize, cColor(1, mfPauseMessageAlpha));
-
-		vTextPos.y += mvFontSize.y+2;
-	}
-
-	////////////////////////
-	// Yes / No
-	if(mbMessageYesNo)
-	{
-		vTextPos.y += 10.0f;
-		vTextPos.x = 170;
-
-		gpBase->mpGameHudSet->DrawFont(mpFont,vTextPos,mvFontSize, cColor(1, mfPauseMessageAlpha),_W("Yes"));
-
-		vTextPos.x += 80;
-		gpBase->mpGameHudSet->DrawFont(mpFont,vTextPos,mvFontSize-cVector2f(1), cColor(1, mfPauseMessageAlpha),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Interact").c_str());
-
-
-		vTextPos.x = 170;
-		vTextPos.y += mvFontSize.y+4;
-		gpBase->mpGameHudSet->DrawFont(mpFont,vTextPos,mvFontSize, cColor(1, mfPauseMessageAlpha),_W("No"));
-
-		vTextPos.x += 80;
-		gpBase->mpGameHudSet->DrawFont(mpFont,vTextPos,mvFontSize-cVector2f(1), cColor(1, mfPauseMessageAlpha),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Attack").c_str());
-
+		const OhplGa8Event &e = vEvents[i];
+		cVector3f vPos(e.v[0],e.v[1],e.v[2]);
+		switch(e.kind)
+		{
+		case eOhplGa8Msg_PauseBg:
+			gpBase->mpGameHudSet->DrawGfx(mpBlackGfx,vPos,cVector2f(e.v[3],e.v[4]),cColor(1, e.v[8]));
+			break;
+		case eOhplGa8Msg_PauseRow:
+			gpBase->mpGameHudSet->DrawFont(mvLines[e.a], mpFont,vPos,vFontSize, cColor(1, e.v[8]));
+			break;
+		case eOhplGa8Msg_Yes:
+			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,vFontSize, cColor(1, e.v[8]),_W("Yes"));
+			break;
+		case eOhplGa8Msg_YesKey:
+			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Interact").c_str());
+			break;
+		case eOhplGa8Msg_No:
+			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,vFontSize, cColor(1, e.v[8]),_W("No"));
+			break;
+		case eOhplGa8Msg_NoKey:
+			gpBase->mpGameHudSet->DrawFont(mpFont,vPos,cVector2f(e.v[3],e.v[4]), cColor(1, e.v[8]),_W("(%ls)"), gpBase->mpInputHandler->GetInputName("Attack").c_str());
+			break;
+		}
 	}
 }

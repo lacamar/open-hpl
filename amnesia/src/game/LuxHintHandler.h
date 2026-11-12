@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxUi.h"
 
 //---------------------------------------
 
@@ -60,7 +61,7 @@ public:
 	void UpdateHintText(float afTimeStep);
 
 	void SetActive(bool abX);
-	bool IsActive() { return mbActive; }
+	bool IsActive() { return mS.active != 0; }
 
 	/**
 	* if time shown is <=0 then the life time is calculated based on string length.
@@ -73,6 +74,7 @@ public:
 
 private:
 #ifdef USE_GAMEPAD
+	static void IconReplace(void *apCtx, const unsigned *apCmd, size_t alLen, int alPos, OhplGa8Sink32 apSink, void *apSinkCtx);
 	void ParseStringForGamepadIcons();
 	tWString AddGamepadIconAtPosition(const tWString& asCommand, int alPosition);
 #endif
@@ -81,22 +83,13 @@ private:
 	// Data
 	iFontData *mpFont;
 
-	float mfYPos;
-	cVector2f mvFontSize;
+	OhplGa8HintState mS;
 
-	float mfTextDurationMul;
-	
 	//////////////////
 	// Variables
-	bool mbActive;
-
 	tStringSet m_setHintsGiven;
 	tStringSet m_setHintsBlocked;
 
-	cLinearOscillation mHintOscill;
-
-	float mfAlpha;
-	float mfShowTextCount;
 	tWString msCurrentText;
 
 #ifdef USE_GAMEPAD

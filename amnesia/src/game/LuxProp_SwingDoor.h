@@ -101,7 +101,7 @@ public:
 	iLuxInteractData_RotateBase* GetMoveBaseData(){ return &mSwingDoorData;}
 	
 	void SetClosed(bool abClosed, bool abEffects);
-	bool GetClosed(){ return mbClosed;}
+	bool GetClosed(){ return mS.closed;}
 
 	/**
 	 * -1=closed 0=between 1=open
@@ -109,16 +109,18 @@ public:
 	int GetDoorState();
 
 	void SetLocked(bool abLocked, bool abEffects);
-	bool GetLocked(){ return mbLocked;}
+	bool GetLocked(){ return mS.locked;}
 
-	void SetDisableAutoClose(bool abX){ mbDisableAutoClose=abX;}
-	bool GetDisableAutoClose(){ return mbDisableAutoClose;}
+	void SetDisableAutoClose(bool abX){ mS.disable_auto_close=abX;}
+	bool GetDisableAutoClose(){ return mS.disable_auto_close;}
 
 	void SetCurrentDamageLevel(int alX);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
+	void Ga4Hinge(int alIdx, OhplGa4Hinge *apOut);
 
 	cMeshEntity* GetEffectMeshEntity();
 
-	bool IsBroken(){ return mbBroken;}
+	bool IsBroken(){ return mS.broken;}
 
 	//////////////////////
 	//Connection callbacks
@@ -136,26 +138,25 @@ public:
 
 private:
 	void SetupDoorPhysics(float afOpenAmount, bool abOpenTowardsMaxAngle=true, bool abApplyAlways=false);
-    void UpdateOpening(float afTimeStep);
 
 	cLuxSwingDoorJointData* GetJointDataFromBody(iPhysicsBody *apBody);
 	cLuxSwingDoorJointData* GetJointDataFromJoint(iPhysicsJoint *apJoint);
 
 	//////////////////////
 	// Data
+	OhplGa4DoorParams mP;
+	OhplGa4Door mS;
 	std::vector<cLuxSwingDoorJointData> mvJointData;
+	std::vector<OhplGa4DoorJoint> Ga4DoorJoints();
 
 	cLuxInteractData_SwingDoor mSwingDoorData;
 
-	bool mbCanInteractWithStaticBody;
 	tString msCloseOnSound;
 	tString msCloseOffSound;
 	tString msLockOnSound;
 	tString msLockOffSound;
 	tString msInteractLockedSound;
 	
-	bool mbDisableBreakable;
-	bool mbBreakable;
 
 	tString msDamageMesh[2];
 	tString msBrokenEntity;
@@ -165,31 +166,17 @@ private:
 
 	tString msBreakSound;
 	tString msBreakPS;
-	float mfBreakImpulse;
 
-	float mfHealthDamage[2];
 
 	cMeshEntity* mpDamageMeshEntity[3];
 
 	//////////////////////
 	// Variables
-	bool mbLocked;
-	bool mbClosed;
 
-	int mlBrokenEntityID;
 
-	bool mbDisableAutoClose;
 
-	int mlCurrentMeshEntity;
-	bool mbBroken;
 
-	float mfInteractSoundCount;
 
-    float mfGoalOpenAmount;
-    bool mbOpeningTowardsMaxAngle;
-    float mfCurrentOpenAmount;
-	float mfOpenSpeed;
-	bool mbIsUpdatingOpenAmount;
 };
 
 //----------------------------------------------

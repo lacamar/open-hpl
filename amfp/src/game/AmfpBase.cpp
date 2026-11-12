@@ -2,44 +2,51 @@
 #include "AmfpBase.h"
 
 #include "system/HeadlessControl.h"
+#include "../../../amnesia/src/game/RustLuxBase.h"
 
 cAmfpBase *gpAmfpBase = NULL;
 
-static void cAmfpBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+static void cAmfpBase_RunHeadless(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp, uint32_t alCmd)
 {
 	cAmfpBase *pBase = (cAmfpBase*)apUserData;
-	if(pBase->GetDebugCamera() == NULL)
-	{
-		aResp.SetError("no camera yet");
-		return;
-	}
 
-	const cVector3f &vPos = pBase->GetDebugCamera()->GetPosition();
-	aResp.Set("pos_x", vPos.x);
-	aResp.Set("pos_y", vPos.y);
-	aResp.Set("pos_z", vPos.z);
-	aResp.Set("pitch", pBase->GetDebugCamera()->GetPitch());
-	aResp.Set("yaw", pBase->GetDebugCamera()->GetYaw());
-	aResp.Set("fps", pBase->mpEngine->GetFPS());
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	{
+		cCamera *pCam = pBase->GetDebugCamera();
+		switch(op)
+		{
+		case eOhplGa9Op_ReqHas: r->i = aReq.HasKey(OhplGa9GetS(a[0])); break;
+		case eOhplGa9Op_ReqFloat: r->f = aReq.GetFloat(OhplGa9GetS(a[0]), a[1].f); break;
+		case eOhplGa9Op_RespError: aResp.SetError(OhplGa9GetS(a[0])); break;
+		case eOhplGa9Op_RespFloat: aResp.Set(OhplGa9GetS(a[0]), a[1].f); break;
+		case eOhplGa9Op_Camera: r->i = pCam != NULL; break;
+		case eOhplGa9Op_CameraValue:
+			switch(a[0].i)
+			{
+			case 0: r->f = pCam->GetPosition().x; break;
+			case 1: r->f = pCam->GetPosition().y; break;
+			case 2: r->f = pCam->GetPosition().z; break;
+			case 3: r->f = pCam->GetPitch(); break;
+			case 4: r->f = pCam->GetYaw(); break;
+			}
+			break;
+		case eOhplGa9Op_Fps: r->f = pBase->mpEngine->GetFPS(); break;
+		case eOhplGa9Op_SetCameraPos: pCam->SetPosition(cVector3f(a[0].f, a[1].f, a[2].f)); break;
+		case eOhplGa9Op_SetPitch: pCam->SetPitch(a[0].f); break;
+		case eOhplGa9Op_SetYaw: pCam->SetYaw(a[0].f); break;
+		}
+	};
+	ohpl_ga9_headless(alCmd, &call, OhplGa9CallOf<decltype(call)>::Fn());
+}
+
+static void cAmfpBase_HeadlessCmd_CameraState(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
+{
+	cAmfpBase_RunHeadless(apUserData, aReq, aResp, eOhplGa9Cmd_CameraState);
 }
 
 static void cAmfpBase_HeadlessCmd_SetCamera(void *apUserData, const cHeadlessRequest &aReq, cHeadlessResponse &aResp)
 {
-	cAmfpBase *pBase = (cAmfpBase*)apUserData;
-	if(pBase->GetDebugCamera() == NULL)
-	{
-		aResp.SetError("no camera yet");
-		return;
-	}
-
-	if(aReq.HasKey("x") || aReq.HasKey("y") || aReq.HasKey("z"))
-	{
-		const cVector3f &vCur = pBase->GetDebugCamera()->GetPosition();
-		cVector3f vPos(aReq.GetFloat("x", vCur.x), aReq.GetFloat("y", vCur.y), aReq.GetFloat("z", vCur.z));
-		pBase->GetDebugCamera()->SetPosition(vPos);
-	}
-	if(aReq.HasKey("pitch")) pBase->GetDebugCamera()->SetPitch(aReq.GetFloat("pitch", 0));
-	if(aReq.HasKey("yaw")) pBase->GetDebugCamera()->SetYaw(aReq.GetFloat("yaw", 0));
+	cAmfpBase_RunHeadless(apUserData, aReq, aResp, eOhplGa9Cmd_SetCamera);
 }
 
 cAmfpBase::cAmfpBase()
@@ -64,7 +71,12 @@ bool cAmfpBase::Init(const tString &asCommandline)
 	if (InitMainConfig() == false)
 		return false;
 
-	Log("AMFP game module - Phase 0 scaffolding (%s)\n", msGameName.c_str());
+	{
+		tString sBanner;
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { sBanner = OhplGa9EmitS(p, n); };
+		ohpl_ga9_amfp_text(1, (const unsigned char*)msGameName.data(), msGameName.size(), OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
+		Log("%s", sBanner.c_str());
+	}
 
 	if (InitEngine() == false)
 		return false;
@@ -95,9 +107,8 @@ void cAmfpBase::Run()
 
 bool cAmfpBase::ParseCommandLine(const tString &asCommandline)
 {
-	msInitConfigFile = cString::To16Char(asCommandline);
-	if (msInitConfigFile == _W(""))
-		msInitConfigFile = _W("config/main_init.cfg");
+	auto emit = [&](uint32_t tag, const void *p, size_t n) { msInitConfigFile = OhplGa9EmitW(p, n); };
+	ohpl_ga9_amfp_init_config_file((const unsigned char*)asCommandline.data(), asCommandline.size(), OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
 	return true;
 }
@@ -105,20 +116,26 @@ bool cAmfpBase::ParseCommandLine(const tString &asCommandline)
 bool cAmfpBase::InitMainConfig()
 {
 	cConfigFile *pInitCfg = hplNew(cConfigFile, (msInitConfigFile));
-	if (pInitCfg->Load() == false)
-	{
-		msErrorMessage = _W("Could not load main init file: ") + msInitConfigFile;
-		hplDelete(pInitCfg);
-		return false;
-	}
+	bool bLoaded = pInitCfg->Load();
 
-	msResourceConfigPath = pInitCfg->GetString("ConfigFiles", "Resources", "resources.cfg");
-	msMaterialConfigPath = pInitCfg->GetString("ConfigFiles", "Materials", "materials.cfg");
-	msGameName = pInitCfg->GetString("Variables", "GameName", "Amnesia - A Machine For Pigs");
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r) { OhplGa9CfgCall(pInitCfg, op, a, r); };
+	auto emit = [&](uint32_t tag, const void *p, size_t n)
+	{
+		switch(tag)
+		{
+		case eOhplGa9Tag_AmfpResources: msResourceConfigPath = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_AmfpMaterials: msMaterialConfigPath = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_AmfpGameName: msGameName = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_AmfpError: msErrorMessage = OhplGa9EmitW(p, n); break;
+		}
+	};
+	bool bOk = ohpl_ga9_amfp_load_vars(&call, OhplGa9CallOf<decltype(call)>::Fn(), bLoaded,
+										(const uint32_t*)msInitConfigFile.data(), msInitConfigFile.size(),
+										OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
 	hplDelete(pInitCfg);
 
-	return true;
+	return bOk;
 }
 
 bool cAmfpBase::InitEngine()
@@ -126,7 +143,10 @@ bool cAmfpBase::InitEngine()
 	cEngineInitVars vars;
 	vars.mGraphics.mvScreenSize = cVector2l(1280, 720);
 	vars.mGraphics.mbFullscreen = false;
-	vars.mGraphics.msWindowCaption = msGameName + " (Phase 0)";
+	{
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { vars.mGraphics.msWindowCaption = OhplGa9EmitS(p, n); };
+		ohpl_ga9_amfp_text(0, (const unsigned char*)msGameName.data(), msGameName.size(), OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
+	}
 
 	mpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 	if (mpEngine == NULL)

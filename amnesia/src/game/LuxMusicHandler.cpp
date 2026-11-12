@@ -18,6 +18,7 @@
  */
 
 #include "LuxMusicHandler.h"
+#include "RustLuxFx.h"
 
 #include "LuxMap.h"
 #include "LuxMapHandler.h"
@@ -117,23 +118,21 @@ void cLuxMusicHandler::Update(float afTimeStep)
 
 	///////////////////////////////////
 	//Check if close by music should be played.
-	UpdateDangerMusic(afTimeStep);	
+	UpdateDangerMusic(afTimeStep);
 
 	///////////////////////////////////
 	//Check if attack music should be played.
 	UpdateEnemyMusic(afTimeStep, eLuxEnemyMusic_Search);
 	UpdateEnemyMusic(afTimeStep, eLuxEnemyMusic_Attack);
-	
+
 	///////////////////////////////////
 	//Check if current song is over
-	if(mlCurrentMaxPrio >=0)
+	bool bNoSong = mlCurrentMaxPrio >= 0 && mpMusicHandler->GetCurrentSong()==NULL;
+	if(ohpl_ga9b_music_song_over(mlCurrentMaxPrio, bNoSong))
 	{
-		if(mpMusicHandler->GetCurrentSong()==NULL)
-		{
-			mvGameMusic[mlCurrentMaxPrio].msFile = "";
-			mlCurrentMaxPrio = -1;
-			PlayHighestPriority();
-		}
+		mvGameMusic[mlCurrentMaxPrio].msFile = "";
+		mlCurrentMaxPrio = -1;
+		PlayHighestPriority();
 	}
 }
 
@@ -142,25 +141,24 @@ void cLuxMusicHandler::Update(float afTimeStep)
 
 void cLuxMusicHandler::Play(const tString &asFile, bool abLoop,float afVolume, float afFadeTime, int alPrio, bool abResume, bool abSpecialEffect)
 {
-	if(alPrio> mlMaxPrio) alPrio = mlMaxPrio;
+	alPrio = ohpl_ga9b_music_prio(alPrio, mlMaxPrio);
+	if(alPrio < 0) return;
 
-	if(mvGameMusic[alPrio].msFile == asFile) return;
-
-	float fVolume = afVolume * mfVolumeMul;
+	OhplGa9bPlayOut out;
+	if(ohpl_ga9b_music_play(mlCurrentMaxPrio, alPrio, mvGameMusic[alPrio].msFile == asFile, afVolume, mfVolumeMul, afFadeTime, &out) == false) return;
 
 	//If higher or equal to song playing, start playing
-	if(mlCurrentMaxPrio <= alPrio)
+	if(out.play)
 	{
-		float fFadeSpeed = fVolume / afFadeTime;
-		mpMusicHandler->Play(asFile,fVolume,fFadeSpeed,abLoop, abResume);
-		mlCurrentMaxPrio = alPrio;
+		mpMusicHandler->Play(asFile,out.volume,out.fadeSpeed,abLoop, abResume);
 	}
+	mlCurrentMaxPrio = out.curPrio;
 
 	//Set game music properites
 	mvGameMusic[alPrio].mbSpecialEffect = abSpecialEffect;
 	mvGameMusic[alPrio].mbLoop = abLoop;
 	mvGameMusic[alPrio].mbResume = abResume;
-	mvGameMusic[alPrio].mfVolume = fVolume;
+	mvGameMusic[alPrio].mfVolume = out.volume;
 	mvGameMusic[alPrio].msFile = asFile;
 }
 
@@ -168,23 +166,21 @@ void cLuxMusicHandler::Play(const tString &asFile, bool abLoop,float afVolume, f
 
 void cLuxMusicHandler::Stop(float afFadeTime, int alPrio)
 {
-	if(alPrio> mlMaxPrio) alPrio = mlMaxPrio;
+	alPrio = ohpl_ga9b_music_prio(alPrio, mlMaxPrio);
+	if(alPrio < 0) return;
 
-	//Check if there is any song playing at this prio
-	if(mvGameMusic[alPrio].msFile != "")
-	{
+	bool bHasFile = mvGameMusic[alPrio].msFile != "";
+	OhplGa9bStopOut out = ohpl_ga9b_music_stop(mlCurrentMaxPrio, alPrio, bHasFile, bHasFile ? mvGameMusic[alPrio].mfVolume : 0.0f, afFadeTime);
+	if(out.clear)
 		mvGameMusic[alPrio].msFile = "";
 
-		//Check the current song playing is this
-		if(alPrio == mlCurrentMaxPrio)
-		{
-			float fFadeSpeed = mvGameMusic[alPrio].mfVolume / afFadeTime;
-			mpMusicHandler->Stop(fFadeSpeed);
+	if(out.stop)
+	{
+		mpMusicHandler->Stop(out.fadeSpeed);
 
-			//Play next song in priority if there is any.
-			mlCurrentMaxPrio = -1;
-			PlayHighestPriority();
-		}
+		//Play next song in priority if there is any.
+		mlCurrentMaxPrio = -1;
+		PlayHighestPriority();
 	}
 }
 
@@ -245,81 +241,79 @@ void cLuxMusicHandler::OnMapLeave(cLuxMap *apMap)
 
 void cLuxMusicHandler::UpdateDangerMusic(float afTimeStep)
 {
-	////////////////////////////
-	// HARDMODE early out
-	if (gpBase->mbHardMode == true) return;
-
-	for(int i=0; i<eLuxEnemyMusic_LastEnum; ++i)
-	{
-		if(mbEnemyPlaying[i]) return;
-	}
-	
+	OhplGa9bEnemyMusic e = EnemyToRust();
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	if(pMap==NULL) return;
-	
-	////////////////////////////
-	//Music not playing
-	if(mbEnemyClosePlaying==false)
+	int lMode = ohpl_ga9b_music_danger_begin(gpBase->mbHardMode == true, &e, pMap != NULL);
+	if(lMode == kOhplGa9bDangerReturn) return;
+
+	std::vector<uint32_t> vNonEmpty;
+	std::vector<int> vPrios;
+	std::vector<tString> vMusics;
+	bool bFound = false;
+
+	cLuxEnemyIterator enemyIt = pMap->GetEnemyIterator();
+	while(enemyIt.HasNext())
 	{
-		tString sMusic ="";
-		int lHighestPrio =-1;
-		cLuxEnemyIterator enemyIt = pMap->GetEnemyIterator();
-		while(enemyIt.HasNext())
+		iLuxEnemy *pEnemy = enemyIt.Next();
+		if(pEnemy->GetHealth() <= 0 || pEnemy->IsActive()==false) continue;
+
+		if(pEnemy->GetPlayerInRange())
 		{
-			iLuxEnemy *pEnemy = enemyIt.Next();
-
-			if(pEnemy->GetHealth() <= 0 || pEnemy->IsActive()==false) continue;
-
-			if(pEnemy->GetPlayerInRange())
-			{
-				if(pEnemy->GetDangerMusic()!= "" && (sMusic=="" || lHighestPrio < pEnemy->GetDangerMusicPrio()))
-				{
-					sMusic = pEnemy->GetDangerMusic();
-					lHighestPrio = pEnemy->GetDangerMusicPrio();
-				}
-			}
-		}
-
-		if(sMusic != "")
-		{
-			mfEnemyGoneCount =0;
-			mfEnemyCloseCount += afTimeStep;
-			if(mfEnemyCloseCount > 2.0f)
-			{
-				Play(sMusic,true,1.0f, 6.0f, 5, true, true);
-				mbEnemyClosePlaying = true;
-			}
+			bFound = true;
+			vNonEmpty.push_back(pEnemy->GetDangerMusic()!= "");
+			vPrios.push_back(pEnemy->GetDangerMusicPrio());
+			vMusics.push_back(pEnemy->GetDangerMusic());
 		}
 	}
-	/////////////////////////
-	//Music playing
+
+	OhplGa9bOps ops;
+	int lIdx = -1;
+	if(lMode == kOhplGa9bDangerScanIdle)
+	{
+		lIdx = ohpl_ga9b_music_pick_danger(vNonEmpty.empty() ? NULL : &vNonEmpty[0], vPrios.empty() ? NULL : &vPrios[0], vNonEmpty.size());
+		ohpl_ga9b_music_danger_idle(&e, lIdx >= 0, afTimeStep, &ops);
+	}
 	else
 	{
-		bool bFound=false;
-		cLuxEnemyIterator enemyIt = pMap->GetEnemyIterator();
-		while(enemyIt.HasNext())
-		{
-			iLuxEnemy *pEnemy = enemyIt.Next();
-
-			if(pEnemy->GetHealth() <= 0 || pEnemy->IsActive()==false) continue;
-
-			if(pEnemy->GetPlayerInRange())
-			{
-				bFound = true;
-			}
-		}
-
-		if(bFound == false)
-		{
-			mfEnemyCloseCount =0;
-			mfEnemyGoneCount += afTimeStep;
-			if(mfEnemyGoneCount > 6.0f)
-			{
-				Stop(6.0f, 5);
-				mbEnemyClosePlaying = false;
-			}
-		}
+		ohpl_ga9b_music_danger_playing(&e, bFound, afTimeStep, &ops);
 	}
+	EnemyFromRust(e);
+
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		if(ops.ops[i].kind == kOhplGa9bMusicPlayDanger)
+			Play(vMusics[lIdx],true,1.0f, 6.0f, 5, true, true);
+		else if(ops.ops[i].kind == kOhplGa9bMusicStopDanger)
+			Stop(6.0f, 5);
+	}
+}
+
+OhplGa9bEnemyMusic cLuxMusicHandler::EnemyToRust()
+{
+	OhplGa9bEnemyMusic e;
+	for(int i=0; i<eLuxEnemyMusic_LastEnum; ++i)
+	{
+		e.playing[i] = mbEnemyPlaying[i];
+		e.playCount[i] = mfEnemyPlayCount[i];
+		e.stopCount[i] = mfEnemyStopCount[i];
+	}
+	e.closePlaying = mbEnemyClosePlaying;
+	e.closeCount = mfEnemyCloseCount;
+	e.goneCount = mfEnemyGoneCount;
+	return e;
+}
+
+void cLuxMusicHandler::EnemyFromRust(const OhplGa9bEnemyMusic &e)
+{
+	for(int i=0; i<eLuxEnemyMusic_LastEnum; ++i)
+	{
+		mbEnemyPlaying[i] = e.playing[i] != 0;
+		mfEnemyPlayCount[i] = e.playCount[i];
+		mfEnemyStopCount[i] = e.stopCount[i];
+	}
+	mbEnemyClosePlaying = e.closePlaying != 0;
+	mfEnemyCloseCount = e.closeCount;
+	mfEnemyGoneCount = e.goneCount;
 }
 
 //-----------------------------------------------------------------------
@@ -327,76 +321,51 @@ void cLuxMusicHandler::UpdateDangerMusic(float afTimeStep)
 void cLuxMusicHandler::UpdateEnemyMusic(float afTimeStep, eLuxEnemyMusic aType)
 {
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	if(pMap==NULL) return;
 
-	for(int i=aType+1; i<eLuxEnemyMusic_LastEnum; ++i)
+	OhplGa9bEnemyMusic e = EnemyToRust();
+	OhplGa9bOps ops;
+	int lMode = ohpl_ga9b_music_enemy_begin(&e, (int)aType, pMap != NULL, m_setEnemies[aType].empty(), afTimeStep, &ops);
+	EnemyFromRust(e);
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		if(mbEnemyPlaying[i]) return;
+		if(ops.ops[i].kind == kOhplGa9bMusicStopEnemy)
+			Stop(5.0f, ops.ops[i].i);
+	}
+	if(lMode != kOhplGa9bEnemyScan) return;
+
+	//////////////////////
+	// Go through attackers and get music with highest priority
+	std::vector<uint32_t> vNonEmpty;
+	std::vector<int> vPrios;
+	std::vector<tString> vMusics;
+	tLuxEnemySetIt it = m_setEnemies[aType].begin();
+	for(; it != m_setEnemies[aType].end(); ++it)
+	{
+		iLuxEnemy *pEnemy = *it;
+		vNonEmpty.push_back(pEnemy->GetMusic(aType) != "");
+		vPrios.push_back(pEnemy->GetMusicPrio(aType));
+		vMusics.push_back(pEnemy->GetMusic(aType));
 	}
 
-	////////////////////////////////////////
-	//Attack not playing and attackers active
-	if(mbEnemyPlaying[aType]==false && m_setEnemies[aType].empty()==false)
+	int lIdx = ohpl_ga9b_music_pick_enemy(vNonEmpty.empty() ? NULL : &vNonEmpty[0], vPrios.empty() ? NULL : &vPrios[0], vNonEmpty.size());
+	if(lIdx < 0) return;
+
+	e = EnemyToRust();
+	ohpl_ga9b_music_enemy_found(&e, (int)aType, &ops);
+	EnemyFromRust(e);
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		mfEnemyStopCount[aType] =0;
-		mfEnemyPlayCount[aType] += afTimeStep;
-		if(mfEnemyPlayCount[aType] > 0.1f)
+		switch(ops.ops[i].kind)
 		{
-			//////////////////////
-			// Go through attackers and get music with highest priority
-			tString sMusic = "";
-			int lMaxPrio = -9999;
-
-			tLuxEnemySetIt it = m_setEnemies[aType].begin();
-			for(; it != m_setEnemies[aType].end(); ++it)
-			{
-				iLuxEnemy *pEnemy = *it;
-
-				if(pEnemy->GetMusic(aType) != "" && pEnemy->GetMusicPrio(aType) > lMaxPrio)
-				{
-					sMusic = pEnemy->GetMusic(aType);
-					lMaxPrio = pEnemy->GetMusicPrio(aType);
-				}
-			}
-
-			//////////////////////
-			// Play music if found
-			if(sMusic != "")
-			{
-				//Stop close music
-				if(mbEnemyClosePlaying)
-				{
-					mbEnemyClosePlaying = false;
-					Stop(2.0f, 5);
-				}
-
-				//Stop lower prio
-				for(int i=0; i<aType; ++i)
-				{
-					mbEnemyPlaying[i] = false;
-					Stop(2.0f, 8+aType);
-				}
-
-				Play(sMusic, true, 1.0f, 1.5f, 8+aType, true, true);
-				mbEnemyPlaying[aType] = true;
-				//Log("Play!");
-				mfEnemyPlayCount[aType] =0;
-			}
-		}
-	}
-	////////////////////////////////////////
-	//Attack playing and no attackers active
-	else if(mbEnemyPlaying[aType] && m_setEnemies[aType].empty())
-	{
-		mfEnemyPlayCount[aType] =0;
-		mfEnemyStopCount[aType] += afTimeStep;
-
-		if(mfEnemyStopCount[aType] > 1.2f)
-		{
-			mbEnemyPlaying[aType] = false;
-			Stop(5.0f, 8+aType);
-			//Log("Stop!");
-			mfEnemyStopCount[aType] =0;
+		case kOhplGa9bMusicStopClose:
+			Stop(2.0f, 5);
+			break;
+		case kOhplGa9bMusicStopLower:
+			Stop(2.0f, ops.ops[i].i);
+			break;
+		case kOhplGa9bMusicPlayEnemy:
+			Play(vMusics[lIdx], true, 1.0f, 1.5f, ops.ops[i].i, true, true);
+			break;
 		}
 	}
 }
@@ -405,22 +374,32 @@ void cLuxMusicHandler::UpdateEnemyMusic(float afTimeStep, eLuxEnemyMusic aType)
 
 void cLuxMusicHandler::PlayHighestPriority()
 {
-	for(int i= mlMaxPrio; i>=0; --i)
+	std::vector<OhplGa9bSlot> vSlots(mvGameMusic.size());
+	for(size_t i=0; i<mvGameMusic.size(); ++i)
 	{
-		if(mvGameMusic[i].msFile != "")
+		cLuxMusic &music = mvGameMusic[i];
+		bool bHasFile = music.msFile != "";
+		vSlots[i].hasFile = bHasFile;
+		vSlots[i].loop = bHasFile ? music.mbLoop : false;
+		vSlots[i].resume = bHasFile ? music.mbResume : false;
+		vSlots[i].volume = bHasFile ? music.mfVolume : 0.0f;
+	}
+
+	OhplGa9bOps ops;
+	ohpl_ga9b_music_play_highest(&vSlots[0], vSlots.size(), mlMaxPrio, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		int lPrio = ops.ops[i].i;
+		if(ops.ops[i].kind == kOhplGa9bMusicPlay)
 		{
 			//If looped, play
-			if(mvGameMusic[i].mbLoop)
-			{
-				mpMusicHandler->Play(	mvGameMusic[i].msFile, mvGameMusic[i].mfVolume,	0.3f,true, mvGameMusic[i].mbResume);
-				mlCurrentMaxPrio = (int)i;
-				break;
-			}
+			mpMusicHandler->Play(	mvGameMusic[lPrio].msFile, mvGameMusic[lPrio].mfVolume,	0.3f,true, mvGameMusic[lPrio].mbResume);
+			mlCurrentMaxPrio = lPrio;
+		}
+		else
+		{
 			//If not looped remove
-			else
-			{
-				mvGameMusic[i].msFile = "";
-			}
+			mvGameMusic[lPrio].msFile = "";
 		}
 	}
 }

@@ -20,6 +20,7 @@
 #include "LuxMoveState_ClimbLedge.h"
 
 #include "LuxPlayer.h"
+#include "RustLuxPlayer.h"
 #include "LuxHelpFuncs.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -91,21 +92,15 @@ void cLuxMoveState_ClimbLedge::OnLeaveState(eLuxMoveState aNewState)
 
 void cLuxMoveState_ClimbLedge::OnUpdate(float afTimeStep)
 {
-	///////////////////////////////////
-	//See at the top of the climbing, if so end
-	if(mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_ClimbLedge).Length() <= mfGivePlayerControlDist)
+	OhplGa2bLedgeCfg cfg = {mfGivePlayerControlDist, mfMovePitchFactor, mfMaxMovePitchSpeed};
+	cVector3f vHeadAdd = mpPlayer->GetHeadPosAdd(eLuxHeadPosAdd_ClimbLedge);
+	float fPitchAdd;
+	if(ohpl_ga2b_ledge_update(&cfg, &vHeadAdd, mpPlayer->GetCamera()->GetPitch(), afTimeStep, &fPitchAdd) == false)
 	{
 		mpPlayer->ChangeMoveState(eLuxMoveState_Normal);
 		return;
 	}
-
-	///////////////////////////////////
-	//Move the pitch to 0
-	float fPitch = mpPlayer->GetCamera()->GetPitch();
-	float fAdd = -fPitch * mfMovePitchFactor;
-	if(fAdd < -mfMaxMovePitchSpeed) fAdd = -mfMaxMovePitchSpeed; 
-	if(fAdd > mfMaxMovePitchSpeed)  fAdd = mfMaxMovePitchSpeed;
-    mpPlayer->GetCamera()->AddPitch(fAdd * afTimeStep);
+	mpPlayer->GetCamera()->AddPitch(fPitchAdd);
 }
 
 //-----------------------------------------------------------------------

@@ -49,16 +49,8 @@ cLuxPlayerState_InteractPush::cLuxPlayerState_InteractPush(cLuxPlayer *apPlayer)
 	
 	mfMaxForce = gpBase->mpGameCfg->GetFloat("Player_Interaction","PushMaxForce",0);
 
-	mVelocityPid.SetErrorNum(20);
-	mVelocityPid.p = 15;
-	mVelocityPid.i = 0;
-	mVelocityPid.d = 0.1f;
-
-	mStopVelocityPid.SetErrorNum(20);
-	mStopVelocityPid.p = 10;
-	mStopVelocityPid.i = 0;
-	mStopVelocityPid.d = 0.1f;
-
+	ohpl_ga2b_pid_init(&mVelocityPid, 20, 15, 0, 0.1f);
+	ohpl_ga2b_pid_init(&mStopVelocityPid, 20, 10, 0, 0.1f);
 }
 
 //-----------------------------------------------------------------------
@@ -90,8 +82,8 @@ void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 	//Reset variables
 	ClearMoveVars();
 
-	mVelocityPid.Reset();
-	mStopVelocityPid.Reset();
+	ohpl_ga2b_pid_reset(&mVelocityPid);
+	ohpl_ga2b_pid_reset(&mStopVelocityPid);
 	
 	mvPushDir =0;
 	
@@ -106,30 +98,29 @@ void cLuxPlayerState_InteractPush::OnEnterState(eLuxPlayerState aPrevState)
 	mfPrevMinPitchLimit = pCam->GetPitchMinLimit();
 	mfPrevMaxPitchLimit = pCam->GetPitchMaxLimit();
 
-	pCam->SetPitchLimits(pCam->GetPitch() - mfPitchMinRange, pCam->GetPitch() + mfPitchMaxRange);
-	pCam->SetYawLimits(pCam->GetYaw() - mfYawRange, pCam->GetYaw() + mfYawRange);
+	OhplGa2bPushEnterIn pi;
+	pi.pitch = pCam->GetPitch();
+	pi.yaw = pCam->GetYaw();
+	pi.pitchMinRange = mfPitchMinRange;
+	pi.pitchMaxRange = mfPitchMaxRange;
+	pi.yawRange = mfYawRange;
+	pi.atPoint = mpPushData->mbPushAtPoint;
+	pi.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	pi.bodyPos = mpCurrentBody->GetLocalPosition();
+	pi.feet = pCharBody->GetFeetPosition();
+	pi.interactPos = vInteractPos;
+	OhplGa2bPushEnterOut po;
+	po.localAttach = mvLocalAttachPos;
+	ohpl_ga2b_push_enter(&pi, &po);
 
-	
-	/////////////////////////////////
-	//Calculate the local attach pos (if in attach at point)
-	if(mpPushData->mbPushAtPoint)
-	{
-		cMatrixf mtxInvWorld = cMath::MatrixInverse(mpCurrentBody->GetLocalMatrix());
-		mvLocalAttachPos = cMath::MatrixMul(mtxInvWorld, vInteractPos);
-	}
+	pCam->SetPitchLimits(po.pitchMin, po.pitchMax);
+	pCam->SetYawLimits(po.yawMin, po.yawMax);
 
-	/////////////////////////////////
-	//Get the maximum distance
-	if(mpPushData->mbPushAtPoint)
-	{
-		mfMaxAttachPointDist = cMath::Vector3Dist(pCharBody->GetFeetPosition(), vInteractPos);
-	}
-	else
-	{
-		mfMaxAttachPointDist = cMath::Vector3Dist(pCharBody->GetFeetPosition(), mpCurrentBody->GetLocalPosition());
-	}
-	mfMaxAttachPointDist = mfMaxAttachPointDist*1.2f + 0.3f;
+	mvLocalAttachPos = po.localAttach;
+	mfMaxAttachPointDist = po.maxAttachDist;
 }
+
+//-----}
 
 //-----------------------------------------------------------------------
 
@@ -153,159 +144,112 @@ void cLuxPlayerState_InteractPush::Update(float afTimeStep)
 	iPhysicsWorld *pPhysicsWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld()->GetPhysicsWorld();
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-	///////////////////////////////////////
-	// Get the attach point (skip if not at point)
-	cVector3f vAttachPos(0);
-	if(mpPushData->mbPushAtPoint)
+	OhplGa2bPushBegin pb;
+	pb.atPoint = mpPushData->mbPushAtPoint;
+	pb.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	pb.localAttach = mvLocalAttachPos;
+	pb.bodyPos = mpCurrentBody->GetLocalPosition();
+	pb.feet = pCharBody->GetFeetPosition();
+	pb.maxAttachDist = mfMaxAttachPointDist;
+	pb.forward = pCharBody->GetForward();
+	pb.right = pCharBody->GetRight();
+	for(int i=0; i<2; ++i)
 	{
-		vAttachPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalAttachPos);
+		pb.moving[i] = mbMoving[i];
+		pb.totalMoveMul[i] = mfTotalMoveMul[i];
 	}
+	OhplGa2bPushBeginOut pbo;
+	ohpl_ga2b_push_begin(&pb, &pbo);
 
-	///////////////////////////////////////
-	// Check so not too far away from body
-	float fDistance = mpPushData->mbPushAtPoint ?	cMath::Vector3Dist(pCharBody->GetFeetPosition(), vAttachPos) :
-													cMath::Vector3Dist(pCharBody->GetFeetPosition(), mpCurrentBody->GetLocalPosition());
-	if(fDistance > mfMaxAttachPointDist)
+	if(pbo.tooFar)
 	{
 		mpPlayer->ChangeState(mPreviousState);
 		return;
 	}
 
-	///////////////////////////////////////
-	// Get the direction that to move in
-	cVector3f vDirAdd[2] = {pCharBody->GetForward(),pCharBody->GetRight()};
-	mvPushDir =0;
-	for(int i=0; i<2; ++i)
-	{
-		if(mbMoving[i]) mvPushDir += vDirAdd[i] * mfTotalMoveMul[i];
-	}
-	
-	///////////////////////////////////////
-	// Check if there was any movement
-    if(mvPushDir == 0)
-	{
-	
-		cVector3f vBodyVel = mpPushData->mbPushAtPoint ?  mpCurrentBody->GetVelocityAtPosition(vAttachPos) : mpCurrentBody->GetLinearVelocity();
-		cVector3f vVelError = cVector3f(0) - vBodyVel; 
-		vVelError.y =0; //Skip fixing y and concentrate on ground plane.
-		cVector3f vForce = mStopVelocityPid.Output(vVelError,afTimeStep) * mpCurrentBody->GetMass();
+	cVector3f vAttachPos = pbo.attach;
+	mvPushDir = pbo.pushDir;
 
-		vForce = cMath::Vector3MaxLength(vForce, mfMaxForce);
-		
+	cVector3f vBodyVel = mpPushData->mbPushAtPoint ?  mpCurrentBody->GetVelocityAtPosition(vAttachPos) : mpCurrentBody->GetLinearVelocity();
+
+	if(pbo.noMovement)
+	{
+		cVector3f vForce;
+		ohpl_ga2b_push_stop(&mStopVelocityPid, &vBodyVel, mpCurrentBody->GetMass(), mfMaxForce, afTimeStep, &vForce);
+
 		if(mpPushData->mbPushAtPoint)
-			mpCurrentBody->AddForceAtPosition(vForce,vAttachPos);    
+			mpCurrentBody->AddForceAtPosition(vForce,vAttachPos);
 		else
-			mpCurrentBody->AddForce(vForce); 
-		
+			mpCurrentBody->AddForce(vForce);
 		return;
 	}
 
-	mvPushDir.Normalize();
-	
-	///////////////////////////////////////
-	// Update speed so it only travels in the correct direction!
-	cVector3f vBodyVel = mpPushData->mbPushAtPoint ?  mpCurrentBody->GetVelocityAtPosition(vAttachPos) : mpCurrentBody->GetLinearVelocity();
-	cVector3f vVelInDir = mvPushDir * cMath::Vector3Dot(mvPushDir, vBodyVel);
-	
-	mVelocityPid.p = 12;
-	mVelocityPid.i = 0;
-	mVelocityPid.d = 0.2f;
-	cVector3f vVelError = vVelInDir - vBodyVel;
-	vVelError.y =0; //Skip fixing y and concentrate on ground plane.
-	cVector3f vCorrectForce = mVelocityPid.Output(vVelError,afTimeStep) * mpCurrentBody->GetMass();
-
-	vCorrectForce = cMath::Vector3MaxLength(vCorrectForce, mfMaxForce);
-
-	if(mpPushData->mbPushAtPoint)
-		mpCurrentBody->AddForceAtPosition(vCorrectForce,vAttachPos);    
-	else
-		mpCurrentBody->AddForce(vCorrectForce); 
-
-	
-	///////////////////////////////////////
-	// GetMax Speed and force
-	float fMaxSpeed = mfWalkMaxSpeed;
-	float fPushForce = mfWalkForce;
-	if(mpPlayer->GetCurrentMoveState() == eLuxMoveState_Normal)
+	bool bNormalMove = mpPlayer->GetCurrentMoveState() == eLuxMoveState_Normal;
+	bool bRunning = false;
+	bool bCrouching = false;
+	if(bNormalMove)
 	{
 		cLuxMoveState_Normal *pNormalMove = static_cast<cLuxMoveState_Normal*>(mpPlayer->GetMoveStateData(eLuxMoveState_Normal));
-		
-		if(pNormalMove->IsRunning())
-		{
-			fMaxSpeed = mfRunMaxSpeed;
-			fPushForce = mfRunForce;
-		}
-		else if(pNormalMove->IsCrouching())
-		{
-			fMaxSpeed = mfCrouchMaxSpeed;
-			fPushForce = mfCrouchForce;
-		}
+		bRunning = pNormalMove->IsRunning();
+		bCrouching = pNormalMove->IsCrouching();
 	}
-	
-	
-	///////////////////////////////////////
-	// Update the box force
-	if(vVelInDir.Length() < fMaxSpeed || cMath::Vector3Dot(vVelInDir,mvPushDir)<0)
+	float vWalk[2] = {mfWalkMaxSpeed, mfWalkForce};
+	float vRun[2] = {mfRunMaxSpeed, mfRunForce};
+	float vCrouch[2] = {mfCrouchMaxSpeed, mfCrouchForce};
+	float vPick[2];
+	ohpl_ga2b_push_pick(bNormalMove, bRunning, bCrouching, vWalk, vRun, vCrouch, vPick);
+
+	OhplGa2bPushDrive pd;
+	pd.pushDir = mvPushDir;
+	pd.vel = vBodyVel;
+	pd.mass = mpCurrentBody->GetMass();
+	pd.maxForce = mfMaxForce;
+	pd.maxSpeed = vPick[0];
+	pd.pushForce = vPick[1];
+	pd.forceMul = mpPushData->mfPushForceMul;
+	pd.bodyMatrix = mpCurrentBody->GetLocalMatrix();
+	pd.forward = pCharBody->GetForward();
+	pd.right = pCharBody->GetRight();
+	OhplGa2bPushDriveOut pdo;
+	ohpl_ga2b_push_drive(&mVelocityPid, &pd, afTimeStep, &pdo);
+
+	if(mpPushData->mbPushAtPoint)
+		mpCurrentBody->AddForceAtPosition(pdo.correctForce,vAttachPos);
+	else
+		mpCurrentBody->AddForce(pdo.correctForce);
+
+	if(pdo.hasPushForce)
 	{
-		cVector3f vForce = mvPushDir * fPushForce * mpPushData->mfPushForceMul;
-
-		vForce = cMath::Vector3MaxLength(vForce, mfMaxForce);
-
-		//Attach at point
 		if(mpPushData->mbPushAtPoint)
 		{
-			mpCurrentBody->AddForceAtPosition(vForce,vAttachPos);
+			mpCurrentBody->AddForceAtPosition(pdo.pushForce,vAttachPos);
 		}
-		//Attach at center
 		else
 		{
-			mpCurrentBody->AddForce(vForce);
+			mpCurrentBody->AddForce(pdo.pushForce);
 		}
 	}
 
-	
-	///////////////////////////////////////////
-	//Get the max speed the player may have
-	cVector3f vMaxPlayerVel = 0;
-	
-	//Make sure box is moving in right direction.
-	if(cMath::Vector3Dot(vVelInDir,mvPushDir)>0)
-	{
-		vMaxPlayerVel = vVelInDir;
-	}
-
-	///////////////////////////////////////
-	// Check if the body will collide with the player!
 	cCollideData collideData;collideData.SetMaxSize(1);
-	cMatrixf mtxNextTransform = cMath::MatrixMul(cMath::MatrixTranslate(mvPushDir * 0.1f), mpCurrentBody->GetLocalMatrix());
-    
 	bool bWillCollideWithPlayer = pPhysicsWorld->CheckShapeCollision(
 										pCharBody->GetCurrentShape(), cMath::MatrixTranslate(pCharBody->GetPosition()),
-										mpCurrentBody->GetShape(), mtxNextTransform,
+										mpCurrentBody->GetShape(), pdo.nextTransform,
 										collideData,1,false);
 
-	///////////////////////////////////////
-	// Get the max right and forward speeds allowed.
-	// Skip it if the body is about to collide with player!
-	// Note: This will only work if move state is update before the player state!
 	if(bWillCollideWithPlayer==false)
 	{
 		for(int i=0; i<2; ++i)
 		{
-			float fMaxSpeed = cMath::Abs( cMath::Vector3Dot(vDirAdd[i],vMaxPlayerVel) );
-			pCharBody->SetMaxPositiveMoveSpeed((eCharDir)i,fMaxSpeed);
-			pCharBody->SetMaxNegativeMoveSpeed((eCharDir)i,-fMaxSpeed);
+			pCharBody->SetMaxPositiveMoveSpeed((eCharDir)i,pdo.maxSpeed[i]);
+			pCharBody->SetMaxNegativeMoveSpeed((eCharDir)i,-pdo.maxSpeed[i]);
 		}
 	}
 
-	///////////////////////////////////////
-	// Update player movement
 	for(int i=0; i<2; ++i)
 	{
 		if(mbMoving[i])
 			pCharBody->Move((eCharDir)i, mfTotalMoveMul[i]);
 	}
-	
 }
 
 void cLuxPlayerState_InteractPush::PostUpdate(float afTimeStep)
@@ -317,40 +261,30 @@ void cLuxPlayerState_InteractPush::PostUpdate(float afTimeStep)
 
 bool cLuxPlayerState_InteractPush::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact)
+	int lKind = ohpl_ga2b_interact_action(OhplGa2bActOf(aAction), abPressed);
+	if(lKind == 1)
 	{
-		// Released
-		if(abPressed==false)
-		{
-			mpPlayer->ChangeState(mPreviousState);
-
-			return false;
-		}
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
-	////////////////////////////
-	// Attack
-	else if(aAction == eLuxPlayerAction_Attack)
+	else if(lKind == 2)
 	{
-		// Pressed
-		if(abPressed)
-		{
-			iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-			if(mpPushData->mbPushAtPoint)
-			{
-				cVector3f vAttachPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalAttachPos);
-				mpCurrentBody->AddImpulseAtPosition(mvPushDir * mpPushData->mfPushImpulse,vAttachPos);
-			}
-			else
-			{
-				mpCurrentBody->AddImpulse(mvPushDir * mpPushData->mfPushImpulse);
-			}
+		iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-			mpPlayer->ChangeState(mPreviousState);	
-			return false;
+		if(mpPushData->mbPushAtPoint)
+		{
+			cVector3f vAttachPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalAttachPos);
+			mpCurrentBody->AddImpulseAtPosition(mvPushDir * mpPushData->mfPushImpulse,vAttachPos);
 		}
+		else
+		{
+			mpCurrentBody->AddImpulse(mvPushDir * mpPushData->mfPushImpulse);
+		}
+
+		mpPlayer->ChangeState(mPreviousState);
+		return false;
 	}
+
 	return true;
 }
 

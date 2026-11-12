@@ -18,6 +18,7 @@
  */
 
 #include "LuxAreaNodes.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 
@@ -54,11 +55,10 @@ void cLuxAreaNodeLoader_PlayerStart::Load(const tString &asName, int alID, bool 
 	}
 
 	cLuxNode_PlayerStart *pNode = hplNew(cLuxNode_PlayerStart, (asName));
-	pNode->mvPos = a_mtxTransform.GetTranslation() + cVector3f(0,0.05f, 0);
-	
-	cVector3f vForward = cMath::MatrixMul(a_mtxTransform.GetRotation(), cVector3f(0,0,1));
-	
-	pNode->mfAngle = -cMath::GetAngleFromPoints2D(0, cVector2f(vForward.x, vForward.z));
+	OhplGa5PlayerStart start;
+	ohpl_ga5_player_start(reinterpret_cast<const OhplGa5Mtx*>(&a_mtxTransform), &start);
+	pNode->mvPos = cVector3f(start.pos.x, start.pos.y, start.pos.z);
+	pNode->mfAngle = start.angle;
 
 	//pNode->mfAngle = cMath::Vector3Angle(vForward, cVector3f(0,0,1));
 	//if(cMath::Vector3Dot(vForward, cVector3f(1,0,0)) < 0) pNode->mfAngle = -pNode->mfAngle;	
@@ -84,7 +84,10 @@ cLuxAreaNodeLoader_PathNode::cLuxAreaNodeLoader_PathNode(const tString& asName) 
 
 void cLuxAreaNodeLoader_PathNode::Load(const tString &asName, int alID, bool abActive, const cVector3f &avSize, const cMatrixf &a_mtxTransform,cWorld *apWorld)
 {
-	apWorld->AddAINode(asName,alID, "Default", a_mtxTransform.GetTranslation()+cVector3f(0,0.05f,0));
+	cVector3f vTranslation = a_mtxTransform.GetTranslation();
+	cVector3f vNodePos;
+	ohpl_ga5_node_up(reinterpret_cast<const OhplGa5Vec3*>(&vTranslation), reinterpret_cast<OhplGa5Vec3*>(&vNodePos));
+	apWorld->AddAINode(asName,alID, "Default", vNodePos);
 }
 
 //-----------------------------------------------------------------------

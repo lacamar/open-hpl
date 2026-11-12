@@ -20,6 +20,7 @@
 #include "LuxMoveState.h"
 
 #include "LuxPlayer.h"
+#include "RustLuxPlayer.h"
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -70,12 +71,14 @@ void iLuxMoveState::Update(float afTimeStep)
 
 	//////////////////////////////
 	// Set move state variables
-	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();	
-
-	pCharBody->SetMaxPositiveMoveSpeed(eCharDir_Forward,mfMaxForwardSpeed * mfMaxForwardSpeedMul);
-	pCharBody->SetMaxNegativeMoveSpeed(eCharDir_Forward,-mfMaxBackwardSpeed * mfMaxBackwardSpeedMul);
-	pCharBody->SetMaxPositiveMoveSpeed(eCharDir_Right,mfMaxSidwaySpeed * mfMaxSidwaySpeedMul);
-	pCharBody->SetMaxNegativeMoveSpeed(eCharDir_Right,-mfMaxSidwaySpeed * mfMaxSidwaySpeedMul);
+	iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
+	OhplGa2bSpeedMuls muls = {mfMaxForwardSpeedMul, mfMaxBackwardSpeedMul, mfMaxSidwaySpeedMul, 0};
+	OhplGa2bMoveLimits lim;
+	ohpl_ga2b_move_limits(mfMaxForwardSpeed, mfMaxBackwardSpeed, mfMaxSidwaySpeed, &muls, &lim);
+	pCharBody->SetMaxPositiveMoveSpeed(eCharDir_Forward,lim.fwdPos);
+	pCharBody->SetMaxNegativeMoveSpeed(eCharDir_Forward,lim.fwdNeg);
+	pCharBody->SetMaxPositiveMoveSpeed(eCharDir_Right,lim.sidePos);
+	pCharBody->SetMaxNegativeMoveSpeed(eCharDir_Right,lim.sideNeg);
 	pCharBody->SetMoveAcc(eCharDir_Forward,mfForwardAcc);
 	pCharBody->SetMoveAcc(eCharDir_Right,mfSidewayAcc);
 	pCharBody->SetMoveDeacc(eCharDir_Forward,mfForwardDeacc);

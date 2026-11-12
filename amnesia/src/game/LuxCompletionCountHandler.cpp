@@ -18,6 +18,7 @@
  */
 
 #include "LuxCompletionCountHandler.h"
+#include "RustLuxFx.h"
 
 //-----------------------------------------------------------------------
 
@@ -68,59 +69,34 @@ void cLuxCompletionCountHandler::OnStart()
 
 void cLuxCompletionCountHandler::Reset()
 {
-	mbActive = false;
-	mfAlpha=0;
-	mfDelay =0;
+	OhplGa9bCompletion c = ToRust();
+	ohpl_ga9b_completion_reset(&c);
+	FromRust(c);
+}
 
-	mfNewAmount =0;
-	mfDisplayedAmount =0;
+OhplGa9bCompletion cLuxCompletionCountHandler::ToRust()
+{
+	OhplGa9bCompletion c = { mbActive, mfAlpha, mfDelay, mfNewAmount, mfDisplayedAmount, mfDisableDelay };
+	return c;
+}
+
+void cLuxCompletionCountHandler::FromRust(const OhplGa9bCompletion &c)
+{
+	mbActive = c.active != 0;
+	mfAlpha = c.alpha;
+	mfDelay = c.delay;
+	mfNewAmount = c.newAmount;
+	mfDisplayedAmount = c.displayed;
+	mfDisableDelay = c.disableDelay;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxCompletionCountHandler::Update(float afTimeStep)
 {
-	return;
-
-	/////////////////////
-	//Decrease alpha
-	if(mbActive==false)
-	{
-		mfAlpha -= 0.5 * afTimeStep;
-		if(mfAlpha <0) mfAlpha =0;
-		return;
-	}
-
-	if(mfDelay > 0)
-	{
-		mfDelay -=afTimeStep;
-		return;
-	}
-
-	/////////////////////
-	//Increase alpha
-	mfAlpha += 1.2f * afTimeStep;
-	if(mfAlpha >1) mfAlpha =1;
-
-	/////////////////////
-	//Increase count
-	if(mfAlpha > 0.2f)
-	{
-		if(mfDisplayedAmount < mfNewAmount)
-		{
-			float fDistance = 0;//(mfNewAmount - mfDisplayedAmount);
-			mfDisplayedAmount += (fDistance+0.001) * 30 * afTimeStep;
-			if(mfDisplayedAmount > mfNewAmount)mfDisplayedAmount = mfNewAmount;
-		}
-		else
-		{
-			mfDisableDelay -=afTimeStep;
-			if(mfDisableDelay <=0)
-			{
-				mbActive = false;
-			}
-		}
-	}
+	OhplGa9bCompletion c = ToRust();
+	ohpl_ga9b_completion_update(&c, afTimeStep);
+	FromRust(c);
 }
 
 //-----------------------------------------------------------------------
@@ -148,22 +124,9 @@ void cLuxCompletionCountHandler::OnMapExit(cLuxMap *apMap)
 
 void cLuxCompletionCountHandler::ShowCompletionIncrease(float afPrevius, float afNew, float afDelay)
 {
-	return;
-
-	if(afPrevius == afNew) return;
-
-	mbActive = true;
-
-	//If the count is already shown then do not set a new value.
-	if(mfAlpha <=0)
-	{
-		mfDelay = afDelay;
-		mfDisplayedAmount = afPrevius;
-	}
-
-    mfNewAmount = afNew;
-
-	mfDisableDelay = 2.0f;
+	OhplGa9bCompletion c = ToRust();
+	ohpl_ga9b_completion_show(&c, afPrevius, afNew, afDelay);
+	FromRust(c);
 }
 
 

@@ -68,29 +68,12 @@ void cLuxPlayerState_UseItem::ImplementedOnEnterState(eLuxPlayerState aPrevState
 
 bool cLuxPlayerState_UseItem::ImplementedDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	////////////////////
-	// Holster (draw hand object)
-	if(aAction == eLuxPlayerAction_Holster && abPressed)
-	{
-		mpPlayer->ChangeState(eLuxPlayerState_HandObject);
-		return false;
-	}
-	////////////////////////////
-	// Interact
-	if(aAction == eLuxPlayerAction_Interact || aAction == eLuxPlayerAction_Attack)
-	{
-		// Pressed
-		if(abPressed)
-		{
-			UseItem();
-			
-			mpPlayer->ChangeState(eLuxPlayerState_Normal);
-            return false;
-		}
-	}
-
-	
-	return true;
+	OhplGa2bAction a;
+	ohpl_ga2b_action(2, OhplGa2bActOf(aAction), abPressed, &a);
+	if(a.useItem) UseItem();
+	if(a.change == kOhplGa2bPsHand) mpPlayer->ChangeState(eLuxPlayerState_HandObject);
+	else if(a.change == kOhplGa2bPsNormal) mpPlayer->ChangeState(eLuxPlayerState_Normal);
+	return a.pass;
 }
 
 //-----------------------------------------------------------------------
@@ -115,16 +98,14 @@ bool cLuxPlayerState_UseItem::OnDrawCrossHair(cGuiGfxElement *apGfx, const cVect
 {
 	if(mpEntityInFocus==NULL) return true;
 
-	float fMaxFocusDistance = cMath::Max(mpEntityInFocus->GetMaxFocusDistance(), mfMinUseItemDistance);
-	if(mfFocusDistance > fMaxFocusDistance) return true;	
+	float fMaxFocusDistance = ohpl_ga2b_use_item_max_focus(mpEntityInFocus->GetMaxFocusDistance(), mfMinUseItemDistance);
 
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
-	if(	mpEntityInFocus->GetEntityType() == eLuxEntityType_Prop)
-	{
-		iLuxProp *pProp = static_cast<iLuxProp*>(mpEntityInFocus);
-		if(pProp->GetPropType() == eLuxPropType_Item) return true;
-	}
-	else
+	bool bIsProp = mpEntityInFocus->GetEntityType() == eLuxEntityType_Prop;
+	bool bIsItem = bIsProp && static_cast<iLuxProp*>(mpEntityInFocus)->GetPropType() == eLuxPropType_Item;
+	int lDraw = ohpl_ga2b_use_item_draw(true, mfFocusDistance, fMaxFocusDistance, bIsProp, bIsItem);
+	if(lDraw == kOhplGa2bDrawNo) return true;
+	if(lDraw == kOhplGa2bDrawCheckCallback)
 	{
 		if(pMap->GetUseItemCallback(mpCurrentItem->GetName(), mpEntityInFocus->GetName())==NULL) return true;
 	}
@@ -190,22 +171,22 @@ bool cLuxPlayerState_UseItem::ShowOutlineOnEntity(iLuxEntity *apEntity, iPhysics
 
 void cLuxPlayerState_UseItem::UseItem()
 {
-	if(mpCurrentItem==NULL) return;
-
 	iLuxEntity *pEntity = mpEntityInFocus;
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 
-	/////////////////////////
-	//An object is in focus
-	if(pEntity && pMap && mfFocusDistance < cMath::Max(pEntity->GetMaxFocusDistance(), mfMinUseItemDistance))
+	float fMaxFocus = pEntity ? ohpl_ga2b_use_item_max_focus(pEntity->GetMaxFocusDistance(), mfMinUseItemDistance) : 0.0f;
+	int lPlan = ohpl_ga2b_use_item_focus(mpCurrentItem != NULL, pEntity != NULL, pMap != NULL, mfFocusDistance, fMaxFocus);
+	if(lPlan == kOhplGa2bPlanNone) return;
+
+	if(lPlan == kOhplGa2bPlanCallback)
 	{
 		cLuxUseItemCallback *pCallback = pMap->GetUseItemCallback(mpCurrentItem->GetName(), pEntity->GetName());
-		if(pCallback)
+		if(ohpl_ga2b_use_item_plan(pCallback != NULL) == kOhplGa2bPlanCallback)
 		{
-            // Running the script MAY destroy this item so "Backup" the check flag.
-            bool bAutoDestroy = pCallback->mbAutoDestroy;
+			bool bAutoDestroy = pCallback->mbAutoDestroy;
 			tString sName = pCallback->msName;
-            pMap->RunScript(pCallback->msFunction+ "(\"" + pCallback->msItem + "\", \"" + pCallback->msEntity + "\")" );
+
+			pMap->RunScript(pCallback->msFunction+ "(\"" + pCallback->msItem + "\", \"" + pCallback->msEntity + "\")" );
 
 			if(bAutoDestroy)
 			{
@@ -217,8 +198,6 @@ void cLuxPlayerState_UseItem::UseItem()
 			gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory","UseItemDoesNotWork"), 0);
 		}
 	}
-	/////////////////////////
-	//No object in focus
 	else
 	{
 		gpBase->mpMessageHandler->SetMessage(kTranslate("Inventory","UseItemHasNoObject"), 0);

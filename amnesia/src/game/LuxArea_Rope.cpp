@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Rope.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 
@@ -145,9 +146,10 @@ cLuxRope::~cLuxRope()
 void cLuxRope::AfterWorldLoad()
 {
 	//The rope entity is only created once!
-	if(mbRopeCreated)
+	int lRopeAction = ohpl_ga5_rope_after_world(mbRopeCreated, mpRopeGfx==NULL && mpRope==NULL);
+	if(lRopeAction != kOhplGa5RopeCreate)
 	{
-		if(mpRopeGfx==NULL && mpRope==NULL)
+		if(lRopeAction == kOhplGa5RopeRelink)
 		{
 			mpRope = mpMap->GetPhysicsWorld()->GetRopeFromUniqueID(mlID);
 			if(mpRope==NULL) Error("Cannot find rope physics entity with ID %d for lux rope '%s'\n", mlID, msName.c_str());
@@ -217,7 +219,7 @@ void cLuxRope::AfterWorldLoad()
 	// Create Graphical Rope
 	cResources *pResources = gpBase->mpEngine->GetResources();
 
-	int lMaxSegments = (int)(mfMaxTotalLength / mfSegmentLength)+4;
+	int lMaxSegments = ohpl_ga5_rope_max_segments(mfMaxTotalLength, mfSegmentLength);
 	mpRopeGfx = mpMap->GetWorld()->CreateRopeEntity(msName, mpRope, lMaxSegments);
 
 	mpRopeGfx->SetMaterial(pResources->GetMaterialManager()->CreateMaterial(msMaterial));

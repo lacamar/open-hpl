@@ -55,6 +55,20 @@ private:
 
 //----------------------------------------------
 
+class cLuxCritterQuery
+{
+public:
+	cLuxCritterQuery(iLuxProp_CritterBase *apCritter) : mpCritter(apCritter) { mQuery.ctx = this; mQuery.ask = &Ask; }
+	const OhplGa4bQuery *Query() const { return &mQuery; }
+
+private:
+	static void Ask(void *apCtx, int alCode, const float *apA, const float *apB, int alFlags, OhplGa4bReply *apOut);
+	iLuxProp_CritterBase *mpCritter;
+	OhplGa4bQuery mQuery;
+};
+
+//----------------------------------------------
+
 class iLuxProp_CritterBase_SaveData : public iLuxProp_SaveData
 {
 	kSerializableClassInit(iLuxProp_CritterBase_SaveData)
@@ -89,6 +103,8 @@ class iLuxProp_CritterBase : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxCritterRayCallback;
+friend class cLuxCritterQuery;
+template<class T> friend class OhplGa4bSink;
 friend class iLuxPropLoader_Critter;
 public:	
 	iLuxProp_CritterBase(const tString &asName, int alID, cLuxMap *apMap);
@@ -114,7 +130,7 @@ public:
 	void OnHealthChange();
 	void OnDamage(float afAmount, int alStrength);
 
-	bool CausesSanityDecrease(){ return mbCausesSanityDecrease;}
+	bool CausesSanityDecrease(){ return mC.causes_sanity;}
 
 	//////////////////////
 	//Properties
@@ -137,59 +153,31 @@ protected:
 	virtual void UpdateCritterSpecific(float afTimeStep)=0;
 	virtual void OnShapeCollision(const cVector3f& avPushVec, float afTimeStep){}
 
-	void CreateOrthoVectors(cVector3f &avRight, cVector3f& avUp, cVector3f &avForward);
-	float GetDistanceToPlayer();
-	float GetDistanceToPlayer2D();
 
 	cMatrixf GetAttackMatrix(const cVector3f& avDir);
 	bool Attack(const cVector3f& avDir);
     
-	cVector3f GetWanderAdd(float afLength, float afRadius, float afTimeStep);
-	cVector3f GetTowardPlayerAdd(bool abDependOnDistance, float afTimeStep);
 
 	void UpdateMesh(float afTimeStep);
 	void UpdateMovement(float afTimeStep);
 
-	void CheckRayCollision(const cVector3f& avVelAdd,const cVector3f& avGravityAdd, float afTimeStep);
-	void CheckShapeCollision(const cVector3f& avVelAdd,const cVector3f& avGravityAdd, float afTimeStep);
+	virtual void OnGa4bSound(int alKind){}
+	void Ga4bApplyOp(const OhplGa4Op &aOp);
 
 	//Data
-	bool mbUseRayCollision;
-
 	tString msDeathEntity;
 	tString msDeathPS;
 	tString msDeathSound;
-
-	float mfAttackSizeRadius;
-	cVector3f mvAttackOffset;
-	cVector2f mvAttackDamageMinMax;
-	cVector2f mvAttackForce;
-	int mlAttackStrength;
 	tString msAttackHitSound;
 
-	cMatrixf m_mtxMeshOffset;
-	
+	OhplGa4bCritterParams mCP;
+	OhplGa4bCritter mC;
+
 	iCollideShape *mpDamageShape;
 
-	bool mbCausesSanityDecrease;
-
-	//Vars
-	int mlAnimState;
-	cVector3f mvVel;
-	cVector3f mvGravityVel;
-	cVector3f mvGroundNormal;
-	bool mbColliding;
-	bool mbUpdateAnimation;
-	
-	
-	cVector3f mvSwarmPoint;
-	
 	std::vector<cMatrixf> mvBaseMatrices;
-	tVector3fList mlstFwdDirs;
-	tVector3fList mlstUpDirs;
-	
-	iPhysicsBody *mpBody;
 
+	iPhysicsBody *mpBody;
 	cLuxCritterRayCallback *mpRayCallback;
 };
 

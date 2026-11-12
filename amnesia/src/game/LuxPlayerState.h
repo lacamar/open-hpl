@@ -24,6 +24,7 @@
 
 #include "LuxBase.h"
 #include "LuxTypes.h"
+#include "RustLuxPlayer.h"
 
 //----------------------------------------------
 
@@ -147,5 +148,16 @@ protected:
 
 //----------------------------------------------
 
+
+inline int32_t OhplGa2bActOf(eLuxPlayerAction aAction)
+{
+	if(aAction == eLuxPlayerAction_Holster) return kOhplGa2bActHolster;
+	if(aAction == eLuxPlayerAction_Attack) return kOhplGa2bActAttack;
+	if(aAction == eLuxPlayerAction_Interact) return kOhplGa2bActInteract;
+	if(aAction == eLuxPlayerAction_Lantern) return kOhplGa2bActLantern;
+	return kOhplGa2bActOther;
+}
+
+//----------------------------------------------
 
 #endif // LUX_PLAYER_STATE_H

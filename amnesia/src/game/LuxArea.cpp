@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea.h"
+#include "RustLuxMap.h"
 
 #include "LuxMap.h"
 #include "LuxMapHandler.h"
@@ -148,24 +149,22 @@ iEntity3D* iLuxArea::GetAttachEntity()
 //-----------------------------------------------------------------------
 
 void iLuxArea::AttachToBody(const tString& asPropName, int alBodyId)
-{ 
+{
 	iLuxEntity *apEntity = mpMap->GetEntityByName(asPropName);
-
 	if(apEntity && apEntity->GetEntityType() == eLuxEntityType_Prop)
 	{
 		iLuxProp* pProp = static_cast<iLuxProp*>(apEntity);
-
 		if( pProp->GetBodyNum() > 0 )
 		{
 			iPhysicsBody* pPropBody = pProp->GetBody(alBodyId);
-
 			if(pPropBody)
 			{
-				msPropName = asPropName; 
+				msPropName = asPropName;
 				mlBodyId = alBodyId;
 				mpParentBody = pPropBody;
-				mvRelativeOffset = mpBody->GetWorldPosition() - mpParentBody->GetWorldPosition();
-
+				cVector3f vBodyPos = mpBody->GetWorldPosition();
+				cVector3f vParentPos = mpParentBody->GetWorldPosition();
+				ohpl_ga5_attach_offset(reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<OhplGa5Vec3*>(&mvRelativeOffset));
 				return;
 			}
 		}
@@ -203,7 +202,11 @@ void iLuxArea::OnUpdate(float afTimeStep)
 {
 	if(mpParentBody)
 	{
-		mpBody->StaticLinearMove(mvRelativeOffset + mpParentBody->GetWorldPosition() - mpBody->GetWorldPosition());
+		cVector3f vParentPos = mpParentBody->GetWorldPosition();
+		cVector3f vBodyPos = mpBody->GetWorldPosition();
+		cVector3f vMove;
+		ohpl_ga5_follow_offset(reinterpret_cast<const OhplGa5Vec3*>(&mvRelativeOffset), reinterpret_cast<const OhplGa5Vec3*>(&vParentPos), reinterpret_cast<const OhplGa5Vec3*>(&vBodyPos), reinterpret_cast<OhplGa5Vec3*>(&vMove));
+		mpBody->StaticLinearMove(vMove);
 	}
 }
 

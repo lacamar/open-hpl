@@ -89,8 +89,8 @@ protected:
 
 	float mfMaxSpeedInDir[2];
 
-	cPidController<cVector3f> mVelocityPid;
-	cPidController<cVector3f> mStopVelocityPid;
+	OhplGa2bPid3 mVelocityPid;
+	OhplGa2bPid3 mStopVelocityPid;
 	
 	cVector3f mvLocalAttachPos;
 

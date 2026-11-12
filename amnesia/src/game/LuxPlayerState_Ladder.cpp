@@ -105,29 +105,28 @@ void cLuxPlayerState_Ladder::OnEnterState(eLuxPlayerState aPrevState)
 
 	/////////////////////////////////////		
 	//Different time if player is above the ladder.
-	float fTime = 0.5f;
-	if(mpPlayer->GetCharacterBody()->GetPosition().y > mpLadder->GetMaxY()) fTime = 1.2f;
+	OhplGa2bLadderEnterIn li;
+	li.pos = mpPlayer->GetCharacterBody()->GetPosition();
+	li.start = mvStartPosition;
+	li.maxY = mpLadder->GetMaxY();
+	li.startYaw = mpLadder->GetStartRotation().y;
+	li.pitch = mpPlayer->GetCamera()->GetPitch();
+	li.yaw = mpPlayer->GetCamera()->GetYaw();
+	OhplGa2bLadderEnterOut lo;
+	ohpl_ga2b_ladder_enter(&li, &lo);
 
-	mfTimeCount = fTime;
-	
-	/////////////////////////////////////
-	//Get the goal position and then add used to get there
+	mfTimeCount = lo.time;
+
 	mvGoalPos = mvStartPosition;
-	mvPosAdd = (mvGoalPos - mpPlayer->GetCharacterBody()->GetPosition()) / fTime;
+	mvPosAdd = lo.posAdd;
 
 	mvCharPosition = mpPlayer->GetCharacterBody()->GetPosition();
 
-	/////////////////////////////////////
-	//Get the goal rotation and the add to get there.
 	mvGoalRot.x = 0;
 	mvGoalRot.y = mpLadder->GetStartRotation().y;
 
-	cVector3f vStartRot;
-	vStartRot.x = mpPlayer->GetCamera()->GetPitch();
-	vStartRot.y = mpPlayer->GetCamera()->GetYaw();
-
-	mvRotAdd.x = cMath::GetAngleDistance(vStartRot.x, mvGoalRot.x,k2Pif) / fTime;
-	mvRotAdd.y = cMath::GetAngleDistance(vStartRot.y, mvGoalRot.y,k2Pif) / fTime;
+	mvRotAdd.x = lo.rotAdd.x;
+	mvRotAdd.y = lo.rotAdd.y;
 
     /////////////////////////////////////
 	// Play attach sound
@@ -163,149 +162,116 @@ void cLuxPlayerState_Ladder::Update(float afTimeStep)
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 	cCamera *pCam = mpPlayer->GetCamera();
 
-	//////////////////////////////////
-	// Attach To Ladder
+	auto toRust = [this]()
+	{
+		OhplGa2bLadderState s;
+		s.state = mlState;
+		s.timeCount = mfTimeCount;
+		s.stepCount = mfStepCount;
+		s.moveMul = mfMoveMul;
+		s.leaveAtTop = mfLeaveAtTopCount;
+		s.playedSound = mbPlayedSound;
+		s.charPos = mvCharPosition;
+		s.posAdd = mvPosAdd;
+		s.rotAdd = cVector2f(mvRotAdd.x, mvRotAdd.y);
+		return s;
+	};
+	auto fromRust = [this](const OhplGa2bLadderState &s)
+	{
+		mfTimeCount = s.timeCount;
+		mfStepCount = s.stepCount;
+		mfMoveMul = s.moveMul;
+		mfLeaveAtTopCount = s.leaveAtTop;
+		mbPlayedSound = s.playedSound;
+		mvCharPosition = s.charPos;
+	};
+
 	if(mlState ==0)
 	{
-		mfTimeCount -= afTimeStep;
+		OhplGa2bLadderState ls = toRust();
+		OhplGa2bLadderAttachOut ao;
+		ohpl_ga2b_ladder_attach(&ls, afTimeStep, &ao);
+		fromRust(ls);
 
-		mvCharPosition += mvPosAdd*afTimeStep;
 		pCharBody->SetPosition(mvCharPosition);
 		mvCharPosition = pCharBody->GetPosition();
 
-		pCam->AddPitch(mvRotAdd.x *afTimeStep);
-		pCam->AddYaw(mvRotAdd.y *afTimeStep);
+		pCam->AddPitch(ao.pitchAdd);
+		pCam->AddYaw(ao.yawAdd);
 		pCharBody->SetYaw(pCam->GetYaw());
 
-		if(mfTimeCount<=0)
+		if(ao.done)
 		{
 			mpPlayer->GetCharacterBody()->SetTestCollision(true);
 
-			////////////////////////////
-			//Set turn head limits
 			SetupHeadTurnLimits();
 
 			mlState++;
 		}
 	}
-	//////////////////////////////////
-	// Move On Ladder
 	else if(mlState == 1)
 	{
-		///////////////////////////////////
-		// Update position
-		mvCharPosition = pCharBody->GetPosition();
+		cVector3f vPos = pCharBody->GetPosition();
+		OhplGa2bLadderState ls = toRust();
+		int lSound = ohpl_ga2b_ladder_move_pre(&ls, &vPos, mfUpSpeed, mfDownSpeed, afTimeStep);
+		fromRust(ls);
+		if(lSound == kOhplGa2bSoundUp) PlaySound("up");
+		else if(lSound == kOhplGa2bSoundDown) PlaySound("down");
 
-		//Up
-		if(mfMoveMul > 0)
-		{
-			mvCharPosition.y += mfMoveMul*mfUpSpeed* afTimeStep;
-
-			if(mfStepCount<0)mfStepCount=0;
-		}
-		//Down
-		else if(mfMoveMul < 0)
-		{
-			mvCharPosition.y += mfMoveMul*mfDownSpeed*afTimeStep;
-
-			if(mfStepCount>0)mfStepCount=0;
-		}
-		//Still
-		else
-		{
-			if(!mbPlayedSound)
-			{
-				if(mfStepCount>0) PlaySound("up");
-				if(mfStepCount<0) PlaySound("down");
-			}
-
-			mfStepCount =0;
-			mbPlayedSound = false;
-		}
-
-		/////////////////////////////////
-		//Check collision
 		if(pCharBody->CheckCharacterFits(mvCharPosition,false,0,NULL,kEpsilonf)==false)
 		{
 			mfMoveMul =0;
-			return;	
+			return;
 		}
 
-		/////////////////////////////////
-		//Check if climb sound should be played.
-		if(mfMoveMul > 0)
-		{
-			mfStepCount += mfMoveMul*mfUpSpeed*afTimeStep;
-			if(mfStepCount >= mfStepLength)
-			{
-				mfStepCount =0;
-				PlaySound("up");
-				mbPlayedSound = true;
-			}
-		}
-		else if(mfMoveMul < 0)
-		{
-			mfStepCount += mfMoveMul*mfDownSpeed*afTimeStep;
-			if(mfStepCount <= -mfStepLength)
-			{
-				mfStepCount =0;
-				PlaySound("down");
-				mbPlayedSound = true;
-			}
-		}
-		
-		/////////////////////////////////
-		//Update character body
+		ls = toRust();
+		lSound = ohpl_ga2b_ladder_move_post(&ls, mfUpSpeed, mfDownSpeed, mfStepLength, afTimeStep);
+		fromRust(ls);
+		if(lSound == kOhplGa2bSoundUp) PlaySound("up");
+		else if(lSound == kOhplGa2bSoundDown) PlaySound("down");
+
 		pCharBody->SetPosition(mvCharPosition);
 
+		cVector3f vFeet = pCharBody->GetFeetPosition();
+		cVector3f vLadderForward = mpLadder->GetForward();
+		cVector3f vRays[4];
+		ohpl_ga2b_ladder_ground_rays(&vFeet, &vLadderForward, pCharBody->GetSize().x, vRays);
 
-		/////////////////////////////////
-		//Get the rays that will be tested to see if something solid was hit when clibming down.
-        cVector3f vGroundRayStart1 = pCharBody->GetFeetPosition() + cVector3f(0,0.05f,0) + 
-									mpLadder->GetForward()*pCharBody->GetSize().x*0.7f;
-		cVector3f vGroundRayEnd1 = vGroundRayStart1 - cVector3f(0,0.1f,0);
-
-		cVector3f vGroundRayStart2 = pCharBody->GetFeetPosition() + cVector3f(0,0.05f,0);
-		cVector3f vGroundRayEnd2 = vGroundRayStart2 - cVector3f(0,0.1f,0);
-
-		///////////////////////////
-		//Check if at top
-		if(mfMoveMul > 0 && (mvCharPosition.y - pCharBody->GetSize().y*0.5f) > mpLadder->GetMaxY())
+		if(ohpl_ga2b_ladder_at_top(mfMoveMul, mvCharPosition.y, pCharBody->GetSize().y, mpLadder->GetMaxY()))
 		{
 			mlState = 2;
 			mfLeaveAtTopCount = 2;
 			PlaySound("dettach");
 		}
-		///////////////////////////
-		//Check if at bottom
-		else if(	mfMoveMul < 0 && 
-					(  (mvCharPosition.y - pCharBody->GetSize().y/2) < mpLadder->GetMinY() ||
-					    pCharBody->CheckRayIntersection(vGroundRayStart1, vGroundRayEnd1,NULL,NULL) ||
-						pCharBody->CheckRayIntersection(vGroundRayStart2, vGroundRayEnd2,NULL,NULL) 
-					)
-				)
+		else
 		{
-			mpPlayer->ChangeState(eLuxPlayerState_Normal);
+			int lBottom = ohpl_ga2b_ladder_at_bottom(mfMoveMul, mvCharPosition.y, pCharBody->GetSize().y, mpLadder->GetMinY());
+			if(lBottom == kOhplGa2bBottomYes ||
+				(lBottom == kOhplGa2bBottomCheckRays &&
+					(pCharBody->CheckRayIntersection(vRays[0], vRays[1],NULL,NULL) ||
+					pCharBody->CheckRayIntersection(vRays[2], vRays[3],NULL,NULL))))
+			{
+				mpPlayer->ChangeState(eLuxPlayerState_Normal);
+			}
 		}
 
 		mfMoveMul =0;
 	}
-	//////////////////////////////////
-	// On the top of the ladder
 	else if(mlState == 2)
 	{
-		//mfLeaveAtTopCount -= afTimeStep;
 		pCharBody->Move(eCharDir_Forward,1);
 
-		cVector3f vRayStart = pCharBody->GetFeetPosition() + cVector3f(0,0.1f,0);
-		cVector3f vRayEnd = pCharBody->GetFeetPosition() - cVector3f(0,0.3f,0);
+		cVector3f vFeet = pCharBody->GetFeetPosition();
+		cVector3f vRay[2];
+		ohpl_ga2b_ladder_top_rays(&vFeet, vRay);
 
-		mfLeaveAtTopCount -= afTimeStep;
-		if( pCharBody->CheckRayIntersection(vRayStart, vRayEnd,NULL,NULL))
+		bool bTimeout = ohpl_ga2b_ladder_leave_tick(&mfLeaveAtTopCount, afTimeStep);
+
+		if( pCharBody->CheckRayIntersection(vRay[0], vRay[1],NULL,NULL))
 		{
 			mpPlayer->ChangeState(eLuxPlayerState_Normal);
 		}
-		else if(mfLeaveAtTopCount <=0)
+		else if(bTimeout)
 		{
 			mpPlayer->ChangeState(eLuxPlayerState_Normal);
 		}
@@ -339,32 +305,22 @@ cGuiGfxElement* cLuxPlayerState_Ladder::GetCrosshair()
 
 bool cLuxPlayerState_Ladder::OnMove(eCharDir aDir, float afMul)
 {
-	////////////////////////////////////
-	//If in final states, do not move.
-	if(mlState==0 || mlState==2) return false;
-	if(aDir == eCharDir_Right) return false;
-
-	mfMoveMul = afMul;
-
-	return false;	
+	ohpl_ga2b_ladder_on_move(mlState, aDir == eCharDir_Right, afMul, &mfMoveMul);
+	return false;
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnAddYaw(float afAmount)
 {
-	//Do not move camera when attaching
-	if(mlState==0) 	return false;
-	else			return true;
+	return ohpl_ga2b_ladder_camera_free(mlState);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPlayerState_Ladder::OnAddPitch(float afAmount)
 {
-	//Do not move camera when attaching
-	if(mlState==0) 	return false;
-	else			return true;
+	return ohpl_ga2b_ladder_camera_free(mlState);
 }
 
 //-----------------------------------------------------------------------
@@ -399,25 +355,13 @@ bool cLuxPlayerState_Ladder::OnCrouch(bool abPressed)
 
 bool cLuxPlayerState_Ladder::OnDoAction(eLuxPlayerAction aAction,bool abPressed)
 {
-	if(abPressed)
+	bool bRelease;
+	bool bPass = ohpl_ga2b_ladder_action(OhplGa2bActOf(aAction), abPressed, &bRelease);
+	if(bRelease)
 	{
-		////////////////////////////////
-		//Release grip from ladder
-		if(	aAction == eLuxPlayerAction_Interact ||
-			aAction == eLuxPlayerAction_Attack)
-		{
-			mpPlayer->ChangeState(eLuxPlayerState_Normal);
-		}
+		mpPlayer->ChangeState(eLuxPlayerState_Normal);
 	}
-
-	////////////////////////////////
-	//Lantern shall still work!
-	if( aAction == eLuxPlayerAction_Lantern)
-	{
-		return true;
-	}
-	
-	return false;
+	return bPass;
 }
 
 //-----------------------------------------------------------------------
@@ -449,16 +393,11 @@ void cLuxPlayerState_Ladder::SetupHeadTurnLimits()
 {
 	cCamera *pCam = mpPlayer->GetCamera();
 
-	cVector2f vMaxHeadLimits = cVector2f(cMath::ToRad(120),cMath::ToRad(79));
-	cVector2f vMinHeadLimits = cVector2f(cMath::ToRad(-120),cMath::ToRad(-60));
-	float fXmax = pCam->GetYaw() + vMaxHeadLimits.x;
-	float fYmax = pCam->GetPitch() + vMaxHeadLimits.y;
+	float vLimits[4];
+	ohpl_ga2b_ladder_head_limits(pCam->GetYaw(), pCam->GetPitch(), vLimits);
 
-	float fXmin = pCam->GetYaw() + vMinHeadLimits.x;
-	float fYmin = pCam->GetPitch() + vMinHeadLimits.y;
-
-	pCam->SetPitchLimits(fYmin, fYmax);
-	pCam->SetYawLimits(fXmin, fXmax);
+	pCam->SetPitchLimits(vLimits[0], vLimits[1]);
+	pCam->SetYawLimits(vLimits[2], vLimits[3]);
 }
 
 //-----------------------------------------------------------------------

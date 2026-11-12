@@ -122,18 +122,18 @@ private:
 
 	//////////////////////
 	// State stuff
-	bool CheckEnemyAutoRemoval(float afDistance);
-	void PatrolUpdateGoal();
-	bool FleeTryToFindSafeNode();
-	bool StalkFindNode();
-	bool TrackFindNode();
-	bool TrackTeleportBehindPlayer();
 
 	//////////////////////
 	// Helper
 	void PlayHuntSound();
 	bool InsidePlayerView();
 	void UpdateCheckInLantern(float afTimeStep);
+
+	//////////////////////
+	// Rust handlers (rust/src/luxenemy/manpig.rs)
+	OhplGa3Host Ga3PigHost();
+	static int Ga3PigCall(void *apEnemy, unsigned alOp, OhplGa3Io *apIo);
+	const tString* Ga3SoundName(int alKind);
 
 	void SetTeslaEffectsAmount(float afX);
 	void ResetMindFuckEffects();
@@ -213,7 +213,8 @@ private:
 	int mlHuntSoundId;
 
 	eLuxEnemyMoveType mCurrentMoveType;
-	
+
+	OhplGa3bPigCtx mGa3Pig;
 };
 
 //----------------------------------------------

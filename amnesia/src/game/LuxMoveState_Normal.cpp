@@ -24,6 +24,7 @@
 #include "LuxMap.h"
 #include "LuxHelpFuncs.h"
 #include "LuxPlayerHelpers.h"
+#include "RustLuxPlayer.h"
 
 //////////////////////////////////////////////////////////////////////////
 // CHARACTER CALLBACK
@@ -40,18 +41,15 @@ cLuxMoveState_Normal_Callback::cLuxMoveState_Normal_Callback(cLuxMoveState_Norma
 void cLuxMoveState_Normal_Callback::OnGravityCollide(iCharacterBody *apCharBody, iPhysicsBody *apBody, cCollideData *apCollideData)
 {
 	//Check if there is enough speed for a bounce!
-	if(	apCollideData->mvContactPoints[0].mvNormal.y > 0.001f &&
-		apCharBody->GetForceVelocity().y < -mpMoveState->mfMinHitGroundBounceSpeed)
+	if(ohpl_ga2b_bounce_starts(apCollideData->mvContactPoints[0].mvNormal.y, apCharBody->GetForceVelocity().y,
+							mpMoveState->mfMinHitGroundBounceSpeed, mpMoveState->mbHeadGroundBounceActive))
 	{
-		if(mpMoveState->mbHeadGroundBounceActive == false)
-		{
-			mpMoveState->mbHeadGroundBounceActive = true;
-			mpMoveState->mfBounceSizeMul = 1.0f;
-			mpMoveState->mfBounceSpeedMul = 1.0f;
-			mpMoveState->FootSound(eLuxFootSound_Landing);
+		mpMoveState->mbHeadGroundBounceActive = true;
+		mpMoveState->mfBounceSizeMul = 1.0f;
+		mpMoveState->mfBounceSpeedMul = 1.0f;
+		mpMoveState->FootSound(eLuxFootSound_Landing);
 
-			mpMoveState->FallDamage(apCharBody->GetForceVelocity().y);
-		}
+		mpMoveState->FallDamage(apCharBody->GetForceVelocity().y);
 	}
 }
 
@@ -279,17 +277,11 @@ bool cLuxMoveState_Normal::OnAddPitch(float afAmount)
 
 void cLuxMoveState_Normal::OnRun(bool abActive)
 {
-	if(abActive)
+	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
+	if(abActive && ohpl_ga2b_run_pressed_stands(mpPlayer->GetCrouchDisabled(), mpPlayer->GetInsanityCollapse()->IsActive(),
+												pCharBody && pCharBody->IsOnGround(), mpPlayer->GetPressedMove()))
 	{
-		if(mpPlayer->GetCrouchDisabled()==false && mpPlayer->GetInsanityCollapse()->IsActive()==false)
-		{
-			//Stand up if moving and running!
-			iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-			if(pCharBody->IsOnGround() && mpPlayer->GetPressedMove())
-			{
-				SetCrouch(false);
-			}
-		}
+		SetCrouch(false);
 	}
 }
 
@@ -307,16 +299,11 @@ void cLuxMoveState_Normal::OnCrouch(bool abActive)
 
 void cLuxMoveState_Normal::OnJump(bool abActive)
 {
-	//////////////////////////
-	//Jump pressed
-	if(abActive && mbJumping == false)
+	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
+	if(ohpl_ga2b_jump_starts(abActive, mbJumping, pCharBody && pCharBody->IsOnGround()))
 	{
-		iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
-		if(pCharBody->IsOnGround()==false) return;
-
 		Jump();
 	}
-	
 }
 
 //-----------------------------------------------------------------------
@@ -329,10 +316,9 @@ void cLuxMoveState_Normal::Jump()
 
 	gpBase->mpHelpFuncs->PlayGuiSoundData(msJumpSound, eSoundEntryType_World);
 
-	float fStartForce = mbCrouching ? mfJumpCrouchStartForce : mfJumpStartForce;
-	fStartForce *= mpPlayer->GetScriptJumpForceMul();
-
-	pCharBody->AddForce(cVector3f(0, fStartForce * mpPlayer->GetDefaultMass(),0));		
+	float fStartForce = ohpl_ga2b_jump_force(mbCrouching, mfJumpCrouchStartForce, mfJumpStartForce, mpPlayer->GetScriptJumpForceMul(),
+											mpPlayer->GetDefaultMass());
+	pCharBody->AddForce(cVector3f(0, fStartForce,0));
 	mbJumping = true;
 	mfJumpCount = 0;
 }
@@ -424,14 +410,15 @@ void cLuxMoveState_Normal::ResetJumping()
 
 float cLuxMoveState_Normal::GetMoveSpeedMul()
 {
-	float fMoveMul =	mpPlayer->GetInteractionMoveSpeedMul() * 
-						mpPlayer->GetScriptMoveSpeedMul() * 
-						mpPlayer->GetEventMoveSpeedMul() * 
-						mpPlayer->GetHurtMoveSpeedMul() *
-						mpPlayer->GetInsanityCollapseSpeedMul();
-	if(mpPlayer->IsInWater()) fMoveMul *= mpPlayer->GetWaterSpeedMul();
-	
-	return fMoveMul;
+	OhplGa2bMoveMulIn in;
+	in.interaction = mpPlayer->GetInteractionMoveSpeedMul();
+	in.script = mpPlayer->GetScriptMoveSpeedMul();
+	in.event = mpPlayer->GetEventMoveSpeedMul();
+	in.hurt = mpPlayer->GetHurtMoveSpeedMul();
+	in.collapse = mpPlayer->GetInsanityCollapseSpeedMul();
+	in.inWater = mpPlayer->IsInWater();
+	in.water = in.inWater ? mpPlayer->GetWaterSpeedMul() : 0.0f;
+	return ohpl_ga2b_move_speed_mul(&in);
 }
 
 //-----------------------------------------------------------------------
@@ -454,28 +441,12 @@ void cLuxMoveState_Normal::UpdateMovement(float afTimeStep)
 {
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-	//////////////////////////////////////
-	//Update the running state
 	mbRunning = mpPlayer->IsPressingRun();
 
-
-	//////////////////////////////////////
-	//Check if character is running, if so stand up (if possible)
-	if(pCharBody->IsOnGround() && mpPlayer->GetPressedMove() && mbWasMoving==false)
+	if(ohpl_ga2b_movement_update(pCharBody->IsOnGround(), mpPlayer->GetPressedMove(), &mbWasMoving, mbRunning,
+								mpPlayer->GetCrouchDisabled(), mpPlayer->GetInsanityCollapse()->IsActive()))
 	{
-		mbWasMoving = true;
-
-		if(mbRunning)
-		{
-			if(mpPlayer->GetCrouchDisabled()==false && mpPlayer->GetInsanityCollapse()->IsActive()==false)
-			{
-				SetCrouch(false);
-			}
-		}
-	}
-	else
-	{
-		mbWasMoving = false;
+		SetCrouch(false);
 	}
 }
 
@@ -485,51 +456,14 @@ void cLuxMoveState_Normal::UpdateSpeedMultipliers(float afTimeStep)
 {
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-	float fMoveMul =	GetMoveSpeedMul();
-
-	mfMaxForwardSpeedMul = fMoveMul;
-	mfMaxBackwardSpeedMul = fMoveMul;
-	mfMaxSidwaySpeedMul = fMoveMul;
-
-	mfDefaultForwardMul = 1.0f;
-
-	////////////////////////
-	//On ground
-	if(pCharBody->IsOnGround())
-	{
-		//Crouching
-		if(mbCrouching)
-		{
-			mfMaxForwardSpeedMul *= mfCrouchForwardMul;
-			mfMaxBackwardSpeedMul *= mfCrouchBackwardMul;
-			mfMaxSidwaySpeedMul *= mfCrouchSidewayMul;
-
-			mfDefaultForwardMul *= mfCrouchForwardMul;
-		}
-		//Running
-		else if(mbRunning)
-		{
-			//The cumbersome-looking algorithm is because it should be easy to set the amount of running
-			//speed the player has.
-			float fRunSpeedMul = GetRunSpeedMul();
-
-			mfMaxForwardSpeedMul *= 1 + (mfRunForwardMul-1) * fRunSpeedMul;
-			mfMaxBackwardSpeedMul *= 1 + (mfRunBackwardMul-1) * fRunSpeedMul;
-			mfMaxSidwaySpeedMul *= 1 + (mfRunSidewayMul-1) * fRunSpeedMul;
-
-			mfDefaultForwardMul *= mfRunForwardMul;
-		}	
-	}
-	////////////////////////
-	//Not on ground
-	else
-	{
-		mfMaxForwardSpeedMul = mfInAirForwardMul;
-		mfMaxBackwardSpeedMul = mfInAirBackwardMul;
-		mfMaxSidwaySpeedMul = mfInAirSidewayMul;
-
-		mfDefaultForwardMul = mfInAirForwardMul;
-	}
+	OhplGa2bSpeedCfg cfg = {mfCrouchForwardMul, mfCrouchBackwardMul, mfCrouchSidewayMul, mfRunForwardMul, mfRunBackwardMul,
+							mfRunSidewayMul, mfInAirForwardMul, mfInAirBackwardMul, mfInAirSidewayMul};
+	OhplGa2bSpeedMuls m;
+	ohpl_ga2b_speed_multipliers(&cfg, GetMoveSpeedMul(), GetRunSpeedMul(), pCharBody->IsOnGround(), mbCrouching, mbRunning, &m);
+	mfMaxForwardSpeedMul = m.fwd;
+	mfMaxBackwardSpeedMul = m.back;
+	mfMaxSidwaySpeedMul = m.side;
+	mfDefaultForwardMul = m.defaultFwd;
 }
 
 //-----------------------------------------------------------------------
@@ -538,36 +472,18 @@ void cLuxMoveState_Normal::UpdateJumpAndGroundCheck(float afTimeStep)
 {
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-	////////////////////////////
-	// Check player landing
-	if(pCharBody->IsOnGround() && pCharBody->GetForceVelocity().y <=0)
-	{
-		mbWasOnGround = true;
-	}
-	else if(pCharBody->IsOnGround()==false)
-	{
-		mbWasOnGround = false;
-	}
+	ohpl_ga2b_ground_check(pCharBody->IsOnGround(), pCharBody->GetForceVelocity().y, &mbWasOnGround);
 
-
-	////////////////////////////
-	// Update Jump button is held down.
-	if(mbJumping)
+	OhplGa2bJumpState js = {mfJumpCount, mfMaxJumpCount, mbJumping};
+	if(ohpl_ga2b_jump_tick(&js, afTimeStep))
 	{
-		mfJumpCount += afTimeStep;
-		if(mfJumpCount >= mfMaxJumpCount)
-		{
-			mfJumpCount = mfMaxJumpCount;
-			mbJumping = false;
-		}
+		mfJumpCount = js.count;
+		mbJumping = js.jumping;
 
 		iPhysicsWorld *pPhysicsWorld = gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld();
-		cVector3f vGravity = pCharBody->GetCustomGravityActive() ?	pCharBody->GetCustomGravity() : 
-		pPhysicsWorld->GetGravity();
-
-		//Remove some gravity and make jump last longer.
-		float fMul = 0.4f + 0.5f * (1 - mfJumpCount / mfMaxJumpCount);
-		pCharBody->AddForce(cVector3f(0,-vGravity.y * pCharBody->GetMass() * fMul,0));		
+		cVector3f vGravity = pCharBody->GetCustomGravityActive() ?	pCharBody->GetCustomGravity() :
+																	pPhysicsWorld->GetGravity();
+		pCharBody->AddForce(cVector3f(0, ohpl_ga2b_jump_gravity_force(mfJumpCount, mfMaxJumpCount, vGravity.y, pCharBody->GetMass()),0));
 	}
 }
 
@@ -577,125 +493,27 @@ void cLuxMoveState_Normal::UpdateHeadBob(float afTimeStep)
 {
 	iCharacterBody *pCharBody = mpPlayer->GetCharacterBody();
 
-	/////////////////////////
-	//Get the current bob max
-	mvBobMaxGoal = mvWalkBobMax;
-	float fMinBobSpeed = mfWalkMinBobSpeed;
-	float fMaxBobSpeed = mfWalkMaxBobSpeed;
-	if(mbCrouching)
-	{
-		mvBobMaxGoal = mvCrouchBobMax;
-		fMinBobSpeed = mfCrouchMinBobSpeed;
-		fMaxBobSpeed = mfCrouchMaxBobSpeed;
-	}
-    else if(mbRunning)
-	{
-		mvBobMaxGoal = mvRunBobMax;
-		fMinBobSpeed = mfRunMinBobSpeed;
-		fMaxBobSpeed = mfRunMaxBobSpeed;
-	}
+	OhplGa2bBobCfg cfg = {mvWalkBobMax, mvRunBobMax, mvCrouchBobMax, mfWalkMinBobSpeed, mfWalkMaxBobSpeed, mfRunMinBobSpeed,
+						mfRunMaxBobSpeed, mfCrouchMinBobSpeed, mfCrouchMaxBobSpeed, mfMaxForwardSpeed, mfGroundBounceSize,
+						mfGroundBounceSpeed};
+	OhplGa2bBobState s = {mvHeadBob, mfPrevHeadBobCount, mfHeadBobCount, mbBobbing, mbHeadGroundBounceActive, mfHeadGroundBounce,
+						mvCurrentBobMax, mvBobMaxGoal, mfBounceSizeMul, mfBounceSpeedMul, mfDefaultForwardMul};
+	OhplGa2bBobIn in = {pCharBody->GetVelocity(afTimeStep), mbCrouching, mbRunning, pCharBody->IsOnGround(),
+						pCharBody->GetMovedLastUpdate()};
 
-	float fPlayerSpeed = pCharBody->GetVelocity(afTimeStep).Length();
-	float fMaxPlayerSpeed = mfMaxForwardSpeed * mfDefaultForwardMul;
-	float fBobSpeed = fMinBobSpeed + (fPlayerSpeed/fMaxPlayerSpeed) * (fMaxBobSpeed - fMinBobSpeed);
-	
-	/////////////////////
-	// Check if moving
-	bool bMoving = pCharBody->IsOnGround() && pCharBody->GetMovedLastUpdate();
+	bool bFootStep = ohpl_ga2b_head_bob(&s, &cfg, &in, afTimeStep);
 
-	//If not moving fade size to 0 too.
-	if(bMoving==false)
-	{
-		mvBobMaxGoal =0;
-	}
-	
-	//Fade into the new max
-	float fAdd = 0.1f;
-	mvCurrentBobMax = cMath::Vector2IncreaseTo(mvCurrentBobMax, fAdd * afTimeStep, mvBobMaxGoal);
-	
+	mvHeadBob = s.headBob;
+	mfPrevHeadBobCount = s.prevCount;
+	mfHeadBobCount = s.count;
+	mbBobbing = s.bobbing;
+	mbHeadGroundBounceActive = s.groundBounceActive;
+	mfHeadGroundBounce = s.groundBounce;
+	mvCurrentBobMax = s.curMax;
+	mvBobMaxGoal = s.maxGoal;
 
-	/////////////////////////
-	//Player is not moving
-	if(bMoving==false)
-	{
-        //If the head is in a bob, move it back to the rest state (sin = 1)
-		if(mbBobbing)
-		{
-			//Wrap x between -90 and 270 and see where what direction to go
-			float fX = cMath::Wrap(mfHeadBobCount,cMath::ToRad(-90),cMath::ToRad(270) );
-			float fAdd;
-			if(fX <= cMath::ToRad(90)) fAdd = 1;
-			else						fAdd = -1;
+	if(bFootStep) FootSound(eLuxFootSound_Step);
 
-			float fPrevCos = cos(mfHeadBobCount);
-
-			mfPrevHeadBobCount = mfHeadBobCount;
-			mfHeadBobCount += afTimeStep * k2Pif * fAdd * 3.1f;
-			
-			float fCos = cos(mfHeadBobCount);
-			float fSin = cos(mfHeadBobCount);
-
-			//See if count passed a cos =0 and that sin is above 1.
-			if(fSin > 0 && ((fCos <=0 && fPrevCos >= 0) || (fCos >=0 && fPrevCos <= 0)))
-			{
-				mbBobbing = false;
-				mvHeadBob.y = 0;
-				mvHeadBob.x = 0;
-			}
-		}
-	}
-	/////////////////////////
-	//Player moves
-	else
-	{
-		//Set and update variables
-		mbBobbing = true;
-		mfPrevHeadBobCount = mfHeadBobCount;
-		mfHeadBobCount += fBobSpeed * afTimeStep * k2Pif;
-
-		//Footstep
-		float fPrevCos = cos(mfPrevHeadBobCount);
-		float fCos = cos(mfHeadBobCount);
-		float fSin = sin(mfHeadBobCount);
-		
-		//Check if in lowest position
-		if(fSin < 0 && ((fCos <=0 && fPrevCos >= 0) || (fCos >=0 && fPrevCos <= 0)))
-		{
-			FootSound(eLuxFootSound_Step);
-		}
-	}
-	
-	if(mbBobbing)
-	{
-		mvHeadBob.y = sin(mfHeadBobCount) * mvCurrentBobMax.y - mvCurrentBobMax.y;
-		mvHeadBob.x = sin(mfHeadBobCount/2 - kPi4f) * mvCurrentBobMax.x;
-	}
-	else
-	{
-		mvHeadBob =0;
-	}
-
-
-	/////////////////////////
-	//Ground bounce
-	if(mbHeadGroundBounceActive)
-	{
-		mfHeadGroundBounce += afTimeStep * mfGroundBounceSpeed * mfBounceSpeedMul;
-		
-		//Slow down on way down, and back up go slow, speed up and then slow.
-		if(mfHeadGroundBounce < 0.5f)
-			mvHeadBob.y += sin(kPif + mfHeadGroundBounce * kPif) * mfGroundBounceSize * mfBounceSizeMul;
-		else
-			mvHeadBob.y += (cMath::SmoothCurve( (mfHeadGroundBounce-0.5f)*2.0f )-1) * mfGroundBounceSize * mfBounceSizeMul;
-
-		if(mfHeadGroundBounce >= 1)
-		{
-			mbHeadGroundBounceActive = false;
-			mfHeadGroundBounce = 0;
-		}
-	}
-	
-	
 	mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_Bob,mvHeadBob);
 }
 
@@ -870,32 +688,17 @@ void cLuxMoveState_Normal::FallDamage(float afYSpeed)
 {
 	if(mpPlayer->GetNoFallDamage()) return;
 
-	tString sSound = "";
-	float fDamage = 0.0f;
+	OhplGa2bFallCfg cfg = {mfFallDamageSpeed_Min, mfFallDamage_Min, mfFallDamageSpeed_Med, mfFallDamage_Med, mfFallDamageSpeed_Max,
+						mfFallDamage_Max};
+	float fDamage;
+	int lTier = ohpl_ga2b_fall_damage(&cfg, afYSpeed, &fDamage);
+	if(lTier != 0)
+	{
+		const tString &sSound = lTier == 3 ? msFallDamageSound_Max : lTier == 2 ? msFallDamageSound_Med : msFallDamageSound_Min;
 
-	//Hard
-	if(afYSpeed < -mfFallDamageSpeed_Max)
-	{
-		sSound = msFallDamageSound_Max;
-		fDamage = mfFallDamage_Max;
-	}
-	//Medium
-	else if(afYSpeed < -mfFallDamageSpeed_Med)
-	{
-		sSound = msFallDamageSound_Med;
-		fDamage = mfFallDamage_Med;
-	}
-	//Light
-	else if(afYSpeed < -mfFallDamageSpeed_Min)
-	{
-		sSound = msFallDamageSound_Min;
-		fDamage = mfFallDamage_Min;
-	}
-
-	if(fDamage >0)
-	{
 		mfBounceSizeMul = mfFallDamageBounceSizeMul;
 		mfBounceSpeedMul = mfFallDamageBounceSpeedMul;
+
 		mpPlayer->GiveDamage(fDamage,100,eLuxDamageType_BloodSplat, false, false);
 		gpBase->mpHelpFuncs->PlayGuiSoundData(sSound, eSoundEntryType_World);
 	}

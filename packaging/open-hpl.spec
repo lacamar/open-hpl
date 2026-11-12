@@ -1,5 +1,5 @@
 Name:           open-hpl
-Version:        1.3.85
+Version:        1.3.86
 Release:        1%{?dist}
 Summary:        Native aarch64 port of Frictional Games' HPL engine
 
@@ -150,6 +150,11 @@ cd amnesia/src
 %{_datadir}/icons/hicolor/128x128/apps/open-hpl-*.png
 
 %changelog
+* Thu Nov 12 2026 lacamar <lchlnm@pm.me> - 1.3.86-1
+- Port Amnesia player, props, areas, menus to Rust
+- Port Amnesia effects, inventory, journal, input to Rust
+- Fix Amnesia save round-trip check
+
 * Thu Nov 12 2026 lacamar <lchlnm@pm.me> - 1.3.85-1
 - Port SOMA, Rebirth, Bunker game code to Rust
 - Port Amnesia scripts, enemies, player, saves to Rust

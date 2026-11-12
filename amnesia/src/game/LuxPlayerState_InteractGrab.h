@@ -125,8 +125,8 @@ protected:
 	cVector3f mvLocalBodyOffset;
 	cMatrixf m_mtxBodyRotation;
 
-	cPidController<cVector3f> mForcePid;
-	cPidController<cVector3f> mSpeedTorquePid;
+	OhplGa2bPid3 mForcePid;
+	OhplGa2bPid3 mSpeedTorquePid;
 
 	float mfDepth;
 	float mfMaxDistance;

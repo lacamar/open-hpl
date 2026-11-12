@@ -18,6 +18,7 @@
  */
 
 #include "LuxArea_Insanity.h"
+#include "RustLuxMap.h"
 
 #include "LuxInsanityHandler.h"
 
@@ -95,9 +96,7 @@ void cLuxArea_Insanity::OnUpdate(float afTimeStep)
 {
 	//////////////////////////
 	// Check update count
-	mfCheckCollisionCount-=afTimeStep;
-	if(mfCheckCollisionCount>0) return;
-	mfCheckCollisionCount = cMath::RandRectf(mfCheckTimeMin, mfCheckTimeMax);
+	if(ohpl_ga5_tick_random(&mfCheckCollisionCount, afTimeStep, mfCheckTimeMin, mfCheckTimeMax)==false) return;
 
 	//////////////////////////
 	// Check collision

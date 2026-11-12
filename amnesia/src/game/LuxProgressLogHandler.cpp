@@ -18,6 +18,7 @@
  */
 
 #include "LuxProgressLogHandler.h"
+#include "RustLuxFx.h"
 
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
@@ -94,19 +95,19 @@ void cLuxProgressLogHandler::CreateAndResetLogFile()
 	/////////////////////////////
 	// Get file name of log
 	cDate currentDate =  cPlatform::GetDate();
-	tWString sFileName =	_W("ProgLog_") + gpBase->msProfileName + _W("_") +
-		cString::ToStringW(currentDate.year,4)+_W("_") +
-		cString::ToStringW(currentDate.month+1,2)+_W("_") +
-		cString::ToStringW(currentDate.month_day,2)+_W("_") +
-		cString::ToStringW(currentDate.hours,2)+_W("_") +
-		cString::ToStringW(currentDate.minutes,2)+_W("_") +
-		cString::ToStringW(currentDate.seconds,2)+_W("_") +
-		cString::ToStringW(mlFileNameCount,2)+
-		_W(".log");
+	OhplGa9bDate date = { currentDate.year, currentDate.month, currentDate.month_day, currentDate.hours, currentDate.minutes, currentDate.seconds };
+
+	std::vector<uint32_t> vProfile(gpBase->msProfileName.begin(), gpBase->msProfileName.end());
+	const uint32_t *pProfile = vProfile.empty() ? NULL : &vProfile[0];
+	size_t lNameLen = ohpl_ga9b_proglog_file_name(pProfile, vProfile.size(), &date, mlFileNameCount, NULL, 0);
+	std::vector<uint32_t> vName(lNameLen);
+	ohpl_ga9b_proglog_file_name(pProfile, vProfile.size(), &date, mlFileNameCount, lNameLen ? &vName[0] : NULL, lNameLen);
+	tWString sFileName(vName.begin(), vName.end());
 
 	/////////////////////////////
 	// Open file
 	tWString sPath = gpBase->msBaseStatePath + sFileName;
+
 #ifdef WIN32
 	mpFile = _wfopen(sPath.c_str(),_W("w"));
 #else
@@ -117,11 +118,13 @@ void cLuxProgressLogHandler::CreateAndResetLogFile()
 		Error("Could not open progress log file '%s'!\n", cString::To8Char(sPath).c_str());
 	else
 	{
-		fprintf(mpFile, "--- Amnesia Progress Logger ----\n");
-		fprintf(mpFile, "Player: %s Date: %d/%d - %d\n", cString::To8Char(gpBase->msProfileName).c_str(), currentDate.month_day, currentDate.month+1, currentDate.year);
-		fprintf(mpFile, "---------------------------------\n");
+		tString sProfile = cString::To8Char(gpBase->msProfileName);
+		const unsigned char *pProfile8 = (const unsigned char*)sProfile.data();
+		size_t lHeaderLen = ohpl_ga9b_proglog_header(pProfile8, sProfile.size(), &date, NULL, 0);
+		std::vector<unsigned char> vHeader(lHeaderLen);
+		ohpl_ga9b_proglog_header(pProfile8, sProfile.size(), &date, lHeaderLen ? &vHeader[0] : NULL, lHeaderLen);
+		if(lHeaderLen) fwrite(&vHeader[0], 1, lHeaderLen, mpFile);
 	}
-
 
 	mlCounter =0;
 }
@@ -130,10 +133,7 @@ void cLuxProgressLogHandler::CreateAndResetLogFile()
 
 void cLuxProgressLogHandler::Update(float afTimeStep)
 {
-	if(mbActive==false) return;
-
-
-	mlCounter++;
+	mlCounter = ohpl_ga9b_proglog_tick(mbActive, mlCounter);
 }
 
 //-----------------------------------------------------------------------
@@ -142,36 +142,19 @@ void cLuxProgressLogHandler::AddLog(eLuxProgressLogLevel aLevel, const tString& 
 {
 	if(mbActive==false || mpFile==NULL) return;
 
-	int lSec = (mlCounter/60) % 60;
-	int lMin = (mlCounter/(60*60)) % 60;
-	int lHour = mlCounter/ (60*60*60);
-
-	char sTemp[1024];
-	sprintf(sTemp, "%02d:%02d:%02d", lHour, lMin, lSec);
-
 	cLuxMap *pMap = gpBase->mpMapHandler->GetCurrentMap();
 	tString sMapName = pMap ? pMap->GetName() : "NoMap";
+
 	cLuxPlayer *pPlayer = gpBase->mpPlayer;
-	tString sHealth = cString::ToString(pPlayer->GetHealth(),0);
-	tString sSanity = cString::ToString(pPlayer->GetSanity(),0);
-	tString sTinderboxes = cString::ToString(pPlayer->GetTinderboxes());
-	tString sOil = cString::ToString(pPlayer->GetLampOil(),0);
-	tString sCoins = cString::ToString(pPlayer->GetCoins());
-	
-	tString sFinalMess = "# "+LevelToString(aLevel)+" # "+ sTemp;
-	sFinalMess += " | "+sMapName + " | H:"+sHealth+ " | S:"+sSanity+ " | O:"+sOil+ " | T:"+sTinderboxes+ " | C:"+sCoins +" \n > ";
-	for(size_t i=0; i<asMessage.size(); ++i)
-	{
-		char c = asMessage[i];
-        sFinalMess += c;
-		if(c == '\n')
-		{
-			sFinalMess += " > ";
-		}
-	}
-	sFinalMess += "\n";
-	
-	fprintf(mpFile, "%s", sFinalMess.c_str());
+	OhplGa9bVitals vitals = { pPlayer->GetHealth(), pPlayer->GetSanity(), pPlayer->GetLampOil(), pPlayer->GetTinderboxes(), pPlayer->GetCoins() };
+
+	const unsigned char *pMapName = (const unsigned char*)sMapName.data();
+	const unsigned char *pMessage = (const unsigned char*)asMessage.data();
+	size_t lLen = ohpl_ga9b_proglog_line((int)aLevel, mlCounter, pMapName, sMapName.size(), &vitals, pMessage, asMessage.size(), NULL, 0);
+	std::vector<unsigned char> vLine(lLen);
+	ohpl_ga9b_proglog_line((int)aLevel, mlCounter, pMapName, sMapName.size(), &vitals, pMessage, asMessage.size(), lLen ? &vLine[0] : NULL, lLen);
+
+	if(lLen) fwrite(&vLine[0], 1, lLen, mpFile);
 	fflush(mpFile);
 }
 
@@ -183,12 +166,6 @@ void cLuxProgressLogHandler::AddLog(eLuxProgressLogLevel aLevel, const tString& 
 
 //-----------------------------------------------------------------------
 
-tString cLuxProgressLogHandler::LevelToString(eLuxProgressLogLevel aLevel)
-{
-	if(aLevel == eLuxProgressLogLevel_Low)		return "Low";
-	if(aLevel == eLuxProgressLogLevel_Medium)	return "Medium";
-	if(aLevel == eLuxProgressLogLevel_High)		return "High";
-	return "";
-}
+
 
 //-----------------------------------------------------------------------

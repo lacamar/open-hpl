@@ -104,10 +104,7 @@ void cLuxProp_Button::SetCanBeSwitchedOff(bool abX)
 
 bool cLuxProp_Button::CanInteract(iPhysicsBody *apBody)
 {
-	if(mbCanBeSwitchedOff && mbSwitchedOn) return true;
-	if(mbCanBeSwitchedOn && mbSwitchedOn==false) return true;
-
-	return false;
+	return ohpl_ga4b_button_can_interact(mbSwitchedOn, mbCanBeSwitchedOn, mbCanBeSwitchedOff);
 }
 
 //-----------------------------------------------------------------------
@@ -158,11 +155,11 @@ eLuxFocusCrosshair cLuxProp_Button::GetFocusCrosshair(iPhysicsBody *apBody, cons
 
 void cLuxProp_Button::SetSwitchedOn(bool abX, bool abUseEffects)
 {
-	if(mbSwitchedOn == abX) return;
+	int lConnState;
+	if(ohpl_ga4b_button_set(&mbSwitchedOn, abX, &lConnState)==false) return;
 
-    mbSwitchedOn =  abX;
+	ConnectionStateChange(lConnState);
 
-	ConnectionStateChange(mbSwitchedOn ? 1 : -1);
 	SetEffectsActive(mbSwitchedOn, abUseEffects);
 }
 
@@ -170,8 +167,9 @@ void cLuxProp_Button::SetSwitchedOn(bool abX, bool abUseEffects)
 
 void cLuxProp_Button::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	if(alState > 0)	SetSwitchedOn(true, true);
-	if(alState < 0)	SetSwitchedOn(false, true);
+	int lSwitch = ohpl_ga4b_button_conn_state(alState);
+	if(lSwitch == 1)		SetSwitchedOn(true, true);
+	else if(lSwitch == 0)	SetSwitchedOn(false, true);
 }
 
 //-----------------------------------------------------------------------

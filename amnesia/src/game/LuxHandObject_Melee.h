@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxHandObject.h"
+#include "RustLuxProp.h"
 
 
 //----------------------------------------------
@@ -54,6 +55,8 @@ private:
 	
 	
 	void Charge();
+	OhplGa4bHands GetHands();
+	void SetHands(const OhplGa4bHands &aHands);
 	void Swing();
 
 	tString msHandsAnim_Swing;
