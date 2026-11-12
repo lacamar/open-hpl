@@ -34,6 +34,7 @@ mod input_ffi;
 mod input_tables;
 pub mod luxbase;
 pub mod luxenemy;
+pub mod luxfx;
 pub mod luxmap;
 pub mod luxmenu;
 pub mod luxplayer;

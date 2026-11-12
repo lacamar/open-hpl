@@ -18,6 +18,8 @@
  */
 
 #include "LuxEffectRenderer.h"
+#include "RustLuxFx.h"
+#include <cstring>
 
 
 //-----------------------------------------------------------------------
@@ -223,44 +225,18 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
 {
 	if(mvFlashObjects.empty()) return;
 	if(mpFlashProgram==NULL) return;
-	
-	////////////////////////////////////
-	// Setup functions
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_Equal);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
 
-	apFunctions->SetProgram(mpFlashProgram);
-	
-	float fGlobalAlpha = (0.5f+mFlashOscill.val*0.5f);
-
-	////////////////////////////////////
-	// Render objects
 	cFrustum *pFrustum = apFunctions->GetFrustum();
+	std::vector<iRenderable*> vObjects(mvFlashObjects.size());
+	std::vector<OhplGa9bGlow> vGlow(mvFlashObjects.size());
 	for(size_t i=0; i<mvFlashObjects.size(); ++i)
 	{
-		iRenderable *pObject = mvFlashObjects[i].mpObject;
-
-		if(pObject->CollidesWithFrustum(pFrustum)==false) continue;
-
-		if(mpFlashProgram)
-			mpFlashProgram->SetFloat(kVar_afColorMul,mvFlashObjects[i].mfAlpha*fGlobalAlpha);
-		
-		apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
-	
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-		
-		for(int i=0; i<2; ++i)
-			apFunctions->DrawCurrent();
+		vObjects[i] = mvFlashObjects[i].mpObject;
+		vGlow[i].collides = vObjects[i]->CollidesWithFrustum(pFrustum);
+		vGlow[i].alpha = mvFlashObjects[i].mfAlpha;
 	}
-
-	apFunctions->SetTexture(0,NULL);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+	OhplGa9bRPlan *pPlan = ohpl_ga9b_plan_flash(&vGlow[0], vGlow.size(), mFlashOscill.val, true);
+	Replay(pPlan, apFunctions, vObjects, cRect2l());
 }
 
 //-----------------------------------------------------------------------
@@ -270,39 +246,17 @@ void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions
 	if(mvEnemyGlowObjects.empty()) return;
 	if(mpEnemyGlowProgram==NULL) return;
 
-	////////////////////////////////////
-	// Setup functions
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_Equal);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
-
-	apFunctions->SetProgram(mpEnemyGlowProgram);
-
-	////////////////////////////////////
-	// Render objects
 	cFrustum *pFrustum = apFunctions->GetFrustum();
+	std::vector<iRenderable*> vObjects(mvEnemyGlowObjects.size());
+	std::vector<OhplGa9bGlow> vGlow(mvEnemyGlowObjects.size());
 	for(size_t i=0; i<mvEnemyGlowObjects.size(); ++i)
 	{
-		iRenderable *pObject = mvEnemyGlowObjects[i].mpObject;
-
-		if(pObject->CollidesWithFrustum(pFrustum)==false) continue;
-
-		mpEnemyGlowProgram->SetFloat(kVar_afColorMul,mvEnemyGlowObjects[i].mfAlpha);
-
-		apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
-
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-
-		apFunctions->DrawCurrent();
+		vObjects[i] = mvEnemyGlowObjects[i].mpObject;
+		vGlow[i].collides = vObjects[i]->CollidesWithFrustum(pFrustum);
+		vGlow[i].alpha = mvEnemyGlowObjects[i].mfAlpha;
 	}
-
-	apFunctions->SetTexture(0,NULL);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+	OhplGa9bRPlan *pPlan = ohpl_ga9b_plan_glow(&vGlow[0], vGlow.size(), true);
+	Replay(pPlan, apFunctions, vObjects, cRect2l());
 }
 
 //-----------------------------------------------------------------------
@@ -311,205 +265,108 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 {
 	if(mvOutlineObjects.empty()) return;
 
-	/////////////////////////////
-	//Setup vars
 	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
 	cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
-	
-	float fScaleAdd = 0.02f;
-	
-	////////////////////////////////////
-	// Get entities to be rendered
+
 	cFrustum *pFrustum = apFunctions->GetFrustum();
-	tRenderableList lstObjects;
+
+	std::vector<OhplGa9bOutline> vOutline(mvOutlineObjects.size());
 	for(size_t i=0; i<mvOutlineObjects.size(); ++i)
 	{
 		iRenderable *pObject = mvOutlineObjects[i];
+		OhplGa9bOutline &out = vOutline[i];
+		memset(&out, 0, sizeof(out));
+		out.collides = pObject->CollidesWithFrustum(pFrustum);
+		if(out.collides == 0) continue;
 
-		if(pObject->CollidesWithFrustum(pFrustum))
-		{
-			lstObjects.push_back(pObject);
-		}
-	}
-
-	////////////////////////////////////
-	// Build AABB from all objects
-	cBoundingVolume totalBV;
-	cVector3f vTotalMin = 100000.0f;
-	cVector3f vTotalMax = -100000.0f;
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
 		cBoundingVolume *pBV = pObject->GetBoundingVolume();
-
-		cMath::ExpandAABB(vTotalMin, vTotalMax, pBV->GetMin(), pBV->GetMax());        
+		out.hasAlpha = pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha) != NULL;
+		const cVector3f vMin = pBV->GetMin(), vMax = pBV->GetMax();
+		const cVector3f vLocalMin = pBV->GetLocalMin(), vLocalMax = pBV->GetLocalMax(), vLocalCenter = pBV->GetLocalCenter();
+		out.min[0] = vMin.x; out.min[1] = vMin.y; out.min[2] = vMin.z;
+		out.max[0] = vMax.x; out.max[1] = vMax.y; out.max[2] = vMax.z;
+		out.localMin[0] = vLocalMin.x; out.localMin[1] = vLocalMin.y; out.localMin[2] = vLocalMin.z;
+		out.localMax[0] = vLocalMax.x; out.localMax[1] = vLocalMax.y; out.localMax[2] = vLocalMax.z;
+		out.localCenter[0] = vLocalCenter.x; out.localCenter[1] = vLocalCenter.y; out.localCenter[2] = vLocalCenter.z;
+		const cMatrixf &mtxWorld = pObject->GetWorldMatrix();
+		for(int r=0; r<4; ++r)
+			for(int c=0; c<4; ++c)
+				out.world[r*4+c] = mtxWorld.m[r][c];
 	}
-	
-	//Need to scale so the outline is contained.
-	cVector3f vTotalSize = vTotalMax - vTotalMin;
-	cVector3f vTotalAdd = vTotalSize * (cVector3f(1.0f)/vTotalSize) * (fScaleAdd*2);
-		
-	totalBV.SetLocalMinMax(vTotalMin-vTotalAdd, vTotalMax+vTotalAdd);
 
+	uint32_t lProgramsOk = 0;
+	if(mpOutlineColorProgram[0]) lProgramsOk |= 1u << kOhplGa9bProgOutlineColor0;
+	if(mpOutlineColorProgram[1]) lProgramsOk |= 1u << kOhplGa9bProgOutlineColor1;
+	if(mpOutlineStencilProgram) lProgramsOk |= 1u << kOhplGa9bProgOutlineStencil;
+	if(mpOutlineStencilAlphaProgram) lProgramsOk |= 1u << kOhplGa9bProgOutlineStencilAlpha;
+	if(mpBlurProgram[0]) lProgramsOk |= 1u << kOhplGa9bProgBlur0;
+	if(mpBlurProgram[1]) lProgramsOk |= 1u << kOhplGa9bProgBlur1;
+
+	OhplGa9bRPlan *pPlan = ohpl_ga9b_plan_outline(&vOutline[0], vOutline.size(), lProgramsOk);
+
+	float vClipMin[3], vClipMax[3];
+	ohpl_ga9b_rplan_clip(pPlan, vClipMin, vClipMax);
+	cBoundingVolume totalBV;
+	totalBV.SetLocalMinMax(cVector3f(vClipMin[0], vClipMin[1], vClipMin[2]), cVector3f(vClipMax[0], vClipMax[1], vClipMax[2]));
 	cRect2l clipRect;
 	cMath::GetClipRectFromBV(clipRect,totalBV, apFunctions->GetFrustum(), vScreenSize,-1);
 
-	////////////////////////////////////
-	// General setup
-	apFunctions->SetFrameBuffer(mpFrameBufferColor);
-
-	apFunctions->ClearFrameBuffer(eClearFrameBufferFlag_Stencil | eClearFrameBufferFlag_Color,true);
-
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetStencilActive(true);
-
-	////////////////////////////////////
-	// Render stencil
-
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetChannelMode(eMaterialChannelMode_None);
-
-	apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Replace);
-
-	
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
-
-		/////////////////
-		// Solid
-		if(pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha)==NULL)
-		{
-			apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-			apFunctions->SetProgram(mpOutlineStencilProgram);
-			apFunctions->SetTexture(0, NULL);
-		}
-		/////////////////
-		// Trans
-		else
-		{
-			apFunctions->SetAlphaMode(eMaterialAlphaMode_Trans);
-			apFunctions->SetProgram(mpOutlineStencilAlphaProgram);
-			apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha));
-		}
-
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-		apFunctions->DrawCurrent();
-	}
-
-	////////////////////////////////////
-	// Render out line
-
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
-
-	apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_NotEqual,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Keep);
-
-	apFunctions->SetTextureRange(NULL, 0);
-
-	//Iterate objects and render them
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
-		cMaterial *pMat = pObject->GetMaterial();
-
-		cBoundingVolume* pBV = pObject->GetBoundingVolume();
-		
-        if(pMat->GetTexture(eMaterialTexture_Alpha))
-		{
-			apFunctions->SetTexture(0, pMat->GetTexture(eMaterialTexture_Alpha));
-			apFunctions->SetProgram(mpOutlineColorProgram[1]);
-			mpOutlineColorProgram[1]->SetColor3f(mpOutlineColorProgram[1]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		}
-		else
-		{
-			apFunctions->SetTexture(0, NULL);
-			apFunctions->SetProgram(mpOutlineColorProgram[0]);
-			mpOutlineColorProgram[0]->SetColor3f(mpOutlineColorProgram[0]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		}
-		
-		cVector3f vLocalSize = pBV->GetLocalMax() - pBV->GetLocalMin();
-		cVector3f vScale = (cVector3f(1.0f)/vLocalSize) * fScaleAdd  + cVector3f(1.0f);
-
-		cMatrixf mtxScale = cMath::MatrixMul(cMath::MatrixScale(vScale), cMath::MatrixTranslate(pBV->GetLocalCenter()*-1));
-		mtxScale.SetTranslation(mtxScale.GetTranslation() + pBV->GetLocalCenter());
-		m_mtxTemp = cMath::MatrixMul(pObject->GetWorldMatrix(), mtxScale);
-
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(NULL);
-		apFunctions->SetMatrix(&m_mtxTemp);
-		apFunctions->DrawCurrent();
-	}
-
-	////////////////////////////////////
-	// Blur the color buffer
-	apFunctions->SetFlatProjection();
-
-	apFunctions->SetStencilActive(false);
-	apFunctions->SetDepthTest(false);
-
-	for(int i=0; i<2; ++i)
-	{
-		//Reverse order so blur program is not set unneeded times
-		if(mpBlurProgram[1-i])
-			mpBlurProgram[1-i]->SetFloat(kVar_afBlurSize, 1.0f);	
-	}
-
-	int lBlurIterations = 2;
-	RenderOutlineBlur(apFunctions, mpOutlineColorTexture);
-	for(int i=1; i<lBlurIterations;++i)
-	{
-		RenderOutlineBlur(apFunctions, mpBlurTexture[1]);
-	}	
-
-
-	////////////////////////////////////
-	// Draw the color buffer
-	apFunctions->SetStencilActive(true);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetFrameBuffer(mpDeferredAccumBuffer);
-
-	apFunctions->SetScissorActive(true);
-	apFunctions->SetScissorRect(clipRect,false);
-
-	apFunctions->SetTexture(0, mpBlurTexture[1]);	
-	apFunctions->DrawQuad(0,1,0,mpBlurTexture[1]->GetSizeFloat2D(),true);
-	//apFunctions->SetTexture(0, mpOutlineColorTexture);	
-	//apFunctions->DrawQuad(0,1,0,mpOutlineColorTexture->GetSizeFloat2D(),true);
-	
-	////////////////////////////////////
-	// Reset 
-	apFunctions->SetNormalFrustumProjection();
-	apFunctions->SetStencilActive(false);
-	apFunctions->SetScissorActive(false);
-	
-	apFunctions->SetTextureRange(NULL, 0);
-
-	//Debug:
-	/*apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetTexture(0, NULL);
-	apFunctions->SetMatrix(NULL);
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(totalBV.GetMin(),totalBV.GetMax(),cColor(1,1));*/
+	Replay(pPlan, apFunctions, mvOutlineObjects, clipRect);
 }
 
-void cLuxEffectRenderer::RenderOutlineBlur(cRendererCallbackFunctions* apFunctions, iTexture *apInputTex)
+void cLuxEffectRenderer::Replay(OhplGa9bRPlan *apPlan, cRendererCallbackFunctions* apFunctions, const std::vector<iRenderable*> &avObjects, const cRect2l &aClipRect)
 {
-	apFunctions->SetFrameBuffer(mpBlurBuffer[0]);
-	
-	apFunctions->SetProgram(mpBlurProgram[0]);
-	apFunctions->SetTexture(0, apInputTex);
-	apFunctions->DrawQuad(0,1,apInputTex->GetSizeFloat2D(),true);
+	iGpuProgram *vPrograms[8] = { mpFlashProgram, mpEnemyGlowProgram, mpOutlineColorProgram[0], mpOutlineColorProgram[1],
+									mpOutlineStencilProgram, mpOutlineStencilAlphaProgram, mpBlurProgram[0], mpBlurProgram[1] };
+	iTexture *vTextures[3] = { mpOutlineColorTexture, mpBlurTexture[0], mpBlurTexture[1] };
+	iFrameBuffer *vFrameBuffers[4] = { mpFrameBufferColor, mpBlurBuffer[0], mpBlurBuffer[1], mpDeferredAccumBuffer };
 
-	apFunctions->SetFrameBuffer(mpBlurBuffer[1]);
-	apFunctions->SetProgram(mpBlurProgram[1]);
-	apFunctions->SetTexture(0, mpBlurTexture[0]);
-	apFunctions->DrawQuad(0,1,mpBlurTexture[0]->GetSizeFloat2D(),true);
+	OhplGa9bROp op;
+	while(ohpl_ga9b_rplan_next(apPlan, &op))
+	{
+		switch(op.kind)
+		{
+		case kOhplGa9bRDepthFunc:		apFunctions->SetDepthTestFunc(op.i == kOhplGa9bDepthEqual ? eDepthTestFunc_Equal : eDepthTestFunc_LessOrEqual); break;
+		case kOhplGa9bRDepthTest:		apFunctions->SetDepthTest(op.i != 0); break;
+		case kOhplGa9bRDepthWrite:		apFunctions->SetDepthWrite(op.i != 0); break;
+		case kOhplGa9bRBlend:			apFunctions->SetBlendMode(op.i == kOhplGa9bBlendAdd ? eMaterialBlendMode_Add : eMaterialBlendMode_None); break;
+		case kOhplGa9bRAlphaMode:		apFunctions->SetAlphaMode(op.i == kOhplGa9bAlphaTrans ? eMaterialAlphaMode_Trans : eMaterialAlphaMode_Solid); break;
+		case kOhplGa9bRChannel:			apFunctions->SetChannelMode(op.i == kOhplGa9bChannelNone ? eMaterialChannelMode_None : eMaterialChannelMode_RGBA); break;
+		case kOhplGa9bRProgram:			apFunctions->SetProgram(op.i >= 0 ? vPrograms[op.i] : NULL); break;
+		case kOhplGa9bRProgFloat:		vPrograms[op.i]->SetFloat(op.j, op.f[0]); break;
+		case kOhplGa9bRProgColor3:		vPrograms[op.i]->SetColor3f(vPrograms[op.i]->GetVariableId("gvColor"), cColor(op.f[0], op.f[1], op.f[2], op.f[3])); break;
+		case kOhplGa9bRTexDiffuse:		apFunctions->SetTexture(0, avObjects[op.i]->GetMaterial()->GetTexture(eMaterialTexture_Diffuse)); break;
+		case kOhplGa9bRTexAlpha:		apFunctions->SetTexture(0, avObjects[op.i]->GetMaterial()->GetTexture(eMaterialTexture_Alpha)); break;
+		case kOhplGa9bRTexNull:			apFunctions->SetTexture(0, NULL); break;
+		case kOhplGa9bRTexSlot:			apFunctions->SetTexture(0, vTextures[op.i]); break;
+		case kOhplGa9bRVertexObj:		apFunctions->SetVertexBuffer(avObjects[op.i]->GetVertexBuffer()); break;
+		case kOhplGa9bRMatrixObj:		apFunctions->SetMatrix(avObjects[op.i]->GetModelMatrixPtr()); break;
+		case kOhplGa9bRMatrixNull:		apFunctions->SetMatrix(NULL); break;
+		case kOhplGa9bRMatrixTemp:
+			for(int r=0; r<4; ++r)
+				for(int c=0; c<4; ++c)
+					m_mtxTemp.m[r][c] = op.f[r*4+c];
+			apFunctions->SetMatrix(&m_mtxTemp);
+			break;
+		case kOhplGa9bRDraw:			apFunctions->DrawCurrent(); break;
+		case kOhplGa9bRFrameBuffer:		apFunctions->SetFrameBuffer(vFrameBuffers[op.i]); break;
+		case kOhplGa9bRClearStencilColor:	apFunctions->ClearFrameBuffer(eClearFrameBufferFlag_Stencil | eClearFrameBufferFlag_Color,true); break;
+		case kOhplGa9bRStencilActive:	apFunctions->SetStencilActive(op.i != 0); break;
+		case kOhplGa9bRStencilAlwaysReplace:	apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Replace); break;
+		case kOhplGa9bRStencilNotEqualKeep:		apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_NotEqual,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Keep); break;
+		case kOhplGa9bRFlatProjection:	apFunctions->SetFlatProjection(); break;
+		case kOhplGa9bRNormalProjection:	apFunctions->SetNormalFrustumProjection(); break;
+		case kOhplGa9bRTextureRangeNull:	apFunctions->SetTextureRange(NULL, op.i); break;
+		case kOhplGa9bRScissorActive:	apFunctions->SetScissorActive(op.i != 0); break;
+		case kOhplGa9bRScissorRect:		apFunctions->SetScissorRect(aClipRect,false); break;
+		case kOhplGa9bRQuadMaxUv:		apFunctions->DrawQuad(0,1,vTextures[op.i]->GetSizeFloat2D(),true); break;
+		case kOhplGa9bRQuadMinMax:		apFunctions->DrawQuad(0,1,0,vTextures[op.i]->GetSizeFloat2D(),true); break;
+		}
+	}
+	ohpl_ga9b_rplan_free(apPlan);
 }
+
+
 
 //-----------------------------------------------------------------------
 

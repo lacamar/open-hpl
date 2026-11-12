@@ -18,6 +18,7 @@
  */
 
 #include "LuxPostEffects.h"
+#include "RustLuxFx.h"
 
 #include "LuxMapHandler.h"
 
@@ -89,12 +90,10 @@ cLuxPostEffect_Insanity::~cLuxPostEffect_Insanity()
 
 void cLuxPostEffect_Insanity::Update(float afTimeStep)
 {
-	mfT += afTimeStep * mfWaveSpeed;
-	
-	mfAnimCount += afTimeStep * 0.15f;
-
-	float fMaxAnim = (float)mvAmpMaps.size();
-	if(mfAnimCount >= fMaxAnim) mfAnimCount = mfAnimCount-fMaxAnim;
+	OhplGa9bClock clock = { mfT, mfAnimCount, mfWaveAlpha, mfZoomAlpha, mfWaveSpeed };
+	ohpl_ga9b_post_update(&clock, afTimeStep);
+	mfT = clock.t;
+	mfAnimCount = clock.animCount;
 }
 
 //-----------------------------------------------------------------------
@@ -102,46 +101,33 @@ void cLuxPostEffect_Insanity::Update(float afTimeStep)
 
 iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 {
-	/////////////////////////
-	// Init render states
-	mpCurrentComposite->SetFlatProjection();
-	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
+	OhplGa9bClock clock = { mfT, mfAnimCount, mfWaveAlpha, mfZoomAlpha, mfWaveSpeed };
+	cVector2f vScreenSize(0);
+	if(mpProgram) vScreenSize = mpLowLevelGraphics->GetScreenSizeFloat();
+	OhplGa9bPPlan *pPlan = ohpl_ga9b_post_plan(&clock, vScreenSize.x, vScreenSize.y, mpProgram != NULL);
 
-	/////////////////////////
-	// Render the to final buffer
-	// This function sets to frame buffer if post effect is last!
-	SetFinalFrameBuffer(apFinalTempBuffer);
+	iTexture *vTextures[5] = { apInputTexture, mvAmpMaps[0], mvAmpMaps[1], mvAmpMaps[2], mpZoomMap };
+	auto Tex = [&](int i) { return i >= 0 ? vTextures[i] : (iTexture*)NULL; };
 
-	mpCurrentComposite->SetTexture(0, apInputTexture);
-	
-	int lAmp0 = (int)mfAnimCount;
-	int lAmp1 = (int)(mfAnimCount+1);
-	if(lAmp1 >= (int) mvAmpMaps.size()) lAmp1 = 0;
-	float fAmpT = cMath::GetFraction(mfAnimCount);
-
-	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
-
-	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
-	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
-	mpCurrentComposite->SetTexture(3, mpZoomMap);
-	
-	mpCurrentComposite->SetProgram(mpProgram);
-	if(mpProgram)
+	OhplGa9bPOp op;
+	while(ohpl_ga9b_pplan_next(pPlan, &op))
 	{
-		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
-		mpProgram->SetFloat(kVar_afT, mfT);
-		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
-		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
-		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
-		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
+		switch(op.kind)
+		{
+		case kOhplGa9bPFlatProjection:		mpCurrentComposite->SetFlatProjection(); break;
+		case kOhplGa9bPBlendNone:			mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None); break;
+		case kOhplGa9bPChannelRgba:			mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA); break;
+		case kOhplGa9bPFinalFb:				SetFinalFrameBuffer(apFinalTempBuffer); break;
+		case kOhplGa9bPTex:					mpCurrentComposite->SetTexture(op.a, Tex(op.b)); break;
+		case kOhplGa9bPProgram:				mpCurrentComposite->SetProgram(op.a >= 0 ? mpProgram : NULL); break;
+		case kOhplGa9bPFloat:				mpProgram->SetFloat(op.b, op.f[0]); break;
+		case kOhplGa9bPVec2:				mpProgram->SetVec2f(op.b, cVector2f(op.f[0], op.f[1])); break;
+		case kOhplGa9bPQuad1:				DrawQuad(0,1,Tex(op.a), op.b != 0); break;
+		case kOhplGa9bPTextureRangeNull:	mpCurrentComposite->SetTextureRange(NULL, op.a); break;
+		}
 	}
-	
+	ohpl_ga9b_pplan_free(pPlan);
 
-	DrawQuad(0,1,apInputTexture, true);
-
-	mpCurrentComposite->SetTextureRange(NULL, 1);
-	
 	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
 }
 

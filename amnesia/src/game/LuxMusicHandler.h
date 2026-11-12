@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxFx.h"
 
 //----------------------------------------------
 
@@ -81,6 +82,8 @@ private:
 	void UpdateEnemyMusic(float afTimeStep, eLuxEnemyMusic aType);
 
 	void PlayHighestPriority();
+	OhplGa9bEnemyMusic EnemyToRust();
+	void EnemyFromRust(const OhplGa9bEnemyMusic &e);
 
 	//////////////////
 	// Data

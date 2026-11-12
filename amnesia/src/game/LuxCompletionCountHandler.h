@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxFx.h"
 
 //----------------------------------------
 
@@ -52,6 +53,9 @@ public:
 	int mlChestCompletionValue;
 
 private:
+	OhplGa9bCompletion ToRust();
+	void FromRust(const OhplGa9bCompletion &c);
+
 	//////////////////
 	// Data
 	iFontData *mpFont;

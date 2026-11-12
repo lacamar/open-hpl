@@ -18,6 +18,7 @@
  */
 
 #include "LuxEffectHandler.h"
+#include "RustLuxFx.h"
 
 #include "LuxMapHandler.h"
 #include "LuxMap.h"
@@ -240,9 +241,7 @@ void cLuxEffect_EmotionFlash::LoadFonts()
 void cLuxEffect_EmotionFlash::Start(const tString &asTextCat, const tString &asTextEntry, const tString &asSound)
 {
 	mbActive = true;
-
 	mlStep = 0;
-
 	mfAlpha =0;
 
 	gpBase->mpHelpFuncs->PlayGuiSoundData(asSound, eSoundEntryType_Gui);
@@ -251,17 +250,33 @@ void cLuxEffect_EmotionFlash::Start(const tString &asTextCat, const tString &asT
 	mvTextRows.clear();
 	mpFont->GetWordWrapRows(500, mvFontSize.y, mvFontSize, sText, &mvTextRows);
 
-	mfTextTime = 3.0f + 0.15f * (float)sText.length();
-	mfTextAlpha =0;
+	OhplGa9bEmotion s = ToRust();
+	ohpl_ga9b_emotion_start(&s, sText.length());
+	FromRust(s);
 
 	gpBase->mpEffectHandler->SetPlayerIsPaused(true);
 	gpBase->mpPlayer->FadeFOVMulTo(0.5f, 0.5f);
+
 	gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(0.15f, 3);
 	gpBase->mpEffectHandler->GetRadialBlur()->SetBlurStartDist(0.6f);
 
-	//Disable enemies
 	gpBase->mpMapHandler->GetCurrentMap()->BroadcastEnemyMessage(eLuxEnemyMessage_Reset, false,0,0);
+}
 
+OhplGa9bEmotion cLuxEffect_EmotionFlash::ToRust()
+{
+	OhplGa9bEmotion s = { mfAlpha, mlStep, mfCount, mfTextAlpha, mfTextTime, mbActive };
+	return s;
+}
+
+void cLuxEffect_EmotionFlash::FromRust(const OhplGa9bEmotion &s)
+{
+	mfAlpha = s.alpha;
+	mlStep = s.step;
+	mfCount = s.count;
+	mfTextAlpha = s.textAlpha;
+	mfTextTime = s.textTime;
+	mbActive = s.active != 0;
 }
 
 void cLuxEffect_EmotionFlash::Reset()
@@ -273,42 +288,23 @@ void cLuxEffect_EmotionFlash::Reset()
 
 void cLuxEffect_EmotionFlash::Update(float afTimeStep)
 {
-	if(mlStep ==0)
+	OhplGa9bEmotion s = ToRust();
+	OhplGa9bOps ops;
+	ohpl_ga9b_emotion_update(&s, afTimeStep, &ops);
+	FromRust(s);
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		mfAlpha += 0.5f * afTimeStep;
-		if(mfAlpha >= 1.0f)
+		switch(ops.ops[i].kind)
 		{
-			mfAlpha = 1.0f;
-			mlStep=1;
-			mfCount = 1;
-		}
-	}
-	else if(mlStep ==1)
-	{
-		mfTextAlpha += afTimeStep * 3.0f;
-		if(mfTextAlpha > 1) mfTextAlpha =1;
-
-		//Check if text has been displayed long enough.
-		mfTextTime -= afTimeStep;
-		if(mfTextTime < 0)
-		{
+		case kOhplGa9bEmoFovOut:
 			gpBase->mpPlayer->FadeFOVMulTo(1.0f, 0.33f);
+			break;
+		case kOhplGa9bEmoUnpause:
 			gpBase->mpEffectHandler->SetPlayerIsPaused(false);
-
+			break;
+		case kOhplGa9bEmoRadialOut:
 			gpBase->mpEffectHandler->GetRadialBlur()->FadeTo(0, 1);
-			
-			mlStep = 2;
-		}
-	}
-	else if(mlStep ==2)
-	{
-		mfTextAlpha -= afTimeStep * 1.0f;
-		if(mfTextAlpha < 0) mfTextAlpha =0;
-
-		mfAlpha -= 0.33f * afTimeStep;
-		if(mfAlpha <= 0.0f)
-		{
-			mbActive = false;
+			break;
 		}
 	}
 }
@@ -321,20 +317,14 @@ void cLuxEffect_EmotionFlash::OnDraw(float afFrameTime)
 
 	if(mfTextAlpha > 0)
 	{
-		float fStartY = 300 - (mvFontSize.y+2.0f) * 0.5f * (float)mvTextRows.size();
-
-		if(mvTextRows.size() == 1)
+		size_t lRows = mvTextRows.size();
+		std::vector<OhplGa9bRow> vRows(lRows ? lRows : 1);
+		size_t lNum = ohpl_ga9b_emotion_rows(lRows, mvFontSize.y, &vRows[0]);
+		for(size_t i=0; i<lNum; ++i)
 		{
-			gpBase->mpGameHudSet->DrawFont(mvTextRows[0], mpFont, cVector3f(400,fStartY, 4), mvFontSize, cColor(0, mfTextAlpha), eFontAlign_Center);
-		}
-		else
-		{
-			float fY = fStartY;
-			for(size_t i=0; i<mvTextRows.size(); ++i)
-			{
-				gpBase->mpGameHudSet->DrawFont(mvTextRows[i], mpFont, cVector3f(150,fY, 4), mvFontSize, cColor(0, mfTextAlpha), eFontAlign_Left);
-				fY += mvFontSize.y + 2.0f;
-			}
+			const OhplGa9bRow &row = vRows[i];
+			gpBase->mpGameHudSet->DrawFont(mvTextRows[row.row], mpFont, cVector3f(row.x,row.y, row.z), mvFontSize, cColor(0, mfTextAlpha),
+											row.align == kOhplGa9bAlignCenter ? eFontAlign_Center : eFontAlign_Left);
 		}
 	}
 }
@@ -343,9 +333,9 @@ void cLuxEffect_EmotionFlash::OnDraw(float afFrameTime)
 
 void cLuxEffect_EmotionFlash::DoAction(eLuxPlayerAction aAction, bool abPressed)
 {
-	if(abPressed==false) return;
-
-	if(mlStep==1) mfTextTime = 0;
+	OhplGa9bEmotion s = ToRust();
+	ohpl_ga9b_emotion_action(&s, abPressed);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
@@ -361,6 +351,7 @@ cLuxEffect_RadialBlur::cLuxEffect_RadialBlur()
 {
 	mfSize =0;
 	mfSizeGoal =0;
+	mfFadeSpeed =0;
 	mfBlurStartDist =0;
 }
 
@@ -391,33 +382,24 @@ void cLuxEffect_RadialBlur::FadeTo(float afSize, float afSpeed)
 
 void cLuxEffect_RadialBlur::Update(float afTimeStep)
 {
-	if(mfSizeGoal < mfSize)
+	OhplGa9bAmount s = { mfSize, mfSizeGoal, mfFadeSpeed, mbActive };
+	OhplGa9bOps ops;
+	ohpl_ga9b_amount_update(&s, afTimeStep, &ops);
+	mfSize = s.amount;
+	mbActive = s.active != 0;
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		mfSize -= mfFadeSpeed * afTimeStep;
-		if(mfSize <= mfSizeGoal)
+		if(ops.ops[i].kind == kOhplGa9bAmountParams)
 		{
-			mfSize = 	mfSizeGoal;
-			SetActive(false);
+			cPostEffectParams_RadialBlur radialBlurParams;
+			radialBlurParams.mfSize = ops.ops[i].a;
+			radialBlurParams.mfBlurStartDist = mfBlurStartDist;
+			gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetParams(&radialBlurParams);
 		}
-	}
-	else
-	{
-		mfSize += mfFadeSpeed * afTimeStep;
-		if(mfSize >= mfSizeGoal)
+		else
 		{
-			mfSize = mfSizeGoal;
-			SetActive(false);
+			gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(false);
 		}
-	}
-
-	cPostEffectParams_RadialBlur radialBlurParams;
-	radialBlurParams.mfSize = mfSize;
-	radialBlurParams.mfBlurStartDist = mfBlurStartDist;
-	gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetParams(&radialBlurParams);
-
-	if(mfSize <=0)
-	{
-		gpBase->mpMapHandler->GetPostEffect_RadialBlur()->SetActive(false);
 	}
 }
 
@@ -445,6 +427,7 @@ cLuxEffect_SepiaColor::cLuxEffect_SepiaColor()
 {
 	mfAmount =0;
 	mfAmountGoal =0;
+	mfFadeSpeed =0;
 }
 
 void cLuxEffect_SepiaColor::FadeTo(float afAmount, float afSpeed)
@@ -457,32 +440,23 @@ void cLuxEffect_SepiaColor::FadeTo(float afAmount, float afSpeed)
 
 void cLuxEffect_SepiaColor::Update(float afTimeStep)
 {
-	if(mfAmountGoal < mfAmount)
+	OhplGa9bAmount s = { mfAmount, mfAmountGoal, mfFadeSpeed, mbActive };
+	OhplGa9bOps ops;
+	ohpl_ga9b_amount_update(&s, afTimeStep, &ops);
+	mfAmount = s.amount;
+	mbActive = s.active != 0;
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		mfAmount -= mfFadeSpeed * afTimeStep;
-		if(mfAmount <= mfAmountGoal)
+		if(ops.ops[i].kind == kOhplGa9bAmountParams)
 		{
-			mfAmount = 	mfAmountGoal;
-			SetActive(false);
+			cPostEffectParams_ColorConvTex sepiaParams;
+			sepiaParams.mfFadeAlpha = ops.ops[i].a;
+			gpBase->mpMapHandler->GetPostEffect_Sepia()->SetParams(&sepiaParams);
 		}
-	}
-	else
-	{
-		mfAmount += mfFadeSpeed * afTimeStep;
-		if(mfAmount >= mfAmountGoal)
+		else
 		{
-			mfAmount = mfAmountGoal;
-			SetActive(false);
+			gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(false);
 		}
-	}
-
-	cPostEffectParams_ColorConvTex sepiaParams;
-	sepiaParams.mfFadeAlpha = mfAmount;
-	gpBase->mpMapHandler->GetPostEffect_Sepia()->SetParams(&sepiaParams);
-	
-	if(mfAmount <=0)
-	{
-		gpBase->mpMapHandler->GetPostEffect_Sepia()->SetActive(false);
 	}
 }
 
@@ -532,59 +506,40 @@ void cLuxEffect_ShakeScreen::Start(float afAmount, float afTime,float afFadeInTi
 
 void cLuxEffect_ShakeScreen::Update(float afTimeStep)
 {
-	float fLargest = 0;
-
-	std::list<cLuxEffect_ShakeScreen_Shake>::iterator it = mlstShakes.begin();
-	for(; it != mlstShakes.end(); )
+	std::vector<OhplGa9bShake> vShakes;
+	vShakes.reserve(mlstShakes.size());
+	for(std::list<cLuxEffect_ShakeScreen_Shake>::iterator it = mlstShakes.begin(); it != mlstShakes.end(); ++it)
 	{
-		cLuxEffect_ShakeScreen_Shake &shake = *it;
-
-		if(shake.mfFadeInTime >0)
-		{
-			shake.mfFadeInTime -= afTimeStep; if(shake.mfFadeInTime<0) shake.mfFadeInTime=0;
-			float fT = shake.mfFadeInTime / shake.mfMaxFadeInTime;
-			shake.mfSize = (1-fT) * shake.mfMaxSize;
-		}
-		else if(shake.mfTime >0)
-		{
-			shake.mfTime -= afTimeStep; if(shake.mfTime<0)shake.mfTime=0;
-			shake.mfSize = shake.mfMaxSize;
-		}
-		else
-		{
-			shake.mfFadeOutTime -= afTimeStep; if(shake.mfFadeOutTime<0) shake.mfFadeOutTime=0;
-			float fT = shake.mfFadeOutTime / shake.mfMaxFadeOutTime;
-			shake.mfSize =  fT * shake.mfMaxSize;
-		}
-
-		//Log("%f, %f, %f size: %f\n",shake.mfFadeInTime,shake.mfTime,shake.mfFadeOutTime,shake.mfSize);
-
-		if(fLargest < shake.mfSize) fLargest = shake.mfSize;
-
-		if(shake.mfTime <= 0 && shake.mfFadeOutTime <= 0 && shake.mfFadeInTime <= 0)
-		{
-			it = mlstShakes.erase(it);
-
-			//If all shaking is over, set pos add to 0 and return.
-			if(mlstShakes.empty())
-			{
-				SetActive(false);
-				gpBase->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_ScreenShake,0);
-				return;
-			}
-		}
-		else
-		{
-			++it;
-		}
+		OhplGa9bShake s = { it->mfMaxSize, it->mfSize, it->mfTime, it->mfFadeInTime, it->mfMaxFadeInTime, it->mfFadeOutTime, it->mfMaxFadeOutTime };
+		vShakes.push_back(s);
 	}
 
-	cVector3f vAdd(0);
-	vAdd.x = cMath::RandRectf(-fLargest,fLargest);
-	vAdd.y = cMath::RandRectf(-fLargest,fLargest);
-	vAdd.z = cMath::RandRectf(-fLargest,fLargest);
+	uint32_t lNum = (uint32_t)vShakes.size();
+	OhplGa9bOps ops;
+	bool bActive = ohpl_ga9b_shake_update(vShakes.empty() ? NULL : &vShakes[0], &lNum, afTimeStep, &ops);
 
-	gpBase->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_ScreenShake, vAdd);
+	mlstShakes.clear();
+	for(uint32_t i=0; i<lNum; ++i)
+	{
+		cLuxEffect_ShakeScreen_Shake shake;
+		shake.mfMaxSize = vShakes[i].maxSize;
+		shake.mfSize = vShakes[i].size;
+		shake.mfTime = vShakes[i].time;
+		shake.mfFadeInTime = vShakes[i].fadeInTime;
+		shake.mfMaxFadeInTime = vShakes[i].maxFadeInTime;
+		shake.mfFadeOutTime = vShakes[i].fadeOutTime;
+		shake.mfMaxFadeOutTime = vShakes[i].maxFadeOutTime;
+		mlstShakes.push_back(shake);
+	}
+	if(bActive == false) SetActive(false);
+
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		if(ops.ops[i].kind == kOhplGa9bShakeEnd)
+			gpBase->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_ScreenShake,0);
+		else
+			gpBase->mpPlayer->SetHeadPosAdd(eLuxHeadPosAdd_ScreenShake, cVector3f(ops.ops[i].a, ops.ops[i].b, ops.ops[i].c));
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -608,6 +563,7 @@ cLuxEffect_ImageTrail::cLuxEffect_ImageTrail()
 {
 	mfAmount =0;
 	mfAmountGoal =0;
+	mfFadeSpeed =0;
 }
 
 void cLuxEffect_ImageTrail::FadeTo(float afAmount, float afSpeed)
@@ -620,32 +576,23 @@ void cLuxEffect_ImageTrail::FadeTo(float afAmount, float afSpeed)
 
 void cLuxEffect_ImageTrail::Update(float afTimeStep)
 {
-	if(mfAmountGoal < mfAmount)
+	OhplGa9bAmount s = { mfAmount, mfAmountGoal, mfFadeSpeed, mbActive };
+	OhplGa9bOps ops;
+	ohpl_ga9b_amount_update(&s, afTimeStep, &ops);
+	mfAmount = s.amount;
+	mbActive = s.active != 0;
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		mfAmount -= mfFadeSpeed * afTimeStep;
-		if(mfAmount <= mfAmountGoal)
+		if(ops.ops[i].kind == kOhplGa9bAmountParams)
 		{
-			mfAmount = 	mfAmountGoal;
-			SetActive(false);
+			cPostEffectParams_ImageTrail imageTrailParams;
+			imageTrailParams.mfAmount = ops.ops[i].a;
+			gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetParams(&imageTrailParams);
 		}
-	}
-	else
-	{
-		mfAmount += mfFadeSpeed * afTimeStep;
-		if(mfAmount >= mfAmountGoal)
+		else
 		{
-			mfAmount = mfAmountGoal;
-			SetActive(false);
+			gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(false);
 		}
-	}
-	
-	cPostEffectParams_ImageTrail imageTrailParams;
-	imageTrailParams.mfAmount = mfAmount;
-	gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetParams(&imageTrailParams);
-	
-	if(mfAmount <=0)
-	{
-		gpBase->mpMapHandler->GetPostEffect_ImageTrail()->SetActive(false);
 	}
 }
 
@@ -681,64 +628,56 @@ cLuxEffect_Fade::~cLuxEffect_Fade()
 
 void cLuxEffect_Fade::FadeIn(float afTime)
 {
-	mfGoalAlpha = 0;
-	if(afTime <= 0) mfAlpha = 0;
-	else			mfFadeSpeed = 1 / afTime;
+	OhplGa9bFade s = ToRust();
+	ohpl_ga9b_fade_in(&s, afTime);
+	FromRust(s);
+}
 
-	SetActive(true);
+OhplGa9bFade cLuxEffect_Fade::ToRust()
+{
+	OhplGa9bFade s = { mfGoalAlpha, mfAlpha, mfFadeSpeed, mbActive };
+	return s;
+}
+
+void cLuxEffect_Fade::FromRust(const OhplGa9bFade &s)
+{
+	mfGoalAlpha = s.goal;
+	mfAlpha = s.alpha;
+	mfFadeSpeed = s.speed;
+	mbActive = s.active != 0;
 }
 
 void cLuxEffect_Fade::FadeOut(float afTime)
 {
-	mfGoalAlpha = 1;
-	if(afTime <= 0) mfAlpha = 1;
-	else			mfFadeSpeed = 1 / afTime;
-
-	SetActive(true);
+	OhplGa9bFade s = ToRust();
+	ohpl_ga9b_fade_out(&s, afTime);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffect_Fade::SetDirectAlpha(float afX)
 {
-	if(afX<=0)	SetActive(false);
-	else		SetActive(true);
-
-	mfGoalAlpha = afX;
-	mfAlpha = afX;
+	OhplGa9bFade s = ToRust();
+	ohpl_ga9b_fade_direct(&s, afX);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxEffect_Fade::IsFading()
 {
-	if(mfGoalAlpha==0 && mfAlpha>0) return true;
-	if(mfGoalAlpha==1 && mfAlpha<1) return true;
-
-	return false;
+	OhplGa9bFade s = ToRust();
+	return ohpl_ga9b_fade_is_fading(&s);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffect_Fade::Update(float afTimeStep)
 {
-	if(mfGoalAlpha==0 && mfAlpha > 0)
-	{
-		mfAlpha -= afTimeStep * mfFadeSpeed;
-		if(mfAlpha <0)
-		{
-			mfAlpha =0;
-			SetActive(false);
-		}
-	}
-	else if(mfGoalAlpha==1 && mfAlpha < 1)
-	{
-		mfAlpha += afTimeStep * mfFadeSpeed;
-		if(mfAlpha >1)
-		{
-			mfAlpha =1;
-		}
-	}
+	OhplGa9bFade s = ToRust();
+	ohpl_ga9b_fade_update(&s, afTimeStep);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
@@ -754,9 +693,9 @@ void cLuxEffect_Fade::OnDraw(float afFrameTime)
 
 void cLuxEffect_Fade::Reset()
 {
-	mfGoalAlpha =0;
-	mfAlpha =0;
-	mfFadeSpeed = 1;
+	OhplGa9bFade s = ToRust();
+	ohpl_ga9b_fade_reset(&s);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
@@ -796,49 +735,36 @@ void cLuxEffect_SanityGainFlash::Start()
 {
 	if(msSound != "")
 		gpBase->mpHelpFuncs->PlayGuiSoundData(msSound, eSoundEntryType_Gui);
-	
-	mbActive = true;
 
-	mlStep = 0;
+	OhplGa9bFlash s = ToRust();
+	ohpl_ga9b_sanity_flash_start(&s, mfFadeInTime, mfFadeOutTime);
+	FromRust(s);
+}
 
-	mfAlpha =0;
+OhplGa9bFlash cLuxEffect_SanityGainFlash::ToRust()
+{
+	OhplGa9bFlash s = { mfAlpha, mlStep, mfCount, mfFadeInSpeed, mfWhiteSpeed, mfFadeOutSpeed, mbActive };
+	return s;
+}
 
-	mfFadeInSpeed = 1 / mfFadeInTime;
-	mfWhiteSpeed = 1 / 0.05f;
-	mfFadeOutSpeed = 1 / mfFadeOutTime;
+void cLuxEffect_SanityGainFlash::FromRust(const OhplGa9bFlash &s)
+{
+	mfAlpha = s.alpha;
+	mlStep = s.step;
+	mfCount = s.count;
+	mfFadeInSpeed = s.inSpeed;
+	mfWhiteSpeed = s.whiteSpeed;
+	mfFadeOutSpeed = s.outSpeed;
+	mbActive = s.active != 0;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffect_SanityGainFlash::Update(float afTimeStep)
 {
-	if(mlStep ==0)
-	{
-		mfAlpha += mfFadeInSpeed * afTimeStep;
-		if(mfAlpha >= 1.0f)
-		{
-			mfAlpha = 1.0f;
-			mlStep=1;
-			mfCount = 1;
-		}
-	}
-	else if(mlStep ==1)
-	{
-		mfCount -= mfWhiteSpeed * afTimeStep;
-		if(mfCount <= 0)
-		{
-			mlStep = 2;
-		}
-	}
-	else if(mlStep ==2)
-	{
-		mfAlpha -= mfFadeOutSpeed * afTimeStep;
-		if(mfAlpha <= 0.0f)
-		{
-			mbActive = false;
-		}
-	}
-
+	OhplGa9bFlash s = ToRust();
+	ohpl_ga9b_flash_update(&s, afTimeStep);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
@@ -877,62 +803,44 @@ cLuxEffect_Flash::~cLuxEffect_Flash()
 
 void cLuxEffect_Flash::Start(float afFadeIn, float afWhite, float afFadeOut)
 {
-	mbActive = true;
+	OhplGa9bFlash s = ToRust();
+	ohpl_ga9b_flash_start(&s, afFadeIn, afWhite, afFadeOut);
+	FromRust(s);
+}
 
-	mlStep = 0;
+OhplGa9bFlash cLuxEffect_Flash::ToRust()
+{
+	OhplGa9bFlash s = { mfAlpha, mlStep, mfCount, mfFadeInSpeed, mfWhiteSpeed, mfFadeOutSpeed, mbActive };
+	return s;
+}
 
-	mfAlpha =0;
-
-	if(afFadeIn==0) afFadeIn = 0.000001f;
-	if(afWhite==0) afWhite = 0.000001f;
-	if(afFadeOut==0) afFadeOut = 0.000001f;
-
-
-	mfFadeInSpeed = 1 / afFadeIn;
-	mfWhiteSpeed = 1 / afWhite;
-	mfFadeOutSpeed = 1 / afFadeOut;
+void cLuxEffect_Flash::FromRust(const OhplGa9bFlash &s)
+{
+	mfAlpha = s.alpha;
+	mlStep = s.step;
+	mfCount = s.count;
+	mfFadeInSpeed = s.inSpeed;
+	mfWhiteSpeed = s.whiteSpeed;
+	mfFadeOutSpeed = s.outSpeed;
+	mbActive = s.active != 0;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffect_Flash::Reset()
 {
-	mlStep = 0;
-
-	mfAlpha =0;
+	OhplGa9bFlash s = ToRust();
+	ohpl_ga9b_flash_reset(&s);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffect_Flash::Update(float afTimeStep)
 {
-	if(mlStep ==0)
-	{
-		mfAlpha += mfFadeInSpeed * afTimeStep;
-		if(mfAlpha >= 1.0f)
-		{
-			mfAlpha = 1.0f;
-			mlStep=1;
-			mfCount = 1;
-		}
-	}
-	else if(mlStep ==1)
-	{
-		mfCount -= mfWhiteSpeed * afTimeStep;
-		if(mfCount <= 0)
-		{
-			mlStep = 2;
-		}
-	}
-	else if(mlStep ==2)
-	{
-		mfAlpha -= mfFadeOutSpeed * afTimeStep;
-		if(mfAlpha <= 0.0f)
-		{
-			mbActive = false;
-		}
-	}
-
+	OhplGa9bFlash s = ToRust();
+	ohpl_ga9b_flash_update(&s, afTimeStep);
+	FromRust(s);
 }
 
 //-----------------------------------------------------------------------
@@ -1108,48 +1016,44 @@ void cLuxEffect_PlayVoice::AddMultiSubbedVoice(
 	voiceData.mfCurrentTime = 0;
 	voiceData.mfInterruptedAt = -1;
 
-	if(mbActive && mlstVoices.empty() == false)
+	OhplGa9bVoiceAdd addIn;
+	addIn.active = mbActive;
+	addIn.listEmpty = mlstVoices.empty();
+	addIn.frontPriority = mlstVoices.empty() ? 0 : mlstVoices.front().mlPriority;
+	addIn.priority = alPriority;
+	addIn.removeInterrupted = abRemoveInterrupted;
+	addIn.voiceValid = mpSoundHandler->IsValid(mpVoiceEntry,mlVoiceEntryID);
+	addIn.effectValid = mpSoundHandler->IsValid(mpEffectEntry,mlEffectEntryID);
+	OhplGa9bOps ops;
+	ohpl_ga9b_voice_add(&addIn, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		cLuxVoiceData& currentVoiceData = mlstVoices.front();
-
-		// negative priority: TDD-style call, queue without interrupting
-		if(alPriority >= 0 && currentVoiceData.mlPriority <= alPriority)
+		switch(ops.ops[i].kind)
 		{
-			/////////////////
-			// Replace the current voice
-			if(mpSoundHandler->IsValid(mpVoiceEntry,mlVoiceEntryID))
-			{
-				mpVoiceEntry->FadeOut(0.5f);
-				currentVoiceData.mfCurrentTime = mpVoiceEntry->GetChannel()->GetElapsedTime();
-				voiceData.mfInterruptedAt = gpBase->mpEngine->GetGameTime();
-			}
-			
+		case kOhplGa9bVoiceFadeVoice:
+			mpVoiceEntry->FadeOut(0.5f);
+			mlstVoices.front().mfCurrentTime = mpVoiceEntry->GetChannel()->GetElapsedTime();
+			voiceData.mfInterruptedAt = gpBase->mpEngine->GetGameTime();
+			break;
+		case kOhplGa9bVoiceVoiceNull:
 			mpVoiceEntry = NULL;
-
-			if(mpSoundHandler->IsValid(mpEffectEntry,mlEffectEntryID)) mpEffectEntry->FadeOut(0.5f);
+			break;
+		case kOhplGa9bVoiceFadeEffect:
+			mpEffectEntry->FadeOut(0.5f);
+			break;
+		case kOhplGa9bVoiceEffectNull:
 			mpEffectEntry = NULL;
-			
-			/////////////
-			// Remove the old one and place this first
-			if(abRemoveInterrupted)
-			{
-				mlstVoices.pop_front();
-			}
-
+			break;
+		case kOhplGa9bVoicePopFront:
+			mlstVoices.pop_front();
+			break;
+		case kOhplGa9bVoicePushFront:
 			mlstVoices.push_front(voiceData);
-		}
-		else
-		{
-			/////////////
-		// Add to the back
+			break;
+		case kOhplGa9bVoicePushBack:
 			mlstVoices.push_back(voiceData);
+			break;
 		}
-	}
-	else
-	{
-		/////////////
-		// Add to the back
-		mlstVoices.push_back(voiceData);
 	}
 
 	mbActive = true;
@@ -1207,39 +1111,40 @@ static bool SortVoiceData(const cLuxVoiceData& aLhs, const cLuxVoiceData& aRhs)
 
 void cLuxEffect_PlayVoice::Update(float afTimeStep)
 {
-	//do not want to have like this, because then loading save when playing last voice + callback will not work and callback will not be called.
-	//if(mpVoiceEntry==NULL && mpEffectEntry==NULL && mlstVoices.empty()) return; 
-
+	////////////////////////////
+	// Subtitle queue
+	std::vector<float> vDelays(mvTextEntryQueue.size());
 	for(size_t i=0; i<mvTextEntryQueue.size(); ++i)
-	{
-		mvTextEntryQueue[i].mfDelay -= afTimeStep;
-	}
-
-	while ( !mvTextEntryQueue.empty() && mvTextEntryQueue.front().mfDelay <= 0.0f )
+		vDelays[i] = mvTextEntryQueue[i].mfDelay;
+	size_t lDue = ohpl_ga9b_voice_text_tick(vDelays.empty() ? NULL : &vDelays[0], vDelays.size(), afTimeStep);
+	for(size_t i=0; i<vDelays.size(); ++i)
+		mvTextEntryQueue[i].mfDelay = vDelays[i];
+	for(size_t i=0; i<lDue; ++i)
 	{
 		mvCurrentTextRows.clear();
 		gpBase->mpDefaultFont->GetWordWrapRows(mfRowWidth,mvFontSize.y+2,mvFontSize, mvTextEntryQueue.front().msTextEntry, &mvCurrentTextRows);
 		mvTextEntryQueue.pop_front();
 	}
 
-	if(mfVolumeMul <1.0f)
+	OhplGa9bVoiceUpdate upd;
+	upd.volumeMul = mfVolumeMul;
+	upd.voiceNonNull = mpVoiceEntry != NULL;
+	upd.voiceValid = mpSoundHandler->IsValid(mpVoiceEntry, mlVoiceEntryID);
+	upd.effectNonNull = mpEffectEntry != NULL;
+	upd.effectValid = mpSoundHandler->IsValid(mpEffectEntry, mlEffectEntryID);
+	upd.listEmpty = mlstVoices.empty();
+	OhplGa9bOps ops;
+	int lAction = ohpl_ga9b_voice_update_a(&upd, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
 	{
-		if(mpVoiceEntry && mpSoundHandler->IsValid(mpVoiceEntry, mlVoiceEntryID))
-			mpVoiceEntry->SetVolumeMul(mfVolumeMul);
-
-		if(mpEffectEntry && mpSoundHandler->IsValid(mpEffectEntry, mlEffectEntryID))
-			mpEffectEntry->SetVolumeMul(mfVolumeMul);
+		if(ops.ops[i].kind == kOhplGa9bVoiceVolVoice) mpVoiceEntry->SetVolumeMul(ops.ops[i].a);
+		else if(ops.ops[i].kind == kOhplGa9bVoiceVolEffect) mpEffectEntry->SetVolumeMul(ops.ops[i].a);
 	}
-	
-	if(mpSoundHandler->IsValid(mpVoiceEntry, mlVoiceEntryID)) return;
-	if(mpVoiceEntry==NULL && mpSoundHandler->IsValid(mpEffectEntry, mlEffectEntryID)) return;
+	if(lAction == kOhplGa9bVoiceReturn) return;
 
-	if(mlstVoices.empty())
+	if(lAction == kOhplGa9bVoiceFinalize)
 	{
-		//Need to save as it will be reseted otherwise!
-		tString sCallback = msOverCallback; 
-
-		//Reset before calling so it is possible to start voices from callback!
+		tString sCallback = msOverCallback;
 		float fPreVolMul = mfVolumeMul;
 		Reset();
 		mfVolumeMul = fPreVolMul;
@@ -1247,24 +1152,15 @@ void cLuxEffect_PlayVoice::Update(float afTimeStep)
 
 		if(sCallback!="")
 			gpBase->mpMapHandler->GetCurrentMap()->RunScript(sCallback+"()");
-		
+
 		return;
 	}
 
-	////////////
-	// Sort the priorities
 	mlstVoices.sort(SortVoiceData);
 
     cLuxVoiceData& voiceData = mlstVoices.front();
 	
-	double fStartTime = voiceData.mfCurrentTime;
-
-	if(voiceData.mfInterruptedAt != -1.0)
-	{
-		////////////////
-		// Add the elapsed time since interrupting it
-		fStartTime += gpBase->mpEngine->GetGameTime() - voiceData.mfInterruptedAt;
-	}
+	double fStartTime = ohpl_ga9b_voice_start_time(voiceData.mfCurrentTime, voiceData.mfInterruptedAt, gpBase->mpEngine->GetGameTime());
 
 	//////////////////////
 	//GUI sound
@@ -1313,84 +1209,47 @@ void cLuxEffect_PlayVoice::Update(float afTimeStep)
 
 	//////////////////////
 	//Text
-	mvCurrentTextRows.clear();
-	mvTextEntryQueue.clear();
-
-	if(voiceData.msText != _W(""))
+	OhplGa9bVoiceTexts texts;
+	const tWString *vTexts[7] = { &voiceData.msText, &voiceData.msText2, &voiceData.msText3, &voiceData.msText4, &voiceData.msText5, &voiceData.msText6, &voiceData.msText7 };
+	const float vDelaysIn[7] = { voiceData.mfTextDelay, voiceData.mfText2Delay, voiceData.mfText3Delay, voiceData.mfText4Delay, voiceData.mfText5Delay, voiceData.mfText6Delay, voiceData.mfText7Delay };
+	texts.nonEmptyMask = 0;
+	for(int i=0; i<7; ++i)
 	{
-		if ( voiceData.mfTextDelay <= 0.0f )
+		if(*vTexts[i] != _W("")) texts.nonEmptyMask |= 1u << i;
+		texts.delays[i] = vDelaysIn[i];
+	}
+	texts.listSize = (uint32_t)mlstVoices.size();
+	texts.voiceNull = mpVoiceEntry==NULL;
+	texts.effectNull = mpEffectEntry==NULL;
+	bool bOver = ohpl_ga9b_voice_update_b(&texts, &ops);
+	for(uint32_t i=0; i<ops.n; ++i)
+	{
+		switch(ops.ops[i].kind)
 		{
+		case kOhplGa9bVoiceClearText:
+			mvCurrentTextRows.clear();
+			mvTextEntryQueue.clear();
+			break;
+		case kOhplGa9bVoiceWrapNow:
 			gpBase->mpDefaultFont->GetWordWrapRows(mfRowWidth,mvFontSize.y+2,mvFontSize, voiceData.msText, &mvCurrentTextRows);
+			break;
+		case kOhplGa9bVoiceQueue:
+			{
+				cTextQueueEntry entry;
+				entry.mfDelay = ops.ops[i].a;
+				entry.msTextEntry = *vTexts[ops.ops[i].i];
+				mvTextEntryQueue.push_back( entry );
+			}
+			break;
 		}
-		else
-		{
-			cTextQueueEntry entry;
-			entry.mfDelay = voiceData.mfTextDelay;
-			entry.msTextEntry = voiceData.msText;
-			mvTextEntryQueue.push_back( entry );
-		}
 	}
 
-	if(voiceData.msText2 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText2Delay;
-		entry.msTextEntry = voiceData.msText2;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	if(voiceData.msText3 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText3Delay;
-		entry.msTextEntry = voiceData.msText3;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	if(voiceData.msText4 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText4Delay;
-		entry.msTextEntry = voiceData.msText4;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	if(voiceData.msText5 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText5Delay;
-		entry.msTextEntry = voiceData.msText5;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	if(voiceData.msText6 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText6Delay;
-		entry.msTextEntry = voiceData.msText6;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	if(voiceData.msText7 != _W(""))
-	{
-		cTextQueueEntry entry;
-		entry.mfDelay = voiceData.mfText7Delay;
-		entry.msTextEntry = voiceData.msText7;
-		mvTextEntryQueue.push_back( entry );
-	}
-
-	//////////////////////
-	//Pop!
 	mlstVoices.pop_front();
 
-	//////////////////////
-	//Extra check in case the voices does not load.
-	if(mlstVoices.empty() && mpVoiceEntry==NULL && mpEffectEntry==NULL)
+	if(bOver)
 	{
-		//Reset before calling so it is possible to start voices from callback!
 		Reset();
 		SetActive(false);
-		
 		if(msOverCallback!="")
 			gpBase->mpMapHandler->GetCurrentMap()->RunScript(msOverCallback+"()");
 	}
@@ -1402,13 +1261,14 @@ void cLuxEffect_PlayVoice::OnDraw(float afFrameTime)
 {
 	if(gpBase->mpMessageHandler->ShowSubtitles()==false) return;
 	if(mvCurrentTextRows.empty()) return;
-    
-	cVector3f vStartPos(400-mfRowWidth/2, 580 - (mvCurrentTextRows.size()*(mvFontSize.y+2)), 4);
-	
-    for(size_t i=0; i<mvCurrentTextRows.size(); ++i)
+
+	size_t lRows = mvCurrentTextRows.size();
+	std::vector<OhplGa9bRow> vRows(lRows);
+	size_t lNum = ohpl_ga9b_voice_rows(lRows, mfRowWidth, mvFontSize.y, &vRows[0]);
+	for(size_t i=0; i<lNum; ++i)
 	{
-		gpBase->mpGameHudSet->DrawFont(mvCurrentTextRows[i],gpBase->mpDefaultFont, vStartPos, mvFontSize,cColor(1,1));
-		vStartPos.y+= mvFontSize.y+2;
+		const OhplGa9bRow &row = vRows[i];
+		gpBase->mpGameHudSet->DrawFont(mvCurrentTextRows[row.row],gpBase->mpDefaultFont, cVector3f(row.x, row.y, row.z), mvFontSize,cColor(1,1));
 	}
 }
 //-----------------------------------------------------------------------

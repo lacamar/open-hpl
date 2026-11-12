@@ -44,7 +44,6 @@ public:
 	void AddLog(eLuxProgressLogLevel aLevel, const tString& asMessage);
 	
 private:
-	tString LevelToString(eLuxProgressLogLevel aLevel);
 
 	int mlCounter;
 	int mlFileNameCount;
