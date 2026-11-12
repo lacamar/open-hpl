@@ -20,8 +20,7 @@
 #include "LauncherHelper.h"
 #include "hpl.h"
 #include "launcher.h"
-
-#include <set>
+#include "RustLauncher.h"
 
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
@@ -32,121 +31,42 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Check_Button.H>
 
+
 #ifdef USERDIR_RESOURCES
 extern tWString gsUserResourceDir;
 #endif
 
 using namespace hpl;
 
-int glDefaultSSAOSamples = 8;
-
-//------------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////
-// Default int values
-static cPresetValueInt gvIntPresets[] = 
+static std::vector<OhplLnMode> ToLnModes(const tVideoModeVec& avModes)
 {
-	cPresetValueInt("Graphics", "ShadowQuality", 1),
-	cPresetValueInt("Graphics", "ShadowResolution", 1),
-	cPresetValueInt("Graphics", "TextureQuality", 1),
-	cPresetValueInt("Graphics", "TextureFilter", 1),
-	cPresetValueInt("Graphics", "SSAOResolution", 1),
-	cPresetValueInt("Graphics", "SSAOSamples", glDefaultSSAOSamples),
-
-	cPresetValueInt("", "", 0),
-};
-
-//------------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////
-// Default float values
-static cPresetValueFloat gvFloatPresets[] = 
-{
-	cPresetValueFloat("Graphics", "TextureAnisotropy", 1.0f),
-
-	cPresetValueFloat("", "", 0.0f),
-};
-
-//------------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////
-// Default bool values
-static cPresetValueBool gvBoolPresets[] =
-{
-	cPresetValueBool("Graphics", "ParallaxEnabled", true),
-	cPresetValueBool("Graphics", "WorldReflection", true),
-	cPresetValueBool("Graphics", "SSAOActive", true),
-	cPresetValueBool("Graphics", "EdgeSmooth", true),
-
-	cPresetValueBool("", "", false),
-};
-
-//------------------------------------------------------------------------------
-
-/*
-static tString gvPresetEntries[] =
-{
-	// Int Values
-	"ShadowQuality",
-	"ShadowResolution",
-
-	"TextureQuality",
-	"TextureFilter",
-
-	"SSAOResolution",
-	"SSAOSamples",
-
-	// Float Values
-
-
-	// numeric values
-	"ShadowQuality",
-	"ShadowResolution",
-
-	"TextureQuality",
-	"TextureFilter",
-	"TextureAnisotropy",
-
-	"SSAOResolution",
-	"SSAOSamples",
-	"",
-	
-	// boolean values
-	"ParallaxEnabled",
-	"WorldReflection",
-	"SSAOActive",
-	"EdgeSmooth",
-	""
-};
-*/
-
-//------------------------------------------------------------------------------
-
-
-
-//------------------------------------------------------------------------------
-
-iPresetValue::iPresetValue(const tString& asCat, const tString& asName) : msCat(asCat), msName(asName)
-{
+	std::vector<OhplLnMode> vModes;
+	for(size_t i = 0; i < avModes.size(); ++i)
+	{
+		OhplLnMode mode = {avModes[i].mlDisplay, avModes[i].mvScreenSize.x, avModes[i].mvScreenSize.y};
+		vModes.push_back(mode);
+	}
+	return vModes;
 }
 
-cPresetValueInt::cPresetValueInt(const tString& asCat, const tString& asName, int alDefault) : iPresetValue(asCat, asName), mlDefaultValue(alDefault)
+static void SelectByUserData(Fl_Choice* apChoice, int alWanted)
 {
+	std::vector<int> vValues;
+	for(int i = 0; i < apChoice->size(); ++i)
+		vValues.push_back((int)(long int)apChoice->menu()[i].user_data());
+	apChoice->value(ohpl_launcher_menu_index(vValues.data(), vValues.size(), alWanted));
 }
 
-cPresetValueFloat::cPresetValueFloat(const tString& asCat, const tString& asName, float afDefault) : iPresetValue(asCat, asName), mfDefaultValue(afDefault)
+static void SelectByUserDataIndex(Fl_Choice* apRes, int alIndex)
 {
+	const Fl_Menu_Item *item = apRes->menu();
+	for (int i=1; i<(int)apRes->size(); ++i,++item) {
+		if ((long int)item->user_data()==alIndex) {
+			apRes->value(item);
+			break;
+		}
+	}
 }
-
-cPresetValueBool::cPresetValueBool(const tString& asCat, const tString& asName, bool abDefault) : iPresetValue(asCat, asName), mbDefaultValue(abDefault)
-{
-}
-
-//------------------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////////////
-// LAUNCHER HELPER - Static helper functions
-///////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
 
@@ -174,54 +94,30 @@ tVideoModeVec cLauncherHelper::GetAvailableVideoModes(cConfigFile* apFile)
 	tVideoModeVec vVidModes;
 	cPlatform::GetAvailableVideoModes(vVidModes, 32);
 
-	int lScreenWidth = apFile->GetInt("Screen", "Width", -1);
-    int lScreenHeight = apFile->GetInt("Screen", "Height", -1);
-    int lDisplay = apFile->GetInt("Screen", "Display", 0);
-    cVideoMode curMode(lDisplay, cVector2l(lScreenWidth, lScreenHeight), 32, 1);
-
-	if(lScreenWidth==-1 || lScreenHeight==-1)
+	OhplLnCfg cfg(apFile);
+	std::vector<OhplLnMode> vModes = ToLnModes(vVidModes);
+	if(ohpl_launcher_fix_config_size(cfg.Ops(), vModes.data(), vModes.size()))
 	{
-		apFile->SetInt("Screen", "Width", -1);
-		apFile->SetInt("Screen", "Height", -1);
-		apFile->SetInt("Screen", "Display", 0);
-	}
-	else
-	{
-		int lResFoundIndex = -1;
-		for(int i=0;i<(int)vVidModes.size();++i)
-		{
-			cVideoMode& vMode = vVidModes[i];
-			if(vMode == curMode)
-			{
-				lResFoundIndex = i;
-				break;
-			}
-		}
-		
-		if(lResFoundIndex==-1)
-		{
-			cVideoMode vMode(cVector2l(lScreenWidth, lScreenHeight));
-			
-			vVidModes.push_back(vMode);
-		}
+		OhplLnMode cur;
+		ohpl_launcher_configured_mode(cfg.Ops(), &cur);
+		vVidModes.push_back(cVideoMode(cVector2l(cur.width, cur.height)));
 	}
 
 	return vVidModes;
 }
-
 //------------------------------------------------------------------------------
 
 tStringVec cLauncherHelper::GetAvailableLanguages(const tString& asGameLangFolder)
 {
 	tStringVec vLangFiles;
-	////////////////////////////////////
-	// Retrieve available languages
 	tWStringList lstLangs;
 	tWString sPath = cString::To16Char(asGameLangFolder);
+	tString sDir;
 #ifdef USERDIR_RESOURCES
-	if (cPlatform::FileExists(gsUserResourceDir + sPath)) {
-		sPath = gsUserResourceDir + sPath;
-	}
+	tString sUserDir = cString::To8Char(gsUserResourceDir);
+	bool bUserExists = cPlatform::FileExists(gsUserResourceDir + sPath);
+	ohpl_launcher_languages_dir(OhplLnS(asGameLangFolder), OhplLnS(sUserDir), bUserExists, OhplLnStrSink, &sDir);
+	sPath = cString::To16Char(sDir);
 #endif
 	cPlatform::FindFilesInDir(lstLangs, sPath, _W("*.lang"));
 
@@ -235,7 +131,6 @@ tStringVec cLauncherHelper::GetAvailableLanguages(const tString& asGameLangFolde
 
 	return vLangFiles;
 }
-
 //------------------------------------------------------------------------------
 
 tSoundDeviceVec cLauncherHelper::GetAvailableSoundDevices()
@@ -253,60 +148,22 @@ tSoundDeviceVec cLauncherHelper::GetAvailableSoundDevices()
 
 int cLauncherHelper::GetEqualPresetIndex(cConfigFile* apConfig, const std::vector<cConfigFile*>& avPresets)
 {
+	std::vector<OhplLnCfg> vPresets;
 	for(size_t i = 0; i < avPresets.size(); ++i)
-	{
-		if(EqualsPreset(apConfig, avPresets[i]))
-			return (int)i;
-	}
-
-	return -1;
+		vPresets.push_back(OhplLnCfg(avPresets[i]));
+	std::vector<const OhplLnCfgOps*> vOps;
+	for(size_t i = 0; i < vPresets.size(); ++i)
+		vOps.push_back(vPresets[i].Ops());
+	OhplLnCfg cfg(apConfig);
+	return ohpl_launcher_equal_preset_index(cfg.Ops(), vOps.data(), vOps.size());
 }
-
 //------------------------------------------------------------------------------
 
 bool cLauncherHelper::EqualsPreset(cConfigFile* apFile, cConfigFile* apPresetFile)
 {
-	if(apFile==NULL || apPresetFile==NULL)
-		return false;
-
-	bool bEqualsPreset = true;
-
-	// Check ints
-	for(int i=0; bEqualsPreset && gvIntPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvIntPresets[i].msCat;
-		const tString& sName = gvIntPresets[i].msName;
-
-		bEqualsPreset = bEqualsPreset && 
-			apFile->GetInt(sCat, sName , -1) ==
-			apPresetFile->GetInt(sCat, sName, 0);
-	}
-
-	// Check floats
-	for(int i=0; bEqualsPreset && gvFloatPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvFloatPresets[i].msCat;
-		const tString& sName = gvFloatPresets[i].msName;
-
-		bEqualsPreset = bEqualsPreset && 
-			apFile->GetFloat(sCat, sName , -1.0f) ==
-			apPresetFile->GetFloat(sCat, sName, 0.0f);
-	}
-
-	// Check bools
-	for(int i=0; bEqualsPreset && gvBoolPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvBoolPresets[i].msCat;
-		const tString& sName = gvBoolPresets[i].msName;
-
-		bEqualsPreset = bEqualsPreset && 
-			apFile->GetBool(sCat, sName , false) ==
-			apPresetFile->GetBool(sCat, sName, true);
-	}
-	
-	return bEqualsPreset;
+	OhplLnCfg file(apFile), preset(apPresetFile);
+	return ohpl_launcher_equals_preset(file.Ops(), preset.Ops()) != 0;
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::UpdateConfigFile(cUserInterface* apUI, cConfigFile* apFile,
@@ -345,101 +202,30 @@ void cLauncherHelper::UpdateConfigFile(cUserInterface* apUI, cConfigFile* apFile
 
 //------------------------------------------------------------------------------
 
-void cLauncherHelper::UpdateConfigFileWithPreset(cConfigFile* apFile, cConfigFile* apPresetFile)
+void cLauncherHelper::UpdateConfigFileWithPreset(cConfigFile* apFile, cConfigFile* apPreset)
 {
-	if(apFile==NULL || apPresetFile==NULL) return;
-
-	
-	for(int i=0; gvIntPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvIntPresets[i].msCat;
-		const tString& sName = gvIntPresets[i].msName;
-		int lDefault = gvIntPresets[i].mlDefaultValue;
-
-		apFile->SetInt(sCat, sName, 
-			apPresetFile->GetInt(sCat, sName, lDefault));
-	}
-
-	for(int i=0; gvFloatPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvFloatPresets[i].msCat;
-		const tString& sName = gvFloatPresets[i].msName;
-		float fDefault = gvFloatPresets[i].mfDefaultValue;
-
-		apFile->SetFloat(sCat, sName, 
-			apPresetFile->GetFloat(sCat, sName, fDefault));
-	}
-
-	for(int i=0; gvBoolPresets[i].msName!=""; ++i)
-	{
-		const tString& sCat = gvBoolPresets[i].msCat;
-		const tString& sName = gvBoolPresets[i].msName;
-		bool bDefault = gvBoolPresets[i].mbDefaultValue;
-
-		apFile->SetBool(sCat, sName, 
-			apPresetFile->GetBool(sCat, sName, bDefault));
-	}
-	
-	/*
-	UpdateConfigFile("Graphics", "ShadowQuality", apPreset->GetInt("Graphics", "ShadowQuality", 1));
-	UpdateConfigFile("Graphics", "ShadowResolution", apPreset->GetInt("Graphics", "ShadowResolution", 1));
-	UpdateConfigFile("Graphics", "SSAOResolution", apPreset->GetInt("Graphics", "SSAOResolution", 0));
-	UpdateConfigFile("Graphics", "SSAOSamples", apPreset->GetInt("Graphics", "SSAOSamples", glDefaultSSAOSamples));
-	UpdateConfigFile("Graphics", "TextureQuality", apPreset->GetInt("Graphics", "TextureQuality", 1));
-	UpdateConfigFile("Graphics", "TextureFilter", apPreset->GetInt("Graphics", "TextureFilter", 1));
-
-	UpdateConfigFile("Graphics", "WorldReflection", apPreset->GetBool("Graphics", "WorldReflection", "true"));
-  
-  UpdateConfigFile("Graphics", "SSAOActive", apPreset->GetBool("Graphics", "SSAOActive", true));
-  
-  
-  UpdateConfigFile("Graphics", "TextureQuality", apPreset->GetInt("Graphics", "TextureQuality", 1));
-  UpdateConfigFile("Graphics", "TextureFilter", apPreset->GetInt("Graphics", "TextureFilter", 1));
-  UpdateConfigFile("Graphics", "TextureAnisotropy", apPreset->GetFloat("Graphics", "TextureAnisotropy", 1));
-  
-  UpdateConfigFile("Graphics", "EdgeSmooth", apPreset->GetBool("Graphics", "EdgeSmooth", false));
-  
-  UpdateConfigFile("Graphics", "ParallaxEnabled", apPreset->GetBool("Graphics", "ParallaxEnabled", true));
-  UpdateConfigFile("Graphics", "ParallaxQuality", apPreset->GetInt("Graphics", "ParallaxQuality", 0));
-
-  mbSettingPreset = false;
-  */
+	OhplLnCfg file(apFile), preset(apPreset);
+	ohpl_launcher_apply_preset(file.Ops(), preset.Ops());
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::PopulateLanguages(const tStringVec& avLangFiles, const tString& asDefaultLang, cConfigFile* apConfig, Fl_Choice* apLangs)
 {
-	///////////////////////////////////////////////////////////////////////////////////
-	// Lang
-	int lLangIndex = -1;
-	int lDefaultLangIndex = -1;
-	tString sCurrentLang = apConfig->GetString("Main", "StartLanguage", asDefaultLang);
-
+	std::vector<OhplLnStr> vFiles;
 	for(size_t i=0;i<avLangFiles.size();++i)
 	{
 		const tString& sLangFile = avLangFiles[i];
+		vFiles.push_back(OhplLnS(sLangFile));
 
-		tString sLangName = cString::ToLowerCase(cString::Sub(sLangFile, 0, 
-									cString::GetLastStringPos(sLangFile, ".")));
-									   
+		tString sLangName;
+		ohpl_launcher_language_name((const unsigned char*)sLangFile.data(), sLangFile.size(), OhplLnStrSink, &sLangName);
 		tString sLangEntry = cString::S16BitToUTF8(kTranslate("Languages", sLangName));
-		//tString sLangEntry = cString::To8Char(kTranslate("Languages", sLangName));
-									   	
 		apLangs->add(sLangEntry.c_str());
-
-		if(lDefaultLangIndex==-1 && sLangFile==asDefaultLang)
-			lDefaultLangIndex = i;
-		if(sLangFile == sCurrentLang)
-			lLangIndex = i;
 	}
 
-	if(lLangIndex==-1)
-		lLangIndex = lDefaultLangIndex;
-
-	apLangs->value(lLangIndex);
+	OhplLnCfg cfg(apConfig);
+	apLangs->value(ohpl_launcher_language_index(cfg.Ops(), vFiles.data(), vFiles.size(), OhplLnS(asDefaultLang)));
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::cb_AddResolution(Fl_Widget* o, void* v) 
@@ -452,252 +238,128 @@ void cLauncherHelper::cb_AddResolution(Fl_Widget* o, void* v)
 
 bool cLauncherHelper::AddCustomResolution(tVideoModeVec& avVidModes, cConfigFile* apConfig, Fl_Choice* apRes, cUserInterface* apUI, int apWidth, int apHeight)
 {
-	if (apWidth < 640 || apHeight < 480) {
+	std::vector<OhplLnMode> vModes = ToLnModes(avVidModes);
+	int lRow = -1;
+	int lAction = ohpl_launcher_custom_resolution(vModes.data(), vModes.size(), apWidth, apHeight, &lRow);
+	if (lAction == 0) {
 		return false;
 	}
-	//update config
+
 	UpdateConfigFile(apUI, apConfig, "Screen", "Width", apWidth);
 	UpdateConfigFile(apUI, apConfig, "Screen", "Height", apHeight);
 	UpdateConfigFile(apUI, apConfig, "Screen", "Display", 0);
-	// Find existing mode first.
-	int lSelectedRes = -1;
-	for(int i=0; i<(int)avVidModes.size(); ++i)
-	{
-		const cVideoMode& vMode = avVidModes[i];
-		if(vMode.mvScreenSize.x==apWidth && vMode.mvScreenSize.y==apHeight)
-			lSelectedRes = i;
-	}
-	if (lSelectedRes != -1) {
+
+	if (lAction == 1) {
 		const Fl_Menu_Item *item = apRes->menu();
 		for (int i=1; i<(int)apRes->size(); ++i,++item) {
-			if ((long int)item->user_data()==lSelectedRes) {
+			if ((long int)item->user_data()==lRow) {
 				apRes->value(item);
 				return true;
 			}
 		}
 	}
+
 	cVideoMode vMode(cVector2l(apWidth, apHeight));
 	avVidModes.push_back(vMode);
-
 	PopulateResolutions(avVidModes, apConfig, apRes, apUI);
 
 	return true;
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::ReselectResolution(const tVideoModeVec& avVidModes, cConfigFile* apConfig, Fl_Choice* apRes)
 {
-	// Reset resolution selection
-	int lScreenWidth, lScreenHeight, lDisplay;
-	lScreenWidth = apConfig->GetInt("Screen", "Width", -1);
-	lScreenHeight = apConfig->GetInt("Screen", "Height", -1);
-	lDisplay = apConfig->GetInt("Screen", "Display", 0);
-	cVideoMode curMode(lDisplay, cVector2l(lScreenWidth, lScreenHeight), 32, 1);
-
-	int lSelectedRes = -1;
-	for(int i=0; i<(int)avVidModes.size(); ++i)
-	{
-		const cVideoMode& vMode = avVidModes[i];
-		if(vMode == curMode)
-			lSelectedRes = i;
-	}
-	const Fl_Menu_Item *item = apRes->menu();
-	for (int i=1; i<(int)apRes->size(); ++i,++item) {
-		if ((long int)item->user_data()==lSelectedRes) {
-			apRes->value(item);
-			break;
-		}
-	}
+	OhplLnCfg cfg(apConfig);
+	OhplLnMode cur;
+	ohpl_launcher_configured_mode(cfg.Ops(), &cur);
+	std::vector<OhplLnMode> vModes = ToLnModes(avVidModes);
+	SelectByUserDataIndex(apRes, ohpl_launcher_last_match(vModes.data(), vModes.size(), cur));
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::PopulateResolutions(const tVideoModeVec& avVidModes, cConfigFile* apConfig, Fl_Choice* apRes, cUserInterface* apUI)
 {
-	int lScreenWidth, lScreenHeight, lDisplay;
-	lScreenWidth = apConfig->GetInt("Screen", "Width", -1);
-	lScreenHeight = apConfig->GetInt("Screen", "Height", -1);
-	lDisplay = apConfig->GetInt("Screen", "Display", 0);
-	cVideoMode curMode(lDisplay, cVector2l(lScreenWidth, lScreenHeight), 32, 1);
-	// Clear out menu
+	OhplLnCfg cfg(apConfig);
+	OhplLnMode cur;
+	ohpl_launcher_configured_mode(cfg.Ops(), &cur);
+	std::vector<OhplLnMode> vModes = ToLnModes(avVidModes);
+
 	apRes->menu(NULL);
 
-	// FLTK add() merges identical labels and treats '/' as a path separator
-	std::set<int> setDisplays;
-	for(size_t i=0; i<avVidModes.size(); ++i) setDisplays.insert(avVidModes[i].mlDisplay);
-	bool bMultiDisplay = setDisplays.size() > 1;
-
-	int lSelectedRes = -1;
+	bool bMultiDisplay = ohpl_launcher_multi_display(vModes.data(), vModes.size()) != 0;
 	int lItemPos = -1;
+
 	for(int i=0; i<(int)avVidModes.size(); ++i)
 	{
 		const cVideoMode& vMode = avVidModes[i];
-		tString sModeStr;
-		if (vMode.isFullScreenDesktop())
-		{
-			sModeStr = cString::S16BitToUTF8(kTranslate("OptionsMenu", "FullScreenDesktop")) + " " + cString::S16BitToUTF8(cPlatform::GetDisplayName(vMode.mlDisplay));
-		}
-		else
-		{
-			sModeStr = cString::ToString(vMode.mvScreenSize.x) + "x" + cString::ToString(vMode.mvScreenSize.y);
-			// Calculate aspect ratio
-			AspectRatio ratio = AspectRatioForResolution(vMode.mvScreenSize.x, vMode.mvScreenSize.y);
-			sModeStr += "  [" + cString::ToString(ratio.w) + ':' + cString::ToString(ratio.h)+ "]";
-			// Check if custom added mode
-			if(vMode.mbCustom)
-			{
-				tWString sAppendix = tWString(kTranslate("Launcher", "Custom"));
-				sModeStr += " (" + cString::S16BitToUTF8(sAppendix) + ")";
-			}
-		}
-		if(bMultiDisplay)
-		{
-			tString sDisplayName = cString::S16BitToUTF8(cPlatform::GetDisplayName(vMode.mlDisplay));
-			sDisplayName = cString::ReplaceCharTo(sDisplayName, "/", "-");
-			sModeStr += "  (" + sDisplayName + ")";
-		}
-		lItemPos = apRes->add(sModeStr.c_str(), 0, NULL, (void*)i);
 
-		if(vMode == curMode)
-			lSelectedRes = lItemPos;
+		tString sFullScreenDesktop = cString::S16BitToUTF8(kTranslate("OptionsMenu", "FullScreenDesktop"));
+		tString sDisplayName = cString::S16BitToUTF8(cPlatform::GetDisplayName(vMode.mlDisplay));
+		tString sCustom = cString::S16BitToUTF8(tWString(kTranslate("Launcher", "Custom")));
+		tString sModeStr;
+		ohpl_launcher_mode_label(vMode.isFullScreenDesktop(), OhplLnS(sFullScreenDesktop), OhplLnS(sDisplayName),
+								 vMode.mvScreenSize.x, vMode.mvScreenSize.y, vMode.mbCustom, OhplLnS(sCustom),
+								 bMultiDisplay, OhplLnStrSink, &sModeStr);
+
+		lItemPos = apRes->add(sModeStr.c_str(), 0, NULL, (void*)(long)i);
 	}
+
 	if(lItemPos>-1) {
 		apRes->mode(lItemPos,FL_MENU_DIVIDER);
 	}
-	// Add Custom Menu option
 	apRes->add("(Add Custom...)", 0, (Fl_Callback*)cb_AddResolution, (void*)apUI);
 
-	if(lSelectedRes==-1)
-	{
-		if(lScreenWidth==-1 || lScreenHeight==-1)
-			lSelectedRes = 0;
-	}
-
-	apRes->value(lSelectedRes);
+	apRes->value(ohpl_launcher_populate_selection(ohpl_launcher_last_match(vModes.data(), vModes.size(), cur), cur.width, cur.height));
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::PopulateSoundDevices(const tSoundDeviceVec& avSoundDevices, iSoundDeviceIdentifier* apCurrentDev, cConfigFile* apConfig, Fl_Choice* apSndDevs)
 {
-	////////////////////////////////////////////////////////////////////////////////////
-	// Sound
-	int lHintedSoundDev = apConfig->GetInt("Sound", "Device", -1);
-	bool bCurDevSupported = false;
-
-	int lIndex = -1;
+	std::vector<OhplLnDevice> vDevs;
 	for(int i=0;i<(int)avSoundDevices.size();++i)
 	{
 		iSoundDeviceIdentifier* pDev = avSoundDevices[i];
-		tString sDev = cString::ReplaceStringTo(pDev->GetName(), "/", "\\/");
-		
+
+		tString sDev;
+		ohpl_launcher_escape_device((const unsigned char*)pDev->GetName().data(), pDev->GetName().size(), OhplLnStrSink, &sDev);
 		apSndDevs->add(sDev.c_str());
 
-		/////////////////////////////////////////
-		// If we are not actively indicating a dev
-		// that could be unsupported, pick first default
-		if(lHintedSoundDev==-1 && lIndex==-1 && pDev->IsDefault())
-			lIndex = i;
-
-		if(apCurrentDev==pDev)
-		{
-			bCurDevSupported = true;
-			lIndex = i;
-		}
+		OhplLnDevice dev = {pDev->IsDefault(), apCurrentDev==pDev};
+		vDevs.push_back(dev);
 	}
 
-	if(bCurDevSupported==false && lHintedSoundDev!=-1)
+	OhplLnCfg cfg(apConfig);
+	int lAppend = 0;
+	int lIndex = ohpl_launcher_sound_selection(cfg.Ops(), vDevs.data(), vDevs.size(), &lAppend);
+	if(lAppend)
 	{
 		tString sDev = "(" + cString::S16BitToUTF8(tWString(kTranslate("Launcher", "Unsupported"))) +") " + apCurrentDev->GetName();
-		lIndex = apSndDevs->add(sDev.c_str());
+		apSndDevs->add(sDev.c_str());
 	}
-	
+
 	apSndDevs->value(lIndex);
 }
-
-//------------------------------------------------------------------------------
-
-void cLauncherHelper::SetInitialSSAOSamples(cConfigFile* apConfig, Fl_Choice* apSamples)
-{
-	int lSSAOSamples = apConfig->GetInt("Graphics", "SSAOSamples", glDefaultSSAOSamples);
-
-	int lSelectedItem = 0;
-	for(int i=0;i<apSamples->size();++i)
-	{
-		const Fl_Menu_Item& item = apSamples->menu()[i];
-		
-		int lValue = (long int)item.user_data();
-		if(lSSAOSamples==lValue)
-		{
-			lSelectedItem = i;
-			break;			
-		}		
-	}
-	
-	apSamples->value(lSelectedItem);
-}
-
-//------------------------------------------------------------------------------
-
-void cLauncherHelper::SetInitialShadowChoice(cConfigFile* apConfig, Fl_Choice* apShadows, const tString& asWhat)
-{
-	apShadows->value(apConfig->GetInt("Graphics", "Shadow"+asWhat, 1));
-}
-
-//------------------------------------------------------------------------------
-
-void cLauncherHelper::SetInitialAnisotropy(cConfigFile* apConfig, Fl_Choice* apAni)
-{
-	int lAnisotropy = (int)apConfig->GetFloat("Graphics", "TextureAnisotropy", 1.0f);
-
-	int lSelectedItem = 0;
-	for(int i=0;i<apAni->size();++i)
-	{
-		const Fl_Menu_Item& item = apAni->menu()[i];
-		
-		int lValue = (long int)item.user_data();
-		if(lAnisotropy==lValue)
-		{
-			lSelectedItem = i;
-			break;			
-		}		
-	}
-
-	apAni->value(lSelectedItem);
-}
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::SetInitialValues(cConfigFile* apConfig, cUserInterface* apUI)
 {
-	apUI->ChBFullScreen->value(apConfig->GetBool("Screen", "FullScreen", true)?1:0);
+	OhplLnCfg cfg(apConfig);
+	OhplLnInitial v;
+	ohpl_launcher_initial(cfg.Ops(), &v);
 
-	// Shadows
-	SetInitialShadowChoice(apConfig, apUI->CBShadowQ, "Quality");
-	SetInitialShadowChoice(apConfig, apUI->CBShadowRes, "Resolution");
-
-	// Reflection
-	apUI->ChBWaterReflect->value(apConfig->GetBool("Graphics", "WorldReflection", true)?1:0);
-
-	// SSAO
-	apUI->ChBSSAO->value(apConfig->GetBool("Graphics", "SSAOActive", true)?1:0);
-	apUI->CBSSAORes->value(apConfig->GetInt("Graphics", "SSAOResolution", 0));
-	SetInitialSSAOSamples(apConfig, apUI->CBSSAOSamples);
-
-	// Textures
-	apUI->CBTexQ->value((apUI->CBTexQ->size()-1-1) - apConfig->GetInt("Graphics", "TextureQuality", 1));
-	apUI->CBTexFilter->value(apConfig->GetInt("Graphics", "TextureFilter", 1));
-	SetInitialAnisotropy(apConfig, apUI->CBAnisotropy);
-
-	// Edge Smooth
-	apUI->ChBEdgeSmooth->value((int)apConfig->GetBool("Graphics", "EdgeSmooth", false));
-
-	// Parallax
-	bool bParallaxEnabled = apConfig->GetBool("Graphics", "ParallaxEnabled", true);
-	apUI->CBParallax->value(bParallaxEnabled?1:0);
+	apUI->ChBFullScreen->value(v.fullscreen);
+	apUI->CBShadowQ->value(v.shadow_quality);
+	apUI->CBShadowRes->value(v.shadow_resolution);
+	apUI->ChBWaterReflect->value(v.reflection);
+	apUI->ChBSSAO->value(v.ssao);
+	apUI->CBSSAORes->value(v.ssao_resolution);
+	SelectByUserData(apUI->CBSSAOSamples, v.ssao_samples);
+	apUI->CBTexQ->value(ohpl_launcher_texture_quality_row(apUI->CBTexQ->size(), v.texture_quality));
+	apUI->CBTexFilter->value(v.texture_filter);
+	SelectByUserData(apUI->CBAnisotropy, v.anisotropy);
+	apUI->ChBEdgeSmooth->value(v.edge_smooth);
+	apUI->CBParallax->value(v.parallax);
 }
-
 //------------------------------------------------------------------------------
 
 void cLauncherHelper::SetUpWidgetLabels(cUserInterface* apUI, tStringList& alstLabels)
@@ -774,43 +436,40 @@ void cLauncherHelper::SetUpWidgetLabels(cUserInterface* apUI, tStringList& alstL
 
 //------------------------------------------------------------------------------
 
-void cLauncherHelper::DetectSettings(cUserInterface* apUI, cConfigFile* apConfig, const std::vector<cConfigFile*>& avPresets, 
+void cLauncherHelper::DetectSettings(cUserInterface* apUI, cConfigFile* apConfig, const std::vector<cConfigFile*>& avPresets,
 									 cQualityChooser* apChooser, const tString& asCardString)
 {
 	tString sClosestMatch;
-	eQRating rating = apChooser->GetQualityRatingByCardString(asCardString, sClosestMatch); 
+	int lRating = apChooser->GetQualityRatingByCardString(asCardString, sClosestMatch);
 
-	if(sClosestMatch.empty()==false)
+	OhplLnDetect plan;
+	ohpl_launcher_detect(lRating, sClosestMatch.empty() == false, &plan);
+
+	if(plan.show_closest)
 	{
-		sClosestMatch = cString::S16BitToUTF8(kTranslate("Launcher", "UnlistedVCardClosestMatch")) + " " + sClosestMatch; 
+		sClosestMatch = cString::S16BitToUTF8(kTranslate("Launcher", "UnlistedVCardClosestMatch")) + " " + sClosestMatch;
 		fl_message("%s", sClosestMatch.c_str());
 	}
 
-	if(rating==eQRating_Unknown)
+	if(plan.show_unknown)
 	{
-		rating = eQRating_Medium;
 		tString sMsg = cString::S16BitToUTF8(kTranslate("Launcher", "UnlistedVCard"));
 		fl_message("%s", sMsg.c_str());
 	}
-		
-	if(rating==eQRating_Unsupported)
+
+	if(plan.show_unsupported)
 	{
 		tString sMsg = cString::S16BitToUTF8(kTranslate("Launcher", "UnsupportedVCard"));
 		fl_message("%s", sMsg.c_str());
 	}
-	else
+	else if(plan.preset >= 0)
 	{
-		/////////////
-		// Update preset
-		cLauncherHelper::UpdateConfigFileWithPreset(apConfig, avPresets[rating]);
+		cLauncherHelper::UpdateConfigFileWithPreset(apConfig, avPresets[plan.preset]);
 
-		//////////////
-		// Get native resolution
 		tVideoModeVec vResolutions = cLauncherHelper::GetAvailableVideoModes(apConfig);
 
 		int lWidth, lHeight;
 		cPlatform::GetDisplayResolution(0, lWidth, lHeight);
-
 		UpdateConfigFile(apUI, apConfig, "Screen", "Width", lWidth);
 		UpdateConfigFile(apUI, apConfig, "Screen", "Height", lHeight);
 		UpdateConfigFile(apUI, apConfig, "Screen", "Display", vResolutions.back().mlDisplay);
@@ -821,22 +480,10 @@ void cLauncherHelper::DetectSettings(cUserInterface* apUI, cConfigFile* apConfig
 		SetInitialValues(apConfig, apUI);
 	}
 }
-
 //------------------------------------------------------------------------------
 
 AspectRatio cLauncherHelper::AspectRatioForResolution(int w, int h) {
-	if (w == 0 || h == 0) return AspectRatio();
-	int a = w, b = h;
-	for (int r = a % b;
-		r != 0;
-		a = b, b = r, r = a % b);
-
-	AspectRatio ret(w / b, h / b);
-	if (ret.w == 8 && ret.h == 5) {
-		ret.w = 16;
-		ret.h = 10;
-	}
-	return ret;
+	int vRatio[2];
+	ohpl_launcher_aspect_ratio(w, h, vRatio);
+	return AspectRatio(vRatio[0], vRatio[1]);
 }
-
-//------------------------------------------------------------------------------

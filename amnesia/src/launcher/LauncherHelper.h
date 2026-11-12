@@ -22,6 +22,7 @@
 
 #include <vector>
 #include "hpl.h"
+#include "QualityChooser.h"
 
 #include <FL/Fl.H>
 #include <FL/Fl_Choice.H>
@@ -33,42 +34,6 @@ using namespace hpl;
 extern cEngine* gpEngine;
 
 class cUserInterface;
-class cQualityChooser;
-
-class iPresetValue
-{
-public:
-	iPresetValue(const tString& asCat, const tString& asName);
-
-	//virtual void UpdateConfigFile(cConfigFile* apFile)=0;
-
-	tString msCat;
-	tString msName;
-};
-
-class cPresetValueInt : public iPresetValue
-{
-public:
-	cPresetValueInt(const tString& asCat, const tString& asName, int alDefault);
-
-	int mlDefaultValue;
-};
-
-class cPresetValueFloat : public iPresetValue
-{
-	public:
-	cPresetValueFloat(const tString& asCat, const tString& asName, float afDefault);
-
-	float mfDefaultValue;
-};
-
-class cPresetValueBool : public iPresetValue
-{
-	public:
-	cPresetValueBool(const tString& asCat, const tString& asName, bool abDefault);
-
-	bool mbDefaultValue;
-};
 
 struct AspectRatio {
 	AspectRatio() : w(0), h(0) {}
@@ -113,9 +78,6 @@ public:
 	static void cb_AddResolution(Fl_Widget*, void*);
 	static bool AddCustomResolution(tVideoModeVec& avVidModes, cConfigFile* apConfig, Fl_Choice* apRes, cUserInterface* apUI, int apWidth, int apHeight);
 
-	static void SetInitialSSAOSamples(cConfigFile* apConfig, Fl_Choice* apSamples);
-	static void SetInitialShadowChoice(cConfigFile* apConfig, Fl_Choice* apShadows, const tString& asWhat);
-	static void SetInitialAnisotropy(cConfigFile* apConfig, Fl_Choice* apAni);
 
 	static void SetInitialValues(cConfigFile* apConfig, cUserInterface* apUI);
 

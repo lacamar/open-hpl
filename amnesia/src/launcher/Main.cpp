@@ -1,18 +1,18 @@
 /*
  * Copyright © 2009-2020 Frictional Games
- * 
+ *
  * This file is part of Amnesia: The Dark Descent.
- * 
+ *
  * Amnesia: The Dark Descent is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version. 
+ * (at your option) any later version.
 
  * Amnesia: The Dark Descent is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -20,198 +20,180 @@
 #include "launcher.h"
 #include "hpl.h"
 #include "QualityChooser.h"
+#include "RustLauncher.h"
 
 #include "FL/fl_ask.H"
 
-#ifdef WIN32
-	#include <Windows.h>
-#endif
 #include <GL/gl.h>
-#include <GL/glu.h>
-#if USE_SDL2
 #include <SDL2/SDL.h>
-#elif defined WIN32
-#include "glut.h"
-#elif defined __linux__
-#include <GL/glx.h>
-#endif
-
+#include <stdio.h>
 
 using namespace hpl;
 
 //--------------------------------------------------------------------------------
 
-#include "../game/LuxBasePersonal.h"
-
-//-----------------------------------------------------------------------
-
 cEngine* gpEngine = NULL;
 
-#ifdef USERDIR_RESOURCES
 tWString gsUserResourceDir;
-#endif
-
-//tWString gsInitConfigFile;
-tWString gsMainSaveFolder;
 
 tString gsDefaultBaseLanguage;
 tString gsDefaultGameLanguage;
 
 tString gsBaseLanguageFolder;
 tString gsGameLanguageFolder;
-tString gsCustomStoriesPath;
 
 tWString gsDefaultMainConfigPath;
 tWString gsDefaultMainConfigPathLow;
 tWString gsDefaultMainConfigPathMedium;
 tWString gsDefaultMainConfigPathHigh;
-tString gsGameName;
-tWString gsBaseSavePath;
 tWString gsBaseConfigPath;
 tWString gsCrashFlagPath;
 
 std::vector<cConfigFile*> gvPresets;
 
-bool InitPaths(const tWString& asInitConfigFile, const tWString &asDefaultInitConfigFile)
+//--------------------------------------------------------------------------------
+
+static tString Rust1(void (*apFn)(const unsigned char*, size_t, OhplLnSink, void*), const tString &asIn)
 {
-    // Load this up as a global to search alternate resource path
-	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(PERSONAL_SYSTEMPATH_TYPE);
-
-    tWString sInitConfigFile = asInitConfigFile;
-#ifdef USERDIR_RESOURCES
-    gsUserResourceDir = sPersonalDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT PERSONAL_RESOURCES;
-    if (cPlatform::FileExists(gsUserResourceDir + asInitConfigFile)) {
-        sInitConfigFile = gsUserResourceDir + asInitConfigFile;
-    }
-#endif
-	/////////////////////////
-	// Load the Init file
-	cConfigFile *pInitCfg = hplNew(cConfigFile, (sInitConfigFile));
-	if(pInitCfg->Load()==false){
-		fl_message("%s",cString::To8Char((_W("Could not load main init file: ")+asInitConfigFile)).c_str());
-		return false;
-	}
-	
-	//Set the name of the folder (in Lux) that all save stuff will be put.
-	gsMainSaveFolder = pInitCfg->GetStringW("Directories","MainSaveFolder",_W(""));
-	
-	//Get the config file paths
-#if USE_SDL2
-	gsDefaultMainConfigPath = pInitCfg->GetStringW("ConfigFiles", "DefaultMainSettingsSDL2",_W(""));
-	if(gsDefaultMainConfigPath.empty() && asInitConfigFile!=asDefaultInitConfigFile)
-	{
-		fl_message("%s",cString::To8Char((_W("No DefaultMainSettingsSDL2 path defined in: ")+asInitConfigFile)+_W(" - Using default")).c_str());
-
-		cConfigFile *pInitCfgDefaults = hplNew(cConfigFile, (asDefaultInitConfigFile));
-		if(pInitCfgDefaults->Load()==false){
-			fl_message("%s",cString::To8Char((_W("Could not load default main init file: ")+asDefaultInitConfigFile)).c_str());
-			return false;
-		}
-
-		gsDefaultMainConfigPath = pInitCfgDefaults->GetStringW("ConfigFiles", "DefaultMainSettingsSDL2",_W(""));
-		hplDelete(pInitCfgDefaults);
-
-		if(gsDefaultMainConfigPath.empty())
-		{
-			fl_message("Settings file for entry DefaultMainSettingsSDL2 in default config is empty");
-			
-			return false;
-		}
-	}
-#else
-	gsDefaultMainConfigPath = pInitCfg->GetStringW("ConfigFiles", "DefaultMainSettings",_W(""));
-#endif
-
-	// Get presets paths
-	gsDefaultMainConfigPathLow = pInitCfg->GetStringW("ConfigFiles", "DefaultMainSettingsLow",_W(""));
-	gsDefaultMainConfigPathMedium = pInitCfg->GetStringW("ConfigFiles", "DefaultMainSettingsMedium",_W(""));
-	gsDefaultMainConfigPathHigh = pInitCfg->GetStringW("ConfigFiles", "DefaultMainSettingsHigh",_W(""));
-
-	gsDefaultBaseLanguage = pInitCfg->GetString("ConfigFiles", "DefaultBaseLanguage", "");
-	//gsDefaultGameLanguage = pInitCfg->GetString("ConfigFiles", "DefaultGameLanguage", "");
-
-	//Directories
-	gsBaseLanguageFolder = pInitCfg->GetString("Directories","BaseLanguageFolder","");
-	gsGameLanguageFolder = pInitCfg->GetString("Directories","GameLanguageFolder","");
-    gsCustomStoriesPath = pInitCfg->GetString("Directories","CustomStoryPath","");
-
-	//Various variables
-	gsGameName = pInitCfg->GetString("Variables","GameName","");
-	
-
-	//Delete the config file
-	hplDelete(pInitCfg);
-
-    //////////////////////////////
-    //Set up the directories to be created
-    tWStringVec vDirs;
-    hpl::SetupBaseDirs(vDirs, PERSONAL_RELATIVEGAME_PARENT, gsMainSaveFolder
-#ifdef USERDIR_RESOURCES
-                       , true, hpl::cString::To16Char(gsCustomStoriesPath)
-#endif
-                       );
-    //Create directories	
-    hpl::CreateBaseDirs(vDirs, sPersonalDir);
-
-	//Set the base directory from which all saving will take place.
-	gsBaseSavePath = sPersonalDir+PERSONAL_RELATIVEROOT PERSONAL_RELATIVEGAME_PARENT + gsMainSaveFolder + _W("/");
-
-#if defined(__linux__)
-	gsBaseConfigPath = hpl::PersonalXdgDir(eSystemPath_XDGConfigHome, gsMainSaveFolder);
-	tWString sStatePath = hpl::PersonalXdgDir(eSystemPath_XDGStateHome, gsMainSaveFolder);
-	hpl::MoveIfMissing(gsBaseSavePath + _W("main_settings.cfg"), gsBaseConfigPath + _W("main_settings.cfg"));
-#else
-	gsBaseConfigPath = gsBaseSavePath;
-	tWString sStatePath = gsBaseSavePath;
-#endif
-
-	//Set Crash flag file path
-	gsCrashFlagPath = sStatePath + _W("crash_flag");
-
-	// Store the log file in the users personal directory not in the install directory
-	SetLogFile(sStatePath + _W("launcher.log"));
-	return true;
+	tString sOut;
+	apFn((const unsigned char*)asIn.data(), asIn.size(), OhplLnStrSink, &sOut);
+	return sOut;
 }
 
+struct cPathPlanCtx
+{
+	tString msMoveFrom;
+	tString msBaseConfig;
+	tString msCrashFlag;
+	tString msLogFile;
+};
+
+static void PathPlanSink(void *apCtx, int alTag, const unsigned char *apData, size_t alLen)
+{
+	cPathPlanCtx *pCtx = (cPathPlanCtx*)apCtx;
+	tString sPath((const char*)apData, alLen);
+	switch(alTag)
+	{
+	case 10:
+	{
+		tWString sDir = cString::To16Char(sPath);
+		if(cPlatform::FolderExists(sDir) == false) cPlatform::CreateFolder(sDir);
+		break;
+	}
+	case 11: cPlatform::CreateFolder(cString::To16Char(sPath)); break;
+	case 12: pCtx->msMoveFrom = sPath; break;
+	case 13:
+		if(cPlatform::FileExists(cString::To16Char(pCtx->msMoveFrom)) && !cPlatform::FileExists(cString::To16Char(sPath)))
+			rename(pCtx->msMoveFrom.c_str(), sPath.c_str());
+		break;
+	case 21: pCtx->msBaseConfig = sPath; break;
+	case 22: pCtx->msCrashFlag = sPath; break;
+	case 23: pCtx->msLogFile = sPath; break;
+	}
+}
+
+struct cDefaultsLoader
+{
+	cDefaultsLoader(const tString &asFile) : msFile(asFile), mpFile(NULL), mpCfg(NULL) {}
+	~cDefaultsLoader()
+	{
+		delete mpCfg;
+		if(mpFile) hplDelete(mpFile);
+	}
+
+	static const OhplLnCfgOps* Load(void *apCtx)
+	{
+		cDefaultsLoader *pThis = (cDefaultsLoader*)apCtx;
+		pThis->mpFile = hplNew(cConfigFile, (cString::To16Char(pThis->msFile)));
+		if(pThis->mpFile->Load() == false) return NULL;
+		pThis->mpCfg = new OhplLnCfg(pThis->mpFile);
+		return pThis->mpCfg->Ops();
+	}
+
+	tString msFile;
+	cConfigFile *mpFile;
+	OhplLnCfg *mpCfg;
+};
+
+bool InitPaths(const tString& asInitConfigFile, const tString &asDefaultInitConfigFile)
+{
+	tWString sPersonalDir = cPlatform::GetSystemSpecialPath(eSystemPath_XDGDataHome);
+	tString sPersonal = cString::To8Char(sPersonalDir);
+
+	tString sUserDir = Rust1(ohpl_launcher_user_resource_dir, sPersonal);
+	gsUserResourceDir = cString::To16Char(sUserDir);
+
+	bool bUserInit = cPlatform::FileExists(gsUserResourceDir + cString::To16Char(asInitConfigFile));
+	tString sInitConfigFile;
+	ohpl_launcher_init_cfg_path((const unsigned char*)sUserDir.data(), sUserDir.size(),
+								(const unsigned char*)asInitConfigFile.data(), asInitConfigFile.size(), bUserInit,
+								OhplLnStrSink, &sInitConfigFile);
+
+	cConfigFile *pInitCfg = hplNew(cConfigFile, (cString::To16Char(sInitConfigFile)));
+	if(pInitCfg->Load()==false){
+		fl_message("%s", Rust1(ohpl_launcher_message_init_load, asInitConfigFile).c_str());
+		return false;
+	}
+
+	OhplLnTagged init;
+	cDefaultsLoader defaults(asDefaultInitConfigFile);
+	OhplLnCfg initOps(pInitCfg);
+	int lQuit = ohpl_launcher_read_init(initOps.Ops(), (const unsigned char*)asInitConfigFile.data(), asInitConfigFile.size(),
+										(const unsigned char*)asDefaultInitConfigFile.data(), asDefaultInitConfigFile.size(),
+										cDefaultsLoader::Load, &defaults, OhplLnTagged::Sink, &init);
+	hplDelete(pInitCfg);
+
+	for(size_t i = 0; i < init.mvItems.size(); ++i)
+		if(init.mvItems[i].first == 100) fl_message("%s", init.mvItems[i].second.c_str());
+	if(lQuit) return false;
+
+	tString sSaveFolder = init.Get(1);
+	gsDefaultMainConfigPath = cString::To16Char(init.Get(2));
+	gsDefaultMainConfigPathLow = cString::To16Char(init.Get(3));
+	gsDefaultMainConfigPathMedium = cString::To16Char(init.Get(4));
+	gsDefaultMainConfigPathHigh = cString::To16Char(init.Get(5));
+	gsDefaultBaseLanguage = init.Get(6);
+	gsBaseLanguageFolder = init.Get(7);
+	gsGameLanguageFolder = init.Get(8);
+	tString sCustomStories = init.Get(9);
+
+	cPathPlanCtx plan;
+	tString sConfigHome = cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGConfigHome));
+	tString sStateHome = cString::To8Char(cPlatform::GetSystemSpecialPath(eSystemPath_XDGStateHome));
+	ohpl_launcher_plan_paths(OhplLnS(sPersonal), OhplLnS(sConfigHome), OhplLnS(sStateHome), OhplLnS(sSaveFolder),
+							 OhplLnS(sCustomStories), PathPlanSink, &plan);
+
+	gsBaseConfigPath = cString::To16Char(plan.msBaseConfig);
+	gsCrashFlagPath = cString::To16Char(plan.msCrashFlag);
+
+	SetLogFile(cString::To16Char(plan.msLogFile));
+	return true;
+}
 
 //--------------------------------------------------------------------------------
 
 cConfigFile* LoadConfigFile(const tWString& asDefaultPath, const tWString& asWantedPath, bool abForceLoadDefault)
 {
 	cConfigFile *pConfig;
-	bool bLoadedWantedPath = false;
+	bool bLoadedWantedPath = ohpl_launcher_use_wanted_config(abForceLoadDefault, cPlatform::FileExists(asWantedPath)) != 0;
 
-	tWString sErrorMessageExtra;
-	
-	//////////////////////
-	//Check if wanted exist and created config using existing file
-	if(abForceLoadDefault==false && cPlatform::FileExists(asWantedPath))
+	if(bLoadedWantedPath)
 	{
 		pConfig = hplNew( cConfigFile, (asWantedPath) );
-		bLoadedWantedPath = true;
 	}
 	else
 	{
-#ifdef USERDIR_RESOURCES
 		pConfig = hplNew( cConfigFile, (asDefaultPath, gsUserResourceDir) );
-#else
-		pConfig = hplNew( cConfigFile, (asDefaultPath) );
-#endif
 	}
 
-	////////////////////////////////////
-	// Load the settings config file
 	if(pConfig->Load()==false)
 	{
-		if(bLoadedWantedPath==false &&
-			asDefaultPath.empty()) {
-			fl_message("Empty default config file in startup config file");
-		}
-		//msErrorMessage = _W("Failed to load config file!");
+		tString sMsg;
+		if(ohpl_launcher_config_load_message(bLoadedWantedPath, asDefaultPath.empty(), OhplLnStrSink, &sMsg))
+			fl_message("%s", sMsg.c_str());
 		return NULL;
 	}
 
-	//Set correct path for saving.
 	if(bLoadedWantedPath==false)
 	{
 		pConfig->SetFileLocation(asWantedPath);
@@ -225,48 +207,22 @@ cConfigFile* LoadConfigFile(const tWString& asDefaultPath, const tWString& asWan
 bool LoadLanguage(cEngine* apEngine, const tString& asName, bool abForceReload)
 {
 	cResources *pResources = apEngine->GetResources();
+	pResources->ClearTranslations();
 
-	////////////////////////////////////////////
-	//Check if the language is already loaded.
-	//tString sLowName = cString::ToLowerCase(asName);
-	//if(gsCurrentLanguage == sLowName && abForceReload==false) return false;
+	OhplLnTagged plan;
+	ohpl_launcher_language_plan(OhplLnS(asName), OhplLnS(gsBaseLanguageFolder), OhplLnS(gsGameLanguageFolder),
+								OhplLnS(gsDefaultBaseLanguage), OhplLnS(gsDefaultGameLanguage), OhplLnTagged::Sink, &plan);
 
-	//if(gsCurrentLanguage != "")
-	//{
-		pResources->ClearTranslations();	
-	//}
+	for(size_t i = 0; i < plan.mvItems.size(); ++i)
+	{
+		if(plan.mvItems[i].first == 1)
+			pResources->AddLanguageFile(plan.mvItems[i].second, true);
+		else
+			pResources->AddLanguageFile(plan.mvItems[i].second, false, gsUserResourceDir);
+	}
 
-	//msCurrentLanguage = sLowName;
-
-	tString sGameFileName = cString::SetFileExt(asName,"lang");
-	tString sBaseFileName = "base_"+sGameFileName;
-
-	////////////////////////////////////////////
-	//Load the language files
-	pResources->AddLanguageFile(gsBaseLanguageFolder + sBaseFileName, true);
-
-    
-	////////////////////////////////////////////
-	//If not default language, add default to so only missing entries are filled in
-    if(sGameFileName != gsDefaultGameLanguage)	
-#ifdef USERDIR_RESOURCES
-		pResources->AddLanguageFile(gsGameLanguageFolder + gsDefaultGameLanguage, false, gsUserResourceDir);
-#else
-		pResources->AddLanguageFile(gsGameLanguageFolder + gsDefaultGameLanguage, false);
-#endif
-
-	if(sBaseFileName != gsDefaultBaseLanguage)
-#ifdef USERDIR_RESOURCES
-	pResources->AddLanguageFile(gsBaseLanguageFolder + gsDefaultBaseLanguage, false,gsUserResourceDir);
-#else
-	pResources->AddLanguageFile(gsBaseLanguageFolder + gsDefaultBaseLanguage, false);
-#endif
-    
 	return true;
 }
-
-#if USE_SDL2
-#include <SDL2/SDL.h>
 
 tString SDL2GetRenderer() {
     SDL_Init(SDL_INIT_VIDEO);
@@ -289,224 +245,84 @@ tString SDL2GetRenderer() {
     SDL_DestroyWindow(sdlwin);
     return ret;
 }
-#elif defined __linux__
-tString LinuxGetRenderer() {
-	Display *dpy = XOpenDisplay(NULL);
-	if (!dpy) {
-		fprintf(stderr, "Error: unable to open the display %s\n", XDisplayName(NULL));
-		return "";
-	}
 
-	int attributeSingle[] = {
-		GLX_RGBA,
-		GLX_RED_SIZE, 1,
-		GLX_GREEN_SIZE, 1,
-		GLX_BLUE_SIZE, 1,
-		None };
-	int attributeDouble[] = {
-		GLX_RGBA,
-		GLX_RED_SIZE, 1,
-		GLX_GREEN_SIZE, 1,
-		GLX_BLUE_SIZE, 1,
-		GLX_DOUBLEBUFFER,
-		None };
-
-	XVisualInfo *visinfo;
-	GLXContext ctx = NULL;
-
-	visinfo = glXChooseVisual(dpy,0, attributeSingle);
-	if (!visinfo)
-		visinfo = glXChooseVisual(dpy, 0, attributeDouble);
-
-	if (visinfo)
-		ctx = glXCreateContext(dpy, visinfo, NULL, True);
-
-	if (!visinfo) {
-		fprintf(stderr, "Error: couldn't find RGB GLX visual\n");
-		return "";
-	}
-
-	if (!ctx) {
-		fprintf(stderr, "Error: glXCreateContext failed\n");
-		XFree(visinfo);
-		return "";
-	}
-
-	XSetWindowAttributes attr;
-	unsigned long mask;
-	Window root, win;
-	int width = 100, height = 100;
-
-	root = RootWindow(dpy, 0);
-
-	attr.background_pixel = 0;
-	attr.border_pixel = 0;
-	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
-	attr.event_mask = StructureNotifyMask | ExposureMask;
-	mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
-	win = XCreateWindow(dpy, root, 0, 0, width, height,
-						0, visinfo->depth, InputOutput,
-						visinfo->visual, mask, &attr);
-
-	tString ret = "";
-	if (glXMakeCurrent(dpy, win, ctx)) {
-		const char *pCardString = (const char *)glGetString(GL_RENDERER);
-		if (pCardString) {
-			ret = tString(pCardString);
-		}
-	}
-
-	glXDestroyContext(dpy, ctx);
-	XFree(visinfo);
-	XDestroyWindow(dpy, win);
-	XCloseDisplay(dpy);
-
-	return ret;
-}
-#endif
 //--------------------------------------------------------------------------------
 
 int hplMain(const tString &asCommandLine)
 {
-	tWString sParams = _W(""); //REMOVE COMMAND LINE AS FIX FOR EPIC GAMES cString::To16Char(asCommandLine);
-	tWString sCfgFileDefault = _W("config/main_init.cfg");
-	tWString sCfgFile;
-	if(sParams==_W("ptest"))
-		sCfgFile = _W("config/ptest_main_init.cfg");
-	else if(sParams.empty())
-		sCfgFile = sCfgFileDefault;
-	else
-		sCfgFile = sParams;
+	// the command line is ignored (it broke Epic Games launches)
+	tString sParams;
 
-	if(InitPaths(sCfgFile, sCfgFileDefault)==false)
+	OhplLnTagged names;
+	ohpl_launcher_init_cfg((const unsigned char*)sParams.data(), sParams.size(), OhplLnTagged::Sink, &names);
+
+	if(InitPaths(names.Get(0), names.Get(1))==false)
 		return -1;
 
-	// Create video card database handler
 	cQualityChooser* pChooser = hplNew(cQualityChooser,("launcher/launcher_card_database.cfg"));
 
-#if USE_SDL2
     // FLTK loop never polls SDL_QUIT, so SDL's handler would swallow SIGTERM
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     tString sCardString = SDL2GetRenderer();
-#elif defined WIN32
-	// Temp GLUT retrieval of the card string.
-	int argc = 1;
-	char *argv[] = { "" };
-	glutInit(&argc, argv);
-	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE);
-	int lWin = glutCreateWindow("");
-	const GLubyte* pCardString = glGetString(GL_RENDERER);
-	tString sCardString;
-	if(pCardString)
-		sCardString = tString((const char*)pCardString);
-	glutDestroyWindow(lWin);
-#elif defined(__linux__)
-	tString sCardString = LinuxGetRenderer();
-#endif
 
-	tWString sConfigFilePath = gsBaseConfigPath + _W("main_settings.cfg");
+	tString sConfigFilePath8;
+	tString sBaseConfig8 = cString::To8Char(gsBaseConfigPath);
+	ohpl_launcher_settings_path((const unsigned char*)sBaseConfig8.data(), sBaseConfig8.size(), OhplLnStrSink, &sConfigFilePath8);
+	tWString sConfigFilePath = cString::To16Char(sConfigFilePath8);
 
 	bool bConfigFileExists = cPlatform::FileExists(sConfigFilePath);
 	bool bLastInitCrashed = cPlatform::FileExists(gsCrashFlagPath);
-	/////////////////////////////////////////////////
-	// Load the main settings
+
 	cConfigFile* pMainConfig = LoadConfigFile(gsDefaultMainConfigPath, sConfigFilePath, bLastInitCrashed);
 	if(pMainConfig==NULL) return -1;
 
+	OhplLnCfg mainOps(pMainConfig);
+
 	cEngineInitVars vars;
-	vars.mSound.mlSoundDeviceID = pMainConfig->GetInt("Sound", "Device", -1);
-	//////////////////////////////////////////////////////////////////////////
-	// If sound devices should be filtered, set this before creating engine
-	#if defined(WIN32)
-	iLowLevelSound::SetSoundDeviceNameFilter("software");
-	#endif
+	vars.mSound.mlSoundDeviceID = ohpl_launcher_sound_device(mainOps.Ops());
 
 	gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_Video, &vars);
-	
-	/////////////////////////////////////////////////
-	// Load presets
+
 	gvPresets.push_back(hplNew(cConfigFile, (gsDefaultMainConfigPathLow)));
 	gvPresets.push_back(hplNew(cConfigFile, (gsDefaultMainConfigPathMedium)));
 	gvPresets.push_back(hplNew(cConfigFile, (gsDefaultMainConfigPathHigh)));
 	gvPresets.push_back(NULL);
-	
+
 	for(int i=0;i<(int)gvPresets.size();++i)
 	{
 		if(gvPresets[i]) gvPresets[i]->Load();
 	}
 
-	//////////////////////////////////////////////////
-	// Run FLTK window in a loop
 	int exitflag = -1;
-	bool bShowLauncher = pMainConfig->GetBool("Main", "ShowLauncher", true);
+	bool bShowLauncher = ohpl_launcher_show_launcher(mainOps.Ops()) != 0;
 
-#if defined(__linux__)
-	// match game binary name for StartupWMClass
-	#if defined(__aarch64__)
-		Fl_Window::default_xclass("Amnesia.bin.aarch64");
-	#elif (defined(i386) && !defined(__LP64__))
-		Fl_Window::default_xclass("Amnesia.bin.x86");
-	#else
-		Fl_Window::default_xclass("Amnesia.bin.x86_64");
-	#endif
-#endif
+	static tString sWindowClass;
+	ohpl_launcher_window_class(OhplLnStrSink, &sWindowClass);
+	Fl_Window::default_xclass(sWindowClass.c_str());
 
 	if(bShowLauncher)
 	{
 		while(exitflag==-1)
 		{
-			LoadLanguage(gpEngine, pMainConfig->GetString("Main", "StartLanguage", "english.lang"), true);
+			tString sLanguage;
+			ohpl_launcher_start_language(mainOps.Ops(), OhplLnStrSink, &sLanguage);
+			LoadLanguage(gpEngine, sLanguage, true);
 			cUserInterface* win = hplNew(cUserInterface,(exitflag, pMainConfig, bConfigFileExists, bLastInitCrashed, sCardString, pChooser, gvPresets, gpEngine ));
 
-			int ret = win->Run();
-			if(ret) 
-			{
-
-			} 
-			else 
-			{
-				ret = exitflag;
-			}
+			win->Run();
 
 			hplDelete(win);
 		}
 	}
 
-	////////////////////////////////////////////
-	// Set up game exe
-	tWString sGameExe;
-#ifdef WIN32
-	sGameExe = _W("Amnesia.exe");
-#elif __linux__
-	// must match CMAKE_EXECUTABLE_SUFFIX
-	#if defined(__aarch64__)
-		sGameExe = _W("/Amnesia.bin.aarch64");
-	#elif (defined(i386) && !defined(__LP64__))
-		sGameExe = _W("/Amnesia.bin.x86");
-	#else
-		sGameExe = _W("/Amnesia.bin.x86_64");
-	#endif
-	// next to this launcher, which runs from outside the game dir
-	sGameExe = cString::To16Char(cPlatform::GetDataDir()) + sGameExe;
-#endif
+	tString sDataDir = cPlatform::GetDataDir();
+	tString sGameExe8;
+	ohpl_launcher_game_exe((const unsigned char*)sDataDir.data(), sDataDir.size(), OhplLnStrSink, &sGameExe8);
 
+	tString sArgs;
+	if(ohpl_launcher_run_plan(exitflag, (const unsigned char*)sParams.data(), sParams.size(), OhplLnStrSink, &sArgs))
+		cPlatform::RunProgram(cString::To16Char(sGameExe8), cString::To16Char(sArgs));
 
-	//////////////////////////////
-	// PTEST arg
-	if(exitflag==2)
-		sParams = _W("ptest");
-
-	///////////////////////////////
-	// Call program
-    if(exitflag!=0)
-#ifdef __linux__
-		cPlatform::RunProgram(sGameExe, _W("-cwd ") + sParams);
-#else
-		cPlatform::RunProgram(sGameExe, sParams);
-#endif
-		
-	///////////////////////////////////////
-	// Clean up
 	DestroyHPLEngine(gpEngine);
 
 	hplDelete(pMainConfig);

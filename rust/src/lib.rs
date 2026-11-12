@@ -32,6 +32,7 @@ pub mod imageload;
 pub mod input;
 mod input_ffi;
 mod input_tables;
+pub mod launcher;
 pub mod luxbase;
 pub mod luxenemy;
 pub mod luxmap;
