@@ -3,6 +3,7 @@
 
 mod diag;
 mod ffi;
+pub mod h1;
 pub mod headless;
 pub mod logic_timer;
 pub mod serialize;

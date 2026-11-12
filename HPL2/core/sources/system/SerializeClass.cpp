@@ -24,6 +24,8 @@
 #include "system/String.h"
 #include "system/Platform.h"
 #include "system/RustSystem.h"
+#include "system/RustH1.h"
+#include "impl/RustBackends.h"
 
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
@@ -35,10 +37,16 @@
 #include <zlib.h>
 #include <stdio.h>
 #include <new>
+#include <cstddef>
 
 namespace hpl {
 
 	#define kSavedDataCRCKey (0x12AD11A1)
+
+	static_assert(sizeof(cSerializeMemberField) == 96 && offsetof(cSerializeMemberField, msClassName) == 32 &&
+				  offsetof(cSerializeMemberField, mlOffset) == 64 && offsetof(cSerializeMemberField, mType) == 80 &&
+				  offsetof(cSerializeMemberField, mlArraySize) == 88,
+				  "cSerializeMemberField is mirrored by CppMemberField in rust/src/system/h1.rs");
 
 	static_assert(sizeof(cVector2l) == 8 && sizeof(cVector2f) == 8 && sizeof(cVector3l) == 12 &&
 				  sizeof(cVector3f) == 12 && sizeof(cMatrixf) == 64 && sizeof(cColor) == 16 &&
@@ -70,6 +78,11 @@ namespace hpl {
 									cSerializeMemberField* apMemberFields,size_t alSize,
 									iSerializable* (*apCreateFunc)())
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h1_ser_defer(asName, asParent, apMemberFields, alSize, reinterpret_cast<void*(*)()>(apCreateFunc));
+			return;
+		}
 		gvSerializeTempClasses[glSerializeTempClassesNum] = cSerializeSavedClass(asName,asParent,
 													apMemberFields,alSize,apCreateFunc);
 
@@ -83,6 +96,12 @@ namespace hpl {
 		if(mbDataSetup) return;
 
 		mbDataSetup = true;
+
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h1_ser_flush();
+			return;
+		}
 
 		for(int i=0; i< glSerializeTempClassesNum; i++)
 		{

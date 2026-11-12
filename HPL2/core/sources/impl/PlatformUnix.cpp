@@ -19,6 +19,7 @@
 
 #include "system/Platform.h"
 #include "system/RustPlatform.h"
+#include "system/RustH1.h"
 #include "impl/RustBackends.h"
 #include "impl/RustL1.h"
 
@@ -127,6 +128,11 @@ namespace hpl {
 	bool cPlatform::CloneFile(	const tWString& asSrcFileName,const tWString& asDestFileName,
 		bool abFailIfExists)
 	{
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h1_clone_file(cString::To8Char(asSrcFileName).c_str(), cString::To8Char(asDestFileName).c_str());
+			return true;
+		}
 		std::ifstream IN (cString::To8Char(asSrcFileName).c_str(), std::ios::binary);
 		std::ofstream OUT (cString::To8Char(asDestFileName).c_str(), std::ios::binary);
 		OUT << IN.rdbuf();
@@ -377,6 +383,11 @@ namespace hpl {
     tString cPlatform::GetDataDir()
     {
         tString temp;
+		if(OhplBackendRustRequested())
+		{
+			ohpl_h1_data_dir(L1Utf8Sink, &temp);
+			return temp;
+		}
         BrInitError error;
 		if (!br_init (&error)) {
 			// Log non-fatal error
@@ -568,7 +579,15 @@ namespace hpl {
 #if defined(__APPLE__)
 		OSXLaunchURL(cString::To8Char(asURL));
 #else
-		pid_t pID = fork();
+		pid_t pID;
+		if(OhplBackendRustRequested())
+		{
+			tString sURL = cString::To8Char(asURL);
+			const char *vArgs[] = { "xdg-open", sURL.c_str() };
+			pID = ohpl_h1_spawn("xdg-open", vArgs, 2);
+		}
+		else
+			pID = fork();
 		if (pID == 0) {// child
 			execlp("xdg-open", "xdg-open", cString::To8Char(asURL).c_str(), (char *)0);
 			exit(1);
@@ -586,7 +605,15 @@ namespace hpl {
 #if defined(__APPLE__)
         return OSXOpenFile(cString::To8Char(asPath));
 #else
-		pid_t pID = fork();
+		pid_t pID;
+		if(OhplBackendRustRequested())
+		{
+			tString sPath = cString::To8Char(asPath);
+			const char *vArgs[] = { "xdg-open", "xdg-open", sPath.c_str() };
+			pID = ohpl_h1_spawn("/bin/bash", vArgs, 3);
+		}
+		else
+			pID = fork();
 		if (pID == 0) {// child
 			execlp("/bin/bash", "xdg-open", "xdg-open", cString::To8Char(asPath).c_str(), (char *)0);
 			exit(1);
@@ -607,7 +634,19 @@ namespace hpl {
 #if defined(__APPLE__)
 		ret = OSXRunProgram(cString::To8Char(asPath), cString::To8Char(asParams));
 #else
-		pid_t pID = fork();
+		pid_t pID;
+		if(OhplBackendRustRequested())
+		{
+			tStringVec tvArgs;
+			tString sSepp = " ";
+			cString::GetStringVec( cString::To8Char(asParams), tvArgs, &sSepp);
+			tString sTemp = cString::To8Char(asPath);
+			std::vector<const char*> vArgs(1, sTemp.c_str());
+			for (size_t i = 0; i < tvArgs.size(); ++i) vArgs.push_back(tvArgs[i].c_str());
+			pID = ohpl_h1_spawn(sTemp.c_str(), vArgs.data(), vArgs.size());
+		}
+		else
+			pID = fork();
 		if (pID == 0) {// child
 			tStringVec tvArgs;
 			tString sSepp = " ";
