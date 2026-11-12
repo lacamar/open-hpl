@@ -18,6 +18,7 @@
  */
 
 #include "LuxBase.h"
+#include "RustLuxBase.h"
 
 //---------------------------------------
 #ifdef WIN32
@@ -53,8 +54,9 @@ int hplMain(const tString &asCommandline)
 	//Error occurred
 	else
 	{
-		if(gpBase->msErrorMessage==_W(""))
-			gpBase->msErrorMessage = _W("Error occured");
+		auto emit = [&](uint32_t tag, const void *p, size_t n) { gpBase->msErrorMessage = OhplGa9EmitW(p, n); };
+		ohpl_ga9_error_text((const uint32_t*)gpBase->msErrorMessage.data(), gpBase->msErrorMessage.size(),
+							OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
 		cPlatform::CreateMessageBox(_W("Error!"),gpBase->msErrorMessage.c_str());
 		//No Exit, since it was not sure everything was created as it should.

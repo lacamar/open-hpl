@@ -24,6 +24,7 @@
 #include "LuxInputHandler.h"
 #include "LuxHintHandler.h"
 #include "LuxHelpFuncs.h"
+#include "RustLuxBase.h"
 
 // TODO: there is some cleanup to do here
 
@@ -35,8 +36,8 @@
 
 cLuxConfigHandler::cLuxConfigHandler()
 {
-	mbGameNeedsRestart = false;
-	mbRestartDialogShown = false;
+	mRestart.needed = false;
+	mRestart.dialog_shown = false;
 }
 
 //-----------------------------------------------------------------------
@@ -59,160 +60,124 @@ void cLuxConfigHandler::LoadMainConfig()
 	////////////////////////////////////////////////////////////////////////////////
 	// Purpose of this is loading variables that need to be set on engine creation,
 	// or set to restart.
+	cConfigFile *pCfg = gpBase->mpMainConfig;
+	tString sDefaultLang = gpBase->msDefaultGameLanguage;
+	OhplGa9MainCfg c;
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	{
+		if(op == eOhplGa9Op_FirstStartFlag) r->i = gpBase->CheckFirstStartFlag();
+		else OhplGa9CfgCall(pCfg, op, a, r);
+	};
+	auto emit = [&](uint32_t tag, const void *p, size_t n)
+	{
+		switch(tag)
+		{
+		case eOhplGa9Tag_MainLang: msLangFile = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_MainExt: msScreenShotExt = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_MainRenderer: msRenderer = OhplGa9EmitS(p, n); break;
+		case eOhplGa9Tag_MainColor: msColorOutput = OhplGa9EmitS(p, n); break;
+		}
+	};
+	ohpl_ga9_load_main_cfg(&call, OhplGa9CallOf<decltype(call)>::Fn(),
+							(const unsigned char*)sDefaultLang.data(), sDefaultLang.size(), &c, OhplGa9EmitOf<decltype(emit)>::Fn(), &emit);
 
-	/////////////////////
-	// Main
-	mbLoadDebugMenu = gpBase->mpMainConfig->GetBool("Main","LoadDebugMenu", false);
-	mbFirstStart = gpBase->CheckFirstStartFlag()==false;
-	//mbFirstStart = gpBase->mpMainConfig->GetBool("Main","FirstStart", true);
-
-	msLangFile = gpBase->mpMainConfig->GetString("Main", "StartLanguage", gpBase->msDefaultGameLanguage);
-
-	msScreenShotExt = gpBase->mpMainConfig->GetString("Main","ScreenShotExt", "jpg");
-
-	mbForceCacheLoadingAndSkipSaving = gpBase->mpMainConfig->GetBool("Main","ForceCacheLoadingAndSkipSaving", true);
-	//mbCreateAndLoadCompressedMaps = gpBase->mpMainConfig->GetBool("Main","CreateAndLoadCompressedMaps", false);
-
-	/////////////////////
-	// Engine init variables
-	mvScreenSize.x =	gpBase->mpMainConfig->GetInt("Screen","Width", 800);
-	mvScreenSize.y =	gpBase->mpMainConfig->GetInt("Screen","Height", 600);
-    mlDisplay =			gpBase->mpMainConfig->GetInt("Screen","Display", 0);
-	mbFullscreen =		gpBase->mpMainConfig->GetBool("Screen","FullScreen", false);
-	mbVSync =			gpBase->mpMainConfig->GetBool("Screen","Vsync", false);
-	mbAdaptiveVSync =	gpBase->mpMainConfig->GetBool("Screen","AdaptiveVsync", false);
-
-	mbFastPhysicsLoad=	gpBase->mpMainConfig->GetBool("MapLoad","FastPhysicsLoad", false);
-	mbFastStaticLoad=	gpBase->mpMainConfig->GetBool("MapLoad","FastStaticLoad", false);
-	mbFastEntityLoad =	gpBase->mpMainConfig->GetBool("MapLoad","FastEntityLoad", false);
-
-	/////////////////////
-	// Graphics variables
-
-	// General
-	mbOcclusionTestLights = gpBase->mpMainConfig->GetBool("Graphics", "OcclusionTestLights", true);
-
-	// Shadows
-	mbShadowsActive =	gpBase->mpMainConfig->GetBool("Graphics", "ShadowsActive", true);
-	mlShadowQuality =	gpBase->mpMainConfig->GetInt("Graphics", "ShadowQuality", eShadowMapQuality_Medium);
-	mlShadowRes =		gpBase->mpMainConfig->GetInt("Graphics", "ShadowResolution", eShadowMapResolution_High);
-
-	mlGuiScale =		gpBase->mpMainConfig->GetInt("Graphics", "GuiScale", 1);
-
-	msRenderer =		gpBase->mpMainConfig->GetString("Graphics", "Renderer", "OpenGL");
-	msColorOutput =		gpBase->mpMainConfig->GetString("Graphics", "ColorOutput", "SDR");
-	mfPaperWhite =		gpBase->mpMainConfig->GetFloat("Graphics", "HdrPaperWhite", 203);
-	mfPeakNits =		gpBase->mpMainConfig->GetFloat("Graphics", "HdrPeak", 1000);
-
-	// Misc
-	mbWorldReflection = gpBase->mpMainConfig->GetBool("Graphics", "WorldReflection", true);
-	mbRefraction =		gpBase->mpMainConfig->GetBool("Graphics", "Refraction", true);
-	mbEdgeSmooth =		gpBase->mpMainConfig->GetBool("Graphics", "EdgeSmooth", false);
-
-	// SSAO
-	mbSSAOActive =		gpBase->mpMainConfig->GetBool("Graphics","SSAOActive", true);
-	mlSSAOSamples =		gpBase->mpMainConfig->GetInt("Graphics","SSAOSamples", 8);
-	mlSSAOResolution =	gpBase->mpMainConfig->GetInt("Graphics","SSAOResolution", 0);
-	
-	// Parallax
-	mbParallaxEnabled = gpBase->mpMainConfig->GetBool("Graphics", "ParallaxEnabled", true);
-	mlParallaxQuality = gpBase->mpMainConfig->GetInt("Graphics", "ParallaxQuality", 0);
-	
-	// Texture
-	mlTextureQuality =	gpBase->mpMainConfig->GetInt("Graphics", "TextureQuality", 0);
-	mlTextureFilter =	gpBase->mpMainConfig->GetInt("Graphics", "TextureFilter", eTextureFilter_Bilinear);
-	mfTextureAnisotropy = gpBase->mpMainConfig->GetFloat("Graphics", "TextureAnisotropy", 1.0f);
-
-	mbForceShaderModel3And4Off = gpBase->mpMainConfig->GetBool("Graphics", "ForceShaderModel3And4Off", false);
-
-	/////////////////////
-	// Sound variables
-	mlSoundDevID = gpBase->mpMainConfig->GetInt("Sound", "Device", -1);
-	mlMaxSoundChannels = gpBase->mpMainConfig->GetInt("Sound", "MaxChannels", 32);
-	mlSoundStreamBuffers = gpBase->mpMainConfig->GetInt("Sound", "StreamBuffers", 4);
-	mlSoundStreamBufferSize = gpBase->mpMainConfig->GetInt("Sound", "StreamBufferSize", 262144);
+	mbLoadDebugMenu = c.load_debug_menu;
+	mbFirstStart = c.first_start;
+	mbForceCacheLoadingAndSkipSaving = c.force_cache;
+	mvScreenSize.x = c.screen_width;
+	mvScreenSize.y = c.screen_height;
+	mlDisplay = c.display;
+	mbFullscreen = c.fullscreen;
+	mbVSync = c.vsync;
+	mbAdaptiveVSync = c.adaptive_vsync;
+	mbFastPhysicsLoad = c.fast_physics;
+	mbFastStaticLoad = c.fast_static;
+	mbFastEntityLoad = c.fast_entity;
+	mbOcclusionTestLights = c.occlusion_test_lights;
+	mbShadowsActive = c.shadows_active;
+	mlShadowQuality = c.shadow_quality;
+	mlShadowRes = c.shadow_res;
+	mlGuiScale = c.gui_scale;
+	mfPaperWhite = c.paper_white;
+	mfPeakNits = c.peak_nits;
+	mbWorldReflection = c.world_reflection;
+	mbRefraction = c.refraction;
+	mbEdgeSmooth = c.edge_smooth;
+	mbSSAOActive = c.ssao_active;
+	mlSSAOSamples = c.ssao_samples;
+	mlSSAOResolution = c.ssao_resolution;
+	mbParallaxEnabled = c.parallax_enabled;
+	mlParallaxQuality = c.parallax_quality;
+	mlTextureQuality = c.texture_quality;
+	mlTextureFilter = c.texture_filter;
+	mfTextureAnisotropy = c.texture_anisotropy;
+	mbForceShaderModel3And4Off = c.force_sm34_off;
+	mlSoundDevID = c.sound_dev_id;
+	mlMaxSoundChannels = c.max_sound_channels;
+	mlSoundStreamBuffers = c.sound_stream_buffers;
+	mlSoundStreamBufferSize = c.sound_stream_buffer_size;
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxConfigHandler::SaveMainConfig()
 {
-	/////////////////////
-	// Main
-	gpBase->mpMainConfig->SetBool("Main","LoadDebugMenu", mbLoadDebugMenu);
-	if(mbFirstStart) gpBase->RaiseFirstStartFlag();
-	//gpBase->mpMainConfig->SetBool("Main","FirstStart", false);
+	OhplGa9MainCfg c = {};
+	c.load_debug_menu = mbLoadDebugMenu;
+	c.first_start = mbFirstStart;
+	c.force_cache = mbForceCacheLoadingAndSkipSaving;
+	c.screen_width = mvScreenSize.x;
+	c.screen_height = mvScreenSize.y;
+	c.display = mlDisplay;
+	c.fullscreen = mbFullscreen;
+	c.vsync = mbVSync;
+	c.adaptive_vsync = mbAdaptiveVSync;
+	c.fast_physics = mbFastPhysicsLoad;
+	c.fast_static = mbFastStaticLoad;
+	c.fast_entity = mbFastEntityLoad;
+	c.occlusion_test_lights = mbOcclusionTestLights;
+	c.shadows_active = mbShadowsActive;
+	c.shadow_quality = mlShadowQuality;
+	c.shadow_res = mlShadowRes;
+	c.gui_scale = mlGuiScale;
+	c.paper_white = mfPaperWhite;
+	c.peak_nits = mfPeakNits;
+	c.world_reflection = mbWorldReflection;
+	c.refraction = mbRefraction;
+	c.edge_smooth = mbEdgeSmooth;
+	c.ssao_active = mbSSAOActive;
+	c.ssao_samples = mlSSAOSamples;
+	c.ssao_resolution = mlSSAOResolution;
+	c.parallax_enabled = mbParallaxEnabled;
+	c.parallax_quality = mlParallaxQuality;
+	c.texture_quality = mlTextureQuality;
+	c.texture_filter = mlTextureFilter;
+	c.texture_anisotropy = mfTextureAnisotropy;
+	c.force_sm34_off = mbForceShaderModel3And4Off;
+	c.sound_dev_id = mlSoundDevID;
+	c.max_sound_channels = mlMaxSoundChannels;
+	c.sound_stream_buffers = mlSoundStreamBuffers;
+	c.sound_stream_buffer_size = mlSoundStreamBufferSize;
+	c.lang_file = OhplGa9StrOf(msLangFile);
+	c.screenshot_ext = OhplGa9StrOf(msScreenShotExt);
+	c.renderer = OhplGa9StrOf(msRenderer);
+	c.color_output = OhplGa9StrOf(msColorOutput);
 
-
-	gpBase->mpMainConfig->SetString("Main", "StartLanguage", msLangFile);
-
-	gpBase->mpMainConfig->SetString("Main","ScreenShotExt", msScreenShotExt);
-
-	gpBase->mpMainConfig->SetBool("Main","ForceCacheLoadingAndSkipSaving", mbForceCacheLoadingAndSkipSaving);
-
-	/////////////////////
-	// Engine init variables
-	gpBase->mpMainConfig->SetInt("Screen","Width", mvScreenSize.x);
-	gpBase->mpMainConfig->SetInt("Screen","Height", mvScreenSize.y);
-	gpBase->mpMainConfig->SetBool("Screen","FullScreen", mbFullscreen);
-	gpBase->mpMainConfig->SetBool("Screen","Vsync", mbVSync);
-
-	gpBase->mpMainConfig->SetBool("MapLoad","FastPhysicsLoad", mbFastPhysicsLoad);
-	gpBase->mpMainConfig->SetBool("MapLoad","FastStaticLoad", mbFastStaticLoad);
-	gpBase->mpMainConfig->SetBool("MapLoad","FastEntityLoad", mbFastEntityLoad);
-
-	/////////////////////
-	// Graphics variables
-	cMaterialManager* pMatMgr = gpBase->mpEngine->GetResources()->GetMaterialManager();
-	cRenderSettings* pRenderSettings = gpBase->mpMapHandler->GetViewport()->GetRenderSettings();
-
-	gpBase->mpMainConfig->SetString("Graphics","Renderer", msRenderer);
-	gpBase->mpMainConfig->SetString("Graphics","ColorOutput", msColorOutput);
-	gpBase->mpMainConfig->SetFloat("Graphics","HdrPaperWhite", mfPaperWhite);
-	gpBase->mpMainConfig->SetFloat("Graphics","HdrPeak", mfPeakNits);
-	gpBase->mpMainConfig->SetFloat("Graphics","Gamma",gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
-	gpBase->mpMainConfig->SetInt("Graphics","GBufferType", cRendererDeferred::GetGBufferType());
-	gpBase->mpMainConfig->SetInt("Graphics","NumOfGBufferTextures", cRendererDeferred::GetNumOfGBufferTextures());
-	
-	gpBase->mpMainConfig->SetBool("Graphics", "OcclusionTestLights", mbOcclusionTestLights);
-
-	gpBase->mpMainConfig->SetInt("Graphics","TextureQuality", mlTextureQuality);
-	gpBase->mpMainConfig->SetInt("Graphics","TextureFilter", mlTextureFilter);
-	gpBase->mpMainConfig->SetFloat("Graphics","TextureAnisotropy", mfTextureAnisotropy);
-
-	gpBase->mpMainConfig->SetBool("Graphics","SSAOActive",mbSSAOActive);
-	gpBase->mpMainConfig->SetInt("Graphics","SSAOResolution",mlSSAOResolution);
-	gpBase->mpMainConfig->SetInt("Graphics","SSAOSamples",mlSSAOSamples);
-	
-	gpBase->mpMainConfig->SetBool("Graphics", "WorldReflection", mbWorldReflection);
-	gpBase->mpMainConfig->SetBool("Graphics", "Refraction", mbRefraction);
-	
-	gpBase->mpMainConfig->SetBool("Graphics", "ShadowsActive", mbShadowsActive);
-	gpBase->mpMainConfig->SetInt("Graphics","ShadowQuality", mlShadowQuality);
-	gpBase->mpMainConfig->SetInt("Graphics","ShadowResolution", mlShadowRes);
-
-	gpBase->mpMainConfig->SetInt("Graphics","GuiScale", mlGuiScale);
-
-	gpBase->mpMainConfig->SetInt("Graphics","ParallaxQuality", mlParallaxQuality);
-	gpBase->mpMainConfig->SetBool("Graphics", "ParallaxEnabled", mbParallaxEnabled);
-
-	gpBase->mpMainConfig->SetBool("Graphics", "EdgeSmooth", mbEdgeSmooth);
-
-	gpBase->mpMainConfig->SetBool("Graphics", "ForceShaderModel3And4Off", mbForceShaderModel3And4Off);
-
-	/////////////////////
-	// Sound variables
-	cSound *pSound = gpBase->mpEngine->GetSound();
-	gpBase->mpMainConfig->SetInt("Sound", "Device", mlSoundDevID);
-	gpBase->mpMainConfig->SetFloat("Sound","Volume", pSound->GetLowLevel()->GetVolume());
-	gpBase->mpMainConfig->SetInt("Sound", "MaxChannels", mlMaxSoundChannels);
-	gpBase->mpMainConfig->SetInt("Sound", "StreamBuffers", mlSoundStreamBuffers);
-	gpBase->mpMainConfig->SetInt("Sound", "StreamBufferSize", mlSoundStreamBufferSize);
-
-	/////////////////////
-	// Engine properties
-	gpBase->mpMainConfig->SetBool("Engine","LimitFPS", gpBase->mpEngine->GetLimitFPS());
-	gpBase->mpMainConfig->SetBool("Engine","SleepWhenOutOfFocus",gpBase->mpEngine->GetWaitIfAppOutOfFocus());
+	auto call = [&](uint32_t op, const OhplGa9Arg *a, size_t, OhplGa9Ret *r)
+	{
+		switch(op)
+		{
+		case eOhplGa9Op_RaiseFirstStart: gpBase->RaiseFirstStartFlag(); break;
+		case eOhplGa9Op_Gamma: r->f = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection(); break;
+		case eOhplGa9Op_GBufferType: r->i = cRendererDeferred::GetGBufferType(); break;
+		case eOhplGa9Op_NumGBuffer: r->i = cRendererDeferred::GetNumOfGBufferTextures(); break;
+		case eOhplGa9Op_Volume: r->f = gpBase->mpEngine->GetSound()->GetLowLevel()->GetVolume(); break;
+		case eOhplGa9Op_LimitFps: r->i = gpBase->mpEngine->GetLimitFPS(); break;
+		case eOhplGa9Op_WaitFocus: r->i = gpBase->mpEngine->GetWaitIfAppOutOfFocus(); break;
+		default: OhplGa9CfgCall(gpBase->mpMainConfig, op, a, r); break;
+		}
+	};
+	ohpl_ga9_save_main_cfg(&call, OhplGa9CallOf<decltype(call)>::Fn(), &c);
 }
 
 //-----------------------------------------------------------------------
@@ -222,9 +187,8 @@ bool cLuxConfigHandler::ShowRestartWarning(cGuiSet* apSet, void* apObject, tGuiC
 	///////////////////////////////////////////////////////////////////////////////////
 	// This will show a popup if really needed, once per "restarting" setting changed.
 	// Also, will return true if the popup was actually shown.
-	if(mbGameNeedsRestart && mbRestartDialogShown==false)
+	if(ohpl_ga9_restart_due(&mRestart))
 	{
-		mbRestartDialogShown = true;
 		cGuiPopUpMessageBox* pPopUp = apSet->CreatePopUpMessageBox(kTranslate("OptionsMenu", "ReqRestartLabel"),
 									 kTranslate("OptionsMenu", "ReqRestartMessage"), 
 									 kTranslate("MainMenu","OK"), _W(""),
