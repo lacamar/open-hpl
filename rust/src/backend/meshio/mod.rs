@@ -7,3 +7,6 @@ mod assimp;
 mod collada;
 mod ffi;
 pub mod msh;
+
+#[cfg(test)]
+mod tests;

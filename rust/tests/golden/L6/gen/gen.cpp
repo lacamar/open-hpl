@@ -26,6 +26,7 @@
 #include "scene/Node3D.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include "resources/Resources.h"
 #include "impl/LowLevelGraphicsSDL.h"
 
 using namespace hpl;
@@ -95,12 +96,14 @@ struct Sums { Hash all, vtx, idx, bone, anim, names, xf; };
 static void HashAnim(Sums& s, cAnimation* a)
 {
 	Hash& h = s.anim;
+	if(getenv("GEN_DUMP")) fprintf(stderr, "anim '%s' len=%a tracks=%d\n", a->GetAnimationName(), a->GetLength(), a->GetTrackNum());
 	h.S(a->GetAnimationName());
 	h.F(a->GetLength());
 	h.I(a->GetTrackNum());
 	for(int t = 0; t < a->GetTrackNum(); ++t)
 	{
 		cAnimationTrack* tr = a->GetTrack(t);
+		if(getenv("GEN_DUMP")) fprintf(stderr, "track %s flags=%d unit=%a keys=%d\n", tr->GetName().c_str(), (int)tr->GetTransformFlags(), tr->GetUnitScale(), tr->GetKeyFrameNum());
 		h.S(tr->GetName());
 		h.I(tr->GetTransformFlags());
 		h.F(tr->GetUnitScale());
@@ -108,6 +111,7 @@ static void HashAnim(Sums& s, cAnimation* a)
 		for(int k = 0; k < tr->GetKeyFrameNum(); ++k)
 		{
 			cKeyFrame* f = tr->GetKeyFrame(k);
+			if(getenv("GEN_DUMP")) fprintf(stderr, "key %s %d t=%a tr=%a,%a,%a q=%a,%a,%a,%a\n", tr->GetName().c_str(), k, f->time, f->trans.x, f->trans.y, f->trans.z, f->rotation.v.x, f->rotation.v.y, f->rotation.v.z, f->rotation.w);
 			h.F(f->time);
 			h.V3(f->trans);
 			h.F(f->rotation.v.x); h.F(f->rotation.v.y); h.F(f->rotation.v.z); h.F(f->rotation.w);
@@ -230,6 +234,18 @@ struct HAss : cMeshLoaderAssimp
 
 int hplMain(const std::string&) { return 0; }
 
+static std::string FileBytesHash(const std::string& path)
+{
+	FILE* f = fopen(path.c_str(), "rb");
+	if(!f) return "none";
+	Hash h;
+	char buf[65536];
+	size_t n;
+	while((n = fread(buf, 1, sizeof buf, f)) > 0) h.Bytes(buf, n);
+	fclose(f);
+	return Hex(h.h);
+}
+
 int main(int argc, char** argv)
 {
 	if(argc < 3) { fprintf(stderr, "usage: gen <msh|dae|fbx|anm|daeanim|fbxanim> <file>... | -\n"); return 2; }
@@ -258,6 +274,34 @@ int main(int argc, char** argv)
 		tWString file = cString::To16Char(files[a]);
 		Sums s;
 		bool ok = false;
+		if(kind == "daecache")
+		{
+			// cold load writes the cache, warm load reads it back; prints both hashes and the cache file hash
+			std::string dir = getenv("GEN_CACHE_DIR");
+			cResources::SetMeshCacheDir(cString::To16Char(dir));
+			std::string flat = files[a];
+			for(size_t i = 0; i < flat.size(); ++i) if(flat[i] == '/' || flat[i] == '\\' || flat[i] == ':') flat[i] = '_';
+			std::string cache = dir + flat + ".v5.msh";
+			remove(cache.c_str());
+			HCol cc(&low, &msh, true);
+			std::string line;
+			for(int pass = 0; pass < 2; ++pass)
+			{
+				Sums t;
+				gMaterials.clear();
+				cMesh* m = cc.LoadMesh(file, 0);
+				if(m) HashMesh(t, m);
+				for(size_t i = 0; i < gMaterials.size(); ++i) t.names.S(gMaterials[i]);
+				Hash all;
+				for(Hash* h : { &t.vtx, &t.idx, &t.bone, &t.anim, &t.names, &t.xf }) all.I((int64_t)h->h);
+				line += (m ? Hex(all.h) : "FAIL") + " ";
+				if(pass == 0) line += FileBytesHash(cache) + " ";
+			}
+			Hash lg;
+			lg.S(gLog);
+			printf("%s %s%s\n", files[a].c_str(), line.c_str(), Hex(lg.h).c_str());
+			continue;
+		}
 		if(kind == "msh" || kind == "dae" || kind == "fbx")
 		{
 			iMeshLoader* l = kind == "msh" ? (iMeshLoader*)&msh : kind == "dae" ? (iMeshLoader*)&col : (iMeshLoader*)&ass;

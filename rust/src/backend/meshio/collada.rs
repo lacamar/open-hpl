@@ -790,7 +790,7 @@ fn build_animation(
     c: &Collada,
     skel: Option<&Skel>,
     scene: &Scene,
-) -> Option<Vec<Track>> {
+) -> Option<(Vec<Track>, f32)> {
     if c.animations.is_empty() {
         return None;
     }
@@ -810,26 +810,12 @@ fn build_animation(
         }
         tracks.push(t);
     }
-    let _ = (start, end);
-    Some(tracks)
-}
-
-fn anim_length(c: &Collada, tracks: &[Track]) -> f32 {
-    if c.scene.delta >= 0.0 {
-        return c.scene.delta;
-    }
-    let (mut start, mut end) = (9_999_999.0f32, 0.0f32);
-    for t in tracks {
-        if let (Some(first), Some(last)) = (t.keys.first(), t.keys.last()) {
-            if start > first.time {
-                start = first.time;
-            }
-            if end < last.time {
-                end = last.time;
-            }
-        }
-    }
-    end - start
+    let length = if c.scene.delta >= 0.0 {
+        c.scene.delta
+    } else {
+        end - start
+    };
+    Some((tracks, length))
 }
 
 fn emit_track(sink: Sink, t: &Track) {
@@ -1374,7 +1360,10 @@ pub fn load_mesh(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
     }
 
     // animation
-    let mut tracks = build_animation(sink, &c, skel.as_ref(), &scene);
+    let (mut tracks, length) = match build_animation(sink, &c, skel.as_ref(), &scene) {
+        Some((t, l)) => (Some(t), l),
+        None => (None, 0.0),
+    };
     if let Some(t) = &mut tracks {
         clean_up_non_animated(sink, t, skel.as_ref(), &scene, c.z_to_y, unit);
     }
@@ -1417,7 +1406,7 @@ pub fn load_mesh(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
             path,
             string::file_name(path),
             Some(b"Default"),
-            anim_length(&c, t),
+            length,
             t.len(),
         );
         for tr in t {
@@ -1555,7 +1544,7 @@ pub fn load_anim(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
             return 1;
         }
     };
-    let Some(mut tracks) = build_animation(sink, &c, skel.as_ref(), &scene) else {
+    let Some((mut tracks, length)) = build_animation(sink, &c, skel.as_ref(), &scene) else {
         return 1;
     };
     clean_up_non_animated(
@@ -1584,7 +1573,7 @@ pub fn load_anim(cfg: &Cfg, sink: Sink, path: &[u8]) -> i32 {
             }
         }
     }
-    sink.anim_new(path, file, None, anim_length(&c, &tracks), tracks.len());
+    sink.anim_new(path, file, None, length, tracks.len());
     for t in &tracks {
         emit_track(sink, t);
     }

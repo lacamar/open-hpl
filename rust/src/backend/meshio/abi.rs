@@ -4,6 +4,9 @@
 use crate::meshload::Key;
 use std::ffi::c_void;
 
+#[cfg(test)]
+pub(super) mod recorder;
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Str {
