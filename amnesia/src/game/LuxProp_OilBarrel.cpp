@@ -103,61 +103,38 @@ bool cLuxProp_OilBarrel::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos
 {
 	CalculateOilAmount();
 
-	float fOil = gpBase->mpPlayer->GetLampOil();
+	OhplGa4bOilFill fill;
+	ohpl_ga4b_oil_fill(mfOilAmount, gpBase->mpPlayer->GetLampOil(), &fill);
 
-	///////////////////////////////////
-	// Check if barrel is empty or lantern is full
-	if(mfOilAmount <= 0)
+	if(fill.result == kOhplGa4bOil_Empty)
 	{
 		PlaySound("EmptyBarell",msEmptySound, true, false);
 		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Empty"), 0);
 		return false;
 	}
-	else if(fOil > 99)
+	else if(fill.result == kOhplGa4bOil_Full)
 	{
 		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_LanternFull"), 0);
 		return false;
 	}
-	
-	///////////////////////////////////
-	// Increase oil amount
-	fOil += mfOilAmount;
-	float fFillAmount = mfOilAmount;
-	if(fOil > 100)
-	{	
-		fFillAmount = mfOilAmount - (fOil - 100.0f);
-        mfOilAmount = fOil - 100.0f;
-		if(mfOilAmount < 1.0f) mfOilAmount =0; //If very little oil left, just let it be empty.
-		fOil = 100;
-	}
-	else
-	{
-		fFillAmount = mfOilAmount;
-		mfOilAmount = 0;
-	}
 
-	gpBase->mpPlayer->SetLampOil(fOil);
+	mfOilAmount = fill.barrel;
+	gpBase->mpPlayer->SetLampOil(fill.lamp);
+
 	PlaySound("FillLantern",msFillSound, true, false);
 
-	///////////////////////////////////
-	// Display fill message
-	if(fOil >= 100)
+	if(fill.tier == 0)
 	{
 		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Full"), 0);
 	}
 	else
 	{
-		if(fFillAmount < 25)
-			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_025"),0);
-		else if(fFillAmount < 50)
-			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_050"),0);
-		else if(fFillAmount < 75)
-			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_075"),0);
-		else 
-			gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_100"),0);
+		if(fill.tier == 1)		gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_025"),0);
+		else if(fill.tier == 2)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_050"),0);
+		else if(fill.tier == 3)	gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_075"),0);
+		else					gpBase->mpMessageHandler->SetMessage(kTranslate("Game", "OilBarrel_Refill_Amount_100"),0);
 	}
 
-	
 	return true;
 }
 
@@ -203,22 +180,13 @@ tWString cLuxProp_OilBarrel::GetFocusText()
 	CalculateOilAmount();
 
 	tWString sText;
-	if(mfOilAmount <=0)
-	{
-		sText = kTranslate("Game", "OilBarrel_FocusText_Empty");
-	}
-	else
-	{
-		if(mfOilAmount < 25)
-			sText = kTranslate("Game", "OilBarrel_FocusText_025");
-		else if(mfOilAmount < 50)
-			sText = kTranslate("Game", "OilBarrel_FocusText_050");
-		else if(mfOilAmount < 75)
-			sText = kTranslate("Game", "OilBarrel_FocusText_075");
-		else 
-			sText = kTranslate("Game", "OilBarrel_FocusText_100");
-	}
-		
+	int lTier = ohpl_ga4b_oil_focus_tier(mfOilAmount);
+	if(lTier == 0)			sText = kTranslate("Game", "OilBarrel_FocusText_Empty");
+	else if(lTier == 1)		sText = kTranslate("Game", "OilBarrel_FocusText_025");
+	else if(lTier == 2)		sText = kTranslate("Game", "OilBarrel_FocusText_050");
+	else if(lTier == 3)		sText = kTranslate("Game", "OilBarrel_FocusText_075");
+	else					sText = kTranslate("Game", "OilBarrel_FocusText_100");
+
 	return sText;
 }
 
@@ -264,11 +232,7 @@ void cLuxProp_OilBarrel::CalculateOilAmount()
 		fTotalOil += pItem->GetAmount() * (float)pItem->GetCount();
 	}
 	
-    float fAdd = 100 - fTotalOil;
-	if(fAdd < 0) fAdd = 0;
-	if(fAdd > 90) fAdd = 90;
-
-	mfOilAmount += fAdd;
+	mfOilAmount = ohpl_ga4b_oil_amount(fTotalOil);
 
     mbAmountCalculated = true;    
 }

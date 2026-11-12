@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxHandObject.h"
+#include "RustLuxProp.h"
 
 
 //----------------------------------------------
@@ -48,22 +49,10 @@ public:
 private:
 	void UpdateSwayPhysics(float afTimeStep);
 
-	float mfFadeInSpeed;
-	float mfFadeOutSpeed;
-	
-	bool mbHasSwayPhysics;
-	float mfMaxSwayVel;
-	cVector2f mvSwayAngleLimits;
-	cVector2f mvSwayDownAngleLimits;
-	cVector3f mvSwayPinDir;
-	float mfSwayGravity;
-	float mfSwayFriction;
-	float mfSwayPlayerSpeedMul;
-	float mfSwayCameraRollMul;
+	OhplGa4bLightParams mP;
 	tString msSkipSwaySubMesh;
-	
-	float mfSwayAngle;
-	float mfSwayVel;
+
+	OhplGa4bSway mSway;
 
 	std::vector<cColor> mvLightFadeOutColor;
 	std::vector<cColor> mvDefaultLightColors;

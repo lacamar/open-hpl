@@ -108,20 +108,19 @@ bool cLuxProp_LevelDoor::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_LevelDoor::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mbLocked)
+	OhplGa4bDoorAct act;
+	ohpl_ga4b_door_interact(mbLocked, mfLockedCount, &act);
+
+	if(act.locked_feedback)
 	{
-		//Wait until last locked message until showing a new.
-		if(mfLockedCount <=0)
+		gpBase->mpHelpFuncs->PlayGuiSoundData(msLockedSound,eSoundEntryType_World);
+		if(msLockedTextCat != "" && msLockedTextEntry != "")
 		{
-			gpBase->mpHelpFuncs->PlayGuiSoundData(msLockedSound,eSoundEntryType_World);
-			if(msLockedTextCat != "" && msLockedTextEntry != "")
-			{
-				gpBase->mpMessageHandler->SetMessage(kTranslate(msLockedTextCat, msLockedTextEntry), 0);
-			}
-			mfLockedCount = 2.0f;
+			gpBase->mpMessageHandler->SetMessage(kTranslate(msLockedTextCat, msLockedTextEntry), 0);
 		}
+		mfLockedCount = act.count;
 	}
-	else
+	if(act.change_map)
 	{
 		gpBase->mpMapHandler->ChangeMap(msMapFile,msStartPos, msEnterSound, msExitSound);
 	}
@@ -146,10 +145,7 @@ void cLuxProp_LevelDoor::OnResetProperties()
 
 void cLuxProp_LevelDoor::UpdatePropSpecific(float afTimeStep)
 {
-	if(mfLockedCount >0)
-	{
-		mfLockedCount -= afTimeStep;
-	}
+	mfLockedCount = ohpl_ga4b_door_tick(mfLockedCount, afTimeStep);
 }
 
 //-----------------------------------------------------------------------

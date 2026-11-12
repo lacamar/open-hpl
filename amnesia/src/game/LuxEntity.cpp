@@ -18,6 +18,8 @@
  */
 
 #include "LuxEntity.h"
+#include "RustLuxProp.h"
+#include <cstring>
 
 #include "LuxMap.h"
 #include "LuxPlayer.h"
@@ -203,97 +205,68 @@ void iLuxEntity::UpdateCheckCollideCallback(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
+static bool LuxEntityLineOfSight(void *apCtx, const float *apStart, const float *apEnd)
+{
+	return gpBase->mpMapHelper->CheckLineOfSight(cVector3f(apStart[0], apStart[1], apStart[2]), cVector3f(apEnd[0], apEnd[1], apEnd[2]), false);
+}
+
 void iLuxEntity::UpdatePlayerLookAt(float afTimeStep)
 {
 	if(msLookAtCallback == "") return;
 
-	if(mfLookAtCount > 0)
-	{
-		mfLookAtCount-=afTimeStep;
-		return;
-	}
-	mfLookAtCount = 0.3f;
+	if(ohpl_ga4b_entity_look_timer(&mfLookAtCount, afTimeStep)==false) return;
 
-	//////////////////////////////////////
-	// Iterate bodies and check frustum and then line of sight
 	bool bLookingAt=false;
 	cCamera *pCamera = gpBase->mpPlayer->GetCamera();
 	cFrustum *pFrustum = pCamera->GetFrustum();
+
+	OhplGa4bLos los;
+	los.ctx = NULL;
+	los.los = &LuxEntityLineOfSight;
+
 	for(int i = 0; i < GetBodyNum(); i++)
 	{
 		iPhysicsBody *pBody = GetBody(i);
 		cBoundingVolume *pBV = pBody->GetBoundingVolume();
 
-		/////////////////////////
-		// Frustum check
 		if(pFrustum->CollideBoundingVolume(pBV) == eCollision_Outside)
 		{
 			continue;
 		}
-		
-		/////////////////////////
-		// Set up line of sight check
-		cVector3f vStart = pCamera->GetPosition();
-		cVector3f vEnd = pBV->GetWorldCenter();
-		
-		cVector3f vDir = vEnd - vStart;
-		float fSqrDist = vDir.SqrLength();
-		
-		if(fSqrDist > 50*50) continue;
 
-		/////////////////////////
-		// Check if center of screen is over object
-		cVector3f vIntersection;
-		cVector3f vCentreLineEnd = vStart + pCamera->GetForward() * 50;
-		if(cMath::CheckAABBLineIntersection(pBV->GetMin(), pBV->GetMax(), vStart, vCentreLineEnd,&vIntersection, NULL)==false)
-		{
-			continue;
-		}
-		
-		/////////////////////////
-		// If close enough then it is visible
-		float fSqrRadius = pBV->GetRadius()*pBV->GetRadius()+0.05f;
-		if(fSqrDist < fSqrRadius)
+		OhplGa4bLookIn in;
+		cVector3f vCamPos = pCamera->GetPosition();
+		cVector3f vCamFwd = pCamera->GetForward();
+		cVector3f vCamUp = pCamera->GetUp();
+		cVector3f vCamRight = pCamera->GetRight();
+		cVector3f vMin = pBV->GetMin();
+		cVector3f vMax = pBV->GetMax();
+		cVector3f vCenter = pBV->GetWorldCenter();
+		memcpy(in.cam_pos, vCamPos.v, sizeof(in.cam_pos));
+		memcpy(in.cam_fwd, vCamFwd.v, sizeof(in.cam_fwd));
+		memcpy(in.cam_up, vCamUp.v, sizeof(in.cam_up));
+		memcpy(in.cam_right, vCamRight.v, sizeof(in.cam_right));
+		memcpy(in.bv_min, vMin.v, sizeof(in.bv_min));
+		memcpy(in.bv_max, vMax.v, sizeof(in.bv_max));
+		memcpy(in.bv_center, vCenter.v, sizeof(in.bv_center));
+		in.bv_radius = pBV->GetRadius();
+
+		if(ohpl_ga4b_entity_look_body(&in, &los))
 		{
 			bLookingAt = true;
 			break;
 		}
-
-		/////////////////////////
-		// Check line of sight
-		vDir.Normalize();
-		cVector3f vLineOfSightTestPos[5];
-		float fHalfRadius = pBV->GetRadius() * 0.5f;
-
-		vLineOfSightTestPos[0] = vEnd - vDir*pBV->GetRadius();
-		vLineOfSightTestPos[1] = vLineOfSightTestPos[0] + pCamera->GetUp() * fHalfRadius;
-		vLineOfSightTestPos[2] = vLineOfSightTestPos[0] - pCamera->GetUp() * fHalfRadius;
-		vLineOfSightTestPos[3] = vLineOfSightTestPos[0] + pCamera->GetRight() * fHalfRadius;
-		vLineOfSightTestPos[4] = vLineOfSightTestPos[0] - pCamera->GetRight() * fHalfRadius;
-				
-		for(int i=0; i<5; ++i)
-		{
-			if(gpBase->mpMapHelper->CheckLineOfSight(vStart, vLineOfSightTestPos[i], false))
-			{
-				bLookingAt = true;
-				break;
-			}
-		}
-		if(bLookingAt) break;
 	}
 
-	//////////////////////////////////////
-	// Check if looking at
 	if(bLookingAt && mbIsLookedAt == false)
 	{
 		tString sTempCallback = msLookAtCallback;
 		if(mbLookAtCallbackRemove) msLookAtCallback = "";
-
 		mpMap->RunScript(sTempCallback + "(\""+msName+"\", 1)" );
 	}
 	else if(bLookingAt==false && mbIsLookedAt)
 	{
-		mpMap->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );	
+		mpMap->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );
 	}
 
 	mbIsLookedAt = bLookingAt;
@@ -317,14 +290,8 @@ void iLuxEntity::ConnectionStateChange(int alState)
 	{
 		cLuxEntityConnection *pConn = mvConnections[i];
 		
-		//See if this state will send a message.
-		if(pConn->GetStateUsed()!=0)
-		{
-			if(alState != pConn->GetStateUsed()) continue;
-		}
-
-		//Get state sent to child, invert if set so.
-		int lState = pConn->GetInvertStateSent() ? -alState : alState;
+		int lState;
+		if(ohpl_ga4b_entity_conn_state(alState, pConn->GetStateUsed(), pConn->GetInvertStateSent(), &lState)==false) continue;
 
 		//Log("Send state '%s'%d to '%s'as %d\n", msName.c_str(), alState, pConn->GetEntity()->GetName().c_str(), lState);
 

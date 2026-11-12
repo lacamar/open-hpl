@@ -65,37 +65,16 @@ public:
 
 private:
 	void UpdateVelocity(float afTimeStep);
-	void UpdateMovement(float afTimeStep);
+	void OnGa4bSound(int alKind);
 	
 	//General
 	
 	//Vars
-	float mfPlaySoundCount;
-	float mfPauseCount;
-	bool mbPaused;
-	
-	//Data
-	float mfMaxSpeed;
-	float mfMaxSpeedNormal;
-	float mfMaxSpeedAfraid;
-	float mfGravity;
-
-	float mfPlayerFleeDistance;
-
-	float mfFleeMul;
-	float mfBackToSpawnPointMul;
-	float mfWanderCircleRadius;
-	float mfWanderCircleDist;
-
-	bool mbHasRandomPauses;
-	cVector2f mvRandomPauseTimeMinMax;
-	cVector2f mvRandomMoveTimeMinMax;
-
 	tString msNormalSound;
-	cVector2f mvNormalSoundRandMinMax;
-
 	tString msScaredSound;
-	cVector2f mvScaredSoundRandMinMax;
+
+	OhplGa4bBugParams mBP;
+	OhplGa4bBug mB;
 };
 
 //----------------------------------------------
