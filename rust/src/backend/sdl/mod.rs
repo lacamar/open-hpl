@@ -2,7 +2,7 @@
 //! `OHPL_IMPL=rust`. Decision logic lives in `crate::sdlsys` and `crate::input`.
 
 mod clib;
-mod fs;
+pub mod fs;
 mod input;
 mod logw;
 mod plat;

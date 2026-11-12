@@ -25,6 +25,7 @@
 #include "resources/ResourcesTypes.h"
 #include "system/SystemTypes.h"
 #include "resources/RustResources.h"
+#include "resources/RustResourcesH2.h"
 
 namespace hpl {
 
@@ -61,6 +62,7 @@ namespace hpl {
 	
 	private:
 		OhplFileSearcher *mpFiles;
+		OhplH2Searcher *mpRs;
 		std::deque<tWString> mvPaths;
 
 		tWString msNull;
