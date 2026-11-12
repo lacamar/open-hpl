@@ -90,7 +90,7 @@ namespace hpl {
 		cProgramComboManager(const tString& asName, cGraphics *apGraphics, cResources *apResources, int alNumOfMainModes);
 		~cProgramComboManager();
 
-		void SetName( const tString& asName){ msName = asName;}
+		void SetName( const tString& asName);
 
 		iGpuProgram* GenerateProgram(int alMainMode, int alFlags);
 		int GetGenerateCombinationNum(int alMainMode){ return mvCombinationNum[alMainMode]; }
@@ -126,6 +126,7 @@ namespace hpl {
 		tString GenerateProgramName(int alMainMode, int alBitFlags);
 
 		iGpuShader* GetShaderForCombo(int alMainMode, int alBitFlags, const tString& asShaderName, tFlag aShaderType);
+		iGpuShader* CreateShaderFromRustVars(const tString& asShaderFile, int alMainMode, tFlag aShaderType, int alBitFlags);
 		iGpuShader* CreateShaderFromFeatures(	const tString& asShaderFile, tFlag aShaderType, int alBitFlags, cProgramComboFeature* apFeatures, int alFeatureNum, 
 												cProgramComboSettingsVar *apDefaultVars, int alDefaultVarsNum);
 
@@ -153,6 +154,7 @@ namespace hpl {
 		std::vector<int> mvCombinationNum;
 
 		OhplComboHandle *mpCombo;
+		void *mpSettings;
 
 		tGpuShaderList mlstExtraShaders;
 		tGpuProgramList mlstExtraPrograms;

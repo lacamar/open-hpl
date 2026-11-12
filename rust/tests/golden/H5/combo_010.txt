@@ -1,0 +1,67 @@
+mgr mat5 1
+-o setup 0 mode0_36 vs_16.vert fs_3.frag f:1:Feat2 f:1:Feat7
+combos=4
+-o name 0 0
+mat5_mode0_36
+-o name 0 3
+mat5_mode0_36_Feat2_Feat7
+-o shader 0 1 2
+create file=fs_3.frag type=1 vars=
+shader id=0
+-o shader 0 3 1
+create file=vs_16.vert type=0 vars=Feat2=;Feat7=;
+shader id=3
+-o shader 0 1 1
+create file=vs_16.vert type=0 vars=Feat2=;
+shader id=1
+-o shader 0 2 1
+create file=vs_16.vert type=0 vars=Feat7=;
+shader id=2
+-o name 0 1
+mat5_mode0_36_Feat2
+-o shader 0 1 2
+shader id=0
+-o shader 0 2 2
+shader id=0
+-o name 0 0
+mat5_mode0_36
+-o shader 0 1 1
+shader id=1
+-o shader 0 1 1
+shader id=1
+-o shader 0 0 1
+create file=vs_16.vert type=0 vars=
+shader id=0
+-o name 0 3
+mat5_mode0_36_Feat2_Feat7
+-o name 0 2
+mat5_mode0_36_Feat7
+-o shader 0 2 2
+shader id=0
+-o name 0 2
+mat5_mode0_36_Feat7
+-o name 0 2
+mat5_mode0_36_Feat7
+-o shader 0 3 1
+shader id=3
+-o shader 0 1 2
+shader id=0
+-o shader 0 0 1
+shader id=0
+-o shader 0 3 2
+shader id=0
+-o shader 0 1 2
+shader id=0
+-o shader 0 1 1
+shader id=1
+-o name 0 3
+mat5_mode0_36_Feat2_Feat7
+-o shader 0 0 1
+shader id=0
+-o name 0 2
+mat5_mode0_36_Feat7
+-o name 0 1
+mat5_mode0_36_Feat2
+-o name 0 1
+mat5_mode0_36_Feat2
+-o end

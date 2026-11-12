@@ -1,0 +1,80 @@
+mgr mat28 3
+-o setup 0 mode0_34 vs_23.vert fs_16.frag f:3:Feat20 f:1:Feat12 f:3:Feat3 f:3:Feat24 d:Def9:863
+combos=16
+-o setup 1 mode1_34 vs_20.vert fs_18.frag f:3:Feat17 f:1:Feat25 f:2:Feat26 d:Def2:743
+combos=8
+-o setup 2 mode2_27 vs_14.vert fs_9.frag f:2:Feat26 f:1:Feat5 f:3:Feat21 f:2:Feat13 d:Def2:331
+combos=16
+-o shader 2 14 1
+create file=vs_14.vert type=0 vars=Def2=331;Feat21=;Feat5=;
+shader id=6
+-o name 1 2
+mat28_mode1_34_Feat25
+-o shader 0 0 1
+create file=vs_23.vert type=0 vars=Def9=863;
+shader id=0
+-o name 1 5
+mat28_mode1_34_Feat17_Feat26
+-o name 2 3
+mat28_mode2_27_Feat26_Feat5
+-o name 2 13
+mat28_mode2_27_Feat26_Feat21_Feat13
+-o shader 2 6 2
+create file=fs_9.frag type=1 vars=Def2=331;Feat21=;
+shader id=4
+-o name 2 10
+mat28_mode2_27_Feat5_Feat13
+-o name 2 13
+mat28_mode2_27_Feat26_Feat21_Feat13
+-o shader 2 14 1
+shader id=6
+-o name 0 6
+mat28_mode0_34_Feat12_Feat3
+-o name 2 10
+mat28_mode2_27_Feat5_Feat13
+-o name 2 8
+mat28_mode2_27_Feat13
+-o name 2 15
+mat28_mode2_27_Feat26_Feat5_Feat21_Feat13
+-o shader 1 2 1
+create file=vs_20.vert type=0 vars=Def2=743;Feat25=;
+shader id=2
+-o name 1 2
+mat28_mode1_34_Feat25
+-o shader 2 5 1
+create file=vs_14.vert type=0 vars=Def2=331;Feat21=;
+shader id=4
+-o shader 2 13 1
+shader id=4
+-o name 0 2
+mat28_mode0_34_Feat12
+-o name 0 8
+mat28_mode0_34_Feat24
+-o name 2 15
+mat28_mode2_27_Feat26_Feat5_Feat21_Feat13
+-o name 2 4
+mat28_mode2_27_Feat21
+-o shader 1 5 2
+create file=fs_18.frag type=1 vars=Def2=743;Feat17=;Feat26=;
+shader id=5
+-o name 2 14
+mat28_mode2_27_Feat5_Feat21_Feat13
+-o shader 0 14 1
+create file=vs_23.vert type=0 vars=Def9=863;Feat12=;Feat24=;Feat3=;
+shader id=14
+-o name 1 7
+mat28_mode1_34_Feat17_Feat25_Feat26
+-o shader 1 7 2
+shader id=5
+-o shader 0 10 2
+create file=fs_16.frag type=1 vars=Def9=863;Feat24=;
+shader id=8
+-o shader 1 4 1
+create file=vs_20.vert type=0 vars=Def2=743;
+shader id=0
+-o name 0 6
+mat28_mode0_34_Feat12_Feat3
+-o shader 1 1 2
+create file=fs_18.frag type=1 vars=Def2=743;Feat17=;
+shader id=1
+-o end

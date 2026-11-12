@@ -1,0 +1,8 @@
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=d6a8f1cb80e49a8b}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=69689b7321a02a57}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=e57273c3735564b7}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=324e9656849bee3f}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=733fd256d348675f}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=7e47c0a9c12c5f77}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=7a1a6365d101846b}")
+tex#0.CreateFromBitmap("v3i{256,64,1}511img{n=65536,h=dfb517411e81d4a3}")
