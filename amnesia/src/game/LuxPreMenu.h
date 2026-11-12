@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMenu2.h"
+
 
 enum eLuxPreMenuState
 {
@@ -117,7 +119,7 @@ public:
 	void AppLostInputFocus();
 	void AppGotInputFocus();
 	cGuiSet* GetSet() { return mpGuiSet; }
-	eLuxPreMenuState GetState() { return mCurrentState; }
+	eLuxPreMenuState GetState() { return (eLuxPreMenuState)mS.mlState; }
 	bool IsContinueButtonVisible() { return mpBContinue->IsVisible(); }
 
 private:
@@ -157,12 +159,8 @@ private:
 	cVector2f mvGuiSetOffset;
 	cVector3f mvGuiSetStartPos;
 	
-	eLuxPreMenuState mCurrentState;
-	int mlCurrentSectionIdx;
-	float mfTimer;
-	float mfAlphaFade;
+	OhplGa7bPre mS;
 
-	bool mbExitPreMenu;
 	
 	cGuiGfxElement* mpBlackFade;
 

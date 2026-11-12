@@ -44,6 +44,7 @@ class cLuxProp_Item : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxPropLoader_Item;
+friend class cLuxItemHost;
 public:	
 	cLuxProp_Item(const tString &asName, int alID, cLuxMap *apMap);
 	virtual ~cLuxProp_Item();
@@ -81,6 +82,7 @@ public:
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 	//////////////////////
 	//Save data stuff
@@ -98,7 +100,7 @@ private:
 
 	int mlSpawnContainerID;
 
-	float mfFlashAlpha;
+	OhplGa4cItemState mS;
 
 	////////////////
 	//Data

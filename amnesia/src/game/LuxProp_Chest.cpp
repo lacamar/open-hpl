@@ -52,10 +52,14 @@ void cLuxPropLoader_Chest::LoadVariables(iLuxProp *apProp, cXmlElement *apRootEl
 
 	///////////////////////////
 	// General
-	pChest->mSwingDoorData.mfMoveMaxSpeed = GetVarFloat("MoveMaxSpeed", 13.5f);
-	pChest->mSwingDoorData.mfMoveSlowDownFactor = GetVarFloat("MoveSlowDownFactor", 3.0f);
-	pChest->mSwingDoorData.mfMoveSpeedFactor = GetVarFloat("MoveSpeedFactor", 1.0f);
-	pChest->mSwingDoorData.mfMoveThrowImpulse = GetVarFloat("MoveThrowImpulse", 6.0f);
+	OhplGa4VarsAdapter vars(this);
+	OhplGa4MoveData data;
+	ohpl_ga4c_chest_load(vars.Vars(), &data);
+
+	pChest->mSwingDoorData.mfMoveMaxSpeed = data.max_speed;
+	pChest->mSwingDoorData.mfMoveSlowDownFactor = data.slow_down_factor;
+	pChest->mSwingDoorData.mfMoveSpeedFactor = data.speed_factor;
+	pChest->mSwingDoorData.mfMoveThrowImpulse = data.throw_impulse;
 }
 
 //-----------------------------------------------------------------------
@@ -64,7 +68,8 @@ void cLuxPropLoader_Chest::LoadInstanceVariables(iLuxProp *apProp, cResourceVars
 {
 	cLuxProp_Chest  *pChest = static_cast<cLuxProp_Chest*>(apProp);
 
-	pChest->mlCoinsNeeded = apInstanceVars->GetVarInt("CoinsNeeded",0);
+	OhplGa4VarsAdapter vars(apInstanceVars);
+	pChest->mlCoinsNeeded = ohpl_ga4c_chest_load_instance(vars.Vars());
 }
 //-----------------------------------------------------------------------
 
@@ -83,17 +88,9 @@ cLuxChestMessageCallback::cLuxChestMessageCallback(cLuxProp_Chest *apChest)
 
 void cLuxChestMessageCallback::OnPress(bool abYes)
 {
-	if(abYes)
-	{
-		gpBase->mpPlayer->AddCoins(-mpChest->mlCoinsNeeded);
-		mpChest->SetLocked(false, true);
-
-		ProgLog(eLuxProgressLogLevel_Medium, "Opened chest "+ mpChest->msName);
-
-		mpChest->mpMap->AddCompletionAmount(gpBase->mpCompletionCountHandler->mlChestCompletionValue);
-
-		gpBase->mpHelpFuncs->PlayGuiSoundData("gameplay_open_chest", eSoundEntryType_Gui);
-	}
+	OhplGa4Run run(mpChest);
+	ohpl_ga4c_chest_press(abYes, mpChest->mlCoinsNeeded, run.Sink());
+	run.Finish();
 }
 
 //-----------------------------------------------------------------------
@@ -135,12 +132,13 @@ bool cLuxProp_Chest::CanInteract(iPhysicsBody *apBody)
 
 bool cLuxProp_Chest::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mbLocked==false) return false;
+	int lAction = ohpl_ga4c_chest_interact(mbLocked, mlCoinsNeeded, gpBase->mpPlayer->GetCoins());
+	if(lAction == kOhplGa4cChest_NoInteract) return false;
 
 	tWString sText = kTranslate("Game", "InteractChest01")+_W(" ")+cString::ToStringW(mlCoinsNeeded)+_W(" ")+kTranslate("Game", "InteractChest02")+_W("\n");
 	sText += kTranslate("Game", "InteractChest03")+_W(" ")+cString::ToStringW(gpBase->mpPlayer->GetCoins())+_W("\n");
 
-	if(gpBase->mpPlayer->GetCoins() < mlCoinsNeeded)
+	if(lAction == kOhplGa4cChest_NoCoins)
 	{
 		sText += kTranslate("Game", "InteractChest03_NoCoins")+_W("\n");
 		gpBase->mpMessageHandler->StartPauseMessage(sText,false, NULL);
@@ -150,7 +148,6 @@ bool cLuxProp_Chest::OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)
 		sText += kTranslate("Game", "InteractChest03_Question")+_W("\n");
 		gpBase->mpMessageHandler->StartPauseMessage(sText,true, mpMessageCallback);
 	}
-	
 	
 	return true;
 }
@@ -216,7 +213,7 @@ void cLuxProp_Chest::BeforePropDestruction()
 
 eLuxFocusCrosshair cLuxProp_Chest::GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos)
 {
-	if(mbLocked)
+	if(ohpl_ga4c_chest_crosshair(mbLocked) == kOhplGa4cCrosshair_Grab)
 		return eLuxFocusCrosshair_Grab;
 	else
 		return eLuxFocusCrosshair_Default;
@@ -257,29 +254,50 @@ void cLuxProp_Chest::InFocusDraw(cGuiSet *apGuiSet, float afFrameTime)
 
 void cLuxProp_Chest::SetLocked(bool abLocked, bool abEffects)
 {
-	if(mbLocked == abLocked) return;
+	std::vector<float> vMaxAngles;
+	for(size_t i=0; i<mvJointData.size(); ++i) vMaxAngles.push_back(mvJointData[i].mfMaxAngle);
 
-	mbLocked = abLocked;
+	OhplGa4Run run(this);
+	ohpl_ga4c_chest_set_locked(&mbLocked, abLocked, vMaxAngles.empty() ? NULL : &vMaxAngles[0], (int)vMaxAngles.size(), run.Sink());
+	run.Finish();
+}
 
-	for(size_t i=0; i<mvJointData.size(); ++i)
+//-----------------------------------------------------------------------
+
+void cLuxProp_Chest::Ga4ApplyOp(const OhplGa4Op &aOp)
+{
+	switch(aOp.code)
 	{
-		iPhysicsJointHinge *pHingeJoint = mvJointData[i].mpHingeJoint;
-
-		if(mbLocked)
-		{
-			pHingeJoint->SetMinAngle(cMath::ToRad(0.0f));
-			pHingeJoint->SetMaxAngle(cMath::ToRad(2.0f));
-			pHingeJoint->SetStickyMinLimit(false);
-			pHingeJoint->SetStickyMaxLimit(false);
-		}
-		else
-		{
-			pHingeJoint->SetMaxAngle(mvJointData[i].mfMaxAngle);
-			pHingeJoint->SetMinAngle(mvJointData[i].mfMaxAngle-cMath::ToRad(2.0f));
-			pHingeJoint->SetStickyMinLimit(false);
-			pHingeJoint->SetStickyMaxLimit(false);
-		}
-		mvJointData[i].mpChildBody->AddForce(cVector3f(0,1,0));
+	case kOhplGa4cOp_ChestHingeMin:
+		mvJointData[aOp.i].mpHingeJoint->SetMinAngle(aOp.f[0]);
+		break;
+	case kOhplGa4cOp_ChestHingeMax:
+		mvJointData[aOp.i].mpHingeJoint->SetMaxAngle(aOp.f[0]);
+		break;
+	case kOhplGa4cOp_ChestHingeSticky:
+		mvJointData[aOp.i].mpHingeJoint->SetStickyMinLimit(false);
+		mvJointData[aOp.i].mpHingeJoint->SetStickyMaxLimit(false);
+		break;
+	case kOhplGa4cOp_ChestAddForce:
+		mvJointData[aOp.i].mpChildBody->AddForce(cVector3f(0,1,0));
+		break;
+	case kOhplGa4cOp_ChestPay:
+		gpBase->mpPlayer->AddCoins(aOp.i);
+		break;
+	case kOhplGa4cOp_ChestUnlock:
+		SetLocked(false, true);
+		break;
+	case kOhplGa4cOp_ChestLog:
+		ProgLog(eLuxProgressLogLevel_Medium, "Opened chest "+ msName);
+		break;
+	case kOhplGa4cOp_ChestCompletion:
+		mpMap->AddCompletionAmount(gpBase->mpCompletionCountHandler->mlChestCompletionValue);
+		break;
+	case kOhplGa4cOp_ChestSound:
+		gpBase->mpHelpFuncs->PlayGuiSoundData("gameplay_open_chest", eSoundEntryType_Gui);
+		break;
+	default:
+		iLuxProp::Ga4ApplyOp(aOp);
 	}
 }
 
@@ -287,8 +305,7 @@ void cLuxProp_Chest::SetLocked(bool abLocked, bool abEffects)
 
 void cLuxProp_Chest::OnConnectionStateChange(iLuxEntity *apEntity, int alState)
 {
-	if(alState > 0)		SetLocked(true, true);
-	else				SetLocked(false, true);
+	SetLocked(ohpl_ga4c_chest_conn_locked(alState), true);
 }
 
 //-----------------------------------------------------------------------

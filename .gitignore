@@ -35,7 +35,9 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 [Bb]in/
+!rust/src/bin/
 [Oo]bj/
+!rust/src/obj/
 [Ll]og/
 [Ll]ogs/
 

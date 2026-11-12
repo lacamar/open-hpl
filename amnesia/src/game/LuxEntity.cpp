@@ -111,10 +111,11 @@ cSoundEntity* iLuxEntity::PlaySound(const tString& asName, const tString& asFile
 
 	cSoundEntity *pSound = mpMap->GetWorld()->CreateSoundEntity(msName + "_" + asName,asFile,abRemoveWhenDone);
 	iEntity3D *pAttachEnt = GetAttachEntity();
-	if(pSound && pAttachEnt)
+
+	switch(ohpl_ga4c_ent_attach(pSound != NULL, pAttachEnt != NULL, abAttach))
 	{
-		if(abAttach)	pAttachEnt->AddChild(pSound);
-		else			pSound->SetPosition(pAttachEnt->GetWorldPosition());
+	case kOhplGa4cAttach_Child:		pAttachEnt->AddChild(pSound); break;
+	case kOhplGa4cAttach_Position:	pSound->SetPosition(pAttachEnt->GetWorldPosition()); break;
 	}
 
 	return pSound;
@@ -124,29 +125,23 @@ cSoundEntity* iLuxEntity::PlaySound(const tString& asName, const tString& asFile
 
 void iLuxEntity::RunCallbackFunc(const tString& asType)
 {
-	if(msCallbackFunc=="")return;
-
-	mpMap->RunScript(msCallbackFunc + "(\""+msName+"\", \""+asType+"\")" );
+	OhplGa4cEntSink sink(this, &asType);
+	ohpl_ga4c_ent_run_callback(msCallbackFunc != "", sink.Sink());
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEntity::RunInteractCallbackFunc()
 {
-	if(msInteractCallback=="")return;
-	
-	mpMap->RunScript(msInteractCallback + "(\""+msName+"\")");
-	
-	if(mbInteractCallbackRemove) msInteractCallback = "";
+	OhplGa4cEntSink sink(this);
+	ohpl_ga4c_ent_run_interact(&mGa4cCb, msInteractCallback != "", sink.Sink());
 }
 
 //-----------------------------------------------------------------------
 
 void iLuxEntity::SetActive(bool abX)
 {
-	if(mbActive == abX) return;
-
-	mbActive = abX;
+	if(ohpl_ga4c_ent_set_active(&mbActive, abX) == false) return;
 
     OnSetActive(abX);
 }
@@ -210,31 +205,28 @@ static bool LuxEntityLineOfSight(void *apCtx, const float *apStart, const float 
 	return gpBase->mpMapHelper->CheckLineOfSight(cVector3f(apStart[0], apStart[1], apStart[2]), cVector3f(apEnd[0], apEnd[1], apEnd[2]), false);
 }
 
-void iLuxEntity::UpdatePlayerLookAt(float afTimeStep)
+//-----------------------------------------------------------------------
+
+class cLuxEntityLookHost
 {
-	if(msLookAtCallback == "") return;
-
-	if(ohpl_ga4b_entity_look_timer(&mfLookAtCount, afTimeStep)==false) return;
-
-	bool bLookingAt=false;
-	cCamera *pCamera = gpBase->mpPlayer->GetCamera();
-	cFrustum *pFrustum = pCamera->GetFrustum();
-
-	OhplGa4bLos los;
-	los.ctx = NULL;
-	los.los = &LuxEntityLineOfSight;
-
-	for(int i = 0; i < GetBodyNum(); i++)
+public:
+	cLuxEntityLookHost(iLuxEntity *apEntity) : mpEntity(apEntity)
 	{
-		iPhysicsBody *pBody = GetBody(i);
+		mHost.ctx = this; mHost.body_num = &BodyNum; mHost.body = &Body;
+	}
+	const OhplGa4cLookHost *Host() const { return &mHost; }
+
+private:
+	static int BodyNum(void *c) { return ((cLuxEntityLookHost*)c)->mpEntity->GetBodyNum(); }
+	static bool Body(void *c, int i, OhplGa4bLookIn *apOut)
+	{
+		iPhysicsBody *pBody = ((cLuxEntityLookHost*)c)->mpEntity->GetBody(i);
+		cCamera *pCamera = gpBase->mpPlayer->GetCamera();
+		cFrustum *pFrustum = pCamera->GetFrustum();
 		cBoundingVolume *pBV = pBody->GetBoundingVolume();
 
-		if(pFrustum->CollideBoundingVolume(pBV) == eCollision_Outside)
-		{
-			continue;
-		}
+		if(pFrustum->CollideBoundingVolume(pBV) == eCollision_Outside) return false;
 
-		OhplGa4bLookIn in;
 		cVector3f vCamPos = pCamera->GetPosition();
 		cVector3f vCamFwd = pCamera->GetForward();
 		cVector3f vCamUp = pCamera->GetUp();
@@ -242,70 +234,111 @@ void iLuxEntity::UpdatePlayerLookAt(float afTimeStep)
 		cVector3f vMin = pBV->GetMin();
 		cVector3f vMax = pBV->GetMax();
 		cVector3f vCenter = pBV->GetWorldCenter();
-		memcpy(in.cam_pos, vCamPos.v, sizeof(in.cam_pos));
-		memcpy(in.cam_fwd, vCamFwd.v, sizeof(in.cam_fwd));
-		memcpy(in.cam_up, vCamUp.v, sizeof(in.cam_up));
-		memcpy(in.cam_right, vCamRight.v, sizeof(in.cam_right));
-		memcpy(in.bv_min, vMin.v, sizeof(in.bv_min));
-		memcpy(in.bv_max, vMax.v, sizeof(in.bv_max));
-		memcpy(in.bv_center, vCenter.v, sizeof(in.bv_center));
-		in.bv_radius = pBV->GetRadius();
-
-		if(ohpl_ga4b_entity_look_body(&in, &los))
-		{
-			bLookingAt = true;
-			break;
-		}
+		memcpy(apOut->cam_pos, vCamPos.v, sizeof(apOut->cam_pos));
+		memcpy(apOut->cam_fwd, vCamFwd.v, sizeof(apOut->cam_fwd));
+		memcpy(apOut->cam_up, vCamUp.v, sizeof(apOut->cam_up));
+		memcpy(apOut->cam_right, vCamRight.v, sizeof(apOut->cam_right));
+		memcpy(apOut->bv_min, vMin.v, sizeof(apOut->bv_min));
+		memcpy(apOut->bv_max, vMax.v, sizeof(apOut->bv_max));
+		memcpy(apOut->bv_center, vCenter.v, sizeof(apOut->bv_center));
+		apOut->bv_radius = pBV->GetRadius();
+		return true;
 	}
 
-	if(bLookingAt && mbIsLookedAt == false)
-	{
-		tString sTempCallback = msLookAtCallback;
-		if(mbLookAtCallbackRemove) msLookAtCallback = "";
-		mpMap->RunScript(sTempCallback + "(\""+msName+"\", 1)" );
-	}
-	else if(bLookingAt==false && mbIsLookedAt)
-	{
-		mpMap->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );
-	}
+	iLuxEntity *mpEntity;
+	OhplGa4cLookHost mHost;
+};
 
-	mbIsLookedAt = bLookingAt;
+//-----------------------------------------------------------------------
+
+void iLuxEntity::UpdatePlayerLookAt(float afTimeStep)
+{
+	cLuxEntityLookHost host(this);
+	OhplGa4bLos los;
+	los.ctx = NULL;
+	los.los = &LuxEntityLineOfSight;
+
+	OhplGa4cEntSink sink(this);
+	ohpl_ga4c_ent_look_at(&mGa4cCb, msLookAtCallback != "", afTimeStep, host.Host(), &los, sink.Sink());
 }
+
+//-----------------------------------------------------------------------
+
+class cLuxEntityConnHost
+{
+public:
+	cLuxEntityConnHost(iLuxEntity *apEntity) : mpEntity(apEntity)
+	{
+		mHost.ctx = this; mHost.conn_num = &ConnNum; mHost.conn = &Conn; mHost.has_callback = &HasCallback;
+	}
+	const OhplGa4cConnHost *Host() const { return &mHost; }
+
+private:
+	static int ConnNum(void *c) { return ((cLuxEntityConnHost*)c)->mpEntity->GetConnectionNum(); }
+	static void Conn(void *c, int i, int *apUsed, bool *apInvert)
+	{
+		cLuxEntityConnection *pConn = ((cLuxEntityConnHost*)c)->mpEntity->GetConnection(i);
+		*apUsed = pConn->GetStateUsed();
+		*apInvert = pConn->GetInvertStateSent();
+	}
+	static bool HasCallback(void *c, int i) { return ((cLuxEntityConnHost*)c)->mpEntity->GetConnection(i)->GetCallbackFunc() != ""; }
+
+	iLuxEntity *mpEntity;
+	OhplGa4cConnHost mHost;
+};
 
 //-----------------------------------------------------------------------
 
 void iLuxEntity::ConnectionStateChange(int alState)
 {
-	//////////////////////////////////
-	// Callback
-	if(msConnectionStateChangeCallback != "")
+	cLuxEntityConnHost host(this);
+	OhplGa4cEntSink sink(this);
+	ohpl_ga4c_ent_conn_change(alState, msConnectionStateChangeCallback != "", host.Host(), sink.Sink());
+}
+
+//-----------------------------------------------------------------------
+
+void iLuxEntity::Ga4cApplyOp(const OhplGa4Op &aOp, const tString *apType)
+{
+	switch(aOp.code)
 	{
-		mpMap->RunScript(	msConnectionStateChangeCallback + 
-							"(\""+msName+"\", "+ cString::ToString(alState) + ")");
-	}
-
-    //////////////////////////////////
-	// Iterate connections
-	for(size_t i=0; i< mvConnections.size(); ++i)
-	{
-		cLuxEntityConnection *pConn = mvConnections[i];
-		
-		int lState;
-		if(ohpl_ga4b_entity_conn_state(alState, pConn->GetStateUsed(), pConn->GetInvertStateSent(), &lState)==false) continue;
-
-		//Log("Send state '%s'%d to '%s'as %d\n", msName.c_str(), alState, pConn->GetEntity()->GetName().c_str(), lState);
-
-        pConn->GetEntity()->OnConnectionStateChange(this,lState);
-
-		if(pConn->GetCallbackFunc()!="")
+	case kOhplGa4cOp_EntCallback:
+		mpMap->RunScript(msCallbackFunc + "(\""+msName+"\", \""+*apType+"\")" );
+		break;
+	case kOhplGa4cOp_EntInteract:
+		mpMap->RunScript(msInteractCallback + "(\""+msName+"\")");
+		break;
+	case kOhplGa4cOp_EntClearInteract:
+		msInteractCallback = "";
+		break;
+	case kOhplGa4cOp_EntLookAtEnter:
 		{
+			tString sTempCallback = msLookAtCallback;
+			if(aOp.i) msLookAtCallback = "";
+			mpMap->RunScript(sTempCallback + "(\""+msName+"\", 1)" );
+		}
+		break;
+	case kOhplGa4cOp_EntLookAtLeave:
+		mpMap->RunScript(msLookAtCallback + "(\""+msName+"\", -1)" );
+		break;
+	case kOhplGa4cOp_EntConnChangeCb:
+		mpMap->RunScript(	msConnectionStateChangeCallback +
+							"(\""+msName+"\", "+ cString::ToString(aOp.i) + ")");
+		break;
+	case kOhplGa4cOp_EntConnSend:
+		mvConnections[aOp.i]->GetEntity()->OnConnectionStateChange(this, aOp.j);
+		break;
+	case kOhplGa4cOp_EntConnScript:
+		{
+			cLuxEntityConnection *pConn = mvConnections[aOp.i];
 			//Syntax: ConnectionName,ParentEnt, ChildEnt, state
 			tString sCommand = pConn->GetCallbackFunc() + "(\"" + pConn->GetName() + "\"," +
 															"\"" + msName +  + "\"," +
 															"\"" + pConn->GetEntity()->GetName() + "\"," +
-															cString::ToString(lState) + ")";
-			mpMap->RunScript(sCommand);		
+															cString::ToString(aOp.j) + ")";
+			mpMap->RunScript(sCommand);
 		}
+		break;
 	}
 }
 
@@ -320,7 +353,7 @@ void iLuxEntity::PreloadEntityModel(const tString &asFile)
 	//////////////////////
 	// Load XML document
 	iXmlDocument *pEntityDoc = pResources->LoadXmlDocument(sFileName);
-	if(pEntityDoc==NULL){
+	if(ohpl_ga4c_ent_preload_has_doc(pEntityDoc != NULL) == false){
 		Error("Could not load xml file '%s'\n", sFileName.c_str());
 		return;
 	}
@@ -335,7 +368,7 @@ void iLuxEntity::PreloadEntityModel(const tString &asFile)
 	//////////////////////
 	// Load Mesh
 	cMesh *pMesh = pResources->GetMeshManager()->CreateMesh(sModelFile);
-	if(pMesh)
+	if(ohpl_ga4c_ent_preload_has_mesh(pMesh != NULL))
 		mvPreloadedMeshes.push_back(pMesh);
 	else
 		Error("Could not load mesh '%s' when preloading!\n",sModelFile.c_str());
@@ -345,29 +378,47 @@ void iLuxEntity::PreloadEntityModel(const tString &asFile)
 
 //-----------------------------------------------------------------------
 
+class cLuxEntityCollideHost
+{
+public:
+	cLuxEntityCollideHost(iLuxEntity *apEntity, iPhysicsWorld *apPhysicsWorld, iPhysicsBody *apPlayerBody) : mpEntity(apEntity), mpPhysicsWorld(apPhysicsWorld), mpPlayerBody(apPlayerBody)
+	{
+		mHost.ctx = this; mHost.body_num = &BodyNum; mHost.bv_intersects = &BvIntersects; mHost.shape_collides = &ShapeCollides;
+		mCollideData.SetMaxSize(1);
+	}
+	const OhplGa4cCollideHost *Host() const { return &mHost; }
+
+private:
+	static cLuxEntityCollideHost *Me(void *c) { return (cLuxEntityCollideHost*)c; }
+	static int BodyNum(void *c) { return Me(c)->mpEntity->GetBodyNum(); }
+	static bool BvIntersects(void *c, int i)
+	{
+		iPhysicsBody *pBody = Me(c)->mpEntity->GetBody(i);
+		return cMath::CheckBVIntersection(*Me(c)->mpPlayerBody->GetBoundingVolume(), *pBody->GetBoundingVolume());
+	}
+	static bool ShapeCollides(void *c, int i)
+	{
+		cLuxEntityCollideHost *me = Me(c);
+		iPhysicsBody *pBody = me->mpEntity->GetBody(i);
+		return me->mpPhysicsWorld->CheckShapeCollision(pBody->GetShape(), pBody->GetLocalMatrix(), me->mpPlayerBody->GetShape(), me->mpPlayerBody->GetLocalMatrix(), me->mCollideData,1, false);
+	}
+
+	iLuxEntity *mpEntity;
+	iPhysicsWorld *mpPhysicsWorld;
+	iPhysicsBody *mpPlayerBody;
+	cCollideData mCollideData;
+	OhplGa4cCollideHost mHost;
+};
+
+//-----------------------------------------------------------------------
+
 bool iLuxEntity::CollidesWithPlayer()
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
-	cCollideData collideData;
-	collideData.SetMaxSize(1);
-
 	iPhysicsBody *pPlayerBody = gpBase->mpPlayer->GetCharacterBody()->GetCurrentBody();
 
-	for(int i=0; i<GetBodyNum(); ++i)
-	{
-		iPhysicsBody *pBody = GetBody(i);
-
-		if(cMath::CheckBVIntersection(*pPlayerBody->GetBoundingVolume(), *pBody->GetBoundingVolume())==false)
-		{
-			continue;
-		}
-		
-		if(pPhysicsWorld->CheckShapeCollision(pBody->GetShape(), pBody->GetLocalMatrix(), pPlayerBody->GetShape(), pPlayerBody->GetLocalMatrix(), collideData,1, false))
-		{
-			return true;
-		}
-	}
-	return false;
+	cLuxEntityCollideHost host(this, pPhysicsWorld, pPlayerBody);
+	return ohpl_ga4c_ent_collides(host.Host());
 }
 
 //-----------------------------------------------------------------------
@@ -400,7 +451,7 @@ void cLuxEntityConnection_SaveData::FromConnection(cLuxEntityConnection *apConne
 void cLuxEntityConnection_SaveData::ToConnection(cLuxEntityConnection *apConnection, cLuxMap *apMap)
 {
 	apConnection->mpEntity = apMap->GetEntityByID(mlEntityId);
-	if(apConnection->mpEntity ==NULL)
+	if(ohpl_ga4c_ent_connection_missing(apConnection->mpEntity != NULL))
 	{
 		Error("Could not find entity  with id %d for connection '%s'\n", mlEntityId, msName.c_str());
 	}

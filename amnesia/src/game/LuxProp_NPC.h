@@ -54,6 +54,8 @@ class cLuxProp_NPC : public iLuxProp
 {
 typedef iLuxProp super_class;
 friend class cLuxPropLoader_NPC;
+friend class cLuxNpcLoadCtx;
+friend class cLuxNpcHost;
 public:	
 	cLuxProp_NPC(const tString &asName, int alID, cLuxMap *apMap);
 	virtual ~cLuxProp_NPC();
@@ -78,7 +80,7 @@ public:
 	//////////////////////
 	//Settings
 	void SetAwake(bool abX, bool abEffects);
-	void SetFollowPlayer(bool abX){ mbFollowPlayer = abX; }
+	void SetFollowPlayer(bool abX){ mS.follow_player = abX; }
 	
 	//////////////////////
 	//Debug
@@ -88,6 +90,7 @@ public:
 	//////////////////////
 	//Connection callbacks
 	void OnConnectionStateChange(iLuxEntity *apEntity, int alState);
+	void Ga4ApplyOp(const OhplGa4Op &aOp);
 
 
 	//////////////////////
@@ -106,23 +109,14 @@ private:
 	// Data
 	std::vector<cLuxProp_NPC_HeadMoveBone> mvHeadMoveBones;
 
-	float mfHeadMoveSpeedMul;
-	float mfHeadMoveMaxSpeed;
-	float mfMaxHeadAngle;
+	OhplGa4cNpcParams mP;
     	
 	//////////////////////
 	// Variables
 	tString msFollowPlayerArea;
 	iLuxEntity *mpFollowPlayerArea;
 
-	bool mbPlayerIsInArea;
-	float mfInAreaCount;
-
-	float mfHeadAngle;
-
-	bool mbAwake;
-	bool mbPlayingWakeAnim;
-	bool mbFollowPlayer;
+	OhplGa4cNpcState mS;
 };
 
 //----------------------------------------------

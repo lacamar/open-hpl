@@ -22,6 +22,8 @@
 #include "LuxInputHandler.h"
 #include "LuxSaveHandler.h"
 #include "LuxProgressLogHandler.h"
+#include "RustLuxMenu2.h"
+
 
 
 //-----------------------------------------------------------------------
@@ -84,19 +86,18 @@ void cLuxMainMenu_CustomStory::CreateGui()
 
 	//////////////////////////////////////////////////////////////
 	// Get longest label string and set button width accordingly
+	std::vector<float> vLabelLengths;
 	for(int i=0;i<(int)vLabels.size();++i)
 	{
 		const tWString& sLabel = vLabels[i];
-		float fLabelLength = pButton->GetDefaultFontType()->GetLength(pButton->GetDefaultFontSize(), 
-																		sLabel.c_str());
 
-		if(fButtonWidth < fLabelLength)
-			fButtonWidth = fLabelLength;
+		vLabelLengths.push_back(pButton->GetDefaultFontType()->GetLength(pButton->GetDefaultFontSize(),
+																		sLabel.c_str()));
 	}
-	
+
 	//////////////////////////
 	//Buttons
-	fButtonWidth += 20.0f;
+	fButtonWidth = ohpl_ga7b_pg_button_width(vLabelLengths.data(), vLabelLengths.size());
 	float fButtonHeight = 30.0f;
 	float fButtonSepp = 3;
 
@@ -156,20 +157,23 @@ void cLuxMainMenu_CustomStory::SetCurrentStory(cLuxCustomStorySettings* apStory)
 
 	tWString sBy = kTranslate("CustomStory", "By");
 	tWString sName, sAuthor, sDescription;
-		
-	// Retrieve story name
+
 	sName = mpStory->msName;
-	if(sName==_W(""))
+	sAuthor = mpStory->msAuthor;
+	sDescription = kTranslate("CustomStoryMain", "Description");
+
+	uint32_t lFallbacks = ohpl_ga7b_pg_story_fallbacks(sName==_W(""), sAuthor==_W(""), sDescription==_W(""));
+
+	// Retrieve story name
+	if(lFallbacks & eOhplGa7bFb_Name)
 		sName = kTranslate("CustomStory", "NoName");
 
 	// Retrieve author name
-	sAuthor = mpStory->msAuthor;
-	if(sAuthor==_W(""))
-        sAuthor = kTranslate("CustomStory", "NoAuthor");
+	if(lFallbacks & eOhplGa7bFb_Author)
+		sAuthor = kTranslate("CustomStory", "NoAuthor");
 
 	// Retrieve description
-	sDescription = kTranslate("CustomStoryMain", "Description");
-	if(sDescription==_W(""))
+	if(lFallbacks & eOhplGa7bFb_Desc)
 		sDescription = kTranslate("CustomStory", "NoDescription");
 
 	// Create picture
@@ -199,36 +203,28 @@ void cLuxMainMenu_CustomStory::SetCurrentStory(cLuxCustomStorySettings* apStory)
 	if(mvButtons.empty())
 		return;
 
-	float fButtonSep = 3.0f;
 	bool bSaveFileExists = gpBase->mpSaveHandler->SaveFileExists();
-	tBoolVec vButtonAffectedBySave;
-	// Continue button
-	vButtonAffectedBySave.push_back(true);
-	// Start button
-	vButtonAffectedBySave.push_back(false);
-	// Load game button
-	vButtonAffectedBySave.push_back(true);
-	// Cancel button
-	vButtonAffectedBySave.push_back(false);
-
 
 	cVector3f vButtonPos = mvButtons[0]->GetLocalPosition();
+	std::vector<float> vHeights;
+	for(int i=0;i<(int)mvButtons.size();++i)
+		vHeights.push_back(mvButtons[i]->GetSize().y);
+	std::vector<unsigned char> vActive(vHeights.size());
+	std::vector<float> vY(vHeights.size());
+	ohpl_ga7b_pg_story_buttons(bSaveFileExists, vButtonPos.y, vHeights.data(), vHeights.size(), (bool*)vActive.data(), vY.data());
+
 	for(int i=0;i<(int)mvButtons.size();++i)
 	{
         cWidgetButton* pButton = mvButtons[i];
 
-		// If button is not affected by the presence of save files or there are save files, the button will be active
-		bool bButtonActive = (vButtonAffectedBySave[i]==false || bSaveFileExists);
+		pButton->SetEnabled(vActive[i]);
+		pButton->SetVisible(vActive[i]);
 
-		pButton->SetEnabled(bButtonActive);
-		pButton->SetVisible(bButtonActive);
-
-		if(bButtonActive==false)
+		if(vActive[i]==false)
 			continue;
 
+		vButtonPos.y = vY[i];
 		pButton->SetPosition(vButtonPos);
-
-		vButtonPos.y += pButton->GetSize().y + fButtonSep*2;
 	}
 }
 
@@ -274,13 +270,12 @@ bool cLuxMainMenu_CustomStory::PressStart(iWidget* apWidget, const cGuiMessageDa
 	//////////////////////////////////////////////////////
 	// Create save folder if not already present
 	tWString sProfileCustomSaveFolder = gpBase->msMainProfileSavePath + _W("custom");
-	if(cPlatform::FolderExists(sProfileCustomSaveFolder)==false)
+	bool bCustomFolderExists = cPlatform::FolderExists(sProfileCustomSaveFolder);
+	uint32_t lFolders = ohpl_ga7b_pg_start_folders(bCustomFolderExists, bCustomFolderExists && cPlatform::FolderExists(gpBase->msProfileSavePath));
+	if(lFolders & eOhplGa7bFolder_Custom)
 		cPlatform::CreateFolder(sProfileCustomSaveFolder);
-	else
-	{
-		if(cPlatform::FolderExists(gpBase->msProfileSavePath)==false)
-			cPlatform::CreateFolder(gpBase->msProfileSavePath);
-	}
+	if(lFolders & eOhplGa7bFolder_Profile)
+		cPlatform::CreateFolder(gpBase->msProfileSavePath);
 
 	gpBase->StartCustomStory();
 
@@ -523,7 +518,7 @@ bool cLuxMainMenu_CustomStoryList::PressOK(iWidget* apWidget, const cGuiMessageD
 {
 	/////////////////////////////////////////////////////////////
 	// Check if the list has a valid selection, and warn if not
-	if(mpLBStories->GetSelectedItem()<0)
+	if(ohpl_ga7b_pg_press_ok(mpLBStories->GetSelectedItem()) == 0)
 		mpGuiSet->CreatePopUpMessageBox(kTranslate("Global", "Warning"), 
 										kTranslate("CustomStory", "NoValidStory"), 
 										kTranslate("Global","OK"), _W(""), 
@@ -560,8 +555,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_CustomStoryList, PressCancel);
 
 bool cLuxMainMenu_CustomStoryList::LoadStoryCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bOkPressed = aData.mlVal==0? true : false;
-	if(bOkPressed==false)
+	if(ohpl_ga7b_popup_ok(aData.mlVal)==false)
 		return true;
 
 	LoadStory(mpLBStories->GetSelectedItem());
@@ -574,7 +568,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_CustomStoryList, LoadStoryCallback);
 
 bool cLuxMainMenu_CustomStoryList::ExitCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bOkPressed = aData.mlVal==0? true : false;
+	bool bOkPressed = ohpl_ga7b_popup_ok(aData.mlVal);
 	if(bOkPressed==false)
 	{
 		gpBase->SetCustomStory(NULL);

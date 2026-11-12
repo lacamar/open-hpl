@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMenu2.h"
+
 
 
 enum eLuxMainMenuWindow
@@ -113,7 +115,7 @@ public:
 	cGuiSet* GetSet() { return mpGuiSet; }
 
 	void SetWindowActive(eLuxMainMenuWindow aWindow);
-	void SetTopMenuAlpha(float afX) { mfTopMenuAlpha = afX; }
+	void SetTopMenuAlpha(float afX) { mS.mfTopAlpha = afX; }
 
 	void ExitPressed();
 
@@ -227,8 +229,8 @@ private:
 	bool HardModeTextDraw(iWidget* apWidget, const cGuiMessageData& aData);
 	kGuiCallbackDeclarationEnd(HardModeTextDraw);
 
-	float mfDescriptionAlpha;
-	bool mbFadeInDescription;
+	OhplGa7bMenu mS;
+
 
 	cWidgetLabel * mpSaveCost;
 	cWidgetLabel * mpNumTinderboxes;
@@ -277,7 +279,7 @@ private:
 	cGuiGfxElement *mpLogoGfx;
 	
 	std::vector<iLuxMainMenuWindow*> mvWindows;
-	eLuxMainMenuWindow mCurrentWindow;
+
 
 	iWidget* mpLastFocusedItem;
 
@@ -288,14 +290,8 @@ private:
 	cVector2f mvScreenSize;
 
 	std::vector<cWidgetLabel*> mvTopMenuLabels;
-	bool mbTopMenuVisible;
-	float mfTopMenuAlpha;
-	
-	float mfMenuFadeAlpha;
-	
 	bool mbRecreateGui;
-	bool mbExiting;
-	eLuxMainMenuExit mExitMessage;
+
 
 	cGuiGfxElement *mpBlackFade;
 	cGuiGfxElement *mpTopBackground;

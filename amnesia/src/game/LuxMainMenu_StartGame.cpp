@@ -21,6 +21,8 @@
 #include "LuxBase.h"
 #include "LuxInputHandler.h"
 #include "LuxDebugHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //-----------------------------------------------------------------------
 
@@ -185,6 +187,14 @@ void cLuxMainMenu_StartGame::OnSetActive(bool abX)
 	}
 }
 
+void cLuxMainMenu_StartGame::SetModeColors(bool abHard)
+{
+	int lGold = ohpl_ga7b_pg_mode_gold(abHard);
+	cColor gold(232.0f / 255.0f, 201.0f / 255.0f, 28.0f / 255.0f, 1.0f);
+	mpNormalModeButton->SetDefaultFontColor((lGold & 1) ? gold : cColor(1.f, 1.0f));
+	mpHardModeButton->SetDefaultFontColor((lGold & 2) ? gold : cColor(1.f, 1.0f));
+}
+
 //-----------------------------------------------------------------------
 
 bool cLuxMainMenu_StartGame::WindowOnUpdate(iWidget* apWidget, const cGuiMessageData& aData)
@@ -197,8 +207,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, WindowOnUpdate);
 
 bool cLuxMainMenu_StartGame::PressNormalMode(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	mpNormalModeButton->SetDefaultFontColor(cColor(232.0f / 255.0f, 201.0f / 255.0f, 28.0f / 255.0f, 1.0f));
-	mpHardModeButton->SetDefaultFontColor(cColor(1.f, 1.0f));
+	SetModeColors(false);
 	mpLDescription->SetText(kTranslate("MainMenu", "NormalModeDescription"));
 
 	gpBase->mbHardMode = false;
@@ -211,7 +220,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, PressNormalMode);
 
 bool cLuxMainMenu_StartGame::ClickedStartGamePopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bStartGame = aData.mlVal == 0 ? true : false;
+	bool bStartGame = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 
 	if (bStartGame)
@@ -259,14 +268,11 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, PressCancel);
 
 bool cLuxMainMenu_StartGame::ExitCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bOkPressed = aData.mlVal == 0 ? true : false;
-	if (bOkPressed == false)
+	int lTarget = ohpl_ga7b_pg_exit_target(gpBase->mpCustomStory != NULL, ohpl_ga7b_popup_ok(aData.mlVal));
+	if (lTarget < 0)
 		return true;
 
-	if (gpBase->mpCustomStory == NULL)
-		gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_LastEnum);
-	else
-		gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_CustomStory);
+	gpBase->mpMainMenu->SetWindowActive((eLuxMainMenuWindow)lTarget);
 
 	return true;
 }
@@ -276,10 +282,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, ExitCallback);
 
 bool cLuxMainMenu_StartGame::UIPressStart(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch(aData.mlVal)
+	switch(ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary:	return PressStartGame(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary:	return PressStartGame(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -289,10 +295,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, UIPressStart);
 
 bool cLuxMainMenu_StartGame::UIPressNormalMode(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch (aData.mlVal)
+	switch (ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary:	return PressNormalMode(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary:	return PressNormalMode(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -303,10 +309,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, UIPressNormalMode);
 
 bool cLuxMainMenu_StartGame::UIPressHardmode(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch (aData.mlVal)
+	switch (ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary:	return PressHardMode(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary:	return PressHardMode(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -315,10 +321,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, UIPressHardmode);
 
 bool cLuxMainMenu_StartGame::UIPressCancel(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch(aData.mlVal)
+	switch(ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary: return PressCancel(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -329,8 +335,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_StartGame, UIPressCancel);
 
 bool cLuxMainMenu_StartGame::PressHardMode(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	mpNormalModeButton->SetDefaultFontColor(cColor(1.f, 1.0f));
-	mpHardModeButton->SetDefaultFontColor(cColor(232.0f / 255.0f, 201.0f / 255.0f, 28.0f / 255.0f, 1.0f));
+	SetModeColors(true);
 	mpLDescription->SetText(kTranslate("MainMenu", "HardModeDescription"));
 	gpBase->mbHardMode = true;
 
