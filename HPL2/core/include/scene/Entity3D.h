@@ -45,11 +45,13 @@ namespace hpl {
 	//-----------------------------------------
 
 	class cNode3D;
+	struct OhplH10Hooks;
 
 	//-----------------------------------------
 
 	class iEntity3D
 	{
+	friend struct OhplH10Hooks;
 	public:
 		iEntity3D(tString asName);
 		virtual ~iEntity3D();

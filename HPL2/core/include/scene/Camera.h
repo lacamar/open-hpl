@@ -23,6 +23,7 @@
 #include "math/MathTypes.h"
 #include "math/Frustum.h"
 #include "scene/Node3D.h"
+#include "scene/RustSceneH10.h"
 
 namespace hpl {
 	
@@ -53,7 +54,7 @@ namespace hpl {
 		cCamera();
 		~cCamera();
 
-		const cVector3f& GetPosition()const{return mvPosition;}
+		const cVector3f& GetPosition()const{return mS.mvPosition;}
 		void SetPosition(const cVector3f& avPos);
 
 		/**
@@ -73,36 +74,36 @@ namespace hpl {
 		void MoveUp(float afDist);
 
 		void SetFOV(float afAngle);
-		float GetFOV() { return mfFOV;}
+		float GetFOV() { return mS.mfFOV;}
 
 		void SetAspect(float afSpect);
-		float GetAspect() { return mfAspect;}
+		float GetAspect() { return mS.mfAspect;}
 
 		void SetFarClipPlane(float afX);
-		float GetFarClipPlane() { return mfFarClipPlane;}
+		float GetFarClipPlane() { return mS.mfFarClipPlane;}
 		
 		void SetNearClipPlane(float afX);
-		float GetNearClipPlane() { return mfNearClipPlane;}
+		float GetNearClipPlane() { return mS.mfNearClipPlane;}
 
 		void SetProjectionType(eProjectionType aType);
-		eProjectionType GetProjectionType() { return mProjectionType; }
+		eProjectionType GetProjectionType() { return (eProjectionType)mS.mlProjectionType; }
 
 		void SetOrthoViewSize(const cVector2f &avSize);
-		const cVector2f& GetOrthoViewSize(){ return mvViewSize;}
+		const cVector2f& GetOrthoViewSize(){ return mS.mvViewSize;}
 		
 		/**
 		 * This sets the far plane so that no far clipping is made.
 		 * The FarClipPlane is still used for creating bounding box and frustum and 
 		 * should be set to some value.
 		 */
-		void SetInifintiveFarPlane(bool abX){ mbInfFarPlane = abX; mbProjectionUpdated = true;}
-		bool GetInifintiveFarPlane(){ return mbInfFarPlane;}
+		void SetInifintiveFarPlane(bool abX){ mS.mbInfFarPlane = abX; mS.mbProjectionUpdated = true;}
+		bool GetInifintiveFarPlane(){ return mS.mbInfFarPlane;}
 
 		cFrustum* GetFrustum();
 
-		eCameraRotateMode GetRotateMode(){return mRotateMode;}
+		eCameraRotateMode GetRotateMode(){return (eCameraRotateMode)mS.mlRotateMode;}
 		
-		eCameraMoveMode GetMoveMode(){return mMoveMode;}
+		eCameraMoveMode GetMoveMode(){return (eCameraMoveMode)mS.mlMoveMode;}
 		/**
 		* Set the mode to calculate the rotation angles.
 		* EulerAngles: Yaw, Pitch and Roll are used.
@@ -146,20 +147,20 @@ namespace hpl {
 		void AddYaw(float afAngle);
 		void AddRoll(float afAngle);
 
-		float GetPitch() const{ return mfPitch;}
-		float GetYaw() const{ return mfYaw;}
-		float GetRoll() const{ return mfRoll;}
+		float GetPitch() const{ return mS.mfPitch;}
+		float GetYaw() const{ return mS.mfYaw;}
+		float GetRoll() const{ return mS.mfRoll;}
 
 		/**
 		 * Set the limits within the pitch can move. 0 and 0 equals no limits.
 		 */
-		void SetPitchLimits(float afMin, float afMax){ mfPitchLimitMin = afMin; mfPitchLimitMax = afMax; }
-		float GetPitchMinLimit(){return mfPitchLimitMin;}
-		float GetPitchMaxLimit(){return mfPitchLimitMax;}
+		void SetPitchLimits(float afMin, float afMax){ mS.mfPitchLimitMin = afMin; mS.mfPitchLimitMax = afMax; }
+		float GetPitchMinLimit(){return mS.mfPitchLimitMin;}
+		float GetPitchMaxLimit(){return mS.mfPitchLimitMax;}
 
-		void SetYawLimits(float afMin, float afMax){ mfYawLimitMin = afMin; mfYawLimitMax = afMax; }
-		float GetYawMinLimit(){return mfYawLimitMin;}
-		float GetYawMaxLimit(){return mfYawLimitMax;}
+		void SetYawLimits(float afMin, float afMax){ mS.mfYawLimitMin = afMin; mS.mfYawLimitMax = afMax; }
+		float GetYawMinLimit(){return mS.mfYawLimitMin;}
+		float GetYawMaxLimit(){return mS.mfYawLimitMax;}
 
 		//////////////////////////////////////////////////
 		////////// MATRIX ROTATION ///////////////////////
@@ -175,7 +176,7 @@ namespace hpl {
 		cVector3f GetRight();
 		cVector3f GetUp();
 
-		const cMatrixf& GetRotationMatrix() { return m_mtxMatrixRotation; }
+		const cMatrixf& GetRotationMatrix() { return mS.m_mtxMatrixRotation; }
 
 		//////////////////////////////////////////////////
 		////////// PROPERTIES /////////////////
@@ -195,56 +196,20 @@ namespace hpl {
 		////////// RENDER SPECIFIC ///////////////////////
 		//////////////////////////////////////////////////
 		
-		void SetPrevView(const cMatrixf &a_mtxA){ m_mtxPrevView = a_mtxA;}
-		void SetPrevProjection(const cMatrixf &a_mtxA){m_mtxPrevProjection = a_mtxA;}
+		void SetPrevView(const cMatrixf &a_mtxA){ mS.m_mtxPrevView = a_mtxA;}
+		void SetPrevProjection(const cMatrixf &a_mtxA){mS.m_mtxPrevProjection = a_mtxA;}
 		
-		cMatrixf& GetPrevView(){ return m_mtxPrevView;}
-		cMatrixf& GetPrevProjection(){ return m_mtxPrevProjection;}
+		cMatrixf& GetPrevView(){ return mS.m_mtxPrevView;}
+		cMatrixf& GetPrevProjection(){ return mS.m_mtxPrevProjection;}
 
 	private:
 		void UpdateMoveMatrix();
 
-		cVector3f mvPosition;
-
-		float mfFOV;
-		float mfAspect;
-		float mfFarClipPlane;
-		float mfNearClipPlane;
-
-		cVector2f mvViewSize;
-
-		eProjectionType mProjectionType;
-
-		float mfPitch;
-		float mfYaw;
-		float mfRoll;
-		float mfPitchLimitMin;
-		float mfPitchLimitMax;
-		float mfYawLimitMin;
-		float mfYawLimitMax;
-		
-		eCameraRotateMode mRotateMode;
-		eCameraMoveMode mMoveMode;
-
-		cMatrixf m_mtxView;
-		cMatrixf m_mtxProjection;
-		cMatrixf m_mtxMove;
-
-		cMatrixf m_mtxPrevView;
-		cMatrixf m_mtxPrevProjection;
-
-		cMatrixf m_mtxMatrixRotation;
+		OhplH10Cam mS;
 
 		cNode3D mNode;
 
 		cFrustum mFrustum;
-
-		bool mbInfFarPlane;
-
-		bool mbViewUpdated;
-		bool mbProjectionUpdated;
-		bool mbMoveUpdated;
-		bool mbFrustumUpdated;
 	};
 
 };
