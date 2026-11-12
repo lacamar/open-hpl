@@ -33,8 +33,8 @@
 
 cLuxHandObject_LightSource::cLuxHandObject_LightSource(const tString& asName, cLuxPlayerHands *apHands) : iLuxHandObject(asName, apHands)
 {
-	mfSwayAngle =0;
-	mfSwayVel =0;
+	mSway.angle =0;
+	mSway.vel =0;
 }
 
 cLuxHandObject_LightSource::~cLuxHandObject_LightSource()
@@ -51,24 +51,22 @@ cLuxHandObject_LightSource::~cLuxHandObject_LightSource()
 
 void cLuxHandObject_LightSource::LoadImplementedVars(cXmlElement *apVarsElem)
 {
-	float fFadeInTime = apVarsElem->GetAttributeFloat("FadeInTime", 0);
-	float fFadeOutTime = apVarsElem->GetAttributeFloat("FadeOutTime", 0);
-	if(fFadeInTime == 0) fFadeInTime = 0.001f;
-	if(fFadeOutTime == 0) fFadeOutTime = 0.001f;
-	mfFadeInSpeed = 1.0f / fFadeInTime;
-	mfFadeOutSpeed = 1.0f / fFadeOutTime;
-
-	mbHasSwayPhysics = apVarsElem->GetAttributeBool("HasSwayPhysics", false);
-	mfMaxSwayVel = apVarsElem->GetAttributeFloat("MaxSwayVel", 0);
-	mvSwayAngleLimits = cMath::Vector2ToRad(apVarsElem->GetAttributeVector2f("SwayAngleLimits", 0));
-	mvSwayDownAngleLimits= cMath::Vector2ToRad(apVarsElem->GetAttributeVector2f("SwayDownAngleLimits", 0));
-	
-	mfSwayGravity = apVarsElem->GetAttributeFloat("SwayGravity", 0);
-	mfSwayFriction = apVarsElem->GetAttributeFloat("SwayFriction", 0);
-	mvSwayPinDir = apVarsElem->GetAttributeVector3f("SwayPinDir", 1);
-	mvSwayPinDir.Normalize();
-	mfSwayPlayerSpeedMul = apVarsElem->GetAttributeFloat("SwayPlayerSpeedMul", 0);
-	mfSwayCameraRollMul = apVarsElem->GetAttributeFloat("SwayCameraRollMul", 0);
+	OhplGa4bLightAttrs attrs;
+	attrs.fade_in_time = apVarsElem->GetAttributeFloat("FadeInTime", 0);
+	attrs.fade_out_time = apVarsElem->GetAttributeFloat("FadeOutTime", 0);
+	attrs.has_sway = apVarsElem->GetAttributeBool("HasSwayPhysics", false);
+	attrs.max_sway_vel = apVarsElem->GetAttributeFloat("MaxSwayVel", 0);
+	cVector2f vSwayLimits = apVarsElem->GetAttributeVector2f("SwayAngleLimits", 0);
+	attrs.sway_limits[0] = vSwayLimits.x; attrs.sway_limits[1] = vSwayLimits.y;
+	cVector2f vSwayDownLimits = apVarsElem->GetAttributeVector2f("SwayDownAngleLimits", 0);
+	attrs.sway_down_limits[0] = vSwayDownLimits.x; attrs.sway_down_limits[1] = vSwayDownLimits.y;
+	attrs.gravity = apVarsElem->GetAttributeFloat("SwayGravity", 0);
+	attrs.friction = apVarsElem->GetAttributeFloat("SwayFriction", 0);
+	cVector3f vPinDir = apVarsElem->GetAttributeVector3f("SwayPinDir", 1);
+	attrs.pin_dir[0] = vPinDir.x; attrs.pin_dir[1] = vPinDir.y; attrs.pin_dir[2] = vPinDir.z;
+	attrs.player_speed_mul = apVarsElem->GetAttributeFloat("SwayPlayerSpeedMul", 0);
+	attrs.camera_roll_mul = apVarsElem->GetAttributeFloat("SwayCameraRollMul", 0);
+	ohpl_ga4b_hand_light_load(&attrs, &mP);
 
 	msSkipSwaySubMesh = apVarsElem->GetAttributeString("SkipSwaySubMesh", "");
 }
@@ -106,8 +104,8 @@ void cLuxHandObject_LightSource::ImplementedDestroyEntity(cLuxMap *apMap)
 
 void cLuxHandObject_LightSource::ImplementedReset()
 {
-	mfSwayAngle =0;
-	mfSwayVel =0;
+	mSway.angle =0;
+	mSway.vel =0;
 }
 
 //-----------------------------------------------------------------------
@@ -119,14 +117,15 @@ void cLuxHandObject_LightSource::Update(float afTimeStep)
 
 	///////////////////
 	// Sway Physics
-    if(mbHasSwayPhysics)	
+    if(mP.has_sway)
 	{
 		UpdateSwayPhysics(afTimeStep);	
 	}
 
 	///////////////////
 	// Fade out
-	if(mpHands->GetState() == eLuxHandsState_Holster)
+	bool bHolster = mpHands->GetState() == eLuxHandsState_Holster;
+	if(bHolster)
 	{
 		for(size_t i=0; i<mvLights.size(); ++i)
 		{
@@ -136,28 +135,14 @@ void cLuxHandObject_LightSource::Update(float afTimeStep)
 				mvLights[i]->StopFading();
 			}
 		}
-
-		mpHands->mfHandObjectAlpha -= mfFadeOutSpeed * afTimeStep;
-		if(mpHands->mfHandObjectAlpha < 0.0f) mpHands->mfHandObjectAlpha = 0.0f;
-		
-		bUpdate = true;
-	}
-	///////////////////
-	// Fade in
-	else if(mpHands->mfHandObjectAlpha < 1.0f)
-	{
-		mpHands->mfHandObjectAlpha += mfFadeInSpeed * afTimeStep;
-		if(mpHands->mfHandObjectAlpha > 1.0f)
-		{
-			mpHands->mfHandObjectAlpha = 1.0f;
-			bUpdateDone = true;
-		}
-
-		bUpdate = true;
 	}
 
-	///////////////////
-	// Calculate fade out color
+	OhplGa4bFade fade;
+	ohpl_ga4b_hand_light_fade(&mP, bHolster, mpHands->mfHandObjectAlpha, afTimeStep, &fade);
+	mpHands->mfHandObjectAlpha = fade.alpha;
+	bUpdate = fade.update;
+	bUpdateDone = fade.done;
+
 	if(mpHands->GetState() != eLuxHandsState_Holster)
 	{
 		for(size_t i=0; i<mvLights.size(); ++i)
@@ -233,58 +218,16 @@ bool cLuxHandObject_LightSource::AnimationIsOver()
 
 void cLuxHandObject_LightSource::UpdateSwayPhysics(float afTimeStep)
 {
-	/////////////////////////////
-	// Update vel
+	cMatrixf mtxSway;
 	{
-		/////////////////////////////
-		// Gravity
 		cCamera *pCam = gpBase->mpPlayer->GetCamera();
-		float fDownAngle = pCam->GetPitch() * -1.0f;
-		fDownAngle += pCam->GetRoll() * mfSwayCameraRollMul;
-		fDownAngle = cMath::Clamp(fDownAngle, mvSwayDownAngleLimits.x, mvSwayDownAngleLimits.y);
 
-		float fAngle = mfSwayAngle - fDownAngle;
+		iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
+		float fPlayerSpeed = pCharBody->GetVelocity(gpBase->mpEngine->GetStepSize()).Length();
+		bool bMovingBack = pCharBody->GetMoveSpeed(eCharDir_Forward)<0;
 
-		float fForce = -sin(fAngle) * mfSwayGravity;
-		mfSwayVel += fForce * afTimeStep;
-
-		/////////////////////////////
-		// Player velocity
-        iCharacterBody *pCharBody = gpBase->mpPlayer->GetCharacterBody();
-        float fPlayerSpeed = pCharBody->GetVelocity(gpBase->mpEngine->GetStepSize()).Length();	
-		if(pCharBody->GetMoveSpeed(eCharDir_Forward)<0) fPlayerSpeed = -fPlayerSpeed;
-
-		mfSwayVel += -fPlayerSpeed * mfSwayPlayerSpeedMul;
-
-		/////////////////////////////
-		// Cap and Friction
-		if(mfSwayVel> mfMaxSwayVel)		mfSwayVel = mfMaxSwayVel;
-		if(mfSwayVel< -mfMaxSwayVel)	mfSwayVel = -mfMaxSwayVel;
-
-		mfSwayVel -= mfSwayVel*mfSwayFriction*afTimeStep;
+		ohpl_ga4b_hand_light_sway(&mP, &mSway, pCam->GetPitch(), pCam->GetRoll(), fPlayerSpeed, bMovingBack, afTimeStep, &mtxSway.m[0][0]);
 	}
-
-	/////////////////////////////
-	// Update Angle
-    mfSwayAngle += mfSwayVel * afTimeStep;
-
-	//Min
-	if(mfSwayAngle < mvSwayAngleLimits.x)
-	{
-		mfSwayVel =0;
-		mfSwayAngle = mvSwayAngleLimits.x;
-	}
-
-	//Max
-	if(mfSwayAngle > mvSwayAngleLimits.y)
-	{
-		mfSwayVel =0;
-		mfSwayAngle = mvSwayAngleLimits.y;
-	}
-	
-	/////////////////////////////
-	// Update Model matrix
-	cMatrixf mtxSway = cMath::MatrixRotate(mvSwayPinDir * mfSwayAngle, eEulerRotationOrder_XYZ);
 	//cMatrixf mtxTrans = cMath::MatrixMul(m_mtxOffset, mtxSway);
 	//mpMeshEntity->SetMatrix(mtxTrans);
 

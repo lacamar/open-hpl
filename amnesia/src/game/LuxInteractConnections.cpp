@@ -89,39 +89,20 @@ void cLuxInteractConnection_Rope::UpdateProp(float afTimeStep)
 	if(mpProp->IsInteractedWith()) return;
 	if(mbInteractionOnly==false) return;
 
-	float fMin = mpRope->GetMinTotalLength();
-	float fMax = mpRope->GetMaxTotalLength();
-	float fLength = mpRope->GetTotalLength();
-
-	float fT = (fLength-fMin) / (fMax - fMin);
-
-	//Invert if var is set
-	if(mbInvert) fT = 1 - fT;
-
-	////////////////////////
-	// Update wheel
 	if(mpProp->GetPropType() == eLuxPropType_Wheel)
 	{
 		cLuxProp_Wheel *pWheel = static_cast<cLuxProp_Wheel*>(mpProp);
-		
-		float fAngle = pWheel->GetMinLimit() + fT * (pWheel->GetMaxLimit() - pWheel->GetMinLimit());
-		
+		float fAngle = ohpl_ga4b_rope_wheel_angle(	mpRope->GetTotalLength(), mpRope->GetMinTotalLength(), mpRope->GetMaxTotalLength(), mbInvert,
+													pWheel->GetMinLimit(), pWheel->GetMaxLimit());
 		pWheel->SetAngle(fAngle, true);
 	}
-
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxInteractConnection_Rope::OnTurn(float afAngleAdd, float afT)
 {
-	//Invert if var is set
-	if(mbInvert) afT = 1 - afT;
-
-	float fMin = mpRope->GetMinTotalLength();
-	float fMax = mpRope->GetMaxTotalLength();
-
-	float fWantedLength = fMin + (fMax-fMin)*afT;
+	float fWantedLength = ohpl_ga4b_rope_turn_length(afT, mbInvert, mpRope->GetMinTotalLength(), mpRope->GetMaxTotalLength());
 
 	mpRope->SetMotorActive(true);
 	mpRope->SetMotorWantedLength(fWantedLength);
@@ -134,23 +115,9 @@ void cLuxInteractConnection_Rope::OnTurn(float afAngleAdd, float afT)
 
 void cLuxInteractConnection_Rope::OnLimit(int alState)
 {
-	if(mpProp->GetPropType() == eLuxPropType_Wheel) return;
-	if(alState==0) return;
-	//Check if this state is used.
-	if(mlStateUsed != 0 && mlStateUsed != alState) return;
-
-	//Invert state if var is set.
-	if(mbInvert) alState = -alState;
-
-	float fWantedLength =0;
-	if(alState == 1)
-	{
-		fWantedLength = mpRope->GetMaxTotalLength();	
-	}
-	else if(alState == -1)
-	{
-		fWantedLength = mpRope->GetMinTotalLength();	
-	}
+	float fWantedLength=0;
+	if(ohpl_ga4b_rope_limit_length(	mpProp->GetPropType() == eLuxPropType_Wheel, alState, mlStateUsed, mbInvert,
+									mpRope->GetMinTotalLength(), mpRope->GetMaxTotalLength(), &fWantedLength)==false) return;
 
 	mpRope->SetMotorActive(true);
 	mpRope->SetMotorWantedLength(fWantedLength);
@@ -248,37 +215,14 @@ void cLuxInteractConnection_MoveObject::Update(float afTimeStep)
 
 void cLuxInteractConnection_MoveObject::UpdateProp(float afTimeStep)
 {
-	if(	mbInteractionOnly==false || 
-		(mpMoveObject->IsMoving()==false && mbPropNeedsUpdate==false))
-	{
-		return;
-	}
-
-	mbPropNeedsUpdate = false;
+	if(ohpl_ga4b_move_update_gate(mbInteractionOnly, mpMoveObject->IsMoving(), &mbPropNeedsUpdate)==false) return;
 
 	if(mpProp->GetPropType() != eLuxPropType_Wheel) return;
 
-	float fT = mpMoveObject->GetMoveState();
-	if(mbInvert) fT = 1 - fT;
-	
-	////////////////////////
-	// Update wheel
 	cLuxProp_Wheel *pWheel = static_cast<cLuxProp_Wheel*>(mpProp);
-	float fAngle = pWheel->GetMinLimit() + fT * (pWheel->GetMaxLimit() - pWheel->GetMinLimit());
-	
-	if(mpProp->IsInteractedWith())
-	{
-		float fLimitAdd = (pWheel->GetMaxLimit() - pWheel->GetMinLimit()) * 0.2f;
-		float fMinLimit = fAngle - fLimitAdd;
-		float fMaxLimit = fAngle + fLimitAdd;
+	float fAngle = ohpl_ga4b_move_wheel_angle(mpMoveObject->GetMoveState(), mbInvert, pWheel->GetMinLimit(), pWheel->GetMaxLimit());
 
-		//TODO: Can this be fixed? Right now it messes up stuff? Is there another
-		//Way to stop the wheel when the connected moveobject has collided and is stuck?
-		//Log("Adjusting: Angle: %f, Min: %f Max: %f\n", pWheel->GetAngle(), fMinLimit, fMaxLimit);
-		//if(pWheel->GetAngle() < fMinLimit) pWheel->SetAngle(fMinLimit, true);
-		//if(pWheel->GetAngle() > fMaxLimit) pWheel->SetAngle(fMaxLimit, true);
-	}
-	else
+	if(mpProp->IsInteractedWith()==false)
 	{
 		pWheel->SetAngle(fAngle, true);
 	}
@@ -289,23 +233,17 @@ void cLuxInteractConnection_MoveObject::UpdateProp(float afTimeStep)
 
 void cLuxInteractConnection_MoveObject::OnTurn(float afAngleAdd, float afT)
 {
-	if(mbInvert) afT = 1 - afT;
-
-	mpMoveObject->MoveToState(afT, 10.0f, 5, 0.01f, false);
+	mpMoveObject->MoveToState(ohpl_ga4b_move_turn_state(afT, mbInvert), 10.0f, 5, 0.01f, false);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxInteractConnection_MoveObject::OnLimit(int alState)
 {
-	if(mpProp->GetPropType() == eLuxPropType_Wheel) return;
+	float fState=0;
+	if(ohpl_ga4b_move_limit_state(mpProp->GetPropType() == eLuxPropType_Wheel, alState, mlStateUsed, mbInvert, &fState)==false) return;
 
-	if(alState==0) return;
-	if(mlStateUsed != 0 && mlStateUsed != alState) return;
-
-	if(mbInvert) alState = -alState;
-
-	mpMoveObject->MoveToState(alState >0 ? 1.0f : 0.0f);
+	mpMoveObject->MoveToState(fState);
 }
 
 //-----------------------------------------------------------------------

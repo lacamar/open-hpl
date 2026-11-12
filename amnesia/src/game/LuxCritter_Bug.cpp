@@ -47,32 +47,11 @@ void cLuxPropLoader_Critter_Bug::LoadCritterVariables(iLuxProp *apProp, cXmlElem
 {
 	cLuxCritter_Bug  *pCritter_Bug = static_cast<cLuxCritter_Bug*>(apProp);
 
-	///////////////////////////
-	// General
-	pCritter_Bug->mfMaxSpeedNormal = GetVarFloat("MaxSpeedNormal", 0);
-	pCritter_Bug->mfMaxSpeedAfraid = GetVarFloat("MaxSpeedAfraid", 0);
-	pCritter_Bug->mfMaxSpeed = pCritter_Bug->mfMaxSpeedNormal;
-
-	pCritter_Bug->mfMaxSpeed = GetVarFloat("MaxSpeed", 0);
-	pCritter_Bug->mfGravity = GetVarFloat("Gravity", 0);
-
-	pCritter_Bug->mfPlayerFleeDistance = GetVarFloat("PlayerFleeDistance", 0);
-	
-	pCritter_Bug->mfFleeMul = GetVarFloat("FleeMul", 0);
-	pCritter_Bug->mfBackToSpawnPointMul = GetVarFloat("BackToSpawnPointMul", 0);
-	pCritter_Bug->mfWanderCircleRadius = GetVarFloat("WanderCircleRadius", 0);
-	pCritter_Bug->mfWanderCircleDist = GetVarFloat("WanderCircleDist", 0);
-
-	pCritter_Bug->mbHasRandomPauses = GetVarBool("HasRandomPauses", false);
-	pCritter_Bug->mvRandomPauseTimeMinMax = GetVarVector2f("RandomPauseTimeMinMax", cVector2f(1,3));
-	pCritter_Bug->mvRandomMoveTimeMinMax = GetVarVector2f("RandomMoveTimeMinMax", cVector2f(2,5));
-
-	pCritter_Bug->msNormalSound = GetVarString("NormalSound", "");
-	pCritter_Bug->mvNormalSoundRandMinMax = GetVarVector2f("NormalSoundRandMinMax", 0);
-
-	pCritter_Bug->msScaredSound = GetVarString("ScaredSound", "");
-	pCritter_Bug->mvScaredSoundRandMinMax = GetVarVector2f("ScaredSoundRandMinMax", 0);
-
+	OhplGa4bVars<cResourceVarsObject> vars(this);
+	vars.Slot(kOhplGa4bSlot_BugNormalSound, pCritter_Bug->msNormalSound);
+	vars.Slot(kOhplGa4bSlot_BugScaredSound, pCritter_Bug->msScaredSound);
+	ohpl_ga4b_bug_load(vars.Vars(), &pCritter_Bug->mBP);
+	pCritter_Bug->mB.max_speed = pCritter_Bug->mBP.max_speed;
 }
 
 //-----------------------------------------------------------------------
@@ -92,9 +71,7 @@ void cLuxPropLoader_Critter_Bug::LoadCritterInstanceVariables(iLuxProp *apProp, 
 
 cLuxCritter_Bug::cLuxCritter_Bug(const tString &asName,int alID, cLuxMap *apMap) : iLuxProp_CritterBase(asName,alID,apMap)
 {
-	mfPlaySoundCount = cMath::RandRectf(1, 5);
-	mfPauseCount = cMath::RandRectf(1,3);
-	mbPaused = false;
+	ohpl_ga4b_bug_state_new(&mB);
 }
 
 //-----------------------------------------------------------------------
@@ -126,131 +103,14 @@ void cLuxCritter_Bug::UpdateCritterSpecific(float afTimeStep)
 
 void cLuxCritter_Bug::UpdateVelocity(float afTimeStep)
 {
-	
-	/////////////////// 
-	// Check if scared
-	bool bScared=false;
-	cVector3f vPlayerPos = gpBase->mpPlayer->GetCharacterBody()->GetFeetPosition();
-	float fPlayerDistanceSqr = cMath::Vector3DistSqr(vPlayerPos, mpBody->GetWorldPosition());
-	if(fPlayerDistanceSqr < mfPlayerFleeDistance * mfPlayerFleeDistance)
-	{
-		bScared = true;
-		mbPaused=false;
-	}
+	cLuxCritterQuery query(this);
+	OhplGa4bSink<iLuxProp_CritterBase> sink(this);
+	ohpl_ga4b_bug_update_velocity(&mC, &mB, &mBP, query.Query(), sink.Sink(), afTimeStep);
+}
 
-	/////////////////// 
-	// Pause
-	if(mbHasRandomPauses && bScared==false)
-	{
-		mfPauseCount -= afTimeStep;
-		if(mfPauseCount < 0)
-		{
-			if(mbPaused)
-			{
-				mbPaused = false;
-				mfPauseCount = cMath::RandRectf(mvRandomMoveTimeMinMax.x, mvRandomMoveTimeMinMax.y);
-			}
-			else
-			{
-				mbPaused = true;
-				mfPauseCount = cMath::RandRectf(mvRandomPauseTimeMinMax.x, mvRandomPauseTimeMinMax.y);
-			}
-		}
-	}
-		
-	/////////////////// 
-	// Movement
-	if(mbPaused==false)
-	{
-		/////////////////// 
-		// Wandering
-		cVector3f vDir;
-		if(mvVel==0)
-		{
-			if(mlstFwdDirs.empty())
-			{
-				float fAngle = cMath::RandRectf(0, k2Pif);
-				vDir = cMath::MatrixMul(cMath::MatrixRotateY(fAngle),cVector3f(1,0,0));
-			}
-			else
-			{
-				vDir = mlstFwdDirs.back();
-			}
-		}
-		else
-		{
-			vDir = cMath::Vector3Normalize(mvVel);
-		}
-		float fAngle = cMath::RandRectf(0, k2Pif);
-
-		cVector3f vForce = cMath::MatrixMul(cMath::MatrixRotateY(fAngle),cVector3f(mfWanderCircleRadius,0,0));
-		
-		mvVel += (vDir*mfWanderCircleDist + vForce) * afTimeStep;
-		
-		/////////////////// 
-		// Avoid player
-		if(bScared)
-		{
-			float fPlayerDistance = sqrt(fPlayerDistanceSqr);
-		
-			if(fPlayerDistance ==0) fPlayerDistance = 0.0001f;
-			
-			vPlayerPos.y = mpBody->GetWorldPosition().y;
-			cVector3f vWantedVel = cMath::Vector3Normalize(mpBody->GetWorldPosition() - vPlayerPos) * mfMaxSpeed;
-			
-			cVector3f vForce = (vWantedVel - mvVel) * mfFleeMul * (1.0f/fPlayerDistance);
-			mvVel += vForce * afTimeStep;
-
-			mfMaxSpeed = mfMaxSpeedAfraid;
-		}
-		else
-		{
-			mfMaxSpeed = mfMaxSpeedNormal;
-		}
-
-		/////////////////// 
-		// Swarm around point
-		{
-			float fSwarmPointDist = cMath::Vector3Dist(mvSwarmPoint, mpBody->GetWorldPosition());
-			
-			cVector3f vSwarmPos = cVector3f(mvSwarmPoint.x, mpBody->GetWorldPosition().y, mvSwarmPoint.z);
-			cVector3f vWantedVel = cMath::Vector3Normalize(vSwarmPos - mpBody->GetWorldPosition()) * mfMaxSpeed;
-			vWantedVel.y=0;
-
-			cVector3f vForce = (vWantedVel - mvVel) * 0.2f * fSwarmPointDist;
-			mvVel += vForce * afTimeStep;
-		}
-	}
-	/////////////////// 
-	// Stopping
-	else
-	{
-		mvVel -= mvVel*afTimeStep*3.0f;
-	}
-	
-	/////////////////// 
-	// Sound
-	mfPlaySoundCount-=afTimeStep;
-	if(mfPlaySoundCount < 0)
-	{
-		mfPlaySoundCount = bScared ? cMath::RandRectf(mvScaredSoundRandMinMax.x, mvScaredSoundRandMinMax.y) : 
-									cMath::RandRectf(mvNormalSoundRandMinMax.x, mvNormalSoundRandMinMax.y);
-		PlaySound("Critter_BugSound",bScared ? msScaredSound : msNormalSound,true, true);
-	}
-    
-
-	/////////////////// 
-	// Cap speed
-	float fSpeed = mvVel.Length();
-	if(fSpeed > mfMaxSpeed)
-	{
-		mvVel = (mvVel / fSpeed) * mfMaxSpeed;
-	}
-
-	////////////////////////
-	// Gravity
-	mvGravityVel.y -= mfGravity * afTimeStep;
-	mvGravityVel = cMath::Vector3MaxLength(mvGravityVel, 10);
+void cLuxCritter_Bug::OnGa4bSound(int alKind)
+{
+	PlaySound("Critter_BugSound", alKind == kOhplGa4bSnd_BugScared ? msScaredSound : msNormalSound, true, true);
 }
 
 //-----------------------------------------------------------------------
@@ -283,7 +143,7 @@ void cLuxCritter_Bug::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 
 	//////////////////
 	//Set variables
-	kCopyToVar(pData,mfPlaySoundCount);
+	pData->mfPlaySoundCount = mB.play_sound_count;
 }
 
 //-----------------------------------------------------------------------
@@ -297,7 +157,7 @@ void cLuxCritter_Bug::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 	
 	//////////////////
 	//Set variables
-	kCopyFromVar(pData,mfPlaySoundCount);
+	mB.play_sound_count = pData->mfPlaySoundCount;
 }
 
 //-----------------------------------------------------------------------

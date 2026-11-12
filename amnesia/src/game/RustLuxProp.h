@@ -679,4 +679,413 @@ extern "C"
 	void ohpl_ga4_move_on_connection_state(const OhplGa4MoveObj *s, const OhplGa4MoveParams *p, OhplGa4Base *base, const float *body, int state, const OhplGa4Sink *sink);
 }
 
+// ---- GA4b: critters, hand objects, interact connections, small props, entity ----
+
+#include <map>
+#include <string>
+#include <utility>
+
+struct OhplGa4bVars2
+{
+	OhplGa4Vars base;
+	void (*vec2)(void *ctx, const unsigned char *name, size_t len, const float *def, float *out);
+};
+
+// Vars adapter over any cResourceVarsObject-like V (loader or instance vars).
+template<class V> class OhplGa4bVars
+{
+public:
+	OhplGa4bVars(V *apVars) : mpVars(apVars)
+	{
+		mVars.base.ops = &sOps;
+		mVars.base.ctx = this;
+		mVars.vec2 = &GetVec2;
+	}
+	OhplGa4bVars &Slot(int alSlot, std::string &asDest) { mmapSlots[alSlot] = &asDest; return *this; }
+	const OhplGa4bVars2 *Vars() const { return &mVars; }
+	const OhplGa4Vars *BaseVars() const { return &mVars.base; }
+
+private:
+	typedef decltype(std::declval<V &>().GetVarVector2f(std::string())) T2;
+	typedef decltype(std::declval<V &>().GetVarVector3f(std::string())) T3;
+	typedef decltype(std::declval<V &>().GetVarColor(std::string())) TC;
+	static std::string Name(const unsigned char *n, size_t len) { return std::string((const char *)n, len); }
+	static OhplGa4bVars *Me(void *c) { return (OhplGa4bVars *)c; }
+	static void GetString(void *c, const unsigned char *n, size_t len, const unsigned char *d, size_t dlen, void (*out)(void *, const unsigned char *, size_t), void *oc)
+	{
+		std::string s = Me(c)->mpVars->GetVarString(Name(n, len), std::string((const char *)d, dlen));
+		out(oc, (const unsigned char *)s.data(), s.size());
+	}
+	static bool GetBool(void *c, const unsigned char *n, size_t len, bool d) { return Me(c)->mpVars->GetVarBool(Name(n, len), d); }
+	static float GetFloat(void *c, const unsigned char *n, size_t len, float d) { return Me(c)->mpVars->GetVarFloat(Name(n, len), d); }
+	static int GetInt(void *c, const unsigned char *n, size_t len, int d) { return Me(c)->mpVars->GetVarInt(Name(n, len), d); }
+	static void GetVec3(void *c, const unsigned char *n, size_t len, const float *d, float *out)
+	{
+		T3 v = Me(c)->mpVars->GetVarVector3f(Name(n, len), T3(d[0], d[1], d[2]));
+		out[0] = v.x; out[1] = v.y; out[2] = v.z;
+	}
+	static void GetVec2(void *c, const unsigned char *n, size_t len, const float *d, float *out)
+	{
+		T2 v = Me(c)->mpVars->GetVarVector2f(Name(n, len), T2(d[0], d[1]));
+		out[0] = v.x; out[1] = v.y;
+	}
+	static void GetColor(void *c, const unsigned char *n, size_t len, const float *d, float *out)
+	{
+		TC v = Me(c)->mpVars->GetVarColor(Name(n, len), TC(d[0], d[1], d[2], d[3]));
+		out[0] = v.r; out[1] = v.g; out[2] = v.b; out[3] = v.a;
+	}
+	static void Put(void *c, int alSlot, const unsigned char *s, size_t len)
+	{
+		OhplGa4bVars *me = Me(c);
+		typename std::map<int, std::string *>::iterator it = me->mmapSlots.find(alSlot);
+		if (it != me->mmapSlots.end()) it->second->assign((const char *)s, len);
+	}
+
+	static const OhplGa4VarsOps sOps;
+	V *mpVars;
+	OhplGa4bVars2 mVars;
+	std::map<int, std::string *> mmapSlots;
+};
+
+template<class V> const OhplGa4VarsOps OhplGa4bVars<V>::sOps = {
+	&OhplGa4bVars<V>::GetString, &OhplGa4bVars<V>::GetBool, &OhplGa4bVars<V>::GetFloat, &OhplGa4bVars<V>::GetInt,
+	&OhplGa4bVars<V>::GetVec3, &OhplGa4bVars<V>::GetColor, &OhplGa4bVars<V>::Put};
+
+// Op sink that hands each op to `T::Ga4bApplyOp` as it is issued.
+template<class T> class OhplGa4bSink
+{
+public:
+	OhplGa4bSink(T *apOwner) : mpOwner(apOwner) { mSink.ctx = this; mSink.push = &Push; }
+	const OhplGa4Sink *Sink() const { return &mSink; }
+
+private:
+	static void Push(void *c, const OhplGa4Op *op) { ((OhplGa4bSink *)c)->mpOwner->Ga4bApplyOp(*op); }
+	T *mpOwner;
+	OhplGa4Sink mSink;
+};
+
+struct OhplGa4bReply
+{
+	int ok;
+	float v[3];
+	float f;
+};
+
+struct OhplGa4bQuery
+{
+	void *ctx;
+	void (*ask)(void *ctx, int code, const float *a, const float *b, int flags, OhplGa4bReply *out);
+};
+
+enum
+{
+	kOhplGa4bOp_Sound = 100,
+	kOhplGa4bOp_Attack = 101,
+	kOhplGa4bOp_AnimFade = 102,
+	kOhplGa4bOp_AnimSpeed = 103,
+	kOhplGa4bOp_SetBodyPos = 104,
+	kOhplGa4bOp_ShapeCollision = 105,
+
+	kOhplGa4bSnd_SpiderHit = 0,
+	kOhplGa4bSnd_SpiderIdle = 1,
+	kOhplGa4bSnd_SpiderAttack = 2,
+	kOhplGa4bSnd_BugNormal = 3,
+	kOhplGa4bSnd_BugScared = 4,
+
+	kOhplGa4bAnim_Attack = 0,
+	kOhplGa4bAnim_Walk = 1,
+	kOhplGa4bAnim_Idle = 2,
+
+	kOhplGa4bQ_PlayerFeet = 1,
+	kOhplGa4bQ_PlayerPos = 2,
+	kOhplGa4bQ_PlayerDead = 3,
+	kOhplGa4bQ_BodyWorld = 4,
+	kOhplGa4bQ_BodyLocal = 5,
+	kOhplGa4bQ_BodySize = 6,
+	kOhplGa4bQ_ShapeRadius = 7,
+	kOhplGa4bQ_Lantern = 8,
+	kOhplGa4bQ_RayReset = 9,
+	kOhplGa4bQ_RayCast = 10,
+	kOhplGa4bQ_RayHit = 11,
+	kOhplGa4bQ_RayNormal = 12,
+	kOhplGa4bQ_RayMass = 13,
+	kOhplGa4bQ_ShapeCollide = 14,
+
+	kOhplGa4bSlot_DeathEntity = 80,
+	kOhplGa4bSlot_DeathPS = 81,
+	kOhplGa4bSlot_DeathSound = 82,
+	kOhplGa4bSlot_AttackHitSound = 83,
+	kOhplGa4bSlot_BugNormalSound = 84,
+	kOhplGa4bSlot_BugScaredSound = 85,
+	kOhplGa4bSlot_SpiderHitSound = 86,
+	kOhplGa4bSlot_SpiderIdleSound = 87,
+	kOhplGa4bSlot_SpiderAttackSound = 88,
+};
+
+struct OhplGa4bCritterParams
+{
+	float attack_size_radius;
+	float attack_offset[3];
+	float attack_damage[2];
+	float attack_force[2];
+	int attack_strength;
+	float mesh_offset[16];
+};
+
+struct OhplGa4bCritter
+{
+	float vel[3];
+	float gravity_vel[3];
+	float ground_normal[3];
+	float swarm_point[3];
+	int anim_state;
+	bool use_ray;
+	bool colliding;
+	bool update_animation;
+	bool causes_sanity;
+	int n_fwd;
+	int n_up;
+	float fwd[24][3];
+	float up[44][3];
+};
+
+struct OhplGa4bBugParams
+{
+	float max_speed;
+	float max_speed_normal;
+	float max_speed_afraid;
+	float gravity;
+	float flee_distance;
+	float flee_mul;
+	float back_to_spawn_mul;
+	float wander_radius;
+	float wander_dist;
+	bool random_pauses;
+	float pause_time[2];
+	float move_time[2];
+	float normal_sound_rand[2];
+	float scared_sound_rand[2];
+};
+
+struct OhplGa4bBug
+{
+	float play_sound_count;
+	float pause_count;
+	bool paused;
+	float max_speed;
+};
+
+struct OhplGa4bSpiderParams
+{
+	float max_idle_speed;
+	float max_hunt_speed;
+	float idle_sound_rand[2];
+	float attack_player_dist[2];
+	float hunt_player_dist;
+	float hunt_time[2];
+	float move_time[2];
+	float idle_time[2];
+};
+
+struct OhplGa4bSpider
+{
+	int state;
+	float falling_count;
+	float new_ground_normal_count;
+	bool on_ground;
+	float max_speed;
+	float count;
+	float play_sound_count;
+};
+
+static_assert(sizeof(OhplGa4bCritterParams) == 100, "OhplGa4bCritterParams layout");
+static_assert(sizeof(OhplGa4bCritter) == 880, "OhplGa4bCritter layout");
+static_assert(sizeof(OhplGa4bBugParams) == 72, "OhplGa4bBugParams layout");
+static_assert(sizeof(OhplGa4bBug) == 16, "OhplGa4bBug layout");
+static_assert(sizeof(OhplGa4bSpiderParams) == 52, "OhplGa4bSpiderParams layout");
+static_assert(sizeof(OhplGa4bSpider) == 28, "OhplGa4bSpider layout");
+static_assert(sizeof(OhplGa4bReply) == 20, "OhplGa4bReply layout");
+
+extern "C"
+{
+	void ohpl_ga4b_critter_load(const OhplGa4bVars2 *v, OhplGa4bCritterParams *out);
+	void ohpl_ga4b_critter_state_new(OhplGa4bCritter *s);
+	void ohpl_ga4b_critter_setup_dirs(OhplGa4bCritter *s, const float *ground, const float *forward);
+	bool ohpl_ga4b_critter_in_range(const float *feet, const float *body);
+	void ohpl_ga4b_critter_update_movement(OhplGa4bCritter *s, const OhplGa4bQuery *q, const OhplGa4Sink *sink, float dt);
+	void ohpl_ga4b_critter_mesh_basis(OhplGa4bCritter *s, float *out);
+	void ohpl_ga4b_critter_mesh_matrix(const float *rot_t, const float *offset, bool skeleton, float *out);
+	void ohpl_ga4b_critter_anim_step(OhplGa4bCritter *s, const OhplGa4Sink *sink);
+	void ohpl_ga4b_bug_load(const OhplGa4bVars2 *v, OhplGa4bBugParams *p);
+	void ohpl_ga4b_bug_state_new(OhplGa4bBug *s);
+	void ohpl_ga4b_bug_update_velocity(OhplGa4bCritter *c, OhplGa4bBug *b, const OhplGa4bBugParams *p, const OhplGa4bQuery *q, const OhplGa4Sink *sink, float dt);
+	void ohpl_ga4b_spider_load(const OhplGa4bVars2 *v, OhplGa4bSpiderParams *p);
+	void ohpl_ga4b_spider_new(OhplGa4bCritter *c, OhplGa4bSpider *s);
+	void ohpl_ga4b_spider_on_damage(OhplGa4bCritter *c, OhplGa4bSpider *s, float amount, const OhplGa4Sink *sink);
+	void ohpl_ga4b_spider_update_velocity(OhplGa4bCritter *c, OhplGa4bSpider *s, const OhplGa4bSpiderParams *p, const OhplGa4bQuery *q, const OhplGa4Sink *sink, float dt);
+	void ohpl_ga4b_spider_ground_check(OhplGa4bCritter *c, OhplGa4bSpider *s, const OhplGa4bQuery *q, float dt);
+	void ohpl_ga4b_spider_on_shape_collision(OhplGa4bCritter *c, OhplGa4bSpider *s, const OhplGa4bQuery *q, const float *push, float dt);
+}
+
+// ---- GA4b hand objects ----
+
+struct OhplGa4bLightAttrs
+{
+	float fade_in_time;
+	float fade_out_time;
+	bool has_sway;
+	float max_sway_vel;
+	float sway_limits[2];
+	float sway_down_limits[2];
+	float gravity;
+	float friction;
+	float pin_dir[3];
+	float player_speed_mul;
+	float camera_roll_mul;
+};
+
+struct OhplGa4bLightParams
+{
+	float fade_in_speed;
+	float fade_out_speed;
+	bool has_sway;
+	float max_sway_vel;
+	float sway_limits[2];
+	float sway_down_limits[2];
+	float gravity;
+	float friction;
+	float pin_dir[3];
+	float player_speed_mul;
+	float camera_roll_mul;
+};
+
+struct OhplGa4bFade
+{
+	float alpha;
+	bool update;
+	bool done;
+};
+
+struct OhplGa4bSway
+{
+	float angle;
+	float vel;
+};
+
+struct OhplGa4bHands
+{
+	int obj_state;
+	bool attack_down;
+	float charge_count;
+};
+
+struct OhplGa4bMeleeAct
+{
+	bool ret;
+	bool charge;
+	bool swing;
+	bool charge_speed;
+};
+
+static_assert(sizeof(OhplGa4bLightAttrs) == 60, "OhplGa4bLightAttrs layout");
+static_assert(sizeof(OhplGa4bLightParams) == 60, "OhplGa4bLightParams layout");
+static_assert(sizeof(OhplGa4bFade) == 8, "OhplGa4bFade layout");
+static_assert(sizeof(OhplGa4bSway) == 8, "OhplGa4bSway layout");
+static_assert(sizeof(OhplGa4bHands) == 12, "OhplGa4bHands layout");
+static_assert(sizeof(OhplGa4bMeleeAct) == 4, "OhplGa4bMeleeAct layout");
+
+extern "C"
+{
+	void ohpl_ga4b_hand_light_load(const OhplGa4bLightAttrs *a, OhplGa4bLightParams *out);
+	void ohpl_ga4b_hand_light_fade(const OhplGa4bLightParams *p, bool holster, float alpha, float dt, OhplGa4bFade *out);
+	void ohpl_ga4b_hand_light_sway(const OhplGa4bLightParams *p, OhplGa4bSway *s, float pitch, float roll, float player_speed, bool moving_back, float dt, float *out);
+	void ohpl_ga4b_hand_melee_do_action(int hands_state, bool pressed, OhplGa4bHands *h, OhplGa4bMeleeAct *out);
+	void ohpl_ga4b_hand_melee_anim_over(OhplGa4bHands *h, OhplGa4bMeleeAct *out);
+	bool ohpl_ga4b_hand_melee_update_charge(OhplGa4bHands *h, float charge_time, float dt);
+	bool ohpl_ga4b_hand_melee_swing(OhplGa4bHands *h);
+	void ohpl_ga4b_hand_melee_charge(OhplGa4bHands *h);
+	float ohpl_ga4b_hand_melee_damage_mul(const OhplGa4bHands *h);
+}
+
+// ---- GA4b interact connections ----
+
+extern "C"
+{
+	float ohpl_ga4b_rope_wheel_angle(float length, float min_len, float max_len, bool invert, float min_limit, float max_limit);
+	float ohpl_ga4b_rope_turn_length(float t, bool invert, float min_len, float max_len);
+	bool ohpl_ga4b_rope_limit_length(bool is_wheel, int state, int used, bool invert, float min_len, float max_len, float *out);
+	bool ohpl_ga4b_move_update_gate(bool interaction_only, bool moving, bool *needs_update);
+	float ohpl_ga4b_move_wheel_angle(float t, bool invert, float min_limit, float max_limit);
+	float ohpl_ga4b_move_turn_state(float t, bool invert);
+	bool ohpl_ga4b_move_limit_state(bool is_wheel, int state, int used, bool invert, float *out);
+}
+
+// ---- GA4b entity and small props ----
+
+struct OhplGa4bLookIn
+{
+	float cam_pos[3];
+	float cam_fwd[3];
+	float cam_up[3];
+	float cam_right[3];
+	float bv_min[3];
+	float bv_max[3];
+	float bv_center[3];
+	float bv_radius;
+};
+
+struct OhplGa4bLos
+{
+	void *ctx;
+	bool (*los)(void *ctx, const float *start, const float *end);
+};
+
+struct OhplGa4bDoorAct
+{
+	bool locked_feedback;
+	bool change_map;
+	float count;
+};
+
+struct OhplGa4bOilFill
+{
+	int result;
+	float barrel;
+	float lamp;
+	float filled;
+	int tier;
+};
+
+enum
+{
+	kOhplGa4bOil_Empty = 0,
+	kOhplGa4bOil_Full = 1,
+	kOhplGa4bOil_Filled = 2,
+};
+
+static_assert(sizeof(OhplGa4bLookIn) == 88, "OhplGa4bLookIn layout");
+static_assert(sizeof(OhplGa4bDoorAct) == 8, "OhplGa4bDoorAct layout");
+static_assert(sizeof(OhplGa4bOilFill) == 20, "OhplGa4bOilFill layout");
+
+extern "C"
+{
+	bool ohpl_ga4b_entity_conn_state(int state, int used, bool invert, int *out);
+	bool ohpl_ga4b_entity_look_timer(float *count, float dt);
+	bool ohpl_ga4b_entity_look_body(const OhplGa4bLookIn *in, const OhplGa4bLos *los);
+	bool ohpl_ga4b_button_set(bool *on, bool new_on, int *out);
+	bool ohpl_ga4b_button_can_interact(bool on, bool can_on, bool can_off);
+	int ohpl_ga4b_button_conn_state(int state);
+	float ohpl_ga4b_door_tick(float count, float dt);
+	void ohpl_ga4b_door_interact(bool locked, float count, OhplGa4bDoorAct *out);
+	float ohpl_ga4b_oil_amount(float total_oil);
+	void ohpl_ga4b_oil_fill(float barrel, float lamp, OhplGa4bOilFill *out);
+	int ohpl_ga4b_oil_focus_tier(float barrel);
+	bool ohpl_ga4b_photo_tick(float *count, float dt);
+	void ohpl_ga4b_photo_samples(const float *size, const float *center, float *out);
+	float ohpl_ga4b_photo_level(const float *samples, int n);
+	int ohpl_ga4b_photo_switch(float level, bool *lit, float on_limit, float off_limit);
+	float ohpl_ga4b_photo_goal(float level, float on_limit, float off_limit);
+	float ohpl_ga4b_photo_illum_step(float current, float goal, float dt);
+}
+
 #endif

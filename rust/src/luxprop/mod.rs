@@ -5,17 +5,26 @@
 //! that re-enters the prop rewrites its POD state, which Rust re-reads after each such op.
 
 mod base;
+mod critter;
+mod entity;
 mod ffi;
+mod ffi_b;
+mod hand;
+mod interact;
 mod lamp;
 mod lever;
 mod moveobject;
 mod multislider;
 mod object;
 mod ops;
+mod smallprops;
 mod swingdoor;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_b;
 mod vars;
+mod vars2;
 mod wheel;
 
 pub use ops::{Op, Ops, Pod, Probe, op};
