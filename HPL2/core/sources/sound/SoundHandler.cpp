@@ -28,6 +28,7 @@
 #include "sound/SoundChannel.h"
 #include "resources/SoundManager.h"
 #include "sound/SoundData.h"
+#include "impl/RustBackends.h"
 #include "sound/SoundEntityData.h"
 #include "resources/SoundEntityManager.h"
 
@@ -133,7 +134,15 @@ namespace hpl {
 		mlId = alId;
 		mpSoundHandler = apSoundHandler;
 		mpCallback = NULL;
-		ohpl_snd_entry_init(&mS, afVolume, (uint32_t)aType, ab3D, abStream);
+		mRs = 0;
+		mS = &mCppState;
+		if(apSoundHandler->mpRs)
+		{
+			mRs = ohpl_sndh_entry_new(apSoundHandler->mpRs, this, (const unsigned char*)msName.data(), msName.size(),
+									  afVolume, (uint32_t)aType, ab3D, abStream, &mS);
+			mlId = ohpl_sndh_entry_id(apSoundHandler->mpRs, mRs);
+		}
+		else ohpl_snd_entry_init(mS, afVolume, (uint32_t)aType, ab3D, abStream);
 	}
 
 	//-----------------------------------------------------------------------
@@ -145,13 +154,14 @@ namespace hpl {
 			mpSound->Stop();
 			hplDelete( mpSound );
 		}
+		if(mRs) ohpl_sndh_entry_free(mpSoundHandler->mpRs, mRs);
 	}
 
 	//-----------------------------------------------------------------------
 	
 	bool cSoundEntry::Update(float afTimeStep)
 	{
-		int lState = ohpl_snd_entry_update(&mS, afTimeStep, &gChannelOps, mpSound, &gHostOps, mpSoundHandler);
+		int lState = ohpl_snd_entry_update(mS, afTimeStep, &gChannelOps, mpSound, &gHostOps, mpSoundHandler);
 		if(lState == 1) return true;
 
 		if(lState == 2 && mpCallback) mpCallback->OnPriorityRelease();
@@ -164,7 +174,7 @@ namespace hpl {
 
 	void cSoundEntry::Stop()
 	{
-		ohpl_snd_entry_stop(&mS, &gChannelOps, mpSound);
+		ohpl_snd_entry_stop(mS, &gChannelOps, mpSound);
 	}
 
 	//-----------------------------------------------------------------------
@@ -178,22 +188,22 @@ namespace hpl {
 
 	void cSoundEntry::FadeVolumeMulTo(float afDestMul, float afSpeed)
 	{
-		ohpl_snd_entry_fade_volume(&mS, afDestMul, afSpeed);
+		ohpl_snd_entry_fade_volume(mS, afDestMul, afSpeed);
 	}
 
 	void cSoundEntry::FadeSpeedMulTo(float afDestMul, float afSpeed)
 	{
-		ohpl_snd_entry_fade_speed(&mS, afDestMul, afSpeed);
+		ohpl_snd_entry_fade_speed(mS, afDestMul, afSpeed);
 	}
 
 	void cSoundEntry::FadeOut(float afSpeed)
 	{
-		ohpl_snd_entry_fade_out(&mS, afSpeed);
+		ohpl_snd_entry_fade_out(mS, afSpeed);
 	}
 
 	void cSoundEntry::FadeIn(float afVolumeMul,float afSpeed)
 	{
-		ohpl_snd_entry_fade_in(&mS, afVolumeMul, afSpeed);
+		ohpl_snd_entry_fade_in(mS, afVolumeMul, afSpeed);
 	}
 
 	//-----------------------------------------------------------------------
@@ -216,6 +226,7 @@ namespace hpl {
 		mlIdCount = 0;
 
 		mbSilent = false;
+		mpRs = OhplBackendRustRequested() ? ohpl_sndh_new() : NULL;
 
 		for(int i=0; i<32; ++i)
 		{
@@ -228,7 +239,41 @@ namespace hpl {
 
 	cSoundHandler::~cSoundHandler()
 	{
+		if(mpRs)
+		{
+			while(ohpl_sndh_count(mpRs) > 0) hplDelete( static_cast<cSoundEntry*>(ohpl_sndh_shell_at(mpRs, 0)) );
+			ohpl_sndh_free(mpRs);
+			return;
+		}
 		STLDeleteAll(m_lstSoundEntries);
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cSoundHandler::SetSilent(bool abX)
+	{
+		mbSilent = abX;
+		if(mpRs) ohpl_sndh_set_silent(mpRs, abX);
+	}
+
+	bool cSoundHandler::GetSilent()
+	{
+		return mpRs ? ohpl_sndh_silent(mpRs) : mbSilent;
+	}
+
+	//-----------------------------------------------------------------------
+
+	template<class F> void cSoundHandler::ForEachOfTypes(tFlag aTypes, F aFunc)
+	{
+		if(mpRs)
+		{
+			ohpl_sndh_for_each(mpRs, aTypes, [](void *apCtx, void *apShell){ (*static_cast<F*>(apCtx))(static_cast<cSoundEntry*>(apShell)); }, &aFunc);
+			return;
+		}
+		for(tSoundEntryListIt it = m_lstSoundEntries.begin(); it != m_lstSoundEntries.end(); ++it)
+		{
+			if((*it)->GetType() & aTypes) aFunc(*it);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -252,6 +297,18 @@ namespace hpl {
 
 		mGlobalVolumeHandler.Update(afTimeStep);
 		mGlobalSpeedHandler.Update(afTimeStep);
+
+		if(mpRs)
+		{
+			ohpl_sndh_set_globals(mpRs, mfGlobalVolume, mfGlobalSpeed);
+			static const OhplH16ShellOps ShellOps = {
+				[](void*, void *e, float dt){ return static_cast<cSoundEntry*>(e)->Update(dt); },
+				[](void*, void *e){ hplDelete( static_cast<cSoundEntry*>(e) ); },
+			};
+			ohpl_sndh_update(mpRs, afTimeStep, &ShellOps, this);
+			mlCount++;
+			return;
+		}
 
 		///////////////////////////////////////////////
 		// Update entries
@@ -303,7 +360,7 @@ namespace hpl {
 			return NULL;
 		}
 
-		OhplSoundPlayParams Params = { avPos, afMinDist, afMaxDist, alPriorityModifier, (uint32_t)aEntryType, abLoop, abRelative, ab3D, mbSilent };
+		OhplSoundPlayParams Params = { avPos, afMinDist, afMaxDist, alPriorityModifier, (uint32_t)aEntryType, abLoop, abRelative, ab3D, GetSilent() };
 		ohpl_snd_play_setup(&Params, lDistPrio, &mpLowLevelSound->GetListenerMatrix(), &gChannelOps, pSound);
 
 		////////////////////////
@@ -322,14 +379,15 @@ namespace hpl {
 			pEntry->Setup(asName,pSound,afVolume,aEntryType, ab3D, false,mlIdCount);
 		}*/
 
-		m_lstSoundEntries.push_back(pEntry);
+		if(mpRs) ohpl_sndh_push_back(mpRs, pEntry->mRs);
+		else m_lstSoundEntries.push_back(pEntry);
 		mlstRecentStarts.push_back(cString::ToString((int)cPlatform::GetApplicationTime()) + "|" + asName + "|" + cString::ToString(afVolume) + "|" +
 								   (abLoop ? "1" : "0") + "|" + (ab3D ? "1" : "0") + "|" + (abRelative ? "1" : "0") + "|" +
 								   cString::ToString(ab3D && !abRelative ? cMath::Vector3Dist(avPos, mpLowLevelSound->GetListenerPosition()) : avPos.Length()) + "|" +
 								   cString::ToString(afMinDist) + "|" + cString::ToString(afMaxDist));
 		if(mlstRecentStarts.size() > 256) mlstRecentStarts.pop_front();
 
-		mlIdCount++;
+		if(mpRs == NULL) mlIdCount++;
 
 		return pEntry;
 	}
@@ -410,64 +468,30 @@ namespace hpl {
 
 	void cSoundHandler::StopAll(tFlag mTypes)
 	{
-		tSoundEntryListIt it = m_lstSoundEntries.begin();
-		for(; it != m_lstSoundEntries.end(); ++it)
-		{
-			cSoundEntry *pEntry = *it;
-
-            if(pEntry->GetType() & mTypes)
-			{
-				pEntry->Stop();
-			}
-		}
+		ForEachOfTypes(mTypes, [](cSoundEntry *pEntry){ pEntry->Stop(); });
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundHandler::PauseAll(tFlag mTypes)
 	{
-		tSoundEntryListIt it = m_lstSoundEntries.begin();
-		for(; it != m_lstSoundEntries.end(); ++it)
-		{
-			cSoundEntry *pEntry = *it;
-
-			if(pEntry->GetType() & mTypes)
-			{
-				pEntry->SetPaused(true);
-			}
-		}
+		ForEachOfTypes(mTypes, [](cSoundEntry *pEntry){ pEntry->SetPaused(true); });
 	}
 	//-----------------------------------------------------------------------
 
 	void cSoundHandler::ResumeAll(tFlag mTypes)
 	{
-		tSoundEntryListIt it = m_lstSoundEntries.begin();
-		for(; it != m_lstSoundEntries.end(); ++it)
-		{
-			cSoundEntry *pEntry = *it;
-
-			if(pEntry->GetType() & mTypes)
-			{
-				pEntry->SetPaused(false);
-			}
-		}
+		ForEachOfTypes(mTypes, [](cSoundEntry *pEntry){ pEntry->SetPaused(false); });
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cSoundHandler::FadeOutAll(tFlag mTypes,float afFadeSpeed, bool abDisableStop)
 	{
-		tSoundEntryListIt it = m_lstSoundEntries.begin();
-		for(; it != m_lstSoundEntries.end(); ++it)
-		{
-			cSoundEntry *pEntry = *it;
-
-			if(pEntry->GetType() & mTypes)
-			{
-				pEntry->FadeOut(afFadeSpeed);
-				if(abDisableStop) pEntry->SetStopDisabled(true);
-			}
-		}
+		ForEachOfTypes(mTypes, [=](cSoundEntry *pEntry){
+			pEntry->FadeOut(afFadeSpeed);
+			if(abDisableStop) pEntry->SetStopDisabled(true);
+		});
 	}
 	
 	//-----------------------------------------------------------------------
@@ -484,6 +508,8 @@ namespace hpl {
 	
 	bool cSoundHandler::IsValid(cSoundEntry *apEntry, int alID)
 	{
+		if(mpRs) return ohpl_sndh_is_valid(mpRs, apEntry, alID);
+
 		tSoundEntryListIt it = m_lstSoundEntries.begin();
 		for(; it != m_lstSoundEntries.end(); ++it)
 		{
@@ -557,11 +583,13 @@ namespace hpl {
 
 	float cSoundHandler::GetGlobalVolume(eSoundEntryType aType)
 	{
+		if(mpRs) return ohpl_sndh_global_volume(mpRs, (uint32_t)aType);
 		return aType ? mfGlobalVolume[__builtin_ctz((unsigned)aType)] : 1.0f;
 	}
 
 	float cSoundHandler::GetGlobalSpeed(eSoundEntryType aType)
 	{
+		if(mpRs) return ohpl_sndh_global_speed(mpRs, (uint32_t)aType);
 		return aType ? mfGlobalSpeed[__builtin_ctz((unsigned)aType)] : 1.0f;
 	}
 
@@ -576,6 +604,12 @@ namespace hpl {
 	
 	tSoundEntryList* cSoundHandler::GetEntryList()
 	{
+		if(mpRs)
+		{
+			mlstEntryView.clear();
+			for(size_t i=0, n=ohpl_sndh_count(mpRs); i<n; ++i) mlstEntryView.push_back(static_cast<cSoundEntry*>(ohpl_sndh_shell_at(mpRs, i)));
+			return &mlstEntryView;
+		}
 		return &m_lstSoundEntries;
 	}
 
@@ -607,6 +641,8 @@ namespace hpl {
 	cSoundEntry* cSoundHandler::GetEntry(const tString& asName)
 	{
 		tString sLowName = cString::ToLowerCase(asName);
+
+		if(mpRs) return static_cast<cSoundEntry*>(ohpl_sndh_find(mpRs, (const unsigned char*)sLowName.data(), sLowName.size()));
 		
 		tSoundEntryListIt it = m_lstSoundEntries.begin();
 		for(; it != m_lstSoundEntries.end(); ++it)

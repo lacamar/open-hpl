@@ -28,6 +28,9 @@ bool ohpl_ai_graph_connect(OhplAiGraph*, uint32_t, uint32_t);
 bool ohpl_ai_graph_free_path(const OhplAiGraph*, const cVector3f*, const cVector3f*, int, uint32_t);
 size_t ohpl_ai_graph_query(const OhplAiGraph*, const cVector3f*, float);
 bool ohpl_ai_graph_astar(const OhplAiGraph*, const cVector3f*, const cVector3f*, int, OhplAiCanAddFn, void*);
+void ohpl_ai_graph_name_node(OhplAiGraph*, uint32_t, const unsigned char*, size_t, int);
+int64_t ohpl_ai_graph_find_name(const OhplAiGraph*, const unsigned char*, size_t);
+int64_t ohpl_ai_graph_find_id(const OhplAiGraph*, int);
 size_t ohpl_ai_graph_result(const OhplAiGraph*, uint32_t*, size_t);
 
 }

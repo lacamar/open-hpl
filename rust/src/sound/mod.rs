@@ -6,6 +6,10 @@ mod channel;
 pub mod entity_data;
 pub mod entry;
 mod ffi;
+pub mod handler;
+mod handler_ffi;
+#[cfg(test)]
+mod handler_tests;
 pub mod music;
 pub mod play;
 #[cfg(test)]
