@@ -55,3 +55,27 @@ AddTestTarget(TraceRecorderTests TraceRecorderTests.cpp)
 target_link_libraries(TraceRecorderTests HPL2TraceRecorder)
 add_test(NAME TraceRecorderTests COMMAND TraceRecorderTests)
 set_tests_properties(TraceRecorderTests PROPERTIES TIMEOUT 30)
+
+# H14 differential scenes (CharacterBody, PhysicsRope, PhysicsController): scripts/h14-diff.sh.
+AddTestTarget(PhysicsH14Tests
+    PhysicsH14Tests.cpp
+)
+
+# Call recorder hooks (OHPL_H14_VEC), see PhysicsH14Tests.cpp.
+target_link_options(PhysicsH14Tests PRIVATE
+    "LINKER:--wrap=ohpl_h14_aux_new"
+    "LINKER:--wrap=ohpl_h14_aux_free"
+    "LINKER:--wrap=ohpl_h14_reset_pids"
+    "LINKER:--wrap=ohpl_h14_clear_smoothing"
+    "LINKER:--wrap=ohpl_h14_clear_camera"
+    "LINKER:--wrap=ohpl_h14_setup_safe_positions"
+    "LINKER:--wrap=ohpl_h14_update_safe_positions"
+    "LINKER:--wrap=ohpl_h14_safe_position"
+    "LINKER:--wrap=ohpl_h14_body_connection_pos"
+    "LINKER:--wrap=ohpl_h14_char_connection_pos"
+    "LINKER:--wrap=ohpl_h14_update_body_connection"
+    "LINKER:--wrap=ohpl_h14_update_character_connection"
+    "LINKER:--wrap=ohpl_h14_update_gravity_attachment"
+    "LINKER:--wrap=ohpl_h14_update_camera"
+    "LINKER:--wrap=ohpl_h14_update_entity"
+)

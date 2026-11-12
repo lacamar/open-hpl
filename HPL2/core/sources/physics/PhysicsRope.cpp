@@ -32,6 +32,8 @@
 #include "graphics/LowLevelGraphics.h"
 
 #include "math/Math.h"
+#include "impl/RustBackends.h"
+#include "physics/RustPhysicsH14.h"
 
 namespace hpl {
 
@@ -456,7 +458,14 @@ namespace hpl {
 		////////////////////////
 		//Calculate number of particles needed and update vars
 		int lWantedNum = 0;
-		if(mS.segmentLength > 0)
+		if(OhplBackendRustRequested())
+		{
+			OhplH14RopePlan plan;
+			ohpl_h14_rope_plan(mS.totalLength, mS.segmentLength, &plan);
+			lWantedNum = plan.wanted;
+			mS.firstSegmentLength = plan.firstSegment;
+		}
+		else if(mS.segmentLength > 0)
 		{
 			lWantedNum = (int)((mS.totalLength / mS.segmentLength)+0.999999f) - 1;
 
@@ -502,7 +511,14 @@ namespace hpl {
 
 			for(; lAddCount>0; --lAddCount)
 			{
-				cVector3f vPos = vStartPos + vDir*fLength;
+				cVector3f vPos;
+				if(OhplBackendRustRequested())
+				{
+					OhplV3 r = ohpl_h14_rope_particle_pos(OhplV3{vStartPos.x, vStartPos.y, vStartPos.z}, OhplV3{vDir.x, vDir.y, vDir.z}, fLength);
+					vPos = cVector3f(r.x, r.y, r.z);
+				}
+				else
+					vPos = vStartPos + vDir*fLength;
 				//Log("Adding %d pos: %s length: %f\n", lAddCount, vPos.ToString().c_str(), fLength);
 				fLength -= mS.segmentLength;
 

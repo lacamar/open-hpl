@@ -1,0 +1,48 @@
+scene player_plain
+  charpos 402f8f23 3f6485cc c0c1c664
+  crate 3fc00000 3e99993f bf800000
+end player_plain steps 600 hash ee55f5b44466fe70
+scene player_camera_entity
+  charpos 402f8f23 3f6485cc c0c1c664
+  crate 3fc00000 3e99993f bf800000
+  entpos 403032fa 3fb4d242 c0c1c664
+end player_camera_entity steps 600 hash 3cf9b7bc578bad8f
+scene platform_pos
+  charpos 3f89166c 3f64cc88 c1268692
+  platpos 3fbd89f2 4008e86e 3f6acdfd
+end platform_pos steps 600 hash 0ba71cab0f698659
+scene platform_rot
+  charpos bfd7d966 3f64baac c11fa883
+  platpos 3fbee600 4008e6ce 3f6b73fc
+end platform_rot steps 600 hash 649e64fdb8b0de3d
+scene platform_vel_xz
+  charpos 3f974157 3f64bdbc c125a3f8
+  platpos 3fb6bdaa 4008e8ad 3f684b1e
+end platform_vel_xz steps 600 hash 072e2859c9a7ec10
+scene platform_vel_y
+  charpos 3f64648f 3f64be30 c127051f
+  platpos 3fbee6c9 4008e760 3f6b74b2
+end platform_vel_y steps 600 hash 40d409f62430fcd4
+scene connect_body_rot
+  charpos 42270007 c2bff7fc 42859f2c
+  crate 4222213c c2c9a6fd 428167e0
+end connect_body_rot steps 480 hash 2ac0cc51027875d4
+scene connect_all
+  charpos c03c050b 3f64cb28 41877d77
+  crate c0431f62 3ecc74d7 41911d50
+end connect_all steps 480 hash 32ea6a1cae7dbaab
+scene connect_char_align
+  charpos c1b72539 3f64cb28 40e6c42e
+  crate c155e30b 3ecc3c1a 41d1f972
+end connect_char_align steps 480 hash 354f94a9c1cacee5
+scene connect_plain
+  charpos bf58d2fb 3f64cb28 4186e05f
+  crate bf586d47 3ecc695e 417a903d
+end connect_plain steps 480 hash 09fd042469defe3a
+scene rope_collide
+end rope_collide steps 600 hash 1660e677a8e0409c
+scene rope_free
+end rope_free steps 600 hash 65ed53930b346a5b
+scene controller
+  body 00000000 3fb623dc 00000000
+end controller steps 600 hash c7915af449edcf54

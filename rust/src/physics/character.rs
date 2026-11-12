@@ -218,7 +218,7 @@ impl S {
 }
 
 /// `cMath::MatrixRotateY`.
-fn rotate_y(a: f32) -> Matrixf {
+pub(super) fn rotate_y(a: f32) -> Matrixf {
     let (s, c) = (sin(a), cos(a));
     Matrixf {
         m: [

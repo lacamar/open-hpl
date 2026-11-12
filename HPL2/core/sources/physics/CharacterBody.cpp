@@ -19,6 +19,8 @@
 
 #include "physics/CharacterBody.h"
 
+#include "impl/RustBackends.h"
+
 #include "physics/CollideShape.h"
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
@@ -31,6 +33,9 @@
 #include "scene/World.h"
 
 namespace hpl {
+
+	static const OhplH14BodyVt* BodyVt();
+
 	//////////////////////////////////////////////////////////////////////////
 	// COLLIDE GRAVITY
 	//////////////////////////////////////////////////////////////////////////
@@ -247,6 +252,7 @@ namespace hpl {
 
 	iCharacterBody::iCharacterBody(const tString &asName, iPhysicsWorld *apWorld, const cVector3f avSize)
 	{
+		mpAux = OhplBackendRustRequested() ? ohpl_h14_aux_new() : NULL;
 
 		/////////////////////////////
 		//Set up main properties
@@ -426,6 +432,8 @@ namespace hpl {
 
 		for(size_t i=0; i< mvBodies.size(); i++) mpWorld->DestroyBody(mvBodies[i]);
 
+		if(mpAux) ohpl_h14_aux_free(mpAux);
+
 		hplDelete(mpCollideGravityCallback);
 		hplDelete(mpCollidePushCallback);
 		hplDelete(mpRayCallback);
@@ -603,6 +611,7 @@ namespace hpl {
 
 	void iCharacterBody::SetupSafePositions(float afSaveInterval, float afBufferTime)
 	{
+		if(mpAux) ohpl_h14_setup_safe_positions(mpAux, afSaveInterval, afBufferTime);
 		if(afBufferTime <= 0) return;
 		mfSafePosTimer = 0;
 		mfSafePosInterval = afSaveInterval;
@@ -615,6 +624,11 @@ namespace hpl {
 	// cCharacterBodyNewton::PostUpdate 0x14b4a20, iCharacterBody::TeleportToSafePosition 0xe787c0 (Rebirth)
 	void iCharacterBody::UpdateSafePositions(float afTimeStep)
 	{
+		if(mpAux)
+		{
+			ohpl_h14_update_safe_positions(mpAux, afTimeStep, OhplV3{mS.position.x, mS.position.y, mS.position.z});
+			return;
+		}
 		if(mfSafePosInterval <= 0) return;
 		for(int i=0; i<3; ++i) mvSafePosHistory[i] = mvSafePosHistory[i+1];
 		mvSafePosHistory[3] = mS.position;
@@ -628,6 +642,14 @@ namespace hpl {
 
 	void iCharacterBody::TeleportToSafePosition(float afElapsedTime, bool abSmooth)
 	{
+		if(mpAux)
+		{
+			cVector3f vSafe;
+			if(!ohpl_h14_safe_position(mpAux, afElapsedTime, reinterpret_cast<OhplV3*>(&vSafe))) return;
+			SetPosition(vSafe, abSmooth);
+			mS.velocity = cVector3f(0, 0.1f, 0);
+			return;
+		}
 		if(mvSafePositions.empty()) return;
 		int lIdx = (int)floorf(afElapsedTime / mfSafePosInterval + 0.5f);
 		lIdx = cMath::Min(lIdx, (int)mvSafePositions.size() - 1);
@@ -645,6 +667,7 @@ namespace hpl {
 		mpCurrentBody->SetPosition(avPos);
 		
 		if(!abSmooth){
+			if(mpAux) ohpl_h14_clear_smoothing(mpAux);
 			mlstCameraPos.clear();
 			mlstEntityPos.clear();
 			mlstEntityYPositions.clear();
@@ -881,6 +904,7 @@ namespace hpl {
 		
 		//////////////////////////////////////////
 		// Set up pids
+		if(mpAux) ohpl_h14_reset_pids(mpAux);
 		mBodyConnectionPointPid.Reset();
 		mBodyCenterPid.Reset();
 		mBodyOneAxisAngularPid.Reset();
@@ -1081,6 +1105,13 @@ namespace hpl {
 	
 	cVector3f iCharacterBody::GetBodyConnectionPos()
 	{
+		if(mpAux)
+		{
+			OhplH14Conn conn = MakeConn();
+			cVector3f vPos;
+			ohpl_h14_body_connection_pos(BodyVt(), &conn, reinterpret_cast<OhplV3*>(&vPos));
+			return vPos;
+		}
 		if(mpConnectedBody == NULL) return 0;
 		
 		if(mbConnectionDependOnBodyRotation)
@@ -1091,6 +1122,13 @@ namespace hpl {
 	
 	cVector3f iCharacterBody::GetCharConnectionPos()
 	{
+		if(mpAux)
+		{
+			OhplH14Conn conn = MakeConn();
+			cVector3f vPos;
+			ohpl_h14_char_connection_pos(&mS, &conn, reinterpret_cast<OhplV3*>(&vPos));
+			return vPos;
+		}
 		if(mpConnectedBody == NULL) return 0;
 
 		if(mbConnectionDependOnCharRotation || mbConnectionAlignCharacterRotation)
@@ -1138,6 +1176,13 @@ namespace hpl {
 	{
 		//No connected body = nothing to do
 		if(mpConnectedBody == NULL) return;
+
+		if(mpAux)
+		{
+			OhplH14Conn conn = MakeConn();
+			ohpl_h14_update_body_connection(mpAux, BodyVt(), &mS, &conn, IsOnGround(), afTimeStep);
+			return;
+		}
 
 		//Nothing to do on static bodies.
 		if(mpConnectedBody->GetMass() == 0) return;
@@ -1288,6 +1333,15 @@ namespace hpl {
 		//If no connection, do nothing
 		if(mpConnectedBody == NULL) return;
 
+		if(mpAux)
+		{
+			OhplH14Conn conn = MakeConn();
+			cVector3f vForce;
+			if(ohpl_h14_update_character_connection(mpAux, BodyVt(), &mS, &conn, afTimeStep, reinterpret_cast<OhplV3*>(&vForce)))
+				AddForce(vForce);
+			return;
+		}
+
 		//Check if character is affected.
 		if(mbConnectionAffectChar==false) return;
 
@@ -1341,6 +1395,45 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	//-----------------------------------------------------------------------
+
+	static const OhplH14BodyVt* BodyVt()
+	{
+		static const OhplH14BodyVt vt = {
+			[](size_t b) { return reinterpret_cast<iPhysicsBody*>(b)->GetMass(); },
+			[](size_t b, cMatrixf *m) { *m = reinterpret_cast<iPhysicsBody*>(b)->GetWorldMatrix(); },
+			[](size_t b, cMatrixf *m) { *m = reinterpret_cast<iPhysicsBody*>(b)->GetLocalMatrix(); },
+			[](size_t b) { cVector3f v = reinterpret_cast<iPhysicsBody*>(b)->GetWorldPosition(); return OhplV3{v.x, v.y, v.z}; },
+			[](size_t b, cMatrixf *m) { *m = reinterpret_cast<iPhysicsBody*>(b)->GetInertiaMatrix(); },
+			[](size_t b, OhplV3 f, OhplV3 p)
+			{
+				cVector3f v = reinterpret_cast<iPhysicsBody*>(b)->GetTorqueFromForceAtPosition(cVector3f(f.x, f.y, f.z), cVector3f(p.x, p.y, p.z));
+				return OhplV3{v.x, v.y, v.z};
+			},
+			[](size_t b, OhplV3 p)
+			{
+				cVector3f v = reinterpret_cast<iPhysicsBody*>(b)->GetVelocityAtPosition(cVector3f(p.x, p.y, p.z));
+				return OhplV3{v.x, v.y, v.z};
+			},
+			[](size_t b, OhplV3 f) { reinterpret_cast<iPhysicsBody*>(b)->AddForce(cVector3f(f.x, f.y, f.z)); },
+			[](size_t b, OhplV3 t) { reinterpret_cast<iPhysicsBody*>(b)->AddTorque(cVector3f(t.x, t.y, t.z)); },
+			[](size_t b) { return reinterpret_cast<iPhysicsBody*>(b)->GetGravityAttachmentRotation(); },
+			[](size_t b) { return reinterpret_cast<iPhysicsBody*>(b)->GetGravityAttachmentVelocity(); },
+			[](size_t b) { return (int32_t)reinterpret_cast<iPhysicsBody*>(b)->GetGravityAttachmentVelocityAxes(); },
+		};
+		return &vt;
+	}
+
+	OhplH14Conn iCharacterBody::MakeConn()
+	{
+		OhplH14Conn conn = {
+			reinterpret_cast<size_t>(mpConnectedBody), mfMaxConnectionForce, mfMaxConnectionTorque, mfConnectionDistanceToBody,
+			mvConnectionPosLocalToBody, mvConnectionPosLocalToChar, mvConnectionNormalLocalToBody, mvConnectionLocalUpBody,
+			mvConnectionBodyStartRotation, mvConnectionCharLocalForward, mpWorld->GetGravity(),
+			mbConnectionDependOnBodyRotation, mbConnectionAlignCenter, mbConnectionAlignRotation, mbConnectionAffectChar,
+			mbConnectionDependOnCharRotation, mbConnectionAlignCharacterRotation
+		};
+		return conn;
+	}
 
 	OhplCharVt iCharacterBody::MakeVt()
 	{
@@ -1501,6 +1594,21 @@ namespace hpl {
 	void iCharacterBody::UpdateCamera()
 	{
 		if(mpCamera==NULL) return;
+		if(mpAux)
+		{
+			OhplH14CamIn in = {
+				mS.position, mS.right, mS.forward, mvCameraPosAdd,
+				mvShapes[0]->GetSize().y, mS.size.y, mS.yaw, mlCameraSmoothPosNum, mbCameraUpdateActive, mbCameraUseSmoothing
+			};
+			OhplH14CamOut out;
+			ohpl_h14_update_camera(mpAux, &in, &out);
+			if(out.set)
+			{
+				mpCamera->SetPosition(out.position);
+				mpCamera->SetYaw(out.yaw);
+			}
+			return;
+		}
 		if(!mbCameraUpdateActive)
 		{
 			mlstCameraPos.clear();
@@ -1571,6 +1679,17 @@ namespace hpl {
 	void iCharacterBody::UpdateEntity()
 	{
 		if(mpEntity==NULL) return;
+		if(mpAux)
+		{
+			OhplH14EntIn in = {
+				mS.position, mS.mtxMove, m_mtxEntityOffset, m_mtxEntityPostOffset,
+				mS.yaw, mlEntitySmoothPosNum, mlEntitySmoothYPosNum, mbEntitySmoothYPos
+			};
+			cMatrixf mtxEntity;
+			ohpl_h14_update_entity(mpAux, &in, &mtxEntity);
+			mpEntity->SetMatrix(mtxEntity);
+			return;
+		}
 
 		///////////////////////////////
 		//Y Position Smoothing
@@ -1662,6 +1781,20 @@ namespace hpl {
 
 	void iCharacterBody::UpdateGravityAttachment()
 	{
+		if(mpAux)
+		{
+			OhplH14Grav grav = {
+				reinterpret_cast<size_t>(mpGravityAttachedBody), reinterpret_cast<size_t>(mpGravityLastAttachedBody),
+				m_mtxGravityAttachedPrevMatrix, mvGravityAttachmentBodyVelocity, mbRotateYawWhenGravityAttached
+			};
+			ohpl_h14_update_gravity_attachment(BodyVt(), &mS, &grav);
+			if(mpGravityAttachedBody)
+			{
+				mvGravityAttachmentBodyVelocity = grav.bodyVelocity;
+				m_mtxGravityAttachedPrevMatrix = grav.prevMatrix;
+			}
+			return;
+		}
 		if(mpGravityAttachedBody==NULL)
 		{
 			////////////////////////
