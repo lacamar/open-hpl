@@ -12,6 +12,8 @@ mod anim;
 mod common;
 mod decal;
 mod ffi;
+mod h7;
+mod h7_ffi;
 mod probe;
 mod setup;
 mod solid;
@@ -21,9 +23,15 @@ mod vars;
 mod water;
 
 #[cfg(test)]
+mod h7_tests;
+#[cfg(test)]
 mod tests;
 
 pub use anim::{UvAnim, uv_matrix};
+pub use h7::{
+    MatState, MaterialType, PeState, PostEffectType, material_type, material_types,
+    post_effect_type,
+};
 pub use setup::{Feature, SetupSink};
 pub use types::{
     Bv, CompileOut, ForceFieldInfo, Globals, Host, Kind, LightInfo, MatView, ObjView, ProgSel,

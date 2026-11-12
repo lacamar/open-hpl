@@ -1,0 +1,105 @@
+new RadialBlur active 1 disabled 0 p 0
+-o active 1
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set ColorConvTex 876
+active 0 disabled 1 p 0
+-o set ColorConvTex 829
+active 0 disabled 1 p 0
+-o set RadialBlur 929
+  onsetparams 929
+active 0 disabled 1 p 929
+-o set RadialBlur 482
+  onsetparams 482
+active 0 disabled 1 p 482
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 482
+-o set Other 423
+active 0 disabled 1 p 482
+-o set Bloom 786
+active 0 disabled 1 p 482
+-o get Bloom -> -1
+active 0 disabled 1 p 482
+-o set ColorConvTex 292
+active 0 disabled 1 p 482
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 482
+-o get RadialBlur -> 482
+active 0 disabled 1 p 482
+-o set Bloom 842
+active 0 disabled 1 p 482
+-o get Bloom -> -1
+active 0 disabled 1 p 482
+-o get Bloom -> -1
+active 0 disabled 1 p 482
+-o set Other 345
+active 0 disabled 1 p 482
+-o set Other 140
+active 0 disabled 1 p 482
+-o get RadialBlur -> 482
+active 0 disabled 1 p 482
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 482
+-o active 0
+active 0 disabled 1 p 482
+-o get Bloom -> -1
+active 0 disabled 1 p 482
+-o active 0
+active 0 disabled 1 p 482
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 482
+-o set Bloom 693
+active 0 disabled 1 p 482
+-o active 1
+  onsetactive 1
+active 0 disabled 1 p 482
+-o disabled 0
+active 1 disabled 0 p 482
+-o set Bloom 607
+active 1 disabled 0 p 482
+-o get Other -> -1
+active 1 disabled 0 p 482
+-o get Bloom -> -1
+active 1 disabled 0 p 482
+-o disabled 1
+active 0 disabled 1 p 482
+-o disabled 1
+active 0 disabled 1 p 482
+-o set ImageTrail 850
+active 0 disabled 1 p 482
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 482
+-o active 1
+active 0 disabled 1 p 482
+-o active 1
+active 0 disabled 1 p 482
+-o disabled 1
+active 0 disabled 1 p 482
+-o get ImageTrail -> -1
+active 0 disabled 1 p 482
+-o set ImageTrail 985
+active 0 disabled 1 p 482
+-o set Other 743
+active 0 disabled 1 p 482
+-o get ColorConvTex -> -1
+active 0 disabled 1 p 482
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 482
+-o disabled 0
+active 0 disabled 0 p 482
+-o disabled 1
+active 0 disabled 1 p 482
+-o disabled 0
+active 0 disabled 0 p 482
+-o set ImageTrail 256
+active 0 disabled 0 p 482
+-o set RadialBlur 268
+  onsetparams 268
+active 0 disabled 0 p 268
+-o set ImageTrail 779
+active 0 disabled 0 p 268

@@ -1,0 +1,328 @@
+effect 0 type 3 active 0
+effect 1 type 0 active 1
+effect 2 type 2 active 1
+frame 0 has active 1
+frame 1 has active 1
+frame 2 has active 1
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+GetScreenSizeInt() -> v2i{1280,720}
+CreateTexture("TempBufferTexture1280x720:5", 2, 1) -> tex#0
+tex#0.CreateFromRawData(v3i{1280,720,0}, 5, "cstr{n=4,h=cee237146f424a56}")
+tex#0.SetWrapSTR(2)
+CreateFrameBuffer("TempBuffer1280x720:5") -> fb#0
+fb#0.SetTexture2D(0, tex#0, 0)
+fb#0.CompileAndValidate() -> true
+CreateTexture("TempBufferTexture1280x720:5", 2, 1) -> tex#1
+tex#1.CreateFromRawData(v3i{1280,720,0}, 5, "cstr{n=4,h=cee237146f424a56}")
+tex#1.SetWrapSTR(2)
+CreateFrameBuffer("TempBuffer1280x720:5") -> fb#1
+fb#1.SetTexture2D(0, tex#1, 0)
+fb#1.CompileAndValidate() -> true
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_bloom_blur_vtx.glsl", 0) -> shader#0
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_bloom_blur_frag.glsl", 1) -> shader#1
+CreateGpuProgram("BloomBlur") -> prog#0
+prog#0.Link(shader#0, shader#1)
+prog#0.GetVariableAsId("afBlurSize", 2)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_bloom_blur_vtx.glsl", 0) -> shader#2
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_bloom_blur_frag.glsl", 1) -> shader#3
+CreateGpuProgram("BloomBlur") -> prog#1
+prog#1.Link(shader#2, shader#3)
+prog#1.GetVariableAsId("afBlurSize", 2)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("deferred_base_vtx.glsl", 0) -> shader#4
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_bloom_add_frag.glsl", 1) -> shader#5
+CreateGpuProgram("BloomBlur") -> prog#2
+prog#2.Link(shader#4, shader#5)
+prog#2.GetVariableAsId("avRgbToIntensity", 0)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("deferred_base_vtx.glsl", 0) -> shader#6
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_image_trail_frag.glsl", 1) -> shader#7
+CreateGpuProgram("ImageTrail") -> prog#3
+prog#3.Link(shader#6, shader#7)
+prog#3.GetVariableAsId("afAlpha", 0)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("deferred_base_vtx.glsl", 0) -> shader#8
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_radial_blur_frag.glsl", 1) -> shader#9
+CreateGpuProgram("RadialBlur") -> prog#4
+prog#4.Link(shader#8, shader#9)
+prog#4.GetVariableAsId("afSize", 0)
+prog#4.GetVariableAsId("avHalfScreenSize", 1)
+prog#4.GetVariableAsId("afBlurStartDist", 2)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("deferred_base_vtx.glsl", 0) -> shader#10
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_color_conv_tex_frag.glsl", 1) -> shader#11
+CreateGpuProgram("BloomBlur0") -> prog#5
+prog#5.Link(shader#10, shader#11)
+GetGpuProgramFormat() -> 2
+CreateGpuShader("deferred_base_vtx.glsl", 0) -> shader#12
+GetGpuProgramFormat() -> 2
+CreateGpuShader("posteffect_color_conv_tex_frag.glsl", 1) -> shader#13
+CreateGpuProgram("BloomBlur1") -> prog#6
+prog#6.Link(shader#12, shader#13)
+prog#6.GetVariableAsId("afFadeAlpha", 0)
+GetScreenSizeInt() -> v2i{1280,720}
+CreateTexture("TempBufferTexture320x180:5", 2, 1) -> tex#2
+tex#2.CreateFromRawData(v3i{320,180,0}, 5, "cstr{n=4,h=cee237146f424a56}")
+tex#2.SetWrapSTR(2)
+CreateFrameBuffer("TempBuffer320x180:5") -> fb#2
+fb#2.SetTexture2D(0, tex#2, 0)
+fb#2.CompileAndValidate() -> true
+CreateTexture("TempBufferTexture320x180:5", 2, 1) -> tex#3
+tex#3.CreateFromRawData(v3i{320,180,0}, 5, "cstr{n=4,h=cee237146f424a56}")
+tex#3.SetWrapSTR(2)
+CreateFrameBuffer("TempBuffer320x180:5") -> fb#3
+fb#3.SetTexture2D(0, tex#3, 0)
+fb#3.CompileAndValidate() -> true
+GetScreenSizeInt() -> v2i{1280,720}
+CreateTexture("TempBufferTexture1280x720:5", 2, 1) -> tex#4
+tex#4.CreateFromRawData(v3i{1280,720,0}, 5, "cstr{n=4,h=cee237146f424a56}")
+tex#4.SetWrapSTR(2)
+CreateFrameBuffer("TempBuffer1280x720:5") -> fb#4
+fb#4.SetTexture2D(0, tex#4, 0)
+fb#4.CompileAndValidate() -> true
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetColorWriteActive(true, true, true, true)
+SetCullActive(true)
+SetCullMode(1)
+SetDepthTestActive(false)
+SetDepthWriteActive(false)
+SetDepthTestFunc(2)
+SetColor(c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetTexture(0u, null)
+SetTexture(1u, null)
+SetTexture(2u, null)
+SetTexture(3u, null)
+SetTexture(4u, null)
+SetTexture(5u, null)
+SetTexture(6u, null)
+SetTexture(7u, null)
+SetTexture(8u, null)
+SetTexture(9u, null)
+SetTexture(10u, null)
+SetTexture(11u, null)
+SetTexture(12u, null)
+SetTexture(13u, null)
+SetTexture(14u, null)
+SetTexture(15u, null)
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetBlendActive(false)
+prog#1.SetFloat(2, f:3f800000)
+prog#0.SetFloat(2, f:3f800000)
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#4)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#3)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetCurrentFrameBuffer(fb#0, v2i{0,0}, v2i{1280,720})
+SetTexture(0u, tex#3)
+SetTexture(1u, tex#4)
+prog#2.Bind()
+prog#2.SetVec3f(0, f:3e99999a, f:3f147ae1, f:3df5c28f)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetTexture(1u, null)
+SetCurrentFrameBuffer(fb#4, v2i{0,0}, v2i{1280,720})
+prog#4.Bind()
+prog#4.SetFloat(0, f:42999999)
+prog#4.SetFloat(2, f:00000000)
+prog#4.SetVec2f(1, f:44200000, f:43b40000)
+SetTexture(0u, tex#0)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+prog#4.UnBind()
+SetTexture(0u, null)
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetColorWriteActive(true, true, true, true)
+SetCullActive(true)
+SetCullMode(1)
+SetDepthTestActive(false)
+SetDepthWriteActive(false)
+SetDepthTestFunc(2)
+SetColor(c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetTexture(0u, null)
+SetTexture(1u, null)
+SetTexture(2u, null)
+SetTexture(3u, null)
+SetTexture(4u, null)
+SetTexture(5u, null)
+SetTexture(6u, null)
+SetTexture(7u, null)
+SetTexture(8u, null)
+SetTexture(9u, null)
+SetTexture(10u, null)
+SetTexture(11u, null)
+SetTexture(12u, null)
+SetTexture(13u, null)
+SetTexture(14u, null)
+SetTexture(15u, null)
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetBlendActive(false)
+prog#1.SetFloat(2, f:3f800000)
+prog#0.SetFloat(2, f:3f800000)
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#4)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#3)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetCurrentFrameBuffer(fb#0, v2i{0,0}, v2i{1280,720})
+SetTexture(0u, tex#3)
+SetTexture(1u, tex#4)
+prog#2.Bind()
+prog#2.SetVec3f(0, f:3e99999a, f:3f147ae1, f:3df5c28f)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetTexture(1u, null)
+SetCurrentFrameBuffer(fb#4, v2i{0,0}, v2i{1280,720})
+prog#4.Bind()
+prog#4.SetFloat(0, f:42999999)
+prog#4.SetFloat(2, f:00000000)
+prog#4.SetVec2f(1, f:44200000, f:43b40000)
+SetTexture(0u, tex#0)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+prog#4.UnBind()
+SetTexture(0u, null)
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetColorWriteActive(true, true, true, true)
+SetCullActive(true)
+SetCullMode(1)
+SetDepthTestActive(false)
+SetDepthWriteActive(false)
+SetDepthTestFunc(2)
+SetColor(c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetTexture(0u, null)
+SetTexture(1u, null)
+SetTexture(2u, null)
+SetTexture(3u, null)
+SetTexture(4u, null)
+SetTexture(5u, null)
+SetTexture(6u, null)
+SetTexture(7u, null)
+SetTexture(8u, null)
+SetTexture(9u, null)
+SetTexture(10u, null)
+SetTexture(11u, null)
+SetTexture(12u, null)
+SetTexture(13u, null)
+SetTexture(14u, null)
+SetTexture(15u, null)
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetBlendActive(false)
+prog#1.SetFloat(2, f:3f800000)
+prog#0.SetFloat(2, f:3f800000)
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#4)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#2, v2i{0,0}, v2i{320,180})
+prog#0.Bind()
+SetTexture(0u, tex#3)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+GetScreenSizeInt() -> v2i{1280,720}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+SetCurrentFrameBuffer(fb#3, v2i{0,0}, v2i{320,180})
+prog#1.Bind()
+SetTexture(0u, tex#2)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetCurrentFrameBuffer(fb#0, v2i{0,0}, v2i{1280,720})
+SetTexture(0u, tex#3)
+SetTexture(1u, tex#4)
+prog#2.Bind()
+prog#2.SetVec3f(0, f:3e99999a, f:3f147ae1, f:3df5c28f)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:43340000}, v2{f:43a00000,f:00000000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+SetOrthoProjection(v2{f:3f800000,f:3f800000}, f:c2c80000, f:42c80000)
+SetIdentityMatrix(0)
+SetTexture(1u, null)
+SetCurrentFrameBuffer(fb#4, v2i{0,0}, v2i{1280,720})
+prog#4.Bind()
+prog#4.SetFloat(0, f:42999999)
+prog#4.SetFloat(2, f:00000000)
+prog#4.SetVec2f(1, f:44200000, f:43b40000)
+SetTexture(0u, tex#0)
+GetScreenSizeFloat() -> v2{f:44a00000,f:44340000}
+DrawQuad(v3{f:00000000,f:00000000,f:00000000}, v2{f:3f800000,f:3f800000}, v2{f:00000000,f:44340000}, v2{f:44a00000,f:00000000}, c{f:3f800000,f:3f800000,f:3f800000,f:3f800000})
+prog#4.UnBind()
+SetTexture(0u, null)

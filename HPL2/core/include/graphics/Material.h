@@ -24,6 +24,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "resources/ResourceBase.h"
+#include "graphics/RustMaterialH7.h"
 
 namespace hpl {
 
@@ -172,6 +173,8 @@ namespace hpl {
 		cResources *mpResources;
 
 		iMaterialType *mpType;
+
+		OhplH7Mat *mpRs;
 
 		iMaterialVars *mpVars;
 

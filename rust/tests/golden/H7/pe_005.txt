@@ -1,0 +1,105 @@
+new RadialBlur active 1 disabled 0 p 0
+-o set Bloom 203
+active 1 disabled 0 p 0
+-o get RadialBlur -> 0
+active 1 disabled 0 p 0
+-o disabled 1
+active 0 disabled 1 p 0
+-o set ColorConvTex 313
+active 0 disabled 1 p 0
+-o get ImageTrail -> -1
+active 0 disabled 1 p 0
+-o get RadialBlur -> 0
+active 0 disabled 1 p 0
+-o active 0
+  onsetactive 0
+active 0 disabled 1 p 0
+-o set ImageTrail 568
+active 0 disabled 1 p 0
+-o disabled 0
+active 0 disabled 0 p 0
+-o set Other 434
+active 0 disabled 0 p 0
+-o disabled 0
+active 0 disabled 0 p 0
+-o set ColorConvTex 94
+active 0 disabled 0 p 0
+-o get Other -> -1
+active 0 disabled 0 p 0
+-o set Bloom 532
+active 0 disabled 0 p 0
+-o get RadialBlur -> 0
+active 0 disabled 0 p 0
+-o get ImageTrail -> -1
+active 0 disabled 0 p 0
+-o set Other 828
+active 0 disabled 0 p 0
+-o set RadialBlur 739
+  onsetparams 739
+active 0 disabled 0 p 739
+-o set ColorConvTex 691
+active 0 disabled 0 p 739
+-o get RadialBlur -> 739
+active 0 disabled 0 p 739
+-o disabled 1
+active 0 disabled 1 p 739
+-o disabled 0
+active 0 disabled 0 p 739
+-o set Bloom 390
+active 0 disabled 0 p 739
+-o get Bloom -> -1
+active 0 disabled 0 p 739
+-o set ColorConvTex 883
+active 0 disabled 0 p 739
+-o set RadialBlur 505
+  onsetparams 505
+active 0 disabled 0 p 505
+-o disabled 0
+active 0 disabled 0 p 505
+-o get RadialBlur -> 505
+active 0 disabled 0 p 505
+-o set RadialBlur 730
+  onsetparams 730
+active 0 disabled 0 p 730
+-o get ImageTrail -> -1
+active 0 disabled 0 p 730
+-o active 0
+active 0 disabled 0 p 730
+-o active 1
+  onsetactive 1
+active 1 disabled 0 p 730
+-o get Bloom -> -1
+active 1 disabled 0 p 730
+-o active 1
+active 1 disabled 0 p 730
+-o active 1
+active 1 disabled 0 p 730
+-o active 0
+  onsetactive 0
+active 0 disabled 0 p 730
+-o get ColorConvTex -> -1
+active 0 disabled 0 p 730
+-o get Other -> -1
+active 0 disabled 0 p 730
+-o set ColorConvTex 867
+active 0 disabled 0 p 730
+-o get Other -> -1
+active 0 disabled 0 p 730
+-o get ImageTrail -> -1
+active 0 disabled 0 p 730
+-o disabled 0
+active 0 disabled 0 p 730
+-o get Bloom -> -1
+active 0 disabled 0 p 730
+-o disabled 1
+active 0 disabled 1 p 730
+-o set ImageTrail 470
+active 0 disabled 1 p 730
+-o set Bloom 791
+active 0 disabled 1 p 730
+-o set Bloom 350
+active 0 disabled 1 p 730
+-o active 0
+active 0 disabled 1 p 730
+-o get Other -> -1
+active 0 disabled 1 p 730

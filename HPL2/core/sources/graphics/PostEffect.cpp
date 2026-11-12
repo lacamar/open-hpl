@@ -18,6 +18,7 @@
  */
 
 #include "graphics/PostEffect.h"
+#include "impl/RustBackends.h"
 
 #include "graphics/Graphics.h"
 
@@ -70,12 +71,26 @@ namespace hpl {
 
 		mbActive = true;
 		mbDisabled = false;
+
+		mpRs = NULL;
+		if(OhplBackendRustRequested())
+		{
+			const tString sName = mpType ? mpType->GetName() : tString();
+			mpRs = ohpl_h7_pe_new(mpType != NULL, sName.data(), sName.size());
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	iPostEffect::~iPostEffect()
 	{
+		if(mpRs) ohpl_h7_pe_free(mpRs);
+	}
+
+	void iPostEffect::SetDisabled(bool abX)
+	{
+		mbDisabled = abX;
+		if(mpRs) ohpl_h7_pe_set_disabled(mpRs, abX);
 	}
 
 	//-----------------------------------------------------------------------
@@ -88,6 +103,7 @@ namespace hpl {
 		mbIsLastEffect = abLastEffect;
 
 		mbFinalFrameBufferUsed = false;
+		if(mpRs) ohpl_h7_pe_begin_render(mpRs);
 
 		///////////////////////////
 		// Render
@@ -95,7 +111,7 @@ namespace hpl {
 		
 		//////////////////////////
 		// If last effect and final frame buffer has not been called, copy o rendertarget
-		if(mbIsLastEffect && mbFinalFrameBufferUsed == false)
+		if(mpRs ? ohpl_h7_pe_needs_final_copy(mpRs, mbIsLastEffect) : (mbIsLastEffect && mbFinalFrameBufferUsed == false))
 		{
 			iTexture *vTextures[1] = {pOutputTex};
 			iFrameBuffer *vFrameBuffers[1] = {mpCurrentComposite->GetCurrentRenderTarget()->mpFrameBuffer};
@@ -109,7 +125,8 @@ namespace hpl {
 
 	void iPostEffect::SetActive(bool abX)
 	{
-		if(mbActive == abX) return;
+		if(mpRs){ if(ohpl_h7_pe_set_active(mpRs, abX) == false) return; }
+		else if(mbActive == abX) return;
 
 		mbActive = abX;
 
@@ -123,7 +140,8 @@ namespace hpl {
 		if(mpType==NULL) return;
 
 		//Make sure the type is correct!
-		if(apSrcParams->GetName() != mpType->GetName()) return;
+		if(mpRs){ if(ohpl_h7_pe_accepts(mpRs, apSrcParams->GetName().data(), apSrcParams->GetName().size()) == false) return; }
+		else if(apSrcParams->GetName() != mpType->GetName()) return;
 
         GetTypeSpecificParams()->LoadFrom(apSrcParams);
 		OnSetParams();
@@ -134,7 +152,8 @@ namespace hpl {
 		if(mpType==NULL) return;
 
 		//Make sure the type is correct!
-		if(apDestParams->GetName() != mpType->GetName()) return;
+		if(mpRs){ if(ohpl_h7_pe_accepts(mpRs, apDestParams->GetName().data(), apDestParams->GetName().size()) == false) return; }
+		else if(apDestParams->GetName() != mpType->GetName()) return;
 
 		GetTypeSpecificParams()->CopyTo(apDestParams);
 	}
@@ -144,6 +163,7 @@ namespace hpl {
 	void iPostEffect::SetFinalFrameBuffer(iFrameBuffer *apOutputBuffer)
 	{
 		mbFinalFrameBufferUsed = true;
+		if(mpRs) ohpl_h7_pe_mark_final_used(mpRs);
 
 		///////////////////////
 		// Set the frame buffer
