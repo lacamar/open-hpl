@@ -1,0 +1,12 @@
+<font>
+ <info face="t" outline="2"/>
+ <common lineHeight="30" base="24"/>
+ <pages><page id="0" file="a.png"/><page id="1" file="b.png"/></pages>
+ <chars count="6">
+  <char id="65" x="1" y="2" width="10" height="11" xoffset="1" yoffset="2" xadvance="12" page="0"/>
+  <char id="66" x="3" y="4" width="10" height="11" xoffset="-1" yoffset="2" xadvance="12" page="1"/>
+  <char id="67" x="3" y="4" width="10" height="11" xoffset="0" yoffset="2" xadvance="12" page="2"/>
+  <char id="-5" x="3" y="4" width="10" height="11" xoffset="0" yoffset="2" xadvance="12" page="0"/>
+  <char id="100" width="5"/>
+ </chars>
+</font>

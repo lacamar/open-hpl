@@ -1,0 +1,4 @@
+<SoundEnvironment>
+ <Main Type="OpenAL" Name="cave"/>
+ <Parameters Density="1" Diffusion="0.5" Gain="0.32" GainHF="0.89" GainLF="0" DecayTime="2.5" DecayHFRatio="0.8" DecayLFRatio="1.1" ReflectionsGain="0.05" ReflectionsDelay="0.007" ReflectionsPan="0 0.5 -1" LateReverbGain="1.25" LateReverbDelay="0.011" LateReverbPan="1 2" EchoTime="0.25" EchoDepth="0.1" ModulationTime="0.25" ModulationDepth="0" AirAbsorptionGainHF="0.994" HFReference="5000" LFReference="250" RoomRolloffFactor="0.3" DecayHFLimit="1"/>
+</SoundEnvironment>

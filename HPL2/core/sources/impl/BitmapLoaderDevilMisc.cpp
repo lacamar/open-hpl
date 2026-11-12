@@ -56,6 +56,8 @@ namespace hpl {
 
 	cBitmap* cBitmapLoaderDevilMisc::LoadBitmap(const tWString& asFile, tBitmapLoadFlag aFlags)
 	{
+		if(OhplBackendRustRequested()) return LoadBitmapRust(asFile, 0, aFlags);
+
 		Initialize();
 
 		//create image id

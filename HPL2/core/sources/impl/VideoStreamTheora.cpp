@@ -46,6 +46,18 @@ namespace hpl {
 		// Set up extensions
 		AddSupportedExtension("dds");
 
+		mpRust = NULL;
+		mpYuvToR = NULL;
+		mpYuvToB = NULL;
+		mpYuv_G_UV = NULL;
+		mpYuv_G_Y_UV = NULL;
+		if(OhplBackendRustRequested())
+		{
+			OhplL5InstallLog();
+			mpRust = ohpl_l5_vloader_new();
+			return;
+		}
+
 		//////////////////////////////////////
 		// Calculate YUV -> RBG
 		
@@ -62,6 +74,11 @@ namespace hpl {
 
 	cVideoStreamTheora_Loader::~cVideoStreamTheora_Loader()
 	{
+		if(mpRust)
+		{
+			ohpl_l5_vloader_free(mpRust);
+			return;
+		}
 		hplDeleteArray(mpYuvToR);
 		hplDeleteArray(mpYuvToB);
 
@@ -99,10 +116,19 @@ namespace hpl {
 		mpLoader = apLoader;
 
 		mpFile = NULL;
+		mpRust = NULL;
 
 		mbLooping = false;
 		mbPaused = false;
 		mbPlaying = false;
+
+		if(apLoader->mpRust)
+		{
+			OhplL5InstallLog();
+			mpRust = ohpl_l5_video_new(apLoader->mpRust);
+			mpFrameBuffer = NULL;
+			return;
+		}
 
 		mlVideobufReady =0;
 		mlVideobufGranulePos=-1;
@@ -131,6 +157,12 @@ namespace hpl {
 
 	cVideoStreamTheora::~cVideoStreamTheora()
 	{
+		if(mpRust)
+		{
+			ohpl_l5_video_free(mpRust);
+			return;
+		}
+
 		if(mpFile) fclose(mpFile);
 
 		ogg_sync_clear(&mOggSyncState);
@@ -158,6 +190,16 @@ namespace hpl {
 	bool cVideoStreamTheora::LoadFromFile(const tWString& asFilePath)
 	{
 		SetFullPath(asFilePath);
+
+		if(mpRust)
+		{
+			msFilePath = asFilePath;
+			if(ohpl_l5_video_load(mpRust, (const uint32_t*)asFilePath.c_str(), asFilePath.size())==false) return false;
+			int32_t lWidth, lHeight;
+			ohpl_l5_video_size(mpRust, &lWidth, &lHeight);
+			mvSize = cVector2l(lWidth, lHeight);
+			return true;
+		}
 
 		////////////////////////////////
 		//Try to open the file
@@ -189,6 +231,8 @@ namespace hpl {
 
 	void cVideoStreamTheora::Update(float afTimeStep)
 	{
+		if(mpRust) { ohpl_l5_video_update(mpRust, afTimeStep); return; }
+
 		if(mbPlaying==false || mbPaused) return;
 
 		mfTime += afTimeStep;
@@ -253,6 +297,7 @@ namespace hpl {
 
 	void cVideoStreamTheora::Play()
 	{
+		if(mpRust) { ohpl_l5_video_play(mpRust); return; }
 		mbPlaying = true;
 	}
 	
@@ -260,6 +305,7 @@ namespace hpl {
 
 	void cVideoStreamTheora::Stop()
 	{
+		if(mpRust) { ohpl_l5_video_stop(mpRust); return; }
 		mbPlaying = false;
 		ResetStreams();
 	}
@@ -269,6 +315,7 @@ namespace hpl {
 	void cVideoStreamTheora::Pause(bool abX)
 	{
 		mbPaused = abX;
+		if(mpRust) ohpl_l5_video_pause(mpRust, abX);
 	}
 	//-----------------------------------------------------------------------
 
@@ -276,12 +323,20 @@ namespace hpl {
 	void cVideoStreamTheora::SetLoop(bool abX)
 	{
 		mbLooping = abX;
+		if(mpRust) ohpl_l5_video_set_loop(mpRust, abX);
 	}
 	
 	//-----------------------------------------------------------------------
 
 	void cVideoStreamTheora::CopyToTexture(iTexture *apTexture)
 	{
+		if(mpRust)
+		{
+			const uint8_t* pFrame = ohpl_l5_video_take_frame(mpRust);
+			if(pFrame) apTexture->SetRawData(0,0,cVector3l(mvSize.x,mvSize.y,1) ,ePixelFormat_RGB,(unsigned char*)pFrame);
+			return;
+		}
+
 		if(mbVideoLoaded==false || mpFrameBuffer ==NULL || ohpl_theora_frame_len(mvSize.x, mvSize.y) == 0) return;
 
 		if(mbVideoFrameReady)

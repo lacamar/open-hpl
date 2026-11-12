@@ -25,6 +25,8 @@
 
 #include <theora/theora.h>
 
+#include "impl/RustL5.h"
+
 namespace hpl {
 
 	//-----------------------------------------
@@ -60,6 +62,7 @@ namespace hpl {
 		void ResetStreams();
 		
 		cVideoStreamTheora_Loader *mpLoader;
+		OhplL5Video *mpRust;
 
 		FILE *mpFile;
 
@@ -103,6 +106,7 @@ namespace hpl {
 		
 		unsigned short* mpYuv_G_UV;
 		unsigned char* mpYuv_G_Y_UV;
+		OhplL5VLoader* mpRust;
 	};
 
 	//-----------------------------------------

@@ -1,0 +1,360 @@
+== main
+LOG 0  Initializing OpenAL\n
+LOG 0   Sound logging enabled\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Beta Headset'... 
+SetupLogging 1 0 3 HPL_OpenAL_Beta_Headset
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Listener_SetMasterVolume 3f000000
+Listener_SetAttributes 3f800000,40000000,40400000 3f000000,00000000,00000000 80000000,80000000,bf800000 00000000,3f800000,00000000
+Listener_SetAttributes 40800000,40a00000,40c00000 3f000000,00000000,00000000 80000000,80000000,bf800000 00000000,3f800000,00000000
+SetRollOffFactor 3f333333
+Update
+== sample
+Sample_Load snd/a_stereo.wav
+Sample_SetLoop #1 1
+Sample_GetChannels #1
+Sample_Play -3 #1 3f800000 1 5
+Source_SetAttributes 100 00000000,00000000,00000000 00000000,00000000,00000000
+Source_SetFilterType 100 2
+Source_SetSpatialize 100 0
+Source_SetPaused 100 0
+Source_SetPitch 100 3fc00000
+Source_SetGain 100 3f4ccccd
+Source_SetLoop 100 1
+Source_SetSpatialize 100 1
+Source_SetSpatialize 100 0
+Source_SetAttributes 100 3f800000,40000000,40400000 00000000,00000000,00000000
+Source_SetAttributes 100 3f800000,40000000,40400000 40800000,40a00000,40c00000
+Source_SetSpatialize 100 1
+Source_SetPaused 100 1
+Source_IsPlaying 100
+Source_IsBufferUnderrun 100
+Source_GetElapsedTime 100
+Source_GetTotalTime 100
+Source_GetTotalTime 100
+Source_SetElapsedTime 100 0000000000000000
+Source_GetTotalTime 100
+Source_SetElapsedTime 100 3ff8000000000000
+Source_GetTotalTime 100
+Source_GetTotalTime 100
+Source_SetElapsedTime 100 3fffff972474538f
+Source_SetPriority 100 7
+Source_GetPriority 100
+Source_SetPriority 100 255
+Source_GetPriority 100
+Source_SetAuxSendSlot 100 0 0
+Source_SetAuxSendSlot 100 0 -1
+Source_SetFiltering 100 1 3
+Source_SetFilterGain 100 3f000000
+Source_SetFilterGainHF 100 3e800000
+Source_SetFilterGainLF 100 3e000000
+Source_SetAuxSendGain 100 3f400000
+Source_Stop 100
+Source_SetGain -1 3dcccccd
+Sample_Play -3 #1 3f800000 1 9
+Source_SetAttributes 101 00000000,00000000,00000000 00000000,00000000,00000000
+Source_SetFilterType 101 2
+Source_SetSpatialize 101 0
+Source_Stop 101
+Sample_Unload #1
+== stream
+Stream_Load music/m.ogg
+Stream_SetLoop #2 1
+Stream_GetChannels #2
+Stream_Play -3 #2 3f800000 1
+Source_SetAttributes 102 00000000,00000000,00000000 00000000,00000000,00000000
+Source_SetFilterType 102 2
+Source_SetSpatialize 102 0
+Source_SetPaused 102 0
+Source_SetPitch 102 3fc00000
+Source_SetGain 102 3f4ccccd
+Source_SetLoop 102 1
+Source_SetSpatialize 102 1
+Source_SetSpatialize 102 0
+Source_SetAttributes 102 3f800000,40000000,40400000 00000000,00000000,00000000
+Source_SetAttributes 102 3f800000,40000000,40400000 40800000,40a00000,40c00000
+Source_SetSpatialize 102 1
+Source_SetPaused 102 1
+Source_IsPlaying 102
+Source_IsBufferUnderrun 102
+Source_GetElapsedTime 102
+Source_GetTotalTime 102
+Source_GetTotalTime 102
+Source_SetElapsedTime 102 0000000000000000
+Source_GetTotalTime 102
+Source_SetElapsedTime 102 3ff8000000000000
+Source_GetTotalTime 102
+Source_GetTotalTime 102
+Source_SetElapsedTime 102 3fffff972474538f
+Source_SetPriority 102 7
+Source_GetPriority 102
+Source_SetPriority 102 255
+Source_GetPriority 102
+Source_SetAuxSendSlot 102 0 0
+Source_SetAuxSendSlot 102 0 -1
+Source_SetFiltering 102 1 3
+Source_SetFilterGain 102 3f000000
+Source_SetFilterGainHF 102 3e800000
+Source_SetFilterGainLF 102 3e000000
+Source_SetAuxSendGain 102 3f400000
+Source_Stop 102
+Source_SetGain -1 3dcccccd
+Stream_Play -3 #2 3f800000 1
+no channel
+Stream_Unload #2
+== missing
+Sample_Load missing.wav
+LOG 2 ERROR: Couldn't load sound data 'missing.wav'\n
+Stream_Load missing.ogg
+LOG 2 ERROR: Couldn't load sound stream 'missing.ogg'\n
+both null
+Close
+== fail1
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Beta Headset'... 
+SetupLogging 0 0 3 HPL_OpenAL_Beta_Headset
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Finding first device matching filter that works... 
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0   Device name: Alpha Speaker\n
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== fail2
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Beta Headset'... 
+SetupLogging 0 0 3 HPL_OpenAL_Beta_Headset
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Finding first device matching filter that works... 
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0   Device name: Beta Headset\n
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== fail3
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Beta Headset'... 
+SetupLogging 0 0 3 HPL_OpenAL_Beta_Headset
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Finding first device matching filter that works... 
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Gamma HDMI' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0   Device name: Gamma HDMI\n
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== fail4
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Alpha Speaker'... 
+SetupLogging 0 0 3 HPL_OpenAL_Alpha_Speaker
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Finding first device matching filter that works... 
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Gamma HDMI' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Trying with default device... 
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0   Device name: Beta Headset\n
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== fail5
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Alpha Speaker'... 
+SetupLogging 0 0 3 HPL_OpenAL_Alpha_Speaker
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Finding first device matching filter that works... 
+Init 'Alpha Speaker' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+Init 'Gamma HDMI' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Trying with default device... 
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 0
+LOG 0 Failed\n  Trying to let your OpenAL driver pick the device... 
+Init '' 44100 100 32 16 8 8192 4 110 -> 1
+Info_GetDeviceName
+LOG 0   Device name: Beta Headset\n
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== filter
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Gamma HDMI'... 
+SetupLogging 0 0 3 HPL_OpenAL_Gamma_HDMI
+Init 'Gamma HDMI' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== nofilter
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 1 WARNING:   No valid sound devices available! Using implementation default\n
+LOG 0   Trying to open device 'Beta Headset'... 
+SetupLogging 0 0 3 HPL_OpenAL_Beta_Headset
+Init 'Beta Headset' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close
+== env
+LOG 0  Initializing OpenAL\n
+LOG 0   Available OpenAL devices:\n
+Info_GetOutputDevices
+Info_GetDefaultOutputDevice
+Info_GetDefaultOutputDevice
+LOG 0    0. Alpha Speaker
+LOG 0 \n
+LOG 0    1. Beta Headset
+LOG 0 (OpenAL default)\n
+LOG 0    2. Gamma HDMI
+LOG 0 \n
+LOG 0   Trying to open device 'Gamma HDMI'... 
+SetupLogging 0 0 3 HPL_OpenAL_Gamma_HDMI
+Init 'Gamma HDMI' 44100 100 32 16 8 8192 4 110 -> 1
+LOG 0 Success!\n
+SetDistanceModel 6
+Info_GetNumSources
+LOG 0   Number of mono sources: 32\n
+Info_GetStreamBufferCount
+Info_GetStreamBufferSize
+LOG 0   Streaming setup: 4 Buffers x 8192 bytes each\n
+Listener_SetAttributes 00000000,00000000,00000000 00000000,00000000,00000000 00000000,00000000,3f800000 00000000,3f800000,00000000
+Listener_SetMasterVolume 3f800000
+Close

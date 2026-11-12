@@ -35,6 +35,7 @@ namespace hpl {
 	{
 		mpSample = NULL;
 		mpStream = NULL;
+		mpRust = NULL;
 //		mpSoundData = NULL;
 	}
 	
@@ -42,6 +43,7 @@ namespace hpl {
 
 	cOpenALSoundData::~cOpenALSoundData()
 	{
+		if(mpRust) ohpl_l5_data_free(mpRust);
 		if (mbStream)
 		{
 			if(mpStream)
@@ -65,6 +67,14 @@ namespace hpl {
 	bool cOpenALSoundData::CreateFromFile(const tWString &asFile)
 	{
 		SetFullPath(asFile);
+
+		if(OhplBackendRustRequested())
+		{
+			OhplL5InstallLog();
+			if(mpRust) ohpl_l5_data_free(mpRust);
+			mpRust = ohpl_l5_data_new(mbStream, mbLoopStream);
+			return ohpl_l5_data_create(mpRust, (const uint32_t*)asFile.c_str(), asFile.size());
+		}
 
 		int lFlags=0;
 		unsigned int lCaps = 0;
@@ -114,6 +124,12 @@ namespace hpl {
 
 	iSoundChannel* cOpenALSoundData::CreateChannel(int alPriority)
 	{
+		if(mpRust)
+		{
+			int lRustHandle = ohpl_l5_data_channel(mpRust, alPriority);
+			if(lRustHandle==-1) return NULL;
+			return hplNew( cOpenALSoundChannel, (this,lRustHandle, mpSoundManger) );
+		}
 		//if(mpSoundData==NULL)return NULL;
 		if ( (mpSample == NULL) && (mpStream == NULL) ) return NULL;
 
@@ -141,6 +157,7 @@ namespace hpl {
 
 	bool cOpenALSoundData::IsStereo()
 	{
+		if(mpRust) return ohpl_l5_data_is_stereo(mpRust);
 		if (mbStream)
 			return (OAL_Stream_GetChannels(mpStream)==2);
 		if (mpSample)

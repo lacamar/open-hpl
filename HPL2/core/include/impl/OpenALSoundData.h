@@ -21,6 +21,7 @@
 #define HPL_OPENAL_SOUND_DATA_H
 
 #include "sound/SoundData.h"
+#include "impl/RustL5.h"
 
 #ifdef USE_OALWRAPPER
 # include "OALWrapper/OAL_Funcs.h"
@@ -50,6 +51,7 @@ namespace hpl {
 	private:
 		cOAL_Sample*	mpSample;
 		cOAL_Stream*	mpStream;
+		OhplL5Data*		mpRust;
 
 //iOAL_Loadable*	mpSoundData;
 	};

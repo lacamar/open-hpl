@@ -5,6 +5,8 @@
 #include <SDL2/SDL.h>
 #include <zlib.h>
 
+#include "shims.h"
+
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -849,3 +851,10 @@ static_assert(S_IFMT == 0170000 && S_IFDIR == 0040000, "S_IF");
 static_assert(LC_CTYPE == 0 && CODESET == 14, "locale");
 static_assert(CLONE_NEWNS == 0x00020000 && CLONE_NEWUSER == 0x10000000, "CLONE_NEW");
 static_assert(MS_REC == 16384 && MS_PRIVATE == (1 << 18) && MS_BIND == 4096 && W_OK == 2, "mount flags");
+
+// retained shims used by rust/src/backend/media (L5)
+static_assert(sizeof(OhplOalInit) == 40 && offsetof(OhplOalInit, output_freq) == 8 && offsetof(OhplOalInit, stream_buffer_count) == 32
+	&& offsetof(OhplOalInit, use_thread) == 36 && offsetof(OhplOalInit, use_efx) == 38, "OhplOalInit");
+static_assert(sizeof(OhplThYuv) == 56 && offsetof(OhplThYuv, y_len) == 24 && offsetof(OhplThYuv, y_stride) == 48
+	&& offsetof(OhplThYuv, uv_stride) == 52, "OhplThYuv");
+static_assert(sizeof(wchar_t) == 4, "wide text crosses the ABI as u32");

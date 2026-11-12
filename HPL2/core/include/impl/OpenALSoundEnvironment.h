@@ -21,6 +21,7 @@
 #define HPL_OPENALSOUNDENVIRONMENT_H
 
 #include "sound/SoundEnvironment.h"
+#include "impl/RustL5.h"
 
 namespace hpl
 {
@@ -34,6 +35,9 @@ namespace hpl
 		~cOpenALSoundEnvironment ();
 
 		bool CreateFromFile(const tString &asFile);
+
+		void ToRust(OhplL5EnvParams& aParams);
+		void FromRust(const OhplL5EnvParams& aParams);
 
 		inline float GetDensity( ) { return mfDensity; }
 		inline float GetDiffusion ( ) { return mfDiffusion; }
