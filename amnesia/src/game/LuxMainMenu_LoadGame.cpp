@@ -22,6 +22,8 @@
 #include "LuxSaveHandler.h"
 #include "LuxInputHandler.h"
 #include "LuxProgressLogHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //////////////////////////////////////////////
 // TODO - add a snapshot view?
@@ -145,39 +147,33 @@ void cLuxMainMenu_LoadGame::OnSetActive(bool abX)
 
 //-----------------------------------------------------------------------
 
-typedef std::multimap<cDate, tWString, std::greater<cDate> > tLoadGameFileListMap;
-typedef tLoadGameFileListMap::iterator tLoadGameFileListMapIt;
-
 void cLuxMainMenu_LoadGame::PopulateSavedGameList()
 {
-	/////////////////////////////////////////////////
-	// Clear list
 	mpLBSavedGames->ClearItems();
 	mvSavedGameFileNames.clear();
 
-	/////////////////////////////////////////////////
-	// Check profile folder for savegame files and add to sorted list
-	tLoadGameFileListMap mapSortedFiles;
+	static_assert(sizeof(cDate) == 8*sizeof(int), "cDate layout");
 
 	tWStringList lstSavedGameFiles;
 	cPlatform::FindFilesInDir(lstSavedGameFiles, gpBase->msProfileSavePath, _W("*.sav"));
-	
+
+	std::vector<tWString> vFiles;
+	std::vector<cDate> vDates;
 	tWStringListIt it = lstSavedGameFiles.begin();
 	for(;it!=lstSavedGameFiles.end();++it)
 	{
 		const tWString& sSavedGameFile = *it;
 		tWString sPath = gpBase->msProfileSavePath + sSavedGameFile;
-
-		cDate date = cPlatform::FileModifiedDate(sPath);
-		mapSortedFiles.insert(tLoadGameFileListMap::value_type(date, sSavedGameFile));
+		vDates.push_back(cPlatform::FileModifiedDate(sPath));
+		vFiles.push_back(sSavedGameFile);
 	}
 
-	/////////////////////////////////
-	// Add items to listbox and array
-	for(tLoadGameFileListMapIt it = mapSortedFiles.begin(); it != mapSortedFiles.end(); ++it)
-	{
-		const tWString& sSavedGameFile = it->second;
+	std::vector<uint32_t> vOrder(vFiles.size());
+	ohpl_ga7b_pg_sort_saves(vDates.data(), vDates.size(), vOrder.data());
 
+	for(size_t i = 0; i < vOrder.size(); ++i)
+	{
+		const tWString& sSavedGameFile = vFiles[vOrder[i]];
 		mpLBSavedGames->AddItem(gpBase->mpSaveHandler->GetProperSaveName(sSavedGameFile));
 		mvSavedGameFileNames.push_back(sSavedGameFile);
 	}
@@ -195,8 +191,9 @@ void cLuxMainMenu_LoadGame::LoadGame(int alIdx)
 	gpBase->mpEngine->GetUpdater()->BroadcastMessageToAll(eUpdateableMessage_Reset);
 
 	gpBase->mpProgressLogHandler->CreateAndResetLogFile();
-
-	gpBase->mpSaveHandler->LoadGameFromFile(gpBase->msProfileSavePath+mvSavedGameFileNames[alIdx]);
+	int lFile = ohpl_ga7b_pg_load_index(alIdx, mvSavedGameFileNames.size());
+	if(lFile >= 0)
+		gpBase->mpSaveHandler->LoadGameFromFile(gpBase->msProfileSavePath+mvSavedGameFileNames[lFile]);
 }
 
 //-----------------------------------------------------------------------
@@ -213,7 +210,7 @@ bool cLuxMainMenu_LoadGame::PressOK(iWidget* apWidget, const cGuiMessageData& aD
 {
 	/////////////////////////////////////////////////////////////
 	// Check if the list has a valid selection, and warn if not
-	if(mpLBSavedGames->GetSelectedItem()<0)
+	if(ohpl_ga7b_pg_press_ok(mpLBSavedGames->GetSelectedItem()) == 0)
 		mpGuiSet->CreatePopUpMessageBox(kTranslate("Global", "Warning"), 
 										kTranslate("LoadGame", "NoGame"), 
 										kTranslate("Global","OK"), _W(""), 
@@ -240,9 +237,9 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_LoadGame, PressCancel);
 
 bool cLuxMainMenu_LoadGame::UIPressList(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch(aData.mlVal)
+	switch(ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -253,10 +250,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_LoadGame, UIPressList);
 
 bool cLuxMainMenu_LoadGame::UIPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch(aData.mlVal)
+	switch(ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary: return PressOK(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary: return PressOK(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -265,10 +262,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_LoadGame, UIPress);
 
 bool cLuxMainMenu_LoadGame::UIPressCancel(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	switch(aData.mlVal)
+	switch(ohpl_ga7b_pg_ui_switch(aData.mlVal))
 	{
-	case eUIButton_Primary: return PressCancel(apWidget, aData);
-	case eUIButton_Secondary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Primary: return PressCancel(apWidget, aData);
+	case eOhplGa7bUi_Secondary: return PressCancel(apWidget, aData);
 	}
 
 	return false;
@@ -279,10 +276,8 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_LoadGame, UIPressCancel);
 
 bool cLuxMainMenu_LoadGame::LoadGameCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bOkPressed = aData.mlVal==0? true : false;
-	if(bOkPressed==false)
+	if(ohpl_ga7b_popup_ok(aData.mlVal)==false)
 		return true;
-
 	LoadGame(mpLBSavedGames->GetSelectedItem());
 
 	return true; 
@@ -293,14 +288,11 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_LoadGame, LoadGameCallback);
 
 bool cLuxMainMenu_LoadGame::ExitCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bOkPressed = aData.mlVal==0? true : false;
-	if(bOkPressed==false)
+	int lTarget = ohpl_ga7b_pg_exit_target(gpBase->mpCustomStory!=NULL, ohpl_ga7b_popup_ok(aData.mlVal));
+	if(lTarget < 0)
 		return true;
 
-	if(gpBase->mpCustomStory==NULL)
-        gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_LastEnum);
-	else
-		gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_CustomStory);
+	gpBase->mpMainMenu->SetWindowActive((eLuxMainMenuWindow)lTarget);
 
 	return true; 
 }

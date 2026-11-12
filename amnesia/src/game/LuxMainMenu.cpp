@@ -40,6 +40,8 @@
 #include "LuxDemoEnd.h"
 #include <sstream>
 #include "LuxAchievementHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //--------------------------------------------------------------------------------
 
@@ -47,22 +49,12 @@ static const bool gbDebug_SkipBGScene = false;
 static const bool gbDebug_FastLoadOptions = false;
 const int glHardMode_SaveCost = 4;
 
-#if MAC_OS || LINUX
-std::wstring LongToWString(const long long &l)
+static tWString OhplGa7bSubst(const tWString &asText, long long alNum)
 {
-    std::string s;
-    std::stringstream strstream;
-    strstream << l;
-    strstream >> s;
-    std::wstring temp(s.length(),L' ');
-    std::copy(s.begin(),s.end(), temp.begin());
-    return temp;
+	tWString sOut = asText;
+	ohpl_ga7b_menu_subst_hash((const uint32_t*)asText.data(), asText.size(), alNum, OhplGa7bWideSink, &sOut);
+	return sOut;
 }
-
-const tWString gsHardMode_SaveCostString = tWString(LongToWString((static_cast<long long>(glHardMode_SaveCost))));
-#else
-const tWString gsHardMode_SaveCostString = tWString(to_wstring(static_cast<long long>(glHardMode_SaveCost)));
-#endif
 //--------------------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////
@@ -217,10 +209,9 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	//Setup variables
 	mbGuiCreated = false;
 
-	mbExiting = false;
+	ohpl_ga7b_menu_new(&mS);
 	mbRecreateGui = false;
 
-	mCurrentWindow = eLuxMainMenuWindow_LastEnum;
 
 	mpLastFocusedItem = NULL;
 	mpSaveCost = NULL;
@@ -255,7 +246,7 @@ void cLuxMainMenu::OnQuit()
     }
     
     //Quit Game
-    mExitMessage = eLuxMainMenuExit_QuitGame;
+    mS.mlExitMsg = eLuxMainMenuExit_QuitGame;
     OnMenuExit();
 }
 
@@ -360,11 +351,8 @@ void cLuxMainMenu::OnEnterContainer(const tString& asOldContainer)
 	////////////////////////////
 	//Set up menu variables
 
-	mfMenuFadeAlpha = 1.0f;	//Fade in from black or from sharp -> blurry if ingame
-	
-	mbExiting = false;
+	ohpl_ga7b_menu_enter(&mS);
 
-	mCurrentWindow = eLuxMainMenuWindow_LastEnum;
 
 	CreateGui();
 	CreateBackground();
@@ -377,7 +365,7 @@ void cLuxMainMenu::OnEnterContainer(const tString& asOldContainer)
 	}
 	
 	//Always fade in top menu:
-	mfTopMenuAlpha =0.01f;
+	mS.mfTopAlpha =0.01f;
 	UpdateTopMenu(1.0f/60.0f);
 
 	mfCamTimer = 0.0f;
@@ -434,8 +422,8 @@ void cLuxMainMenu::Update(float afTimeStep)
 	//Log("1\n");
 	if(mbRecreateGui)
 	{
-		eLuxMainMenuWindow currentWindow = mCurrentWindow;
-		mCurrentWindow = eLuxMainMenuWindow_LastEnum;
+		eLuxMainMenuWindow currentWindow = (eLuxMainMenuWindow)mS.mlWindow;
+		mS.mlWindow = eLuxMainMenuWindow_LastEnum;
 		//Log("1.1\n");
 		CreateGui();
 		//Log("1.2\n");
@@ -465,31 +453,31 @@ void cLuxMainMenu::OnDraw(float afFrameTime)
 	//Screen background
 	if(mpScreenGfx)
 	{
-		if(mpScreenGfx && mfMenuFadeAlpha>0)
+		if(mpScreenGfx && mS.mfFadeAlpha>0)
 			mpGuiSet->DrawGfx(mpScreenGfx,cVector3f(0,0,0),vMenuSpace);
 
 		if(mpScreenBlurGfx)
-			mpGuiSet->DrawGfx(mpScreenBlurGfx,cVector3f(0,0,0.2f),vMenuSpace,cColor(1, 1-mfMenuFadeAlpha));
+			mpGuiSet->DrawGfx(mpScreenBlurGfx,cVector3f(0,0,0.2f),vMenuSpace,cColor(1, 1-mS.mfFadeAlpha));
 
-		if(	mfMenuFadeAlpha > 0 && mbExiting && mExitMessage != eLuxMainMenuExit_ReturnToGame )
+		if(	mS.mfFadeAlpha > 0 && mS.mbExiting && mS.mlExitMsg != eLuxMainMenuExit_ReturnToGame )
 		{
-			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mfMenuFadeAlpha));
+			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mS.mfFadeAlpha));
 		}
 
 		//Top Menu background
 		mpGuiSet->DrawGfx(	mpTopBackground,cVector3f(0,mvTopMenuStartPos.y,0.5f),
 							cVector2f(vMenuSpace.x, vMenuSpace.y - mvTopMenuStartPos.y),
-							cColor(1 ,0.5f*mfTopMenuAlpha));
+							cColor(1 ,0.5f*mS.mfTopAlpha));
 	}
 	/////////////////////////////////
 	//3D background
 	else
 	{
-		if(mfMenuFadeAlpha > 0)
-			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mfMenuFadeAlpha));
+		if(mS.mfFadeAlpha > 0)
+			mpGuiSet->DrawGfx(	mpBlackFade,cVector3f(0,0,50), vMenuSpace, cColor(1 ,mS.mfFadeAlpha));
 
 		if(mpLogoGfx)
-			mpGuiSet->DrawGfx( mpLogoGfx, mvLogoPos, mvLogoSize, cColor(1, mfTopMenuAlpha) );
+			mpGuiSet->DrawGfx( mpLogoGfx, mvLogoPos, mvLogoSize, cColor(1, mS.mfTopAlpha) );
 	}
 }
 
@@ -506,41 +494,27 @@ void cLuxMainMenu::OnPostRender(float afFrameTime)
 
 void cLuxMainMenu::SetWindowActive(eLuxMainMenuWindow aWindow)
 {
-	if(mCurrentWindow == aWindow) return;
+	int lPrev = ohpl_ga7b_menu_win_begin(&mS, aWindow);
+	if(lPrev == -2) return;
 
 #ifdef USE_GAMEPAD
 	bool bHasGamepad = gpBase->mpInputHandler->IsGamepadPresent();
-
-	switch(aWindow)
-	{
-	case eLuxMainMenuWindow_Options:
-	case eLuxMainMenuWindow_KeyConfig:
-	case eLuxMainMenuWindow_LoadGame:
-	case eLuxMainMenuWindow_Profiles:
-	case eLuxMainMenuWindow_StartGame:
-		mpGuiSet->SetDrawFocus(bHasGamepad);
-		break;
-	default:
-		mpGuiSet->SetDrawFocus(false);
-		break;
-	}
-
+	mpGuiSet->SetDrawFocus(ohpl_ga7b_menu_draw_focus(aWindow) ? bHasGamepad : false);
 #endif
 
-	if(mCurrentWindow != eLuxMainMenuWindow_LastEnum)
+	if(lPrev != eLuxMainMenuWindow_LastEnum)
 	{
-		if(mvWindows[mCurrentWindow]) mvWindows[mCurrentWindow]->SetActive(false);
+		if(mvWindows[lPrev]) mvWindows[lPrev]->SetActive(false);
 	}
 
-	mCurrentWindow = aWindow;
-	if(aWindow == eLuxMainMenuWindow_LastEnum)
+	if(ohpl_ga7b_menu_win_commit(&mS, aWindow))
 	{
 		SetTopMenuVisible(true);
 	}
 	else
 	{
 		SetTopMenuVisible(false);
-		if(mvWindows[mCurrentWindow]) mvWindows[mCurrentWindow]->SetActive(true);
+		if(mvWindows[mS.mlWindow]) mvWindows[mS.mlWindow]->SetActive(true);
 	}
 }
 
@@ -548,23 +522,18 @@ void cLuxMainMenu::SetWindowActive(eLuxMainMenuWindow aWindow)
 
 void cLuxMainMenu::ExitPressed()
 {
-	/////////////////////////
-	//Top menu is active
-	if(mCurrentWindow == eLuxMainMenuWindow_LastEnum)
+	switch(ohpl_ga7b_menu_exit_pressed(&mS, gpBase->mpMapHandler->MapIsLoaded()))
 	{
-		if(gpBase->mpMapHandler->MapIsLoaded())
+	case eOhplGa7bExitMenu_ReturnToGame:
+		ExitMenu(eLuxMainMenuExit_ReturnToGame);
+		break;
+	case eOhplGa7bExitMenu_Window:
 		{
-			ExitMenu(eLuxMainMenuExit_ReturnToGame);
+			iLuxMainMenuWindow *pWindow = mvWindows[mS.mlWindow];
+			if(pWindow) pWindow->ExitPressed();
 		}
+		break;
 	}
-	/////////////////////////
-	//Window is active
-	else
-	{
-		iLuxMainMenuWindow *pWindow = mvWindows[mCurrentWindow];
-        if(pWindow) pWindow->ExitPressed();		
-	}
-
 }
 
 //-----------------------------------------------------------------------
@@ -615,21 +584,19 @@ void cLuxMainMenu::AppDeviceWasRemoved()
 void cLuxMainMenu::ExitMenu(eLuxMainMenuExit aMessage)
 {
 	SetTopMenuVisible(false);
-	mbExiting = true;
-	mExitMessage = aMessage;
+	int lExitFlags = ohpl_ga7b_menu_exit_menu(&mS, aMessage);
 	gpBase->mpInputHandler->ChangeState(eLuxInputState_Null);
 
 	mpGuiSet->SetDrawMouse(false);
 	mpGui->SetFocus(NULL);
 
-	if(	aMessage == eLuxMainMenuExit_ContinueGame ||
-		aMessage == eLuxMainMenuExit_StartGame)
+	if(lExitFlags & eOhplGa7bXm_ZoomSound)
 	{
 		if(msZoomSound != "")
 			gpBase->mpEngine->GetSound()->GetSoundHandler()->PlayGui(msZoomSound, false,1.0f);
 	}
 
-	if (aMessage == eLuxMainMenuExit_QuitToMenu || aMessage == eLuxMainMenuExit_QuitAndSave)
+	if (lExitFlags & eOhplGa7bXm_Achievement)
 	{
 		tString mapName = gpBase->mpMapHandler->GetCurrentMap()->GetName();
 		if (mapName == "00_rainy_hall" || mapName == "01_old_archives")
@@ -643,21 +610,19 @@ void cLuxMainMenu::ExitMenu(eLuxMainMenuExit aMessage)
 
 void cLuxMainMenu::OnMenuExit()
 {
-	switch(mExitMessage)
+	switch(ohpl_ga7b_menu_on_exit(mS.mlExitMsg, gpBase->mpDemoEnd && gpBase->mpDemoEnd->ShowOnAllExit()))
 	{
 	////////////////
 	// Quit Game
-	case eLuxMainMenuExit_QuitGame:
-
-		if(gpBase->mpDemoEnd && gpBase->mpDemoEnd->ShowOnAllExit())
-			gpBase->mpEngine->GetUpdater()->SetContainer("DemoEnd");
-		else
-			gpBase->mpEngine->Exit();
-		
+	case eOhplGa7bOme_DemoEnd:
+		gpBase->mpEngine->GetUpdater()->SetContainer("DemoEnd");
+		break;
+	case eOhplGa7bOme_EngineExit:
+		gpBase->mpEngine->Exit();
 		break;
 	////////////////
 	// Return To Game
-	case eLuxMainMenuExit_ReturnToGame:
+	case eOhplGa7bOme_Return:
 		
 		ProgLog(eLuxProgressLogLevel_Low, "Return to game from menu");
 
@@ -667,7 +632,7 @@ void cLuxMainMenu::OnMenuExit()
 		break;
 	////////////////
 	// Start Game
-	case eLuxMainMenuExit_StartGame:
+	case eOhplGa7bOme_Start:
 
 		gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
 
@@ -689,7 +654,7 @@ void cLuxMainMenu::OnMenuExit()
 
 	////////////////
 	// Continue Game
-	case eLuxMainMenuExit_ContinueGame:
+	case eOhplGa7bOme_Continue:
 		{
 
 			gpBase->mpInputHandler->ChangeState(eLuxInputState_Game);
@@ -709,7 +674,7 @@ void cLuxMainMenu::OnMenuExit()
 		break;
 	////////////////
 	// Quit To Menu
-	case eLuxMainMenuExit_QuitToMenu:
+	case eOhplGa7bOme_ToMenu:
 		{
 			gpBase->mpLoadScreenHandler->DrawMenuScreen();
 
@@ -725,7 +690,7 @@ void cLuxMainMenu::OnMenuExit()
 	
 	////////////////
 	// Quit And Save
-	case eLuxMainMenuExit_QuitAndSave:
+	case eOhplGa7bOme_AndSave:
 		{
 			gpBase->mpLoadScreenHandler->DrawMenuScreen();
 
@@ -756,84 +721,31 @@ void cLuxMainMenu::OnMenuExit()
 
 void cLuxMainMenu::UpdateBase(float afTimeStep)
 {
-	//////////////////////////
-	//Exiting the main menu
-	if(mbExiting)
-	{
-		//Do checks
-		float fFadeSpeed = mfMainFadeOutTimeFast;
-		bool bZoomCamera = false;
+	OhplGa7bTimes times = { mfMainFadeInTime, mfMainFadeOutTimeFast, mfMainFadeOutTimeSlow, mfBgCamera_FOV, mfBgCamera_ZoomedFOV };
+	OhplGa7bBase base;
+	ohpl_ga7b_menu_update_base(&mS, afTimeStep, &times, mpBgCamera != NULL, &base);
 
-		if(	mExitMessage == eLuxMainMenuExit_StartGame ||
-			mExitMessage == eLuxMainMenuExit_ContinueGame)
-		{
-			bZoomCamera = true;
-			fFadeSpeed = mfMainFadeOutTimeSlow;
-		}
-
-		//Zoom in camera
-		if(bZoomCamera &&mpBgCamera)
-		{
-			mpBgCamera->SetFOV(mfBgCamera_FOV*(1.0f-mfMenuFadeAlpha) + mfBgCamera_ZoomedFOV*mfMenuFadeAlpha);
-		}
-
-		//Fade or exit!
-		if(mfMenuFadeAlpha < 1.0f)
-		{
-			mfMenuFadeAlpha += afTimeStep * (1.0f/fFadeSpeed);
-			if(mfMenuFadeAlpha > 1.0f) mfMenuFadeAlpha =1.0f;
-
-			//gpBase->mpEngine->GetSound()->GetLowLevel()->SetVolume(1-mfMenuFadeAlpha);
-		}
-		else
-		{
-			OnMenuExit();
-		}
-	}
-	//////////////////////////
-	//Normal operation
-	else
-	{
-		if(mfMenuFadeAlpha > 0.0f)
-		{
-			mfMenuFadeAlpha -= afTimeStep * (1.0f/mfMainFadeInTime);
-			if(mfMenuFadeAlpha < 0.0f) mfMenuFadeAlpha =0;
-		}
-	}
+	if(base.mbSetFov) mpBgCamera->SetFOV(base.mfFov);
+	if(base.mbExit) OnMenuExit();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMainMenu::UpdateTopMenu(float afTimeStep)
 {
-	bool bAlphaChanged = false;
-
-	////////////////
-	// Visible
-	if(mbTopMenuVisible && mbExiting==false)
+	int lSaveFocus = -1;
+	for (size_t i = 0; i < mvTopMenuLabels.size(); ++i)
 	{
-		if(mfTopMenuAlpha < 1.0f)
+		cWidgetLabel *pLabel = mvTopMenuLabels[i];
+		if (pLabel->GetName() == "Save")
 		{
-			mfTopMenuAlpha += afTimeStep * (1.0f/mfTopMenuFadeInTime);
-			if(mfTopMenuAlpha >1) mfTopMenuAlpha =1;
-			bAlphaChanged = true;
-		}
-	}
-	////////////////
-	// Not Visible
-	else
-	{
-		if(mfTopMenuAlpha > 0.0f)
-		{
-			mfTopMenuAlpha -= afTimeStep * (1.0f/mfTopMenuFadeOutTime);
-			if(mfTopMenuAlpha <0) mfTopMenuAlpha =0;
-			bAlphaChanged = true;
+			lSaveFocus = pLabel->HasFocus() ? 1 : 0;
+			break;
 		}
 	}
 
+	bool bAlphaChanged = ohpl_ga7b_menu_update_top(&mS, afTimeStep, mfTopMenuFadeInTime, mfTopMenuFadeOutTime, lSaveFocus);
 
-	////////////////////
-	// Update widgets
 	if(bAlphaChanged)
 	{
 		for(size_t i=0; i<mvTopMenuLabels.size(); ++i)
@@ -841,39 +753,8 @@ void cLuxMainMenu::UpdateTopMenu(float afTimeStep)
 			cWidgetLabel *pLabel = mvTopMenuLabels[i];
 
 			cColor col = pLabel->GetDefaultFontColor();
-			pLabel->SetDefaultFontColor(cColor(col.r, col.g, col.b, mfTopMenuAlpha));
+			pLabel->SetDefaultFontColor(cColor(col.r, col.g, col.b, mS.mfTopAlpha));
 		}
-	}
-
-	for (size_t i = 0; i < mvTopMenuLabels.size(); ++i)
-	{
-		cWidgetLabel *pLabel = mvTopMenuLabels[i];
-		if (pLabel->GetName() == "Save")
-		{
-			if (pLabel->HasFocus())
-			{
-				mbFadeInDescription = true;
-			}
-			else
-			{
-				mbFadeInDescription = false;
-			}
-			break;
-		}
-	}
-
-
-	if (mbFadeInDescription)
-	{
-		mfDescriptionAlpha += afTimeStep;
-		if (mfDescriptionAlpha > 1.0f)
-			mfDescriptionAlpha = 1.0f;
-	}
-	else
-	{
-		mfDescriptionAlpha -= afTimeStep;
-		if (mfDescriptionAlpha < 0.5f)
-			mfDescriptionAlpha = 0.5f;
 	}
 }
 
@@ -881,7 +762,7 @@ void cLuxMainMenu::UpdateTopMenu(float afTimeStep)
 
 void cLuxMainMenu::SetTopMenuVisible(bool abVisible)
 {
-	mbTopMenuVisible = abVisible;
+	mS.mbTopVisible = abVisible;
 	if(abVisible)
 	{
 		mpGuiSet->SetDefaultFocusNavWidget(mvTopMenuLabels.front());
@@ -972,7 +853,7 @@ void cLuxMainMenu::CreateTopMenuGui()
 
 	float fInvScreenRatio = mvScreenSize.y / mvScreenSize.x;
 	float fWidthMul = fInvScreenRatio / (3.0f/4.0f);
-	
+
 	cVector2f vSize(mvScreenSize.x*0.15f, mvTopMenuFontSize.y);
 	cVector3f vPos = gpBase->mpMapHandler->MapIsLoaded() ? mvTopMenuStartPosInGame : mvTopMenuStartPos;
 
@@ -982,9 +863,9 @@ void cLuxMainMenu::CreateTopMenuGui()
 	mvTopMenuLabels.clear();
 
 	//TODO: Move these?
-	mbTopMenuVisible = true;
-	mfTopMenuAlpha = 1.0f;
-	
+	mS.mbTopVisible = true;
+	mS.mfTopAlpha = 1.0f;
+
 	///////////////////
 	//Create labels
 
@@ -1009,221 +890,144 @@ void cLuxMainMenu::CreateTopMenuGui()
 	vLabels.push_back(kTranslate("MainMenu","Save")); // TRANSLATE THIS
 	//////////////////////
 
-
-	float fMaxLabelLength = 0;
-	int lLongestStringSize;
+	std::vector<float> vLabelLengths;
+	std::vector<int> vLabelChars;
 	// Create a temp label to be able to access font data
 	pLabel = mpGuiSet->CreateWidgetLabel();
 	for(size_t i=0;i<vLabels.size();++i)
 	{
 		const tWString& sLabel = vLabels[i];
 
-		float fLabelLength = pLabel->GetDefaultFontType()->GetLength(mvTopMenuFontSize, sLabel.c_str());
-
-		if(fMaxLabelLength < fLabelLength)
-		{
-			fMaxLabelLength = fLabelLength;
-			lLongestStringSize = (int)sLabel.size();
-		}
+		vLabelLengths.push_back(pLabel->GetDefaultFontType()->GetLength(mvTopMenuFontSize, sLabel.c_str()));
+		vLabelChars.push_back((int)sLabel.size());
 	}
 	mpGuiSet->DestroyWidget(pLabel);
 
-	float fSafeMaxLabelLength = mvScreenSize.x * 0.35f;
-	mfTopMenuFontSizeMul = 1.0f;
+	float vFit[2];
+	ohpl_ga7b_menu_font_fit(vLabelLengths.data(), vLabelChars.data(), vLabels.size(), mvScreenSize.x, mvTopMenuFontSize.x, mvTopMenuFontSize.y, vFit);
+	mfTopMenuFontSizeMul = vFit[0];
+	float fRowAdd = vFit[1];
 
-	///////////////////////////////////////////////////////////
-	// If longest label is longer than safe length, compute new length
-	if(fMaxLabelLength>fSafeMaxLabelLength)
+	uint32_t lPlanFlags = 0;
+	if(gpBase->mbPTestActivated) lPlanFlags |= eOhplGa7bPlan_PTest;
+	if(gpBase->mpMapHandler->MapIsLoaded()) lPlanFlags |= eOhplGa7bPlan_Map;
+	if(gpBase->mpSaveHandler->SaveFileExists()) lPlanFlags |= eOhplGa7bPlan_SaveExists;
+	if(gpBase->mbHardMode) lPlanFlags |= eOhplGa7bPlan_Hard;
+	if(gpBase->mbExitMenuDirectly) lPlanFlags |= eOhplGa7bPlan_ExitDirect;
+	if(	(lPlanFlags & eOhplGa7bPlan_Map) && gpBase->mbExitMenuDirectly == false &&
+		gpBase->mbPTestActivated == false && gpBase->mpPlayer->IsDead()) lPlanFlags |= eOhplGa7bPlan_Dead;
+	#ifdef LUX_DEMO_VERSION
+		lPlanFlags |= eOhplGa7bPlan_NoCustom;
+	#endif
+
+	int vPlan[16];
+	size_t lPlanNum = ohpl_ga7b_menu_plan(lPlanFlags, vPlan, 16);
+
+	for(size_t i=0; i<lPlanNum; ++i)
 	{
-		float fCharWidth = fSafeMaxLabelLength/lLongestStringSize;
-		mfTopMenuFontSizeMul = fCharWidth/mvTopMenuFontSize.x;
-
-		mfTopMenuFontSizeMul = cMath::Clamp(mfTopMenuFontSizeMul, 0.7f, mfTopMenuFontSizeMul);
-	}
-
-	float fRowAdd = mvTopMenuFontSize.y*mfTopMenuFontSizeMul*1.3f;
-
-	///////////////
-	//Continue
-	if(	gpBase->mbPTestActivated==false &&
-		gpBase->mpMapHandler->MapIsLoaded()==false && gpBase->mpSaveHandler->SaveFileExists()) 
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Continue"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressContinue));
-		SetupTopMenuLabel(pLabel);
-		vPos.y += fRowAdd;
-	}
-	
-	///////////////
-	//Start game
-	if(gpBase->mpMapHandler->MapIsLoaded()) 
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Back To Game"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressBackToGame));
-	}
-	else
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Start Game"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressStartGame));
-	}
-	SetupTopMenuLabel(pLabel);
-	vPos.y += fRowAdd;
-
-	///////////////
-	//Load game
-	if(	gpBase->mbPTestActivated==false &&
-		gpBase->mpSaveHandler->SaveFileExists() && gpBase->mpMapHandler->MapIsLoaded()==false)
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Load Game"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this,kGuiCallback(PressLoadGame));
-		SetupTopMenuLabel(pLabel);
-		vPos.y += fRowAdd;
-	}
-
-	///////////////
-	// HARDMODE
-	// Save game
-	if (gpBase->mbPTestActivated == false && 
-		gpBase->mbHardMode && 
-		gpBase->mpMapHandler->MapIsLoaded() == true)
-	{
-		////////////////////////////
-		// Get translation and insert cost
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos, 0, kTranslate("MainMenu", "Save"), NULL, "Save");
-		pLabel->AddCallback(eGuiMessage_MouseDown, this, kGuiCallback(PressSaveGame));
-		pSaveLabel = pLabel;
-		
-		SetupTopMenuLabel(pLabel);
-
-																					  
-		////////////////////////////
-		// Set enabled to false if player does not have enough resources  
-		pLabel->SetEnabled(gpBase->mpPlayer->GetTinderboxes() >= 4);
-
-		////////////////////////////
-		// Save cost label
-		tWString sText = kTranslate("MainMenu", "HardModeSaveCost");
-		size_t lNumIndex = sText.find(L"#");
-		
-		if (lNumIndex != std::wstring::npos)
+		switch(vPlan[i])
 		{
-			tWString sSubString = sText.substr(lNumIndex + 1, sText.size() - lNumIndex);
-			sText = sText.substr(0, lNumIndex);
-			sText.replace(lNumIndex, gsHardMode_SaveCostString.size(), gsHardMode_SaveCostString);
-			sText += sSubString;
-		}
+		case eOhplGa7bLabel_Continue:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Continue"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressContinue));
+			break;
+		case eOhplGa7bLabel_Back:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Back To Game"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressBackToGame));
+			break;
+		case eOhplGa7bLabel_Start:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Start Game"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressStartGame));
+			break;
+		case eOhplGa7bLabel_Load:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Load Game"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this,kGuiCallback(PressLoadGame));
+			break;
+		case eOhplGa7bLabel_Save:
+			{
+			////////////////////////////
+			// Get translation and insert cost
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos, 0, kTranslate("MainMenu", "Save"), NULL, "Save");
+			pLabel->AddCallback(eGuiMessage_MouseDown, this, kGuiCallback(PressSaveGame));
+			pSaveLabel = pLabel;
 
-		cVector3f vSaveDescriptionPosition = 0;
-		vSaveDescriptionPosition.x = (mvScreenSize.x / 16.0f);
-		vSaveDescriptionPosition.x = pLabel->GetGlobalPosition().x + pLabel->GetSize().x + 100;
-		vSaveDescriptionPosition.y = mvTopMenuStartPosInGame.y - (2.5f * fRowAdd);
-		vSaveDescriptionPosition.z = 2.0f;
+			SetupTopMenuLabel(pLabel);
 
-		vSaveDescriptionPosition.x = mvTopMenuStartPosInGame.x;
+			////////////////////////////
+			// Set enabled to false if player does not have enough resources
+			pLabel->SetEnabled(gpBase->mpPlayer->GetTinderboxes() >= 4);
 
-		mpSaveCost = mpGuiSet->CreateWidgetLabel(vSaveDescriptionPosition, 0, sText, NULL, "SaveDescription");
-		mpSaveCost->SetTextAlign(eFontAlign_Center);
-		mpSaveCost->SetDefaultFontColor(cColor(0.5f, 0));
-		mpSaveCost->SetDefaultFontSize(mvTopMenuFontSize*mfTopMenuFontSizeMul * 0.85f);
-		mpSaveCost->SetDefaultFontType(mpFont);
-		mpSaveCost->SetAutogenerateSize(true);
-		mpSaveCost->AddCallback(eGuiMessage_OnDraw, this, kGuiCallback(HardModeTextDraw));
-		mpSaveCost->SetAutogenerateSize(true);
-		mpSaveCost->SetPosition(mpSaveCost->GetLocalPosition() - cVector3f(mpSaveCost->GetSize().x*0.5f, 0, 0));
+			////////////////////////////
+			// Save cost label
+			tWString sText = OhplGa7bSubst(kTranslate("MainMenu", "HardModeSaveCost"), glHardMode_SaveCost);
 
-		vSaveDescriptionPosition.y += fRowAdd * 0.65f;
+			cVector3f vSaveDescriptionPosition = 0;
+			vSaveDescriptionPosition.x = (mvScreenSize.x / 16.0f);
+			vSaveDescriptionPosition.x = pLabel->GetGlobalPosition().x + pLabel->GetSize().x + 100;
+			vSaveDescriptionPosition.y = mvTopMenuStartPosInGame.y - (2.5f * fRowAdd);
+			vSaveDescriptionPosition.z = 2.0f;
 
-		//////////////////////////////////
-		// Tinder inventory label
-		sText = kTranslate("MainMenu", "HardModeTinderboxInInventory");
-		lNumIndex = sText.find(L"#");
+			vSaveDescriptionPosition.x = mvTopMenuStartPosInGame.x;
 
-		if (lNumIndex != std::wstring::npos)
-		{
-#if MAC_OS || LINUX
-            tWString sNumTinderboxes = tWString(LongToWString(static_cast<long long>(gpBase->mpPlayer->GetTinderboxes())));
-#else
-            tWString sNumTinderboxes = tWString(std::to_wstring(static_cast<long long>(gpBase->mpPlayer->GetTinderboxes())));
-#endif
-            
-			tWString sSubString = sText.substr(lNumIndex + 1, sText.size() - lNumIndex);
-			sText = sText.substr(0, lNumIndex);
-			sText.replace(lNumIndex, sNumTinderboxes.size(), sNumTinderboxes);
-			sText += sSubString;
-		}
+			mpSaveCost = mpGuiSet->CreateWidgetLabel(vSaveDescriptionPosition, 0, sText, NULL, "SaveDescription");
+			mpSaveCost->SetTextAlign(eFontAlign_Center);
+			mpSaveCost->SetDefaultFontColor(cColor(0.5f, 0));
+			mpSaveCost->SetDefaultFontSize(mvTopMenuFontSize*mfTopMenuFontSizeMul * 0.85f);
+			mpSaveCost->SetDefaultFontType(mpFont);
+			mpSaveCost->SetAutogenerateSize(true);
+			mpSaveCost->AddCallback(eGuiMessage_OnDraw, this, kGuiCallback(HardModeTextDraw));
+			mpSaveCost->SetAutogenerateSize(true);
+			mpSaveCost->SetPosition(mpSaveCost->GetLocalPosition() - cVector3f(mpSaveCost->GetSize().x*0.5f, 0, 0));
 
-		mpNumTinderboxes = mpGuiSet->CreateWidgetLabel(vSaveDescriptionPosition, 0, sText, NULL, "NumTinderboxes");
-		mpNumTinderboxes->SetTextAlign(eFontAlign_Center);
-		mpNumTinderboxes->SetDefaultFontColor(cColor(0.5f, 0));
-		mpNumTinderboxes->SetDefaultFontSize(mvTopMenuFontSize*mfTopMenuFontSizeMul * 0.75f);
-		mpNumTinderboxes->SetDefaultFontType(mpFont);
-		mpNumTinderboxes->SetAutogenerateSize(true);
-		mpNumTinderboxes->AddCallback(eGuiMessage_OnDraw, this, kGuiCallback(HardModeTextDraw));
-		mpNumTinderboxes->SetAutogenerateSize(true);
-		mpNumTinderboxes->SetPosition(mpNumTinderboxes->GetLocalPosition() - cVector3f(mpNumTinderboxes->GetSize().x*0.5f, 0, 0));
+			vSaveDescriptionPosition.y += fRowAdd * 0.65f;
 
-		mbFadeInDescription = true;
-		mfDescriptionAlpha = 0.0f;
-		vPos.y += fRowAdd;
-	}
+			//////////////////////////////////
+			// Tinder inventory label
+			sText = OhplGa7bSubst(kTranslate("MainMenu", "HardModeTinderboxInInventory"), (long long)gpBase->mpPlayer->GetTinderboxes());
 
-	///////////////
-	//Custom map
-	
-	#ifndef LUX_DEMO_VERSION
-		if(	gpBase->mbPTestActivated==false &&
-			gpBase->mpMapHandler->MapIsLoaded()==false) 
-		{
+			mpNumTinderboxes = mpGuiSet->CreateWidgetLabel(vSaveDescriptionPosition, 0, sText, NULL, "NumTinderboxes");
+			mpNumTinderboxes->SetTextAlign(eFontAlign_Center);
+			mpNumTinderboxes->SetDefaultFontColor(cColor(0.5f, 0));
+			mpNumTinderboxes->SetDefaultFontSize(mvTopMenuFontSize*mfTopMenuFontSizeMul * 0.75f);
+			mpNumTinderboxes->SetDefaultFontType(mpFont);
+			mpNumTinderboxes->SetAutogenerateSize(true);
+			mpNumTinderboxes->AddCallback(eGuiMessage_OnDraw, this, kGuiCallback(HardModeTextDraw));
+			mpNumTinderboxes->SetAutogenerateSize(true);
+			mpNumTinderboxes->SetPosition(mpNumTinderboxes->GetLocalPosition() - cVector3f(mpNumTinderboxes->GetSize().x*0.5f, 0, 0));
+
+			mS.mbFadeDesc = true;
+			mS.mfDescAlpha = 0.0f;
+			}
+			break;
+		case eOhplGa7bLabel_Custom:
 			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Custom Map"));
 			pLabel->AddCallback(eGuiMessage_MouseDown, this, kGuiCallback(PressCustomStory));
-			SetupTopMenuLabel(pLabel);
-			vPos.y += fRowAdd;
-		}
-	#endif
-	
-
-	///////////////
-	//Options
-	pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Options"));
-	pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressOptions));
-	SetupTopMenuLabel(pLabel);
-	vPos.y += fRowAdd;
-
-	///////////////
-	//Change profile
-	if(gpBase->mpMapHandler->MapIsLoaded()==false) 
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Change Profile"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressChangeProfile));
-		SetupTopMenuLabel(pLabel);
-		vPos.y += fRowAdd;
-	}
-
-	///////////////
-	//Exit
-	if(gpBase->mpMapHandler->MapIsLoaded()==false || gpBase->mbExitMenuDirectly) 
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Exit"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressExit));
-	}
-	else
-	{
-		pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","ExitToMainMenu"));
-		pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressExitToMainMenu));
-
-		if(gpBase->mbPTestActivated==false && gpBase->mpPlayer->IsDead()==false && gpBase->mbHardMode == false)
-		{
-			// Set up label right above
-			SetupTopMenuLabel(pLabel);
-			vPos.y += fRowAdd;
-
+			break;
+		case eOhplGa7bLabel_Options:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Options"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressOptions));
+			break;
+		case eOhplGa7bLabel_Profile:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Change Profile"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressChangeProfile));
+			break;
+		case eOhplGa7bLabel_Exit:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","Exit"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressExit));
+			break;
+		case eOhplGa7bLabel_ToMenu:
+			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","ExitToMainMenu"));
+			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressExitToMainMenu));
+			break;
+		case eOhplGa7bLabel_AndSave:
 			pLabel = mpGuiSet->CreateWidgetLabel(vPos,0,kTranslate("MainMenu","ExitAndSave"));
 			pLabel->AddCallback(eGuiMessage_MouseDown,this, kGuiCallback(PressExitAndSave));
-
+			break;
 		}
+
+		if(vPlan[i] != eOhplGa7bLabel_Save) SetupTopMenuLabel(pLabel);
+		vPos.y += fRowAdd;
 	}
-	SetupTopMenuLabel(pLabel);
-	vPos.y += fRowAdd;
 
 	/////////////////////////////////
 	// Link first and last labels nav
@@ -1454,9 +1258,9 @@ void cLuxMainMenu::DestroyBackground()
 
 bool cLuxMainMenu::TopMenuTextMouseEnter(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if (mbTopMenuVisible) mpGuiSet->SetFocusedWidget(apWidget);
+	if (mS.mbTopVisible) mpGuiSet->SetFocusedWidget(apWidget);
 	
-	//apWidget->SetDefaultFontColor(cColor(232.0f/255.0f, 201.0f/255.0f, 28.0f/255.0f, mfTopMenuAlpha));
+	//apWidget->SetDefaultFontColor(cColor(232.0f/255.0f, 201.0f/255.0f, 28.0f/255.0f, mS.mfTopAlpha));
 
 	return true;
 }
@@ -1464,22 +1268,23 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, TopMenuTextMouseEnter);
 
 bool cLuxMainMenu::TopMenuTextMouseLeave(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible)
+	if(mS.mbTopVisible)
 	{
 		if(mpGuiSet->GetFocusedWidget()==apWidget)
 			mpGuiSet->SetFocusedWidget(NULL);
 	}
-	//apWidget->SetDefaultFontColor(cColor(1.0f, mfTopMenuAlpha));
+	//apWidget->SetDefaultFontColor(cColor(1.0f, mS.mfTopAlpha));
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, TopMenuTextMouseLeave);
 
 bool cLuxMainMenu::TopMenuTextPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(aData.mlVal&eUIButton_Primary)
-		return apWidget->ProcessMessage(eGuiMessage_MouseDown, aData);
-	else if(aData.mlVal&eUIButton_Secondary)
+	switch(ohpl_ga7b_menu_top_press(aData.mlVal))
 	{
+	case 1:
+		return apWidget->ProcessMessage(eGuiMessage_MouseDown, aData);
+	case 2:
 		ExitPressed();
 		return true;
 	}
@@ -1490,9 +1295,9 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, TopMenuTextPress);
 bool cLuxMainMenu::TopMenuTextDraw(iWidget* apWidget, const cGuiMessageData& aData)
 {
 	if(apWidget->HasFocus())
-		apWidget->SetDefaultFontColor(cColor(232.0f/255.0f, 201.0f/255.0f, 28.0f/255.0f, mfTopMenuAlpha));
+		apWidget->SetDefaultFontColor(cColor(232.0f/255.0f, 201.0f/255.0f, 28.0f/255.0f, mS.mfTopAlpha));
 	else
-		apWidget->SetDefaultFontColor(cColor(1.0f, mfTopMenuAlpha));
+		apWidget->SetDefaultFontColor(cColor(1.0f, mS.mfTopAlpha));
 
 	return true;
 }
@@ -1502,7 +1307,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, TopMenuTextDraw);
 
 bool cLuxMainMenu::PressContinue(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetTopMenuVisible(false);
@@ -1522,7 +1327,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressContinue)
 
 bool cLuxMainMenu::ClickedContinuePopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bStartGame = aData.mlVal ==0 ? true : false;
+	bool bStartGame = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 
 	if(bStartGame)
@@ -1542,7 +1347,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedContinuePopup)
 
 bool cLuxMainMenu::PressStartGame(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 	
 	/////////////
@@ -1575,7 +1380,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressStartGame);
 
 bool cLuxMainMenu::ClickedStartGamePopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bStartGame = aData.mlVal ==0 ? true : false;
+	bool bStartGame = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 	
 	if(bStartGame)
@@ -1596,7 +1401,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedStartGamePopup);
 
 bool cLuxMainMenu::PressBackToGame(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	ExitMenu(eLuxMainMenuExit_ReturnToGame);
@@ -1609,7 +1414,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressBackToGame);
 
 bool cLuxMainMenu::PressLoadGame(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetWindowActive(eLuxMainMenuWindow_LoadGame);
@@ -1629,7 +1434,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedLoadGamePopup);
 
 bool cLuxMainMenu::PressCustomStory(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetWindowActive(eLuxMainMenuWindow_CustomStoryList);
@@ -1642,7 +1447,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressCustomStory);
 
 bool cLuxMainMenu::PressExit(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetTopMenuVisible(false);
@@ -1661,7 +1466,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressExit);
 
 bool cLuxMainMenu::ClickedExitPopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bExit = aData.mlVal ==0 ? true : false;
+	bool bExit = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 
 	if(bExit)
@@ -1681,7 +1486,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedExitPopup);
 
 bool cLuxMainMenu::PressExitToMainMenu(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetTopMenuVisible(false);
@@ -1700,7 +1505,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressExitToMainMenu);
 
 bool cLuxMainMenu::ClickedExitToMainMenuPopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bExit = aData.mlVal ==0 ? true : false;
+	bool bExit = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 
 	if(bExit)
@@ -1720,7 +1525,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedExitToMainMenuPopup);
 
 bool cLuxMainMenu::PressExitAndSave(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetTopMenuVisible(false);
@@ -1739,7 +1544,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressExitAndSave);
 
 bool cLuxMainMenu::ClickedExitAndSavePopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bExit = aData.mlVal ==0 ? true : false;
+	bool bExit = ohpl_ga7b_popup_ok(aData.mlVal);
 	mpGuiSet->SetDrawFocus(false);
 
 	if(bExit)
@@ -1759,7 +1564,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedExitAndSavePopup);
 
 bool cLuxMainMenu::PressChangeProfile(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetWindowActive(eLuxMainMenuWindow_Profiles);
@@ -1772,7 +1577,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressChangeProfile);
 
 bool cLuxMainMenu::PressOptions(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbTopMenuVisible==false)
+	if(mS.mbTopVisible==false)
 		return true;
 
 	SetWindowActive(eLuxMainMenuWindow_Options);
@@ -1787,16 +1592,14 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressOptions);
 // HARDMODE
 bool cLuxMainMenu::PressSaveGame(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if (mbTopMenuVisible == false)
+	if (mS.mbTopVisible == false)
 		return true;
 
 	SetTopMenuVisible(false);
 
 	////////////////////////////
 	// Get translation and insert cost
-	tWString sText = kTranslate("MainMenu", "HardModeSavePopup");
-	size_t lNumIndex = sText.find(L"#");
-	sText.replace(lNumIndex, gsHardMode_SaveCostString.size(), gsHardMode_SaveCostString);
+	tWString sText = OhplGa7bSubst(kTranslate("MainMenu", "HardModeSavePopup"), glHardMode_SaveCost);
 
 	mpGuiSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
 	cGuiPopUpMessageBox *pPopUp = mpGuiSet->CreatePopUpMessageBox(_W(""), sText,
@@ -1815,7 +1618,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, PressSaveGame);
 
 bool cLuxMainMenu::ClickedSaveGamePopup(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	bool bSave = aData.mlVal == 0 ? true : false;
+	bool bSave = ohpl_ga7b_popup_ok(aData.mlVal);
 	
 	mpGuiSet->SetDrawFocus(false);
 	SetTopMenuVisible(true);
@@ -1829,10 +1632,11 @@ bool cLuxMainMenu::ClickedSaveGamePopup(iWidget* apWidget, const cGuiMessageData
 
 	///////////////////////////
 	// decrement tinderboxes
-	if (lNumTinderboxes < 4)
+	int lTinderboxesLeft = ohpl_ga7b_menu_pay_save(lNumTinderboxes);
+	if (lTinderboxesLeft < 0)
 		return true;
 
-	gpBase->mpPlayer->SetTinderboxes(cMath::Max(0, lNumTinderboxes - 4));
+	gpBase->mpPlayer->SetTinderboxes(lTinderboxesLeft);
 
 	///////////////////////////
 	// Save game
@@ -1840,23 +1644,8 @@ bool cLuxMainMenu::ClickedSaveGamePopup(iWidget* apWidget, const cGuiMessageData
 
 	//////////////////////////
 	// Update Labels
-	tWString sText = kTranslate("MainMenu", "HardModeTinderboxInInventory");
-	size_t lNumIndex = sText.find(L"#");
+	tWString sText = OhplGa7bSubst(kTranslate("MainMenu", "HardModeTinderboxInInventory"), (long long)gpBase->mpPlayer->GetTinderboxes());
 
-	if (lNumIndex != std::wstring::npos)
-	{
-#if MAC_OS || LINUX
-        tWString sNumTinderboxes = tWString(LongToWString(static_cast<long long>(gpBase->mpPlayer->GetTinderboxes())));
-
-#else
-        tWString sNumTinderboxes = tWString(std::to_wstring(static_cast<long long>(gpBase->mpPlayer->GetTinderboxes())));
-
-#endif
-		tWString sSubString = sText.substr(lNumIndex + 1, sText.size() - lNumIndex);
-		sText = sText.substr(0, lNumIndex);
-		sText.replace(lNumIndex, sNumTinderboxes.size(), sNumTinderboxes);
-		sText += sSubString;
-	}
 	cVector3f vGlobalPos = mpNumTinderboxes->GetGlobalPosition();
 	vGlobalPos.x = mvTopMenuStartPosInGame.x;
 	mpNumTinderboxes->SetText(sText);
@@ -1901,7 +1690,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, ClickedSaveGamePopup);
 
 bool cLuxMainMenu::HardModeTextDraw(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	apWidget->SetDefaultFontColor(cColor(mfDescriptionAlpha, mfTopMenuAlpha));
+	apWidget->SetDefaultFontColor(cColor(mS.mfDescAlpha, mS.mfTopAlpha));
 	return false;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu, HardModeTextDraw);

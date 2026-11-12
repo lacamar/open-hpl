@@ -25,18 +25,19 @@
 #include "LuxConfigHandler.h"
 #include "LuxDebugHandler.h"
 #include "LuxLoadScreenHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //-----------------------------------------------------------------------
 
 static eFontAlign ToFontAlign(const tString& asX)
 {
-	tString sLowerCase = cString::ToLowerCase(asX);
-	if(sLowerCase == "center")
-		return eFontAlign_Center;
-	else if(sLowerCase == "right")
-		return eFontAlign_Right;
-	else if(sLowerCase == "left")
-		return eFontAlign_Left;
+	switch(ohpl_ga7b_pm_parse_align((const unsigned char*)asX.data(), asX.size()))
+	{
+	case 2: return eFontAlign_Center;
+	case 1: return eFontAlign_Right;
+	case 0: return eFontAlign_Left;
+	}
 
 	Error("The font alignment '%s' does not exist!\n", asX.c_str());
 	return eFontAlign_Left;
@@ -205,7 +206,8 @@ cLuxPreMenu::cLuxPreMenu() : iLuxUpdateable("LuxPreMenu")
 	Reset();
 
 	mpBlackFade = mpGui->CreateGfxFilledRect(cColor(0,1), eGuiMaterial_Alpha, true);
-	mbExitPreMenu = false;
+	ohpl_ga7b_pm_new(&mS);
+
 
 	///////////////////////////////////////
 	// Load skin and sections
@@ -266,9 +268,10 @@ cLuxPreMenu::cLuxPreMenu() : iLuxUpdateable("LuxPreMenu")
 		mpSGamma = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, vPos, vSize, 10, mpGGamma);
 		mpSGamma->AddCallback(eGuiMessage_SliderMove, this, kGuiCallback(Gamma_ChangeValue));
 
-		int lMaxValue = cMath::RoundToInt((mfGammaMaxValue-mfGammaMinValue)/mfGammaStep);
-		mpSGamma->SetMaxValue(lMaxValue);
-		mpSGamma->SetBarValueSize(cMath::RoundToInt(0.25f*(float)lMaxValue));
+		int vSlider[2];
+		ohpl_ga7b_pm_gamma_slider(vSlider);
+		mpSGamma->SetMaxValue(vSlider[0]);
+		mpSGamma->SetBarValueSize(vSlider[1]);
 
 		// Set initial value
 		SetGammaValueToInput(gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection(), true);
@@ -329,11 +332,9 @@ void cLuxPreMenu::OnEnterContainer(const tString& asOldContainer)
 
 	///////////////////////////////
 	//Load data
-	mlCurrentSectionIdx = -1;
+	ohpl_ga7b_pm_enter(&mS);
 	mpCurrentBackground = NULL;
 	mpCurrentSection = NULL;
-
-	mCurrentState = eLuxPreMenuState_Initial;
 }
 
 //-----------------------------------------------------------------------
@@ -368,7 +369,7 @@ void cLuxPreMenu::Update(float afTimeStep)
 
 	////////////////////////////////////////////////////////
 	// Exit premenu
-	if(mbExitPreMenu)
+	if(mS.mbExit)
 	{
 		if(gpBase->mbShowMenu)
 		{
@@ -402,24 +403,14 @@ void cLuxPreMenu::Update(float afTimeStep)
 
 void cLuxPreMenu::SetGammaValueToInput(float afGamma, bool abGenCallback)
 {
-	afGamma = cMath::Clamp(afGamma, mfGammaMinValue, mfGammaMaxValue);
-
-	float fMaxSliderValue = (float) mpSGamma->GetMaxValue();
-	float fRange = mfGammaMaxValue-mfGammaMinValue;
-
-	int lValue = cMath::RoundToInt((afGamma-mfGammaMinValue)*fMaxSliderValue/fRange);
-	
-	mpSGamma->SetValue(lValue, abGenCallback);
+	mpSGamma->SetValue(ohpl_ga7b_pm_gamma_to_slider(afGamma, mpSGamma->GetMaxValue()), abGenCallback);
 }
 
 //-----------------------------------------------------------------------
 
 bool cLuxPreMenu::Gamma_ChangeValue(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	float fSliderRelValue = ((float)mpSGamma->GetValue())/(float)mpSGamma->GetMaxValue();
-	float fRange = mfGammaMaxValue-mfGammaMinValue;
-
-	float fGamma = mfGammaMinValue + fRange*fSliderRelValue;
+	float fGamma = ohpl_ga7b_pm_slider_to_gamma(mpSGamma->GetValue(), mpSGamma->GetMaxValue());
 
 	mpLGamma->SetText(kTranslate("OptionsMenu","Gamma") + _W(": ") + cString::ToStringW(fGamma, 2, true));
 	gpBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
@@ -432,7 +423,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxPreMenu, Gamma_ChangeValue);
 
 bool cLuxPreMenu::Continue_Pressed(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	mCurrentState = eLuxPreMenuState_FadeOut;
+	mS.mlState = eLuxPreMenuState_FadeOut;
 
 	return true;
 }
@@ -444,7 +435,7 @@ bool cLuxPreMenu::Continue_UIPressed(iWidget* apWidget, const cGuiMessageData& a
 {
 	if(aData.mlVal == eUIButton_Primary)
 	{
-		mCurrentState = eLuxPreMenuState_FadeOut;
+		mS.mlState = eLuxPreMenuState_FadeOut;
 
 		return true;
 	}
@@ -456,13 +447,10 @@ kGuiCallbackDeclaredFuncEnd(cLuxPreMenu, Continue_UIPressed);
 
 bool cLuxPreMenu::Gamma_UIArrowPressed(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(aData.mlVal == eUIArrow_Left)
+	int lStep = ohpl_ga7b_pm_gamma_arrow(aData.mlVal);
+	if(lStep != 0)
 	{
-		mpSGamma->SetValue(mpSGamma->GetValue() - 1, true);
-	}
-	else if(aData.mlVal == eUIArrow_Right)
-	{
-		mpSGamma->SetValue(mpSGamma->GetValue() + 1, true);
+		mpSGamma->SetValue(mpSGamma->GetValue() + lStep, true);
 	}
 	return true;
 }
@@ -472,9 +460,7 @@ kGuiCallbackDeclaredFuncEnd(cLuxPreMenu, Gamma_UIArrowPressed);
 
 void cLuxPreMenu::ButtonPressed()
 {
-	if(mpCurrentSection && mpCurrentSection->mbAllowSkipping==false) return;
-	
-	mCurrentState = eLuxPreMenuState_FastFadeOut;
+	ohpl_ga7b_pm_button_pressed(&mS, mpCurrentSection != NULL, mpCurrentSection ? mpCurrentSection->mbAllowSkipping : true);
 }
 
 //-----------------------------------------------------------------------
@@ -483,17 +469,17 @@ void cLuxPreMenu::OnDraw(float afFrameTime)
 {
 	///////////////////////////////////////
 	// Draw fade rect and background
-	mpGuiSet->DrawGfx(mpBlackFade, mvGuiSetStartPos + cVector3f(0,0,2), mvGuiSetSize, cColor(1, mfAlphaFade));
+	mpGuiSet->DrawGfx(mpBlackFade, mvGuiSetStartPos + cVector3f(0,0,2), mvGuiSetSize, cColor(1, mS.mfAlpha));
 	mpGuiSet->DrawGfx(mpBlackFade, mvGuiSetStartPos - cVector3f(0,0,2), mvGuiSetSize, cColor(1, 1));
 
 	if(mpCurrentBackground)
 	{
 		//Draw the image with correct ratio, always filling out height-wise.
 		cVector2f vSize = mpCurrentBackground->GetImageSize();
-		float fRatio = vSize.x / vSize.y;
-		float fRatioMul = fRatio / (4.0f/3.0f);
+		float vRect[2];
+		ohpl_ga7b_pm_background_rect(vSize.x, vSize.y, vRect);
 
-		mpGuiSet->DrawGfx(mpCurrentBackground, cVector3f(400*(1-fRatioMul),0,0), cVector2f(800*fRatioMul, 600),cColor(1,1));
+		mpGuiSet->DrawGfx(mpCurrentBackground, cVector3f(vRect[0],0,0), cVector2f(vRect[1], 600),cColor(1,1));
 	}
 }
 
@@ -529,58 +515,7 @@ void cLuxPreMenu::AppGotInputFocus()
 
 void cLuxPreMenu::UpdateActions(float afTimeStep)
 {
-	//////////////////////////////////////////
-	// Update stuff according to state
-	switch(mCurrentState)
-	{
-	case eLuxPreMenuState_Initial:
-		// Set initial fade value
-		mfAlphaFade = 0;
-		break;
-	case eLuxPreMenuState_Final:
-		{
-			mbExitPreMenu = true;
-		}
-		break;
-
-	case eLuxPreMenuState_FadeIn:
-		{
-			// Update alpha for fading in
-			if(mfAlphaFade>0)
-				mfAlphaFade -= afTimeStep;
-			else
-				mfAlphaFade = 0;
-		}
-		break;
-	case eLuxPreMenuState_FadeOut:
-		{
-			// Update alpha for fading out
-			if(mfAlphaFade<1)
-				mfAlphaFade += afTimeStep;
-			else
-			{
-				mfAlphaFade = 1;
-			}
-		}
-		break;
-	case eLuxPreMenuState_FastFadeOut:
-		{
-			// Fast fade out (2x)
-			if(mfAlphaFade<1)
-				mfAlphaFade += afTimeStep*2;
-			else
-			{
-				mfAlphaFade = 1;
-			}
-		}
-		break;
-	case eLuxPreMenuState_ShowPremenuSection:
-		{
-			// Update pic show timer
-			mfTimer -= afTimeStep;
-		}
-		break;
-	}
+	ohpl_ga7b_pm_update_actions(&mS, afTimeStep);
 }
 
 //-----------------------------------------------------------------------
@@ -588,139 +523,93 @@ void cLuxPreMenu::UpdateActions(float afTimeStep)
 void cLuxPreMenu::UpdateState()
 {
 	cTextureManager* pTexMgr = gpBase->mpEngine->GetResources()->GetTextureManager();
-	//////////////////////////////////////////////////////////////
-	// Set next state according to conditions and current state
-	switch(mCurrentState)
+
+	std::vector<unsigned char> vFirstOnly(mvSections.size());
+	for(size_t i=0; i<mvSections.size(); ++i)
+		vFirstOnly[i] = mvSections[i]->ShowFirstStartOnly();
+
+	OhplGa7bStep step;
+	ohpl_ga7b_pm_update_state(&mS, gpBase->mpConfigHandler->mbFirstStart, (const bool*)vFirstOnly.data(), vFirstOnly.size(), &step);
+
+	switch(step.mlAct)
 	{
-	// Initial state, just change to next
-	case eLuxPreMenuState_Initial:
-		{
-			mCurrentState = eLuxPreMenuState_FadeOut;
-		}
+	case eOhplGa7bPreAct_SetTimer:
+		mS.mfTimer = mpCurrentSection->GetTime();
 		break;
-	// Final state, no checks
-	case eLuxPreMenuState_Final:
+	case eOhplGa7bPreAct_Final:
+	case eOhplGa7bPreAct_Section:
+		if(mpCurrentBackground)
 		{
+			mpGui->DestroyGfx(mpCurrentBackground);
+			mpCurrentBackground = NULL;
 		}
-		break;
-	// FadeIn state, check if fade is done
-	case eLuxPreMenuState_FadeIn:
+
+		for(int i=0;i<(int)mvCurrentLabels.size();++i)
 		{
-			if(mfAlphaFade==0)
+			mpGuiSet->DestroyWidget(mvCurrentLabels[i]);
+		}
+		mvCurrentLabels.clear();
+
+		if(step.mlAct == eOhplGa7bPreAct_Final)
+		{
+			mpCurrentSection = NULL;
+		}
+		else
+		{
+			mpCurrentSection = mvSections[step.mlSection];
+
+			/////////////////////////////////
+			// Set up current section
+			if(mpCurrentSection)
 			{
-				mfTimer = mpCurrentSection->GetTime();
-				mCurrentState = eLuxPreMenuState_ShowPremenuSection;
-			}
-		}
-		break;
-	// (Fast)FadeOut state, check if fade is done, also sets up next section
-	case eLuxPreMenuState_FadeOut:
-	case eLuxPreMenuState_FastFadeOut:
-		{
-			if(mfAlphaFade==1)
-			{
-				if(mpCurrentBackground)
+				bool bHasTextElements = mpCurrentSection->HasTextElements();
+				bool bGuiSetActive = (bHasTextElements || mpCurrentSection->HasGammaSettings());
+
+				////////////////////////////////////////////
+				// Set up Background
+				mpCurrentBackground = mpCurrentSection->CreateBackground(mpGui, pTexMgr);
+
+				////////////////////////////////////////////
+				// Set up Gui elements
+				mpLGamma->SetVisible(mpCurrentSection->HasGammaSettings());
+				mpLGamma->SetEnabled(mpCurrentSection->HasGammaSettings());
+				mpSGamma->SetVisible(mpCurrentSection->HasGammaSettings());
+				mpSGamma->SetEnabled(mpCurrentSection->HasGammaSettings());
+
+				mpIGammaPreview->SetVisible(mpCurrentSection->HasGammaSettings());
+				mpIGammaPreview->SetEnabled(mpCurrentSection->HasGammaSettings());
+
+				mpBContinue->SetVisible(bGuiSetActive);
+				mpBContinue->SetEnabled(bGuiSetActive);
+				mpGuiSet->SetDrawMouse(bGuiSetActive);
+
+				////////////////////////////////////////////
+				// Set up text
+				const tPreMenuTextList& lstText = mpCurrentSection->GetTextElements();
+				tPreMenuTextList::const_iterator itText = lstText.begin();
+				for(;itText!=lstText.end();++itText)
 				{
-					mpGui->DestroyGfx(mpCurrentBackground);
-					mpCurrentBackground = NULL;
+					cLuxPreMenuTextElement* pText = *itText;
+
+					// One label per element, word wrap enabled
+					cWidgetLabel* pLabel = pText->CreateLabel(mpGuiSet);
+					mvCurrentLabels.push_back(pLabel);
 				}
 
-				for(int i=0;i<(int)mvCurrentLabels.size();++i)
+				////////////////////////////////////////////
+				// Play music
+				if(mpCurrentSection->msMusic != "")
 				{
-					mpGuiSet->DestroyWidget(mvCurrentLabels[i]);
-				}
-				mvCurrentLabels.clear();
+					cMusicHandler* pMusHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
 
-				// Fade is done, get next section, if no sections left, move to final state
-				++mlCurrentSectionIdx;
-
-				//If not first start, skip any sections that are only shown on firs start.
-				if(gpBase->mpConfigHandler->mbFirstStart==false)
-				{
-					while(	mlCurrentSectionIdx<(int)mvSections.size() &&
-							mvSections[mlCurrentSectionIdx]->ShowFirstStartOnly() )
-					{
-						++mlCurrentSectionIdx;
-					}
-				}
-
-				////////////////////////////
-				// All Sections Shown
-				if(mlCurrentSectionIdx==(int)mvSections.size())
-				{
-					mCurrentState = eLuxPreMenuState_Final;
-					mpCurrentSection = NULL;
-				}
-				////////////////////////////
-				// New Sections
-				else
-				{
-					mCurrentState = eLuxPreMenuState_FadeIn;
-
-					mpCurrentSection = mvSections[mlCurrentSectionIdx];
-
-					/////////////////////////////////
-					// Set up current section
-					if(mpCurrentSection)
-					{
-						bool bHasTextElements = mpCurrentSection->HasTextElements();
-						bool bGuiSetActive = (bHasTextElements || mpCurrentSection->HasGammaSettings());
-
-						////////////////////////////////////////////
-						// Set up Background
-						mpCurrentBackground = mpCurrentSection->CreateBackground(mpGui, pTexMgr);
-
-						////////////////////////////////////////////
-						// Set up Gui elements
-						mpLGamma->SetVisible(mpCurrentSection->HasGammaSettings());
-						mpLGamma->SetEnabled(mpCurrentSection->HasGammaSettings());
-						mpSGamma->SetVisible(mpCurrentSection->HasGammaSettings());
-						mpSGamma->SetEnabled(mpCurrentSection->HasGammaSettings());
-
-						mpIGammaPreview->SetVisible(mpCurrentSection->HasGammaSettings());
-						mpIGammaPreview->SetEnabled(mpCurrentSection->HasGammaSettings());
-
-						mpBContinue->SetVisible(bGuiSetActive);
-						mpBContinue->SetEnabled(bGuiSetActive);
-						mpGuiSet->SetDrawMouse(bGuiSetActive);
-
-						////////////////////////////////////////////
-						// Set up text
-						const tPreMenuTextList& lstText = mpCurrentSection->GetTextElements();
-						tPreMenuTextList::const_iterator itText = lstText.begin();
-						for(;itText!=lstText.end();++itText)
-						{
-							cLuxPreMenuTextElement* pText = *itText;
-
-							// One label per element, word wrap enabled
-							cWidgetLabel* pLabel = pText->CreateLabel(mpGuiSet);
-							mvCurrentLabels.push_back(pLabel);
-						}
-
-						////////////////////////////////////////////
-						// Play music
-						if(mpCurrentSection->msMusic != "")
-						{
-							cMusicHandler* pMusHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
-
-							float fFadeSpeed = mpCurrentSection->mfMusicFadeTime ==0 ? 100.0f : 1.0f / mpCurrentSection->mfMusicFadeTime;
-							pMusHandler->Play(mpCurrentSection->msMusic, mpCurrentSection->mfMusicVolume, fFadeSpeed, true, false);
-						}
-					}
+					float fFadeSpeed = ohpl_ga7b_pm_music_fade_speed(mpCurrentSection->mfMusicFadeTime);
+					pMusHandler->Play(mpCurrentSection->msMusic, mpCurrentSection->mfMusicVolume, fFadeSpeed, true, false);
 				}
 			}
 		}
 		break;
-		// ShowPremenuSection state, if no text, check if timer is done or some key was pressed
-	case eLuxPreMenuState_ShowPremenuSection:
-		{
-			if(mpCurrentSection->HasTextElements()==false && 
-				mpCurrentSection->HasGammaSettings()==false &&
-				mfTimer <= 0)
-			{
-				mCurrentState = eLuxPreMenuState_FadeOut;
-			}
-		}
+	case eOhplGa7bPreAct_CheckShow:
+		ohpl_ga7b_pm_check_show(&mS, mpCurrentSection->HasTextElements(), mpCurrentSection->HasGammaSettings());
 		break;
 	}
 }

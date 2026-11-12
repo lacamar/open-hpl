@@ -46,6 +46,7 @@ pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::angle_from_points_2d;
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
+pub(crate) use scalar::{get_flag_bit, smooth_curve};
 pub(crate) use scalar::{increase_to, wrap};
 
 #[repr(C)]

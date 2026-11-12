@@ -37,6 +37,7 @@ pub mod luxenemy;
 pub mod luxfx;
 pub mod luxmap;
 pub mod luxmenu;
+pub mod luxmenu2;
 pub mod luxplayer;
 pub mod luxprop;
 pub mod luxsave;

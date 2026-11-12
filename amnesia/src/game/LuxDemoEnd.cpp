@@ -24,6 +24,8 @@
 #include "LuxLoadScreenHandler.h"
 #include "LuxMusicHandler.h"
 #include "LuxInputHandler.h"
+#include "RustLuxMenu2.h"
+
 
 //-----------------------------------------------------------------------
 
@@ -68,7 +70,8 @@ cLuxDemoEnd::cLuxDemoEnd() : iLuxUpdateable("LuxDemoEnd")
 
 	mpGfxBackground = NULL;
 
-	mfFadeAlpha = 1;
+	ohpl_ga7b_de_new(&mS);
+
 
 	///////////////////////////////
 	//Load Data
@@ -155,8 +158,8 @@ void cLuxDemoEnd::LoadFonts()
 
 void cLuxDemoEnd::Reset()
 {
-	mbExiting = false;
-	mbGotoWebsiteAtExit = false;
+	ohpl_ga7b_de_reset(&mS);
+
 }
 
 //-----------------------------------------------------------------------
@@ -211,26 +214,13 @@ void cLuxDemoEnd::OnLeaveContainer(const tString& asNewContainer)
 
 void cLuxDemoEnd::Update(float afTimeStep)
 {
-	mfTime += afTimeStep;
-	
-	if(mbExiting)
+	uint32_t lUpdate = ohpl_ga7b_de_update(&mS, afTimeStep);
+
+	if(lUpdate & eOhplGa7bDe_Exit)
 	{
-		mfFadeAlpha += afTimeStep*0.7f;
-		if(mfFadeAlpha>1)
-		{
-			mfFadeAlpha =1;
-			gpBase->mpEngine->Exit();
-			if(mbGotoWebsiteAtExit)
-				cPlatform::OpenBrowserWindow(cString::To16Char(msDestinationURL));
-		}
-	}
-	else
-	{
-		if(mfFadeAlpha>0.0f)
-		{
-			mfFadeAlpha -= afTimeStep*0.7f;
-			if(mfFadeAlpha< 0) mfFadeAlpha =0;
-		}
+		gpBase->mpEngine->Exit();
+		if(lUpdate & eOhplGa7bDe_Browser)
+			cPlatform::OpenBrowserWindow(cString::To16Char(msDestinationURL));
 	}
 }
 
@@ -238,8 +228,8 @@ void cLuxDemoEnd::Update(float afTimeStep)
 
 void cLuxDemoEnd::Exit(bool abShowWebsite)
 {
-	mbExiting = true;
-	mbGotoWebsiteAtExit = abShowWebsite;
+	ohpl_ga7b_de_exit(&mS, abShowWebsite);
+
 	gpBase->mpInputHandler->ChangeState(eLuxInputState_Null);
 	mpGuiSet->SetDrawMouse(false);
 }
@@ -256,17 +246,18 @@ void cLuxDemoEnd::OnDraw(float afFrameTime)
 	{
 		//Draw the image with correct ratio, always filling out height-wise.
 		cVector2f vSize = mpGfxBackground->GetImageSize();
-		float fRatio = vSize.x / vSize.y;
-		float fRatioMul = fRatio / (4.0f/3.0f);
+		float vRect[2];
+		ohpl_ga7b_pm_background_rect(vSize.x, vSize.y, vRect);
 
-		mpGuiSet->DrawGfx(mpGfxBackground, cVector3f(400*(1-fRatioMul),0,5), cVector2f(800*fRatioMul, 600),cColor(1,1));
+		mpGuiSet->DrawGfx(mpGfxBackground, cVector3f(vRect[0],0,5), cVector2f(vRect[1], 600),cColor(1,1));
 	}
 
 	//////////////////////////////////////////////
 	// Text
 	if(mpFontMessage)
 	{
-		float fY = mfTextY;
+		std::vector<float> vRowY(mvTextRows.size());
+		ohpl_ga7b_de_message_rows(vRowY.size(), mfTextY, mvMessageFontSize.y, vRowY.data());
 
 		for(size_t i=0; i< mvTextRows.size(); ++i)
 		{
@@ -274,10 +265,8 @@ void cLuxDemoEnd::OnDraw(float afFrameTime)
 			// Text row
 			if(mvTextRows[i].empty()==false)
 			{
-				mpGuiSet->DrawFont(mvTextRows[i], mpFontMessage, cVector3f(400.0f-mfTextWidth/2.0f,fY,10), mvMessageFontSize, mMessageFontColor,eFontAlign_Left);
+				mpGuiSet->DrawFont(mvTextRows[i], mpFontMessage, cVector3f(400.0f-mfTextWidth/2.0f,vRowY[i],10), mvMessageFontSize, mMessageFontColor,eFontAlign_Left);
 			}
-
-			fY += mvMessageFontSize.y + 1;
 		}
 		mpGuiSet->DrawFont( kTranslate("Demo", "AvailableAt"), mpFontMessage, cVector3f(400.0f,mfAvailableAtY,10), mvAvailableAtFontSize, mAvailableAtFontColor,eFontAlign_Center);
 	}
@@ -285,9 +274,9 @@ void cLuxDemoEnd::OnDraw(float afFrameTime)
 
 	//////////////////////////////////////////////
 	// Fade
-	if(mfFadeAlpha > 0)
+	if(mS.mfFadeAlpha > 0)
 	{
-		mpGuiSet->DrawGfx(mpBlackGfx, mvGuiSetStartPos+cVector3f(0,0,20), mvGuiSetSize, cColor(1, mfFadeAlpha));
+		mpGuiSet->DrawGfx(mpBlackGfx, mvGuiSetStartPos+cVector3f(0,0,20), mvGuiSetSize, cColor(1, mS.mfFadeAlpha));
 	}
 }
 
@@ -364,31 +353,13 @@ kGuiCallbackDeclaredFuncEnd(cLuxDemoEnd, ExitOnPressed);
 bool cLuxDemoEnd::ButtonLabelOnUpdate(iWidget* apWidget, const cGuiMessageData& aData)
 {
 	bool bMouseOver = apWidget->GetUserValue()==1;
-	cColor col = mButtonFontColor;
 	float* pFade = (float*)apWidget->GetUserData();
 
-	if(bMouseOver)
-	{
-		if(*pFade<1.0f)
-		{
-			*pFade += aData.mfVal*3.0f;
-			if(*pFade>1)*pFade =1;
-		}
-	}
-	else
-	{
-		if(*pFade>0)
-		{
-			*pFade -= aData.mfVal;
-			if(*pFade<0)*pFade =0;
-		}
-	}
+	float vBase[4] = { mButtonFontColor.r, mButtonFontColor.g, mButtonFontColor.b, mButtonFontColor.a };
+	float vCol[4];
+	ohpl_ga7b_de_button_color(pFade, bMouseOver, aData.mfVal, vBase, vCol);
 
-	float fT = *pFade;
-
-	col = col*(1.0f-fT) + cColor(1,0,0)*fT;
-
-	apWidget->SetDefaultFontColor(col);
+	apWidget->SetDefaultFontColor(cColor(vCol[0], vCol[1], vCol[2], vCol[3]));
 
 	return true;
 }

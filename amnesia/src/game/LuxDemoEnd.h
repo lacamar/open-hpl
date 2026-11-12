@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "RustLuxMenu2.h"
+
 
 //----------------------------------------------
 
@@ -110,13 +112,8 @@ private:
 	///////////////////////
 	// Vars
 	bool mbActive;
-	float mfYPos;
-	int mlState;
-	float mfTime;
-	float mfFadeAlpha;
+	OhplGa7bDemoEnd mS;
 
-	bool mbExiting;
-	bool mbGotoWebsiteAtExit;
 		
 	float mfBuyNowFade;
 	cWidgetLabel* mpLBuyNow;

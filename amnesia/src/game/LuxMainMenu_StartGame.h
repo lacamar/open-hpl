@@ -38,6 +38,7 @@ public:
 
 private:
 	virtual void OnSetActive(bool abX);
+	void SetModeColors(bool abHard);
 
 	////////////////////////
 	// Properties
