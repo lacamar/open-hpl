@@ -233,10 +233,14 @@ add_custom_target(ohpl_rust_build DEPENDS ${OHPL_RUST_LIB})
 add_library(ohpl_rust STATIC IMPORTED GLOBAL)
 set_target_properties(ohpl_rust PROPERTIES IMPORTED_LOCATION ${OHPL_RUST_LIB})
 add_dependencies(ohpl_rust ohpl_rust_build)
+file(GLOB ohpl_cshim_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../cshim/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../../cshim/*.c)
+add_library(ohpl_cdeps STATIC ${ohpl_cshim_sources})
+target_link_libraries(ohpl_cdeps PUBLIC OALWrapper Newton ${ANGELSCRIPT_LIBRARY})
 add_test(NAME RustTests COMMAND ${CARGO} test --offline --locked --target-dir ${OHPL_RUST_TARGET} WORKING_DIRECTORY ${OHPL_RUST_DIR})
 
 target_link_libraries(HPL2
     ohpl_rust
+    ohpl_cdeps
     OALWrapper # also pulls in ogg,vorbis,SDL
     Newton
     ${ANGELSCRIPT_LIBRARY}
