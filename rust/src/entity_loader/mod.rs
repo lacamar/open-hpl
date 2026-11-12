@@ -11,4 +11,6 @@ pub use builder::{
 pub use parse::parse;
 
 #[cfg(test)]
+mod golden_tests;
+#[cfg(test)]
 mod tests;

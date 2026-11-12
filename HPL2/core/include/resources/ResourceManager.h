@@ -23,7 +23,7 @@
 #include <map>
 #include "system/SystemTypes.h"
 #include "resources/RustResources.h"
-#include "resources/RustResources.h"
+#include "resources/RustResourcesH3.h"
 
 namespace hpl {
 
@@ -47,7 +47,7 @@ namespace hpl {
 	public:
 		iResourceManager(cFileSearcher *apFileSearcher, iLowLevelResources *apLowLevelResources,
 						iLowLevelSystem *apLowLevelSystem);
-		virtual ~iResourceManager(){}
+		virtual ~iResourceManager();
 
 		iResourceBase* GetResource(const tWString& asFullPath);
 		
@@ -65,6 +65,7 @@ namespace hpl {
 		static void (*mpLoadTickCallback)();
 		
 	protected:
+		OhplH3Mgr *mpRs;
 		tResourceBaseMap m_mapResources;
 		
 		cFileSearcher *mpFileSearcher;

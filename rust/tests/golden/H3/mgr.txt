@@ -1,0 +1,4 @@
+soma	6000	486309da8bb056a0
+amnesia	6000	5b7036db3b225bcb
+rebirth	6000	caba9851ceedc9a6
+bunker	6000	05582c8bde9c5d4e

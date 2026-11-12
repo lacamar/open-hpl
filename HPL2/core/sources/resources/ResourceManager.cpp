@@ -29,6 +29,8 @@
 
 #include "system/LowLevelSystem.h"
 
+#include "impl/RustBackends.h"
+
 #include <algorithm>
 
 namespace hpl {
@@ -47,10 +49,17 @@ namespace hpl {
 	iResourceManager::iResourceManager(cFileSearcher *apFileSearcher, 
 										iLowLevelResources *apLowLevelResources,
 										iLowLevelSystem *apLowLevelSystem)
+		: mpRs(OhplBackendRustRequested() ? ohpl_h3_mgr_new() : NULL),
+		  m_mapResources(mpRs ? cResourceMap(ohpl_h3_mgr_map(mpRs)) : cResourceMap())
 	{
 		mpFileSearcher = apFileSearcher;
 		mpLowLevelResources = apLowLevelResources;
 		mpLowLevelSystem = apLowLevelSystem;
+	}
+
+	iResourceManager::~iResourceManager()
+	{
+		if(mpRs) ohpl_h3_mgr_free(mpRs);
 	}
 
 	//-----------------------------------------------------------------------
@@ -63,6 +72,7 @@ namespace hpl {
 
 	iResourceBase* iResourceManager::GetResource(const tWString& asFullPath)
 	{
+		if(mpRs) return static_cast<iResourceBase*>(ohpl_h3_mgr_get(mpRs, reinterpret_cast<const uint32_t*>(asFullPath.data()), asFullPath.size()));
 		unsigned int lHash = cString::GetHashW(asFullPath);
 		return m_mapResources.find_if(lHash, [&](iResourceBase *pResource){ return pResource->GetFullPath() == asFullPath; });
 	}
@@ -91,6 +101,21 @@ namespace hpl {
 
     void iResourceManager::DestroyUnused(int alMaxToKeep)
 	{
+		if(mpRs)
+		{
+			std::vector<iResourceBase*> vTail;
+			ohpl_h3_mgr_eviction_tail(mpRs, alMaxToKeep, CollectResources, &vTail);
+			for(iResourceBase *pRes : vTail)
+			{
+				if(pRes->HasUsers()==false)
+				{
+					RemoveResource(pRes);
+					hplDelete(pRes);
+				}
+			}
+			return;
+		}
+
 		if((int)m_mapResources.size() <= alMaxToKeep) return;
 
 		//Sorted according to num of users and then time.
@@ -113,6 +138,16 @@ namespace hpl {
 
 	void iResourceManager::DestroyAll()
 	{
+		if(mpRs)
+		{
+			while(iResourceBase *pResource = static_cast<iResourceBase*>(ohpl_h3_mgr_first(mpRs)))
+			{
+				while(pResource->HasUsers()) pResource->DecUserCount();
+				Destroy(pResource);
+			}
+			return;
+		}
+
 		tResourceBaseMapIt it = m_mapResources.begin();
 		while(it != m_mapResources.end())
 		{
@@ -144,6 +179,7 @@ namespace hpl {
 	void iResourceManager::BeginLoad(const tString& asFile)
 	{
 		mlTimeStart = cPlatform::GetApplicationTime();
+		if(mpRs) { ohpl_h3_begin_load(reinterpret_cast<const uint8_t*>(asFile.data()), asFile.size(), mlTimeStart); return; }
 		
 		//Log("Begin resource: %s\n",asFile.c_str());
 
@@ -155,6 +191,17 @@ namespace hpl {
 
 	void iResourceManager::EndLoad()
 	{
+		if(mpRs)
+		{
+			tString sOuter;
+			uint64_t lElapsed = 0;
+			if(ohpl_h3_end_load(cPlatform::GetApplicationTime(), [](void *c, const uint8_t *p, size_t n){ static_cast<tString*>(c)->assign(reinterpret_cast<const char*>(p), n); }, &sOuter, &lElapsed))
+			{
+				cEngineDiagnostics::AddLoadTime(sOuter, (double)lElapsed);
+				if(mpLoadTickCallback) mpLoadTickCallback();
+			}
+			return;
+		}
 		mlTabCount--;
 		if(mlTabCount==0) cEngineDiagnostics::AddLoadTime(gsOuterName, (double)(cPlatform::GetApplicationTime() - glOuterStart));
 		if(mlTabCount==0 && mpLoadTickCallback) mpLoadTickCallback();
@@ -179,7 +226,7 @@ namespace hpl {
 	tString iResourceManager::GetTabs()
 	{
 		tString sTabs ="";
-		for(int i=0; i<mlTabCount; ++i) sTabs+="  ";
+		for(int i=0, n = mpRs ? ohpl_h3_tab_count() : mlTabCount; i<n; ++i) sTabs+="  ";
 		return sTabs;
 	}
 
@@ -187,7 +234,9 @@ namespace hpl {
 	{
 		tString sName = cString::ToLowerCase(apResource->GetName());
 		
-		if(abAddToSet)
+		if(abAddToSet && mpRs)
+			ohpl_h3_mgr_add(mpRs, apResource, reinterpret_cast<const uint32_t*>(apResource->GetFullPath().data()), apResource->GetFullPath().size(), apResource->GetMeta());
+		else if(abAddToSet)
 		{
 			int lHash = cString::GetHashW(apResource->GetFullPath());
 			m_mapResources.insert(lHash, apResource);
@@ -210,6 +259,8 @@ namespace hpl {
 	void iResourceManager::RemoveResource(iResourceBase* apResource)
 	{
 		//Log("Removing resource name: '%s' path: '%s' ", apResource->GetName().c_str(), cString::To8Char(apResource->GetFullPath()).c_str());
+
+		if(mpRs) { ohpl_h3_mgr_remove(mpRs, apResource); return; }
 
 		unsigned int lHash = cString::GetHashW(apResource->GetFullPath());
 
