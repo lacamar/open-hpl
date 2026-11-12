@@ -26,6 +26,10 @@
 #include "impl/scripthelper.h"
 #include "resources/BinaryBuffer.h"
 #include "resources/Resources.h"
+#include "impl/RustL7.h"
+#include "impl/scriptarray.h"
+#include "impl/scriptstring.h"
+#include "../../../../cshim/as_shim.h"
 
 namespace hpl {
 
@@ -37,6 +41,16 @@ namespace hpl {
 
 	#define kEncryptKey 0x4516FFDD
 
+	static void AssignSink(void *apCtx, const char *apData, size_t alLen)
+	{
+		((tString*)apCtx)->assign(apData, alLen);
+	}
+
+	static void ChunkSink(void *apCtx, const char *apData, size_t alLen)
+	{
+		((std::vector<tString>*)apCtx)->push_back(tString(apData, alLen));
+	}
+
 	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
@@ -46,23 +60,33 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	cSqScript::cSqScript(const tString& asName,asIScriptEngine *apScriptEngine,
-							cScriptOutput *apScriptOutput, int alHandle)
+							cScriptOutput *apScriptOutput, int alHandle, OhplL7Engine *apRustEngine)
 		: iScript(asName, _W(""))
 	{
 		mpScriptEngine = apScriptEngine;
 		mpScriptOutput = apScriptOutput;
 		mlHandle = alHandle;
 
-		mpContext = mpScriptEngine->CreateContext();
+		mpRs = NULL;
+		mpContext = NULL;
+		mpModule = NULL;
+		if(apRustEngine==NULL) mpContext = mpScriptEngine->CreateContext();
 
 		//Create a unique module name
-		msModuleName = "Module_"+cString::ToString(cMath::RandRectl(0,1000000))+
+		int lRand = cMath::RandRectl(0,1000000);
+		msModuleName = "Module_"+cString::ToString(lRand)+
 						"_"+cString::ToString(mlHandle);
+		if(apRustEngine) mpRs = ohpl_l7_script_new(apRustEngine, mlHandle, lRand);
 
 	}
 
 	cSqScript::~cSqScript()
 	{
+		if(mpRs)
+		{
+			ohpl_l7_script_free(mpRs);
+			return;
+		}
 		mpScriptEngine->DiscardModule(msModuleName.c_str());
 		mpContext->Release();
 	}
@@ -148,6 +172,25 @@ namespace hpl {
 		
 		/////////////////////////////////////////
 		// Create module
+		if(mpRs)
+		{
+			std::vector<tString> vChunks;
+			int lRes = ohpl_l7_script_build(mpRs, pCharBuffer, lLength, apCompileMessages ? AssignSink : NULL, apCompileMessages,
+											ChunkSink, &vChunks);
+			if(lRes==1)
+			{
+				Error("Couldn't add script '%s'!\n",asFileName.c_str());
+			}
+			else if(lRes==2)
+			{
+				Error("Couldn't build script '%s'!\n",cString::To8Char(asFileName).c_str());
+				Log("------- SCRIPT OUTPUT BEGIN --------------------------\n");
+				for(size_t i=0; i<vChunks.size(); ++i) Log(vChunks[i].c_str());
+				Log("------- SCRIPT OUTPUT END ----------------------------\n");
+			}
+			hplDeleteArray(pCharBuffer);
+			return lRes==0;
+		}
 		mpModule = mpScriptEngine->GetModule(msModuleName.c_str(), asGM_ALWAYS_CREATE);
 		if(mpModule->AddScriptSection("main", pCharBuffer, lLength)<0)
 		{
@@ -180,6 +223,7 @@ namespace hpl {
 
 	int cSqScript::GetFuncHandle(const tString& asFunc)
 	{
+		if(mpRs) return ohpl_l7_script_func_handle(mpRs, asFunc.c_str());
 		asIScriptFunction *pFunc = mpModule->GetFunctionByName(asFunc.c_str());
 		if(pFunc==NULL) return -1;
 
@@ -198,6 +242,7 @@ namespace hpl {
 
 	bool cSqScript::Run(const tString& asFuncLine)
 	{
+		if(mpRs) return ohpl_l7_script_run_line(mpRs, asFuncLine.c_str());
 		ExecuteString(mpScriptEngine, asFuncLine.c_str(), mpModule);
 
 		return true;
@@ -207,6 +252,7 @@ namespace hpl {
 
 	bool cSqScript::Run(int alHandle)
 	{
+		if(mpRs) return ohpl_l7_script_run_handle(mpRs, alHandle);
 		if(alHandle<0 || alHandle>=(int)mvFuncHandles.size()) return false;
 
 		mpContext->Prepare(mvFuncHandles[alHandle]);
@@ -257,4 +303,27 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+}
+
+// AngelScript add-ons reached from the Rust side through the shim (cshim/as_shim.h)
+static void AddonsRegister(void* e)
+{
+	asIScriptEngine* pEngine = static_cast<asIScriptEngine*>(e);
+	RegisterScriptString(pEngine);
+	RegisterScriptArray(pEngine, true);
+}
+
+static int AddonsExecuteString(void* e, const char* code, void* module)
+{
+	return ExecuteString(static_cast<asIScriptEngine*>(e), code, static_cast<asIScriptModule*>(module));
+}
+
+static void* AddonsStrNew(const char* p, size_t n) { return new CScriptString(p, (unsigned)n); }
+static unsigned AddonsArraySize(const void* a) { return static_cast<const CScriptArray*>(a)->GetSize(); }
+static void* AddonsArrayAt(void* a, unsigned i) { return static_cast<CScriptArray*>(a)->At(i); }
+
+void OhplL7InstallAddons()
+{
+	static const OhplAsAddons kAddons = {AddonsRegister, AddonsExecuteString, AddonsStrNew, AddonsArraySize, AddonsArrayAt};
+	ohpl_as_set_addons(&kAddons);
 }

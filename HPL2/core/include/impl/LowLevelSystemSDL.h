@@ -22,6 +22,7 @@
 
 #include "system/LowLevelSystem.h"
 #include <angelscript.h>
+#include "impl/RustL7.h"
 #include <stdio.h>
 
 struct OhplL1Log;
@@ -85,6 +86,7 @@ namespace hpl {
 	private:
 		asIScriptEngine *mpScriptEngine;
 		cScriptOutput *mpScriptOutput;
+		OhplL7Engine *mpRustEngine;
 		int mlHandleCount;
 	};
 

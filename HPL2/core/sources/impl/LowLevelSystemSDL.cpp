@@ -59,6 +59,7 @@
 #include "impl/RustImpl.h"
 #include "impl/RustBackends.h"
 #include "impl/RustL1.h"
+#include "impl/RustL7.h"
 
 static void AppendSink(void *apCtx, const char *apData, size_t alLen)
 {
@@ -582,18 +583,33 @@ namespace hpl {
 
 	cLowLevelSystemSDL::cLowLevelSystemSDL()
 	{
-		mpScriptEngine = asCreateScriptEngine(ANGELSCRIPT_VERSION);
-		if(mpScriptEngine==NULL)
+		mpRustEngine = NULL;
+		mpScriptOutput = NULL;
+		if(OhplBackendRustRequested())
 		{
-			Error("Failed to start angel script!\n");
+			OhplL7InstallAddons();
+			mpRustEngine = ohpl_l7_engine_new();
+			mpScriptEngine = (asIScriptEngine*)ohpl_l7_engine_raw(mpRustEngine);
+			if(mpScriptEngine==NULL)
+			{
+				Error("Failed to start angel script!\n");
+			}
 		}
+		else
+		{
+			mpScriptEngine = asCreateScriptEngine(ANGELSCRIPT_VERSION);
+			if(mpScriptEngine==NULL)
+			{
+				Error("Failed to start angel script!\n");
+			}
 		
-		mpScriptOutput = hplNew( cScriptOutput, () );
-		mpScriptEngine->SetMessageCallback(asMETHOD(cScriptOutput,AddMessage), mpScriptOutput, asCALL_THISCALL);
+			mpScriptOutput = hplNew( cScriptOutput, () );
+			mpScriptEngine->SetMessageCallback(asMETHOD(cScriptOutput,AddMessage), mpScriptOutput, asCALL_THISCALL);
 
-		RegisterScriptString(mpScriptEngine);
+			RegisterScriptString(mpScriptEngine);
 
-		RegisterScriptArray(mpScriptEngine, true);
+			RegisterScriptArray(mpScriptEngine, true);
+		}
 
 		mlHandleCount = 0;
 
@@ -611,8 +627,12 @@ namespace hpl {
 	{
 		/*Release all runnings contexts */
 		
-		mpScriptEngine->Release();
-		hplDelete(mpScriptOutput);
+		if(mpRustEngine) ohpl_l7_engine_free(mpRustEngine);
+		else
+		{
+			mpScriptEngine->Release();
+			hplDelete(mpScriptOutput);
+		}
 
 		//perhaps not the best thing to skip :)
 		//if(gpLogWriter)	hplDelete(gpLogWriter);
@@ -630,14 +650,15 @@ namespace hpl {
 	
 	iScript* cLowLevelSystemSDL::CreateScript(const tString& asName)
 	{
-		return hplNew( cSqScript, (asName,mpScriptEngine,mpScriptOutput,mlHandleCount++) );
+		return hplNew( cSqScript, (asName,mpScriptEngine,mpScriptOutput,mlHandleCount++,mpRustEngine) );
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cLowLevelSystemSDL::AddScriptFunc(const tString& asFuncDecl, void* pFunc)
 	{
-		if(mpScriptEngine->RegisterGlobalFunction(asFuncDecl.c_str(),asFUNCTION(pFunc),asCALL_STDCALL)<0)
+		if(mpRustEngine ? !ohpl_l7_add_func(mpRustEngine, asFuncDecl.c_str(), pFunc) :
+			mpScriptEngine->RegisterGlobalFunction(asFuncDecl.c_str(),asFUNCTION(pFunc),asCALL_STDCALL)<0)
 		{
 			Error("Couldn't add func '%s'\n",asFuncDecl.c_str());
 			return false;
@@ -650,7 +671,8 @@ namespace hpl {
 
 	bool cLowLevelSystemSDL::AddScriptVar(const tString& asVarDecl, void *pVar)
 	{
-		if(mpScriptEngine->RegisterGlobalProperty(asVarDecl.c_str(),pVar)<0)
+		if(mpRustEngine ? !ohpl_l7_add_var(mpRustEngine, asVarDecl.c_str(), pVar) :
+			mpScriptEngine->RegisterGlobalProperty(asVarDecl.c_str(),pVar)<0)
 		{
 			Error("Couldn't add var '%s'\n",asVarDecl.c_str());
 			return false;
