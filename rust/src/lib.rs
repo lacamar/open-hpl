@@ -16,6 +16,7 @@
 )]
 
 pub mod ai;
+pub mod backend;
 pub mod binary_buffer;
 pub mod crc;
 pub mod engine;
@@ -46,6 +47,7 @@ pub mod luxui;
 pub mod material;
 pub mod math;
 pub mod meshload;
+pub mod obj;
 pub mod physics;
 pub mod platform;
 mod platform_ffi;
@@ -58,6 +60,7 @@ mod resmgr_tests;
 pub mod resources;
 mod resources_ffi;
 pub mod scene;
+pub mod script;
 pub mod sdlsys;
 pub mod shader;
 pub mod somaagent;
@@ -70,6 +73,7 @@ pub mod somaui;
 pub mod sound;
 pub mod string;
 mod string_ffi;
+pub mod sys;
 pub mod system;
 pub mod types;
 pub mod vk;
