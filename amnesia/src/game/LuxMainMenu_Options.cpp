@@ -30,6 +30,8 @@
 #include "LuxPlayerHelpers.h"
 #include "LuxPlayer.h"
 #include "LuxHelpFuncs.h"
+#include "RustLuxMenu.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 // HELPERS
@@ -46,53 +48,43 @@ static tWString TranslateOrFallback(const tString& asCat, const tString& asName,
 
 static int GetIndexFromAnisotropy(float afX)
 {
-	if(afX <= 1) return 0;
-	if(afX <= 2) return 1;
-	if(afX <= 4) return 2;
-	if(afX <= 8) return 3;
-	if(afX <= 16) return 4;
-	return 0;
+	return ohpl_ga7a_op_aniso_index(afX);
 }
 
 static float GetAnisotropyFromIndex(int alX)
 {
-	switch(alX)
-	{
-	case 0: return 1.0f;
-	case 1: return 2.0f;
-	case 2: return 4.0f;
-	case 3: return 8.0f;
-	case 4: return 16.0f;
-	}
-	return 1.0f;
+	return ohpl_ga7a_op_aniso_from_index(alX);
 }
 
 //-----------------------------------------------------------------------
 
 static int GetIndexFromSSAOSamples(int alX)
 {
-	if(alX <= 4) return 0;
-	if(alX <= 8) return 1;
-	if(alX <= 16) return 2;
-	if(alX <= 32) return 3;
-	//if(alX <= 64) return 4;
-	//if(alX <= 128) return 5;
-	return 0;
+	return ohpl_ga7a_op_ssao_index(alX);
 }
 
 static int GetSSAOSamplesFromIndex(int alX)
 {
-	switch(alX)
-	{
-	case 0: return 4;
-	case 1: return 8;
-	case 2: return 16;
-	case 3: return 32;
-	//case 4: return 64;
-	//case 5: return 128;
-	}
-	return 3;
+	return ohpl_ga7a_op_ssao_from_index(alX);
 }
+
+enum eOhplGa7aRange
+{
+	eOhplGa7aRange_Gamma,
+	eOhplGa7aRange_Mouse,
+	eOhplGa7aRange_Gamepad,
+	eOhplGa7aRange_Volume,
+	eOhplGa7aRange_PaperWhite,
+	eOhplGa7aRange_Peak,
+};
+
+static float OhplGa7aRangeMin(int alKind) { float fMin, fStep, fMax; ohpl_ga7a_op_range(alKind, &fMin, &fStep, &fMax); return fMin; }
+static float OhplGa7aRangeStep(int alKind) { float fMin, fStep, fMax; ohpl_ga7a_op_range(alKind, &fMin, &fStep, &fMax); return fStep; }
+static float OhplGa7aRangeMax(int alKind) { float fMin, fStep, fMax; ohpl_ga7a_op_range(alKind, &fMin, &fStep, &fMax); return fMax; }
+
+float cLuxMainMenu_Options::GetPaperWhite() { return GetSliderValue(mpSPaperWhite, OhplGa7aRangeMin(eOhplGa7aRange_PaperWhite), OhplGa7aRangeMax(eOhplGa7aRange_PaperWhite)); }
+float cLuxMainMenu_Options::GetPeakNits() { return GetSliderValue(mpSPeak, OhplGa7aRangeMin(eOhplGa7aRange_Peak), OhplGa7aRangeMax(eOhplGa7aRange_Peak)); }
+
 
 //-----------------------------------------------------------------------
 
@@ -116,23 +108,20 @@ cLuxMainMenu_Options::cLuxMainMenu_Options(cGuiSet *apGuiSet, cGuiSkin *apGuiSki
 	mbTipTextReset = false;
 	mpCurrentTipWidget = NULL;
 
-	mfGammaMin = 0.3f;
-	mfGammaStep = 0.05f;
-	mfGammaMax = 2.0f;
-
-	mfMouseSensitivityMin = 0.2f;
-	mfMouseSensitivityStep = 0.1f;
-	mfMouseSensitivityMax = 5.0f;
-
+	mfGammaMin = OhplGa7aRangeMin(eOhplGa7aRange_Gamma);
+	mfGammaStep = OhplGa7aRangeStep(eOhplGa7aRange_Gamma);
+	mfGammaMax = OhplGa7aRangeMax(eOhplGa7aRange_Gamma);
+	mfMouseSensitivityMin = OhplGa7aRangeMin(eOhplGa7aRange_Mouse);
+	mfMouseSensitivityStep = OhplGa7aRangeStep(eOhplGa7aRange_Mouse);
+	mfMouseSensitivityMax = OhplGa7aRangeMax(eOhplGa7aRange_Mouse);
 #ifdef USE_GAMEPAD
-	mfGamepadLookSensitivityMin = 0.5f;
-	mfGamepadLookSensitivityStep = 0.05f;
-	mfGamepadLookSensitivityMax = 3.0f;
+	mfGamepadLookSensitivityMin = OhplGa7aRangeMin(eOhplGa7aRange_Gamepad);
+	mfGamepadLookSensitivityStep = OhplGa7aRangeStep(eOhplGa7aRange_Gamepad);
+	mfGamepadLookSensitivityMax = OhplGa7aRangeMax(eOhplGa7aRange_Gamepad);
 #endif
-
-	mfVolumeMin = 0.0f;
-	mfVolumeStep = 0.1f;
-	mfVolumeMax = 1.0f;
+	mfVolumeMin = OhplGa7aRangeMin(eOhplGa7aRange_Volume);
+	mfVolumeStep = OhplGa7aRangeStep(eOhplGa7aRange_Volume);
+	mfVolumeMax = OhplGa7aRangeMax(eOhplGa7aRange_Volume);
 
 	mbShowCommentary = gpBase->mpMenuCfg->GetBool("Options","ShowCommentary", false);
 
@@ -573,12 +562,12 @@ void cLuxMainMenu_Options::AddBasicGfxOptions(cWidgetDummy* apDummy)
 		pLabel = mpGuiSet->CreateWidgetLabel(vSliderPos, -1, TranslateOrFallback("OptionsMenu","HdrPaperWhite", _W("HDR white (nits)")), apDummy);
 		mpSPaperWhite = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, cVector3f(0, pLabel->GetSize().y+5, 0), cVector2f(120, 20), 0, pLabel);
 		SetUpInput(pLabel, mpSPaperWhite, false, TranslateOrFallback("OptionsMenu","HdrPaperWhiteTip", _W("Brightness of white in nits when an HDR output is active.")));
-		SetUpSlider(mpSPaperWhite, 80, 400, 5, kGuiCallback(HdrSlider_OnMove), &mpLPaperWhite);
+		SetUpSlider(mpSPaperWhite, OhplGa7aRangeMin(eOhplGa7aRange_PaperWhite), OhplGa7aRangeMax(eOhplGa7aRange_PaperWhite), OhplGa7aRangeStep(eOhplGa7aRange_PaperWhite), kGuiCallback(HdrSlider_OnMove), &mpLPaperWhite);
 
 		pLabel = mpGuiSet->CreateWidgetLabel(vSliderPos + cVector3f(0, 55, 0), -1, TranslateOrFallback("OptionsMenu","HdrPeak", _W("HDR peak (nits)")), apDummy);
 		mpSPeak = mpGuiSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal, cVector3f(0, pLabel->GetSize().y+5, 0), cVector2f(120, 20), 0, pLabel);
 		SetUpInput(pLabel, mpSPeak, false, TranslateOrFallback("OptionsMenu","HdrPeakTip", _W("Peak brightness of your HDR display in nits.")));
-		SetUpSlider(mpSPeak, 400, 2000, 50, kGuiCallback(HdrSlider_OnMove), &mpLPeak);
+		SetUpSlider(mpSPeak, OhplGa7aRangeMin(eOhplGa7aRange_Peak), OhplGa7aRangeMax(eOhplGa7aRange_Peak), OhplGa7aRangeStep(eOhplGa7aRange_Peak), kGuiCallback(HdrSlider_OnMove), &mpLPeak);
 	}
 
 	mpCBRenderer->SetFocusNavigation(eUIArrow_Left, mpCBGuiScale);
@@ -1127,15 +1116,13 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 		// Language
 		{
 			tString sLang = aObj.GetVarString("Language", gpBase->msDefaultGameLanguage);
-			int lLangIndex=0;
-			for(int i=0;i<(int)mvLangFiles.size();++i)
+			std::vector<OhplGa7aWStr> vFiles(mvLangFiles.size());
+			for(size_t i=0;i<mvLangFiles.size();++i)
 			{
-				if(sLang==cString::To8Char(mvLangFiles[i]))
-				{
-					lLangIndex = i;
-					break;
-				}
+				OhplGa7aWStr file = { (const unsigned*)mvLangFiles[i].data(), mvLangFiles[i].size() };
+				vFiles[i] = file;
 			}
+			int lLangIndex = ohpl_ga7a_op_language_index((const unsigned char*)sLang.data(), sLang.size(), vFiles.data(), vFiles.size());
 			mpCBLanguage->SetSelectedItem(lLangIndex, false, false);
 		}
 	}
@@ -1155,76 +1142,61 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 			cVector2f vCurrentResf = aObj.GetVarVector2f("Resolution");
 			cVideoMode vCurrentRes = cVideoMode(aObj.GetVarInt("Display"), cVector2l((int)vCurrentResf.x, (int)vCurrentResf.y), -1, -1);
 
-			bool bMultiDisplay = false;
-			for(size_t i=1;i<vVidModes.size();++i)
+			std::vector<OhplGa7aMode> vRawModes(vVidModes.size());
+			for(size_t i=0;i<vVidModes.size();++i)
 			{
-				if(vVidModes[i].mlDisplay != vVidModes[0].mlDisplay) { bMultiDisplay = true; break; }
+				OhplGa7aMode m = { vVidModes[i].mlDisplay, vVidModes[i].mvScreenSize.x, vVidModes[i].mvScreenSize.y, vVidModes[i].mlRefreshRate };
+				vRawModes[i] = m;
 			}
+			bool bMultiDisplay = ohpl_ga7a_op_multi_display(vRawModes.data(), vRawModes.size()) != 0;
 
 			/////////////////
 			// Remove duplicates
-			for(size_t i=0;i<vVidModes.size();++i)
+			std::vector<unsigned> vSrc(vRawModes.size());
+			std::vector<int> vRefresh(vRawModes.size());
+			size_t lKept = ohpl_ga7a_op_dedup_modes(vRawModes.data(), vRawModes.size(), vSrc.data(), vRefresh.data());
+			tVideoModeVec vKept;
+			std::vector<OhplGa7aMode> vKeptRaw;
+			for(size_t i=0;i<lKept;++i)
 			{
-				int lRemove = 0;
-				int lRefreshRate = vVidModes[i].mlRefreshRate;
-
-				//////////////
-				// vVidModes is sorted by display, then size
-				for(size_t j=i+1;j<vVidModes.size();++j)
-				{
-					if(vVidModes[i].mvScreenSize == vVidModes[j].mvScreenSize && vVidModes[i].mlDisplay == vVidModes[j].mlDisplay)
-					{
-						lRemove++;
-						lRefreshRate = cMath::Max(lRefreshRate, vVidModes[i].mlRefreshRate);
-					}
-					else break;
-				}
-
-				//////////////
-				// Remove dupilcates and get the one with the highest refreshrate
-				for(size_t j = i + lRemove; j < vVidModes.size(); j++)
-				{
-					vVidModes[j-lRemove] = vVidModes[j];
-				}
-				vVidModes[i].mlRefreshRate = lRefreshRate;
-
-				while(lRemove--) vVidModes.pop_back();
+				vKept.push_back(vVidModes[vSrc[i]]);
+				vKept.back().mlRefreshRate = vRefresh[i];
+				vKeptRaw.push_back(vRawModes[vSrc[i]]);
+				vKeptRaw.back().refresh = vRefresh[i];
 			}
+			vVidModes = vKept;
 
 			mpCBResolution->ClearItems();
 			for(size_t i=0;i<vVidModes.size();++i)
 			{
 				const cVideoMode& mode = vVidModes[i];
-                tWString sRes;
-                if (mode.isFullScreenDesktop())
-                {
-                    sRes = kTranslate("OptionsMenu", "FullScreenDesktop") + _W(" ") + cPlatform::GetDisplayName(mode.mlDisplay);
-                }
-                else
-                {
-					sRes = cString::ToStringW(mode.mvScreenSize.x) + _W("x") + cString::ToStringW(mode.mvScreenSize.y);
+
+				tWString sRes;
+				if (mode.isFullScreenDesktop())
+				{
+					sRes = kTranslate("OptionsMenu", "FullScreenDesktop") + _W(" ") + cPlatform::GetDisplayName(mode.mlDisplay);
+				}
+				else
+				{
+					ohpl_ga7a_op_resolution_label(mode.mvScreenSize.x, mode.mvScreenSize.y, false, OhplGa7aWideSink, &sRes);
 					if(bMultiDisplay)
 					{
 						sRes += _W(" (") + cPlatform::GetDisplayName(mode.mlDisplay) + _W(")");
 					}
-            	}
+				}
 
 				mpCBResolution->AddItem(sRes);
 				mvScreenSizes.push_back(mode);
-
-				if(mode==vCurrentRes)
-					lCurrentMode = mpCBResolution->GetItemNum()-1;
 			}
+			lCurrentMode = ohpl_ga7a_op_current_mode(vKeptRaw.data(), vKeptRaw.size(), vCurrentRes.mlDisplay, vCurrentRes.mvScreenSize.x, vCurrentRes.mvScreenSize.y);
+
 			if(lCurrentMode==-1)
 			{
-				tWString sRes = cString::ToStringW(vCurrentRes.mvScreenSize.x) + _W("x") + cString::ToStringW(vCurrentRes.mvScreenSize.y) + _W(" (Custom)");
-
+				tWString sRes;
+				ohpl_ga7a_op_resolution_label(vCurrentRes.mvScreenSize.x, vCurrentRes.mvScreenSize.y, true, OhplGa7aWideSink, &sRes);
 				mpCBResolution->AddItem(sRes);
 				mvScreenSizes.push_back(vCurrentRes);
 				lCurrentMode = mpCBResolution->GetItemNum()-1;
-
-				//lCurrentMode=0;
-				//bGenerateCallback = true;
 			}
 			mpCBResolution->SetSelectedItem(lCurrentMode, true, false);
 		}
@@ -1237,12 +1209,13 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 
 		mpChBShowFPS->SetChecked(aObj.GetVarBool("ShowFPS"), false);
 
-		mpCBRenderer->SetSelectedItem(cString::ToLowerCase(aObj.GetVarString("Renderer"))=="vulkan" ? 1 : 0, true, false);
+		tString sRenderer = aObj.GetVarString("Renderer");
+		mpCBRenderer->SetSelectedItem(ohpl_ga7a_op_renderer_index((const unsigned char*)sRenderer.data(), sRenderer.size()), true, false);
 		{
-			tString sOut = cString::ToLowerCase(aObj.GetVarString("ColorOutput"));
-			mpCBColorOutput->SetSelectedItem(sOut=="hdr10" ? 1 : sOut=="scrgb" ? 2 : sOut=="p3" ? 3 : 0, true, false);
-			SetSliderValue(mpSPaperWhite, aObj.GetVarFloat("PaperWhite"), false, 80, 400);
-			SetSliderValue(mpSPeak, aObj.GetVarFloat("PeakNits"), false, 400, 2000);
+			tString sOut = aObj.GetVarString("ColorOutput");
+			mpCBColorOutput->SetSelectedItem(ohpl_ga7a_op_color_index((const unsigned char*)sOut.data(), sOut.size()), true, false);
+			SetSliderValue(mpSPaperWhite, aObj.GetVarFloat("PaperWhite"), false, OhplGa7aRangeMin(eOhplGa7aRange_PaperWhite), OhplGa7aRangeMax(eOhplGa7aRange_PaperWhite));
+			SetSliderValue(mpSPeak, aObj.GetVarFloat("PeakNits"), false, OhplGa7aRangeMin(eOhplGa7aRange_Peak), OhplGa7aRangeMax(eOhplGa7aRange_Peak));
 			HdrSlider_OnMove(NULL, cGuiMessageData());
 		}
 
@@ -1254,7 +1227,7 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 			mpCBGuiScale->AddItem(_W("4x"));
 
 			int lGuiScale = aObj.GetVarInt("GuiScale");
-			int lIdx = cMath::Clamp(lGuiScale-1, 0, mpCBGuiScale->GetItemNum()-1);
+			int lIdx = ohpl_ga7a_op_gui_scale_index(lGuiScale, mpCBGuiScale->GetItemNum());
 			mpCBGuiScale->SetSelectedItem(lIdx, true, false);
 		}
 
@@ -1263,7 +1236,7 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 		{
 			/////////////////////////////////
 			// Texture Quality
-			mpCBTextureSizeLevel->SetSelectedItem((mpCBTextureSizeLevel->GetItemNum()-1) - aObj.GetVarInt("TextureQuality"), true, false);
+			mpCBTextureSizeLevel->SetSelectedItem(ohpl_ga7a_op_flip_index(aObj.GetVarInt("TextureQuality"), mpCBTextureSizeLevel->GetItemNum()), true, false);
 		
 			/////////////////////////////////
 			// Texture filtering
@@ -1412,21 +1385,10 @@ void cLuxMainMenu_Options::SetInputValues(cResourceVarsObject& aObj)
 	SetVolumeLabelString(fVolume);
 
 	int lSndDev = aObj.GetVarInt("SoundDeviceID");
-	int lSndDevIdx = -1;
+	std::vector<int> vSndDevIDs;
 	for(size_t i=0;i<mvSoundDevices.size();++i)
-	{
-		if(lSndDev==mvSoundDevices[i]->GetID())
-		{
-			lSndDevIdx = i;
-			break;
-		}
-	}
-	
-
-	if(lSndDevIdx==-1)
-        mpCBSndDevice->SetSelectedItem(mpCBSndDevice->GetItemNum()-1, true, false);
-	else
-		mpCBSndDevice->SetSelectedItem(lSndDevIdx, true, false);
+		vSndDevIDs.push_back(mvSoundDevices[i]->GetID());
+	mpCBSndDevice->SetSelectedItem(ohpl_ga7a_op_sound_device_index(lSndDev, vSndDevIDs.data(), vSndDevIDs.size(), mpCBSndDevice->GetItemNum()), true, false);
 #endif
 
 	mbSettingInitialValues = false;
@@ -1538,9 +1500,8 @@ void cLuxMainMenu_Options::ApplyChanges()
 		gpBase->mpDebugHandler->SetShowFPS(mpChBShowFPS->IsChecked());
 
 		{
-			static const char* vOutputs[] = {"SDR","HDR10","scRGB","P3"};
-			pCfgHdr->msRenderer = mpCBRenderer->GetSelectedItem()==1 ? "Vulkan" : "OpenGL";
-			pCfgHdr->msColorOutput = vOutputs[std::min(std::max(mpCBColorOutput->GetSelectedItem(),0),3)];
+			pCfgHdr->msRenderer = ohpl_ga7a_op_renderer_name(mpCBRenderer->GetSelectedItem());
+			pCfgHdr->msColorOutput = ohpl_ga7a_op_color_name(mpCBColorOutput->GetSelectedItem());
 			pCfgHdr->mfPaperWhite = GetPaperWhite();
 			pCfgHdr->mfPeakNits = GetPeakNits();
 			pGfx->GetLowLevel()->SetColorOutput(pCfgHdr->msColorOutput, pCfgHdr->mfPaperWhite, pCfgHdr->mfPeakNits);
@@ -1556,7 +1517,7 @@ void cLuxMainMenu_Options::ApplyChanges()
 
 
 		// Texture
-		pCfgHdr->mlTextureQuality = (mpCBTextureSizeLevel->GetItemNum()-1) - mpCBTextureSizeLevel->GetSelectedItem();
+		pCfgHdr->mlTextureQuality = ohpl_ga7a_op_flip_index(mpCBTextureSizeLevel->GetSelectedItem(), mpCBTextureSizeLevel->GetItemNum());
 		pCfgHdr->mlTextureFilter = mpCBTextureFilter->GetSelectedItem();
 		pCfgHdr->mfTextureAnisotropy = GetAnisotropyFromIndex(mpCBAnisotropy->GetSelectedItem());
 
@@ -1750,9 +1711,10 @@ void cLuxMainMenu_Options::PopulateSoundDevices()
 
 void cLuxMainMenu_Options::SetUpSlider(cWidgetSlider* apSlider, float afMinValue, float afMaxValue, float afStepValue, tGuiCallbackFunc apCallback, cWidgetLabel** apValueDisplay)
 {
-	int lMaxValue = cMath::RoundToInt((afMaxValue-afMinValue)/afStepValue);
+	int lMaxValue, lBarSize;
+	ohpl_ga7a_op_slider_setup(afMinValue, afMaxValue, afStepValue, &lMaxValue, &lBarSize);
 	apSlider->SetMaxValue(lMaxValue);
-	apSlider->SetBarValueSize(cMath::RoundToInt(0.25f*(float)lMaxValue));
+	apSlider->SetBarValueSize(lBarSize);
 
 	if(apCallback)
 	{
@@ -1763,7 +1725,6 @@ void cLuxMainMenu_Options::SetUpSlider(cWidgetSlider* apSlider, float afMinValue
 	{
 		cWidgetLabel* pLabel = mpGuiSet->CreateWidgetLabel(cVector3f(apSlider->GetSize().x*0.5f,2,1), -1, _W(""), apSlider);
 		pLabel->SetTextAlign(eFontAlign_Center);
-
 		*apValueDisplay = pLabel;
 	}
 }
@@ -1772,24 +1733,14 @@ void cLuxMainMenu_Options::SetUpSlider(cWidgetSlider* apSlider, float afMinValue
 
 void cLuxMainMenu_Options::SetSliderValue(cWidgetSlider* apSlider, float afValue, bool abGenCallback, float afMinValue, float afMaxValue)
 {
-	afValue = cMath::Clamp(afValue, afMinValue, afMaxValue);
-
-	float fMaxSliderValue = (float) apSlider->GetMaxValue();
-	float fRange = afMaxValue-afMinValue;
-
-	int lValue = cMath::RoundToInt((afValue-afMinValue)*fMaxSliderValue/fRange);
-	
-	apSlider->SetValue(lValue, abGenCallback);
+	apSlider->SetValue(ohpl_ga7a_op_slider_to_int(afValue, afMinValue, afMaxValue, apSlider->GetMaxValue()), abGenCallback);
 }
 
 //-----------------------------------------------------------------------
 
 float cLuxMainMenu_Options::GetSliderValue(cWidgetSlider* apSlider, float afMinValue, float afMaxValue)
 {
-	float fSliderRelValue = ((float)apSlider->GetValue())/(float)apSlider->GetMaxValue();
-	float fRange = afMaxValue-afMinValue;
-
-	return afMinValue + fRange*fSliderRelValue;
+	return ohpl_ga7a_op_slider_to_value(apSlider->GetValue(), apSlider->GetMaxValue(), afMinValue, afMaxValue);
 }
 
 //-----------------------------------------------------------------------
@@ -1799,24 +1750,13 @@ void cLuxMainMenu_Options::SetSliderLabelString(cWidgetLabel* apLabel, float afV
 												const tWString& asMin, const tWString& asMax)
 {
 	tWString sText;
-
 	if(afValue<=afMinValue)
-	{
-		if(asMin.empty())
-			afValue = afMinValue;
-		else
-			sText = asMin;
-	}
+		sText = asMin;
 	else if(afValue>=afMaxValue)
-	{
-		if(asMax.empty())
-			afValue = afMaxValue;
-		else
-			sText = asMax;
-	}
-	
+		sText = asMax;
+
 	if(sText.empty())
-		sText = cString::ToStringW(afValue, 3, true);
+		ohpl_ga7a_op_slider_label(afValue, afMinValue, afMaxValue, OhplGa7aWideSink, &sText);
 
 	apLabel->SetText(sText);
 }
@@ -1962,9 +1902,8 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 
 		aObj.AddVarBool("ShowFPS",		mpChBShowFPS->IsChecked());
 		{
-			static const char* vOutputs[] = {"SDR","HDR10","scRGB","P3"};
-			aObj.AddVarString("Renderer", mpCBRenderer->GetSelectedItem()==1 ? "Vulkan" : "OpenGL");
-			aObj.AddVarString("ColorOutput", vOutputs[std::min(std::max(mpCBColorOutput->GetSelectedItem(),0),3)]);
+			aObj.AddVarString("Renderer", ohpl_ga7a_op_renderer_name(mpCBRenderer->GetSelectedItem()));
+			aObj.AddVarString("ColorOutput", ohpl_ga7a_op_color_name(mpCBColorOutput->GetSelectedItem()));
 			aObj.AddVarFloat("PaperWhite", GetPaperWhite());
 			aObj.AddVarFloat("PeakNits", GetPeakNits());
 		}
@@ -1973,7 +1912,7 @@ void cLuxMainMenu_Options::DumpCurrentValues(cResourceVarsObject &aObj)
 
 		/////////////////////////
 		// Texture quality and filtering
-		aObj.AddVarInt("TextureQuality", (mpCBTextureSizeLevel->GetItemNum()-1) - mpCBTextureSizeLevel->GetSelectedItem());
+		aObj.AddVarInt("TextureQuality", ohpl_ga7a_op_flip_index(mpCBTextureSizeLevel->GetSelectedItem(), mpCBTextureSizeLevel->GetItemNum()));
 		aObj.AddVarInt("TextureFilter", mpCBTextureFilter->GetSelectedItem());
 		aObj.AddVarFloat("TextureAnisotropy", GetAnisotropyFromIndex(mpCBAnisotropy->GetSelectedItem()));
 
@@ -2057,31 +1996,24 @@ bool cLuxMainMenu_Options::Window_OnUpdate(iWidget* apWidget, const cGuiMessageD
 	////////////////////////////////////////////////////
 	// Update Tip label fade
 	cColor labelCol = mpLTip->GetDefaultFontColor();
-	if(mbTipFadeRestart)
+	int lTipFlags = (mbTipFadeRestart ? 1 : 0) | (mbTipTextReset ? 2 : 0);
+	float fTipDelta = 0;
+	int lTip = ohpl_ga7a_op_tip_step(&lTipFlags, labelCol.a, aData.mfVal, &fTipDelta);
+	mbTipFadeRestart = (lTipFlags & 1) != 0;
+	mbTipTextReset = (lTipFlags & 2) != 0;
+	if(lTip & (1<<8))
+		mpLTip->SetScrollOffset(0);
+	switch(lTip & 0xff)
 	{
-		if(mbTipTextReset)
-		{
-			mbTipTextReset = false;
-			mpLTip->SetScrollOffset(0);
-		}
-		labelCol = labelCol + cColor(0, aData.mfVal*3);
-		if(labelCol.a>=1.0f)
-		{
+	case 1:
+		labelCol = labelCol + cColor(0, fTipDelta);
+		if(lTip & (1<<9))
 			labelCol.a = 1.0f;
-			mbTipFadeRestart = false;
-		}
 		mpLTip->SetDefaultFontColor(labelCol);
-	}
-	else
-	{
-		if(labelCol.a>0.0f)
-		{
-			mpLTip->SetDefaultFontColor(labelCol-cColor(0, aData.mfVal*0.8f));
-		}
-		else if(mbTipTextReset==false)
-		{
-			mbTipTextReset = true;
-		}
+		break;
+	case 2:
+		mpLTip->SetDefaultFontColor(labelCol-cColor(0, fTipDelta));
+		break;
 	}
     
 	///////////////////////////////////////////////////
@@ -2149,15 +2081,9 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, Option_OnMouseOver);
 
 bool cLuxMainMenu_Options::Option_OnChangeValue(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbSettingInitialValues)
-		return true;
-
-	if(apWidget->GetUserData())
-	{
-		cLuxOption_ExtData* pData = (cLuxOption_ExtData*)apWidget->GetUserData();
-		if(pData->mbNeedsRestart)
-			gpBase->mpConfigHandler->SetGameNeedsRestart();
-	}
+	cLuxOption_ExtData* pData = (cLuxOption_ExtData*)apWidget->GetUserData();
+	if(ohpl_ga7a_op_needs_restart(mbSettingInitialValues, pData!=NULL, pData && pData->mbNeedsRestart))
+		gpBase->mpConfigHandler->SetGameNeedsRestart();
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, Option_OnChangeValue);
@@ -2166,8 +2092,11 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, Option_OnChangeValue);
 
 bool cLuxMainMenu_Options::HdrSlider_OnMove(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	mpLPaperWhite->SetText(cString::ToStringW(cMath::RoundToInt(GetPaperWhite())));
-	mpLPeak->SetText(cString::ToStringW(cMath::RoundToInt(GetPeakNits())));
+	tWString sPaperWhite, sPeak;
+	ohpl_ga7a_op_int_label(GetPaperWhite(), OhplGa7aWideSink, &sPaperWhite);
+	ohpl_ga7a_op_int_label(GetPeakNits(), OhplGa7aWideSink, &sPeak);
+	mpLPaperWhite->SetText(sPaperWhite);
+	mpLPeak->SetText(sPeak);
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_Options, HdrSlider_OnMove);
@@ -2235,16 +2164,13 @@ bool cLuxMainMenu_Options::PressToggleShowGfxOptions(iWidget* apWidget, const cG
 {
 	bool bBasicVisible = mpDBasicGfxOptions->IsVisible();
 	tWString sText[] = { kTranslate("OptionsMenu", "BasicOptions"), kTranslate("OptionsMenu", "AdvancedOptions") };
-
-	mpDBasicGfxOptions->SetVisible(bBasicVisible==false);
-	mpDBasicGfxOptions->SetEnabled(bBasicVisible==false);
-
-	mpDAdvancedGfxOptions->SetVisible(bBasicVisible);
-	mpDAdvancedGfxOptions->SetEnabled(bBasicVisible);
-
+	int lToggle = ohpl_ga7a_op_toggle_gfx(bBasicVisible);
+	mpDBasicGfxOptions->SetVisible((lToggle & 1) != 0);
+	mpDBasicGfxOptions->SetEnabled((lToggle & 1) != 0);
+	mpDAdvancedGfxOptions->SetVisible((lToggle & 2) != 0);
+	mpDAdvancedGfxOptions->SetEnabled((lToggle & 2) != 0);
 	cWidgetTab* pTab = mpTabGraphics;
-
-	if(bBasicVisible)
+	if(lToggle & 8)
 	{
 		mpBToggleShowGfxOptions->SetFocusNavigation(eUIArrow_Up, mpChBRefraction);
 
@@ -2257,7 +2183,7 @@ bool cLuxMainMenu_Options::PressToggleShowGfxOptions(iWidget* apWidget, const cG
 		pTab->GetTabLabel()->SetUserData(mpCBResolution);
 	}
 
-	apWidget->SetText(sText[bBasicVisible==false]);
+	apWidget->SetText(sText[(lToggle >> 2) & 1]);
 
 	return true;
 }
@@ -2337,24 +2263,25 @@ void cLuxMainMenu_Options::OnSetActive(bool abX)
 	{
 		SetTabNavigation(mpTabGame->GetParentTabFrame()->GetTabOnTop(), true);
 
-		if(mbKeyConfigOpen==false)
+		switch(ohpl_ga7a_op_activate(mbKeyConfigOpen, mbKeyConfigOpen==false && mInitialValues.GetVarBool("SettingLanguage", false), mbKeyConfigOpen==false && mInitialValues.GetVarBool("InitialValuesSet")))
 		{
-			if(mInitialValues.GetVarBool("SettingLanguage", false))
-			{
-				SetInputValues(mCurrentValues);
-				mInitialValues.AddVarBool("SettingLanguage", false);
-			}
-			else
-			{
-				if(mInitialValues.GetVarBool("InitialValuesSet")==false)
-					DumpInitialValues(mInitialValues);
-
-				SetInputValues(mInitialValues);
-				mInitialValues.AddVarBool("InitialValuesSet", true);
-			}
-		}
-		else
+		case 0:
 			mbKeyConfigOpen = false;
+			break;
+		case 1:
+			SetInputValues(mCurrentValues);
+			mInitialValues.AddVarBool("SettingLanguage", false);
+			break;
+		case 2:
+			DumpInitialValues(mInitialValues);
+			SetInputValues(mInitialValues);
+			mInitialValues.AddVarBool("InitialValuesSet", true);
+			break;
+		case 3:
+			SetInputValues(mInitialValues);
+			mInitialValues.AddVarBool("InitialValuesSet", true);
+			break;
+		}
 	}
 
 #ifdef USE_GAMEPAD

@@ -20,7 +20,15 @@
 #include "LuxMainMenu_KeyConfig.h"
 
 #include "LuxInputHandler.h"
+#include "RustLuxMenu.h"
 
+static_assert(sizeof(cSubActionWrapper) == sizeof(OhplGa7aSub), "cSubActionWrapper layout");
+static_assert(offsetof(cSubActionWrapper, mType) == offsetof(OhplGa7aSub, kind), "mType");
+static_assert(offsetof(cSubActionWrapper, mGamepadInputType) == offsetof(OhplGa7aSub, gtype), "mGamepadInputType");
+static_assert(offsetof(cSubActionWrapper, mlInputId) == offsetof(OhplGa7aSub, id), "mlInputId");
+static_assert(offsetof(cSubActionWrapper, mfInputValue) == offsetof(OhplGa7aSub, value), "mfInputValue");
+
+#define OHPL_SUBS(v) ((OhplGa7aSub*)(v).data()), (v).size()
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
 //////////////////////////////////////////////////////////////////////////
@@ -47,8 +55,7 @@ cLuxInputMenuEntry::cLuxInputMenuEntry(cLuxMainMenu_KeyConfig* apWindow, cLuxAct
 	//mpLAction->AddCallback(eGuiMessage_MouseDown, this, kGuiCallback(InputEntryClick));
 	//mpLAction->AddCallback(eGuiMessage_KeyPress, this, kGuiCallback(InputEntryKeyPress));
 
-	if((apAction->msName == "LeanLeft"
-	|| apAction->msName == "LeanRight") == false)
+	if(ohpl_ga7a_kc_binds_pad((const unsigned char*)apAction->msName.data(), apAction->msName.size()))
 	{
 		mpLAction->AddCallback(eGuiMessage_UIButtonPress, this, kGuiCallback(InputEntryUIButtonPress));
 	}
@@ -80,8 +87,7 @@ cLuxInputMenuEntry::cLuxInputMenuEntry(cLuxMainMenu_KeyConfig* apWindow, cLuxAct
 		pLabel->AddCallback(eGuiMessage_TextChange, this, kGuiCallback(InputEntryChange));
 		pLabel->AddCallback(eGuiMessage_KeyPress, this, kGuiCallback(InputEntryKeyPress));
 		
-		if((apAction->msName == "LeanLeft"
-		|| apAction->msName == "LeanRight") == false)
+		if(ohpl_ga7a_kc_binds_pad((const unsigned char*)apAction->msName.data(), apAction->msName.size()))
 		{
 			//////////////
 			// Not possible to bind lean to gamepad
@@ -114,32 +120,21 @@ cLuxInputMenuEntry::~cLuxInputMenuEntry()
 void cLuxInputMenuEntry::RetrieveDefaultValue()
 {
 	tLuxInputVec vDefaultInputs = gpBase->mpInputHandler->GetDefaultInputsByActionId(mlActionId);
-	
-	size_t i=0;
-	for(;i<vDefaultInputs.size();++i)
+
+	std::vector<OhplGa7aStr> vNames(vDefaultInputs.size());
+	std::vector<int> vValues(vDefaultInputs.size());
+	for(size_t i=0; i<vDefaultInputs.size(); ++i)
 	{
-		if(i>=eInputMenuEntryPos_LastEnum)
-			break;
-
-		cLuxInput* pInput = vDefaultInputs[i];
-
-		mvSubActions[i] = GetSubActionWrapperFromLuxInput(pInput);
-		//mvSubActions[i].mType = GetInputDeviceTypeFromString(pInput->msInputType);
-		//mvSubActions[i].mlInputId = pInput->mlValue;
+		OhplGa7aStr name = { (const unsigned char*)vDefaultInputs[i]->msInputType.data(), vDefaultInputs[i]->msInputType.size() };
+		vNames[i] = name;
+		vValues[i] = vDefaultInputs[i]->mlValue;
 	}
+
+	int bMacKey = 0;
 #ifdef __APPLE__
-	// Heinous Kludge to get a default Mac keyboard shortcut without relying on different config files.
-	if (i < eInputMenuEntryPos_LastEnum && mlActionId == eLuxAction_Attack) {
-		mvSubActions[i].mType = eInputDeviceType_Keyboard;
-		mvSubActions[i].mlInputId = eKey_LeftMeta;
-		++i;
-	}
+	bMacKey = mlActionId == eLuxAction_Attack;
 #endif
-	for(;i<eInputMenuEntryPos_LastEnum;++i)
-	{
-		mvSubActions[i].mType = eInputDeviceType_LastEnum;
-		mvSubActions[i].mlInputId = -1;
-	}
+	ohpl_ga7a_kc_fill_default(vNames.data(), vValues.data(), vNames.size(), OHPL_SUBS(mvSubActions), bMacKey, (int)eKey_LeftMeta);
 
 	///////////////////////////////////////////////////////////
 	// Set changed to true, as we might have changed stuff
@@ -153,76 +148,60 @@ void cLuxInputMenuEntry::RetrieveInitialValue()
 	cInput* pInput = gpBase->mpEngine->GetInput();
 	cAction* pAction = pInput->GetAction(mlActionId);
 
-	int i=0;
-	for(;i<pAction->GetSubActionNum();++i)
+	std::vector<tString> vStrings;
+	for(int i=0;i<pAction->GetSubActionNum();++i)
 	{
 		if(i>=eInputMenuEntryPos_LastEnum)
 			break;
-
 		iSubAction* pSubAction = pAction->GetSubAction(i);
-		
-		mvSubActions[i] = GetSubActionWrapperFromSubAction(pSubAction);
+		vStrings.push_back(pSubAction->GetInputType()+"."+pSubAction->GetInputName());
 	}
-
-	for(;i<eInputMenuEntryPos_LastEnum;++i)
+	std::vector<OhplGa7aStr> vNames(vStrings.size());
+	for(size_t i=0; i<vStrings.size(); ++i)
 	{
-		mvSubActions[i].mType = eInputDeviceType_LastEnum;
-		mvSubActions[i].mlInputId = -1;
+		OhplGa7aStr name = { (const unsigned char*)vStrings[i].data(), vStrings[i].size() };
+		vNames[i] = name;
 	}
+	ohpl_ga7a_kc_fill_initial(vNames.data(), vNames.size(), OHPL_SUBS(mvSubActions));
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxInputMenuEntry::UpdateAction()
 {
-	if(mbChanged==false)
+	OhplGa7aOp vOps[eInputMenuEntryPos_LastEnum];
+	int lOps = ohpl_ga7a_kc_update(OHPL_SUBS(mvSubActions), mbChanged, vOps, eInputMenuEntryPos_LastEnum);
+	if(lOps<0)
 		return;
 
 	cInput* pInp = gpBase->mpEngine->GetInput();
 	cAction* pAction = pInp->GetAction(mlActionId);
-
 	pAction->ClearSubActions();
-	for(size_t i=0;i<mvSubActions.size();++i)
+
+	for(int i=0;i<lOps;++i)
 	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		int lId = subAction.mlInputId;
-		switch(subAction.mType)
+		const OhplGa7aOp& op = vOps[i];
+		switch(op.kind)
 		{
-		case eInputDeviceType_Keyboard:
-			pAction->AddKey((eKey)lId);
+		case 1:
+			pAction->AddKey((eKey)op.a);
 			break;
-		case eInputDeviceType_Mouse:
-			pAction->AddMouseButton((eMouseButton)lId);
+		case 2:
+			pAction->AddMouseButton((eMouseButton)op.a);
 			break;
-		case eInputDeviceType_Gamepad:
-			UpdateGamepadAction(pAction, subAction);
+		case 3:
+			pAction->AddGamepadButton(0, (eGamepadButton)op.a);
+			break;
+		case 4:
+			pAction->AddGamepadHat(0, (eGamepadHat)op.a, (eGamepadHatState)op.b);
+			break;
+		case 5:
+			pAction->AddGamepadAxis(0, (eGamepadAxis)op.a, (eGamepadAxisRange)op.b, 0.25f);
 			break;
 		}
 	}
-	mbChanged = false;
-}
 
-void cLuxInputMenuEntry::UpdateGamepadAction(cAction* pAction, const cSubActionWrapper& aSubAction)
-{
-	cInput* pInp = gpBase->mpEngine->GetInput();
-	switch(aSubAction.mGamepadInputType)
-	{
-		case eGamepadInputType_Button:
-			pAction->AddGamepadButton(0, (eGamepadButton)aSubAction.mlInputId);
-			break;
-		case eGamepadInputType_Hat:
-			{
-				int lState = (int)aSubAction.mfInputValue;
-				pAction->AddGamepadHat(0, (eGamepadHat)aSubAction.mlInputId, (eGamepadHatState)lState);
-			}
-			break;
-		case eGamepadInputType_Axis:
-			{
-				int lRange = (int)aSubAction.mfInputValue;
-				pAction->AddGamepadAxis(0, (eGamepadAxis)aSubAction.mlInputId, (eGamepadAxisRange)lRange, 0.25f);
-			}
-			break;
-	}
+	mbChanged = false;
 }
 
 //-----------------------------------------------------------------------
@@ -249,109 +228,54 @@ void cLuxInputMenuEntry::UpdateEntry()
 
 void cLuxInputMenuEntry::SetInputKeypress(eInputMenuEntryPos aPos, eKey aKey)
 {
-	if(HasKey(aKey))
-		return;
-
-	mvSubActions[aPos] = cSubActionWrapper(eInputDeviceType_Keyboard, aKey);
+	ohpl_ga7a_kc_set(OHPL_SUBS(mvSubActions), aPos, 0, (int)aKey, (int)0);
 }
 
 void cLuxInputMenuEntry::SetInputMouseButton(eInputMenuEntryPos aPos, eMouseButton aButton)
 {
-	if(HasMouseButton(aButton))
-		return;
-
-	mvSubActions[aPos] = cSubActionWrapper(eInputDeviceType_Mouse, aButton);
+	ohpl_ga7a_kc_set(OHPL_SUBS(mvSubActions), aPos, 1, (int)aButton, (int)0);
 }
 
 void cLuxInputMenuEntry::SetInputGamepadButton(eInputMenuEntryPos aPos, eGamepadButton aButton)
 {
-	if(HasGamepadButton(aButton))
-		return;
-
-	mvSubActions[aPos] = cSubActionWrapper(eGamepadInputType_Button, aButton, 1.0f);
+	ohpl_ga7a_kc_set(OHPL_SUBS(mvSubActions), aPos, 2, (int)aButton, (int)0);
 }
 
 void cLuxInputMenuEntry::SetInputGamepadHat(eInputMenuEntryPos aPos, eGamepadHat aHat, eGamepadHatState aState)
 {
-	if(HasGamepadHatState(aHat, aState))
-		return;
-
-	mvSubActions[aPos] = cSubActionWrapper(eGamepadInputType_Hat, aHat, (float)aState);
+	ohpl_ga7a_kc_set(OHPL_SUBS(mvSubActions), aPos, 3, (int)aHat, (int)aState);
 }
 
 void cLuxInputMenuEntry::SetInputGamepadAxis(eInputMenuEntryPos aPos, eGamepadAxis aAxis, eGamepadAxisRange aRange)
 {
-	if(HasGamepadAxis(aAxis, aRange))
-		return;
-
-	mvSubActions[aPos] = cSubActionWrapper(eGamepadInputType_Axis, aAxis, (float)aRange);
+	ohpl_ga7a_kc_set(OHPL_SUBS(mvSubActions), aPos, 4, (int)aAxis, (int)aRange);
 }
 
 //-----------------------------------------------------------------------
 
 eInputMenuEntryPos cLuxInputMenuEntry::GetKeyPos(eKey aKey)
 {
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		if(subAction.mType==eInputDeviceType_Keyboard &&
-			subAction.mlInputId==aKey)
-			return (eInputMenuEntryPos)i;
-	}
-
-	return eInputMenuEntryPos_LastEnum;
+	return (eInputMenuEntryPos)ohpl_ga7a_kc_key_pos(OHPL_SUBS(mvSubActions), (int)aKey);
 }
 
 eInputMenuEntryPos cLuxInputMenuEntry::GetMouseButtonPos(eMouseButton aButton)
 {
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		if(subAction.mType==eInputDeviceType_Mouse &&
-			subAction.mlInputId==aButton)
-			return (eInputMenuEntryPos)i;
-	}
-
-	return eInputMenuEntryPos_LastEnum;
+	return (eInputMenuEntryPos)ohpl_ga7a_kc_mouse_pos(OHPL_SUBS(mvSubActions), (int)aButton);
 }
 
 eInputMenuEntryPos cLuxInputMenuEntry::GetGamepadButtonPos(eGamepadButton aButton)
 {
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		if(subAction.mGamepadInputType==eGamepadInputType_Button &&
-			subAction.mlInputId==aButton)
-			return (eInputMenuEntryPos)i;
-	}
-
-	return eInputMenuEntryPos_LastEnum;
+	return (eInputMenuEntryPos)ohpl_ga7a_kc_pad_button_pos(OHPL_SUBS(mvSubActions), (int)aButton);
 }
 
 eInputMenuEntryPos cLuxInputMenuEntry::GetGamepadHatStatePos(eGamepadHat aHat, eGamepadHatState aState)
 {
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		if(subAction.mGamepadInputType==eGamepadInputType_Hat &&
-			subAction.mlInputId==aHat && subAction.mfInputValue==aState)
-			return (eInputMenuEntryPos)i;
-	}
-
-	return eInputMenuEntryPos_LastEnum;
+	return (eInputMenuEntryPos)ohpl_ga7a_kc_pad_hat_pos(OHPL_SUBS(mvSubActions), (int)aHat, (int)aState);
 }
 
 eInputMenuEntryPos cLuxInputMenuEntry::GetGamepadAxisPos(eGamepadAxis aAxis, eGamepadAxisRange aRange)
 {
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		if(subAction.mGamepadInputType==eGamepadInputType_Axis &&
-			subAction.mlInputId==aAxis && subAction.mfInputValue==aRange)
-			return (eInputMenuEntryPos)i;
-	}
-
-	return eInputMenuEntryPos_LastEnum;
+	return (eInputMenuEntryPos)ohpl_ga7a_kc_pad_axis_pos(OHPL_SUBS(mvSubActions), (int)aAxis, (int)aRange);
 }
 
 //-----------------------------------------------------------------------
@@ -385,52 +309,19 @@ bool cLuxInputMenuEntry::HasGamepadAxis(eGamepadAxis aAxis, eGamepadAxisRange aR
 
 bool cLuxInputMenuEntry::HasSubActions()
 {
-	for(int i=0;i<eInputMenuEntryPos_LastEnum;++i)
-	{
-		if(mvSubActions[i].mType!=eInputDeviceType_LastEnum)
-			return true;
-	}
-
-	return false;
+	return ohpl_ga7a_kc_has_sub_actions(OHPL_SUBS(mvSubActions)) != 0;
 }
 
 //-----------------------------------------------------------------------
 
 tMenuEntryPosVec cLuxInputMenuEntry::GetPosSharingSubAction(cLuxInputMenuEntry* apEntry)
 {
+	int vPos[eInputMenuEntryPos_LastEnum];
+	size_t lNum = ohpl_ga7a_kc_sharing(OHPL_SUBS(mvSubActions), OHPL_SUBS(apEntry->mvSubActions), vPos);
+
 	tMenuEntryPosVec vEntryPositions;
-	for(size_t i=0;i<mvSubActions.size();++i)
-	{
-		const cSubActionWrapper& subAction = mvSubActions[i];
-		switch(subAction.mType)
-		{
-		case eInputDeviceType_Keyboard:
-			if(apEntry->HasKey((eKey)subAction.mlInputId))
-				vEntryPositions.push_back((eInputMenuEntryPos)i);
-			break;
-		case eInputDeviceType_Mouse:
-			if(apEntry->HasMouseButton((eMouseButton)subAction.mlInputId))
-				vEntryPositions.push_back((eInputMenuEntryPos)i);
-			break;
-		case eInputDeviceType_Gamepad:
-			switch(subAction.mGamepadInputType)
-			{
-			case eGamepadInputType_Button:
-				if(apEntry->HasGamepadButton((eGamepadButton)subAction.mlInputId))
-					vEntryPositions.push_back((eInputMenuEntryPos)i);
-				break;
-			case eGamepadInputType_Hat:
-				if(apEntry->HasGamepadHatState((eGamepadHat)subAction.mlInputId, eGamepadHatState((int)subAction.mfInputValue)))
-					vEntryPositions.push_back((eInputMenuEntryPos)i);
-				break;
-			case eGamepadInputType_Axis:
-				if(apEntry->HasGamepadAxis((eGamepadAxis)subAction.mlInputId, eGamepadAxisRange((int)subAction.mfInputValue)))
-					vEntryPositions.push_back((eInputMenuEntryPos)i);
-				break;
-			}
-			break;
-		}
-	}
+	for(size_t i=0;i<lNum;++i)
+		vEntryPositions.push_back((eInputMenuEntryPos)vPos[i]);
 
 	return vEntryPositions;
 }
@@ -457,164 +348,14 @@ void cLuxInputMenuEntry::SetColor(eInputMenuEntryPos aPos, const cColor& aCol)
 
 tString cLuxInputMenuEntry::GetStringFromSubAction(const cSubActionWrapper& aSubAction)
 {
-    cInput* pInput = gpBase->mpEngine->GetInput();
-	switch(aSubAction.mType)
-	{
-	case eInputDeviceType_Keyboard:
-		return pInput->GetKeyboard()->KeyToString((eKey)aSubAction.mlInputId);
-	case eInputDeviceType_Mouse:
-		return pInput->GetMouse()->ButtonToString((eMouseButton)aSubAction.mlInputId);
-	case eInputDeviceType_Gamepad:
-		return GetStringFromGamepadSubAction(aSubAction);
-	}
-
-	return "None";
-}
-
-tString cLuxInputMenuEntry::GetStringFromGamepadSubAction(const cSubActionWrapper& aSubAction)
-{
-	switch(aSubAction.mGamepadInputType)
-	{
-	case eGamepadInputType_Button:
-		return iGamepad::ButtonToString((eGamepadButton)aSubAction.mlInputId);
-	case eGamepadInputType_Hat:
-		{
-			int lState = (int)aSubAction.mfInputValue;
-			return iGamepad::HatToString((eGamepadHat)aSubAction.mlInputId) + "." + iGamepad::HatStateToString((eGamepadHatState)lState);
-		}
-	case eGamepadInputType_Axis:
-		{
-			int lRange = (int)aSubAction.mfInputValue;
-			return iGamepad::AxisToString((eGamepadAxis)aSubAction.mlInputId) + "." + iGamepad::AxisRangeToString((eGamepadAxisRange)lRange);
-		}
-	}
-
-	return "None";
+	tString sLabel;
+	ohpl_ga7a_kc_label((const OhplGa7aSub*)&aSubAction, OhplGa7aStrSink, &sLabel);
+	return sLabel;
 }
 
 //-----------------------------------------------------------------------
 
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromSubAction(iSubAction* apSubAction)
-{
-	return GetSubActionWrapperFromString(apSubAction->GetInputType()+"."+apSubAction->GetInputName(),-1);
-}
-
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromLuxInput(cLuxInput* apInput)
-{
-	return GetSubActionWrapperFromString(apInput->msInputType, apInput->mlValue);
-}
-
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromString(const tString& asX, int alValue)
-{
-	tString sSep = ".";
-	tStringVec vInputParts;
-	cString::GetStringVec(asX, vInputParts, &sSep);
-
-	tString sLowerCaseDev = cString::ToLowerCase(vInputParts[0]);
-
-	if(sLowerCaseDev=="keyboard")
-		return GetSubActionWrapperFromStringVecKeyboard(vInputParts, alValue);
-	else if(sLowerCaseDev=="mousebutton" || sLowerCaseDev=="mouse")
-		return GetSubActionWrapperFromStringVecMouse(vInputParts, alValue);
-	else if(cString::GetFirstStringPos(sLowerCaseDev, "gamepad")!=-1)
-		return GetSubActionWrapperFromStringVecGamepad(vInputParts, alValue);
-
-	return cSubActionWrapper(eInputDeviceType_LastEnum, -1);
-
-}
-
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromStringVecKeyboard(const tStringVec& avX, int alValue)
-{
-	iKeyboard* pKB = gpBase->mpEngine->GetInput()->GetKeyboard();
-	
-	eKey key;
-	if(alValue!=-1)
-		key = (eKey)alValue;
-	else
-		key = pKB->StringToKey(avX[1]);
-	
-	return cSubActionWrapper(eInputDeviceType_Keyboard, key);
-}
-
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromStringVecMouse(const tStringVec& avX, int alValue)
-{
-	iMouse* pMouse = gpBase->mpEngine->GetInput()->GetMouse();
-
-	eMouseButton button;
-	if(alValue!=-1)
-		button = (eMouseButton)alValue;
-	else
-		button = pMouse->StringToButton(avX[1]);
-	
-	return cSubActionWrapper(eInputDeviceType_Mouse, button);
-}
-
-cSubActionWrapper cLuxInputMenuEntry::GetSubActionWrapperFromStringVecGamepad(const tStringVec& avInputParts, int alValue)
-{
-	/*
-	tString sInputName = apSubAction->GetInputName();
-	tString sSep = ".";
-	tStringVec vGamepadInputVec;
-	cString::GetStringVec(sInputName, vGamepadInputVec, &sSep);
-	*/
-
-	//if(alValue==-1 && avInputParts.size()==3 || alValue!=-1 && avInputParts.size()==2)
-	if(avInputParts[0]=="GamepadButton")
-	{
-		eGamepadButton button;
-		if(alValue!=-1)
-			button = (eGamepadButton)alValue;
-		else
-			button = iGamepad::StringToButton(avInputParts[1]);
-
-		return cSubActionWrapper(eGamepadInputType_Button, button, 1.0f);
-	}
-	else
-	{
-		eGamepadHat hat = iGamepad::StringToHat(avInputParts[1]);
-		eGamepadAxis axis = iGamepad::StringToAxis(avInputParts[1]);
-
-		if(hat!=eGamepadHat_LastEnum)
-		{
-			eGamepadHatState state;
-			if(alValue!=-1)
-				state = (eGamepadHatState)alValue;
-			else
-				state = iGamepad::StringToHatState(avInputParts[2]);
-
-			return cSubActionWrapper(eGamepadInputType_Hat, hat, (float)state);
-		}
-		else if(axis!=eGamepadAxis_LastEnum)
-		{
-			eGamepadAxisRange range;
-			if(alValue!=-1)
-				range = (eGamepadAxisRange)alValue;
-			else
-				range = iGamepad::StringToAxisRange(avInputParts[2]);
-
-			return cSubActionWrapper(eGamepadInputType_Axis, axis, (float)range);
-		}
-	}
-
-
-	return cSubActionWrapper(eInputDeviceType_Gamepad, -1);
-}
-
-
 //-----------------------------------------------------------------------
-
-eInputDeviceType cLuxInputMenuEntry::GetInputDeviceTypeFromString(const tString& asX)
-{
-	tString sLowerCaseDev = cString::ToLowerCase(asX);
-	if(sLowerCaseDev=="keyboard")
-		return eInputDeviceType_Keyboard;
-	else if(sLowerCaseDev=="mousebutton" || sLowerCaseDev=="mouse")
-		return eInputDeviceType_Mouse;
-	else if(cString::GetFirstStringPos(sLowerCaseDev, "gamepad")!=-1)
-		return eInputDeviceType_Gamepad;
-
-	return eInputDeviceType_LastEnum;
-}
 
 //-----------------------------------------------------------------------
 
@@ -771,17 +512,15 @@ kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryChange);
 
 bool cLuxInputMenuEntry::InputEntryClick(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mpWindow->GetWaitingInput()==NULL)
+	int lClick = ohpl_ga7a_kc_click(mpWindow->GetWaitingInput()==NULL, aData.mlVal==eGuiMouseButton_Left);
+	if(lClick==1)
 	{
-		if(aData.mlVal==eGuiMouseButton_Left)
-		{
-			SetWaiting(true, GetPosFromInput(apWidget));
-		}
+		SetWaiting(true, GetPosFromInput(apWidget));
 	}
-	else
+	else if(lClick==2)
 	{
 		SaveSubAction(GetPosFromInput(apWidget),
-					  eInputDeviceType_Mouse, 
+					  eInputDeviceType_Mouse,
 					  gpBase->mpEngine->GetGui()->TranslateGuiMouseToMouse((eGuiMouseButton)aData.mlVal));
 	}
 	return true; 
@@ -792,23 +531,19 @@ kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryClick);
 
 bool cLuxInputMenuEntry::InputEntryKeyPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(IsWaiting())
+	int lAct = ohpl_ga7a_kc_key_press(IsWaiting(), aData.mKeyPress.mKey, eKey_Escape);
+	if(lAct==1)
 	{
-		if(aData.mKeyPress.mKey!=eKey_Escape)
-		{
-			SaveSubAction(GetPosFromInput(apWidget),
-					  eInputDeviceType_Keyboard,
-					  aData.mKeyPress.mKey);
-		}
-		else
-		{
-			UpdateEntry();
-			SetWaiting(false, GetPosFromInput(apWidget));
-
-			mpWindow->CancelInputSetting();
-		}
+		SaveSubAction(GetPosFromInput(apWidget),
+				  eInputDeviceType_Keyboard,
+				  aData.mKeyPress.mKey);
 	}
-
+	else if(lAct==2)
+	{
+		UpdateEntry();
+		SetWaiting(false, GetPosFromInput(apWidget));
+		mpWindow->CancelInputSetting();
+	}
 	return true; 
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryKeyPress);
@@ -817,36 +552,18 @@ kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryKeyPress);
 
 bool cLuxInputMenuEntry::InputEntryUIArrowPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(mbGamepadButtonPress)
-	{
-		mbGamepadButtonPress = false;
-		return true;
-	}
-
-	return false; 
+	int lPress = ohpl_ga7a_kc_ui_arrow(mbGamepadButtonPress);
+	if(lPress & 2) mbGamepadButtonPress = false;
+	return (lPress & 1) != 0;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryUIArrowPress);
 
 bool cLuxInputMenuEntry::InputEntryUIButtonPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(aData.mlVal!=eUIButton_Primary)
-		return false;
-
-	if(mbGamepadButtonPress)
-	{
-		mbGamepadButtonPress = false;
-		return true;
-	}
-
-	if(mpWindow->GetWaitingInput()==NULL)
-	{
-		if(aData.mlVal==eUIButton_Primary)
-		{
-			SetWaiting(true, eInputMenuEntryPos_Secondary);
-		}
-	}
-	
-	return true; 
+	int lPress = ohpl_ga7a_kc_ui_button(aData.mlVal==eUIButton_Primary, mbGamepadButtonPress, mpWindow->GetWaitingInput()==NULL);
+	if(lPress & 2) mbGamepadButtonPress = false;
+	if(lPress & 4) SetWaiting(true, eInputMenuEntryPos_Secondary);
+	return (lPress & 1) != 0;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryUIButtonPress);
 
@@ -855,34 +572,31 @@ kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryUIButtonPress);
 
 bool cLuxInputMenuEntry::InputEntryGamepadButtonPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	if(IsWaiting())
-	{
-		if(aData.mGamepadInputData.mfInputValue==0.0f) return false;
 #if USE_SDL2
-		if(aData.mGamepadInputData.mInputType == eGamepadInputType_Button && aData.mGamepadInputData.mlInputId == eGamepadButton_B)
+	int lCancelButton = eGamepadButton_B;
 #else
-		if(aData.mGamepadInputData.mInputType == eGamepadInputType_Button && aData.mGamepadInputData.mlInputId == eGamepadButton_1)
+	int lCancelButton = eGamepadButton_1;
 #endif
-		{
-			//////////
-			// Cancel when pressing B
-			UpdateEntry();
-			SetWaiting(false, GetPosFromInput(apWidget));
-
-			mpWindow->CancelInputSetting();
-
-			return true;
-		}
-
+	int lAct = ohpl_ga7a_kc_pad_press(IsWaiting(), aData.mGamepadInputData.mfInputValue, aData.mGamepadInputData.mInputType == eGamepadInputType_Button,
+										aData.mGamepadInputData.mlInputId, lCancelButton);
+	if(lAct==1) return false;
+	if(lAct==2)
+	{
+		//////////
+		// Cancel when pressing B
+		UpdateEntry();
+		SetWaiting(false, GetPosFromInput(apWidget));
+		mpWindow->CancelInputSetting();
+		return true;
+	}
+	if(lAct==3)
+	{
 		mbGamepadButtonPress = true;
-
-		
-		SaveGamepadSubAction(GetPosFromInput(apWidget), 
-								aData.mGamepadInputData.mInputType, 
+		SaveGamepadSubAction(GetPosFromInput(apWidget),
+								aData.mGamepadInputData.mInputType,
 								aData.mGamepadInputData.mlInputId,
 								aData.mGamepadInputData.mfInputValue);
 	}
-
 	return true; 
 }
 kGuiCallbackDeclaredFuncEnd(cLuxInputMenuEntry, InputEntryGamepadButtonPress);
@@ -1096,13 +810,13 @@ void cLuxMainMenu_KeyConfig::CreateGui()
 
 void cLuxMainMenu_KeyConfig::ExitPressed()
 {
-    if(mpGuiSet->PopUpIsActive()) return;
-	if(mbInputSettingCancelled)
+	int lExit = ohpl_ga7a_kc_exit(mpGuiSet->PopUpIsActive(), mbInputSettingCancelled);
+	if(lExit==0) return;
+	if(lExit==1)
 	{
 		mbInputSettingCancelled = false;
 		return;
 	}
-
 	gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_Options);
 }
 
@@ -1170,16 +884,9 @@ void cLuxMainMenu_KeyConfig::SetCurrentToolTipEntry(cLuxInputMenuEntry* apEntry)
 		mpLTip->SetText(sTip);
 	}
 
-	if(sTip.empty())
-	{
-		mbTipFadeOut = true;
-		mbTipFadeRestore = false;
-	}
-	else
-	{
-		mbTipFadeOut = false;
-		mbTipFadeRestore = true;
-	}
+	int lFlags = ohpl_ga7a_kc_tip_flags(sTip.empty());
+	mbTipFadeOut = (lFlags & 1) != 0;
+	mbTipFadeRestore = (lFlags & 2) != 0;
 
 	//mpLTip->SetText(sTip);
 }
@@ -1251,7 +958,7 @@ void cLuxMainMenu_KeyConfig::SetInitialValues()
 
 void cLuxMainMenu_KeyConfig::SetWaitingInput(iWidget *apWidget)
 {
-	if(apWidget!=NULL && mpWaitingInput)
+	if(ohpl_ga7a_kc_set_waiting(apWidget!=NULL, mpWaitingInput!=NULL)==0)
 		return;
 
 	mpWaitingInput = apWidget;
@@ -1275,65 +982,34 @@ void cLuxMainMenu_KeyConfig::SetWaitingInput(iWidget *apWidget)
 
 //-----------------------------------------------------------------------
 
+static void OhplGa7aSetEntryColor(void *apCtx, size_t alEntry, int alPos, int abRed)
+{
+	cLuxInputMenuEntry *pEntry = ((cLuxInputMenuEntry**)apCtx)[alEntry];
+	pEntry->SetColor((eInputMenuEntryPos)alPos, abRed ? cColor(1,0,0,1) : cColor(1,1));
+}
+
 void cLuxMainMenu_KeyConfig::CheckEmptyAndDuplicateInputs()
 {
 	if(mbSettingInitialValues)
 		return;
 
-	//////////////////////////////////////////
-	// Brute force marking... works for now
-	cColor red = cColor(1,0,0,1);
-	cColor white = cColor(1,1);
+	std::vector<cLuxInputMenuEntry*> vEntries;
+	std::vector<size_t> vCounts;
+	std::vector<OhplGa7aSub> vSubs;
+	for(size_t cat=0; cat<mvInputs.size(); ++cat)
+	{
+		vCounts.push_back(mvInputs[cat].size());
+		for(size_t i=0; i<mvInputs[cat].size(); ++i)
+		{
+			vEntries.push_back(mvInputs[cat][i]);
+			const std::vector<cSubActionWrapper>& vEntrySubs = mvInputs[cat][i]->mvSubActions;
+			for(size_t j=0; j<vEntrySubs.size(); ++j)
+				vSubs.push_back(((const OhplGa7aSub*)vEntrySubs.data())[j]);
+		}
+	}
 
-	
-	// Reset marking
 	mbInvalidInputs = false;
-	for(size_t cat=0; cat<mvInputs.size(); ++cat)
-	{
-		const tInputEntryVec& vInputs = mvInputs[cat];
-		for(size_t i=0;i<vInputs.size();++i)
-		{
-			cLuxInputMenuEntry* pEntry = vInputs[i];
-			pEntry->SetColor(eInputMenuEntryPos_Primary, white);
-			pEntry->SetColor(eInputMenuEntryPos_Secondary, white);
-		}
-	}
-
-	// Update
-	for(size_t cat=0; cat<mvInputs.size(); ++cat)
-	{
-		const tInputEntryVec& vInputs = mvInputs[cat];
-		for(size_t i=0;i<vInputs.size();++i)
-		{
-			cLuxInputMenuEntry* pEntry1 = vInputs[i];
-		
-			for(size_t j=i+1;j<vInputs.size();++j)
-			{
-				cLuxInputMenuEntry* pEntry2 = vInputs[j];
-				if(pEntry2->HasSubActions()==false)
-				{
-					mbInvalidInputs = true;
-					pEntry2->SetColor(eInputMenuEntryPos_Primary, red);
-					pEntry2->SetColor(eInputMenuEntryPos_Secondary, red);
-					continue;
-				}
-
-				tMenuEntryPosVec vPositions = pEntry1->GetPosSharingSubAction(pEntry2);
-				if(vPositions.empty()==false)
-				{
-					mbInvalidInputs = true;
-
-					for(size_t k=0;k<vPositions.size();++k)
-						pEntry1->SetColor(vPositions[k], red);
-
-					vPositions = pEntry2->GetPosSharingSubAction(pEntry1);
-					for(size_t k=0;k<vPositions.size();++k)
-						pEntry2->SetColor(vPositions[k], red);
-				
-				}
-			}
-		}
-	}
+	mbInvalidInputs = ohpl_ga7a_kc_check(vSubs.data(), vSubs.size(), vCounts.data(), vCounts.size(), OhplGa7aSetEntryColor, vEntries.data()) != 0;
 }
 
 //-----------------------------------------------------------------------
@@ -1354,27 +1030,14 @@ bool cLuxMainMenu_KeyConfig::WindowOnUpdate(iWidget* apWidget, const cGuiMessage
 	////////////////////////////////////////////////////
 	// Update Tip label fade
 	cColor labelCol = mpLTip->GetDefaultFontColor();
-	if(mbTipFadeOut)
+	int lFlags = (mbTipFadeOut ? 1 : 0) | (mbTipFadeRestore ? 2 : 0);
+	float vAlphas[2];
+	size_t lSets = ohpl_ga7a_kc_tip_fade(labelCol.a, &lFlags, aData.mfVal, vAlphas);
+	mbTipFadeOut = (lFlags & 1) != 0;
+	mbTipFadeRestore = (lFlags & 2) != 0;
+	for(size_t i=0; i<lSets; ++i)
 	{
-		labelCol.a -= aData.mfVal*0.8f;
-		if(labelCol.a<=0.0f)
-		{
-			labelCol.a = 0.0f;
-			mbTipFadeOut=false;
-		}
-
-		mpLTip->SetDefaultFontColor(labelCol);		
-	}
-
-	if(mbTipFadeRestore)
-	{
-		labelCol.a += aData.mfVal*3;
-		if(labelCol.a>=1.0f)
-		{
-			labelCol.a = 1.0f;
-			mbTipFadeRestore = false;
-		}
-
+		labelCol.a = vAlphas[i];
 		mpLTip->SetDefaultFontColor(labelCol);
 	}
 
@@ -1388,7 +1051,7 @@ bool cLuxMainMenu_KeyConfig::CategoryChange(iWidget* apWidget, const cGuiMessage
 {
 	for(int i=eLuxActionCategory_Movement;i!=eLuxActionCategory_LastEnum;++i)
 	{
-		bool bActive = (aData.mlVal==i-1);
+		bool bActive = ohpl_ga7a_kc_category_active(aData.mlVal, i) != 0;
         mvDKeyGroups[i]->SetVisible(bActive);
 		mvDKeyGroups[i]->SetEnabled(bActive);
 
@@ -1412,30 +1075,11 @@ kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_KeyConfig, CategoryChange);
 
 bool cLuxMainMenu_KeyConfig::CategorySelector_OnUIButtonPress(iWidget* apWidget, const cGuiMessageData& aData)
 {
-	iWidget* pWidget = GetWaitingInput();
-
-	if(mbWasWaitingOnInput)
+	int lCat = ohpl_ga7a_kc_category_button(mbWasWaitingOnInput, aData.mlVal, eUIButton_PrevPage, eUIButton_NextPage,
+											mpCBCategory->GetSelectedItem(), mpCBCategory->GetItemNum());
+	if(lCat<0)
 		return false;
-
-	int lCat = mpCBCategory->GetSelectedItem();
-	
-	if(aData.mlVal==eUIButton_PrevPage)
-	{
-		int lPrevCat = lCat-1;
-		if(lPrevCat>=0)
-			lCat = lPrevCat;
-	}
-	else if(aData.mlVal==eUIButton_NextPage)
-	{
-		int lNextCat = lCat+1;
-		if(lNextCat<mpCBCategory->GetItemNum())
-			lCat = lNextCat;
-	}
-	else
-		return false;
-
 	mpCBCategory->SetSelectedItem(lCat);
-
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_KeyConfig, CategorySelector_OnUIButtonPress);
@@ -1490,15 +1134,11 @@ bool cLuxMainMenu_KeyConfig::UIPressCancel(iWidget* apWidget, const cGuiMessageD
 {
 	///////////////
 	// Check if this windows is or has been waiting for input his frame
-	if(mbWasWaitingOnInput)
-		return false;
-
-	if(aData.mlVal == eUIButton_Secondary)
+	if(ohpl_ga7a_kc_ui_cancel(mbWasWaitingOnInput, aData.mlVal == eUIButton_Secondary))
 	{
 		gpBase->mpMainMenu->SetWindowActive(eLuxMainMenuWindow_Options);
 		return true;
 	}
-
 	return false; 
 }
 kGuiCallbackDeclaredFuncEnd(cLuxMainMenu_KeyConfig, UIPressCancel);

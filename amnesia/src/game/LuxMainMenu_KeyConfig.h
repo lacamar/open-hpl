@@ -85,7 +85,6 @@ public:
 	void RetrieveInitialValue();
 
 	void UpdateAction();
-	void UpdateGamepadAction(cAction* apAction, const cSubActionWrapper& aSubAction);
 	void UpdateEntry();
 
 	void SetInputKeypress(eInputMenuEntryPos aPos, eKey aKey);
@@ -124,18 +123,10 @@ private:
 	///////////////////////////
 	// Helper funcs
 	tString GetStringFromSubAction(const cSubActionWrapper& aSubAction);
-	tString GetStringFromGamepadSubAction(const cSubActionWrapper& aSubAction);
 
-	cSubActionWrapper GetSubActionWrapperFromSubAction(iSubAction* apSubAction);
-	cSubActionWrapper GetSubActionWrapperFromLuxInput(cLuxInput* apInput);
 	
-	cSubActionWrapper GetSubActionWrapperFromString(const tString& asX, int alValue);
 
-	cSubActionWrapper GetSubActionWrapperFromStringVecKeyboard(const tStringVec& avX, int alValue);
-	cSubActionWrapper GetSubActionWrapperFromStringVecMouse(const tStringVec& avX, int alValue);
-	cSubActionWrapper GetSubActionWrapperFromStringVecGamepad(const tStringVec& avX, int alValue);
 
-	eInputDeviceType GetInputDeviceTypeFromString(const tString& asX);
 
 	eInputMenuEntryPos GetPosFromInput(iWidget* apWidget);
 
