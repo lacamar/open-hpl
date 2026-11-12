@@ -1,0 +1,5 @@
+mgr.txt: "game<TAB>ops<TAB>fnv64" of the iResourceManager op log (create/release/addref/DestroyUnused/GetResource/force destroy/load tabs/iteration, then DestroyAll) of harness/mgr_probe.cpp, recorded with OHPL_IMPL=cpp; names come from the game files, op order from a fixed LCG. Replayed by resources::manager_golden against the Rust Manager.
+ent.txt: "game:rel<TAB>calls<TAB>fnv64<TAB>calls<TAB>fnv64" for the full and the empty builder configuration of harness/ent_probe.cpp (recording iEntityObjectBuilder, deterministic answers) over every .ent of SOMA, Amnesia TDD, Rebirth, Bunker, recorded from the pre-port C++ parser (commit f537dd0^). NaN bits are dropped from the digest text (debug and release Rust order NaN operands differently); the harness compares them raw. Replayed by entity_loader::golden_tests.
+results.txt: differential run, cpp vs rust manager logs and pre-port vs current parser (diffs per probe).
+Replay without C++: cargo test golden (skipped per game when the Steam data is absent; OHPL_H3_CORPUS overrides the common dir).
+Regenerate: harness/build.sh BUILD_DIR OUT; harness/compare.sh OUT [OPS] (needs the HPL2 target built in BUILD_DIR).

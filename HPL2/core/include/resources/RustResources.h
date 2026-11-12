@@ -94,8 +94,9 @@ namespace hpl {
 			size_t mlPos;
 		};
 
-		cResourceMap() : mpMap(ohpl_resmap_new()) {}
-		~cResourceMap() { ohpl_resmap_free(mpMap); }
+		cResourceMap() : mpMap(ohpl_resmap_new()), mbOwned(true) {}
+		explicit cResourceMap(OhplResMap* apBorrowed) : mpMap(apBorrowed), mbOwned(false) {}
+		~cResourceMap() { if(mbOwned) ohpl_resmap_free(mpMap); }
 		cResourceMap(const cResourceMap&) = delete;
 		cResourceMap& operator=(const cResourceMap&) = delete;
 
@@ -117,6 +118,7 @@ namespace hpl {
 
 	private:
 		OhplResMap* mpMap;
+		bool mbOwned;
 	};
 }
 

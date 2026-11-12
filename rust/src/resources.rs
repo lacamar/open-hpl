@@ -5,6 +5,10 @@ pub mod config;
 pub mod ffi;
 #[cfg(test)]
 mod golden_tests;
+pub mod manager;
+pub mod manager_ffi;
+#[cfg(test)]
+mod manager_golden;
 pub mod searcher;
 
 use crate::string;

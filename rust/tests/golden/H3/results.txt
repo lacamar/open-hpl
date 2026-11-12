@@ -1,0 +1,8 @@
+soma mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=486309da8bb056a0
+soma ent files=4247 calls=282816 old-vs-new file diffs=0 full-log diff lines=0
+amnesia mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=5b7036db3b225bcb
+amnesia ent files=909 calls=56033 old-vs-new file diffs=0 full-log diff lines=0
+rebirth mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=caba9851ceedc9a6
+rebirth ent files=3399 calls=296829 old-vs-new file diffs=0 full-log diff lines=0
+bunker mgr ops=6000 lines=6001 cpp-vs-rust diff lines=0 digest=05582c8bde9c5d4e
+bunker ent files=3012 calls=193616 old-vs-new file diffs=0 full-log diff lines=0
