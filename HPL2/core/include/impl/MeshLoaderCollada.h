@@ -475,6 +475,7 @@ namespace hpl {
 		static void SetConvertUnit(bool abX) { mbConvertUnit = abX; }
 		static bool GetConvertUnit() { return mbConvertUnit; }
 		static void SetConvertUnitFromAnyTool(bool abX) { mbConvertUnitFromAnyTool = abX; }
+		static bool GetConvertUnitFromAnyTool() { return mbConvertUnitFromAnyTool; }
 		static void SetUnscaledSkeleton(bool abX);
 		static bool GetUnscaledSkeleton() { return mbUnscaledSkeleton; }
 

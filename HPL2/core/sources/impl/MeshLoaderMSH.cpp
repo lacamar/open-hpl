@@ -19,6 +19,7 @@
 
 #include "impl/MeshLoaderMSH.h"
 #include "impl/RustMeshLoadMsh.h"
+#include "impl/RustL6.h"
 
 #include <cstring>
 #include <vector>
@@ -128,6 +129,14 @@ namespace hpl {
 
 	cMesh* cMeshLoaderMSH::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, false, aFlags);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, this };
+			return OhplL6LoadMesh(eOhplL6KindMsh, env, cfg.cfg, asFile);
+		}
+
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{
@@ -492,6 +501,14 @@ namespace hpl {
 
 	cAnimation* cMeshLoaderMSH::LoadAnimation(const tWString& asFile)
 	{
+		if(OhplBackendRustRequested())
+		{
+			OhplL6CfgBuf cfg;
+			OhplL6FillCfg(cfg, mpMeshManager, false, 0);
+			OhplL6Env env = { mpLowLevelGraphics, mpMaterialManager, mpAnimationManager, this };
+			return OhplL6LoadAnim(eOhplL6KindMsh, env, cfg.cfg, asFile);
+		}
+
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{

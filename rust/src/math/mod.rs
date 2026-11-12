@@ -42,10 +42,12 @@ pub(crate) use matrix::{
     matrix_quaternion, matrix_unit_vectors, quat_dot, quat_from_angle_axis,
     quat_from_rotation_matrix,
 };
+pub(crate) use matrix::{matrix_to_euler_angles, quat_to_rotation_matrix};
 pub(crate) use matrix::{matrix_translate, orthographic_projection, transpose};
 pub(crate) use matrix::{quat_normalize, quat_scale, quat_slerp};
 pub(crate) use scalar::angle_distance;
 pub(crate) use scalar::angle_from_points_2d;
+pub(crate) use scalar::to_deg;
 pub(crate) use scalar::{clamp, rand_rectf, round_float_to_decimals, to_rad};
 pub(crate) use scalar::{fast_random_float, modulus, rand_rectl};
 pub(crate) use scalar::{get_flag_bit, smooth_curve};
